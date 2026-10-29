@@ -33,22 +33,22 @@ def entries : List Entry := [
   { id := "ipaddress-getitem-sequence", pyFile := "Lib/ipaddress.py"
     pyFns := ["_BaseNetwork.__getitem__"]
     statement := "net[i] returns addr + i mod size for -size <= i < size and raises IndexError otherwise."
-    source := "invariant: sequence indexing", status := .open
+    source := "invariant: sequence indexing", status := .proven
     prop := ``GetitemSequence, thm := some ``getitemSequence_proven },
   { id := "ipaddress-contains-mem", pyFile := "Lib/ipaddress.py"
     pyFns := ["_BaseNetwork.__contains__"]
     statement := "address in net holds exactly for the addresses of the block."
-    source := "invariant", status := .open
+    source := "invariant", status := .proven
     prop := ``ContainsMem, thm := some ``containsMem_proven },
   { id := "ipaddress-overlaps-share", pyFile := "Lib/ipaddress.py"
     pyFns := ["_BaseNetwork.overlaps"]
     statement := "a.overlaps(b) holds exactly when the blocks share an address."
-    source := "overlaps docstring, Lib/ipaddress.py:747", status := .open
+    source := "overlaps docstring, Lib/ipaddress.py:747", status := .proven
     prop := ``OverlapsShareAddress, thm := some ``overlapsShareAddress_proven },
   { id := "ipaddress-subnet-of-mem", pyFile := "Lib/ipaddress.py"
     pyFns := ["_BaseNetwork.subnet_of", "_BaseNetwork._is_subnet_of"]
     statement := "a.subnet_of(b) holds exactly when every address of a is in b."
-    source := "subnet_of docstring, Lib/ipaddress.py:1043", status := .open
+    source := "subnet_of docstring, Lib/ipaddress.py:1043", status := .proven
     prop := ``SubnetOfMem, thm := some ``subnetOfMem_proven },
   { id := "ipaddress-summarize-exact-cover", pyFile := "Lib/ipaddress.py"
     pyFns := ["summarize_address_range", "_count_righthand_zero_bits"]
