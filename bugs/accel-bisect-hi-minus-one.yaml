@@ -1,0 +1,72 @@
+id: accel-bisect-hi-minus-one
+title: "bisect: C treats hi=-1 as len(a) while bisect.py searches an empty range; negative hi breaks the documented partition"
+priority: P4
+kind: twin-mismatch
+module: accel
+files: [Modules/_bisectmodule.c, Lib/bisect.py]
+functions: ["bisect_left", "bisect_right", "insort_left", "insort_right"]
+summary: |
+  `_bisect` receives hi=None from Argument Clinic as the C default -1 and replaces any hi == -1
+  with len(a). An explicit hi=-1 is therefore "search the whole list" in C, while the pure-Python
+  twin searches the empty range [lo, -1) and returns lo. With a sorted a = [1, 2, 3, 4, 5],
+  bisect_left(a, 3, 0, -1) is 2 in C and 0 in Python; insort_left(a, 3, 0, -1) inserts at
+  index 2 in C (list stays sorted) and at index 0 in Python ([3, 1, 2, 3, 4, 5]). Every other
+  negative hi returns lo in both twins. Read literally, the docs' partition
+  "all(elem < x for elem in a[lo:ip]) ... all(elem >= x for elem in a[ip:hi])" then fails for
+  negative hi, because a[ip:hi] uses negative-index slicing (Python with hi=-1, both twins with
+  hi <= -2). The Lean proofs show these are the only failures: for hi=None or hi >= 0 any
+  returned ip is a correct partition point (accel-bisect-doc-partition-nonneg-hi).
+likelihood: |
+  Low. Needs an explicit negative hi, e.g. code that computes hi = len(a) - k and lets it go
+  negative, or that expects slice-like negative indices. The pure-Python twin only runs when
+  `_bisect` is unavailable (some alternative implementations, or tests that block it).
+maybe_intended: |
+  Yes, effectively. This is python/cpython#125889 ("python versions of bisect_right and
+  bisect_left can fail guarantees"), closed as not planned on 2026-09-21; Raymond Hettinger:
+  "I don't think this is worth any added overhead. Bisecting is a fine-grained function that is
+  sometimes called in a tight loop. The argument pattern being detected doesn't seem to arise in
+  practice". python/cpython#66873 (negative / too large hi) was closed the same way. Recorded
+  for completeness of the twin comparison, not for filing.
+reproducer: |
+  from test.support.import_helper import import_fresh_module
+  cb = import_fresh_module('bisect', fresh=['_bisect'])
+  pb = import_fresh_module('bisect', blocked=['_bisect'])
+  a = [1, 2, 3, 4, 5]
+  c, p = cb.bisect_left(a, 3, 0, -1), pb.bisect_left(a, 3, 0, -1)
+  print('bisect_left(a, 3, 0, -1): C', c, 'Python', p)
+  la, lb = list(a), list(a)
+  cb.insort_left(la, 3, 0, -1); pb.insort_left(lb, 3, 0, -1)
+  print('insort_left(a, 3, 0, -1): C', la, 'Python', lb)
+  doc_ok = all(e < 3 for e in a[0:p]) and all(e >= 3 for e in a[p:-1])
+  print('Python partition of a[0:ip], a[ip:-1] holds:', doc_ok)
+  if c == 2 and p == 0 and la == [1, 2, 3, 3, 4, 5] and lb == [3, 1, 2, 3, 4, 5] and not doc_ok:
+      print('REPRODUCED accel-bisect-hi-minus-one')
+expected: |
+  The twins agree on hi=-1 (either both treat it as an empty range, or both reject negative hi
+  like they reject negative lo), and a returned ip satisfies the documented partition.
+observed: |
+  python3 3.14.7: C 2 / Python 0; C [1, 2, 3, 3, 4, 5] / Python [3, 1, 2, 3, 4, 5]. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Doc/library/bisect.rst:51-54 (bisect_left partition) and :74-77 (bisect_right); the twin
+  relation between Modules/_bisectmodule.c and Lib/bisect.py (bisect.py:110-114 replaces the
+  Python functions with the C ones when available).
+cause: |
+  Modules/_bisectmodule.c:157 (`hi: Py_ssize_t(c_default='-1', accept={int, NoneType}) = None`)
+  makes -1 the "None" sentinel, and :64-68 / :248-252 replace hi == -1 by PySequence_Size(list).
+  Lib/bisect.py:36-37 / :89-90 only replace `hi is None`. Neither twin validates negative hi
+  (only lo, :60-63 / bisect.py:34-35).
+possible_fix: |
+  Use a sentinel that cannot be passed explicitly (e.g. clinic `hi: object = None` converted in
+  C), or reject negative hi in both twins as for lo. Maintainers have declined both (#125889).
+duplicates:
+  issues:
+    - {number: 125889, state: closed, relation: duplicate, reason: "not_planned (2026-09-21; not worth the overhead)"}
+    - {number: 66873, state: closed, relation: related (hi out of range in bisect.py), reason: "won't fix; favor stability"}
+    - {number: 70840, state: closed, relation: related (hi=None accepted by C), reason: "not a bug"}
+  queries: ["bisect in:title", "insort in:title", "bisect hi=-1", "bisect hi -1", "bisect negative hi",
+            "bisect hi None -1", "_bisect hi", "bisect hi negative", "125889"]
+lean:
+  property: PyLean.Accel.BisectTwinsAgree
+  theorem: PyLean.Accel.bisectTwinsAgree_refuted
+  also: [PyLean.Accel.BisectDocPartition, PyLean.Accel.bisectDocPartition_refuted]
