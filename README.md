@@ -38,5 +38,5 @@ scripts/audit.sh                                   # everything, fails on any op
 Pilot module: `Lib/ipaddress.py` integer core (network construction,
 `summarize_address_range`, `subnets`, `supernet`, indexing, containment,
 `overlaps`, `subnet_of`, `address_exclude`). The model agrees with CPython
-3.14.7 on 150k differential cases. See `lake env lean Audit.lean` for property
-status.
+3.14.7 on 200k differential cases. 11 properties: 9 proven for every input,
+2 refuted (`bugs/`). The proofs hold for any address width, not just 32/128.

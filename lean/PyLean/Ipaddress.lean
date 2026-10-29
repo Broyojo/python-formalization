@@ -63,17 +63,17 @@ def entries : List Entry := [
   { id := "ipaddress-subnets-partition", pyFile := "Lib/ipaddress.py"
     pyFns := ["_BaseNetwork.subnets"]
     statement := "For a valid prefixlen_diff, subnets returns 2^diff valid networks of the new prefix that tile the network in order."
-    source := "subnets docstring, Lib/ipaddress.py:925-951", status := .open
+    source := "subnets docstring, Lib/ipaddress.py:925-951", status := .proven
     prop := ``SubnetsPartition, thm := some ``subnetsPartition_proven },
   { id := "ipaddress-supernet-contains", pyFile := "Lib/ipaddress.py"
     pyFns := ["_BaseNetwork.supernet"]
     statement := "For 0 <= diff <= prefixlen, supernet returns a valid network of prefix prefixlen - diff containing self."
-    source := "supernet docstring, Lib/ipaddress.py:978-998", status := .open
+    source := "supernet docstring, Lib/ipaddress.py:978-998", status := .proven
     prop := ``SupernetContains, thm := some ``supernetContains_proven },
   { id := "ipaddress-address-exclude-partition", pyFile := "Lib/ipaddress.py"
     pyFns := ["_BaseNetwork.address_exclude"]
     statement := "For other a subnet of self, address_exclude returns valid networks that with other cover self exactly once."
-    source := "address_exclude docstring, Lib/ipaddress.py:792-825", status := .open
+    source := "address_exclude docstring, Lib/ipaddress.py:792-825", status := .proven
     prop := ``AddressExcludePartition, thm := some ``addressExcludePartition_proven }
 ]
 
