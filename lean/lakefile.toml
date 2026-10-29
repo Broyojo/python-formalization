@@ -1,0 +1,12 @@
+name = "PyLean"
+defaultTargets = ["PyLean", "pydiff"]
+
+[[lean_lib]]
+name = "PyLean"
+# Per-file memory cap (MB), so a runaway elaboration fails instead of
+# exhausting the machine.
+moreLeanArgs = ["-M8000"]
+
+[[lean_exe]]
+name = "pydiff"
+root = "DiffMain"
