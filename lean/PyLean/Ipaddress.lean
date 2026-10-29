@@ -53,7 +53,7 @@ def entries : List Entry := [
   { id := "ipaddress-summarize-exact-cover", pyFile := "Lib/ipaddress.py"
     pyFns := ["summarize_address_range", "_count_righthand_zero_bits"]
     statement := "For first <= last, summarize_address_range returns valid networks that tile first..last in ascending order."
-    source := "summarize_address_range docstring, Lib/ipaddress.py:201-232", status := .open
+    source := "summarize_address_range docstring, Lib/ipaddress.py:201-232", status := .proven
     prop := ``SummarizeExactCover, thm := some ``summarizeExactCover_proven },
   { id := "ipaddress-summarize-reversed", pyFile := "Lib/ipaddress.py"
     pyFns := ["summarize_address_range"]
