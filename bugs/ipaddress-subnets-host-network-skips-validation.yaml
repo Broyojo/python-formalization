@@ -1,0 +1,51 @@
+id: ipaddress-subnets-host-network-skips-validation
+title: "subnets() on a /32 or /128 network ignores invalid prefixlen_diff / new_prefix instead of raising ValueError"
+priority: P3
+kind: missing-validation
+module: ipaddress
+files: [Lib/ipaddress.py]
+functions: ["_BaseNetwork.subnets"]
+summary: |
+  For a host network (prefixlen == max_prefixlen), subnets() yields the network itself
+  before checking its arguments. new_prefix shorter than the current prefix, a negative
+  prefixlen_diff, a too-large prefixlen_diff, and setting both arguments all succeed for
+  /32 and /128, while the same calls raise ValueError for every other prefix length.
+likelihood: |
+  Needs a host network plus an invalid argument, e.g. code that walks networks of mixed
+  sizes calling net.subnets(new_prefix=24). The invalid call silently returns [net].
+maybe_intended: |
+  The early return implements the documented "In the case that self contains only one IP
+  ... yield an iterator with just ourself". It is plausibly meant only for *valid*
+  arguments; the docstring's Raises section has no exception for host networks.
+reproducer: |
+  import ipaddress
+  n32 = ipaddress.ip_network('192.0.2.1/32')
+  n31 = ipaddress.ip_network('192.0.2.0/31')
+  got = list(n32.subnets(new_prefix=24))
+  print('/32 new_prefix=24 ->', got)
+  try:
+      list(n31.subnets(new_prefix=24)); other = 'no error'
+  except ValueError as e:
+      other = repr(e)
+  print('/31 new_prefix=24 ->', other)
+  print('/32 prefixlen_diff=-3 ->', list(n32.subnets(prefixlen_diff=-3)))
+  if got == [n32] and other.startswith('ValueError'):
+      print('REPRODUCED ipaddress-subnets-host-network-skips-validation')
+expected: |
+  ValueError('new prefix must be longer') for new_prefix=24 and
+  ValueError('prefix length diff must be > 0') for prefixlen_diff=-3, as for /31.
+promised_by: |
+  subnets docstring, Lib/ipaddress.py:943-949 ("Raises: ValueError: The prefixlen_diff is
+  too small or too large. OR ... new_prefix is a smaller number than the current prefix").
+cause: |
+  Lib/ipaddress.py:952-954 returns before the argument checks at :956-967.
+possible_fix: |
+  Move the `if self._prefixlen == self.max_prefixlen` early return below the argument
+  validation (and treat new_prefix == max_prefixlen / prefixlen_diff == 0 as valid there).
+duplicates:
+  issues:
+    - {number: 158784, state: closed, relation: same-pattern (supernet, /0), reason: not_planned (bulk-filing cleanup, not judged on merits)}
+  queries: ["ipaddress subnets", "subnets new_prefix", "subnets prefixlen", "ipaddress subnets ValueError", "supernet"]
+lean:
+  property: PyLean.Ipaddress.SubnetsRejectsInvalidArgs
+  theorem: PyLean.Ipaddress.subnetsRejectsInvalidArgs_refuted

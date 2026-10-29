@@ -1,0 +1,46 @@
+id: ipaddress-supernet-zero-prefix-skips-validation
+title: "supernet() on a /0 network ignores invalid prefixlen_diff / new_prefix instead of raising ValueError"
+priority: P3
+kind: missing-validation
+module: ipaddress
+files: [Lib/ipaddress.py]
+functions: ["_BaseNetwork.supernet"]
+summary: |
+  Mirror image of the subnets() finding. For prefixlen == 0, supernet() returns self before
+  checking its arguments, so supernet(prefixlen_diff=5) and supernet(new_prefix=8) on
+  0.0.0.0/0 return 0.0.0.0/0 while /4 and /0-adjacent prefixes raise ValueError. Separately,
+  a negative prefixlen_diff on any other prefix raises the internal
+  ValueError('negative shift count') rather than a message about the argument.
+likelihood: Rare; needs the whole address space plus an invalid argument.
+maybe_intended: |
+  Same as the subnets() case: the early return is documented-adjacent behaviour for valid
+  arguments.
+reproducer: |
+  import ipaddress
+  z = ipaddress.ip_network('0.0.0.0/0')
+  got = z.supernet(prefixlen_diff=5)
+  print('/0 prefixlen_diff=5 ->', got)
+  try:
+      ipaddress.ip_network('16.0.0.0/4').supernet(prefixlen_diff=5); other = 'no error'
+  except ValueError as e:
+      other = repr(e)
+  print('/4 prefixlen_diff=5 ->', other)
+  try:
+      ipaddress.ip_network('10.0.0.0/8').supernet(prefixlen_diff=-1)
+  except ValueError as e:
+      print('/8 prefixlen_diff=-1 ->', repr(e))
+  if got == z and other.startswith('ValueError'):
+      print('REPRODUCED ipaddress-supernet-zero-prefix-skips-validation')
+expected: ValueError('current prefixlen is 0, cannot have a prefixlen_diff of 5'), as for /4.
+promised_by: |
+  supernet docstring, Lib/ipaddress.py:990-997 ("ValueError: If self.prefixlen -
+  prefixlen_diff < 0 ... OR ... new_prefix is a larger number than the current prefix").
+cause: Lib/ipaddress.py:999-1000 returns before the checks at :1002-1012.
+possible_fix: Move the `if self._prefixlen == 0` early return below the validation.
+duplicates:
+  issues:
+    - {number: 158784, state: closed, relation: duplicate (new_prefix case), reason: not_planned (bulk-filing cleanup)}
+  queries: ["ipaddress supernet", "supernet", "supernet new_prefix", "supernet negative shift count"]
+lean:
+  property: PyLean.Ipaddress.SupernetRejectsInvalidArgs
+  theorem: PyLean.Ipaddress.supernetRejectsInvalidArgs_refuted
