@@ -9,7 +9,14 @@ anywhere in a proof shows up here as the axiom `sorryAx`.
 
 open Lean Elab Command PyLean.Registry
 
-def allEntries : List Entry := PyLean.Ipaddress.entries
+def allEntries : List Entry :=
+  PyLean.Ipaddress.entries ++
+  PyLean.Datetime.entries ++
+  PyLean.Fractions.entries ++
+  PyLean.RangeSlice.entries ++
+  PyLean.MathInt.entries ++
+  PyLean.StrSearch.entries ++
+  PyLean.Accel.entries
 
 def allowedAxioms : List Name := [``propext, ``Classical.choice, ``Quot.sound]
 

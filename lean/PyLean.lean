@@ -1,3 +1,17 @@
 import PyLean.Core
 import PyLean.Registry
+import PyLean.DiffCore
 import PyLean.Ipaddress
+import PyLean.Ipaddress.Diff
+import PyLean.Datetime
+import PyLean.Datetime.Diff
+import PyLean.Fractions
+import PyLean.Fractions.Diff
+import PyLean.RangeSlice
+import PyLean.RangeSlice.Diff
+import PyLean.MathInt
+import PyLean.MathInt.Diff
+import PyLean.StrSearch
+import PyLean.StrSearch.Diff
+import PyLean.Accel
+import PyLean.Accel.Diff

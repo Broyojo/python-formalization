@@ -13,5 +13,5 @@ if grep -rnwE 'sorry|admit|native_decide|bv_decide|ofReduceBool|implemented_by|e
 fi
 
 (cd lean && lake env lean Audit.lean)
-python3 difftest/ipaddress_diff.py --cases 50000
+for t in difftest/*_diff.py; do python3 "$t" --cases 50000; done
 python3 scripts/check_bugs.py

@@ -2,19 +2,12 @@
 
 Usage: python3 difftest/ipaddress_diff.py [--cases N] [--seed S]
 
-Exits non-zero on any mismatch. The model binary is lean/.lake/build/bin/pydiff.
+Exits non-zero on any mismatch. See difftest/common.py.
 """
 
-import argparse
 import ipaddress
-import json
-import random
-import subprocess
-import sys
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-PYDIFF = ROOT / "lean" / ".lake" / "build" / "bin" / "pydiff"
+import common
 
 NET = {32: ipaddress.IPv4Network, 128: ipaddress.IPv6Network}
 ADDR = {32: ipaddress.IPv4Address, 128: ipaddress.IPv6Address}
@@ -48,7 +41,7 @@ def gen_case(rng):
     bits = rng.choice([32, 128])
     fn = rng.choice(["summarize", "mknet", "subnets", "supernet", "getitem",
                      "contains", "overlaps", "subnet_of", "address_exclude"])
-    c = {"fn": fn, "bits": bits}
+    c = {"mod": "ipaddress", "fn": fn, "bits": bits}
     if fn == "summarize":
         a, b = edge_addr(rng, bits), edge_addr(rng, bits)
         if rng.random() < 0.8:
@@ -119,53 +112,5 @@ def run_python(c):
         return {"exc": type(e).__name__, "msg": str(e)}
 
 
-def agree(py, lean):
-    if "ok" in py or "ok" in lean:
-        return py == lean
-    if py["exc"] != lean.get("exc"):
-        return False
-    return lean["msg"].startswith("~") or py["msg"] == lean["msg"]
-
-
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--cases", type=int, default=20000)
-    ap.add_argument("--seed", type=int, default=0)
-    args = ap.parse_args()
-    rng = random.Random(args.seed)
-
-    cases = []
-    while len(cases) < args.cases:
-        c = gen_case(rng)
-        if c is not None:
-            cases.append(c)
-
-    proc = subprocess.run([str(PYDIFF)], input="".join(json.dumps(c) + "\n" for c in cases),
-                          capture_output=True, text=True, check=True)
-    lean_out = [json.loads(line) for line in proc.stdout.splitlines()]
-    assert len(lean_out) == len(cases), (len(lean_out), len(cases))
-
-    mismatches, by_fn = 0, {}
-    for c, lo in zip(cases, lean_out):
-        if "harness_error" in lo:
-            print("HARNESS", c, lo, file=sys.stderr)
-            mismatches += 1
-            continue
-        py = run_python(c)
-        ok = agree(py, lo)
-        tot = by_fn.setdefault(c["fn"], [0, 0])
-        tot[0] += 1
-        tot[1] += ok
-        if not ok:
-            mismatches += 1
-            if mismatches <= 20:
-                print(f"MISMATCH {json.dumps(c)}\n  python: {py}\n  lean:   {lo}", file=sys.stderr)
-
-    for fn, (n, good) in sorted(by_fn.items()):
-        print(f"{fn:16s} {good}/{n}")
-    print(f"python {sys.version.split()[0]}: {len(cases) - mismatches}/{len(cases)} agree")
-    sys.exit(1 if mismatches else 0)
-
-
 if __name__ == "__main__":
-    main()
+    common.main(gen_case, run_python)
