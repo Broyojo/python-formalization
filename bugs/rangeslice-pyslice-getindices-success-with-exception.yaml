@@ -1,0 +1,102 @@
+id: rangeslice-pyslice-getindices-success-with-exception
+title: "PySlice_GetIndices() returns 0 (success) with OverflowError set when a slice index does not fit in Py_ssize_t"
+priority: P3
+kind: wrong-error-contract
+module: rangeslice
+files: [Objects/sliceobject.c]
+functions: ["PySlice_GetIndices"]
+summary: |
+  PySlice_GetIndices() converts the step, start and stop with PyLong_AsSsize_t() but never
+  checks for the -1/OverflowError failure return. The -1 is used as an ordinary index, the
+  bounds checks that follow usually pass, and the function returns 0 ("success") with the
+  OverflowError still pending. For slice(None, None, 2**64) and length 10 it returns 0 with
+  (start, stop, step) = (9, -1, -1), i.e. a reversed slice nobody asked for, plus a pending
+  exception; for slice(2**64, 5) it returns 0 with start = -1 + 10 = 9. A caller that trusts
+  the documented contract continues with garbage indices and then trips
+  "SystemError: ... returned a result with an exception set" (release builds) or an
+  assertion (debug builds).
+likelihood: |
+  Needs a C extension that still uses the legacy PySlice_GetIndices() (it is in the limited
+  API/stable ABI and the docs only say "You probably do not want to use this function") and a
+  Python caller passing a slice part outside Py_ssize_t, e.g. obj[::2**64] or obj[2**64:].
+  Rare, but the result is silent wrong indices plus a stale exception, not a clean error.
+  The new CPython test helper _testlimitedcapi.slice_getindices (gh-158102, on main and 3.13-3.15
+  branches) asserts !PyErr_Occurred() after a successful call, so on a debug build of main
+  `_testlimitedcapi.slice_getindices(slice(None, None, 2**64), 10)` aborts with
+  "Assertion failed: (!PyErr_Occurred()), function slice_getindices, file slice.c, line 56".
+maybe_intended: |
+  The function is legacy ("XXX support long ints", sliceobject.c:190) and indices that do not
+  fit are expected to be rejected; returning success with an exception set is not a plausible
+  design choice. A very similar typo-level bug in the same function (checking r->step instead
+  of r->start, bpo-34229 / gh-78410) was fixed by maintainers as a "good catch".
+reproducer: |
+  import importlib.machinery, importlib.util, os, subprocess, sys, sysconfig, tempfile
+  SRC = r'''
+  #include <Python.h>
+  static PyObject *
+  getindices(PyObject *self, PyObject *args)
+  {
+      PyObject *slice;
+      Py_ssize_t length, start = -7, stop = -7, step = -7;
+      if (!PyArg_ParseTuple(args, "On", &slice, &length)) return NULL;
+      int ret = PySlice_GetIndices(slice, length, &start, &stop, &step);
+      PyObject *exc = PyErr_GetRaisedException();   /* clear it, report its type */
+      PyObject *name = exc ? PyUnicode_FromString(Py_TYPE(exc)->tp_name) : Py_NewRef(Py_None);
+      Py_XDECREF(exc);
+      return Py_BuildValue("iNnnn", ret, name, start, stop, step);
+  }
+  static PyMethodDef methods[] = {{"getindices", getindices, METH_VARARGS, NULL}, {NULL}};
+  static struct PyModuleDef mod = {PyModuleDef_HEAD_INIT, "_gi_repro", NULL, -1, methods};
+  PyMODINIT_FUNC PyInit__gi_repro(void) { return PyModule_Create(&mod); }
+  '''
+  d = tempfile.mkdtemp()
+  src = os.path.join(d, "gi.c")
+  out = os.path.join(d, "_gi_repro" + importlib.machinery.EXTENSION_SUFFIXES[0])
+  open(src, "w").write(SRC)
+  cc = (sysconfig.get_config_var("CC") or "cc").split()
+  incs = {sysconfig.get_paths()["include"], os.path.dirname(sysconfig.get_config_h_filename())}
+  link = ["-bundle", "-undefined", "dynamic_lookup"] if sys.platform == "darwin" else ["-shared", "-fPIC"]
+  subprocess.run(cc + [f"-I{i}" for i in incs] + link + [src, "-o", out], check=True)
+  spec = importlib.util.spec_from_file_location("_gi_repro", out)
+  m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+  r1 = m.getindices(slice(None, None, 2**64), 10)
+  r2 = m.getindices(slice(2**64, 5), 10)
+  print("PySlice_GetIndices(slice(None, None, 2**64), 10) ->", r1)
+  print("PySlice_GetIndices(slice(2**64, 5), 10)          ->", r2)
+  # Documented: -1 whenever an exception is set. Observed: 0 (success) with OverflowError set.
+  if r1[:2] == (0, "OverflowError") and r2[:2] == (0, "OverflowError"):
+      print("REPRODUCED rangeslice-pyslice-getindices-success-with-exception")
+expected: |
+  -1 with OverflowError set for both calls (the documented error return), never 0 with an
+  exception pending.
+observed: |
+  python3 3.14.7:      (0, 'OverflowError', 9, -1, -1) and (0, 'OverflowError', 9, 5, 1). REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0, assertions enabled): same output from the compiled helper; REPRODUCED.
+  Also on main: _testlimitedcapi.slice_getindices(slice(None, None, 2**64), 10) aborts with
+  "Assertion failed: (!PyErr_Occurred()), function slice_getindices, file slice.c, line 56".
+promised_by: |
+  Doc/c-api/slice.rst:38-40: "Returns 0 on success and -1 on error with no exception set
+  (unless one of the indices was not None and failed to be converted to an integer, in which
+  case -1 is returned with an exception set)."
+cause: |
+  Objects/sliceobject.c:195, :201 and :208 call PyLong_AsSsize_t() without the usual
+  `if (x == -1 && PyErr_Occurred()) return -1;`. The failure value -1 then flows into
+  `if (*start < 0) *start += length;` (:202, :209) and the bounds checks at :211-213, which
+  accept it. Same code on main (only the PySlice_New refactor differs in that file).
+possible_fix: |
+  After each PyLong_AsSsize_t() call add
+      if (*step == -1 && PyErr_Occurred()) return -1;   /* likewise for *start, *stop */
+  and add `getindices(slice(None, None, 2**64), 10)` / `getindices(slice(2**64, 5), 10)` cases
+  (expecting OverflowError) to Lib/test/test_capi/test_slice.py:test_getindices.
+duplicates:
+  issues:
+    - {number: 78410, state: closed, relation: "same function, different bug (bpo-34229, wrong field checked)", reason: "fixed"}
+    - {number: 158102, state: closed, relation: "added the slice C API tests (PR 158120); no overflow case for PySlice_GetIndices", reason: "tests merged"}
+  queries: ["PySlice_GetIndices", "PySlice_GetIndices overflow", "PySlice_GetIndices exception set",
+            "slice GetIndices OverflowError", "slice_getindices assertion", "PySlice_GetIndices returns 0",
+            "PySlice_GetIndices PyLong_AsSsize_t", "slice indices overflow exception set",
+            "PySlice_GetIndices long", "bpo-34229",
+            "gh search prs: PySlice_GetIndices", "bugforge README: no range/slice entries"]
+lean:
+  property: PyLean.RangeSlice.GetIndicesContract
+  theorem: PyLean.RangeSlice.getIndicesContract_refuted

@@ -1,0 +1,71 @@
+id: rangeslice-iter-setstate-fast-slow-mismatch
+title: "range_iterator.__setstate__ raises OverflowError for big states while longrange_iterator.__setstate__ clips them"
+priority: P4
+kind: fast-slow-path-mismatch
+module: rangeslice
+files: [Objects/rangeobject.c]
+functions: ["rangeiter_setstate", "longrangeiter_setstate"]
+summary: |
+  The two range iterator types disagree on out-of-range __setstate__ arguments. The PyLong
+  iterator (longrange_iterator) clips any int state into [0, len]. The C long iterator
+  (range_iterator) first converts with PyLong_AsLong() and raises OverflowError for any state
+  outside the C long range, so iter(range(10)).__setstate__(2**64) raises while
+  iter(range(2**64, 2**64 + 10)).__setstate__(2**64) silently exhausts the iterator; the same
+  holds for -2**64 (OverflowError vs. clipping to 0). Which iterator you get depends only on
+  whether start/stop/step and the length fit in a C long.
+likelihood: |
+  Very low. __setstate__ is a pickling hook; __reduce__ of both iterators produces
+  iter(range(...)) with no state, so real pickles never call it with an out-of-range value.
+  Only hand-written calls see the difference.
+maybe_intended: |
+  Probably tolerated. In the review of PR 141317 (gh-141312, which made longrangeiter_setstate
+  reject non-exact ints) Serhiy Storchaka wrote that rejecting non-exact ints in one iterator
+  and accepting them in the other is fine and that such differences are implementation
+  details ("they are never raised in real world"). The big-int case here is the same kind of
+  difference for exact ints. A maintainer would most likely not consider this worth a change,
+  except as a one-line consistency tweak (clip after PyLong_AsLongAndOverflow).
+reproducer: |
+  fast = iter(range(10))
+  slow = iter(range(2**64, 2**64 + 10))
+  try:
+      fast.__setstate__(2**64)
+      f = 'clipped'
+  except OverflowError as e:
+      f = 'OverflowError: %s' % e
+  slow.__setstate__(2**64)
+  print(type(fast).__name__, '__setstate__(2**64) ->', f)
+  print(type(slow).__name__, '__setstate__(2**64) -> clipped, remaining', slow.__length_hint__())
+  try:
+      iter(range(10)).__setstate__(-2**64)
+      g = 'clipped'
+  except OverflowError:
+      g = 'OverflowError'
+  s2 = iter(range(2**64, 2**64 + 10)); s2.__setstate__(-2**64)
+  print('__setstate__(-2**64):', g, 'vs clipped, next ->', next(s2))
+  if f.startswith('OverflowError') and slow.__length_hint__() == 0 and g == 'OverflowError':
+      print('REPRODUCED rangeslice-iter-setstate-fast-slow-mismatch')
+expected: |
+  Both iterator types clip an exact-int state into [0, len] (or both raise).
+observed: |
+  python3 3.14.7: range_iterator raises "OverflowError: Python int too large to convert to C
+  long"; longrange_iterator clips (remaining 0, resp. next() == 2**64). REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+promised_by: |
+  No documentation; the invariant is that the fast path (range_iterator) and the slow path
+  (longrange_iterator) of the same object type behave alike.
+cause: |
+  Objects/rangeobject.c:888 `long index = PyLong_AsLong(state);` propagates OverflowError
+  before the clipping at :891-895, whereas longrangeiter_setstate (:1042-1085) compares and
+  clips in PyLong arithmetic.
+possible_fix: |
+  Use PyLong_AsLongAndOverflow() in rangeiter_setstate and map overflow > 0 to r->len and
+  overflow < 0 to 0 before the existing clipping.
+duplicates:
+  issues:
+    - {number: 143197, state: closed, relation: "same functions, different bug (use-after-free)", reason: "fixed by GH-141317"}
+    - {number: 141312, state: closed, relation: "same functions, different bug (non-int state assertion)", reason: "fixed; review of PR 141317 says setstate differences between the two iterators are implementation details"}
+  queries: ["range iterator setstate", "longrange_iterator", "rangeiter_setstate", "range_iterator __setstate__",
+            "range iterator setstate OverflowError", "longrangeiter_setstate", "bugforge README: no range/slice entries"]
+lean:
+  property: PyLean.RangeSlice.SetstateClips
+  theorem: PyLean.RangeSlice.setstateClips_refuted
