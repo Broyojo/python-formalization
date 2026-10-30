@@ -9,6 +9,7 @@ import PyLean.MathInt.Pow
 import PyLean.MathInt.Comb
 import PyLean.MathInt.Factorial
 import PyLean.MathInt.Isqrt
+import PyLean.MathInt.Bytes
 
 /-!
 Integer functions of `math` (`Modules/mathmodule.c`) and the related `int`
@@ -63,6 +64,28 @@ def entries : List Entry := [
     statement := "factorial(n) raises ValueError for n < 0 and OverflowError for n > LONG_MAX."
     source := "math.factorial docs; mathmodule.c:2025-2039", status := .proven
     prop := ``FactorialArgErrors, thm := some ``factorialArgErrors_proven },
+  { id := "mathint-to-bytes-exact", pyFile := "Objects/longobject.c"
+    pyFns := ["int.to_bytes", "_PyLong_AsByteArray"]
+    statement := "For 0 <= n <= PY_SSIZE_T_MAX and a valid byteorder, v.to_bytes(n, byteorder, signed=s) returns n bytes holding v mod 256**n when v fits (0 <= v < 256**n, or -256**n/2 <= v < 256**n/2 if signed) and raises OverflowError otherwise."
+    source := "int.to_bytes docs: \"An OverflowError is raised if the integer is not representable with the given number of bytes\"", status := .proven
+    prop := ``ToBytesExact, thm := some ``toBytesExact_proven
+    notes := "Models the 30-bit digit loop, the two's-complement carry, the bit counting of the top digit, the straggler byte and the sign-bit check of _PyLong_AsByteArray." },
+  { id := "mathint-from-bytes-value", pyFile := "Objects/longobject.c"
+    pyFns := ["int.from_bytes", "_PyLong_FromByteArray"]
+    statement := "int.from_bytes(bs, byteorder, signed=s) is the unsigned value of bs in that byte order, minus 256**len(bs) when s and the top bit is set."
+    source := "int.from_bytes docs", status := .proven
+    prop := ``FromBytesValue, thm := some ``fromBytesValue_proven
+    notes := "Includes the insignificant-leading-byte trimming and its +1 bump for negative values." },
+  { id := "mathint-bytes-roundtrip", pyFile := "Objects/longobject.c"
+    pyFns := ["int.to_bytes", "int.from_bytes"]
+    statement := "If v fits in n bytes, int.from_bytes(v.to_bytes(n, order, signed=s), order, signed=s) == v."
+    source := "invariant: round trip", status := .proven
+    prop := ``BytesRoundTrip, thm := some ``bytesRoundTrip_proven },
+  { id := "mathint-bytes-arg-errors", pyFile := "Objects/longobject.c"
+    pyFns := ["int.to_bytes", "int.from_bytes"]
+    statement := "A byteorder other than 'little'/'big' raises ValueError in to_bytes and from_bytes; a negative length raises ValueError; a length outside Py_ssize_t raises OverflowError."
+    source := "int.to_bytes / int.from_bytes docs; longobject.c:6306-6324", status := .proven
+    prop := ``BytesArgErrors, thm := some ``bytesArgErrors_proven },
   { id := "mathint-divmod-floor", pyFile := "Objects/longobject.c"
     pyFns := ["divmod", "l_divmod", "fast_floor_div", "fast_mod", "_pylong.int_divmod"]
     statement := "For w != 0, divmod(v, w) returns (q, r) with q*w + r == v, r of the sign of w and abs(r) < abs(w), on the single-digit fast path, the _pylong path and the long_divrem path; w == 0 raises ZeroDivisionError."

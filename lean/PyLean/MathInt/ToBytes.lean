@@ -374,4 +374,205 @@ theorem asByteArray_nonneg (V n : Nat) (signed : Bool) :
             have : 2 * ((V : Nat) : Int) < 2 ^ (8 * n) := by exact_mod_cast hfit.2 rfl
             simp; omega
 
+theorem twos_facts (V : Nat) (hV : 1 ≤ V) :
+    effVal true (digitsOf V) 1 + V = 2 ^ (30 * digitCount V) ∧
+    effBits true (digitsOf V) 1 = bitLength (V - 1) ∧ bitLength (V - 1) ≤ 30 * digitCount V := by
+  obtain ⟨hlen, hdig, hval⟩ := digitsOf_spec V
+  obtain ⟨hlt, hK⟩ := digitCount_spec V
+  obtain ⟨hK1, htop⟩ := hK hV
+  have h1 := effVal_twos (digitsOf V) 1 hdig (by decide)
+  have h2 := effVal_lt true (digitsOf V) 1 hdig (by decide)
+  rw [hlen, hval] at h1; rw [hlen] at h2
+  have hE : effVal true (digitsOf V) 1 + V = 2 ^ (30 * digitCount V) := by
+    rcases Nat.eq_zero_or_pos (effCarry true (digitsOf V) 1) with hc | hc
+    · rw [hc] at h1; omega
+    · have := Nat.mul_le_mul_left (2 ^ (30 * digitCount V)) hc; omega
+  refine ⟨hE, ?_, ?_⟩
+  · have hne : digitsOf V ≠ [] := by intro h; rw [h] at hlen; simp at hlen; omega
+    rw [effBits_twos _ 1 hne hdig (by decide), hlen,
+      show 2 ^ (30 * digitCount V) - 1 - effVal true (digitsOf V) 1 = V - 1 by omega]
+    have : 30 * (digitCount V - 1) ≤ bitLength (V - 1) := by
+      by_cases hk : digitCount V - 1 = 0
+      · rw [hk]; omega
+      · have := (two_pow_le_iff_lt_bitLength (V - 1) (30 * (digitCount V - 1) - 1) (by
+          have := Nat.one_le_two_pow (n := 30 * (digitCount V - 1)); have : 2 ≤ 2 ^ (30 * (digitCount V - 1)) := by
+            calc 2 = 2 ^ 1 := rfl
+              _ ≤ _ := Nat.pow_le_pow_right (by decide) (by omega)
+          omega)).mp (by
+          have : 2 ^ (30 * (digitCount V - 1) - 1) * 2 = 2 ^ (30 * (digitCount V - 1)) := by
+            rw [← Nat.pow_succ]; congr 1; omega
+          omega)
+        omega
+    omega
+  · exact bitLength_le_of_lt' (by omega)
+
+/-- `_PyLong_AsByteArray` for `v < 0` with `is_signed`. -/
+theorem asByteArray_neg (V n : Nat) (hV : 1 ≤ V) :
+    BytesOutcome (-(V : Int)) n true (asByteArray (-(V : Int)) n true) := by
+  obtain ⟨_, hdig, _⟩ := digitsOf_spec V
+  obtain ⟨hE, hLb, hL30⟩ := twos_facts V hV
+  have loop := asByteArrayLoop_spec n true (digitsOf V) ⟨[], 0, 0, 1⟩ hdig (by decide)
+    (by decide) (by decide) (by simp)
+  simp only [List.length_nil, Nat.zero_add, Nat.pow_zero, Nat.one_mul, List.nil_append] at loop
+  rw [hLb] at loop
+  generalize effVal true (digitsOf V) 1 = E at *
+  generalize hK : 30 * digitCount V = K at *
+  generalize hLdef : bitLength (V - 1) = L at *
+  obtain ⟨hVL, hVL2, hV0⟩ := bitLength_facts (V - 1)
+  rw [hLdef] at hVL hVL2 hV0
+  -- E mod 2^L = 2^L - V
+  have hEmod : E % 2 ^ L = 2 ^ L - V := by
+    have hsplit : 2 ^ K = 2 ^ L * 2 ^ (K - L) := by rw [← Nat.pow_add]; congr 1; omega
+    have h1 : 1 ≤ 2 ^ (K - L) := Nat.one_le_two_pow
+    have : E = (2 ^ L - V) + 2 ^ L * (2 ^ (K - L) - 1) := by
+      rw [Nat.mul_sub, Nat.mul_one, ← hsplit]
+      have : 2 ^ L ≤ 2 ^ K := Nat.pow_le_pow_right (by decide) (by omega)
+      omega
+    rw [this, Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt (by omega)]
+  unfold asByteArray
+  have hd : decide (-(V : Int) < 0) = true := by simp; omega
+  simp only [not_true_eq_false, and_false, ite_false, hd, Int.natAbs_neg,
+    Int.natAbs_natCast, ite_true]
+  rw [loop]
+  have hq : L = 8 * (L / 8) + L % 8 := by omega
+  -- the target value
+  have htarget : ∀ m : Nat, 2 * V ≤ 2 ^ m → (-(V : Int)) % 2 ^ m = ((2 ^ m - V : Nat) : Int) := by
+    intro m hm
+    have hVm : V ≤ 2 ^ m := by omega
+    have hc : ((V : Nat) : Int) ≤ ((2 ^ m : Nat) : Int) := by exact_mod_cast hVm
+    push_cast at hc
+    have e : -(V : Int) = ((2 : Int) ^ m - V) + (-1) * (2 : Int) ^ m := by omega
+    rw [e, Int.add_mul_emod_self_right, Int.emod_eq_of_lt (by omega) (by omega),
+      Int.ofNat_sub hVm]
+    push_cast; rfl
+  unfold BytesOutcome FitsBytes
+  simp only [ite_true]
+  by_cases hov : L / 8 > n
+  · simp only [hov, ite_true]
+    right; refine ⟨⟨_, rfl, rfl⟩, ?_⟩
+    have hV1 : 1 ≤ V - 1 := Classical.byContradiction fun h => by have := hV0 (by omega); omega
+    have := (hVL2 hV1).1
+    have : 2 ^ (8 * n) ≤ 2 ^ (L - 1) := Nat.pow_le_pow_right (by decide) (by omega)
+    have : ((2 ^ (8 * n) : Nat) : Int) < 2 * (V : Int) := by exact_mod_cast (by omega)
+    push_cast at this; omega
+  · simp only [hov, ite_false]
+    have hqn : L / 8 ≤ n := by omega
+    generalize hq8 : L / 8 = q at *
+    generalize hr8 : L % 8 = r at *
+    have hr7 : r < 8 := by omega
+    have h2L : 256 ^ q * 2 ^ r = 2 ^ L := by rw [pow256, ← Nat.pow_add]; congr 1; omega
+    have hlow : E % 256 ^ q + 256 ^ q * ((E / 256 ^ q) % 2 ^ r) = 2 ^ L - V := by
+      rw [← Nat.mod_mul, h2L, hEmod]
+    have hVle : V ≤ 2 ^ L := by omega
+    have hq1 : 256 ^ (q + 1) = 256 ^ q * 256 := Nat.pow_succ 256 q
+    have hpr : 2 ^ r ≤ 256 := by
+      calc 2 ^ r ≤ 2 ^ 8 := Nat.pow_le_pow_right (by decide) (by omega)
+        _ = 256 := rfl
+    have hneg : ∀ m, (0 : Int) ≤ ((2 ^ m - V : Nat) : Int) := fun m => by omega
+    by_cases hr0 : r > 0
+    · simp only [hr0, ite_true, lowBytes_length]
+      by_cases hfull : q ≥ n
+      · simp only [hfull, ite_true]
+        right; refine ⟨⟨_, rfl, rfl⟩, ?_⟩
+        have hV1 : 1 ≤ V - 1 := Classical.byContradiction fun h => by have := hV0 (by omega); omega
+        have := (hVL2 hV1).1
+        have : 2 ^ (8 * n) ≤ 2 ^ (L - 1) := Nat.pow_le_pow_right (by decide) (by omega)
+        have : ((2 ^ (8 * n) : Nat) : Int) < 2 * (V : Int) := by exact_mod_cast (by omega)
+        push_cast at this; omega
+      · simp only [hfull, ite_false]
+        left
+        have hfit : 2 * V ≤ 2 ^ (8 * n) := by
+          have : 2 ^ (L + 1) ≤ 2 ^ (8 * n) := Nat.pow_le_pow_right (by decide) (by omega)
+          rw [Nat.pow_succ] at this; omega
+        have hLq : 2 ^ L ≤ 256 ^ (q + 1) := by
+          rw [pow256]; exact Nat.pow_le_pow_right (by decide) (by omega)
+        have hqn2 : 256 ^ (q + 1) ≤ 2 ^ (8 * n) := by
+          rw [pow256]; exact Nat.pow_le_pow_right (by decide) (by omega)
+        refine ⟨⟨_, rfl, ?_, ?_, ?_⟩, ?_⟩
+        · simp [lowBytes_length]; omega
+        · exact allBytes_append (allBytes_append (lowBytes_all _ _)
+            (fun b hb => by simp at hb; rw [hb]; exact Nat.mod_lt _ (by decide)))
+            (allBytes_replicate _ _ (by decide))
+        · rw [htarget _ hfit, bytesVal_append, bytesVal_append, bytesVal_lowBytes]
+          simp only [bytesVal, lowBytes_length, Nat.mul_zero, Nat.add_zero, List.length_append,
+            List.length_singleton]
+          rw [straggler _ r hr7]
+          have hrep := bytesVal_replicate_255 (n - (q + 1))
+          have e1 : 256 ^ q * ((E / 256 ^ q) % 2 ^ r + (256 - 2 ^ r)) =
+              256 ^ q * ((E / 256 ^ q) % 2 ^ r) + (256 ^ (q + 1) - 2 ^ L) := by
+            rw [Nat.mul_add, Nat.mul_sub, ← h2L, hq1]
+          have e2 : 256 ^ (q + 1) * bytesVal (List.replicate (n - (q + 1)) 255) =
+              2 ^ (8 * n) - 256 ^ (q + 1) := by
+            rw [show bytesVal (List.replicate (n - (q + 1)) 255) = 256 ^ (n - (q + 1)) - 1 by omega,
+              Nat.mul_sub, Nat.mul_one, ← Nat.pow_add, show q + 1 + (n - (q + 1)) = n by omega,
+              pow256]
+          rw [e1, e2]
+          have : ((E % 256 ^ q + (256 ^ q * (E / 256 ^ q % 2 ^ r) + (256 ^ (q + 1) - 2 ^ L)) +
+              (2 ^ (8 * n) - 256 ^ (q + 1)) : Nat) : Int) = ((2 ^ (8 * n) - V : Nat) : Int) := by
+            congr 1; omega
+          exact this
+        · have : 2 * (V : Int) ≤ 2 ^ (8 * n) := by exact_mod_cast hfit
+          omega
+    · have hr00 : r = 0 := by omega
+      subst hr00
+      simp only [Nat.lt_irrefl, ite_false, lowBytes_length, and_true]
+      have hLq : 2 ^ L = 256 ^ q := by rw [pow256]; congr 1 <;> omega
+      have hEq : E % 256 ^ q = 2 ^ L - V := by rw [← hLq, hEmod]
+      by_cases hqn' : q = n
+      · subst hqn'
+        simp only [ite_true]
+        by_cases hq0 : q = 0
+        · subst hq0
+          simp only [Nat.lt_irrefl, false_and, decide_false, Bool.false_eq_true, ite_false]
+          right; refine ⟨⟨_, rfl, rfl⟩, ?_⟩
+          have : L = 0 := by omega
+          subst this
+          have : V = 1 := by simp at hVL; omega
+          subst this; simp
+        · obtain ⟨k, rfl⟩ : ∃ k, q = k + 1 := ⟨q - 1, by omega⟩
+          have hlast : (lowBytes E (k + 1)).getLastD 0 = (2 ^ L - V) / 256 ^ k := by
+            rw [getLastD_lowBytes, ← Nat.mod_mul_right_div_self, ← Nat.pow_succ, hEq]
+          have hk : 2 ^ (L - 1) = 256 ^ k * 128 := by
+            rw [pow256, show L - 1 = 8 * k + 7 by omega, Nat.pow_add]
+          have hkL : 2 ^ L = 256 ^ k * 256 := by rw [hLq, Nat.pow_succ]
+          by_cases hfit : 2 * V ≤ 2 ^ (8 * (k + 1))
+          · have hge : (2 ^ L - V) / 256 ^ k ≥ 128 :=
+              (Nat.le_div_iff_mul_le (Nat.pow_pos (by decide))).mpr (by
+                rw [Nat.mul_comm]; rw [pow256] at hLq; omega)
+            simp only [show k + 1 > 0 by omega, hlast, hge, and_self, decide_true, ite_true]
+            left
+            refine ⟨⟨_, rfl, lowBytes_length _ _, lowBytes_all _ _, ?_⟩, ?_⟩
+            · rw [htarget _ hfit, bytesVal_lowBytes, hEq, hLq, pow256]
+            · have : 2 * (V : Int) ≤ 2 ^ (8 * (k + 1)) := by exact_mod_cast hfit
+              omega
+          · have hlt : (2 ^ L - V) / 256 ^ k < 128 :=
+              (Nat.div_lt_iff_lt_mul (Nat.pow_pos (by decide))).mpr (by
+                rw [Nat.mul_comm]; rw [pow256] at hLq; omega)
+            simp only [show k + 1 > 0 by omega, hlast, show ¬ ((2 ^ L - V) / 256 ^ k ≥ 128) by omega,
+              and_false, decide_false, Bool.false_eq_true, ite_false]
+            right; refine ⟨⟨_, rfl, rfl⟩, ?_⟩
+            have : 2 ^ (8 * (k + 1)) < 2 * (V : Int) := by exact_mod_cast (by omega)
+            omega
+      · simp only [hqn', ite_false]
+        left
+        have hfit : 2 * V ≤ 2 ^ (8 * n) := by
+          have : 2 ^ (L + 1) ≤ 2 ^ (8 * n) := Nat.pow_le_pow_right (by decide) (by omega)
+          rw [Nat.pow_succ] at this; omega
+        have hqn2 : 256 ^ q ≤ 2 ^ (8 * n) := by
+          rw [pow256]; exact Nat.pow_le_pow_right (by decide) (by omega)
+        refine ⟨⟨_, rfl, ?_, ?_, ?_⟩, ?_⟩
+        · simp [lowBytes_length]; omega
+        · exact allBytes_append (lowBytes_all _ _) (allBytes_replicate _ _ (by decide))
+        · rw [htarget _ hfit, bytesVal_append, bytesVal_lowBytes, lowBytes_length, hEq]
+          have hrep := bytesVal_replicate_255 (n - q)
+          have e2 : 256 ^ q * bytesVal (List.replicate (n - q) 255) = 2 ^ (8 * n) - 256 ^ q := by
+            rw [show bytesVal (List.replicate (n - q) 255) = 256 ^ (n - q) - 1 by omega,
+              Nat.mul_sub, Nat.mul_one, ← Nat.pow_add, show q + (n - q) = n by omega, pow256]
+          rw [e2]
+          have : (((2 ^ L - V) + (2 ^ (8 * n) - 256 ^ q) : Nat) : Int) = ((2 ^ (8 * n) - V : Nat) : Int) := by
+            congr 1; omega
+          exact this
+        · have : 2 * (V : Int) ≤ 2 ^ (8 * n) := by exact_mod_cast hfit
+          omega
+
 end PyLean.MathInt
