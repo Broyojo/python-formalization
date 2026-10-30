@@ -1,0 +1,79 @@
+id: sequences-insert-huge-index-vs-slice
+title: "list.insert(i, x) raises OverflowError for |i| >= 2**63 although it is documented as equivalent to s[i:i] = [x], which clips"
+priority: P4
+kind: doc-violation
+module: sequences
+files: [Objects/listobject.c, Objects/clinic/listobject.c.h, Modules/arraymodule.c]
+functions: ["list_insert_impl", "ins1", "list_ass_subscript_lock_held", "array_array_insert_impl"]
+summary: |
+  The docs define sequence.insert(index, value) as "equivalent to writing
+  sequence[index:index] = [value]" (Doc/library/stdtypes.rst:1336-1343). Slice bounds are
+  clipped for any int (PySlice_Unpack saturates to Py_ssize_t), so l[2**63:2**63] = [9]
+  appends and l[-2**63-1:-2**63-1] = [9] prepends. list.insert converts its index with the
+  Argument Clinic Py_ssize_t converter and raises "OverflowError: Python int too large to
+  convert to C ssize_t" for the same indices, before the identical clipping in ins1().
+  array.array.insert and collections.deque.insert behave like list.insert.
+  Lean: InsertIsSliceAssign (list.insert(i, x) == (l[i:i] = [x]) for every int i) is refuted
+  at i = 2**63; InsertIsSliceAssignSsize (the same for i inside Py_ssize_t) and InsertAgree
+  (list/array/deque insert agree for every int i, deque's documented full-deque IndexError
+  aside) are proven.
+likelihood: |
+  Very low: it needs an index beyond +-2**63 - 1. It matters only to code that relies on the
+  documented clipping with sys.maxsize-style sentinels computed as larger ints.
+maybe_intended: |
+  Most likely tolerated: Py_ssize_t limits on argument conversion are a normal CPython
+  implementation limit, and gh-143420 (2026) treated the slice equivalence as the spec for the
+  clipping of in-range indices without discussing huge ones. A maintainer would probably not
+  change the converter; at most a doc note. Recorded because the documented equivalence is
+  exact and the property is otherwise proven.
+reproducer: |
+  from array import array
+  from collections import deque
+  def run(f):
+      try:
+          return repr(f())
+      except Exception as e:
+          return '%s: %s' % (type(e).__name__, e)
+  l1 = [1, 2, 3]
+  r1 = run(lambda: l1.insert(2**63, 9))
+  l2 = [1, 2, 3]
+  l2[2**63:2**63] = [9]
+  l3 = [1, 2, 3]
+  l3[-2**63 - 1:-2**63 - 1] = [9]
+  r4 = run(lambda: l3.copy().insert(-2**63 - 1, 9))
+  ra = run(lambda: array('b', [1, 2, 3]).insert(2**63, 9))
+  rd = run(lambda: deque([1, 2, 3]).insert(2**63, 9))
+  print('l.insert(2**63, 9)         ->', r1)
+  print('l[2**63:2**63] = [9]       ->', l2)
+  print('l[-2**63-1:-2**63-1] = [9] ->', l3, '| insert:', r4)
+  print('array.insert / deque.insert ->', ra, '|', rd)
+  if r1.startswith('OverflowError') and l2 == [1, 2, 3, 9] and l3 == [9, 1, 2, 3]:
+      print('REPRODUCED sequences-insert-huge-index-vs-slice')
+expected: |
+  l.insert(2**63, 9) appends (as l[2**63:2**63] = [9] does) or the docs mention the
+  Py_ssize_t limit.
+observed: |
+  python3 3.14.7: insert raises "OverflowError: Python int too large to convert to C ssize_t"
+  (list, array and deque alike); the slice assignments append / prepend. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Doc/library/stdtypes.rst:1336-1343 ("This is equivalent to writing
+  sequence[index:index] = [value]").
+cause: |
+  Objects/clinic/listobject.c.h (list.insert: `index: Py_ssize_t`, PyLong_AsSsize_t raises
+  OverflowError) before list_insert_impl / ins1 (Objects/listobject.c:1128-1135, 476-499);
+  slice assignment goes through PySlice_Unpack (Objects/sliceobject.c), which saturates with
+  PyNumber_AsSsize_t(v, NULL), then the same clipping (list_ass_subscript_lock_held,
+  Objects/listobject.c:3688-3850).
+possible_fix: |
+  Either document that the index must fit in Py_ssize_t, or convert the index with
+  `slice_index`/_PyEval_SliceIndex (saturating, as list.index already does for start/stop).
+duplicates:
+  issues:
+    - {number: 143420, state: closed, relation: "clarified insert clipping via the slice equivalence (docs); does not cover huge indices"}
+  queries: ["list.insert OverflowError", "insert index sys.maxsize", "list insert huge index",
+            "insert equivalent slice assignment", "list.insert", "insert OverflowError",
+            "array.array OverflowError insert", "bugforge README: no list.insert entries"]
+lean:
+  property: PyLean.Sequences.InsertIsSliceAssign
+  theorem: PyLean.Sequences.insertIsSliceAssign_refuted
