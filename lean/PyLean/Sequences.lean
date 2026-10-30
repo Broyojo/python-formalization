@@ -9,6 +9,7 @@ import PyLean.Sequences.SliceAssign
 import PyLean.Sequences.ArraySlice
 import PyLean.Sequences.ArrayRange
 import PyLean.Sequences.DequeRepeat
+import PyLean.Sequences.Reverse
 
 /-!
 `collections.deque` (`Modules/_collectionsmodule.c`), `list` (`Objects/listobject.c`) and
@@ -121,7 +122,12 @@ def entries : List Entry := [
     pyFns := ["deque_copy_impl", "deque_concat_lock_held"]
     statement := "For every deque d and deque other: d.copy() has the same items and maxlen; d + other holds the last d.maxlen items of list(d) + list(other) with d's maxlen; results keep the invariant."
     source := "Doc/library/collections.rst:503-507, 599-600", status := .proven
-    prop := ``DequeCopyConcat, thm := some ``dequeCopyConcat_proven }
+    prop := ``DequeCopyConcat, thm := some ``dequeCopyConcat_proven },
+  { id := "sequences-deque-reverse", pyFile := "Modules/_collectionsmodule.c"
+    pyFns := ["deque_reverse_impl"]
+    statement := "For every deque with the layout invariant, reverse() swaps through the left and right block cursors len // 2 times, touching only used slots, and leaves exactly the reversed items with the layout and maxlen unchanged."
+    source := "Doc/library/collections.rst:567-571", status := .proven
+    prop := ``DequeReverse, thm := some ``dequeReverse_proven }
 ]
 
 end PyLean.Sequences
