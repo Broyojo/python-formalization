@@ -1,0 +1,79 @@
+id: sequences-deque-imul-maxlen-memoryerror
+title: "deque *= n / deque * n raise MemoryError for a bounded deque of 2+ items although the result has at most maxlen items"
+priority: P4
+kind: fast-slow-path-mismatch
+module: sequences
+files: [Modules/_collectionsmodule.c]
+functions: ["deque_inplace_repeat_lock_held", "deque_inplace_repeat", "deque_repeat"]
+summary: |
+  For a bounded deque, d *= n keeps the last maxlen items of list(d) * n, and the code
+  deliberately shortens the work to ceil(maxlen / len(d)) repetitions (bpo-29634). But for
+  len(d) >= 2 the overflow guard `size > PY_SSIZE_T_MAX / n` runs *before* that maxlen
+  reduction, so a large n raises MemoryError even though the result has at most maxlen items
+  and no large allocation is ever needed. The single-item fast path applies maxlen first and
+  succeeds: deque([1], maxlen=3) *= 2**62 gives deque([1, 1, 1]), while
+  deque([1, 2], maxlen=3) *= 2**62 (and deque([1, 2], maxlen=3) * 2**62) raise MemoryError.
+  Small factors work: deque([1, 2], maxlen=3) * 4 == deque([2, 1, 2], maxlen=3).
+  Lean: DequeIRepeat (keepLast maxlen (items * n) for every bounded deque) is refuted by this
+  input; DequeIRepeatChecked (same statement when len(d) <= 1 or len(d) * n <= sys.maxsize)
+  is proven, including the ceil(maxlen / size) reduction and the block-filling fast path.
+likelihood: |
+  Low. It needs a bounded deque and a repeat factor above sys.maxsize // len(d) (about 4.6e18
+  for two items). Such factors are only plausible as "repeat a lot, maxlen will cut it"
+  idioms, which work for one-item deques and fail for longer ones.
+maybe_intended: |
+  Probably not intended: the guard only exists to make the following `n * size` product
+  safe, and bpo-29634 added the maxlen shortcut precisely so that big factors on bounded
+  deques are cheap. A maintainer would likely accept moving the maxlen reduction before the
+  guard (or computing it without the product), but would also consider it low priority.
+reproducer: |
+  from collections import deque
+  def run(f):
+      try:
+          return repr(f())
+      except Exception as e:
+          return type(e).__name__
+  d1 = deque([1], maxlen=3)
+  r1 = run(lambda: d1.__imul__(2**62))
+  d2 = deque([1, 2], maxlen=3)
+  r2 = run(lambda: d2.__imul__(2**62))
+  r3 = run(lambda: deque([1, 2], maxlen=3) * 2**62)
+  small = deque([1, 2], maxlen=3) * 4
+  print('deque([1], maxlen=3) *= 2**62    ->', r1)
+  print('deque([1, 2], maxlen=3) *= 2**62 ->', r2)
+  print('deque([1, 2], maxlen=3) * 2**62  ->', r3)
+  print('deque([1, 2], maxlen=3) * 4      ->', small, '(expected tail of [1, 2] * n:', ([1, 2] * 4)[-3:], ')')
+  if r1.startswith('deque([1, 1, 1]') and r2 == 'MemoryError' and r3 == 'MemoryError' \
+          and list(small) == ([1, 2] * 4)[-3:]:
+      print('REPRODUCED sequences-deque-imul-maxlen-memoryerror')
+expected: |
+  deque([1, 2], maxlen=3) *= 2**62 leaves the last three items of [1, 2] * 2**62, i.e.
+  deque([2, 1, 2], maxlen=3), exactly as for small even factors.
+observed: |
+  python3 3.14.7: one-item deque -> deque([1, 1, 1], maxlen=3); two-item deque *= and * ->
+  MemoryError. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical (the same code is at
+  Modules/_collectionsmodule.c:883-893 on main). REPRODUCED.
+promised_by: |
+  Doc/library/collections.rst:475-478 (bounded deques discard items from the opposite end
+  instead of growing), :599-600 (deques support __mul__ and __imul__), and the code's own
+  single-item path, which applies maxlen before repeating.
+cause: |
+  Modules/_collectionsmodule.c:871-873 (3.14.7) `if ((size_t)size > PY_SSIZE_T_MAX /
+  (size_t)n) return PyErr_NoMemory();` precedes the reduction at :879-881
+  `if (deque->maxlen >= 0 && n * size > deque->maxlen) n = (deque->maxlen + size - 1) / size;`.
+  The size == 1 branch (:836-869) clamps n to maxlen first (:840-841). deque_repeat (:907-924)
+  copies and calls the same function, so `*` is affected too.
+possible_fix: |
+  Apply maxlen before the guard, without the product, e.g.
+  `if (deque->maxlen >= 0 && n > (deque->maxlen + size - 1) / size) n = (deque->maxlen + size - 1) / size;`
+  and only then `if ((size_t)size > PY_SSIZE_T_MAX / (size_t)n) return PyErr_NoMemory();`.
+duplicates:
+  issues:
+    - {number: 73820, state: closed, relation: "introduced the maxlen reduction (bpo-29634, PR 255) after the existing guard; not this bug"}
+  queries: ["deque maxlen MemoryError", "deque imul", "deque repeat maxlen", "deque __imul__ maxlen",
+            "deque inplace repeat", "deque multiplication", "deque mul maxlen", "deque_inplace_repeat",
+            "deque MemoryError", "bpo-29634", "bugforge README: no deque entries"]
+lean:
+  property: PyLean.Sequences.DequeIRepeat
+  theorem: PyLean.Sequences.dequeIRepeat_refuted

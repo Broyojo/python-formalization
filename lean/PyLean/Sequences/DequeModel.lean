@@ -18,7 +18,7 @@ pointer.
 
 The record keeps `leftindex`, `rightindex`, the items and `maxlen` exactly
 as the C struct does (`maxlen = -1` when unbounded); `Deque.WF` is the
-layout invariant documented at _collectionsmodule.c:44-66, which every
+layout invariant documented at _collectionsmodule.c:103-125, which every
 operation preserves. `state` (the mutation counter) and the free-block list
 only matter for mutation during comparison and for allocation, both out of
 scope.
@@ -43,7 +43,7 @@ namespace Deque
 
 def size (d : Deque) : Int := d.items.length
 
-/-- The layout invariant, _collectionsmodule.c:44-66: both indices in
+/-- The layout invariant, _collectionsmodule.c:103-125: both indices in
 `[0, BLOCKLEN)`, `(leftindex + len - 1) % BLOCKLEN == rightindex`, an empty
 deque has `leftindex == rightindex + 1` (in one block), and `maxlen` is `-1`
 or bounds the length. -/
@@ -75,10 +75,10 @@ def write (d : Deque) (b j v : Int) : Py Deque :=
     if 0 ≤ j ∧ j < 64 ∧ 0 ≤ k ∧ k < d.size then .ok { d with items := d.items.set k.toNat v }
     else .error (cUB "unused slot")
 
-/-- `deque_new` (_collectionsmodule.c:143-174): one block, centred, unbounded. -/
+/-- `deque_new` (_collectionsmodule.c:202-233): one block, centred, unbounded. -/
 def new : Deque := ⟨CENTER + 1, CENTER, [], -1⟩
 
-/-- `deque_pop_impl` (_collectionsmodule.c:185-219). -/
+/-- `deque_pop_impl` (_collectionsmodule.c:244-278). -/
 def pop (d : Deque) : Py (Int × Deque) :=
   if d.size = 0 then .error (.indexError "pop from an empty deque")
   else
@@ -90,7 +90,7 @@ def pop (d : Deque) : Py (Int × Deque) :=
       else .ok (item, { d with items, left := CENTER + 1, right := CENTER })
     else .ok (item, { d with items, right })
 
-/-- `deque_popleft_impl` (_collectionsmodule.c:230-265). -/
+/-- `deque_popleft_impl` (_collectionsmodule.c:289-324). -/
 def popleft (d : Deque) : Py (Int × Deque) :=
   if d.size = 0 then .error (.indexError "pop from an empty deque")
   else
@@ -103,7 +103,7 @@ def popleft (d : Deque) : Py (Int × Deque) :=
     else .ok (item, { d with items, left })
 
 /-- `NEEDS_TRIM(deque, maxlen)`: `(size_t)maxlen < (size_t)len`, i.e.
-`0 <= maxlen < len` (_collectionsmodule.c:279). -/
+`0 <= maxlen < len` (_collectionsmodule.c:338). -/
 def needsTrim (d : Deque) (maxlen : Int) : Bool := decide (0 ≤ maxlen ∧ maxlen < d.size)
 
 /-- Drop the popped item of a trim (the C code `Py_DECREF`s it). The trims
@@ -113,24 +113,24 @@ def snd' (r : Py (Int × Deque)) (d : Deque) : Deque :=
   | .ok (_, d') => d'
   | .error _ => d
 
-/-- `deque_append_lock_held` (_collectionsmodule.c:281-305): a new right
+/-- `deque_append_lock_held` (_collectionsmodule.c:340-364): a new right
 block when `rightindex == BLOCKLEN - 1`, store, then trim from the left. -/
 def appendM (d : Deque) (x maxlen : Int) : Deque :=
   let right := if d.right = 64 - 1 then -1 else d.right
   let d := { d with items := d.items ++ [x], right := right + 1 }
   if d.needsTrim maxlen then snd' d.popleft d else d
 
-/-- `deque_appendleft_lock_held` (_collectionsmodule.c:327-352). -/
+/-- `deque_appendleft_lock_held` (_collectionsmodule.c:386-411). -/
 def appendleftM (d : Deque) (x maxlen : Int) : Deque :=
   let left := if d.left = 0 then 64 else d.left
   let d := { d with items := x :: d.items, left := left - 1 }
   if d.needsTrim maxlen then snd' d.pop d else d
 
-/-- `d.append(x)` / `d.appendleft(x)` (_collectionsmodule.c:318-325, 365-372). -/
+/-- `d.append(x)` / `d.appendleft(x)` (_collectionsmodule.c:377-384, 424-431). -/
 def append (d : Deque) (x : Int) : Deque := d.appendM x d.maxlen
 def appendleft (d : Deque) (x : Int) : Deque := d.appendleftM x d.maxlen
 
-/-- `deque_extend_impl` (_collectionsmodule.c:415-457) for an iterable other
+/-- `deque_extend_impl` (_collectionsmodule.c:474-516) for an iterable other
 than the deque itself, yielding `xs`: nothing at all when `maxlen == 0`
 (`consume_iterator`), otherwise the "start filling from the left" heuristic
 on an empty deque and one `deque_append_lock_held` per item. -/
@@ -140,7 +140,7 @@ def extend (d : Deque) (xs : List Int) : Deque :=
     let d := if d.size = 0 then { d with left := 1, right := 0 } else d
     xs.foldl (fun d x => d.appendM x d.maxlen) d
 
-/-- `deque_extendleft_impl` (_collectionsmodule.c:470-513). -/
+/-- `deque_extendleft_impl` (_collectionsmodule.c:529-572). -/
 def extendleft (d : Deque) (xs : List Int) : Deque :=
   if d.maxlen = 0 then d
   else
@@ -148,15 +148,15 @@ def extendleft (d : Deque) (xs : List Int) : Deque :=
     xs.foldl (fun d x => d.appendleftM x d.maxlen) d
 
 /-- `d.extend(d)` / `d.extendleft(d)` / `d += d`: `PySequence_List(d)` first
-(_collectionsmodule.c:423-432, 478-487). -/
+(_collectionsmodule.c:482-491, 537-546). -/
 def extendSelf (d : Deque) : Deque := d.extend d.items
 def extendleftSelf (d : Deque) : Deque := d.extendleft d.items
 
-/-- `deque_clear` (_collectionsmodule.c:658-741): a fresh centred block. -/
+/-- `deque_clear` (_collectionsmodule.c:717-800): a fresh centred block. -/
 def clear (d : Deque) : Deque :=
   if d.size = 0 then d else { d with items := [], left := CENTER + 1, right := CENTER }
 
-/-- `deque_copy_impl` (_collectionsmodule.c:539-584), exact `deque` type:
+/-- `deque_copy_impl` (_collectionsmodule.c:598-643), exact `deque` type:
 a new deque with the same `maxlen`, filled from the left by walking the
 blocks of the old one. -/
 def copy (d : Deque) : Deque :=
@@ -165,13 +165,13 @@ def copy (d : Deque) : Deque :=
     (d.items.foldl (fun nd x => nd.appendM x nd.maxlen) { nd with left := 1, right := 0 })
   else nd
 
-/-- `d + other` (`deque_concat_lock_held`, _collectionsmodule.c:615-645):
+/-- `d + other` (`deque_concat_lock_held`, _collectionsmodule.c:674-704):
 copy, then `deque_extend_impl` with the other deque's items. -/
 def concat (d other : Deque) : Deque := d.copy.extend other.items
 
 /-! ### Rotation -/
 
-/-- The `n > 0` loop of `_deque_rotate` (_collectionsmodule.c:916-959): a
+/-- The `n > 0` loop of `_deque_rotate` (_collectionsmodule.c:975-1018): a
 new left block when `leftindex == 0`, then move the last
 `m = min(n, rightindex + 1, leftindex)` items from the right block to the
 left block, freeing the right block once it empties. -/
@@ -190,7 +190,7 @@ def rotRight : Nat → Int → Int → List Int → Int → Py (Int × Int × Li
       rotRight fuel li ri items n
     else .ok (li, ri, items)
 
-/-- The `n < 0` loop of `_deque_rotate` (_collectionsmodule.c:960-1003). -/
+/-- The `n < 0` loop of `_deque_rotate` (_collectionsmodule.c:1019-1062). -/
 def rotLeft : Nat → Int → Int → List Int → Int → Py (Int × Int × List Int)
   | 0, _, _, _, _ => .error .modelFuel
   | fuel + 1, li, ri, items, n =>
@@ -205,7 +205,7 @@ def rotLeft : Nat → Int → Int → List Int → Int → Py (Int × Int × Lis
       rotLeft fuel li ri items n
     else .ok (li, ri, items)
 
-/-- The normalisation at the top of `_deque_rotate` (_collectionsmodule.c:903-911);
+/-- The normalisation at the top of `_deque_rotate` (_collectionsmodule.c:962-970);
 C `%` truncates. -/
 def rotNorm (len n : Int) : Int :=
   let halflen := len / 2
@@ -214,7 +214,7 @@ def rotNorm (len n : Int) : Int :=
     if n > halflen then n - len else if n < -halflen then n + len else n
   else n
 
-/-- `_deque_rotate(deque, n)` (_collectionsmodule.c:892-1014). -/
+/-- `_deque_rotate(deque, n)` (_collectionsmodule.c:951-1073). -/
 def rotateC (d : Deque) (n : Int) : Py Deque :=
   if d.size ≤ 1 then .ok d
   else
@@ -227,7 +227,7 @@ def rotateC (d : Deque) (n : Int) : Py Deque :=
     | .error e => .error e
 
 /-- `d.rotate(n)`: Argument Clinic `Py_ssize_t` (default 1), then
-`deque_rotate_impl` (_collectionsmodule.c:1027-1034). -/
+`deque_rotate_impl` (_collectionsmodule.c:1086-1093). -/
 def rotate (d : Deque) (n : Int) : Py Deque := do
   let n ← asSsize n
   d.rotateC n
@@ -375,7 +375,7 @@ def reverse (d : Deque) : Py Deque :=
 
 /-! ### Repetition and initialisation -/
 
-/-- `deque_inplace_repeat_lock_held` (_collectionsmodule.c:760-835) for a
+/-- `deque_inplace_repeat_lock_held` (_collectionsmodule.c:819-894) for a
 `Py_ssize_t` count. The single-item case fills blocks directly. -/
 def irepeatC (d : Deque) (n : Int) : Py Deque := do
   let size := d.size
@@ -398,7 +398,7 @@ def irepeat (d : Deque) (n : Int) : Py Deque := do
   let n ← repeatCount n
   d.irepeatC n
 
-/-- `d * n` (`deque_repeat`, _collectionsmodule.c:848-865): copy, then
+/-- `d * n` (`deque_repeat`, _collectionsmodule.c:907-924): copy, then
 repeat the copy in place. -/
 def mul (d : Deque) (n : Int) : Py Deque := do
   let n ← repeatCount n

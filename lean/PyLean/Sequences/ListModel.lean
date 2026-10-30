@@ -32,14 +32,19 @@ def listAppend (l : List Int) (v : Int) : List Int := l ++ [v]
 
 /-- `l.pop([index])`: `index` defaults to `-1` (clinic), `list_pop_impl`
 (listobject.c:1530-1572). -/
-def listPop (l : List Int) (index : Option Int) : Py (Int × List Int) := do
-  let index ← match index with
-    | none => pure (-1)
-    | some i => asSsize i
+def popArg : Option Int → Py Int
+  | none => pure (-1)
+  | some i => asSsize i
+
+/-- The body of `list_pop_impl` after argument conversion. -/
+def listPopK (l : List Int) (index : Int) : Py (Int × List Int) := do
   if l.length = 0 then throw (.indexError "pop from empty list")
   let index := if index < 0 then index + l.length else index
   if !validIndex index l.length then throw (.indexError "pop index out of range")
   return (ix l index, l.eraseIdx index.toNat)
+
+def listPop (l : List Int) (index : Option Int) : Py (Int × List Int) :=
+  popArg index >>= listPopK l
 
 /-- The search loop of `list_index_impl` (listobject.c:3301-3313):
 `for (i = start; i < stop; i++)`, stopping at the end of the list. `fuel`

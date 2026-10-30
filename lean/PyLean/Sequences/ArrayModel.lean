@@ -114,15 +114,14 @@ def arrIterExtend (a : Arr) : List Int → Arr × Option PyExc
     | .error e => (a, some e)
 
 /-- `a.pop([i])` (arraymodule.c:1391-1415). -/
-def arrPop (a : Arr) (i : Option Int) : Py (Int × Arr) := do
-  let i ← match i with
-    | none => pure (-1)
-    | some i => asSsize i
+def arrPopK (a : Arr) (i : Int) : Py (Int × Arr) := do
   let n : Int := a.items.length
   if n = 0 then throw (.indexError "pop from empty array")
   let i := if i < 0 then i + n else i
   if i < 0 ∨ i ≥ n then throw (.indexError "pop index out of range")
   return (ix a.items i, { a with items := a.items.eraseIdx i.toNat })
+
+def arrPop (a : Arr) (i : Option Int) : Py (Int × Arr) := popArg i >>= arrPopK a
 
 /-- The loop of `array_array_index_impl` (arraymodule.c:3307-3321):
 `for (i = start; i < stop && i < Py_SIZE(self); i++)`. -/
