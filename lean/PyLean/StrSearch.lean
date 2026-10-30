@@ -3,6 +3,8 @@ import PyLean.StrSearch.Diff
 import PyLean.StrSearch.Model
 import PyLean.StrSearch.Basic
 import PyLean.StrSearch.Find
+import PyLean.StrSearch.Pad
+import PyLean.StrSearch.Strip
 
 /-!
 Search and split methods of `str`, `bytes`, `bytearray`: `Objects/stringlib/`, `Objects/unicodeobject.c`, `Objects/bytes_methods.c`, CPython 3.14.7.
@@ -55,7 +57,40 @@ def entries : List Entry := [
     statement := "partition(sep) is (s[:i], sep, s[i+len(sep):]) for i = s.find(sep), or (s, '', '') when i == -1; rpartition likewise with rfind and ('', '', s); empty sep raises ValueError."
     source := "partition/rpartition docstrings; method vs equivalent method"
     status := .proven, prop := ``PartitionFind, thm := some ``partitionFind_proven
-    notes := "Values only: bytes.partition returns the separator object itself (python/cpython#137217, not modelled)." }
+    notes := "Values only: bytes.partition returns the separator object itself (python/cpython#137217, not modelled)." },
+  { id := "strsearch-pad-str-bytes", pyFile := "Objects/stringlib/transmogrify.h"
+    pyFns := ["str.center", "str.ljust", "str.rjust", "str.zfill", "bytes.center", "bytes.ljust",
+      "bytes.rjust", "bytes.zfill"]
+    statement := "str and bytes agree on center/ljust/rjust/zfill for every width and fill; the OverflowError branch of str's pad is unreachable for a Py_ssize_t width."
+    source := "invariant: str vs bytes (pad, unicodeobject.c:10492-10531, vs transmogrify.h:103-246)"
+    status := .proven, prop := ``PadStrBytes, thm := some ``padStrBytes_proven
+    notes := "Allocation failures are not modelled: for width near sys.maxsize str raises MemoryError and bytes OverflowError('byte string is too large')." },
+  { id := "strsearch-center-balanced", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["str.center"]
+    statement := "s.center(width) is s when width <= len(s), else s padded with l fills before and r after, l + len(s) + r == width, |l - r| <= 1."
+    source := "center docstring and stdtypes.rst:1889-1893"
+    status := .proven, prop := ``CenterBalanced, thm := some ``centerBalanced_proven },
+  { id := "strsearch-zfill-spec", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["str.zfill"]
+    statement := "s.zfill(width) is s when width <= len(s); otherwise '0' * (width - len(s)) is inserted after a leading '+'/'-', or before s."
+    source := "zfill docstring and stdtypes.rst:2892-2898"
+    status := .proven, prop := ``ZfillSpec, thm := some ``zfillSpec_proven },
+  { id := "strsearch-expandtabs-str-bytes", pyFile := "Objects/stringlib/transmogrify.h"
+    pyFns := ["str.expandtabs", "bytes.expandtabs"]
+    statement := "str.expandtabs and bytes.expandtabs return the same expansion when it has at most sys.maxsize characters and both raise OverflowError otherwise, for every C int tabsize (negative and zero included)."
+    source := "invariant: str vs bytes, no silent wraparound (unicodeobject.c:11893-11917 vs transmogrify.h:44-70)"
+    status := .proven, prop := ``ExpandtabsStrBytes, thm := some ``expandtabsStrBytes_proven
+    notes := "The two first passes use different overflow checks (running total vs per-line column + line sums); both are exact." },
+  { id := "strsearch-strip-paths", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["str.strip", "str.lstrip", "str.rstrip", "bytes.strip", "bytearray.strip"]
+    statement := "str.strip()'s ASCII fast path agrees with the general path; bytearray.strip()'s explicit whitespace list agrees with bytes'; str and bytes agree with chars given, and without chars on byte strings free of \\x1c-\\x1f, \\x85, \\xa0."
+    source := "invariant: fast vs slow path, bytes vs bytearray, str vs bytes"
+    status := .proven, prop := ``StripPaths, thm := some ``stripPaths_proven },
+  { id := "strsearch-splitlines-str-bytes", pyFile := "Objects/stringlib/split.h"
+    pyFns := ["str.splitlines", "bytes.splitlines"]
+    statement := "str.splitlines and bytes.splitlines agree on byte strings without \\v, \\f, \\x1c-\\x1e, \\x85; splitlines(True) concatenates back to the string."
+    source := "invariant: str vs bytes away from the documented line-boundary differences; round trip"
+    status := .proven, prop := ``SplitlinesStrBytes, thm := some ``splitlinesStrBytes_proven }
 ]
 
 end PyLean.StrSearch

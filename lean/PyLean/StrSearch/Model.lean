@@ -536,22 +536,55 @@ def bytesRSplit (s : Seq) (sep : Option Seq) (maxsplit : Int) : Py (List Seq) :=
 
 /-! ## splitlines -/
 
-/-- `STRINGLIB(splitlines)`, split.h:324-388, on the remainder `str + j`. -/
-def splitlines (isLB : Nat → Bool) (keepends : Bool) (rest : Seq) : List Seq :=
-  if rest = [] then []
-  else
-    let line := rest.takeWhile (fun x => !isLB x)
-    match h : rest.dropWhile (fun x => !isLB x) with
-    | [] => [line]
-    | c :: cs =>
-      if c = 13 ∧ cs.head? = some 10 then
-        (if keepends then line ++ [13, 10] else line) :: splitlines isLB keepends (cs.drop 1)
-      else (if keepends then line ++ [c] else line) :: splitlines isLB keepends cs
-termination_by rest.length
-decreasing_by
-  all_goals
-    have h2 := dropWhile_length_le (fun x => !isLB x) rest
-    rw [h] at h2; simp at h2 ⊢; omega
+/-- One iteration of the loop of `STRINGLIB(splitlines)`, split.h:340-381:
+the line (with its line break if `keepends`; `\r\n` counts as one break) and
+the remainder `str + i`. -/
+def lineBreak (isLB : Nat → Bool) (keepends : Bool) (s : Seq) : Seq × Seq :=
+  let line := s.takeWhile (fun x => !isLB x)
+  match s.dropWhile (fun x => !isLB x) with
+  | [] => (line, [])
+  | c :: cs =>
+    if c = 13 ∧ cs.head? = some 10 then (if keepends then line ++ [13, 10] else line, cs.drop 1)
+    else (if keepends then line ++ [c] else line, cs)
+
+theorem lineBreak_snd (isLB : Nat → Bool) (keepends : Bool) (s : Seq) :
+    (lineBreak isLB keepends s).2 = [] ∨
+    ∃ c cs, s.dropWhile (fun x => !isLB x) = c :: cs ∧
+      ((lineBreak isLB keepends s).2 = cs ∨ (lineBreak isLB keepends s).2 = cs.drop 1) := by
+  unfold lineBreak
+  split
+  · exact Or.inl rfl
+  · next c cs h =>
+    refine Or.inr ⟨c, cs, h, ?_⟩
+    split
+    · exact Or.inr rfl
+    · exact Or.inl rfl
+
+theorem lineBreak_snd_len (isLB : Nat → Bool) (keepends : Bool) {s : Seq} (hs : s ≠ []) :
+    (lineBreak isLB keepends s).2.length < s.length := by
+  rcases lineBreak_snd isLB keepends s with h | ⟨c, cs, h1, h2 | h2⟩
+  · rw [h]; exact List.length_pos_iff.mpr hs
+  · have := (List.dropWhile_suffix (l := s) (fun x => !isLB x)).length_le
+    rw [h1] at this; rw [h2]; simp at this; omega
+  · have := (List.dropWhile_suffix (l := s) (fun x => !isLB x)).length_le
+    rw [h1] at this; rw [h2]; simp at this ⊢; omega
+
+theorem lineBreak_snd_mem (isLB : Nat → Bool) (keepends : Bool) {s : Seq} {x : Nat}
+    (hx : x ∈ (lineBreak isLB keepends s).2) : x ∈ s := by
+  rcases lineBreak_snd isLB keepends s with h | ⟨c, cs, h1, h2 | h2⟩
+  · rw [h] at hx; simp at hx
+  · have := (List.dropWhile_suffix (l := s) (fun x => !isLB x)).subset
+    rw [h1] at this; rw [h2] at hx; exact this (List.mem_cons_of_mem c hx)
+  · have := (List.dropWhile_suffix (l := s) (fun x => !isLB x)).subset
+    rw [h1] at this; rw [h2] at hx; exact this (List.mem_cons_of_mem c (List.mem_of_mem_drop hx))
+
+/-- `STRINGLIB(splitlines)`, split.h:324-388: the loop `for (i = j = 0; i < str_len; )`
+on the remainder `str + j`. -/
+def splitlines (isLB : Nat → Bool) (keepends : Bool) (s : Seq) : List Seq :=
+  if h : s = [] then []
+  else (lineBreak isLB keepends s).1 :: splitlines isLB keepends (lineBreak isLB keepends s).2
+termination_by s.length
+decreasing_by exact lineBreak_snd_len isLB keepends h
 
 def strSplitlines (s : Seq) (keepends : Bool) : List Seq := splitlines uniLinebreak keepends s
 def bytesSplitlines (s : Seq) (keepends : Bool) : List Seq := splitlines byteLinebreak keepends s

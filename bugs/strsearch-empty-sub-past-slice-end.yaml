@@ -1,0 +1,66 @@
+id: strsearch-empty-sub-past-slice-end
+title: "find/count/startswith with an empty substring disagree with the same call on s[start:end] when start lies past end"
+priority: P4
+kind: doc-mismatch
+module: str / bytes / bytearray
+files: [Objects/unicodeobject.c, Objects/bytes_methods.c, Objects/stringlib/count.h, Doc/library/stdtypes.rst]
+functions: ["str.find", "str.rfind", "str.index", "str.count", "str.startswith", "str.endswith",
+            "bytes.find", "bytes.count", "bytes.startswith", "bytearray.find"]
+status: duplicate
+duplicate_of: python/cpython#68431 (bpo-24243, open, labelled docs)
+summary: |
+  The docs say find returns the lowest index "such that sub is contained within s[start:end]",
+  and count counts occurrences "in the range [start, end]". With an empty sub and a start that
+  normalises past the end (start > len(s), or start > end), find returns -1, count returns 0 and
+  startswith returns False, while the same calls on the slice s[start:end] (which is '') return
+  0 (i.e. index min(start, len(s))), 1 and True. All three types behave the same way (the Lean
+  proofs show str and bytes agree on every input), so this is a documentation question, not a
+  str/bytes inconsistency. NOT A NEW FINDING: this is python/cpython#68431.
+likelihood: |
+  Rare: needs an empty needle together with a start index at or past the end of the string,
+  e.g. a loop that searches for a user-supplied (possibly empty) needle from a moving offset.
+maybe_intended: |
+  Yes. In python/cpython#68431 Serhiy Storchaka states the intended invariant: find returns the
+  minimal i with start <= i and i + len(sub) <= end (indices normalised as in slicing but not
+  clamped to len(s)), and since bpo-24284 startswith/endswith follow the same rule. The Lean
+  property strsearch-find-extreme proves exactly that invariant for find and rfind.
+reproducer: |
+  s = 'abc'
+  got = (s.find('', 4), s.count('', 4), s.startswith('', 4), s.find('', 2, 1))
+  sliced = (min(4, len(s)) + s[4:].find(''), s[4:].count(''), s[4:].startswith(''),
+            2 + s[2:1].find(''))
+  print('calls:', got)
+  print('slices:', sliced)
+  same_for_bytes = (b'abc'.find(b'', 4), b'abc'.count(b'', 4), b'abc'.startswith(b'', 4)) == got[:3]
+  print('bytes agree with str:', same_for_bytes)
+  if got == (-1, 0, False, -1) and sliced == (3, 1, True, 2) and same_for_bytes:
+      print('REPRODUCED strsearch-empty-sub-past-slice-end')
+expected: |
+  Either the docs mention the empty-substring edge case (the open docs issue #68431), or the
+  results match the slice: 3, 1, True and 2.
+promised_by: |
+  Doc/library/stdtypes.rst:2002-2006 (str.find "within the slice s[start:end]"), :1903-1907
+  (str.count "in the range [start, end]"), the find/count docstrings in unicodeobject.c
+  ("such that sub is contained within S[start:end]").
+cause: |
+  ADJUST_INDICES (unicodeobject.c:9662-9678, bytes_methods.c:434-450) clamps end to len but not
+  start, and any_find_slice (:9698-9700), unicode_count_impl (:11802-11804), tailmatch
+  (:9961-9963) and find_internal / _Py_bytes_count / tailmatch in bytes_methods.c return
+  "not found" when end - start < len(sub), which for len(sub) == 0 means start > end.
+possible_fix: |
+  Documentation only (as #68431 proposes): state that an empty sub is found only at indices
+  start <= i <= min(end, len(s)).
+duplicates:
+  issues:
+    - {number: 68431, state: open, relation: same, reason: "bpo-24243 'behavior for finding an empty string is inconsistent with documentation'"}
+    - {number: 151021, state: closed, relation: same-pattern (mmap.find past the end), reason: n/a}
+  queries: ["find empty string start greater than len", "count empty string start end",
+            "empty string find", "repo:python/cpython find empty string (api)",
+            "startswith empty string start", "count empty substring", "find start greater than length"]
+  bugforge: "no match in vendor/bugforge-results/README.md"
+results:
+  python_3_14_7: REPRODUCED
+  python_main: REPRODUCED
+lean:
+  property: PyLean.StrSearch.FindSliceLiteral
+  theorem: PyLean.StrSearch.findSliceLiteral_refuted
