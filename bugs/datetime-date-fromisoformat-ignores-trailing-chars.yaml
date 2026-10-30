@@ -1,0 +1,45 @@
+id: datetime-date-fromisoformat-ignores-trailing-chars
+title: "date.fromisoformat() ignores the last two characters of a 10-character basic-format string"
+priority: P3
+kind: missing-validation
+module: datetime
+files: [Lib/_pydatetime.py, Modules/_datetimemodule.c]
+functions: ["date.fromisoformat", "_parse_isoformat_date", "C parse_isoformat_date"]
+summary: |
+  Both parsers read fixed-width fields and never check that the whole string was
+  consumed. A 10-character string without '-' at index 4 is parsed as YYYYMMDD or
+  YYYYWwwD and the rest is dropped: date.fromisoformat('2020010112') == date(2020, 1, 1)
+  and '2020W011xy' == date(2019, 12, 30), in both twins. The C version takes the length
+  in UTF-8 bytes, so it also accepts '20040509٠' (9 characters, 10 bytes), which
+  Python rejects as non-ASCII. Still present on main. DUPLICATE of gh-158500 (open;
+  PR gh-160737 open, gh-158557 closed).
+likelihood: A 10-digit YYYYMMDDHH stamp silently parses as a date.
+maybe_intended: No.
+reproducer: |
+  import datetime, _pydatetime
+  c = datetime.date.fromisoformat('2020010112')
+  py = _pydatetime.date.fromisoformat('2020010112')
+  print('C:', c, ' Python:', py)
+  try:
+      print('C 9 chars / 10 bytes:', datetime.date.fromisoformat('20040509٠'))
+  except ValueError as e:
+      print('C 9 chars / 10 bytes:', repr(e))
+  if (c.year, c.month, c.day) == (py.year, py.month, py.day) == (2020, 1, 1):
+      print('REPRODUCED datetime-date-fromisoformat-ignores-trailing-chars')
+expected: ValueError('Invalid isoformat string: ...').
+promised_by: date.fromisoformat docs ("any valid ISO 8601 format").
+cause: |
+  Lib/_pydatetime.py:358-393 and Modules/_datetimemodule.c:939-1009 do not check that the
+  parse ended at the end of the string; C date_fromisoformat (:3385-3423) checks the
+  UTF-8 byte length.
+possible_fix: Require the parse to consume the whole input (see PR gh-160737).
+reproduces:
+  python3 (3.14.7): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues:
+    - {number: 158500, state: open, relation: duplicate, reason: open (PR gh-160737)}
+  queries: ["fromisoformat accepts", "fromisoformat trailing", "PR: fromisoformat"]
+lean:
+  property: PyLean.Datetime.DateFromisoTenChars
+  theorem: PyLean.Datetime.dateFromisoTenChars_refuted
