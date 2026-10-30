@@ -1,0 +1,106 @@
+import PyLean.Core
+
+/-!
+Shared vocabulary for the in-memory I/O models (`Modules/_io/bytesio.c`,
+`Modules/_io/stringio.c`, `Lib/_pyio.py`), CPython 3.14.7.
+
+Conventions:
+
+* Bytes are `List Nat` (each in `[0, 256)`), text is `List Nat` of code
+  points (each in `[0, 0x110000)`, surrogates included), so that NUL and lone
+  surrogates are ordinary elements.
+* A test case is a constructor plus a list of operations; every operation
+  returns a `Py Val`. Arguments are Python ints or `None` (`Option Int`).
+* LP64: `Py_ssize_t` and `long` are 64-bit, `int` is 32-bit.
+* Allocation: a request for `memLimit` or more bytes fails with `MemoryError`
+  and smaller requests succeed. Real limits depend on the machine; the
+  difftest only exercises sizes far below or far above this bound.
+-/
+
+namespace PyLean.PyIO
+
+open PyLean
+
+/-- A scalar Python value. -/
+inductive Atom where
+  | none
+  | int (i : Int)
+  | bool (b : Bool)
+  | bytes (b : List Nat)
+  | str (s : List Nat)
+  deriving Repr, DecidableEq, Inhabited
+
+/-- Values returned by operations: a scalar or a list (or tuple) of scalars. -/
+inductive Val where
+  | atom (a : Atom)
+  | list (l : List Atom)
+  deriving Repr, DecidableEq, Inhabited
+
+@[match_pattern] def Val.none : Val := .atom .none
+@[match_pattern] def Val.int (i : Int) : Val := .atom (.int i)
+@[match_pattern] def Val.bool (b : Bool) : Val := .atom (.bool b)
+@[match_pattern] def Val.bytes (b : List Nat) : Val := .atom (.bytes b)
+@[match_pattern] def Val.str (s : List Nat) : Val := .atom (.str s)
+
+/-! ## Exceptions that are not in `PyExc` -/
+
+def bufferError : PyExc := .named "BufferError" "Existing exports of data: object cannot be re-sized"
+def memoryError : PyExc := .named "MemoryError" ""
+def osError (m : String) : PyExc := .named "OSError" m
+def unsupportedOp (m : String) : PyExc := .named "UnsupportedOperation" m
+/-- `UnicodeDecodeError`; the message embeds byte values and positions. -/
+def unicodeDecodeError : PyExc := .named "UnicodeDecodeError" "~utf-8 decode error"
+/-- `UnicodeEncodeError` (a lone surrogate in a `newline` argument). -/
+def unicodeEncodeError : PyExc := .named "UnicodeEncodeError" "~utf-8 encode error"
+
+/-- Allocation bound (bytes), see the module docstring. -/
+def memLimit : Nat := 2 ^ 48
+
+/-! ## C argument conversion (Argument Clinic), LP64 -/
+
+def intMin : Int := -(2 ^ 31)
+def intMax : Int := 2 ^ 31 - 1
+
+def InSsize (v : Int) : Prop := ssizeMin ≤ v ∧ v ≤ ssizeMax
+instance (v : Int) : Decidable (InSsize v) := inferInstanceAs (Decidable (_ ∧ _))
+
+def InCInt (v : Int) : Prop := intMin ≤ v ∧ v ≤ intMax
+instance (v : Int) : Decidable (InCInt v) := inferInstanceAs (Decidable (_ ∧ _))
+
+/-- `Py_ssize_t(accept={int, NoneType})`: `_Py_convert_optional_to_ssize_t`
+(Python/modsupport.c:14-34) calls `PyNumber_AsSsize_t(obj, PyExc_OverflowError)`
+(Objects/abstract.c), whose message names the type. `None` keeps the default. -/
+def optSsize (dflt : Int) : Option Int → Py Int
+  | none => .ok dflt
+  | some v => if InSsize v then .ok v
+      else .error (.overflowError "cannot fit 'int' into an index-sized integer")
+
+/-- Plain `Py_ssize_t` converter: `PyLong_AsSsize_t`. -/
+def argSsize (v : Int) : Py Int :=
+  if InSsize v then .ok v else .error (.overflowError "Python int too large to convert to C ssize_t")
+
+/-- `int` converter: `PyLong_AsInt`. -/
+def argCInt (v : Int) : Py Int :=
+  if InCInt v then .ok v else .error (.overflowError "Python int too large to convert to C int")
+
+/-- `PyLong_AsLong` (LP64: same range as `Py_ssize_t`). -/
+def asLong (v : Int) : Py Int :=
+  if InSsize v then .ok v else .error (.overflowError "Python int too large to convert to C long")
+
+/-! ## List helpers -/
+
+/-- `buf[a:a+n]` for `a, n >= 0`. -/
+def slice (buf : List Nat) (a n : Nat) : List Nat := (buf.drop a).take n
+
+/-- Index of the first element equal to `c`, if any. -/
+def findIdx? (l : List Nat) (c : Nat) : Option Nat :=
+  match l with
+  | [] => none
+  | x :: xs => if x = c then some 0 else (findIdx? xs c).map (· + 1)
+
+/-- `buf` with `b` written at position `pos`, zero-filling any gap:
+the semantics both BytesIO twins and the C StringIO implement. -/
+def writeAt (buf : List Nat) (pos : Nat) (b : List Nat) : List Nat :=
+  (buf ++ List.replicate (pos - buf.length) 0).take pos ++ b ++ buf.drop (pos + b.length)
+
+end PyLean.PyIO
