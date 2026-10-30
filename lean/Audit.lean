@@ -16,7 +16,14 @@ def allEntries : List Entry :=
   PyLean.RangeSlice.entries ++
   PyLean.MathInt.entries ++
   PyLean.StrSearch.entries ++
-  PyLean.Accel.entries
+  PyLean.Accel.entries ++
+  PyLean.Decimal.entries ++
+  PyLean.PyIO.entries ++
+  PyLean.JsonMod.entries ++
+  PyLean.Pickle.entries ++
+  PyLean.Itertools.entries ++
+  PyLean.Sequences.entries ++
+  PyLean.ListSort.entries
 
 def allowedAxioms : List Name := [``propext, ``Classical.choice, ``Quot.sound]
 

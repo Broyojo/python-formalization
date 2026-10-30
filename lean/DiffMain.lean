@@ -17,7 +17,14 @@ def handlers : List (String × Handler) := [
   ("rangeslice", PyLean.RangeSlice.handler),
   ("mathint", PyLean.MathInt.handler),
   ("strsearch", PyLean.StrSearch.handler),
-  ("accel", PyLean.Accel.handler)
+  ("accel", PyLean.Accel.handler),
+  ("decimal", PyLean.Decimal.handler),
+  ("pyio", PyLean.PyIO.handler),
+  ("json", PyLean.JsonMod.handler),
+  ("pickle", PyLean.Pickle.handler),
+  ("itertools", PyLean.Itertools.handler),
+  ("sequences", PyLean.Sequences.handler),
+  ("listsort", PyLean.ListSort.handler)
 ]
 
 def runCase (j : Json) : Except String Json := do

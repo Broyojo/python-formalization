@@ -15,3 +15,17 @@ import PyLean.StrSearch
 import PyLean.StrSearch.Diff
 import PyLean.Accel
 import PyLean.Accel.Diff
+import PyLean.Decimal
+import PyLean.Decimal.Diff
+import PyLean.PyIO
+import PyLean.PyIO.Diff
+import PyLean.JsonMod
+import PyLean.JsonMod.Diff
+import PyLean.Pickle
+import PyLean.Pickle.Diff
+import PyLean.Itertools
+import PyLean.Itertools.Diff
+import PyLean.Sequences
+import PyLean.Sequences.Diff
+import PyLean.ListSort
+import PyLean.ListSort.Diff

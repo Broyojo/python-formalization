@@ -30,6 +30,21 @@ Sources (absolute paths; `vendor/` is not in git worktrees):
 - Prior automated findings (for duplicate checks):
   `/Users/broyojo/code/projects/python-formalization/vendor/bugforge-results/README.md`
 
+## Reference modules (finished; copy their patterns)
+
+- `Datetime`: modelling C and Python twins side by side, parsers over UTF-8 bytes.
+- `RangeSlice`: C `Py_ssize_t`/unsigned-long fast paths vs PyLong slow paths;
+  a C-API finding reproduced with a tiny compiled extension.
+- `Accel`: layered twin properties (broad "C == Py" refuted, narrowed version
+  proven, so every excluded case is on record as a refutation).
+- `Fractions`: exact arithmetic proofs, the 4300-digit int/str limit, format specs.
+- `StrSearch`: str vs bytes vs bytearray agreement.
+
+Lessons so far: the C arithmetic is usually right. Findings came from
+parsers (`datetime.fromisoformat`), missing error checks after
+`PyLong_AsSsize_t`-style conversions, NUL-terminator assumptions in C, and
+validation done in the wrong order. Look there first.
+
 ## 1. Model
 
 - Mirror the source line by line: same branch order, same check order, same
