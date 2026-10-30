@@ -1,0 +1,64 @@
+id: datetime-c-fromisoformat-nul-after-z
+title: "C fromisoformat() ignores everything after 'Z' when the next character is NUL"
+priority: P3
+kind: c-python-divergence
+module: datetime
+files: [Modules/_datetimemodule.c]
+functions: ["C parse_isoformat_time", "time.fromisoformat", "datetime.fromisoformat"]
+summary: |
+  After the UTC designator 'Z', the C parser checks that the next byte is the C string
+  terminator (`*(tzinfo_pos + 1) != '\0'`) instead of checking that 'Z' is the last
+  character of the argument. A Python str can contain '\x00', so a NUL right after 'Z'
+  hides the rest of the string: datetime.fromisoformat('2020-01-01T12:00Z\x00junk') and
+  time.fromisoformat('12:00Z\x00anything') return 12:00 UTC. The pure-Python
+  implementation rejects both, as does C without the NUL ('...Zjunk'). This is still the
+  case on main. On 3.14.7 the NUL also ends the time in other positions
+  ('2020-01-01T12\x00', '12:00:00.123456\x00 trailing text'), which gh-159224 fixed on
+  main as a side effect of rejecting stray text before an offset.
+likelihood: |
+  Low; needs an embedded NUL. It matters where fromisoformat() is used to validate
+  untrusted text (the argument is accepted and the rest of it silently dropped), and for
+  C/pure-Python parity.
+maybe_intended: |
+  No. Every other end-of-input check in the parser compares against the length
+  (`p_end`); this one is a leftover from treating the input as a NUL-terminated C string.
+reproducer: |
+  import datetime, _pydatetime
+  def parse(f, s):
+      try:
+          return repr(f(s))
+      except ValueError as e:
+          return 'ValueError'
+  s = '2020-01-01T12:00Z\x00junk'
+  c = parse(datetime.datetime.fromisoformat, s)
+  py = parse(_pydatetime.datetime.fromisoformat, s)
+  nonul = parse(datetime.datetime.fromisoformat, '2020-01-01T12:00Zjunk')
+  t = parse(datetime.time.fromisoformat, '12:00Z\x00anything')
+  print('C      :', c)
+  print('Python :', py)
+  print('C without NUL:', nonul)
+  print('C time :', t)
+  if c.startswith('datetime.datetime(2020, 1, 1, 12, 0') and py == 'ValueError' and nonul == 'ValueError':
+      print('REPRODUCED datetime-c-fromisoformat-nul-after-z')
+expected: ValueError('Invalid isoformat string: ...'), as from the pure-Python implementation.
+promised_by: |
+  C/Python twin agreement (Lib/_pydatetime.py is the reference implementation; both are
+  tested against the same vectors), and the fromisoformat docs (only valid ISO 8601 text).
+cause: |
+  Modules/_datetimemodule.c:1129-1139 (3.14.7; unchanged on main) tests
+  `*(tzinfo_pos + 1) != '\0'` rather than `tzinfo_pos + 1 != p_end`.
+possible_fix: |
+  Replace the NUL test with a length test: `if (tzinfo_pos + 1 != p_end) return -5;`.
+reproduces:
+  python3 (3.14.7): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues:
+    - {number: 158501, state: closed, relation: related (stray text before an offset; its fix gh-159224 removed the other NUL cases but kept this check), reason: completed}
+    - {number: 152157, state: closed, relation: related (empty fraction before a designator), reason: completed}
+  queries: ["fromisoformat accepts", "fromisoformat null character", "fromisoformat NUL", "fromisoformat embedded null",
+            "datetime null byte", "fromisoformat Z trailing", "_datetimemodule NUL", "PR: fromisoformat null",
+            "PR: fromisoformat", "gh pr view 159224 (grep NUL)", "bugforge-results/README.md: datetime entries (3, none related)"]
+lean:
+  property: PyLean.Datetime.DatetimeFromisoTwins
+  theorem: PyLean.Datetime.datetimeFromisoTwins_refuted

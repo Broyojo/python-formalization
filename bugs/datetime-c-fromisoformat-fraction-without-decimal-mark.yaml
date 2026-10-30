@@ -1,0 +1,44 @@
+id: datetime-c-fromisoformat-fraction-without-decimal-mark
+title: "C time/datetime.fromisoformat() reads digits after HHMMSS as a fraction with no decimal mark"
+priority: P3
+kind: c-python-divergence
+module: datetime
+files: [Modules/_datetimemodule.c]
+functions: ["C parse_hh_mm_ss_ff", "time.fromisoformat", "datetime.fromisoformat"]
+summary: |
+  In the basic (no colon) time format, when the loop in parse_hh_mm_ss_ff() has read
+  HHMMSS it backs up one character and falls through to the fraction parser without
+  checking for '.' or ','. So time.fromisoformat('12345678') is 12:34:56.780000 and
+  '12:00:00+0000000001' gets a 100-microsecond offset. The pure-Python parser raises
+  ValueError for both. Still present on main. DUPLICATE of gh-155175 (open, PR gh-155177).
+likelihood: Low; needs a basic-format time with extra digits (e.g. a mangled timestamp).
+maybe_intended: No; the extended format ('12:34:5678') is rejected and ISO 8601 requires a decimal sign.
+reproducer: |
+  import datetime, _pydatetime
+  def parse(f, s):
+      try:
+          return repr(f(s))
+      except ValueError:
+          return 'ValueError'
+  c = parse(datetime.time.fromisoformat, '12345678')
+  py = parse(_pydatetime.time.fromisoformat, '12345678')
+  print('C:', c, ' Python:', py)
+  print('offset:', parse(datetime.time.fromisoformat, '12:00:00+0000000001'))
+  if c == 'datetime.time(12, 34, 56, 780000)' and py == 'ValueError':
+      print('REPRODUCED datetime-c-fromisoformat-fraction-without-decimal-mark')
+expected: ValueError, as from the pure-Python implementation.
+promised_by: C/Python twin agreement; ISO 8601 (a fraction needs a decimal sign).
+cause: |
+  Modules/_datetimemodule.c:1052-1054 (`else if (!has_separator) { --p; }` on the third
+  iteration) then :1060-1086 parses the fraction without a decimal mark.
+possible_fix: After the SS component, only parse a fraction if the next character is '.' or ','.
+reproduces:
+  python3 (3.14.7): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues:
+    - {number: 155175, state: open, relation: duplicate, reason: open (PR gh-155177 open)}
+  queries: ["fromisoformat accepts", "fromisoformat invalid", "fromisoformat fractional", "PR: fromisoformat"]
+lean:
+  property: PyLean.Datetime.TimeFromisoTwins
+  theorem: PyLean.Datetime.timeFromisoTwins_refuted

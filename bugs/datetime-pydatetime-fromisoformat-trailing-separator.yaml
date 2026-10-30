@@ -1,0 +1,38 @@
+id: datetime-pydatetime-fromisoformat-trailing-separator
+title: "Pure-Python datetime.fromisoformat() accepts a date followed by a bare separator"
+priority: P4
+kind: c-python-divergence
+module: datetime
+files: [Lib/_pydatetime.py]
+functions: ["datetime.fromisoformat"]
+summary: |
+  _pydatetime.datetime.fromisoformat('2009-04-19T') returns midnight: the time part after
+  the separator is empty and `if tstr:` treats it as absent. The C implementation raises
+  ValueError. Also '2020W0112' (the separator is the last digit). DUPLICATE of gh-160850
+  (closed as completed on 2026-10-28; the vendored main snapshot predates the fix).
+likelihood: Low; affects PyPy and other users of _pydatetime.
+maybe_intended: No (fixed upstream).
+reproducer: |
+  import datetime, _pydatetime
+  try:
+      datetime.datetime.fromisoformat('2009-04-19T'); c = 'accepted'
+  except ValueError:
+      c = 'ValueError'
+  py = _pydatetime.datetime.fromisoformat('2009-04-19T')
+  print('C:', c, ' Python:', py)
+  if c == 'ValueError' and (py.year, py.month, py.day, py.hour) == (2009, 4, 19, 0):
+      print('REPRODUCED datetime-pydatetime-fromisoformat-trailing-separator')
+expected: ValueError, as from the C implementation.
+promised_by: C/Python twin agreement.
+cause: Lib/_pydatetime.py:1938 (`if tstr:`) falls back to the date-only path for an empty time.
+possible_fix: Take the date-only path only when the string ends at the separator location (as C does).
+reproduces:
+  python3 (3.14.7): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED (snapshot predates the gh-160850 fix)
+duplicates:
+  issues:
+    - {number: 160850, state: closed, relation: duplicate, reason: completed}
+  queries: ["fromisoformat accepts", "fromisoformat trailing", "PR: fromisoformat"]
+lean:
+  property: PyLean.Datetime.DatetimeFromisoBareSeparator
+  theorem: PyLean.Datetime.datetimeFromisoBareSeparator_refuted
