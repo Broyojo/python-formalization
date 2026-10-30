@@ -333,20 +333,31 @@ def Dec.withSign (d : Dec) (n : Bool) : Dec :=
 /-- `copy_sign`, _pydecimal.py:2995-2999. -/
 def copySign (a b : Dec) : Dec := a.withSign b.neg
 
-/-- `compare_total`, _pydecimal.py:2899-2969, as -1/0/1. -/
-def compareTotal (a b : Dec) : Int :=
-  if a.neg ∧ ¬b.neg then -1 else if ¬a.neg ∧ b.neg then 1 else
-  let sign := a.neg
-  let nanKind : Dec → Nat
-    | .nan _ false _ => 1 | .nan _ true _ => 2 | _ => 0
+/-- NaN kind as `_isnan()` reports it: 0, 1 (quiet), 2 (signaling). -/
+def nanKind : Dec → Nat
+  | .nan _ false _ => 1
+  | .nan _ true _ => 2
+  | _ => 0
+
+def payloadOf : Dec → Nat
+  | .nan _ _ p => p
+  | _ => 0
+
+def expOf : Dec → Int
+  | .fin _ _ e => e
+  | _ => 0
+
+/-- `compare_total` once both operands have the sign `sign`,
+_pydecimal.py:2913-2969. -/
+def compareTotalSame (sign : Bool) (a b : Dec) : Int :=
+  let flip (x : Int) : Int := if sign then -x else x
   let na := nanKind a
   let nb := nanKind b
-  let flip (x : Int) : Int := if sign then -x else x
   if na ≠ 0 ∨ nb ≠ 0 then
     if na = nb then
-      let pa := match a with | .nan _ _ p => p | _ => 0
-      let pb := match b with | .nan _ _ p => p | _ => 0
-      if pa < pb then flip (-1) else if pa > pb then flip 1 else 0
+      -- payloads compared by (len(_int), _int), i.e. as integers
+      if payloadOf a < payloadOf b then flip (-1)
+      else if payloadOf a > payloadOf b then flip 1 else 0
     else if na = 1 then flip 1
     else if nb = 1 then flip (-1)
     else if na = 2 then flip 1
@@ -356,9 +367,14 @@ def compareTotal (a b : Dec) : Int :=
     | .lt => -1
     | .gt => 1
     | .eq =>
-      let ea := match a with | .fin _ _ e => e | _ => 0
-      let eb := match b with | .fin _ _ e => e | _ => 0
-      if ea < eb then flip (-1) else if ea > eb then flip 1 else 0
+      if expOf a < expOf b then flip (-1) else if expOf a > expOf b then flip 1 else 0
+
+/-- `compare_total`, _pydecimal.py:2899-2969, as -1/0/1. -/
+def compareTotal (a b : Dec) : Int :=
+  match a.neg, b.neg with
+  | true, false => -1
+  | false, true => 1
+  | sign, _ => compareTotalSame sign a b
 
 /-! ## Arithmetic (`Decimal.__add__`, `__sub__`, `__mul__`) -/
 

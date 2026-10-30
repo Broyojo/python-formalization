@@ -129,16 +129,16 @@ def pyParse (s : List Char) : Py Dec :=
 /-- `numeric_as_ascii(u, strip_ws=1, ignore_underscores=1)`, _decimal.c:2143-2195.
 An invalid character makes the whole result the empty string. -/
 def numericAsAscii (s : List Char) : List Char :=
-  let rec go : List Char → Option (List Char)
-    | [] => some []
+  let rec go (acc : List Char) : List Char → Option (List Char)
+    | [] => some acc.reverse
     | c :: cs =>
-      if c == '_' then go cs
-      else if 0 < c.toNat ∧ c.toNat ≤ 127 then (c :: ·) <$> go cs
-      else if isSpace c then (' ' :: ·) <$> go cs
+      if c == '_' then go acc cs
+      else if 0 < c.toNat ∧ c.toNat ≤ 127 then go (c :: acc) cs
+      else if isSpace c then go (' ' :: acc) cs
       else match digitVal c with
-        | some d => (Char.ofNat (48 + d) :: ·) <$> go cs
+        | some d => go (Char.ofNat (48 + d) :: acc) cs
         | none => none
-  (go (strip s)).getD []
+  (go [] (strip s)).getD []
 
 def isAsciiDigit (c : Char) : Bool := '0' ≤ c && c ≤ '9'
 
