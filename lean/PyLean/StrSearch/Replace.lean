@@ -858,4 +858,203 @@ theorem splitStrBytes_proven : SplitStrBytes := by
           simp only [List.head!, rsplitCharLoop_eq, hmc]
         · rw [if_neg h1, if_neg h1, hmc]
 
+/-! ## split against rsplit -/
+
+theorem occ_single {s : Seq} {c j : Nat} : Occ s [c] j ↔ ∃ h : j < s.length, s[j] = c := by
+  unfold Occ
+  constructor
+  · intro ⟨h1, h2⟩
+    have hj : j < s.length := by simp at h1; omega
+    refine ⟨hj, ?_⟩
+    rw [List.drop_eq_getElem_cons hj] at h2
+    simp only [List.length_singleton, List.take_succ_cons, List.take_zero, List.cons.injEq] at h2
+    exact h2.1
+  · intro ⟨hj, h⟩
+    refine ⟨by simp; omega, ?_⟩
+    rw [List.drop_eq_getElem_cons hj, h]; simp
+
+theorem occ_of_mem {s : Seq} {c : Nat} (h : c ∈ s) : ∃ j, Occ s [c] j := by
+  obtain ⟨j, hj, he⟩ := List.mem_iff_getElem.mp h
+  exact ⟨j, occ_single.mpr ⟨hj, he⟩⟩
+
+theorem occ_of_mem_take {s : Seq} {c i : Nat} (h : c ∈ s.take i) : ∃ j, j < i ∧ Occ s [c] j := by
+  obtain ⟨j, hj, he⟩ := List.mem_iff_getElem.mp h
+  simp only [List.length_take] at hj
+  refine ⟨j, by omega, occ_single.mpr ⟨by omega, ?_⟩⟩
+  rw [List.getElem_take] at he; exact he
+
+theorem occ_of_mem_drop {s : Seq} {c i : Nat} (h : c ∈ s.drop i) : ∃ j, i ≤ j ∧ Occ s [c] j := by
+  obtain ⟨j, hj, he⟩ := List.mem_iff_getElem.mp h
+  simp only [List.length_drop] at hj
+  refine ⟨i + j, by omega, occ_single.mpr ⟨by omega, ?_⟩⟩
+  rw [List.getElem_drop] at he; exact he
+
+/-- No piece contains the separator character. -/
+def NoC (c : Nat) (P : List Seq) : Prop := ∀ q ∈ P, c ∉ q
+
+theorem append_cons_cancel {c : Nat} : ∀ {p q x y : Seq}, c ∉ p → c ∉ q →
+    p ++ c :: x = q ++ c :: y → p = q ∧ x = y
+  | [], [], x, y, _, _, h => by simpa using h
+  | [], b :: q, x, y, _, hq, h => by
+    simp at h; exact absurd (h.1 ▸ List.mem_cons_self) hq
+  | a :: p, [], x, y, hp, _, h => by
+    simp at h; exact absurd (h.1 ▸ List.mem_cons_self) hp
+  | a :: p, b :: q, x, y, hp, hq, h => by
+    simp only [List.cons_append, List.cons.injEq] at h
+    have := append_cons_cancel (p := p) (q := q) (fun h' => hp (List.mem_cons_of_mem _ h'))
+      (fun h' => hq (List.mem_cons_of_mem _ h')) h.2
+    exact ⟨by rw [h.1, this.1], this.2⟩
+
+/-- Splitting at every occurrence of one character has a unique result. -/
+theorem split_unique (c : Nat) : ∀ (P Q : List Seq), P ≠ [] → Q ≠ [] → NoC c P → NoC c Q →
+    [c].intercalate P = [c].intercalate Q → P = Q := by
+  intro P
+  induction P with
+  | nil => intro Q h; exact absurd rfl h
+  | cons p P ih =>
+    intro Q _ hQ hP hQc heq
+    match Q, hQ with
+    | q :: Q, _ =>
+      have hp : c ∉ p := hP p List.mem_cons_self
+      have hq : c ∉ q := hQc q List.mem_cons_self
+      cases P with
+      | nil =>
+        cases Q with
+        | nil => simp at heq; rw [heq]
+        | cons q2 Q =>
+          have : c ∈ [c].intercalate [p] := by rw [heq, intercalate_cons_ne (by simp)]; simp
+          simp at this; exact absurd this hp
+      | cons p2 P =>
+        cases Q with
+        | nil =>
+          have : c ∈ [c].intercalate [q] := by rw [← heq, intercalate_cons_ne (by simp)]; simp
+          simp at this; exact absurd this hq
+        | cons q2 Q =>
+          rw [intercalate_cons_ne (sep := [c]) (a := p) (L := p2 :: P) (by simp),
+            intercalate_cons_ne (sep := [c]) (a := q) (L := q2 :: Q) (by simp)] at heq
+          simp only [List.append_assoc, List.singleton_append] at heq
+          obtain ⟨h1, h2⟩ := append_cons_cancel hp hq heq
+          rw [h1, ih (q2 :: Q) (by simp) (by simp) (fun x hx => hP x (List.mem_cons_of_mem _ hx))
+            (fun x hx => hQc x (List.mem_cons_of_mem _ hx)) h2]
+
+theorem noC_splitAll (c : Nat) : ∀ s : Seq, NoC c (splitAll [c] s) := by
+  intro s
+  induction s using (measure List.length).wf.induction with
+  | _ s ih =>
+    cases hf : findL [c] s with
+    | none =>
+      rw [splitAll_none hf]
+      intro q hq hc
+      simp at hq; subst hq
+      obtain ⟨j, hj⟩ := occ_of_mem hc
+      exact findL_eq_none.mp hf j hj
+    | some i =>
+      rw [splitAll_some (by simp) hf]
+      intro q hq hcq
+      simp only [List.mem_cons] at hq
+      rcases hq with rfl | hq
+      · obtain ⟨j, hj, ho⟩ := occ_of_mem_take hcq
+        exact (findL_eq_some.mp hf).2 j hj ho
+      · exact ih _ (length_drop_match (by simp) hf).2 q hq hcq
+
+theorem intercalate_append_single (sep x : Seq) : ∀ (L : List Seq), L ≠ [] →
+    sep.intercalate (L ++ [x]) = sep.intercalate L ++ sep ++ x := by
+  intro L hL
+  induction L with
+  | nil => exact absurd rfl hL
+  | cons a L ih =>
+    cases L with
+    | nil => simp [List.intercalate_cons_cons]
+    | cons b L =>
+      rw [List.cons_append, intercalate_cons_ne (sep := sep) (a := a) (L := b :: L ++ [x]) (by simp),
+        ih (by simp), intercalate_cons_ne (sep := sep) (a := a) (L := b :: L) (by simp)]
+      simp only [List.append_assoc]
+
+theorem rsplitLoop_ne_nil (sep : Seq) (mc : Int) (pre : Seq) : rsplitLoop sep mc pre ≠ [] := by
+  rw [rsplitLoop]; split
+  · split <;> simp
+  · simp
+
+theorem rsplitChar_props (c : Nat) : ∀ (pre : Seq) (mc : Int), (pre.length : Int) < mc →
+    NoC c (rsplitLoop [c] mc pre).reverse ∧ [c].intercalate (rsplitLoop [c] mc pre).reverse = pre := by
+  intro pre
+  induction pre using (measure List.length).wf.induction with
+  | _ pre ih =>
+    intro mc hmc
+    rw [rsplitLoop, if_pos ⟨by omega, by simp⟩]
+    split
+    · next k hf =>
+      have hk := rfindL_le hf
+      simp only [List.length_singleton] at hk
+      have hlt : (pre.take k).length < pre.length := by simp; omega
+      obtain ⟨h1, h2⟩ := ih _ hlt (mc - 1) (by simp; omega)
+      rw [List.reverse_cons]
+      constructor
+      · intro q hq hcq
+        rcases List.mem_append.mp hq with hq | hq
+        · exact h1 q hq hcq
+        · simp at hq; subst hq
+          obtain ⟨j, hj, ho⟩ := occ_of_mem_drop hcq
+          exact (rfindL_eq_some.mp hf).2 j (by omega) ho
+      · rw [intercalate_append_single _ _ _ (by simpa using rsplitLoop_ne_nil [c] (mc - 1) (pre.take k)), h2]
+        have ho := (rfindL_eq_some.mp hf).1
+        obtain ⟨hk', hc⟩ := occ_single.mp ho
+        conv => rhs; rw [← List.take_append_drop k pre]
+        rw [List.drop_eq_getElem_cons hk', hc, List.append_assoc]; rfl
+    · next hf =>
+      simp only [List.reverse_singleton]
+      constructor
+      · intro q hq hcq
+        simp at hq; subst hq
+        obtain ⟨j, hj⟩ := occ_of_mem hcq
+        exact rfindL_eq_none.mp hf j hj
+      · simp
+
+/-- With `maxsplit=-1`, `split` and `rsplit` by one character return the same
+pieces, for `str` and `bytes` ("Except for splitting from the right, rsplit()
+behaves like split()", stdtypes.rst). For longer separators the two differ
+when the separator overlaps itself (`'aaa'.split('aa')` vs
+`'aaa'.rsplit('aa')`), as splitting from the right implies. Precondition:
+`len(s) < sys.maxsize` (type invariant). -/
+def SplitRsplitAgree : Prop :=
+  ∀ (s : Seq) (c : Nat), (s.length : Int) < ssizeMax →
+    strSplit s (some [c]) (-1) = strRSplit s (some [c]) (-1) ∧
+    bytesSplit s (some [c]) (-1) = bytesRSplit s (some [c]) (-1)
+
+theorem splitRsplitAgree_proven : SplitRsplitAgree := by
+  intro s c hs
+  have hk1 : ssizeMin ≤ -1 := by unfold ssizeMin; omega
+  have hk2 : (-1 : Int) ≤ ssizeMax := by unfold ssizeMax; omega
+  have hr : rounds (-1) s = s.length + 1 := by simp [rounds]
+  -- the full split, and the full rsplit, are the same decomposition
+  have key : ∀ mc : Int, (s.length : Int) < mc → splitAll [c] s = (rsplitLoop [c] mc s).reverse := by
+    intro mc hmc
+    obtain ⟨h1, h2⟩ := rsplitChar_props c s mc hmc
+    apply split_unique c _ _ (splitN_ne_nil _ _ _)
+      (by simpa using rsplitLoop_ne_nil [c] mc s) (noC_splitAll c s) h1
+    rw [h2]; exact intercalate_splitN (by simp) _ s
+  have hsm : strSepMaxcount s.length [c].length (-1) = (s.length : Int) + 1 := by
+    simp only [strSepMaxcount, List.length_singleton, Nat.div_one]
+    rw [if_pos (by decide), if_neg (by omega)]
+    simp only [show (1 : Nat) ≠ 0 by decide, ↓reduceIte]
+  constructor
+  · rw [strSplit_some (by simp) hs hk1 hk2, hr]
+    simp only [strRSplit, argSsize_ok hk1 hk2, bind, Except.bind, pure, Except.pure]
+    rw [hsm]
+    by_cases hc : kindOf s < kindOf [c] ∨ s.length < [c].length
+    · rw [if_pos hc]
+      have : ∀ j, ¬ Occ s [c] j := by
+        rcases hc with h | h
+        · exact not_occ_of_kind h
+        · exact not_occ_of_long h
+      rw [splitN_noocc this]
+    · rw [if_neg hc]
+      simp only [stringlibRSplit, List.length_singleton, ↓reduceIte, List.head!, rsplitCharLoop_eq]
+      rw [← key _ (by omega)]; rfl
+  · rw [bytesSplit_some (by simp) hs hk1 hk2, hr]
+    simp only [bytesRSplit, argSsize_ok hk1 hk2, bind, Except.bind, pure, Except.pure,
+      show (-1 : Int) < 0 by decide, ↓reduceIte, stringlibRSplit, List.length_singleton, List.head!,
+      rsplitCharLoop_eq]
+    rw [← key _ (by omega)]; rfl
+
 end PyLean.StrSearch

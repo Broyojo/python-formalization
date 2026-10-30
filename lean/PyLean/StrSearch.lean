@@ -115,7 +115,13 @@ def entries : List Entry := [
     statement := "On byte strings, str.replace and bytes.replace agree for every old (empty included), new and count: same result, or both OverflowError."
     source := "invariant: str vs bytes (unicodeobject.c:10811-11067 vs transmogrify.h:276-737)"
     status := .proven, prop := ``ReplaceStrBytes, thm := some ``replaceStrBytes_proven
-    notes := "Precondition len(s) < sys.maxsize (type invariant)." }
+    notes := "Precondition len(s) < sys.maxsize (type invariant)." },
+  { id := "strsearch-split-rsplit-agree", pyFile := "Objects/stringlib/split.h"
+    pyFns := ["str.split", "str.rsplit", "bytes.split", "bytes.rsplit"]
+    statement := "With maxsplit=-1, s.split(c) == s.rsplit(c) for every one-character separator c, for str and bytes."
+    source := "rsplit docs ('Except for splitting from the right, rsplit() behaves like split()'); method vs equivalent method"
+    status := .proven, prop := ``SplitRsplitAgree, thm := some ``splitRsplitAgree_proven
+    notes := "Longer separators that overlap themselves legitimately differ ('aaa'.split('aa') vs 'aaa'.rsplit('aa')). The whitespace (sep=None) version was smoke-tested on 100k inputs but not proven." }
 ]
 
 end PyLean.StrSearch
