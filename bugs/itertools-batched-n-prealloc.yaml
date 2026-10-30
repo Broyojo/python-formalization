@@ -1,0 +1,67 @@
+id: itertools-batched-n-prealloc
+title: "itertools.batched preallocates an n-item tuple per batch: MemoryError for large n even on short or empty input"
+priority: P4
+kind: resource-exhaustion
+module: itertools
+files: [Modules/itertoolsmodule.c]
+functions: ["batched_next"]
+summary: |
+  batched_next calls PyTuple_New(n) before reading any item and shrinks it with
+  _PyTuple_Resize at the end. For a large n this fails even when the input is short:
+  list(batched('abc', sys.maxsize)) and list(batched([], sys.maxsize)) raise MemoryError,
+  whereas the documented equivalent (tuple(islice(iterator, n)), rst:160-167) returns
+  [('a', 'b', 'c')] and []. For n around 10**8-10**9 each batch allocates (and frees) n
+  pointers, e.g. batched('abc', 10**8) allocates 800 MB to return one 3-tuple. n is accepted
+  up to sys.maxsize, so "one batch of everything" (n = sys.maxsize) is a plausible but failing
+  call.
+  Lean: C and doc agree on the batches and on when they raise for every n whose result tuple
+  can be allocated (itertools-batched-doc-agree-alloc, proven); itertools-batched-doc-agree is
+  refuted by n = sys.maxsize.
+likelihood: |
+  Low. Most callers use small n. Large n arises when n is derived from a size bound or used as
+  "no batching" (sys.maxsize).
+maybe_intended: |
+  Presizing is a deliberate speed optimisation (PR 98419 "Presize the list for batched()",
+  Raymond Hettinger; later switched to tuples). The cost for large n was not discussed there.
+  A maintainer may well accept the MemoryError as the price of presizing; a cheap mitigation is
+  to presize to min(n, some cap) or use the input's length hint.
+reproducer: |
+  import sys, itertools
+  def run(data):
+      try:
+          return list(itertools.batched(data, sys.maxsize))
+      except MemoryError:
+          return 'MemoryError'
+  a, b = run('abc'), run([])
+  doc = tuple(itertools.islice(iter('abc'), sys.maxsize))
+  print("batched('abc', sys.maxsize) ->", a, "; doc equivalent first batch:", doc)
+  print("batched([], sys.maxsize)    ->", b)
+  if a == 'MemoryError' and b == 'MemoryError' and doc == ('a', 'b', 'c'):
+      print('REPRODUCED itertools-batched-n-prealloc')
+expected: |
+  [('a', 'b', 'c')] and [] (the doc equivalent's output).
+observed: |
+  python3 3.14.7: MemoryError for both. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Doc/library/itertools.rst:139-167 ("The input is consumed lazily, just enough to fill a
+  batch"; "Roughly equivalent to" tuple(islice(iterator, n))). n is a Py_ssize_t, so values up to
+  sys.maxsize are accepted.
+cause: |
+  Modules/itertoolsmodule.c:201-204: `result = PyTuple_New(n);` before the read loop; tuple_alloc
+  (Objects/tupleobject.c:53-56) rejects n > (PY_SSIZE_T_MAX - 32) / 8 with MemoryError and
+  smaller huge n fail in malloc.
+possible_fix: |
+  Presize to min(n, cap) (or to PyObject_LengthHint(it) when available) and grow, or collect into
+  a list and convert; keep the current fast path for small n.
+duplicates:
+  issues:
+    - {number: 98419, state: merged, relation: "PR that introduced presizing", reason: "design decision; large n not discussed"}
+    - {number: 142732, state: open, relation: "batched use-after-free via re-entrant iterator", reason: "different bug"}
+  queries: ["batched MemoryError", "batched large n", "batched preallocate", "batched PyTuple_New",
+            "batched sys.maxsize", "itertools.batched memory", "batched (100 results, titles read)",
+            "PR 98419 and issue 98363 comments grepped for large/huge/memory/maxsize",
+            "bugforge README: no itertools entries"]
+lean:
+  property: PyLean.Itertools.BatchedDocAgree
+  theorem: PyLean.Itertools.batchedDocAgree_refuted

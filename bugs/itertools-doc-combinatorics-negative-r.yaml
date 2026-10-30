@@ -1,0 +1,97 @@
+id: itertools-doc-combinatorics-negative-r
+title: "Docs: the combinations/permutations/combinations_with_replacement equivalents yield a tuple for negative r instead of raising ValueError"
+priority: P4
+kind: doc-mismatch
+module: itertools
+files: [Doc/library/itertools.rst]
+functions: ["combinations", "permutations", "combinations_with_replacement"]
+summary: |
+  The C functions raise ValueError("r must be non-negative") for r < 0 (on main the message is
+  "r cannot be negative" for combinations/cwr via Argument Clinic). The "Roughly equivalent to"
+  code has no such check and yields one tuple: combinations('abc', -1) -> [()],
+  combinations_with_replacement('abc', -1) -> [()], and permutations('abc', -1) -> [('a', 'b')]
+  (indices[:r] with a negative r slices from the end). product's equivalent does check
+  (`if repeat < 0: raise ValueError(...)`), so the omission is inconsistent within the page.
+  Lean: itertools-combinatorics-doc-agree (all int r) is refuted by r = -1; with r >= 0 the C
+  machines and the doc code agree in lockstep (layers below it).
+likelihood: |
+  Only affects readers who run or port the doc code with a negative r.
+maybe_intended: |
+  Possibly: the doc code is "roughly equivalent" and focuses on the algorithm; a maintainer may
+  decline to add argument checks. The permutations case (a wrong-looking 2-tuple) is the
+  strongest argument for a one-line `if r < 0: raise ValueError` as in product().
+reproducer: |
+  import itertools
+  def doc_combinations(iterable, r):
+      pool = tuple(iterable)
+      n = len(pool)
+      if r > n:
+          return
+      indices = list(range(r))
+      yield tuple(pool[i] for i in indices)
+      while True:
+          for i in reversed(range(r)):
+              if indices[i] != i + n - r:
+                  break
+          else:
+              return
+          indices[i] += 1
+          for j in range(i+1, r):
+              indices[j] = indices[j-1] + 1
+          yield tuple(pool[i] for i in indices)
+  def doc_permutations(iterable, r=None):
+      pool = tuple(iterable)
+      n = len(pool)
+      r = n if r is None else r
+      if r > n:
+          return
+      indices = list(range(n))
+      cycles = list(range(n, n-r, -1))
+      yield tuple(pool[i] for i in indices[:r])
+      while n:
+          for i in reversed(range(r)):
+              cycles[i] -= 1
+              if cycles[i] == 0:
+                  indices[i:] = indices[i+1:] + indices[i:i+1]
+                  cycles[i] = n - i
+              else:
+                  j = cycles[i]
+                  indices[i], indices[-j] = indices[-j], indices[i]
+                  yield tuple(pool[i] for i in indices[:r])
+                  break
+          else:
+              return
+  rows = []
+  for name, c, doc in [('combinations', itertools.combinations, doc_combinations),
+                       ('permutations', itertools.permutations, doc_permutations)]:
+      try:
+          cres = list(c('abc', -1))
+      except ValueError as e:
+          cres = 'ValueError: %s' % e
+      dres = list(doc('abc', -1))
+      rows.append((cres, dres))
+      print(f"{name}('abc', -1): C -> {cres}; doc equivalent -> {dres}")
+  if all(c.startswith('ValueError') for c, _ in rows) and rows[0][1] == [()] and rows[1][1] == [('a', 'b')]:
+      print('REPRODUCED itertools-doc-combinatorics-negative-r')
+expected: |
+  The doc equivalents raise ValueError for r < 0, like the C code and like product()'s equivalent.
+observed: |
+  python3 3.14.7: C raises ValueError; the doc code yields [()] and [('a', 'b')]. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical (the doc code is unchanged).
+  REPRODUCED.
+promised_by: |
+  Doc/library/itertools.rst:239-258, :275-295, :572-598 ("Roughly equivalent to").
+cause: |
+  The doc code lacks the `r < 0` check that Modules/itertoolsmodule.c:2366-2369, :2620-2623 and
+  :2881-2884 perform.
+possible_fix: |
+  Add `if r < 0: raise ValueError('r must be non-negative')` to the three equivalents (after
+  `r = n if r is None else r` for permutations).
+duplicates:
+  issues:
+    - {number: 118476, state: closed, relation: "corner cases in the islice equivalent", reason: "same kind of doc fix, different function"}
+  queries: ["itertools.combinations (titles read)", "itertools.permutations (titles read)",
+            "combinations_with_replacement (titles read)", "islice in:title"]
+lean:
+  property: PyLean.Itertools.CombDocAgree
+  theorem: PyLean.Itertools.combDocAgree_refuted
