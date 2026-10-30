@@ -57,7 +57,8 @@ def approxIsqrt (n : Nat) : Nat :=
   u32 (u32 (u <<< 15) + u32 ((n >>> 17) / u))
 
 /-- The `c_bit_length` loop, mathmodule.c:1745-1748: starting from `k`,
-increment while `c >> k > 0`. -/
+increment while `c >> k > 0`. The caller passes fuel `c + 1`, which is never
+exhausted since the loop stops at `c.bit_length() <= c`. -/
 def cBitLength (c : Nat) : Nat → Nat → Nat
   | 0, k => k
   | fuel + 1, k => if c >>> k > 0 then cBitLength c fuel (k + 1) else k
@@ -89,7 +90,7 @@ def isqrt (n : Int) : Py Nat :=
       .ok u
     else
       -- slow path, :1740-1820
-      let cbl := cBitLength c 64 6
+      let cbl := cBitLength c (c + 1) 6
       let d := c >>> (cbl - 5)
       let b := n >>> (2 * c - 62)
       if b ≥ 2 ^ 64 then

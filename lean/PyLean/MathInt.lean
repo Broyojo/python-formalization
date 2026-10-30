@@ -8,6 +8,7 @@ import PyLean.MathInt.Round
 import PyLean.MathInt.Pow
 import PyLean.MathInt.Comb
 import PyLean.MathInt.Factorial
+import PyLean.MathInt.Isqrt
 
 /-!
 Integer functions of `math` (`Modules/mathmodule.c`) and the related `int`
@@ -19,6 +20,12 @@ namespace PyLean.MathInt
 open PyLean.Registry
 
 def entries : List Entry := [
+  { id := "mathint-isqrt-floor-sqrt", pyFile := "Modules/mathmodule.c"
+    pyFns := ["math.isqrt", "_approximate_isqrt"]
+    statement := "For every n >= 0, isqrt(n) returns r with r*r <= n < (r+1)*(r+1)."
+    source := "math.isqrt docs: \"the greatest integer a such that a**2 <= n\"", status := .proven
+    prop := ``IsqrtFloorSqrt, thm := some ``isqrtFloorSqrt_proven
+    notes := "Covers the n < 2**64 fast path (192-entry table checked by the kernel, no uint32_t wraparound, including the top range where the clamped entry 255 matters) and the slow path. c is modelled as an unbounded Nat (C int64 cannot overflow for any representable n)." },
   { id := "mathint-comb-formula", pyFile := "Modules/mathmodule.c"
     pyFns := ["math.comb", "perm_comb_small", "perm_comb"]
     statement := "For 0 <= k <= n, comb(n, k) == n! // (k! * (n-k)!) exactly, unless min(k, n-k) > LLONG_MAX, where it raises OverflowError."
