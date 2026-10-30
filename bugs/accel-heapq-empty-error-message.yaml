@@ -11,8 +11,9 @@ summary: |
   IndexError('list index out of range') (heapreplace, heapreplace_max: from heap[0]). Apart from
   the message the twins agree completely: Lean proves, for every element type and comparison,
   the same returned item, the same final list and the same exception class for all ten heap
-  primitives (accel-heap-twins-agree; heapify for at most 2500 items), and the difftest finds no
-  other difference.
+  primitives (accel-heap-twins-agree, accel-heapify-twins-agree, the latter including the
+  cache-friendly heapify order used above 2500 items), and the difftest finds no other
+  difference.
 likelihood: |
   Any pop from an empty heap, but only code that inspects str(exc) can tell. test_heapq checks
   only the class.

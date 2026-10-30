@@ -6,8 +6,15 @@ import PyLean.Accel.BisectProps
 import PyLean.Accel.HeapTwins
 import PyLean.Accel.HeapCorrect
 import PyLean.Accel.HeapProps
+import PyLean.Accel.HeapifyLocal
+import PyLean.Accel.HeapifyLocalCanon
+import PyLean.Accel.HeapifyLocalOrder
+import PyLean.Accel.HeapifyLocalC
 import PyLean.Accel.HeapifyTwins
+import PyLean.Accel.StableSort
+import PyLean.Accel.Selection
 import PyLean.Accel.SelectProps
+import PyLean.Accel.MergeProps
 import PyLean.Accel.Diff
 
 /-!
@@ -86,9 +93,9 @@ def entries : List Entry := [
   { id := "accel-heapify-twins-agree", pyFile := "Modules/_heapqmodule.c"
     pyFns := ["heapify", "heapify_max", "cache_friendly_heapify"]
     statement := "For every element type, comparison and length, the C heapify (cache-friendly order above 2500 items) builds the same list as the Python heapify."
-    source := "invariant: C accelerator vs pure-Python twin; comment at Modules/_heapqmodule.c:311-329", status := .open
-    prop := ``HeapifyTwinsAgree
-    notes := "Proven for at most 2500 items (cHeapify_small); the cache-friendly order is in progress." },
+    source := "invariant: C accelerator vs pure-Python twin; comment at Modules/_heapqmodule.c:311-329", status := .proven
+    prop := ``HeapifyTwinsAgree, thm := some ``heapifyTwinsAgree_proven
+    notes := "Above 2500 items the C order (row R-1 climbs, then row R climbs) is a different children-first order; any such order yields the same heap because siftup at k only reads and writes the subtree of k." },
   { id := "accel-heap-ops-invariant", pyFile := "Lib/heapq.py"
     pyFns := ["heappush", "heappop", "heapreplace", "heappushpop", "heappush_max", "heappop_max",
       "heapreplace_max", "heappushpop_max"]
@@ -103,21 +110,20 @@ def entries : List Entry := [
   { id := "accel-nsmallest-sorted-prefix", pyFile := "Lib/heapq.py"
     pyFns := ["nsmallest"]
     statement := "For n >= 0, nsmallest(n, iterable, key) == sorted(iterable, key=key)[:n], ties included, for sized and unsized iterables."
-    source := "nsmallest docstring, Lib/heapq.py:477-481; Doc/library/heapq.rst:188-193", status := .open
-    prop := ``NsmallestIsSortedPrefix
-    notes := "In progress." },
+    source := "nsmallest docstring, Lib/heapq.py:477-481; Doc/library/heapq.rst:188-193", status := .proven
+    prop := ``NsmallestIsSortedPrefix, thm := some ``nsmallestIsSortedPrefix_proven
+    notes := "Covers the n == 1 min() shortcut, the n >= len sorted() shortcut and both heap branches. Negative n is excluded: its meaning is undefined (python/cpython#57483); nsmallest returns [] there while sorted(...)[:n] drops items." },
   { id := "accel-nlargest-sorted-prefix", pyFile := "Lib/heapq.py"
     pyFns := ["nlargest"]
     statement := "For n >= 0, nlargest(n, iterable, key) == sorted(iterable, key=key, reverse=True)[:n], ties included."
-    source := "nlargest docstring, Lib/heapq.py:537-541; Doc/library/heapq.rst:179-185", status := .open
-    prop := ``NlargestIsSortedPrefix
-    notes := "In progress." },
+    source := "nlargest docstring, Lib/heapq.py:537-541; Doc/library/heapq.rst:179-185", status := .proven
+    prop := ``NlargestIsSortedPrefix, thm := some ``nlargestIsSortedPrefix_proven
+    notes := "As for nsmallest; negative n excluded (python/cpython#57483)." },
   { id := "accel-merge-sorted", pyFile := "Lib/heapq.py"
     pyFns := ["merge"]
     statement := "For inputs sorted by key (descending if reverse), list(merge(*its, key, reverse)) == sorted(chain(*its), key=key, reverse=reverse), ties included."
-    source := "merge docstring, Lib/heapq.py:330-346; Doc/library/heapq.rst:154-176", status := .open
-    prop := ``MergeIsSorted
-    notes := "In progress." }
+    source := "merge docstring, Lib/heapq.py:330-346; Doc/library/heapq.rst:154-176", status := .proven
+    prop := ``MergeIsSorted, thm := some ``mergeIsSorted_proven }
 ]
 
 end PyLean.Accel
