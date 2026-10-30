@@ -5,6 +5,8 @@ import PyLean.StrSearch.Basic
 import PyLean.StrSearch.Find
 import PyLean.StrSearch.Pad
 import PyLean.StrSearch.Strip
+import PyLean.StrSearch.Split
+import PyLean.StrSearch.Replace
 
 /-!
 Search and split methods of `str`, `bytes`, `bytearray`: `Objects/stringlib/`, `Objects/unicodeobject.c`, `Objects/bytes_methods.c`, CPython 3.14.7.
@@ -90,7 +92,30 @@ def entries : List Entry := [
     pyFns := ["str.splitlines", "bytes.splitlines"]
     statement := "str.splitlines and bytes.splitlines agree on byte strings without \\v, \\f, \\x1c-\\x1e, \\x85; splitlines(True) concatenates back to the string."
     source := "invariant: str vs bytes away from the documented line-boundary differences; round trip"
-    status := .proven, prop := ``SplitlinesStrBytes, thm := some ``splitlinesStrBytes_proven }
+    status := .proven, prop := ``SplitlinesStrBytes, thm := some ``splitlinesStrBytes_proven },
+  { id := "strsearch-split-char-fast-path", pyFile := "Objects/stringlib/split.h"
+    pyFns := ["str.split", "str.rsplit", "bytes.split", "bytes.rsplit"]
+    statement := "split_char/rsplit_char (the one-character-separator fast paths) agree with the general STRINGLIB(split)/STRINGLIB(rsplit) loops for every string and maxcount."
+    source := "invariant: fast path vs slow path (split.h:100-140 vs :142-186, :240-277 vs :279-322)"
+    status := .proven, prop := ``SplitCharFastPath, thm := some ``splitCharFastPath_proven },
+  { id := "strsearch-split-str-bytes", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["str.split", "str.rsplit", "bytes.split", "bytes.rsplit"]
+    statement := "On byte strings, str and bytes split/rsplit agree for every sep and maxsplit (for sep=None: without \\x1c-\\x1f, \\x85, \\xa0); in particular str's computed default maxcounts (len-1)//2+1 and len//len(sep)+1 never cut a split short."
+    source := "invariant: str vs bytes (unicodeobject.c:10568-10750 vs bytesobject.c:1769-1876)"
+    status := .proven, prop := ``SplitStrBytes, thm := some ``splitStrBytes_proven
+    notes := "Precondition len(s) < sys.maxsize (type invariant)." },
+  { id := "strsearch-replace-split-join", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["str.replace", "bytes.replace", "str.split", "bytes.split"]
+    statement := "For non-empty old and every count: split(old, count) agrees between str and bytes, old.join of it is s, and replace(old, new, count) == new.join(s.split(old, count)) except for an OverflowError raised exactly when the result is too long."
+    source := "replace docstring; method vs equivalent method; no silent wraparound in the overflow checks"
+    status := .proven, prop := ``ReplaceSplitJoin, thm := some ``replaceSplitJoin_proven
+    notes := "Covers the three branches of str replace and the seven bytes helpers. str raises when the lengths differ, something is replaced and len > PY_SSIZE_T_MAX / kind; bytes when len > PY_SSIZE_T_MAX. Precondition len(s) < sys.maxsize." },
+  { id := "strsearch-replace-str-bytes", pyFile := "Objects/stringlib/transmogrify.h"
+    pyFns := ["str.replace", "bytes.replace"]
+    statement := "On byte strings, str.replace and bytes.replace agree for every old (empty included), new and count: same result, or both OverflowError."
+    source := "invariant: str vs bytes (unicodeobject.c:10811-11067 vs transmogrify.h:276-737)"
+    status := .proven, prop := ``ReplaceStrBytes, thm := some ``replaceStrBytes_proven
+    notes := "Precondition len(s) < sys.maxsize (type invariant)." }
 ]
 
 end PyLean.StrSearch
