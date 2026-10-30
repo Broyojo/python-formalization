@@ -1,0 +1,64 @@
+id: fractions-zero-denominator-huge-numerator-valueerror
+title: "Fraction(n, 0) raises ValueError instead of ZeroDivisionError when n has more than 4300 digits"
+priority: P4
+kind: wrong-exception
+module: fractions
+files: [Lib/fractions.py]
+functions: ["Fraction.__new__"]
+summary: |
+  The zero-denominator check builds its message with 'Fraction(%s, 0)' % numerator.
+  For a numerator with more than sys.get_int_max_str_digits() (default 4300) decimal
+  digits, formatting the message raises ValueError ("Exceeds the limit (4300 digits) for
+  integer string conversion"), so the documented ZeroDivisionError is never raised and
+  `except ZeroDivisionError` does not catch the error.
+likelihood: |
+  Low. Needs a zero denominator together with a numerator above 10**4300, e.g. an exact
+  computation that ends up dividing a huge int by an exact zero via Fraction(n, d).
+  Arithmetic on Fractions (a / 0, 0 ** -k) is not affected: those messages format the
+  denominator, which is 1 for a zero Fraction.
+maybe_intended: |
+  Unlikely to be intended: the message is only cosmetic, and the docs promise
+  ZeroDivisionError unconditionally. The int string-conversion limit (gh-95778) was meant
+  to guard int<->str conversions requested by the caller, not error-message formatting.
+reproducer: |
+  from fractions import Fraction
+  def kind(n):
+      try:
+          Fraction(n, 0)
+          return 'no error'
+      except Exception as e:
+          return type(e).__name__
+  big, small = kind(10**4300), kind(10**4299)
+  print('Fraction(10**4300, 0) ->', big)
+  print('Fraction(10**4299, 0) ->', small)
+  if big == 'ValueError' and small == 'ZeroDivisionError':
+      print('REPRODUCED fractions-zero-denominator-huge-numerator-valueerror')
+expected: |
+  ZeroDivisionError for every numerator (with a message that does not need the full
+  decimal expansion of the numerator).
+promised_by: |
+  Fraction docs (Doc/library/fractions.rst): "If denominator is zero, it raises a
+  ZeroDivisionError."
+cause: |
+  Lib/fractions.py:302-303: `raise ZeroDivisionError('Fraction(%s, 0)' % numerator)`; the
+  '%s' conversion calls int.__str__, which raises ValueError past the digit limit
+  (Objects/longobject.c:2131-2140). Same lines on main.
+possible_fix: |
+  Do not embed the numerator (e.g. raise ZeroDivisionError('Fraction(..., 0)') or
+  'division by zero'), or format it with repr-safe truncation; at minimum build the
+  message inside a try/except so ZeroDivisionError is raised regardless.
+tested:
+  python3 (3.14.7): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
+duplicates:
+  issues: []
+  related:
+    - {number: 158716, state: closed, relation: same root cause (int string-conversion limit inside fractions), reason: not_planned (bulk-filing cleanup, not judged on merits)}
+  queries: ["Fraction ZeroDivisionError", "ZeroDivisionError Fraction", "Fraction zero denominator",
+            "Fraction int_max_str_digits", "fractions integer string conversion limit",
+            "int_max_str_digits fractions", "Exceeds the limit integer string conversion",
+            "integer string conversion", "max_str_digits error message exception"]
+  bugforge: "only fractions entry is fractions-20261003-233134-c1 (= #158716, format); not this one"
+lean:
+  property: PyLean.Fractions.CtorZeroDenominatorRaises
+  theorem: PyLean.Fractions.ctorZeroDenominatorRaises_refuted

@@ -1,0 +1,59 @@
+id: fractions-format-e-int-max-str-digits
+title: "format(Fraction, '.2e') raises ValueError (int string-conversion limit) for values with more than 4300-digit numerator or denominator"
+priority: P4
+kind: crash-on-valid-input
+module: fractions
+files: [Lib/fractions.py]
+functions: ["Fraction.__format__", "Fraction._format_float_style", "_round_to_figures"]
+summary: |
+  For presentation types e, E, g, G, _round_to_figures finds the decimal magnitude of n/d
+  with str(abs(n)) and str(d). When either has more than 4300 digits this raises
+  ValueError ("Exceeds the limit (4300 digits) for integer string conversion"), although
+  the requested output is a handful of characters. Example:
+  format(Fraction(10**4300 + 1, 10**4300), '.2e') should be '1.00e+00';
+  format(Fraction(1, 3**10000), '.3e') fails the same way. format(Decimal(10**4400), '.3e')
+  works, format(Fraction(10**4400), '.3e') does not.
+likelihood: |
+  Low: needs exact rationals with 4300+ digit numerator or denominator (e.g. long exact
+  series computations), formatted in scientific / general notation.
+maybe_intended: |
+  The limit is a documented security measure for int<->str conversion; maintainers may
+  regard any formatting of huge values as in scope of that limit. Here, however, no large
+  string is produced or requested, so the limit is an implementation artifact. Only the
+  'e'/'g' paths are affected this way ('f' legitimately needs all the digits).
+reproducer: |
+  from fractions import Fraction
+  x = Fraction(10**4300 + 1, 10**4300)
+  try:
+      got = format(x, '.2e')
+  except ValueError as e:
+      got = 'ValueError: ' + str(e)[:40]
+  print("format(Fraction(10**4300 + 1, 10**4300), '.2e') ->", got)
+  if got.startswith('ValueError'):
+      print('REPRODUCED fractions-format-e-int-max-str-digits')
+expected: |
+  '1.00e+00' (the exact value rounds to 1.00).
+promised_by: |
+  Fraction docs: with a presentation type 'e', 'E', 'f', 'F', 'g', 'G' or '%',
+  "formatting follows the rules outlined for the float type in the format specification
+  mini-language".
+cause: |
+  Lib/fractions.py:124 `str_n, str_d = str(abs(n)), str(d)` and :134 `len(str(significand))`
+  inside _round_to_figures (called from _format_float_style, :533-534). Same lines on main.
+possible_fix: |
+  Compute the magnitude estimate from bit lengths (e.g. m from n.bit_length() -
+  d.bit_length() with a correction step comparing against 10**m), and compare
+  significand against 10**figures instead of measuring len(str(significand)).
+tested:
+  python3 (3.14.7): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
+duplicates:
+  issues:
+    - {number: 158716, state: closed, relation: duplicate (same function, same trigger), reason: not_planned (bulk-filing cleanup by an automated tool, not judged on merits)}
+  queries: ["Fraction __format__", "Fraction int_max_str_digits", "fractions integer string conversion limit",
+            "int_max_str_digits fractions", "Exceeds the limit integer string conversion",
+            "integer string conversion"]
+  bugforge: "fractions-20261003-233134-c1 (filed as #158716)"
+lean:
+  property: PyLean.Fractions.FormatETotal
+  theorem: PyLean.Fractions.formatETotal_refuted
