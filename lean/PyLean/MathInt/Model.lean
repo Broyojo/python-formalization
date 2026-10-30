@@ -113,32 +113,35 @@ def smallLoop (iscomb : Bool) : Nat → Nat → Nat → Nat → Nat
     let result := if iscomb then result / i else result
     smallLoop iscomb rem result n i
 
+/-- The fast paths of `perm_comb_small`, mathmodule.c:3563-3637: `some r` when
+one of them applies. -/
+def permCombFast (n k : Nat) (iscomb : Bool) : Option Nat :=
+  if iscomb then
+    if k < fastCombLimits1.length ∧ n ≤ fastCombLimits1.getD k 0 then
+      let odd := u64 (u64 (reducedFactorialOddPart.getD n 0 * invertedFactorialOddPart.getD k 0)
+        * invertedFactorialOddPart.getD (n - k) 0)
+      let shift : Int := (factorialTrailingZeros.getD n 0 : Int)
+        - factorialTrailingZeros.getD k 0 - factorialTrailingZeros.getD (n - k) 0
+      some (u64 (odd <<< shift.toNat))
+    else if k < fastCombLimits2.length ∧ n ≤ fastCombLimits2.getD k 0 then
+      some (smallLoop true (k - 1) n n 1)
+    else none
+  else
+    if k < fastPermLimits.length ∧ n ≤ fastPermLimits.getD k 0 then
+      if n ≤ 127 then
+        let odd := u64 (reducedFactorialOddPart.getD n 0 * invertedFactorialOddPart.getD (n - k) 0)
+        let shift : Int := (factorialTrailingZeros.getD n 0 : Int)
+          - factorialTrailingZeros.getD (n - k) 0
+        some (u64 (odd <<< shift.toNat))
+      else some (smallLoop false (k - 1) n n 1)
+    else none
+
 /-- `perm_comb_small(n, k, iscomb)`, mathmodule.c:3557-3669, for `n` and `k`
 of type `unsigned long long`. `fuel` bounds the recursion depth. -/
 def permCombSmall : Nat → Nat → Nat → Bool → Py Nat
   | 0, _, _, _ => .error .modelFuel
   | fuel + 1, n, k, iscomb =>
-    let fast : Option Nat :=
-      if iscomb then
-        if k < fastCombLimits1.length ∧ n ≤ fastCombLimits1.getD k 0 then
-          let odd := u64 (u64 (reducedFactorialOddPart.getD n 0 * invertedFactorialOddPart.getD k 0)
-            * invertedFactorialOddPart.getD (n - k) 0)
-          let shift : Int := (factorialTrailingZeros.getD n 0 : Int)
-            - factorialTrailingZeros.getD k 0 - factorialTrailingZeros.getD (n - k) 0
-          some (u64 (odd <<< shift.toNat))
-        else if k < fastCombLimits2.length ∧ n ≤ fastCombLimits2.getD k 0 then
-          some (smallLoop true (k - 1) n n 1)
-        else none
-      else
-        if k < fastPermLimits.length ∧ n ≤ fastPermLimits.getD k 0 then
-          if n ≤ 127 then
-            let odd := u64 (reducedFactorialOddPart.getD n 0 * invertedFactorialOddPart.getD (n - k) 0)
-            let shift : Int := (factorialTrailingZeros.getD n 0 : Int)
-              - factorialTrailingZeros.getD (n - k) 0
-            some (u64 (odd <<< shift.toNat))
-          else some (smallLoop false (k - 1) n n 1)
-        else none
-    match fast with
+    match permCombFast n k iscomb with
     | some r => .ok r
     | none => do
       let j := k / 2

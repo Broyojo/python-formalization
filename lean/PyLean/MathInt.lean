@@ -6,6 +6,8 @@ import PyLean.MathInt.Errors
 import PyLean.MathInt.Divmod
 import PyLean.MathInt.Round
 import PyLean.MathInt.Pow
+import PyLean.MathInt.Comb
+import PyLean.MathInt.Factorial
 
 /-!
 Integer functions of `math` (`Modules/mathmodule.c`) and the related `int`
@@ -17,6 +19,23 @@ namespace PyLean.MathInt
 open PyLean.Registry
 
 def entries : List Entry := [
+  { id := "mathint-comb-formula", pyFile := "Modules/mathmodule.c"
+    pyFns := ["math.comb", "perm_comb_small", "perm_comb"]
+    statement := "For 0 <= k <= n, comb(n, k) == n! // (k! * (n-k)!) exactly, unless min(k, n-k) > LLONG_MAX, where it raises OverflowError."
+    source := "comb docstring: \"Evaluates to n! / (k! * (n - k)!) when k <= n\"", status := .proven
+    prop := ``CombFormula, thm := some ``combFormula_proven
+    notes := "Covers both uint64 fast paths (odd-part tables checked by the kernel, the C(n,k)*k loop bounded by fast_comb_limits2) and both recursions." },
+  { id := "mathint-perm-formula", pyFile := "Modules/mathmodule.c"
+    pyFns := ["math.perm", "perm_comb_small", "perm_comb"]
+    statement := "For 0 <= k <= n, perm(n, k) == n! // (n-k)! exactly, unless k > LLONG_MAX, where it raises OverflowError."
+    source := "perm docstring: \"Evaluates to n! / (n - k)! when k <= n\"", status := .proven
+    prop := ``PermFormula, thm := some ``permFormula_proven },
+  { id := "mathint-factorial-exact", pyFile := "Modules/mathmodule.c"
+    pyFns := ["math.factorial", "math.perm", "factorial_odd_part", "factorial_partial_product", "count_set_bits"]
+    statement := "For 0 <= n <= LONG_MAX, factorial(n) and perm(n) equal n!."
+    source := "math.factorial docs; perm docstring (k=None returns n!)", status := .proven
+    prop := ``FactorialExact, thm := some ``factorialExact_proven
+    notes := "Includes the unsigned long tight loop of factorial_partial_product (no wraparound under its num_operands * max_bits <= 64 guard)." },
   { id := "mathint-isqrt-negative", pyFile := "Modules/mathmodule.c", pyFns := ["math.isqrt"]
     statement := "isqrt(n) raises ValueError for every n < 0."
     source := "math.isqrt docs; mathmodule.c:1707-1712", status := .proven
