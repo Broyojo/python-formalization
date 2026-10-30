@@ -15,6 +15,10 @@ import common
 
 P63, P64 = 1 << 63, 1 << 64
 
+FIB = [0, 1]
+while len(FIB) < 1500:
+    FIB.append(FIB[-1] + FIB[-2])
+
 
 def edge_nat(rng, big=True):
     """A non-negative int biased to the boundaries the C code branches on."""
@@ -113,6 +117,11 @@ def gen_case(rng):
             if rng.random() < 0.1:
                 v = rng.choice([0, 1, -1])
             args.append(v)
+        if m >= 2 and rng.random() < 0.15:
+            # consecutive Fibonacci numbers: the longest runs of Lehmer's inner loop
+            k = rng.randrange(40, len(FIB) - 1)
+            g = rng.choice([1, 1, edge_nat(rng, False) or 1])
+            args[0], args[1] = FIB[k + 1] * g, FIB[k] * g
         if fn == "lcm" and sum(abs(a).bit_length() for a in args) > 20000:
             return None
         c["args"] = args
