@@ -1,0 +1,60 @@
+id: accel-heapq-empty-error-message
+title: "heapq: heappop/heapreplace (and _max) on an empty heap raise IndexError with different messages in C and Python"
+priority: P4
+kind: twin-mismatch
+module: accel
+files: [Modules/_heapqmodule.c, Lib/heapq.py]
+functions: ["heappop", "heapreplace", "heappop_max", "heapreplace_max"]
+summary: |
+  On an empty list the C functions raise IndexError('index out of range'); the pure-Python twins
+  raise IndexError('pop from empty list') (heappop, heappop_max: from list.pop()) and
+  IndexError('list index out of range') (heapreplace, heapreplace_max: from heap[0]). Apart from
+  the message the twins agree completely: Lean proves, for every element type and comparison,
+  the same returned item, the same final list and the same exception class for all ten heap
+  primitives (accel-heap-twins-agree, accel-heapify-twins-agree, the latter including the
+  cache-friendly heapify order used above 2500 items), and the difftest finds no other
+  difference.
+likelihood: |
+  Any pop from an empty heap, but only code that inspects str(exc) can tell. test_heapq checks
+  only the class.
+maybe_intended: |
+  Most likely tolerated. The Python comments say "raises appropriate IndexError if heap is
+  empty" (Lib/heapq.py:140, :159, :184, :194), i.e. the class is what matters. Cosmetic.
+reproducer: |
+  from test.support.import_helper import import_fresh_module
+  ch = import_fresh_module('heapq', fresh=['_heapq'])
+  ph = import_fresh_module('heapq', blocked=['_heapq'])
+  def msg(f, *args):
+      try:
+          f([], *args)
+      except IndexError as e:
+          return str(e)
+  rows = [(name, msg(getattr(ch, name), *args), msg(getattr(ph, name), *args))
+          for name, args in [('heappop', ()), ('heappop_max', ()),
+                             ('heapreplace', (1,)), ('heapreplace_max', (1,))]]
+  for name, c, p in rows:
+      print(f'{name}([]): C {c!r} | Python {p!r}')
+  if all(c != p for _, c, p in rows):
+      print('REPRODUCED accel-heapq-empty-error-message')
+expected: |
+  The same IndexError message from both twins.
+observed: |
+  python3 3.14.7: heappop/heappop_max: 'index out of range' vs 'pop from empty list';
+  heapreplace/heapreplace_max: 'index out of range' vs 'list index out of range'. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+promised_by: |
+  No documentation of the message; the invariant is that `_heapq` is a drop-in replacement for
+  heapq.py (Modules/_heapqmodule.c:1).
+cause: |
+  Modules/_heapqmodule.c:160-163 (heappop_internal) and :207-210 (heapreplace_internal) set
+  "index out of range"; Lib/heapq.py:140, :159, :184, :194 rely on list.pop() / heap[0].
+possible_fix: |
+  Not worth changing; if desired, make the C messages match ("pop from empty list" /
+  "list index out of range").
+duplicates:
+  issues: []
+  queries: ["heapq in:title", "heappop", "heapreplace", "heappop empty list message", "heapq index out of range",
+            "heapq IndexError message", "heapreplace empty", "pop from empty list heapq", "heapq error message"]
+lean:
+  property: PyLean.Accel.HeapTwinsAgreeExact
+  theorem: PyLean.Accel.heapTwinsAgreeExact_refuted
