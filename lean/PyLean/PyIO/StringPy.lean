@@ -234,9 +234,7 @@ def readlinesLoop (hint : Option Int) : TState → Int → List Atom → Nat →
     | (t, .error .stopIteration) => (t, .ok (.list acc.reverse))
     | (t, .error e) => (t, .error e)
     | (t, .ok v) =>
-      let l := match v with
-        | .str l => l
-        | _ => []
+      let l := v.strOf
       let acc := Atom.str l :: acc
       let n := n + l.length
       match hint with

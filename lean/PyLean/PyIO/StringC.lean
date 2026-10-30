@@ -138,9 +138,7 @@ def readlinesLoop (hint : Int) : SCState → Int → List Atom → Nat → SCSta
     | (s', .error .stopIteration) => (s', .ok (.list acc.reverse))
     | (s', .error e) => (s', .error e)
     | (s', .ok v) =>
-      let line := match v with
-        | .str l => l
-        | _ => []
+      let line := v.strOf
       let acc := Atom.str line :: acc
       if hint > 0 ∧ (line.length : Int) > hint - length then (s', .ok (.list acc.reverse))
       else readlinesLoop hint s' (length + line.length) acc fuel

@@ -42,6 +42,11 @@ inductive Val where
 @[match_pattern] def Val.bytes (b : List Nat) : Val := .atom (.bytes b)
 @[match_pattern] def Val.str (s : List Nat) : Val := .atom (.str s)
 
+/-- The text of a `str` value (`[]` for anything else). -/
+def Val.strOf : Val → List Nat
+  | .str l => l
+  | _ => []
+
 /-! ## Exceptions that are not in `PyExc` -/
 
 def bufferError : PyExc := .named "BufferError" "Existing exports of data: object cannot be re-sized"
