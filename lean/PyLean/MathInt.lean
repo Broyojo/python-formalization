@@ -11,6 +11,7 @@ import PyLean.MathInt.Factorial
 import PyLean.MathInt.Isqrt
 import PyLean.MathInt.Bytes
 import PyLean.MathInt.Gcd
+import PyLean.MathInt.Lehmer
 
 /-!
 Integer functions of `math` (`Modules/mathmodule.c`) and the related `int`
@@ -26,7 +27,7 @@ No defect was found: every C fast path examined (the uint64 odd-part tables
 and loops of `perm_comb_small`, the uint32 `_approximate_isqrt`, the
 unsigned-long tight loop of `factorial_partial_product`, the byte/digit
 packing of `_PyLong_AsByteArray` / `_PyLong_FromByteArray`) is proven exact
-for all inputs. Lehmer's step in `_PyLong_GCD` is the one piece left open.
+for all inputs, and so is Lehmer's step in `_PyLong_GCD` (`MathInt/Lehmer.lean`).
 -/
 
 namespace PyLean.MathInt
@@ -104,25 +105,24 @@ def entries : List Entry := [
     statement := "If every argument has abs < 2**60, gcd(*args) is the nonnegative greatest common divisor of the arguments (gcd() == 0), including the 2-argument fast path and the res == 1 short cut."
     source := "math.gcd docs", status := .proven
     prop := ``GcdSmall, thm := some ``gcdSmall_proven
-    notes := "Scope: the inputs on which _PyLong_GCD takes its simple: path (Euclid on C longs). Larger inputs are mathint-gcd-general." },
+    notes := "Scope: the inputs on which _PyLong_GCD takes its simple: path (Euclid on C longs). Subsumed by mathint-gcd-general." },
   { id := "mathint-lcm-small", pyFile := "Modules/mathmodule.c"
     pyFns := ["math.lcm", "long_lcm"]
     statement := "lcm() == 1, lcm(a) == abs(a), and for abs(a), abs(b) < 2**60, lcm(a, b) is the nonnegative least common multiple (0 if either is 0)."
     source := "math.lcm docs", status := .proven
     prop := ``LcmSmall, thm := some ``lcmSmall_proven
-    notes := "Scope as for mathint-gcd-small; the general statement is mathint-lcm-general." },
+    notes := "Scope as for mathint-gcd-small; subsumed by mathint-lcm-general." },
   { id := "mathint-gcd-general", pyFile := "Objects/longobject.c"
     pyFns := ["math.gcd", "_PyLong_GCD"]
     statement := "For all int arguments, gcd(*args) is the nonnegative greatest common divisor (gcd() == 0)."
-    source := "math.gcd docs", status := .open
-    prop := ``GcdGeneral
-    notes := "Open: needs a correctness proof of the single-precision Lehmer step of _PyLong_GCD (longobject.c:5683-5808): that the cosequence (A, B, C, D) accepted by the test s <= t yields nonnegative A*a - B*b, D*b - C*a below 2**(30*size_a) (so the digit loop's carries vanish), that the int64 intermediates cannot overflow, and that a strictly decreases. Unimodularity (gcd preservation) alone is not enough because the model, like C, reduces the new values modulo 2**(30*size_a). The model detects int64 overflow; 50k+ difftest cases (with Fibonacci inputs, the longest inner loops) and 300k Python-only stress cases agree with Euclid." },
+    source := "math.gcd docs", status := .proven
+    prop := ``GcdGeneral, thm := some ``gcdGeneral_proven
+    notes := "Includes Lehmer's step of _PyLong_GCD (longobject.c:5683-5808): the cofactors accepted by the test B + q*D <= x - q*y are the true Euclidean cofactors of (a, b), so the digit loop yields two consecutive nonnegative remainders below 2**(30*size_a) (no wraparound), b strictly decreases, and no int64_t intermediate of the inner loop exceeds 2**62 in absolute value." },
   { id := "mathint-lcm-general", pyFile := "Modules/mathmodule.c"
     pyFns := ["math.lcm", "long_lcm"]
     statement := "For all int arguments, lcm(*args) is the nonnegative least common multiple (lcm() == 1, 0 if any argument is 0)."
-    source := "math.lcm docs", status := .open
-    prop := ``LcmGeneral
-    notes := "Open for the same reason as mathint-gcd-general: long_lcm calls _PyLong_GCD on unbounded running values." },
+    source := "math.lcm docs", status := .proven
+    prop := ``LcmGeneral, thm := some ``lcmGeneral_proven },
   { id := "mathint-divmod-floor", pyFile := "Objects/longobject.c"
     pyFns := ["divmod", "l_divmod", "fast_floor_div", "fast_mod", "_pylong.int_divmod"]
     statement := "For w != 0, divmod(v, w) returns (q, r) with q*w + r == v, r of the sign of w and abs(r) < abs(w), on the single-digit fast path, the _pylong path and the long_divrem path; w == 0 raises ZeroDivisionError."

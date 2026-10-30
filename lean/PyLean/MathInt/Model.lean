@@ -312,33 +312,51 @@ def lehmerInner : Nat → LehmerState → Py LehmerState
         if !(inI64 qC && inI64 t') then .error ubError
         else lehmerInner fuel ⟨st.y, t, st.D, st.C, s, t', st.k + 1⟩
 
-/-- The outer loop of `_PyLong_GCD`, longobject.c:5683-5808, on `0 <= b <= a`.
+/-- Fuel for Lehmer's inner loop: each iteration strictly decreases `y < 2^60`. -/
+@[irreducible] def lehmerInnerFuel : Nat := 2 ^ 64
+
+/-- `sh = 30*(size_a-3) + nbits`, `nbits = bit_length(a's top digit)`,
+longobject.c:5689-5707. -/
+def lehmerShift (a : Nat) : Nat :=
+  30 * (digitCount a - 3) + bitLength (a >>> (30 * (digitCount a - 1)))
+
+/-- The new pair after `k >= 1` accepted steps: the sign swap for odd `k`
+(longobject.c:5743-5746) and the digit loop (:5777-5799), which stores the
+low `size_a` digits of `A*a - B*b` and `D*b - C*a`. -/
+def lehmerNew (st : LehmerState) (a b : Nat) : Nat × Nat :=
+  if st.k % 2 = 1 then
+    ((((-st.B) * a - (-st.A) * b) % 2 ^ (30 * digitCount a)).toNat,
+     (((-st.C) * b - (-st.D) * a) % 2 ^ (30 * digitCount a)).toNat)
+  else
+    (((st.A * a - st.B * b) % 2 ^ (30 * digitCount a)).toNat,
+     ((st.D * b - st.C * a) % 2 ^ (30 * digitCount a)).toNat)
+
+/-- One pass of the outer loop of `_PyLong_GCD`, longobject.c:5683-5808, on
+`0 <= b <= a`: `inl g` when the loop exits with result `g` (through the
+`simple:` tail or `size_b == 0`), `inr (a', b')` for the next pair.
 The top `2*PyLong_SHIFT` bits that :5701-5707 assemble from three digits are
 `a >> sh` and `b >> sh` with `sh = 30*(size_a-3) + nbits`. The digit loop at
 :5777-5799 stores the low `size_a` digits of `A*a - B*b` and `D*b - C*a`,
 i.e. their values modulo `2^(30*size_a)`. -/
+def lehmerOuterStep (a b : Nat) : Py (Nat ⊕ (Nat × Nat)) :=
+  if digitCount a ≤ 2 then .ok (.inl (gcdSimple a b))
+  else if digitCount b = 0 then .ok (.inl a)
+  else
+    match lehmerInner lehmerInnerFuel
+        ⟨(a >>> lehmerShift a : Nat), (b >>> lehmerShift a : Nat), 1, 0, 0, 1, 0⟩ with
+    | .error e => .error e
+    | .ok st =>
+      if st.k = 0 then .ok (.inr (b, a % b))
+      else .ok (.inr (lehmerNew st a b))
+
+/-- The outer loop of `_PyLong_GCD`, longobject.c:5683-5808. -/
 def lehmerOuter : Nat → Nat → Nat → Py Nat
   | 0, _, _ => .error .modelFuel
   | fuel + 1, a, b =>
-    let sa := digitCount a
-    if sa ≤ 2 then .ok (gcdSimple a b)
-    else
-      let nbits := bitLength (a >>> (30 * (sa - 1)))
-      let sb := digitCount b
-      if sb = 0 then .ok a
-      else
-        let sh := 30 * (sa - 3) + nbits
-        match lehmerInner (2 ^ 64) ⟨(a >>> sh : Nat), (b >>> sh : Nat), 1, 0, 0, 1, 0⟩ with
-        | .error e => .error e
-        | .ok st =>
-          if st.k = 0 then lehmerOuter fuel b (a % b)
-          else
-            let (A, B, C, D) :=
-              if st.k % 2 = 1 then (-st.B, -st.A, -st.D, -st.C) else (st.A, st.B, st.C, st.D)
-            let m : Int := 2 ^ (30 * sa)
-            let c := (A * a - B * b) % m
-            let d := (D * b - C * a) % m
-            lehmerOuter fuel c.toNat d.toNat
+    match lehmerOuterStep a b with
+    | .error e => .error e
+    | .ok (.inl g) => .ok g
+    | .ok (.inr (c, d)) => lehmerOuter fuel c d
 
 /-- `_PyLong_GCD(a, b)`, longobject.c:5647-5851. -/
 def pyLongGCD (a b : Int) : Py Nat :=

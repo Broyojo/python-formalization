@@ -4,7 +4,8 @@ import PyLean.MathInt.Factorial
 /-!
 `math.gcd` / `math.lcm` on arguments below `2**60`, where `_PyLong_GCD`
 takes its `simple:` path (Euclid on C `long`s, longobject.c:5812-5843).
-The Lehmer path for larger arguments is stated in `GcdGeneral` and left open.
+The general statements `GcdGeneral` / `LcmGeneral`, which go through Lehmer's
+step, are proven in `Lehmer.lean`.
 -/
 
 namespace PyLean.MathInt
