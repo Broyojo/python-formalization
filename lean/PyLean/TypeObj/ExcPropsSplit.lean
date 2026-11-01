@@ -178,7 +178,7 @@ theorem specSplit_stable {w w' : World} (p : Val → Bool) (h : Ext w w') :
 
 /-! ## The heap steps of `exceptiongroup_subset` -/
 
-theorem ext_push (w : World) (o : Obj) (ho : ∀ d, o.body ≠ .exc d) :
+theorem ext_push (w : World) (o : Obj) :
     Ext w { w with heap := w.heap.push (.val o) } := by
   refine ⟨by simp, ?_⟩
   intro a ha
@@ -351,7 +351,7 @@ theorem subset_spec {rt : Rt} {mt : MatcherType} {mv : Val} {p : Val → Bool}
     have hEmpty : xs.isEmpty = false := rfl
     let c : Obj := { cls := B.list, body := .list xs }
     let w1 : World := { w with heap := w.heap.push (.val c) }
-    have hext1 : Ext w w1 := ext_push w c (by intro d h; simp [c] at h)
+    have hext1 : Ext w w1 := ext_push w c
     have hl1 : listOf w1 (.obj w.heap.size) = some xs := listOf_alloc w xs
     have hE : (x :: xs').isEmpty = false := rfl
     simp only [exceptiongroupSubset, hE, M.bind_app] at hs
@@ -415,7 +415,7 @@ theorem subset_spec {rt : Rt} {mt : MatcherType} {mv : Val} {p : Val → Bool}
                     | ok u6 w6 =>
                       have hext7 := H.notesSet _ _ _ _ hset
                       have hext6 : Ext w5 { w5 with heap := w5.heap.push (.val { cls := B.list, body := .list cs }) } :=
-                        ext_push w5 _ (by intro d h; simp at h)
+                        ext_push w5 _
                       simp [hset] at hs
                       obtain ⟨h1, h2⟩ := hs
                       subst h1 h2
