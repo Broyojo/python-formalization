@@ -56,7 +56,8 @@ duplicates:
     - {number: 73325, state: open, relation: "same function, 'operator.concat/iconcat could only work if left operand is a sequence'", reason: "related; maintainers declined to change the semantics"}
     - {number: 55686, state: open, relation: "same root, 'Incorrect operand precedence when implementing sequences in C'", reason: "related"}
     - {number: 37334, state: closed, relation: "same root, 'sq_concat prevents __radd__ from working'", reason: "related, about the + operator"}
-  queries: ["operator concat __radd__", "bugforge README: no match for operator.concat"]
+    - {number: 158733, state: closed, relation: "same family, 'operator.iconcat ignores list subclass __iadd__ override', from bugforge", reason: "closed not planned with a batch of automated reports, so not judged on its merits"}
+  queries: ["operator concat __radd__", "bugforge README: operator-20261003-044103-c1, the iconcat entry above"]
 lean:
   property: PyLean.CoreLibs.Operator.ConcatIsPlus
   theorem: PyLean.CoreLibs.Operator.concatIsPlus_refuted
