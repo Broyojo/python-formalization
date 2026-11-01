@@ -271,7 +271,9 @@ def main():
             bad.append(("harness", source(c).split("\n")[-1], str(lo)[:160], py[-1:]))
             continue
         # __firstlineno__ is a line of the generated source, which the model does not have.
-        if [FIRST.sub("", x) for x in lean] == [FIRST.sub("", x) for x in py]:
+        # The runner rewrites what looks like an address on the Python side, so do both.
+        if ([td.ADDR.sub("0x0", FIRST.sub("", x)) for x in lean]
+                == [td.ADDR.sub("0x0", FIRST.sub("", x)) for x in py]):
             cats["agree"] += 1
             continue
         hit = [x for x in lean if "MODEL-GAP" in x or "MODEL-FUEL" in x]
