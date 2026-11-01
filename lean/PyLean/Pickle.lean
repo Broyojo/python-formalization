@@ -10,6 +10,7 @@ import PyLean.Pickle.EncProps
 import PyLean.Pickle.EncFrame
 import PyLean.Pickle.DecProps
 import PyLean.Pickle.ToolsGen
+import PyLean.Pickle.DecSim
 
 /-!
 `Lib/pickle.py` vs `Modules/_pickle.c`, CPython 3.14.7, on plain data: None,
@@ -164,6 +165,12 @@ def entries : List Entry := [
     prop := ``LoadsTwinsAccept, thm := some ``loadsTwinsAccept_refuted
     bug := some "pickle-c-empty-batch-no-type-check"
     notes := "APPENDS with no items on None. The text-opcode and frame divergences have their own entries." },
+  { id := "pickle-loads-twins-narrow", pyFile := "Modules/_pickle.c"
+    pyFns := ["_pickle_loads_impl", "_loads"]
+    statement := "On every data-only stream whose run meets none of the divergences on record (INT spellings and digit limit, NUL in text arguments, PUT index above sys.maxsize, an empty APPENDS or ADDITEMS batch on the wrong target, a FRAME longer than the data), pickle.loads and pickle._loads both raise or return equal objects."
+    source := "invariant: C accelerator vs pure-Python twin", status := .open
+    prop := ``LoadsTwinsNarrow
+    notes := "Open: DecSim.lean has the state relation, the sequencing rule with Python's doomed runs, and how each reader computes. Still missing: the read, readline and readinto simulations, one lemma per handler over the tables, and the loop. This would settle most load_* rows." },
   { id := "pickle-frame-twins", pyFile := "Lib/pickle.py"
     pyFns := ["_Unframer.load_frame", "load_frame"]
     statement := "For a stream starting with a FRAME of any length, the two unpicklers accept the same streams and return equal objects."

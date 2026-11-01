@@ -453,12 +453,29 @@ def strRepr (asciiOnly : Bool) (s : List Nat) : Py String := do
   let parts ← s.mapM (strReprCP asciiOnly q)
   return charOf q ++ String.join parts ++ charOf q
 
+/-- One byte of `repr(bytearray)`. Unlike `bytes`, `'` is escaped under either
+quote. -/
+def bytearrayReprByte (c : UInt8) : String :=
+  let n := c.toNat
+  if n == 0x27 || n == 0x5c then "\\" ++ charOf n
+  else if n == 0x09 then "\\t"
+  else if n == 0x0a then "\\n"
+  else if n == 0x0d then "\\r"
+  else if n < 0x20 || n ≥ 0x7f then "\\x" ++ hexN 2 n
+  else charOf n
+
+/-- `repr(bytearray)`, `bytearray_repr_lock_held` in `Objects/bytearrayobject.c:1092-1178`:
+`"` only when there is a `'` and no `"`. -/
+def bytearrayRepr (b : Bytes) : String :=
+  let quote := if b.contains 0x27 && !b.contains 0x22 then "\"" else "'"
+  "bytearray(b" ++ quote ++ String.join (b.map bytearrayReprByte) ++ quote ++ ")"
+
 /-- `repr(arg)`. -/
 def tvRepr : TV → Py String
   | .int i => do return bytesText (← reprInt i)
   | .bool b => .ok (if b then "True" else "False")
   | .bytes b => .ok (bytesRepr b)
-  | .bytearray b => .ok ("bytearray(" ++ bytesRepr b ++ ")")
+  | .bytearray b => .ok (bytearrayRepr b)
   | .str s => strRepr false s
   | .float _ => .error (excluded "repr of a float")
 
@@ -569,10 +586,10 @@ def argText (info : OpInfo) (arg : Option TV) (markmsg : Option String) (line : 
     let l ← match arg with
       | none => pure l
       | some a =>
-        match info.name, a with
-        | "STRING", .str s | "BINSTRING", .str s | "SHORT_BINSTRING", .str s =>
-          do return l ++ " " ++ (← strRepr true s)
-        | _, _ => do return l ++ " " ++ (← tvRepr a)
+        let r ← match info.name, a with
+          | "STRING", .str s | "BINSTRING", .str s | "SHORT_BINSTRING", .str s => strRepr true s
+          | _, _ => tvRepr a
+        pure (l ++ " " ++ r)
     match markmsg with
     | some m => return l ++ " " ++ m
     | none => return l
