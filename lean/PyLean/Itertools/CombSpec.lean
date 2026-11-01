@@ -12,35 +12,37 @@ namespace PyLean.Itertools
 
 open PyLean
 
+variable {α : Type} [Inhabited α]
+
 /-! ## Iterating a partial step function -/
 
 /-- From `a`, the step function goes through exactly the states `L` and arrives at `z`. -/
-inductive Walk {α : Type} (step : α → Option α) : α → List α → α → Prop
-  | nil (a : α) : Walk step a [] a
-  | cons {a b : α} {L : List α} {z : α} : step a = some b → Walk step b L z → Walk step a (a :: L) z
+inductive Walk {σ : Type} (step : σ → Option σ) : σ → List σ → σ → Prop
+  | nil (a : σ) : Walk step a [] a
+  | cons {a b : σ} {L : List σ} {z : σ} : step a = some b → Walk step b L z → Walk step a (a :: L) z
 
 /-- From `a`, the step function goes through exactly the states `L` and then stops. -/
-inductive RunTo {α : Type} (step : α → Option α) : α → List α → Prop
-  | last {a : α} : step a = none → RunTo step a [a]
-  | cons {a b : α} {L : List α} : step a = some b → RunTo step b L → RunTo step a (a :: L)
+inductive RunTo {σ : Type} (step : σ → Option σ) : σ → List σ → Prop
+  | last {a : σ} : step a = none → RunTo step a [a]
+  | cons {a b : σ} {L : List σ} : step a = some b → RunTo step b L → RunTo step a (a :: L)
 
-theorem Walk.append_run {α : Type} {step : α → Option α} {a z : α} {L R : List α}
+theorem Walk.append_run {σ : Type} {step : σ → Option σ} {a z : σ} {L R : List σ}
     (h : Walk step a L z) (hr : RunTo step z R) : RunTo step a (L ++ R) := by
   induction h with
   | nil => exact hr
   | cons hs _ ih => exact RunTo.cons hs (ih hr)
 
-theorem RunTo.head {α : Type} {step : α → Option α} {a : α} {L : List α} (h : RunTo step a L) :
+theorem RunTo.head {σ : Type} {step : σ → Option σ} {a : σ} {L : List σ} (h : RunTo step a L) :
     ∃ t, L = a :: t := by
   cases h with
   | last _ => exact ⟨[], rfl⟩
   | cons _ _ => exact ⟨_, rfl⟩
 
 /-- A run of `step` embeds in a run of `step'` under `f`, ending at `z`. -/
-theorem RunTo.lift_walk {α β : Type} {step : α → Option α} {step' : β → Option β} (f : α → β)
-    (P : α → Prop) (z : β)
+theorem RunTo.lift_walk {σ β : Type} {step : σ → Option σ} {step' : β → Option β} (f : σ → β)
+    (P : σ → Prop) (z : β)
     (hs : ∀ x y, P x → step x = some y → P y ∧ step' (f x) = some (f y))
-    (ht : ∀ x, P x → step x = none → step' (f x) = some z) {a : α} {L : List α}
+    (ht : ∀ x, P x → step x = none → step' (f x) = some z) {a : σ} {L : List σ}
     (h : RunTo step a L) (hP : P a) : Walk step' (f a) (L.map f) z := by
   induction h with
   | last h0 => exact Walk.cons (ht _ hP h0) (Walk.nil z)
@@ -49,10 +51,10 @@ theorem RunTo.lift_walk {α β : Type} {step : α → Option α} {step' : β →
     exact Walk.cons this.2 (ih this.1)
 
 /-- A run of `step` embeds in a run of `step'` under `f`, stopping with it. -/
-theorem RunTo.lift_run {α β : Type} {step : α → Option α} {step' : β → Option β} (f : α → β)
-    (P : α → Prop)
+theorem RunTo.lift_run {σ β : Type} {step : σ → Option σ} {step' : β → Option β} (f : σ → β)
+    (P : σ → Prop)
     (hs : ∀ x y, P x → step x = some y → P y ∧ step' (f x) = some (f y))
-    (ht : ∀ x, P x → step x = none → step' (f x) = none) {a : α} {L : List α}
+    (ht : ∀ x, P x → step x = none → step' (f x) = none) {a : σ} {L : List σ}
     (h : RunTo step a L) (hP : P a) : RunTo step' (f a) (L.map f) := by
   induction h with
   | last h0 => exact RunTo.last (ht _ hP h0)
@@ -265,7 +267,7 @@ theorem comb_run : ∀ (s r k : Nat), r ≤ s → RunTo (combStep (k + s) r) (Li
       exact hr
 
 /-- From a started state, the C iterator drains the tuples of the run. -/
-theorem combDrain (pool : List Int) (r : Nat) {idx : List Nat} {L : List (List Nat)}
+theorem combDrain (pool : List α) (r : Nat) {idx : List Nat} {L : List (List Nat)}
     (h : RunTo (combStep pool.length r) idx L) : ∀ fuel, L.length ≤ fuel →
     drain cCombinationsNext fuel
         { pool := pool, indices := idx, r := r, started := true, stopped := false } =
@@ -301,9 +303,9 @@ yields the tuples at exactly the positions in a list `L` that has
 lexicographic order (so no repeats), and consists of all-distinct, increasing
 `r`-tuples of positions `< n`. Type invariant: the pool tuple is in memory. -/
 def CombinationsSpec : Prop :=
-  ∀ (pool : List Int) (r : Int) (fuel : Nat), tupleNewOk pool.length = true → 0 ≤ r →
+  ∀ (α : Type) [Inhabited α] (pool : List α) (r : Int) (fuel : Nat), tupleNewOk pool.length = true → 0 ≤ r →
     memNewOk r = true → tupleNewOk r = true → choose pool.length r.toNat < fuel →
-    ∃ L : List (List Nat), cCombinationsF fuel pool r = Run.ok (L.map (pick pool)) ∧
+    ∃ L : List (List Nat), cCombinationsF fuel (.iter pool none) r = Run.ok (L.map (pick pool)) ∧
       L.length = choose pool.length r.toNat ∧ L.Pairwise LexLt ∧
       ∀ x ∈ L, IncIn 0 pool.length r.toNat x
 
@@ -313,13 +315,13 @@ theorem choose_gt : ∀ n k, n < k → choose n k = 0
     simp [choose, choose_gt n k (by omega), choose_gt n (k + 1) (by omega)]
 
 theorem combinationsSpec_proven : CombinationsSpec := by
-  intro pool r fuel _ h0 hm ht hf
+  intro α _ pool r fuel _ h0 hm ht hf
   have hle := memNewOk_le hm
   have hmin : ssizeMin ≤ r := by rw [ssizeMin_eq]; omega
   have hrn : ((r.toNat : Nat) : Int) = r := Int.toNat_of_nonneg h0
   refine ⟨cp pool.length r.toNat 0, ?_, cp_length _ _ _, cp_sorted _ _ _, fun x hx => cp_valid _ _ _ x hx⟩
   obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-  simp only [cCombinationsF, cCombinationsNew, asSsize_ok hmin hle]
+  simp only [cCombinationsF, cCombinationsNew, asSsize_ok hmin hle, tupleOf]
   simp only [bind, Except.bind, show ¬ r < 0 by omega, ↓reduceIte, hm, Bool.not_true,
     Bool.false_eq_true, pure, Except.pure]
   by_cases hn : r > pool.length

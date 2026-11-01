@@ -7,12 +7,17 @@ doc equivalent (Doc/library/itertools.rst:459-501).
 Arguments after the iterable are `args : List (Option Int)` of length 1 to 3
 (`none` is `None`), i.e. `islice(it, stop)` or `islice(it, start, stop[, step])`.
 The observable result is the drained run plus the number of items consumed
-from the input iterator (the doc promises `max(start, stop)`).
+from the input iterator (the doc promises `max(start, stop)`). An argument
+that is not an int behaves as an out-of-range int: `PyNumber_AsSsize_t` fails
+and `islice_new` clears the error, so non-index objects need no separate case.
+The input is an `Obj`, so it may be non-iterable or raise after its items.
 -/
 
 namespace PyLean.Itertools
 
 open PyLean
+
+variable {α : Type}
 
 def isliceStopMsg : String :=
   "Stop argument for islice() must be None or an integer: 0 <= x <= sys.maxsize."
@@ -28,13 +33,12 @@ def asSsizeOrMinus1 (x : Int) : Int :=
   | .error _ => -1
 
 /-- `isliceobject` (:1584-1591); `it = none` after `Py_CLEAR(lz->it)`. -/
-structure IsliceState where
-  it : Option (List Int)
+structure IsliceState (α : Type) where
+  it : Option (Src α)
   next : Int
   stop : Int
   step : Int
   cnt : Int
-  deriving Repr, DecidableEq
 
 /-- `islice_new` (:1596-1680): validated `(start, stop, step)`, with
 `stop = -1` for `None`. -/
@@ -73,39 +77,62 @@ def cIsliceArgs (args : List (Option Int)) : Py (Int × Int × Int) :=
 
 /-- The `while (lz->cnt < lz->next)` skip loop (:1716-1722): `none` when the
 input ran out (`goto empty`). Each iteration consumes one item. -/
-def cIsliceSkip (next : Int) : List Int → Int → Option (List Int) × Int
+def cIsliceSkip (next : Int) : List α → Int → Option (List α) × Int
   | [], cnt => if cnt < next then (none, cnt) else (some [], cnt)
   | x :: rest, cnt => if cnt < next then cIsliceSkip next rest (cnt + 1) else (some (x :: rest), cnt)
 
+/-- `goto empty` (:1737-1739) after `iternext` returned `NULL`: `it` is cleared
+and the error, if any, stays set. -/
+def cIsliceEnded (s : IsliceState α) (err : Option PyExc) (cnt : Int) : Step (IsliceState α) α :=
+  match err with
+  | none => .stop { s with it := none, cnt := cnt }
+  | some e => .raise e { s with it := none, cnt := cnt }
+
 /-- `islice_next` (:1703-1740). The step is added in `size_t` and converted
 back (:1729-1734), i.e. with two's complement wraparound. -/
-def cIsliceNext (s : IsliceState) : Step IsliceState Int :=
+def cIsliceNext (s : IsliceState α) : Step (IsliceState α) α :=
   match s.it with
   | none => .stop s
-  | some l =>
-    let empty (cnt : Int) : Step IsliceState Int := .stop { s with it := none, cnt := cnt }
+  | some ⟨l, err⟩ =>
     match cIsliceSkip s.next l s.cnt with
-    | (none, cnt) => empty cnt
+    | (none, cnt) => cIsliceEnded s err cnt
     | (some l, cnt) =>
-      if s.stop != -1 && cnt >= s.stop then empty cnt
+      if s.stop != -1 && cnt >= s.stop then .stop { s with it := none, cnt := cnt }
       else match l with
-        | [] => empty cnt
+        | [] => cIsliceEnded s err cnt
         | item :: rest =>
           let cnt := cnt + 1
           let oldnext := s.next
           let next := wrapSsize (s.next + s.step)
           let next := if next < oldnext || (s.stop != -1 && next > s.stop) then s.stop else next
-          .yield item { it := some rest, next := next, stop := s.stop, step := s.step, cnt := cnt }
+          .yield item { it := some ⟨rest, err⟩, next := next, stop := s.stop, step := s.step, cnt := cnt }
 
-/-- `list(islice(l, *args))` in C, and the number of items consumed from `l`
-(`lz->cnt`). Fuel `l.length + 1` suffices: each call consumes an item or
-clears `it`. -/
-def cIslice (l : List Int) (args : List (Option Int)) : Run Int × Int :=
+/-- `PyArg_UnpackTuple(args, "islice", 2, 4, ...)` (:1610) and the keyword
+check (:1606-1608), before `cIsliceArgs`; `nargs` counts the iterable too. -/
+def cIsliceArity (nargs : Nat) (hasKw : Bool) : Py Unit :=
+  if hasKw then .error (.typeError "islice() takes no keyword arguments")
+  else if nargs < 2 then .error (.typeError s!"islice expected at least 2 arguments, got {nargs}")
+  else if nargs > 4 then .error (.typeError s!"islice expected at most 4 arguments, got {nargs}")
+  else .ok ()
+
+/-- The body of `islice_new` after unpacking (:1612-1679): the arguments are
+checked first, then `PyObject_GetIter(seq)`. -/
+def cIsliceNew (seq : Obj α) (args : List (Option Int)) : Py (IsliceState α) :=
   match cIsliceArgs args with
-  | .error e => (Run.err e, 0)
+  | .error e => .error e
   | .ok (start, stop, step) =>
-    let r := drainSt cIsliceNext (l.length + 1)
-      { it := some l, next := start, stop := stop, step := step, cnt := 0 }
+    match getIter seq with
+    | .error e => .error e
+    | .ok it => .ok { it := some it, next := start, stop := stop, step := step, cnt := 0 }
+
+/-- `list(islice(seq, *args))` in C, and the number of items consumed from the
+input (`lz->cnt`). Fuel `seq.len + 1` suffices: each call consumes an item or
+clears `it`. -/
+def cIslice (seq : Obj α) (args : List (Option Int)) : Run α × Int :=
+  match cIsliceNew seq args with
+  | .error e => (Run.err e, 0)
+  | .ok s =>
+    let r := drainSt cIsliceNext (seq.len + 1) s
     (r.1, r.2.cnt)
 
 /-! ### Doc equivalent -/
@@ -133,26 +160,31 @@ def pastBound : Option Int → Int → Bool
 /-- The `for i, element in zip(indices, iterable)` loop (rst:489-493):
 `indices` is `range(bound)` (`some bound`) or `count()` (`none`); `zip` pulls
 the index first, so an exhausted `range` stops without touching the input.
-Returns the yielded items and the number of input items consumed. -/
-def docIsliceLoop (bound : Option Int) (step : Int) : Int → Int → List Int → List Int × Nat
-  | _, _, [] => ([], 0)
+Returns the yielded items, the number of input items consumed, and the
+exception, `err`, if the loop pulled past the last item. -/
+def docIsliceLoop (bound : Option Int) (step : Int) (err : Option PyExc) :
+    Int → Int → List α → List α × Nat × Option PyExc
+  | i, _, [] => if pastBound bound i then ([], 0, none) else ([], 0, err)
   | i, nextI, x :: xs =>
-    if pastBound bound i then ([], 0)
+    if pastBound bound i then ([], 0, none)
     else
       if i = nextI then
-        let r := docIsliceLoop bound step (i + 1) (nextI + step) xs
-        (x :: r.1, r.2 + 1)
+        let r := docIsliceLoop bound step err (i + 1) (nextI + step) xs
+        (x :: r.1, r.2.1 + 1, r.2.2)
       else
-        let r := docIsliceLoop bound step (i + 1) nextI xs
-        (r.1, r.2 + 1)
+        let r := docIsliceLoop bound step err (i + 1) nextI xs
+        (r.1, r.2.1 + 1, r.2.2)
 
 /-- The doc's `islice(iterable, *args)`, drained, and the items consumed. -/
-def docIslice (l : List Int) (args : List (Option Int)) : Run Int × Int :=
+def docIslice (seq : Obj α) (args : List (Option Int)) : Run α × Int :=
   match docIsliceArgs args with
   | .error e => (Run.err e, 0)
   | .ok (start, stop, step) =>
-    let bound := stop.map (fun s => max start s)
-    let r := docIsliceLoop bound step 0 start l
-    (Run.ok r.1, r.2)
+    match getIter seq with
+    | .error e => (Run.err e, 0)
+    | .ok ⟨l, err⟩ =>
+      let bound := stop.map (fun s => max start s)
+      let r := docIsliceLoop bound step err 0 start l
+      ((r.1, r.2.2), r.2.1)
 
 end PyLean.Itertools
