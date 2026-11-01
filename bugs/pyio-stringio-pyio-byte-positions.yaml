@@ -1,0 +1,58 @@
+id: pyio-stringio-pyio-byte-positions
+title: "_pyio.StringIO positions are UTF-8 byte offsets: writing over non-ASCII text corrupts the stream"
+priority: P4
+kind: twin-mismatch
+module: pyio
+files: [Lib/_pyio.py]
+functions: ["StringIO.__init__", "TextIOWrapper.write", "TextIOWrapper.truncate"]
+summary: |
+  _pyio.StringIO stores UTF-8 in a BytesIO and its positions are byte offsets. io.StringIO's
+  positions are code points. Most of the difference is allowed (tell() is opaque), but it also
+  loses data in operations with no explicit position: _pyio.StringIO('éa').write('x') overwrites
+  the first *byte* of 'é' and getvalue() then raises UnicodeDecodeError, where io.StringIO gives
+  'xa'. truncate() after seek(0, 2) style use has the same effect (truncate(1) cuts inside 'é').
+likelihood: |
+  Very low: needs _pyio and an overwrite of non-ASCII initial text.
+maybe_intended: |
+  The design is known: test_memoryio's test_widechar is C-only with an "XXX" saying the Python
+  version depends on the encoding of the buffer, and gh-69377 (open) discusses making offsets code
+  points. A maintainer would call this a known limitation of a reference implementation, although
+  the docs do promise this use: StringIO is "ready ... for a write that would overwrite the
+  initial value".
+reproducer: |
+  import io, _pyio
+  def overwrite(m):
+      s = m.StringIO('éa')
+      s.write('x')
+      try:
+          return s.getvalue()
+      except UnicodeDecodeError as e:
+          return 'UnicodeDecodeError: %s' % e
+  c, p = overwrite(io), overwrite(_pyio)
+  print('io   ', repr(c))
+  print('_pyio', repr(p))
+  if c == 'xa' and p.startswith('UnicodeDecodeError'):
+      print('REPRODUCED pyio-stringio-pyio-byte-positions')
+expected: |
+  'xa', as in io.StringIO.
+observed: |
+  python3 3.14.7: io 'xa'; _pyio UnicodeDecodeError ('utf-8' codec can't decode byte 0xa9 in position
+  1: invalid start byte). REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Doc/library/io.rst:1136-1138: "making it ready for an immediate write from the beginning or for
+  a write that would overwrite the initial value".
+cause: |
+  Lib/_pyio.py:2724-2726 builds StringIO on a BytesIO with encoding='utf-8'; TextIOWrapper.write
+  (Lib/_pyio.py:2256-2278) writes encoded bytes at a byte position.
+possible_fix: |
+  Use a fixed-width encoding (UTF-32) for the buffer, as suggested in gh-69377, or a list-based
+  buffer in a dedicated _pyio.StringIO.
+duplicates:
+  issues:
+    - {number: 69377, state: open, relation: "related: 'Define StringIO seek offset as code point offset'", reason: "feature request covering the same design; does not mention the data corruption"}
+    - {number: 122299, state: closed, relation: "docs: byte vs character offsets in io docs", reason: ""}
+  queries: ["_pyio StringIO", "bugforge README: no io entries"]
+lean:
+  property: PyLean.PyIO.StringIOInitWriteTwins
+  theorem: PyLean.PyIO.stringIOInitWriteTwins_refuted

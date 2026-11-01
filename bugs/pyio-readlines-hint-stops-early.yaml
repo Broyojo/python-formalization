@@ -1,0 +1,71 @@
+id: pyio-readlines-hint-stops-early
+title: "readlines(hint) stops one line early in io.BytesIO and all of _pyio, unlike every other C stream and the docs"
+priority: P3
+kind: sibling-mismatch
+module: pyio
+files: [Modules/_io/bytesio.c, Lib/_pyio.py, Modules/_io/iobase.c]
+functions: ["_io_BytesIO_readlines_impl", "IOBase.readlines", "_io__IOBase_readlines_impl"]
+summary: |
+  The docs say no more lines are read once the total size of the lines so far *exceeds* hint. The
+  C _IOBase.readlines (used by io.StringIO, io.TextIOWrapper, io.BufferedReader, real files)
+  stops when the total is greater than hint. io.BytesIO.readlines and _pyio's IOBase.readlines
+  stop when the total is greater than or equal to hint. So when the lines read so far add up to
+  exactly hint, the same content gives different results:
+  io.BytesIO(b'a\nb\nc').readlines(2) is [b'a\n'], but
+  io.BufferedReader(io.BytesIO(b'a\nb\nc')).readlines(2) is [b'a\n', b'b\n'], and in _pyio every
+  class returns one line. The result of a program can change when a file is replaced by a BytesIO
+  or when io is replaced by _pyio.
+likelihood: |
+  Low to moderate. The hint is usually a large round number used as a batch size, and the
+  difference needs an exact hit on a line boundary. Then the only effect is one line more or less
+  in a batch, and a caller looping until [] still sees every line.
+maybe_intended: |
+  Partly. "hint" is a hint, and BytesIO.readlines's docstring calls it "an approximate bound"
+  (bytesio.c:581). No test pins the boundary (test_memoryio's only hint case, readlines(15) over
+  11-character lines, passes under both rules). A maintainer would likely accept aligning the code
+  as a cleanup, with low urgency, and could equally choose to soften the docs.
+reproducer: |
+  import io, _pyio
+  data = b'a\nb\nc'
+  text = data.decode()
+  got = {
+      'io.BytesIO': io.BytesIO(data).readlines(2),
+      'io.BufferedReader': io.BufferedReader(io.BytesIO(data)).readlines(2),
+      'io.StringIO': io.StringIO(text).readlines(2),
+      'io.TextIOWrapper': io.TextIOWrapper(io.BytesIO(data), encoding='ascii').readlines(2),
+      '_pyio.BytesIO': _pyio.BytesIO(data).readlines(2),
+      '_pyio.BufferedReader': _pyio.BufferedReader(_pyio.BytesIO(data)).readlines(2),
+      '_pyio.StringIO': _pyio.StringIO(text).readlines(2),
+  }
+  for k, v in got.items():
+      print('%-22s %r' % (k, v))
+  stop_at_reach = ['io.BytesIO', '_pyio.BytesIO', '_pyio.BufferedReader', '_pyio.StringIO']
+  stop_at_exceed = ['io.BufferedReader', 'io.StringIO', 'io.TextIOWrapper']
+  if all(len(got[k]) == 1 for k in stop_at_reach) and all(len(got[k]) == 2 for k in stop_at_exceed):
+      print('REPRODUCED pyio-readlines-hint-stops-early')
+expected: |
+  Two lines everywhere: the total after the first line (2) does not exceed the hint (2).
+observed: |
+  python3 3.14.7: io.BytesIO, _pyio.BytesIO, _pyio.BufferedReader and _pyio.StringIO return one line;
+  io.BufferedReader, io.StringIO and io.TextIOWrapper return two. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Doc/library/io.rst:409-413: "no more lines will be read if the total size (in bytes/characters)
+  of all lines so far exceeds hint". Lib/_pyio.py:568-570 repeats the sentence in the docstring of
+  the code that does not follow it.
+cause: |
+  Modules/_io/bytesio.c:627 `if (maxsize > 0 && size >= maxsize) break;` and Lib/_pyio.py:579
+  `if n >= hint: break` use >=; Modules/_io/iobase.c:765 `if (line_length > hint - length) break;`
+  uses >.
+possible_fix: |
+  Change the two >= to >, or (the other way round) change iobase.c and reword the docs to "reaches
+  or exceeds". Add a boundary test to test_memoryio/test_io so that the classes cannot drift.
+duplicates:
+  issues:
+    - {number: 143412, state: closed, relation: "same method, different bug (keyword arguments)", reason: "not a duplicate"}
+  queries: ["readlines hint", "readlines hint exceeds", "readlines size hint", "readlines hint off by one",
+            "readlines exceeds", "BytesIO readlines", "readlines hint (PRs)", "bugforge README: no io entries"]
+lean:
+  property: PyLean.PyIO.BytesIOReadlinesHintDoc
+  theorem: PyLean.PyIO.bytesIOReadlinesHintDoc_refuted
+  also_proven: "PyLean.PyIO.CStringIOReadlinesHintDoc: the C StringIO follows the documented rule for every state and hint"

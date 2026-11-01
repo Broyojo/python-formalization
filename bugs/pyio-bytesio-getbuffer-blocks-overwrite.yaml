@@ -1,0 +1,70 @@
+id: pyio-bytesio-getbuffer-blocks-overwrite
+title: "With a live getbuffer() view, io.BytesIO refuses every write; _pyio.BytesIO refuses only resizes"
+priority: P4
+kind: twin-mismatch
+module: pyio
+files: [Modules/_io/bytesio.c, Lib/_pyio.py]
+functions: ["write_bytes_lock_held", "_io_BytesIO_truncate_impl", "BytesIO.write", "BytesIO.close"]
+summary: |
+  The docs say the object "cannot be resized or closed" while a view exists. C goes further: it
+  raises BufferError for every write, including an in-place overwrite, write(b'') and a
+  truncate(n) that removes nothing. _pyio does what the sentence says: it only fails when the
+  bytearray would change size. In the other direction, _pyio.BytesIO() with an empty buffer closes
+  successfully with a live view, because bytearray.clear() on an empty array does not check
+  exports, and that contradicts the same sentence.
+likelihood: |
+  Low. Code holding a view normally writes through the view.
+maybe_intended: |
+  Yes for C: the comment at bytesio.c:43 says "exports > 0. ... any modifications are forbidden",
+  so C is deliberately strict. A maintainer would not change C. The _pyio empty-close case is a
+  corner case of a corner case.
+reproducer: |
+  import io, _pyio
+  def attempt(f):
+      try:
+          return f()
+      except Exception as e:
+          return type(e).__name__
+  r = {}
+  for m in (io, _pyio):
+      b = m.BytesIO(b'ab')
+      v = b.getbuffer()
+      w = attempt(lambda: b.write(b'x'))
+      e = attempt(lambda: b.write(b''))
+      t = attempt(lambda: b.truncate(5))
+      v.release()
+      del v
+      r[m.__name__] = (w, e, t)
+      print(m.__name__, 'overwrite:', w, 'write(b""):', e, 'truncate(5):', t)
+      b2 = m.BytesIO()
+      v2 = b2.getbuffer()
+      c = attempt(b2.close)
+      print(m.__name__, 'close empty with live view:', c, 'closed:', b2.closed)
+      v2.release()
+      del v2
+  if r['io'] == ('BufferError',) * 3 and r['_pyio'] == (1, 0, 5):
+      print('REPRODUCED pyio-bytesio-getbuffer-blocks-overwrite')
+expected: |
+  The same outcome in both twins.
+observed: |
+  python3 3.14.7: io BufferError for overwrite, write(b'') and truncate(5), and for close() of an empty
+  BytesIO; _pyio 1, 0, 5, and the close succeeds with the view alive. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): write and truncate identical, REPRODUCED; close() now succeeds in C too (gh-111331, GH-155383),
+  so the close difference is gone; the docs there now say "Closing it does not invalidate the view".
+promised_by: |
+  Doc/library/io.rst:770-771: "As long as the view exists, the BytesIO object cannot be resized or
+  closed."
+cause: |
+  Modules/_io/bytesio.c:245 `check_exports` runs before any size test, and :695 in truncate.
+  Lib/_pyio.py:941-958 relies on bytearray, which only checks exports when resizing.
+possible_fix: |
+  Keep C; align _pyio with explicit checks if exact twin behaviour is wanted.
+duplicates:
+  issues:
+    - {number: 111331, state: closed, relation: "same area: 'Allow closing BytesIO with exported buffers' (main) changes close, not write", reason: "different change"}
+    - {number: 111330, state: closed, relation: "same area: _pyio.BytesIO destructor with exported buffer", reason: "different bug"}
+  queries: ["BytesIO getbuffer BufferError write", "BytesIO exported buffer write", "BytesIO getbuffer write",
+            "BytesIO close exported buffer empty", "_pyio BytesIO", "bugforge README: no io entries"]
+lean:
+  property: PyLean.PyIO.BytesIOTwinsSameClassInRange
+  theorem: PyLean.PyIO.bytesIOTwinsSameClassInRange_refuted

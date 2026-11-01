@@ -1,0 +1,74 @@
+id: pyio-stringio-newline-embedded-nul
+title: "io.StringIO accepts a newline argument with an embedded NUL and silently truncates it at the NUL"
+priority: P3
+kind: nul-terminator-assumption
+module: pyio
+files: [Modules/_io/stringio.c]
+functions: ["_io_StringIO___init___impl"]
+summary: |
+  The StringIO constructor gets the UTF-8 bytes of `newline` with PyUnicode_AsUTF8() and validates
+  them as a NUL-terminated C string, so everything after the first NUL is ignored. The value is
+  then stored from the same C string, so the object behaves as if the prefix had been passed:
+  newline='\n\x00' is '\n', '\r\x00junk' is '\r', '\r\n\x00x' is '\r\n', and '\x00' or '\x00\n'
+  is '' (universal newlines without translation, `newlines` reported). io.TextIOWrapper and both
+  _pyio classes reject all of these with ValueError, so the C StringIO is the only one of the four
+  that accepts them. `_pyio.StringIO` raises "illegal newline value", `io.TextIOWrapper` raises
+  "embedded null character".
+likelihood: |
+  Low. Nobody passes NUL in `newline` on purpose. It could only matter when `newline` comes from
+  untrusted input, and then the effect is a wrong line-ending mode, not memory unsafety.
+maybe_intended: |
+  No. The same file's check rejects every other illegal value, and TextIOWrapper's generated
+  argument parser has an explicit strlen() check for this exact case. This is the NUL-terminator
+  pattern: a maintainer would call it a small real bug and take a two-line fix.
+reproducer: |
+  import io, _pyio
+  bad = ['\x00', '\n\x00', '\r\x00', '\r\n\x00', '\x00\n', '\r\x00junk']
+  accepted = 0
+  for nl in bad:
+      try:
+          s = io.StringIO('a\nb\r\nc\rd', newline=nl)
+          r = repr(s.getvalue()), s.readlines(), s.newlines
+          accepted += 1
+      except ValueError as e:
+          r = 'ValueError: %s' % e
+      print('io.StringIO     ', repr(nl), r)
+      for name, make in (('_pyio.StringIO  ', lambda: _pyio.StringIO(newline=nl)),
+                         ('io.TextIOWrapper', lambda: io.TextIOWrapper(io.BytesIO(), encoding='ascii', newline=nl))):
+          try:
+              make()
+              print(name, repr(nl), 'accepted')
+              accepted = -100
+          except ValueError as e:
+              print(name, repr(nl), 'ValueError:', e)
+  if accepted == len(bad):
+      print('REPRODUCED pyio-stringio-newline-embedded-nul')
+expected: |
+  ValueError for every one of these values, as in _pyio.StringIO and io.TextIOWrapper.
+observed: |
+  python3 3.14.7: all six values accepted; '\x00' and '\x00\n' behave as newline='' (lines ['a\n',
+  'b\r\n', 'c\r', 'd'], newlines reported), '\n\x00' as '\n', '\r\x00' and '\r\x00junk' as '\r',
+  '\r\n\x00' as '\r\n'. _pyio.StringIO and io.TextIOWrapper raise ValueError for all six. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Doc/library/io.rst:1019 and :1142: newline "can be None, '', '\n', '\r', or '\r\n'", and
+  StringIO's argument "works like that of TextIOWrapper". Twin: Lib/_pyio.py:2098-2102 rejects
+  anything else.
+cause: |
+  Modules/_io/stringio.c:693 `newline = PyUnicode_AsUTF8(newline_obj);` drops the length, the
+  check at :698-701 then compares newline[0..2] against '\0'-terminated literals, and :725
+  `self->readnl = PyUnicode_FromString(newline)` stores the truncated value. :729 treats a
+  leading NUL as the empty string.
+possible_fix: |
+  Use PyUnicode_AsUTF8AndSize() and raise ValueError when strlen(newline) != size, exactly as
+  Modules/_io/clinic/textio.c.h does for TextIOWrapper's newline ("embedded null character"), or
+  run the check with the length so that the existing "illegal newline value" message fires.
+duplicates:
+  issues:
+    - {number: 97544, state: open, relation: "same error message, different request (NEL as newline)", reason: "not a duplicate"}
+  queries: ["illegal newline value", "StringIO null character", "StringIO newline null character",
+            "StringIO newline embedded null", "StringIO newline NUL", "StringIO newline (PRs)",
+            "bugforge README: no StringIO/BytesIO/_pyio entries"]
+lean:
+  property: PyLean.PyIO.CStringIONewlineLegal
+  theorem: PyLean.PyIO.cStringIONewlineLegal_refuted
