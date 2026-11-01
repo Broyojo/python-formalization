@@ -1,0 +1,58 @@
+id: corelibs-copy-reduce-six-tuple
+title: "copy.copy and copy.deepcopy raise TypeError on a __reduce__ result with a state_setter, which pickle accepts"
+priority: P3
+kind: logic-error
+module: corelibs
+files: [Lib/copy.py]
+functions: ["_reconstruct", "copy", "deepcopy"]
+summary: |
+  Since 3.8 __reduce__ may return a sixth item, a state_setter callable, and pickle honours it. The
+  copy module unpacks the same result into _reconstruct(x, None, *rv), whose signature takes five
+  items, so a class using that form pickles fine and fails in copy.copy and copy.deepcopy with
+  "_reconstruct() takes from 4 to 7 positional arguments but 8 were given", even when the sixth
+  item is None.
+likelihood: |
+  Low. The sixth item is rarely used; a class that uses it and is also copied will fail loudly.
+maybe_intended: |
+  Oversight is more likely: the copy module predates the sixth item, and the error message names a
+  private function with an argument count rather than saying the form is unsupported. A maintainer
+  could still decide not to support it, and then the docs should say so.
+reproducer: |
+  import copy, pickle
+  def build():
+      return Thing()
+  def setter(obj, state):
+      obj.state = state
+  class Thing:
+      def __reduce__(self):
+          return (build, (), 5, None, None, setter)
+  outcome = {}
+  pickled = pickle.loads(pickle.dumps(Thing(), protocol=4))
+  outcome['pickle'] = pickled.state
+  for f in (copy.copy, copy.deepcopy):
+      try:
+          outcome[f.__name__] = f(Thing()).state
+      except TypeError as e:
+          outcome[f.__name__] = type(e).__name__
+  print(outcome)
+  if outcome == {'pickle': 5, 'copy': 'TypeError', 'deepcopy': 'TypeError'}:
+      print('REPRODUCED corelibs-copy-reduce-six-tuple')
+expected: |
+  Both copies built through build() and setter(), with state 5.
+observed: |
+  python3 3.14.7: pickle gives state 5, copy.copy and copy.deepcopy raise TypeError. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): same, REPRODUCED.
+promised_by: |
+  Doc/library/copy.rst:85: "Classes can use the same interfaces to control copying that they use to
+  control pickling."
+cause: |
+  Lib/copy.py:228-230, the signature of _reconstruct, called at :100 and :157 with *rv.
+possible_fix: |
+  Add a state_setter parameter to _reconstruct, called with (y, state) in place of the
+  __setstate__ path, as pickle does.
+duplicates:
+  issues: []
+  queries: ["pending: GitHub search API rate limited at triage time"]
+lean:
+  property: PyLean.CoreLibs.Operator.CopyAcceptsPickleReduce
+  theorem: PyLean.CoreLibs.Operator.copyAcceptsPickleReduce_refuted

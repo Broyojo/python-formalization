@@ -63,6 +63,11 @@ def reduceC {α : Type} (f : α → α → Py α) (seq : Source α) (initial : O
   | .notIterable => .error (.typeError "reduce() arg 2 must support iteration")
   | .iter items err => reduceCLoop f initial items err
 
+/-- `_warn_python_reduce_kwargs`, Lib/functools.py:1139-1153: the pure-Python `reduce` warns exactly
+when the deprecated keywords are used. -/
+def reduceWarns (kwnames : List String) : Bool :=
+  kwnames.contains "function" || kwnames.contains "sequence"
+
 /-! ### `total_ordering` -/
 
 /-- The four root comparisons, spelled as the method names. -/
@@ -140,8 +145,8 @@ inductive CmpOp where
 def CmpOp.test (r : Int) : CmpOp → Bool
   | .lt => r < 0
   | .le => r ≤ 0
-  | .eq => r == 0
-  | .ne => r != 0
+  | .eq => decide (r = 0)
+  | .ne => decide (r ≠ 0)
   | .gt => r > 0
   | .ge => r ≥ 0
 
@@ -163,6 +168,9 @@ def keyCompareC {α : Type} (mycmp : α → α → Py Int) (op : CmpOp) (x : α)
   match other with
   | none => .error (.typeError "other argument must be K instance")
   | some y => do pure (CmpOp.test (← mycmp x y) op)
+
+/-- `keyobject_text_signature`, Modules/_functoolsmodule.c:854-857. -/
+def keyTextSignature : String := "(obj)"
 
 /-! ### `partial` -/
 
@@ -219,39 +227,50 @@ def kwVals {α : Type} (kw : List (String × PArg α)) : Option (List (String ×
     | .val a => some (p.1, a)
     | .ph => none)
 
-/-- `_partial_new`, Lib/functools.py:313-357, for `cls` a `partial` type: flattens every `isinstance`
-of `partial`. `outer` is the new object's own `override`. -/
-def partialNewPy {α : Type} (outer : Option Nat) (func : Fn α) (args : List (PArg α))
-    (kw : List (String × PArg α)) : Py (Fn α) := do
-  if !func.isCallable then throw (.typeError "the first argument must be callable")
-  if trailingPh args then throw (.typeError trailingMsg)
-  let some kw' := kwVals kw | throw (.typeError kwPhMsg)
+/-- The checks shared by `_partial_new`, Lib/functools.py:316-328, and `partial_new`,
+Modules/_functoolsmodule.c:181-211, in that order. -/
+def validateNew {α : Type} (func : Fn α) (args : List (PArg α)) (kw : List (String × PArg α)) :
+    Py (List (String × α)) :=
+  if !func.isCallable then .error (.typeError "the first argument must be callable")
+  else if trailingPh args then .error (.typeError trailingMsg)
+  else
+    match kwVals kw with
+    | none => .error (.typeError kwPhMsg)
+    | some kw' => .ok kw'
+
+/-- The flattening of `_partial_new`, Lib/functools.py:329-349: every `isinstance` of `partial`
+is flattened, so a subclass's `__call__` is dropped. `outer` is the new object's own `override`. -/
+def flattenPy {α : Type} (outer : Option Nat) (func : Fn α) (args : List (PArg α))
+    (kw' : List (String × α)) : Fn α :=
   match func with
   | .pobj _ _ inner pargs pkw pph =>
-    if args.isEmpty then
-      pure (.pobj outer false inner pargs (mergeKw pkw kw') pph)
+    if args.isEmpty then .pobj outer false inner pargs (mergeKw pkw kw') pph
     else
       let tot := if pph = 0 then pargs ++ args else fill pargs args
-      pure (.pobj outer false inner tot (mergeKw pkw kw') (phCount tot))
-  | _ => pure (.pobj outer false func args kw' (phCount args))
+      .pobj outer false inner tot (mergeKw pkw kw') (phCount tot)
+  | _ => .pobj outer false func args kw' (phCount args)
 
-/-- `partial_new`, Modules/_functoolsmodule.c:168-324: flattens a `partial` instance only when its
-`__dict__` was never created, :219-230. -/
-def partialNewC {α : Type} (outer : Option Nat) (func : Fn α) (args : List (PArg α))
-    (kw : List (String × PArg α)) : Py (Fn α) := do
-  if !func.isCallable then throw (.typeError "the first argument must be callable")
-  if trailingPh args then throw (.typeError trailingMsg)
-  let some kw' := kwVals kw | throw (.typeError kwPhMsg)
+/-- The flattening of `partial_new`, Modules/_functoolsmodule.c:213-295, which takes a `partial`
+instance apart only when its `__dict__` was never created, :219-230. -/
+def flattenC {α : Type} (outer : Option Nat) (func : Fn α) (args : List (PArg α))
+    (kw' : List (String × α)) : Fn α :=
   match func with
   | .pobj _ false inner pargs pkw pph =>
     let newPh := phCount args
     if pph > 0 ∧ !args.isEmpty then
       let tot := fill pargs args
-      let filled := min pph args.length
-      pure (.pobj outer false inner tot (mergeKw pkw kw') (pph - filled + newPh))
+      .pobj outer false inner tot (mergeKw pkw kw') (pph - min pph args.length + newPh)
     else
-      pure (.pobj outer false inner (pargs ++ args) (mergeKw pkw kw') (pph + newPh))
-  | _ => pure (.pobj outer false func args kw' (phCount args))
+      .pobj outer false inner (pargs ++ args) (mergeKw pkw kw') (pph + newPh)
+  | _ => .pobj outer false func args kw' (phCount args)
+
+def partialNewPy {α : Type} (outer : Option Nat) (func : Fn α) (args : List (PArg α))
+    (kw : List (String × PArg α)) : Py (Fn α) := do
+  pure (flattenPy outer func args (← validateNew func args kw))
+
+def partialNewC {α : Type} (outer : Option Nat) (func : Fn α) (args : List (PArg α))
+    (kw : List (String × PArg α)) : Py (Fn α) := do
+  pure (flattenC outer func args (← validateNew func args kw))
 
 /-- A completed call: which function, with which positional and keyword arguments. -/
 structure Called (α : Type) where
@@ -305,6 +324,14 @@ def partialVectorcall {α : Type} (func : Fn α) (pargs : List (PArg α)) (pkw :
   else if args.length < ph then .error (.typeError (missingMsg ph args.length))
   else callFn func (fillCall pargs args) kw
 
+/-- `partial.__get__`, Lib/functools.py:395-398, and `partial_descr_get`,
+Modules/_functoolsmodule.c:362-368, with `lru_cache_descr_get`, :1658-1664: `None` gives the
+object itself, anything else a method, which prepends the instance. -/
+def descrGet {α : Type} (obj : Option α) (args : List α) : List α :=
+  match obj with
+  | none => args
+  | some o => o :: args
+
 /-- `partial.__repr__`, Lib/functools.py:359-366, and `partial_repr`,
 Modules/_functoolsmodule.c:610-687, on the reprs of the parts. -/
 def partialRepr (cls func : String) (args : List String) (kw : List (String × String)) : String :=
@@ -338,7 +365,8 @@ def setstatePy {α : Type} (st : PState α) : Py Nat :=
 /-- `partial_setstate`, Modules/_functoolsmodule.c:706-768. -/
 def setstateC {α : Type} (st : PState α) : Py Nat :=
   if !st.isTuple then .error (.typeError invalidState)
-  else if st.size ≠ 4 || !st.callable || !st.argsTuple || (!st.kwNone && !st.kwDict) ||
+  else if st.size ≠ 4 then .error (.typeError invalidState)
+  else if !st.callable || !st.argsTuple || (!st.kwNone && !st.kwDict) ||
       (!st.nsNone && !st.nsDict) then .error (.typeError invalidState)
   else if trailingPh st.args then .error (.typeError trailingMsg)
   else .ok (phCount st.args)
@@ -369,6 +397,37 @@ def placeholderNew (inst : Option PlaceholderType) : PlaceholderType × Option P
 def unwrapPartial {α : Type} : Fn α → Fn α
   | .pobj _ _ f _ _ _ => unwrapPartial f
   | f => f
+
+/-- `_unwrap_partialmethod`, Lib/functools.py:505-514, on a `partial` chain: a `partialmethod` wraps
+like a `partial`, and each one is removed. -/
+def unwrapPartialmethod {α : Type} (f : Fn α) : Fn α := unwrapPartial f
+
+/-- What `self.func.__get__(obj, cls)` gives, Lib/functools.py:473-484. -/
+inductive PmBind where
+  /-- A new object: a function binding `obj`. -/
+  | bound
+  /-- No `__get__`, or a `__get__` returning `self.func`. -/
+  | unbound
+  deriving Repr, DecidableEq
+
+def missingMethodMsg (phcount got : Nat) : String :=
+  s!"missing positional arguments in 'partialmethod' call; expected at least {phcount}, got {got}"
+
+/-- A call of `obj.method(*args, **kw)` through `partialmethod.__get__`, Lib/functools.py:472-489,
+with `_make_unbound_method`, :453-470. Either way the target gets `obj` first. -/
+def partialmethodCall {α : Type} (b : PmBind) (id : Nat) (pargs : List (PArg α)) (pkw : List (String × α))
+    (ph : Nat) (obj : α) (args : List α) (kw : List (String × α)) : Py (Called α) :=
+  match b with
+  | .bound =>
+    if args.length < ph then .error (.typeError (missingMsg ph args.length))
+    else .ok ⟨id, obj :: fillCall pargs args, mergeKw pkw kw⟩
+  | .unbound =>
+    if ph ≠ 0 ∧ args.length < ph then .error (.typeError (missingMethodMsg ph args.length))
+    else .ok ⟨id, obj :: fillCall pargs args, mergeKw pkw kw⟩
+
+/-- `__isabstractmethod__` of `partialmethod`, :491-493, and of `singledispatchmethod`,
+:1018-1020: `getattr(self.func, "__isabstractmethod__", False)`. -/
+def isAbstractOf (attr : Option Bool) : Bool := attr.getD false
 
 /-! ### `lru_cache` keys -/
 
@@ -550,6 +609,12 @@ def stepInfinite {K V : Type} [DecidableEq K] (f : K → Py V) (s : CLru K V) (k
     | .error e => (.error e, s)
     | .ok result => (.ok result, { s with links := s.links ++ [(key, result)] })
 
+/-- `lru_cache_reduce`, Modules/_functoolsmodule.c:1719-1722: pickled by qualified name. -/
+def lruReduce (qualname : String) : String := qualname
+
+/-- `lru_cache_copy` and `lru_cache_deepcopy`, :1725-1734: the wrapper is its own copy. -/
+def lruCopy {α : Type} (self : α) : α := self
+
 /-- One operation on a wrapper. -/
 inductive LruOp (K : Type) where
   | call (k : K)
@@ -644,6 +709,11 @@ def sdmGetRepr (qualname name : Option String) (objRepr : Option String) : Strin
   | some o => s!"<bound single dispatch method {n} of {o}>"
   | none => s!"<single dispatch method {n}>"
 
+/-- `_singledispatchmethod_get.__getattr__`, Lib/functools.py:1071-1077: `none` for the bare
+`AttributeError`. -/
+def sdmGetattrAllowed (name : String) : Bool :=
+  name ∈ ["__name__", "__qualname__", "__isabstractmethod__", "__annotations__", "__type_params__"]
+
 /-! ### `singledispatch` -/
 
 abbrev Cls := Nat
@@ -685,6 +755,14 @@ def boundaryOf (W : World) (bases : List Cls) : Nat :=
   | some (_, i) => bases.length - i
   | none => 0
 
+/-- A list comprehension whose body may raise. -/
+def mapPy {α β : Type} (f : α → Py β) : List α → Py (List β)
+  | [] => .ok []
+  | x :: xs => do
+    let y ← f x
+    let ys ← mapPy f xs
+    pure (y :: ys)
+
 /-- `_c3_mro`, Lib/functools.py:762-805. -/
 def c3Mro (W : World) : (fuel : Nat) → Cls → List Cls → Py (List Cls)
   | 0, _, _ => .error .modelFuel
@@ -695,15 +773,9 @@ def c3Mro (W : World) : (fuel : Nat) → Cls → List Cls → Py (List Cls)
     let otherBases := bases.drop boundary
     let abstractBases := abcs.filter (fun b => W.isSub cls b && !bases.any (fun x => W.isSub x b))
     let abcs' := abcs.filter (fun b => b ∉ abstractBases)
-    let rec mros : List Cls → Py (List (List Cls))
-      | [] => .ok []
-      | b :: bs => do
-        let m ← c3Mro W fuel b abcs'
-        let ms ← mros bs
-        pure (m :: ms)
-    let e ← mros explicitBases
-    let a ← mros abstractBases
-    let o ← mros otherBases
+    let e ← mapPy (fun b => c3Mro W fuel b abcs') explicitBases
+    let a ← mapPy (fun b => c3Mro W fuel b abcs') abstractBases
+    let o ← mapPy (fun b => c3Mro W fuel b abcs') otherBases
     let seqs := [[cls]] ++ e ++ a ++ o ++ [explicitBases] ++ [abstractBases] ++ [otherBases]
     -- each pass removes at least one element
     c3Merge ((seqs.map List.length).sum + 1) seqs
@@ -757,9 +829,10 @@ structure Dispatcher (ι : Type) where
   cache : List (Cls × Option ι)
   token : Option Nat
 
-def regSet {ι : Type} (reg : Registry ι) (c : Cls) (i : ι) : Registry ι :=
-  if reg.any (fun p => p.1 == c) then reg.map (fun p => if p.1 == c then (c, i) else p)
-  else reg ++ [(c, i)]
+/-- `registry[c] = i`: an existing key keeps its position. -/
+def regSet {ι : Type} : Registry ι → Cls → ι → Registry ι
+  | [], c, i => [(c, i)]
+  | p :: ps, c, i => if p.1 == c then (c, i) :: ps else p :: regSet ps c i
 
 /-- The first argument of `register`: a class, or a union of classes. -/
 inductive RegArg where
@@ -780,12 +853,15 @@ def register {ι : Type} (W : World) (abcToken : Nat) (d : Dispatcher ι) (arg :
   let token := if d.token.isNone && hasAbstract then some abcToken else d.token
   { registry, cache := [], token }
 
-/-- `dispatch(cls)`, Lib/functools.py:893-914. `abcToken` is `get_cache_token()`. -/
-def dispatch {ι : Type} (W : World) (fuel abcToken : Nat) (d : Dispatcher ι) (cls : Cls) :
+/-- The token check at the top of `dispatch`, Lib/functools.py:901-905. -/
+def tokenSync {ι : Type} (abcToken : Nat) (d : Dispatcher ι) : Dispatcher ι :=
+  match d.token with
+  | some t => if t ≠ abcToken then { d with cache := [], token := some abcToken } else d
+  | none => d
+
+/-- The cache lookup of `dispatch`, Lib/functools.py:906-913. -/
+def dispatchCached {ι : Type} (W : World) (fuel : Nat) (d : Dispatcher ι) (cls : Cls) :
     Py (Option ι) × Dispatcher ι :=
-  let d := match d.token with
-    | some t => if t ≠ abcToken then { d with cache := [], token := some abcToken } else d
-    | none => d
   match d.cache.lookup cls with
   | some i => (.ok i, d)
   | none =>
@@ -795,6 +871,24 @@ def dispatch {ι : Type} (W : World) (fuel abcToken : Nat) (d : Dispatcher ι) (
       match findImpl W fuel cls d.registry with
       | .error e => (.error e, d)
       | .ok i => (.ok i, { d with cache := (cls, i) :: d.cache })
+
+/-- `dispatch(cls)`, Lib/functools.py:893-914. `abcToken` is `get_cache_token()`. -/
+def dispatch {ι : Type} (W : World) (fuel abcToken : Nat) (d : Dispatcher ι) (cls : Cls) :
+    Py (Option ι) × Dispatcher ι :=
+  dispatchCached W fuel (tokenSync abcToken d) cls
+
+/-- The `wrapper` of `singledispatch`, Lib/functools.py:978-982, and
+`_singledispatchmethod_get.__call__`, :1063-1069: the class of the first positional argument
+selects the implementation, and no positional argument is a `TypeError`. -/
+def dispatchCall {ι : Type} (W : World) (fuel abcToken : Nat) (name : String) (d : Dispatcher ι)
+    (firstArg : Option Cls) : Py (Option ι) × Dispatcher ι :=
+  match firstArg with
+  | none => (.error (.typeError s!"{name} requires at least 1 positional argument"), d)
+  | some c => dispatch W fuel abcToken d c
+
+/-- `singledispatchmethod.__init__`, Lib/functools.py:1001-1006. -/
+def sdmInit (callable hasGet : Bool) : Py Unit :=
+  if !callable && !hasGet then .error (.typeError "~is not callable or a descriptor") else .ok ()
 
 /-- `singledispatch(func)`, Lib/functools.py:985: `registry[object] = func`. -/
 def newDispatcher {ι : Type} (object : Cls) (func : ι) : Dispatcher ι := ⟨[(object, func)], [], none⟩

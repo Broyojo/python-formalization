@@ -1,0 +1,62 @@
+id: corelibs-singledispatch-union-abc-stale-cache
+title: "singledispatch keeps a stale dispatch after ABC.register when the ABC was registered through a union"
+priority: P3
+kind: logic-error
+module: corelibs
+files: [Lib/functools.py]
+functions: ["singledispatch"]
+summary: |
+  singledispatch caches dispatch results and clears the cache when abc.get_cache_token() changes,
+  but it only starts watching the token once an ABC is registered. The test at
+  Lib/functools.py:973 is `hasattr(cls, '__abstractmethods__')`, on the argument of register. For
+  register(Sized | int, impl), cls is the UnionType, which has no such attribute, so cache_token stays
+  None. A class dispatched before Sized.register(C) then stays on the old implementation forever,
+  while the same code with register(Sized, impl) picks up the new implementation.
+likelihood: |
+  Low to moderate. It needs a union containing an ABC, a dispatch on the class before it is
+  registered as a virtual subclass, and a later register call. Union registration exists since 3.11
+  and registering virtual subclasses after import happens in plugin-style code. The failure is
+  silent: the wrong implementation runs.
+maybe_intended: |
+  No. The union branch at :968-970 was added without touching the token test that follows it, and
+  the single-class path shows the intended behaviour.
+reproducer: |
+  from collections.abc import Sized
+  from functools import singledispatch
+  @singledispatch
+  def by_union(x):
+      return 'default'
+  by_union.register(Sized | int, lambda x: 'sized')
+  @singledispatch
+  def by_class(x):
+      return 'default'
+  by_class.register(Sized, lambda x: 'sized')
+  class C:
+      pass
+  c = C()
+  before = by_union(c), by_class(c)
+  Sized.register(C)
+  after = by_union(c), by_class(c)
+  print('before:', before, 'after:', after)
+  if before == ('default', 'default') and after == ('default', 'sized'):
+      print('REPRODUCED corelibs-singledispatch-union-abc-stale-cache')
+expected: |
+  After Sized.register(C), by_union(c) returns 'sized', as by_class(c) does.
+observed: |
+  python3 3.14.7: by_union stays on 'default' after Sized.register(C), by_class moves to 'sized'.
+  REPRODUCED. main (python.exe 3.16.0a1+dev): same, REPRODUCED.
+promised_by: |
+  Doc/library/functools.rst:529 and the lines before it accept union types in register, with no
+  caveat. The cache_token logic, Lib/functools.py:900-905, exists so that ABC registrations invalidate
+  the cache.
+cause: |
+  Lib/functools.py:973 `if cache_token is None and hasattr(cls, '__abstractmethods__'):` runs after the
+  union branch at :968-970, with cls still the union.
+possible_fix: |
+  Test the members: for a union, `any(hasattr(arg, '__abstractmethods__') for arg in cls.__args__)`.
+duplicates:
+  issues: []
+  queries: ["pending: GitHub search API rate limited at triage time"]
+lean:
+  property: PyLean.CoreLibs.Functools.UnionAbcRegistrationInvalidates
+  theorem: PyLean.CoreLibs.Functools.unionAbcRegistrationInvalidates_refuted

@@ -1,0 +1,51 @@
+id: corelibs-lru-cache-maxsize-overflow
+title: "lru_cache(maxsize=2**63) raises OverflowError with the C wrapper and works with the Python wrapper"
+priority: P4
+kind: twin-mismatch
+module: corelibs
+files: [Modules/_functoolsmodule.c, Lib/functools.py]
+functions: ["lru_cache_new", "lru_cache", "_lru_cache_wrapper"]
+summary: |
+  lru_cache accepts any int. The C wrapper converts maxsize with PyNumber_AsSsize_t and raises
+  OverflowError above sys.maxsize, at decoration time, where the Python wrapper keeps the int and
+  behaves as a large bounded cache. Negative values are clamped first by lru_cache, so they agree.
+likelihood: |
+  Very low. No program needs a cache larger than sys.maxsize, and None is the documented way to get
+  an unbounded cache. Recorded because it is a twin mismatch, not because it matters.
+maybe_intended: |
+  Practically yes: a maintainer would call this harmless and would not change it. Not worth filing
+  on its own.
+reproducer: |
+  import sys
+  import functools
+  from test.support import import_helper
+  py = import_helper.import_fresh_module('functools', blocked=['_functools'])
+  def f():
+      return 0
+  def attempt(m):
+      try:
+          return m.lru_cache(maxsize=sys.maxsize + 1)(f).cache_info().maxsize
+      except OverflowError as e:
+          return type(e).__name__
+  c_result, py_result = attempt(functools), attempt(py)
+  print('C:', c_result, 'Python:', py_result)
+  if c_result == 'OverflowError' and py_result == sys.maxsize + 1:
+      print('REPRODUCED corelibs-lru-cache-maxsize-overflow')
+expected: |
+  The same outcome in both twins.
+observed: |
+  python3 3.14.7: C raises OverflowError, the pure-Python wrapper reports maxsize=9223372036854775808.
+  REPRODUCED. main (python.exe 3.16.0a1+dev): same, REPRODUCED.
+promised_by: |
+  Nothing explicit. Doc/library/functools.rst:182 documents None as the way to disable the limit and
+  gives no upper bound for an int.
+cause: |
+  Modules/_functoolsmodule.c:1558 `PyNumber_AsSsize_t(maxsize_O, PyExc_OverflowError)`.
+possible_fix: |
+  Keep the error, or clamp with PyNumber_AsSsize_t(maxsize_O, NULL), which saturates.
+duplicates:
+  issues: []
+  queries: ["pending: GitHub search API rate limited at triage time"]
+lean:
+  property: PyLean.CoreLibs.Functools.LruMaxsizeTwinsAlways
+  theorem: PyLean.CoreLibs.Functools.lruMaxsizeTwinsAlways_refuted

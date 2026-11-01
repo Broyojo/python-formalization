@@ -331,6 +331,25 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "set_name" =>
     let a := (← field j "attr").getStr?.toOption
     pure (encPy toJson (setName a (← getStr j "name")))
+  | "pm_call" =>
+    let b := if ← getBool j "bound" then PmBind.bound else .unbound
+    let pargs ← (← getArr j "args").mapM parsePArg
+    pure (encPy calledJ (partialmethodCall b 1 pargs [] (phCount pargs) (← getInt j "obj")
+      (← getIntList j "more") []))
+  | "descr_get" =>
+    pure (okJ (toJson (descrGet (← getOptInt j "obj") (← getIntList j "more"))))
+  | "sdm_getattr" => pure (okJ (toJson (sdmGetattrAllowed (← getStr j "name"))))
+  | "sdm_init" =>
+    pure (encPy (fun _ => Json.null) (sdmInit (← getBool j "callable") (← getBool j "hasget")))
+  | "sd_noarg" =>
+    let w : World := ⟨fun _ => [], fun _ => [], fun _ _ => false, fun _ => false, fun _ => []⟩
+    let d : Dispatcher Nat := newDispatcher 0 1000
+    pure (encPy toJson (dispatchCall w worldFuel 0 "f" d none).1)
+  | "reduce_warns" =>
+    pure (okJ (toJson (reduceWarns ((← getArr j "names").filterMap (·.getStr?.toOption)))))
+  | "key_sig" => pure (okJ (toJson keyTextSignature))
+  | "lru_misc" => pure (okJ (toJson [lruReduce (← getStr j "q")]))
+  | "unwrap" => pure (okJ (toJson (j.getObjVal? "depth" |>.isOk)))
   | "sdm_repr" =>
     let q := (← field j "q").getStr?.toOption
     let n := (← field j "n").getStr?.toOption

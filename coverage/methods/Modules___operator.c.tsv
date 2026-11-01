@@ -1,5 +1,5 @@
 file	line	endline	name	signature	status	entry	note
-Modules/_operator.c	19	24	get_operator_state	get_operator_state(PyObject *module)	todo		
+Modules/_operator.c	19	24	get_operator_state	get_operator_state(PyObject *module)	excluded		internal-bootstrap: module-state accessor with no Python-visible behaviour of its own
 Modules/_operator.c	51	55	_operator_truth_impl	_operator_truth_impl(PyObject *module, PyObject *a) /*[clinic end generated code: output=eaf87767234fa5d7 input=bc74a4cd90235875]*/	todo		
 Modules/_operator.c	68	72	_operator_add_impl	_operator_add_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=8292984204f45164 input=5efe3bff856ac215]*/	todo		
 Modules/_operator.c	81	85	_operator_sub_impl	_operator_sub_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=4adfc3b888c1ee2e input=6494c6b100b8e795]*/	todo		
@@ -56,20 +56,20 @@ Modules/_operator.c	772	807	_tscmp	_tscmp(const unsigned char *a, const unsigned
 Modules/_operator.c	826	831	_operator_length_hint_impl	_operator_length_hint_impl(PyObject *module, PyObject *obj, Py_ssize_t default_value) /*[clinic end generated code: output=01d469edc1d612ad input=65ed29f04401e96a]*/	todo		
 Modules/_operator.c	852	916	_operator__compare_digest_impl	_operator__compare_digest_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=11d452bdd3a23cbc input=9ac7e2c4e30bc356]*/	todo		
 Modules/_operator.c	928	937	_operator_call	_operator_call(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)	todo		
-Modules/_operator.c	1004	1007	text_signature	text_signature(PyObject *Py_UNUSED(self), void *Py_UNUSED(closure))	todo		
+Modules/_operator.c	1004	1007	text_signature	text_signature(PyObject *Py_UNUSED(self), void *Py_UNUSED(closure))	excluded		no-behaviour: returns the constant __text_signature__ string (obj, /) for inspect.signature; carries no logic
 Modules/_operator.c	1034	1079	itemgetter_new	itemgetter_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
-Modules/_operator.c	1082	1087	itemgetter_clear	itemgetter_clear(PyObject *op)	todo		
-Modules/_operator.c	1090	1097	itemgetter_dealloc	itemgetter_dealloc(PyObject *op)	todo		
-Modules/_operator.c	1100	1106	itemgetter_traverse	itemgetter_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_operator.c	1082	1087	itemgetter_clear	itemgetter_clear(PyObject *op)	excluded		no-behaviour: GC clear of owned references
+Modules/_operator.c	1090	1097	itemgetter_dealloc	itemgetter_dealloc(PyObject *op)	excluded		no-behaviour: deallocation
+Modules/_operator.c	1100	1106	itemgetter_traverse	itemgetter_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
 Modules/_operator.c	1109	1118	itemgetter_call	itemgetter_call(PyObject *op, PyObject *args, PyObject *kw)	todo		
 Modules/_operator.c	1121	1133	itemgetter_vectorcall	itemgetter_vectorcall(PyObject *op, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
 Modules/_operator.c	1136	1169	itemgetter_call_impl	itemgetter_call_impl(itemgetterobject *ig, PyObject *obj)	todo		
 Modules/_operator.c	1172	1189	itemgetter_repr	itemgetter_repr(PyObject *op)	todo		
 Modules/_operator.c	1192	1198	itemgetter_reduce	itemgetter_reduce(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
 Modules/_operator.c	1262	1367	attrgetter_new	attrgetter_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
-Modules/_operator.c	1370	1375	attrgetter_clear	attrgetter_clear(PyObject *op)	todo		
-Modules/_operator.c	1378	1385	attrgetter_dealloc	attrgetter_dealloc(PyObject *op)	todo		
-Modules/_operator.c	1388	1394	attrgetter_traverse	attrgetter_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_operator.c	1370	1375	attrgetter_clear	attrgetter_clear(PyObject *op)	excluded		no-behaviour: GC clear of owned references
+Modules/_operator.c	1378	1385	attrgetter_dealloc	attrgetter_dealloc(PyObject *op)	excluded		no-behaviour: deallocation
+Modules/_operator.c	1388	1394	attrgetter_traverse	attrgetter_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
 Modules/_operator.c	1397	1427	dotted_getattr	dotted_getattr(PyObject *obj, PyObject *attr)	todo		
 Modules/_operator.c	1430	1438	attrgetter_call	attrgetter_call(PyObject *op, PyObject *args, PyObject *kw)	todo		
 Modules/_operator.c	1441	1453	attrgetter_vectorcall	attrgetter_vectorcall(PyObject *op, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
@@ -81,14 +81,14 @@ Modules/_operator.c	1558	1565	attrgetter_reduce	attrgetter_reduce(PyObject *op, 
 Modules/_operator.c	1628	1646	methodcaller_vectorcall	methodcaller_vectorcall(PyObject *op, PyObject *const *args, size_t nargsf, PyObject* kwnames)	todo		
 Modules/_operator.c	1649	1686	_methodcaller_initialize_vectorcall	_methodcaller_initialize_vectorcall(methodcallerobject* mc)	todo		
 Modules/_operator.c	1690	1741	methodcaller_new	methodcaller_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
-Modules/_operator.c	1744	1752	methodcaller_clear	methodcaller_clear(PyObject *op)	todo		
-Modules/_operator.c	1755	1762	methodcaller_dealloc	methodcaller_dealloc(PyObject *op)	todo		
-Modules/_operator.c	1765	1775	methodcaller_traverse	methodcaller_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_operator.c	1744	1752	methodcaller_clear	methodcaller_clear(PyObject *op)	excluded		no-behaviour: GC clear of owned references
+Modules/_operator.c	1755	1762	methodcaller_dealloc	methodcaller_dealloc(PyObject *op)	excluded		no-behaviour: deallocation
+Modules/_operator.c	1765	1775	methodcaller_traverse	methodcaller_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
 Modules/_operator.c	1778	1795	methodcaller_call	methodcaller_call(PyObject *op, PyObject *args, PyObject *kw)	todo		
 Modules/_operator.c	1798	1872	methodcaller_repr	methodcaller_repr(PyObject *op)	todo		
 Modules/_operator.c	1875	1907	methodcaller_reduce	methodcaller_reduce(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
-Modules/_operator.c	1952	1980	operator_exec	operator_exec(PyObject *module)	todo		
-Modules/_operator.c	1991	1998	operator_traverse	operator_traverse(PyObject *module, visitproc visit, void *arg)	todo		
-Modules/_operator.c	2001	2008	operator_clear	operator_clear(PyObject *module)	todo		
-Modules/_operator.c	2011	2014	operator_free	operator_free(void *module)	todo		
-Modules/_operator.c	2029	2032	PyInit__operator	PyInit__operator(void)	todo		
+Modules/_operator.c	1952	1980	operator_exec	operator_exec(PyObject *module)	excluded		internal-bootstrap: module initialisation, creates the types
+Modules/_operator.c	1991	1998	operator_traverse	operator_traverse(PyObject *module, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal of module state
+Modules/_operator.c	2001	2008	operator_clear	operator_clear(PyObject *module)	excluded		no-behaviour: GC clear of module state
+Modules/_operator.c	2011	2014	operator_free	operator_free(void *module)	excluded		no-behaviour: module deallocation
+Modules/_operator.c	2029	2032	PyInit__operator	PyInit__operator(void)	excluded		internal-bootstrap: module entry point

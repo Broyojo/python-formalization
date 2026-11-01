@@ -937,7 +937,30 @@ def functools_gen(rng):
         return {"fn": "functools." + which, "key": key, "cls": i, "types": types, **w, **extra}
     if r == 13:
         return functools_dispatch_case(rng)
-    k = rng.randrange(0, 4)
+    k = rng.randrange(0, 11)
+    if k == 4:
+        n = rng.randrange(0, 3)
+        return {"fn": "functools.pm_call", "bound": rng.random() < .5,
+                "args": [("PH" if i < n - 1 and rng.random() < .5 else 7) for i in range(n)],
+                "obj": 1, "more": [rng.randrange(0, 5) for _ in range(rng.randrange(0, 3))]}
+    if k == 5:
+        return {"fn": "functools.descr_get", "twin": twin, "obj": rng.choice([None, 3]),
+                "more": [rng.randrange(0, 5) for _ in range(rng.randrange(0, 3))]}
+    if k == 6:
+        return {"fn": "functools.sdm_getattr",
+                "name": rng.choice(["__name__", "__qualname__", "__isabstractmethod__",
+                                    "__annotations__", "__type_params__", "foo", "__dict2__"])}
+    if k == 7:
+        return {"fn": "functools.sdm_init", "callable": rng.random() < .5,
+                "hasget": rng.random() < .5}
+    if k == 8:
+        return {"fn": "functools.sd_noarg"}
+    if k == 9:
+        return {"fn": "functools.reduce_warns",
+                "names": rng.sample(["function", "sequence", "initial"], rng.randrange(0, 3))}
+    if k == 10:
+        return {"fn": rng.choice(["functools.key_sig", "functools.lru_misc", "functools.unwrap"]),
+                "q": "functools_mod", "depth": 2}
     if k == 0:
         return {"fn": "functools.update_wrapper",
                 "wrapper": [["__name__", 1]], "wrapped": rng.sample([["__name__", 2], ["__doc__", 3],
@@ -1078,7 +1101,82 @@ def functools_run(case):
         return py_result(go)
     if fn == "sdm_repr":
         return functools_sdm(case)
+    if fn == "pm_call":
+        return functools_pm(case)
+    if fn == "descr_get":
+        q = m.partial(lambda *a: list(a))
+        obj = case["obj"]
+        return {"ok": q.__get__(obj, int)(*case["more"])}
+    if fn == "sdm_getattr":
+        def f():
+            return 0
+        g = functools_P.singledispatchmethod(f).__get__(None, int)
+        n = case["name"]
+        try:
+            g.__getattr__(n)
+            return {"ok": True}
+        except AttributeError as e:
+            return {"ok": str(e) != ""}
+    if fn == "sdm_init":
+        cls = type("X", (), {**({"__call__": lambda s: 0} if case["callable"] else {}),
+                             **({"__get__": lambda s, o, t=None: s} if case["hasget"] else {})})
+        return py_result(lambda: (functools_P.singledispatchmethod(cls()), None)[1])
+    if fn == "sd_noarg":
+        def f2(*a):
+            return 0
+        f2.__name__ = "f"
+        return py_result(functools_P.singledispatch(f2))
+    if fn == "reduce_warns":
+        import warnings
+        kw = {k: {"function": max, "sequence": [1], "initial": 0}[k] for k in case["names"]}
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            try:
+                if "function" in kw or "sequence" in kw:
+                    functools_P.reduce(**kw)
+                else:
+                    functools_P.reduce(max, [1], **kw)
+            except TypeError:
+                pass
+        return {"ok": any(x.category is DeprecationWarning for x in w)}
+    if fn == "key_sig":
+        return {"ok": functools_C.cmp_to_key(max).__text_signature__}
+    if fn == "lru_misc":
+        import copy
+        wr = functools_C.lru_cache(functools_mod)
+        assert copy.copy(wr) is wr and copy.deepcopy(wr) is wr
+        assert wr.__get__(None, int) is wr and type(wr.__get__(1, int)).__name__ == "method"
+        return {"ok": [wr.__reduce__()]}
+    if fn == "unwrap":
+        f = functools_mod
+        q = functools_P.partial(functools_P.partial(f))
+        assert functools_P._unwrap_partial(q) is f
+        assert functools_P._unwrap_partialmethod(functools_P.partialmethod(q)) is f
+        return {"ok": True}
     raise ValueError(fn)
+
+
+def functools_pm(case):
+    P = functools_P.Placeholder
+    args = [P if a == "PH" else a for a in case["args"]]
+
+    def target(*a):
+        return [1, list(a), []]
+    if case["bound"]:
+        class A:
+            h = functools_P.partialmethod(target, *args)
+    else:
+        class Plain:
+            def __call__(self, *a):
+                return [1, list(a), []]
+
+        class A:
+            h = functools_P.partialmethod(Plain(), *args)
+    obj = A()
+    r = py_result(lambda: obj.h(*case["more"]))
+    if "ok" in r:
+        r["ok"][1][0] = 1
+    return r
 
 
 class functools_attrobj:
@@ -1245,8 +1343,506 @@ def functools_sdm(case):
 
 # ====== BEGIN AREA operator (Lib/operator.py, Modules/_operator.c, Lib/copy.py, Lib/abc.py) ======
 # Everything for this area stays between these two markers; prefix top-level names with operator_.
-operator_gen = None  # replace with def operator_gen(rng) -> case dict with "fn": "operator.<name>"
-operator_run = None  # replace with def operator_run(case) -> common.py_result-style dict
+import abc as operator_abc  # noqa: E402
+import copy as operator_copy  # noqa: E402
+import _operator as operator_C  # noqa: E402
+from test.support import import_helper as operator_ih  # noqa: E402
+
+operator_P = operator_ih.import_fresh_module("operator", blocked=["_operator"])
+operator_BIN = {"add": "+", "sub": "-", "mul": "*", "matmul": "@", "floordiv": "//",
+                "truediv": "/", "mod": "%", "lshift": "<<", "rshift": ">>", "and_": "&",
+                "xor": "^", "or_": "|"}
+operator_DUNDER = {"add": "add", "sub": "sub", "mul": "mul", "matmul": "matmul",
+                   "floordiv": "floordiv", "truediv": "truediv", "mod": "mod",
+                   "lshift": "lshift", "rshift": "rshift", "and_": "and", "xor": "xor",
+                   "or_": "or"}
+operator_DUNDER["pow"] = "pow"
+
+
+def operator_mod(case):
+    return operator_C if case.get("twin") == "c" else operator_P
+
+
+def operator_slot(kind, tag):
+    if kind == "val":
+        return lambda *a: tag
+    if kind == "ni":
+        return lambda *a: NotImplemented
+    if kind == "raise":
+        def f(*a):
+            raise ValueError("slot")
+        return f
+    return None
+
+
+def operator_pair(case, name):
+    d = operator_DUNDER[name]
+    A = type("A", (), {k: v for k, v in [(f"__{d}__", operator_slot(case["l"], 1))] if v})
+    r = {k: v for k, v in [(f"__r{d}__", operator_slot(case["r"], 2))] if v}
+    if case["sub"]:
+        B = type("B", (A,), r)
+    else:
+        B = type("B", (), r)
+    return A, B
+
+
+def operator_gen(rng):
+    r = rng.randrange(0, 18)
+    twin = rng.choice(["c", "py"])
+    if r in (0, 1):
+        name = rng.choice(list(operator_BIN))
+        l, rr = rng.choice(["none", "val", "ni", "raise"]), rng.choice(["none", "val", "ni", "raise"])
+        sub = rng.random() < .3 and rr != "none"
+        case = {"twin": twin, "name": name, "sym": operator_BIN[name], "l": l, "r": rr, "sub": sub}
+        if r == 0:
+            return {"fn": "operator.binop", **case}
+        return {"fn": "operator.iop", **case, "i": rng.choice(["none", "val", "ni", "raise"])}
+    if r == 2:
+        return {"fn": "operator.cmp", "twin": twin, "op": rng.choice(["lt", "le", "eq", "ne", "gt", "ge"]),
+                "l": rng.choice(["val", "ni", "raise"]), "r": rng.choice(["val", "ni", "raise"]),
+                "sub": rng.random() < .3}
+    if r == 3:
+        return {"fn": "operator.unary", "twin": twin, "name": rng.choice(["neg", "pos", "invert", "abs"]),
+                "has": rng.random() < .6, "desc": ""}
+    if r == 4:
+        return {"fn": "operator.index", "twin": twin, "k": rng.choice(["int", "none", "bad"]),
+                "n": rng.choice([0, -1, 2**70])}
+    if r == 5:
+        kinds = ["list", "tuple", "dict", "seqadd", "radd", "plain", "int"]
+        return {"fn": "operator.concat", "twin": twin, "a": rng.choice(kinds), "b": rng.choice(kinds),
+                "inplace": rng.random() < .4}
+    if r in (6, 7):
+        xs = [rng.randrange(0, 4) for _ in range(rng.randrange(0, 6))]
+        return {"fn": "operator." + ("count_of" if r == 6 else "index_of"), "twin": twin, "xs": xs,
+                "b": rng.randrange(0, 4), "bad": rng.choice([None, None, None, 1]),
+                "itfail": rng.random() < .2}
+    if r == 8:
+        return {"fn": "operator.length_hint", "twin": twin,
+                "len": rng.choice([None, None, 3, 0, "raise"]),
+                "hint": rng.choice([None, 0, 2, -1, "ni", "typeerror", "raise", "str"]),
+                "dkind": rng.choice(["int", "int", "int", "other"]) if True else "",
+                "d": rng.choice([0, 7, -1])}
+    if r == 9:
+        xs = [rng.randrange(0, 9) for _ in range(rng.randrange(0, 5))]
+        return rng.choice([
+            {"fn": "operator.itemgetter", "twin": twin, "xs": xs,
+             "items": [rng.randrange(-6, 6) for _ in range(rng.randrange(1, 4))]},
+            {"fn": "operator.itemgetter_fast", "xs": xs, "i": rng.randrange(-6, 6)}])
+    if r == 10:
+        return {"fn": "operator.getter_repr", "twin": twin, "cls": "operator.itemgetter",
+                "items": [str(rng.randrange(0, 5)) for _ in range(rng.randrange(1, 4))]}
+    if r == 11:
+        names = ["a", "b.c", "x", "a.x", "", "a.", ".b", 5]
+        return {"fn": "operator.attrgetter", "twin": twin,
+                "attrs": [rng.choice(names) for _ in range(rng.randrange(1, 3))]}
+    if r == 12:
+        k = rng.randrange(0, 3)
+        if k == 0:
+            return {"fn": "operator.mc_new", "twin": twin, "name": rng.choice([None, "BAD", "m"])}
+        args = [rng.randrange(0, 5) for _ in range(rng.randrange(0, 9))]
+        kw = [[n, rng.randrange(0, 5)] for n in rng.sample(["p", "q", "r"], rng.randrange(0, 3))]
+        if k == 1:
+            return {"fn": "operator.mc_call", "twin": twin, "args": args, "kw": kw}
+        return {"fn": "operator.mc_repr", "twin": twin, "args": [repr(a) for a in args],
+                "kw": [[n, repr(v)] for n, v in kw]}
+    if r == 13:
+        def arg():
+            k = rng.choice(["str", "str", "bytes", "bytes", "int"])
+            return {"k": k, "ascii": rng.random() < .8,
+                    "data": [rng.randrange(97, 100) for _ in range(rng.randrange(0, 4))]}
+        a = arg()
+        return {"fn": "operator.digest", "a": a, "b": dict(a) if rng.random() < .3 else arg()}
+    if r == 14:
+        return operator_graph(rng)
+    if r == 15:
+        return rng.choice([
+            {"fn": "operator.copy_route", "k": "tuple", "n": rng.randrange(2, 7)},
+            {"fn": "operator.deep_method", "self": rng.choice([0, 1])},
+            {"fn": "operator.subscript", "twin": twin, "op": rng.choice(["get", "contains"]),
+             "xs": [1, 2, 3], "i": rng.randrange(-5, 5)},
+            {"fn": "operator.call_op", "twin": twin, "args": [0] * rng.randrange(0, 3)},
+            {"fn": "operator.replace", "has": rng.random() < .5}])
+    if r == 16:
+        names = ["f", "g", "h"]
+        return {"fn": "operator.update_abstract", "isabc": rng.random() < .8,
+                "parents": [rng.sample(names, rng.randrange(0, 3)) for _ in range(rng.randrange(1, 3))],
+                "abstract": rng.sample(names, rng.randrange(0, 3)),
+                "own": [[n, rng.random() < .5] for n in rng.sample(["u", "v"], rng.randrange(0, 2))]}
+    return operator_abc_case(rng)
+
+
+def operator_graph(rng):
+    n = rng.randrange(1, 7)
+    cells = []
+    for i in range(n):
+        k = rng.choice(["atom", "atom", "list", "tuple", "dict"])
+        if k == "atom":
+            cells.append({"k": k, "n": rng.randrange(0, 4)})
+        elif k == "list":
+            cells.append({"k": k, "items": [rng.randrange(0, n) for _ in range(rng.randrange(0, 3))]})
+        elif k == "tuple":
+            low = [j for j in range(i) if cells[j]["k"] != "tuple"] + list(range(i + 1, n))
+            cells.append({"k": k, "items": rng.sample(low, min(len(low), rng.randrange(0, 3)))})
+        else:
+            atoms = list({cells[j]["n"]: j for j in range(i) if cells[j]["k"] == "atom"}.values())
+            items = []
+            for key in rng.sample(atoms, min(len(atoms), 2)):
+                items += [key, rng.randrange(0, n)]
+            cells.append({"k": k, "items": items})
+    # a tuple may only refer forward to non-tuples, so it can be built after them
+    for i, c in enumerate(cells):
+        if c["k"] == "tuple":
+            c["items"] = [j for j in c["items"] if cells[j]["k"] != "tuple"]
+    return {"fn": "operator.deepcopy", "cells": cells, "root": rng.randrange(0, n)}
+
+
+def operator_build_graph(cells):
+    objs = {}
+    for i, c in enumerate(cells):
+        if c["k"] == "atom":
+            objs[i] = operator_Atom(c["n"])
+        elif c["k"] == "list":
+            objs[i] = []
+        elif c["k"] == "dict":
+            objs[i] = {}
+    for i, c in enumerate(cells):
+        if c["k"] == "tuple":
+            objs[i] = tuple(objs[j] for j in c["items"])
+    for i, c in enumerate(cells):
+        if c["k"] == "list":
+            objs[i].extend(objs[j] for j in c["items"])
+        elif c["k"] == "dict":
+            it = c["items"]
+            for a, b in zip(it[::2], it[1::2]):
+                objs[i][objs[a]] = objs[b]
+    return objs
+
+
+class operator_Atom(int):
+    """An int subclass would be copied, so use exact behaviour through deepcopy's atomic table."""
+
+    def __deepcopy__(self, memo):
+        return self
+
+
+def operator_render(o, seen):
+    if isinstance(o, operator_Atom):
+        return ["atom", int(o)]
+    for i, s in enumerate(seen):
+        if s is o:
+            return ["ref", i]
+    seen.append(o)
+    if isinstance(o, list):
+        return ["list", [operator_render(x, seen) for x in o]]
+    if isinstance(o, tuple):
+        return ["tuple", [operator_render(x, seen) for x in o]]
+    out = []
+    for k, v in o.items():
+        out.append(operator_render(k, seen))
+        out.append(operator_render(v, seen))
+    return ["dict", out]
+
+
+def operator_abc_case(rng):
+    n = rng.randrange(2, 5)
+    A = operator_abc.ABCMeta("C0", (), {})
+    classes = [A]
+    hooks = []
+    for i in range(1, n):
+        base = rng.choice(classes)
+        classes.append(operator_abc.ABCMeta(f"C{i}", (base,), {}))
+    for i in range(1, n):
+        if rng.random() < .3:
+            j = rng.randrange(0, n)
+            if j != i and not issubclass(classes[j], classes[i]):
+                try:
+                    classes[i].register(classes[j])
+                except RuntimeError:
+                    pass
+    idx = {c: i for i, c in enumerate(classes)}
+    W = {"mro": [[idx[m] for m in c.__mro__ if m in idx] for c in classes],
+         "reg": [[idx[r] for r in c._abc_impl and operator_registry(c) if r in idx] for c in classes],
+         "subs": [[idx[s] for s in c.__subclasses__() if s in idx] for c in classes]}
+    key = len(operator_HIER)
+    operator_HIER[key] = classes
+    return {"fn": "operator.abc_check", "key": key, "cls": rng.randrange(n), "sub": rng.randrange(n),
+            "hooks": hooks, **W}
+
+
+operator_HIER = {}
+
+
+def operator_registry(c):
+    import _abc
+    reg, _, _, _ = _abc._get_dump(c)
+    return [r() for r in reg]
+
+
+def operator_run(case):
+    fn = case["fn"].split(".")[1]
+    m = operator_mod(case)
+    if fn == "binop":
+        A, B = operator_pair(case, case["name"])
+        return py_result(lambda: getattr(m, case["name"])(A(), B()))
+    if fn == "iop":
+        A, B = operator_pair(case, case["name"])
+        s = operator_slot(case["i"], 3)
+        if s:
+            setattr(A, f"__i{operator_DUNDER[case['name']]}__", s)
+        name = {"and_": "iand", "or_": "ior"}.get(case["name"], "i" + case["name"])
+        return py_result(lambda: getattr(m, name)(A(), B()))
+    if fn == "cmp":
+        return operator_cmp(case, m)
+    if fn == "unary":
+        name = case["name"]
+        d = {"neg": "neg", "pos": "pos", "invert": "invert", "abs": "abs"}[name]
+        cls = type("A", (), {f"__{d}__": (lambda s: 4)} if case["has"] else {})
+        r = py_result(lambda: getattr(m, name)(cls()))
+        if "exc" in r:
+            r["msg"] = r["msg"]
+            return {"exc": r["exc"], "msg": "bad operand type for : 'A'"}
+        return r
+    if fn == "index":
+        k = case["k"]
+        cls = {"int": type("I", (), {"__index__": lambda s: case["n"]}),
+               "none": object, "bad": type("I", (), {"__index__": lambda s: "x"})}[k]
+
+        def go():
+            v = m.index(cls())
+            return v if isinstance(v, int) else None
+        return py_result(go)
+    if fn == "concat":
+        return operator_concat(case, m)
+    if fn in ("count_of", "index_of"):
+        bad = case["bad"]
+
+        class E:
+            def __init__(self, v):
+                self.v = v
+
+            def __eq__(self, o):
+                if self.v == bad:
+                    raise ValueError("eq")
+                return self.v == o
+
+        def gen():
+            yield from (E(x) for x in case["xs"])
+            if case["itfail"]:
+                raise ValueError("it")
+        f = m.countOf if fn == "count_of" else m.indexOf
+        return py_result(lambda: f(gen(), case["b"]))
+    if fn == "length_hint":
+        return operator_hint(case, m)
+    if fn == "itemgetter":
+        items = case["items"]
+        return py_result(lambda: operator_as_list(m.itemgetter(*items)(tuple(case["xs"])), len(items)))
+    if fn == "itemgetter_fast":
+        return py_result(lambda: operator_C.itemgetter(case["i"])(tuple(case["xs"])))
+    if fn == "getter_repr":
+        ints = [int(i) for i in case["items"]]
+        return {"ok": repr(m.itemgetter(*ints))}
+    if fn == "attrgetter":
+        return operator_attr(case, m)
+    if fn == "mc_new":
+        n = case["name"]
+        if n is None:
+            return py_result(lambda: (m.methodcaller(), None)[1])
+        return py_result(lambda: (m.methodcaller(5 if n == "BAD" else n), n)[1])
+    if fn == "mc_call":
+        class O:
+            def m(self, *a, **k):
+                return [list(a), [[x, y] for x, y in k.items()]]
+        return {"ok": m.methodcaller("m", *case["args"], **dict(case["kw"]))(O())}
+    if fn == "mc_repr":
+        args = [eval(a) for a in case["args"]]
+        kw = {k: eval(v) for k, v in case["kw"]}
+        return {"ok": repr(m.methodcaller("m", *args, **kw))}
+    if fn == "digest":
+        def conv(a):
+            if a["k"] == "str":
+                return "".join(map(chr, a["data"])) + ("" if a["ascii"] else "é")
+            if a["k"] == "bytes":
+                return bytes(a["data"])
+            return 5
+        return py_result(lambda: operator_C._compare_digest(conv(case["a"]), conv(case["b"])))
+    if fn == "deepcopy":
+        objs = operator_build_graph(case["cells"])
+        x = objs[case["root"]]
+        y = operator_copy.deepcopy(x)
+        return {"ok": [operator_render(y, []), y is x]}
+    if fn == "copy_route":
+        n = case["n"]
+
+        class R:
+            def __reduce__(self):
+                return (operator_mk, (), None, None, None, None)[:n]
+        return py_result(lambda: (operator_copy.copy(R()), "reconstruct")[1])
+    if fn == "deep_method":
+        class O:
+            def __init__(self, v):
+                self.v = v
+
+            def m(self):
+                return 0
+        o = O(1)
+        bound = o.m if case["self"] == 1 else operator_Atom(1).__index__
+        if case["self"] == 0:
+            return {"ok": [True, True]}
+        c = operator_copy.deepcopy(bound)
+        return {"ok": [c.__func__ is bound.__func__, c.__self__ is bound.__self__]}
+    if fn == "subscript":
+        xs = tuple(case["xs"])
+        if case["op"] == "get":
+            return py_result(lambda: m.getitem(xs, case["i"]))
+        return py_result(lambda: m.contains(xs, case["i"]))
+    if fn == "call_op":
+        args = [(lambda *a: len(a))] + [0] * (len(case["args"]) - 1) if case["args"] else []
+        return py_result(lambda: m.call(*args))
+    if fn == "replace":
+        cls = type("X", (), {"__replace__": lambda s, **k: None} if case["has"] else {})
+        return py_result(lambda: (operator_copy.replace(cls()), None)[1])
+    if fn == "update_abstract":
+        return operator_update(case)
+    if fn == "abc_check":
+        cs = operator_HIER[case["key"]]
+        return {"ok": issubclass(cs[case["sub"]], cs[case["cls"]])}
+    raise ValueError(fn)
+
+
+def operator_mk():
+    return object.__new__(operator_Empty)
+
+
+class operator_Empty:
+    pass
+
+
+def operator_as_list(v, n):
+    return list(v) if n > 1 else [v]
+
+
+def operator_cmp(case, m):
+    op = case["op"]
+    refl = {"lt": "gt", "le": "ge", "gt": "lt", "ge": "le", "eq": "eq", "ne": "ne"}[op]
+
+    def mk(kind, val):
+        if kind == "val":
+            return lambda s, o: val
+        if kind == "raise":
+            def f(s, o):
+                raise ValueError("slot")
+            return f
+        return lambda s, o: NotImplemented
+    A = type("A", (), {f"__{op}__": mk(case["l"], True), "__hash__": None})
+    B = type("B", (A,) if case["sub"] else (), {f"__{refl}__": mk(case["r"], False),
+                                                "__hash__": None})
+    return py_result(lambda: getattr(m, op)(A(), B()))
+
+
+def operator_concat(case, m):
+    class SeqAdd:
+        def __getitem__(self, i):
+            raise IndexError
+
+        def __add__(self, o):
+            return self
+
+    class RAdd:
+        def __getitem__(self, i):
+            raise IndexError
+
+        def __radd__(self, o):
+            return self
+
+    class Plain:
+        def __add__(self, o):
+            return self
+    mk = {"list": list, "tuple": tuple, "dict": dict, "seqadd": SeqAdd, "radd": RAdd, "plain": Plain,
+          "int": lambda: 5}
+    names = {list: "list", tuple: "tuple", SeqAdd: "seqadd", RAdd: "radd", Plain: "plain"}
+    a, b = mk[case["a"]](), mk[case["b"]]()
+    f = m.iconcat if case["inplace"] else m.concat
+    return py_result(lambda: names[type(f(a, b))])
+
+
+def operator_hint(case, m):
+    ln, hint = case["len"], case["hint"]
+    body = {}
+    if ln == "raise":
+        def f(s):
+            raise ValueError("len")
+        body["__len__"] = f
+    elif ln is not None:
+        body["__len__"] = lambda s: ln
+    if hint is not None:
+        def h(s):
+            if hint == "typeerror":
+                raise TypeError("hint")
+            if hint == "raise":
+                raise ValueError("hint")
+            return {"ni": NotImplemented, "str": "x"}.get(hint, hint)
+        body["__length_hint__"] = h
+    obj = type("O", (), body)()
+    d = case["d"] if case["dkind"] == "int" else "x"
+    r = py_result(lambda: m.length_hint(obj, d))
+    return r
+
+
+def operator_attr(case, m):
+    class N:
+        def __init__(self, path):
+            self.path = path
+
+        def __getattr__(self, n):
+            if n in ("", "x"):
+                raise AttributeError("no attribute")
+            return N(self.path + "." + n)
+
+    attrs = case["attrs"]
+
+    def go():
+        v = m.attrgetter(*attrs)(N("o"))
+        return [x.path for x in v] if isinstance(v, tuple) else [v.path]
+    return py_result(go)
+
+
+def operator_update(case):
+    names = {}
+    abstract = set(case["abstract"])
+    parents = []
+    for i, p in enumerate(case["parents"]):
+        parents.append(p)
+    body = {}
+    for n, is_abs in case["own"]:
+        f = (lambda: 0)
+        if is_abs:
+            f.__isabstractmethod__ = True
+        body[n] = f
+
+    class P:
+        __slots__ = ("__abstractmethods__",)
+    bases = []
+    for i, p in enumerate(parents):
+        ns = {n: operator_mark(n in abstract) for n in p}
+        b = operator_abc.ABCMeta(f"P{i}", (), ns)
+        b.__abstractmethods__ = frozenset(p)
+        bases.append(b)
+    all_names = {n for p in parents for n in p}
+    if case["isabc"]:
+        c = operator_abc.ABCMeta("C", tuple(bases), {**{n: operator_mark(n in abstract)
+                                                       for n in all_names}, **body})
+    else:
+        return {"ok": None}
+    operator_abc.update_abstractmethods(c)
+    return {"ok": sorted(c.__abstractmethods__)}
+
+
+def operator_mark(is_abs):
+    def f():
+        return 0
+    if is_abs:
+        f.__isabstractmethod__ = True
+    return f
 # ====== END AREA operator ======
 
 # ====== BEGIN AREA enumdc (Lib/enum.py, Lib/dataclasses.py) ======
