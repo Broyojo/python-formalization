@@ -1,10 +1,10 @@
 file	line	endline	name	signature	status	entry	note
-Modules/signalmodule.c	127	131	Py_LOCAL_INLINE	Py_LOCAL_INLINE(PyObject *) get_handler(int i)	todo		
-Modules/signalmodule.c	133	139	Py_LOCAL_INLINE	Py_LOCAL_INLINE(void) set_handler(int i, PyObject* func)	todo		
+Modules/signalmodule.c	127	131	get_handler	Py_LOCAL_INLINE(PyObject *) get_handler(int i)	todo		
+Modules/signalmodule.c	133	139	set_handler	Py_LOCAL_INLINE(void) set_handler(int i, PyObject* func)	todo		
 Modules/signalmodule.c	143	148	get_signal_state	get_signal_state(PyObject *module)	todo		
 Modules/signalmodule.c	152	164	compare_handler	compare_handler(PyObject *func, PyObject *dfl_ign_handler)	todo		
 Modules/signalmodule.c	169	182	timeval_from_double	timeval_from_double(PyObject *obj, struct timeval *tv)	todo		
-Modules/signalmodule.c	187	191	Py_LOCAL_INLINE	Py_LOCAL_INLINE(double) double_from_timeval(struct timeval *tv)	todo		
+Modules/signalmodule.c	187	191	double_from_timeval	Py_LOCAL_INLINE(double) double_from_timeval(struct timeval *tv)	todo		
 Modules/signalmodule.c	194	217	itimer_retval	itimer_retval(struct itimerval *iv)	todo		
 Modules/signalmodule.c	232	238	signal_default_int_handler_impl	signal_default_int_handler_impl(PyObject *module, int signalnum, PyObject *frame) /*[clinic end generated code: output=bb11c2eb115ace4e input=efcd4a56a207acfd]*/	todo		
 Modules/signalmodule.c	242	253	report_wakeup_write_error	report_wakeup_write_error(void *data)	todo		

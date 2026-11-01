@@ -1,17 +1,17 @@
 file	line	endline	name	signature	status	entry	note
 Objects/stringlib/transmogrify.h	16	24	return_self	return_self(PyObject *self)	todo		
 Objects/stringlib/transmogrify.h	37	102	stringlib_expandtabs_impl	stringlib_expandtabs_impl(PyObject *self, int tabsize) /*[clinic end generated code: output=069cb7fae72e4c2b input=3c6d3b12aa3ccbea]*/	todo		
-Objects/stringlib/transmogrify.h	105	131	pad	pad(PyObject *self, Py_ssize_t left, Py_ssize_t right, char fill)	modelled	strsearch-pad-str-bytes,strsearch-center-balanced	
-Objects/stringlib/transmogrify.h	146	154	stringlib_ljust_impl	stringlib_ljust_impl(PyObject *self, Py_ssize_t width, char fillchar) /*[clinic end generated code: output=c79ca173c5ff8337 input=eff2d014bc7d80df]*/	modelled	strsearch-pad-str-bytes	
-Objects/stringlib/transmogrify.h	170	178	stringlib_rjust_impl	stringlib_rjust_impl(PyObject *self, Py_ssize_t width, char fillchar) /*[clinic end generated code: output=7df5d728a5439570 input=218b0bd31308955d]*/	modelled	strsearch-pad-str-bytes	
-Objects/stringlib/transmogrify.h	194	207	stringlib_center_impl	stringlib_center_impl(PyObject *self, Py_ssize_t width, char fillchar) /*[clinic end generated code: output=d8da2e055288b4c2 input=3776fd278765d89b]*/	modelled	strsearch-pad-str-bytes	
-Objects/stringlib/transmogrify.h	221	247	stringlib_zfill_impl	stringlib_zfill_impl(PyObject *self, Py_ssize_t width) /*[clinic end generated code: output=0b3c684a7f1b2319 input=2da6d7b8e9bcb19a]*/	modelled	strsearch-pad-str-bytes	
-Objects/stringlib/transmogrify.h	257	271	countchar	countchar(const char *target, Py_ssize_t target_len, char c, Py_ssize_t maxcount)	modelled	strsearch-replace-str-bytes	
-Objects/stringlib/transmogrify.h	278	344	stringlib_replace_interleave	stringlib_replace_interleave(PyObject *self, const char *to_s, Py_ssize_t to_len, Py_ssize_t maxcount)	modelled	strsearch-replace-str-bytes	
-Objects/stringlib/transmogrify.h	349	388	stringlib_replace_delete_single_character	stringlib_replace_delete_single_character(PyObject *self, char from_c, Py_ssize_t maxcount)	modelled	strsearch-replace-str-bytes	
-Objects/stringlib/transmogrify.h	393	441	stringlib_replace_delete_substring	stringlib_replace_delete_substring(PyObject *self, const char *from_s, Py_ssize_t from_len, Py_ssize_t maxcount)	modelled	strsearch-replace-str-bytes	
-Objects/stringlib/transmogrify.h	445	488	stringlib_replace_single_character_in_place	stringlib_replace_single_character_in_place(PyObject *self, char from_c, char to_c, Py_ssize_t maxcount)	modelled	strsearch-replace-str-bytes	
-Objects/stringlib/transmogrify.h	492	540	stringlib_replace_substring_in_place	stringlib_replace_substring_in_place(PyObject *self, const char *from_s, Py_ssize_t from_len, const char *to_s, Py_ssize_t to_len, Py_ssize_t maxcount)	modelled	strsearch-replace-str-bytes	
-Objects/stringlib/transmogrify.h	544	604	stringlib_replace_single_character	stringlib_replace_single_character(PyObject *self, char from_c, const char *to_s, Py_ssize_t to_len, Py_ssize_t maxcount)	modelled	strsearch-replace-str-bytes	
-Objects/stringlib/transmogrify.h	608	673	stringlib_replace_substring	stringlib_replace_substring(PyObject *self, const char *from_s, Py_ssize_t from_len, const char *to_s, Py_ssize_t to_len, Py_ssize_t maxcount)	modelled	strsearch-replace-str-bytes	
-Objects/stringlib/transmogrify.h	677	737	stringlib_replace	stringlib_replace(PyObject *self, const char *from_s, Py_ssize_t from_len, const char *to_s, Py_ssize_t to_len, Py_ssize_t maxcount)	modelled	strsearch-replace-str-bytes	
+Objects/stringlib/transmogrify.h	105	131	pad	pad(PyObject *self, Py_ssize_t left, Py_ssize_t right, char fill)	todo		
+Objects/stringlib/transmogrify.h	146	154	stringlib_ljust_impl	stringlib_ljust_impl(PyObject *self, Py_ssize_t width, char fillchar) /*[clinic end generated code: output=c79ca173c5ff8337 input=eff2d014bc7d80df]*/	todo		
+Objects/stringlib/transmogrify.h	170	178	stringlib_rjust_impl	stringlib_rjust_impl(PyObject *self, Py_ssize_t width, char fillchar) /*[clinic end generated code: output=7df5d728a5439570 input=218b0bd31308955d]*/	todo		
+Objects/stringlib/transmogrify.h	194	207	stringlib_center_impl	stringlib_center_impl(PyObject *self, Py_ssize_t width, char fillchar) /*[clinic end generated code: output=d8da2e055288b4c2 input=3776fd278765d89b]*/	todo		
+Objects/stringlib/transmogrify.h	221	247	stringlib_zfill_impl	stringlib_zfill_impl(PyObject *self, Py_ssize_t width) /*[clinic end generated code: output=0b3c684a7f1b2319 input=2da6d7b8e9bcb19a]*/	todo		
+Objects/stringlib/transmogrify.h	257	271	countchar	countchar(const char *target, Py_ssize_t target_len, char c, Py_ssize_t maxcount)	todo		
+Objects/stringlib/transmogrify.h	278	344	stringlib_replace_interleave	stringlib_replace_interleave(PyObject *self, const char *to_s, Py_ssize_t to_len, Py_ssize_t maxcount)	todo		
+Objects/stringlib/transmogrify.h	349	388	stringlib_replace_delete_single_character	stringlib_replace_delete_single_character(PyObject *self, char from_c, Py_ssize_t maxcount)	todo		
+Objects/stringlib/transmogrify.h	393	441	stringlib_replace_delete_substring	stringlib_replace_delete_substring(PyObject *self, const char *from_s, Py_ssize_t from_len, Py_ssize_t maxcount)	todo		
+Objects/stringlib/transmogrify.h	445	488	stringlib_replace_single_character_in_place	stringlib_replace_single_character_in_place(PyObject *self, char from_c, char to_c, Py_ssize_t maxcount)	todo		
+Objects/stringlib/transmogrify.h	492	540	stringlib_replace_substring_in_place	stringlib_replace_substring_in_place(PyObject *self, const char *from_s, Py_ssize_t from_len, const char *to_s, Py_ssize_t to_len, Py_ssize_t maxcount)	todo		
+Objects/stringlib/transmogrify.h	544	604	stringlib_replace_single_character	stringlib_replace_single_character(PyObject *self, char from_c, const char *to_s, Py_ssize_t to_len, Py_ssize_t maxcount)	todo		
+Objects/stringlib/transmogrify.h	608	673	stringlib_replace_substring	stringlib_replace_substring(PyObject *self, const char *from_s, Py_ssize_t from_len, const char *to_s, Py_ssize_t to_len, Py_ssize_t maxcount)	todo		
+Objects/stringlib/transmogrify.h	677	737	stringlib_replace	stringlib_replace(PyObject *self, const char *from_s, Py_ssize_t from_len, const char *to_s, Py_ssize_t to_len, Py_ssize_t maxcount)	todo		

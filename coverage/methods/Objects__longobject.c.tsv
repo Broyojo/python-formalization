@@ -11,7 +11,7 @@ Objects/longobject.c	217	243	_PyLong_Copy	_PyLong_Copy(PyLongObject *src)	todo
 Objects/longobject.c	246	264	_PyLong_FromMedium	_PyLong_FromMedium(sdigit x)	modelled	longobj-from-stwodigits	
 Objects/longobject.c	267	303	_PyLong_FromLarge	_PyLong_FromLarge(stwodigits ival)	modelled	longobj-from-stwodigits	
 Objects/longobject.c	307	317	_PyLong_FromSTwoDigits	_PyLong_FromSTwoDigits(stwodigits x)	modelled	longobj-from-stwodigits	
-Objects/longobject.c	321	334	Py_LOCAL_INLINE	Py_LOCAL_INLINE(void) _PyLong_Negate(PyLongObject **x_p)	modelled	longobj-mul	
+Objects/longobject.c	321	334	_PyLong_Negate	Py_LOCAL_INLINE(void) _PyLong_Negate(PyLongObject **x_p)	modelled	longobj-mul	
 Objects/longobject.c	373	376	PyLong_FromLong	PyLong_FromLong(long ival)	modelled	longobj-from-c	
 Objects/longobject.c	411	414	PyLong_FromUnsignedLong	PyLong_FromUnsignedLong(unsigned long ival)	modelled	longobj-from-c	
 Objects/longobject.c	419	422	PyLong_FromUnsignedLongLong	PyLong_FromUnsignedLongLong(unsigned long long ival)	modelled	longobj-from-c	

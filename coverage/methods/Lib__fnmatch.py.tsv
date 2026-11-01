@@ -2,7 +2,7 @@ file	line	endline	name	signature	status	entry	note
 Lib/fnmatch.py	22	39	fnmatch	fnmatch(name, pat)	todo		
 Lib/fnmatch.py	43	50	_compile_pattern	_compile_pattern(pat)	todo		
 Lib/fnmatch.py	53	67	filter	filter(names, pat)	todo		
-Lib/fnmatch.py	70	82	filterfalse	filterfalse(names, pat)	modelled	itertools-simple-doc-agree	
+Lib/fnmatch.py	70	82	filterfalse	filterfalse(names, pat)	todo		
 Lib/fnmatch.py	85	92	fnmatchcase	fnmatchcase(name, pat)	todo		
 Lib/fnmatch.py	95	102	translate	translate(pat)	todo		
 Lib/fnmatch.py	109	183	_translate	_translate(pat, star, question_mark)	todo		

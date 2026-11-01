@@ -13,7 +13,7 @@ Modules/itertoolsmodule.c	346	402	pairwise_next	pairwise_next(PyObject *op)	mode
 Modules/itertoolsmodule.c	458	477	itertools_groupby_impl	itertools_groupby_impl(PyTypeObject *type, PyObject *it, PyObject *keyfunc) /*[clinic end generated code: output=cbb1ae3a90fd4141 input=6b3d123e87ff65a1]*/	modelled	itertools-groupby-ctor-error,itertools-groupby-doc-agree,itertools-groupby-no-crash	
 Modules/itertoolsmodule.c	480	492	groupby_dealloc	groupby_dealloc(PyObject *op)	excluded		no-behaviour: deallocation, drops references and frees memory; no return value
 Modules/itertoolsmodule.c	495	505	groupby_traverse	groupby_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal (Py_VISIT of object members); only tp_traverse for the cycle collector, no Python-visible result of its own
-Modules/itertoolsmodule.c	507	531	Py_LOCAL_INLINE	Py_LOCAL_INLINE(int) groupby_step(groupbyobject *gbo)	modelled	itertools-groupby-doc-agree,itertools-groupby-failed-step,itertools-groupby-no-crash	
+Modules/itertoolsmodule.c	507	531	groupby_step	Py_LOCAL_INLINE(int) groupby_step(groupbyobject *gbo)	todo		
 Modules/itertoolsmodule.c	534	579	groupby_next	groupby_next(PyObject *op)	modelled	itertools-groupby-doc-agree,itertools-groupby-eq-error,itertools-groupby-no-crash,itertools-groupby-no-crash-no-reentry	
 Modules/itertoolsmodule.c	621	626	itertools__grouper_impl	itertools__grouper_impl(PyTypeObject *type, PyObject *parent, PyObject *tgtkey) /*[clinic end generated code: output=462efb1cdebb5914 input=afe05eb477118f12]*/	modelled	itertools-grouper-direct	
 Modules/itertoolsmodule.c	629	641	_grouper_create	_grouper_create(groupbyobject *parent, PyObject *tgtkey)	modelled	itertools-groupby-doc-agree,itertools-groupby-no-crash,itertools-grouper-direct	

@@ -1,8 +1,8 @@
 file	line	endline	name	signature	status	entry	note
-Objects/dictobject.c	187	191	load_keys_nentries	load_keys_nentries(PyDictObject *mp)	excluded		platform: free-threaded build only (Py_GIL_DISABLED); the GIL build the model covers has no such code
-Objects/dictobject.c	194	198	set_keys	set_keys(PyDictObject *mp, PyDictKeysObject *keys)	excluded		platform: free-threaded build only (Py_GIL_DISABLED); the GIL build the model covers has no such code
-Objects/dictobject.c	201	205	set_values	set_values(PyDictObject *mp, PyDictValues *values)	excluded		platform: free-threaded build only (Py_GIL_DISABLED); the GIL build the model covers has no such code
-Objects/dictobject.c	222	230	split_keys_entry_added	static inline void split_keys_entry_added(PyDictKeysObject *keys)	excluded		platform: free-threaded build only (Py_GIL_DISABLED); the GIL build the model covers has no such code
+Objects/dictobject.c	187	191	load_keys_nentries	load_keys_nentries(PyDictObject *mp)	todo		
+Objects/dictobject.c	194	198	set_keys	set_keys(PyDictObject *mp, PyDictKeysObject *keys)	todo		withdrawn: theorem is rfl on a thin definition
+Objects/dictobject.c	201	205	set_values	set_values(PyDictObject *mp, PyDictValues *values)	todo		
+Objects/dictobject.c	222	230	split_keys_entry_added	static inline void split_keys_entry_added(PyDictKeysObject *keys)	todo		
 Objects/dictobject.c	254	258	split_keys_entry_added	static inline void split_keys_entry_added(PyDictKeysObject *keys)	todo		
 Objects/dictobject.c	261	264	set_keys	set_keys(PyDictObject *mp, PyDictKeysObject *keys)	todo		withdrawn: theorem is rfl on a thin definition
 Objects/dictobject.c	267	270	set_values	set_values(PyDictObject *mp, PyDictValues *values)	todo		
@@ -52,9 +52,9 @@ Objects/dictobject.c	1417	1444	compare_unicode_unicode_threadsafe	compare_unicod
 Objects/dictobject.c	1447	1450	unicodekeys_lookup_unicode_threadsafe	unicodekeys_lookup_unicode_threadsafe(PyDictKeysObject* dk, PyObject *key, Py_hash_t hash)	excluded		platform: free-threaded build only (Py_GIL_DISABLED); the GIL build the model covers has no such code
 Objects/dictobject.c	1453	1481	compare_generic_threadsafe	compare_generic_threadsafe(PyDictObject *mp, PyDictKeysObject *dk, void *ep0, Py_ssize_t ix, PyObject *key, Py_hash_t hash)	excluded		platform: free-threaded build only (Py_GIL_DISABLED); the GIL build the model covers has no such code
 Objects/dictobject.c	1484	1487	dictkeys_generic_lookup_threadsafe	dictkeys_generic_lookup_threadsafe(PyDictObject *mp, PyDictKeysObject* dk, PyObject *key, Py_hash_t hash)	excluded		platform: free-threaded build only (Py_GIL_DISABLED); the GIL build the model covers has no such code
-Objects/dictobject.c	1490	1585	_Py_dict_lookup_threadsafe	_Py_dict_lookup_threadsafe(PyDictObject *mp, PyObject *key, Py_hash_t hash, PyObject **value_addr)	excluded		platform: free-threaded build only (Py_GIL_DISABLED); the GIL build the model covers has no such code
+Objects/dictobject.c	1490	1585	_Py_dict_lookup_threadsafe	_Py_dict_lookup_threadsafe(PyDictObject *mp, PyObject *key, Py_hash_t hash, PyObject **value_addr)	todo		
 Objects/dictobject.c	1588	1617	lookup_threadsafe_unicode	lookup_threadsafe_unicode(PyDictKeysObject *dk, PyObject *key, Py_hash_t hash, _PyStackRef *value_addr)	excluded		platform: free-threaded build only (Py_GIL_DISABLED); the GIL build the model covers has no such code
-Objects/dictobject.c	1620	1641	_Py_dict_lookup_threadsafe_stackref	_Py_dict_lookup_threadsafe_stackref(PyDictObject *mp, PyObject *key, Py_hash_t hash, _PyStackRef *value_addr)	excluded		platform: free-threaded build only (Py_GIL_DISABLED); the GIL build the model covers has no such code
+Objects/dictobject.c	1620	1641	_Py_dict_lookup_threadsafe_stackref	_Py_dict_lookup_threadsafe_stackref(PyDictObject *mp, PyObject *key, Py_hash_t hash, _PyStackRef *value_addr)	todo		
 Objects/dictobject.c	1646	1651	_Py_dict_lookup_threadsafe	_Py_dict_lookup_threadsafe(PyDictObject *mp, PyObject *key, Py_hash_t hash, PyObject **value_addr)	todo		
 Objects/dictobject.c	1654	1665	_Py_dict_lookup_threadsafe_stackref	_Py_dict_lookup_threadsafe_stackref(PyDictObject *mp, PyObject *key, Py_hash_t hash, _PyStackRef *value_addr)	todo		
 Objects/dictobject.c	1672	1715	_PyDict_GetMethodStackRef	_PyDict_GetMethodStackRef(PyDictObject *mp, PyObject *key, _PyStackRef *method)	todo		

@@ -29,7 +29,7 @@ Objects/floatobject.c	845	863	float_is_integer_impl	float_is_integer_impl(PyObje
 Objects/floatobject.c	872	876	float___trunc___impl	float___trunc___impl(PyObject *self) /*[clinic end generated code: output=dd3e289dd4c6b538 input=591b9ba0d650fdff]*/	modelled	float-int-conversions	
 Objects/floatobject.c	885	890	float___floor___impl	float___floor___impl(PyObject *self) /*[clinic end generated code: output=e0551dbaea8c01d1 input=77bb13eb12e268df]*/	modelled	float-int-conversions	
 Objects/floatobject.c	899	904	float___ceil___impl	float___ceil___impl(PyObject *self) /*[clinic end generated code: output=a2fd8858f73736f9 input=79e41ae94aa0a516]*/	modelled	float-int-conversions	
-Objects/floatobject.c	916	966	double_round	double_round(double x, int ndigits) {	modelled	float-round-extremes	
+Objects/floatobject.c	916	966	double_round	double_round(double x, int ndigits) {	excluded		platform: compiled only when _PY_SHORT_FLOAT_REPR == 0, that is without IEEE 754 doubles and a usable FPU control word
 Objects/floatobject.c	974	1016	double_round	double_round(double x, int ndigits) {	excluded		platform: compiled only when _PY_SHORT_FLOAT_REPR == 0, that is without IEEE 754 doubles and a usable FPU control word
 Objects/floatobject.c	1034	1076	float___round___impl	float___round___impl(PyObject *self, PyObject *o_ndigits) /*[clinic end generated code: output=374c36aaa0f13980 input=fc0fe25924fbc9ed]*/	modelled	float-round-extremes	
 Objects/floatobject.c	1079	1087	float_float	float_float(PyObject *v)	modelled	float-identities	
