@@ -16,4 +16,5 @@ if [ -n "$outside" ]; then
 fi
 git diff --stat "$base" "$branch" | tail -1
 git merge --no-ff -q -m "Merge $mod module ($branch)" "$branch"
-scripts/r scripts/audit.sh
+# Batch merges set SKIP_AUDIT and run one full audit afterwards.
+[ -n "${SKIP_AUDIT:-}" ] || scripts/r scripts/audit.sh

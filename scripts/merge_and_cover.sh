@@ -6,7 +6,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 until mkdir .git/merge.lock 2>/dev/null; do sleep 10; done
 trap 'rmdir .git/merge.lock' EXIT
 scripts/merge_module.sh "$1" "$2" "$3" 2>&1 |
-    grep -E '^FAIL|Build completed|properties|not reproduced|NOT REPRO|error:|CONFLICT|touches' | cut -c1-130 | tail -8
+    grep -E '^FAIL|AUDIT PASSED|Build completed|properties|not reproduced|NOT REPRO|error:|CONFLICT|touches' | cut -c1-130 | tail -8
 status=${PIPESTATUS[0]}
 if [ "$status" -ne 0 ]; then
     echo "MERGE GATE FAILED ($status) for $2"
