@@ -1,5 +1,5 @@
 import PyLean.DictSet.DictProps2
-import PyLean.DictSet.ODict
+import PyLean.DictSet.ODictPy
 import PyLean.DictSet.Managed
 
 /-!
@@ -128,6 +128,36 @@ theorem odictIterBounded_refuted : ¬OdictIterBounded := by
   have := h Nat Nat intProto _ _ intProto_honest
     [.set 0 0, .set 1 1, .set 2 2, .rawPopitem, .rawPopitem] 8
   exact absurd this (by decide +kernel)
+
+/-- One step of a program on an `OrderedDict`, through its own methods only. -/
+inductive OdOp (K V : Type) where
+  | set (k : K) (v : V)
+  | del (k : K)
+  | moveToEnd (k : K) (last : Bool)
+
+def odProg {K V : Type} [DecidableEq K] (P : Proto K (PyDict K V)) :
+    List (OdOp K V) → ODict K V → ODict K V
+  | [], od => od
+  | .set k v :: rest, od => odProg P rest (odictSetItem P k v od).2
+  | .del k :: rest, od => odProg P rest (odictDelItem P k od).2
+  | .moveToEnd k l :: rest, od => odProg P rest (odictMoveToEnd P k l od).2
+
+def pyProg {K V : Type} [DecidableEq K] (P : Proto K (PyDict K V)) (Q : Proto K (PyDict K Nat)) :
+    List (OdOp K V) → PyOD K V → PyOD K V
+  | [], o => o
+  | .set k v :: rest, o => pyProg P Q rest (pyodSetItem P Q k v o).2
+  | .del k :: rest, o => pyProg P Q rest (pyodDelItem P Q k o).2
+  | .moveToEnd k l :: rest, o => pyProg P Q rest (pyodMoveToEnd Q k l o).2
+
+/-- For keys that keep the contract, the C and pure-Python `OrderedDict` hold the same keys in the
+same order after any program of their own methods. Open: it needs `Chain`-style invariants for
+`od_fast_nodes` and the deferred `_odict_resize`, and for the link heap. The difftest checks each
+twin against its own model on 50k-case runs. -/
+def OdictTwinsAgree : Prop :=
+  ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (Q : Proto K (PyDict K Nat))
+    (hf : K → Int) (eqv : K → K → Bool), Honest P hf eqv → Honest Q hf eqv →
+    ∀ ops : List (OdOp K V),
+      (odProg P ops (odictNew 1)).nodes.map (·.key) = (pyProg P Q ops (pyodNew 1)).keysList
 
 /-- One step of a program using a reverse dict iterator. -/
 inductive RevStep (K V : Type) where

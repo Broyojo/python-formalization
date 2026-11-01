@@ -324,28 +324,31 @@ def mergeLoop (override : Nat) : List (K × V × Int) → DM K V Unit
         M.throw (keyErr P key)
     mergeLoop override rest
 
+/-- The tail of `dict_dict_merge` (:3934-3987): one big resize, then the insertions. -/
+def mergeRest (other : PyDict K V) (override : Nat) : DM K V Unit := fun mp =>
+  match (if usableFraction (2 ^ mp.body.log2Size) < other.used then
+           dictResize (estimateLog2Keysize (mp.used + other.used)) other.body.isUnicode mp
+         else (.ok (), mp)) with
+  | (.error e, s) => (.error e, s)
+  | (.ok _, s) => mergeLoop P override (dictItems other) s
+
 /-- `dict_dict_merge` (:3891-3988). -/
-def dictDictMerge (other : PyDict K V) (override : Nat) : DM K V Unit := do
-  let mp ← M.get
-  if other.ident == mp.ident || other.used == 0 then return ()
-  let mut override := override
-  if mp.used == 0 then
-    override := 1
+def dictDictMerge (other : PyDict K V) (override : Nat) : DM K V Unit := fun mp =>
+  if other.ident == mp.ident || other.used == 0 then (.ok (), mp)
+  else if mp.used == 0 then
+    -- `override = 1`: the target is empty, so the test is unnecessary (:3900-3905).
     match mp.body, other.body with
     | .combined _, .combined okeys =>
       if other.used == okeys.nentries &&
           (okeys.log2Size == PyDict_LOG_MINSIZE ||
             decide (usableFraction (okeys.size / 2) < other.used)) then
-        M.put { mp with
+        (.ok (), { mp with
           nextId := mp.nextId + 1
           used := other.used
-          body := .combined (cloneCombinedDictKeys mp.nextId okeys) }
-        return ()
-    | _, _ => pure ()
-  let mp ← M.get
-  if usableFraction (2 ^ mp.body.log2Size) < other.used then
-    dictResize (estimateLog2Keysize (mp.used + other.used)) other.body.isUnicode
-  mergeLoop P override (dictItems other)
+          body := .combined (cloneCombinedDictKeys mp.nextId okeys) })
+      else mergeRest P other 1 mp
+    | _, _ => mergeRest P other 1 mp
+  else mergeRest P other override mp
 
 /-- The right operand of `dict_merge` (:3990-4088). -/
 inductive MergeArg (K V : Type) where

@@ -1,6 +1,6 @@
 import PyLean.Registry
 import PyLean.DictSet.Diff
-import PyLean.DictSet.Props2
+import PyLean.DictSet.Props3
 import PyLean.DictSet.SetProps
 import PyLean.DictSet.Findings
 
@@ -24,7 +24,7 @@ def entries : List Entry := [
     prop := ``LcgFullPeriod, thm := some ``lcgFullPeriod_proven
     notes := "Proved from scratch, without Mathlib: 2**n steps add 2**n times an odd number." },
   { id := "dict-probe-reaches-all", pyFile := "Objects/dictobject.c",
-    pyFns := ["lookdict_index", "find_empty_slot", "build_indices_generic", "build_indices_unicode"]
+    pyFns := ["lookdict_index", "find_empty_slot", "build_indices_unicode"]
     statement := "For every table of 2**n slots, every 64-bit hash and every slot s, the probe sequence reaches s within 2**n + 13 steps."
     source := "dictobject.c:354-358", status := .proven
     prop := ``ProbeReachesAll, thm := some ``probeReachesAll_proven },
@@ -69,8 +69,8 @@ def entries : List Entry := [
   { id := "dict-setitem-refines", pyFile := "Objects/dictobject.c",
     pyFns := ["setitem_take2_lock_held", "PyDict_SetItem", "_PyDict_SetItem_Take2", "setitem_lock_held",
       "insertdict", "insert_to_emptydict", "insert_combined_dict", "find_empty_slot",
-      "is_unusable_slot", "insertion_resize", "dictresize", "build_indices_generic",
-      "build_indices_unicode", "new_keys_object", "set_keys", "dict_unhashable_type"]
+      "is_unusable_slot", "insertion_resize", "dictresize",
+      "build_indices_unicode", "new_keys_object", "set_keys"]
     statement := "d[key] = v on any well-formed combined dict either raises MemoryError and changes nothing, or keeps the table well formed and does to the association list what assocSet does: overwrite in place, or append."
     source := "language: dicts preserve insertion order; invariant", status := .proven
     prop := ``SetItemRefines, thm := some ``setItemRefines_proven
@@ -146,6 +146,64 @@ def entries : List Entry := [
     source := "Doc/library/stdtypes.rst: iteration order", status := .proven
     prop := ``ForwardIterOrder, thm := some ``forwardIterOrder_proven
     notes := "Hypothesis d.used < 2**63 is the type invariant of Py_ssize_t ma_used." },
+  { id := "dict-pop-default", pyFile := "Objects/dictobject.c",
+    pyFns := ["dict_pop_default", "_PyDict_Pop", "dict_pop_impl"]
+    statement := "d.pop(key[, default]) returns and removes the list's value; if absent it returns default, or raises KeyError(key) when there is none, changing nothing."
+    source := "dict.pop docstring, dictobject.c:4573-4576", status := .proven
+    prop := ``PopDefaultSpec, thm := some ``popDefaultSpec_proven },
+  { id := "dict-ass-sub", pyFile := "Objects/dictobject.c", pyFns := ["dict_ass_sub"]
+    statement := "mp_ass_subscript deletes when the value is NULL and sets otherwise."
+    source := "dictobject.c:3540-3547", status := .proven
+    prop := ``AssSubDispatch, thm := some ``assSubDispatch_proven },
+  { id := "dict-new-empty", pyFile := "Objects/dictobject.c", pyFns := ["PyDict_New", "dict_new", "new_dict"]
+    statement := "A new dict is well formed and holds nothing."
+    source := "invariant", status := .proven
+    prop := ``NewDictEmpty, thm := some ``newDictEmpty_proven },
+  { id := "dict-merge-refines", pyFile := "Objects/dictobject.c",
+    pyFns := ["dict_dict_merge", "dict_merge", "PyDict_Update", "PyDict_Merge", "_PyDict_MergeEx",
+      "clone_combined_dict_keys", "dict_ior"]
+    statement := "d.update(other) on well-formed distinct dicts is the fold of d[k] = v over other's items in order, whichever path runs: the clone into an empty dict, the single resize, or plain insertion. MemoryError is the only failure."
+    source := "dict.update docstring", status := .proven
+    prop := ``DictMergeRefines, thm := some ``dictMergeRefines_proven
+    notes := "override == 1; the override 0 and 2 branches are not covered by this statement." },
+  { id := "dict-merge-self", pyFile := "Objects/dictobject.c", pyFns := ["dict_dict_merge"]
+    statement := "d.update(d) does nothing."
+    source := "comment at dictobject.c:3898", status := .proven
+    prop := ``DictMergeSelf, thm := some ``dictMergeSelf_proven },
+  { id := "dict-merge-mapping", pyFile := "Objects/dictobject.c", pyFns := ["dict_merge"]
+    statement := "With a mapping argument whose __getitem__ succeeds, update is d[k] = E[k] for k in E.keys(), in order."
+    source := "dict.update docstring, dictobject.c:4806", status := .proven
+    prop := ``MergeMappingRefines, thm := some ``mergeMappingRefines_proven },
+  { id := "dict-merge-seq2", pyFile := "Objects/dictobject.c",
+    pyFns := ["merge_from_seq2_lock_held", "PyDict_MergeFromSeq2"]
+    statement := "With an iterable of pairs, update is d[k] = v for each pair, in order."
+    source := "dict.update docstring, dictobject.c:4807", status := .proven
+    prop := ``MergeSeq2Refines, thm := some ``mergeSeq2Refines_proven
+    notes := "override == 1 and well-formed pairs. The error messages for bad elements are checked by the difftest, not stated here." },
+  { id := "dict-update-arg-routes", pyFile := "Objects/dictobject.c", pyFns := ["dict_update_arg"]
+    statement := "dict_update_arg sends an object with keys to dict_merge and one without to the sequence route."
+    source := "dict.update docstring, dictobject.c:4805-4808", status := .proven
+    prop := ``UpdateArgRoutes, thm := some ``updateArgRoutes_proven },
+  { id := "dict-cstring-wrappers", pyFile := "Objects/dictobject.c",
+    pyFns := ["_PyDict_GetItemIdWithError", "_PyDict_GetItemStringWithError", "PyDict_GetItemStringRef",
+      "PyDict_ContainsString", "_PyDict_ContainsId", "_PyDict_SetItemId", "PyDict_SetItemString",
+      "_PyDict_DelItemId", "PyDict_DelItemString"]
+    statement := "The C-string entry points build the key, raise if that fails with the dict untouched, and otherwise behave as the key operation."
+    source := "Doc/c-api/dict.rst", status := .proven
+    prop := ``CKeyWrappers, thm := some ``cKeyWrappers_proven
+    notes := "One model, withCKey, stands for all of them: their bodies differ only in which key operation they call. PyDict_SetItemString also interns the key, which has no effect on the dict's contents." },
+  { id := "set-table-refines", pyFile := "Objects/setobject.c",
+    pyFns := ["set_lookkey", "set_add_entry", "set_discard_entry", "set_contains_entry"]
+    statement := "For every key type keeping the hash/eq contract, after any program of add and discard from an empty set, membership agrees with a list without duplicates."
+    source := "language: set semantics", status := .open
+    prop := ``SetTableRefines
+    notes := "Not proved. Needs the Chain invariant restated over set_lookkey's nested linear-probe loops, the freeslot logic of set_add_entry_takeref, and set_table_resize. The behaviour is checked by the difftest, including exact slot order." },
+  { id := "odict-twins-agree", pyFile := "Objects/odictobject.c",
+    pyFns := ["_odict_get_index", "_odict_resize", "_odict_add_new_node", "_odict_remove_node"]
+    statement := "For keys keeping the contract, the C and pure-Python OrderedDict hold the same keys in the same order after any program of __setitem__, __delitem__ and move_to_end."
+    source := "odictobject.c:3-4: necessarily explicitly equivalent to the pure Python class", status := .open
+    prop := ``OdictTwinsAgree
+    notes := "Not proved. Needs an invariant tying od_fast_nodes to dk_entries across the deferred _odict_resize, and one for the link heap." },
   { id := "dict-setdefault-no-crash", pyFile := "Objects/dictobject.c",
     pyFns := ["dict_setdefault_ref_lock_held", "dict_setdefault_impl", "PyDict_SetDefaultRef"]
     statement := "For every key type keeping the hash/eq contract, dict.setdefault on a fresh instance __dict__ never dereferences NULL."

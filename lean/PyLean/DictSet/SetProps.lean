@@ -141,4 +141,37 @@ theorem setClearEmpties_proven : SetClearEmpties := by
       rw [e]
       exact ⟨h hid hf, by simp [hid, hf]⟩
 
+/-- The contract of `__hash__` and `__eq__`, for a set's keys. -/
+structure HonestSet (P : Proto K (SetObj K)) (hf : K → Int) (eqv : K → K → Bool) : Prop where
+  hash_ok : ∀ k, P.hash k = .ok (hf k)
+  eq_ok : ∀ a b s, P.eq a b s = (.ok (eqv a b), s)
+  str_eq : ∀ a b, P.isStr a = true → P.isStr b = true → P.strEq a b = eqv a b
+  refl : ∀ a, eqv a a = true
+  symm : ∀ a b, eqv a b = eqv b a
+  trans : ∀ a b c, eqv a b = true → eqv b c = true → eqv a c = true
+  hash_cons : ∀ a b, eqv a b = true → hf a = hf b
+
+/-- A run of `add` and `discard` from an empty set. -/
+inductive SOp (K : Type) where
+  | add (k : K)
+  | discard (k : K)
+
+def setProg [DecidableEq K] (P : Proto K (SetObj K)) : List (SOp K) → SetObj K → SetObj K
+  | [], s => s
+  | .add k :: rest, s => setProg P rest (setAddKey P k s).2
+  | .discard k :: rest, s => setProg P rest (setDiscardKey P k s).2
+
+def setAbs (eqv : K → K → Bool) : List (SOp K) → List K → List K
+  | [], l => l
+  | .add k :: rest, l => setAbs eqv rest (if l.any (eqv · k) then l else l ++ [k])
+  | .discard k :: rest, l => setAbs eqv rest (l.filter fun x => !eqv x k)
+
+/-- The set table refines a list without duplicates: the dict theorem, for linear probing. Open:
+it needs the probing invariant of `Chain` restated over `set_lookkey`'s nested loops, for `set_add_entry`'s
+freeslot and `set_table_resize`. -/
+def SetTableRefines : Prop :=
+  ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (hf : K → Int) (eqv : K → K → Bool),
+    HonestSet P hf eqv → ∀ (ops : List (SOp K)) (key : K),
+      (setContainsKey P key (setProg P ops {})).1 = .ok ((setAbs eqv ops []).any (eqv · key))
+
 end PyLean.DictSet
