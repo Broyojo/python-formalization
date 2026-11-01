@@ -4,10 +4,10 @@
 For a list whose keys are all exact `int`s, `list_sort_impl` picks
 `unsafe_long_compare` when every key is compact (at most one 30-bit digit), and
 `unsafe_object_compare`, i.e. `long_richcompare`, otherwise
-(`listobject.c:2964-3059`). The model represents an int as in
+(`listobject.c:3029-3124`). The model represents an int as in
 `Include/cpython/longintrepr.h`: a sign and little-endian base `2^30` digits with
 a non-zero top digit. `longCompare` mirrors `long_compare`
-(`Objects/longobject.c:3522-3540`) digit by digit, so the theorems here say the
+(`Objects/longobject.c:3605-3623`) digit by digit, so the theorems here say the
 fast path and the digit loop both agree with `<` on `Int`.
 -/
 
@@ -44,7 +44,7 @@ def digitLoop (a b : List Nat) : Nat → Int
     let diff : Int := (a.getD i 0 : Int) - (b.getD i 0 : Int)
     if diff ≠ 0 then diff else digitLoop a b i
 
-/-- `long_compare(a, b)` (`Objects/longobject.c:3522-3540`). -/
+/-- `long_compare(a, b)` (`Objects/longobject.c:3605-3623`). -/
 def longCompare (a b : PyLong) : Int :=
   if a.isCompact && b.isCompact then a.compactValue - b.compactValue
   else
@@ -54,14 +54,14 @@ def longCompare (a b : PyLong) : Int :=
       if a.sign < 0 then -diff else diff
     else sign
 
-/-- `unsafe_long_compare` (`listobject.c:2795-2817`): `v0 < w0`. -/
+/-- `unsafe_long_compare` (`listobject.c:2860-2882`): `v0 < w0`. -/
 def unsafeLongCompare (v w : PyLong) : Bool := decide (v.compactValue < w.compactValue)
 
-/-- `long_richcompare(v, w, Py_LT)` (`Objects/longobject.c:3543-3552`). The `self ==
+/-- `long_richcompare(v, w, Py_LT)` (`Objects/longobject.c:3626-3635`). The `self ==
 other` shortcut gives 0, as `long_compare` does for equal values. -/
 def longRichLt (v w : PyLong) : Bool := decide (longCompare v w < 0)
 
-/-- `ints_are_bounded` over the keys (`listobject.c:3008-3013`, `:3029`). -/
+/-- `ints_are_bounded` over the keys (`listobject.c:3073-3078`, `:3094`). -/
 def allCompact (keys : List Int) : Bool := keys.all (fun k => (PyLong.ofInt k).isCompact)
 
 /-- The compare chosen by the pre-sort check for all-int keys. -/

@@ -35,9 +35,9 @@ promised_by: |
   Doc/library/re.rst on (?(id/name)yes|no): the yes pattern is tried "if the group with given id or
   name exists". No failed path should count. Nothing states the open-group case.
 cause: |
-  Modules/_sre/sre_lib.h:1248 pushes marks only `if (state->repeat)`, and :1261-1262 restores them
+  Modules/_sre/sre_lib.h:1303 pushes marks only `if (state->repeat)`, and :1316-1317 restores them
   the same way. The code relies on marks above lastmark being invisible, which covers every mark
-  except the end mark of an open group below a nested closed group. Modules/_sre/sre_lib.h:1539-1554
+  except the end mark of an open group below a nested closed group. Modules/_sre/sre_lib.h:1594-1609
   reads that mark.
 possible_fix: |
   Reject a conditional on an open group in Lib/re/_parser.py, as a backreference is, or clear the end

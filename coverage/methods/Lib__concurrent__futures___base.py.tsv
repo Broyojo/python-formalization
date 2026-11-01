@@ -37,8 +37,9 @@ Lib/concurrent/futures/_base.py	461	492	Future.exception	exception(self, timeout
 Lib/concurrent/futures/_base.py	495	534	Future.set_running_or_notify_cancel	set_running_or_notify_cancel(self)	todo		
 Lib/concurrent/futures/_base.py	536	549	Future.set_result	set_result(self, result)	todo		
 Lib/concurrent/futures/_base.py	551	564	Future.set_exception	set_exception(self, exception)	todo		
-Lib/concurrent/futures/_base.py	571	581	Executor.submit	submit(self, fn, /, *args, **kwargs)	todo		
-Lib/concurrent/futures/_base.py	583	651	Executor.map	map(self, fn, *iterables, timeout=None, chunksize=1, buffersize=None)	todo		
-Lib/concurrent/futures/_base.py	653	667	Executor.shutdown	shutdown(self, wait=True, *, cancel_futures=False)	todo		
-Lib/concurrent/futures/_base.py	669	670	Executor.__enter__	__enter__(self)	todo		
-Lib/concurrent/futures/_base.py	672	674	Executor.__exit__	__exit__(self, exc_type, exc_val, exc_tb)	todo		
+Lib/concurrent/futures/_base.py	566	591	Future._get_snapshot	_get_snapshot(self)	todo		changed-in-3.15: new function
+Lib/concurrent/futures/_base.py	598	608	Executor.submit	submit(self, fn, /, *args, **kwargs)	todo		
+Lib/concurrent/futures/_base.py	610	678	Executor.map	map(self, fn, *iterables, timeout=None, chunksize=1, buffersize=None)	todo		
+Lib/concurrent/futures/_base.py	680	694	Executor.shutdown	shutdown(self, wait=True, *, cancel_futures=False)	todo		
+Lib/concurrent/futures/_base.py	696	697	Executor.__enter__	__enter__(self)	todo		
+Lib/concurrent/futures/_base.py	699	701	Executor.__exit__	__exit__(self, exc_type, exc_val, exc_tb)	todo		

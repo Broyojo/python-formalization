@@ -1,11 +1,17 @@
 file	line	endline	name	signature	status	entry	note
-Python/thread.c	47	54	PyThread_init_thread	PyThread_init_thread(void)	todo		
-Python/thread.c	76	79	PyThread_get_stacksize	PyThread_get_stacksize(void)	todo		
-Python/thread.c	87	94	PyThread_set_stacksize	PyThread_set_stacksize(size_t size)	todo		
-Python/thread.c	98	129	PyThread_ParseTimeoutArg	PyThread_ParseTimeoutArg(PyObject *arg, int blocking, PY_TIMEOUT_T *timeout_p)	todo		
-Python/thread.c	132	177	PyThread_acquire_lock_timed_with_retries	PyThread_acquire_lock_timed_with_retries(PyThread_type_lock lock, PY_TIMEOUT_T timeout)	todo		
-Python/thread.c	186	194	PyThread_tss_alloc	PyThread_tss_alloc(void)	todo		
-Python/thread.c	197	203	PyThread_tss_free	PyThread_tss_free(Py_tss_t *key)	todo		
-Python/thread.c	206	210	PyThread_tss_is_created	PyThread_tss_is_created(Py_tss_t *key)	todo		
-Python/thread.c	235	294	PyThread_GetInfo	PyThread_GetInfo(void)	todo		
-Python/thread.c	298	301	_PyThread_FiniType	_PyThread_FiniType(PyInterpreterState *interp)	todo		
+Python/thread.c	48	55	PyThread_init_thread	PyThread_init_thread(void)	todo		
+Python/thread.c	80	92	PyThread_allocate_lock	PyThread_allocate_lock(void)	todo		changed-in-3.15: new function
+Python/thread.c	95	98	PyThread_free_lock	PyThread_free_lock(PyThread_type_lock lock)	todo		changed-in-3.15: new function
+Python/thread.c	101	126	PyThread_acquire_lock_timed	PyThread_acquire_lock_timed(PyThread_type_lock lock, PY_TIMEOUT_T microseconds, int intr_flag)	todo		changed-in-3.15: new function
+Python/thread.c	129	132	PyThread_release_lock	PyThread_release_lock(PyThread_type_lock lock)	todo		changed-in-3.15: new function
+Python/thread.c	135	139	_PyThread_at_fork_reinit	_PyThread_at_fork_reinit(PyThread_type_lock *lock)	todo		changed-in-3.15: new function
+Python/thread.c	142	145	PyThread_acquire_lock	PyThread_acquire_lock(PyThread_type_lock lock, int waitflag)	todo		changed-in-3.15: new function
+Python/thread.c	150	153	PyThread_get_stacksize	PyThread_get_stacksize(void)	todo		
+Python/thread.c	161	168	PyThread_set_stacksize	PyThread_set_stacksize(size_t size)	todo		
+Python/thread.c	172	203	PyThread_ParseTimeoutArg	PyThread_ParseTimeoutArg(PyObject *arg, int blocking, PY_TIMEOUT_T *timeout_p)	todo		
+Python/thread.c	206	251	PyThread_acquire_lock_timed_with_retries	PyThread_acquire_lock_timed_with_retries(PyThread_type_lock lock, PY_TIMEOUT_T timeout)	todo		
+Python/thread.c	260	268	PyThread_tss_alloc	PyThread_tss_alloc(void)	todo		
+Python/thread.c	271	277	PyThread_tss_free	PyThread_tss_free(Py_tss_t *key)	todo		
+Python/thread.c	280	284	PyThread_tss_is_created	PyThread_tss_is_created(Py_tss_t *key)	todo		
+Python/thread.c	309	362	PyThread_GetInfo	PyThread_GetInfo(void)	todo		changed-in-3.15:
+Python/thread.c	366	369	_PyThread_FiniType	_PyThread_FiniType(PyInterpreterState *interp)	todo		

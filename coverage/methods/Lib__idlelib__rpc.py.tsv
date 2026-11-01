@@ -7,47 +7,47 @@ Lib/idlelib/rpc.py	80	82	RPCServer.server_bind	server_bind(self)	excluded		platf
 Lib/idlelib/rpc.py	84	91	RPCServer.server_activate	server_activate(self)	excluded		platform: GUI toolkit
 Lib/idlelib/rpc.py	93	95	RPCServer.get_request	get_request(self)	excluded		platform: GUI toolkit
 Lib/idlelib/rpc.py	97	119	RPCServer.handle_error	handle_error(self, request, client_address)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	132	141	SocketIO.__init__	__init__(self, sock, objtable=None, debugging=None)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	143	147	SocketIO.close	close(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	149	151	SocketIO.exithook	exithook(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	153	159	SocketIO.debug	debug(self, *args)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	161	162	SocketIO.register	register(self, oid, object_)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	164	168	SocketIO.unregister	unregister(self, oid)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	170	214	SocketIO.localcall	localcall(self, seq, request)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	216	219	SocketIO.remotecall	remotecall(self, oid, methodname, args, kwargs)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	221	224	SocketIO.remotequeue	remotequeue(self, oid, methodname, args, kwargs)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	226	234	SocketIO.asynccall	asynccall(self, oid, methodname, args, kwargs)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	236	244	SocketIO.asyncqueue	asyncqueue(self, oid, methodname, args, kwargs)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	246	250	SocketIO.asyncreturn	asyncreturn(self, seq)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	252	271	SocketIO.decoderesponse	decoderesponse(self, response)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	273	275	SocketIO.decode_interrupthook	decode_interrupthook(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	277	288	SocketIO.mainloop	mainloop(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	290	296	SocketIO.getresponse	getresponse(self, myseq, wait)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	298	304	SocketIO._proxify	_proxify(self, obj)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	306	326	SocketIO._getresponse	_getresponse(self, myseq, wait)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	328	330	SocketIO.newseq	newseq(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	332	346	SocketIO.putmessage	putmessage(self, message)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	352	366	SocketIO.pollpacket	pollpacket(self, wait)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	368	373	SocketIO._stage0	_stage0(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	375	381	SocketIO._stage1	_stage1(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	383	395	SocketIO.pollmessage	pollmessage(self, wait)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	397	468	SocketIO.pollresponse	pollresponse(self, myseq, wait)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	470	481	SocketIO.handle_EOF	handle_EOF(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	483	485	SocketIO.EOFhook	EOFhook(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	494	497	remoteref	remoteref(obj)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	502	503	RemoteProxy.__init__	__init__(self, oid)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	511	514	RPCHandler.__init__	__init__(self, sock, addr, svr)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	516	518	RPCHandler.handle	handle(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	520	521	RPCHandler.get_remote_proxy	get_remote_proxy(self, oid)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	531	534	RPCClient.__init__	__init__(self, address, family=socket.AF_INET, type=socket.SOCK_STREAM)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	536	544	RPCClient.accept	accept(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	546	547	RPCClient.get_remote_proxy	get_remote_proxy(self, oid)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	555	557	RPCProxy.__init__	__init__(self, sockio, oid)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	559	571	RPCProxy.__getattr__	__getattr__(self, name)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	573	575	RPCProxy.__getattributes	__getattributes(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	577	579	RPCProxy.__getmethods	__getmethods(self)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	581	590	_getmethods	_getmethods(obj, methods)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	592	596	_getattributes	_getattributes(obj, attributes)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	601	604	MethodProxy.__init__	__init__(self, sockio, oid, name)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	606	608	MethodProxy.__call__	__call__(self, /, *args, **kwargs)	excluded		platform: GUI toolkit
-Lib/idlelib/rpc.py	614	630	displayhook	displayhook(value)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	132	147	SocketIO.__init__	__init__(self, sock, objtable=None, debugging=None)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	149	153	SocketIO.close	close(self)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	155	157	SocketIO.exithook	exithook(self)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	159	165	SocketIO.debug	debug(self, *args)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	167	168	SocketIO.register	register(self, oid, object_)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	170	174	SocketIO.unregister	unregister(self, oid)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	176	220	SocketIO.localcall	localcall(self, seq, request)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	222	225	SocketIO.remotecall	remotecall(self, oid, methodname, args, kwargs)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	227	230	SocketIO.remotequeue	remotequeue(self, oid, methodname, args, kwargs)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	232	240	SocketIO.asynccall	asynccall(self, oid, methodname, args, kwargs)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	242	250	SocketIO.asyncqueue	asyncqueue(self, oid, methodname, args, kwargs)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	252	256	SocketIO.asyncreturn	asyncreturn(self, seq)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	258	277	SocketIO.decoderesponse	decoderesponse(self, response)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	279	281	SocketIO.decode_interrupthook	decode_interrupthook(self)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	283	294	SocketIO.mainloop	mainloop(self)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	296	302	SocketIO.getresponse	getresponse(self, myseq, wait)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	304	310	SocketIO._proxify	_proxify(self, obj)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	312	337	SocketIO._getresponse	_getresponse(self, myseq, wait)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	339	341	SocketIO.newseq	newseq(self)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	343	358	SocketIO.putmessage	putmessage(self, message)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	360	374	SocketIO.pollpacket	pollpacket(self, wait)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	376	381	SocketIO._stage0	_stage0(self)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	383	389	SocketIO._stage1	_stage1(self)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	391	403	SocketIO.pollmessage	pollmessage(self, wait)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	405	476	SocketIO.pollresponse	pollresponse(self, myseq, wait)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	478	489	SocketIO.handle_EOF	handle_EOF(self)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	491	493	SocketIO.EOFhook	EOFhook(self)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	502	505	remoteref	remoteref(obj)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	510	511	RemoteProxy.__init__	__init__(self, oid)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	519	522	RPCHandler.__init__	__init__(self, sock, addr, svr)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	524	526	RPCHandler.handle	handle(self)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	528	529	RPCHandler.get_remote_proxy	get_remote_proxy(self, oid)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	539	542	RPCClient.__init__	__init__(self, address, family=socket.AF_INET, type=socket.SOCK_STREAM)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	544	552	RPCClient.accept	accept(self)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	554	555	RPCClient.get_remote_proxy	get_remote_proxy(self, oid)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	563	565	RPCProxy.__init__	__init__(self, sockio, oid)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	567	579	RPCProxy.__getattr__	__getattr__(self, name)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	581	583	RPCProxy.__getattributes	__getattributes(self)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	585	587	RPCProxy.__getmethods	__getmethods(self)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	589	598	_getmethods	_getmethods(obj, methods)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	600	604	_getattributes	_getattributes(obj, attributes)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	609	612	MethodProxy.__init__	__init__(self, sockio, oid, name)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	614	616	MethodProxy.__call__	__call__(self, /, *args, **kwargs)	excluded		platform: GUI toolkit
+Lib/idlelib/rpc.py	622	638	displayhook	displayhook(value)	excluded		platform: GUI toolkit

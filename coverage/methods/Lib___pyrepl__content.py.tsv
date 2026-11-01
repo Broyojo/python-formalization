@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_pyrepl/content.py	74	75	SourceLine.cursor_on_line	cursor_on_line(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/content.py	94	106	process_prompt	process_prompt(prompt: str)	todo		changed-in-3.15: new function
+Lib/_pyrepl/content.py	109	136	build_body_fragments	build_body_fragments(buffer: str, colors: list[ColorSpan] | None, start_index: int)	todo		changed-in-3.15: new function

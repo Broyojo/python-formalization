@@ -1,60 +1,61 @@
 file	line	endline	name	signature	status	entry	note
-Python/compile.c	110	150	compiler_setup	compiler_setup(compiler *c, mod_ty mod, PyObject *filename, PyCompilerFlags *flags, int optimize, PyArena *arena)	todo		
-Python/compile.c	153	162	compiler_free	compiler_free(compiler *c)	todo		
-Python/compile.c	165	178	new_compiler	new_compiler(mod_ty mod, PyObject *filename, PyCompilerFlags *pflags, int optimize, PyArena *arena)	todo		
-Python/compile.c	181	199	compiler_unit_free	compiler_unit_free(struct compiler_unit *u)	todo		
-Python/compile.c	204	227	_PyCompile_MaybeAddStaticAttributeToClass	_PyCompile_MaybeAddStaticAttributeToClass(compiler *c, expr_ty e)	todo		
-Python/compile.c	230	313	compiler_set_qualname	compiler_set_qualname(compiler *c)	todo		
-Python/compile.c	319	428	const_cache_insert	const_cache_insert(PyObject *const_cache, PyObject *o, bool recursive)	todo		
-Python/compile.c	431	434	merge_consts_recursive	merge_consts_recursive(PyObject *const_cache, PyObject *o)	todo		
-Python/compile.c	437	460	_PyCompile_DictAddObj	_PyCompile_DictAddObj(PyObject *dict, PyObject *o)	todo		
-Python/compile.c	463	473	_PyCompile_AddConst	_PyCompile_AddConst(compiler *c, PyObject *o)	todo		
-Python/compile.c	476	499	list2dict	list2dict(PyObject *list)	todo		
-Python/compile.c	510	573	dictbytype	dictbytype(PyObject *src, int scope_type, int flag, Py_ssize_t offset)	todo		
-Python/compile.c	576	711	_PyCompile_EnterScope	_PyCompile_EnterScope(compiler *c, identifier name, int scope_type, void *key, int lineno, PyObject *private, _PyCompile_CodeUnitMetadata *umd)	todo		
-Python/compile.c	714	749	_PyCompile_ExitScope	_PyCompile_ExitScope(compiler *c)	todo		
-Python/compile.c	756	774	_PyCompile_PushFBlock	_PyCompile_PushFBlock(compiler *c, location loc, fblocktype t, jump_target_label block_label, jump_target_label exit, void *datum)	todo		
-Python/compile.c	777	787	_PyCompile_PopFBlock	_PyCompile_PopFBlock(compiler *c, fblocktype t, jump_target_label block_label)	todo		
-Python/compile.c	790	796	_PyCompile_TopFBlock	_PyCompile_TopFBlock(compiler *c)	todo		
-Python/compile.c	799	805	_PyCompile_DeferredAnnotations	_PyCompile_DeferredAnnotations(compiler *c, PyObject **deferred_annotations, PyObject **conditional_annotation_indices)	todo		
-Python/compile.c	808	820	start_location	start_location(asdl_stmt_seq *stmts)	todo		
-Python/compile.c	823	850	compiler_codegen	compiler_codegen(compiler *c, mod_ty mod)	todo		
-Python/compile.c	853	867	compiler_mod	compiler_mod(compiler *c, mod_ty mod)	todo		
-Python/compile.c	870	893	_PyCompile_GetRefType	_PyCompile_GetRefType(compiler *c, PyObject *name)	todo		
-Python/compile.c	896	903	dict_lookup_arg	dict_lookup_arg(PyObject *dict, PyObject *name)	todo		
-Python/compile.c	906	910	_PyCompile_LookupCellvar	_PyCompile_LookupCellvar(compiler *c, PyObject *name)	todo		
-Python/compile.c	913	949	_PyCompile_LookupArg	_PyCompile_LookupArg(compiler *c, PyCodeObject *co, PyObject *name)	todo		
-Python/compile.c	952	966	_PyCompile_StaticAttributesAsTuple	_PyCompile_StaticAttributesAsTuple(compiler *c)	todo		
-Python/compile.c	969	1016	_PyCompile_ResolveNameop	_PyCompile_ResolveNameop(compiler *c, PyObject *mangled, int scope, _PyCompile_optype *optype, Py_ssize_t *arg)	todo		
-Python/compile.c	1019	1096	_PyCompile_TweakInlinedComprehensionScopes	_PyCompile_TweakInlinedComprehensionScopes(compiler *c, location loc, PySTEntryObject *entry, _PyCompile_InlinedComprehensionState *state)	todo		
-Python/compile.c	1099	1130	_PyCompile_RevertInlinedComprehensionScopes	_PyCompile_RevertInlinedComprehensionScopes(compiler *c, location loc, _PyCompile_InlinedComprehensionState *state)	todo		
-Python/compile.c	1133	1136	_PyCompile_EnterConditionalBlock	_PyCompile_EnterConditionalBlock(struct _PyCompiler *c)	todo		
-Python/compile.c	1139	1143	_PyCompile_LeaveConditionalBlock	_PyCompile_LeaveConditionalBlock(struct _PyCompiler *c)	todo		
-Python/compile.c	1146	1189	_PyCompile_AddDeferredAnnotation	_PyCompile_AddDeferredAnnotation(compiler *c, stmt_ty s, PyObject **conditional_annotation_index)	todo		
-Python/compile.c	1195	1208	_PyCompile_Error	_PyCompile_Error(compiler *c, location loc, const char *format, ...)	todo		
-Python/compile.c	1215	1231	_PyCompile_Warn	_PyCompile_Warn(compiler *c, location loc, const char *format, ...)	todo		
-Python/compile.c	1234	1237	_PyCompile_Mangle	_PyCompile_Mangle(compiler *c, PyObject *name)	todo		
-Python/compile.c	1240	1243	_PyCompile_MaybeMangle	_PyCompile_MaybeMangle(compiler *c, PyObject *name)	todo		
-Python/compile.c	1246	1249	_PyCompile_InstrSequence	_PyCompile_InstrSequence(compiler *c)	todo		
-Python/compile.c	1252	1262	_PyCompile_StartAnnotationSetup	_PyCompile_StartAnnotationSetup(struct _PyCompiler *c)	todo		
-Python/compile.c	1265	1277	_PyCompile_EndAnnotationSetup	_PyCompile_EndAnnotationSetup(struct _PyCompiler *c)	todo		
-Python/compile.c	1281	1284	_PyCompile_FutureFeatures	_PyCompile_FutureFeatures(compiler *c)	todo		
-Python/compile.c	1287	1290	_PyCompile_Symtable	_PyCompile_Symtable(compiler *c)	todo		
-Python/compile.c	1293	1296	_PyCompile_SymtableEntry	_PyCompile_SymtableEntry(compiler *c)	todo		
-Python/compile.c	1299	1302	_PyCompile_OptimizationLevel	_PyCompile_OptimizationLevel(compiler *c)	todo		
-Python/compile.c	1305	1311	_PyCompile_IsInteractiveTopLevel	_PyCompile_IsInteractiveTopLevel(compiler *c)	todo		
-Python/compile.c	1314	1317	_PyCompile_ScopeType	_PyCompile_ScopeType(compiler *c)	todo		
-Python/compile.c	1320	1323	_PyCompile_IsInInlinedComp	_PyCompile_IsInInlinedComp(compiler *c)	todo		
-Python/compile.c	1326	1330	_PyCompile_Qualname	_PyCompile_Qualname(compiler *c)	todo		
-Python/compile.c	1333	1336	_PyCompile_Metadata	_PyCompile_Metadata(compiler *c)	todo		
-Python/compile.c	1340	1355	_PyCompile_ConstCacheMergeOne	_PyCompile_ConstCacheMergeOne(PyObject *const_cache, PyObject **obj)	todo		
-Python/compile.c	1358	1380	consts_dict_keys_inorder	consts_dict_keys_inorder(PyObject *dict)	todo		
-Python/compile.c	1383	1413	compute_code_flags	compute_code_flags(compiler *c)	todo		
-Python/compile.c	1416	1459	optimize_and_assemble_code_unit	optimize_and_assemble_code_unit(struct compiler_unit *u, PyObject *const_cache, int code_flags, PyObject *filename)	todo		
-Python/compile.c	1463	1479	_PyCompile_OptimizeAndAssemble	_PyCompile_OptimizeAndAssemble(compiler *c, int addNone)	todo		
-Python/compile.c	1482	1495	_PyAST_Compile	_PyAST_Compile(mod_ty mod, PyObject *filename, PyCompilerFlags *pflags, int optimize, PyArena *arena)	todo		
-Python/compile.c	1498	1513	_PyCompile_AstPreprocess	_PyCompile_AstPreprocess(mod_ty mod, PyObject *filename, PyCompilerFlags *cf, int optimize, PyArena *arena, int no_const_folding)	todo		
-Python/compile.c	1520	1603	_PyCompile_CleanDoc	_PyCompile_CleanDoc(PyObject *doc)	todo		
-Python/compile.c	1612	1694	_PyCompile_CodeGen	_PyCompile_CodeGen(PyObject *ast, PyObject *filename, PyCompilerFlags *pflags, int optimize, int compile_mode)	todo		
-Python/compile.c	1699	1747	_PyCompile_Assemble	_PyCompile_Assemble(_PyCompile_CodeUnitMetadata *umd, PyObject *filename, PyObject *seq)	todo		
-Python/compile.c	1753	1757	PyCode_Optimize	PyCode_Optimize(PyObject *code, PyObject* Py_UNUSED(consts), PyObject *Py_UNUSED(names), PyObject *Py_UNUSED(lnotab_obj))	todo		
+Python/compile.c	112	156	compiler_setup	compiler_setup(compiler *c, mod_ty mod, PyObject *filename, PyCompilerFlags *flags, int optimize, PyArena *arena, PyObject *module)	todo		changed-in-3.15:
+Python/compile.c	159	169	compiler_free	compiler_free(compiler *c)	todo		changed-in-3.15:
+Python/compile.c	172	185	new_compiler	new_compiler(mod_ty mod, PyObject *filename, PyCompilerFlags *pflags, int optimize, PyArena *arena, PyObject *module)	todo		changed-in-3.15:
+Python/compile.c	188	206	compiler_unit_free	compiler_unit_free(struct compiler_unit *u)	todo		
+Python/compile.c	211	234	_PyCompile_MaybeAddStaticAttributeToClass	_PyCompile_MaybeAddStaticAttributeToClass(compiler *c, expr_ty e)	todo		
+Python/compile.c	237	337	_PyCompile_SetQualname	_PyCompile_SetQualname(compiler *c)	todo		changed-in-3.15: new function
+Python/compile.c	343	452	const_cache_insert	const_cache_insert(PyObject *const_cache, PyObject *o, bool recursive)	todo		
+Python/compile.c	455	458	merge_consts_recursive	merge_consts_recursive(PyObject *const_cache, PyObject *o)	todo		
+Python/compile.c	461	484	_PyCompile_DictAddObj	_PyCompile_DictAddObj(PyObject *dict, PyObject *o)	todo		
+Python/compile.c	487	497	_PyCompile_AddConst	_PyCompile_AddConst(compiler *c, PyObject *o)	todo		
+Python/compile.c	500	523	list2dict	list2dict(PyObject *list)	todo		
+Python/compile.c	534	597	dictbytype	dictbytype(PyObject *src, int scope_type, int flag, Py_ssize_t offset)	todo		
+Python/compile.c	600	732	_PyCompile_EnterScope	_PyCompile_EnterScope(compiler *c, identifier name, int scope_type, void *key, int lineno, PyObject *private, _PyCompile_CodeUnitMetadata *umd)	todo		changed-in-3.15:
+Python/compile.c	735	770	_PyCompile_ExitScope	_PyCompile_ExitScope(compiler *c)	todo		
+Python/compile.c	777	795	_PyCompile_PushFBlock	_PyCompile_PushFBlock(compiler *c, location loc, fblocktype t, jump_target_label block_label, jump_target_label exit, void *datum)	todo		
+Python/compile.c	798	808	_PyCompile_PopFBlock	_PyCompile_PopFBlock(compiler *c, fblocktype t, jump_target_label block_label)	todo		
+Python/compile.c	811	817	_PyCompile_TopFBlock	_PyCompile_TopFBlock(compiler *c)	todo		
+Python/compile.c	820	837	_PyCompile_InExceptionHandler	_PyCompile_InExceptionHandler(compiler *c)	todo		changed-in-3.15: new function
+Python/compile.c	840	846	_PyCompile_DeferredAnnotations	_PyCompile_DeferredAnnotations(compiler *c, PyObject **deferred_annotations, PyObject **conditional_annotation_indices)	todo		
+Python/compile.c	849	861	start_location	start_location(asdl_stmt_seq *stmts)	todo		
+Python/compile.c	864	891	compiler_codegen	compiler_codegen(compiler *c, mod_ty mod)	todo		
+Python/compile.c	894	908	compiler_mod	compiler_mod(compiler *c, mod_ty mod)	todo		
+Python/compile.c	911	934	_PyCompile_GetRefType	_PyCompile_GetRefType(compiler *c, PyObject *name)	todo		
+Python/compile.c	937	944	dict_lookup_arg	dict_lookup_arg(PyObject *dict, PyObject *name)	todo		
+Python/compile.c	947	951	_PyCompile_LookupCellvar	_PyCompile_LookupCellvar(compiler *c, PyObject *name)	todo		
+Python/compile.c	954	990	_PyCompile_LookupArg	_PyCompile_LookupArg(compiler *c, PyCodeObject *co, PyObject *name)	todo		
+Python/compile.c	993	1007	_PyCompile_StaticAttributesAsTuple	_PyCompile_StaticAttributesAsTuple(compiler *c)	todo		
+Python/compile.c	1010	1057	_PyCompile_ResolveNameop	_PyCompile_ResolveNameop(compiler *c, PyObject *mangled, int scope, _PyCompile_optype *optype, Py_ssize_t *arg)	todo		
+Python/compile.c	1060	1141	_PyCompile_TweakInlinedComprehensionScopes	_PyCompile_TweakInlinedComprehensionScopes(compiler *c, location loc, PySTEntryObject *entry, _PyCompile_InlinedComprehensionState *state)	todo		changed-in-3.15:
+Python/compile.c	1144	1175	_PyCompile_RevertInlinedComprehensionScopes	_PyCompile_RevertInlinedComprehensionScopes(compiler *c, location loc, _PyCompile_InlinedComprehensionState *state)	todo		
+Python/compile.c	1178	1181	_PyCompile_EnterConditionalBlock	_PyCompile_EnterConditionalBlock(struct _PyCompiler *c)	todo		
+Python/compile.c	1184	1188	_PyCompile_LeaveConditionalBlock	_PyCompile_LeaveConditionalBlock(struct _PyCompiler *c)	todo		
+Python/compile.c	1191	1234	_PyCompile_AddDeferredAnnotation	_PyCompile_AddDeferredAnnotation(compiler *c, stmt_ty s, PyObject **conditional_annotation_index)	todo		
+Python/compile.c	1240	1253	_PyCompile_Error	_PyCompile_Error(compiler *c, location loc, const char *format, ...)	todo		
+Python/compile.c	1260	1277	_PyCompile_Warn	_PyCompile_Warn(compiler *c, location loc, const char *format, ...)	todo		changed-in-3.15:
+Python/compile.c	1280	1283	_PyCompile_Mangle	_PyCompile_Mangle(compiler *c, PyObject *name)	todo		
+Python/compile.c	1286	1289	_PyCompile_MaybeMangle	_PyCompile_MaybeMangle(compiler *c, PyObject *name)	todo		
+Python/compile.c	1292	1295	_PyCompile_InstrSequence	_PyCompile_InstrSequence(compiler *c)	todo		
+Python/compile.c	1298	1308	_PyCompile_StartAnnotationSetup	_PyCompile_StartAnnotationSetup(struct _PyCompiler *c)	todo		
+Python/compile.c	1311	1323	_PyCompile_EndAnnotationSetup	_PyCompile_EndAnnotationSetup(struct _PyCompiler *c)	todo		
+Python/compile.c	1327	1330	_PyCompile_FutureFeatures	_PyCompile_FutureFeatures(compiler *c)	todo		
+Python/compile.c	1333	1336	_PyCompile_Symtable	_PyCompile_Symtable(compiler *c)	todo		
+Python/compile.c	1339	1342	_PyCompile_SymtableEntry	_PyCompile_SymtableEntry(compiler *c)	todo		
+Python/compile.c	1345	1348	_PyCompile_OptimizationLevel	_PyCompile_OptimizationLevel(compiler *c)	todo		
+Python/compile.c	1351	1357	_PyCompile_IsInteractiveTopLevel	_PyCompile_IsInteractiveTopLevel(compiler *c)	todo		
+Python/compile.c	1360	1363	_PyCompile_ScopeType	_PyCompile_ScopeType(compiler *c)	todo		
+Python/compile.c	1366	1369	_PyCompile_IsInInlinedComp	_PyCompile_IsInInlinedComp(compiler *c)	todo		
+Python/compile.c	1372	1376	_PyCompile_Qualname	_PyCompile_Qualname(compiler *c)	todo		
+Python/compile.c	1379	1382	_PyCompile_Metadata	_PyCompile_Metadata(compiler *c)	todo		
+Python/compile.c	1386	1401	_PyCompile_ConstCacheMergeOne	_PyCompile_ConstCacheMergeOne(PyObject *const_cache, PyObject **obj)	todo		
+Python/compile.c	1404	1426	consts_dict_keys_inorder	consts_dict_keys_inorder(PyObject *dict)	todo		
+Python/compile.c	1429	1459	compute_code_flags	compute_code_flags(compiler *c)	todo		
+Python/compile.c	1462	1505	optimize_and_assemble_code_unit	optimize_and_assemble_code_unit(struct compiler_unit *u, PyObject *const_cache, int code_flags, PyObject *filename)	todo		changed-in-3.15:
+Python/compile.c	1509	1525	_PyCompile_OptimizeAndAssemble	_PyCompile_OptimizeAndAssemble(compiler *c, int addNone)	todo		
+Python/compile.c	1528	1541	_PyAST_Compile	_PyAST_Compile(mod_ty mod, PyObject *filename, PyCompilerFlags *pflags, int optimize, PyArena *arena, PyObject *module)	todo		changed-in-3.15:
+Python/compile.c	1544	1562	_PyCompile_AstPreprocess	_PyCompile_AstPreprocess(mod_ty mod, PyObject *filename, PyCompilerFlags *cf, int optimize, PyArena *arena, int no_const_folding, PyObject *module)	todo		changed-in-3.15:
+Python/compile.c	1569	1652	_PyCompile_CleanDoc	_PyCompile_CleanDoc(PyObject *doc)	todo		
+Python/compile.c	1661	1745	_PyCompile_CodeGen	_PyCompile_CodeGen(PyObject *ast, PyObject *filename, PyCompilerFlags *pflags, int optimize, int compile_mode)	todo		changed-in-3.15:
+Python/compile.c	1750	1798	_PyCompile_Assemble	_PyCompile_Assemble(_PyCompile_CodeUnitMetadata *umd, PyObject *filename, PyObject *seq)	todo		changed-in-3.15:
+Python/compile.c	1804	1808	PyCode_Optimize	PyCode_Optimize(PyObject *code, PyObject* Py_UNUSED(consts), PyObject *Py_UNUSED(names), PyObject *Py_UNUSED(lnotab_obj))	todo		

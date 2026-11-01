@@ -2,8 +2,8 @@ import PyLean.UnicodeObj.TextTable
 
 /-!
 The standard error handlers of Python/codecs.c, as every codec sees them through
-`unicode_decode_call_errorhandler_writer` (unicodeobject.c:4538-4635) and
-`unicode_encode_call_errorhandler` (:7321-7374).
+`unicode_decode_call_errorhandler_writer` (unicodeobject.c:4432-4529) and
+`unicode_encode_call_errorhandler` (:7189-7242).
 
 Only the eight registered handlers are modelled. A user callback could return any
 position; the built-in ones always return a position past `start`, so the codec loops
@@ -25,7 +25,7 @@ inductive ErrHandler where
   deriving Repr, DecidableEq
 
 /-- `ENC_UTF8`..`ENC_UTF32BE` with `*bytelength`, or `ENC_UNKNOWN`:
-`get_standard_encoding_impl`, Python/codecs.c:1157-1205, already applied to the name. -/
+`get_standard_encoding_impl`, Python/codecs.c:1148-1198, already applied to the name. -/
 inductive EncCode where
   | utf8 | utf16le | utf16be | utf32le | utf32be | unknown
   deriving Repr, DecidableEq
@@ -65,7 +65,7 @@ def encodeError (encoding : String) (input : Str) (start stop : Nat) (reason : S
 def wrongExceptionType (name : String) : PyExc :=
   .typeError s!"don't know how to handle {name} in error callback"
 
-/-- The code unit a `surrogatepass` decode reads at `p`, Python/codecs.c:1345-1381. -/
+/-- The code unit a `surrogatepass` decode reads at `p`, Python/codecs.c:1338-1374. -/
 def surrogatePassRead (code : EncCode) (p : List Nat) : Nat :=
   match code, p with
   | .utf8, a :: b :: c :: _ =>
@@ -79,7 +79,7 @@ def surrogatePassRead (code : EncCode) (p : List Nat) : Nat :=
   | _, _ => 0
 
 /-- The leading bytes at or above 128, at most 4: the loop of
-`_PyCodec_SurrogateEscapeUnicodeDecodeError`, Python/codecs.c:1467-1490. -/
+`_PyCodec_SurrogateEscapeUnicodeDecodeError`, Python/codecs.c:1460-1483. -/
 def escapeRun : Nat → List Nat → List Nat
   | 0, _ => []
   | _ + 1, [] => []
@@ -119,7 +119,7 @@ def decChars : Nat → Nat → List Nat → List Nat
     let a := (48 + n % 10) :: acc
     if n / 10 = 0 then a else decChars fuel (n / 10) a
 
-/-- `&#NNN;`, `PyCodec_XMLCharRefReplaceErrors`, Python/codecs.c:903-950. -/
+/-- `&#NNN;`, `PyCodec_XMLCharRefReplaceErrors`, Python/codecs.c:894-941. -/
 def xmlRef (c : Nat) : List Nat := [38, 35] ++ decChars (c + 1) c [] ++ [59]
 
 /-- The bytes of one surrogate, `_PyCodec_SurrogatePassUnicodeEncodeError`. -/

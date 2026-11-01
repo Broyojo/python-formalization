@@ -1,24 +1,24 @@
 import PyLean.LongObj.Mul
 
 /-!
-`kmul_split`, `k_mul`, `k_lopsided_mul` and `long_mul`, longobject.c:3936-4258.
+`kmul_split`, `k_mul`, `k_lopsided_mul` and `long_mul`, longobject.c:4039-4357.
 
 `same` models the pointer test `a == b`. The recursion carries explicit fuel, and
 each store into `ret` is checked to stay inside the allocation: a `memcpy` or
 `v_iadd` past the end is reported as `cOverflow`. `kMulF_spec` therefore also
-proves the "(*) Why adding t3 can't run out of room" comment at :4134-4177.
+proves the "(*) Why adding t3 can't run out of room" comment at :4233-4276.
 -/
 
 namespace PyLean.LongObj
 
 open PyLean PyLean.MathInt
 
-/-- `KARATSUBA_CUTOFF`, longobject.c:82. -/
+/-- `KARATSUBA_CUTOFF`, longobject.c:84. -/
 def karatsubaCutoff : Nat := 70
-/-- `KARATSUBA_SQUARE_CUTOFF`, longobject.c:83. -/
+/-- `KARATSUBA_SQUARE_CUTOFF`, longobject.c:85. -/
 def karatsubaSquareCutoff : Nat := 2 * karatsubaCutoff
 
-/-- `kmul_split(n, size, &high, &low)`, longobject.c:3936-3961; returns `(high, low)`. -/
+/-- `kmul_split(n, size, &high, &low)`, longobject.c:4039-4064; returns `(high, low)`. -/
 def kmulSplit (n : List Nat) (size : Nat) : Py (List Nat × List Nat) :=
   let sizeLo := min n.length size
   let sizeHi := n.length - sizeLo
@@ -27,7 +27,7 @@ def kmulSplit (n : List Nat) (size : Nat) : Py (List Nat × List Nat) :=
     longAlloc sizeLo
     return (normalize (n.drop sizeLo), normalize (n.take sizeLo))
 
-/-- The loop of `k_lopsided_mul`, longobject.c:4211-4231. `b` is what remains of
+/-- The loop of `k_lopsided_mul`, longobject.c:4310-4330. `b` is what remains of
 the input (`b + nbdone`), `ret` is `ret + nbdone`, `mul` is `k_mul(a, -)`. -/
 def lopLoop (mul : List Nat → Py (List Nat)) (asize : Nat) :
     Nat → List Nat → List Nat → Py (List Nat)
@@ -44,7 +44,7 @@ def lopLoop (mul : List Nat → Py (List Nat)) (asize : Nat) :
           return ret'.take n ++ rest
     else .ok ret
 
-/-- Steps 2 to 6 of `k_mul`, longobject.c:4049-4123, once the operands are split. -/
+/-- Steps 2 to 6 of `k_mul`, longobject.c:4152-4222, once the operands are split. -/
 def kMulCombine (mul : Bool → List Nat → List Nat → Py (List Nat)) (same : Bool)
     (rsize shift : Nat) (ah al bh bl : List Nat) : Py (List Nat) := do
   longAlloc rsize
@@ -70,8 +70,8 @@ def kMulCombine (mul : Bool → List Nat → List Nat → Py (List Nat)) (same :
           let (up, _) ← vIAdd up t3
           return normalize (lo ++ up)
 
-/-- The part of `k_mul`, longobject.c:4004-4123, after the swap at :3994-4002 has
-made `a` the shorter operand. `k_lopsided_mul` (:4188-4240) is inlined; its
+/-- The part of `k_mul`, longobject.c:4107-4222, after the swap at :4097-4105 has
+made `a` the shorter operand. `k_lopsided_mul` (:4287-4339) is inlined; its
 recursive calls are never on one object, so `same` is false there. -/
 def kMulBody (mul : Bool → List Nat → List Nat → Py (List Nat)) (same : Bool)
     (a b : List Nat) : Py (List Nat) :=
@@ -92,7 +92,7 @@ def kMulBody (mul : Bool → List Nat → List Nat → Py (List Nat)) (same : Bo
       let (bh, bl) ← if same = true then pure (ah, al) else kmulSplit b shift
       kMulCombine mul same (asize + bsize) shift ah al bh bl
 
-/-- `k_mul(a, b)`, longobject.c:3970-4132. -/
+/-- `k_mul(a, b)`, longobject.c:4073-4231. -/
 def kMulF : Nat → Bool → List Nat → List Nat → Py (List Nat)
   | 0, _, _, _ => .error .modelFuel
   | fuel + 1, same, a, b =>
@@ -268,7 +268,7 @@ theorem two_mul_pow_le {p : Nat} : 2 * 2 ^ (30 * p) ≤ 2 ^ (30 * (p + 1)) := by
   exact Nat.mul_le_mul_right _ (by decide)
 
 /-- Steps 2 to 6 of `k_mul` compute the product, stay inside `ret`, and overflow
-nothing. The bound on `t3` is the "(*)" comment at longobject.c:4134-4177. -/
+nothing. The bound on `t3` is the "(*)" comment at longobject.c:4233-4276. -/
 theorem kMulCombine_spec {mul : Bool → List Nat → List Nat → Py (List Nat)} {same : Bool}
     {sa sb shift Ah Al Bh Bl V : Nat}
     (hmul : ∀ x y, IsDigits x → IsDigits y → (same = true → x = y) →
@@ -519,8 +519,8 @@ differs from both signs. -/
 def sameSign (a b : Long) : Bool :=
   (a.ds.isEmpty == b.ds.isEmpty) && (a.neg == b.neg)
 
-/-- `long_mul(a, b)`, longobject.c:4244-4258. `same` is `a == b` on the two objects.
-`_PyLong_Negate(&z)` (:321-334) is `Long.flip`: on the shared zero object it
+/-- `long_mul(a, b)`, longobject.c:4343-4357. `same` is `a == b` on the two objects.
+`_PyLong_Negate(&z)` (:355-368) is `Long.flip`: on the shared zero object it
 rebuilds zero through `_PyLong_FromSTwoDigits`, which `flip` leaves unchanged. -/
 def longMul (same : Bool) (a b : Long) : Py Long :=
   if bothCompact a b then do

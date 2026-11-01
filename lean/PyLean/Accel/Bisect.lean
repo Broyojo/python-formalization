@@ -94,7 +94,7 @@ def cConvLo (lo : Int) : Py Int :=
   else .ok lo
 
 /-- `hi: Py_ssize_t(c_default='-1', accept={int, NoneType}) = None`:
-`_Py_convert_optional_to_ssize_t` (Python/modsupport.c:14-34) leaves the
+`_Py_convert_optional_to_ssize_t` (Python/modsupport.c:15-35) leaves the
 default `-1` for `None` and otherwise calls
 `PyNumber_AsSsize_t(obj, PyExc_OverflowError)`. -/
 def cConvHi : Option Int → Py Int
@@ -104,17 +104,17 @@ def cConvHi : Option Int → Py Int
       .error (.overflowError "cannot fit 'int' into an index-sized integer")
     else .ok h
 
-/-- `sq_item(list, mid)` = `list_item` (Objects/listobject.c:669-687). In the
+/-- `sq_item(list, mid)` = `list_item` (Objects/listobject.c:696-714). In the
 loop `0 ≤ mid`, and `valid_index` is an unsigned `mid < len`. -/
 def cIndex (a : List Int) (i : Int) : Py Int :=
   if 0 ≤ i ∧ i < a.length then .ok (a.getD i.toNat 0)
   else .error (.indexError "list index out of range")
 
-/-- `internal_bisect_right`, Modules/_bisectmodule.c:52-149, on already
-converted `Py_ssize_t` arguments. `hi == -1` means "use `len(a)`" (:64-68).
-`mid = ((size_t)lo + hi) / 2` (:82) cannot wrap since `0 ≤ lo < hi ≤
-PY_SSIZE_T_MAX`. The same-type fast path (:102-129) and the generic path
-(:130-133) compute the same `item < litem` for ints. -/
+/-- `internal_bisect_right`, Modules/_bisectmodule.c:52-145, on already
+converted `Py_ssize_t` arguments. `hi == -1` means "use `len(a)`" (:60-64).
+`mid = ((size_t)lo + hi) / 2` (:78) cannot wrap since `0 ≤ lo < hi ≤
+PY_SSIZE_T_MAX`. The same-type fast path (:98-125) and the generic path
+(:126-129) compute the same `item < litem` for ints. -/
 def cInternalRight (a : List Int) (x lo hi : Int) (key : Option (Int → Int)) : Py Int :=
   if lo < 0 then .error (.valueError "lo must be non-negative")
   else
@@ -122,7 +122,7 @@ def cInternalRight (a : List Int) (x lo hi : Int) (key : Option (Int → Int)) :
     bisectLoop (fun mid => applyKey key <$> cIndex a mid) (fun v => !decide (x < v))
       (hi - lo).toNat lo hi
 
-/-- `internal_bisect_left`, Modules/_bisectmodule.c:236-333 (`litem < item`). -/
+/-- `internal_bisect_left`, Modules/_bisectmodule.c:232-325 (`litem < item`). -/
 def cInternalLeft (a : List Int) (x lo hi : Int) (key : Option (Int → Int)) : Py Int :=
   if lo < 0 then .error (.valueError "lo must be non-negative")
   else
@@ -130,13 +130,13 @@ def cInternalLeft (a : List Int) (x lo hi : Int) (key : Option (Int → Int)) : 
     bisectLoop (fun mid => applyKey key <$> cIndex a mid) (fun v => decide (v < x))
       (hi - lo).toNat lo hi
 
-/-- `_bisect.bisect_right`, Modules/_bisectmodule.c:151-179. -/
+/-- `_bisect.bisect_right`, Modules/_bisectmodule.c:147-175. -/
 def cBisectRight (a : List Int) (x lo : Int) (hi : Option Int) (key : Option (Int → Int)) : Py Int := do
   let lo ← cConvLo lo
   let hi ← cConvHi hi
   cInternalRight a x lo hi key
 
-/-- `_bisect.bisect_left`, Modules/_bisectmodule.c:336-364. -/
+/-- `_bisect.bisect_left`, Modules/_bisectmodule.c:328-356. -/
 def cBisectLeft (a : List Int) (x lo : Int) (hi : Option Int) (key : Option (Int → Int)) : Py Int := do
   let lo ← cConvLo lo
   let hi ← cConvHi hi
@@ -146,14 +146,14 @@ def cBisectLeft (a : List Int) (x lo : Int) (hi : Option Int) (key : Option (Int
 def cListInsert (a : List Int) (i : Int) (x : Int) : List Int :=
   a.insertIdx (min i a.length).toNat x
 
-/-- `_bisect.insort_right`, Modules/_bisectmodule.c:181-234: the final list. -/
+/-- `_bisect.insort_right`, Modules/_bisectmodule.c:177-230: the final list. -/
 def cInsortRight (a : List Int) (x lo : Int) (hi : Option Int) (key : Option (Int → Int)) : Py (List Int) := do
   let lo ← cConvLo lo
   let hi ← cConvHi hi
   let i ← cInternalRight a (applyKey key x) lo hi key
   return cListInsert a i x
 
-/-- `_bisect.insort_left`, Modules/_bisectmodule.c:367-419: the final list. -/
+/-- `_bisect.insort_left`, Modules/_bisectmodule.c:359-411: the final list. -/
 def cInsortLeft (a : List Int) (x lo : Int) (hi : Option Int) (key : Option (Int → Int)) : Py (List Int) := do
   let lo ← cConvLo lo
   let hi ← cConvHi hi

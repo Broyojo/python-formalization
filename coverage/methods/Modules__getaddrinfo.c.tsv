@@ -1,7 +1,7 @@
 file	line	endline	name	signature	status	entry	note
-Modules/getaddrinfo.c	204	209	gai_strerror	gai_strerror(int ecode)	todo		
-Modules/getaddrinfo.c	212	223	freeaddrinfo	freeaddrinfo(struct addrinfo *ai)	todo		
-Modules/getaddrinfo.c	226	236	str_isnumber	str_isnumber(const char *p)	todo		
-Modules/getaddrinfo.c	239	492	getaddrinfo	getaddrinfo(const char*hostname, const char*servname, const struct addrinfo *hints, struct addrinfo **res)	todo		
-Modules/getaddrinfo.c	495	533	get_name	get_name(const char *addr, struct gai_afd *gai_afd, struct addrinfo **res, char *numaddr, struct addrinfo *pai, int port0)	todo		
-Modules/getaddrinfo.c	536	640	get_addr	get_addr(const char *hostname, int af, struct addrinfo **res, struct addrinfo *pai, int port0)	todo		
+Modules/getaddrinfo.c	210	215	gai_strerror	gai_strerror(int ecode)	todo		
+Modules/getaddrinfo.c	218	229	freeaddrinfo	freeaddrinfo(struct addrinfo *ai)	todo		
+Modules/getaddrinfo.c	232	242	str_isnumber	str_isnumber(const char *p)	todo		
+Modules/getaddrinfo.c	245	501	getaddrinfo	getaddrinfo(const char*hostname, const char*servname, const struct addrinfo *hints, struct addrinfo **res)	todo		changed-in-3.15:
+Modules/getaddrinfo.c	504	542	get_name	get_name(const char *addr, struct gai_afd *gai_afd, struct addrinfo **res, char *numaddr, struct addrinfo *pai, int port0)	todo		
+Modules/getaddrinfo.c	545	649	get_addr	get_addr(const char *hostname, int af, struct addrinfo **res, struct addrinfo *pai, int port0)	todo		

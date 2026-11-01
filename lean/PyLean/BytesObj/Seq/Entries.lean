@@ -22,7 +22,7 @@ open PyLean.Registry
 def entries : List Entry := [
   { id := "bytesobj-tuple-hash-empty", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_hash", "tuple_get_empty"]
     statement := "hash(()) is 5740354900026072187, the value of _PyTuple_HASH_EMPTY, for every element type."
-    source := "Include/internal/pycore_tuple.h:70; tupleobject.c:345 (the length mangling keeps the historical value)", status := .proven
+    source := "Include/internal/pycore_tuple.h:76; tupleobject.c:404 (the length mangling keeps the historical value)", status := .proven
     prop := ``TupleHashEmpty, thm := some ``tupleHashEmpty_proven },
   { id := "bytesobj-tuple-hash-not-minus-one", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_hash"]
     statement := "For every element type and every tuple with no cached hash, a successful hash(t) is not -1, is stored in ob_hash, and leaves the items alone."
@@ -34,21 +34,21 @@ def entries : List Entry := [
     prop := ``TupleHashCached, thm := some ``tupleHashCached_proven },
   { id := "bytesobj-tuple-hash-one-lane", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_hash"]
     statement := "Each round of tuple_hash is a bijection: tuples of equal length differing in exactly one element's hash never collide in the loop, and the final hash can only collide through the single remap of -1 to 1546275796."
-    source := "tupleobject.c:310-320 (xxHash construction); invariant of the construction", status := .proven
+    source := "tupleobject.c:356-369 (xxHash construction); invariant of the construction", status := .proven
     prop := ``TupleHashOneLane, thm := some ``tupleHashOneLane_proven },
   { id := "bytesobj-contains-agree", pyFile := "Objects/listobject.c", pyFns := ["list_contains", "list_get_item_ref", "valid_index", "_PyList_GetItemRef", "tuple_contains"]
     statement := "x in l and x in tuple(l) agree for every element type and every comparison, including raising ones, when the comparison leaves the list alone."
-    source := "Doc/reference/expressions.rst:2025; list and tuple implement one operation", status := .proven
+    source := "Doc/reference/expressions.rst:2260; list and tuple implement one operation", status := .proven
     prop := ``ContainsAgree, thm := some ``containsAgree_proven
     notes := "The operands are item == x, deliberately since gh-81829. expressions.rst still writes x == e; that doc wording is not treated as a bug here." },
   { id := "bytesobj-contains-identity", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_contains"]
     statement := "An object is in a tuple that holds that very object at any position, unless an earlier comparison raises: the identity shortcut of PyObject_RichCompareBool decides, so a NaN-like element is found."
-    source := "Doc/reference/expressions.rst:2025 ('x is e or x == e')", status := .proven
+    source := "Doc/reference/expressions.rst:2260 ('x is e or x == e')", status := .proven
     prop := ``ContainsIdentity, thm := some ``containsIdentity_proven },
   { id := "bytesobj-list-search-reentrant", pyFile := "Objects/listobject.c"
     pyFns := ["list_contains", "list_index_impl", "list_count_impl", "list_remove_impl", "list_richcompare_impl"]
     statement := "x in l, l.index, l.count, l.remove and the search of l == r read no slot outside the list, whatever a comparison does to it, however often."
-    source := "listobject.c:649-666, :3297-3309, :3323-3382, :3416-3432", status := .proven
+    source := "listobject.c:676-693, :3297-3309, :3323-3382, :3416-3432", status := .proven
     prop := ``ListSearchSafe, thm := some ``listSearchSafe_proven },
   { id := "bytesobj-index-agree", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_index_impl", "list_index_impl"]
     statement := "list.index and tuple.index run the same search for every element type, every comparison (including raising ones) and every int start and stop: their different clipping of stop never shows."
@@ -59,8 +59,8 @@ def entries : List Entry := [
     source := "common sequence s.count(x), Doc/library/stdtypes.rst", status := .proven
     prop := ``CountAgree, thm := some ``countAgree_proven },
   { id := "bytesobj-compare-agree", pyFile := "Objects/listobject.c", pyFns := ["list_richcompare_impl", "list_richcompare", "tuple_richcompare"]
-    statement := "A list comparison is the tuple comparison, for every element type, comparison (including raising ones) and operator, except for the early out on == and != when lengths differ, which is the difference the note at tupleobject.c:675-680 states."
-    source := "tupleobject.c:675-680; Doc/reference/expressions.rst (sequence comparison)", status := .proven
+    statement := "A list comparison is the tuple comparison, for every element type, comparison (including raising ones) and operator, except for the early out on == and != when lengths differ, which is the difference the note at tupleobject.c:753-758 states."
+    source := "tupleobject.c:753-758; Doc/reference/expressions.rst (sequence comparison)", status := .proven
     prop := ``CompareAgree, thm := some ``compareAgree_proven },
   { id := "bytesobj-compare-reflexive", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_richcompare"]
     statement := "A tuple equals itself when every item is identical to itself, whatever its __eq__ says: identity implies equality in collections."
@@ -101,12 +101,12 @@ def entries : List Entry := [
     prop := ``SliceReads, thm := some ``sliceReads_proven
     notes := "Bounds are derived from RangeSlice.IndicesInBounds, not assumed." },
   { id := "bytesobj-list-resize", pyFile := "Objects/listobject.c", pyFns := ["list_resize"]
-    statement := "list_resize's fast path changes nothing; the over-allocation is a multiple of 4, at most 9/8 of the size plus 6, and below 2^64 for every size up to PY_SSIZE_T_MAX, as the note at listobject.c:130-131 says."
-    source := "listobject.c:113-138", status := .proven
+    statement := "list_resize's fast path changes nothing; the over-allocation is a multiple of 4, at most 9/8 of the size plus 6, and below 2^64 for every size up to PY_SSIZE_T_MAX, as the note at listobject.c:145-146 says."
+    source := "listobject.c:115-153", status := .proven
     prop := ``ListResizeSpec, thm := some ``listResizeSpec_proven },
   { id := "bytesobj-list-growth-pattern", pyFile := "Objects/listobject.c", pyFns := ["list_resize", "_PyList_AppendTakeRefListResize", "list_append_impl"]
-    statement := "The capacities through the first 65 appends are 0, 4, 8, 16, 24, 32, 40, 52, 64, 76, the sequence in the comment at listobject.c:129."
-    source := "listobject.c:129", status := .proven
+    statement := "The capacities through the first 65 appends are 0, 4, 8, 16, 24, 32, 40, 52, 64, 76, the sequence in the comment at listobject.c:144."
+    source := "listobject.c:144", status := .proven
     prop := ``ListGrowthPattern, thm := some ``listGrowthPattern_proven },
   { id := "bytesobj-list-ops-wf", pyFile := "Objects/listobject.c", pyFns := ["list_resize", "list_preallocate_exact", "list_new_prealloc", "list_clear_impl", "list_clear", "list_clear_slot", "py_list_clear_impl", "list_append_impl", "list_extend_fast", "list_extend_lock_held", "list_extend_set", "list_extend_dict", "list_extend_dictitems", "list_inplace_repeat", "list_ass_item", "list_ass_slice", "reverse_slice", "list_reverse_impl", "PyList_Clear"]
     statement := "Every mutating list method keeps the invariant: allocated covers the items, an array exists when anything is allocated, and its byte size fits Py_ssize_t."
@@ -122,7 +122,7 @@ def entries : List Entry := [
     prop := ``RepeatSpec, thm := some ``repeatSpec_proven },
   { id := "bytesobj-tuple-construct", pyFile := "Objects/tupleobject.c", pyFns := ["maybe_tracked", "_PyTuple_FromArray", "_PyTuple_FromStackRefStealOnSuccess", "_PyTuple_FromArraySteal", "PyTuple_Pack", "_PyTuple_MaybeUntrack", "tuple_new_impl", "tuple_vectorcall", "tuple_subtype_new", "tuple___getnewargs___impl", "tuple_slice"]
     statement := "The tuple construction paths and their GC tracking decisions, as gc.is_tracked shows them; tuple(t) is t for an exact tuple; a subclass instance starts with no cached hash; keyword arguments are rejected first."
-    source := "tupleobject.c:386-457; Doc/library/gc.rst (is_tracked)", status := .proven
+    source := "tupleobject.c:445-516; Doc/library/gc.rst (is_tracked)", status := .proven
     prop := ``TupleConstruct, thm := some ``tupleConstruct_proven },
   { id := "bytesobj-capi-agree", pyFile := "Objects/listobject.c", pyFns := ["PyList_Size", "PyList_GetItem", "PyList_GetItemRef", "PyList_SetItem", "PyList_Insert", "PyList_Append", "PyList_SetSlice", "PyList_Reverse", "PyList_AsTuple", "PyList_Extend", "PyList_Clear", "list_copy_impl", "PyTuple_Size", "PyTuple_GetItem", "_PyTuple_Resize", "list_ass_slice"]
     statement := "Each C API entry point refuses an object of another type with its own error; PyList_GetItem and friends take no negative index, unlike l[i], and the others act on the contents as described, for every argument; _PyTuple_Resize keeps the prefix and pads with NULL."
@@ -146,19 +146,19 @@ def entries : List Entry := [
     prop := ``ListExtendIterContents, thm := some ``listExtendIterContents_proven },
   { id := "bytesobj-sortslice-parallel", pyFile := "Objects/listobject.c", pyFns := ["sortslice_copy", "sortslice_copy_incr", "sortslice_copy_decr", "sortslice_memcpy", "sortslice_memmove", "sortslice_advance", "sortslice_reverse"]
     statement := "Every sortslice move keeps keys[i] the key of values[i], which is what makes list.sort(key=...) return the values in key order."
-    source := "listobject.c:1594-1601", status := .proven
+    source := "listobject.c:1660-1667", status := .proven
     prop := ``SortsliceParallel, thm := some ``sortsliceParallel_proven },
   { id := "bytesobj-merge-mem", pyFile := "Objects/listobject.c", pyFns := ["merge_init", "merge_getmem"]
     statement := "merge_init sizes the stack area as documented, and merge_getmem provides at least need slots, its overflow check not firing below the limit."
-    source := "listobject.c:2190-2201, :2247", status := .proven
+    source := "listobject.c:2258-2269, :2247", status := .proven
     prop := ``MergeMemSpec, thm := some ``mergeMemSpec_proven },
   { id := "bytesobj-sort-compare-agree", pyFile := "Objects/listobject.c", pyFns := ["safe_object_compare", "unsafe_latin_compare", "unsafe_tuple_compare", "PyList_Sort"]
     statement := "The compares list.sort selects agree with the generic path: unsafe_latin_compare is str.__lt__ on all byte strings, unsafe_tuple_compare is tuple.__lt__ for every comparison including raising ones, and PyList_Sort rejects a non-list and is otherwise list.sort."
-    source := "listobject.c:2713-2873 (the asserts at :2789, :2814, :2829)", status := .proven
+    source := "listobject.c:2777-2938 (the asserts at :2789, :2814, :2829)", status := .proven
     prop := ``SortCompareAgree, thm := some ``sortCompareAgree_proven },
   { id := "bytesobj-release-order", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_dealloc", "list_dealloc"]
     statement := "Containers release and visit their items last to first, for every element type, as finalizers and gc.get_referents show; a live iterator refers to exactly its sequence."
-    source := "listobject.c:555-558 ('Do it backwards'); Doc/library/gc.rst (get_referents)", status := .proven
+    source := "listobject.c:582-585 ('Do it backwards'); Doc/library/gc.rst (get_referents)", status := .proven
     prop := ``ReleaseOrder, thm := some ``releaseOrder_proven },
   { id := "bytesobj-list-iter-releases", pyFile := "Objects/listobject.c", pyFns := ["listiter_next"]
     statement := "iter(l) lets go of the list once exhausted, for every list and any number of next calls."
@@ -166,11 +166,11 @@ def entries : List Entry := [
     prop := ``ListIterReleases, thm := some ``listIterReleases_proven },
   { id := "bytesobj-list-reviter-releases", pyFile := "Objects/listobject.c", pyFns := ["listreviter_next"]
     statement := "reversed(l) lets go of the list once exhausted, as iter(l) does. False: the early index < 0 return skips the code that clears it_seq, so the list is kept alive."
-    source := "listobject.c:4084 ('Set to NULL when iterator is exhausted')", status := .refuted
+    source := "listobject.c:4154 ('Set to NULL when iterator is exhausted')", status := .refuted
     prop := ``ListRevIterReleases, thm := some ``listRevIterReleases_refuted, bug := some "bytesobj-list-reversed-keeps-list" },
   { id := "bytesobj-list-reviter-stops", pyFile := "Objects/listobject.c", pyFns := ["listreviter_next"]
     statement := "A reversed iterator whose index is past the end of a shrunken list stops and clears it_seq: the one path that does release the list."
-    source := "listobject.c:4189-4193", status := .proven
+    source := "listobject.c:4259-4263", status := .proven
     prop := ``ListRevIterStops, thm := some ``listRevIterStops_proven },
   { id := "bytesobj-list-sizeof-exact", pyFile := "Objects/listobject.c", pyFns := ["list___sizeof___impl"]
     statement := "Outside list.sort, list.__sizeof__() is exactly 40 + 8 * allocated, with no wraparound."
@@ -186,15 +186,15 @@ def entries : List Entry := [
     prop := ``ListHintInert, thm := some ``listHintInert_refuted, bug := some "bytesobj-list-length-hint-overestimate" },
   { id := "bytesobj-list-hint-ignored", pyFile := "Objects/listobject.c", pyFns := ["list_extend_iter_lock_held"]
     statement := "The same maximal hint is ignored for a one-item list, because m > PY_SSIZE_T_MAX - n skips the allocation."
-    source := "listobject.c:1241-1246", status := .proven
+    source := "listobject.c:1317-1322", status := .proven
     prop := ``ListHintIgnoredWhenOverflowing, thm := some ``listHintIgnoredWhenOverflowing_proven },
   { id := "bytesobj-list-del-like-pop", pyFile := "Objects/listobject.c", pyFns := ["list_ass_item", "list_pop_impl"]
     statement := "del l[i] and l.pop(i) leave a list with the same allocation. False on 3.14.7: del never shrinks the array. Duplicate of gh-158592, fixed on main."
-    source := "listobject.c:113-116 (shrinking policy); gh-158592", status := .refuted
+    source := "listobject.c:115-120 (shrinking policy); gh-158592", status := .refuted
     prop := ``ListDelLikePop, thm := some ``listDelLikePop_refuted, bug := some "bytesobj-list-del-item-never-shrinks" },
   { id := "bytesobj-list-del-keeps-allocation", pyFile := "Objects/listobject.c", pyFns := ["list_ass_item"]
     statement := "On 3.14.7, del l[i] and l[i] = x leave allocated and ob_item unchanged."
-    source := "listobject.c:1082-1103", status := .proven
+    source := "listobject.c:1158-1179", status := .proven
     prop := ``ListAssItemKeepsAllocation, thm := some ``listAssItemKeepsAllocation_proven }
 ]
 

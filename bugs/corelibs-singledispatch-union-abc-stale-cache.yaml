@@ -8,7 +8,7 @@ functions: ["singledispatch"]
 summary: |
   singledispatch caches dispatch results and clears the cache when abc.get_cache_token() changes,
   but it only starts watching the token once an ABC is registered. The test at
-  Lib/functools.py:973 is `hasattr(cls, '__abstractmethods__')`, on the argument of register. For
+  Lib/functools.py:994 is `hasattr(cls, '__abstractmethods__')`, on the argument of register. For
   register(Sized | int, impl), cls is the UnionType, which has no such attribute, so cache_token stays
   None. A class dispatched before Sized.register(C) then stays on the old implementation forever,
   while the same code with register(Sized, impl) picks up the new implementation.
@@ -18,7 +18,7 @@ likelihood: |
   and registering virtual subclasses after import happens in plugin-style code. The failure is
   silent: the wrong implementation runs.
 maybe_intended: |
-  No. The union branch at :968-970 was added without touching the token test that follows it, and
+  No. The union branch at :989-991 was added without touching the token test that follows it, and
   the single-class path shows the intended behaviour.
 reproducer: |
   from collections.abc import Sized
@@ -46,12 +46,12 @@ observed: |
   python3 3.14.7: by_union stays on 'default' after Sized.register(C), by_class moves to 'sized'.
   REPRODUCED. main (python.exe 3.16.0a1+dev): same, REPRODUCED.
 promised_by: |
-  Doc/library/functools.rst:529 and the lines before it accept union types in register, with no
-  caveat. The cache_token logic, Lib/functools.py:900-905, exists so that ABC registrations invalidate
+  Doc/library/functools.rst:526 and the lines before it accept union types in register, with no
+  caveat. The cache_token logic, Lib/functools.py:921-926, exists so that ABC registrations invalidate
   the cache.
 cause: |
-  Lib/functools.py:973 `if cache_token is None and hasattr(cls, '__abstractmethods__'):` runs after the
-  union branch at :968-970, with cls still the union.
+  Lib/functools.py:994 `if cache_token is None and hasattr(cls, '__abstractmethods__'):` runs after the
+  union branch at :989-991, with cls still the union.
 possible_fix: |
   Test the members: for a union, `any(hasattr(arg, '__abstractmethods__') for arg in cls.__args__)`.
 duplicates:

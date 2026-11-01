@@ -1,0 +1,6 @@
+file	line	endline	name	signature	status	entry	note
+Lib/profiling/sampling/string_table.py	6	8	StringTable.__init__	__init__(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/string_table.py	10	28	StringTable.intern	intern(self, string)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/string_table.py	30	41	StringTable.get_string	get_string(self, index)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/string_table.py	43	49	StringTable.get_strings	get_strings(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/string_table.py	51	53	StringTable.__len__	__len__(self)	todo		changed-in-3.15: new function

@@ -30,10 +30,10 @@ observed: |
   'ʰσ' and 'aςʰ'.
 tested: "REPRODUCED on python3 3.14.7 and on main (3.16.0a1+dev) by scripts/check_bugs.py"
 promised_by: |
-  Comment at Objects/unicodeobject.c:10047-10051; The Unicode Standard, Table 3-17 (Final_Sigma).
+  Comment at Objects/unicodeobject.c:9812-9816; The Unicode Standard, Table 3-17 (Final_Sigma).
 cause: |
-  Objects/unicodeobject.c:10053-10057 and :10060-10064 stop only at a character that is not
-  case-ignorable, and :10058 and :10065 test cased only on that character.
+  Objects/unicodeobject.c:9818-9822 and :9825-9829 stop only at a character that is not
+  case-ignorable, and :9823 and :9830 test cased only on that character.
 possible_fix: |
   Stop the scans at the first character that is cased or not case-ignorable, or reword the
   comment to say that case-ignorable takes precedence.

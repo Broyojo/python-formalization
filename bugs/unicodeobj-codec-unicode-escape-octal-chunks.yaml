@@ -39,7 +39,7 @@ promised_by: |
   The contract of incremental decoding (Doc/library/codecs.rst: "can be used to decode an input
   in multiple steps"), and the same decoder's handling of \x, \u, \U and \N.
 cause: |
-  Objects/unicodeobject.c:6724, the `case '0'..'7'` branch of _PyUnicode_DecodeUnicodeEscapeInternal2:
+  Objects/unicodeobject.c:6617, the `case '0'..'7'` branch of _PyUnicode_DecodeUnicodeEscapeInternal2:
   `if (s < end && '0' <= *s && *s <= '7')` treats the end of the chunk as the end of the escape,
   even when `consumed` is set.
 possible_fix: |

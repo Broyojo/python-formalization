@@ -1,24 +1,28 @@
 file	line	endline	name	signature	status	entry	note
-Lib/_pyrepl/console.py	54	71	Console.__init__	__init__(self, f_in: IO[bytes] | int=0, f_out: IO[bytes] | int=1, term: str='', encoding: str='')	todo		
-Lib/_pyrepl/console.py	74	74	Console.refresh	refresh(self, screen: list[str], xy: tuple[int, int])	todo		
-Lib/_pyrepl/console.py	77	77	Console.prepare	prepare(self)	todo		
-Lib/_pyrepl/console.py	80	80	Console.restore	restore(self)	todo		
-Lib/_pyrepl/console.py	83	83	Console.move_cursor	move_cursor(self, x: int, y: int)	todo		
-Lib/_pyrepl/console.py	86	86	Console.set_cursor_vis	set_cursor_vis(self, visible: bool)	todo		
-Lib/_pyrepl/console.py	89	92	Console.getheightwidth	getheightwidth(self)	todo		
-Lib/_pyrepl/console.py	95	99	Console.get_event	get_event(self, block: bool=True)	todo		
-Lib/_pyrepl/console.py	102	106	Console.push_char	push_char(self, char: int | bytes)	todo		
-Lib/_pyrepl/console.py	109	109	Console.beep	beep(self)	todo		
-Lib/_pyrepl/console.py	112	114	Console.clear	clear(self)	todo		
-Lib/_pyrepl/console.py	117	120	Console.finish	finish(self)	todo		
-Lib/_pyrepl/console.py	123	126	Console.flushoutput	flushoutput(self)	todo		
-Lib/_pyrepl/console.py	129	131	Console.forgetinput	forgetinput(self)	todo		
-Lib/_pyrepl/console.py	134	137	Console.getpending	getpending(self)	todo		
-Lib/_pyrepl/console.py	140	144	Console.wait	wait(self, timeout: float | None)	todo		
-Lib/_pyrepl/console.py	147	149	Console.input_hook	input_hook(self)	todo		
-Lib/_pyrepl/console.py	152	152	Console.repaint	repaint(self)	todo		
-Lib/_pyrepl/console.py	158	166	InteractiveColoredConsole.__init__	__init__(self, locals: dict[str, object] | None=None, filename: str='<console>', *, local_exit: bool=False)	todo		
-Lib/_pyrepl/console.py	168	169	InteractiveColoredConsole.showsyntaxerror	showsyntaxerror(self, filename=None, **kwargs)	todo		
-Lib/_pyrepl/console.py	171	177	InteractiveColoredConsole._excepthook	_excepthook(self, typ, value, tb)	todo		
-Lib/_pyrepl/console.py	179	187	InteractiveColoredConsole.runcode	runcode(self, code)	todo		
-Lib/_pyrepl/console.py	189	229	InteractiveColoredConsole.runsource	runsource(self, source, filename='<input>', symbol='single')	todo		
+Lib/_pyrepl/console.py	64	87	Console.__init__	__init__(self, f_in: IO[bytes] | int=0, f_out: IO[bytes] | int=1, term: str='', encoding: str='')	todo		changed-in-3.15:
+Lib/_pyrepl/console.py	90	91	Console.screen	screen(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/console.py	93	106	Console.sync_rendered_screen	sync_rendered_screen(self, rendered_screen: RenderedScreen, posxy: CursorXY | None=None)	todo		changed-in-3.15: new function
+Lib/_pyrepl/console.py	108	110	Console.invalidate_render_state	invalidate_render_state(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/console.py	112	125	Console.begin_redraw_visualization	begin_redraw_visualization(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/console.py	128	128	Console.refresh	refresh(self, rendered_screen: RenderedScreen)	todo		changed-in-3.15:
+Lib/_pyrepl/console.py	131	131	Console.prepare	prepare(self)	todo		
+Lib/_pyrepl/console.py	134	134	Console.restore	restore(self)	todo		
+Lib/_pyrepl/console.py	137	137	Console.move_cursor	move_cursor(self, x: int, y: int)	todo		
+Lib/_pyrepl/console.py	140	140	Console.set_cursor_vis	set_cursor_vis(self, visible: bool)	todo		
+Lib/_pyrepl/console.py	143	146	Console.getheightwidth	getheightwidth(self)	todo		
+Lib/_pyrepl/console.py	149	153	Console.get_event	get_event(self, block: bool=True)	todo		
+Lib/_pyrepl/console.py	156	160	Console.push_char	push_char(self, char: int | bytes)	todo		
+Lib/_pyrepl/console.py	163	163	Console.beep	beep(self)	todo		
+Lib/_pyrepl/console.py	166	168	Console.clear	clear(self)	todo		
+Lib/_pyrepl/console.py	171	174	Console.finish	finish(self)	todo		
+Lib/_pyrepl/console.py	177	180	Console.flushoutput	flushoutput(self)	todo		
+Lib/_pyrepl/console.py	183	185	Console.forgetinput	forgetinput(self)	todo		
+Lib/_pyrepl/console.py	188	191	Console.getpending	getpending(self)	todo		
+Lib/_pyrepl/console.py	194	198	Console.wait	wait(self, timeout: float | None)	todo		
+Lib/_pyrepl/console.py	201	203	Console.input_hook	input_hook(self)	todo		
+Lib/_pyrepl/console.py	206	206	Console.repaint	repaint(self)	todo		
+Lib/_pyrepl/console.py	212	220	InteractiveColoredConsole.__init__	__init__(self, locals: dict[str, object] | None=None, filename: str='<console>', *, local_exit: bool=False)	todo		
+Lib/_pyrepl/console.py	222	223	InteractiveColoredConsole.showsyntaxerror	showsyntaxerror(self, filename=None, **kwargs)	todo		
+Lib/_pyrepl/console.py	225	231	InteractiveColoredConsole._excepthook	_excepthook(self, typ, value, tb)	todo		
+Lib/_pyrepl/console.py	233	241	InteractiveColoredConsole.runcode	runcode(self, code)	todo		
+Lib/_pyrepl/console.py	243	295	InteractiveColoredConsole.runsource	runsource(self, source, filename='<input>', symbol='single')	todo		changed-in-3.15:

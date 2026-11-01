@@ -38,9 +38,9 @@ observed: |
   python3 3.14.7: None, <re.Match span=(0, 3)>, None, <re.Match span=(0, 2)>. REPRODUCED.
   main 3.16.0a1+dev: the same. REPRODUCED.
 promised_by: |
-  Doc/library/re.rst:216, "x{m,n}+ is equivalent to (?>x{m,n})".
+  Doc/library/re.rst@3.14.7:216, "x{m,n}+ is equivalent to (?>x{m,n})".
 cause: |
-  Modules/_sre/sre_lib.h:1311-1327 runs the first pattern[1] iterations with DO_JUMP0, each ending at
+  Modules/_sre/sre_lib.h:1366-1382 runs the first pattern[1] iterations with DO_JUMP0, each ending at
   its own SUCCESS, and fails at once when one fails. It never retries an earlier iteration, which
   the backtracking in an atomic group over MAX_UNTIL would.
 possible_fix: |

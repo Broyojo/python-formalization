@@ -3,8 +3,8 @@ import PyLean.PyIO.Text
 import PyLean.PyIO.Double
 
 /-!
-`_pyio.StringIO` (`Lib/_pyio.py:2716-2764`): a `TextIOWrapper`
-(`Lib/_pyio.py:2033-2714`) over a `_pyio.BytesIO`, with encoding UTF-8,
+`_pyio.StringIO` (`Lib/_pyio.py:2740-2788`): a `TextIOWrapper`
+(`Lib/_pyio.py:2057-2738`) over a `_pyio.BytesIO`, with encoding UTF-8,
 errors `surrogatepass`, no line buffering, `os.linesep == '\n'`.
 
 The model keeps the wrapper's fields (`_decoded_chars`,
@@ -12,7 +12,7 @@ The model keeps the wrapper's fields (`_decoded_chars`,
 the newline configuration) and the `BState` of the underlying `BytesIO`.
 The decoder is the UTF-8 incremental decoder (`codecs.BufferedIncrementalDecoder`,
 `Lib/codecs.py:306-341`), wrapped in `IncrementalNewlineDecoder`
-(`Lib/_pyio.py:1948-2030`) when reading in universal mode. The UTF-8
+(`Lib/_pyio.py:1972-2054`) when reading in universal mode. The UTF-8
 encoder is stateless, so `_encoder` and `_reset_encoder` are not modelled.
 `_CHUNK_SIZE` is 2048.
 -/
@@ -35,7 +35,7 @@ namespace Dec
 
 def none0 : NlKinds := ⟨false, false, false⟩
 
-/-- `IncrementalNewlineDecoder.decode` (_pyio.py:1962-1991) over
+/-- `IncrementalNewlineDecoder.decode` (_pyio.py:1986-2015) over
 `BufferedIncrementalDecoder.decode` (codecs.py:322-328). On a decoding error
 nothing changes. -/
 def decode (d : Dec) (input : List Nat) (final : Bool) : Py (Dec × List Nat) := do
@@ -49,14 +49,14 @@ def decode (d : Dec) (input : List Nat) (final : Bool) : Py (Dec × List Nat) :=
   let d := { d with seennl := d.seennl.union (nlKinds out) }
   return (d, if d.translate then translateNl out else out)
 
-/-- `getstate()` (_pyio.py:1993-2002; codecs.py:334-336). -/
+/-- `getstate()` (_pyio.py:2017-2026; codecs.py:334-336). -/
 def getstate (d : Dec) : List Nat × Nat := (d.ubuf, if d.nl && d.pendingcr then 1 else 0)
 
-/-- `setstate((buf, flag))` (_pyio.py:2004-2008; codecs.py:338-341). -/
+/-- `setstate((buf, flag))` (_pyio.py:2028-2032; codecs.py:338-341). -/
 def setstate (d : Dec) (st : List Nat × Nat) : Dec :=
   if d.nl then { d with ubuf := st.1, pendingcr := st.2 % 2 = 1 } else { d with ubuf := st.1 }
 
-/-- `reset()` (_pyio.py:2010-2014; codecs.py:330-332). -/
+/-- `reset()` (_pyio.py:2034-2038; codecs.py:330-332). -/
 def reset (d : Dec) : Dec :=
   if d.nl then { d with ubuf := [], pendingcr := false, seennl := none0 } else { d with ubuf := [] }
 
@@ -82,7 +82,7 @@ namespace TP
 
 def closedDot : PyExc := .valueError "I/O operation on closed file."
 
-/-- `_get_decoder` (_pyio.py:2285-2291). -/
+/-- `_get_decoder` (_pyio.py:2309-2315). -/
 def getDecoder (t : TState) : TState × Dec :=
   match t.decoder with
   | some d => (t, d)
@@ -92,7 +92,7 @@ def getDecoder (t : TState) : TState × Dec :=
 
 def setDecoded (t : TState) (cs : List Nat) : TState := { t with decoded := cs, used := 0 }
 
-/-- `_get_decoded_chars(n)` (_pyio.py:2301-2309). -/
+/-- `_get_decoded_chars(n)` (_pyio.py:2325-2333). -/
 def getDecodedChars (t : TState) (n : Option Nat) : TState × List Nat :=
   let rest := t.decoded.drop t.used
   let cs := match n with
@@ -100,12 +100,12 @@ def getDecodedChars (t : TState) (n : Option Nat) : TState × List Nat :=
     | some n => rest.take n
   ({ t with used := t.used + cs.length }, cs)
 
-/-- `flush()` (_pyio.py:2231-2233): `BytesIO.flush` is `IOBase.flush`, which
+/-- `flush()` (_pyio.py:2255-2257): `BytesIO.flush` is `IOBase.flush`, which
 checks `closed`. -/
 def flush (t : TState) : Py TState :=
   if t.b.closed then .error closedDot else .ok { t with telling := true }
 
-/-- `_read_chunk` (_pyio.py:2326-2366); `read1` is `read` for `BytesIO`. -/
+/-- `_read_chunk` (_pyio.py:2350-2390); `read1` is `read` for `BytesIO`. -/
 def readChunk (t : TState) : TState × Py Bool :=
   match t.decoder with
   | none => (t, .error (.valueError "no decoder"))
@@ -124,7 +124,7 @@ def readChunk (t : TState) : TState × Py Bool :=
         let t := if t.telling then { t with snapshot := some (decFlags, decBuf ++ chunk) } else t
         (t, .ok (!eof))
 
-/-- The `while len(result) < size and not eof` loop of `read` (_pyio.py:2598-2603). -/
+/-- The `while len(result) < size and not eof` loop of `read` (_pyio.py:2622-2627). -/
 def readLoop (size : Nat) : TState → List Nat → Nat → TState × Py (List Nat)
   | t, _, 0 => (t, .error .modelFuel)
   | t, res, fuel + 1 =>
@@ -137,7 +137,7 @@ def readLoop (size : Nat) : TState → List Nat → Nat → TState × Py (List N
         if more then readLoop size t res fuel else (t, .ok res)
     else (t, .ok res)
 
-/-- `read(size)` (_pyio.py:2573-2603). -/
+/-- `read(size)` (_pyio.py:2597-2627). -/
 def read (t : TState) (size : Option Int) : TState × Py Val :=
   if t.b.closed then (t, .error closedDot) else
   let size := size.getD (-1)
@@ -159,7 +159,7 @@ def read (t : TState) (size : Option Int) : TState × Py Val :=
     | (t, .error e) => (t, .error e)
     | (t, .ok r) => (t, .ok (.str r))
 
-/-- The line-ending search of `readline` (_pyio.py:2637-2683): `some endpos`
+/-- The line-ending search of `readline` (_pyio.py:2661-2707): `some endpos`
 or the next `start`. -/
 def search (t : TState) (line : List Nat) (start : Nat) : Option Nat × Nat :=
   if t.readtranslate then
@@ -179,7 +179,7 @@ def search (t : TState) (line : List Nat) (start : Nat) : Option Nat × Nat :=
     let p := findFrom line nl 0
     if p ≥ 0 then (some (p.toNat + nl.length), start) else (none, start)
 
-/-- `while self._read_chunk(): if self._decoded_chars: break` (_pyio.py:2689-2691). -/
+/-- `while self._read_chunk(): if self._decoded_chars: break` (_pyio.py:2713-2715). -/
 def chunkLoop : TState → Nat → TState × Py Unit
   | t, 0 => (t, .error .modelFuel)
   | t, fuel + 1 =>
@@ -187,14 +187,14 @@ def chunkLoop : TState → Nat → TState × Py Unit
     | (t, .error e) => (t, .error e)
     | (t, .ok more) => if more && t.decoded = [] then chunkLoop t fuel else (t, .ok ())
 
-/-- The end of `readline` (_pyio.py:2700-2705). -/
+/-- The end of `readline` (_pyio.py:2724-2729). -/
 def finishLine (t : TState) (size : Int) (line : List Nat) (endpos : Nat) : TState × Py (List Nat) :=
   let endpos := if size ≥ 0 ∧ (endpos : Int) > size then size.toNat else endpos
   let n := line.length - endpos
   if t.used < n then (t, .error (.assertionError "rewind decoded_chars out of bounds"))
   else ({ t with used := t.used - n }, .ok (line.take endpos))
 
-/-- The `while True` loop of `readline` (_pyio.py:2636-2698). -/
+/-- The `while True` loop of `readline` (_pyio.py:2660-2722). -/
 def lineLoop (size : Int) : TState → List Nat → Nat → Nat → TState × Py (List Nat)
   | t, _, _, 0 => (t, .error .modelFuel)
   | t, line, start, fuel + 1 =>
@@ -210,7 +210,7 @@ def lineLoop (size : Int) : TState → List Nat → Nat → Nat → TState × Py
           lineLoop size t (line ++ cs) start fuel
         else ({ (setDecoded t []) with snapshot := none }, .ok line)
 
-/-- `readline(size)` (_pyio.py:2614-2705). -/
+/-- `readline(size)` (_pyio.py:2638-2729). -/
 def readlineRaw (t : TState) (size : Option Int) : TState × Py (List Nat) :=
   if t.b.closed then (t, .error (.valueError "read from closed file")) else
   let size := size.getD (-1)
@@ -218,7 +218,7 @@ def readlineRaw (t : TState) (size : Option Int) : TState × Py (List Nat) :=
   let (t, _) := getDecoder t
   lineLoop size t line 0 (t.b.buf.length - t.b.pos + t.decoded.length + 3)
 
-/-- `__next__` (_pyio.py:2605-2612). -/
+/-- `__next__` (_pyio.py:2629-2636). -/
 def next (t : TState) : TState × Py Val :=
   match readlineRaw { t with telling := false } none with
   | (t, .error e) => (t, .error e)
@@ -248,7 +248,7 @@ def readlines (t : TState) (hint : Option Int) : TState × Py Val :=
     | none => none
   readlinesLoop hint t 0 [] (t.b.buf.length - t.b.pos + t.decoded.length + 3)
 
-/-- `write(s)` (_pyio.py:2256-2278). -/
+/-- `write(s)` (_pyio.py:2280-2302). -/
 def write (t : TState) (s : List Nat) : TState × Py Val :=
   if t.b.closed then (t, .error (.valueError "write to closed file")) else
   let length := s.length
@@ -262,12 +262,12 @@ def write (t : TState) (s : List Nat) : TState × Py Val :=
     let t := { t with decoder := t.decoder.map Dec.reset }
     (t, .ok (.int length))
 
-/-- `_pack_cookie` (_pyio.py:2368-2376). -/
+/-- `_pack_cookie` (_pyio.py:2392-2400). -/
 def pack (position decFlags bytesToFeed : Nat) (needEof : Bool) (charsToSkip : Nat) : Nat :=
   position ||| (decFlags <<< 64) ||| (bytesToFeed <<< 128) ||| (charsToSkip <<< 192) |||
     ((if needEof then 1 else 0) <<< 256)
 
-/-- The fast search of `tell` (_pyio.py:2420-2443): returns the decoder
+/-- The fast search of `tell` (_pyio.py:2444-2467): returns the decoder
 (always, since decoding updates `seennl` even when a later call fails) and
 `skip_bytes`, `dec_flags`, `chars_to_skip`. -/
 def tellSkip (nextInput : List Nat) : Dec → Int → Nat → Nat → Nat → Nat → Dec × Py (Int × Nat × Nat)
@@ -286,7 +286,7 @@ def tellSkip (nextInput : List Nat) : Dec → Int → Nat → Nat → Nat → Na
         else tellSkip nextInput d (skipBytes - skipBack) (skipBack * 2) decFlags charsToSkip fuel
     else (d.setstate ([], decFlags), .ok (0, decFlags, charsToSkip))
 
-/-- The byte-by-byte loop of `tell` (_pyio.py:2460-2477) over
+/-- The byte-by-byte loop of `tell` (_pyio.py:2484-2501) over
 `(start_pos, start_flags, bytes_fed, chars_decoded, chars_to_skip)`; the
 final flag says whether the loop ended with `break`. -/
 def tellFeed : List Nat → Dec → Nat → Nat → Nat → Nat → Nat →
@@ -304,7 +304,7 @@ def tellFeed : List Nat → Dec → Nat → Nat → Nat → Nat → Nat →
       if cd ≥ cts then (d, .ok (sp, sf, bf, cd, cts, true))
       else tellFeed xs d sp sf bf cd cts
 
-/-- The `try` body of `tell` after `saved_state` (_pyio.py:2412-2482). -/
+/-- The `try` body of `tell` after `saved_state` (_pyio.py:2436-2506). -/
 def tellBody (t : TState) (d : Dec) (position : Nat) (decFlags : Nat) (nextInput : List Nat)
     (charsToSkip : Nat) : Dec × Py Nat :=
   let skipBytes := dTrunc (dMulNat (dDiv t.b2c.1 t.b2c.2) charsToSkip)
@@ -326,7 +326,7 @@ def tellBody (t : TState) (d : Dec) (position : Nat) (decFlags : Nat) (nextInput
         if cd < cts then (d, .error (osError "can't reconstruct logical file position"))
         else (d, .ok (pack sp sf bf true cts))
 
-/-- `tell()` (_pyio.py:2385-2482). -/
+/-- `tell()` (_pyio.py:2409-2506). -/
 def tell (t : TState) : TState × Py Int :=
   if !t.telling then (t, .error (osError "telling position disabled by next() call")) else
   match flush t with
@@ -346,7 +346,7 @@ def tell (t : TState) : TState × Py Int :=
     if t.decoded ≠ [] then (t, .error (.assertionError "pending decoded text"))
     else (t, .ok position)
 
-/-- `_unpack_cookie` (_pyio.py:2378-2383) for a cookie `>= 0`. -/
+/-- `_unpack_cookie` (_pyio.py:2402-2407) for a cookie `>= 0`. -/
 def unpack (c : Nat) : Nat × Nat × Nat × Bool × Nat :=
   let position := c % 2 ^ 64
   let rest := c / 2 ^ 64
@@ -356,7 +356,7 @@ def unpack (c : Nat) : Nat × Nat × Nat × Bool × Nat :=
   let rest := rest / 2 ^ 64
   (position, decFlags, bytesToFeed, rest / 2 ^ 64 ≠ 0, rest % 2 ^ 64)
 
-/-- `seek(cookie, 0)` for `cookie >= 0` after the checks (_pyio.py:2538-2571). -/
+/-- `seek(cookie, 0)` for `cookie >= 0` after the checks (_pyio.py:2562-2595). -/
 def seekCookie (t : TState) (cookie : Nat) : TState × Py Val :=
   match flush t with
   | .error e => (t, .error e)
@@ -384,7 +384,7 @@ def seekCookie (t : TState) (cookie : Nat) : TState × Py Val :=
         else ({ t with used := charsToSkip }, .ok (.int cookie))
   else (t, .ok (.int cookie))
 
-/-- `seek(cookie, whence)` (_pyio.py:2498-2571). -/
+/-- `seek(cookie, whence)` (_pyio.py:2522-2595). -/
 def seek (t : TState) (cookie whence : Int) : TState × Py Val :=
   if t.b.closed then (t, .error (.valueError "tell on closed file")) else
   if whence = 1 then
@@ -405,7 +405,7 @@ def seek (t : TState) (cookie whence : Int) : TState × Py Val :=
   else if cookie < 0 then (t, .error (.valueError s!"negative seek position {cookie}"))
   else seekCookie t cookie.toNat
 
-/-- `truncate(pos)` (_pyio.py:2484-2488). -/
+/-- `truncate(pos)` (_pyio.py:2508-2512). -/
 def truncate (t : TState) (pos : Option Int) : TState × Py Val :=
   match flush t with
   | .error e => (t, .error e)
@@ -417,7 +417,7 @@ def truncate (t : TState) (pos : Option Int) : TState × Py Val :=
       | (t, .error e) => (t, .error e)
       | (t, .ok p) => let (b, r) := P.truncate t.b (some p); ({ t with b := b }, r)
 
-/-- `StringIO.getvalue()` (_pyio.py:2739-2747). -/
+/-- `StringIO.getvalue()` (_pyio.py:2763-2771). -/
 def getvalue (t : TState) : TState × Py Val :=
   match flush t with
   | .error e => (t, .error e)
@@ -429,7 +429,7 @@ def getvalue (t : TState) : TState × Py Val :=
     | .error e => ({ t with decoder := some (d.setstate old) }, .error e)
     | .ok (d2, out) => ({ t with decoder := some (d2.setstate old) }, .ok (.str out))
 
-/-- The `newlines` property (_pyio.py:2707-2709): a plain UTF-8 decoder has
+/-- The `newlines` property (_pyio.py:2731-2733): a plain UTF-8 decoder has
 no `newlines` attribute. -/
 def newlines (t : TState) : Py Val :=
   match t.decoder with
@@ -437,7 +437,7 @@ def newlines (t : TState) : Py Val :=
   | some d => if d.nl then .ok (newlinesVal d.seennl)
       else .error (.named "AttributeError" "'IncrementalDecoder' object has no attribute 'newlines'")
 
-/-- `close()` (_pyio.py:2235-2240). -/
+/-- `close()` (_pyio.py:2259-2264). -/
 def close (t : TState) : TState × Py Val :=
   if t.b.closed then (t, .ok .none) else
   let (b, r) := P.close t.b
@@ -464,9 +464,9 @@ def step (t : TState) : SOp → TState × Py Val
     | (t, .error e) => (t, .error e)
     | (t, .ok c) => seek t c 0
 
-/-- `StringIO(initial_value, newline)` (_pyio.py:2723-2737): the
-`TextIOWrapper` constructor checks `newline` (_pyio.py:2098-2102) and
-configures (`_configure`, :2104-2119); then the value is written and the
+/-- `StringIO(initial_value, newline)` (_pyio.py:2747-2761): the
+`TextIOWrapper` constructor checks `newline` (_pyio.py:2122-2126) and
+configures (`_configure`, :2128-2143); then the value is written and the
 stream rewound. -/
 def init (value : Option (List Nat)) (newline : Option (List Nat)) : Py TState :=
   match newline with

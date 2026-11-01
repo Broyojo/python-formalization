@@ -1,18 +1,19 @@
 file	line	endline	name	signature	status	entry	note
-Lib/tabnanny.py	30	36	errprint	errprint(*args)	todo		
-Lib/tabnanny.py	38	54	main	main()	todo		candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output
-Lib/tabnanny.py	61	62	NannyNag.__init__	__init__(self, lineno, msg, line)	todo		
-Lib/tabnanny.py	63	64	NannyNag.get_lineno	get_lineno(self)	todo		
-Lib/tabnanny.py	65	66	NannyNag.get_msg	get_msg(self)	todo		
-Lib/tabnanny.py	67	68	NannyNag.get_line	get_line(self)	todo		
-Lib/tabnanny.py	70	133	check	check(file)	todo		
-Lib/tabnanny.py	158	179	Whitespace.__init__	__init__(self, ws)	todo		
-Lib/tabnanny.py	183	185	Whitespace.longest_run_of_spaces	longest_run_of_spaces(self)	todo		
-Lib/tabnanny.py	187	206	Whitespace.indent_level	indent_level(self, tabsize)	todo		
-Lib/tabnanny.py	210	211	Whitespace.equal	equal(self, other)	todo		
-Lib/tabnanny.py	217	226	Whitespace.not_equal_witness	not_equal_witness(self, other)	todo		
-Lib/tabnanny.py	241	252	Whitespace.less	less(self, other)	todo		
-Lib/tabnanny.py	258	267	Whitespace.not_less_witness	not_less_witness(self, other)	todo		
-Lib/tabnanny.py	269	274	format_witnesses	format_witnesses(w)	todo		
-Lib/tabnanny.py	276	280	process_tokens	process_tokens(tokens)	todo		
-Lib/tabnanny.py	282	334	_process_tokens	_process_tokens(tokens)	todo		
+Lib/tabnanny.py	28	34	errprint	errprint(*args)	todo		
+Lib/tabnanny.py	36	52	main	main()	todo		changed-in-3.15: candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output
+Lib/tabnanny.py	59	60	NannyNag.__init__	__init__(self, lineno, msg, line)	todo		
+Lib/tabnanny.py	61	62	NannyNag.get_lineno	get_lineno(self)	todo		
+Lib/tabnanny.py	63	64	NannyNag.get_msg	get_msg(self)	todo		
+Lib/tabnanny.py	65	66	NannyNag.get_line	get_line(self)	todo		
+Lib/tabnanny.py	68	131	check	check(file)	todo		
+Lib/tabnanny.py	156	177	Whitespace.__init__	__init__(self, ws)	todo		
+Lib/tabnanny.py	181	183	Whitespace.longest_run_of_spaces	longest_run_of_spaces(self)	todo		
+Lib/tabnanny.py	185	204	Whitespace.indent_level	indent_level(self, tabsize)	todo		
+Lib/tabnanny.py	208	209	Whitespace.equal	equal(self, other)	todo		
+Lib/tabnanny.py	215	224	Whitespace.not_equal_witness	not_equal_witness(self, other)	todo		
+Lib/tabnanny.py	239	250	Whitespace.less	less(self, other)	todo		
+Lib/tabnanny.py	256	265	Whitespace.not_less_witness	not_less_witness(self, other)	todo		
+Lib/tabnanny.py	267	272	format_witnesses	format_witnesses(w)	todo		
+Lib/tabnanny.py	274	278	process_tokens	process_tokens(tokens)	todo		
+Lib/tabnanny.py	280	332	_process_tokens	_process_tokens(tokens)	todo		
+Lib/tabnanny.py	335	341	__getattr__	__getattr__(name)	todo		changed-in-3.15: new function

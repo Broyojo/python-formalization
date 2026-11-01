@@ -1,6 +1,6 @@
 file	line	endline	name	signature	status	entry	note
 Lib/code.py	25	37	InteractiveInterpreter.__init__	__init__(self, locals=None)	todo		
-Lib/code.py	39	76	InteractiveInterpreter.runsource	runsource(self, source, filename='<input>', symbol='single')	todo		
+Lib/code.py	39	76	InteractiveInterpreter.runsource	runsource(self, source, filename='<input>', symbol='single')	todo		changed-in-3.15:
 Lib/code.py	78	95	InteractiveInterpreter.runcode	runcode(self, code)	todo		
 Lib/code.py	97	116	InteractiveInterpreter.showsyntaxerror	showsyntaxerror(self, filename=None, **kwargs)	todo		
 Lib/code.py	118	130	InteractiveInterpreter.showtraceback	showtraceback(self)	todo		
@@ -9,7 +9,7 @@ Lib/code.py	161	165	InteractiveInterpreter._excepthook	_excepthook(self, typ, va
 Lib/code.py	167	174	InteractiveInterpreter.write	write(self, data)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
 Lib/code.py	185	198	InteractiveConsole.__init__	__init__(self, locals=None, filename='<console>', *, local_exit=False)	todo		
 Lib/code.py	200	202	InteractiveConsole.resetbuffer	resetbuffer(self)	todo		
-Lib/code.py	204	304	InteractiveConsole.interact	interact(self, banner=None, exitmsg=None)	todo		
+Lib/code.py	204	304	InteractiveConsole.interact	interact(self, banner=None, exitmsg=None)	todo		changed-in-3.15:
 Lib/code.py	306	327	InteractiveConsole.push	push(self, line, filename=None, _symbol='single')	todo		
 Lib/code.py	329	340	InteractiveConsole.raw_input	raw_input(self, prompt='')	todo		
 Lib/code.py	344	349	Quitter.__init__	__init__(self, name)	todo		

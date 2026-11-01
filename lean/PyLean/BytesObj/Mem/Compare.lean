@@ -148,8 +148,8 @@ theorem cmpReflexive_proven : CmpReflexive := by
 
 /-- The fast path of `unpack_cmp` gives what the `struct` path gives, for every native
 format and all memory: `Struct(c)` compiles, and comparing its unpacked values is the
-`switch` of `unpack_cmp` (:2979-3031). The source's only reason for having both is speed
-(the comment at :2958-2963). -/
+`switch` of `unpack_cmp` (@3.14.7:2979-3031). The source's only reason for having both is speed
+(the comment at @3.14.7:2958-2963). -/
 def CmpFastStruct : Prop :=
   ∀ (m : Mem) (p q : Int) (c : Char), nativeChar c = true →
     ∃ u, structGetUnpacker [c] (fmtSize c) = .ok u ∧

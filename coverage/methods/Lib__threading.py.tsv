@@ -1,106 +1,117 @@
 file	line	endline	name	signature	status	entry	note
-Lib/threading.py	76	83	setprofile	setprofile(func)	todo		
-Lib/threading.py	85	93	setprofile_all_threads	setprofile_all_threads(func)	todo		
-Lib/threading.py	95	97	getprofile	getprofile()	todo		
-Lib/threading.py	99	106	settrace	settrace(func)	todo		
-Lib/threading.py	108	116	settrace_all_threads	settrace_all_threads(func)	todo		
-Lib/threading.py	118	120	gettrace	gettrace()	todo		
-Lib/threading.py	126	144	RLock	RLock(*args, **kwargs)	todo		
-Lib/threading.py	156	159	_RLock.__init__	__init__(self)	todo		
-Lib/threading.py	161	174	_RLock.__repr__	__repr__(self)	todo		
-Lib/threading.py	176	179	_RLock._at_fork_reinit	_at_fork_reinit(self)	todo		
-Lib/threading.py	181	215	_RLock.acquire	acquire(self, blocking=True, timeout=-1)	todo		
-Lib/threading.py	219	240	_RLock.release	release(self)	todo		
-Lib/threading.py	242	243	_RLock.__exit__	__exit__(self, t, v, tb)	todo		
-Lib/threading.py	245	247	_RLock.locked	locked(self)	todo		
-Lib/threading.py	251	253	_RLock._acquire_restore	_acquire_restore(self, state)	todo		
-Lib/threading.py	255	263	_RLock._release_save	_release_save(self)	todo		
-Lib/threading.py	265	266	_RLock._is_owned	_is_owned(self)	todo		
-Lib/threading.py	270	273	_RLock._recursion_count	_recursion_count(self)	todo		
-Lib/threading.py	290	307	Condition.__init__	__init__(self, lock=None)	todo		
-Lib/threading.py	309	311	Condition._at_fork_reinit	_at_fork_reinit(self)	todo		
-Lib/threading.py	313	314	Condition.__enter__	__enter__(self)	todo		
-Lib/threading.py	316	317	Condition.__exit__	__exit__(self, *args)	todo		
-Lib/threading.py	319	320	Condition.__repr__	__repr__(self)	todo		
-Lib/threading.py	322	323	Condition._release_save	_release_save(self)	todo		
-Lib/threading.py	325	326	Condition._acquire_restore	_acquire_restore(self, x)	todo		
-Lib/threading.py	328	335	Condition._is_owned	_is_owned(self)	todo		
-Lib/threading.py	337	383	Condition.wait	wait(self, timeout=None)	todo		
-Lib/threading.py	385	406	Condition.wait_for	wait_for(self, predicate, timeout=None)	todo		
-Lib/threading.py	408	436	Condition.notify	notify(self, n=1)	todo		
-Lib/threading.py	438	445	Condition.notify_all	notify_all(self)	todo		
-Lib/threading.py	447	456	Condition.notifyAll	notifyAll(self)	todo		
-Lib/threading.py	471	475	Semaphore.__init__	__init__(self, value=1)	todo		
-Lib/threading.py	477	480	Semaphore.__repr__	__repr__(self)	todo		
-Lib/threading.py	482	525	Semaphore.acquire	acquire(self, blocking=True, timeout=None)	todo		
-Lib/threading.py	529	540	Semaphore.release	release(self, n=1)	todo		
-Lib/threading.py	542	543	Semaphore.__exit__	__exit__(self, t, v, tb)	todo		
-Lib/threading.py	563	565	BoundedSemaphore.__init__	__init__(self, value=1)	todo		
-Lib/threading.py	567	570	BoundedSemaphore.__repr__	__repr__(self)	todo		
-Lib/threading.py	572	588	BoundedSemaphore.release	release(self, n=1)	todo		
-Lib/threading.py	602	604	Event.__init__	__init__(self)	todo		
-Lib/threading.py	606	609	Event.__repr__	__repr__(self)	todo		
-Lib/threading.py	611	613	Event._at_fork_reinit	_at_fork_reinit(self)	todo		
-Lib/threading.py	615	617	Event.is_set	is_set(self)	todo		
-Lib/threading.py	619	628	Event.isSet	isSet(self)	todo		
-Lib/threading.py	630	639	Event.set	set(self)	todo		
-Lib/threading.py	641	649	Event.clear	clear(self)	todo		
-Lib/threading.py	651	671	Event.wait	wait(self, timeout=None)	todo		
-Lib/threading.py	694	710	Barrier.__init__	__init__(self, parties, action=None, timeout=None)	todo		
-Lib/threading.py	712	717	Barrier.__repr__	__repr__(self)	todo		
-Lib/threading.py	719	745	Barrier.wait	wait(self, timeout=None)	todo		
-Lib/threading.py	749	756	Barrier._enter	_enter(self)	todo		
-Lib/threading.py	760	770	Barrier._release	_release(self)	todo		
-Lib/threading.py	774	781	Barrier._wait	_wait(self, timeout)	todo		
-Lib/threading.py	785	790	Barrier._exit	_exit(self)	todo		
-Lib/threading.py	792	810	Barrier.reset	reset(self)	todo		
-Lib/threading.py	812	820	Barrier.abort	abort(self)	todo		
-Lib/threading.py	822	826	Barrier._break	_break(self)	todo		
-Lib/threading.py	829	831	Barrier.parties	parties(self)	todo		
-Lib/threading.py	834	840	Barrier.n_waiting	n_waiting(self)	todo		
-Lib/threading.py	843	845	Barrier.broken	broken(self)	todo		
-Lib/threading.py	854	855	_newname	_newname(name_template)	todo		
-Lib/threading.py	880	946	Thread.__init__	__init__(self, group=None, target=None, name=None, args=(), kwargs=None, *, daemon=None, context=None)	todo		
-Lib/threading.py	948	960	Thread._after_fork	_after_fork(self, new_ident=None)	todo		
-Lib/threading.py	962	973	Thread.__repr__	__repr__(self)	todo		
-Lib/threading.py	975	1011	Thread.start	start(self)	todo		
-Lib/threading.py	1013	1028	Thread.run	run(self)	todo		
-Lib/threading.py	1030	1048	Thread._bootstrap	_bootstrap(self)	todo		
-Lib/threading.py	1050	1051	Thread._set_ident	_set_ident(self)	todo		
-Lib/threading.py	1054	1055	Thread._set_native_id	_set_native_id(self)	todo		
-Lib/threading.py	1057	1063	Thread._set_os_name	_set_os_name(self)	todo		
-Lib/threading.py	1065	1086	Thread._bootstrap_inner	_bootstrap_inner(self)	todo		
-Lib/threading.py	1088	1091	Thread._delete	_delete(self)	todo		
-Lib/threading.py	1097	1133	Thread.join	join(self, timeout=None)	todo		
-Lib/threading.py	1136	1144	Thread.name	name(self)	todo		
-Lib/threading.py	1147	1151	Thread.name	name(self, name)	todo		
-Lib/threading.py	1154	1163	Thread.ident	ident(self)	todo		
-Lib/threading.py	1167	1175	Thread.native_id	native_id(self)	todo		
-Lib/threading.py	1177	1186	Thread.is_alive	is_alive(self)	todo		
-Lib/threading.py	1189	1201	Thread.daemon	daemon(self)	todo		
-Lib/threading.py	1204	1211	Thread.daemon	daemon(self, daemonic)	todo		
-Lib/threading.py	1213	1222	Thread.isDaemon	isDaemon(self)	todo		
-Lib/threading.py	1224	1233	Thread.setDaemon	setDaemon(self, daemonic)	todo		
-Lib/threading.py	1235	1244	Thread.getName	getName(self)	todo		
-Lib/threading.py	1246	1255	Thread.setName	setName(self, name)	todo		
-Lib/threading.py	1308	1356	_make_invoke_excepthook	_make_invoke_excepthook()	todo		
-Lib/threading.py	1370	1376	Timer.__init__	__init__(self, interval, function, args=None, kwargs=None)	todo		
-Lib/threading.py	1378	1380	Timer.cancel	cancel(self)	todo		
-Lib/threading.py	1382	1386	Timer.run	run(self)	todo		
-Lib/threading.py	1393	1401	_MainThread.__init__	__init__(self)	todo		
-Lib/threading.py	1414	1423	_DeleteDummyThreadOnDel.__init__	__init__(self, dummy_thread)	todo		
-Lib/threading.py	1425	1428	_DeleteDummyThreadOnDel.__del__	__del__(self, _active_limbo_lock=_active_limbo_lock, _active=_active)	todo		
-Lib/threading.py	1440	1450	_DummyThread.__init__	__init__(self)	todo		
-Lib/threading.py	1452	1455	_DummyThread.is_alive	is_alive(self)	todo		
-Lib/threading.py	1457	1458	_DummyThread.join	join(self, timeout=None)	todo		
-Lib/threading.py	1460	1465	_DummyThread._after_fork	_after_fork(self, new_ident=None)	todo		
-Lib/threading.py	1470	1480	current_thread	current_thread()	todo		
-Lib/threading.py	1482	1491	currentThread	currentThread()	todo		
-Lib/threading.py	1493	1503	active_count	active_count()	todo		
-Lib/threading.py	1505	1514	activeCount	activeCount()	todo		
-Lib/threading.py	1516	1518	_enumerate	_enumerate()	todo		
-Lib/threading.py	1520	1529	enumerate	enumerate()	todo		
-Lib/threading.py	1535	1548	_register_atexit	_register_atexit(func, *arg, **kwargs)	todo		
-Lib/threading.py	1559	1583	_shutdown	_shutdown()	todo		
-Lib/threading.py	1586	1593	main_thread	main_thread()	todo		
-Lib/threading.py	1596	1638	_after_fork	_after_fork()	todo		
+Lib/threading.py	77	84	setprofile	setprofile(func)	todo		
+Lib/threading.py	86	94	setprofile_all_threads	setprofile_all_threads(func)	todo		
+Lib/threading.py	96	98	getprofile	getprofile()	todo		
+Lib/threading.py	100	107	settrace	settrace(func)	todo		
+Lib/threading.py	109	117	settrace_all_threads	settrace_all_threads(func)	todo		
+Lib/threading.py	119	121	gettrace	gettrace()	todo		
+Lib/threading.py	127	138	RLock	RLock()	todo		changed-in-3.15:
+Lib/threading.py	150	153	_RLock.__init__	__init__(self)	todo		
+Lib/threading.py	155	168	_RLock.__repr__	__repr__(self)	todo		
+Lib/threading.py	170	173	_RLock._at_fork_reinit	_at_fork_reinit(self)	todo		
+Lib/threading.py	175	209	_RLock.acquire	acquire(self, blocking=True, timeout=-1)	todo		
+Lib/threading.py	213	234	_RLock.release	release(self)	todo		
+Lib/threading.py	236	237	_RLock.__exit__	__exit__(self, t, v, tb)	todo		
+Lib/threading.py	239	241	_RLock.locked	locked(self)	todo		
+Lib/threading.py	245	247	_RLock._acquire_restore	_acquire_restore(self, state)	todo		
+Lib/threading.py	249	257	_RLock._release_save	_release_save(self)	todo		
+Lib/threading.py	259	260	_RLock._is_owned	_is_owned(self)	todo		
+Lib/threading.py	264	267	_RLock._recursion_count	_recursion_count(self)	todo		
+Lib/threading.py	284	301	Condition.__init__	__init__(self, lock=None)	todo		
+Lib/threading.py	303	305	Condition._at_fork_reinit	_at_fork_reinit(self)	todo		
+Lib/threading.py	307	308	Condition.__enter__	__enter__(self)	todo		
+Lib/threading.py	310	311	Condition.__exit__	__exit__(self, *args)	todo		
+Lib/threading.py	313	314	Condition.__repr__	__repr__(self)	todo		
+Lib/threading.py	316	317	Condition._release_save	_release_save(self)	todo		
+Lib/threading.py	319	320	Condition._acquire_restore	_acquire_restore(self, x)	todo		
+Lib/threading.py	322	329	Condition._is_owned	_is_owned(self)	todo		
+Lib/threading.py	331	378	Condition.wait	wait(self, timeout=None)	todo		changed-in-3.15:
+Lib/threading.py	380	401	Condition.wait_for	wait_for(self, predicate, timeout=None)	todo		
+Lib/threading.py	403	431	Condition.notify	notify(self, n=1)	todo		
+Lib/threading.py	433	440	Condition.notify_all	notify_all(self)	todo		
+Lib/threading.py	442	451	Condition.notifyAll	notifyAll(self)	todo		
+Lib/threading.py	466	470	Semaphore.__init__	__init__(self, value=1)	todo		
+Lib/threading.py	472	475	Semaphore.__repr__	__repr__(self)	todo		
+Lib/threading.py	477	520	Semaphore.acquire	acquire(self, blocking=True, timeout=None)	todo		
+Lib/threading.py	524	535	Semaphore.release	release(self, n=1)	todo		
+Lib/threading.py	537	538	Semaphore.__exit__	__exit__(self, t, v, tb)	todo		
+Lib/threading.py	558	560	BoundedSemaphore.__init__	__init__(self, value=1)	todo		
+Lib/threading.py	562	565	BoundedSemaphore.__repr__	__repr__(self)	todo		
+Lib/threading.py	567	583	BoundedSemaphore.release	release(self, n=1)	todo		
+Lib/threading.py	597	599	Event.__init__	__init__(self)	todo		
+Lib/threading.py	601	604	Event.__repr__	__repr__(self)	todo		
+Lib/threading.py	606	608	Event._at_fork_reinit	_at_fork_reinit(self)	todo		
+Lib/threading.py	610	612	Event.is_set	is_set(self)	todo		
+Lib/threading.py	614	623	Event.isSet	isSet(self)	todo		
+Lib/threading.py	625	634	Event.set	set(self)	todo		
+Lib/threading.py	636	644	Event.clear	clear(self)	todo		
+Lib/threading.py	646	666	Event.wait	wait(self, timeout=None)	todo		
+Lib/threading.py	689	705	Barrier.__init__	__init__(self, parties, action=None, timeout=None)	todo		
+Lib/threading.py	707	712	Barrier.__repr__	__repr__(self)	todo		
+Lib/threading.py	714	740	Barrier.wait	wait(self, timeout=None)	todo		
+Lib/threading.py	744	751	Barrier._enter	_enter(self)	todo		
+Lib/threading.py	755	765	Barrier._release	_release(self)	todo		
+Lib/threading.py	769	776	Barrier._wait	_wait(self, timeout)	todo		
+Lib/threading.py	780	785	Barrier._exit	_exit(self)	todo		
+Lib/threading.py	787	805	Barrier.reset	reset(self)	todo		
+Lib/threading.py	807	815	Barrier.abort	abort(self)	todo		
+Lib/threading.py	817	821	Barrier._break	_break(self)	todo		
+Lib/threading.py	824	826	Barrier.parties	parties(self)	todo		
+Lib/threading.py	829	835	Barrier.n_waiting	n_waiting(self)	todo		
+Lib/threading.py	838	840	Barrier.broken	broken(self)	todo		
+Lib/threading.py	868	870	serialize_iterator.__init__	__init__(self, iterable)	todo		changed-in-3.15: new function
+Lib/threading.py	872	873	serialize_iterator.__iter__	__iter__(self)	todo		changed-in-3.15: new function
+Lib/threading.py	875	877	serialize_iterator.__next__	__next__(self)	todo		changed-in-3.15: new function
+Lib/threading.py	879	885	serialize_iterator.send	send(self, value, /)	todo		changed-in-3.15: new function
+Lib/threading.py	887	893	serialize_iterator.throw	throw(self, *args)	todo		changed-in-3.15: new function
+Lib/threading.py	895	901	serialize_iterator.close	close(self)	todo		changed-in-3.15: new function
+Lib/threading.py	904	934	synchronized_iterator	synchronized_iterator(func)	todo		changed-in-3.15: new function
+Lib/threading.py	937	957	concurrent_tee	concurrent_tee(iterable, n=2)	todo		changed-in-3.15: new function
+Lib/threading.py	963	971	_concurrent_tee.__init__	__init__(self, iterable)	todo		changed-in-3.15: new function
+Lib/threading.py	973	974	_concurrent_tee.__iter__	__iter__(self)	todo		changed-in-3.15: new function
+Lib/threading.py	976	984	_concurrent_tee.__next__	__next__(self)	todo		changed-in-3.15: new function
+Lib/threading.py	991	992	_newname	_newname(name_template)	todo		
+Lib/threading.py	1017	1083	Thread.__init__	__init__(self, group=None, target=None, name=None, args=(), kwargs=None, *, daemon=None, context=None)	todo		
+Lib/threading.py	1085	1097	Thread._after_fork	_after_fork(self, new_ident=None)	todo		
+Lib/threading.py	1099	1110	Thread.__repr__	__repr__(self)	todo		
+Lib/threading.py	1112	1148	Thread.start	start(self)	todo		
+Lib/threading.py	1150	1165	Thread.run	run(self)	todo		
+Lib/threading.py	1167	1185	Thread._bootstrap	_bootstrap(self)	todo		
+Lib/threading.py	1187	1188	Thread._set_ident	_set_ident(self)	todo		
+Lib/threading.py	1191	1192	Thread._set_native_id	_set_native_id(self)	todo		
+Lib/threading.py	1194	1200	Thread._set_os_name	_set_os_name(self)	todo		
+Lib/threading.py	1202	1223	Thread._bootstrap_inner	_bootstrap_inner(self)	todo		
+Lib/threading.py	1225	1228	Thread._delete	_delete(self)	todo		
+Lib/threading.py	1234	1270	Thread.join	join(self, timeout=None)	todo		
+Lib/threading.py	1273	1281	Thread.name	name(self)	todo		
+Lib/threading.py	1284	1288	Thread.name	name(self, name)	todo		
+Lib/threading.py	1291	1300	Thread.ident	ident(self)	todo		
+Lib/threading.py	1304	1312	Thread.native_id	native_id(self)	todo		
+Lib/threading.py	1314	1323	Thread.is_alive	is_alive(self)	todo		
+Lib/threading.py	1326	1338	Thread.daemon	daemon(self)	todo		
+Lib/threading.py	1341	1348	Thread.daemon	daemon(self, daemonic)	todo		
+Lib/threading.py	1350	1359	Thread.isDaemon	isDaemon(self)	todo		
+Lib/threading.py	1361	1370	Thread.setDaemon	setDaemon(self, daemonic)	todo		
+Lib/threading.py	1372	1381	Thread.getName	getName(self)	todo		
+Lib/threading.py	1383	1392	Thread.setName	setName(self, name)	todo		
+Lib/threading.py	1445	1493	_make_invoke_excepthook	_make_invoke_excepthook()	todo		
+Lib/threading.py	1507	1513	Timer.__init__	__init__(self, interval, function, args=None, kwargs=None)	todo		
+Lib/threading.py	1515	1517	Timer.cancel	cancel(self)	todo		
+Lib/threading.py	1519	1523	Timer.run	run(self)	todo		
+Lib/threading.py	1530	1538	_MainThread.__init__	__init__(self)	todo		
+Lib/threading.py	1551	1560	_DeleteDummyThreadOnDel.__init__	__init__(self, dummy_thread)	todo		
+Lib/threading.py	1562	1565	_DeleteDummyThreadOnDel.__del__	__del__(self, _active_limbo_lock=_active_limbo_lock, _active=_active)	todo		
+Lib/threading.py	1577	1587	_DummyThread.__init__	__init__(self)	todo		
+Lib/threading.py	1589	1592	_DummyThread.is_alive	is_alive(self)	todo		
+Lib/threading.py	1594	1595	_DummyThread.join	join(self, timeout=None)	todo		
+Lib/threading.py	1597	1602	_DummyThread._after_fork	_after_fork(self, new_ident=None)	todo		
+Lib/threading.py	1607	1617	current_thread	current_thread()	todo		
+Lib/threading.py	1619	1628	currentThread	currentThread()	todo		
+Lib/threading.py	1630	1640	active_count	active_count()	todo		
+Lib/threading.py	1642	1651	activeCount	activeCount()	todo		
+Lib/threading.py	1653	1655	_enumerate	_enumerate()	todo		
+Lib/threading.py	1657	1666	enumerate	enumerate()	todo		
+Lib/threading.py	1672	1685	_register_atexit	_register_atexit(func, *arg, **kwargs)	todo		
+Lib/threading.py	1696	1721	_shutdown	_shutdown()	todo		changed-in-3.15:
+Lib/threading.py	1724	1731	main_thread	main_thread()	todo		
+Lib/threading.py	1734	1776	_after_fork	_after_fork()	todo		

@@ -1,7 +1,7 @@
 import PyLean.Fractions.Model
 
 /-!
-`Fraction(string)`, fractions.py:56-68 (`_RATIONAL_FORMAT`) and :257-287.
+`Fraction(string)`, fractions.py:56-68 (`_RATIONAL_FORMAT`) and :252-287.
 
 The regex is matched by a hand-written scanner that follows the regex's
 backtracking to its unique outcome:
@@ -18,8 +18,8 @@ plus four common `Nd` blocks (Arabic-Indic, Extended Arabic-Indic,
 Devanagari, Fullwidth), and the differential tester draws digits only from
 these.
 
-`int()` on a matched group (fractions.py:263, :266, :273, :277) raises
-`ValueError` beyond 4300 digits (Objects/longobject.c:2940-2950).
+`int()` on a matched group (fractions.py:258, :261, :268, :272) raises
+`ValueError` beyond 4300 digits (Objects/longobject.c:3022-3032).
 -/
 
 namespace PyLean.Fractions
@@ -139,7 +139,7 @@ def matchRational (s : List Char) : Option Groups :=
         let (ex, s5) := expGroup s4
         if skipWs s5 = [] then some ⟨neg, num, none, dec, ex⟩ else none
 
-/-- `_MAX_STR_DIGITS_ERROR_FMT_TO_INT`, Objects/longobject.c:30. -/
+/-- `_MAX_STR_DIGITS_ERROR_FMT_TO_INT`, Objects/longobject.c:32. -/
 def limitToIntMsg (digits : Nat) : String :=
   s!"Exceeds the limit (4300 digits) for integer string conversion: value has {digits} digits; use sys.set_int_max_str_digits() to increase the limit"
 
@@ -161,7 +161,7 @@ def pyIntOfDigits (cs : List Char) : Py Int :=
     let v : Int := digitsValue body
     .ok (if neg then -v else v)
 
-/-- `Fraction(s)` for a string `s`, fractions.py:257-287 then :302-311. -/
+/-- `Fraction(s)` for a string `s`, fractions.py:252-287 then :302-311. -/
 def parse (s : List Char) : Py Frac := do
   let some m := matchRational s
     | throw (.valueError "~Invalid literal for Fraction: <repr>")

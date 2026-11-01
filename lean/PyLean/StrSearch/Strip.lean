@@ -95,9 +95,9 @@ def strOnlySpace (c : Nat) : Bool := (0x1c ≤ c ∧ c ≤ 0x1f) || c == 0x85 ||
 def strOnlyLinebreak (c : Nat) : Bool := c == 11 || c == 12 || (0x1c ≤ c ∧ c ≤ 0x1e) || c == 0x85
 
 /-- `str.strip`/`lstrip`/`rstrip` without `chars` take an ASCII fast path
-(`_Py_ascii_whitespace`, unicodeobject.c:12684-12708) that agrees with the
+(`_Py_ascii_whitespace`, unicodeobject.c:12428-12452) that agrees with the
 general `Py_UNICODE_ISSPACE` path; `bytearray`'s explicit list `"\t\n\r\f\v "`
-(bytearrayobject.c:2326-2328) agrees with `bytes`' `Py_ISSPACE`; and `str`
+(bytearrayobject.c:2433-2435) agrees with `bytes`' `Py_ISSPACE`; and `str`
 agrees with `bytes` on byte-valued strings without the characters only `str`
 treats as whitespace (U+001C..U+001F, U+0085, U+00A0); with an explicit
 `chars` argument `str`, `bytes` and `bytearray` always agree. -/

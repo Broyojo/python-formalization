@@ -7,38 +7,39 @@ Modules/_testcapi/heaptype.c	205	315	test_type_from_ephemeral_spec	test_type_fro
 Modules/_testcapi/heaptype.c	353	372	create_type_from_repeated_slots	create_type_from_repeated_slots(PyObject *self, PyObject *variant_obj)	excluded		test-support: only for CPython's own tests
 Modules/_testcapi/heaptype.c	376	386	make_immutable_type_with_base	make_immutable_type_with_base(PyObject *self, PyObject *base)	excluded		test-support: only for CPython's own tests
 Modules/_testcapi/heaptype.c	389	399	make_type_with_base	make_type_with_base(PyObject *self, PyObject *base)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	403	410	pyobject_getitemdata	pyobject_getitemdata(PyObject *self, PyObject *o)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	414	457	create_type_with_token	create_type_with_token(PyObject *module, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	460	467	get_tp_token	get_tp_token(PyObject *self, PyObject *type)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	470	522	pytype_getbasebytoken	pytype_getbasebytoken(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	525	529	pytype_getmodulebydef	pytype_getmodulebydef(PyObject *self, PyObject *type)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	544	548	create_heapctype_with_none_bases_slot	create_heapctype_with_none_bases_slot(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	629	633	heapctype_init	heapctype_init(PyObject *self, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	636	641	heapgcctype_traverse	heapgcctype_traverse(PyObject *op, visitproc visit, void *arg)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	644	651	heapgcctype_dealloc	heapgcctype_dealloc(PyObject *op)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	675	681	heapctype_dealloc	heapctype_dealloc(PyObject *op)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	709	718	heapctypesubclass_init	heapctypesubclass_init(PyObject *self, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	750	759	heapctypewithbuffer_getbuffer	heapctypewithbuffer_getbuffer(PyObject *op, Py_buffer *view, int flags)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	762	766	heapctypewithbuffer_releasebuffer	heapctypewithbuffer_releasebuffer(PyObject *op, Py_buffer *view)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	789	795	heapctypesubclasswithfinalizer_init	heapctypesubclasswithfinalizer_init(PyObject *self, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	798	847	heapctypesubclasswithfinalizer_finalize	heapctypesubclasswithfinalizer_finalize(PyObject *self)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	878	881	heap_ctype_metaclass_custom_tp_new	heap_ctype_metaclass_custom_tp_new(PyTypeObject *tp, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	921	928	heapctypewithdict_dealloc	heapctypewithdict_dealloc(PyObject *op)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	965	969	heapmanaged_traverse	heapmanaged_traverse(PyObject *self, visitproc visit, void *arg)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	972	976	heapmanaged_clear	heapmanaged_clear(PyObject *self)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	979	987	heapmanaged_dealloc	heapmanaged_dealloc(PyObject *op)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	1006	1014	heapctypewithmanagedweakref_dealloc	heapctypewithmanagedweakref_dealloc(PyObject* self)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	1065	1074	heapctypewithweakref_dealloc	heapctypewithweakref_dealloc(PyObject *op)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	1113	1117	heapctypesetattr_init	heapctypesetattr_init(PyObject *self, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	1120	1126	heapctypesetattr_dealloc	heapctypesetattr_dealloc(PyObject *op)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	1129	1155	heapctypesetattr_setattro	heapctypesetattr_setattro(PyObject *op, PyObject *attr, PyObject *value)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	1193	1212	heapctype_vectorcall_vectorcall	static PyObject *heapctype_vectorcall_vectorcall(PyObject *self, PyObject *const *args_in, size_t nargsf, PyObject *kwargs_in)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	1215	1222	heapctype_vectorcall_new	heapctype_vectorcall_new(PyTypeObject* type, PyObject* args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	1225	1234	heapctype_vectorcall_init	heapctype_vectorcall_init(PyObject *self, PyObject *args, PyObject *kwargs) {	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	1261	1285	HeapCCollection_new	HeapCCollection_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	1288	1292	HeapCCollection_length	HeapCCollection_length(PyObject *op)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	1295	1305	HeapCCollection_item	HeapCCollection_item(PyObject *self, Py_ssize_t i)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	1308	1318	HeapCCollection_traverse	HeapCCollection_traverse(PyObject *self, visitproc visit, void *arg)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	1321	1333	HeapCCollection_clear	HeapCCollection_clear(PyObject *self)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	1336	1343	HeapCCollection_dealloc	HeapCCollection_dealloc(PyObject *self)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/heaptype.c	1366	1480	_PyTestCapi_Init_Heaptype	_PyTestCapi_Init_Heaptype(PyObject *m) {	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	403	411	pyobject_getitemdata	pyobject_getitemdata(PyObject *self, PyObject *o)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	415	458	create_type_with_token	create_type_with_token(PyObject *module, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	461	468	get_tp_token	get_tp_token(PyObject *self, PyObject *type)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	471	534	pytype_getbasebytoken	pytype_getbasebytoken(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	537	542	pytype_getmodulebydef	pytype_getmodulebydef(PyObject *self, PyObject *type)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	545	559	pytype_getmodulebytoken	pytype_getmodulebytoken(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	574	578	create_heapctype_with_none_bases_slot	create_heapctype_with_none_bases_slot(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	661	665	heapctype_init	heapctype_init(PyObject *self, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	668	673	heapgcctype_traverse	heapgcctype_traverse(PyObject *op, visitproc visit, void *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	676	683	heapgcctype_dealloc	heapgcctype_dealloc(PyObject *op)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	707	713	heapctype_dealloc	heapctype_dealloc(PyObject *op)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	741	750	heapctypesubclass_init	heapctypesubclass_init(PyObject *self, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	782	791	heapctypewithbuffer_getbuffer	heapctypewithbuffer_getbuffer(PyObject *op, Py_buffer *view, int flags)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	794	798	heapctypewithbuffer_releasebuffer	heapctypewithbuffer_releasebuffer(PyObject *op, Py_buffer *view)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	821	827	heapctypesubclasswithfinalizer_init	heapctypesubclasswithfinalizer_init(PyObject *self, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	830	877	heapctypesubclasswithfinalizer_finalize	heapctypesubclasswithfinalizer_finalize(PyObject *self)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	908	911	heap_ctype_metaclass_custom_tp_new	heap_ctype_metaclass_custom_tp_new(PyTypeObject *tp, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	951	958	heapctypewithdict_dealloc	heapctypewithdict_dealloc(PyObject *op)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	995	999	heapmanaged_traverse	heapmanaged_traverse(PyObject *self, visitproc visit, void *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	1002	1006	heapmanaged_clear	heapmanaged_clear(PyObject *self)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	1009	1017	heapmanaged_dealloc	heapmanaged_dealloc(PyObject *op)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	1036	1044	heapctypewithmanagedweakref_dealloc	heapctypewithmanagedweakref_dealloc(PyObject* self)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	1095	1104	heapctypewithweakref_dealloc	heapctypewithweakref_dealloc(PyObject *op)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	1143	1147	heapctypesetattr_init	heapctypesetattr_init(PyObject *self, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	1150	1156	heapctypesetattr_dealloc	heapctypesetattr_dealloc(PyObject *op)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	1159	1185	heapctypesetattr_setattro	heapctypesetattr_setattro(PyObject *op, PyObject *attr, PyObject *value)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	1223	1242	heapctype_vectorcall_vectorcall	static PyObject *heapctype_vectorcall_vectorcall(PyObject *self, PyObject *const *args_in, size_t nargsf, PyObject *kwargs_in)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	1245	1252	heapctype_vectorcall_new	heapctype_vectorcall_new(PyTypeObject* type, PyObject* args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	1255	1264	heapctype_vectorcall_init	heapctype_vectorcall_init(PyObject *self, PyObject *args, PyObject *kwargs) {	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	1291	1316	HeapCCollection_new	HeapCCollection_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	1319	1323	HeapCCollection_length	HeapCCollection_length(PyObject *op)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	1326	1337	HeapCCollection_item	HeapCCollection_item(PyObject *self, Py_ssize_t i)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	1340	1351	HeapCCollection_traverse	HeapCCollection_traverse(PyObject *self, visitproc visit, void *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	1354	1367	HeapCCollection_clear	HeapCCollection_clear(PyObject *self)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	1370	1377	HeapCCollection_dealloc	HeapCCollection_dealloc(PyObject *self)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/heaptype.c	1400	1514	_PyTestCapi_Init_Heaptype	_PyTestCapi_Init_Heaptype(PyObject *m) {	excluded		test-support: only for CPython's own tests

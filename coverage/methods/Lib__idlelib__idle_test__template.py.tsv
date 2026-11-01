@@ -1,4 +1,4 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/idle_test/template.py	11	14	Test.setUpClass	setUpClass(cls)	excluded		platform: GUI toolkit
-Lib/idlelib/idle_test/template.py	17	22	Test.tearDownClass	tearDownClass(cls)	excluded		platform: GUI toolkit
-Lib/idlelib/idle_test/template.py	24	25	Test.test_init	test_init(self)	excluded		platform: GUI toolkit
+Lib/idlelib/idle_test/template.py	12	15	Test.setUpClass	setUpClass(cls)	excluded		platform: GUI toolkit
+Lib/idlelib/idle_test/template.py	18	23	Test.tearDownClass	tearDownClass(cls)	excluded		platform: GUI toolkit
+Lib/idlelib/idle_test/template.py	26	27	Test.test_init	test_init(self)	excluded		platform: GUI toolkit

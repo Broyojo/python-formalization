@@ -40,7 +40,7 @@ theorem roundDir_spec (m : Rounding) (neg : Bool) (q r h : Nat) (hr : r < 2 * h)
     refine ⟨?_, ?_⟩ <;> (try constructor) <;> (try intro) <;> (repeat' split) <;> simp_all <;> omega
 
 /-- The digits-below-zero substitution of `_rescale`/`_fix`
-(`self = _dec_from_triple(self._sign, '1', exp-1)`, _pydecimal.py:2600-2602)
+(`self = _dec_from_triple(self._sign, '1', exp-1)`, _pydecimal.py:2700-2702)
 rounds like dropping all digits of `c` directly. -/
 theorem roundDir_small (m : Rounding) (neg : Bool) (c h : Nat) (hc0 : c ≠ 0) (_h5 : 5 ≤ h) (hck : c < h) :
     roundDir m neg 0 1 5 = roundDir m neg 0 c h := by

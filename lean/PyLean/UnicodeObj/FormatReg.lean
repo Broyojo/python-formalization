@@ -25,7 +25,7 @@ def formatEntries : List Entry := [
   { id := "unicodeobj-format-parse-asserts", pyFile := "Python/formatter_unicode.c"
     pyFns := []
     statement := "Every parsed spec has one of the four alignments and a sign of NUL, space, + or -, whatever the input."
-    source := "assert (format->align <= 127) and assert (format->sign <= 127), formatter_unicode.c:369-370, in sharp form"
+    source := "assert (format->align <= 127) and assert (format->sign <= 127), formatter_unicode.c@3.14.7:369-370, in sharp form"
     status := .proven, prop := ``ParseAsserts, thm := some ``parseAsserts_proven },
   { id := "unicodeobj-format-str-shape", pyFile := "Python/formatter_unicode.c"
     pyFns := []

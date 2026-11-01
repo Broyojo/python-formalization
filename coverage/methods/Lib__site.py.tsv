@@ -1,29 +1,45 @@
 file	line	endline	name	signature	status	entry	note
-Lib/site.py	93	95	_trace	_trace(message)	todo		
-Lib/site.py	98	101	_warn	_warn(*args, **kwargs)	todo		
-Lib/site.py	104	110	makepath	makepath(*paths)	todo		
-Lib/site.py	113	133	abs_paths	abs_paths()	todo		
-Lib/site.py	136	152	removeduppaths	removeduppaths()	todo		
-Lib/site.py	155	165	_init_pathinfo	_init_pathinfo()	todo		
-Lib/site.py	168	231	addpackage	addpackage(sitedir, name, known_paths)	todo		
-Lib/site.py	234	257	addsitedir	addsitedir(sitedir, known_paths=None)	todo		
-Lib/site.py	260	282	check_enableusersite	check_enableusersite()	todo		
-Lib/site.py	292	293	_get_implementation	_get_implementation()	todo		
-Lib/site.py	296	316	_getuserbase	_getuserbase()	todo		
-Lib/site.py	320	336	_get_path	_get_path(userbase)	todo		
-Lib/site.py	339	349	getuserbase	getuserbase()	todo		
-Lib/site.py	352	367	getusersitepackages	getusersitepackages()	todo		
-Lib/site.py	369	382	addusersitepackages	addusersitepackages(known_paths)	todo		
-Lib/site.py	384	421	getsitepackages	getsitepackages(prefixes=None)	todo		
-Lib/site.py	423	430	addsitepackages	addsitepackages(known_paths, prefixes=None)	todo		
-Lib/site.py	432	445	setquit	setquit()	todo		
-Lib/site.py	448	467	setcopyright	setcopyright()	todo		
-Lib/site.py	470	471	sethelper	sethelper()	todo		
-Lib/site.py	474	484	gethistoryfile	gethistoryfile()	todo		
-Lib/site.py	487	491	enablerlcompleter	enablerlcompleter()	todo		
-Lib/site.py	494	592	register_readline	register_readline()	todo		
-Lib/site.py	595	647	venv	venv(known_paths)	todo		
-Lib/site.py	650	667	execsitecustomize	execsitecustomize()	todo		
-Lib/site.py	670	687	execusercustomize	execusercustomize()	todo		
-Lib/site.py	690	717	main	main()	todo		candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output
-Lib/site.py	724	776	_script	_script()	todo		
+Lib/site.py	69	71	_trace	_trace(message, exc=None)	todo		changed-in-3.15:
+Lib/site.py	74	80	_print_error	_print_error(message, exc=None)	todo		changed-in-3.15: new function
+Lib/site.py	83	84	_warn	_warn(*args, **kwargs)	todo		changed-in-3.15:
+Lib/site.py	87	94	_warn_future_us	_warn_future_us(message, remove)	todo		changed-in-3.15: new function
+Lib/site.py	97	103	makepath	makepath(*paths)	todo		
+Lib/site.py	106	122	abs_paths	abs_paths()	todo		changed-in-3.15:
+Lib/site.py	125	141	removeduppaths	removeduppaths()	todo		
+Lib/site.py	144	154	_init_pathinfo	_init_pathinfo()	todo		
+Lib/site.py	180	228	_read_pthstart_file	_read_pthstart_file(sitedir, name, suffix)	todo		changed-in-3.15: new function
+Lib/site.py	259	288	StartupState.__init__	__init__(self, known_paths=None)	todo		changed-in-3.15: new function
+Lib/site.py	290	305	StartupState.addsitedir	addsitedir(self, sitedir)	todo		changed-in-3.15: new function
+Lib/site.py	307	317	StartupState.addusersitepackages	addusersitepackages(self)	todo		changed-in-3.15: new function
+Lib/site.py	319	329	StartupState.addsitepackages	addsitepackages(self, prefixes=None)	todo		changed-in-3.15: new function
+Lib/site.py	331	365	StartupState._addsitedir	_addsitedir(self, sitedir, *, process_known_sitedirs)	todo		changed-in-3.15: new function
+Lib/site.py	367	389	StartupState._record_sitedir	_record_sitedir(self, sitedir, *, process_known_sitedirs=True)	todo		changed-in-3.15: new function
+Lib/site.py	391	440	StartupState._read_pth_file	_read_pth_file(self, sitedir, name)	todo		changed-in-3.15: new function
+Lib/site.py	442	461	StartupState._read_start_file	_read_start_file(self, sitedir, name)	todo		changed-in-3.15: new function
+Lib/site.py	463	473	StartupState.process	process(self)	todo		changed-in-3.15: new function
+Lib/site.py	475	500	StartupState._extend_syspath	_extend_syspath(self)	todo		changed-in-3.15: new function
+Lib/site.py	502	544	StartupState._exec_imports	_exec_imports(self)	todo		changed-in-3.15: new function
+Lib/site.py	546	577	StartupState._execute_start_entrypoints	_execute_start_entrypoints(self)	todo		changed-in-3.15: new function
+Lib/site.py	580	592	addpackage	addpackage(sitedir, name, known_paths)	todo		changed-in-3.15:
+Lib/site.py	595	612	addsitedir	addsitedir(sitedir, known_paths=None)	todo		changed-in-3.15:
+Lib/site.py	615	637	check_enableusersite	check_enableusersite()	todo		
+Lib/site.py	647	648	_get_implementation	_get_implementation()	todo		
+Lib/site.py	651	671	_getuserbase	_getuserbase()	todo		
+Lib/site.py	675	691	_get_path	_get_path(userbase)	todo		changed-in-3.15:
+Lib/site.py	694	704	getuserbase	getuserbase()	todo		
+Lib/site.py	707	722	getusersitepackages	getusersitepackages()	todo		
+Lib/site.py	725	735	addusersitepackages	addusersitepackages(known_paths)	todo		changed-in-3.15:
+Lib/site.py	738	775	getsitepackages	getsitepackages(prefixes=None)	todo		
+Lib/site.py	778	788	addsitepackages	addsitepackages(known_paths, prefixes=None)	todo		changed-in-3.15:
+Lib/site.py	791	804	setquit	setquit()	todo		
+Lib/site.py	807	826	setcopyright	setcopyright()	todo		
+Lib/site.py	829	830	sethelper	sethelper()	todo		
+Lib/site.py	833	843	gethistoryfile	gethistoryfile()	todo		
+Lib/site.py	846	850	enablerlcompleter	enablerlcompleter()	todo		
+Lib/site.py	853	953	register_readline	register_readline()	todo		changed-in-3.15:
+Lib/site.py	956	961	venv	venv(known_paths)	todo		changed-in-3.15:
+Lib/site.py	964	1019	_venv	_venv(state)	todo		changed-in-3.15: new function
+Lib/site.py	1022	1039	execsitecustomize	execsitecustomize()	todo		
+Lib/site.py	1042	1059	execusercustomize	execusercustomize()	todo		
+Lib/site.py	1062	1097	main	main()	todo		changed-in-3.15: candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output
+Lib/site.py	1104	1156	_script	_script()	todo		

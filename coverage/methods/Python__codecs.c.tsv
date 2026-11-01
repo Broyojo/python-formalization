@@ -1,68 +1,68 @@
 file	line	endline	name	signature	status	entry	note
-Python/codecs.c	32	55	PyCodec_Register	int PyCodec_Register(PyObject *search_function)	todo		
-Python/codecs.c	58	92	PyCodec_Unregister	PyCodec_Unregister(PyObject *search_function)	todo		
-Python/codecs.c	100	125	normalizestring	PyObject *normalizestring(const char *string)	todo		
-Python/codecs.c	142	227	_PyCodec_Lookup	PyObject *_PyCodec_Lookup(const char *encoding)	todo		
-Python/codecs.c	231	244	PyCodec_KnownEncoding	int PyCodec_KnownEncoding(const char *encoding)	todo		
-Python/codecs.c	247	267	args_tuple	PyObject *args_tuple(PyObject *object, const char *errors)	todo		
-Python/codecs.c	272	283	codec_getitem	PyObject *codec_getitem(const char *encoding, int index)	todo		
-Python/codecs.c	287	302	codec_makeincrementalcodec	PyObject *codec_makeincrementalcodec(PyObject *codec_info, const char *errors, const char *attrname)	todo		
-Python/codecs.c	305	317	codec_getincrementalcodec	PyObject *codec_getincrementalcodec(const char *encoding, const char *errors, const char *attrname)	todo		
-Python/codecs.c	322	340	codec_getstreamcodec	PyObject *codec_getstreamcodec(const char *encoding, PyObject *stream, const char *errors, const int index)	todo		
-Python/codecs.c	345	350	_PyCodecInfo_GetIncrementalDecoder	PyObject *_PyCodecInfo_GetIncrementalDecoder(PyObject *codec_info, const char *errors)	todo		
-Python/codecs.c	352	357	_PyCodecInfo_GetIncrementalEncoder	PyObject *_PyCodecInfo_GetIncrementalEncoder(PyObject *codec_info, const char *errors)	todo		
-Python/codecs.c	366	369	PyCodec_Encoder	PyObject *PyCodec_Encoder(const char *encoding)	todo		
-Python/codecs.c	371	374	PyCodec_Decoder	PyObject *PyCodec_Decoder(const char *encoding)	todo		
-Python/codecs.c	376	380	PyCodec_IncrementalEncoder	PyObject *PyCodec_IncrementalEncoder(const char *encoding, const char *errors)	todo		
-Python/codecs.c	382	386	PyCodec_IncrementalDecoder	PyObject *PyCodec_IncrementalDecoder(const char *encoding, const char *errors)	todo		
-Python/codecs.c	388	393	PyCodec_StreamReader	PyObject *PyCodec_StreamReader(const char *encoding, PyObject *stream, const char *errors)	todo		
-Python/codecs.c	395	400	PyCodec_StreamWriter	PyObject *PyCodec_StreamWriter(const char *encoding, PyObject *stream, const char *errors)	todo		
-Python/codecs.c	408	445	_PyCodec_EncodeInternal	_PyCodec_EncodeInternal(PyObject *object, PyObject *encoder, const char *encoding, const char *errors)	todo		
-Python/codecs.c	453	489	_PyCodec_DecodeInternal	_PyCodec_DecodeInternal(PyObject *object, PyObject *decoder, const char *encoding, const char *errors)	todo		
-Python/codecs.c	492	503	PyCodec_Encode	PyObject *PyCodec_Encode(PyObject *object, const char *encoding, const char *errors)	todo		
-Python/codecs.c	505	516	PyCodec_Decode	PyObject *PyCodec_Decode(PyObject *object, const char *encoding, const char *errors)	todo		
-Python/codecs.c	519	564	_PyCodec_LookupTextEncoding	PyObject * _PyCodec_LookupTextEncoding(const char *encoding, const char *alternate_command)	todo		
-Python/codecs.c	568	582	codec_getitem_checked	PyObject *codec_getitem_checked(const char *encoding, const char *alternate_command, int index)	todo		
-Python/codecs.c	584	587	_PyCodec_TextEncoder	static PyObject * _PyCodec_TextEncoder(const char *encoding)	todo		
-Python/codecs.c	589	592	_PyCodec_TextDecoder	static PyObject * _PyCodec_TextDecoder(const char *encoding)	todo		
-Python/codecs.c	594	605	_PyCodec_EncodeText	PyObject *_PyCodec_EncodeText(PyObject *object, const char *encoding, const char *errors)	todo		
-Python/codecs.c	607	618	_PyCodec_DecodeText	PyObject *_PyCodec_DecodeText(PyObject *object, const char *encoding, const char *errors)	todo		
-Python/codecs.c	626	636	PyCodec_RegisterError	int PyCodec_RegisterError(const char *name, PyObject *error)	todo		
-Python/codecs.c	638	650	_PyCodec_UnregisterError	int _PyCodec_UnregisterError(const char *name)	todo		
-Python/codecs.c	655	671	PyCodec_LookupError	PyObject *PyCodec_LookupError(const char *name)	todo		
-Python/codecs.c	675	679	wrong_exception_type	wrong_exception_type(PyObject *exc)	todo		
-Python/codecs.c	697	711	codec_handler_unicode_hex_width	codec_handler_unicode_hex_width(Py_UCS4 ch)	todo		
-Python/codecs.c	719	741	codec_handler_write_unicode_hex	codec_handler_write_unicode_hex(Py_UCS1 **p, Py_UCS4 ch)	todo		
-Python/codecs.c	749	760	n_decimal_digits_for_codepoint	n_decimal_digits_for_codepoint(Py_UCS4 ch)	todo		
-Python/codecs.c	768	781	codec_handler_unicode_replacement_character	codec_handler_unicode_replacement_character(Py_ssize_t count)	todo		
-Python/codecs.c	786	795	PyCodec_StrictErrors	PyObject *PyCodec_StrictErrors(PyObject *exc)	todo		
-Python/codecs.c	801	810	_PyCodec_IgnoreError	_PyCodec_IgnoreError(PyObject *exc, int as_bytes)	todo		
-Python/codecs.c	813	825	PyCodec_IgnoreErrors	PyObject *PyCodec_IgnoreErrors(PyObject *exc)	todo		
-Python/codecs.c	831	848	_PyCodec_ReplaceUnicodeEncodeError	_PyCodec_ReplaceUnicodeEncodeError(PyObject *exc)	todo		
-Python/codecs.c	852	863	_PyCodec_ReplaceUnicodeDecodeError	_PyCodec_ReplaceUnicodeDecodeError(PyObject *exc)	todo		
-Python/codecs.c	867	880	_PyCodec_ReplaceUnicodeTranslateError	_PyCodec_ReplaceUnicodeTranslateError(PyObject *exc)	todo		
-Python/codecs.c	883	898	PyCodec_ReplaceErrors	PyObject *PyCodec_ReplaceErrors(PyObject *exc)	todo		
-Python/codecs.c	903	968	PyCodec_XMLCharRefReplaceErrors	PyObject *PyCodec_XMLCharRefReplaceErrors(PyObject *exc)	todo		
-Python/codecs.c	974	1015	_PyCodec_BackslashReplaceUnicodeEncodeError	_PyCodec_BackslashReplaceUnicodeEncodeError(PyObject *exc)	todo		
-Python/codecs.c	1019	1048	_PyCodec_BackslashReplaceUnicodeDecodeError	_PyCodec_BackslashReplaceUnicodeDecodeError(PyObject *exc)	todo		
-Python/codecs.c	1052	1056	_PyCodec_BackslashReplaceUnicodeTranslateError	_PyCodec_BackslashReplaceUnicodeTranslateError(PyObject *exc)	todo		
-Python/codecs.c	1059	1074	PyCodec_BackslashReplaceErrors	PyObject *PyCodec_BackslashReplaceErrors(PyObject *exc)	todo		
-Python/codecs.c	1079	1146	PyCodec_NameReplaceErrors	PyObject *PyCodec_NameReplaceErrors(PyObject *exc)	todo		
-Python/codecs.c	1157	1213	get_standard_encoding_impl	get_standard_encoding_impl(const char *encoding, int *bytelength)	todo		
-Python/codecs.c	1217	1225	get_standard_encoding	get_standard_encoding(PyObject *encoding, int *code, int *bytelength)	todo		
-Python/codecs.c	1231	1318	_PyCodec_SurrogatePassUnicodeEncodeError	_PyCodec_SurrogatePassUnicodeEncodeError(PyObject *exc)	todo		
-Python/codecs.c	1322	1399	_PyCodec_SurrogatePassUnicodeDecodeError	_PyCodec_SurrogatePassUnicodeDecodeError(PyObject *exc)	todo		
-Python/codecs.c	1405	1417	PyCodec_SurrogatePassErrors	PyCodec_SurrogatePassErrors(PyObject *exc)	todo		
-Python/codecs.c	1423	1455	_PyCodec_SurrogateEscapeUnicodeEncodeError	_PyCodec_SurrogateEscapeUnicodeEncodeError(PyObject *exc)	todo		
-Python/codecs.c	1459	1494	_PyCodec_SurrogateEscapeUnicodeDecodeError	_PyCodec_SurrogateEscapeUnicodeDecodeError(PyObject *exc)	todo		
-Python/codecs.c	1498	1510	PyCodec_SurrogateEscapeErrors	PyCodec_SurrogateEscapeErrors(PyObject *exc)	todo		
-Python/codecs.c	1516	1519	strict_errors	strict_errors(PyObject *Py_UNUSED(self), PyObject *exc)	todo		
-Python/codecs.c	1523	1526	ignore_errors	ignore_errors(PyObject *Py_UNUSED(self), PyObject *exc)	todo		
-Python/codecs.c	1530	1533	replace_errors	replace_errors(PyObject *Py_UNUSED(self), PyObject *exc)	todo		
-Python/codecs.c	1537	1540	xmlcharrefreplace_errors	xmlcharrefreplace_errors(PyObject *Py_UNUSED(self), PyObject *exc)	todo		
-Python/codecs.c	1544	1547	backslashreplace_errors	backslashreplace_errors(PyObject *Py_UNUSED(self), PyObject *exc)	todo		
-Python/codecs.c	1551	1554	namereplace_errors	namereplace_errors(PyObject *Py_UNUSED(self), PyObject *exc)	todo		
-Python/codecs.c	1558	1561	surrogatepass_errors	surrogatepass_errors(PyObject *Py_UNUSED(self), PyObject *exc)	todo		
-Python/codecs.c	1565	1568	surrogateescape_errors	surrogateescape_errors(PyObject *Py_UNUSED(self), PyObject *exc)	todo		
-Python/codecs.c	1572	1702	_PyCodec_InitRegistry	_PyCodec_InitRegistry(PyInterpreterState *interp)	todo		
-Python/codecs.c	1705	1711	_PyCodec_Fini	_PyCodec_Fini(PyInterpreterState *interp)	todo		
+Python/codecs.c	32	52	PyCodec_Register	int PyCodec_Register(PyObject *search_function)	todo		changed-in-3.15:
+Python/codecs.c	55	82	PyCodec_Unregister	PyCodec_Unregister(PyObject *search_function)	todo		changed-in-3.15:
+Python/codecs.c	88	115	normalizestring	normalizestring(const char *string)	todo		changed-in-3.15:
+Python/codecs.c	133	218	_PyCodec_Lookup	PyObject *_PyCodec_Lookup(const char *encoding)	todo		
+Python/codecs.c	222	235	PyCodec_KnownEncoding	int PyCodec_KnownEncoding(const char *encoding)	todo		
+Python/codecs.c	238	258	args_tuple	PyObject *args_tuple(PyObject *object, const char *errors)	todo		
+Python/codecs.c	263	274	codec_getitem	PyObject *codec_getitem(const char *encoding, int index)	todo		
+Python/codecs.c	278	293	codec_makeincrementalcodec	PyObject *codec_makeincrementalcodec(PyObject *codec_info, const char *errors, const char *attrname)	todo		
+Python/codecs.c	296	308	codec_getincrementalcodec	PyObject *codec_getincrementalcodec(const char *encoding, const char *errors, const char *attrname)	todo		
+Python/codecs.c	313	331	codec_getstreamcodec	PyObject *codec_getstreamcodec(const char *encoding, PyObject *stream, const char *errors, const int index)	todo		
+Python/codecs.c	336	341	_PyCodecInfo_GetIncrementalDecoder	PyObject *_PyCodecInfo_GetIncrementalDecoder(PyObject *codec_info, const char *errors)	todo		
+Python/codecs.c	343	348	_PyCodecInfo_GetIncrementalEncoder	PyObject *_PyCodecInfo_GetIncrementalEncoder(PyObject *codec_info, const char *errors)	todo		
+Python/codecs.c	357	360	PyCodec_Encoder	PyObject *PyCodec_Encoder(const char *encoding)	todo		
+Python/codecs.c	362	365	PyCodec_Decoder	PyObject *PyCodec_Decoder(const char *encoding)	todo		
+Python/codecs.c	367	371	PyCodec_IncrementalEncoder	PyObject *PyCodec_IncrementalEncoder(const char *encoding, const char *errors)	todo		
+Python/codecs.c	373	377	PyCodec_IncrementalDecoder	PyObject *PyCodec_IncrementalDecoder(const char *encoding, const char *errors)	todo		
+Python/codecs.c	379	384	PyCodec_StreamReader	PyObject *PyCodec_StreamReader(const char *encoding, PyObject *stream, const char *errors)	todo		
+Python/codecs.c	386	391	PyCodec_StreamWriter	PyObject *PyCodec_StreamWriter(const char *encoding, PyObject *stream, const char *errors)	todo		
+Python/codecs.c	399	436	_PyCodec_EncodeInternal	_PyCodec_EncodeInternal(PyObject *object, PyObject *encoder, const char *encoding, const char *errors)	todo		
+Python/codecs.c	444	480	_PyCodec_DecodeInternal	_PyCodec_DecodeInternal(PyObject *object, PyObject *decoder, const char *encoding, const char *errors)	todo		
+Python/codecs.c	483	494	PyCodec_Encode	PyObject *PyCodec_Encode(PyObject *object, const char *encoding, const char *errors)	todo		
+Python/codecs.c	496	507	PyCodec_Decode	PyObject *PyCodec_Decode(PyObject *object, const char *encoding, const char *errors)	todo		
+Python/codecs.c	510	555	_PyCodec_LookupTextEncoding	PyObject * _PyCodec_LookupTextEncoding(const char *encoding, const char *alternate_command)	todo		
+Python/codecs.c	559	573	codec_getitem_checked	PyObject *codec_getitem_checked(const char *encoding, const char *alternate_command, int index)	todo		
+Python/codecs.c	575	578	_PyCodec_TextEncoder	static PyObject * _PyCodec_TextEncoder(const char *encoding)	todo		
+Python/codecs.c	580	583	_PyCodec_TextDecoder	static PyObject * _PyCodec_TextDecoder(const char *encoding)	todo		
+Python/codecs.c	585	596	_PyCodec_EncodeText	PyObject *_PyCodec_EncodeText(PyObject *object, const char *encoding, const char *errors)	todo		
+Python/codecs.c	598	609	_PyCodec_DecodeText	PyObject *_PyCodec_DecodeText(PyObject *object, const char *encoding, const char *errors)	todo		
+Python/codecs.c	617	627	PyCodec_RegisterError	int PyCodec_RegisterError(const char *name, PyObject *error)	todo		
+Python/codecs.c	629	641	_PyCodec_UnregisterError	int _PyCodec_UnregisterError(const char *name)	todo		
+Python/codecs.c	646	662	PyCodec_LookupError	PyObject *PyCodec_LookupError(const char *name)	todo		
+Python/codecs.c	666	670	wrong_exception_type	wrong_exception_type(PyObject *exc)	todo		
+Python/codecs.c	688	702	codec_handler_unicode_hex_width	codec_handler_unicode_hex_width(Py_UCS4 ch)	todo		
+Python/codecs.c	710	732	codec_handler_write_unicode_hex	codec_handler_write_unicode_hex(Py_UCS1 **p, Py_UCS4 ch)	todo		
+Python/codecs.c	740	751	n_decimal_digits_for_codepoint	n_decimal_digits_for_codepoint(Py_UCS4 ch)	todo		
+Python/codecs.c	759	772	codec_handler_unicode_replacement_character	codec_handler_unicode_replacement_character(Py_ssize_t count)	todo		
+Python/codecs.c	777	786	PyCodec_StrictErrors	PyObject *PyCodec_StrictErrors(PyObject *exc)	todo		
+Python/codecs.c	792	801	_PyCodec_IgnoreError	_PyCodec_IgnoreError(PyObject *exc, int as_bytes)	todo		
+Python/codecs.c	804	816	PyCodec_IgnoreErrors	PyObject *PyCodec_IgnoreErrors(PyObject *exc)	todo		
+Python/codecs.c	822	839	_PyCodec_ReplaceUnicodeEncodeError	_PyCodec_ReplaceUnicodeEncodeError(PyObject *exc)	todo		
+Python/codecs.c	843	854	_PyCodec_ReplaceUnicodeDecodeError	_PyCodec_ReplaceUnicodeDecodeError(PyObject *exc)	todo		
+Python/codecs.c	858	871	_PyCodec_ReplaceUnicodeTranslateError	_PyCodec_ReplaceUnicodeTranslateError(PyObject *exc)	todo		
+Python/codecs.c	874	889	PyCodec_ReplaceErrors	PyObject *PyCodec_ReplaceErrors(PyObject *exc)	todo		
+Python/codecs.c	894	959	PyCodec_XMLCharRefReplaceErrors	PyObject *PyCodec_XMLCharRefReplaceErrors(PyObject *exc)	todo		
+Python/codecs.c	965	1006	_PyCodec_BackslashReplaceUnicodeEncodeError	_PyCodec_BackslashReplaceUnicodeEncodeError(PyObject *exc)	todo		
+Python/codecs.c	1010	1039	_PyCodec_BackslashReplaceUnicodeDecodeError	_PyCodec_BackslashReplaceUnicodeDecodeError(PyObject *exc)	todo		
+Python/codecs.c	1043	1047	_PyCodec_BackslashReplaceUnicodeTranslateError	_PyCodec_BackslashReplaceUnicodeTranslateError(PyObject *exc)	todo		
+Python/codecs.c	1050	1065	PyCodec_BackslashReplaceErrors	PyObject *PyCodec_BackslashReplaceErrors(PyObject *exc)	todo		
+Python/codecs.c	1070	1137	PyCodec_NameReplaceErrors	PyObject *PyCodec_NameReplaceErrors(PyObject *exc)	todo		
+Python/codecs.c	1148	1206	get_standard_encoding_impl	get_standard_encoding_impl(const char *encoding, int *bytelength)	todo		changed-in-3.15:
+Python/codecs.c	1210	1218	get_standard_encoding	get_standard_encoding(PyObject *encoding, int *code, int *bytelength)	todo		
+Python/codecs.c	1224	1311	_PyCodec_SurrogatePassUnicodeEncodeError	_PyCodec_SurrogatePassUnicodeEncodeError(PyObject *exc)	todo		
+Python/codecs.c	1315	1392	_PyCodec_SurrogatePassUnicodeDecodeError	_PyCodec_SurrogatePassUnicodeDecodeError(PyObject *exc)	todo		
+Python/codecs.c	1398	1410	PyCodec_SurrogatePassErrors	PyCodec_SurrogatePassErrors(PyObject *exc)	todo		
+Python/codecs.c	1416	1448	_PyCodec_SurrogateEscapeUnicodeEncodeError	_PyCodec_SurrogateEscapeUnicodeEncodeError(PyObject *exc)	todo		
+Python/codecs.c	1452	1487	_PyCodec_SurrogateEscapeUnicodeDecodeError	_PyCodec_SurrogateEscapeUnicodeDecodeError(PyObject *exc)	todo		
+Python/codecs.c	1491	1503	PyCodec_SurrogateEscapeErrors	PyCodec_SurrogateEscapeErrors(PyObject *exc)	todo		
+Python/codecs.c	1509	1512	strict_errors	strict_errors(PyObject *Py_UNUSED(self), PyObject *exc)	todo		
+Python/codecs.c	1516	1519	ignore_errors	ignore_errors(PyObject *Py_UNUSED(self), PyObject *exc)	todo		
+Python/codecs.c	1523	1526	replace_errors	replace_errors(PyObject *Py_UNUSED(self), PyObject *exc)	todo		
+Python/codecs.c	1530	1533	xmlcharrefreplace_errors	xmlcharrefreplace_errors(PyObject *Py_UNUSED(self), PyObject *exc)	todo		
+Python/codecs.c	1537	1540	backslashreplace_errors	backslashreplace_errors(PyObject *Py_UNUSED(self), PyObject *exc)	todo		
+Python/codecs.c	1544	1547	namereplace_errors	namereplace_errors(PyObject *Py_UNUSED(self), PyObject *exc)	todo		
+Python/codecs.c	1551	1554	surrogatepass_errors	surrogatepass_errors(PyObject *Py_UNUSED(self), PyObject *exc)	todo		
+Python/codecs.c	1558	1561	surrogateescape_errors	surrogateescape_errors(PyObject *Py_UNUSED(self), PyObject *exc)	todo		
+Python/codecs.c	1565	1695	_PyCodec_InitRegistry	_PyCodec_InitRegistry(PyInterpreterState *interp)	todo		
+Python/codecs.c	1698	1704	_PyCodec_Fini	_PyCodec_Fini(PyInterpreterState *interp)	todo		

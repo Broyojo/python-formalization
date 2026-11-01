@@ -48,13 +48,13 @@ observed: |
   python3 3.14.7: builtin close returns 7, the mixin returns None. REPRODUCED.
   main (python.exe 3.16.0a1+dev): same. REPRODUCED. Its Lib/_collections_abc.py has the same close.
 promised_by: |
-  Doc/reference/expressions.rst:849-850: "If the generator function catches the exception and
+  Doc/reference/expressions.rst@3.14.7:849-850: "If the generator function catches the exception and
   returns a value, this value is returned from close()." That sentence is about generators; the
-  mixin's own docstring promises less. Doc/library/collections.abc.rst:252-257 describes Generator
+  mixin's own docstring promises less. Doc/library/collections.abc.rst:249-254 describes Generator
   as the ABC for classes implementing the PEP 342 protocol, send, throw and close.
 cause: |
   Lib/_collections_abc.py:385-390 `except (GeneratorExit, StopIteration): pass`, and the same
-  at :179-184 for Coroutine.close. Objects/genobject.c:387 gen_close returns the StopIteration value.
+  at :179-184 for Coroutine.close. Objects/genobject.c:464 gen_close returns the StopIteration value.
 possible_fix: |
   try:
       self.throw(GeneratorExit)

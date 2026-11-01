@@ -1,7 +1,7 @@
 import PyLean.CoreLibs.Operator.Proto
 
 /-!
-`itemgetter`, `attrgetter`, `methodcaller`, Lib/operator.py:240-342 and Modules/_operator.c:1016-1907.
+`itemgetter`, `attrgetter`, `methodcaller`, Lib/operator.py:240-342 and Modules/_operator.c:1016-1908.
 
 The classes differ between the twins in storage and in how they check a call, and agree, or are meant to, on
 what a call does. Each constructor, `__call__`, `__repr__` and `__reduce__` is mirrored in both.
@@ -251,7 +251,7 @@ def mcNewC {α : Type} (name : Option AttrArg) (args : List α) (kw : List (Stri
 /-- `getattr(obj, name)` gives a bound method, and calling it gives a result. Both steps may raise. -/
 abbrev Meth (α β : Type) := α → List Char → Py (List α → List (String × α) → Py β)
 
-/-- `methodcaller.__call__`, Lib/operator.py:326-327, and `methodcaller_call`, Modules/_operator.c:1778-1795. -/
+/-- `methodcaller.__call__`, Lib/operator.py:326-327, and `methodcaller_call`, Modules/_operator.c:1779-1796. -/
 def mcCall {α β : Type} (m : Meth α β) (c : Mc α) (obj : α) : Py β :=
   match m obj c.name with
   | .error e => .error e
@@ -288,7 +288,7 @@ def mcReprPy {α : Type} (rep : α → Py String) (cls nameRepr : String) (c : M
     | .error e => .error e
     | .ok k => .ok (cls ++ "(" ++ joinArgs (nameRepr :: a ++ k) ++ ")")
 
-/-- `methodcaller_repr`, Modules/_operator.c:1798-1872, with the guard as in `reprC`. -/
+/-- `methodcaller_repr`, Modules/_operator.c:1799-1873, with the guard as in `reprC`. -/
 def mcReprC {α : Type} (rep : α → Py String) (running : Bool) (cls nameRepr : String) (c : Mc α) : Py String :=
   if running then .ok (cls ++ "(...)") else
   if c.args.isEmpty && c.kw.isEmpty then .ok (cls ++ "(" ++ nameRepr ++ ")") else
@@ -307,7 +307,7 @@ inductive McReduce (α : Type) where
   | viaPartial (name : List Char) (kw : List (String × α)) (args : List α)
   deriving Repr, DecidableEq
 
-/-- `methodcaller.__reduce__`, Lib/operator.py:337-342, and `methodcaller_reduce`, Modules/_operator.c:1875-1907. -/
+/-- `methodcaller.__reduce__`, Lib/operator.py:337-342, and `methodcaller_reduce`, Modules/_operator.c:1876-1908. -/
 def mcReduce {α : Type} (c : Mc α) : McReduce α :=
   if c.kw.isEmpty then .plain c.name c.args else .viaPartial c.name c.kw c.args
 

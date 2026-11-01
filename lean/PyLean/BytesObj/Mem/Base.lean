@@ -46,7 +46,7 @@ def fmtText (s : List Char) : String := String.ofList s
 
 /-! ## Native format characters -/
 
-/-- The `switch` of `get_native_fmtchar`, memoryobject.c:1209-1221 (`-1`: unknown). -/
+/-- The `switch` of `get_native_fmtchar`, memoryobject.c:1210-1233 (`-1`: unknown). -/
 def fmtSize : Char → Int
   | 'c' | 'b' | 'B' => 1
   | 'h' | 'H' => 2
@@ -61,20 +61,20 @@ def fmtSize : Char → Int
   | 'P' => 8
   | _ => -1
 
-/-- `get_native_fmtchar`, memoryobject.c:1202-1229: `(char, size)`, or `none` for `-1`.
+/-- `get_native_fmtchar`, memoryobject.c:1203-1241: `(char, size)`, or `none` for `-1`.
 Skips one leading `@`, then requires `fmt[0]` known and `fmt[1] == '\0'`. -/
 def getNativeFmtchar (fmt : List Char) : Option (Char × Int) :=
   let fmt := if cc fmt 0 = '@' then fmt.drop 1 else fmt
   let size := fmtSize (cc fmt 0)
   if size > 0 ∧ cc fmt 1 = '\x00' then some (cc fmt 0, size) else none
 
-/-- The `switch` of `get_native_fmtstr`, memoryobject.c:1246-1265. -/
+/-- The `switch` of `get_native_fmtstr`, memoryobject.c:1268-1294. -/
 def nativeChar : Char → Bool
   | 'c' | 'b' | 'B' | 'h' | 'H' | 'i' | 'I' | 'l' | 'L' | 'q' | 'Q' | 'n' | 'N'
   | 'f' | 'd' | 'e' | '?' | 'P' => true
   | _ => false
 
-/-- `get_native_fmtstr`, memoryobject.c:1231-1268. -/
+/-- `get_native_fmtstr`, memoryobject.c:1243-1297. -/
 def getNativeFmtstr (fmt : List Char) : Option (List Char) :=
   let at_ := cc fmt 0 = '@'
   let fmt := if at_ then fmt.drop 1 else fmt
@@ -82,7 +82,7 @@ def getNativeFmtstr (fmt : List Char) : Option (List Char) :=
   else if nativeChar (cc fmt 0) then some (if at_ then ['@', cc fmt 0] else [cc fmt 0])
   else none
 
-/-- `IS_BYTE_FORMAT`, memoryobject.c:1200. -/
+/-- `IS_BYTE_FORMAT`, memoryobject.c@3.14.7:1200. -/
 def isByteFormat (f : Char) : Bool := f == 'b' || f == 'B' || f == 'c'
 
 /-! ## The byte store -/
@@ -156,7 +156,7 @@ def dMant (d : Nat) : Nat × Int :=
   if e = 0 then (f, -1074) else (f + 2 ^ 52, (e : Int) - 1075)
 
 /-- `double` value of the 32-bit float pattern `x` (`dest = x` in `UNPACK_SINGLE(d, ptr,
-float)`, memoryobject.c:1822): exact, a signalling NaN comes back quiet. -/
+float)`, memoryobject.c@3.14.7:1822): exact, a signalling NaN comes back quiet. -/
 def widen32 (x : Nat) : Nat :=
   let s := x / 2 ^ 31 % 2
   let e := x / 2 ^ 23 % 2 ^ 8
@@ -172,7 +172,7 @@ def widen32 (x : Nat) : Nat :=
       sgn + (l + 874) * 2 ^ 52 + (f - 2 ^ l) * 2 ^ (52 - l)
   else sgn + (e + 896) * 2 ^ 52 + f * 2 ^ 29
 
-/-- `(float)d`, `PACK_SINGLE(ptr, d, float)` (memoryobject.c:1973): to nearest, ties to
+/-- `(float)d`, `PACK_SINGLE(ptr, d, float)` (memoryobject.c:2023): to nearest, ties to
 even; too large a value becomes an infinity, with no error. -/
 def narrow32 (d : Nat) : Nat :=
   let sgn := dSign d * 2 ^ 31
@@ -195,7 +195,7 @@ def narrow32 (d : Nat) : Nat :=
       else sgn + (ex + 127).toNat * 2 ^ 23 + (m' - 2 ^ 23)
     else sgn + rshiftRound m (-(ee + 149)).toNat
 
-/-- `PyFloat_Unpack2`, Objects/floatobject.c:2379-2433, on the 16-bit pattern `x`. -/
+/-- `PyFloat_Unpack2`, Objects/floatobject.c:2090-2144, on the 16-bit pattern `x`. -/
 def unpack2 (x : Nat) : Nat :=
   let s := x / 2 ^ 15 % 2
   let e := x / 2 ^ 10 % 2 ^ 5
@@ -212,7 +212,7 @@ def unpack2 (x : Nat) : Nat :=
 
 def pack2Overflow : PyExc := .overflowError "float too large to pack with 'e' format"
 
-/-- `PyFloat_Pack2`, Objects/floatobject.c:1993-2085, as a 16-bit pattern. -/
+/-- `PyFloat_Pack2`, Objects/floatobject.c:1895-1987, as a 16-bit pattern. -/
 def pack2 (d : Nat) : Py Nat :=
   let sgn := dSign d * 2 ^ 15
   if dIsZero d then .ok sgn

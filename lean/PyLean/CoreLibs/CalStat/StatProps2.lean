@@ -12,7 +12,7 @@ open PyLean
 
 /-- `_exact_ratio` returns the value as a ratio with positive denominator for every finite number
 of every type; a NaN or infinity comes back as `(x, None)`, exactly when `_isfinite` says it is not
-finite (the `assert` at statistics.py:1612); a non-number is `TypeError`. -/
+finite (the `assert` at statistics.py:1613); a non-number is `TypeError`. -/
 def ExactRatioSpec : Prop :=
   (∀ v, IsExact v → ∃ n d, exactRatio v = .ok (.ratio n d) ∧ d ≠ 0 ∧ mkRat n d = exactQ v) ∧
   (∀ x : Flt, exactRatio (.flt x) = .ok (.special (.flt x)) ↔ isFiniteV (.flt x) = .ok false) ∧
@@ -491,7 +491,7 @@ theorem harmonicEarlyOut_proven : HarmonicEarlyOut := by
 
 /-- `_integer_sqrt_of_frac_rto(n, m)` for `n >= 0`, `m > 0` is the floor `a` of the exact square
 root of `n/m`, with the low bit forced to 1 when the root is inexact: the round-to-odd of the
-reference cited at statistics.py:1707, which is what makes the later rounding to `float` correct. -/
+reference cited at statistics.py:1708, which is what makes the later rounding to `float` correct. -/
 def IntegerSqrtRto : Prop :=
   ∀ n m : Int, 0 ≤ n → 0 < m →
     ∃ a : Int, 0 ≤ a ∧ a * a * m ≤ n ∧ n < (a + 1) * (a + 1) * m ∧

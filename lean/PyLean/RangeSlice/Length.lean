@@ -101,8 +101,8 @@ theorem getLenOfRange_eq (lo hi step : Int) (hlo : IsLong lo) (hhi : IsLong hi)
 /-! ### Properties -/
 
 /-- Fast path vs slow path: whenever `compute_range_length_long` (the C
-`long` fast path, rangeobject.c:187-221) produces a length, it equals what the
-PyLong slow path (rangeobject.c:249-298) computes for the same arguments.
+`long` fast path, rangeobject.c:202-236) produces a length, it equals what the
+PyLong slow path (rangeobject.c:264-313) computes for the same arguments.
 Hypothesis `step ≠ 0` is a documented precondition (`get_len_of_range`
 asserts it; `validate_step` guarantees it). -/
 def RangeLengthFastSlow : Prop :=

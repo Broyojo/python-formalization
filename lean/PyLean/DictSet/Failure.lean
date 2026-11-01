@@ -13,7 +13,7 @@ open PyLean
 variable {K V : Type} [DecidableEq K]
 
 /-- `PyDict_GetItem` never raises, for any protocol and any dict: "PyDict_GetItem() suppresses all
-errors" (`dictobject.c:2290-2299`). This is the function's whole contract, and it is why a failing
+errors" (`dictobject.c:2379-2388`). This is the function's whole contract, and it is why a failing
 comparison can look like a missing key. -/
 theorem dictGetitemSuppress_total (P : Proto K (PyDict K V)) (isDict : Bool) (key : K)
     (d : PyDict K V) : ∃ r d', dictGetitemSuppress P isDict key d = (.ok r, d') := by
@@ -94,7 +94,7 @@ theorem compareGeneric_raises (P : Proto K (PyDict K V)) (mp mp' : PyDict K V) (
   simp [compareGeneric, he, hne, hq]
 
 /-- `compare_generic` when `__eq__` changed the table under it: `DKIX_KEY_CHANGED`, whatever `__eq__`
-answered. That is the check at `dictobject.c:1118`, which keeps a stale answer from being trusted. -/
+answered. That is the check at `dictobject.c:1198`, which keeps a stale answer from being trusted. -/
 theorem compareGeneric_changed (P : Proto K (PyDict K V)) (mp mp' : PyDict K V) (ix : Nat) (key epKey : K)
     (hash : Int) (b : Bool) (he : mp.body.entryKH ix = some (epKey, hash)) (hne : epKey ≠ key)
     (hq : P.eq epKey key mp = (.ok b, mp'))
@@ -112,7 +112,7 @@ theorem lookup_restarts (P : Proto K (PyDict K V)) (key : K) (hash : Int) (n : N
   rfl
 
 /-- `__missing__`: a subclass's hook runs on an absent key, and its outcome, value or exception, is
-the result (`dictobject.c:3520-3530`). -/
+the result (`dictobject.c:3765-3775`). -/
 theorem subscript_missing {P : Proto K (PyDict K V)} {hf : K → Int} {eqv : K → K → Bool}
     (H : Honest P hf eqv) (d : PyDict K V) (hd : DictInv hf eqv P.isStr d) (key : K)
     (f : K → DM K V V) (habs : assocGet eqv (dictAssoc d) key = none) :
@@ -231,7 +231,7 @@ theorem lookupControl_proven : LookupControl := by
     rw [h]
     simp
 
-/-- The `Fail` path of `insertdict` (:1953-1956): when the lookup raises, for a table or a key that
+/-- The `Fail` path of `insertdict` (:2045-2048): when the lookup raises, for a table or a key that
 goes through the lookup, the exception is the result and nothing is stored beyond what `__eq__` did.
 The same goes for `dictresize` asked for an impossible size. -/
 def InsertFailure : Prop :=

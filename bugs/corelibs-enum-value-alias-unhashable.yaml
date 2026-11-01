@@ -8,9 +8,9 @@ functions: ["Enum._add_value_alias_"]
 summary: |
   The docs say that _add_value_alias_ raises ValueError if the value is already linked with a different member.
   That holds for a hashable value. For an unhashable one it fails in two ways. When the value is another member's
-  _value_, the ValueError at Lib/enum.py:1223 is formatted with cls._value2member_map_[value], which hashes the
+  _value_, the ValueError at Lib/enum.py:1251 is formatted with cls._value2member_map_[value], which hashes the
   value again, so TypeError "cannot use 'list' as a dict key" comes out instead. When the value was linked by an
-  earlier _add_value_alias_, the long search at :1220-1224 only reads _value_, does not see it, and the second member
+  earlier _add_value_alias_, the long search at :1248-1252 only reads _value_, does not see it, and the second member
   is linked as well, with no error: D.A._add_value_alias_([9]) and then D.B._add_value_alias_([9]) both succeed, and
   D([9]) finds the first.
 likelihood: |
@@ -50,10 +50,10 @@ promised_by: |
   Doc/library/enum.rst, Enum._add_value_alias_: "Raises a ValueError if the value is already linked with a different
   member."
 cause: |
-  Lib/enum.py:1223 subscripts _value2member_map_ with an unhashable value, and should print m. :1220-1224 reads
+  Lib/enum.py:1251 subscripts _value2member_map_ with an unhashable value, and should print m. :1248-1252 reads
   m._value_ only, and not _unhashable_values_map_.
 possible_fix: |
-  Format the message with m, and search _unhashable_values_map_ as Enum.__new__ does at :1163-1165.
+  Format the message with m, and search _unhashable_values_map_ as Enum.__new__ does at :1191-1193.
 duplicates:
   issues:
     - {number: 136672, state: closed, relation: "search hit, documentation of _add_alias_ and _add_value_alias_", reason: "docs only, different"}

@@ -1,25 +1,26 @@
 file	line	endline	name	signature	status	entry	note
-Lib/shelve.py	69	70	_ClosedDict.closed	closed(self, *args)	todo		
-Lib/shelve.py	73	74	_ClosedDict.__repr__	__repr__(self)	todo		
-Lib/shelve.py	84	92	Shelf.__init__	__init__(self, dict, protocol=None, writeback=False, keyencoding='utf-8')	todo		
-Lib/shelve.py	94	96	Shelf.__iter__	__iter__(self)	todo		
-Lib/shelve.py	98	99	Shelf.__len__	__len__(self)	todo		
-Lib/shelve.py	101	102	Shelf.__contains__	__contains__(self, key)	todo		
-Lib/shelve.py	104	107	Shelf.get	get(self, key, default=None)	todo		
-Lib/shelve.py	109	117	Shelf.__getitem__	__getitem__(self, key)	todo		
-Lib/shelve.py	119	125	Shelf.__setitem__	__setitem__(self, key, value)	todo		
-Lib/shelve.py	127	132	Shelf.__delitem__	__delitem__(self, key)	todo		
-Lib/shelve.py	134	135	Shelf.__enter__	__enter__(self)	todo		
-Lib/shelve.py	137	138	Shelf.__exit__	__exit__(self, type, value, traceback)	todo		
-Lib/shelve.py	140	155	Shelf.close	close(self)	todo		
-Lib/shelve.py	157	162	Shelf.__del__	__del__(self)	todo		
-Lib/shelve.py	164	172	Shelf.sync	sync(self)	todo		
-Lib/shelve.py	188	190	BsdDbShelf.__init__	__init__(self, dict, protocol=None, writeback=False, keyencoding='utf-8')	todo		
-Lib/shelve.py	192	195	BsdDbShelf.set_location	set_location(self, key)	todo		
-Lib/shelve.py	197	200	BsdDbShelf.next	next(self)	todo		
-Lib/shelve.py	202	205	BsdDbShelf.previous	previous(self)	todo		
-Lib/shelve.py	207	210	BsdDbShelf.first	first(self)	todo		
-Lib/shelve.py	212	215	BsdDbShelf.last	last(self)	todo		
-Lib/shelve.py	225	227	DbfilenameShelf.__init__	__init__(self, filename, flag='c', protocol=None, writeback=False)	todo		
-Lib/shelve.py	229	234	DbfilenameShelf.clear	clear(self)	todo		
-Lib/shelve.py	237	250	open	open(filename, flag='c', protocol=None, writeback=False)	todo		
+Lib/shelve.py	73	74	_ClosedDict.closed	closed(self, *args)	todo		
+Lib/shelve.py	77	78	_ClosedDict.__repr__	__repr__(self)	todo		
+Lib/shelve.py	88	106	Shelf.__init__	__init__(self, dict, protocol=None, writeback=False, keyencoding='utf-8', *, serializer=None, deserializer=None)	todo		changed-in-3.15:
+Lib/shelve.py	108	110	Shelf.__iter__	__iter__(self)	todo		
+Lib/shelve.py	112	113	Shelf.__len__	__len__(self)	todo		
+Lib/shelve.py	115	116	Shelf.__contains__	__contains__(self, key)	todo		
+Lib/shelve.py	118	121	Shelf.get	get(self, key, default=None)	todo		
+Lib/shelve.py	123	131	Shelf.__getitem__	__getitem__(self, key)	todo		changed-in-3.15:
+Lib/shelve.py	133	137	Shelf.__setitem__	__setitem__(self, key, value)	todo		changed-in-3.15:
+Lib/shelve.py	139	144	Shelf.__delitem__	__delitem__(self, key)	todo		
+Lib/shelve.py	146	147	Shelf.__enter__	__enter__(self)	todo		
+Lib/shelve.py	149	150	Shelf.__exit__	__exit__(self, type, value, traceback)	todo		
+Lib/shelve.py	152	167	Shelf.close	close(self)	todo		
+Lib/shelve.py	169	174	Shelf.__del__	__del__(self)	todo		
+Lib/shelve.py	176	184	Shelf.sync	sync(self)	todo		
+Lib/shelve.py	186	189	Shelf.reorganize	reorganize(self)	todo		changed-in-3.15: new function
+Lib/shelve.py	205	208	BsdDbShelf.__init__	__init__(self, dict, protocol=None, writeback=False, keyencoding='utf-8', *, serializer=None, deserializer=None)	todo		changed-in-3.15:
+Lib/shelve.py	210	212	BsdDbShelf.set_location	set_location(self, key)	todo		changed-in-3.15:
+Lib/shelve.py	214	216	BsdDbShelf.next	next(self)	todo		changed-in-3.15:
+Lib/shelve.py	218	220	BsdDbShelf.previous	previous(self)	todo		changed-in-3.15:
+Lib/shelve.py	222	224	BsdDbShelf.first	first(self)	todo		changed-in-3.15:
+Lib/shelve.py	226	228	BsdDbShelf.last	last(self)	todo		changed-in-3.15:
+Lib/shelve.py	238	242	DbfilenameShelf.__init__	__init__(self, filename, flag='c', protocol=None, writeback=False, *, serializer=None, deserializer=None)	todo		changed-in-3.15:
+Lib/shelve.py	244	249	DbfilenameShelf.clear	clear(self)	todo		
+Lib/shelve.py	251	266	open	open(filename, flag='c', protocol=None, writeback=False, *, serializer=None, deserializer=None)	todo		changed-in-3.15:

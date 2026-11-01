@@ -1,17 +1,17 @@
 file	line	endline	name	signature	status	entry	note
-Lib/importlib/resources/_common.py	19	48	package_to_anchor	package_to_anchor(func)	todo		
-Lib/importlib/resources/_common.py	52	56	files	files(anchor: Optional[Anchor]=None)	todo		
-Lib/importlib/resources/_common.py	59	72	get_resource_reader	get_resource_reader(package: types.ModuleType)	todo		
-Lib/importlib/resources/_common.py	76	77	resolve	resolve(cand: Optional[Anchor])	todo		
-Lib/importlib/resources/_common.py	81	82	_	_(cand: str)	todo		
-Lib/importlib/resources/_common.py	86	87	_	_(cand: None)	todo		
-Lib/importlib/resources/_common.py	90	105	_infer_caller	_infer_caller()	todo		
-Lib/importlib/resources/_common.py	108	118	from_package	from_package(package: types.ModuleType)	todo		
-Lib/importlib/resources/_common.py	122	145	_tempfile	_tempfile(reader, suffix='', *, _os_remove=os.remove)	todo		
-Lib/importlib/resources/_common.py	148	149	_temp_file	_temp_file(path)	todo		
-Lib/importlib/resources/_common.py	152	162	_is_present_dir	_is_present_dir(path: Traversable)	todo		
-Lib/importlib/resources/_common.py	166	171	as_file	as_file(path)	todo		
-Lib/importlib/resources/_common.py	176	180	_	_(path)	todo		
-Lib/importlib/resources/_common.py	184	189	_temp_path	_temp_path(dir: tempfile.TemporaryDirectory)	todo		
-Lib/importlib/resources/_common.py	193	200	_temp_dir	_temp_dir(path)	todo		
-Lib/importlib/resources/_common.py	203	211	_write_contents	_write_contents(target, source)	todo		
+Lib/importlib/resources/_common.py	18	22	files	files(anchor: Optional[Anchor]=None)	todo		
+Lib/importlib/resources/_common.py	25	38	get_resource_reader	get_resource_reader(package: types.ModuleType)	todo		
+Lib/importlib/resources/_common.py	42	43	resolve	resolve(cand: Optional[Anchor])	todo		
+Lib/importlib/resources/_common.py	47	48	_	_(cand: str)	todo		
+Lib/importlib/resources/_common.py	52	53	_	_(cand: None)	todo		
+Lib/importlib/resources/_common.py	56	71	_infer_caller	_infer_caller()	todo		
+Lib/importlib/resources/_common.py	74	84	_assert_spec	_assert_spec(package: types.ModuleType)	todo		changed-in-3.15: new function
+Lib/importlib/resources/_common.py	87	98	from_package	from_package(package: types.ModuleType)	todo		changed-in-3.15:
+Lib/importlib/resources/_common.py	102	125	_tempfile	_tempfile(reader, suffix='', *, _os_remove=os.remove)	todo		
+Lib/importlib/resources/_common.py	128	129	_temp_file	_temp_file(path)	todo		
+Lib/importlib/resources/_common.py	132	142	_is_present_dir	_is_present_dir(path: Traversable)	todo		
+Lib/importlib/resources/_common.py	146	151	as_file	as_file(path)	todo		
+Lib/importlib/resources/_common.py	156	160	_	_(path)	todo		
+Lib/importlib/resources/_common.py	164	169	_temp_path	_temp_path(dir: tempfile.TemporaryDirectory)	todo		
+Lib/importlib/resources/_common.py	173	180	_temp_dir	_temp_dir(path)	todo		
+Lib/importlib/resources/_common.py	183	191	_write_contents	_write_contents(target, source)	todo		

@@ -1,4 +1,4 @@
 file	line	endline	name	signature	status	entry	note
-Modules/_ctypes/malloc_closure.c	48	102	more_core	static void more_core(void)	todo		
-Modules/_ctypes/malloc_closure.c	107	128	Py_ffi_closure_free	void Py_ffi_closure_free(void *p)	todo		
-Modules/_ctypes/malloc_closure.c	131	165	Py_ffi_closure_alloc	void *Py_ffi_closure_alloc(size_t size, void** codeloc)	todo		
+Modules/_ctypes/malloc_closure.c	44	100	more_core	static void more_core(void)	todo		changed-in-3.15:
+Modules/_ctypes/malloc_closure.c	105	126	Py_ffi_closure_free	void Py_ffi_closure_free(void *p)	todo		changed-in-3.15:
+Modules/_ctypes/malloc_closure.c	129	163	Py_ffi_closure_alloc	void *Py_ffi_closure_alloc(size_t size, void** codeloc)	todo		changed-in-3.15:

@@ -11,7 +11,7 @@ the terminating NUL (`hd`). So `end == s + len` becomes "the suffix is empty",
 and an embedded NUL ends a scan exactly as in C.
 
 `long_from_non_binary_base` allocates from a `double` estimate. The estimate is
-not observable except through the rare reallocation at :2837-2853, so the digit
+not observable except through the rare reallocation at :2919-2935, so the digit
 loop is modelled for an arbitrary capacity `size_z` and proven for all of them.
 `fsizeZ` gives the capacity the tables produce; it uses the exact values of the
 doubles in `log_base_BASE` and leaves out the rounding of the two `double`
@@ -24,7 +24,7 @@ open PyLean PyLean.MathInt PyLean.Datetime PyLean.StrSearch
 
 /-! ## Character classes -/
 
-/-- `_PyLong_DigitValue`, longobject.c:2475-2492. -/
+/-- `_PyLong_DigitValue`, longobject.c:2556-2573. -/
 def digitValueTable : List Nat :=
   [37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37,
    37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37,
@@ -57,7 +57,7 @@ def hd (p : List Nat) : Nat := p.headD 0
 
 /-! ## `long_from_binary_base` -/
 
-/-- The read loop of `long_from_binary_base`, longobject.c:2545-2566, over the
+/-- The read loop of `long_from_binary_base`, longobject.c:2626-2647, over the
 characters from the right. Returns the digits written, from `ob_digit[0]`. -/
 def binLoop (bpc : Nat) : List Nat → Nat → Nat → Py (List Nat)
   | [], accum, bits =>
@@ -76,10 +76,10 @@ def binLoop (bpc : Nat) : List Nat → Nat → Nat → Py (List Nat)
         return (a &&& MASK) :: rest
       else binLoop bpc r a bits'
 
-/-- `for (bits_per_char = -1; n; ++bits_per_char) n >>= 1;`, longobject.c:2519-2522. -/
+/-- `for (bits_per_char = -1; n; ++bits_per_char) n >>= 1;`, longobject.c:2600-2603. -/
 def bitsPerChar (base : Nat) : Nat := bitLength base - 1
 
-/-- `long_from_binary_base(start, end, digits, base, res)`, longobject.c:2507-2571. -/
+/-- `long_from_binary_base(start, end, digits, base, res)`, longobject.c:2588-2652. -/
 def longFromBinaryBase (body : List Nat) (digits base : Nat) : Py (List Nat) := do
   let bpc := bitsPerChar base
   if digits > (ssizeMax - (30 - 1)) / bpc then
@@ -92,7 +92,7 @@ def longFromBinaryBase (body : List Nat) (digits base : Nat) : Py (List Nat) := 
 
 /-! ## `long_from_non_binary_base` -/
 
-/-- `log_base_BASE[base] * 2^60`, longobject.c:2720-2732: the doubles of the table
+/-- `log_base_BASE[base] * 2^60`, longobject.c:2801-2813: the doubles of the table
 are all integer multiples of `2^-60`. -/
 def logBaseBASE : List Nat :=
   [0, 0, 0, 60911245035895544, 0, 89233361091548256, 99341961856123776, 107888662023469680,
@@ -104,23 +104,23 @@ def logBaseBASE : List Nat :=
    188575322947672032, 190393315476297536, 0, 193859681930689312, 195514843785525536,
    197122023115017952, 198683923712247552]
 
-/-- `convwidth_base`, longobject.c:2733-2735. -/
+/-- `convwidth_base`, longobject.c:2814-2816. -/
 def convwidthBase : List Nat :=
   [0, 0, 0, 18, 0, 12, 11, 10, 0, 9, 9, 8, 8, 8, 7, 7, 0, 7, 7, 7, 6, 6, 6, 6, 6, 6, 6, 6, 6,
    6, 6, 6, 0, 5, 5, 5, 5]
 
-/-- `convmultmax_base`, longobject.c:2736-2742. -/
+/-- `convmultmax_base`, longobject.c:2817-2823. -/
 def convmultmaxBase : List Nat :=
   [0, 0, 0, 387420489, 0, 244140625, 362797056, 282475249, 0, 387420489, 1000000000,
    214358881, 429981696, 815730721, 105413504, 170859375, 0, 410338673, 612220032, 893871739,
    64000000, 85766121, 113379904, 148035889, 191102976, 244140625, 308915776, 387420489,
    481890304, 594823321, 729000000, 887503681, 0, 39135393, 45435424, 52521875, 60466176]
 
-/-- `(Py_ssize_t)((double)digits * log_base_BASE[base] + 1.0)`, longobject.c:2766,
-:2774, without the rounding of the `double` operations (see the module note). -/
+/-- `(Py_ssize_t)((double)digits * log_base_BASE[base] + 1.0)`, longobject.c:2847,
+:2855, without the rounding of the `double` operations (see the module note). -/
 def fsizeZ (digits base : Nat) : Nat := digits * logBaseBASE.getD base 0 / 2 ^ 60 + 1
 
-/-- Inner `for (i = 1; i < convwidth && p != end; ++p)`, longobject.c:2800-2808.
+/-- Inner `for (i = 1; i < convwidth && p != end; ++p)`, longobject.c:2882-2890.
 Returns `(i, c, p)`. -/
 def grab (base convwidth : Nat) : List Nat → Nat → Nat → Py (Nat × Nat × List Nat)
   | [], i, c => .ok (i, c, [])
@@ -132,7 +132,7 @@ def grab (base convwidth : Nat) : List Nat → Nat → Nat → Py (Nat × Nat ×
         grab base convwidth r (i + 1) c'
     else .ok (i, c, x :: r)
 
-/-- `convmult = base; for ( ; i > 1; --i) convmult *= base;`, longobject.c:2815-2818. -/
+/-- `convmult = base; for ( ; i > 1; --i) convmult *= base;`, longobject.c:2897-2900. -/
 def shortMult (base : Nat) : Nat → Nat → Py Nat
   | 0, m => .ok m
   | 1, m => .ok m
@@ -140,12 +140,12 @@ def shortMult (base : Nat) : Nat → Nat → Py Nat
     let m' ← chk64 (m * base)
     shortMult base (i + 1) m'
 
-/-- `convmult`, longobject.c:2810-2819: `convmultmax`, or recomputed when fewer than
+/-- `convmult`, longobject.c:2892-2901: `convmultmax`, or recomputed when fewer than
 `convwidth` digits were grabbed. -/
 def convMult (base convwidth convmultmax i : Nat) : Py Nat :=
   if i ≠ convwidth then shortMult base i base else pure convmultmax
 
-/-- `for (; pz < pzstop; ++pz)`, longobject.c:2824-2828. -/
+/-- `for (; pz < pzstop; ++pz)`, longobject.c:2906-2910. -/
 def mulLoop (m : Nat) : List Nat → Nat → Py (List Nat × Nat)
   | [], c => .ok ([], c)
   | d :: ds, c => do
@@ -154,11 +154,11 @@ def mulLoop (m : Nat) : List Nat → Nat → Py (List Nat × Nat)
     let (r, c'') ← mulLoop m ds (c' >>> 30)
     return ((c' &&& MASK) :: r, c'')
 
-/-- `(digit)c` with `assert(c < PyLong_BASE)`, longobject.c:2831. -/
+/-- `(digit)c` with `assert(c < PyLong_BASE)`, longobject.c:2913. -/
 def chkDigit (c : Nat) : Py Nat := if c < 2 ^ 30 then .ok c else .error cOverflow
 
 /-- The `while (p < end)` loop of `long_from_non_binary_base`,
-longobject.c:2793-2855. `z` is the digits so far, `sizeZ` the allocated size. -/
+longobject.c:2875-2937. `z` is the digits so far, `sizeZ` the allocated size. -/
 def nbLoop (base convwidth convmultmax : Nat) :
     Nat → List Nat → List Nat → Nat → Py (List Nat)
   | 0, _, _, _ => .error .modelFuel
@@ -179,7 +179,7 @@ def nbLoop (base convwidth convmultmax : Nat) :
       else nbLoop base convwidth convmultmax f p z' sizeZ
 
 /-- `long_from_non_binary_base(start, end, digits, base, res)`,
-longobject.c:2747-2858, with the allocation `sizeZ` as a parameter. -/
+longobject.c:2828-2940, with the allocation `sizeZ` as a parameter. -/
 def longFromNonBinaryBaseAt (sizeZ : Nat) (body : List Nat) (base : Nat) : Py (List Nat) := do
   if sizeZ > maxLongDigits then
     throw (.overflowError "too many digits in integer")
@@ -189,19 +189,19 @@ def longFromNonBinaryBaseAt (sizeZ : Nat) (body : List Nat) (base : Nat) : Py (L
 
 /-! ## `long_from_string_base` -/
 
-/-- `_MAX_STR_DIGITS_ERROR_FMT_TO_INT`, longobject.c:30. -/
+/-- `_MAX_STR_DIGITS_ERROR_FMT_TO_INT`, longobject.c:32. -/
 def limitToIntMsg (lim digits : Nat) : String :=
   s!"Exceeds the limit ({lim} digits) for integer string conversion: value has {digits} digits; use sys.set_int_max_str_digits() to increase the limit"
 
 /-- How the validating loop of `long_from_string_base` ended. -/
 inductive Scan where
-  /-- A double underscore: `*str = p - 1`, longobject.c:2903-2906. -/
+  /-- A double underscore: `*str = p - 1`, longobject.c:2985-2988. -/
   | dbl (q : List Nat)
   /-- The first character that is neither a digit nor `_`: `p`, with the count of
   digits, the previous character and the pointer `p - 1`. -/
   | stop (digits prev : Nat) (q p : List Nat)
 
-/-- The `while` loop at longobject.c:2900-2912. -/
+/-- The `while` loop at longobject.c:2982-2994. -/
 def scan (base : Nat) : List Nat → List Nat → Nat → Nat → Scan
   | q, [], prev, digits => .stop digits prev q []
   | q, c :: r, prev, digits =>
@@ -212,7 +212,7 @@ def scan (base : Nat) : List Nat → List Nat → Nat → Nat → Scan
       else scan base (c :: r) r c (digits + 1)
     else .stop digits prev q (c :: r)
 
-/-- The conversion chosen once a body is validated, longobject.c:2936-2961. -/
+/-- The conversion chosen once a body is validated, longobject.c:3018-3043. -/
 def convBody (pyl : List Nat → Py (List Nat)) (lim : Nat) (body : List Nat) (digits base : Nat) :
     Py (List Nat) :=
   if base &&& (base - 1) = 0 then longFromBinaryBase body digits base
@@ -221,7 +221,7 @@ def convBody (pyl : List Nat → Py (List Nat)) (lim : Nat) (body : List Nat) (d
   else if digits > 6000 ∧ base = 10 then pyl body
   else longFromNonBinaryBaseAt (fsizeZ digits base) body base
 
-/-- `long_from_string_base(&str, base, &res)`, longobject.c:2880-2962. The first
+/-- `long_from_string_base(&str, base, &res)`, longobject.c:2962-3044. The first
 component is the return value and `*res`: `none` is `-1`, a syntax error. The
 second is the new `*str`. `pyl` is `pylong_int_from_string`. -/
 def longFromStringBase (pyl : List Nat → Py (List Nat)) (lim : Nat) (start : List Nat)
@@ -284,7 +284,7 @@ def invalidLiteral (base : Int) (repr : Option (List Char)) : PyExc :=
 /-- All of `s` is ASCII, so `reprStr` applies. -/
 def isAscii (s : List Nat) : Bool := s.all (· < 128)
 
-/-- The `onError` label, longobject.c:3061-3075: a `str` is made from the first 200
+/-- The `onError` label, longobject.c:3143-3157: a `str` is made from the first 200
 bytes of `orig_str`, which can fail to decode. -/
 def onError (orig : List Nat) (base : Int) : PyExc :=
   let cs := (cStr orig).take 200
@@ -296,7 +296,7 @@ def onError (orig : List Nat) (base : Int) : PyExc :=
 
 def lower (c : Nat) : Nat := if 65 ≤ c ∧ c ≤ 90 then c + 32 else c
 
-/-- The sign, longobject.c:2989-2995. -/
+/-- The sign, longobject.c:3071-3077. -/
 def signOf (s0 : List Nat) : Bool × List Nat :=
   if hd s0 = 43 then (false, s0.drop 1)
   else if hd s0 = 45 then (true, s0.drop 1)
@@ -305,7 +305,7 @@ def signOf (s0 : List Nat) : Bool × List Nat :=
 /-- The radix letter of a base with a prefix. -/
 def radixLetter (b : Nat) : Nat := if b = 16 then 120 else if b = 8 then 111 else 98
 
-/-- Base detection, longobject.c:2996-3015: the base and `error_if_nonzero`. -/
+/-- Base detection, longobject.c:3078-3097: the base and `error_if_nonzero`. -/
 def detectBase (base c0 c1 : Nat) : Nat × Bool :=
   if base = 0 then
     if c0 ≠ 48 then (10, false)
@@ -315,7 +315,7 @@ def detectBase (base c0 c1 : Nat) : Nat × Bool :=
     else (10, true)
   else (base, false)
 
-/-- Skipping the radix prefix, longobject.c:3016-3025. -/
+/-- Skipping the radix prefix, longobject.c:3098-3107. -/
 def skipPrefix (b : Nat) (s1 : List Nat) : List Nat :=
   let c0 := hd s1
   let c1 := hd (s1.drop 1)
@@ -325,7 +325,7 @@ def skipPrefix (b : Nat) (s1 : List Nat) : List Nat :=
     if hd t = uscore then t.drop 1 else t
   else s1
 
-/-- `PyLong_FromString(str, pend, base)`, longobject.c:2973-3076. The second
+/-- `PyLong_FromString(str, pend, base)`, longobject.c:3055-3158. The second
 component is what is stored to `*pend`: `none` when no path wrote it. -/
 def pyLongFromString (pyl : List Nat → Py (List Nat)) (lim : Nat) (orig : List Nat)
     (base : Int) : Py Long × Option (List Nat) :=
@@ -346,7 +346,7 @@ def pyLongFromString (pyl : List Nat → Py (List Nat)) (lim : Nat) (orig : List
         (.ok (if neg then v.flip else v), some p)
 
 
-/-- `_PyLong_FromBytes(s, len, base)`, longobject.c:3084-3101. -/
+/-- `_PyLong_FromBytes(s, len, base)`, longobject.c:3166-3183. -/
 def pyLongFromBytes (pyl : List Nat → Py (List Nat)) (lim : Nat) (s : List Nat) (base : Int) :
     Py Long :=
   let (r, e) := pyLongFromString pyl lim s base
@@ -355,7 +355,7 @@ def pyLongFromBytes (pyl : List Nat → Py (List Nat)) (lim : Nat) (s : List Nat
   | some [], .ok v => .ok v
   | some _, _ => .error (invalidLiteral base (some (reprBytes (s.take 200))))
 
-/-- `_PyUnicode_TransformDecimalAndSpaceToASCII(unicode)`, unicodeobject.c:9614-9657,
+/-- `_PyUnicode_TransformDecimalAndSpaceToASCII(unicode)`, unicodeobject.c:9515-9558,
 over code points. On a character that is none of these, `'?'` ends the result. -/
 def transformLoop : List Nat → List Nat
   | [] => []
@@ -369,7 +369,7 @@ def transformLoop : List Nat → List Nat
 def transformDecimalAndSpace (u : List Nat) : List Nat :=
   if u.all (· < 128) then u else transformLoop u
 
-/-- `PyLong_FromUnicodeObject(u, base)`, longobject.c:3104-3130. -/
+/-- `PyLong_FromUnicodeObject(u, base)`, longobject.c:3186-3212. -/
 def pyLongFromUnicodeObject (pyl : List Nat → Py (List Nat)) (lim : Nat) (u : List Nat)
     (base : Int) : Py Long :=
   let asciidig := transformDecimalAndSpace u
@@ -1196,8 +1196,8 @@ theorem fsizeZ_le {digits base : Nat} (h : digits ≤ 2 ^ 58) (hb : base < 37) :
   have e : 2 ^ 58 * 2 ^ 58 / 2 ^ 60 + 1 ≤ maxLongDigits := by decide
   omega
 
-/-- The limit test of `long_from_string_base`, longobject.c:2943-2946 and the
-power-of-two exemption at :2936. -/
+/-- The limit test of `long_from_string_base`, longobject.c:3025-3028 and the
+power-of-two exemption at :3018. -/
 def limitHit (lim digits base : Nat) : Prop :=
   base &&& (base - 1) ≠ 0 ∧ digits > strDigitsThreshold ∧ lim > 0 ∧ digits > lim
 

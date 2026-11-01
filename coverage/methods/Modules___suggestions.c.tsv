@@ -1,3 +1,3 @@
 file	line	endline	name	signature	status	entry	note
-Modules/_suggestions.c	19	44	_suggestions__generate_suggestions_impl	_suggestions__generate_suggestions_impl(PyObject *module, PyObject *candidates, PyObject *item) /*[clinic end generated code: output=79be7b653ae5e7ca input=ba2a8dddc654e33a]*/	todo		
-Modules/_suggestions.c	67	69	PyInit__suggestions	PyMODINIT_FUNC PyInit__suggestions(void) {	todo		
+Modules/_suggestions.c	20	45	_suggestions__generate_suggestions_impl	_suggestions__generate_suggestions_impl(PyObject *module, PyObject *candidates, PyObject *item) /*[clinic end generated code: output=79be7b653ae5e7ca input=92861a6c9bd8f667]*/	todo		changed-in-3.15:
+Modules/_suggestions.c	69	71	PyInit__suggestions	PyMODINIT_FUNC PyInit__suggestions(void) {	todo		

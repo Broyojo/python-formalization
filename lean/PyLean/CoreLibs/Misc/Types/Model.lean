@@ -41,7 +41,7 @@ variable {O NS R : Type}
 /-- `new_bases[i:i+1] = new_base`. -/
 def splice (l : List O) (i : Nat) (nb : List O) : List O := l.take i ++ nb ++ l.drop (i + 1)
 
-/-- The `for i, base in enumerate(bases):` loop of `resolve_bases`, Lib/types.py:95-106. -/
+/-- The `for i, base in enumerate(bases):` loop of `resolve_bases`, Lib/types.py:101-112. -/
 def resolveLoop (ops : Ops O NS R) (bases : List O) :
     Nat → List O → List O → Bool → Int → Py (List O × Bool)
   | _, [], new, updated, _ => .ok (new, updated)
@@ -58,7 +58,7 @@ def resolveLoop (ops : Ops O NS R) (bases : List O) :
           resolveLoop ops bases (i + 1) rest (splice new (i + shift).toNat nb) true
             (shift + nb.length - 1)
 
-/-- `resolve_bases`, Lib/types.py:90-109. `none` is `return bases`, the same object; `some l` is
+/-- `resolve_bases`, Lib/types.py:96-115. `none` is `return bases`, the same object; `some l` is
 the new tuple. -/
 def resolveBases (ops : Ops O NS R) (bases : List O) : Py (Option (List O)) :=
   match resolveLoop ops bases 0 bases bases false 0 with
@@ -89,7 +89,7 @@ def updateLoop (ops : Ops O NS R) (bases : List O) :
 def updateBases (ops : Ops O NS R) (bases : List O) : Py (Option (List O)) :=
   updateLoop ops bases bases [] none
 
-/-- The `for base in bases:` loop of `_calculate_meta`, Lib/types.py:146-157. -/
+/-- The `for base in bases:` loop of `_calculate_meta`, Lib/types.py:152-163. -/
 def calcLoop (ops : Ops O NS R) : O → List O → Py O
   | winner, [] => .ok winner
   | winner, base :: rest =>
@@ -105,7 +105,7 @@ def calcLoop (ops : Ops O NS R) : O → List O → Py O
           ("metaclass conflict: the metaclass of a derived class must be a (non-strict) " ++
            "subclass of the metaclasses of all its bases"))
 
-/-- `_calculate_meta`, Lib/types.py:143-158. -/
+/-- `_calculate_meta`, Lib/types.py:149-164. -/
 def calculateMeta (ops : Ops O NS R) (mcs : O) (bases : List O) : Py O := calcLoop ops mcs bases
 
 /-- `kwds.pop('metaclass')` on a dict: the value and the remaining items in order. -/
@@ -117,7 +117,7 @@ def popMeta : List (String × O) → Option O × List (String × O)
       let (m, r) := popMeta rest
       (m, (k, v) :: r)
 
-/-- `prepare_class`, Lib/types.py:111-141. Returns `(meta, ns, kwds)`. -/
+/-- `prepare_class`, Lib/types.py:117-147. Returns `(meta, ns, kwds)`. -/
 def prepareClass (ops : Ops O NS R) (name : String) (bases : List O)
     (kwds : Option (List (String × O))) : Py (O × NS × List (String × O)) :=
   let kwds := kwds.getD []
@@ -141,7 +141,7 @@ def prepareClass (ops : Ops O NS R) (name : String) (bases : List O)
     | .ok mcs => rest mcs
   else rest mcs
 
-/-- `new_class`, Lib/types.py:80-88. -/
+/-- `new_class`, Lib/types.py:86-94. -/
 def newClass (ops : Ops O NS R) (name : String) (bases : List O)
     (kwds : Option (List (String × O))) (execBody : Option (NS → Py NS)) : Py R :=
   match resolveBases ops bases with
@@ -170,7 +170,7 @@ structure ClsLike (V : Type) where
   origBases : Option V
   bases : Option V
 
-/-- `get_original_bases`, Lib/types.py:161-186. The default argument `cls.__bases__` is evaluated
+/-- `get_original_bases`, Lib/types.py:167-192. The default argument `cls.__bases__` is evaluated
 before `.get` runs, so a missing `__bases__` raises even when `__orig_bases__` is present. -/
 def getOriginalBases {V : Type} (cls : ClsLike V) : Py V :=
   let exc : PyExc := .typeError s!"Expected an instance of type, not '{cls.typeName}'"
@@ -185,7 +185,7 @@ def getOriginalBases {V : Type} (cls : ClsLike V) : Py V :=
 
 /-! ### `DynamicClassAttribute` -/
 
-/-- The attributes of a `DynamicClassAttribute`, Lib/types.py:207-215. -/
+/-- The attributes of a `DynamicClassAttribute`, Lib/types.py:213-221. -/
 structure DCA (F : Type) where
   fget : Option F
   fset : Option F
@@ -214,7 +214,7 @@ def fgetDoc (o : FnOps F) : Option F → Option String
   | some f => o.docOf f
   | none => o.noneDoc
 
-/-- `DynamicClassAttribute.__init__`, Lib/types.py:207-215. `doc or fget.__doc__` reads
+/-- `DynamicClassAttribute.__init__`, Lib/types.py:213-221. `doc or fget.__doc__` reads
 `fget.__doc__` only when `doc` is false; the read cannot fail. -/
 def DCA.init (o : FnOps F) (fget fset fdel : Option F := none) (doc : Option String := none) :
     DCA F :=
@@ -233,7 +233,7 @@ inductive GetRes (F V : Type) where
 /-- `raise AttributeError(msg)`. -/
 def attrErr (msg : String) : PyExc := .named "AttributeError" msg
 
-/-- `DynamicClassAttribute.__get__`, Lib/types.py:217-224. `call` is `fget(instance)`; `instance =
+/-- `DynamicClassAttribute.__get__`, Lib/types.py:223-230. `call` is `fget(instance)`; `instance =
 none` is access through the class. -/
 def DCA.get {I V : Type} (d : DCA F) (call : F → I → Py V) (inst : Option I) :
     Py (GetRes F V) :=
@@ -248,30 +248,30 @@ def DCA.get {I V : Type} (d : DCA F) (call : F → I → Py V) (inst : Option I)
       | .error e => .error e
       | .ok v => .ok (.value v)
 
-/-- `DynamicClassAttribute.__set__`, Lib/types.py:226-229. -/
+/-- `DynamicClassAttribute.__set__`, Lib/types.py:232-235. -/
 def DCA.set {I V : Type} (d : DCA F) (call : F → I → V → Py Unit) (i : I) (v : V) : Py Unit :=
   match d.fset with
   | none => .error (attrErr "can't set attribute")
   | some f => call f i v
 
-/-- `DynamicClassAttribute.__delete__`, Lib/types.py:231-234. -/
+/-- `DynamicClassAttribute.__delete__`, Lib/types.py:237-240. -/
 def DCA.delete {I : Type} (d : DCA F) (call : F → I → Py Unit) (i : I) : Py Unit :=
   match d.fdel with
   | none => .error (attrErr "can't delete attribute")
   | some f => call f i
 
-/-- `DynamicClassAttribute.getter`, Lib/types.py:236-240. -/
+/-- `DynamicClassAttribute.getter`, Lib/types.py:242-246. -/
 def DCA.getter (o : FnOps F) (d : DCA F) (fget : F) : DCA F :=
   let fdoc := if d.overwriteDoc then o.docOf fget else none
   let result := DCA.init o (some fget) d.fset d.fdel (docOr fdoc d.doc)
   { result with overwriteDoc := d.overwriteDoc }
 
-/-- `DynamicClassAttribute.setter`, Lib/types.py:242-245. -/
+/-- `DynamicClassAttribute.setter`, Lib/types.py:248-251. -/
 def DCA.setter (o : FnOps F) (d : DCA F) (fset : F) : DCA F :=
   let result := DCA.init o d.fget (some fset) d.fdel d.doc
   { result with overwriteDoc := d.overwriteDoc }
 
-/-- `DynamicClassAttribute.deleter`, Lib/types.py:247-250. -/
+/-- `DynamicClassAttribute.deleter`, Lib/types.py:253-256. -/
 def DCA.deleter (o : FnOps F) (d : DCA F) (fdel : F) : DCA F :=
   let result := DCA.init o d.fget d.fset (some fdel) d.doc
   { result with overwriteDoc := d.overwriteDoc }
@@ -290,7 +290,7 @@ structure GenObj (G V : Type) where
   giYieldfrom : G → Py V
   giSuspended : G → Py V
 
-/-- A `_GeneratorWrapper`, Lib/types.py:255-259. `name` and `qualname` are the `getattr(gen, ...,
+/-- A `_GeneratorWrapper`, Lib/types.py:260-264. `name` and `qualname` are the `getattr(gen, ...,
 None)` reads. -/
 structure Wrapper (G : Type) where
   wrapped : G
@@ -300,42 +300,42 @@ structure Wrapper (G : Type) where
 
 variable {G V : Type}
 
-/-- `_GeneratorWrapper.__init__`, Lib/types.py:255-259. -/
+/-- `_GeneratorWrapper.__init__`, Lib/types.py:260-264. -/
 def Wrapper.init (g : G) (isgen : Bool) (name qualname : Option String) : Wrapper G :=
   { wrapped := g, isgen, name, qualname }
 
-/-- `_GeneratorWrapper.send`, Lib/types.py:260-261. -/
+/-- `_GeneratorWrapper.send`, Lib/types.py:265-266. -/
 def Wrapper.send (o : GenObj G V) (w : Wrapper G) (val : V) : Wrapper G × Py V :=
   let (g, r) := o.send w.wrapped val
   ({ w with wrapped := g }, r)
 
-/-- `_GeneratorWrapper.throw`, Lib/types.py:262-263. -/
+/-- `_GeneratorWrapper.throw`, Lib/types.py:267-268. -/
 def Wrapper.throw (o : GenObj G V) (w : Wrapper G) (tp : V) (rest : List V) : Wrapper G × Py V :=
   let (g, r) := o.throw w.wrapped tp rest
   ({ w with wrapped := g }, r)
 
-/-- `_GeneratorWrapper.close`, Lib/types.py:264-265. -/
+/-- `_GeneratorWrapper.close`, Lib/types.py:269-270. -/
 def Wrapper.close (o : GenObj G V) (w : Wrapper G) : Wrapper G × Py V :=
   let (g, r) := o.close w.wrapped
   ({ w with wrapped := g }, r)
 
-/-- `_GeneratorWrapper.__next__`, Lib/types.py:286-287. -/
+/-- `_GeneratorWrapper.__next__`, Lib/types.py:297-298. -/
 def Wrapper.next (o : GenObj G V) (w : Wrapper G) : Wrapper G × Py V :=
   let (g, r) := o.next w.wrapped
   ({ w with wrapped := g }, r)
 
-/-- `_GeneratorWrapper.gi_code`, Lib/types.py:266-268. -/
+/-- `_GeneratorWrapper.gi_code`, Lib/types.py:271-273. -/
 def Wrapper.giCode (o : GenObj G V) (w : Wrapper G) : Py V := o.giCode w.wrapped
-/-- `_GeneratorWrapper.gi_frame`, Lib/types.py:269-271. -/
+/-- `_GeneratorWrapper.gi_frame`, Lib/types.py:274-276. -/
 def Wrapper.giFrame (o : GenObj G V) (w : Wrapper G) : Py V := o.giFrame w.wrapped
-/-- `_GeneratorWrapper.gi_running`, Lib/types.py:272-274. -/
+/-- `_GeneratorWrapper.gi_running`, Lib/types.py:277-279. -/
 def Wrapper.giRunning (o : GenObj G V) (w : Wrapper G) : Py V := o.giRunning w.wrapped
-/-- `_GeneratorWrapper.gi_yieldfrom`, Lib/types.py:275-277. -/
+/-- `_GeneratorWrapper.gi_yieldfrom`, Lib/types.py:280-282. -/
 def Wrapper.giYieldfrom (o : GenObj G V) (w : Wrapper G) : Py V := o.giYieldfrom w.wrapped
-/-- `_GeneratorWrapper.gi_suspended`, Lib/types.py:278-280. -/
+/-- `_GeneratorWrapper.gi_suspended`, Lib/types.py:283-285. -/
 def Wrapper.giSuspended (o : GenObj G V) (w : Wrapper G) : Py V := o.giSuspended w.wrapped
 
-/-- `_GeneratorWrapper.__iter__`, Lib/types.py:288-291: `.inl` is `self.__wrapped`, `.inr` is
+/-- `_GeneratorWrapper.__iter__`, Lib/types.py:299-302: `.inl` is `self.__wrapped`, `.inr` is
 `self`. -/
 def Wrapper.iter (w : Wrapper G) : G ⊕ Wrapper G :=
   if w.isgen then .inl w.wrapped else .inr w
@@ -358,7 +358,7 @@ inductive CoResult where
   | wrapped
   deriving Repr, DecidableEq
 
-/-- `coroutine`, Lib/types.py:294-343, down to the point where `wrapped` is returned. -/
+/-- `coroutine`, Lib/types.py:305-353, down to the point where `wrapped` is returned. -/
 def coroutine (f : CoFunc) : Py CoResult :=
   if !f.callable then .error (.typeError "types.coroutine() expects a callable")
   else if f.function then
@@ -379,7 +379,7 @@ structure CoValue where
   isCoroutine : Bool
   deriving Repr, DecidableEq
 
-/-- `wrapped(*args, **kwargs)` after `func` returned: does it wrap? Lib/types.py:329-341. -/
+/-- `wrapped(*args, **kwargs)` after `func` returned: does it wrap? Lib/types.py:339-351. -/
 def wrappedWraps (c : CoValue) : Bool :=
   if c.isCoroutineType || (c.isGeneratorType && (c.flags &&& 0x100 != 0)) then false
   else if c.isGenerator && !c.isCoroutine then true

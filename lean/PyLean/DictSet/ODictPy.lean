@@ -90,7 +90,7 @@ def pyodSetItem (key : K) (value : V) : PM K V Unit := do
   onD (dictSetItem P key value)
 
 /-- Remove the link of `key` from `__map` and unlink it, clearing its pointers
-(:138-144, :253-259). -/
+(:138-144, :252-258). -/
 def pyodDropLink (key : K) : PM K V Unit := do
   let id ← onMap (dictPopDefault Q key none)
   let o ← M.get
@@ -140,7 +140,7 @@ def pyodMoveToEnd (key : K) (last : Bool) : PM K V Unit := do
     let first := (o.link root).next.getD root
     M.put (((o.setLink link fun x => { x with prev := some root, next := some first }).setPrev first link).setNext root link)
 
-/-- `OrderedDict.pop` (:246-266). -/
+/-- `OrderedDict.pop` (:245-265). -/
 def pyodPop (key : K) (dflt : Option V) : PM K V V := do
   match ← onD (pyDictPop P true key) with
   | some result =>
@@ -151,7 +151,7 @@ def pyodPop (key : K) (dflt : Option V) : PM K V V := do
     | some d => return d
     | none => M.throw (keyErr P key)
 
-/-- `OrderedDict.setdefault` (:268-276). -/
+/-- `OrderedDict.setdefault` (:267-275). -/
 def pyodSetdefault (key : K) (dflt : V) : PM K V V := do
   let inSelf ← onD (pyDictContains P key)
   if inSelf then onD (dictSubscript P none key)
@@ -170,7 +170,7 @@ def pyodKeysLoop (getitem : K → Py V) : List K → Option PyExc → PM K V Uni
     pyodSetItem P Q key value
     pyodKeysLoop getitem rest stop
 
-/-- `for key, value in other: self[key] = value` (`_collections_abc.py:979-981`):
+/-- `for key, value in other: self[key] = value` (`_collections_abc.py:980-982`):
 `UNPACK_SEQUENCE`'s own messages. -/
 def pyodPairsLoop : List (PairItem K V) → Option PyExc → PM K V Unit
   | [], stop =>
@@ -186,7 +186,7 @@ def pyodPairsLoop : List (PairItem K V) → Option PyExc → PM K V Unit
     | .pair k v => pyodSetItem P Q k v
     pyodPairsLoop rest stop
 
-/-- `MutableMapping.update` (`Lib/_collections_abc.py:964-983`), `OrderedDict.update`,
+/-- `MutableMapping.update` (`Lib/_collections_abc.py:965-984`), `OrderedDict.update`,
 `OrderedDict.__init__` (:113-117). `.itemsObj` objects have no `keys`, so here only their
 iteration counts: this is where the twin differs from `mutablemapping_update_arg`. -/
 def pyodUpdateArg (arg : ODictArg K V) : PM K V Unit :=

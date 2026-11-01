@@ -2,7 +2,7 @@ import PyLean.Binary64.BigintProps
 
 /-!
 `lshift`, `cmp`, `diff` and `dshift` from `Python/dtoa.c`. These need the invariant the
-source comment at dtoa.c:289-292 states: limbs are 32-bit, and the top limb is nonzero
+source comment at dtoa.c:291-294 states: limbs are 32-bit, and the top limb is nonzero
 unless the number has a single limb.
 -/
 
@@ -13,7 +13,7 @@ open Bigint
 /-- Every limb fits in 32 bits. -/
 def Limbs32 (x : List Nat) : Prop := ∀ d ∈ x, d < 2 ^ 32
 
-/-- The invariant of `struct Bigint`, dtoa.c:289-292. -/
+/-- The invariant of `struct Bigint`, dtoa.c:291-294. -/
 structure Normal (b : Bigint) : Prop where
   limbs : Limbs32 b.x
   ne : b.x ≠ []
@@ -332,7 +332,7 @@ theorem diffValue_proven : DiffValue := by
       · simp; omega
 
 /-- `dshift(b, p2)` is the left shift, modulo 32, that leaves 4 leading zero bits in the top
-limb of `b * 2 ** max(p2, 0)`, as the comment at dtoa.c:2597-2603 asks. -/
+limb of `b * 2 ** max(p2, 0)`, as the comment at dtoa.c:2609-2615 asks. -/
 def DshiftSpec : Prop :=
   ∀ (b : Bigint) (p2 : Int), dshift b p2 < 32 ∧
     ((dshift b p2 : Int) + max p2 0 + 4 - (hi0bits b.top : Int)) % 32 = 0

@@ -42,12 +42,12 @@ Lib/uuid.py	645	649	_unix_getnode	_unix_getnode()	todo
 Lib/uuid.py	651	655	_windll_getnode	_windll_getnode()	todo		
 Lib/uuid.py	657	672	_random_getnode	_random_getnode()	todo		
 Lib/uuid.py	702	721	getnode	getnode()	todo		
-Lib/uuid.py	726	761	uuid1	uuid1(node=None, clock_seq=None)	todo		
-Lib/uuid.py	763	772	uuid3	uuid3(namespace, name)	todo		
-Lib/uuid.py	774	779	uuid4	uuid4()	todo		
-Lib/uuid.py	781	790	uuid5	uuid5(namespace, name)	todo		
-Lib/uuid.py	795	829	uuid6	uuid6(node=None, clock_seq=None)	todo		
-Lib/uuid.py	835	841	_uuid7_get_counter_and_tail	_uuid7_get_counter_and_tail()	todo		
-Lib/uuid.py	844	905	uuid7	uuid7()	todo		
-Lib/uuid.py	908	931	uuid8	uuid8(a=None, b=None, c=None)	todo		
-Lib/uuid.py	934	997	main	main()	todo		candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output
+Lib/uuid.py	726	762	uuid1	uuid1(node=None, clock_seq=None)	todo		
+Lib/uuid.py	764	773	uuid3	uuid3(namespace, name)	todo		
+Lib/uuid.py	775	780	uuid4	uuid4()	todo		
+Lib/uuid.py	782	791	uuid5	uuid5(namespace, name)	todo		
+Lib/uuid.py	796	830	uuid6	uuid6(node=None, clock_seq=None)	todo		
+Lib/uuid.py	836	842	_uuid7_get_counter_and_tail	_uuid7_get_counter_and_tail()	todo		
+Lib/uuid.py	845	906	uuid7	uuid7()	todo		
+Lib/uuid.py	909	932	uuid8	uuid8(a=None, b=None, c=None)	todo		
+Lib/uuid.py	935	997	main	main()	todo		changed-in-3.15: candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output

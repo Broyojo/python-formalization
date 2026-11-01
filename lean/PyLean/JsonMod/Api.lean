@@ -118,7 +118,7 @@ def decodeBytes (enc : String) (b : List Nat) : Except PyExc PStr :=
   else if enc = "utf-32-le" then utf32Dec true f b
   else utf32Dec false f b
 
-/-! ### `detect_encoding`, Lib/json/__init__.py:248-275 -/
+/-! ### `detect_encoding`, Lib/json/__init__.py:247-274 -/
 
 def bomUtf8 : List Nat := [0xef, 0xbb, 0xbf]
 def bomU16Le : List Nat := [0xff, 0xfe]
@@ -147,7 +147,7 @@ def detectEncoding (b : List Nat) : String :=
       else "utf-8"
     else "utf-8"
 
-/-! ### `JSONDecoder.__init__`, decoder.py:292-337 -/
+/-! ### `JSONDecoder.__init__`, decoder.py:296-350 -/
 
 /-- A hook argument with its truth value: `parse_float or float` falls back to
 `float` for a false callable. -/
@@ -194,7 +194,7 @@ inductive LoadArg where
   /-- Any other object, by type name. -/
   | other (t : String)
 
-/-- The condition of the fast path, Lib/json/__init__.py:349-351. -/
+/-- The condition of the fast path, Lib/json/__init__.py@3.14.7:349-351. -/
 def loadsFast (a : DecArgs) : Bool :=
   a.objectHook.isNone && a.parseInt.isNone && a.parseFloat.isNone && a.parseConstant.isNone &&
     a.objectPairsHook.isNone && a.strict.isNone && a.kw.isEmpty
@@ -209,7 +209,7 @@ def loadsDecode (decode : DCfg → PStr → DR JVal) (a : DecArgs) (s : PStr) : 
     | .ok v => .ok v
     | .error e => .error (e.toPy s)
 
-/-- `json.loads(x, ...)`, Lib/json/__init__.py:304-365, for a given `JSONDecoder.decode`. -/
+/-- `json.loads(x, ...)`, Lib/json/__init__.py:313-386, for a given `JSONDecoder.decode`. -/
 def jsonLoads (decode : DCfg → PStr → DR JVal) (a : DecArgs) : LoadArg → Except PyExc JVal
   | .str s =>
     if s.head? = some 0xfeff then
@@ -280,7 +280,7 @@ def encoderInit (a : EncArgs) : Except PyExc ECfg :=
 
 /-! ### `json.dumps`, `json.dump` -/
 
-/-- The condition of the cached encoder, Lib/json/__init__.py:231-233. -/
+/-- The condition of the cached encoder, Lib/json/__init__.py:230-232. -/
 def dumpsFast (a : EncArgs) : Bool :=
   !a.skipkeys && a.ensureAscii && a.checkCircular && a.allowNan && a.separators.isNone &&
     a.default.isNone && !a.sortKeys && a.kw.isEmpty &&
@@ -292,7 +292,7 @@ def dumpsFast (a : EncArgs) : Bool :=
 def encoderOf (a : EncArgs) : Except PyExc ECfg :=
   if dumpsFast a then .ok {} else encoderInit a
 
-/-- `json.dumps(v, ...)`, Lib/json/__init__.py:185-242, for a given `JSONEncoder.encode`. -/
+/-- `json.dumps(v, ...)`, Lib/json/__init__.py:184-241, for a given `JSONEncoder.encode`. -/
 def jsonDumps (encode : ECfg → EVal → ER) (a : EncArgs) (v : EVal) : ER :=
   match encoderOf a with
   | .error e => .error e

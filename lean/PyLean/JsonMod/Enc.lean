@@ -134,7 +134,7 @@ def pyFloatStr (cfg : ECfg) (bits : Nat) (repr : PStr) : Except PyExc PStr :=
   | none => .ok repr
   | some t => if !cfg.allowNan then .error (outOfRange repr) else .ok t
 
-/-- `encoder_encode_float`, Modules/_json.c:1422-1447. -/
+/-- `encoder_encode_float`, Modules/_json.c:1509-1534. -/
 def cEncodeFloat (cfg : ECfg) (bits : Nat) (repr : PStr) : Except PyExc PStr :=
   if !fltIsFinite bits then
     if !cfg.allowNan then .error (outOfRange repr)
@@ -143,7 +143,7 @@ def cEncodeFloat (cfg : ECfg) (bits : Nat) (repr : PStr) : Except PyExc PStr :=
     else .ok (cs "NaN")
   else .ok repr
 
-/-- `int.__repr__` (`_PyLong_Format`), Objects/longobject.c:2133-2139: more than
+/-- `int.__repr__` (`_PyLong_Format`), Objects/longobject.c:2209-2215: more than
 4300 digits raise `ValueError`. -/
 def intRepr (n : Int) : ER :=
   let ds := decDigits n.natAbs
@@ -190,13 +190,13 @@ def pyAsciiReplace (c : Nat) : PStr :=
 def pyEncodeBasestringAscii (s : PStr) : PStr :=
   [34] ++ s.flatMap (fun c => if c = 92 ∨ c = 34 ∨ ¬(32 ≤ c ∧ c ≤ 126) then pyAsciiReplace c else [c]) ++ [34]
 
-/-- `S_CHAR`, Modules/_json.c:110. -/
+/-- `S_CHAR`, Modules/_json.c:122. -/
 def sChar (c : Nat) : Bool := 32 ≤ c && c ≤ 126 && c != 92 && c != 34
 
 /-- `\uXXXX` as written by `ascii_escape_unichar` (`Py_hexdigits`, lower case). -/
 def cU (v : Nat) : PStr := [117, hexCp (v >>> 12 &&& 0xf), hexCp (v >>> 8 &&& 0xf), hexCp (v >>> 4 &&& 0xf), hexCp (v &&& 0xf)]
 
-/-- `ascii_escape_unichar`, Modules/_json.c:113-147. -/
+/-- `ascii_escape_unichar`, Modules/_json.c:125-159. -/
 def cAsciiEscapeChar (c : Nat) : PStr :=
   92 :: (if c = 92 then [92] else if c = 34 then [34] else if c = 8 then [98]
     else if c = 12 then [102] else if c = 10 then [110] else if c = 13 then [114]
@@ -206,11 +206,11 @@ def cAsciiEscapeChar (c : Nat) : PStr :=
       cU (0xd800 - (0x10000 >>> 10) + (c >>> 10)) ++ [92] ++ cU (0xdc00 + (c &&& 0x3ff))
     else cU c)
 
-/-- `ascii_escape_unicode`, Modules/_json.c:149-210. -/
+/-- `ascii_escape_unicode`, Modules/_json.c@3.14.7:149-210. -/
 def cAsciiEscape (s : PStr) : PStr :=
   [34] ++ s.flatMap (fun c => if sChar c then [c] else cAsciiEscapeChar c) ++ [34]
 
-/-- `escape_unicode`, Modules/_json.c:212-304 (`ENCODE_OUTPUT`). -/
+/-- `escape_unicode`, Modules/_json.c:224-368 (`ENCODE_OUTPUT`). -/
 def cEscapeChar (c : Nat) : PStr :=
   if c = 92 then [92, 92] else if c = 34 then [92, 34] else if c = 8 then [92, 98]
   else if c = 12 then [92, 102] else if c = 10 then [92, 110] else if c = 13 then [92, 114]
@@ -268,7 +268,7 @@ def insertItem (p : EKey × EVal) : List (EKey × EVal) → List (EKey × EVal)
   | [] => [p]
   | q :: t => if p.1.lt q.1 then p :: q :: t else q :: insertItem p t
 
-/-- `sorted(dct.items())` (encoder.py:358) and `PyList_Sort(items)` (_json.c:1700):
+/-- `sorted(dct.items())` (encoder.py:347) and `PyList_Sort(items)` (_json.c@3.14.7:1700):
 the keys of a dict are distinct, so tuples compare by key alone. When keys of
 two classes are present some comparison between them raises; which one depends
 on the sort, so the message is not modelled. -/
@@ -293,12 +293,12 @@ def rep (t : PStr) : Nat → PStr
   | 0 => []
   | k + 1 => t ++ rep t k
 
-/-! ### Pure-Python encoder: `_make_iterencode`, encoder.py:265-461 -/
+/-! ### Pure-Python encoder: `_make_iterencode`, encoder.py@3.14.7:265-461 -/
 
 def pyStrEnc (cfg : ECfg) (s : PStr) : PStr :=
   if cfg.ensureAscii then pyEncodeBasestringAscii s else pyEncodeBasestring s
 
-/-- The key conversion of `_iterencode_dict`, encoder.py:362-382: the key text,
+/-- The key conversion of `_iterencode_dict`, encoder.py:351-371: the key text,
 `none` for a skipped key, or the error. -/
 def pyKeyStr (cfg : ECfg) : EKey → Except PyExc (Option PStr)
   | .str s => .ok (some s)
@@ -310,7 +310,7 @@ def pyKeyStr (cfg : ECfg) : EKey → Except PyExc (Option PStr)
   | .tup _ => if cfg.skipKeys then .ok none else .error badKeyErr
 
 mutual
-/-- `_iterencode(o, _current_indent_level)`, encoder.py:426-460. -/
+/-- `_iterencode(o, _current_indent_level)`, encoder.py:415-449. -/
 def pyEnc (cfg : ECfg) : Nat → Nat → List Nat → EVal → ER
   | 0, _, _, _ => .error .modelFuel
   | f + 1, lvl, seen, v =>
@@ -322,7 +322,7 @@ def pyEnc (cfg : ECfg) : Nat → Nat → List Nat → EVal → ER
     | .int n => intRepr n
     | .flt b r => pyFloatStr cfg b r
     | .list xs =>
-      -- `_iterencode_list`, encoder.py:280-337
+      -- `_iterencode_list`, encoder.py:269-326
       if xs = [] then .ok (cs "[]")
       else
         let (lvl, nl, sep) : Nat × Option PStr × PStr :=
@@ -337,7 +337,7 @@ def pyEnc (cfg : ECfg) : Nat → Nat → List Nat → EVal → ER
             | none => []
           .ok ([91] ++ nl.getD [] ++ body ++ close ++ [93])
     | .dict kvs =>
-      -- `_iterencode_dict`, encoder.py:339-424
+      -- `_iterencode_dict`, encoder.py:328-413
       if kvs = [] then .ok (cs "{}")
       else
         let (lvl, nl, sep) : Nat × Option PStr × PStr :=
@@ -357,7 +357,7 @@ def pyEnc (cfg : ECfg) : Nat → Nat → List Nat → EVal → ER
             .ok ([123] ++ body ++ close ++ [125])
     | .back _ => .error (if cfg.checkCircular then circularErr else recursionErr)
     | .other n t =>
-      -- encoder.py:446-460. `seen` holds the objects being serialized: they are
+      -- encoder.py:435-449. `seen` holds the objects being serialized: they are
       -- `markers`, and without `check_circular` a repeat recurses forever.
       if n ∈ seen then .error (if cfg.checkCircular then circularErr else recursionErr)
       else
@@ -397,13 +397,13 @@ def pyEncItems (cfg : ECfg) : Nat → Nat → List Nat → Option PStr → PStr 
 termination_by f _ _ _ _ _ items => (f, sizeOf items)
 end
 
-/-! ### C encoder: `encoder_listencode_obj` and friends, Modules/_json.c:1478-1860 -/
+/-! ### C encoder: `encoder_listencode_obj` and friends, Modules/_json.c:1568-1994 -/
 
-/-- `encoder_encode_string` with `fast_encode` (:1449-1467). -/
+/-- `encoder_encode_string` with `fast_encode` (@3.14.7:1449-1467). -/
 def cStrEnc (cfg : ECfg) (s : PStr) : PStr :=
   if cfg.ensureAscii then cAsciiEscape s else cEscape s
 
-/-- `encoder_encode_string` with a custom `encoder` (:1456-1466), or with
+/-- `encoder_encode_string` with a custom `encoder` (@3.14.7:1456-1466), or with
 `fast_encode`. -/
 def cEncStr (cfg : ECfg) (s : PStr) : ER :=
   match cfg.customEnc with
@@ -414,13 +414,13 @@ def cEncStr (cfg : ECfg) (s : PStr) : ER :=
     | .ok (.str t) => .ok t
     | .ok (.nonstr t) => .error (.typeError s!"encoder() must return a string, not {(String.ofList (t.toList.take 80))}")
 
-/-- `_encoded_const`, :1403-1420: `None`, `True`, `False` as text. -/
+/-- `_encoded_const`, :1490-1507: `None`, `True`, `False` as text. -/
 def encodedConst : Option Bool → PStr
   | none => cs "null"
   | some true => cs "true"
   | some false => cs "false"
 
-/-- The key conversion of `encoder_encode_key_value`, :1590-1613. -/
+/-- The key conversion of `encoder_encode_key_value`, :1677-1700. -/
 def cKeyStr (cfg : ECfg) : EKey → Except PyExc (Option PStr)
   | .str s => .ok (some s)
   | .flt b r => (cEncodeFloat cfg b r).map some
@@ -429,13 +429,13 @@ def cKeyStr (cfg : ECfg) : EKey → Except PyExc (Option PStr)
   | .int n => (intRepr n).map some
   | .tup _ => if cfg.skipKeys then .ok none else .error badKeyErr
 
-/-- The indent cache entries (:1274-1349): `'\n' + indent * k` and
+/-- The indent cache entries (:1361-1436): `'\n' + indent * k` and
 `item_separator + '\n' + indent * k`. -/
 def cNewlineIndent (ind : PStr) (k : Nat) : PStr := [10] ++ rep ind k
 def cSepIndent (cfg : ECfg) (ind : PStr) (k : Nat) : PStr := cfg.itemSep ++ cNewlineIndent ind k
 
 mutual
-/-- `encoder_listencode_obj`, :1478-1581. -/
+/-- `encoder_listencode_obj`, :1568-1668. -/
 def cEnc (cfg : ECfg) : Nat → Nat → List Nat → EVal → ER
   | 0, _, _, _ => .error .modelFuel
   | f + 1, lvl, seen, v =>
@@ -446,7 +446,7 @@ def cEnc (cfg : ECfg) : Nat → Nat → List Nat → EVal → ER
     | .int n => intRepr n
     | .flt b r => cEncodeFloat cfg b r
     | .list xs =>
-      -- `encoder_listencode_list`, :1769-1860
+      -- `encoder_listencode_list`, :1915-1994
       if xs.length = 0 then .ok (cs "[]")
       else
         let (lvl, pre, sep) : Nat × PStr × PStr :=
@@ -461,7 +461,7 @@ def cEnc (cfg : ECfg) : Nat → Nat → List Nat → EVal → ER
             | none => []
           .ok ([91] ++ pre ++ body ++ post ++ [93])
     | .dict kvs =>
-      -- `encoder_listencode_dict`, :1654-1767
+      -- `encoder_listencode_dict`, :1797-1887
       if kvs.length = 0 then .ok (cs "{}")
       else
         let (lvl, sep) : Nat × PStr :=
@@ -481,7 +481,7 @@ def cEnc (cfg : ECfg) : Nat → Nat → List Nat → EVal → ER
             .ok ([123] ++ body ++ post ++ [125])
     | .back _ => .error (if cfg.checkCircular then circularErr else recursionErr)
     | .other n t =>
-      -- :1542-1579, with `seen` as in `pyEnc`
+      -- :1629-1666, with `seen` as in `pyEnc`
       if n ∈ seen then .error (if cfg.checkCircular then circularErr else recursionErr)
       else
         match cfg.dflt n t with
@@ -489,7 +489,7 @@ def cEnc (cfg : ECfg) : Nat → Nat → List Nat → EVal → ER
         | .ok v' => cEnc cfg f lvl (n :: seen) v'
 termination_by f _ _ v => (f, sizeOf v)
 
-/-- The item loop of `encoder_listencode_list`, :1817-1832. -/
+/-- The item loop of `encoder_listencode_list`, @3.14.7:1817-1832. -/
 def cEncList (cfg : ECfg) : Nat → Nat → List Nat → PStr → Nat → List EVal → ER
   | _, _, _, _, _, [] => .ok []
   | f, lvl, seen, sep, i, x :: xs =>
@@ -503,7 +503,7 @@ def cEncList (cfg : ECfg) : Nat → Nat → List Nat → PStr → Nat → List E
 termination_by f _ _ _ _ xs => (f, sizeOf xs)
 
 /-- The item loop of `encoder_listencode_dict` with `encoder_encode_key_value`
-(:1582-1652); also returns `first`. -/
+(:1669-1736); also returns `first`. -/
 def cEncItems (cfg : ECfg) : Nat → Nat → List Nat → PStr → Bool → List (EKey × EVal) → Except PyExc (PStr × Bool)
   | _, _, _, _, first, [] => .ok ([], first)
   | f, lvl, seen, sep, first, (k, x) :: xs =>

@@ -29,8 +29,8 @@ reproducer: |
 expected: ValueError, as from the pure-Python implementation.
 promised_by: C/Python twin agreement; ISO 8601 (a fraction needs a decimal sign).
 cause: |
-  Modules/_datetimemodule.c:1052-1054 (`else if (!has_separator) { --p; }` on the third
-  iteration) then :1060-1086 parses the fraction without a decimal mark.
+  Modules/_datetimemodule.c:1055-1057 (`else if (!has_separator) { --p; }` on the third
+  iteration) then :1063-1089 parses the fraction without a decimal mark.
 possible_fix: After the SS component, only parse a fraction if the next character is '.' or ','.
 reproduces:
   python3 (3.14.7): REPRODUCED

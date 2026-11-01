@@ -1,8 +1,8 @@
 import PyLean.BytesObj.Bytes.Escape
 
 /-!
-`bytes.fromhex`/`bytearray.fromhex` (`_PyBytes_FromHex`, Objects/bytesobject.c:2519-2628)
-and `hex` (`_Py_strhex_impl`, Python/pystrhex.c:7-143).
+`bytes.fromhex`/`bytearray.fromhex` (`_PyBytes_FromHex`, Objects/bytesobject.c:2628-2741)
+and `hex` (`_Py_strhex_impl`, Python/pystrhex.c@3.14.7:7-143).
 
 `_PyBytes_FromHex` walks a raw pointer. Its loop tests `str < end` only at the
 top, so it can read `*str` at `end`: harmless for a NUL-terminated `str`, `bytes`
@@ -21,7 +21,7 @@ def memRead (mem : Seq) (i : Nat) : Py Nat :=
   | some c => .ok c
   | none => .error (Sequences.cUB "read past the buffer")
 
-/-- `do { str++; } while (Py_ISSPACE(*str));`, bytesobject.c:2578-2580. -/
+/-- `do { str++; } while (Py_ISSPACE(*str));`, bytesobject.c:2689-2694. -/
 def skipSpaces (mem : Seq) : Nat → Nat → Py Nat
   | 0, _ => .error .modelFuel
   | fuel + 1, i =>
@@ -35,7 +35,7 @@ def invalidAt (i : Nat) : PyExc :=
 def oddDigits : PyExc :=
   .valueError "fromhex() arg must contain an even number of hexadecimal digits"
 
-/-- The loop of `_PyBytes_FromHex`, bytesobject.c:2575-2605. `len` is `hexlen`,
+/-- The loop of `_PyBytes_FromHex`, bytesobject.c:2686-2717. `len` is `hexlen`,
 `i` is `str - start`. -/
 def fromHexLoop (mem : Seq) (len : Nat) : Nat → Nat → Seq → Py Seq
   | 0, _, _ => .error .modelFuel
@@ -70,7 +70,7 @@ items are the argument. The allocation in the writer is `hexlen / 2`. -/
 def fromHexRaw (mem : Seq) (len : Nat) : Py Seq :=
   fromHexLoop mem len (len + 1) 0 []
 
-/-- `_PyBytes_FromHex`, bytesobject.c:2519-2628, on an object. A `str` and a
+/-- `_PyBytes_FromHex`, bytesobject.c:2628-2741, on an object. A `str` and a
 `bytes`/`bytearray` are NUL-terminated; a memoryview is followed by `after`. -/
 def bytesFromHex (o : Obj) : Py Seq :=
   match o with
@@ -94,13 +94,13 @@ def objLength (o : Obj) : Py Nat :=
 
 def hexPair (c : Nat) : Seq := [hexDigit (c / 16), hexDigit (c % 16)]
 
-/-- The `bytes_per_sep_group < 0` loop, pystrhex.c:99-115: `abs` bytes then the
+/-- The `bytes_per_sep_group < 0` loop, pystrhex.c:210-226: `abs` bytes then the
 separator, `chunks` times, from the left. -/
 def chunkLeft (sep abs : Nat) : Nat → Seq → Seq
   | 0, bs => bs.flatMap hexPair
   | k + 1, bs => (bs.take abs).flatMap hexPair ++ [sep] ++ chunkLeft sep abs k (bs.drop abs)
 
-/-- The `bytes_per_sep_group > 0` loop, pystrhex.c:116-133: the same from the right. -/
+/-- The `bytes_per_sep_group > 0` loop, pystrhex.c:227-244: the same from the right. -/
 def chunkRight (sep abs : Nat) : Nat → Seq → Seq
   | 0, bs => bs.flatMap hexPair
   | k + 1, bs =>
@@ -108,7 +108,7 @@ def chunkRight (sep abs : Nat) : Nat → Seq → Seq
     chunkRight sep abs k (bs.take n) ++ [sep] ++ (bs.drop n).flatMap hexPair
 
 /-- `_Py_strhex_impl(argbuf, arglen, sep, bytes_per_sep_group, return_bytes)`,
-pystrhex.c:7-143. The second argument of `hex` is a C `int`. -/
+pystrhex.c@3.14.7:7-143. The second argument of `hex` is a C `int`. -/
 def strhexImpl (arg : Seq) (sep : Option Obj) (bytesPerSep : Int) (returnBytes : Bool) : Py Seq := do
   let parsed : Option Nat ←
     match sep with
@@ -137,8 +137,8 @@ def strhexImpl (arg : Seq) (sep : Option Obj) (bytesPerSep : Int) (returnBytes :
   if group < 0 then return chunkLeft sepChar abs chunks arg
   return chunkRight sepChar abs chunks arg
 
-/-- `bytes.hex(sep, bytes_per_sep)` (`bytes_hex_impl`, bytesobject.c:2654-2661) and
-`bytearray.hex` (`bytearray_hex_impl`, bytearrayobject.c:2621-2634): the argument
+/-- `bytes.hex(sep, bytes_per_sep)` (`bytes_hex_impl`, bytesobject.c:2766-2773) and
+`bytearray.hex` (`bytearray_hex_impl`, bytearrayobject.c:2733-2747): the argument
 clinic `int`, then `_Py_strhex_with_sep`. -/
 def bytesHex (s : Seq) (sep : Option Obj) (bytesPerSep : Int) : Py Seq :=
   if bytesPerSep < -2147483648 ∨ bytesPerSep > 2147483647 then

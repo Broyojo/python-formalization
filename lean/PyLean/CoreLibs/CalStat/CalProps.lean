@@ -135,7 +135,7 @@ theorem wk_cycle (y m d k : Int) : wk (y + 400 * k) m d = wk y m d := by
 
 /-- `weekday` is exact on the whole line of int years: shifting the year by any multiple of
 400 keeps the result. This is what makes the substitution `2000 + year % 400` at
-calendar.py:158-159 right, across both ends of `datetime`'s year range. -/
+calendar.py:177-178 right, across both ends of `datetime`'s year range. -/
 def WeekdayCycle : Prop :=
   ∀ y m d k w : Int, weekday y m d = .ok w →
     0 ≤ w ∧ w ≤ 6 ∧ weekday (y + 400 * k) m d = .ok w
@@ -149,7 +149,7 @@ theorem weekdayCycle_proven : WeekdayCycle := by
   rw [weekday_ok _ _ _ hm (by omega), wk_cycle]
 
 /-- Consecutive days have consecutive weekdays, also over month and year ends and
-across year 0 and year 10000, where the substitution of calendar.py:159 changes the year. -/
+across year 0 and year 10000, where the substitution of calendar.py:178 changes the year. -/
 def WeekdayNextDay : Prop :=
   ∀ y m d : Int, (1 ≤ m ∧ m ≤ 12) → 1 ≤ d → d ≤ daysInMonth y m →
     ∃ w, weekday y m d = .ok w ∧

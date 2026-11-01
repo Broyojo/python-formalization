@@ -1,60 +1,45 @@
 file	line	name	verdict	mirror	property	settled	reason
-Objects/dictobject.c	187	load_keys_nentries	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :152-232; the GIL twin is the row at :273.
-Objects/dictobject.c	194	set_keys	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :152-232; the GIL twin is the row at :261.
-Objects/dictobject.c	201	set_values	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :152-232; the GIL twin is the row at :267.
-Objects/dictobject.c	222	split_keys_entry_added	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :152-232; the GIL twin is the row at :254.
-Objects/dictobject.c	410	_PyDict_DebugMallocStats	FAITHFUL	yes	-	-	Prints freelist sizes for sys._debugmallocstats and nothing else.
-Objects/dictobject.c	434	dictkeys_incref	FAITHFUL	yes	-	-	Reference count of the keys object only.
-Objects/dictobject.c	447	dictkeys_decref	FAITHFUL	yes	-	-	Drops references and frees, which passes under the ruling on plain reference dropping in AGENTS.md.
-Objects/dictobject.c	635	dump_entries	FAITHFUL	yes	-	-	Compiled only under DEBUG_PYDICT (:633-648).
-Objects/dictobject.c	651	_PyDict_CheckConsistency	FAITHFUL	yes	-	-	Compiled in, but its only callers are asserts here and _PyObject_CheckConsistency, itself used through assert.
-Objects/dictobject.c	756	new_keys_object	FAITHFUL	yes	yes	yes	Total in the model, so the MemoryError disjunct of SetItemRefines cannot absorb a wrong table: bad indices or an oversized usable break Chain or load; the malloc NULL is out of memory, as in earlier reviews, and log2_bytes is storage only.
-Objects/dictobject.c	812	free_keys_object	FAITHFUL	yes	-	-	Freelist or free only.
-Objects/dictobject.c	856	free_values	FAITHFUL	yes	-	-	Free only.
-Objects/dictobject.c	981	lookdict_index	FAITHFUL	yes	yes	yes	DelItemRefines has no error disjunct, so a wrong or failing slot search breaks it; the DKIX_EMPTY return is unreachable under Chain.
-Objects/dictobject.c	1046	compare_unicode_generic	FAITHFUL	yes	yes	yes	The raise and changed paths hold for every protocol, and LookupFound and LookupMissing pin the honest answers.
-Objects/dictobject.c	1075	unicodekeys_lookup_generic	FAITHFUL	yes	yes	yes	A single call with no branch of its own, run by LookupFound on a unicode table with a non-exact-str key; a miss and a raising __eq__ are charged to do_lookup.
-Objects/dictobject.c	1081	compare_unicode_unicode	FAITHFUL	yes	yes	yes	No callback can run here and str_eq is true of exact strs, so Honest costs nothing.
-Objects/dictobject.c	1102	compare_generic	FAITHFUL	yes	yes	yes	The raise and changed paths hold for every protocol, and LookupFound and LookupMissing pin the identity, hash and honest answers.
-Objects/dictobject.c	1130	dictkeys_generic_lookup	FAITHFUL	yes	yes	yes	A single call with no branch of its own, run by LookupFound on a general table; a miss and a raising __eq__ are charged to do_lookup.
-Objects/dictobject.c	1243	_Py_dict_lookup	FAITHFUL	yes	yes	yes	dict-lookup-control gives the error and restart paths in all three dispatch branches for every protocol; success is in dict-split-refines and, by that entry's note, dict-lookup-found and dict-lookup-missing.
-Objects/dictobject.c	1315	ensure_shared_on_read	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :1313-1335.
-Objects/dictobject.c	1331	_PyDict_EnsureSharedOnRead	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :1313-1335.
-Objects/dictobject.c	1338	ensure_shared_on_resize	FAITHFUL	yes	-	-	The whole body is under Py_GIL_DISABLED (:1340-1354).
-Objects/dictobject.c	1358	ensure_shared_on_keys_version_assignment	FAITHFUL	yes	-	-	Empty in a GIL build except a lock assert that compiles to nothing.
-Objects/dictobject.c	1374	compare_unicode_generic_threadsafe	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :1371-1643.
-Objects/dictobject.c	1411	unicodekeys_lookup_generic_threadsafe	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :1371-1643.
-Objects/dictobject.c	1417	compare_unicode_unicode_threadsafe	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :1371-1643.
-Objects/dictobject.c	1447	unicodekeys_lookup_unicode_threadsafe	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :1371-1643.
-Objects/dictobject.c	1453	compare_generic_threadsafe	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :1371-1643.
-Objects/dictobject.c	1484	dictkeys_generic_lookup_threadsafe	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :1371-1643.
-Objects/dictobject.c	1490	_Py_dict_lookup_threadsafe	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :1371-1643; the GIL twin is the row at :1646.
-Objects/dictobject.c	1588	lookup_threadsafe_unicode	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :1371-1643.
-Objects/dictobject.c	1620	_Py_dict_lookup_threadsafe_stackref	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :1371-1643; the GIL twin is the row at :1654.
-Objects/dictobject.c	1733	_PyDict_EnablePerThreadRefcounting	FAITHFUL	yes	-	-	Only an assert outside the Py_GIL_DISABLED block at :1736-1749.
-Objects/dictobject.c	1753	is_unusable_slot	FAITHFUL	yes	yes	yes	A Bool predicate, so the MemoryError disjunct cannot absorb it: treating a live slot as free breaks Chain; whether a dummy is reused stays unpinned but has no Python-visible effect.
-Objects/dictobject.c	2465	PyDict_GetItemRef	FAITHFUL	yes	yes	yes	Its own two checks are stated for every protocol, and the found path of its tail call is charged to _PyDict_GetItemRef_KnownHash.
-Objects/dictobject.c	2773	delete_index_from_values	FAITHFUL	yes	yes	yes	List.erase is the find-and-shift loop under nodup, and the del conjunct of SplitRefines has no error disjunct and depends on the order array.
-Objects/dictobject.c	2791	delitem_common	FAITHFUL	yes	yes	yes	Split branch in dict-split-refines and combined branch in dict-delitem-refines, which that entry's note names without listing this row; neither has an error disjunct, and no callback runs here.
-Objects/dictobject.c	2834	PyDict_DelItem	FAITHFUL	yes	yes	yes	Its own body is the hash test and a tail call, and both are covered; the PyDict_Check and raising __eq__ paths belong to the callee.
-Objects/dictobject.c	2945	clear_embedded_values	FAITHFUL	yes	yes	yes	SplitInv after clear needs an empty order array and NULL values, so a stand-in that leaves them fails; the later decrefs are plain reference dropping.
-Objects/dictobject.c	4542	dict_setdefault_impl	FAITHFUL	yes	yes	yes	The counterexample runs this function to the NULL dereference and the property is its own no-crash invariant; bugs/dictset-setdefault-split-null.yaml exists.
-Objects/dictobject.c	4597	dict_popitem_impl	FAITHFUL	yes	yes	yes	Neither dict-split-refines nor dict-popitem-lifo, which its note names, has an error disjunct, and no callback runs here; the tuple allocated first needs no step because the model starts from the state after any GC it triggers.
-Objects/dictobject.c	4682	dict_traverse	FAITHFUL	yes	-	-	GC traversal, which passes under the ruling in AGENTS.md.
-Objects/dictobject.c	4714	dict_tp_clear	FAITHFUL	yes	-	-	Reference-dropping tp_clear, which passes under the ruling in AGENTS.md, though it does empty the dict.
-Objects/dictobject.c	4837	PyDict_Contains	FAITHFUL	yes	yes	yes	Its own body is the hash test and a tail call, and the found path of that call is charged to _PyDict_Contains_KnownHash.
-Objects/dictobject.c	5174	dictiter_dealloc	FAITHFUL	yes	-	-	Untracks and drops references only.
-Objects/dictobject.c	5185	dictiter_traverse	FAITHFUL	yes	-	-	GC traversal, which passes under the ruling in AGENTS.md.
-Objects/dictobject.c	5194	dictiter_len	FAITHFUL	yes	yes	yes	The counterexample reaches the size_t wrap of a negative len, which a non-wrapping stand-in would not refute; bugs/dictset-reversed-iter-length-hint.yaml exists.
-Objects/dictobject.c	5555	acquire_key_value	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :5549-5685.
-Objects/dictobject.c	5579	dictiter_iternext_threadsafe	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :5549-5685.
-Objects/dictobject.c	5688	acquire_iter_result	FAITHFUL	yes	-	-	Compiled in the GIL build, but the tuple is reused only when uniquely referenced, so no other holder can see it.
-Objects/dictobject.c	5964	dictview_dealloc	FAITHFUL	yes	-	-	Untracks and drops references only.
-Objects/dictobject.c	5974	dictview_traverse	FAITHFUL	yes	-	-	GC traversal, which passes under the ruling in AGENTS.md.
-Objects/dictobject.c	7108	_PyObject_ManagedDictValidityCheck	FAITHFUL	yes	-	-	Inside #if 0 (:7104-7132).
-Objects/dictobject.c	7250	PyObject_VisitManagedDict	FAITHFUL	yes	-	-	GC traversal, which passes under the ruling in AGENTS.md.
-Objects/dictobject.c	7304	try_set_dict_inline_only_or_other_dict	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :7298-7360.
-Objects/dictobject.c	7340	replace_dict_probably_inline_materialized	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :7298-7360.
-Objects/dictobject.c	7363	decref_maybe_delay	FAITHFUL	yes	-	-	Chooses how a reference is dropped, nothing more.
-Objects/dictobject.c	7646	_PyDictKeys_DecRef	FAITHFUL	yes	-	-	One call of dictkeys_decref.
-Objects/dictobject.c	7831	_PyObject_InlineValuesConsistencyCheck	FAITHFUL	yes	-	-	Compiled only under #ifndef NDEBUG (:7829-7848) and called only from asserts.
+Objects/dictobject.c	198	load_keys_nentries	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :163-243; the GIL twin is the row at :284.
+Objects/dictobject.c	205	set_keys	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :163-243; the GIL twin is the row at :272.
+Objects/dictobject.c	212	set_values	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :163-243; the GIL twin is the row at :278.
+Objects/dictobject.c	233	split_keys_entry_added	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :163-243; the GIL twin is the row at :265.
+Objects/dictobject.c	472	dictkeys_incref	FAITHFUL	yes	-	-	Reference count of the keys object only.
+Objects/dictobject.c	673	dump_entries	FAITHFUL	yes	-	-	Compiled only under DEBUG_PYDICT (:671-686).
+Objects/dictobject.c	850	free_keys_object	FAITHFUL	yes	-	-	Freelist or free only.
+Objects/dictobject.c	894	free_values	FAITHFUL	yes	-	-	Free only.
+Objects/dictobject.c	1061	lookdict_index	FAITHFUL	yes	yes	yes	DelItemRefines has no error disjunct, so a wrong or failing slot search breaks it; the DKIX_EMPTY return is unreachable under Chain.
+Objects/dictobject.c	1126	compare_unicode_generic	FAITHFUL	yes	yes	yes	The raise and changed paths hold for every protocol, and LookupFound and LookupMissing pin the honest answers.
+Objects/dictobject.c	1155	unicodekeys_lookup_generic	FAITHFUL	yes	yes	yes	A single call with no branch of its own, run by LookupFound on a unicode table with a non-exact-str key; a miss and a raising __eq__ are charged to do_lookup.
+Objects/dictobject.c	1161	compare_unicode_unicode	FAITHFUL	yes	yes	yes	No callback can run here and str_eq is true of exact strs, so Honest costs nothing.
+Objects/dictobject.c	1182	compare_generic	FAITHFUL	yes	yes	yes	The raise and changed paths hold for every protocol, and LookupFound and LookupMissing pin the identity, hash and honest answers.
+Objects/dictobject.c	1210	dictkeys_generic_lookup	FAITHFUL	yes	yes	yes	A single call with no branch of its own, run by LookupFound on a general table; a miss and a raising __eq__ are charged to do_lookup.
+Objects/dictobject.c	1323	_Py_dict_lookup	FAITHFUL	yes	yes	yes	dict-lookup-control gives the error and restart paths in all three dispatch branches for every protocol; success is in dict-split-refines and, by that entry's note, dict-lookup-found and dict-lookup-missing.
+Objects/dictobject.c	1395	ensure_shared_on_read	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :1393-1415.
+Objects/dictobject.c	1411	_PyDict_EnsureSharedOnRead	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :1393-1415.
+Objects/dictobject.c	1418	ensure_shared_on_resize	FAITHFUL	yes	-	-	The whole body is under Py_GIL_DISABLED (:1420-1434).
+Objects/dictobject.c	1438	ensure_shared_on_keys_version_assignment	FAITHFUL	yes	-	-	Empty in a GIL build except a lock assert that compiles to nothing.
+Objects/dictobject.c	1454	compare_unicode_generic_threadsafe	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :1451-1723.
+Objects/dictobject.c	1491	unicodekeys_lookup_generic_threadsafe	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :1451-1723.
+Objects/dictobject.c	1497	compare_unicode_unicode_threadsafe	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :1451-1723.
+Objects/dictobject.c	1527	unicodekeys_lookup_unicode_threadsafe	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :1451-1723.
+Objects/dictobject.c	1533	compare_generic_threadsafe	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :1451-1723.
+Objects/dictobject.c	1564	dictkeys_generic_lookup_threadsafe	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :1451-1723.
+Objects/dictobject.c	1570	_Py_dict_lookup_threadsafe	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :1451-1723; the GIL twin is the row at :1726.
+Objects/dictobject.c	1700	_Py_dict_lookup_threadsafe_stackref	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :1451-1723; the GIL twin is the row at :1734.
+Objects/dictobject.c	1813	_PyDict_EnablePerThreadRefcounting	FAITHFUL	yes	-	-	Only an assert outside the Py_GIL_DISABLED block at :1816-1829.
+Objects/dictobject.c	1833	is_unusable_slot	FAITHFUL	yes	yes	yes	A Bool predicate, so the MemoryError disjunct cannot absorb it: treating a live slot as free breaks Chain; whether a dummy is reused stays unpinned but has no Python-visible effect.
+Objects/dictobject.c	4908	dict_setdefault_impl	FAITHFUL	yes	yes	yes	The counterexample runs this function to the NULL dereference and the property is its own no-crash invariant; bugs/dictset-setdefault-split-null.yaml exists.
+Objects/dictobject.c	5048	dict_traverse	FAITHFUL	yes	-	-	GC traversal, which passes under the ruling in AGENTS.md.
+Objects/dictobject.c	5080	dict_tp_clear	FAITHFUL	yes	-	-	Reference-dropping tp_clear, which passes under the ruling in AGENTS.md, though it does empty the dict.
+Objects/dictobject.c	5617	dictiter_dealloc	FAITHFUL	yes	-	-	Untracks and drops references only.
+Objects/dictobject.c	5628	dictiter_traverse	FAITHFUL	yes	-	-	GC traversal, which passes under the ruling in AGENTS.md.
+Objects/dictobject.c	5998	acquire_key_value	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :5992-6133.
+Objects/dictobject.c	6136	acquire_iter_result	FAITHFUL	yes	-	-	Compiled in the GIL build, but the tuple is reused only when uniquely referenced, so no other holder can see it.
+Objects/dictobject.c	6406	dictview_dealloc	FAITHFUL	yes	-	-	Untracks and drops references only.
+Objects/dictobject.c	6416	dictview_traverse	FAITHFUL	yes	-	-	GC traversal, which passes under the ruling in AGENTS.md.
+Objects/dictobject.c	7562	_PyObject_ManagedDictValidityCheck	FAITHFUL	yes	-	-	Inside #if 0 (:7558-7586).
+Objects/dictobject.c	7704	PyObject_VisitManagedDict	FAITHFUL	yes	-	-	GC traversal, which passes under the ruling in AGENTS.md.
+Objects/dictobject.c	7758	try_set_dict_inline_only_or_other_dict	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :7752-7814.
+Objects/dictobject.c	7794	replace_dict_probably_inline_materialized	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :7752-7814.
+Objects/dictobject.c	7817	decref_maybe_delay	FAITHFUL	yes	-	-	Chooses how a reference is dropped, nothing more.
+Objects/dictobject.c	8281	_PyObject_InlineValuesConsistencyCheck	FAITHFUL	yes	-	-	Compiled only under #ifndef NDEBUG (:8279-8298) and called only from asserts.

@@ -1,8 +1,7 @@
 file	line	endline	name	signature	status	entry	note
-Parser/lexer/state.c	13	66	_PyTokenizer_tok_new	_PyTokenizer_tok_new(void)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Parser/lexer/state.c	69	84	free_fstring_expressions	free_fstring_expressions(struct tok_state *tok)	excluded		no-behaviour: frees f-string buffers at teardown
-Parser/lexer/state.c	88	108	_PyTokenizer_Free	_PyTokenizer_Free(struct tok_state *tok)	excluded		no-behaviour: frees the tokenizer state
-Parser/lexer/state.c	111	113	_PyToken_Free	_PyToken_Free(struct token *token) {	excluded		no-behaviour: drops a metadata reference
-Parser/lexer/state.c	116	118	_PyToken_Init	_PyToken_Init(struct token *token) {	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Parser/lexer/state.c	121	131	_PyLexer_type_comment_token_setup	_PyLexer_type_comment_token_setup(struct tok_state *tok, struct token *token, int type, int col_offset, int end_col_offset, const char *start, const char *end)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Parser/lexer/state.c	134	154	_PyLexer_token_setup	_PyLexer_token_setup(struct tok_state *tok, struct token *token, int type, const char *start, const char *end)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/lexer/state.c	13	67	_PyTokenizer_tok_new	_PyTokenizer_tok_new(void)	todo		changed-in-3.15: withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/lexer/state.c	71	91	_PyTokenizer_Free	_PyTokenizer_Free(struct tok_state *tok)	todo		changed-in-3.15: was excluded: no-behaviour: frees the tokenizer state
+Parser/lexer/state.c	94	96	_PyToken_Free	_PyToken_Free(struct token *token) {	excluded		no-behaviour: drops a metadata reference
+Parser/lexer/state.c	99	101	_PyToken_Init	_PyToken_Init(struct token *token) {	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/lexer/state.c	104	114	_PyLexer_type_comment_token_setup	_PyLexer_type_comment_token_setup(struct tok_state *tok, struct token *token, int type, int col_offset, int end_col_offset, const char *start, const char *end)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/lexer/state.c	117	137	_PyLexer_token_setup	_PyLexer_token_setup(struct tok_state *tok, struct token *token, int type, const char *start, const char *end)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body

@@ -1,5 +1,5 @@
 file	line	endline	name	signature	status	entry	note
-Lib/sqlite3/__main__.py	15	34	execute	execute(c, sql, suppress_errors=True)	todo		
-Lib/sqlite3/__main__.py	40	43	SqliteInteractiveConsole.__init__	__init__(self, connection)	todo		
-Lib/sqlite3/__main__.py	45	70	SqliteInteractiveConsole.runsource	runsource(self, source, filename='<input>', symbol='single')	todo		
-Lib/sqlite3/__main__.py	73	135	main	main(*args)	todo		candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output
+Lib/sqlite3/__main__.py	18	41	execute	execute(c, sql, suppress_errors=True, theme=theme_no_color)	todo		changed-in-3.15:
+Lib/sqlite3/__main__.py	47	51	SqliteInteractiveConsole.__init__	__init__(self, connection, use_color=False)	todo		changed-in-3.15:
+Lib/sqlite3/__main__.py	53	86	SqliteInteractiveConsole.runsource	runsource(self, source, filename='<input>', symbol='single')	todo		changed-in-3.15:
+Lib/sqlite3/__main__.py	89	152	main	main(*args)	todo		changed-in-3.15: candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output

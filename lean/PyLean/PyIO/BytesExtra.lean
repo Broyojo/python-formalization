@@ -21,7 +21,7 @@ inductive XOp where
 
 namespace C
 
-/-- `_io_BytesIO_writelines_impl`, bytesio.c:844-870: `CHECK_CLOSED`, then
+/-- `_io_BytesIO_writelines_impl`, bytesio.c:850-876: `CHECK_CLOSED`, then
 `write_bytes_lock_held` per item, stopping at the first failure. -/
 def writelinesLoop : BState → List (List Nat) → BState × Py Val
   | s, [] => (s, .ok .none)
@@ -30,7 +30,7 @@ def writelinesLoop : BState → List (List Nat) → BState × Py Val
     | (s', .error e) => (s', .error e)
     | (s', .ok _) => writelinesLoop s' ls
 
-/-- `bytesio_setstate_lock_held`, bytesio.c:942-1017, for a 3-tuple: exports
+/-- `bytesio_setstate_lock_held`, bytesio.c:948-1023, for a 3-tuple: exports
 are checked, the buffer is reset and `state[0]` is written, then the position
 is converted and range-checked. -/
 def setstate (s : BState) (b : List Nat) (pos : Int) : BState × Py Val :=
@@ -44,8 +44,8 @@ def setstate (s : BState) (b : List Nat) (pos : Int) : BState × Py Val :=
       if p < 0 then (s', .error (.valueError "position value cannot be negative"))
       else ({ s' with pos := p.toNat }, .ok .none)
 
-/-- bytesio.c:322-327, :337-342, :352-357, :367-372, :444-449, :844-870,
-:932-939, :942-1017. -/
+/-- bytesio.c:323-328, :338-343, :353-358, :368-373, :445-450, :850-876,
+:938-945, :948-1023. -/
 def xstep (s : BState) : XOp → BState × Py Val
   | .readable | .writable | .seekable =>
     if s.closed then (s, .error closedErr) else (s, .ok (.bool true))
@@ -71,9 +71,9 @@ def writelinesLoop : BState → List (List Nat) → BState × Py Val
     | (s', .error e) => (s', .error e)
     | (s', .ok _) => writelinesLoop s' ls
 
-/-- `BytesIO.readable/writable/seekable` (_pyio.py:1003-1016), `IOBase.flush`
+/-- `BytesIO.readable/writable/seekable` (_pyio.py:1022-1035), `IOBase.flush`
 (:380-386), `IOBase.isatty` (:503-509), `IOBase.writelines` (:583-590),
-`BytesIO.__getstate__` (:891-894, the instance dict as `[buffer, pos]`).
+`BytesIO.__getstate__` (@3.14.7:891-894, the instance dict as `[buffer, pos]`).
 `__setstate__` does not exist in `_pyio`. -/
 def xstep (s : BState) : XOp → BState × Py Val
   | .readable | .writable | .seekable =>
@@ -114,7 +114,7 @@ theorem bytesIOInquiries_proven : BytesIOInquiries := by
 
 /-- `writelines(ls)` on an open BytesIO is `write(l)` for each `l` in turn,
 stopping at the first failure ("equivalent to calling write() for each
-element", bytesio.c:840-841): same final state and outcome as the run of
+element", bytesio.c:846-847): same final state and outcome as the run of
 `write` operations (both twins). -/
 def BytesIOWritelines : Prop := ∀ (s : BState) (ls : List (List Nat)), s.closed = false →
   ∃ (rs : List (Py Val)),

@@ -44,7 +44,7 @@ structure EqOps (α : Type) where
   is_ : α → α → Bool
   eq : α → α → Py Bool
 
-/-- `v is value or v == value` (Lib/_collections_abc.py:896, 1027, 1053, 1060). -/
+/-- `v is value or v == value` (Lib/_collections_abc.py:897, 1027, 1053, 1060). -/
 def EqOps.same {α : Type} (E : EqOps α) (v w : α) : Py Bool :=
   if E.is_ v w then pure true else E.eq v w
 
@@ -128,12 +128,12 @@ def stubBody : String → Option Stub
   | "MutableSet.add" => some (.raises "NotImplementedError")     -- :707
   | "MutableSet.discard" => some (.raises "NotImplementedError") -- :712
   | "Mapping.__getitem__" => some (.raises "KeyError")           -- :790
-  | "MutableMapping.__setitem__" => some (.raises "KeyError")    -- :921
-  | "MutableMapping.__delitem__" => some (.raises "KeyError")    -- :925
-  | "Sequence.__getitem__" => some (.raises "IndexError")        -- :1013
-  | "MutableSequence.__setitem__" => some (.raises "IndexError") -- :1115
-  | "MutableSequence.__delitem__" => some (.raises "IndexError") -- :1119
-  | "MutableSequence.insert" => some (.raises "IndexError")      -- :1124
+  | "MutableMapping.__setitem__" => some (.raises "KeyError")    -- :922
+  | "MutableMapping.__delitem__" => some (.raises "KeyError")    -- :926
+  | "Sequence.__getitem__" => some (.raises "IndexError")        -- :1014
+  | "MutableSequence.__setitem__" => some (.raises "IndexError") -- :1116
+  | "MutableSequence.__delitem__" => some (.raises "IndexError") -- :1120
+  | "MutableSequence.insert" => some (.raises "IndexError")      -- :1125
   | _ => none
 
 /-! ### Generator, Coroutine, AsyncGenerator mixins -/
@@ -217,7 +217,7 @@ def coroCloseMsg := "coroutine ignored GeneratorExit"
 def asyncCloseMsg := "asynchronous generator ignored GeneratorExit"
 
 /-- The builtin `generator.close()` after the frame has started and not finished,
-Objects/genobject.c:387 `gen_close`: a value returned while closing is the result. -/
+Objects/genobject.c:464 `gen_close`: a value returned while closing is the result. -/
 def builtinClose {σ V : Type} (G : Gen σ V) (s : σ) : Py (Option V) × σ :=
   match G.throwExit s with
   | (.yielded _, s') => (.error (.named "RuntimeError" genCloseMsg), s')
@@ -300,7 +300,7 @@ structure Seq (α : Type) where
   getitem : Int → Py α
   len : Py Nat
 
-/-- `Sequence.__iter__`, Lib/_collections_abc.py:1015-1023, drained. An `IndexError`
+/-- `Sequence.__iter__`, Lib/_collections_abc.py:1016-1024, drained. An `IndexError`
 from `self[i]` ends the iteration; anything else propagates. -/
 def Seq.iterFrom {α : Type} (s : Seq α) : (fuel : Nat) → Int → Py (List α)
   | 0, _ => .error .modelFuel
@@ -311,7 +311,7 @@ def Seq.iterFrom {α : Type} (s : Seq α) : (fuel : Nat) → Int → Py (List α
       let rest ← s.iterFrom fuel (i + 1)
       pure (v :: rest)
 
-/-- `Sequence.__contains__`, Lib/_collections_abc.py:1025-1029, over `__iter__`. -/
+/-- `Sequence.__contains__`, Lib/_collections_abc.py:1026-1030, over `__iter__`. -/
 def Seq.containsFrom {α : Type} (s : Seq α) (E : EqOps α) (value : α) :
     (fuel : Nat) → Int → Py Bool
   | 0, _ => .error .modelFuel
@@ -322,7 +322,7 @@ def Seq.containsFrom {α : Type} (s : Seq α) (E : EqOps α) (value : α) :
       if ← E.same v value then return true
       s.containsFrom E value fuel (i + 1)
 
-/-- `Sequence.count`, Lib/_collections_abc.py:1058-1060. -/
+/-- `Sequence.count`, Lib/_collections_abc.py:1059-1061. -/
 def Seq.countFrom {α : Type} (s : Seq α) (E : EqOps α) (value : α) :
     (fuel : Nat) → Int → Py Nat
   | 0, _ => .error .modelFuel
@@ -342,12 +342,12 @@ def Seq.reversedFrom {α : Type} (s : Seq α) : Nat → Py (List α)
     let rest ← s.reversedFrom n
     pure (v :: rest)
 
-/-- `Sequence.__reversed__`, Lib/_collections_abc.py:1031-1033. -/
+/-- `Sequence.__reversed__`, Lib/_collections_abc.py:1032-1034. -/
 def Seq.reversed {α : Type} (s : Seq α) : Py (List α) := do
   let n ← s.len
   s.reversedFrom n
 
-/-- The `while` loop of `Sequence.index`, Lib/_collections_abc.py:1048-1056. -/
+/-- The `while` loop of `Sequence.index`, Lib/_collections_abc.py:1049-1057. -/
 def Seq.indexLoop {α : Type} (s : Seq α) (E : EqOps α) (value : α) (stop : Option Int) :
     (fuel : Nat) → Int → Py Int
   | 0, _ => .error .modelFuel
@@ -361,7 +361,7 @@ def Seq.indexLoop {α : Type} (s : Seq α) (E : EqOps α) (value : α) (stop : O
     else .error (.valueError "")
 
 /-- `Sequence.index(value, start, stop)` for an `int` `start`,
-Lib/_collections_abc.py:1035-1056. `start=None` and non-`int` arguments fall through to
+Lib/_collections_abc.py:1036-1057. `start=None` and non-`int` arguments fall through to
 `__getitem__` and to `<`, which is the subclass's business. -/
 def Seq.index {α : Type} (s : Seq α) (E : EqOps α) (value : α) (start : Int)
     (stop : Option Int) (fuel : Nat) : Py Int := do
@@ -384,17 +384,17 @@ structure MSeq (σ α : Type) where
 /-- The `Sequence` mixins of the current state. -/
 def MSeq.view {σ α : Type} (M : MSeq σ α) (s : σ) : Seq α := ⟨M.getitem s, M.len s⟩
 
-/-- `MutableSequence.append`, Lib/_collections_abc.py:1126-1128. -/
+/-- `MutableSequence.append`, Lib/_collections_abc.py:1127-1129. -/
 def MSeq.append {σ α : Type} (M : MSeq σ α) (s : σ) (v : α) : Py σ := do
   M.insert s (← M.len s : Nat) v
 
-/-- `MutableSequence.pop`, Lib/_collections_abc.py:1152-1158. -/
+/-- `MutableSequence.pop`, Lib/_collections_abc.py:1153-1159. -/
 def MSeq.pop {σ α : Type} (M : MSeq σ α) (s : σ) (index : Int := -1) : Py (α × σ) := do
   let v ← M.getitem s index
   let s' ← M.delitem s index
   pure (v, s')
 
-/-- `MutableSequence.clear`, Lib/_collections_abc.py:1130-1136. -/
+/-- `MutableSequence.clear`, Lib/_collections_abc.py:1131-1137. -/
 def MSeq.clear {σ α : Type} (M : MSeq σ α) : (fuel : Nat) → σ → Py σ
   | 0, _ => .error .modelFuel
   | fuel + 1, s =>
@@ -417,7 +417,7 @@ def MSeq.swapLoop {σ α : Type} (M : MSeq σ α) (n : Nat) : (k i : Nat) → σ
     let s' ← M.swap n s i
     M.swapLoop n k (i + 1) s'
 
-/-- `MutableSequence.reverse`, Lib/_collections_abc.py:1138-1142. -/
+/-- `MutableSequence.reverse`, Lib/_collections_abc.py:1139-1143. -/
 def MSeq.reverse {σ α : Type} (M : MSeq σ α) (s : σ) : Py σ := do
   let n ← M.len s
   M.swapLoop n (n / 2) 0 s
@@ -429,8 +429,8 @@ def MSeq.extendList {σ α : Type} (M : MSeq σ α) (s : σ) : List α → Py σ
     let s' ← M.append s v
     M.extendList s' vs
 
-/-- `MutableSequence.extend(values)`, Lib/_collections_abc.py:1144-1150, and
-`MutableSequence.__iadd__`, :1166-1168. `none` is `values is self`, which first takes
+/-- `MutableSequence.extend(values)`, Lib/_collections_abc.py:1145-1151, and
+`MutableSequence.__iadd__`, :1167-1169. `none` is `values is self`, which first takes
 `list(values)` through `Sequence.__iter__`. -/
 def MSeq.extend {σ α : Type} (M : MSeq σ α) (s : σ) (values : Option (List α)) (fuel : Nat) :
     Py σ := do
@@ -440,7 +440,7 @@ def MSeq.extend {σ α : Type} (M : MSeq σ α) (s : σ) (values : Option (List 
     let vs ← (M.view s).iterFrom fuel 0
     M.extendList s vs
 
-/-- `MutableSequence.remove`, Lib/_collections_abc.py:1160-1164. -/
+/-- `MutableSequence.remove`, Lib/_collections_abc.py:1161-1165. -/
 def MSeq.remove {σ α : Type} (M : MSeq σ α) (E : EqOps α) (s : σ) (value : α) (fuel : Nat) :
     Py σ := do
   let i ← (M.view s).index E value 0 none fuel
@@ -686,7 +686,7 @@ def Slot.hash : Slot → BitVec 64
   | .dummy => BitVec.ofInt 64 (-1)
   | .active h => BitVec.ofInt 64 h
 
-/-- `_shuffle_bits`, Objects/setobject.c:763-766. -/
+/-- `_shuffle_bits`, Objects/setobject.c:954-957. -/
 def shuffleBits (h : BitVec 64) : BitVec 64 :=
   ((h ^^^ 89869747#64) ^^^ (h <<< 16)) * 3644798167#64
 
@@ -694,7 +694,7 @@ def Slot.isNull : Slot → Bool | .null => true | _ => false
 def Slot.isDummy : Slot → Bool | .dummy => true | _ => false
 def Slot.isActive : Slot → Bool | .active _ => true | _ => false
 
-/-- `frozenset_hash_impl`, Objects/setobject.c:779-818, on the table: `fill` is the number of
+/-- `frozenset_hash_impl`, Objects/setobject.c:973-1012, on the table: `fill` is the number of
 non-null slots and `used` the number of active ones, so `mask + 1 - fill` is the number of null
 slots and `fill - used` the number of dummies. -/
 def frozensetHash (table : List Slot) : Int :=
@@ -822,14 +822,14 @@ def MapV.get {K V : Type} (m : MapV K V) (key : K) (default : V) : Py V :=
   | .error e => if isKeyError e then .ok default else .error e
 
 /-- `Mapping.__contains__`, Lib/_collections_abc.py:799-805, also
-`KeysView.__contains__`, :854-855. -/
+`KeysView.__contains__`, :855-856. -/
 def MapV.contains {K V : Type} (m : MapV K V) (key : K) : Py Bool :=
   match m.getitem key with
   | .ok _ => .ok true
   | .error e => if isKeyError e then .ok false else .error e
 
 /-- `for key in self._mapping: yield (key, self._mapping[key])`, ItemsView.__iter__,
-Lib/_collections_abc.py:881-883, drained. -/
+Lib/_collections_abc.py:882-884, drained. -/
 def MapV.itemsOf {K V : Type} (m : MapV K V) : List K → Py (List (K × V))
   | [] => raiseTail m.tail []
   | k :: ks => do
@@ -840,12 +840,12 @@ def MapV.itemsOf {K V : Type} (m : MapV K V) : List K → Py (List (K × V))
 /-- `ItemsView.__iter__`. -/
 def MapV.items {K V : Type} (m : MapV K V) : Py (List (K × V)) := do m.itemsOf (← m.iter)
 
-/-- `ValuesView.__iter__`, Lib/_collections_abc.py:900-902, drained. -/
+/-- `ValuesView.__iter__`, Lib/_collections_abc.py:901-903, drained. -/
 def MapV.values {K V : Type} (m : MapV K V) : Py (List V) := do
   let it ← m.items
   pure (it.map Prod.snd)
 
-/-- `ValuesView.__contains__`, Lib/_collections_abc.py:893-898. -/
+/-- `ValuesView.__contains__`, Lib/_collections_abc.py:894-899. -/
 def MapV.valuesContain {K V : Type} (m : MapV K V) (E : EqOps V) (value : V) : Py Bool := do
   let rec go : List K → Py Bool
     | [] => raiseTail m.tail false
@@ -865,7 +865,7 @@ inductive ItemArg (K V : Type) where
   | notIterable
   deriving Repr, DecidableEq
 
-/-- `ItemsView.__contains__`, Lib/_collections_abc.py:872-879. The unpack is outside the
+/-- `ItemsView.__contains__`, Lib/_collections_abc.py:873-880. The unpack is outside the
 `try`, so a non-pair raises. -/
 def MapV.itemsContain {K V : Type} (m : MapV K V) (E : EqOps V) : ItemArg K V → Py Bool
   | .notIterable => .error (.typeError "~cannot unpack non-iterable object")
@@ -877,7 +877,7 @@ def MapV.itemsContain {K V : Type} (m : MapV K V) (E : EqOps V) : ItemArg K V �
     | .error e => if isKeyError e then .ok false else .error e
     | .ok v => E.same v value
 
-/-- `dictitems_contains`, Objects/dictobject.c:6595-6612: a non-tuple or a tuple of the wrong
+/-- `dictitems_contains`, Objects/dictobject.c:7039-7056: a non-tuple or a tuple of the wrong
 length is `False`. `getitem` stands for `PyDict_GetItemRef`. -/
 def dictItemsContain {K V : Type} (m : MapV K V) (E : EqOps V) : ItemArg K V → Py Bool
   | .notIterable | .wrongLen .. | .pair _ _ false => .ok false
@@ -886,10 +886,10 @@ def dictItemsContain {K V : Type} (m : MapV K V) (E : EqOps V) : ItemArg K V →
     | .error e => if isKeyError e then .ok false else .error e
     | .ok v => E.same v value
 
-/-- `MappingView.__repr__`, Lib/_collections_abc.py:840-841. -/
+/-- `MappingView.__repr__`, Lib/_collections_abc.py:841-842. -/
 def viewRepr (cls mappingRepr : String) : String := s!"{cls}({mappingRepr})"
 
-/-- The `Set`-mixin primitives of `KeysView(m)`, Lib/_collections_abc.py:846-858. -/
+/-- The `Set`-mixin primitives of `KeysView(m)`, Lib/_collections_abc.py:847-859. -/
 def MapV.keysView {K V : Type} (m : MapV K V) : SetV K := ⟨m.len, m.iter, m.contains, m.tail⟩
 
 /-! ### MutableMapping -/
@@ -900,7 +900,7 @@ structure MMap (σ K V : Type) where
   setitem : σ → K → V → Py σ
   delitem : σ → K → Py σ
 
-/-- `MutableMapping.pop(key)`, Lib/_collections_abc.py:929-942. `default = none` is the
+/-- `MutableMapping.pop(key)`, Lib/_collections_abc.py:930-943. `default = none` is the
 `__marker`. -/
 def MMap.pop {σ K V : Type} (M : MMap σ K V) (s : σ) (key : K) (default : Option V) :
     Py (V × σ) :=
@@ -915,7 +915,7 @@ def MMap.pop {σ K V : Type} (M : MMap σ K V) (s : σ) (key : K) (default : Opt
     let s' ← M.delitem s key
     pure (value, s')
 
-/-- `MutableMapping.popitem`, Lib/_collections_abc.py:944-954. -/
+/-- `MutableMapping.popitem`, Lib/_collections_abc.py:945-955. -/
 def MMap.popitem {σ K V : Type} (M : MMap σ K V) (s : σ) : Py ((K × V) × σ) := do
   match ← (M.view s).iter with
   | [] =>
@@ -927,7 +927,7 @@ def MMap.popitem {σ K V : Type} (M : MMap σ K V) (s : σ) : Py ((K × V) × σ
     let s' ← M.delitem s key
     pure ((key, value), s')
 
-/-- `MutableMapping.clear`, Lib/_collections_abc.py:956-962. -/
+/-- `MutableMapping.clear`, Lib/_collections_abc.py:957-963. -/
 def MMap.clear {σ K V : Type} (M : MMap σ K V) : (fuel : Nat) → σ → Py σ
   | 0, _ => .error .modelFuel
   | fuel + 1, s =>
@@ -958,7 +958,7 @@ def MMap.setAll {σ K V : Type} (M : MMap σ K V) (s : σ) : List (K × V) → P
     let s' ← M.setitem s k v
     M.setAll s' xs
 
-/-- `MutableMapping.update(other, **kwds)`, Lib/_collections_abc.py:964-983. -/
+/-- `MutableMapping.update(other, **kwds)`, Lib/_collections_abc.py:965-984. -/
 def MMap.update {σ K V : Type} (M : MMap σ K V) (s : σ) (other : UpdateArg K V)
     (kwds : List (K × V)) : Py σ := do
   let s' ← match other with
@@ -966,7 +966,7 @@ def MMap.update {σ K V : Type} (M : MMap σ K V) (s : σ) (other : UpdateArg K 
     | .pairs xs => M.setAll s xs
   M.setAll s' kwds
 
-/-- `MutableMapping.setdefault`, Lib/_collections_abc.py:985-991. -/
+/-- `MutableMapping.setdefault`, Lib/_collections_abc.py:986-992. -/
 def MMap.setdefault {σ K V : Type} (M : MMap σ K V) (s : σ) (key : K) (default : V) :
     Py (V × σ) :=
   match (M.view s).getitem key with
@@ -991,11 +991,11 @@ def mappingEq {K V : Type} (dictEq : List (K × V) → List (K × V) → Py Bool
 
 /-! ### `ByteString` deprecation metaclass -/
 
-/-- `_DeprecateByteStringMeta.__new__`, Lib/_collections_abc.py:1069-1077: a
+/-- `_DeprecateByteStringMeta.__new__`, Lib/_collections_abc.py:1070-1078: a
 `DeprecationWarning` for any class name but `ByteString`. -/
 def byteStringMetaWarns (name : String) : Bool := name != "ByteString"
 
-/-- `_DeprecateByteStringMeta.__instancecheck__`, Lib/_collections_abc.py:1079-1086:
+/-- `_DeprecateByteStringMeta.__instancecheck__`, Lib/_collections_abc.py:1080-1087:
 always warns, then the `ABCMeta` answer. -/
 def byteStringInstanceCheck (abcAnswer : Bool) : Bool × Bool := (true, abcAnswer)
 

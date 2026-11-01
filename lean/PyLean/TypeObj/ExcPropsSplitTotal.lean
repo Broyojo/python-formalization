@@ -195,7 +195,7 @@ theorem splitComputesSpec_proven : SplitComputesSpec := by
 
 /-- **The failure paths propagate.** A matcher that raises makes the recursion raise the same
 exception, and `derive` returning something other than a group is the `TypeError` of
-`Objects/exceptions.c:1183-1187`, never a silently wrong result. No hypothesis: this is what
+`Objects/exceptions.c:1179-1183`, never a silently wrong result. No hypothesis: this is what
 `SplitTotalHyp` excludes, so it covers the other side of `SplitComputesSpec`. -/
 def SplitPropagatesFailures : Prop :=
   (∀ (rt : Rt) (mt : MatcherType) (mv : Val) (cr : Bool) (f : Nat) (exc : Val) (w : World)

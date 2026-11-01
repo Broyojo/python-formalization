@@ -8,28 +8,29 @@ Lib/multiprocessing/util.py	65	86	get_logger	get_logger()	todo
 Lib/multiprocessing/util.py	88	104	log_to_stderr	log_to_stderr(level=None)	todo		
 Lib/multiprocessing/util.py	109	110	_platform_supports_abstract_sockets	_platform_supports_abstract_sockets()	todo		
 Lib/multiprocessing/util.py	113	120	is_abstract_socket_namespace	is_abstract_socket_namespace(address)	todo		
-Lib/multiprocessing/util.py	146	153	_remove_temp_dir	_remove_temp_dir(rmtree, tempdir)	todo		
-Lib/multiprocessing/util.py	155	209	_get_base_temp_dir	_get_base_temp_dir(tempfile)	todo		
-Lib/multiprocessing/util.py	211	224	get_temp_dir	get_temp_dir()	todo		
-Lib/multiprocessing/util.py	233	240	_run_after_forkers	_run_after_forkers()	todo		
-Lib/multiprocessing/util.py	242	243	register_after_fork	register_after_fork(obj, func)	todo		
-Lib/multiprocessing/util.py	257	274	Finalize.__init__	__init__(self, obj, callback, args=(), kwargs=None, exitpriority=None)	todo		
-Lib/multiprocessing/util.py	276	298	Finalize.__call__	__call__(self, wr=None, _finalizer_registry=_finalizer_registry, sub_debug=sub_debug, getpid=os.getpid)	todo		
-Lib/multiprocessing/util.py	300	310	Finalize.cancel	cancel(self)	todo		
-Lib/multiprocessing/util.py	312	316	Finalize.still_active	still_active(self)	todo		
-Lib/multiprocessing/util.py	318	336	Finalize.__repr__	__repr__(self)	todo		
-Lib/multiprocessing/util.py	339	377	_run_finalizers	_run_finalizers(minpriority=None)	todo		
-Lib/multiprocessing/util.py	383	387	is_exiting	is_exiting()	todo		
-Lib/multiprocessing/util.py	391	431	_exit_function	_exit_function(info=info, debug=debug, _run_finalizers=_run_finalizers, active_children=process.active_children, current_process=process.current_process)	todo		
-Lib/multiprocessing/util.py	440	444	ForkAwareThreadLock.__init__	__init__(self)	todo		
-Lib/multiprocessing/util.py	446	447	ForkAwareThreadLock._at_fork_reinit	_at_fork_reinit(self)	todo		
-Lib/multiprocessing/util.py	449	450	ForkAwareThreadLock.__enter__	__enter__(self)	todo		
-Lib/multiprocessing/util.py	452	453	ForkAwareThreadLock.__exit__	__exit__(self, *args)	todo		
-Lib/multiprocessing/util.py	457	458	ForkAwareLocal.__init__	__init__(self)	todo		
-Lib/multiprocessing/util.py	459	460	ForkAwareLocal.__reduce__	__reduce__(self)	todo		
-Lib/multiprocessing/util.py	471	476	close_all_fds_except	close_all_fds_except(fds)	todo		
-Lib/multiprocessing/util.py	481	498	_close_stdin	_close_stdin()	todo		
-Lib/multiprocessing/util.py	504	512	_flush_std_streams	_flush_std_streams()	todo		
-Lib/multiprocessing/util.py	518	529	spawnv_passfds	spawnv_passfds(path, args, passfds)	todo		
-Lib/multiprocessing/util.py	532	535	close_fds	close_fds(*fds)	todo		
-Lib/multiprocessing/util.py	538	560	_cleanup_tests	_cleanup_tests()	todo		
+Lib/multiprocessing/util.py	182	189	_remove_temp_dir	_remove_temp_dir(rmtree, tempdir)	todo		
+Lib/multiprocessing/util.py	192	238	_get_base_temp_dir	_get_base_temp_dir(tempfile)	todo		changed-in-3.15:
+Lib/multiprocessing/util.py	241	255	get_temp_dir	get_temp_dir()	todo		changed-in-3.15:
+Lib/multiprocessing/util.py	258	282	_has_writeable_tempdir	_has_writeable_tempdir()	todo		changed-in-3.15: new function
+Lib/multiprocessing/util.py	292	299	_run_after_forkers	_run_after_forkers()	todo		
+Lib/multiprocessing/util.py	301	302	register_after_fork	register_after_fork(obj, func)	todo		
+Lib/multiprocessing/util.py	316	333	Finalize.__init__	__init__(self, obj, callback, args=(), kwargs=None, exitpriority=None)	todo		
+Lib/multiprocessing/util.py	335	357	Finalize.__call__	__call__(self, wr=None, _finalizer_registry=_finalizer_registry, sub_debug=sub_debug, getpid=os.getpid)	todo		
+Lib/multiprocessing/util.py	359	369	Finalize.cancel	cancel(self)	todo		
+Lib/multiprocessing/util.py	371	375	Finalize.still_active	still_active(self)	todo		
+Lib/multiprocessing/util.py	377	395	Finalize.__repr__	__repr__(self)	todo		
+Lib/multiprocessing/util.py	398	436	_run_finalizers	_run_finalizers(minpriority=None)	todo		
+Lib/multiprocessing/util.py	442	446	is_exiting	is_exiting()	todo		
+Lib/multiprocessing/util.py	450	490	_exit_function	_exit_function(info=info, debug=debug, _run_finalizers=_run_finalizers, active_children=process.active_children, current_process=process.current_process)	todo		
+Lib/multiprocessing/util.py	499	503	ForkAwareThreadLock.__init__	__init__(self)	todo		
+Lib/multiprocessing/util.py	505	506	ForkAwareThreadLock._at_fork_reinit	_at_fork_reinit(self)	todo		
+Lib/multiprocessing/util.py	508	509	ForkAwareThreadLock.__enter__	__enter__(self)	todo		
+Lib/multiprocessing/util.py	511	512	ForkAwareThreadLock.__exit__	__exit__(self, *args)	todo		
+Lib/multiprocessing/util.py	516	517	ForkAwareLocal.__init__	__init__(self)	todo		
+Lib/multiprocessing/util.py	518	519	ForkAwareLocal.__reduce__	__reduce__(self)	todo		
+Lib/multiprocessing/util.py	530	535	close_all_fds_except	close_all_fds_except(fds)	todo		
+Lib/multiprocessing/util.py	540	557	_close_stdin	_close_stdin()	todo		
+Lib/multiprocessing/util.py	563	571	_flush_std_streams	_flush_std_streams()	todo		
+Lib/multiprocessing/util.py	577	588	spawnv_passfds	spawnv_passfds(path, args, passfds)	todo		
+Lib/multiprocessing/util.py	591	594	close_fds	close_fds(*fds)	todo		
+Lib/multiprocessing/util.py	597	619	_cleanup_tests	_cleanup_tests()	todo		

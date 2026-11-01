@@ -102,7 +102,7 @@ theorem parseTail_keeps {t spec f g rest} (h : parseTail t spec f rest = .ok g) 
       have k3 := parseType_keeps h
       exact ⟨by rw [k3.1, k1.1], by rw [k3.2, k1.2]⟩
 
-/-- The asserts at formatter_unicode.c:369-370, in their sharp form: whatever the
+/-- The asserts at formatter_unicode.c@3.14.7:369-370, in their sharp form: whatever the
 spec, a parsed spec has one of the four alignments (given a default among them) and
 a sign of NUL, space, `+` or `-`. -/
 def ParseAsserts : Prop :=

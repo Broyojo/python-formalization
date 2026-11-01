@@ -19,9 +19,9 @@ namespace PyLean.MathInt
 
 open PyLean
 
-/-! ## Three-argument `pow`, longobject.c:4817-5157 -/
+/-! ## Three-argument `pow`, longobject.c:4909-5249 -/
 
-/-- The loop of `long_invmod`, longobject.c:4826-4846: Python's
+/-- The loop of `long_invmod`, longobject.c:4918-4938: Python's
 `while n: q, r = divmod(a, n); a, b, c, n = n, c, b - q*c, r`. -/
 def invmodLoop : Nat → Int → Int → Int → Int → Py (Int × Int)
   | 0, _, _, _, _ => .error .modelFuel
@@ -32,14 +32,14 @@ def invmodLoop : Nat → Int → Int → Int → Int → Py (Int × Int)
       let r := floorMod a n
       invmodLoop fuel n c (b - q * c) r
 
-/-- `long_invmod(a, n)` for `n > 0`, longobject.c:4817-4875. -/
+/-- `long_invmod(a, n)` for `n > 0`, longobject.c:4909-4967. -/
 def invmod (a n : Int) : Py Int := do
   let (g, b) ← invmodLoop (n.toNat + 2) a 1 0 n
   if g ≠ 1 then throw (.valueError "base is not invertible for the given modulus")
   return b
 
 /-- `a ** e % c` by square-and-multiply; stands in for the windowed loop of
-`long_pow` (longobject.c:5024-5134), whose result is that value. -/
+`long_pow` (longobject.c:5116-5226), whose result is that value. -/
 def modPowAux (c : Nat) : Nat → Nat → Nat → Nat → Nat
   | 0, _, _, acc => acc
   | fuel + 1, base, e, acc =>
@@ -48,7 +48,7 @@ def modPowAux (c : Nat) : Nat → Nat → Nat → Nat → Nat
 
 def modPow (a e c : Nat) : Nat := modPowAux c (e + 1) (a % c) e (1 % c)
 
-/-- `pow(v, w, x)` for ints with `x` given, longobject.c:4878-5157. -/
+/-- `pow(v, w, x)` for ints with `x` given, longobject.c:4970-5249. -/
 def powMod (v w x : Int) : Py Int := do
   if x = 0 then throw (.valueError "pow() 3rd argument cannot be 0")
   let negativeOutput := x < 0
@@ -65,7 +65,7 @@ def powMod (v w x : Int) : Py Int := do
   if negativeOutput ∧ z ≠ 0 then return z - c
   return z
 
-/-! ## `int.to_bytes`, longobject.c:1031-1170 and :6300-6334 -/
+/-! ## `int.to_bytes`, longobject.c:1109-1248 and :6395-6422 -/
 
 def digitMask : Nat := 2 ^ 30 - 1
 
@@ -85,7 +85,7 @@ structure ABState where
   carry : Nat
   deriving Repr, Inhabited
 
-/-- "Store as many bytes as possible", longobject.c:1103-1112; `none` is the
+/-- "Store as many bytes as possible", longobject.c:1181-1190; `none` is the
 jump to `Overflow`. -/
 def storeBytes (n : Nat) : Nat → ABState → Option ABState
   | 0, st => some st
@@ -96,7 +96,7 @@ def storeBytes (n : Nat) : Nat → ABState → Option ABState
                                        accumbits := st.accumbits - 8, accum := st.accum / 256 }
     else some st
 
-/-- The digit loop of `_PyLong_AsByteArray`, longobject.c:1077-1113. -/
+/-- The digit loop of `_PyLong_AsByteArray`, longobject.c:1155-1191. -/
 def asByteArrayLoop (n : Nat) (twos : Bool) : List Nat → ABState → Option ABState
   | [], st => some st
   | d :: ds, st =>
@@ -114,7 +114,7 @@ def asByteArrayLoop (n : Nat) (twos : Bool) : List Nat → ABState → Option AB
     | some st => asByteArrayLoop n twos ds st
 
 /-- `_PyLong_AsByteArray(v, bytes, n, little_endian=1, is_signed, 1)`: the
-bytes least significant first, longobject.c:1031-1170. -/
+bytes least significant first, longobject.c:1109-1248. -/
 def asByteArray (v : Int) (n : Nat) (signed : Bool) : Py (List Nat) :=
   let overflow : Py (List Nat) := .error (.overflowError "int too big to convert")
   if v < 0 ∧ ¬signed then .error (.overflowError "can't convert negative int to unsigned")
@@ -135,7 +135,7 @@ def asByteArray (v : Int) (n : Nat) (signed : Bool) : Py (List Nat) :=
         if signBitSet = twos then .ok st.out else overflow
       else fill st.out
 
-/-- `int.to_bytes(length, byteorder, *, signed)`, longobject.c:6300-6334,
+/-- `int.to_bytes(length, byteorder, *, signed)`, longobject.c:6395-6422,
 after Argument Clinic converts `length` to `Py_ssize_t`. Bytes are `0..255`. -/
 def toBytes (v : Int) (length : Int) (byteorder : String) (signed : Bool) : Py (List Nat) :=
   if length < ssizeMin ∨ length > ssizeMax then
@@ -147,15 +147,15 @@ def toBytes (v : Int) (length : Int) (byteorder : String) (signed : Bool) : Py (
     let bs ← asByteArray v length.toNat signed
     return if byteorder = "little" then bs else bs.reverse
 
-/-! ## `int.from_bytes`, longobject.c:923-1029 and :6364-6396 -/
+/-! ## `int.from_bytes`, longobject.c:1000-1107 and :6452-6503 -/
 
-/-- Number of leading (most significant) bytes equal to `ins`, longobject.c:957-960;
+/-- Number of leading (most significant) bytes equal to `ins`, longobject.c:1034-1037;
 `msbFirst` lists the bytes from the most significant one. -/
 def countInsignificant (ins : Nat) : List Nat → Nat
   | [] => 0
   | b :: bs => if b ≠ ins then 0 else countInsignificant ins bs + 1
 
-/-- The copy loop of `_PyLong_FromByteArray`, longobject.c:980-1012, on the
+/-- The copy loop of `_PyLong_FromByteArray`, longobject.c:1057-1089, on the
 significant bytes least significant first; returns the digits written. -/
 def fromByteArrayLoop (signed : Bool) : List Nat → (carry accum accumbits : Nat) → List Nat
   | [], _, accum, accumbits => if accumbits ≠ 0 then [accum] else []
@@ -177,7 +177,7 @@ def digitsValue : List Nat → Nat
   | d :: ds => d + 2 ^ 30 * digitsValue ds
 
 /-- `_PyLong_FromByteArray(bytes, n, little_endian=1, is_signed)` on bytes
-least significant first, longobject.c:923-1029. -/
+least significant first, longobject.c:1000-1107. -/
 def fromByteArray (lsbFirst : List Nat) (signed : Bool) : Int :=
   let n := lsbFirst.length
   if n = 0 then 0
@@ -190,15 +190,15 @@ def fromByteArray (lsbFirst : List Nat) (signed : Bool) : Int :=
     let mag : Int := digitsValue digits
     if isSigned then -mag else mag
 
-/-- `int.from_bytes(bytes, byteorder, *, signed)`, longobject.c:6364-6396. -/
+/-- `int.from_bytes(bytes, byteorder, *, signed)`, longobject.c:6452-6503. -/
 def fromBytes (bs : List Nat) (byteorder : String) (signed : Bool) : Py Int :=
   if byteorder ≠ "little" ∧ byteorder ≠ "big" then
     .error (.valueError "byteorder must be either 'little' or 'big'")
   else .ok (fromByteArray (if byteorder = "little" then bs else bs.reverse) signed)
 
-/-! ## `divmod`, longobject.c:4275-4455 and Lib/_pylong.py:511-541 -/
+/-! ## `divmod`, longobject.c:4378-4558 and Lib/_pylong.py:511-541 -/
 
-/-- `fast_floor_div` and `fast_mod`, longobject.c:4275-4315, for single-digit
+/-- `fast_floor_div` and `fast_mod`, longobject.c:4378-4418, for single-digit
 nonzero `a`, `b` (`left = |a|`, `right = |b|`). -/
 def fastDivmod (a b : Int) : Int × Int :=
   let left : Int := a.natAbs
@@ -226,8 +226,8 @@ def pylongIntDivmod (a b : Int) : Int × Int :=
     (q, -r)
   else pylongDivmodPos a b
 
-/-- `divmod(v, w)` for ints, `l_divmod`, longobject.c:4379-4455.
-`long_divrem` (:3135-3197) gives the truncated quotient and remainder. -/
+/-- `divmod(v, w)` for ints, `l_divmod`, longobject.c:4482-4558.
+`long_divrem` (:3217-3279) gives the truncated quotient and remainder. -/
 def divmod (v w : Int) : Py (Int × Int) :=
   let sv := digitCount v.natAbs
   let sw := digitCount w.natAbs
@@ -240,9 +240,9 @@ def divmod (v w : Int) : Py (Int × Int) :=
     if (md < 0 ∧ w > 0) ∨ (md > 0 ∧ w < 0) then .ok (div - 1, md + w)
     else .ok (div, md)
 
-/-! ## `round(int, ndigits)`, longobject.c:6014-6170 -/
+/-! ## `round(int, ndigits)`, longobject.c:6118-6267 -/
 
-/-- `_PyLong_DivmodNear(a, b)`, longobject.c:6014-6094. -/
+/-- `_PyLong_DivmodNear(a, b)`, longobject.c:6118-6191. -/
 def divmodNear (a b : Int) : Int × Int :=
   let quoIsNeg := decide (a < 0) ≠ decide (b < 0)
   let quo := a.tdiv b
@@ -254,7 +254,7 @@ def divmodNear (a b : Int) : Int × Int :=
     if quoIsNeg then (quo - 1, rem + b) else (quo + 1, rem - b)
   else (quo, rem)
 
-/-- `round(self, ndigits)` for ints, `int___round___impl`, longobject.c:6110-6170. -/
+/-- `round(self, ndigits)` for ints, `int___round___impl`, longobject.c:6207-6267. -/
 def roundInt (self : Int) (ndigits : Option Int) : Int :=
   match ndigits with
   | none => self

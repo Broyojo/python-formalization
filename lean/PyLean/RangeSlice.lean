@@ -27,12 +27,12 @@ def entries : List Entry := [
   { id := "rangeslice-new-length", pyFile := "Objects/rangeobject.c"
     pyFns := ["range_from_array", "validate_step", "make_range_object"]
     statement := "range(start, stop[, step]) raises ValueError for step 0 and otherwise succeeds for all ints, storing start, stop, step and the mathematical length."
-    source := "Doc/library/stdtypes.rst:1526 ('If step is zero, ValueError is raised')", status := .proven
+    source := "Doc/library/stdtypes.rst@3.14.7:1526 ('If step is zero, ValueError is raised')", status := .proven
     prop := ``RangeNewLength, thm := some ``rangeNewLength_proven },
   { id := "rangeslice-len-overflow", pyFile := "Objects/rangeobject.c"
     pyFns := ["range_length"]
     statement := "len(r) is the mathematical length L when L <= sys.maxsize and raises OverflowError otherwise."
-    source := "Doc/library/stdtypes.rst:1541-1543", status := .proven
+    source := "Doc/library/stdtypes.rst@3.14.7:1541-1543", status := .proven
     prop := ``LenOverflow, thm := some ``lenOverflow_proven },
   { id := "rangeslice-getitem", pyFile := "Objects/rangeobject.c"
     pyFns := ["range_subscript", "compute_range_item", "compute_item"]
@@ -47,12 +47,12 @@ def entries : List Entry := [
   { id := "rangeslice-index-count", pyFile := "Objects/rangeobject.c"
     pyFns := ["range_index", "range_count"]
     statement := "For an int x, r.index(x) returns the k with r[k] == x and raises ValueError exactly for non-members; r.count(x) is 1 for members and 0 otherwise."
-    source := "index/count docstrings, rangeobject.c:759-764", status := .proven
+    source := "index/count docstrings, rangeobject.c:774-779", status := .proven
     prop := ``IndexCount, thm := some ``indexCount_proven },
   { id := "rangeslice-eq-sequence", pyFile := "Objects/rangeobject.c"
     pyFns := ["range_richcompare", "range_equals"]
     statement := "r0 == r1 exactly when both ranges have the same length and the same elements."
-    source := "Doc/library/stdtypes.rst:1607-1609 (ranges compare as sequences)", status := .proven
+    source := "Doc/library/stdtypes.rst@3.14.7:1607-1609 (ranges compare as sequences)", status := .proven
     prop := ``EqSameSeq, thm := some ``eqSameSeq_proven },
   { id := "rangeslice-eq-hash", pyFile := "Objects/rangeobject.c"
     pyFns := ["range_hash", "range_equals"]
@@ -62,7 +62,7 @@ def entries : List Entry := [
   { id := "rangeslice-indices-in-bounds", pyFile := "Objects/sliceobject.c"
     pyFns := ["slice_indices", "_PySlice_GetLongIndices"]
     statement := "For n >= 0 and a non-zero step, s.indices(n) keeps the slice's step and every element of range(*s.indices(n)) is in [0, n)."
-    source := "Doc/reference/datamodel.rst:1893-1900", status := .proven
+    source := "Doc/reference/datamodel.rst:1909-1916", status := .proven
     prop := ``IndicesInBounds, thm := some ``indicesInBounds_proven },
   { id := "rangeslice-slice-errors", pyFile := "Objects/sliceobject.c"
     pyFns := ["slice_indices", "PySlice_Unpack", "compute_slice"]
@@ -72,7 +72,7 @@ def entries : List Entry := [
   { id := "rangeslice-list-slice-indices", pyFile := "Objects/sliceobject.c"
     pyFns := ["PySlice_Unpack", "PySlice_AdjustIndices", "list_slice_wrap", "list_slice_step_lock_held"]
     statement := "For 0 <= n <= sys.maxsize, list slicing (saturating Py_ssize_t PySlice_Unpack + PySlice_AdjustIndices + size_t cursor) reads exactly the positions range(*s.indices(n)) (PyLong _PySlice_GetLongIndices)."
-    source := "Doc/reference/datamodel.rst:1899-1900 ('handled in a manner consistent with regular slices')", status := .proven
+    source := "Doc/reference/datamodel.rst:1915-1916 ('handled in a manner consistent with regular slices')", status := .proven
     prop := ``ListSliceIndices, thm := some ``listSliceIndices_proven },
   { id := "rangeslice-range-slice", pyFile := "Objects/rangeobject.c"
     pyFns := ["compute_slice", "_PySlice_GetLongIndices"]

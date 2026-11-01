@@ -3,7 +3,7 @@ import PyLean.TypeObj.PropsCall
 /-!
 C3 and class-creation properties. The C3 statements are over classes as addresses and hold
 for every hierarchy; `C3Monotonic` is the single-step statement and `C3MonotonicTransitive`
-the one the comment at `Objects/typeobject.c:3135` makes: the MRO of a class extends the MRO
+the one the comment at `Objects/typeobject.c:3275` makes: the MRO of a class extends the MRO
 of each of its superclasses without reordering, for any depth of inheritance.
 -/
 
@@ -232,7 +232,7 @@ theorem self_head (bases mro : Addr → List Addr) (t : Addr)
 
 /-- **Monotonicity at every depth**: in a linearized hierarchy, for every class `s` in the
 MRO of `t`, the MRO of `s` is a sublist of the MRO of `t`: the promise of
-`Objects/typeobject.c:3135-3137`. Together with `pmerge_nodup` this says that if `A`
+`Objects/typeobject.c:3275-3277`. Together with `pmerge_nodup` this says that if `A`
 precedes `B` in the MRO of a class, it does so in the MRO of every subclass. -/
 def C3MonotonicTransitive : Prop :=
   ∀ (bases mro : Addr → List Addr) (rank : Addr → Nat), Linearized bases mro rank →
@@ -331,7 +331,7 @@ theorem metaclassConflictReal_proven : MetaclassConflictReal := by
         exact ⟨start, b, by simp, by simpa using h1, by simpa using h2⟩
 
 /-- **`__eq__` without `__hash__` makes instances unhashable**: `type_ready_set_hash`
-installs `PyObject_HashNotImplemented` and `__hash__ = None`, `Objects/typeobject.c:8781`.
+installs `PyObject_HashNotImplemented` and `__hash__ = None`, `Objects/typeobject.c:9429`.
 Precondition: `t` is a heap type object and its `tp_hash` is NULL, which `inherit_slots`
 guarantees when the class dict has `__eq__` and no `__hash__`. -/
 def HashNoneWhenEqDefined : Prop :=
@@ -380,7 +380,7 @@ theorem hashNoneWhenEqDefined_proven : HashNoneWhenEqDefined := by
     simp [setSlot]
 
 /-- `inherit_slots` copies `tp_richcompare` and `tp_hash` together, and only when the class
-defines neither `__eq__` nor `__hash__`, `Objects/typeobject.c:8383-8394`: a class defining
+defines neither `__eq__` nor `__hash__`, `Objects/typeobject.c:9017-9028`: a class defining
 `__eq__` does not inherit `tp_hash`. -/
 def OverridesHashBlocksInherit : Prop :=
   ∀ (w : World) (t : Addr) (n : Name),
@@ -392,7 +392,7 @@ theorem overridesHashBlocksInherit_proven : OverridesHashBlocksInherit := by
   rcases hn with rfl | rfl <;> simp [overridesHash, h]
 
 /-- `__slots__ = ('__dict__', '__dict__')` fails: the second name finds `add_dict` set,
-`Objects/typeobject.c:3990`. -/
+`Objects/typeobject.c:4283`. -/
 def IsDunderNameShape : Prop :=
   ∀ (n : Name), isDunderName n = true →
     n.toList.length > 4 ∧ n.toList.take 2 = ['_', '_']
@@ -415,7 +415,7 @@ theorem mangleKeepsDunders_proven : MangleKeepsDunders := by
   · simp [pyMangle, h]
 
 /-- A `__slots__` name that is also a class attribute raises `ValueError`, except the three
-names the compiler inserts, `Objects/typeobject.c:4043-4060`. -/
+names the compiler inserts, `Objects/typeobject.c:4336-4353`. -/
 def SlotNotesIdentifier : Prop :=
   ∀ (s : Val) (w : World),
     strOf w s = none →

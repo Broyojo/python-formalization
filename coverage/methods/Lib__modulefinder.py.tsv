@@ -1,32 +1,32 @@
 file	line	endline	name	signature	status	entry	note
 Lib/modulefinder.py	30	31	AddPackagePath	AddPackagePath(packagename, path)	todo		
 Lib/modulefinder.py	41	42	ReplacePackage	ReplacePackage(oldname, newname)	todo		
-Lib/modulefinder.py	45	92	_find_module	_find_module(name, path=None)	todo		
-Lib/modulefinder.py	97	108	Module.__init__	__init__(self, name, file=None, path=None)	todo		
-Lib/modulefinder.py	110	117	Module.__repr__	__repr__(self)	todo		
-Lib/modulefinder.py	121	131	ModuleFinder.__init__	__init__(self, path=None, debug=0, excludes=None, replace_paths=None)	todo		
-Lib/modulefinder.py	133	140	ModuleFinder.msg	msg(self, level, str, *args)	todo		
-Lib/modulefinder.py	142	146	ModuleFinder.msgin	msgin(self, *args)	todo		
-Lib/modulefinder.py	148	152	ModuleFinder.msgout	msgout(self, *args)	todo		
-Lib/modulefinder.py	154	158	ModuleFinder.run_script	run_script(self, pathname)	todo		
-Lib/modulefinder.py	160	165	ModuleFinder.load_file	load_file(self, pathname)	todo		
-Lib/modulefinder.py	167	176	ModuleFinder.import_hook	import_hook(self, name, caller=None, fromlist=None, level=-1)	todo		
-Lib/modulefinder.py	178	211	ModuleFinder.determine_parent	determine_parent(self, caller, level=-1)	todo		
-Lib/modulefinder.py	213	238	ModuleFinder.find_head_package	find_head_package(self, parent, name)	todo		
-Lib/modulefinder.py	240	253	ModuleFinder.load_tail	load_tail(self, q, tail)	todo		
-Lib/modulefinder.py	255	267	ModuleFinder.ensure_fromlist	ensure_fromlist(self, m, fromlist, recursive=0)	todo		
-Lib/modulefinder.py	269	295	ModuleFinder.find_all_submodules	find_all_submodules(self, m)	todo		
-Lib/modulefinder.py	297	327	ModuleFinder.import_module	import_module(self, partname, fqname, parent)	todo		
-Lib/modulefinder.py	329	356	ModuleFinder.load_module	load_module(self, fqname, fp, pathname, file_info)	todo		
-Lib/modulefinder.py	358	364	ModuleFinder._add_badmodule	_add_badmodule(self, name, caller)	todo		
-Lib/modulefinder.py	366	390	ModuleFinder._safe_import_hook	_safe_import_hook(self, name, caller, fromlist, level=-1)	todo		
-Lib/modulefinder.py	392	400	ModuleFinder.scan_opcodes	scan_opcodes(self, co)	todo		
-Lib/modulefinder.py	402	449	ModuleFinder.scan_code	scan_code(self, co, m)	todo		
-Lib/modulefinder.py	451	470	ModuleFinder.load_package	load_package(self, fqname, pathname)	todo		
-Lib/modulefinder.py	472	476	ModuleFinder.add_module	add_module(self, fqname)	todo		
-Lib/modulefinder.py	478	494	ModuleFinder.find_module	find_module(self, name, path, parent=None)	todo		
-Lib/modulefinder.py	496	528	ModuleFinder.report	report(self)	todo		
-Lib/modulefinder.py	530	536	ModuleFinder.any_missing	any_missing(self)	todo		
-Lib/modulefinder.py	538	582	ModuleFinder.any_missing_maybe	any_missing_maybe(self)	todo		
-Lib/modulefinder.py	584	605	ModuleFinder.replace_paths_in_code	replace_paths_in_code(self, co)	todo		
-Lib/modulefinder.py	608	664	test	test()	todo		
+Lib/modulefinder.py	45	97	_find_module	_find_module(name, path=None)	todo		changed-in-3.15:
+Lib/modulefinder.py	102	113	Module.__init__	__init__(self, name, file=None, path=None)	todo		
+Lib/modulefinder.py	115	122	Module.__repr__	__repr__(self)	todo		
+Lib/modulefinder.py	126	136	ModuleFinder.__init__	__init__(self, path=None, debug=0, excludes=None, replace_paths=None)	todo		
+Lib/modulefinder.py	138	145	ModuleFinder.msg	msg(self, level, str, *args)	todo		
+Lib/modulefinder.py	147	151	ModuleFinder.msgin	msgin(self, *args)	todo		
+Lib/modulefinder.py	153	157	ModuleFinder.msgout	msgout(self, *args)	todo		
+Lib/modulefinder.py	159	163	ModuleFinder.run_script	run_script(self, pathname)	todo		
+Lib/modulefinder.py	165	170	ModuleFinder.load_file	load_file(self, pathname)	todo		
+Lib/modulefinder.py	172	181	ModuleFinder.import_hook	import_hook(self, name, caller=None, fromlist=None, level=-1)	todo		
+Lib/modulefinder.py	183	216	ModuleFinder.determine_parent	determine_parent(self, caller, level=-1)	todo		
+Lib/modulefinder.py	218	243	ModuleFinder.find_head_package	find_head_package(self, parent, name)	todo		
+Lib/modulefinder.py	245	258	ModuleFinder.load_tail	load_tail(self, q, tail)	todo		
+Lib/modulefinder.py	260	272	ModuleFinder.ensure_fromlist	ensure_fromlist(self, m, fromlist, recursive=0)	todo		
+Lib/modulefinder.py	274	300	ModuleFinder.find_all_submodules	find_all_submodules(self, m)	todo		
+Lib/modulefinder.py	302	332	ModuleFinder.import_module	import_module(self, partname, fqname, parent)	todo		
+Lib/modulefinder.py	334	361	ModuleFinder.load_module	load_module(self, fqname, fp, pathname, file_info)	todo		changed-in-3.15:
+Lib/modulefinder.py	363	369	ModuleFinder._add_badmodule	_add_badmodule(self, name, caller)	todo		
+Lib/modulefinder.py	371	395	ModuleFinder._safe_import_hook	_safe_import_hook(self, name, caller, fromlist, level=-1)	todo		
+Lib/modulefinder.py	397	405	ModuleFinder.scan_opcodes	scan_opcodes(self, co)	todo		
+Lib/modulefinder.py	407	453	ModuleFinder.scan_code	scan_code(self, co, m)	todo		changed-in-3.15:
+Lib/modulefinder.py	455	479	ModuleFinder.load_package	load_package(self, fqname, pathname)	todo		changed-in-3.15:
+Lib/modulefinder.py	481	485	ModuleFinder.add_module	add_module(self, fqname)	todo		
+Lib/modulefinder.py	487	503	ModuleFinder.find_module	find_module(self, name, path, parent=None)	todo		
+Lib/modulefinder.py	505	537	ModuleFinder.report	report(self)	todo		
+Lib/modulefinder.py	539	545	ModuleFinder.any_missing	any_missing(self)	todo		
+Lib/modulefinder.py	547	591	ModuleFinder.any_missing_maybe	any_missing_maybe(self)	todo		
+Lib/modulefinder.py	593	614	ModuleFinder.replace_paths_in_code	replace_paths_in_code(self, co)	todo		
+Lib/modulefinder.py	617	673	test	test()	todo		

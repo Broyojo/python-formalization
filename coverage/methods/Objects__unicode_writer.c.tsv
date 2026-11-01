@@ -1,0 +1,23 @@
+file	line	endline	name	signature	status	entry	note
+Objects/unicode_writer.c	66	86	_PyUnicodeWriter_Update	_PyUnicodeWriter_Update(_PyUnicodeWriter *writer)	todo		
+Objects/unicode_writer.c	90	101	_PyUnicodeWriter_Init	_PyUnicodeWriter_Init(_PyUnicodeWriter *writer)	todo		
+Objects/unicode_writer.c	105	132	PyUnicodeWriter_Create	PyUnicodeWriter_Create(Py_ssize_t length)	todo		
+Objects/unicode_writer.c	135	142	PyUnicodeWriter_Discard	void PyUnicodeWriter_Discard(PyUnicodeWriter *writer)	excluded		no-behaviour: frees the writer
+Objects/unicode_writer.c	147	156	_PyUnicodeWriter_InitWithBuffer	_PyUnicodeWriter_InitWithBuffer(_PyUnicodeWriter *writer, PyObject *buffer)	todo		changed-in-3.15: new function
+Objects/unicode_writer.c	160	235	_PyUnicodeWriter_PrepareInternal	_PyUnicodeWriter_PrepareInternal(_PyUnicodeWriter *writer, Py_ssize_t length, Py_UCS4 maxchar)	todo		changed-in-3.15: new function
+Objects/unicode_writer.c	238	256	_PyUnicodeWriter_PrepareKindInternal	_PyUnicodeWriter_PrepareKindInternal(_PyUnicodeWriter *writer, int kind)	todo		changed-in-3.15: new function
+Objects/unicode_writer.c	260	263	_PyUnicodeWriter_WriteChar	_PyUnicodeWriter_WriteChar(_PyUnicodeWriter *writer, Py_UCS4 ch)	modelled	unicodeobj-writer-paths-agree	applyOp .char
+Objects/unicode_writer.c	267	276	PyUnicodeWriter_WriteChar	PyUnicodeWriter_WriteChar(PyUnicodeWriter *writer, Py_UCS4 ch)	todo		changed-in-3.15: new function
+Objects/unicode_writer.c	280	309	_PyUnicodeWriter_WriteStr	_PyUnicodeWriter_WriteStr(_PyUnicodeWriter *writer, PyObject *str)	todo		changed-in-3.15: new function
+Objects/unicode_writer.c	313	332	PyUnicodeWriter_WriteStr	PyUnicodeWriter_WriteStr(PyUnicodeWriter *writer, PyObject *obj)	modelled	unicodeobj-writer-text	writeStrOp: exact str, exact int, PyObject_Str with fallible objects
+Objects/unicode_writer.c	336	354	PyUnicodeWriter_WriteRepr	PyUnicodeWriter_WriteRepr(PyUnicodeWriter *writer, PyObject *obj)	modelled	unicodeobj-writer-text	writeReprOp: NULL, exact int, PyObject_Repr with fallible objects
+Objects/unicode_writer.c	358	389	_PyUnicodeWriter_WriteSubstring	_PyUnicodeWriter_WriteSubstring(_PyUnicodeWriter *writer, PyObject *str, Py_ssize_t start, Py_ssize_t end)	todo		changed-in-3.15: new function
+Objects/unicode_writer.c	393	411	PyUnicodeWriter_WriteSubstring	PyUnicodeWriter_WriteSubstring(PyUnicodeWriter *writer, PyObject *str, Py_ssize_t start, Py_ssize_t end)	modelled	unicodeobj-writer-substring-slice	writeSubOp
+Objects/unicode_writer.c	415	478	_PyUnicodeWriter_WriteASCIIString	_PyUnicodeWriter_WriteASCIIString(_PyUnicodeWriter *writer, const char *ascii, Py_ssize_t len)	todo		changed-in-3.15: new function
+Objects/unicode_writer.c	482	491	PyUnicodeWriter_WriteASCII	PyUnicodeWriter_WriteASCII(PyUnicodeWriter *writer, const char *str, Py_ssize_t size)	modelled	unicodeobj-writer-text	applyOp .ascii, with asciiBytes
+Objects/unicode_writer.c	495	511	PyUnicodeWriter_WriteUTF8	PyUnicodeWriter_WriteUTF8(PyUnicodeWriter *writer, const char *str, Py_ssize_t size)	todo		changed-in-3.15: new function
+Objects/unicode_writer.c	515	537	PyUnicodeWriter_DecodeUTF8Stateful	PyUnicodeWriter_DecodeUTF8Stateful(PyUnicodeWriter *writer, const char *string, Py_ssize_t length, const char *errors, Py_ssize_t *consumed)	todo		changed-in-3.15: new function
+Objects/unicode_writer.c	541	583	_PyUnicodeWriter_WriteLatin1String	_PyUnicodeWriter_WriteLatin1String(_PyUnicodeWriter *writer, const char *str, Py_ssize_t len)	todo		changed-in-3.15: new function
+Objects/unicode_writer.c	587	616	_PyUnicodeWriter_Finish	_PyUnicodeWriter_Finish(_PyUnicodeWriter *writer)	todo		changed-in-3.15: new function
+Objects/unicode_writer.c	620	626	PyUnicodeWriter_Finish	PyUnicodeWriter_Finish(PyUnicodeWriter *writer)	modelled	unicodeobj-writer-finish-canonical	UWriter.finish; the readonly branch of _PyUnicodeWriter_Finish is reached after PyUnicodeWriter_Format, and returns the same text and kind
+Objects/unicode_writer.c	630	633	_PyUnicodeWriter_Dealloc	_PyUnicodeWriter_Dealloc(_PyUnicodeWriter *writer)	excluded		no-behaviour: releases the buffer

@@ -2,7 +2,7 @@ import PyLean.DictSet.DictOps
 import PyLean.DictSet.SetOps
 
 /-!
-Dict views (`Objects/dictobject.c:5957-6782`): `len`, `repr`, comparison and the set
+Dict views (`Objects/dictobject.c:6399-7226`): `len`, `repr`, comparison and the set
 operations, which is where the dict and set tables meet. Line numbers refer to
 `Objects/dictobject.c`. Views of the three kinds behave alike, so the three `*_iter` and
 `*_reversed` slots and `dict_keys_impl`/`dict_items_impl`/`dict_values_impl` are one
@@ -26,15 +26,15 @@ structure View (K V : Type) where
   exactDict : Bool := true
   ident : Nat := 0
 
-/-- `dict_keys_impl` (:6565-6570), `dict_items_impl` (:6677-6682), `dict_values_impl`
-(:6767-6772), `_PyDictView_New` (:5991-6012). -/
+/-- `dict_keys_impl` (:7009-7014), `dict_items_impl` (:7121-7126), `dict_values_impl`
+(:7211-7216), `_PyDictView_New` (:6433-6454). -/
 def viewNew (kind : ViewKind) (d : PyDict K V) : View K V := { kind, d }
 
-/-- `dictview_len` (:5981-5989). -/
+/-- `dictview_len` (:6423-6431). -/
 def dictviewLen (v : View K V) : Nat := v.d.used
 
-/-- `dictkeys_iter` (:6149-6157), `dictitems_iter` (:6584-6592), `dictvalues_iter`
-(:6696-6704), and the `*_reversed` slots (:6572-6580, :6684-6692, :6774-6782). -/
+/-- `dictkeys_iter` (:6591-6599), `dictitems_iter` (:7028-7036), `dictvalues_iter`
+(:7140-7148), and the `*_reversed` slots (:7016-7024, :7128-7136, :7218-7226). -/
 def dictviewIter (v : View K V) (rev : Bool) : DictIter :=
   dictiterNew v.d (match v.kind with
     | .keys => .key
@@ -83,7 +83,7 @@ def ViewArg.toSetArg (E : Env K V) [DecidableEq K] : ViewArg K V → SetArg K
 section
 variable [DecidableEq K] (E : Env K V)
 
-/-- `dictviews_to_set` (:6182-6194). -/
+/-- `dictviews_to_set` (:6624-6636). -/
 def dictviewsToSet (self : ViewArg K V) (id : Nat) : Py (SetObj K) :=
   let shell : SetObj K := { ident := id }
   match self with
@@ -94,22 +94,22 @@ def dictviewsToSet (self : ViewArg K V) (id : Nat) : Py (SetObj K) :=
       makeNewSet E.S shell (some (.iter (viewIterable E v)))
   | a => makeNewSet E.S shell (some (a.toSetArg E))
 
-/-- `dictviews_sub` (:6196-6213). -/
+/-- `dictviews_sub` (:6638-6655). -/
 def dictviewsSub (self other : ViewArg K V) (id : Nat) : Py (SetObj K) :=
   match dictviewsToSet E self id with
   | .error e => .error e
   | .ok r => runNew (setDifferenceUpdateMulti E.S [other.toSetArg E] id) r
 
-/-- `dictviews_or` (:6303-6316). -/
+/-- `dictviews_or` (:6745-6758). -/
 def dictviewsOr (self other : ViewArg K V) (id : Nat) : Py (SetObj K) :=
   match dictviewsToSet E self id with
   | .error e => .error e
   | .ok r => runNew (setUpdate E.S (other.toSetArg E)) r
 
-/-- `dictkeys_contains` (:6159-6166). -/
+/-- `dictkeys_contains` (:6601-6608). -/
 def dictkeysContains (d : PyDict K V) (obj : K) : Py Bool := (pyDictContains E.D obj d).1
 
-/-- `dictitems_contains` (:6594-6612). -/
+/-- `dictitems_contains` (:7038-7056). -/
 def dictitemsContains (d : PyDict K V) (obj : K) : Py Bool :=
   match E.unpair obj with
   | none => .ok false
@@ -125,7 +125,7 @@ def viewContains (v : View K V) (x : K) : Py Bool :=
   | .items => dictitemsContains E v.d x
   | _ => dictkeysContains E v.d x
 
-/-- The loop of `_PyDictView_Intersect` (:6277-6288). -/
+/-- The loop of `_PyDictView_Intersect` (:6719-6730). -/
 def viewInterLoop (self : View K V) : List K → Option PyExc → SM K Unit
   | [], stop =>
     match stop with
@@ -136,7 +136,7 @@ def viewInterLoop (self : View K V) : List K → Option PyExc → SM K Unit
     if rv then setAddKey E.S key
     viewInterLoop self rest stop
 
-/-- `_PyDictView_Intersect` (:6218-6301). `self` is the view (the swap at :6230-6234 has
+/-- `_PyDictView_Intersect` (:6660-6743). `self` is the view (the swap at :6672-6676 has
 been applied by the caller). -/
 def dictviewIntersect (self : View K V) (other : ViewArg K V) (id : Nat) : Py (SetObj K) :=
   let viaSet := match other with
@@ -155,7 +155,7 @@ def dictviewIntersect (self : View K V) (other : ViewArg K V) (id : Nat) : Py (S
     | some e => .error e
     | none => runNew (viewInterLoop E self' it.items it.stop) result
 
-/-- `dictitems_xor_lock_held` (:6318-6400), `dictitems_xor` (:6402-6416). -/
+/-- `dictitems_xor_lock_held` (:6760-6844), `dictitems_xor` (:6846-6860). -/
 def dictitemsXor (d1 d2 : PyDict K V) (id : Nat) : Py (SetObj K) :=
   match dictCopy E.D d1 0 false (.dict d1) with
   | .error e => .error e
@@ -185,7 +185,7 @@ def dictitemsXor (d1 d2 : PyDict K V) (id : Nat) : Py (SetObj K) :=
       runNew (setUpdateIterable E.S
         { items := (dictItemsList t).map fun p => E.pair p.1 p.2 }) r
 
-/-- `dictviews_xor` (:6418-6438). -/
+/-- `dictviews_xor` (:6862-6882). -/
 def dictviewsXor (self other : ViewArg K V) (id : Nat) : Py (SetObj K) :=
   match self, other with
   | .view a, .view b =>
@@ -211,7 +211,7 @@ def argContains (a : ViewArg K V) (x : K) : Py Bool :=
     | .ok h => d.contains x h
   | .other (.iter it) => .ok (it.items.any fun y => (E.S.eq x y default).1 == .ok true)
 
-/-- `all_contained_in` (:6040-6062). -/
+/-- `all_contained_in` (:6482-6504). -/
 def allContainedIn (self other : ViewArg K V) : Py Bool :=
   let it := (self.toSetArg E).toIterable
   let rec go : List K → Py Bool
@@ -233,7 +233,7 @@ def argLen : ViewArg K V → Nat
   | .other (.dict d) => d.size
   | .other (.iter it) => it.items.length
 
-/-- `dictview_richcompare` (:6064-6121): `other` must be a set or a view (otherwise
+/-- `dictview_richcompare` (:6506-6563): `other` must be a set or a view (otherwise
 `NotImplemented`). -/
 def dictviewRichcompare (self : View K V) (other : ViewArg K V) (op : CmpOp) : Py Bool :=
   let s : ViewArg K V := .view self
@@ -252,7 +252,7 @@ def dictviewRichcompare (self : View K V) (other : ViewArg K V) (op : CmpOp) : P
   | .gt => if lenSelf > lenOther then allContainedIn E other s else .ok false
   | .ge => if lenSelf ≥ lenOther then allContainedIn E other s else .ok false
 
-/-- `dictviews_isdisjoint` (:6459-6508). `sameObject` is `self == other`. -/
+/-- `dictviews_isdisjoint` (:6903-6952). `sameObject` is `self == other`. -/
 def dictviewsIsdisjoint (self : View K V) (other : ViewArg K V) (sameObject : Bool) : Py Bool :=
   if sameObject then .ok (dictviewLen self == 0)
   else
@@ -276,7 +276,7 @@ def dictviewsIsdisjoint (self : View K V) (other : ViewArg K V) (sameObject : Bo
           | .ok c => if c then .ok false else go rest
       go it.items
 
-/-- `dictview_repr` (:6123-6145). `seqRepr` is `repr(list(view))`. -/
+/-- `dictview_repr` (:6565-6587). `seqRepr` is `repr(list(view))`. -/
 def dictviewRepr (tpName : String) (inRepr : Bool) (seqRepr : Py String) : Py String :=
   if inRepr then .ok "..."
   else

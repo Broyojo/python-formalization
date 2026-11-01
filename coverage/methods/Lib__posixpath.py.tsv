@@ -1,17 +1,17 @@
 file	line	endline	name	signature	status	entry	note
-Lib/posixpath.py	42	46	_get_sep	_get_sep(path)	todo		
-Lib/posixpath.py	53	55	normcase	normcase(s)	todo		
-Lib/posixpath.py	61	65	isabs	isabs(s)	todo		
-Lib/posixpath.py	72	92	join	join(a, *p)	modelled	textlibs-path-p-join,textlibs-path-p-join-mix,textlibs-path-p-join-fspath-error,textlibs-path-p-join-other-errors	
-Lib/posixpath.py	100	109	split	split(p)	modelled	textlibs-path-p-split	
-Lib/posixpath.py	117	125	splitext	splitext(p)	modelled	textlibs-path-p-splitext	
-Lib/posixpath.py	131	135	splitdrive	splitdrive(p)	todo		
-Lib/posixpath.py	166	171	basename	basename(p)	todo		
-Lib/posixpath.py	176	184	dirname	dirname(p)	todo		
-Lib/posixpath.py	190	217	ismount	ismount(path)	todo		
-Lib/posixpath.py	229	280	expanduser	expanduser(path)	todo		
-Lib/posixpath.py	291	333	expandvars	expandvars(path)	todo		
-Lib/posixpath.py	373	382	abspath	abspath(path)	todo		
-Lib/posixpath.py	388	508	realpath	realpath(filename, *, strict=False)	todo		
-Lib/posixpath.py	513	548	relpath	relpath(path, start=None)	todo		
-Lib/posixpath.py	556	592	commonpath	commonpath(paths)	todo		
+Lib/posixpath.py	43	47	_get_sep	_get_sep(path)	todo		
+Lib/posixpath.py	54	56	normcase	normcase(s, /)	todo		changed-in-3.15:
+Lib/posixpath.py	62	66	isabs	isabs(s, /)	todo		changed-in-3.15:
+Lib/posixpath.py	73	93	join	join(a, /, *p)	todo		changed-in-3.15: was textlibs-path-p-join,textlibs-path-p-join-mix,textlibs-path-p-join-fspath-error,textlibs-path-p-join-other-errors
+Lib/posixpath.py	101	110	split	split(p, /)	todo		changed-in-3.15: was textlibs-path-p-split
+Lib/posixpath.py	118	126	splitext	splitext(p, /)	todo		changed-in-3.15: was textlibs-path-p-splitext
+Lib/posixpath.py	132	136	splitdrive	splitdrive(p, /)	todo		changed-in-3.15:
+Lib/posixpath.py	167	172	basename	basename(p, /)	todo		changed-in-3.15:
+Lib/posixpath.py	177	185	dirname	dirname(p, /)	todo		changed-in-3.15:
+Lib/posixpath.py	191	218	ismount	ismount(path)	todo		
+Lib/posixpath.py	230	281	expanduser	expanduser(path)	todo		
+Lib/posixpath.py	292	334	expandvars	expandvars(path)	todo		
+Lib/posixpath.py	374	383	abspath	abspath(path)	todo		
+Lib/posixpath.py	389	513	realpath	realpath(filename, /, *, strict=False)	todo		changed-in-3.15:
+Lib/posixpath.py	518	553	relpath	relpath(path, start=None)	todo		changed-in-3.15:
+Lib/posixpath.py	561	597	commonpath	commonpath(paths)	todo		

@@ -1,5 +1,5 @@
 file	line	endline	name	signature	status	entry	note
-Modules/_io/stringio.c	81	130	resize_buffer	resize_buffer(stringio *self, size_t size)	modelled	pyio-stringio-writes-twins-not-none,pyio-truncate-keeps-position	
+Modules/_io/stringio.c	81	130	resize_buffer	resize_buffer(stringio *self, size_t size)	todo		changed-in-3.15: was pyio-stringio-writes-twins-not-none,pyio-truncate-keeps-position
 Modules/_io/stringio.c	133	152	make_intermediate	make_intermediate(stringio *self)	todo		
 Modules/_io/stringio.c	155	185	realize	realize(stringio *self)	todo		
 Modules/_io/stringio.c	190	277	write_str	write_str(stringio *self, PyObject *obj)	modelled	pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none	
@@ -9,20 +9,20 @@ Modules/_io/stringio.c	327	355	_io_StringIO_read_impl	_io_StringIO_read_impl(str
 Modules/_io/stringio.c	359	385	_stringio_readline	_stringio_readline(stringio *self, Py_ssize_t limit)	modelled	pyio-stringio-c-readlines-hint-doc	
 Modules/_io/stringio.c	399	407	_io_StringIO_readline_impl	_io_StringIO_readline_impl(stringio *self, Py_ssize_t size) /*[clinic end generated code: output=cabd6452f1b7e85d input=4d14b8495dea1d98]*/	todo		
 Modules/_io/stringio.c	410	445	stringio_iternext	stringio_iternext(PyObject *op)	modelled	pyio-stringio-c-readlines-hint-doc	
-Modules/_io/stringio.c	461	481	_io_StringIO_truncate_impl	_io_StringIO_truncate_impl(stringio *self, Py_ssize_t size) /*[clinic end generated code: output=eb3aef8e06701365 input=fa8a6c98bb2ba780]*/	modelled	pyio-truncate-keeps-position	
-Modules/_io/stringio.c	501	536	_io_StringIO_seek_impl	_io_StringIO_seek_impl(stringio *self, Py_ssize_t pos, int whence) /*[clinic end generated code: output=e9e0ac9a8ae71c25 input=ffef24668fd71a5d]*/	modelled	pyio-bytesio-read-after-seek	
-Modules/_io/stringio.c	551	569	_io_StringIO_write_impl	_io_StringIO_write_impl(stringio *self, PyObject *obj) /*[clinic end generated code: output=d53b1d841d7db288 input=1561272c0da4651f]*/	modelled	pyio-stringio-read-write-twins,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none	
-Modules/_io/stringio.c	584	597	_io_StringIO_close_impl	_io_StringIO_close_impl(stringio *self) /*[clinic end generated code: output=04399355cbe518f1 input=305d19aa29cc40b9]*/	todo		
-Modules/_io/stringio.c	600	609	stringio_traverse	stringio_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal/clear of object references, no Python-visible result
-Modules/_io/stringio.c	612	620	stringio_clear	stringio_clear(PyObject *op)	excluded		no-behaviour: GC traversal/clear of object references, no Python-visible result
-Modules/_io/stringio.c	623	638	stringio_dealloc	stringio_dealloc(PyObject *op)	excluded		no-behaviour: frees memory and drops references only; no finalizer, no output
-Modules/_io/stringio.c	641	660	stringio_new	stringio_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
-Modules/_io/stringio.c	674	782	_io_StringIO___init___impl	_io_StringIO___init___impl(stringio *self, PyObject *value, PyObject *newline_obj) /*[clinic end generated code: output=a421ea023b22ef4e input=cee2d9181b2577a3]*/	modelled	pyio-stringio-c-newline-legal,pyio-stringio-c-newline-legal-no-nul	
-Modules/_io/stringio.c	794	800	_io_StringIO_readable_impl	_io_StringIO_readable_impl(stringio *self) /*[clinic end generated code: output=b19d44dd8b1ceb99 input=6cd2ffd65a8e8763]*/	modelled	pyio-stringio-inquiries	
-Modules/_io/stringio.c	810	816	_io_StringIO_writable_impl	_io_StringIO_writable_impl(stringio *self) /*[clinic end generated code: output=13e4dd77187074ca input=1b3c63dbaa761c69]*/	modelled	pyio-stringio-inquiries	
-Modules/_io/stringio.c	826	832	_io_StringIO_seekable_impl	_io_StringIO_seekable_impl(stringio *self) /*[clinic end generated code: output=4d20b4641c756879 input=a820fad2cf085fc3]*/	modelled	pyio-stringio-inquiries	
-Modules/_io/stringio.c	853	878	_io_StringIO___getstate___impl	_io_StringIO___getstate___impl(stringio *self) /*[clinic end generated code: output=780be4a996410199 input=76f27255ef83bb92]*/	modelled	pyio-stringio-pickle-roundtrip	
-Modules/_io/stringio.c	889	989	_io_StringIO___setstate___impl	_io_StringIO___setstate___impl(stringio *self, PyObject *state) /*[clinic end generated code: output=cb3962bc6d5c5609 input=8a27784b11b82e47]*/	modelled	pyio-stringio-pickle-roundtrip	
-Modules/_io/stringio.c	998	1003	_io_StringIO_closed_get_impl	_io_StringIO_closed_get_impl(stringio *self) /*[clinic end generated code: output=531ddca7954331d6 input=178d2ef24395fd49]*/	todo		
-Modules/_io/stringio.c	1012	1018	_io_StringIO_line_buffering_get_impl	_io_StringIO_line_buffering_get_impl(stringio *self) /*[clinic end generated code: output=360710e0112966ae input=6a7634e7f890745e]*/	todo		
-Modules/_io/stringio.c	1027	1036	_io_StringIO_newlines_get_impl	_io_StringIO_newlines_get_impl(stringio *self) /*[clinic end generated code: output=35d7c0b66d7e0160 input=092a14586718244b]*/	modelled	pyio-stringio-newlines-attr	
+Modules/_io/stringio.c	461	491	_io_StringIO_truncate_impl	_io_StringIO_truncate_impl(stringio *self, PyObject *pos) /*[clinic end generated code: output=c76c43b5ecfaf4e2 input=d59fd2ee49757ae6]*/	todo		changed-in-3.15: was pyio-truncate-keeps-position
+Modules/_io/stringio.c	511	546	_io_StringIO_seek_impl	_io_StringIO_seek_impl(stringio *self, Py_ssize_t pos, int whence) /*[clinic end generated code: output=e9e0ac9a8ae71c25 input=ffef24668fd71a5d]*/	modelled	pyio-bytesio-read-after-seek	
+Modules/_io/stringio.c	561	579	_io_StringIO_write_impl	_io_StringIO_write_impl(stringio *self, PyObject *obj) /*[clinic end generated code: output=d53b1d841d7db288 input=1561272c0da4651f]*/	modelled	pyio-stringio-read-write-twins,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none	
+Modules/_io/stringio.c	594	607	_io_StringIO_close_impl	_io_StringIO_close_impl(stringio *self) /*[clinic end generated code: output=04399355cbe518f1 input=305d19aa29cc40b9]*/	todo		
+Modules/_io/stringio.c	610	619	stringio_traverse	stringio_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal/clear of object references, no Python-visible result
+Modules/_io/stringio.c	622	630	stringio_clear	stringio_clear(PyObject *op)	excluded		no-behaviour: GC traversal/clear of object references, no Python-visible result
+Modules/_io/stringio.c	633	648	stringio_dealloc	stringio_dealloc(PyObject *op)	excluded		no-behaviour: frees memory and drops references only; no finalizer, no output
+Modules/_io/stringio.c	651	670	stringio_new	stringio_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Modules/_io/stringio.c	684	792	_io_StringIO___init___impl	_io_StringIO___init___impl(stringio *self, PyObject *value, PyObject *newline_obj) /*[clinic end generated code: output=a421ea023b22ef4e input=cee2d9181b2577a3]*/	modelled	pyio-stringio-c-newline-legal,pyio-stringio-c-newline-legal-no-nul	
+Modules/_io/stringio.c	804	810	_io_StringIO_readable_impl	_io_StringIO_readable_impl(stringio *self) /*[clinic end generated code: output=b19d44dd8b1ceb99 input=6cd2ffd65a8e8763]*/	modelled	pyio-stringio-inquiries	
+Modules/_io/stringio.c	820	826	_io_StringIO_writable_impl	_io_StringIO_writable_impl(stringio *self) /*[clinic end generated code: output=13e4dd77187074ca input=1b3c63dbaa761c69]*/	modelled	pyio-stringio-inquiries	
+Modules/_io/stringio.c	836	842	_io_StringIO_seekable_impl	_io_StringIO_seekable_impl(stringio *self) /*[clinic end generated code: output=4d20b4641c756879 input=a820fad2cf085fc3]*/	modelled	pyio-stringio-inquiries	
+Modules/_io/stringio.c	863	888	_io_StringIO___getstate___impl	_io_StringIO___getstate___impl(stringio *self) /*[clinic end generated code: output=780be4a996410199 input=76f27255ef83bb92]*/	modelled	pyio-stringio-pickle-roundtrip	
+Modules/_io/stringio.c	899	999	_io_StringIO___setstate___impl	_io_StringIO___setstate___impl(stringio *self, PyObject *state) /*[clinic end generated code: output=cb3962bc6d5c5609 input=8a27784b11b82e47]*/	modelled	pyio-stringio-pickle-roundtrip	
+Modules/_io/stringio.c	1008	1013	_io_StringIO_closed_get_impl	_io_StringIO_closed_get_impl(stringio *self) /*[clinic end generated code: output=531ddca7954331d6 input=178d2ef24395fd49]*/	todo		
+Modules/_io/stringio.c	1022	1028	_io_StringIO_line_buffering_get_impl	_io_StringIO_line_buffering_get_impl(stringio *self) /*[clinic end generated code: output=360710e0112966ae input=6a7634e7f890745e]*/	todo		
+Modules/_io/stringio.c	1037	1046	_io_StringIO_newlines_get_impl	_io_StringIO_newlines_get_impl(stringio *self) /*[clinic end generated code: output=35d7c0b66d7e0160 input=092a14586718244b]*/	modelled	pyio-stringio-newlines-attr	

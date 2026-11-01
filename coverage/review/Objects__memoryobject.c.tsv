@@ -38,41 +38,30 @@ Objects/memoryobject.c	1151	memory_dealloc	FAITHFUL	yes	yes	yes	DeallocRules pin
 Objects/memoryobject.c	1164	memory_traverse	FAITHFUL	yes	-	-	GC traversal ruling in AGENTS.md; memory_clear, which the note calls modelled, is hollow, but the exclusion does not rest on that.
 Objects/memoryobject.c	1183	memory_enter	FAITHFUL	yes	yes	yes	ContextRules ties it to __exit__, so a stand-in that returns without the check fails on the second __enter__.
 Objects/memoryobject.c	1190	memory_exit	FAITHFUL	yes	yes	yes	ContextRules holds in every state, with no HookClear, and fails for a stand-in that does not release.
-Objects/memoryobject.c	1203	get_native_fmtchar	FAITHFUL	yes	yes	yes	NativeFormatAgree checks each size against struct's separate native table, and the refutation records the NUL behaviour.
-Objects/memoryobject.c	1232	get_native_fmtstr	FAITHFUL	yes	yes	yes	NativeFormatAgree pins acceptance and the character; that a leading @ is kept is free, because stripAt removes it before the comparison, so m.cast('@B').format is unstated.
-Objects/memoryobject.c	1378	cast_to_ND	FAITHFUL	yes	yes	yes	CastNDSpec pins the size refusal and the result, and CastShapeSpec requires success; that ndim = 0 succeeds when the size fits is stated only conditionally.
-Objects/memoryobject.c	1414	zero_in_shape	FAITHFUL	yes	yes	yes	zeroInShape_iff is an exact characterisation, used by CastRejections.
-Objects/memoryobject.c	1609	memory_releasebuf	FAITHFUL	yes	yes	yes	GetbufRules states that it restores the view exactly, which a stand-in without the decrement fails.
-Objects/memoryobject.c	1673	pylong_as_ld	FAITHFUL	yes	yes	yes	ConvRule pins each outcome of _PyNumber_Index and the conversion, and PackUnpackInt pins the range.
-Objects/memoryobject.c	1688	pylong_as_lu	FAITHFUL	yes	yes	yes	ConvRule pins each outcome of _PyNumber_Index and the conversion, and PackUnpackInt pins the range.
-Objects/memoryobject.c	1703	pylong_as_lld	FAITHFUL	yes	yes	yes	asLong stands for PyLong_AsLongLong, with the same range on this build; only the OverflowError text differs, and fix_error_int replaces it.
-Objects/memoryobject.c	1718	pylong_as_llu	FAITHFUL	yes	yes	yes	asUnsignedLong stands for PyLong_AsUnsignedLongLong, with the same range on this build; only the OverflowError text differs, and fix_error_int replaces it.
-Objects/memoryobject.c	1733	pylong_as_zd	FAITHFUL	yes	yes	yes	ConvRule pins each outcome of _PyNumber_Index and PyLong_AsSsize_t, and PackUnpackInt pins the range.
-Objects/memoryobject.c	1748	pylong_as_zu	FAITHFUL	yes	yes	yes	asUnsignedLong stands for PyLong_AsSize_t, with the same range on this build; only the OverflowError text differs, and fix_error_int replaces it.
-Objects/memoryobject.c	1776	unpack_single	FAITHFUL	yes	yes	yes	The re-check at :1788 and the integer, bool, c, P and d arms are pinned by round trips and by native_item against struct's reader; f and e are stated only through widen32 and unpack2 (their round trips are open), and err_format is mirrored and unstated.
-Objects/memoryobject.c	2045	unpacker_new	FAITHFUL	yes	-	-	Allocator plumbing applies; the note's claim that struct_get_unpacker is modelled is out of date, since that row is todo and hollow.
-Objects/memoryobject.c	2063	unpacker_free	FAITHFUL	yes	-	-	Applies for the stock struct.Struct; the Py_XDECREFs at :2066-2067 could run a finalizer only if struct.Struct is replaced.
-Objects/memoryobject.c	2128	struct_unpack_single	FAITHFUL	yes	yes	yes	CmpIsTolist and CmpNonNative run it, and the 1-tuple unwrapping is pinned by CmpFastStruct against the fast path.
-Objects/memoryobject.c	2153	adjust_fmt	FAITHFUL	yes	yes	yes	AdjustFmtRules restates the character test as a length test, with both outcomes and the message.
-Objects/memoryobject.c	2168	tolist_base	FAITHFUL	yes	yes	yes	tolistBase_ok pins order and addresses, and TolistFlat, SliceTolist and CmpIsTolist depend on it.
-Objects/memoryobject.c	2195	tolist_rec	FAITHFUL	yes	yes	yes	tolistRec_ok pins the nesting, and TupleItem and CmpIsTolist read through it.
-Objects/memoryobject.c	2237	memoryview_tolist_impl	FAITHFUL	yes	yes	yes	TolistFlat and ZeroDimItem cover all three ndim arms; a single-character non-native format is mirrored and unstated.
-Objects/memoryobject.c	2279	memoryview_tobytes_impl	FAITHFUL	yes	yes	yes	TobytesOrders and TobytesOrderArg pin the orders and the refusal; a 0-dim view is outside TobytesOrders and reached only by HashIsTobytes.
-Objects/memoryobject.c	2338	memoryview_hex_impl	FAITHFUL	yes	yes	yes	HexIsTobytes and HexHoldsExport pin both paths and the export; the external strhexSep is wrong on a memoryview `sep`, which has a length (Model.lean:823), and that is not charged to this row.
-Objects/memoryobject.c	2391	lookup_dimension	FAITHFUL	yes	yes	yes	IndexItem and TupleRefusals pin negative, in-range and out-of-range indices, and TupleItem pins dim > 0 and suboffsets.
-Objects/memoryobject.c	2417	ptr_from_index	FAITHFUL	yes	yes	yes	One line, exercised with exact addresses by IndexItem and AssItemInt.
-Objects/memoryobject.c	2425	ptr_from_tuple	FAITHFUL	yes	yes	yes	TupleRefusals, TupleItem and TupleFailures pin the length check before any __index__, the walk and a raising __index__.
-Objects/memoryobject.c	2454	memory_item	FAITHFUL	yes	yes	yes	IndexItem and RankRules state every arm with its message.
-Objects/memoryobject.c	2484	memory_item_multi	FAITHFUL	yes	yes	yes	TupleItem, TupleRefusals and KeyRejections cover success, the refusals and the short tuple.
-Objects/memoryobject.c	2509	init_slice	FAITHFUL	yes	yes	yes	SliceItems, SliceTolist and SliceFailures pin dimension 0 with the wrapping product and the refutation records the overflow; the dim > 0 branch is dead because callers pass 0, and only one part of a slice carries a callback.
-Objects/memoryobject.c	2557	is_multiindex	FAITHFUL	yes	yes	yes	TupleItem requires true on int tuples and KeyRejections requires false on slices, so constant stand-ins fail.
-Objects/memoryobject.c	2746	memory_length	FAITHFUL	yes	yes	yes	RankRules states both arms, and memoryIter_spec makes IterYields depend on the value.
-Objects/memoryobject.c	2932	struct_unpack_cmp	FAITHFUL	yes	yes	yes	CmpNonNative and CmpIsTolist run it with structResultEq, and struct_cmp pins one-value tuples against itemEq.
-Objects/memoryobject.c	2974	unpack_cmp	FAITHFUL	yes	yes	yes	CmpFastStruct compares the whole switch with the struct reader for every native format and all memory, NaN included.
-Objects/memoryobject.c	3041	cmp_base	FAITHFUL	yes	yes	yes	cmpBase_spec and CmpNonNative pin the walk and the stop at the first unequal pair.
-Objects/memoryobject.c	3063	cmp_rec	FAITHFUL	yes	yes	yes	cmpRec_spec pins it against the nested lists tolist builds, on shapes equiv_shape accepts.
-Objects/memoryobject.c	3099	memory_richcompare	FAITHFUL	yes	yes	yes	The view and exporter paths, the identity cases and the release after the result are pinned; the swallowed __buffer__ failure at :3127-3130 is mirrored but unstated, contrary to the CompareReleases docstring, since BufferFailures does not mention ==.
-Objects/memoryobject.c	3206	memory_hash	FAITHFUL	yes	yes	yes	HashIsTobytes, HashRejections, HashHoldsExport and HashViewExporter pin the value, the cache, both refusals and the export around Python code.
-Objects/memoryobject.c	3475	memoryiter_dealloc	FAITHFUL	yes	-	-	Plain reference-dropping ruling in AGENTS.md, although the note's 'no Python-visible effect' overstates it, since dropping the last reference runs memory_dealloc.
-Objects/memoryobject.c	3484	memoryiter_traverse	FAITHFUL	yes	-	-	GC traversal ruling in AGENTS.md, although the note's 'no Python-visible effect' overstates it, since gc.get_referents() can see it_seq.
-Objects/memoryobject.c	3520	memory_iter	FAITHFUL	yes	yes	yes	IterYields and RankRules pin the iterator and each refusal in order; the PyMemoryView_Check at :3522 cannot fail through the type slot.
+Objects/memoryobject.c	1407	cast_to_ND	FAITHFUL	yes	yes	yes	CastNDSpec pins the size refusal and the result, and CastShapeSpec requires success; that ndim = 0 succeeds when the size fits is stated only conditionally.
+Objects/memoryobject.c	1443	zero_in_shape	FAITHFUL	yes	yes	yes	zeroInShape_iff is an exact characterisation, used by CastRejections.
+Objects/memoryobject.c	1638	memory_releasebuf	FAITHFUL	yes	yes	yes	GetbufRules states that it restores the view exactly, which a stand-in without the decrement fails.
+Objects/memoryobject.c	1702	pylong_as_ld	FAITHFUL	yes	yes	yes	ConvRule pins each outcome of _PyNumber_Index and the conversion, and PackUnpackInt pins the range.
+Objects/memoryobject.c	1717	pylong_as_lu	FAITHFUL	yes	yes	yes	ConvRule pins each outcome of _PyNumber_Index and the conversion, and PackUnpackInt pins the range.
+Objects/memoryobject.c	1732	pylong_as_lld	FAITHFUL	yes	yes	yes	asLong stands for PyLong_AsLongLong, with the same range on this build; only the OverflowError text differs, and fix_error_int replaces it.
+Objects/memoryobject.c	1747	pylong_as_llu	FAITHFUL	yes	yes	yes	asUnsignedLong stands for PyLong_AsUnsignedLongLong, with the same range on this build; only the OverflowError text differs, and fix_error_int replaces it.
+Objects/memoryobject.c	1762	pylong_as_zd	FAITHFUL	yes	yes	yes	ConvRule pins each outcome of _PyNumber_Index and PyLong_AsSsize_t, and PackUnpackInt pins the range.
+Objects/memoryobject.c	1777	pylong_as_zu	FAITHFUL	yes	yes	yes	asUnsignedLong stands for PyLong_AsSize_t, with the same range on this build; only the OverflowError text differs, and fix_error_int replaces it.
+Objects/memoryobject.c	2121	unpacker_new	FAITHFUL	yes	-	-	Allocator plumbing applies; the note's claim that struct_get_unpacker is modelled is out of date, since that row is todo and hollow.
+Objects/memoryobject.c	2139	unpacker_free	FAITHFUL	yes	-	-	Applies for the stock struct.Struct; the Py_XDECREFs at :2142-2143 could run a finalizer only if struct.Struct is replaced.
+Objects/memoryobject.c	2204	struct_unpack_single	FAITHFUL	yes	yes	yes	CmpIsTolist and CmpNonNative run it, and the 1-tuple unwrapping is pinned by CmpFastStruct against the fast path.
+Objects/memoryobject.c	2246	tolist_base	FAITHFUL	yes	yes	yes	tolistBase_ok pins order and addresses, and TolistFlat, SliceTolist and CmpIsTolist depend on it.
+Objects/memoryobject.c	2273	tolist_rec	FAITHFUL	yes	yes	yes	tolistRec_ok pins the nesting, and TupleItem and CmpIsTolist read through it.
+Objects/memoryobject.c	2315	memoryview_tolist_impl	FAITHFUL	yes	yes	yes	TolistFlat and ZeroDimItem cover all three ndim arms; a single-character non-native format is mirrored and unstated.
+Objects/memoryobject.c	2471	lookup_dimension	FAITHFUL	yes	yes	yes	IndexItem and TupleRefusals pin negative, in-range and out-of-range indices, and TupleItem pins dim > 0 and suboffsets.
+Objects/memoryobject.c	2497	ptr_from_index	FAITHFUL	yes	yes	yes	One line, exercised with exact addresses by IndexItem and AssItemInt.
+Objects/memoryobject.c	2505	ptr_from_tuple	FAITHFUL	yes	yes	yes	TupleRefusals, TupleItem and TupleFailures pin the length check before any __index__, the walk and a raising __index__.
+Objects/memoryobject.c	2534	memory_item	FAITHFUL	yes	yes	yes	IndexItem and RankRules state every arm with its message.
+Objects/memoryobject.c	2564	memory_item_multi	FAITHFUL	yes	yes	yes	TupleItem, TupleRefusals and KeyRejections cover success, the refusals and the short tuple.
+Objects/memoryobject.c	2589	init_slice	FAITHFUL	yes	yes	yes	SliceItems, SliceTolist and SliceFailures pin dimension 0 with the wrapping product and the refutation records the overflow; the dim > 0 branch is dead because callers pass 0, and only one part of a slice carries a callback.
+Objects/memoryobject.c	2637	is_multiindex	FAITHFUL	yes	yes	yes	TupleItem requires true on int tuples and KeyRejections requires false on slices, so constant stand-ins fail.
+Objects/memoryobject.c	2826	memory_length	FAITHFUL	yes	yes	yes	RankRules states both arms, and memoryIter_spec makes IterYields depend on the value.
+Objects/memoryobject.c	3012	struct_unpack_cmp	FAITHFUL	yes	yes	yes	CmpNonNative and CmpIsTolist run it with structResultEq, and struct_cmp pins one-value tuples against itemEq.
+Objects/memoryobject.c	3602	memoryiter_dealloc	FAITHFUL	yes	-	-	Plain reference-dropping ruling in AGENTS.md, although the note's 'no Python-visible effect' overstates it, since dropping the last reference runs memory_dealloc.
+Objects/memoryobject.c	3611	memoryiter_traverse	FAITHFUL	yes	-	-	GC traversal ruling in AGENTS.md, although the note's 'no Python-visible effect' overstates it, since gc.get_referents() can see it_seq.
+Objects/memoryobject.c	3647	memory_iter	FAITHFUL	yes	yes	yes	IterYields and RankRules pin the iterator and each refusal in order; the PyMemoryView_Check at :3649 cannot fail through the type slot.

@@ -18,8 +18,8 @@ theorem nativeChar_nul : nativeChar '\x00' = false := by decide
 /-- The two tables of the source agree: for every string, `get_native_fmtchar` accepts it
 exactly when `get_native_fmtstr` does, and the string `get_native_fmtstr` returns is
 `[@]c` for the character `get_native_fmtchar` returns, whose size is the size of that
-code in `struct`'s native table. Source: the NOT_REACHED comment at memoryobject.c:1316,
-and "native single character format" in the error message at :1297. -/
+code in `struct`'s native table. Source: the NOT_REACHED comment at memoryobject.c:1345,
+and "native single character format" in the error message at @3.14.7:1297. -/
 def NativeFormatAgree : Prop :=
   ∀ fmt : List Char,
     (getNativeFmtchar fmt).isSome = (getNativeFmtstr fmt).isSome ∧

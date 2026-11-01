@@ -207,7 +207,7 @@ theorem foldPy_step_mem (W : World) (cls : Cls) (types : List Cls) (t : Cls)
 
 /-- `_compose_mro` passes on a related type: one that is not in `cls.__mro__`, is a real class and not a
 `GenericAlias`, that `cls` is a subclass of, not a strict base of another selected type, and with no
-subclass implemented by `cls`. So the selection at Lib/functools.py:816-828 is not vacuous; a type that
+subclass implemented by `cls`. So the selection at Lib/functools.py:837-849 is not vacuous; a type that
 fails `is_related` raises nothing and is dropped. The docstring's "includes relevant abstract base classes". -/
 def ComposeSelectsRelated : Prop :=
   ∀ (W : World) (cls t : Cls) (types selected r : List Cls),
@@ -305,7 +305,7 @@ theorem findImplFirstMatch_proven : FindImplFirstMatch := by
         exact ⟨pre, c, post, by rw [hm, h1], h, h3⟩
 
 /-- When the match and the next class of the MRO are two unrelated ABCs with implementations, neither in
-`cls.__mro__`, `_find_impl` refuses to guess: `RuntimeError`, the path at Lib/functools.py:865-869. If
+`cls.__mro__`, `_find_impl` refuses to guess: `RuntimeError`, the path at Lib/functools.py:886-890. If
 `issubclass(match, t)` raises, that exception comes out instead. -/
 def FindImplAmbiguous : Prop :=
   ∀ (ι : Type) (W : World) (cls m t : Cls) (reg : Registry ι) (rest : List Cls),
@@ -482,7 +482,7 @@ theorem dispatchIdempotent_proven : DispatchIdempotent := by
 
 /-- `singledispatch` notices a new virtual subclass of a registered ABC: after `register(abc, f)`, a
 change of the ABC cache token drops what was cached, so `dispatch` recomputes in the new world. This
-is the purpose of `cache_token`, Lib/functools.py:900-905, 973-974. -/
+is the purpose of `cache_token`, Lib/functools.py:921-926, 973-974. -/
 def AbcRegistrationInvalidates : Prop :=
   ∀ (ι : Type) (W W' : World) (fuel t tok : Nat) (o a c : Cls) (f g : ι), W.isAbc a = true →
     t ≠ tok →
@@ -502,7 +502,7 @@ theorem abcRegistrationInvalidates_proven : AbcRegistrationInvalidates := by
   rw [e1]
 
 /-- The same for a union: `register(abc | other, f)` notices a new virtual subclass of `abc` as
-`register(abc, f)` does. False: at Lib/functools.py:973 the test `hasattr(cls, '__abstractmethods__')`
+`register(abc, f)` does. False: at Lib/functools.py:994 the test `hasattr(cls, '__abstractmethods__')`
 sees the `UnionType`, so `cache_token` stays `None`, and a stale `dispatch_cache` entry survives
 `abc.register`. -/
 def UnionAbcRegistrationInvalidates : Prop :=
@@ -537,7 +537,7 @@ decorator and changes nothing; a value that is not a class, given with a functio
 union with a non-class member; a function with no annotations is a `TypeError`; an annotation that is not a
 class is a `TypeError`, for a union, a forward reference and anything else; an exception from
 `get_type_hints` propagates. Each `TypeError` leaves the registry alone, because the state is only returned on
-success. The checks at Lib/functools.py:929-966. -/
+success. The checks at Lib/functools.py:950-987. -/
 def RegisterValidates : Prop :=
   ∀ (ι : Type) (W : World) (tok : Nat) (d : Dispatcher ι) (f g : ι) (c : Cls) (e : PyExc)
     (as : List (Option Cls)) (n : String),
@@ -595,7 +595,7 @@ theorem registerAnnotationIsFirstParam_refuted : ¬RegisterAnnotationIsFirstPara
   simp at h2
 
 /-- `register` never lets a `StopIteration` escape: every failure is a `TypeError` or what `get_type_hints`
-raised. False: `next(iter(...))` at Lib/functools.py:950 on a function whose `__annotate__` returns no
+raised. False: `next(iter(...))` at Lib/functools.py:971 on a function whose `__annotate__` returns no
 annotations raises a bare `StopIteration`. -/
 def RegisterNoStopIteration : Prop :=
   ∀ (W : World) (tok : Nat) (d : Dispatcher Nat) (g : Nat) (hints : List (String × TypeVal)),

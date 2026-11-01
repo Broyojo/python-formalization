@@ -275,7 +275,7 @@ theorem tupleFailures_proven : TupleFailures := by
 
 /-- A failing `__buffer__`: `memoryview(x)`, `memoryview._from_flags(x, flags)` and the
 `PyObject_GetBuffer` of a slice assignment all raise what it raised, or the `TypeError`
-of typeobject.c:10718-10719 for a non-memoryview result, after its callback ran, and
+of typeobject.c@3.14.7:10718-10719 for a non-memoryview result, after its callback ran, and
 no view or managed buffer is left behind. -/
 def BufferFailures : Prop :=
   ∀ (r : Option Nat) (e : PyExc) (t : String) (flags : Nat) (st st' : St), fire r st = (.ok (), st') →

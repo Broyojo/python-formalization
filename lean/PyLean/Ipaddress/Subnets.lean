@@ -390,7 +390,7 @@ theorem addressExclude_spec (s o : Net) (hs : s.Valid) (ho : o.Valid) (hb : o.bi
 
 end SubnetsAux
 
-/-- `subnets` docstring, ipaddress.py:925-951: with a valid `prefixlen_diff`
+/-- `subnets` docstring, ipaddress.py:922-948: with a valid `prefixlen_diff`
 the result is the `2^prefixlen_diff` subnets of the new prefix length that
 "join to make the current subnet", in ascending order. -/
 def SubnetsPartition : Prop :=
@@ -403,7 +403,7 @@ def SubnetsPartition : Prop :=
 theorem subnetsPartition_proven : SubnetsPartition :=
   fun n d _ hv hlt hd => SubnetsAux.subnets_spec n d hv hlt hd
 
-/-- `supernet` docstring, ipaddress.py:978-998: for `0 <= d <= prefixlen` the
+/-- `supernet` docstring, ipaddress.py:975-995: for `0 <= d <= prefixlen` the
 result is the unique valid network of prefix length `prefixlen - d` that
 contains `self`. -/
 def SupernetContains : Prop :=
@@ -414,7 +414,7 @@ def SupernetContains : Prop :=
 theorem supernetContains_proven : SupernetContains :=
   fun n d _ hv h0 hd => SubnetsAux.supernet_spec n d hv h0 hd
 
-/-- `address_exclude` docstring, ipaddress.py:792-825: for `other` a subnet of
+/-- `address_exclude` docstring, ipaddress.py:789-822: for `other` a subnet of
 `self`, the result is "self minus other": valid networks of the same version
 that, together with `other`, cover every address of `self` exactly once. -/
 def AddressExcludePartition : Prop :=

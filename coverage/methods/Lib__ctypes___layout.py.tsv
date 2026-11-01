@@ -1,6 +1,6 @@
 file	line	endline	name	signature	status	entry	note
-Lib/ctypes/_layout.py	13	16	round_down	round_down(n, multiple)	todo		
-Lib/ctypes/_layout.py	18	21	round_up	round_up(n, multiple)	todo		
-Lib/ctypes/_layout.py	27	39	StructUnionLayout.__init__	__init__(self, fields, size, align, format_spec)	todo		
-Lib/ctypes/_layout.py	42	322	get_layout	get_layout(cls, input_fields, is_struct, base)	todo		
-Lib/ctypes/_layout.py	325	330	padding_spec	padding_spec(padding)	todo		
+Lib/ctypes/_layout.py	14	17	round_down	round_down(n, multiple)	todo		
+Lib/ctypes/_layout.py	19	22	round_up	round_up(n, multiple)	todo		
+Lib/ctypes/_layout.py	28	40	StructUnionLayout.__init__	__init__(self, fields, size, align, format_spec)	todo		
+Lib/ctypes/_layout.py	43	323	get_layout	get_layout(cls, input_fields, is_struct, base)	todo		
+Lib/ctypes/_layout.py	326	331	padding_spec	padding_spec(padding)	todo		

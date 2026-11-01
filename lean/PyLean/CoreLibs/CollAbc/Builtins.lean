@@ -34,14 +34,14 @@ def listSetItem {α : Type} (xs : List α) (i : Int) (v : α) : Py (List α) :=
   if j < 0 ∨ j ≥ n then .error (.indexError "list assignment index out of range")
   else .ok (xs.set j.toNat v)
 
-/-- `list.insert`, Objects/listobject.c:476 `ins1`: negative counts from the end and both
+/-- `list.insert`, Objects/listobject.c:503 `ins1`: negative counts from the end and both
 ends clamp. -/
 def listInsert {α : Type} (xs : List α) (i : Int) (v : α) : List α :=
   let n : Int := xs.length
   let w := if i < 0 then max (i + n) 0 else min i n
   xs.take w.toNat ++ v :: xs.drop w.toNat
 
-/-- `list.pop(index)`, Objects/listobject.c:1531 `list_pop_impl`. -/
+/-- `list.pop(index)`, Objects/listobject.c:1607 `list_pop_impl`. -/
 def listPop {α : Type} (xs : List α) (index : Int) : Py (α × List α) :=
   if xs.isEmpty then .error (.indexError "pop from empty list")
   else
@@ -67,7 +67,7 @@ def listIndexLoop {α : Type} (E : EqOps α) (value : α) (xs : List α) (stop :
         listIndexLoop E value xs stop fuel (i + 1)
     else .ok none
 
-/-- `list.index(value, start, stop)`, Objects/listobject.c:3283-3312 `list_index_impl`, with
+/-- `list.index(value, start, stop)`, Objects/listobject.c:3346-3375 `list_index_impl`, with
 `none` for the `ValueError`. Indices are already `Py_ssize_t`, clamped by
 `_PyEval_SliceIndexNotNone`, which keeps the outcome for any `list` shorter than
 `sys.maxsize`. -/
@@ -78,14 +78,14 @@ def listIndex {α : Type} (E : EqOps α) (xs : List α) (value : α) (start stop
   let stop := if stop < 0 then max (stop + n) 0 else stop
   listIndexLoop E value xs stop fuel start
 
-/-- `list.__contains__`, Objects/listobject.c:650-666 `list_contains`. -/
+/-- `list.__contains__`, Objects/listobject.c:677-693 `list_contains`. -/
 def listContains {α : Type} (E : EqOps α) (value : α) : List α → Py Bool
   | [] => .ok false
   | v :: vs => do
     if ← E.same v value then return true
     listContains E value vs
 
-/-- `list.count`, Objects/listobject.c:3324-3347 `list_count_impl`; its `obj == value` test is the identity half of `same`. -/
+/-- `list.count`, Objects/listobject.c:3387-3410 `list_count_impl`; its `obj == value` test is the identity half of `same`. -/
 def listCount {α : Type} (E : EqOps α) (value : α) : List α → Py Nat
   | [] => .ok 0
   | v :: vs => do
@@ -93,7 +93,7 @@ def listCount {α : Type} (E : EqOps α) (value : α) : List α → Py Nat
     let rest ← listCount E value vs
     pure ((if hit then 1 else 0) + rest)
 
-/-- `list.remove`, Objects/listobject.c:3362-3382 `list_remove_impl`: `none` for the `ValueError`. -/
+/-- `list.remove`, Objects/listobject.c:3425-3445 `list_remove_impl`: `none` for the `ValueError`. -/
 def listRemove {α : Type} (E : EqOps α) (value : α) : List α → Py (Option (List α))
   | [] => .ok none
   | v :: vs => do
@@ -157,7 +157,7 @@ def dictMMap {K V : Type} [DecidableEq K] : MMap (List (K × V)) K V where
   setitem d k v := .ok (dictSet d k v)
   delitem := dictDel
 
-/-- `dict.pop(key[, default])`, Objects/dictobject.c:3112 `_PyDict_Pop_KnownHash`. -/
+/-- `dict.pop(key[, default])`, Objects/dictobject.c:3234 `_PyDict_Pop_KnownHash`. -/
 def builtinDictPop {K V : Type} [DecidableEq K] (d : List (K × V)) (k : K) (default : Option V) :
     Py (V × List (K × V)) :=
   match d.lookup k with
@@ -167,7 +167,7 @@ def builtinDictPop {K V : Type} [DecidableEq K] (d : List (K × V)) (k : K) (def
     | some x => .ok (x, d)
     | none => .error (.keyError "~key")
 
-/-- `dict.setdefault`, Objects/dictobject.c:4409 `dict_setdefault_ref_lock_held`. -/
+/-- `dict.setdefault`, Objects/dictobject.c:4772 `dict_setdefault_ref_lock_held`. -/
 def builtinDictSetdefault {K V : Type} [DecidableEq K] (d : List (K × V)) (k : K) (default : V) :
     V × List (K × V) :=
   match d.lookup k with

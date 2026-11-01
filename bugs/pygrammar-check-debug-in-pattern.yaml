@@ -43,9 +43,9 @@ expected: |
 promised_by: |
   The compile() documentation: optimize "specifies the optimization level of the compiler", and at
   level 1 and above `__debug__` is false. The comment in astfold_pattern,
-  Python/ast_preprocess.c:900-902, says subexpressions are recursed into.
+  Python/ast_preprocess.c:904-906, says subexpressions are recursed into.
 cause: |
-  Python/ast_preprocess.c:905-906, MatchValue_kind, and 913-914, MatchMapping_kind, call
+  Python/ast_preprocess.c:909-910, MatchValue_kind, and 913-914, MatchMapping_kind, call
   fold_const_match_patterns (lines 857-895) rather than astfold_expr. That function handles
   UnaryOp and BinOp of constants only, and its `default` leaves the node unwalked.
 possible_fix: |

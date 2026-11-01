@@ -30,10 +30,10 @@ observed: |
   python3 3.14.7: [1, 1, 1], then ValueError. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same. REPRODUCED.
 promised_by: |
-  statistics.py:1223 raises for an unknown method; Doc/library/statistics.rst lists the two methods.
+  statistics.py:1224 raises for an unknown method; Doc/library/statistics.rst lists the two methods.
 cause: |
-  Lib/statistics.py:1198-1201 returns before the checks at :1203 and :1212, and the ValueError is the
-  fall-through at :1223.
+  Lib/statistics.py:1199-1202 returns before the checks at :1204 and :1213, and the ValueError is the
+  fall-through at :1224.
 possible_fix: |
   Check `method` right after `n`, before sorting.
 duplicates:

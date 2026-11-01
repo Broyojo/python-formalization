@@ -507,7 +507,7 @@ theorem htmlYearMonths_proven : HtmlYearMonths := by
       width = 7 ∨ width = 8 ∨ width = 9 ∨ width = 10 ∨ width = 11) with
       h | h | h | h | h | h | h | h | h | h | h <;> subst h <;> decide
 
-/-- `TextCalendar.formatyear`: the numbers of the month row `i` computed at calendar.py:422 are
+/-- `TextCalendar.formatyear`: the numbers of the month row `i` computed at calendar.py:441 are
 the months actually laid out in row `i` by `yeardays2calendar`, for all `m >= 1`.
 A formatted name can never disagree with the column below it. -/
 def TextYearMonths : Prop :=

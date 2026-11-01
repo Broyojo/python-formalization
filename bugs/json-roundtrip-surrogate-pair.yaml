@@ -42,8 +42,8 @@ promised_by: |
   Round-trip expectation for JSON-representable values (json docs: "dumps ... loads"); not
   explicitly promised for surrogate code points.
 cause: |
-  Lib/json/encoder.py:49-68 and Modules/_json.c:113-147 escape each surrogate code point as its
-  own \uXXXX; Lib/json/decoder.py:118-124 and Modules/_json.c:500-526 join an escaped high
+  Lib/json/encoder.py:49-68 and Modules/_json.c:125-159 escape each surrogate code point as its
+  own \uXXXX; Lib/json/decoder.py:118-124 and Modules/_json.c:600-626 join an escaped high
   surrogate with a following escaped low surrogate.
 possible_fix: |
   None needed beyond documentation; an encoder that wanted to preserve such strings would have to

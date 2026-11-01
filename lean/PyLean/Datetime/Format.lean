@@ -28,7 +28,7 @@ def formatTime (hh mm ss us : Int) (spec : TimeSpec) : List Char :=
   | .microseconds => padInt 2 hh ++ [':'] ++ padInt 2 mm ++ [':'] ++ padInt 2 ss ++ ['.'] ++ padInt 6 us
 
 /-- `_format_offset(off, sep)`, _pydatetime.py:187-203, for an offset of `off`
-microseconds with `|off| < 24h` (C `format_utcoffset`, :1722-1768). -/
+microseconds with `|off| < 24h` (C `format_utcoffset`, :1767-1813). -/
 def formatOffsetSep (sep : List Char) : Option Int → List Char
   | none => []
   | some off =>
@@ -46,15 +46,15 @@ def formatOffsetSep (sep : List Char) : Option Int → List Char
 /-- `_format_offset(off)` with the default `sep=':'`. -/
 def formatOffset (off : Option Int) : List Char := formatOffsetSep [':'] off
 
-/-- `date.isoformat()`, _pydatetime.py:1114-1123. -/
+/-- `date.isoformat()`, _pydatetime.py:1139-1148. -/
 def dateIsoformat (y m d : Int) : List Char :=
   padInt 4 y ++ ['-'] ++ padInt 2 m ++ ['-'] ++ padInt 2 d
 
-/-- `time.isoformat(timespec)`, _pydatetime.py:1595-1610. -/
+/-- `time.isoformat(timespec)`, _pydatetime.py:1625-1640. -/
 def timeIsoformat (t : TimeV) (spec : TimeSpec) : List Char :=
   formatTime t.h t.mi t.s t.us spec ++ formatOffset t.tz
 
-/-- `datetime.isoformat(sep, timespec)`, _pydatetime.py:2125-2150. -/
+/-- `datetime.isoformat(sep, timespec)`, _pydatetime.py:2174-2199. -/
 def datetimeIsoformat (dt : DateTimeV) (sep : Char) (spec : TimeSpec) : List Char :=
   dateIsoformat dt.y dt.m dt.d ++ [sep] ++ timeIsoformat dt.t spec
 

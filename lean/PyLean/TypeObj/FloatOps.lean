@@ -55,7 +55,7 @@ def floatOpt (r : Py (Option F64)) : M Val := do
   | some x => mkFloat x
   | none => pure .notImpl
 
-/-- `float_add` to `float_divmod`, `Objects/floatobject.c:551-690`, by slot. -/
+/-- `float_add` to `float_divmod`, `Objects/floatobject.c:541-680`, by slot. -/
 def floatBinary (s : Slot) (a b : Val) : M Val := do
   let w ← getW
   let x := floatObj w a
@@ -89,7 +89,7 @@ def cpowRounded (x y : F64) : Option F64 :=
     | .error _ => none
   else none
 
-/-- `float_pow`, `Objects/floatobject.c:696`, through `floatPowCore`. A case `cpowRounded` leaves
+/-- `float_pow`, `Objects/floatobject.c:686`, through `floatPowCore`. A case `cpowRounded` leaves
 out is a gap, and so is the complex result of a negative base with a fractional exponent. Overflow
 is `PyErr_SetFromErrno(PyExc_OverflowError)`, so the exception's args are `errno` and its text. -/
 def floatPow (a b c : Val) : M Val := do
@@ -113,8 +113,8 @@ def floatPow (a b c : Val) : M Val := do
     if r.isNaN && !nanIn then gap% else mkFloat r
   | .ok (some _) => gap%
 
-/-- `long_true_divide`, `Objects/longobject.c:4504`, whose result is correctly rounded. Zero keeps
-the sign of the quotient of the signs (`:4530`), and an infinite result is the `OverflowError`. -/
+/-- `long_true_divide`, `Objects/longobject.c:4607`, whose result is correctly rounded. Zero keeps
+the sign of the quotient of the signs (`:4633`), and an infinite result is the `OverflowError`. -/
 def longTrueDivide (a b : Int) : M Val := do
   if b == 0 then raiseC B.ZeroDivisionError "division by zero"
   else if a == 0 then mkFloat (F64.zero (b < 0))
@@ -123,7 +123,7 @@ def longTrueDivide (a b : Int) : M Val := do
     if r.isInf then overflowErr "integer division result too large for a float"
     else mkFloat r
 
-/-- The text of `float_repr`, `Objects/floatobject.c:348`. -/
+/-- The text of `float_repr`, `Objects/floatobject.c:338`. -/
 def floatReprStr (x : F64) : M String :=
   match Binary64.float_repr x with
   | some cs => pure (String.ofList (cs.map Char.ofNat))

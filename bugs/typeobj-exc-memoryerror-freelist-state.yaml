@@ -45,9 +45,9 @@ promised_by: |
   `args`, the implementation disagrees with itself: the freelist and allocation paths of
   `get_memory_error`.
 cause: |
-  Objects/exceptions.c:4043-4049 restores `dict` and `args` only; :133 `BaseException_clear`
-  does not reset `suppress_context`, and :4047 sets `args` to the empty tuple without looking
-  at the argument passed at :4073.
+  Objects/exceptions.c:4120-4126 restores `dict` and `args` only; :125 `BaseException_clear`
+  does not reset `suppress_context`, and :4124 sets `args` to the empty tuple without looking
+  at the argument passed at :4150.
 possible_fix: |
   Set `self->suppress_context = 0` in `get_memory_error`, and use `args` there when it is
   not NULL.

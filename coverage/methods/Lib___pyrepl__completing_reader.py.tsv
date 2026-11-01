@@ -1,17 +1,17 @@
 file	line	endline	name	signature	status	entry	note
-Lib/_pyrepl/completing_reader.py	36	49	prefix	prefix(wordlist: list[str], j: int=0)	todo		
-Lib/_pyrepl/completing_reader.py	54	55	stripcolor	stripcolor(s: str)	todo		
-Lib/_pyrepl/completing_reader.py	58	59	real_len	real_len(s: str)	todo		
-Lib/_pyrepl/completing_reader.py	62	68	left_align	left_align(s: str, maxlen: int)	todo		
-Lib/_pyrepl/completing_reader.py	71	116	build_menu	build_menu(cons: console.Console, wordlist: list[str], start: int, use_brackets: bool, sort_in_column: bool)	todo		
-Lib/_pyrepl/completing_reader.py	167	203	complete.do	do(self)	todo		
-Lib/_pyrepl/completing_reader.py	207	224	self_insert.do	do(self)	todo		
-Lib/_pyrepl/completing_reader.py	244	249	CompletingReader.__post_init__	__post_init__(self)	todo		
-Lib/_pyrepl/completing_reader.py	251	253	CompletingReader.collect_keymap	collect_keymap(self)	todo		
-Lib/_pyrepl/completing_reader.py	255	258	CompletingReader.after_command	after_command(self, cmd: Command)	todo		
-Lib/_pyrepl/completing_reader.py	260	272	CompletingReader.calc_screen	calc_screen(self)	todo		
-Lib/_pyrepl/completing_reader.py	274	276	CompletingReader.finish	finish(self)	todo		
-Lib/_pyrepl/completing_reader.py	278	283	CompletingReader.cmpltn_reset	cmpltn_reset(self)	todo		
-Lib/_pyrepl/completing_reader.py	285	292	CompletingReader.get_stem	get_stem(self)	todo		
-Lib/_pyrepl/completing_reader.py	294	295	CompletingReader.get_completions	get_completions(self, stem: str)	todo		
-Lib/_pyrepl/completing_reader.py	297	299	CompletingReader.get_line	get_line(self)	todo		
+Lib/_pyrepl/completing_reader.py	38	51	prefix	prefix(wordlist: list[str], j: int=0)	todo		
+Lib/_pyrepl/completing_reader.py	56	57	stripcolor	stripcolor(s: str)	todo		
+Lib/_pyrepl/completing_reader.py	60	61	real_len	real_len(s: str)	todo		
+Lib/_pyrepl/completing_reader.py	64	70	left_align	left_align(s: str, maxlen: int)	todo		
+Lib/_pyrepl/completing_reader.py	73	118	build_menu	build_menu(cons: console.Console, wordlist: list[str], start: int, use_brackets: bool, sort_in_column: bool)	todo		
+Lib/_pyrepl/completing_reader.py	169	234	complete.do	do(self)	todo		changed-in-3.15:
+Lib/_pyrepl/completing_reader.py	238	256	self_insert.do	do(self)	todo		changed-in-3.15:
+Lib/_pyrepl/completing_reader.py	277	282	CompletingReader.__post_init__	__post_init__(self)	todo		
+Lib/_pyrepl/completing_reader.py	284	286	CompletingReader.collect_keymap	collect_keymap(self)	todo		changed-in-3.15:
+Lib/_pyrepl/completing_reader.py	288	291	CompletingReader.after_command	after_command(self, cmd: Command)	todo		
+Lib/_pyrepl/completing_reader.py	293	302	CompletingReader.get_screen_overlays	get_screen_overlays(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/completing_reader.py	304	306	CompletingReader.finish	finish(self)	todo		
+Lib/_pyrepl/completing_reader.py	308	316	CompletingReader.cmpltn_reset	cmpltn_reset(self)	todo		changed-in-3.15:
+Lib/_pyrepl/completing_reader.py	318	325	CompletingReader.get_stem	get_stem(self)	todo		
+Lib/_pyrepl/completing_reader.py	327	328	CompletingReader.get_completions	get_completions(self, stem: str)	todo		changed-in-3.15:
+Lib/_pyrepl/completing_reader.py	330	332	CompletingReader.get_line	get_line(self)	todo		

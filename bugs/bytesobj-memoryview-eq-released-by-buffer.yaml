@@ -16,7 +16,7 @@ summary: |
       m == W()
   With a large buffer the process dies with SIGSEGV. With a small buffer that is not freed, the
   released view compares by content and gives True, where a released view compares by identity
-  (:3113-3116).
+  (:3216-3219).
   Lean: CmpReleasedIdentity is refuted on a 1-byte view; CmpSpecialCases (a view already
   released on entry compares by identity, for all states) is proven.
   The difftest met this independently, without a crash: for a view from
@@ -63,11 +63,11 @@ observed: |
   main (python.exe 3.16.0a1+dev): identical, SIGSEGV included. REPRODUCED.
 promised_by: |
   Doc/library/stdtypes.rst, memoryview.release: "any further operation on the view raises a
-  ValueError"; Objects/memoryobject.c:3113-3116 (released views compare by identity).
+  ValueError"; Objects/memoryobject.c:3216-3219 (released views compare by identity).
 cause: |
-  Objects/memoryobject.c:3113 tests v; :3127 PyObject_GetBuffer(w, &wbuf, PyBUF_FULL_RO) may run
-  __buffer__; :3163-3177 read vv->buf. struct_get_unpacker (:2082) can also run Python code if
-  sys.modules['struct'] was replaced, with the same effect. main: Objects/memoryobject.c:3287.
+  Objects/memoryobject.c:3216 tests v; :3254 PyObject_GetBuffer(w, &wbuf, PyBUF_FULL_RO) may run
+  __buffer__; :3290-3304 read vv->buf. struct_get_unpacker (:2158) can also run Python code if
+  sys.modules['struct'] was replaced, with the same effect. main: Objects/memoryobject.c:3414.
 possible_fix: |
   Hold an export on v across the call (FT_ATOMIC_ADD_SSIZE(self->exports, 1), as memory_hash and
   memoryview_hex_impl do since gh-142664 and gh-143195), or repeat the BASE_INACCESSIBLE test after

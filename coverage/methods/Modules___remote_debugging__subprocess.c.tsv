@@ -1,0 +1,12 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_remote_debugging/subprocess.c	32	42	pid_array_init	pid_array_init(pid_array_t *arr)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/subprocess.c	45	53	pid_array_cleanup	pid_array_cleanup(pid_array_t *arr)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/subprocess.c	56	80	pid_array_append	pid_array_append(pid_array_t *arr, pid_t pid)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/subprocess.c	83	91	pid_array_contains	pid_array_contains(pid_array_t *arr, pid_t pid)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/subprocess.c	101	145	find_children_bfs	find_children_bfs(pid_t target_pid, int recursive, pid_t *all_pids, pid_t *ppids, size_t pid_count, pid_array_t *result)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/subprocess.c	155	202	get_ppid_linux	get_ppid_linux(pid_t pid)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/subprocess.c	205	293	get_child_pids_platform	get_child_pids_platform(pid_t target_pid, int recursive, pid_array_t *result)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/subprocess.c	307	370	get_child_pids_platform	get_child_pids_platform(pid_t target_pid, int recursive, pid_array_t *result)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/subprocess.c	381	443	get_child_pids_platform	get_child_pids_platform(pid_t target_pid, int recursive, pid_array_t *result)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/subprocess.c	454	459	get_child_pids_platform	get_child_pids_platform(pid_t target_pid, int recursive, pid_array_t *result)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/subprocess.c	468	500	enumerate_child_pids	enumerate_child_pids(pid_t target_pid, int recursive)	todo		changed-in-3.15: new function

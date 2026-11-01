@@ -4,7 +4,7 @@ import PyLean.PyIO.Basic
 Text helpers shared by the two `StringIO` models: UTF-8 with the
 `surrogatepass` error handler (`Objects/unicodeobject.c`, `Python/codecs.c`),
 newline scanning and translation (the `IncrementalNewlineDecoder` of
-`Modules/_io/textio.c:328-519` and `Lib/_pyio.py:1948-2030`), and the
+`Modules/_io/textio.c:328-519` and `Lib/_pyio.py:1972-2054`), and the
 `repr()` of an ASCII `str` (for `illegal newline value: %r`).
 -/
 
@@ -40,7 +40,7 @@ def seqLen (b0 : Nat) : Nat :=
 in Objects/stringlib/codecs.h). For `0xED` the strict range is `80..9F`; the
 `surrogatepass` handler also accepts `A0..BF` (an encoded surrogate) when the
 whole three-byte sequence is present, and the decoder keeps a truncated
-`ED A0..BF` as incomplete (unicodeobject.c:5346-5352). -/
+`ED A0..BF` as incomplete (unicodeobject.c:5227-5233). -/
 def secondOk (b0 b1 : Nat) : Bool :=
   if b0 = 0xE0 then 0xA0 ≤ b1 && b1 ≤ 0xBF
   else if b0 = 0xF0 then 0x90 ≤ b1 && b1 ≤ 0xBF
@@ -122,7 +122,7 @@ def replaceLf (nl : List Nat) : List Nat → List Nat
   | c :: r => if c = 10 then nl ++ replaceLf nl r else c :: replaceLf nl r
 
 /-- The `newlines` attribute for a set of seen kinds (textio.c:639-663,
-_pyio.py:2020-2031; both use the same order). -/
+_pyio.py:2044-2055; both use the same order). -/
 def newlinesVal (k : NlKinds) : Val :=
   match k.cr, k.lf, k.crlf with
   | false, false, false => .none

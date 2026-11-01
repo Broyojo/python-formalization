@@ -23,7 +23,7 @@ likelihood: |
   and without a bound at all under `ulimit -s unlimited` (compare gh-143460).
 maybe_intended: |
   Quite possibly. The docs say that with check_circular=False a circular reference results in a
-  RecursionError "(or worse)" (Doc/library/json.rst:191-194), so this is inside what was promised.
+  RecursionError "(or worse)" (Doc/library/json.rst:194-197), so this is inside what was promised.
   About a third of the memory is the indented text itself, which any encoder that keeps its output
   would need; only the other two thirds are the cache from gh-118636. For a legitimately deep,
   acyclic value the output is quadratic regardless. A maintainer may reasonably close this as
@@ -63,14 +63,14 @@ observed: |
   The figures match the model: 51,755^2 * 1.5 is 4.0e9 characters.
 promised_by: |
   Nothing explicit. C/Python twin agreement holds for the exception class only when memory is
-  plentiful; Doc/library/json.rst:191-194 allows "(or worse)".
+  plentiful; Doc/library/json.rst:194-197 allows "(or worse)".
 cause: |
-  Modules/_json.c:1308-1335 (update_indent_cache) appends, for each new level, a newline_indent of
+  Modules/_json.c:1395-1422 (update_indent_cache) appends, for each new level, a newline_indent of
   length 1 + level*len(indent) and a separator_indent longer by len(item_separator), and keeps them
-  for the whole call. The recursion check at Modules/_json.c:1519 uses _Py_EnterRecursiveCall, which
+  for the whole call. The recursion check at Modules/_json.c:1606 uses _Py_EnterRecursiveCall, which
   in 3.14 compares the C stack pointer with its limit, so the depth reached is set by the stack
   size, about fifty times the Python recursion limit that stops Lib/json/encoder.py.
-  Unchanged on main (Modules/_json.c:1395 update_indent_cache).
+  Unchanged on main (Modules/_json.c:1482 update_indent_cache).
 possible_fix: |
   Probably none needed beyond noting it in the docs for check_circular. If it is worth changing: cap
   the indent cache at some depth and build the strings on the fly past it, which removes the two

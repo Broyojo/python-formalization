@@ -1,24 +1,25 @@
 file	line	endline	name	signature	status	entry	note
-Lib/ast.py	26	47	parse	parse(source, filename='<unknown>', mode='exec', *, type_comments=False, feature_version=None, optimize=-1)	todo		
-Lib/ast.py	50	106	literal_eval	literal_eval(node_or_string)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Lib/ast.py	109	190	dump	dump(node, annotate_fields=True, include_attributes=False, *, indent=None, show_empty=False)	todo		
-Lib/ast.py	193	207	copy_location	copy_location(new_node, old_node)	todo		
-Lib/ast.py	210	242	fix_missing_locations	fix_missing_locations(node)	todo		
-Lib/ast.py	245	265	increment_lineno	increment_lineno(node, n=1)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Lib/ast.py	268	277	iter_fields	iter_fields(node)	todo		
-Lib/ast.py	280	291	iter_child_nodes	iter_child_nodes(node)	todo		
-Lib/ast.py	294	315	get_docstring	get_docstring(node, clean=True)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Lib/ast.py	319	335	_splitlines_no_ff	_splitlines_no_ff(source, maxlines=None)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Lib/ast.py	338	346	_pad_whitespace	_pad_whitespace(source)	modelled	pygrammar-ast-pad-whitespace	
-Lib/ast.py	349	383	get_source_segment	get_source_segment(source, node, *, padded=False)	todo		
-Lib/ast.py	386	397	walk	walk(node)	todo		
-Lib/ast.py	400	479	compare	compare(a, b, /, *, compare_attributes=False)	todo		
-Lib/ast.py	502	506	NodeVisitor.visit	visit(self, node)	todo		
-Lib/ast.py	508	516	NodeVisitor.generic_visit	generic_visit(self, node)	todo		
-Lib/ast.py	555	575	NodeTransformer.generic_visit	generic_visit(self, node)	todo		
-Lib/ast.py	582	583	Index.__new__	__new__(cls, value, **kwargs)	todo		
-Lib/ast.py	587	588	ExtSlice.__new__	__new__(cls, dims=(), **kwargs)	todo		
-Lib/ast.py	595	597	_dims_getter	_dims_getter(self)	todo		
-Lib/ast.py	599	600	_dims_setter	_dims_setter(self, value)	todo		
-Lib/ast.py	617	624	unparse	unparse(ast_obj)	modelled	pygrammar-unparse-roundtrip	
-Lib/ast.py	627	677	main	main(args=None)	todo		candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output
+Lib/ast.py	26	48	parse	parse(source, filename='<unknown>', mode='exec', *, type_comments=False, feature_version=None, optimize=-1, module=None)	todo		changed-in-3.15:
+Lib/ast.py	51	64	literal_eval	literal_eval(node_or_string)	todo		changed-in-3.15: withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Lib/ast.py	67	114	_convert_literal	_convert_literal(node)	todo		changed-in-3.15: new function
+Lib/ast.py	117	226	dump	dump(node, annotate_fields=True, include_attributes=False, *, color=False, indent=None, show_empty=False)	todo		changed-in-3.15:
+Lib/ast.py	229	243	copy_location	copy_location(new_node, old_node)	todo		
+Lib/ast.py	246	278	fix_missing_locations	fix_missing_locations(node)	todo		
+Lib/ast.py	281	301	increment_lineno	increment_lineno(node, n=1)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Lib/ast.py	304	313	iter_fields	iter_fields(node)	todo		
+Lib/ast.py	316	327	iter_child_nodes	iter_child_nodes(node)	todo		
+Lib/ast.py	330	351	get_docstring	get_docstring(node, clean=True)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Lib/ast.py	355	371	_splitlines_no_ff	_splitlines_no_ff(source, maxlines=None)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Lib/ast.py	374	382	_pad_whitespace	_pad_whitespace(source)	modelled	pygrammar-ast-pad-whitespace	
+Lib/ast.py	385	419	get_source_segment	get_source_segment(source, node, *, padded=False)	todo		
+Lib/ast.py	422	433	walk	walk(node)	todo		
+Lib/ast.py	436	515	compare	compare(a, b, /, *, compare_attributes=False)	todo		
+Lib/ast.py	538	542	NodeVisitor.visit	visit(self, node)	todo		
+Lib/ast.py	544	552	NodeVisitor.generic_visit	generic_visit(self, node)	todo		
+Lib/ast.py	591	611	NodeTransformer.generic_visit	generic_visit(self, node)	todo		
+Lib/ast.py	618	619	Index.__new__	__new__(cls, value, **kwargs)	todo		
+Lib/ast.py	623	624	ExtSlice.__new__	__new__(cls, dims=(), **kwargs)	todo		
+Lib/ast.py	631	633	_dims_getter	_dims_getter(self)	todo		
+Lib/ast.py	635	636	_dims_setter	_dims_setter(self, value)	todo		
+Lib/ast.py	653	660	unparse	unparse(ast_obj)	modelled	pygrammar-unparse-roundtrip	
+Lib/ast.py	663	715	main	main(args=None)	todo		changed-in-3.15: candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output

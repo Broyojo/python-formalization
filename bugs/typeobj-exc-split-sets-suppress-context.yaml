@@ -61,7 +61,7 @@ promised_by: |
   documentation of `derive`: split and subgroup keep the metadata of the group. The
   implementation disagrees with itself: it keeps `__context__` and disables it.
 cause: |
-  Objects/exceptions.c:1200 calls `PyException_SetCause`, and :555 sets
+  Objects/exceptions.c:1196 calls `PyException_SetCause`, and :551 sets
   `suppress_context = 1` unconditionally.
 possible_fix: |
   After copying the cause, set the new group's `suppress_context` from the original's, or

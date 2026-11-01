@@ -1,0 +1,19 @@
+file	line	endline	name	signature	status	entry	note
+Modules/xxlimited_3_13.c	103	118	newXxoObject	newXxoObject(PyObject *module)	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_3_13.c	128	137	Xxo_traverse	Xxo_traverse(PyObject *op, visitproc visit, void *arg)	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_3_13.c	141	146	Xxo_clear	Xxo_clear(PyObject *op)	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_3_13.c	151	155	Xxo_finalize	Xxo_finalize(PyObject *op)	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_3_13.c	159	167	Xxo_dealloc	Xxo_dealloc(PyObject *self)	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_3_13.c	174	189	Xxo_getattro	Xxo_getattro(PyObject *op, PyObject *name)	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_3_13.c	193	217	Xxo_setattro	Xxo_setattro(PyObject *op, PyObject *name, PyObject *v)	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_3_13.c	224	249	Xxo_demo	Xxo_demo(PyObject *op, PyTypeObject *defining_class, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_3_13.c	263	273	Xxo_getbuffer	Xxo_getbuffer(PyObject *op, Py_buffer *view, int flags)	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_3_13.c	276	280	Xxo_releasebuffer	Xxo_releasebuffer(PyObject *op, Py_buffer *Py_UNUSED(view))	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_3_13.c	283	287	Xxo_get_x_exports	Xxo_get_x_exports(PyObject *op, void *Py_UNUSED(closure))	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_3_13.c	346	354	xx_foo	xx_foo(PyObject *module, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_3_13.c	360	368	xx_new	xx_new(PyObject *module, PyObject *Py_UNUSED(unused))	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_3_13.c	389	424	xx_modexec	xx_modexec(PyObject *m)	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_3_13.c	454	460	xx_traverse	xx_traverse(PyObject *module, visitproc visit, void *arg)	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_3_13.c	463	469	xx_clear	xx_clear(PyObject *module)	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_3_13.c	472	476	xx_free	xx_free(void *module)	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_3_13.c	496	499	PyInit_xxlimited_3_13	PyInit_xxlimited_3_13(void)	excluded		test-support: only for CPython's own tests

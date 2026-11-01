@@ -167,7 +167,7 @@ def adjustPtr (m : Mem) (ptr : Int) (subs : Option (List Int)) (dim : Nat) : Int
     if s.getD dim (-1) ≥ 0 then (rdU m ptr 8 : Int) + s.getD dim 0 else ptr
   | none => ptr
 
-/-! ## Contiguity (Objects/abstract.c:450-530) -/
+/-! ## Contiguity (Objects/abstract.c:460-540) -/
 
 /-- The loop of `_IsCContiguous`, abstract.c:505-512, from dimension `i - 1` down. -/
 def cLoop (shape strides : List Int) : Nat → Int → Bool
@@ -209,16 +209,16 @@ def pyBufferIsContiguous (v : Buf) (order : Char) : Bool :=
   else if order = 'A' then isCContiguous v || isFortranContiguous v
   else false
 
-/-- `MV_CONTIGUOUS_NDIM1`, :240-241. -/
+/-- `MV_CONTIGUOUS_NDIM1`, :250-251. -/
 def mvContiguousNdim1 (v : Buf) : Bool :=
   (v.shape.getD []).getD 0 0 == 1 || (v.strides.getD []).getD 0 0 == v.itemsize
 
-/-- `MV_C_CONTIGUOUS`, `MV_F_CONTIGUOUS`, `MV_ANY_CONTIGUOUS`, :233-237. -/
+/-- `MV_C_CONTIGUOUS`, `MV_F_CONTIGUOUS`, `MV_ANY_CONTIGUOUS`, :243-247. -/
 def Flags.isC (f : Flags) : Bool := f.scalar || f.c
 def Flags.isF (f : Flags) : Bool := f.scalar || f.fortran
 def Flags.isAny (f : Flags) : Bool := f.scalar || f.c || f.fortran
 
-/-- `init_flags`, :610-639. The assignment `mv->flags = flags` replaces every bit. -/
+/-- `init_flags`, :620-649. The assignment `mv->flags = flags` replaces every bit. -/
 def initFlags (v : Buf) : Flags :=
   let f : Flags :=
     match v.ndim with
@@ -229,26 +229,26 @@ def initFlags (v : Buf) : Flags :=
 
 /-! ## Strides -/
 
-/-- The loop of `init_fortran_strides_from_shape`, :487-489. -/
+/-- The loop of `init_fortran_strides_from_shape`, :497-499. -/
 def fStrides (sd : Int) : List Int → List Int
   | [] => []
   | d :: ds => sd :: fStrides (sd * d) ds
 
-/-- `init_strides_from_shape`, :467-477: `strides[ndim-1] = itemsize`, then downwards.
-The loop of :475-476 is the Fortran loop on the reversed shape. -/
+/-- `init_strides_from_shape`, :477-487: `strides[ndim-1] = itemsize`, then downwards.
+The loop of :485-486 is the Fortran loop on the reversed shape. -/
 def cStrides (itemsize : Int) (shape : List Int) : List Int :=
   (fStrides itemsize shape.reverse).reverse
 
-/-- `init_len`, :596-607. -/
+/-- `init_len`, :606-617. -/
 def initLen (shape : List Int) (itemsize : Int) : Int := shape.foldl (· * ·) 1 * itemsize
 
-/-- `init_shared_values`, :542-552. -/
+/-- `init_shared_values`, :552-562. -/
 def initSharedValues (dest src : Buf) : Buf :=
   { dest with
     obj := src.obj, buf := src.buf, len := src.len, itemsize := src.itemsize,
     readonly := src.readonly, format := some (src.format.getD ['B']), hook := src.hook }
 
-/-- `init_shape_strides`, :555-580: `(shape, strides)` of `dest`, reconstructing what
+/-- `init_shape_strides`, :565-590: `(shape, strides)` of `dest`, reconstructing what
 `src` lacks. -/
 def initShapeStrides (src : Buf) : Option (List Int) × Option (List Int) :=
   if src.ndim = 0 then (none, none)
@@ -261,18 +261,18 @@ def initShapeStrides (src : Buf) : Option (List Int) × Option (List Int) :=
     | some st => (some shape, some (st.take src.ndim))
     | none => (some shape, some (cStrides src.itemsize shape))
 
-/-- `init_suboffsets`, :582-593. -/
+/-- `init_suboffsets`, :592-603. -/
 def initSuboffsets (src : Buf) : Option (List Int) := src.suboffsets.map (·.take src.ndim)
 
 /-! ## Format and shape equivalence -/
 
-/-- `equiv_format`, :287-302 (`dest`, `src` have formats, assertion at :292). -/
+/-- `equiv_format`, :297-312 (`dest`, `src` have formats, assertion at :302). -/
 def stripAt (f : List Char) : List Char := if cc f 0 = '@' then f.drop 1 else f
 
 def equivFormat (dest src : Buf) : Bool :=
   stripAt (dest.format.getD []) == stripAt (src.format.getD []) && dest.itemsize == src.itemsize
 
-/-- The loop of `equiv_shape`, :315-320: stop at the first equal zero. -/
+/-- The loop of `equiv_shape`, :325-330: stop at the first equal zero. -/
 def shapeLoop : List Int → List Int → Bool
   | [], _ => true
   | a :: as, bs =>
@@ -280,23 +280,23 @@ def shapeLoop : List Int → List Int → Bool
     | [] => a == 0
     | b :: bs => if a ≠ b then false else if a = 0 then true else shapeLoop as bs
 
-/-- `equiv_shape`, :307-323. -/
+/-- `equiv_shape`, :317-333. -/
 def equivShape (dest src : Buf) : Bool :=
   dest.ndim == src.ndim && shapeLoop ((dest.shape.getD []).take dest.ndim) (src.shape.getD [])
 
-/-- `equiv_structure`, :327-339. -/
+/-- `equiv_structure`, :337-349. -/
 def equivStructure (dest src : Buf) : Py Unit :=
   if !equivFormat dest src || !equivShape dest src then
     .error (.valueError "memoryview assignment: lvalue and rvalue have different structures")
   else .ok ()
 
-/-- `HAVE_SUBOFFSETS_IN_LAST_DIM`, :268-269. -/
+/-- `HAVE_SUBOFFSETS_IN_LAST_DIM`, :278-279. -/
 def haveSubInLast (v : Buf) : Bool :=
   match v.suboffsets with
   | some s => s.getD (v.ndim - 1) (-1) ≥ 0
   | none => false
 
-/-- `last_dim_is_contiguous`, :271-279. -/
+/-- `last_dim_is_contiguous`, :281-289. -/
 def lastDimIsContiguous (dest src : Buf) : Bool :=
   !haveSubInLast dest && !haveSubInLast src &&
     (dest.strides.getD []).getD (dest.ndim - 1) 0 == dest.itemsize &&
@@ -309,21 +309,21 @@ The destination of `copy_rec` and `copy_buffer` is always a fresh buffer
 `sm` and the destination store `dm` separately. `copy_single` passes one store as both;
 `copy_base` reads everything before writing anything, in either branch. -/
 
-/-- The first loop of `copy_base`, :360-363: the `n` items into the scratch buffer. -/
+/-- The first loop of `copy_base`, :370-373: the `n` items into the scratch buffer. -/
 def readItems (sm : Mem) (itemsize : Nat) (stride : Int) (subs : Option (List Int)) :
     Nat → Int → List (List Nat)
   | 0, _ => []
   | n + 1, sptr =>
     rdBytes sm (adjustPtr sm sptr subs 0) itemsize :: readItems sm itemsize stride subs n (sptr + stride)
 
-/-- The second loop of `copy_base`, :364-367. Pointers of `dest` come from `dm`. -/
+/-- The second loop of `copy_base`, :374-377. Pointers of `dest` come from `dm`. -/
 def writeItems (itemsize : Nat) (stride : Int) (subs : Option (List Int)) :
     List (List Nat) → Int → Mem → Mem
   | [], _, dm => dm
   | it :: its, dptr, dm =>
     writeItems itemsize stride subs its (dptr + stride) (wrBytes dm (adjustPtr dm dptr subs 0) it)
 
-/-- `copy_base`, :344-370. `useMem` is `mem != NULL`. The contiguous branch's `memcpy`
+/-- `copy_base`, :354-380. `useMem` is `mem != NULL`. The contiguous branch's `memcpy`
 and `memmove` agree here since the bytes are read first. -/
 def copyBase (shape0 itemsize : Int) (dptr : Int) (dstr : Int) (dsub : Option (List Int))
     (sptr : Int) (sstr : Int) (ssub : Option (List Int)) (useMem : Bool) (sm dm : Mem) : Mem :=
@@ -335,12 +335,12 @@ def copyBase (shape0 itemsize : Int) (dptr : Int) (dstr : Int) (dsub : Option (L
 /-- Tail of a suboffset array: `dsuboffsets ? dsuboffsets+1 : NULL`. -/
 def subTail (s : Option (List Int)) : Option (List Int) := s.map (·.drop 1)
 
-/-- The loop of `copy_rec`, :392-400: `k` sub-arrays, both pointers advancing. -/
+/-- The loop of `copy_rec`, :402-410: `k` sub-arrays, both pointers advancing. -/
 def copyLoop (dstep sstep : Int) (body : Int → Int → Mem → Mem) : Nat → Int → Int → Mem → Mem
   | 0, _, _, dm => dm
   | k + 1, dptr, sptr, dm => copyLoop dstep sstep body k (dptr + dstep) (sptr + sstep) (body dptr sptr dm)
 
-/-- `copy_rec`, :374-401, on the shape, stride and suboffset arrays from the current
+/-- `copy_rec`, :384-411, on the shape, stride and suboffset arrays from the current
 dimension on. `ndim` is `shape.length`. -/
 def copyRec (itemsize : Int) (useMem : Bool) (sm : Mem) :
     List Int → Int → List Int → Option (List Int) → Int → List Int → Option (List Int) → Mem → Mem
@@ -354,14 +354,14 @@ def copyRec (itemsize : Int) (useMem : Bool) (sm : Mem) :
           (adjustPtr sm sptr' ssub 0) (sst.drop 1) (subTail ssub) dm)
       n.toNat dptr sptr dm
 
-/-- `copy_buffer`, :437-464, into `dm`. -/
+/-- `copy_buffer`, :447-474, into `dm`. -/
 def copyBuffer (sm dm : Mem) (dest src : Buf) : Py Mem := do
   equivStructure dest src
   let useMem := !lastDimIsContiguous dest src
   return copyRec dest.itemsize useMem sm (dest.shape.getD []) dest.buf (dest.strides.getD [])
     dest.suboffsets src.buf (src.strides.getD []) src.suboffsets dm
 
-/-- `buffer_to_contiguous`, :495-534: `len(mem) == src->len`, `src->ndim >= 1`. -/
+/-- `buffer_to_contiguous`, :505-544: `len(mem) == src->len`, `src->ndim >= 1`. -/
 def bufferToContiguous (sm : Mem) (src : Buf) (order : Char) : Py (List Nat) :=
   let shape := src.shape.getD []
   let strides :=
@@ -370,7 +370,7 @@ def bufferToContiguous (sm : Mem) (src : Buf) (order : Char) : Py (List Nat) :=
   let dest : Buf := { src with buf := 0, strides := some strides, suboffsets := none }
   copyBuffer sm (List.replicate src.len.toNat 0) dest src
 
-/-- `PyBuffer_ToContiguous`, :1048-1087, into a fresh `len`-byte buffer. -/
+/-- `PyBuffer_ToContiguous`, :1058-1097, into a fresh `len`-byte buffer. -/
 def pyBufferToContiguous (sm : Mem) (src : Buf) (len : Int) (order : Char) : Py (List Nat) :=
   if len ≠ src.len then .error (.valueError "PyBuffer_ToContiguous: len != view->len")
   else if pyBufferIsContiguous src order then .ok (rdBytes sm src.buf len.toNat)
@@ -382,7 +382,7 @@ def pyBufferToContiguous (sm : Mem) (src : Buf) (len : Int) (order : Char) : Py 
 
 /-! ## `struct` unpackers -/
 
-/-- `struct unpacker`, :2037-2042. -/
+/-- `struct unpacker`, :2046-2051. -/
 structure Unpacker where
   fmt : SFmt
   itemsize : Int
@@ -391,7 +391,7 @@ structure Unpacker where
 /-- `MemoryError()`. -/
 def noMemory : PyExc := .named "MemoryError" ""
 
-/-- `struct_get_unpacker`, :2074-2124. The `Struct` call raises `struct.error` on a bad format, and
+/-- `struct_get_unpacker`, :2083-2133. The `Struct` call raises `struct.error` on a bad format, and
 `PyMem_Malloc(itemsize)` fails for a size no allocation can have, taken as at least `2^47`, past the
 address space of an LP64 system. The import is `unpackerOf`. -/
 def structGetUnpacker (fmt : List Char) (itemsize : Int) : Py Unpacker := do
@@ -399,20 +399,20 @@ def structGetUnpacker (fmt : List Char) (itemsize : Int) : Py Unpacker := do
   if itemsize ≥ 2 ^ 47 then throw noMemory
   return ⟨sf, itemsize⟩
 
-/-- `struct_unpack_single`, :2127-2144: copy `itemsize` bytes, then `unpack_from`. -/
+/-- `struct_unpack_single`, :2136-2153: copy `itemsize` bytes, then `unpack_from`. -/
 def structUnpackSingle (m : Mem) (ptr : Int) (x : Unpacker) : Py (List Item) :=
   structUnpackFrom x.fmt (rdBytes m ptr x.itemsize.toNat)
 
-/-- `struct_unpack_cmp`, :2931-2956. -/
+/-- `struct_unpack_cmp`, :2937-2970. -/
 def structUnpackCmp (m : Mem) (p q : Int) (up uq : Unpacker) : Py Bool := do
   let v ← structUnpackSingle m p up
   let w ← structUnpackSingle m q uq
   return structResultEq v w
 
-/-- `UNPACK_TO_BOOL`, :1668-1669. -/
+/-- `UNPACK_TO_BOOL`, :1677-1678. -/
 def unpackToBool (m : Mem) (p : Int) : Bool := rdByte m p != 0
 
-/-- The native item at `ptr` as the `switch` of `unpack_single` reads it, :1796-1834.
+/-- The native item at `ptr` as the `switch` of `unpack_single` reads it, :1805-1843.
 `fmt` is the format after `adjust_fmt`. -/
 def unpackRaw (m : Mem) (ptr : Int) (fmt : List Char) : Py Item :=
   match cc fmt 0 with
@@ -436,7 +436,7 @@ def unpackRaw (m : Mem) (ptr : Int) (fmt : List Char) : Py Item :=
   | 'P' => .ok (.int (rdU m ptr 8))
   | _ => .error (notImplError s!"memoryview: format {fmtText fmt} not supported")
 
-/-- `unpack_cmp`, :2973-3037, for `fmt != '_'`. `CMP_SINGLE` compares C values, which
+/-- `unpack_cmp`, :2987-3051, for `fmt != '_'`. `CMP_SINGLE` compares C values, which
 for integer types is equality of the decoded numbers; `f` compares as `float`, and
 widening is exact, so comparing doubles is the same. -/
 def unpackCmpNative (m : Mem) (p q : Int) (fmt : Char) : Py Bool :=
@@ -467,7 +467,7 @@ def unpackCmp (m : Mem) (p q : Int) (fmt : Char) (unp : Option (Unpacker × Unpa
   | '_', some (up, uq) => structUnpackCmp m p q up uq
   | _, _ => unpackCmpNative m p q fmt
 
-/-- `cmp_base`, :3040-3058: `equal <= 0` stops the walk. -/
+/-- `cmp_base`, :3054-3072: `equal <= 0` stops the walk. -/
 def cmpBase (m : Mem) (fmt : Char) (unp : Option (Unpacker × Unpacker))
     (ps qs : Int) (psub qsub : Option (List Int)) : Nat → Int → Int → Py Bool
   | 0, _, _ => .ok true
@@ -476,7 +476,7 @@ def cmpBase (m : Mem) (fmt : Char) (unp : Option (Unpacker × Unpacker))
     if !equal then return false
     cmpBase m fmt unp ps qs psub qsub n (p + ps) (q + qs)
 
-/-- The loop of `cmp_rec`, :3084-3093: `equal <= 0` stops the walk. -/
+/-- The loop of `cmp_rec`, :3098-3107: `equal <= 0` stops the walk. -/
 def cmpLoop (pstep qstep : Int) (body : Int → Int → Py Bool) : Nat → Int → Int → Py Bool
   | 0, _, _ => .ok true
   | k + 1, p, q => do
@@ -484,7 +484,7 @@ def cmpLoop (pstep qstep : Int) (body : Int → Int → Py Bool) : Nat → Int �
     if !equal then return false
     cmpLoop pstep qstep body k (p + pstep) (q + qstep)
 
-/-- `cmp_rec`, :3062-3096, on the arrays from the current dimension on. -/
+/-- `cmp_rec`, :3076-3110, on the arrays from the current dimension on. -/
 def cmpRec (m : Mem) (fmt : Char) (unp : Option (Unpacker × Unpacker)) :
     List Int → List Int → Option (List Int) → List Int → Option (List Int) → Int → Int → Py Bool
   | [], _, _, _, _, _, _ => .ok true
@@ -505,7 +505,7 @@ inductive Tree where
   | node (l : List Tree)
   deriving Repr, Inhabited
 
-/-- The loop of `tolist_base`, :2179-2187, with `unpack_single` as `f`. -/
+/-- The loop of `tolist_base`, :2188-2196, with `unpack_single` as `f`. -/
 def tolistBase {α : Type} (m : Mem) (f : Int → Py α) (stride : Int) (subs : Option (List Int)) :
     Nat → Int → Py (List α)
   | 0, _ => .ok []
@@ -514,8 +514,8 @@ def tolistBase {α : Type} (m : Mem) (f : Int → Py α) (stride : Int) (subs : 
     let r ← tolistBase m f stride subs n (ptr + stride)
     return x :: r
 
-/-- `tolist_rec`, :2194-2226, on the arrays from the current dimension on. The loop at
-:2213-2223 is the loop of `tolist_base` with a recursive call as the item. -/
+/-- `tolist_rec`, :2203-2235, on the arrays from the current dimension on. The loop at
+:2222-2232 is the loop of `tolist_base` with a recursive call as the item. -/
 def tolistRec (m : Mem) (f : Int → Py Item) :
     List Int → List Int → Option (List Int) → Int → Py Tree
   | [], _, _, _ => .ok (.node [])
@@ -532,18 +532,18 @@ def hexDigit (d : Nat) : Char := if d < 10 then Char.ofNat (48 + d) else Char.of
 /-- `retbuf[j++] = Py_hexdigits[c >> 4]; retbuf[j++] = Py_hexdigits[c & 0x0f]`. -/
 def hexPair (c : Nat) : List Char := [hexDigit (c / 16), hexDigit (c % 16)]
 
-/-- The loops of pystrhex.c:99-115: chunks counted from the left. -/
+/-- The loops of pystrhex.c:210-226: chunks counted from the left. -/
 def hexLeft (sep : Char) (k : Nat) : Nat → List Nat → List Char
   | 0, l => l.flatMap hexPair
   | c + 1, l => (l.take k).flatMap hexPair ++ sep :: hexLeft sep k c (l.drop k)
 
-/-- The loops of pystrhex.c:116-133: chunks counted from the right, on the reversed
+/-- The loops of pystrhex.c:227-244: chunks counted from the right, on the reversed
 input, since `retbuf` is filled backwards. -/
 def hexRight (sep : Char) (k : Nat) : Nat → List Nat → List Char
   | 0, rl => rl.reverse.flatMap hexPair
   | c + 1, rl => hexRight sep k c (rl.drop k) ++ sep :: (rl.take k).reverse.flatMap hexPair
 
-/-- `_Py_strhex_impl` after the separator checks, pystrhex.c:45-134. `group` is
+/-- `_Py_strhex_impl` after the separator checks, pystrhex.c@3.14.7:45-134. `group` is
 `bytes_per_sep_group`, `0` when there is no separator. -/
 def strhexBody (arg : List Nat) (sep : Char) (group : Int) : Py (List Char) :=
   let arglen : Int := arg.length

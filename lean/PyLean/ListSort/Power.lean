@@ -10,7 +10,7 @@ at which `A/(2N)` and `B/(2N)` differ (`listsort.txt:382-393`):
 `powerIter_spec` / `powerloop_spec`.
 
 The stack bound needs the powers stored on the stack to be strictly increasing
-towards the top (`listsort.txt:426-427`, the `assert` at `listobject.c:2663`).
+towards the top (`listsort.txt:426-427`, the `assert` at `listobject.c:2739`).
 That depends on history: a stored power belongs to the boundary between the
 last *original* run of a block and the first original run of the block above,
 and every boundary inside a block has a larger power than the block's stored

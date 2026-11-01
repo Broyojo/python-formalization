@@ -105,7 +105,7 @@ def loadCode (j : Json) : Except String (Code × Array Json) := do
     version := (← getNat j "index") + 1 }
   pure (c, consts)
 
-/-- `_Py_INTERPRETER_TRAMPOLINE_INSTRUCTIONS`, `Python/ceval.c:1050-1058`. -/
+/-- `_Py_INTERPRETER_TRAMPOLINE_INSTRUCTIONS`, `Python/ceval.c:1047-1056`. -/
 def trampolineCode : Code :=
   { name := "<trampoline>", instrs := #[
       { op := .NOP, arg := 0 }, { op := .INTERPRETER_EXIT, arg := 0 },
@@ -151,7 +151,7 @@ def initBuiltins : RM Val := do
   dictSetStr d "Ellipsis" .ellipsis
   pure d
 
-/-- `PyEval_EvalCode`, `Python/ceval.c:957-987`, on a fresh interpreter. -/
+/-- `PyEval_EvalCode`, `Python/ceval.c:674-704`, on a fresh interpreter. -/
 def runMainWith (ev : Frame → Option Val → RM Val) (P : Program) (main : Nat) : RM Val := do
   let builtins ← initBuiltins
   let globals ← mkDict

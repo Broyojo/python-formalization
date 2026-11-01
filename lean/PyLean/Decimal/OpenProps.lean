@@ -6,7 +6,7 @@ import PyLean.Decimal.Ops
 Statements with no proof yet. Each is registered `.open` with a note on what is
 missing; none is used by any other file. They are stated in full, with the same
 hypotheses a proof would be allowed: `prec ≥ 1` and `Emin ≤ 0 ≤ Emax` are the
-invariants `Context._set_integer_check` enforces (_pydecimal.py:3905-3917).
+invariants `Context._set_integer_check` enforces (_pydecimal.py:4005-4017).
 -/
 
 namespace PyLean.Decimal
@@ -25,7 +25,7 @@ sum is non-zero, when `+` returns a value in the normal range, that value is the
 exact sum correctly rounded to `prec` digits, Inexact is set exactly when non-zero
 digits of the exact sum were dropped, and Rounded exactly when any were. The
 statement quantifies over operands of very different size, where `_normalize`
-(_pydecimal.py:5623-5649) replaces the smaller one by a sticky digit. -/
+(_pydecimal.py:5723-5749) replaces the smaller one by a sticky digit. -/
 def AddCorrect : Prop :=
   ∀ (c : Ctx) (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) (cb : Nat) (eb : Int)
     (fl fl' : List Signal) (d : Dec),
@@ -78,7 +78,7 @@ def MulOverflowCorrect : Prop :=
 /-- When the product is below the normal range, `*` rounds it at exponent
 `Etiny` and sets Subnormal; Inexact and Underflow are set exactly when non-zero
 digits were dropped. `numDigits P + e - prec < Etiny` is `_fix`'s test for the
-subnormal case (_pydecimal.py:1651-1656). -/
+subnormal case (_pydecimal.py:1750-1755). -/
 def MulSubnormalCorrect : Prop :=
   ∀ (c : Ctx) (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) (cb : Nat) (eb : Int)
     (fl fl' : List Signal) (d : Dec),

@@ -1,4 +1,4 @@
 file	line	endline	name	signature	status	entry	note
-Modules/symtablemodule.c	24	61	_symtable_symtable_impl	_symtable_symtable_impl(PyObject *module, PyObject *source, PyObject *filename, const char *startstr) /*[clinic end generated code: output=59eb0d5fc7285ac4 input=436ffff90d02e4f6]*/	todo		
-Modules/symtablemodule.c	69	109	symtable_init_constants	symtable_init_constants(PyObject *m)	todo		
-Modules/symtablemodule.c	127	130	PyInit__symtable	PyInit__symtable(void)	todo		
+Modules/symtablemodule.c	26	74	_symtable_symtable_impl	_symtable_symtable_impl(PyObject *module, PyObject *source, PyObject *filename, const char *startstr, PyObject *modname) /*[clinic end generated code: output=235ec5a87a9ce178 input=fbf9adaa33c7070d]*/	todo		changed-in-3.15:
+Modules/symtablemodule.c	82	122	symtable_init_constants	symtable_init_constants(PyObject *m)	todo		
+Modules/symtablemodule.c	141	144	PyInit__symtable	PyInit__symtable(void)	todo		

@@ -1,86 +1,91 @@
 file	line	endline	name	signature	status	entry	note
-Objects/genobject.c	48	50	_PyGen_GetCode	_PyGen_GetCode(PyGenObject *gen) {	todo		review: a fact about setState, not about the body; assumes away the audit hook
-Objects/genobject.c	53	58	PyGen_GetCode	PyGen_GetCode(PyGenObject *gen) {	todo		review: a fact about setState, not about the body; assumes away the audit hook
-Objects/genobject.c	61	84	gen_traverse	gen_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal of the references a generator holds; no effect on the state machine
-Objects/genobject.c	87	143	_PyGen_Finalize	_PyGen_Finalize(PyObject *self)	modelled	gen-finalize-branches	
-Objects/genobject.c	146	156	gen_clear_frame	gen_clear_frame(PyGenObject *gen)	modelled	gen-close-idempotent,gen-close-rejects-executing,gen-close-fast-slow-agree	
-Objects/genobject.c	159	189	gen_dealloc	gen_dealloc(PyObject *self)	excluded		no-behaviour: memory release; its one visible step, the finalizer call, is _PyGen_Finalize, which is modelled
-Objects/genobject.c	192	288	gen_send_ex2	gen_send_ex2(PyGenObject *gen, PyObject *arg, PyObject **presult, int exc, int closing)	modelled	gen-send-rejected-no-effect,gen-already-executing,gen-resume-sees-executing,gen-send-state-edges	
-Objects/genobject.c	291	295	PyGen_am_send	PyGen_am_send(PyObject *self, PyObject *arg, PyObject **result)	modelled	gen-send-rejected-no-effect,gen-send-vs-am-send	
-Objects/genobject.c	298	315	gen_send_ex	gen_send_ex(PyGenObject *gen, PyObject *arg, int exc, int closing)	modelled	gen-iternext-vs-send-none,gen-send-vs-am-send	
-Objects/genobject.c	322	325	gen_send	gen_send(PyObject *gen, PyObject *arg)	modelled	gen-iternext-vs-send-none,gen-send-vs-am-send	
-Objects/genobject.c	336	360	gen_close_iter	gen_close_iter(PyObject *yf)	modelled	gen-ops-state-edges,gen-close-stack-bounded,gen-close-iter-foreign	
-Objects/genobject.c	363	371	is_resume	is_resume(_Py_CODEUNIT *instr)	modelled	gen-close-rejects-executing,gen-close-rejects-executing-past-resume,gen-close-fast-slow-agree	
-Objects/genobject.c	374	384	_PyGen_yf	_PyGen_yf(PyGenObject *gen)	todo		review: simp over a two-line getter restates it
-Objects/genobject.c	387	453	gen_close	gen_close(PyObject *self, PyObject *args)	modelled	gen-resume-sees-executing,gen-close-idempotent,gen-close-rejects-executing,gen-close-rejects-executing-past-resume,gen-close-fast-slow-agree,gen-ops-state-edges,gen-close-stack-bounded	
-Objects/genobject.c	466	595	_gen_throw	_gen_throw(PyGenObject *gen, int close_on_genexit, PyObject *typ, PyObject *val, PyObject *tb)	modelled	gen-resume-sees-executing,gen-ops-state-edges,gen-throw-stack-bounded,gen-throw-bad-arg-undelegated,gen-throw-bad-arg-no-effect,gen-throw-no-delegation,gen-throw-lookup-sees-executing	
-Objects/genobject.c	599	626	gen_throw	gen_throw(PyObject *op, PyObject *const *args, Py_ssize_t nargs)	modelled	gen-ops-state-edges,gen-throw-bad-arg-undelegated,gen-throw-bad-arg-no-effect	
-Objects/genobject.c	630	643	gen_iternext	gen_iternext(PyObject *self)	modelled	gen-iternext-vs-send-none	
-Objects/genobject.c	652	668	_PyGen_SetStopIterationValue	_PyGen_SetStopIterationValue(PyObject *value)	todo		review: the setter is a constructor: the NULL and failed-call branches are not mirrored, and = on values claims identity
-Objects/genobject.c	680	695	_PyGen_FetchStopIterationValue	_PyGen_FetchStopIterationValue(PyObject **pvalue)	todo		review: the setter is a constructor: the NULL and failed-call branches are not mirrored, and = on values claims identity
-Objects/genobject.c	698	703	gen_repr	gen_repr(PyObject *self)	todo		review: restates the format of a one-line definition
-Objects/genobject.c	706	710	gen_get_name	gen_get_name(PyObject *self, void *Py_UNUSED(ignored))	modelled	gen-name-setters	
-Objects/genobject.c	713	725	gen_set_name	gen_set_name(PyObject *self, PyObject *value, void *Py_UNUSED(ignored))	modelled	gen-name-setters	
-Objects/genobject.c	728	732	gen_get_qualname	gen_get_qualname(PyObject *self, void *Py_UNUSED(ignored))	modelled	gen-name-setters	
-Objects/genobject.c	735	747	gen_set_qualname	gen_set_qualname(PyObject *self, PyObject *value, void *Py_UNUSED(ignored))	modelled	gen-name-setters	
-Objects/genobject.c	750	757	gen_getyieldfrom	gen_getyieldfrom(PyObject *gen, void *Py_UNUSED(ignored))	todo		review: simp over a two-line getter restates it
-Objects/genobject.c	761	768	gen_getrunning	gen_getrunning(PyObject *self, void *Py_UNUSED(ignored))	todo		review: restates one-line getters and assumes the audit hook passes
-Objects/genobject.c	771	775	gen_getsuspended	gen_getsuspended(PyObject *self, void *Py_UNUSED(ignored))	todo		review: restates one-line getters and assumes the audit hook passes
-Objects/genobject.c	778	787	_gen_getframe	_gen_getframe(PyGenObject *gen, const char *const name)	todo		review: restates one-line getters and assumes the audit hook passes
-Objects/genobject.c	790	794	gen_getframe	gen_getframe(PyObject *self, void *Py_UNUSED(ignored))	todo		review: restates one-line getters and assumes the audit hook passes
-Objects/genobject.c	797	803	_gen_getcode	_gen_getcode(PyGenObject *gen, const char *const name)	todo		review: a fact about setState, not about the body; assumes away the audit hook
-Objects/genobject.c	806	810	gen_getcode	gen_getcode(PyObject *self, void *Py_UNUSED(ignored))	todo		review: a fact about setState, not about the body; assumes away the audit hook
-Objects/genobject.c	831	839	gen_sizeof	gen_sizeof(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		review: restates a one-line formula; statelessness is a fact about setState
-Objects/genobject.c	916	935	make_gen	make_gen(PyTypeObject *type, PyFunctionObject *func)	modelled	gen-make-coro-kinds	
-Objects/genobject.c	941	985	_Py_MakeCoro	_Py_MakeCoro(PyFunctionObject *func)	modelled	gen-make-coro-kinds	
-Objects/genobject.c	988	1022	gen_new_with_qualname	gen_new_with_qualname(PyTypeObject *type, PyFrameObject *f, PyObject *name, PyObject *qualname)	todo		review: field reads of constructors; the frame copy of gen_new_with_qualname is not mirrored
-Objects/genobject.c	1025	1028	PyGen_NewWithQualName	PyGen_NewWithQualName(PyFrameObject *f, PyObject *name, PyObject *qualname)	todo		review: field reads of constructors; the frame copy of gen_new_with_qualname is not mirrored
-Objects/genobject.c	1031	1034	PyGen_New	PyGen_New(PyFrameObject *f)	todo		review: field reads of constructors; the frame copy of gen_new_with_qualname is not mirrored
-Objects/genobject.c	1049	1058	gen_is_coroutine	gen_is_coroutine(PyObject *o)	modelled	gen-awaitable-iter-result	
-Objects/genobject.c	1069	1107	_PyCoro_GetAwaitableIter	_PyCoro_GetAwaitableIter(PyObject *o)	modelled	gen-awaitable-iter-result	
-Objects/genobject.c	1110	1115	coro_repr	coro_repr(PyObject *self)	todo		review: restates the format of a one-line definition
-Objects/genobject.c	1118	1127	coro_await	coro_await(PyObject *coro)	todo		review: rfl on one-line wrappers
-Objects/genobject.c	1130	1136	coro_get_cr_await	coro_get_cr_await(PyObject *coro, void *Py_UNUSED(ignored))	todo		review: simp over a two-line getter restates it
-Objects/genobject.c	1139	1146	cr_getsuspended	cr_getsuspended(PyObject *self, void *Py_UNUSED(ignored))	todo		review: restates one-line getters and assumes the audit hook passes
-Objects/genobject.c	1149	1156	cr_getrunning	cr_getrunning(PyObject *self, void *Py_UNUSED(ignored))	todo		review: restates one-line getters and assumes the audit hook passes
-Objects/genobject.c	1159	1162	cr_getframe	cr_getframe(PyObject *coro, void *Py_UNUSED(ignored))	todo		review: restates one-line getters and assumes the audit hook passes
-Objects/genobject.c	1165	1168	cr_getcode	cr_getcode(PyObject *coro, void *Py_UNUSED(ignored))	todo		review: a fact about setState, not about the body; assumes away the audit hook
-Objects/genobject.c	1276	1282	coro_wrapper_dealloc	coro_wrapper_dealloc(PyObject *self)	excluded		no-behaviour: releases the reference to the coroutine
-Objects/genobject.c	1285	1289	coro_wrapper_iternext	coro_wrapper_iternext(PyObject *self)	todo		review: rfl on one-line wrappers
-Objects/genobject.c	1292	1296	coro_wrapper_send	coro_wrapper_send(PyObject *self, PyObject *arg)	todo		review: rfl on one-line wrappers
-Objects/genobject.c	1299	1303	coro_wrapper_throw	coro_wrapper_throw(PyObject *self, PyObject *const *args, Py_ssize_t nargs)	todo		review: rfl on one-line wrappers
-Objects/genobject.c	1306	1310	coro_wrapper_close	coro_wrapper_close(PyObject *self, PyObject *args)	todo		review: rfl on one-line wrappers
-Objects/genobject.c	1313	1318	coro_wrapper_traverse	coro_wrapper_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
-Objects/genobject.c	1371	1400	compute_cr_origin	compute_cr_origin(int origin_depth, _PyInterpreterFrame *current_frame)	modelled	gen-cr-origin-take	
-Objects/genobject.c	1403	1425	PyCoro_New	PyCoro_New(PyFrameObject *f, PyObject *name, PyObject *qualname)	todo		review: field reads of constructors; the frame copy of gen_new_with_qualname is not mirrored; gen-cr-origin-take does not run this function
-Objects/genobject.c	1479	1484	async_gen_traverse	async_gen_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
-Objects/genobject.c	1488	1493	async_gen_repr	async_gen_repr(PyObject *self)	todo		review: restates the format of a one-line definition
-Objects/genobject.c	1497	1530	async_gen_init_hooks	async_gen_init_hooks(PyAsyncGenObject *o)	modelled	gen-async-hooks-once	
-Objects/genobject.c	1534	1541	async_gen_anext	async_gen_anext(PyObject *self)	modelled	gen-async-methods-create	
-Objects/genobject.c	1545	1552	async_gen_asend	async_gen_asend(PyObject *op, PyObject *arg)	modelled	gen-async-methods-create	
-Objects/genobject.c	1556	1563	async_gen_aclose	async_gen_aclose(PyObject *op, PyObject *arg)	modelled	gen-async-methods-create	
-Objects/genobject.c	1566	1581	async_gen_athrow	async_gen_athrow(PyObject *op, PyObject *args)	modelled	gen-async-methods-create	
-Objects/genobject.c	1584	1587	ag_getframe	ag_getframe(PyObject *ag, void *Py_UNUSED(ignored))	todo		review: restates one-line getters and assumes the audit hook passes
-Objects/genobject.c	1590	1593	ag_getcode	ag_getcode(PyObject *gen, void *Py_UNUSED(ignored))	todo		review: a fact about setState, not about the body; assumes away the audit hook
-Objects/genobject.c	1596	1603	ag_getsuspended	ag_getsuspended(PyObject *self, void *Py_UNUSED(ignored))	todo		review: restates one-line getters and assumes the audit hook passes
-Objects/genobject.c	1711	1725	PyAsyncGen_New	PyAsyncGen_New(PyFrameObject *f, PyObject *name, PyObject *qualname)	todo		review: field reads of constructors; the frame copy of gen_new_with_qualname is not mirrored
-Objects/genobject.c	1728	1754	async_gen_unwrap_value	async_gen_unwrap_value(PyAsyncGenObject *gen, PyObject *result)	modelled	gen-async-unwrap-value	
-Objects/genobject.c	1761	1777	async_gen_asend_dealloc	async_gen_asend_dealloc(PyObject *self)	excluded		no-behaviour: memory release; the finalizer call is async_gen_asend_finalize, which is modelled
-Objects/genobject.c	1780	1786	async_gen_asend_traverse	async_gen_asend_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
-Objects/genobject.c	1790	1824	async_gen_asend_send	async_gen_asend_send(PyObject *self, PyObject *arg)	modelled	gen-async-ops-state-edges,gen-asend-error-closes,gen-asend-error-clears-running,gen-awaitable-closed-terminal,gen-awaitable-running-exclusion	
-Objects/genobject.c	1828	1831	async_gen_asend_iternext	async_gen_asend_iternext(PyObject *ags)	modelled	gen-async-ops-state-edges,gen-asend-error-closes,gen-awaitable-closed-terminal	
-Objects/genobject.c	1835	1868	async_gen_asend_throw	async_gen_asend_throw(PyObject *self, PyObject *const *args, Py_ssize_t nargs)	modelled	gen-async-ops-state-edges,gen-asend-error-closes,gen-asend-error-clears-running,gen-awaitable-closed-terminal,gen-awaitable-running-exclusion	
-Objects/genobject.c	1872	1894	async_gen_asend_close	async_gen_asend_close(PyObject *self, PyObject *args)	modelled	gen-awaitable-close-idempotent,gen-awaitable-closed-terminal	
-Objects/genobject.c	1897	1903	async_gen_asend_finalize	async_gen_asend_finalize(PyObject *self)	todo		review: restates the one-branch definitions
-Objects/genobject.c	1966	1982	async_gen_asend_new	async_gen_asend_new(PyAsyncGenObject *gen, PyObject *sendval)	modelled	gen-async-methods-create	
-Objects/genobject.c	1989	1995	async_gen_wrapped_val_dealloc	async_gen_wrapped_val_dealloc(PyObject *self)	excluded		no-behaviour: memory release and freelist
-Objects/genobject.c	1999	2004	async_gen_wrapped_val_traverse	async_gen_wrapped_val_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
-Objects/genobject.c	2051	2067	_PyAsyncGenValueWrapperNew	_PyAsyncGenValueWrapperNew(PyThreadState *tstate, PyObject *val)	modelled	gen-async-unwrap-value	
-Objects/genobject.c	2077	2088	async_gen_athrow_dealloc	async_gen_athrow_dealloc(PyObject *self)	excluded		no-behaviour: memory release; the finalizer call is async_gen_athrow_finalize, which is modelled
-Objects/genobject.c	2092	2098	async_gen_athrow_traverse	async_gen_athrow_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
-Objects/genobject.c	2102	2231	async_gen_athrow_send	async_gen_athrow_send(PyObject *self, PyObject *arg)	modelled	gen-async-ops-state-edges,gen-aclose-error-closes,gen-athrow-start-error-closes,gen-athrow-error-closes,gen-athrow-error-clears-running,gen-athrow-valid-args-clears-running,gen-awaitable-closed-terminal,gen-awaitable-running-exclusion,gen-athrow-on-finished,gen-athrow-on-closed	
-Objects/genobject.c	2235	2301	async_gen_athrow_throw	async_gen_athrow_throw(PyObject *self, PyObject *const *args, Py_ssize_t nargs)	modelled	gen-async-ops-state-edges,gen-athrow-throw-error-closes,gen-awaitable-closed-terminal,gen-awaitable-running-exclusion	
-Objects/genobject.c	2305	2308	async_gen_athrow_iternext	async_gen_athrow_iternext(PyObject *agt)	modelled	gen-async-ops-state-edges,gen-aclose-error-closes,gen-awaitable-closed-terminal,gen-athrow-on-finished	
-Objects/genobject.c	2312	2334	async_gen_athrow_close	async_gen_athrow_close(PyObject *self, PyObject *args)	modelled	gen-awaitable-close-idempotent,gen-awaitable-closed-terminal	
-Objects/genobject.c	2338	2345	async_gen_athrow_finalize	async_gen_athrow_finalize(PyObject *op)	todo		review: restates the one-branch definitions
-Objects/genobject.c	2409	2421	async_gen_athrow_new	async_gen_athrow_new(PyAsyncGenObject *gen, PyObject *args)	modelled	gen-async-methods-create	
+Objects/genobject.c	42	51	gen_try_set_frame_state	gen_try_set_frame_state(PyGenObject *gen, int8_t *expected, int8_t state)	todo		changed-in-3.15: new function
+Objects/genobject.c	69	71	_PyGen_GetCode	_PyGen_GetCode(PyGenObject *gen) {	todo		review: a fact about setState, not about the body; assumes away the audit hook
+Objects/genobject.c	74	79	PyGen_GetCode	PyGen_GetCode(PyGenObject *gen) {	todo		review: a fact about setState, not about the body; assumes away the audit hook
+Objects/genobject.c	82	105	gen_traverse	gen_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal of the references a generator holds; no effect on the state machine
+Objects/genobject.c	108	164	gen_finalize	gen_finalize(PyObject *self)	todo		changed-in-3.15: new function
+Objects/genobject.c	167	175	gen_clear_frame	gen_clear_frame(PyGenObject *gen)	todo		changed-in-3.15: was gen-close-idempotent,gen-close-rejects-executing,gen-close-fast-slow-agree
+Objects/genobject.c	178	203	_PyGen_ClearFrame	_PyGen_ClearFrame(PyGenObject *gen)	todo		changed-in-3.15: new function
+Objects/genobject.c	206	239	gen_dealloc	gen_dealloc(PyObject *self)	todo		changed-in-3.15: was excluded: no-behaviour: memory release; its one visible step, the finalizer call, is _PyGen_Finalize, which is modelled
+Objects/genobject.c	242	252	gen_raise_already_executing_error	gen_raise_already_executing_error(PyGenObject *gen)	todo		changed-in-3.15: new function
+Objects/genobject.c	260	325	gen_send_ex2	gen_send_ex2(PyGenObject *gen, PyObject *arg, PyObject **presult, int exc)	todo		changed-in-3.15: was gen-send-rejected-no-effect,gen-already-executing,gen-resume-sees-executing,gen-send-state-edges
+Objects/genobject.c	330	375	gen_send_ex	gen_send_ex(PyGenObject *gen, PyObject *arg, PyObject **presult)	todo		changed-in-3.15: was gen-iternext-vs-send-none,gen-send-vs-am-send
+Objects/genobject.c	378	382	PyGen_am_send	PyGen_am_send(PyObject *self, PyObject *arg, PyObject **result)	todo		changed-in-3.15: was gen-send-rejected-no-effect,gen-send-vs-am-send
+Objects/genobject.c	385	399	gen_set_stop_iteration	gen_set_stop_iteration(PyGenObject *gen, PyObject *result)	todo		changed-in-3.15: new function
+Objects/genobject.c	406	414	gen_send	gen_send(PyObject *op, PyObject *arg)	todo		changed-in-3.15: was gen-iternext-vs-send-none,gen-send-vs-am-send
+Objects/genobject.c	425	449	gen_close_iter	gen_close_iter(PyObject *yf)	modelled	gen-ops-state-edges,gen-close-stack-bounded,gen-close-iter-foreign	
+Objects/genobject.c	452	461	is_resume	is_resume(_Py_CODEUNIT *instr)	todo		changed-in-3.15: was gen-close-rejects-executing,gen-close-rejects-executing-past-resume,gen-close-fast-slow-agree
+Objects/genobject.c	464	541	gen_close	gen_close(PyObject *self, PyObject *args)	todo		changed-in-3.15: was gen-resume-sees-executing,gen-close-idempotent,gen-close-rejects-executing,gen-close-rejects-executing-past-resume,gen-close-fast-slow-agree,gen-ops-state-edges,gen-close-stack-bounded
+Objects/genobject.c	546	601	gen_set_exception	gen_set_exception(PyObject *typ, PyObject *val, PyObject *tb)	todo		changed-in-3.15: new function
+Objects/genobject.c	604	613	gen_throw_current_exception	gen_throw_current_exception(PyGenObject *gen)	todo		changed-in-3.15: new function
+Objects/genobject.c	625	726	_gen_throw	_gen_throw(PyGenObject *gen, int close_on_genexit, PyObject *typ, PyObject *val, PyObject *tb)	todo		changed-in-3.15: was gen-resume-sees-executing,gen-ops-state-edges,gen-throw-stack-bounded,gen-throw-bad-arg-undelegated,gen-throw-bad-arg-no-effect,gen-throw-no-delegation,gen-throw-lookup-sees-executing
+Objects/genobject.c	730	757	gen_throw	gen_throw(PyObject *op, PyObject *const *args, Py_ssize_t nargs)	modelled	gen-ops-state-edges,gen-throw-bad-arg-undelegated,gen-throw-bad-arg-no-effect	
+Objects/genobject.c	761	774	gen_iternext	gen_iternext(PyObject *self)	todo		changed-in-3.15: was gen-iternext-vs-send-none
+Objects/genobject.c	783	799	_PyGen_SetStopIterationValue	_PyGen_SetStopIterationValue(PyObject *value)	todo		review: the setter is a constructor: the NULL and failed-call branches are not mirrored, and = on values claims identity
+Objects/genobject.c	811	826	_PyGen_FetchStopIterationValue	_PyGen_FetchStopIterationValue(PyObject **pvalue)	todo		review: the setter is a constructor: the NULL and failed-call branches are not mirrored, and = on values claims identity
+Objects/genobject.c	829	834	gen_repr	gen_repr(PyObject *self)	todo		review: restates the format of a one-line definition
+Objects/genobject.c	837	842	gen_get_name	gen_get_name(PyObject *self, void *Py_UNUSED(ignored))	todo		changed-in-3.15: was gen-name-setters
+Objects/genobject.c	845	861	gen_set_name	gen_set_name(PyObject *self, PyObject *value, void *Py_UNUSED(ignored))	todo		changed-in-3.15: was gen-name-setters
+Objects/genobject.c	864	869	gen_get_qualname	gen_get_qualname(PyObject *self, void *Py_UNUSED(ignored))	todo		changed-in-3.15: was gen-name-setters
+Objects/genobject.c	872	888	gen_set_qualname	gen_set_qualname(PyObject *self, PyObject *value, void *Py_UNUSED(ignored))	todo		changed-in-3.15: was gen-name-setters
+Objects/genobject.c	891	914	gen_getyieldfrom	gen_getyieldfrom(PyObject *self, void *Py_UNUSED(ignored))	todo		changed-in-3.15: review: simp over a two-line getter restates it
+Objects/genobject.c	918	923	gen_getrunning	gen_getrunning(PyObject *self, void *Py_UNUSED(ignored))	todo		changed-in-3.15: review: restates one-line getters and assumes the audit hook passes
+Objects/genobject.c	926	931	gen_getsuspended	gen_getsuspended(PyObject *self, void *Py_UNUSED(ignored))	todo		changed-in-3.15: review: restates one-line getters and assumes the audit hook passes
+Objects/genobject.c	934	951	gen_getstate	gen_getstate(PyObject *self, void *Py_UNUSED(ignored))	todo		changed-in-3.15: new function
+Objects/genobject.c	954	965	_gen_getframe	_gen_getframe(PyGenObject *gen, const char *const name)	todo		changed-in-3.15: review: restates one-line getters and assumes the audit hook passes
+Objects/genobject.c	968	972	gen_getframe	gen_getframe(PyObject *self, void *Py_UNUSED(ignored))	todo		review: restates one-line getters and assumes the audit hook passes
+Objects/genobject.c	975	981	_gen_getcode	_gen_getcode(PyGenObject *gen, const char *const name)	todo		review: a fact about setState, not about the body; assumes away the audit hook
+Objects/genobject.c	984	988	gen_getcode	gen_getcode(PyObject *self, void *Py_UNUSED(ignored))	todo		review: a fact about setState, not about the body; assumes away the audit hook
+Objects/genobject.c	1011	1019	gen_sizeof	gen_sizeof(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		review: restates a one-line formula; statelessness is a fact about setState
+Objects/genobject.c	1096	1115	make_gen	make_gen(PyTypeObject *type, PyFunctionObject *func)	modelled	gen-make-coro-kinds	
+Objects/genobject.c	1118	1162	_Py_MakeCoro	_Py_MakeCoro(PyFunctionObject *func)	todo		changed-in-3.15: was gen-make-coro-kinds
+Objects/genobject.c	1165	1199	gen_new_with_qualname	gen_new_with_qualname(PyTypeObject *type, PyFrameObject *f, PyObject *name, PyObject *qualname)	todo		review: field reads of constructors; the frame copy of gen_new_with_qualname is not mirrored
+Objects/genobject.c	1202	1205	PyGen_NewWithQualName	PyGen_NewWithQualName(PyFrameObject *f, PyObject *name, PyObject *qualname)	todo		review: field reads of constructors; the frame copy of gen_new_with_qualname is not mirrored
+Objects/genobject.c	1208	1211	PyGen_New	PyGen_New(PyFrameObject *f)	todo		review: field reads of constructors; the frame copy of gen_new_with_qualname is not mirrored
+Objects/genobject.c	1226	1235	gen_is_coroutine	gen_is_coroutine(PyObject *o)	modelled	gen-awaitable-iter-result	
+Objects/genobject.c	1246	1284	_PyCoro_GetAwaitableIter	_PyCoro_GetAwaitableIter(PyObject *o)	todo		changed-in-3.15: was gen-awaitable-iter-result
+Objects/genobject.c	1287	1292	coro_repr	coro_repr(PyObject *self)	todo		review: restates the format of a one-line definition
+Objects/genobject.c	1295	1304	coro_await	coro_await(PyObject *coro)	todo		review: rfl on one-line wrappers
+Objects/genobject.c	1307	1310	cr_getframe	cr_getframe(PyObject *coro, void *Py_UNUSED(ignored))	todo		review: restates one-line getters and assumes the audit hook passes
+Objects/genobject.c	1313	1316	cr_getcode	cr_getcode(PyObject *coro, void *Py_UNUSED(ignored))	todo		review: a fact about setState, not about the body; assumes away the audit hook
+Objects/genobject.c	1319	1336	cr_getstate	cr_getstate(PyObject *self, void *Py_UNUSED(ignored))	todo		changed-in-3.15: new function
+Objects/genobject.c	1446	1452	coro_wrapper_dealloc	coro_wrapper_dealloc(PyObject *self)	excluded		no-behaviour: releases the reference to the coroutine
+Objects/genobject.c	1455	1459	coro_wrapper_iternext	coro_wrapper_iternext(PyObject *self)	todo		review: rfl on one-line wrappers
+Objects/genobject.c	1462	1466	coro_wrapper_send	coro_wrapper_send(PyObject *self, PyObject *arg)	todo		review: rfl on one-line wrappers
+Objects/genobject.c	1469	1473	coro_wrapper_throw	coro_wrapper_throw(PyObject *self, PyObject *const *args, Py_ssize_t nargs)	todo		review: rfl on one-line wrappers
+Objects/genobject.c	1476	1480	coro_wrapper_close	coro_wrapper_close(PyObject *self, PyObject *args)	todo		review: rfl on one-line wrappers
+Objects/genobject.c	1483	1488	coro_wrapper_traverse	coro_wrapper_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
+Objects/genobject.c	1541	1570	_PyCoro_ComputeOrigin	_PyCoro_ComputeOrigin(int origin_depth, _PyInterpreterFrame *current_frame)	todo		changed-in-3.15: new function
+Objects/genobject.c	1573	1595	PyCoro_New	PyCoro_New(PyFrameObject *f, PyObject *name, PyObject *qualname)	todo		changed-in-3.15: review: field reads of constructors; the frame copy of gen_new_with_qualname is not mirrored; gen-cr-origin-take does not run this function
+Objects/genobject.c	1651	1656	async_gen_traverse	async_gen_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
+Objects/genobject.c	1660	1665	async_gen_repr	async_gen_repr(PyObject *self)	todo		review: restates the format of a one-line definition
+Objects/genobject.c	1669	1702	async_gen_init_hooks	async_gen_init_hooks(PyAsyncGenObject *o)	modelled	gen-async-hooks-once	
+Objects/genobject.c	1706	1713	async_gen_anext	async_gen_anext(PyObject *self)	modelled	gen-async-methods-create	
+Objects/genobject.c	1717	1724	async_gen_asend	async_gen_asend(PyObject *op, PyObject *arg)	modelled	gen-async-methods-create	
+Objects/genobject.c	1728	1735	async_gen_aclose	async_gen_aclose(PyObject *op, PyObject *arg)	modelled	gen-async-methods-create	
+Objects/genobject.c	1738	1753	async_gen_athrow	async_gen_athrow(PyObject *op, PyObject *args)	modelled	gen-async-methods-create	
+Objects/genobject.c	1756	1759	ag_getframe	ag_getframe(PyObject *ag, void *Py_UNUSED(ignored))	todo		review: restates one-line getters and assumes the audit hook passes
+Objects/genobject.c	1762	1765	ag_getcode	ag_getcode(PyObject *gen, void *Py_UNUSED(ignored))	todo		review: a fact about setState, not about the body; assumes away the audit hook
+Objects/genobject.c	1768	1785	ag_getstate	ag_getstate(PyObject *self, void *Py_UNUSED(ignored))	todo		changed-in-3.15: new function
+Objects/genobject.c	1895	1909	PyAsyncGen_New	PyAsyncGen_New(PyFrameObject *f, PyObject *name, PyObject *qualname)	todo		review: field reads of constructors; the frame copy of gen_new_with_qualname is not mirrored
+Objects/genobject.c	1912	1938	async_gen_unwrap_value	async_gen_unwrap_value(PyAsyncGenObject *gen, PyObject *result)	modelled	gen-async-unwrap-value	
+Objects/genobject.c	1945	1961	async_gen_asend_dealloc	async_gen_asend_dealloc(PyObject *self)	excluded		no-behaviour: memory release; the finalizer call is async_gen_asend_finalize, which is modelled
+Objects/genobject.c	1964	1970	async_gen_asend_traverse	async_gen_asend_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
+Objects/genobject.c	1974	2008	async_gen_asend_send	async_gen_asend_send(PyObject *self, PyObject *arg)	modelled	gen-async-ops-state-edges,gen-asend-error-closes,gen-asend-error-clears-running,gen-awaitable-closed-terminal,gen-awaitable-running-exclusion	
+Objects/genobject.c	2011	2021	_PyAsyncGenASend_Send	_PyAsyncGenASend_Send(PyObject *iter, PyObject *arg, PyObject **result)	todo		changed-in-3.15: new function
+Objects/genobject.c	2025	2028	async_gen_asend_iternext	async_gen_asend_iternext(PyObject *ags)	modelled	gen-async-ops-state-edges,gen-asend-error-closes,gen-awaitable-closed-terminal	
+Objects/genobject.c	2032	2065	async_gen_asend_throw	async_gen_asend_throw(PyObject *self, PyObject *const *args, Py_ssize_t nargs)	modelled	gen-async-ops-state-edges,gen-asend-error-closes,gen-asend-error-clears-running,gen-awaitable-closed-terminal,gen-awaitable-running-exclusion	
+Objects/genobject.c	2069	2091	async_gen_asend_close	async_gen_asend_close(PyObject *self, PyObject *args)	modelled	gen-awaitable-close-idempotent,gen-awaitable-closed-terminal	
+Objects/genobject.c	2094	2100	async_gen_asend_finalize	async_gen_asend_finalize(PyObject *self)	todo		review: restates the one-branch definitions
+Objects/genobject.c	2161	2177	async_gen_asend_new	async_gen_asend_new(PyAsyncGenObject *gen, PyObject *sendval)	modelled	gen-async-methods-create	
+Objects/genobject.c	2184	2190	async_gen_wrapped_val_dealloc	async_gen_wrapped_val_dealloc(PyObject *self)	excluded		no-behaviour: memory release and freelist
+Objects/genobject.c	2194	2199	async_gen_wrapped_val_traverse	async_gen_wrapped_val_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
+Objects/genobject.c	2246	2262	_PyAsyncGenValueWrapperNew	_PyAsyncGenValueWrapperNew(PyThreadState *tstate, PyObject *val)	modelled	gen-async-unwrap-value	
+Objects/genobject.c	2272	2285	async_gen_athrow_dealloc	async_gen_athrow_dealloc(PyObject *self)	todo		changed-in-3.15: was excluded: no-behaviour: memory release; the finalizer call is async_gen_athrow_finalize, which is modelled
+Objects/genobject.c	2289	2297	async_gen_athrow_traverse	async_gen_athrow_traverse(PyObject *self, visitproc visit, void *arg)	todo		changed-in-3.15: was excluded: no-behaviour: GC traversal
+Objects/genobject.c	2301	2421	async_gen_athrow_send	async_gen_athrow_send(PyObject *self, PyObject *arg)	todo		changed-in-3.15: was gen-async-ops-state-edges,gen-aclose-error-closes,gen-athrow-start-error-closes,gen-athrow-error-closes,gen-athrow-error-clears-running,gen-athrow-valid-args-clears-running,gen-awaitable-closed-terminal,gen-awaitable-running-exclusion,gen-athrow-on-finished,gen-athrow-on-closed
+Objects/genobject.c	2425	2491	async_gen_athrow_throw	async_gen_athrow_throw(PyObject *self, PyObject *const *args, Py_ssize_t nargs)	todo		changed-in-3.15: was gen-async-ops-state-edges,gen-athrow-throw-error-closes,gen-awaitable-closed-terminal,gen-awaitable-running-exclusion
+Objects/genobject.c	2495	2498	async_gen_athrow_iternext	async_gen_athrow_iternext(PyObject *agt)	modelled	gen-async-ops-state-edges,gen-aclose-error-closes,gen-awaitable-closed-terminal,gen-athrow-on-finished	
+Objects/genobject.c	2502	2524	async_gen_athrow_close	async_gen_athrow_close(PyObject *self, PyObject *args)	modelled	gen-awaitable-close-idempotent,gen-awaitable-closed-terminal	
+Objects/genobject.c	2528	2535	async_gen_athrow_finalize	async_gen_athrow_finalize(PyObject *op)	todo		changed-in-3.15: review: restates the one-branch definitions
+Objects/genobject.c	2599	2621	async_gen_athrow_new	async_gen_athrow_new(PyAsyncGenObject *gen, PyObject *args)	todo		changed-in-3.15: was gen-async-methods-create

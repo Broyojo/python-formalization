@@ -37,10 +37,10 @@ observed: |
   python3 3.14.7: C raises OverflowError, the pure-Python wrapper reports maxsize=9223372036854775808.
   REPRODUCED. main (python.exe 3.16.0a1+dev): same, REPRODUCED.
 promised_by: |
-  Nothing explicit. Doc/library/functools.rst:182 documents None as the way to disable the limit and
+  Nothing explicit. Doc/library/functools.rst:179 documents None as the way to disable the limit and
   gives no upper bound for an int.
 cause: |
-  Modules/_functoolsmodule.c:1558 `PyNumber_AsSsize_t(maxsize_O, PyExc_OverflowError)`.
+  Modules/_functoolsmodule.c:1654 `PyNumber_AsSsize_t(maxsize_O, PyExc_OverflowError)`.
 possible_fix: |
   Keep the error, or clamp with PyNumber_AsSsize_t(maxsize_O, NULL), which saturates.
 duplicates:

@@ -424,7 +424,7 @@ def setdefault (q : Eqv) (w : World) (d : WKD V) (key : PV) (default : V) : WKD 
     | some (_, v) => (d, .ok v)
     | none => (setRef q w d k default, .ok default)
 
-/-- `WeakKeyDictionary.update`, Lib/weakref.py:410-418. `kwargs` have `str` keys, and a `str`
+/-- `WeakKeyDictionary.update`, Lib/weakref.py@3.14.7:410-418. `kwargs` have `str` keys, and a `str`
 refuses `ref()`, so any keyword fails, after `dict` has been applied. -/
 def update (q : Eqv) (w : World) (d : WKD V) (dict : Option (List (PV × V))) (kwargs : Bool := false) :
     WKD V × Py Unit :=
@@ -441,7 +441,7 @@ def update (q : Eqv) (w : World) (d : WKD V) (dict : Option (List (PV × V))) (k
     if kwargs then (d, .error (.typeError "cannot create weak reference to 'str' object"))
     else (d, .ok ())
 
-/-- `dict(pairs)` when the keys are objects: Lib/weakref.py:413-414. Equal keys collapse, and only
+/-- `dict(pairs)` when the keys are objects: Lib/weakref.py:417-418. Equal keys collapse, and only
 hashable keys get here: an `int` is a key of the dict like any other. -/
 def dictOf (q : Eqv) (pairs : List (PV × V)) : List (PV × V) :=
   let same (a b : PV) : Bool := match a, b with
@@ -453,7 +453,7 @@ def dictOf (q : Eqv) (pairs : List (PV × V)) : List (PV × V) :=
       d.map (fun e => if same e.1 kv.1 then (e.1, kv.2) else e)
     else d ++ [kv]) []
 
-/-- `WeakKeyDictionary.update` for a `dict` without `items`, Lib/weakref.py:413-414. -/
+/-- `WeakKeyDictionary.update` for a `dict` without `items`, Lib/weakref.py:417-418. -/
 def updatePairs (q : Eqv) (w : World) (d : WKD V) (pairs : List (PV × V)) : WKD V × Py Unit :=
   update q w d (some (dictOf q pairs))
 
@@ -466,11 +466,11 @@ def init (q : Eqv) (w : World) (dict : Option (List (PV × V))) : Py (WKD V) :=
     | (_, .error e) => .error e
     | (d, .ok ()) => .ok d
 
-/-- `WeakKeyDictionary.__ior__`, Lib/weakref.py:420-422. -/
+/-- `WeakKeyDictionary.__ior__`, Lib/weakref.py:422-424. -/
 def ior (q : Eqv) (w : World) (d : WKD V) (other : List (PV × V)) : WKD V × Py Unit :=
   update q w d (some other)
 
-/-- `WeakKeyDictionary.__or__`, Lib/weakref.py:424-429. -/
+/-- `WeakKeyDictionary.__or__`, Lib/weakref.py:426-431. -/
 def or_ (q : Eqv) (w : World) (d : WKD V) (other : Option (List (PV × V))) : Option (Py (WKD V)) :=
   match other with
   | none => none
@@ -480,7 +480,7 @@ def or_ (q : Eqv) (w : World) (d : WKD V) (other : Option (List (PV × V))) : Op
       | (_, .error e) => .error e
       | (c, .ok ()) => .ok c)
 
-/-- `WeakKeyDictionary.__ror__`, Lib/weakref.py:431-437. -/
+/-- `WeakKeyDictionary.__ror__`, Lib/weakref.py:433-439. -/
 def ror (q : Eqv) (w : World) (d : WKD V) (other : Option (List (PV × V))) : Option (Py (WKD V)) :=
   match other with
   | none => none
@@ -553,7 +553,7 @@ def WM.ne (q : Eqv) (w : World) (m : WM) (other : Option WM) : Option Bool :=
 
 /-! ### `finalize` -/
 
-/-- `finalize._Info`, Lib/weakref.py:465-466, with `func(*args, **kwargs)` abstract as `F`. -/
+/-- `finalize._Info`, Lib/weakref.py:467-468, with `func(*args, **kwargs)` abstract as `F`. -/
 structure Info (F : Type) where
   obj : Nat
   func : F
@@ -561,7 +561,7 @@ structure Info (F : Type) where
   index : Nat
   deriving Repr, DecidableEq
 
-/-- The class attributes of `finalize`, Lib/weakref.py:459-463. A finalizer is an id. -/
+/-- The class attributes of `finalize`, Lib/weakref.py:461-465. A finalizer is an id. -/
 structure Fin (F : Type) where
   registry : List (Nat × Info F)
   shutdown : Bool
@@ -579,7 +579,7 @@ def start : Fin F :=
   { registry := [], shutdown := false, indexIter := 0, dirty := false,
     registeredWithAtexit := false }
 
-/-- `finalize.__init__`, Lib/weakref.py:468-483. `ref(obj, self)` fails before anything else in the
+/-- `finalize.__init__`, Lib/weakref.py:470-485. `ref(obj, self)` fails before anything else in the
 registry changes, but after `atexit.register`. -/
 def init (st : Fin F) (self : Nat) (obj : PV) (func : F) : Fin F × Py Unit :=
   let st := { st with registeredWithAtexit := true }
@@ -592,7 +592,7 @@ def init (st : Fin F) (self : Nat) (obj : PV) (func : F) : Fin F × Py Unit :=
         registry := dSet st.registry self info
         dirty := true }, .ok ())
 
-/-- `finalize.__call__`, Lib/weakref.py:485-490: `info` is what `self._registry.pop(self, None)`
+/-- `finalize.__call__`, Lib/weakref.py:487-492: `info` is what `self._registry.pop(self, None)`
 found and the call happens when the result is `some`. -/
 def call (st : Fin F) (self : Nat) : Fin F × Option F :=
   match dGet st.registry self with
@@ -601,7 +601,7 @@ def call (st : Fin F) (self : Nat) : Fin F × Option F :=
     let st := { st with registry := dDel st.registry self }
     if st.shutdown then (st, none) else (st, some info.func)
 
-/-- `finalize.detach`, Lib/weakref.py:492-498. -/
+/-- `finalize.detach`, Lib/weakref.py:494-500. -/
 def detach (w : World) (st : Fin F) (self : Nat) : Fin F × Option (PV × F) :=
   match dGet st.registry self with
   | none => (st, none)
@@ -610,7 +610,7 @@ def detach (w : World) (st : Fin F) (self : Nat) : Fin F × Option (PV × F) :=
     | none => (st, none)
     | some o => ({ st with registry := dDel st.registry self }, some (o, info.func))
 
-/-- `finalize.peek`, Lib/weakref.py:500-506. -/
+/-- `finalize.peek`, Lib/weakref.py:502-508. -/
 def peek (w : World) (st : Fin F) (self : Nat) : Option (PV × F) :=
   match dGet st.registry self with
   | none => none
@@ -619,22 +619,22 @@ def peek (w : World) (st : Fin F) (self : Nat) : Option (PV × F) :=
     | none => none
     | some o => some (o, info.func)
 
-/-- `finalize.alive`, Lib/weakref.py:508-511. -/
+/-- `finalize.alive`, Lib/weakref.py:510-513. -/
 def isAlive (st : Fin F) (self : Nat) : Bool := (dGet st.registry self).isSome
 
-/-- The `atexit` property getter, Lib/weakref.py:513-517. -/
+/-- The `atexit` property getter, Lib/weakref.py:515-519. -/
 def atexit (st : Fin F) (self : Nat) : Bool :=
   match dGet st.registry self with
   | none => false
   | some info => info.atexit
 
-/-- The `atexit` property setter, Lib/weakref.py:519-523. -/
+/-- The `atexit` property setter, Lib/weakref.py:521-525. -/
 def setAtexit (st : Fin F) (self : Nat) (value : Bool) : Fin F :=
   match dGet st.registry self with
   | none => st
   | some info => { st with registry := dSet st.registry self { info with atexit := value } }
 
-/-- `finalize.__repr__`, Lib/weakref.py:525-532, for finalizer address `addr`, object address
+/-- `finalize.__repr__`, Lib/weakref.py:527-534, for finalizer address `addr`, object address
 `oaddr`, and object type name `tn`. -/
 def repr (w : World) (st : Fin F) (self : Nat) (addr oaddr tn : String) : String :=
   let dead := s!"<finalize object at {addr}; dead>"
@@ -651,7 +651,7 @@ def insertByIndex (kv : Nat × Info F) : List (Nat × Info F) → List (Nat × I
   | x :: rest =>
     if kv.2.index < x.2.index then kv :: x :: rest else x :: insertByIndex kv rest
 
-/-- `finalize._select_for_exit`, Lib/weakref.py:534-539: oldest first. -/
+/-- `finalize._select_for_exit`, Lib/weakref.py:536-541: oldest first. -/
 def selectForExit (st : Fin F) : List Nat :=
   ((st.registry.filter (fun kv => kv.2.atexit)).foldr insertByIndex []).map (·.1)
 
@@ -661,7 +661,7 @@ abbrev RunF (σ F : Type) := F → Fin F → σ → Fin F × σ × Option (PyExc
 
 variable {σ : Type}
 
-/-- The `while True:` loop of `_exitfunc`, Lib/weakref.py:554-569. `onHook` is
+/-- The `while True:` loop of `_exitfunc`, Lib/weakref.py:556-571. `onHook` is
 `sys.excepthook(*sys.exc_info())`; a `BaseException` that is no `Exception` leaves the loop. -/
 def exitLoop (run : RunF σ F) (onHook : σ → PyExc → σ) :
     Nat → Fin F → σ → Option (List Nat) → Fin F × σ × Option PyExc
@@ -682,7 +682,7 @@ def exitLoop (run : RunF σ F) (onHook : σ → PyExc → σ) :
         | (st, s, some (e, true)) => exitLoop run onHook fuel st (onHook s e) (some pending)
         | (st, s, some (e, false)) => (st, s, some e)
 
-/-- `finalize._exitfunc`, Lib/weakref.py:541-574. -/
+/-- `finalize._exitfunc`, Lib/weakref.py:543-576. -/
 def exitfunc (run : RunF σ F) (onHook : σ → PyExc → σ) (fuel : Nat) (st : Fin F) (s : σ) :
     Fin F × σ × Option PyExc :=
   let r : Fin F × σ × Option PyExc :=

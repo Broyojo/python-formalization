@@ -15,7 +15,7 @@ likelihood: |
   Low. It needs a partial subclass with its own __call__, wrapped again by partial. The result is
   silent, though: the override, which might log, check or transform, is skipped.
 maybe_intended: |
-  Flattening is a deliberate optimisation (python/cpython#52078). Lib/test/test_functools.py:647-648
+  Flattening is a deliberate optimisation (python/cpython#52078). Lib/test/test_functools.py:693-694
   says "partial subclasses are not optimized for nested calls" and disables test_nested_optimization
   for the subclass test class, so the suite does not pin this down, and that comment no longer
   matches what the code does for a wrapped subclass. A maintainer would likely accept the override
@@ -40,11 +40,11 @@ observed: |
   outer.func is target. REPRODUCED, and the pure-Python twin does the same.
   main (python.exe 3.16.0a1+dev): same, REPRODUCED.
 promised_by: |
-  Doc/library/functools.rst:347-356: "which when called will behave like *func* called with the
+  Doc/library/functools.rst:344-353: "which when called will behave like *func* called with the
   positional arguments *args*", with an equivalent closure that calls func, so the object's __call__.
 cause: |
-  Modules/_functoolsmodule.c:215 `PyObject_TypeCheck(func, state->partial_type)`, with the merge at
-  :219-230 and no test of tp_call. Lib/functools.py:329 `isinstance(func, base_cls)`. The same line is in
+  Modules/_functoolsmodule.c:208 `PyObject_TypeCheck(func, state->partial_type)`, with the merge at
+  :212-223 and no test of tp_call. Lib/functools.py:329 `isinstance(func, base_cls)`. The same line is in
   main at :208.
 possible_fix: |
   Flatten only when the wrapped object uses the default call: in C test

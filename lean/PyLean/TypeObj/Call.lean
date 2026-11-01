@@ -2,9 +2,9 @@ import PyLean.TypeObj.Reduce
 import PyLean.LongObj.FromString
 
 /-!
-Calling: function argument binding (`initialize_locals`, `Python/ceval.c:1681`), `tp_new`
+Calling: function argument binding (`initialize_locals`, `Python/ceval.c:1738`), `tp_new`
 and `tp_init` of the builtin types, `object_new`/`object_init`, `type_call`, the slot
-wrappers of `Objects/typeobject.c:9264-9818`, `tp_new_wrapper`, bound methods, builtin
+wrappers of `Objects/typeobject.c:9956-10510`, `tp_new_wrapper`, bound methods, builtin
 functions and the `PyGetSetDef` tables. `pyCall` at the end is `PyObject_Call`.
 -/
 
@@ -23,11 +23,11 @@ structure Bound where
 /-- Parameter names, positional and keyword-only: `co_varnames[:total_args]`. -/
 def FuncData.paramNames (f : FuncData) : List Name := f.varnames.take (f.argcount + f.kwonly)
 
-/-- Index of `n` in `names`, from `start`: the keyword search at `Python/ceval.c:1765`. -/
+/-- Index of `n` in `names`, from `start`: the keyword search at `Python/ceval.c:1822`. -/
 def findParam (names : List Name) (start : Nat) (n : Name) : Option Nat :=
   ((names.drop start).findIdx? (· == n)).map (· + start)
 
-/-- `format_missing`, `Python/ceval.c:1389`. -/
+/-- `format_missing`, `Python/ceval.c:1514`. -/
 def formatMissing (kind qualname : String) (names : List String) : String :=
   let nameStr := match names with
     | [a] => a
@@ -38,7 +38,7 @@ def formatMissing (kind qualname : String) (names : List String) : String :=
       ", ".intercalate (names.take (n - 2)) ++ tail
   s!"{qualname}() missing {names.length} required {kind} argument{if names.length == 1 then "" else "s"}: {nameStr}"
 
-/-- `missing_arguments`, `Python/ceval.c:1452`. `defcount = none` is keyword-only. -/
+/-- `missing_arguments`, `Python/ceval.c:1577`. `defcount = none` is keyword-only. -/
 def missingArguments (f : FuncData) (slots : List (Option Val)) (defcount : Option Nat) : String :=
   let (kind, start, stop) := match defcount with
     | some d => ("positional", 0, f.argcount - d)
@@ -47,10 +47,10 @@ def missingArguments (f : FuncData) (slots : List (Option Val)) (defcount : Opti
   let miss := idx.filter fun i => (slots.getD i none).isNone
   formatMissing kind f.qualname (miss.map fun i => reprStr (f.varnames.getD i ""))
 
-/-- `atleast`, `Python/ceval.c:1510`. -/
+/-- `atleast`, `Python/ceval.c:1635`. -/
 def tooManyAtLeast (f : FuncData) : Int := (f.argcount : Int) - f.defaults.length
 
-/-- `too_many_positional`, `Python/ceval.c:1491`. -/
+/-- `too_many_positional`, `Python/ceval.c:1616`. -/
 def tooManyPositional (f : FuncData) (givenN : Nat) (slots : List (Option Val)) : String :=
   let kwonlyGiven := ((slots.drop f.argcount).filter Option.isSome).length
   let defcount := f.defaults.length
@@ -63,11 +63,11 @@ def tooManyPositional (f : FuncData) (givenN : Nat) (slots : List (Option Val)) 
     else ""
   s!"{f.qualname}() takes {sig} positional argument{if plural then "s" else ""} but {givenN}{kwonlySig} {if givenN == 1 && kwonlyGiven == 0 then "was" else "were"} given"
 
-/-- `positional_only_passed_as_keyword`, `Python/ceval.c:1549`. -/
+/-- `positional_only_passed_as_keyword`, `Python/ceval.c:1674`. -/
 def posonlyConflicts (f : FuncData) (kw : Kw) : List Name :=
   (f.varnames.take f.posonly).flatMap fun p => (kw.filter (·.1 == p)).map (·.1)
 
-/-- Handle one keyword, `Python/ceval.c:1749-1845`. -/
+/-- Handle one keyword, `Python/ceval.c:1806-1902`. -/
 def bindKeyword (f : FuncData) (allKw : Kw) (b : Bound) (kv : Name × Val) : Except String Bound :=
   let (keyword, value) := kv
   let total := f.argcount + f.kwonly
@@ -82,7 +82,7 @@ def bindKeyword (f : FuncData) (allKw : Kw) (b : Bound) (kv : Name × Val) : Exc
       .error s!"{f.qualname}() got some positional-only arguments passed as keyword arguments: '{", ".intercalate (posonlyConflicts f allKw)}'"
     else .error s!"{f.qualname}() got an unexpected keyword argument '{keyword}'"
 
-/-- The `for` loop over keywords, `Python/ceval.c:1749`. -/
+/-- The `for` loop over keywords, `Python/ceval.c:1806`. -/
 def bindKeywords (f : FuncData) (allKw : Kw) : Bound → Kw → Except String Bound
   | b, [] => .ok b
   | b, kv :: rest =>
@@ -90,7 +90,7 @@ def bindKeywords (f : FuncData) (allKw : Kw) : Bound → Kw → Except String Bo
     | .ok b' => bindKeywords f allKw b' rest
     | .error e => .error e
 
-/-- Fill defaults for positional parameters, `Python/ceval.c:1856-1883`. `m` is a signed
+/-- Fill defaults for positional parameters, `Python/ceval.c:1913-1940`. `m` is a signed
 `Py_ssize_t`: assigning `__defaults__` can make it negative. -/
 def fillDefaults (f : FuncData) (argc : Nat) (n : Nat) (b : Bound) : Except String Bound :=
   if argc < f.argcount then
@@ -120,7 +120,7 @@ def kwdefaultLookup (rt : Rt) (d : Val) (name : Name) : M (Option Val) := do
     | none => pure none
   | _ => gap%
 
-/-- The loop of `Python/ceval.c:1886-1909`, over the keyword-only parameters. -/
+/-- The loop of `Python/ceval.c:1943-1966`, over the keyword-only parameters. -/
 def fillKwLoop (rt : Rt) (f : FuncData) : List Nat → List (Option Val) → M (List (Option Val))
   | [], s => pure s
   | i :: is, s => do
@@ -132,7 +132,7 @@ def fillKwLoop (rt : Rt) (f : FuncData) : List Nat → List (Option Val) → M (
       | some v => fillKwLoop rt f is (s.set i (some v))
       | none => fillKwLoop rt f is s
 
-/-- Fill keyword-only defaults, `Python/ceval.c:1886-1909`. -/
+/-- Fill keyword-only defaults, `Python/ceval.c:1943-1966`. -/
 def fillKwdefaults (rt : Rt) (f : FuncData) (b : Bound) : M Bound := do
   if f.kwonly > 0 then
     let idx := (List.range f.kwonly).map (· + f.argcount)
@@ -142,7 +142,7 @@ def fillKwdefaults (rt : Rt) (f : FuncData) (b : Bound) : M Bound := do
     pure { b with slots := slots }
   else pure b
 
-/-- `initialize_locals`, `Python/ceval.c:1681`, up to the keyword-only defaults. The error string
+/-- `initialize_locals`, `Python/ceval.c:1738`, up to the keyword-only defaults. The error string
 is the `TypeError` message. Keyword names are strings, so the `keywords must be strings` branch
 is outside this signature; a "Did you mean" suggestion (`_Py_CalculateSuggestions`) is not
 modelled. -/
@@ -185,10 +185,10 @@ def functionCall (rt : Rt) (self : Val) (f : FuncData) (args : List Val) (kw : K
 
 /-! ## `tp_new`, `tp_init` -/
 
-/-- `excess_args`, `Objects/typeobject.c:6825`. -/
+/-- `excess_args`, `Objects/typeobject.c:7435`. -/
 def excessArgs (args : List Val) (kw : Kw) : Bool := !args.isEmpty || !kw.isEmpty
 
-/-- `object_init`, `Objects/typeobject.c:6832`. -/
+/-- `object_init`, `Objects/typeobject.c:7442`. -/
 def objectInit (self : Val) (args : List Val) (kw : Kw) : M Unit := do
   let w ← getW
   let tp := typeOf w self
@@ -209,7 +209,7 @@ def freshBody (w : World) (t : Addr) : Payload :=
   else if isSubtype w t B.super then .super none none none
   else .plain
 
-/-- `join(sorted(names))` of the abstract method error, `Objects/typeobject.c:6874-6892`. -/
+/-- `join(sorted(names))` of the abstract method error, `Objects/typeobject.c:7484-7502`. -/
 def abstractNames (rt : Rt) (t : Addr) : M (List String) := do
   let w ← getW
   match NameDict.get? (tdata w t).dict "__abstractmethods__" with
@@ -226,7 +226,7 @@ def abstractNames (rt : Rt) (t : Addr) : M (List String) := do
       | none => gap%
     pure (names.mergeSort fun a b => decide (strCompare a.toList b.toList ≤ 0))
 
-/-- `object_new`, `Objects/typeobject.c:6852`. -/
+/-- `object_new`, `Objects/typeobject.c:7462`. -/
 def objectNew (rt : Rt) (t : Addr) (args : List Val) (kw : Kw) : M Val := do
   let w ← getW
   if excessArgs args kw then
@@ -274,7 +274,7 @@ def longFromStr (s : String) (base : Int) : M Val :=
   | .error (.valueError m) => valueErr (if m.startsWith "~" then (m.drop 1).toString else m)
   | .error _ => gap%
 
-/-- `long_new_impl`, `Objects/longobject.c:5876`, through the clinic parser: `x` is positional and
+/-- `long_new_impl`, `Objects/longobject.c:5975`, through the clinic parser: `x` is positional and
 `base` may be either. -/
 def longNew (rt : Rt) (t : Addr) (args : List Val) (kw : Kw) : M Val := do
   if args.length + kw.length > 2 then
@@ -372,12 +372,12 @@ def listInit (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Unit := do
   match args, self with
   | [], .obj a => modObj a fun o => { o with body := .list [] }
   | x :: _, .obj a =>
-    -- `list___init___impl`, `Objects/listobject.c:3491-3497`: clear, then `_list_extend`.
+    -- `list___init___impl`, `Objects/listobject.c:3554-3560`: clear, then `_list_extend`.
     modObj a fun o => { o with body := .list [] }
     listExtend rt self a x
   | _, _ => gap%
 
-/-- `dict_init` through `dict_update_common`, `Objects/dictobject.c:3751`: the argument, then the
+/-- `dict_init` through `dict_update_common`, `Objects/dictobject.c:4008`: the argument, then the
 keywords, are merged into `self`, which keeps what it held. -/
 def dictInit (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Unit := do
   unpackTuple "dict" 0 1 args.length
@@ -390,7 +390,7 @@ def dictInit (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Unit := do
       dictInsert rt a (.str k) (strHash k) v
   | _ => gap%
 
-/-- `property_init_impl`, `Objects/descrobject.c:1837`, with the clinic argument
+/-- `property_init_impl`, `Objects/descrobject.c:1861`, with the clinic argument
 parsing. -/
 def propertyInit (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Unit := do
   let names := ["fget", "fset", "fdel", "doc"]
@@ -438,7 +438,7 @@ def propertyInit (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Unit := 
       else catchMatch B.AttributeError set (pure ())
   | _ => gap%
 
-/-- `functools_wraps`, `Objects/funcobject.c:1403`: copy `__module__`, `__name__`,
+/-- `functools_wraps`, `Objects/funcobject.c:1391`: copy `__module__`, `__name__`,
 `__qualname__`, `__doc__` onto the wrapper, then its `__dict__` gets `__wrapped__`... in
 3.14 the function copies four attributes through `functools_copy_attr`. -/
 def functoolsWraps (rt : Rt) (wrapper wrapped : Val) : M Unit := do
@@ -447,7 +447,7 @@ def functoolsWraps (rt : Rt) (wrapper wrapped : Val) : M Unit := do
     | some v => rt.setAttr wrapper n (some v)
     | none => pure ()
 
-/-- `cm_init`, `sm_init`, `Objects/funcobject.c:1574`, `:1818`. -/
+/-- `cm_init`, `sm_init`, `Objects/funcobject.c:1580`, `:1842`. -/
 def descrWrapInit (rt : Rt) (name : String) (self : Val) (args : List Val) (kw : Kw)
     (mk : Val → Payload) : M Unit := do
   noKeywords name kw
@@ -458,7 +458,7 @@ def descrWrapInit (rt : Rt) (name : String) (self : Val) (args : List Val) (kw :
     functoolsWraps rt self c
   | _, _ => gap%
 
-/-- `super_init`/`super_init_impl`, `Objects/typeobject.c:12150`, `:12166`, with two
+/-- `super_init`/`super_init_impl`, `Objects/typeobject.c:13003`, `:13019`, with two
 explicit arguments. Zero-argument `super()` needs the caller's frame: see `superZero`. -/
 def superInit (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Unit := do
   noKeywords "super" kw
@@ -470,7 +470,7 @@ def superInit (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Unit := do
     let arg0 := args.headD .none
     match asType w arg0 with
     | none =>
-      -- `PyArg_ParseTuple(args, "|O!O:super", &PyType_Type, ...)`, `:12157`.
+      -- `PyArg_ParseTuple(args, "|O!O:super", &PyType_Type, ...)`, `:13010`.
       typeErr s!"super() argument 1 must be type, not {argTypeName w arg0}"
     | some ty =>
       let obj := match args with
@@ -484,7 +484,7 @@ def superInit (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Unit := do
       | _ => gap%
   | n => typeErr s!"super() takes at most 2 arguments ({n} given)"
 
-/-- `super_vectorcall`, `Objects/typeobject.c:12237`: `super(...)` on exact `super` skips
+/-- `super_vectorcall`, `Objects/typeobject.c:13090`: `super(...)` on exact `super` skips
 `tp_new` and `tp_init`, with messages of its own. -/
 def superVectorcall (rt : Rt) (args : List Val) (kw : Kw) : M Val := do
   unless kw.isEmpty do typeErr "super() takes no keyword arguments"
@@ -501,7 +501,7 @@ def superVectorcall (rt : Rt) (args : List Val) (kw : Kw) : M Val := do
       superInit rt su args []
       pure su
 
-/-- `slot_tp_new`, `Objects/typeobject.c:10587`. -/
+/-- `slot_tp_new`, `Objects/typeobject.c:11297`. -/
 def slotTpNew (rt : Rt) (t : Addr) (args : List Val) (kw : Kw) : M Val := do
   let func ← rt.getAttr (.obj t) "__new__"
   rt.call func (.obj t :: args) kw
@@ -518,7 +518,7 @@ def callTpNew (rt : Rt) (f : SlotFn) (t : Addr) (args : List Val) (kw : Kw) : M 
   | .c .float =>
     noKeywords "float" kw
     unpackTuple "float" 0 1 args.length
-    -- `float_new_impl`, `Objects/floatobject.c:1575`: only exact `float` calls for the string
+    -- `float_new_impl`, `Objects/floatobject.c:1567`: only exact `float` calls for the string
     -- path directly, and a subclass copies the value (`float_subtype_new`).
     let r ← match args with
       | [] => mkFloat (PyLean.Binary64.F64.zero false)
@@ -533,7 +533,7 @@ def callTpNew (rt : Rt) (f : SlotFn) (t : Addr) (args : List Val) (kw : Kw) : M 
   | .c .str => strNew rt t args kw
   | .c .tuple => tupleNew rt t args kw
   | .c .method =>
-    -- `method_new_impl`, `Objects/classobject.c:180`.
+    -- `method_new_impl`, `Objects/classobject.c:195`.
     noKeywords "method" kw
     unpackTuple "method" 2 2 args.length
     match args with
@@ -543,7 +543,7 @@ def callTpNew (rt : Rt) (f : SlotFn) (t : Addr) (args : List Val) (kw : Kw) : M 
       alloc B.method (.bound func inst)
     | _ => gap%
   | .c .mappingproxy =>
-    -- `mappingproxy_new_impl`, `Objects/descrobject.c:1263`, and the check at `:1240`.
+    -- `mappingproxy_new_impl`, `Objects/descrobject.c:1287`, and the check at `:1264`.
     let m ← match args, kw with
       | [x], [] | [], [("mapping", x)] => pure x
       | _, _ =>
@@ -563,14 +563,14 @@ def callTpNew (rt : Rt) (f : SlotFn) (t : Addr) (args : List Val) (kw : Kw) : M 
   | .c e => if isExcFamily e then excTpNew rt e t args kw else gap%
   | _ => gap%
 
-/-- `type_init`, `Objects/typeobject.c:3883`. -/
+/-- `type_init`, `Objects/typeobject.c:4175`. -/
 def typeInit (args : List Val) (kw : Kw) : M Unit := do
   if !kw.isEmpty && args.length == 1 then
     typeErr "type.__init__() takes no keyword arguments"
   if args.length != 1 && args.length != 3 then
     typeErr "type.__init__() takes 1 or 3 arguments"
 
-/-- `slot_tp_init`, `Objects/typeobject.c:10570`. -/
+/-- `slot_tp_init`, `Objects/typeobject.c:11280`. -/
 def slotTpInit (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Unit := do
   let res ← callMethod rt self "__init__" args kw
   let w ← getW
@@ -592,7 +592,7 @@ def callTpInit (rt : Rt) (f : SlotFn) (self : Val) (args : List Val) (kw : Kw) :
   | .c e => if isExcFamily e then excTpInit rt e self args kw else gap%
   | _ => gap%
 
-/-- `type_call`, `Objects/typeobject.c:2331`. -/
+/-- `type_call`, `Objects/typeobject.c:2471`. -/
 def typeCall (rt : Rt) (t : Addr) (args : List Val) (kw : Kw) : M Val := do
   let w ← getW
   if t == B.type then
@@ -613,7 +613,7 @@ def typeCall (rt : Rt) (t : Addr) (args : List Val) (kw : Kw) : M Val := do
       pure obj
     | none => pure obj
 
-/-- `tp_new_wrapper`, `Objects/typeobject.c:9821`. -/
+/-- `tp_new_wrapper`, `Objects/typeobject.c@3.14.7:9821`. -/
 def tpNewWrapper (rt : Rt) (ty : Addr) (args : List Val) (kw : Kw) : M Val := do
   let w ← getW
   let tn := tpName w ty
@@ -626,7 +626,7 @@ def tpNewWrapper (rt : Rt) (ty : Addr) (args : List Val) (kw : Kw) : M Val := do
       let sn := tpName w sub
       unless isSubtype w sub ty do
         typeErr s!"{tn}.__new__({sn}): {sn} is not a subtype of {tn}"
-      -- staticbase: the most derived base that is not a heap type, :9862
+      -- staticbase: the most derived base that is not a heap type, :10554
       let rec walk : Nat → Option Addr → Option Addr
         | 0, s => s
         | n + 1, s =>
@@ -647,21 +647,21 @@ def tpNewWrapper (rt : Rt) (ty : Addr) (args : List Val) (kw : Kw) : M Val := do
 
 /-! ## Slot wrappers -/
 
-/-- The message of `check_num_args`, `Objects/typeobject.c:9229`. -/
+/-- The message of `check_num_args`, `Objects/typeobject.c:9921`. -/
 def argCountMsg (n got : Nat) : String :=
   s!"expected {n} argument{if n == 1 then "" else "s"}, got {got}"
 
-/-- `check_num_args`, `Objects/typeobject.c:9220`. -/
+/-- `check_num_args`, `Objects/typeobject.c:9912`. -/
 def checkNumArgs (args : List Val) (n : Nat) : M Unit := do
   unless args.length == n do
     typeErr (argCountMsg n args.length)
 
-/-- `wrap_*` arity: `check_pow_args`, `Objects/typeobject.c:9236`. -/
+/-- `wrap_*` arity: `check_pow_args`, `Objects/typeobject.c:9928`. -/
 def checkPowArgs (args : List Val) : M Unit := do
   unless args.length == 1 || args.length == 2 do
     typeErr s!"expected 1 or 2 arguments, got {args.length}"
 
-/-- `getindex`, `Objects/typeobject.c:9397`. -/
+/-- `getindex`, `Objects/typeobject.c:10089`. -/
 def getIndex (rt : Rt) (self arg : Val) : M Int := do
   let i ← numberAsSsize rt arg (some B.OverflowError)
   if i < 0 then
@@ -673,7 +673,7 @@ def getIndex (rt : Rt) (self arg : Val) : M Int := do
     | none => pure i
   else pure i
 
-/-- The slot-compare in `hackcheck_unlocked`, `Objects/typeobject.c:9530`. -/
+/-- The slot-compare in `hackcheck_unlocked`, `Objects/typeobject.c:10222`. -/
 def hackcheck (self : Val) (func : SlotFn) (what : String) : M Unit := do
   let w ← getW
   if !typeCheck w self then return
@@ -695,14 +695,14 @@ def hackcheck (self : Val) (func : SlotFn) (what : String) : M Unit := do
     chain w.heap.size (some defining)
 
 /-- Attribute names passed to slot functions directly must be strings
-(`PyObject_GenericGetAttr`, `Objects/object.c:1823`). -/
+(`PyObject_GenericGetAttr`, `Objects/object.c:1902`). -/
 def attrName (v : Val) : M Name := do
   let w ← getW
   match strOf w v with
   | some s => pure s
   | none => typeErr s!"attribute name must be string, not '{trunc 200 (typeName w v)}'"
 
-/-- A one-operand wrapped slot, `wrap_unaryfunc`, `Objects/typeobject.c:9371`. -/
+/-- A one-operand wrapped slot, `wrap_unaryfunc`, `Objects/typeobject.c:10063`. -/
 def wrapUnary (rt : Rt) (p : SlotDef) (f : SlotFn) (self : Val) : M Val := do
   match p.slot with
   | .tp_repr => callRepr rt f self
@@ -715,7 +715,7 @@ def wrapUnary (rt : Rt) (p : SlotDef) (f : SlotFn) (self : Val) : M Val := do
   | _ => gap%
 
 /-- `wrapperdescr_raw_call`'s dispatch on the wrapper function,
-`Objects/typeobject.c:9264-9818`. -/
+`Objects/typeobject.c:9956-10510`. -/
 def wrapperApply (rt : Rt) (p : SlotDef) (f : SlotFn) (self : Val) (args : List Val)
     (kw : Kw) : M Val := do
   match p.wrapper with
@@ -805,7 +805,7 @@ def wrapperApply (rt : Rt) (p : SlotDef) (f : SlotFn) (self : Val) (args : List 
       unpackTuple "__setattr__" 2 2 args.length
       hackcheck self f "__setattr__"
       let w ← getW
-      -- `type_setattro` tests immutability before the name, `Objects/typeobject.c:6242`.
+      -- `type_setattro` tests immutability before the name, `Objects/typeobject.c:6808`.
       if f == .c .type && (match self with
           | .obj t => (tdata w t).immutable
           | _ => false) then
@@ -875,19 +875,19 @@ def wrapperdescrCall (rt : Rt) (owner : Addr) (p : SlotDef) (f : SlotFn) (args :
 
 /-! ## Builtin functions -/
 
-/-- `object.__dir__` and `type.__dir__`: `merge_class_dict`, `Objects/typeobject.c:6524`,
+/-- `object.__dir__` and `type.__dir__`: `merge_class_dict`, `Objects/typeobject.c:7134`,
 over the static hierarchy. -/
 def classDictKeys (w : World) (t : Addr) : List Name :=
   ((tdata w t).mro.getD []).flatMap fun c => (tdata w c).dict.map (·.1)
 
-/-- `object___format___impl`, `Objects/typeobject.c:7875`. -/
+/-- `object___format___impl`, `Objects/typeobject.c:8501`. -/
 def objectFormat (rt : Rt) (self : Val) (spec : String) : M Val := do
   let w ← getW
   if spec.length > 0 then
     typeErr s!"unsupported format string passed to {trunc 200 (typeName w self)}.__format__"
   .str <$> rt.str self
 
-/-- `PyObject_Format`, `Objects/abstract.c:843`. -/
+/-- `PyObject_Format`, `Objects/abstract.c:853`. -/
 def pyFormat (rt : Rt) (obj : Val) (spec : Option Val) : M Val := do
   let w ← getW
   let specS : Option String := match spec with
@@ -910,7 +910,7 @@ def pyFormat (rt : Rt) (obj : Val) (spec : Option Val) : M Val := do
     | some _ => pure r
     | none => typeErr s!"__format__ must return a str, not {trunc 200 (typeName w r)}"
 
-/-- `dir(obj)` for the object protocol, `_dir_object`, `Objects/object.c:2156`. -/
+/-- `dir(obj)` for the object protocol, `_dir_object`, `Objects/object.c:2235`. -/
 def pyDir (rt : Rt) (obj : Val) : M Val := do
   let w ← getW
   match ← lookupSpecial rt obj "__dir__" with
@@ -925,11 +925,11 @@ def pyDir (rt : Rt) (obj : Val) : M Val := do
     let _ := w
     alloc B.list (.list (sorted.map Val.str))
 
-/-- The `doc` argument of `property_copy`, `Objects/descrobject.c:1780-1786`. -/
+/-- The `doc` argument of `property_copy`, `Objects/descrobject.c:1804-1810`. -/
 def copyDocArg (getterDoc : Bool) (g doc : Val) : Val :=
   if getterDoc && !g.is .none then .none else doc
 
-/-- `property_copy`, `Objects/descrobject.c:1762`. -/
+/-- `property_copy`, `Objects/descrobject.c:1786`. -/
 def propertyCopy (rt : Rt) (old : Val) (get set del : Option Val) : M Val := do
   let w ← getW
   match propertyFields w old with
@@ -951,7 +951,7 @@ def propertyCopy (rt : Rt) (old : Val) (get set del : Option Val) : M Val := do
       pure n
     | _, _ => pure n
 
-/-- `type_mro_impl`, `Objects/typeobject.c:3434`. -/
+/-- `type_mro_impl`, `Objects/typeobject.c:3575`. -/
 def typeMroImpl (rt : Rt) (self : Val) : M Val := do
   match self with
   | .obj t =>
@@ -959,7 +959,7 @@ def typeMroImpl (rt : Rt) (self : Val) : M Val := do
     alloc B.list (.list (m.map Val.obj))
   | _ => gap%
 
-/-- `_PyObject_FunctionStr` of a builtin, `Objects/object.c:959`, via `meth_get__qualname__`,
+/-- `_PyObject_FunctionStr` of a builtin, `Objects/object.c:962`, via `meth_get__qualname__`,
 `Objects/methodobject.c:231`. -/
 def builtinFuncStr (w : World) (name : String) (self : Option Val) : String :=
   match self with
@@ -996,7 +996,7 @@ def reduceToGetattr (obj name : Val) : M Val := do
   let g ← alloc B.builtinFn (.builtin .getattr none)
   pure (.tuple [g, .tuple [obj, name]])
 
-/-- `method___reduce___impl`, `Objects/classobject.c:90`. -/
+/-- `method___reduce___impl`, `Objects/classobject.c:91`. -/
 def methodReduce (rt : Rt) (self : Val) : M Val := do
   let w ← getW
   match payloadOf w self with
@@ -1016,7 +1016,7 @@ def methReduce (self : Val) : M Val := do
     | none, _ => gap%
   | _ => gap%
 
-/-- `wrapper_reduce`, `Objects/descrobject.c:1369`. -/
+/-- `wrapper_reduce`, `Objects/descrobject.c:1393`. -/
 def wrapperReduce (self : Val) : M Val := do
   let w ← getW
   match payloadOf w self with
@@ -1064,9 +1064,9 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
     | _ => gap%
   | .numDunderFormat =>
     -- `int.__format__` and `float.__format__`, `_PyLong_FormatAdvancedWriter` and
-    -- `_PyFloat_FormatAdvancedWriter`, `Python/formatter_unicode.c:1590`, `:1652`: an empty
-    -- spec is the `str` of the number, and type `s` is `unknown_presentation_type` (:1584,
-    -- :1642). Other specs belong to `LongObj` and `Binary64`.
+    -- `_PyFloat_FormatAdvancedWriter`, `Python/formatter_unicode.c@3.14.7:1590`, `@3.14.7:1652`: an empty
+    -- spec is the `str` of the number, and type `s` is `unknown_presentation_type` (@3.14.7:1584,
+    -- @3.14.7:1642). Other specs belong to `LongObj` and `Binary64`.
     match args with
     | [s] =>
       match strOf w s with
@@ -1079,7 +1079,7 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
   | .strDunderFormat =>
     -- `unicode___format___impl` through `_PyUnicode_FormatAdvancedWriter`,
     -- `Python/formatter_unicode.c`: an empty spec is `PyObject_Str`, and spec `s` takes the fast
-    -- path at `:913`, which hands back the object itself, subclass and all. Other specs belong
+    -- path at `@3.14.7:913`, which hands back the object itself, subclass and all. Other specs belong
     -- to `UnicodeObj`.
     match args with
     | [s] =>
@@ -1154,7 +1154,7 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
     | _ => gap%
   | .typePrepare => alloc B.dict (.dict [])
   | .objectSizeof =>
-    -- `object___sizeof___impl`, `Objects/typeobject.c:7896`, for fixed-size objects.
+    -- `object___sizeof___impl`, `Objects/typeobject.c:8522`, for fixed-size objects.
     let d := tdata w (typeOf w selfV)
     if d.itemsize != 0 then gap% else pure (.int d.basicsize)
   | .typeInstancecheck =>
@@ -1301,7 +1301,7 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
     | [k] => .bool <$> callContains rt (.c .dict) selfV k
     | _ => typeErr s!"__contains__() takes exactly one argument ({args.length} given)"
   | .dictKeysMethod =>
-    -- `dict_keys_impl`, `Objects/dictobject.c:6566`: the view keeps a reference to the dict.
+    -- `dict_keys_impl`, `Objects/dictobject.c:7010`: the view keeps a reference to the dict.
     alloc B.dictKeys (.seqIter (some selfV) 0)
   | .iterLengthHint =>
     match selfV with
@@ -1316,9 +1316,9 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
             pure (.int (if n - i ≥ 0 then n - i else 0))
           else pure .notImpl
         else
-          -- `listiter_len`, `Objects/listobject.c:4043`, `tupleiter_len`,
-          -- `Objects/tupleobject.c:1074`, `unicodeiter_len`, `Objects/unicodeobject.c:16379`,
-          -- and `dictiter_len`, `Objects/dictobject.c:5194`, read the size directly.
+          -- `listiter_len`, `Objects/listobject.c:4113`, `tupleiter_len`,
+          -- `Objects/tupleobject.c:1177`, `unicodeiter_len`, `Objects/unicodeobject.c:14676`,
+          -- and `dictiter_len`, `Objects/dictobject.c:5637`, read the size directly.
           let n : Int := match seq, listOf w seq, strOf w seq with
             | .tuple xs, _, _ => xs.length
             | _, some xs, _ => xs.length
@@ -1358,7 +1358,7 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
 
 /-! ## Getsets and static members -/
 
-/-- `type_get_doc`, `Objects/typeobject.c:1951`, for heap types. -/
+/-- `type_get_doc`, `Objects/typeobject.c:2090`, for heap types. -/
 def typeGetDoc (rt : Rt) (t : Addr) : M Val := do
   let w ← getW
   match NameDict.get? (tdata w t).dict "__doc__" with
@@ -1374,7 +1374,7 @@ def typeGetDoc (rt : Rt) (t : Addr) : M Val := do
 /-- `_PyType_Name`: the part after the last dot. -/
 def typeShortName (w : World) (t : Addr) : String := typeQualname w t
 
-/-- `_PyObject_SetDict`, `Objects/typeobject.c:3765`. -/
+/-- `_PyObject_SetDict`, `Objects/typeobject.c:4060`. -/
 def objectSetDict (obj : Val) (value : Option Val) : M Unit := do
   let w ← getW
   match value with
@@ -1395,7 +1395,7 @@ def bindToType (rt : Rt) (r : Val) (t : Addr) : M Val := do
   | some g => callDescrGet rt g r none (some (.obj t))
   | none => pure r
 
-/-- `type_get_annotate`, `Objects/typeobject.c:1990`: `__annotate__`, then `__annotate_func__`.
+/-- `type_get_annotate`, `Objects/typeobject.c:2129`: `__annotate__`, then `__annotate_func__`.
 With neither, reading stores `None` under `__annotate_func__`, which the class dict then shows. -/
 def typeGetAnnotate (rt : Rt) (t : Addr) : M Val := do
   let w ← getW
@@ -1410,7 +1410,7 @@ def typeGetAnnotate (rt : Rt) (t : Addr) : M Val := do
     modType t fun d => { d with dict := NameDict.set d.dict "__annotate_func__" .none }
     pure .none
 
-/-- `type_get_annotations`, `Objects/typeobject.c:2069`: `__annotations__`, then
+/-- `type_get_annotations`, `Objects/typeobject.c:2208`: `__annotations__`, then
 `__annotations_cache__`, then a call of `__annotate__` whose result is cached. -/
 def typeGetAnnotations (rt : Rt) (t : Addr) : M Val := do
   let w ← getW
@@ -1434,7 +1434,7 @@ def typeGetAnnotations (rt : Rt) (t : Addr) : M Val := do
     modType t fun d => { d with dict := NameDict.set d.dict "__annotations_cache__" ann }
     pure ann
 
-/-- `type_set_annotate`, `Objects/typeobject.c:2030`. -/
+/-- `type_set_annotate`, `Objects/typeobject.c:2169`. -/
 def typeSetAnnotate (t : Addr) (value : Option Val) : M Unit := do
   let w ← getW
   match value with
@@ -1448,7 +1448,7 @@ def typeSetAnnotate (t : Addr) (value : Option Val) : M Unit := do
       let nd := NameDict.set d.dict "__annotate_func__" v
       { d with dict := if v.is .none then nd else NameDict.erase nd "__annotations_cache__" }
 
-/-- `type_set_annotations`, `Objects/typeobject.c:2139`. -/
+/-- `type_set_annotations`, `Objects/typeobject.c:2279`. -/
 def typeSetAnnotations (t : Addr) (value : Option Val) : M Unit := do
   let w ← getW
   let d := tdata w t
@@ -1468,8 +1468,8 @@ def typeSetAnnotations (t : Addr) (value : Option Val) : M Unit := do
   modType t fun d =>
     { d with dict := NameDict.erase (NameDict.erase d.dict "__annotate_func__") "__annotate__" }
 
-/-- `function___annotations___get_impl`, `Objects/funcobject.c:981`, with
-`func_get_annotation_dict`, `:556`. The result is kept on the function. -/
+/-- `function___annotations___get_impl`, `Objects/funcobject.c:967`, with
+`func_get_annotation_dict`, `:539`. The result is kept on the function. -/
 def funcGetAnnotations (rt : Rt) (fn : Addr) (f : FuncData) : M Val := do
   let w ← getW
   let store (d : Val) (g : FuncData) : M Val := do
@@ -1493,7 +1493,7 @@ def funcGetAnnotations (rt : Rt) (fn : Addr) (f : FuncData) : M Val := do
     let d ← alloc B.dict (.dict [])
     store d f
 
-/-- `descriptor_get_wrapped_attribute`, `Objects/funcobject.c:1424`: the descriptor's own
+/-- `descriptor_get_wrapped_attribute`, `Objects/funcobject.c:1412`: the descriptor's own
 `__dict__`, else the wrapped callable's attribute, which is then cached there. -/
 def wrappedAttrGet (rt : Rt) (wrapped obj : Val) (n : Name) : M Val := do
   let dv ← genericGetDict obj
@@ -1508,7 +1508,7 @@ def wrappedAttrGet (rt : Rt) (wrapped obj : Val) (n : Name) : M Val := do
       pure r
   | _ => gap%
 
-/-- `descriptor_set_wrapped_attribute`, `Objects/funcobject.c:1454`. -/
+/-- `descriptor_set_wrapped_attribute`, `Objects/funcobject.c:1442`. -/
 def wrappedAttrSet (rt : Rt) (obj : Val) (n : Name) (value : Option Val) (tn : String) : M Unit := do
   let dv ← genericGetDict obj
   match value, dv with
@@ -1518,7 +1518,7 @@ def wrappedAttrSet (rt : Rt) (obj : Val) (n : Name) (value : Option Val) (tn : S
   | some v, .obj d => dictSetAt rt d (.str n) v
   | _, _ => gap%
 
-/-- `PyObject_GenericSetDict`, `Objects/object.c:2046`: unlike `subtype_setdict`, it refuses to
+/-- `PyObject_GenericSetDict`, `Objects/object.c:2125`: unlike `subtype_setdict`, it refuses to
 delete. -/
 def genericSetDict (obj : Val) (value : Option Val) : M Unit := do
   if value.isNone then typeErr "cannot delete __dict__"
@@ -1574,7 +1574,7 @@ def getsetGetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) : M Val := do
     if n == "__annotate__" then return ← typeGetAnnotate rt tA
     if n == "__annotations__" then return ← typeGetAnnotations rt tA
     if n == "__type_params__" then
-      -- `type_get_type_params`, `Objects/typeobject.c:2211`.
+      -- `type_get_type_params`, `Objects/typeobject.c:2351`.
       if tA == B.type then return .tuple []
       return (NameDict.get? d.dict "__type_params__").getD (.tuple [])
     gap%
@@ -1688,7 +1688,7 @@ def getsetGetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) : M Val := do
         gap%
     | _ => gap%
   if owner == B.methodWrapper then
-    -- `wrapper_objclass`, `wrapper_name`, `wrapper_qualname`, `Objects/descrobject.c:1387-1422`.
+    -- `wrapper_objclass`, `wrapper_name`, `wrapper_qualname`, `Objects/descrobject.c:1411-1446`.
     match payloadOf w obj with
     | some (.methodWrapper d s) =>
       match payloadOf w d with
@@ -1710,13 +1710,13 @@ def getsetGetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) : M Val := do
       gap%
     | none => gap%
   if owner == B.dictKeys && n == "mapping" then
-    -- `dictview_mapping`, `Objects/dictobject.c:6015`.
+    -- `dictview_mapping`, `Objects/dictobject.c:6457`.
     match payloadOf w obj with
     | some (.seqIter (some d) _) => return ← alloc B.mappingproxy (.proxy d)
     | _ => gap%
   gap%
 where
-  /-- `_PyObject_IsAbstract`, `Objects/object.c:1235`. -/
+  /-- `_PyObject_IsAbstract`, `Objects/object.c:1252`. -/
   isAbstract (rt : Rt) (o : Val) : M Bool := do
     match o with
     | .none => pure false
@@ -1781,7 +1781,7 @@ def getsetSetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) (value : Optio
     if n == "__annotate__" then return ← typeSetAnnotate tA value
     if n == "__annotations__" then return ← typeSetAnnotations tA value
     if n == "__type_params__" then
-      -- `type_set_type_params`, `Objects/typeobject.c:2226`.
+      -- `type_set_type_params`, `Objects/typeobject.c:2366`.
       checkSetSpecial tA value "__type_params__"
       return ← modType tA fun d =>
         { d with dict := NameDict.set d.dict "__type_params__" (value.getD .none) }
@@ -1827,7 +1827,7 @@ def getsetSetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) (value : Optio
           | some _ => return ← setF { f with kwdefaultsObj := some v }
           | none => typeErr "__kwdefaults__ must be set to a dict object"
       if n == "__annotate__" then
-        -- `function___annotate___set_impl`, `Objects/funcobject.c:948`.
+        -- `function___annotate___set_impl`, `Objects/funcobject.c:934`.
         match value with
         | none => typeErr "__annotate__ cannot be deleted"
         | some v =>
@@ -1836,7 +1836,7 @@ def getsetSetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) (value : Optio
             return ← setF { f with annotate := some v, annotations := none }
           typeErr "__annotate__ must be callable or None"
       if n == "__annotations__" then
-        -- `function___annotations___set_impl`, `Objects/funcobject.c:1002`.
+        -- `function___annotations___set_impl`, `Objects/funcobject.c:989`.
         let v := match value with
           | some x => if x.is .none then none else some x
           | none => none
@@ -1846,7 +1846,7 @@ def getsetSetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) (value : Optio
         | none => pure ()
         return ← setF { f with annotations := v, annotate := none }
       if n == "__type_params__" then
-        -- `function___type_params___set_impl`, `Objects/funcobject.c:1047`.
+        -- `function___type_params___set_impl`, `Objects/funcobject.c:1035`.
         match value with
         | some x =>
           if (tupleOf w x).isNone then typeErr "__type_params__ must be set to a tuple"
@@ -1870,7 +1870,7 @@ def getsetSetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) (value : Optio
 
 /-! ## `PyObject_Call` -/
 
-/-- `slot_tp_call`, `Objects/typeobject.c:10341`. -/
+/-- `slot_tp_call`, `Objects/typeobject.c:11042`. -/
 def slotTpCall (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Val :=
   callMethod rt self "__call__" args kw
 

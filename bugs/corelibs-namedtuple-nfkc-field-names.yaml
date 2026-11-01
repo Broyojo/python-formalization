@@ -28,7 +28,7 @@ likelihood: |
 maybe_intended: |
   No sign of it. typing.NamedTuple's class syntax normalises at parse time and has neither problem.
   A maintainer could still answer that such names are an edge case, and that getattr/setattr do not
-  normalise either (documented in Doc/reference/lexical_analysis.rst:535 only for source). The
+  normalise either (documented in Doc/reference/lexical_analysis.rst:539 only for source). The
   SyntaxError with rename=True is the part hardest to defend.
 reproducer: |
   from collections import namedtuple
@@ -67,9 +67,9 @@ observed: |
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same, the SyntaxError now says "duplicate
   parameter". REPRODUCED.
 promised_by: |
-  Doc/library/collections.rst:879-880: "If rename is true, invalid fieldnames are automatically replaced
+  Doc/library/collections.rst:883-884: "If rename is true, invalid fieldnames are automatically replaced
   with positional names." Lib/collections/__init__.py:375-379, class docstring: `Point(**d)  # convert
-  from a dictionary`. Doc/reference/lexical_analysis.rst:535: "All names are converted into the
+  from a dictionary`. Doc/reference/lexical_analysis.rst:539: "All names are converted into the
   normalization form NFKC while parsing."
 cause: |
   Lib/collections/__init__.py:392-419 compare the raw strings; :446-447 `eval(code, namespace)` compiles

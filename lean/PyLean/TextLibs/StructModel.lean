@@ -61,7 +61,7 @@ def structErr (m : String) : PyExc := .named "error" m
 Python exception. -/
 def MEMORY : PyExc := .named "MemoryUnsafe" ""
 
-/-- The unpack routines of the three tables (`Modules/_struct.c:365-521, 865-993, 1196-1317`). -/
+/-- The unpack routines of the three tables (`Modules/_struct.c:366-522, 865-993, 1196-1317`). -/
 inductive UFn where
   | none | nuByte | nuUbyte | nuChar | nuShort | nuUshort | nuInt | nuUint | nuLong | nuUlong
   | nuSsizeT | nuSizeT | nuLonglong | nuUlonglong | nuBool | nuHalffloat | nuFloat | nuDouble
@@ -72,7 +72,7 @@ inductive UFn where
   | luFloatComplex | luDoubleComplex
   deriving Repr, DecidableEq, Inhabited
 
-/-- The pack routines of the three tables (`Modules/_struct.c:523-834, 995-1167, 1320-1481`). -/
+/-- The pack routines of the three tables (`Modules/_struct.c:524-835, 995-1167, 1320-1481`). -/
 inductive PFn where
   | none | npByte | npUbyte | npChar | npShort | npUshort | npInt | npUint | npLong | npUlong
   | npSsizeT | npSizeT | npLonglong | npUlonglong | npBool | npHalffloat | npFloat | npDouble
@@ -92,7 +92,7 @@ structure FormatDef where
   pack : PFn
   deriving Repr, DecidableEq, Inhabited
 
-/-- `native_table`, `Modules/_struct.c:836-861`, with x86-64 sizes. -/
+/-- `native_table`, `Modules/_struct.c:837-864`, with x86-64 sizes. -/
 def nativeTable : List FormatDef :=
   [⟨'x', 1, 0, .none, .none⟩, ⟨'b', 1, 0, .nuByte, .npByte⟩, ⟨'B', 1, 0, .nuUbyte, .npUbyte⟩,
    ⟨'c', 1, 0, .nuChar, .npChar⟩, ⟨'s', 1, 0, .none, .none⟩, ⟨'p', 1, 0, .none, .none⟩,
@@ -106,7 +106,7 @@ def nativeTable : List FormatDef :=
    ⟨'F', 8, 4, .nuFloatComplex, .npFloatComplex⟩, ⟨'D', 16, 8, .nuDoubleComplex, .npDoubleComplex⟩,
    ⟨'P', 8, 8, .nuVoidP, .npVoidP⟩]
 
-/-- `bigendian_table`, `Modules/_struct.c:1169-1190`. -/
+/-- `bigendian_table`, `Modules/_struct.c:1172-1195`. -/
 def bigendianTable : List FormatDef :=
   [⟨'x', 1, 0, .none, .none⟩, ⟨'b', 1, 0, .nuByte, .npByte⟩, ⟨'B', 1, 0, .nuUbyte, .npUbyte⟩,
    ⟨'c', 1, 0, .nuChar, .npChar⟩, ⟨'s', 1, 0, .none, .none⟩, ⟨'p', 1, 0, .none, .none⟩,
@@ -118,7 +118,7 @@ def bigendianTable : List FormatDef :=
    ⟨'f', 4, 0, .buFloat, .bpFloat⟩, ⟨'d', 8, 0, .buDouble, .bpDouble⟩,
    ⟨'F', 8, 0, .buFloatComplex, .bpFloatComplex⟩, ⟨'D', 16, 0, .buDoubleComplex, .bpDoubleComplex⟩]
 
-/-- `lilendian_table` before `init_endian_tables` runs, `Modules/_struct.c:1483-1506`. -/
+/-- `lilendian_table` before `init_endian_tables` runs, `Modules/_struct.c:1488-1513`. -/
 def lilendianTable0 : List FormatDef :=
   [⟨'x', 1, 0, .none, .none⟩, ⟨'b', 1, 0, .nuByte, .npByte⟩, ⟨'B', 1, 0, .nuUbyte, .npUbyte⟩,
    ⟨'c', 1, 0, .nuChar, .npChar⟩, ⟨'s', 1, 0, .none, .none⟩, ⟨'p', 1, 0, .none, .none⟩,
@@ -147,7 +147,7 @@ def initInner (native : FormatDef) (tbl : List FormatDef) (other : Nat) :
         else (tbl.set ptr { p with pack := native.pack, unpack := native.unpack }, other')
       else initInner native tbl other (ptr + 1) fuel
 
-/-- `init_endian_tables`, `Modules/_struct.c:1511-1553`. -/
+/-- `init_endian_tables`, `Modules/_struct.c:1518-1557`. -/
 def initEndianTablesGo (tbl : List FormatDef) (other : Nat) : List FormatDef → List FormatDef
   | [] => tbl
   | n :: ns =>
@@ -167,7 +167,7 @@ def Tab.table : Tab → List FormatDef
   | .little => lilendianTable
   | .big => bigendianTable
 
-/-- `whichtable`, `Modules/_struct.c:1556-1579`: table and the remaining format. -/
+/-- `whichtable`, `Modules/_struct.c:1560-1583`: table and the remaining format. -/
 def whichtable : List Char → Tab × List Char
   | '<' :: r => (.little, r)
   | '>' :: r | '!' :: r => (.big, r)
@@ -175,7 +175,7 @@ def whichtable : List Char → Tab × List Char
   | '@' :: r => (.native, r)
   | s => (.native, s)
 
-/-- `getentry`, `Modules/_struct.c:1584-1594`. -/
+/-- `getentry`, `Modules/_struct.c:1603-1613`. -/
 def getentry (c : Char) : List FormatDef → Py FormatDef
   | [] => .error (structErr "bad char in struct format")
   | f :: fs => if f.format = c then .ok f else getentry c fs
@@ -183,7 +183,7 @@ def getentry (c : Char) : List FormatDef → Py FormatDef
 /-- `PY_SSIZE_T_MAX` as a `Nat`. -/
 def maxN : Nat := 2 ^ 63 - 1
 
-/-- `align`, `Modules/_struct.c:1599-1613`: `none` is the `-1` overflow return.
+/-- `align`, `Modules/_struct.c:1618-1632`: `none` is the `-1` overflow return.
 `e->format == c` always holds at both call sites. -/
 def align (size : Nat) (e : FormatDef) : Option Nat :=
   if e.alignment ≠ 0 ∧ size > 0 then
@@ -198,7 +198,7 @@ def isSpace (c : Char) : Bool :=
 def isDigit (c : Char) : Bool := '0' ≤ c && c ≤ '9'
 def digit (c : Char) : Nat := c.toNat - '0'.toNat
 
-/-- The digit loop of the first pass, `Modules/_struct.c:1654-1662`. The `none` result
+/-- The digit loop of the first pass, `Modules/_struct.c:1677-1685`. The `none` result
 is `goto overflow`; otherwise `(num, c, rest)`, where `c` is the first non-digit read
 (`none` for the terminating NUL). -/
 def scanDigits1 (num : Nat) : List Char → Option (Nat × Option Char × List Char)
@@ -218,7 +218,7 @@ structure Pass1 where
   ncodes : Nat := 0
   deriving Repr, DecidableEq, Inhabited
 
-/-- One format item of the first pass, `Modules/_struct.c:1672-1705`. -/
+/-- One format item of the first pass, `Modules/_struct.c@3.14.7:1672-1705`. -/
 def pass1Item (tbl : List FormatDef) (st : Pass1) (num : Nat) (c : Char) : Py Pass1 := do
   let e ← getentry c tbl
   let (len, ncodes) ←
@@ -236,7 +236,7 @@ def pass1Item (tbl : List FormatDef) (st : Pass1) (num : Nat) (c : Char) : Py Pa
     if num > (maxN - size) / itemsize then .error overflowErr
     else pure { size := size + num * itemsize, len, ncodes }
 
-/-- The first `while` of `prepare_s`, `Modules/_struct.c:1649-1706`. -/
+/-- The first `while` of `prepare_s`, `Modules/_struct.c:1672-1731`. -/
 def pass1 (tbl : List FormatDef) : (fuel : Nat) → List Char → Pass1 → Py Pass1
   | 0, _, _ => .error .modelFuel
   | _ + 1, [], st => pure st
@@ -257,12 +257,12 @@ structure Code where
   repeat_ : Nat
   deriving Repr, DecidableEq, Inhabited
 
-/-- The digit loop of the second pass, `Modules/_struct.c:1727-1728`. -/
+/-- The digit loop of the second pass, `Modules/_struct.c:1752-1753`. -/
 def scanDigits2 (num : Nat) : List Char → Nat × Option Char × List Char
   | [] => (num, none, [])
   | c :: r => if isDigit c then scanDigits2 (num * 10 + digit c) r else (num, some c, r)
 
-/-- One item of the second pass, `Modules/_struct.c:1733-1752`. `getentry` and `align`
+/-- One item of the second pass, `Modules/_struct.c@3.14.7:1733-1752`. `getentry` and `align`
 cannot fail here because the first pass accepted the format. -/
 def pass2Item (tbl : List FormatDef) (acc : List Code × Nat) (num : Nat) (c : Char) :
     List Code × Nat :=
@@ -276,7 +276,7 @@ def pass2Item (tbl : List FormatDef) (acc : List Code × Nat) (num : Nat) (c : C
     else if num ≠ 0 then (codes ++ [⟨e, size, e.size, num⟩], size + e.size * num)
     else (codes, size)
 
-/-- The second `while` of `prepare_s`, `Modules/_struct.c:1722-1753`. -/
+/-- The second `while` of `prepare_s`, `Modules/_struct.c:1747-1780`. -/
 def pass2 (tbl : List FormatDef) : (fuel : Nat) → List Char → List Code × Nat → List Code × Nat
   | 0, _, acc => acc
   | _ + 1, [], acc => acc
@@ -298,7 +298,7 @@ structure SObj where
 
 def asciiChars (b : List Nat) : List Char := b.map Char.ofNat
 
-/-- `prepare_s`, `Modules/_struct.c:1621-1773`. `sizeof(formatcode) = 32`. -/
+/-- `prepare_s`, `Modules/_struct.c:1640-1800`. `sizeof(formatcode) = 32`. -/
 def prepareS (format : List Nat) : Py SObj :=
   if 0 ∈ format then .error (structErr "embedded null character")
   else
@@ -321,7 +321,7 @@ inductive FmtArg where
   | hashRaises (tyName : String) (e : PyExc)
   deriving Repr, DecidableEq, Inhabited
 
-/-- `Struct___init___impl`, `Modules/_struct.c:1808-1835`. -/
+/-- `Struct___init___impl`, `Modules/_struct.c:1964-2004`. -/
 def structInit : FmtArg → Py SObj
   | .str cps =>
     if cps.all (· < 128) then prepareS cps
@@ -330,7 +330,7 @@ def structInit : FmtArg → Py SObj
   | .other t _ | .hashRaises t _ =>
     .error (.typeError s!"Struct() argument 1 must be a str or bytes object, not {t}")
 
-/-- `cache_struct_converter`, `Modules/_struct.c:2504-2552`. A cache hit returns the
+/-- `cache_struct_converter`, `Modules/_struct.c:2615-2663`. A cache hit returns the
 object built by an earlier identical call, so the cache is not observable; only the
 key conversion (surrogateescape decoding of bytes, then `Struct(key)`) and the hash
 of the key are. -/
@@ -345,7 +345,7 @@ def cacheStruct : FmtArg → Py SObj
     | .typeError m => .error (.typeError s!"cannot use '{t}' as a dict key ({m})")
     | e => .error e
 
-/-- `_range_error`, `Modules/_struct.c:314-342`. -/
+/-- `_range_error`, `Modules/_struct.c:315-343`. -/
 def rangeError (f : FormatDef) (isUnsigned : Bool) : PyExc :=
   let ulargest := 2 ^ (f.size * 8) - 1
   if isUnsigned then
@@ -354,7 +354,7 @@ def rangeError (f : FormatDef) (isUnsigned : Bool) : PyExc :=
     let largest := ulargest / 2
     structErr s!"'{f.format}' format requires {-(largest : Int) - 1} <= number <= {largest}"
 
-/-- `get_pylong`, `Modules/_struct.c:111-133`. -/
+/-- `get_pylong`, `Modules/_struct.c:112-134`. -/
 def getPylong : SV → Py Int
   | .int n | .index n => .ok n
   | .obj { index := some r, .. } => r
@@ -368,31 +368,31 @@ def longMin : Int := -(2 ^ 63)
 def longMax : Int := 2 ^ 63 - 1
 def ulongMax : Int := 2 ^ 64 - 1
 
-/-- `get_long`, `Modules/_struct.c:138-154` (with `PyLong_AsLong`). -/
+/-- `get_long`, `Modules/_struct.c:139-155` (with `PyLong_AsLong`). -/
 def getLong (v : SV) : Py Int := do
   asC longMin longMax "Python int too large to convert to C long" (← getPylong v)
 
-/-- `get_ulong`, `Modules/_struct.c:159-175` (with `PyLong_AsUnsignedLong`). -/
+/-- `get_ulong`, `Modules/_struct.c:160-176` (with `PyLong_AsUnsignedLong`). -/
 def getUlong (v : SV) : Py Int := do
   let n ← getPylong v
   if n < 0 then throw (.overflowError "can't convert negative int to unsigned")
   asC 0 ulongMax "Python int too large to convert to C unsigned long" n
 
-/-- `get_longlong`, `Modules/_struct.c:179-195`. -/
+/-- `get_longlong`, `Modules/_struct.c:180-196`. -/
 def getLonglong (v : SV) : Py Int := do
   asC longMin longMax "Python int too large to convert to C long long" (← getPylong v)
 
-/-- `get_ulonglong`, `Modules/_struct.c:199-215`. -/
+/-- `get_ulonglong`, `Modules/_struct.c:200-216`. -/
 def getUlonglong (v : SV) : Py Int := do
   let n ← getPylong v
   if n < 0 then throw (.overflowError "can't convert negative int to unsigned")
   asC 0 ulongMax "Python int too large to convert" n
 
-/-- `get_ssize_t`, `Modules/_struct.c:219-235`. -/
+/-- `get_ssize_t`, `Modules/_struct.c:220-236`. -/
 def getSsizeT (v : SV) : Py Int := do
   asC longMin longMax "Python int too large to convert to C ssize_t" (← getPylong v)
 
-/-- `get_size_t`, `Modules/_struct.c:239-255`. -/
+/-- `get_size_t`, `Modules/_struct.c:240-256`. -/
 def getSizeT (v : SV) : Py Int := do
   let n ← getPylong v
   if n < 0 then throw (.overflowError "can't convert negative int to size_t")
@@ -441,7 +441,7 @@ def isTrue : SV → Py Bool
   | .obj o => o.truth
 
 /-- `Py` to `Option`: `struct` replaces every exception from these two conversions, a raising
-`__float__` included, `Modules/_struct.c:280-285`. -/
+`__float__` included, `Modules/_struct.c:281-286`. -/
 def okOf {α : Type} : Py α → Option α
   | .ok a => some a
   | .error _ => none
@@ -469,7 +469,7 @@ def asCComplex : SV → Option (Nat × Nat)
 def notFloat : PyExc := structErr "required argument is not a float"
 def notComplex : PyExc := structErr "required argument is not a complex"
 
-/-- `PyFloat_Pack2`, `Objects/floatobject.c:1992-2098`, on the magnitude `f = fn/fd`. -/
+/-- `PyFloat_Pack2`, `Objects/floatobject.c:1894-2000`, on the magnitude `f = fn/fd`. -/
 def pack2Round (sign : Nat) (fn fd e : Nat) : Py Nat :=
   -- `f *= 1024.0; bits = (unsigned short)f` and the round-to-even test
   let num := fn * 1024
@@ -504,7 +504,7 @@ def pyFloatPack2Bits (x : Nat) : Py Nat :=
     else
       pack2Round sign (m - 2 ^ k) (2 ^ k) (E + 15).toNat
 
-/-- `PyFloat_Pack4`, `Objects/floatobject.c:2180-2243`: a 32-bit pattern. -/
+/-- `PyFloat_Pack4`, `Objects/floatobject.c@3.14.7:2180-2243`: a 32-bit pattern. -/
 def pyFloatPack4Bits (x : Nat) : Py Nat :=
   let y := castDoubleToFloat x
   if f32.isInf y && !f64.isInf x then
@@ -515,7 +515,7 @@ def pyFloatPack4Bits (x : Nat) : Py Nat :=
     else .ok y
   else .ok y
 
-/-- `PyFloat_Unpack2`, `Objects/floatobject.c:2378-2432`. -/
+/-- `PyFloat_Unpack2`, `Objects/floatobject.c:2089-2143`. -/
 def pyFloatUnpack2Bits (h : Nat) : Nat :=
   let sign := h / 32768 % 2
   let e := h / 1024 % 32
@@ -528,7 +528,7 @@ def pyFloatUnpack2Bits (h : Nat) : Nat :=
     let (m, ex) : Nat × Int := if e = 0 then (f, -24) else (f + 1024, (e : Int) - 25)
     (f64.encodeRounded sign m ex).getD 0
 
-/-- `PyFloat_Unpack4`, `Objects/floatobject.c:2494-2545`. -/
+/-- `PyFloat_Unpack4`, `Objects/floatobject.c@3.14.7:2494-2545`. -/
 def pyFloatUnpack4Bits (y : Nat) : Nat :=
   let x := castFloatToDouble y
   if f32.isNaN y ∧ y &&& 2 ^ 22 = 0 then x - 2 ^ 51 else x
@@ -537,7 +537,7 @@ def pyFloatUnpack4Bits (y : Nat) : Nat :=
 def ordered (le : Bool) (n v : Nat) : List Nat :=
   if le then leBytes n v else (leBytes n v).reverse
 
-/-- `pack_halffloat`, `Modules/_struct.c:274-287`. -/
+/-- `pack_halffloat`, `Modules/_struct.c:275-288`. -/
 def packHalffloat (v : SV) (le : Bool) : Py (List Nat) :=
   match asDouble v with
   | none => .error notFloat
@@ -553,7 +553,7 @@ def packDoubleStd (v : SV) (le : Bool) : Py (List Nat) :=
   | none => .error notFloat
   | some x => .ok (ordered le 8 x)
 
-/-- `bp_float_complex`/`lp_float_complex`, `Modules/_struct.c:1128-1141`. -/
+/-- `bp_float_complex`/`lp_float_complex`, `Modules/_struct.c:1131-1144`. -/
 def packFCStd (v : SV) (le : Bool) : Py (List Nat) :=
   match asCComplex v with
   | none => .error notComplex
@@ -562,7 +562,7 @@ def packFCStd (v : SV) (le : Bool) : Py (List Nat) :=
     let y ← pyFloatPack4Bits b
     return ordered le 4 x ++ ordered le 4 y
 
-/-- `bp_double_complex`/`lp_double_complex`, `Modules/_struct.c:1143-1156`. -/
+/-- `bp_double_complex`/`lp_double_complex`, `Modules/_struct.c:1146-1159`. -/
 def packDCStd (v : SV) (le : Bool) : Py (List Nat) :=
   match asCComplex v with
   | none => .error notComplex
@@ -581,7 +581,7 @@ def packUlonglongStd (f : FormatDef) (v : SV) (le : Bool) : Py (List Nat) := do
     throw (structErr s!"'{f.format}' format requires 0 <= number <= {ulongMax}")
   return (if le then lpLoop 8 n else bpLoop 8 n)
 
-/-- `bp_int`/`lp_int`, `Modules/_struct.c:995-1021, 1319-1345`. -/
+/-- `bp_int`/`lp_int`, `Modules/_struct.c:998-1024, 1319-1345`. -/
 def packIntStd (f : FormatDef) (v : SV) (le : Bool) : Py (List Nat) := do
   let x ← orRange f false (getLong v)
   let i := f.size
@@ -590,7 +590,7 @@ def packIntStd (f : FormatDef) (v : SV) (le : Bool) : Py (List Nat) := do
     else if i = 4 ∧ (x < -2147483648 ∨ x > 2147483647) then throw (rangeError f false)
   return (if le then lpLoop i x else bpLoop i x)
 
-/-- `bp_uint`/`lp_uint`, `Modules/_struct.c:1023-1047, 1347-1371`. -/
+/-- `bp_uint`/`lp_uint`, `Modules/_struct.c:1026-1050, 1347-1371`. -/
 def packUintStd (f : FormatDef) (v : SV) (le : Bool) : Py (List Nat) := do
   let x ← orRange f true (getUlong v)
   let i := f.size
@@ -633,7 +633,7 @@ def runPack (f : FormatDef) (v : SV) : Py (List Nat) :=
   | .npFloat => packFloatStd v true
   | .npDouble => packDoubleStd v true
   | .npFloatComplex =>
-    -- `Modules/_struct.c:791-799`: the C casts `(float)c.real`, `(float)c.imag`
+    -- `Modules/_struct.c:792-800`: the C casts `(float)c.real`, `(float)c.imag`
     match asCComplex v with
     | none => .error notComplex
     | some (a, b) => .ok (leBytes 4 (castDoubleToFloat a) ++ leBytes 4 (castDoubleToFloat b))
@@ -642,7 +642,7 @@ def runPack (f : FormatDef) (v : SV) : Py (List Nat) :=
     | none => .error notComplex
     | some (a, b) => .ok (leBytes 8 a ++ leBytes 8 b)
   | .npVoidP => do
-    -- `np_void_p`, `Modules/_struct.c:819-834`, `PyLong_AsVoidPtr` (`Objects/longobject.c`)
+    -- `np_void_p`, `Modules/_struct.c:820-835`, `PyLong_AsVoidPtr` (`Objects/longobject.c`)
     let n ← getPylong v
     if n < 0 then
       return twos 8 (← asC longMin longMax "Python int too large to convert to C long" n)
@@ -670,7 +670,7 @@ def runPack (f : FormatDef) (v : SV) : Py (List Nat) :=
 
 /-- `x = (x ^ m) - m` then `x & m ? -1 - (long)(~x) : (long)x` of `bu_short`, `bu_int`,
 `bu_longlong`, `lu_*`: sign extension of a `2 * m`-range value in 64-bit unsigned
-arithmetic (`Modules/_struct.c:878-879, 895-896, 924-926`). -/
+arithmetic (`Modules/_struct.c:881-882, 895-896, 924-926`). -/
 def signExtC (m x : Nat) : Int :=
   let w := 2 ^ 64
   let y := ((x ^^^ m) + w - m) % w
@@ -726,7 +726,7 @@ def runUnpack (f : FormatDef) (p : List Nat) : Py SV :=
 def overlay (buf : List Nat) (i : Nat) (w : List Nat) : List Nat :=
   buf.take i ++ w ++ buf.drop (i + w.length)
 
-/-- One `while (j--)` turn of `s_unpack_internal`, `Modules/_struct.c:1884-1900`. -/
+/-- One `while (j--)` turn of `s_unpack_internal`, `Modules/_struct.c@3.14.7:1884-1900`. -/
 def unpackOne (code : Code) (res : List Nat) : Py SV :=
   let e := code.fmtdef
   if e.format = 's' then .ok (.bytes (res.take code.size))
@@ -747,12 +747,12 @@ def unpackRepeat (code : Code) (buf : List Nat) : (j : Nat) → (off : Nat) → 
     let vs ← unpackRepeat code buf j (off + code.size)
     return v :: vs
 
-/-- `s_unpack_internal`, `Modules/_struct.c:1869-1912`. -/
+/-- `s_unpack_internal`, `Modules/_struct.c:2038-2081`. -/
 def sUnpackInternal (s : SObj) (buf : List Nat) : Py (List SV) :=
   s.codes.foldlM (init := []) fun acc code => do
     return acc ++ (← unpackRepeat code buf code.repeat_ code.offset)
 
-/-- `Struct_unpack_impl`, `Modules/_struct.c:1937-1950`. -/
+/-- `Struct_unpack_impl`, `Modules/_struct.c:2105-2118`. -/
 def structUnpack (s : SObj) (buf : List Nat) : Py (List SV) :=
   if buf.length ≠ s.sSize then
     .error (structErr s!"unpack requires a buffer of {s.sSize} bytes")
@@ -764,7 +764,7 @@ def ssizeArg (n : Int) : Py Int :=
     .error (.overflowError "Python int too large to convert to C ssize_t")
   else .ok n
 
-/-- `Struct_unpack_from_impl`, `Modules/_struct.c:1969-2008`. -/
+/-- `Struct_unpack_from_impl`, `Modules/_struct.c:2134-2173`. -/
 def structUnpackFrom (s : SObj) (buf : List Nat) (offset0 : Int) : Py (List SV) := do
   let offset ← ssizeArg offset0
   let len : Int := buf.length
@@ -783,7 +783,7 @@ def structUnpackFrom (s : SObj) (buf : List Nat) (offset0 : Int) : Py (List SV) 
       unpacking {size} bytes at offset {offset} (actual buffer size is {len})")
   sUnpackInternal s (buf.drop offset.toNat)
 
-/-- `Struct_iter_unpack_impl` and `unpackiter_iternext`, `Modules/_struct.c:2066-2086,
+/-- `Struct_iter_unpack_impl` and `unpackiter_iternext`, `Modules/_struct.c:2231-2251,
 2122-2154`: the tuples the iterator yields. `fuel` bounds the loop. -/
 def iterLoop (s : SObj) (buf : List Nat) : (fuel : Nat) → (index : Nat) → Py (List (List SV))
   | 0, _ => .error .modelFuel
@@ -801,11 +801,11 @@ def structIterUnpack (s : SObj) (buf : List Nat) : Py (List (List SV)) :=
     .error (structErr s!"iterative unpacking requires a buffer of a multiple of {s.sSize} bytes")
   else iterLoop s buf (buf.length + 1) 0
 
-/-- `unpackiter_len`, `Modules/_struct.c:2046-2058`, on a live iterator. -/
+/-- `unpackiter_len`, `Modules/_struct.c:2211-2223`, on a live iterator. -/
 def unpackiterLen (s : SObj) (buf : List Nat) (index : Nat) : Nat :=
   (buf.length - index) / s.sSize
 
-/-- The `'s'` branch of `s_pack_internal`, `Modules/_struct.c:2184-2205`; the slot
+/-- The `'s'` branch of `s_pack_internal`, `Modules/_struct.c@3.14.7:2184-2205`; the slot
 `res` of `code.size` bytes comes in and goes out. -/
 def packS (code : Code) (v : SV) (res : List Nat) : Py (List Nat) :=
   let p? := match v with | .bytes b | .bytearray b => some b | _ => none
@@ -815,7 +815,7 @@ def packS (code : Code) (v : SV) (res : List Nat) : Py (List Nat) :=
     let n := if p.length > code.size then code.size else p.length
     .ok (p.take n ++ res.drop n)
 
-/-- The `'p'` branch, `Modules/_struct.c:2206-2234`: the count byte is written even for
+/-- The `'p'` branch, `Modules/_struct.c@3.14.7:2206-2234`: the count byte is written even for
 a zero-sized field, where it lands on the first byte after the field. -/
 def packP (code : Code) (v : SV) (res : List Nat) : Py (List Nat) :=
   let p? := match v with | .bytes b | .bytearray b => some b | _ => none
@@ -828,7 +828,7 @@ def packP (code : Code) (v : SV) (res : List Nat) : Py (List Nat) :=
     let cnt := if n > 255 then 255 else n
     .ok (body.set 0 cnt)
 
-/-- `e->pack` and the `OverflowError` rewrite of `Modules/_struct.c:2236-2241`. -/
+/-- `e->pack` and the `OverflowError` rewrite of `Modules/_struct.c:2402-2407`. -/
 def packCall (e : FormatDef) (v : SV) : Py (List Nat) :=
   match runPack e v, v with
   | .error (.overflowError _), .int _ => .error (structErr "int too large to convert")
@@ -866,7 +866,7 @@ def packRepeat (code : Code) : (j : Nat) → (off : Nat) → List Nat → List S
       let buf' ← packOne code buf off v
       packRepeat code j (off + code.size) buf' rest
 
-/-- `s_pack_internal`, `Modules/_struct.c:2167-2249`, working on the region starting at
+/-- `s_pack_internal`, `Modules/_struct.c:2331-2415`, working on the region starting at
 the offset inside `buf`. -/
 def sPackInternal (s : SObj) (buf : List Nat) (args : List SV) : Py (List Nat) := do
   let cleared := List.replicate s.sSize 0 ++ buf.drop s.sSize
@@ -874,7 +874,7 @@ def sPackInternal (s : SObj) (buf : List Nat) (args : List SV) : Py (List Nat) :
     packRepeat code code.repeat_ code.offset acc.1 acc.2
   return r.1
 
-/-- `s_pack`, `Modules/_struct.c:2259-2293`. -/
+/-- `s_pack`, `Modules/_struct.c:2430-2459`. -/
 def structPack (s : SObj) (args : List SV) : Py (List Nat) :=
   if args.length ≠ s.sLen then
     .error (structErr s!"pack expected {s.sLen} items for packing (got {args.length})")
@@ -890,7 +890,7 @@ def asSsizeIndex (n : Int) (ty : String := "int") : Py Int :=
     .error (.indexError s!"cannot fit '{ty}' into an index-sized integer")
   else .ok n
 
-/-- `s_pack_into`, `Modules/_struct.c:2304-2396`: the buffer afterwards. -/
+/-- `s_pack_into`, `Modules/_struct.c:2478-2539`: the buffer afterwards. -/
 def packIntoBody (s : SObj) (buffer : List Nat) (offset : Int) (args : List SV) :
     Py (List Nat) := do
   let len : Int := buffer.length
@@ -931,7 +931,7 @@ def readBuf : BufArg → Py (List Nat)
   | .notBuffer t => .error (.typeError s!"a bytes-like object is required, not '{t}'")
   | .raises _ e => .error e
 
-/-- `w*`, `Modules/_struct.c:2335`: any failure, a raising `__buffer__` too, is this `TypeError`. -/
+/-- `w*`, `Modules/_struct.c@3.14.7:2335`: any failure, a raising `__buffer__` too, is this `TypeError`. -/
 def writeBuf : BufArg → Py (List Nat)
   | .bytearray b => .ok b
   | .bytes _ => .error (.typeError "argument must be read-write bytes-like object, not bytes")
@@ -977,7 +977,7 @@ inductive PackIntoArgs where
   | full (b : BufArg) (off : OffArg) (args : List SV)
   deriving Inhabited
 
-/-- `s_pack_into`, `Modules/_struct.c:2304-2396`, with the `Struct` as it is once the offset has been
+/-- `s_pack_into`, `Modules/_struct.c:2478-2539`, with the `Struct` as it is once the offset has been
 converted. `nargs` is checked against the `s_len` from before that conversion, so a longer format
 installed by `__index__` makes `s_pack_internal` read past `args`. -/
 def structPackIntoA (s : SObj) : PackIntoArgs → Py (List Nat)
@@ -1004,7 +1004,7 @@ structure UIter where
   index : Nat := 0
   deriving Repr, DecidableEq, Inhabited
 
-/-- `Struct_iter_unpack_impl`, `Modules/_struct.c:2121-2154`. -/
+/-- `Struct_iter_unpack_impl`, `Modules/_struct.c:2285-2318`. -/
 def structIterUnpackA (s : SObj) (b : BufArg) : Py UIter :=
   if s.sSize = 0 then .error (structErr "cannot iteratively unpack with a struct of length 0")
   else
@@ -1015,7 +1015,7 @@ def structIterUnpackA (s : SObj) (b : BufArg) : Py UIter :=
         .error (structErr s!"iterative unpacking requires a buffer of a multiple of {s.sSize} bytes")
       else .ok { buf }
 
-/-- `unpackiter_iternext`, `Modules/_struct.c:2065-2086`: `none` is `StopIteration`. The bound on the
+/-- `unpackiter_iternext`, `Modules/_struct.c:2230-2251`: `none` is `StopIteration`. The bound on the
 read is only an `assert`, against the `s_size` of the moment, which `__init__` can have changed. -/
 def iterNextU (s : SObj) (it : UIter) : UIter × Py (Option (List SV)) :=
   if !it.live then (it, .ok none)
@@ -1026,7 +1026,7 @@ def iterNextU (s : SObj) (it : UIter) : UIter × Py (Option (List SV)) :=
     | .ok r => ({ it with index := it.index + s.sSize }, .ok (some r))
     | .error e => ({ it with index := it.index + s.sSize }, .error e)
 
-/-- `unpackiter_len`, `Modules/_struct.c:2046-2058`: `/ s_size` is undefined when it is `0`, which
+/-- `unpackiter_len`, `Modules/_struct.c:2211-2223`: `/ s_size` is undefined when it is `0`, which
 `__init__` can make it. -/
 def iterLenU (s : SObj) (it : UIter) : Py Nat :=
   if !it.live then .ok 0
@@ -1043,7 +1043,7 @@ def iterDrive (s : SObj) : (fuel : Nat) → UIter → Py (List (List SV))
     | (it', .ok (some r)) => do
       return r :: (← iterDrive s fuel it')
 
-/-- `s_sizeof`, `Modules/_struct.c:2417-2427` (`_PyObject_SIZE` is 56). -/
+/-- `s_sizeof`, `Modules/_struct.c:2545-2555` (`_PyObject_SIZE` is 56). -/
 def sSizeof (s : SObj) : Nat := 56 + 32 + 32 * s.codes.length
 
 /-- `repr` of one character of an accepted format: the only non-printable ones are the
@@ -1053,48 +1053,48 @@ def reprChar (c : Nat) : String :=
   else if c = 11 then "\\x0b" else if c = 12 then "\\x0c"
   else String.singleton (Char.ofNat c)
 
-/-- `s_repr`, `Modules/_struct.c:2429-2442`: `"%s(%R)"` of the type name and the format. -/
+/-- `s_repr`, `Modules/_struct.c:2557-2563`: `"%s(%R)"` of the type name and the format. -/
 def sRepr (s : SObj) : String :=
   "Struct('" ++ String.join (s.format.map reprChar) ++ "')"
 
-/-- `Struct.format`, `s_get_format`, `Modules/_struct.c:2398-2405`. -/
+/-- `Struct.format`, `s_get_format`, `Modules/_struct.c@3.14.7:2398-2405`. -/
 def sGetFormat (s : SObj) : List Nat := s.format
 
-/-- `s_new`, `Modules/_struct.c:1775-1793`: a `Struct` before `__init__` has no codes. -/
+/-- `s_new`, `Modules/_struct.c:1867-1951`: a `Struct` before `__init__` has no codes. -/
 def sNew : Option SObj := none
 
-/-- `ENSURE_STRUCT_IS_READY`, `Modules/_struct.c:1914-1921`. -/
+/-- `ENSURE_STRUCT_IS_READY`, `Modules/_struct.c:2083-2090`. -/
 def ensureReady (s : Option SObj) : Py SObj :=
   match s with
   | some s => .ok s
   | none => .error (.named "RuntimeError" "Struct object is not initialized")
 
-/-- `s_get_size`, `Modules/_struct.c:2407-2412`: `s_new` stores -1, and this getter is
+/-- `s_get_size`, `Modules/_struct.c@3.14.7:2407-2412`: `s_new` stores -1, and this getter is
 the one accessor without `ENSURE_STRUCT_IS_READY`. -/
 def sGetSize : Option SObj → Int
   | some s => s.sSize
   | none => -1
 
-/-- `calcsize_impl`, `Modules/_struct.c:2578-2583`. -/
+/-- `calcsize_impl`, `Modules/_struct.c:2689-2694`. -/
 def calcsize (f : FmtArg) : Py Nat := do return (← cacheStruct f).sSize
 
-/-- `pack`, `Modules/_struct.c:2591-2609`. -/
+/-- `pack`, `Modules/_struct.c@3.14.7:2591-2609`. -/
 def modPack (f : FmtArg) (args : List SV) : Py (List Nat) := do
   structPack (← cacheStruct f) args
 
-/-- `pack_into`, `Modules/_struct.c:2619-2637`. -/
+/-- `pack_into`, `Modules/_struct.c:2734-2742`. -/
 def modPackInto (f : FmtArg) (buf : List Nat) (off : Int) (args : List SV) : Py (List Nat) := do
   structPackInto (← cacheStruct f) buf off args
 
-/-- `unpack_impl`, `Modules/_struct.c:2653-2658`. -/
+/-- `unpack_impl`, `Modules/_struct.c:2758-2763`. -/
 def modUnpack (f : FmtArg) (buf : List Nat) : Py (List SV) := do
   structUnpack (← cacheStruct f) buf
 
-/-- `unpack_from_impl`, `Modules/_struct.c:2676-2682`. -/
+/-- `unpack_from_impl`, `Modules/_struct.c:2781-2787`. -/
 def modUnpackFrom (f : FmtArg) (buf : List Nat) (off : Int) : Py (List SV) := do
   structUnpackFrom (← cacheStruct f) buf off
 
-/-- `iter_unpack_impl`, `Modules/_struct.c:2699-2705`. -/
+/-- `iter_unpack_impl`, `Modules/_struct.c:2803-2809`. -/
 def modIterUnpack (f : FmtArg) (buf : List Nat) : Py (List (List SV)) := do
   structIterUnpack (← cacheStruct f) buf
 
@@ -1110,12 +1110,12 @@ def modUnpackFromA (f : FmtArg) (b : BufArg) (off : OffArg) : Py (List SV) := do
 def modIterUnpackA (f : FmtArg) (b : BufArg) : Py UIter := do
   structIterUnpackA (← cacheStruct f) b
 
-/-- `pack`, `Modules/_struct.c:2591-2609`: the format is the first of `*args`. -/
+/-- `pack`, `Modules/_struct.c@3.14.7:2591-2609`: the format is the first of `*args`. -/
 def modPackA : List SV → Option FmtArg → Py (List Nat)
   | _, none => .error (.typeError "missing format argument")
   | args, some f => do structPack (← cacheStruct f) args
 
-/-- `pack_into`, `Modules/_struct.c:2619-2637`. -/
+/-- `pack_into`, `Modules/_struct.c:2734-2742`. -/
 def modPackIntoA : PackIntoArgs → Option FmtArg → Py (List Nat)
   | _, none => .error (.typeError "missing format argument")
   | a, some f => do structPackIntoA (← cacheStruct f) a

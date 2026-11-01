@@ -1,7 +1,7 @@
 import PyLean.Accel.HeapifyLocalOrder
 
 /-!
-The concrete C cache-friendly order (`Modules/_heapqmodule.c:331-362`) is a
+The concrete C cache-friendly order (`Modules/_heapqmodule.c:332-363`) is a
 valid bottom-up order covering every internal node: with `Q = 2^q`,
 `2Q <= m + 1 < 4Q` (so `keep_top_bit(m + 1) = 2Q` and `leftmost = 2Q - 1`),
 loop 1 climbs from `[m/2, 2Q - 1)` and loop 2 from `[2Q - 1, m)`.

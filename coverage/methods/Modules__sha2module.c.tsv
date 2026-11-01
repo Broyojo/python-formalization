@@ -1,36 +1,35 @@
 file	line	endline	name	signature	status	entry	note
-Modules/sha2module.c	85	90	sha2_get_state	sha2_get_state(PyObject *module)	todo		
-Modules/sha2module.c	93	102	SHA256copy	SHA256copy(SHA256object *src, SHA256object *dest)	todo		
-Modules/sha2module.c	105	114	SHA512copy	SHA512copy(SHA512object *src, SHA512object *dest)	todo		
-Modules/sha2module.c	117	127	newSHA224object	newSHA224object(sha2_state *state)	todo		
-Modules/sha2module.c	130	140	newSHA256object	newSHA256object(sha2_state *state)	todo		
-Modules/sha2module.c	143	153	newSHA384object	newSHA384object(sha2_state *state)	todo		
-Modules/sha2module.c	156	166	newSHA512object	newSHA512object(sha2_state *state)	todo		
-Modules/sha2module.c	171	175	SHA2_traverse	SHA2_traverse(PyObject *ptr, visitproc visit, void *arg)	todo		
-Modules/sha2module.c	178	189	SHA256_dealloc	SHA256_dealloc(PyObject *op)	todo		
-Modules/sha2module.c	192	203	SHA512_dealloc	SHA512_dealloc(PyObject *op)	todo		
-Modules/sha2module.c	209	225	update_256	update_256(Hacl_Hash_SHA2_state_t_256 *state, uint8_t *buf, Py_ssize_t len)	todo		
-Modules/sha2module.c	228	244	update_512	update_512(Hacl_Hash_SHA2_state_t_512 *state, uint8_t *buf, Py_ssize_t len)	todo		
-Modules/sha2module.c	258	283	SHA256Type_copy_impl	SHA256Type_copy_impl(SHA256object *self, PyTypeObject *cls) /*[clinic end generated code: output=fabd515577805cd3 input=3137146fcb88e212]*/	todo		
-Modules/sha2module.c	294	320	SHA512Type_copy_impl	SHA512Type_copy_impl(SHA512object *self, PyTypeObject *cls) /*[clinic end generated code: output=66d2a8ef20de8302 input=f673a18f66527c90]*/	todo		
-Modules/sha2module.c	329	340	SHA256Type_digest_impl	SHA256Type_digest_impl(SHA256object *self) /*[clinic end generated code: output=3a2e3997a98ee792 input=f1f4cfea5cbde35c]*/	todo		
-Modules/sha2module.c	349	360	SHA512Type_digest_impl	SHA512Type_digest_impl(SHA512object *self) /*[clinic end generated code: output=dd8c6320070458e0 input=f6470dd359071f4b]*/	todo		
-Modules/sha2module.c	369	378	SHA256Type_hexdigest_impl	SHA256Type_hexdigest_impl(SHA256object *self) /*[clinic end generated code: output=96cb68996a780ab3 input=0cc4c714693010d1]*/	todo		
-Modules/sha2module.c	387	396	SHA512Type_hexdigest_impl	SHA512Type_hexdigest_impl(SHA512object *self) /*[clinic end generated code: output=cbd6f844aba1fe7c input=498b877b25cbe0a2]*/	todo		
-Modules/sha2module.c	408	430	SHA256Type_update_impl	SHA256Type_update_impl(SHA256object *self, PyObject *obj) /*[clinic end generated code: output=dc58a580cf8905a5 input=b2d449d5b30f0f5a]*/	todo		
-Modules/sha2module.c	442	464	SHA512Type_update_impl	SHA512Type_update_impl(SHA512object *self, PyObject *obj) /*[clinic end generated code: output=9af211766c0b7365 input=ded2b46656566283]*/	todo		
-Modules/sha2module.c	483	486	SHA256_get_block_size	SHA256_get_block_size(PyObject *Py_UNUSED(self), void *Py_UNUSED(closure))	todo		
-Modules/sha2module.c	489	492	SHA512_get_block_size	SHA512_get_block_size(PyObject *Py_UNUSED(self), void *Py_UNUSED(closure))	todo		
-Modules/sha2module.c	495	499	SHA256_get_digest_size	SHA256_get_digest_size(PyObject *op, void *Py_UNUSED(closure))	todo		
-Modules/sha2module.c	502	506	SHA512_get_digest_size	SHA512_get_digest_size(PyObject *op, void *Py_UNUSED(closure))	todo		
-Modules/sha2module.c	509	516	SHA256_get_name	SHA256_get_name(PyObject *op, void *Py_UNUSED(closure))	todo		
-Modules/sha2module.c	519	526	SHA512_get_name	SHA512_get_name(PyObject *op, void *Py_UNUSED(closure))	todo		
-Modules/sha2module.c	606	655	_sha2_sha256_impl	_sha2_sha256_impl(PyObject *module, PyObject *data, int usedforsecurity, PyObject *string_obj) /*[clinic end generated code: output=49828a7bcd418f45 input=9ce1d70e669abc14]*/	todo		
-Modules/sha2module.c	669	717	_sha2_sha224_impl	_sha2_sha224_impl(PyObject *module, PyObject *data, int usedforsecurity, PyObject *string_obj) /*[clinic end generated code: output=2163cb03b6cf6157 input=612f7682a889bc2a]*/	todo		
-Modules/sha2module.c	731	780	_sha2_sha512_impl	_sha2_sha512_impl(PyObject *module, PyObject *data, int usedforsecurity, PyObject *string_obj) /*[clinic end generated code: output=cc3fcfce001a4538 input=19c9f2c06d59563a]*/	todo		
-Modules/sha2module.c	794	843	_sha2_sha384_impl	_sha2_sha384_impl(PyObject *module, PyObject *data, int usedforsecurity, PyObject *string_obj) /*[clinic end generated code: output=b6e3db593b5a0330 input=9fd50c942ad9e0bf]*/	todo		
-Modules/sha2module.c	856	864	_sha2_traverse	_sha2_traverse(PyObject *module, visitproc visit, void *arg)	todo		
-Modules/sha2module.c	867	875	_sha2_clear	_sha2_clear(PyObject *module)	todo		
-Modules/sha2module.c	878	881	_sha2_free	_sha2_free(void *module)	todo		
-Modules/sha2module.c	884	930	sha2_exec	static int sha2_exec(PyObject *module)	todo		
-Modules/sha2module.c	951	954	PyInit__sha2	PyInit__sha2(void)	todo		
+Modules/sha2module.c	71	76	sha2_get_state	sha2_get_state(PyObject *module)	todo		
+Modules/sha2module.c	92	101	SHA256copy	SHA256copy(SHA256object *src, SHA256object *dest)	todo		
+Modules/sha2module.c	104	113	SHA512copy	SHA512copy(SHA512object *src, SHA512object *dest)	todo		
+Modules/sha2module.c	116	126	newSHA224object	newSHA224object(sha2_state *state)	todo		
+Modules/sha2module.c	129	139	newSHA256object	newSHA256object(sha2_state *state)	todo		
+Modules/sha2module.c	142	153	newSHA384object	newSHA384object(sha2_state *state)	todo		changed-in-3.15:
+Modules/sha2module.c	156	167	newSHA512object	newSHA512object(sha2_state *state)	todo		changed-in-3.15:
+Modules/sha2module.c	171	182	SHA256_dealloc	SHA256_dealloc(PyObject *op)	todo		changed-in-3.15:
+Modules/sha2module.c	185	196	SHA512_dealloc	SHA512_dealloc(PyObject *op)	todo		changed-in-3.15:
+Modules/sha2module.c	202	218	update_256	update_256(Hacl_Hash_SHA2_state_t_256 *state, uint8_t *buf, Py_ssize_t len)	todo		
+Modules/sha2module.c	221	237	update_512	update_512(Hacl_Hash_SHA2_state_t_512 *state, uint8_t *buf, Py_ssize_t len)	todo		
+Modules/sha2module.c	251	276	SHA256Type_copy_impl	SHA256Type_copy_impl(SHA256object *self, PyTypeObject *cls) /*[clinic end generated code: output=fabd515577805cd3 input=3137146fcb88e212]*/	todo		changed-in-3.15:
+Modules/sha2module.c	287	313	SHA512Type_copy_impl	SHA512Type_copy_impl(SHA512object *self, PyTypeObject *cls) /*[clinic end generated code: output=66d2a8ef20de8302 input=f673a18f66527c90]*/	todo		changed-in-3.15:
+Modules/sha2module.c	322	333	SHA256Type_digest_impl	SHA256Type_digest_impl(SHA256object *self) /*[clinic end generated code: output=3a2e3997a98ee792 input=f1f4cfea5cbde35c]*/	todo		changed-in-3.15:
+Modules/sha2module.c	342	353	SHA512Type_digest_impl	SHA512Type_digest_impl(SHA512object *self) /*[clinic end generated code: output=dd8c6320070458e0 input=f6470dd359071f4b]*/	todo		changed-in-3.15:
+Modules/sha2module.c	362	371	SHA256Type_hexdigest_impl	SHA256Type_hexdigest_impl(SHA256object *self) /*[clinic end generated code: output=96cb68996a780ab3 input=0cc4c714693010d1]*/	todo		changed-in-3.15:
+Modules/sha2module.c	380	389	SHA512Type_hexdigest_impl	SHA512Type_hexdigest_impl(SHA512object *self) /*[clinic end generated code: output=cbd6f844aba1fe7c input=498b877b25cbe0a2]*/	todo		changed-in-3.15:
+Modules/sha2module.c	401	412	SHA256Type_update_impl	SHA256Type_update_impl(SHA256object *self, PyObject *obj) /*[clinic end generated code: output=dc58a580cf8905a5 input=b2d449d5b30f0f5a]*/	todo		changed-in-3.15:
+Modules/sha2module.c	424	435	SHA512Type_update_impl	SHA512Type_update_impl(SHA512object *self, PyObject *obj) /*[clinic end generated code: output=9af211766c0b7365 input=ded2b46656566283]*/	todo		changed-in-3.15:
+Modules/sha2module.c	454	457	SHA256_get_block_size	SHA256_get_block_size(PyObject *Py_UNUSED(self), void *Py_UNUSED(closure))	todo		
+Modules/sha2module.c	460	463	SHA512_get_block_size	SHA512_get_block_size(PyObject *Py_UNUSED(self), void *Py_UNUSED(closure))	todo		
+Modules/sha2module.c	466	470	SHA256_get_digest_size	SHA256_get_digest_size(PyObject *op, void *Py_UNUSED(closure))	todo		
+Modules/sha2module.c	473	477	SHA512_get_digest_size	SHA512_get_digest_size(PyObject *op, void *Py_UNUSED(closure))	todo		
+Modules/sha2module.c	480	487	SHA256_get_name	SHA256_get_name(PyObject *op, void *Py_UNUSED(closure))	todo		
+Modules/sha2module.c	490	497	SHA512_get_name	SHA512_get_name(PyObject *op, void *Py_UNUSED(closure))	todo		
+Modules/sha2module.c	577	622	_sha2_sha256_impl	_sha2_sha256_impl(PyObject *module, PyObject *data, int usedforsecurity, PyObject *string_obj) /*[clinic end generated code: output=49828a7bcd418f45 input=9ce1d70e669abc14]*/	todo		changed-in-3.15:
+Modules/sha2module.c	636	680	_sha2_sha224_impl	_sha2_sha224_impl(PyObject *module, PyObject *data, int usedforsecurity, PyObject *string_obj) /*[clinic end generated code: output=2163cb03b6cf6157 input=612f7682a889bc2a]*/	todo		changed-in-3.15:
+Modules/sha2module.c	694	739	_sha2_sha512_impl	_sha2_sha512_impl(PyObject *module, PyObject *data, int usedforsecurity, PyObject *string_obj) /*[clinic end generated code: output=cc3fcfce001a4538 input=19c9f2c06d59563a]*/	todo		changed-in-3.15:
+Modules/sha2module.c	753	798	_sha2_sha384_impl	_sha2_sha384_impl(PyObject *module, PyObject *data, int usedforsecurity, PyObject *string_obj) /*[clinic end generated code: output=b6e3db593b5a0330 input=9fd50c942ad9e0bf]*/	todo		changed-in-3.15:
+Modules/sha2module.c	811	819	_sha2_traverse	_sha2_traverse(PyObject *module, visitproc visit, void *arg)	todo		
+Modules/sha2module.c	822	830	_sha2_clear	_sha2_clear(PyObject *module)	todo		
+Modules/sha2module.c	833	836	_sha2_free	_sha2_free(void *module)	todo		
+Modules/sha2module.c	839	885	sha2_exec	static int sha2_exec(PyObject *module)	todo		
+Modules/sha2module.c	907	910	PyInit__sha2	PyInit__sha2(void)	todo		

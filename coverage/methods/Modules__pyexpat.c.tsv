@@ -1,73 +1,74 @@
 file	line	endline	name	signature	status	entry	note
-Modules/pyexpat.c	65	70	pyexpat_get_state	pyexpat_get_state(PyObject *module)	todo		
-Modules/pyexpat.c	136	142	set_xml_error_attr_code	set_xml_error_attr_code(PyObject *err, enum XML_Error code)	todo		
-Modules/pyexpat.c	148	154	set_xml_error_attr_location	set_xml_error_attr_location(PyObject *err, const char *name, XML_Size value)	todo		
-Modules/pyexpat.c	158	188	set_xml_error	set_xml_error(pyexpat_state *state, enum XML_Error code, XML_Size lineno, XML_Size column, const char *errmsg)	todo		
-Modules/pyexpat.c	203	207	set_error	set_error(pyexpat_state *state, xmlparseobject *self, enum XML_Error code)	todo		
-Modules/pyexpat.c	210	214	set_invalid_arg	set_invalid_arg(pyexpat_state *state, xmlparseobject *self, const char *errmsg)	todo		
-Modules/pyexpat.c	219	223	have_handler	have_handler(xmlparseobject *self, int type)	todo		
-Modules/pyexpat.c	229	238	conv_string_to_unicode	conv_string_to_unicode(const XML_Char *str)	todo		
-Modules/pyexpat.c	241	244	conv_string_to_unicode_void	conv_string_to_unicode_void(void *arg)	todo		
-Modules/pyexpat.c	247	256	conv_string_len_to_unicode	conv_string_len_to_unicode(const XML_Char *str, int len)	todo		
-Modules/pyexpat.c	266	273	error_external_entity_ref_handler	error_external_entity_ref_handler(XML_Parser parser, const XML_Char *context, const XML_Char *base, const XML_Char *systemId, const XML_Char *publicId)	todo		
-Modules/pyexpat.c	282	285	noop_character_data_handler	noop_character_data_handler(void *userData, const XML_Char *data, int len)	todo		
-Modules/pyexpat.c	288	293	flag_error	flag_error(xmlparseobject *self)	todo		
-Modules/pyexpat.c	296	307	call_with_frame	call_with_frame(const char *funcname, int lineno, PyObject* func, PyObject* args, xmlparseobject *self)	todo		
-Modules/pyexpat.c	310	327	string_intern	string_intern(xmlparseobject *self, const char* str)	todo		
-Modules/pyexpat.c	333	368	call_character_handler	call_character_handler(xmlparseobject *self, const XML_Char *buffer, int len)	todo		
-Modules/pyexpat.c	371	379	flush_character_buffer	flush_character_buffer(xmlparseobject *self)	todo		
-Modules/pyexpat.c	382	411	my_CharacterDataHandler	my_CharacterDataHandler(void *userData, const XML_Char *data, int len)	todo		
-Modules/pyexpat.c	414	500	my_StartElementHandler	my_StartElementHandler(void *userData, const XML_Char *name, const XML_Char *atts[])	todo		
-Modules/pyexpat.c	604	633	conv_content_model	conv_content_model(XML_Content * const model, PyObject *(*conv_string)(void *))	todo		
-Modules/pyexpat.c	636	682	my_ElementDeclHandler	my_ElementDeclHandler(void *userData, const XML_Char *name, XML_Content *model)	todo		
-Modules/pyexpat.c	787	799	get_parse_result	get_parse_result(pyexpat_state *state, xmlparseobject *self, int rv)	todo		
-Modules/pyexpat.c	813	822	pyexpat_xmlparser_SetReparseDeferralEnabled_impl	pyexpat_xmlparser_SetReparseDeferralEnabled_impl(xmlparseobject *self, int enabled) /*[clinic end generated code: output=5ec539e3b63c8c49 input=021eb9e0bafc32c5]*/	todo		
-Modules/pyexpat.c	831	835	pyexpat_xmlparser_GetReparseDeferralEnabled_impl	pyexpat_xmlparser_GetReparseDeferralEnabled_impl(xmlparseobject *self) /*[clinic end generated code: output=4e91312e88a595a8 input=54b5f11d32b20f3e]*/	todo		
-Modules/pyexpat.c	851	894	pyexpat_xmlparser_Parse_impl	pyexpat_xmlparser_Parse_impl(xmlparseobject *self, PyTypeObject *cls, PyObject *data, int isfinal) /*[clinic end generated code: output=8faffe07fe1f862a input=053e0f047e55c05a]*/	todo		
-Modules/pyexpat.c	901	937	readinst	readinst(char *buf, int buf_size, PyObject *meth)	todo		
-Modules/pyexpat.c	950	991	pyexpat_xmlparser_ParseFile_impl	pyexpat_xmlparser_ParseFile_impl(xmlparseobject *self, PyTypeObject *cls, PyObject *file) /*[clinic end generated code: output=34780a094c8ca3ae input=ba4bc9c541684793]*/	todo		
-Modules/pyexpat.c	1003	1010	pyexpat_xmlparser_SetBase_impl	pyexpat_xmlparser_SetBase_impl(xmlparseobject *self, const char *base) /*[clinic end generated code: output=c212ddceb607b539 input=c684e5de895ee1a8]*/	todo		
-Modules/pyexpat.c	1019	1023	pyexpat_xmlparser_GetBase_impl	pyexpat_xmlparser_GetBase_impl(xmlparseobject *self) /*[clinic end generated code: output=2886cb21f9a8739a input=918d71c38009620e]*/	todo		
-Modules/pyexpat.c	1036	1052	pyexpat_xmlparser_GetInputContext_impl	pyexpat_xmlparser_GetInputContext_impl(xmlparseobject *self) /*[clinic end generated code: output=a88026d683fc22cc input=3ff7cb00783c8f98]*/	todo		
-Modules/pyexpat.c	1066	1135	pyexpat_xmlparser_ExternalEntityParserCreate_impl	pyexpat_xmlparser_ExternalEntityParserCreate_impl(xmlparseobject *self, PyTypeObject *cls, const char *context, const char *encoding) /*[clinic end generated code: output=01d4472b49cb3f92 input=ec70c6b9e6e9619a]*/	todo		
-Modules/pyexpat.c	1152	1157	pyexpat_xmlparser_SetParamEntityParsing_impl	pyexpat_xmlparser_SetParamEntityParsing_impl(xmlparseobject *self, int flag) /*[clinic end generated code: output=18668ee8e760d64c input=8aea19b4b15e9af1]*/	todo		
-Modules/pyexpat.c	1177	1189	pyexpat_xmlparser_UseForeignDTD_impl	pyexpat_xmlparser_UseForeignDTD_impl(xmlparseobject *self, PyTypeObject *cls, int flag) /*[clinic end generated code: output=d7d98252bd25a20f input=0387bce44fd53d99]*/	todo		
-Modules/pyexpat.c	1194	1208	set_activation_threshold	set_activation_threshold(xmlparseobject *self, PyTypeObject *cls, unsigned long long threshold, XML_Bool (*setter)(XML_Parser, unsigned long long))	todo		
-Modules/pyexpat.c	1211	1233	set_maximum_amplification	set_maximum_amplification(xmlparseobject *self, PyTypeObject *cls, float max_factor, XML_Bool (*setter)(XML_Parser, float))	todo		
-Modules/pyexpat.c	1257	1266	pyexpat_xmlparser_SetBillionLaughsAttackProtectionActivationThreshold_impl	pyexpat_xmlparser_SetBillionLaughsAttackProtectionActivationThreshold_impl(xmlparseobject *self, PyTypeObject *cls, unsigned long long threshold) /*[clinic end generated code: output=0c082342f1c78114 input=5a51695a481def92]*/	todo		
-Modules/pyexpat.c	1294	1303	pyexpat_xmlparser_SetBillionLaughsAttackProtectionMaximumAmplification_impl	pyexpat_xmlparser_SetBillionLaughsAttackProtectionMaximumAmplification_impl(xmlparseobject *self, PyTypeObject *cls, float max_factor) /*[clinic end generated code: output=c590439eadf463fa input=5de7c6dd7169b3b0]*/	todo		
-Modules/pyexpat.c	1321	1330	pyexpat_xmlparser_SetAllocTrackerActivationThreshold_impl	pyexpat_xmlparser_SetAllocTrackerActivationThreshold_impl(xmlparseobject *self, PyTypeObject *cls, unsigned long long threshold) /*[clinic end generated code: output=bed7e93207ba08c5 input=b74171709a77f2d9]*/	todo		
-Modules/pyexpat.c	1359	1368	pyexpat_xmlparser_SetAllocTrackerMaximumAmplification_impl	pyexpat_xmlparser_SetAllocTrackerMaximumAmplification_impl(xmlparseobject *self, PyTypeObject *cls, float max_factor) /*[clinic end generated code: output=6e44bd48c9b112a0 input=db40271991462073]*/	todo		
-Modules/pyexpat.c	1417	1458	PyUnknownEncodingHandler	PyUnknownEncodingHandler(void *encodingHandlerData, const XML_Char *name, XML_Encoding *info)	todo		
-Modules/pyexpat.c	1462	1521	newxmlparseobject	newxmlparseobject(pyexpat_state *state, const char *encoding, const char *namespace_separator, PyObject *intern)	todo		
-Modules/pyexpat.c	1524	1533	xmlparse_traverse	xmlparse_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/pyexpat.c	1536	1546	xmlparse_clear	xmlparse_clear(PyObject *op)	todo		
-Modules/pyexpat.c	1549	1571	xmlparse_dealloc	xmlparse_dealloc(PyObject *op)	todo		
-Modules/pyexpat.c	1575	1586	xmlparse_handler_getter	xmlparse_handler_getter(PyObject *op, void *closure)	todo		
-Modules/pyexpat.c	1589	1634	xmlparse_handler_setter	xmlparse_handler_setter(PyObject *op, PyObject *v, void *closure)	todo		
-Modules/pyexpat.c	1654	1658	xmlparse_buffer_text_getter	xmlparse_buffer_text_getter(PyObject *op, void *Py_UNUSED(closure))	todo		
-Modules/pyexpat.c	1661	1690	xmlparse_buffer_text_setter	xmlparse_buffer_text_setter(PyObject *op, PyObject *v, void *Py_UNUSED(closure))	todo		
-Modules/pyexpat.c	1693	1697	xmlparse_buffer_size_getter	xmlparse_buffer_size_getter(PyObject *op, void *Py_UNUSED(closure))	todo		
-Modules/pyexpat.c	1700	1749	xmlparse_buffer_size_setter	xmlparse_buffer_size_setter(PyObject *op, PyObject *v, void *Py_UNUSED(closure))	todo		
-Modules/pyexpat.c	1752	1756	xmlparse_buffer_used_getter	xmlparse_buffer_used_getter(PyObject *op, void *Py_UNUSED(closure))	todo		
-Modules/pyexpat.c	1759	1763	xmlparse_namespace_prefixes_getter	xmlparse_namespace_prefixes_getter(PyObject *op, void *Py_UNUSED(closure))	todo		
-Modules/pyexpat.c	1766	1780	xmlparse_namespace_prefixes_setter	xmlparse_namespace_prefixes_setter(PyObject *op, PyObject *v, void *Py_UNUSED(closure))	todo		
-Modules/pyexpat.c	1783	1787	xmlparse_ordered_attributes_getter	xmlparse_ordered_attributes_getter(PyObject *op, void *Py_UNUSED(closure))	todo		
-Modules/pyexpat.c	1790	1803	xmlparse_ordered_attributes_setter	xmlparse_ordered_attributes_setter(PyObject *op, PyObject *v, void *Py_UNUSED(closure))	todo		
-Modules/pyexpat.c	1806	1810	xmlparse_specified_attributes_getter	xmlparse_specified_attributes_getter(PyObject *op, void *Py_UNUSED(closure))	todo		
-Modules/pyexpat.c	1813	1826	xmlparse_specified_attributes_setter	xmlparse_specified_attributes_setter(PyObject *op, PyObject *v, void *Py_UNUSED(closure))	todo		
-Modules/pyexpat.c	1894	1929	pyexpat_ParserCreate_impl	pyexpat_ParserCreate_impl(PyObject *module, const char *encoding, const char *namespace_separator, PyObject *intern) /*[clinic end generated code: output=295c0cf01ab1146c input=e8da8e8d7122cb5d]*/	todo		
-Modules/pyexpat.c	1941	1945	pyexpat_ErrorString_impl	pyexpat_ErrorString_impl(PyObject *module, long code) /*[clinic end generated code: output=2feae50d166f2174 input=cc67de010d9e62b3]*/	todo		
-Modules/pyexpat.c	1966	1989	init_handler_descrs	static int init_handler_descrs(pyexpat_state *state)	todo		
-Modules/pyexpat.c	1992	2020	add_submodule	add_submodule(PyObject *mod, const char *fullname)	todo		
-Modules/pyexpat.c	2092	2142	add_error	add_error(PyObject *errors_module, PyObject *codes_dict, PyObject *rev_codes_dict, size_t error_index)	todo		
-Modules/pyexpat.c	2145	2194	add_errors_module	add_errors_module(PyObject *mod)	todo		
-Modules/pyexpat.c	2197	2229	add_model_module	add_model_module(PyObject *mod)	todo		
-Modules/pyexpat.c	2233	2258	add_features	add_features(PyObject *mod)	todo		
-Modules/pyexpat.c	2262	2271	pyexpat_capsule_destructor	pyexpat_capsule_destructor(PyObject *capsule)	todo		
-Modules/pyexpat.c	2275	2432	pyexpat_exec	pyexpat_exec(PyObject *mod)	todo		
-Modules/pyexpat.c	2435	2442	pyexpat_traverse	pyexpat_traverse(PyObject *module, visitproc visit, void *arg)	todo		
-Modules/pyexpat.c	2445	2452	pyexpat_clear	pyexpat_clear(PyObject *module)	todo		
-Modules/pyexpat.c	2455	2458	pyexpat_free	pyexpat_free(void *module)	todo		
-Modules/pyexpat.c	2480	2483	PyInit_pyexpat	PyInit_pyexpat(void)	todo		
-Modules/pyexpat.c	2486	2500	clear_handlers	clear_handlers(xmlparseobject *self, int initial)	todo		
+Modules/pyexpat.c	75	80	pyexpat_get_state	pyexpat_get_state(PyObject *module)	todo		
+Modules/pyexpat.c	148	154	set_xml_error_attr_code	set_xml_error_attr_code(PyObject *err, enum XML_Error code)	todo		
+Modules/pyexpat.c	160	167	set_xml_error_attr_location	set_xml_error_attr_location(PyObject *err, const char *name, unsigned long long value)	todo		changed-in-3.15:
+Modules/pyexpat.c	171	202	set_xml_error	set_xml_error(pyexpat_state *state, enum XML_Error code, unsigned long long lineno, unsigned long long column, const char *errmsg)	todo		changed-in-3.15:
+Modules/pyexpat.c	219	223	set_error	set_error(pyexpat_state *state, xmlparseobject *self, enum XML_Error code)	todo		
+Modules/pyexpat.c	227	231	set_invalid_arg	set_invalid_arg(pyexpat_state *state, xmlparseobject *self, const char *errmsg)	todo		
+Modules/pyexpat.c	237	241	have_handler	have_handler(xmlparseobject *self, int type)	todo		
+Modules/pyexpat.c	247	256	conv_string_to_unicode	conv_string_to_unicode(const XML_Char *str)	todo		
+Modules/pyexpat.c	259	262	conv_string_to_unicode_void	conv_string_to_unicode_void(void *arg)	todo		
+Modules/pyexpat.c	265	274	conv_string_len_to_unicode	conv_string_len_to_unicode(const XML_Char *str, int len)	todo		
+Modules/pyexpat.c	284	291	error_external_entity_ref_handler	error_external_entity_ref_handler(XML_Parser parser, const XML_Char *context, const XML_Char *base, const XML_Char *systemId, const XML_Char *publicId)	todo		
+Modules/pyexpat.c	300	303	noop_character_data_handler	noop_character_data_handler(void *userData, const XML_Char *data, int len)	todo		
+Modules/pyexpat.c	306	311	flag_error	flag_error(xmlparseobject *self)	todo		
+Modules/pyexpat.c	314	327	call_with_frame	call_with_frame(const char *funcname, int lineno, PyObject* func, PyObject* args, xmlparseobject *self)	todo		changed-in-3.15:
+Modules/pyexpat.c	330	347	string_intern	string_intern(xmlparseobject *self, const char* str)	todo		
+Modules/pyexpat.c	353	394	call_character_handler	call_character_handler(xmlparseobject *self, const XML_Char *buffer, int len)	todo		changed-in-3.15:
+Modules/pyexpat.c	397	406	flush_character_buffer	flush_character_buffer(xmlparseobject *self)	todo		changed-in-3.15:
+Modules/pyexpat.c	409	433	my_CharacterDataHandler	my_CharacterDataHandler(void *userData, const XML_Char *data, int len)	todo		changed-in-3.15:
+Modules/pyexpat.c	436	528	my_StartElementHandler	my_StartElementHandler(void *userData, const XML_Char *name, const XML_Char *atts[])	todo		changed-in-3.15:
+Modules/pyexpat.c	531	550	invalid_expat_handler_rv	invalid_expat_handler_rv(const char *name)	todo		changed-in-3.15: new function
+Modules/pyexpat.c	661	690	conv_content_model	conv_content_model(XML_Content * const model, PyObject *(*conv_string)(void *))	todo		
+Modules/pyexpat.c	693	742	my_ElementDeclHandler	my_ElementDeclHandler(void *userData, const XML_Char *name, XML_Content *model)	todo		changed-in-3.15:
+Modules/pyexpat.c	859	871	get_parse_result	get_parse_result(pyexpat_state *state, xmlparseobject *self, int rv)	todo		
+Modules/pyexpat.c	886	895	pyexpat_xmlparser_SetReparseDeferralEnabled_impl	pyexpat_xmlparser_SetReparseDeferralEnabled_impl(xmlparseobject *self, int enabled) /*[clinic end generated code: output=5ec539e3b63c8c49 input=6d3743500dcee799]*/	todo		
+Modules/pyexpat.c	905	909	pyexpat_xmlparser_GetReparseDeferralEnabled_impl	pyexpat_xmlparser_GetReparseDeferralEnabled_impl(xmlparseobject *self) /*[clinic end generated code: output=4e91312e88a595a8 input=ae02d7152ab9e2d0]*/	todo		
+Modules/pyexpat.c	927	973	pyexpat_xmlparser_Parse_impl	pyexpat_xmlparser_Parse_impl(xmlparseobject *self, PyTypeObject *cls, PyObject *data, int isfinal) /*[clinic end generated code: output=8faffe07fe1f862a input=f8f3ba4eadf837e5]*/	todo		changed-in-3.15:
+Modules/pyexpat.c	980	1016	readinst	readinst(char *buf, int buf_size, PyObject *meth)	todo		
+Modules/pyexpat.c	1031	1075	pyexpat_xmlparser_ParseFile_impl	pyexpat_xmlparser_ParseFile_impl(xmlparseobject *self, PyTypeObject *cls, PyObject *file) /*[clinic end generated code: output=34780a094c8ca3ae input=c96030cf5e4f577e]*/	todo		changed-in-3.15:
+Modules/pyexpat.c	1087	1094	pyexpat_xmlparser_SetBase_impl	pyexpat_xmlparser_SetBase_impl(xmlparseobject *self, const char *base) /*[clinic end generated code: output=c212ddceb607b539 input=c684e5de895ee1a8]*/	todo		
+Modules/pyexpat.c	1103	1107	pyexpat_xmlparser_GetBase_impl	pyexpat_xmlparser_GetBase_impl(xmlparseobject *self) /*[clinic end generated code: output=2886cb21f9a8739a input=918d71c38009620e]*/	todo		
+Modules/pyexpat.c	1122	1145	pyexpat_xmlparser_GetInputContext_impl	pyexpat_xmlparser_GetInputContext_impl(xmlparseobject *self) /*[clinic end generated code: output=a88026d683fc22cc input=2d605aaa9edbb415]*/	todo		changed-in-3.15:
+Modules/pyexpat.c	1160	1229	pyexpat_xmlparser_ExternalEntityParserCreate_impl	pyexpat_xmlparser_ExternalEntityParserCreate_impl(xmlparseobject *self, PyTypeObject *cls, const char *context, const char *encoding) /*[clinic end generated code: output=01d4472b49cb3f92 input=550479eaff952cc0]*/	todo		
+Modules/pyexpat.c	1247	1252	pyexpat_xmlparser_SetParamEntityParsing_impl	pyexpat_xmlparser_SetParamEntityParsing_impl(xmlparseobject *self, int flag) /*[clinic end generated code: output=18668ee8e760d64c input=1c43532fcb405879]*/	todo		
+Modules/pyexpat.c	1273	1285	pyexpat_xmlparser_UseForeignDTD_impl	pyexpat_xmlparser_UseForeignDTD_impl(xmlparseobject *self, PyTypeObject *cls, int flag) /*[clinic end generated code: output=d7d98252bd25a20f input=2920baa5bf24714d]*/	todo		
+Modules/pyexpat.c	1290	1304	set_activation_threshold	set_activation_threshold(xmlparseobject *self, PyTypeObject *cls, unsigned long long threshold, XML_Bool (*setter)(XML_Parser, unsigned long long))	todo		
+Modules/pyexpat.c	1307	1329	set_maximum_amplification	set_maximum_amplification(xmlparseobject *self, PyTypeObject *cls, float max_factor, XML_Bool (*setter)(XML_Parser, float))	todo		
+Modules/pyexpat.c	1355	1364	pyexpat_xmlparser_SetBillionLaughsAttackProtectionActivationThreshold_impl	pyexpat_xmlparser_SetBillionLaughsAttackProtectionActivationThreshold_impl(xmlparseobject *self, PyTypeObject *cls, unsigned long long threshold) /*[clinic end generated code: output=0c082342f1c78114 input=8d84b0e3a873cdba]*/	todo		
+Modules/pyexpat.c	1396	1405	pyexpat_xmlparser_SetBillionLaughsAttackProtectionMaximumAmplification_impl	pyexpat_xmlparser_SetBillionLaughsAttackProtectionMaximumAmplification_impl(xmlparseobject *self, PyTypeObject *cls, float max_factor) /*[clinic end generated code: output=c590439eadf463fa input=d0f11971c5b9e98b]*/	todo		
+Modules/pyexpat.c	1425	1434	pyexpat_xmlparser_SetAllocTrackerActivationThreshold_impl	pyexpat_xmlparser_SetAllocTrackerActivationThreshold_impl(xmlparseobject *self, PyTypeObject *cls, unsigned long long threshold) /*[clinic end generated code: output=bed7e93207ba08c5 input=4728360b545de87a]*/	todo		
+Modules/pyexpat.c	1465	1474	pyexpat_xmlparser_SetAllocTrackerMaximumAmplification_impl	pyexpat_xmlparser_SetAllocTrackerMaximumAmplification_impl(xmlparseobject *self, PyTypeObject *cls, float max_factor) /*[clinic end generated code: output=6e44bd48c9b112a0 input=dd23ea3ef2069b69]*/	todo		
+Modules/pyexpat.c	1523	1564	PyUnknownEncodingHandler	PyUnknownEncodingHandler(void *encodingHandlerData, const XML_Char *name, XML_Encoding *info)	todo		
+Modules/pyexpat.c	1568	1627	newxmlparseobject	newxmlparseobject(pyexpat_state *state, const char *encoding, const char *namespace_separator, PyObject *intern)	todo		
+Modules/pyexpat.c	1630	1639	xmlparse_traverse	xmlparse_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/pyexpat.c	1642	1652	xmlparse_clear	xmlparse_clear(PyObject *op)	todo		
+Modules/pyexpat.c	1655	1677	xmlparse_dealloc	xmlparse_dealloc(PyObject *op)	todo		
+Modules/pyexpat.c	1681	1692	xmlparse_handler_getter	xmlparse_handler_getter(PyObject *op, void *closure)	todo		
+Modules/pyexpat.c	1695	1740	xmlparse_handler_setter	xmlparse_handler_setter(PyObject *op, PyObject *v, void *closure)	todo		changed-in-3.15:
+Modules/pyexpat.c	1760	1764	xmlparse_buffer_text_getter	xmlparse_buffer_text_getter(PyObject *op, void *Py_UNUSED(closure))	todo		
+Modules/pyexpat.c	1767	1796	xmlparse_buffer_text_setter	xmlparse_buffer_text_setter(PyObject *op, PyObject *v, void *Py_UNUSED(closure))	todo		
+Modules/pyexpat.c	1799	1803	xmlparse_buffer_size_getter	xmlparse_buffer_size_getter(PyObject *op, void *Py_UNUSED(closure))	todo		
+Modules/pyexpat.c	1806	1855	xmlparse_buffer_size_setter	xmlparse_buffer_size_setter(PyObject *op, PyObject *v, void *Py_UNUSED(closure))	todo		
+Modules/pyexpat.c	1858	1862	xmlparse_buffer_used_getter	xmlparse_buffer_used_getter(PyObject *op, void *Py_UNUSED(closure))	todo		
+Modules/pyexpat.c	1865	1869	xmlparse_namespace_prefixes_getter	xmlparse_namespace_prefixes_getter(PyObject *op, void *Py_UNUSED(closure))	todo		
+Modules/pyexpat.c	1872	1886	xmlparse_namespace_prefixes_setter	xmlparse_namespace_prefixes_setter(PyObject *op, PyObject *v, void *Py_UNUSED(closure))	todo		
+Modules/pyexpat.c	1889	1893	xmlparse_ordered_attributes_getter	xmlparse_ordered_attributes_getter(PyObject *op, void *Py_UNUSED(closure))	todo		
+Modules/pyexpat.c	1896	1909	xmlparse_ordered_attributes_setter	xmlparse_ordered_attributes_setter(PyObject *op, PyObject *v, void *Py_UNUSED(closure))	todo		
+Modules/pyexpat.c	1912	1916	xmlparse_specified_attributes_getter	xmlparse_specified_attributes_getter(PyObject *op, void *Py_UNUSED(closure))	todo		
+Modules/pyexpat.c	1919	1932	xmlparse_specified_attributes_setter	xmlparse_specified_attributes_setter(PyObject *op, PyObject *v, void *Py_UNUSED(closure))	todo		
+Modules/pyexpat.c	2000	2035	pyexpat_ParserCreate_impl	pyexpat_ParserCreate_impl(PyObject *module, const char *encoding, const char *namespace_separator, PyObject *intern) /*[clinic end generated code: output=295c0cf01ab1146c input=e8da8e8d7122cb5d]*/	todo		
+Modules/pyexpat.c	2047	2051	pyexpat_ErrorString_impl	pyexpat_ErrorString_impl(PyObject *module, long code) /*[clinic end generated code: output=2feae50d166f2174 input=cc67de010d9e62b3]*/	todo		
+Modules/pyexpat.c	2072	2095	init_handler_descrs	static int init_handler_descrs(pyexpat_state *state)	todo		
+Modules/pyexpat.c	2098	2126	add_submodule	add_submodule(PyObject *mod, const char *fullname)	todo		
+Modules/pyexpat.c	2198	2248	add_error	add_error(PyObject *errors_module, PyObject *codes_dict, PyObject *rev_codes_dict, size_t error_index)	todo		
+Modules/pyexpat.c	2251	2300	add_errors_module	add_errors_module(PyObject *mod)	todo		
+Modules/pyexpat.c	2303	2335	add_model_module	add_model_module(PyObject *mod)	todo		
+Modules/pyexpat.c	2339	2364	add_features	add_features(PyObject *mod)	todo		
+Modules/pyexpat.c	2368	2377	pyexpat_capsule_destructor	pyexpat_capsule_destructor(PyObject *capsule)	todo		
+Modules/pyexpat.c	2381	2544	pyexpat_exec	pyexpat_exec(PyObject *mod)	todo		changed-in-3.15:
+Modules/pyexpat.c	2547	2554	pyexpat_traverse	pyexpat_traverse(PyObject *module, visitproc visit, void *arg)	todo		
+Modules/pyexpat.c	2557	2564	pyexpat_clear	pyexpat_clear(PyObject *module)	todo		
+Modules/pyexpat.c	2567	2570	pyexpat_free	pyexpat_free(void *module)	todo		
+Modules/pyexpat.c	2593	2596	PyInit_pyexpat	PyInit_pyexpat(void)	todo		
+Modules/pyexpat.c	2599	2613	clear_handlers	clear_handlers(xmlparseobject *self, int initial)	todo		

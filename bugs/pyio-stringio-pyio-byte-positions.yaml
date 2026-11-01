@@ -40,11 +40,11 @@ observed: |
   1: invalid start byte). REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
 promised_by: |
-  Doc/library/io.rst:1136-1138: "making it ready for an immediate write from the beginning or for
+  Doc/library/io.rst:1118-1120: "making it ready for an immediate write from the beginning or for
   a write that would overwrite the initial value".
 cause: |
-  Lib/_pyio.py:2724-2726 builds StringIO on a BytesIO with encoding='utf-8'; TextIOWrapper.write
-  (Lib/_pyio.py:2256-2278) writes encoded bytes at a byte position.
+  Lib/_pyio.py:2748-2750 builds StringIO on a BytesIO with encoding='utf-8'; TextIOWrapper.write
+  (Lib/_pyio.py:2280-2302) writes encoded bytes at a byte position.
 possible_fix: |
   Use a fixed-width encoding (UTF-32) for the buffer, as suggested in gh-69377, or a list-based
   buffer in a dedicated _pyio.StringIO.

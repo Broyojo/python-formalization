@@ -1,18 +1,18 @@
 file	line	endline	name	signature	status	entry	note
-Python/traceback.c	81	99	tb_create_raw	tb_create_raw(PyTracebackObject *next, PyFrameObject *frame, int lasti, int lineno)	todo		
-Python/traceback.c	114	128	tb_new_impl	tb_new_impl(PyTypeObject *type, PyObject *tb_next, PyFrameObject *tb_frame, int tb_lasti, int tb_lineno) /*[clinic end generated code: output=fa077debd72d861a input=b88143145454cb59]*/	todo		
-Python/traceback.c	131	135	tb_dir	tb_dir(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(ignored))	todo		
-Python/traceback.c	144	152	traceback_tb_next_get_impl	traceback_tb_next_get_impl(PyTracebackObject *self) /*[clinic end generated code: output=963634df7d5fc837 input=8f6345f2b73cb965]*/	todo		
-Python/traceback.c	155	161	tb_get_lineno	tb_get_lineno(PyObject *op)	todo		
-Python/traceback.c	164	175	tb_lineno_get	tb_lineno_get(PyObject *op, void *Py_UNUSED(_))	todo		
-Python/traceback.c	184	221	traceback_tb_next_set_impl	traceback_tb_next_set_impl(PyTracebackObject *self, PyObject *value) /*[clinic end generated code: output=d4868cbc48f2adac input=ce66367f85e3c443]*/	todo		
+Python/traceback.c	80	98	tb_create_raw	tb_create_raw(PyTracebackObject *next, PyFrameObject *frame, int lasti, int lineno)	todo		
+Python/traceback.c	113	127	tb_new_impl	tb_new_impl(PyTypeObject *type, PyObject *tb_next, PyFrameObject *tb_frame, int tb_lasti, int tb_lineno) /*[clinic end generated code: output=fa077debd72d861a input=b88143145454cb59]*/	todo		
+Python/traceback.c	130	134	tb_dir	tb_dir(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(ignored))	todo		
+Python/traceback.c	143	151	traceback_tb_next_get_impl	traceback_tb_next_get_impl(PyTracebackObject *self) /*[clinic end generated code: output=963634df7d5fc837 input=8f6345f2b73cb965]*/	todo		
+Python/traceback.c	154	160	tb_get_lineno	tb_get_lineno(PyObject *op)	todo		
+Python/traceback.c	163	174	tb_lineno_get	tb_lineno_get(PyObject *op, void *Py_UNUSED(_))	todo		
+Python/traceback.c	184	221	traceback_tb_next_set_impl	traceback_tb_next_set_impl(PyTracebackObject *self, PyObject *value) /*[clinic end generated code: output=d4868cbc48f2adac input=936201ff689c5700]*/	todo		
 Python/traceback.c	242	249	tb_dealloc	tb_dealloc(PyObject *op)	todo		
 Python/traceback.c	252	258	tb_traverse	tb_traverse(PyObject *op, visitproc visit, void *arg)	todo		
 Python/traceback.c	261	267	tb_clear	tb_clear(PyObject *op)	todo		
 Python/traceback.c	312	318	_PyTraceBack_FromFrame	_PyTraceBack_FromFrame(PyObject *tb_next, PyFrameObject *frame)	todo		
 Python/traceback.c	322	337	PyTraceBack_Here	PyTraceBack_Here(PyFrameObject *frame)	todo		
 Python/traceback.c	340	374	_PyTraceback_Add	void _PyTraceback_Add(const char *funcname, const char *filename, int lineno)	todo		
-Python/traceback.c	377	464	_Py_FindSourceFile	_Py_FindSourceFile(PyObject *filename, char* namebuf, size_t namelen, PyObject *io)	todo		
+Python/traceback.c	377	464	_Py_FindSourceFile	_Py_FindSourceFile(PyObject *filename, char* namebuf, size_t namelen, PyObject *io)	todo		changed-in-3.15:
 Python/traceback.c	469	483	_Py_WriteIndent	_Py_WriteIndent(int indent, PyObject *f)	todo		
 Python/traceback.c	486	634	display_source_line	display_source_line(PyObject *f, PyObject *filename, int lineno, int indent, int *truncation, PyObject **line)	todo		
 Python/traceback.c	637	641	_Py_DisplaySourceLine	_Py_DisplaySourceLine(PyObject *f, PyObject *filename, int lineno, int indent, int *truncation, PyObject **line)	todo		
@@ -20,7 +20,7 @@ Python/traceback.c	648	656	ignore_source_errors	ignore_source_errors(void) {	tod
 Python/traceback.c	659	691	tb_displayline	tb_displayline(PyTracebackObject* tb, PyObject *f, PyObject *filename, int lineno, PyFrameObject *frame, PyObject *name)	todo		
 Python/traceback.c	696	710	tb_print_line_repeated	tb_print_line_repeated(PyObject *f, long cnt)	todo		
 Python/traceback.c	713	773	tb_printinternal	tb_printinternal(PyTracebackObject *tb, PyObject *f, long limit)	todo		
-Python/traceback.c	778	815	_PyTraceBack_Print	_PyTraceBack_Print(PyObject *v, const char *header, PyObject *f)	todo		
+Python/traceback.c	778	815	_PyTraceBack_Print	_PyTraceBack_Print(PyObject *v, const char *header, PyObject *f)	todo		changed-in-3.15:
 Python/traceback.c	818	822	PyTraceBack_Print	PyTraceBack_Print(PyObject *v, PyObject *f)	todo		
 Python/traceback.c	830	849	_Py_DumpDecimal	_Py_DumpDecimal(int fd, size_t value)	todo		
 Python/traceback.c	854	882	dump_hexadecimal	dump_hexadecimal(int fd, uintptr_t value, Py_ssize_t width, int strip_zeros)	todo		
@@ -33,12 +33,12 @@ Python/traceback.c	1040	1090	dump_frame	dump_frame(int fd, _PyInterpreterFrame *
 Python/traceback.c	1093	1105	tstate_is_freed	tstate_is_freed(PyThreadState *tstate)	todo		
 Python/traceback.c	1109	1112	interp_is_freed	interp_is_freed(PyInterpreterState *interp)	todo		
 Python/traceback.c	1116	1163	dump_traceback	dump_traceback(int fd, PyThreadState *tstate, int write_header)	todo		
-Python/traceback.c	1172	1175	_Py_DumpTraceback	_Py_DumpTraceback(int fd, PyThreadState *tstate)	todo		
-Python/traceback.c	1191	1235	write_thread_name	write_thread_name(int fd, PyThreadState *tstate)	todo		
-Python/traceback.c	1244	1259	write_thread_id	write_thread_id(int fd, PyThreadState *tstate, int is_current)	todo		
-Python/traceback.c	1268	1342	_Py_DumpTracebackThreads	_Py_DumpTracebackThreads(int fd, PyInterpreterState *interp, PyThreadState *current_tstate)	todo		
-Python/traceback.c	1347	1417	_Py_backtrace_symbols_fd	_Py_backtrace_symbols_fd(int fd, void *const *array, Py_ssize_t size)	todo		
-Python/traceback.c	1420	1438	_Py_DumpStack	_Py_DumpStack(int fd)	todo		
-Python/traceback.c	1441	1445	_Py_DumpStack	_Py_DumpStack(int fd)	todo		
-Python/traceback.c	1449	1456	_Py_InitDumpStack	_Py_InitDumpStack(void)	todo		
-Python/traceback.c	1460	1473	_Py_DumpTraceback_Init	_Py_DumpTraceback_Init(void)	todo		
+Python/traceback.c	1172	1176	PyUnstable_DumpTraceback	PyUnstable_DumpTraceback(int fd, PyThreadState *tstate)	todo		changed-in-3.15: new function
+Python/traceback.c	1192	1236	write_thread_name	write_thread_name(int fd, PyThreadState *tstate)	todo		
+Python/traceback.c	1245	1260	write_thread_id	write_thread_id(int fd, PyThreadState *tstate, int is_current)	todo		
+Python/traceback.c	1269	1348	PyUnstable_DumpTracebackThreads	PyUnstable_DumpTracebackThreads(int fd, PyInterpreterState *interp, PyThreadState *current_tstate, Py_ssize_t max_threads)	todo		changed-in-3.15: new function
+Python/traceback.c	1353	1423	_Py_backtrace_symbols_fd	_Py_backtrace_symbols_fd(int fd, void *const *array, Py_ssize_t size)	todo		
+Python/traceback.c	1426	1444	_Py_DumpStack	_Py_DumpStack(int fd)	todo		
+Python/traceback.c	1447	1451	_Py_DumpStack	_Py_DumpStack(int fd)	todo		
+Python/traceback.c	1455	1462	_Py_InitDumpStack	_Py_InitDumpStack(void)	todo		
+Python/traceback.c	1466	1479	_Py_DumpTraceback_Init	_Py_DumpTraceback_Init(void)	todo		

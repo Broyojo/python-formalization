@@ -15,78 +15,78 @@ Python/errors.c	293	301	_PyErr_SetString	_PyErr_SetString(PyThreadState *tstate,
 Python/errors.c	304	308	PyErr_SetString	PyErr_SetString(PyObject *exception, const char *string)	todo		
 Python/errors.c	311	318	_PyErr_SetLocaleString	_PyErr_SetLocaleString(PyObject *exception, const char *string)	todo		
 Python/errors.c	321	328	PyErr_Occurred	PyErr_Occurred(void)	todo		
-Python/errors.c	332	360	PyErr_GivenExceptionMatches	PyErr_GivenExceptionMatches(PyObject *err, PyObject *exc)	todo		
-Python/errors.c	364	367	_PyErr_ExceptionMatches	_PyErr_ExceptionMatches(PyThreadState *tstate, PyObject *exc)	todo		
-Python/errors.c	371	375	PyErr_ExceptionMatches	PyErr_ExceptionMatches(PyObject *exc)	todo		
-Python/errors.c	389	488	_PyErr_NormalizeException	_PyErr_NormalizeException(PyThreadState *tstate, PyObject **exc, PyObject **val, PyObject **tb)	todo		
-Python/errors.c	492	496	PyErr_NormalizeException	PyErr_NormalizeException(PyObject **exc, PyObject **val, PyObject **tb)	todo		
-Python/errors.c	500	504	_PyErr_GetRaisedException	_PyErr_GetRaisedException(PyThreadState *tstate) {	todo		
-Python/errors.c	507	511	PyErr_GetRaisedException	PyErr_GetRaisedException(void)	todo		
-Python/errors.c	514	527	_PyErr_Fetch	_PyErr_Fetch(PyThreadState *tstate, PyObject **p_type, PyObject **p_value, PyObject **p_traceback)	todo		
-Python/errors.c	531	535	PyErr_Fetch	PyErr_Fetch(PyObject **p_type, PyObject **p_value, PyObject **p_traceback)	todo		
-Python/errors.c	539	542	_PyErr_Clear	_PyErr_Clear(PyThreadState *tstate)	todo		
-Python/errors.c	546	550	PyErr_Clear	PyErr_Clear(void)	todo		
-Python/errors.c	553	564	get_exc_type	get_exc_type(PyObject *exc_value) /* returns a strong ref */	todo		
-Python/errors.c	567	577	get_exc_traceback	get_exc_traceback(PyObject *exc_value) /* returns a strong ref */	todo		
-Python/errors.c	580	588	_PyErr_GetExcInfo	_PyErr_GetExcInfo(PyThreadState *tstate, PyObject **p_type, PyObject **p_value, PyObject **p_traceback)	todo		
-Python/errors.c	591	599	_PyErr_GetHandledException	_PyErr_GetHandledException(PyThreadState *tstate)	todo		
-Python/errors.c	602	606	PyErr_GetHandledException	PyErr_GetHandledException(void)	todo		
-Python/errors.c	609	612	_PyErr_SetHandledException	_PyErr_SetHandledException(PyThreadState *tstate, PyObject *exc)	todo		
-Python/errors.c	615	619	PyErr_SetHandledException	PyErr_SetHandledException(PyObject *exc)	todo		
-Python/errors.c	622	626	PyErr_GetExcInfo	PyErr_GetExcInfo(PyObject **p_type, PyObject **p_value, PyObject **p_traceback)	todo		
-Python/errors.c	629	636	PyErr_SetExcInfo	PyErr_SetExcInfo(PyObject *type, PyObject *value, PyObject *traceback)	todo		
-Python/errors.c	640	661	_PyErr_StackItemToExcInfoTuple	_PyErr_StackItemToExcInfoTuple(_PyErr_StackItem *err_info)	todo		
-Python/errors.c	670	699	_PyErr_ChainExceptions	_PyErr_ChainExceptions(PyObject *typ, PyObject *val, PyObject *tb)	todo		
-Python/errors.c	707	720	_PyErr_ChainExceptions1Tstate	_PyErr_ChainExceptions1Tstate(PyThreadState *tstate, PyObject *exc)	todo		
-Python/errors.c	723	727	_PyErr_ChainExceptions1	_PyErr_ChainExceptions1(PyObject *exc)	todo		
-Python/errors.c	736	751	_PyErr_ChainStackItem	_PyErr_ChainStackItem(void)	todo		
-Python/errors.c	754	767	_PyErr_FormatVFromCause	_PyErr_FormatVFromCause(PyThreadState *tstate, PyObject *exception, const char *format, va_list vargs)	todo		
-Python/errors.c	770	778	_PyErr_FormatFromCauseTstate	_PyErr_FormatFromCauseTstate(PyThreadState *tstate, PyObject *exception, const char *format, ...)	todo		
-Python/errors.c	781	789	_PyErr_FormatFromCause	_PyErr_FormatFromCause(PyObject *exception, const char *format, ...)	todo		
-Python/errors.c	794	800	PyErr_BadArgument	PyErr_BadArgument(void)	todo		
-Python/errors.c	803	807	PyErr_NoMemory	PyErr_NoMemory(void)	todo		
-Python/errors.c	810	813	PyErr_SetFromErrnoWithFilenameObject	PyErr_SetFromErrnoWithFilenameObject(PyObject *exc, PyObject *filenameObject)	todo		
-Python/errors.c	816	912	PyErr_SetFromErrnoWithFilenameObjects	PyErr_SetFromErrnoWithFilenameObjects(PyObject *exc, PyObject *filenameObject, PyObject *filenameObject2)	todo		
-Python/errors.c	915	929	PyErr_SetFromErrnoWithFilename	PyErr_SetFromErrnoWithFilename(PyObject *exc, const char *filename)	todo		
-Python/errors.c	932	935	PyErr_SetFromErrno	PyErr_SetFromErrno(PyObject *exc)	todo		
-Python/errors.c	939	946	PyErr_SetExcFromWindowsErrWithFilenameObject	PyObject *PyErr_SetExcFromWindowsErrWithFilenameObject( PyObject *exc, int ierr, PyObject *filenameObject)	todo		
-Python/errors.c	948	1015	PyErr_SetExcFromWindowsErrWithFilenameObjects	PyObject *PyErr_SetExcFromWindowsErrWithFilenameObjects( PyObject *exc, int ierr, PyObject *filenameObject, PyObject *filenameObject2)	todo		
-Python/errors.c	1017	1038	PyErr_SetExcFromWindowsErrWithFilename	PyObject *PyErr_SetExcFromWindowsErrWithFilename( PyObject *exc, int ierr, const char *filename)	todo		
-Python/errors.c	1040	1043	PyErr_SetExcFromWindowsErr	PyObject *PyErr_SetExcFromWindowsErr(PyObject *exc, int ierr)	todo		
-Python/errors.c	1045	1049	PyErr_SetFromWindowsErr	PyObject *PyErr_SetFromWindowsErr(int ierr)	todo		
-Python/errors.c	1051	1070	PyErr_SetFromWindowsErrWithFilename	PyObject *PyErr_SetFromWindowsErrWithFilename( int ierr, const char *filename)	todo		
-Python/errors.c	1075	1126	new_importerror	new_importerror( PyThreadState *tstate, PyObject *exctype, PyObject *msg, PyObject *name, PyObject *path, PyObject* from_name)	todo		
-Python/errors.c	1129	1141	_PyErr_SetImportErrorSubclassWithNameFrom	_PyErr_SetImportErrorSubclassWithNameFrom( PyObject *exception, PyObject *msg, PyObject *name, PyObject *path, PyObject* from_name)	todo		
-Python/errors.c	1145	1149	PyErr_SetImportErrorSubclass	PyErr_SetImportErrorSubclass(PyObject *exception, PyObject *msg, PyObject *name, PyObject *path)	todo		
-Python/errors.c	1152	1155	_PyErr_SetImportErrorWithNameFrom	_PyErr_SetImportErrorWithNameFrom(PyObject *msg, PyObject *name, PyObject *path, PyObject* from_name)	todo		
-Python/errors.c	1158	1161	PyErr_SetImportError	PyErr_SetImportError(PyObject *msg, PyObject *name, PyObject *path)	todo		
-Python/errors.c	1164	1184	_PyErr_SetModuleNotFoundError	_PyErr_SetModuleNotFoundError(PyObject *name)	todo		
-Python/errors.c	1187	1193	_PyErr_BadInternalCall	_PyErr_BadInternalCall(const char *filename, int lineno)	todo		
-Python/errors.c	1199	1205	PyErr_BadInternalCall	PyErr_BadInternalCall(void)	todo		
-Python/errors.c	1210	1225	_PyErr_FormatV	_PyErr_FormatV(PyThreadState *tstate, PyObject *exception, const char *format, va_list vargs)	todo		
-Python/errors.c	1229	1233	PyErr_FormatV	PyErr_FormatV(PyObject *exception, const char *format, va_list vargs)	todo		
-Python/errors.c	1237	1245	_PyErr_Format	_PyErr_Format(PyThreadState *tstate, PyObject *exception, const char *format, ...)	todo		
-Python/errors.c	1249	1257	PyErr_Format	PyErr_Format(PyObject *exception, const char *format, ...)	todo		
-Python/errors.c	1262	1284	_PyErr_FormatNote	_PyErr_FormatNote(const char *format, ...)	todo		
-Python/errors.c	1288	1338	PyErr_NewException	PyErr_NewException(const char *name, PyObject *base, PyObject *dict)	todo		
-Python/errors.c	1343	1372	PyErr_NewExceptionWithDoc	PyErr_NewExceptionWithDoc(const char *name, const char *doc, PyObject *base, PyObject *dict)	todo		
-Python/errors.c	1400	1408	_PyErr_InitTypes	_PyErr_InitTypes(PyInterpreterState *interp)	todo		
-Python/errors.c	1412	1415	_PyErr_FiniTypes	_PyErr_FiniTypes(PyInterpreterState *interp)	todo		
-Python/errors.c	1419	1450	make_unraisable_hook_args	make_unraisable_hook_args(PyThreadState *tstate, PyObject *exc_type, PyObject *exc_value, PyObject *exc_tb, PyObject *err_msg, PyObject *obj)	todo		
-Python/errors.c	1460	1574	write_unraisable_exc_file	write_unraisable_exc_file(PyThreadState *tstate, PyObject *exc_type, PyObject *exc_value, PyObject *exc_tb, PyObject *err_msg, PyObject *obj, PyObject *file)	todo		
-Python/errors.c	1578	1596	write_unraisable_exc	write_unraisable_exc(PyThreadState *tstate, PyObject *exc_type, PyObject *exc_value, PyObject *exc_tb, PyObject *err_msg, PyObject *obj)	todo		
-Python/errors.c	1600	1622	_PyErr_WriteUnraisableDefaultHook	_PyErr_WriteUnraisableDefaultHook(PyObject *args)	todo		
-Python/errors.c	1638	1745	format_unraisable_v	format_unraisable_v(const char *format, va_list va, PyObject *obj)	todo		
-Python/errors.c	1748	1755	PyErr_FormatUnraisable	PyErr_FormatUnraisable(const char *format, ...)	todo		
-Python/errors.c	1758	1765	format_unraisable	format_unraisable(PyObject *obj, const char *format, ...)	todo		
-Python/errors.c	1768	1771	PyErr_WriteUnraisable	PyErr_WriteUnraisable(PyObject *obj)	todo		
-Python/errors.c	1775	1778	PyErr_SyntaxLocation	PyErr_SyntaxLocation(const char *filename, int lineno)	todo		
-Python/errors.c	1786	1887	PyErr_SyntaxLocationObjectEx	PyErr_SyntaxLocationObjectEx(PyObject *filename, int lineno, int col_offset, int end_lineno, int end_col_offset)	todo		
-Python/errors.c	1890	1892	PyErr_SyntaxLocationObject	PyErr_SyntaxLocationObject(PyObject *filename, int lineno, int col_offset) {	todo		
-Python/errors.c	1901	1916	PyErr_SyntaxLocationEx	PyErr_SyntaxLocationEx(const char *filename, int lineno, int col_offset)	todo		
-Python/errors.c	1922	1939	_PyErr_RaiseSyntaxError	_PyErr_RaiseSyntaxError(PyObject *msg, PyObject *filename, int lineno, int col_offset, int end_lineno, int end_col_offset)	todo		
-Python/errors.c	1946	1962	_PyErr_EmitSyntaxWarning	_PyErr_EmitSyntaxWarning(PyObject *msg, PyObject *filename, int lineno, int col_offset, int end_lineno, int end_col_offset)	todo		
-Python/errors.c	1971	2009	err_programtext	err_programtext(FILE *fp, int lineno, const char* encoding)	todo		
-Python/errors.c	2012	2026	PyErr_ProgramText	PyErr_ProgramText(const char *filename, int lineno)	todo		
-Python/errors.c	2032	2063	_PyErr_ProgramDecodedTextObject	_PyErr_ProgramDecodedTextObject(PyObject *filename, int lineno, const char* encoding)	todo		
-Python/errors.c	2066	2069	PyErr_ProgramTextObject	PyErr_ProgramTextObject(PyObject *filename, int lineno)	todo		
+Python/errors.c	332	370	PyErr_GivenExceptionMatches	PyErr_GivenExceptionMatches(PyObject *err, PyObject *exc)	todo		changed-in-3.15:
+Python/errors.c	374	377	_PyErr_ExceptionMatches	_PyErr_ExceptionMatches(PyThreadState *tstate, PyObject *exc)	todo		
+Python/errors.c	381	385	PyErr_ExceptionMatches	PyErr_ExceptionMatches(PyObject *exc)	todo		
+Python/errors.c	399	498	_PyErr_NormalizeException	_PyErr_NormalizeException(PyThreadState *tstate, PyObject **exc, PyObject **val, PyObject **tb)	todo		
+Python/errors.c	502	506	PyErr_NormalizeException	PyErr_NormalizeException(PyObject **exc, PyObject **val, PyObject **tb)	todo		
+Python/errors.c	510	514	_PyErr_GetRaisedException	_PyErr_GetRaisedException(PyThreadState *tstate) {	todo		
+Python/errors.c	517	521	PyErr_GetRaisedException	PyErr_GetRaisedException(void)	todo		
+Python/errors.c	524	537	_PyErr_Fetch	_PyErr_Fetch(PyThreadState *tstate, PyObject **p_type, PyObject **p_value, PyObject **p_traceback)	todo		
+Python/errors.c	541	545	PyErr_Fetch	PyErr_Fetch(PyObject **p_type, PyObject **p_value, PyObject **p_traceback)	todo		
+Python/errors.c	549	552	_PyErr_Clear	_PyErr_Clear(PyThreadState *tstate)	todo		
+Python/errors.c	556	560	PyErr_Clear	PyErr_Clear(void)	todo		
+Python/errors.c	563	574	get_exc_type	get_exc_type(PyObject *exc_value) /* returns a strong ref */	todo		
+Python/errors.c	577	587	get_exc_traceback	get_exc_traceback(PyObject *exc_value) /* returns a strong ref */	todo		
+Python/errors.c	590	598	_PyErr_GetExcInfo	_PyErr_GetExcInfo(PyThreadState *tstate, PyObject **p_type, PyObject **p_value, PyObject **p_traceback)	todo		
+Python/errors.c	601	609	_PyErr_GetHandledException	_PyErr_GetHandledException(PyThreadState *tstate)	todo		
+Python/errors.c	612	616	PyErr_GetHandledException	PyErr_GetHandledException(void)	todo		
+Python/errors.c	619	622	_PyErr_SetHandledException	_PyErr_SetHandledException(PyThreadState *tstate, PyObject *exc)	todo		
+Python/errors.c	625	629	PyErr_SetHandledException	PyErr_SetHandledException(PyObject *exc)	todo		
+Python/errors.c	632	636	PyErr_GetExcInfo	PyErr_GetExcInfo(PyObject **p_type, PyObject **p_value, PyObject **p_traceback)	todo		
+Python/errors.c	639	646	PyErr_SetExcInfo	PyErr_SetExcInfo(PyObject *type, PyObject *value, PyObject *traceback)	todo		
+Python/errors.c	650	671	_PyErr_StackItemToExcInfoTuple	_PyErr_StackItemToExcInfoTuple(_PyErr_StackItem *err_info)	todo		
+Python/errors.c	680	709	_PyErr_ChainExceptions	_PyErr_ChainExceptions(PyObject *typ, PyObject *val, PyObject *tb)	todo		
+Python/errors.c	717	730	_PyErr_ChainExceptions1Tstate	_PyErr_ChainExceptions1Tstate(PyThreadState *tstate, PyObject *exc)	todo		
+Python/errors.c	733	737	_PyErr_ChainExceptions1	_PyErr_ChainExceptions1(PyObject *exc)	todo		
+Python/errors.c	746	761	_PyErr_ChainStackItem	_PyErr_ChainStackItem(void)	todo		
+Python/errors.c	764	777	_PyErr_FormatVFromCause	_PyErr_FormatVFromCause(PyThreadState *tstate, PyObject *exception, const char *format, va_list vargs)	todo		
+Python/errors.c	780	788	_PyErr_FormatFromCauseTstate	_PyErr_FormatFromCauseTstate(PyThreadState *tstate, PyObject *exception, const char *format, ...)	todo		
+Python/errors.c	791	799	_PyErr_FormatFromCause	_PyErr_FormatFromCause(PyObject *exception, const char *format, ...)	todo		
+Python/errors.c	804	810	PyErr_BadArgument	PyErr_BadArgument(void)	todo		
+Python/errors.c	813	817	PyErr_NoMemory	PyErr_NoMemory(void)	todo		
+Python/errors.c	820	823	PyErr_SetFromErrnoWithFilenameObject	PyErr_SetFromErrnoWithFilenameObject(PyObject *exc, PyObject *filenameObject)	todo		
+Python/errors.c	826	921	PyErr_SetFromErrnoWithFilenameObjects	PyErr_SetFromErrnoWithFilenameObjects(PyObject *exc, PyObject *filenameObject, PyObject *filenameObject2)	todo		changed-in-3.15:
+Python/errors.c	924	938	PyErr_SetFromErrnoWithFilename	PyErr_SetFromErrnoWithFilename(PyObject *exc, const char *filename)	todo		
+Python/errors.c	941	944	PyErr_SetFromErrno	PyErr_SetFromErrno(PyObject *exc)	todo		
+Python/errors.c	948	955	PyErr_SetExcFromWindowsErrWithFilenameObject	PyObject *PyErr_SetExcFromWindowsErrWithFilenameObject( PyObject *exc, int ierr, PyObject *filenameObject)	todo		
+Python/errors.c	957	1024	PyErr_SetExcFromWindowsErrWithFilenameObjects	PyObject *PyErr_SetExcFromWindowsErrWithFilenameObjects( PyObject *exc, int ierr, PyObject *filenameObject, PyObject *filenameObject2)	todo		
+Python/errors.c	1026	1047	PyErr_SetExcFromWindowsErrWithFilename	PyObject *PyErr_SetExcFromWindowsErrWithFilename( PyObject *exc, int ierr, const char *filename)	todo		
+Python/errors.c	1049	1052	PyErr_SetExcFromWindowsErr	PyObject *PyErr_SetExcFromWindowsErr(PyObject *exc, int ierr)	todo		
+Python/errors.c	1054	1058	PyErr_SetFromWindowsErr	PyObject *PyErr_SetFromWindowsErr(int ierr)	todo		
+Python/errors.c	1060	1079	PyErr_SetFromWindowsErrWithFilename	PyObject *PyErr_SetFromWindowsErrWithFilename( int ierr, const char *filename)	todo		
+Python/errors.c	1084	1135	new_importerror	new_importerror( PyThreadState *tstate, PyObject *exctype, PyObject *msg, PyObject *name, PyObject *path, PyObject* from_name)	todo		
+Python/errors.c	1138	1150	_PyErr_SetImportErrorSubclassWithNameFrom	_PyErr_SetImportErrorSubclassWithNameFrom( PyObject *exception, PyObject *msg, PyObject *name, PyObject *path, PyObject* from_name)	todo		
+Python/errors.c	1154	1158	PyErr_SetImportErrorSubclass	PyErr_SetImportErrorSubclass(PyObject *exception, PyObject *msg, PyObject *name, PyObject *path)	todo		
+Python/errors.c	1161	1164	_PyErr_SetImportErrorWithNameFrom	_PyErr_SetImportErrorWithNameFrom(PyObject *msg, PyObject *name, PyObject *path, PyObject* from_name)	todo		
+Python/errors.c	1167	1170	PyErr_SetImportError	PyErr_SetImportError(PyObject *msg, PyObject *name, PyObject *path)	todo		
+Python/errors.c	1173	1193	_PyErr_SetModuleNotFoundError	_PyErr_SetModuleNotFoundError(PyObject *name)	todo		
+Python/errors.c	1196	1202	_PyErr_BadInternalCall	_PyErr_BadInternalCall(const char *filename, int lineno)	todo		
+Python/errors.c	1208	1214	PyErr_BadInternalCall	PyErr_BadInternalCall(void)	todo		
+Python/errors.c	1219	1234	_PyErr_FormatV	_PyErr_FormatV(PyThreadState *tstate, PyObject *exception, const char *format, va_list vargs)	todo		
+Python/errors.c	1238	1242	PyErr_FormatV	PyErr_FormatV(PyObject *exception, const char *format, va_list vargs)	todo		
+Python/errors.c	1246	1254	_PyErr_Format	_PyErr_Format(PyThreadState *tstate, PyObject *exception, const char *format, ...)	todo		
+Python/errors.c	1258	1266	PyErr_Format	PyErr_Format(PyObject *exception, const char *format, ...)	todo		
+Python/errors.c	1271	1293	_PyErr_FormatNote	_PyErr_FormatNote(const char *format, ...)	todo		
+Python/errors.c	1297	1347	PyErr_NewException	PyErr_NewException(const char *name, PyObject *base, PyObject *dict)	todo		
+Python/errors.c	1352	1381	PyErr_NewExceptionWithDoc	PyErr_NewExceptionWithDoc(const char *name, const char *doc, PyObject *base, PyObject *dict)	todo		
+Python/errors.c	1409	1417	_PyErr_InitTypes	_PyErr_InitTypes(PyInterpreterState *interp)	todo		
+Python/errors.c	1421	1424	_PyErr_FiniTypes	_PyErr_FiniTypes(PyInterpreterState *interp)	todo		
+Python/errors.c	1428	1459	make_unraisable_hook_args	make_unraisable_hook_args(PyThreadState *tstate, PyObject *exc_type, PyObject *exc_value, PyObject *exc_tb, PyObject *err_msg, PyObject *obj)	todo		
+Python/errors.c	1470	1608	write_unraisable_exc_file	write_unraisable_exc_file(PyThreadState *tstate, PyObject *exc_type, PyObject *exc_value, PyObject *exc_tb, PyObject *err_msg, PyObject *obj, PyObject *file)	todo		changed-in-3.15:
+Python/errors.c	1612	1630	write_unraisable_exc	write_unraisable_exc(PyThreadState *tstate, PyObject *exc_type, PyObject *exc_value, PyObject *exc_tb, PyObject *err_msg, PyObject *obj)	todo		changed-in-3.15:
+Python/errors.c	1634	1656	_PyErr_WriteUnraisableDefaultHook	_PyErr_WriteUnraisableDefaultHook(PyObject *args)	todo		
+Python/errors.c	1672	1779	format_unraisable_v	format_unraisable_v(const char *format, va_list va, PyObject *obj)	todo		changed-in-3.15:
+Python/errors.c	1782	1789	PyErr_FormatUnraisable	PyErr_FormatUnraisable(const char *format, ...)	todo		
+Python/errors.c	1792	1799	format_unraisable	format_unraisable(PyObject *obj, const char *format, ...)	todo		
+Python/errors.c	1802	1805	PyErr_WriteUnraisable	PyErr_WriteUnraisable(PyObject *obj)	todo		
+Python/errors.c	1809	1812	PyErr_SyntaxLocation	PyErr_SyntaxLocation(const char *filename, int lineno)	todo		
+Python/errors.c	1820	1921	PyErr_SyntaxLocationObjectEx	PyErr_SyntaxLocationObjectEx(PyObject *filename, int lineno, int col_offset, int end_lineno, int end_col_offset)	todo		
+Python/errors.c	1924	1926	PyErr_SyntaxLocationObject	PyErr_SyntaxLocationObject(PyObject *filename, int lineno, int col_offset) {	todo		
+Python/errors.c	1935	1950	PyErr_SyntaxLocationEx	PyErr_SyntaxLocationEx(const char *filename, int lineno, int col_offset)	todo		
+Python/errors.c	1956	1973	_PyErr_RaiseSyntaxError	_PyErr_RaiseSyntaxError(PyObject *msg, PyObject *filename, int lineno, int col_offset, int end_lineno, int end_col_offset)	todo		
+Python/errors.c	1980	1997	_PyErr_EmitSyntaxWarning	_PyErr_EmitSyntaxWarning(PyObject *msg, PyObject *filename, int lineno, int col_offset, int end_lineno, int end_col_offset, PyObject *module)	todo		changed-in-3.15:
+Python/errors.c	2006	2044	err_programtext	err_programtext(FILE *fp, int lineno, const char* encoding)	todo		
+Python/errors.c	2047	2061	PyErr_ProgramText	PyErr_ProgramText(const char *filename, int lineno)	todo		
+Python/errors.c	2067	2098	_PyErr_ProgramDecodedTextObject	_PyErr_ProgramDecodedTextObject(PyObject *filename, int lineno, const char* encoding)	todo		
+Python/errors.c	2101	2104	PyErr_ProgramTextObject	PyErr_ProgramTextObject(PyObject *filename, int lineno)	todo		

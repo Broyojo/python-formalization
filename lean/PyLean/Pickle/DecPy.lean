@@ -1,8 +1,8 @@
 import PyLean.Pickle.Obj
 
 /-!
-`_Unpickler` (`Lib/pickle.py:1244-1858`) reading from `io.BytesIO(data)`
-(`_loads`, `:1878-1884`), with `encoding='ASCII'`, `errors='strict'`, no
+`_Unpickler` (`Lib/pickle.py:1270-1889`) reading from `io.BytesIO(data)`
+(`_loads`, `:1909-1915`), with `encoding='ASCII'`, `errors='strict'`, no
 `buffers`, and `find_class` restricted to the five globals the picklers emit
 (`Obj.findGlob`). Opcodes that run code or are out of scope (persistent ids,
 floats, `INST`/`OBJ`/`NEWOBJ*`, `BUILD`, `EXT*`, out-of-band buffers) raise the
@@ -14,7 +14,7 @@ namespace PyLean.Pickle
 open PyLean
 
 /-- `bytes.decode` escape processing of `codecs.escape_decode`
-(`_PyBytes_DecodeEscape2`, `Objects/bytesobject.c:1081-1191`), strict. `pos`
+(`_PyBytes_DecodeEscape2`, `Objects/bytesobject.c:1170-1276`), strict. `pos`
 is the offset of the current byte in the original data. -/
 def escapeDecode (pos : Nat) : Bytes → Py Bytes
   | [] => .ok []
@@ -100,7 +100,7 @@ def fileReadline : PyM Bytes := do
   set { s with pos := s.pos + line.length }
   return line
 
-/-- `_Unframer.read` (`Lib/pickle.py:280-291`). -/
+/-- `_Unframer.read` (`Lib/pickle.py@3.14.7:280-291`). -/
 def pyRead (n : Nat) : PyM Bytes := do
   let s ← get
   match s.frame with
@@ -114,7 +114,7 @@ def pyRead (n : Nat) : PyM Bytes := do
     else return data
   | Option.none => fileRead n
 
-/-- `_Unframer.readline` (`Lib/pickle.py:293-304`). -/
+/-- `_Unframer.readline` (`Lib/pickle.py:297-308`). -/
 def pyReadline : PyM Bytes := do
   let s ← get
   match s.frame with
@@ -132,7 +132,7 @@ def pyReadline : PyM Bytes := do
   | Option.none => fileReadline
 
 /-- `_Unframer.readinto(buf)` with `len(buf) = n`, returning the new buffer
-contents (`buf[:] = ...` may shorten it) (`Lib/pickle.py:263-278`). -/
+contents (`buf[:] = ...` may shorten it) (`Lib/pickle.py:267-282`). -/
 def pyReadinto (n : Nat) : PyM Bytes := do
   let s ← get
   match s.frame with
@@ -161,7 +161,7 @@ def pyTop : PyM DV := do
   | v :: _ => return v
   | [] => pyThrow (.indexError "list index out of range")
 
-/-- `pop_mark` (`Lib/pickle.py:1325-1329`): the items in push order. -/
+/-- `pop_mark` (`Lib/pickle.py:1351-1355`): the items in push order. -/
 def pyPopMark : PyM (List DV) := do
   let s ← get
   match s.metastack with
@@ -201,15 +201,15 @@ def memoPutPy (i : Int) (v : DV) : PyM Unit := modify fun s =>
 /-- Python's error for an unknown opcode byte: `KeyError(key[0])`. -/
 def pyKeyError (c : UInt8) : PyExc := .keyError (toString c.toNat)
 
-/-! ## Opcode handlers (`Lib/pickle.py:1336-1858`) -/
+/-! ## Opcode handlers (`Lib/pickle.py:1362-1889`) -/
 
-/-- `load_proto`, :1336-1341. -/
+/-- `load_proto`, :1362-1367. -/
 def pyLoadProto : PyM Unit := do
   let p ← pyRead1
   if p ≤ 5 then modify fun s => { s with proto := p }
   else pyThrow (.valueError s!"unsupported pickle protocol: {p}")
 
-/-- The tail of `load_frame` once the size is read: `_Unframer.load_frame`, :306-310. -/
+/-- The tail of `load_frame` once the size is read: `_Unframer.load_frame`, @3.14.7:306-310. -/
 def pyStartFrame (size : Nat) : PyM Unit := do
   let s ← get
   match s.frame with
@@ -223,7 +223,7 @@ def pyStartFrame (size : Nat) : PyM Unit := do
     let data ← fileRead size
     modify fun s => { s with frame := some (data, 0) }
 
-/-- `load_frame`, :1343-1347. -/
+/-- `load_frame`, :1369-1373. -/
 def pyLoadFrame : PyM Unit := do
   let size := leNat (← pyUnpack 8)
   if size > ssizeMaxN then pyThrow (.valueError s!"frame size > sys.maxsize: {size}")
@@ -233,7 +233,7 @@ def pyLoadNone : PyM Unit := push .none
 def pyLoadFalse : PyM Unit := push (.bool false)
 def pyLoadTrue : PyM Unit := push (.bool true)
 
-/-- `load_int`, :1376-1385. -/
+/-- `load_int`, :1402-1411. -/
 def pyLoadInt : PyM Unit := do
   match ← pyLift (pyLoadIntLine (← pyReadline)) with
   | .int v => push (.int v)
@@ -244,12 +244,12 @@ def pyLoadBinint1 : PyM Unit := do push (.int (← pyRead1))
 def pyLoadBinint2 : PyM Unit := do push (.int (leNat (← pyUnpack 2)))
 def pyLoadLong : PyM Unit := do push (.int (← pyLift (pyLoadLongLine (← pyReadline))))
 
-/-- `load_long1`, :1406-1410. -/
+/-- `load_long1`, :1432-1436. -/
 def pyLoadLong1 : PyM Unit := do
   let n ← pyRead1
   push (.int (decodeLong (← pyRead n)))
 
-/-- `load_long4`, :1412-1419. -/
+/-- `load_long4`, :1438-1445. -/
 def pyLoadLong4 : PyM Unit := do
   let n := leInt (← pyUnpack 4)
   if n < 0 then pyThrow (unpicklingError "LONG pickle has negative byte count")
@@ -260,14 +260,14 @@ def quotedString (data : Bytes) : Prop :=
 
 instance (data : Bytes) : Decidable (quotedString data) := by unfold quotedString; exact inferInstance
 
-/-- `load_string`, :1438-1446. -/
+/-- `load_string`, :1464-1472. -/
 def pyLoadString : PyM Unit := do
   let data := (← pyReadline).dropLast
   if quotedString data then
     push (← pyLift (decodeString (← pyLift (escapeDecode 0 ((data.drop 1).dropLast)))))
   else pyThrow (unpicklingError "the STRING opcode argument must be quoted")
 
-/-- `load_binstring`, :1448-1455. -/
+/-- `load_binstring`, :1474-1481. -/
 def pyLoadBinstring : PyM Unit := do
   let n := leInt (← pyUnpack 4)
   if n < 0 then pyThrow (unpicklingError "BINSTRING pickle has negative byte count")
@@ -285,13 +285,13 @@ def pyLoadShortBinbytes : PyM Unit := do
   let n ← pyRead1
   push (.bytes (← pyRead n))
 
-/-- `load_binbytes8`, :1485-1491. -/
+/-- `load_binbytes8`, :1511-1517. -/
 def pyLoadBinbytes8 : PyM Unit := do
   let n := leNat (← pyUnpack 8)
   if n > ssizeMaxN then pyThrow (unpicklingError s!"BINBYTES8 exceeds system's maximum size of {ssizeMaxN} bytes")
   else push (.bytes (← pyRead n))
 
-/-- `load_bytearray8`, :1493-1501. -/
+/-- `load_bytearray8`, :1519-1532. -/
 def pyLoadBytearray8 : PyM Unit := do
   let n := leNat (← pyUnpack 8)
   if n > ssizeMaxN then pyThrow (unpicklingError s!"BYTEARRAY8 exceeds system's maximum size of {ssizeMaxN} bytes")
@@ -309,7 +309,7 @@ def pyLoadShortBinunicode : PyM Unit := do
   let n ← pyRead1
   push (.str (← pyLift (decodeUtf8SP (← pyRead n))))
 
-/-- `load_binunicode8`, :1477-1483. -/
+/-- `load_binunicode8`, :1503-1509. -/
 def pyLoadBinunicode8 : PyM Unit := do
   let n := leNat (← pyUnpack 8)
   if n > ssizeMaxN then pyThrow (unpicklingError s!"BINUNICODE8 exceeds system's maximum size of {ssizeMaxN} bytes")
@@ -318,7 +318,7 @@ def pyLoadBinunicode8 : PyM Unit := do
 def pyLoadTuple : PyM Unit := do push (.tuple (← pyPopMark))
 def pyLoadEmptyTuple : PyM Unit := push (.tuple [])
 
-/-- `load_tuple1`, :1546-1548: `self.stack[-1] = (self.stack[-1],)`. -/
+/-- `load_tuple1`, :1577-1579: `self.stack[-1] = (self.stack[-1],)`. -/
 def pyLoadTuple1 : PyM Unit := do
   let s ← get
   match s.stack with
@@ -341,35 +341,35 @@ def pyLoadEmptyList : PyM Unit := do push (← pyAlloc (.list []))
 def pyLoadEmptyDict : PyM Unit := do push (← pyAlloc (.dict []))
 def pyLoadEmptySet : PyM Unit := do push (← pyAlloc (.set []))
 
-/-- `load_frozenset`, :1570-1573. -/
+/-- `load_frozenset`, :1601-1604. -/
 def pyLoadFrozenset : PyM Unit := do
   let items ← pyPopMark
   push (← pyLift (mkFrozenset (← get).heap items))
 
-/-- `load_list`, :1575-1578. -/
+/-- `load_list`, :1606-1609. -/
 def pyLoadList : PyM Unit := do
   let items ← pyPopMark
   push (← pyAlloc (.list items))
 
-/-- The dict comprehension of `load_dict`, :1583-1584. -/
+/-- The dict comprehension of `load_dict`, :1614-1615. -/
 def dictBuild (h : Heap) (acc : List (DV × DV)) : List DV → Py (List (DV × DV))
   | [] => .ok acc
   | [_] => .error (.indexError "list index out of range")
   | k :: v :: r => do dictBuild h (← dictSet h acc k v) r
 
-/-- `load_dict`, :1580-1585. -/
+/-- `load_dict`, :1611-1616. -/
 def pyLoadDict : PyM Unit := do
   let items ← pyPopMark
   let kvs ← pyLift (dictBuild (← get).heap [] items)
   push (← pyAlloc (.dict kvs))
 
-/-- `load_append`, :1772-1776. -/
+/-- `load_append`, :1803-1807. -/
 def pyLoadAppend : PyM Unit := do
   let value ← pyPop
   let lst ← pyTop
   setHeap (← pyLift (appendTo (← get).heap lst value))
 
-/-- The `extend`, falling back on `append`, of `load_appends`, :1782-1795. -/
+/-- The `extend`, falling back on `append`, of `load_appends`, :1813-1826. -/
 def pyExtendItems (lst : DV) (items : List DV) : PyM Unit := do
   let h := (← get).heap
   if hasExtend h lst then setHeap (← pyLift (extendObj h lst items))
@@ -378,32 +378,32 @@ def pyExtendItems (lst : DV) (items : List DV) : PyM Unit := do
     | .glob _ => pyThrow (excluded "global as APPENDS target")
     | _ => pyThrow (attributeError s!"'{lst.typeName h}' object has no attribute 'append'")
 
-/-- `load_appends`, :1779-1795. -/
+/-- `load_appends`, :1810-1826. -/
 def pyLoadAppends : PyM Unit := do
   let items ← pyPopMark
   let lst ← pyTop
   pyExtendItems lst items
 
-/-- `load_setitem`, :1797-1803. -/
+/-- `load_setitem`, :1828-1834. -/
 def pyLoadSetitem : PyM Unit := do
   let value ← pyPop
   let key ← pyPop
   let d ← pyTop
   setHeap (← pyLift (setItem (← get).heap d key value))
 
-/-- The loop of `load_setitems`, :1808-1809. -/
+/-- The loop of `load_setitems`, :1839-1840. -/
 def setitemsGo (d : DV) (h : Heap) : List DV → Py Heap
   | [] => .ok h
   | [_] => .error (.indexError "list index out of range")
   | k :: v :: r => do setitemsGo d (← setItem h d k v) r
 
-/-- `load_setitems`, :1805-1809. -/
+/-- `load_setitems`, :1836-1840. -/
 def pyLoadSetitems : PyM Unit := do
   let items ← pyPopMark
   let d ← pyTop
   setHeap (← pyLift (setitemsGo d (← get).heap items))
 
-/-- `load_additems`, :1812-1820. -/
+/-- `load_additems`, :1843-1851. -/
 def pyLoadAdditems : PyM Unit := do
   let items ← pyPopMark
   let so ← pyTop
@@ -411,14 +411,14 @@ def pyLoadAdditems : PyM Unit := do
   if isSetRef h so then setHeap (← pyLift (setUpdate h so items))
   else pyThrow (noAdd h so)
 
-/-- `load_pop`, :1704-1709. -/
+/-- `load_pop`, :1735-1740. -/
 def pyLoadPop : PyM Unit := do
   if (← get).stack ≠ [] then discard pyPop else discard pyPopMark
 
 def pyLoadPopMark : PyM Unit := do discard pyPopMark
 def pyLoadDup : PyM Unit := do push (← pyTop)
 
-/-- `load_get`, :1719-1726. -/
+/-- `load_get`, :1750-1757. -/
 def pyLoadGet : PyM Unit := do
   let i ← pyLift (pyIntOfBytes (← pyReadline).dropLast)
   discard (memoGetPy i)
@@ -426,7 +426,7 @@ def pyLoadGet : PyM Unit := do
 def pyLoadBinget : PyM Unit := do discard (memoGetPy (← pyRead1))
 def pyLoadLongBinget : PyM Unit := do discard (memoGetPy (leNat (← pyUnpack 4)))
 
-/-- `load_put`, :1746-1751. -/
+/-- `load_put`, :1777-1782. -/
 def pyLoadPut : PyM Unit := do
   let i ← pyLift (pyIntOfBytes (← pyReadline).dropLast)
   if i < 0 then pyThrow (.valueError "negative PUT argument")
@@ -440,12 +440,12 @@ def pyLoadLongBinput : PyM Unit := do
   let i := leNat (← pyUnpack 4)
   memoPutPy i (← pyTop)
 
-/-- `load_memoize`, :1767-1769: the value is evaluated first. -/
+/-- `load_memoize`, :1798-1800: the value is evaluated first. -/
 def pyLoadMemoize : PyM Unit := do
   let v ← pyTop
   memoPutPy (← get).memo.length v
 
-/-- `load_mark`, :1847-1851. -/
+/-- `load_mark`, :1878-1882. -/
 def pyLoadMark : PyM Unit :=
   modify fun s => { s with metastack := s.stack :: s.metastack, stack := [] }
 
@@ -454,7 +454,7 @@ def utf8Name (b : Bytes) : Py (List Nat) :=
   | some s => .ok s
   | Option.none => .error unicodeDecodeError
 
-/-- `load_global`, :1633-1638 (names decoded as UTF-8). -/
+/-- `load_global`, :1664-1669 (names decoded as UTF-8). -/
 def pyLoadGlobal : PyM Unit := do
   let m := (← pyReadline).dropLast
   let n := (← pyReadline).dropLast
@@ -462,7 +462,7 @@ def pyLoadGlobal : PyM Unit := do
   let n ← pyLift (utf8Name n)
   push (.glob (← pyLift (findGlob (← get).proto m n)))
 
-/-- `load_stack_global`, :1640-1646. -/
+/-- `load_stack_global`, :1671-1677. -/
 def pyLoadStackGlobal : PyM Unit := do
   let name ← pyPop
   let module ← pyPop
@@ -470,7 +470,7 @@ def pyLoadStackGlobal : PyM Unit := do
   | .str m, .str n => push (.glob (← pyLift (findGlob (← get).proto m n)))
   | _, _ => pyThrow (unpicklingError "STACK_GLOBAL requires str")
 
-/-- `load_reduce`, :1697-1702. -/
+/-- `load_reduce`, :1728-1733. -/
 def pyLoadReduce : PyM Unit := do
   let args ← pyPop
   let func ← pyTop
@@ -502,8 +502,8 @@ def pyTable : List (UInt8 × PyM Unit) := [
 def excludedOps : List UInt8 := [oFLOAT, oBINFLOAT, oPERSID, oBINPERSID, oINST, oOBJ, oNEWOBJ, oNEWOBJ_EX,
   oBUILD, oEXT1, oEXT2, oEXT4, oNEXT_BUFFER, oREADONLY_BUFFER]
 
-/-- One opcode of `_Unpickler.load` (`Lib/pickle.py:1294-1323`); `some v` on
-`STOP` (`load_stop`, :1853-1855). -/
+/-- One opcode of `_Unpickler.load` (`Lib/pickle.py:1320-1349`); `some v` on
+`STOP` (`load_stop`, :1884-1886). -/
 def pyStep (op : UInt8) : PyM (Option DV) :=
   if op == oSTOP then do return some (← pyPop)
   else match pyTable.lookup op with

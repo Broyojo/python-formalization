@@ -18,7 +18,7 @@ def bufferedEntries : List Entry := [
     source := "invariant: C accelerator vs pure-Python twin"
     status := .refuted, prop := ``BufferedReaderReadintoTwins, thm := some ``bufferedReaderReadintoTwins_refuted
     bug := some "pyio-bufferedreader-readinto-valueerror"
-    notes := "BufferedReader(BytesIO(b'abcdefghij'), 3): read(1), readinto(bytearray(3)): C returns 3, _pyio raises ValueError because avail is bounded by len(buf) and not by the space left (_pyio.py:1175)." }
+    notes := "BufferedReader(BytesIO(b'abcdefghij'), 3): read(1), readinto(bytearray(3)): C returns 3, _pyio raises ValueError because avail is bounded by len(buf) and not by the space left (_pyio.py:1194)." }
 ]
 
 end PyLean.PyIO

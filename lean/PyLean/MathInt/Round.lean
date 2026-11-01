@@ -11,7 +11,7 @@ namespace PyLean.MathInt
 open PyLean
 
 /-- `_PyLong_DivmodNear(a, b)` for `b > 0`: `a == q*b + r`, `abs(r) <= b/2`,
-and on a tie `q` is even (longobject.c:6008-6012). -/
+and on a tie `q` is even (longobject.c:6112-6116). -/
 theorem divmodNear_spec (a b : Int) (hb : 0 < b) :
     a = (divmodNear a b).1 * b + (divmodNear a b).2 ∧
     2 * (divmodNear a b).2.natAbs ≤ b ∧

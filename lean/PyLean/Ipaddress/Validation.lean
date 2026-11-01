@@ -10,7 +10,7 @@ namespace PyLean.Ipaddress
 
 open PyLean
 
-/-- `subnets` docstring, ipaddress.py:943-949: "Raises: ValueError: The
+/-- `subnets` docstring, ipaddress.py:940-946: "Raises: ValueError: The
 prefixlen_diff is too small or too large. OR prefixlen_diff and new_prefix are
 both set or new_prefix is a smaller number than the current prefix". -/
 def SubnetsRejectsInvalidArgs : Prop :=
@@ -30,7 +30,7 @@ theorem subnetsRejectsInvalidArgs_refuted : ¬SubnetsRejectsInvalidArgs := by
   rw [hv] at he
   cases he
 
-/-- `supernet` docstring, ipaddress.py:990-997: "Raises: ValueError: If
+/-- `supernet` docstring, ipaddress.py:987-994: "Raises: ValueError: If
 self.prefixlen - prefixlen_diff < 0. I.e., you have a negative prefix length.
 OR If prefixlen_diff and new_prefix are both set or new_prefix is a larger
 number than the current prefix". -/

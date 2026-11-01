@@ -1,6 +1,6 @@
 file	line	endline	name	signature	status	entry	note
 Lib/subprocess.py	139	143	CalledProcessError.__init__	__init__(self, returncode, cmd, output=None, stderr=None)	todo		
-Lib/subprocess.py	145	155	CalledProcessError.__str__	__str__(self)	todo		
+Lib/subprocess.py	145	155	CalledProcessError.__str__	__str__(self)	todo		changed-in-3.15:
 Lib/subprocess.py	158	160	CalledProcessError.stdout	stdout(self)	todo		
 Lib/subprocess.py	163	166	CalledProcessError.stdout	stdout(self, value)	todo		
 Lib/subprocess.py	176	180	TimeoutExpired.__init__	__init__(self, cmd, timeout, output=None, stderr=None)	todo		
@@ -12,59 +12,67 @@ Lib/subprocess.py	208	218	STARTUPINFO.copy	copy(self)	todo
 Lib/subprocess.py	224	227	Handle.Close	Close(self, CloseHandle=_winapi.CloseHandle)	todo		
 Lib/subprocess.py	229	233	Handle.Detach	Detach(self)	todo		
 Lib/subprocess.py	235	236	Handle.__repr__	__repr__(self)	todo		
-Lib/subprocess.py	265	266	_cleanup	_cleanup()	todo		
-Lib/subprocess.py	274	285	_cleanup	_cleanup()	todo		
-Lib/subprocess.py	296	303	_optim_args_from_interpreter_flags	_optim_args_from_interpreter_flags()	todo		
-Lib/subprocess.py	306	365	_args_from_interpreter_flags	_args_from_interpreter_flags()	todo		
-Lib/subprocess.py	368	385	_text_encoding	_text_encoding()	todo		
-Lib/subprocess.py	388	402	call	call(*popenargs, timeout=None, **kwargs)	todo		
-Lib/subprocess.py	405	421	check_call	check_call(*popenargs, **kwargs)	todo		
-Lib/subprocess.py	424	474	check_output	check_output(*popenargs, timeout=None, **kwargs)	todo		
-Lib/subprocess.py	488	492	CompletedProcess.__init__	__init__(self, args, returncode, stdout=None, stderr=None)	todo		
-Lib/subprocess.py	494	501	CompletedProcess.__repr__	__repr__(self)	todo		
-Lib/subprocess.py	506	510	CompletedProcess.check_returncode	check_returncode(self)	todo		
-Lib/subprocess.py	513	580	run	run(*popenargs, input=None, capture_output=False, timeout=None, check=False, **kwargs)	todo		
-Lib/subprocess.py	583	650	list2cmdline	list2cmdline(seq)	todo		
-Lib/subprocess.py	656	686	getstatusoutput	getstatusoutput(cmd, *, encoding=None, errors=None)	todo		
-Lib/subprocess.py	688	698	getoutput	getoutput(cmd, *, encoding=None, errors=None)	todo		
-Lib/subprocess.py	702	750	_use_posix_spawn	_use_posix_spawn()	todo		
-Lib/subprocess.py	817	1075	Popen.__init__	__init__(self, args, bufsize=-1, executable=None, stdin=None, stdout=None, stderr=None, preexec_fn=None, close_fds=True, shell=False, cwd=None, env=None, universal_newlines=None, startupinfo=None, creationflags=0, restore_signals=True, start_new_session=False, pass_fds=(), *, user=None, group=None, extra_groups=None, encoding=None, errors=None, text=None, umask=-1, pipesize=-1, process_group=None)	todo		
-Lib/subprocess.py	1077	1084	Popen.__repr__	__repr__(self)	todo		
-Lib/subprocess.py	1089	1092	Popen.universal_newlines	universal_newlines(self)	todo		
-Lib/subprocess.py	1095	1096	Popen.universal_newlines	universal_newlines(self, universal_newlines)	todo		
-Lib/subprocess.py	1098	1100	Popen._translate_newlines	_translate_newlines(self, data, encoding, errors)	todo		
-Lib/subprocess.py	1102	1103	Popen.__enter__	__enter__(self)	todo		
-Lib/subprocess.py	1105	1130	Popen.__exit__	__exit__(self, exc_type, value, traceback)	todo		
-Lib/subprocess.py	1132	1145	Popen.__del__	__del__(self, _maxsize=sys.maxsize, _warn=warnings.warn)	todo		
-Lib/subprocess.py	1147	1150	Popen._get_devnull	_get_devnull(self)	todo		
-Lib/subprocess.py	1152	1175	Popen._stdin_write	_stdin_write(self, input)	todo		
-Lib/subprocess.py	1177	1245	Popen.communicate	communicate(self, input=None, timeout=None)	todo		
-Lib/subprocess.py	1248	1251	Popen.poll	poll(self)	todo		
-Lib/subprocess.py	1254	1259	Popen._remaining_time	_remaining_time(self, endtime)	todo		
-Lib/subprocess.py	1262	1271	Popen._check_timeout	_check_timeout(self, endtime, orig_timeout, stdout_seq, stderr_seq, skip_check_and_raise=False)	todo		
-Lib/subprocess.py	1274	1295	Popen.wait	wait(self, timeout=None)	todo		
-Lib/subprocess.py	1297	1324	Popen._close_pipe_fds	_close_pipe_fds(self, p2cread, p2cwrite, c2pread, c2pwrite, errread, errwrite)	todo		
-Lib/subprocess.py	1327	1344	Popen._on_error_fd_closer	_on_error_fd_closer(self)	todo		
-Lib/subprocess.py	1350	1426	Popen._get_handles	_get_handles(self, stdin, stdout, stderr)	todo		
-Lib/subprocess.py	1429	1435	Popen._make_inheritable	_make_inheritable(self, handle)	todo		
-Lib/subprocess.py	1438	1448	Popen._filter_handle_list	_filter_handle_list(self, handle_list)	todo		
-Lib/subprocess.py	1451	1576	Popen._execute_child	_execute_child(self, args, executable, preexec_fn, close_fds, pass_fds, cwd, env, startupinfo, creationflags, shell, p2cread, p2cwrite, c2pread, c2pwrite, errread, errwrite, unused_restore_signals, unused_gid, unused_gids, unused_uid, unused_umask, unused_start_new_session, unused_process_group)	todo		
-Lib/subprocess.py	1578	1592	Popen._internal_poll	_internal_poll(self, _deadstate=None, _WaitForSingleObject=_winapi.WaitForSingleObject, _WAIT_OBJECT_0=_winapi.WAIT_OBJECT_0, _GetExitCodeProcess=_winapi.GetExitCodeProcess)	todo		
-Lib/subprocess.py	1595	1610	Popen._wait	_wait(self, timeout)	todo		
-Lib/subprocess.py	1613	1615	Popen._readerthread	_readerthread(self, fh, buffer)	todo		
-Lib/subprocess.py	1618	1619	Popen._writerthread	_writerthread(self, input)	todo		
-Lib/subprocess.py	1622	1685	Popen._communicate	_communicate(self, input, endtime, orig_timeout)	todo		
-Lib/subprocess.py	1687	1699	Popen.send_signal	send_signal(self, sig)	todo		
-Lib/subprocess.py	1701	1714	Popen.terminate	terminate(self)	todo		
-Lib/subprocess.py	1722	1783	Popen._get_handles	_get_handles(self, stdin, stdout, stderr)	todo		
-Lib/subprocess.py	1786	1824	Popen._posix_spawn	_posix_spawn(self, args, executable, env, restore_signals, close_fds, p2cread, p2cwrite, c2pread, c2pwrite, errread, errwrite)	todo		
-Lib/subprocess.py	1826	1993	Popen._execute_child	_execute_child(self, args, executable, preexec_fn, close_fds, pass_fds, cwd, env, startupinfo, creationflags, shell, p2cread, p2cwrite, c2pread, c2pwrite, errread, errwrite, restore_signals, gid, gids, uid, umask, start_new_session, process_group)	todo		
-Lib/subprocess.py	1996	2003	Popen._handle_exitstatus	_handle_exitstatus(self, sts, _del_safe=_del_safe)	todo		
-Lib/subprocess.py	2005	2036	Popen._internal_poll	_internal_poll(self, _deadstate=None, _del_safe=_del_safe)	todo		
-Lib/subprocess.py	2039	2049	Popen._try_wait	_try_wait(self, wait_flags)	todo		
-Lib/subprocess.py	2052	2090	Popen._wait	_wait(self, timeout)	todo		
-Lib/subprocess.py	2093	2202	Popen._communicate	_communicate(self, input, endtime, orig_timeout)	todo		
-Lib/subprocess.py	2205	2214	Popen._save_input	_save_input(self, input)	todo		
-Lib/subprocess.py	2217	2247	Popen.send_signal	send_signal(self, sig)	todo		
-Lib/subprocess.py	2249	2252	Popen.terminate	terminate(self)	todo		
-Lib/subprocess.py	2254	2257	Popen.kill	kill(self)	todo		
+Lib/subprocess.py	253	327	_communicate_io_posix	_communicate_io_posix(selector, stdin, input_view, input_offset, output_buffers, endtime, *, close_on_eof=False)	todo		changed-in-3.15: new function
+Lib/subprocess.py	341	342	_cleanup	_cleanup()	todo		
+Lib/subprocess.py	350	361	_cleanup	_cleanup()	todo		
+Lib/subprocess.py	368	372	_deadline_remaining	_deadline_remaining(endtime)	todo		changed-in-3.15: new function
+Lib/subprocess.py	375	384	_flush_stdin	_flush_stdin(stdin)	todo		changed-in-3.15: new function
+Lib/subprocess.py	387	398	_make_input_view	_make_input_view(input_data)	todo		changed-in-3.15: new function
+Lib/subprocess.py	401	404	_translate_newlines	_translate_newlines(data, encoding, errors)	todo		changed-in-3.15: new function
+Lib/subprocess.py	411	418	_optim_args_from_interpreter_flags	_optim_args_from_interpreter_flags()	todo		
+Lib/subprocess.py	421	480	_args_from_interpreter_flags	_args_from_interpreter_flags()	todo		
+Lib/subprocess.py	483	499	_text_encoding	_text_encoding()	todo		changed-in-3.15:
+Lib/subprocess.py	502	516	call	call(*popenargs, timeout=None, **kwargs)	todo		
+Lib/subprocess.py	519	535	check_call	check_call(*popenargs, **kwargs)	todo		
+Lib/subprocess.py	538	588	check_output	check_output(*popenargs, timeout=None, **kwargs)	todo		
+Lib/subprocess.py	602	606	CompletedProcess.__init__	__init__(self, args, returncode, stdout=None, stderr=None)	todo		
+Lib/subprocess.py	608	615	CompletedProcess.__repr__	__repr__(self)	todo		
+Lib/subprocess.py	620	624	CompletedProcess.check_returncode	check_returncode(self)	todo		
+Lib/subprocess.py	627	694	run	run(*popenargs, input=None, capture_output=False, timeout=None, check=False, **kwargs)	todo		
+Lib/subprocess.py	697	764	list2cmdline	list2cmdline(seq)	todo		
+Lib/subprocess.py	770	800	getstatusoutput	getstatusoutput(cmd, *, encoding=None, errors=None)	todo		
+Lib/subprocess.py	802	812	getoutput	getoutput(cmd, *, encoding=None, errors=None)	todo		
+Lib/subprocess.py	816	864	_use_posix_spawn	_use_posix_spawn()	todo		
+Lib/subprocess.py	867	882	_can_use_pidfd_open	_can_use_pidfd_open()	todo		changed-in-3.15: new function
+Lib/subprocess.py	885	914	_can_use_kqueue	_can_use_kqueue()	todo		changed-in-3.15: new function
+Lib/subprocess.py	991	1249	Popen.__init__	__init__(self, args, bufsize=-1, executable=None, stdin=None, stdout=None, stderr=None, preexec_fn=None, close_fds=True, shell=False, cwd=None, env=None, universal_newlines=None, startupinfo=None, creationflags=0, restore_signals=True, start_new_session=False, pass_fds=(), *, user=None, group=None, extra_groups=None, encoding=None, errors=None, text=None, umask=-1, pipesize=-1, process_group=None)	todo		
+Lib/subprocess.py	1251	1258	Popen.__repr__	__repr__(self)	todo		
+Lib/subprocess.py	1263	1266	Popen.universal_newlines	universal_newlines(self)	todo		
+Lib/subprocess.py	1269	1270	Popen.universal_newlines	universal_newlines(self, universal_newlines)	todo		
+Lib/subprocess.py	1272	1274	Popen._translate_newlines	_translate_newlines(self, data, encoding, errors)	todo		changed-in-3.15:
+Lib/subprocess.py	1276	1277	Popen.__enter__	__enter__(self)	todo		
+Lib/subprocess.py	1279	1304	Popen.__exit__	__exit__(self, exc_type, value, traceback)	todo		
+Lib/subprocess.py	1306	1319	Popen.__del__	__del__(self, _maxsize=sys.maxsize, _warn=warnings.warn)	todo		
+Lib/subprocess.py	1321	1324	Popen._get_devnull	_get_devnull(self)	todo		
+Lib/subprocess.py	1326	1349	Popen._stdin_write	_stdin_write(self, input)	todo		
+Lib/subprocess.py	1351	1419	Popen.communicate	communicate(self, input=None, timeout=None)	todo		changed-in-3.15:
+Lib/subprocess.py	1422	1425	Popen.poll	poll(self)	todo		
+Lib/subprocess.py	1428	1437	Popen._check_timeout	_check_timeout(self, endtime, orig_timeout, stdout_seq, stderr_seq, skip_check_and_raise=False)	todo		
+Lib/subprocess.py	1440	1461	Popen.wait	wait(self, timeout=None)	todo		changed-in-3.15:
+Lib/subprocess.py	1463	1490	Popen._close_pipe_fds	_close_pipe_fds(self, p2cread, p2cwrite, c2pread, c2pwrite, errread, errwrite)	todo		
+Lib/subprocess.py	1493	1510	Popen._on_error_fd_closer	_on_error_fd_closer(self)	todo		
+Lib/subprocess.py	1516	1592	Popen._get_handles	_get_handles(self, stdin, stdout, stderr)	todo		
+Lib/subprocess.py	1595	1601	Popen._make_inheritable	_make_inheritable(self, handle)	todo		
+Lib/subprocess.py	1604	1614	Popen._filter_handle_list	_filter_handle_list(self, handle_list)	todo		
+Lib/subprocess.py	1617	1742	Popen._execute_child	_execute_child(self, args, executable, preexec_fn, close_fds, pass_fds, cwd, env, startupinfo, creationflags, shell, p2cread, p2cwrite, c2pread, c2pwrite, errread, errwrite, unused_restore_signals, unused_gid, unused_gids, unused_uid, unused_umask, unused_start_new_session, unused_process_group)	todo		
+Lib/subprocess.py	1744	1758	Popen._internal_poll	_internal_poll(self, _deadstate=None, _WaitForSingleObject=_winapi.WaitForSingleObject, _WAIT_OBJECT_0=_winapi.WAIT_OBJECT_0, _GetExitCodeProcess=_winapi.GetExitCodeProcess)	todo		
+Lib/subprocess.py	1761	1776	Popen._wait	_wait(self, timeout)	todo		
+Lib/subprocess.py	1779	1781	Popen._readerthread	_readerthread(self, fh, buffer)	todo		
+Lib/subprocess.py	1784	1785	Popen._writerthread	_writerthread(self, input)	todo		
+Lib/subprocess.py	1788	1851	Popen._communicate	_communicate(self, input, endtime, orig_timeout)	todo		changed-in-3.15:
+Lib/subprocess.py	1853	1865	Popen.send_signal	send_signal(self, sig)	todo		
+Lib/subprocess.py	1867	1880	Popen.terminate	terminate(self)	todo		
+Lib/subprocess.py	1888	1949	Popen._get_handles	_get_handles(self, stdin, stdout, stderr)	todo		
+Lib/subprocess.py	1952	1990	Popen._posix_spawn	_posix_spawn(self, args, executable, env, restore_signals, close_fds, p2cread, p2cwrite, c2pread, c2pwrite, errread, errwrite)	todo		
+Lib/subprocess.py	1992	2159	Popen._execute_child	_execute_child(self, args, executable, preexec_fn, close_fds, pass_fds, cwd, env, startupinfo, creationflags, shell, p2cread, p2cwrite, c2pread, c2pwrite, errread, errwrite, restore_signals, gid, gids, uid, umask, start_new_session, process_group)	todo		
+Lib/subprocess.py	2162	2169	Popen._handle_exitstatus	_handle_exitstatus(self, sts, _del_safe=_del_safe)	todo		
+Lib/subprocess.py	2171	2202	Popen._internal_poll	_internal_poll(self, _deadstate=None, _del_safe=_del_safe)	todo		
+Lib/subprocess.py	2205	2215	Popen._try_wait	_try_wait(self, wait_flags)	todo		
+Lib/subprocess.py	2217	2251	Popen._wait_pidfd	_wait_pidfd(self, timeout)	todo		changed-in-3.15: new function
+Lib/subprocess.py	2253	2291	Popen._wait_kqueue	_wait_kqueue(self, timeout)	todo		changed-in-3.15: new function
+Lib/subprocess.py	2293	2364	Popen._wait	_wait(self, timeout)	todo		changed-in-3.15:
+Lib/subprocess.py	2367	2454	Popen._communicate	_communicate(self, input, endtime, orig_timeout)	todo		changed-in-3.15:
+Lib/subprocess.py	2457	2466	Popen._save_input	_save_input(self, input)	todo		
+Lib/subprocess.py	2469	2499	Popen.send_signal	send_signal(self, sig)	todo		
+Lib/subprocess.py	2501	2504	Popen.terminate	terminate(self)	todo		
+Lib/subprocess.py	2506	2509	Popen.kill	kill(self)	todo		

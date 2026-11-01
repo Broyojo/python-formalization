@@ -21,7 +21,7 @@ def entries : List Entry := [
     pyFns := ["str.find", "str.rfind", "str.index", "str.rindex", "str.count",
       "bytes.find", "bytes.rfind", "bytes.index", "bytes.rindex", "bytes.count"]
     statement := "For byte-valued strings, str and bytes agree on find/rfind/index/rindex/count for every start/end, and bytes accepts an int v in range(256) exactly like bytes([v])."
-    source := "invariant: str vs bytes (any_find_slice, unicodeobject.c:9681-9761, vs find_internal, bytes_methods.c:452-509)"
+    source := "invariant: str vs bytes (any_find_slice, unicodeobject.c:9582-9662, vs find_internal, bytes_methods.c:450-507)"
     status := .proven, prop := ``FindStrBytes, thm := some ``findStrBytes_proven
     notes := "index/rindex messages differ ('substring not found' vs 'subsection not found'); the property compares the outcomes." },
   { id := "strsearch-find-extreme", pyFile := "Objects/unicodeobject.c"
@@ -40,7 +40,7 @@ def entries : List Entry := [
   { id := "strsearch-tailmatch-str-bytes", pyFile := "Objects/bytes_methods.c"
     pyFns := ["str.startswith", "str.endswith", "bytes.startswith", "bytes.endswith"]
     statement := "The two tailmatch implementations agree: str.startswith/endswith and bytes.startswith/endswith give the same answer for every receiver, prefix or tuple, start and end."
-    source := "invariant: str vs bytes (unicodeobject.c:9946-10007 vs bytes_methods.c:640-686)"
+    source := "invariant: str vs bytes (unicodeobject.c:9711-9772 vs bytes_methods.c:638-684)"
     status := .proven, prop := ``TailmatchStrBytes, thm := some ``tailmatchStrBytes_proven },
   { id := "strsearch-rfind-reverse", pyFile := "Objects/stringlib/fastsearch.h"
     pyFns := ["str.rfind", "str.find"]
@@ -64,23 +64,23 @@ def entries : List Entry := [
     pyFns := ["str.center", "str.ljust", "str.rjust", "str.zfill", "bytes.center", "bytes.ljust",
       "bytes.rjust", "bytes.zfill"]
     statement := "str and bytes agree on center/ljust/rjust/zfill for every width and fill; the OverflowError branch of str's pad is unreachable for a Py_ssize_t width."
-    source := "invariant: str vs bytes (pad, unicodeobject.c:10492-10531, vs transmogrify.h:103-246)"
+    source := "invariant: str vs bytes (pad, unicodeobject.c:10257-10297, vs transmogrify.h:103-247)"
     status := .proven, prop := ``PadStrBytes, thm := some ``padStrBytes_proven
     notes := "Allocation failures are not modelled: for width near sys.maxsize str raises MemoryError and bytes OverflowError('byte string is too large')." },
   { id := "strsearch-center-balanced", pyFile := "Objects/unicodeobject.c"
     pyFns := ["str.center"]
     statement := "s.center(width) is s when width <= len(s), else s padded with l fills before and r after, l + len(s) + r == width, |l - r| <= 1."
-    source := "center docstring and stdtypes.rst:1889-1893"
+    source := "center docstring and stdtypes.rst@3.14.7:1889-1893"
     status := .proven, prop := ``CenterBalanced, thm := some ``centerBalanced_proven },
   { id := "strsearch-zfill-spec", pyFile := "Objects/unicodeobject.c"
     pyFns := ["str.zfill"]
     statement := "s.zfill(width) is s when width <= len(s); otherwise '0' * (width - len(s)) is inserted after a leading '+'/'-', or before s."
-    source := "zfill docstring and stdtypes.rst:2892-2898"
+    source := "zfill docstring and stdtypes.rst@3.14.7:2892-2898"
     status := .proven, prop := ``ZfillSpec, thm := some ``zfillSpec_proven },
   { id := "strsearch-expandtabs-str-bytes", pyFile := "Objects/stringlib/transmogrify.h"
     pyFns := ["str.expandtabs", "bytes.expandtabs"]
     statement := "str.expandtabs and bytes.expandtabs return the same expansion when it has at most sys.maxsize characters and both raise OverflowError otherwise, for every C int tabsize (negative and zero included)."
-    source := "invariant: str vs bytes, no silent wraparound (unicodeobject.c:11893-11917 vs transmogrify.h:44-70)"
+    source := "invariant: str vs bytes, no silent wraparound (unicodeobject.c:11619-11643 vs transmogrify.h:44-70)"
     status := .proven, prop := ``ExpandtabsStrBytes, thm := some ``expandtabsStrBytes_proven
     notes := "The two first passes use different overflow checks (running total vs per-line column + line sums); both are exact." },
   { id := "strsearch-strip-paths", pyFile := "Objects/unicodeobject.c"
@@ -101,7 +101,7 @@ def entries : List Entry := [
   { id := "strsearch-split-str-bytes", pyFile := "Objects/unicodeobject.c"
     pyFns := ["str.split", "str.rsplit", "bytes.split", "bytes.rsplit"]
     statement := "On byte strings, str and bytes split/rsplit agree for every sep and maxsplit (for sep=None: without \\x1c-\\x1f, \\x85, \\xa0); in particular str's computed default maxcounts (len-1)//2+1 and len//len(sep)+1 never cut a split short."
-    source := "invariant: str vs bytes (unicodeobject.c:10568-10750 vs bytesobject.c:1769-1876)"
+    source := "invariant: str vs bytes (unicodeobject.c:10334-10516 vs bytesobject.c:1861-1969)"
     status := .proven, prop := ``SplitStrBytes, thm := some ``splitStrBytes_proven
     notes := "Precondition len(s) < sys.maxsize (type invariant)." },
   { id := "strsearch-replace-split-join", pyFile := "Objects/unicodeobject.c"
@@ -113,7 +113,7 @@ def entries : List Entry := [
   { id := "strsearch-replace-str-bytes", pyFile := "Objects/stringlib/transmogrify.h"
     pyFns := ["str.replace", "bytes.replace"]
     statement := "On byte strings, str.replace and bytes.replace agree for every old (empty included), new and count: same result, or both OverflowError."
-    source := "invariant: str vs bytes (unicodeobject.c:10811-11067 vs transmogrify.h:276-737)"
+    source := "invariant: str vs bytes (unicodeobject.c:10577-10833 vs transmogrify.h:277-738)"
     status := .proven, prop := ``ReplaceStrBytes, thm := some ``replaceStrBytes_proven
     notes := "Precondition len(s) < sys.maxsize (type invariant)." },
   { id := "strsearch-split-rsplit-agree", pyFile := "Objects/stringlib/split.h"

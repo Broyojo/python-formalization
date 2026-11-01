@@ -127,7 +127,7 @@ def inWsSlice (t : PStr) : Bool :=
   | [c] => isWs c
   | _ => false
 
-/-- The `try:` blocks that skip white space after `,` (decoder.py:248-255) and
+/-- The `try:` blocks that skip white space after `,` (decoder.py:250-257) and
 `:` (decoder.py:178-184):
 `if s[end] in _ws: end += 1; if s[end] in _ws: end = _w(s, end + 1).end()`,
 then (array only) `nextchar = s[end:end + 1]`. Returns `end` and `nextchar`,
@@ -144,7 +144,7 @@ def pyTryWs (s : PStr) (e : Int) (nc : PStr) : Int × PStr :=
         (e', pySlice s e' (e' + 1))
     else (e, pySlice s e (e + 1))
 
-/-- The part of `JSONArray` after one element was scanned, decoder.py:237-257:
+/-- The part of `JSONArray` after one element was scanned, decoder.py:239-259:
 `end` is the element's end. Returns the error, `]` (array closed at the new
 `end`), or the position of the next element. -/
 inductive ArrStep where
@@ -162,7 +162,7 @@ def pyArrAfter (s : PStr) (e : Int) : ArrStep :=
   else if nc ≠ [44] then .err (.jde "Expecting ',' delimiter" (e - 1))
   else
     let comma := e - 1
-    -- the `try:` block, decoder.py:248-255; `IndexError` leaves `nextchar == ','`
+    -- the `try:` block, decoder.py:250-257; `IndexError` leaves `nextchar == ','`
     let (e, nc) := pyTryWs s e nc
     if nc = [93] then .err (.jde "Illegal trailing comma before end of array" comma)
     else .next e
@@ -218,7 +218,7 @@ def pyMkObj (cfg : DCfg) (pairs : List (PStr × JVal)) : DR JVal :=
     | some h => h (dictOf pairs)
     | none => .ok (.obj (dictOf pairs))
 
-/-- `NUMBER_RE` and the literals after it in `_scan_once`, scanner.py:48-63. -/
+/-- `NUMBER_RE` and the literals after it in `_scan_once`, scanner.py:49-64. -/
 def pyScanNumber (cfg : DCfg) (s : PStr) (idx : Int) (c : Nat) : DR (JVal × Int) :=
   let p := clampPos s idx
   match numberRe (s.drop p) with
@@ -236,7 +236,7 @@ def pyScanNumber (cfg : DCfg) (s : PStr) (idx : Int) (c : Nat) : DR (JVal × Int
     else .error (.stop idx)
 
 mutual
-/-- `_scan_once(string, idx)`, scanner.py:28-63. -/
+/-- `_scan_once(string, idx)`, scanner.py:29-64. -/
 def pyScanOnce (cfg : DCfg) (s : PStr) : Nat → Int → DR (JVal × Int)
   | 0, _ => fuelOut
   | n + 1, idx =>
@@ -259,7 +259,7 @@ def pyScanOnce (cfg : DCfg) (s : PStr) : Nat → Int → DR (JVal × Int)
           else pyObjLoop cfg s n (e + 1) []
         else pyObjLoop cfg s n (e + 1) []
       else if c = 91 then
-        -- `JSONArray((string, idx + 1), _scan_once)`, decoder.py:221-231
+        -- `JSONArray((string, idx + 1), _scan_once)`, decoder.py@3.14.7:221-231
         let e := idx + 1
         let nc := pySlice s e (e + 1)
         let (e, nc) : Int × PStr :=
@@ -272,7 +272,7 @@ def pyScanOnce (cfg : DCfg) (s : PStr) : Nat → Int → DR (JVal × Int)
       else if c = 102 ∧ pySlice s idx (idx + 5) = cs "false" then .ok (.bool false, idx + 5)
       else pyScanNumber cfg s idx c
 
-/-- The `while True` loop of `JSONArray`, decoder.py:232-257. -/
+/-- The `while True` loop of `JSONArray`, decoder.py:234-259. -/
 def pyArrLoop (cfg : DCfg) (s : PStr) : Nat → Int → List JVal → DR (JVal × Int)
   | 0, _, _ => fuelOut
   | n + 1, e, acc =>
@@ -314,11 +314,11 @@ def stopToJde {α : Type} : DR α → DR α
   | .error (.stop i) => .error (.jde "Expecting value" i)
   | r => r
 
-/-- `JSONDecoder.raw_decode(s, idx)`, decoder.py:351-364. -/
+/-- `JSONDecoder.raw_decode(s, idx)`, decoder.py:364-377. -/
 def rawDecodePy (cfg : DCfg) (s : PStr) (idx : Int) : DR (JVal × Int) :=
   stopToJde (pyScanOnce cfg s (docFuel s) idx)
 
-/-- `JSONDecoder.decode(s)`, decoder.py:340-349, for a given `raw_decode`. -/
+/-- `JSONDecoder.decode(s)`, decoder.py:353-362, for a given `raw_decode`. -/
 def decodeWith (raw : PStr → Int → DR (JVal × Int)) (s : PStr) : DR JVal :=
   match raw s (wsEnd s 0) with
   | .error e => .error e

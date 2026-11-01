@@ -58,7 +58,7 @@ cause: |
   Modules/_csv.c:948-953: the end-of-input branch calls parse_save_field without checking
   self->fields, which is NULL after an inner call returned a row (:992-993). parse_save_field reaches
   PyList_Append(NULL, ...) at :688, and PyList_Check reads through the pointer
-  (Objects/listobject.c:535).
+  (Objects/listobject.c:562).
 possible_fix: |
   Check self->fields == NULL in the end-of-input branch too, and raise the same csv.Error, as
   python/cpython#157379 proposes.

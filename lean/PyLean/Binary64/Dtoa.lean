@@ -8,7 +8,7 @@ import PyLean.Binary64.Strtod
 
 CPython only ever calls `_Py_dg_dtoa` with mode 0, 2 or 3 (`format_float_short` and
 `double_round`), so `leftright` is true exactly in mode 0, where `ilim == -1` keeps
-the floating-point quick path out. Its `leftright` branch at dtoa.c:2441-2459 and
+the floating-point quick path out. Its `leftright` branch at dtoa.c:2453-2471 and
 the bookkeeping for modes 1, 4, 5 and above are therefore not modelled.
 
 Precisions stay `int`-sized `Int`s, and C `int` overflow is modelled with `wrap32`,
@@ -34,7 +34,7 @@ structure DtoaOut where
   sign : Bool
   deriving DecidableEq, Repr
 
-/-- `bump_up` (dtoa.c:2508-2516) and `roundoff` (:2763-2770) on the reversed buffer:
+/-- `bump_up` (dtoa.c:2520-2528) and `roundoff` (:2775-2782) on the reversed buffer:
 pop nines, increment the digit below them, and when every digit was a nine, leave
 a `1` and raise `k`. -/
 def bumpUp : List Nat → Int → List Nat × Int
@@ -49,7 +49,7 @@ def bumpUp : List Nat → Int → List Nat × Int
 /-- `while(*--s == '0'); s++;` on the reversed buffer. -/
 def stripTrailingZeros (s : List Nat) : List Nat := s.dropWhile (· == 48)
 
-/-- The scaling of `u` in the quick path, dtoa.c:2398-2421: `(u, ieps)`. -/
+/-- The scaling of `u` in the quick path, dtoa.c:2410-2433: `(u, ieps)`. -/
 def quickScale (u : F64) (k : Int) : F64 × Nat :=
   if 0 < k then
     let k' := k.toNat
@@ -67,7 +67,7 @@ def quickScale (u : F64) (k : Int) : F64 × Nat :=
       if ((j1 / 16) / 2 ^ i) &&& 1 != 0 then (F64.mul st.1 (bigtens i), st.2 + 1) else st) (u1, 2)
   else (u, 2)
 
-/-- The "generate `ilim` digits, then fix them up" loop, dtoa.c:2462-2478. -/
+/-- The "generate `ilim` digits, then fix them up" loop, dtoa.c:2474-2490. -/
 def quickDigits (eps : F64) : Nat → Int → Nat → F64 → List Nat → Int → Option (List Nat × Int)
   | 0, _, _, _, _, _ => none
   | fuel + 1, ilim0, i, u, s, k =>
@@ -81,7 +81,7 @@ def quickDigits (eps : F64) : Nat → Int → Nat → F64 → List Nat → Int �
       else none
     else quickDigits eps fuel ilim (i + 1) (F64.mul u1 (F64.ofInt 10)) s' k
 
-/-- The floating-point quick path, dtoa.c:2389-2485, for `leftright == 0`. `none`
+/-- The floating-point quick path, dtoa.c:2401-2497, for `leftright == 0`. `none`
 is `fast_failed`. Otherwise the reversed digits and `k`, as at `ret1`, `ret` after
 `no_digits`, or `ret` after `one_digit`. -/
 def dtoaQuick (u0 : F64) (k0 ilim0 ilim1 ndigits : Int) (k_check : Bool) :
@@ -106,7 +106,7 @@ def dtoaQuick (u0 : F64) (k0 ilim0 ilim1 ndigits : Int) (k_check : Bool) :
       let eps2 := F64.mul eps1 (tens (ilim - 1).toNat)
       quickDigits eps2 (ilim.toNat + 1) ilim 1 u2 [] k
 
-/-- The "small integer" digit loop, dtoa.c:2498-2527. -/
+/-- The "small integer" digit loop, dtoa.c:2510-2539. -/
 def smallIntDigits (ds : F64) (ilim : Int) : Nat → Nat → F64 → List Nat → Int → List Nat × Int
   | 0, _, _, s, k => (s, k)
   | fuel + 1, i, u, s, k =>
@@ -120,7 +120,7 @@ def smallIntDigits (ds : F64) (ilim : Int) : Nat → Nat → F64 → List Nat �
       else (s'.dropWhile (· == 48), k)
     else smallIntDigits ds ilim fuel (i + 1) (F64.mul u1 (F64.ofInt 10)) s' k
 
-/-- The non-`leftright` digit loop and the final round-off, dtoa.c:2744-2775. -/
+/-- The non-`leftright` digit loop and the final round-off, dtoa.c:2756-2787. -/
 def fixedDigits (S : Bigint) (ilim : Int) : Nat → Nat → Bigint → List Nat → Int → Option (List Nat × Int)
   | 0, _, _, _, _ => none
   | fuel + 1, i, b, s, k =>
@@ -135,7 +135,7 @@ def fixedDigits (S : Bigint) (ilim : Int) : Nat → Nat → Bigint → List Nat 
       else some (stripTrailingZeros s', k)
     else fixedDigits S ilim fuel (i + 1) (multadd b1 10 0) s' k
 
-/-- The shortest-digits loop, dtoa.c:2674-2741, for mode 0. `even` is
+/-- The shortest-digits loop, dtoa.c:2686-2753, for mode 0. `even` is
 `!(word1(&u) & 1)`. -/
 def shortestDigits (S : Bigint) (even : Bool) :
     Nat → Bigint → Bigint → Bigint → List Nat → Int → Option (List Nat × Int)
@@ -165,7 +165,7 @@ def shortestDigits (S : Bigint) (even : Bool) :
       shortestDigits S even fuel (multadd b 10 0) (multadd mlo 10 0) (multadd mhi 10 0)
         (dig :: s) k
 
-/-- The multiple-precision path, dtoa.c:2531-2775. -/
+/-- The multiple-precision path, dtoa.c:2543-2787. -/
 def dtoaBig (u : F64) (mode : Nat) (b0 : Bigint) (be : Int) (bbits : Nat) (denorm k_check : Bool)
     (b20 s20 : Int) (b5 s5 : Nat) (k0 ilim0 ilim1 ndigits : Int) : Option (List Nat × Int) :=
   let leftright := mode == 0
@@ -224,7 +224,7 @@ def dtoaBig (u : F64) (mode : Nat) (b0 : Bigint) (be : Int) (bbits : Nat) (denor
       shortestDigits S1 (word1 u % 2 == 0) 40 b3 mlo mhi4 [] k
     else fixedDigits S1 ilim 1300 1 b3 [] k
 
-/-- `_Py_dg_dtoa`, dtoa.c:2194-2802, for modes 0, 2 and 3. `none` means the model's
+/-- `_Py_dg_dtoa`, dtoa.c:2197-2814, for modes 0, 2 and 3. `none` means the model's
 fuel ran out. -/
 def _Py_dg_dtoa (dd : F64) (mode : Nat) (ndigits0 : Int) : Option DtoaOut :=
   let sign := word0 dd &&& Sign_bit != 0
@@ -273,7 +273,7 @@ def _Py_dg_dtoa (dd : F64) (mode : Nat) (ndigits0 : Int) : Option DtoaOut :=
     let finish (r : List Nat × Int) : Option DtoaOut :=
       some { digits := r.1.reverse, decpt := r.2 + 1, sign }
     let bigPath (u' : F64) : Option DtoaOut :=
-      -- "Do we have a small integer?", dtoa.c:2489-2529
+      -- "Do we have a small integer?", dtoa.c:2501-2541
       if 0 ≤ be && k ≤ Int_max then
         let ds' := tens k.toNat
         if ndigits < 0 && ilim ≤ 0 then
@@ -324,7 +324,7 @@ inductive DtsType where
   | finite | infinite | nan
   deriving DecidableEq, Repr
 
-/-- `format_float_short`, pystrtod.c:968-1218. `code` is `'e'`, `'f'`, `'g'` or `'r'`
+/-- `format_float_short`, pystrtod.c:984-1234. `code` is `'e'`, `'f'`, `'g'` or `'r'`
 and `upper` selects `uc_float_strings`. -/
 def format_float_short (d : F64) (code : Nat) (mode : Nat) (precision : Int) (fl : DtsFlags)
     (upper : Bool) : Option (List Piece × DtsType) :=
@@ -392,8 +392,8 @@ where
       | p :: rest => p :: rest
     (go ps.reverse).reverse
 
-/-- `PyOS_double_to_string`, pystrtod.c:1221-1285, for the codes CPython uses. The
-`precision++` at :1240 is `int` arithmetic. -/
+/-- `PyOS_double_to_string`, pystrtod.c:1237-1308, for the codes CPython uses. The
+`precision++` at :1263 is `int` arithmetic. -/
 def PyOS_double_to_string (val : F64) (format_code : Nat) (precision : Int) (fl : DtsFlags) :
     Option (List Piece × DtsType) :=
   let go (code mode : Nat) (prec : Int) (upper : Bool) :=
@@ -407,7 +407,7 @@ def PyOS_double_to_string (val : F64) (format_code : Nat) (precision : Int) (fl 
   else if format_code == 114 && precision == 0 then go 114 0 precision false
   else none
 
-/-- `float_repr`, floatobject.c:348-364. -/
+/-- `float_repr`, floatobject.c:338-354. -/
 def float_repr (x : F64) : Option (List Nat) :=
   (PyOS_double_to_string x 114 0 { add_dot_0 := true }).map fun r => render r.1
 
@@ -415,7 +415,7 @@ def float_repr (x : F64) : Option (List Nat) :=
 
 def asciiOfInt (n : Int) : List Nat := (toString n).toList.map Char.toNat
 
-/-- `double_round`, floatobject.c:915-966. -/
+/-- `double_round`, floatobject.c:905-956. -/
 def double_round (x : F64) (ndigits : Int) : Py F64 :=
   match _Py_dg_dtoa x 3 ndigits with
   | none => .error .modelFuel
@@ -432,7 +432,7 @@ def double_round (x : F64) (ndigits : Int) : Py F64 :=
 /-- `PyNumber_AsSsize_t(o, NULL)`: clips. -/
 def clipSsize (n : Int) : Int := max (min n ssizeMax) ssizeMin
 
-/-- `float___round___impl` with an `ndigits`, floatobject.c:1051-1075. -/
+/-- `float___round___impl` with an `ndigits`, floatobject.c:1041-1065. -/
 def float_round_ndigits (x : F64) (o_ndigits : Int) : Py F64 :=
   let ndigits := clipSsize o_ndigits
   if !x.isFinite then .ok x
@@ -469,7 +469,7 @@ def PyOS_string_to_double (s : List Nat) (start : Nat) (wantEnd : Bool)
 
 def strToFloatError {α} : Py α := .error (.valueError "~could not convert string to float: ")
 
-/-- `float_from_string_inner`, floatobject.c:149-187: `s` is the whole buffer, with
+/-- `float_from_string_inner`, floatobject.c:139-177: `s` is the whole buffer, with
 `len` meaningful bytes. -/
 def float_from_string_inner (s : List Nat) (len : Nat) : Py F64 :=
   let i0 := scanLimit s isSpace len 0
@@ -565,32 +565,32 @@ inductive StrArg where
   | bytes (b : List Nat)
   deriving DecidableEq, Repr
 
-/-- `PyFloat_FromString`, floatobject.c:189-237. -/
+/-- `PyFloat_FromString`, floatobject.c:179-227. -/
 def PyFloat_FromString (v : StrArg) : Py F64 :=
   let s := match v with
     | .str cps => transformDecimalAndSpace cps
     | .bytes b => b
   _Py_string_to_number_with_underscores s "float" float_from_string_inner
 
-/-- `float_new_impl`, floatobject.c:1574-1593, for no argument and for numbers. -/
+/-- `float_new_impl`, floatobject.c:1566-1585, for no argument and for numbers. -/
 def float_new_number (x : Option Obj) : Py F64 :=
   match x with
   | none => .ok d0
   | some o => PyFloat_AsDouble o
 
-/-- `float_subtype_new`, floatobject.c:1600-1618: the value of `float(x)`, stored in
+/-- `float_subtype_new`, floatobject.c:1592-1610: the value of `float(x)`, stored in
 a new instance of the subclass. -/
 def float_subtype_new (x : Option Obj) : Py F64 :=
   float_new_number (some (x.getD (.int 0)))
 
-/-- `float_vectorcall`, floatobject.c:1620-1635: the argument count check. -/
+/-- `float_vectorcall`, floatobject.c:1612-1627: the argument count check. -/
 def float_vectorcall (args : List Obj) : Py F64 :=
   match args with
   | [] => float_new_number none
   | [x] => float_new_number (some x)
   | _ => .error (.typeError s!"float expected at most 1 argument, got {args.length}")
 
-/-- `float_from_number_impl`, floatobject.c:1648-1665. -/
+/-- `float_from_number_impl`, floatobject.c:1640-1657. -/
 def float_from_number (x : Obj) : Py F64 := PyFloat_AsDouble x
 
 end PyLean.Binary64

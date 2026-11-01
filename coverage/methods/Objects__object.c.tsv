@@ -1,147 +1,148 @@
 file	line	endline	name	signature	status	entry	note
-Objects/object.c	48	67	_PyObject_CheckConsistency	_PyObject_CheckConsistency(PyObject *op, int check_content)	excluded		test-support: debug-build diagnostic, not reachable from Python
-Objects/object.c	75	78	get_legacy_reftotal	get_legacy_reftotal(void)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	87	97	reftotal_add	reftotal_add(PyThreadState *tstate, Py_ssize_t n)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	108	112	_Py_FinalizeRefTotal	_Py_FinalizeRefTotal(_PyRuntimeState *runtime)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	115	119	_PyInterpreterState_FinalizeRefTotal	_PyInterpreterState_FinalizeRefTotal(PyInterpreterState *interp)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	122	135	get_reftotal	get_reftotal(PyInterpreterState *interp)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	138	156	get_global_reftotal	get_global_reftotal(_PyRuntimeState *runtime)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	161	168	_PyDebug_PrintTotalRefs	_PyDebug_PrintTotalRefs(void) {	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	181	188	has_own_refchain	has_own_refchain(PyInterpreterState *interp)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	191	211	refchain_init	refchain_init(PyInterpreterState *interp)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	214	220	refchain_fini	refchain_fini(PyInterpreterState *interp)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	223	226	_PyRefchain_IsTraced	_PyRefchain_IsTraced(PyInterpreterState *interp, PyObject *obj)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	230	237	_PyRefchain_Trace	_PyRefchain_Trace(PyInterpreterState *interp, PyObject *obj)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	241	249	_PyRefchain_Remove	_PyRefchain_Remove(PyInterpreterState *interp, PyObject *obj)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	259	265	_Py_AddToAllObjects	_Py_AddToAllObjects(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	271	275	_Py_NegativeRefcount	_Py_NegativeRefcount(const char *filename, int lineno, PyObject *op)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	279	282	_Py_INCREF_IncRefTotal	_Py_INCREF_IncRefTotal(void)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	286	289	_Py_DECREF_DecRefTotal	_Py_DECREF_DecRefTotal(void)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	292	295	_Py_IncRefTotal	_Py_IncRefTotal(PyThreadState *tstate)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	298	301	_Py_DecRefTotal	_Py_DecRefTotal(PyThreadState *tstate)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	304	307	_Py_AddRefTotal	_Py_AddRefTotal(PyThreadState *tstate, Py_ssize_t n)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	312	315	_Py_GetGlobalRefTotal	_Py_GetGlobalRefTotal(void)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	318	321	_Py_GetLegacyRefTotal	_Py_GetLegacyRefTotal(void)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	324	330	_PyInterpreterState_GetRefTotal	_PyInterpreterState_GetRefTotal(PyInterpreterState *interp)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	335	338	Py_IncRef	Py_IncRef(PyObject *o)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	341	344	Py_DecRef	Py_DecRef(PyObject *o)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	347	350	_Py_IncRef	_Py_IncRef(PyObject *o)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	353	356	_Py_DecRef	_Py_DecRef(PyObject *o)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	361	368	is_dead	is_dead(PyObject *o)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	374	418	_Py_DecRefSharedIsDead	_Py_DecRefSharedIsDead(PyObject *o, const char *filename, int lineno)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	421	426	_Py_DecRefSharedDebug	_Py_DecRefSharedDebug(PyObject *o, const char *filename, int lineno)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	429	432	_Py_DecRefShared	_Py_DecRefShared(PyObject *o)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	435	463	_Py_MergeZeroLocalRefcount	_Py_MergeZeroLocalRefcount(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	466	491	_Py_ExplicitMergeRefcount	_Py_ExplicitMergeRefcount(PyObject *op, Py_ssize_t extra)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	495	521	_PyObject_ResurrectEndSlow	_PyObject_ResurrectEndSlow(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	530	538	PyObject_Init	PyObject_Init(PyObject *op, PyTypeObject *tp)	excluded		no-behaviour: object allocator or free list
-Objects/object.c	541	549	PyObject_InitVar	PyObject_InitVar(PyVarObject *op, PyTypeObject *tp, Py_ssize_t size)	excluded		no-behaviour: object allocator or free list
-Objects/object.c	552	560	_PyObject_New	_PyObject_New(PyTypeObject *tp)	excluded		no-behaviour: object allocator or free list
-Objects/object.c	563	573	_PyObject_NewVar	_PyObject_NewVar(PyTypeObject *tp, Py_ssize_t nitems)	excluded		no-behaviour: object allocator or free list
-Objects/object.c	576	590	PyObject_CallFinalizer	PyObject_CallFinalizer(PyObject *self)	todo		
-Objects/object.c	593	628	PyObject_CallFinalizerFromDealloc	PyObject_CallFinalizerFromDealloc(PyObject *self)	todo		
-Objects/object.c	631	692	PyObject_Print	PyObject_Print(PyObject *op, FILE *fp, int flags)	todo		
-Objects/object.c	696	698	_Py_BreakPoint	_Py_BreakPoint(void)	excluded		test-support: debug-build diagnostic, not reachable from Python
-Objects/object.c	708	714	_PyObject_IsFreed	_PyObject_IsFreed(PyObject *op)	excluded		test-support: debug-build diagnostic, not reachable from Python
-Objects/object.c	719	754	_PyObject_Dump	_PyObject_Dump(PyObject* op)	excluded		test-support: debug-build diagnostic, not reachable from Python
-Objects/object.c	757	796	PyObject_Repr	PyObject_Repr(PyObject *v)	modelled	typeobj-repr-str-result	
-Objects/object.c	799	840	PyObject_Str	PyObject_Str(PyObject *v)	modelled	typeobj-str-result	
-Objects/object.c	843	867	PyObject_ASCII	PyObject_ASCII(PyObject *v)	todo		
-Objects/object.c	870	899	PyObject_Bytes	PyObject_Bytes(PyObject *v)	todo		
-Objects/object.c	902	914	clear_freelist	clear_freelist(struct _Py_freelist *freelist, int is_finalization, freefunc dofree)	excluded		no-behaviour: object allocator or free list
-Objects/object.c	917	923	free_object	free_object(void *obj)	excluded		no-behaviour: object allocator or free list
-Objects/object.c	926	956	_PyObject_ClearFreeLists	_PyObject_ClearFreeLists(struct _Py_freelists *freelists, int is_finalization)	excluded		no-behaviour: object allocator or free list
-Objects/object.c	959	1006	_PyObject_FunctionStr	def _PyObject_FunctionStr(x): try: qualname = x.__qualname__ except AttributeError: return str(x) try: mod = x.__module__ if mod is not None and mod != 'builtins': return f\"{x.__module__}.{qualname}()\" except AttributeError: pass return qualname */ PyObject * _PyObject_FunctionStr(PyObject *x)	todo		
-Objects/object.c	1046	1091	do_richcompare	do_richcompare(PyThreadState *tstate, PyObject *v, PyObject *w, int op)	modelled	typeobj-richcompare-defaults,typeobj-richcompare-left-first,typeobj-richcompare-subclass-first	
-Objects/object.c	1097	1114	PyObject_RichCompare	PyObject_RichCompare(PyObject *v, PyObject *w, int op)	modelled	typeobj-richcompare-subclass-first	
-Objects/object.c	1119	1142	PyObject_RichCompareBool	PyObject_RichCompareBool(PyObject *v, PyObject *w, int op)	modelled	typeobj-richcomparebool-identity	
-Objects/object.c	1145	1150	PyObject_HashNotImplemented	PyObject_HashNotImplemented(PyObject *v)	todo		
-Objects/object.c	1153	1171	PyObject_Hash	PyObject_Hash(PyObject *v)	todo		
-Objects/object.c	1174	1186	PyObject_GetAttrString	PyObject_GetAttrString(PyObject *v, const char *name)	todo		
-Objects/object.c	1189	1195	PyObject_HasAttrStringWithError	PyObject_HasAttrStringWithError(PyObject *obj, const char *name)	todo		
-Objects/object.c	1199	1210	PyObject_HasAttrString	PyObject_HasAttrString(PyObject *obj, const char *name)	todo		
-Objects/object.c	1213	1226	PyObject_SetAttrString	PyObject_SetAttrString(PyObject *v, const char *name, PyObject *w)	todo		
-Objects/object.c	1229	1232	PyObject_DelAttrString	PyObject_DelAttrString(PyObject *v, const char *name)	todo		
-Objects/object.c	1235	1249	_PyObject_IsAbstract	_PyObject_IsAbstract(PyObject *obj)	todo		
-Objects/object.c	1252	1260	_PyObject_GetAttrId	_PyObject_GetAttrId(PyObject *v, _Py_Identifier *name)	todo		
-Objects/object.c	1263	1287	_PyObject_SetAttributeErrorContext	_PyObject_SetAttributeErrorContext(PyObject* v, PyObject* name)	todo		
-Objects/object.c	1290	1321	PyObject_GetAttr	PyObject_GetAttr(PyObject *v, PyObject *name)	modelled	typeobj-optional-attr-agrees	
-Objects/object.c	1324	1389	PyObject_GetOptionalAttr	PyObject_GetOptionalAttr(PyObject *v, PyObject *name, PyObject **result)	modelled	typeobj-optional-attr-agrees	
-Objects/object.c	1392	1414	PyObject_GetOptionalAttrString	PyObject_GetOptionalAttrString(PyObject *obj, const char *name, PyObject **result)	todo		
-Objects/object.c	1417	1423	PyObject_HasAttrWithError	PyObject_HasAttrWithError(PyObject *obj, PyObject *name)	todo		
-Objects/object.c	1426	1437	PyObject_HasAttr	PyObject_HasAttr(PyObject *obj, PyObject *name)	todo		
-Objects/object.c	1440	1487	PyObject_SetAttr	PyObject_SetAttr(PyObject *v, PyObject *name, PyObject *value)	todo		
-Objects/object.c	1490	1493	PyObject_DelAttr	PyObject_DelAttr(PyObject *v, PyObject *name)	todo		
-Objects/object.c	1496	1521	_PyObject_ComputedDictPointer	_PyObject_ComputedDictPointer(PyObject *obj)	todo		
-Objects/object.c	1531	1545	_PyObject_GetDictPtr	_PyObject_GetDictPtr(PyObject *obj)	modelled	typeobj-getattr-instance-dict	
-Objects/object.c	1548	1551	PyObject_SelfIter	PyObject_SelfIter(PyObject *obj)	todo		
-Objects/object.c	1559	1565	_PyObject_NextNotImplemented	_PyObject_NextNotImplemented(PyObject *self)	todo		
-Objects/object.c	1579	1668	_PyObject_GetMethod	_PyObject_GetMethod(PyObject *obj, PyObject *name, PyObject **method)	modelled	typeobj-get-method	
-Objects/object.c	1679	1804	_PyObject_GetMethodStackRef	_PyObject_GetMethodStackRef(PyThreadState *ts, _PyStackRef *self, PyObject *name, _PyStackRef *method)	modelled	typeobj-get-method	
-Objects/object.c	1809	1929	_PyObject_GenericGetAttrWithDict	_PyObject_GenericGetAttrWithDict(PyObject *obj, PyObject *name, PyObject *dict, int suppress)	modelled	typeobj-getattr-class-attr,typeobj-getattr-data-descr,typeobj-getattr-instance-dict,typeobj-getattr-nondata-descr,typeobj-getattr-suppress	
-Objects/object.c	1932	1935	PyObject_GenericGetAttr	PyObject_GenericGetAttr(PyObject *obj, PyObject *name)	todo		
-Objects/object.c	1938	2037	_PyObject_GenericSetAttrWithDict	_PyObject_GenericSetAttrWithDict(PyObject *obj, PyObject *name, PyObject *value, PyObject *dict)	todo		
-Objects/object.c	2040	2043	PyObject_GenericSetAttr	PyObject_GenericSetAttr(PyObject *obj, PyObject *name, PyObject *value)	todo		
-Objects/object.c	2046	2053	PyObject_GenericSetDict	PyObject_GenericSetDict(PyObject *obj, PyObject *value, void *context)	todo		
-Objects/object.c	2060	2082	PyObject_IsTrue	PyObject_IsTrue(PyObject *v)	modelled	typeobj-istrue-default,typeobj-istrue-len	
-Objects/object.c	2088	2095	PyObject_Not	PyObject_Not(PyObject *v)	todo		
-Objects/object.c	2100	2105	PyCallable_Check	PyCallable_Check(PyObject *x)	todo		
-Objects/object.c	2110	2152	_dir_locals	_dir_locals(void)	todo		
-Objects/object.c	2156	2182	_dir_object	_dir_object(PyObject *obj)	todo		
-Objects/object.c	2189	2192	PyObject_Dir	PyObject_Dir(PyObject *obj)	todo		
-Objects/object.c	2202	2205	none_repr	none_repr(PyObject *op)	todo		
-Objects/object.c	2208	2215	none_dealloc	none_dealloc(PyObject* none)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	2218	2225	none_new	none_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)	todo		
-Objects/object.c	2228	2231	none_bool	none_bool(PyObject *v)	todo		
-Objects/object.c	2233	2236	none_hash	static Py_hash_t none_hash(PyObject *v)	todo		
-Objects/object.c	2327	2330	NotImplemented_repr	NotImplemented_repr(PyObject *op)	todo		
-Objects/object.c	2333	2336	NotImplemented_reduce	NotImplemented_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
-Objects/object.c	2344	2351	notimplemented_new	notimplemented_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)	todo		
-Objects/object.c	2354	2361	notimplemented_dealloc	notimplemented_dealloc(PyObject *notimplemented)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	2364	2369	notimplemented_bool	notimplemented_bool(PyObject *v)	todo		
-Objects/object.c	2425	2433	_PyObject_InitState	_PyObject_InitState(PyInterpreterState *interp)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
-Objects/object.c	2436	2441	_PyObject_FiniState	_PyObject_FiniState(PyInterpreterState *interp)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
-Objects/object.c	2582	2611	_PyTypes_InitTypes	_PyTypes_InitTypes(PyInterpreterState *interp)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
-Objects/object.c	2621	2629	_PyTypes_FiniTypes	_PyTypes_FiniTypes(PyInterpreterState *interp)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
-Objects/object.c	2633	2663	new_reference	new_reference(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	2666	2672	_Py_NewReference	_Py_NewReference(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	2675	2678	_Py_NewReferenceNoTotal	_Py_NewReferenceNoTotal(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	2681	2698	_Py_SetImmortalUntracked	_Py_SetImmortalUntracked(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	2701	2707	_Py_SetImmortal	_Py_SetImmortal(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	2710	2719	_PyObject_SetDeferredRefcount	_PyObject_SetDeferredRefcount(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	2722	2755	PyUnstable_Object_EnableDeferredRefcount	PyUnstable_Object_EnableDeferredRefcount(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	2758	2782	PyUnstable_Object_IsUniqueReferencedTemporary	PyUnstable_Object_IsUniqueReferencedTemporary(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	2785	2788	PyUnstable_TryIncRef	PyUnstable_TryIncRef(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	2791	2796	PyUnstable_EnableTryIncRef	PyUnstable_EnableTryIncRef(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	2799	2804	_Py_ResurrectReference	_Py_ResurrectReference(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	2807	2826	_Py_ForgetReference	_Py_ForgetReference(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	2831	2843	_Py_PrintReference	_Py_PrintReference(_Py_hashtable_t *ht, const void *key, const void *value, void *user_data)	excluded		test-support: debug-build diagnostic, not reachable from Python
-Objects/object.c	2850	2857	_Py_PrintReferences	_Py_PrintReferences(PyInterpreterState *interp, FILE *fp)	excluded		test-support: debug-build diagnostic, not reachable from Python
-Objects/object.c	2861	2870	_Py_PrintReferenceAddress	_Py_PrintReferenceAddress(_Py_hashtable_t *ht, const void *key, const void *value, void *user_data)	excluded		test-support: debug-build diagnostic, not reachable from Python
-Objects/object.c	2881	2885	_Py_PrintReferenceAddresses	_Py_PrintReferenceAddresses(PyInterpreterState *interp, FILE *fp)	excluded		test-support: debug-build diagnostic, not reachable from Python
-Objects/object.c	2903	2937	_Py_GetObject	_Py_GetObject(_Py_hashtable_t *ht, const void *key, const void *value, void *user_data)	excluded		test-support: debug-build diagnostic, not reachable from Python
-Objects/object.c	2942	2969	_Py_GetObjects	_Py_GetObjects(PyObject *self, PyObject *args)	excluded		test-support: debug-build diagnostic, not reachable from Python
-Objects/object.c	2982	2988	_PyObject_DebugTypeStats	_PyObject_DebugTypeStats(FILE *out)	excluded		test-support: debug-build diagnostic, not reachable from Python
-Objects/object.c	3003	3034	Py_ReprEnter	Py_ReprEnter(PyObject *obj)	todo		
-Objects/object.c	3037	3065	Py_ReprLeave	Py_ReprLeave(PyObject *obj)	todo		
-Objects/object.c	3074	3093	_PyTrash_thread_deposit_object	_PyTrash_thread_deposit_object(PyThreadState *tstate, PyObject *op)	excluded		no-behaviour: object allocator or free list
-Objects/object.c	3098	3125	_PyTrash_thread_destroy_chain	_PyTrash_thread_destroy_chain(PyThreadState *tstate)	excluded		no-behaviour: object allocator or free list
-Objects/object.c	3128	3175	_PyObject_AssertFailed	_PyObject_AssertFailed(PyObject *obj, const char *expr, const char *msg, const char *file, int line, const char *function)	excluded		test-support: debug-build diagnostic, not reachable from Python
-Objects/object.c	3186	3242	_Py_Dealloc	_Py_Dealloc(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	3246	3249	PyObject_GET_WEAKREFS_LISTPTR	PyObject_GET_WEAKREFS_LISTPTR(PyObject *op)	todo		
-Objects/object.c	3257	3260	Py_NewRef	Py_NewRef(PyObject *obj)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	3263	3266	Py_XNewRef	Py_XNewRef(PyObject *obj)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	3275	3278	Py_Is	int Py_Is(PyObject *x, PyObject *y)	todo		
-Objects/object.c	3280	3283	Py_IsNone	int Py_IsNone(PyObject *x)	todo		
-Objects/object.c	3285	3288	Py_IsTrue	int Py_IsTrue(PyObject *x)	todo		
-Objects/object.c	3290	3293	Py_IsFalse	int Py_IsFalse(PyObject *x)	todo		
-Objects/object.c	3298	3301	_Py_SetRefcnt	_Py_SetRefcnt(PyObject *ob, Py_ssize_t refcnt)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	3303	3308	PyRefTracer_SetTracer	int PyRefTracer_SetTracer(PyRefTracer tracer, void *data) {	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	3310	3316	PyRefTracer_GetTracer	PyRefTracer PyRefTracer_GetTracer(void** data) {	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	3334	3347	_Py_GetConstant_Init	_Py_GetConstant_Init(void)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
-Objects/object.c	3350	3359	Py_GetConstant	Py_GetConstant(unsigned int constant_id)	todo		
-Objects/object.c	3363	3367	Py_GetConstantBorrowed	Py_GetConstantBorrowed(unsigned int constant_id)	todo		
-Objects/object.c	3373	3376	Py_TYPE	Py_TYPE(PyObject *ob)	todo		
-Objects/object.c	3382	3385	Py_REFCNT	Py_REFCNT(PyObject *ob)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	3388	3394	PyUnstable_IsImmortal	PyUnstable_IsImmortal(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	3397	3402	PyUnstable_Object_IsUniquelyReferenced	PyUnstable_Object_IsUniquelyReferenced(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	50	69	_PyObject_CheckConsistency	_PyObject_CheckConsistency(PyObject *op, int check_content)	todo		changed-in-3.15: was excluded: test-support: debug-build diagnostic, not reachable from Python
+Objects/object.c	77	80	get_legacy_reftotal	get_legacy_reftotal(void)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	89	99	reftotal_add	reftotal_add(PyThreadState *tstate, Py_ssize_t n)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	110	114	_Py_FinalizeRefTotal	_Py_FinalizeRefTotal(_PyRuntimeState *runtime)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	117	121	_PyInterpreterState_FinalizeRefTotal	_PyInterpreterState_FinalizeRefTotal(PyInterpreterState *interp)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	124	137	get_reftotal	get_reftotal(PyInterpreterState *interp)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	140	158	get_global_reftotal	get_global_reftotal(_PyRuntimeState *runtime)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	163	170	_PyDebug_PrintTotalRefs	_PyDebug_PrintTotalRefs(void) {	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	183	190	has_own_refchain	has_own_refchain(PyInterpreterState *interp)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	193	214	refchain_init	refchain_init(PyInterpreterState *interp)	todo		changed-in-3.15: was excluded: no-behaviour: reference count bookkeeping
+Objects/object.c	217	223	refchain_fini	refchain_fini(PyInterpreterState *interp)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	226	229	_PyRefchain_IsTraced	_PyRefchain_IsTraced(PyInterpreterState *interp, PyObject *obj)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	233	240	_PyRefchain_Trace	_PyRefchain_Trace(PyInterpreterState *interp, PyObject *obj)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	244	252	_PyRefchain_Remove	_PyRefchain_Remove(PyInterpreterState *interp, PyObject *obj)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	262	268	_Py_AddToAllObjects	_Py_AddToAllObjects(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	274	278	_Py_NegativeRefcount	_Py_NegativeRefcount(const char *filename, int lineno, PyObject *op)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	282	285	_Py_INCREF_IncRefTotal	_Py_INCREF_IncRefTotal(void)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	289	292	_Py_DECREF_DecRefTotal	_Py_DECREF_DecRefTotal(void)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	295	298	_Py_IncRefTotal	_Py_IncRefTotal(PyThreadState *tstate)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	301	304	_Py_DecRefTotal	_Py_DecRefTotal(PyThreadState *tstate)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	307	310	_Py_AddRefTotal	_Py_AddRefTotal(PyThreadState *tstate, Py_ssize_t n)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	315	318	_Py_GetGlobalRefTotal	_Py_GetGlobalRefTotal(void)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	321	324	_Py_GetLegacyRefTotal	_Py_GetLegacyRefTotal(void)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	327	333	_PyInterpreterState_GetRefTotal	_PyInterpreterState_GetRefTotal(PyInterpreterState *interp)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	338	341	Py_IncRef	Py_IncRef(PyObject *o)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	344	347	Py_DecRef	Py_DecRef(PyObject *o)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	350	353	_Py_IncRef	_Py_IncRef(PyObject *o)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	356	359	_Py_DecRef	_Py_DecRef(PyObject *o)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	364	371	is_dead	is_dead(PyObject *o)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	377	421	_Py_DecRefSharedIsDead	_Py_DecRefSharedIsDead(PyObject *o, const char *filename, int lineno)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	424	429	_Py_DecRefSharedDebug	_Py_DecRefSharedDebug(PyObject *o, const char *filename, int lineno)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	432	435	_Py_DecRefShared	_Py_DecRefShared(PyObject *o)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	438	466	_Py_MergeZeroLocalRefcount	_Py_MergeZeroLocalRefcount(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	469	494	_Py_ExplicitMergeRefcount	_Py_ExplicitMergeRefcount(PyObject *op, Py_ssize_t extra)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	498	524	_PyObject_ResurrectEndSlow	_PyObject_ResurrectEndSlow(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	533	541	PyObject_Init	PyObject_Init(PyObject *op, PyTypeObject *tp)	excluded		no-behaviour: object allocator or free list
+Objects/object.c	544	552	PyObject_InitVar	PyObject_InitVar(PyVarObject *op, PyTypeObject *tp, Py_ssize_t size)	excluded		no-behaviour: object allocator or free list
+Objects/object.c	555	563	_PyObject_New	_PyObject_New(PyTypeObject *tp)	excluded		no-behaviour: object allocator or free list
+Objects/object.c	566	576	_PyObject_NewVar	_PyObject_NewVar(PyTypeObject *tp, Py_ssize_t nitems)	excluded		no-behaviour: object allocator or free list
+Objects/object.c	579	593	PyObject_CallFinalizer	PyObject_CallFinalizer(PyObject *self)	todo		
+Objects/object.c	596	631	PyObject_CallFinalizerFromDealloc	PyObject_CallFinalizerFromDealloc(PyObject *self)	todo		
+Objects/object.c	634	695	PyObject_Print	PyObject_Print(PyObject *op, FILE *fp, int flags)	todo		
+Objects/object.c	699	701	_Py_BreakPoint	_Py_BreakPoint(void)	excluded		test-support: debug-build diagnostic, not reachable from Python
+Objects/object.c	711	717	_PyObject_IsFreed	_PyObject_IsFreed(PyObject *op)	excluded		test-support: debug-build diagnostic, not reachable from Python
+Objects/object.c	722	757	PyObject_Dump	PyObject_Dump(PyObject* op)	todo		changed-in-3.15: new function
+Objects/object.c	760	798	PyObject_Repr	PyObject_Repr(PyObject *v)	todo		changed-in-3.15: was typeobj-repr-str-result
+Objects/object.c	801	841	PyObject_Str	PyObject_Str(PyObject *v)	todo		changed-in-3.15: was typeobj-str-result
+Objects/object.c	844	868	PyObject_ASCII	PyObject_ASCII(PyObject *v)	todo		
+Objects/object.c	871	900	PyObject_Bytes	PyObject_Bytes(PyObject *v)	todo		changed-in-3.15:
+Objects/object.c	903	915	clear_freelist	clear_freelist(struct _Py_freelist *freelist, int is_finalization, freefunc dofree)	excluded		no-behaviour: object allocator or free list
+Objects/object.c	918	924	free_object	free_object(void *obj)	excluded		no-behaviour: object allocator or free list
+Objects/object.c	927	959	_PyObject_ClearFreeLists	_PyObject_ClearFreeLists(struct _Py_freelists *freelists, int is_finalization)	todo		changed-in-3.15: was excluded: no-behaviour: object allocator or free list
+Objects/object.c	962	1009	_PyObject_FunctionStr	def _PyObject_FunctionStr(x): try: qualname = x.__qualname__ except AttributeError: return str(x) try: mod = x.__module__ if mod is not None and mod != 'builtins': return f\"{x.__module__}.{qualname}()\" except AttributeError: pass return qualname */ PyObject * _PyObject_FunctionStr(PyObject *x)	todo		
+Objects/object.c	1049	1094	do_richcompare	do_richcompare(PyThreadState *tstate, PyObject *v, PyObject *w, int op)	modelled	typeobj-richcompare-defaults,typeobj-richcompare-left-first,typeobj-richcompare-subclass-first	
+Objects/object.c	1100	1117	PyObject_RichCompare	PyObject_RichCompare(PyObject *v, PyObject *w, int op)	modelled	typeobj-richcompare-subclass-first	
+Objects/object.c	1122	1148	PyObject_RichCompareBool	PyObject_RichCompareBool(PyObject *v, PyObject *w, int op)	todo		changed-in-3.15: was typeobj-richcomparebool-identity
+Objects/object.c	1151	1156	PyObject_HashNotImplemented	PyObject_HashNotImplemented(PyObject *v)	todo		
+Objects/object.c	1159	1177	PyObject_Hash	PyObject_Hash(PyObject *v)	todo		
+Objects/object.c	1180	1192	PyObject_GetAttrString	PyObject_GetAttrString(PyObject *v, const char *name)	todo		
+Objects/object.c	1195	1201	PyObject_HasAttrStringWithError	PyObject_HasAttrStringWithError(PyObject *obj, const char *name)	todo		
+Objects/object.c	1205	1216	PyObject_HasAttrString	PyObject_HasAttrString(PyObject *obj, const char *name)	todo		
+Objects/object.c	1219	1243	PyObject_SetAttrString	PyObject_SetAttrString(PyObject *v, const char *name, PyObject *w)	todo		changed-in-3.15:
+Objects/object.c	1246	1249	PyObject_DelAttrString	PyObject_DelAttrString(PyObject *v, const char *name)	todo		
+Objects/object.c	1252	1266	_PyObject_IsAbstract	_PyObject_IsAbstract(PyObject *obj)	todo		
+Objects/object.c	1269	1280	_PyObject_GetAttrId	_PyObject_GetAttrId(PyObject *v, _Py_Identifier *name)	todo		changed-in-3.15:
+Objects/object.c	1283	1308	_PyObject_SetAttributeErrorContext	_PyObject_SetAttributeErrorContext(PyObject* v, PyObject* name)	todo		changed-in-3.15:
+Objects/object.c	1311	1342	PyObject_GetAttr	PyObject_GetAttr(PyObject *v, PyObject *name)	modelled	typeobj-optional-attr-agrees	
+Objects/object.c	1348	1390	_PyObject_GetAttrStackRef	_PyObject_GetAttrStackRef(PyObject *v, PyObject *name)	todo		changed-in-3.15: new function
+Objects/object.c	1393	1458	PyObject_GetOptionalAttr	PyObject_GetOptionalAttr(PyObject *v, PyObject *name, PyObject **result)	modelled	typeobj-optional-attr-agrees	
+Objects/object.c	1461	1483	PyObject_GetOptionalAttrString	PyObject_GetOptionalAttrString(PyObject *obj, const char *name, PyObject **result)	todo		
+Objects/object.c	1486	1492	PyObject_HasAttrWithError	PyObject_HasAttrWithError(PyObject *obj, PyObject *name)	todo		
+Objects/object.c	1495	1506	PyObject_HasAttr	PyObject_HasAttr(PyObject *obj, PyObject *name)	todo		
+Objects/object.c	1509	1565	PyObject_SetAttr	PyObject_SetAttr(PyObject *v, PyObject *name, PyObject *value)	todo		changed-in-3.15:
+Objects/object.c	1568	1571	PyObject_DelAttr	PyObject_DelAttr(PyObject *v, PyObject *name)	todo		
+Objects/object.c	1574	1599	_PyObject_ComputedDictPointer	_PyObject_ComputedDictPointer(PyObject *obj)	todo		
+Objects/object.c	1609	1623	_PyObject_GetDictPtr	_PyObject_GetDictPtr(PyObject *obj)	modelled	typeobj-getattr-instance-dict	
+Objects/object.c	1626	1629	PyObject_SelfIter	PyObject_SelfIter(PyObject *obj)	todo		
+Objects/object.c	1637	1643	_PyObject_NextNotImplemented	_PyObject_NextNotImplemented(PyObject *self)	todo		
+Objects/object.c	1657	1746	_PyObject_GetMethod	_PyObject_GetMethod(PyObject *obj, PyObject *name, PyObject **method)	modelled	typeobj-get-method	
+Objects/object.c	1757	1882	_PyObject_GetMethodStackRef	_PyObject_GetMethodStackRef(PyThreadState *ts, _PyStackRef *self, PyObject *name, _PyStackRef *method)	modelled	typeobj-get-method	
+Objects/object.c	1888	2008	_PyObject_GenericGetAttrWithDict	_PyObject_GenericGetAttrWithDict(PyObject *obj, PyObject *name, PyObject *dict, int suppress)	modelled	typeobj-getattr-class-attr,typeobj-getattr-data-descr,typeobj-getattr-instance-dict,typeobj-getattr-nondata-descr,typeobj-getattr-suppress	
+Objects/object.c	2011	2014	PyObject_GenericGetAttr	PyObject_GenericGetAttr(PyObject *obj, PyObject *name)	todo		
+Objects/object.c	2017	2116	_PyObject_GenericSetAttrWithDict	_PyObject_GenericSetAttrWithDict(PyObject *obj, PyObject *name, PyObject *value, PyObject *dict)	todo		
+Objects/object.c	2119	2122	PyObject_GenericSetAttr	PyObject_GenericSetAttr(PyObject *obj, PyObject *name, PyObject *value)	todo		
+Objects/object.c	2125	2132	PyObject_GenericSetDict	PyObject_GenericSetDict(PyObject *obj, PyObject *value, void *context)	todo		
+Objects/object.c	2139	2161	PyObject_IsTrue	PyObject_IsTrue(PyObject *v)	modelled	typeobj-istrue-default,typeobj-istrue-len	
+Objects/object.c	2167	2174	PyObject_Not	PyObject_Not(PyObject *v)	todo		
+Objects/object.c	2179	2184	PyCallable_Check	PyCallable_Check(PyObject *x)	todo		
+Objects/object.c	2189	2231	_dir_locals	_dir_locals(void)	todo		
+Objects/object.c	2235	2261	_dir_object	_dir_object(PyObject *obj)	todo		
+Objects/object.c	2268	2271	PyObject_Dir	PyObject_Dir(PyObject *obj)	todo		
+Objects/object.c	2281	2284	none_repr	none_repr(PyObject *op)	todo		
+Objects/object.c	2287	2294	none_dealloc	none_dealloc(PyObject* none)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	2297	2304	none_new	none_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)	todo		
+Objects/object.c	2307	2310	none_bool	none_bool(PyObject *v)	todo		
+Objects/object.c	2312	2315	none_hash	static Py_hash_t none_hash(PyObject *v)	todo		
+Objects/object.c	2406	2409	NotImplemented_repr	NotImplemented_repr(PyObject *op)	todo		
+Objects/object.c	2412	2415	NotImplemented_reduce	NotImplemented_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
+Objects/object.c	2423	2430	notimplemented_new	notimplemented_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)	todo		
+Objects/object.c	2433	2440	notimplemented_dealloc	notimplemented_dealloc(PyObject *notimplemented)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	2443	2448	notimplemented_bool	notimplemented_bool(PyObject *v)	todo		
+Objects/object.c	2504	2512	_PyObject_InitState	_PyObject_InitState(PyInterpreterState *interp)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
+Objects/object.c	2515	2520	_PyObject_FiniState	_PyObject_FiniState(PyInterpreterState *interp)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
+Objects/object.c	2670	2702	_PyTypes_InitTypes	_PyTypes_InitTypes(PyInterpreterState *interp)	todo		changed-in-3.15: was excluded: internal-bootstrap: interpreter start-up and shutdown of static types
+Objects/object.c	2712	2723	_PyTypes_FiniTypes	_PyTypes_FiniTypes(PyInterpreterState *interp)	todo		changed-in-3.15: was excluded: internal-bootstrap: interpreter start-up and shutdown of static types
+Objects/object.c	2727	2757	new_reference	new_reference(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	2760	2766	_Py_NewReference	_Py_NewReference(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	2769	2772	_Py_NewReferenceNoTotal	_Py_NewReferenceNoTotal(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	2775	2792	_Py_SetImmortalUntracked	_Py_SetImmortalUntracked(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	2795	2801	_Py_SetImmortal	_Py_SetImmortal(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	2804	2813	_PyObject_SetDeferredRefcount	_PyObject_SetDeferredRefcount(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	2816	2849	PyUnstable_Object_EnableDeferredRefcount	PyUnstable_Object_EnableDeferredRefcount(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	2852	2876	PyUnstable_Object_IsUniqueReferencedTemporary	PyUnstable_Object_IsUniqueReferencedTemporary(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	2879	2882	PyUnstable_TryIncRef	PyUnstable_TryIncRef(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	2885	2890	PyUnstable_EnableTryIncRef	PyUnstable_EnableTryIncRef(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	2893	2901	PyUnstable_SetImmortal	PyUnstable_SetImmortal(PyObject *op)	todo		changed-in-3.15: new function
+Objects/object.c	2904	2909	_Py_ResurrectReference	_Py_ResurrectReference(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	2912	2931	_Py_ForgetReference	_Py_ForgetReference(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	2936	2948	_Py_PrintReference	_Py_PrintReference(_Py_hashtable_t *ht, const void *key, const void *value, void *user_data)	excluded		test-support: debug-build diagnostic, not reachable from Python
+Objects/object.c	2955	2962	_Py_PrintReferences	_Py_PrintReferences(PyInterpreterState *interp, FILE *fp)	excluded		test-support: debug-build diagnostic, not reachable from Python
+Objects/object.c	2966	2975	_Py_PrintReferenceAddress	_Py_PrintReferenceAddress(_Py_hashtable_t *ht, const void *key, const void *value, void *user_data)	excluded		test-support: debug-build diagnostic, not reachable from Python
+Objects/object.c	2986	2990	_Py_PrintReferenceAddresses	_Py_PrintReferenceAddresses(PyInterpreterState *interp, FILE *fp)	excluded		test-support: debug-build diagnostic, not reachable from Python
+Objects/object.c	3008	3042	_Py_GetObject	_Py_GetObject(_Py_hashtable_t *ht, const void *key, const void *value, void *user_data)	excluded		test-support: debug-build diagnostic, not reachable from Python
+Objects/object.c	3047	3074	_Py_GetObjects	_Py_GetObjects(PyObject *self, PyObject *args)	excluded		test-support: debug-build diagnostic, not reachable from Python
+Objects/object.c	3087	3093	_PyObject_DebugTypeStats	_PyObject_DebugTypeStats(FILE *out)	excluded		test-support: debug-build diagnostic, not reachable from Python
+Objects/object.c	3108	3139	Py_ReprEnter	Py_ReprEnter(PyObject *obj)	todo		changed-in-3.15:
+Objects/object.c	3142	3170	Py_ReprLeave	Py_ReprLeave(PyObject *obj)	todo		
+Objects/object.c	3179	3198	_PyTrash_thread_deposit_object	_PyTrash_thread_deposit_object(PyThreadState *tstate, PyObject *op)	excluded		no-behaviour: object allocator or free list
+Objects/object.c	3203	3234	_PyTrash_thread_destroy_chain	_PyTrash_thread_destroy_chain(PyThreadState *tstate)	todo		changed-in-3.15: was excluded: no-behaviour: object allocator or free list
+Objects/object.c	3237	3284	_PyObject_AssertFailed	_PyObject_AssertFailed(PyObject *obj, const char *expr, const char *msg, const char *file, int line, const char *function)	todo		changed-in-3.15: was excluded: test-support: debug-build diagnostic, not reachable from Python
+Objects/object.c	3295	3351	_Py_Dealloc	_Py_Dealloc(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	3355	3358	PyObject_GET_WEAKREFS_LISTPTR	PyObject_GET_WEAKREFS_LISTPTR(PyObject *op)	todo		
+Objects/object.c	3366	3369	Py_NewRef	Py_NewRef(PyObject *obj)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	3372	3375	Py_XNewRef	Py_XNewRef(PyObject *obj)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	3384	3387	Py_Is	int Py_Is(PyObject *x, PyObject *y)	todo		
+Objects/object.c	3389	3392	Py_IsNone	int Py_IsNone(PyObject *x)	todo		
+Objects/object.c	3394	3397	Py_IsTrue	int Py_IsTrue(PyObject *x)	todo		
+Objects/object.c	3399	3402	Py_IsFalse	int Py_IsFalse(PyObject *x)	todo		
+Objects/object.c	3407	3410	_Py_SetRefcnt	_Py_SetRefcnt(PyObject *ob, Py_ssize_t refcnt)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	3412	3427	PyRefTracer_SetTracer	int PyRefTracer_SetTracer(PyRefTracer tracer, void *data) {	todo		changed-in-3.15: was excluded: no-behaviour: reference count bookkeeping
+Objects/object.c	3429	3435	PyRefTracer_GetTracer	PyRefTracer PyRefTracer_GetTracer(void** data) {	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	3453	3466	_Py_GetConstant_Init	_Py_GetConstant_Init(void)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
+Objects/object.c	3469	3478	Py_GetConstant	Py_GetConstant(unsigned int constant_id)	todo		
+Objects/object.c	3482	3486	Py_GetConstantBorrowed	Py_GetConstantBorrowed(unsigned int constant_id)	todo		
+Objects/object.c	3489	3495	PyUnstable_IsImmortal	PyUnstable_IsImmortal(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	3498	3503	PyUnstable_Object_IsUniquelyReferenced	PyUnstable_Object_IsUniquelyReferenced(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
+Objects/object.c	3506	3513	_PyObject_VisitType	_PyObject_VisitType(PyObject *op, visitproc visit, void *arg)	todo		changed-in-3.15: new function

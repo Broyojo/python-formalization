@@ -6,21 +6,22 @@ Python/ast.c	100	110	validate_args	validate_args(asdl_arg_seq *args)	modelled	py
 Python/ast.c	113	125	expr_context_name	expr_context_name(expr_context_ty ctx)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Python/ast.c	128	154	validate_arguments	validate_arguments(arguments_ty args)	modelled	pygrammar-check-rejects	
 Python/ast.c	157	207	validate_constant	validate_constant(PyObject *value)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast.c	210	410	validate_expr	validate_expr(expr_ty exp, expr_context_ty ctx)	modelled	pygrammar-check-rejects	
-Python/ast.c	417	424	ensure_literal_number	ensure_literal_number(expr_ty exp, bool allow_real, bool allow_imaginary)	modelled	pygrammar-check-rejects	
-Python/ast.c	427	441	ensure_literal_negative	ensure_literal_negative(expr_ty exp, bool allow_real, bool allow_imaginary)	modelled	pygrammar-check-rejects	
-Python/ast.c	444	481	ensure_literal_complex	ensure_literal_complex(expr_ty exp)	modelled	pygrammar-check-rejects	
-Python/ast.c	484	536	validate_pattern_match_value	validate_pattern_match_value(expr_ty exp)	modelled	pygrammar-check-rejects	
-Python/ast.c	539	547	validate_capture	validate_capture(PyObject *name)	modelled	pygrammar-check-rejects	
-Python/ast.c	550	699	validate_pattern	validate_pattern(pattern_ty p, int star_ok)	modelled	pygrammar-check-null-sites	
-Python/ast.c	702	708	_validate_nonempty_seq	_validate_nonempty_seq(asdl_seq *seq, const char *what, const char *owner)	modelled	pygrammar-check-rejects	
-Python/ast.c	712	717	validate_assignlist	validate_assignlist(asdl_expr_seq *targets, expr_context_ty ctx)	modelled	pygrammar-check-rejects	
-Python/ast.c	720	724	validate_body	validate_body(asdl_stmt_seq *body, const char *owner)	modelled	pygrammar-check-rejects	
-Python/ast.c	727	951	validate_stmt	validate_stmt(stmt_ty stmt)	modelled	pygrammar-check-rejects	
-Python/ast.c	954	970	validate_stmts	validate_stmts(asdl_stmt_seq *seq)	modelled	pygrammar-check-rejects	
-Python/ast.c	973	990	validate_exprs	validate_exprs(asdl_expr_seq *exprs, expr_context_ty ctx, int null_ok)	modelled	pygrammar-check-rejects	
-Python/ast.c	993	1003	validate_patterns	validate_patterns(asdl_pattern_seq *patterns, int star_ok)	modelled	pygrammar-check-null-sites	
-Python/ast.c	1006	1030	validate_typeparam	validate_typeparam(type_param_ty tp)	modelled	pygrammar-check-rejects	
-Python/ast.c	1033	1044	validate_type_params	validate_type_params(asdl_type_param_seq *tps)	modelled	pygrammar-check-rejects	
-Python/ast.c	1047	1074	_PyAST_Validate	_PyAST_Validate(mod_ty mod)	modelled	pygrammar-check-null-sites	
-Python/ast.c	1077	1091	_PyAST_GetDocString	_PyAST_GetDocString(asdl_stmt_seq *body)	modelled	pygrammar-ast-docstring-twins	
+Python/ast.c	210	412	validate_expr	validate_expr(expr_ty exp, expr_context_ty ctx)	todo		changed-in-3.15: was pygrammar-check-rejects
+Python/ast.c	419	426	ensure_literal_number	ensure_literal_number(expr_ty exp, bool allow_real, bool allow_imaginary)	modelled	pygrammar-check-rejects	
+Python/ast.c	429	443	ensure_literal_signed	ensure_literal_signed(expr_ty exp, bool allow_real, bool allow_imaginary)	todo		changed-in-3.15: new function
+Python/ast.c	446	483	ensure_literal_complex	ensure_literal_complex(expr_ty exp)	todo		changed-in-3.15: was pygrammar-check-rejects
+Python/ast.c	486	538	validate_pattern_match_value	validate_pattern_match_value(expr_ty exp)	todo		changed-in-3.15: was pygrammar-check-rejects
+Python/ast.c	541	549	validate_capture	validate_capture(PyObject *name)	modelled	pygrammar-check-rejects	
+Python/ast.c	552	701	validate_pattern	validate_pattern(pattern_ty p, int star_ok)	modelled	pygrammar-check-null-sites	
+Python/ast.c	704	710	_validate_nonempty_seq	_validate_nonempty_seq(asdl_seq *seq, const char *what, const char *owner)	modelled	pygrammar-check-rejects	
+Python/ast.c	714	728	validate_import_names	validate_import_names(asdl_alias_seq *seq, const char *what, const char *owner)	todo		changed-in-3.15: new function
+Python/ast.c	731	736	validate_assignlist	validate_assignlist(asdl_expr_seq *targets, expr_context_ty ctx)	modelled	pygrammar-check-rejects	
+Python/ast.c	739	743	validate_body	validate_body(asdl_stmt_seq *body, const char *owner)	modelled	pygrammar-check-rejects	
+Python/ast.c	746	975	validate_stmt	validate_stmt(stmt_ty stmt)	todo		changed-in-3.15: was pygrammar-check-rejects
+Python/ast.c	978	994	validate_stmts	validate_stmts(asdl_stmt_seq *seq)	modelled	pygrammar-check-rejects	
+Python/ast.c	997	1014	validate_exprs	validate_exprs(asdl_expr_seq *exprs, expr_context_ty ctx, int null_ok)	modelled	pygrammar-check-rejects	
+Python/ast.c	1017	1027	validate_patterns	validate_patterns(asdl_pattern_seq *patterns, int star_ok)	modelled	pygrammar-check-null-sites	
+Python/ast.c	1030	1054	validate_typeparam	validate_typeparam(type_param_ty tp)	modelled	pygrammar-check-rejects	
+Python/ast.c	1057	1068	validate_type_params	validate_type_params(asdl_type_param_seq *tps)	modelled	pygrammar-check-rejects	
+Python/ast.c	1071	1098	_PyAST_Validate	_PyAST_Validate(mod_ty mod)	modelled	pygrammar-check-null-sites	
+Python/ast.c	1101	1115	_PyAST_GetDocString	_PyAST_GetDocString(asdl_stmt_seq *body)	modelled	pygrammar-ast-docstring-twins	

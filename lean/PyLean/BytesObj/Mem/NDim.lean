@@ -181,7 +181,7 @@ theorem flags_contig_empty (v : Buf) (n d : Int) (hflag : (initFlags v).isC = fa
 /-- `hash(m) == hash(m.tobytes())` for every read-only view of a byte format, of any number of
 dimensions, strides and suboffsets (Doc/library/stdtypes.rst, `memoryview.__hash__`), and the value
 stays: a later `hash` gives the same even after `release()`. The two read the memory by different
-tests, `MV_C_CONTIGUOUS(flags)` (:3238) and `PyBuffer_IsContiguous` (:1063), and these differ only on an
+tests, `MV_C_CONTIGUOUS(flags)` (@3.14.7:3238) and `PyBuffer_IsContiguous` (@3.14.7:1063), and these differ only on an
 empty view. Hypotheses: the conditions of the function itself (read-only, byte format, an exporter
 whose `__hash__` succeeds and touches no view: the other cases are `HashHoldsExport` and
 `HashViewExporter`), and the type invariants of the view, among them that a 0-dim view has no
@@ -280,7 +280,7 @@ theorem hashIsTobytes_proven : HashIsTobytes := by
     exact hash_cached s' self _ hs
 
 /-- `memoryview.cast(format, shape)` from the arguments to the new view (`memoryview_cast_impl`,
-:1447-1499, through `cast_to_1D` and `cast_to_ND`): a new view of the same buffer and byte size,
+@3.14.7:1447-1499, through `cast_to_1D` and `cast_to_ND`): a new view of the same buffer and byte size,
 with `ndim == len(shape)`, the given shape, the new format and C strides, and `m` unchanged.
 Hypotheses: what the function checks, each with its own refusal in `CastRejections`, `CastNDSpec`
 and `Cast1DSpec`, and a live, C-contiguous source. -/
@@ -370,7 +370,7 @@ theorem castShapeSpec_proven : CastShapeSpec := by
   · have hne : st.mvs.length ≠ self := by omega
     rw [St.mv_setMv_ne _ _ _ _ hne, hs2e, St.mv_setMv_ne _ _ _ _ hne, hA.old _ hself]
 
-/-- `with m as x:` (`memory_enter`, `memory_exit`, :1182-1193): `__enter__` returns the view itself,
+/-- `with m as x:` (`memory_enter`, `memory_exit`, @3.14.7:1182-1193): `__enter__` returns the view itself,
 and a released view refuses; `__exit__` is `release`, so with no exports the view is released and
 a second `__enter__` refuses. The refusal with exports is in `ReleaseRules`. Hypothesis: `i` exists. -/
 def ContextRules : Prop :=
@@ -392,7 +392,7 @@ theorem contextRules_proven : ContextRules := by
     refine ⟨memoryRelease_ok i st, hr, ?_⟩
     simp only [memoryEnter, M.bind_app, checkReleased_err _ _ (released_inaccessible _ _ hr)]
 
-/-- The exit of `PyMemoryView_GetContiguous` the function exists for, :998-1000: a read request in
+/-- The exit of `PyMemoryView_GetContiguous` the function exists for, @3.14.7:998-1000: a read request in
 C order on a view that is not contiguous gives a new view over a new `bytes` object, with C strides
 and no suboffsets, holding the view's items in row-major order, and the temporary view is
 dropped. `m` keeps its buffer. Hypotheses: a live view of any number of dimensions with
@@ -467,7 +467,7 @@ theorem getContiguousCopy_proven : GetContiguousCopy := by
     exact h7
   · rw [hmono.view, h8 self (by rw [hlen1]; have := hL.valid; omega), hA.old _ hL.valid]
 
-/-- `m[s] = x` on a 1-D writable view (`memory_ass_sub`, :2694-2719, through `init_slice` and
+/-- `m[s] = x` on a 1-D writable view (`memory_ass_sub`, @3.14.7:2694-2719, through `init_slice` and
 `copy_single`): for every slice with a non-zero step and every `x` of the same structure, item
 `range(*s.indices(n))[k]` of `m` holds item `k` of `x`, also when the two overlap, and `x`'s buffer is
 given back. Refusals are `SliceCleanup` and `CopySingleRefuses`. Hypotheses: a live, writable view with
@@ -554,7 +554,7 @@ theorem assSliceSpec_proven : AssSliceSpec := by
   rw [hdit] at this
   exact this
 
-/-- `init_shape_strides`, :555-580, and `init_suboffsets`, :582-593: no arrays for 0 dimensions; a
+/-- `init_shape_strides`, @3.14.7:555-580, and `init_suboffsets`, @3.14.7:582-593: no arrays for 0 dimensions; a
 missing shape or stride of a 1-D buffer rebuilt from `len` and `itemsize`; N-D arrays copied; and N-D
 strides that are missing filled in by `init_strides_from_shape`, which is C order, as the buffer
 protocol defines a NULL `strides`. Suboffsets are copied when there are any.
@@ -589,7 +589,7 @@ theorem initArrays_proven : InitArrays := by
   · simp [initSuboffsets, h1, List.take_of_length_le (show l.length ≤ v.ndim by omega)]
   · simp [initSuboffsets, h]
 
-/-- `PyMemoryView_FromBuffer`, :769-794, on a `Py_buffer` with all its arrays, of any number of
+/-- `PyMemoryView_FromBuffer`, @3.14.7:769-794, on a `Py_buffer` with all its arrays, of any number of
 dimensions: the view is that buffer with no exporter, and it is the only view of a new managed
 buffer. A buffer that lacks them is `FromBufferReconstructs` and `InitArrays`. Hypotheses: the
 arrays have `ndim` entries, at most 64. -/
@@ -637,10 +637,10 @@ theorem fromBufferFull_proven : FromBufferFull := by
     rfl
   · rw [hA.mem, hmem]
 
-/-- `memoryview._from_flags(x, flags)`, :1031-1036, gives `flags` to an exporter
-(`_PyManagedBuffer_FromObject`, :88-104): a writable request on a read-only exporter is refused
+/-- `memoryview._from_flags(x, flags)`, @3.14.7:1031-1036, gives `flags` to an exporter
+(`_PyManagedBuffer_FromObject`, @3.14.7:88-104): a writable request on a read-only exporter is refused
 with no view made, and without `PyBUF_FORMAT` the master has no format and the view reads `B`,
-as `init_shared_values` fills it in (:550). Hypotheses: the case; at most 64 dimensions. -/
+as `init_shared_values` fills it in (@3.14.7:550). Hypotheses: the case; at most 64 dimensions. -/
 def FromFlagsExporter : Prop :=
   ∀ (st : St) (b : Buf) (flags : Nat), b.ndim ≤ 64 →
     (req flags bufWritable = true → b.readonly = true →
@@ -708,7 +708,7 @@ theorem fromFlagsExporter_proven : FromFlagsExporter := by
     rw [hA.master (by omega), hmbk]
     exact hmf
 
-/-- `_PyMemoryView_FromBufferProc`, :831-848, for every buffer proc. A proc that fails passes its
+/-- `_PyMemoryView_FromBufferProc`, @3.14.7:831-848, for every buffer proc. A proc that fails passes its
 exception up and releases nothing; a proc that succeeds with a usable buffer gives a new view of it
 on a new managed buffer; a buffer `mbuf_add_view` refuses is released. Hypotheses: the case. -/
 def BufferProcRules : Prop :=
@@ -770,7 +770,7 @@ theorem bufferProcRules_proven : BufferProcRules := by
     · apply (pyBufferRelease_mono _ _).mb
       rw [St.mb_setMb _ _ _ hk2]
 
-/-- `memoryview_cast_impl`, :1496-1498: when a cast fails after the new view is made, `Py_DECREF(mv)`
+/-- `memoryview_cast_impl`, @3.14.7:1496-1498: when a cast fails after the new view is made, `Py_DECREF(mv)`
 gives its export of the managed buffer back. Hypotheses: a live, C-contiguous source that passes the
 first checks; a format that is not native, the case; the buffer counts `self`, a type invariant. -/
 def CastCleanup : Prop :=

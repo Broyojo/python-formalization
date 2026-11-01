@@ -46,7 +46,7 @@ theorem powerloopNoOverflow_proven : PowerloopNoOverflow := fun s1 n1 n2 n h1 h2
 /-- For every list length `N <= PY_SSIZE_T_MAX` and every sequence of positive run
 lengths (any run structure, not only the ones `count_run`/`minrun` produce),
 after each `found_new_run` + push the stored powers strictly increase towards
-the top and are `>= 1` (the `assert` at `listobject.c:2663`,
+the top and are `>= 1` (the `assert` at `listobject.c:2739`,
 `listsort.txt:426-427`). -/
 def PolicyPowersStrict : Prop :=
   ∀ (N : Nat) (lens : List Nat), N ≤ 2 ^ 63 - 1 → (∀ l ∈ lens, 0 < l) → lens.sum ≤ N →
@@ -58,7 +58,7 @@ theorem policyPowersStrict_proven : PolicyPowersStrict := fun N lens hN hl hs =>
 /-- For every `N <= PY_SSIZE_T_MAX` and every non-empty sequence of positive run
 lengths summing to at most `N`, after each push the stack holds `s` entries
 with `2^s < 4N` (i.e. `s <= ceil(log2 N) + 1`), and no push violates
-`assert(ms.n < MAX_MERGE_PENDING)` (`listobject.c:3100`). -/
+`assert(ms.n < MAX_MERGE_PENDING)` (`listobject.c:3165`). -/
 def PolicyStackBound : Prop :=
   ∀ (N : Nat) (lens : List Nat), N ≤ 2 ^ 63 - 1 → (∀ l ∈ lens, 0 < l) → lens.sum ≤ N → lens ≠ [] →
     2 ^ (policyRun N lens).1.length < 4 * N ∧ (policyRun N lens).2.2 = true
@@ -115,7 +115,7 @@ theorem policyStackTight_proven : PolicyStackTight := by
   · simp [tightLens, List.range, List.range.loop, policyRun, policyStep, foundNewRun, mergeWhile, powerloop,
       powerloopOvf, powerIter, MAX_MERGE_PENDING]
 
-/-- The comment at `listobject.c:1673-1677`: "For a list with n elements, this
+/-- The comment at `listobject.c:1739-1743`: "For a list with n elements, this
 needs at most floor(log2(n)) + 1 entries even if we didn't force runs to a
 minimal length." -/
 def StackCommentLog2 : Prop :=
@@ -133,7 +133,7 @@ theorem stackCommentLog2_refuted : ¬ StackCommentLog2 := by
 
 /-- The whole sort, for every item type, every comparison function (including
 inconsistent ones) and every list of length `<= PY_SSIZE_T_MAX`, never violates
-`assert(ms.n < MAX_MERGE_PENDING)` before a push (`listobject.c:3100`). In a
+`assert(ms.n < MAX_MERGE_PENDING)` before a push (`listobject.c:3165`). In a
 release build that `assert` is compiled out, so a violation would write past
 `ms.pending[]`. -/
 def SortPushAssert : Prop :=
@@ -144,7 +144,7 @@ theorem sortPushAssert_proven : SortPushAssert := fun _ lt xs h => (sortCore_ok 
 /-- `merge_compute_minrun(n)`: `n` for `n < 64`; otherwise `⌈n / 2^e⌉` for the
 `e` with `32 * 2^e <= n < 64 * 2^e`, hence `32 <= minrun <= 64` (so
 `binarysort`'s `assert(n <= MAX_MINRUN)` holds) and `n / minrun <= 2^e`, with
-`minrun = 32` for powers of two (`listobject.c:2690-2699`, `listsort.txt:313-318`). -/
+`minrun = 32` for powers of two (`listobject.c@3.14.7:2690-2699`, `listsort.txt:313-318`). -/
 def MinrunSpec : Prop :=
   ∀ n : Nat,
     (n < 64 → computeMinrun n = n) ∧
@@ -184,8 +184,8 @@ theorem minrunSpec_proven : MinrunSpec := by
 
 /-- `gallop_left`/`gallop_right` on a sorted vector, for every `hint < n`:
 `gallop_left` returns the number of items `< key` (`a[k-1] < key <= a[k]`,
-`listobject.c:2009-2011`), `gallop_right` the number of items `<= key`
-(`a[k-1] <= key < a[k]`, `:2098-2100`). -/
+`listobject.c:2077-2079`), `gallop_right` the number of items `<= key`
+(`a[k-1] <= key < a[k]`, `:2166-2168`). -/
 def GallopSpec : Prop :=
   ∀ (α : Type) (kf : α → Int) (key : α) (A : List α) (hint : Nat) (ms : MS),
     Sorted kf A → hint < A.length →
@@ -201,7 +201,7 @@ theorem gallopSpec_proven : GallopSpec := by
   exact ⟨gallopLeft_spec kf key A _ hint ms hs hget hh, gallopRight_spec kf key A _ hint ms hs hget hh⟩
 
 /-- `binarysort(a, n, ok)` with `a[:max(ok,1)]` sorted and `max(ok,1) <= n`
-leaves the stable sort of `a[:n]` followed by `a[n:]` (`listobject.c:1754-1763`). -/
+leaves the stable sort of `a[:n]` followed by `a[n:]` (`listobject.c:1822-1831`). -/
 def BinarysortStable : Prop :=
   ∀ (α : Type) (kf : α → Int) (a : List α) (n ok : Nat) (ms : MS),
     (if ok = 0 then 1 else ok) ≤ n → Sorted kf (a.take (if ok = 0 then 1 else ok)) →
@@ -215,7 +215,7 @@ theorem binarysortStable_proven : BinarysortStable := by
 /-- `count_run` on a non-empty slice returns `1 <= n <= len` and leaves the
 stable sort of the first `n` items (ascending runs, descending runs with their
 all-equal groups kept in order, plus the ascending extension;
-`listobject.c:1895-1996`), the rest untouched. -/
+`listobject.c:1963-2064`), the rest untouched. -/
 def CountRunSpec : Prop :=
   ∀ (α : Type) (kf : α → Int) (xs : List α) (ms : MS), xs ≠ [] →
     1 ≤ (countRun (ltOf kf) xs ms).1 ∧ (countRun (ltOf kf) xs ms).1 ≤ xs.length ∧
@@ -239,7 +239,7 @@ theorem mergeAtStable_proven : MergeAtStable := fun _ kf A B ms hA hB hAne hBne 
   ss_eq_stableSort (mergeAt_spec kf A B ms hA hB hAne hBne)
 
 /-- "Even in case of error, the list will be some permutation of its input
-state (nothing is lost or duplicated)" (`listobject.c:2875-2879`): for every
+state (nothing is lost or duplicated)" (`listobject.c:2940-2944`): for every
 comparison function, however inconsistent, the result of `list.sort` (with or
 without `reverse`) is a permutation of the input. -/
 def PermAnyCompare : Prop :=
@@ -280,7 +280,7 @@ theorem listSort_rev_eq (kf : α → Int) (xs : List α) :
 
 /-- For every item type and integer-valued key, `list.sort()` with items
 compared by `<` on the key is the stable sort: sorted, a permutation, and items
-with equal keys keep their order (the docstring, `listobject.c:2888-2891`). -/
+with equal keys keep their order (the docstring, `listobject.c:2953-2956`). -/
 def SortIsStableSort : Prop :=
   ∀ (α : Type) (kf : α → Int) (xs : List α),
     let r := listSort (ltOf kf) xs
@@ -352,7 +352,7 @@ theorem stableSort_reverse (kf : α → Int) (xs : List α) :
     rw [e, e, ← h.2 (-k), List.filter_reverse, List.reverse_reverse]
 
 /-- `reverse=True`: the result is the stable sort of the reversed list,
-reversed (`listobject.c:3067-3073`, `:3136-3137`), which is the stable sort by
+reversed (`listobject.c:3132-3138`, `:3201-3202`), which is the stable sort by
 descending key: equal keys keep their original order ("The reverse parameter
 still maintains sort stability", Doc/howto/sorting.rst). -/
 def ReverseStable : Prop :=
@@ -383,7 +383,7 @@ theorem ss_map_snd {β : Type} (f : β → Int) {L R : List (Int × β)} (hs : S
 
 /-- `key=f`: the keys are computed once per item and the items are sorted
 stably by key; with `reverse=True` stably by descending key (the docstring,
-`listobject.c:2893-2894`). -/
+`listobject.c:2958-2959`). -/
 def KeySortStable : Prop :=
   ∀ (β : Type) (f : β → Int) (xs : List β) (reverse : Bool),
     listSortKey f (fun a b => decide (a < b)) xs reverse =

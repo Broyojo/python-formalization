@@ -29,7 +29,7 @@ open PyLean PyLean.StrSearch
 /-- ASCII text as byte values. -/
 def asc (s : String) : Seq := s.toList.map Char.toNat
 
-/-- `PyBytesObject_SIZE`, bytesobject.c:34: `offsetof(ob_sval) + 1` on LP64. -/
+/-- `PyBytesObject_SIZE`, bytesobject.c@3.14.7:34: `offsetof(ob_sval) + 1` on LP64. -/
 def bytesObjectSize : Int := 33
 
 /-- `malloc` failure, see the module docstring. -/
@@ -144,7 +144,7 @@ def Obj.isNumber : Obj → Bool
   | _ => false
 
 /-- `"a bytes-like object is required, not '%.100s'"`, `PyObject_GetBuffer`,
-Objects/abstract.c:430-434. -/
+Objects/abstract.c:440-444. -/
 def notBytesLike (o : Obj) : PyExc :=
   .typeError s!"a bytes-like object is required, not '{o.typeName}'"
 
@@ -165,9 +165,9 @@ def asSsizeClamp (o : Obj) : Py Int :=
   | some (.error e) => .error e
   | none => .error (notInteger o)
 
-/-! ## `repr` of bytes, bytesobject.c:1344-1416 -/
+/-! ## `repr` of bytes, bytesobject.c:1429-1507 -/
 
-/-- The sizing loop of `PyBytes_Repr`, bytesobject.c:1358-1372:
+/-- The sizing loop of `PyBytes_Repr`, bytesobject.c:1448-1463:
 `(newsize, squotes, dquotes)`. -/
 def reprScan : Seq → Int → Int → Int → Py (Int × Int × Int)
   | [], n, sq, dq => .ok (n, sq, dq)
@@ -184,7 +184,7 @@ def reprScan : Seq → Int → Int → Int → Py (Int × Int × Int)
 /-- `Py_hexdigits[d]`, lower case. -/
 def hexDigit (d : Nat) : Nat := if d < 10 then 48 + d else 87 + d
 
-/-- The writing loop of `PyBytes_Repr`, one byte, bytesobject.c:1390-1406. -/
+/-- The writing loop of `PyBytes_Repr`, one byte, bytesobject.c@3.14.7:1390-1406. -/
 def reprByte (quote c : Nat) : Seq :=
   if c = quote ∨ c = 92 then [92, c]
   else if c = 9 then [92, 116]
@@ -196,7 +196,7 @@ def reprByte (quote c : Nat) : Seq :=
 /-- The body of a bytes literal. -/
 def reprBody (quote : Nat) (s : Seq) : Seq := s.flatMap (reprByte quote)
 
-/-- `PyBytes_Repr(obj, smartquotes)`, bytesobject.c:1344-1416. -/
+/-- `PyBytes_Repr(obj, smartquotes)`, bytesobject.c:1429-1507. -/
 def bytesRepr (s : Seq) (smart : Bool) : Py Seq := do
   let (newsize, squotes, dquotes) ← reprScan s 3 0 0
   let quote : Nat := if smart ∧ squotes ≠ 0 ∧ dquotes = 0 then 34 else 39
@@ -205,14 +205,14 @@ def bytesRepr (s : Seq) (smart : Bool) : Py Seq := do
       throw (.overflowError "bytes object is too large to make repr")
   return [98, quote] ++ reprBody quote s ++ [quote]
 
-/-! ## `repr` of bytearray, bytearrayobject.c:1092-1178 -/
+/-! ## `repr` of bytearray, bytearrayobject.c:1185-1198 -/
 
-/-- The quote choice, bytearrayobject.c:1126-1135. -/
+/-- The quote choice, bytearrayobject.c@3.14.7:1126-1135. -/
 def baQuote : Seq → Nat → Nat
   | [], q => q
   | c :: rest, q => if c = 34 then 39 else if c = 39 then baQuote rest 34 else baQuote rest q
 
-/-- One byte of `bytearray_repr_lock_held`, bytearrayobject.c:1149-1167. Unlike
+/-- One byte of `bytearray_repr_lock_held`, bytearrayobject.c@3.14.7:1149-1167. Unlike
 `PyBytes_Repr`, `'` is escaped whatever the quote is, and `c == 0` has its own
 branch with the same result as the general `\xHH` one. -/
 def baReprByte (c : Nat) : Seq :=
@@ -224,7 +224,7 @@ def baReprByte (c : Nat) : Seq :=
   else if c < 32 ∨ c ≥ 127 then [92, 120, hexDigit (c / 16), hexDigit (c % 16)]
   else [c]
 
-/-- `bytearray_repr_lock_held`, bytearrayobject.c:1092-1178. -/
+/-- `bytearray_repr_lock_held`, bytearrayobject.c:1185-1198. -/
 def bytearrayRepr (className : String) (s : Seq) : Py Seq :=
   let newsize : Int := className.length
   if (s.length : Int) > Int.tdiv (ssizeMax - 6 - newsize) 4 then
@@ -319,7 +319,7 @@ def intToFlt (v : Int) : Py Flt :=
   if m ≥ 2 ^ 1024 then .error (.overflowError "int too large to convert to float")
   else .ok ⟨decide (v < 0), 0, m, 1, ""⟩
 
-/-- `PyFloat_AsDouble(o)`, Objects/floatobject.c:257-313. -/
+/-- `PyFloat_AsDouble(o)`, Objects/floatobject.c:247-303. -/
 def asDouble (o : Obj) : Py Flt :=
   match o with
   | .float f => .ok f
@@ -392,7 +392,7 @@ def fmtG (expChar : Nat) (num den prec : Nat) (alt : Bool) : Seq :=
     ds.take n ++ (if !fr.isEmpty ∨ alt then [46] else []) ++ fr
 
 /-- `PyOS_double_to_string(x, type, prec, alt ? Py_DTSF_ALT : 0, NULL)`,
-Python/pystrtod.c:1243-1336 with `format_float_short` (:932-1241), for type in
+Python/pystrtod.c:1266-1359 with `format_float_short` (:948-1264), for type in
 `eEfFgG` and `prec ≥ 0`. -/
 def dtoa (x : Flt) (type : Nat) (prec : Nat) (alt : Bool) : Seq :=
   let up := type = 69 ∨ type = 70 ∨ type = 71
@@ -413,7 +413,7 @@ def dtoa (x : Flt) (type : Nat) (prec : Nat) (alt : Bool) : Seq :=
 def digitsBase (base : Nat) (n : Nat) : Seq :=
   (Nat.toDigits base n).map Char.toNat
 
-/-- `PyNumber_ToBase(val, base)`, Objects/abstract.c:2895-2914 and
+/-- `PyNumber_ToBase(val, base)`, Objects/abstract.c:2901-2920 and
 `_PyLong_Format`: the base prefix, after the sign; the digit limit applies to
 base 10 only. -/
 def numberToBase (val : Int) (base : Nat) : Py Seq :=

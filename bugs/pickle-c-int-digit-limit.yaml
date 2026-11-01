@@ -38,8 +38,8 @@ observed: |
 promised_by: |
   Doc/library/stdtypes.rst "Integer string conversion length limitation"; twin relation.
 cause: |
-  Modules/_pickle.c:5411-5414: strtol succeeds, so PyLong_FromString and its limit check
-  (Objects/longobject.c:2943-2951) never run. Lib/pickle.py:1383 uses `int(data)`.
+  Modules/_pickle.c:5534-5537: strtol succeeds, so PyLong_FromString and its limit check
+  (Objects/longobject.c:3025-3033) never run. Lib/pickle.py:1409 uses `int(data)`.
 possible_fix: |
   None needed unless `load_int` changes; dropping the strtol path would make INT match LONG.
 duplicates:

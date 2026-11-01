@@ -1,49 +1,49 @@
 file	line	endline	name	signature	status	entry	note
-Modules/overlapped.c	131	135	steal_buffer	steal_buffer(Py_buffer * dst, Py_buffer * src)	todo		
-Modules/overlapped.c	142	159	SetFromWindowsErr	SetFromWindowsErr(DWORD err)	todo		
-Modules/overlapped.c	176	213	initialize_function_pointers	initialize_function_pointers(void)	todo		
-Modules/overlapped.c	232	248	_overlapped_CreateIoCompletionPort_impl	_overlapped_CreateIoCompletionPort_impl(PyObject *module, HANDLE FileHandle, HANDLE ExistingCompletionPort, ULONG_PTR CompletionKey, DWORD NumberOfConcurrentThreads) /*[clinic end generated code: output=24ede2b0f05e5433 input=847bae4d0efe1976]*/	todo		
-Modules/overlapped.c	263	288	_overlapped_GetQueuedCompletionStatus_impl	_overlapped_GetQueuedCompletionStatus_impl(PyObject *module, HANDLE CompletionPort, DWORD Milliseconds) /*[clinic end generated code: output=68314171628dddb7 input=94a042d14c4f6410]*/	todo		
-Modules/overlapped.c	303	320	_overlapped_PostQueuedCompletionStatus_impl	_overlapped_PostQueuedCompletionStatus_impl(PyObject *module, HANDLE CompletionPort, DWORD NumberOfBytes, ULONG_PTR CompletionKey, OVERLAPPED *Overlapped) /*[clinic end generated code: output=93e73f2933a43e9e input=e936202d87937aca]*/	todo		
-Modules/overlapped.c	332	340	PostToQueueCallback	PostToQueueCallback(PVOID lpParameter, BOOLEAN TimerOrWaitFired)	todo		
-Modules/overlapped.c	355	383	_overlapped_RegisterWaitWithQueue_impl	_overlapped_RegisterWaitWithQueue_impl(PyObject *module, HANDLE Object, HANDLE CompletionPort, OVERLAPPED *Overlapped, DWORD Milliseconds) /*[clinic end generated code: output=c2ace732e447fe45 input=2dd4efee44abe8ee]*/	todo		
-Modules/overlapped.c	395	407	_overlapped_UnregisterWait_impl	_overlapped_UnregisterWait_impl(PyObject *module, HANDLE WaitHandle) /*[clinic end generated code: output=ec90cd955a9a617d input=a56709544cb2df0f]*/	todo		
-Modules/overlapped.c	420	433	_overlapped_UnregisterWaitEx_impl	_overlapped_UnregisterWaitEx_impl(PyObject *module, HANDLE WaitHandle, HANDLE Event) /*[clinic end generated code: output=2e3d84c1d5f65b92 input=953cddc1de50fab9]*/	todo		
-Modules/overlapped.c	454	473	_overlapped_CreateEvent_impl	_overlapped_CreateEvent_impl(PyObject *module, PyObject *EventAttributes, BOOL ManualReset, BOOL InitialState, const wchar_t *Name) /*[clinic end generated code: output=b17ddc5fd506972d input=dbc36ae14375ba24]*/	todo		
-Modules/overlapped.c	485	497	_overlapped_SetEvent_impl	_overlapped_SetEvent_impl(PyObject *module, HANDLE Handle) /*[clinic end generated code: output=5b8d974216b0e569 input=d8b0d26eb7391e80]*/	todo		
-Modules/overlapped.c	509	521	_overlapped_ResetEvent_impl	_overlapped_ResetEvent_impl(PyObject *module, HANDLE Handle) /*[clinic end generated code: output=066537a8405cddb2 input=d4e089c9ba84ff2f]*/	todo		
-Modules/overlapped.c	540	569	_overlapped_BindLocal_impl	_overlapped_BindLocal_impl(PyObject *module, HANDLE Socket, int Family) /*[clinic end generated code: output=edb93862697aed9c input=a0e7b5c2f541170c]*/	todo		
-Modules/overlapped.c	585	610	_overlapped_FormatMessage_impl	_overlapped_FormatMessage_impl(PyObject *module, DWORD code) /*[clinic end generated code: output=02c964ff22407c6b input=644bb5b80326179e]*/	todo		
-Modules/overlapped.c	618	623	mark_as_completed	mark_as_completed(OVERLAPPED *ov)	todo		
-Modules/overlapped.c	640	667	_overlapped_Overlapped_impl	_overlapped_Overlapped_impl(PyTypeObject *type, HANDLE event) /*[clinic end generated code: output=6da60504a18eb421 input=26b8a7429e629e95]*/	todo		
-Modules/overlapped.c	679	720	Overlapped_clear	Overlapped_clear(OverlappedObject *self)	todo		
-Modules/overlapped.c	723	785	Overlapped_dealloc	Overlapped_dealloc(PyObject *op)	todo		
-Modules/overlapped.c	791	799	make_ipv4_addr	make_ipv4_addr(const struct sockaddr_in *addr)	todo		
-Modules/overlapped.c	804	812	make_ipv6_addr	make_ipv6_addr(const struct sockaddr_in6 *addr)	todo		
-Modules/overlapped.c	815	849	unparse_address	unparse_address(LPSOCKADDR Address, DWORD Length)	todo		
-Modules/overlapped.c	858	877	_overlapped_Overlapped_cancel_impl	_overlapped_Overlapped_cancel_impl(OverlappedObject *self) /*[clinic end generated code: output=54ad7aeece89901c input=80eb67c7b57dbcf1]*/	todo		
-Modules/overlapped.c	893	1007	_overlapped_Overlapped_getresult_impl	_overlapped_Overlapped_getresult_impl(OverlappedObject *self, BOOL wait) /*[clinic end generated code: output=8c9bd04d08994f6c input=852fbd817cbd2b3d]*/	todo		
-Modules/overlapped.c	1010	1035	do_ReadFile	do_ReadFile(OverlappedObject *self, HANDLE handle, char *bufstart, DWORD buflen)	todo		
-Modules/overlapped.c	1048	1071	_overlapped_Overlapped_ReadFile_impl	_overlapped_Overlapped_ReadFile_impl(OverlappedObject *self, HANDLE handle, DWORD size) /*[clinic end generated code: output=4c8557e16941e4ae input=98c495baa0342425]*/	todo		
-Modules/overlapped.c	1084	1106	_overlapped_Overlapped_ReadFileInto_impl	_overlapped_Overlapped_ReadFileInto_impl(OverlappedObject *self, HANDLE handle, Py_buffer *bufobj) /*[clinic end generated code: output=8754744506023071 input=4f037ba09939e32d]*/	todo		
-Modules/overlapped.c	1109	1138	do_WSARecv	do_WSARecv(OverlappedObject *self, HANDLE handle, char *bufstart, DWORD buflen, DWORD flags)	todo		
-Modules/overlapped.c	1153	1176	_overlapped_Overlapped_WSARecv_impl	_overlapped_Overlapped_WSARecv_impl(OverlappedObject *self, HANDLE handle, DWORD size, DWORD flags) /*[clinic end generated code: output=3a5e9c61ff040906 input=8c04e506cc3d741a]*/	todo		
-Modules/overlapped.c	1190	1213	_overlapped_Overlapped_WSARecvInto_impl	_overlapped_Overlapped_WSARecvInto_impl(OverlappedObject *self, HANDLE handle, Py_buffer *bufobj, DWORD flags) /*[clinic end generated code: output=59ae7688786cf86b input=73e7fa00db633edd]*/	todo		
-Modules/overlapped.c	1226	1265	_overlapped_Overlapped_WriteFile_impl	_overlapped_Overlapped_WriteFile_impl(OverlappedObject *self, HANDLE handle, Py_buffer *bufobj) /*[clinic end generated code: output=fa5d5880a1bf04b1 input=ac54424c362abfc1]*/	todo		
-Modules/overlapped.c	1279	1320	_overlapped_Overlapped_WSASend_impl	_overlapped_Overlapped_WSASend_impl(OverlappedObject *self, HANDLE handle, Py_buffer *bufobj, DWORD flags) /*[clinic end generated code: output=3baaa6e1f7fe229e input=c4167420ba2f93d8]*/	todo		
-Modules/overlapped.c	1333	1373	_overlapped_Overlapped_AcceptEx_impl	_overlapped_Overlapped_AcceptEx_impl(OverlappedObject *self, HANDLE ListenSocket, HANDLE AcceptSocket) /*[clinic end generated code: output=9a7381d4232af889 input=b83473224fc3a1c5]*/	todo		
-Modules/overlapped.c	1377	1435	parse_address	parse_address(PyObject *obj, SOCKADDR *Address, int Length)	todo		
-Modules/overlapped.c	1450	1488	_overlapped_Overlapped_ConnectEx_impl	_overlapped_Overlapped_ConnectEx_impl(OverlappedObject *self, HANDLE ConnectSocket, PyObject *AddressObj) /*[clinic end generated code: output=5aebbbdb4f022833 input=d6bbd2d84b156fc1]*/	todo		
-Modules/overlapped.c	1500	1528	_overlapped_Overlapped_DisconnectEx_impl	_overlapped_Overlapped_DisconnectEx_impl(OverlappedObject *self, HANDLE Socket, DWORD flags) /*[clinic end generated code: output=8d64ddb8c93c2126 input=680845cdcdf820eb]*/	todo		
-Modules/overlapped.c	1546	1580	_overlapped_Overlapped_TransmitFile_impl	_overlapped_Overlapped_TransmitFile_impl(OverlappedObject *self, HANDLE Socket, HANDLE File, DWORD offset, DWORD offset_high, DWORD count_to_write, DWORD count_per_send, DWORD flags) /*[clinic end generated code: output=03f3ca5512e678fd input=7e6f97b391f60e8c]*/	todo		
-Modules/overlapped.c	1592	1623	_overlapped_Overlapped_ConnectNamedPipe_impl	_overlapped_Overlapped_ConnectNamedPipe_impl(OverlappedObject *self, HANDLE Pipe) /*[clinic end generated code: output=3e69adfe55818abe input=8b0d4cef8a72f7bc]*/	todo		
-Modules/overlapped.c	1635	1651	_overlapped_Overlapped_ConnectPipe_impl	_overlapped_Overlapped_ConnectPipe_impl(OverlappedObject *self, const wchar_t *Address) /*[clinic end generated code: output=67cbd8e4d3a57855 input=167c06a274efcefc]*/	todo		
-Modules/overlapped.c	1654	1658	Overlapped_getaddress	Overlapped_getaddress(PyObject *op, void *Py_UNUSED(closure))	todo		
-Modules/overlapped.c	1661	1666	Overlapped_getpending	Overlapped_getpending(PyObject *op, void *Py_UNUSED(closure))	todo		
-Modules/overlapped.c	1669	1696	Overlapped_traverse	Overlapped_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/overlapped.c	1716	1744	_overlapped_WSAConnect_impl	_overlapped_WSAConnect_impl(PyObject *module, HANDLE ConnectSocket, PyObject *AddressObj) /*[clinic end generated code: output=ea0b4391e94dad63 input=7cf65313d49c015a]*/	todo		
-Modules/overlapped.c	1759	1813	_overlapped_Overlapped_WSASendTo_impl	_overlapped_Overlapped_WSASendTo_impl(OverlappedObject *self, HANDLE handle, Py_buffer *bufobj, DWORD flags, PyObject *AddressObj) /*[clinic end generated code: output=3cdedc4cfaeb70cd input=31f44cd4ab92fc33]*/	todo		
-Modules/overlapped.c	1827	1880	_overlapped_Overlapped_WSARecvFrom_impl	_overlapped_Overlapped_WSARecvFrom_impl(OverlappedObject *self, HANDLE handle, DWORD size, DWORD flags) /*[clinic end generated code: output=13832a2025b86860 input=1b2663fa130e0286]*/	todo		
-Modules/overlapped.c	1896	1952	_overlapped_Overlapped_WSARecvFromInto_impl	_overlapped_Overlapped_WSARecvFromInto_impl(OverlappedObject *self, HANDLE handle, Py_buffer *bufobj, DWORD size, DWORD flags) /*[clinic end generated code: output=30c7ea171a691757 input=4be4b08d03531e76]*/	todo		
-Modules/overlapped.c	2039	2079	overlapped_exec	overlapped_exec(PyObject *module)	todo		
-Modules/overlapped.c	2096	2099	PyInit__overlapped	PyInit__overlapped(void)	todo		
+Modules/overlapped.c	132	136	steal_buffer	steal_buffer(Py_buffer * dst, Py_buffer * src)	todo		
+Modules/overlapped.c	143	160	SetFromWindowsErr	SetFromWindowsErr(DWORD err)	todo		
+Modules/overlapped.c	177	214	initialize_function_pointers	initialize_function_pointers(void)	todo		
+Modules/overlapped.c	233	249	_overlapped_CreateIoCompletionPort_impl	_overlapped_CreateIoCompletionPort_impl(PyObject *module, HANDLE FileHandle, HANDLE ExistingCompletionPort, ULONG_PTR CompletionKey, DWORD NumberOfConcurrentThreads) /*[clinic end generated code: output=24ede2b0f05e5433 input=847bae4d0efe1976]*/	todo		
+Modules/overlapped.c	264	289	_overlapped_GetQueuedCompletionStatus_impl	_overlapped_GetQueuedCompletionStatus_impl(PyObject *module, HANDLE CompletionPort, DWORD Milliseconds) /*[clinic end generated code: output=68314171628dddb7 input=94a042d14c4f6410]*/	todo		
+Modules/overlapped.c	304	321	_overlapped_PostQueuedCompletionStatus_impl	_overlapped_PostQueuedCompletionStatus_impl(PyObject *module, HANDLE CompletionPort, DWORD NumberOfBytes, ULONG_PTR CompletionKey, OVERLAPPED *Overlapped) /*[clinic end generated code: output=93e73f2933a43e9e input=e936202d87937aca]*/	todo		
+Modules/overlapped.c	333	341	PostToQueueCallback	PostToQueueCallback(PVOID lpParameter, BOOLEAN TimerOrWaitFired)	todo		
+Modules/overlapped.c	356	384	_overlapped_RegisterWaitWithQueue_impl	_overlapped_RegisterWaitWithQueue_impl(PyObject *module, HANDLE Object, HANDLE CompletionPort, OVERLAPPED *Overlapped, DWORD Milliseconds) /*[clinic end generated code: output=c2ace732e447fe45 input=2dd4efee44abe8ee]*/	todo		
+Modules/overlapped.c	396	408	_overlapped_UnregisterWait_impl	_overlapped_UnregisterWait_impl(PyObject *module, HANDLE WaitHandle) /*[clinic end generated code: output=ec90cd955a9a617d input=a56709544cb2df0f]*/	todo		
+Modules/overlapped.c	421	434	_overlapped_UnregisterWaitEx_impl	_overlapped_UnregisterWaitEx_impl(PyObject *module, HANDLE WaitHandle, HANDLE Event) /*[clinic end generated code: output=2e3d84c1d5f65b92 input=953cddc1de50fab9]*/	todo		
+Modules/overlapped.c	455	474	_overlapped_CreateEvent_impl	_overlapped_CreateEvent_impl(PyObject *module, PyObject *EventAttributes, BOOL ManualReset, BOOL InitialState, const wchar_t *Name) /*[clinic end generated code: output=b17ddc5fd506972d input=dbc36ae14375ba24]*/	todo		
+Modules/overlapped.c	486	498	_overlapped_SetEvent_impl	_overlapped_SetEvent_impl(PyObject *module, HANDLE Handle) /*[clinic end generated code: output=5b8d974216b0e569 input=d8b0d26eb7391e80]*/	todo		
+Modules/overlapped.c	510	522	_overlapped_ResetEvent_impl	_overlapped_ResetEvent_impl(PyObject *module, HANDLE Handle) /*[clinic end generated code: output=066537a8405cddb2 input=d4e089c9ba84ff2f]*/	todo		
+Modules/overlapped.c	541	570	_overlapped_BindLocal_impl	_overlapped_BindLocal_impl(PyObject *module, HANDLE Socket, int Family) /*[clinic end generated code: output=edb93862697aed9c input=a0e7b5c2f541170c]*/	todo		changed-in-3.15:
+Modules/overlapped.c	586	611	_overlapped_FormatMessage_impl	_overlapped_FormatMessage_impl(PyObject *module, DWORD code) /*[clinic end generated code: output=02c964ff22407c6b input=644bb5b80326179e]*/	todo		
+Modules/overlapped.c	619	624	mark_as_completed	mark_as_completed(OVERLAPPED *ov)	todo		
+Modules/overlapped.c	641	668	_overlapped_Overlapped_impl	_overlapped_Overlapped_impl(PyTypeObject *type, HANDLE event) /*[clinic end generated code: output=6da60504a18eb421 input=26b8a7429e629e95]*/	todo		
+Modules/overlapped.c	680	721	Overlapped_clear	Overlapped_clear(OverlappedObject *self)	todo		
+Modules/overlapped.c	724	786	Overlapped_dealloc	Overlapped_dealloc(PyObject *op)	todo		
+Modules/overlapped.c	792	800	make_ipv4_addr	make_ipv4_addr(const struct sockaddr_in *addr)	todo		
+Modules/overlapped.c	805	813	make_ipv6_addr	make_ipv6_addr(const struct sockaddr_in6 *addr)	todo		
+Modules/overlapped.c	816	850	unparse_address	unparse_address(LPSOCKADDR Address, DWORD Length)	todo		
+Modules/overlapped.c	859	878	_overlapped_Overlapped_cancel_impl	_overlapped_Overlapped_cancel_impl(OverlappedObject *self) /*[clinic end generated code: output=54ad7aeece89901c input=80eb67c7b57dbcf1]*/	todo		
+Modules/overlapped.c	894	1003	_overlapped_Overlapped_getresult_impl	_overlapped_Overlapped_getresult_impl(OverlappedObject *self, BOOL wait) /*[clinic end generated code: output=8c9bd04d08994f6c input=852fbd817cbd2b3d]*/	todo		changed-in-3.15:
+Modules/overlapped.c	1006	1031	do_ReadFile	do_ReadFile(OverlappedObject *self, HANDLE handle, char *bufstart, DWORD buflen)	todo		
+Modules/overlapped.c	1044	1067	_overlapped_Overlapped_ReadFile_impl	_overlapped_Overlapped_ReadFile_impl(OverlappedObject *self, HANDLE handle, DWORD size) /*[clinic end generated code: output=4c8557e16941e4ae input=98c495baa0342425]*/	todo		
+Modules/overlapped.c	1080	1102	_overlapped_Overlapped_ReadFileInto_impl	_overlapped_Overlapped_ReadFileInto_impl(OverlappedObject *self, HANDLE handle, Py_buffer *bufobj) /*[clinic end generated code: output=8754744506023071 input=4f037ba09939e32d]*/	todo		
+Modules/overlapped.c	1105	1134	do_WSARecv	do_WSARecv(OverlappedObject *self, HANDLE handle, char *bufstart, DWORD buflen, DWORD flags)	todo		
+Modules/overlapped.c	1149	1172	_overlapped_Overlapped_WSARecv_impl	_overlapped_Overlapped_WSARecv_impl(OverlappedObject *self, HANDLE handle, DWORD size, DWORD flags) /*[clinic end generated code: output=3a5e9c61ff040906 input=8c04e506cc3d741a]*/	todo		
+Modules/overlapped.c	1186	1209	_overlapped_Overlapped_WSARecvInto_impl	_overlapped_Overlapped_WSARecvInto_impl(OverlappedObject *self, HANDLE handle, Py_buffer *bufobj, DWORD flags) /*[clinic end generated code: output=59ae7688786cf86b input=73e7fa00db633edd]*/	todo		
+Modules/overlapped.c	1222	1261	_overlapped_Overlapped_WriteFile_impl	_overlapped_Overlapped_WriteFile_impl(OverlappedObject *self, HANDLE handle, Py_buffer *bufobj) /*[clinic end generated code: output=fa5d5880a1bf04b1 input=ac54424c362abfc1]*/	todo		
+Modules/overlapped.c	1275	1316	_overlapped_Overlapped_WSASend_impl	_overlapped_Overlapped_WSASend_impl(OverlappedObject *self, HANDLE handle, Py_buffer *bufobj, DWORD flags) /*[clinic end generated code: output=3baaa6e1f7fe229e input=c4167420ba2f93d8]*/	todo		
+Modules/overlapped.c	1329	1369	_overlapped_Overlapped_AcceptEx_impl	_overlapped_Overlapped_AcceptEx_impl(OverlappedObject *self, HANDLE ListenSocket, HANDLE AcceptSocket) /*[clinic end generated code: output=9a7381d4232af889 input=b83473224fc3a1c5]*/	todo		
+Modules/overlapped.c	1373	1431	parse_address	parse_address(PyObject *obj, SOCKADDR *Address, int Length)	todo		
+Modules/overlapped.c	1446	1484	_overlapped_Overlapped_ConnectEx_impl	_overlapped_Overlapped_ConnectEx_impl(OverlappedObject *self, HANDLE ConnectSocket, PyObject *AddressObj) /*[clinic end generated code: output=5aebbbdb4f022833 input=d6bbd2d84b156fc1]*/	todo		
+Modules/overlapped.c	1496	1524	_overlapped_Overlapped_DisconnectEx_impl	_overlapped_Overlapped_DisconnectEx_impl(OverlappedObject *self, HANDLE Socket, DWORD flags) /*[clinic end generated code: output=8d64ddb8c93c2126 input=680845cdcdf820eb]*/	todo		
+Modules/overlapped.c	1542	1576	_overlapped_Overlapped_TransmitFile_impl	_overlapped_Overlapped_TransmitFile_impl(OverlappedObject *self, HANDLE Socket, HANDLE File, DWORD offset, DWORD offset_high, DWORD count_to_write, DWORD count_per_send, DWORD flags) /*[clinic end generated code: output=03f3ca5512e678fd input=7e6f97b391f60e8c]*/	todo		
+Modules/overlapped.c	1588	1619	_overlapped_Overlapped_ConnectNamedPipe_impl	_overlapped_Overlapped_ConnectNamedPipe_impl(OverlappedObject *self, HANDLE Pipe) /*[clinic end generated code: output=3e69adfe55818abe input=8b0d4cef8a72f7bc]*/	todo		
+Modules/overlapped.c	1631	1647	_overlapped_Overlapped_ConnectPipe_impl	_overlapped_Overlapped_ConnectPipe_impl(OverlappedObject *self, const wchar_t *Address) /*[clinic end generated code: output=67cbd8e4d3a57855 input=167c06a274efcefc]*/	todo		
+Modules/overlapped.c	1650	1654	Overlapped_getaddress	Overlapped_getaddress(PyObject *op, void *Py_UNUSED(closure))	todo		
+Modules/overlapped.c	1657	1662	Overlapped_getpending	Overlapped_getpending(PyObject *op, void *Py_UNUSED(closure))	todo		
+Modules/overlapped.c	1665	1692	Overlapped_traverse	Overlapped_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/overlapped.c	1712	1740	_overlapped_WSAConnect_impl	_overlapped_WSAConnect_impl(PyObject *module, HANDLE ConnectSocket, PyObject *AddressObj) /*[clinic end generated code: output=ea0b4391e94dad63 input=7cf65313d49c015a]*/	todo		
+Modules/overlapped.c	1755	1809	_overlapped_Overlapped_WSASendTo_impl	_overlapped_Overlapped_WSASendTo_impl(OverlappedObject *self, HANDLE handle, Py_buffer *bufobj, DWORD flags, PyObject *AddressObj) /*[clinic end generated code: output=3cdedc4cfaeb70cd input=31f44cd4ab92fc33]*/	todo		
+Modules/overlapped.c	1823	1876	_overlapped_Overlapped_WSARecvFrom_impl	_overlapped_Overlapped_WSARecvFrom_impl(OverlappedObject *self, HANDLE handle, DWORD size, DWORD flags) /*[clinic end generated code: output=13832a2025b86860 input=1b2663fa130e0286]*/	todo		
+Modules/overlapped.c	1892	1948	_overlapped_Overlapped_WSARecvFromInto_impl	_overlapped_Overlapped_WSARecvFromInto_impl(OverlappedObject *self, HANDLE handle, Py_buffer *bufobj, DWORD size, DWORD flags) /*[clinic end generated code: output=30c7ea171a691757 input=4be4b08d03531e76]*/	todo		
+Modules/overlapped.c	2035	2075	overlapped_exec	overlapped_exec(PyObject *module)	todo		
+Modules/overlapped.c	2093	2096	PyInit__overlapped	PyInit__overlapped(void)	todo		

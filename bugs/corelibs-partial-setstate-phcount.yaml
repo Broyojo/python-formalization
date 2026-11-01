@@ -7,11 +7,11 @@ files: [Modules/_functoolsmodule.c]
 functions: ["partial_setstate", "partial_call", "partial_vectorcall"]
 summary: |
   partial_setstate walks the storage of the state's args tuple with PyTuple_GET_ITEM to check for a
-  trailing Placeholder and to count placeholders (:726-737), and only then turns a tuple subclass into a
-  real tuple with PySequence_Tuple (:739-743), which runs the subclass's __iter__. The stored args and
+  trailing Placeholder and to count placeholders (:821-832), and only then turns a tuple subclass into a
+  real tuple with PySequence_Tuple (:834-838), which runs the subclass's __iter__. The stored args and
   the stored phcount then describe two different tuples. partial_call and partial_vectorcall trust
   phcount: with more placeholders in args than phcount they read past the end of the call's argument
-  array, and with fewer they size the stack by phcount while the memcpy at :460-462 copies from j, so it
+  array, and with fewer they size the stack by phcount while the memcpy at @3.14.7:460-462 copies from j, so it
   writes past the end. Both crash the interpreter from pure Python, with no threads and no re-entrancy. The
   write needs nothing large: a tuple of four items, phcount 2 and three call arguments overrun small_stack,
   and glibc stops with "stack smashing detected". A smaller form of the same defect is
@@ -60,16 +60,16 @@ expected: |
 observed: |
   python3 3.14.7: argument dropped: (1, 2); subprocess exit -11 (SIGSEGV), faulthandler points into
   partial_vectorcall. A kw-carrying state crashes through partial_call as well, and a third form, raw
-  (Placeholder,) * 100000 + (1,) with iteration (1,) and 100001 call arguments, makes the memcpy at :461
+  (Placeholder,) * 100000 + (1,) with iteration (1,) and 100001 call arguments, makes the memcpy at @3.14.7:461
   overflow small_stack (exit -11); raw (Placeholder, Placeholder, 1), iteration (1, 2, 3, 4) and three call
   arguments abort with stack smashing detected (exit -6). REPRODUCED. main (python 3.16.0a1+dev): REPRODUCED, the same
-  code order at Modules/_functoolsmodule.c:821-843.
+  code order at Modules/_functoolsmodule.c:916-938.
 promised_by: |
   No interpreter crash from pure Python. The pure-Python twin has the same stale count but stays memory
   safe: it returns garbled arguments instead.
 cause: |
-  Modules/_functoolsmodule.c:726-737 read the raw tuple, :739-743 call PySequence_Tuple after that.
-  partial_call :550-565 and partial_vectorcall :450-462 then index args with j and copy by phcount.
+  Modules/_functoolsmodule.c:821-832 read the raw tuple, :834-838 call PySequence_Tuple after that.
+  partial_call :645-660 and partial_vectorcall :535-548 then index args with j and copy by phcount.
 possible_fix: |
   Do the PySequence_Tuple conversion first, and run the trailing-Placeholder check and the count on the
   converted tuple. The same change to Lib/functools.py:415-419 keeps the twins together.

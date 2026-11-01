@@ -13,7 +13,7 @@ Two constructors exist because of what the C does:
   no exception leaves `p->mark` advanced, and `(_opt_var = c(p), !p->error_indicator)` carries on
   from there.
 * `ItemsM.optSoft`: `_PyPegen_soft_keyword_token` advances past a `NAME` that is not a soft keyword
-  and then returns `NULL`, `Parser/pegen.c:605-620`.
+  and then returns `NULL`, `Parser/pegen.c:597-612`.
 -/
 
 namespace PyLean.PyGrammar.Peg

@@ -5,4 +5,5 @@ Modules/_testcapi/buffer.c	42	47	testbuf_clear	testbuf_clear(PyObject *op)	exclu
 Modules/_testcapi/buffer.c	50	56	testbuf_dealloc	testbuf_dealloc(PyObject *op)	excluded		test-support: only for CPython's own tests
 Modules/_testcapi/buffer.c	59	68	testbuf_getbuf	testbuf_getbuf(PyObject *op, Py_buffer *view, int flags)	excluded		test-support: only for CPython's own tests
 Modules/_testcapi/buffer.c	71	76	testbuf_releasebuf	testbuf_releasebuf(PyObject *op, Py_buffer *Py_UNUSED(view))	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/buffer.c	102	111	_PyTestCapi_Init_Buffer	_PyTestCapi_Init_Buffer(PyObject *m) {	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/buffer.c	105	115	buffer_pointer_as_int	buffer_pointer_as_int(PyObject *Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/buffer.c	123	135	_PyTestCapi_Init_Buffer	_PyTestCapi_Init_Buffer(PyObject *m) {	excluded		test-support: only for CPython's own tests

@@ -1,29 +1,30 @@
 file	line	endline	name	signature	status	entry	note
-Modules/blake2module.c	74	114	detect_cpu_features	void detect_cpu_features(cpu_flags *flags) {	todo		
-Modules/blake2module.c	117	121	has_simd128	static inline bool has_simd128(cpu_flags *flags) {	todo		
-Modules/blake2module.c	125	127	has_simd256	static inline bool has_simd256(cpu_flags *flags) {	todo		
-Modules/blake2module.c	161	166	blake2_get_state	blake2_get_state(PyObject *module)	todo		
-Modules/blake2module.c	170	175	blake2_get_state_from_type	blake2_get_state_from_type(PyTypeObject *module)	todo		
-Modules/blake2module.c	183	189	_blake2_traverse	_blake2_traverse(PyObject *module, visitproc visit, void *arg)	todo		
-Modules/blake2module.c	192	198	_blake2_clear	_blake2_clear(PyObject *module)	todo		
-Modules/blake2module.c	201	204	_blake2_free	_blake2_free(void *module)	todo		
-Modules/blake2module.c	224	279	blake2_exec	blake2_exec(PyObject *m)	todo		
-Modules/blake2module.c	304	307	PyInit__blake2	PyInit__blake2(void)	todo		
-Modules/blake2module.c	323	325	is_blake2b	static inline bool is_blake2b(blake2_impl impl) {	todo		
-Modules/blake2module.c	327	329	is_blake2s	static inline bool is_blake2s(blake2_impl impl) {	todo		
-Modules/blake2module.c	331	352	type_to_impl	static inline blake2_impl type_to_impl(PyTypeObject *type) {	todo		
-Modules/blake2module.c	384	394	new_Blake2Object	new_Blake2Object(PyTypeObject *type)	todo		
-Modules/blake2module.c	425	449	update	update(Blake2Object *self, uint8_t *buf, Py_ssize_t len)	todo		
-Modules/blake2module.c	678	691	py_blake2b_new_impl	py_blake2b_new_impl(PyTypeObject *type, PyObject *data_obj, int digest_size, Py_buffer *key, Py_buffer *salt, Py_buffer *person, int fanout, int depth, unsigned long leaf_size, unsigned long long node_offset, int node_depth, int inner_size, int last_node, int usedforsecurity, PyObject *string) /*[clinic end generated code: output=de64bd850606b6a0 input=32832fb37d13c03d]*/	todo		
-Modules/blake2module.c	716	729	py_blake2s_new_impl	py_blake2s_new_impl(PyTypeObject *type, PyObject *data_obj, int digest_size, Py_buffer *key, Py_buffer *salt, Py_buffer *person, int fanout, int depth, unsigned long leaf_size, unsigned long long node_offset, int node_depth, int inner_size, int last_node, int usedforsecurity, PyObject *string) /*[clinic end generated code: output=582a0c4295cc3a3c input=da467fc9dae646bb]*/	todo		
-Modules/blake2module.c	732	781	blake2_blake2b_copy_locked	blake2_blake2b_copy_locked(Blake2Object *self, Blake2Object *cpy)	todo		
-Modules/blake2module.c	790	808	_blake2_blake2b_copy_impl	_blake2_blake2b_copy_impl(Blake2Object *self) /*[clinic end generated code: output=622d1c56b91c50d8 input=e383c2d199fd8a2e]*/	todo		
-Modules/blake2module.c	820	843	_blake2_blake2b_update_impl	_blake2_blake2b_update_impl(Blake2Object *self, PyObject *data) /*[clinic end generated code: output=99330230068e8c99 input=ffc4aa6a6a225d31]*/	todo		
-Modules/blake2module.c	852	881	_blake2_blake2b_digest_impl	_blake2_blake2b_digest_impl(Blake2Object *self) /*[clinic end generated code: output=31ab8ad477f4a2f7 input=7d21659e9c5fff02]*/	todo		
-Modules/blake2module.c	890	919	_blake2_blake2b_hexdigest_impl	_blake2_blake2b_hexdigest_impl(Blake2Object *self) /*[clinic end generated code: output=5ef54b138db6610a input=76930f6946351f56]*/	todo		
-Modules/blake2module.c	932	936	py_blake2b_get_name	py_blake2b_get_name(PyObject *op, void *Py_UNUSED(closure))	todo		
-Modules/blake2module.c	941	945	py_blake2b_get_block_size	py_blake2b_get_block_size(PyObject *op, void *Py_UNUSED(closure))	todo		
-Modules/blake2module.c	950	969	py_blake2b_get_digest_size	py_blake2b_get_digest_size(PyObject *op, void *Py_UNUSED(closure))	todo		
-Modules/blake2module.c	981	1021	py_blake2_clear	py_blake2_clear(PyObject *op)	todo		
-Modules/blake2module.c	1024	1031	py_blake2_dealloc	py_blake2_dealloc(PyObject *self)	todo		
-Modules/blake2module.c	1034	1038	py_blake2_traverse	py_blake2_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Modules/blake2module.c	85	90	blake2_get_state	blake2_get_state(PyObject *module)	todo		
+Modules/blake2module.c	94	99	blake2_get_state_from_type	blake2_get_state_from_type(PyTypeObject *module)	todo		
+Modules/blake2module.c	107	113	_blake2_traverse	_blake2_traverse(PyObject *module, visitproc visit, void *arg)	todo		
+Modules/blake2module.c	116	122	_blake2_clear	_blake2_clear(PyObject *module)	todo		
+Modules/blake2module.c	125	128	_blake2_free	_blake2_free(void *module)	todo		
+Modules/blake2module.c	131	204	blake2module_init_cpu_features	blake2module_init_cpu_features(Blake2State *state)	todo		changed-in-3.15: new function
+Modules/blake2module.c	207	280	blake2_exec	blake2_exec(PyObject *m)	todo		changed-in-3.15:
+Modules/blake2module.c	303	306	PyInit__blake2	PyInit__blake2(void)	todo		
+Modules/blake2module.c	323	326	is_blake2b	is_blake2b(blake2_impl impl)	todo		changed-in-3.15:
+Modules/blake2module.c	329	332	is_blake2s	is_blake2s(blake2_impl impl)	todo		changed-in-3.15:
+Modules/blake2module.c	335	355	type_to_impl	type_to_impl(PyTypeObject *type)	todo		changed-in-3.15:
+Modules/blake2module.c	388	421	new_Blake2Object	new_Blake2Object(PyTypeObject *type)	todo		changed-in-3.15:
+Modules/blake2module.c	452	480	blake2_update_unlocked	blake2_update_unlocked(Blake2Object *self, uint8_t *buf, Py_ssize_t len)	todo		changed-in-3.15: new function
+Modules/blake2module.c	495	562	py_blake2_validate_params	py_blake2_validate_params(Blake2Object *self, int digest_size, Py_buffer *key, Py_buffer *salt, Py_buffer *person, int fanout, int depth, unsigned long leaf_size, unsigned long long node_offset, int node_depth, int inner_size)	todo		changed-in-3.15: new function
+Modules/blake2module.c	566	665	py_blake2_new	py_blake2_new(PyTypeObject *type, PyObject *data, int digest_size, Py_buffer *key, Py_buffer *salt, Py_buffer *person, int fanout, int depth, unsigned long leaf_size, unsigned long long node_offset, int node_depth, int inner_size, int last_node, int usedforsecurity)	todo		changed-in-3.15: new function
+Modules/blake2module.c	690	705	py_blake2b_new_impl	py_blake2b_new_impl(PyTypeObject *type, PyObject *data_obj, int digest_size, Py_buffer *key, Py_buffer *salt, Py_buffer *person, int fanout, int depth, unsigned long leaf_size, unsigned long long node_offset, int node_depth, int inner_size, int last_node, int usedforsecurity, PyObject *string) /*[clinic end generated code: output=de64bd850606b6a0 input=32832fb37d13c03d]*/	todo		changed-in-3.15:
+Modules/blake2module.c	730	745	py_blake2s_new_impl	py_blake2s_new_impl(PyTypeObject *type, PyObject *data_obj, int digest_size, Py_buffer *key, Py_buffer *salt, Py_buffer *person, int fanout, int depth, unsigned long leaf_size, unsigned long long node_offset, int node_depth, int inner_size, int last_node, int usedforsecurity, PyObject *string) /*[clinic end generated code: output=582a0c4295cc3a3c input=da467fc9dae646bb]*/	todo		changed-in-3.15:
+Modules/blake2module.c	748	789	blake2_blake2b_copy_unlocked	blake2_blake2b_copy_unlocked(Blake2Object *self, Blake2Object *cpy)	todo		changed-in-3.15: new function
+Modules/blake2module.c	800	818	_blake2_blake2b_copy_impl	_blake2_blake2b_copy_impl(Blake2Object *self, PyTypeObject *cls) /*[clinic end generated code: output=5f8ea31c56c52287 input=f38f3475e9aec98d]*/	todo		changed-in-3.15:
+Modules/blake2module.c	830	841	_blake2_blake2b_update_impl	_blake2_blake2b_update_impl(Blake2Object *self, PyObject *data) /*[clinic end generated code: output=99330230068e8c99 input=ffc4aa6a6a225d31]*/	todo		changed-in-3.15:
+Modules/blake2module.c	844	864	blake2_blake2b_compute_digest	blake2_blake2b_compute_digest(Blake2Object *self, uint8_t *digest)	todo		changed-in-3.15: new function
+Modules/blake2module.c	873	881	_blake2_blake2b_digest_impl	_blake2_blake2b_digest_impl(Blake2Object *self) /*[clinic end generated code: output=31ab8ad477f4a2f7 input=7d21659e9c5fff02]*/	todo		changed-in-3.15:
+Modules/blake2module.c	890	898	_blake2_blake2b_hexdigest_impl	_blake2_blake2b_hexdigest_impl(Blake2Object *self) /*[clinic end generated code: output=5ef54b138db6610a input=76930f6946351f56]*/	todo		changed-in-3.15:
+Modules/blake2module.c	911	915	py_blake2b_get_name	py_blake2b_get_name(PyObject *op, void *Py_UNUSED(closure))	todo		changed-in-3.15:
+Modules/blake2module.c	919	923	py_blake2b_get_block_size	py_blake2b_get_block_size(PyObject *op, void *Py_UNUSED(closure))	todo		changed-in-3.15:
+Modules/blake2module.c	927	945	hacl_get_blake2_info	hacl_get_blake2_info(Blake2Object *self)	todo		changed-in-3.15: new function
+Modules/blake2module.c	949	954	py_blake2b_get_digest_size	py_blake2b_get_digest_size(PyObject *op, void *Py_UNUSED(closure))	todo		changed-in-3.15:
+Modules/blake2module.c	966	1003	py_blake2_clear	py_blake2_clear(PyObject *op)	todo		changed-in-3.15:
+Modules/blake2module.c	1006	1013	py_blake2_dealloc	py_blake2_dealloc(PyObject *self)	todo		

@@ -200,7 +200,7 @@ def tell : P Int := do return (← get).tk.tell
 def peek : P (Option (List Nat)) := do return (← get).tk.next
 
 /-- `State.opengroup`, `Lib/re/_parser.py:86-97`. The two errors are re-raised by the `except` in
-`_parse` with the offset `len(name) + 1`, `Lib/re/_parser.py:850-851`. That `len(name)` would be a
+`_parse` with the offset `len(name) + 1`, `Lib/re/_parser.py:849-850`. That `len(name)` would be a
 `TypeError` for an unnamed group, which needs `MAXGROUPS` groups and is out of the model's reach. -/
 def opengroupPure (st : PSt) (name : Option (List Nat)) : Py (Nat × PSt) :=
   let gid := st.groupwidths.length
@@ -426,7 +426,7 @@ def escapeCode (escape : List Nat) : P Node := do
 /-- `_uniq`, `Lib/re/_parser.py:449-450`. -/
 def uniq (l : List SetItem) : List SetItem := l.eraseDups
 
-/-- The pfx-factoring loop of `_parse_sub`, `Lib/re/_parser.py:473-489`. -/
+/-- The pfx-factoring loop of `_parse_sub`, `Lib/re/_parser.py:472-488`. -/
 def factorPrefix : (fuel : Nat) → List (List Node) → List Node → List (List Node) × List Node
   | 0, items, acc => (items, acc)
   | fuel + 1, items, acc =>
@@ -442,7 +442,7 @@ def factorPrefix : (fuel : Nat) → List (List Node) → List Node → List (Lis
           factorPrefix fuel (items.map (·.drop 1)) (acc ++ [pfx])
         else (items, acc)
 
-/-- The character-set test of `_parse_sub`, `Lib/re/_parser.py:492-502`. -/
+/-- The character-set test of `_parse_sub`, `Lib/re/_parser.py:491-501`. -/
 def branchSet : List (List Node) → List SetItem → Option (List SetItem)
   | [], acc => some acc
   | [.literal c] :: r, acc => branchSet r (acc ++ [.literal c])
@@ -452,7 +452,7 @@ def branchSet : List (List Node) → List SetItem → Option (List SetItem)
     | _ => branchSet r (acc ++ av)
   | _, _ => none
 
-/-- `_parse_sub`'s end, `Lib/re/_parser.py:467-510`. -/
+/-- `_parse_sub`'s end, `Lib/re/_parser.py:466-509`. -/
 def finishSub (items : List (List Node)) : List Node :=
   match items with
   | [one] => one
@@ -479,7 +479,7 @@ def isAlphaTok (c : List Nat) : Bool :=
   | [x] => isLetter x || x ≥ 170
   | _ => false
 
-/-- The first `while True` of `_parse_flags`, `Lib/re/_parser.py:892-913`: returns `add_flags`
+/-- The first `while True` of `_parse_flags`, `Lib/re/_parser.py:891-912`: returns `add_flags`
 and the stopping character. -/
 def flagsOn : (fuel : Nat) → List Nat → Nat → P (Nat × List Nat)
   | 0, _, _ => throw .modelFuel
@@ -501,7 +501,7 @@ def flagsOn : (fuel : Nat) → List Nat → Nat → P (Nat × List Nat)
         pErr (if isAlphaTok c then "unknown flag" else "missing -, : or )") c.length
       flagsOn fuel c add
 
-/-- The second `while True` of `_parse_flags`, `Lib/re/_parser.py:926-939`. -/
+/-- The second `while True` of `_parse_flags`, `Lib/re/_parser.py:925-938`. -/
 def flagsOff : (fuel : Nat) → List Nat → Nat → P Nat
   | 0, _, _ => throw .modelFuel
   | fuel + 1, char, del => do
@@ -517,13 +517,13 @@ def flagsOff : (fuel : Nat) → List Nat → Nat → P Nat
         pErr (if isAlphaTok c then "unknown flag" else "missing :") c.length
       flagsOff fuel c del
 
-/-- The last checks of `_parse_flags`, `Lib/re/_parser.py:941-945`. -/
+/-- The last checks of `_parse_flags`, `Lib/re/_parser.py:940-944`. -/
 def flagsCheck (add del : Nat) : P (Option (Nat × Nat)) :=
   if (del &&& GLOBAL_FLAGS) ≠ 0 then pErr "bad inline flags: cannot turn off global flag" 1
   else if (add &&& del) ≠ 0 then pErr "bad inline flags: flag turned on and off" 1
   else pure (some (add, del))
 
-/-- `_parse_flags`, `Lib/re/_parser.py:887-945`; `none` is the global form `(?x)`. -/
+/-- `_parse_flags`, `Lib/re/_parser.py:886-944`; `none` is the global form `(?x)`. -/
 def parseFlags (char : List Nat) : P (Option (Nat × Nat)) := do
   let fuel := (← get).tk.s.length + 8
   let (add, char) ← if char != [45] then flagsOn fuel char 0 else pure (0, char)
@@ -562,7 +562,7 @@ def asItem : Node → SetItem
   | .in_ (i :: _) => i
   | _ => .negate
 
-/-- The `while True` of a character set, `Lib/re/_parser.py:565-622`. -/
+/-- The `while True` of a character set, `Lib/re/_parser.py:564-621`. -/
 def setLoop (here : Int) : (fuel : Nat) → List SetItem → P (List SetItem)
   | 0, _ => throw .modelFuel
   | fuel + 1, set => do
@@ -595,7 +595,7 @@ def setLoop (here : Int) : (fuel : Nat) → List SetItem → P (List SetItem)
               (this.length + 1 + that.length)
       else setLoop here fuel (set ++ [asItem code1])
 
-/-- The digit runs of `{m,n}`, `Lib/re/_parser.py:656-660`. -/
+/-- The digit runs of `{m,n}`, `Lib/re/_parser.py:655-659`. -/
 def digitsRun : (fuel : Nat) → P (List Nat)
   | 0 => pure []
   | fuel + 1 => do
@@ -607,7 +607,7 @@ def digitsRun : (fuel : Nat) → P (List Nat)
       return []
     | _ => return []
 
-/-- `subpattern[i: i+1] = p` for plain non-capturing groups, `Lib/re/_parser.py:878-883`. -/
+/-- `subpattern[i: i+1] = p` for plain non-capturing groups, `Lib/re/_parser.py:877-882`. -/
 def unpackGroups (sub : List Node) : List Node :=
   sub.flatMap fun n =>
     match n with
@@ -615,7 +615,7 @@ def unpackGroups (sub : List Node) : List Node :=
     | _ => [n]
 
 mutual
-  /-- `_parse_sub`, `Lib/re/_parser.py:452-510`. `verbose` is the truth of the argument. -/
+  /-- `_parse_sub`, `Lib/re/_parser.py:452-509`. `verbose` is the truth of the argument. -/
   def parseSub : (fuel : Nat) → Bool → Nat → P (List Node)
     | 0, _, _ => throw .modelFuel
     | fuel + 1, verbose, nested => do
@@ -633,8 +633,8 @@ mutual
         parseAlts fuel verbose nested items
       else return items
 
-  /-- The `while True` of `_parse`, `Lib/re/_parser.py:523-875`, then the unpacking of
-  non-capturing groups, `:878-883`. `sub` is the `subpattern` so far. -/
+  /-- The `while True` of `_parse`, `Lib/re/_parser.py:522-874`, then the unpacking of
+  non-capturing groups, `:877-882`. `sub` is the `subpattern` so far. -/
   def parseSeq : (fuel : Nat) → Bool → Nat → Bool → List Node → P (List Node)
     | 0, _, _, _, _ => throw .modelFuel
     | fuel + 1, verbose, nested, first, sub => do
@@ -675,7 +675,7 @@ mutual
           return ← parseSeq fuel verbose nested first (sub ++ [.at_ .end_])
         throw (.assertionError "~unsupported special character")
 
-  /-- The `while True` of a verbose comment, `Lib/re/_parser.py:537-540`. -/
+  /-- The `while True` of a verbose comment, `Lib/re/_parser.py:536-539`. -/
   def skipComment : (fuel : Nat) → P Unit
     | 0 => throw .modelFuel
     | fuel + 1 => do
@@ -683,7 +683,7 @@ mutual
       | none => return ()
       | some t => if t == [10] then return () else skipComment fuel
 
-  /-- The quantifier branch, `Lib/re/_parser.py:639-704`. -/
+  /-- The quantifier branch, `Lib/re/_parser.py:638-703`. -/
   def parseRepeat : (fuel : Nat) → Bool → Nat → Bool → List Node → Nat → P (List Node)
     | 0, _, _, _, _, _ => throw .modelFuel
     | fuel + 1, verbose, nested, first, sub, c => do
@@ -741,7 +741,7 @@ mutual
             else pure RepeatKind.max)
           parseSeq fuel verbose nested first (sub.dropLast ++ [.repeat_ kind mn mx item])
 
-  /-- The `(` branch, `Lib/re/_parser.py:709-866`. -/
+  /-- The `(` branch, `Lib/re/_parser.py:708-865`. -/
   def parseGroup : (fuel : Nat) → Bool → Nat → Bool → List Node → P (List Node)
     | 0, _, _, _, _ => throw .modelFuel
     | fuel + 1, verbose, nested, first, sub => do
@@ -843,7 +843,7 @@ mutual
             return ← finishGroup fuel verbose nested first sub start false false none add del
         pErr ("unknown extension ?" ++ textOf char) (char.length + 1)
 
-  /-- The `(?#...)` comment, `Lib/re/_parser.py:751-759`. -/
+  /-- The `(?#...)` comment, `Lib/re/_parser.py:750-758`. -/
   def skipParenComment : (fuel : Nat) → Int → P Unit
     | 0, _ => throw .modelFuel
     | fuel + 1, start => do
@@ -853,7 +853,7 @@ mutual
       | some [41] => return ()
       | _ => skipParenComment fuel start
 
-  /-- "parse group contents", `Lib/re/_parser.py:846-866`. -/
+  /-- "parse group contents", `Lib/re/_parser.py:845-865`. -/
   def finishGroup : (fuel : Nat) → Bool → Nat → Bool → List Node → Int → Bool → Bool →
       Option (List Nat) → Nat → Nat → P (List Node)
     | 0, _, _, _, _, _, _, _, _, _, _ => throw .modelFuel
@@ -875,7 +875,7 @@ mutual
 
 end
 
-/-- `fix_flags`, `Lib/re/_parser.py:947-961`. -/
+/-- `fix_flags`, `Lib/re/_parser.py:946-960`. -/
 def fixFlags (istext : Bool) (flags : Nat) : Py Nat :=
   if istext then
     if (flags &&& FLAG_LOCALE) ≠ 0 then .error (.valueError "cannot use LOCALE flag with a str pattern")
@@ -897,7 +897,7 @@ structure Parsed where
   groupwidths : List (Option (Nat × Nat))
   deriving Repr, Inhabited
 
-/-- `parse`, `Lib/re/_parser.py:963-988`. -/
+/-- `parse`, `Lib/re/_parser.py:962-987`. -/
 def parse (istext : Bool) (s : List Nat) (flags : Nat) (maxDigits : Nat := 4300) : Py Parsed := do
   let t ← Tk.adv ⟨istext, s, 0, none⟩
   let (p, st) ← (parseSub (4 * s.length + 16) ((flags &&& FLAG_VERBOSE) ≠ 0) 0).run { tk := t, flags, maxDigits }
@@ -917,7 +917,7 @@ inductive TItem where
   | group (g : Nat)
   deriving Repr, DecidableEq, Inhabited
 
-/-- The state of `parse_template`, `Lib/re/_parser.py:990-1066`. -/
+/-- The state of `parse_template`, `Lib/re/_parser.py:989-1065`. -/
 structure TSt where
   tk : Tk
   result : List TItem := []
@@ -959,7 +959,7 @@ def peekDig : T (Option Nat) := do
 def lappend (s : List Nat) : T Unit :=
   modify fun st => { st with literal := st.literal ++ s }
 
-/-- The `\g<...>` of `parse_template`, `Lib/re/_parser.py:1019-1034`. -/
+/-- The `\g<...>` of `parse_template`, `Lib/re/_parser.py:1018-1033`. -/
 def templateG (groups : Nat) (groupindex : List (List Nat × Nat)) : T Unit := do
   let st ← get
   if st.tk.next == some [60] then
@@ -988,7 +988,7 @@ def templateG (groups : Nat) (groupindex : List (List Nat × Nat)) : T Unit := d
     if i ≥ MAXGROUPS then tErr s!"invalid group reference {i}" (name.length + 1)
     addGroup groups i (name.length + 1)
 
-/-- The loop of `parse_template`, `Lib/re/_parser.py:1012-1064`. -/
+/-- The loop of `parse_template`, `Lib/re/_parser.py:1011-1063`. -/
 def templateLoop (groups : Nat) (groupindex : List (List Nat × Nat)) : (fuel : Nat) → T Unit
   | 0 => throw .modelFuel
   | fuel + 1 => do
@@ -1034,7 +1034,7 @@ def templateLoop (groups : Nat) (groupindex : List (List Nat × Nat)) : (fuel : 
       | _ => lappend this
       templateLoop groups groupindex fuel
 
-/-- `parse_template`, `Lib/re/_parser.py:990-1066`. -/
+/-- `parse_template`, `Lib/re/_parser.py:989-1065`. -/
 def parseTemplate (istext : Bool) (s : List Nat) (groups : Nat)
     (groupindex : List (List Nat × Nat)) (maxDigits : Nat := 4300) : Py (List TItem) := do
   let t ← Tk.adv ⟨istext, s, 0, none⟩

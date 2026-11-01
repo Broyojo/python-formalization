@@ -33,7 +33,7 @@ observed: |
 promised_by: |
   Twin relation only.
 cause: |
-  Modules/_pickle.c:6580-6590. Lib/pickle.py:1746-1751.
+  Modules/_pickle.c:6716-6726. Lib/pickle.py:1777-1782.
 possible_fix: |
   None proposed.
 duplicates:

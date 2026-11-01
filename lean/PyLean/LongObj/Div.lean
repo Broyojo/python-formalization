@@ -17,7 +17,7 @@ open PyLean PyLean.MathInt
 
 /-! ## Vector shifts -/
 
-/-- `v_lshift(z, a, m, d)`, longobject.c:1830-1842, returning `z` and the final carry. -/
+/-- `v_lshift(z, a, m, d)`, longobject.c:1905-1917, returning `z` and the final carry. -/
 def vLshiftGo (d : Nat) : List Nat → Nat → List Nat × Nat
   | [], carry => ([], carry)
   | a :: as, carry =>
@@ -25,7 +25,7 @@ def vLshiftGo (d : Nat) : List Nat → Nat → List Nat × Nat
     let (r, c) := vLshiftGo d as (u32 (acc >>> 30))
     ((u32 acc &&& MASK) :: r, c)
 
-/-- `v_rshift(z, a, m, d)`, longobject.c:1848-1861: the C loop runs from the top
+/-- `v_rshift(z, a, m, d)`, longobject.c:1923-1936: the C loop runs from the top
 digit down, which is this recursion's return order. Returns `z` and the final carry. -/
 def vRshiftGo (d : Nat) : List Nat → List Nat × Nat
   | [] => ([], 0)
@@ -114,7 +114,7 @@ theorem vRshiftGo_spec {d : Nat} (hd : d < 30) : ∀ (as : List Nat), IsDigits a
 
 /-! ## Division by one digit -/
 
-/-- `inplace_divrem1(pout, pin, size, n)`, longobject.c:1885-1899. The loop runs
+/-- `inplace_divrem1(pout, pin, size, n)`, longobject.c:1960-1974. The loop runs
 from the top digit down, which is this recursion's return order. -/
 def inplaceDivrem1 (n : Nat) : List Nat → List Nat × Nat
   | [] => ([], 0)
@@ -123,12 +123,12 @@ def inplaceDivrem1 (n : Nat) : List Nat → List Nat × Nat
     let dividend := (remainder <<< 30) ||| a
     (u32 (dividend / n) :: qs, dividend % n)
 
-/-- `inplace_rem1(pin, size, n)`, longobject.c:1924-1932. -/
+/-- `inplace_rem1(pin, size, n)`, longobject.c:1999-2007. -/
 def inplaceRem1 (n : Nat) : List Nat → Nat
   | [] => 0
   | a :: as => ((inplaceRem1 n as <<< 30) ||| a) % n
 
-/-- `divrem1(a, n, &rem)`, longobject.c:1907-1918. -/
+/-- `divrem1(a, n, &rem)`, longobject.c:1982-1993. -/
 def divrem1 (a : List Nat) (n : Nat) : Py (List Nat × Nat) := do
   longAlloc a.length
   let (q, r) := inplaceDivrem1 n a
@@ -179,7 +179,7 @@ theorem inplaceRem1_eq {n : Nat} (hn : 0 < n) (hn2 : n < 2 ^ 30) :
 
 /-! ## `x_divrem` -/
 
-/-- The outer loop of `x_divrem`, longobject.c:3300-3361. `rem` is `vk[1:size_w+1]`
+/-- The outer loop of `x_divrem`, longobject.c:3383-3444. `rem` is `vk[1:size_w+1]`
 at the start of an iteration and `low` the digits still to bring down, the next
 one first. Quotient digits go in front of `acc`, as `*--ak = q` stores them. -/
 def divLoop (w : List Nat) (wm1 wm2 : Nat) : List Nat → List Nat → List Nat →
@@ -189,7 +189,7 @@ def divLoop (w : List Nat) (wm1 wm2 : Nat) : List Nat → List Nat → List Nat 
     let (q, rem') ← divStep w wm1 wm2 (d :: rem)
     divLoop w wm1 wm2 low rem' (q :: acc)
 
-/-- `x_divrem(v1, w1, &prem)`, longobject.c:3242-3370; returns quotient and remainder digits. -/
+/-- `x_divrem(v1, w1, &prem)`, longobject.c:3324-3453; returns quotient and remainder digits. -/
 def xDivrem (v1 w1 : List Nat) : Py (List Nat × List Nat) := do
   longAlloc (v1.length + 1)
   longAlloc w1.length
@@ -268,7 +268,7 @@ theorem val_lt_of_top {x w : List Nat} {t wm1 Pn : Nat} (hx : IsDigits x)
   rw [Nat.mul_add, Nat.mul_one] at h2
   omega
 
-/-- The final unshift and the division relation, longobject.c:3364-3369. -/
+/-- The final unshift and the division relation, longobject.c:3447-3452. -/
 theorem unshift_alg {V W Q R c p M : Nat} (hp : 0 < p) (hc : c < p)
     (h1 : V * p = Q * (W * p) + M) (h2 : R * p + c = M) (hM : M < W * p) :
     V / W = Q ∧ V % W = R := by
@@ -478,7 +478,7 @@ theorem xDivrem_spec {v1 w1 : List Nat} (hv : IsDigits v1) (hw : IsDigits w1) (n
 
 /-! ## `long_divrem` and `long_rem` -/
 
-/-- The digit work of `long_divrem`, longobject.c:3156-3172: both magnitudes. -/
+/-- The digit work of `long_divrem`, longobject.c:3238-3254: both magnitudes. -/
 def divMag (a b : List Nat) : Py (List Nat × Long) :=
   if b.length = 1 then
     match divrem1 a (b.getD 0 0) with
@@ -489,12 +489,12 @@ def divMag (a b : List Nat) : Py (List Nat × Long) :=
     | .ok (q, r) => .ok (q, ⟨false, r⟩)
     | .error e => .error e
 
-/-- The test `|a| < |b|`, longobject.c:3145-3147 and :3208-3210. -/
+/-- The test `|a| < |b|`, longobject.c:3227-3229 and :3290-3292. -/
 def magLess (a b : List Nat) : Bool :=
   decide (a.length < b.length ∨
     (a.length = b.length ∧ a.getD (a.length - 1) 0 < b.getD (b.length - 1) 0))
 
-/-- `long_divrem(a, b, &div, &rem)`, longobject.c:3135-3194. -/
+/-- `long_divrem(a, b, &div, &rem)`, longobject.c:3217-3276. -/
 def longDivrem (a b : Long) : Py (Long × Long) :=
   if b.ds.length = 0 then .error (.zeroDivisionError "division by zero")
   else if magLess a.ds b.ds then .ok (⟨false, []⟩, a)
@@ -507,10 +507,10 @@ def longDivrem (a b : Long) : Py (Long × Long) :=
       let rem := if a.neg && !rem.ds.isEmpty then rem.flip else rem
       .ok (z, rem)
 
-/-- `rem1(a, n)`, longobject.c:1939-1947, through `PyLong_FromLong`. -/
+/-- `rem1(a, n)`, longobject.c:2014-2022, through `PyLong_FromLong`. -/
 def rem1 (a : List Nat) (n : Nat) : Long := fromSingle (inplaceRem1 n a)
 
-/-- `long_rem(a, b, &rem)`, longobject.c:3199-3236. -/
+/-- `long_rem(a, b, &rem)`, longobject.c:3281-3318. -/
 def longRem (a b : Long) : Py Long :=
   if b.ds.length = 0 then .error (.zeroDivisionError "division by zero")
   else if magLess a.ds b.ds then .ok a

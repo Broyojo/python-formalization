@@ -1,5 +1,5 @@
 file	line	endline	name	signature	status	entry	note
-Lib/asyncio/__main__.py	23	28	AsyncIOInteractiveConsole.__init__	__init__(self, locals, loop)	todo		
-Lib/asyncio/__main__.py	30	81	AsyncIOInteractiveConsole.runcode	runcode(self, code)	todo		
-Lib/asyncio/__main__.py	85	139	REPLThread.run	run(self)	todo		
-Lib/asyncio/__main__.py	141	148	REPLThread.interrupt	interrupt(self)	todo		
+Lib/asyncio/__main__.py	26	31	AsyncIOInteractiveConsole.__init__	__init__(self, locals, loop)	todo		
+Lib/asyncio/__main__.py	33	84	AsyncIOInteractiveConsole.runcode	runcode(self, code)	todo		
+Lib/asyncio/__main__.py	88	146	REPLThread.run	run(self)	todo		changed-in-3.15:
+Lib/asyncio/__main__.py	148	155	REPLThread.interrupt	interrupt(self)	todo		

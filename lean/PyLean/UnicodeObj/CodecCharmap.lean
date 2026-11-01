@@ -2,11 +2,11 @@ import PyLean.UnicodeObj.CodecAscii
 import PyLean.UnicodeObj.TextTranslate
 
 /-!
-The charmap codec: `charmap_decode_string` (unicodeobject.c:8400-8513),
-`charmap_decode_mapping` (:8516-8617), `PyUnicode_BuildEncodingMap` (:8696-8809),
-`encoding_map_lookup` (:8812-8840), and the encoder `charmapencode_lookup`,
+The charmap codec: `charmap_decode_string` (unicodeobject.c:8259-8372),
+`charmap_decode_mapping` (:8375-8476), `PyUnicode_BuildEncodingMap` (:8555-8668),
+`encoding_map_lookup` (:8671-8699), and the encoder `charmapencode_lookup`,
 `charmapencode_output`, `charmap_encoding_error` and `_PyUnicode_EncodeCharmap`
-(:8848-9182).
+(:8707-9083).
 
 The mapping is an abstract pure function, as for `translate`. The fast paths of
 `charmap_decode_string` for tables of at least 256 entries write what the general path
@@ -17,14 +17,14 @@ namespace PyLean.UnicodeObj
 
 open PyLean
 
-/-- One round of the general path of `charmap_decode_string`, unicodeobject.c:8473-8498. -/
+/-- One round of the general path of `charmap_decode_string`, unicodeobject.c:8332-8357. -/
 def stepCharmapString (table : Str) : List Nat → DStep
   | [] => .stop
   | ch :: _ =>
     let x := if ch < table.length then table.getD ch 0 else 0xfffe
     if x == 0xfffe then .fail "character maps to <undefined>" 0 1 else .char x 1
 
-/-- One round of `charmap_decode_mapping`, unicodeobject.c:8530-8600. -/
+/-- One round of `charmap_decode_mapping`, unicodeobject.c:8389-8459. -/
 def stepCharmapMapping (m : Mapping) : List Nat → DStep
   | [] => .stop
   | ch :: _ =>
@@ -48,7 +48,7 @@ inductive DecMap where
   | str (table : Str)
   | map (m : Mapping)
 
-/-- `PyUnicode_DecodeCharmap`, unicodeobject.c:8620-8651. -/
+/-- `PyUnicode_DecodeCharmap`, unicodeobject.c:8479-8510. -/
 def charmapDecode (input : Bytes) (mapping : DecMap) (h : ErrHandler) : Py Str := do
   if input.isEmpty then .ok []
   else
@@ -76,7 +76,7 @@ inductive EMap where
 /-- A `memset`-to-`d` array updated at some indices. -/
 def fnSet (f : Nat → Nat) (i v : Nat) : Nat → Nat := fun j => if j = i then v else f j
 
-/-- The first loop of `PyUnicode_BuildEncodingMap`, unicodeobject.c:8725-8740:
+/-- The first loop of `PyUnicode_BuildEncodingMap`, unicodeobject.c:8584-8599:
 `(level1, level2, count2, count3, need_dict)`. -/
 def buildScan : List Nat → (Nat → Nat) → (Nat → Nat) → Nat → Nat → (Nat → Nat) × (Nat → Nat) × Nat × Nat × Bool
   | [], l1, l2, c2, c3 => (l1, l2, c2, c3, false)
@@ -90,7 +90,7 @@ def buildScan : List Nat → (Nat → Nat) → (Nat → Nat) → Nat → Nat →
       let (l2, c3) := if l2 k2 == 0xFF then (fnSet l2 k2 c3, c3 + 1) else (l2, c3)
       buildScan t l1 l2 c2 c3
 
-/-- The trie filling loop, unicodeobject.c:8783-8798: `(mlevel2, mlevel3, count3)`. -/
+/-- The trie filling loop, unicodeobject.c:8642-8657: `(mlevel2, mlevel3, count3)`. -/
 def trieFill (mlevel1 : Nat → Nat) : Nat → List Nat → (Nat → Nat) → (Nat → Nat) → Nat →
     (Nat → Nat) × (Nat → Nat) × Nat
   | _, [], m2, m3, c3 => (m2, m3, c3)
@@ -107,7 +107,7 @@ def dictAssign (items : List (Nat × Nat)) (k v : Nat) : List (Nat × Nat) :=
   if items.any (·.1 == k) then items.map fun e => if e.1 == k then (k, v) else e
   else items ++ [(k, v)]
 
-/-- `PyUnicode_BuildEncodingMap`, unicodeobject.c:8696-8809. `string` is not empty. -/
+/-- `PyUnicode_BuildEncodingMap`, unicodeobject.c:8555-8668. `string` is not empty. -/
 def buildEncodingMap (string : Str) : EMap :=
   let table := string.take 256
   let (l1, l2, c2, c3, need0) := buildScan table.tail (fun _ => 0xFF) (fun _ => 0xFF) 0 0
@@ -119,7 +119,7 @@ def buildEncodingMap (string : Str) : EMap :=
     let _ := l2
     .trie { level1 := l1, level2 := m2, level3 := m3, count2 := c2, count3 := c3' }
 
-/-- `encoding_map_lookup`, unicodeobject.c:8812-8840: the byte, or `none` for -1. -/
+/-- `encoding_map_lookup`, unicodeobject.c:8671-8699: the byte, or `none` for -1. -/
 def encodingMapLookup (c : Nat) (t : Trie) : Option Nat :=
   if c > 0xFFFF then none
   else if c = 0 then some 0
@@ -133,7 +133,7 @@ def encodingMapLookup (c : Nat) (t : Trie) : Option Nat :=
         let i := t.level3 (128 * i + c % 128)
         if i == 0 then none else some i
 
-/-- `EncodingMap_size_impl`, unicodeobject.c:8674-8679, on a 64-bit build:
+/-- `EncodingMap_size_impl`, unicodeobject.c:8533-8538, on a 64-bit build:
 `sizeof(struct encoding_map) - 1` is 63. -/
 def encodingMapSize (t : Trie) : Nat := 63 + 16 * t.count2 + 128 * t.count3
 
@@ -151,7 +151,7 @@ inductive EncMap where
   | trie (t : Trie)
   | map (m : Nat → EncItem)
 
-/-- `charmapencode_lookup`, unicodeobject.c:8848-8892: `none` stands for `Py_None`. -/
+/-- `charmapencode_lookup`, unicodeobject.c:8707-8751: `none` stands for `Py_None`. -/
 def charmapencodeLookup (m : Nat → EncItem) (c : Nat) : Py (Option Bytes) :=
   match m c with
   | .missing | .pyNone => .ok none
@@ -163,14 +163,14 @@ def charmapencodeLookup (m : Nat → EncItem) (c : Nat) : Py (Option Bytes) :=
   | .wrong t =>
     .error (.typeError s!"character mapping must return integer, bytes or None, not {t}")
 
-/-- `charmapencode_output`, unicodeobject.c:8916-8970: the bytes, or `none` for
+/-- `charmapencode_output`, unicodeobject.c:8773-8831: the bytes, or `none` for
 `enc_FAILED`. -/
 def charmapencodeOutput (mapping : EncMap) (c : Nat) : Py (Option Bytes) :=
   match mapping with
   | .trie t => .ok ((encodingMapLookup c t).map ([·]))
   | .map m => charmapencodeLookup m c
 
-/-- The `while (collendpos < size)` of `charmap_encoding_error`, unicodeobject.c:8999-9022:
+/-- The `while (collendpos < size)` of `charmap_encoding_error`, unicodeobject.c:8860-8883:
 how many characters from the head are unencodable. -/
 def charmapCollect (mapping : EncMap) : List Nat → Py Nat
   | [] => .ok 0
@@ -195,7 +195,7 @@ def charmapWriteAll (mapping : EncMap) (bad : PyExc) : List Nat → Py Bytes
       | .error e => .error e
       | .ok r => .ok (w ++ r)
 
-/-- `charmap_encoding_error`, unicodeobject.c:8975-9113: what to write and the new `inpos`. -/
+/-- `charmap_encoding_error`, unicodeobject.c:8836-8974: what to write and the new `inpos`. -/
 def charmapEncodingError (input : Str) (mapping : EncMap) (h : ErrHandler)
     (nameOf : Nat → Option Str) (inpos : Nat) : Py (Bytes × Nat) := do
   let n ← charmapCollect mapping (input.drop (inpos + 1))
@@ -214,7 +214,7 @@ def charmapEncodingError (input : Str) (mapping : EncMap) (h : ErrHandler)
     | .bytes b => .ok (b, newpos)
     | .str r => .ok (← charmapWriteAll mapping bad r, newpos)
 
-/-- The `while (inpos<size)` of `_PyUnicode_EncodeCharmap`, unicodeobject.c:9150-9166. -/
+/-- The `while (inpos<size)` of `_PyUnicode_EncodeCharmap`, unicodeobject.c@3.14.7:9150-9166. -/
 def charmapEncodeLoop (input : Str) (mapping : EncMap) (h : ErrHandler)
     (nameOf : Nat → Option Str) : Nat → Nat → List Nat → Bytes → Py Bytes
   | 0, _, _, _ => .error .modelFuel
@@ -229,7 +229,7 @@ def charmapEncodeLoop (input : Str) (mapping : EncMap) (h : ErrHandler)
       | .ok (w, newpos) =>
         charmapEncodeLoop input mapping h nameOf fuel newpos (input.drop newpos) (out ++ w)
 
-/-- `_PyUnicode_EncodeCharmap`, unicodeobject.c:9116-9182. -/
+/-- `_PyUnicode_EncodeCharmap`, unicodeobject.c:8977-9083. -/
 def charmapEncode (s : Str) (mapping : EncMap) (h : ErrHandler) (nameOf : Nat → Option Str) :
     Py Bytes :=
   charmapEncodeLoop s mapping h nameOf (s.length + 1) 0 s []

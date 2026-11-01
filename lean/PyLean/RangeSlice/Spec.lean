@@ -20,7 +20,7 @@ def IsLen (start stop step L : Int) : Prop :=
 /-- The k-th element of the mathematical sequence. -/
 def Range.elem (r : Range) (k : Int) : Int := r.start + k * r.step
 
-/-- Type invariant of every `rangeobject`: `make_range_object` (rangeobject.c:51-73)
+/-- Type invariant of every `rangeobject`: `make_range_object` (rangeobject.c:66-88)
 stores `compute_range_length` in `length`, and the step is non-zero
 (`validate_step`, or the product of two non-zero steps in `compute_slice`). -/
 def Range.WF (r : Range) : Prop :=

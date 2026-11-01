@@ -5,36 +5,36 @@ The division family of `_pydecimal`: `__truediv__`, `_divide`, `__divmod__`,
 `__mod__`, `__floordiv__`, `remainder_near`.
 
 The conditions `DivisionUndefined` and `DivisionImpossible` map to the signal
-InvalidOperation (`_condition_map`, _pydecimal.py:333-336) and their handlers
-return `_NaN` (:195-196, :206-207), which is `invalid`. `DivisionByZero.handle`
-returns `_SignedInfinity[sign]` (:184-185).
+InvalidOperation (`_condition_map`, _pydecimal.py:336-339) and their handlers
+return `_NaN` (:198-199, :209-210), which is `invalid`. `DivisionByZero.handle`
+returns `_SignedInfinity[sign]` (:187-188).
 -/
 
 namespace PyLean.Decimal
 
 open PyLean
 
-/-- `_WorkRep(value)` of a finite Decimal, _pydecimal.py:5603-5616: `int(value._int)`. -/
+/-- `_WorkRep(value)` of a finite Decimal, _pydecimal.py:5703-5716: `int(value._int)`. -/
 def workRep : Dec → Py (Bool × Nat × Int)
   | .fin neg co e => do
     intLimit (numDigits co)
     return (neg, co, e)
   | _ => .ok (false, 0, 0)
 
-/-- `context._raise_error(DivisionByZero, msg, sign)`, _pydecimal.py:184-185. -/
+/-- `context._raise_error(DivisionByZero, msg, sign)`, _pydecimal.py:187-188. -/
 def divByZero (c : Ctx) (sign : Bool) : DM Dec := do
   raiseSig c .divisionByZero
   return .inf sign
 
 /-- `while exp < ideal_exp and coeff % 10 == 0: coeff //= 10; exp += 1`,
-_pydecimal.py:1329-1331, with the iteration bound `ideal_exp - exp`. -/
+_pydecimal.py:1421-1423, with the iteration bound `ideal_exp - exp`. -/
 def stripIdeal (coeff : Nat) (exp ideal : Int) : Nat → Nat × Int
   | 0 => (coeff, exp)
   | f + 1 =>
     if exp < ideal ∧ coeff % 10 = 0 then stripIdeal (coeff / 10) (exp + 1) ideal f
     else (coeff, exp)
 
-/-- The integer division of `__truediv__`, _pydecimal.py:1309-1331, for finite
+/-- The integer division of `__truediv__`, _pydecimal.py:1401-1423, for finite
 operands with a non-zero divisor. The result carries one digit more than `prec`;
 `coeff % 5 == 0` with a remainder bumps the last digit so that `_fix` sees an
 inexact tail. -/
@@ -55,7 +55,7 @@ def truedivFin (c : Ctx) (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) (cb : Nat
     let ideal := ea - eb
     return stripIdeal coeff exp ideal (ideal - exp).toNat
 
-/-- `Decimal.__truediv__`, _pydecimal.py:1277-1334. -/
+/-- `Decimal.__truediv__`, _pydecimal.py:1369-1426. -/
 def truediv (c : Ctx) (a b : Dec) : DM Dec := do
   let sign := a.neg != b.neg
   if isSpecial a || isSpecial b then
@@ -76,11 +76,11 @@ def truediv (c : Ctx) (a b : Dec) : DM Dec := do
   | _, _ => return a
 
 /-- `op1.int *= 10**(op1.exp - op2.exp)` or `op2.int *= 10**(op2.exp - op1.exp)`,
-_pydecimal.py:1355-1358 and :1504-1507: both operands as integers at the lower exponent. -/
+_pydecimal.py:1447-1450 and :1601-1604: both operands as integers at the lower exponent. -/
 def scaled (ca : Nat) (ea : Int) (cb : Nat) (eb : Int) : Nat × Nat :=
   if ea ≥ eb then (ca * 10 ^ (ea - eb).toNat, cb) else (ca, cb * 10 ^ (eb - ea).toNat)
 
-/-- `Decimal._divide`, _pydecimal.py:1336-1367: `(self // other, self % other)`
+/-- `Decimal._divide`, _pydecimal.py:1428-1464: `(self // other, self % other)`
 for finite `self` and non-zero `other`. -/
 def divideD (c : Ctx) (a b : Dec) : DM (Dec × Dec) := do
   let sign := a.neg != b.neg
@@ -104,7 +104,7 @@ def divideD (c : Ctx) (a b : Dec) : DM (Dec × Dec) := do
   let ans ← invalid c
   return (ans, ans)
 
-/-- `Decimal.__divmod__`, _pydecimal.py:1376-1410. -/
+/-- `Decimal.__divmod__`, _pydecimal.py:1473-1507. -/
 def divmodD (c : Ctx) (a b : Dec) : DM (Dec × Dec) := do
   if let some ans ← checkNans c a (some b) then return (ans, ans)
   let sign := a.neg != b.neg
@@ -126,7 +126,7 @@ def divmodD (c : Ctx) (a b : Dec) : DM (Dec × Dec) := do
   let r ← fix c qr.2
   return (qr.1, r)
 
-/-- `Decimal.__mod__`, _pydecimal.py:1419-1444. -/
+/-- `Decimal.__mod__`, _pydecimal.py:1516-1541. -/
 def modD (c : Ctx) (a b : Dec) : DM Dec := do
   if let some ans ← checkNans c a (some b) then return ans
   if isinfinity a ≠ 0 then return ← invalid c
@@ -134,7 +134,7 @@ def modD (c : Ctx) (a b : Dec) : DM Dec := do
   let qr ← divideD c a b
   fix c qr.2
 
-/-- `Decimal.__floordiv__`, _pydecimal.py:1528-1554. -/
+/-- `Decimal.__floordiv__`, _pydecimal.py:1627-1653. -/
 def floordivD (c : Ctx) (a b : Dec) : DM Dec := do
   if let some ans ← checkNans c a (some b) then return ans
   if isinfinity a ≠ 0 then
@@ -146,14 +146,14 @@ def floordivD (c : Ctx) (a b : Dec) : DM Dec := do
   let qr ← divideD c a b
   return qr.1
 
-/-- The adjustment of `remainder_near`, _pydecimal.py:1508-1514: `q, r = divmod(x, y)`,
+/-- The adjustment of `remainder_near`, _pydecimal.py:1605-1611: `q, r = divmod(x, y)`,
 then `if 2*r + (q&1) > y: r -= y; q += 1`. -/
 def nearestQR (x y : Nat) : Nat × Int :=
   let q := x / y
   let r := x % y
   if 2 * r + q % 2 > y then (q + 1, (r : Int) - y) else (q, r)
 
-/-- `Decimal.remainder_near`, _pydecimal.py:1453-1526. -/
+/-- `Decimal.remainder_near`, _pydecimal.py:1550-1625. -/
 def remainderNear (c : Ctx) (a b : Dec) : DM Dec := do
   if let some ans ← checkNans c a (some b) then return ans
   if isinfinity a ≠ 0 then return ← invalid c

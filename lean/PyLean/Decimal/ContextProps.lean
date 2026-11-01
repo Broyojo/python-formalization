@@ -171,7 +171,7 @@ theorem contextFma_equiv (c : Ctx) (a b t : Arg) (x y z : Dec) (fl : List Signal
 
 /-- "For a Context instance C and Decimal instance x, C.exp(x) is equivalent to
 x.exp(context=C). Each Context method accepts a Python integer anywhere that a Decimal
-instance is accepted." (Doc/library/decimal.rst:1172-1176.) Every `Context` method taking
+instance is accepted." (Doc/library/decimal.rst:1164-1168.) Every `Context` method taking
 one or two operands behaves as the `Decimal` method on the operands converted by
 `_convert_other`, and an operand that is neither raises the conversion's error. The
 exceptions the docs do not mention, `canonical` and `is_canonical`, take only a Decimal. -/
@@ -274,7 +274,7 @@ theorem ebind_ok {α β : Type} {x : Py α} {f : α → Py β} {r : β} (h : (x 
 def dirtyTemplate : CContext := { dfltCtx with status := [.inexact, .rounded] }
 
 /-- "If the flags field is not specified or is None, all flags are cleared."
-(Doc/library/decimal.rst:1118-1119), for `_decimal`, for any state of `DefaultContext`. -/
+(Doc/library/decimal.rst:1110-1111), for `_decimal`, for any state of `DefaultContext`. -/
 def ContextNewClearsFlagsC : Prop :=
   ∀ (t c : CContext), cContextCall t {} = .ok c → c.status = []
 
@@ -286,7 +286,7 @@ theorem contextNewClearsFlagsC_refuted : ¬ContextNewClearsFlagsC := by
   simp [dirtyTemplate] at this
 
 /-- "If a field is not specified or is None, the default values are copied from the
-DefaultContext." (Doc/library/decimal.rst:1117-1118), for `capitals` in `_decimal`. -/
+DefaultContext." (Doc/library/decimal.rst:1109-1110), for `capitals` in `_decimal`. -/
 def ContextNewCopiesCapitalsC : Prop :=
   ∀ (t c : CContext), cContextCall t {} = .ok c → c.capitals = t.capitals
 
@@ -569,7 +569,7 @@ theorem mem_clear (a b : Status) (x : Bit) : x ∈ clearBits a b ↔ x ∈ a ∧
   simp [clearBits, bit_mem]
 
 /-- Two status words with the same signals compare equal as mappings: a `SignalDict`
-is a `MutableMapping` (_decimal.c:6079-6080), whose `__eq__` compares items
+is a `MutableMapping` (_decimal.c:7796-7797), whose `__eq__` compares items
 (Lib/_collections_abc.py:822), and `ctx.flags.copy()` is that same mapping. -/
 def SignalDictEqualityByItems : Prop :=
   ∀ (a b : Status), (∀ s, hasSignal a s = hasSignal b s) →

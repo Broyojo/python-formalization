@@ -7,8 +7,8 @@ import PyLean.PyIO.StringC
 /-!
 `Modules/_io/textio.c`: the C `TextIOWrapper` over a C `BytesIO`, CPython 3.14.7.
 
-`TC` holds the fields of `textio` (textio.c:669-727). The encoders are the
-specialized ones of textio.c:739-815; decoding covers utf-8, ascii and latin-1
+`TC` holds the fields of `textio` (textio.c:669-729). The encoders are the
+specialized ones of textio.c:806-882; decoding covers utf-8, ascii and latin-1
 (utf-16 and utf-32 streams are only written). `pending` is `pending_bytes`
 flattened; only its concatenation and count are observable.
 -/
@@ -55,7 +55,7 @@ def encodeAll (enc : TEnc) (pass : Bool) : List Nat → Py (List Nat)
     | _, .error e => .error e
     | .ok a, .ok b => .ok (a ++ b)
 
-/-- `ascii_encode` .. `latin1_encode`, textio.c:739-815: `utf16_encode` and
+/-- `ascii_encode` .. `latin1_encode`, textio.c:806-882: `utf16_encode` and
 `utf32_encode` add a BOM at the start of the stream, little-endian here. -/
 def encodeFunc (enc : TEnc) (pass start : Bool) (s : List Nat) : Py (List Nat) :=
   match encodeAll enc pass s with
@@ -115,14 +115,14 @@ def checkAttached : TM Unit := do
     thr (.valueError (if t.detached then "underlying buffer has been detached"
       else "I/O operation on uninitialized object"))
 
-/-- `CHECK_CLOSED`, textio.c:1534-1544. -/
+/-- `CHECK_CLOSED`, textio.c:1600-1610. -/
 def checkClosed : TM Unit := do
   let t ← SM.get
   if t.b.closed then thr (.valueError "I/O operation on closed file.")
 
 def setDecoded (cs : List Nat) : TM Unit := SM.mod fun t => { t with decoded := cs, used := 0, decodedNN := false }
 
-/-- `textiowrapper_get_decoded_chars`, textio.c:1827-1856. -/
+/-- `textiowrapper_get_decoded_chars`, textio.c:1902-1931. -/
 def getDecoded (n : Int) : TM (List Nat) := do
   let t ← SM.get
   let avail : Int := (t.decoded.length : Int) - t.used
@@ -135,7 +135,7 @@ def getDecoded (n : Int) : TM (List Nat) := do
     SM.mod fun t => { t with used := t.used + n }
     pure t.decoded
 
-/-- The codec stack: `_textiowrapper_decode`, textio.c:932-948. -/
+/-- The codec stack: `_textiowrapper_decode`, textio.c:999-1015. -/
 def decodeStep (t : TC) (input : List Nat) (final : Bool) : Py (NDec × List Nat) :=
   match decodeBytes t.enc t.pass final (t.dec.inner.getD [] ++ input) with
   | .error e => .error e
@@ -156,7 +156,7 @@ def decSet (t : TC) (st : List Nat × Int) : TC :=
 def decReset (t : TC) : TC :=
   { t with dec := { t.dec with inner := some [], pendingcr := false, seennl := ⟨false, false, false⟩ } }
 
-/-- `_textiowrapper_writeflush`, textio.c:1585-1654. -/
+/-- `_textiowrapper_writeflush`, textio.c:1654-1723. -/
 def writeflush : TM Unit := do
   let t ← SM.get
   if t.pending ≠ [] then
@@ -166,7 +166,7 @@ def writeflush : TM Unit := do
     | .error e => thr e
     | .ok _ => pure ()
 
-/-- `_io_TextIOWrapper_flush_impl`, textio.c:3129-3138. -/
+/-- `_io_TextIOWrapper_flush_impl`, textio.c:3218-3227. -/
 def flush : TM Val := do
   checkAttached
   checkClosed
@@ -174,7 +174,7 @@ def flush : TM Val := do
   writeflush
   pure .none
 
-/-- `textiowrapper_read_chunk`, textio.c:1861-1986: `false` at EOF. -/
+/-- `textiowrapper_read_chunk`, textio.c:1936-2062: `false` at EOF. -/
 def readChunk (hint : Int) : TM Bool := do
   let t ← SM.get
   let (decBuf, decFlags) := decState t
@@ -198,7 +198,7 @@ def readChunk (hint : Int) : TM Bool := do
     SM.mod fun t => if t.telling then { t with snapshot := some (decFlags, decBuf ++ chunk) } else t
     pure (!(eof && out = []))
 
-/-- The chunk loop of `_io_TextIOWrapper_read_impl`, textio.c:2052-2074. -/
+/-- The chunk loop of `_io_TextIOWrapper_read_impl`, textio.c:2128-2150. -/
 def readLoop : Nat → Int → List Nat → TM (List Nat)
   | 0, _, _ => thr .modelFuel
   | fuel + 1, remaining, acc => do
@@ -209,7 +209,7 @@ def readLoop : Nat → Int → List Nat → TM (List Nat)
       readLoop fuel (remaining - r.length) (acc ++ r)
     else pure acc
 
-/-- `_io_TextIOWrapper_read_impl`, textio.c:1996-2103. -/
+/-- `_io_TextIOWrapper_read_impl`, textio.c:2072-2179. -/
 def read (n : Int) : TM Val := do
   checkAttached
   checkClosed
@@ -236,7 +236,7 @@ def read (n : Int) : TM Val := do
     let o ← readLoop (t.b.buf.length - t.b.pos + 3) (n - r.length) r
     pure (.str o)
 
-/-- `_PyIO_find_line_ending`, textio.c:2128-2211: `.inl endpos`, or `.inr consumed`. -/
+/-- `_PyIO_find_line_ending`, textio.c:2204-2287: `.inl endpos`, or `.inr consumed`. -/
 def findEnding (t : TC) (seg : List Nat) : Nat ⊕ Nat :=
   if t.readtranslate then
     match findIdx? seg 10 with
@@ -259,7 +259,7 @@ def findEnding (t : TC) (seg : List Nat) : Nat ⊕ Nat :=
     else if nl.length = 2 ∧ seg.getLast? = some 13 then .inr (seg.length - 1)
     else .inr seg.length
 
-/-- The main loop of `_textiowrapper_readline`, textio.c:2223-2318: `acc` is
+/-- The main loop of `_textiowrapper_readline`, textio.c:2299-2394: `acc` is
 `chunks`, `rem` is `remaining`, `chunked` their length. -/
 def lineLoop (limit : Int) : Nat → List Nat → Option (List Nat) → Int → TM (List Nat)
   | 0, _, _, _ => thr .modelFuel
@@ -308,14 +308,14 @@ where
     SM.mod fun t => { t with used := endpos - offset }
     pure (acc ++ slice line start.toNat (endpos - start).toNat)
 
-/-- `_textiowrapper_readline`, textio.c:2214-2370. -/
+/-- `_textiowrapper_readline`, textio.c:2290-2446. -/
 def readlineRaw (limit : Int) : TM (List Nat) := do
   checkClosed
   writeflush
   let t ← SM.get
   lineLoop limit (t.b.buf.length - t.b.pos + t.decoded.length + 3) [] none 0
 
-/-- `textiowrapper_iternext_lock_held`, textio.c:3193-3229. -/
+/-- `textiowrapper_iternext_lock_held`, textio.c:3283-3319. -/
 def next : TM Val := do
   checkAttached
   SM.mod fun t => { t with telling := false }
@@ -325,7 +325,7 @@ def next : TM Val := do
     thr .stopIteration
   else pure (.str l)
 
-/-- `_io_TextIOWrapper_write_impl`, textio.c:1664-1815. -/
+/-- `_io_TextIOWrapper_write_impl`, textio.c:1733-1890. -/
 def write (s : List Nat) : TM Val := do
   checkAttached
   checkClosed
@@ -348,7 +348,7 @@ def write (s : List Nat) : TM Val := do
     SM.mod decReset
     pure (.int textlen)
 
-/-- `textiowrapper_build_cookie`, textio.c:2454-2466 (LP64, little-endian). -/
+/-- `textiowrapper_build_cookie`, textio.c:2530-2542 (LP64, little-endian). -/
 def buildCookie (start decFlags feed skip : Int) (eof : Bool) : Int :=
   (start % 2 ^ 64) + (decFlags % 2 ^ 32) * 2 ^ 64 + (feed % 2 ^ 32) * 2 ^ 96 +
     (skip % 2 ^ 32) * 2 ^ 128 + (if eof then 1 else 0) * 2 ^ 160
@@ -357,17 +357,17 @@ def buildCookie (start decFlags feed skip : Int) (eof : Bool) : Int :=
 def s32 (x : Int) : Int := if x ≥ 2 ^ 31 then x - 2 ^ 32 else x
 def s64 (x : Int) : Int := if x ≥ 2 ^ 63 then x - 2 ^ 64 else x
 
-/-- `textiowrapper_parse_cookie`, textio.c:2430-2451. -/
+/-- `textiowrapper_parse_cookie`, textio.c:2506-2527. -/
 def parseCookie (c : Int) : Py (Int × Int × Int × Int × Bool) :=
   if c ≥ 2 ^ 168 then .error (.overflowError "int too big to convert") else
   .ok (s64 (c % 2 ^ 64), s32 (c / 2 ^ 64 % 2 ^ 32), s32 (c / 2 ^ 96 % 2 ^ 32),
     s32 (c / 2 ^ 128 % 2 ^ 32), c / 2 ^ 160 % 256 ≠ 0)
 
-/-- `_textiowrapper_decoder_setstate`, textio.c:2469-2490. -/
+/-- `_textiowrapper_decoder_setstate`, textio.c:2545-2566. -/
 def decoderSetstate (start flags : Int) : TM Unit :=
   SM.mod fun t => if start = 0 ∧ flags = 0 then decReset t else decSet t ([], flags)
 
-/-- The fast search of `_io_TextIOWrapper_tell_impl`, textio.c:2857-2888. -/
+/-- The fast search of `_io_TextIOWrapper_tell_impl`, textio.c:2949-2980. -/
 def tellSkip (next : List Nat) (start : Int) : Nat → Int → Int → Int → Int → TM (Int × Int × Int)
   | 0, _, _, _, _ => thr .modelFuel
   | fuel + 1, skipBytes, skipBack, flags, cts => do
@@ -389,7 +389,7 @@ def tellSkip (next : List Nat) (start : Int) : Nat → Int → Int → Int → I
       decoderSetstate start flags
       pure (0, flags, cts)
 
-/-- The byte loop of `tell`, textio.c:2906-2926: `(start, flags, feed, decoded, skip, broke)`. -/
+/-- The byte loop of `tell`, textio.c:2998-3018: `(start, flags, feed, decoded, skip, broke)`. -/
 def tellFeed : List Nat → Int → Int → Int → Int → Int → TM (Int × Int × Int × Int × Int × Bool)
   | [], sp, fl, bf, cd, cts => pure (sp, fl, bf, cd, cts, false)
   | x :: xs, sp, fl, bf, cd, cts => do
@@ -407,7 +407,7 @@ def tellFeed : List Nat → Int → Int → Int → Int → Int → TM (Int × I
       if cd ≥ cts then pure (sp, fl, bf, cd, cts, true)
       else tellFeed xs sp fl bf cd cts
 
-/-- `_io_TextIOWrapper_tell_impl`, textio.c:2742-2966. -/
+/-- `_io_TextIOWrapper_tell_impl`, textio.c:2830-3060. -/
 def tell : TM Int := do
   checkAttached
   checkClosed
@@ -443,11 +443,11 @@ def tell : TM Int := do
     | .error e => thr e
     | .ok v => pure v
 
-/-- `_textiowrapper_encoder_setstate`/`_reset`, textio.c:2493-2517. -/
+/-- `_textiowrapper_encoder_setstate`/`_reset`, textio.c:2569-2593. -/
 def encoderReset (atStart : Bool) : TM Unit :=
   SM.mod fun t => { t with startOfStream := atStart }
 
-/-- `_io_TextIOWrapper_seek_impl`, textio.c:2544-2729, after `whence` is converted. -/
+/-- `_io_TextIOWrapper_seek_impl`, textio.c:2620-2817, after `whence` is converted. -/
 def seek (cookie whence : Int) : TM Val := do
   checkAttached
   checkClosed
@@ -508,7 +508,7 @@ def seek (cookie whence : Int) : TM Val := do
         encoderReset (start = 0 ∧ flags = 0)
         pure (.int c)
 
-/-- `_io_TextIOWrapper_truncate_impl`, textio.c:2976-2986. -/
+/-- `_io_TextIOWrapper_truncate_impl`, textio.c:3070-3080. -/
 def truncate (p : Option Int) : TM Val := do
   checkAttached
   let _ ← flush
@@ -519,7 +519,7 @@ def truncate (p : Option Int) : TM Val := do
   | .error e => thr e
   | .ok v => pure v
 
-/-- `_io_TextIOWrapper_close_impl`, textio.c:3146-3190. -/
+/-- `_io_TextIOWrapper_close_impl`, textio.c:3235-3280. -/
 def close : TM Val := do
   checkAttached
   let t ← SM.get
@@ -533,14 +533,14 @@ def close : TM Val := do
   | .ok _, .error e => thr e
   | .ok _, .ok _ => pure .none
 
-/-- `_io_TextIOWrapper_detach_impl`, textio.c:1568-1580. -/
+/-- `_io_TextIOWrapper_detach_impl`, textio.c:1634-1649. -/
 def detach : TM Val := do
   checkAttached
   let _ ← flush
   SM.mod fun t => { t with detached := true, ok := false }
   pure .none
 
-/-- `set_newline` and `_io_TextIOWrapper___init___impl`, textio.c:859-892, :1104-1269. -/
+/-- `set_newline` and `_io_TextIOWrapper___init___impl`, textio.c:926-959, :1170-1335. -/
 def init (data : List Nat) (enc : TEnc) (encName errName : List Nat) (pass : Bool) (nl : Option (List Nat))
     (lb wt : Bool) (chunk : Nat) : Py TC :=
   let legal := nl = none ∨ nl = some [] ∨ nl = some [10] ∨ nl = some [13] ∨ nl = some [13, 10]

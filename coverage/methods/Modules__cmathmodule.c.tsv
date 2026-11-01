@@ -21,11 +21,11 @@ Modules/cmathmodule.c	877	939	cmath_tanh_impl	cmath_tanh_impl(PyObject *module, 
 Modules/cmathmodule.c	956	974	cmath_log_impl	cmath_log_impl(PyObject *module, Py_complex x, PyObject *y_obj) /*[clinic end generated code: output=4effdb7d258e0d94 input=eb25de0757baf4a0]*/	todo		
 Modules/cmathmodule.c	980	989	math_error	math_error(void)	todo		
 Modules/cmathmodule.c	1002	1013	cmath_phase_impl	cmath_phase_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=50725086a7bfd253 input=5cf75228ba94b69d]*/	todo		
-Modules/cmathmodule.c	1027	1039	cmath_polar_impl	cmath_polar_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=d0a8147c41dbb654 input=26c353574fd1a861]*/	todo		
+Modules/cmathmodule.c	1027	1039	cmath_polar_impl	cmath_polar_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=d0a8147c41dbb654 input=26c353574fd1a861]*/	todo		changed-in-3.15:
 Modules/cmathmodule.c	1073	1123	cmath_rect_impl	cmath_rect_impl(PyObject *module, double r, double phi) /*[clinic end generated code: output=385a0690925df2d5 input=24c5646d147efd69]*/	todo		
-Modules/cmathmodule.c	1132	1136	cmath_isfinite_impl	cmath_isfinite_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=ac76611e2c774a36 input=848e7ee701895815]*/	todo		
-Modules/cmathmodule.c	1145	1149	cmath_isnan_impl	cmath_isnan_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=e7abf6e0b28beab7 input=71799f5d284c9baf]*/	todo		
-Modules/cmathmodule.c	1158	1162	cmath_isinf_impl	cmath_isinf_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=502a75a79c773469 input=363df155c7181329]*/	todo		
-Modules/cmathmodule.c	1190	1230	cmath_isclose_impl	cmath_isclose_impl(PyObject *module, Py_complex a, Py_complex b, double rel_tol, double abs_tol) /*[clinic end generated code: output=8a2486cc6e0014d1 input=301b56c90d9a79de]*/	todo		
-Modules/cmathmodule.c	1264	1293	cmath_exec	cmath_exec(PyObject *mod)	todo		
-Modules/cmathmodule.c	1312	1315	PyInit_cmath	PyInit_cmath(void)	todo		
+Modules/cmathmodule.c	1133	1137	cmath_isfinite_impl	cmath_isfinite_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=ac76611e2c774a36 input=e224f5c36d94f5da]*/	todo		
+Modules/cmathmodule.c	1146	1150	cmath_isnan_impl	cmath_isnan_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=e7abf6e0b28beab7 input=71799f5d284c9baf]*/	todo		
+Modules/cmathmodule.c	1159	1163	cmath_isinf_impl	cmath_isinf_impl(PyObject *module, Py_complex z) /*[clinic end generated code: output=502a75a79c773469 input=363df155c7181329]*/	todo		
+Modules/cmathmodule.c	1191	1231	cmath_isclose_impl	cmath_isclose_impl(PyObject *module, Py_complex a, Py_complex b, double rel_tol, double abs_tol) /*[clinic end generated code: output=8a2486cc6e0014d1 input=301b56c90d9a79de]*/	todo		
+Modules/cmathmodule.c	1265	1294	cmath_exec	cmath_exec(PyObject *mod)	todo		changed-in-3.15:
+Modules/cmathmodule.c	1314	1317	PyInit_cmath	PyInit_cmath(void)	todo		

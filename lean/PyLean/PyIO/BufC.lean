@@ -3,7 +3,7 @@ import PyLean.PyIO.BufRaw
 /-!
 `Modules/_io/bufferedio.c`: `BufferedReader`, `BufferedWriter`, `BufferedRandom`
 over the scripted `Raw`, CPython 3.14.7. `BufS` holds the fields of `buffered`
-(bufferedio.c:220-262); positions are `Py_off_t`. The lock is not modelled
+(bufferedio.c:221-263); positions are `Py_off_t`. The lock is not modelled
 (single-threaded use has no re-entrant call from these raws).
 -/
 
@@ -36,29 +36,29 @@ namespace BC2
 def validRead (s : BufS) : Bool := s.readable && s.readEnd != -1
 def validWrite (s : BufS) : Bool := s.writable && s.writeEnd != -1
 
-/-- `READAHEAD`, bufferedio.c:377-379. -/
+/-- `READAHEAD`, bufferedio.c:386-388. -/
 def readahead (s : BufS) : Int := if validRead s then s.readEnd - s.pos else 0
 
-/-- `RAW_OFFSET`, bufferedio.c:381-383. -/
+/-- `RAW_OFFSET`, bufferedio.c:390-392. -/
 def rawOffset (s : BufS) : Int :=
   if (validRead s || validWrite s) && decide (s.rawPos ≥ 0) then s.rawPos - s.pos else 0
 
-/-- `ADJUST_POSITION`, bufferedio.c:370-375. -/
+/-- `ADJUST_POSITION`, bufferedio.c@3.14.7:370-375. -/
 def adjust (s : BufS) (n : Int) : BufS :=
   let s := { s with pos := n }
   if validRead s && decide (s.readEnd < s.pos) then { s with readEnd := s.pos } else s
 
-/-- `CHECK_INITIALIZED`, bufferedio.c:339-348. -/
+/-- `CHECK_INITIALIZED`, bufferedio.c:340-349. -/
 def checkInit : BM Unit := do
   let s ← SM.get
   if !s.ok then
     thr (.valueError (if s.detached then "raw stream has been detached"
       else "I/O operation on uninitialized object"))
 
-/-- `IS_CLOSED`, bufferedio.c:351-355. -/
+/-- `IS_CLOSED`, bufferedio.c:352-356. -/
 def isClosed (s : BufS) : Bool := !s.hasBuf || s.raw.closed
 
-/-- `CHECK_CLOSED`, bufferedio.c:357-361. -/
+/-- `CHECK_CLOSED`, bufferedio.c:358-362. -/
 def checkClosed (msg : String) : BM Unit := do
   let s ← SM.get
   if isClosed s && decide (readahead s = 0) then thr (.valueError msg)
@@ -71,14 +71,14 @@ def asOff (v : Int) : BM Int :=
   if InSsize v then pure v
   else thr (.valueError "cannot fit 'int' into an offset-sized integer")
 
-/-- The tail of `_buffered_raw_tell`/`_buffered_raw_seek`, bufferedio.c:784-792, :817-825. -/
+/-- The tail of `_buffered_raw_tell`/`_buffered_raw_seek`, bufferedio.c:793-801, :826-834. -/
 def checkPos (n : Int) : BM Int := do
   let n ← asOff n
   if n < 0 then thr (osError s!"Raw stream returned invalid position {n}")
   SM.mod fun s => { s with absPos := n }
   pure n
 
-/-- `_buffered_raw_tell`, bufferedio.c:775-793. -/
+/-- `_buffered_raw_tell`, bufferedio.c:784-802. -/
 def rawTell : BM Int := do
   let s ← SM.get
   let (r, res) := s.raw.tell
@@ -87,7 +87,7 @@ def rawTell : BM Int := do
   | .error e => thr e
   | .ok n => checkPos n
 
-/-- `_buffered_raw_seek`, bufferedio.c:796-826. -/
+/-- `_buffered_raw_seek`, bufferedio.c:805-835. -/
 def rawSeek (t w : Int) : BM Int := do
   let s ← SM.get
   let (r, res) := s.raw.seek t w
@@ -98,7 +98,7 @@ def rawSeek (t w : Int) : BM Int := do
 
 def trapEintr (e : PyExc) : Bool := e.className == "InterruptedError"
 
-/-- `_bufferedreader_raw_read`, bufferedio.c:1611-1658: the count (`-2` for
+/-- `_bufferedreader_raw_read`, bufferedio.c:1623-1670: the count (`-2` for
 `None`) and the bytes read. -/
 def rawRead (len : Int) : Nat → BM (Int × List Nat)
   | 0 => thr .modelFuel
@@ -119,7 +119,7 @@ def rawRead (len : Int) : Nat → BM (Int × List Nat)
 
 def fuelR (s : BufS) : Nat := s.raw.rs.length + 2
 
-/-- `_bufferedreader_fill_buffer`, bufferedio.c:1661-1675. -/
+/-- `_bufferedreader_fill_buffer`, bufferedio.c:1673-1687. -/
 def fillBuffer : BM Int := do
   let s ← SM.get
   let start : Int := if validRead s then s.readEnd else 0
@@ -128,7 +128,7 @@ def fillBuffer : BM Int := do
   SM.mod fun s => { s with buffer := writeAt s.buffer start.toNat d, readEnd := start + n, rawPos := start + n }
   pure n
 
-/-- `_bufferedwriter_raw_write`, bufferedio.c:1969-2013. -/
+/-- `_bufferedwriter_raw_write`, bufferedio.c:1977-2021. -/
 def rawWrite (b : List Nat) : Nat → BM Int
   | 0 => thr .modelFuel
   | fuel + 1 => do
@@ -143,7 +143,7 @@ def rawWrite (b : List Nat) : Nat → BM Int
       pure n
     | .data _ => pure 0
     | .bad v =>
-      -- :2002-2009: a failed conversion leaves `n == -1`, and `n < 0` replaces its error
+      -- :2010-2017: a failed conversion leaves `n == -1`, and `n < 0` replaces its error
       let n : Int := if InSsize v then v else -1
       thr (osError s!"raw write() returned invalid length {n} (should have been between 0 and {b.length})")
 
@@ -152,7 +152,7 @@ def blocking (written : Nat) : PyExc :=
 
 def fuelW (s : BufS) : Nat := s.raw.ws.length + 2
 
-/-- The loop of `_bufferedwriter_flush_unlocked`, bufferedio.c:2031-2052. -/
+/-- The loop of `_bufferedwriter_flush_unlocked`, bufferedio.c:2039-2060. -/
 def flushLoop : Nat → BM Unit
   | 0 => thr .modelFuel
   | fuel + 1 => do
@@ -163,7 +163,7 @@ def flushLoop : Nat → BM Unit
       SM.mod fun s => { s with writePos := s.writePos + n, rawPos := s.writePos + n }
       flushLoop fuel
 
-/-- `_bufferedwriter_flush_unlocked`, bufferedio.c:2016-2069. -/
+/-- `_bufferedwriter_flush_unlocked`, bufferedio.c:2024-2077. -/
 def flushUnlocked : BM Unit := do
   let s ← SM.get
   if !validWrite s || s.writePos == s.writeEnd then
@@ -178,7 +178,7 @@ def flushUnlocked : BM Unit := do
     flushLoop (s.raw.ws.length + (s.writeEnd - s.writePos).toNat + 3)
     resetWrite
 
-/-- `buffered_flush_and_rewind_unlocked`, bufferedio.c:899-918. -/
+/-- `buffered_flush_and_rewind_unlocked`, bufferedio.c:908-927. -/
 def flushRewind : BM Unit := do
   flushUnlocked
   let s ← SM.get
@@ -189,14 +189,14 @@ def flushRewind : BM Unit := do
     | .error e => thr e
     | .ok _ => pure ()
 
-/-- `_io__Buffered_flush_impl`, bufferedio.c:926-940. -/
+/-- `_io__Buffered_flush_impl`, bufferedio.c:935-949. -/
 def flush : BM Val := do
   checkInit
   checkClosed "flush of closed file"
   flushRewind
   pure .none
 
-/-- `_io__Buffered_simple_flush_impl`, bufferedio.c:504-509: `BufferedReader.flush`
+/-- `_io__Buffered_simple_flush_impl`, bufferedio.c:513-518: `BufferedReader.flush`
 forwards to the raw stream, with no closed check of its own and no rewind. -/
 def simpleFlush : BM Val := do
   checkInit
@@ -213,7 +213,7 @@ def flushMethod : BM Val := do
   let s ← SM.get
   if s.writable then flush else simpleFlush
 
-/-- `_bufferedreader_read_fast`, bufferedio.c:1770-1783. -/
+/-- `_bufferedreader_read_fast`, bufferedio.c:1782-1795. -/
 def readFast (n : Int) : BM (Option (List Nat)) := do
   let s ← SM.get
   if n ≤ readahead s then
@@ -221,7 +221,7 @@ def readFast (n : Int) : BM (Option (List Nat)) := do
     pure (some (slice s.buffer s.pos.toNat n.toNat))
   else pure none
 
-/-- The first loop of `_bufferedreader_read_generic`, bufferedio.c:1824-1845:
+/-- The first loop of `_bufferedreader_read_generic`, bufferedio.c:1836-1855:
 `some out` is an early return. -/
 def genericBlocks : Nat → Int → List Nat → BM (Int × List Nat × Option Val)
   | 0, _, _ => thr .modelFuel
@@ -237,7 +237,7 @@ def genericBlocks : Nat → Int → List Nat → BM (Int × List Nat × Option V
       else genericBlocks fuel (remaining - n) (out ++ d)
     else pure (remaining, out, (none : Option Val))
 
-/-- The second loop of `_bufferedreader_read_generic`, bufferedio.c:1852-1879. -/
+/-- The second loop of `_bufferedreader_read_generic`, bufferedio.c:1862-1887. -/
 def genericFill : Nat → Int → List Nat → BM Val
   | 0, _, _ => thr .modelFuel
   | fuel + 1, remaining, out => do
@@ -255,7 +255,7 @@ def genericFill : Nat → Int → List Nat → BM Val
         if remaining = 0 then pure (.bytes out) else genericFill fuel remaining out
     else pure (.bytes out)
 
-/-- `_bufferedreader_read_generic`, bufferedio.c:1789-1883. -/
+/-- `_bufferedreader_read_generic`, bufferedio.c:1801-1891. -/
 def readGeneric (n : Int) : BM Val := do
   let s ← SM.get
   let cur := readahead s
@@ -278,7 +278,7 @@ def readGeneric (n : Int) : BM Val := do
       let s ← SM.get
       genericFill (s.raw.rs.length + remaining.toNat + 3) remaining out
 
-/-- `_io__RawIOBase_read_impl`, iobase.c:922-960, on the raw (`n >= 0`). -/
+/-- `_io__RawIOBase_read_impl`, iobase.c:923-961, on the raw (`n >= 0`). -/
 def rawBaseRead (n : Nat) : BM (Option (List Nat)) := do
   let s ← SM.get
   let (r, res) := s.raw.readinto n
@@ -292,7 +292,7 @@ def rawBaseRead (n : Nat) : BM (Option (List Nat)) := do
     if !InSsize v then thr (.valueError "cannot fit 'int' into an index-sized integer")
     else thr (.valueError s!"readinto returned {v} outside buffer size {n}")
 
-/-- `_io__RawIOBase_readall_impl`, iobase.c:970-1021, on the raw. -/
+/-- `_io__RawIOBase_readall_impl`, iobase.c:971-1020, on the raw. -/
 def rawReadall : Nat → List Nat → Bool → BM Val
   | 0, _, _ => thr .modelFuel
   | fuel + 1, acc, any => do
@@ -302,7 +302,7 @@ def rawReadall : Nat → List Nat → Bool → BM Val
     | .ok none => if !any then pure .none else pure (.bytes acc)
     | .ok (some d) => if d = [] then pure (.bytes acc) else rawReadall fuel (acc ++ d) true
 
-/-- `_bufferedreader_read_all`, bufferedio.c:1678-1765 (`raw.readall` exists). -/
+/-- `_bufferedreader_read_all`, bufferedio.c:1690-1777 (`raw.readall` exists). -/
 def readAll : BM Val := do
   let s ← SM.get
   let cur := readahead s
@@ -315,7 +315,7 @@ def readAll : BM Val := do
   if cur = 0 then pure tmp
   else pure (.bytes (data ++ tmp.bytesOf))
 
-/-- `_io__Buffered_read_impl`, bufferedio.c:983-1015. -/
+/-- `_io__Buffered_read_impl`, bufferedio.c:992-1024. -/
 def read (n : Int) : BM Val := do
   checkInit
   if n < -1 then thr (.valueError "read length must be non-negative or -1")
@@ -327,7 +327,7 @@ def read (n : Int) : BM Val := do
     | some d => pure (.bytes d)
     | none => readGeneric n
 
-/-- `_io__Buffered_read1_impl`, bufferedio.c:1025-1080. -/
+/-- `_io__Buffered_read1_impl`, bufferedio.c:1034-1092. -/
 def read1 (n : Int) : BM Val := do
   checkInit
   let s ← SM.get
@@ -345,7 +345,7 @@ def read1 (n : Int) : BM Val := do
     let (r, d) ← rawRead n (fuelR s)
     pure (.bytes (if r = -2 then [] else d))
 
-/-- The loop of `_buffered_readinto_generic`, bufferedio.c:1118-1152: the
+/-- The loop of `_buffered_readinto_generic`, bufferedio.c:1130-1164: the
 final `written` bytes, or `none` for the `None` result. -/
 def readintoLoop (one : Bool) : Nat → Int → List Nat → BM (Option (List Nat))
   | 0, _, _ => thr .modelFuel
@@ -372,7 +372,7 @@ def readintoLoop (one : Bool) : Nat → Int → List Nat → BM (Option (List Na
       else pure (some out)
     else pure (some out)
 
-/-- `_buffered_readinto_generic`, bufferedio.c:1083-1162, with a buffer of `len`
+/-- `_buffered_readinto_generic`, bufferedio.c:1095-1174, with a buffer of `len`
 bytes `0xff`; the result is `[count, buffer]`. -/
 def readinto (len : Nat) (one : Bool) : BM Val := do
   checkInit
@@ -396,7 +396,7 @@ def readinto (len : Nat) (one : Bool) : BM Val := do
     | some o => fin o (.int o.length)
     | none => fin out .none
 
-/-- The loop of `_buffered_readline`, bufferedio.c:1249-1291. -/
+/-- The loop of `_buffered_readline`, bufferedio.c:1261-1303. -/
 def readlineLoop : Nat → Int → List Nat → BM (List Nat)
   | 0, _, _ => thr .modelFuel
   | fuel + 1, limit, acc => do
@@ -417,7 +417,7 @@ def readlineLoop : Nat → Int → List Nat → BM (List Nat)
       else
         readlineLoop fuel (if limit ≥ 0 then limit - n else limit) (acc ++ seg)
 
-/-- `_buffered_readline`, bufferedio.c:1194-1299. -/
+/-- `_buffered_readline`, bufferedio.c:1206-1311. -/
 def readlineRaw (limit : Int) : BM (List Nat) := do
   checkClosed "readline of closed file"
   let s ← SM.get
@@ -440,8 +440,8 @@ def readlineRaw (limit : Int) : BM (List Nat) := do
       let s ← SM.get
       readlineLoop (s.raw.rs.length + s.raw.data.length + 2) limit acc
 
-/-- `_io__Buffered_peek_impl` (bufferedio.c:951-973) and
-`_bufferedreader_peek_unlocked` (:1886-1910). -/
+/-- `_io__Buffered_peek_impl` (bufferedio.c:960-982) and
+`_bufferedreader_peek_unlocked` (:1894-1918). -/
 def peek : BM Val := do
   checkInit
   checkClosed "peek of closed file"
@@ -457,7 +457,7 @@ def peek : BM Val := do
   let s ← SM.get
   pure (.bytes (slice s.buffer 0 r.toNat))
 
-/-- `_io__Buffered_tell_impl`, bufferedio.c:1323-1339. -/
+/-- `_io__Buffered_tell_impl`, bufferedio.c:1335-1351. -/
 def tell : BM Val := do
   checkInit
   let p ← rawTell
@@ -470,7 +470,7 @@ def checkRawSeekable : BM Unit := do
   let s ← SM.get
   if !s.raw.canSeek then thr (unsupportedOp "File or stream is not seekable.")
 
-/-- `_io__Buffered_seek_impl`, bufferedio.c:1350-1442, after `whence` is converted. -/
+/-- `_io__Buffered_seek_impl`, bufferedio.c:1362-1454, after `whence` is converted. -/
 def seek (target whence : Int) : BM Val := do
   checkInit
   if whence < 0 ∨ (whence > 2 ∧ whence ≠ 3 ∧ whence ≠ 4) then
@@ -505,7 +505,7 @@ def seek (target whence : Int) : BM Val := do
     if s.readable then resetRead
     pure (.int n)
 
-/-- `_io__Buffered_truncate_impl`, bufferedio.c:1453-1483. -/
+/-- `_io__Buffered_truncate_impl`, bufferedio.c:1465-1495. -/
 def truncate (p : Option Int) : BM Val := do
   checkInit
   checkClosed "truncate of closed file"
@@ -521,7 +521,7 @@ def truncate (p : Option Int) : BM Val := do
     let _ ← SM.attempt rawTell
     pure (.int v)
 
-/-- `_io__Buffered_close_impl`, bufferedio.c:545-600. -/
+/-- `_io__Buffered_close_impl`, bufferedio.c:554-609. -/
 def close : BM Val := do
   checkInit
   let s ← SM.get
@@ -535,14 +535,14 @@ def close : BM Val := do
   | .ok (), .error e => thr e
   | .ok (), .ok _ => pure .none
 
-/-- `_io__Buffered_detach_impl`, bufferedio.c:608-621. -/
+/-- `_io__Buffered_detach_impl`, bufferedio.c:617-630. -/
 def detach : BM Val := do
   checkInit
   let _ ← flushMethod
   SM.mod fun s => { s with detached := true, ok := false }
   pure .none
 
-/-- The write loop of `_io_BufferedWriter_write_impl`, bufferedio.c:2178-2205:
+/-- The write loop of `_io_BufferedWriter_write_impl`, bufferedio.c:2191-2218:
 `(written, remaining)`. -/
 def writeLoop (b : List Nat) : Nat → Int → Int → BM (Int × Int)
   | 0, _, _ => thr .modelFuel
@@ -560,7 +560,7 @@ def writeLoop (b : List Nat) : Nat → Int → Int → BM (Int × Int)
       else writeLoop b fuel (written + n) (remaining - n)
     else pure (written, remaining)
 
-/-- `_io_BufferedWriter_write_impl`, bufferedio.c:2079-2221. -/
+/-- `_io_BufferedWriter_write_impl`, bufferedio.c:2087-2234. -/
 def write (b : List Nat) : BM Val := do
   checkInit
   let s ← SM.get
@@ -614,10 +614,10 @@ def write (b : List Nat) : BM Val := do
       SM.mod fun s => { s with rawPos := 0 }
       pure (.int (written + (if remaining > 0 then remaining else 0)))
 
-/-- `_buffered_init`, bufferedio.c:829-863, as far as it is observable. Nothing
-sets `abs_pos` before the first `_buffered_raw_tell` (assignments are at :791 and
-:824 only), so if that call fails it stays at `tp_alloc`'s 0, not the -1 that
-means unknown, and `RAW_TELL` (:397) trusts it. -/
+/-- `_buffered_init`, bufferedio.c:838-872, as far as it is observable. Nothing
+sets `abs_pos` before the first `_buffered_raw_tell` (assignments are at :800 and
+:833 only), so if that call fails it stays at `tp_alloc`'s 0, not the -1 that
+means unknown, and `RAW_TELL` (:406) trusts it. -/
 def init (kind : Nat) (raw : Raw) (size : Int) : Py BufS :=
   -- kind 0: reader, 1: writer, 2: random
   if kind = 2 ∧ !raw.canSeek then .error (unsupportedOp "File or stream is not seekable.") else

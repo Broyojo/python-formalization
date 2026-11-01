@@ -29,7 +29,7 @@ theorem roundingModesCorrect_proven : RoundingModesCorrect :=
 /-- For every context, rounding argument and finite value `c·10^e` with
 `e < 0`, `to_integral_value` returns the integer `roundSpec` prescribes (at
 exponent 0) and leaves the flags untouched (docs: "without signaling
-Inexact or Rounded", Doc/library/decimal.rst:937), or raises the int/str-limit `ValueError`; values with
+Inexact or Rounded", Doc/library/decimal.rst:929), or raises the int/str-limit `ValueError`; values with
 `e ≥ 0` are returned unchanged. -/
 def ToIntegralValueCorrect : Prop :=
   ∀ (ctx : Ctx) (r : Option Rounding) (neg : Bool) (c : Nat) (e : Int) (fl : List Signal),
@@ -123,7 +123,7 @@ theorem intConversionsPyOrLimit_proven : IntConversionsPyOrLimit := by
 
 /-! ## Hashing -/
 
-/-- `_decimal`'s literal `inv10_p` (_decimal.c:4903) is `_pydecimal`'s
+/-- `_decimal`'s literal `inv10_p` (_decimal.c:5827) is `_pydecimal`'s
 `_PyHASH_10INV = pow(10, P - 2, P)`, so the two hash formulas coincide. -/
 theorem tenInv_eq : PyLean.Fractions.tenInv = 2075258708292324556 := by
   set_option maxRecDepth 100000 in decide +kernel

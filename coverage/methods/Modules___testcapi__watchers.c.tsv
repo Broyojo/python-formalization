@@ -11,40 +11,41 @@ Modules/_testcapi/watchers.c	169	176	get_dict_watcher_events	get_dict_watcher_ev
 Modules/_testcapi/watchers.c	183	190	type_modified_callback	type_modified_callback(PyTypeObject *type)	excluded		test-support: only for CPython's own tests
 Modules/_testcapi/watchers.c	193	210	type_modified_callback_wrap	type_modified_callback_wrap(PyTypeObject *type)	excluded		test-support: only for CPython's own tests
 Modules/_testcapi/watchers.c	213	217	type_modified_callback_error	type_modified_callback_error(PyTypeObject *type)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	220	245	add_type_watcher	add_type_watcher(PyObject *self, PyObject *kind)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	248	259	clear_type_watcher	clear_type_watcher(PyObject *self, PyObject *watcher_id)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	262	269	get_type_modified_events	get_type_modified_events(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	279	286	_testcapi_watch_type_impl	_testcapi_watch_type_impl(PyObject *module, int watcher_id, PyObject *type) /*[clinic end generated code: output=fdf4777126724fc4 input=5a808bf12be7e3ed]*/	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	293	300	_testcapi_unwatch_type_impl	_testcapi_unwatch_type_impl(PyObject *module, int watcher_id, PyObject *type) /*[clinic end generated code: output=0389672d4ad5f68b input=6701911fb45edc9e]*/	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	311	322	handle_code_object_event	handle_code_object_event(int which_watcher, PyCodeEvent event, PyCodeObject *co) {	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	325	328	first_code_object_callback	first_code_object_callback(PyCodeEvent event, PyCodeObject *co)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	331	334	second_code_object_callback	second_code_object_callback(PyCodeEvent event, PyCodeObject *co)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	337	340	noop_code_event_handler	noop_code_event_handler(PyCodeEvent event, PyCodeObject *co)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	343	347	error_code_event_handler	error_code_event_handler(PyCodeEvent event, PyCodeObject *co)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	350	378	add_code_watcher	add_code_watcher(PyObject *self, PyObject *which_watcher)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	381	399	clear_code_watcher	clear_code_watcher(PyObject *self, PyObject *watcher_id)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	402	408	get_code_watcher_num_created_events	get_code_watcher_num_created_events(PyObject *self, PyObject *watcher_id)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	411	417	get_code_watcher_num_destroyed_events	get_code_watcher_num_destroyed_events(PyObject *self, PyObject *watcher_id)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	420	448	allocate_too_many_code_watchers	allocate_too_many_code_watchers(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	457	476	get_id	get_id(PyObject *obj)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	479	512	call_pyfunc_watcher	call_pyfunc_watcher(PyObject *watcher, PyFunction_WatchEvent event, PyFunctionObject *func, PyObject *new_value)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	515	519	first_func_watcher_callback	first_func_watcher_callback(PyFunction_WatchEvent event, PyFunctionObject *func, PyObject *new_value)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	522	526	second_func_watcher_callback	second_func_watcher_callback(PyFunction_WatchEvent event, PyFunctionObject *func, PyObject *new_value)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	534	537	add_func_event	add_func_event(PyObject *module, const char *name, PyFunction_WatchEvent event)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	540	567	add_func_watcher	add_func_watcher(PyObject *self, PyObject *func)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	570	592	clear_func_watcher	clear_func_watcher(PyObject *self, PyObject *watcher_id_obj)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	595	599	noop_func_event_handler	noop_func_event_handler(PyFunction_WatchEvent event, PyFunctionObject *func, PyObject *new_value)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	602	630	allocate_too_many_func_watchers	allocate_too_many_func_watchers(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	638	646	handle_context_watcher_event	handle_context_watcher_event(int which_watcher, PyContextEvent event, PyObject *ctx) {	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	649	651	first_context_watcher_callback	first_context_watcher_callback(PyContextEvent event, PyObject *ctx) {	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	654	656	second_context_watcher_callback	second_context_watcher_callback(PyContextEvent event, PyObject *ctx) {	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	659	661	noop_context_event_handler	noop_context_event_handler(PyContextEvent event, PyObject *ctx) {	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	664	667	error_context_event_handler	error_context_event_handler(PyContextEvent event, PyObject *ctx) {	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	670	695	add_context_watcher	add_context_watcher(PyObject *self, PyObject *which_watcher)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	698	715	clear_context_watcher	clear_context_watcher(PyObject *self, PyObject *watcher_id)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	718	731	clear_context_stack	clear_context_stack(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	734	746	get_context_switches	get_context_switches(PyObject *Py_UNUSED(self), PyObject *watcher_id)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	749	777	allocate_too_many_context_watchers	allocate_too_many_context_watchers(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	787	795	_testcapi_set_func_defaults_via_capi_impl	_testcapi_set_func_defaults_via_capi_impl(PyObject *module, PyObject *func, PyObject *defaults) /*[clinic end generated code: output=caf0cb39db31ac24 input=e04a8508ca9d42fc]*/	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	802	810	_testcapi_set_func_kwdefaults_via_capi_impl	_testcapi_set_func_kwdefaults_via_capi_impl(PyObject *module, PyObject *func, PyObject *defaults) /*[clinic end generated code: output=9ed3b08177025070 input=f3cd1ca3c18de8ce]*/	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/watchers.c	857	873	_PyTestCapi_Init_Watchers	_PyTestCapi_Init_Watchers(PyObject *mod)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	220	233	type_modified_callback_name	type_modified_callback_name(PyTypeObject *type)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	236	264	add_type_watcher	add_type_watcher(PyObject *self, PyObject *kind)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	267	278	clear_type_watcher	clear_type_watcher(PyObject *self, PyObject *watcher_id)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	281	288	get_type_modified_events	get_type_modified_events(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	298	305	_testcapi_watch_type_impl	_testcapi_watch_type_impl(PyObject *module, int watcher_id, PyObject *type) /*[clinic end generated code: output=fdf4777126724fc4 input=5a808bf12be7e3ed]*/	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	312	319	_testcapi_unwatch_type_impl	_testcapi_unwatch_type_impl(PyObject *module, int watcher_id, PyObject *type) /*[clinic end generated code: output=0389672d4ad5f68b input=6701911fb45edc9e]*/	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	330	341	handle_code_object_event	handle_code_object_event(int which_watcher, PyCodeEvent event, PyCodeObject *co) {	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	344	347	first_code_object_callback	first_code_object_callback(PyCodeEvent event, PyCodeObject *co)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	350	353	second_code_object_callback	second_code_object_callback(PyCodeEvent event, PyCodeObject *co)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	356	359	noop_code_event_handler	noop_code_event_handler(PyCodeEvent event, PyCodeObject *co)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	362	366	error_code_event_handler	error_code_event_handler(PyCodeEvent event, PyCodeObject *co)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	369	397	add_code_watcher	add_code_watcher(PyObject *self, PyObject *which_watcher)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	400	418	clear_code_watcher	clear_code_watcher(PyObject *self, PyObject *watcher_id)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	421	427	get_code_watcher_num_created_events	get_code_watcher_num_created_events(PyObject *self, PyObject *watcher_id)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	430	436	get_code_watcher_num_destroyed_events	get_code_watcher_num_destroyed_events(PyObject *self, PyObject *watcher_id)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	439	467	allocate_too_many_code_watchers	allocate_too_many_code_watchers(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	476	495	get_id	get_id(PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	498	531	call_pyfunc_watcher	call_pyfunc_watcher(PyObject *watcher, PyFunction_WatchEvent event, PyFunctionObject *func, PyObject *new_value)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	534	538	first_func_watcher_callback	first_func_watcher_callback(PyFunction_WatchEvent event, PyFunctionObject *func, PyObject *new_value)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	541	545	second_func_watcher_callback	second_func_watcher_callback(PyFunction_WatchEvent event, PyFunctionObject *func, PyObject *new_value)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	553	556	add_func_event	add_func_event(PyObject *module, const char *name, PyFunction_WatchEvent event)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	559	586	add_func_watcher	add_func_watcher(PyObject *self, PyObject *func)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	589	611	clear_func_watcher	clear_func_watcher(PyObject *self, PyObject *watcher_id_obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	614	618	noop_func_event_handler	noop_func_event_handler(PyFunction_WatchEvent event, PyFunctionObject *func, PyObject *new_value)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	621	649	allocate_too_many_func_watchers	allocate_too_many_func_watchers(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	657	665	handle_context_watcher_event	handle_context_watcher_event(int which_watcher, PyContextEvent event, PyObject *ctx) {	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	668	670	first_context_watcher_callback	first_context_watcher_callback(PyContextEvent event, PyObject *ctx) {	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	673	675	second_context_watcher_callback	second_context_watcher_callback(PyContextEvent event, PyObject *ctx) {	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	678	680	noop_context_event_handler	noop_context_event_handler(PyContextEvent event, PyObject *ctx) {	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	683	686	error_context_event_handler	error_context_event_handler(PyContextEvent event, PyObject *ctx) {	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	689	714	add_context_watcher	add_context_watcher(PyObject *self, PyObject *which_watcher)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	717	734	clear_context_watcher	clear_context_watcher(PyObject *self, PyObject *watcher_id)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	737	750	clear_context_stack	clear_context_stack(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	753	765	get_context_switches	get_context_switches(PyObject *Py_UNUSED(self), PyObject *watcher_id)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	768	796	allocate_too_many_context_watchers	allocate_too_many_context_watchers(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	806	814	_testcapi_set_func_defaults_via_capi_impl	_testcapi_set_func_defaults_via_capi_impl(PyObject *module, PyObject *func, PyObject *defaults) /*[clinic end generated code: output=caf0cb39db31ac24 input=e04a8508ca9d42fc]*/	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	821	829	_testcapi_set_func_kwdefaults_via_capi_impl	_testcapi_set_func_kwdefaults_via_capi_impl(PyObject *module, PyObject *func, PyObject *defaults) /*[clinic end generated code: output=9ed3b08177025070 input=f3cd1ca3c18de8ce]*/	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/watchers.c	876	892	_PyTestCapi_Init_Watchers	_PyTestCapi_Init_Watchers(PyObject *mod)	excluded		test-support: only for CPython's own tests

@@ -91,7 +91,7 @@ theorem getattrHookCalledWhenMissing_proven : GetattrHookCalledWhenMissing := by
   simp [slotTpGetattrHook, h1, h2, h3]
 
 /-- **A user `__getattribute__` that raises `AttributeError` falls back to `__getattr__`**;
-any other exception propagates, `Objects/typeobject.c:10430`. -/
+any other exception propagates, `Objects/typeobject.c:11131`. -/
 def GetattributeAttributeErrorFallback : Prop :=
   ∀ (rt : Rt) (self getattr ga : Val) (n : Name) (e : PyErr) (w w1 : World),
     findInMro w (typeOf w self) "__getattr__" = some getattr →
@@ -255,7 +255,7 @@ theorem slotDescrSetDispatch_proven : SlotDescrSetDispatch := by
   simp [slotTpDescrSet]
 
 /-- `slot_tp_descr_get` passes `None` for a missing instance or type, and returns the
-descriptor unchanged if `__get__` went away, `Objects/typeobject.c:10529-10544`. -/
+descriptor unchanged if `__get__` went away, `Objects/typeobject.c@3.14.7:10529-10544`. -/
 def SlotDescrGetArgs : Prop :=
   ∀ (rt : Rt) (self get : Val) (ty : Val) (w : World),
     (findInMro w (typeOf w self) "__get__" = some get →
@@ -323,7 +323,7 @@ theorem methodIsOverloadedTable_proven : MethodIsOverloadedTable := by
 /-! ## Slot wrappers -/
 
 /-- **`x.__add__(y)` calls the slot function with `(x, y)`, and `x.__radd__(y)` with
-`(y, x)`**: `wrap_binaryfunc_l` and `wrap_binaryfunc_r`, `Objects/typeobject.c:9304-9326`. -/
+`(y, x)`**: `wrap_binaryfunc_l` and `wrap_binaryfunc_r`, `Objects/typeobject.c:9996-10018`. -/
 def WrapBinarySwaps : Prop :=
   ∀ (rt : Rt) (p : SlotDef) (f : SlotFn) (self other : Val) (w : World),
     (p.wrapper = some .binaryR →

@@ -81,7 +81,7 @@ def byteToCharRaw (str : List Nat) (colOffset : Int) : Int :=
   let c := if colOffset > len + 1 then len + 1 else colOffset
   ((utf8Decode ((str ++ [0]).take c.toNat)).length : Int)
 
-/-- `get_error_line_from_tokenizer_buffers`, `Parser/pegen_errors.c:227-267`, for a
+/-- `get_error_line_from_tokenizer_buffers`, `Parser/pegen_errors.c:244-284`, for a
 string source: walk `lineno - 1` newlines in `tok->str`, stopping at `tok->inp`. -/
 def errorLineFromBuffers (p : PS) (lineno : Int) : List Nat :=
   let s := p.tok
@@ -99,7 +99,7 @@ def errorLineFromBuffers (p : PS) (lineno : Int) : List Nat :=
   let rest := (s.src.extract start s.src.size).toList
   utf8Decode (rest.takeWhile (· != 10))
 
-/-- `_PyPegen_raise_error_known_location`, `Parser/pegen_errors.c:270-364`. A
+/-- `_PyPegen_raise_error_known_location`, `Parser/pegen_errors.c:287-381`. A
 `CURRENT_POS` end position is `-5`. `filename` never names a real file here, so
 `_PyErr_ProgramDecodedTextObject` yields nothing. -/
 def raiseKnownLocation (cls : String) (lineno colOffset endLineno endColOffset : Int)
@@ -125,13 +125,13 @@ def raiseErrorKnownLocation (cls : String) (lineno col endLineno endCol : Int)
   raiseKnownLocation cls lineno (if col == -5 then -5 else col + 1) endLineno
     (if endCol == -5 then -5 else endCol + 1) msg
 
-/-- `raise_unclosed_parentheses_error`, `Parser/pegen_errors.c:13-20`. -/
+/-- `raise_unclosed_parentheses_error`, `Parser/pegen_errors.c:14-21`. -/
 def raiseUnclosed : PM Unit := do
   let p ← get
   let (c, line, col) := p.tok.parenstack.headD (0, 0, 0)
   raiseErrorKnownLocation "SyntaxError" line col line (-1) s!"'{chStr c}' was never closed"
 
-/-- `_Pypegen_stack_overflow`, `Parser/pegen_errors.c:410-415`. -/
+/-- `_Pypegen_stack_overflow`, `Parser/pegen_errors.c:427-432`. -/
 def stackOverflow : PM Unit := do
   modify fun p => { p with errorIndicator := true }
   setErr { cls := "MemoryError",
@@ -143,7 +143,7 @@ def keywordOrName (bytes : List Nat) : Nat :=
   | some (_, t) => t
   | none => TokKind.NAME.num
 
-/-- `_PyPegen_raise_error` once the token `t` is chosen, `Parser/pegen_errors.c:190-220`. -/
+/-- `_PyPegen_raise_error` once the token `t` is chosen, `Parser/pegen_errors.c:207-237`. -/
 def raiseAtToken (cls : String) (t : Token) (msg : String) : PM Unit := do
   let p ← get
   let s := p.tok
@@ -154,7 +154,7 @@ def raiseAtToken (cls : String) (t : Token) (msg : String) : PM Unit := do
   let ecol : Int := if t.endColOffset != -1 then t.endColOffset + 1 else -1
   raiseKnownLocation cls t.lineno col t.endLineno ecol msg
 
-/-- `_PyPegen_raise_error` with `use_mark == 0`, `Parser/pegen_errors.c:173-222`. -/
+/-- `_PyPegen_raise_error` with `use_mark == 0`, `Parser/pegen_errors.c:190-239`. -/
 def raiseError0 (cls msg : String) : PM Unit := do
   let p ← get
   if p.errorIndicator && p.errOccurred then return
@@ -163,7 +163,7 @@ def raiseError0 (cls msg : String) : PM Unit := do
     return
   raiseAtToken cls ((p.knownErrToken).getD (p.tokenAt (p.fill - 1))) msg
 
-/-- The `switch (p->tok->done)` of `_Pypegen_tokenizer_error`, `Parser/pegen_errors.c:33-79`. -/
+/-- The `switch (p->tok->done)` of `_Pypegen_tokenizer_error`, `Parser/pegen_errors.c:34-80`. -/
 def tokenizerErrorSwitch (s : TokState) : PM Unit :=
   let known (cls msg : String) (col : Int) : PM Unit :=
     raiseErrorKnownLocation cls s.lineno (if col ≥ 0 then col else 0) s.lineno (-1) msg
@@ -184,7 +184,7 @@ def tokenizerErrorSwitch (s : TokState) : PM Unit :=
     setErr { cls := "OverflowError", msg := "Parser column offset overflow - source line is too big" }
   else known "SyntaxError" "unknown parsing error" (-1)
 
-/-- `_Pypegen_tokenizer_error`, `Parser/pegen_errors.c:23-80`. Always returns -1. -/
+/-- `_Pypegen_tokenizer_error`, `Parser/pegen_errors.c:24-81`. Always returns -1. -/
 def tokenizerError : PM Int := do
   if (← get).errOccurred then return -1
   modify fun p => { p with errorIndicator := true }
@@ -207,7 +207,7 @@ def raiseDecodeBody : Option PyError → PM Unit
     | none => pure ()
   | none => pure ()
 
-/-- `_Pypegen_raise_decode_error`, `Parser/pegen_errors.c:83-114`. -/
+/-- `_Pypegen_raise_decode_error`, `Parser/pegen_errors.c:84-131`. -/
 def raiseDecodeError : PM Int := do
   raiseDecodeBody (← get).tok.err
   return -1
@@ -254,7 +254,7 @@ def fillToken : PM Int := do
     if r.1.tok.done == E_DECODE then raiseDecodeError else tokenizerError
   else return 0
 
-/-- `_PyPegen_raise_error`, `Parser/pegen_errors.c:181-224`, any `use_mark`. -/
+/-- `_PyPegen_raise_error`, `Parser/pegen_errors.c:198-241`, any `use_mark`. -/
 def raiseError (cls : String) (useMark : Bool) (msg : String) : PM Unit := do
   let p ← get
   if p.errorIndicator && p.errOccurred then return
@@ -284,7 +284,7 @@ def tokenizeRest (curLine : Int) : Nat → PM Unit
     else if ty == TokKind.ENDMARKER.num then return
     else tokenizeRest curLine f
 
-/-- `_PyPegen_tokenize_full_source_to_check_for_errors`, `Parser/pegen_errors.c:117-176`. -/
+/-- `_PyPegen_tokenize_full_source_to_check_for_errors`, `Parser/pegen_errors.c:134-193`. -/
 def tokenizeFullSource : PM Unit := do
   let p ← get
   if p.tok.prompt then return
@@ -300,7 +300,7 @@ def tokenizeFullSource : PM Unit := do
 def isSyntaxErrorClass (c : String) : Bool :=
   c == "SyntaxError" || c == "IndentationError" || c == "TabError"
 
-/-- `_Pypegen_set_syntax_error` past its first checks, `Parser/pegen_errors.c:383-406`. `p` is
+/-- `_Pypegen_set_syntax_error` past its first checks, `Parser/pegen_errors.c:400-423`. `p` is
 the state on entry. -/
 def setSyntaxErrorTail (p : PS) (lastToken : Token) : PM Unit :=
   if lastToken.type == TokKind.ERRORTOKEN.num && p.tok.done == E_EOF then
@@ -314,7 +314,7 @@ def setSyntaxErrorTail (p : PS) (lastToken : Token) : PM Unit :=
       lastToken.endLineno lastToken.endColOffset "invalid syntax"
     tokenizeFullSource
 
-/-- `_Pypegen_set_syntax_error`, `Parser/pegen_errors.c:367-407`. -/
+/-- `_Pypegen_set_syntax_error`, `Parser/pegen_errors.c:384-424`. -/
 def setSyntaxError (lastToken : Token) : PM Unit := do
   let p ← get
   if p.errOccurred then
@@ -333,13 +333,13 @@ def ensureToken : PM Bool := fun p =>
     if r.1 < 0 then (false, { r.2 with errorIndicator := true }) else (true, r.2)
   else (true, p)
 
-/-- The lookup of `_PyPegen_is_memoized`, `Parser/pegen.c:359-380`. -/
+/-- The lookup of `_PyPegen_is_memoized`, `Parser/pegen.c:351-372`. -/
 def memoLookup (ty : Nat) : PM (Option Ast) := fun p =>
   match (p.memo.getD p.mark []).find? (fun m => m.1 == ty) with
   | some (_, node, mark) => (some node, { p with mark := mark })
   | none => (none, p)
 
-/-- `_PyPegen_is_memoized`, `Parser/pegen.c:350-381`. `some r` when the C function
+/-- `_PyPegen_is_memoized`, `Parser/pegen.c:342-373`. `some r` when the C function
 returns nonzero. -/
 def isMemoized (ty : Nat) : PM (Option Ast) := fun p =>
   let e := ensureToken p
@@ -363,12 +363,12 @@ def takeToken (ty : Nat) : PM Ast := fun p =>
   let t := p.tokenAt p.mark
   if t.type != ty then (.null, p) else (.tok t, { p with mark := p.mark + 1 })
 
-/-- `_PyPegen_expect_token`, `Parser/pegen.c:413-427`. -/
+/-- `_PyPegen_expect_token`, `Parser/pegen.c:405-419`. -/
 def expectToken (ty : Nat) : PM Ast := do
   if !(← ensureToken) then return .null
   takeToken ty
 
-/-- `_PyPegen_new_identifier`, `Parser/pegen.c:503-570`. -/
+/-- `_PyPegen_new_identifier`, `Parser/pegen.c:495-562`. -/
 def newIdentifier (bytes : List Nat) : PM Ast := do
   let id := utf8Decode bytes
   let p ← get
@@ -390,7 +390,7 @@ def newIdentifier (bytes : List Nat) : PM Ast := do
 /-- A located node. -/
 def tokLoc (t : Token) : Loc := ⟨t.lineno, t.colOffset, t.endLineno, t.endColOffset⟩
 
-/-- `_PyPegen_name_from_token`, `Parser/pegen.c:573-590`. -/
+/-- `_PyPegen_name_from_token`, `Parser/pegen.c:565-582`. -/
 def nameFromToken (t : Ast) : PM Ast := fun p =>
   match t with
   | .tok t =>
@@ -400,10 +400,10 @@ def nameFromToken (t : Ast) : PM Ast := fun p =>
     | id => (.node .Name [id, .node .Load [] none] (some (tokLoc t)), n.2)
   | _ => (.null, p)
 
-/-- `_PyPegen_name_token`, `Parser/pegen.c:593-597`. -/
+/-- `_PyPegen_name_token`, `Parser/pegen.c:585-589`. -/
 def nameToken : PM Ast := do nameFromToken (← expectToken TokKind.NAME.num)
 
-/-- `_PyPegen_soft_keyword_token`, `Parser/pegen.c:605-620`. A `NAME` that is not a soft keyword
+/-- `_PyPegen_soft_keyword_token`, `Parser/pegen.c:597-612`. A `NAME` that is not a soft keyword
 stays consumed: the function returns `NULL` with `p->mark` advanced. -/
 def softKeywordToken : PM Ast := fun p =>
   let e := expectToken TokKind.NAME.num p
@@ -411,7 +411,7 @@ def softKeywordToken : PM Ast := fun p =>
   | .tok t => if softKeywords.contains t.bytes then nameFromToken (.tok t) e.2 else (.null, e.2)
   | _ => (.null, e.2)
 
-/-- `_PyPegen_expect_soft_keyword`, `Parser/pegen.c:465-486`. -/
+/-- `_PyPegen_expect_soft_keyword`, `Parser/pegen.c:457-478`. -/
 def expectSoftKeyword (kw : List Nat) : PM Ast := fun p =>
   let e := ensureToken p
   if !e.1 then (.null, e.2) else
@@ -420,7 +420,7 @@ def expectSoftKeyword (kw : List Nat) : PM Ast := fun p =>
   else if t.bytes != kw then (.null, e.2)
   else nameToken e.2
 
-/-- The tail of `_PyPegen_number_token`, `Parser/pegen.c:696-749`, on what
+/-- The tail of `_PyPegen_number_token`, `Parser/pegen.c:688-741`, on what
 `_PyPegen_expect_token` returned. -/
 def numberFromToken (t : Ast) : PM Ast := fun p =>
   match t with
@@ -439,10 +439,10 @@ def numberFromToken (t : Ast) : PM Ast := fun p =>
           { p with errorIndicator := true }).2)
   | _ => (.null, p)
 
-/-- `_PyPegen_number_token`, `Parser/pegen.c:696-749`. -/
+/-- `_PyPegen_number_token`, `Parser/pegen.c:688-741`. -/
 def numberToken : PM Ast := do numberFromToken (← expectToken TokKind.NUMBER.num)
 
-/-- `_PyPegen_get_last_nonnwhitespace_token`, `Parser/pegen.c:489-500`. -/
+/-- `_PyPegen_get_last_nonnwhitespace_token`, `Parser/pegen.c:481-492`. -/
 def lastNonWhitespaceToken (p : PS) : Token :=
   let rec go : Nat → Token → Token
     | 0, tok => tok

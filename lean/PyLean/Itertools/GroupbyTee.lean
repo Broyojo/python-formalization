@@ -1,8 +1,8 @@
 import PyLean.Itertools.Model
 
 /-!
-`itertools.groupby` (Modules/itertoolsmodule.c:426-720) and `itertools.tee`
-(:722-1205) with their doc equivalents (rst:426-456, :687-718), driven by
+`itertools.groupby` (Modules/itertoolsmodule.c:423-716) and `itertools.tee`
+(:718-1197) with their doc equivalents (rst:426-456, :683-714), driven by
 interleaved operations on the returned iterators.
 
 groupby operations: `outer` is `next(groupby_obj)` (result: the key, the group
@@ -36,7 +36,7 @@ inductive GbOp (κ : Type) where
   | group (j : Nat)
   | direct (k : κ)
 
-/-- `groupbyobject` (:428-437); groupers are numbered by creation, and
+/-- `groupbyobject` (:425-434); groupers are numbered by creation, and
 `currgrouper` is the number of the current one. -/
 structure CGroupby (α κ : Type) where
   it : List α
@@ -46,18 +46,18 @@ structure CGroupby (α κ : Type) where
   currgrouper : Option Nat
   groupers : List κ   -- `tgtkey` of each `_grouper`, by number
 
-/-- `_grouper_create` (:629-641): a new grouper becomes the current one. -/
+/-- `_grouper_create` (:625-637): a new grouper becomes the current one. -/
 def cGrouperCreate (g : CGroupby α κ) (tgtkey : κ) : CGroupby α κ :=
   { g with groupers := g.groupers ++ [tgtkey], currgrouper := some g.groupers.length }
 
-/-- `itertools_groupby_impl` (:458-477). The input's exception is not modelled. -/
+/-- `itertools_groupby_impl` (:456-475). The input's exception is not modelled. -/
 def cGroupbyNew (iterable : Obj α) : Py (CGroupby α κ) :=
   match getIter iterable with
   | .error e => .error e
   | .ok ⟨l, _⟩ => .ok { it := l, tgtkey := none, currkey := none, currvalue := none,
                         currgrouper := none, groupers := [] }
 
-/-- `groupby_step` (:507-531): `none` is the `-1` (exhausted) return. -/
+/-- `groupby_step` (:505-529): `none` is the `-1` (exhausted) return. -/
 def cGroupbyStep (key : α → κ) (g : CGroupby α κ) : Option (CGroupby α κ) :=
   match g.it with
   | [] => none
@@ -69,7 +69,7 @@ def gbAdvance : Option κ → Option κ → Bool
   | some _, none => false
   | some ck, some tk => tk == ck
 
-/-- The `for (;;)` loop of `groupby_next` (:541-568). The flag is `true` for
+/-- The `for (;;)` loop of `groupby_next` (:539-566). The flag is `true` for
 the `break` out of the loop and `false` when `groupby_step` failed; the steps
 already taken stay in the state either way. Each iteration but the last
 consumes an item, so `it.length + 1` iterations are enough. -/
@@ -81,7 +81,7 @@ def cGroupbySkip (key : α → κ) : Nat → CGroupby α κ → Bool × CGroupby
       | none => (false, g)
       | some g => cGroupbySkip key fuel g
 
-/-- `groupby_next` (:534-579). -/
+/-- `groupby_next` (:532-575). -/
 def cGroupbyNext (key : α → κ) (g : CGroupby α κ) : Option κ × CGroupby α κ :=
   let g := { g with currgrouper := none }
   match cGroupbySkip key (g.it.length + 1) g with
@@ -90,7 +90,7 @@ def cGroupbyNext (key : α → κ) (g : CGroupby α κ) : Option κ × CGroupby 
     let ck := g.currkey.getD default
     (some ck, cGrouperCreate { g with tgtkey := some ck } ck)
 
-/-- `_grouper_next` (:666-700). -/
+/-- `_grouper_next` (:662-696). -/
 def cGrouperNext (key : α → κ) (g : CGroupby α κ) (j : Nat) : Option α × CGroupby α κ :=
   if g.currgrouper != some j then (none, g)
   else
@@ -102,7 +102,7 @@ def cGrouperNext (key : α → κ) (g : CGroupby α κ) (j : Nat) : Option α ×
         (g.currvalue, { g with currvalue := none, currkey := none })
       else (none, g)
 
-/-- `itertools__grouper_impl` (:621-626) on an existing groupby object. -/
+/-- `itertools__grouper_impl` (:617-622) on an existing groupby object. -/
 def cGrouperDirect (g : CGroupby α κ) (k : κ) : CGroupby α κ := cGrouperCreate g k
 
 def cGroupbyOps (key : α → κ) : CGroupby α κ → List (GbOp κ) → List (Option κ ⊕ Option α)
@@ -213,10 +213,10 @@ inductive NextRes (α : Type) where
   | stop
   | exc (e : PyExc)
 
-/-- `#define LINKCELLS 57` (:732). -/
+/-- `#define LINKCELLS 57` (:728). -/
 def LINKCELLS : Nat := 57
 
-/-- The shared chain of `teedataobject`s (:734-741): block `b` holds
+/-- The shared chain of `teedataobject`s (:730-737): block `b` holds
 `blocks[b]` (`numread` values); `nextlink` of block `b` exists iff
 `b + 1 < blocks.length`. Each tee is `(dataobj, index)`. -/
 structure CTee (α : Type) where
@@ -224,18 +224,18 @@ structure CTee (α : Type) where
   blocks : List (List α)
   tees : List (Nat × Nat)
 
-/-- `teedataobject_jumplink` (:773-782) as used by `tee_next` (:961-968): at
+/-- `teedataobject_jumplink` (:769-778) as used by `tee_next` (:957-964): at
 `index >= LINKCELLS` move to the next block, creating it if needed
-(`teedataobject_newinternal`, :756-770). -/
+(`teedataobject_newinternal`, :752-766). -/
 def teeJump (t : CTee α) (b i : Nat) : CTee α × Nat × Nat :=
   if i ≥ LINKCELLS then
     let t := if b + 1 < t.blocks.length then t else { t with blocks := t.blocks ++ [[]] }
     (t, b + 1, 0)
   else (t, b, i)
 
-/-- `teedataobject_getitem_lock_held` (:785-809), its wrapper
-`teedataobject_getitem` (:812-819) and the `to->index++` of `tee_next`
-(:969-973): a stored value, or (lead iterator) pull one more item. -/
+/-- `teedataobject_getitem_lock_held` (:781-805), its wrapper
+`teedataobject_getitem` (:808-815) and the `to->index++` of `tee_next`
+(:965-969): a stored value, or (lead iterator) pull one more item. -/
 def teeGetitem (t : CTee α) (k b i : Nat) : NextRes α × CTee α :=
   let blk := t.blocks.getD b []
   if i < blk.length then
@@ -248,7 +248,7 @@ def teeGetitem (t : CTee α) (k b i : Nat) : NextRes α × CTee α :=
       (.val v, { t with it := rest, blocks := t.blocks.set b (blk ++ [v]),
                         tees := t.tees.set k (b, i + 1) })
 
-/-- `tee_next` (:953-975, GIL build). -/
+/-- `tee_next` (:949-971, GIL build). -/
 def cTeeNext (t : CTee α) (k : Nat) : NextRes α × CTee α :=
   let (b, i) := t.tees.getD k (0, 0)
   let (t, b, i) := teeJump t b i
@@ -271,13 +271,13 @@ def cTeeOps : CTee α → List TeeOp → List (NextRes α) × CTee α
     if k < t.tees.length then cTeeOps { t with tees := t.tees ++ [t.tees.getD k (0, 0)] } ops
     else cTeeOps t ops
   | t, .ctor k :: ops =>
-    -- `itertools__tee_impl` (:1097-1102) → `tee_fromiterable` (:1055-1086): a tee is copied
+    -- `itertools__tee_impl` (:1093-1098) → `tee_fromiterable` (:1051-1082): a tee is copied
     if k < t.tees.length then cTeeOps { t with tees := t.tees ++ [t.tees.getD k (0, 0)] } ops
     else cTeeOps t ops
 
-/-- `itertools_tee_impl` (:1165-1204) on a non-tee input: `n` through the
+/-- `itertools_tee_impl` (:1161-1196) on a non-tee input: `n` through the
 `Py_ssize_t` converter; `n == 0` returns `()` without touching the iterable;
-otherwise `PyObject_GetIter` and `tee_fromiterable` (:1055-1086). Results of the
+otherwise `PyObject_GetIter` and `tee_fromiterable` (:1051-1082). Results of the
 ops, then the number of items pulled from the input. -/
 def cTee (iterable : Obj α) (n : Int) (ops : List TeeOp) : Py (List (NextRes α) × Nat) :=
   match asSsize n with
@@ -300,7 +300,7 @@ inductive TeeNextArg where
   | other
   deriving Repr, DecidableEq
 
-/-- `itertools_teedataobject_impl` (:889-930): the constructor's validation; on
+/-- `itertools_teedataobject_impl` (:885-926): the constructor's validation; on
 success the block's `values` and whether `nextlink` is set. -/
 def cTeeDataNew (values : List α) (next : TeeNextArg) : Py (List α × Bool) :=
   let invalid : Py (List α × Bool) := .error (.valueError "Invalid arguments")

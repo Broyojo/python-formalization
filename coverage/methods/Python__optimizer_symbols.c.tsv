@@ -1,39 +1,60 @@
 file	line	endline	name	signature	status	entry	note
-Python/optimizer_symbols.c	34	41	get_lltrace	static inline int get_lltrace(void) {	todo		
-Python/optimizer_symbols.c	54	57	allocation_base	allocation_base(JitOptContext *ctx)	todo		
-Python/optimizer_symbols.c	60	65	out_of_space	out_of_space(JitOptContext *ctx)	todo		
-Python/optimizer_symbols.c	68	79	sym_new	sym_new(JitOptContext *ctx)	todo		
-Python/optimizer_symbols.c	81	85	make_const	static void make_const(JitOptSymbol *sym, PyObject *val)	todo		
-Python/optimizer_symbols.c	88	93	sym_set_bottom	sym_set_bottom(JitOptContext *ctx, JitOptSymbol *sym)	todo		
-Python/optimizer_symbols.c	96	99	_Py_uop_sym_is_bottom	_Py_uop_sym_is_bottom(JitOptSymbol *sym)	todo		
-Python/optimizer_symbols.c	102	104	_Py_uop_sym_is_not_null	_Py_uop_sym_is_not_null(JitOptSymbol *sym) {	todo		
-Python/optimizer_symbols.c	107	122	_Py_uop_sym_is_const	_Py_uop_sym_is_const(JitOptContext *ctx, JitOptSymbol *sym)	todo		
-Python/optimizer_symbols.c	125	128	_Py_uop_sym_is_null	_Py_uop_sym_is_null(JitOptSymbol *sym)	todo		
-Python/optimizer_symbols.c	132	148	_Py_uop_sym_get_const	_Py_uop_sym_get_const(JitOptContext *ctx, JitOptSymbol *sym)	todo		
-Python/optimizer_symbols.c	151	198	_Py_uop_sym_set_type	_Py_uop_sym_set_type(JitOptContext *ctx, JitOptSymbol *sym, PyTypeObject *typ)	todo		
-Python/optimizer_symbols.c	201	245	_Py_uop_sym_set_type_version	_Py_uop_sym_set_type_version(JitOptContext *ctx, JitOptSymbol *sym, unsigned int version)	todo		
-Python/optimizer_symbols.c	248	314	_Py_uop_sym_set_const	_Py_uop_sym_set_const(JitOptContext *ctx, JitOptSymbol *sym, PyObject *const_val)	todo		
-Python/optimizer_symbols.c	317	325	_Py_uop_sym_set_null	_Py_uop_sym_set_null(JitOptContext *ctx, JitOptSymbol *sym)	todo		
-Python/optimizer_symbols.c	328	336	_Py_uop_sym_set_non_null	_Py_uop_sym_set_non_null(JitOptContext *ctx, JitOptSymbol *sym)	todo		
-Python/optimizer_symbols.c	340	347	_Py_uop_sym_new_unknown	_Py_uop_sym_new_unknown(JitOptContext *ctx)	todo		
-Python/optimizer_symbols.c	350	358	_Py_uop_sym_new_not_null	_Py_uop_sym_new_not_null(JitOptContext *ctx)	todo		
-Python/optimizer_symbols.c	361	369	_Py_uop_sym_new_type	_Py_uop_sym_new_type(JitOptContext *ctx, PyTypeObject *typ)	todo		
-Python/optimizer_symbols.c	373	382	_Py_uop_sym_new_const	_Py_uop_sym_new_const(JitOptContext *ctx, PyObject *const_val)	todo		
-Python/optimizer_symbols.c	385	393	_Py_uop_sym_new_null	_Py_uop_sym_new_null(JitOptContext *ctx)	todo		
-Python/optimizer_symbols.c	396	416	_Py_uop_sym_get_type	_Py_uop_sym_get_type(JitOptSymbol *sym)	todo		
-Python/optimizer_symbols.c	419	440	_Py_uop_sym_get_type_version	_Py_uop_sym_get_type_version(JitOptSymbol *sym)	todo		
-Python/optimizer_symbols.c	443	460	_Py_uop_sym_has_type	_Py_uop_sym_has_type(JitOptSymbol *sym)	todo		
-Python/optimizer_symbols.c	463	467	_Py_uop_sym_matches_type	_Py_uop_sym_matches_type(JitOptSymbol *sym, PyTypeObject *typ)	todo		
-Python/optimizer_symbols.c	470	473	_Py_uop_sym_matches_type_version	_Py_uop_sym_matches_type_version(JitOptSymbol *sym, unsigned int version)	todo		
-Python/optimizer_symbols.c	476	521	_Py_uop_sym_truthiness	_Py_uop_sym_truthiness(JitOptContext *ctx, JitOptSymbol *sym)	todo		
-Python/optimizer_symbols.c	524	542	_Py_uop_sym_new_tuple	_Py_uop_sym_new_tuple(JitOptContext *ctx, int size, JitOptSymbol **args)	todo		
-Python/optimizer_symbols.c	545	558	_Py_uop_sym_tuple_getitem	_Py_uop_sym_tuple_getitem(JitOptContext *ctx, JitOptSymbol *sym, int item)	todo		
-Python/optimizer_symbols.c	561	573	_Py_uop_sym_tuple_length	_Py_uop_sym_tuple_length(JitOptSymbol *sym)	todo		
-Python/optimizer_symbols.c	577	589	_Py_uop_sym_is_immortal	_Py_uop_sym_is_immortal(JitOptSymbol *sym)	todo		
-Python/optimizer_symbols.c	592	613	_Py_uop_sym_new_truthiness	_Py_uop_sym_new_truthiness(JitOptContext *ctx, JitOptSymbol *value, bool truthy)	todo		
-Python/optimizer_symbols.c	617	658	_Py_uop_frame_new	_Py_uop_frame_new( JitOptContext *ctx, PyCodeObject *co, int curr_stackentries, JitOptSymbol **args, int arg_len)	todo		
-Python/optimizer_symbols.c	661	674	_Py_uop_abstractcontext_fini	_Py_uop_abstractcontext_fini(JitOptContext *ctx)	todo		
-Python/optimizer_symbols.c	677	701	_Py_uop_abstractcontext_init	_Py_uop_abstractcontext_init(JitOptContext *ctx)	todo		
-Python/optimizer_symbols.c	704	713	_Py_uop_frame_pop	_Py_uop_frame_pop(JitOptContext *ctx)	todo		
-Python/optimizer_symbols.c	726	731	make_bottom	make_bottom(JitOptContext *ctx)	todo		
-Python/optimizer_symbols.c	734	878	_Py_uop_symbols_test	_Py_uop_symbols_test(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(ignored))	todo		
+Python/optimizer_symbols.c	64	71	get_lltrace	static inline int get_lltrace(void) {	todo		
+Python/optimizer_symbols.c	76	136	_PyUOpSymPrint	_PyUOpSymPrint(JitOptRef ref)	todo		changed-in-3.15: new function
+Python/optimizer_symbols.c	148	151	allocation_base	allocation_base(JitOptContext *ctx)	todo		
+Python/optimizer_symbols.c	154	159	out_of_space	out_of_space(JitOptContext *ctx)	todo		
+Python/optimizer_symbols.c	162	165	out_of_space_ref	out_of_space_ref(JitOptContext *ctx)	todo		changed-in-3.15: new function
+Python/optimizer_symbols.c	168	179	sym_new	sym_new(JitOptContext *ctx)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	181	185	make_const	static void make_const(JitOptSymbol *sym, PyObject *val)	todo		
+Python/optimizer_symbols.c	188	193	sym_set_bottom	sym_set_bottom(JitOptContext *ctx, JitOptSymbol *sym)	todo		
+Python/optimizer_symbols.c	196	200	_Py_uop_sym_is_bottom	_Py_uop_sym_is_bottom(JitOptRef ref)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	203	206	_Py_uop_sym_is_not_null	_Py_uop_sym_is_not_null(JitOptRef ref) {	todo		changed-in-3.15:
+Python/optimizer_symbols.c	209	225	_Py_uop_sym_is_const	_Py_uop_sym_is_const(JitOptContext *ctx, JitOptRef ref)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	228	231	_Py_uop_sym_is_null	_Py_uop_sym_is_null(JitOptRef ref)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	235	252	_Py_uop_sym_get_const	_Py_uop_sym_get_const(JitOptContext *ctx, JitOptRef ref)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	255	262	_Py_uop_sym_get_const_as_stackref	_Py_uop_sym_get_const_as_stackref(JitOptContext *ctx, JitOptRef sym)	todo		changed-in-3.15: new function
+Python/optimizer_symbols.c	269	285	_Py_uop_sym_is_safe_const	_Py_uop_sym_is_safe_const(JitOptContext *ctx, JitOptRef sym)	todo		changed-in-3.15: new function
+Python/optimizer_symbols.c	288	299	_Py_uop_sym_is_not_container	_Py_uop_sym_is_not_container(JitOptRef sym)	todo		changed-in-3.15: new function
+Python/optimizer_symbols.c	302	379	_Py_uop_sym_set_type	_Py_uop_sym_set_type(JitOptContext *ctx, JitOptRef ref, PyTypeObject *typ)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	382	473	_Py_uop_sym_set_type_version	_Py_uop_sym_set_type_version(JitOptContext *ctx, JitOptRef ref, unsigned int version)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	476	577	_Py_uop_sym_set_const	_Py_uop_sym_set_const(JitOptContext *ctx, JitOptRef ref, PyObject *const_val)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	580	589	_Py_uop_sym_set_null	_Py_uop_sym_set_null(JitOptContext *ctx, JitOptRef ref)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	592	601	_Py_uop_sym_set_non_null	_Py_uop_sym_set_non_null(JitOptContext *ctx, JitOptRef ref)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	604	611	_Py_uop_sym_new_unknown	_Py_uop_sym_new_unknown(JitOptContext *ctx)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	614	622	_Py_uop_sym_new_not_null	_Py_uop_sym_new_not_null(JitOptContext *ctx)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	625	634	_Py_uop_sym_new_type	_Py_uop_sym_new_type(JitOptContext *ctx, PyTypeObject *typ)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	638	648	_Py_uop_sym_new_const	_Py_uop_sym_new_const(JitOptContext *ctx, PyObject *const_val)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	651	658	_Py_uop_sym_new_const_steal	_Py_uop_sym_new_const_steal(JitOptContext *ctx, PyObject *const_val)	todo		changed-in-3.15: new function
+Python/optimizer_symbols.c	661	670	_Py_uop_sym_new_null	_Py_uop_sym_new_null(JitOptContext *ctx)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	673	705	_Py_uop_sym_get_type	_Py_uop_sym_get_type(JitOptRef ref)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	708	733	_Py_uop_sym_get_probable_type	_Py_uop_sym_get_probable_type(JitOptRef ref)	todo		changed-in-3.15: new function
+Python/optimizer_symbols.c	736	765	_Py_uop_sym_get_type_version	_Py_uop_sym_get_type_version(JitOptRef ref)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	769	772	_Py_uop_sym_has_type	_Py_uop_sym_has_type(JitOptRef sym)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	775	779	_Py_uop_sym_matches_type	_Py_uop_sym_matches_type(JitOptRef sym, PyTypeObject *typ)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	782	785	_Py_uop_sym_matches_type_version	_Py_uop_sym_matches_type_version(JitOptRef sym, unsigned int version)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	788	812	_Py_uop_sym_get_probable_value	_Py_uop_sym_get_probable_value(JitOptRef ref)	todo		changed-in-3.15: new function
+Python/optimizer_symbols.c	815	828	_Py_uop_sym_get_probable_func_code	_Py_uop_sym_get_probable_func_code(JitOptRef ref)	todo		changed-in-3.15: new function
+Python/optimizer_symbols.c	831	842	_Py_uop_sym_get_probable_function	_Py_uop_sym_get_probable_function(JitOptRef ref)	todo		changed-in-3.15: new function
+Python/optimizer_symbols.c	845	899	_Py_uop_sym_truthiness	_Py_uop_sym_truthiness(JitOptContext *ctx, JitOptRef ref)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	902	920	_Py_uop_sym_new_tuple	_Py_uop_sym_new_tuple(JitOptContext *ctx, int size, JitOptRef *args)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	923	937	_Py_uop_sym_tuple_getitem	_Py_uop_sym_tuple_getitem(JitOptContext *ctx, JitOptRef ref, Py_ssize_t item)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	940	953	_Py_uop_sym_tuple_length	_Py_uop_sym_tuple_length(JitOptRef ref)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	957	966	_Py_uop_symbol_is_immortal	_Py_uop_symbol_is_immortal(JitOptSymbol *sym)	todo		changed-in-3.15: new function
+Python/optimizer_symbols.c	969	976	_Py_uop_sym_is_compact_int	_Py_uop_sym_is_compact_int(JitOptRef ref)	todo		changed-in-3.15: new function
+Python/optimizer_symbols.c	979	983	_Py_uop_sym_is_immortal	_Py_uop_sym_is_immortal(JitOptRef ref)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	986	1034	_Py_uop_sym_set_compact_int	_Py_uop_sym_set_compact_int(JitOptContext *ctx, JitOptRef ref)	todo		changed-in-3.15: new function
+Python/optimizer_symbols.c	1037	1053	_Py_uop_sym_new_predicate	_Py_uop_sym_new_predicate(JitOptContext *ctx, JitOptRef lhs_ref, JitOptRef rhs_ref, JitOptPredicateKind kind)	todo		changed-in-3.15: new function
+Python/optimizer_symbols.c	1056	1100	_Py_uop_sym_apply_predicate_narrowing	_Py_uop_sym_apply_predicate_narrowing(JitOptContext *ctx, JitOptRef ref, bool branch_is_true)	todo		changed-in-3.15: new function
+Python/optimizer_symbols.c	1103	1125	_Py_uop_sym_new_truthiness	_Py_uop_sym_new_truthiness(JitOptContext *ctx, JitOptRef ref, bool truthy)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	1128	1136	_Py_uop_sym_new_compact_int	_Py_uop_sym_new_compact_int(JitOptContext *ctx)	todo		changed-in-3.15: new function
+Python/optimizer_symbols.c	1139	1206	_Py_uop_sym_set_recorded_value	_Py_uop_sym_set_recorded_value(JitOptContext *ctx, JitOptRef ref, PyObject *value)	todo		changed-in-3.15: new function
+Python/optimizer_symbols.c	1208	1267	_Py_uop_sym_set_recorded_gen_func	_Py_uop_sym_set_recorded_gen_func(JitOptContext *ctx, JitOptRef ref, PyFunctionObject *value)	todo		changed-in-3.15: new function
+Python/optimizer_symbols.c	1270	1323	_Py_uop_sym_set_recorded_type	_Py_uop_sym_set_recorded_type(JitOptContext *ctx, JitOptRef ref, PyTypeObject *type)	todo		changed-in-3.15: new function
+Python/optimizer_symbols.c	1327	1350	_Py_uop_frame_new_from_symbol	_Py_uop_frame_new_from_symbol( JitOptContext *ctx, JitOptRef callable, JitOptRef *args, int arg_len)	todo		changed-in-3.15: new function
+Python/optimizer_symbols.c	1354	1423	_Py_uop_frame_new	_Py_uop_frame_new( JitOptContext *ctx, PyCodeObject *co, JitOptRef *args, int arg_len)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	1426	1453	_Py_uop_sym_set_stack_depth	_Py_uop_sym_set_stack_depth(JitOptContext *ctx, int stack_depth, JitOptRef *current_sp) {	todo		changed-in-3.15: new function
+Python/optimizer_symbols.c	1457	1470	_Py_uop_abstractcontext_fini	_Py_uop_abstractcontext_fini(JitOptContext *ctx)	todo		
+Python/optimizer_symbols.c	1476	1508	_Py_uop_abstractcontext_init	_Py_uop_abstractcontext_init(JitOptContext *ctx, _PyBloomFilter *dependencies)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	1511	1550	_Py_uop_frame_pop	_Py_uop_frame_pop(JitOptContext *ctx, PyCodeObject *co)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	1563	1571	make_bottom	make_bottom(JitOptContext *ctx)	todo		changed-in-3.15:
+Python/optimizer_symbols.c	1574	2119	_Py_uop_symbols_test	_Py_uop_symbols_test(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(ignored))	todo		changed-in-3.15:

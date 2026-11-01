@@ -2,7 +2,7 @@ import PyLean.TypeObj.Call
 
 /-!
 Properties of the dict lookup, `_Py_dict_lookup` through `compare_generic`,
-`Objects/dictobject.c:1102`, modelled by `dictProbe`. They quantify over every `Rt`, so over
+`Objects/dictobject.c:1182`, modelled by `dictProbe`. They quantify over every `Rt`, so over
 every `__eq__` and `__hash__`, and over every dict.
 -/
 

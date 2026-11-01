@@ -11,7 +11,7 @@ summary: |
   self._name_.lower()` is accepted: the rest of enum reads _name_ and works. With such a class there is no alias,
   and yet @unique raises "duplicate values found in <enum 'Color'>: RED -> red, GREEN -> green". verify(CONTINUOUS)
   has the same shape with e.value. _add_value_alias_ files an unhashable value under self.name at
-  Lib/enum.py:1234, and Enum.__new__ then does cls[name] at :1165, so Color([1]) raises KeyError 'red' from a lookup
+  Lib/enum.py:1262, and Enum.__new__ then does cls[name] at :1193, so Color([1]) raises KeyError 'red' from a lookup
   that should end in the member.
 likelihood: |
   Modest. A name property on an enum is unusual but not rare, and @unique on the same class is ordinary. The
@@ -49,8 +49,8 @@ promised_by: |
   The docstring of unique, "Class decorator for enumerations ensuring unique member values", and the docs: it searches
   __members__ "gathering any aliases it finds". The docs example of _add_value_alias_ for the lookup.
 cause: |
-  Lib/enum.py:1651-1652 and :1951-1952 compare with member.name; :1234 uses self.name as the key of
-  _unhashable_values_map_, which :1165 reads with cls[name]. :1959 and :1984 read e.value and m.value.
+  Lib/enum.py:1682-1683 and :1982-1983 compare with member.name; :1262 uses self.name as the key of
+  _unhashable_values_map_, which :1193 reads with cls[name]. :1990 and :2015 read e.value and m.value.
 possible_fix: |
   Read member._name_ and self._name_ in those places, and _value_ in verify.
 duplicates:

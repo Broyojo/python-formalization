@@ -1,0 +1,11 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testlimitedcapi/slice.c	15	19	slice_check	slice_check(PyObject *Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/slice.c	22	33	slice_new	slice_new(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/slice.c	38	61	slice_getindices	slice_getindices(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/slice.c	66	92	slice_getindicesex_macro	slice_getindicesex_macro(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/slice.c	98	119	slice_getindicesex_seq_macro	slice_getindicesex_seq_macro(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/slice.c	122	138	slice_unpack	slice_unpack(PyObject *Py_UNUSED(module), PyObject *slice)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/slice.c	141	151	slice_adjustindices	slice_adjustindices(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/slice.c	158	187	slice_getindicesex_func	slice_getindicesex_func(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/slice.c	193	218	slice_getindicesex_seq_func	slice_getindicesex_seq_func(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/slice.c	237	240	_PyTestLimitedCAPI_Init_Slice	_PyTestLimitedCAPI_Init_Slice(PyObject *m)	excluded		test-support: only for CPython's own tests

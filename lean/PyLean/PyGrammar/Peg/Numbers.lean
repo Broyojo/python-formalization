@@ -1,7 +1,7 @@
 import PyLean.PyGrammar.Lexer.State
 
 /-!
-`parsenumber`, `Parser/pegen.c:667-693`, with exact decimal-to-binary64 conversion.
+`parsenumber`, `Parser/pegen.c:659-685`, with exact decimal-to-binary64 conversion.
 Everything is over `Nat`: a binary64 is its 64-bit pattern, and
 `PyOS_string_to_double` is correctly rounded (ties to even), which `roundToBits`
 computes from the exact rational value.
@@ -117,7 +117,7 @@ def limitMessage (n : Nat) : String :=
     ++ "digits; use sys.set_int_max_str_digits() to increase the limit"
 
 /-- `parsenumber_raw` after `parsenumber` removes underscores,
-`Parser/pegen.c:622-690`. An integer literal is one `strtol` with base 0 consumes
+`Parser/pegen.c:614-682`. An integer literal is one `strtol` with base 0 consumes
 entirely; its value is the same on both C paths, and only `PyLong_FromString`, reached
 when `strtol` overflows, enforces the digit limit. -/
 def parseNumber (raw : List Nat) : NumResult :=

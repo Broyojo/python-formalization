@@ -57,7 +57,7 @@ def entries : List Entry := [
     pyFile := "Parser/lexer/lexer.c"
     pyFns := Rows.lex_nextc_in_buffer
     statement := "For every tokenizer state with cur <= inp, one tok_nextc keeps cur <= inp."
-    source := "Parser/lexer/state.h:78 'buf <= cur <= inp <= end'"
+    source := "Parser/lexer/state.h:79 'buf <= cur <= inp <= end'"
     status := .proven
     prop := ``NextcStaysInBuffer
     thm := some ``nextcStaysInBuffer_proven },

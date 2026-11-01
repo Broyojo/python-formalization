@@ -1,11 +1,11 @@
 file	line	endline	name	signature	status	entry	note
-Modules/syslogmodule.c	76	79	is_main_interpreter	is_main_interpreter(void)	todo		
-Modules/syslogmodule.c	82	137	syslog_get_argv	syslog_get_argv(void)	todo		
-Modules/syslogmodule.c	152	197	syslog_openlog_impl	syslog_openlog_impl(PyObject *module, PyObject *ident, long logopt, long facility) /*[clinic end generated code: output=5476c12829b6eb75 input=ee700b8786f81c23]*/	todo		
-Modules/syslogmodule.c	217	253	syslog_syslog_impl	syslog_syslog_impl(PyObject *module, int group_left_1, int priority, const char *message) /*[clinic end generated code: output=c3dbc73445a0e078 input=6588ddb0b113af8e]*/	todo		
-Modules/syslogmodule.c	264	283	syslog_closelog_impl	syslog_closelog_impl(PyObject *module) /*[clinic end generated code: output=97890a80a24b1b84 input=167f489868bd5a72]*/	todo		
-Modules/syslogmodule.c	295	303	syslog_setlogmask_impl	syslog_setlogmask_impl(PyObject *module, long maskpri) /*[clinic end generated code: output=d6ed163917b434bf input=adff2c2b76c7629c]*/	todo		
+Modules/syslogmodule.c	75	78	is_main_interpreter	is_main_interpreter(void)	todo		
+Modules/syslogmodule.c	81	135	syslog_get_argv	syslog_get_argv(void)	todo		changed-in-3.15:
+Modules/syslogmodule.c	150	195	syslog_openlog_impl	syslog_openlog_impl(PyObject *module, PyObject *ident, long logopt, long facility) /*[clinic end generated code: output=5476c12829b6eb75 input=ee700b8786f81c23]*/	todo		changed-in-3.15:
+Modules/syslogmodule.c	215	246	syslog_syslog_impl	syslog_syslog_impl(PyObject *module, int group_left_1, int priority, const char *message) /*[clinic end generated code: output=c3dbc73445a0e078 input=6588ddb0b113af8e]*/	todo		changed-in-3.15:
+Modules/syslogmodule.c	257	277	syslog_closelog_impl	syslog_closelog_impl(PyObject *module) /*[clinic end generated code: output=97890a80a24b1b84 input=167f489868bd5a72]*/	todo		changed-in-3.15:
+Modules/syslogmodule.c	289	303	syslog_setlogmask_impl	syslog_setlogmask_impl(PyObject *module, long maskpri) /*[clinic end generated code: output=d6ed163917b434bf input=adff2c2b76c7629c]*/	todo		changed-in-3.15:
 Modules/syslogmodule.c	315	319	syslog_LOG_MASK_impl	syslog_LOG_MASK_impl(PyObject *module, long pri) /*[clinic end generated code: output=c4a5bbfcc74c7c94 input=534829cb7fb5f7d2]*/	todo		
 Modules/syslogmodule.c	331	335	syslog_LOG_UPTO_impl	syslog_LOG_UPTO_impl(PyObject *module, long pri) /*[clinic end generated code: output=9eab083c90601d7e input=5e906d6c406b7458]*/	todo		
 Modules/syslogmodule.c	351	446	syslog_exec	syslog_exec(PyObject *module)	todo		
-Modules/syslogmodule.c	466	469	PyInit_syslog	PyInit_syslog(void)	todo		
+Modules/syslogmodule.c	467	470	PyInit_syslog	PyInit_syslog(void)	todo		

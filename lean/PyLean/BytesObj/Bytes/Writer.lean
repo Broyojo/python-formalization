@@ -1,8 +1,8 @@
 import PyLean.BytesObj.Bytes.Obj
 
 /-!
-Object allocation and `_PyBytesWriter`, Objects/bytesobject.c:105-197 and
-:3450-3743. The writer is its bookkeeping (`allocated`, `min_size`, the flags);
+Object allocation and `_PyBytesWriter`, Objects/bytesobject.c:91-183 and
+:3645-4060. The writer is its bookkeeping (`allocated`, `min_size`, the flags);
 the bytes written are kept by the caller, so only the errors and the capacity
 logic are modelled here. `pos ≤ min_size ≤ allocated` is the safety invariant.
 -/
@@ -12,8 +12,8 @@ namespace PyLean.BytesObj.Bytes
 open PyLean PyLean.StrSearch
 
 /-- The `(size_t)size > PY_SSIZE_T_MAX - PyBytesObject_SIZE` check and allocation
-of `_PyBytes_FromSize`, bytesobject.c:105-135. The size-0 path returns the empty
-singleton, `bytes_get_empty`, :48-53. -/
+of `_PyBytes_FromSize`, bytesobject.c:91-121. The size-0 path returns the empty
+singleton, `bytes_get_empty`, :45-50. -/
 def bytesFromSize (size : Int) : Py Seq :=
   if size = 0 then .ok []
   else if size > ssizeMax - bytesObjectSize then
@@ -21,7 +21,7 @@ def bytesFromSize (size : Int) : Py Seq :=
   else if mallocFails (bytesObjectSize + size) then .error memoryError
   else .ok (List.replicate size.toNat 0)
 
-/-- `PyBytes_FromStringAndSize(str, size)`, bytesobject.c:137-163: `str` is the
+/-- `PyBytes_FromStringAndSize(str, size)`, bytesobject.c:123-149: `str` is the
 data (`none` for `NULL`, an uninitialised result of `size` bytes, read as zeros
 here because no caller exposes them). -/
 def bytesFromStringAndSize (str : Option Seq) (size : Int) : Py Seq :=
@@ -34,11 +34,11 @@ def bytesFromStringAndSize (str : Option Seq) (size : Int) : Py Seq :=
         return s.take size.toNat
     | none => if size = 0 then .ok [] else bytesFromSize size
 
-/-- `PyBytes_FromString(str)`, bytesobject.c:165-197: the bytes up to the first
+/-- `PyBytes_FromString(str)`, bytesobject.c:151-183: the bytes up to the first
 NUL. -/
 def bytesFromCString (s : Seq) : Seq := s.takeWhile (· != 0)
 
-/-- The `_PyBytes_Resize` paths that can fail, bytesobject.c:3218-3279, for a
+/-- The `_PyBytes_Resize` paths that can fail, bytesobject.c:3417-3484, for a
 uniquely referenced buffer of `oldsize` bytes. Its `else` paths copy; the result
 is the first `newsize` bytes, extended with bytes the caller fills. -/
 def bytesResizeCheck (oldsize newsize : Int) : Py Unit :=
@@ -52,11 +52,11 @@ def bytesResizeCheck (oldsize newsize : Int) : Py Unit :=
   else .ok ()
 
 /-- `PyByteArray_FromStringAndSize`/`PyByteArray_Resize` failure for a buffer of
-`size` bytes: only size checks, bytearrayobject.c:158-176 and :261-270. -/
+`size` bytes: only size checks, bytearrayobject.c@3.14.7:158-176 and @3.14.7:261-270. -/
 def baAllocCheck (size : Int) : Py Unit :=
   if size ≥ ssizeMax ∨ mallocFails (size + 1) then .error memoryError else .ok ()
 
-/-- `_PyBytesWriter`, Include/internal/pycore_bytesobject.h:79-90. -/
+/-- `_PyBytesWriter`, Include/internal/pycore_bytesobject.h@3.14.7:79-90. -/
 structure Writer where
   allocated : Int := 0
   minSize : Int := 0
@@ -68,13 +68,13 @@ structure Writer where
 /-- `sizeof(writer->small_buffer)`. -/
 def smallBufferSize : Int := 512
 
-/-- `_PyBytesWriter_Init`, bytesobject.c:3450-3459. -/
+/-- `_PyBytesWriter_Init`, bytesobject.c:3645-3666. -/
 def writerInit (useBytearray : Bool := false) : Writer := { useBytearray }
 
-/-- `OVERALLOCATE_FACTOR`, bytesobject.c:3442-3448, not Windows. -/
+/-- `OVERALLOCATE_FACTOR`, bytesobject.c@3.14.7:3442-3448, not Windows. -/
 def overallocateFactor : Int := 4
 
-/-- The allocation of `_PyBytesWriter_Resize`, bytesobject.c:3547-3589: the
+/-- The allocation of `_PyBytesWriter_Resize`, bytesobject.c@3.14.7:3547-3589: the
 small buffer moves to a new object, or the object is resized. -/
 def writerResizeCheck (w : Writer) (allocated : Int) : Py Unit :=
   if !w.useSmall then
@@ -84,7 +84,7 @@ def writerResizeCheck (w : Writer) (allocated : Int) : Py Unit :=
     if w.useBytearray then baAllocCheck allocated
     else (bytesFromSize allocated).map (fun _ => ())
 
-/-- `_PyBytesWriter_Resize`, bytesobject.c:3531-3599. -/
+/-- `_PyBytesWriter_Resize`, bytesobject.c@3.14.7:3531-3599. -/
 def writerResize (w : Writer) (size : Int) : Py Writer := do
   let allocated :=
     if w.overallocate ∧ size ≤ ssizeMax - size / overallocateFactor then
@@ -93,33 +93,33 @@ def writerResize (w : Writer) (size : Int) : Py Writer := do
   writerResizeCheck w allocated
   return { w with allocated, useSmall := false }
 
-/-- `_PyBytesWriter_Prepare`, bytesobject.c:3601-3626. -/
+/-- `_PyBytesWriter_Prepare`, bytesobject.c@3.14.7:3601-3626. -/
 def writerPrepare (w : Writer) (size : Int) : Py Writer := do
   if size = 0 then return w
   if w.minSize > ssizeMax - size then throw memoryError
   let w' ← if w.minSize + size > w.allocated then writerResize w (w.minSize + size) else pure w
   return { w' with minSize := w.minSize + size }
 
-/-- `_PyBytesWriter_Alloc`, bytesobject.c:3631-3659 (release build). -/
+/-- `_PyBytesWriter_Alloc`, bytesobject.c@3.14.7:3631-3659 (release build). -/
 def writerAlloc (w : Writer) (size : Int) : Py Writer :=
   writerPrepare { w with useSmall := true, allocated := smallBufferSize } size
 
-/-- `_PyBytesWriter_WriteBytes`, bytesobject.c:3705-3719. -/
+/-- `_PyBytesWriter_WriteBytes`, bytesobject.c:3940-3955. -/
 def writerWriteBytes (w : Writer) (out bytes : Seq) : Py (Writer × Seq) := do
   let w ← writerPrepare w bytes.length
   return (w, out ++ bytes)
 
-/-- `_PyBytesWriter_GetSize`, bytesobject.c:3484-3492, and
-`_PyBytesWriter_AsString`, :3467-3482: the buffer is whichever of the small
+/-- `_PyBytesWriter_GetSize`, bytesobject.c@3.14.7:3484-3492, and
+`_PyBytesWriter_AsString`, @3.14.7:3467-3482: the buffer is whichever of the small
 buffer, the bytes or the bytearray is in use; the size is the bytes written. -/
 def writerGetSize (out : Seq) : Int := out.length
 
-/-- `_PyBytesWriter_Finish`, bytesobject.c:3661-3703: an exact-size bytes or
+/-- `_PyBytesWriter_Finish`, bytesobject.c@3.14.7:3661-3703: an exact-size bytes or
 bytearray holding what was written. The `_PyBytes_Resize` to the final size only
 shrinks, so it cannot fail. -/
 def writerFinish (_ : Writer) (out : Seq) : Seq := out
 
-/-- `_PyBytes_Repeat(dest, len_dest, src, len_src)`, bytesobject.c:3722-3743,
+/-- `_PyBytes_Repeat(dest, len_dest, src, len_src)`, bytesobject.c@3.14.7:3722-3743,
 for `len_src > 0`: the doubling copy. `dest` holds `copied` bytes so far; `fuel`
 bounds the doublings. -/
 def repeatLoop (lenDest : Nat) : Nat → Seq → Seq

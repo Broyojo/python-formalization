@@ -58,14 +58,14 @@ observed: |
   and the result is ']', of length 1. With width 5 the fill is 7 and the length is 7. Other runs gave
   '獹' for an empty string and '\U616d0000', above the Unicode range. "%.*s" gives '[]' and
   "%.*d" gives '[7]', with no crash.
-tested: "REPRODUCED on python3 3.14.7 (SIGSEGV on Linux). REPRODUCED on main (3.16.0a1+dev) (SIGBUS on macOS arm64); the same lines are there, Objects/unicodeobject.c:2598 on main."
+tested: "REPRODUCED on python3 3.14.7 (SIGSEGV on Linux). REPRODUCED on main (3.16.0a1+dev) (SIGBUS on macOS arm64); the same lines are there, Objects/unicodeobject.c:2504 on main."
 promised_by: |
-  Invariant: no crash, and no copy with a negative count. Objects/unicodeobject.c:1485 asserts
-  `0 <= how_many`, so a debug build aborts there. Doc/c-api/unicode.rst:446-449 documents `*` as an
+  Invariant: no crash, and no copy with a negative count. Objects/unicodeobject.c:1393 asserts
+  `0 <= how_many`, so a debug build aborts there. Doc/c-api/unicode.rst:479-482 documents `*` as an
   `int` with no restriction on its sign. C11 7.21.6.1: "A negative precision argument is taken as if
   the precision were omitted."
 cause: |
-  Objects/unicodeobject.c:2852-2854 turns a negative `*` into -2. Line 2678 tests only for -1, so -2
+  Objects/unicodeobject.c:2760-2762 turns a negative `*` into -2. Line 2678 tests only for -1, so -2
   is not "no precision"; line 2683 then gives `length = Py_MIN(precision, length)` = -2; line 2694
   computes the fill from it; line 2701 passes it to _PyUnicode_FastCopyCharacters, whose only check
   is `how_many == 0` at line 1493; line 2703 adds it to `writer->pos`. In

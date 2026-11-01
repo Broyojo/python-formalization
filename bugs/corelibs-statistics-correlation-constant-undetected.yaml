@@ -35,12 +35,12 @@ observed: |
   python3 3.14.7: 0.0 0.0, and StatisticsError for 0.5. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same. REPRODUCED.
 promised_by: |
-  Doc/library/statistics.rst:760 for correlation: "Both inputs must be of the same length (no less
+  Doc/library/statistics.rst:757 for correlation: "Both inputs must be of the same length (no less
   than two), and need not to be constant, otherwise StatisticsError is raised." Doc:809 for
   linear_regression: "the independent variable x cannot be constant".
 cause: |
-  Lib/statistics.py:726-729 and :790-792: `xbar = fsum(x) / n` is rounded twice, so `xi - xbar` need
-  not be 0 for equal xi. The ZeroDivisionError at :737 and :800 is then not raised.
+  Lib/statistics.py:727-730 and :791-793: `xbar = fsum(x) / n` is rounded twice, so `xi - xbar` need
+  not be 0 for equal xi. The ZeroDivisionError at :738 and :801 is then not raised.
 possible_fix: |
   Test for constant input directly (`min(x) == max(x)`, or `all(xi == x[0] for xi in x)`) before
   centring.

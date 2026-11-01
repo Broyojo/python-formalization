@@ -2,9 +2,9 @@ import PyLean.Itertools.SimpleProps
 import PyLean.Itertools.GroupbyTee
 
 /-!
-`pairwise_next` (Modules/itertoolsmodule.c:345-402) with the input able to call
+`pairwise_next` (Modules/itertoolsmodule.c:346-399) with the input able to call
 `next()` on the same pairwise object: that is what makes the re-check of `po->it`
-at :363-367 reachable, and what the plain model `cPairwiseNext` in `Simple.lean`
+at :364-368 reachable, and what the plain model `cPairwiseNext` in `Simple.lean`
 cannot express. `hooks` holds, for successive items, how many `next()` calls are
 made after the item is taken and before it is returned, as a function given to
 `map` does: an input that re-entered before taking its item would have none left
@@ -52,9 +52,9 @@ def pwFail {β : Type} : Option PyExc → NextRes β
   | none => .stop
   | some e => .exc e
 
-/-- :369-401: pull `new`. On failure `it` and `old` are cleared (:371-376). On
+/-- :370-398: pull `new`. On failure `it` and `old` are cleared (:372-377). On
 success the local `old` is paired with `new`, and `po->old` becomes `new`
-(:399), overwriting whatever a hook left there. `it` is the local copy, so this
+(:396), overwriting whatever a hook left there. `it` is the local copy, so this
 pull happens even if a hook cleared `po->it` meanwhile. -/
 def pwSecond (run : Nat → PwS α → PwS α) (old : α) (s : PwS α) : NextRes (α × α) × PwS α :=
   match pwPull run s with
@@ -62,7 +62,7 @@ def pwSecond (run : Nat → PwS α → PwS α) (old : α) (s : PwS α) : NextRes
   | (.fail e, s) => (.exc e, { s with live := false, old := none })
   | (.item new, s) => (.val (old, new), { s with old := some new })
 
-/-- `pairwise_next` (:345-402). -/
+/-- `pairwise_next` (:346-399). -/
 def pwNext (run : Nat → PwS α → PwS α) (s : PwS α) : NextRes (α × α) × PwS α :=
   if !s.live then (.stop, s)
   else
@@ -70,11 +70,11 @@ def pwNext (run : Nat → PwS α → PwS α) (s : PwS α) : NextRes (α × α) �
     | some old => pwSecond run old s
     | none =>
       match pwPull run s with
-      -- :358-362: `Py_XSETREF(po->old, NULL)`, then `Py_CLEAR(po->it)`
+      -- :359-363: `Py_XSETREF(po->old, NULL)`, then `Py_CLEAR(po->it)`
       | (.done, s) => (.stop, { s with live := false, old := none })
       | (.fail e, s) => (.exc e, { s with live := false, old := none })
       | (.item old, s) =>
-        -- :358 stores it; :363-367 re-read `po->it`, which a hook may have cleared
+        -- :359 stores it; :364-368 re-read `po->it`, which a hook may have cleared
         if !s.live then (.stop, { s with old := none })
         else pwSecond run old { s with old := some old }
 
@@ -91,7 +91,7 @@ def pwRun : Nat → Nat → PwS α → PwS α
   | 0, _, s => s
   | d + 1, n, s => pwTimes (pwRun d) n s
 
-/-- `pairwise(iterable)` (`pairwise_new_impl`, :296-319), then `n` calls of `next()`. -/
+/-- `pairwise(iterable)` (`pairwise_new_impl`, :297-320), then `n` calls of `next()`. -/
 def cPairwiseR (iterable : Obj α) (hooks : List Nat) (n : Nat) : Py (List (NextRes (α × α))) :=
   match getIter iterable with
   | .error e => .error e
@@ -227,7 +227,7 @@ theorem pairwiseDocAgreeR_proven : PairwiseDocAgreeR := by
     simp [runOf_pure]
 
 /-- For every hook and state. Once `po->it` is cleared, `next()` stops and changes
-nothing (:353-355). And the re-check after the first pull (:363-367): if the hook
+nothing (:354-356). And the re-check after the first pull (:364-368): if the hook
 cleared `po->it` while the outer call was taking its first item, the outer call
 stops, clearing `old`, and that item is dropped. It is reached: with `map(f, [0, 1,
 2])` where `f(0)` drains the pairwise object, the inner calls see `(1, 2)` and the

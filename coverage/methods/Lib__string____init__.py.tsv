@@ -9,12 +9,12 @@ Lib/string/__init__.py	128	146	Template.substitute	substitute(self, mapping=_sen
 Lib/string/__init__.py	148	168	Template.safe_substitute	safe_substitute(self, mapping=_sentinel_dict, /, **kws)	todo		
 Lib/string/__init__.py	170	181	Template.is_valid	is_valid(self)	todo		
 Lib/string/__init__.py	183	197	Template.get_identifiers	get_identifiers(self)	todo		
-Lib/string/__init__.py	211	212	Formatter.format	format(self, format_string, /, *args, **kwargs)	todo		candidates:calstat-calendar-formatstring-width
-Lib/string/__init__.py	214	218	Formatter.vformat	vformat(self, format_string, args, kwargs)	todo		
-Lib/string/__init__.py	220	272	Formatter._vformat	_vformat(self, format_string, args, kwargs, used_args, recursion_depth, auto_arg_index=0)	todo		
-Lib/string/__init__.py	275	279	Formatter.get_value	get_value(self, key, args, kwargs)	todo		
-Lib/string/__init__.py	282	283	Formatter.check_unused_args	check_unused_args(self, used_args, args, kwargs)	todo		
-Lib/string/__init__.py	286	287	Formatter.format_field	format_field(self, value, format_spec)	todo		
-Lib/string/__init__.py	290	300	Formatter.convert_field	convert_field(self, value, conversion)	todo		
-Lib/string/__init__.py	310	311	Formatter.parse	parse(self, format_string)	todo		
-Lib/string/__init__.py	319	332	Formatter.get_field	get_field(self, field_name, args, kwargs)	todo		
+Lib/string/__init__.py	209	210	Formatter.format	format(self, format_string, /, *args, **kwargs)	todo		candidates:calstat-calendar-formatstring-width
+Lib/string/__init__.py	212	216	Formatter.vformat	vformat(self, format_string, args, kwargs)	todo		
+Lib/string/__init__.py	218	270	Formatter._vformat	_vformat(self, format_string, args, kwargs, used_args, recursion_depth, auto_arg_index=0)	todo		
+Lib/string/__init__.py	272	276	Formatter.get_value	get_value(self, key, args, kwargs)	todo		
+Lib/string/__init__.py	278	279	Formatter.check_unused_args	check_unused_args(self, used_args, args, kwargs)	todo		
+Lib/string/__init__.py	281	282	Formatter.format_field	format_field(self, value, format_spec)	todo		
+Lib/string/__init__.py	284	294	Formatter.convert_field	convert_field(self, value, conversion)	todo		
+Lib/string/__init__.py	296	305	Formatter.parse	parse(self, format_string)	todo		
+Lib/string/__init__.py	307	323	Formatter.get_field	get_field(self, field_name, args, kwargs)	todo		

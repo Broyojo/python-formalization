@@ -1,77 +1,77 @@
 file	line	endline	name	signature	status	entry	note
-Lib/xml/dom/expatbuilder.py	63	66	ElementInfo.__init__	__init__(self, tagName, model=None)	todo		
-Lib/xml/dom/expatbuilder.py	68	69	ElementInfo.__getstate__	__getstate__(self)	todo		
-Lib/xml/dom/expatbuilder.py	71	72	ElementInfo.__setstate__	__setstate__(self, state)	todo		
-Lib/xml/dom/expatbuilder.py	74	82	ElementInfo.getAttributeType	getAttributeType(self, aname)	todo		
-Lib/xml/dom/expatbuilder.py	84	85	ElementInfo.getAttributeTypeNS	getAttributeTypeNS(self, namespaceURI, localName)	todo		
-Lib/xml/dom/expatbuilder.py	87	93	ElementInfo.isElementContent	isElementContent(self)	todo		
-Lib/xml/dom/expatbuilder.py	95	99	ElementInfo.isEmpty	isEmpty(self)	todo		
-Lib/xml/dom/expatbuilder.py	101	105	ElementInfo.isId	isId(self, aname)	todo		
-Lib/xml/dom/expatbuilder.py	107	109	ElementInfo.isIdNS	isIdNS(self, euri, ename, auri, aname)	todo		
-Lib/xml/dom/expatbuilder.py	111	112	_intern	_intern(builder, s)	todo		
-Lib/xml/dom/expatbuilder.py	114	130	_parse_ns_name	_parse_ns_name(builder, name)	todo		
-Lib/xml/dom/expatbuilder.py	137	149	ExpatBuilder.__init__	__init__(self, options=None)	todo		
-Lib/xml/dom/expatbuilder.py	151	153	ExpatBuilder.createParser	createParser(self)	todo		
-Lib/xml/dom/expatbuilder.py	155	164	ExpatBuilder.getParser	getParser(self)	todo		
-Lib/xml/dom/expatbuilder.py	166	172	ExpatBuilder.reset	reset(self)	todo		
-Lib/xml/dom/expatbuilder.py	174	195	ExpatBuilder.install	install(self, parser)	todo		
-Lib/xml/dom/expatbuilder.py	197	214	ExpatBuilder.parseFile	parseFile(self, file)	todo		
-Lib/xml/dom/expatbuilder.py	216	227	ExpatBuilder.parseString	parseString(self, string)	todo		
-Lib/xml/dom/expatbuilder.py	229	235	ExpatBuilder._setup_subset	_setup_subset(self, buffer)	todo		
-Lib/xml/dom/expatbuilder.py	237	256	ExpatBuilder.start_doctype_decl_handler	start_doctype_decl_handler(self, doctypeName, systemId, publicId, has_internal_subset)	todo		
-Lib/xml/dom/expatbuilder.py	258	263	ExpatBuilder.end_doctype_decl_handler	end_doctype_decl_handler(self)	todo		
-Lib/xml/dom/expatbuilder.py	265	269	ExpatBuilder.pi_handler	pi_handler(self, target, data)	todo		
-Lib/xml/dom/expatbuilder.py	271	289	ExpatBuilder.character_data_handler_cdata	character_data_handler_cdata(self, data)	todo		
-Lib/xml/dom/expatbuilder.py	291	300	ExpatBuilder.character_data_handler	character_data_handler(self, data)	todo		
-Lib/xml/dom/expatbuilder.py	302	318	ExpatBuilder.entity_decl_handler	entity_decl_handler(self, entityName, is_parameter_entity, value, base, systemId, publicId, notationName)	todo		
-Lib/xml/dom/expatbuilder.py	320	324	ExpatBuilder.notation_decl_handler	notation_decl_handler(self, notationName, base, systemId, publicId)	todo		
-Lib/xml/dom/expatbuilder.py	326	330	ExpatBuilder.comment_handler	comment_handler(self, data)	todo		
-Lib/xml/dom/expatbuilder.py	332	334	ExpatBuilder.start_cdata_section_handler	start_cdata_section_handler(self)	todo		
-Lib/xml/dom/expatbuilder.py	336	338	ExpatBuilder.end_cdata_section_handler	end_cdata_section_handler(self)	todo		
-Lib/xml/dom/expatbuilder.py	340	341	ExpatBuilder.external_entity_ref_handler	external_entity_ref_handler(self, context, base, systemId, publicId)	todo		
-Lib/xml/dom/expatbuilder.py	343	347	ExpatBuilder.first_element_handler	first_element_handler(self, name, attributes)	todo		
-Lib/xml/dom/expatbuilder.py	349	364	ExpatBuilder.start_element_handler	start_element_handler(self, name, attributes)	todo		
-Lib/xml/dom/expatbuilder.py	366	384	ExpatBuilder._finish_start_element	_finish_start_element(self, node)	todo		
-Lib/xml/dom/expatbuilder.py	389	392	ExpatBuilder.end_element_handler	end_element_handler(self, name)	todo		
-Lib/xml/dom/expatbuilder.py	394	403	ExpatBuilder._finish_end_element	_finish_end_element(self, curNode)	todo		
-Lib/xml/dom/expatbuilder.py	405	420	ExpatBuilder._handle_white_text_nodes	_handle_white_text_nodes(self, node, info)	todo		
-Lib/xml/dom/expatbuilder.py	422	428	ExpatBuilder.element_decl_handler	element_decl_handler(self, name, model)	todo		
-Lib/xml/dom/expatbuilder.py	430	436	ExpatBuilder.attlist_decl_handler	attlist_decl_handler(self, elem, name, type, default, required)	todo		
-Lib/xml/dom/expatbuilder.py	438	446	ExpatBuilder.xml_decl_handler	xml_decl_handler(self, version, encoding, standalone)	todo		
-Lib/xml/dom/expatbuilder.py	459	460	FilterVisibilityController.__init__	__init__(self, filter)	todo		
-Lib/xml/dom/expatbuilder.py	462	473	FilterVisibilityController.startContainer	startContainer(self, node)	todo		
-Lib/xml/dom/expatbuilder.py	475	493	FilterVisibilityController.acceptNode	acceptNode(self, node)	todo		
-Lib/xml/dom/expatbuilder.py	514	521	FilterCrutch.__init__	__init__(self, builder)	todo		
-Lib/xml/dom/expatbuilder.py	526	536	Rejecter.__init__	__init__(self, builder)	todo		
-Lib/xml/dom/expatbuilder.py	538	539	Rejecter.start_element_handler	start_element_handler(self, *args)	todo		
-Lib/xml/dom/expatbuilder.py	541	549	Rejecter.end_element_handler	end_element_handler(self, *args)	todo		
-Lib/xml/dom/expatbuilder.py	554	558	Skipper.start_element_handler	start_element_handler(self, *args)	todo		
-Lib/xml/dom/expatbuilder.py	560	569	Skipper.end_element_handler	end_element_handler(self, *args)	todo		
-Lib/xml/dom/expatbuilder.py	600	607	FragmentBuilder.__init__	__init__(self, context, options=None)	todo		
-Lib/xml/dom/expatbuilder.py	609	611	FragmentBuilder.reset	reset(self)	todo		
-Lib/xml/dom/expatbuilder.py	613	616	FragmentBuilder.parseFile	parseFile(self, file)	todo		
-Lib/xml/dom/expatbuilder.py	618	644	FragmentBuilder.parseString	parseString(self, string)	todo		
-Lib/xml/dom/expatbuilder.py	646	680	FragmentBuilder._getDeclarations	_getDeclarations(self)	todo		
-Lib/xml/dom/expatbuilder.py	682	683	FragmentBuilder._getNSattrs	_getNSattrs(self)	todo		
-Lib/xml/dom/expatbuilder.py	685	705	FragmentBuilder.external_entity_ref_handler	external_entity_ref_handler(self, context, base, systemId, publicId)	todo		
-Lib/xml/dom/expatbuilder.py	711	714	Namespaces._initNamespaces	_initNamespaces(self)	todo		
-Lib/xml/dom/expatbuilder.py	716	720	Namespaces.createParser	createParser(self)	todo		
-Lib/xml/dom/expatbuilder.py	722	727	Namespaces.install	install(self, parser)	todo		
-Lib/xml/dom/expatbuilder.py	729	731	Namespaces.start_namespace_decl_handler	start_namespace_decl_handler(self, prefix, uri)	todo		
-Lib/xml/dom/expatbuilder.py	733	778	Namespaces.start_element_handler	start_element_handler(self, name, attributes)	todo		
-Lib/xml/dom/expatbuilder.py	786	800	Namespaces.end_element_handler	end_element_handler(self, name)	todo		
-Lib/xml/dom/expatbuilder.py	806	808	ExpatBuilderNS.reset	reset(self)	todo		
-Lib/xml/dom/expatbuilder.py	814	816	FragmentBuilderNS.reset	reset(self)	todo		
-Lib/xml/dom/expatbuilder.py	818	845	FragmentBuilderNS._getNSattrs	_getNSattrs(self)	todo		
-Lib/xml/dom/expatbuilder.py	857	859	InternalSubsetExtractor.getSubset	getSubset(self)	todo		
-Lib/xml/dom/expatbuilder.py	861	865	InternalSubsetExtractor.parseFile	parseFile(self, file)	todo		
-Lib/xml/dom/expatbuilder.py	867	871	InternalSubsetExtractor.parseString	parseString(self, string)	todo		
-Lib/xml/dom/expatbuilder.py	873	875	InternalSubsetExtractor.install	install(self, parser)	todo		
-Lib/xml/dom/expatbuilder.py	877	885	InternalSubsetExtractor.start_doctype_decl_handler	start_doctype_decl_handler(self, name, publicId, systemId, has_internal_subset)	todo		
-Lib/xml/dom/expatbuilder.py	887	890	InternalSubsetExtractor.end_doctype_decl_handler	end_doctype_decl_handler(self)	todo		
-Lib/xml/dom/expatbuilder.py	892	893	InternalSubsetExtractor.start_element_handler	start_element_handler(self, name, attrs)	todo		
-Lib/xml/dom/expatbuilder.py	896	911	parse	parse(file, namespaces=True)	todo		
-Lib/xml/dom/expatbuilder.py	914	922	parseString	parseString(string, namespaces=True)	todo		
-Lib/xml/dom/expatbuilder.py	925	942	parseFragment	parseFragment(file, context, namespaces=True)	todo		
-Lib/xml/dom/expatbuilder.py	945	954	parseFragmentString	parseFragmentString(string, context, namespaces=True)	todo		
-Lib/xml/dom/expatbuilder.py	957	962	makeBuilder	makeBuilder(options)	todo		
+Lib/xml/dom/expatbuilder.py	64	67	ElementInfo.__init__	__init__(self, tagName, model=None)	todo		
+Lib/xml/dom/expatbuilder.py	69	70	ElementInfo.__getstate__	__getstate__(self)	todo		
+Lib/xml/dom/expatbuilder.py	72	73	ElementInfo.__setstate__	__setstate__(self, state)	todo		
+Lib/xml/dom/expatbuilder.py	75	83	ElementInfo.getAttributeType	getAttributeType(self, aname)	todo		
+Lib/xml/dom/expatbuilder.py	85	86	ElementInfo.getAttributeTypeNS	getAttributeTypeNS(self, namespaceURI, localName)	todo		
+Lib/xml/dom/expatbuilder.py	88	94	ElementInfo.isElementContent	isElementContent(self)	todo		
+Lib/xml/dom/expatbuilder.py	96	100	ElementInfo.isEmpty	isEmpty(self)	todo		
+Lib/xml/dom/expatbuilder.py	102	106	ElementInfo.isId	isId(self, aname)	todo		
+Lib/xml/dom/expatbuilder.py	108	110	ElementInfo.isIdNS	isIdNS(self, euri, ename, auri, aname)	todo		
+Lib/xml/dom/expatbuilder.py	112	113	_intern	_intern(builder, s)	todo		
+Lib/xml/dom/expatbuilder.py	115	131	_parse_ns_name	_parse_ns_name(builder, name)	todo		
+Lib/xml/dom/expatbuilder.py	138	150	ExpatBuilder.__init__	__init__(self, options=None)	todo		
+Lib/xml/dom/expatbuilder.py	152	154	ExpatBuilder.createParser	createParser(self)	todo		
+Lib/xml/dom/expatbuilder.py	156	165	ExpatBuilder.getParser	getParser(self)	todo		
+Lib/xml/dom/expatbuilder.py	167	173	ExpatBuilder.reset	reset(self)	todo		
+Lib/xml/dom/expatbuilder.py	175	196	ExpatBuilder.install	install(self, parser)	todo		
+Lib/xml/dom/expatbuilder.py	198	215	ExpatBuilder.parseFile	parseFile(self, file)	todo		
+Lib/xml/dom/expatbuilder.py	217	228	ExpatBuilder.parseString	parseString(self, string)	todo		
+Lib/xml/dom/expatbuilder.py	230	236	ExpatBuilder._setup_subset	_setup_subset(self, buffer)	todo		
+Lib/xml/dom/expatbuilder.py	238	257	ExpatBuilder.start_doctype_decl_handler	start_doctype_decl_handler(self, doctypeName, systemId, publicId, has_internal_subset)	todo		
+Lib/xml/dom/expatbuilder.py	259	264	ExpatBuilder.end_doctype_decl_handler	end_doctype_decl_handler(self)	todo		
+Lib/xml/dom/expatbuilder.py	266	270	ExpatBuilder.pi_handler	pi_handler(self, target, data)	todo		
+Lib/xml/dom/expatbuilder.py	272	290	ExpatBuilder.character_data_handler_cdata	character_data_handler_cdata(self, data)	todo		
+Lib/xml/dom/expatbuilder.py	292	301	ExpatBuilder.character_data_handler	character_data_handler(self, data)	todo		
+Lib/xml/dom/expatbuilder.py	303	319	ExpatBuilder.entity_decl_handler	entity_decl_handler(self, entityName, is_parameter_entity, value, base, systemId, publicId, notationName)	todo		
+Lib/xml/dom/expatbuilder.py	321	325	ExpatBuilder.notation_decl_handler	notation_decl_handler(self, notationName, base, systemId, publicId)	todo		
+Lib/xml/dom/expatbuilder.py	327	331	ExpatBuilder.comment_handler	comment_handler(self, data)	todo		
+Lib/xml/dom/expatbuilder.py	333	335	ExpatBuilder.start_cdata_section_handler	start_cdata_section_handler(self)	todo		
+Lib/xml/dom/expatbuilder.py	337	339	ExpatBuilder.end_cdata_section_handler	end_cdata_section_handler(self)	todo		
+Lib/xml/dom/expatbuilder.py	341	342	ExpatBuilder.external_entity_ref_handler	external_entity_ref_handler(self, context, base, systemId, publicId)	todo		
+Lib/xml/dom/expatbuilder.py	344	348	ExpatBuilder.first_element_handler	first_element_handler(self, name, attributes)	todo		
+Lib/xml/dom/expatbuilder.py	350	365	ExpatBuilder.start_element_handler	start_element_handler(self, name, attributes)	todo		
+Lib/xml/dom/expatbuilder.py	367	385	ExpatBuilder._finish_start_element	_finish_start_element(self, node)	todo		
+Lib/xml/dom/expatbuilder.py	390	393	ExpatBuilder.end_element_handler	end_element_handler(self, name)	todo		
+Lib/xml/dom/expatbuilder.py	395	404	ExpatBuilder._finish_end_element	_finish_end_element(self, curNode)	todo		
+Lib/xml/dom/expatbuilder.py	406	422	ExpatBuilder._handle_white_text_nodes	_handle_white_text_nodes(self, node, info)	todo		changed-in-3.15:
+Lib/xml/dom/expatbuilder.py	424	430	ExpatBuilder.element_decl_handler	element_decl_handler(self, name, model)	todo		
+Lib/xml/dom/expatbuilder.py	432	438	ExpatBuilder.attlist_decl_handler	attlist_decl_handler(self, elem, name, type, default, required)	todo		
+Lib/xml/dom/expatbuilder.py	440	448	ExpatBuilder.xml_decl_handler	xml_decl_handler(self, version, encoding, standalone)	todo		
+Lib/xml/dom/expatbuilder.py	461	462	FilterVisibilityController.__init__	__init__(self, filter)	todo		
+Lib/xml/dom/expatbuilder.py	464	475	FilterVisibilityController.startContainer	startContainer(self, node)	todo		
+Lib/xml/dom/expatbuilder.py	477	495	FilterVisibilityController.acceptNode	acceptNode(self, node)	todo		
+Lib/xml/dom/expatbuilder.py	516	523	FilterCrutch.__init__	__init__(self, builder)	todo		
+Lib/xml/dom/expatbuilder.py	528	538	Rejecter.__init__	__init__(self, builder)	todo		
+Lib/xml/dom/expatbuilder.py	540	541	Rejecter.start_element_handler	start_element_handler(self, *args)	todo		
+Lib/xml/dom/expatbuilder.py	543	551	Rejecter.end_element_handler	end_element_handler(self, *args)	todo		
+Lib/xml/dom/expatbuilder.py	556	560	Skipper.start_element_handler	start_element_handler(self, *args)	todo		
+Lib/xml/dom/expatbuilder.py	562	571	Skipper.end_element_handler	end_element_handler(self, *args)	todo		
+Lib/xml/dom/expatbuilder.py	602	609	FragmentBuilder.__init__	__init__(self, context, options=None)	todo		
+Lib/xml/dom/expatbuilder.py	611	613	FragmentBuilder.reset	reset(self)	todo		
+Lib/xml/dom/expatbuilder.py	615	618	FragmentBuilder.parseFile	parseFile(self, file)	todo		
+Lib/xml/dom/expatbuilder.py	620	646	FragmentBuilder.parseString	parseString(self, string)	todo		
+Lib/xml/dom/expatbuilder.py	648	682	FragmentBuilder._getDeclarations	_getDeclarations(self)	todo		
+Lib/xml/dom/expatbuilder.py	684	685	FragmentBuilder._getNSattrs	_getNSattrs(self)	todo		
+Lib/xml/dom/expatbuilder.py	687	707	FragmentBuilder.external_entity_ref_handler	external_entity_ref_handler(self, context, base, systemId, publicId)	todo		
+Lib/xml/dom/expatbuilder.py	713	716	Namespaces._initNamespaces	_initNamespaces(self)	todo		
+Lib/xml/dom/expatbuilder.py	718	722	Namespaces.createParser	createParser(self)	todo		
+Lib/xml/dom/expatbuilder.py	724	729	Namespaces.install	install(self, parser)	todo		
+Lib/xml/dom/expatbuilder.py	731	733	Namespaces.start_namespace_decl_handler	start_namespace_decl_handler(self, prefix, uri)	todo		
+Lib/xml/dom/expatbuilder.py	735	780	Namespaces.start_element_handler	start_element_handler(self, name, attributes)	todo		
+Lib/xml/dom/expatbuilder.py	788	802	Namespaces.end_element_handler	end_element_handler(self, name)	todo		
+Lib/xml/dom/expatbuilder.py	808	810	ExpatBuilderNS.reset	reset(self)	todo		
+Lib/xml/dom/expatbuilder.py	816	818	FragmentBuilderNS.reset	reset(self)	todo		
+Lib/xml/dom/expatbuilder.py	820	847	FragmentBuilderNS._getNSattrs	_getNSattrs(self)	todo		
+Lib/xml/dom/expatbuilder.py	859	861	InternalSubsetExtractor.getSubset	getSubset(self)	todo		
+Lib/xml/dom/expatbuilder.py	863	867	InternalSubsetExtractor.parseFile	parseFile(self, file)	todo		
+Lib/xml/dom/expatbuilder.py	869	873	InternalSubsetExtractor.parseString	parseString(self, string)	todo		
+Lib/xml/dom/expatbuilder.py	875	877	InternalSubsetExtractor.install	install(self, parser)	todo		
+Lib/xml/dom/expatbuilder.py	879	887	InternalSubsetExtractor.start_doctype_decl_handler	start_doctype_decl_handler(self, name, publicId, systemId, has_internal_subset)	todo		
+Lib/xml/dom/expatbuilder.py	889	892	InternalSubsetExtractor.end_doctype_decl_handler	end_doctype_decl_handler(self)	todo		
+Lib/xml/dom/expatbuilder.py	894	895	InternalSubsetExtractor.start_element_handler	start_element_handler(self, name, attrs)	todo		
+Lib/xml/dom/expatbuilder.py	898	913	parse	parse(file, namespaces=True)	todo		
+Lib/xml/dom/expatbuilder.py	916	924	parseString	parseString(string, namespaces=True)	todo		
+Lib/xml/dom/expatbuilder.py	927	944	parseFragment	parseFragment(file, context, namespaces=True)	todo		
+Lib/xml/dom/expatbuilder.py	947	956	parseFragmentString	parseFragmentString(string, context, namespaces=True)	todo		
+Lib/xml/dom/expatbuilder.py	959	964	makeBuilder	makeBuilder(options)	todo		

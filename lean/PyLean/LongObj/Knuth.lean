@@ -1,7 +1,7 @@
 import PyLean.LongObj.Karatsuba
 
 /-!
-Algorithm D as used by `x_divrem`, longobject.c:3242-3370: one quotient digit.
+Algorithm D as used by `x_divrem`, longobject.c:3324-3453: one quotient digit.
 
 The first half is pure `Nat` arithmetic on the top digits of the window, written
 for an arbitrary base `B`. With
@@ -30,7 +30,7 @@ theorem est_upper {vl v2 X B vv wl wm2 wm1 V W q : Nat}
   have e3 : X * (v2 + 1) = X * v2 + X := by grind
   omega
 
-/-- The test at longobject.c:3325-3326 succeeding means `q` is too large. -/
+/-- The test at longobject.c:3408-3409 succeeding means `q` is too large. -/
 theorem est_dec {vl v2 X B vv wl wm2 wm1 V W q r : Nat}
     (hV : V = vl + X * v2 + X * B * vv) (hW : W = wl + X * wm2 + X * B * wm1)
     (hvl : vl < X) (hvv : vv = wm1 * q + r) (hgt : r * B + v2 < wm2 * q) : V < q * W := by
@@ -72,7 +72,7 @@ theorem shl_or (a b i : Nat) (h : b < 2 ^ i) : (a <<< i) ||| b = a * 2 ^ i + b :
   rw [Nat.shiftLeft_eq, Nat.mul_comm, Nat.two_pow_add_eq_or_of_lt h]
 
 /-- `while (wm2 * q > (r << SHIFT | vk[size_w-2])) { --q; r += wm1; if (r >= BASE) break; }`,
-longobject.c:3325-3331. Fuel 2 is enough (`qLoop_spec`). -/
+longobject.c:3408-3414. Fuel 2 is enough (`qLoop_spec`). -/
 def qLoop (wm1 wm2 v2 : Nat) : Nat → Nat → Nat → Py (Nat × Nat)
   | 0, q, r => .ok (q, r)
   | f + 1, q, r => do
@@ -134,10 +134,10 @@ theorem qLoop_spec {wm1 wm2 v2 vl wl X vv V W : Nat}
 
 /-! ## Multiply and subtract -/
 
-/-- `(digit)z & PyLong_MASK`, longobject.c:3341: the low 30 bits of a signed value. -/
+/-- `(digit)z & PyLong_MASK`, longobject.c:3424: the low 30 bits of a signed value. -/
 def loDigit (z : Int) : Nat := (z % 2 ^ 30).toNat
 
-/-- `Py_ARITHMETIC_RIGHT_SHIFT(stwodigits, z, PyLong_SHIFT)`, longobject.c:3342-3343. -/
+/-- `Py_ARITHMETIC_RIGHT_SHIFT(stwodigits, z, PyLong_SHIFT)`, longobject.c:3425-3426. -/
 def arsh30 (z : Int) : Int := z / 2 ^ 30
 
 /-- `(sdigit)x`: the value fits `int32_t`. -/
@@ -146,7 +146,7 @@ def chkS32 (x : Int) : Py Int :=
 
 theorem chkS32_ok {x : Int} (h : -(2 ^ 31 : Int) ≤ x ∧ x < 2 ^ 31) : chkS32 x = .ok x := if_pos h
 
-/-- The loop subtracting `q * w0[0:size_w]` from `vk[0:size_w]`, longobject.c:3335-3344,
+/-- The loop subtracting `q * w0[0:size_w]` from `vk[0:size_w]`, longobject.c:3418-3427,
 carrying `zhi`. -/
 def subLoop (q : Nat) : List Nat → List Nat → Int → Py (List Nat × Int)
   | [], _, zhi => .ok ([], zhi)
@@ -209,7 +209,7 @@ theorem subLoop_spec {q : Nat} (hq : q ≤ 2 ^ 30) :
 
 /-! ## One quotient digit -/
 
-/-- The body of the outer loop of `x_divrem`, longobject.c:3304-3361: divide
+/-- The body of the outer loop of `x_divrem`, longobject.c:3387-3444: divide
 `vk[0:size_w+1]` by `w`, giving the digit and the remainder `vk[0:size_w]`. -/
 def divStep (w : List Nat) (wm1 wm2 : Nat) (vk : List Nat) : Py (Nat × List Nat) := do
   let n := w.length
@@ -223,7 +223,7 @@ def divStep (w : List Nat) (wm1 wm2 : Nat) (vk : List Nat) : Py (Nat × List Nat
     return (q - 1, r')
   else return (q, r)
 
-/-- What the sign of `vtop + zhi` says, longobject.c:3347-3348: `t` is 0 or -1. -/
+/-- What the sign of `vtop + zhi` says, longobject.c:3430-3431: `t` is 0 or -1. -/
 theorem divStep_value {V W Pn r q : Nat} {t : Int}
     (hPn : W ≤ Pn) (hr : r < Pn)
     (e : (r : Int) + (Pn : Int) * t = (V : Int) - ((q * W : Nat) : Int))
@@ -283,7 +283,7 @@ theorem split3 {vk : List Nat} {m : Nat} (h : vk.length = m + 3) :
     refine ⟨vk.take m, a, b, c, ?_, by simp; omega⟩
     rw [← hr, List.take_append_drop]
 
-/-- `vtop <= wm1`, the assert at longobject.c:3314. -/
+/-- `vtop <= wm1`, the assert at longobject.c:3397. -/
 theorem vtop_le {X B vl vm vtop wl wm2 wm1 : Nat} (hB : 0 < B) (hX : 0 < X) (hwl : wl < X)
     (hw2 : wm2 < B)
     (h : vl + X * B * vm + X * B * B * vtop < B * (wl + X * wm2 + X * B * wm1)) :

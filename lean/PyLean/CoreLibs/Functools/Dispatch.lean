@@ -1,7 +1,7 @@
 import PyLean.CoreLibs.Functools.Partial
 
 /-!
-`singledispatch`, Lib/functools.py:731-991. The class hierarchy is data, and `issubclass` is fallible,
+`singledispatch`, Lib/functools.py:752-1012. The class hierarchy is data, and `issubclass` is fallible,
 because it runs `__subclasscheck__` and `__subclasshook__`.
 -/
 
@@ -45,14 +45,14 @@ def anyPy {α : Type} (p : α → Py Bool) : List α → Py Bool
     | .ok true => .ok true
     | .ok false => anyPy p xs
 
-/-- The first sequence head not in the tail of any sequence, Lib/functools.py:746-753. -/
+/-- The first sequence head not in the tail of any sequence, Lib/functools.py:767-774. -/
 def candidateOf (seqs : List (List Cls)) : Option Cls :=
   seqs.findSome? (fun s =>
     match s with
     | [] => none
     | c :: _ => if seqs.any (fun t => t.tail.contains c) then none else some c)
 
-/-- `_c3_merge`, Lib/functools.py:735-760. -/
+/-- `_c3_merge`, Lib/functools.py:756-781. -/
 def c3Merge : (fuel : Nat) → List (List Cls) → Py (List Cls)
   | 0, _ => .error .modelFuel
   | fuel + 1, seqs =>
@@ -65,13 +65,13 @@ def c3Merge : (fuel : Nat) → List (List Cls) → Py (List Cls)
         let rest ← c3Merge fuel (seqs.map (fun s => if s.head? = some c then s.tail else s))
         pure (c :: rest)
 
-/-- The last index-plus-one of a base with `__abstractmethods__`, Lib/functools.py:779-784. -/
+/-- The last index-plus-one of a base with `__abstractmethods__`, Lib/functools.py:800-805. -/
 def boundaryOf (W : World) (bases : List Cls) : Nat :=
   match (bases.reverse.zipIdx.find? (fun p => W.isAbc p.1)) with
   | some (_, i) => bases.length - i
   | none => 0
 
-/-- The test at Lib/functools.py:790-792: `cls` introduces the behaviour of `base`. -/
+/-- The test at Lib/functools.py:811-813: `cls` introduces the behaviour of `base`. -/
 def introduces (W : World) (cls base : Cls) : Py Bool :=
   match W.isSub cls base with
   | .error e => .error e
@@ -81,7 +81,7 @@ def introduces (W : World) (cls base : Cls) : Py Bool :=
     | .error e => .error e
     | .ok a => .ok !a
 
-/-- `_c3_mro`, Lib/functools.py:762-805. The three loops run in order, so an `issubclass` failure happens
+/-- `_c3_mro`, Lib/functools.py:783-826. The three loops run in order, so an `issubclass` failure happens
 before any recursion. -/
 def c3Mro (W : World) : (fuel : Nat) → Cls → List Cls → Py (List Cls)
   | 0, _, _ => .error .modelFuel
@@ -99,21 +99,21 @@ def c3Mro (W : World) : (fuel : Nat) → Cls → List Cls → Py (List Cls)
     -- each pass removes at least one element
     c3Merge ((seqs.map List.length).sum + 1) seqs
 
-/-- `is_related` of `_compose_mro`, Lib/functools.py:816-819. -/
+/-- `is_related` of `_compose_mro`, Lib/functools.py:837-840. -/
 def isRelated (W : World) (cls typ : Cls) : Py Bool :=
   if typ ∈ W.mro cls ∨ !W.isType typ ∨ W.isAlias typ then .ok false else W.isSub cls typ
 
-/-- `is_strict_base` of `_compose_mro`, Lib/functools.py:823-827. -/
+/-- `is_strict_base` of `_compose_mro`, Lib/functools.py:844-848. -/
 def isStrictBase (W : World) (types : List Cls) (typ : Cls) : Bool :=
   types.any (fun other => typ != other && (W.mro other).contains typ)
 
-/-- The inner loop of `_compose_mro`, Lib/functools.py:834-837, in the order of `__subclasses__()`. -/
+/-- The inner loop of `_compose_mro`, Lib/functools.py:855-858, in the order of `__subclasses__()`. -/
 def foundFor (W : World) (cls : Cls) (types : List Cls) (typ : Cls) : Py (List (List Cls)) := do
   let subs ← filterPy (fun sub =>
     if sub ∈ W.mro cls then .ok false else W.isSub cls sub) (W.subclasses typ)
   pure (subs.map (fun sub => (W.mro sub).filter (fun s => types.contains s)))
 
-/-- One round of the outer loop, Lib/functools.py:833-846. `found.sort(key=len, reverse=True)` is stable. -/
+/-- One round of the outer loop, Lib/functools.py:854-867. `found.sort(key=len, reverse=True)` is stable. -/
 def composeStep (W : World) (cls : Cls) (types : List Cls) (acc : List Cls) (typ : Cls) : Py (List Cls) := do
   let found ← foundFor W cls types typ
   if found.isEmpty then pure (acc ++ [typ])
@@ -129,20 +129,20 @@ def foldPy {α β : Type} (f : α → β → Py α) : α → List β → Py α
     | .error e => .error e
     | .ok a' => foldPy f a' bs
 
-/-- `_compose_mro` before the final call, Lib/functools.py:814-846: the ABCs to insert. -/
+/-- `_compose_mro` before the final call, Lib/functools.py:835-867: the ABCs to insert. -/
 def composeAbcs (W : World) (cls : Cls) (types : List Cls) : Py (List Cls) := do
   let types ← filterPy (isRelated W cls) types
   let types' := types.filter (fun t => !isStrictBase W types t)
   foldPy (composeStep W cls types') [] types'
 
-/-- `_compose_mro`, Lib/functools.py:807-847. -/
+/-- `_compose_mro`, Lib/functools.py:828-868. -/
 def composeMro (W : World) (fuel : Nat) (cls : Cls) (types : List Cls) : Py (List Cls) := do
   c3Mro W fuel cls (← composeAbcs W cls types)
 
 /-- The registry, in insertion order. -/
 abbrev Registry (ι : Type) := List (Cls × ι)
 
-/-- The loop of `_find_impl`, Lib/functools.py:861-872: it stops at the element after the match. -/
+/-- The loop of `_find_impl`, Lib/functools.py:882-893: it stops at the element after the match. -/
 def findLoop {ι : Type} (W : World) (cls : Cls) (reg : Registry ι) :
     Option Cls → List Cls → Py (Option Cls)
   | m, [] => .ok m
@@ -157,13 +157,13 @@ def findLoop {ι : Type} (W : World) (cls : Cls) (reg : Registry ι) :
     if (reg.lookup t).isSome then findLoop W cls reg (some t) rest
     else findLoop W cls reg none rest
 
-/-- `_find_impl`, Lib/functools.py:849-873. -/
+/-- `_find_impl`, Lib/functools.py:870-894. -/
 def findImpl {ι : Type} (W : World) (fuel : Nat) (cls : Cls) (reg : Registry ι) : Py (Option ι) := do
   let mro ← composeMro W fuel cls (reg.map Prod.fst)
   let m ← findLoop W cls reg none mro
   pure (m.bind (fun c => reg.lookup c))
 
-/-- The closure state of `singledispatch`, Lib/functools.py:889-891, and `funcname`, :984. -/
+/-- The closure state of `singledispatch`, Lib/functools.py:910-912, and `funcname`, :1005. -/
 structure Dispatcher (ι : Type) where
   registry : Registry ι
   cache : List (Cls × Option ι)
@@ -181,8 +181,8 @@ inductive RegArg where
   | union (cs : List Cls)
   deriving Repr, DecidableEq
 
-/-- The end of `register`, Lib/functools.py:968-976. A `types.UnionType` has no
-`__abstractmethods__`, so the test at :973 is false for a union, whatever its members are. -/
+/-- The end of `register`, Lib/functools.py:989-997. A `types.UnionType` has no
+`__abstractmethods__`, so the test at :994 is false for a union, whatever its members are. -/
 def regStore {ι : Type} (W : World) (abcToken : Nat) (d : Dispatcher ι) (arg : RegArg) (f : ι) :
     Dispatcher ι :=
   let registry := match arg with
@@ -203,7 +203,7 @@ inductive TypeVal where
   | other
   deriving Repr, DecidableEq
 
-/-- `_is_valid_dispatch_type`, Lib/functools.py:916-920, with what `register` then stores. -/
+/-- `_is_valid_dispatch_type`, Lib/functools.py:937-941, with what `register` then stores. -/
 def validType : TypeVal → Option RegArg
   | .cls c => some (.cls c)
   | .union args => (args.mapM id).map RegArg.union
@@ -223,7 +223,7 @@ inductive Registered (ι : Type) where
   /-- `lambda f: register(cls, f)`. -/
   | decorator (arg : RegArg)
 
-/-- `register(cls, func=None)`, Lib/functools.py:922-976. `next(iter(...))` on no hints is a bare
+/-- `register(cls, func=None)`, Lib/functools.py:943-997. `next(iter(...))` on no hints is a bare
 `StopIteration`. The first hint is taken whatever its name is, so `'return'` and a later parameter count. -/
 def register {ι : Type} (W : World) (abcToken : Nat) (d : Dispatcher ι) (cls : RegFirst ι)
     (func : Option ι) : Py (Registered ι × Dispatcher ι) :=
@@ -261,13 +261,13 @@ def register {ι : Type} (W : World) (abcToken : Nat) (d : Dispatcher ι) (cls :
             | .forwardRef => .error (.typeError "~Invalid annotation: is an unresolved forward reference.")
             | _ => .error (.typeError "~Invalid annotation: is not a class.")
 
-/-- The token check at the top of `dispatch`, Lib/functools.py:901-905. -/
+/-- The token check at the top of `dispatch`, Lib/functools.py:922-926. -/
 def tokenSync {ι : Type} (abcToken : Nat) (d : Dispatcher ι) : Dispatcher ι :=
   match d.token with
   | some t => if t ≠ abcToken then { d with cache := [], token := some abcToken } else d
   | none => d
 
-/-- The cache lookup of `dispatch`, Lib/functools.py:906-913. -/
+/-- The cache lookup of `dispatch`, Lib/functools.py:927-934. -/
 def dispatchCached {ι : Type} (W : World) (fuel : Nat) (d : Dispatcher ι) (cls : Cls) :
     Py (Option ι) × Dispatcher ι :=
   match d.cache.lookup cls with
@@ -280,12 +280,12 @@ def dispatchCached {ι : Type} (W : World) (fuel : Nat) (d : Dispatcher ι) (cls
       | .error e => (.error e, d)
       | .ok i => (.ok i, { d with cache := (cls, i) :: d.cache })
 
-/-- `dispatch(cls)`, Lib/functools.py:893-914. `abcToken` is `get_cache_token()`. -/
+/-- `dispatch(cls)`, Lib/functools.py:914-935. `abcToken` is `get_cache_token()`. -/
 def dispatch {ι : Type} (W : World) (fuel abcToken : Nat) (d : Dispatcher ι) (cls : Cls) :
     Py (Option ι) × Dispatcher ι :=
   dispatchCached W fuel (tokenSync abcToken d) cls
 
-/-- The `wrapper` of `singledispatch`, Lib/functools.py:978-982: the class of the first positional argument
+/-- The `wrapper` of `singledispatch`, Lib/functools.py:999-1003: the class of the first positional argument
 selects the implementation, and no positional argument is a `TypeError`. -/
 def dispatchCall {ι : Type} (W : World) (fuel abcToken : Nat) (d : Dispatcher ι)
     (firstArg : Option Cls) : Py (Option ι) × Dispatcher ι :=
@@ -293,7 +293,7 @@ def dispatchCall {ι : Type} (W : World) (fuel abcToken : Nat) (d : Dispatcher �
   | none => (.error (.typeError s!"{d.name} requires at least 1 positional argument"), d)
   | some c => dispatch W fuel abcToken d c
 
-/-- `singledispatch(func)`, Lib/functools.py:984-985: `funcname` from `getattr(func, '__name__', ...)`, which
+/-- `singledispatch(func)`, Lib/functools.py:1005-1006: `funcname` from `getattr(func, '__name__', ...)`, which
 may raise, and `registry[object] = func`. -/
 def newDispatcher {ι : Type} (object : Cls) (func : ι) : Dispatcher ι :=
   { registry := [(object, func)], cache := [], token := none }

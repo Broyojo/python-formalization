@@ -44,13 +44,13 @@ terminator) fits in `ob_alloc`; the empty object may have no buffer. -/
 def BA.WF (b : BA) : Prop :=
   0 ≤ b.offset ∧ (b.alloc = 0 ∧ b.data = [] ∧ b.offset = 0 ∨ b.offset + b.size + 1 ≤ b.alloc)
 
-/-- `_canresize`, bytearrayobject.c:104-113. -/
+/-- `_canresize`, bytearrayobject.c:127-136. -/
 def canResize (b : BA) : Py Unit :=
   if b.exports > 0 then
     .error (bufferError "Existing exports of data: object cannot be re-sized")
   else .ok ()
 
-/-- `PyByteArray_FromStringAndSize(bytes, size)`, bytearrayobject.c:145-187. `bytes`
+/-- `PyByteArray_FromStringAndSize(bytes, size)`, bytearrayobject.c:168-206. `bytes`
 is `none` for `NULL`: the result is then uninitialised. -/
 def baFromStringAndSize (bytes : Option Seq) (size : Int) : Py BA :=
   if size < 0 then .error (systemError "Negative size passed to PyByteArray_FromStringAndSize")
@@ -63,7 +63,7 @@ def baFromStringAndSize (bytes : Option Seq) (size : Int) : Py BA :=
       | none => List.replicate size.toNat uninit
     .ok { data, alloc := size + 1 }
 
-/-- `bytearray_dealloc`, bytearrayobject.c:1257-1270: what it prints. It reports
+/-- `bytearray_dealloc`, bytearrayobject.c:1277-1288: what it prints. It reports
 `ob_exports > 0`, which a real object cannot have here, because a view keeps its
 exporter alive. -/
 def baDealloc (exports : Int) : List String :=
@@ -71,8 +71,8 @@ def baDealloc (exports : Int) : List String :=
 
 /-- `PyByteArray_FromStringAndSize` with what it leaves on stderr.
 `garbage` is the uninitialised `ob_exports` of the memory `PyObject_New` returned:
-the field is set at :184, after the failing `PyMem_Malloc` at :172, and the
-`Py_DECREF(new)` at :174 runs `bytearray_dealloc`. -/
+the field is set at @3.14.7:184, after the failing `PyMem_Malloc` at @3.14.7:172, and the
+`Py_DECREF(new)` at @3.14.7:174 runs `bytearray_dealloc`. -/
 def baFromSizeTrace (garbage : Int) (bytes : Option Seq) (size : Int) : Py BA × List String :=
   if size ≥ 0 ∧ size ≠ ssizeMax ∧ size ≠ 0 ∧ mallocFails (size + 1) = true then
     (.error memoryError, baDealloc garbage)
@@ -82,8 +82,8 @@ def baFromSizeTrace (garbage : Int) (bytes : Option Seq) (size : Int) : Py BA ×
 def resizedData (data : List Int) (requested : Int) : List Int :=
   data.take requested.toNat ++ List.replicate (requested.toNat - data.length) uninit
 
-/-- `bytearray_resize_lock_held`, bytearrayobject.c:207-290, with
-`PyByteArray_Resize`, :292-300. New bytes are uninitialised. -/
+/-- `bytearray_resize_lock_held`, bytearrayobject.c:263-343, with
+`PyByteArray_Resize`, :345-353. New bytes are uninitialised. -/
 def baResize (b : BA) (requested : Int) : Py BA := do
   if requested < 0 then
     throw (.valueError s!"Can only resize to positive sizes, got {requested}")
@@ -108,16 +108,16 @@ terminator; `Sequences.memmove` checks the bounds (`cUB` on violation). -/
 def baMove (mem : List Int) (dst src cnt : Int) : Py (List Int) := Sequences.memmove mem dst src cnt
 
 /-- The tail move and copy of `bytearray_setslice_linear`, the `growth < 0`, `lo ≠ 0`
-branch, bytearrayobject.c:574-583. Reads `mem` as it stands, with the terminator. -/
+branch, bytearrayobject.c:627-636. Reads `mem` as it stands, with the terminator. -/
 def setsliceShrinkMove (b : BA) (lo hi blen : Int) : Py BA := do
   let mem ← baMove b.data (lo + blen) hi (b.size - hi)
   return { b with data := mem }
 
-/-- `memcpy(buf + lo, bytes, bytes_len)`, bytearrayobject.c:628-629. -/
+/-- `memcpy(buf + lo, bytes, bytes_len)`, bytearrayobject.c:681-682. -/
 def baCopyIn (b : BA) (lo : Int) (bytes : List Int) : BA :=
   { b with data := b.data.take lo.toNat ++ bytes ++ b.data.drop (lo + bytes.length).toNat }
 
-/-- The resize of the `lo == 0` shrink, bytearrayobject.c:584-585. `ob_start` has
+/-- The resize of the `lo == 0` shrink, bytearrayobject.c:637-638. `ob_start` has
 advanced already, but the size field still has the old value, so the resize is not the
 "same size" no-op; `b.data` is already the new contents. This is `baResize` from the
 `_canresize` on, with the allocation strategy only. -/
@@ -135,14 +135,14 @@ def baResizeNoSize (b : BA) (requested : Int) : Py BA := do
   return { b with alloc, offset := 0 }
 
 /-- `growth < 0`, `lo == 0`: shrink the buffer by advancing its logical start,
-bytearrayobject.c:564-573 and :584. -/
+bytearrayobject.c:617-626 and :637. -/
 def baShrinkStart (self : BA) (growth : Int) (bytes : List Int) : Py BA := do
   let s := { self with offset := self.offset - growth, data := self.data.drop (-growth).toNat }
   let r ← baResizeNoSize s s.size
   return baCopyIn r 0 bytes
 
 /-- `growth < 0`, `lo != 0`: `memmove` the tail down, then resize,
-bytearrayobject.c:574-585. -/
+bytearrayobject.c:627-638. -/
 def baShrinkMove (self : BA) (lo hi growth : Int) (bytes : List Int) : Py BA := do
   let blen : Int := bytes.length
   let s ← setsliceShrinkMove self lo hi blen
@@ -150,7 +150,7 @@ def baShrinkMove (self : BA) (lo hi growth : Int) (bytes : List Int) : Py BA := 
   return baCopyIn r lo bytes
 
 /-- `growth > 0`: resize, then make the place for the additional bytes,
-bytearrayobject.c:606-626. -/
+bytearrayobject.c:659-679. -/
 def baGrow (self : BA) (lo hi growth : Int) (bytes : List Int) : Py BA := do
   let blen : Int := bytes.length
   if self.size > ssizeMax - growth then throw memoryError
@@ -158,7 +158,7 @@ def baGrow (self : BA) (lo hi growth : Int) (bytes : List Int) : Py BA := do
   let mem ← baMove r.data (lo + blen) hi (r.size - lo - blen)
   return baCopyIn { r with data := mem } lo bytes
 
-/-- `bytearray_setslice_linear`, bytearrayobject.c:548-631. Resize failures after a
+/-- `bytearray_setslice_linear`, bytearrayobject.c:601-684. Resize failures after a
 partial update cannot occur here: `realloc` to a smaller size succeeds. -/
 def baSetsliceLinear (self : BA) (lo hi : Int) (bytes : List Int) : Py BA :=
   let growth := (bytes.length : Int) - (hi - lo)
@@ -178,7 +178,7 @@ structure SetVal where
   mutate : BA → Py BA := .ok
   deriving Inhabited
 
-/-- `bytearray_setslice`, bytearrayobject.c:633-682. `lo` and `hi` were computed by
+/-- `bytearray_setslice`, bytearrayobject.c:686-738. `lo` and `hi` were computed by
 the caller; the value's `__buffer__` runs between that and the clamps, and the clamps
 do not cover `lo > Py_SIZE(self)`. -/
 def baSetslice (self : BA) (lo hi : Int) (values : Option SetVal) : Py BA := do
@@ -192,7 +192,7 @@ def baSetslice (self : BA) (lo hi : Int) (values : Option SetVal) : Py BA := do
   let hi := if hi > self.size then self.size else hi
   baSetsliceLinear self lo hi bytes
 
-/-- `bytearray.extend` with a buffer argument, bytearrayobject.c:2147-2153:
+/-- `bytearray.extend` with a buffer argument, bytearrayobject.c:2254-2260:
 `bytearray_setslice(self, size, size, x)`. If the argument's `__buffer__` shrinks
 `self`, `lo` is past the new end, and `baSetsliceLinear` runs with `avail < 0`: the
 bytes between the new end and `lo` are never written. -/
@@ -209,13 +209,13 @@ def getByteValue (arg : Obj) : Py Nat :=
     else .ok v.toNat
 
 /-- `bytearray_getbuffer` and `bytearray_getbuffer_lock_held`,
-bytearrayobject.c:46-73. -/
+bytearrayobject.c:69-96. -/
 def baGetBuffer (b : BA) : BA := { b with exports := b.exports + 1 }
 
-/-- `bytearray_releasebuffer`, bytearrayobject.c:75-83. -/
+/-- `bytearray_releasebuffer`, bytearrayobject.c:98-106. -/
 def baReleaseBuffer (b : BA) : BA := { b with exports := b.exports - 1 }
 
-/-- `_bytearray_with_buffer`, bytearrayobject.c:89-102: `op` runs with `ob_exports`
+/-- `_bytearray_with_buffer`, bytearrayobject.c:112-125: `op` runs with `ob_exports`
 raised, so a callback cannot resize `self`. -/
 def withBuffer {α : Type} (self : BA) (op : BA → Py α) : Py α × BA :=
   let inner := baGetBuffer self
@@ -227,7 +227,7 @@ Each one runs the shared `bytes` code. Those that can call back into Python rais
 `ob_exports` around it (`_bytearray_with_buffer`, or by hand in `split`, `rsplit`,
 `join`, `hex`, `%` and `__contains__`). The rest take the critical section only. -/
 
-/-- `bytearray_find_impl`, :1317-1323, and `rfind`, `index`, `rindex`, `count`,
+/-- `bytearray_find_impl`, :1336-1342, and `rfind`, `index`, `rindex`, `count`,
 `startswith`, `endswith`, `__contains__`: the operation on the contents, with
 `ob_exports` raised meanwhile. -/
 def baRead {α : Type} (self : BA) (op : Seq → Py α) : Py α × BA :=
@@ -235,18 +235,18 @@ def baRead {α : Type} (self : BA) (op : Seq → Py α) : Py α × BA :=
 
 /-! ## Subscript -/
 
-/-- `bytearray_getitem`, bytearrayobject.c:455-475. -/
+/-- `bytearray_getitem`, bytearrayobject.c:508-528. -/
 def baGetItemRaw (b : BA) (i : Int) : Py Int :=
   if i < 0 ∨ i ≥ b.size then .error (.indexError "bytearray index out of range")
   else .ok (b.data.getD i.toNat 0)
 
-/-- `bytearray_subscript` for an index, bytearrayobject.c:482-496. -/
+/-- `bytearray_subscript` for an index, bytearrayobject.c:535-549. -/
 def baGetItem (b : BA) (i : Int) : Py Int := do
   let i ← Sequences.subIndex i
   let i := if i < 0 then i + b.size else i
   baGetItemRaw b i
 
-/-- `bytearray_subscript` for a slice, bytearrayobject.c:497-528: a new bytearray. -/
+/-- `bytearray_subscript` for a slice, bytearrayobject.c:550-581: a new bytearray. -/
 def baGetSlice (b : BA) (sl : Slice) : Py Seq := do
   let (start, stop, step) ← sliceUnpack sl
   let (start, _, len) := RangeSlice.adjustIndices b.size start stop step
@@ -254,7 +254,7 @@ def baGetSlice (b : BA) (sl : Slice) : Py Seq := do
   if step = 1 then return (b.seq.drop start.toNat).take len.toNat
   return (slicePositions start step len.toNat).map (fun p => b.seq.getD p.toNat 0)
 
-/-- `bytearray_setitem` (`sq_ass_item`), bytearrayobject.c:684-723. -/
+/-- `bytearray_setitem` (`sq_ass_item`), bytearrayobject.c:740-779. -/
 def baSetItemRaw (self : BA) (i : Int) (value : Option Obj) : Py BA := do
   let ival ← match value with
     | some v => some <$> getByteValue v
@@ -266,7 +266,7 @@ def baSetItemRaw (self : BA) (i : Int) (value : Option Obj) : Py BA := do
   | some v => return { self with data := self.data.set i.toNat (v : Int) }
 
 /-- `bytearray_ass_subscript` for an index and a value, and for `del b[i]`,
-bytearrayobject.c:735-771, with the deletion continuing as a one-byte slice. -/
+bytearrayobject.c:791-827, with the deletion continuing as a one-byte slice. -/
 def baAssIndex (self : BA) (i : Int) (value : Option Obj) : Py BA := do
   let i ← Sequences.subIndex i
   let ival ← match value with
@@ -278,7 +278,7 @@ def baAssIndex (self : BA) (i : Int) (value : Option Obj) : Py BA := do
   | none => baSetsliceLinear self i (i + 1) []
   | some v => return { self with data := self.data.set i.toNat (v : Int) }
 
-/-- The right-hand sides of a slice assignment: bytearrayobject.c:788-812. -/
+/-- The right-hand sides of a slice assignment: bytearrayobject.c:844-868. -/
 def assValue (self : BA) (values : Option Obj) : Py (Option Seq) :=
   match values with
   | none => .ok none
@@ -306,7 +306,7 @@ where
       return vals
 
 /-- The extended-slice part of `bytearray_ass_subscript_lock_held`,
-bytearrayobject.c:824-883, for `step ≠ 1`. `needed == 0` is the deletion branch, also
+bytearrayobject.c:880-939, for `step ≠ 1`. `needed == 0` is the deletion branch, also
 for an assignment of an empty value (`bugs/sequences-array-extended-slice-empty-deletes.yaml`),
 and `_canresize` comes before the `slicelen == 0` return. The loops are the ones of
 `Sequences.delExtended` and `Sequences.storeLoop`. -/
@@ -325,7 +325,7 @@ def baAssExtended (self : BA) (start stop step slicelen : Int) (bytes : List Int
     return { self with data := Sequences.storeLoop self.data start step bytes }
 
 /-- `b[s] = v` and `del b[s]` for a slice `s`: `bytearray_ass_subscript_lock_held`,
-bytearrayobject.c:772-884, and `bytearray_ass_subscript`, :886-901. `values == self`
+bytearrayobject.c:828-940, and `bytearray_ass_subscript`, :942-957. `values == self`
 is a copy (`self` is passed by value here). -/
 def baAssSlice (self : BA) (sl : Slice) (values : Option Obj) : Py BA := do
   let (start, stop, step) ← sliceUnpack sl
@@ -339,7 +339,7 @@ def baAssSlice (self : BA) (sl : Slice) (values : Option Obj) : Py BA := do
 
 /-! ## Concatenation and repetition -/
 
-/-- `PyByteArray_Concat`, bytearrayobject.c:302-337. -/
+/-- `PyByteArray_Concat`, bytearrayobject.c:355-390. -/
 def baConcat (a b : Obj) : Py BA :=
   match a.buffer?, b.buffer? with
   | some va, some vb =>
@@ -347,7 +347,7 @@ def baConcat (a b : Obj) : Py BA :=
     else baFromStringAndSize (some (va ++ vb)) (va.length + vb.length)
   | _, _ => .error (.typeError s!"can't concat {b.typeName} to {a.typeName}")
 
-/-- `bytearray_iconcat`, bytearrayobject.c:347-384. -/
+/-- `bytearray_iconcat`, bytearrayobject.c:400-437. -/
 def baIConcat (self : BA) (other : Obj) : Py BA := do
   let vo ← match other.buffer? with
     | some v => pure v
@@ -357,7 +357,7 @@ def baIConcat (self : BA) (other : Obj) : Py BA := do
   let r ← baResize self (size + vo.length)
   return { r with data := r.data.take size.toNat ++ seqData vo }
 
-/-- `bytearray_repeat`, bytearrayobject.c:386-416. -/
+/-- `bytearray_repeat`, bytearrayobject.c:439-469. -/
 def baRepeat (self : BA) (count : Int) : Py BA := do
   let count := if count < 0 then 0 else count
   let mysize := self.size
@@ -367,7 +367,7 @@ def baRepeat (self : BA) (count : Int) : Py BA := do
   if size ≠ 0 then return { r with data := seqData (bytesRepeatFill size.toNat self.seq) }
   return r
 
-/-- `bytearray_irepeat`, bytearrayobject.c:418-453. -/
+/-- `bytearray_irepeat`, bytearrayobject.c:471-506. -/
 def baIRepeat (self : BA) (count : Int) : Py BA := do
   let count := if count < 0 then 0 else count
   if count = 1 then return self
@@ -379,13 +379,13 @@ def baIRepeat (self : BA) (count : Int) : Py BA := do
 
 /-! ## Mutating methods -/
 
-/-- `bytearray.clear()`, bytearrayobject.c:1346-1353. -/
+/-- `bytearray.clear()`, bytearrayobject.c:1366-1373. -/
 def baClear (self : BA) : Py BA := baResize self 0
 
-/-- `bytearray.copy()`, bytearrayobject.c:1362-1368. -/
+/-- `bytearray.copy()`, bytearrayobject.c:1382-1388. -/
 def baCopy (self : BA) : Py BA := baFromStringAndSize (some self.seq) self.size
 
-/-- `bytearray.resize(size)`, bytearrayobject.c:1563-1577: new bytes are zero. -/
+/-- `bytearray.resize(size)`, bytearrayobject.c:1588-1602: new bytes are zero. -/
 def baResizeMethod (self : BA) (size : Int) : Py BA := do
   let size ← Sequences.asSsize size
   let start := self.size
@@ -394,20 +394,20 @@ def baResizeMethod (self : BA) (size : Int) : Py BA := do
     return { r with data := r.data.take start.toNat ++ List.replicate (size - start).toNat 0 }
   return r
 
-/-- `bytearray.reverse()`, bytearrayobject.c:1917-1934: the swap loop. -/
+/-- `bytearray.reverse()`, bytearrayobject.c:2033-2050: the swap loop. -/
 def baReverse (self : BA) : BA := { self with data := self.data.reverse }
 
-/-- `bytearray.insert(index, item)`, bytearrayobject.c:1958-1985. -/
+/-- `bytearray.insert(index, item)`, bytearrayobject.c:2074-2096. -/
 def baInsert (self : BA) (index : Int) (item : Obj) : Py BA := do
   let index ← Sequences.asSsize index
   let item ← getByteValue item
   let n := self.size
   if n = ssizeMax then throw (.overflowError "cannot add more objects to bytearray")
   let r ← baResize self (n + 1)
-  -- the same clamps as `ins1`, listobject.c:488-495
+  -- the same clamps as `ins1`, listobject.c:515-522
   return { r with data := Sequences.insAt self.data (Sequences.ins1Pos n index).toNat (item : Int) }
 
-/-- `bytearray.append(item)`, bytearrayobject.c:2078-2095. -/
+/-- `bytearray.append(item)`, bytearrayobject.c:2189-2201. -/
 def baAppend (self : BA) (item : Obj) : Py BA := do
   let item ← getByteValue item
   let n := self.size
@@ -415,7 +415,7 @@ def baAppend (self : BA) (item : Obj) : Py BA := do
   let r ← baResize self (n + 1)
   return { r with data := self.data ++ [(item : Int)] }
 
-/-- `bytearray.pop(index)`, bytearrayobject.c:2252-2281. -/
+/-- `bytearray.pop(index)`, bytearrayobject.c:2359-2388. -/
 def baPop (self : BA) (index : Option Int) : Py (Int × BA) := do
   let index ← Sequences.popArg index
   let n := self.size
@@ -427,7 +427,7 @@ def baPop (self : BA) (index : Option Int) : Py (Int × BA) := do
   let r ← baResize self (n - 1)
   return (value, { r with data := self.data.eraseIdx index.toNat })
 
-/-- `bytearray.remove(value)`, bytearrayobject.c:2294-2314. -/
+/-- `bytearray.remove(value)`, bytearrayobject.c:2401-2421. -/
 def baRemove (self : BA) (value : Obj) : Py BA := do
   let value ← getByteValue value
   let n := self.size
@@ -442,7 +442,7 @@ def baRemove (self : BA) (value : Obj) : Py BA := do
 /-- What `bytearray.__init__`'s and `extend`'s loop gets from an iterable. -/
 def baItems (o : Obj) : Option (List Obj) := iterItems? o
 
-/-- The iterator loop of `bytearray___init___impl`, bytearrayobject.c:1047-1077:
+/-- The iterator loop of `bytearray___init___impl`, bytearrayobject.c:1142-1172:
 each byte extends the object in place when the allocation has room, else through
 `PyByteArray_Resize`. -/
 def baInitLoop (self : BA) : List Obj → Py BA
@@ -461,7 +461,7 @@ def baInitLoop (self : BA) : List Obj → Py BA
 /-- The result of `__init__`: the object as it is left, and the exception if any. -/
 abbrev InitRes := BA × Option PyExc
 
-/-- The exact-list and exact-tuple fast path, bytearrayobject.c:1008-1033. The object
+/-- The exact-list and exact-tuple fast path, bytearrayobject.c:1101-1128. The object
 was resized to `size` first, so a failure leaves the bytes after the bad item
 uninitialised. Returns `none` to go to the slow path (a non-`int` item). -/
 def baInitFast (self : BA) (items : List Obj) : InitRes ⊕ Unit :=
@@ -476,7 +476,7 @@ def baInitFast (self : BA) (items : List Obj) : InitRes ⊕ Unit :=
       | _ => .inr ()
   go 0 self items
 
-/-- `bytearray___init___impl`, bytearrayobject.c:912-1087. Returns the object as it
+/-- `bytearray___init___impl`, bytearrayobject.c:982-1182. Returns the object as it
 is afterwards (the C code mutates `self` before it can fail) and the exception. -/
 def baInit (self : BA) (arg : Option Obj) (encoding errors : Option String) : InitRes :=
   match (if self.size ≠ 0 then baResize self 0 else .ok self) with
@@ -558,7 +558,7 @@ def baNew (arg : Option Obj) (encoding errors : Option String) : Py BA :=
   | (_, some e) => .error e
 
 /-- `bytearray.extend(iterable_of_ints)` for a non-buffer argument,
-bytearrayobject.c:2155-2235: the items go to a temporary, which is then appended. -/
+bytearrayobject.c:2262-2342: the items go to a temporary, which is then appended. -/
 def baExtend (self : BA) (o : Obj) : Py BA := do
   match o.buffer? with
   | some b => baExtendBuffer self { bytes := b }
@@ -574,7 +574,7 @@ def baExtend (self : BA) (o : Obj) : Py BA := do
     let r := baSetsliceLinear self self.size self.size (seqData vals)
     r
 
-/-! ## Iterator, bytearrayobject.c:2897-3077 -/
+/-! ## Iterator, bytearrayobject.c:3015-3195 -/
 
 /-- `bytesiterobject`: `index = -1` is exhausted. `bytearrayiter_setstate` keeps the
 sign of a `-1`, unlike the bytes iterator's clamp to 0. -/
@@ -582,24 +582,24 @@ structure BAIter where
   index : Int := 0
   deriving Repr, DecidableEq, Inhabited
 
-/-- `bytearrayiter_next`, bytearrayobject.c:2924-2956, against the current object. -/
+/-- `bytearrayiter_next`, bytearrayobject.c:3042-3074, against the current object. -/
 def baIterNext (seq : BA) (it : BAIter) : Option Int × BAIter :=
   if it.index < 0 then (none, it)
   else if it.index < seq.size then (some (seq.data.getD it.index.toNat 0), { index := it.index + 1 })
   else (none, { index := -1 })
 
-/-- `bytearrayiter_length_hint`, bytearrayobject.c:2958-2971. -/
+/-- `bytearrayiter_length_hint`, bytearrayobject.c:3076-3089. -/
 def baIterLen (seq : BA) (it : BAIter) : Int :=
   if it.index ≥ 0 then
     let len := seq.size - it.index
     if len < 0 then 0 else len
   else 0
 
-/-- `bytearrayiter_reduce`, bytearrayobject.c:2976-2990. -/
+/-- `bytearrayiter_reduce`, bytearrayobject.c:3094-3108. -/
 def baIterReduce (it : BAIter) : Option Int :=
   if it.index ≥ 0 then some it.index else none
 
-/-- `bytearrayiter_setstate`, bytearrayobject.c:2992-3014. -/
+/-- `bytearrayiter_setstate`, bytearrayobject.c:3110-3132. -/
 def baIterSetstate (seq : BA) (it : BAIter) (state : Int) : Py BAIter := do
   let index ← Sequences.asSsize state
   if it.index ≥ 0 then
@@ -609,7 +609,7 @@ def baIterSetstate (seq : BA) (it : BAIter) (state : Int) : Py BAIter := do
 
 /-! ## Comparison, repr, reduce -/
 
-/-- `bytearray_richcompare`, bytearrayobject.c:1202-1255: `none` is `NotImplemented`. -/
+/-- `bytearray_richcompare`, bytearrayobject.c:1222-1275: `none` is `NotImplemented`. -/
 def baRichcompare (a b : Obj) (op : CmpOp) : Option Bool :=
   match a.buffer?, b.buffer? with
   | some x, some y =>
@@ -621,7 +621,7 @@ def baRichcompare (a b : Obj) (op : CmpOp) : Option Bool :=
   | _, _ => none
 
 /-- `bytearray.__reduce_ex__(proto)` for an exact bytearray with no state:
-`_common_reduce`, bytearrayobject.c:2636-2660. The argument tuple is `()`,
+`_common_reduce`, bytearrayobject.c:2749-2773. The argument tuple is `()`,
 `(latin1_text, "latin-1")`, or `(bytes,)`. -/
 inductive ReduceArgs where
   | empty
@@ -635,17 +635,17 @@ def baReduce (s : Seq) (proto : Int) : ReduceArgs :=
   else .bin s
 
 /-- What a buffer request on `bytes` exports: the contents, read-only
-(`bytes_buffer_getbuffer`, bytesobject.c:1701-1707). -/
+(`bytes_buffer_getbuffer`, bytesobject.c:1792-1798). -/
 def bytesBufferInfo (s : Seq) : Seq × Bool := (s, true)
 
 /-- What a buffer request on `bytearray` exports, and the object afterwards:
-`bytearray_getbuffer`, bytearrayobject.c:46-73, writable. -/
+`bytearray_getbuffer`, bytearrayobject.c:69-96, writable. -/
 def baBufferInfo (b : BA) : (Seq × Bool) × BA := ((b.seq, false), baGetBuffer b)
 
 /-- `sizeof(PyByteArrayObject)` on LP64. -/
 def baBasicSize : Int := 56
 
-/-- `bytearray.__sizeof__()`, bytearrayobject.c:2699-2706. -/
+/-- `bytearray.__sizeof__()`, bytearrayobject.c:2812-2823. -/
 def baSizeof (self : BA) : Int := baBasicSize + self.alloc
 
 end PyLean.BytesObj.Bytes

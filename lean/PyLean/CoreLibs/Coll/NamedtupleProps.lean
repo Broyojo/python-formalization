@@ -471,7 +471,7 @@ theorem call_kw {ν : Type} {T : NT ν} {vals : List ν}
     exact D.get?_of_mem_pair hwf (x := p.1) (v := p.2) hp
   simp [ntCall, hkw, hc, hf, bind, Except.bind, pure, Except.pure]
 
-/-- The class docstring, :375-379: `d = p._asdict()` then `Point(**d)` "convert from a dictionary"
+/-- The class docstring, :372-378: `d = p._asdict()` then `Point(**d)` "convert from a dictionary"
 gives back `p`. False: `__new__` has the normalised parameter names and `_asdict` the raw
 field names, and keywords at run time are not normalised. -/
 def NamedtupleAsdictRoundTrip : Prop :=

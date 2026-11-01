@@ -53,7 +53,7 @@ Lib/email/message.py	991	995	MIMEPart.__init__	__init__(self, policy=None)	todo
 Lib/email/message.py	998	1012	MIMEPart.as_string	as_string(self, unixfrom=False, maxheaderlen=None, policy=None)	todo		
 Lib/email/message.py	1014	1015	MIMEPart.__str__	__str__(self)	todo		
 Lib/email/message.py	1017	1019	MIMEPart.is_attachment	is_attachment(self)	todo		
-Lib/email/message.py	1021	1048	MIMEPart._find_body	_find_body(self, part, preferencelist)	todo		
+Lib/email/message.py	1021	1048	MIMEPart._find_body	_find_body(self, part, preferencelist)	todo		changed-in-3.15:
 Lib/email/message.py	1050	1068	MIMEPart.get_body	get_body(self, preferencelist=('related', 'html', 'plain'))	todo		
 Lib/email/message.py	1074	1127	MIMEPart.iter_attachments	iter_attachments(self)	todo		
 Lib/email/message.py	1129	1135	MIMEPart.iter_parts	iter_parts(self)	todo		

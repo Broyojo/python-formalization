@@ -1,42 +1,52 @@
 file	line	endline	name	signature	status	entry	note
-Lib/pprint.py	46	53	pprint	pprint(object, stream=None, indent=1, width=80, depth=None, *, compact=False, sort_dicts=True, underscore_numbers=False)	todo		
-Lib/pprint.py	56	61	pformat	pformat(object, indent=1, width=80, depth=None, *, compact=False, sort_dicts=True, underscore_numbers=False)	todo		
-Lib/pprint.py	64	66	pp	pp(object, *args, sort_dicts=False, **kwargs)	todo		
-Lib/pprint.py	69	71	saferepr	saferepr(object)	todo		
-Lib/pprint.py	74	76	isreadable	isreadable(object)	todo		
-Lib/pprint.py	79	81	isrecursive	isrecursive(object)	todo		
-Lib/pprint.py	96	97	_safe_key.__init__	__init__(self, obj)	todo		
-Lib/pprint.py	99	104	_safe_key.__lt__	__lt__(self, other)	todo		
-Lib/pprint.py	107	109	_safe_tuple	_safe_tuple(t)	todo		
-Lib/pprint.py	113	158	PrettyPrinter.__init__	__init__(self, indent=1, width=80, depth=None, stream=None, *, compact=False, sort_dicts=True, underscore_numbers=False)	todo		
-Lib/pprint.py	160	163	PrettyPrinter.pprint	pprint(self, object)	todo		
-Lib/pprint.py	165	168	PrettyPrinter.pformat	pformat(self, object)	todo		
-Lib/pprint.py	170	171	PrettyPrinter.isrecursive	isrecursive(self, object)	todo		
-Lib/pprint.py	173	175	PrettyPrinter.isreadable	isreadable(self, object)	todo		
-Lib/pprint.py	177	206	PrettyPrinter._format	_format(self, object, stream, indent, allowance, context, level)	todo		
-Lib/pprint.py	208	217	PrettyPrinter._pprint_dataclass	_pprint_dataclass(self, object, stream, indent, allowance, context, level)	todo		
-Lib/pprint.py	221	234	PrettyPrinter._pprint_dict	_pprint_dict(self, object, stream, indent, allowance, context, level)	todo		
-Lib/pprint.py	238	247	PrettyPrinter._pprint_ordered_dict	_pprint_ordered_dict(self, object, stream, indent, allowance, context, level)	todo		
-Lib/pprint.py	251	255	PrettyPrinter._pprint_list	_pprint_list(self, object, stream, indent, allowance, context, level)	todo		
-Lib/pprint.py	259	264	PrettyPrinter._pprint_tuple	_pprint_tuple(self, object, stream, indent, allowance, context, level)	todo		
-Lib/pprint.py	268	283	PrettyPrinter._pprint_set	_pprint_set(self, object, stream, indent, allowance, context, level)	todo		
-Lib/pprint.py	288	338	PrettyPrinter._pprint_str	_pprint_str(self, object, stream, indent, allowance, context, level)	todo		
-Lib/pprint.py	342	359	PrettyPrinter._pprint_bytes	_pprint_bytes(self, object, stream, indent, allowance, context, level)	todo		
-Lib/pprint.py	363	368	PrettyPrinter._pprint_bytearray	_pprint_bytearray(self, object, stream, indent, allowance, context, level)	todo		
-Lib/pprint.py	372	376	PrettyPrinter._pprint_mappingproxy	_pprint_mappingproxy(self, object, stream, indent, allowance, context, level)	todo		
-Lib/pprint.py	380	391	PrettyPrinter._pprint_simplenamespace	_pprint_simplenamespace(self, object, stream, indent, allowance, context, level)	todo		
-Lib/pprint.py	395	410	PrettyPrinter._format_dict_items	_format_dict_items(self, items, stream, indent, allowance, context, level)	todo		
-Lib/pprint.py	412	429	PrettyPrinter._format_namespace_items	_format_namespace_items(self, items, stream, indent, allowance, context, level)	todo		
-Lib/pprint.py	431	470	PrettyPrinter._format_items	_format_items(self, items, stream, indent, allowance, context, level)	todo		
-Lib/pprint.py	472	479	PrettyPrinter._repr	_repr(self, object, context, level)	todo		
-Lib/pprint.py	481	486	PrettyPrinter.format	format(self, object, context, maxlevels, level)	todo		candidates:calstat-calendar-formatstring-width
-Lib/pprint.py	488	497	PrettyPrinter._pprint_default_dict	_pprint_default_dict(self, object, stream, indent, allowance, context, level)	todo		
-Lib/pprint.py	501	513	PrettyPrinter._pprint_counter	_pprint_counter(self, object, stream, indent, allowance, context, level)	todo		
-Lib/pprint.py	517	530	PrettyPrinter._pprint_chain_map	_pprint_chain_map(self, object, stream, indent, allowance, context, level)	todo		
-Lib/pprint.py	534	550	PrettyPrinter._pprint_deque	_pprint_deque(self, object, stream, indent, allowance, context, level)	todo		
-Lib/pprint.py	554	555	PrettyPrinter._pprint_user_dict	_pprint_user_dict(self, object, stream, indent, allowance, context, level)	todo		
-Lib/pprint.py	559	560	PrettyPrinter._pprint_user_list	_pprint_user_list(self, object, stream, indent, allowance, context, level)	todo		
-Lib/pprint.py	564	565	PrettyPrinter._pprint_user_string	_pprint_user_string(self, object, stream, indent, allowance, context, level)	todo		
-Lib/pprint.py	569	648	PrettyPrinter._safe_repr	_safe_repr(self, object, context, maxlevels, level)	todo		
-Lib/pprint.py	655	657	_recursion	_recursion(object)	todo		
-Lib/pprint.py	660	675	_wrap_bytes_repr	_wrap_bytes_repr(object, width, allowance)	todo		
+Lib/pprint.py	46	54	pprint	pprint(object, stream=None, indent=1, width=80, depth=None, *, compact=False, expand=False, sort_dicts=True, underscore_numbers=False)	todo		changed-in-3.15:
+Lib/pprint.py	57	63	pformat	pformat(object, indent=1, width=80, depth=None, *, compact=False, expand=False, sort_dicts=True, underscore_numbers=False)	todo		changed-in-3.15:
+Lib/pprint.py	66	68	pp	pp(object, *args, sort_dicts=False, **kwargs)	todo		
+Lib/pprint.py	71	73	saferepr	saferepr(object)	todo		
+Lib/pprint.py	76	78	isreadable	isreadable(object)	todo		
+Lib/pprint.py	81	83	isrecursive	isrecursive(object)	todo		
+Lib/pprint.py	98	99	_safe_key.__init__	__init__(self, obj)	todo		
+Lib/pprint.py	101	106	_safe_key.__lt__	__lt__(self, other)	todo		
+Lib/pprint.py	109	111	_safe_tuple	_safe_tuple(t)	todo		
+Lib/pprint.py	115	170	PrettyPrinter.__init__	__init__(self, indent=1, width=80, depth=None, stream=None, *, compact=False, expand=False, sort_dicts=True, underscore_numbers=False)	todo		changed-in-3.15:
+Lib/pprint.py	172	175	PrettyPrinter.pprint	pprint(self, object)	todo		
+Lib/pprint.py	177	180	PrettyPrinter.pformat	pformat(self, object)	todo		
+Lib/pprint.py	182	183	PrettyPrinter.isrecursive	isrecursive(self, object)	todo		
+Lib/pprint.py	185	187	PrettyPrinter.isreadable	isreadable(self, object)	todo		
+Lib/pprint.py	189	223	PrettyPrinter._format	_format(self, object, stream, indent, allowance, context, level)	todo		changed-in-3.15:
+Lib/pprint.py	225	228	PrettyPrinter._format_block_start	_format_block_start(self, start_str, indent)	todo		changed-in-3.15: new function
+Lib/pprint.py	230	233	PrettyPrinter._format_block_end	_format_block_end(self, end_str, indent)	todo		changed-in-3.15: new function
+Lib/pprint.py	235	238	PrettyPrinter._child_indent	_child_indent(self, indent, prefix_len)	todo		changed-in-3.15: new function
+Lib/pprint.py	245	254	PrettyPrinter._format_child	_format_child(self, object, stream, indent, allowance, context, level, prefix_len)	todo		changed-in-3.15: new function
+Lib/pprint.py	256	261	PrettyPrinter._write_indent_padding	_write_indent_padding(self, write)	todo		changed-in-3.15: new function
+Lib/pprint.py	263	275	PrettyPrinter._pprint_dataclass	_pprint_dataclass(self, object, stream, indent, allowance, context, level)	todo		changed-in-3.15:
+Lib/pprint.py	279	291	PrettyPrinter._pprint_dict	_pprint_dict(self, object, stream, indent, allowance, context, level)	todo		changed-in-3.15:
+Lib/pprint.py	295	317	PrettyPrinter._pprint_frozendict	_pprint_frozendict(self, object, stream, indent, allowance, context, level)	todo		changed-in-3.15: new function
+Lib/pprint.py	321	336	PrettyPrinter._pprint_ordered_dict	_pprint_ordered_dict(self, object, stream, indent, allowance, context, level)	todo		changed-in-3.15:
+Lib/pprint.py	340	360	PrettyPrinter._pprint_dict_view	_pprint_dict_view(self, object, stream, indent, allowance, context, level)	todo		changed-in-3.15: new function
+Lib/pprint.py	362	368	PrettyPrinter._pprint_mapping_abc_view	_pprint_mapping_abc_view(self, object, stream, indent, allowance, context, level)	todo		changed-in-3.15: new function
+Lib/pprint.py	385	389	PrettyPrinter._pprint_list	_pprint_list(self, object, stream, indent, allowance, context, level)	todo		changed-in-3.15:
+Lib/pprint.py	393	401	PrettyPrinter._pprint_tuple	_pprint_tuple(self, object, stream, indent, allowance, context, level)	todo		changed-in-3.15:
+Lib/pprint.py	405	421	PrettyPrinter._pprint_set	_pprint_set(self, object, stream, indent, allowance, context, level)	todo		changed-in-3.15:
+Lib/pprint.py	426	479	PrettyPrinter._pprint_str	_pprint_str(self, object, stream, indent, allowance, context, level)	todo		changed-in-3.15:
+Lib/pprint.py	483	503	PrettyPrinter._pprint_bytes	_pprint_bytes(self, object, stream, indent, allowance, context, level)	todo		changed-in-3.15:
+Lib/pprint.py	507	517	PrettyPrinter._pprint_bytearray	_pprint_bytearray(self, object, stream, indent, allowance, context, level)	todo		changed-in-3.15:
+Lib/pprint.py	521	532	PrettyPrinter._pprint_mappingproxy	_pprint_mappingproxy(self, object, stream, indent, allowance, context, level)	todo		changed-in-3.15:
+Lib/pprint.py	536	551	PrettyPrinter._pprint_simplenamespace	_pprint_simplenamespace(self, object, stream, indent, allowance, context, level)	todo		changed-in-3.15:
+Lib/pprint.py	555	578	PrettyPrinter._format_dict_items	_format_dict_items(self, items, stream, indent, allowance, context, level)	todo		changed-in-3.15:
+Lib/pprint.py	580	605	PrettyPrinter._format_namespace_items	_format_namespace_items(self, items, stream, indent, allowance, context, level)	todo		changed-in-3.15:
+Lib/pprint.py	607	647	PrettyPrinter._format_items	_format_items(self, items, stream, indent, allowance, context, level)	todo		changed-in-3.15:
+Lib/pprint.py	649	656	PrettyPrinter._repr	_repr(self, object, context, level)	todo		
+Lib/pprint.py	658	663	PrettyPrinter.format	format(self, object, context, maxlevels, level)	todo		candidates:calstat-calendar-formatstring-width
+Lib/pprint.py	665	678	PrettyPrinter._pprint_default_dict	_pprint_default_dict(self, object, stream, indent, allowance, context, level)	todo		changed-in-3.15:
+Lib/pprint.py	682	698	PrettyPrinter._pprint_counter	_pprint_counter(self, object, stream, indent, allowance, context, level)	todo		changed-in-3.15:
+Lib/pprint.py	702	721	PrettyPrinter._pprint_chain_map	_pprint_chain_map(self, object, stream, indent, allowance, context, level)	todo		changed-in-3.15:
+Lib/pprint.py	725	744	PrettyPrinter._pprint_deque	_pprint_deque(self, object, stream, indent, allowance, context, level)	todo		changed-in-3.15:
+Lib/pprint.py	748	749	PrettyPrinter._pprint_user_dict	_pprint_user_dict(self, object, stream, indent, allowance, context, level)	todo		
+Lib/pprint.py	753	754	PrettyPrinter._pprint_user_list	_pprint_user_list(self, object, stream, indent, allowance, context, level)	todo		
+Lib/pprint.py	758	759	PrettyPrinter._pprint_user_string	_pprint_user_string(self, object, stream, indent, allowance, context, level)	todo		
+Lib/pprint.py	763	780	PrettyPrinter._pprint_template	_pprint_template(self, object, stream, indent, allowance, context, level)	todo		changed-in-3.15: new function
+Lib/pprint.py	782	811	PrettyPrinter._pprint_interpolation	_pprint_interpolation(self, object, stream, indent, allowance, context, level)	todo		changed-in-3.15: new function
+Lib/pprint.py	818	945	PrettyPrinter._safe_repr	_safe_repr(self, object, context, maxlevels, level)	todo		changed-in-3.15:
+Lib/pprint.py	952	954	_recursion	_recursion(object)	todo		
+Lib/pprint.py	957	972	_wrap_bytes_repr	_wrap_bytes_repr(object, width, allowance)	todo		

@@ -102,7 +102,7 @@ def isOdd (x : Float) : Bool :=
 def zeroLike (x : Float) : Float :=
   if (x.toBits.toNat >>> 63) == 1 then -0.0 else 0.0
 
-/-- `lanczos_num_coeffs`, Modules/mathmodule.c:317-331. -/
+/-- `lanczos_num_coeffs`, Modules/mathmodule.c:318-332. -/
 def lanczosNum : List Float := [
   ofDecimal 23531376880410759688572007674451636754734846804940 true 39,
   ofDecimal 42919803642649098768957899047001988850926355848959 true 39,
@@ -118,15 +118,15 @@ def lanczosNum : List Float := [
   ofDecimal 21082427775157934587250973392071336271166969580291 true 47,
   ofDecimal 25066282746310002701649081771338373386264310793408 true 49]
 
-/-- `lanczos_den_coeffs`, Modules/mathmodule.c:334-336. -/
+/-- `lanczos_den_coeffs`, Modules/mathmodule.c:335-337. -/
 def lanczosDen : List Float :=
   [0.0, 39916800.0, 120543840.0, 150917976.0, 105258076.0, 45995730.0,
    13339535.0, 2637558.0, 357423.0, 32670.0, 1925.0, 66.0, 1.0]
 
-/-- `lanczos_g`, Modules/mathmodule.c:315. -/
+/-- `lanczos_g`, Modules/mathmodule.c:316. -/
 def lanczosG : Float := ofDecimal 6024680040776729583740234375 true 27
 
-/-- `lanczos_sum`, Modules/mathmodule.c:350-378. -/
+/-- `lanczos_sum`, Modules/mathmodule.c:351-379. -/
 def lanczosSum (x : Float) : Float :=
   let pairs := lanczosNum.zip lanczosDen
   if x < 5.0 then
@@ -138,7 +138,7 @@ def lanczosSum (x : Float) : Float :=
       (acc.1 / x + c.1, acc.2 / x + c.2)) (0.0, 0.0)
     n / d
 
-/-- `m_lgamma` for finite `x > 0`, Modules/mathmodule.c:482-523. `Lib/random.py`
+/-- `m_lgamma` for finite `x > 0`, Modules/mathmodule.c:483-524. `Lib/random.py`
 only calls it on `m + 1`, `n - m + 1`, `k + 1`, `n - k + 1`, all at least 1. -/
 def lgamma (x : Float) : Float :=
   if x == x.floor && x ≤ 2.0 then 0.0

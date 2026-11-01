@@ -13,10 +13,10 @@ Objects/iterobject.c	224	254	calliter_iternext	calliter_iternext(PyObject *op)	m
 Objects/iterobject.c	257	270	calliter_reduce	calliter_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	bytecode-calliter-ends	
 Objects/iterobject.c	321	328	anextawaitable_dealloc	anextawaitable_dealloc(PyObject *op)	todo		
 Objects/iterobject.c	331	337	anextawaitable_traverse	anextawaitable_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Objects/iterobject.c	340	367	anextawaitable_getiter	anextawaitable_getiter(anextawaitableobject *obj)	modelled	bytecode-anext-default-restarts-await	
-Objects/iterobject.c	370	407	anextawaitable_iternext	anextawaitable_iternext(PyObject *op)	modelled	bytecode-anext-default-restarts-await	
-Objects/iterobject.c	411	436	anextawaitable_proxy	anextawaitable_proxy(anextawaitableobject *obj, char *meth, PyObject *arg)	modelled	bytecode-anext-default-restarts-await	
-Objects/iterobject.c	440	444	anextawaitable_send	anextawaitable_send(PyObject *op, PyObject *arg)	todo		
-Objects/iterobject.c	448	452	anextawaitable_throw	anextawaitable_throw(PyObject *op, PyObject *args)	todo		
-Objects/iterobject.c	456	460	anextawaitable_close	anextawaitable_close(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
-Objects/iterobject.c	530	541	PyAnextAwaitable_New	PyAnextAwaitable_New(PyObject *awaitable, PyObject *default_value)	modelled	bytecode-anext-default-restarts-await	
+Objects/iterobject.c	340	368	anextawaitable_getiter	anextawaitable_getiter(anextawaitableobject *obj)	todo		changed-in-3.15: was bytecode-anext-default-restarts-await
+Objects/iterobject.c	371	408	anextawaitable_iternext	anextawaitable_iternext(PyObject *op)	modelled	bytecode-anext-default-restarts-await	
+Objects/iterobject.c	412	437	anextawaitable_proxy	anextawaitable_proxy(anextawaitableobject *obj, char *meth, PyObject *arg)	modelled	bytecode-anext-default-restarts-await	
+Objects/iterobject.c	441	445	anextawaitable_send	anextawaitable_send(PyObject *op, PyObject *arg)	todo		
+Objects/iterobject.c	449	453	anextawaitable_throw	anextawaitable_throw(PyObject *op, PyObject *args)	todo		
+Objects/iterobject.c	457	461	anextawaitable_close	anextawaitable_close(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
+Objects/iterobject.c	531	542	PyAnextAwaitable_New	PyAnextAwaitable_New(PyObject *awaitable, PyObject *default_value)	modelled	bytecode-anext-default-restarts-await	

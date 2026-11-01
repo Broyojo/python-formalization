@@ -1,8 +1,8 @@
 import PyLean.UnicodeObj.TextCase
 
 /-!
-`_PyUnicode_Dedent` (Objects/unicodeobject.c:14352-14500), used by `python -c`
-(Modules/main.c:258), and its documented twin `textwrap.dedent`
+`_PyUnicode_Dedent` (Objects/unicodeobject.c:13572-13721), used by `python -c`
+(Modules/main.c:260), and its documented twin `textwrap.dedent`
 (Lib/textwrap.py:416-444).
 
 The C code walks the UTF-8 bytes. It only compares them with `'\n'`, `' '` and
@@ -23,19 +23,19 @@ def nextLine : List Nat → List Nat × Bool × List Nat
     let (line, nl, r) := nextLine rest
     (c :: line, nl, r)
 
-/-- `leading_whitespace_end - line_start`, unicodeobject.c:14366-14378: the offset
+/-- `leading_whitespace_end - line_start`, unicodeobject.c:13586-13598: the offset
 of the first unit other than `' '` and `'\t'`, if there is one. -/
 def leadingEnd : List Nat → Nat → Option Nat
   | [], _ => none
   | c :: cs, i => if c != 32 && c != 9 then some i else leadingEnd cs (i + 1)
 
-/-- The common-prefix loop, unicodeobject.c:14399-14408. -/
+/-- The common-prefix loop, unicodeobject.c:13619-13628. -/
 def commonLen : List Nat → List Nat → Nat
   | a :: as, b :: bs => if a == b then 1 + commonLen as bs else 0
   | _, _ => 0
 
 /-- The `for` loop of `search_longest_common_leading_whitespace`,
-unicodeobject.c:14362-14416. `start` is the text of the current longest
+unicodeobject.c:13582-13636. `start` is the text of the current longest
 whitespace (`_start`), already cut to `_len`. Fuel bounds the number of lines. -/
 def searchLeading : Nat → List Nat → Option (List Nat) → Nat
   | 0, _, _ => 0
@@ -68,7 +68,7 @@ def dedentLoop (wsLen : Nat) : Nat → List Nat → Str → Option Str
       dedentLoop wsLen fuel rest
         (out ++ line.drop wsLen ++ if appendNewline then [10] else [])
 
-/-- `_PyUnicode_Dedent`, unicodeobject.c:14430-14500. -/
+/-- `_PyUnicode_Dedent`, unicodeobject.c:13651-13721. -/
 def pyUnicodeDedent (src : Str) : Option Str :=
   if src.length = 0 then some src
   else

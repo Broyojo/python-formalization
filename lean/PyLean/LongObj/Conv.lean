@@ -15,14 +15,14 @@ open PyLean PyLean.MathInt
 
 /-! ## From C integers -/
 
-/-- `PYLONG_FROM_INT(UINT_TYPE, INT_TYPE, ival)`, longobject.c:336-367, for a 32 or
+/-- `PYLONG_FROM_INT(UINT_TYPE, INT_TYPE, ival)`, longobject.c:370-401, for a 32 or
 64 bit type. -/
 def fromCInt (ival : Int) : Long :=
   if isSmallInt ival then fromSingle ival
   else if -(MASK : Int) ≤ ival ∧ ival ≤ MASK then fromSingle ival
   else ⟨decide (ival < 0), digitLoop 3 ival.natAbs⟩
 
-/-- `PYLONG_FROM_UINT(INT_TYPE, ival)`, longobject.c:378-406. -/
+/-- `PYLONG_FROM_UINT(INT_TYPE, ival)`, longobject.c:412-440. -/
 def fromCUInt (ival : Nat) : Long :=
   if (ival : Int) < nSmallPos then fromSingle ival
   else if ival ≤ MASK then fromSingle ival
@@ -62,7 +62,7 @@ theorem fromCUInt_spec {x : Nat} (h : x ≤ 2 ^ 64) : fromCUInt x = Long.ofInt x
 
 /-! ## Accumulating digits, top first -/
 
-/-- `x = (x << SHIFT) | digit; if ((x >> SHIFT) != prev) overflow;`, longobject.c:560-567
+/-- `x = (x << SHIFT) | digit; if ((x >> SHIFT) != prev) overflow;`, longobject.c:641-647
 and its copies, on `uint64_t`. `ds` runs from the top digit down. -/
 def accumLoop : List Nat → Nat → Option Nat
   | [], x => some x
@@ -70,7 +70,7 @@ def accumLoop : List Nat → Nat → Option Nat
     let x' := u64 ((x <<< 30) ||| d)
     if x' >>> 30 ≠ x then none else accumLoop ds x'
 
-/-- The same loop with no check, longobject.c:794-796 and :1619-1621. -/
+/-- The same loop with no check, longobject.c:871-873 and :1696-1698. -/
 def maskLoop : List Nat → Nat → Nat
   | [], x => x
   | d :: ds, x => maskLoop ds (u64 ((x <<< 30) ||| d))
@@ -138,7 +138,7 @@ theorem accum_digits (V : Nat) :
 
 /-! ## `long`, `Py_ssize_t` -/
 
-/-- `PyLong_AsLongAndOverflow(vv, &overflow)`, longobject.c:512-587, for an exact int. -/
+/-- `PyLong_AsLongAndOverflow(vv, &overflow)`, longobject.c:593-667, for an exact int. -/
 def asLongAndOverflow (v : Long) : Int × Int :=
   if v.isCompact = true then (v.medium, 0)
   else
@@ -150,19 +150,19 @@ def asLongAndOverflow (v : Long) : Int × Int :=
       else if sign < 0 ∧ x = 2 ^ 63 then (-(2 ^ 63), 0)
       else (-1, sign)
 
-/-- `PyLong_AsLong(obj)`, longobject.c:593-604. -/
+/-- `PyLong_AsLong(obj)`, longobject.c:673-684. -/
 def asLong (v : Long) : Py Int :=
   let (r, o) := asLongAndOverflow v
   if o ≠ 0 then .error (.overflowError "Python int too large to convert to C long") else .ok r
 
-/-- `PyLong_AsInt(obj)`, longobject.c:610-622. -/
+/-- `PyLong_AsInt(obj)`, longobject.c:690-702. -/
 def asCInt (v : Long) : Py Int :=
   let (r, o) := asLongAndOverflow v
   if o ≠ 0 ∨ r > 2 ^ 31 - 1 ∨ r < -(2 ^ 31) then
     .error (.overflowError "Python int too large to convert to C int")
   else .ok r
 
-/-- `PyLong_AsSsize_t(vv)`, longobject.c:628-671. -/
+/-- `PyLong_AsSsize_t(vv)`, longobject.c:708-751. -/
 def asSsize (v : Long) : Py Int :=
   let overflow : Py Int := .error (.overflowError "Python int too large to convert to C ssize_t")
   if v.isCompact = true then .ok v.medium
@@ -175,7 +175,7 @@ def asSsize (v : Long) : Py Int :=
       else if sign < 0 ∧ x = 2 ^ 63 then .ok (-(2 ^ 63))
       else overflow
 
-/-- `PyLong_AsUnsignedLong(vv)`, longobject.c:677-725, for an exact int. -/
+/-- `PyLong_AsUnsignedLong(vv)`, longobject.c:757-804, for an exact int. -/
 def asUnsignedLong (v : Long) : Py Nat :=
   if !v.neg && v.isCompact then .ok v.medium.toNat
   else if v.neg then .error (.overflowError "can't convert negative value to unsigned int")
@@ -184,7 +184,7 @@ def asUnsignedLong (v : Long) : Py Nat :=
     | none => .error (.overflowError "Python int too large to convert to C unsigned long")
     | some x => .ok x
 
-/-- `PyLong_AsSize_t(vv)`, longobject.c:731-767, for an exact int. -/
+/-- `PyLong_AsSize_t(vv)`, longobject.c:810-845, for an exact int. -/
 def asSizeT (v : Long) : Py Nat :=
   if !v.neg && v.isCompact then .ok v.medium.toNat
   else if v.neg then .error (.overflowError "can't convert negative value to size_t")
@@ -193,15 +193,15 @@ def asSizeT (v : Long) : Py Nat :=
     | none => .error (.overflowError "Python int too large to convert to C size_t")
     | some x => .ok x
 
-/-- `_PyLong_AsUnsignedLongMask(vv)`, longobject.c:773-798, and its `long long` twin,
-:1597-1623, identical on a 64-bit build: `x * sign` on `unsigned long`. -/
+/-- `_PyLong_AsUnsignedLongMask(vv)`, longobject.c:851-875, and its `long long` twin,
+:1675-1700, identical on a 64-bit build: `x * sign` on `unsigned long`. -/
 def asUnsignedMask (v : Long) : Nat :=
   if v.isCompact = true then (v.medium % 2 ^ 64).toNat
   else
     let sign : Int := if v.neg then -1 else 1
     (((maskLoop v.ds.reverse 0 : Nat) * sign) % 2 ^ 64).toNat
 
-/-- `PyLong_AsLongLongAndOverflow(vv, &overflow)`, longobject.c:1660-1735. It adds the
+/-- `PyLong_AsLongLongAndOverflow(vv, &overflow)`, longobject.c:1737-1810. It adds the
 digit where `PyLong_AsLongAndOverflow` ors it; `x << SHIFT` has zero low bits, so
 this is the same `accumLoop`. -/
 def asLongLongAndOverflow (v : Long) : Int × Int := asLongAndOverflow v
@@ -395,12 +395,12 @@ theorem asUnsignedMask_spec (a : Int) : asUnsignedMask (Long.ofInt a) = (a % 2 ^
 
 /-! ## Sign predicates and `_PyLong_NumBits` -/
 
-/-- `long_sign(vv)`, longobject.c:858-868, and `_PyLong_Sign`, `PyLong_GetSign`,
-:871-886: compact and non-compact branches read the same tag. -/
+/-- `long_sign(vv)`, longobject.c:935-945, and `_PyLong_Sign`, `PyLong_GetSign`,
+:948-963: compact and non-compact branches read the same tag. -/
 def longSign (v : Long) : Int :=
   if v.ds = [] then 0 else if v.neg then -1 else 1
 
-/-- `_PyLong_NumBits(vv)`, longobject.c:899-920. -/
+/-- `_PyLong_NumBits(vv)`, longobject.c:976-997. -/
 def numBits (v : Long) : Nat :=
   let n := v.ds.length
   if n > 0 then (n - 1) * 30 + bitLength (v.ds.getD (n - 1) 0) else 0
@@ -447,7 +447,7 @@ theorem numBits_spec (a : Int) : numBits (Long.ofInt a) = bitLength a.natAbs := 
 /-- `_PyHASH_MODULUS`, pyhash.h. -/
 def hashModulus : Nat := 2 ^ 61 - 1
 
-/-- One iteration of the loop of `long_hash`, longobject.c:3634-3638. -/
+/-- One iteration of the loop of `long_hash`, longobject.c@3.14.7:3634-3638. -/
 def hashStep (x d : Nat) : Nat :=
   let x := (u64 (x <<< 30) &&& hashModulus) ||| (x >>> (61 - 30))
   let x := x + d
@@ -456,7 +456,7 @@ def hashStep (x d : Nat) : Nat :=
 /-- `(Py_uhash_t)-1` becomes `-2`, and the result is read as `Py_hash_t`. -/
 def hashResult (x : Nat) : Int := s64of (if x = 2 ^ 64 - 1 then 2 ^ 64 - 2 else x)
 
-/-- `long_hash(obj)`, longobject.c:3591-3644. -/
+/-- `long_hash(obj)`, longobject.c:3674-3743. -/
 def longHash (v : Long) : Int :=
   if v.isCompact = true then hashResult (v.medium % 2 ^ 64).toNat
   else
@@ -472,7 +472,7 @@ def pyHash (a : Int) : Int :=
   if h = -1 then -2 else h
 
 /-- Rotating by `SHIFT` is multiplication by `2**SHIFT` modulo `2**61 - 1`, the argument
-of the comment at longobject.c:3609-3633. -/
+of the comment at longobject.c@3.14.7:3609-3633. -/
 theorem hashStep_spec {x d : Nat} (hx : x < hashModulus) (hd : d < 2 ^ 30) :
     hashStep x d = (x * 2 ^ 30 + d) % hashModulus := by
   have hM : hashModulus = 2 ^ 61 - 1 := rfl
@@ -549,10 +549,10 @@ def popK : Nat → Nat → Nat
   | 0, _ => 0
   | k + 1, n => popK k n + (n.testBit k).toNat
 
-/-- `popcount_digit(d)`, longobject.c:208-214: `_Py_popcount32` on a digit. -/
+/-- `popcount_digit(d)`, longobject.c:213-219: `_Py_popcount32` on a digit. -/
 def popcountDigit (d : Nat) : Nat := popK 30 d
 
-/-- `int.bit_count()`, longobject.c:6230-6245: the sum over the digits. -/
+/-- `int.bit_count()`, longobject.c:6328-6343: the sum over the digits. -/
 def bitCount (v : Long) : Nat := v.ds.foldl (fun s d => s + popcountDigit d) 0
 
 theorem popK_succ (k n : Nat) : popK (k + 1) n = popK k n + (n.testBit k).toNat :=

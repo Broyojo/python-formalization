@@ -1,23 +1,23 @@
 file	line	endline	name	signature	status	entry	note
-Objects/sliceobject.c	28	35	ellipsis_new	ellipsis_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)	todo		
-Objects/sliceobject.c	38	45	ellipsis_dealloc	ellipsis_dealloc(PyObject *ellipsis)	todo		
-Objects/sliceobject.c	48	51	ellipsis_repr	ellipsis_repr(PyObject *op)	todo		
-Objects/sliceobject.c	54	57	ellipsis_reduce	ellipsis_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
-Objects/sliceobject.c	120	141	_PyBuildSlice_Consume2	_PyBuildSlice_Consume2(PyObject *start, PyObject *stop, PyObject *step)	todo		
-Objects/sliceobject.c	144	157	PySlice_New	PySlice_New(PyObject *start, PyObject *stop, PyObject *step)	todo		
-Objects/sliceobject.c	160	164	_PyBuildSlice_ConsumeRefs	_PyBuildSlice_ConsumeRefs(PyObject *start, PyObject *stop)	todo		
-Objects/sliceobject.c	167	183	_PySlice_FromIndices	_PySlice_FromIndices(Py_ssize_t istart, Py_ssize_t istop)	todo		
-Objects/sliceobject.c	186	215	PySlice_GetIndices	PySlice_GetIndices(PyObject *_r, Py_ssize_t length, Py_ssize_t *start, Py_ssize_t *stop, Py_ssize_t *step)	modelled	rangeslice-getindices-contract	
-Objects/sliceobject.c	218	261	PySlice_Unpack	PySlice_Unpack(PyObject *_r, Py_ssize_t *start, Py_ssize_t *stop, Py_ssize_t *step)	modelled	rangeslice-list-slice-indices,rangeslice-slice-errors	
-Objects/sliceobject.c	264	303	PySlice_AdjustIndices	PySlice_AdjustIndices(Py_ssize_t length, Py_ssize_t *start, Py_ssize_t *stop, Py_ssize_t step)	modelled	rangeslice-list-slice-indices	
-Objects/sliceobject.c	308	316	PySlice_GetIndicesEx	PySlice_GetIndicesEx(PyObject *_r, Py_ssize_t length, Py_ssize_t *start, Py_ssize_t *stop, Py_ssize_t *step, Py_ssize_t *slicelength)	todo		
-Objects/sliceobject.c	319	338	slice_new	slice_new(PyTypeObject *type, PyObject *args, PyObject *kw)	todo		
-Objects/sliceobject.c	349	357	slice_dealloc	slice_dealloc(PyObject *op)	todo		
-Objects/sliceobject.c	360	365	slice_repr	slice_repr(PyObject *op)	todo		
-Objects/sliceobject.c	378	389	evaluate_slice_index	evaluate_slice_index(PyObject *v)	todo		
-Objects/sliceobject.c	396	522	_PySlice_GetLongIndices	_PySlice_GetLongIndices(PySliceObject *self, PyObject *length, PyObject **start_ptr, PyObject **stop_ptr, PyObject **step_ptr)	modelled	rangeslice-indices-in-bounds,rangeslice-range-slice	
-Objects/sliceobject.c	527	552	slice_indices	slice_indices(PyObject *op, PyObject* len)	modelled	rangeslice-indices-in-bounds,rangeslice-slice-errors	
-Objects/sliceobject.c	563	567	slice_reduce	slice_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
-Objects/sliceobject.c	578	622	slice_richcompare	slice_richcompare(PyObject *v, PyObject *w, int op)	todo		
-Objects/sliceobject.c	625	632	slice_traverse	slice_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Objects/sliceobject.c	648	660	slice_hash	slice_hash(PyObject *op)	todo		
+Objects/sliceobject.c	29	36	ellipsis_new	ellipsis_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)	todo		
+Objects/sliceobject.c	39	46	ellipsis_dealloc	ellipsis_dealloc(PyObject *ellipsis)	todo		
+Objects/sliceobject.c	49	52	ellipsis_repr	ellipsis_repr(PyObject *op)	todo		
+Objects/sliceobject.c	55	58	ellipsis_reduce	ellipsis_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
+Objects/sliceobject.c	121	142	_PyBuildSlice_Consume2	_PyBuildSlice_Consume2(PyObject *start, PyObject *stop, PyObject *step)	todo		
+Objects/sliceobject.c	145	158	PySlice_New	PySlice_New(PyObject *start, PyObject *stop, PyObject *step)	todo		
+Objects/sliceobject.c	161	165	_PyBuildSlice_ConsumeRefs	_PyBuildSlice_ConsumeRefs(PyObject *start, PyObject *stop)	todo		
+Objects/sliceobject.c	168	184	_PySlice_FromIndices	_PySlice_FromIndices(Py_ssize_t istart, Py_ssize_t istop)	todo		
+Objects/sliceobject.c	187	216	PySlice_GetIndices	PySlice_GetIndices(PyObject *_r, Py_ssize_t length, Py_ssize_t *start, Py_ssize_t *stop, Py_ssize_t *step)	modelled	rangeslice-getindices-contract	
+Objects/sliceobject.c	219	262	PySlice_Unpack	PySlice_Unpack(PyObject *_r, Py_ssize_t *start, Py_ssize_t *stop, Py_ssize_t *step)	modelled	rangeslice-list-slice-indices,rangeslice-slice-errors	
+Objects/sliceobject.c	265	304	PySlice_AdjustIndices	PySlice_AdjustIndices(Py_ssize_t length, Py_ssize_t *start, Py_ssize_t *stop, Py_ssize_t step)	modelled	rangeslice-list-slice-indices	
+Objects/sliceobject.c	309	317	PySlice_GetIndicesEx	PySlice_GetIndicesEx(PyObject *_r, Py_ssize_t length, Py_ssize_t *start, Py_ssize_t *stop, Py_ssize_t *step, Py_ssize_t *slicelength)	todo		
+Objects/sliceobject.c	320	339	slice_new	slice_new(PyTypeObject *type, PyObject *args, PyObject *kw)	todo		
+Objects/sliceobject.c	350	358	slice_dealloc	slice_dealloc(PyObject *op)	todo		
+Objects/sliceobject.c	361	366	slice_repr	slice_repr(PyObject *op)	todo		
+Objects/sliceobject.c	379	390	evaluate_slice_index	evaluate_slice_index(PyObject *v)	todo		
+Objects/sliceobject.c	397	523	_PySlice_GetLongIndices	_PySlice_GetLongIndices(PySliceObject *self, PyObject *length, PyObject **start_ptr, PyObject **stop_ptr, PyObject **step_ptr)	modelled	rangeslice-indices-in-bounds,rangeslice-range-slice	
+Objects/sliceobject.c	528	553	slice_indices	slice_indices(PyObject *op, PyObject* len)	modelled	rangeslice-indices-in-bounds,rangeslice-slice-errors	
+Objects/sliceobject.c	564	568	slice_reduce	slice_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
+Objects/sliceobject.c	581	625	slice_richcompare	slice_richcompare(PyObject *v, PyObject *w, int op)	todo		
+Objects/sliceobject.c	628	635	slice_traverse	slice_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Objects/sliceobject.c	651	663	slice_hash	slice_hash(PyObject *op)	todo		

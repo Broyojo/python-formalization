@@ -45,7 +45,7 @@ tested: "REPRODUCED on python3 3.14.7 and on main (3.16.0a1+dev) by scripts/chec
 promised_by: |
   Internal consistency: the trie branch and the decoder both treat U+FFFE as undefined.
 cause: |
-  Objects/unicodeobject.c:8696-8809: the first and third loops test `ch == 0xFFFE`, and the dict loop
+  Objects/unicodeobject.c:8555-8668: the first and third loops test `ch == 0xFFFE`, and the dict loop
   does not.
 possible_fix: |
   Skip U+FFFE in the dict loop.

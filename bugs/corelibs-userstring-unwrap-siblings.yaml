@@ -45,11 +45,11 @@ observed: |
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the ten still raise TypeError; startswith and endswith
   accept UserString. REPRODUCED.
 promised_by: |
-  No sentence; the sibling methods and gh-159868. Doc/library/collections.rst:1403: "Class that simulates a
+  No sentence; the sibling methods and gh-159868. Doc/library/collections.rst:1414: "Class that simulates a
   string object."
 cause: |
-  Lib/collections/__init__.py:1555-1556, :1578-1579, :1584-1588, :1550-1551, :1581-1582, :1596-1597,
-  :1460-1461, :1544-1545, :1575-1576 pass the argument on unchanged. Compare :1463-1466.
+  Lib/collections/__init__.py:1610-1611, :1633-1634, :1639-1643, :1605-1606, :1636-1637, :1651-1652,
+  :1515-1516, :1599-1600, :1630-1631 pass the argument on unchanged. Compare :1518-1521.
 possible_fix: |
   The same two lines as in gh-159868, in each method; for `center`, `ljust`, `rjust` on `*args`.
 duplicates:

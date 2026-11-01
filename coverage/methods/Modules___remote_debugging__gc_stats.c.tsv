@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_remote_debugging/gc_stats.c	16	25	read_gc_stats	read_gc_stats(struct gc_stats *stats, int64_t iid, PyObject *result, PyTypeObject *gc_stats_info_type)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/gc_stats.c	79	151	get_gc_stats_from_interpreter_state	get_gc_stats_from_interpreter_state(RuntimeOffsets *offsets, uintptr_t interpreter_state_addr, int64_t iid, void *context)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/gc_stats.c	154	184	get_gc_stats	get_gc_stats(RuntimeOffsets *offsets, bool all_interpreters, PyTypeObject *gc_stats_info_type)	todo		changed-in-3.15: new function

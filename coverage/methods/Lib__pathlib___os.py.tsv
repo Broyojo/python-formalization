@@ -1,35 +1,15 @@
 file	line	endline	name	signature	status	entry	note
-Lib/pathlib/_os.py	24	40	_get_copy_blocksize	_get_copy_blocksize(infd)	todo		
-Lib/pathlib/_os.py	44	50	_ficlone	_ficlone(source_fd, target_fd)	todo		
-Lib/pathlib/_os.py	56	61	_fcopyfile	_fcopyfile(source_fd, target_fd)	todo		
-Lib/pathlib/_os.py	67	82	_copy_file_range	_copy_file_range(source_fd, target_fd)	todo		
-Lib/pathlib/_os.py	88	99	_sendfile	_sendfile(source_fd, target_fd)	todo		
-Lib/pathlib/_os.py	105	109	copyfile2	copyfile2(source, target)	todo		
-Lib/pathlib/_os.py	114	166	copyfileobj	copyfileobj(source_f, target_f)	todo		
-Lib/pathlib/_os.py	169	210	magic_open	magic_open(path, mode='r', buffering=-1, encoding=None, errors=None, newline=None)	todo		
-Lib/pathlib/_os.py	213	230	ensure_distinct_paths	ensure_distinct_paths(source, target)	todo		
-Lib/pathlib/_os.py	233	252	ensure_different_files	ensure_different_files(source, target)	todo		
-Lib/pathlib/_os.py	255	311	copy_info	copy_info(info, target, follow_symlinks=True)	todo		
-Lib/pathlib/_os.py	317	318	_PathInfoBase.__init__	__init__(self, path)	todo		
-Lib/pathlib/_os.py	320	322	_PathInfoBase.__repr__	__repr__(self)	todo		
-Lib/pathlib/_os.py	324	356	_PathInfoBase._stat	_stat(self, *, follow_symlinks=True, ignore_errors=False)	todo		
-Lib/pathlib/_os.py	358	360	_PathInfoBase._posix_permissions	_posix_permissions(self, *, follow_symlinks=True)	todo		
-Lib/pathlib/_os.py	362	365	_PathInfoBase._file_id	_file_id(self, *, follow_symlinks=True)	todo		
-Lib/pathlib/_os.py	367	369	_PathInfoBase._access_time_ns	_access_time_ns(self, *, follow_symlinks=True)	todo		
-Lib/pathlib/_os.py	371	373	_PathInfoBase._mod_time_ns	_mod_time_ns(self, *, follow_symlinks=True)	todo		
-Lib/pathlib/_os.py	376	378	_PathInfoBase._bsd_flags	_bsd_flags(self, *, follow_symlinks=True)	todo		
-Lib/pathlib/_os.py	381	391	_PathInfoBase._xattrs	_xattrs(self, *, follow_symlinks=True)	todo		
-Lib/pathlib/_os.py	399	411	_WindowsPathInfo.exists	exists(self, *, follow_symlinks=True)	todo		
-Lib/pathlib/_os.py	413	425	_WindowsPathInfo.is_dir	is_dir(self, *, follow_symlinks=True)	todo		
-Lib/pathlib/_os.py	427	439	_WindowsPathInfo.is_file	is_file(self, *, follow_symlinks=True)	todo		
-Lib/pathlib/_os.py	441	447	_WindowsPathInfo.is_symlink	is_symlink(self)	todo		
-Lib/pathlib/_os.py	455	460	_PosixPathInfo.exists	exists(self, *, follow_symlinks=True)	todo		
-Lib/pathlib/_os.py	462	467	_PosixPathInfo.is_dir	is_dir(self, *, follow_symlinks=True)	todo		
-Lib/pathlib/_os.py	469	474	_PosixPathInfo.is_file	is_file(self, *, follow_symlinks=True)	todo		
-Lib/pathlib/_os.py	476	481	_PosixPathInfo.is_symlink	is_symlink(self)	todo		
-Lib/pathlib/_os.py	493	495	DirEntryInfo.__init__	__init__(self, entry)	todo		
-Lib/pathlib/_os.py	497	503	DirEntryInfo._stat	_stat(self, *, follow_symlinks=True, ignore_errors=False)	todo		
-Lib/pathlib/_os.py	505	509	DirEntryInfo.exists	exists(self, *, follow_symlinks=True)	todo		
-Lib/pathlib/_os.py	511	516	DirEntryInfo.is_dir	is_dir(self, *, follow_symlinks=True)	todo		
-Lib/pathlib/_os.py	518	523	DirEntryInfo.is_file	is_file(self, *, follow_symlinks=True)	todo		
-Lib/pathlib/_os.py	525	530	DirEntryInfo.is_symlink	is_symlink(self)	todo		
+Lib/pathlib/_os.py	23	39	_get_copy_blocksize	_get_copy_blocksize(infd)	todo		
+Lib/pathlib/_os.py	43	49	_ficlone	_ficlone(source_fd, target_fd)	todo		
+Lib/pathlib/_os.py	55	60	_fcopyfile	_fcopyfile(source_fd, target_fd)	todo		
+Lib/pathlib/_os.py	66	81	_copy_file_range	_copy_file_range(source_fd, target_fd)	todo		
+Lib/pathlib/_os.py	87	98	_sendfile	_sendfile(source_fd, target_fd)	todo		
+Lib/pathlib/_os.py	104	108	copyfile2	copyfile2(source, target)	todo		
+Lib/pathlib/_os.py	113	165	copyfileobj	copyfileobj(source_f, target_f)	todo		
+Lib/pathlib/_os.py	168	176	_open_reader	_open_reader(obj)	todo		changed-in-3.15: new function
+Lib/pathlib/_os.py	179	187	_open_writer	_open_writer(obj, mode)	todo		changed-in-3.15: new function
+Lib/pathlib/_os.py	190	198	_open_updater	_open_updater(obj, mode)	todo		changed-in-3.15: new function
+Lib/pathlib/_os.py	201	247	vfsopen	vfsopen(obj, mode='r', buffering=-1, encoding=None, errors=None, newline=None)	todo		changed-in-3.15: new function
+Lib/pathlib/_os.py	250	261	vfspath	vfspath(obj)	todo		changed-in-3.15: new function
+Lib/pathlib/_os.py	264	281	ensure_distinct_paths	ensure_distinct_paths(source, target)	todo		changed-in-3.15:
+Lib/pathlib/_os.py	284	303	ensure_different_files	ensure_different_files(source, target)	todo		changed-in-3.15:

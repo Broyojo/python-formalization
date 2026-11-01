@@ -46,7 +46,7 @@ observed: |
   python3 3.14.7: contiguous True False; cast '0' vs TypeError; join b'' vs TypeError. REPRODUCED.
   main (python.exe 3.16.0a1+dev): identical. REPRODUCED.
 promised_by: |
-  Objects/abstract.c:458-459 and :498-499 ("len = 0 <==> exists i: shape[i] = 0", then "if
+  Objects/abstract.c:468-469 and :508-509 ("len = 0 <==> exists i: shape[i] = 0", then "if
   (view->len == 0) return 1"); Doc/glossary.rst:348, "contiguous".
 cause: |
   Objects/memoryobject.c:240-241 (MV_CONTIGUOUS_NDIM1) and :621-624 (init_flags, case 1) have no

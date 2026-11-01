@@ -1,0 +1,14 @@
+file	line	endline	name	signature	status	entry	note
+Lib/profiling/tracing/__init__.py	18	29	run	run(statement, filename=None, sort=-1)	todo		changed-in-3.15: new function
+Lib/profiling/tracing/__init__.py	31	38	runctx	runctx(statement, globals, locals, filename=None, sort=-1)	todo		changed-in-3.15: new function
+Lib/profiling/tracing/__init__.py	55	59	Profile.print_stats	print_stats(self, sort=-1)	todo		
+Lib/profiling/tracing/__init__.py	61	65	Profile.dump_stats	dump_stats(self, file)	todo		
+Lib/profiling/tracing/__init__.py	67	69	Profile.create_stats	create_stats(self)	todo		
+Lib/profiling/tracing/__init__.py	71	104	Profile.snapshot_stats	snapshot_stats(self)	todo		
+Lib/profiling/tracing/__init__.py	109	112	Profile.run	run(self, cmd)	todo		
+Lib/profiling/tracing/__init__.py	114	120	Profile.runctx	runctx(self, cmd, globals, locals)	todo		
+Lib/profiling/tracing/__init__.py	123	128	Profile.runcall	runcall(self, func, /, *args, **kw)	todo		
+Lib/profiling/tracing/__init__.py	130	132	Profile.__enter__	__enter__(self)	todo		
+Lib/profiling/tracing/__init__.py	134	135	Profile.__exit__	__exit__(self, *exc_info)	todo		
+Lib/profiling/tracing/__init__.py	139	143	label	label(code)	todo		
+Lib/profiling/tracing/__init__.py	147	216	main	main()	todo		changed-in-3.15: new function

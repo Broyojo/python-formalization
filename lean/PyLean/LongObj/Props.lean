@@ -90,7 +90,7 @@ theorem xMulExact_proven : XMulExact := fun _ _ _ h1 h2 h3 h4 => xMul_spec h1 h2
 
 /-- `k_mul`, with `k_lopsided_mul` and `kmul_split`, is exact for all digit vectors
 including non-normalized slices, with every store inside `ret`: this is the claim of
-the "(*)" comment at longobject.c:4134-4177. -/
+the "(*)" comment at longobject.c:4233-4276. -/
 def KMulExact : Prop :=
   ∀ (same : Bool) (a b : List Nat), IsDigits a → IsDigits b → (same = true → a = b) →
     a.length + b.length + 2 ≤ maxLongDigits → kMul same a b = .ok (digitsOf (val a * val b))
@@ -147,7 +147,7 @@ theorem knuthDigit_proven : KnuthDigit := fun _ _ _ _ h1 h2 h3 h4 h5 => by
   exact ⟨q, r, a1, a2, a3, a5, a6⟩
 
 /-- `x_divrem` returns `v // w` and `v % w`. Hypotheses: the function's own stated
-precondition `2 <= size(w) <= size(v)` (longobject.c:3238-3239), digit vectors, a
+precondition `2 <= size(w) <= size(v)` (longobject.c:3320-3321), digit vectors, a
 normalized divisor, and room for the work copy. -/
 def XDivremExact : Prop :=
   ∀ v w : List Nat, IsDigits v → IsDigits w → Normal w → 2 ≤ w.length → w.length ≤ v.length →

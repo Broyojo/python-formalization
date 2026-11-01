@@ -164,8 +164,8 @@ theorem bytesRoundTrip_proven : BytesRoundTrip := by
       have h256i : (256 : Int) ^ (k + 1) = 2 ^ (8 * (k + 1)) := by rw [Int.pow_mul]; rfl
       rw [hval', h256i]; omega
 
-/-- Argument errors of `int.to_bytes` (longobject.c:6306-6324, after Argument
-Clinic's `Py_ssize_t` conversion) and `int.from_bytes` (:6370-6380). -/
+/-- Argument errors of `int.to_bytes` (longobject.c@3.14.7:6306-6324, after Argument
+Clinic's `Py_ssize_t` conversion) and `int.from_bytes` (:6458-6468). -/
 def BytesArgErrors : Prop :=
   ∀ (v length : Int) (byteorder : String) (signed : Bool) (bs : List Nat),
     ((byteorder ≠ "little" ∧ byteorder ≠ "big") → ssizeMin ≤ length → length ≤ ssizeMax →

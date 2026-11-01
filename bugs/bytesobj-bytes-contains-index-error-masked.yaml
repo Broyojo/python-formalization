@@ -47,10 +47,10 @@ promised_by: |
   Twin behaviour: find and in search for the same argument, and parse_args_finds_byte, which serves
   find, rfind, index, rindex and count, keeps the error.
 cause: |
-  Objects/bytes_methods.c:606-612 (3.14.7): the test is ival == -1 && PyErr_Occurred(), with no
+  Objects/bytes_methods.c:604-610: the test is ival == -1 && PyErr_Occurred(), with no
   _PyIndex_Check before it and PyErr_Clear inside it.
 possible_fix: |
-  Test _PyIndex_Check first, as parse_args_finds_byte does at :412-419, and return the error when it
+  Test _PyIndex_Check first, as parse_args_finds_byte does at :410-417, and return the error when it
   fails; keep the buffer path for arguments with no __index__.
 duplicates:
   issues:

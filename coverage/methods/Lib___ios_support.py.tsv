@@ -1,2 +1,2 @@
 file	line	endline	name	signature	status	entry	note
-Lib/_ios_support.py	25	71	get_platform_ios	get_platform_ios()	excluded		platform: single-OS support
+Lib/_ios_support.py	28	74	get_platform_ios	get_platform_ios()	excluded		platform: single-OS support

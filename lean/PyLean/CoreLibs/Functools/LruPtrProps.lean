@@ -49,8 +49,8 @@ def raiseCfg : PCfg Nat Int :=
 
 /-- The two twins of the bounded wrapper give the same results for any sequence of calls, with any `__eq__`. Refuted:
 with a re-entrant `__eq__` in the store, the last call of `[2, 0, 3, 4, 5, 6]` returns `60` in C and raises `KeyError`
-in Python, out of `del cache[oldkey]` at Lib/functools.py:683. C has the orphan branch at
-Modules/_functoolsmodule.c:1446-1454, and Python has no such branch. -/
+in Python, out of `del cache[oldkey]` at Lib/functools.py:699. C has the orphan branch at
+Modules/_functoolsmodule.c:1542-1550, and Python has no such branch. -/
 def LruTwinsReentrantEq : Prop :=
   ∀ (cfg : PCfg Nat Int) (ks : List Nat) (t : Option Nat), 0 < cfg.maxsize →
     (ptrSeq (callPtrC cfg 40) ks (LS.empty t)).1 = (ptrSeq (callPtrP cfg 40) ks (LS.empty t)).1
@@ -63,7 +63,7 @@ theorem lruTwinsReentrantEq_refuted : ¬LruTwinsReentrantEq := by
   decide +kernel
 
 /-- The orphan is real, in both twins. In the run above, after the second call, the dict holds two keys and the ring
-holds three links, two of them for key `0`: the comment at Modules/_functoolsmodule.c:1398-1402. C's dict refers to the
+holds three links, two of them for key `0`: the comment at Modules/_functoolsmodule.c:1494-1498. C's dict refers to the
 newer of the two links and Python's to the older, because Python links first and stores last. -/
 def LruOrphanReached : Prop :=
   let c := (ptrSeq (callPtrC reCfg 40) [2, 0] (LS.empty (some 3))).2
@@ -104,9 +104,9 @@ def gcCfg : PCfg Nat Int :=
     .call 2 (fun _ => .raise (.valueError "eq")), -1⟩
 
 /-- The C wrapper's list stays a ring through the root, for any calls and any `__eq__`. Refuted: `[1, 2, 1, 3]`. In the
-fourth call the oldest link is unlinked and its key popped, Modules/_functoolsmodule.c:1427-1434. The pop runs `__eq__`,
+fourth call the oldest link is unlinked and its key popped, Modules/_functoolsmodule.c:1523-1530. The pop runs `__eq__`,
 which calls the wrapper with that key: a hit, since the dict still has it, so the link is appended. Then `__eq__` raises,
-and the error path prepends the same link, :1435-1445. The list has a cycle without the root, and
+and the error path prepends the same link, :1531-1541. The list has a cycle without the root, and
 `lru_cache_tp_traverse` never ends. -/
 def LruRingCloses : Prop :=
   ∀ (cfg : PCfg Nat Int) (ks : List Nat) (t : Option Nat),
@@ -168,7 +168,7 @@ end General
 
 /-- C's orphan branch, for any state in which these lookups meet no `__eq__`: with a full cache and an oldest link whose
 key is no longer in the dict, the update returns the computed result, the link is gone, and the new key is not stored,
-Modules/_functoolsmodule.c:1446-1454. -/
+Modules/_functoolsmodule.c:1542-1550. -/
 def LruOrphanC : Prop :=
   ∀ (K V : Type) [DecidableEq K] [Inhabited V] (cfg : PCfg K V) (fuel : Nat) (key ok : K) (result : V) (s : LS K V),
     let l := (s.link s.root).next
@@ -186,7 +186,7 @@ theorem lruOrphanC_proven : LruOrphanC := by
   have h7 := findC_plain cfg fuel ok _ h5
   rw [h7, h6]
 
-/-- The same state in Python: the root has already moved, and `del cache[oldkey]` raises `KeyError`, Lib/functools.py:683.
+/-- The same state in Python: the root has already moved, and `del cache[oldkey]` raises `KeyError`, Lib/functools.py:699.
 There is no branch for it, so the exception reaches the caller of the cached function. -/
 def LruOrphanP : Prop :=
   ∀ (K V : Type) [DecidableEq K] [Inhabited V] (cfg : PCfg K V) (fuel : Nat) (key ok : K) (result : V) (s : LS K V),
@@ -210,7 +210,7 @@ theorem lruOrphanP_proven : LruOrphanP := by
   rw [h7, h6]
 
 /-- A `__eq__` that raises in the eviction, in C: the link goes back to the oldest place, the dict is unchanged, and the
-exception propagates, Modules/_functoolsmodule.c:1435-1445. -/
+exception propagates, Modules/_functoolsmodule.c:1531-1541. -/
 def LruPopRaisesC : Prop :=
   ∀ (K V : Type) [DecidableEq K] [Inhabited V] (cfg : PCfg K V) (fuel : Nat) (key ok : K) (result : V) (s : LS K V)
     (e : PyExc),
@@ -231,7 +231,7 @@ theorem lruPopRaisesC_proven : LruPopRaisesC := by
   rw [h8]
 
 /-- A `__eq__` that raises in the `del`, in Python: the dict still has the key, the root has moved and carries no key,
-Lib/functools.py:675-683. So the key's dict entry is the root, and the next call with that key is a hit on the root that
+Lib/functools.py:690-699. So the key's dict entry is the root, and the next call with that key is a hit on the root that
 returns `None`. -/
 def LruDelRaisesP : Prop :=
   ∀ (K V : Type) [DecidableEq K] [Inhabited V] (cfg : PCfg K V) (fuel : Nat) (key ok : K) (result : V) (s : LS K V)
@@ -266,7 +266,7 @@ theorem lruClearResets_proven : LruClearResets := by
   refine ⟨rfl, rfl, rfl, rfl, rfl, rfl, ?_, rfl⟩
   simp [LS.clear, LS.link, List.getD, h]
 
-/-- The `maxsize == 0` branch, Lib/functools.py:617-622 and Modules/_functoolsmodule.c:1202-1211: every call is a miss
+/-- The `maxsize == 0` branch, Lib/functools.py:624-630 and Modules/_functoolsmodule.c:1298-1307: every call is a miss
 and runs the function, and there is no key, so nothing can be remembered and the function's exception propagates. -/
 def LruUncachedRuns : Prop :=
   ∀ (K V : Type) [DecidableEq K] (f : K → Nat → Prog K V) (fuel m : Nat) (key : K) (v : V) (e : PyExc),
@@ -279,7 +279,7 @@ theorem lruUncachedRuns_proven : LruUncachedRuns := by
   · intro h; simp [callNone, h, runNone]
   · intro h; simp [callNone, h, runNone]
 
-/-- The `maxsize is None` branch, Lib/functools.py:626-637 and Modules/_functoolsmodule.c:1214-1249, which is `cache`: a
+/-- The `maxsize is None` branch, Lib/functools.py:634-646 and Modules/_functoolsmodule.c:1310-1345, which is `cache`: a
 miss stores the result, and the next call is a hit that does not run the function. -/
 def LruInfiniteMemo : Prop :=
   ∀ (K V : Type) [DecidableEq K] (f : K → Nat → Prog K V) (F : Faults K) (fuel : Nat) (key : K) (v : V)

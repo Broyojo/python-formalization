@@ -5,7 +5,7 @@ Objects/codeobject.c	66	81	PyCode_AddWatcher	PyCode_AddWatcher(PyCode_WatchCallb
 Objects/codeobject.c	84	95	validate_watcher_id	validate_watcher_id(PyInterpreterState *interp, int watcher_id)	todo		
 Objects/codeobject.c	98	108	PyCode_ClearWatcher	PyCode_ClearWatcher(int watcher_id)	todo		
 Objects/codeobject.c	117	137	should_intern_string	should_intern_string(PyObject *o)	todo		
-Objects/codeobject.c	147	178	should_immortalize_constant	should_immortalize_constant(PyObject *v)	todo		
+Objects/codeobject.c	147	178	should_immortalize_constant	should_immortalize_constant(PyObject *v)	todo		changed-in-3.15:
 Objects/codeobject.c	182	197	intern_strings	intern_strings(PyObject *tuple)	todo		
 Objects/codeobject.c	203	304	intern_constants	intern_constants(PyObject *tuple, int *modified)	todo		
 Objects/codeobject.c	310	346	validate_and_copy_tuple	validate_and_copy_tuple(PyObject *tup)	todo		
@@ -14,109 +14,106 @@ Objects/codeobject.c	381	386	_Py_set_localsplus_info	_Py_set_localsplus_info(int
 Objects/codeobject.c	389	421	get_localsplus_counts	get_localsplus_counts(PyObject *names, PyObject *kinds, int *pnlocals, int *pncellvars, int *pnfreevars)	todo		
 Objects/codeobject.c	424	443	get_localsplus_names	get_localsplus_names(PyCodeObject *co, _PyLocals_Kind kind, int num)	todo		
 Objects/codeobject.c	446	501	_PyCode_Validate	_PyCode_Validate(struct _PyCodeConstructor *con)	todo		
-Objects/codeobject.c	511	593	init_code	init_code(PyCodeObject *co, struct _PyCodeConstructor *con)	todo		
-Objects/codeobject.c	596	607	scan_varint	scan_varint(const uint8_t *ptr)	todo		
-Objects/codeobject.c	610	619	scan_signed_varint	scan_signed_varint(const uint8_t *ptr)	todo		
-Objects/codeobject.c	622	641	get_line_delta	get_line_delta(const uint8_t *ptr)	todo		
-Objects/codeobject.c	644	684	remove_column_info	remove_column_info(PyObject *locations)	todo		
-Objects/codeobject.c	687	713	intern_code_constants	intern_code_constants(struct _PyCodeConstructor *con)	todo		
-Objects/codeobject.c	718	763	_PyCode_New	_PyCode_New(struct _PyCodeConstructor *con)	todo		
-Objects/codeobject.c	771	922	PyUnstable_Code_NewWithPosOnlyArgs	PyUnstable_Code_NewWithPosOnlyArgs( int argcount, int posonlyargcount, int kwonlyargcount, int nlocals, int stacksize, int flags, PyObject *code, PyObject *consts, PyObject *names, PyObject *varnames, PyObject *freevars, PyObject *cellvars, PyObject *filename, PyObject *name, PyObject *qualname, int firstlineno, PyObject *linetable, PyObject *exceptiontable)	todo		
-Objects/codeobject.c	925	940	PyUnstable_Code_New	PyUnstable_Code_New(int argcount, int kwonlyargcount, int nlocals, int stacksize, int flags, PyObject *code, PyObject *consts, PyObject *names, PyObject *varnames, PyObject *freevars, PyObject *cellvars, PyObject *filename, PyObject *name, PyObject *qualname, int firstlineno, PyObject *linetable, PyObject *exceptiontable)	todo		
-Objects/codeobject.c	959	1013	PyCode_NewEmpty	PyCode_NewEmpty(const char *filename, const char *funcname, int firstlineno)	todo		
-Objects/codeobject.c	1021	1037	PyCode_Addr2Line	PyCode_Addr2Line(PyCodeObject *co, int addrq)	todo		
-Objects/codeobject.c	1040	1054	_PyCode_SafeAddr2Line	_PyCode_SafeAddr2Line(PyCodeObject *co, int addrq)	todo		
-Objects/codeobject.c	1057	1065	_PyLineTable_InitAddressRange	_PyLineTable_InitAddressRange(const char *linetable, Py_ssize_t length, int firstlineno, PyCodeAddressRange *range)	todo		
-Objects/codeobject.c	1068	1075	_PyCode_InitAddressRange	_PyCode_InitAddressRange(PyCodeObject* co, PyCodeAddressRange *bounds)	todo		
-Objects/codeobject.c	1080	1093	_PyCode_CheckLineNumber	_PyCode_CheckLineNumber(int lasti, PyCodeAddressRange *bounds)	todo		
-Objects/codeobject.c	1096	1099	is_no_line_marker	is_no_line_marker(uint8_t b)	todo		
-Objects/codeobject.c	1109	1113	next_code_delta	next_code_delta(PyCodeAddressRange *bounds)	todo		
-Objects/codeobject.c	1116	1128	previous_code_delta	previous_code_delta(PyCodeAddressRange *bounds)	todo		
-Objects/codeobject.c	1131	1134	read_byte	read_byte(PyCodeAddressRange *bounds)	todo		
-Objects/codeobject.c	1137	1148	read_varint	read_varint(PyCodeAddressRange *bounds)	todo		
-Objects/codeobject.c	1151	1160	read_signed_varint	read_signed_varint(PyCodeAddressRange *bounds)	todo		
-Objects/codeobject.c	1163	1180	retreat	retreat(PyCodeAddressRange *bounds)	todo		
-Objects/codeobject.c	1183	1200	advance	advance(PyCodeAddressRange *bounds)	todo		
-Objects/codeobject.c	1203	1255	advance_with_locations	advance_with_locations(PyCodeAddressRange *bounds, int *endline, int *column, int *endcolumn)	todo		
-Objects/codeobject.c	1257	1274	PyCode_Addr2Location	PyCode_Addr2Location(PyCodeObject *co, int addrq, int *start_line, int *start_column, int *end_line, int *end_column)	todo		
-Objects/codeobject.c	1278	1280	at_end	at_end(PyCodeAddressRange *bounds) {	todo		
-Objects/codeobject.c	1283	1291	_PyLineTable_PreviousAddressRange	_PyLineTable_PreviousAddressRange(PyCodeAddressRange *range)	todo		
-Objects/codeobject.c	1294	1302	_PyLineTable_NextAddressRange	_PyLineTable_NextAddressRange(PyCodeAddressRange *range)	todo		
-Objects/codeobject.c	1305	1318	emit_pair	emit_pair(PyObject **bytes, int *offset, int a, int b)	todo		
-Objects/codeobject.c	1321	1344	emit_delta	emit_delta(PyObject **bytes, int bdelta, int ldelta, int *offset)	todo		
-Objects/codeobject.c	1347	1373	decode_linetable	decode_linetable(PyCodeObject *code)	todo		
-Objects/codeobject.c	1384	1389	lineiter_dealloc	lineiter_dealloc(PyObject *self)	todo		
-Objects/codeobject.c	1392	1398	_source_offset_converter	_source_offset_converter(void *arg) {	todo		
-Objects/codeobject.c	1401	1419	lineiter_next	lineiter_next(PyObject *self)	todo		
-Objects/codeobject.c	1465	1474	new_linesiterator	new_linesiterator(PyCodeObject *code)	todo		
-Objects/codeobject.c	1488	1493	positionsiter_dealloc	positionsiter_dealloc(PyObject *self)	todo		
-Objects/codeobject.c	1496	1512	positionsiter_next	positionsiter_next(PyObject *self)	todo		
-Objects/codeobject.c	1558	1569	code_positionsiterator	code_positionsiterator(PyObject *self, PyObject* Py_UNUSED(args))	todo		
-Objects/codeobject.c	1584	1587	code_extra_size	code_extra_size(Py_ssize_t n)	todo		
-Objects/codeobject.c	1591	1620	code_extra_grow_ft	code_extra_grow_ft(PyCodeObject *co, _PyCodeObjectExtra *old_co_extra, Py_ssize_t old_ce_size, Py_ssize_t new_ce_size, Py_ssize_t index, void *extra)	todo		
-Objects/codeobject.c	1623	1641	code_extra_grow_gil	code_extra_grow_gil(PyCodeObject *co, _PyCodeObjectExtra *old_co_extra, Py_ssize_t old_ce_size, Py_ssize_t new_ce_size, Py_ssize_t index, void *extra)	todo		
-Objects/codeobject.c	1645	1666	PyUnstable_Code_GetExtra	PyUnstable_Code_GetExtra(PyObject *code, Py_ssize_t index, void **extra)	todo		
-Objects/codeobject.c	1670	1727	PyUnstable_Code_SetExtra	PyUnstable_Code_SetExtra(PyObject *code, Py_ssize_t index, void *extra)	todo		
-Objects/codeobject.c	1735	1755	get_cached_locals	get_cached_locals(PyCodeObject *co, PyObject **cached_field, _PyLocals_Kind kind, int num)	todo		
-Objects/codeobject.c	1758	1764	_PyCode_GetVarnames	_PyCode_GetVarnames(PyCodeObject *co)	todo		
-Objects/codeobject.c	1767	1770	PyCode_GetVarnames	PyCode_GetVarnames(PyCodeObject *code)	todo		
-Objects/codeobject.c	1773	1779	_PyCode_GetCellvars	_PyCode_GetCellvars(PyCodeObject *co)	todo		
-Objects/codeobject.c	1782	1785	PyCode_GetCellvars	PyCode_GetCellvars(PyCodeObject *code)	todo		
-Objects/codeobject.c	1788	1794	_PyCode_GetFreevars	_PyCode_GetFreevars(PyCodeObject *co)	todo		
-Objects/codeobject.c	1797	1800	PyCode_GetFreevars	PyCode_GetFreevars(PyCodeObject *code)	todo		
-Objects/codeobject.c	1824	1913	identify_unbound_names	identify_unbound_names(PyThreadState *tstate, PyCodeObject *co, PyObject *globalnames, PyObject *attrnames, PyObject *globalsns, PyObject *builtinsns, struct co_unbound_counts *counts, int *p_numdupes)	todo		
-Objects/codeobject.c	1917	2021	_PyCode_GetVarCounts	_PyCode_GetVarCounts(PyCodeObject *co, _PyCode_var_counts_t *counts)	todo		
-Objects/codeobject.c	2024	2085	_PyCode_SetUnboundVarCounts	_PyCode_SetUnboundVarCounts(PyThreadState *tstate, PyCodeObject *co, _PyCode_var_counts_t *counts, PyObject *globalnames, PyObject *attrnames, PyObject *globalsns, PyObject *builtinsns)	todo		
-Objects/codeobject.c	2089	2105	_PyCode_CheckNoInternalState	_PyCode_CheckNoInternalState(PyCodeObject *co, const char **p_errmsg)	todo		
-Objects/codeobject.c	2108	2133	_PyCode_CheckNoExternalState	_PyCode_CheckNoExternalState(PyCodeObject *co, _PyCode_var_counts_t *counts, const char **p_errmsg)	todo		
-Objects/codeobject.c	2136	2166	_PyCode_VerifyStateless	_PyCode_VerifyStateless(PyThreadState *tstate, PyCodeObject *co, PyObject *globalnames, PyObject *globalsns, PyObject *builtinsns)	todo		
-Objects/codeobject.c	2170	2193	_PyCode_CheckPureFunction	_PyCode_CheckPureFunction(PyCodeObject *co, const char **p_errmsg)	todo		
-Objects/codeobject.c	2199	2260	code_returns_only_none	code_returns_only_none(PyCodeObject *co)	todo		
-Objects/codeobject.c	2263	2270	_PyCode_ReturnsOnlyNone	_PyCode_ReturnsOnlyNone(PyCodeObject *co)	todo		
-Objects/codeobject.c	2276	2287	clear_executors	clear_executors(PyCodeObject *co)	todo		
-Objects/codeobject.c	2290	2293	_PyCode_Clear_Executors	_PyCode_Clear_Executors(PyCodeObject *code)	todo		
-Objects/codeobject.c	2298	2311	deopt_code	deopt_code(PyCodeObject *code, _Py_CODEUNIT *instructions)	todo		
-Objects/codeobject.c	2314	2339	_PyCode_GetCode	_PyCode_GetCode(PyCodeObject *co)	todo		
-Objects/codeobject.c	2342	2345	PyCode_GetCode	PyCode_GetCode(PyCodeObject *co)	todo		
-Objects/codeobject.c	2384	2467	code_new_impl	code_new_impl(PyTypeObject *type, int argcount, int posonlyargcount, int kwonlyargcount, int nlocals, int stacksize, int flags, PyObject *code, PyObject *consts, PyObject *names, PyObject *varnames, PyObject *filename, PyObject *name, PyObject *qualname, int firstlineno, PyObject *linetable, PyObject *exceptiontable, PyObject *freevars, PyObject *cellvars) /*[clinic end generated code: output=069fa20d299f9dda input=e31da3c41ad8064a]*/	todo		
-Objects/codeobject.c	2470	2491	free_monitoring_data	free_monitoring_data(_PyCoMonitoringData *data)	todo		
-Objects/codeobject.c	2494	2565	code_dealloc	code_dealloc(PyObject *self)	todo		
-Objects/codeobject.c	2569	2574	code_traverse	code_traverse(PyObject *self, visitproc visit, void *arg)	todo		
-Objects/codeobject.c	2578	2595	code_repr	code_repr(PyObject *self)	todo		
-Objects/codeobject.c	2598	2684	code_richcompare	code_richcompare(PyObject *self, PyObject *other, int op)	todo		
-Objects/codeobject.c	2687	2725	code_hash	code_hash(PyObject *self)	todo		
-Objects/codeobject.c	2750	2759	code_getlnotab	code_getlnotab(PyObject *self, void *closure)	todo		
-Objects/codeobject.c	2762	2766	code_getvarnames	code_getvarnames(PyObject *self, void *closure)	todo		
-Objects/codeobject.c	2769	2773	code_getcellvars	code_getcellvars(PyObject *self, void *closure)	todo		
-Objects/codeobject.c	2776	2780	code_getfreevars	code_getfreevars(PyObject *self, void *closure)	todo		
-Objects/codeobject.c	2783	2788	code_getcodeadaptive	code_getcodeadaptive(PyObject *self, void *closure)	todo		
-Objects/codeobject.c	2791	2795	code_getcode	code_getcode(PyObject *self, void *closure)	todo		
-Objects/codeobject.c	2810	2820	code_sizeof	code_sizeof(PyObject *self, PyObject *Py_UNUSED(args))	todo		
-Objects/codeobject.c	2823	2827	code_linesiterator	code_linesiterator(PyObject *self, PyObject *Py_UNUSED(args))	todo		
-Objects/codeobject.c	2830	2834	code_branchesiterator	code_branchesiterator(PyObject *self, PyObject *Py_UNUSED(args))	todo		
-Objects/codeobject.c	2864	2948	code_replace_impl	code_replace_impl(PyCodeObject *self, int co_argcount, int co_posonlyargcount, int co_kwonlyargcount, int co_nlocals, int co_stacksize, int co_flags, int co_firstlineno, PyObject *co_code, PyObject *co_consts, PyObject *co_names, PyObject *co_varnames, PyObject *co_freevars, PyObject *co_cellvars, PyObject *co_filename, PyObject *co_name, PyObject *co_qualname, PyObject *co_linetable, PyObject *co_exceptiontable) /*[clinic end generated code: output=e75c48a15def18b9 input=a455a89c57ac9d42]*/	todo		
-Objects/codeobject.c	2962	2970	code__varname_from_oparg_impl	code__varname_from_oparg_impl(PyCodeObject *self, int oparg) /*[clinic end generated code: output=1fd1130413184206 input=6ba7d6df0d566463]*/	todo		
-Objects/codeobject.c	3042	3202	_PyCode_ConstantKey	_PyCode_ConstantKey(PyObject *op)	todo		
-Objects/codeobject.c	3206	3235	intern_one_constant	intern_one_constant(PyObject *op)	todo		
-Objects/codeobject.c	3238	3302	compare_constants	compare_constants(const void *key1, const void *key2)	todo		
-Objects/codeobject.c	3305	3329	hash_const	hash_const(const void *key)	todo		
-Objects/codeobject.c	3332	3353	clear_containers	clear_containers(_Py_hashtable_t *ht, const void *key, const void *value, void *user_data)	todo		
-Objects/codeobject.c	3356	3359	destroy_key	destroy_key(void *key)	todo		
-Objects/codeobject.c	3363	3374	_PyCode_Init	_PyCode_Init(PyInterpreterState *interp)	todo		
-Objects/codeobject.c	3377	3389	_PyCode_Fini	_PyCode_Fini(PyInterpreterState *interp)	todo		
-Objects/codeobject.c	3414	3421	_Py_ReserveTLBCIndex	_Py_ReserveTLBCIndex(PyInterpreterState *interp)	todo		
-Objects/codeobject.c	3424	3430	_Py_ClearTLBCIndex	_Py_ClearTLBCIndex(_PyThreadStateImpl *tstate)	todo		
-Objects/codeobject.c	3433	3443	_PyCodeArray_New	_PyCodeArray_New(Py_ssize_t size)	todo		
-Objects/codeobject.c	3447	3460	deopt_code_unit	deopt_code_unit(PyCodeObject *code, int i)	todo		
-Objects/codeobject.c	3463	3470	copy_code	copy_code(_Py_CODEUNIT *dst, PyCodeObject *co)	todo		
-Objects/codeobject.c	3473	3482	get_pow2_greater	get_pow2_greater(Py_ssize_t initial, Py_ssize_t limit)	todo		
-Objects/codeobject.c	3485	3512	create_tlbc_lock_held	create_tlbc_lock_held(PyCodeObject *co, Py_ssize_t idx)	todo		
-Objects/codeobject.c	3515	3524	get_tlbc_lock_held	get_tlbc_lock_held(PyCodeObject *co)	todo		
-Objects/codeobject.c	3527	3534	_PyCode_GetTLBC	_PyCode_GetTLBC(PyCodeObject *co)	todo		
-Objects/codeobject.c	3543	3547	flag_is_set	flag_is_set(struct flag_set *flags, Py_ssize_t idx)	todo		
-Objects/codeobject.c	3551	3573	get_indices_in_use	get_indices_in_use(PyInterpreterState *interp, struct flag_set *in_use)	todo		
-Objects/codeobject.c	3582	3589	clear_get_code_args	clear_get_code_args(struct get_code_args *args)	todo		
-Objects/codeobject.c	3592	3597	is_bytecode_unused	is_bytecode_unused(_PyCodeArray *tlbc, Py_ssize_t idx, struct flag_set *indices_in_use)	todo		
-Objects/codeobject.c	3600	3620	get_code_with_unused_tlbc	get_code_with_unused_tlbc(PyObject *obj, void *data)	todo		
-Objects/codeobject.c	3623	3634	free_unused_bytecode	free_unused_bytecode(PyCodeObject *co, struct flag_set *indices_in_use)	todo		
-Objects/codeobject.c	3637	3671	_Py_ClearUnusedTLBC	_Py_ClearUnusedTLBC(PyInterpreterState *interp)	todo		
+Objects/codeobject.c	511	595	init_code	init_code(PyCodeObject *co, struct _PyCodeConstructor *con)	todo		changed-in-3.15:
+Objects/codeobject.c	598	609	scan_varint	scan_varint(const uint8_t *ptr)	todo		
+Objects/codeobject.c	612	621	scan_signed_varint	scan_signed_varint(const uint8_t *ptr)	todo		
+Objects/codeobject.c	624	643	get_line_delta	get_line_delta(const uint8_t *ptr)	todo		
+Objects/codeobject.c	646	686	remove_column_info	remove_column_info(PyObject *locations)	todo		
+Objects/codeobject.c	689	711	intern_code_constants	intern_code_constants(struct _PyCodeConstructor *con)	todo		changed-in-3.15:
+Objects/codeobject.c	716	761	_PyCode_New	_PyCode_New(struct _PyCodeConstructor *con)	todo		
+Objects/codeobject.c	769	920	PyUnstable_Code_NewWithPosOnlyArgs	PyUnstable_Code_NewWithPosOnlyArgs( int argcount, int posonlyargcount, int kwonlyargcount, int nlocals, int stacksize, int flags, PyObject *code, PyObject *consts, PyObject *names, PyObject *varnames, PyObject *freevars, PyObject *cellvars, PyObject *filename, PyObject *name, PyObject *qualname, int firstlineno, PyObject *linetable, PyObject *exceptiontable)	todo		
+Objects/codeobject.c	923	938	PyUnstable_Code_New	PyUnstable_Code_New(int argcount, int kwonlyargcount, int nlocals, int stacksize, int flags, PyObject *code, PyObject *consts, PyObject *names, PyObject *varnames, PyObject *freevars, PyObject *cellvars, PyObject *filename, PyObject *name, PyObject *qualname, int firstlineno, PyObject *linetable, PyObject *exceptiontable)	todo		
+Objects/codeobject.c	958	1012	PyCode_NewEmpty	PyCode_NewEmpty(const char *filename, const char *funcname, int firstlineno)	todo		changed-in-3.15:
+Objects/codeobject.c	1020	1036	PyCode_Addr2Line	PyCode_Addr2Line(PyCodeObject *co, int addrq)	todo		
+Objects/codeobject.c	1039	1053	_PyCode_SafeAddr2Line	_PyCode_SafeAddr2Line(PyCodeObject *co, int addrq)	todo		
+Objects/codeobject.c	1056	1064	_PyLineTable_InitAddressRange	_PyLineTable_InitAddressRange(const char *linetable, Py_ssize_t length, int firstlineno, PyCodeAddressRange *range)	todo		
+Objects/codeobject.c	1067	1074	_PyCode_InitAddressRange	_PyCode_InitAddressRange(PyCodeObject* co, PyCodeAddressRange *bounds)	todo		
+Objects/codeobject.c	1079	1092	_PyCode_CheckLineNumber	_PyCode_CheckLineNumber(int lasti, PyCodeAddressRange *bounds)	todo		
+Objects/codeobject.c	1095	1098	is_no_line_marker	is_no_line_marker(uint8_t b)	todo		
+Objects/codeobject.c	1108	1112	next_code_delta	next_code_delta(PyCodeAddressRange *bounds)	todo		
+Objects/codeobject.c	1115	1127	previous_code_delta	previous_code_delta(PyCodeAddressRange *bounds)	todo		
+Objects/codeobject.c	1130	1133	read_byte	read_byte(PyCodeAddressRange *bounds)	todo		
+Objects/codeobject.c	1136	1147	read_varint	read_varint(PyCodeAddressRange *bounds)	todo		
+Objects/codeobject.c	1150	1159	read_signed_varint	read_signed_varint(PyCodeAddressRange *bounds)	todo		
+Objects/codeobject.c	1162	1179	retreat	retreat(PyCodeAddressRange *bounds)	todo		
+Objects/codeobject.c	1182	1199	advance	advance(PyCodeAddressRange *bounds)	todo		
+Objects/codeobject.c	1202	1254	advance_with_locations	advance_with_locations(PyCodeAddressRange *bounds, int *endline, int *column, int *endcolumn)	todo		
+Objects/codeobject.c	1256	1273	PyCode_Addr2Location	PyCode_Addr2Location(PyCodeObject *co, int addrq, int *start_line, int *start_column, int *end_line, int *end_column)	todo		
+Objects/codeobject.c	1277	1279	at_end	at_end(PyCodeAddressRange *bounds) {	todo		
+Objects/codeobject.c	1282	1290	_PyLineTable_PreviousAddressRange	_PyLineTable_PreviousAddressRange(PyCodeAddressRange *range)	todo		
+Objects/codeobject.c	1293	1301	_PyLineTable_NextAddressRange	_PyLineTable_NextAddressRange(PyCodeAddressRange *range)	todo		
+Objects/codeobject.c	1312	1317	lineiter_dealloc	lineiter_dealloc(PyObject *self)	todo		
+Objects/codeobject.c	1320	1326	_source_offset_converter	_source_offset_converter(void *arg) {	todo		
+Objects/codeobject.c	1329	1347	lineiter_next	lineiter_next(PyObject *self)	todo		
+Objects/codeobject.c	1393	1402	new_linesiterator	new_linesiterator(PyCodeObject *code)	todo		
+Objects/codeobject.c	1416	1421	positionsiter_dealloc	positionsiter_dealloc(PyObject *self)	todo		
+Objects/codeobject.c	1424	1440	positionsiter_next	positionsiter_next(PyObject *self)	todo		
+Objects/codeobject.c	1486	1497	code_positionsiterator	code_positionsiterator(PyObject *self, PyObject* Py_UNUSED(args))	todo		
+Objects/codeobject.c	1512	1515	code_extra_size	code_extra_size(Py_ssize_t n)	todo		
+Objects/codeobject.c	1519	1548	code_extra_grow_ft	code_extra_grow_ft(PyCodeObject *co, _PyCodeObjectExtra *old_co_extra, Py_ssize_t old_ce_size, Py_ssize_t new_ce_size, Py_ssize_t index, void *extra)	todo		
+Objects/codeobject.c	1551	1569	code_extra_grow_gil	code_extra_grow_gil(PyCodeObject *co, _PyCodeObjectExtra *old_co_extra, Py_ssize_t old_ce_size, Py_ssize_t new_ce_size, Py_ssize_t index, void *extra)	todo		
+Objects/codeobject.c	1573	1594	PyUnstable_Code_GetExtra	PyUnstable_Code_GetExtra(PyObject *code, Py_ssize_t index, void **extra)	todo		
+Objects/codeobject.c	1598	1655	PyUnstable_Code_SetExtra	PyUnstable_Code_SetExtra(PyObject *code, Py_ssize_t index, void *extra)	todo		
+Objects/codeobject.c	1663	1683	get_cached_locals	get_cached_locals(PyCodeObject *co, PyObject **cached_field, _PyLocals_Kind kind, int num)	todo		
+Objects/codeobject.c	1686	1692	_PyCode_GetVarnames	_PyCode_GetVarnames(PyCodeObject *co)	todo		
+Objects/codeobject.c	1695	1698	PyCode_GetVarnames	PyCode_GetVarnames(PyCodeObject *code)	todo		
+Objects/codeobject.c	1701	1707	_PyCode_GetCellvars	_PyCode_GetCellvars(PyCodeObject *co)	todo		
+Objects/codeobject.c	1710	1713	PyCode_GetCellvars	PyCode_GetCellvars(PyCodeObject *code)	todo		
+Objects/codeobject.c	1716	1722	_PyCode_GetFreevars	_PyCode_GetFreevars(PyCodeObject *co)	todo		
+Objects/codeobject.c	1725	1728	PyCode_GetFreevars	PyCode_GetFreevars(PyCodeObject *code)	todo		
+Objects/codeobject.c	1752	1841	identify_unbound_names	identify_unbound_names(PyThreadState *tstate, PyCodeObject *co, PyObject *globalnames, PyObject *attrnames, PyObject *globalsns, PyObject *builtinsns, struct co_unbound_counts *counts, int *p_numdupes)	todo		changed-in-3.15:
+Objects/codeobject.c	1845	1949	_PyCode_GetVarCounts	_PyCode_GetVarCounts(PyCodeObject *co, _PyCode_var_counts_t *counts)	todo		
+Objects/codeobject.c	1952	2013	_PyCode_SetUnboundVarCounts	_PyCode_SetUnboundVarCounts(PyThreadState *tstate, PyCodeObject *co, _PyCode_var_counts_t *counts, PyObject *globalnames, PyObject *attrnames, PyObject *globalsns, PyObject *builtinsns)	todo		
+Objects/codeobject.c	2017	2033	_PyCode_CheckNoInternalState	_PyCode_CheckNoInternalState(PyCodeObject *co, const char **p_errmsg)	todo		
+Objects/codeobject.c	2036	2061	_PyCode_CheckNoExternalState	_PyCode_CheckNoExternalState(PyCodeObject *co, _PyCode_var_counts_t *counts, const char **p_errmsg)	todo		
+Objects/codeobject.c	2064	2094	_PyCode_VerifyStateless	_PyCode_VerifyStateless(PyThreadState *tstate, PyCodeObject *co, PyObject *globalnames, PyObject *globalsns, PyObject *builtinsns)	todo		
+Objects/codeobject.c	2098	2121	_PyCode_CheckPureFunction	_PyCode_CheckPureFunction(PyCodeObject *co, const char **p_errmsg)	todo		
+Objects/codeobject.c	2127	2164	code_returns_only_none	code_returns_only_none(PyCodeObject *co)	todo		changed-in-3.15:
+Objects/codeobject.c	2167	2174	_PyCode_ReturnsOnlyNone	_PyCode_ReturnsOnlyNone(PyCodeObject *co)	todo		
+Objects/codeobject.c	2180	2191	clear_executors	clear_executors(PyCodeObject *co)	todo		
+Objects/codeobject.c	2194	2197	_PyCode_Clear_Executors	_PyCode_Clear_Executors(PyCodeObject *code)	todo		
+Objects/codeobject.c	2202	2215	deopt_code	deopt_code(PyCodeObject *code, _Py_CODEUNIT *instructions)	todo		
+Objects/codeobject.c	2218	2243	_PyCode_GetCode	_PyCode_GetCode(PyCodeObject *co)	todo		
+Objects/codeobject.c	2246	2249	PyCode_GetCode	PyCode_GetCode(PyCodeObject *co)	todo		
+Objects/codeobject.c	2288	2371	code_new_impl	code_new_impl(PyTypeObject *type, int argcount, int posonlyargcount, int kwonlyargcount, int nlocals, int stacksize, int flags, PyObject *code, PyObject *consts, PyObject *names, PyObject *varnames, PyObject *filename, PyObject *name, PyObject *qualname, int firstlineno, PyObject *linetable, PyObject *exceptiontable, PyObject *freevars, PyObject *cellvars) /*[clinic end generated code: output=069fa20d299f9dda input=e31da3c41ad8064a]*/	todo		
+Objects/codeobject.c	2374	2395	free_monitoring_data	free_monitoring_data(_PyCoMonitoringData *data)	todo		
+Objects/codeobject.c	2398	2469	code_dealloc	code_dealloc(PyObject *self)	todo		
+Objects/codeobject.c	2473	2478	code_traverse	code_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/codeobject.c	2482	2499	code_repr	code_repr(PyObject *self)	todo		
+Objects/codeobject.c	2502	2588	code_richcompare	code_richcompare(PyObject *self, PyObject *other, int op)	todo		changed-in-3.15:
+Objects/codeobject.c	2591	2629	code_hash	code_hash(PyObject *self)	todo		
+Objects/codeobject.c	2654	2658	code_getvarnames	code_getvarnames(PyObject *self, void *closure)	todo		
+Objects/codeobject.c	2661	2665	code_getcellvars	code_getcellvars(PyObject *self, void *closure)	todo		
+Objects/codeobject.c	2668	2672	code_getfreevars	code_getfreevars(PyObject *self, void *closure)	todo		
+Objects/codeobject.c	2675	2680	code_getcodeadaptive	code_getcodeadaptive(PyObject *self, void *closure)	todo		
+Objects/codeobject.c	2683	2687	code_getcode	code_getcode(PyObject *self, void *closure)	todo		
+Objects/codeobject.c	2701	2711	code_sizeof	code_sizeof(PyObject *self, PyObject *Py_UNUSED(args))	todo		
+Objects/codeobject.c	2714	2718	code_linesiterator	code_linesiterator(PyObject *self, PyObject *Py_UNUSED(args))	todo		
+Objects/codeobject.c	2721	2725	code_branchesiterator	code_branchesiterator(PyObject *self, PyObject *Py_UNUSED(args))	todo		
+Objects/codeobject.c	2756	2840	code_replace_impl	code_replace_impl(PyCodeObject *self, int co_argcount, int co_posonlyargcount, int co_kwonlyargcount, int co_nlocals, int co_stacksize, int co_flags, int co_firstlineno, PyObject *co_code, PyObject *co_consts, PyObject *co_names, PyObject *co_varnames, PyObject *co_freevars, PyObject *co_cellvars, PyObject *co_filename, PyObject *co_name, PyObject *co_qualname, PyObject *co_linetable, PyObject *co_exceptiontable) /*[clinic end generated code: output=e75c48a15def18b9 input=e944fdac8b456114]*/	todo		
+Objects/codeobject.c	2854	2862	code__varname_from_oparg_impl	code__varname_from_oparg_impl(PyCodeObject *self, int oparg) /*[clinic end generated code: output=1fd1130413184206 input=6ba7d6df0d566463]*/	todo		
+Objects/codeobject.c	2934	3094	_PyCode_ConstantKey	_PyCode_ConstantKey(PyObject *op)	todo		changed-in-3.15:
+Objects/codeobject.c	3098	3127	intern_one_constant	intern_one_constant(PyObject *op)	todo		
+Objects/codeobject.c	3130	3194	compare_constants	compare_constants(const void *key1, const void *key2)	todo		
+Objects/codeobject.c	3197	3221	hash_const	hash_const(const void *key)	todo		
+Objects/codeobject.c	3224	3245	clear_containers	clear_containers(_Py_hashtable_t *ht, const void *key, const void *value, void *user_data)	todo		
+Objects/codeobject.c	3248	3251	destroy_key	destroy_key(void *key)	todo		
+Objects/codeobject.c	3255	3266	_PyCode_Init	_PyCode_Init(PyInterpreterState *interp)	todo		
+Objects/codeobject.c	3269	3281	_PyCode_Fini	_PyCode_Fini(PyInterpreterState *interp)	todo		
+Objects/codeobject.c	3306	3313	_Py_ReserveTLBCIndex	_Py_ReserveTLBCIndex(PyInterpreterState *interp)	todo		
+Objects/codeobject.c	3316	3321	_Py_UnreserveTLBCIndex	_Py_UnreserveTLBCIndex(PyInterpreterState *interp, int32_t index)	todo		changed-in-3.15: new function
+Objects/codeobject.c	3324	3328	_Py_ClearTLBCIndex	_Py_ClearTLBCIndex(_PyThreadStateImpl *tstate)	todo		changed-in-3.15:
+Objects/codeobject.c	3331	3341	_PyCodeArray_New	_PyCodeArray_New(Py_ssize_t size)	todo		
+Objects/codeobject.c	3345	3358	deopt_code_unit	deopt_code_unit(PyCodeObject *code, int i)	todo		
+Objects/codeobject.c	3361	3368	copy_code	copy_code(PyInterpreterState *interp, _Py_CODEUNIT *dst, PyCodeObject *co)	todo		changed-in-3.15:
+Objects/codeobject.c	3371	3380	get_pow2_greater	get_pow2_greater(Py_ssize_t initial, Py_ssize_t limit)	todo		
+Objects/codeobject.c	3383	3410	create_tlbc_lock_held	create_tlbc_lock_held(PyInterpreterState *interp, PyCodeObject *co, Py_ssize_t idx)	todo		changed-in-3.15:
+Objects/codeobject.c	3413	3423	get_tlbc_lock_held	get_tlbc_lock_held(PyCodeObject *co)	todo		changed-in-3.15:
+Objects/codeobject.c	3426	3433	_PyCode_GetTLBC	_PyCode_GetTLBC(PyCodeObject *co)	todo		
+Objects/codeobject.c	3442	3446	flag_is_set	flag_is_set(struct flag_set *flags, Py_ssize_t idx)	todo		
+Objects/codeobject.c	3450	3472	get_indices_in_use	get_indices_in_use(PyInterpreterState *interp, struct flag_set *in_use)	todo		
+Objects/codeobject.c	3481	3488	clear_get_code_args	clear_get_code_args(struct get_code_args *args)	todo		
+Objects/codeobject.c	3491	3496	is_bytecode_unused	is_bytecode_unused(_PyCodeArray *tlbc, Py_ssize_t idx, struct flag_set *indices_in_use)	todo		
+Objects/codeobject.c	3499	3519	get_code_with_unused_tlbc	get_code_with_unused_tlbc(PyObject *obj, void *data)	todo		
+Objects/codeobject.c	3522	3533	free_unused_bytecode	free_unused_bytecode(PyCodeObject *co, struct flag_set *indices_in_use)	todo		
+Objects/codeobject.c	3536	3570	_Py_ClearUnusedTLBC	_Py_ClearUnusedTLBC(PyInterpreterState *interp)	todo		

@@ -1,6 +1,6 @@
 /-!
 Exact emulation of the two IEEE-754 binary64 operations used by
-`TextIOWrapper.tell()` (`Lib/_pyio.py:2357-2359`, `:2420`):
+`TextIOWrapper.tell()` (`Lib/_pyio.py:2381-2383`, `:2444`):
 `len(input_chunk) / len(decoded_chars)` (int true division, correctly
 rounded) and `int(ratio * chars_to_skip)` (float times int, rounded to
 nearest-even, then truncated). Only non-negative finite values occur.

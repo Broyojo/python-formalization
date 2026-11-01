@@ -29,10 +29,10 @@ observed: |
   python3 3.14.7: True F(0) 0. REPRODUCED.
   main (3.16.0a1+dev): same, REPRODUCED.
 promised_by: |
-  The docstring of EnumType.__contains__ at Lib/enum.py:729-732: `value` is in `cls` if it is a member, the value of
+  The docstring of EnumType.__contains__ at Lib/enum.py:753-756: `value` is in `cls` if it is a member, the value of
   a member, or a pseudo-member.
 cause: |
-  Lib/enum.py:736-739 takes isinstance(result, cls) and does not compare result._value_ with value; :1476-1477
+  Lib/enum.py:760-763 takes isinstance(result, cls) and does not compare result._value_ with value; :1504-1505
   has changed the value by then.
 possible_fix: |
   Compare the value of the result with the argument, or say in the docstring that the test is "would be accepted".

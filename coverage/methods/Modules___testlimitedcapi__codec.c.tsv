@@ -1,3 +1,3 @@
 file	line	endline	name	signature	status	entry	note
-Modules/_testlimitedcapi/codec.c	11	15	codec_namereplace_errors	codec_namereplace_errors(PyObject *Py_UNUSED(module), PyObject *exc)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/codec.c	23	29	_PyTestLimitedCAPI_Init_Codec	_PyTestLimitedCAPI_Init_Codec(PyObject *module)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/codec.c	12	16	codec_namereplace_errors	codec_namereplace_errors(PyObject *Py_UNUSED(module), PyObject *exc)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/codec.c	24	30	_PyTestLimitedCAPI_Init_Codec	_PyTestLimitedCAPI_Init_Codec(PyObject *module)	excluded		test-support: only for CPython's own tests

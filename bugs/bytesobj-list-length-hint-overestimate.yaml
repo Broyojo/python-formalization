@@ -9,10 +9,10 @@ summary: |
   list_extend_iter_lock_held allocates from PyObject_LengthHint before it iterates, and an allocation
   failure ends the call. So an iterable that yields one item but reports a huge hint fails:
   list(x) and [].extend(x) raise MemoryError for a hint of 2**60, sys.maxsize - 1 or sys.maxsize.
-  The outcome also depends on the list being extended, through the overflow test at :1241: with
+  The outcome also depends on the list being extended, through the overflow test at :1317: with
   hint sys.maxsize, [0].extend(x) succeeds where [].extend(x) raises, and with sys.maxsize - 1,
   [0, 0].extend(x) succeeds where [0].extend(x) raises. Separately, at hint sys.maxsize
-  list_preallocate_exact computes `size + 1` on a Py_ssize_t (:203), which is signed overflow,
+  list_preallocate_exact computes `size + 1` on a Py_ssize_t (:230), which is signed overflow,
   reachable from pure Python. The wrapped value then fails PyMem_New's size test, so the visible
   result is the same MemoryError.
   Lean: ListHintInert (any legal hint leaves extend succeeding) is refuted; ListExtendIterContents
@@ -25,7 +25,7 @@ maybe_intended: |
   Probably intended for the common case, and a maintainer may well decline this. Failing fast on a
   huge length is relied on: Lib/test/test_list.py:41 asserts MemoryError from
   list(range(sys.maxsize // 2)), where the length is accurate, and iterating first would fill
-  memory instead. The comment at :1242-1244 does consider a lying hint, though only for the overflow
+  memory instead. The comment at :1260-1262 does consider a lying hint, though only for the overflow
   branch. The strongest part of this report is the narrow one: the signed overflow at :203 is
   undefined behaviour however the MemoryError question is settled, and `size / 2`-style rounding or a
   range check would remove it.
@@ -59,15 +59,15 @@ observed: |
   The signed overflow at :203 comes from reading the source. It has not been observed under UBSan:
   no sanitizer build was run.
 promised_by: |
-  Doc/reference/datamodel.rst:3235-3240: "Should return an estimated length for the object (which may
+  Doc/reference/datamodel.rst:3258-3263: "Should return an estimated length for the object (which may
   be greater or less than the actual length) ... This method is purely an optimization and is never
   required for correctness."
 cause: |
-  Objects/listobject.c:1234 takes the hint; :1241 skips allocation only when m + n would overflow;
-  :1247-1249 and :1253-1255 treat a failed allocation as an error. :203 is
+  Objects/listobject.c:1310 takes the hint; :1317 skips allocation only when m + n would overflow;
+  :1323-1325 and :1329-1331 treat a failed allocation as an error. :230 is
   `size = (size + 1) & ~(size_t)1;` on a Py_ssize_t.
 possible_fix: |
-  At :203, round without overflowing, for instance through size_t. For the MemoryError itself, either
+  At :230, round without overflowing, for instance through size_t. For the MemoryError itself, either
   document that an absurd hint may raise, or treat a failed preallocation as "no hint" and carry on
   iterating, which gives up the fast failure that test_list.py:41 relies on unless __len__ and
   __length_hint__ are told apart.

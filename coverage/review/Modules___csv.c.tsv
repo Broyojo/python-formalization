@@ -41,8 +41,8 @@ Modules/_csv.c	1455	csv_writerows	FAITHFUL	yes	yes	yes	Status todo, reviewed thr
 Modules/_csv.c	1495	Writer_traverse	FAITHFUL	yes	-	-	GC traversal, no-behaviour by the stated policy.
 Modules/_csv.c	1506	Writer_clear	FAITHFUL	yes	-	-	Ruling: plain reference-dropping is an accepted scope limit; see the Coverage rules in AGENTS.md. Finalization is not modelled.
 Modules/_csv.c	1516	Writer_dealloc	FAITHFUL	yes	-	-	Ruling: plain reference-dropping is an accepted scope limit; see the Coverage rules in AGENTS.md. Finalization is not modelled.
-Modules/_csv.c	1653	_csv_unregister_dialect_impl	FAITHFUL	yes	yes	yes	Status todo, reviewed through textlibs-csv-unregister: the rc < 0 branch and the empty dict shortcut (Objects/dictobject.c:3171-3176) are mirrored and stated, and a __hash__ that mutates the registry is covered by taking r as the state at the lookup.
+Modules/_csv.c	1653	_csv_unregister_dialect_impl	FAITHFUL	yes	yes	yes	Status todo, reviewed through textlibs-csv-unregister: the rc < 0 branch and the empty dict shortcut (Objects/dictobject.c:3295-3300) are mirrored and stated, and a __hash__ that mutates the registry is covered by taking r as the state at the lookup.
 Modules/_csv.c	1677	_csv_get_dialect_impl	FAITHFUL	yes	yes	yes	Status todo, reviewed through textlibs-csv-get-dialect, which quantifies over every name object through KeyProbe.
 Modules/_csv.c	1695	_csv_field_size_limit_impl	FAITHFUL	yes	yes	yes	Status todo, reviewed through textlibs-csv-field-limit and textlibs-csv-limit-live: FieldLimit no longer assumes the value fits and states the OverflowError and TypeError branches.
 Modules/_csv.c	1780	csv_exec	FAITHFUL	yes	-	-	Module start-up; the constants it installs are copied into CsvModel.lean by hand rather than covered by this row.
-Modules/_csv.c	1861	PyInit__csv	FAITHFUL	yes	-	-	Only returns the module definition for multi-phase initialisation.
+Modules/_csv.c	1862	PyInit__csv	FAITHFUL	yes	-	-	Only returns the module definition for multi-phase initialisation.

@@ -395,7 +395,7 @@ theorem mono_right (key : Option (Int → Int)) (a : List Int) (x : Int) (hs : S
   have := of_decide_eq_false hg
   exact decide_eq_false (by omega)
 
-/-- `bisect_left` docstring, Lib/bisect.py:77-79 and Doc/library/bisect.rst:51-54,
+/-- `bisect_left` docstring, Lib/bisect.py:77-79 and Doc/library/bisect.rst:48-51,
 for in-range bounds `0 <= lo <= hi <= len(a)` (`hi=None` is `len(a)`) and `a`
 sorted by key: both twins return the same `ip` in `[lo, hi]` with every keyed
 element of `a[lo:ip]` `< x` and every one of `a[ip:hi]` `>= x`. -/
@@ -498,7 +498,7 @@ def LeftDoc (key : Option (Int → Int)) (a : List Int) (x lo ip hi : Int) : Pro
 def RightDoc (key : Option (Int → Int)) (a : List Int) (x lo ip hi : Int) : Prop :=
   (∀ e ∈ pySlice a lo ip, applyKey key e ≤ x) ∧ (∀ e ∈ pySlice a ip hi, x < applyKey key e)
 
-/-- Doc/library/bisect.rst:51-54 and :74-77, read literally for every `lo`
+/-- Doc/library/bisect.rst:48-51 and :71-74, read literally for every `lo`
 and `hi` the functions accept: whenever a twin returns `ip` for a sorted `a`,
 `ip` partitions the slices `a[lo:ip]` and `a[ip:hi]` (`hi=None` is `len(a)`). -/
 def BisectDocPartition : Prop :=

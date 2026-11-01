@@ -45,7 +45,7 @@ structure ElemOps (α ρ : Type) where
 
 variable {α ρ : Type}
 
-/-- `PyObject_RichCompareBool(v, w, op)`, Objects/object.c:1119-1142: the
+/-- `PyObject_RichCompareBool(v, w, op)`, Objects/object.c:1122-1148: the
 identity shortcut for `==` and `!=`, then `PyObject_RichCompare` and `IsTrue`. -/
 def richBool (E : ElemOps α ρ) (op : CmpOp) (v w : α) : Py Bool :=
   if E.same v w && op == .eq then .ok true
@@ -68,7 +68,7 @@ def cmpSizes (op : CmpOp) (a b : Int) : Bool :=
 /-- `PyObject_Length`-free reading of `a[i]`: the slot at a non-negative C index. -/
 def slot (l : List α) (i : Int) : Option α := if 0 ≤ i then l[i.toNat]? else none
 
-/-- `valid_index(i, limit)`, Objects/listobject.c:314-325: the unsigned compare
+/-- `valid_index(i, limit)`, Objects/listobject.c:341-352: the unsigned compare
 `(size_t) i < (size_t) limit`, for `0 <= limit`. -/
 def validIndex (i limit : Int) : Bool := decide (i % (2 ^ 64 : Int) < limit % (2 ^ 64 : Int))
 

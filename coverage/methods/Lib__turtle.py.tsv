@@ -1,221 +1,223 @@
 file	line	endline	name	signature	status	entry	note
-Lib/turtle.py	168	195	config_dict	config_dict(filename)	excluded		platform: GUI toolkit
-Lib/turtle.py	197	225	readconfig	readconfig(cfgdict)	excluded		platform: GUI toolkit
-Lib/turtle.py	247	248	Vec2D.__new__	__new__(cls, x, y)	excluded		platform: GUI toolkit
-Lib/turtle.py	249	250	Vec2D.__add__	__add__(self, other)	excluded		platform: GUI toolkit
-Lib/turtle.py	251	254	Vec2D.__mul__	__mul__(self, other)	excluded		platform: GUI toolkit
-Lib/turtle.py	255	258	Vec2D.__rmul__	__rmul__(self, other)	excluded		platform: GUI toolkit
-Lib/turtle.py	259	260	Vec2D.__sub__	__sub__(self, other)	excluded		platform: GUI toolkit
-Lib/turtle.py	261	262	Vec2D.__neg__	__neg__(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	263	264	Vec2D.__abs__	__abs__(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	265	271	Vec2D.rotate	rotate(self, angle)	excluded		platform: GUI toolkit
-Lib/turtle.py	272	273	Vec2D.__getnewargs__	__getnewargs__(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	274	275	Vec2D.__repr__	__repr__(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	286	294	__methodDict	__methodDict(cls, _dict)	excluded		platform: GUI toolkit
-Lib/turtle.py	296	300	__methods	__methods(cls)	excluded		platform: GUI toolkit
-Lib/turtle.py	306	324	__forwardmethods	__forwardmethods(fromClass, toClass, toPart, exclude=())	excluded		platform: GUI toolkit
-Lib/turtle.py	333	356	ScrolledCanvas.__init__	__init__(self, master, width=500, height=350, canvwidth=600, canvheight=500)	excluded		platform: GUI toolkit
-Lib/turtle.py	358	373	ScrolledCanvas.reset	reset(self, canvwidth=None, canvheight=None, bg=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	376	390	ScrolledCanvas.adjustScrolls	adjustScrolls(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	392	394	ScrolledCanvas.onResize	onResize(self, event)	excluded		platform: GUI toolkit
-Lib/turtle.py	396	399	ScrolledCanvas.bbox	bbox(self, *args)	excluded		platform: GUI toolkit
-Lib/turtle.py	401	404	ScrolledCanvas.cget	cget(self, *args, **kwargs)	excluded		platform: GUI toolkit
-Lib/turtle.py	406	409	ScrolledCanvas.config	config(self, *args, **kwargs)	excluded		platform: GUI toolkit
-Lib/turtle.py	411	414	ScrolledCanvas.bind	bind(self, *args, **kwargs)	excluded		platform: GUI toolkit
-Lib/turtle.py	416	419	ScrolledCanvas.unbind	unbind(self, *args, **kwargs)	excluded		platform: GUI toolkit
-Lib/turtle.py	421	424	ScrolledCanvas.focus_force	focus_force(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	431	432	_Root.__init__	__init__(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	434	436	_Root.setupcanvas	setupcanvas(self, width, height, cwidth, cheight)	excluded		platform: GUI toolkit
-Lib/turtle.py	438	439	_Root._getcanvas	_getcanvas(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	441	442	_Root.set_geometry	set_geometry(self, width, height, startx, starty)	excluded		platform: GUI toolkit
-Lib/turtle.py	444	445	_Root.ondestroy	ondestroy(self, destroy)	excluded		platform: GUI toolkit
-Lib/turtle.py	447	448	_Root.win_width	win_width(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	450	451	_Root.win_height	win_height(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	464	469	TurtleScreenBase._blankimage	_blankimage(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	471	475	TurtleScreenBase._image	_image(self, filename)	excluded		platform: GUI toolkit
-Lib/turtle.py	477	489	TurtleScreenBase.__init__	__init__(self, cv)	excluded		platform: GUI toolkit
-Lib/turtle.py	491	494	TurtleScreenBase._createpoly	_createpoly(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	496	519	TurtleScreenBase._drawpoly	_drawpoly(self, polyitem, coordlist, fill=None, outline=None, width=None, top=False)	excluded		platform: GUI toolkit
-Lib/turtle.py	521	525	TurtleScreenBase._createline	_createline(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	527	548	TurtleScreenBase._drawline	_drawline(self, lineitem, coordlist=None, fill=None, width=None, top=False)	excluded		platform: GUI toolkit
-Lib/turtle.py	550	554	TurtleScreenBase._delete	_delete(self, item)	excluded		platform: GUI toolkit
-Lib/turtle.py	556	568	TurtleScreenBase._update	_update(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	570	572	TurtleScreenBase._delay	_delay(self, delay)	excluded		platform: GUI toolkit
-Lib/turtle.py	574	582	TurtleScreenBase._iscolorstring	_iscolorstring(self, color)	excluded		platform: GUI toolkit
-Lib/turtle.py	584	591	TurtleScreenBase._bgcolor	_bgcolor(self, color=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	593	605	TurtleScreenBase._write	_write(self, pos, txt, align, font, pencolor)	excluded		platform: GUI toolkit
-Lib/turtle.py	607	620	TurtleScreenBase._onclick	_onclick(self, item, fun, num=1, add=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	622	639	TurtleScreenBase._onrelease	_onrelease(self, item, fun, num=1, add=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	641	660	TurtleScreenBase._ondrag	_ondrag(self, item, fun, num=1, add=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	662	678	TurtleScreenBase._onscreenclick	_onscreenclick(self, fun, num=1, add=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	680	689	TurtleScreenBase._onkeyrelease	_onkeyrelease(self, fun, key)	excluded		platform: GUI toolkit
-Lib/turtle.py	691	707	TurtleScreenBase._onkeypress	_onkeypress(self, fun, key=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	709	712	TurtleScreenBase._listen	_listen(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	714	720	TurtleScreenBase._ontimer	_ontimer(self, fun, t)	excluded		platform: GUI toolkit
-Lib/turtle.py	722	725	TurtleScreenBase._createimage	_createimage(self, image)	excluded		platform: GUI toolkit
-Lib/turtle.py	727	733	TurtleScreenBase._drawimage	_drawimage(self, item, pos, image)	excluded		platform: GUI toolkit
-Lib/turtle.py	735	741	TurtleScreenBase._setbgpic	_setbgpic(self, item, image)	excluded		platform: GUI toolkit
-Lib/turtle.py	743	747	TurtleScreenBase._type	_type(self, item)	excluded		platform: GUI toolkit
-Lib/turtle.py	749	759	TurtleScreenBase._pointlist	_pointlist(self, item)	excluded		platform: GUI toolkit
-Lib/turtle.py	761	762	TurtleScreenBase._setscrollregion	_setscrollregion(self, srx1, sry1, srx2, sry2)	excluded		platform: GUI toolkit
-Lib/turtle.py	764	774	TurtleScreenBase._rescale	_rescale(self, xscalefactor, yscalefactor)	excluded		platform: GUI toolkit
-Lib/turtle.py	776	789	TurtleScreenBase._resize	_resize(self, canvwidth=None, canvheight=None, bg=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	791	800	TurtleScreenBase._window_size	_window_size(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	802	815	TurtleScreenBase.mainloop	mainloop(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	817	830	TurtleScreenBase.textinput	textinput(self, title, prompt)	excluded		platform: GUI toolkit
-Lib/turtle.py	832	852	TurtleScreenBase.numinput	numinput(self, title, prompt, default=None, minval=None, maxval=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	881	892	Shape.__init__	__init__(self, type_, data=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	894	915	Shape.addcomponent	addcomponent(self, poly, fill, outline=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	920	924	Tbuffer.__init__	__init__(self, bufsize=10)	excluded		platform: GUI toolkit
-Lib/turtle.py	925	932	Tbuffer.reset	reset(self, bufsize=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	933	939	Tbuffer.push	push(self, item)	excluded		platform: GUI toolkit
-Lib/turtle.py	940	948	Tbuffer.pop	pop(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	949	950	Tbuffer.nr_of_items	nr_of_items(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	951	952	Tbuffer.__repr__	__repr__(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	965	1003	TurtleScreen.__init__	__init__(self, cv, mode=_CFG['mode'], colormode=_CFG['colormode'], delay=_CFG['delay'])	excluded		platform: GUI toolkit
-Lib/turtle.py	1005	1033	TurtleScreen.clear	clear(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1035	1067	TurtleScreen.mode	mode(self, mode=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	1069	1106	TurtleScreen.setworldcoordinates	setworldcoordinates(self, llx, lly, urx, ury)	excluded		platform: GUI toolkit
-Lib/turtle.py	1108	1142	TurtleScreen.register_shape	register_shape(self, name, shape=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	1144	1169	TurtleScreen._colorstr	_colorstr(self, color)	excluded		platform: GUI toolkit
-Lib/turtle.py	1171	1180	TurtleScreen._color	_color(self, cstr)	excluded		platform: GUI toolkit
-Lib/turtle.py	1182	1201	TurtleScreen.colormode	colormode(self, cmode=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	1203	1213	TurtleScreen.reset	reset(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1215	1222	TurtleScreen.turtles	turtles(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1224	1261	TurtleScreen.bgcolor	bgcolor(self, *args)	excluded		platform: GUI toolkit
-Lib/turtle.py	1263	1289	TurtleScreen.tracer	tracer(self, n=None, delay=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	1291	1304	TurtleScreen.delay	delay(self, delay=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	1307	1324	TurtleScreen.no_animation	no_animation(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1326	1333	TurtleScreen._incrementudc	_incrementudc(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1335	1344	TurtleScreen.update	update(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1346	1353	TurtleScreen.window_width	window_width(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1355	1362	TurtleScreen.window_height	window_height(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1364	1374	TurtleScreen.getcanvas	getcanvas(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1376	1385	TurtleScreen.getshapes	getshapes(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1387	1402	TurtleScreen.onclick	onclick(self, fun, btn=1, add=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	1404	1432	TurtleScreen.onkey	onkey(self, fun, key)	excluded		platform: GUI toolkit
-Lib/turtle.py	1434	1464	TurtleScreen.onkeypress	onkeypress(self, fun, key=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	1466	1476	TurtleScreen.listen	listen(self, xdummy=None, ydummy=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	1478	1497	TurtleScreen.ontimer	ontimer(self, fun, t=0)	excluded		platform: GUI toolkit
-Lib/turtle.py	1499	1521	TurtleScreen.bgpic	bgpic(self, picname=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	1523	1540	TurtleScreen.screensize	screensize(self, canvwidth=None, canvheight=None, bg=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	1542	1573	TurtleScreen.save	save(self, filename, *, overwrite=False)	excluded		platform: GUI toolkit
+Lib/turtle.py	105	132	config_dict	config_dict(filename)	excluded		platform: GUI toolkit
+Lib/turtle.py	134	162	readconfig	readconfig(cfgdict)	excluded		platform: GUI toolkit
+Lib/turtle.py	184	185	Vec2D.__new__	__new__(cls, x, y)	excluded		platform: GUI toolkit
+Lib/turtle.py	187	188	Vec2D.__add__	__add__(self, other)	excluded		platform: GUI toolkit
+Lib/turtle.py	190	193	Vec2D.__mul__	__mul__(self, other)	excluded		platform: GUI toolkit
+Lib/turtle.py	195	198	Vec2D.__rmul__	__rmul__(self, other)	excluded		platform: GUI toolkit
+Lib/turtle.py	200	201	Vec2D.__sub__	__sub__(self, other)	excluded		platform: GUI toolkit
+Lib/turtle.py	203	204	Vec2D.__neg__	__neg__(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	206	207	Vec2D.__abs__	__abs__(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	209	214	Vec2D.rotate	rotate(self, angle)	excluded		platform: GUI toolkit
+Lib/turtle.py	216	217	Vec2D.__getnewargs__	__getnewargs__(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	219	220	Vec2D.__repr__	__repr__(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	231	239	__methodDict	__methodDict(cls, _dict)	excluded		platform: GUI toolkit
+Lib/turtle.py	241	245	__methods	__methods(cls)	excluded		platform: GUI toolkit
+Lib/turtle.py	251	269	__forwardmethods	__forwardmethods(fromClass, toClass, toPart, exclude=())	excluded		platform: GUI toolkit
+Lib/turtle.py	278	301	ScrolledCanvas.__init__	__init__(self, master, width=500, height=350, canvwidth=600, canvheight=500)	excluded		platform: GUI toolkit
+Lib/turtle.py	303	318	ScrolledCanvas.reset	reset(self, canvwidth=None, canvheight=None, bg=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	321	334	ScrolledCanvas.adjustScrolls	adjustScrolls(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	336	338	ScrolledCanvas.onResize	onResize(self, event)	excluded		platform: GUI toolkit
+Lib/turtle.py	340	343	ScrolledCanvas.bbox	bbox(self, *args)	excluded		platform: GUI toolkit
+Lib/turtle.py	345	348	ScrolledCanvas.cget	cget(self, *args, **kwargs)	excluded		platform: GUI toolkit
+Lib/turtle.py	350	353	ScrolledCanvas.config	config(self, *args, **kwargs)	excluded		platform: GUI toolkit
+Lib/turtle.py	355	358	ScrolledCanvas.bind	bind(self, *args, **kwargs)	excluded		platform: GUI toolkit
+Lib/turtle.py	360	363	ScrolledCanvas.unbind	unbind(self, *args, **kwargs)	excluded		platform: GUI toolkit
+Lib/turtle.py	365	368	ScrolledCanvas.focus_force	focus_force(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	375	376	_Root.__init__	__init__(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	378	380	_Root.setupcanvas	setupcanvas(self, width, height, cwidth, cheight)	excluded		platform: GUI toolkit
+Lib/turtle.py	382	383	_Root._getcanvas	_getcanvas(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	385	386	_Root.set_geometry	set_geometry(self, width, height, startx, starty)	excluded		platform: GUI toolkit
+Lib/turtle.py	388	389	_Root.ondestroy	ondestroy(self, destroy)	excluded		platform: GUI toolkit
+Lib/turtle.py	391	392	_Root.win_width	win_width(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	394	395	_Root.win_height	win_height(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	408	412	TurtleScreenBase._blankimage	_blankimage(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	414	418	TurtleScreenBase._image	_image(self, filename)	excluded		platform: GUI toolkit
+Lib/turtle.py	420	432	TurtleScreenBase.__init__	__init__(self, cv)	excluded		platform: GUI toolkit
+Lib/turtle.py	434	436	TurtleScreenBase._createpoly	_createpoly(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	438	463	TurtleScreenBase._drawpoly	_drawpoly(self, polyitem, coordlist, fill=None, outline=None, width=None, top=False)	excluded		platform: GUI toolkit
+Lib/turtle.py	465	468	TurtleScreenBase._createline	_createline(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	470	493	TurtleScreenBase._drawline	_drawline(self, lineitem, coordlist=None, fill=None, width=None, top=False)	excluded		platform: GUI toolkit
+Lib/turtle.py	495	500	TurtleScreenBase._delete	_delete(self, item)	excluded		platform: GUI toolkit
+Lib/turtle.py	502	513	TurtleScreenBase._update	_update(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	515	517	TurtleScreenBase._delay	_delay(self, delay)	excluded		platform: GUI toolkit
+Lib/turtle.py	519	527	TurtleScreenBase._iscolorstring	_iscolorstring(self, color)	excluded		platform: GUI toolkit
+Lib/turtle.py	529	536	TurtleScreenBase._bgcolor	_bgcolor(self, color=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	538	551	TurtleScreenBase._write	_write(self, pos, txt, align, font, pencolor)	excluded		platform: GUI toolkit
+Lib/turtle.py	553	566	TurtleScreenBase._onclick	_onclick(self, item, fun, num=1, add=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	568	585	TurtleScreenBase._onrelease	_onrelease(self, item, fun, num=1, add=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	587	606	TurtleScreenBase._ondrag	_ondrag(self, item, fun, num=1, add=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	608	624	TurtleScreenBase._onscreenclick	_onscreenclick(self, fun, num=1, add=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	626	635	TurtleScreenBase._onkeyrelease	_onkeyrelease(self, fun, key)	excluded		platform: GUI toolkit
+Lib/turtle.py	637	653	TurtleScreenBase._onkeypress	_onkeypress(self, fun, key=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	655	658	TurtleScreenBase._listen	_listen(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	660	666	TurtleScreenBase._ontimer	_ontimer(self, fun, t)	excluded		platform: GUI toolkit
+Lib/turtle.py	668	671	TurtleScreenBase._createimage	_createimage(self, image)	excluded		platform: GUI toolkit
+Lib/turtle.py	673	679	TurtleScreenBase._drawimage	_drawimage(self, item, pos, image)	excluded		platform: GUI toolkit
+Lib/turtle.py	681	687	TurtleScreenBase._setbgpic	_setbgpic(self, item, image)	excluded		platform: GUI toolkit
+Lib/turtle.py	689	693	TurtleScreenBase._type	_type(self, item)	excluded		platform: GUI toolkit
+Lib/turtle.py	695	705	TurtleScreenBase._pointlist	_pointlist(self, item)	excluded		platform: GUI toolkit
+Lib/turtle.py	707	708	TurtleScreenBase._setscrollregion	_setscrollregion(self, srx1, sry1, srx2, sry2)	excluded		platform: GUI toolkit
+Lib/turtle.py	710	720	TurtleScreenBase._rescale	_rescale(self, xscalefactor, yscalefactor)	excluded		platform: GUI toolkit
+Lib/turtle.py	722	736	TurtleScreenBase._resize	_resize(self, canvwidth=None, canvheight=None, bg=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	738	746	TurtleScreenBase._window_size	_window_size(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	748	755	TurtleScreenBase.mainloop	mainloop(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	757	771	TurtleScreenBase.textinput	textinput(self, title, prompt)	excluded		platform: GUI toolkit
+Lib/turtle.py	773	797	TurtleScreenBase.numinput	numinput(self, title, prompt, default=None, minval=None, maxval=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	827	838	Shape.__init__	__init__(self, type_, data=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	840	863	Shape.addcomponent	addcomponent(self, poly, fill, outline=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	869	873	Tbuffer.__init__	__init__(self, bufsize=10)	excluded		platform: GUI toolkit
+Lib/turtle.py	875	882	Tbuffer.reset	reset(self, bufsize=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	884	890	Tbuffer.push	push(self, item)	excluded		platform: GUI toolkit
+Lib/turtle.py	892	900	Tbuffer.pop	pop(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	902	909	Tbuffer.remove	remove(self, item)	excluded		platform: GUI toolkit
+Lib/turtle.py	911	912	Tbuffer.nr_of_items	nr_of_items(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	914	915	Tbuffer.__repr__	__repr__(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	928	969	TurtleScreen.__init__	__init__(self, cv, mode=_CFG['mode'], colormode=_CFG['colormode'], delay=_CFG['delay'])	excluded		platform: GUI toolkit
+Lib/turtle.py	971	1000	TurtleScreen.clear	clear(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	1002	1037	TurtleScreen.mode	mode(self, mode=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	1039	1079	TurtleScreen.setworldcoordinates	setworldcoordinates(self, llx, lly, urx, ury)	excluded		platform: GUI toolkit
+Lib/turtle.py	1081	1119	TurtleScreen.register_shape	register_shape(self, name, shape=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	1121	1144	TurtleScreen._colorstr	_colorstr(self, color)	excluded		platform: GUI toolkit
+Lib/turtle.py	1146	1155	TurtleScreen._color	_color(self, cstr)	excluded		platform: GUI toolkit
+Lib/turtle.py	1157	1184	TurtleScreen.colormode	colormode(self, cmode=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	1186	1197	TurtleScreen.reset	reset(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	1199	1206	TurtleScreen.turtles	turtles(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	1208	1245	TurtleScreen.bgcolor	bgcolor(self, *args)	excluded		platform: GUI toolkit
+Lib/turtle.py	1247	1276	TurtleScreen.tracer	tracer(self, n=None, delay=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	1278	1297	TurtleScreen.delay	delay(self, delay=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	1300	1318	TurtleScreen.no_animation	no_animation(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	1320	1327	TurtleScreen._incrementudc	_incrementudc(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	1329	1337	TurtleScreen.update	update(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	1339	1346	TurtleScreen.window_width	window_width(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	1348	1355	TurtleScreen.window_height	window_height(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	1357	1365	TurtleScreen.getcanvas	getcanvas(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	1367	1374	TurtleScreen.getshapes	getshapes(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	1376	1400	TurtleScreen.onclick	onclick(self, fun, btn=1, add=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	1402	1430	TurtleScreen.onkey	onkey(self, fun, key)	excluded		platform: GUI toolkit
+Lib/turtle.py	1432	1462	TurtleScreen.onkeypress	onkeypress(self, fun, key=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	1464	1474	TurtleScreen.listen	listen(self, xdummy=None, ydummy=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	1476	1495	TurtleScreen.ontimer	ontimer(self, fun, t=0)	excluded		platform: GUI toolkit
+Lib/turtle.py	1497	1519	TurtleScreen.bgpic	bgpic(self, picname=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	1521	1538	TurtleScreen.screensize	screensize(self, canvwidth=None, canvheight=None, bg=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	1540	1571	TurtleScreen.save	save(self, filename, *, overwrite=False)	excluded		platform: GUI toolkit
 Lib/turtle.py	1593	1601	TNavigator.__init__	__init__(self, mode=DEFAULT_MODE)	excluded		platform: GUI toolkit
 Lib/turtle.py	1603	1609	TNavigator.reset	reset(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1611	1624	TNavigator._setmode	_setmode(self, mode=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	1626	1633	TNavigator._setDegreesPerAU	_setDegreesPerAU(self, fullcircle)	excluded		platform: GUI toolkit
-Lib/turtle.py	1635	1657	TNavigator.degrees	degrees(self, fullcircle=360.0)	excluded		platform: GUI toolkit
-Lib/turtle.py	1659	1671	TNavigator.radians	radians(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1673	1676	TNavigator._go	_go(self, distance)	excluded		platform: GUI toolkit
-Lib/turtle.py	1678	1681	TNavigator._rotate	_rotate(self, angle)	excluded		platform: GUI toolkit
-Lib/turtle.py	1683	1685	TNavigator._goto	_goto(self, end)	excluded		platform: GUI toolkit
-Lib/turtle.py	1687	1692	TNavigator.teleport	teleport(self, x=None, y=None, *, fill_gap: bool=False)	excluded		platform: GUI toolkit
-Lib/turtle.py	1694	1715	TNavigator.forward	forward(self, distance)	excluded		platform: GUI toolkit
-Lib/turtle.py	1717	1735	TNavigator.back	back(self, distance)	excluded		platform: GUI toolkit
-Lib/turtle.py	1737	1756	TNavigator.right	right(self, angle)	excluded		platform: GUI toolkit
-Lib/turtle.py	1758	1777	TNavigator.left	left(self, angle)	excluded		platform: GUI toolkit
-Lib/turtle.py	1779	1790	TNavigator.pos	pos(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1792	1804	TNavigator.xcor	xcor(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1806	1818	TNavigator.ycor	ycor(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1821	1854	TNavigator.goto	goto(self, x, y=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	1856	1868	TNavigator.home	home(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1870	1886	TNavigator.setx	setx(self, x)	excluded		platform: GUI toolkit
-Lib/turtle.py	1888	1904	TNavigator.sety	sety(self, y)	excluded		platform: GUI toolkit
-Lib/turtle.py	1906	1936	TNavigator.distance	distance(self, x, y=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	1938	1971	TNavigator.towards	towards(self, x, y=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	1973	1986	TNavigator.heading	heading(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	1988	2014	TNavigator.setheading	setheading(self, to_angle)	excluded		platform: GUI toolkit
-Lib/turtle.py	2016	2077	TNavigator.circle	circle(self, radius, extent=None, steps=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	2081	2082	TNavigator.speed	speed(self, s=0)	excluded		platform: GUI toolkit
-Lib/turtle.py	2083	2084	TNavigator._tracer	_tracer(self, a=None, b=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	2085	2086	TNavigator._delay	_delay(self, n=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	2103	2106	TPen.__init__	__init__(self, resizemode=_CFG['resizemode'])	excluded		platform: GUI toolkit
-Lib/turtle.py	2108	2120	TPen._reset	_reset(self, pencolor=_CFG['pencolor'], fillcolor=_CFG['fillcolor'])	excluded		platform: GUI toolkit
-Lib/turtle.py	2122	2148	TPen.resizemode	resizemode(self, rmode=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	2150	2170	TPen.pensize	pensize(self, width=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	2173	2185	TPen.penup	penup(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	2187	2199	TPen.pendown	pendown(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	2201	2214	TPen.isdown	isdown(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	2216	2252	TPen.speed	speed(self, speed=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	2254	2296	TPen.color	color(self, *args)	excluded		platform: GUI toolkit
-Lib/turtle.py	2298	2337	TPen.pencolor	pencolor(self, *args)	excluded		platform: GUI toolkit
-Lib/turtle.py	2339	2378	TPen.fillcolor	fillcolor(self, *args)	excluded		platform: GUI toolkit
-Lib/turtle.py	2380	2387	TPen.teleport	teleport(self, x=None, y=None, *, fill_gap: bool=False)	excluded		platform: GUI toolkit
-Lib/turtle.py	2389	2400	TPen.showturtle	showturtle(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	2402	2416	TPen.hideturtle	hideturtle(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	2418	2428	TPen.isvisible	isvisible(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	2430	2553	TPen.pen	pen(self, pen=None, **pendict)	excluded		platform: GUI toolkit
-Lib/turtle.py	2557	2558	TPen._newLine	_newLine(self, usePos=True)	excluded		platform: GUI toolkit
-Lib/turtle.py	2559	2560	TPen._update	_update(self, count=True, forced=False)	excluded		platform: GUI toolkit
-Lib/turtle.py	2561	2562	TPen._color	_color(self, args)	excluded		platform: GUI toolkit
-Lib/turtle.py	2563	2564	TPen._colorstr	_colorstr(self, args)	excluded		platform: GUI toolkit
-Lib/turtle.py	2579	2582	_TurtleImage.__init__	__init__(self, screen, shapeIndex)	excluded		platform: GUI toolkit
-Lib/turtle.py	2584	2603	_TurtleImage._setshape	_setshape(self, shapeIndex)	excluded		platform: GUI toolkit
-Lib/turtle.py	2613	2651	RawTurtle.__init__	__init__(self, canvas=None, shape=_CFG['shape'], undobuffersize=_CFG['undobuffersize'], visible=_CFG['visible'])	excluded		platform: GUI toolkit
-Lib/turtle.py	2653	2676	RawTurtle.reset	reset(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	2678	2695	RawTurtle.setundobuffer	setundobuffer(self, size)	excluded		platform: GUI toolkit
-Lib/turtle.py	2697	2708	RawTurtle.undobufferentries	undobufferentries(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	2710	2721	RawTurtle._clear	_clear(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	2724	2737	RawTurtle.clear	clear(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	2739	2745	RawTurtle._update_data	_update_data(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	2747	2763	RawTurtle._update	_update(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	2765	2784	RawTurtle._tracer	_tracer(self, flag=None, delay=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	2786	2787	RawTurtle._color	_color(self, args)	excluded		platform: GUI toolkit
-Lib/turtle.py	2789	2790	RawTurtle._colorstr	_colorstr(self, args)	excluded		platform: GUI toolkit
-Lib/turtle.py	2792	2805	RawTurtle._cc	_cc(self, args)	excluded		platform: GUI toolkit
-Lib/turtle.py	2807	2853	RawTurtle.teleport	teleport(self, x=None, y=None, *, fill_gap: bool=False)	excluded		platform: GUI toolkit
-Lib/turtle.py	2855	2893	RawTurtle.clone	clone(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	2895	2920	RawTurtle.shape	shape(self, name=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	2922	2960	RawTurtle.shapesize	shapesize(self, stretch_wid=None, stretch_len=None, outline=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	2962	2983	RawTurtle.shearfactor	shearfactor(self, shear=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	2985	3019	RawTurtle.tiltangle	tiltangle(self, angle=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	3021	3038	RawTurtle.tilt	tilt(self, angle)	excluded		platform: GUI toolkit
-Lib/turtle.py	3040	3077	RawTurtle.shapetransform	shapetransform(self, t11=None, t12=None, t21=None, t22=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	3080	3090	RawTurtle._polytrafo	_polytrafo(self, poly)	excluded		platform: GUI toolkit
-Lib/turtle.py	3092	3106	RawTurtle.get_shapepoly	get_shapepoly(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3109	3120	RawTurtle._getshapepoly	_getshapepoly(self, polygon, compound=False)	excluded		platform: GUI toolkit
-Lib/turtle.py	3122	3158	RawTurtle._drawturtle	_drawturtle(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3162	3205	RawTurtle.stamp	stamp(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3207	3227	RawTurtle._clearstamp	_clearstamp(self, stampid)	excluded		platform: GUI toolkit
-Lib/turtle.py	3229	3242	RawTurtle.clearstamp	clearstamp(self, stampid)	excluded		platform: GUI toolkit
-Lib/turtle.py	3244	3270	RawTurtle.clearstamps	clearstamps(self, n=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	3272	3323	RawTurtle._goto	_goto(self, end)	excluded		platform: GUI toolkit
-Lib/turtle.py	3325	3388	RawTurtle._undogoto	_undogoto(self, entry)	excluded		platform: GUI toolkit
-Lib/turtle.py	3390	3406	RawTurtle._rotate	_rotate(self, angle)	excluded		platform: GUI toolkit
-Lib/turtle.py	3408	3422	RawTurtle._newLine	_newLine(self, usePos=True)	excluded		platform: GUI toolkit
-Lib/turtle.py	3424	3436	RawTurtle.filling	filling(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3439	3454	RawTurtle.fill	fill(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3456	3474	RawTurtle.begin_fill	begin_fill(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3476	3494	RawTurtle.end_fill	end_fill(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3496	3537	RawTurtle.dot	dot(self, size=None, *color)	excluded		platform: GUI toolkit
-Lib/turtle.py	3539	3548	RawTurtle._write	_write(self, txt, align, font)	excluded		platform: GUI toolkit
-Lib/turtle.py	3550	3577	RawTurtle.write	write(self, arg, move=False, align='left', font=('Arial', 8, 'normal'))	excluded		platform: GUI toolkit
-Lib/turtle.py	3580	3598	RawTurtle.poly	poly(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3600	3612	RawTurtle.begin_poly	begin_poly(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3614	3625	RawTurtle.end_poly	end_poly(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3627	3638	RawTurtle.get_poly	get_poly(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3640	3654	RawTurtle.getscreen	getscreen(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3656	3671	RawTurtle.getturtle	getturtle(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3680	3683	RawTurtle._delay	_delay(self, delay=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	3685	3704	RawTurtle.onclick	onclick(self, fun, btn=1, add=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	3706	3729	RawTurtle.onrelease	onrelease(self, fun, btn=1, add=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	3731	3749	RawTurtle.ondrag	ondrag(self, fun, btn=1, add=None)	excluded		platform: GUI toolkit
-Lib/turtle.py	3752	3782	RawTurtle._undo	_undo(self, action, data)	excluded		platform: GUI toolkit
-Lib/turtle.py	3784	3811	RawTurtle.undo	undo(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3819	3825	Screen	Screen()	excluded		platform: GUI toolkit
-Lib/turtle.py	3833	3848	_Screen.__init__	__init__(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3850	3888	_Screen.setup	setup(self, width=_CFG['width'], height=_CFG['height'], startx=_CFG['leftright'], starty=_CFG['topbottom'])	excluded		platform: GUI toolkit
-Lib/turtle.py	3890	3905	_Screen.title	title(self, titlestring)	excluded		platform: GUI toolkit
-Lib/turtle.py	3907	3915	_Screen._destroy	_destroy(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3917	3923	_Screen.bye	bye(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3925	3953	_Screen.exitonclick	exitonclick(self)	excluded		platform: GUI toolkit
-Lib/turtle.py	3964	3973	Turtle.__init__	__init__(self, shape=_CFG['shape'], undobuffersize=_CFG['undobuffersize'], visible=_CFG['visible'])	excluded		platform: GUI toolkit
-Lib/turtle.py	3977	4009	write_docstringdict	write_docstringdict(filename='turtle_docstringdict')	excluded		platform: GUI toolkit
-Lib/turtle.py	4011	4026	read_docstrings	read_docstrings(lang)	excluded		platform: GUI toolkit
-Lib/turtle.py	4040	4074	getmethparlist	getmethparlist(ob)	excluded		platform: GUI toolkit
-Lib/turtle.py	4076	4086	_turtle_docrevise	_turtle_docrevise(docstr)	excluded		platform: GUI toolkit
-Lib/turtle.py	4088	4098	_screen_docrevise	_screen_docrevise(docstr)	excluded		platform: GUI toolkit
-Lib/turtle.py	4120	4130	_make_global_funcs	_make_global_funcs(functions, cls, obj, init, docrevise)	excluded		platform: GUI toolkit
-Lib/turtle.py	4141	4145	switchpen	switchpen()	excluded		platform: GUI toolkit
-Lib/turtle.py	4147	4197	demo1	demo1()	excluded		platform: GUI toolkit
-Lib/turtle.py	4200	4297	demo2	demo2()	excluded		platform: GUI toolkit
+Lib/turtle.py	1611	1623	TNavigator._setmode	_setmode(self, mode=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	1625	1632	TNavigator._setDegreesPerAU	_setDegreesPerAU(self, fullcircle)	excluded		platform: GUI toolkit
+Lib/turtle.py	1634	1658	TNavigator.degrees	degrees(self, fullcircle=360.0)	excluded		platform: GUI toolkit
+Lib/turtle.py	1660	1674	TNavigator.radians	radians(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	1676	1679	TNavigator._go	_go(self, distance)	excluded		platform: GUI toolkit
+Lib/turtle.py	1681	1684	TNavigator._rotate	_rotate(self, angle)	excluded		platform: GUI toolkit
+Lib/turtle.py	1686	1688	TNavigator._goto	_goto(self, end)	excluded		platform: GUI toolkit
+Lib/turtle.py	1691	1702	TNavigator._undo_sequence	_undo_sequence(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	1704	1711	TNavigator.teleport	teleport(self, x=None, y=None, *, fill_gap: bool=False)	excluded		platform: GUI toolkit
+Lib/turtle.py	1713	1733	TNavigator.forward	forward(self, distance)	excluded		platform: GUI toolkit
+Lib/turtle.py	1735	1753	TNavigator.back	back(self, distance)	excluded		platform: GUI toolkit
+Lib/turtle.py	1755	1774	TNavigator.right	right(self, angle)	excluded		platform: GUI toolkit
+Lib/turtle.py	1776	1795	TNavigator.left	left(self, angle)	excluded		platform: GUI toolkit
+Lib/turtle.py	1797	1806	TNavigator.pos	pos(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	1808	1818	TNavigator.xcor	xcor(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	1820	1830	TNavigator.ycor	ycor(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	1833	1863	TNavigator.goto	goto(self, x, y=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	1865	1883	TNavigator.home	home(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	1885	1900	TNavigator.setx	setx(self, x)	excluded		platform: GUI toolkit
+Lib/turtle.py	1902	1917	TNavigator.sety	sety(self, y)	excluded		platform: GUI toolkit
+Lib/turtle.py	1919	1948	TNavigator.distance	distance(self, x, y=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	1950	1978	TNavigator.towards	towards(self, x, y=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	1980	1994	TNavigator.heading	heading(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	1996	2021	TNavigator.setheading	setheading(self, to_angle)	excluded		platform: GUI toolkit
+Lib/turtle.py	2023	2075	TNavigator.circle	circle(self, radius, extent=None, steps=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	2079	2080	TNavigator.speed	speed(self, s=0)	excluded		platform: GUI toolkit
+Lib/turtle.py	2081	2082	TNavigator._tracer	_tracer(self, a=None, b=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	2083	2084	TNavigator._delay	_delay(self, n=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	2105	2108	TPen.__init__	__init__(self, resizemode=_CFG['resizemode'])	excluded		platform: GUI toolkit
+Lib/turtle.py	2110	2122	TPen._reset	_reset(self, pencolor=_CFG['pencolor'], fillcolor=_CFG['fillcolor'])	excluded		platform: GUI toolkit
+Lib/turtle.py	2124	2153	TPen.resizemode	resizemode(self, rmode=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	2155	2174	TPen.pensize	pensize(self, width=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	2177	2186	TPen.penup	penup(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	2188	2197	TPen.pendown	pendown(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	2199	2210	TPen.isdown	isdown(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	2212	2260	TPen.speed	speed(self, speed=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	2262	2302	TPen.color	color(self, *args)	excluded		platform: GUI toolkit
+Lib/turtle.py	2304	2342	TPen.pencolor	pencolor(self, *args)	excluded		platform: GUI toolkit
+Lib/turtle.py	2344	2382	TPen.fillcolor	fillcolor(self, *args)	excluded		platform: GUI toolkit
+Lib/turtle.py	2384	2392	TPen.teleport	teleport(self, x=None, y=None, *, fill_gap: bool=False)	excluded		platform: GUI toolkit
+Lib/turtle.py	2394	2399	TPen.showturtle	showturtle(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	2401	2408	TPen.hideturtle	hideturtle(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	2410	2421	TPen.isvisible	isvisible(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	2423	2546	TPen.pen	pen(self, pen=None, **pendict)	excluded		platform: GUI toolkit
+Lib/turtle.py	2550	2551	TPen._newLine	_newLine(self, usePos=True)	excluded		platform: GUI toolkit
+Lib/turtle.py	2552	2553	TPen._update	_update(self, count=True, forced=False)	excluded		platform: GUI toolkit
+Lib/turtle.py	2554	2555	TPen._color	_color(self, args)	excluded		platform: GUI toolkit
+Lib/turtle.py	2556	2557	TPen._colorstr	_colorstr(self, args)	excluded		platform: GUI toolkit
+Lib/turtle.py	2573	2576	_TurtleImage.__init__	__init__(self, screen, shapeIndex)	excluded		platform: GUI toolkit
+Lib/turtle.py	2578	2597	_TurtleImage._setshape	_setshape(self, shapeIndex)	excluded		platform: GUI toolkit
+Lib/turtle.py	2608	2646	RawTurtle.__init__	__init__(self, canvas=None, shape=_CFG['shape'], undobuffersize=_CFG['undobuffersize'], visible=_CFG['visible'])	excluded		platform: GUI toolkit
+Lib/turtle.py	2648	2670	RawTurtle.reset	reset(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	2672	2688	RawTurtle.setundobuffer	setundobuffer(self, size)	excluded		platform: GUI toolkit
+Lib/turtle.py	2690	2699	RawTurtle.undobufferentries	undobufferentries(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	2701	2712	RawTurtle._clear	_clear(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	2715	2725	RawTurtle.clear	clear(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	2727	2733	RawTurtle._update_data	_update_data(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	2735	2750	RawTurtle._update	_update(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	2752	2754	RawTurtle._tracer	_tracer(self, flag=None, delay=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	2756	2757	RawTurtle._color	_color(self, args)	excluded		platform: GUI toolkit
+Lib/turtle.py	2759	2760	RawTurtle._colorstr	_colorstr(self, args)	excluded		platform: GUI toolkit
+Lib/turtle.py	2762	2774	RawTurtle._cc	_cc(self, args)	excluded		platform: GUI toolkit
+Lib/turtle.py	2776	2821	RawTurtle.teleport	teleport(self, x=None, y=None, *, fill_gap: bool=False)	excluded		platform: GUI toolkit
+Lib/turtle.py	2823	2858	RawTurtle.clone	clone(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	2860	2884	RawTurtle.shape	shape(self, name=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	2886	2938	RawTurtle.shapesize	shapesize(self, stretch_wid=None, stretch_len=None, outline=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	2940	2961	RawTurtle.shearfactor	shearfactor(self, shear=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	2963	2997	RawTurtle.tiltangle	tiltangle(self, angle=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	2999	3016	RawTurtle.tilt	tilt(self, angle)	excluded		platform: GUI toolkit
+Lib/turtle.py	3018	3055	RawTurtle.shapetransform	shapetransform(self, t11=None, t12=None, t21=None, t22=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	3058	3068	RawTurtle._polytrafo	_polytrafo(self, poly)	excluded		platform: GUI toolkit
+Lib/turtle.py	3070	3084	RawTurtle.get_shapepoly	get_shapepoly(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	3087	3098	RawTurtle._getshapepoly	_getshapepoly(self, polygon, compound=False)	excluded		platform: GUI toolkit
+Lib/turtle.py	3100	3136	RawTurtle._drawturtle	_drawturtle(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	3140	3184	RawTurtle.stamp	stamp(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	3186	3198	RawTurtle._clearstamp	_clearstamp(self, stampid)	excluded		platform: GUI toolkit
+Lib/turtle.py	3200	3213	RawTurtle.clearstamp	clearstamp(self, stampid)	excluded		platform: GUI toolkit
+Lib/turtle.py	3215	3241	RawTurtle.clearstamps	clearstamps(self, n=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	3243	3294	RawTurtle._goto	_goto(self, end)	excluded		platform: GUI toolkit
+Lib/turtle.py	3296	3358	RawTurtle._undogoto	_undogoto(self, entry)	excluded		platform: GUI toolkit
+Lib/turtle.py	3360	3375	RawTurtle._rotate	_rotate(self, angle)	excluded		platform: GUI toolkit
+Lib/turtle.py	3377	3392	RawTurtle._newLine	_newLine(self, usePos=True)	excluded		platform: GUI toolkit
+Lib/turtle.py	3394	3404	RawTurtle.filling	filling(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	3407	3422	RawTurtle.fill	fill(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	3424	3442	RawTurtle.begin_fill	begin_fill(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	3444	3462	RawTurtle.end_fill	end_fill(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	3464	3502	RawTurtle.dot	dot(self, size=None, *color)	excluded		platform: GUI toolkit
+Lib/turtle.py	3504	3513	RawTurtle._write	_write(self, txt, align, font)	excluded		platform: GUI toolkit
+Lib/turtle.py	3515	3538	RawTurtle.write	write(self, arg, move=False, align='left', font=('Arial', 8, 'normal'))	excluded		platform: GUI toolkit
+Lib/turtle.py	3541	3559	RawTurtle.poly	poly(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	3561	3567	RawTurtle.begin_poly	begin_poly(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	3569	3575	RawTurtle.end_poly	end_poly(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	3577	3594	RawTurtle.get_poly	get_poly(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	3596	3607	RawTurtle.getscreen	getscreen(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	3609	3623	RawTurtle.getturtle	getturtle(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	3632	3634	RawTurtle._delay	_delay(self, delay=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	3636	3658	RawTurtle.onclick	onclick(self, fun, btn=1, add=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	3660	3683	RawTurtle.onrelease	onrelease(self, fun, btn=1, add=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	3685	3703	RawTurtle.ondrag	ondrag(self, fun, btn=1, add=None)	excluded		platform: GUI toolkit
+Lib/turtle.py	3706	3738	RawTurtle._undo	_undo(self, action, data)	excluded		platform: GUI toolkit
+Lib/turtle.py	3740	3767	RawTurtle.undo	undo(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	3775	3782	Screen	Screen()	excluded		platform: GUI toolkit
+Lib/turtle.py	3790	3805	_Screen.__init__	__init__(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	3807	3845	_Screen.setup	setup(self, width=_CFG['width'], height=_CFG['height'], startx=_CFG['leftright'], starty=_CFG['topbottom'])	excluded		platform: GUI toolkit
+Lib/turtle.py	3847	3862	_Screen.title	title(self, titlestring)	excluded		platform: GUI toolkit
+Lib/turtle.py	3864	3872	_Screen._destroy	_destroy(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	3874	3876	_Screen.bye	bye(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	3878	3906	_Screen.exitonclick	exitonclick(self)	excluded		platform: GUI toolkit
+Lib/turtle.py	3917	3926	Turtle.__init__	__init__(self, shape=_CFG['shape'], undobuffersize=_CFG['undobuffersize'], visible=_CFG['visible'])	excluded		platform: GUI toolkit
+Lib/turtle.py	3930	3962	write_docstringdict	write_docstringdict(filename='turtle_docstringdict')	excluded		platform: GUI toolkit
+Lib/turtle.py	3964	3979	read_docstrings	read_docstrings(lang)	excluded		platform: GUI toolkit
+Lib/turtle.py	3993	4027	getmethparlist	getmethparlist(ob)	excluded		platform: GUI toolkit
+Lib/turtle.py	4029	4038	_turtle_docrevise	_turtle_docrevise(docstr)	excluded		platform: GUI toolkit
+Lib/turtle.py	4040	4049	_screen_docrevise	_screen_docrevise(docstr)	excluded		platform: GUI toolkit
+Lib/turtle.py	4071	4081	_make_global_funcs	_make_global_funcs(functions, cls, obj, init, docrevise)	excluded		platform: GUI toolkit
+Lib/turtle.py	4092	4096	switchpen	switchpen()	excluded		platform: GUI toolkit
+Lib/turtle.py	4098	4148	demo1	demo1()	excluded		platform: GUI toolkit
+Lib/turtle.py	4151	4248	demo2	demo2()	excluded		platform: GUI toolkit

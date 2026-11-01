@@ -1,82 +1,84 @@
 file	line	endline	name	signature	status	entry	note
-Python/fileutils.c	64	77	get_surrogateescape	get_surrogateescape(_Py_error_handler errors, int *surrogateescape)	todo		
-Python/fileutils.c	81	118	_Py_device_encoding	_Py_device_encoding(int fd)	todo		
-Python/fileutils.c	122	144	is_valid_wide_char	is_valid_wide_char(wchar_t ch)	todo		
-Python/fileutils.c	148	160	_Py_mbstowcs	_Py_mbstowcs(wchar_t *dest, const char *src, size_t n)	todo		
-Python/fileutils.c	165	175	_Py_mbrtowc	_Py_mbrtowc(wchar_t *pwc, const char *str, size_t len, mbstate_t *pmbs)	todo		
-Python/fileutils.c	215	312	check_force_ascii	check_force_ascii(void)	todo		
-Python/fileutils.c	316	322	_Py_GetForceASCII	_Py_GetForceASCII(void)	todo		
-Python/fileutils.c	326	329	_Py_ResetForceASCII	_Py_ResetForceASCII(void)	todo		
-Python/fileutils.c	333	390	encode_ascii	encode_ascii(const wchar_t *text, char **str, size_t *error_pos, const char **reason, int raw_malloc, _Py_error_handler errors)	todo		
-Python/fileutils.c	393	396	_Py_GetForceASCII	_Py_GetForceASCII(void)	todo		
-Python/fileutils.c	399	402	_Py_ResetForceASCII	_Py_ResetForceASCII(void)	todo		
-Python/fileutils.c	408	456	decode_ascii	decode_ascii(const char *arg, wchar_t **wstr, size_t *wlen, const char **reason, _Py_error_handler errors)	todo		
-Python/fileutils.c	460	573	decode_current_locale	decode_current_locale(const char* arg, wchar_t **wstr, size_t *wlen, const char **reason, _Py_error_handler errors)	todo		
-Python/fileutils.c	599	638	_Py_DecodeLocaleEx	_Py_DecodeLocaleEx(const char* arg, wchar_t **wstr, size_t *wlen, const char **reason, int current_locale, _Py_error_handler errors)	todo		
-Python/fileutils.c	661	675	Py_DecodeLocale	Py_DecodeLocale(const char* arg, size_t *wlen)	todo		
-Python/fileutils.c	679	769	encode_current_locale	encode_current_locale(const wchar_t *text, char **str, size_t *error_pos, const char **reason, int raw_malloc, _Py_error_handler errors)	todo		
-Python/fileutils.c	790	831	encode_locale_ex	encode_locale_ex(const wchar_t *text, char **str, size_t *error_pos, const char **reason, int raw_malloc, int current_locale, _Py_error_handler errors)	todo		
-Python/fileutils.c	834	848	encode_locale	encode_locale(const wchar_t *text, size_t *error_pos, int raw_malloc, int current_locale)	todo		
-Python/fileutils.c	863	866	Py_EncodeLocale	Py_EncodeLocale(const wchar_t *text, size_t *error_pos)	todo		
-Python/fileutils.c	872	875	_Py_EncodeLocaleRaw	_Py_EncodeLocaleRaw(const wchar_t *text, size_t *error_pos)	todo		
-Python/fileutils.c	879	885	_Py_EncodeLocaleEx	_Py_EncodeLocaleEx(const wchar_t *text, char **str, size_t *error_pos, const char **reason, int current_locale, _Py_error_handler errors)	todo		
-Python/fileutils.c	900	932	_Py_GetLocaleEncoding	_Py_GetLocaleEncoding(void)	todo		
-Python/fileutils.c	936	947	_Py_GetLocaleEncodingObject	_Py_GetLocaleEncodingObject(void)	todo		
-Python/fileutils.c	953	963	_Py_LocaleUsesNonUnicodeWchar	_Py_LocaleUsesNonUnicodeWchar(void)	todo		
-Python/fileutils.c	966	1006	_Py_ConvertWCharForm	_Py_ConvertWCharForm(const wchar_t *source, Py_ssize_t size, const char *tocode, const char *fromcode)	todo		
-Python/fileutils.c	1016	1019	_Py_DecodeNonUnicodeWchar	_Py_DecodeNonUnicodeWchar(const wchar_t *native, Py_ssize_t size)	todo		
-Python/fileutils.c	1034	1043	_Py_EncodeNonUnicodeWchar_InPlace	_Py_EncodeNonUnicodeWchar_InPlace(wchar_t *unicode, Py_ssize_t size)	todo		
-Python/fileutils.c	1050	1059	FILE_TIME_to_time_t_nsec	FILE_TIME_to_time_t_nsec(FILETIME *in_ptr, time_t *time_out, int* nsec_out)	todo		
-Python/fileutils.c	1062	1066	LARGE_INTEGER_to_time_t_nsec	LARGE_INTEGER_to_time_t_nsec(LARGE_INTEGER *in_ptr, time_t *time_out, int* nsec_out)	todo		
-Python/fileutils.c	1069	1076	_Py_time_t_to_FILE_TIME	_Py_time_t_to_FILE_TIME(time_t time_in, int nsec_in, FILETIME *out_ptr)	todo		
-Python/fileutils.c	1083	1095	attributes_to_mode	attributes_to_mode(DWORD attr)	todo		
-Python/fileutils.c	1108	1152	_Py_attribute_data_to_stat	_Py_attribute_data_to_stat(BY_HANDLE_FILE_INFORMATION *info, ULONG reparse_tag, FILE_BASIC_INFO *basic_info, FILE_ID_INFO *id_info, struct _Py_stat_struct *result)	todo		
-Python/fileutils.c	1155	1216	_Py_stat_basic_info_to_stat	_Py_stat_basic_info_to_stat(FILE_STAT_BASIC_INFORMATION *info, struct _Py_stat_struct *result)	todo		
-Python/fileutils.c	1233	1289	_Py_fstat_noraise	_Py_fstat_noraise(int fd, struct _Py_stat_struct *status)	todo		
-Python/fileutils.c	1307	1326	_Py_fstat	_Py_fstat(int fd, struct _Py_stat_struct *status)	todo		
-Python/fileutils.c	1330	1350	_Py_wstat	_Py_wstat(const wchar_t* path, struct stat *buf)	todo		
-Python/fileutils.c	1360	1391	_Py_stat	_Py_stat(PyObject *path, struct stat *statbuf)	todo		
-Python/fileutils.c	1403	1434	get_inheritable	get_inheritable(int fd, int raise)	todo		
-Python/fileutils.c	1440	1443	_Py_get_inheritable	_Py_get_inheritable(int fd)	todo		
-Python/fileutils.c	1448	1575	set_inheritable	set_inheritable(int fd, int inheritable, int raise, int *atomic_flag_works)	todo		
-Python/fileutils.c	1580	1583	make_non_inheritable	make_non_inheritable(int fd)	todo		
-Python/fileutils.c	1602	1605	_Py_set_inheritable	_Py_set_inheritable(int fd, int inheritable, int *atomic_flag_works)	todo		
-Python/fileutils.c	1611	1614	_Py_set_inheritable_async_safe	_Py_set_inheritable_async_safe(int fd, int inheritable, int *atomic_flag_works)	todo		
-Python/fileutils.c	1617	1675	_Py_open_impl	_Py_open_impl(const char *pathname, int flags, int gil_held)	todo		
-Python/fileutils.c	1688	1693	_Py_open	_Py_open(const char *pathname, int flags)	todo		
-Python/fileutils.c	1702	1705	_Py_open_noraise	_Py_open_noraise(const char *pathname, int flags)	todo		
-Python/fileutils.c	1714	1745	_Py_wfopen	_Py_wfopen(const wchar_t *path, const wchar_t *mode)	todo		
-Python/fileutils.c	1764	1838	Py_fopen	Py_fopen(PyObject *path, const char *mode)	todo		
-Python/fileutils.c	1847	1850	Py_fclose	Py_fclose(FILE *file)	todo		
-Python/fileutils.c	1867	1923	_Py_read	_Py_read(int fd, void *buf, size_t count)	todo		
-Python/fileutils.c	1926	2024	_Py_write_impl	_Py_write_impl(int fd, const void *buf, size_t count, int gil_held)	todo		
-Python/fileutils.c	2037	2047	_Py_write	_Py_write(int fd, const void *buf, size_t count)	todo		
-Python/fileutils.c	2057	2060	_Py_write_noraise	_Py_write_noraise(int fd, const void *buf, size_t count)	todo		
-Python/fileutils.c	2070	2108	_Py_wreadlink	_Py_wreadlink(const wchar_t *path, wchar_t *buf, size_t buflen)	todo		
-Python/fileutils.c	2119	2151	_Py_wrealpath	_Py_wrealpath(const wchar_t *path, wchar_t *resolved_path, size_t resolved_path_len)	todo		
-Python/fileutils.c	2156	2176	_Py_isabs	_Py_isabs(const wchar_t *path)	todo		
-Python/fileutils.c	2185	2239	_Py_abspath	_Py_abspath(const wchar_t *path, wchar_t **abspath_p)	todo		
-Python/fileutils.c	2247	2272	PathCchSkipRoot	PathCchSkipRoot(const wchar_t *path, const wchar_t **rootEnd)	todo		
-Python/fileutils.c	2275	2304	PathCchCombineEx	PathCchCombineEx(wchar_t *buffer, size_t bufsize, const wchar_t *dirname, const wchar_t *relfile, unsigned long flags)	todo		
-Python/fileutils.c	2309	2399	_Py_skiproot	_Py_skiproot(const wchar_t *path, Py_ssize_t size, Py_ssize_t *drvsize, Py_ssize_t *rootsize)	todo		
-Python/fileutils.c	2403	2436	join_relfile	join_relfile(wchar_t *buffer, size_t bufsize, const wchar_t *dirname, const wchar_t *relfile)	todo		
-Python/fileutils.c	2442	2461	_Py_join_relfile	_Py_join_relfile(const wchar_t *dirname, const wchar_t *relfile)	todo		
-Python/fileutils.c	2470	2475	_Py_add_relfile	_Py_add_relfile(wchar_t *dirname, const wchar_t *relfile, size_t bufsize)	todo		
-Python/fileutils.c	2479	2487	_Py_find_basename	_Py_find_basename(const wchar_t *filename)	todo		
-Python/fileutils.c	2496	2608	_Py_normpath_and_size	_Py_normpath_and_size(wchar_t *path, Py_ssize_t size, Py_ssize_t *normsize)	todo		
-Python/fileutils.c	2616	2620	_Py_normpath	_Py_normpath(wchar_t *path, Py_ssize_t size)	todo		
-Python/fileutils.c	2629	2653	_Py_wgetcwd	_Py_wgetcwd(wchar_t *buf, size_t buflen)	todo		
-Python/fileutils.c	2661	2724	_Py_dup	_Py_dup(int fd)	todo		
-Python/fileutils.c	2731	2743	_Py_get_blocking	_Py_get_blocking(int fd)	todo		
-Python/fileutils.c	2752	2785	_Py_set_blocking	_Py_set_blocking(int fd, int blocking)	todo		
-Python/fileutils.c	2788	2810	_Py_get_blocking	_Py_get_blocking(int fd)	todo		
-Python/fileutils.c	2813	2843	_Py_set_blocking	_Py_set_blocking(int fd, int blocking)	todo		
-Python/fileutils.c	2846	2853	_Py_get_osfhandle_noraise	_Py_get_osfhandle_noraise(int fd)	todo		
-Python/fileutils.c	2856	2863	_Py_get_osfhandle	_Py_get_osfhandle(int fd)	todo		
-Python/fileutils.c	2866	2873	_Py_open_osfhandle_noraise	_Py_open_osfhandle_noraise(void *handle, int flags)	todo		
-Python/fileutils.c	2876	2883	_Py_open_osfhandle	_Py_open_osfhandle(void *handle, int flags)	todo		
-Python/fileutils.c	2887	2962	_Py_GetLocaleconvNumeric	_Py_GetLocaleconvNumeric(struct lconv *lc, PyObject **decimal_point, PyObject **thousands_sep)	todo		
-Python/fileutils.c	2985	2998	_fdwalk_close_func	_fdwalk_close_func(void *lohi, int fd)	todo		
-Python/fileutils.c	3003	3039	_Py_closerange	_Py_closerange(int first, int last)	todo		
-Python/fileutils.c	3046	3062	_Py_GetTicksPerSecond	_Py_GetTicksPerSecond(long *ticks_per_second)	todo		
-Python/fileutils.c	3069	3112	_Py_IsValidFD	_Py_IsValidFD(int fd)	todo		
+Python/fileutils.c	62	75	get_surrogateescape	get_surrogateescape(_Py_error_handler errors, int *surrogateescape)	todo		
+Python/fileutils.c	79	142	_Py_device_encoding	_Py_device_encoding(int fd)	todo		changed-in-3.15:
+Python/fileutils.c	146	168	is_valid_wide_char	is_valid_wide_char(wchar_t ch)	todo		changed-in-3.15:
+Python/fileutils.c	172	184	_Py_mbstowcs	_Py_mbstowcs(wchar_t *dest, const char *src, size_t n)	todo		
+Python/fileutils.c	189	199	_Py_mbrtowc	_Py_mbrtowc(wchar_t *pwc, const char *str, size_t len, mbstate_t *pmbs)	todo		
+Python/fileutils.c	239	336	check_force_ascii	check_force_ascii(void)	todo		changed-in-3.15:
+Python/fileutils.c	340	346	_Py_GetForceASCII	_Py_GetForceASCII(void)	todo		
+Python/fileutils.c	350	353	_Py_ResetForceASCII	_Py_ResetForceASCII(void)	todo		
+Python/fileutils.c	357	414	encode_ascii	encode_ascii(const wchar_t *text, char **str, size_t *error_pos, const char **reason, int raw_malloc, _Py_error_handler errors)	todo		
+Python/fileutils.c	417	420	_Py_GetForceASCII	_Py_GetForceASCII(void)	todo		
+Python/fileutils.c	423	426	_Py_ResetForceASCII	_Py_ResetForceASCII(void)	todo		
+Python/fileutils.c	432	480	decode_ascii	decode_ascii(const char *arg, wchar_t **wstr, size_t *wlen, const char **reason, _Py_error_handler errors)	todo		
+Python/fileutils.c	484	597	decode_current_locale	decode_current_locale(const char* arg, wchar_t **wstr, size_t *wlen, const char **reason, _Py_error_handler errors)	todo		
+Python/fileutils.c	623	662	_Py_DecodeLocaleEx	_Py_DecodeLocaleEx(const char* arg, wchar_t **wstr, size_t *wlen, const char **reason, int current_locale, _Py_error_handler errors)	todo		
+Python/fileutils.c	685	699	Py_DecodeLocale	Py_DecodeLocale(const char* arg, size_t *wlen)	todo		
+Python/fileutils.c	703	793	encode_current_locale	encode_current_locale(const wchar_t *text, char **str, size_t *error_pos, const char **reason, int raw_malloc, _Py_error_handler errors)	todo		
+Python/fileutils.c	814	855	encode_locale_ex	encode_locale_ex(const wchar_t *text, char **str, size_t *error_pos, const char **reason, int raw_malloc, int current_locale, _Py_error_handler errors)	todo		
+Python/fileutils.c	858	872	encode_locale	encode_locale(const wchar_t *text, size_t *error_pos, int raw_malloc, int current_locale)	todo		
+Python/fileutils.c	887	890	Py_EncodeLocale	Py_EncodeLocale(const wchar_t *text, size_t *error_pos)	todo		
+Python/fileutils.c	896	899	_Py_EncodeLocaleRaw	_Py_EncodeLocaleRaw(const wchar_t *text, size_t *error_pos)	todo		
+Python/fileutils.c	903	909	_Py_EncodeLocaleEx	_Py_EncodeLocaleEx(const wchar_t *text, char **str, size_t *error_pos, const char **reason, int current_locale, _Py_error_handler errors)	todo		
+Python/fileutils.c	924	956	_Py_GetLocaleEncoding	_Py_GetLocaleEncoding(void)	todo		
+Python/fileutils.c	960	971	_Py_GetLocaleEncodingObject	_Py_GetLocaleEncodingObject(void)	todo		
+Python/fileutils.c	977	987	_Py_LocaleUsesNonUnicodeWchar	_Py_LocaleUsesNonUnicodeWchar(void)	todo		
+Python/fileutils.c	990	1030	_Py_ConvertWCharForm	_Py_ConvertWCharForm(const wchar_t *source, Py_ssize_t size, const char *tocode, const char *fromcode)	todo		
+Python/fileutils.c	1040	1043	_Py_DecodeNonUnicodeWchar	_Py_DecodeNonUnicodeWchar(const wchar_t *native, Py_ssize_t size)	todo		
+Python/fileutils.c	1058	1067	_Py_EncodeNonUnicodeWchar_InPlace	_Py_EncodeNonUnicodeWchar_InPlace(wchar_t *unicode, Py_ssize_t size)	todo		
+Python/fileutils.c	1074	1083	FILE_TIME_to_time_t_nsec	FILE_TIME_to_time_t_nsec(FILETIME *in_ptr, time_t *time_out, int* nsec_out)	todo		
+Python/fileutils.c	1086	1090	LARGE_INTEGER_to_time_t_nsec	LARGE_INTEGER_to_time_t_nsec(LARGE_INTEGER *in_ptr, time_t *time_out, int* nsec_out)	todo		
+Python/fileutils.c	1093	1100	_Py_time_t_to_FILE_TIME	_Py_time_t_to_FILE_TIME(time_t time_in, int nsec_in, FILETIME *out_ptr)	todo		
+Python/fileutils.c	1107	1119	attributes_to_mode	attributes_to_mode(DWORD attr)	todo		
+Python/fileutils.c	1132	1176	_Py_attribute_data_to_stat	_Py_attribute_data_to_stat(BY_HANDLE_FILE_INFORMATION *info, ULONG reparse_tag, FILE_BASIC_INFO *basic_info, FILE_ID_INFO *id_info, struct _Py_stat_struct *result)	todo		
+Python/fileutils.c	1179	1240	_Py_stat_basic_info_to_stat	_Py_stat_basic_info_to_stat(FILE_STAT_BASIC_INFORMATION *info, struct _Py_stat_struct *result)	todo		
+Python/fileutils.c	1257	1313	_Py_fstat_noraise	_Py_fstat_noraise(int fd, struct _Py_stat_struct *status)	todo		
+Python/fileutils.c	1331	1350	_Py_fstat	_Py_fstat(int fd, struct _Py_stat_struct *status)	todo		
+Python/fileutils.c	1354	1374	_Py_wstat	_Py_wstat(const wchar_t* path, struct stat *buf)	todo		
+Python/fileutils.c	1384	1415	_Py_stat	_Py_stat(PyObject *path, struct stat *statbuf)	todo		
+Python/fileutils.c	1427	1458	get_inheritable	get_inheritable(int fd, int raise)	todo		
+Python/fileutils.c	1464	1467	_Py_get_inheritable	_Py_get_inheritable(int fd)	todo		
+Python/fileutils.c	1472	1599	set_inheritable	set_inheritable(int fd, int inheritable, int raise, int *atomic_flag_works)	todo		
+Python/fileutils.c	1604	1607	make_non_inheritable	make_non_inheritable(int fd)	todo		
+Python/fileutils.c	1626	1629	_Py_set_inheritable	_Py_set_inheritable(int fd, int inheritable, int *atomic_flag_works)	todo		
+Python/fileutils.c	1635	1638	_Py_set_inheritable_async_safe	_Py_set_inheritable_async_safe(int fd, int inheritable, int *atomic_flag_works)	todo		
+Python/fileutils.c	1641	1699	_Py_open_impl	_Py_open_impl(const char *pathname, int flags, int gil_held)	todo		
+Python/fileutils.c	1712	1717	_Py_open	_Py_open(const char *pathname, int flags)	todo		
+Python/fileutils.c	1726	1729	_Py_open_noraise	_Py_open_noraise(const char *pathname, int flags)	todo		
+Python/fileutils.c	1738	1769	_Py_wfopen	_Py_wfopen(const wchar_t *path, const wchar_t *mode)	todo		
+Python/fileutils.c	1788	1862	Py_fopen	Py_fopen(PyObject *path, const char *mode)	todo		
+Python/fileutils.c	1871	1874	Py_fclose	Py_fclose(FILE *file)	todo		
+Python/fileutils.c	1891	1947	_Py_read	_Py_read(int fd, void *buf, size_t count)	todo		
+Python/fileutils.c	1950	2048	_Py_write_impl	_Py_write_impl(int fd, const void *buf, size_t count, int gil_held)	todo		
+Python/fileutils.c	2061	2071	_Py_write	_Py_write(int fd, const void *buf, size_t count)	todo		
+Python/fileutils.c	2081	2084	_Py_write_noraise	_Py_write_noraise(int fd, const void *buf, size_t count)	todo		
+Python/fileutils.c	2094	2132	_Py_wreadlink	_Py_wreadlink(const wchar_t *path, wchar_t *buf, size_t buflen)	todo		
+Python/fileutils.c	2143	2176	_Py_wrealpath	_Py_wrealpath(const wchar_t *path, wchar_t *resolved_path, size_t resolved_path_len)	todo		changed-in-3.15:
+Python/fileutils.c	2181	2201	_Py_isabs	_Py_isabs(const wchar_t *path)	todo		
+Python/fileutils.c	2210	2264	_Py_abspath	_Py_abspath(const wchar_t *path, wchar_t **abspath_p)	todo		
+Python/fileutils.c	2272	2297	PathCchSkipRoot	PathCchSkipRoot(const wchar_t *path, const wchar_t **rootEnd)	todo		
+Python/fileutils.c	2300	2329	PathCchCombineEx	PathCchCombineEx(wchar_t *buffer, size_t bufsize, const wchar_t *dirname, const wchar_t *relfile, unsigned long flags)	todo		
+Python/fileutils.c	2334	2424	_Py_skiproot	_Py_skiproot(const wchar_t *path, Py_ssize_t size, Py_ssize_t *drvsize, Py_ssize_t *rootsize)	todo		
+Python/fileutils.c	2428	2461	join_relfile	join_relfile(wchar_t *buffer, size_t bufsize, const wchar_t *dirname, const wchar_t *relfile)	todo		
+Python/fileutils.c	2467	2486	_Py_join_relfile	_Py_join_relfile(const wchar_t *dirname, const wchar_t *relfile)	todo		
+Python/fileutils.c	2495	2500	_Py_add_relfile	_Py_add_relfile(wchar_t *dirname, const wchar_t *relfile, size_t bufsize)	todo		
+Python/fileutils.c	2504	2512	_Py_find_basename	_Py_find_basename(const wchar_t *filename)	todo		
+Python/fileutils.c	2521	2633	_Py_normpath_and_size	_Py_normpath_and_size(wchar_t *path, Py_ssize_t size, Py_ssize_t *normsize)	todo		
+Python/fileutils.c	2641	2645	_Py_normpath	_Py_normpath(wchar_t *path, Py_ssize_t size)	todo		
+Python/fileutils.c	2654	2678	_Py_wgetcwd	_Py_wgetcwd(wchar_t *buf, size_t buflen)	todo		
+Python/fileutils.c	2686	2749	_Py_dup	_Py_dup(int fd)	todo		
+Python/fileutils.c	2756	2768	_Py_get_blocking	_Py_get_blocking(int fd)	todo		
+Python/fileutils.c	2777	2810	_Py_set_blocking	_Py_set_blocking(int fd, int blocking)	todo		
+Python/fileutils.c	2817	2846	GetNamedPipeHandleStateW	GetNamedPipeHandleStateW(HANDLE hNamedPipe, LPDWORD lpState, LPDWORD lpCurInstances, LPDWORD lpMaxCollectionCount, LPDWORD lpCollectDataTimeout, LPWSTR lpUserName, DWORD nMaxUserNameSize)	todo		changed-in-3.15: new function
+Python/fileutils.c	2850	2872	_Py_get_blocking	_Py_get_blocking(int fd)	todo		
+Python/fileutils.c	2875	2905	_Py_set_blocking	_Py_set_blocking(int fd, int blocking)	todo		
+Python/fileutils.c	2908	2915	_Py_get_osfhandle_noraise	_Py_get_osfhandle_noraise(int fd)	todo		
+Python/fileutils.c	2918	2925	_Py_get_osfhandle	_Py_get_osfhandle(int fd)	todo		
+Python/fileutils.c	2928	2935	_Py_open_osfhandle_noraise	_Py_open_osfhandle_noraise(void *handle, int flags)	todo		
+Python/fileutils.c	2938	2945	_Py_open_osfhandle	_Py_open_osfhandle(void *handle, int flags)	todo		
+Python/fileutils.c	2949	3024	_Py_GetLocaleconvNumeric	_Py_GetLocaleconvNumeric(struct lconv *lc, PyObject **decimal_point, PyObject **thousands_sep)	todo		
+Python/fileutils.c	3047	3060	_fdwalk_close_func	_fdwalk_close_func(void *lohi, int fd)	todo		
+Python/fileutils.c	3065	3101	_Py_closerange	_Py_closerange(int first, int last)	todo		
+Python/fileutils.c	3108	3124	_Py_GetTicksPerSecond	_Py_GetTicksPerSecond(long *ticks_per_second)	todo		
+Python/fileutils.c	3131	3174	_Py_IsValidFD	_Py_IsValidFD(int fd)	todo		
+Python/fileutils.c	3183	3268	_Py_strerror	_Py_strerror(int code) /*[clinic end generated code: output=baebf09fa02a78f2 input=75a8673d97915a91]*/	todo		changed-in-3.15: new function

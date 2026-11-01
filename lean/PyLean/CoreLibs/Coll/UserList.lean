@@ -2,7 +2,7 @@ import PyLean.Accel.Select
 import PyLean.Sequences.ListModel
 
 /-!
-`collections.UserList`, Lib/collections/__init__.py:1230-1356 (CPython 3.14.7).
+`collections.UserList`, Lib/collections/__init__.py:1285-1411 (CPython 3.14.7).
 
 `UserList` is a wrapper: what it adds to `list` is operand dispatch, re-wrapping in
 `self.__class__`, and `__cast`. The wrapped `list` methods are the fields of `ListOps`,
@@ -69,7 +69,7 @@ def iterOf : LOpnd α → Py (List α)
   | .user l | .list l | .iter _ l => .ok l
   | .noniter ty => .error (.typeError s!"'{ty}' object is not iterable")
 
-/-- `UserList.__init__`, :1233-1242; `none` is `initlist=None`. -/
+/-- `UserList.__init__`, :1309-1318; `none` is `initlist=None`. -/
 def ulNew (cls : String) : Option (LOpnd α) → Py (UL α)
   | none => .ok ⟨cls, []⟩
   | some (.list l) => .ok ⟨cls, l⟩
@@ -78,13 +78,13 @@ def ulNew (cls : String) : Option (LOpnd α) → Py (UL α)
     let l ← iterOf o
     return ⟨cls, l⟩
 
-/-- `UserList.__cast`, :1262-1263: a `list` to compare with, or the type name of
+/-- `UserList.__cast`, :1338-1339: a `list` to compare with, or the type name of
 some other object. -/
 def ulCast : LOpnd α → List α ⊕ String
   | .user l | .list l => .inl l
   | .iter ty _ | .noniter ty => .inr ty
 
-/-- `__lt__`, `__le__`, `__eq__`, `__gt__`, `__ge__`, :1247-1260: `self.data op
+/-- `__lt__`, `__le__`, `__eq__`, `__gt__`, `__ge__`, :1323-1336: `self.data op
 self.__cast(other)`. A list against a non-list is `NotImplemented` on both sides, so `==`
 is identity and the orderings raise. -/
 def ulCmp (ops : ListOps α) (op : CmpOp) (u : UL α) (o : LOpnd α) : Py Bool :=
@@ -94,16 +94,16 @@ def ulCmp (ops : ListOps α) (op : CmpOp) (u : UL α) (o : LOpnd α) : Py Bool :
     if op = .eq then .ok false
     else .error (.typeError s!"'{op.sym}' not supported between instances of 'list' and '{ty}'")
 
-/-- `UserList.__repr__`, :1244-1245. -/
+/-- `UserList.__repr__`, :1320-1321. -/
 def ulRepr (ops : ListOps α) (u : UL α) : String := ops.repr u.data
 
-/-- `UserList.__contains__`, :1265-1266. -/
+/-- `UserList.__contains__`, :1341-1342. -/
 def ulContains (ops : ListOps α) (u : UL α) (x : α) : Bool := ops.contains u.data x
 
-/-- `UserList.__len__`, :1268-1269. -/
+/-- `UserList.__len__`, :1344-1345. -/
 def ulLen (u : UL α) : Nat := u.data.length
 
-/-- `UserList.__getitem__`, :1271-1275, int index. -/
+/-- `UserList.__getitem__`, :1347-1351, int index. -/
 def ulGetitem (ops : ListOps α) (u : UL α) (i : Int) : Py α := ops.getItem u.data i
 
 /-- `UserList.__getitem__`, slice: `self.__class__(self.data[i])`. -/
@@ -114,7 +114,7 @@ def ulGetslice (ops : ListOps α) (u : UL α) (s : Slice) : Py (UL α) := do
 /-- Store a new `self.data`. -/
 def withData (u : UL α) (r : Py (List α)) : Py (UL α) := r.map (fun l => { u with data := l })
 
-/-- `UserList.__setitem__`, :1277-1278, int index. -/
+/-- `UserList.__setitem__`, :1353-1354, int index. -/
 def ulSetitem (ops : ListOps α) (u : UL α) (i : Int) (x : α) : Py (UL α) :=
   withData u (ops.setItem u.data i x)
 
@@ -122,7 +122,7 @@ def ulSetitem (ops : ListOps α) (u : UL α) (i : Int) (x : α) : Py (UL α) :=
 def ulSetslice (ops : ListOps α) (u : UL α) (s : Slice) (v : List α) : Py (UL α) :=
   withData u (ops.assSlice u.data s (some v))
 
-/-- `UserList.__delitem__`, :1280-1281, int index. -/
+/-- `UserList.__delitem__`, :1356-1357, int index. -/
 def ulDelitem (ops : ListOps α) (u : UL α) (i : Int) : Py (UL α) :=
   withData u (ops.delItem u.data i)
 
@@ -130,7 +130,7 @@ def ulDelitem (ops : ListOps α) (u : UL α) (i : Int) : Py (UL α) :=
 def ulDelslice (ops : ListOps α) (u : UL α) (s : Slice) : Py (UL α) :=
   withData u (ops.assSlice u.data s none)
 
-/-- `UserList.__add__`, :1283-1288. -/
+/-- `UserList.__add__`, :1359-1364. -/
 def ulAdd (u : UL α) : LOpnd α → Py (UL α)
   | .user l => .ok ⟨u.cls, u.data ++ l⟩
   | .list l => .ok ⟨u.cls, u.data ++ l⟩
@@ -138,7 +138,7 @@ def ulAdd (u : UL α) : LOpnd α → Py (UL α)
     let l ← iterOf o
     return ⟨u.cls, u.data ++ l⟩
 
-/-- `UserList.__radd__`, :1290-1295. -/
+/-- `UserList.__radd__`, :1366-1371. -/
 def ulRadd (u : UL α) : LOpnd α → Py (UL α)
   | .user l => .ok ⟨u.cls, l ++ u.data⟩
   | .list l => .ok ⟨u.cls, l ++ u.data⟩
@@ -146,7 +146,7 @@ def ulRadd (u : UL α) : LOpnd α → Py (UL α)
     let l ← iterOf o
     return ⟨u.cls, l ++ u.data⟩
 
-/-- `UserList.__iadd__`, :1297-1304. -/
+/-- `UserList.__iadd__`, :1373-1380. -/
 def ulIadd (u : UL α) : LOpnd α → Py (UL α)
   | .user l => .ok { u with data := u.data ++ l }
   | .list l => .ok { u with data := u.data ++ l }
@@ -154,51 +154,51 @@ def ulIadd (u : UL α) : LOpnd α → Py (UL α)
     let l ← iterOf o
     return { u with data := u.data ++ l }
 
-/-- `UserList.__mul__`, :1306-1307, and `__rmul__`, :1309. -/
+/-- `UserList.__mul__`, :1382-1383, and `__rmul__`, :1385. -/
 def ulMul (ops : ListOps α) (u : UL α) (n : Int) : Py (UL α) := do
   let l ← ops.repeatL u.data n
   return ⟨u.cls, l⟩
 
-/-- `UserList.__imul__`, :1311-1313. -/
+/-- `UserList.__imul__`, :1387-1389. -/
 def ulImul (ops : ListOps α) (u : UL α) (n : Int) : Py (UL α) := withData u (ops.irepeat u.data n)
 
-/-- `UserList.__copy__`, :1315-1320. -/
+/-- `UserList.__copy__`, :1391-1396. -/
 def ulCopyDunder (u : UL α) : UL α := { u with data := u.data.take u.data.length }
 
-/-- `UserList.append`, :1322-1323. -/
+/-- `UserList.append`, :1398-1399. -/
 def ulAppend (u : UL α) (x : α) : UL α := { u with data := u.data ++ [x] }
 
-/-- `UserList.insert`, :1325-1326. -/
+/-- `UserList.insert`, :1401-1402. -/
 def ulInsert (ops : ListOps α) (u : UL α) (i : Int) (x : α) : Py (UL α) :=
   withData u (ops.insert u.data i x)
 
-/-- `UserList.pop`, :1328-1329. -/
+/-- `UserList.pop`, :1404-1405. -/
 def ulPop (ops : ListOps α) (u : UL α) (i : Option Int) : Py (α × UL α) :=
   (ops.pop u.data i).map (fun r => (r.1, { u with data := r.2 }))
 
-/-- `UserList.remove`, :1331-1332. -/
+/-- `UserList.remove`, :1407-1408. -/
 def ulRemove (ops : ListOps α) (u : UL α) (x : α) : Py (UL α) := withData u (ops.remove u.data x)
 
-/-- `UserList.clear`, :1334-1335. -/
+/-- `UserList.clear`, :1410-1411. -/
 def ulClear (u : UL α) : UL α := { u with data := [] }
 
-/-- `UserList.copy`, :1337-1338: `self.__class__(self)`. -/
+/-- `UserList.copy`, :1413-1414: `self.__class__(self)`. -/
 def ulCopy (u : UL α) : Py (UL α) := ulNew u.cls (some (.user u.data))
 
-/-- `UserList.count`, :1340-1341. -/
+/-- `UserList.count`, :1416-1417. -/
 def ulCount (ops : ListOps α) (u : UL α) (x : α) : Int := ops.count u.data x
 
-/-- `UserList.index`, :1343-1344. -/
+/-- `UserList.index`, :1419-1420. -/
 def ulIndex (ops : ListOps α) (u : UL α) (x : α) (start stop : Option Int) : Py Int :=
   ops.index u.data x start stop
 
-/-- `UserList.reverse`, :1346-1347. -/
+/-- `UserList.reverse`, :1422-1423. -/
 def ulReverse (ops : ListOps α) (u : UL α) : UL α := { u with data := ops.reverse u.data }
 
-/-- `UserList.sort`, :1349-1350. -/
+/-- `UserList.sort`, :1425-1426. -/
 def ulSort (ops : ListOps α) (u : UL α) (r : Bool) : UL α := { u with data := ops.sort u.data r }
 
-/-- `UserList.extend`, :1352-1356. -/
+/-- `UserList.extend`, :1428-1432. -/
 def ulExtend (u : UL α) : LOpnd α → Py (UL α)
   | .user l => .ok { u with data := u.data ++ l }
   | o => do

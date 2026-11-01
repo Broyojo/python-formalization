@@ -99,7 +99,7 @@ inductive Key where
 def mbufAlloc : M Nat := fun st =>
   (.ok st.mbufs.length, { st with mbufs := st.mbufs ++ [{}] })
 
-/-- `PyBuffer_Release(view)` when `obj` is a memoryview: `memory_releasebuf`, :1608-1615. -/
+/-- `PyBuffer_Release(view)` when `obj` is a memoryview: `memory_releasebuf`, :1637-1644. -/
 def pyBufferRelease0 (b : Buf) : M Unit := fun st =>
   match b.obj with
   | some (.mv i) =>
@@ -108,7 +108,7 @@ def pyBufferRelease0 (b : Buf) : M Unit := fun st =>
   | _ => (.ok (), st)
 
 /-- `PyBuffer_Release(view)`, Objects/abstract.c: `bf_releasebuffer`, which for a Python
-exporter is `__release_buffer__` (typeobject.c:10800-10850), whose exceptions are not
+exporter is `__release_buffer__` (typeobject.c:11515-11565), whose exceptions are not
 raised (`PyErr_FormatUnraisable`), then the drop of `view->obj`. The callback here does
 `m.release()`, ignoring `BufferError`; `rel` is that release. -/
 def hookRelease (rel : Nat → M Unit) (b : Buf) : M Unit := fun st =>
@@ -150,18 +150,18 @@ def pyBufferRelease (b : Buf) : M Unit := fun st =>
     pyBufferRelease0 b st
   | none => pyBufferRelease0 b st
 
-/-- `mbuf_release`, :106-117. -/
+/-- `mbuf_release`, :174-180. -/
 def mbufRelease (k : Nat) : M Unit := fun st =>
   let x := st.mb k
   if x.released then (.ok (), st)
   else pyBufferRelease x.master (st.setMb k { x with released := true })
 
-/-- `mbuf_clear`, :138-145. -/
+/-- `mbuf_clear`, @3.14.7:138-145. -/
 def mbufClear (k : Nat) : M Unit := mbufRelease k
 
-/-! ## Release (:1104-1193) -/
+/-! ## Release (:1176-1272) -/
 
-/-- `_memory_release`, :1108-1120. -/
+/-- `_memory_release`, :1180-1192. -/
 def memoryRelease (i : Nat) : M Unit := fun st =>
   let x := st.mv i
   if x.flags.released then (.ok (), st)
@@ -172,10 +172,10 @@ def memoryRelease (i : Nat) : M Unit := fun st =>
     let st := st.setMb x.mbuf { b with exports := e }
     if e = 0 then mbufRelease x.mbuf st else (.ok (), st)
 
-/-- `get_exports`, :1089-1097. -/
+/-- `get_exports`, :1162-1170. -/
 def getExports (st : St) (i : Nat) : Int := (st.mv i).exports
 
-/-- `memoryview_release_impl`, :1128-1148. -/
+/-- `memoryview_release_impl`, :1200-1225. -/
 def memoryviewRelease (i : Nat) : M Unit := fun st =>
   let e := getExports st i
   if e = 0 then memoryRelease i st
@@ -183,8 +183,8 @@ def memoryviewRelease (i : Nat) : M Unit := fun st =>
     (.error (bufferError s!"memoryview has {e} exported buffer{if e = 1 then "" else "s"}"), st)
   else (.error (systemError "memoryview: negative export count"), st)
 
-/-- `memory_dealloc`, :1150-1161: the last reference to a view goes away. After the
-release, `PyObject_ClearWeakRefs` (:1158-1159) runs the callback of a weakref to it. -/
+/-- `memory_dealloc`, :1227-1238: the last reference to a view goes away. After the
+release, `PyObject_ClearWeakRefs` (:1235-1236) runs the callback of a weakref to it. -/
 def memoryDealloc (i : Nat) : M Unit := fun st =>
   let cb := (st.mv i).weakcb
   match memoryRelease i st with
@@ -193,20 +193,20 @@ def memoryDealloc (i : Nat) : M Unit := fun st =>
     | some t => if getExports s t = 0 then (memoryRelease t s) else (r, s)
     | none => (r, s)
 
-/-- `mbuf_dealloc`, :119-128: `mbuf_release` and the frees. A released managed buffer is
-left alone, so this is the release of a buffer no view ever kept: :816-817, :845-846. -/
+/-- `mbuf_dealloc`, @3.14.7:119-128: `mbuf_release` and the frees. A released managed buffer is
+left alone, so this is the release of a buffer no view ever kept: :889-890, :918-919. -/
 def mbufDealloc (k : Nat) : M Unit := mbufRelease k
 
-/-- `memory_clear`, :1171-1180: a view in a reference cycle. -/
+/-- `memory_clear`, :1248-1259: a view in a reference cycle. -/
 def memoryClear (i : Nat) : M Unit := fun st =>
   if getExports st i = 0 then memoryRelease i st else (.ok (), st)
 
-/-- `memory_enter`, :1182-1187. -/
+/-- `memory_enter`, :1261-1266. -/
 def memoryEnter (i : Nat) : M Nat := do
   checkReleased i
   return i
 
-/-- `memory_exit`, :1189-1193. -/
+/-- `memory_exit`, :1268-1272. -/
 def memoryExit (i : Nat) : M Unit := memoryviewRelease i
 
 /-- Python callback of an argument object: `m.release()`, `BufferError` swallowed. -/
@@ -227,12 +227,12 @@ theorem Ret.get_state {α : Type} (w : String → PyExc) (r : Ret α) (st : St) 
 theorem Ret.get_val {α : Type} (w : String → PyExc) (a : α) (st : St) :
     (Ret.val a).get w st = (.ok a, st) := rfl
 
-/-- `__buffer__` returned something other than a memoryview, typeobject.c:10718-10719. -/
+/-- `__buffer__` returned something other than a memoryview, typeobject.c@3.14.7:10718-10719. -/
 def bufferWrong (_ : String) : PyExc := .typeError "__buffer__ returned non-memoryview object"
 
 /-! ## Registering views -/
 
-/-- `memory_alloc`, :643-665, with the view filled in by the caller. Returns its number. -/
+/-- `memory_alloc`, :681-704, with the view filled in by the caller. Returns its number. -/
 def memoryAlloc (x : MV) : M Nat := fun st =>
   (.ok st.mvs.length, { st with mvs := st.mvs ++ [x] })
 
@@ -240,7 +240,7 @@ def bumpMbuf (k : Nat) : M Unit := fun st =>
   let b := st.mb k
   (.ok (), st.setMb k { b with exports := b.exports + 1 })
 
-/-- `mbuf_add_view`, :675-705. -/
+/-- `mbuf_add_view`, :714-744. -/
 def mbufAddView (k : Nat) (src : Option Buf) : M Nat := do
   let st ← M.get
   let src := src.getD (st.mb k).master
@@ -253,7 +253,7 @@ def mbufAddView (k : Nat) (src : Option Buf) : M Nat := do
   bumpMbuf k
   return i
 
-/-- `mbuf_add_incomplete_view`, :712-735. -/
+/-- `mbuf_add_incomplete_view`, :751-790. -/
 def mbufAddIncompleteView (k : Nat) (src : Option Buf) (ndim : Nat) : M Nat := do
   let st ← M.get
   let src := src.getD (st.mb k).master
@@ -275,19 +275,19 @@ def bufFullRO : Nat := bufIndirect ||| bufFormat
 
 def req (flags x : Nat) : Bool := (flags &&& x) == x
 
-/-- `view->format = NULL` without `PyBUF_FORMAT`, :1547-1554. -/
+/-- `view->format = NULL` without `PyBUF_FORMAT`, :1652-1659. -/
 def viewFormat (flags : Nat) (v : Buf) : Buf :=
   if (flags &&& bufFormat) == 0 then { v with format := none } else v
 
-/-- `view->strides = NULL` without `PyBUF_STRIDES`, :1576-1583. -/
+/-- `view->strides = NULL` without `PyBUF_STRIDES`, :1681-1688. -/
 def viewStrides (flags : Nat) (v : Buf) : Buf :=
   if !req flags bufStrides then { v with strides := none } else v
 
-/-- `view->ndim = 1; view->shape = NULL` without `PyBUF_ND`, :1584-1599. -/
+/-- `view->ndim = 1; view->shape = NULL` without `PyBUF_ND`, :1689-1704. -/
 def viewShape (flags : Nat) (v : Buf) : Buf :=
   if !req flags bufND then { v with ndim := 1, shape := none } else v
 
-/-- The checks of `memory_getbuf`, :1538-1599, on `*view = *base`, in order. -/
+/-- The checks of `memory_getbuf`, :1643-1704, on `*view = *base`, in order. -/
 def getbufView (base : Buf) (baseflags : Flags) (flags : Nat) : Py Buf :=
   if (flags &&& bufWritable) != 0 && base.readonly then
     .error (bufferError "memoryview: underlying buffer is not writable")
@@ -310,7 +310,7 @@ def getbufView (base : Buf) (baseflags : Flags) (flags : Nat) : Py Buf :=
   else
   .ok (viewShape flags view)
 
-/-- `memory_getbuf`, :1528-1606. `*view = *base` is a copy; the export is counted only
+/-- `memory_getbuf`, :1628-1711. `*view = *base` is a copy; the export is counted only
 on success. The memoryview itself becomes `view->obj`. -/
 def memoryGetbuf (self : Nat) (flags : Nat) : M Buf := do
   checkReleased self
@@ -324,7 +324,7 @@ def memoryGetbuf (self : Nat) (flags : Nat) : M Buf := do
   -- the release of this export runs `memory_releasebuf`, not the exporter's hook
   return { view with obj := some (.mv self), hook := Option.none }
 
-/-- `memory_releasebuf`, :1608-1615. -/
+/-- `memory_releasebuf`, :1713-1720. -/
 def memoryReleasebuf (self : Nat) : M Unit := pyBufferRelease { obj := some (.mv self) }
 
 /-- `PyBuffer_FillInfo`, abstract.c, and the same logic in `array_buffer_getbuf`, for an
@@ -361,20 +361,20 @@ def getBufferFull (o : Obj) : M Buf :=
 
 /-! ## Constructors -/
 
-/-- `_PyManagedBuffer_FromObject`, :88-104, for an exporter described by `b`. -/
+/-- `_PyManagedBuffer_FromObject`, @3.14.7:88-104, for an exporter described by `b`. -/
 def managedBufferFromObject (b : Buf) (flags : Nat) : M Nat := do
   let k ← mbufAlloc
   let master ← M.lift (simpleGetbuffer b flags)
   M.modify fun st => st.setMb k { st.mb k with master := master }
   return k
 
-/-- The exporter path of `PyMemoryView_FromObjectAndFlags`, :811-819: on failure of
+/-- The exporter path of `PyMemoryView_FromObjectAndFlags`, :884-892: on failure of
 `mbuf_add_view` the `Py_DECREF(mbuf)` releases the master. -/
 def viewOfExporter (b : Buf) (flags : Nat) : M Nat := do
   let k ← managedBufferFromObject b flags
   M.onError (mbufAddView k none) (mbufDealloc k)
 
-/-- `PyMemoryView_FromObjectAndFlags`, :800-825. -/
+/-- `PyMemoryView_FromObjectAndFlags`, :873-898. -/
 def memoryViewFromObjectAndFlags (v : Obj) (flags : Nat) : M Nat :=
   match v with
   | .view i => do
@@ -390,16 +390,16 @@ def memoryViewFromObjectAndFlags (v : Obj) (flags : Nat) : M Nat :=
     viewOfExporter (← r.get bufferWrong) flags
   | o => throw (.typeError s!"memoryview: a bytes-like object is required, not '{o.typeName}'")
 
-/-- `PyMemoryView_FromObject`, :853-857. -/
+/-- `PyMemoryView_FromObject`, :926-930. -/
 def memoryViewFromObject (v : Obj) : M Nat := memoryViewFromObjectAndFlags v bufFullRO
 
-/-- `memoryview_impl`, :1013-1018 (`memoryview(object)`). -/
+/-- `memoryview_impl`, :1086-1091 (`memoryview(object)`). -/
 def memoryviewNew (v : Obj) : M Nat := memoryViewFromObject v
 
-/-- `memoryview__from_flags_impl`, :1031-1036. -/
+/-- `memoryview__from_flags_impl`, :1104-1109. -/
 def memoryviewFromFlags (v : Obj) (flags : Nat) : M Nat := memoryViewFromObjectAndFlags v flags
 
-/-- `_PyMemoryView_FromBufferProc`, :831-848, for any `bufferproc`. If it fails, `master.obj`
+/-- `_PyMemoryView_FromBufferProc`, :904-921, for any `bufferproc`. If it fails, `master.obj`
 is cleared and the `Py_DECREF(mbuf)` releases nothing. -/
 def bufferProc (proc : M Buf) : M Nat := do
   let k ← mbufAlloc
@@ -407,11 +407,11 @@ def bufferProc (proc : M Buf) : M Nat := do
   M.modify fun st => st.setMb k { st.mb k with master := master }
   M.onError (mbufAddView k none) (mbufDealloc k)
 
-/-- `m.__buffer__(flags)`: `wrap_buffer`, Objects/typeobject.c:9754-9773, with `memory_getbuf`
+/-- `m.__buffer__(flags)`: `wrap_buffer`, Objects/typeobject.c:10446-10465, with `memory_getbuf`
 as the buffer proc. -/
 def memoryBufferProc (self : Nat) (flags : Nat) : M Nat := bufferProc (memoryGetbuf self flags)
 
-/-- `PyMemoryView_FromMemory`, :740-762, on `size` bytes at `mem`. `writable` is
+/-- `PyMemoryView_FromMemory`, @3.14.7:740-762, on `size` bytes at `mem`. `writable` is
 `flags == PyBUF_WRITE`. -/
 def memoryViewFromMemory (mem : Int) (size : Int) (writable : Bool) : M Nat := do
   let k ← mbufAlloc
@@ -421,14 +421,14 @@ def memoryViewFromMemory (mem : Int) (size : Int) (writable : Bool) : M Nat := d
   M.modify fun st => st.setMb k { st.mb k with master := master }
   mbufAddView k none
 
-/-- `PyMemoryView_FromBuffer`, :769-794. `isNull` is `info->buf == NULL`. -/
+/-- `PyMemoryView_FromBuffer`, :842-867. `isNull` is `info->buf == NULL`. -/
 def memoryViewFromBuffer (info : Buf) (isNull : Bool) : M Nat := do
   if isNull then throw (.valueError "PyMemoryView_FromBuffer(): info->buf must not be NULL")
   let k ← mbufAlloc
   M.modify fun st => st.setMb k { st.mb k with master := { info with obj := none } }
   mbufAddView k none
 
-/-- `releasebuffer_call_python`, Objects/typeobject.c:10820-10833, for an exporter with no Python
+/-- `releasebuffer_call_python`, Objects/typeobject.c:11535-11548, for an exporter with no Python
 `__buffer__`: `__release_buffer__` receives a new view of the buffer, restricted. -/
 def restrictedView (b : Buf) : M Nat := do
   let i ← memoryViewFromBuffer b false
@@ -437,8 +437,8 @@ def restrictedView (b : Buf) : M Nat := do
     st.setMv i { x with flags := { x.flags with restricted := true } }
   return i
 
-/-- The first part of `memory_from_contiguous_copy`, :900-912: a new bytes object at the
-end of the store, its managed buffer, and `mbuf_copy_format` (:860-874). -/
+/-- The first part of `memory_from_contiguous_copy`, :973-985: a new bytes object at the
+end of the store, its managed buffer, and `mbuf_copy_format` (:933-947). -/
 def contigBytes (src : Buf) : M Nat := do
   let e ← bytesBuf (List.replicate src.len.toNat 0)
   let k ← managedBufferFromObject e bufFullRO
@@ -447,7 +447,7 @@ def contigBytes (src : Buf) : M Nat := do
     st.setMb k { b with master := { b.master with format := src.format } }
   return k
 
-/-- The second part of `memory_from_contiguous_copy`, :914-945: the view, its strides in
+/-- The second part of `memory_from_contiguous_copy`, :987-1018: the view, its strides in
 the requested order, and the copy. -/
 def contigFill (k : Nat) (src : Buf) (order : Char) : M Nat := do
   let i ← mbufAddIncompleteView k none src.ndim
@@ -465,12 +465,12 @@ def contigFill (k : Nat) (src : Buf) (order : Char) : M Nat := do
   M.modify fun st => { st with mem := dm }
   return i
 
-/-- `memory_from_contiguous_copy`, :888-946. -/
+/-- `memory_from_contiguous_copy`, :961-1019. -/
 def memoryFromContiguousCopy (src : Buf) (order : Char) : M Nat := do
   let k ← contigBytes src
   contigFill k src order
 
-/-- `PyMemoryView_GetContiguous`, :965-1001. `writable` is `buffertype == PyBUF_WRITE`. -/
+/-- `PyMemoryView_GetContiguous`, :1038-1074. `writable` is `buffertype == PyBUF_WRITE`. -/
 def memoryViewGetContiguous (obj : Obj) (writable : Bool) (order : Char) : M Nat := do
   let mv ← memoryViewFromObject obj
   let st ← M.get
@@ -489,13 +489,13 @@ def memoryViewGetContiguous (obj : Obj) (writable : Bool) (order : Char) : M Nat
 /-! ## Casting -/
 
 /-- The test `get_native_fmtchar(&srcchar, view->format) >= 0 && IS_BYTE_FORMAT(srcchar)`
-of :1302-1303. -/
+of :1381-1382. -/
 def srcIsByte (view : Buf) : Bool :=
   match getNativeFmtchar (view.format.getD ['B']) with
   | some (c, _) => isByteFormat c
   | none => false
 
-/-- `cast_to_1D`, :1275-1335, on the fresh view `i`. -/
+/-- `cast_to_1D`, :1354-1435, on the fresh view `i`. -/
 def castTo1D (i : Nat) (format : List Char) : M Unit := do
   let st ← M.get
   let x := st.mv i
@@ -514,7 +514,7 @@ def castTo1D (i : Nat) (format : List Char) : M Unit := do
     shape := some [Int.tdiv view.len itemsize], strides := some [itemsize], suboffsets := none }
   M.set (st.setMv i { x with view := v, flags := initFlags v })
 
-/-- `PyLong_AsSsize_t`, Objects/longobject.c:668-669. -/
+/-- `PyLong_AsSsize_t`, Objects/longobject.c:748-749. -/
 def longAsSsize (x : Int) : Py Int :=
   if ssizeMin ≤ x ∧ x ≤ ssizeMax then .ok x
   else .error (.overflowError "Python int too large to convert to C ssize_t")
@@ -525,7 +525,7 @@ def Obj.asLong? : Obj → Option Int
   | .bool b => some (if b then 1 else 0)
   | _ => Option.none
 
-/-- `copy_shape`, :1338-1372: `(len, shape)`, `len` the running product. -/
+/-- `copy_shape`, :1416-1450: `(len, shape)`, `len` the running product. -/
 def copyShape : List Obj → Int → Py (Int × List Int)
   | [], len => .ok (len, [])
   | tmp :: rest, len =>
@@ -540,7 +540,7 @@ def copyShape : List Obj → Int → Py (Int × List Int)
         let (l, s) ← copyShape rest (len * x)
         return (l, x :: s)
 
-/-- `cast_to_ND`, :1377-1411. -/
+/-- `cast_to_ND`, :1455-1489. -/
 def castToND (i : Nat) (shape : List Obj) (ndim : Nat) : M Unit := do
   let st ← M.get
   let x := st.mv i
@@ -556,7 +556,7 @@ def castToND (i : Nat) (shape : List Obj) (ndim : Nat) : M Unit := do
     throw (.typeError "memoryview: product(shape) * itemsize != buffer size")
   M.set (st.setMv i { x with view := v, flags := initFlags v })
 
-/-- `zero_in_shape`, :1413-1424. -/
+/-- `zero_in_shape`, :1491-1502. -/
 def zeroInShape (v : Buf) : Bool := ((v.shape.getD []).take v.ndim).any (· == 0)
 
 /-- The argument `shape` of `memoryview.cast`. -/
@@ -567,7 +567,7 @@ inductive ShapeArg where
   | other
   deriving Repr, DecidableEq, Inhabited
 
-/-- `memoryview_cast_impl`, :1447-1499. -/
+/-- `memoryview_cast_impl`, :1525-1577. -/
 def memoryviewCast (self : Nat) (format : List Char) (shape : Option ShapeArg) : M Nat := do
   checkReleased self
   checkRestricted self
@@ -595,7 +595,7 @@ def memoryviewCast (self : Nat) (format : List Char) (shape : Option ShapeArg) :
     if shape.isSome then castToND mv items ndim
     return mv) (memoryDealloc mv)
 
-/-- `memoryview_toreadonly_impl`, :1507-1521. -/
+/-- `memoryview_toreadonly_impl`, :1585-1599. -/
 def memoryviewToreadonly (self : Nat) : M Nat := do
   checkReleased self
   checkRestricted self
@@ -606,17 +606,17 @@ def memoryviewToreadonly (self : Nat) : M Nat := do
     st.setMv i { y with view := { y.view with readonly := true } }
   return i
 
-/-! ## Pack and unpack (:1628-2026) -/
+/-! ## Pack and unpack (:1705-2102) -/
 
-/-- `type_error_int`, :1634-1640. -/
+/-- `type_error_int`, :1711-1717. -/
 def typeErrorInt (fmt : List Char) : PyExc :=
   .typeError s!"memoryview: invalid type for format '{fmtText fmt}'"
 
-/-- `value_error_int`, :1642-1648. -/
+/-- `value_error_int`, :1719-1725. -/
 def valueErrorInt (fmt : List Char) : PyExc :=
   .valueError s!"memoryview: invalid value for format '{fmtText fmt}'"
 
-/-- `fix_error_int`, :1650-1665: `PyErr_ExceptionMatches`, so a subclass counts. -/
+/-- `fix_error_int`, :1727-1741: `PyErr_ExceptionMatches`, so a subclass counts. -/
 def fixErrorInt (fmt : List Char) (e : PyExc) : PyExc :=
   if excMatches e "TypeError" then typeErrorInt fmt
   else if excMatches e "OverflowError" || excMatches e "ValueError" then valueErrorInt fmt
@@ -634,10 +634,10 @@ def fixErrorInt (fmt : List Char) (e : PyExc) : PyExc :=
     fixErrorInt fmt (.overflowError m) = valueErrorInt fmt := by
   simp [fixErrorInt, excMatches, PyExc.className, excBases]
 
-/-- `__index__` returned a non-int, Objects/abstract.c:1423-1425. -/
+/-- `__index__` returned a non-int, Objects/abstract.c@3.14.7:1423-1425. -/
 def indexWrong (t : String) : PyExc := .typeError s!"__index__ returned non-int (type {t})"
 
-/-- `_PyNumber_Index(item)`, Objects/abstract.c:1402-1440, running `__index__`. -/
+/-- `_PyNumber_Index(item)`, Objects/abstract.c:1412-1450, running `__index__`. -/
 def numberIndex : Obj → M Int
   | .int n => pure n
   | .bool b => pure (if b then 1 else 0)
@@ -655,20 +655,20 @@ def asUnsignedLong (x : Int) : Py Int :=
   else if x < 2 ^ 64 then .ok x
   else .error (.overflowError "Python int too large to convert to C unsigned long")
 
-/-- `pylong_as_ld`, :1672-1685. -/
+/-- `pylong_as_ld`, :1681-1694. -/
 def pylongAsLd (item : Obj) : M Int := do M.lift (asLong (← numberIndex item))
-/-- `pylong_as_lu`, :1687-1700. -/
+/-- `pylong_as_lu`, :1696-1709. -/
 def pylongAsLu (item : Obj) : M Int := do M.lift (asUnsignedLong (← numberIndex item))
-/-- `pylong_as_lld`, :1702-1715. -/
+/-- `pylong_as_lld`, :1711-1724. -/
 def pylongAsLld (item : Obj) : M Int := do M.lift (asLong (← numberIndex item))
-/-- `pylong_as_llu`, :1717-1730. -/
+/-- `pylong_as_llu`, :1726-1739. -/
 def pylongAsLlu (item : Obj) : M Int := do M.lift (asUnsignedLong (← numberIndex item))
-/-- `pylong_as_zd`, :1732-1745. -/
+/-- `pylong_as_zd`, :1741-1754. -/
 def pylongAsZd (item : Obj) : M Int := do M.lift (longAsSsize (← numberIndex item))
-/-- `pylong_as_zu`, :1747-1760. -/
+/-- `pylong_as_zu`, :1756-1769. -/
 def pylongAsZu (item : Obj) : M Int := do M.lift (asUnsignedLong (← numberIndex item))
 
-/-- `__float__` returned a non-float, Objects/floatobject.c:294-296. -/
+/-- `__float__` returned a non-float, Objects/floatobject.c@3.14.7:294-296. -/
 def floatWrong (t : String) : PyExc := .typeError s!"Flt.__float__ returned non-float (type {t})"
 
 /-- `PyFloat_AsDouble`, Objects/floatobject.c: `__float__`, then `__index__`. -/
@@ -680,7 +680,7 @@ def floatAsDouble : Obj → M Nat
   | .index r rel => do fire rel; M.lift (longAsDouble (← r.get indexWrong))
   | o => throw (.typeError s!"must be real number, not {o.typeName}")
 
-/-- `__bool__` returned a non-bool, Objects/typeobject.c:10235-10238. -/
+/-- `__bool__` returned a non-bool, Objects/typeobject.c@3.14.7:10235-10238. -/
 def boolWrong (t : String) : PyExc := .typeError s!"__bool__ should return bool, returned {t}"
 
 /-- `__len__` returned a non-int: `PyNumber_AsSsize_t` of its result in `slot_sq_length`. -/
@@ -722,8 +722,8 @@ def asVoidPtr (item : Obj) : Py Int :=
 def memWrite (ptr : Int) (bs : List Nat) : M Unit := fun st =>
   (.ok (), { st with mem := wrBytes st.mem ptr bs })
 
-/-- `pack_single`, :1874-2026. `fmt` is the format after `adjust_fmt`. Note the arm for
-`c` (:1995-2001): unlike every other arm and unlike `unpack_single`, it has no
+/-- `pack_single`, :1949-2102. `fmt` is the format after `adjust_fmt`. Note the arm for
+`c` (:2071-2077): unlike every other arm and unlike `unpack_single`, it has no
 `CHECK_RELEASED_INT_AGAIN`. -/
 def packSingle (self : Nat) (ptr : Int) (item : Obj) (fmt : List Char) : M Unit :=
   let fixed {α : Type} (x : M α) : M α := M.mapErr (fixErrorInt fmt) x
@@ -796,13 +796,13 @@ def packSingle (self : Nat) (ptr : Int) (item : Obj) (fmt : List Char) : M Unit 
     memWrite ptr (encInt p 8)
   | _ => throw (notImplError s!"memoryview: format {fmtText fmt} not supported")
 
-/-- `unpack_single`, :1775-1863. -/
+/-- `unpack_single`, :1850-1938. -/
 def unpackSingle (self : Nat) (ptr : Int) (fmt : List Char) : M Item := do
   checkReleased self
   let st ← M.get
   M.lift (unpackRaw st.mem ptr fmt)
 
-/-- `adjust_fmt`, :2152-2164: `view->format` with an optional `@` removed, or an error
+/-- `adjust_fmt`, :2230-2242: `view->format` with an optional `@` removed, or an error
 unless a single character is left. -/
 def adjustFmt (v : Buf) : Py (List Char) :=
   let vf := v.format.getD []
@@ -812,7 +812,7 @@ def adjustFmt (v : Buf) : Py (List Char) :=
 
 /-! ## Representations -/
 
-/-- `memoryview_tolist_impl`, :2236-2261. `Tree.leaf` for a 0-dim view. -/
+/-- `memoryview_tolist_impl`, :2314-2339. `Tree.leaf` for a 0-dim view. -/
 def memoryviewTolist (self : Nat) : M Tree := do
   checkReleased self
   let st ← M.get
@@ -828,7 +828,7 @@ def memoryviewTolist (self : Nat) : M Tree := do
   else
     M.lift (tolistRec st.mem f (view.shape.getD []) (view.strides.getD []) view.suboffsets view.buf)
 
-/-- The `order` argument of `memoryview_tobytes_impl`, :2288-2300. -/
+/-- The `order` argument of `memoryview_tobytes_impl`, :2366-2378. -/
 def parseOrder : Option (List Char) → Py Char
   | Option.none => .ok 'C'
   | some ['F'] => .ok 'F'
@@ -836,7 +836,7 @@ def parseOrder : Option (List Char) → Py Char
   | some ['C'] => .ok 'C'
   | some _ => .error (.valueError "order must be 'C', 'F' or 'A'")
 
-/-- `memoryview_tobytes_impl`, :2278-2312. `order`: `none` is `order=None`, or the
+/-- `memoryview_tobytes_impl`, :2356-2390. `order`: `none` is `order=None`, or the
 argument's text. -/
 def memoryviewTobytes (self : Nat) (order : Option (List Char)) : M (List Nat) := do
   checkReleased self
@@ -845,7 +845,7 @@ def memoryviewTobytes (self : Nat) (order : Option (List Char)) : M (List Nat) :
   let src := (st.mv self).view
   M.lift (pyBufferToContiguous st.mem src src.len ord)
 
-/-- The separator checks of `_Py_strhex_impl`, pystrhex.c:13-44: `(sep_char, group)`. -/
+/-- The separator checks of `_Py_strhex_impl`, pystrhex.c:122-153: `(sep_char, group)`. -/
 def strhexSep (sep : Option Obj) (group : Int) : Py (Char × Int) :=
   match sep with
   | Option.none => .ok ('\x00', 0)
@@ -867,12 +867,12 @@ def strhexSep (sep : Option Obj) (group : Int) : Py (Char × Int) :=
       else .error (.typeError "sep must be str or bytes.")
     | o => .error (.typeError s!"object of type '{o.typeName}' has no len()")
 
-/-- `_Py_strhex_with_sep`, Python/pystrhex.c:7-143 and :159-163. -/
+/-- `_Py_strhex_with_sep`, Python/pystrhex.c@3.14.7:7-143 and @3.14.7:159-163. -/
 def strhexWithSep (arg : List Nat) (sep : Option Obj) (bps : Int) : Py (List Char) := do
   let (c, group) ← strhexSep sep bps
   strhexBody arg c group
 
-/-- `_Py_strhex_with_sep`'s handling of `sep`, Python/pystrhex.c:13-31, for a `sep` whose
+/-- `_Py_strhex_with_sep`'s handling of `sep`, Python/pystrhex.c:122-140, for a `sep` whose
 `__len__` is Python code, then the formatting. -/
 def strhexWithSepM (arg : M (List Nat)) (sep : Option Obj) (bps : Int) : M (List Char) := do
   match sep with
@@ -887,14 +887,14 @@ def strhexWithSepM (arg : M (List Nat)) (sep : Option Obj) (bps : Int) : M (List
     M.lift (strhexBody (← arg) c group)
 
 /-- The export count held around a call that runs Python code, so that the view cannot
-be released under it: :2352-2354, :3231-3233. -/
+be released under it: :2463-2465, :3342-3344. -/
 def withExport {α : Type} (i : Nat) (x : M α) : M α := fun st =>
   let bump (d : Int) (s : St) : St := s.setMv i { s.mv i with exports := (s.mv i).exports + d }
   match x (bump 1 st) with
   | (r, s) => (r, bump (-1) s)
 
-/-- `memoryview_hex_impl`, :2337-2373. Only the contiguous branch hexes the view's own
-memory, so only that branch holds an export (:2352-2354, gh-143195). -/
+/-- `memoryview_hex_impl`, :2448-2484. Only the contiguous branch hexes the view's own
+memory, so only that branch holds an export (:2463-2465, gh-143195). -/
 def memoryviewHex (self : Nat) (sep : Option Obj) (bps : Int) : M (List Char) := do
   checkReleased self
   let st ← M.get
@@ -906,13 +906,13 @@ def memoryviewHex (self : Nat) (sep : Option Obj) (bps : Int) : M (List Char) :=
   let bytes ← M.lift (pyBufferToContiguous st.mem src src.len 'C')
   strhexWithSepM (pure bytes) sep bps
 
-/-- `memory_repr`, :2375-2383: the text before ` at 0x...`. -/
+/-- `memory_repr`, :2486-2494: the text before ` at 0x...`. -/
 def memoryRepr (self : Nat) : M String := fun st =>
   (.ok (if (st.mv self).flags.released then "<released memory" else "<memory"), st)
 
-/-! ## Indexing and slicing (:2386-2743) -/
+/-! ## Indexing and slicing (:2497-2854) -/
 
-/-- `lookup_dimension`, :2390-2413. -/
+/-- `lookup_dimension`, :2501-2524. -/
 def lookupDimension (m : Mem) (v : Buf) (ptr : Int) (dim : Nat) (index : Int) : Py Int :=
   let nitems := (v.shape.getD []).getD dim 0
   let index := if index < 0 then index + nitems else index
@@ -921,10 +921,10 @@ def lookupDimension (m : Mem) (v : Buf) (ptr : Int) (dim : Nat) (index : Int) : 
   else
     .ok (adjustPtr m (ptr + (v.strides.getD []).getD dim 0 * index) v.suboffsets dim)
 
-/-- `ptr_from_index`, :2415-2421. -/
+/-- `ptr_from_index`, :2526-2532. -/
 def ptrFromIndex (m : Mem) (v : Buf) (index : Int) : Py Int := lookupDimension m v v.buf 0 index
 
-/-- `PyNumber_AsSsize_t(key, PyExc_IndexError)`, Objects/abstract.c:1458-1500, after
+/-- `PyNumber_AsSsize_t(key, PyExc_IndexError)`, Objects/abstract.c:1468-1510, after
 `__index__` gave `x`. The message names the key's type. -/
 def keyAsSsize (o : Obj) (x : Int) : Py Int :=
   if ssizeMin ≤ x ∧ x ≤ ssizeMax then .ok x
@@ -937,7 +937,7 @@ def elemIndex : KeyElem → M Int
     M.lift (keyAsSsize o n)
   | .slice .. => throw (.typeError "slice indices must be integers")
 
-/-- The loop of `ptr_from_tuple`, :2437-2446. -/
+/-- The loop of `ptr_from_tuple`, :2446-2453. -/
 def tupleLoop (v : Buf) : Nat → List KeyElem → Int → M Int
   | _, [], ptr => pure ptr
   | dim, e :: es, ptr => do
@@ -946,13 +946,13 @@ def tupleLoop (v : Buf) : Nat → List KeyElem → Int → M Int
     let ptr ← M.lift (lookupDimension st.mem v ptr dim index)
     tupleLoop v (dim + 1) es ptr
 
-/-- `ptr_from_tuple`, :2423-2448. -/
+/-- `ptr_from_tuple`, :2432-2455. -/
 def ptrFromTuple (v : Buf) (tup : List KeyElem) : M Int := do
   if tup.length > v.ndim then
     throw (.typeError s!"cannot index {v.ndim}-dimension view with {tup.length}-element tuple")
   tupleLoop v 0 tup v.buf
 
-/-- `memory_item`, :2453-2480. -/
+/-- `memory_item`, :2460-2487. -/
 def memoryItem (self : Nat) (index : Int) : M Item := do
   checkReleased self
   let st ← M.get
@@ -964,7 +964,7 @@ def memoryItem (self : Nat) (index : Int) : M Item := do
     return ← unpackSingle self ptr fmt
   throw (notImplError "multi-dimensional sub-views are not implemented")
 
-/-- `memory_item_multi`, :2483-2506. -/
+/-- `memory_item_multi`, :2490-2513. -/
 def memoryItemMulti (self : Nat) (tup : List KeyElem) : M Item := do
   checkReleased self
   let st ← M.get
@@ -974,12 +974,12 @@ def memoryItemMulti (self : Nat) (tup : List KeyElem) : M Item := do
   let ptr ← ptrFromTuple view tup
   unpackSingle self ptr fmt
 
-/-- The loop of :2525-2526: the last earlier dimension with a suboffset. -/
+/-- The loop of :2532-2533: the last earlier dimension with a suboffset. -/
 def lastSub (subs : List Int) : Nat → Option Nat
   | 0 => Option.none
   | n + 1 => if subs.getD n (-1) ≥ 0 then some n else lastSub subs n
 
-/-- `init_slice`, :2508-2535. `PySlice_Unpack` saturates and rejects a zero step;
+/-- `init_slice`, :2515-2542. `PySlice_Unpack` saturates and rejects a zero step;
 every `Py_ssize_t` product is a wrapping one. -/
 def initSlice (base : Buf) (s : Slice) (dim : Nat) : Py Buf := do
   let (start, stop, step) ← sliceUnpack s
@@ -1000,7 +1000,7 @@ def initSlice (base : Buf) (s : Slice) (dim : Nat) : Py Buf := do
   return { b with shape := some (shape.set dim slicelength),
                   strides := some (strides.set dim (wrap (sd * step))) }
 
-/-- `is_multislice`, :2537-2554, on the tuple elements. -/
+/-- `is_multislice`, :2544-2561, on the tuple elements. -/
 def isMultislice (es : List KeyElem) : Bool :=
   !es.isEmpty && es.all fun e => match e with | .slice .. => true | _ => false
 
@@ -1009,7 +1009,7 @@ def Obj.isIndex : Obj → Bool
   | .int _ | .bool _ | .index _ _ => true
   | _ => false
 
-/-- `is_multiindex`, :2556-2571. -/
+/-- `is_multiindex`, :2563-2578. -/
 def isMultiindex (es : List KeyElem) : Bool :=
   es.all fun e => match e with | .obj o => o.isIndex | _ => false
 
@@ -1028,7 +1028,7 @@ def sliceStage (at_ p : SlicePart) (rel : Option Nat) (fail : Option SliceFail) 
     | Option.none => pure ()
   else pure ()
 
-/-- The Python code inside `PySlice_Unpack`, Objects/sliceobject.c:218-258: step, then
+/-- The Python code inside `PySlice_Unpack`, Objects/sliceobject.c:219-259: step, then
 start, then stop, with the zero test right after the step. `initSlice` does the
 arithmetic. -/
 def sliceEvents (s : Slice) (rel : Option Nat) (fail : Option SliceFail) : M Unit := do
@@ -1045,7 +1045,7 @@ inductive Sub where
   | view (i : Nat)
   deriving Repr, DecidableEq, Inhabited
 
-/-- `memory_subscript`, :2579-2640. -/
+/-- `memory_subscript`, :2582-2643. -/
 def memorySubscript (self : Nat) (key : Key) : M Sub := do
   checkReleased self
   let st ← M.get
@@ -1083,7 +1083,7 @@ def memorySubscript (self : Nat) (key : Key) : M Sub := do
     throw (.typeError "memoryview: invalid slice key")
   | .ellipsis => throw (.typeError "memoryview: invalid slice key")
 
-/-- `copy_single`, :404-432. -/
+/-- `copy_single`, :405-433. -/
 def copySingle (self : Nat) (dest src : Buf) : M Unit := do
   checkReleased self
   M.lift (equivStructure dest src)
@@ -1094,7 +1094,7 @@ def copySingle (self : Nat) (dest src : Buf) : M Unit := do
     src.suboffsets useMem st.mem st.mem
   M.modify fun st => { st with mem := dm }
 
-/-- `memory_ass_sub`, :2642-2743. `value = none` is `del m[key]`. -/
+/-- `memory_ass_sub`, :2645-2746. `value = none` is `del m[key]`. -/
 def memoryAssSub (self : Nat) (key : Key) (value : Option Obj) : M Unit := do
   checkReleased self
   let st ← M.get
@@ -1139,7 +1139,7 @@ def memoryAssSub (self : Nat) (key : Key) (value : Option Obj) : M Unit := do
     throw (.typeError "memoryview: invalid slice key")
   | .ellipsis => throw (.typeError "memoryview: invalid slice key")
 
-/-- `memory_length`, :2745-2755. -/
+/-- `memory_length`, :2748-2758. -/
 def memoryLength (self : Nat) : M Int := do
   checkReleased self
   let st ← M.get
@@ -1147,13 +1147,13 @@ def memoryLength (self : Nat) : M Int := do
   if view.ndim = 0 then throw (.typeError "0-dim memory has no length")
   return (view.shape.getD []).getD 0 0
 
-/-! ## Iteration (:3460-3555) -/
+/-! ## Iteration (:3463-3558) -/
 
 /-- `PyObject_GC_New(memoryiterobject, ...)`: a new iterator, by number. -/
 def iterAlloc (x : MIter) : M Nat := fun st =>
   (.ok st.iters.length, { st with iters := st.iters ++ [x] })
 
-/-- `memory_iter`, :3519-3555: the iterator's number. -/
+/-- `memory_iter`, :3522-3558: the iterator's number. -/
 def memoryIter (self : Nat) : M Nat := do
   checkReleased self
   let st ← M.get
@@ -1168,7 +1168,7 @@ def memoryIter (self : Nat) : M Nat := do
 `adjust_ptr` reads as any other address. The store is laid out so that nothing lives at 0. -/
 def nullPtr : Int := 0
 
-/-- `memoryiter_next`, :3491-3517: `none` is exhaustion (a NULL return with no error). -/
+/-- `memoryiter_next`, :3494-3520: `none` is exhaustion (a NULL return with no error). -/
 def memoryiterNext (it : Nat) : M (Option Item) := do
   let st ← M.get
   let x := st.iters.getD it default
@@ -1185,16 +1185,16 @@ def memoryiterNext (it : Nat) : M (Option Item) := do
   M.modify fun st => { st with iters := st.iters.set it { x with seq := Option.none } }
   return Option.none
 
-/-! ## Comparison (:2908-3199) -/
+/-! ## Comparison (:2911-3202) -/
 
-/-- `fix_struct_error_int`, :2916-2928: `struct.error` means "not equal". -/
+/-- `fix_struct_error_int`, :2919-2931: `struct.error` means "not equal". -/
 def fixStructError (e : PyExc) : Py Bool :=
   if excMatches e "ImportError" || excMatches e "MemoryError" then .error e else .ok false
 
 /-- What `import struct` raises with `sys.modules['struct'] = None`. -/
 def importStruct : PyExc := .named "ModuleNotFoundError" "import of struct halted; None in sys.modules"
 
-/-- `struct_get_unpacker`, :2075-2124: the import of `struct.Struct` comes first (:2084-2086). -/
+/-- `struct_get_unpacker`, :2078-2127: the import of `struct.Struct` comes first (:2087-2089). -/
 def unpackerOf (noStruct : Bool) (fmt : List Char) (itemsize : Int) : Py Unpacker :=
   if noStruct then .error importStruct else structGetUnpacker fmt itemsize
 
@@ -1203,7 +1203,7 @@ inductive CmpOp where
   | eq | ne | other
   deriving Repr, DecidableEq, Inhabited
 
-/-- The comparison proper, :3134-3178, once both buffers are at hand. -/
+/-- The comparison proper, :3137-3181, once both buffers are at hand. -/
 def compareBufs (m : Mem) (noStruct : Bool) (vv ww : Buf) : Py Bool :=
   if !equivShape vv ww then .ok false
   else
@@ -1228,9 +1228,9 @@ def compareBufs (m : Mem) (noStruct : Bool) (vv ww : Buf) : Py Bool :=
         | .ok uq => run '_' (some (up, uq))
     else run vfmt Option.none
 
-/-- The part of `memory_richcompare` before the label `result:`, :3107-3178: `equal`,
-with `none` for `MV_COMPARE_NOT_IMPL`. The check of `v` at :3113 comes before
-`PyObject_GetBuffer(w)` at :3127, which runs Python code; nothing looks at `v` again. -/
+/-- The part of `memory_richcompare` before the label `result:`, :3110-3181: `equal`,
+with `none` for `MV_COMPARE_NOT_IMPL`. The check of `v` at :3116 comes before
+`PyObject_GetBuffer(w)` at :3130, which runs Python code; nothing looks at `v` again. -/
 def memoryRichEqual (v : Nat) (w : Obj) : M (Option Bool) := do
   let st ← M.get
   if baseInaccessible st v then
@@ -1248,12 +1248,12 @@ def memoryRichEqual (v : Nat) (w : Obj) : M (Option Bool) := do
     | some ww =>
       let st ← M.get
       let r := compareBufs st.mem st.noStruct vv ww
-      -- `PyBuffer_Release(ww)`, :3192-3193, after the result is known
+      -- `PyBuffer_Release(ww)`, :3195-3196, after the result is known
       pyBufferRelease ww
       return some (← M.lift r)
   | _ => return Option.none
 
-/-- `memory_richcompare`, :3098-3199. `none` is `NotImplemented`. -/
+/-- `memory_richcompare`, :3101-3202. `none` is `NotImplemented`. -/
 def memoryRichcompare (v : Nat) (w : Obj) (op : CmpOp) : M (Option Bool) := do
   if op = .other then return Option.none
   let e ← memoryRichEqual v w
@@ -1293,7 +1293,7 @@ def itemEqM (x : Item) : Obj → M Bool
     | _ => pure false
   | o => pure (itemEqObj x o)
 
-/-- The loop of `memoryview_count_impl`, :2797-2816. -/
+/-- The loop of `memoryview_count_impl`, :2800-2819. -/
 def countLoop (it : Nat) (value : Obj) : Nat → Int → M Int
   | 0, _ => throw .modelFuel
   | fuel + 1, count => do
@@ -1303,13 +1303,13 @@ def countLoop (it : Nat) (value : Obj) : Nat → Int → M Int
       let contained ← itemEqM item value
       countLoop it value fuel (if contained then count + 1 else count)
 
-/-- `memoryview_count_impl`, :2786-2819. -/
+/-- `memoryview_count_impl`, :2789-2822. -/
 def memoryviewCount (self : Nat) (value : Obj) : M Int := do
   let it ← memoryIter self
   let st ← M.get
   countLoop it value ((st.iters.getD it default).length.toNat + 2) 0
 
-/-- The search loop of `memoryview_index_impl`, :2872-2895. -/
+/-- The search loop of `memoryview_index_impl`, :2875-2898. -/
 def indexLoop (self : Nat) (value : Obj) : Nat → Int → Int → M Int
   | 0, _, _ => throw .modelFuel
   | fuel + 1, index, stop =>
@@ -1319,7 +1319,7 @@ def indexLoop (self : Nat) (value : Obj) : Nat → Int → Int → M Int
       indexLoop self value fuel (index + 1) stop
     else throw (.valueError "memoryview.index(x): x not found")
 
-/-- `memoryview_index_impl`, :2839-2905. `start` and `stop` are `slice_index` arguments,
+/-- `memoryview_index_impl`, :2842-2908. `start` and `stop` are `slice_index` arguments,
 already saturated to `Py_ssize_t`. -/
 def memoryviewIndex (self : Nat) (value : Obj) (start stop : Int) : M Int := do
   checkReleased self
@@ -1335,12 +1335,12 @@ def memoryviewIndex (self : Nat) (value : Obj) (start stop : Int) : M Int := do
     return ← indexLoop self value (stop - start + 1).toNat start stop
   throw (notImplError "multi-dimensional lookup is not implemented")
 
-/-! ## Hash (:3205-3260) -/
+/-! ## Hash (:3208-3263) -/
 
-/-- `memory_hash`, :3205-3260, as the bytes given to `Py_HashBuffer`. The result is
+/-- `memory_hash`, :3208-3263, as the bytes given to `Py_HashBuffer`. The result is
 cached in `self->hash`, consulted before anything else. `PyObject_Hash(view->obj)` is
 this function again when the exporter is a memoryview (`fuel` bounds that chain), and
-may be Python code otherwise, so `self` holds an export around it (:3231-3233, gh-142664):
+may be Python code otherwise, so `self` holds an export around it (:3234-3236, gh-142664):
 a `__hash__` that calls `self.release()` gets `BufferError`. -/
 def memoryHashF : Nat → Nat → M (List Nat)
   | 0, _ => throw .modelFuel
@@ -1377,9 +1377,9 @@ def memoryHashF : Nat → Nat → M (List Nat)
 
 def memoryHash (self : Nat) : M (List Nat) := fun st => memoryHashF (st.mvs.length + 1) self st
 
-/-! ## Getters (:3267-3390) -/
+/-! ## Getters (:3270-3393) -/
 
-/-- `_IntTupleFromSsizet`, :3267-3289: NULL gives the empty tuple. -/
+/-- `_IntTupleFromSsizet`, :3270-3292: NULL gives the empty tuple. -/
 def intTupleFromSsizet (len : Nat) (vals : Option (List Int)) : List Int :=
   match vals with
   | Option.none => []
@@ -1400,7 +1400,7 @@ inductive AttrVal where
   | tuple (l : List Int)
   deriving Repr, DecidableEq, Inhabited
 
-/-- `memory_obj_get` to `memory_contiguous`, :3291-3390: each is `CHECK_RELEASED`, then
+/-- `memory_obj_get` to `memory_contiguous`, :3294-3393: each is `CHECK_RELEASED`, then
 a read. -/
 def memoryGet (self : Nat) (a : Attr) : M AttrVal := do
   checkReleased self

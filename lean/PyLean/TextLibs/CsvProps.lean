@@ -503,7 +503,7 @@ theorem getattrCleared_proven : GetattrCleared := by
   rw [new_other r ty o h1 h2, ha]
   simp [dialectFresh, hb, ltObj, bind, Except.bind, pure, Except.pure]
 
-/-- A keyword beats the attribute, `Modules/_csv.c:504-511`: `DIALECT_GETATTR` only fills what is
+/-- A keyword beats the attribute, `Modules/_csv.c@3.14.7:504-511`: `DIALECT_GETATTR` only fills what is
 still `NULL`. With a keyword present an object is not reused, even a `Dialect`, and the new object
 is built from the keywords and the attributes of the old one. -/
 def DialectKeywords : Prop :=
@@ -638,7 +638,7 @@ theorem dialectNewValid_proven : DialectNewValid := by
           · cases h
           · exact fresh_inv h
 
-/-- An attribute of a subclass shadows the C field, `Modules/_csv.c:507`: `DIALECT_GETATTR` reads what
+/-- An attribute of a subclass shadows the C field, `Modules/_csv.c@3.14.7:507`: `DIALECT_GETATTR` reads what
 the instance's class says, and clears it if it raises. Without one it reads the getter. -/
 def SubclassAttrs : Prop :=
   ∀ (t : TyName) (d : Dialect) (l : Option Obj) (at_ : List (String × Except PyExc Obj))

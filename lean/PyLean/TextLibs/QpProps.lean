@@ -201,7 +201,7 @@ theorem inv_plain {h : Bool} {out ds : List Nat} (c : Nat) (hc : c ≠ 61) (hi :
     have : qdc h c = c := by simp only [qdc]; split <;> simp_all
     rw [this]
 
-/-- The rewrite of `Modules/binascii.c:1192-1201`. -/
+/-- The rewrite of `Modules/binascii.c:2602-2611`. -/
 theorem inv_line_end {h : Bool} {out ds : List Nat} (hi : Inv h out ds) : Inv h (qpProtect out) ds := by
   cases out with
   | nil => exact hi

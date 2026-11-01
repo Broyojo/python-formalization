@@ -21,11 +21,11 @@ Python/assemble.c	286	321	write_location_info_entry	write_location_info_entry(st
 Python/assemble.c	324	334	assemble_emit_location	assemble_emit_location(struct assembler* a, location loc, int isize)	todo		
 Python/assemble.c	337	366	assemble_location_info	assemble_location_info(struct assembler *a, instr_sequence *instrs, int firstlineno)	todo		
 Python/assemble.c	369	405	write_instr	write_instr(_Py_CODEUNIT *codestr, instruction *instr, int ilen)	todo		
-Python/assemble.c	413	429	assemble_emit_instr	assemble_emit_instr(struct assembler *a, instruction *instr)	todo		
-Python/assemble.c	432	455	assemble_emit	assemble_emit(struct assembler *a, instr_sequence *instrs, int first_lineno, PyObject *const_cache)	todo		
-Python/assemble.c	458	477	dict_keys_inorder	dict_keys_inorder(PyObject *dict, Py_ssize_t offset)	todo		
-Python/assemble.c	484	572	compute_localsplus_info	compute_localsplus_info(_PyCompile_CodeUnitMetadata *umd, int nlocalsplus, int flags, PyObject *names, PyObject *kinds)	todo		
-Python/assemble.c	575	668	makecode	makecode(_PyCompile_CodeUnitMetadata *umd, struct assembler *a, PyObject *const_cache, PyObject *constslist, int maxdepth, int nlocalsplus, int code_flags, PyObject *filename)	todo		
-Python/assemble.c	675	746	resolve_jump_offsets	resolve_jump_offsets(instr_sequence *instrs)	todo		
-Python/assemble.c	749	776	resolve_unconditional_jumps	resolve_unconditional_jumps(instr_sequence *instrs)	todo		
-Python/assemble.c	779	802	_PyAssemble_MakeCodeObject	_PyAssemble_MakeCodeObject(_PyCompile_CodeUnitMetadata *umd, PyObject *const_cache, PyObject *consts, int maxdepth, instr_sequence *instrs, int nlocalsplus, int code_flags, PyObject *filename)	todo		
+Python/assemble.c	413	430	assemble_emit_instr	assemble_emit_instr(struct assembler *a, instruction *instr)	todo		changed-in-3.15:
+Python/assemble.c	433	456	assemble_emit	assemble_emit(struct assembler *a, instr_sequence *instrs, int first_lineno, PyObject *const_cache)	todo		
+Python/assemble.c	459	478	dict_keys_inorder	dict_keys_inorder(PyObject *dict, Py_ssize_t offset)	todo		
+Python/assemble.c	485	573	compute_localsplus_info	compute_localsplus_info(_PyCompile_CodeUnitMetadata *umd, int nlocalsplus, int flags, PyObject *names, PyObject *kinds)	todo		
+Python/assemble.c	576	669	makecode	makecode(_PyCompile_CodeUnitMetadata *umd, struct assembler *a, PyObject *const_cache, PyObject *constslist, int maxdepth, int nlocalsplus, int code_flags, PyObject *filename)	todo		
+Python/assemble.c	676	747	resolve_jump_offsets	resolve_jump_offsets(instr_sequence *instrs)	todo		
+Python/assemble.c	750	777	resolve_unconditional_jumps	resolve_unconditional_jumps(instr_sequence *instrs)	todo		
+Python/assemble.c	780	803	_PyAssemble_MakeCodeObject	_PyAssemble_MakeCodeObject(_PyCompile_CodeUnitMetadata *umd, PyObject *const_cache, PyObject *consts, int maxdepth, instr_sequence *instrs, int nlocalsplus, int code_flags, PyObject *filename)	todo		

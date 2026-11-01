@@ -96,7 +96,7 @@ def asciiG (fuel : Nat) (o : GObj) : Py Str := do
 /-- How deep a repr goes here. -/
 def reprFuel : Nat := 8
 
-/-- `object___format___impl`, Objects/typeobject.c:7877-7887. -/
+/-- `object___format___impl`, Objects/typeobject.c:8503-8513. -/
 def objectFormat (o : GObj) (spec : Str) : Py Str :=
   if spec.length > 0 then
     .error (.typeError s!"unsupported format string passed to {o.tpName}.__format__")
@@ -108,7 +108,7 @@ def intFormat (v : Int) (name : String) (shown : Str) (spec : Str) : Py Str := d
   | some s => .ok s
   | Option.none => formatLongAsFloat v spec name
 
-/-- `PyObject_Format`, Objects/abstract.c:843-906: `format(obj, spec)`. -/
+/-- `PyObject_Format`, Objects/abstract.c:853-916: `format(obj, spec)`. -/
 def pyObjectFormat (o : GObj) (spec : Str) : Py Str :=
   match o, spec with
   | .str s, [] => .ok s
@@ -124,7 +124,7 @@ def pyObjectFormat (o : GObj) (spec : Str) : Py Str :=
     | r => .error (.typeError s!"__format__ must return a str, not {r.tpName}")
   | o, _ => objectFormat o spec
 
-/-- `render_field`, unicode_format.h:499-551: the exact types go straight to their formatter. -/
+/-- `render_field`, unicode_format.h:500-552: the exact types go straight to their formatter. -/
 def renderField (o : GObj) (spec : Str) : Py Str :=
   match o with
   | .str s => formatStrAdvanced s spec
@@ -136,7 +136,7 @@ def renderField (o : GObj) (spec : Str) : Py Str :=
 
 /-! ## Lookups -/
 
-/-- `get_integer`, unicode_format.h:111-140: `none` is the -1 for "not a number". The check comes
+/-- `get_integer`, unicode_format.h:112-141: `none` is the -1 for "not a number". The check comes
 before the multiplication, so the accumulator cannot wrap. A digit past the point of overflow
 raises even if a non-digit follows. -/
 def fieldIntegerLoop : List Nat → Int → Py (Option Nat)
@@ -155,7 +155,7 @@ def fieldInteger (s : Str) : Py (Option Nat) :=
 def attrError (o : GObj) (name : Str) : PyExc :=
   .named "AttributeError" s!"'{o.tpName}' object has no attribute '{toLeanString name}'"
 
-/-- `getattr`, unicode_format.h:147-157. -/
+/-- `getattr`, unicode_format.h:148-158. -/
 def getattrG (o : GObj) (name : Str) : Py GObj :=
   let s := toLeanString name
   match o with
@@ -180,7 +180,7 @@ def getattrG (o : GObj) (name : Str) : Py GObj :=
   | .user _ _ _ _ attr _ => attr name
   | _ => .error (attrError o name)
 
-/-- `obj[key]`: `getitem_sequence`, `getitem_idx` and `getitem_str`, unicode_format.h:160-190. A
+/-- `obj[key]`: `getitem_sequence`, `getitem_idx` and `getitem_str`, unicode_format.h:161-191. A
 digit key reaches a mapping as an int. -/
 def getitemG (o : GObj) (k : GKey) : Py GObj :=
   match o, k with
@@ -218,7 +218,7 @@ structure FSt where
 
 def isFieldStop (c : Nat) : Bool := c == 91 || c == 46
 
-/-- `autonumber_state_error`, unicode_format.h:84-104. -/
+/-- `autonumber_state_error`, unicode_format.h:85-105. -/
 def autonumberStateError (state : ANState) (empty : Bool) : Py Unit :=
   if state == .manual then
     if empty then
@@ -228,7 +228,7 @@ def autonumberStateError (state : ANState) (empty : Bool) : Py Unit :=
     .error (.valueError "cannot switch from automatic field numbering to manual field specification")
   else .ok ()
 
-/-- `field_name_split`, unicode_format.h:319-388, with `auto_number` present: first, its index,
+/-- `field_name_split`, unicode_format.h:320-389, with `auto_number` present: first, its index,
 the rest of the name, the state. -/
 def fieldNameSplit (s : Str) (st : FSt) : Py (Str × Option Nat × Str × FSt) := do
   let first := s.takeWhile (fun c => !isFieldStop c)
@@ -241,7 +241,7 @@ def fieldNameSplit (s : Str) (st : FSt) : Py (Str × Option Nat × Str × FSt) :
   if empty then .ok (first, some st.n, rest, { st with an, n := st.n + 1 })
   else .ok (first, idx, rest, { st with an })
 
-/-- `_FieldNameIterator_attr`, unicode_format.h:212-237: up to `.` or `[`. -/
+/-- `_FieldNameIterator_attr`, unicode_format.h:213-238: up to `.` or `[`. -/
 def attrName (s : Str) : Str × Str :=
   (s.takeWhile (fun c => !isFieldStop c), s.dropWhile (fun c => !isFieldStop c))
 
@@ -252,7 +252,7 @@ inductive NameStep where
   | item (key : GKey) (rest : Str)
   deriving Repr, DecidableEq
 
-/-- `FieldNameIterator_next`, unicode_format.h:273-310, with `_FieldNameIterator_item`, :239-270. -/
+/-- `FieldNameIterator_next`, unicode_format.h:274-311, with `_FieldNameIterator_item`, :240-271. -/
 def fieldNameNext : Str → Py NameStep
   | [] => .ok .done
   | c :: t =>
@@ -273,7 +273,7 @@ def fieldNameNext : Str → Py NameStep
           | Option.none => .ok (.item (.name name) after.tail)
     else .error (.valueError "Only '.' or '[' may follow ']' in format field specifier")
 
-/-- The loop at the end of `get_field_object`, unicode_format.h:456-481. -/
+/-- The loop at the end of `get_field_object`, unicode_format.h:457-482. -/
 def walkField : Nat → GObj → Str → Py GObj
   | 0, _, _ => .error .modelFuel
   | fuel + 1, o, rest => do
@@ -292,7 +292,7 @@ def dictKw (items : List (Str × GObj)) : KwMap := fun hist =>
   | some x => .ok x
   | Option.none => .error (.keyError (toLeanString (unicodeRepr key)))
 
-/-- `get_field_object`, unicode_format.h:396-485. `args` is `none` for `format_map`, `kw` is `none`
+/-- `get_field_object`, unicode_format.h:397-486. `args` is `none` for `format_map`, `kw` is `none`
 when there are no keyword arguments. -/
 def getFieldObject (input : Str) (args : Option (List GObj)) (kw : Option KwMap) (st : FSt) :
     Py (GObj × FSt) := do
@@ -324,7 +324,7 @@ structure MField where
   expand : Bool
   deriving Repr, DecidableEq
 
-/-- The search for the field name, unicode_format.h:571-589: the name, the character that stopped
+/-- The search for the field name, unicode_format.h:572-590: the name, the character that stopped
 it, what follows. A `[` skips to the `]`, so `:` and `!` are ordinary inside it. -/
 def fieldNameScan : Nat → List Nat → Str → Nat → Py (Str × Nat × List Nat)
   | 0, _, _, _ => .error .modelFuel
@@ -336,7 +336,7 @@ def fieldNameScan : Nat → List Nat → Str → Nat → Py (Str × Nat × List 
     else if x == 125 || x == 58 || x == 33 then .ok (acc, x, t)
     else fieldNameScan fuel t (acc ++ [x]) x
 
-/-- The format spec, unicode_format.h:621-640: braces nest, and any `{` asks for expansion. -/
+/-- The format spec, unicode_format.h:622-641: braces nest, and any `{` asks for expansion. -/
 def specScan : List Nat → Nat → Str → Bool → Py (Str × Bool × List Nat)
   | [], _, _, _ => .error (.valueError "unmatched '{' in format spec")
   | x :: t, count, acc, e =>
@@ -345,7 +345,7 @@ def specScan : List Nat → Nat → Str → Bool → Py (Str × Bool × List Nat
       if count == 1 then .ok (acc, e, t) else specScan t (count - 1) (acc ++ [x]) e
     else specScan t count (acc ++ [x]) e
 
-/-- `parse_field`, unicode_format.h:553-649. `conv` stays 0 with no conversion, so an explicit NUL
+/-- `parse_field`, unicode_format.h:554-650. `conv` stays 0 with no conversion, so an explicit NUL
 after `!` reads as no conversion. -/
 def parseField (s : List Nat) : Py (MField × List Nat) := do
   let (name, c, rest) ← fieldNameScan (s.length + 1) s [] 0
@@ -368,7 +368,7 @@ def parseField (s : List Nat) : Py (MField × List Nat) := do
 
 def isBrace (c : Nat) : Bool := c == 123 || c == 125
 
-/-- `MarkupIterator_next`, unicode_format.h:674-760: `none` at the end of the input, else the
+/-- `MarkupIterator_next`, unicode_format.h:675-761: `none` at the end of the input, else the
 literal text, the field if there is one, and what follows. -/
 def markupNext (s : List Nat) : Py (Option (Str × Option MField × List Nat)) := do
   if s.isEmpty then return Option.none
@@ -394,14 +394,14 @@ def unknownConversion (conv : Nat) : PyExc :=
   if 32 < conv ∧ conv < 127 then .valueError s!"Unknown conversion specifier {Char.ofNat conv}"
   else .valueError s!"Unknown conversion specifier \\x{hexPlain conv}"
 
-/-- `do_conversion`, unicode_format.h:764-790. -/
+/-- `do_conversion`, unicode_format.h:765-791. -/
 def doConversion (o : GObj) (conv : Nat) : Py GObj :=
   if conv == 114 then .str <$> reprG reprFuel o
   else if conv == 115 then .str <$> strG reprFuel o
   else if conv == 97 then .str <$> asciiG reprFuel o
   else .error (unknownConversion conv)
 
-/-- `output_markup`, unicode_format.h:805-858: object first, then conversion, then the nested
+/-- `output_markup`, unicode_format.h:806-859: object first, then conversion, then the nested
 fields of the spec, then rendering. The auto-numbering runs in that order. -/
 def outputMarkup (expand : Str → FSt → Py (Str × FSt)) (args : Option (List GObj)) (kw : Option KwMap)
     (f : MField) (st : FSt) : Py (Str × FSt) := do
@@ -410,7 +410,7 @@ def outputMarkup (expand : Str → FSt → Py (Str × FSt)) (args : Option (List
   let (spec, st) ← if f.expand then expand (f.spec.getD []) st else .ok (f.spec.getD [], st)
   return (← renderField obj spec, st)
 
-/-- `do_markup`, unicode_format.h:866-902. -/
+/-- `do_markup`, unicode_format.h:867-903. -/
 def doMarkup (expand : Str → FSt → Py (Str × FSt)) (args : Option (List GObj)) (kw : Option KwMap) :
     Nat → List Nat → FSt → Str → Py (Str × FSt)
   | 0, _, _, _ => .error .modelFuel
@@ -424,17 +424,17 @@ def doMarkup (expand : Str → FSt → Py (Str × FSt)) (args : Option (List GOb
         let (text, st') ← outputMarkup expand args kw f st
         doMarkup expand args kw fuel rest st' (out ++ literal ++ text)
 
-/-- `build_string`, unicode_format.h:909-933. -/
+/-- `build_string`, unicode_format.h:910-934. -/
 def buildString (args : Option (List GObj)) (kw : Option KwMap) : Nat → Str → FSt → Py (Str × FSt)
   | 0, _, _ => .error (.valueError "Max string recursion exceeded")
   | depth + 1, s, st => doMarkup (buildString args kw depth) args kw (s.length + 1) s st []
 
-/-- `do_string_format`, unicode_format.h:940-955: `str.format`. -/
+/-- `do_string_format`, unicode_format.h:941-956: `str.format`. -/
 def doStringFormat (s : Str) (args : List GObj) (kw : Option KwMap) : Py Str := do
   let (r, _) ← buildString (some args) kw 2 s {}
   .ok r
 
-/-- `do_string_format_map`, unicode_format.h:957-961: `str.format_map`. -/
+/-- `do_string_format_map`, unicode_format.h:958-962: `str.format_map`. -/
 def doStringFormatMap (s : Str) (m : KwMap) : Py Str := do
   let (r, _) ← buildString Option.none (some m) 2 s {}
   .ok r
@@ -444,7 +444,7 @@ def doStringFormatMap (s : Str) (m : KwMap) : Py Str := do
 /-- A tuple of `formatter_parser`. -/
 abbrev ParserItem := Str × Option Str × Option Str × Option Str
 
-/-- `formatteriter_next`, unicode_format.h:995-1059. A field with no spec gives an empty string,
+/-- `formatteriter_next`, unicode_format.h:996-1060. A field with no spec gives an empty string,
 and a NUL conversion gives `None`. -/
 def parserItem (literal : Str) (field : Option MField) : ParserItem :=
   match field with
@@ -452,7 +452,7 @@ def parserItem (literal : Str) (field : Option MField) : ParserItem :=
   | some f =>
     (literal, some f.name, some (f.spec.getD []), if f.conv == 0 then Option.none else some [f.conv])
 
-/-- `formatter_parser`, unicode_format.h:1102-1122, run to the end. -/
+/-- `formatter_parser`, unicode_format.h:1103-1123, run to the end. -/
 def formatterParser : Nat → List Nat → List ParserItem → Py (List ParserItem)
   | 0, _, _ => .error .modelFuel
   | fuel + 1, s, acc => do
@@ -460,7 +460,7 @@ def formatterParser : Nat → List Nat → List ParserItem → Py (List ParserIt
     | Option.none => .ok acc
     | some (literal, field, rest) => formatterParser fuel rest (acc ++ [parserItem literal field])
 
-/-- `formatter_field_name_split`, unicode_format.h:1238-1283, with the iterator run to the end. With
+/-- `formatter_field_name_split`, unicode_format.h:1239-1284, with the iterator run to the end. With
 no `auto_number`, an empty first part stays a string. -/
 def fieldNameItems : Nat → Str → List (Bool × (Nat ⊕ Str)) → Py (List (Bool × (Nat ⊕ Str)))
   | 0, _, _ => .error .modelFuel

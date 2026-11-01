@@ -1,13 +1,13 @@
 import PyLean.CoreLibs.Functools.Lru
 
 /-!
-The bounded wrapper of `lru_cache` with its links as a real heap, Lib/functools.py:641-696 and
-Modules/_functoolsmodule.c:1252-1278 and :1312-1521.
+The bounded wrapper of `lru_cache` with its links as a real heap, Lib/functools.py:650-716 and
+Modules/_functoolsmodule.c:1348-1374 and :1408-1617.
 
 `Lru.lean` keeps the queue as a list, which is enough while the dict and the queue agree. They stop agreeing when a
 dict operation runs a key's `__eq__` and that `__eq__` calls the cached function again, which is what the comments at
-Lib/functools.py:684-686 and Modules/_functoolsmodule.c:1398-1402 are about, and after a failed `del` at
-Lib/functools.py:683. A list cannot hold a dict entry that points at a link outside the ring, or the root in the dict.
+Lib/functools.py:701-703 and Modules/_functoolsmodule.c:1494-1498 are about, and after a failed `del` at
+Lib/functools.py:699. A list cannot hold a dict entry that points at a link outside the ring, or the root in the dict.
 So here a link is a cell with `prev` and `next`, as in the source, and each statement of the source is one heap write.
 Nothing stops at a state the source can reach.
 
@@ -102,7 +102,7 @@ def nextProbe (mask i perturb : Nat) : Nat × Nat :=
   let p := perturb >>> 5
   ((i * 5 + p + 1) &&& mask, p)
 
-/-- `do_lookup`, Objects/dictobject.c:1002-1044, up to the next comparison that can run code. A dummy or a freed entry
+/-- `do_lookup`, Objects/dictobject.c:1082-1124, up to the next comparison that can run code. A dummy or a freed entry
 is passed, and so is an entry of another hash. -/
 def DT.scan (t : DT K) (key : K) (h : Nat) : Nat → Nat → Nat → Scan
   | 0, _, _ => .absent
@@ -137,7 +137,7 @@ def DT.linkAt (t : DT K) (slot : Nat) : Option Nat :=
 /-- The walk from the head of the chain. -/
 def DT.scan0 (t : DT K) (key : K) (h : Nat) : Scan := t.scan key h probeFuel (h &&& t.mask) h
 
-/-- `find_empty_slot`, :1766-1779, and with `-1` only, `build_indices`: the first free slot on the chain. -/
+/-- `find_empty_slot`, :1846-1859, and with `-1` only, `build_indices`: the first free slot on the chain. -/
 def slotFree (table : List Int) (mask : Nat) : Nat → Nat → Nat → Nat
   | 0, i, _ => i
   | fuel + 1, i, perturb =>
@@ -146,7 +146,7 @@ def slotFree (table : List Int) (mask : Nat) : Nat → Nat → Nat → Nat
       let n := nextProbe mask i perturb
       slotFree table mask fuel n.1 n.2
 
-/-- `dictresize` with `GROWTH_RATE`, :590 and :547-560: the live entries in order, in a fresh table. -/
+/-- `dictresize` with `GROWTH_RATE`, :628 and :585-598: the live entries in order, in a fresh table. -/
 def DT.resize (t : DT K) : DT K :=
   let log2 := bitLength (max (t.used * 3) 8 - 1)
   let live := t.ents.filterMap id
@@ -156,7 +156,7 @@ def DT.resize (t : DT K) : DT K :=
   ⟨log2, table, live.map some, (size * 2) / 3 - t.used, t.used, t.gen + 1⟩
 
 /-- `insertdict` after its lookup, which gave `slot`: an existing key keeps its entry; otherwise
-`insert_combined_dict`, :1788-1826. -/
+`insert_combined_dict`, @3.14.7:1788-1826. -/
 def DT.storeAt (t : DT K) (slot : Option Nat) (key : K) (h l : Nat) : DT K :=
   match slot with
   | some i => { t with ents := t.ents.set (t.ixAt i) (some (key, h, l)) }
@@ -184,13 +184,13 @@ def LS.slot (s : LS K V) (h : K → Nat) (key : K) : Option Nat :=
 
 variable [Inhabited V]
 
-/-- `lru_cache_extract_link`, Modules/_functoolsmodule.c:1252-1256. -/
+/-- `lru_cache_extract_link`, Modules/_functoolsmodule.c:1348-1352. -/
 def LS.extract (s : LS K V) (l : Nat) : LS K V :=
   let k := s.link l
   let s := s.setNext k.prev k.next
   s.setPrev k.next k.prev
 
-/-- `lru_cache_append_link`, :1258-1267: before the root, as the newest. -/
+/-- `lru_cache_append_link`, :1354-1363: before the root, as the newest. -/
 def LS.append (s : LS K V) (l : Nat) : LS K V :=
   let last := (s.link s.root).prev
   let s := s.setNext last l
@@ -198,7 +198,7 @@ def LS.append (s : LS K V) (l : Nat) : LS K V :=
   let s := s.setPrev l last
   s.setNext l s.root
 
-/-- `lru_cache_prepend_link`, :1269-1278: after the root, as the oldest. -/
+/-- `lru_cache_prepend_link`, :1365-1374: after the root, as the oldest. -/
 def LS.prepend (s : LS K V) (l : Nat) : LS K V :=
   let first := (s.link s.root).next
   let s := s.setPrev first l
@@ -206,7 +206,7 @@ def LS.prepend (s : LS K V) (l : Nat) : LS K V :=
   let s := s.setPrev l s.root
   s.setNext l first
 
-/-- `cache_clear`, Lib/functools.py:703-709, and `lru_cache_cache_clear`, Modules/_functoolsmodule.c:1700-1711. The
+/-- `cache_clear`, Lib/functools.py:723-730, and `lru_cache_cache_clear`, Modules/_functoolsmodule.c:1796-1807. The
 `root` stays where it is, which is not cell `0` after an eviction in Python. `PyDict_Clear` installs new keys. -/
 def LS.clear (s : LS K V) : LS K V :=
   let r := s.root
@@ -241,7 +241,7 @@ mutual
         | some (m + 2) => findP cfg fuel key n.1 n.2 { s with trig := some (m + 1) }
         | _ => findP cfg fuel key n.1 n.2 s
 
-  /-- `wrapper`, Lib/functools.py:641-696, as far as the user function. -/
+  /-- `wrapper`, Lib/functools.py:650-716, as far as the user function. -/
   def callPtrP (cfg : PCfg K V) : Nat → K → LS K V → Py V × LS K V
     | 0, _, s => (.error .modelFuel, s)
     | fuel + 1, key, s =>
@@ -250,7 +250,7 @@ mutual
       | (.ok slot, s) =>
         match slot.bind s.cache.linkAt with
         | some l =>
-          -- :648-657
+          -- :659-668
           let L := s.link l
           let s := s.setNext L.prev L.next
           let s := s.setPrev L.next L.prev
@@ -266,7 +266,7 @@ mutual
           | (.error e, s) => (.error e, s)
           | (.ok result, s) => updatePtrP cfg fuel key result s
 
-  /-- Lib/functools.py:661-695: the second `with lock`. -/
+  /-- Lib/functools.py:674-714: the second `with lock`. -/
   def updatePtrP (cfg : PCfg K V) : Nat → K → V → LS K V → Py V × LS K V
     | 0, _, _, s => (.error .modelFuel, s)
     | fuel + 1, key, result, s =>
@@ -276,7 +276,7 @@ mutual
       | (.ok (some _), s) => (.ok result, s)
       | (.ok none, s) =>
         if s.full then
-          -- :669-687
+          -- :683-704
           let oldroot := s.root
           let s := s.setKV oldroot (some key) (some result)
           let s := { s with root := (s.link oldroot).next }
@@ -294,7 +294,7 @@ mutual
               | (.error e, s) => (.error e, s)
               | (.ok slot, s) => (.ok result, { s with cache := s.cache.storeAt slot key h oldroot })
         else
-          -- :690-695: `last[NEXT] = root[PREV] = cache[key] = link` assigns left to right
+          -- :708-714: `last[NEXT] = root[PREV] = cache[key] = link` assigns left to right
           let last := (s.link s.root).prev
           let l := s.links.length
           let s := { s with links := s.links ++ [(⟨last, s.root, some key, some result⟩ : Link K V)] }
@@ -340,8 +340,8 @@ mutual
         | some (m + 2) => findC cfg fuel key n.1 n.2 { s with trig := some (m + 1) }
         | _ => findC cfg fuel key n.1 n.2 s
 
-  /-- `bounded_lru_cache_wrapper`, Modules/_functoolsmodule.c:1493-1521, with `bounded_lru_cache_get_lock_held`,
-  :1312-1344. -/
+  /-- `bounded_lru_cache_wrapper`, Modules/_functoolsmodule.c:1589-1617, with `bounded_lru_cache_get_lock_held`,
+  :1408-1440. -/
   def callPtrC (cfg : PCfg K V) : Nat → K → LS K V → Py V × LS K V
     | 0, _, s => (.error .modelFuel, s)
     | fuel + 1, key, s =>
@@ -359,7 +359,7 @@ mutual
           | (.error e, s) => (.error e, s)
           | (.ok result, s) => updatePtrC cfg fuel key result s
 
-  /-- `bounded_lru_cache_update_lock_held`, :1347-1490. -/
+  /-- `bounded_lru_cache_update_lock_held`, :1443-1586. -/
   def updatePtrC (cfg : PCfg K V) : Nat → K → V → LS K V → Py V × LS K V
     | 0, _, _, s => (.error .modelFuel, s)
     | fuel + 1, key, result, s =>
@@ -369,7 +369,7 @@ mutual
       | (.ok (some _), s) => (.ok result, s)
       | (.ok none, s) =>
         if s.size < cfg.maxsize ∨ (s.link s.root).next = s.root then
-          -- :1383-1409: the dict first, then the link
+          -- :1479-1505: the dict first, then the link
           let l := s.links.length
           let s := { s with links := s.links ++ [(⟨0, 0, some key, some result⟩ : Link K V)] }
           match findC cfg fuel key (h &&& s.cache.mask) h s with
@@ -382,15 +382,15 @@ mutual
           | none => (.error .modelFuel, s)
           | some ok =>
             match findC cfg fuel ok (cfg.hash ok &&& s.cache.mask) (cfg.hash ok) s with
-            -- :1435-1445: back to the oldest position
+            -- :1531-1541: back to the oldest position
             | (.error e, s) => (.error e, s.prepend l)
-            -- :1446-1454: an orphan: the result is returned, and neither link nor key is kept
+            -- :1542-1550: an orphan: the result is returned, and neither link nor key is kept
             | (.ok none, s) => (.ok result, s)
             | (.ok (some slot), s) =>
               let s := { s with cache := s.cache.deleteAt slot }
               let s := s.setKV l (some key) (some result)
               match findC cfg fuel key (h &&& s.cache.mask) h s with
-              -- :1473-1482: short one link
+              -- :1569-1578: short one link
               | (.error e, s) => (.error e, s)
               | (.ok slot, s) => (.ok result, LS.append { s with cache := s.cache.storeAt slot key h l } l)
 

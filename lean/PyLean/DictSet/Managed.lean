@@ -1,7 +1,7 @@
 import PyLean.DictSet.DictOps
 
 /-!
-Instance dictionaries (`Objects/dictobject.c:6785-7643`): shared keys, inline values, the lazily
+Instance dictionaries (`Objects/dictobject.c:7229-8094`): shared keys, inline values, the lazily
 materialized `__dict__`, and detaching. Line numbers refer to `Objects/dictobject.c`.
 
 `ObjSt` is the state one operation sees: the class's cached keys, and the instance. A dict whose
@@ -45,12 +45,12 @@ def Inst.values (i : Inst K V) : Values V :=
     | .combined _ => i.inlineV
   | none => i.inlineV
 
-/-- `invalidate_and_clear_inline_values` (:2040-2048), `clear_inline_values` (:7274-7283). -/
+/-- `invalidate_and_clear_inline_values` (:2131-2139), `clear_inline_values` (:7728-7737). -/
 def invalidateInline (v : Values V) : Values V :=
   { v with valid := false, values := v.values.map fun _ => none, order := [] }
 
 /-- After a dict operation on an instance dict: the shared keys may have grown, and a resize
-that left the split form has invalidated the inline values (:2138-2142). -/
+that left the split form has invalidated the inline values (:2229-2233). -/
 def syncDict (before : Bool) (d : PyDict K V) (s : ObjSt K V) : ObjSt K V :=
   let inst' : Inst K V :=
     match d.body with
@@ -79,7 +79,7 @@ def onInstDict {α : Type} (m : DM K V α) (d : PyDict K V) : IM K V α := fun s
 section
 variable [DecidableEq K] (P : Proto K (PyDict K V))
 
-/-- `_PyDict_NewKeysForClass` (:6787-6818): `attrs` is `__static_attributes__`. -/
+/-- `_PyDict_NewKeysForClass` (:7231-7259): `attrs` is `__static_attributes__`. -/
 def dictNewKeysForClass (attrs : List K) : Keys K Unit :=
   let k0 : Keys K Unit :=
     { (newKeysObject 1 NEXT_LOG2_SHARED_KEYS_MAX_SIZE true : Keys K Unit) with
@@ -99,27 +99,27 @@ def dictNewKeysForClass (attrs : List K) : Keys K Unit :=
 
 end
 
-/-- `_PyObject_InitInlineValues` (:6820-6854): `keys` shrink by one each time, so later
+/-- `_PyObject_InitInlineValues` (:7261-7295): `keys` shrink by one each time, so later
 instances get smaller arrays. -/
 def initInlineValues (keys : Keys K Unit) : Keys K Unit × Inst K V :=
   let keys' := if keys.usable > 1 then { keys with usable := keys.usable - 1 } else keys
   let size := sharedKeysUsableSize keys'
   (keys', { inlineV := { values := List.replicate size none, order := [], embedded := true } })
 
-/-- `make_dict_from_instance_attributes` (:6856-6871). -/
+/-- `make_dict_from_instance_attributes` (:7297-7311). -/
 def makeDictFromInstanceAttributes (id : Nat) (keys : Keys K Unit) (values : Values V) : PyDict K V :=
   { ident := id
     used := (values.values.filter Option.isSome).length
     body := .split keys values
     nextId := 2 }
 
-/-- `new_dict_with_shared_keys` (:896-909). -/
+/-- `new_dict_with_shared_keys` (:971-984). -/
 def newDictWithSharedKeys (id : Nat) (keys : Keys K Unit) : PyDict K V :=
   { ident := id, used := 0, nextId := 2
     body := .split keys (Values.new (sharedKeysUsableSize keys)) }
 
-/-- `_PyObject_MaterializeManagedDict_LockHeld` (:6873-6893),
-`_PyObject_MaterializeManagedDict` (:6895-6919). -/
+/-- `_PyObject_MaterializeManagedDict_LockHeld` (:7313-7332),
+`_PyObject_MaterializeManagedDict` (:7334-7358). -/
 def materializeManagedDict : IM K V (PyDict K V) := do
   let s ← M.get
   match s.inst.dict with
@@ -131,8 +131,8 @@ def materializeManagedDict : IM K V (PyDict K V) := do
     M.put { s with inst := { s.inst with dict := some d }, nextDict := s.nextDict + 1 }
     return d
 
-/-- `ensure_managed_dict` (:7541-7572), `PyObject_GenericGetDict` (:7606-7623) for a type with a
-managed dict; `ensure_nonmanaged_dict` (:7574-7604) is this minus the inline branch. -/
+/-- `ensure_managed_dict` (:7994-8024), `PyObject_GenericGetDict` (:8057-8074) for a type with a
+managed dict; `ensure_nonmanaged_dict` (:8026-8055) is this minus the inline branch. -/
 def ensureManagedDict : IM K V (PyDict K V) := do
   let s ← M.get
   match s.inst.dict with
@@ -147,7 +147,7 @@ def ensureManagedDict : IM K V (PyDict K V) := do
 section
 variable [DecidableEq K] (P : Proto K (PyDict K V))
 
-/-- `_PyDict_SetItem_LockHeld` (:6921-6934): `value = none` deletes. -/
+/-- `_PyDict_SetItem_LockHeld` (:7360-7388): `value = none` deletes. -/
 def dictSetItemLockHeld (name : K) (value : Option V) : DM K V Unit :=
   match value with
   | none => do
@@ -155,7 +155,7 @@ def dictSetItemLockHeld (name : K) (value : Option V) : DM K V Unit :=
     dictDelItemKnownHash P name hash
   | some v => dictSetItem P name v
 
-/-- The fast path of `store_instance_attr_lock_held` (:7003-7033), when the key is in the
+/-- The fast path of `store_instance_attr_lock_held` (:7457-7487), when the key is in the
 shared keys at `ix`. The inline values are the dict's if a dict is attached. -/
 def storeAtIndex (tpName : String) (name : K) (value : Option V) (ix : Nat) : IM K V Unit := do
   let s ← M.get
@@ -181,7 +181,7 @@ def storeAtIndex (tpName : String) (name : K) (value : Option V) (ix : Nat) : IM
       | .combined _ => d
     M.put { s with inst := { s.inst with inlineV := v2, dict := dict' } }
 
-/-- `store_instance_attr_lock_held` (:6939-7035). -/
+/-- `store_instance_attr_lock_held` (:7393-7489). -/
 def storeInstanceAttr (tpName : String) (name : K) (value : Option V) : IM K V Unit := do
   let s ← M.get
   let ix ← (if P.isStr name then do
@@ -194,7 +194,7 @@ def storeInstanceAttr (tpName : String) (name : K) (value : Option V) : IM K V U
     let s ← M.get
     match s.inst.dict with
     | none =>
-      -- Make the dict but don't publish it until the store has worked (:6978-6991).
+      -- Make the dict but don't publish it until the store has worked (:7432-7445).
       let d : PyDict K V := makeDictFromInstanceAttributes s.nextDict s.keys s.inst.inlineV
       match dictSetItemLockHeld P name value d with
       | (.error e, _) => M.throw e
@@ -204,13 +204,13 @@ def storeInstanceAttr (tpName : String) (name : K) (value : Option V) : IM K V U
   else
     storeAtIndex P tpName name value ix.toNat
 
-/-- `store_instance_attr_dict` (:7037-7051). -/
+/-- `store_instance_attr_dict` (:7491-7505). -/
 def storeInstanceAttrDict (tpName : String) (d : PyDict K V) (name : K) (value : Option V) :
     IM K V Unit :=
   if isInlineDict d then storeInstanceAttr P tpName name value
   else onInstDict (dictSetItemLockHeld P name value) d
 
-/-- `_PyObject_StoreInstanceAttribute` (:7053-7101). -/
+/-- `_PyObject_StoreInstanceAttribute` (:7507-7555). -/
 def storeInstanceAttribute (tpName : String) (name : K) (value : Option V) : IM K V Unit := do
   let s ← M.get
   if !s.inst.values.valid then
@@ -219,13 +219,13 @@ def storeInstanceAttribute (tpName : String) (name : K) (value : Option V) : IM 
   else
     storeInstanceAttr P tpName name value
 
-/-- `_PyDictKeys_StringLookupSplit` (:1216-1230). -/
+/-- `_PyDictKeys_StringLookupSplit` (:1296-1310). -/
 def dictKeysStringLookupSplit (keys : Keys K Unit) (key : K) : Py Int :=
   match P.hash key with
   | .error _ => .ok (-3)
   | .ok hash => unicodekeysLookupUnicode P keys key hash
 
-/-- `_PyObject_TryGetInstanceAttribute` (:7136-7213): `none` is "ask the dict", `some r` is the
+/-- `_PyObject_TryGetInstanceAttribute` (:7590-7667): `none` is "ask the dict", `some r` is the
 answer from the inline values, with `r = none` meaning the attribute is absent. -/
 def tryGetInstanceAttribute (s : ObjSt K V) (name : K) : Py (Option (Option V)) :=
   let values := s.inst.values
@@ -239,7 +239,7 @@ def tryGetInstanceAttribute (s : ObjSt K V) (name : K) : Py (Option (Option V)) 
 
 end
 
-/-- The instance branch of `_PyObject_GenericGetAttrWithDict` (`Objects/object.c:1856-1870`),
+/-- The instance branch of `_PyObject_GenericGetAttrWithDict` (`Objects/object.c:1935-1949`),
 what `getattr` runs. It is not a pure read: a name that is not an exact `str`, or inline values
 that are no longer valid, materialize the dict, as a plain empty dict in the second case. -/
 def genericGetAttr [DecidableEq K] (P : Proto K (PyDict K V)) (name : K) : IM K V (Option V) := do
@@ -254,7 +254,7 @@ def genericGetAttr [DecidableEq K] (P : Proto K (PyDict K V)) (name : K) : IM K 
     | none => viaDict
   else viaDict
 
-/-- `_PyObject_IsInstanceDictEmpty` (:7215-7247), for a type with inline values. -/
+/-- `_PyObject_IsInstanceDictEmpty` (:7339-7371), for a type with inline values. -/
 def isInstanceDictEmpty (s : ObjSt K V) : Bool :=
   let values := s.inst.values
   if values.valid then
@@ -264,7 +264,7 @@ def isInstanceDictEmpty (s : ObjSt K V) : Bool :=
     | none => true
     | some d => d.used == 0
 
-/-- `detach_dict_from_object` (:7455-7485), `_PyDict_DetachFromObject` (:7533-7539). -/
+/-- `detach_dict_from_object` (:7579-7609), `_PyDict_DetachFromObject` (:7657-7663). -/
 def detachDictFromObject (s : ObjSt K V) (d : PyDict K V) : ObjSt K V × PyDict K V :=
   if !isInlineDict d then (s, d)
   else
@@ -274,12 +274,12 @@ def detachDictFromObject (s : ObjSt K V) (d : PyDict K V) : ObjSt K V × PyDict 
       ({ s with inst := { s.inst with inlineV := invalidateInline v, dict := some d' } }, d')
     | .combined _ => (s, d)
 
-/-- `set_dict_inline_values` (:7285-7296). -/
+/-- `set_dict_inline_values` (:7409-7420). -/
 def setDictInlineValues (s : ObjSt K V) (new : Option (PyDict K V)) : ObjSt K V :=
   let v := s.inst.inlineV
   { s with inst := { inlineV := if v.valid then invalidateInline v else v, dict := new } }
 
-/-- `_PyObject_SetManagedDict` (:7373-7453), the GIL inline-values branch: `o.__dict__ = new`,
+/-- `_PyObject_SetManagedDict` (:7497-7577), the GIL inline-values branch: `o.__dict__ = new`,
 `del o.__dict__`. -/
 def setManagedDict (s : ObjSt K V) (new : Option (PyDict K V)) : ObjSt K V :=
   match s.inst.dict with
@@ -288,7 +288,7 @@ def setManagedDict (s : ObjSt K V) (new : Option (PyDict K V)) : ObjSt K V :=
     let (s', _) := detachDictFromObject s d
     { s' with inst := { s'.inst with dict := new } }
 
-/-- `PyObject_ClearManagedDict` (:7488-7531), run when the instance dies: the dict, if anyone
+/-- `PyObject_ClearManagedDict` (:7612-7655), run when the instance dies: the dict, if anyone
 else holds it, keeps its contents, detached. -/
 def clearManagedDict (s : ObjSt K V) : ObjSt K V × Option (PyDict K V) :=
   match s.inst.dict with

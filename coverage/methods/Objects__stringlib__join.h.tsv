@@ -1,2 +1,0 @@
-file	line	endline	name	signature	status	entry	note
-Objects/stringlib/join.h	7	164	Py_LOCAL_INLINE	Py_LOCAL_INLINE(PyObject *) STRINGLIB(bytes_join)(PyObject *sep, PyObject *iterable)	todo		

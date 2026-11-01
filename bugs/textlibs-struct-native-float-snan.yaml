@@ -38,10 +38,10 @@ observed: |
   000000200000f87f, >F 000000200000f07f. REPRODUCED through F against >F; `f` against `<f` no longer
   differs.
 promised_by: |
-  invariant: PyFloat_Unpack4 preserves signalling NaNs on purpose (Objects/floatobject.c:2509-2522).
+  invariant: PyFloat_Unpack4 preserves signalling NaNs on purpose (Objects/floatobject.c@3.14.7:2509-2522).
 cause: |
-  Modules/_struct.c:482-487 (nu_float casts to double), :498-504 (nu_float_complex), and
-  :1537-1540, which keeps `f` out of the native swap but not `F`.
+  Modules/_struct.c:483-488 (nu_float casts to double), :499-505 (nu_float_complex), and
+  @3.14.7:1537-1540, which keeps `f` out of the native swap but not `F`.
 possible_fix: |
   Use PyFloat_Unpack4 in nu_float and nu_float_complex, or decide that NaN signalling is not
   preserved and drop the special case in PyFloat_Unpack4.

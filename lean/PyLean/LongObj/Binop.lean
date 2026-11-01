@@ -4,7 +4,7 @@ import PyLean.LongObj.Conv2
 /-!
 The object-level entry points: what happens before the digit code runs.
 
-`CHECK_BINOP`, longobject.c:1768-1772, returns `NotImplemented` unless both operands are
+`CHECK_BINOP`, longobject.c:1843-1847, returns `NotImplemented` unless both operands are
 ints, and is the only code in the `*_method` wrappers. The `PyLong_As*` family either calls
 `__index__` on a non-int, which runs arbitrary Python and may raise, or refuses it with
 `TypeError`. Both are failure paths, so they are mirrored here over `Obj`, with
@@ -28,7 +28,7 @@ def checkBinop {α β : Type} (f : Long → Long → Py β) : Obj α → Obj α 
     | .error e => .error e
   | _, _ => .ok none
 
-/-- `if (PyLong_Check(vv)) v = vv; else v = _PyNumber_Index(vv);`, longobject.c:528-536. -/
+/-- `if (PyLong_Check(vv)) v = vv; else v = _PyNumber_Index(vv);`, longobject.c:608-616. -/
 def viaIndex {α β : Type} (index : α → Py Long) (f : Long → Py β) : Obj α → Py β
   | .int v => f v
   | .other o =>
@@ -36,7 +36,7 @@ def viaIndex {α β : Type} (index : α → Py Long) (f : Long → Py β) : Obj 
     | .ok v => f v
     | .error e => .error e
 
-/-- `if (!PyLong_Check(vv)) TypeError`, longobject.c:638-641. -/
+/-- `if (!PyLong_Check(vv)) TypeError`, longobject.c:717-720. -/
 def requireInt {α β : Type} (f : Long → Py β) : Obj α → Py β
   | .int v => f v
   | .other _ => .error (.typeError "an integer is required")
@@ -204,7 +204,7 @@ def entriesBinop : List Entry := [
   { id := "longobj-require-int", pyFile := "Objects/longobject.c"
     pyFns := ["PyLong_AsSsize_t", "PyLong_AsUnsignedLong", "PyLong_AsSize_t", "PyLong_AsUnsignedLongLong"]
     statement := "These conversions raise TypeError for a non-int and are exact, or raise OverflowError, for an int."
-    source := "longobject.c:638-641 and copies", status := .proven
+    source := "longobject.c:717-720 and copies", status := .proven
     prop := ``RequireIntExact, thm := some ``requireIntExact_proven }
 ]
 

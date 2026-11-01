@@ -2,7 +2,7 @@ import PyLean.LongObj.Bitwise
 import PyLean.MathInt.Pow
 
 /-!
-`long_pow`, longobject.c:4994-5133: the small-exponent cases, left-to-right binary
+`long_pow`, longobject.c:5086-5225: the small-exponent cases, left-to-right binary
 exponentiation, and the sliding window. `MULT` is `mult`, on values, because
 `long_mul` and `l_mod` are proven exact in `Karatsuba.lean` and `DivOps.lean`.
 
@@ -14,12 +14,12 @@ namespace PyLean.LongObj
 
 open PyLean PyLean.MathInt
 
-/-- `EXP_TABLE_LEN`, longobject.c:92. -/
+/-- `EXP_TABLE_LEN`, longobject.c:94. -/
 def expTableLen : Nat := 16
-/-- `HUGE_EXP_CUTOFF / PyLong_SHIFT`, longobject.c:112, :5045. -/
+/-- `HUGE_EXP_CUTOFF / PyLong_SHIFT`, longobject.c:114, :5137. -/
 def hugeDigits : Nat := 60 / 30
 
-/-- `MULT(x, y, result)`, longobject.c:5014-5023: `x*y`, reduced when `c` is given. -/
+/-- `MULT(x, y, result)`, longobject.c:5106-5115: `x*y`, reduced when `c` is given. -/
 def mult (c : Option Int) (x y : Int) : Int :=
   match c with
   | some m => (x * y) % m
@@ -32,13 +32,13 @@ def sqN (c : Option Int) : Nat → Int → Int
 
 /-! ## Binary -/
 
-/-- The search for the first significant bit, longobject.c:5054-5061, on the bit
+/-- The search for the first significant bit, longobject.c:5146-5153, on the bit
 index: stops at the `k` with `2^(k+1) > bi`. -/
 def firstBit (bi : Nat) : Nat → Nat → Nat
   | 0, k => k
   | f + 1, k => if 2 ^ (k + 1) > bi then k else firstBit bi f (k + 1)
 
-/-- The loop `for (; bit != 0; bit >>= 1)`, longobject.c:5063-5068. `k` indexes
+/-- The loop `for (; bit != 0; bit >>= 1)`, longobject.c:5155-5160. `k` indexes
 `bit = 1 << (k-1)`. -/
 def binDigit (c : Option Int) (a : Int) (bi : Nat) : Nat → Int → Int
   | 0, z => z
@@ -47,7 +47,7 @@ def binDigit (c : Option Int) (a : Int) (bi : Nat) : Nat → Int → Int
     let z := if bi &&& (1 <<< k) ≠ 0 then mult c z a else z
     binDigit c a bi k z
 
-/-- The outer loop over the lower digits, longobject.c:5062-5074. -/
+/-- The outer loop over the lower digits, longobject.c:5154-5166. -/
 def binDigits (c : Option Int) (a : Int) : List Nat → Int → Int
   | [], z => z
   | d :: ds, z => binDigits c a ds (binDigit c a d 30 z)
@@ -59,19 +59,19 @@ structure WinState where
   pending : Nat
   blen : Nat
 
-/-- `while ((pending & 1) == 0) { ++ntz; pending >>= 1; }`, longobject.c:5101-5104. -/
+/-- `while ((pending & 1) == 0) { ++ntz; pending >>= 1; }`, longobject.c:5193-5196. -/
 def ntzLoop : Nat → Nat → Nat → Nat × Nat
   | 0, p, n => (p, n)
   | f + 1, p, n => if p &&& 1 = 0 then ntzLoop f (p >>> 1) (n + 1) else (p, n)
 
-/-- `ABSORB_PENDING`, longobject.c:5096-5115. -/
+/-- `ABSORB_PENDING`, longobject.c:5188-5207. -/
 def absorb (c : Option Int) (table : List Int) (st : WinState) : WinState :=
   let (p, ntz) := ntzLoop 6 st.pending 0
   let z := sqN c (st.blen - ntz) st.z
   let z := mult c z (table.getD (p >>> 1) 0)
   ⟨sqN c ntz z, 0, 0⟩
 
-/-- One exponent bit, longobject.c:5120-5128. -/
+/-- One exponent bit, longobject.c:5212-5220. -/
 def winBit (c : Option Int) (table : List Int) (st : WinState) (bit : Nat) : WinState :=
   let pending := (st.pending <<< 1) ||| bit
   if pending ≠ 0 then
@@ -79,17 +79,17 @@ def winBit (c : Option Int) (table : List Int) (st : WinState) (bit : Nat) : Win
     if blen = 5 then absorb c table ⟨st.z, pending, blen⟩ else ⟨st.z, pending, blen⟩
   else ⟨mult c st.z st.z, pending, st.blen⟩
 
-/-- `for (j = PyLong_SHIFT - 1; j >= 0; --j)`, longobject.c:5119-5129. -/
+/-- `for (j = PyLong_SHIFT - 1; j >= 0; --j)`, longobject.c:5211-5221. -/
 def winDigit (c : Option Int) (table : List Int) (bi : Nat) : Nat → WinState → WinState
   | 0, st => st
   | j + 1, st => winDigit c table bi j (winBit c table st ((bi >>> j) &&& 1))
 
-/-- The digit loop of the window path, longobject.c:5117-5130. -/
+/-- The digit loop of the window path, longobject.c:5209-5222. -/
 def winDigits (c : Option Int) (table : List Int) : List Nat → WinState → WinState
   | [], st => st
   | d :: ds, st => winDigits c table ds (winDigit c table d 30 st)
 
-/-- The table `table[i] == a**(2*i+1) % c`, longobject.c:5080-5088. -/
+/-- The table `table[i] == a**(2*i+1) % c`, longobject.c:5172-5180. -/
 def tableGo (c : Option Int) (a2 : Int) : Nat → Int → List Int
   | 0, _ => []
   | n + 1, t => t :: tableGo c a2 n (mult c t a2)
@@ -596,7 +596,7 @@ theorem powLoop_some (a : Int) (e : Nat) {m : Int} (hm : 2 ≤ m) :
 
 /-! ## `long_pow` -/
 
-/-- `pow(v, w, x)` for ints with `x` given, longobject.c:4878-5157, with the result
+/-- `pow(v, w, x)` for ints with `x` given, longobject.c:4970-5249, with the result
 of the exponentiation loops supplied by `k`. -/
 def powModWith (k : Int → Int → Int → Int) (v w x : Int) : Py Int := do
   if x = 0 then throw (.valueError "pow() 3rd argument cannot be 0")
@@ -618,7 +618,7 @@ def powModWith (k : Int → Int → Int → Int) (v w x : Int) : Py Int := do
 def longPowMod (v w x : Int) : Py Int :=
   powModWith (fun a b c => powLoop a (digitsOf b.toNat) (some c)) v w x
 
-/-- `v ** w` with no modulus, longobject.c:4914-4922, :5024-5133. A negative exponent
+/-- `v ** w` with no modulus, longobject.c:5006-5014, :5116-5225. A negative exponent
 leaves `long_pow` for `float_pow`, outside the integer model. -/
 def longPowNone (v w : Int) : Option Int :=
   if w < 0 then none else some (powLoop v (digitsOf w.toNat) none)
@@ -628,7 +628,7 @@ theorem floorMod_nonneg (a c : Int) (hc : 2 ≤ c) : 0 ≤ floorMod a c := by
   rw [Int.fmod_eq_emod_of_nonneg _ (by omega)]
   exact Int.emod_nonneg _ (by omega)
 
-/-- The base after the reduction at longobject.c:4983-4988 is non-negative. -/
+/-- The base after the reduction at longobject.c:5075-5080 is non-negative. -/
 theorem reduced_base_nonneg (a c : Int) (hc : 2 ≤ c) :
     0 ≤ (if a < 0 ∨ digitCount a.natAbs > digitCount c.natAbs then floorMod a c else a) := by
   by_cases h1 : a < 0 ∨ digitCount a.natAbs > digitCount c.natAbs

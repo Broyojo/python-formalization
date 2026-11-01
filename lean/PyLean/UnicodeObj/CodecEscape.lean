@@ -2,20 +2,20 @@ import PyLean.UnicodeObj.CodecAscii
 
 /-!
 `unicode_escape` and `raw_unicode_escape`: `_PyUnicode_DecodeUnicodeEscapeInternal2`
-(unicodeobject.c:6629-6876), `PyUnicode_AsUnicodeEscapeString` (:6928-7040),
-`_PyUnicode_DecodeRawUnicodeEscapeStateful` (:7045-7178) and
-`PyUnicode_AsRawUnicodeEscapeString` (:7190-7263).
+(unicodeobject.c:6522-6769), `PyUnicode_AsUnicodeEscapeString` (:6821-6919),
+`_PyUnicode_DecodeRawUnicodeEscapeStateful` (:6924-7057) and
+`PyUnicode_AsRawUnicodeEscapeString` (:7069-7131).
 
 `\N{...}` looks names up in the Unicode name database, which the model takes as the
 parameter `nameToCode`, supplied by the difftest. The `DeprecationWarning` for an invalid
-escape (:6879-6915) has no effect on the result and is not modelled.
+escape (:6772-6808) has no effect on the result and is not modelled.
 -/
 
 namespace PyLean.UnicodeObj
 
 open PyLean
 
-/-- The value of a hex digit, as the three branches at unicodeobject.c:6771-6783 compute it. -/
+/-- The value of a hex digit, as the three branches at unicodeobject.c:6664-6676 compute it. -/
 def hexValue (c : Nat) : Option Nat :=
   if 48 ≤ c ∧ c ≤ 57 then some (c - 48)
   else if 97 ≤ c ∧ c ≤ 102 then some (c - 87)
@@ -47,7 +47,7 @@ def nameBytes : List Nat → Option (List Nat)
   | 125 :: _ => some []
   | c :: cs => (nameBytes cs).map (c :: ·)
 
-/-- The `\N` case, unicodeobject.c:6793-6825. `rest` follows the `N`. -/
+/-- The `\N` case, unicodeobject.c:6686-6718. `rest` follows the `N`. -/
 def stepName (nameToCode : List Nat → Option Nat) (consumed : Bool) (rest : List Nat) : DStep :=
   let malformed := "malformed \\N character escape"
   match rest with
@@ -62,7 +62,7 @@ def stepName (nameToCode : List Nat → Option Nat) (consumed : Bool) (rest : Li
       | none => .fail "unknown Unicode character name" 0 (4 + name.length)
   | _ => .fail malformed 0 2
 
-/-- One octal escape, unicodeobject.c:6747-6762: the value and the digits after the first. -/
+/-- One octal escape, unicodeobject.c:6640-6655: the value and the digits after the first. -/
 def octalEscape (d0 : Nat) : List Nat → Nat × Nat
   | a :: b :: _ =>
     if 48 ≤ a ∧ a ≤ 55 then
@@ -72,7 +72,7 @@ def octalEscape (d0 : Nat) : List Nat → Nat × Nat
   | [a] => if 48 ≤ a ∧ a ≤ 55 then (d0 * 8 + (a - 48), 1) else (d0, 0)
   | [] => (d0, 0)
 
-/-- One round of the loop of the `unicode_escape` decoder, unicodeobject.c:6684-6853. -/
+/-- One round of the loop of the `unicode_escape` decoder, unicodeobject.c:6577-6746. -/
 def stepUnicodeEscape (nameToCode : List Nat → Option Nat) (consumed : Bool) : List Nat → DStep
   | [] => .stop
   | c :: t =>
@@ -101,7 +101,7 @@ def stepUnicodeEscape (nameToCode : List Nat → Option Nat) (consumed : Bool) :
         else if e == 78 then stepName nameToCode consumed r
         else .multi [92, e] 2
 
-/-- `_PyUnicode_DecodeUnicodeEscapeInternal2`, unicodeobject.c:6629-6876. -/
+/-- `_PyUnicode_DecodeUnicodeEscapeInternal2`, unicodeobject.c:6522-6769. -/
 def unicodeEscapeDecode (input : Bytes) (h : ErrHandler) (nameToCode : List Nat → Option Nat)
     (final : Bool) : Py (Str × Nat) :=
   if input.isEmpty then .ok ([], 0)
@@ -116,7 +116,7 @@ def hex8 (c : Nat) : Bytes :=
   [48, 48, hexLower (c / 1048576 % 16), hexLower (c / 65536 % 16)] ++ hex4 c
 
 /-- The bytes `PyUnicode_AsUnicodeEscapeString` writes for one character,
-unicodeobject.c:6972-7033. -/
+unicodeobject.c:6855-6916. -/
 def unicodeEscapeChar (ch : Nat) : Bytes :=
   if ch < 0x100 then
     if ch ≥ 32 ∧ ch < 127 then
@@ -128,10 +128,10 @@ def unicodeEscapeChar (ch : Nat) : Bytes :=
   else if ch < 0x10000 then [92, 117] ++ hex4 ch
   else [92, 85] ++ hex8 ch
 
-/-- `PyUnicode_AsUnicodeEscapeString`, unicodeobject.c:6928-7040. -/
+/-- `PyUnicode_AsUnicodeEscapeString`, unicodeobject.c:6821-6919. -/
 def unicodeEscapeEncode (s : Str) : Bytes := s.flatMap unicodeEscapeChar
 
-/-- The `\\u` and `\\U` forms of the raw decoder, unicodeobject.c:7115-7148. -/
+/-- The `\\u` and `\\U` forms of the raw decoder, unicodeobject.c:6994-7027. -/
 def rawHex (consumed : Bool) (count : Nat) (message : String) (r : List Nat) : DStep :=
   match hexEscape count r 0 0 with
   | .ok ch =>
@@ -140,7 +140,7 @@ def rawHex (consumed : Bool) (count : Nat) (message : String) (r : List Nat) : D
   | .error (n, true) => if consumed then .stop else .fail message 0 (2 + n)
   | .error (n, false) => .fail message 0 (2 + n)
 
-/-- One round of the loop of the raw decoder, unicodeobject.c:7082-7168. -/
+/-- One round of the loop of the raw decoder, unicodeobject.c:6961-7047. -/
 def stepRawEscape (consumed : Bool) : List Nat → DStep
   | [] => .stop
   | c :: t =>
@@ -153,7 +153,7 @@ def stepRawEscape (consumed : Bool) : List Nat → DStep
         else if e == 85 then rawHex consumed 8 "truncated \\UXXXXXXXX escape" r
         else .multi [92, e] 2
 
-/-- `_PyUnicode_DecodeRawUnicodeEscapeStateful`, unicodeobject.c:7045-7178. -/
+/-- `_PyUnicode_DecodeRawUnicodeEscapeStateful`, unicodeobject.c:6924-7057. -/
 def rawEscapeDecode (input : Bytes) (h : ErrHandler) (final : Bool) : Py (Str × Nat) :=
   if input.isEmpty then .ok ([], 0)
   else
@@ -161,13 +161,13 @@ def rawEscapeDecode (input : Bytes) (h : ErrHandler) (final : Bool) : Py (Str ×
       input []
 
 /-- The bytes `PyUnicode_AsRawUnicodeEscapeString` writes for one character,
-unicodeobject.c:7223-7252. -/
+unicodeobject.c@3.14.7:7223-7252. -/
 def rawEscapeChar (ch : Nat) : Bytes :=
   if ch < 0x100 then [ch]
   else if ch < 0x10000 then [92, 117] ++ hex4 ch
   else [92, 85] ++ hex8 ch
 
-/-- `PyUnicode_AsRawUnicodeEscapeString`, unicodeobject.c:7190-7263. -/
+/-- `PyUnicode_AsRawUnicodeEscapeString`, unicodeobject.c:7069-7131. -/
 def rawEscapeEncode (s : Str) : Bytes := s.flatMap rawEscapeChar
 
 end PyLean.UnicodeObj

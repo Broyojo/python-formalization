@@ -34,7 +34,7 @@ def PyVal.typeName : PyVal → String
   | .str _ => "str"
   | .obj t _ => t
 
-/-- `_PyNumber_Index` (Objects/abstract.c:1400-1444). -/
+/-- `_PyNumber_Index` (Objects/abstract.c:1410-1454). -/
 def toIndex (v : PyVal) : Py Int :=
   match v with
   | .int n => .ok n
@@ -44,7 +44,7 @@ def toIndex (v : PyVal) : Py Int :=
 def longMin : Int := -9223372036854775808
 def longMax : Int := 9223372036854775807
 
-/-- `PyLong_AsLong` (Objects/longobject.c:593-608), through `_PyNumber_Index`. -/
+/-- `PyLong_AsLong` (Objects/longobject.c:673-688), through `_PyNumber_Index`. -/
 def asLongV (v : PyVal) : Py Int := do
   let n ← toIndex v
   if longMin ≤ n ∧ n ≤ longMax then return n
@@ -64,7 +64,7 @@ def roundShift (m s : Nat) : Nat :=
     let half := 2 ^ (s - 1)
     if r > half ∨ (r = half ∧ q % 2 = 1) then q + 1 else q
 
-/-- `PyLong_AsDouble` (Objects/longobject.c:3484-3505, `_PyLong_Frexp` rounds half
+/-- `PyLong_AsDouble` (Objects/longobject.c:3567-3588, `_PyLong_Frexp` rounds half
 to even): the binary64 pattern of an int, or `none` on overflow. -/
 def intToDouble (n : Int) : Option Nat :=
   if n = 0 then some 0
@@ -79,7 +79,7 @@ def intToDouble (n : Int) : Option Nat :=
         if q = 2 * two52 then (two52, L) else (q, L - 1)
     if e ≥ 1024 then none else some (sign + ((e + 1023) <<< 52) + (q - two52))
 
-/-- `PyFloat_AsDouble` (Objects/floatobject.c:257-309) on the values we model. -/
+/-- `PyFloat_AsDouble` (Objects/floatobject.c:247-299) on the values we model. -/
 def asDouble (v : PyVal) : Py Nat :=
   let ofInt (n : Int) : Py Nat :=
     match intToDouble n with
@@ -146,7 +146,7 @@ def cmpScaled (a x b y : Int) : Ordering :=
   compare (a * 2 ^ (x - e).toNat) (b * 2 ^ (y - e).toNat)
 
 /-- The order of two numbers, `none` if one is NaN (`float_richcompare`,
-Objects/floatobject.c:382-606, compares int and float exactly). -/
+Objects/floatobject.c:372-596, compares int and float exactly). -/
 def numOrder (a b : DVal) : Option Ordering :=
   match a, b with
   | .nan, _ | _, .nan => none

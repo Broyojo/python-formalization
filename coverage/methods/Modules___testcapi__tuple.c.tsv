@@ -5,4 +5,5 @@ Modules/_testcapi/tuple.c	25	36	tuple_copy	tuple_copy(PyObject *tuple)	excluded	
 Modules/_testcapi/tuple.c	39	66	tuple_set_item	tuple_set_item(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
 Modules/_testcapi/tuple.c	69	93	_tuple_resize	_tuple_resize(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
 Modules/_testcapi/tuple.c	96	104	_check_tuple_item_is_NULL	_check_tuple_item_is_NULL(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/tuple.c	117	124	_PyTestCapi_Init_Tuple	_PyTestCapi_Init_Tuple(PyObject *m)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/tuple.c	108	131	tuple_fromarray	tuple_fromarray(PyObject* Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/tuple.c	145	152	_PyTestCapi_Init_Tuple	_PyTestCapi_Init_Tuple(PyObject *m)	excluded		test-support: only for CPython's own tests

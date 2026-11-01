@@ -52,24 +52,24 @@ def entries : List Entry := [
   { id := "accel-bisect-left-partition", pyFile := "Lib/bisect.py"
     pyFns := ["bisect_left"]
     statement := "For a sorted by key and 0 <= lo <= hi <= len(a), both twins return the same ip in [lo, hi] with key(e) < x on a[lo:ip] and key(e) >= x on a[ip:hi]."
-    source := "bisect_left docstring, Lib/bisect.py:77-79; Doc/library/bisect.rst:51-54", status := .proven
+    source := "bisect_left docstring, Lib/bisect.py:77-79; Doc/library/bisect.rst:48-51", status := .proven
     prop := ``BisectLeftPartition, thm := some ``bisectLeftPartition_proven },
   { id := "accel-bisect-right-partition", pyFile := "Lib/bisect.py"
     pyFns := ["bisect_right"]
     statement := "For a sorted by key and 0 <= lo <= hi <= len(a), both twins return the same ip in [lo, hi] with key(e) <= x on a[lo:ip] and key(e) > x on a[ip:hi]."
-    source := "bisect_right docstring, Lib/bisect.py:24-26; Doc/library/bisect.rst:74-77", status := .proven
+    source := "bisect_right docstring, Lib/bisect.py:24-26; Doc/library/bisect.rst:71-74", status := .proven
     prop := ``BisectRightPartition, thm := some ``bisectRightPartition_proven },
   { id := "accel-bisect-doc-partition", pyFile := "Lib/bisect.py"
     pyFns := ["bisect_left", "bisect_right"]
     statement := "For a sorted by key and any lo, hi: whenever a twin returns ip, the slices a[lo:ip] and a[ip:hi] satisfy the documented partition."
-    source := "Doc/library/bisect.rst:51-54 and :74-77", status := .refuted
+    source := "Doc/library/bisect.rst:48-51 and :74-77", status := .refuted
     prop := ``BisectDocPartition, thm := some ``bisectDocPartition_refuted
     bug := some "accel-bisect-hi-minus-one"
     notes := "Negative hi: the search range is empty but a[ip:hi] uses negative-index slicing (python/cpython#125889)." },
   { id := "accel-bisect-doc-partition-nonneg-hi", pyFile := "Lib/bisect.py"
     pyFns := ["bisect_left", "bisect_right"]
     statement := "For a sorted by key, any lo and hi=None or hi >= 0 (including lo > hi and hi > len(a)): whenever either twin returns ip, the documented slice partition holds."
-    source := "Doc/library/bisect.rst:51-54 and :74-77", status := .proven
+    source := "Doc/library/bisect.rst:48-51 and :74-77", status := .proven
     prop := ``BisectDocPartitionNonnegHi, thm := some ``bisectDocPartitionNonnegHi_proven
     notes := "For hi > len(a) the search either returns a correct ip or raises IndexError; it never returns a wrong one." },
   { id := "accel-insort-keeps-sorted", pyFile := "Lib/bisect.py"
@@ -93,36 +93,36 @@ def entries : List Entry := [
   { id := "accel-heapify-twins-agree", pyFile := "Modules/_heapqmodule.c"
     pyFns := ["heapify", "heapify_max", "cache_friendly_heapify"]
     statement := "For every element type, comparison and length, the C heapify (cache-friendly order above 2500 items) builds the same list as the Python heapify."
-    source := "invariant: C accelerator vs pure-Python twin; comment at Modules/_heapqmodule.c:311-329", status := .proven
+    source := "invariant: C accelerator vs pure-Python twin; comment at Modules/_heapqmodule.c:312-330", status := .proven
     prop := ``HeapifyTwinsAgree, thm := some ``heapifyTwinsAgree_proven
     notes := "Above 2500 items the C order (row R-1 climbs, then row R climbs) is a different children-first order; any such order yields the same heap because siftup at k only reads and writes the subtree of k." },
   { id := "accel-heap-ops-invariant", pyFile := "Lib/heapq.py"
     pyFns := ["heappush", "heappop", "heapreplace", "heappushpop", "heappush_max", "heappop_max",
       "heapreplace_max", "heappushpop_max"]
     statement := "On an int min-heap (max-heap for _max), every operation leaves a heap, permutes the items as documented, and pops/returns the smallest (largest) item."
-    source := "Lib/heapq.py:3-6 and docstrings; Doc/library/heapq.rst:61-150", status := .proven
+    source := "Lib/heapq.py:3-6 and docstrings; Doc/library/heapq.rst:56-145", status := .proven
     prop := ``HeapOpsKeepInvariant, thm := some ``heapOpsKeepInvariant_proven },
   { id := "accel-heapify-makes-heap", pyFile := "Lib/heapq.py"
     pyFns := ["heapify", "heapify_max"]
     statement := "heapify and heapify_max turn any int list into a min-heap / max-heap with the same items."
-    source := "Lib/heapq.py:171-180, :211-215; Doc/library/heapq.rst:61-63, :104-106", status := .proven
+    source := "Lib/heapq.py:171-180, :211-215; Doc/library/heapq.rst:56-58, :104-106", status := .proven
     prop := ``HeapifyMakesHeap, thm := some ``heapifyMakesHeap_proven },
   { id := "accel-nsmallest-sorted-prefix", pyFile := "Lib/heapq.py"
     pyFns := ["nsmallest"]
     statement := "For n >= 0, nsmallest(n, iterable, key) == sorted(iterable, key=key)[:n], ties included, for sized and unsized iterables."
-    source := "nsmallest docstring, Lib/heapq.py:477-481; Doc/library/heapq.rst:188-193", status := .proven
+    source := "nsmallest docstring, Lib/heapq.py:477-481; Doc/library/heapq.rst:183-188", status := .proven
     prop := ``NsmallestIsSortedPrefix, thm := some ``nsmallestIsSortedPrefix_proven
     notes := "Covers the n == 1 min() shortcut, the n >= len sorted() shortcut and both heap branches. Negative n is excluded: its meaning is undefined (python/cpython#57483); nsmallest returns [] there while sorted(...)[:n] drops items." },
   { id := "accel-nlargest-sorted-prefix", pyFile := "Lib/heapq.py"
     pyFns := ["nlargest"]
     statement := "For n >= 0, nlargest(n, iterable, key) == sorted(iterable, key=key, reverse=True)[:n], ties included."
-    source := "nlargest docstring, Lib/heapq.py:537-541; Doc/library/heapq.rst:179-185", status := .proven
+    source := "nlargest docstring, Lib/heapq.py:537-541; Doc/library/heapq.rst:174-180", status := .proven
     prop := ``NlargestIsSortedPrefix, thm := some ``nlargestIsSortedPrefix_proven
     notes := "As for nsmallest; negative n excluded (python/cpython#57483)." },
   { id := "accel-merge-sorted", pyFile := "Lib/heapq.py"
     pyFns := ["merge"]
     statement := "For inputs sorted by key (descending if reverse), list(merge(*its, key, reverse)) == sorted(chain(*its), key=key, reverse=reverse), ties included."
-    source := "merge docstring, Lib/heapq.py:330-346; Doc/library/heapq.rst:154-176", status := .proven
+    source := "merge docstring, Lib/heapq.py:330-346; Doc/library/heapq.rst:149-171", status := .proven
     prop := ``MergeIsSorted, thm := some ``mergeIsSorted_proven }
 ]
 

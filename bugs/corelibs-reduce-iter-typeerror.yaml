@@ -39,7 +39,7 @@ observed: |
 promised_by: |
   Nothing explicit: the Python twin, and the behaviour of iter(), list and map.
 cause: |
-  Modules/_functoolsmodule.c:1000-1005 replaces any TypeError after PyObject_GetIter.
+  Modules/_functoolsmodule.c:1096-1101 replaces any TypeError after PyObject_GetIter.
 possible_fix: |
   Drop the replacement, as the error of iter() now names the type, or test PyIter_Check/tp_iter first.
 duplicates:

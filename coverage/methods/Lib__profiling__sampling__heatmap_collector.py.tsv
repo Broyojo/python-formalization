@@ -1,0 +1,32 @@
+file	line	endline	name	signature	status	entry	note
+Lib/profiling/sampling/heatmap_collector.py	60	70	_TemplateLoader.__init__	__init__(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	72	105	_TemplateLoader._load_templates	_load_templates(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	112	154	_TreeBuilder.build_file_tree	build_file_tree(file_stats: List[FileStats])	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	157	182	_TreeBuilder._calculate_node_stats	_calculate_node_stats(node: TreeNode)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	188	195	_HtmlRenderer.__init__	__init__(self, file_index: Dict[str, str])	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	197	255	_HtmlRenderer.render_hierarchical_html	render_hierarchical_html(self, trees: Dict[str, TreeNode])	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	257	301	_HtmlRenderer._render_folder	_render_folder(self, node: TreeNode, name: str, level: int=1)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	303	326	_HtmlRenderer._render_file_item	_render_file_item(self, stat: FileStats, indent: str='')	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	344	387	HeatmapCollector.__init__	__init__(self, *args, **kwargs)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	389	410	HeatmapCollector.set_stats	set_stats(self, sample_interval_usec, duration_sec, sample_rate, error_rate=None, missed_samples=None, **kwargs)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	412	457	HeatmapCollector.process_frames	process_frames(self, frames, thread_id, weight=1)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	459	469	HeatmapCollector._is_valid_frame	_is_valid_frame(self, filename, lineno)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	471	490	HeatmapCollector._record_line_sample	_record_line_sample(self, filename, lineno, funcname, is_leaf=False, count_cumulative=True, weight=1)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	492	518	HeatmapCollector._record_bytecode_sample	_record_bytecode_sample(self, filename, lineno, opcode, end_lineno=None, col_offset=None, end_col_offset=None, weight=1)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	520	563	HeatmapCollector._get_bytecode_data_for_line	_get_bytecode_data_for_line(self, filename, lineno)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	565	591	HeatmapCollector._record_call_relationship	_record_call_relationship(self, callee_frame, caller_frame, weight=1)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	593	619	HeatmapCollector.export	export(self, output_path)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	621	632	HeatmapCollector._prepare_output_directory	_prepare_output_directory(self, output_path)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	634	639	HeatmapCollector._create_file_index	_create_file_index(self, file_stats: List[FileStats])	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	641	657	HeatmapCollector._generate_file_reports	_generate_file_reports(self, output_dir, file_stats: List[FileStats])	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	659	664	HeatmapCollector._print_export_summary	_print_export_summary(self, output_dir, file_stats: List[FileStats])	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	666	713	HeatmapCollector._calculate_file_stats	_calculate_file_stats(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	715	782	HeatmapCollector._generate_index_html	_generate_index_html(self, index_path: Path, file_stats: List[FileStats])	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	784	829	HeatmapCollector._generate_file_html	_generate_file_html(self, output_path: Path, filename: str, line_counts: Dict[int, int], self_counts: Dict[int, int], file_stat: FileStats)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	831	924	HeatmapCollector._build_line_html	_build_line_html(self, line_num: int, line_content: str, line_counts: Dict[int, int], self_counts: Dict[int, int], max_samples: int, max_self_samples: int, filename: str)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	926	1016	HeatmapCollector._render_source_with_highlights	_render_source_with_highlights(self, line_content: str, line_num: int, filename: str, bytecode_data: list)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	1018	1040	HeatmapCollector._format_specialization_color	_format_specialization_color(self, spec_pct: int)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	1042	1081	HeatmapCollector._build_navigation_buttons	_build_navigation_buttons(self, filename: str, line_num: int)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	1083	1099	HeatmapCollector._get_edge_counts	_get_edge_counts(self, line_key: Tuple[str, int], items: List[Tuple[str, int, str]], is_caller: bool)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	1101	1114	HeatmapCollector._deduplicate_by_function	_deduplicate_by_function(self, items)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/heatmap_collector.py	1116	1145	HeatmapCollector._create_navigation_button	_create_navigation_button(self, items_with_counts: List[Tuple[str, int, str, int]], btn_class: str, arrow: str)	todo		changed-in-3.15: new function

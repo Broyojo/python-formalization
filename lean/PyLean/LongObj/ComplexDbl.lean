@@ -152,13 +152,13 @@ def toLong (x : Dbl) : Int :=
   let q : Int := x.mag / 2 ^ 1074
   if x.sign then -q else q
 
-/-- `PyLong_AsDouble`, `Objects/longobject.c:3484-3513`: round to nearest-even,
+/-- `PyLong_AsDouble`, `Objects/longobject.c:3567-3596`: round to nearest-even,
 and report overflow if the rounded value does not fit. -/
 def ofInt (n : Int) : Option Dbl :=
   let r := ofNat' (n < 0) n.natAbs
   if r.isInf then none else some r
 
-/-- `float == int`, exact, as `float_richcompare` (`Objects/floatobject.c:382-542`)
+/-- `float == int`, exact, as `float_richcompare` (`Objects/floatobject.c:372-532`)
 decides it. An infinity or NaN equals no int. -/
 def eqInt (x : Dbl) (n : Int) : Bool :=
   if x.isNaN || x.isInf then false else x.sval == n * 2 ^ 1074
@@ -268,7 +268,7 @@ def dgMant (negS : Bool) (s : List Nat) (off₀ : Nat) : Dbl × Nat :=
   let digits := ip.1 * 10 ^ fr.2.1 + fr.1
   (decToDbl negS digits (ex.1 - (fr.2.1 : Int)), off₀ + ip.2 + dl + ex.2)
 
-/-- `_Py_dg_strtod`, `Python/dtoa.c:1386`, through the end of parsing, with the
+/-- `_Py_dg_strtod`, `Python/dtoa.c:1388`, through the end of parsing, with the
 conversion done exactly. Returns the value and the characters consumed; `0`
 means `se == s00`. -/
 def dgStrtod : List Nat → Dbl × Nat

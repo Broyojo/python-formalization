@@ -1,0 +1,13 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testlimitedcapi/type.c	29	32	get_heaptype_for_name	get_heaptype_for_name(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/type.c	37	43	get_type_name	get_type_name(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/type.c	48	54	get_type_qualname	get_type_qualname(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/type.c	59	65	get_type_fullyqualname	get_type_fullyqualname(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/type.c	70	76	get_type_module_name	get_type_module_name(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/type.c	81	88	type_modified	type_modified(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/type.c	93	105	type_ready	type_ready(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/type.c	110	119	type_freeze	type_freeze(PyObject *module, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/type.c	124	131	type_clearcache	type_clearcache(PyObject *module, PyObject *Py_UNUSED(arg))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/type.c	136	144	type_getflags	type_getflags(PyObject *module, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/type.c	149	160	type_issubtype	type_issubtype(PyObject *module, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/type.c	179	222	_PyTestLimitedCAPI_Init_Type	_PyTestLimitedCAPI_Init_Type(PyObject *m)	excluded		test-support: only for CPython's own tests

@@ -460,7 +460,7 @@ theorem setDelProtocol_proven : SetDelProtocol := by
 /-! ### `concat` -/
 
 /-- `concat` in C and Python agree for user sequences, the case the fallback at
-Objects/abstract.c:1725-1733 exists for: neither has a sequence slot and both operands are sequences,
+Objects/abstract.c:1734-1742 exists for: neither has a sequence slot and both operands are sequences,
 so both call `nb_add`; both raise `TypeError` without an answer. -/
 def ConcatTwinsOnUserSequences : Prop :=
   ∀ (α : Type) (A : ConcatArgs α) (lt rt : String) (a b : α) (x : α),

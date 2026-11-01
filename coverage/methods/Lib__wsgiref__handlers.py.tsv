@@ -1,37 +1,37 @@
 file	line	endline	name	signature	status	entry	note
 Lib/wsgiref/handlers.py	19	23	format_date_time	format_date_time(timestamp)	todo		
 Lib/wsgiref/handlers.py	30	32	_needs_transcode	_needs_transcode(k)	todo		
-Lib/wsgiref/handlers.py	34	91	read_environ	read_environ()	todo		
-Lib/wsgiref/handlers.py	128	149	BaseHandler.run	run(self, application)	todo		
-Lib/wsgiref/handlers.py	152	170	BaseHandler.setup_environ	setup_environ(self)	todo		
-Lib/wsgiref/handlers.py	173	196	BaseHandler.finish_response	finish_response(self)	todo		
-Lib/wsgiref/handlers.py	199	201	BaseHandler.get_scheme	get_scheme(self)	todo		
-Lib/wsgiref/handlers.py	204	213	BaseHandler.set_content_length	set_content_length(self)	todo		
-Lib/wsgiref/handlers.py	217	223	BaseHandler.cleanup_headers	cleanup_headers(self)	todo		
-Lib/wsgiref/handlers.py	225	249	BaseHandler.start_response	start_response(self, status, headers, exc_info=None)	todo		
-Lib/wsgiref/handlers.py	251	259	BaseHandler._validate_status	_validate_status(self, status)	todo		
-Lib/wsgiref/handlers.py	261	267	BaseHandler._convert_string_type	_convert_string_type(self, value, title)	todo		
-Lib/wsgiref/handlers.py	269	281	BaseHandler.send_preamble	send_preamble(self)	todo		
-Lib/wsgiref/handlers.py	283	301	BaseHandler.write	write(self, data)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
-Lib/wsgiref/handlers.py	304	322	BaseHandler.sendfile	sendfile(self)	todo		
-Lib/wsgiref/handlers.py	325	333	BaseHandler.finish_content	finish_content(self)	todo		
-Lib/wsgiref/handlers.py	335	345	BaseHandler.close	close(self)	todo		
-Lib/wsgiref/handlers.py	348	354	BaseHandler.send_headers	send_headers(self)	todo		
-Lib/wsgiref/handlers.py	357	360	BaseHandler.result_is_file	result_is_file(self)	todo		
-Lib/wsgiref/handlers.py	363	365	BaseHandler.client_is_modern	client_is_modern(self)	todo		
-Lib/wsgiref/handlers.py	368	382	BaseHandler.log_exception	log_exception(self, exc_info)	todo		
-Lib/wsgiref/handlers.py	384	389	BaseHandler.handle_error	handle_error(self)	todo		
-Lib/wsgiref/handlers.py	392	406	BaseHandler.error_output	error_output(self, environ, start_response)	todo		
-Lib/wsgiref/handlers.py	411	418	BaseHandler._write	_write(self, data)	todo		
-Lib/wsgiref/handlers.py	420	426	BaseHandler._flush	_flush(self)	todo		
-Lib/wsgiref/handlers.py	428	430	BaseHandler.get_stdin	get_stdin(self)	todo		
-Lib/wsgiref/handlers.py	432	434	BaseHandler.get_stderr	get_stderr(self)	todo		
-Lib/wsgiref/handlers.py	436	438	BaseHandler.add_cgi_vars	add_cgi_vars(self)	todo		
-Lib/wsgiref/handlers.py	454	462	SimpleHandler.__init__	__init__(self, stdin, stdout, stderr, environ, multithread=True, multiprocess=False)	todo		
-Lib/wsgiref/handlers.py	464	465	SimpleHandler.get_stdin	get_stdin(self)	todo		
-Lib/wsgiref/handlers.py	467	468	SimpleHandler.get_stderr	get_stderr(self)	todo		
-Lib/wsgiref/handlers.py	470	471	SimpleHandler.add_cgi_vars	add_cgi_vars(self)	todo		
-Lib/wsgiref/handlers.py	473	481	SimpleHandler._write	_write(self, data)	todo		
-Lib/wsgiref/handlers.py	483	485	SimpleHandler._flush	_flush(self)	todo		
-Lib/wsgiref/handlers.py	535	539	CGIHandler.__init__	__init__(self)	todo		
-Lib/wsgiref/handlers.py	566	575	IISCGIHandler.__init__	__init__(self)	todo		
+Lib/wsgiref/handlers.py	34	92	read_environ	read_environ()	todo		
+Lib/wsgiref/handlers.py	129	150	BaseHandler.run	run(self, application)	todo		
+Lib/wsgiref/handlers.py	153	171	BaseHandler.setup_environ	setup_environ(self)	todo		
+Lib/wsgiref/handlers.py	174	197	BaseHandler.finish_response	finish_response(self)	todo		
+Lib/wsgiref/handlers.py	200	202	BaseHandler.get_scheme	get_scheme(self)	todo		
+Lib/wsgiref/handlers.py	205	214	BaseHandler.set_content_length	set_content_length(self)	todo		
+Lib/wsgiref/handlers.py	218	224	BaseHandler.cleanup_headers	cleanup_headers(self)	todo		
+Lib/wsgiref/handlers.py	226	250	BaseHandler.start_response	start_response(self, status, headers, exc_info=None)	todo		
+Lib/wsgiref/handlers.py	252	260	BaseHandler._validate_status	_validate_status(self, status)	todo		
+Lib/wsgiref/handlers.py	262	268	BaseHandler._convert_string_type	_convert_string_type(self, value, title)	todo		
+Lib/wsgiref/handlers.py	270	282	BaseHandler.send_preamble	send_preamble(self)	todo		
+Lib/wsgiref/handlers.py	284	302	BaseHandler.write	write(self, data)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/wsgiref/handlers.py	305	323	BaseHandler.sendfile	sendfile(self)	todo		
+Lib/wsgiref/handlers.py	326	334	BaseHandler.finish_content	finish_content(self)	todo		
+Lib/wsgiref/handlers.py	336	346	BaseHandler.close	close(self)	todo		
+Lib/wsgiref/handlers.py	349	355	BaseHandler.send_headers	send_headers(self)	todo		
+Lib/wsgiref/handlers.py	358	361	BaseHandler.result_is_file	result_is_file(self)	todo		
+Lib/wsgiref/handlers.py	364	366	BaseHandler.client_is_modern	client_is_modern(self)	todo		
+Lib/wsgiref/handlers.py	369	383	BaseHandler.log_exception	log_exception(self, exc_info)	todo		
+Lib/wsgiref/handlers.py	385	390	BaseHandler.handle_error	handle_error(self)	todo		
+Lib/wsgiref/handlers.py	393	407	BaseHandler.error_output	error_output(self, environ, start_response)	todo		
+Lib/wsgiref/handlers.py	412	419	BaseHandler._write	_write(self, data)	todo		
+Lib/wsgiref/handlers.py	421	427	BaseHandler._flush	_flush(self)	todo		
+Lib/wsgiref/handlers.py	429	431	BaseHandler.get_stdin	get_stdin(self)	todo		
+Lib/wsgiref/handlers.py	433	435	BaseHandler.get_stderr	get_stderr(self)	todo		
+Lib/wsgiref/handlers.py	437	439	BaseHandler.add_cgi_vars	add_cgi_vars(self)	todo		
+Lib/wsgiref/handlers.py	455	463	SimpleHandler.__init__	__init__(self, stdin, stdout, stderr, environ, multithread=True, multiprocess=False)	todo		
+Lib/wsgiref/handlers.py	465	466	SimpleHandler.get_stdin	get_stdin(self)	todo		
+Lib/wsgiref/handlers.py	468	469	SimpleHandler.get_stderr	get_stderr(self)	todo		
+Lib/wsgiref/handlers.py	471	472	SimpleHandler.add_cgi_vars	add_cgi_vars(self)	todo		
+Lib/wsgiref/handlers.py	474	482	SimpleHandler._write	_write(self, data)	todo		
+Lib/wsgiref/handlers.py	484	486	SimpleHandler._flush	_flush(self)	todo		
+Lib/wsgiref/handlers.py	536	540	CGIHandler.__init__	__init__(self)	todo		
+Lib/wsgiref/handlers.py	567	576	IISCGIHandler.__init__	__init__(self)	todo		

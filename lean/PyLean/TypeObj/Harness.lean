@@ -193,7 +193,7 @@ def storeName (env : Env) (rt : Rt) (fr : Frame) (inFunc : Bool) (n : Name) (v :
       pure fr
 
 /-- `super()` with no arguments: `super_init_without_args`,
-`Objects/typeobject.c:12066`. The first local is the first parameter. -/
+`Objects/typeobject.c:12919`. The first local is the first parameter. -/
 def superZero (rt : Rt) (fr : Frame) : M Val := do
   let w ← getW
   let some f := fr.func

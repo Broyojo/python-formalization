@@ -14,174 +14,175 @@ Lib/_pydatetime.py	206	214	_need_normalize_century	_need_normalize_century()	exc
 Lib/_pydatetime.py	217	295	_wrap_strftime	_wrap_strftime(object, format, timetuple)	modelled	datetime-strftime-twins	
 Lib/_pydatetime.py	298	299	_is_ascii_digit	_is_ascii_digit(c)	modelled	datetime-date-isoformat-roundtrip	
 Lib/_pydatetime.py	301	355	_find_isoformat_datetime_separator	_find_isoformat_datetime_separator(dtstr)	modelled	datetime-date-isoformat-roundtrip,datetime-datetime-fromiso-bare-separator	
-Lib/_pydatetime.py	358	392	_parse_isoformat_date	_parse_isoformat_date(dtstr)	modelled	datetime-date-fromiso-ten-chars,datetime-date-fromiso-twins,datetime-date-isoformat-roundtrip	
-Lib/_pydatetime.py	398	443	_parse_hh_mm_ss_ff	_parse_hh_mm_ss_ff(tstr)	modelled	datetime-time-fromiso-twins	
-Lib/_pydatetime.py	445	500	_parse_isoformat_time	_parse_isoformat_time(tstr)	modelled	datetime-datetime-fromiso-twins,datetime-time-fromiso-twins	
-Lib/_pydatetime.py	503	532	_isoweek_to_gregorian	_isoweek_to_gregorian(year, week, day)	modelled	datetime-fromisocalendar-exact,datetime-fromisocalendar-twins,datetime-isocalendar-roundtrip	
-Lib/_pydatetime.py	536	539	_check_tzname	_check_tzname(name)	modelled	datetime-tzname-twins	
-Lib/_pydatetime.py	547	557	_check_utc_offset	_check_utc_offset(name, offset)	modelled	datetime-datetime-offsets,datetime-time-offsets	
-Lib/_pydatetime.py	559	570	_check_date_fields	_check_date_fields(year, month, day)	modelled	datetime-date-add-timedelta,datetime-date-ctor,datetime-datetime-ctor,datetime-ordinal-roundtrip	
-Lib/_pydatetime.py	572	587	_check_time_fields	_check_time_fields(hour, minute, second, microsecond, fold)	modelled	datetime-datetime-ctor,datetime-time-ctor	
-Lib/_pydatetime.py	589	594	_check_tzinfo_arg	_check_tzinfo_arg(tz)	modelled	datetime-datetime-ctor,datetime-time-ctor	
-Lib/_pydatetime.py	596	613	_divide_and_round	_divide_and_round(a, b)	modelled	datetime-timedelta-ops-twins	
-Lib/_pydatetime.py	638	749	timedelta.__new__	__new__(cls, days=0, seconds=0, microseconds=0, milliseconds=0, minutes=0, hours=0, weeks=0)	modelled	datetime-timedelta-ctor-exact,datetime-timedelta-ctor-twins	
-Lib/_pydatetime.py	751	763	timedelta.__repr__	__repr__(self)	todo		
-Lib/_pydatetime.py	765	775	timedelta.__str__	__str__(self)	todo		
-Lib/_pydatetime.py	777	780	timedelta.total_seconds	total_seconds(self)	todo		
-Lib/_pydatetime.py	784	786	timedelta.days	days(self)	modelled	datetime-timedelta-ctor-exact	
-Lib/_pydatetime.py	789	791	timedelta.seconds	seconds(self)	modelled	datetime-timedelta-ctor-exact	
-Lib/_pydatetime.py	794	796	timedelta.microseconds	microseconds(self)	modelled	datetime-timedelta-ctor-exact	
-Lib/_pydatetime.py	798	805	timedelta.__add__	__add__(self, other)	modelled	datetime-timedelta-ops-twins	
-Lib/_pydatetime.py	809	816	timedelta.__sub__	__sub__(self, other)	modelled	datetime-timedelta-ops-twins	
-Lib/_pydatetime.py	818	821	timedelta.__rsub__	__rsub__(self, other)	modelled	datetime-timedelta-pos-rsub	
-Lib/_pydatetime.py	823	828	timedelta.__neg__	__neg__(self)	modelled	datetime-timedelta-ops-twins	
-Lib/_pydatetime.py	830	831	timedelta.__pos__	__pos__(self)	modelled	datetime-timedelta-pos-rsub	
-Lib/_pydatetime.py	833	837	timedelta.__abs__	__abs__(self)	modelled	datetime-timedelta-ops-twins	
-Lib/_pydatetime.py	839	850	timedelta.__mul__	__mul__(self, other)	modelled	datetime-timedelta-ops-twins	
-Lib/_pydatetime.py	854	856	timedelta._to_microseconds	_to_microseconds(self)	modelled	datetime-timedelta-divmod,datetime-timedelta-ops-twins	
-Lib/_pydatetime.py	858	865	timedelta.__floordiv__	__floordiv__(self, other)	modelled	datetime-timedelta-divmod,datetime-timedelta-ops-twins	
-Lib/_pydatetime.py	867	877	timedelta.__truediv__	__truediv__(self, other)	modelled	datetime-timedelta-ops-twins	
-Lib/_pydatetime.py	879	883	timedelta.__mod__	__mod__(self, other)	modelled	datetime-timedelta-divmod,datetime-timedelta-ops-twins	
-Lib/_pydatetime.py	885	890	timedelta.__divmod__	__divmod__(self, other)	modelled	datetime-timedelta-divmod,datetime-timedelta-ops-twins	
-Lib/_pydatetime.py	894	898	timedelta.__eq__	__eq__(self, other)	modelled	datetime-timedelta-compare	
-Lib/_pydatetime.py	900	904	timedelta.__le__	__le__(self, other)	modelled	datetime-timedelta-compare	
-Lib/_pydatetime.py	906	910	timedelta.__lt__	__lt__(self, other)	modelled	datetime-timedelta-compare	
-Lib/_pydatetime.py	912	916	timedelta.__ge__	__ge__(self, other)	modelled	datetime-timedelta-compare	
-Lib/_pydatetime.py	918	922	timedelta.__gt__	__gt__(self, other)	modelled	datetime-timedelta-compare	
-Lib/_pydatetime.py	924	926	timedelta._cmp	_cmp(self, other)	modelled	datetime-timedelta-compare	
-Lib/_pydatetime.py	928	931	timedelta.__hash__	__hash__(self)	modelled	datetime-timedelta-bool-hash	
-Lib/_pydatetime.py	933	936	timedelta.__bool__	__bool__(self)	modelled	datetime-timedelta-bool-hash	
-Lib/_pydatetime.py	940	941	timedelta._getstate	_getstate(self)	modelled	datetime-timedelta-compare,datetime-timedelta-reduce	
-Lib/_pydatetime.py	943	944	timedelta.__reduce__	__reduce__(self)	modelled	datetime-timedelta-reduce	
-Lib/_pydatetime.py	982	1012	date.__new__	__new__(cls, year, month=None, day=None)	modelled	datetime-date-ctor	
-Lib/_pydatetime.py	1017	1022	date.fromtimestamp	fromtimestamp(cls, t)	excluded		platform: reads the OS clock, localtime(3) or the libc strftime behaviour; no pure part beyond what the callers model
-Lib/_pydatetime.py	1025	1028	date.today	today(cls)	excluded		platform: reads the OS clock, localtime(3) or the libc strftime behaviour; no pure part beyond what the callers model
-Lib/_pydatetime.py	1031	1038	date.fromordinal	fromordinal(cls, n)	modelled	datetime-ordinal-roundtrip,datetime-toordinal-roundtrip	
-Lib/_pydatetime.py	1041	1056	date.fromisoformat	fromisoformat(cls, date_string)	modelled	datetime-date-fromiso-ten-chars,datetime-date-fromiso-twins,datetime-date-isoformat-roundtrip	
-Lib/_pydatetime.py	1059	1063	date.fromisocalendar	fromisocalendar(cls, year, week, day)	modelled	datetime-fromisocalendar-exact,datetime-fromisocalendar-twins,datetime-isocalendar-roundtrip	
-Lib/_pydatetime.py	1066	1069	date.strptime	strptime(cls, date_string, format)	modelled	datetime-strptime-wrappers	
-Lib/_pydatetime.py	1073	1084	date.__repr__	__repr__(self)	modelled	datetime-date-repr	
-Lib/_pydatetime.py	1091	1097	date.ctime	ctime(self)	modelled	datetime-ctime	
-Lib/_pydatetime.py	1099	1105	date.strftime	strftime(self, format)	todo		
-Lib/_pydatetime.py	1107	1112	date.__format__	__format__(self, fmt)	modelled	datetime-format-via-strftime	
-Lib/_pydatetime.py	1114	1123	date.isoformat	isoformat(self)	modelled	datetime-date-isoformat-roundtrip	
-Lib/_pydatetime.py	1129	1131	date.year	year(self)	modelled	datetime-packed-accessors	
-Lib/_pydatetime.py	1134	1136	date.month	month(self)	modelled	datetime-packed-accessors	
-Lib/_pydatetime.py	1139	1141	date.day	day(self)	modelled	datetime-packed-accessors	
-Lib/_pydatetime.py	1146	1149	date.timetuple	timetuple(self)	modelled	datetime-date-timetuple	
-Lib/_pydatetime.py	1151	1157	date.toordinal	toordinal(self)	modelled	datetime-ordinal-roundtrip,datetime-toordinal-roundtrip	
-Lib/_pydatetime.py	1159	1167	date.replace	replace(self, year=None, month=None, day=None)	modelled	datetime-date-replace	
-Lib/_pydatetime.py	1173	1176	date.__eq__	__eq__(self, other)	modelled	datetime-date-compare	
-Lib/_pydatetime.py	1178	1181	date.__le__	__le__(self, other)	modelled	datetime-date-compare	
-Lib/_pydatetime.py	1183	1186	date.__lt__	__lt__(self, other)	modelled	datetime-date-compare	
-Lib/_pydatetime.py	1188	1191	date.__ge__	__ge__(self, other)	modelled	datetime-date-compare	
-Lib/_pydatetime.py	1193	1196	date.__gt__	__gt__(self, other)	modelled	datetime-date-compare	
-Lib/_pydatetime.py	1198	1203	date._cmp	_cmp(self, other)	modelled	datetime-date-compare	
-Lib/_pydatetime.py	1205	1209	date.__hash__	__hash__(self)	modelled	datetime-date-hash	
-Lib/_pydatetime.py	1213	1220	date.__add__	__add__(self, other)	modelled	datetime-date-add-timedelta	
-Lib/_pydatetime.py	1224	1232	date.__sub__	__sub__(self, other)	modelled	datetime-date-subtract	
-Lib/_pydatetime.py	1234	1236	date.weekday	weekday(self)	modelled	datetime-date-weekday	
-Lib/_pydatetime.py	1240	1243	date.isoweekday	isoweekday(self)	modelled	datetime-date-weekday	
-Lib/_pydatetime.py	1245	1271	date.isocalendar	isocalendar(self)	modelled	datetime-fromisocalendar-exact,datetime-isocalendar-roundtrip	
-Lib/_pydatetime.py	1275	1277	date._getstate	_getstate(self)	modelled	datetime-date-hash,datetime-date-pickle	
-Lib/_pydatetime.py	1279	1281	date.__setstate	__setstate(self, string)	modelled	datetime-date-pickle	
-Lib/_pydatetime.py	1283	1284	date.__reduce__	__reduce__(self)	modelled	datetime-date-pickle	
-Lib/_pydatetime.py	1300	1302	tzinfo.tzname	tzname(self, dt)	modelled	datetime-tzinfo-base	
-Lib/_pydatetime.py	1304	1306	tzinfo.utcoffset	utcoffset(self, dt)	modelled	datetime-tzinfo-base	
-Lib/_pydatetime.py	1308	1314	tzinfo.dst	dst(self, dt)	modelled	datetime-tzinfo-base	
-Lib/_pydatetime.py	1316	1341	tzinfo.fromutc	fromutc(self, dt)	todo		
-Lib/_pydatetime.py	1345	1351	tzinfo.__reduce__	__reduce__(self)	modelled	datetime-tzinfo-reduce	
-Lib/_pydatetime.py	1356	1357	IsoCalendarDate.__new__	__new__(cls, year, week, weekday, /)	modelled	datetime-isocalendardate	
-Lib/_pydatetime.py	1360	1361	IsoCalendarDate.year	year(self)	modelled	datetime-isocalendardate	
-Lib/_pydatetime.py	1364	1365	IsoCalendarDate.week	week(self)	modelled	datetime-isocalendardate	
-Lib/_pydatetime.py	1368	1369	IsoCalendarDate.weekday	weekday(self)	modelled	datetime-isocalendardate	
-Lib/_pydatetime.py	1371	1374	IsoCalendarDate.__reduce__	__reduce__(self)	todo		
-Lib/_pydatetime.py	1376	1378	IsoCalendarDate.__repr__	__repr__(self)	modelled	datetime-isocalendardate	
-Lib/_pydatetime.py	1411	1448	time.__new__	__new__(cls, hour=0, minute=0, second=0, microsecond=0, tzinfo=None, *, fold=0)	modelled	datetime-time-ctor,datetime-time-pickle-ctor-twins	
-Lib/_pydatetime.py	1451	1454	time.strptime	strptime(cls, date_string, format)	modelled	datetime-strptime-wrappers	
-Lib/_pydatetime.py	1458	1460	time.hour	hour(self)	modelled	datetime-packed-accessors	
-Lib/_pydatetime.py	1463	1465	time.minute	minute(self)	modelled	datetime-packed-accessors	
-Lib/_pydatetime.py	1468	1470	time.second	second(self)	modelled	datetime-packed-accessors	
-Lib/_pydatetime.py	1473	1475	time.microsecond	microsecond(self)	modelled	datetime-packed-accessors	
-Lib/_pydatetime.py	1478	1480	time.tzinfo	tzinfo(self)	todo		
-Lib/_pydatetime.py	1483	1484	time.fold	fold(self)	todo		
-Lib/_pydatetime.py	1490	1494	time.__eq__	__eq__(self, other)	modelled	datetime-time-compare-base,datetime-time-compare-twins	
-Lib/_pydatetime.py	1496	1500	time.__le__	__le__(self, other)	modelled	datetime-time-compare-base	
-Lib/_pydatetime.py	1502	1506	time.__lt__	__lt__(self, other)	modelled	datetime-time-compare-base	
-Lib/_pydatetime.py	1508	1512	time.__ge__	__ge__(self, other)	modelled	datetime-time-compare-base	
-Lib/_pydatetime.py	1514	1518	time.__gt__	__gt__(self, other)	modelled	datetime-time-compare-base	
-Lib/_pydatetime.py	1520	1546	time._cmp	_cmp(self, other, allow_mixed=False)	modelled	datetime-time-compare-base,datetime-time-compare-twins	
-Lib/_pydatetime.py	1548	1567	time.__hash__	__hash__(self)	modelled	datetime-time-hash-total	
-Lib/_pydatetime.py	1571	1574	time._tzstr	_tzstr(self)	modelled	datetime-time-isoformat-twins	
-Lib/_pydatetime.py	1576	1593	time.__repr__	__repr__(self)	modelled	datetime-time-repr	
-Lib/_pydatetime.py	1595	1610	time.isoformat	isoformat(self, timespec='auto')	modelled	datetime-time-isoformat-twins	
-Lib/_pydatetime.py	1615	1628	time.fromisoformat	fromisoformat(cls, time_string)	modelled	datetime-time-fromiso-twins	
-Lib/_pydatetime.py	1630	1639	time.strftime	strftime(self, format)	todo		
-Lib/_pydatetime.py	1641	1646	time.__format__	__format__(self, fmt)	modelled	datetime-format-via-strftime	
-Lib/_pydatetime.py	1650	1657	time.utcoffset	utcoffset(self)	modelled	datetime-time-offsets	
-Lib/_pydatetime.py	1659	1670	time.tzname	tzname(self)	modelled	datetime-tzname-twins	
-Lib/_pydatetime.py	1672	1685	time.dst	dst(self)	modelled	datetime-time-offsets	
-Lib/_pydatetime.py	1687	1702	time.replace	replace(self, hour=None, minute=None, second=None, microsecond=None, tzinfo=True, *, fold=None)	modelled	datetime-replace-combine	
-Lib/_pydatetime.py	1708	1719	time._getstate	_getstate(self, protocol=3)	modelled	datetime-time-pickle	
-Lib/_pydatetime.py	1721	1732	time.__setstate	__setstate(self, string, tzinfo)	modelled	datetime-time-pickle	
-Lib/_pydatetime.py	1734	1735	time.__reduce_ex__	__reduce_ex__(self, protocol)	modelled	datetime-time-pickle	
-Lib/_pydatetime.py	1737	1738	time.__reduce__	__reduce__(self)	modelled	datetime-time-pickle	
-Lib/_pydatetime.py	1755	1788	datetime.__new__	__new__(cls, year, month=None, day=None, hour=0, minute=0, second=0, microsecond=0, tzinfo=None, *, fold=0)	modelled	datetime-datetime-ctor	
-Lib/_pydatetime.py	1792	1794	datetime.hour	hour(self)	modelled	datetime-packed-accessors	
-Lib/_pydatetime.py	1797	1799	datetime.minute	minute(self)	modelled	datetime-packed-accessors	
-Lib/_pydatetime.py	1802	1804	datetime.second	second(self)	modelled	datetime-packed-accessors	
-Lib/_pydatetime.py	1807	1809	datetime.microsecond	microsecond(self)	modelled	datetime-packed-accessors	
-Lib/_pydatetime.py	1812	1814	datetime.tzinfo	tzinfo(self)	todo		
-Lib/_pydatetime.py	1817	1818	datetime.fold	fold(self)	todo		
-Lib/_pydatetime.py	1821	1862	datetime._fromtimestamp	_fromtimestamp(cls, t, utc, tz)	todo		
-Lib/_pydatetime.py	1865	1872	datetime.fromtimestamp	fromtimestamp(cls, timestamp, tz=None)	todo		
-Lib/_pydatetime.py	1875	1884	datetime.utcfromtimestamp	utcfromtimestamp(cls, t)	todo		
-Lib/_pydatetime.py	1887	1890	datetime.now	now(cls, tz=None)	excluded		platform: reads the OS clock, localtime(3) or the libc strftime behaviour; no pure part beyond what the callers model
-Lib/_pydatetime.py	1893	1903	datetime.utcnow	utcnow(cls)	excluded		platform: reads the OS clock, localtime(3) or the libc strftime behaviour; no pure part beyond what the callers model
-Lib/_pydatetime.py	1906	1916	datetime.combine	combine(cls, date, time, tzinfo=True)	modelled	datetime-replace-combine	
-Lib/_pydatetime.py	1919	1964	datetime.fromisoformat	fromisoformat(cls, date_string)	modelled	datetime-date-isoformat-roundtrip,datetime-datetime-fromiso-bare-separator,datetime-datetime-fromiso-midnight-valid-date,datetime-datetime-fromiso-twins	
-Lib/_pydatetime.py	1966	1977	datetime.timetuple	timetuple(self)	modelled	datetime-datetime-timetuple	
-Lib/_pydatetime.py	1979	2011	datetime._mktime	_mktime(self)	modelled	datetime-mktime-fixed,datetime-mktime-twins	
-Lib/_pydatetime.py	2014	2020	datetime.timestamp	timestamp(self)	todo		
-Lib/_pydatetime.py	2022	2029	datetime.utctimetuple	utctimetuple(self)	modelled	datetime-datetime-utctimetuple	
-Lib/_pydatetime.py	2031	2033	datetime.date	date(self)	modelled	datetime-replace-combine	
-Lib/_pydatetime.py	2035	2037	datetime.time	time(self)	modelled	datetime-replace-combine	
-Lib/_pydatetime.py	2039	2042	datetime.timetz	timetz(self)	modelled	datetime-replace-combine	
-Lib/_pydatetime.py	2044	2067	datetime.replace	replace(self, year=None, month=None, day=None, hour=None, minute=None, second=None, microsecond=None, tzinfo=True, *, fold=None)	modelled	datetime-replace-combine	
-Lib/_pydatetime.py	2071	2086	datetime._local_timezone	_local_timezone(self)	excluded		platform: reads the OS clock, localtime(3) or the libc strftime behaviour; no pure part beyond what the callers model
-Lib/_pydatetime.py	2088	2111	datetime.astimezone	astimezone(self, tz=None)	modelled	datetime-astimezone-twins	
-Lib/_pydatetime.py	2115	2123	datetime.ctime	ctime(self)	modelled	datetime-ctime	
-Lib/_pydatetime.py	2125	2150	datetime.isoformat	isoformat(self, sep='T', timespec='auto')	modelled	datetime-datetime-isoformat-twins	
-Lib/_pydatetime.py	2152	2169	datetime.__repr__	__repr__(self)	modelled	datetime-datetime-repr	
-Lib/_pydatetime.py	2171	2173	datetime.__str__	__str__(self)	modelled	datetime-datetime-isoformat-twins	
-Lib/_pydatetime.py	2176	2179	datetime.strptime	strptime(cls, date_string, format)	modelled	datetime-strptime-wrappers	
-Lib/_pydatetime.py	2181	2188	datetime.utcoffset	utcoffset(self)	modelled	datetime-datetime-offsets	
-Lib/_pydatetime.py	2190	2201	datetime.tzname	tzname(self)	modelled	datetime-tzname-twins	
-Lib/_pydatetime.py	2203	2216	datetime.dst	dst(self)	modelled	datetime-datetime-offsets	
-Lib/_pydatetime.py	2220	2224	datetime.__eq__	__eq__(self, other)	modelled	datetime-datetime-compare	
-Lib/_pydatetime.py	2226	2230	datetime.__le__	__le__(self, other)	modelled	datetime-datetime-compare	
-Lib/_pydatetime.py	2232	2236	datetime.__lt__	__lt__(self, other)	modelled	datetime-datetime-compare	
-Lib/_pydatetime.py	2238	2242	datetime.__ge__	__ge__(self, other)	modelled	datetime-datetime-compare	
-Lib/_pydatetime.py	2244	2248	datetime.__gt__	__gt__(self, other)	modelled	datetime-datetime-compare	
-Lib/_pydatetime.py	2250	2285	datetime._cmp	_cmp(self, other, allow_mixed=False)	modelled	datetime-datetime-compare	
-Lib/_pydatetime.py	2287	2304	datetime.__add__	__add__(self, other)	modelled	datetime-datetime-add	
-Lib/_pydatetime.py	2308	2330	datetime.__sub__	__sub__(self, other)	modelled	datetime-datetime-sub-delta,datetime-datetime-sub-twins	
-Lib/_pydatetime.py	2332	2345	datetime.__hash__	__hash__(self)	modelled	datetime-datetime-hash	
-Lib/_pydatetime.py	2349	2362	datetime._getstate	_getstate(self, protocol=3)	modelled	datetime-datetime-pickle	
-Lib/_pydatetime.py	2364	2377	datetime.__setstate	__setstate(self, string, tzinfo)	modelled	datetime-datetime-pickle	
-Lib/_pydatetime.py	2379	2380	datetime.__reduce_ex__	__reduce_ex__(self, protocol)	modelled	datetime-datetime-pickle	
-Lib/_pydatetime.py	2382	2383	datetime.__reduce__	__reduce__(self)	modelled	datetime-datetime-pickle	
-Lib/_pydatetime.py	2391	2399	_isoweek1monday	_isoweek1monday(year)	modelled	datetime-fromisocalendar-exact,datetime-isocalendar-roundtrip	
-Lib/_pydatetime.py	2407	2420	timezone.__new__	__new__(cls, offset, name=_Omitted)	modelled	datetime-timezone-new,datetime-timezone-range	
-Lib/_pydatetime.py	2422	2423	timezone.__init_subclass__	__init_subclass__(cls)	todo		
-Lib/_pydatetime.py	2426	2430	timezone._create	_create(cls, offset, name=None)	modelled	datetime-timezone-new	
-Lib/_pydatetime.py	2432	2436	timezone.__getinitargs__	__getinitargs__(self)	modelled	datetime-timezone-methods	
-Lib/_pydatetime.py	2438	2441	timezone.__eq__	__eq__(self, other)	modelled	datetime-timezone-methods	
-Lib/_pydatetime.py	2443	2444	timezone.__hash__	__hash__(self)	modelled	datetime-timezone-methods	
-Lib/_pydatetime.py	2446	2464	timezone.__repr__	__repr__(self)	todo		
-Lib/_pydatetime.py	2466	2467	timezone.__str__	__str__(self)	modelled	datetime-timezone-name	
-Lib/_pydatetime.py	2469	2473	timezone.utcoffset	utcoffset(self, dt)	modelled	datetime-timezone-methods	
-Lib/_pydatetime.py	2475	2481	timezone.tzname	tzname(self, dt)	modelled	datetime-timezone-name	
-Lib/_pydatetime.py	2483	2487	timezone.dst	dst(self, dt)	modelled	datetime-timezone-methods	
-Lib/_pydatetime.py	2489	2496	timezone.fromutc	fromutc(self, dt)	modelled	datetime-timezone-fromutc	
-Lib/_pydatetime.py	2502	2519	timezone._name_from_offset	_name_from_offset(delta)	modelled	datetime-timezone-name	
+Lib/_pydatetime.py	358	363	_read_isoformat_component	_read_isoformat_component(s, n)	todo		changed-in-3.15: new function
+Lib/_pydatetime.py	366	403	_parse_isoformat_date	_parse_isoformat_date(dtstr)	todo		changed-in-3.15: was datetime-date-fromiso-ten-chars,datetime-date-fromiso-twins,datetime-date-isoformat-roundtrip
+Lib/_pydatetime.py	409	451	_parse_hh_mm_ss_ff	_parse_hh_mm_ss_ff(tstr)	todo		changed-in-3.15: was datetime-time-fromiso-twins
+Lib/_pydatetime.py	453	519	_parse_isoformat_time	_parse_isoformat_time(tstr)	todo		changed-in-3.15: was datetime-datetime-fromiso-twins,datetime-time-fromiso-twins
+Lib/_pydatetime.py	522	551	_isoweek_to_gregorian	_isoweek_to_gregorian(year, week, day)	modelled	datetime-fromisocalendar-exact,datetime-fromisocalendar-twins,datetime-isocalendar-roundtrip	
+Lib/_pydatetime.py	555	558	_check_tzname	_check_tzname(name)	modelled	datetime-tzname-twins	
+Lib/_pydatetime.py	566	576	_check_utc_offset	_check_utc_offset(name, offset)	modelled	datetime-datetime-offsets,datetime-time-offsets	
+Lib/_pydatetime.py	578	589	_check_date_fields	_check_date_fields(year, month, day)	modelled	datetime-date-add-timedelta,datetime-date-ctor,datetime-datetime-ctor,datetime-ordinal-roundtrip	
+Lib/_pydatetime.py	591	606	_check_time_fields	_check_time_fields(hour, minute, second, microsecond, fold)	modelled	datetime-datetime-ctor,datetime-time-ctor	
+Lib/_pydatetime.py	608	613	_check_tzinfo_arg	_check_tzinfo_arg(tz)	modelled	datetime-datetime-ctor,datetime-time-ctor	
+Lib/_pydatetime.py	615	632	_divide_and_round	_divide_and_round(a, b)	modelled	datetime-timedelta-ops-twins	
+Lib/_pydatetime.py	657	768	timedelta.__new__	__new__(cls, days=0, seconds=0, microseconds=0, milliseconds=0, minutes=0, hours=0, weeks=0)	modelled	datetime-timedelta-ctor-exact,datetime-timedelta-ctor-twins	
+Lib/_pydatetime.py	770	782	timedelta.__repr__	__repr__(self)	todo		
+Lib/_pydatetime.py	784	794	timedelta.__str__	__str__(self)	todo		
+Lib/_pydatetime.py	796	799	timedelta.total_seconds	total_seconds(self)	todo		
+Lib/_pydatetime.py	803	805	timedelta.days	days(self)	modelled	datetime-timedelta-ctor-exact	
+Lib/_pydatetime.py	808	810	timedelta.seconds	seconds(self)	modelled	datetime-timedelta-ctor-exact	
+Lib/_pydatetime.py	813	815	timedelta.microseconds	microseconds(self)	modelled	datetime-timedelta-ctor-exact	
+Lib/_pydatetime.py	817	824	timedelta.__add__	__add__(self, other)	modelled	datetime-timedelta-ops-twins	
+Lib/_pydatetime.py	828	835	timedelta.__sub__	__sub__(self, other)	modelled	datetime-timedelta-ops-twins	
+Lib/_pydatetime.py	837	840	timedelta.__rsub__	__rsub__(self, other)	modelled	datetime-timedelta-pos-rsub	
+Lib/_pydatetime.py	842	847	timedelta.__neg__	__neg__(self)	modelled	datetime-timedelta-ops-twins	
+Lib/_pydatetime.py	849	850	timedelta.__pos__	__pos__(self)	modelled	datetime-timedelta-pos-rsub	
+Lib/_pydatetime.py	852	856	timedelta.__abs__	__abs__(self)	modelled	datetime-timedelta-ops-twins	
+Lib/_pydatetime.py	858	869	timedelta.__mul__	__mul__(self, other)	modelled	datetime-timedelta-ops-twins	
+Lib/_pydatetime.py	873	875	timedelta._to_microseconds	_to_microseconds(self)	modelled	datetime-timedelta-divmod,datetime-timedelta-ops-twins	
+Lib/_pydatetime.py	877	884	timedelta.__floordiv__	__floordiv__(self, other)	modelled	datetime-timedelta-divmod,datetime-timedelta-ops-twins	
+Lib/_pydatetime.py	886	896	timedelta.__truediv__	__truediv__(self, other)	modelled	datetime-timedelta-ops-twins	
+Lib/_pydatetime.py	898	902	timedelta.__mod__	__mod__(self, other)	modelled	datetime-timedelta-divmod,datetime-timedelta-ops-twins	
+Lib/_pydatetime.py	904	909	timedelta.__divmod__	__divmod__(self, other)	modelled	datetime-timedelta-divmod,datetime-timedelta-ops-twins	
+Lib/_pydatetime.py	913	917	timedelta.__eq__	__eq__(self, other)	modelled	datetime-timedelta-compare	
+Lib/_pydatetime.py	919	923	timedelta.__le__	__le__(self, other)	modelled	datetime-timedelta-compare	
+Lib/_pydatetime.py	925	929	timedelta.__lt__	__lt__(self, other)	modelled	datetime-timedelta-compare	
+Lib/_pydatetime.py	931	935	timedelta.__ge__	__ge__(self, other)	modelled	datetime-timedelta-compare	
+Lib/_pydatetime.py	937	941	timedelta.__gt__	__gt__(self, other)	modelled	datetime-timedelta-compare	
+Lib/_pydatetime.py	943	945	timedelta._cmp	_cmp(self, other)	modelled	datetime-timedelta-compare	
+Lib/_pydatetime.py	947	950	timedelta.__hash__	__hash__(self)	modelled	datetime-timedelta-bool-hash	
+Lib/_pydatetime.py	952	955	timedelta.__bool__	__bool__(self)	modelled	datetime-timedelta-bool-hash	
+Lib/_pydatetime.py	959	960	timedelta._getstate	_getstate(self)	modelled	datetime-timedelta-compare,datetime-timedelta-reduce	
+Lib/_pydatetime.py	962	963	timedelta.__reduce__	__reduce__(self)	modelled	datetime-timedelta-reduce	
+Lib/_pydatetime.py	1001	1031	date.__new__	__new__(cls, year, month=None, day=None)	modelled	datetime-date-ctor	
+Lib/_pydatetime.py	1036	1041	date.fromtimestamp	fromtimestamp(cls, t)	excluded		platform: reads the OS clock, localtime(3) or the libc strftime behaviour; no pure part beyond what the callers model
+Lib/_pydatetime.py	1044	1047	date.today	today(cls)	excluded		platform: reads the OS clock, localtime(3) or the libc strftime behaviour; no pure part beyond what the callers model
+Lib/_pydatetime.py	1050	1057	date.fromordinal	fromordinal(cls, n)	modelled	datetime-ordinal-roundtrip,datetime-toordinal-roundtrip	
+Lib/_pydatetime.py	1060	1075	date.fromisoformat	fromisoformat(cls, date_string)	modelled	datetime-date-fromiso-ten-chars,datetime-date-isoformat-roundtrip	
+Lib/_pydatetime.py	1078	1082	date.fromisocalendar	fromisocalendar(cls, year, week, day)	modelled	datetime-fromisocalendar-exact,datetime-fromisocalendar-twins,datetime-isocalendar-roundtrip	
+Lib/_pydatetime.py	1085	1092	date.strptime	strptime(cls, date_string, format)	modelled	datetime-strptime-wrappers	
+Lib/_pydatetime.py	1096	1107	date.__repr__	__repr__(self)	modelled	datetime-date-repr	
+Lib/_pydatetime.py	1114	1120	date.ctime	ctime(self)	modelled	datetime-ctime	
+Lib/_pydatetime.py	1122	1130	date.strftime	strftime(self, format)	todo		
+Lib/_pydatetime.py	1132	1137	date.__format__	__format__(self, fmt)	modelled	datetime-format-via-strftime	
+Lib/_pydatetime.py	1139	1148	date.isoformat	isoformat(self)	modelled	datetime-date-isoformat-roundtrip	
+Lib/_pydatetime.py	1154	1156	date.year	year(self)	modelled	datetime-packed-accessors	
+Lib/_pydatetime.py	1159	1161	date.month	month(self)	modelled	datetime-packed-accessors	
+Lib/_pydatetime.py	1164	1166	date.day	day(self)	modelled	datetime-packed-accessors	
+Lib/_pydatetime.py	1171	1174	date.timetuple	timetuple(self)	modelled	datetime-date-timetuple	
+Lib/_pydatetime.py	1176	1182	date.toordinal	toordinal(self)	modelled	datetime-ordinal-roundtrip,datetime-toordinal-roundtrip	
+Lib/_pydatetime.py	1184	1192	date.replace	replace(self, year=None, month=None, day=None)	modelled	datetime-date-replace	
+Lib/_pydatetime.py	1198	1201	date.__eq__	__eq__(self, other)	modelled	datetime-date-compare	
+Lib/_pydatetime.py	1203	1206	date.__le__	__le__(self, other)	modelled	datetime-date-compare	
+Lib/_pydatetime.py	1208	1211	date.__lt__	__lt__(self, other)	modelled	datetime-date-compare	
+Lib/_pydatetime.py	1213	1216	date.__ge__	__ge__(self, other)	modelled	datetime-date-compare	
+Lib/_pydatetime.py	1218	1221	date.__gt__	__gt__(self, other)	modelled	datetime-date-compare	
+Lib/_pydatetime.py	1223	1228	date._cmp	_cmp(self, other)	modelled	datetime-date-compare	
+Lib/_pydatetime.py	1230	1234	date.__hash__	__hash__(self)	modelled	datetime-date-hash	
+Lib/_pydatetime.py	1238	1245	date.__add__	__add__(self, other)	modelled	datetime-date-add-timedelta	
+Lib/_pydatetime.py	1249	1257	date.__sub__	__sub__(self, other)	modelled	datetime-date-subtract	
+Lib/_pydatetime.py	1259	1261	date.weekday	weekday(self)	modelled	datetime-date-weekday	
+Lib/_pydatetime.py	1265	1268	date.isoweekday	isoweekday(self)	modelled	datetime-date-weekday	
+Lib/_pydatetime.py	1270	1296	date.isocalendar	isocalendar(self)	modelled	datetime-fromisocalendar-exact,datetime-isocalendar-roundtrip	
+Lib/_pydatetime.py	1300	1302	date._getstate	_getstate(self)	modelled	datetime-date-hash,datetime-date-pickle	
+Lib/_pydatetime.py	1304	1306	date.__setstate	__setstate(self, string)	modelled	datetime-date-pickle	
+Lib/_pydatetime.py	1308	1309	date.__reduce__	__reduce__(self)	modelled	datetime-date-pickle	
+Lib/_pydatetime.py	1325	1327	tzinfo.tzname	tzname(self, dt)	modelled	datetime-tzinfo-base	
+Lib/_pydatetime.py	1329	1331	tzinfo.utcoffset	utcoffset(self, dt)	modelled	datetime-tzinfo-base	
+Lib/_pydatetime.py	1333	1339	tzinfo.dst	dst(self, dt)	modelled	datetime-tzinfo-base	
+Lib/_pydatetime.py	1341	1366	tzinfo.fromutc	fromutc(self, dt)	todo		
+Lib/_pydatetime.py	1370	1376	tzinfo.__reduce__	__reduce__(self)	modelled	datetime-tzinfo-reduce	
+Lib/_pydatetime.py	1381	1382	IsoCalendarDate.__new__	__new__(cls, year, week, weekday, /)	modelled	datetime-isocalendardate	
+Lib/_pydatetime.py	1385	1386	IsoCalendarDate.year	year(self)	modelled	datetime-isocalendardate	
+Lib/_pydatetime.py	1389	1390	IsoCalendarDate.week	week(self)	modelled	datetime-isocalendardate	
+Lib/_pydatetime.py	1393	1394	IsoCalendarDate.weekday	weekday(self)	modelled	datetime-isocalendardate	
+Lib/_pydatetime.py	1396	1399	IsoCalendarDate.__reduce__	__reduce__(self)	todo		
+Lib/_pydatetime.py	1401	1403	IsoCalendarDate.__repr__	__repr__(self)	modelled	datetime-isocalendardate	
+Lib/_pydatetime.py	1436	1473	time.__new__	__new__(cls, hour=0, minute=0, second=0, microsecond=0, tzinfo=None, *, fold=0)	modelled	datetime-time-ctor,datetime-time-pickle-ctor-twins	
+Lib/_pydatetime.py	1477	1484	time.strptime	strptime(cls, date_string, format)	modelled	datetime-strptime-wrappers	
+Lib/_pydatetime.py	1488	1490	time.hour	hour(self)	modelled	datetime-packed-accessors	
+Lib/_pydatetime.py	1493	1495	time.minute	minute(self)	modelled	datetime-packed-accessors	
+Lib/_pydatetime.py	1498	1500	time.second	second(self)	modelled	datetime-packed-accessors	
+Lib/_pydatetime.py	1503	1505	time.microsecond	microsecond(self)	modelled	datetime-packed-accessors	
+Lib/_pydatetime.py	1508	1510	time.tzinfo	tzinfo(self)	todo		
+Lib/_pydatetime.py	1513	1514	time.fold	fold(self)	todo		
+Lib/_pydatetime.py	1520	1524	time.__eq__	__eq__(self, other)	modelled	datetime-time-compare-base,datetime-time-compare-twins	
+Lib/_pydatetime.py	1526	1530	time.__le__	__le__(self, other)	modelled	datetime-time-compare-base	
+Lib/_pydatetime.py	1532	1536	time.__lt__	__lt__(self, other)	modelled	datetime-time-compare-base	
+Lib/_pydatetime.py	1538	1542	time.__ge__	__ge__(self, other)	modelled	datetime-time-compare-base	
+Lib/_pydatetime.py	1544	1548	time.__gt__	__gt__(self, other)	modelled	datetime-time-compare-base	
+Lib/_pydatetime.py	1550	1576	time._cmp	_cmp(self, other, allow_mixed=False)	modelled	datetime-time-compare-base,datetime-time-compare-twins	
+Lib/_pydatetime.py	1578	1597	time.__hash__	__hash__(self)	modelled	datetime-time-hash-total	
+Lib/_pydatetime.py	1601	1604	time._tzstr	_tzstr(self)	modelled	datetime-time-isoformat-twins	
+Lib/_pydatetime.py	1606	1623	time.__repr__	__repr__(self)	modelled	datetime-time-repr	
+Lib/_pydatetime.py	1625	1640	time.isoformat	isoformat(self, timespec='auto')	modelled	datetime-time-isoformat-twins	
+Lib/_pydatetime.py	1645	1670	time.fromisoformat	fromisoformat(cls, time_string)	todo		changed-in-3.15: was datetime-time-fromiso-twins
+Lib/_pydatetime.py	1672	1684	time.strftime	strftime(self, format)	todo		
+Lib/_pydatetime.py	1686	1691	time.__format__	__format__(self, fmt)	modelled	datetime-format-via-strftime	
+Lib/_pydatetime.py	1695	1702	time.utcoffset	utcoffset(self)	modelled	datetime-time-offsets	
+Lib/_pydatetime.py	1704	1715	time.tzname	tzname(self)	modelled	datetime-tzname-twins	
+Lib/_pydatetime.py	1717	1730	time.dst	dst(self)	modelled	datetime-time-offsets	
+Lib/_pydatetime.py	1732	1747	time.replace	replace(self, hour=None, minute=None, second=None, microsecond=None, tzinfo=True, *, fold=None)	modelled	datetime-replace-combine	
+Lib/_pydatetime.py	1753	1764	time._getstate	_getstate(self, protocol=3)	modelled	datetime-time-pickle	
+Lib/_pydatetime.py	1766	1777	time.__setstate	__setstate(self, string, tzinfo)	modelled	datetime-time-pickle	
+Lib/_pydatetime.py	1779	1780	time.__reduce_ex__	__reduce_ex__(self, protocol)	modelled	datetime-time-pickle	
+Lib/_pydatetime.py	1782	1783	time.__reduce__	__reduce__(self)	modelled	datetime-time-pickle	
+Lib/_pydatetime.py	1800	1833	datetime.__new__	__new__(cls, year, month=None, day=None, hour=0, minute=0, second=0, microsecond=0, tzinfo=None, *, fold=0)	modelled	datetime-datetime-ctor	
+Lib/_pydatetime.py	1837	1839	datetime.hour	hour(self)	modelled	datetime-packed-accessors	
+Lib/_pydatetime.py	1842	1844	datetime.minute	minute(self)	modelled	datetime-packed-accessors	
+Lib/_pydatetime.py	1847	1849	datetime.second	second(self)	modelled	datetime-packed-accessors	
+Lib/_pydatetime.py	1852	1854	datetime.microsecond	microsecond(self)	modelled	datetime-packed-accessors	
+Lib/_pydatetime.py	1857	1859	datetime.tzinfo	tzinfo(self)	todo		
+Lib/_pydatetime.py	1862	1863	datetime.fold	fold(self)	todo		
+Lib/_pydatetime.py	1866	1907	datetime._fromtimestamp	_fromtimestamp(cls, t, utc, tz)	todo		
+Lib/_pydatetime.py	1910	1917	datetime.fromtimestamp	fromtimestamp(cls, timestamp, tz=None)	todo		
+Lib/_pydatetime.py	1920	1929	datetime.utcfromtimestamp	utcfromtimestamp(cls, t)	todo		
+Lib/_pydatetime.py	1932	1935	datetime.now	now(cls, tz=None)	excluded		platform: reads the OS clock, localtime(3) or the libc strftime behaviour; no pure part beyond what the callers model
+Lib/_pydatetime.py	1938	1948	datetime.utcnow	utcnow(cls)	excluded		platform: reads the OS clock, localtime(3) or the libc strftime behaviour; no pure part beyond what the callers model
+Lib/_pydatetime.py	1951	1961	datetime.combine	combine(cls, date, time, tzinfo=True)	modelled	datetime-replace-combine	
+Lib/_pydatetime.py	1964	2014	datetime.fromisoformat	fromisoformat(cls, date_string)	todo		changed-in-3.15: was datetime-date-isoformat-roundtrip,datetime-datetime-fromiso-bare-separator,datetime-datetime-fromiso-midnight-valid-date,datetime-datetime-fromiso-twins
+Lib/_pydatetime.py	2016	2027	datetime.timetuple	timetuple(self)	modelled	datetime-datetime-timetuple	
+Lib/_pydatetime.py	2029	2061	datetime._mktime	_mktime(self)	modelled	datetime-mktime-fixed,datetime-mktime-twins	
+Lib/_pydatetime.py	2064	2070	datetime.timestamp	timestamp(self)	todo		
+Lib/_pydatetime.py	2072	2079	datetime.utctimetuple	utctimetuple(self)	modelled	datetime-datetime-utctimetuple	
+Lib/_pydatetime.py	2081	2083	datetime.date	date(self)	modelled	datetime-replace-combine	
+Lib/_pydatetime.py	2085	2087	datetime.time	time(self)	modelled	datetime-replace-combine	
+Lib/_pydatetime.py	2089	2092	datetime.timetz	timetz(self)	modelled	datetime-replace-combine	
+Lib/_pydatetime.py	2094	2117	datetime.replace	replace(self, year=None, month=None, day=None, hour=None, minute=None, second=None, microsecond=None, tzinfo=True, *, fold=None)	modelled	datetime-replace-combine	
+Lib/_pydatetime.py	2121	2135	datetime._local_timezone	_local_timezone(self)	todo		changed-in-3.15: was excluded: platform: reads the OS clock, localtime(3) or the libc strftime behaviour; no pure part beyond what the callers model
+Lib/_pydatetime.py	2137	2160	datetime.astimezone	astimezone(self, tz=None)	modelled	datetime-astimezone-twins	
+Lib/_pydatetime.py	2164	2172	datetime.ctime	ctime(self)	modelled	datetime-ctime	
+Lib/_pydatetime.py	2174	2199	datetime.isoformat	isoformat(self, sep='T', timespec='auto')	modelled	datetime-datetime-isoformat-twins	
+Lib/_pydatetime.py	2201	2218	datetime.__repr__	__repr__(self)	modelled	datetime-datetime-repr	
+Lib/_pydatetime.py	2220	2222	datetime.__str__	__str__(self)	modelled	datetime-datetime-isoformat-twins	
+Lib/_pydatetime.py	2225	2232	datetime.strptime	strptime(cls, date_string, format)	modelled	datetime-strptime-wrappers	
+Lib/_pydatetime.py	2234	2241	datetime.utcoffset	utcoffset(self)	modelled	datetime-datetime-offsets	
+Lib/_pydatetime.py	2243	2254	datetime.tzname	tzname(self)	modelled	datetime-tzname-twins	
+Lib/_pydatetime.py	2256	2269	datetime.dst	dst(self)	modelled	datetime-datetime-offsets	
+Lib/_pydatetime.py	2273	2277	datetime.__eq__	__eq__(self, other)	modelled	datetime-datetime-compare	
+Lib/_pydatetime.py	2279	2283	datetime.__le__	__le__(self, other)	modelled	datetime-datetime-compare	
+Lib/_pydatetime.py	2285	2289	datetime.__lt__	__lt__(self, other)	modelled	datetime-datetime-compare	
+Lib/_pydatetime.py	2291	2295	datetime.__ge__	__ge__(self, other)	modelled	datetime-datetime-compare	
+Lib/_pydatetime.py	2297	2301	datetime.__gt__	__gt__(self, other)	modelled	datetime-datetime-compare	
+Lib/_pydatetime.py	2303	2338	datetime._cmp	_cmp(self, other, allow_mixed=False)	modelled	datetime-datetime-compare	
+Lib/_pydatetime.py	2340	2357	datetime.__add__	__add__(self, other)	modelled	datetime-datetime-add	
+Lib/_pydatetime.py	2361	2383	datetime.__sub__	__sub__(self, other)	modelled	datetime-datetime-sub-delta,datetime-datetime-sub-twins	
+Lib/_pydatetime.py	2385	2398	datetime.__hash__	__hash__(self)	modelled	datetime-datetime-hash	
+Lib/_pydatetime.py	2402	2415	datetime._getstate	_getstate(self, protocol=3)	modelled	datetime-datetime-pickle	
+Lib/_pydatetime.py	2417	2430	datetime.__setstate	__setstate(self, string, tzinfo)	modelled	datetime-datetime-pickle	
+Lib/_pydatetime.py	2432	2433	datetime.__reduce_ex__	__reduce_ex__(self, protocol)	modelled	datetime-datetime-pickle	
+Lib/_pydatetime.py	2435	2436	datetime.__reduce__	__reduce__(self)	modelled	datetime-datetime-pickle	
+Lib/_pydatetime.py	2444	2452	_isoweek1monday	_isoweek1monday(year)	modelled	datetime-fromisocalendar-exact,datetime-isocalendar-roundtrip	
+Lib/_pydatetime.py	2462	2475	timezone.__new__	__new__(cls, offset, name=_Omitted)	modelled	datetime-timezone-new,datetime-timezone-range	
+Lib/_pydatetime.py	2477	2478	timezone.__init_subclass__	__init_subclass__(cls)	todo		
+Lib/_pydatetime.py	2481	2485	timezone._create	_create(cls, offset, name=None)	modelled	datetime-timezone-new	
+Lib/_pydatetime.py	2487	2491	timezone.__getinitargs__	__getinitargs__(self)	modelled	datetime-timezone-methods	
+Lib/_pydatetime.py	2493	2496	timezone.__eq__	__eq__(self, other)	modelled	datetime-timezone-methods	
+Lib/_pydatetime.py	2498	2499	timezone.__hash__	__hash__(self)	modelled	datetime-timezone-methods	
+Lib/_pydatetime.py	2501	2519	timezone.__repr__	__repr__(self)	todo		
+Lib/_pydatetime.py	2521	2522	timezone.__str__	__str__(self)	modelled	datetime-timezone-name	
+Lib/_pydatetime.py	2524	2528	timezone.utcoffset	utcoffset(self, dt)	modelled	datetime-timezone-methods	
+Lib/_pydatetime.py	2530	2536	timezone.tzname	tzname(self, dt)	modelled	datetime-timezone-name	
+Lib/_pydatetime.py	2538	2542	timezone.dst	dst(self, dt)	modelled	datetime-timezone-methods	
+Lib/_pydatetime.py	2544	2551	timezone.fromutc	fromutc(self, dt)	modelled	datetime-timezone-fromutc	
+Lib/_pydatetime.py	2557	2574	timezone._name_from_offset	_name_from_offset(delta)	modelled	datetime-timezone-name	

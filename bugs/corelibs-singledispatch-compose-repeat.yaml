@@ -6,8 +6,8 @@ module: corelibs
 files: [Lib/functools.py]
 functions: ["_compose_mro", "_c3_mro", "_c3_merge"]
 summary: |
-  In the loop of _compose_mro, a type with no useful subclass is appended at :839 without the test `if subcls not in
-  mro` that :845 has for the other branch. A type can already be there, added through a subclass of an earlier
+  In the loop of _compose_mro, a type with no useful subclass is appended at :860 without the test `if subcls not in
+  mro` that :866 has for the other branch. A type can already be there, added through a subclass of an earlier
   type. The list then has a repeat, _c3_mro keeps both in abstract_bases, and _c3_merge finds the type in the tail of
   that one list, so every head is rejected and dispatch raises RuntimeError on a hierarchy that is consistent.
 likelihood: |
@@ -52,9 +52,9 @@ observed: |
 promised_by: |
   Nothing explicit; the docstring of _compose_mro.
 cause: |
-  Lib/functools.py:838-839 appends typ with no membership test, unlike :845-846.
+  Lib/functools.py:859-860 appends typ with no membership test, unlike :866-867.
 possible_fix: |
-  Test `if typ not in mro` at :839.
+  Test `if typ not in mro` at :860.
 duplicates:
   issues: []
   queries: ["gh search issues singledispatch Inconsistent hierarchy", "gh search issues _compose_mro",

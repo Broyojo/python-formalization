@@ -1,113 +1,115 @@
 file	line	endline	name	signature	status	entry	note
-Python/ceval.c	144	161	dump_item	dump_item(_PyStackRef item)	todo		
-Python/ceval.c	164	194	dump_stack	dump_stack(_PyInterpreterFrame *frame, _PyStackRef *stack_pointer)	todo		
-Python/ceval.c	197	217	lltrace_instruction	lltrace_instruction(_PyInterpreterFrame *frame, _PyStackRef *stack_pointer, _Py_CODEUNIT *next_instr, int opcode, int oparg)	todo		
-Python/ceval.c	220	252	lltrace_resume_frame	lltrace_resume_frame(_PyInterpreterFrame *frame)	todo		
-Python/ceval.c	255	279	maybe_lltrace_resume_frame	maybe_lltrace_resume_frame(_PyInterpreterFrame *frame, PyObject *globals)	todo		
-Python/ceval.c	310	314	Py_GetRecursionLimit	Py_GetRecursionLimit(void)	todo		
-Python/ceval.c	317	329	Py_SetRecursionLimit	Py_SetRecursionLimit(int new_limit)	todo		
-Python/ceval.c	332	353	_Py_ReachedRecursionLimitWithMargin	_Py_ReachedRecursionLimitWithMargin(PyThreadState *tstate, int margin_count)	todo		
-Python/ceval.c	356	367	_Py_EnterRecursiveCallUnchecked	_Py_EnterRecursiveCallUnchecked(PyThreadState *tstate)	todo		
-Python/ceval.c	408	413	pthread_getattr_np	int pthread_getattr_np(pthread_t thread, pthread_attr_t *attr) {	todo		
-Python/ceval.c	417	421	pthread_attr_getguardsize	int pthread_attr_getguardsize(const pthread_attr_t *restrict a, size_t *restrict size)	todo		
-Python/ceval.c	423	434	pthread_attr_getstack	int pthread_attr_getstack(const pthread_attr_t *restrict a, void **restrict addr, size_t *restrict size)	todo		
-Python/ceval.c	436	439	pthread_attr_destroy	int pthread_attr_destroy(pthread_attr_t *a)	todo		
-Python/ceval.c	444	494	hardware_stack_limits	hardware_stack_limits(uintptr_t *base, uintptr_t *top, uintptr_t sp)	todo		
-Python/ceval.c	497	534	tstate_set_stack	tstate_set_stack(PyThreadState *tstate, uintptr_t base, uintptr_t top)	todo		
-Python/ceval.c	538	549	_Py_InitializeRecursionLimits	_Py_InitializeRecursionLimits(PyThreadState *tstate)	todo		
-Python/ceval.c	553	567	PyUnstable_ThreadState_SetStackProtection	PyUnstable_ThreadState_SetStackProtection(PyThreadState *tstate, void *stack_start_addr, size_t stack_size)	todo		
-Python/ceval.c	571	582	PyUnstable_ThreadState_ResetStackProtection	PyUnstable_ThreadState_ResetStackProtection(PyThreadState *tstate)	todo		
-Python/ceval.c	588	626	_Py_CheckRecursiveCall	_Py_CheckRecursiveCall(PyThreadState *tstate, const char *where)	todo		
-Python/ceval.c	730	813	_PyEval_MatchKeys	_PyEval_MatchKeys(PyThreadState *tstate, PyObject *map, PyObject *keys)	todo		
-Python/ceval.c	819	836	match_class_attr	match_class_attr(PyThreadState *tstate, PyObject *subject, PyObject *type, PyObject *name, PyObject *seen)	todo		
-Python/ceval.c	841	952	_PyEval_MatchClass	_PyEval_MatchClass(PyThreadState *tstate, PyObject *subject, PyObject *type, Py_ssize_t nargs, PyObject *kwargs)	todo		
-Python/ceval.c	958	987	PyEval_EvalCode	PyEval_EvalCode(PyObject *co, PyObject *globals, PyObject *locals)	todo		
-Python/ceval.c	993	998	PyEval_EvalFrame	PyEval_EvalFrame(PyFrameObject *f)	todo		
-Python/ceval.c	1001	1005	PyEval_EvalFrameEx	PyEval_EvalFrameEx(PyFrameObject *f, int throwflag)	todo		
-Python/ceval.c	1011	1027	_Py_LoadAttr_StackRefSteal	_Py_LoadAttr_StackRefSteal( PyThreadState *tstate, _PyStackRef owner, PyObject *name, _PyStackRef *self_or_null)	todo		
-Python/ceval.c	1029	1048	_Py_CheckRecursiveCallPy	int _Py_CheckRecursiveCallPy( PyThreadState *tstate)	todo		
-Python/ceval.c	1079	1098	_PyObjectArray_FromStackRefArray	_PyObjectArray_FromStackRefArray(_PyStackRef *input, Py_ssize_t nargs, PyObject **scratch)	todo		
-Python/ceval.c	1101	1106	_PyObjectArray_Free	_PyObjectArray_Free(PyObject **array, PyObject **scratch)	todo		
-Python/ceval.c	1148	1376	_PyEval_EvalFrameDefault	_PyEval_EvalFrameDefault(PyThreadState *tstate, _PyInterpreterFrame *frame, int throwflag)	todo		
-Python/ceval.c	1389	1449	format_missing	format_missing(PyThreadState *tstate, const char *kind, PyCodeObject *co, PyObject *names, PyObject *qualname)	todo		
-Python/ceval.c	1452	1488	missing_arguments	missing_arguments(PyThreadState *tstate, PyCodeObject *co, Py_ssize_t missing, Py_ssize_t defcount, _PyStackRef *localsplus, PyObject *qualname)	todo		
-Python/ceval.c	1491	1546	too_many_positional	too_many_positional(PyThreadState *tstate, PyCodeObject *co, Py_ssize_t given, PyObject *defaults, _PyStackRef *localsplus, PyObject *qualname)	modelled	typeobj-too-many-positional-bound	
-Python/ceval.c	1549	1610	positional_only_passed_as_keyword	positional_only_passed_as_keyword(PyThreadState *tstate, PyCodeObject *co, Py_ssize_t kwcount, PyObject* kwnames, PyObject *qualname)	todo		
-Python/ceval.c	1614	1617	scan_back_to_entry_start	scan_back_to_entry_start(unsigned char *p) {	modelled	bytecode-unwind-to-handler	
-Python/ceval.c	1620	1625	skip_to_next_entry	skip_to_next_entry(unsigned char *p, unsigned char *end) {	modelled	bytecode-unwind-to-handler	
-Python/ceval.c	1631	1678	get_exception_handler	get_exception_handler(PyCodeObject *code, int index, int *level, int *handler, int *lasti)	todo		candidates:bytecode-unwind-to-handler
-Python/ceval.c	1681	1927	initialize_locals	initialize_locals(PyThreadState *tstate, PyFunctionObject *func, _PyStackRef *localsplus, _PyStackRef const *args, Py_ssize_t argcount, PyObject *kwnames)	todo		
-Python/ceval.c	1930	1941	clear_thread_frame	clear_thread_frame(PyThreadState *tstate, _PyInterpreterFrame * frame)	modelled	bytecode-unwind-no-handler	
-Python/ceval.c	1944	1956	clear_gen_frame	clear_gen_frame(PyThreadState *tstate, _PyInterpreterFrame * frame)	todo		
-Python/ceval.c	1959	1967	_PyEval_FrameClearAndPop	_PyEval_FrameClearAndPop(PyThreadState *tstate, _PyInterpreterFrame * frame)	modelled	bytecode-unwind-no-handler	
-Python/ceval.c	1971	2004	_PyEvalFramePushAndInit	_PyEvalFramePushAndInit(PyThreadState *tstate, _PyStackRef func, PyObject *locals, _PyStackRef const* args, size_t argcount, PyObject *kwnames, _PyInterpreterFrame *previous)	todo		
-Python/ceval.c	2010	2068	_PyEvalFramePushAndInit_Ex	_PyEvalFramePushAndInit_Ex(PyThreadState *tstate, _PyStackRef func, PyObject *locals, Py_ssize_t nargs, PyObject *callargs, PyObject *kwargs, _PyInterpreterFrame *previous)	todo		
-Python/ceval.c	2071	2114	_PyEval_Vector	_PyEval_Vector(PyThreadState *tstate, PyFunctionObject *func, PyObject *locals, PyObject* const* args, size_t argcount, PyObject *kwnames)	todo		
-Python/ceval.c	2118	2188	PyEval_EvalCodeEx	PyEval_EvalCodeEx(PyObject *_co, PyObject *globals, PyObject *locals, PyObject *const *args, int argcount, PyObject *const *kws, int kwcount, PyObject *const *defs, int defcount, PyObject *kwdefs, PyObject *closure)	todo		
-Python/ceval.c	2194	2291	do_raise	do_raise(PyThreadState *tstate, PyObject *exc, PyObject *cause)	todo		
-Python/ceval.c	2298	2380	_PyEval_ExceptionGroupMatch	_PyEval_ExceptionGroupMatch(_PyInterpreterFrame *frame, PyObject* exc_value, PyObject *match_type, PyObject **match, PyObject **rest)	todo		
-Python/ceval.c	2390	2491	_PyEval_UnpackIterableStackRef	_PyEval_UnpackIterableStackRef(PyThreadState *tstate, PyObject *v, int argcnt, int argcntafter, _PyStackRef *sp)	todo		
-Python/ceval.c	2494	2512	do_monitor_exc	do_monitor_exc(PyThreadState *tstate, _PyInterpreterFrame *frame, _Py_CODEUNIT *instr, int event)	todo		
-Python/ceval.c	2515	2518	no_tools_for_global_event	no_tools_for_global_event(PyThreadState *tstate, int event)	todo		
-Python/ceval.c	2521	2531	no_tools_for_local_event	no_tools_for_local_event(PyThreadState *tstate, _PyInterpreterFrame *frame, int event)	todo		
-Python/ceval.c	2534	2541	_PyEval_MonitorRaise	_PyEval_MonitorRaise(PyThreadState *tstate, _PyInterpreterFrame *frame, _Py_CODEUNIT *instr)	todo		
-Python/ceval.c	2544	2551	monitor_reraise	monitor_reraise(PyThreadState *tstate, _PyInterpreterFrame *frame, _Py_CODEUNIT *instr)	todo		
-Python/ceval.c	2554	2568	monitor_stop_iteration	monitor_stop_iteration(PyThreadState *tstate, _PyInterpreterFrame *frame, _Py_CODEUNIT *instr, PyObject *value)	todo		
-Python/ceval.c	2571	2579	monitor_unwind	monitor_unwind(PyThreadState *tstate, _PyInterpreterFrame *frame, _Py_CODEUNIT *instr)	todo		
-Python/ceval.c	2582	2584	_PyEval_NoToolsForUnwind	_PyEval_NoToolsForUnwind(PyThreadState *tstate) {	todo		
-Python/ceval.c	2587	2595	monitor_handled	monitor_handled(PyThreadState *tstate, _PyInterpreterFrame *frame, _Py_CODEUNIT *instr, PyObject *exc)	todo		
-Python/ceval.c	2598	2606	monitor_throw	monitor_throw(PyThreadState *tstate, _PyInterpreterFrame *frame, _Py_CODEUNIT *instr)	todo		
-Python/ceval.c	2609	2613	PyThreadState_EnterTracing	PyThreadState_EnterTracing(PyThreadState *tstate)	todo		
-Python/ceval.c	2616	2620	PyThreadState_LeaveTracing	PyThreadState_LeaveTracing(PyThreadState *tstate)	todo		
-Python/ceval.c	2624	2637	_PyEval_CallTracing	_PyEval_CallTracing(PyObject *func, PyObject *args)	todo		
-Python/ceval.c	2640	2647	PyEval_SetProfile	PyEval_SetProfile(Py_tracefunc func, PyObject *arg)	todo		
-Python/ceval.c	2650	2657	PyEval_SetProfileAllThreads	PyEval_SetProfileAllThreads(Py_tracefunc func, PyObject *arg)	todo		
-Python/ceval.c	2660	2667	PyEval_SetTrace	PyEval_SetTrace(Py_tracefunc func, PyObject *arg)	todo		
-Python/ceval.c	2670	2677	PyEval_SetTraceAllThreads	PyEval_SetTraceAllThreads(Py_tracefunc func, PyObject *arg)	todo		
-Python/ceval.c	2680	2689	_PyEval_SetCoroutineOriginTrackingDepth	_PyEval_SetCoroutineOriginTrackingDepth(int depth)	todo		
-Python/ceval.c	2693	2697	_PyEval_GetCoroutineOriginTrackingDepth	_PyEval_GetCoroutineOriginTrackingDepth(void)	todo		
-Python/ceval.c	2700	2710	_PyEval_SetAsyncGenFirstiter	_PyEval_SetAsyncGenFirstiter(PyObject *firstiter)	todo		
-Python/ceval.c	2713	2717	_PyEval_GetAsyncGenFirstiter	_PyEval_GetAsyncGenFirstiter(void)	todo		
-Python/ceval.c	2720	2730	_PyEval_SetAsyncGenFinalizer	_PyEval_SetAsyncGenFinalizer(PyObject *finalizer)	todo		
-Python/ceval.c	2733	2737	_PyEval_GetAsyncGenFinalizer	_PyEval_GetAsyncGenFinalizer(void)	todo		
-Python/ceval.c	2740	2744	_PyEval_GetFrame	_PyEval_GetFrame(void)	todo		
-Python/ceval.c	2747	2758	PyEval_GetFrame	PyEval_GetFrame(void)	todo		
-Python/ceval.c	2761	2768	_PyEval_GetBuiltins	_PyEval_GetBuiltins(PyThreadState *tstate)	todo		
-Python/ceval.c	2771	2775	PyEval_GetBuiltins	PyEval_GetBuiltins(void)	todo		
-Python/ceval.c	2779	2786	_PyEval_GetBuiltin	_PyEval_GetBuiltin(PyObject *name)	todo		
-Python/ceval.c	2789	2792	_PyEval_GetBuiltinId	_PyEval_GetBuiltinId(_Py_Identifier *name)	todo		
-Python/ceval.c	2795	2842	PyEval_GetLocals	PyEval_GetLocals(void)	todo		
-Python/ceval.c	2845	2876	_PyEval_GetFrameLocals	_PyEval_GetFrameLocals(void)	todo		
-Python/ceval.c	2879	2886	_PyEval_GetGlobals	_PyEval_GetGlobals(PyThreadState *tstate)	todo		
-Python/ceval.c	2889	2893	PyEval_GetGlobals	PyEval_GetGlobals(void)	todo		
-Python/ceval.c	2896	2909	_PyEval_GetGlobalsFromRunningMain	_PyEval_GetGlobalsFromRunningMain(PyThreadState *tstate)	todo		
-Python/ceval.c	2912	2928	get_globals_builtins	get_globals_builtins(PyObject *globals)	todo		
-Python/ceval.c	2931	2944	set_globals_builtins	set_globals_builtins(PyObject *globals, PyObject *builtins)	todo		
-Python/ceval.c	2947	2973	_PyEval_EnsureBuiltins	_PyEval_EnsureBuiltins(PyThreadState *tstate, PyObject *globals, PyObject **p_builtins)	todo		
-Python/ceval.c	2976	3000	_PyEval_EnsureBuiltinsWithModule	_PyEval_EnsureBuiltinsWithModule(PyThreadState *tstate, PyObject *globals, PyObject **p_builtins)	todo		
-Python/ceval.c	3003	3006	PyEval_GetFrameLocals	PyEval_GetFrameLocals(void)	todo		
-Python/ceval.c	3008	3016	PyEval_GetFrameGlobals	PyObject* PyEval_GetFrameGlobals(void)	todo		
-Python/ceval.c	3018	3022	PyEval_GetFrameBuiltins	PyObject* PyEval_GetFrameBuiltins(void)	todo		
-Python/ceval.c	3025	3040	PyEval_MergeCompilerFlags	PyEval_MergeCompilerFlags(PyCompilerFlags *cf)	todo		
-Python/ceval.c	3044	3054	PyEval_GetFuncName	PyEval_GetFuncName(PyObject *func)	todo		
-Python/ceval.c	3057	3067	PyEval_GetFuncDesc	PyEval_GetFuncDesc(PyObject *func)	todo		
-Python/ceval.c	3076	3095	_PyEval_SliceIndex	_PyEval_SliceIndex(PyObject *v, Py_ssize_t *pi)	todo		
-Python/ceval.c	3098	3115	_PyEval_SliceIndexNotNone	_PyEval_SliceIndexNotNone(PyObject *v, Py_ssize_t *pi)	todo		
-Python/ceval.c	3118	3154	_PyEval_ImportName	_PyEval_ImportName(PyThreadState *tstate, _PyInterpreterFrame *frame, PyObject *name, PyObject *fromlist, PyObject *level)	todo		
-Python/ceval.c	3157	3322	_PyEval_ImportFrom	_PyEval_ImportFrom(PyThreadState *tstate, PyObject *v, PyObject *name)	todo		
-Python/ceval.c	3331	3353	_PyEval_CheckExceptTypeValid	_PyEval_CheckExceptTypeValid(PyThreadState *tstate, PyObject* right)	todo		
-Python/ceval.c	3356	3390	_PyEval_CheckExceptStarTypeValid	_PyEval_CheckExceptStarTypeValid(PyThreadState *tstate, PyObject* right)	todo		
-Python/ceval.c	3393	3410	_Py_Check_ArgsIterable	_Py_Check_ArgsIterable(PyThreadState *tstate, PyObject *func, PyObject *args)	todo		
-Python/ceval.c	3413	3453	_PyEval_FormatKwargsError	_PyEval_FormatKwargsError(PyThreadState *tstate, PyObject *func, PyObject *kwargs)	todo		
-Python/ceval.c	3456	3482	_PyEval_FormatExcCheckArg	_PyEval_FormatExcCheckArg(PyThreadState *tstate, PyObject *exc, const char *format_str, PyObject *obj)	todo		
-Python/ceval.c	3485	3499	_PyEval_FormatExcUnbound	_PyEval_FormatExcUnbound(PyThreadState *tstate, PyCodeObject *co, int oparg)	todo		
-Python/ceval.c	3502	3518	_PyEval_FormatAwaitableError	_PyEval_FormatAwaitableError(PyThreadState *tstate, PyTypeObject *type, int oparg)	todo		
-Python/ceval.c	3522	3549	PyUnstable_Eval_RequestCodeExtraIndex	PyUnstable_Eval_RequestCodeExtraIndex(freefunc free)	todo		
-Python/ceval.c	3554	3557	Py_EnterRecursiveCall	int Py_EnterRecursiveCall(const char *where)	todo		
-Python/ceval.c	3559	3562	Py_LeaveRecursiveCall	void Py_LeaveRecursiveCall(void)	todo		
-Python/ceval.c	3565	3601	_PyEval_GetANext	_PyEval_GetANext(PyObject *aiter)	todo		
-Python/ceval.c	3604	3641	_PyEval_LoadGlobalStackRef	_PyEval_LoadGlobalStackRef(PyObject *globals, PyObject *builtins, PyObject *name, _PyStackRef *writeto)	todo		
-Python/ceval.c	3644	3665	_PyEval_GetAwaitable	_PyEval_GetAwaitable(PyObject *iterable, int oparg)	todo		
-Python/ceval.c	3668	3698	_PyEval_LoadName	_PyEval_LoadName(PyThreadState *tstate, _PyInterpreterFrame *frame, PyObject *name)	todo		
-Python/ceval.c	3702	3708	type_has_special_method	type_has_special_method(PyTypeObject *cls, PyObject *name)	todo		
-Python/ceval.c	3711	3728	_PyEval_SpecialMethodCanSuggest	_PyEval_SpecialMethodCanSuggest(PyObject *self, int oparg)	todo		
+Python/ceval.c	12	16	Py_GetRecursionLimit	Py_GetRecursionLimit(void)	todo		
+Python/ceval.c	19	31	Py_SetRecursionLimit	Py_SetRecursionLimit(int new_limit)	todo		
+Python/ceval.c	34	55	_Py_ReachedRecursionLimitWithMargin	_Py_ReachedRecursionLimitWithMargin(PyThreadState *tstate, int margin_count)	todo		
+Python/ceval.c	58	69	_Py_EnterRecursiveCallUnchecked	_Py_EnterRecursiveCallUnchecked(PyThreadState *tstate)	todo		
+Python/ceval.c	110	115	pthread_getattr_np	int pthread_getattr_np(pthread_t thread, pthread_attr_t *attr) {	todo		
+Python/ceval.c	119	123	pthread_attr_getguardsize	int pthread_attr_getguardsize(const pthread_attr_t *restrict a, size_t *restrict size)	todo		
+Python/ceval.c	125	136	pthread_attr_getstack	int pthread_attr_getstack(const pthread_attr_t *restrict a, void **restrict addr, size_t *restrict size)	todo		
+Python/ceval.c	138	141	pthread_attr_destroy	int pthread_attr_destroy(pthread_attr_t *a)	todo		
+Python/ceval.c	146	204	hardware_stack_limits	hardware_stack_limits(uintptr_t *base, uintptr_t *top, uintptr_t sp)	todo		changed-in-3.15:
+Python/ceval.c	207	244	tstate_set_stack	tstate_set_stack(PyThreadState *tstate, uintptr_t base, uintptr_t top)	todo		changed-in-3.15:
+Python/ceval.c	248	259	_Py_InitializeRecursionLimits	_Py_InitializeRecursionLimits(PyThreadState *tstate)	todo		
+Python/ceval.c	263	277	PyUnstable_ThreadState_SetStackProtection	PyUnstable_ThreadState_SetStackProtection(PyThreadState *tstate, void *stack_start_addr, size_t stack_size)	todo		
+Python/ceval.c	281	292	PyUnstable_ThreadState_ResetStackProtection	PyUnstable_ThreadState_ResetStackProtection(PyThreadState *tstate)	todo		
+Python/ceval.c	298	336	_Py_CheckRecursiveCall	_Py_CheckRecursiveCall(PyThreadState *tstate, const char *where)	todo		
+Python/ceval.c	440	523	_PyEval_MatchKeys	_PyEval_MatchKeys(PyThreadState *tstate, PyObject *map, PyObject *keys)	todo		
+Python/ceval.c	529	549	match_class_attr	match_class_attr(PyThreadState *tstate, PyObject *subject, PyObject *type, PyObject *name, PyObject *seen)	todo		changed-in-3.15:
+Python/ceval.c	554	669	_PyEval_MatchClass	_PyEval_MatchClass(PyThreadState *tstate, PyObject *subject, PyObject *type, Py_ssize_t nargs, PyObject *kwargs)	todo		changed-in-3.15:
+Python/ceval.c	675	704	PyEval_EvalCode	PyEval_EvalCode(PyObject *co, PyObject *globals, PyObject *locals)	todo		
+Python/ceval.c	710	715	PyEval_EvalFrame	PyEval_EvalFrame(PyFrameObject *f)	todo		
+Python/ceval.c	718	722	PyEval_EvalFrameEx	PyEval_EvalFrameEx(PyFrameObject *f, int throwflag)	todo		
+Python/ceval.c	730	765	_Py_VectorCall_StackRefSteal	_Py_VectorCall_StackRefSteal( _PyStackRef callable, _PyStackRef *arguments, int total_args, _PyStackRef kwnames)	todo		changed-in-3.15: new function
+Python/ceval.c	768	824	_Py_VectorCallInstrumentation_StackRefSteal	_Py_VectorCallInstrumentation_StackRefSteal( _PyStackRef callable, _PyStackRef* arguments, int total_args, _PyStackRef kwnames, bool call_instrumentation, _PyInterpreterFrame* frame, _Py_CODEUNIT* this_instr, PyThreadState* tstate)	todo		changed-in-3.15: new function
+Python/ceval.c	827	847	_Py_BuiltinCallFast_StackRef	_Py_BuiltinCallFast_StackRef( _PyStackRef callable, _PyStackRef *arguments, int total_args)	todo		changed-in-3.15: new function
+Python/ceval.c	850	867	_Py_BuiltinCallFastWithKeywords_StackRef	_Py_BuiltinCallFastWithKeywords_StackRef( _PyStackRef callable, _PyStackRef *arguments, int total_args)	todo		changed-in-3.15: new function
+Python/ceval.c	870	888	_PyCallMethodDescriptorFast_StackRef	_PyCallMethodDescriptorFast_StackRef( _PyStackRef callable, PyCFunctionFast cfunc, PyObject *self, _PyStackRef *arguments, int total_args)	todo		changed-in-3.15: new function
+Python/ceval.c	891	909	_PyCallMethodDescriptorFastWithKeywords_StackRef	_PyCallMethodDescriptorFastWithKeywords_StackRef( _PyStackRef callable, PyCFunctionFastWithKeywords cfunc, PyObject *self, _PyStackRef *arguments, int total_args)	todo		changed-in-3.15: new function
+Python/ceval.c	912	927	_Py_CallBuiltinClass_StackRef	_Py_CallBuiltinClass_StackRef( _PyStackRef callable, _PyStackRef *arguments, int total_args)	todo		changed-in-3.15: new function
+Python/ceval.c	930	952	_Py_BuildString_StackRefSteal	_Py_BuildString_StackRefSteal( _PyStackRef *arguments, int total_args)	todo		changed-in-3.15: new function
+Python/ceval.c	955	981	_Py_BuildMap_StackRefSteal	_Py_BuildMap_StackRefSteal( _PyStackRef *arguments, int half_args)	todo		changed-in-3.15: new function
+Python/ceval.c	984	1000	_Py_LoadAttr_StackRefSteal	_Py_LoadAttr_StackRefSteal( PyThreadState *tstate, _PyStackRef owner, PyObject *name, _PyStackRef *self_or_null)	todo		
+Python/ceval.c	1026	1045	_Py_CheckRecursiveCallPy	int _Py_CheckRecursiveCallPy( PyThreadState *tstate)	todo		
+Python/ceval.c	1066	1086	_PyObjectArray_FromStackRefArray	_PyObjectArray_FromStackRefArray(_PyStackRef *input, Py_ssize_t nargs, PyObject **scratch)	todo		changed-in-3.15:
+Python/ceval.c	1089	1094	_PyObjectArray_Free	_PyObjectArray_Free(PyObject **array, PyObject **scratch)	todo		
+Python/ceval.c	1099	1108	stop_tracing_and_jit	stop_tracing_and_jit(PyThreadState *tstate, _PyInterpreterFrame *frame)	todo		changed-in-3.15: new function
+Python/ceval.c	1131	1163	_PyEval_GetIter	_PyEval_GetIter(_PyStackRef iterable, _PyStackRef *index_or_null, int yield_from)	todo		changed-in-3.15: new function
+Python/ceval.c	1166	1175	_Py_ReachedRecursionLimit	_Py_ReachedRecursionLimit(PyThreadState *tstate) {	todo		changed-in-3.15: new function
+Python/ceval.c	1195	1215	dtrace_function_entry	dtrace_function_entry(_PyInterpreterFrame *frame)	todo		changed-in-3.15: new function
+Python/ceval.c	1218	1238	dtrace_function_return	dtrace_function_return(_PyInterpreterFrame *frame)	todo		changed-in-3.15: new function
+Python/ceval.c	1242	1369	_PyEval_EvalFrameDefault	_PyEval_EvalFrameDefault(PyThreadState *tstate, _PyInterpreterFrame *frame, int throwflag)	todo		changed-in-3.15:
+Python/ceval.c	1514	1574	format_missing	format_missing(PyThreadState *tstate, const char *kind, PyCodeObject *co, PyObject *names, PyObject *qualname)	todo		
+Python/ceval.c	1577	1613	missing_arguments	missing_arguments(PyThreadState *tstate, PyCodeObject *co, Py_ssize_t missing, Py_ssize_t defcount, _PyStackRef *localsplus, PyObject *qualname)	todo		
+Python/ceval.c	1616	1671	too_many_positional	too_many_positional(PyThreadState *tstate, PyCodeObject *co, Py_ssize_t given, PyObject *defaults, _PyStackRef *localsplus, PyObject *qualname)	modelled	typeobj-too-many-positional-bound	
+Python/ceval.c	1674	1735	positional_only_passed_as_keyword	positional_only_passed_as_keyword(PyThreadState *tstate, PyCodeObject *co, Py_ssize_t kwcount, PyObject* kwnames, PyObject *qualname)	todo		
+Python/ceval.c	1738	1984	initialize_locals	initialize_locals(PyThreadState *tstate, PyFunctionObject *func, _PyStackRef *localsplus, _PyStackRef const *args, Py_ssize_t argcount, PyObject *kwnames)	todo		
+Python/ceval.c	1987	1998	clear_thread_frame	clear_thread_frame(PyThreadState *tstate, _PyInterpreterFrame * frame)	modelled	bytecode-unwind-no-handler	
+Python/ceval.c	2001	2016	clear_gen_frame	clear_gen_frame(PyThreadState *tstate, _PyInterpreterFrame * frame)	todo		changed-in-3.15:
+Python/ceval.c	2019	2030	_PyEval_FrameClearAndPop	_PyEval_FrameClearAndPop(PyThreadState *tstate, _PyInterpreterFrame * frame)	todo		changed-in-3.15: was bytecode-unwind-no-handler
+Python/ceval.c	2034	2068	_PyEvalFramePushAndInit	_PyEvalFramePushAndInit(PyThreadState *tstate, _PyStackRef func, PyObject *locals, _PyStackRef const* args, size_t argcount, PyObject *kwnames, _PyInterpreterFrame *previous)	todo		changed-in-3.15:
+Python/ceval.c	2074	2137	_PyEvalFramePushAndInit_Ex	_PyEvalFramePushAndInit_Ex(PyThreadState *tstate, _PyStackRef func, PyObject *locals, Py_ssize_t nargs, PyObject *callargs, PyObject *kwargs, _PyInterpreterFrame *previous)	todo		changed-in-3.15:
+Python/ceval.c	2140	2183	_PyEval_Vector	_PyEval_Vector(PyThreadState *tstate, PyFunctionObject *func, PyObject *locals, PyObject* const* args, size_t argcount, PyObject *kwnames)	todo		changed-in-3.15:
+Python/ceval.c	2187	2257	PyEval_EvalCodeEx	PyEval_EvalCodeEx(PyObject *_co, PyObject *globals, PyObject *locals, PyObject *const *args, int argcount, PyObject *const *kws, int kwcount, PyObject *const *defs, int defcount, PyObject *kwdefs, PyObject *closure)	todo		changed-in-3.15:
+Python/ceval.c	2264	2348	_PyEval_ExceptionGroupMatch	_PyEval_ExceptionGroupMatch(_PyInterpreterFrame *frame, PyObject* exc_value, PyObject *match_type, PyObject **match, PyObject **rest)	todo		changed-in-3.15:
+Python/ceval.c	2358	2459	_PyEval_UnpackIterableStackRef	_PyEval_UnpackIterableStackRef(PyThreadState *tstate, PyObject *v, int argcnt, int argcntafter, _PyStackRef *sp)	todo		
+Python/ceval.c	2464	2471	_PyEval_MonitorRaise	_PyEval_MonitorRaise(PyThreadState *tstate, _PyInterpreterFrame *frame, _Py_CODEUNIT *instr)	todo		changed-in-3.15:
+Python/ceval.c	2474	2477	_PyEval_NoToolsForUnwind	_PyEval_NoToolsForUnwind(PyThreadState *tstate, _PyInterpreterFrame *frame)	todo		changed-in-3.15:
+Python/ceval.c	2481	2485	PyThreadState_EnterTracing	PyThreadState_EnterTracing(PyThreadState *tstate)	todo		
+Python/ceval.c	2488	2492	PyThreadState_LeaveTracing	PyThreadState_LeaveTracing(PyThreadState *tstate)	todo		
+Python/ceval.c	2496	2509	_PyEval_CallTracing	_PyEval_CallTracing(PyObject *func, PyObject *args)	todo		
+Python/ceval.c	2512	2519	PyEval_SetProfile	PyEval_SetProfile(Py_tracefunc func, PyObject *arg)	todo		
+Python/ceval.c	2522	2529	PyEval_SetProfileAllThreads	PyEval_SetProfileAllThreads(Py_tracefunc func, PyObject *arg)	todo		
+Python/ceval.c	2532	2539	PyEval_SetTrace	PyEval_SetTrace(Py_tracefunc func, PyObject *arg)	todo		
+Python/ceval.c	2542	2549	PyEval_SetTraceAllThreads	PyEval_SetTraceAllThreads(Py_tracefunc func, PyObject *arg)	todo		
+Python/ceval.c	2552	2561	_PyEval_SetCoroutineOriginTrackingDepth	_PyEval_SetCoroutineOriginTrackingDepth(int depth)	todo		
+Python/ceval.c	2565	2569	_PyEval_GetCoroutineOriginTrackingDepth	_PyEval_GetCoroutineOriginTrackingDepth(void)	todo		
+Python/ceval.c	2572	2582	_PyEval_SetAsyncGenFirstiter	_PyEval_SetAsyncGenFirstiter(PyObject *firstiter)	todo		
+Python/ceval.c	2585	2589	_PyEval_GetAsyncGenFirstiter	_PyEval_GetAsyncGenFirstiter(void)	todo		
+Python/ceval.c	2592	2602	_PyEval_SetAsyncGenFinalizer	_PyEval_SetAsyncGenFinalizer(PyObject *finalizer)	todo		
+Python/ceval.c	2605	2609	_PyEval_GetAsyncGenFinalizer	_PyEval_GetAsyncGenFinalizer(void)	todo		
+Python/ceval.c	2612	2616	_PyEval_GetFrame	_PyEval_GetFrame(void)	todo		
+Python/ceval.c	2619	2630	PyEval_GetFrame	PyEval_GetFrame(void)	todo		
+Python/ceval.c	2633	2640	_PyEval_GetBuiltins	_PyEval_GetBuiltins(PyThreadState *tstate)	todo		
+Python/ceval.c	2643	2647	PyEval_GetBuiltins	PyEval_GetBuiltins(void)	todo		
+Python/ceval.c	2651	2658	_PyEval_GetBuiltin	_PyEval_GetBuiltin(PyObject *name)	todo		
+Python/ceval.c	2661	2708	PyEval_GetLocals	PyEval_GetLocals(void)	todo		
+Python/ceval.c	2711	2742	_PyEval_GetFrameLocals	_PyEval_GetFrameLocals(void)	todo		
+Python/ceval.c	2745	2752	_PyEval_GetGlobals	_PyEval_GetGlobals(PyThreadState *tstate)	todo		
+Python/ceval.c	2755	2759	PyEval_GetGlobals	PyEval_GetGlobals(void)	todo		
+Python/ceval.c	2762	2775	_PyEval_GetGlobalsFromRunningMain	_PyEval_GetGlobalsFromRunningMain(PyThreadState *tstate)	todo		
+Python/ceval.c	2778	2794	get_globals_builtins	get_globals_builtins(PyObject *globals)	todo		changed-in-3.15:
+Python/ceval.c	2797	2814	set_globals_builtins	set_globals_builtins(PyObject *globals, PyObject *builtins)	todo		changed-in-3.15:
+Python/ceval.c	2817	2843	_PyEval_EnsureBuiltins	_PyEval_EnsureBuiltins(PyThreadState *tstate, PyObject *globals, PyObject **p_builtins)	todo		
+Python/ceval.c	2846	2870	_PyEval_EnsureBuiltinsWithModule	_PyEval_EnsureBuiltinsWithModule(PyThreadState *tstate, PyObject *globals, PyObject **p_builtins)	todo		
+Python/ceval.c	2873	2876	PyEval_GetFrameLocals	PyEval_GetFrameLocals(void)	todo		
+Python/ceval.c	2878	2886	PyEval_GetFrameGlobals	PyObject* PyEval_GetFrameGlobals(void)	todo		
+Python/ceval.c	2888	2892	PyEval_GetFrameBuiltins	PyObject* PyEval_GetFrameBuiltins(void)	todo		
+Python/ceval.c	2895	2913	PyEval_MergeCompilerFlags	PyEval_MergeCompilerFlags(PyCompilerFlags *cf)	todo		changed-in-3.15:
+Python/ceval.c	2917	2927	PyEval_GetFuncName	PyEval_GetFuncName(PyObject *func)	todo		
+Python/ceval.c	2930	2940	PyEval_GetFuncDesc	PyEval_GetFuncDesc(PyObject *func)	todo		
+Python/ceval.c	2949	2955	_PyEval_SliceIndex	_PyEval_SliceIndex(PyObject *v, Py_ssize_t *pi)	todo		changed-in-3.15:
+Python/ceval.c	2958	2979	_PyEval_SliceIndexNotNone	_PyEval_SliceIndexNotNone(PyObject *v, Py_ssize_t *pi)	todo		changed-in-3.15:
+Python/ceval.c	2982	2999	_PyEval_UnpackIndices	_PyEval_UnpackIndices(PyObject *start, PyObject *stop, Py_ssize_t len, Py_ssize_t *istart, Py_ssize_t *istop)	todo		changed-in-3.15: new function
+Python/ceval.c	3002	3020	_PyEval_ImportName	_PyEval_ImportName(PyThreadState *tstate, PyObject *builtins, PyObject *globals, PyObject *locals, PyObject *name, PyObject *fromlist, PyObject *level)	todo		changed-in-3.15:
+Python/ceval.c	3023	3048	_PyEval_ImportNameWithImport	_PyEval_ImportNameWithImport(PyThreadState *tstate, PyObject *import_func, PyObject *globals, PyObject *locals, PyObject *name, PyObject *fromlist, PyObject *level)	todo		changed-in-3.15: new function
+Python/ceval.c	3051	3086	check_lazy_import_compatibility	check_lazy_import_compatibility(PyThreadState *tstate, PyObject *globals, PyObject *name, PyObject *level)	todo		changed-in-3.15: new function
+Python/ceval.c	3089	3093	is_lazy_import_module_level	is_lazy_import_module_level(void)	todo		changed-in-3.15: new function
+Python/ceval.c	3096	3164	_PyEval_LazyImportName	_PyEval_LazyImportName(PyThreadState *tstate, PyObject *builtins, PyObject *globals, PyObject *locals, PyObject *name, PyObject *fromlist, PyObject *level, int lazy)	todo		changed-in-3.15: new function
+Python/ceval.c	3167	3332	_PyEval_ImportFrom	_PyEval_ImportFrom(PyThreadState *tstate, PyObject *v, PyObject *name)	todo		changed-in-3.15:
+Python/ceval.c	3341	3363	_PyEval_CheckExceptTypeValid	_PyEval_CheckExceptTypeValid(PyThreadState *tstate, PyObject* right)	todo		
+Python/ceval.c	3366	3400	_PyEval_CheckExceptStarTypeValid	_PyEval_CheckExceptStarTypeValid(PyThreadState *tstate, PyObject* right)	todo		
+Python/ceval.c	3403	3412	_Py_Check_ArgsIterable	_Py_Check_ArgsIterable(PyThreadState *tstate, PyObject *func, PyObject *args)	todo		changed-in-3.15:
+Python/ceval.c	3415	3446	_PyEval_FormatKwargsError	_PyEval_FormatKwargsError(PyThreadState *tstate, PyObject *func, PyObject *kwargs, PyObject *dupkey)	todo		changed-in-3.15:
+Python/ceval.c	3449	3475	_PyEval_FormatExcCheckArg	_PyEval_FormatExcCheckArg(PyThreadState *tstate, PyObject *exc, const char *format_str, PyObject *obj)	todo		
+Python/ceval.c	3478	3492	_PyEval_FormatExcUnbound	_PyEval_FormatExcUnbound(PyThreadState *tstate, PyCodeObject *co, int oparg)	todo		
+Python/ceval.c	3495	3511	_PyEval_FormatAwaitableError	_PyEval_FormatAwaitableError(PyThreadState *tstate, PyTypeObject *type, int oparg)	todo		
+Python/ceval.c	3515	3542	PyUnstable_Eval_RequestCodeExtraIndex	PyUnstable_Eval_RequestCodeExtraIndex(freefunc free)	todo		
+Python/ceval.c	3547	3550	Py_EnterRecursiveCall	int Py_EnterRecursiveCall(const char *where)	todo		
+Python/ceval.c	3552	3555	Py_LeaveRecursiveCall	void Py_LeaveRecursiveCall(void)	todo		
+Python/ceval.c	3558	3594	_PyEval_GetANext	_PyEval_GetANext(PyObject *aiter)	todo		
+Python/ceval.c	3597	3643	_PyEval_LoadGlobalStackRef	_PyEval_LoadGlobalStackRef(PyObject *globals, PyObject *builtins, PyObject *name, _PyStackRef *writeto)	todo		changed-in-3.15:
+Python/ceval.c	3646	3667	_PyEval_GetAwaitable	_PyEval_GetAwaitable(PyObject *iterable, int oparg)	todo		changed-in-3.15:
+Python/ceval.c	3670	3707	_PyEval_LoadName	_PyEval_LoadName(PyThreadState *tstate, _PyInterpreterFrame *frame, PyObject *name)	todo		changed-in-3.15:
+Python/ceval.c	3709	3739	_PyForIter_VirtualIteratorNext	_PyStackRef _PyForIter_VirtualIteratorNext(PyThreadState* tstate, _PyInterpreterFrame* frame, _PyStackRef iter, _PyStackRef* index_ptr)	todo		changed-in-3.15: new function
+Python/ceval.c	3743	3749	type_has_special_method	type_has_special_method(PyTypeObject *cls, PyObject *name)	todo		
+Python/ceval.c	3752	3769	_PyEval_SpecialMethodCanSuggest	_PyEval_SpecialMethodCanSuggest(PyObject *self, int oparg)	todo		

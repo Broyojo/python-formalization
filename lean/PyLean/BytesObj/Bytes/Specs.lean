@@ -212,7 +212,7 @@ theorem mk_hit (frm to p : Seq) (i : Nat) (hi : i < frm.length) (hl : frm.length
         · simpa using hlast
 
 /-- `bytes.maketrans(frm, to)` sends each byte of `frm` to the byte of `to` at the place of its last
-occurrence (`p[frm[i]] = to[i]`, bytes_methods.c:374-376). Hypotheses: equal lengths, and bytes. -/
+occurrence (`p[frm[i]] = to[i]`, bytes_methods.c:372-374). Hypotheses: equal lengths, and bytes. -/
 def MaketransHit : Prop :=
   ∀ frm to : Seq, frm.length = to.length → (∀ c ∈ frm, c < 256) →
     ∃ t, bytesMaketrans frm to = .ok t ∧ ∀ (i : Nat) (h : i < frm.length), frm[i] ∉ frm.drop (i + 1) →
@@ -288,7 +288,7 @@ theorem stripWith_both (mem : Nat → Bool) (s : Seq) :
     drop_takeWhile]
   exact take_reverse_drop mem _
 
-/-- `lstrip`, `rstrip` and `strip` (`do_xstrip`, `do_strip`, bytesobject.c:1994-2061) for any set:
+/-- `lstrip`, `rstrip` and `strip` (`do_xstrip`, `do_strip`, bytesobject.c:2091-2158) for any set:
 the result is a piece of the input, whatever was removed on either side is in the set, only the
 sides asked for lose anything, and a stripped side of the result is not in the set. `id` and
 `fun _ => []` both fail this. -/
@@ -343,7 +343,7 @@ theorem translateSlow_filter (s t del : Seq) :
     · simpa [translateSlow, List.filterMap_cons, h] using ih
     · simpa [translateSlow, List.filterMap_cons, h] using ih
 
-/-- `b.translate(table, delete=d)`, bytesobject.c:2159-2270: the bytes outside `d`, each sent through
+/-- `b.translate(table, delete=d)`, bytesobject.c:2258-2373: the bytes outside `d`, each sent through
 the table; no table keeps them, and a table of another length is refused. -/
 def TranslateSpec : Prop :=
   ∀ s t del : Seq,

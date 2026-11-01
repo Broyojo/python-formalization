@@ -40,27 +40,27 @@ structure LObj (α : Type) where
 def LObj.empty : LObj α := { items := [], allocated := 0, hasItems := false }
 
 /-- `list_new_prealloc(n)` filled to size: exactly `n` slots, for `n > 0`
-(listobject.c:275-300), or `PyList_New(0)` when there are no items, which is how
+(listobject.c:302-327), or `PyList_New(0)` when there are no items, which is how
 every caller guards it. -/
 def LObj.prealloc (items : List α) : LObj α :=
   if items.length = 0 then LObj.empty
   else { items := items, allocated := items.length, hasItems := true }
 
-/-- `list.__sizeof__`, `list___sizeof___impl`, listobject.c:3536-3550, for exact
+/-- `list.__sizeof__`, `list___sizeof___impl`, listobject.c:3599-3615, for exact
 lists: `_PyObject_SIZE(type) + (size_t)allocated * sizeof(PyObject *)` in `size_t`. -/
 def listSizeof (o : LObj α) : Int := (40 + toU o.allocated * 8) % (2 ^ 64 : Int)
 
-/-- `((size_t)newsize + (newsize >> 3) + 6) & ~(size_t)3`, listobject.c:133. -/
+/-- `((size_t)newsize + (newsize >> 3) + 6) & ~(size_t)3`, listobject.c:148. -/
 def overalloc (newsize : Int) : Int := ((newsize + newsize / 8 + 6) / 4) * 4
 
-/-- The `new_allocated` computation of `list_resize`, listobject.c:133-141. The
+/-- The `new_allocated` computation of `list_resize`, listobject.c:148-156. The
 cast `(Py_ssize_t)(new_allocated - newsize)` is exact: see `overalloc_ge`. -/
 def newAllocated (size newsize : Int) : Int :=
   let na := overalloc newsize
   let na := if newsize - size > na - newsize then ((newsize + 3) / 4) * 4 else na
   if newsize = 0 then 0 else na
 
-/-- `list_resize(self, newsize)`, listobject.c:107-189, on `(allocated, hasItems)`,
+/-- `list_resize(self, newsize)`, listobject.c@3.14.7:107-189, on `(allocated, hasItems)`,
 with `size` the `Py_SIZE(self)` at the call. -/
 def listResize (allocated : Int) (hasItems : Bool) (size newsize : Int) : Py (Int × Bool) :=
   if allocated ≥ newsize ∧ newsize ≥ allocated / 2 then .ok (allocated, hasItems)
@@ -74,7 +74,7 @@ def resizeTo (o : LObj α) (items : List α) : Py (LObj α) :=
   | .ok (a, h) => .ok { items := items, allocated := a, hasItems := h }
   | .error e => .error e
 
-/-- `list_preallocate_exact(self, size)`, listobject.c:191-222, for `self->ob_item
+/-- `list_preallocate_exact(self, size)`, listobject.c:218-249, for `self->ob_item
 == NULL`: `size` rounded up to even, then `PyMem_New`, whose overflow test fails
 for a rounded size past `PY_SSIZE_T_MAX / sizeof(PyObject *)`. `size + 1` overflows
 `Py_ssize_t` at `PY_SSIZE_T_MAX`; the wrapped value is negative, then a huge `size_t`
@@ -83,15 +83,15 @@ def listPreallocateExact (size : Int) : Py Int :=
   let rounded := ((size + 1) / 2) * 2
   if rounded ≤ ssizeMax / 8 then .ok rounded else .error memoryError
 
-/-- `list_clear_impl(a, is_resize)`, listobject.c:842-870, and its wrappers. -/
+/-- `list_clear_impl(a, is_resize)`, listobject.c:893-921, and its wrappers. -/
 def listClear (a : LObj α) : LObj α :=
   if !a.hasItems then a else { items := [], allocated := 0, hasItems := false }
 
-/-- `list_get_item_ref(op, i)` of the default build, listobject.c:374-381. -/
+/-- `list_get_item_ref(op, i)` of the default build, listobject.c:401-408. -/
 def listGetItemRef (l : List α) (i : Int) : Option α :=
   if validIndex i l.length then slot l i else none
 
-/-- `ins1(self, where, v)`, listobject.c:475-501. `v == NULL` is the `none` case. -/
+/-- `ins1(self, where, v)`, listobject.c:502-528. `v == NULL` is the `none` case. -/
 def ins1Where (n where_ : Int) : Int :=
   let w := if where_ < 0 then (if where_ + n < 0 then 0 else where_ + n) else where_
   if w > n then n else w
@@ -104,42 +104,42 @@ def ins1 (self : LObj α) (where_ : Int) (v : Option α) : Py (LObj α) :=
     let w := (ins1Where n where_).toNat
     resizeTo self (self.items.take w ++ v :: self.items.drop w)
 
-/-- `l.insert(index, object)`, `list_insert_impl`, listobject.c:1127-1135. -/
+/-- `l.insert(index, object)`, `list_insert_impl`, listobject.c:1203-1211. -/
 def listInsert (self : LObj α) (index : Int) (v : α) : Py (LObj α) := do
   let i ← PyLean.Sequences.asSsize index
   ins1 self i (some v)
 
-/-- `_PyList_AppendTakeRef`, Include/internal/pycore_list.h:34-51, with
-`_PyList_AppendTakeRefListResize`, listobject.c:519-530. -/
+/-- `_PyList_AppendTakeRef`, Include/internal/pycore_list.h:36-53, with
+`_PyList_AppendTakeRefListResize`, listobject.c:546-557. -/
 def listAppend (self : LObj α) (v : α) : Py (LObj α) :=
   if self.allocated > self.items.length then
     .ok { self with items := self.items ++ [v] }
   else resizeTo self (self.items ++ [v])
 
-/-- `list_length(a)`, listobject.c:643-647: `PyList_GET_SIZE`. -/
+/-- `list_length(a)`, listobject.c:670-674: `PyList_GET_SIZE`. -/
 def listLength (l : List α) : Int := l.length
 
-/-- `list_item(aa, i)`, listobject.c:668-687. -/
+/-- `list_item(aa, i)`, listobject.c:695-714. -/
 def listItem (l : List α) (i : Int) : Py α :=
   if !validIndex i l.length then .error (.indexError "list index out of range")
   else match slot l i with
     | some v => .ok v
     | none => .error (cUB "read outside the items array")
 
-/-- `l[i]`, `list_subscript`, listobject.c:3646-3658. -/
+/-- `l[i]`, `list_subscript`, listobject.c:3711-3723. -/
 def listGetItem (l : List α) (i : Int) : Py α := do
   let i ← PyLean.Sequences.subIndex i
   let i := if i < 0 then i + l.length else i
   listItem l i
 
-/-- `list_slice_lock_held(a, ilow, ihigh)`, listobject.c:689-711. -/
+/-- `list_slice_lock_held(a, ilow, ihigh)`, listobject.c:716-738. -/
 def listSliceLH (a : List α) (ilow ihigh : Int) : LObj α :=
   let len := ihigh - ilow
   if len ≤ 0 then LObj.empty
   else LObj.prealloc ((a.drop ilow.toNat).take len.toNat)
 
-/-- `list_slice_step_lock_held`, listobject.c:3589-3607, and `list_slice_wrap`,
-:3609-3626, after `PySlice_Unpack`. -/
+/-- `list_slice_step_lock_held`, listobject.c:3654-3672, and `list_slice_wrap`,
+:3674-3691, after `PySlice_Unpack`. -/
 def listSliceWrap (a : List α) (start stop step : Int) : Py (LObj α) :=
   let (start, stop, len) := adjustIndices a.length start stop step
   if len ≤ 0 then .ok LObj.empty
@@ -149,21 +149,21 @@ def listSliceWrap (a : List α) (start stop step : Int) : Py (LObj α) :=
     | .ok r => .ok (LObj.prealloc r)
     | .error e => .error e
 
-/-- `l[s]`, `list_slice_subscript`, listobject.c:3628-3638. -/
+/-- `l[s]`, `list_slice_subscript`, listobject.c:3693-3703. -/
 def listGetSlice (a : List α) (s : Slice) : Py (LObj α) := do
   let (start, stop, step) ← sliceUnpack s
   listSliceWrap a start stop step
 
-/-- `a + b`, `list_concat_lock_held`, listobject.c:739-769. -/
+/-- `a + b`, `list_concat_lock_held`, listobject.c:790-820. -/
 def listConcat (a b : List α) : LObj α := LObj.prealloc (a ++ b)
 
-/-- `a + other`, `list_concat`, listobject.c:771-787. -/
+/-- `a + other`, `list_concat`, listobject.c@3.14.7:771-787. -/
 def listConcatAny (a : List α) (bb : Sum (List α) String) : Py (LObj α) :=
   match bb with
   | .inl b => .ok (listConcat a b)
   | .inr name => .error (.typeError s!"can only concatenate list (not \"{name}\") to list")
 
-/-- `a * n`, `list_repeat_lock_held`, listobject.c:789-829, with `list_new_prealloc`
+/-- `a * n`, `list_repeat_lock_held`, listobject.c:840-880, with `list_new_prealloc`
 failing like `PyMem_New` for an output past `PY_SSIZE_T_MAX / 8`. -/
 def listRepeat (a : List α) (n : Int) : Py (LObj α) :=
   let inputSize : Int := a.length
@@ -177,7 +177,7 @@ def listMul (a : List α) (n : Int) : Py (LObj α) := do
   let n ← PyLean.Sequences.repeatCount n
   listRepeat a n
 
-/-- The slice-store core of `list_ass_slice_lock_held`, listobject.c:891-990:
+/-- The slice-store core of `list_ass_slice_lock_held`, listobject.c:970-1059:
 clip, then clear, shrink (`list_resize`, `d < 0`), grow (`d > 0`) or store. `v =
 none` deletes. -/
 def listAssSlice (a : LObj α) (ilow ihigh : Int) (v : Option (List α)) : Py (LObj α) :=
@@ -193,7 +193,7 @@ def listAssSlice (a : LObj α) (ilow ihigh : Int) (v : Option (List α)) : Py (L
     let items := a.items.take ilow.toNat ++ vs ++ a.items.drop ihigh.toNat
     if d = 0 then .ok { a with items := items } else resizeTo a items
 
-/-- `list_inplace_repeat_lock_held(self, n)`, listobject.c:1032-1064. -/
+/-- `list_inplace_repeat_lock_held(self, n)`, listobject.c:1101-1140. -/
 def listInplaceRepeat (self : LObj α) (n : Int) : Py (LObj α) :=
   let inputSize : Int := self.items.length
   if inputSize = 0 ∨ n = 1 then .ok self
@@ -210,7 +210,7 @@ def listIMul (self : LObj α) (n : Int) : Py (LObj α) := do
   let n ← PyLean.Sequences.repeatCount n
   listInplaceRepeat self n
 
-/-- `list_ass_item_lock_held(a, i, v)`, listobject.c:1082-1103. A deletion moves
+/-- `list_ass_item_lock_held(a, i, v)`, listobject.c:1158-1179. A deletion moves
 the tail down and sets the size; unlike every other shrinking path it does not
 call `list_resize`, so `allocated` stays. -/
 def listAssItem (a : LObj α) (i : Int) (v : Option α) : Py (LObj α) :=
@@ -220,7 +220,7 @@ def listAssItem (a : LObj α) (i : Int) (v : Option α) : Py (LObj α) :=
     | some v => .ok { a with items := a.items.set i.toNat v }
 
 /-- `l[i] = v` / `del l[i]`, the int branch of `list_ass_subscript_lock_held`,
-listobject.c:3693-3699. -/
+listobject.c:3758-3764. -/
 def listSetItem (a : LObj α) (i : Int) (v : Option α) : Py (LObj α) := do
   let i ← PyLean.Sequences.subIndex i
   let i := if i < 0 then i + a.items.length else i
@@ -229,7 +229,7 @@ def listSetItem (a : LObj α) (i : Int) (v : Option α) : Py (LObj α) := do
 /-! ## extend -/
 
 /-- `PySequence_Fast_ITEMS` of the argument to `list_extend_fast`,
-listobject.c:1186-1222. -/
+listobject.c:1262-1298. -/
 def listExtendFast (self : LObj α) (seq : List α) : Py (LObj α) :=
   if seq.length = 0 then .ok self
   else if !self.hasItems then
@@ -239,7 +239,7 @@ def listExtendFast (self : LObj α) (seq : List α) : Py (LObj α) :=
   else resizeTo self (self.items ++ seq)
 
 /-- `list_extend_set` / `list_extend_dict` / `list_extend_dictitems`,
-listobject.c:1312-1399: `list_resize(self, m + n)`, always (never exact), then
+listobject.c:1388-1475: `list_resize(self, m + n)`, always (never exact), then
 the `n` new items. -/
 def listExtendSized (self : LObj α) (items : List α) : Py (LObj α) :=
   if self.items.length + items.length = 0 then .ok self
@@ -257,7 +257,7 @@ structure IterSrc (α : Type) where
 /-- The result of an operation that can fail after changing the list. -/
 abbrev LRes (α : Type) := LObj α × Option PyExc
 
-/-- The drain loop of `list_extend_iter_lock_held`, listobject.c:1262-1283: while
+/-- The drain loop of `list_extend_iter_lock_held`, listobject.c:1338-1359: while
 there is room the item goes straight in, otherwise through
 `_PyList_AppendTakeRef`. -/
 def extendDrain (self : LObj α) : List α → Py (LObj α)
@@ -270,7 +270,7 @@ def extendDrain (self : LObj α) : List α → Py (LObj α)
       | .ok o => extendDrain o xs
       | .error e => .error e
 
-/-- The room-making step of `list_extend_iter_lock_held`, listobject.c:1240-1259. -/
+/-- The room-making step of `list_extend_iter_lock_held`, listobject.c:1316-1335. -/
 def extendRoom (self : LObj α) (n : Int) : Py (LObj α) :=
   let m : Int := self.items.length
   if m > ssizeMax - n then .ok self
@@ -285,7 +285,7 @@ def extendRoom (self : LObj α) (n : Int) : Py (LObj α) :=
     | .ok (a, h) => .ok { self with allocated := a, hasItems := h }
     | .error e => .error e
 
-/-- `list_extend_iter_lock_held(self, iterable)`, listobject.c:1224-1297. An
+/-- `list_extend_iter_lock_held(self, iterable)`, listobject.c:1300-1373. An
 exception out of the iterator skips the final cut-back and leaves what was
 appended. -/
 def listExtendIter (self : LObj α) (src : IterSrc α) : LRes α :=
@@ -327,7 +327,7 @@ def liftRes (self : LObj α) : Py (LObj α) → LRes α
   | .ok o => (o, none)
   | .error e => (self, some e)
 
-/-- `_list_extend(self, iterable)`, listobject.c:1401-1456. -/
+/-- `_list_extend(self, iterable)`, listobject.c:1477-1532. -/
 def listExtend (self : LObj α) : ExtArg α → LRes α
   | .self => liftRes self (listInplaceRepeat self 2)
   | .fast items => liftRes self (listExtendFast self items)
@@ -335,11 +335,11 @@ def listExtend (self : LObj α) : ExtArg α → LRes α
   | .iter src => listExtendIter self src
   | .notIterable name => (self, some (.typeError s!"'{name}' object is not iterable"))
 
-/-- `l += iterable`, `list_inplace_concat`, listobject.c:1508-1516, which is
+/-- `l += iterable`, `list_inplace_concat`, listobject.c:1584-1592, which is
 `_list_extend` and returns `self`. -/
 def listIConcat (self : LObj α) (arg : ExtArg α) : LRes α := listExtend self arg
 
-/-- `l.__init__(iterable)`, `list___init___impl`, listobject.c:3480-3502: the old
+/-- `l.__init__(iterable)`, `list___init___impl`, listobject.c:3543-3565: the old
 contents are dropped before the iterable is looked at. -/
 def listInit (self : LObj α) (iterable : Option (ExtArg α)) : LRes α :=
   let o := if self.hasItems then listClear self else self
@@ -347,7 +347,7 @@ def listInit (self : LObj α) (iterable : Option (ExtArg α)) : LRes α :=
   | some arg => listExtend o arg
   | none => (o, none)
 
-/-- `list(iterable)`: `list_vectorcall`, listobject.c:3504-3527. -/
+/-- `list(iterable)`: `list_vectorcall`, listobject.c:3567-3590. -/
 def listVectorcall (args : List (ExtArg α)) (nkw : Nat) : Py (LObj α) :=
   if nkw ≠ 0 then .error (.typeError "list() takes no keyword arguments")
   else if args.length > 1 then
@@ -361,7 +361,7 @@ def listVectorcall (args : List (ExtArg α)) (nkw : Nat) : Py (LObj α) :=
     | [] => .ok LObj.empty
 
 /-- `l.pop(index)` after the clinic conversion, `list_pop_impl`,
-listobject.c:1530-1572. -/
+listobject.c:1606-1638. -/
 def listPopK (self : LObj α) (index : Int) : Py (α × LObj α) :=
   let size : Int := self.items.length
   if size = 0 then .error (.indexError "pop from empty list")
@@ -388,7 +388,7 @@ def listPop (self : LObj α) (index : Option Int) : Py (α × LObj α) :=
     | .ok i => listPopK self i
     | .error e => .error e
 
-/-- `reverse_slice(lo, hi)`, listobject.c:1574-1588: the two cursors swap and
+/-- `reverse_slice(lo, hi)`, listobject.c:1640-1654: the two cursors swap and
 meet. `front` and `back` are the parts already swapped into place, `mid` the
 part between the cursors. -/
 def reverseLoop : Nat → List α → List α → List α → List α
@@ -401,8 +401,8 @@ def reverseLoop : Nat → List α → List α → List α → List α
       reverseLoop fuel (hi :: front) inner (a :: back)
     | _ => front.reverse ++ mid ++ back
 
-/-- `l.reverse()`, `list_reverse_impl`, listobject.c:3189-3196, and `PyList_Reverse`,
-:3198-3213. -/
+/-- `l.reverse()`, `list_reverse_impl`, listobject.c:3254-3261, and `PyList_Reverse`,
+:3263-3278. -/
 def listReverse (self : LObj α) : LObj α :=
   if self.items.length > 1 then
     { self with items := reverseLoop self.items.length [] self.items [] }
@@ -416,7 +416,7 @@ abbrev Cmp (α : Type) := LObj α → α → α → Py Bool × LObj α
 /-- `PyObject_RichCompareBool(item, el, Py_EQ)` with no side effect on the list. -/
 def pureCmp (E : ElemOps α ρ) : Cmp α := fun o a b => (richBool E .eq a b, o)
 
-/-- `list_contains(aa, el)`, listobject.c:649-666. -/
+/-- `list_contains(aa, el)`, listobject.c:676-693. -/
 def containsLoop (cmp : Cmp α) (el : α) : Nat → Int → LObj α → Py Bool × LObj α
   | 0, _, o => (.error .modelFuel, o)
   | fuel + 1, i, o =>
@@ -430,7 +430,7 @@ def containsLoop (cmp : Cmp α) (el : α) : Nat → Int → LObj α → Py Bool 
 def listContains (cmp : Cmp α) (fuel : Nat) (o : LObj α) (el : α) : Py Bool × LObj α :=
   containsLoop cmp el fuel 0 o
 
-/-- The loop of `list_index_impl`, listobject.c:3297-3309: `none` is falling out
+/-- The loop of `list_index_impl`, listobject.c:3360-3372: `none` is falling out
 of the loop, which is what raises `ValueError`. -/
 def indexLoop (cmp : Cmp α) (value : α) (stop : Int) : Nat → Int → LObj α → Py (Option Int) × LObj α
   | 0, _, o => (.error .modelFuel, o)
@@ -445,7 +445,7 @@ def indexLoop (cmp : Cmp α) (value : α) (stop : Int) : Nat → Int → LObj α
         | (.error e, o') => (.error e, o')
     else (.ok none, o)
 
-/-- `start` and `stop` of `list_index_impl`, listobject.c:3287-3296. -/
+/-- `start` and `stop` of `list_index_impl`, listobject.c:3350-3359. -/
 def listIndexBounds (n : Int) (start stop : Option Int) : Int × Int :=
   let start := PyLean.Sequences.sliceIndex (start.getD 0)
   let stop := PyLean.Sequences.sliceIndex (stop.getD ssizeMax)
@@ -453,7 +453,7 @@ def listIndexBounds (n : Int) (start stop : Option Int) : Int × Int :=
   let stop := if stop < 0 then (if stop + n < 0 then 0 else stop + n) else stop
   (start, stop)
 
-/-- `l.index(value, start, stop)`, `list_index_impl`, listobject.c:3282-3312. -/
+/-- `l.index(value, start, stop)`, `list_index_impl`, listobject.c:3345-3375. -/
 def listIndex (cmp : Cmp α) (fuel : Nat) (o : LObj α) (value : α) (start stop : Option Int) :
     Py Int × LObj α :=
   let (start, stop) := listIndexBounds o.items.length start stop
@@ -462,7 +462,7 @@ def listIndex (cmp : Cmp α) (fuel : Nat) (o : LObj α) (value : α) (start stop
   | (.ok none, o') => (.error (.valueError "list.index(x): x not in list"), o')
   | (.error e, o') => (.error e, o')
 
-/-- `list_count_impl`, listobject.c:3323-3347: the `obj == value` shortcut, then
+/-- `list_count_impl`, listobject.c:3386-3410: the `obj == value` shortcut, then
 the comparison. -/
 def countLoop (same : α → α → Bool) (cmp : Cmp α) (value : α) :
     Nat → Int → Int → LObj α → Py Int × LObj α
@@ -482,7 +482,7 @@ def listCount (same : α → α → Bool) (cmp : Cmp α) (fuel : Nat) (o : LObj 
     Py Int × LObj α :=
   countLoop same cmp value fuel 0 0 o
 
-/-- `list_remove_impl`, listobject.c:3361-3382. After the comparison the slice
+/-- `list_remove_impl`, listobject.c:3424-3445. After the comparison the slice
 deletion uses the old `i` on the current list, and clips. -/
 def removeLoop (cmp : Cmp α) (value : α) : Nat → Int → LObj α → Py Unit × LObj α
   | 0, _, o => (.error .modelFuel, o)
@@ -518,7 +518,7 @@ abbrev Final (α ρ : Type) := CmpOp → List α × List α → α → α → Py
 /-- A closing comparison that does not change either list. -/
 def pureFinal (E : ElemOps α ρ) : Final α ρ := fun op st a b => (E.rich op a b, st)
 
-/-- The search of `list_richcompare_impl`, listobject.c:3416-3432: sizes and slots
+/-- The search of `list_richcompare_impl`, listobject.c:3479-3495: sizes and slots
 are reread on each pass, and an identical pair is skipped without a call. -/
 def cmpLoop (same : α → α → Bool) (cmp : Cmp2 α) :
     Nat → Int → List α × List α → Py Int × (List α × List α)
@@ -536,7 +536,7 @@ def cmpLoop (same : α → α → Bool) (cmp : Cmp2 α) :
       | _, _ => (.error (cUB "list_richcompare_impl"), st)
     else (.ok i, st)
 
-/-- `list_richcompare_impl(v, w, op)`, listobject.c:3395-3456, for two lists. -/
+/-- `list_richcompare_impl(v, w, op)`, listobject.c:3458-3519, for two lists. -/
 def listRichcompare (E : ElemOps α ρ) (cmp : Cmp2 α) (final : Final α ρ) (fuel : Nat)
     (op : CmpOp) (v w : List α) : Py ρ × (List α × List α) :=
   if v.length ≠ w.length ∧ (op = .eq ∨ op = .ne) then
@@ -573,7 +573,7 @@ def memmoveL (mem : List α) (dst src cnt : Int) : Py (List α) :=
     .ok (mem.take dst.toNat ++ (mem.drop src.toNat).take cnt.toNat ++ mem.drop (dst + cnt).toNat)
   else .error (cUB "memmove out of bounds")
 
-/-- The compaction loop of `list_ass_subscript_lock_held`, listobject.c:3743-3757. -/
+/-- The compaction loop of `list_ass_subscript_lock_held`, listobject.c:3808-3821. -/
 def delLoopL (size step stop : Int) : Nat → List α → Int → Int → Py (List α)
   | 0, _, _, _ => .error .modelFuel
   | fuel + 1, mem, cur, i =>
@@ -584,7 +584,7 @@ def delLoopL (size step stop : Int) : Nat → List α → Int → Int → Py (Li
       | .error e => .error e
     else .ok mem
 
-/-- Extended-slice deletion, listobject.c:3724-3767: the normalisation of a
+/-- Extended-slice deletion, listobject.c:3789-3829: the normalisation of a
 negative step, the compaction, the tail move, `Py_SET_SIZE` then `list_resize`
 with the size already set. -/
 def delExtendedL (o : LObj α) (start stop step len : Int) : Py (LObj α) := do
@@ -603,19 +603,19 @@ def delExtendedL (o : LObj α) (start stop step len : Int) : Py (LObj α) := do
   | .ok (a, h) => .ok { items := mem.take newsize.toNat, allocated := a, hasItems := h }
   | .error e => .error e
 
-/-- The store loop of `list_ass_subscript_lock_held`, listobject.c:3831-3836. -/
+/-- The store loop of `list_ass_subscript_lock_held`, listobject.c:3893-3898. -/
 def storeLoopL (mem : List α) (step : Int) : List α → Int → List α
   | [], _ => mem
   | x :: xs, cur => storeLoopL (mem.set cur.toNat x) step xs (cur + step)
 
-/-- `adjust_slice_indexes(lst, &start, &stop, step)`, listobject.c:3670-3685. -/
+/-- `adjust_slice_indexes(lst, &start, &stop, step)`, listobject.c:3735-3750. -/
 def adjustSliceIndexes (n start stop step : Int) : Int × Int × Int :=
   let (start, stop, len) := adjustIndices n start stop step
   let stop := if (step < 0 ∧ start < stop) ∨ (step > 0 ∧ start > stop) then start else stop
   (start, stop, len)
 
 /-- `l[s] = value` / `del l[s]`, the slice branch of
-`list_ass_subscript_lock_held`, listobject.c:3701-3847. -/
+`list_ass_subscript_lock_held`, listobject.c:3766-3909. -/
 def listAssSubscript (self : LObj α) (s : Slice) (value : AssVal α) : Py (LObj α) := do
   let (start, stop, step) ← sliceUnpack s
   let n : Int := self.items.length
@@ -646,10 +646,10 @@ structure ListIter where
   alive : Bool
   deriving Repr, DecidableEq
 
-/-- `list_iter(seq)`, listobject.c:3981-3999. -/
+/-- `list_iter(seq)`, listobject.c:4051-4069. -/
 def listIter : ListIter := ⟨0, true⟩
 
-/-- `listiter_next(self)`, listobject.c:4018-4040. A negative index returns first,
+/-- `listiter_next(self)`, listobject.c:4088-4110. A negative index returns first,
 so `it_seq` is only used when `alive`; `cUB` reports the NULL dereference that
 `ListIterWF` rules out. -/
 def listIterNext (it : ListIter) (l : List α) : Py (Option α × ListIter) :=
@@ -660,14 +660,14 @@ def listIterNext (it : ListIter) (l : List α) : Py (Option α × ListIter) :=
     | none => .ok (none, ⟨-1, false⟩)
     | some v => .ok (some v, { it with index := it.index + 1 })
 
-/-- `listiter_len(self)`, listobject.c:4042-4054. -/
+/-- `listiter_len(self)`, listobject.c:4112-4124. -/
 def listIterLen (it : ListIter) (l : List α) : Int :=
   if it.index ≥ 0 then
     let len := (l.length : Int) - it.index
     if len ≥ 0 then len else 0
   else 0
 
-/-- `listiter_setstate(self, state)`, listobject.c:4062-4077. -/
+/-- `listiter_setstate(self, state)`, listobject.c:4132-4147. -/
 def listIterSetstate (it : ListIter) (l : List α) (state : Int) : Py ListIter := do
   let index ← PyLean.Sequences.asSsize state
   if it.alive then
@@ -675,10 +675,10 @@ def listIterSetstate (it : ListIter) (l : List α) (state : Int) : Py ListIter :
     .ok { it with index := index }
   else .ok it
 
-/-- `list___reversed___impl`, listobject.c:4140-4154. -/
+/-- `list___reversed___impl`, listobject.c:4210-4224. -/
 def listReversed (l : List α) : ListIter := ⟨(l.length : Int) - 1, true⟩
 
-/-- `listreviter_next(self)`, listobject.c:4172-4195. -/
+/-- `listreviter_next(self)`, listobject.c:4242-4265. -/
 def listRevIterNext (it : ListIter) (l : List α) : Py (Option α × ListIter) :=
   if it.index < 0 then .ok (none, it)
   else if !it.alive then .error (cUB "listreviter_next on NULL it_seq")
@@ -687,12 +687,12 @@ def listRevIterNext (it : ListIter) (l : List α) : Py (Option α × ListIter) :
     | some v => .ok (some v, { it with index := it.index - 1 })
     | none => .ok (none, ⟨-1, false⟩)
 
-/-- `listreviter_len(self)`, listobject.c:4197-4206. -/
+/-- `listreviter_len(self)`, listobject.c:4267-4276. -/
 def listRevIterLen (it : ListIter) (l : List α) : Int :=
   let len := it.index + 1
   if !it.alive ∨ (l.length : Int) < len then 0 else len
 
-/-- `listreviter_setstate(self, state)`, listobject.c:4214-4229. -/
+/-- `listreviter_setstate(self, state)`, listobject.c:4284-4299. -/
 def listRevIterSetstate (it : ListIter) (l : List α) (state : Int) : Py ListIter := do
   let index ← PyLean.Sequences.asSsize state
   if it.alive then
@@ -701,31 +701,31 @@ def listRevIterSetstate (it : ListIter) (l : List α) (state : Int) : Py ListIte
     .ok { it with index := index }
   else .ok it
 
-/-- `listiter_reduce_general(_it, forward)`, listobject.c:4233-4263, as `(args,
+/-- `listiter_reduce_general(_it, forward)`, listobject.c:4303-4335, as `(args,
 state)`: `iter(seq)` or `reversed(seq)` with the index, or an empty list. -/
 def listIterReduce (it : ListIter) (l : List α) : List α × Option Int :=
   if it.index ≥ 0 then (l, some it.index) else ([], none)
 
 /-! ## C API -/
 
-/-- `PyList_New(size)`, listobject.c:234-273: `NULL` slots, exact allocation. -/
+/-- `PyList_New(size)`, listobject.c:261-300: `NULL` slots, exact allocation. -/
 def pyListNew (size : Int) : Py (LObj (Option α)) :=
   if size < 0 then .error systemError
   else if size ≤ 0 then .ok LObj.empty
   else if size > ssizeMax / 8 then .error memoryError
   else .ok { items := List.replicate size.toNat none, allocated := size, hasItems := true }
 
-/-- `_PyList_FromStackRefStealOnSuccess(src, n)`, listobject.c:3249-3267: a list
+/-- `_PyList_FromStackRefStealOnSuccess(src, n)`, listobject.c:3312-3330: a list
 display. -/
 def listFromStack (src : List α) : LObj α := LObj.prealloc src
 
-/-- `PyList_Size(op)`, listobject.c:302-312. `none` is a non-list. -/
+/-- `PyList_Size(op)`, listobject.c:329-339. `none` is a non-list. -/
 def pyListSize (op : Option (List α)) : Py Int :=
   match op with
   | some l => .ok l.length
   | none => .error systemError
 
-/-- `PyList_GetItem(op, i)`, listobject.c:384-397. -/
+/-- `PyList_GetItem(op, i)`, listobject.c:411-424. -/
 def pyListGetItem (op : Option (List α)) (i : Int) : Py α :=
   match op with
   | none => .error systemError
@@ -735,7 +735,7 @@ def pyListGetItem (op : Option (List α)) (i : Int) : Py α :=
       | some v => .ok v
       | none => .error (cUB "read outside the items array")
 
-/-- `PyList_GetItemRef(op, i)`, listobject.c:399-413. -/
+/-- `PyList_GetItemRef(op, i)`, listobject.c:426-440. -/
 def pyListGetItemRef (op : Option (List α)) (i : Int) : Py α :=
   match op with
   | none => .error (.typeError "expected a list")
@@ -744,7 +744,7 @@ def pyListGetItemRef (op : Option (List α)) (i : Int) : Py α :=
     | some v => .ok v
     | none => .error (.indexError "list index out of range")
 
-/-- `PyList_SetItem(op, i, newitem)`, listobject.c:447-473. -/
+/-- `PyList_SetItem(op, i, newitem)`, listobject.c:474-500. -/
 def pyListSetItem (op : Option (LObj α)) (i : Int) (v : α) : Py (LObj α) :=
   match op with
   | none => .error systemError
@@ -753,19 +753,19 @@ def pyListSetItem (op : Option (LObj α)) (i : Int) (v : α) : Py (LObj α) :=
       .error (.indexError "list assignment index out of range")
     else .ok { self with items := self.items.set i.toNat v }
 
-/-- `PyList_Insert(op, where, newitem)`, listobject.c:503-516. -/
+/-- `PyList_Insert(op, where, newitem)`, listobject.c:530-543. -/
 def pyListInsert (op : Option (LObj α)) (where_ : Int) (v : Option α) : Py (LObj α) :=
   match op with
   | none => .error systemError
   | some self => ins1 self where_ v
 
-/-- `PyList_Append(op, newitem)`, listobject.c:532-544. -/
+/-- `PyList_Append(op, newitem)`, listobject.c:559-571. -/
 def pyListAppend (op : Option (LObj α)) (v : Option α) : Py (LObj α) :=
   match op, v with
   | some self, some v => listAppend self v
   | _, _ => .error systemError
 
-/-- `PyList_GetSlice(a, ilow, ihigh)`, listobject.c:713-737. -/
+/-- `PyList_GetSlice(a, ilow, ihigh)`, listobject.c:764-788. -/
 def pyListGetSlice (op : Option (List α)) (ilow ihigh : Int) : Py (LObj α) :=
   match op with
   | none => .error systemError
@@ -775,8 +775,8 @@ def pyListGetSlice (op : Option (List α)) (ilow ihigh : Int) : Py (LObj α) :=
     let ihigh := if ihigh < ilow then ilow else if ihigh > n then n else ihigh
     .ok (listSliceLH a ilow ihigh)
 
-/-- `PyList_SetSlice(a, ilow, ihigh, v)`, listobject.c:1022-1030, with `list_ass_slice`,
-:992-1020. `v` is `none` for `NULL`, `some items` for a sequence; `isSelf` says `v`
+/-- `PyList_SetSlice(a, ilow, ihigh, v)`, listobject.c:1091-1099, with `list_ass_slice`,
+:1061-1089. `v` is `none` for `NULL`, `some items` for a sequence; `isSelf` says `v`
 is `a` itself, for which a private copy is made first. -/
 def pyListSetSlice (op : Option (LObj α)) (ilow ihigh : Int) (v : Option (List α)) (isSelf : Bool) :
     Py (LObj α) :=
@@ -784,31 +784,31 @@ def pyListSetSlice (op : Option (LObj α)) (ilow ihigh : Int) (v : Option (List 
   | none => .error systemError
   | some a => listAssSlice a ilow ihigh (if isSelf then some a.items else v)
 
-/-- `PyList_Clear(self)`, listobject.c:1494-1505. -/
+/-- `PyList_Clear(self)`, listobject.c:1570-1581. -/
 def pyListClear (op : Option (LObj α)) : Py (LObj α) :=
   match op with
   | none => .error systemError
   | some a => .ok (listClear a)
 
-/-- `PyList_Reverse(v)`, listobject.c:3198-3213. -/
+/-- `PyList_Reverse(v)`, listobject.c:3263-3278. -/
 def pyListReverse (op : Option (LObj α)) : Py (LObj α) :=
   match op with
   | none => .error systemError
   | some a => .ok (listReverse a)
 
-/-- `PyList_AsTuple(v)`, listobject.c:3215-3228. -/
+/-- `PyList_AsTuple(v)`, listobject.c:3280-3293. -/
 def pyListAsTuple (mayTrack : α → Bool) (op : Option (List α)) : Py (TRes α) :=
   match op with
   | none => .error systemError
   | some l => tupleFromArray mayTrack l
 
-/-- `PyList_Extend(self, iterable)`, listobject.c:1483-1491. -/
+/-- `PyList_Extend(self, iterable)`, listobject.c:1559-1567. -/
 def pyListExtend (op : Option (LObj α)) (arg : ExtArg α) : LRes α × Option Unit :=
   match op with
   | none => ((LObj.empty, some systemError), none)
   | some a => (listExtend a arg, some ())
 
-/-- `_PyList_AsTupleAndClear(self)`, listobject.c:3230-3247, for `PySequence_Tuple`:
+/-- `_PyList_AsTupleAndClear(self)`, listobject.c:3295-3310, for `PySequence_Tuple`:
 the array moves into a tuple, always tracked, and the list ends with no array. -/
 def listAsTupleAndClear (self : LObj α) : Py (TRes α × LObj α) :=
   if !self.hasItems then .ok (.empty, self)
@@ -817,7 +817,7 @@ def listAsTupleAndClear (self : LObj α) : Py (TRes α × LObj α) :=
     | .ok r => .ok (r, { self with items := [], hasItems := false })
     | .error e => .error e
 
-/-- The list while `list.sort` runs, listobject.c:2924-2929: size 0, no array,
+/-- The list while `list.sort` runs, listobject.c:2989-2994: size 0, no array,
 `allocated == -1`. -/
 def listDuringSort : LObj α := { items := [], allocated := -1, hasItems := false }
 

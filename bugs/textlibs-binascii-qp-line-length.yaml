@@ -33,11 +33,11 @@ observed: |
   python3 3.14.7: longest line 78. REPRODUCED.
   main 3.16.0a1+dev (ef1fce0): longest line 78. REPRODUCED.
 promised_by: |
-  RFC 2045 section 6.7 rule 5, and `#define MAXLINESIZE 76` at Modules/binascii.c:958.
+  RFC 2045 section 6.7 rule 5, and `#define MAXLINESIZE 76` at Modules/binascii.c:2368.
 cause: |
-  Modules/binascii.c:1223-1231 skips the soft break when databuf[in+1] is '\n'; :1207-1213 then
+  Modules/binascii.c:2633-2641 skips the soft break when databuf[in+1] is '\n'; :2617-2623 then
   turns the trailing space or tab into `=20` or `=09` without looking at linelen. The first pass,
-  :1126-1134, adds the same two bytes, so the buffer is sized correctly: this is not an overflow.
+  :2536-2544, adds the same two bytes, so the buffer is sized correctly: this is not an overflow.
 possible_fix: |
   When a space or tab comes right before a line end and linelen + 3 would pass MAXLINESIZE, emit a
   soft line break before writing it.

@@ -59,7 +59,7 @@ theorem rotLi_insert_neg (l : List α) (k : Nat) (x : α) (hk0 : 0 < k) (hk : k 
 list `l`, int `i` and `x`, `deque.insert` on any deque with items `l` (type
 invariant `WF`) gives `list.insert`'s result unless the deque is full
 (`maxlen == len(d)`), where it raises `IndexError("deque already at its
-maximum size")` as documented (Doc/library/collections.rst:539-544); the
+maximum size")` as documented (Doc/library/collections.rst:543-548); the
 resulting deque keeps the invariant and `maxlen`. -/
 def InsertAgree : Prop :=
   ∀ (α : Type) [Inhabited α] (l : List α) (i : Int) (x : α),
@@ -160,7 +160,7 @@ theorem insertAgree_proven : InsertAgree := by
 /-! ### `insert` against `s[i:i] = [x]` -/
 
 /-- `list.insert(i, x)` "is equivalent to writing `sequence[index:index] =
-[value]`" (Doc/library/stdtypes.rst:1336-1343), for every int `i`. -/
+[value]`" (Doc/library/stdtypes.rst@3.14.7:1336-1343), for every int `i`. -/
 def InsertIsSliceAssign : Prop :=
   ∀ (α : Type) [Inhabited α] (l : List α) (i : Int) (x : α), (l.length : Int) ≤ ssizeMax →
     listInsert l i x = listAssSubscript l ⟨some i, some i, none⟩ (some [x])

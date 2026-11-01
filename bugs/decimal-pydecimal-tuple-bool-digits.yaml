@@ -54,13 +54,13 @@ expected: |
   Decimal('1') and Decimal('10') as in _decimal, or a ValueError in both twins; never an object
   whose coefficient is not a digit string.
 promised_by: |
-  Doc/library/decimal.rst:395-397: a tuple has "three components, a sign (0 for positive or 1 for
+  Doc/library/decimal.rst:387-389: a tuple has "three components, a sign (0 for positive or 1 for
   negative), a tuple of digits, and an integer exponent". Class invariant, and the C twin.
 cause: |
-  Lib/_pydecimal.py:571 `if isinstance(digit, int) and 0 <= digit <= 9:` admits bool; :581 and :586
-  `''.join(map(str, digits ...))` then use str(). :562-566 skip the coefficient for 'F'. The C code
-  reads the value with PyLong_AsLong (Modules/_decimal/_decimal.c:2761) and validates the
-  coefficient for infinities too (:2770-2774). Same lines on main (the check is at :663).
+  Lib/_pydecimal.py:663 `if isinstance(digit, int) and 0 <= digit <= 9:` admits bool; :673 and :678
+  `''.join(map(str, digits ...))` then use str(). :654-658 skip the coefficient for 'F'. The C code
+  reads the value with PyLong_AsLong (Modules/_decimal/_decimal.c:2888) and validates the
+  coefficient for infinities too (:2897-2901). Same lines on main (the check is at :674).
 possible_fix: |
   Convert before storing: `digits.append(int(digit))`, or join with `'%d' % d`. Whether to validate
   value[1] for 'F' is a separate choice; matching _decimal would change accepted inputs.

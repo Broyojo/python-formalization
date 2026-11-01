@@ -17,21 +17,21 @@ open PyLean
 
 /-! ## Attributes and predicates -/
 
-/-- `_dec_from_triple(sign, coefficient, 0..)` for a finite value, _pydecimal.py:3811-3825. -/
+/-- `_dec_from_triple(sign, coefficient, 0..)` for a finite value, _pydecimal.py:3911-3925. -/
 def decFromTriple (neg : Bool) (co : Nat) (e : Int) : Dec := .fin neg co e
 
-/-- `Decimal.__bool__`, _pydecimal.py:763-768. -/
+/-- `Decimal.__bool__`, _pydecimal.py:855-860. -/
 def decBool (d : Dec) : Bool := !isZero d
 
-/-- `Decimal._isnan`, _pydecimal.py:670-683. -/
+/-- `Decimal._isnan`, _pydecimal.py:762-775. -/
 def isnan : Dec → Nat := nanKind
 
-/-- `Decimal._isinfinity`, _pydecimal.py:685-696. -/
+/-- `Decimal._isinfinity`, _pydecimal.py:777-788. -/
 def isinfinity : Dec → Int
   | .inf neg => if neg then -1 else 1
   | _ => 0
 
-/-- `Decimal.adjusted`, _pydecimal.py:2871-2877: `0` for specials. -/
+/-- `Decimal.adjusted`, _pydecimal.py:2971-2977: `0` for specials. -/
 def Dec.adjusted : Dec → Int
   | .fin _ c e => adjustedD c e
   | _ => 0
@@ -41,7 +41,7 @@ def isSpecial : Dec → Bool
   | _ => true
 
 /-- `Decimal.is_nan`, `is_qnan`, `is_snan`, `is_infinite`, `is_finite`,
-`is_signed`, `is_zero`, `is_canonical`, _pydecimal.py:3076-3130. -/
+`is_signed`, `is_zero`, `is_canonical`, _pydecimal.py:3176-3230. -/
 def isNanP (d : Dec) : Bool := decide (isnan d ≠ 0)
 def isQnan (d : Dec) : Bool := decide (isnan d = 1)
 def isSnan (d : Dec) : Bool := decide (isnan d = 2)
@@ -50,15 +50,15 @@ def isFinite (d : Dec) : Bool := !isSpecial d
 def isSigned (d : Dec) : Bool := d.neg
 def isCanonical (_ : Dec) : Bool := true
 
-/-- `Decimal.is_normal`, _pydecimal.py:3100-3106. -/
+/-- `Decimal.is_normal`, _pydecimal.py:3200-3206. -/
 def isNormal (c : Ctx) (d : Dec) : Bool :=
   if isSpecial d || !decBool d then false else decide (c.emin ≤ d.adjusted)
 
-/-- `Decimal.is_subnormal`, _pydecimal.py:3120-3126. -/
+/-- `Decimal.is_subnormal`, _pydecimal.py:3220-3226. -/
 def isSubnormal (c : Ctx) (d : Dec) : Bool :=
   if isSpecial d || !decBool d then false else decide (d.adjusted < c.emin)
 
-/-- `Decimal.number_class`, _pydecimal.py:3567-3607. -/
+/-- `Decimal.number_class`, _pydecimal.py:3667-3707. -/
 def numberClass (c : Ctx) (d : Dec) : String :=
   if isSnan d then "sNaN" else if isQnan d then "NaN"
   else if isinfinity d = 1 then "+Infinity" else if isinfinity d = -1 then "-Infinity"
@@ -67,7 +67,7 @@ def numberClass (c : Ctx) (d : Dec) : String :=
   else if d.neg then "-Normal" else "+Normal"
 
 /-- `Decimal.radix`, `canonical`, `conjugate`, `real`, `imag`,
-_pydecimal.py:3609-3611, :2879-2885, :1596-1597, :1589-1594: `radix` is
+_pydecimal.py:3709-3711, :2979-2985, :1695-1696, :1688-1693: `radix` is
 `Decimal(10)`, the next three return `self`, `imag` is `Decimal(0)`. -/
 def radixD : Dec := .fin false 10 0
 def canonicalD (d : Dec) : Dec := d
@@ -75,32 +75,32 @@ def conjugateD (d : Dec) : Dec := d
 def realD (d : Dec) : Dec := d
 def imagD (_ : Dec) : Dec := .fin false 0 0
 
-/-- `Decimal.same_quantum`, _pydecimal.py:2561-2574. -/
+/-- `Decimal.same_quantum`, _pydecimal.py:2661-2674. -/
 def sameQuantum : Dec → Dec → Bool
   | .fin _ _ e1, .fin _ _ e2 => e1 == e2
   | a, b => (isNanP a && isNanP b) || (isInfinite a && isInfinite b)
 
-/-- `Decimal.copy_abs`, `copy_negate`, _pydecimal.py:2984-2993. -/
+/-- `Decimal.copy_abs`, `copy_negate`, _pydecimal.py:3084-3093. -/
 def copyAbs (d : Dec) : Dec := d.withSign false
 def copyNegate (d : Dec) : Dec := negate d
 
 /-! ## Unary operators -/
 
-/-- `Decimal.__neg__`, _pydecimal.py:1045-1065. -/
+/-- `Decimal.__neg__`, _pydecimal.py:1137-1157. -/
 def dunderNeg (c : Ctx) (a : Dec) : DM Dec := do
   if isSpecial a then
     if let some ans ← checkNans c a none then return ans
   let ans := if !decBool a && c.rounding != .floor then copyAbs a else copyNegate a
   fix c ans
 
-/-- `Decimal.__pos__`, _pydecimal.py:1067-1086. -/
+/-- `Decimal.__pos__`, _pydecimal.py:1159-1178. -/
 def dunderPos (c : Ctx) (a : Dec) : DM Dec := do
   if isSpecial a then
     if let some ans ← checkNans c a none then return ans
   let ans := if !decBool a && c.rounding != .floor then copyAbs a else a
   fix c ans
 
-/-- `Decimal.__abs__`, _pydecimal.py:1088-1108. -/
+/-- `Decimal.__abs__`, _pydecimal.py:1180-1200. -/
 def dunderAbs (c : Ctx) (a : Dec) (round : Bool := true) : DM Dec := do
   if !round then return copyAbs a
   if isSpecial a then
@@ -110,12 +110,12 @@ def dunderAbs (c : Ctx) (a : Dec) (round : Bool := true) : DM Dec := do
 /-! ## Comparisons -/
 
 /-- The NaN operand a comparison reports, `InvalidOperation.handle` with an
-argument, _pydecimal.py:155-159: the same sign and payload, quiet. -/
+argument, _pydecimal.py:158-162: the same sign and payload, quiet. -/
 def quietOf (c : Ctx) : Dec → Dec
   | .nan neg _ p => fixNan c neg false p
   | d => d
 
-/-- `Decimal._compare_check_nans`, _pydecimal.py:730-761: an ordering with any
+/-- `Decimal._compare_check_nans`, _pydecimal.py:822-853: an ordering with any
 NaN signals InvalidOperation. -/
 def compareCheckNans (c : Ctx) (a b : Dec) : DM (Option Dec) := do
   if isSpecial a || isSpecial b then
@@ -133,12 +133,12 @@ def cmpInt (a b : Dec) : Int :=
   | .eq => 0
   | .gt => 1
 
-/-- `Decimal.__eq__`, _pydecimal.py:834-840, for Decimal operands. -/
+/-- `Decimal.__eq__`, _pydecimal.py:926-932, for Decimal operands. -/
 def dunderEq (c : Ctx) (a b : Dec) : DM Bool := do
   if (← checkNans c a (some b)).isSome then return false
   return cmpInt a b == 0
 
-/-- `Decimal.__lt__`, `__le__`, `__gt__`, `__ge__`, _pydecimal.py:842-876, for
+/-- `Decimal.__lt__`, `__le__`, `__gt__`, `__ge__`, _pydecimal.py:934-968, for
 Decimal operands. -/
 def dunderOrd (test : Int → Bool) (c : Ctx) (a b : Dec) : DM Bool := do
   if (← compareCheckNans c a b).isSome then return false
@@ -152,23 +152,23 @@ def dunderGe := dunderOrd (fun x => decide (x ≥ 0))
 /-- `Decimal(i)` for `i` in `-1, 0, 1`. -/
 def decOfInt (i : Int) : Dec := .fin (i < 0) i.natAbs 0
 
-/-- `Decimal.compare`, _pydecimal.py:878-894. -/
+/-- `Decimal.compare`, _pydecimal.py:970-986. -/
 def compareD (c : Ctx) (a b : Dec) : DM Dec := do
   if isSpecial a || isSpecial b then
     if let some ans ← checkNans c a (some b) then return ans
   return decOfInt (cmpInt a b)
 
-/-- `Decimal.compare_signal`, _pydecimal.py:2887-2897. -/
+/-- `Decimal.compare_signal`, _pydecimal.py:2987-2997. -/
 def compareSignal (c : Ctx) (a b : Dec) : DM Dec := do
   if let some ans ← compareCheckNans c a b then return ans
   compareD c a b
 
-/-- `Decimal.compare_total_mag`, _pydecimal.py:2972-2982. -/
+/-- `Decimal.compare_total_mag`, _pydecimal.py:3072-3082. -/
 def compareTotalMag (a b : Dec) : Int := compareTotal (copyAbs a) (copyAbs b)
 
 /-! ## `max`, `min`, `max_mag`, `min_mag` -/
 
-/-- The NaN handling these four share, _pydecimal.py:2793-2806: `none` to go on. -/
+/-- The NaN handling these four share, _pydecimal.py:2893-2906: `none` to go on. -/
 def minmaxNans (c : Ctx) (a b : Dec) : DM (Option Dec) := do
   if isSpecial a || isSpecial b then
     let sn := isnan a
@@ -179,8 +179,8 @@ def minmaxNans (c : Ctx) (a b : Dec) : DM (Option Dec) := do
       return ← checkNans c a (some b)
   return none
 
-/-- `Decimal.max`, `min`, _pydecimal.py:2780-2854, with the comparison `cmp`
-(`_cmp`, or on magnitudes for `max_mag`, `min_mag`, :3415-3473): `pickA` says which
+/-- `Decimal.max`, `min`, _pydecimal.py:2880-2954, with the comparison `cmp`
+(`_cmp`, or on magnitudes for `max_mag`, `min_mag`, :3515-3573): `pickA` says which
 operand wins when `c == -1`. -/
 def minmaxBy (cmp : Dec → Dec → Int) (lowWins : Bool) (c : Ctx) (a b : Dec) : DM Dec := do
   if let some ans ← minmaxNans c a b then return ans
@@ -197,8 +197,8 @@ def minMag := minmaxBy magCmp true
 
 /-! ## `logb` -/
 
-/-- `Decimal.logb`, _pydecimal.py:3288-3316. `DivisionByZero.handle` returns
-`_SignedInfinity[sign]`, :184-185, here `-Infinity`. -/
+/-- `Decimal.logb`, _pydecimal.py:3388-3416. `DivisionByZero.handle` returns
+`_SignedInfinity[sign]`, :187-188, here `-Infinity`. -/
 def logb (c : Ctx) (a : Dec) : DM Dec := do
   if let some ans ← checkNans c a none then return ans
   if isinfinity a ≠ 0 then return .inf false
@@ -209,12 +209,12 @@ def logb (c : Ctx) (a : Dec) : DM Dec := do
 
 /-! ## Logical operations -/
 
-/-- `Decimal._islogical`, _pydecimal.py:3318-3330. -/
+/-- `Decimal._islogical`, _pydecimal.py:3418-3430. -/
 def islogical : Dec → Bool
   | .fin false co 0 => (Nat.toDigits 10 co).all (fun d => d == '0' || d == '1')
   | _ => false
 
-/-- One operand of `Decimal._fill_logical`, _pydecimal.py:3332-3343: pad on the
+/-- One operand of `Decimal._fill_logical`, _pydecimal.py:3432-3443: pad on the
 left, or keep the last `prec` characters. -/
 def fillDigits (prec : Nat) (s : List Char) : List Char :=
   if s.length < prec then List.replicate (prec - s.length) '0' ++ s
@@ -229,7 +229,7 @@ def fillLogical (prec : Nat) (a b : List Char) : List Char × List Char :=
 def digitOp (f : Bool → Bool → Bool) (a b : List Char) : List Char :=
   (a.zip b).map (fun p => if f (p.1 == '1') (p.2 == '1') then '1' else '0')
 
-/-- `logical_and`, `logical_or`, `logical_xor`, _pydecimal.py:3345-3413. -/
+/-- `logical_and`, `logical_or`, `logical_xor`, _pydecimal.py:3445-3513. -/
 def logicalOp (f : Bool → Bool → Bool) (c : Ctx) (a b : Dec) : DM Dec := do
   if !islogical a || !islogical b then return ← invalid c
   match a, b with
@@ -242,14 +242,14 @@ def logicalAnd := logicalOp (· && ·)
 def logicalOr := logicalOp (· || ·)
 def logicalXor := logicalOp (fun x y => x != y)
 
-/-- `Decimal.logical_invert`, _pydecimal.py:3365-3373. -/
+/-- `Decimal.logical_invert`, _pydecimal.py:3465-3473. -/
 def logicalInvert (c : Ctx) (a : Dec) : DM Dec :=
   logicalXor c a (.fin false (digitsValue (List.replicate c.prec '1')) 0)
 
 /-! ## `rotate`, `shift`, `scaleb` -/
 
 /-- The checks `rotate`, `shift`, `scaleb` share up to the range test:
-_pydecimal.py:3619-3626. `.inl r` returns `r`; `.inr` gives `int(other)`. -/
+_pydecimal.py:3719-3726. `.inl r` returns `r`; `.inr` gives `int(other)`. -/
 def intArg (c : Ctx) (a b : Dec) (lo hi : Int) : DM (Dec ⊕ Int) := do
   if let some ans ← checkNans c a (some b) then return .inl ans
   match b with
@@ -261,7 +261,7 @@ def intArg (c : Ctx) (a b : Dec) (lo hi : Int) : DM (Dec ⊕ Int) := do
     return .inr v
   | _ => return .inl (← invalid c)
 
-/-- `Decimal.rotate`, _pydecimal.py:3613-3644: `rotdig` is the coefficient
+/-- `Decimal.rotate`, _pydecimal.py:3713-3744: `rotdig` is the coefficient
 reduced to `prec` digits; rotating left by `torot` (right when negative). -/
 def rotate (c : Ctx) (a b : Dec) : DM Dec := do
   match ← intArg c a b (-(c.prec : Int)) c.prec with
@@ -276,7 +276,7 @@ def rotate (c : Ctx) (a b : Dec) : DM Dec := do
       return .fin neg rotated e
     | d => return d
 
-/-- `Decimal.shift`, _pydecimal.py:3671-3707. -/
+/-- `Decimal.shift`, _pydecimal.py:3771-3807. -/
 def shift (c : Ctx) (a b : Dec) : DM Dec := do
   match ← intArg c a b (-(c.prec : Int)) c.prec with
   | .inl r => return r
@@ -289,7 +289,7 @@ def shift (c : Ctx) (a b : Dec) : DM Dec := do
       return .fin neg shifted e
     | d => return d
 
-/-- `Decimal.scaleb`, _pydecimal.py:3646-3669. -/
+/-- `Decimal.scaleb`, _pydecimal.py:3746-3769. -/
 def scaleb (c : Ctx) (a b : Dec) : DM Dec := do
   let lim := 2 * (c.emax + c.prec)
   match ← intArg c a b (-lim) lim with
@@ -301,16 +301,16 @@ def scaleb (c : Ctx) (a b : Dec) : DM Dec := do
 
 /-! ## `next_*` -/
 
-/-- `context._ignore_all_flags()` on a copy, _pydecimal.py:3487-3488: nothing is
+/-- `context._ignore_all_flags()` on a copy, _pydecimal.py:3587-3588: nothing is
 flagged and nothing raises. -/
 def quietly {α : Type} (x : DM α) : DM α := fun fl => do
   let (a, _) ← x fl
   pure (a, fl)
 
-/-- The context copy `next_*` work in, _pydecimal.py:3486-3488. -/
+/-- The context copy `next_*` work in, _pydecimal.py:3586-3588. -/
 def quietCtx (c : Ctx) (m : Rounding) : Ctx := { c with rounding := m, traps := [] }
 
-/-- `Decimal.next_minus`, _pydecimal.py:3475-3496. -/
+/-- `Decimal.next_minus`, _pydecimal.py:3575-3596. -/
 def nextMinus (c : Ctx) (a : Dec) : DM Dec := do
   if let some ans ← checkNans c a none then return ans
   if isinfinity a = -1 then return .inf true
@@ -321,7 +321,7 @@ def nextMinus (c : Ctx) (a : Dec) : DM Dec := do
     if cmpVal newSelf a ≠ .eq then return newSelf
     sub q a (.fin false 1 (q.etiny - 1))
 
-/-- `Decimal.next_plus`, _pydecimal.py:3498-3519. -/
+/-- `Decimal.next_plus`, _pydecimal.py:3598-3619. -/
 def nextPlus (c : Ctx) (a : Dec) : DM Dec := do
   if let some ans ← checkNans c a none then return ans
   if isinfinity a = 1 then return .inf false
@@ -332,7 +332,7 @@ def nextPlus (c : Ctx) (a : Dec) : DM Dec := do
     if cmpVal newSelf a ≠ .eq then return newSelf
     add q a (.fin false 1 (q.etiny - 1))
 
-/-- `Decimal.next_toward`, _pydecimal.py:3521-3565. -/
+/-- `Decimal.next_toward`, _pydecimal.py:3621-3665. -/
 def nextToward (c : Ctx) (a b : Dec) : DM Dec := do
   if let some ans ← checkNans c a (some b) then return ans
   let cmp := cmpInt a b
@@ -352,7 +352,7 @@ def nextToward (c : Ctx) (a b : Dec) : DM Dec := do
 
 /-! ## `fma` -/
 
-/-- `Decimal.fma`, _pydecimal.py:1875-1917. -/
+/-- `Decimal.fma`, _pydecimal.py:1975-2017. -/
 def fma (c : Ctx) (a b t : Dec) : DM Dec := do
   match a, b with
   | .fin sa ca ea, .fin sb cb eb =>
@@ -376,13 +376,13 @@ def fma (c : Ctx) (a b t : Dec) : DM Dec := do
 
 /-! ## `to_eng_string`, `__repr__`, `_round` -/
 
-/-- `dotplace` of `__str__(eng=True)`, _pydecimal.py:1005-1016. -/
+/-- `dotplace` of `__str__(eng=True)`, _pydecimal.py:1097-1108. -/
 def engDot (isZeroInt : Bool) (e leftdigits : Int) : Int :=
   if e ≤ 0 ∧ leftdigits > -6 then leftdigits
   else if isZeroInt then (leftdigits + 1) % 3 - 1
   else (leftdigits - 1) % 3 + 1
 
-/-- The finite branch of `__str__(eng=True)`, _pydecimal.py:999-1034. -/
+/-- The finite branch of `__str__(eng=True)`, _pydecimal.py:1091-1126. -/
 def engFinite (neg : Bool) (ds : List Char) (e : Int) (caps : Bool) : List Char :=
   let sign := if neg then ['-'] else []
   let leftdigits : Int := e + ds.length
@@ -395,16 +395,16 @@ def engFinite (neg : Bool) (ds : List Char) (e : Int) (caps : Bool) : List Char 
     (if caps then 'E' else 'e') :: fmtSigned (leftdigits - dotplace)
   sign ++ intpart ++ fracpart ++ exp
 
-/-- `Decimal.to_eng_string`, _pydecimal.py:1036-1043. -/
+/-- `Decimal.to_eng_string`, _pydecimal.py:1128-1135. -/
 def toEng (d : Dec) (caps : Bool := true) : List Char :=
   match d with
   | .fin neg c e => engFinite neg (Nat.toDigits 10 c) e caps
   | d => toSci d caps
 
-/-- `Decimal.__repr__`, _pydecimal.py:979-982. -/
+/-- `Decimal.__repr__`, _pydecimal.py:1071-1074. -/
 def reprD (d : Dec) : List Char := "Decimal('".toList ++ toSci d ++ "')".toList
 
-/-- `Decimal._round`, _pydecimal.py:2610-2631, for `places ≥ 1`. -/
+/-- `Decimal._round`, _pydecimal.py:2710-2731, for `places ≥ 1`. -/
 def roundPlaces (d : Dec) (places : Nat) (m : Rounding) : Py Dec := do
   match d with
   | .fin _ co _ =>

@@ -12,26 +12,26 @@ namespace PyLean.LongObj
 
 open PyLean PyLean.MathInt
 
-/-- The constant `_PyLong_GetOne()`, longobject.c:4431. -/
+/-- The constant `_PyLong_GetOne()`, longobject.c:4534. -/
 def longOne : Long := ⟨false, [1]⟩
 
 theorem longOne_eq : longOne = Long.ofInt 1 := by decide
 
-/-- `_PyLong_IsPositive(x)`, pycore_long.h:231-234. -/
+/-- `_PyLong_IsPositive(x)`, pycore_long.h:230-233. -/
 def Long.isPositive (x : Long) : Bool := !x.neg && !x.ds.isEmpty
 
-/-- The sign test at longobject.c:4422-4423 and :4469-4470. -/
+/-- The sign test at longobject.c:4525-4526 and :4572-4573. -/
 def needsFix (md w : Long) : Bool :=
   (md.neg && w.isPositive) || (md.isPositive && w.neg)
 
-/-- `fast_floor_div` and `fast_mod`, longobject.c:4275-4315, on one-digit objects,
+/-- `fast_floor_div` and `fast_mod`, longobject.c:4378-4418, on one-digit objects,
 returned through `PyLong_FromLong`. -/
 def fastPair (v w : Long) : Long × Long :=
   let p := fastDivmod v.toInt w.toInt
   (Long.ofInt p.1, Long.ofInt p.2)
 
-/-- `l_divmod(v, w, &div, &mod)`, longobject.c:4379-4450. The `_pylong` branch is
-`pylong_int_divmod`, :4320-4354, with `MathInt.pylongIntDivmod` as its result. -/
+/-- `l_divmod(v, w, &div, &mod)`, longobject.c:4482-4553. The `_pylong` branch is
+`pylong_int_divmod`, :4423-4457, with `MathInt.pylongIntDivmod` as its result. -/
 def lDivmod (v w : Long) : Py (Long × Long) :=
   if v.ds.length = 1 ∧ w.ds.length = 1 then .ok (fastPair v w)
   else if w.ds.length > 300 ∧ (v.ds.length : Int) - w.ds.length > 150 then
@@ -50,7 +50,7 @@ def lDivmod (v w : Long) : Py (Long × Long) :=
           | .ok d => .ok (d, m)
       else .ok (div, md)
 
-/-- `l_mod(v, w, &mod)`, longobject.c:4457-4480. -/
+/-- `l_mod(v, w, &mod)`, longobject.c:4560-4583. -/
 def lMod (v w : Long) : Py Long :=
   if v.ds.length = 1 ∧ w.ds.length = 1 then .ok (fastPair v w).2
   else
@@ -58,7 +58,7 @@ def lMod (v w : Long) : Py Long :=
     | .error e => .error e
     | .ok md => if needsFix md w then longAdd md w else .ok md
 
-/-- `long_div(a, b)`, longobject.c:4483-4496. -/
+/-- `long_div(a, b)`, longobject.c:4586-4599. -/
 def longDiv (a b : Long) : Py Long :=
   if a.ds.length = 1 ∧ b.ds.length = 1 then .ok (fastPair a b).1
   else
@@ -66,10 +66,10 @@ def longDiv (a b : Long) : Py Long :=
     | .error e => .error e
     | .ok p => .ok p.1
 
-/-- `long_mod(a, b)`, longobject.c:4761-4770. -/
+/-- `long_mod(a, b)`, longobject.c:4864-4873. -/
 def longMod (a b : Long) : Py Long := lMod a b
 
-/-- `long_divmod(a, b)`, longobject.c:4773-4793. -/
+/-- `long_divmod(a, b)`, longobject.c:4876-4885. -/
 def longDivmod (a b : Long) : Py (Long × Long) := lDivmod a b
 
 /-- Apply `Long.ofInt` to both parts of a `divmod` result. -/
@@ -172,7 +172,7 @@ theorem lDivmod_floor (v w : Int) (hs : DivSized v w) (hw : w ≠ 0) :
   obtain ⟨q, r, h1, h2⟩ := (divmod_floor_proven v w).2 hw
   exact ⟨q, r, by rw [lDivmod_eq v w hs, h1]; rfl, h2⟩
 
-/-- The sign fix-up of a remainder, longobject.c:3184-3191 and :3228-3234. -/
+/-- The sign fix-up of a remainder, longobject.c:3266-3273 and :3310-3316. -/
 theorem rem_sign (a : Int) (R : Nat) :
     (if (decide (a < 0) && !(digitsOf R).isEmpty) = true then
         (⟨false, digitsOf R⟩ : Long).flip else ⟨false, digitsOf R⟩) =

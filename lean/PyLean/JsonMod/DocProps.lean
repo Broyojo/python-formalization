@@ -142,7 +142,7 @@ theorem cFind_ctrl_exists : ∀ (t rest : PStr), (∀ c ∈ t, c ≠ 34 ∧ c �
       simp [cFind, h34, h92, h31, hk]
 
 /-- `strict` on a string literal without quotes or backslashes (documented,
-decoder.py:322-325): with `strict=False` every such literal is accepted and
+decoder.py:334-337): with `strict=False` every such literal is accepted and
 gives its characters back, control characters included; with `strict=True` it
 is accepted exactly when it has no character in the range 0-31. In both twins. -/
 def StrictLiteral : Prop :=

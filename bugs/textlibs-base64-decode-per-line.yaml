@@ -40,8 +40,8 @@ promised_by: |
   The two functions document the same format, and RFC 2045 section 6.8 has decoders ignore line
   breaks. Neither function's docs state this directly.
 cause: |
-  Lib/base64.py:550-554 calls binascii.a2b_base64(line) per line, with no state kept between calls.
-  Lib/base64.py:583-586 makes one call over everything.
+  Lib/base64.py:424-428 calls binascii.a2b_base64(line) per line, with no state kept between calls.
+  Lib/base64.py:456-459 makes one call over everything.
 possible_fix: |
   Read the whole input and call a2b_base64 once, or keep the undecoded remainder of each line for
   the next, or state in the docs that each line must hold whole groups.

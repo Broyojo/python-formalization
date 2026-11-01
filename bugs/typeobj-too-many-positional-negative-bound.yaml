@@ -6,8 +6,8 @@ module: typeobj
 files: [Python/ceval.c]
 functions: ["too_many_positional", "PyFunction_SetDefaults", "func_set_defaults"]
 summary: |
-  `__defaults__` accepts a tuple of any length (funcobject.c:842). The rest of the call path
-  copes with more defaults than parameters, using the last ones (ceval.c:1858, m < 0), but
+  `__defaults__` accepts a tuple of any length (funcobject.c:827). The rest of the call path
+  copes with more defaults than parameters, using the last ones (ceval.c:1915, m < 0), but
   `too_many_positional` prints `co_argcount - defcount` unchecked:
 
       def f(a): pass
@@ -40,10 +40,10 @@ observed: |
 promised_by: |
   invariant: an argument count in an error message is not negative.
 cause: |
-  Python/ceval.c:1510 computes `atleast = co_argcount - defcount` and does not clamp it;
-  Objects/funcobject.c:842 (`func_set_defaults`) does not limit the tuple's length.
+  Python/ceval.c:1635 computes `atleast = co_argcount - defcount` and does not clamp it;
+  Objects/funcobject.c:827 (`func_set_defaults`) does not limit the tuple's length.
 possible_fix: |
-  `Py_MAX(0, co_argcount - defcount)` at ceval.c:1510.
+  `Py_MAX(0, co_argcount - defcount)` at ceval.c:1635.
 duplicates:
   issues: []
   queries: ["__defaults__ longer than positional arguments takes from"]

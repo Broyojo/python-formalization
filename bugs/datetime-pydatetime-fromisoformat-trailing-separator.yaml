@@ -24,7 +24,7 @@ reproducer: |
       print('REPRODUCED datetime-pydatetime-fromisoformat-trailing-separator')
 expected: ValueError, as from the C implementation.
 promised_by: C/Python twin agreement.
-cause: Lib/_pydatetime.py:1938 (`if tstr:`) falls back to the date-only path for an empty time.
+cause: Lib/_pydatetime.py:1983 (`if tstr:`) falls back to the date-only path for an empty time.
 possible_fix: Take the date-only path only when the string ends at the separator location (as C does).
 reproduces:
   python3 (3.14.7): REPRODUCED

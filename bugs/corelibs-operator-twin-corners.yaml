@@ -53,7 +53,7 @@ observed: |
 promised_by: |
   Nothing explicit.
 cause: |
-  Lib/operator.py:97, :255, :271-274, against Objects/abstract.c:1400-1437, Modules/_operator.c:1283-1345, :1178.
+  Lib/operator.py:97, :255, :271-274, against Objects/abstract.c:1410-1447, Modules/_operator.c:1283-1345, :1178.
 possible_fix: |
   None needed.
 duplicates:

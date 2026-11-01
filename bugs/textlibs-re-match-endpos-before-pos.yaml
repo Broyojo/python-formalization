@@ -26,10 +26,10 @@ observed: |
   python3 3.14.7: <re.Match span=(1, 1)>, None. REPRODUCED.
   main 3.16.0a1+dev (the vendored checkout predates the fix): the same. REPRODUCED.
 promised_by: |
-  Doc/library/re.rst:1262-1268 on endpos: "If endpos is less than pos, no match will be found."
+  Doc/library/re.rst:1446-1452 on endpos: "If endpos is less than pos, no match will be found."
 cause: |
-  Modules/_sre/sre.c:799 and :844 call sre_match with no test of start against end; only
-  Modules/_sre/sre_lib.h:1705 has one, for search.
+  Modules/_sre/sre.c:800 and :846 call sre_match with no test of start against end; only
+  Modules/_sre/sre_lib.h:1760 has one, for search.
 possible_fix: |
   Already fixed by PR 160317, merged 2026-10-31; backports 161043 and 161044 were open when checked.
 duplicates: |

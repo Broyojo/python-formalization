@@ -19,7 +19,7 @@ def objectEntries : List Entry := [
   { id := "unicodeobj-codec-utf8-chunks", pyFile := "Objects/unicodeobject.c"
     pyFns := ["unicode_decode_utf8_impl"]
     statement := "Decoding UTF-8 in two chunks through consumed gives what decoding at once gives, wherever the input is cut, for every standard handler, surrogatepass and the truncated surrogate case included."
-    source := "the contract of incremental decoding, Doc/library/codecs.rst; unicodeobject.c:5346-5353"
+    source := "the contract of incremental decoding, Doc/library/codecs.rst; unicodeobject.c:5227-5234"
     status := .proven, prop := ``Utf8Chunks, thm := some ``utf8Chunks_proven },
   { id := "unicodeobj-codec-utf16-chunks", pyFile := "Objects/unicodeobject.c"
     pyFns := ["PyUnicode_DecodeUTF16Stateful"]
@@ -44,12 +44,12 @@ def objectEntries : List Entry := [
   { id := "unicodeobj-utf8-std-is-callback", pyFile := "Objects/unicodeobject.c"
     pyFns := ["unicode_decode_utf8_impl"]
     statement := "The ignore, replace and surrogateescape handlers written out inside the UTF-8 decoder do what the registered handlers of those names do through the Python path, for every input and every handler."
-    source := "implementation against itself: inline handlers against Python/codecs.c, unicodeobject.c:5371-5396"
+    source := "implementation against itself: inline handlers against Python/codecs.c, unicodeobject.c:5252-5277"
     status := .proven, prop := ``Utf8StdIsCallback, thm := some ``utf8StdIsCallback_proven },
   { id := "unicodeobj-ascii-decode-spec", pyFile := "Objects/unicodeobject.c"
     pyFns := ["PyUnicode_DecodeASCII"]
     statement := "The replace, surrogateescape and ignore handlers written out inside the ASCII decoder and its fast paths give what the generic handler path gives, for every handler, and the kind of the result is canonical."
-    source := "implementation against itself: inline handlers against Python/codecs.c, unicodeobject.c:7630-7664"
+    source := "implementation against itself: inline handlers against Python/codecs.c, unicodeobject.c:7504-7538"
     status := .proven, prop := ``AsciiDecodeSpec, thm := some ``asciiDecodeSpec_proven },
   { id := "unicodeobj-writer-decode-any-handler", pyFile := "Objects/unicodeobject.c"
     pyFns := ["unicode_decode_utf8_writer"]
@@ -74,17 +74,17 @@ def objectEntries : List Entry := [
   { id := "unicodeobj-join-errors", pyFile := "Objects/unicodeobject.c"
     pyFns := ["_PyUnicode_JoinArray"]
     statement := "With two or more items the separator is checked first, the first item that is not a str is named by its index, and a result too long for Py_ssize_t raises OverflowError."
-    source := "invariant: no wraparound; unicodeobject.c:10320-10368"
+    source := "invariant: no wraparound; unicodeobject.c:10085-10133"
     status := .proven, prop := ``JoinErrors, thm := some ``joinErrors_proven },
   { id := "unicodeobj-join-sequence", pyFile := "Objects/unicodeobject.c"
     pyFns := ["PyUnicode_Join"]
     statement := "An iterator gives what a list of its items gives, the first exception from next is raised as it is, a TypeError from __iter__ becomes 'can only join an iterable', and any other exception from __iter__ is kept."
-    source := "implementation against itself: list against iterator; Objects/abstract.c:2095-2120"
+    source := "implementation against itself: list against iterator; Objects/abstract.c:2104-2129"
     status := .proven, prop := ``JoinSequence, thm := some ``joinSequence_proven },
   { id := "unicodeobj-join-memcpy-safe", pyFile := "Objects/unicodeobject.c"
     pyFns := ["_PyUnicode_JoinArray"]
     statement := "When join takes the memcpy path, the separator and every item have the byte width of the result."
-    source := "invariant: the memcpy of kind * len bytes at unicodeobject.c:10399-10409"
+    source := "invariant: the memcpy of kind * len bytes at unicodeobject.c:10164-10174"
     status := .proven, prop := ``JoinMemcpySafe, thm := some ``joinMemcpySafe_proven },
   { id := "unicodeobj-intern-start-world", pyFile := "Objects/unicodeobject.c"
     pyFns := []
@@ -104,7 +104,7 @@ def objectEntries : List Entry := [
   { id := "unicodeobj-intern-spec", pyFile := "Objects/unicodeobject.c"
     pyFns := ["intern_common", "immortalize_interned"]
     statement := "Interning keeps the tables consistent and every object's text, returns an object of the same text, leaves non-str objects and instances of subclasses alone, and gives an interned result for an exact str, not mortal if immortality was asked for."
-    source := "invariant of the interned tables; unicodeobject.c:16010-16014"
+    source := "invariant of the interned tables; unicodeobject.c:14306-14310"
     status := .proven, prop := ``InternSpec, thm := some ``internSpec_proven },
   { id := "unicodeobj-intern-idempotent", pyFile := "Objects/unicodeobject.c"
     pyFns := []
@@ -139,7 +139,7 @@ def objectEntries : List Entry := [
   { id := "unicodeobj-iter-setstate", pyFile := "Objects/unicodeobject.c"
     pyFns := ["unicodeiter_setstate"]
     statement := "__setstate__ moves to where s[v:] starts, for every Py_ssize_t, leaves an exhausted iterator exhausted, and raises OverflowError or TypeError otherwise, for an exhausted iterator too."
-    source := "invariant: the clamp at unicodeobject.c:16421-16426"
+    source := "invariant: the clamp at unicodeobject.c:14718-14723"
     status := .proven, prop := ``IterSetstateSpec, thm := some ``iterSetstateSpec_proven },
   { id := "unicodeobj-iter-reduce-round-trip", pyFile := "Objects/unicodeobject.c"
     pyFns := ["unicodeiter_reduce"]
@@ -149,7 +149,7 @@ def objectEntries : List Entry := [
   { id := "unicodeobj-fromformat-no-negative-copy", pyFile := "Objects/unicodeobject.c"
     pyFns := []
     statement := "No format and no arguments of the right types reach a copy with a negative count."
-    source := "invariant: no crash; assert(0 <= how_many) at unicodeobject.c:1485"
+    source := "invariant: no crash; assert(0 <= how_many) at unicodeobject.c:1393"
     status := .refuted, prop := ``FromFormatNoNegativeCopy, thm := some ``fromFormatNoNegativeCopy_refuted
     bug := some "unicodeobj-fromformat-negative-precision" },
   { id := "unicodeobj-fromformat-negative-star-omitted", pyFile := "Objects/unicodeobject.c"
@@ -222,7 +222,7 @@ def objectEntries : List Entry := [
   { id := "unicodeobj-writer-consumed-failure", pyFile := "Objects/unicodeobject.c"
     pyFns := []
     statement := "When the stateful decoder raises, PyUnicodeWriter_DecodeUTF8Stateful raises the same exception, keeps no text, and sets *consumed to 0, for every built-in handler."
-    source := "implementation against itself: the writer path against the stateful decoder; unicodeobject.c:14185-14190"
+    source := "implementation against itself: the writer path against the stateful decoder; unicodeobject.c@3.14.7:14185-14190"
     status := .proven, prop := ``WriterConsumedFailure, thm := some ``writerConsumedFailure_proven },
   { id := "unicodeobj-writer-cap-value", pyFile := "Objects/unicodeobject.c"
     pyFns := []

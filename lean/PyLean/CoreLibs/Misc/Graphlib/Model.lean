@@ -80,7 +80,7 @@ def init (graph : Option (List (α × List α))) : Py (Sorter α) :=
   | none => .ok Sorter.empty
   | some g => g.foldlM (fun s kv => add s kv.1 kv.2) Sorter.empty
 
-/-- The `while stack:` backtracking loop of `_find_cycle`, Lib/graphlib.py:228-236. `frames` is
+/-- The `while stack:` backtracking loop of `_find_cycle`, Lib/graphlib.py:227-239. `frames` is
 `stack` and `itstack` zipped, top first, each frame holding the successors its iterator has not
 produced yet. `none` is the `else: break` exit. -/
 def backtrack : List (α × List α) → Option (α × List (α × List α))
@@ -88,7 +88,7 @@ def backtrack : List (α × List α) → Option (α × List (α × List α))
   | (n, s :: rest) :: fr => some (s, (n, rest) :: fr)
   | (_, []) :: fr => backtrack fr
 
-/-- `stack[node2stacki[node]:] + [node]`, Lib/graphlib.py:218, on top-first frames. -/
+/-- `stack[node2stacki[node]:] + [node]`, Lib/graphlib.py:217, on top-first frames. -/
 def cycleOf (frames : List (α × List α)) (node : α) : List α :=
   node :: (((frames.map (·.1)).takeWhile (· ≠ node)).reverse ++ [node])
 
@@ -98,7 +98,7 @@ def succs (m : List (NodeInfo α)) (node : α) : List α :=
   | some i => i.successors
   | none => []
 
-/-- The `while True:` loop of `_find_cycle`, Lib/graphlib.py:213-236. `node in node2stacki` is
+/-- The `while True:` loop of `_find_cycle`, Lib/graphlib.py:214-239. `node in node2stacki` is
 membership in `frames`. Returns the updated `seen`, or the cycle. -/
 def walk (m : List (NodeInfo α)) :
     Nat → α → List (α × List α) → List α → Py (List α ⊕ List α)
@@ -122,7 +122,7 @@ def walk (m : List (NodeInfo α)) :
 def walkFuel (m : List (NodeInfo α)) : Nat :=
   m.foldl (fun acc i => acc + i.successors.length + 1) 1
 
-/-- The `for node in n2i:` loop of `_find_cycle`, Lib/graphlib.py:209-212. -/
+/-- The `for node in n2i:` loop of `_find_cycle`, Lib/graphlib.py:210-213. -/
 def forNodes (m : List (NodeInfo α)) : List (NodeInfo α) → List α → Py (Option (List α))
   | [], _ => .ok none
   | i :: rest, seen =>
@@ -133,7 +133,7 @@ def forNodes (m : List (NodeInfo α)) : List (NodeInfo α) → List α → Py (O
       | .ok (.inr c) => .ok (some c)
       | .ok (.inl seen) => forNodes m rest seen
 
-/-- `TopologicalSorter._find_cycle`, Lib/graphlib.py:202-237. -/
+/-- `TopologicalSorter._find_cycle`, Lib/graphlib.py:203-240. -/
 def findCycle (m : List (NodeInfo α)) : Py (Option (List α)) := forNodes m m []
 
 /-- `CycleError("nodes are in a cycle", cycle)`; `str()` of an exception with two arguments is
@@ -223,7 +223,7 @@ def done (r : α → String) (s : Sorter α) (nodes : List α) : Sorter α × Py
   | none => (s, .error notPrepared)
   | some ready => doneLoop r nodes s ready
 
-/-- The `while self.is_active():` loop of `static_order`, Lib/graphlib.py:249-252. The accumulator
+/-- The `while self.is_active():` loop of `static_order`, Lib/graphlib.py:252-255. The accumulator
 collects what `yield from` has produced. -/
 def staticLoop (r : α → String) : Nat → Sorter α → List α → Sorter α × Py (List α)
   | 0, s, _ => (s, .error .modelFuel)
@@ -239,7 +239,7 @@ def staticLoop (r : α → String) : Nat → Sorter α → List α → Sorter α
         | (s, .error e) => (s, .error e)
         | (s, .ok ()) => staticLoop r fuel s (acc ++ group)
 
-/-- `TopologicalSorter.static_order`, Lib/graphlib.py:239-252, run to exhaustion. The loop body
+/-- `TopologicalSorter.static_order`, Lib/graphlib.py:242-255, run to exhaustion. The loop body
 runs at most once per node, plus the exit test. -/
 def staticOrder (r : α → String) (s : Sorter α) : Sorter α × Py (List α) :=
   match prepare r s with

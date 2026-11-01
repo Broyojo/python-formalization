@@ -49,7 +49,7 @@ observed: |
 promised_by: |
   Nothing explicit: the docs only say the key must compare with other keys.
 cause: |
-  Lib/functools.py:212-221 against Modules/_functoolsmodule.c:914-917 and :940.
+  Lib/functools.py:212-221 against Modules/_functoolsmodule.c:1009-1012 and :1035.
 possible_fix: |
   None needed.
 duplicates:

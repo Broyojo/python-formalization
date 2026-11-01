@@ -1,8 +1,8 @@
 import PyLean.PyIO.BufRaw
 
 /-!
-`Lib/_pyio.py`: `_BufferedIOMixin` (:765-873), `BufferedReader` (:1019-1217),
-`BufferedWriter` (:1219-1321), `BufferedRandom` (:1397-1468) over the scripted
+`Lib/_pyio.py`: `_BufferedIOMixin` (:765-873), `BufferedReader` (:1038-1236),
+`BufferedWriter` (:1238-1340), `BufferedRandom` (:1416-1487) over the scripted
 `Raw` (`kind` 0, 1, 2), with `RawIOBase.read`/`readall` of the raw (:610-638).
 -/
 
@@ -33,7 +33,7 @@ def checkClosed (msg : String) : PM Unit := do
 
 def resetRead : PM Unit := SM.mod fun s => { s with readBuf := [], readPos := 0 }
 
-/-- `RawIOBase.read(n)` for `n >= 0`, _pyio.py:610-627. -/
+/-- `RawIOBase.read(n)` for `n >= 0`, _pyio.py@3.14.7:610-627. -/
 def rawRead (n : Nat) : PM (Option (List Nat)) := do
   let s ← SM.get
   let (r, res) := s.raw.readinto n
@@ -56,7 +56,7 @@ def rawReadall : Nat → List Nat → PM (Option (List Nat))
 
 def tail (s : BufP) : List Nat := s.readBuf.drop s.readPos
 
-/-- The `while avail < n` loop of `_read_unlocked`, _pyio.py:1100-1106:
+/-- The `while avail < n` loop of `_read_unlocked`, _pyio.py:1119-1125:
 `(chunks, avail, nodata)`, with `nodata = none` for `None`. -/
 def readMore (n : Int) (wanted : Nat) : Nat → List Nat → Int → PM (List Nat × Int × Option (List Nat))
   | 0, _, _ => thr .modelFuel
@@ -70,7 +70,7 @@ def readMore (n : Int) (wanted : Nat) : Nat → List Nat → Int → PM (List Na
         else readMore n wanted fuel (chunks ++ d) (avail + d.length)
     else pure (chunks, avail, some [])
 
-/-- `_read_unlocked`, _pyio.py:1063-1113 (`n = -1` for "all"): `none` is `None`. -/
+/-- `_read_unlocked`, _pyio.py:1082-1132 (`n = -1` for "all"): `none` is `None`. -/
 def readUnlocked (n : Int) : PM (Option (List Nat)) := do
   let s ← SM.get
   let t := tail s
@@ -93,7 +93,7 @@ def readUnlocked (n : Int) : PM (Option (List Nat)) := do
       SM.mod fun s => { s with readBuf := out.drop k.toNat, readPos := 0 }
       if out ≠ [] then pure (some (out.take k.toNat)) else pure nodata
 
-/-- `_peek_unlocked`, _pyio.py:1112-1122. -/
+/-- `_peek_unlocked`, _pyio.py:1131-1141. -/
 def peekUnlocked (n : Nat) : PM (List Nat) := do
   let s ← SM.get
   let want := min n s.size
@@ -107,7 +107,7 @@ def peekUnlocked (n : Nat) : PM (List Nat) := do
   let s ← SM.get
   pure (tail s)
 
-/-- `BufferedWriter._flush_unlocked`, _pyio.py:1281-1296. -/
+/-- `BufferedWriter._flush_unlocked`, _pyio.py:1300-1315. -/
 def flushUnlocked : Nat → PM Unit
   | 0 => thr .modelFuel
   | fuel + 1 => do
@@ -130,7 +130,7 @@ def flushUnlocked : Nat → PM Unit
 
 def fuelF (s : BufP) : Nat := s.raw.ws.length + s.writeBuf.length + 3
 
-/-- `flush()`: `BufferedWriter.flush` (:1277-1279) or the mixin's (:808-811). -/
+/-- `flush()`: `BufferedWriter.flush` (:1296-1298) or the mixin's (:808-811). -/
 def flush : PM Val := do
   let s ← SM.get
   if s.kind = 0 then
@@ -148,7 +148,7 @@ def flushIfRandom : PM Unit := do
   let s ← SM.get
   if s.kind = 2 then let _ ← flush
 
-/-- `BufferedReader.read`, _pyio.py:1050-1061; `BufferedRandom.read`, :1440-1444. -/
+/-- `BufferedReader.read`, _pyio.py:1069-1080; `BufferedRandom.read`, :1459-1463. -/
 def read (size : Option Int) : PM Val := do
   flushIfRandom
   let n := size.getD (-1)
@@ -158,7 +158,7 @@ def read (size : Option Int) : PM Val := do
     | some d => .bytes d
     | none => .none)
 
-/-- `BufferedReader.read1`, _pyio.py:1137-1149. -/
+/-- `BufferedReader.read1`, _pyio.py:1156-1168. -/
 def read1 (size : Int) : PM Val := do
   flushIfRandom
   checkClosed "read of closed file"
@@ -172,14 +172,14 @@ def read1 (size : Int) : PM Val := do
     | some d => .bytes d
     | none => .none)
 
-/-- `BufferedReader.peek`, _pyio.py:1115-1124. -/
+/-- `BufferedReader.peek`, _pyio.py:1134-1143. -/
 def peek (n : Int) : PM Val := do
   flushIfRandom
   checkClosed "peek of closed file"
   let r ← peekUnlocked n.toNat
   pure (.bytes r)
 
-/-- The loop of `_readinto`, _pyio.py:1172-1200, over `written` and `out`. -/
+/-- The loop of `_readinto`, _pyio.py:1191-1219, over `written` and `out`. -/
 def readintoLoop (len : Nat) (one : Bool) : Nat → Int → List Nat → PM (Int × List Nat)
   | 0, _, _ => thr .modelFuel
   | fuel + 1, written, out => do
@@ -220,8 +220,8 @@ def readintoLoop (len : Nat) (one : Bool) : Nat → Int → List Nat → PM (Int
         else readintoLoop len one fuel written out
     else pure (written, out)
 
-/-- `_readinto`, _pyio.py:1156-1202, with a buffer of `len` bytes `0xff`;
-`BufferedRandom.readinto(1)` flushes first (:1446-1448, :1458-1460). -/
+/-- `_readinto`, _pyio.py:1175-1221, with a buffer of `len` bytes `0xff`;
+`BufferedRandom.readinto(1)` flushes first (:1465-1467, :1477-1479). -/
 def readinto (len : Nat) (one : Bool) : PM Val := do
   flushIfRandom
   checkClosed "readinto of closed file"
@@ -231,7 +231,7 @@ def readinto (len : Nat) (one : Bool) : PM Val := do
   pure (.list [.int w, .bytes (out ++ List.replicate (len - out.length) 255)])
 
 /-- `self.peek(1)` then `self.read(n)` in the loop of `IOBase.readline`,
-_pyio.py:525-532, :546-553. -/
+_pyio.py:525-532, @3.14.7:546-553. -/
 def readlineLoop (size : Int) : Nat → List Nat → PM (List Nat)
   | 0, _ => thr .modelFuel
   | fuel + 1, res => do
@@ -289,14 +289,14 @@ def tellW : PM Val := do
   let s ← SM.get
   pure (.int (t + s.writeBuf.length))
 
-/-- `tell`: :1204-1206, :1298-1299, :1428-1432. -/
+/-- `tell`: :1223-1225, :1317-1318, :1447-1451. -/
 def tell : PM Val := do
   let s ← SM.get
   if s.kind = 0 then tellR else if s.kind = 1 then tellW
   else if s.writeBuf ≠ [] then tellW else tellR
 
-/-- `seek`: `BufferedReader.seek` (:1208-1217), `BufferedWriter.seek`
-(:1301-1306), `BufferedRandom.seek` (:1411-1426). -/
+/-- `seek`: `BufferedReader.seek` (:1227-1236), `BufferedWriter.seek`
+(:1320-1325), `BufferedRandom.seek` (:1430-1445). -/
 def seek (p w : Int) : PM Val := do
   if !validWhence w then thr (.valueError "invalid whence value")
   let s ← SM.get
@@ -337,7 +337,7 @@ def rawTellPlain : PM Int := do
   | .ok n => pure n
 
 /-- `truncate`: mixin (:791-804, read-only here), `BufferedWriter.truncate`
-(:1270-1275), `BufferedRandom.truncate` (:1434-1438). -/
+(:1289-1294), `BufferedRandom.truncate` (:1453-1457). -/
 def truncate (p : Option Int) : PM Val := do
   let s ← SM.get
   if s.kind = 0 then
@@ -367,7 +367,7 @@ def rawClose : PM Unit := do
   | .error e => thr e
   | .ok () => pure ()
 
-/-- `close`: mixin (:813-819), `BufferedWriter.close` (:1308-1321). -/
+/-- `close`: mixin (:813-819), `BufferedWriter.close` (:1327-1340). -/
 def close : PM Val := do
   let s ← SM.get
   if closed s then pure .none else
@@ -378,7 +378,7 @@ def close : PM Val := do
   | .ok (), .error e => thr e
   | .ok (), .ok _ => pure .none
 
-/-- `BufferedWriter.write`, _pyio.py:1242-1268. -/
+/-- `BufferedWriter.write`, _pyio.py:1261-1287. -/
 def writeW (b : List Nat) : PM Val := do
   let s ← SM.get
   if closed s then thr (.valueError "write to closed file")
@@ -403,7 +403,7 @@ def writeW (b : List Nat) : PM Val := do
       else thr e
   else pure (.int written)
 
-/-- `write`, with `BufferedRandom.write` (:1462-1468) first undoing read-ahead. -/
+/-- `write`, with `BufferedRandom.write` (:1481-1487) first undoing read-ahead. -/
 def write (b : List Nat) : PM Val := do
   let s ← SM.get
   if s.kind = 2 ∧ s.readBuf ≠ [] then
@@ -417,7 +417,7 @@ def detach : PM Val := do
   SM.mod fun s => { s with detached := true }
   pure .none
 
-/-- The constructors, _pyio.py:1030-1041, :1228-1237, :1406-1409. -/
+/-- The constructors, _pyio.py:1049-1060, :1247-1256, :1425-1428. -/
 def init (kind : Nat) (raw : Raw) (size : Int) : Py BufP :=
   if kind = 2 ∧ !raw.canSeek then .error (unsupportedOp "File or stream is not seekable.") else
   if kind = 0 ∨ kind = 2 then

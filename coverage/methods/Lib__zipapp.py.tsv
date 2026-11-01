@@ -1,7 +1,7 @@
 file	line	endline	name	signature	status	entry	note
 Lib/zipapp.py	38	43	_maybe_open	_maybe_open(archive, mode)	todo		
 Lib/zipapp.py	46	50	_write_file_prefix	_write_file_prefix(f, interpreter)	todo		
-Lib/zipapp.py	53	73	_copy_archive	_copy_archive(archive, new_archive, interpreter=None)	todo		
+Lib/zipapp.py	53	73	_copy_archive	_copy_archive(archive, new_archive, interpreter=None)	todo		changed-in-3.15:
 Lib/zipapp.py	76	172	create_archive	create_archive(source, target=None, interpreter=None, main=None, filter=None, compressed=False)	todo		
 Lib/zipapp.py	175	178	get_interpreter	get_interpreter(archive)	todo		
-Lib/zipapp.py	181	227	main	main(args=None)	todo		candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output
+Lib/zipapp.py	181	227	main	main(args=None)	todo		changed-in-3.15: candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output

@@ -360,7 +360,7 @@ theorem compare_huge {x : F64} {vs : Int} {w : Int} (op : CmpOp) (hx : x.isFinit
     exact exactCompare_lt op (by decide +kernel) (by grind)
 
 /-- Same number of bits: compare the integer part, with the operator adjusted for a
-fractional part, floatobject.c:466-511. -/
+fractional part, floatobject.c:456-501. -/
 theorem compare_same_bits {x : F64} {w : Int} (op : CmpOp) (hx : x.isFinite = true)
     (hz : x.isZero = false) (vs : Int)
     (hv : (vs = -1 ∧ x.toRat < 0) ∨ (vs = 1 ∧ 0 < x.toRat)) :

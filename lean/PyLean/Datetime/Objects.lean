@@ -35,7 +35,7 @@ def memcmpBytes : List Nat → List Nat → Int
   | a :: as, b :: bs => if a = b then memcmpBytes as bs else if a < b then -1 else 1
   | _, _ => 0
 
-/-- `diff_to_bool(diff, op)`, _datetimemodule.c:2109-2112. -/
+/-- `diff_to_bool(diff, op)`, _datetimemodule.c:2119-2122. -/
 def diffToBool (diff : Int) : CmpOp → Bool
   | .lt => decide (diff < 0)
   | .le => decide (diff ≤ 0)
@@ -48,13 +48,13 @@ def diffToBool (diff : Int) : CmpOp → Bool
 
 namespace Delta
 
-/-- `timedelta._getstate`, Py:940-941; C `delta_getstate`, :3013-3018. -/
+/-- `timedelta._getstate`, Py:940-941; C `delta_getstate`, :3024-3029. -/
 def getstate (t : Delta) : List Int := [t.days, t.seconds, t.us]
 
 /-- `timedelta._cmp`, Py:924-926. -/
 def cmpPy (a b : Delta) : Int := cmpTuple a.getstate b.getstate
 
-/-- `delta_cmp`, :2526-2536. -/
+/-- `delta_cmp`, :2536-2546. -/
 def cmpC (a b : Delta) : Int :=
   let diff := a.days - b.days
   if diff = 0 then
@@ -65,16 +65,16 @@ def cmpC (a b : Delta) : Int :=
 /-- `timedelta.__eq__`..`__gt__`, Py:894-922 (`__ne__` is the default inverse of `__eq__`). -/
 def richPy (op : CmpOp) (a b : Delta) : Bool := diffToBool (a.cmpPy b) op
 
-/-- `delta_richcompare`, :2539-2548. -/
+/-- `delta_richcompare`, :2549-2558. -/
 def richC (op : CmpOp) (a b : Delta) : Bool := diffToBool (a.cmpC b) op
 
-/-- `timedelta.__bool__`, Py:933-936; C `delta_bool`, :2924-2929. -/
+/-- `timedelta.__bool__`, Py:933-936; C `delta_bool`, :2935-2940. -/
 def bool (t : Delta) : Bool := t.days != 0 || t.seconds != 0 || t.us != 0
 
 /-- `timedelta.__pos__`, Py:830-831. -/
 def posPy (a : Delta) : Delta := a
 
-/-- `delta_positive`, :2476-2485 (no normalization, range already valid). -/
+/-- `delta_positive`, :2486-2495 (no normalization, range already valid). -/
 def posC (a : Delta) : Py Delta := do
   checkDeltaDayRange a.days
   return ⟨a.days, a.seconds, a.us⟩
@@ -112,7 +112,7 @@ inductive HashKey where
   | ints (xs : List Int)
   deriving Repr, DecidableEq, Inhabited
 
-/-- `timedelta.__hash__`, Py:928-931, and `delta_hash`, :2553-2566. -/
+/-- `timedelta.__hash__`, Py:928-931, and `delta_hash`, :2563-2576. -/
 def Delta.hashKey (t : Delta) : HashKey := .ints t.getstate
 
 /-! ### `date` -/
@@ -125,7 +125,7 @@ def dateCmpPy (a b : Int × Int × Int) : Int :=
 def dateRichPy (op : CmpOp) (a b : Int × Int × Int) (otherIsDatetime : Bool) : Option Bool :=
   if otherIsDatetime then none else some (diffToBool (dateCmpPy a b) op)
 
-/-- `date_richcompare`, :3835-3853. -/
+/-- `date_richcompare`, :3916-3934. -/
 def dateRichC (op : CmpOp) (a b : Int × Int × Int) (otherIsDatetime : Bool) : Option Bool :=
   if otherIsDatetime then none
   else some (diffToBool (memcmpBytes (dateData a.1 a.2.1 a.2.2) (dateData b.1 b.2.1 b.2.2)) op)
@@ -133,13 +133,13 @@ def dateRichC (op : CmpOp) (a b : Int × Int × Int) (otherIsDatetime : Bool) : 
 /-- `date.__hash__`, Py:1205-1209: the hash of the one-element state tuple. -/
 def dateHashKeyPy (y m d : Int) : HashKey := .tuple1 (dateData y m d)
 
-/-- `date_hash` through `generic_hash`, :3883-3903. -/
+/-- `date_hash` through `generic_hash`, :3964-3984. -/
 def dateHashKeyC (y m d : Int) : HashKey := .bytes (dateData y m d)
 
 /-- `date.weekday()`, Py:1234-1236. -/
 def dateWeekdayPy (y m d : Int) : Int := (toordinal y m d + 6) % 7
 
-/-- `date_weekday`, :3913-3917, through `weekday`. -/
+/-- `date_weekday`, :3994-3998, through `weekday`. -/
 def dateWeekdayC (y m d : Int) : Int := weekdayC y m d
 
 /-- `date.isoweekday()`, Py:1240-1243. -/
@@ -147,14 +147,14 @@ def dateIsoweekdayPy (y m d : Int) : Int :=
   let r := toordinal y m d % 7
   if r = 0 then 7 else r
 
-/-- `date_isoweekday`, :3641-3646. -/
+/-- `date_isoweekday`, :3705-3710. -/
 def dateIsoweekdayC (y m d : Int) : Int := weekdayC y m d + 1
 
 /-- `date.__sub__(date)`, Py:1224-1232. -/
 def dateSubDatePy (a b : Int × Int × Int) : Py Delta :=
   deltaPy (toordinal a.1 a.2.1 a.2.2 - toordinal b.1 b.2.1 b.2.2) 0 0 0 0 0 0
 
-/-- `date_subtract` with a date, :3540-3564: `new_delta(l - r, 0, 0, 0)`. -/
+/-- `date_subtract` with a date, :3589-3613: `new_delta(l - r, 0, 0, 0)`. -/
 def dateSubDateC (a b : Int × Int × Int) : Py Delta := do
   let d := ymdToOrdC a.1 a.2.1 a.2.2 - ymdToOrdC b.1 b.2.1 b.2.2
   checkDeltaDayRange d
@@ -164,7 +164,7 @@ def dateSubDateC (a b : Int × Int × Int) : Py Delta := do
 def dateSubDeltaPy (y m d : Int) (t : Delta) : Py (Int × Int × Int) := do
   dateAddPy y m d (← deltaPy (-t.days) 0 0 0 0 0 0)
 
-/-- `add_date_timedelta` with `negate = 1`, :3496-3510. -/
+/-- `add_date_timedelta` with `negate = 1`, :3546-3559. -/
 def dateSubDeltaC (y m d : Int) (t : Delta) : Py (Int × Int × Int) := do
   let (y, m, d) ← normalizeYMDC y m (d + -t.days)
   checkDate y m d
@@ -173,8 +173,8 @@ def dateSubDeltaC (y m d : Int) (t : Delta) : Py (Int × Int × Int) := do
 def dateReplacePy (y m d : Int) (ny nm nd : Option Int) : Py (Int × Int × Int) :=
   checkDate (ny.getD y) (nm.getD m) (nd.getD d)
 
-/-- `datetime_date_replace_impl`, :3875-3880, through `new_date_subclass_ex`
-(:1182-1198) and `new_date_ex` (:1159-1171). The clinic `"i"` conversion is modelled
+/-- `datetime_date_replace_impl`, :3956-3961, through `new_date_subclass_ex`
+(@3.14.7:1182-1198) and `new_date_ex` (:1168-1180). The clinic `"i"` conversion is modelled
 by `fitsCInt`. -/
 def dateReplaceC (y m d : Int) (ny nm nd : Option Int) : Py (Int × Int × Int) :=
   let (y, m, d) := (ny.getD y, nm.getD m, nd.getD d)
@@ -193,14 +193,14 @@ def buildStructTimePy (y m d hh mm ss dstflag : Int) : TimeTuple :=
   let dnum := daysBeforeMonth y m + d
   [y, m, d, hh, mm, ss, wday, dnum, dstflag]
 
-/-- `build_struct_time`, :2081-2099. -/
+/-- `build_struct_time`, :2091-2109. -/
 def buildStructTimeC (y m d hh mm ss dstflag : Int) : TimeTuple :=
   [y, m, d, hh, mm, ss, weekdayC y m d, daysBeforeMonth y m + d, dstflag]
 
 /-- `date.timetuple()`, Py:1146-1149. -/
 def dateTimetuplePy (y m d : Int) : TimeTuple := buildStructTimePy y m d 0 0 0 (-1)
 
-/-- `date_timetuple`, :3856-3862. -/
+/-- `date_timetuple`, :3937-3943. -/
 def dateTimetupleC (y m d : Int) : TimeTuple := buildStructTimeC y m d 0 0 0 (-1)
 
 /-! ### `ctime` -/

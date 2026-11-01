@@ -93,7 +93,7 @@ def heappopP (lt : LtP α) (heap : List α) : List α × Py α :=
       | (h, none) => (h, .ok returnitem)
 
 /-- The `for (i = (n >> 1) - 1 ; i >= 0 ; i--)` loop of `heapify_internal`,
-Modules/_heapqmodule.c:376-378. -/
+Modules/_heapqmodule.c:377-379. -/
 def heapifyLoopP (lt : LtP α) : List Nat → List α → List α × Option PyExc
   | [], h => (h, none)
   | i :: rest, h =>
@@ -101,7 +101,7 @@ def heapifyLoopP (lt : LtP α) : List Nat → List α → List α × Option PyEx
     | (h, some e) => (h, some e)
     | (h, none) => heapifyLoopP lt rest h
 
-/-- `heapify_internal`, Modules/_heapqmodule.c:364-380. Above 2500 elements C takes
+/-- `heapify_internal`, Modules/_heapqmodule.c:365-381. Above 2500 elements C takes
 `cache_friendly_heapify`, which does the same comparisons in another order: with a comparison that
 raises, the partial state differs, and that path is not modelled here (the `sched` and `queue`
 difftests stay below it). -/

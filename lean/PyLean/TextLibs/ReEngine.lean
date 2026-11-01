@@ -52,23 +52,23 @@ def Env.ch (e : Env) (i : Nat) : Nat := e.s.getD i 0
 /-- `Py_ISALNUM`. -/
 def isAlnumAscii (c : Nat) : Bool := c < 128 && (isDigit c || isLetter c)
 
-/-- `SRE_IS_WORD`, `Modules/_sre/sre.c:140-141`. -/
+/-- `SRE_IS_WORD`, `Modules/_sre/sre.c:141-142`. -/
 def isWordAscii (c : Nat) : Bool := isAlnumAscii c || c == 95
 
-/-- `SRE_LOC_IS_WORD`, `Modules/_sre/sre.c:151-152`, in the C locale. -/
+/-- `SRE_LOC_IS_WORD`, `Modules/_sre/sre.c:152-153`, in the C locale. -/
 def isWordLoc (c : Nat) : Bool := (c < 256 && isAlnumAscii c) || c == 95
 
-/-- `SRE_UNI_IS_WORD`, `Modules/_sre/sre.c:170`. -/
+/-- `SRE_UNI_IS_WORD`, `Modules/_sre/sre.c:171`. -/
 def isWordUni (c : Nat) : Bool := PyLean.UnicodeObj.isAlnum c || c == 95
 
 /-- `Py_ISSPACE`. -/
 def isSpaceAscii (c : Nat) : Bool := c == 32 || (9 ≤ c && c ≤ 13)
 
-/-- `sre_lower_locale`, `sre_upper_locale`, `Modules/_sre/sre.c:154-162`, in the C locale. -/
+/-- `sre_lower_locale`, `sre_upper_locale`, `Modules/_sre/sre.c:155-163`, in the C locale. -/
 def lowerLocale (c : Nat) : Nat := lowerAscii c
 def upperLocale (c : Nat) : Nat := if 97 ≤ c ∧ c ≤ 122 then c - 32 else c
 
-/-- `sre_category`, `Modules/_sre/sre.c:182-227`. -/
+/-- `sre_category`, `Modules/_sre/sre.c:183-228`. -/
 def sreCategory (cat ch : Nat) : Bool :=
   match cat with
   | 0 => isDigit ch
@@ -91,7 +91,7 @@ def sreCategory (cat ch : Nat) : Bool :=
   | 17 => !PyLean.UnicodeObj.isLinebreak ch
   | _ => false
 
-/-- `char_loc_ignore`, `Modules/_sre/sre.c:229-235`. -/
+/-- `char_loc_ignore`, `Modules/_sre/sre.c:230-236`. -/
 def charLocIgnore (pat ch : Nat) : Bool :=
   ch == pat || lowerLocale ch == pat || upperLocale ch == pat
 
@@ -150,7 +150,7 @@ def sreCharset (e : Env) (ch : Nat) : (fuel : Nat) → (set : Nat) → (ok : Boo
 
 def Env.charset (e : Env) (set ch : Nat) : Bool := sreCharset e ch (e.code.size + 1) set true
 
-/-- `SRE(charset_loc_ignore)`, `Modules/_sre/sre_lib.h:178-188`. -/
+/-- `SRE(charset_loc_ignore)`, `Modules/_sre/sre_lib.h:183-243`. -/
 def Env.charsetLoc (e : Env) (set ch : Nat) : Bool :=
   let lo := lowerLocale ch
   e.charset set lo || (let up := upperLocale ch; up != lo && e.charset set up)
@@ -161,7 +161,7 @@ def Env.countWhile (e : Env) (cond : Nat → Bool) (lim : Nat) : (fuel ptr : Nat
   | fuel + 1, ptr =>
     if ptr < lim && cond (e.ch ptr) then e.countWhile cond lim fuel (ptr + 1) else ptr
 
-/-- The cases of `SRE(count)`, `Modules/_sre/sre_lib.h:206-304`, that run no `SRE(match)`: the new
+/-- The cases of `SRE(count)`, `Modules/_sre/sre_lib.h:261-359`, that run no `SRE(match)`: the new
 `ptr`, or `none` for the `default:`. `pc` is the item, `lim` the adjusted `end`. -/
 def Env.countSimple (e : Env) (pc ptr lim : Nat) : Option Nat :=
   let op := e.c pc
@@ -180,7 +180,7 @@ def Env.countSimple (e : Env) (pc ptr lim : Nat) : Option Nat :=
   else if op == OP_NOT_LITERAL_LOC_IGNORE then scan (fun c => !charLocIgnore a c)
   else none
 
-/-- The `end` of `SRE(count)` after `/* adjust end */`, `Modules/_sre/sre_lib.h:203-204`. -/
+/-- The `end` of `SRE(count)` after `/* adjust end */`, `Modules/_sre/sre_lib.h:258-259`. -/
 def Env.countEnd (e : Env) (ptr maxcount : Nat) : Nat :=
   if maxcount < e.endp - ptr ∧ maxcount ≠ MAXREPEAT then ptr + maxcount else e.endp
 
@@ -206,7 +206,7 @@ def SSt.newRep (st : SSt) (pat : Nat) : SSt × Nat :=
   let i := st.reps.size
   ({ st with reps := st.reps.push ⟨-1, pat, st.repeat_, none⟩, repeat_ := some i }, i)
 
-/-- The `SRE_OP_MARK` body, `Modules/_sre/sre_lib.h:654-667`. -/
+/-- The `SRE_OP_MARK` body, `Modules/_sre/sre_lib.h:709-722`. -/
 def doMark (st : SSt) (i ptr : Nat) : SSt :=
   let li := if i % 2 == 1 then ((i / 2 + 1 : Nat) : Int) else st.lastindex
   let (mark, lm) :=
@@ -216,7 +216,7 @@ def doMark (st : SSt) (i ptr : Nat) : SSt :=
     else (st.mark, st.lastmark)
   { st with lastindex := li, lastmark := lm, mark := mark.set! i (some ptr) }
 
-/-- A group reference, `Modules/_sre/sre_lib.h:1440-1537`: the span, if it can be used. -/
+/-- A group reference, `Modules/_sre/sre_lib.h:1495-1592`: the span, if it can be used. -/
 def groupSpan (st : SSt) (g : Nat) : Option (Nat × Nat) :=
   let groupref := g * 2
   if (groupref : Int) ≥ st.lastmark then none
@@ -235,7 +235,7 @@ def Env.refMatch (e : Env) (norm : Nat → Nat) : (fuel p q ptr : Nat) → Optio
     else some ptr
 
 mutual
-  /-- `SRE(match)` from `entrance:`, `Modules/_sre/sre_lib.h:623-637`. -/
+  /-- `SRE(match)` from `entrance:`, `Modules/_sre/sre_lib.h:678-692`. -/
   def matchAt (e : Env) : (fuel : Nat) → (pc : Nat) → (top : Bool) → SSt → R
     | 0, _, _, _ => none
     | fuel + 1, pc, top, st =>
@@ -245,7 +245,7 @@ mutual
         else exec e fuel (pc + 1 + e.c (pc + 1) + 0) ptr top st
       else exec e fuel pc ptr top st
 
-  /-- The dispatch loop, `Modules/_sre/sre_lib.h:646-1617`. -/
+  /-- The dispatch loop, `Modules/_sre/sre_lib.h:701-1672`. -/
   def exec (e : Env) : (fuel : Nat) → (pc ptr : Nat) → (top : Bool) → SSt → R
     | 0, _, _, _, _ => none
     | fuel + 1, pc, ptr, top, st =>
@@ -492,7 +492,7 @@ mutual
       else if op == OP_FAILURE then fail
       else none
 
-  /-- The tail of `MAX_UNTIL`, `Modules/_sre/sre_lib.h:1204-1212`. -/
+  /-- The tail of `MAX_UNTIL`, `Modules/_sre/sre_lib.h:1259-1267`. -/
   def maxTail (e : Env) : (fuel : Nat) → (p ptr : Nat) → (top : Bool) → (i : Nat) → SSt → R
     | 0, _, _, _, _, _ => none
     | fuel + 1, p, ptr, top, i, st =>
@@ -503,7 +503,7 @@ mutual
         let st := { st with repeat_ := some i }
         if ret then some (true, st) else some (false, { st with ptr })
 
-  /-- The `for` loop of `SRE_OP_BRANCH`, `Modules/_sre/sre_lib.h:860-884`. -/
+  /-- The `for` loop of `SRE_OP_BRANCH`, `Modules/_sre/sre_lib.h:915-939`. -/
   def branchLoop (e : Env) : (fuel : Nat) → (p ptr : Nat) → (top : Bool) → (lm li : Int) →
       Array (Option Nat) → SSt → R
     | 0, _, _, _, _, _, _, _ => none
@@ -522,7 +522,7 @@ mutual
             let st := if st.repeat_.isSome then markPop st snap else st
             branchLoop e fuel (p + e.c p) ptr top lm li snap (lastRestore st lm li)
 
-  /-- `SRE(count)`, `Modules/_sre/sre_lib.h:192-323`: the count and the state, whose `ptr` the
+  /-- `SRE(count)`, `Modules/_sre/sre_lib.h:247-378`: the count and the state, whose `ptr` the
   `default:` case moves. -/
   def countFn (e : Env) : (fuel : Nat) → (pc maxcount : Nat) → SSt → Option (Nat × SSt)
     | 0, _, _, _ => none
@@ -536,7 +536,7 @@ mutual
         | none => none
         | some st => some (st.ptr - ptr, st)
 
-  /-- The `default:` of `SRE(count)`, `Modules/_sre/sre_lib.h:305-317`. -/
+  /-- The `default:` of `SRE(count)`, `Modules/_sre/sre_lib.h:360-372`. -/
   def countLoop (e : Env) : (fuel : Nat) → (pc lim : Nat) → SSt → Option SSt
     | 0, _, _, _ => none
     | fuel + 1, pc, lim, st =>
@@ -547,7 +547,7 @@ mutual
         | some (false, st) => some st
       else some st
 
-  /-- The `for (;;)` of `REPEAT_ONE` with a literal tail, `Modules/_sre/sre_lib.h:935-958`. -/
+  /-- The `for (;;)` of `REPEAT_ONE` with a literal tail, `Modules/_sre/sre_lib.h:990-1013`. -/
   def repOneLit (e : Env) : (fuel : Nat) → (next chr mn start ptr : Nat) → (top : Bool) → (lm li : Int) →
       Array (Option Nat) → SSt → R
     | 0, _, _, _, _, _, _, _, _, _, _ => none
@@ -567,7 +567,7 @@ mutual
           if ptr == 0 then some (false, lastRestore st lm li)
           else repOneLit e fuel next chr mn start (ptr - 1) top lm li snap (lastRestore st lm li)
 
-  /-- The general `while` of `REPEAT_ONE`, `Modules/_sre/sre_lib.h:963-979`. -/
+  /-- The general `while` of `REPEAT_ONE`, `Modules/_sre/sre_lib.h:1018-1034`. -/
   def repOneGen (e : Env) : (fuel : Nat) → (next mn start ptr : Nat) → (top : Bool) → (lm li : Int) →
       Array (Option Nat) → SSt → R
     | 0, _, _, _, _, _, _, _, _, _ => none
@@ -582,7 +582,7 @@ mutual
           if ptr == 0 then some (false, lastRestore st lm li)
           else repOneGen e fuel next mn start (ptr - 1) top lm li snap (lastRestore st lm li)
 
-  /-- The `while` of `MIN_REPEAT_ONE`, `Modules/_sre/sre_lib.h:1033-1057`. -/
+  /-- The `while` of `MIN_REPEAT_ONE`, `Modules/_sre/sre_lib.h:1088-1112`. -/
   def minRepOne (e : Env) : (fuel : Nat) → (p next cnt ptr : Nat) → (top : Bool) → (lm li : Int) →
       Array (Option Nat) → SSt → R
     | 0, _, _, _, _, _, _, _, _, _ => none
@@ -602,7 +602,7 @@ mutual
             if ret == 0 then some (false, st)
             else minRepOne e fuel p next (cnt + 1) (ptr + 1) top lm li snap st
 
-  /-- The first `while` of `POSSESSIVE_REPEAT`, `Modules/_sre/sre_lib.h:1312-1327`. -/
+  /-- The first `while` of `POSSESSIVE_REPEAT`, `Modules/_sre/sre_lib.h:1367-1382`. -/
   def possMin (e : Env) : (fuel : Nat) → (p ptr : Nat) → (top : Bool) → (count : Nat) →
       Option Nat → SSt → R
     | 0, _, _, _, _, _, _ => none
@@ -614,7 +614,7 @@ mutual
         | some (false, st) => some (false, { st with ptr, repeat_ := prev })
       else possMore e fuel p top count none prev st
 
-  /-- The second `while` of `POSSESSIVE_REPEAT`, `Modules/_sre/sre_lib.h:1336-1406`. -/
+  /-- The second `while` of `POSSESSIVE_REPEAT`, `Modules/_sre/sre_lib.h:1391-1461`. -/
   def possMore (e : Env) : (fuel : Nat) → (p : Nat) → (top : Bool) → (count : Nat) →
       Option Nat → Option Nat → SSt → R
     | 0, _, _, _, _, _, _ => none
@@ -645,7 +645,7 @@ abbrev SR := Option (Bool × SSt)
 /-- Enough fuel for one `SRE(match)`: every step along a path spends one. -/
 def Env.mfuel (e : Env) : Nat := 4096 + 64 * (e.code.size + 1) * (e.s.size + 2)
 
-/-- The `while (ptr < end)` of the one-character prefix, `Modules/_sre/sre_lib.h:1755-1771`. -/
+/-- The `while (ptr < end)` of the one-character prefix, `Modules/_sre/sre_lib.h:1810-1826`. -/
 def searchLit (e : Env) (code c skip fl : Nat) : (fuel ptr : Nat) → SSt → SR
   | 0, _, _ => none
   | fuel + 1, ptr, st =>
@@ -661,7 +661,7 @@ def searchLit (e : Env) (code c skip fl : Nat) : (fuel ptr : Nat) → SSt → SR
         | some (false, st) => searchLit e code c skip fl fuel (ptr + 1) (resetGroups st)
 
 mutual
-  /-- The outer `while (ptr < end)` of the longer prefix, `Modules/_sre/sre_lib.h:1787-1821`. -/
+  /-- The outer `while (ptr < end)` of the longer prefix, `Modules/_sre/sre_lib.h:1842-1876`. -/
   def searchOuter (e : Env) (code plen skip fl pfx : Nat) : (fuel ptr : Nat) → SSt → SR
     | 0, _, _ => none
     | fuel + 1, ptr, st =>
@@ -676,7 +676,7 @@ mutual
         else if ptr ≥ e.endp then some (false, st)
         else searchInner e code plen skip fl pfx fuel ptr 1 { st with mustAdvance := false }
 
-  /-- The `do ... while (i != 0)`, `Modules/_sre/sre_lib.h:1798-1820`. `overlap[i]` is the word
+  /-- The `do ... while (i != 0)`, `Modules/_sre/sre_lib.h:1853-1875`. `overlap[i]` is the word
   `prefix + prefix_len - 1 + i`. -/
   def searchInner (e : Env) (code plen skip fl pfx : Nat) : (fuel ptr i : Nat) → SSt → SR
     | 0, _, _, _ => none
@@ -705,7 +705,7 @@ mutual
       else next ptr i st
 end
 
-/-- The `for (;;)` of the charset prefix, `Modules/_sre/sre_lib.h:1829-1842`. -/
+/-- The `for (;;)` of the charset prefix, `Modules/_sre/sre_lib.h:1884-1897`. -/
 def searchSet (e : Env) (code set : Nat) : (fuel ptr : Nat) → SSt → SR
   | 0, _, _ => none
   | fuel + 1, ptr, st =>
@@ -717,7 +717,7 @@ def searchSet (e : Env) (code set : Nat) : (fuel ptr : Nat) → SSt → SR
       | some (true, st) => some (true, st)
       | some (false, st) => searchSet e code set fuel (ptr + 1) (resetGroups st)
 
-/-- The general `while`, `Modules/_sre/sre_lib.h:1857-1863`. -/
+/-- The general `while`, `Modules/_sre/sre_lib.h:1912-1918`. -/
 def searchGen (e : Env) (code lim : Nat) : (fuel ptr : Nat) → SSt → SR
   | 0, _, _ => none
   | fuel + 1, ptr, st =>
@@ -730,7 +730,7 @@ def searchGen (e : Env) (code lim : Nat) : (fuel ptr : Nat) → SSt → SR
       | some (false, st) => searchGen e code lim fuel ptr st
     else some (false, st)
 
-/-- `SRE(search)`, `Modules/_sre/sre_lib.h:1691-1867`. -/
+/-- `SRE(search)`, `Modules/_sre/sre_lib.h:1746-1922`. -/
 def sreSearch (e : Env) (st : SSt) : SR :=
   let ptr := st.start
   if ptr > e.endp then some (false, st)

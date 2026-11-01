@@ -41,9 +41,9 @@ observed: |
 promised_by: |
   No internal exception leaking; the TypeError branch just above covers the same user error.
 cause: |
-  Lib/functools.py:950.
+  Lib/functools.py:971.
 possible_fix: |
-  `next(iter(...), None)` and the TypeError at :940-944.
+  `next(iter(...), None)` and the TypeError at :961-965.
 duplicates:
   issues: []
   related: ["#84644"]

@@ -2,7 +2,7 @@ import PyLean.PyIO.Basic
 
 /-!
 The abstract bases over a scripted subclass: `_io._IOBase`, `_io._RawIOBase`
-(`Modules/_io/iobase.c`), `_io._BufferedIOBase` (`Modules/_io/bufferedio.c:51-219`),
+(`Modules/_io/iobase.c`), `_io._BufferedIOBase` (`Modules/_io/bufferedio.c:51-220`),
 `_io._TextIOBase` (`Modules/_io/textio.c:49-185`) and `IOBase`, `RawIOBase`,
 `BufferedIOBase`, `TextIOBase` in `Lib/_pyio.py`.
 
@@ -110,7 +110,7 @@ def bufSize : Nat := 131072
 
 namespace BC
 
-/-- `_PyIO_trap_eintr`, bufferedio.c:870-892, for a scripted exception. -/
+/-- `_PyIO_trap_eintr`, bufferedio.c:879-901, for a scripted exception. -/
 def trapEintr (cls : String) : Bool := cls == "InterruptedError"
 
 /-- `_io__IOBase_flush_impl`, iobase.c:172-185, after the script. -/
@@ -130,7 +130,7 @@ def close (u : UObj) : UObj × Py Val :=
   let (u', r) := flush u
   ({ u' with isClosed := true }, r.map (fun _ => .none))
 
-/-- `_io__RawIOBase_read_impl`, iobase.c:922-960, for `n >= 0`. -/
+/-- `_io__RawIOBase_read_impl`, iobase.c:923-961, for `n >= 0`. -/
 def rawReadN (u : UObj) (n : Nat) : UObj × Py Val :=
   match u.callInto n with
   | (u, (_, .raise c m)) => (u, .error (excOf c m))
@@ -154,7 +154,7 @@ def readCall (u : UObj) (n : Nat) : UObj × Ret :=
     | (u, .ok v) => (u, .bytes v.bytesOf)
   else u.callRead n
 
-/-- The peek step of `_io__IOBase_readline_impl`, iobase.c:582-614. -/
+/-- The peek step of `_io__IOBase_readline_impl`, iobase.c:582-615. -/
 def readahead (limit : Int) (r : List Nat) : Nat :=
   if r.length > 0 then
     if limit ≥ 0 then
@@ -166,7 +166,7 @@ def readahead (limit : Int) (r : List Nat) : Nat :=
     else nlPrefix r
   else 1
 
-/-- The loop of `_io__IOBase_readline_impl`, iobase.c:577-644. -/
+/-- The loop of `_io__IOBase_readline_impl`, iobase.c:577-645. -/
 def readlineLoop (limit : Int) : UObj → List Nat → Nat → UObj × Py (List Nat)
   | u, _, 0 => (u, .error .modelFuel)
   | u, res, fuel + 1 =>
@@ -195,7 +195,7 @@ def readlineLoop (limit : Int) : UObj → List Nat → Nat → UObj × Py (List 
 
 def fuelOf (u : UObj) : Nat := u.reads.length + u.intos.length + (u.peeks.getD []).length + 2
 
-/-- `_io__IOBase_readline_impl`, iobase.c:569-676. -/
+/-- `_io__IOBase_readline_impl`, iobase.c:569-677. -/
 def readline (u : UObj) (limit : Option Int) : UObj × Py Val :=
   match optSsize (-1) limit with
   | .error e => (u, .error e)
@@ -204,13 +204,13 @@ def readline (u : UObj) (limit : Option Int) : UObj × Py Val :=
     | (u, .error e) => (u, .error e)
     | (u, .ok r) => (u, .ok (.bytes r))
 
-/-- `iobase_iternext`, iobase.c:688-702. -/
+/-- `iobase_iternext`, iobase.c:689-703. -/
 def next (u : UObj) : UObj × Py Val :=
   match readline u none with
   | (u, .error e) => (u, .error e)
   | (u, .ok v) => if v.bytesOf = [] then (u, .error .stopIteration) else (u, .ok v)
 
-/-- The loop of `_io__IOBase_readlines_impl`, iobase.c:745-768. -/
+/-- The loop of `_io__IOBase_readlines_impl`, iobase.c:746-769. -/
 def readlinesLoop (hint : Int) : UObj → Int → List Atom → Nat → UObj × Py Val
   | u, _, _, 0 => (u, .error .modelFuel)
   | u, length, acc, fuel + 1 =>
@@ -223,8 +223,8 @@ def readlinesLoop (hint : Int) : UObj → Int → List Atom → Nat → UObj × 
       if hint > 0 ∧ (l.length : Int) > hint - length then (u, .ok (.list acc.reverse))
       else readlinesLoop hint u (length + l.length) acc fuel
 
-/-- `_io__IOBase_readlines_impl`, iobase.c:717-777, with `iobase_iter`
-(:679-685). -/
+/-- `_io__IOBase_readlines_impl`, iobase.c:718-778, with `iobase_iter`
+(:680-686). -/
 def readlines (u : UObj) (hint : Option Int) : UObj × Py Val :=
   match optSsize (-1) hint with
   | .error e => (u, .error e)
@@ -232,7 +232,7 @@ def readlines (u : UObj) (hint : Option Int) : UObj × Py Val :=
     if u.isClosed then (u, .error closedDotE) else
     readlinesLoop hint u 0 [] (fuelOf u)
 
-/-- The loop of `_io__IOBase_writelines`, iobase.c:803-823. -/
+/-- The loop of `_io__IOBase_writelines`, iobase.c:804-824. -/
 def writelinesLoop : UObj → List (List Nat) → Nat → UObj × Py Val
   | u, _, 0 => (u, .error .modelFuel)
   | u, [], _ => (u, .ok .none)
@@ -242,7 +242,7 @@ def writelinesLoop : UObj → List (List Nat) → Nat → UObj × Py Val
       if trapEintr c then writelinesLoop u (l :: ls) fuel else (u, .error (excOf c m))
     | (u, _) => writelinesLoop u ls fuel
 
-/-- The loop of `_io__RawIOBase_readall_impl`, iobase.c:970-1021. -/
+/-- The loop of `_io__RawIOBase_readall_impl`, iobase.c:971-1020. -/
 def readallLoop : UObj → List Nat → Bool → Nat → UObj × Py Val
   | u, _, _, 0 => (u, .error .modelFuel)
   | u, acc, any, fuel + 1 =>
@@ -337,7 +337,7 @@ def close (u : UObj) : UObj × Py Val :=
   let (u', r) := flush u
   ({ u' with isClosed := true }, r.map (fun _ => .none))
 
-/-- `RawIOBase.read`, _pyio.py:610-627, for `size >= 0`. -/
+/-- `RawIOBase.read`, _pyio.py@3.14.7:610-627, for `size >= 0`. -/
 def rawReadN (u : UObj) (n : Nat) : UObj × Py Val :=
   match u.callInto n with
   | (u, (_, .raise c m)) => (u, .error (excOf c m))
@@ -370,7 +370,7 @@ def nreadahead (size : Int) (r : Ret) : Py Nat :=
   | .int _ => .error (.named "AttributeError" "'int' object has no attribute 'find'")
   | .raise c m => .error (excOf c m)
 
-/-- The loop of `IOBase.readline`, _pyio.py:546-553. -/
+/-- The loop of `IOBase.readline`, _pyio.py@3.14.7:546-553. -/
 def readlineLoop (size : Int) : UObj → List Nat → Nat → UObj × Py (List Nat)
   | u, _, 0 => (u, .error .modelFuel)
   | u, res, fuel + 1 =>
@@ -392,7 +392,7 @@ def readlineLoop (size : Int) : UObj → List Nat → Nat → UObj × Py (List N
           if res.getLast? = some 10 then (u, .ok res) else readlineLoop size u res fuel
     else (u, .ok res)
 
-/-- `IOBase.readline`, _pyio.py:513-553. -/
+/-- `IOBase.readline`, _pyio.py@3.14.7:513-553. -/
 def readline (u : UObj) (size : Option Int) : UObj × Py Val :=
   match readlineLoop (size.getD (-1)) u [] (BC.fuelOf u) with
   | (u, .error e) => (u, .error e)

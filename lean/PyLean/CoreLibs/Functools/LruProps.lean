@@ -478,7 +478,7 @@ theorem lruBounded_proven : LruBounded := by
   have h2 := (drive_sim cfg hm hi he fuel keys emptyC emptyPy (rel_empty _ hm)).2
   exact ⟨h2.bound, h2.nodup⟩
 
-/-- The re-check at Lib/functools.py:661-666 and Modules/_functoolsmodule.c:1361-1368: when the user function
+/-- The re-check at Lib/functools.py:674-679 and Modules/_functoolsmodule.c:1457-1464: when the user function
 stored the same key through a re-entrant call, the outer call returns its own result and leaves the cache as
 it found it, so the inner value stays. Both twins, for every `maxsize`. -/
 def LruRecheckKeepsInner : Prop :=
@@ -493,7 +493,7 @@ theorem lruRecheckKeepsInner_proven : LruRecheckKeepsInner := by
   simp only [callC, h2, h1, h3, h4, h5]
 
 /-- The unbounded wrapper has no re-check, so there the outer result overwrites what a re-entrant call stored:
-the difference between the two branches, Lib/functools.py:631-636 against :661-666. -/
+the difference between the two branches, Lib/functools.py:640-645 against :674-679. -/
 def LruInfiniteOverwrites : Prop :=
   ∀ (f : Nat → Nat → Prog Nat Nat) (F : Faults Nat) (fuel key : Nat) (c s : CLru Nat Nat) (result : Nat),
     c.links.lookup key = none → F.get key c.cache = none →
@@ -555,7 +555,7 @@ theorem lruFailureNotCached_proven : LruFailureNotCached := by
   · simp only [callInf, h1, h3, hf, runInf]
 
 /-- When the deletion of the oldest key fails, the C wrapper puts the link back where it was and the failure
-goes up as if from the user function: `lru_cache_prepend_link`, Modules/_functoolsmodule.c:1435-1445. So a
+goes up as if from the user function: `lru_cache_prepend_link`, Modules/_functoolsmodule.c:1531-1541. So a
 failed eviction keeps every entry, in the same order. -/
 def LruEvictFailureKeepsLinks : Prop :=
   ∀ (cfg : Cfg Nat Nat) (fuel key r : Nat) (e : PyExc) (c : CLru Nat Nat) (old : Nat × Nat)
@@ -689,7 +689,7 @@ def delCfg : Cfg Nat Nat :=
   ⟨2, fun k _ => .ret (k + 1), { noFaults Nat with evict := fun k _ => if k = 2 then some (.valueError "eq") else none }, 0⟩
 
 /-- All the Python wrapper returns is something the user function returned. False: after `del cache[oldkey]` raises at
-Lib/functools.py:683, the dict still has `oldkey`, and its link is the new root, whose result is `None`, so the next call with
+Lib/functools.py:699, the dict still has `oldkey`, and its link is the new root, whose result is `None`, so the next call with
 that key is a hit that returns `None`. C puts the link back, and keeps the value. -/
 def LruResultsFromFunction : Prop :=
   ∀ (keys : List Nat) (v : Nat), Except.ok v ∈ (drivePy delCfg 8 keys emptyPy).1 → ∃ k, v = k + 1
@@ -768,7 +768,7 @@ theorem lruMaxsizeTwinsAlways_refuted : ¬LruMaxsizeTwinsAlways := by
   simp [wrapperCMode, wrapperPyMode, ssizeMax, ssizeMin] at this
 
 /-- Both wrappers accept the same user functions. False: the C wrapper checks `PyCallable_Check` when it is
-built, Modules/_functoolsmodule.c:1541-1545, and the Python one takes any object and fails at the call. -/
+built, Modules/_functoolsmodule.c:1637-1641, and the Python one takes any object and fails at the call. -/
 def LruAcceptsSameFunctions : Prop :=
   ∀ (callable : Bool) (m : Option Int),
     (wrapperCMode callable m).toBool = (wrapperPyMode m).toBool

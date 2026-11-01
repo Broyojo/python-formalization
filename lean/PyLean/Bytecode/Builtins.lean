@@ -29,7 +29,7 @@ def seqBinary (nb : Nat) (l r : Val) : RM (Option Val) := do
   | 0, .str a, .str b => pure (some (.str (a ++ b)))
   | 0, .bytes a, .bytes b => pure (some (.bytes (a ++ b)))
   | 6, .str a, _ =>
-    -- `PyUnicode_Format`, unicodeobject.c:15549,15583, for a template with no conversion
+    -- `PyUnicode_Format`, unicodeobject.c@3.14.7:15549,15583, for a template with no conversion
     -- in it; a template with one is the named exclusion `str-percent-conversion`.
     if a.contains '%' then fault "str % with conversions is not modelled"
     else
@@ -43,7 +43,7 @@ def seqBinary (nb : Nat) (l r : Val) : RM (Option Val) := do
       if dict || isTuple == some 0 then pure (some (.str a))
       else typeError "not all arguments converted during string formatting"
   | 6, .bytes a, _ =>
-    -- `_PyBytes_FormatEx`, bytesobject.c:634-635,1063, with the same named exclusion.
+    -- `_PyBytes_FormatEx`, bytesobject.c:655-656,1063, with the same named exclusion.
     if a.contains 37 then fault "bytes % with conversions is not modelled"
     else
       let isTuple ← match r with
@@ -154,7 +154,7 @@ def seqFast (v : Val) (msg : String) : RM (List Val) := do
     if ← givenMatches e 8 (.cls "TypeError") then typeError msg else throw (.exc e)
   drain om ctx it 1000000 []
 
-/-- The loop of `merge_from_seq2_lock_held`, `Objects/dictobject.c:3810-3866`. Elements
+/-- The loop of `merge_from_seq2_lock_held`, `Objects/dictobject.c:4068-4126`. Elements
 are taken one at a time, so pairs before a failing element stay in the dict. The
 `_PyErr_FormatNote` of line 3826 adds a note, which the model does not record. -/
 def mergeFromSeq2Loop (d it : Val) : Nat → Nat → RM Unit
@@ -170,7 +170,7 @@ def mergeFromSeq2Loop (d it : Val) : Nat → Nat → RM Unit
         mergeFromSeq2Loop d it n (i + 1)
       | _ => valueError s!"dictionary update sequence element #{i} has length {kv.length}; 2 is required"
 
-/-- `dict_update_arg`, `Objects/dictobject.c:3735`: a mapping, or a sequence of pairs. -/
+/-- `dict_update_arg`, `Objects/dictobject.c:3992`: a mapping, or a sequence of pairs. -/
 def dictUpdateArgFwd (d o : Val) : RM Unit := do
   if (← isExactDict o) || (← optAttr om ctx o "keys").isSome then
     return ← om.dictUpdate ctx d o
@@ -211,7 +211,7 @@ def seqSlots (v : Val) : RM (Bool × Bool) := do
     | _ => pure (false, false)
   | _ => pure (false, false)
 
-/-- `sequence_repeat`, `Objects/abstract.c:1147-1163`. The `OverflowError` of
+/-- `sequence_repeat`, `Objects/abstract.c:1157-1173`. The `OverflowError` of
 `PyNumber_AsSsize_t` is the named exclusion `huge-seq-repeat`. -/
 def sequenceRepeat (seq n : Val) : RM Val := do
   match ← asIndex om ctx n with
@@ -353,7 +353,7 @@ def containsImpl (c item : Val) : RM Bool := do
         if len == 0 then pure false
         else if step > 0 then pure (start ≤ i && i < stop && (i - start) % step == 0)
         else pure (stop < i && i ≤ start && (start - i) % (-step) == 0)
-      -- `range_contains`, rangeobject.c:489: anything but an exact int or bool goes to
+      -- `range_contains`, rangeobject.c:504: anything but an exact int or bool goes to
       -- `_PySequence_IterSearch`, abstract.c:2166, which compares `item == obj`.
       | none =>
         (List.range len.toNat).anyM fun (k : Nat) => eqBool om ctx (.int (start + (k : Int) * step)) item
@@ -813,7 +813,7 @@ def instantiate (c : Val) (args : List Val) (kw : List String) : RM Val := do
           | .cls k => pure k.slots.length
           | _ => pure 0
         | _ => pure 0))
-      -- `object_new`, `Objects/typeobject.c:6867`
+      -- `object_new`, `Objects/typeobject.c:7477`
       if let .ref ca := c then
         if let .cls k ← getObj ca then
           if !k.abstractMethods.isEmpty then
@@ -1178,7 +1178,7 @@ def callMethod (tp name : String) (self : Val) (args : List Val) (kw : List Stri
   | _, _ => typeError s!"{tp}.{name}: not modelled"
 where
   /-- `_gen_throw` with `tb = NULL` and the one-argument `throw`,
-  `Objects/genobject.c:465-595`. -/
+  `Objects/genobject.c:624-726`. -/
   genThrow : Nat → Addr → Val → RM Val
     | 0, _, _ => throw .fuel
     | fuel + 1, a, typ => do
@@ -1285,7 +1285,7 @@ def callType (n : String) (args : List Val) (kw : List String) : RM Val := do
         match intFromStr s with
         | some i => pure (.int i)
         | none => valueError s!"invalid literal for int() with base 10: {strRepr s}"
-      -- `PyNumber_Long` -> `_PyLong_FromBytes`, longobject.c:3084
+      -- `PyNumber_Long` -> `_PyLong_FromBytes`, longobject.c:3166
       | .bytes b =>
         match intFromStr (String.ofList (b.map fun x => Char.ofNat x.toNat)) with
         | some i => pure (.int i)
@@ -1612,7 +1612,7 @@ def dictMergeImpl (override : Nat) (d o : Val) : RM Unit := do
   | none =>
     raiseVal (← newExc (.cls "AttributeError") [.str s!"'{← tpName o}' object has no attribute 'keys'"])
 
-/-- `stopiteration_error`, `Python/intrinsics.c:142-184`. -/
+/-- `stopiteration_error`, `Python/intrinsics.c:140-182`. -/
 def stopIterationError (f : Frame) (exc : Val) : RM Val := do
   let co ← getCodeR P f.code
   let msg? ← if ← givenMatches exc 8 (.cls "StopIteration") then
@@ -1630,7 +1630,7 @@ def stopIterationError (f : Frame) (exc : Val) : RM Val := do
     pure err
   | none => pure exc
 
-/-- `_PyIntrinsics_UnaryFunctions`, `Python/intrinsics.c:210-224`. -/
+/-- `_PyIntrinsics_UnaryFunctions`, `Python/intrinsics.c:208-222`. -/
 def intrinsic1Impl (f : Frame) (n : Nat) (v : Val) : RM Val := do
   match n with
   | 0 => raiseS "SystemError" "invalid intrinsic function"
@@ -1648,7 +1648,7 @@ def intrinsic1Impl (f : Frame) (n : Nat) (v : Val) : RM Val := do
     | _ => fault "list_to_tuple on a non-list"
   | _ => fault "intrinsic not modelled"
 
-/-- `_PyIntrinsics_BinaryFunctions`, `Python/intrinsics.c:259-267`. -/
+/-- `_PyIntrinsics_BinaryFunctions`, `Python/intrinsics.c:257-265`. -/
 def intrinsic2Impl (_ : Frame) (n : Nat) (_ _ : Val) : RM Val := do
   match n with
   | 0 => raiseS "SystemError" "invalid intrinsic function"
@@ -1668,7 +1668,7 @@ def awaitableIter (o : Val) : RM Val := do
       pure r
     | none => typeError s!"'{← tpName o}' object can't be awaited"
 
-/-- `_PyEval_GetAwaitable`, `Python/ceval.c:3643-3665`. -/
+/-- `_PyEval_GetAwaitable`, `Python/ceval.c:3645-3667`. -/
 def getAwaitableImpl (o : Val) (oparg : Nat) : RM Val := do
   let r ← tryExc (awaitableIter om ctx o) fun e => do
     if (← userLookup (← typeOf o) "__await__").isNone && (← genKindOf o) != some .coro then
@@ -1684,7 +1684,7 @@ def getAwaitableImpl (o : Val) (oparg : Nat) : RM Val := do
         runtimeError "coroutine is being awaited already"
   pure r
 
-/-- `GET_AITER`, `Python/bytecodes.c:1230-1264`. -/
+/-- `GET_AITER`, `Python/bytecodes.c:1607-1641`. -/
 def getAIterImpl (o : Val) : RM Val := do
   match ← callDunder om ctx o "__aiter__" [] with
   | none =>
@@ -1694,7 +1694,7 @@ def getAIterImpl (o : Val) : RM Val := do
       typeError s!"'async for' received an object from __aiter__ that does not implement __anext__: {← tpName it}"
     pure it
 
-/-- `_PyEval_GetANext`, `Python/ceval.c:3564-3601`. -/
+/-- `_PyEval_GetANext`, `Python/ceval.c:3557-3594`. -/
 def getANextImpl (o : Val) : RM Val := do
   match ← callDunder om ctx o "__anext__" [] with
   | none =>
@@ -1709,7 +1709,7 @@ def getANextImpl (o : Val) : RM Val := do
         raiseVal err
       else throw (.exc e)
 
-/-- `_PyEval_MatchKeys`, `Python/ceval.c:727-813`. -/
+/-- `_PyEval_MatchKeys`, `Python/ceval.c:437-523`. -/
 def matchKeysImpl (m keys : Val) : RM Val := do
   let ks ← tupleItems keys
   if ks.size == 0 then return ← mkTuple []
@@ -1727,7 +1727,7 @@ def matchKeysImpl (m keys : Val) : RM Val := do
     vals := v :: vals
   mkTuple vals.reverse
 
-/-- `match_class_attr`, `Python/ceval.c:818-836`. -/
+/-- `match_class_attr`, `Python/ceval.c:528-549`. -/
 def matchClassAttr (subject typ : Val) (name : String) (seen : List String) :
     RM (Option Val × List String) := do
   if seen.contains name then
@@ -1742,7 +1742,7 @@ def matchSelf (t : Val) : Bool :=
      "tuple"].contains n
   | _ => false
 
-/-- `_PyEval_MatchClass`, `Python/ceval.c:840-952`. -/
+/-- `_PyEval_MatchClass`, `Python/ceval.c:553-669`. -/
 def matchClassImpl (subject typ : Val) (nargs : Nat) (kwargs : Val) : RM (Option Val) := do
   if !(← isType typ) then typeError "called match pattern must be a class"
   if !(← om.isInstance ctx subject typ) then return none

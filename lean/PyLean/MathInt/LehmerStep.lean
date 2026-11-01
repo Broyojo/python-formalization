@@ -2,7 +2,7 @@ import PyLean.MathInt.IsqrtAlg
 
 /-!
 One iteration of the inner loop of Lehmer's algorithm in `_PyLong_GCD`
-(longobject.c:5717-5728), on integers.
+(longobject.c:5816-5827), on integers.
 
 The loop works on `x, y`, the top bits of `a, b` (`a = M*x0 + α`,
 `b = M*y0 + β`, `0 <= α, β < M`), with cofactors `A, B, C, D`. Writing

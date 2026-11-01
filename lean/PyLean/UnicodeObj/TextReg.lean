@@ -28,7 +28,7 @@ def textEntries : List Entry := [
   { id := "unicodeobj-text-final-sigma-regex", pyFile := "Objects/unicodeobject.c"
     pyFns := ["handle_capital_sigma"]
     statement := "handle_capital_sigma returns U+03C2 exactly in the context \\p{cased}\\p{case-ignorable}*U+03A3!(\\p{case-ignorable}*\\p{cased}) of its own comment and of Unicode's Final_Sigma."
-    source := "comment at unicodeobject.c:10047-10051; The Unicode Standard, Table 3-17"
+    source := "comment at unicodeobject.c:9812-9816; The Unicode Standard, Table 3-17"
     status := .refuted, prop := ``FinalSigmaRegex, thm := some ``finalSigmaRegex_refuted
     bug := some "unicodeobj-text-final-sigma-cased-ignorable"
     notes := "Differs only for characters that are both Cased and Case_Ignorable (267 code points, e.g. U+02B0)." },
@@ -50,7 +50,7 @@ def textEntries : List Entry := [
   { id := "unicodeobj-text-isidentifier", pyFile := "Objects/unicodeobject.c"
     pyFns := ["_PyUnicode_ScanIdentifier", "PyUnicode_IsIdentifier", "unicode_isidentifier_impl"]
     statement := "s.isidentifier() holds exactly for a string starting with an XID_Start character or '_' and continuing with XID_Continue characters."
-    source := "PEP 3131, comment at unicodeobject.c:12442-12449"
+    source := "PEP 3131, comment at unicodeobject.c:12172-12179"
     status := .proven, prop := ``IsIdentifierSpec, thm := some ``isIdentifierSpec_proven },
   { id := "unicodeobj-text-repr-two-passes", pyFile := "Objects/unicodeobject.c"
     pyFns := []
@@ -129,13 +129,13 @@ def textEntries : List Entry := [
   { id := "unicodeobj-text-dedent-defined", pyFile := "Objects/unicodeobject.c"
     pyFns := ["_PyUnicode_Dedent", "search_longest_common_leading_whitespace"]
     statement := "_PyUnicode_Dedent never reaches memcpy with a negative length."
-    source := "assert(new_line_len >= 0), unicodeobject.c:14487"
+    source := "assert(new_line_len >= 0), unicodeobject.c:13708"
     status := .refuted, prop := ``DedentDefined, thm := some ``dedentDefined_refuted
     bug := some "unicodeobj-text-dedent-negative-memcpy" },
   { id := "unicodeobj-text-dedent-textwrap", pyFile := "Objects/unicodeobject.c"
     pyFns := ["_PyUnicode_Dedent", "search_longest_common_leading_whitespace"]
     statement := "For input ending in a newline, _PyUnicode_Dedent equals textwrap.dedent."
-    source := "comment at unicodeobject.c:14425-14428"
+    source := "comment at unicodeobject.c:13645-13649"
     status := .refuted, prop := ``DedentMatchesTextwrap, thm := some ``dedentMatchesTextwrap_refuted
     bug := some "unicodeobj-text-dedent-isspace-blank-lines" },
   { id := "unicodeobj-text-case-tables", pyFile := "Objects/unicodectype.c"

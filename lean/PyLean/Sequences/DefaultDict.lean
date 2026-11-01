@@ -50,7 +50,7 @@ namespace DefDict
 
 variable [DecidableEq κ]
 
-/-- `defdict_missing` (_collectionsmodule.c:2230-2252). `keyRepr` renders the key:
+/-- `defdict_missing` (_collectionsmodule.c:2234-2256). `keyRepr` renders the key:
 `PyErr_SetObject(KeyError, (key,))` unpacks the tuple into the arguments, so even a
 tuple key raises `KeyError(key)`. `PyDict_SetDefaultRef` keeps a value the factory
 itself stored under `key`. -/
@@ -71,17 +71,17 @@ def getitem (dd : DefDict κ ν) (keyRepr : κ → String) (key : κ) : Py ν ×
   | some v => (.ok v, dd)
   | Option.none => dd.missing keyRepr key
 
-/-- `new_defdict` (_collectionsmodule.c:2255-2260):
+/-- `new_defdict` (_collectionsmodule.c:2259-2264):
 `type(dd)(dd.default_factory, arg)`. A NULL factory is passed as `None`. -/
 def newFrom (dd : DefDict κ ν) (arg : PyDict κ ν) : DefDict κ ν :=
   { items := dictUpdate [] arg
     factory := match dd.factory with | .null => .none | f => f
     tname := dd.tname }
 
-/-- `dd.copy()`, `dd.__copy__()` (`defdict_copy`, _collectionsmodule.c:2265-2272). -/
+/-- `dd.copy()`, `dd.__copy__()` (`defdict_copy`, _collectionsmodule.c:2269-2276). -/
 def copy (dd : DefDict κ ν) : DefDict κ ν := dd.newFrom dd.items
 
-/-- `dd.__reduce__()` (`defdict_reduce`, _collectionsmodule.c:2275-2328):
+/-- `dd.__reduce__()` (`defdict_reduce`, _collectionsmodule.c:2279-2332):
 `(type(dd), args, None, None, iter(dd.items()))`. `args` is empty for a NULL or
 `None` factory, else `(factory,)`; here the factory's repr stands for it. -/
 def reduce (dd : DefDict κ ν) : Option String × PyDict κ ν :=
@@ -89,7 +89,7 @@ def reduce (dd : DefDict κ ν) : Option String × PyDict κ ν :=
   | .null | .none => (Option.none, dd.items)
   | .call r _ => (some r, dd.items)
 
-/-- `repr(dd)` (`defdict_repr`, _collectionsmodule.c:2370-2406). `base` is
+/-- `repr(dd)` (`defdict_repr`, _collectionsmodule.c:2374-2410). `base` is
 `dict.__repr__`, `entered` is `Py_ReprEnter` finding the factory being printed. -/
 def repr (dd : DefDict κ ν) (base : PyDict κ ν → String) (entered : Bool) : String :=
   let defrepr := match dd.factory with
@@ -105,7 +105,7 @@ inductive FactoryArg (κ ν : Type) where
   /-- Neither callable nor `None`. -/
   | bad
 
-/-- `dd.__init__(first, *rest, **kw)` (`defdict_init`, _collectionsmodule.c:2460-2488).
+/-- `dd.__init__(first, *rest, **kw)` (`defdict_init`, _collectionsmodule.c:2464-2492).
 `rest` is what `dict.__init__(dd, *rest, **kw)` adds, or its exception. The factory
 is replaced before `dict.__init__` runs. -/
 def init (dd : DefDict κ ν) (first : FactoryArg κ ν) (rest : Py (PyDict κ ν)) : Py Unit × DefDict κ ν :=
@@ -132,7 +132,7 @@ def Operand.items? : Operand κ ν → Option (PyDict κ ν)
   | .plain i => some i
   | .notDict => Option.none
 
-/-- `left | right` (`defdict_or`, _collectionsmodule.c:2409-2440): `none` is
+/-- `left | right` (`defdict_or`, _collectionsmodule.c:2413-2444): `none` is
 `NotImplemented`. One operand is a defaultdict (the slot's precondition); the result
 has its type and factory: `new_defdict(self, left)`, then `PyDict_Update(new, right)`. -/
 def orOp (left right : Operand κ ν) : Option (DefDict κ ν) :=
@@ -151,7 +151,7 @@ end DefDict
 /-! ### `_count_elements` -/
 
 /-- The fast path of `_collections__count_elements_impl`
-(_collectionsmodule.c:2574-2616), `mapping` a dict whose `get` and `__setitem__` are
+(_collectionsmodule.c:2578-2620), `mapping` a dict whose `get` and `__setitem__` are
 `dict`'s. `hash` is `_PyObject_HashFast`, `add1` is `PyNumber_Add(oldval, one)`. -/
 def countFast [DecidableEq κ] (hash : κ → Py Unit) (add1 : ν → Py ν) (one : ν) :
     List κ → PyDict κ ν → Py Unit × PyDict κ ν
@@ -167,7 +167,7 @@ def countFast [DecidableEq κ] (hash : κ → Py Unit) (add1 : ν → Py ν) (on
         | .error e => (.error e, d)
         | .ok v => countFast hash add1 one ks (dictSet d k v)
 
-/-- The slow path (_collectionsmodule.c:2618-2642), any mapping `σ`: `mget s k` is
+/-- The slow path (_collectionsmodule.c:2622-2646), any mapping `σ`: `mget s k` is
 `bound_get(key, zero)`, `mset s k v` is `PyObject_SetItem`, `isZero` is the test
 `oldval == zero` of identity with the int 0, which skips the addition. -/
 def countSlow {σ : Type} (mget : σ → κ → Py ν × σ) (mset : σ → κ → ν → Py Unit × σ)
@@ -212,7 +212,7 @@ def dictMset [DecidableEq κ] (d : PyDict κ ν) (k : κ) (v : ν) : Py Unit × 
   (.ok (), dictSet d k v)
 
 /-- The iterator's own end, then the error: `_count_elements` returns NULL when an
-exception is set after the loop (_collectionsmodule.c:2645-2652), so an iterator
+exception is set after the loop (_collectionsmodule.c:2649-2656), so an iterator
 that raises leaves the counts it reached. -/
 def countFinish (src : Option PyExc) (r : Py Unit) : Py Unit :=
   match r with
@@ -223,7 +223,7 @@ def countFinish (src : Option PyExc) (r : Py Unit) : Py Unit :=
     | some e => .error e
 
 /-- `_collections._count_elements(mapping, iterable)` for a `dict` mapping
-(`_collections__count_elements_impl`, _collectionsmodule.c:2541-2653). -/
+(`_collections__count_elements_impl`, _collectionsmodule.c:2545-2657). -/
 def countDict [DecidableEq κ] (hash : κ → Py Unit) (add1 : ν → Py ν) (one : ν)
     (src : PyIterable κ) (d : PyDict κ ν) : Py Unit × PyDict κ ν :=
   match src with
@@ -243,7 +243,7 @@ def countMapping {σ : Type} (mget : σ → κ → Py ν × σ) (mset : σ → �
 
 /-! ### `_tuplegetter` -/
 
-/-- `_tuplegetterobject` (_collectionsmodule.c:2656-2660): `doc` is any object. -/
+/-- `_tuplegetterobject` (_collectionsmodule.c:2660-2664): `doc` is any object. -/
 structure TupleGetter (δ : Type) where
   index : Int
   doc : δ
@@ -255,13 +255,13 @@ inductive TGObj (α : Type) where
   | tuple (xs : List α)
   | other (tname : String)
 
-/-- `_tuplegetter(index, doc)` (`tuplegetter_new_impl`, _collectionsmodule.c:2675-2686),
+/-- `_tuplegetter(index, doc)` (`tuplegetter_new_impl`, _collectionsmodule.c:2679-2690),
 with the clinic's `Py_ssize_t`. -/
 def tuplegetterNew {δ : Type} (index : Int) (doc : δ) : Py (TupleGetter δ) := do
   let i ← asSsize index
   return ⟨i, doc⟩
 
-/-- `tuplegetter_descr_get` (_collectionsmodule.c:2689-2716): `.ok none` is the
+/-- `tuplegetter_descr_get` (_collectionsmodule.c:2693-2720): `.ok none` is the
 descriptor itself. -/
 def tuplegetterGet {α δ : Type} [Inhabited α] (g : TupleGetter δ) (obj : TGObj α) : Py (Option α) :=
   match obj with
@@ -272,16 +272,16 @@ def tuplegetterGet {α δ : Type} [Inhabited α] (g : TupleGetter δ) (obj : TGO
     if !validIndex g.index xs.length then .error (.indexError "tuple index out of range")
     else .ok (some (ix xs g.index))
 
-/-- `tuplegetter_descr_set` (_collectionsmodule.c:2719-2727): always raises. -/
+/-- `tuplegetter_descr_set` (_collectionsmodule.c:2723-2731): always raises. -/
 def tuplegetterSet {α : Type} (value : Option α) : PyExc :=
   match value with
   | none => .named "AttributeError" "can't delete attribute"
   | some _ => .named "AttributeError" "can't set attribute"
 
-/-- `tuplegetter_reduce` (_collectionsmodule.c:2757-2762): `(type(g), (index, doc))`. -/
+/-- `tuplegetter_reduce` (_collectionsmodule.c:2761-2766): `(type(g), (index, doc))`. -/
 def tuplegetterReduce {δ : Type} (g : TupleGetter δ) : Int × δ := (g.index, g.doc)
 
-/-- `tuplegetter_repr` (_collectionsmodule.c:2765-2771). -/
+/-- `tuplegetter_repr` (_collectionsmodule.c:2769-2775). -/
 def tuplegetterRepr {δ : Type} (g : TupleGetter δ) (docRepr : δ → String) : String :=
   s!"_tuplegetter({g.index}, {docRepr g.doc})"
 

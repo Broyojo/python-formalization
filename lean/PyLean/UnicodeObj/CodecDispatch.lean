@@ -2,16 +2,16 @@ import PyLean.UnicodeObj.CodecCharmap
 import PyLean.UnicodeObj.CodecEscapeProps
 
 /-!
-The fast dispatch by encoding name, `_Py_normalize_encoding` (unicodeobject.c:3605-3648) with
-the shortcuts of `PyUnicode_Decode` (:3651-3738) and `PyUnicode_AsEncodedString` (:3928-4025),
-`_Py_GetErrorHandler` (:559-583), and properties of the charmap codec.
+The fast dispatch by encoding name, `_Py_normalize_encoding` (unicodeobject.c:3523-3567) with
+the shortcuts of `PyUnicode_Decode` (:3570-3657) and `PyUnicode_AsEncodedString` (:3828-3925),
+`_Py_GetErrorHandler` (:469-493), and properties of the charmap codec.
 -/
 
 namespace PyLean.UnicodeObj
 
 open PyLean
 
-/-- The loop of `_Py_normalize_encoding`, unicodeobject.c:3618-3644. `room` is what is left
+/-- The loop of `_Py_normalize_encoding`, unicodeobject.c:3537-3563. `room` is what is left
 of the buffer, `l` the output so far, reversed. `none` is the `return 0` of a full buffer.
 A NUL ends the C string. -/
 def normalizeLoop : List Nat → Bool → Nat → List Nat → Option (List Nat)
@@ -48,7 +48,7 @@ def shortcutOf (name : List Nat) : Shortcut :=
         l == lit "iso8859_1" then .latin1
     else .registry
 
-/-- `_Py_GetErrorHandler`, unicodeobject.c:559-583, on the names it recognises: `namereplace`
+/-- `_Py_GetErrorHandler`, unicodeobject.c:469-493, on the names it recognises: `namereplace`
 is `_Py_ERROR_OTHER` there and goes through the registry to the same handler. -/
 def getErrorHandler (errors : String) : Option ErrHandler :=
   if errors == "strict" then some .strict

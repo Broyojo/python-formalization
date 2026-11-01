@@ -1,2 +1,3 @@
 file	line	endline	name	signature	status	entry	note
-Modules/_testlimitedcapi.c	22	105	PyInit__testlimitedcapi	PyInit__testlimitedcapi(void)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi.c	11	101	module_exec	module_exec(PyObject *mod)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi.c	117	120	PyInit__testlimitedcapi	PyInit__testlimitedcapi(void)	excluded		test-support: only for CPython's own tests

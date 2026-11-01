@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testinternalcapi/tuple.c	7	15	tuple_from_pair	tuple_from_pair(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/tuple.c	18	26	tuple_from_pair_steal	tuple_from_pair_steal(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/tuple.c	36	39	_PyTestInternalCapi_Init_Tuple	_PyTestInternalCapi_Init_Tuple(PyObject *m)	excluded		test-support: only for CPython's own tests

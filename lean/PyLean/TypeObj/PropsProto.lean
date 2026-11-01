@@ -90,7 +90,7 @@ theorem containsIdentity_proven : ContainsIdentity := by
 
 /-- **Subclass priority in comparisons**: when the right operand's type is a proper
 subclass, its reflected method runs first, and a non-`NotImplemented` result is final.
-`Objects/object.c:1052-1060`. -/
+`Objects/object.c:1055-1063`. -/
 def RichcompareSubclassFirst : Prop :=
   ∀ (rt : Rt) (v u : Val) (op : CmpOp) (f : SlotFn) (r : Val) (w w' : World),
     typeOf w v ≠ typeOf w u →
@@ -137,7 +137,7 @@ theorem richcompareLeftFirst_proven : RichcompareLeftFirst := by
   simp only [doRichcompare, M.bind_app, getW_app, hcond, Bool.false_eq_true, ite_false,
     M.pure_app, hf, hc]
 
-/-- The fallback of `do_richcompare`, `Objects/object.c:1075-1089`, when every slot call
+/-- The fallback of `do_richcompare`, `Objects/object.c:1078-1092`, when every slot call
 answered `NotImplemented`: `==` is identity, `!=` its negation, ordering raises. Stated
 for two objects of the same type whose slot is `object_richcompare` and which are
 not identical, the common case of a class with no comparison methods. -/
@@ -160,7 +160,7 @@ theorem richcompareDefaults_proven : RichcompareDefaults := by
       simp [doRichcompare, ← heq, hs, callRichcompare, objectRichcompare, CmpOp.swapped]
 
 /-- Default `__ne__`: `object.__ne__(a, b)` asks `tp_richcompare(a, b, Py_EQ)` and negates a
-result that is not `NotImplemented`, `Objects/typeobject.c:6980-7000`. -/
+result that is not `NotImplemented`, `Objects/typeobject.c:7590-7610`. -/
 def ObjectNeInvertsEq : Prop :=
   ∀ (rt : Rt) (a b r : Val) (g : SlotFn) (t : Bool) (w w1 w2 : World),
     slotOf w (typeOf w a) .tp_richcompare = some g →
@@ -180,7 +180,7 @@ theorem objectNeInvertsEq_proven : ObjectNeInvertsEq := by
     | exact (hr rfl).elim
     | simp [ht]
 
-/-- `PyObject_IsTrue` on the singletons, `Objects/object.c:2063-2068`: no slot runs. -/
+/-- `PyObject_IsTrue` on the singletons, `Objects/object.c:2142-2147`: no slot runs. -/
 def IsTrueSingletons : Prop :=
   ∀ (rt : Rt) (w : World),
     pyIsTrue rt (.bool true) w = .ok true w ∧ pyIsTrue rt (.bool false) w = .ok false w ∧
@@ -206,7 +206,7 @@ theorem isTrueDefaultTrue_proven : IsTrueDefaultTrue := by
   | _ => simp [pyIsTrue, h1, h2, h3]
 
 /-- `__len__` decides truth when there is no `__bool__`: the length slot result, positive
-means true (`Objects/object.c:2072-2081`), mapping length first. -/
+means true (`Objects/object.c:2151-2160`), mapping length first. -/
 def IsTrueLengthFallback : Prop :=
   ∀ (rt : Rt) (v : Val) (f : SlotFn) (n : Int) (w w' : World),
     v.is .none = false → (∀ b, v ≠ .bool b) →
@@ -222,7 +222,7 @@ theorem isTrueLengthFallback_proven : IsTrueLengthFallback := by
   | _ => simp [pyIsTrue, h1, h2, hl]
 
 /-- A `__bool__` returning a non-bool raises `TypeError`; `None` as `__bool__` raises
-`TypeError`, `Objects/typeobject.c:10208-10240`. -/
+`TypeError`, `Objects/typeobject.c:10910-10941`. -/
 def NbBoolMustReturnBool : Prop :=
   ∀ (rt : Rt) (self v : Val) (w w' : World),
     maybeCallSpecial rt self "__bool__" [] true w = .ok (.res v) w' →
@@ -237,7 +237,7 @@ theorem nbBoolMustReturnBool_proven : NbBoolMustReturnBool := by
 
 /-- **Hash results are never -1.** `slot_tp_hash` returns `-2` for `-1` and any value in
 `Py_ssize_t` range otherwise; `-1` is reserved for errors,
-`Objects/typeobject.c:10333-10335`. Quantified over every `__hash__`. -/
+`Objects/typeobject.c:11034-11036`. Quantified over every `__hash__`. -/
 def SlotHashNotMinusOne : Prop :=
   ∀ (rt : Rt) (self : Val) (h : Int) (w w' : World),
     slotTpHash rt self w = .ok h w' → h ≠ -1
@@ -268,7 +268,7 @@ theorem slotHashNotMinusOne_proven : SlotHashNotMinusOne := by
 
 /-- **Hash values in range are preserved**: `hash(x)` equals `x.__hash__()` for a result in
 `Py_ssize_t` range other than `-1`, so `x.__hash__()` returning `hash(y)` gives
-`hash(x) == hash(y)`, as the comment at `Objects/typeobject.c:10320-10324` requires. -/
+`hash(x) == hash(y)`, as the comment at `Objects/typeobject.c:11021-11025` requires. -/
 def SlotHashPreservesRange : Prop :=
   ∀ (rt : Rt) (self r : Val) (i : Int) (w w' : World),
     maybeCallSpecial rt self "__hash__" [] true w = .ok (.res r) w' →
@@ -374,7 +374,7 @@ theorem binaryOp1LeftThenRight_proven : BinaryOp1LeftThenRight := by
   simp [hne', hd, hsub, hc]
 
 /-- Two operands sharing the same slot function get one call: the inherited-operator case
-of `Objects/abstract.c:947`. -/
+of `Objects/abstract.c:957`. -/
 def BinaryOp1SharedSlotOnce : Prop :=
   ∀ (rt : Rt) (v u : Val) (s : Slot) (f : SlotFn) (w w1 : World),
     slotIn w v s = some f → slotIn w u s = some f →
@@ -417,7 +417,7 @@ theorem numberAddConcatFallback_proven : NumberAddConcatFallback := by
   simp [pyNumberAdd, hb, hf]
 
 /-- `sequence_repeat` needs an index: a right operand without `__index__` raises the
-message of `Objects/abstract.c:1157`. -/
+message of `Objects/abstract.c:1167`. -/
 def SequenceRepeatNeedsIndex : Prop :=
   ∀ (rt : Rt) (f : SlotFn) (seq n : Val) (w : World),
     indexCheck w n = false →
@@ -443,7 +443,7 @@ theorem numberMultiplyBothSides_proven : NumberMultiplyBothSides := by
 
 /-- **`x *= seq` falls back like `x * seq`.** Refuted: with `x` an instance of any class,
 `x * [1]` repeats the list by `x.__index__()` while `x *= [1]` raises `TypeError`, because
-the `else if` at `Objects/abstract.c:1336` is keyed on `tp_as_sequence != NULL`, and heap
+the `else if` at `Objects/abstract.c:1346` is keyed on `tp_as_sequence != NULL`, and heap
 types always have that struct. The statement says the in-place form takes the same
 fallback whenever the left operand has no repeat slot. -/
 def InPlaceMultiplyMatchesMultiply : Prop :=

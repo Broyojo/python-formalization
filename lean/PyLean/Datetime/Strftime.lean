@@ -2,7 +2,7 @@ import PyLean.Datetime.Objects
 
 /-!
 `strftime` preprocessing: `_wrap_strftime`, _pydatetime.py:217-295, and
-`wrap_strftime`, _datetimemodule.c:1874-2056. Both rewrite the format and call
+`wrap_strftime`, _datetimemodule.c:1884-2066. Both rewrite the format and call
 `time.strftime(newformat, timetuple)`. That final call belongs to the C library, so
 the model stops at the pair `(newformat, timetuple)`.
 
@@ -96,20 +96,20 @@ def wrapStrftimePy (env : TzEnv) (obj : StrfObj) (format : List Char) (tt : Time
 
 /-! ### C -/
 
-/-- `make_freplacement`, :1853-1864. -/
+/-- `make_freplacement`, :1898-1909. -/
 def makeFreplacementC (obj : StrfObj) : List Char := padInt 6 obj.microsecond
 
-/-- `format_utcoffset`, :1723-1768, with the tzinfo argument of the caller. -/
+/-- `format_utcoffset`, :1768-1813, with the tzinfo argument of the caller. -/
 def formatUtcoffsetC (sep : List Char) (off : Option Delta) : List Char :=
   formatOffsetSep sep (off.map Delta.toUs)
 
-/-- `make_somezreplacement`, :1789-1807. -/
+/-- `make_somezreplacement`, :1834-1852. -/
 def makeSomezreplacementC (env : TzEnv) (sep : List Char) : StrfObj → Py (List Char)
   | .date => .ok []
   | .time t => do return formatUtcoffsetC sep (← t.utcoffsetC env)
   | .dt d => do return formatUtcoffsetC sep (← d.utcoffsetC env)
 
-/-- `make_Zreplacement`, :1810-1850. -/
+/-- `make_Zreplacement`, :1855-1895. -/
 def makeZreplacementC (env : TzEnv) : StrfObj → Py (List Char)
   | .date => .ok []
   | .time t => do
@@ -135,7 +135,7 @@ def findPercent (format : List Char) (i : Nat) : Option Nat :=
 def substr (format : List Char) (start stop : Nat) : List Char :=
   (format.drop start).take (stop - start)
 
-/-- The `while (i != flen)` loop of `wrap_strftime`, :1906-2024. `fuel` bounds the
+/-- The `while (i != flen)` loop of `wrap_strftime`, :1951-2074. `fuel` bounds the
 iterations; each one advances `i`. -/
 def wrapLoopC (env : TzEnv) (obj : StrfObj) (format : List Char) (tt0 gyear : Int) (norm : Bool) :
     Nat → WrapState → Py WrapState
@@ -168,7 +168,7 @@ def wrapLoopC (env : TzEnv) (obj : StrfObj) (format : List Char) (tt0 gyear : In
               emit i buf
           else next { st with i := i }
 
-/-- `wrap_strftime`, :1874-2056: the format handed to `time.strftime`. -/
+/-- `wrap_strftime`, :1919-2106: the format handed to `time.strftime`. -/
 def wrapStrftimeC (env : TzEnv) (obj : StrfObj) (format : List Char) (tt : TimeTuple)
     (gyear : Int) (norm : Bool) : Py (List Char) := do
   let st ← wrapLoopC env obj format (tt.getD 0 0) gyear norm (format.length + 1) ⟨0, 0, []⟩
@@ -177,7 +177,7 @@ def wrapStrftimeC (env : TzEnv) (obj : StrfObj) (format : List Char) (tt : TimeT
 
 /-! ### `strftime` and `__format__` of the three classes -/
 
-/-- `date.strftime`, Py:1099-1105, and `date_strftime`, :3601-3621, up to the
+/-- `date.strftime`, Py:1099-1105, and `date_strftime`, :3656-3676, up to the
 call of `time.strftime`. -/
 def dateStrftimePy (env : TzEnv) (y m d : Int) (format : List Char) (gyear : Int) (norm : Bool) :
     Py (List Char × TimeTuple) := do
@@ -200,7 +200,7 @@ def dtStrftimeC (env : TzEnv) (dt : DT) (format : List Char) (gyear : Int) (norm
   let tt ← dtTimetupleC env dt
   return (← wrapStrftimeC env (.dt dt) format tt gyear norm, tt)
 
-/-- The time tuple of `time.strftime`, Py:1630-1639 and :4871-4900. -/
+/-- The time tuple of `time.strftime`, Py:1630-1639 and :4926-4955. -/
 def tmTimetuple (t : TM) : TimeTuple := [1900, 1, 1, t.h, t.mi, t.s, 0, 1, -1]
 
 /-- `time.strftime`, Py:1630-1639. -/
@@ -208,12 +208,12 @@ def tmStrftimePy (env : TzEnv) (t : TM) (format : List Char) (norm : Bool) :
     Py (List Char × TimeTuple) := do
   return (← wrapStrftimePy env (.time t) format (tmTimetuple t) 0 norm, tmTimetuple t)
 
-/-- `time_strftime`, :4871-4900. -/
+/-- `time_strftime`, :4926-4955. -/
 def tmStrftimeC (env : TzEnv) (t : TM) (format : List Char) (norm : Bool) :
     Py (List Char × TimeTuple) := do
   return (← wrapStrftimeC env (.time t) format (tmTimetuple t) 0 norm, tmTimetuple t)
 
-/-- `__format__`, Py:1107-1112 and :1641-1646; `date_format`, :3624-3636: an empty
+/-- `__format__`, Py:1107-1112 and :1686-1691; `date_format`, :3679-3691: an empty
 format is `str(self)`, anything else is `self.strftime(fmt)`. -/
 def formatVia {α : Type} (fmt : List Char) (str : Py String) (strf : List Char → Py α) :
     Py (Sum String α) :=

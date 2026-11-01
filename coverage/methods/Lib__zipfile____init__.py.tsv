@@ -27,71 +27,72 @@ Lib/zipfile/__init__.py	764	769	LZMACompressor._init	_init(self)	todo
 Lib/zipfile/__init__.py	771	774	LZMACompressor.compress	compress(self, data)	todo		candidates:itertools-simple-doc-agree
 Lib/zipfile/__init__.py	776	779	LZMACompressor.flush	flush(self)	todo		
 Lib/zipfile/__init__.py	784	787	LZMADecompressor.__init__	__init__(self)	todo		
-Lib/zipfile/__init__.py	789	807	LZMADecompressor.decompress	decompress(self, data)	todo		
-Lib/zipfile/__init__.py	831	851	_check_compression	_check_compression(compression)	todo		
-Lib/zipfile/__init__.py	854	869	_get_compressor	_get_compressor(compress_type, compresslevel=None)	todo		
-Lib/zipfile/__init__.py	872	889	_get_decompressor	_get_decompressor(compress_type)	todo		
-Lib/zipfile/__init__.py	893	899	_SharedFile.__init__	__init__(self, file, pos, close, lock, writing)	todo		
-Lib/zipfile/__init__.py	901	902	_SharedFile.tell	tell(self)	todo		
-Lib/zipfile/__init__.py	904	915	_SharedFile.seek	seek(self, offset, whence=0)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
-Lib/zipfile/__init__.py	917	926	_SharedFile.read	read(self, n=-1)	todo		candidates:pyio-bytesio-read-after-seek
-Lib/zipfile/__init__.py	928	932	_SharedFile.close	close(self)	todo		
-Lib/zipfile/__init__.py	936	938	_Tellable.__init__	__init__(self, fp)	todo		
-Lib/zipfile/__init__.py	940	943	_Tellable.write	write(self, data)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
-Lib/zipfile/__init__.py	945	946	_Tellable.tell	tell(self)	todo		
-Lib/zipfile/__init__.py	948	949	_Tellable.flush	flush(self)	todo		
-Lib/zipfile/__init__.py	951	952	_Tellable.close	close(self)	todo		
-Lib/zipfile/__init__.py	969	1018	ZipExtFile.__init__	__init__(self, fileobj, mode, zipinfo, pwd=None, close_fileobj=False)	todo		
-Lib/zipfile/__init__.py	1021	1030	ZipExtFile._init_decrypter	_init_decrypter(self)	todo		
-Lib/zipfile/__init__.py	1032	1044	ZipExtFile.__repr__	__repr__(self)	todo		
-Lib/zipfile/__init__.py	1046	1060	ZipExtFile.readline	readline(self, limit=-1)	todo		
-Lib/zipfile/__init__.py	1062	1073	ZipExtFile.peek	peek(self, n=1)	todo		
-Lib/zipfile/__init__.py	1075	1078	ZipExtFile.readable	readable(self)	todo		
-Lib/zipfile/__init__.py	1080	1113	ZipExtFile.read	read(self, n=-1)	todo		candidates:pyio-bytesio-read-after-seek
-Lib/zipfile/__init__.py	1115	1123	ZipExtFile._update_crc	_update_crc(self, newdata)	todo		
-Lib/zipfile/__init__.py	1125	1160	ZipExtFile.read1	read1(self, n)	todo		
-Lib/zipfile/__init__.py	1162	1196	ZipExtFile._read1	_read1(self, n)	todo		
-Lib/zipfile/__init__.py	1198	1212	ZipExtFile._read2	_read2(self, n)	todo		
-Lib/zipfile/__init__.py	1214	1219	ZipExtFile.close	close(self)	todo		
-Lib/zipfile/__init__.py	1221	1224	ZipExtFile.seekable	seekable(self)	todo		
-Lib/zipfile/__init__.py	1226	1289	ZipExtFile.seek	seek(self, offset, whence=os.SEEK_SET)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
-Lib/zipfile/__init__.py	1291	1297	ZipExtFile.tell	tell(self)	todo		
-Lib/zipfile/__init__.py	1301	1309	_ZipWriteFile.__init__	__init__(self, zf, zinfo, zip64)	todo		
-Lib/zipfile/__init__.py	1312	1313	_ZipWriteFile._fileobj	_fileobj(self)	todo		
-Lib/zipfile/__init__.py	1316	1317	_ZipWriteFile.name	name(self)	todo		
-Lib/zipfile/__init__.py	1320	1321	_ZipWriteFile.mode	mode(self)	todo		candidates:calstat-statistics-mode-spec
-Lib/zipfile/__init__.py	1323	1324	_ZipWriteFile.writable	writable(self)	todo		
-Lib/zipfile/__init__.py	1326	1343	_ZipWriteFile.write	write(self, data)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
-Lib/zipfile/__init__.py	1345	1388	_ZipWriteFile.close	close(self)	todo		
-Lib/zipfile/__init__.py	1423	1517	ZipFile.__init__	__init__(self, file, mode='r', compression=ZIP_STORED, allowZip64=True, compresslevel=None, *, strict_timestamps=True, metadata_encoding=None)	todo		
-Lib/zipfile/__init__.py	1519	1520	ZipFile.__enter__	__enter__(self)	todo		
-Lib/zipfile/__init__.py	1522	1523	ZipFile.__exit__	__exit__(self, type, value, traceback)	todo		
-Lib/zipfile/__init__.py	1525	1537	ZipFile.__repr__	__repr__(self)	todo		
-Lib/zipfile/__init__.py	1539	1615	ZipFile._RealGetContents	_RealGetContents(self)	todo		
-Lib/zipfile/__init__.py	1617	1619	ZipFile.namelist	namelist(self)	todo		
-Lib/zipfile/__init__.py	1621	1624	ZipFile.infolist	infolist(self)	todo		
-Lib/zipfile/__init__.py	1626	1633	ZipFile.printdir	printdir(self, file=None)	todo		
-Lib/zipfile/__init__.py	1635	1649	ZipFile.testzip	testzip(self)	todo		
-Lib/zipfile/__init__.py	1651	1658	ZipFile.getinfo	getinfo(self, name)	todo		
-Lib/zipfile/__init__.py	1660	1667	ZipFile.setpassword	setpassword(self, pwd)	todo		
-Lib/zipfile/__init__.py	1670	1672	ZipFile.comment	comment(self)	todo		
-Lib/zipfile/__init__.py	1675	1685	ZipFile.comment	comment(self, comment)	todo		
-Lib/zipfile/__init__.py	1687	1691	ZipFile.read	read(self, name, pwd=None)	todo		candidates:pyio-bytesio-read-after-seek
-Lib/zipfile/__init__.py	1693	1802	ZipFile.open	open(self, name, mode='r', pwd=None, *, force_zip64=False)	todo		
-Lib/zipfile/__init__.py	1804	1844	ZipFile._open_to_write	_open_to_write(self, zinfo, force_zip64=False)	todo		
-Lib/zipfile/__init__.py	1846	1858	ZipFile.extract	extract(self, member, path=None, pwd=None)	todo		
-Lib/zipfile/__init__.py	1860	1876	ZipFile.extractall	extractall(self, path=None, members=None, pwd=None)	todo		
-Lib/zipfile/__init__.py	1879	1891	ZipFile._sanitize_windows_name	_sanitize_windows_name(cls, arcname, pathsep)	todo		
-Lib/zipfile/__init__.py	1893	1950	ZipFile._extract_member	_extract_member(self, member, targetpath, pwd)	todo		
-Lib/zipfile/__init__.py	1952	1973	ZipFile._writecheck	_writecheck(self, zinfo)	todo		
-Lib/zipfile/__init__.py	1975	2006	ZipFile.write	write(self, filename, arcname=None, compress_type=None, compresslevel=None)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
-Lib/zipfile/__init__.py	2008	2039	ZipFile.writestr	writestr(self, zinfo_or_arcname, data, compress_type=None, compresslevel=None)	todo		
-Lib/zipfile/__init__.py	2041	2074	ZipFile.mkdir	mkdir(self, zinfo_or_directory_name, mode=511)	todo		
-Lib/zipfile/__init__.py	2076	2078	ZipFile.__del__	__del__(self)	todo		
-Lib/zipfile/__init__.py	2080	2100	ZipFile.close	close(self)	todo		
-Lib/zipfile/__init__.py	2102	2196	ZipFile._write_end_record	_write_end_record(self)	todo		
-Lib/zipfile/__init__.py	2198	2202	ZipFile._fpclose	_fpclose(self, fp)	todo		
-Lib/zipfile/__init__.py	2208	2212	PyZipFile.__init__	__init__(self, file, mode='r', compression=ZIP_STORED, allowZip64=True, optimize=-1)	todo		
-Lib/zipfile/__init__.py	2214	2294	PyZipFile.writepy	writepy(self, pathname, basename='', filterfunc=None)	todo		
-Lib/zipfile/__init__.py	2296	2376	PyZipFile._get_codename	_get_codename(self, pathname, basename)	todo		
-Lib/zipfile/__init__.py	2379	2446	main	main(args=None)	todo		candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output
+Lib/zipfile/__init__.py	790	796	LZMADecompressor.needs_input	needs_input(self)	todo		changed-in-3.15: new function
+Lib/zipfile/__init__.py	798	816	LZMADecompressor.decompress	decompress(self, data, max_length=-1)	todo		changed-in-3.15:
+Lib/zipfile/__init__.py	840	860	_check_compression	_check_compression(compression)	todo		
+Lib/zipfile/__init__.py	863	878	_get_compressor	_get_compressor(compress_type, compresslevel=None)	todo		
+Lib/zipfile/__init__.py	881	898	_get_decompressor	_get_decompressor(compress_type)	todo		
+Lib/zipfile/__init__.py	902	908	_SharedFile.__init__	__init__(self, file, pos, close, lock, writing)	todo		
+Lib/zipfile/__init__.py	910	911	_SharedFile.tell	tell(self)	todo		
+Lib/zipfile/__init__.py	913	924	_SharedFile.seek	seek(self, offset, whence=0)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
+Lib/zipfile/__init__.py	926	935	_SharedFile.read	read(self, n=-1)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/zipfile/__init__.py	937	941	_SharedFile.close	close(self)	todo		
+Lib/zipfile/__init__.py	945	947	_Tellable.__init__	__init__(self, fp)	todo		
+Lib/zipfile/__init__.py	949	952	_Tellable.write	write(self, data)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/zipfile/__init__.py	954	955	_Tellable.tell	tell(self)	todo		
+Lib/zipfile/__init__.py	957	958	_Tellable.flush	flush(self)	todo		
+Lib/zipfile/__init__.py	960	961	_Tellable.close	close(self)	todo		
+Lib/zipfile/__init__.py	978	1027	ZipExtFile.__init__	__init__(self, fileobj, mode, zipinfo, pwd=None, close_fileobj=False)	todo		
+Lib/zipfile/__init__.py	1030	1039	ZipExtFile._init_decrypter	_init_decrypter(self)	todo		
+Lib/zipfile/__init__.py	1041	1053	ZipExtFile.__repr__	__repr__(self)	todo		
+Lib/zipfile/__init__.py	1055	1069	ZipExtFile.readline	readline(self, limit=-1)	todo		
+Lib/zipfile/__init__.py	1071	1082	ZipExtFile.peek	peek(self, n=1)	todo		
+Lib/zipfile/__init__.py	1084	1087	ZipExtFile.readable	readable(self)	todo		
+Lib/zipfile/__init__.py	1089	1122	ZipExtFile.read	read(self, n=-1)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/zipfile/__init__.py	1124	1132	ZipExtFile._update_crc	_update_crc(self, newdata)	todo		
+Lib/zipfile/__init__.py	1134	1169	ZipExtFile.read1	read1(self, n)	todo		
+Lib/zipfile/__init__.py	1171	1221	ZipExtFile._read1	_read1(self, n)	todo		changed-in-3.15:
+Lib/zipfile/__init__.py	1223	1237	ZipExtFile._read2	_read2(self, n)	todo		
+Lib/zipfile/__init__.py	1239	1244	ZipExtFile.close	close(self)	todo		
+Lib/zipfile/__init__.py	1246	1249	ZipExtFile.seekable	seekable(self)	todo		
+Lib/zipfile/__init__.py	1251	1314	ZipExtFile.seek	seek(self, offset, whence=os.SEEK_SET)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
+Lib/zipfile/__init__.py	1316	1322	ZipExtFile.tell	tell(self)	todo		
+Lib/zipfile/__init__.py	1326	1334	_ZipWriteFile.__init__	__init__(self, zf, zinfo, zip64)	todo		
+Lib/zipfile/__init__.py	1337	1338	_ZipWriteFile._fileobj	_fileobj(self)	todo		
+Lib/zipfile/__init__.py	1341	1342	_ZipWriteFile.name	name(self)	todo		
+Lib/zipfile/__init__.py	1345	1346	_ZipWriteFile.mode	mode(self)	todo		candidates:calstat-statistics-mode-spec
+Lib/zipfile/__init__.py	1348	1349	_ZipWriteFile.writable	writable(self)	todo		
+Lib/zipfile/__init__.py	1351	1368	_ZipWriteFile.write	write(self, data)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/zipfile/__init__.py	1370	1413	_ZipWriteFile.close	close(self)	todo		
+Lib/zipfile/__init__.py	1448	1542	ZipFile.__init__	__init__(self, file, mode='r', compression=ZIP_STORED, allowZip64=True, compresslevel=None, *, strict_timestamps=True, metadata_encoding=None)	todo		
+Lib/zipfile/__init__.py	1544	1545	ZipFile.__enter__	__enter__(self)	todo		
+Lib/zipfile/__init__.py	1547	1548	ZipFile.__exit__	__exit__(self, type, value, traceback)	todo		
+Lib/zipfile/__init__.py	1550	1562	ZipFile.__repr__	__repr__(self)	todo		
+Lib/zipfile/__init__.py	1564	1640	ZipFile._RealGetContents	_RealGetContents(self)	todo		
+Lib/zipfile/__init__.py	1642	1644	ZipFile.namelist	namelist(self)	todo		
+Lib/zipfile/__init__.py	1646	1649	ZipFile.infolist	infolist(self)	todo		
+Lib/zipfile/__init__.py	1651	1658	ZipFile.printdir	printdir(self, file=None)	todo		
+Lib/zipfile/__init__.py	1660	1674	ZipFile.testzip	testzip(self)	todo		
+Lib/zipfile/__init__.py	1676	1683	ZipFile.getinfo	getinfo(self, name)	todo		
+Lib/zipfile/__init__.py	1685	1692	ZipFile.setpassword	setpassword(self, pwd)	todo		
+Lib/zipfile/__init__.py	1695	1697	ZipFile.comment	comment(self)	todo		
+Lib/zipfile/__init__.py	1700	1710	ZipFile.comment	comment(self, comment)	todo		
+Lib/zipfile/__init__.py	1712	1716	ZipFile.read	read(self, name, pwd=None)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/zipfile/__init__.py	1718	1827	ZipFile.open	open(self, name, mode='r', pwd=None, *, force_zip64=False)	todo		
+Lib/zipfile/__init__.py	1829	1869	ZipFile._open_to_write	_open_to_write(self, zinfo, force_zip64=False)	todo		
+Lib/zipfile/__init__.py	1871	1883	ZipFile.extract	extract(self, member, path=None, pwd=None)	todo		
+Lib/zipfile/__init__.py	1885	1901	ZipFile.extractall	extractall(self, path=None, members=None, pwd=None)	todo		
+Lib/zipfile/__init__.py	1904	1916	ZipFile._sanitize_windows_name	_sanitize_windows_name(cls, arcname, pathsep)	todo		
+Lib/zipfile/__init__.py	1918	1975	ZipFile._extract_member	_extract_member(self, member, targetpath, pwd)	todo		
+Lib/zipfile/__init__.py	1977	1998	ZipFile._writecheck	_writecheck(self, zinfo)	todo		
+Lib/zipfile/__init__.py	2000	2031	ZipFile.write	write(self, filename, arcname=None, compress_type=None, compresslevel=None)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/zipfile/__init__.py	2033	2064	ZipFile.writestr	writestr(self, zinfo_or_arcname, data, compress_type=None, compresslevel=None)	todo		
+Lib/zipfile/__init__.py	2066	2108	ZipFile.mkdir	mkdir(self, zinfo_or_directory_name, mode=511)	todo		changed-in-3.15:
+Lib/zipfile/__init__.py	2110	2112	ZipFile.__del__	__del__(self)	todo		
+Lib/zipfile/__init__.py	2114	2134	ZipFile.close	close(self)	todo		
+Lib/zipfile/__init__.py	2136	2230	ZipFile._write_end_record	_write_end_record(self)	todo		
+Lib/zipfile/__init__.py	2232	2236	ZipFile._fpclose	_fpclose(self, fp)	todo		
+Lib/zipfile/__init__.py	2242	2246	PyZipFile.__init__	__init__(self, file, mode='r', compression=ZIP_STORED, allowZip64=True, optimize=-1)	todo		
+Lib/zipfile/__init__.py	2248	2326	PyZipFile.writepy	writepy(self, pathname, basename='', filterfunc=None)	todo		changed-in-3.15:
+Lib/zipfile/__init__.py	2328	2366	PyZipFile._get_code	_get_code(self, pathname, basename)	todo		changed-in-3.15: new function
+Lib/zipfile/__init__.py	2369	2436	main	main(args=None)	todo		changed-in-3.15: candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output

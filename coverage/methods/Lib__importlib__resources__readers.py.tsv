@@ -1,27 +1,27 @@
 file	line	endline	name	signature	status	entry	note
-Lib/importlib/resources/readers.py	18	19	remove_duplicates	remove_duplicates(items)	todo		
-Lib/importlib/resources/readers.py	23	24	FileReader.__init__	__init__(self, loader)	todo		
-Lib/importlib/resources/readers.py	26	32	FileReader.resource_path	resource_path(self, resource)	todo		
-Lib/importlib/resources/readers.py	34	35	FileReader.files	files(self)	todo		
-Lib/importlib/resources/readers.py	39	44	ZipReader.__init__	__init__(self, loader, module)	todo		
-Lib/importlib/resources/readers.py	46	50	ZipReader.open_resource	open_resource(self, resource)	todo		
-Lib/importlib/resources/readers.py	52	58	ZipReader.is_resource	is_resource(self, path)	todo		
-Lib/importlib/resources/readers.py	60	61	ZipReader.files	files(self)	todo		
-Lib/importlib/resources/readers.py	72	78	MultiplexedPath.__init__	__init__(self, *paths)	todo		
-Lib/importlib/resources/readers.py	80	84	MultiplexedPath.iterdir	iterdir(self)	todo		
-Lib/importlib/resources/readers.py	86	87	MultiplexedPath.read_bytes	read_bytes(self)	todo		
-Lib/importlib/resources/readers.py	89	90	MultiplexedPath.read_text	read_text(self, *args, **kwargs)	todo		
-Lib/importlib/resources/readers.py	92	93	MultiplexedPath.is_dir	is_dir(self)	todo		
-Lib/importlib/resources/readers.py	95	96	MultiplexedPath.is_file	is_file(self)	todo		
-Lib/importlib/resources/readers.py	98	104	MultiplexedPath.joinpath	joinpath(self, *descendants)	todo		
-Lib/importlib/resources/readers.py	107	123	MultiplexedPath._follow	_follow(cls, children)	todo		
-Lib/importlib/resources/readers.py	125	126	MultiplexedPath.open	open(self, *args, **kwargs)	todo		
-Lib/importlib/resources/readers.py	129	130	MultiplexedPath.name	name(self)	todo		
-Lib/importlib/resources/readers.py	132	134	MultiplexedPath.__repr__	__repr__(self)	todo		
-Lib/importlib/resources/readers.py	138	141	NamespaceReader.__init__	__init__(self, namespace_path)	todo		
-Lib/importlib/resources/readers.py	144	157	NamespaceReader._resolve	_resolve(cls, path_str)	todo		
-Lib/importlib/resources/readers.py	160	162	NamespaceReader._candidate_paths	_candidate_paths(cls, path_str: str)	todo		
-Lib/importlib/resources/readers.py	165	174	NamespaceReader._resolve_zip_path	_resolve_zip_path(path_str: str)	todo		
-Lib/importlib/resources/readers.py	176	182	NamespaceReader.resource_path	resource_path(self, resource)	todo		
-Lib/importlib/resources/readers.py	184	185	NamespaceReader.files	files(self)	todo		
-Lib/importlib/resources/readers.py	188	203	_ensure_traversable	_ensure_traversable(path)	todo		
+Lib/importlib/resources/readers.py	17	18	remove_duplicates	remove_duplicates(items)	todo		
+Lib/importlib/resources/readers.py	22	23	FileReader.__init__	__init__(self, loader)	todo		
+Lib/importlib/resources/readers.py	25	31	FileReader.resource_path	resource_path(self, resource)	todo		
+Lib/importlib/resources/readers.py	33	34	FileReader.files	files(self)	todo		
+Lib/importlib/resources/readers.py	38	43	ZipReader.__init__	__init__(self, loader, module)	todo		
+Lib/importlib/resources/readers.py	45	49	ZipReader.open_resource	open_resource(self, resource)	todo		
+Lib/importlib/resources/readers.py	51	57	ZipReader.is_resource	is_resource(self, path)	todo		
+Lib/importlib/resources/readers.py	59	60	ZipReader.files	files(self)	todo		
+Lib/importlib/resources/readers.py	71	77	MultiplexedPath.__init__	__init__(self, *paths)	todo		
+Lib/importlib/resources/readers.py	79	83	MultiplexedPath.iterdir	iterdir(self)	todo		
+Lib/importlib/resources/readers.py	85	86	MultiplexedPath.read_bytes	read_bytes(self)	todo		
+Lib/importlib/resources/readers.py	88	89	MultiplexedPath.read_text	read_text(self, *args, **kwargs)	todo		
+Lib/importlib/resources/readers.py	91	92	MultiplexedPath.is_dir	is_dir(self)	todo		
+Lib/importlib/resources/readers.py	94	95	MultiplexedPath.is_file	is_file(self)	todo		
+Lib/importlib/resources/readers.py	97	103	MultiplexedPath.joinpath	joinpath(self, *descendants)	todo		
+Lib/importlib/resources/readers.py	106	122	MultiplexedPath._follow	_follow(cls, children)	todo		
+Lib/importlib/resources/readers.py	124	125	MultiplexedPath.open	open(self, *args, **kwargs)	todo		
+Lib/importlib/resources/readers.py	128	129	MultiplexedPath.name	name(self)	todo		
+Lib/importlib/resources/readers.py	131	133	MultiplexedPath.__repr__	__repr__(self)	todo		
+Lib/importlib/resources/readers.py	137	140	NamespaceReader.__init__	__init__(self, namespace_path)	todo		
+Lib/importlib/resources/readers.py	143	156	NamespaceReader._resolve	_resolve(cls, path_str)	todo		
+Lib/importlib/resources/readers.py	159	161	NamespaceReader._candidate_paths	_candidate_paths(cls, path_str: str)	todo		
+Lib/importlib/resources/readers.py	164	173	NamespaceReader._resolve_zip_path	_resolve_zip_path(path_str: str)	todo		
+Lib/importlib/resources/readers.py	175	181	NamespaceReader.resource_path	resource_path(self, resource)	todo		
+Lib/importlib/resources/readers.py	183	184	NamespaceReader.files	files(self)	todo		
+Lib/importlib/resources/readers.py	187	202	_ensure_traversable	_ensure_traversable(path)	todo		

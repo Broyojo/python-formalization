@@ -63,12 +63,12 @@ expected: |
   The note reaches the caller, on the re-raised part of the group; that means treating `e` as
   changed when its `__notes__` differ, which is what the comparison of `notes` asks for.
 promised_by: |
-  The code itself: Objects/exceptions.c:1595 compares notes as part of "same metadata". PEP 678
+  The code itself: Objects/exceptions.c:1589 compares notes as part of "same metadata". PEP 678
   defines notes as `__notes__`, and `add_note` documents no exception for `except*`.
 cause: |
-  Objects/exceptions.c:1595 reads `e1->notes == e2->notes`; `BaseException_add_note_impl`
-  (:298) uses `__notes__` through `PyObject_SetAttr`, and `notes` is only ever cleared
-  (:69, :138).
+  Objects/exceptions.c:1589 reads `e1->notes == e2->notes`; `BaseException_add_note_impl`
+  (:290) uses `__notes__` through `PyObject_SetAttr`, and `notes` is only ever cleared
+  (:61, :130).
 possible_fix: |
   Compare `__notes__` (a lookup in the instance dict, by identity of the list as
   `exceptiongroup_subset` makes a new list for each part it builds, so the comparison needs to

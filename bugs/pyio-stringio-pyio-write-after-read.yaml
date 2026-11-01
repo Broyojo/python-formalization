@@ -18,7 +18,7 @@ likelihood: |
   Low: needs _pyio, and interleaved reads and writes without a seek.
 maybe_intended: |
   Known limitation of TextIOWrapper, not specific to StringIO. "XXX What if we were just reading?"
-  sits in the code at Lib/_pyio.py:2268. A maintainer would close this as a duplicate of the
+  sits in the code at Lib/_pyio.py:2292. A maintainer would close this as a duplicate of the
   interlaced read/write issues unless a patch for _pyio.StringIO alone is cheap.
 reproducer: |
   import io, _pyio
@@ -46,8 +46,8 @@ observed: |
 promised_by: |
   Twin only (io.StringIO).
 cause: |
-  Lib/_pyio.py:2256-2278 writes at self.buffer's position, which is ahead of the logical position
-  by the unread part of _decoded_chars, and then discards those chars. Lib/_pyio.py:2484-2488
+  Lib/_pyio.py:2280-2302 writes at self.buffer's position, which is ahead of the logical position
+  by the unread part of _decoded_chars, and then discards those chars. Lib/_pyio.py:2508-2512
   truncates the buffer without touching _decoded_chars.
 possible_fix: |
   In TextIOWrapper.write/truncate, seek back to the logical position first when decoded chars are

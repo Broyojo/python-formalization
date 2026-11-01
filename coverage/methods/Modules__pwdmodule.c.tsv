@@ -1,11 +1,11 @@
 file	line	endline	name	signature	status	entry	note
-Modules/pwdmodule.c	63	68	get_pwd_state	get_pwd_state(PyObject *module)	todo		
-Modules/pwdmodule.c	75	120	mkpwent	mkpwent(PyObject *module, struct passwd *p)	todo		
-Modules/pwdmodule.c	134	205	pwd_getpwuid	pwd_getpwuid(PyObject *module, PyObject *uidobj) /*[clinic end generated code: output=c4ee1d4d429b86c4 input=ae64d507a1c6d3e8]*/	todo		
-Modules/pwdmodule.c	219	285	pwd_getpwnam_impl	pwd_getpwnam_impl(PyObject *module, PyObject *name) /*[clinic end generated code: output=359ce1ddeb7a824f input=a6aeb5e3447fb9e0]*/	todo		
-Modules/pwdmodule.c	297	317	pwd_getpwall_impl	pwd_getpwall_impl(PyObject *module) /*[clinic end generated code: output=4853d2f5a0afac8a input=d7ecebfd90219b85]*/	todo		
-Modules/pwdmodule.c	330	342	pwdmodule_exec	pwdmodule_exec(PyObject *module)	todo		
-Modules/pwdmodule.c	351	354	pwdmodule_traverse	static int pwdmodule_traverse(PyObject *m, visitproc visit, void *arg) {	todo		
-Modules/pwdmodule.c	355	358	pwdmodule_clear	static int pwdmodule_clear(PyObject *m) {	todo		
-Modules/pwdmodule.c	359	361	pwdmodule_free	static void pwdmodule_free(void *m) {	todo		
-Modules/pwdmodule.c	377	380	PyInit_pwd	PyInit_pwd(void)	todo		
+Modules/pwdmodule.c	57	62	get_pwd_state	get_pwd_state(PyObject *module)	todo		
+Modules/pwdmodule.c	74	119	mkpwent	mkpwent(PyObject *module, struct passwd *p)	todo		
+Modules/pwdmodule.c	133	212	pwd_getpwuid	pwd_getpwuid(PyObject *module, PyObject *uidobj) /*[clinic end generated code: output=c4ee1d4d429b86c4 input=ae64d507a1c6d3e8]*/	todo		changed-in-3.15:
+Modules/pwdmodule.c	226	301	pwd_getpwnam_impl	pwd_getpwnam_impl(PyObject *module, PyObject *name) /*[clinic end generated code: output=359ce1ddeb7a824f input=a6aeb5e3447fb9e0]*/	todo		changed-in-3.15:
+Modules/pwdmodule.c	314	347	pwd_getpwall_impl	pwd_getpwall_impl(PyObject *module) /*[clinic end generated code: output=4853d2f5a0afac8a input=f8145e0d9a79e32c]*/	todo		changed-in-3.15:
+Modules/pwdmodule.c	360	372	pwdmodule_exec	pwdmodule_exec(PyObject *module)	todo		
+Modules/pwdmodule.c	382	385	pwdmodule_traverse	static int pwdmodule_traverse(PyObject *m, visitproc visit, void *arg) {	todo		
+Modules/pwdmodule.c	386	389	pwdmodule_clear	static int pwdmodule_clear(PyObject *m) {	todo		
+Modules/pwdmodule.c	390	392	pwdmodule_free	static void pwdmodule_free(void *m) {	todo		
+Modules/pwdmodule.c	408	411	PyInit_pwd	PyInit_pwd(void)	todo		

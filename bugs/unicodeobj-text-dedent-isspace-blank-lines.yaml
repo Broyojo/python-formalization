@@ -32,9 +32,9 @@ observed: |
   IndentationError: unexpected indent. textwrap.dedent on the same text gives code that runs.
 tested: "REPRODUCED on python3 3.14.7 and on main (3.16.0a1+dev) by scripts/check_bugs.py"
 promised_by: |
-  Comment at Objects/unicodeobject.c:14425-14428; Lib/textwrap.py:436 and :444 use str.isspace.
+  Comment at Objects/unicodeobject.c:13645-13649; Lib/textwrap.py:436 and :444 use str.isspace.
 cause: |
-  Objects/unicodeobject.c:14368 and :14371: any byte other than ' ' and '\t' at the start of a
+  Objects/unicodeobject.c:13588 and :13591: any byte other than ' ' and '\t' at the start of a
   line makes the search return 0, before it knows whether the line is blank.
 possible_fix: |
   Treat a line as blank when it holds only the ASCII whitespace of Py_ISSPACE, or correct the

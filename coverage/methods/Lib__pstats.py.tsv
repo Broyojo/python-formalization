@@ -2,57 +2,64 @@ file	line	endline	name	signature	status	entry	note
 Lib/pstats.py	47	54	SortKey.__new__	__new__(cls, *values)	todo		
 Lib/pstats.py	107	115	Stats.__init__	__init__(self, *args, stream=None)	todo		
 Lib/pstats.py	117	134	Stats.init	init(self, arg)	todo		
-Lib/pstats.py	136	156	Stats.load_stats	load_stats(self, arg)	todo		
-Lib/pstats.py	158	166	Stats.get_top_level_stats	get_top_level_stats(self)	todo		
-Lib/pstats.py	168	192	Stats.add	add(self, *arg_list)	todo		
-Lib/pstats.py	194	197	Stats.dump_stats	dump_stats(self, filename)	todo		
-Lib/pstats.py	217	232	Stats.get_sort_arg_defs	get_sort_arg_defs(self)	todo		
-Lib/pstats.py	234	271	Stats.sort_stats	sort_stats(self, *field)	todo		
-Lib/pstats.py	273	276	Stats.reverse_order	reverse_order(self)	todo		
-Lib/pstats.py	278	305	Stats.strip_dirs	strip_dirs(self)	todo		
-Lib/pstats.py	307	318	Stats.calc_callees	calc_callees(self)	todo		
-Lib/pstats.py	326	350	Stats.eval_print_amount	eval_print_amount(self, sel, list, msg)	todo		
-Lib/pstats.py	352	385	Stats.get_stats_profile	get_stats_profile(self)	todo		
-Lib/pstats.py	387	409	Stats.get_print_list	get_print_list(self, sel_list)	todo		
-Lib/pstats.py	411	432	Stats.print_stats	print_stats(self, *amount)	todo		
-Lib/pstats.py	434	447	Stats.print_callees	print_callees(self, *amount)	todo		
-Lib/pstats.py	449	458	Stats.print_callers	print_callers(self, *amount)	todo		
-Lib/pstats.py	460	470	Stats.print_call_heading	print_call_heading(self, name_size, column_title)	todo		
-Lib/pstats.py	472	495	Stats.print_call_line	print_call_line(self, name_size, source, call_dict, arrow='->')	todo		
-Lib/pstats.py	497	499	Stats.print_title	print_title(self)	todo		
-Lib/pstats.py	501	517	Stats.print_line	print_line(self, func)	todo		
-Lib/pstats.py	527	528	TupleComp.__init__	__init__(self, comp_select_list)	todo		
-Lib/pstats.py	530	538	TupleComp.compare	compare(self, left, right)	todo		
-Lib/pstats.py	544	546	func_strip_path	func_strip_path(func_name)	todo		
-Lib/pstats.py	548	549	func_get_function_name	func_get_function_name(func)	todo		
-Lib/pstats.py	551	560	func_std_string	func_std_string(func_name)	todo		
-Lib/pstats.py	568	573	add_func_stats	add_func_stats(target, source)	todo		
-Lib/pstats.py	575	590	add_callers	add_callers(target, source)	todo		
-Lib/pstats.py	592	597	count_calls	count_calls(callers)	todo		
-Lib/pstats.py	603	604	f8	f8(x)	todo		
-Lib/pstats.py	618	624	ProfileBrowser.__init__	__init__(self, profile=None)	todo		
-Lib/pstats.py	626	649	ProfileBrowser.generic	generic(self, fn, line)	todo		
-Lib/pstats.py	650	656	ProfileBrowser.generic_help	generic_help(self)	todo		
-Lib/pstats.py	658	666	ProfileBrowser.do_add	do_add(self, line)	todo		
-Lib/pstats.py	667	668	ProfileBrowser.help_add	help_add(self)	todo		
-Lib/pstats.py	670	671	ProfileBrowser.do_callees	do_callees(self, line)	todo		
-Lib/pstats.py	672	674	ProfileBrowser.help_callees	help_callees(self)	todo		
-Lib/pstats.py	676	677	ProfileBrowser.do_callers	do_callers(self, line)	todo		
-Lib/pstats.py	678	680	ProfileBrowser.help_callers	help_callers(self)	todo		
-Lib/pstats.py	682	684	ProfileBrowser.do_EOF	do_EOF(self, line)	todo		
-Lib/pstats.py	685	686	ProfileBrowser.help_EOF	help_EOF(self)	todo		
-Lib/pstats.py	688	689	ProfileBrowser.do_quit	do_quit(self, line)	todo		
-Lib/pstats.py	690	691	ProfileBrowser.help_quit	help_quit(self)	todo		
-Lib/pstats.py	693	709	ProfileBrowser.do_read	do_read(self, line)	todo		
-Lib/pstats.py	710	712	ProfileBrowser.help_read	help_read(self)	todo		
-Lib/pstats.py	714	719	ProfileBrowser.do_reverse	do_reverse(self, line)	todo		
-Lib/pstats.py	720	721	ProfileBrowser.help_reverse	help_reverse(self)	todo		
-Lib/pstats.py	723	734	ProfileBrowser.do_sort	do_sort(self, line)	todo		
-Lib/pstats.py	735	737	ProfileBrowser.help_sort	help_sort(self)	todo		
-Lib/pstats.py	738	739	ProfileBrowser.complete_sort	complete_sort(self, text, *args)	todo		
-Lib/pstats.py	741	742	ProfileBrowser.do_stats	do_stats(self, line)	todo		
-Lib/pstats.py	743	745	ProfileBrowser.help_stats	help_stats(self)	todo		
-Lib/pstats.py	747	751	ProfileBrowser.do_strip	do_strip(self, line)	todo		candidates:bytesobj-bytes-strip-twins
-Lib/pstats.py	752	753	ProfileBrowser.help_strip	help_strip(self)	todo		
-Lib/pstats.py	755	756	ProfileBrowser.help_help	help_help(self)	todo		
-Lib/pstats.py	758	761	ProfileBrowser.postcmd	postcmd(self, stop, line)	todo		
+Lib/pstats.py	136	161	Stats.load_stats	load_stats(self, arg)	todo		changed-in-3.15:
+Lib/pstats.py	163	171	Stats.get_top_level_stats	get_top_level_stats(self)	todo		
+Lib/pstats.py	173	197	Stats.add	add(self, *arg_list)	todo		
+Lib/pstats.py	199	202	Stats.dump_stats	dump_stats(self, filename)	todo		
+Lib/pstats.py	222	237	Stats.get_sort_arg_defs	get_sort_arg_defs(self)	todo		
+Lib/pstats.py	239	276	Stats.sort_stats	sort_stats(self, *field)	todo		
+Lib/pstats.py	278	281	Stats.reverse_order	reverse_order(self)	todo		
+Lib/pstats.py	283	310	Stats.strip_dirs	strip_dirs(self)	todo		
+Lib/pstats.py	312	323	Stats.calc_callees	calc_callees(self)	todo		
+Lib/pstats.py	331	355	Stats.eval_print_amount	eval_print_amount(self, sel, list, msg)	todo		
+Lib/pstats.py	357	390	Stats.get_stats_profile	get_stats_profile(self)	todo		
+Lib/pstats.py	392	414	Stats.get_print_list	get_print_list(self, sel_list)	todo		
+Lib/pstats.py	416	437	Stats.print_stats	print_stats(self, *amount)	todo		
+Lib/pstats.py	439	452	Stats.print_callees	print_callees(self, *amount)	todo		
+Lib/pstats.py	454	463	Stats.print_callers	print_callers(self, *amount)	todo		
+Lib/pstats.py	465	475	Stats.print_call_heading	print_call_heading(self, name_size, column_title)	todo		changed-in-3.15:
+Lib/pstats.py	477	478	Stats.print_call_subheading	print_call_subheading(self, name_size)	todo		changed-in-3.15: new function
+Lib/pstats.py	480	503	Stats.print_call_line	print_call_line(self, name_size, source, call_dict, arrow='->')	todo		
+Lib/pstats.py	505	507	Stats.print_title	print_title(self)	todo		
+Lib/pstats.py	509	525	Stats.print_line	print_line(self, func)	todo		
+Lib/pstats.py	529	546	SampledStats.__init__	__init__(self, *args, stream=None)	todo		changed-in-3.15: new function
+Lib/pstats.py	548	549	SampledStats.print_call_subheading	print_call_subheading(self, name_size)	todo		changed-in-3.15: new function
+Lib/pstats.py	551	553	SampledStats.print_title	print_title(self)	todo		changed-in-3.15: new function
+Lib/pstats.py	564	565	TupleComp.__init__	__init__(self, comp_select_list)	todo		
+Lib/pstats.py	567	575	TupleComp.compare	compare(self, left, right)	todo		
+Lib/pstats.py	581	583	func_strip_path	func_strip_path(func_name)	todo		
+Lib/pstats.py	585	586	func_get_function_name	func_get_function_name(func)	todo		
+Lib/pstats.py	588	597	func_std_string	func_std_string(func_name)	todo		
+Lib/pstats.py	605	610	add_func_stats	add_func_stats(target, source)	todo		
+Lib/pstats.py	612	627	add_callers	add_callers(target, source)	todo		
+Lib/pstats.py	629	634	count_calls	count_calls(callers)	todo		
+Lib/pstats.py	640	641	f8	f8(x)	todo		
+Lib/pstats.py	650	651	StatsLoaderShim.__init__	__init__(self, raw_stats)	todo		changed-in-3.15: new function
+Lib/pstats.py	653	654	StatsLoaderShim.create_stats	create_stats(self)	todo		changed-in-3.15: new function
+Lib/pstats.py	656	663	stats_factory	stats_factory(raw_stats)	todo		changed-in-3.15: new function
+Lib/pstats.py	673	679	ProfileBrowser.__init__	__init__(self, profile=None)	todo		
+Lib/pstats.py	681	704	ProfileBrowser.generic	generic(self, fn, line)	todo		
+Lib/pstats.py	705	711	ProfileBrowser.generic_help	generic_help(self)	todo		
+Lib/pstats.py	713	721	ProfileBrowser.do_add	do_add(self, line)	todo		
+Lib/pstats.py	722	723	ProfileBrowser.help_add	help_add(self)	todo		
+Lib/pstats.py	725	726	ProfileBrowser.do_callees	do_callees(self, line)	todo		
+Lib/pstats.py	727	729	ProfileBrowser.help_callees	help_callees(self)	todo		
+Lib/pstats.py	731	732	ProfileBrowser.do_callers	do_callers(self, line)	todo		
+Lib/pstats.py	733	735	ProfileBrowser.help_callers	help_callers(self)	todo		
+Lib/pstats.py	737	739	ProfileBrowser.do_EOF	do_EOF(self, line)	todo		
+Lib/pstats.py	740	741	ProfileBrowser.help_EOF	help_EOF(self)	todo		
+Lib/pstats.py	743	744	ProfileBrowser.do_quit	do_quit(self, line)	todo		
+Lib/pstats.py	745	746	ProfileBrowser.help_quit	help_quit(self)	todo		
+Lib/pstats.py	748	772	ProfileBrowser.do_read	do_read(self, line)	todo		changed-in-3.15:
+Lib/pstats.py	773	775	ProfileBrowser.help_read	help_read(self)	todo		
+Lib/pstats.py	777	782	ProfileBrowser.do_reverse	do_reverse(self, line)	todo		
+Lib/pstats.py	783	784	ProfileBrowser.help_reverse	help_reverse(self)	todo		
+Lib/pstats.py	786	797	ProfileBrowser.do_sort	do_sort(self, line)	todo		
+Lib/pstats.py	798	800	ProfileBrowser.help_sort	help_sort(self)	todo		
+Lib/pstats.py	801	802	ProfileBrowser.complete_sort	complete_sort(self, text, *args)	todo		
+Lib/pstats.py	804	805	ProfileBrowser.do_stats	do_stats(self, line)	todo		
+Lib/pstats.py	806	808	ProfileBrowser.help_stats	help_stats(self)	todo		
+Lib/pstats.py	810	814	ProfileBrowser.do_strip	do_strip(self, line)	todo		candidates:bytesobj-bytes-strip-twins
+Lib/pstats.py	815	816	ProfileBrowser.help_strip	help_strip(self)	todo		
+Lib/pstats.py	818	819	ProfileBrowser.help_help	help_help(self)	todo		
+Lib/pstats.py	821	824	ProfileBrowser.postcmd	postcmd(self, stop, line)	todo		

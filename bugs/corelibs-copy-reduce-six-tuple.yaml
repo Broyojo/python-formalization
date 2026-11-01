@@ -47,7 +47,7 @@ promised_by: |
   Doc/library/copy.rst:85: "Classes can use the same interfaces to control copying that they use to
   control pickling."
 cause: |
-  Lib/copy.py:228-230, the signature of _reconstruct, called at :100 and :157 with *rv.
+  Lib/copy.py:242-244, the signature of _reconstruct, called at :100 and :156 with *rv.
 possible_fix: |
   Add a state_setter parameter to _reconstruct, called with (y, state) in place of the
   __setstate__ path, as pickle does.

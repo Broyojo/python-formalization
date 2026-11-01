@@ -205,7 +205,7 @@ theorem randint_empty (below : Nat → RM σ Nat) (a b : Int) (h : b < a) (s : �
   · exact ⟨ra, by simp only [raiseValue, ha, bind, Except.bind]⟩
 
 /-- The help text promises, for a positional argument, "integer: same as --integer"
-(Lib/random.py:1041). False for `N < 1`: `randint(1, N)` raises `ValueError`, and the
+(Lib/random.py@3.14.7:1041). False for `N < 1`: `randint(1, N)` raises `ValueError`, and the
 `except ValueError` at :1071 meant for `int(val)` catches it too, so
 `python -m random 0` prints `0.0` and `python -m random -5` a float in `(-5, 0]`,
 where `--integer` raises. -/

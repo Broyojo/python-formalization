@@ -114,7 +114,7 @@ def absEnv : Env :=
     cache := [.tagged 7, .ref 2] }
 
 /-- Instantiating a class with abstract methods never allocates: `object_new` refuses
-(`Objects/typeobject.c:6867`). False for `CALL_ALLOC_AND_ENTER_INIT`, which skips
+(`Objects/typeobject.c:7477`). False for `CALL_ALLOC_AND_ENTER_INIT`, which skips
 `object_new` and which `specialize_class_call` does not withhold from such a class. -/
 def AbstractNeverAllocates : Prop := ∀ (e : Env) (s : St) (k : ClassObj),
   s.stack.getD 1 .null = .ref 1 → s.regs.rt.heap[1]? = some (.cls k) → k.abstractMethods ≠ [] →

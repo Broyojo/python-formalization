@@ -47,10 +47,10 @@ promised_by: |
   Invariant: PEP 424 requires __length_hint__ to return an int >= 0, and PyObject_LengthHint
   enforces it. Internal consistency with dictiter_iternextkey_lock_held.
 cause: |
-  Objects/setobject.c:940 `si->len--` has no guard; :868-870 hands it to PyLong_FromSsize_t.
-  Compare Objects/dictobject.c:5279-5283.
+  Objects/setobject.c:1134 `si->len--` has no guard; :1062-1064 hands it to PyLong_FromSsize_t.
+  Compare Objects/dictobject.c:5722-5726.
 possible_fix: |
-  Before :940, `if (si->len == 0) { raise RuntimeError "Set changed during iteration"; }`, or
+  Before :1021, `if (si->len == 0) { raise RuntimeError "Set changed during iteration"; }`, or
   clamp at 0 in setiter_len.
 duplicates:
   issues:

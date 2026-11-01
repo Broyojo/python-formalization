@@ -10,4 +10,9 @@ Modules/_testcapi/dict.c	146	169	dict_popstring	dict_popstring(PyObject *self, P
 Modules/_testcapi/dict.c	172	182	dict_popstring_null	dict_popstring_null(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
 Modules/_testcapi/dict.c	186	243	test_dict_inner	test_dict_inner(PyObject *self, int count)	excluded		test-support: only for CPython's own tests
 Modules/_testcapi/dict.c	247	258	test_dict_iteration	test_dict_iteration(PyObject* self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/dict.c	276	283	_PyTestCapi_Init_Dict	_PyTestCapi_Init_Dict(PyObject *m)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/dict.c	262	266	frozendict_check	frozendict_check(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/dict.c	269	273	frozendict_checkexact	frozendict_checkexact(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/dict.c	276	280	anydict_check	anydict_check(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/dict.c	283	287	anydict_checkexact	anydict_checkexact(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/dict.c	291	295	frozendict_new	frozendict_new(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/dict.c	318	325	_PyTestCapi_Init_Dict	_PyTestCapi_Init_Dict(PyObject *m)	excluded		test-support: only for CPython's own tests

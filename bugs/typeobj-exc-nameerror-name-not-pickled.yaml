@@ -38,11 +38,11 @@ promised_by: |
   The implementation disagrees with itself: of the three classes with a `name` member, two
   pickle it.
 cause: |
-  Objects/exceptions.c:2559 `NameError_methods` is empty, so no `__reduce__` overrides
-  `BaseException___reduce___impl` (:220).
+  Objects/exceptions.c:2636 `NameError_methods` is empty, so no `__reduce__` overrides
+  `BaseException___reduce___impl` (:212).
 possible_fix: |
   Add `NameError_getstate` and `NameError_reduce` on the pattern of `AttributeError_getstate`
-  (:2643) and `AttributeError_reduce` (:2672).
+  (:2720) and `AttributeError_reduce` (:2749).
 reproduces:
   python3 (3.14.7): REPRODUCED
   main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED

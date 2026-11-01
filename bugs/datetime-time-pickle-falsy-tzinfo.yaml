@@ -31,8 +31,8 @@ expected: |
 promised_by: |
   Nothing explicit; _pydatetime is meant to be equivalent to _datetime (PEP 399).
 cause: |
-  Lib/_pydatetime.py:1434: `self.__setstate(hour, minute or None)`.
-  Modules/_datetimemodule.c:4627: time_from_pickle rejects a tzinfo that is neither None nor a
+  Lib/_pydatetime.py:1459: `self.__setstate(hour, minute or None)`.
+  Modules/_datetimemodule.c:4684: time_from_pickle rejects a tzinfo that is neither None nor a
   tzinfo instance.
 possible_fix: |
   Pass `minute` through unchanged unless it is the signature's default 0 given by omission

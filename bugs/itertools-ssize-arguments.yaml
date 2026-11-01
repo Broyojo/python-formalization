@@ -47,8 +47,8 @@ promised_by: |
   the limit.
 cause: |
   Argument Clinic Py_ssize_t converters and PyNumber_AsSsize_t/PyLong_AsSsize_t calls in the
-  constructors (e.g. :1616, :1628, :1632, :1652 for islice; clinic `r: Py_ssize_t` for
-  combinations; :2877 for permutations; format "n" in repeat_new :3750).
+  constructors (e.g. :1621, :1633, :1637, :1657 for islice; clinic `r: Py_ssize_t` for
+  combinations; :2882 for permutations; format "n" in repeat_new :3755).
 possible_fix: |
   None proposed (won't fix upstream).
 duplicates:

@@ -28,7 +28,7 @@ def statisticsEntries : List Entry := [
     "docstring of mean" ``MeanFractions ``meanFractions_proven,
   st "mean-ints" ["mean", "_convert"]
     "mean of ints is an int when the exact mean is whole and otherwise the correctly rounded float."
-    "docstring of mean; statistics.py:1630-1635" ``MeanInts ``meanInts_proven,
+    "docstring of mean; statistics.py:1631-1636" ``MeanInts ``meanInts_proven,
   st "mean-floats" ["mean", "_convert"]
     "mean of finite floats is the exact mean correctly rounded."
     "docstring of _sum (no round-off)" ``MeanFloats ``meanFloats_proven,
@@ -47,7 +47,7 @@ def statisticsEntries : List Entry := [
     "docstrings of stdev, pstdev" ``StdevOfVariance ``stdevOfVariance_proven,
   st "exact-ratio-spec" ["_exact_ratio", "_isfinite"]
     "_exact_ratio gives the value with a positive denominator for finite numbers, (x, None) exactly for what _isfinite calls non-finite, TypeError for non-numbers."
-    "docstring of _exact_ratio; statistics.py:1612" ``ExactRatioSpec ``exactRatioSpec_proven,
+    "docstring of _exact_ratio; statistics.py:1613" ``ExactRatioSpec ``exactRatioSpec_proven,
   re "coerce-order" "corelibs-statistics-coerce-set-order" ["_coerce", "_sum", "_ss"]
     "The result of reduce(_coerce, types, int) does not depend on the order of the set of types."
     "invariant: same input, same outcome" ``CoerceOrderIndependent ``coerceOrderIndependent_refuted,
@@ -56,7 +56,7 @@ def statisticsEntries : List Entry := [
     "narrowing of coerce-order" ``CoerceBuiltinOrder ``coerceBuiltinOrder_proven,
   st "convert-spec" ["_convert"]
     "_convert keeps a Fraction, gives a whole value to an unrestricted int type and a non-whole value the rounded float, for every int subclass."
-    "statistics.py:1623-1640" ``ConvertSpec ``convertSpec_proven,
+    "statistics.py:1624-1641" ``ConvertSpec ``convertSpec_proven,
   st "fail-neg" ["_fail_neg"]
     "_fail_neg passes values through when none is negative and otherwise raises StatisticsError(errmsg)."
     "docstring" ``FailNegSpec ``failNegSpec_proven,
@@ -78,7 +78,7 @@ def statisticsEntries : List Entry := [
     "Stated in rationals. Needs the double-rounding argument for round-to-odd: a 109-bit odd result rounds to 53 bits as the exact root does. Not attempted." ``FloatSqrtCorrectlyRounded,
   st "decimal-sqrt-sign" ["_decimal_sqrt_of_frac"]
     "_decimal_sqrt_of_frac(0, m) is 0, and (-n, -m) gives the same as (n, m)."
-    "statistics.py:1735-1738" ``DecimalSqrtSign ``decimalSqrtSign_proven,
+    "statistics.py:1736-1739" ``DecimalSqrtSign ``decimalSqrtSign_proven,
   st "sqrtprod" ["_sqrtprod"]
     "_sqrtprod with a zero factor is 0.0; sqrtprod(4, 9) == 6 and sqrtprod(1e308, 1e308) == 1e308 through the rescaling."
     "docstring" ``SqrtprodSpec ``sqrtprodSpec_proven,
@@ -90,7 +90,7 @@ def statisticsEntries : List Entry := [
     "docstrings" ``MedianOrder ``medianOrder_proven,
   st "grouped-bounds" ["median_grouped"]
     "In median_grouped on sorted data, i <= n//2 < j <= n, so the run length j - i is positive; empty data raises."
-    "statistics.py:445-464" ``GroupedBounds ``groupedBounds_proven,
+    "statistics.py:446-465" ``GroupedBounds ``groupedBounds_proven,
   st "mode-spec" ["mode", "multimode"]
     "For == an equivalence, multimode lists exactly the items of maximal count, mode is its first item and the first such item in the data; empty data: mode raises, multimode gives []."
     "docstrings" ``ModeSpec ``modeSpec_proven,
@@ -99,13 +99,13 @@ def statisticsEntries : List Entry := [
     "docstring" ``QuantilesInclusive ``quantilesInclusive_proven,
   st "quantiles-exclusive" ["quantiles"]
     "With method='exclusive' the clamp keeps both indices valid and an interior cut point lies between two neighbours."
-    "statistics.py:1215-1220" ``QuantilesExclusive ``quantilesExclusive_proven,
+    "statistics.py:1216-1221" ``QuantilesExclusive ``quantilesExclusive_proven,
   st "quantiles-shape" ["quantiles"]
     "n < 1 and empty data raise; two or more Fractions give n - 1 cut points with either method."
     "docstring: Returns a list of (n - 1) cut points" ``QuantilesShape ``quantilesShape_proven,
   re "quantiles-method" "corelibs-statistics-quantiles-method-unchecked" ["quantiles"]
     "An unknown method raises ValueError whenever there is data."
-    "statistics.py:1223" ``QuantilesMethodChecked ``quantilesMethodChecked_refuted,
+    "statistics.py:1224" ``QuantilesMethodChecked ``quantilesMethodChecked_refuted,
   st "fmean-checks" ["fmean"]
     "fmean raises for empty data without weights, for a length mismatch, and for zero total weight."
     "docstring" ``FmeanChecks ``fmeanChecks_proven,
@@ -118,7 +118,7 @@ def statisticsEntries : List Entry := [
   re "correlation-constant" "corelibs-statistics-correlation-constant-undetected"
     ["correlation", "linear_regression"]
     "correlation raises StatisticsError for constant x."
-    "Doc/library/statistics.rst:760" ``ConstantInputDetected ``constantInputDetected_refuted,
+    "Doc/library/statistics.rst:757" ``ConstantInputDetected ``constantInputDetected_refuted,
   re "correlation-bounded" "corelibs-statistics-correlation-out-of-range" ["correlation", "_sqrtprod"]
     "correlation returns a value in [-1, 1]."
     "docstring" ``CorrelationBounded ``correlationBounded_refuted,
@@ -135,7 +135,7 @@ def statisticsEntries : List Entry := [
     "docstrings" ``KdeChecks ``kdeChecks_proven,
   st "kde-cdf-outside" ["kde"]
     "The cdf of a bounded kernel is exactly 0.0 below the data and 1.0 above it."
-    "cdf contract; statistics.py:1075-1083" ``KdeCdfOutside ``kdeCdfOutside_proven,
+    "cdf contract; statistics.py:1076-1084" ``KdeCdfOutside ``kdeCdfOutside_proven,
   st "normaldist-init" ["NormalDist.__init__", "NormalDist.mean", "NormalDist.median",
       "NormalDist.mode", "NormalDist.stdev", "NormalDist.variance", "NormalDist.__getstate__",
       "NormalDist.__setstate__"]
@@ -158,14 +158,14 @@ def statisticsEntries : List Entry := [
   st "normaldist-undefined" ["NormalDist.pdf", "NormalDist.cdf", "NormalDist.zscore",
       "NormalDist.overlap", "NormalDist.inv_cdf"]
     "With sigma == 0, pdf, cdf, zscore and overlap raise StatisticsError; p outside 0 < p < 1 raises in inv_cdf."
-    "docstrings; statistics.py:1261-1339" ``NormalDistUndefined ``normalDistUndefined_proven,
+    "docstrings; statistics.py@3.14.7:1261-1339" ``NormalDistUndefined ``normalDistUndefined_proven,
   st "inv-cdf-centre" ["NormalDist.inv_cdf", "NormalDist.quantiles", "NormalDist.samples",
       "_normal_dist_inv_cdf"]
     "inv_cdf(0.5) == mu for finite mu and sigma; quantiles(n) gives n - 1 values and samples one value per draw when they succeed."
     "docstrings" ``InvCdfCentre ``invCdfCentre_proven,
   st "from-samples-short" ["NormalDist.from_samples"]
     "from_samples needs two points and raises the StatisticsError of _mean_stdev otherwise."
-    "statistics.py:1761-1762" ``FromSamplesShort ``fromSamplesShort_proven
+    "statistics.py:1762-1763" ``FromSamplesShort ``fromSamplesShort_proven
 ]
 
 end PyLean.CoreLibs.CalStat

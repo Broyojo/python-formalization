@@ -49,7 +49,7 @@ inductive Shape where
   | andNe
   deriving Repr, DecidableEq
 
-/-- `_convert`, Lib/functools.py:173-186. -/
+/-- `_convert`, Lib/functools.py@3.14.7:173-186. -/
 def convert : OrdOp → List (OrdOp × Shape)
   | .lt => [(.gt, .notAndNe), (.le, .orEq), (.ge, .notOp)]
   | .le => [(.ge, .notOrEq), (.lt, .andNe), (.gt, .notOp)]
@@ -174,7 +174,7 @@ def keyComparePy {α ρ τ : Type} (K : KeyOps ρ τ) (mycmp : α → α → Py 
     pure (K.ofBool (!(← K.truth e)))
   | _ => K.cmp0 r op
 
-/-- `keyobject_richcompare`, Modules/_functoolsmodule.c:912-943: the exact-type test comes first, and
+/-- `keyobject_richcompare`, Modules/_functoolsmodule.c:1007-1038: the exact-type test comes first, and
 `res op 0` is one `PyObject_RichCompare`. -/
 def keyCompareC {α ρ τ : Type} (K : KeyOps ρ τ) (mycmp : α → α → Py ρ) (op : CmpOp)
     (x : Option α) (other : KeyOther α) : Py τ :=
@@ -187,7 +187,7 @@ def keyCompareC {α ρ τ : Type} (K : KeyOps ρ τ) (mycmp : α → α → Py �
       K.cmp0 r op
     | _, _ => .error (.named "AttributeError" "object")
 
-/-- `K.__init__`, Lib/functools.py:210-211, and `keyobject_call`, Modules/_functoolsmodule.c:891-909:
+/-- `K.__init__`, Lib/functools.py:210-211, and `keyobject_call`, Modules/_functoolsmodule.c:986-1004:
 exactly one argument, positional or by the keyword `obj`. -/
 def keyNew {α : Type} (pos : List α) (kw : List (String × α)) : Py α :=
   match pos, kw with

@@ -58,7 +58,7 @@ theorem frac_word (x : F64) : word0 x &&& Frac_mask = x.frac / 2 ^ 32 := by
   have hb := bexp_lt x
   split at h1 <;> omega
 
-/-- The start of `_Py_dg_dtoa` clears the sign bit, dtoa.c:2249-2255. -/
+/-- The start of `_Py_dg_dtoa` clears the sign bit, dtoa.c:2252-2258. -/
 theorem clear_sign (dd : F64) :
     (if dd.sign = true then setWord0 dd (word0 dd - Sign_bit) else dd) = dd.abs := by
   unfold F64.abs
@@ -92,7 +92,7 @@ theorem abs_fields (x : F64) :
   · simp [hs]
   · simp [h1, h2, h3, hs]
 
-/-- `_Py_dg_dtoa` on infinities, NaNs and zeros, dtoa.c:2257-2269: the digit strings
+/-- `_Py_dg_dtoa` on infinities, NaNs and zeros, dtoa.c:2260-2272: the digit strings
 `Infinity`, `NaN` and `0`, the sign of the input, and `decpt` 9999, 9999 and 1. -/
 def DtoaSpecial : Prop :=
   ∀ (dd : F64) (mode : Nat) (n : Int),

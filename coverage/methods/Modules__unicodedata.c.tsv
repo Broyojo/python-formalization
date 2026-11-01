@@ -1,44 +1,67 @@
 file	line	endline	name	signature	status	entry	note
-Modules/unicodedata.c	59	70	_getrecord_ex	_getrecord_ex(Py_UCS4 code)	todo		
-Modules/unicodedata.c	98	111	new_previous_version	new_previous_version(PyTypeObject *ucd_type, const char*name, const change_record* (*getrecord)(Py_UCS4), Py_UCS4 (*normalization)(Py_UCS4))	todo		
-Modules/unicodedata.c	132	166	unicodedata_UCD_decimal_impl	unicodedata_UCD_decimal_impl(PyObject *self, int chr, PyObject *default_value) /*[clinic end generated code: output=be23376e1a185231 input=933f8107993f23d0]*/	todo		
-Modules/unicodedata.c	184	200	unicodedata_UCD_digit_impl	unicodedata_UCD_digit_impl(PyObject *self, int chr, PyObject *default_value) /*[clinic end generated code: output=96e18c950171fd2f input=e27d6e4565cd29f2]*/	todo		
-Modules/unicodedata.c	218	251	unicodedata_UCD_numeric_impl	unicodedata_UCD_numeric_impl(PyObject *self, int chr, PyObject *default_value) /*[clinic end generated code: output=53ce281fe85b10c4 input=fdf5871a5542893c]*/	todo		
-Modules/unicodedata.c	264	276	unicodedata_UCD_category_impl	unicodedata_UCD_category_impl(PyObject *self, int chr) /*[clinic end generated code: output=8571539ee2e6783a input=27d6f3d85050bc06]*/	todo		
-Modules/unicodedata.c	291	305	unicodedata_UCD_bidirectional_impl	unicodedata_UCD_bidirectional_impl(PyObject *self, int chr) /*[clinic end generated code: output=d36310ce2039bb92 input=b3d8f42cebfcf475]*/	todo		
-Modules/unicodedata.c	320	332	unicodedata_UCD_combining_impl	unicodedata_UCD_combining_impl(PyObject *self, int chr) /*[clinic end generated code: output=cad056d0cb6a5920 input=9f2d6b2a95d0a22a]*/	todo		
-Modules/unicodedata.c	348	362	unicodedata_UCD_mirrored_impl	unicodedata_UCD_mirrored_impl(PyObject *self, int chr) /*[clinic end generated code: output=2532dbf8121b50e6 input=5dd400d351ae6f3b]*/	todo		
-Modules/unicodedata.c	375	389	unicodedata_UCD_east_asian_width_impl	unicodedata_UCD_east_asian_width_impl(PyObject *self, int chr) /*[clinic end generated code: output=484e8537d9ee8197 input=c4854798aab026e0]*/	todo		
-Modules/unicodedata.c	415	485	unicodedata_UCD_decomposition_impl	unicodedata_UCD_decomposition_impl(PyObject *self, int chr) /*[clinic end generated code: output=7d699f3ec7565d27 input=e4c12459ad68507b]*/	todo		
-Modules/unicodedata.c	488	511	get_decomp_record	get_decomp_record(PyObject *self, Py_UCS4 code, int *index, int *prefix, int *count)	todo		
-Modules/unicodedata.c	517	537	canonical_ordering_sort_insertion	canonical_ordering_sort_insertion(int kind, void *data, Py_ssize_t start, Py_ssize_t end)	todo		
-Modules/unicodedata.c	540	569	canonical_ordering_sort_counting	canonical_ordering_sort_counting(int kind, void *data, Py_ssize_t start, Py_ssize_t end, Py_UCS4 *sortbuf)	todo		
-Modules/unicodedata.c	572	737	nfd_nfkd	nfd_nfkd(PyObject *self, PyObject *input, int k)	todo		
-Modules/unicodedata.c	740	753	find_nfc_index	find_nfc_index(const struct reindex* nfc, Py_UCS4 code)	todo		
-Modules/unicodedata.c	756	892	nfc_nfkc	nfc_nfkc(PyObject *self, PyObject *input, int k)	todo		
-Modules/unicodedata.c	911	960	is_normalized_quickcheck	is_normalized_quickcheck(PyObject *self, PyObject *input, bool nfc, bool k, bool yes_only)	todo		
-Modules/unicodedata.c	976	1027	unicodedata_UCD_is_normalized_impl	unicodedata_UCD_is_normalized_impl(PyObject *self, PyObject *form, PyObject *input) /*[clinic end generated code: output=11e5a3694e723ca5 input=a544f14cea79e508]*/	todo		
-Modules/unicodedata.c	1044	1084	unicodedata_UCD_normalize_impl	unicodedata_UCD_normalize_impl(PyObject *self, PyObject *form, PyObject *input) /*[clinic end generated code: output=05ca4385a2ad6983 input=3a5206c0ad2833fb]*/	todo		
-Modules/unicodedata.c	1127	1138	find_prefix_id	find_prefix_id(Py_UCS4 code)	todo		
-Modules/unicodedata.c	1150	1164	_dawg_decode_varint_unsigned	_dawg_decode_varint_unsigned(unsigned int index, unsigned int* result)	todo		
-Modules/unicodedata.c	1167	1184	_dawg_match_edge	_dawg_match_edge(const char* name, unsigned int namelen, unsigned int size, unsigned int label_offset, unsigned int namepos)	todo		
-Modules/unicodedata.c	1199	1205	_dawg_decode_node	_dawg_decode_node(unsigned int node_offset, bool* final)	todo		
-Modules/unicodedata.c	1208	1213	_dawg_node_is_final	_dawg_node_is_final(unsigned int node_offset)	todo		
-Modules/unicodedata.c	1216	1221	_dawg_node_descendant_count	_dawg_node_descendant_count(unsigned int node_offset)	todo		
-Modules/unicodedata.c	1264	1285	_dawg_decode_edge	_dawg_decode_edge(bool is_first_edge, unsigned int prev_target_node_offset, unsigned int edge_offset, unsigned int* size, unsigned int* label_offset, unsigned int* target_node_offset)	todo		
-Modules/unicodedata.c	1288	1331	_lookup_dawg_packed	_lookup_dawg_packed(const char* name, unsigned int namelen)	todo		
-Modules/unicodedata.c	1334	1384	_inverse_dawg_lookup	_inverse_dawg_lookup(char* buffer, unsigned int buflen, unsigned int pos)	todo		
-Modules/unicodedata.c	1388	1458	_getucname	_getucname(PyObject *self, Py_UCS4 code, char* buffer, int buflen, int with_alias_and_seq)	todo		
-Modules/unicodedata.c	1461	1467	capi_getucname	capi_getucname(Py_UCS4 code, char* buffer, int buflen, int with_alias_and_seq)	todo		
-Modules/unicodedata.c	1470	1487	find_syllable	find_syllable(const char *str, int *len, int *pos, int count, int column)	todo		
-Modules/unicodedata.c	1490	1500	_check_alias_and_seq	_check_alias_and_seq(Py_UCS4* code, int with_named_seq)	todo		
-Modules/unicodedata.c	1503	1530	parse_hex_code	parse_hex_code(const char *name, int namelen)	todo		
-Modules/unicodedata.c	1533	1584	_getcode	_getcode(const char* name, int namelen, Py_UCS4* code)	todo		
-Modules/unicodedata.c	1588	1595	capi_getcode	capi_getcode(const char* name, int namelen, Py_UCS4* code, int with_named_seq)	todo		
-Modules/unicodedata.c	1598	1607	unicodedata_create_capi	unicodedata_create_capi(void)	todo		
-Modules/unicodedata.c	1628	1645	unicodedata_UCD_name_impl	unicodedata_UCD_name_impl(PyObject *self, int chr, PyObject *default_value) /*[clinic end generated code: output=6bbb37a326407707 input=3e0367f534de56d9]*/	todo		
-Modules/unicodedata.c	1661	1695	unicodedata_UCD_lookup_impl	unicodedata_UCD_lookup_impl(PyObject *self, const char *name, Py_ssize_t name_length) /*[clinic end generated code: output=7f03fc4959b242f6 input=a557be0f8607a0d6]*/	todo		
-Modules/unicodedata.c	1719	1723	ucd_traverse	ucd_traverse(PyObject *self, visitproc visit, void *arg)	todo		
-Modules/unicodedata.c	1726	1732	ucd_dealloc	ucd_dealloc(PyObject *self)	todo		
-Modules/unicodedata.c	1761	1791	unicodedata_exec	unicodedata_exec(PyObject *module)	todo		
-Modules/unicodedata.c	1810	1813	PyInit_unicodedata	PyInit_unicodedata(void)	todo		
+Modules/unicodedata.c	86	97	_getrecord_ex	_getrecord_ex(Py_UCS4 code)	todo		
+Modules/unicodedata.c	105	110	get_unicodedata_state	get_unicodedata_state(PyObject *module)	todo		changed-in-3.15: new function
+Modules/unicodedata.c	138	151	new_previous_version	new_previous_version(PyTypeObject *ucd_type, const char*name, const change_record* (*getrecord)(Py_UCS4), Py_UCS4 (*normalization)(Py_UCS4))	todo		
+Modules/unicodedata.c	172	206	unicodedata_UCD_decimal_impl	unicodedata_UCD_decimal_impl(PyObject *self, int chr, PyObject *default_value) /*[clinic end generated code: output=be23376e1a185231 input=933f8107993f23d0]*/	todo		
+Modules/unicodedata.c	224	240	unicodedata_UCD_digit_impl	unicodedata_UCD_digit_impl(PyObject *self, int chr, PyObject *default_value) /*[clinic end generated code: output=96e18c950171fd2f input=e27d6e4565cd29f2]*/	todo		
+Modules/unicodedata.c	258	291	unicodedata_UCD_numeric_impl	unicodedata_UCD_numeric_impl(PyObject *self, int chr, PyObject *default_value) /*[clinic end generated code: output=53ce281fe85b10c4 input=fdf5871a5542893c]*/	todo		
+Modules/unicodedata.c	305	317	unicodedata_UCD_category_impl	unicodedata_UCD_category_impl(PyObject *self, int chr) /*[clinic end generated code: output=8571539ee2e6783a input=1d729c67299e8a31]*/	todo		
+Modules/unicodedata.c	333	347	unicodedata_UCD_bidirectional_impl	unicodedata_UCD_bidirectional_impl(PyObject *self, int chr) /*[clinic end generated code: output=d36310ce2039bb92 input=838f8a2203bd2990]*/	todo		
+Modules/unicodedata.c	363	375	unicodedata_UCD_combining_impl	unicodedata_UCD_combining_impl(PyObject *self, int chr) /*[clinic end generated code: output=cad056d0cb6a5920 input=e05edfbb882ebfed]*/	todo		
+Modules/unicodedata.c	392	406	unicodedata_UCD_mirrored_impl	unicodedata_UCD_mirrored_impl(PyObject *self, int chr) /*[clinic end generated code: output=2532dbf8121b50e6 input=6db28989e49cd9c8]*/	todo		
+Modules/unicodedata.c	420	434	unicodedata_UCD_east_asian_width_impl	unicodedata_UCD_east_asian_width_impl(PyObject *self, int chr) /*[clinic end generated code: output=484e8537d9ee8197 input=207c5f68fa475516]*/	todo		
+Modules/unicodedata.c	461	531	unicodedata_UCD_decomposition_impl	unicodedata_UCD_decomposition_impl(PyObject *self, int chr) /*[clinic end generated code: output=7d699f3ec7565d27 input=84d628d1abfd01ec]*/	todo		
+Modules/unicodedata.c	534	557	get_decomp_record	get_decomp_record(PyObject *self, Py_UCS4 code, int *index, int *prefix, int *count)	todo		
+Modules/unicodedata.c	563	583	canonical_ordering_sort_insertion	canonical_ordering_sort_insertion(int kind, void *data, Py_ssize_t start, Py_ssize_t end)	todo		
+Modules/unicodedata.c	586	615	canonical_ordering_sort_counting	canonical_ordering_sort_counting(int kind, void *data, Py_ssize_t start, Py_ssize_t end, Py_UCS4 *sortbuf)	todo		
+Modules/unicodedata.c	618	782	nfd_nfkd	nfd_nfkd(PyObject *self, PyObject *input, int k)	todo		changed-in-3.15:
+Modules/unicodedata.c	785	798	find_nfc_index	find_nfc_index(const struct reindex* nfc, Py_UCS4 code)	todo		
+Modules/unicodedata.c	801	937	nfc_nfkc	nfc_nfkc(PyObject *self, PyObject *input, int k)	todo		
+Modules/unicodedata.c	956	1005	is_normalized_quickcheck	is_normalized_quickcheck(PyObject *self, PyObject *input, bool nfc, bool k, bool yes_only)	todo		
+Modules/unicodedata.c	1022	1073	unicodedata_UCD_is_normalized_impl	unicodedata_UCD_is_normalized_impl(PyObject *self, PyObject *form, PyObject *input) /*[clinic end generated code: output=11e5a3694e723ca5 input=de66aa679265300b]*/	todo		
+Modules/unicodedata.c	1090	1130	unicodedata_UCD_normalize_impl	unicodedata_UCD_normalize_impl(PyObject *self, PyObject *form, PyObject *input) /*[clinic end generated code: output=05ca4385a2ad6983 input=3a5206c0ad2833fb]*/	todo		
+Modules/unicodedata.c	1173	1184	find_prefix_id	find_prefix_id(Py_UCS4 code)	todo		
+Modules/unicodedata.c	1196	1210	_dawg_decode_varint_unsigned	_dawg_decode_varint_unsigned(unsigned int index, unsigned int* result)	todo		
+Modules/unicodedata.c	1213	1230	_dawg_match_edge	_dawg_match_edge(const char* name, unsigned int namelen, unsigned int size, unsigned int label_offset, unsigned int namepos)	todo		
+Modules/unicodedata.c	1245	1251	_dawg_decode_node	_dawg_decode_node(unsigned int node_offset, bool* final)	todo		
+Modules/unicodedata.c	1254	1259	_dawg_node_is_final	_dawg_node_is_final(unsigned int node_offset)	todo		
+Modules/unicodedata.c	1262	1267	_dawg_node_descendant_count	_dawg_node_descendant_count(unsigned int node_offset)	todo		
+Modules/unicodedata.c	1310	1331	_dawg_decode_edge	_dawg_decode_edge(bool is_first_edge, unsigned int prev_target_node_offset, unsigned int edge_offset, unsigned int* size, unsigned int* label_offset, unsigned int* target_node_offset)	todo		
+Modules/unicodedata.c	1334	1377	_lookup_dawg_packed	_lookup_dawg_packed(const char* name, unsigned int namelen)	todo		
+Modules/unicodedata.c	1380	1430	_inverse_dawg_lookup	_inverse_dawg_lookup(char* buffer, unsigned int buflen, unsigned int pos)	todo		
+Modules/unicodedata.c	1434	1502	_getucname	_getucname(PyObject *self, Py_UCS4 code, char* buffer, int buflen, int with_alias_and_seq)	todo		changed-in-3.15:
+Modules/unicodedata.c	1505	1511	capi_getucname	capi_getucname(Py_UCS4 code, char* buffer, int buflen, int with_alias_and_seq)	todo		
+Modules/unicodedata.c	1514	1531	find_syllable	find_syllable(const char *str, int *len, int *pos, int count, int column)	todo		
+Modules/unicodedata.c	1534	1544	_check_alias_and_seq	_check_alias_and_seq(Py_UCS4* code, int with_named_seq)	todo		
+Modules/unicodedata.c	1547	1574	parse_hex_code	parse_hex_code(const char *name, int namelen)	todo		
+Modules/unicodedata.c	1577	1628	_getcode	_getcode(const char* name, int namelen, Py_UCS4* code)	todo		changed-in-3.15:
+Modules/unicodedata.c	1632	1639	capi_getcode	capi_getcode(const char* name, int namelen, Py_UCS4* code, int with_named_seq)	todo		
+Modules/unicodedata.c	1642	1651	unicodedata_create_capi	unicodedata_create_capi(void)	todo		
+Modules/unicodedata.c	1672	1689	unicodedata_UCD_name_impl	unicodedata_UCD_name_impl(PyObject *self, int chr, PyObject *default_value) /*[clinic end generated code: output=6bbb37a326407707 input=3e0367f534de56d9]*/	todo		
+Modules/unicodedata.c	1702	1706	unicodedata_isxidstart_impl	unicodedata_isxidstart_impl(PyObject *module, int chr) /*[clinic end generated code: output=7ae0e1a3915aa031 input=3812717f3a6bfc56]*/	todo		changed-in-3.15: new function
+Modules/unicodedata.c	1719	1723	unicodedata_isxidcontinue_impl	unicodedata_isxidcontinue_impl(PyObject *module, int chr) /*[clinic end generated code: output=517caa8b38c73aed input=a971ed6e57cac374]*/	todo		changed-in-3.15: new function
+Modules/unicodedata.c	1739	1773	unicodedata_UCD_lookup_impl	unicodedata_UCD_lookup_impl(PyObject *self, const char *name, Py_ssize_t name_length) /*[clinic end generated code: output=7f03fc4959b242f6 input=a557be0f8607a0d6]*/	todo		
+Modules/unicodedata.c	1810	1824	update_ext_pict_state	update_ext_pict_state(enum ExtPictState state, int gcb, bool ext_pict)	todo		changed-in-3.15: new function
+Modules/unicodedata.c	1827	1841	update_incb_state	update_incb_state(enum InCBState state, int incb)	todo		changed-in-3.15: new function
+Modules/unicodedata.c	1844	1852	update_ri_flag	update_ri_flag(bool flag, int gcb)	todo		changed-in-3.15: new function
+Modules/unicodedata.c	1855	1935	grapheme_break	grapheme_break(int prev_gcb, int curr_gcb, enum ExtPictState ep_state, bool ri_flag, enum InCBState incb_state)	todo		changed-in-3.15: new function
+Modules/unicodedata.c	1938	1948	_Py_InitGraphemeBreak	_Py_InitGraphemeBreak(_PyGraphemeBreak *iter, PyObject *str, Py_ssize_t start, Py_ssize_t end)	todo		changed-in-3.15: new function
+Modules/unicodedata.c	1951	1979	_Py_NextGraphemeBreak	_Py_NextGraphemeBreak(_PyGraphemeBreak *iter)	todo		changed-in-3.15: new function
+Modules/unicodedata.c	1992	1999	Segment_dealloc	Segment_dealloc(PyObject *self)	todo		changed-in-3.15: new function
+Modules/unicodedata.c	2002	2007	Segment_traverse	Segment_traverse(PyObject *self, visitproc visit, void *arg)	todo		changed-in-3.15: new function
+Modules/unicodedata.c	2010	2014	Segment_str	Segment_str(PyObject *self)	todo		changed-in-3.15: new function
+Modules/unicodedata.c	2017	2021	Segment_repr	Segment_repr(PyObject *self)	todo		changed-in-3.15: new function
+Modules/unicodedata.c	2061	2068	GBI_dealloc	GBI_dealloc(PyObject *self)	todo		changed-in-3.15: new function
+Modules/unicodedata.c	2071	2076	GBI_traverse	GBI_traverse(PyObject *self, visitproc visit, void *arg)	todo		changed-in-3.15: new function
+Modules/unicodedata.c	2079	2100	GBI_iternext	GBI_iternext(PyObject *self)	todo		changed-in-3.15: new function
+Modules/unicodedata.c	2138	2155	unicodedata_iter_graphemes_impl	unicodedata_iter_graphemes_impl(PyObject *module, PyObject *unistr, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=b0b831944265d36f input=a1454d9e8135951f]*/	todo		changed-in-3.15: new function
+Modules/unicodedata.c	2167	2188	unicodedata_block_impl	unicodedata_block_impl(PyObject *module, int chr) /*[clinic end generated code: output=5f8b40c49eaec75a input=0834cf2642d6eaae]*/	todo		changed-in-3.15: new function
+Modules/unicodedata.c	2200	2206	unicodedata_grapheme_cluster_break_impl	unicodedata_grapheme_cluster_break_impl(PyObject *module, int chr) /*[clinic end generated code: output=39542e0f63bba36f input=5da75e86435576fd]*/	todo		changed-in-3.15: new function
+Modules/unicodedata.c	2218	2224	unicodedata_indic_conjunct_break_impl	unicodedata_indic_conjunct_break_impl(PyObject *module, int chr) /*[clinic end generated code: output=673eff2caf797f08 input=5c730f78e469f2e8]*/	todo		changed-in-3.15: new function
+Modules/unicodedata.c	2237	2243	unicodedata_extended_pictographic_impl	unicodedata_extended_pictographic_impl(PyObject *module, int chr) /*[clinic end generated code: output=b6bbb349427370b1 input=250d7bd988997eb3]*/	todo		changed-in-3.15: new function
+Modules/unicodedata.c	2281	2287	ucd_dealloc	ucd_dealloc(PyObject *self)	todo		
+Modules/unicodedata.c	2317	2323	unicodedata_traverse	unicodedata_traverse(PyObject *module, visitproc visit, void *arg)	todo		changed-in-3.15: new function
+Modules/unicodedata.c	2326	2332	unicodedata_clear	unicodedata_clear(PyObject *module)	todo		changed-in-3.15: new function
+Modules/unicodedata.c	2335	2338	unicodedata_free	unicodedata_free(void *module)	todo		changed-in-3.15: new function
+Modules/unicodedata.c	2341	2385	unicodedata_exec	unicodedata_exec(PyObject *module)	todo		changed-in-3.15:
+Modules/unicodedata.c	2408	2411	PyInit_unicodedata	PyInit_unicodedata(void)	todo		

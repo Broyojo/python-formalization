@@ -29,44 +29,44 @@ open PyLean.Registry
 def entries : List Entry := [
   { id := "dict-lcg-full-period", pyFile := "Objects/dictobject.c", pyFns := []
     statement := "For all n, x, y, repeating j -> 5*j + 1 from x reaches y mod 2**n within 2**n steps."
-    source := "dictobject.c:323-325, cited there as folklore", status := .proven
+    source := "dictobject.c:363-365, cited there as folklore", status := .proven
     prop := ``LcgFullPeriod, thm := some ``lcgFullPeriod_proven
     notes := "Proved from scratch, without Mathlib: 2**n steps add 2**n times an odd number." },
   { id := "dict-probe-reaches-all", pyFile := "Objects/dictobject.c",
     pyFns := []
     statement := "For every table of 2**n slots, every 64-bit hash and every slot s, the probe sequence reaches s within 2**n + 13 steps."
-    source := "dictobject.c:354-358", status := .proven
+    source := "dictobject.c:394-398", status := .proven
     prop := ``ProbeReachesAll, thm := some ``probeReachesAll_proven },
   { id := "dict-usable-fraction", pyFile := "Objects/dictobject.c", pyFns := []
     statement := "0 < USABLE_FRACTION(n) < n for every n >= 2."
-    source := "dictobject.c:537-538", status := .proven
+    source := "dictobject.c:575-576", status := .proven
     prop := ``UsableFractionBounds, thm := some ``usableFractionBounds_proven },
   { id := "dict-keysize-room", pyFile := "Objects/dictobject.c", pyFns := []
     statement := "calculate_log2_keysize(m) gives a table of at least max(m, 8) slots."
-    source := "dictobject.c:545", status := .proven
+    source := "dictobject.c:583", status := .proven
     prop := ``Log2KeysizeRoom, thm := some ``log2KeysizeRoom_proven },
   { id := "dict-estimate-room", pyFile := "Objects/dictobject.c", pyFns := []
     statement := "estimate_log2_keysize(n) gives a table with room for n entries without resizing."
-    source := "dictobject.c:568-572", status := .proven
+    source := "dictobject.c:606-610", status := .proven
     prop := ``EstimateRoom, thm := some ``estimateRoom_proven },
   { id := "dict-index-width", pyFile := "Objects/dictobject.c",
     pyFns := []
     statement := "Every entry index of a table of 2**n slots fits the int8, int16 or int32 slot chosen for n."
-    source := "asserts at dictobject.c:513, :517, :526", status := .proven
+    source := "asserts at dictobject.c:551, :517, :526", status := .proven
     prop := ``IndexWidthFits, thm := some ``indexWidthFits_proven },
   { id := "dict-growth-room", pyFile := "Objects/dictobject.c", pyFns := []
     statement := "After a resize to GROWTH_RATE(used), the table has room for at least one more entry."
-    source := "dictobject.c:580-590; assert at :1827", status := .proven
+    source := "dictobject.c:618-628; assert at :1827", status := .proven
     prop := ``GrowthRoom, thm := some ``growthRoom_proven },
   { id := "dict-lookup-found", pyFile := "Objects/dictobject.c",
     pyFns := ["_Py_dict_lookup", "do_lookup", "compare_generic", "compare_unicode_generic", "compare_unicode_unicode", "unicodekeys_lookup_generic", "dictkeys_generic_lookup"]
     statement := "For every key type keeping the hash/eq contract and every well-formed combined table, lookup of a key equal to a live entry's key stops, returns that entry and its value, runs no restart and leaves the dict unchanged."
-    source := "invariant: dictobject.c:1232-1246", status := .proven
+    source := "invariant: dictobject.c:1312-1326", status := .proven
     prop := ``LookupFound, thm := some ``lookupFound_proven },
   { id := "dict-lookup-missing", pyFile := "Objects/dictobject.c",
     pyFns := ["_Py_dict_lookup", "do_lookup", "compare_generic", "compare_unicode_generic", "compare_unicode_unicode"]
     statement := "For every such key type and table, lookup of a key equal to no live entry stops at an empty slot and returns DKIX_EMPTY. The table always has an empty slot, so the loop terminates at every load the table can reach."
-    source := "dictobject.c:145-150, :357-358", status := .proven
+    source := "dictobject.c:156-161, :357-358", status := .proven
     prop := ``LookupMissing, thm := some ``lookupMissing_proven },
   { id := "dict-lookup-assoc", pyFile := "Objects/dictobject.c", pyFns := []
     statement := "Lookup on a well-formed dict returns exactly what the association list holds for that key."
@@ -93,7 +93,7 @@ def entries : List Entry := [
     prop := ``DelItemRefines, thm := some ``delItemRefines_proven },
   { id := "dict-popitem-lifo", pyFile := "Objects/dictobject.c", pyFns := ["dict_popitem_impl"]
     statement := "popitem on a well-formed non-empty dict removes and returns the last pair of the association list, keeping the table well formed; on an empty dict it raises KeyError."
-    source := "dict.popitem docstring, dictobject.c:4590-4593", status := .proven
+    source := "dict.popitem docstring, dictobject.c:4957-4960", status := .proven
     prop := ``PopitemLifo, thm := some ``popitemLifo_proven },
   { id := "dict-iteration-order", pyFile := "Objects/dictobject.c",
     pyFns := []
@@ -118,12 +118,12 @@ def entries : List Entry := [
     pyFns := ["do_lookup", "compare_generic", "compare_unicode_generic", "dictkeys_generic_lookup",
       "unicodekeys_lookup_generic"]
     statement := "If __eq__ never mutates the dict (a lying comparison that returns arbitrary booleans but leaves the object alone), then _Py_dict_lookup leaves the table byte-identical, whatever it answers, so Chain/WF/DictInv all survive. The only route by which lookup can change the table is a genuinely mutating __eq__."
-    source := "dictobject.c:1001-1133; the dk re-read and DKIX_KEY_CHANGED checks at 1062, 1118", status := .proven
+    source := "dictobject.c:1081-1213; the dk re-read and DKIX_KEY_CHANGED checks at 1062, 1118", status := .proven
     prop := ``InvUnderLyingEq, thm := some ``invUnderLyingEq_proven },
   { id := "dict-readers-faithful", pyFile := "Objects/dictobject.c",
     pyFns := ["PyDict_GetItemRef", "_PyDict_GetItemRef_KnownHash", "PyDict_GetItemWithError", "PyDict_Contains", "_PyDict_Contains_KnownHash", "dict_subscript", "dict_get_impl"]
     statement := "For every key protocol, including a hash or __eq__ that raises or mutates the dict, each reader is faithful to _Py_dict_lookup: a raising hash or lookup propagates with the state the lookup left, a slot with ix >= 0 but no value (a split key this dict lacks) reads as absent and is never dereferenced, and a slot with a value gives that value."
-    source := "dictobject.c:2420-2509, 2537, 4835-4882, 3504-3538, 4386-4406; the ix>=0,value==NULL note at 1915-1922", status := .proven
+    source := "dictobject.c:2520-2609, 2537, 4835-4882, 3504-3538, 4386-4406; the ix>=0,value==NULL note at 1915-1922", status := .proven
     prop := ``ReadersFaithful, thm := some ``readersFaithful_proven },
   { id := "dict-contains", pyFile := "Objects/dictobject.c",
     pyFns := []
@@ -155,24 +155,24 @@ def entries : List Entry := [
       "dictiter_iternextitem_lock_held", "dictiter_iternextitem",
       "dictreviter_iter_lock_held", "dictreviter_iternext"]
     statement := "On a well-formed dict of either table form, a new forward key, value or item iterator lists the association list in order and a reverse one lists it reversed, whatever deletions left holes in the table; each flavour hands back what it says."
-    source := "Doc/library/stdtypes.rst: iteration order; dictobject.c:5132-5171", status := .proven
+    source := "Doc/library/stdtypes.rst: iteration order; dictobject.c:5575-5614", status := .proven
     prop := ``DictIterOrder, thm := some ``dictIterOrder_proven
     notes := "ma_used < 2**63 is derived from the table invariants, not assumed." },
   { id := "dict-iter-failure", pyFile := "Objects/dictobject.c",
     pyFns := ["dictiter_iternextkey_lock_held", "dictiter_iternextvalue_lock_held",
       "dictiter_iternextitem_lock_held", "dictreviter_iter_lock_held"]
     statement := "For any iterator state and any dict: an exhausted iterator stays exhausted; a changed size raises and stays raised; a forward iterator that finds an entry when its count is spent raises and dies, in either table form; and a reverse iterator has no such test and hands the entry back."
-    source := "dictobject.c:5238-5243, :5279-5283, :5784-5789", status := .proven
+    source := "dictobject.c:5681-5686, :5279-5283, :5784-5789", status := .proven
     prop := ``DictIterFailure, thm := some ``dictIterFailure_proven
     notes := "The missing reverse test is the cause of bugs/dictset-reversed-iter-length-hint.yaml; this entry states what the code does, and dict-reviter-len what is wrong with it." },
   { id := "dict-pop-default", pyFile := "Objects/dictobject.c",
     pyFns := []
     statement := "d.pop(key[, default]) returns and removes the list's value; if absent it returns default, or raises KeyError(key) when there is none, changing nothing."
-    source := "dict.pop docstring, dictobject.c:4573-4576", status := .proven
+    source := "dict.pop docstring, dictobject.c:4940-4943", status := .proven
     prop := ``PopDefaultSpec, thm := some ``popDefaultSpec_proven },
   { id := "dict-ass-sub", pyFile := "Objects/dictobject.c", pyFns := []
     statement := "mp_ass_subscript deletes when the value is NULL and sets otherwise."
-    source := "dictobject.c:3540-3547", status := .proven
+    source := "dictobject.c@3.14.7:3540-3547", status := .proven
     prop := ``AssSubDispatch, thm := some ``assSubDispatch_proven },
   { id := "dict-new-empty", pyFile := "Objects/dictobject.c", pyFns := []
     statement := "A new dict is well formed and holds nothing."
@@ -183,29 +183,29 @@ def entries : List Entry := [
       "delitem_common", "delete_index_from_values", "dict_popitem_impl", "clear_lock_held",
       "clear_embedded_values"]
     statement := "On a well-formed split dict, for a key of any kind: the lookup agrees with the list, in which a shared key with no value is absent; d[key] = v keeps the table well formed, split or combined, and does what assocSet does, up to the object of a key equal to a shared one, unless the table would need 2**64 slots; del, popitem and clear do what the list does; a full iteration gives the list in insertion order."
-    source := "task: the model equals an abstract association list; dictobject.c:1247-1311, 1831-1882, 1890-1957, 2064-2214, 2772-2831, 2944-3002, 4596-4679", status := .proven
+    source := "task: the model equals an abstract association list; dictobject.c:1327-1391, 1831-1882, 1890-1957, 2064-2214, 2772-2831, 2944-3002, 4596-4679", status := .proven
     prop := ``SplitRefines, thm := some ``splitRefines_proven
     notes := "The combined half of these rows is in dict-lookup-*, dict-setitem-refines, dict-delitem-refines, dict-popitem-lifo and dict-clear; their failure paths are in dict-lookup-control and dict-insert-failure." },
   { id := "dict-split-fresh", pyFile := "Objects/dictobject.c", pyFns := ["new_dict_with_shared_keys"]
     statement := "new_dict_with_shared_keys on any well-formed shared keys gives a well-formed split dict of no items, with shared_keys_usable_size value slots all NULL; and the keys a class builds from any attribute list are such keys, so dict-split-refines is not vacuous."
-    source := "dictobject.c:896-909, :6788-6817", status := .proven
+    source := "dictobject.c:971-984, :6788-6817", status := .proven
     prop := ``SplitFresh, thm := some ``splitFresh_proven },
   { id := "dict-split-del-keeps-key", pyFile := "Objects/dictobject.c", pyFns := []
     statement := "del d[key] on a split dict leaves the key in the shared keys with no value in this dict: the state dict.setdefault fails on is reached by ordinary operations and satisfies the invariant."
-    source := "dictobject.c:2802-2807", status := .proven
+    source := "dictobject.c:2894-2899", status := .proven
     prop := ``SplitDelKeepsKey, thm := some ``splitDelKeepsKey_proven },
   { id := "dict-lookup-control", pyFile := "Objects/dictobject.c", pyFns := ["_Py_dict_lookup"]
     statement := "After the scan of _Py_dict_lookup, in every dispatch branch and for every key protocol: an exception is the result, in the state __eq__ left, and DKIX_KEY_CHANGED restarts on that state."
-    source := "dictobject.c:1261-1301", status := .proven
+    source := "dictobject.c:1341-1381", status := .proven
     prop := ``LookupControl, thm := some ``lookupControl_proven },
   { id := "dict-insert-failure", pyFile := "Objects/dictobject.c", pyFns := ["insertdict", "dictresize"]
     statement := "If the lookup in insertdict raises, the exception is the result; dictresize refuses a size of 64 bits or more with MemoryError and changes nothing."
-    source := "dictobject.c:1909-1913, 1953-1956, 2064-2214", status := .proven
+    source := "dictobject.c:2019-2023, 1953-1956, 2064-2214", status := .proven
     prop := ``InsertFailure, thm := some ``insertFailure_proven },
   { id := "dict-lookup-index-valid", pyFile := "Objects/dictobject.c",
     pyFns := ["_Py_dict_lookup", "do_lookup", "compare_generic", "compare_unicode_generic"]
     statement := "For every key protocol, including an __eq__ that lies, raises or changes the dict in any way, an index _Py_dict_lookup reports is one the table has when it returns."
-    source := "dictobject.c:1062, 1118: dk == mp->ma_keys && ep->me_key == startkey", status := .proven
+    source := "dictobject.c:1142, 1118: dk == mp->ma_keys && ep->me_key == startkey", status := .proven
     prop := ``LookupIndexValid, thm := some ``lookupIndexValid_proven },
   { id := "dict-struct-survives", pyFile := "Objects/dictobject.c", pyFns := []
     statement := "If every comparison keeps the chains and counts of a combined table, whatever it answers and whether or not it raises, then _Py_dict_lookup, insertdict and _PyDict_DelItem_KnownHash keep them, on all their outcomes. Key uniqueness is not claimed: a lying __eq__ can break it."
@@ -214,36 +214,36 @@ def entries : List Entry := [
     notes := "Combined tables only; the split case is not proved." },
   { id := "dict-struct-hyp-met", pyFile := "Objects/dictobject.c", pyFns := []
     statement := "An __eq__ that clears the dict it is probing meets the hypothesis of dict-struct-survives."
-    source := "dictobject.c:2959-3002", status := .proven
+    source := "dictobject.c:3080-3124", status := .proven
     prop := ``StructHypMet, thm := some ``structHypMet_proven },
   { id := "dict-merge-guard", pyFile := "Objects/dictobject.c", pyFns := ["dict_dict_merge"]
     statement := "For every key protocol and every override: an error from the loop body is raised as it stands, even if the source changed; otherwise a changed number of items in the source raises RuntimeError('dict mutated during update'), in the state the callback left; otherwise the loop goes on from the source as it now stands."
-    source := "dictobject.c:3952-3986", status := .proven
+    source := "dictobject.c:4223-4254", status := .proven
     prop := ``MergeGuard, thm := some ``mergeGuard_proven },
   { id := "dict-merge-quiet", pyFile := "Objects/dictobject.c", pyFns := ["dict_dict_merge"]
     statement := "If no callback touches the source, then whatever __eq__ answers or does to the receiver, the merge loop runs over the items the source had at the start and the size test never fires."
-    source := "dictobject.c:3947-3986", status := .proven
+    source := "dictobject.c:4218-4254", status := .proven
     prop := ``MergeQuiet, thm := some ``mergeQuiet_proven },
   { id := "dict-merge-guard-reachable", pyFile := "Objects/dictobject.c", pyFns := []
     statement := "A key whose __eq__ clears the source makes d.update(source) raise RuntimeError('dict mutated during update')."
-    source := "dictobject.c:3981-3985; the test reproduces it on CPython", status := .proven
+    source := "dictobject.c:4249-4253; the test reproduces it on CPython", status := .proven
     prop := ``MergeGuardReachable, thm := some ``mergeGuardReachable_proven },
   { id := "dict-merge-same-size-unseen", pyFile := "Objects/dictobject.c", pyFns := []
     statement := "A callback that replaces an item of the source and keeps the count is not seen: the merge succeeds, and a key the source held at the start is missing from the receiver."
-    source := "dictobject.c:3981 compares only ma_used; checked on 3.14.7 and main", status := .proven
+    source := "dictobject.c:4249 compares only ma_used; checked on 3.14.7 and main", status := .proven
     prop := ``MergeSameSizeUnseen, thm := some ``mergeSameSizeUnseen_proven
     notes := "Behaviour on record, not a bug report: the forward dict iterator goes on past the same change." },
   { id := "dict-merge-empty-target", pyFile := "Objects/dictobject.c", pyFns := []
     statement := "On an empty receiver every override value behaves as override == 1."
-    source := "dictobject.c:3900-3905", status := .proven
+    source := "dictobject.c:4178-4183", status := .proven
     prop := ``MergeEmptyTarget, thm := some ``mergeEmptyTarget_proven },
   { id := "dict-merge-generic", pyFile := "Objects/dictobject.c", pyFns := ["dict_merge"]
     statement := "dict_merge takes the fast route exactly for a dict whose tp_iter is dict_iter. On the slow route, for every key protocol and a keys() and __getitem__ that may raise or change the receiver: a failed entry test or keys() raises at once; override 1 never tests membership; on a present key override 0 skips __getitem__ and override 2 raises KeyError; on an absent key, or with override 1, __getitem__ runs first and the store sees what it left."
-    source := "dictobject.c:4002-4005, 4017-4075", status := .proven
+    source := "dictobject.c@3.14.7:4002-4005, 4017-4075", status := .proven
     prop := ``MergeGeneric, thm := some ``mergeGeneric_proven },
   { id := "dict-merge-seq2-order", pyFile := "Objects/dictobject.c", pyFns := ["merge_from_seq2_lock_held"]
     statement := "For an iterator that may raise or change the receiver at any step: PyObject_GetIter failing or an empty iterator ends it; a raising step or a bad element stops the loop with what earlier elements did still in place, and a TypeError from PySequence_Fast gets the note naming the element; a pair is stored, always if override is true and only if absent otherwise, and the loop goes on from the state the store left."
-    source := "dictobject.c:3806-3866", status := .proven
+    source := "dictobject.c:4064-4126", status := .proven
     prop := ``Seq2Order, thm := some ``seq2Order_proven },
   { id := "dict-merge-refines", pyFile := "Objects/dictobject.c",
     pyFns := []
@@ -253,21 +253,21 @@ def entries : List Entry := [
     notes := "override == 1; the override 0 and 2 branches are not covered by this statement." },
   { id := "dict-merge-self", pyFile := "Objects/dictobject.c", pyFns := []
     statement := "d.update(d) does nothing."
-    source := "comment at dictobject.c:3898", status := .proven
+    source := "comment at dictobject.c:4176", status := .proven
     prop := ``DictMergeSelf, thm := some ``dictMergeSelf_proven },
   { id := "dict-merge-mapping", pyFile := "Objects/dictobject.c", pyFns := []
     statement := "With a mapping argument whose __getitem__ succeeds, update is d[k] = E[k] for k in E.keys(), in order."
-    source := "dict.update docstring, dictobject.c:4806", status := .proven
+    source := "dict.update docstring, dictobject.c:5205", status := .proven
     prop := ``MergeMappingRefines, thm := some ``mergeMappingRefines_proven },
   { id := "dict-merge-seq2", pyFile := "Objects/dictobject.c",
     pyFns := []
     statement := "With an iterable of pairs, update is d[k] = v for each pair, in order."
-    source := "dict.update docstring, dictobject.c:4807", status := .proven
+    source := "dict.update docstring, dictobject.c:5206", status := .proven
     prop := ``MergeSeq2Refines, thm := some ``mergeSeq2Refines_proven
     notes := "override == 1 and well-formed pairs. The error messages for bad elements are checked by the difftest, not stated here." },
   { id := "dict-update-arg-routes", pyFile := "Objects/dictobject.c", pyFns := ["dict_update_arg"]
     statement := "dict_update_arg sends an exact dict to dict_merge at once, an object with keys to dict_merge, and one without to the sequence route; a failed keys lookup is the result."
-    source := "dict.update docstring, dictobject.c:3735-3752", status := .proven
+    source := "dict.update docstring, dictobject.c:3992-4009", status := .proven
     prop := ``UpdateArgRoutes, thm := some ``updateArgRoutes_proven },
   { id := "dict-cstring-wrappers", pyFile := "Objects/dictobject.c",
     pyFns := []
@@ -281,31 +281,31 @@ def entries : List Entry := [
     statement := "From an empty set, a run of add and discard leaves a well-formed table that holds what the abstract list holds, up to order, and `in` answers as the list does; or it stops with MemoryError, and then some set of no more keys than the run has steps needed a table PyMem_NEW refuses."
     source := "language: set semantics", status := .proven
     prop := ``SetTableRefines, thm := some ``setTableRefines_proven
-    notes := "The one failure is the refusal of PyMem_NEW at setobject.c:343, about 2**58 slots; an allocator that gives up earlier is not modelled." },
+    notes := "The one failure is the refusal of PyMem_NEW at setobject.c:527, about 2**58 slots; an allocator that gives up earlier is not modelled." },
   { id := "set-pop", pyFile := "Objects/setobject.c", pyFns := ["set_pop_impl"]
     statement := "s.pop() raises KeyError on an empty set; otherwise exactly one entry leaves and the table stays well formed, wherever the finger stood."
-    source := "set.pop docstring; setobject.c:719-743", status := .proven
+    source := "set.pop docstring; setobject.c:910-934", status := .proven
     prop := ``SetPopSpec, thm := some ``setPopSpec_proven },
   { id := "set-clear", pyFile := "Objects/setobject.c", pyFns := ["set_clear_internal", "set_empty_to_minsize"]
     statement := "Clearing keeps the table well formed and empties it."
-    source := "set.clear docstring; setobject.c:445-504", status := .proven
+    source := "set.clear docstring; setobject.c:633-694", status := .proven
     prop := ``SetClearSpec, thm := some ``setClearSpec_proven },
   { id := "set-iter-order", pyFile := "Objects/setobject.c", pyFns := ["set_next"]
     statement := "An iterator over a set that does not change yields its keys, in table order, each once."
-    source := "setobject.c:519-541, 901-942", status := .proven
+    source := "setobject.c:709-731, 901-942", status := .proven
     prop := ``SetIterOrder, thm := some ``setIterOrder_proven },
   { id := "set-probe-failure", pyFile := "Objects/setobject.c", pyFns := ["set_lookkey", "set_add_entry_takeref"]
     statement := "For every key protocol: an __eq__ that raises ends the probe with that exception, in the state it left; and when it changed the table, the lookup restarts on any answer and the add restarts on an answer of no."
-    source := "setobject.c:112-120, 171-178", status := .proven
+    source := "setobject.c@3.14.7:112-120, 171-178", status := .proven
     prop := ``SetProbeFailure, thm := some ``setProbeFailure_proven },
   { id := "set-add-trusts-yes", pyFile := "Objects/setobject.c", pyFns := []
     statement := "set_add_entry and set_lookkey differ on an __eq__ that answers yes and changes the table: the lookup restarts, the add stops and treats the key as present."
-    source := "setobject.c:118-121 against 173-178", status := .proven
+    source := "setobject.c@3.14.7:118-121 against 173-178", status := .proven
     prop := ``SetAddTrustsYes, thm := some ``setAddTrustsYes_proven
     notes := "A difference between two bodies, on record. It needs an __eq__ that lies about its own effect, and nothing goes wrong in memory." },
   { id := "set-hash-failure", pyFile := "Objects/setobject.c", pyFns := ["set_add_key", "set_contains_key", "set_discard_key"]
     statement := "For every key protocol, a hash that raises is reported through set_unhashable_type and the set is unchanged."
-    source := "setobject.c:412-443", status := .proven
+    source := "setobject.c:600-631", status := .proven
     prop := ``SetHashFailure, thm := some ``setHashFailure_proven },
   { id := "odict-twins-agree", pyFile := "Objects/odictobject.c",
     pyFns := ["_odict_get_index", "_odict_resize", "_odict_add_new_node", "_odict_remove_node"]
@@ -330,20 +330,20 @@ def entries : List Entry := [
     prop := ``KeysViewContains, thm := some ``keysViewContains_proven },
   { id := "odict-list-ends", pyFile := "Objects/odictobject.c", pyFns := []
     statement := "Adding a node at either end changes the list as named and increments od_state."
-    source := "odictobject.c:500: incremented whenever the LL changes", status := .proven
+    source := "odictobject.c:499: incremented whenever the LL changes", status := .proven
     prop := ``OdictListEnds, thm := some ``odictListEnds_proven },
   { id := "odict-remove-node", pyFile := "Objects/odictobject.c", pyFns := []
     statement := "Removing a node drops exactly that node and increments od_state."
-    source := "odictobject.c:500", status := .proven
+    source := "odictobject.c:499", status := .proven
     prop := ``OdictRemoveNode, thm := some ``odictRemoveNode_proven },
   { id := "odict-clear-nodes", pyFile := "Objects/odictobject.c", pyFns := []
     statement := "Clearing the nodes empties the list and od_fast_nodes, resets the sentinel and increments od_state."
-    source := "odictobject.c:795-814", status := .proven
+    source := "odictobject.c:794-813", status := .proven
     prop := ``OdictClearNodes, thm := some ``odictClearNodes_proven },
   { id := "odict-iter-start", pyFile := "Objects/odictobject.c",
     pyFns := []
     statement := "An OrderedDict iterator starts at the first or last node as asked, recording the current size and state."
-    source := "odictobject.c:1942-1973", status := .proven
+    source := "odictobject.c:1938-1968", status := .proven
     prop := ``OdictIterStart, thm := some ``odictIterStart_proven
     notes := "Says where iteration starts, not how it proceeds; see odict-iter-bounded." },
   { id := "odict-new-empty", pyFile := "Objects/odictobject.c", pyFns := []
@@ -353,38 +353,38 @@ def entries : List Entry := [
   { id := "dict-getitem-suppressed", pyFile := "Objects/dictobject.c",
     pyFns := []
     statement := "For every key protocol, including a hash or comparison that raises, and every dict, PyDict_GetItem returns without raising."
-    source := "dictobject.c:2290-2299: PyDict_GetItem() suppresses all errors", status := .proven
+    source := "dictobject.c:2379-2388: PyDict_GetItem() suppresses all errors", status := .proven
     prop := ``GetItemSuppressed, thm := some ``getItemSuppressed_proven },
   { id := "dict-hash-failure", pyFile := "Objects/dictobject.c",
     pyFns := ["setitem_take2_lock_held", "PyDict_DelItem"]
     statement := "For every key protocol, when hashing the key raises, each of these raises dict_unhashable_type's exception and leaves the dict unchanged."
-    source := "dictobject.c:2352-2366", status := .proven
+    source := "dictobject.c:2441-2460", status := .proven
     prop := ``HashFailureFamily, thm := some ``hashFailureFamily_proven },
   { id := "dict-pop-hash-order", pyFile := "Objects/dictobject.c", pyFns := []
     statement := "With a key whose hash raises, PyDict_Pop answers not-found on an empty dict without hashing, and raises on a non-empty one."
-    source := "dictobject.c:3171-3185", status := .proven
+    source := "dictobject.c:3295-3309", status := .proven
     prop := ``PopHashOrder, thm := some ``popHashOrder_proven },
   { id := "dict-compare-unicode-failure", pyFile := "Objects/dictobject.c", pyFns := ["compare_unicode_generic"]
     statement := "If __eq__ raises, compare_unicode_generic raises it, keeping whatever __eq__ did to the dict. If __eq__ replaced the table or the entry, it returns DKIX_KEY_CHANGED whatever __eq__ answered."
-    source := "dictobject.c:1045-1071", status := .proven
+    source := "dictobject.c:1125-1151", status := .proven
     prop := ``CompareUnicodeFailure, thm := some ``compareUnicodeFailure_proven },
   { id := "dict-do-lookup-body", pyFile := "Objects/dictobject.c", pyFns := ["do_lookup"]
     statement := "One turn of the probe loop, at any position and for any check: a raising check ends the search with its exception; a negative answer is returned as it stands, which is how DKIX_KEY_CHANGED leaves; a positive one returns the index; zero goes on from the next slot, an empty slot ends the search, and a dummy goes on."
-    source := "dictobject.c:1001-1043", status := .proven
+    source := "dictobject.c:1081-1123", status := .proven
     prop := ``DoLookupBody, thm := some ``doLookupBody_proven },
   { id := "dict-keysize-smallest", pyFile := "Objects/dictobject.c",
     pyFns := ["calculate_log2_keysize"]
     statement := "calculate_log2_keysize(m) is the smallest table of at least 8 slots with room for m."
-    source := "dictobject.c:545", status := .proven
+    source := "dictobject.c:583", status := .proven
     prop := ``KeysizeSmallest, thm := some ``keysizeSmallest_proven },
   { id := "dict-estimate-smallest", pyFile := "Objects/dictobject.c",
     pyFns := ["estimate_log2_keysize"]
     statement := "estimate_log2_keysize(n) is calculate_log2_keysize((n*3+1)/2), and is the smallest table of at least 8 slots whose USABLE_FRACTION holds n."
-    source := "dictobject.c:566-572", status := .proven
+    source := "dictobject.c:604-610", status := .proven
     prop := ``EstimateSmallest, thm := some ``estimateSmallest_proven },
   { id := "dict-getitem-body", pyFile := "Objects/dictobject.c", pyFns := ["dict_getitem"]
     statement := "PyDict_GetItem, for every key protocol: not a dict is silent; a failed hash goes to sys.unraisablehook; a failed lookup goes there too, unless it is a KeyError, which is dropped; and a good lookup gives its value."
-    source := "dictobject.c:2290-2341", status := .proven
+    source := "dictobject.c:2379-2430", status := .proven
     prop := ``DictGetitemBody, thm := some ``dictGetitemBody_proven },
   { id := "dict-getitem-link", pyFile := "Objects/dictobject.c", pyFns := ["dict_getitem"]
     statement := "The model of PyDict_GetItem with its reports and the one the older theorems use agree on the value and the state."
@@ -393,51 +393,51 @@ def entries : List Entry := [
   { id := "dict-del-known-hash-body", pyFile := "Objects/dictobject.c",
     pyFns := ["_PyDict_DelItem_KnownHash_LockHeld"]
     statement := "After its check, for every key protocol: a failed lookup is the result, in the state it left; no slot or no value is KeyError; and a value goes to delitem_common on that state."
-    source := "dictobject.c:2863-2874", status := .proven
+    source := "dictobject.c:2958-2968", status := .proven
     prop := ``DelKnownHashBody, thm := some ``delKnownHashBody_proven },
   { id := "dict-subscript-body", pyFile := "Objects/dictobject.c", pyFns := ["dict_subscript"]
     statement := "d[key] after a good lookup, for every key protocol and any __missing__: a slot with a value gives it; otherwise an exact dict raises KeyError, while a subclass runs the special lookup, whose failure is the result, and calls what it finds on the state it left, either of which may have changed the dict."
-    source := "dictobject.c:3504-3538", status := .proven
+    source := "dictobject.c@3.14.7:3504-3538", status := .proven
     prop := ``SubscriptBody, thm := some ``subscriptBody_proven },
   { id := "dict-checks", pyFile := "Objects/dictobject.c",
     pyFns := ["_PyDict_DelItem_KnownHash_LockHeld", "clear_lock_held",
       "dict_setdefault_ref_lock_held"]
     statement := "The PyDict_Check at the top of these three: something that is not a dict gets a SystemError from the first and last and nothing from the second, unchanged, and a dict goes on to the body."
-    source := "dictobject.c:2853-2856, :2969-2970, :4420-4426", status := .proven
+    source := "dictobject.c:2941-2949, :2969-2970, :4420-4426", status := .proven
     prop := ``DictChecks, thm := some ``dictChecks_proven },
   { id := "dict-dict-merge-body", pyFile := "Objects/dictobject.c", pyFns := ["dict_dict_merge"]
     statement := "dict_dict_merge, for every key protocol and override: merging into itself or from an empty dict does nothing; an empty target takes a clone when the source is clean, and otherwise goes on with override forced to 1; anything else goes on as it is."
-    source := "dictobject.c:3892-3932", status := .proven
+    source := "dictobject.c@3.14.7:3892-3932", status := .proven
     prop := ``DictDictMergeBody, thm := some ``dictDictMergeBody_proven },
   { id := "dict-merge-rest-body", pyFile := "Objects/dictobject.c", pyFns := ["dict_dict_merge"]
     statement := "The one big resize of dict_dict_merge runs only when the source does not fit, its failure ends the merge, and the loop starts from what it left, with the source in hand and its count as orig_size."
-    source := "dictobject.c:3933-3946", status := .proven
+    source := "dictobject.c:4205-4217", status := .proven
     prop := ``MergeRestBody, thm := some ``mergeRestBody_proven },
   { id := "dict-merge-step-body", pyFile := "Objects/dictobject.c", pyFns := ["dict_dict_merge"]
     statement := "One step of the loop of dict_dict_merge, for each override: 1 stores; otherwise a failed test is the result, an absent key is stored from the state the test left, and a present key is skipped by 0 and raises KeyError under 2."
-    source := "dictobject.c:3956-3975", status := .proven
+    source := "dictobject.c:4227-4243", status := .proven
     prop := ``MergeStepBody, thm := some ``mergeStepBody_proven },
   { id := "dict-resize-refines", pyFile := "Objects/dictobject.c",
     pyFns := ["dictresize", "build_indices_generic", "build_indices_unicode"]
     statement := "dictresize on a well-formed table of either form: a size of 64 bits or more raises MemoryError and changes nothing; otherwise the live entries move over in order to a well-formed combined table of that size, with the usable count left over, unicode exactly when the old one was and the caller allows it."
-    source := "dictobject.c:2006-2038, :2064-2214", status := .proven
+    source := "dictobject.c:2097-2129, :2064-2214", status := .proven
     prop := ``DictResizeRefines, thm := some ``dictResizeRefines_proven },
   { id := "dict-resize-invalidates-inline", pyFile := "Objects/dictobject.c",
     pyFns := ["invalidate_and_clear_inline_values"]
     statement := "When an instance's dict leaves the split form, its inline values are marked invalid and emptied, and the dict is what now answers."
-    source := "dictobject.c:2041-2048, :2138-2142", status := .proven
+    source := "dictobject.c:2132-2139, :2138-2142", status := .proven
     prop := ``ResizeInvalidatesInline, thm := some ``resizeInvalidatesInline_proven },
   { id := "dict-dealloc", pyFile := "Objects/dictobject.c", pyFns := ["dict_dealloc"]
     statement := "A watcher that keeps a reference during dict_dealloc gets the dict as it left it, not cleared; without one the dict is gone."
-    source := "dictobject.c:3365-3373", status := .proven
+    source := "dictobject.c:3605-3612", status := .proven
     prop := ``DictDeallocBody, thm := some ``dictDeallocBody_proven },
   { id := "dict-compare-generic-failure", pyFile := "Objects/dictobject.c", pyFns := ["compare_generic"]
     statement := "If __eq__ raises, compare_generic raises it, keeping whatever __eq__ did to the dict. If __eq__ replaced the table or the entry, it returns DKIX_KEY_CHANGED whatever __eq__ answered."
-    source := "dictobject.c:1113-1124", status := .proven
+    source := "dictobject.c:1193-1204", status := .proven
     prop := ``CompareGenericFailure, thm := some ``compareGenericFailure_proven },
   { id := "dict-lookup-restarts", pyFile := "Objects/dictobject.c", pyFns := []
     statement := "On DKIX_KEY_CHANGED, _Py_dict_lookup starts again on the current state of the dict."
-    source := "dictobject.c:1299-1301", status := .proven
+    source := "dictobject.c:1379-1381", status := .proven
     prop := ``LookupRestarts, thm := some ``lookupRestarts_proven
     notes := "_Py_dict_lookup stays todo: its split branch is unproved." },
   { id := "dict-missing-hook", pyFile := "Objects/dictobject.c", pyFns := []
@@ -466,23 +466,23 @@ def entries : List Entry := [
   { id := "dict-reviter-len", pyFile := "Objects/dictobject.c",
     pyFns := ["dictreviter_iter_lock_held", "dictiter_len", "dictiter_new"]
     statement := "After any program of sets, deletes and next() on a reverse dict iterator, __length_hint__ fits Py_ssize_t."
-    source := "invariant; forward iterator check at dictobject.c:5279", status := .refuted
+    source := "invariant; forward iterator check at dictobject.c:5722", status := .refuted
     prop := ``RevIterLenNonneg, thm := some ``revIterLenNonneg_refuted
     bug := some "dictset-reversed-iter-length-hint"
     notes := "Known upstream as gh-158254, fixed on main; 3.14.7 still has it." },
   { id := "set-frozenset-hash-order-free", pyFile := "Objects/setobject.c",
     pyFns := []
     statement := "Two tables whose slots are a permutation of each other, with the same mask, fill and used, have the same frozenset hash."
-    source := "setobject.c:785-793: a frozenset hash should be independent of order", status := .proven
+    source := "setobject.c:979-987: a frozenset hash should be independent of order", status := .proven
     prop := ``FrozensetHashOrderFree, thm := some ``frozensetHashOrderFree_proven },
   { id := "set-frozenset-hash-not-minus-one", pyFile := "Objects/setobject.c",
     pyFns := []
     statement := "The frozenset hash is never -1, the error value of tp_hash."
-    source := "setobject.c:813-815", status := .proven
+    source := "setobject.c:1007-1009", status := .proven
     prop := ``FrozensetHashNotMinusOne, thm := some ``frozensetHashNotMinusOne_proven },
   { id := "set-new-size-minimal", pyFile := "Objects/setobject.c", pyFns := []
     statement := "For minused < 2**63, set_table_resize asks for the smallest table of at least 8 slots above minused."
-    source := "setobject.c:311: Find the smallest table size > minused", status := .proven
+    source := "setobject.c:495: Find the smallest table size > minused", status := .proven
     prop := ``SetNewSizeMinimal, thm := some ``setNewSizeMinimal_proven
     notes := "Hypothesis: minused is a Py_ssize_t; line 315 notes the largest size is PY_SSIZE_T_MAX + 1." },
   { id := "set-clear-empties", pyFile := "Objects/setobject.c",

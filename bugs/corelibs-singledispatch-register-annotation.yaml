@@ -35,9 +35,9 @@ expected: |
 observed: |
   python3 3.14.7: g ['int', 'object', 'str']. REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
-  Doc/library/functools.rst:513-514: "the decorator will infer the type of the first argument automatically".
+  Doc/library/functools.rst:510-511: "the decorator will infer the type of the first argument automatically".
 cause: |
-  Lib/functools.py:950.
+  Lib/functools.py:971.
 possible_fix: |
   Use the signature to find the first parameter, and look its name up in the hints.
 duplicates:

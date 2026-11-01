@@ -3,8 +3,8 @@ Python/interpconfig.c	13	27	gil_flag_to_str	gil_flag_to_str(int flag)	todo
 Python/interpconfig.c	30	52	gil_flag_from_str	gil_flag_from_str(const char *str, int *p_flag)	todo		
 Python/interpconfig.c	55	102	_PyInterpreterConfig_AsDict	_PyInterpreterConfig_AsDict(PyInterpreterConfig *config)	todo		
 Python/interpconfig.c	105	121	_config_dict_get_bool	_config_dict_get_bool(PyObject *dict, const char *name, int *p_flag)	todo		
-Python/interpconfig.c	124	140	_config_dict_copy_str	_config_dict_copy_str(PyObject *dict, const char *name, char *buf, size_t bufsize)	todo		
-Python/interpconfig.c	143	221	interp_config_from_dict	interp_config_from_dict(PyObject *origdict, PyInterpreterConfig *config, bool missing_allowed)	todo		
-Python/interpconfig.c	224	234	_PyInterpreterConfig_InitFromDict	_PyInterpreterConfig_InitFromDict(PyInterpreterConfig *config, PyObject *dict)	todo		
-Python/interpconfig.c	237	247	_PyInterpreterConfig_UpdateFromDict	_PyInterpreterConfig_UpdateFromDict(PyInterpreterConfig *config, PyObject *dict)	todo		
-Python/interpconfig.c	250	269	_PyInterpreterConfig_InitFromState	_PyInterpreterConfig_InitFromState(PyInterpreterConfig *config, PyInterpreterState *interp)	todo		
+Python/interpconfig.c	124	145	_config_dict_copy_str	_config_dict_copy_str(PyObject *dict, const char *name, char *buf, size_t bufsize)	todo		changed-in-3.15:
+Python/interpconfig.c	148	226	interp_config_from_dict	interp_config_from_dict(PyObject *origdict, PyInterpreterConfig *config, bool missing_allowed)	todo		
+Python/interpconfig.c	229	239	_PyInterpreterConfig_InitFromDict	_PyInterpreterConfig_InitFromDict(PyInterpreterConfig *config, PyObject *dict)	todo		
+Python/interpconfig.c	242	252	_PyInterpreterConfig_UpdateFromDict	_PyInterpreterConfig_UpdateFromDict(PyInterpreterConfig *config, PyObject *dict)	todo		
+Python/interpconfig.c	255	274	_PyInterpreterConfig_InitFromState	_PyInterpreterConfig_InitFromState(PyInterpreterConfig *config, PyInterpreterState *interp)	todo		

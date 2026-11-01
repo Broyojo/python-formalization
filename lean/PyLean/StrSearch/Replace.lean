@@ -200,7 +200,7 @@ theorem countN_length {p : Seq} (k : Nat) (s : Seq) : (splitN p k s).length = co
 theorem stringlibFind_some_or {s p : Seq} (h : p.length ≤ s.length) :
     stringlibFind s p 0 = optOff 0 (findL p s) := stringlibFind_eq h 0
 
-/-- `str.replace` (`replace`, unicodeobject.c:10811-11067) with a non-empty
+/-- `str.replace` (`replace`, unicodeobject.c:10577-10833) with a non-empty
 `old` is the split-join replacement, raising `OverflowError` exactly when the
 lengths differ, something is replaced, and the result is longer than
 `PY_SSIZE_T_MAX / kind`. -/
@@ -347,7 +347,7 @@ theorem countChar_eq (s : Seq) (c : Nat) {mc : Int} (hm : 0 < mc) :
   rw [countN_eq_min (by simp), countAll_single, countChar]
   omega
 
-/-- `bytes.replace` (`stringlib_replace` and its helpers, transmogrify.h:276-737)
+/-- `bytes.replace` (`stringlib_replace` and its helpers, transmogrify.h:277-738)
 with a non-empty `old` is the split-join replacement, raising `OverflowError`
 exactly when the result is longer than `PY_SSIZE_T_MAX`. -/
 theorem bytesReplace_eq {s old new : Seq} {k : Int} (hp : old ≠ []) (hs : (s.length : Int) < ssizeMax)
@@ -505,7 +505,7 @@ of them is `s`, and `s.replace(old, new, count) == new.join(s.split(old, count))
 except that `replace` raises `OverflowError` exactly when the result would
 be too long: longer than `PY_SSIZE_T_MAX` for `bytes`, and for `str` longer
 than `PY_SSIZE_T_MAX / kind` when the lengths of `old` and `new` differ and
-something is replaced (unicodeobject.c:10973-10987). Preconditions: `len(s) <
+something is replaced (unicodeobject.c:10739-10753). Preconditions: `len(s) <
 sys.maxsize` (type invariant) and `count` a valid `Py_ssize_t` (otherwise both
 raise the same `OverflowError` from argument parsing). -/
 def ReplaceSplitJoin : Prop :=
@@ -768,7 +768,7 @@ strings for every separator and `maxsplit`, provided (for `sep=None`) the
 string has none of the characters only `str` treats as whitespace
 (\x1c-\x1f, \x85, \xa0). This covers the different default `maxcount`s:
 `str` computes `(len - 1) / 2 + 1` (whitespace) and `len / len(sep) + 1`
-(unicodeobject.c:10579-10614) where `bytes` uses `PY_SSIZE_T_MAX`.
+(unicodeobject.c:10345-10380) where `bytes` uses `PY_SSIZE_T_MAX`.
 Precondition: `len(s) < sys.maxsize` (type invariant). -/
 def SplitStrBytes : Prop :=
   ∀ (s : Seq) (sep : Option Seq) (k : Int), (∀ x ∈ s, x < 256) → (s.length : Int) < ssizeMax →

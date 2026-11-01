@@ -1,0 +1,7 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_sre/sre_lib.h	16	89	sre_at	SRE(at)(SRE_STATE* state, const SRE_CHAR* ptr, SRE_CODE at)	todo		changed-in-3.15: new function
+Modules/_sre/sre_lib.h	92	176	sre_charset	SRE(charset)(SRE_STATE* state, const SRE_CODE* set, SRE_CODE ch)	todo		changed-in-3.15: new function
+Modules/_sre/sre_lib.h	184	243	sre_charset_loc_ignore	SRE(charset_loc_ignore)(SRE_STATE* state, const SRE_CODE* set, SRE_CODE ch)	todo		changed-in-3.15: new function
+Modules/_sre/sre_lib.h	248	378	sre_count	SRE(count)(SRE_STATE* state, const SRE_CODE* pattern, Py_ssize_t maxcount)	todo		changed-in-3.15: new function
+Modules/_sre/sre_lib.h	654	1740	sre_match	SRE(match)(SRE_STATE* state, const SRE_CODE* pattern, int toplevel)	todo		changed-in-3.15: new function
+Modules/_sre/sre_lib.h	1747	1922	sre_search	SRE(search)(SRE_STATE* state, SRE_CODE* pattern)	todo		changed-in-3.15: new function

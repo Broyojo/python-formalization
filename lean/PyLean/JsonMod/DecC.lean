@@ -24,7 +24,7 @@ open PyLean
 /-! The C loop `while (idx <= end_idx && IS_WHITESPACE(PyUnicode_READ(kind, str, idx))) idx++;`
 is `wsEnd s idx` (`idx + wsLen (s.drop idx)`). -/
 
-/-- Result of the inner `for` loop of `scanstring_unicode`, :408-417. -/
+/-- Result of the inner `for` loop of `scanstring_unicode`, :504-513. -/
 inductive CFind where
   /-- `"` or `\` at this offset. -/
   | found (k : Nat)
@@ -44,7 +44,7 @@ def cFind (strict : Bool) : PStr → CFind
       | .ctrl k => .ctrl (k + 1)
       | .eof => .eof
 
-/-- The `while (1)` loop of `scanstring_unicode`, :402-535, from `end` with the
+/-- The `while (1)` loop of `scanstring_unicode`, :498-635, from `end` with the
 writer's contents `acc` (`none` while the writer is empty). -/
 def cScanLoop (s : PStr) (strict : Bool) (begin : Int) : Nat → Nat → Option PStr → DR (PStr × Nat)
   | 0, _, _ => fuelOut
@@ -56,7 +56,7 @@ def cScanLoop (s : PStr) (strict : Bool) (begin : Int) : Nat → Nat → Option 
       let next := e + k
       let c := s.getD next 0
       if c = 34 ∧ acc = none then
-        -- fast path, :421-430
+        -- fast path, :517-525
         .ok ((s.drop e).take k, next + 1)
       else
         let acc := acc.getD [] ++ (s.drop e).take k
@@ -78,7 +78,7 @@ def cScanLoop (s : PStr) (strict : Bool) (begin : Int) : Nat → Nat → Option 
               match hex4 s next with
               | none => .error (.jde "Invalid \\uXXXX escape" ((e - 5 : Nat) : Int))
               | some c =>
-                -- surrogate pair, :500-526
+                -- surrogate pair, :600-626
                 if 0xd800 ≤ c ∧ c ≤ 0xdbff ∧ e + 6 < s.length ∧ s.getD e 0 = 92 ∧ s.getD (e + 1) 0 = 117 then
                   match hex4 s (e + 2) with
                   | none => .error (.jde "Invalid \\uXXXX escape" ((e + 6 - 5 : Nat) : Int))
@@ -88,27 +88,27 @@ def cScanLoop (s : PStr) (strict : Bool) (begin : Int) : Nat → Nat → Option 
                     else cScanLoop s strict begin f e (some (acc ++ [c]))
                 else cScanLoop s strict begin f e (some (acc ++ [c]))
 
-/-- `scanstring_unicode(pystr, end, strict)`, :371-544 (`end <= len`). -/
+/-- `scanstring_unicode(pystr, end, strict)`, :470-644 (`end <= len`). -/
 def cScanstring (s : PStr) (e : Nat) (strict : Bool) : DR (PStr × Nat) :=
   if s.length < e then .error (.exc (.valueError "end is out of bounds"))
   else cScanLoop s strict ((e : Int) - 1) (s.length + 1) e none
 
-/-- The sign, :928-935: `if (idx > end_idx) raise_stop_iteration(start)`. -/
+/-- The sign, :1008-1015: `if (idx > end_idx) raise_stop_iteration(start)`. -/
 def cNumSign (s : PStr) (start : Nat) : Option Nat :=
   if s.getD start 0 = 45 then (if start + 1 ≥ s.length then none else some (start + 1)) else some start
 
-/-- The integer digits, :937-950. -/
+/-- The integer digits, :1017-1030. -/
 def cNumInt (s : PStr) (idx : Nat) : Option Nat :=
   if 49 ≤ s.getD idx 0 ∧ s.getD idx 0 ≤ 57 then some (idx + 1 + digitsLen (s.drop (idx + 1)))
   else if s.getD idx 0 = 48 then some (idx + 1) else none
 
-/-- The fraction, :952-957: the new `idx` and `is_float`. -/
+/-- The fraction, :1032-1037: the new `idx` and `is_float`. -/
 def cNumFrac (s : PStr) (idx : Nat) : Nat × Bool :=
   if idx + 1 < s.length ∧ s.getD idx 0 = 46 ∧ isDigit (s.getD (idx + 1) 0) then
     (idx + 2 + digitsLen (s.drop (idx + 2)), true)
   else (idx, false)
 
-/-- The exponent, :959-976 (backtracking to `e_start` without digits). -/
+/-- The exponent, :1039-1056 (backtracking to `e_start` without digits). -/
 def cNumExp (s : PStr) (idx : Nat) (isFloat : Bool) : Nat × Bool :=
   if idx + 1 < s.length ∧ (s.getD idx 0 = 101 ∨ s.getD idx 0 = 69) then
     let eStart := idx
@@ -118,7 +118,7 @@ def cNumExp (s : PStr) (idx : Nat) (isFloat : Bool) : Nat × Bool :=
     if isDigit (s.getD (idx - 1) 0) then (idx, true) else (eStart, isFloat)
   else (idx, isFloat)
 
-/-- `_match_number_unicode`, :904-1016, at `start < len`. -/
+/-- `_match_number_unicode`, :984-1096, at `start < len`. -/
 def cMatchNumber (cfg : DCfg) (s : PStr) (start : Nat) : DR (JVal × Nat) :=
   match cNumSign s start with
   | none => .error (.stop start)
@@ -132,11 +132,11 @@ def cMatchNumber (cfg : DCfg) (s : PStr) (start : Nat) : DR (JVal × Nat) :=
       if isFloat then (cfg.parseFloat numstr).map (·, idx)
       else (parseInt cfg numstr).map (·, idx)
 
-/-- `has_pairs_hook ? PyList_Append : PyDict_SetItem`, :734-751. -/
+/-- `has_pairs_hook ? PyList_Append : PyDict_SetItem`, :809-825. -/
 def cAddPair (cfg : DCfg) (acc : List (PStr × JVal)) (k : PStr) (v : JVal) : List (PStr × JVal) :=
   if cfg.pairsHook.isSome then acc ++ [(k, v)] else dictSet k v acc
 
-/-- The end of `_parse_object_unicode`, :779-790: `object_pairs_hook(rval)`, or
+/-- The end of `_parse_object_unicode`, :853-864: `object_pairs_hook(rval)`, or
 `object_hook(rval)`, or `rval`. -/
 def cFinish (cfg : DCfg) (acc : List (PStr × JVal)) : DR JVal :=
   match cfg.pairsHook with
@@ -146,7 +146,7 @@ def cFinish (cfg : DCfg) (acc : List (PStr × JVal)) : DR JVal :=
     | some h => h acc
     | none => .ok (.obj acc)
 
-/-- `_parse_constant`, :878-902. -/
+/-- `_parse_constant`, :958-982. -/
 def cConst (cfg : DCfg) (name : String) (idx : Nat) : DR (JVal × Nat) :=
   (cfg.parseConstant (cs name)).map (·, idx + (cs name).length)
 
@@ -154,8 +154,8 @@ def cConst (cfg : DCfg) (name : String) (idx : Nat) : DR (JVal × Nat) :=
 def litAt (s : PStr) (idx : Nat) (lit : String) : Bool :=
   idx + (cs lit).length - 1 < s.length && (s.drop idx).take (cs lit).length == cs lit
 
-/-- What `_parse_array_unicode` does after an element, :842-862; `.close` carries
-`*next_idx_ptr = idx + 1` (:870). -/
+/-- What `_parse_array_unicode` does after an element, :916-936; `.close` carries
+`*next_idx_ptr = idx + 1` (:944). -/
 def cArrAfter (s : PStr) (next : Nat) : ArrStep :=
   let idx := wsEnd s next
   if idx < s.length ∧ s.getD idx 0 = 93 then .close ((idx + 1 : Nat) : Int)
@@ -167,9 +167,9 @@ def cArrAfter (s : PStr) (next : Nat) : ArrStep :=
       .err (.jde "Illegal trailing comma before end of array" comma)
     else .next idx
 
-/-- What `_parse_object_unicode` does after a value, :754-773 (the next key's
+/-- What `_parse_object_unicode` does after a value, :828-847 (the next key's
 quote is checked at the top of the loop, so `.next` is the quote's position);
-`.close` carries `*next_idx_ptr = idx + 1` (:777). -/
+`.close` carries `*next_idx_ptr = idx + 1` (:851). -/
 def cObjAfter (s : PStr) (next : Nat) : ObjStep :=
   let idx := wsEnd s next
   if idx < s.length ∧ s.getD idx 0 = 125 then .close ((idx + 1 : Nat) : Int)
@@ -182,7 +182,7 @@ def cObjAfter (s : PStr) (next : Nat) : ObjStep :=
     else .next idx
 
 mutual
-/-- `scan_once_unicode`, :1018-1125, at `idx >= 0`. -/
+/-- `scan_once_unicode`, :1098-1205, at `idx >= 0`. -/
 def cScanOnce (cfg : DCfg) (s : PStr) : Nat → Nat → DR (JVal × Nat)
   | 0, _ => fuelOut
   | n + 1, idx =>
@@ -194,16 +194,16 @@ def cScanOnce (cfg : DCfg) (s : PStr) : Nat → Nat → DR (JVal × Nat)
         | .ok (v, e) => .ok (.str v, e)
         | .error err => .error err
       else if c = 123 then
-        -- `_parse_object_unicode`, :698-702
+        -- `_parse_object_unicode`, :773-777
         let idx := wsEnd s (idx + 1)
         if idx ≥ s.length ∨ s.getD idx 0 ≠ 125 then
-          -- top of the `while (1)` loop, :706-710
+          -- top of the `while (1)` loop, :781-785
           if idx ≥ s.length ∨ s.getD idx 0 ≠ 34 then
             .error (.jde "Expecting property name enclosed in double quotes" idx)
           else cObjBody cfg s n idx []
         else (cFinish cfg []).map (·, idx + 1)
       else if c = 91 then
-        -- `_parse_array_unicode`, :824-868
+        -- `_parse_array_unicode`, :898-942
         let idx := wsEnd s (idx + 1)
         if idx ≥ s.length ∨ s.getD idx 0 ≠ 93 then cArrLoop cfg s n idx []
         else .ok (.arr [], idx + 1)
@@ -215,7 +215,7 @@ def cScanOnce (cfg : DCfg) (s : PStr) : Nat → Nat → DR (JVal × Nat)
       else if c = 45 ∧ litAt s idx "-Infinity" then cConst cfg "-Infinity" idx
       else cMatchNumber cfg s idx
 
-/-- The `while (1)` loop of `_parse_array_unicode`, :829-862. -/
+/-- The `while (1)` loop of `_parse_array_unicode`, :903-936. -/
 def cArrLoop (cfg : DCfg) (s : PStr) : Nat → Nat → List JVal → DR (JVal × Nat)
   | 0, _, _ => fuelOut
   | n + 1, idx, acc =>
@@ -224,14 +224,14 @@ def cArrLoop (cfg : DCfg) (s : PStr) : Nat → Nat → List JVal → DR (JVal ×
     | .ok (v, next) =>
       match cArrAfter s next with
       | .close i =>
-        -- the check `idx > end_idx || PyUnicode_READ(...) != ']'` at :865-868
+        -- the check `idx > end_idx || PyUnicode_READ(...) != ']'` at :939-942
         -- cannot fail after `break`
         .ok (.arr (acc ++ [v]), i.toNat)
       | .err err => .error err
       | .next i => cArrLoop cfg s n i.toNat (acc ++ [v])
 
 /-- One iteration of the `while (1)` loop of `_parse_object_unicode`
-(:703-775) after the check for the key's opening quote at `idx`. -/
+(:778-849) after the check for the key's opening quote at `idx`. -/
 def cObjBody (cfg : DCfg) (s : PStr) : Nat → Nat → List (PStr × JVal) → DR (JVal × Nat)
   | 0, _, _ => fuelOut
   | n + 1, idx, acc =>
@@ -250,14 +250,14 @@ def cObjBody (cfg : DCfg) (s : PStr) : Nat → Nat → List (PStr × JVal) → D
           | .close i => (cFinish cfg acc).map (·, i.toNat)
           | .err err => .error err
           | .next i =>
-            -- top of the `while (1)` loop, :706-710
+            -- top of the `while (1)` loop, :781-785
             if i.toNat ≥ s.length ∨ s.getD i.toNat 0 ≠ 34 then
               .error (.jde "Expecting property name enclosed in double quotes" i.toNat)
             else cObjBody cfg s n i.toNat acc
 end
 
-/-- `scanner_call(string, idx)` (:1127-1156) as used by
-`JSONDecoder.raw_decode`, decoder.py:351-364: `idx` is converted with the `n`
+/-- `scanner_call(string, idx)` (:1207-1236) as used by
+`JSONDecoder.raw_decode`, decoder.py:364-377: `idx` is converted with the `n`
 format (`OverflowError` outside `Py_ssize_t`), then `scan_once_unicode` rejects
 negative `idx`. -/
 def rawDecodeC (cfg : DCfg) (s : PStr) (idx : Int) : DR (JVal × Int) :=

@@ -1,12 +1,13 @@
 file	line	endline	name	signature	status	entry	note
-Python/importdl.c	48	101	get_encoded_name	get_encoded_name(PyObject *name, const char **hook_prefix) {	todo		
-Python/importdl.c	104	112	_Py_ext_module_loader_info_clear	_Py_ext_module_loader_info_clear(struct _Py_ext_module_loader_info *info)	todo		
-Python/importdl.c	115	170	_Py_ext_module_loader_info_init	_Py_ext_module_loader_info_init(struct _Py_ext_module_loader_info *p_info, PyObject *name, PyObject *filename, _Py_ext_module_origin origin)	todo		
-Python/importdl.c	173	195	_Py_ext_module_loader_info_init_for_builtin	_Py_ext_module_loader_info_init_for_builtin( struct _Py_ext_module_loader_info *info, PyObject *name)	todo		
-Python/importdl.c	198	207	_Py_ext_module_loader_info_init_for_core	_Py_ext_module_loader_info_init_for_core( struct _Py_ext_module_loader_info *info, PyObject *name)	todo		
-Python/importdl.c	211	230	_Py_ext_module_loader_info_init_from_spec	_Py_ext_module_loader_info_init_from_spec( struct _Py_ext_module_loader_info *p_info, PyObject *spec)	todo		
-Python/importdl.c	239	245	_Py_ext_module_loader_result_clear	_Py_ext_module_loader_result_clear(struct _Py_ext_module_loader_result *res)	todo		
-Python/importdl.c	248	296	_Py_ext_module_loader_result_set_error	_Py_ext_module_loader_result_set_error( struct _Py_ext_module_loader_result *res, enum _Py_ext_module_loader_result_error_kind kind)	todo		
-Python/importdl.c	299	371	_Py_ext_module_loader_result_apply_error	_Py_ext_module_loader_result_apply_error( struct _Py_ext_module_loader_result *res, const char *name)	todo		
-Python/importdl.c	380	412	_PyImport_GetModInitFunc	_PyImport_GetModInitFunc(struct _Py_ext_module_loader_info *info, FILE *fp)	todo		
-Python/importdl.c	416	520	_PyImport_RunModInitFunc	_PyImport_RunModInitFunc(PyModInitFunction p0, struct _Py_ext_module_loader_info *info, struct _Py_ext_module_loader_result *p_res)	todo		
+Python/importdl.c	29	82	get_encoded_name	get_encoded_name(PyObject *name, const struct hook_prefixes **hook_prefixes) {	todo		changed-in-3.15:
+Python/importdl.c	85	93	_Py_ext_module_loader_info_clear	_Py_ext_module_loader_info_clear(struct _Py_ext_module_loader_info *info)	todo		
+Python/importdl.c	96	151	_Py_ext_module_loader_info_init	_Py_ext_module_loader_info_init(struct _Py_ext_module_loader_info *p_info, PyObject *name, PyObject *filename, _Py_ext_module_origin origin)	todo		changed-in-3.15:
+Python/importdl.c	154	176	_Py_ext_module_loader_info_init_for_builtin	_Py_ext_module_loader_info_init_for_builtin( struct _Py_ext_module_loader_info *info, PyObject *name)	todo		changed-in-3.15:
+Python/importdl.c	179	188	_Py_ext_module_loader_info_init_for_core	_Py_ext_module_loader_info_init_for_core( struct _Py_ext_module_loader_info *info, PyObject *name)	todo		
+Python/importdl.c	192	211	_Py_ext_module_loader_info_init_from_spec	_Py_ext_module_loader_info_init_from_spec( struct _Py_ext_module_loader_info *p_info, PyObject *spec)	todo		
+Python/importdl.c	220	226	_Py_ext_module_loader_result_clear	_Py_ext_module_loader_result_clear(struct _Py_ext_module_loader_result *res)	todo		
+Python/importdl.c	229	277	_Py_ext_module_loader_result_set_error	_Py_ext_module_loader_result_set_error( struct _Py_ext_module_loader_result *res, enum _Py_ext_module_loader_result_error_kind kind)	todo		
+Python/importdl.c	280	352	_Py_ext_module_loader_result_apply_error	_Py_ext_module_loader_result_apply_error( struct _Py_ext_module_loader_result *res, const char *name)	todo		
+Python/importdl.c	361	373	findfuncptr	findfuncptr(const char *prefix, const char *name_buf, struct _Py_ext_module_loader_info *info, FILE *fp)	todo		changed-in-3.15: new function
+Python/importdl.c	376	420	_PyImport_GetModuleExportHooks	_PyImport_GetModuleExportHooks( struct _Py_ext_module_loader_info *info, FILE *fp, PyModInitFunction *modinit, PyModExportFunction *modexport)	todo		changed-in-3.15: new function
+Python/importdl.c	424	528	_PyImport_RunModInitFunc	_PyImport_RunModInitFunc(PyModInitFunction p0, struct _Py_ext_module_loader_info *info, struct _Py_ext_module_loader_result *p_res)	todo		changed-in-3.15:

@@ -1,2 +1,2 @@
 file	line	endline	name	signature	status	entry	note
-Python/getcompiler.c	24	27	Py_GetCompiler	Py_GetCompiler(void)	todo		
+Python/getcompiler.c	28	31	Py_GetCompiler	Py_GetCompiler(void)	todo		

@@ -13,9 +13,9 @@ namespace PyLean.BytesObj.Bytes
 open PyLean PyLean.StrSearch
 open PyLean.RangeSlice (Slice sliceUnpack)
 
-/-! ## Search plumbing, bytes_methods.c:405-432, :515-624, :678-722 -/
+/-! ## Search plumbing, bytes_methods.c:403-430, :513-622, :676-720 -/
 
-/-- `parse_args_finds_byte`, bytes_methods.c:405-432, on an object: a buffer is
+/-- `parse_args_finds_byte`, bytes_methods.c:403-430, on an object: a buffer is
 kept, an index must be in `range(0, 256)`, anything else is a `TypeError`. -/
 def parseFindsByteObj (sub : Obj) : Py BSub :=
   match sub.buffer? with
@@ -27,23 +27,23 @@ def parseFindsByteObj (sub : Obj) : Py BSub :=
     | none =>
       .error (.typeError s!"argument should be integer or bytes-like object, not '{sub.typeName}'")
 
-/-- `_Py_bytes_find`, `_Py_bytes_rfind`, bytes_methods.c:514-547 with
-`find_internal`, :454-512. -/
+/-- `_Py_bytes_find`, `_Py_bytes_rfind`, bytes_methods.c:512-545 with
+`find_internal`, :452-510. -/
 def bytesFindObj (s : Seq) (sub : Obj) (start «end» : Option Int) (forward : Bool) : Py Int := do
   let b ← parseFindsByteObj sub
   bytesFind s b start «end» forward
 
-/-- `_Py_bytes_index`, `_Py_bytes_rindex`, bytes_methods.c:524-562. -/
+/-- `_Py_bytes_index`, `_Py_bytes_rindex`, bytes_methods.c:522-560. -/
 def bytesIndexObj (s : Seq) (sub : Obj) (start «end» : Option Int) (forward : Bool) : Py Int := do
   let b ← parseFindsByteObj sub
   bytesIndex s b start «end» forward
 
-/-- `_Py_bytes_count`, bytes_methods.c:564-601. -/
+/-- `_Py_bytes_count`, bytes_methods.c:562-599. -/
 def bytesCountObj (s : Seq) (sub : Obj) (start «end» : Option Int) : Py Int := do
   let b ← parseFindsByteObj sub
   bytesCount s b start «end»
 
-/-- `_Py_bytes_contains`, bytes_methods.c:603-624. Unlike `parse_args_finds_byte`
+/-- `_Py_bytes_contains`, bytes_methods.c:601-622. Unlike `parse_args_finds_byte`
 it tries the index first, and on a `PyNumber_AsSsize_t` failure falls back to the
 buffer protocol, losing the original exception. -/
 def bytesContains (s : Seq) (arg : Obj) : Py Bool :=
@@ -58,10 +58,10 @@ def bytesContains (s : Seq) (arg : Obj) : Py Bool :=
     if ival < 0 ∨ ival ≥ 256 then .error (.valueError "byte must be in range(0, 256)")
     else .ok (s.contains ival.toNat)
 
-/-- `tailmatch`'s buffer step, bytes_methods.c:639-648. -/
+/-- `tailmatch`'s buffer step, bytes_methods.c:637-646. -/
 def tailItem (item : Obj) : Py Seq := getBuffer item
 
-/-- `_Py_bytes_tailmatch`, bytes_methods.c:677-708: a tuple tries each item in turn
+/-- `_Py_bytes_tailmatch`, bytes_methods.c:675-706: a tuple tries each item in turn
 (items after a match are not looked at); a failed non-tuple argument gets the
 method's own message. -/
 def bytesTailmatchObj (s : Seq) (fname : String) (subobj : Obj) (start «end» : Int)
@@ -81,10 +81,10 @@ def bytesTailmatchObj (s : Seq) (fname : String) (subobj : Obj) (start «end» :
       .error (.typeError s!"{fname} first arg must be bytes or a tuple of bytes, not {subobj.typeName}")
     | .ok p => .ok (bytesTailmatch s p start «end» direction)
 
-/-! ## `_PyBytes_Find`, bytesobject.c:1308-1341 -/
+/-! ## `_PyBytes_Find`, bytesobject.c:1393-1426 -/
 
 /-- `_PyBytes_Find(haystack, len_haystack, needle, len_needle, offset)`,
-bytesobject.c:1308-1332. `stringlib_find` is called with one byte less so that it
+bytesobject.c:1393-1417. `stringlib_find` is called with one byte less so that it
 never reads `haystack[len_haystack]`; the last alignment is compared by hand. -/
 def privateBytesFind (hay needle : Seq) (offset : Int) : Int :=
   if needle.length = 0 then offset
@@ -96,13 +96,13 @@ def privateBytesFind (hay needle : Seq) (offset : Int) : Int :=
       if (hay.drop lastAlign).take needle.length = needle then offset + lastAlign else res
     else res
 
-/-- `_PyBytes_ReverseFind`, bytesobject.c:1334-1341. -/
+/-- `_PyBytes_ReverseFind`, bytesobject.c:1419-1426. -/
 def privateBytesRFind (hay needle : Seq) (offset : Int) : Int :=
   stringlibRFind hay needle offset
 
 /-! ## Concatenation and repetition -/
 
-/-- `bytes_concat`, bytesobject.c:1444-1486. -/
+/-- `bytes_concat`, bytesobject.c@3.14.7:1444-1486. -/
 def bytesConcat (a b : Obj) : Py Seq :=
   match a.buffer?, b.buffer? with
   | some va, some vb =>
@@ -110,7 +110,7 @@ def bytesConcat (a b : Obj) : Py Seq :=
     else bytesFromStringAndSize (some (va ++ vb)) (va.length + vb.length)
   | _, _ => .error (.typeError s!"can't concat {b.typeName} to {a.typeName}")
 
-/-- `bytes_repeat`, bytesobject.c:1488-1523, after the `sequence_repeat`
+/-- `bytes_repeat`, bytesobject.c:1579-1614, after the `sequence_repeat`
 conversion of `n`. -/
 def bytesRepeat (s : Seq) (n : Int) : Py Seq :=
   let n := if n < 0 then 0 else n
@@ -122,7 +122,7 @@ def bytesRepeat (s : Seq) (n : Int) : Py Seq :=
     else if mallocFails (bytesObjectSize + size) then .error memoryError
     else .ok (bytesRepeatFill size.toNat s)
 
-/-- `b * n`, `sequence_repeat`, Objects/abstract.c:1147-1162: the count goes through
+/-- `b * n`, `sequence_repeat`, Objects/abstract.c:1157-1172: the count goes through
 `PyNumber_AsSsize_t(n, PyExc_OverflowError)`. -/
 def bytesMul (s : Seq) (n : Int) : Py Seq := do
   bytesRepeat s (← Sequences.repeatCount n)
@@ -150,15 +150,15 @@ def memcmp : Nat → Seq → Seq → Int
     if a < b then -1 else if a > b then 1 else memcmp n as bs
   | _, _, _ => 0
 
-/-- `bytes_compare_eq`, bytesobject.c:1542-1557. The first-byte shortcut reads the
+/-- `bytes_compare_eq`, bytesobject.c:1633-1648. The first-byte shortcut reads the
 NUL terminator for empty strings. -/
 def bytesCompareEq (a b : Seq) : Bool :=
   if b.length ≠ a.length then false
   else if a.headD 0 ≠ b.headD 0 then false
   else decide (memcmp a.length a b = 0)
 
-/-- `bytes_richcompare`, bytesobject.c:1559-1620, for two bytes objects. The
-identity shortcut, :1581-1596, gives the same result as this code for equal
+/-- `bytes_richcompare`, bytesobject.c:1650-1711, for two bytes objects. The
+identity shortcut, :1672-1687, gives the same result as this code for equal
 contents, so it is not a separate case. -/
 def bytesRichcompare (a b : Seq) (op : CmpOp) : Bool :=
   if op = .eq ∨ op = .ne then
@@ -184,13 +184,13 @@ def bytesRichcompareObj (a b : Obj) (op : CmpOp) : Option Bool :=
 /-! ## Hash -/
 
 /-- A `bytes` object: its contents and the cached hash, `ob_shash`
-(`set_ob_shash`/`get_ob_shash`, bytesobject.c:56-80). `-1` means not computed. -/
+(`set_ob_shash`/`get_ob_shash`, bytesobject.c@3.14.7:56-80). `-1` means not computed. -/
 structure BytesSt where
   data : Seq
   shash : Int := -1
   deriving Repr, DecidableEq, Inhabited
 
-/-- `bytes_hash`, bytesobject.c:1622-1633: `(hash, object with the cache filled)`.
+/-- `bytes_hash`, bytesobject.c:1713-1724: `(hash, object with the cache filled)`.
 `hb` is `Py_HashBuffer`. -/
 def bytesHash (hb : Seq → Int) (o : BytesSt) : Int × BytesSt :=
   if o.shash = -1 then
@@ -198,7 +198,7 @@ def bytesHash (hb : Seq → Int) (o : BytesSt) : Int × BytesSt :=
     (h, { o with shash := h })
   else (o.shash, o)
 
-/-- `_PyBytes_Resize` on an object, bytesobject.c:3218-3279: failures are
+/-- `_PyBytes_Resize` on an object, bytesobject.c:3417-3484: failures are
 `bytesResizeCheck`; the kept bytes are the first `newsize`, new ones are left for
 the caller (read as zero), and the cached hash is invalidated. `newsize = oldsize`
 returns early and keeps the hash. -/
@@ -207,8 +207,8 @@ def bytesResize (o : BytesSt) (newsize : Int) : Py BytesSt := do
   if newsize = o.data.length then return o
   return { data := o.data.take newsize.toNat ++ List.replicate (newsize.toNat - o.data.length) 0 }
 
-/-- `bytes_subtype_new`, bytesobject.c:3070-3087: the copy keeps the cached hash;
-`bytes_alloc`, :3059-3068, sets it to -1 before that. -/
+/-- `bytes_subtype_new`, bytesobject.c:3182-3199: the copy keeps the cached hash;
+`bytes_alloc`, :3171-3180, sets it to -1 before that. -/
 def bytesSubtypeNew (tmp : BytesSt) : BytesSt :=
   let pnew : BytesSt := { data := tmp.data, shash := -1 }
   { pnew with shash := tmp.shash }
@@ -216,11 +216,11 @@ def bytesSubtypeNew (tmp : BytesSt) : BytesSt :=
 /-! ## Subscript -/
 
 /-- The positions of an extended slice: `cur = start; cur += step` as a `size_t`
-cursor, bytesobject.c:1685-1688. -/
+cursor, bytesobject.c:1776-1779. -/
 def slicePositions (start step : Int) (n : Nat) : List Int :=
   (List.range n).map (fun (i : Nat) => start + (i : Int) * step)
 
-/-- `bytes_subscript` for a slice, bytesobject.c:1652-1692. -/
+/-- `bytes_subscript` for a slice, bytesobject.c:1743-1783. -/
 def bytesGetSlice (s : Seq) (sl : Slice) : Py Seq := do
   let (start, stop, step) ← sliceUnpack sl
   let (start, _, len) := RangeSlice.adjustIndices s.length start stop step
@@ -229,8 +229,8 @@ def bytesGetSlice (s : Seq) (sl : Slice) : Py Seq := do
   if step = 1 then return (s.drop start.toNat).take len.toNat
   return (slicePositions start step len.toNat).map (fun p => s.getD p.toNat 0)
 
-/-- `bytes_subscript` for an index, bytesobject.c:1639-1651, and `bytes_item`,
-:1531-1540. -/
+/-- `bytes_subscript` for an index, bytesobject.c:1730-1742, and `bytes_item`,
+:1622-1631. -/
 def bytesGetItem (s : Seq) (i : Int) : Py Nat := do
   let i ← Sequences.subIndex i
   let i := if i < 0 then i + s.length else i
@@ -265,7 +265,7 @@ def iterFinish (o : Obj) : Py Unit :=
   | .iterRaises _ e => .error e
   | _ => .ok ()
 
-/-- `PyObject_LengthHint(o, d)`, Objects/abstract.c:95-150, with the default `d` for a
+/-- `PyObject_LengthHint(o, d)`, Objects/abstract.c:95-152, with the default `d` for a
 sized object too (the difftest only sizes small ones, so the value does not matter). -/
 def lengthHint (o : Obj) (d : Int) : Py Int :=
   match o with
@@ -277,7 +277,7 @@ def lengthHint (o : Obj) (d : Int) : Py Int :=
     else .ok v
   | _ => .ok d
 
-/-- `PySequence_Fast(o, msg)`, Objects/abstract.c:2095-2120: an exact list or tuple as it
+/-- `PySequence_Fast(o, msg)`, Objects/abstract.c:2104-2129: an exact list or tuple as it
 is, anything else through `PySequence_List`, which runs the iterator to its end first. -/
 def sequenceFast (msg : PyExc) (o : Obj) : Py (List Obj) :=
   match o with
@@ -288,7 +288,7 @@ def sequenceFast (msg : PyExc) (o : Obj) : Py (List Obj) :=
     iterFinish o
     return xs
 
-/-- The pre-pass of `stringlib_bytes_join`, join.h:61-112: the buffers in order, or
+/-- The pre-pass of `stringlib_bytes_join`, join.h:52-103: the buffers in order, or
 the error of the first bad item. -/
 def joinPass (sep : Seq) : Nat → List Obj → Int → Py (List Seq × Int)
   | _, [], sz => .ok ([], sz)
@@ -309,13 +309,13 @@ def joinPass (sep : Seq) : Nat → List Obj → Int → Py (List Seq × Int)
           | .ok (bs, total) => .ok (b :: bs, total)
           | .error e => .error e
 
-/-- The concatenation of the buffers with `sep` between them, join.h:127-149. -/
+/-- The concatenation of the buffers with `sep` between them, join.h:118-140. -/
 def joinWrite (sep : Seq) : List Seq → Seq
   | [] => []
   | [b] => b
   | b :: rest => b ++ sep ++ joinWrite sep rest
 
-/-- `stringlib_bytes_join(sep, iterable)`, join.h:7-164. `exactSingle` is the
+/-- `stringlib_bytes_join(sep, iterable)`, join.h:7-154. `exactSingle` is the
 `seqlen == 1` shortcut for `bytes` only (`!STRINGLIB_MUTABLE`), which returns the
 item itself. -/
 def stringlibJoin (sep : Seq) (iterable : Obj) : Py Seq :=
@@ -326,7 +326,7 @@ def stringlibJoin (sep : Seq) (iterable : Obj) : Py Seq :=
     | .error e => .error e
     | .ok (bs, _) => .ok (joinWrite sep bs)
 
-/-- `PyBytes_Join`, bytesobject.c:1901-1915, and `bytes_join_impl`, :1894-1899. -/
+/-- `PyBytes_Join`, bytesobject.c:1994-2008, and `bytes_join_impl`, :1987-1992. -/
 def pyBytesJoin (sep : Obj) (iterable : Obj) : Py Seq :=
   match sep with
   | .bytes s => stringlibJoin s iterable
@@ -343,17 +343,17 @@ def tableArg (table : Obj) : Py (Option Seq) :=
     | .error e => .error e
     | .ok t => .ok (some t)
 
-/-- The no-delete fast loop, bytesobject.c:2227-2240 and
-bytearrayobject.c:1645-1652. -/
+/-- The no-delete fast loop, bytesobject.c:2326-2343 and
+bytearrayobject.c:1758-1765. -/
 def translateFast (s t : Seq) : Seq := s.map (fun c => t.getD c 0)
 
-/-- The general loop, bytesobject.c:2242-2269 and bytearrayobject.c:1654-1675:
+/-- The general loop, bytesobject.c:2345-2372 and bytearrayobject.c:1767-1788:
 `trans_table[c]` is `t[c]` (or `c` for no table), `-1` for a deleted byte. -/
 def translateSlow (s : Seq) (t : Option Seq) (del : Seq) : Seq :=
   s.filterMap (fun c =>
     if del.contains c then none else some (match t with | some t => t.getD c 0 | none => c))
 
-/-- `bytes_translate_impl`, bytesobject.c:2159-2270. -/
+/-- `bytes_translate_impl`, bytesobject.c:2258-2373. -/
 def bytesTranslate (s : Seq) (table : Obj) (deletechars : Option Obj) : Py Seq := do
   let t ← tableArg table
   if (t.map List.length).getD 256 ≠ 256 then
@@ -365,7 +365,7 @@ def bytesTranslate (s : Seq) (table : Obj) (deletechars : Option Obj) : Py Seq :
   | some t, [] => return translateFast s t
   | _, _ => return translateSlow s t del
 
-/-- `bytearray_translate_impl`, bytearrayobject.c:1596-1683: the same steps, except
+/-- `bytearray_translate_impl`, bytearrayobject.c:1709-1796: the same steps, except
 that the table goes through `PyObject_GetBuffer` also for a `bytes` table. -/
 def bytearrayTranslate (s : Seq) (table : Obj) (deletechars : Option Obj) : Py Seq := do
   let t ← match table with
@@ -382,7 +382,7 @@ def bytearrayTranslate (s : Seq) (table : Obj) (deletechars : Option Obj) : Py S
   | some t, [] => return translateFast s t
   | _, _ => return translateSlow s t del
 
-/-! ## bytes iterator, bytesobject.c:3282-3437 -/
+/-! ## bytes iterator, bytesobject.c:3487-3642 -/
 
 /-- `striterobject`: `seq = none` once exhausted. -/
 structure StrIter where
@@ -390,10 +390,10 @@ structure StrIter where
   index : Int
   deriving Repr, DecidableEq, Inhabited
 
-/-- `bytes_iter`, bytesobject.c:3421-3437. -/
+/-- `bytes_iter`, bytesobject.c:3626-3642. -/
 def bytesIter (s : Seq) : StrIter := { seq := some s, index := 0 }
 
-/-- `striter_next`, bytesobject.c:3309-3329. -/
+/-- `striter_next`, bytesobject.c:3514-3534. -/
 def striterNext (it : StrIter) : Option Nat × StrIter :=
   match it.seq with
   | none => (none, it)
@@ -401,17 +401,17 @@ def striterNext (it : StrIter) : Option Nat × StrIter :=
     if it.index < s.length then (some (s.getD it.index.toNat 0), { it with index := it.index + 1 })
     else (none, { it with seq := none })
 
-/-- `striter_len`, bytesobject.c:3331-3339. -/
+/-- `striter_len`, bytesobject.c:3536-3544. -/
 def striterLen (it : StrIter) : Int :=
   match it.seq with
   | some s => (s.length : Int) - it.index
   | none => 0
 
-/-- `striter_reduce`, bytesobject.c:3344-3358: `(seq, index)` or the empty tuple. -/
+/-- `striter_reduce`, bytesobject.c:3549-3563: `(seq, index)` or the empty tuple. -/
 def striterReduce (it : StrIter) : Option (Seq × Int) :=
   it.seq.map (fun s => (s, it.index))
 
-/-- `striter_setstate`, bytesobject.c:3362-3377. -/
+/-- `striter_setstate`, bytesobject.c:3567-3582. -/
 def striterSetstate (it : StrIter) (state : Int) : Py StrIter := do
   let index ← Sequences.asSsize state
   match it.seq with
@@ -423,22 +423,22 @@ def striterSetstate (it : StrIter) (state : Int) : Py StrIter := do
 /-! ## Object API -/
 
 /-- The error of `PyBytes_Size`, `PyBytes_AsString` and
-`PyBytes_AsStringAndSize`, bytesobject.c:1239-1286. -/
+`PyBytes_AsStringAndSize`, bytesobject.c:1324-1371. -/
 def expectedBytes (o : Obj) : PyExc := .typeError s!"expected bytes, {o.typeName} found"
 
-/-- `PyBytes_Size`, bytesobject.c:1239-1248. -/
+/-- `PyBytes_Size`, bytesobject.c:1324-1333. -/
 def pyBytesSize (o : Obj) : Py Nat :=
   match o with
   | .bytes s => .ok s.length
   | _ => .error (expectedBytes o)
 
-/-- `PyBytes_AsString`, bytesobject.c:1250-1259: the buffer as a C string. -/
+/-- `PyBytes_AsString`, bytesobject.c:1335-1344: the buffer as a C string. -/
 def pyBytesAsString (o : Obj) : Py Seq :=
   match o with
   | .bytes s => .ok s
   | _ => .error (expectedBytes o)
 
-/-- `PyBytes_AsStringAndSize(obj, &s, len)`, bytesobject.c:1261-1286; `wantLen` is
+/-- `PyBytes_AsStringAndSize(obj, &s, len)`, bytesobject.c:1346-1371; `wantLen` is
 `len != NULL`. Without a length the C string must equal the bytes. -/
 def pyBytesAsStringAndSize (o : Obj) (wantLen : Bool) : Py Seq :=
   match o with
@@ -448,7 +448,7 @@ def pyBytesAsStringAndSize (o : Obj) (wantLen : Bool) : Py Seq :=
     else .ok s
   | _ => .error (expectedBytes o)
 
-/-- `PyBytes_Concat(pv, w)`, bytesobject.c:3149-3196, on the value of `*pv`; `none`
+/-- `PyBytes_Concat(pv, w)`, bytesobject.c:3274-3321, on the value of `*pv`; `none`
 is NULL, with the exception raised where there is one. `unique` selects the in-place
 branch (`_PyObject_IsUniquelyReferenced(*pv) && PyBytes_CheckExact(*pv)`), which
 must agree with `bytes_concat`. -/
@@ -486,7 +486,7 @@ def skipDigits (f : Seq) : Nat → Nat → Nat
   | 0, i => i
   | fuel + 1, i => if isDigitC (cAt f i) then skipDigits f fuel (i + 1) else i
 
-/-- The precision digits, bytesobject.c:248-250: `prec` in `Py_ssize_t`, which wraps
+/-- The precision digits, bytesobject.c:234-236: `prec` in `Py_ssize_t`, which wraps
 for absurdly long digit strings (`-fwrapv`). -/
 def precDigits (f : Seq) : Nat → Nat → Int → Nat × Int
   | 0, i, p => (i, p)
@@ -509,13 +509,13 @@ def wrapInt (v : Int) : Int :=
   let m := v % (2 ^ 32)
   if m ≥ 2 ^ 31 then m - 2 ^ 32 else m
 
-/-- The `%s` copy, bytesobject.c:334-347: `strlen`, or at most `prec` bytes. A
+/-- The `%s` copy, bytesobject.c:315-326: `strlen`, or at most `prec` bytes. A
 precision of 0 (`prec <= 0`) means no limit. -/
 def cStringPrec (p : Seq) (prec : Int) : Seq :=
   let z := p.takeWhile (· != 0)
   if prec ≤ 0 then z else z.take prec.toNat
 
-/-- The loop of `PyBytes_FromFormatV`, bytesobject.c:232-379. -/
+/-- The loop of `PyBytes_FromFormatV`, bytesobject.c:218-352. -/
 def fromFormatLoop (f : Seq) : Nat → Nat → List CArg → Seq → Py Seq
   | 0, _, _, _ => .error .modelFuel
   | fuel + 1, i, args, out =>
@@ -564,7 +564,7 @@ def fromFormatLoop (f : Seq) : Nat → Nat → List CArg → Seq → Py Seq
         -- invalid format string: copy unformatted string and exit
         .ok (out ++ (f.drop p).takeWhile (· != 0))
 
-/-- `PyBytes_FromFormatV`, bytesobject.c:199-388, and `PyBytes_FromFormat`, :390-400.
+/-- `PyBytes_FromFormatV`, bytesobject.c@3.14.7:199-388, and `PyBytes_FromFormat`, :380-390.
 `format` is a C string. -/
 def bytesFromFormat (format : Seq) (args : List CArg) : Py Seq :=
   fromFormatLoop format (format.length + 1) 0 args []

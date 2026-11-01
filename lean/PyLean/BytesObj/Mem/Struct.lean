@@ -2,8 +2,8 @@ import PyLean.BytesObj.Mem.Base
 
 /-!
 The part of `struct.Struct` that `memoryview` comparison reaches through
-`struct_get_unpacker` (memoryobject.c:2075-2124): format parsing (`whichtable`,
-`prepare_s`, Modules/_struct.c:1557-1579, :1625-1720) and `unpack_from`
+`struct_get_unpacker` (memoryobject.c:2151-2200): format parsing (`whichtable`,
+`prepare_s`, Modules/_struct.c:1561-1583, :1644-1745) and `unpack_from`
 (`s_unpack_internal`). Formats reach it as C strings from a buffer exporter.
 -/
 
@@ -43,11 +43,11 @@ def spanDigits : List Char → Nat → Nat × List Char
   | c :: cs, n => if isDigit c then spanDigits cs (10 * n + (c.toNat - 48)) else (n, c :: cs)
   | [], n => (n, [])
 
-/-- `align`, Modules/_struct.c:1600-1612. -/
+/-- `align`, Modules/_struct.c@3.14.7:1600-1612. -/
 def alignTo (size a : Nat) : Nat :=
   if a > 0 ∧ size > 0 then size + ((a - 1) - (size - 1) % a) else size
 
-/-- `goto overflow` of `prepare_s`, Modules/_struct.c:1769-1772: the repeat count, the alignment
+/-- `goto overflow` of `prepare_s`, Modules/_struct.c:1796-1799: the repeat count, the alignment
 and the running size are each checked against `PY_SSIZE_T_MAX`. -/
 def sizeTooLong : PyExc := structError "total struct size too long"
 
@@ -138,7 +138,7 @@ def structUnpackFrom (sf : SFmt) (bs : List Nat) : Py (List Item) :=
       s!"{sf.size} bytes at offset 0 (actual buffer size is {bs.length})"))
   else .ok (sf.codes.flatMap (unpackCode sf.big bs))
 
-/-- `v == w` for two results of `struct_unpack_single`, memoryobject.c:2128-2144: a
+/-- `v == w` for two results of `struct_unpack_single`, memoryobject.c:2204-2220: a
 one-item tuple is unwrapped, so an item never equals a tuple. -/
 def structResultEq (v w : List Item) : Bool :=
   match v, w with

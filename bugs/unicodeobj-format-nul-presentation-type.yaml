@@ -37,8 +37,8 @@ promised_by: |
   The format specification mini-language in Doc/library/string.rst lists the presentation types,
   and NUL is not one of them. int and str are the twins that reject it.
 cause: |
-  Python/formatter_unicode.c:322-325 stores any final character as the type. :1671 and :1710 are
-  `case '\0'` in the float and complex dispatch, and :341 is the same case in the thousands check.
+  Python/formatter_unicode.c@3.14.7:322-325 stores any final character as the type. @3.14.7:1671 and @3.14.7:1710 are
+  `case '\0'` in the float and complex dispatch, and @3.14.7:341 is the same case in the thousands check.
 possible_fix: |
   Keep a flag for "type given" in parse_internal_render_format_spec, and raise
   unknown_presentation_type when the given type is NUL.

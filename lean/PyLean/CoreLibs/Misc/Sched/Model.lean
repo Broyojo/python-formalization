@@ -110,7 +110,7 @@ def eventEq (e : Env T P A V W) (a b : Event T P A V) : Py Bool := do
     else return false
   else return false
 
-/-- `list.remove`, Objects/listobject.c:3362-3382: drop the first element equal to `x`. -/
+/-- `list.remove`, Objects/listobject.c:3425-3445: drop the first element equal to `x`. -/
 def listRemove (e : Env T P A V W) (x : Event T P A V) :
     List (Event T P A V) → Py (List (Event T P A V))
   | [] => .error (.valueError "list.remove(x): x not in list")

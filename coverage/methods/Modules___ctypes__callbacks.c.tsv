@@ -1,15 +1,16 @@
 file	line	endline	name	signature	status	entry	note
-Modules/_ctypes/callbacks.c	29	37	CThunkObject_traverse	CThunkObject_traverse(PyObject *myself, visitproc visit, void *arg)	todo		
-Modules/_ctypes/callbacks.c	40	47	CThunkObject_clear	CThunkObject_clear(PyObject *myself)	todo		
-Modules/_ctypes/callbacks.c	50	61	CThunkObject_dealloc	CThunkObject_dealloc(PyObject *myself)	todo		
-Modules/_ctypes/callbacks.c	94	110	TryAddRef	TryAddRef(PyObject *cnv, CDataObject *obj)	todo		
-Modules/_ctypes/callbacks.c	120	290	_CallPythonObject	static void _CallPythonObject(ctypes_state *st, void *mem, ffi_type *restype, SETFUNC setfunc, PyObject *callable, PyObject *converters, int flags, void **pArgs)	todo		
-Modules/_ctypes/callbacks.c	292	312	closure_fcn	static void closure_fcn(ffi_cif *cif, void *resp, void **args, void *userdata)	todo		
-Modules/_ctypes/callbacks.c	314	338	CThunkObject_new	static CThunkObject* CThunkObject_new(ctypes_state *st, Py_ssize_t nargs)	todo		
-Modules/_ctypes/callbacks.c	340	465	_ctypes_alloc_callback	CThunkObject *_ctypes_alloc_callback(ctypes_state *st, PyObject *callable, PyObject *converters, PyObject *restype, int flags)	todo		
-Modules/_ctypes/callbacks.c	469	474	LoadPython	static void LoadPython(void)	todo		
-Modules/_ctypes/callbacks.c	478	534	Call_GetClassObject	long Call_GetClassObject(REFCLSID rclsid, REFIID riid, LPVOID *ppv)	todo		
-Modules/_ctypes/callbacks.c	536	548	DllGetClassObject	STDAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, LPVOID *ppv)	todo		
-Modules/_ctypes/callbacks.c	550	576	Call_CanUnloadNow	long Call_CanUnloadNow(void)	todo		
-Modules/_ctypes/callbacks.c	582	589	DllCanUnloadNow	STDAPI DllCanUnloadNow(void)	todo		
-Modules/_ctypes/callbacks.c	592	600	DllMain	BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvRes)	todo		
+Modules/_ctypes/callbacks.c	20	28	CThunkObject_traverse	CThunkObject_traverse(PyObject *myself, visitproc visit, void *arg)	todo		
+Modules/_ctypes/callbacks.c	31	38	CThunkObject_clear	CThunkObject_clear(PyObject *myself)	todo		
+Modules/_ctypes/callbacks.c	41	52	CThunkObject_dealloc	CThunkObject_dealloc(PyObject *myself)	todo		
+Modules/_ctypes/callbacks.c	85	101	TryAddRef	TryAddRef(PyObject *cnv, CDataObject *obj)	todo		
+Modules/_ctypes/callbacks.c	105	118	is_narrow_int_ffi_type	is_narrow_int_ffi_type(int type)	todo		changed-in-3.15: new function
+Modules/_ctypes/callbacks.c	127	332	_CallPythonObject	static void _CallPythonObject(ctypes_state *st, void *mem, ffi_type *restype, SETFUNC setfunc, PyObject *callable, PyObject *converters, int flags, void **pArgs)	todo		changed-in-3.15:
+Modules/_ctypes/callbacks.c	334	354	closure_fcn	static void closure_fcn(ffi_cif *cif, void *resp, void **args, void *userdata)	todo		
+Modules/_ctypes/callbacks.c	356	380	CThunkObject_new	static CThunkObject* CThunkObject_new(ctypes_state *st, Py_ssize_t nargs)	todo		
+Modules/_ctypes/callbacks.c	382	507	_ctypes_alloc_callback	CThunkObject *_ctypes_alloc_callback(ctypes_state *st, PyObject *callable, PyObject *converters, PyObject *restype, int flags)	todo		
+Modules/_ctypes/callbacks.c	511	516	LoadPython	static void LoadPython(void)	todo		
+Modules/_ctypes/callbacks.c	520	576	Call_GetClassObject	long Call_GetClassObject(REFCLSID rclsid, REFIID riid, LPVOID *ppv)	todo		
+Modules/_ctypes/callbacks.c	578	590	DllGetClassObject	STDAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, LPVOID *ppv)	todo		
+Modules/_ctypes/callbacks.c	592	618	Call_CanUnloadNow	long Call_CanUnloadNow(void)	todo		
+Modules/_ctypes/callbacks.c	624	631	DllCanUnloadNow	STDAPI DllCanUnloadNow(void)	todo		
+Modules/_ctypes/callbacks.c	634	642	DllMain	BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvRes)	todo		

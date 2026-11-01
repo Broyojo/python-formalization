@@ -284,12 +284,12 @@ def typesEntries : List Entry := [
     pyFns := ["DynamicClassAttribute.__init__", "DynamicClassAttribute.getter",
               "DynamicClassAttribute.setter", "DynamicClassAttribute.deleter"]
     statement := "getter, setter and deleter each replace one function and keep the others and overwrite_doc."
-    source := "comment Lib/types.py:211"
+    source := "comment Lib/types.py:217"
     status := .proven, prop := ``Types.DcaAccessors, thm := some ``Types.dcaAccessors_proven },
   { id := "misc-types-dca-doc", pyFile := "Lib/types.py"
     pyFns := ["DynamicClassAttribute.__init__", "DynamicClassAttribute.getter"]
     statement := "An explicit truthy doc stays through getter; otherwise __doc__ is fget's and getter takes the new fget's."
-    source := "comment Lib/types.py:211"
+    source := "comment Lib/types.py:217"
     status := .proven, prop := ``Types.DcaDoc, thm := some ``Types.dcaDoc_proven },
   { id := "misc-types-dca-descriptor", pyFile := "Lib/types.py"
     pyFns := ["DynamicClassAttribute.__get__", "DynamicClassAttribute.__set__",
@@ -314,7 +314,7 @@ def typesEntries : List Entry := [
   { id := "misc-types-coroutine-wrapped", pyFile := "Lib/types.py"
     pyFns := ["coroutine"]
     statement := "wrapped wraps exactly generators in the collections.abc sense that are no coroutines and no iterable coroutines."
-    source := "comments Lib/types.py:331-341"
+    source := "comments Lib/types.py:341-351"
     status := .proven, prop := ``Types.WrappedDecision, thm := some ``Types.wrappedDecision_proven }
 ]
 
@@ -341,27 +341,27 @@ def contextlibEntries : List Entry := [
     pyFns := ["_GeneratorContextManagerBase.__init__", "_GeneratorContextManagerBase._recreate_cm",
               "contextmanager", "asynccontextmanager"]
     statement := "_recreate_cm makes a fresh manager while func is there and raises AttributeError after __enter__; __doc__ comes from func, else from the class."
-    source := "comments Lib/contextlib.py:111, :123-125"
+    source := "comments Lib/contextlib.py:173, :123-125"
     status := .proven, prop := ``Contextlib.RecreateFresh, thm := some ``Contextlib.recreateFresh_proven },
   { id := "misc-ctx-enter", pyFile := "Lib/contextlib.py"
     pyFns := ["_GeneratorContextManager.__enter__", "_AsyncGeneratorContextManager.__aenter__"]
     statement := "__enter__ returns the yielded value, turns a stop into RuntimeError(\"generator didn't yield\"), lets other exceptions through, and is one-shot."
-    source := "Lib/contextlib.py:136-143"
+    source := "Lib/contextlib.py:198-205"
     status := .proven, prop := ``Contextlib.EnterCases, thm := some ``Contextlib.enterCases_proven },
   { id := "misc-ctx-exit-no-exception", pyFile := "Lib/contextlib.py"
     pyFns := ["_GeneratorContextManager.__exit__", "_AsyncGeneratorContextManager.__aexit__"]
     statement := "__exit__(None, None, None) gives False for a generator that ends, RuntimeError after close for one that yields, and passes other exceptions."
-    source := "Lib/contextlib.py:146-155"
+    source := "Lib/contextlib.py:208-217"
     status := .proven, prop := ``Contextlib.ExitNoException, thm := some ``Contextlib.exitNoException_proven },
   { id := "misc-ctx-exit-throw-cases", pyFile := "Lib/contextlib.py"
     pyFns := ["_GeneratorContextManager.__exit__", "_AsyncGeneratorContextManager.__aexit__"]
     statement := "For every generator, __exit__ with an exception does what the comments of the source say in each branch of throw: yield, stop, value back, wrapped value, other exception."
-    source := "comments Lib/contextlib.py:164-192"
+    source := "comments Lib/contextlib.py:226-254"
     status := .proven, prop := ``Contextlib.ExitThrowCases, thm := some ``Contextlib.exitThrowCases_proven },
   { id := "misc-ctx-exit-never-raises-value", pyFile := "Lib/contextlib.py"
     pyFns := ["_GeneratorContextManager.__exit__", "_AsyncGeneratorContextManager.__aexit__"]
     statement := "On every generator whose close() does not raise value, __exit__ never raises the exception passed in."
-    source := "comment Lib/contextlib.py:187-192"
+    source := "comment Lib/contextlib.py:249-254"
     status := .proven, prop := ``Contextlib.ExitNeverRaisesValue, thm := some ``Contextlib.exitNeverRaisesValue_proven },
   { id := "misc-ctx-try-finally", pyFile := "Lib/contextlib.py"
     pyFns := ["contextmanager", "asynccontextmanager", "_GeneratorContextManager.__enter__",
@@ -390,7 +390,7 @@ def contextlibEntries : List Entry := [
   { id := "misc-ctx-redirect", pyFile := "Lib/contextlib.py"
     pyFns := ["_RedirectStream.__init__", "_RedirectStream.__enter__", "_RedirectStream.__exit__"]
     statement := "__enter__ installs and returns the target and the matching __exit__ restores the stream and the object's state, re-entrantly; __exit__ alone is IndexError."
-    source := "comment Lib/contextlib.py:399"
+    source := "comment Lib/contextlib.py:461"
     status := .proven, prop := ``Contextlib.RedirectRestores, thm := some ``Contextlib.redirectRestores_proven },
   { id := "misc-ctx-chdir", pyFile := "Lib/contextlib.py"
     pyFns := ["chdir.__init__", "chdir.__enter__", "chdir.__exit__"]
@@ -411,13 +411,13 @@ def contextlibEntries : List Entry := [
   { id := "misc-ctx-exit-matches-nested", pyFile := "Lib/contextlib.py"
     pyFns := ["ExitStack.__exit__"]
     statement := "For every stack and behaviour of the callbacks, the exception leaving a with ExitStack() block is the one leaving the equivalent nested with statements."
-    source := "comment Lib/contextlib.py:575-576, :592-593"
+    source := "comment Lib/contextlib.py:634-635, :592-593"
     status := .proven, prop := ``Contextlib.ExitMatchesNested, thm := some ``Contextlib.exitMatchesNested_proven
     notes := "__context__ is outside the statement: it differs in the open python/cpython#102201." },
   { id := "misc-ctx-exit-lifo", pyFile := "Lib/contextlib.py"
     pyFns := ["ExitStack.__exit__"]
     statement := "Callbacks run from the last pushed to the first, each once, and the stack ends empty, when the walk of _fix_exception_context ends."
-    source := "comment Lib/contextlib.py:592"
+    source := "comment Lib/contextlib.py:651"
     status := .proven, prop := ``Contextlib.ExitLifo, thm := some ``Contextlib.exitLifo_proven },
   { id := "misc-ctx-exit-terminates", pyFile := "Lib/contextlib.py"
     pyFns := ["ExitStack.__exit__", "AsyncExitStack.__aexit__"]
@@ -430,7 +430,7 @@ def contextlibEntries : List Entry := [
   { id := "misc-ctx-exit-keeps-context-acyclic", pyFile := "Lib/contextlib.py"
     pyFns := ["ExitStack.__exit__", "AsyncExitStack.__aexit__"]
     statement := "ExitStack.__exit__ does not create a cycle in __context__ when the callbacks do not."
-    source := "comment Lib/contextlib.py:575-576; Python/errors.c:203-208 keeps nested with statements acyclic"
+    source := "comment Lib/contextlib.py:634-635; Python/errors.c:203-208 keeps nested with statements acyclic"
     status := .refuted, prop := ``Contextlib.ExitKeepsContextAcyclic,
     thm := some ``Contextlib.exitKeepsContextAcyclic_refuted
     bug := some "corelibs-exitstack-context-cycle-hang"
@@ -580,7 +580,7 @@ def weakrefEntries : List Entry := [
   { id := "misc-finalize-select", pyFile := "Lib/weakref.py"
     pyFns := ["finalize._select_for_exit"]
     statement := "_select_for_exit is a permutation of the finalizers with atexit true, by ascending index."
-    source := "comment Lib/weakref.py:536"
+    source := "comment Lib/weakref.py:538"
     status := .proven, prop := ``Weakref.Fin.SelectForExit, thm := some ``Weakref.Fin.selectForExit_proven },
   { id := "misc-finalize-exitfunc", pyFile := "Lib/weakref.py"
     pyFns := ["finalize._exitfunc"]

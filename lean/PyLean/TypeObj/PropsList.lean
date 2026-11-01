@@ -1,7 +1,7 @@
 import PyLean.TypeObj.Call
 
 /-!
-Properties of `_list_extend`, `Objects/listobject.c:1402`, reached from `list +=` and
+Properties of `_list_extend`, `Objects/listobject.c:1478`, reached from `list +=` and
 `list.__init__`. They quantify over every `Rt`, so over every `__iter__` and `__next__`.
 -/
 
@@ -42,7 +42,7 @@ theorem listExtendSelf_proven : ListExtendSelf := by
   simp [listExtend, Val.is]
 
 /-- **A size hint that overflows is ignored.** `m + n` beyond `PY_SSIZE_T_MAX` reserves nothing
-and the loop runs (`Objects/listobject.c:1241`); otherwise a total of `2 ^ 48` or more is a
+and the loop runs (`Objects/listobject.c:1317`); otherwise a total of `2 ^ 48` or more is a
 `MemoryError`. The bound `2 ^ 48` is the model's stand-in for allocator failure, a limit of the
 platform rather than of the language. -/
 def ListReserveRule : Prop :=

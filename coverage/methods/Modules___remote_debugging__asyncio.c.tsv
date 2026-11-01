@@ -1,0 +1,6 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_remote_debugging/asyncio.c	16	63	_Py_RemoteDebug_GetAsyncioDebugAddress	_Py_RemoteDebug_GetAsyncioDebugAddress(proc_handle_t* handle)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/asyncio.c	66	85	read_async_debug	read_async_debug(RemoteUnwinderObject *unwinder)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/asyncio.c	88	113	ensure_async_debug_offsets	ensure_async_debug_offsets(RemoteUnwinderObject *unwinder)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/asyncio.c	748	771	get_task_frame	get_task_frame(RemoteUnwinderObject *unwinder, uintptr_t task_addr, uintptr_t *frame_addr) {	todo		changed-in-3.15: new function
+Modules/_remote_debugging/asyncio.c	895	939	append_awaited_by	append_awaited_by( RemoteUnwinderObject *unwinder, unsigned long tid, uintptr_t head_addr, PyObject *result)	todo		

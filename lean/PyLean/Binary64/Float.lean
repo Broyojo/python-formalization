@@ -7,7 +7,7 @@ conversions, `hex`, `fromhex`, `as_integer_ratio`, `pow`, `divmod`, `//`, `%`,
 `__getformat__` and the pack/unpack routines.
 
 The `unknown_format` branches of `PyFloat_Pack4/8` and `PyFloat_Unpack4/8` are not
-modelled: `_init_global_state` (floatobject.c:1891-1940) selects the IEEE branch
+modelled: `_init_global_state` (floatobject.c@3.14.7:1891-1940) selects the IEEE branch
 on every IEEE 754 platform, and these models assume a little-endian one, like the
 machines they are tested on.
 
@@ -39,13 +39,13 @@ def d2 : F64 := F64.ofBits 0x4000000000000000
 def d16 : F64 := F64.ofBits 0x4030000000000000
 def dHalf : F64 := F64.ofBits 0x3fe0000000000000
 
-/-- `PyFloat_GetMax`, floatobject.c:31-35. -/
+/-- `PyFloat_GetMax`, floatobject.c:32-36. -/
 def PyFloat_GetMax : F64 := F64.maxFinite
 
-/-- `PyFloat_GetMin`, floatobject.c:37-41. -/
+/-- `PyFloat_GetMin`, floatobject.c:38-42. -/
 def PyFloat_GetMin : F64 := F64.ofBits 0x0010000000000000
 
-/-- `sys.float_info`, `PyFloat_GetInfo`, floatobject.c:81-121. -/
+/-- `sys.float_info`, `PyFloat_GetInfo`, floatobject.c:82-122. -/
 structure FloatInfo where
   max : F64
   max_exp : Int
@@ -67,28 +67,28 @@ def PyFloat_GetInfo : FloatInfo :=
 
 /-! ## Conversions shared with `Objects/longobject.c` -/
 
-/-- `PyLong_AsDouble`, longobject.c:3484-3513. `_PyLong_Frexp` rounds half to even,
+/-- `PyLong_AsDouble`, longobject.c:3567-3596. `_PyLong_Frexp` rounds half to even,
 so this is the exact value rounded, with an error for what rounds past `DBL_MAX`. -/
 def PyLong_AsDouble (n : Int) : Py F64 :=
   let r := F64.ofInt n
   if r.isInf then .error (.overflowError "int too large to convert to float") else .ok r
 
-/-- `PyLong_FromDouble`, longobject.c:435-480: truncation toward zero, with the
+/-- `PyLong_FromDouble`, longobject.c:469-514: truncation toward zero, with the
 checks in source order. -/
 def PyLong_FromDouble (x : F64) : Py Int :=
   if x.isInf then .error (.overflowError "cannot convert float infinity to integer")
   else if x.isNaN then .error (.valueError "cannot convert float NaN to integer")
   else .ok x.truncInt
 
-/-- `_Py_convert_int_to_double`, floatobject.c:329-346, joined with the
-`CONVERT_TO_DOUBLE` macro at :321-325. `none` is `NotImplemented`. -/
+/-- `_Py_convert_int_to_double`, floatobject.c:319-336, joined with the
+`CONVERT_TO_DOUBLE` macro at :311-315. `none` is `NotImplemented`. -/
 def convertToDouble (v : Obj) : Py (Option F64) :=
   match v with
   | .float x | .floatSub _ x => .ok (some x)
   | .int n => do return some (← PyLong_AsDouble n)
   | .other .. => .ok none
 
-/-- `PyFloat_AsDouble`, floatobject.c:256-313, for one level of `__float__`. The
+/-- `PyFloat_AsDouble`, floatobject.c:246-303, for one level of `__float__`. The
 `DeprecationWarning` for a strict subclass result does not change the value. -/
 def PyFloat_AsDouble (op : Obj) : Py F64 :=
   match op with
@@ -108,7 +108,7 @@ inductive CmpOp where
   | lt | le | eq | ne | gt | ge
   deriving DecidableEq, Repr
 
-/-- The `Compare:` block, floatobject.c:517-538. -/
+/-- The `Compare:` block, floatobject.c:507-528. -/
 def compareDoubles (op : CmpOp) (i j : F64) : Bool :=
   match op with
   | .eq => F64.eq i j
@@ -131,7 +131,7 @@ def compareInts (op : CmpOp) (a b : Int) : Bool :=
 /-- `_PyLong_NumBits`: bits in the magnitude. -/
 def numBits (n : Int) : Nat := bitLength n.natAbs
 
-/-- The `PyLong_Check(w)` branch of `float_richcompare`, floatobject.c:407-512,
+/-- The `PyLong_Check(w)` branch of `float_richcompare`, floatobject.c:397-502,
 for a finite `i`. -/
 def compareFiniteInt (op : CmpOp) (i : F64) (w : Int) : Bool :=
   let vsign : Int := if F64.eq i d0 then 0 else if F64.lt i d0 then -1 else 1
@@ -141,7 +141,7 @@ def compareFiniteInt (op : CmpOp) (i : F64) (w : Int) : Bool :=
   else
     let nbits := numBits w
     if 1024 < nbits then
-      -- `j = wsign * 2.0`, floatobject.c:433-436
+      -- `j = wsign * 2.0`, floatobject.c:423-426
       compareDoubles op (F64.ofInt vsign) (F64.ofInt (wsign * 2))
     else if nbits ≤ 48 then
       compareDoubles op i (F64.ofInt w)
@@ -164,7 +164,7 @@ def compareFiniteInt (op : CmpOp) (i : F64) (w : Int) : Bool :=
         | none => op == .ne
         | some o => compareInts o intpart.truncInt w
 
-/-- `float_richcompare`, floatobject.c:381-542. `none` is `NotImplemented`. -/
+/-- `float_richcompare`, floatobject.c:371-532. `none` is `NotImplemented`. -/
 def float_richcompare (v : F64) (w : Obj) (op : CmpOp) : Option Bool :=
   match w with
   | .float j | .floatSub _ j => some (compareDoubles op v j)
@@ -186,7 +186,7 @@ def toSigned64 (x : Nat) : Int := if x < 2 ^ 63 then x else (x : Int) - 2 ^ 64
 def hashRotate (x n : Nat) : Nat :=
   (((x * 2 ^ n) % 2 ^ 64) &&& hashModulus) ||| (x / 2 ^ (hashBits - n))
 
-/-- The loop of `_Py_HashDouble`, pyhash.c:112-120: 28 bits at a time. -/
+/-- The loop of `_Py_HashDouble`, pyhash.c@3.14.7:112-120: 28 bits at a time. -/
 def hashLoop : Nat → F64 → Int → Nat → Int × Nat
   | 0, _, e, x => (e, x)
   | fuel + 1, m, e, x =>
@@ -219,7 +219,7 @@ def _Py_HashDouble (v : F64) : Option Int :=
     let x3 := if x2 = 2 ^ 64 - 1 then 2 ^ 64 - 2 else x2
     some (toSigned64 x3)
 
-/-- `float_hash`, floatobject.c:544-549. -/
+/-- `float_hash`, floatobject.c:534-539. -/
 def float_hash (v : F64) : Option Int := _Py_HashDouble v
 
 /-! ## Binary arithmetic -/
@@ -230,22 +230,22 @@ def withDoubles {α} (v w : Obj) (k : F64 → F64 → Py α) : Py (Option α) :=
   let some b ← convertToDouble w | return none
   return some (← k a b)
 
-/-- `float_add`, floatobject.c:551-559. -/
+/-- `float_add`, floatobject.c:541-549. -/
 def float_add (v w : Obj) : Py (Option F64) := withDoubles v w fun a b => .ok (F64.add a b)
 
-/-- `float_sub`, floatobject.c:561-569. -/
+/-- `float_sub`, floatobject.c:551-559. -/
 def float_sub (v w : Obj) : Py (Option F64) := withDoubles v w fun a b => .ok (F64.sub a b)
 
-/-- `float_mul`, floatobject.c:571-579. -/
+/-- `float_mul`, floatobject.c:561-569. -/
 def float_mul (v w : Obj) : Py (Option F64) := withDoubles v w fun a b => .ok (F64.mul a b)
 
 def zeroDiv {α} : Py α := .error (.zeroDivisionError "division by zero")
 
-/-- `float_div`, floatobject.c:581-594. -/
+/-- `float_div`, floatobject.c:571-584. -/
 def float_div (v w : Obj) : Py (Option F64) :=
   withDoubles v w fun a b => if F64.eq b d0 then zeroDiv else .ok (F64.div a b)
 
-/-- The core of `float_rem`, floatobject.c:603-621. -/
+/-- The core of `float_rem`, floatobject.c:593-611. -/
 def floatRemCore (vx wx : F64) : Py F64 :=
   if F64.eq wx d0 then zeroDiv
   else
@@ -255,10 +255,10 @@ def floatRemCore (vx wx : F64) : Py F64 :=
       if F64.lt wx d0 != F64.lt m d0 then .ok (F64.add m wx) else .ok m
     else .ok (F64.copysign d0 wx)
 
-/-- `float_rem`, floatobject.c:596-622. -/
+/-- `float_rem`, floatobject.c:586-612. -/
 def float_rem (v w : Obj) : Py (Option F64) := withDoubles v w floatRemCore
 
-/-- `_float_div_mod`, floatobject.c:624-660: `(floordiv, mod)`. -/
+/-- `_float_div_mod`, floatobject.c:614-650: `(floordiv, mod)`. -/
 def float_div_mod (vx wx : F64) : F64 × F64 :=
   let m0 := F64.fmod vx wx
   let div0 := F64.div (F64.sub vx m0) wx
@@ -273,11 +273,11 @@ def float_div_mod (vx wx : F64) : F64 × F64 :=
     else F64.copysign d0 (F64.div vx wx)
   (floordiv, m1)
 
-/-- `float_divmod`, floatobject.c:662-675. -/
+/-- `float_divmod`, floatobject.c:652-665. -/
 def float_divmod (v w : Obj) : Py (Option (F64 × F64)) :=
   withDoubles v w fun vx wx => if F64.eq wx d0 then zeroDiv else .ok (float_div_mod vx wx)
 
-/-- `float_floor_div`, floatobject.c:677-690. -/
+/-- `float_floor_div`, floatobject.c:667-680. -/
 def float_floor_div (v w : Obj) : Py (Option F64) :=
   withDoubles v w fun vx wx => if F64.eq wx d0 then zeroDiv else .ok (float_div_mod vx wx).1
 
@@ -289,10 +289,10 @@ inductive PowResult where
   | complexPow (iv iw : F64)
   deriving DecidableEq, Repr
 
-/-- `DOUBLE_IS_ODD_INTEGER`, floatobject.c:694. -/
+/-- `DOUBLE_IS_ODD_INTEGER`, floatobject.c:684. -/
 def isOddInteger (x : F64) : Bool := F64.eq (F64.fmod x.abs d2) d1
 
-/-- `float_pow`, floatobject.c:696-813, after the `CONVERT_TO_DOUBLE` lines, for
+/-- `float_pow`, floatobject.c:686-803, after the `CONVERT_TO_DOUBLE` lines, for
 any C library `pow`. The body never asks `cpow` about a NaN, an infinity, a zero
 base, or a negative base. `_Py_ADJUST_ERANGE1` turns an infinite result into
 `ERANGE`, and a C library that sets `ERANGE` on underflow to zero is cleared, so
@@ -331,7 +331,7 @@ def floatPowCore (cpow : F64 → F64 → F64) (iv0 iw : F64) : Py PowResult :=
         if erange then .error (.overflowError "~[Errno 34] Numerical result out of range")
         else .ok (.float ix)
 
-/-- `float_pow`, floatobject.c:696-813. -/
+/-- `float_pow`, floatobject.c:686-803. -/
 def float_pow (cpow : F64 → F64 → F64) (v w : Obj) (z : Option Obj) : Py (Option PowResult) :=
   match z with
   | some _ =>
@@ -340,52 +340,52 @@ def float_pow (cpow : F64 → F64 → F64) (v w : Obj) (z : Option Obj) : Py (Op
 
 /-! ## Unary methods -/
 
-/-- `float_neg`, floatobject.c:817-822. -/
+/-- `float_neg`, floatobject.c:807-812. -/
 def float_neg (v : F64) : F64 := v.neg
 
-/-- `float_abs`, floatobject.c:824-829. -/
+/-- `float_abs`, floatobject.c:814-819. -/
 def float_abs (v : F64) : F64 := v.abs
 
-/-- `float_bool`, floatobject.c:831-836. -/
+/-- `float_bool`, floatobject.c:821-826. -/
 def float_bool (v : F64) : Bool := F64.ne v d0
 
-/-- `float_is_integer_impl`, floatobject.c:844-863. -/
+/-- `float_is_integer_impl`, floatobject.c:834-853. -/
 def float_is_integer (x : F64) : Bool :=
   if !x.isFinite then false else F64.eq (F64.floor x) x
 
-/-- `float___trunc___impl`, floatobject.c:871-876. -/
+/-- `float___trunc___impl`, floatobject.c:861-866. -/
 def float_trunc (x : F64) : Py Int := PyLong_FromDouble x
 
-/-- `float___floor___impl`, floatobject.c:884-890. -/
+/-- `float___floor___impl`, floatobject.c:874-880. -/
 def float_floor (x : F64) : Py Int := PyLong_FromDouble (F64.floor x)
 
-/-- `float___ceil___impl`, floatobject.c:898-904. -/
+/-- `float___ceil___impl`, floatobject.c:888-894. -/
 def float_ceil (x : F64) : Py Int := PyLong_FromDouble (F64.ceil x)
 
-/-- `round(x)` with no `ndigits`, floatobject.c:1041-1049. -/
+/-- `round(x)` with no `ndigits`, floatobject.c:1031-1039. -/
 def float_round_int (x : F64) : Py Int :=
   let rounded := F64.roundAway x
   let r := if F64.eq (F64.sub x rounded).abs dHalf
     then F64.mul d2 (F64.roundAway (F64.div x d2)) else rounded
   PyLong_FromDouble r
 
-/-- `float_float`, floatobject.c:1078-1087: an exact float itself, or the value of
+/-- `float_float`, floatobject.c:1068-1077: an exact float itself, or the value of
 a subclass instance. -/
 def float_float (x : F64) : F64 := x
 
-/-- `float_conjugate_impl`, floatobject.c:1095-1100. -/
+/-- `float_conjugate_impl`, floatobject.c:1085-1090. -/
 def float_conjugate (x : F64) : F64 := float_float x
 
-/-- `float_getreal`, floatobject.c:1740-1744. -/
+/-- `float_getreal`, floatobject.c:1703-1707. -/
 def float_getreal (x : F64) : F64 := float_float x
 
-/-- `float_getimag`, floatobject.c:1746-1750. -/
+/-- `float_getimag`, floatobject.c:1709-1713. -/
 def float_getimag (_ : F64) : F64 := d0
 
-/-- `float___getnewargs___impl`, floatobject.c:1672-1677. -/
+/-- `float___getnewargs___impl`, floatobject.c:1664-1669. -/
 def float_getnewargs (x : F64) : F64 := x
 
-/-- `float___getformat___impl`, floatobject.c:1706-1737, on a little-endian IEEE
+/-- `float___getformat___impl`, floatobject.c:1689-1701, on a little-endian IEEE
 platform. -/
 def float_getformat (typestr : String) : Py String :=
   if typestr == "double" || typestr == "float" then .ok "IEEE, little-endian"
@@ -393,11 +393,11 @@ def float_getformat (typestr : String) : Py String :=
 
 /-! ## `float.hex` -/
 
-/-- `char_from_hex`, floatobject.c:1104-1109. -/
+/-- `char_from_hex`, floatobject.c:1094-1099. -/
 def char_from_hex (x : Nat) : Char :=
   "0123456789abcdef".toList.getD x '?'
 
-/-- The digit loop of `float_hex_impl`, floatobject.c:1196-1201. -/
+/-- The digit loop of `float_hex_impl`, floatobject.c:1186-1191. -/
 def hexDigits : Nat → F64 → List Char
   | 0, _ => []
   | n + 1, m =>
@@ -407,7 +407,7 @@ def hexDigits : Nat → F64 → List Char
 
 def intToDecimal (n : Nat) : String := toString n
 
-/-- `float_hex_impl`, floatobject.c:1163-1215. `TOHEX_NBITS` is 53, so 13 digits
+/-- `float_hex_impl`, floatobject.c:1153-1205. `TOHEX_NBITS` is 53, so 13 digits
 follow the point. -/
 def float_hex (x : F64) : String :=
   if x.isNaN then "nan"
@@ -470,7 +470,7 @@ def _Py_parse_inf_or_nan (s : List Nat) (p : Nat) : F64 × Nat :=
 
 /-! ## `float.fromhex` -/
 
-/-- `hex_from_char`, floatobject.c:1141-1144: `-1` becomes `none`. -/
+/-- `hex_from_char`, floatobject.c:1131-1134: `-1` becomes `none`. -/
 def hex_from_char (c : Nat) : Option Nat :=
   if 48 ≤ c && c ≤ 57 then some (c - 48)
   else if 97 ≤ c && c ≤ 102 then some (c - 87)
@@ -500,7 +500,7 @@ def hexOverflow {α} : Py α :=
 def hexParseError {α} : Py α :=
   .error (.valueError "invalid hexadecimal floating-point string")
 
-/-- `HEX_DIGIT(j)`, floatobject.c:1368-1370. -/
+/-- `HEX_DIGIT(j)`, floatobject.c:1358-1360. -/
 def hexDigit (s : List Nat) (coeff_end fdigits j : Nat) : Nat :=
   (hex_from_char (at_ s (if j < fdigits then coeff_end - j else coeff_end - 1 - j))).getD 0
 
@@ -510,15 +510,15 @@ def hexAccum (dig : Nat → Nat) : Nat → Nat → F64 → F64
   | n + 1, i, x =>
     hexAccum dig n (i - 1) (F64.add (F64.mul d16 x) (F64.ofInt (dig i)))
 
-/-- Discard leading zeros, floatobject.c:1377-1378. -/
+/-- Discard leading zeros, floatobject.c:1367-1368. -/
 def dropLeadingZeros (dig : Nat → Nat) : Nat → Nat
   | 0 => 0
   | n + 1 => if dig n == 0 then dropLeadingZeros dig n else n + 1
 
-/-- `for (digit = d; digit != 0; digit /= 2) top_exp++`, floatobject.c:1391-1392. -/
+/-- `for (digit = d; digit != 0; digit /= 2) top_exp++`, floatobject.c:1381-1382. -/
 def bitsOfDigit (d : Nat) : Nat := bitLength d
 
-/-- The body of `float_fromhex_impl` from the digit scan on, floatobject.c:1376-1445.
+/-- The body of `float_fromhex_impl` from the digit scan on, floatobject.c:1366-1435.
 It returns the unsigned value. An overflow returns straight away, without reaching
 the trailing-whitespace check at `finished:`. -/
 def hexValue (dig : Nat → Nat) (ndigits0 fdigits : Nat) (exp0 : Int) : Py F64 :=
@@ -553,13 +553,13 @@ def hexValue (dig : Nat → Nat) (ndigits0 fdigits : Nat) (exp0 : Int) : Py F64 
           else .ok (F64.ldexp x2 (exp + 4 * (key_digit : Int)))
         else .ok (F64.ldexp x1 (exp + 4 * (key_digit : Int)))
 
-/-- `finished:`, floatobject.c:1447-1453. -/
+/-- `finished:`, floatobject.c:1437-1443. -/
 def hexFinish (s : List Nat) (i : Nat) (x : F64) (negate : Bool) : Py F64 :=
   let i' := scanFrom s isSpace i
   if i' != s.length then hexParseError
   else .ok (if negate then x.neg else x)
 
-/-- `float_fromhex_impl`, floatobject.c:1234-1473, over the UTF-8 bytes of the
+/-- `float_fromhex_impl`, floatobject.c:1224-1463, over the UTF-8 bytes of the
 argument. -/
 def float_fromhex (s : List Nat) : Py F64 :=
   let s0 := scanFrom s isSpace 0
@@ -604,13 +604,13 @@ def float_fromhex (s : List Nat) : Py F64 :=
 
 /-! ## `as_integer_ratio` -/
 
-/-- The loop of `float_as_integer_ratio_impl`, floatobject.c:1521-1524. -/
+/-- The loop of `float_as_integer_ratio_impl`, floatobject.c:1512-1515. -/
 def ratioLoop : Nat → F64 → Int → F64 × Int
   | 0, f, e => (f, e)
   | n + 1, f, e =>
     if F64.ne f (F64.floor f) then ratioLoop n (F64.mul f d2) (e - 1) else (f, e)
 
-/-- `float_as_integer_ratio_impl`, floatobject.c:1491-1560. -/
+/-- `float_as_integer_ratio_impl`, floatobject.c:1482-1552. -/
 def float_as_integer_ratio (x : F64) : Py (Int × Int) :=
   if x.isInf then .error (.overflowError "cannot convert Infinity to integer ratio")
   else if x.isNaN then .error (.valueError "cannot convert NaN to integer ratio")
@@ -636,7 +636,7 @@ def unlayout (b : List Nat) (le : Bool) : Nat :=
 def pack2Overflow {α} : Py α :=
   .error (.overflowError "float too large to pack with e format")
 
-/-- The finite nonzero branch of `PyFloat_Pack2`, floatobject.c:2025-2075, after
+/-- The finite nonzero branch of `PyFloat_Pack2`, floatobject.c:1927-1977, after
 the sign has been taken off. -/
 def pack2Finite (x : F64) : Py (Nat × Nat) :=
   let (f0, e0) := F64.frexp x
@@ -659,7 +659,7 @@ def pack2Finite (x : F64) : Py (Nat × Nat) :=
       else .ok (e2.toNat, b1)
     else .ok (e2.toNat, bits)
 
-/-- `PyFloat_Pack2`, floatobject.c:1992-2098. -/
+/-- `PyFloat_Pack2`, floatobject.c:1894-2000. -/
 def PyFloat_Pack2 (x : F64) (le : Bool) : Py (List Nat) :=
   let finish (sign : Bool) (e bits : Nat) : Py (List Nat) :=
     .ok (layout 2 (bits ||| (e * 1024) ||| ((if sign then 1 else 0) * 2 ^ 15)) le)
@@ -686,7 +686,7 @@ def toFloat32Bits (x : F64) : Nat :=
     let q := x.toRat
     binary32.encode x.sign (roundPos binary32 q.num.natAbs q.den)
 
-/-- `PyFloat_Pack4`, floatobject.c:2100-2244 (the IEEE branch, :2180-2239). -/
+/-- `PyFloat_Pack4`, floatobject.c:2002-2066 (the IEEE branch, @3.14.7:2180-2239). -/
 def PyFloat_Pack4 (x : F64) (le : Bool) : Py (List Nat) :=
   let y := toFloat32Bits x
   let yIsInf := y % 2 ^ 31 == 0x7f800000
@@ -697,10 +697,10 @@ def PyFloat_Pack4 (x : F64) (le : Bool) : Py (List Nat) :=
       if x.isNaN && (x.bits / 2 ^ 51) % 2 == 0 && y % 2 ^ 22 != 0 then y - 2 ^ 22 else y
     .ok (layout 4 y' le)
 
-/-- `PyFloat_Pack8`, floatobject.c:2246-2376 (the IEEE branch, :2358-2375). -/
+/-- `PyFloat_Pack8`, floatobject.c:2068-2087 (the IEEE branch, @3.14.7:2358-2375). -/
 def PyFloat_Pack8 (x : F64) (le : Bool) : Py (List Nat) := .ok (layout 8 x.bits le)
 
-/-- `PyFloat_Unpack2`, floatobject.c:2378-2432. -/
+/-- `PyFloat_Unpack2`, floatobject.c:2089-2143. -/
 def PyFloat_Unpack2 (data : List Nat) (le : Bool) : F64 :=
   let b := unlayout data le
   let first := b / 256
@@ -730,7 +730,7 @@ def ofFloat32Bits (v : Nat) : F64 :=
     let q := dyadic m e
     if m == 0 then F64.zero neg else F64.ofRat (if neg then -q else q)
 
-/-- `PyFloat_Unpack4`, floatobject.c:2434-2546 (the IEEE branch, :2491-2545). -/
+/-- `PyFloat_Unpack4`, floatobject.c:2145-2201 (the IEEE branch, :2161-2198). -/
 def PyFloat_Unpack4 (data : List Nat) (le : Bool) : F64 :=
   let v := unlayout data le
   let y := ofFloat32Bits v
@@ -739,7 +739,7 @@ def PyFloat_Unpack4 (data : List Nat) (le : Bool) : F64 :=
     if (v / 2 ^ 22) % 2 == 0 then F64.ofBits (y.bits - 2 ^ 51) else y
   | _ => y
 
-/-- `PyFloat_Unpack8`, floatobject.c:2548-2642 (the IEEE branch, :2622-2641). -/
+/-- `PyFloat_Unpack8`, floatobject.c:2203-2224 (the IEEE branch, :2219-2221). -/
 def PyFloat_Unpack8 (data : List Nat) (le : Bool) : F64 :=
   F64.ofBits (unlayout data le)
 

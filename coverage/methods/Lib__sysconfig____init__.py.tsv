@@ -2,30 +2,30 @@ file	line	endline	name	signature	status	entry	note
 Lib/sysconfig/__init__.py	109	110	_get_implementation	_get_implementation()	todo		
 Lib/sysconfig/__init__.py	114	136	_getuserbase	_getuserbase()	todo		
 Lib/sysconfig/__init__.py	188	192	_safe_realpath	_safe_realpath(path)	todo		
-Lib/sysconfig/__init__.py	222	237	is_python_build	is_python_build(check_home=None)	todo		
-Lib/sysconfig/__init__.py	254	261	_subst_vars	_subst_vars(s, local_vars)	todo		
-Lib/sysconfig/__init__.py	263	268	_extend_dict	_extend_dict(target_dict, other_dict)	todo		
-Lib/sysconfig/__init__.py	271	286	_expand_vars	_expand_vars(scheme, vars)	todo		
-Lib/sysconfig/__init__.py	289	307	_get_preferred_schemes	_get_preferred_schemes()	todo		
-Lib/sysconfig/__init__.py	310	319	get_preferred_scheme	get_preferred_scheme(key)	todo		
-Lib/sysconfig/__init__.py	322	323	get_default_scheme	get_default_scheme()	todo		
-Lib/sysconfig/__init__.py	326	344	get_makefile_filename	get_makefile_filename()	todo		
-Lib/sysconfig/__init__.py	347	356	_import_from_directory	_import_from_directory(path, name)	todo		
-Lib/sysconfig/__init__.py	359	364	_get_sysconfigdata_name	_get_sysconfigdata_name()	todo		
-Lib/sysconfig/__init__.py	367	374	_get_sysconfigdata	_get_sysconfigdata()	todo		
-Lib/sysconfig/__init__.py	377	386	_installation_is_relocated	_installation_is_relocated()	todo		
-Lib/sysconfig/__init__.py	389	392	_init_posix	_init_posix(vars)	todo		
-Lib/sysconfig/__init__.py	395	426	_init_non_posix	_init_non_posix(vars)	todo		
-Lib/sysconfig/__init__.py	433	464	parse_config_h	parse_config_h(fp, vars=None)	todo		
-Lib/sysconfig/__init__.py	467	476	get_config_h_filename	get_config_h_filename()	todo		
-Lib/sysconfig/__init__.py	479	481	get_scheme_names	get_scheme_names()	todo		
-Lib/sysconfig/__init__.py	484	486	get_path_names	get_path_names()	todo		
-Lib/sysconfig/__init__.py	489	498	get_paths	get_paths(scheme=get_default_scheme(), vars=None, expand=True)	todo		
-Lib/sysconfig/__init__.py	501	506	get_path	get_path(name, scheme=get_default_scheme(), vars=None, expand=True)	todo		
-Lib/sysconfig/__init__.py	509	591	_init_config_vars	_init_config_vars()	todo		
-Lib/sysconfig/__init__.py	594	631	get_config_vars	get_config_vars(*args)	todo		
-Lib/sysconfig/__init__.py	634	640	get_config_var	get_config_var(name)	todo		
-Lib/sysconfig/__init__.py	643	751	get_platform	get_platform()	todo		
+Lib/sysconfig/__init__.py	222	226	is_python_build	is_python_build()	todo		changed-in-3.15:
+Lib/sysconfig/__init__.py	243	250	_subst_vars	_subst_vars(s, local_vars)	todo		
+Lib/sysconfig/__init__.py	252	257	_extend_dict	_extend_dict(target_dict, other_dict)	todo		
+Lib/sysconfig/__init__.py	260	275	_expand_vars	_expand_vars(scheme, vars)	todo		
+Lib/sysconfig/__init__.py	278	296	_get_preferred_schemes	_get_preferred_schemes()	todo		
+Lib/sysconfig/__init__.py	299	308	get_preferred_scheme	get_preferred_scheme(key)	todo		
+Lib/sysconfig/__init__.py	311	312	get_default_scheme	get_default_scheme()	todo		
+Lib/sysconfig/__init__.py	315	333	get_makefile_filename	get_makefile_filename()	todo		
+Lib/sysconfig/__init__.py	336	345	_import_from_directory	_import_from_directory(path, name)	todo		
+Lib/sysconfig/__init__.py	348	353	_get_sysconfigdata_name	_get_sysconfigdata_name()	todo		
+Lib/sysconfig/__init__.py	356	363	_get_sysconfigdata	_get_sysconfigdata()	todo		
+Lib/sysconfig/__init__.py	366	375	_installation_is_relocated	_installation_is_relocated()	todo		
+Lib/sysconfig/__init__.py	378	381	_init_posix	_init_posix(vars)	todo		
+Lib/sysconfig/__init__.py	384	421	_init_non_posix	_init_non_posix(vars)	todo		changed-in-3.15:
+Lib/sysconfig/__init__.py	428	463	parse_config_h	parse_config_h(fp, vars=None)	todo		changed-in-3.15:
+Lib/sysconfig/__init__.py	466	475	get_config_h_filename	get_config_h_filename()	todo		
+Lib/sysconfig/__init__.py	478	480	get_scheme_names	get_scheme_names()	todo		
+Lib/sysconfig/__init__.py	483	485	get_path_names	get_path_names()	todo		
+Lib/sysconfig/__init__.py	488	497	get_paths	get_paths(scheme=get_default_scheme(), vars=None, expand=True)	todo		
+Lib/sysconfig/__init__.py	500	505	get_path	get_path(name, scheme=get_default_scheme(), vars=None, expand=True)	todo		
+Lib/sysconfig/__init__.py	508	590	_init_config_vars	_init_config_vars()	todo		
+Lib/sysconfig/__init__.py	593	630	get_config_vars	get_config_vars(*args)	todo		
+Lib/sysconfig/__init__.py	633	639	get_config_var	get_config_var(name)	todo		
+Lib/sysconfig/__init__.py	642	751	get_platform	get_platform()	todo		changed-in-3.15:
 Lib/sysconfig/__init__.py	754	755	get_python_version	get_python_version()	todo		
 Lib/sysconfig/__init__.py	758	759	_get_python_version_abi	_get_python_version_abi()	todo		
 Lib/sysconfig/__init__.py	762	797	expand_makefile_vars	expand_makefile_vars(s, vars)	todo		

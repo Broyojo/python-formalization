@@ -12,7 +12,7 @@ namespace PyLean.TextLibs.Re
 
 open PyLean
 
-/-! ### The code validator, `Modules/_sre/sre.c:1770-2259` -/
+/-! ### The code validator, `Modules/_sre/sre.c:1776-2265` -/
 
 /-- Why `_validate_inner` stops: `FAIL`, a read outside the code array (which C does not check, so
 it is undefined behaviour rather than an outcome), or model fuel. -/
@@ -44,7 +44,7 @@ def vSkip (c : Array Nat) (code end_ : Int) (adj : Nat) : V (Nat × Int) := do
   if (word32 ((skip : Int) - adj) : Int) > uptr (end_ - code) then throw .fail
   return (skip, code + 1)
 
-/-- The byte table check of `SRE_OP_BIGCHARSET`, `Modules/_sre/sre.c:1875-1878`. -/
+/-- The byte table check of `SRE_OP_BIGCHARSET`, `Modules/_sre/sre.c:1881-1884`. -/
 def vBlocks (c : Array Nat) (code : Int) (arg : Nat) : (n i : Nat) → V Unit
   | 0, _ => .ok ()
   | n + 1, i => do
@@ -52,7 +52,7 @@ def vBlocks (c : Array Nat) (code : Int) (arg : Nat) : (n i : Nat) → V Unit
     if (w / 256 ^ (i % 4)) % 256 ≥ arg then throw .fail
     vBlocks c code arg n (i + 1)
 
-/-- `_validate_charset`, `Modules/_sre/sre.c:1836-1920`. -/
+/-- `_validate_charset`, `Modules/_sre/sre.c:1842-1926`. -/
 def vCharset (c : Array Nat) : (fuel : Nat) → (code end_ : Int) → V Unit
   | 0, _, _ => .error .fuel
   | fuel + 1, code, end_ => do
@@ -82,14 +82,14 @@ def vCharset (c : Array Nat) : (fuel : Nat) → (code end_ : Int) → V Unit
       if arg ≤ 17 then vCharset c fuel code end_ else throw .fail
     else throw .fail
 
-/-- The overlap table check, `Modules/_sre/sre.c:2046-2049`. -/
+/-- The overlap table check, `Modules/_sre/sre.c:2052-2055`. -/
 def vOverlap (c : Array Nat) (code : Int) (plen : Nat) : (n i : Nat) → V Unit
   | 0, _ => .ok ()
   | n + 1, i => do
     if (← vRead c (code + i)) ≥ plen then throw .fail
     vOverlap c code plen n (i + 1)
 
-/-- The `SRE_OP_INFO` case, `Modules/_sre/sre.c:2007-2065`: the `code` after it. -/
+/-- The `SRE_OP_INFO` case, `Modules/_sre/sre.c:2013-2071`: the `code` after it. -/
 def vInfo (c : Array Nat) (fuel : Nat) (code end_ : Int) : V Int := do
   let (skip, code) ← vSkip c code end_ 0
   let newcode := code + skip - 1
@@ -117,7 +117,7 @@ def vInfo (c : Array Nat) (fuel : Nat) (code end_ : Int) : V Int := do
   else return code
 
 mutual
-  /-- `_validate_inner`, `Modules/_sre/sre.c:1923-2237`: `0`, or `1` when the last op is `JUMP`. -/
+  /-- `_validate_inner`, `Modules/_sre/sre.c:1929-2243`: `0`, or `1` when the last op is `JUMP`. -/
   def vInner (c : Array Nat) (groups : Nat) : (fuel : Nat) → (code end_ : Int) → V Nat
     | 0, _, _ => .error .fuel
     | fuel + 1, code, end_ =>
@@ -217,7 +217,7 @@ mutual
         return 1
       else throw .fail
 
-  /-- The `for (;;)` of `SRE_OP_BRANCH`, `Modules/_sre/sre.c:2070-2090`. -/
+  /-- The `for (;;)` of `SRE_OP_BRANCH`, `Modules/_sre/sre.c:2076-2096`. -/
   def vBranch (c : Array Nat) (groups : Nat) : (fuel : Nat) → (code end_ : Int) → Option Int → V Int
     | 0, _, _, _ => .error .fuel
     | fuel + 1, code, end_, target => do
@@ -240,7 +240,7 @@ end
 /-- `SRE_MAXGROUPS`, `Modules/_sre/sre.h:21`. -/
 def SRE_MAXGROUPS : Nat := (2 ^ 31 - 1) / 2
 
-/-- `_validate_outer`, `Modules/_sre/sre.c:2239-2246`. -/
+/-- `_validate_outer`, `Modules/_sre/sre.c:2245-2252`. -/
 def vOuter (c : Array Nat) (groups : Int) : V Nat :=
   let end_ : Int := c.size
   if groups < 0 ∨ groups > SRE_MAXGROUPS ∨ 0 ≥ end_ then .error .fail
@@ -251,7 +251,7 @@ def vOuter (c : Array Nat) (groups : Int) : V Nat :=
       if w != OP_SUCCESS then .error .fail
       else vInner c groups.toNat (3 * c.size + 8) 0 (end_ - 1)
 
-/-- `_validate`, `Modules/_sre/sre.c:2248-2259`. `vOuter` returning `1` is `true` in C. -/
+/-- `_validate`, `Modules/_sre/sre.c:2254-2265`. `vOuter` returning `1` is `true` in C. -/
 def validate (c : Array Nat) (groups : Int) : Py Unit :=
   match vOuter c groups with
   | .ok 0 => .ok ()
@@ -259,7 +259,7 @@ def validate (c : Array Nat) (groups : Int) : Py Unit :=
   | .error .oob => .error (.named "SegmentationFault" "")
   | .error .fuel => .error .modelFuel
 
-/-- The copy into `self->code`, `Modules/_sre/sre.c:1648-1660`, then `_validate`. -/
+/-- The copy into `self->code`, `Modules/_sre/sre.c:1654-1666`, then `_validate`. -/
 def sreCompileCheck (c : Array Nat) (groups : Int) : Py Unit :=
   if c.any (· ≥ 2 ^ 32) then
     .error (.overflowError "regular expression code size limit exceeded")
@@ -280,7 +280,7 @@ structure Pat where
 def Pat.istext (p : Pat) : Bool := p.isbytes ≤ 0
 
 /-- `_compiler.compile`, `Lib/re/_compiler.py:757-782`, without the `dis` of `DEBUG`, followed by
-`_sre_compile_impl`, `Modules/_sre/sre.c:1620-1704`. -/
+`_sre_compile_impl`, `Modules/_sre/sre.c:1626-1710`. -/
 def compilePat (istext : Bool) (s : List Nat) (flags : Nat) (maxDigits : Nat := 4300) : Py Pat := do
   let p ← parse istext s flags maxDigits
   let c ← codeOf p flags
@@ -294,7 +294,7 @@ structure MatchR where
   lastindex : Option Nat
   deriving Repr, DecidableEq, Inhabited
 
-/-- `pattern_new_match`, `Modules/_sre/sre.c:2728-2800`, on success. -/
+/-- `pattern_new_match`, `Modules/_sre/sre.c:2726-2798`, on success. -/
 def newMatch (p : Pat) (st : SSt) : Py MatchR := do
   let groupSpans := (List.range p.groups).map fun i =>
     let j : Nat := 2 * i
@@ -311,7 +311,7 @@ def newMatch (p : Pat) (st : SSt) : Py MatchR := do
   return ⟨some (st.start, st.ptr) :: groupSpans,
     if st.lastindex < 0 then none else some st.lastindex.toNat⟩
 
-/-- The boundary adjustment of `state_init`, `Modules/_sre/sre.c:574-583`. -/
+/-- The boundary adjustment of `state_init`, `Modules/_sre/sre.c:575-584`. -/
 def clampPos (n : Int) (len : Nat) : Nat :=
   if n < 0 then 0 else if n > (len : Int) then len else n.toNat
 
@@ -321,7 +321,7 @@ def initState (p : Pat) (start : Nat) : SSt :=
 def envOf (p : Pat) (s : List Nat) (endp : Nat) (matchAll : Bool) : Env :=
   ⟨p.code, s.toArray, endp, matchAll⟩
 
-/-- The type checks of `state_init`, `Modules/_sre/sre.c:561-570`. -/
+/-- The type checks of `state_init`, `Modules/_sre/sre.c:562-571`. -/
 def checkSubject (p : Pat) (isbytes : Bool) : Py Unit :=
   if isbytes ∧ p.isbytes = 0 then
     .error (.typeError "cannot use a string pattern on a bytes-like object")
@@ -329,7 +329,7 @@ def checkSubject (p : Pat) (isbytes : Bool) : Py Unit :=
     .error (.typeError "cannot use a bytes pattern on a string-like object")
   else .ok ()
 
-/-- `_sre_SRE_Pattern_match_impl`, `fullmatch` and `search`, `Modules/_sre/sre.c:780-900`. -/
+/-- `_sre_SRE_Pattern_match_impl`, `fullmatch` and `search`, `Modules/_sre/sre.c:781-903`. -/
 def runMatch (p : Pat) (s : List Nat) (pos endpos : Int) (mode : String) : Py (Option MatchR) := do
   let start := clampPos pos s.length
   let endp := clampPos endpos s.length
@@ -349,7 +349,7 @@ inductive GroupV where
 
 def slice (s : List Nat) (i j : Nat) : List Nat := (s.drop i).take (j - i)
 
-/-- `state_getslice`, `Modules/_sre/sre.c:652-680`. -/
+/-- `state_getslice`, `Modules/_sre/sre.c:653-681`. -/
 def stateGetslice (st : SSt) (s : List Nat) (index : Nat) (empty : Bool) : Py GroupV :=
   let i : Nat := (index - 1) * 2
   let missing :=
@@ -370,11 +370,11 @@ inductive FindItem where
   | tuple (vs : List GroupV)
   deriving Repr, DecidableEq, Inhabited
 
-/-- `state_reset`, `Modules/_sre/sre.c:486-498`. -/
+/-- `state_reset`, `Modules/_sre/sre.c:487-499`. -/
 def stateReset (st : SSt) : SSt :=
   { st with lastmark := -1, lastindex := -1, repeat_ := none, reps := #[] }
 
-/-- The `switch (self->groups)` of `findall`, `Modules/_sre/sre.c:952-977`. -/
+/-- The `switch (self->groups)` of `findall`, `Modules/_sre/sre.c:955-980`. -/
 def findItem (p : Pat) (s : List Nat) (st : SSt) : Py FindItem :=
   if p.groups == 0 then pure (FindItem.one (.str (slice s st.start st.ptr)))
   else if p.groups == 1 then do
@@ -383,7 +383,7 @@ def findItem (p : Pat) (s : List Nat) (st : SSt) : Py FindItem :=
     let vs ← (List.range p.groups).mapM (fun i => stateGetslice st s (i + 1) true)
     pure (FindItem.tuple vs)
 
-/-- The loop of `findall`, `Modules/_sre/sre.c:931-987`. -/
+/-- The loop of `findall`, `Modules/_sre/sre.c:934-990`. -/
 def findallLoop (p : Pat) (e : Env) (s : List Nat) : (fuel : Nat) → SSt → Py (List FindItem)
   | 0, _ => .error .modelFuel
   | fuel + 1, st =>
@@ -399,12 +399,12 @@ def findallLoop (p : Pat) (e : Env) (s : List Nat) : (fuel : Nat) → SSt → Py
           { st with mustAdvance := st.ptr == st.start, start := st.ptr }
         return item :: rest
 
-/-- `_sre_SRE_Pattern_findall_impl`, `Modules/_sre/sre.c:912-997`. -/
+/-- `_sre_SRE_Pattern_findall_impl`, `Modules/_sre/sre.c:915-1000`. -/
 def findall (p : Pat) (s : List Nat) (pos endpos : Int) : Py (List FindItem) :=
   let e := envOf p s (clampPos endpos s.length) false
   findallLoop p e s (2 * s.length + 4) (initState p (clampPos pos s.length))
 
-/-- Repeated `_sre_SRE_Scanner_search_impl` or `match_impl`, `Modules/_sre/sre.c:2867-2956`. -/
+/-- Repeated `_sre_SRE_Scanner_search_impl` or `match_impl`, `Modules/_sre/sre.c:2865-2954`. -/
 def scanLoop (p : Pat) (e : Env) (search : Bool) : (fuel : Nat) → SSt → Py (List MatchR)
   | 0, _ => .error .modelFuel
   | fuel + 1, st =>
@@ -423,7 +423,7 @@ def scanAll (p : Pat) (s : List Nat) (pos endpos : Int) (search : Bool) : Py (Li
   let e := envOf p s (clampPos endpos s.length) false
   scanLoop p e search (2 * s.length + 4) (initState p (clampPos pos s.length))
 
-/-- The loop of `split`, `Modules/_sre/sre.c:1097-1141`. -/
+/-- The loop of `split`, `Modules/_sre/sre.c:1101-1145`. -/
 def splitLoop (p : Pat) (e : Env) (s : List Nat) (maxsplit : Int) :
     (fuel : Nat) → Nat → Int → SSt → Py (List GroupV × Nat)
   | 0, _, _, _ => .error .modelFuel
@@ -441,33 +441,33 @@ def splitLoop (p : Pat) (e : Env) (s : List Nat) (maxsplit : Int) :
           { st with mustAdvance := st.ptr == st.start, start := st.ptr }
         return (seg :: gs ++ rest, l)
 
-/-- `_sre_SRE_Pattern_split_impl`, `Modules/_sre/sre.c:1070-1162`. -/
+/-- `_sre_SRE_Pattern_split_impl`, `Modules/_sre/sre.c:1074-1166`. -/
 def split (p : Pat) (s : List Nat) (maxsplit : Int) : Py (List GroupV) := do
   let e := envOf p s s.length false
   let (items, last) ← splitLoop p e s maxsplit (2 * s.length + 4) 0 0 (initState p 0)
   return items ++ [.str (slice s last s.length)]
 
-/-- `match_getslice_by_index`, `Modules/_sre/sre.c:2296-2325`. -/
+/-- `match_getslice_by_index`, `Modules/_sre/sre.c:2302-2331`. -/
 def matchSlice (s : List Nat) (m : MatchR) (i : Nat) : GroupV :=
   match m.spans.getD i none with
   | some (a, b) => .str (slice s a b)
   | none => .none
 
-/-- `_sre_SRE_Match_groups_impl`, `Modules/_sre/sre.c:2449-2470`, with `default=None`. -/
+/-- `_sre_SRE_Match_groups_impl`, `Modules/_sre/sre.c:2456-2477`, with `default=None`. -/
 def matchGroups (s : List Nat) (m : MatchR) : List GroupV :=
   (List.range (m.spans.length - 1)).map fun i => matchSlice s m (i + 1)
 
-/-- `_sre_SRE_Match_groupdict_impl`, `Modules/_sre/sre.c:2482-2520`. -/
+/-- `_sre_SRE_Match_groupdict_impl`, `Modules/_sre/sre.c:2490-2528`. -/
 def matchGroupdict (p : Pat) (s : List Nat) (m : MatchR) : List (List Nat × GroupV) :=
   p.groupindex.map fun x => (x.1, matchSlice s m x.2)
 
-/-- `match_lastgroup_get`, `Modules/_sre/sre.c:2686-2699`. -/
+/-- `match_lastgroup_get`, `Modules/_sre/sre.c:2684-2697`. -/
 def matchLastgroup (p : Pat) (m : MatchR) : Option (List Nat) :=
   match m.lastindex with
   | none => none
   | some i => (p.groupindex.find? (·.2 == i)).map (·.1)
 
-/-- `expand_template`, `Modules/_sre/sre.c:3024-3087`, on `parse_template`'s items. -/
+/-- `expand_template`, `Modules/_sre/sre.c:3022-3085`, on `parse_template`'s items. -/
 def expandTemplate (items : List TItem) (s : List Nat) (m : MatchR) : Py (List Nat) :=
   items.foldlM (init := []) fun acc it =>
     match it with
@@ -478,7 +478,7 @@ def expandTemplate (items : List TItem) (s : List Nat) (m : MatchR) : Py (List N
         | .str t => .ok (acc ++ t)
         | .none => .ok acc
 
-/-- `_sre_SRE_Match_expand_impl`, `Modules/_sre/sre.c:2383-2392`. -/
+/-- `_sre_SRE_Match_expand_impl`, `Modules/_sre/sre.c:2390-2399`. -/
 def matchExpand (p : Pat) (repl s : List Nat) (m : MatchR) : Py (List Nat) := do
   expandTemplate (← parseTemplate p.istext repl p.groups p.groupindex) s m
 
@@ -488,13 +488,13 @@ inductive Filter where
   | template (items : List TItem)
   deriving Repr, DecidableEq, Inhabited
 
-/-- The `if (filter_type != LITERAL)` of `pattern_subx`, `Modules/_sre/sre.c:1322-1352`. -/
+/-- The `if (filter_type != LITERAL)` of `pattern_subx`, `Modules/_sre/sre.c:1326-1356`. -/
 def subItem (p : Pat) (s : List Nat) (f : Filter) (st : SSt) : Py (List Nat) :=
   match f with
   | .literal l => pure l
   | .template t => do expandTemplate t s (← newMatch p st)
 
-/-- The loop of `pattern_subx`, `Modules/_sre/sre.c:1300-1366`: output, `i` and `n`. -/
+/-- The loop of `pattern_subx`, `Modules/_sre/sre.c:1304-1370`: output, `i` and `n`. -/
 def subLoop (p : Pat) (e : Env) (s : List Nat) (f : Filter) (count : Int) :
     (fuel : Nat) → (i : Nat) → (n : Int) → SSt → Py (List Nat × Nat × Int)
   | 0, _, _, _ => .error .modelFuel
@@ -514,7 +514,7 @@ def subLoop (p : Pat) (e : Env) (s : List Nat) (f : Filter) (count : Int) :
           { st with mustAdvance := st.ptr == st.start, start := st.ptr }
         return (pre ++ item ++ rest, i2, n2)
 
-/-- `pattern_subx`, `Modules/_sre/sre.c:1223-1416`, for a `str` or `bytes` `repl`. -/
+/-- `pattern_subx`, `Modules/_sre/sre.c:1227-1420`, for a `str` or `bytes` `repl`. -/
 def subx (p : Pat) (repl s : List Nat) (count : Int) (isbytes : Bool := !p.istext) :
     Py (List Nat × Int) := do
   let f ←
@@ -537,7 +537,7 @@ inductive CallRet where
   | other (cls : String)
   deriving Repr, DecidableEq, Inhabited
 
-/-- The loop of `pattern_subx` for a callable, `Modules/_sre/sre.c:1300-1366`. `f k m` is the `k`th
+/-- The loop of `pattern_subx` for a callable, `Modules/_sre/sre.c:1304-1370`. `f k m` is the `k`th
 call. The result is the list that is joined at the end, so a wrong type surfaces only after every
 call has run. -/
 def subCallLoop (p : Pat) (e : Env) (s : List Nat) (f : Nat → MatchR → Py CallRet) (count : Int) :
@@ -572,7 +572,7 @@ def joinItems (isbytes : Bool) : List CallRet → Nat → Py (List Nat)
     .error (.typeError (if isbytes then s!"sequence item {k}: expected a bytes-like object, {cls} found"
       else s!"sequence item {k}: expected str instance, {cls} found"))
 
-/-- `pattern_subx`, `Modules/_sre/sre.c:1223-1416`, for a callable `repl`. -/
+/-- `pattern_subx`, `Modules/_sre/sre.c:1227-1420`, for a callable `repl`. -/
 def subCall (p : Pat) (f : Nat → MatchR → Py CallRet) (s : List Nat) (count : Int) (isbytes : Bool) :
     Py (List Nat × Int) := do
   checkSubject p isbytes
@@ -591,7 +591,7 @@ inductive GIdx where
   | unhashable
   deriving Repr, DecidableEq, Inhabited
 
-/-- `match_getindex`, `Modules/_sre/sre.c:2327-2360`. -/
+/-- `match_getindex`, `Modules/_sre/sre.c:2333-2366`. -/
 def matchGetindex (p : Pat) (m : MatchR) (g : GIdx) : Py Nat :=
   let check (i : Int) : Py Nat :=
     if i < 0 ∨ i ≥ m.spans.length then .error (.indexError "no such group") else .ok i.toNat
@@ -606,11 +606,11 @@ def matchGetindex (p : Pat) (m : MatchR) (g : GIdx) : Py Nat :=
     if p.groupindex.isEmpty then check (-1)
     else .error (.typeError "~unhashable type")
 
-/-- `match_getslice`, `Modules/_sre/sre.c:2362-2372`. -/
+/-- `match_getslice`, `Modules/_sre/sre.c:2368-2378`. -/
 def matchGetslice (p : Pat) (s : List Nat) (m : MatchR) (g : GIdx) : Py GroupV := do
   return matchSlice s m (← matchGetindex p m g)
 
-/-- `match_group`, `Modules/_sre/sre.c:2396-2430`: one value, or a tuple for two or more. -/
+/-- `match_group`, `Modules/_sre/sre.c:2403-2437`: one value, or a tuple for two or more. -/
 def matchGroup (p : Pat) (s : List Nat) (m : MatchR) : List GIdx → Py FindItem
   | [] => do return .one (← matchGetslice p s m (.int 0))
   | [g] => do return .one (← matchGetslice p s m g)
@@ -622,23 +622,23 @@ def markPair (m : MatchR) (i : Nat) : Int × Int :=
   | some (a, b) => (a, b)
   | none => (-1, -1)
 
-/-- `_sre_SRE_Match_start_impl`, `Modules/_sre/sre.c:2528-2540`. -/
+/-- `_sre_SRE_Match_start_impl`, `Modules/_sre/sre.c:2536-2548`. -/
 def matchStart (p : Pat) (m : MatchR) (g : GIdx) : Py Int := do
   return (markPair m (← matchGetindex p m g)).1
 
-/-- `_sre_SRE_Match_end_impl`, `Modules/_sre/sre.c:2551-2563`. -/
+/-- `_sre_SRE_Match_end_impl`, `Modules/_sre/sre.c:2559-2571`. -/
 def matchEnd (p : Pat) (m : MatchR) (g : GIdx) : Py Int := do
   return (markPair m (← matchGetindex p m g)).2
 
-/-- `_sre_SRE_Match_span_impl`, `Modules/_sre/sre.c:2601-2613`. -/
+/-- `_sre_SRE_Match_span_impl`, `Modules/_sre/sre.c:2599-2611`. -/
 def matchSpan (p : Pat) (m : MatchR) (g : GIdx) : Py (Int × Int) := do
   return markPair m (← matchGetindex p m g)
 
-/-- `match_regs`, `Modules/_sre/sre.c:2615-2638`. -/
+/-- `match_regs`, `Modules/_sre/sre.c:2613-2636`. -/
 def matchRegs (m : MatchR) : List (Int × Int) :=
   (List.range m.spans.length).map (markPair m)
 
-/-- `PyBytes_Repr`, `Objects/bytesobject.c:1389-1461`. -/
+/-- `PyBytes_Repr`, `Objects/bytesobject.c:1480-1552`. -/
 def bytesRepr (b : List Nat) : List Nat :=
   let q : Nat := if b.contains 39 && !b.contains 34 then 34 else 39
   let hex (n : Nat) : Nat := if n < 10 then 48 + n else 87 + n
@@ -659,7 +659,7 @@ def asciiNats (s : String) : List Nat := s.toList.map Char.toNat
 
 def decNats (n : Int) : List Nat := asciiNats (toString n)
 
-/-- `match_repr`, `Modules/_sre/sre.c:2710-2724`. -/
+/-- `match_repr`, `Modules/_sre/sre.c:2708-2722`. -/
 def matchRepr (isbytes : Bool) (s : List Nat) (m : MatchR) : List Nat :=
   let g0 := match matchSlice s m 0 with
     | .str t => t
@@ -668,14 +668,14 @@ def matchRepr (isbytes : Bool) (s : List Nat) (m : MatchR) : List Nat :=
   asciiNats "<re.Match object; span=(" ++ decNats a ++ asciiNats ", " ++ decNats b ++
     asciiNats "), match=" ++ reprCut 50 isbytes g0 ++ asciiNats ">"
 
-/-- `flag_names`, `Modules/_sre/sre.c:1519-1528`. -/
+/-- `flag_names`, `Modules/_sre/sre.c:1525-1534`. -/
 def flagNames : List (String × Nat) :=
   [("re.IGNORECASE", 2), ("re.LOCALE", 4), ("re.MULTILINE", 8), ("re.DOTALL", 16),
    ("re.UNICODE", 32), ("re.VERBOSE", 64), ("re.DEBUG", 128), ("re.ASCII", 256)]
 
 def hexOf (n : Nat) : String := String.ofList (Nat.toDigits 16 n)
 
-/-- `pattern_repr`, `Modules/_sre/sre.c:1513-1592`. `pattern=None` has `repr` `None`. -/
+/-- `pattern_repr`, `Modules/_sre/sre.c:1519-1598`. `pattern=None` has `repr` `None`. -/
 def patternRepr (p : Pat) : List Nat :=
   let fl0 :=
     if p.isbytes = 0 ∧ p.flags &&& (4 ||| 32 ||| 256) = 32 then p.flags - 32 else p.flags
@@ -690,16 +690,16 @@ def patternRepr (p : Pat) : List Nat :=
   else asciiNats "re.compile(" ++ shown ++ asciiNats ", " ++
     asciiNats (String.intercalate "|" items) ++ asciiNats ")"
 
-/-- The `Py_EQ` of `pattern_richcompare`, `Modules/_sre/sre.c:3115-3162`. -/
+/-- The `Py_EQ` of `pattern_richcompare`, `Modules/_sre/sre.c:3113-3160`. -/
 def patEq (a b : Pat) : Bool :=
   a.flags == b.flags && a.isbytes == b.isbytes && a.code.size == b.code.size &&
     a.code == b.code && a.pattern == b.pattern
 
-/-- What `pattern_hash`, `Modules/_sre/sre.c:3090-3113`, mixes. -/
+/-- What `pattern_hash`, `Modules/_sre/sre.c:3088-3111`, mixes. -/
 def patHashInput (a : Pat) : Option (List Nat) × Array Nat × Nat × Int × Nat :=
   (a.pattern, a.code, a.flags, a.isbytes, a.code.size)
 
-/-- `_sre_template_impl`, `Modules/_sre/sre.c:1718-1768`, on `[literal, g, literal, ...]`. `none`
+/-- `_sre_template_impl`, `Modules/_sre/sre.c:1724-1774`, on `[literal, g, literal, ...]`. `none`
 stands for an `int` item in a literal slot or a `str` in an index slot, which the model's list
 never holds; the check that remains is a negative index. -/
 def templateCheck (lits : List (List Nat)) (idx : List Int) : Py Unit :=
@@ -709,10 +709,10 @@ def templateCheck (lits : List (List Nat)) (idx : List Int) : Py Unit :=
 
 /-! ### `Lib/re/__init__.py` -/
 
-/-- `_special_chars_map`, `Lib/re/__init__.py:303`. -/
+/-- `_special_chars_map`, `Lib/re/__init__.py:305`. -/
 def specialChars : List Nat := "()[]{}?*+-|^$\\.&~# \t\n\r\x0b\x0c".toList.map Char.toNat
 
-/-- `escape`, `Lib/re/__init__.py:305-313`. -/
+/-- `escape`, `Lib/re/__init__.py:307-315`. -/
 def escape (s : List Nat) : List Nat :=
   s.flatMap fun c => if specialChars.contains c then [92, c] else [c]
 
@@ -725,7 +725,7 @@ inductive PatArg where
   | other
   deriving Repr, Inhabited
 
-/-- `_compile`, `Lib/re/__init__.py:330-372`. The caches only return an earlier result. -/
+/-- `_compile`, `Lib/re/__init__.py:332-374`. The caches only return an earlier result. -/
 def reCompile (pat : PatArg) (flags : Nat) : Py Pat :=
   match pat with
   | .compiled p =>
@@ -736,7 +736,7 @@ def reCompile (pat : PatArg) (flags : Nat) : Py Pat :=
   | .bytes s => compilePat false s flags
 
 /-- The positional `*args` of `sub`, `subn` (`first` `count`, `least` `3`) and `split` (`first`
-`maxsplit`, `least` `2`), `Lib/re/__init__.py:190-206`: the first argument and `flags`. `kwFirst`
+`maxsplit`, `least` `2`), `Lib/re/__init__.py:192-208`: the first argument and `flags`. `kwFirst`
 and `kwFlags` are the keywords, `none` for `_zero_sentinel`. -/
 def shuffleArgs (fn first : String) (least : Nat) (args : List Int) (kwFirst kwFlags : Option Int) :
     Py (Int × Int) :=
@@ -753,7 +753,7 @@ def shuffleArgs (fn first : String) (least : Nat) (args : List Int) (kwFirst kwF
           .error (.typeError s!"{fn}() takes from {least} to {least + 2} positional arguments but {least + 2 + rest.length} were given")
         else .ok (a, b)
 
-/-- A `Scanner`, `Lib/re/__init__.py:392-408`: its pattern object. `flags` is not passed through
+/-- A `Scanner`, `Lib/re/__init__.py:394-413`: its pattern object. `flags` is not passed through
 `fix_flags` for the combined pattern, and each phrase is parsed in a state of its own. -/
 def scannerInit (istext : Bool) (phrases : List (List Nat)) (flags : Nat) : Py Pat := do
   let parsed ← phrases.mapM (fun ph => parse istext ph flags)
@@ -772,7 +772,7 @@ def scannerInit (istext : Bool) (phrases : List (List Nat)) (flags : Nat) : Py P
   validate code n
   return ⟨none, code, n, [], -1, flags⟩
 
-/-- `Scanner.scan`, `Lib/re/__init__.py:409-428`: `actions[i]`, `none` for `None`. -/
+/-- `Scanner.scan`, `Lib/re/__init__.py:414-433`: `actions[i]`, `none` for `None`. -/
 def scanLoopS {α : Type} [Inhabited α] (actions : List (Option α)) (ms : List MatchR) (i : Nat) :
     List α × Nat :=
   match ms with

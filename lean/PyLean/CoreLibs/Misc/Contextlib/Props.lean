@@ -192,7 +192,7 @@ theorem exitThrowCases_proven : ExitThrowCases := by
     · cases hr : s'.h.isInst exc "RuntimeError" <;> simp [h3, h4]
 
 /-- "`__exit__()` must not raise an exception unless `__exit__()` itself failed" (Lib/contextlib.py
-:188-189): on every generator whose `close()` does not itself raise `value`, `__exit__` never
+:250-251): on every generator whose `close()` does not itself raise `value`, `__exit__` never
 raises the exception passed in. A `with` statement then re-raises it with the original traceback. -/
 def ExitNeverRaisesValue : Prop :=
   ∀ (σ V : Type) (cfg : Cfg) (ops : GenOps σ V) (inst : Instantiate σ) (s : St σ) (c : Cls)

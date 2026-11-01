@@ -36,8 +36,8 @@ observed: |
 promised_by: |
   Twin relation only. Doc/library/pickle.rst says protocol 4 "adds support for very large objects".
 cause: |
-  Lib/pickle.py:851-854: `n > 0xffffffff and self.proto >= 4` is false at protocol 3, so the next
-  branch runs `pack("<I", n)`; likewise :926-929 for str. Modules/_pickle.c:2540-2545 and :2848-2854
+  Lib/pickle.py:867-870: `n > 0xffffffff and self.proto >= 4` is false at protocol 3, so the next
+  branch runs `pack("<I", n)`; likewise :942-945 for str. Modules/_pickle.c:2648-2653 and :2952-2958
   raise OverflowError explicitly.
 possible_fix: |
   Add the same check to `_save_bytes_no_memo` and `save_str`.

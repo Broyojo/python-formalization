@@ -416,7 +416,7 @@ def consumerInner (limit : Nat) (needHi : Bool) :
 
 /-! ## The knots with the C code -/
 
-/-- `pylong_int_to_decimal_string(aa, ...)`, longobject.c:1952-2012, as `str(a)` with
+/-- `pylong_int_to_decimal_string(aa, ...)`, longobject.c:2027-2088, as `str(a)` with
 fuel for the mutual recursion between C and `_pylong`: `int_to_decimal_string` calls
 `str` on pieces. -/
 def longStrF : Nat → Nat → Long → Py (List Char)
@@ -425,7 +425,7 @@ def longStrF : Nat → Nat → Long → Py (List Char)
     longToDecimalWith
       (fun y => intToDecimalString (fun n => longStrF f lim (Long.ofInt n)) y.toInt) lim x
 
-/-- `long_to_decimal_string(aa)`, longobject.c:2243-2249. -/
+/-- `long_to_decimal_string(aa)`, longobject.c:2321-2327. -/
 def longToDecimalString (lim : Nat) (x : Long) : Py (List Char) := longStrF 3 lim x
 
 /-- `_PyLong_Format(obj, base)`. -/
@@ -441,7 +441,7 @@ def decLeafOf (leaf : List Nat → Py Int) (n : Nat) : Py Nat := do
   let v ← leaf ((Nat.toDigits 10 n).map Char.toNat)
   return v.toNat
 
-/-- `pylong_int_from_string(start, end, res)`, longobject.c:2576-2604. -/
+/-- `pylong_int_from_string(start, end, res)`, longobject.c:2657-2685. -/
 def pylongHook (leaf : List Nat → Py Int) (body : List Nat) : Py (List Nat) := do
   let v ← intFromString leaf (decLeafOf leaf) body
   return digitsOf v.natAbs

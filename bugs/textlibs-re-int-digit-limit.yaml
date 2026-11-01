@@ -40,10 +40,10 @@ observed: |
   main 3.16.0a1+dev (ef1fce0): the same. REPRODUCED.
 promised_by: |
   docs: re.compile raises re.PatternError for an invalid pattern; the OverflowError at
-  Lib/re/_parser.py:671 and :675 is the module's own answer for too large a repeat count.
+  Lib/re/_parser.py:670 and :674 is the module's own answer for too large a repeat count.
 cause: |
-  Lib/re/_parser.py:669 and :673 (`int(lo)`, `int(hi)` for `{m,n}`), :800 (`int(condname)`), and
-  :1030 (`int(name)` in parse_template) run before the range checks that follow them.
+  Lib/re/_parser.py:668 and :672 (`int(lo)`, `int(hi)` for `{m,n}`), :799 (`int(condname)`), and
+  :1029 (`int(name)` in parse_template) run before the range checks that follow them.
 possible_fix: |
   Test the digit count first: more digits than MAXREPEAT or MAXGROUPS can have is already out of
   range, so the existing error can be raised without calling int().

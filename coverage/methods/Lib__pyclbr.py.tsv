@@ -6,12 +6,12 @@ Lib/pyclbr.py	89	92	_nest_function	_nest_function(ob, func_name, lineno, end_lin
 Lib/pyclbr.py	94	97	_nest_class	_nest_class(ob, class_name, lineno, end_lineno, super=None)	todo		
 Lib/pyclbr.py	100	110	readmodule	readmodule(module, path=None)	todo		
 Lib/pyclbr.py	112	119	readmodule_ex	readmodule_ex(module, path=None)	todo		
-Lib/pyclbr.py	122	183	_readmodule	_readmodule(module, path, inpackage=None)	todo		
-Lib/pyclbr.py	187	193	_ModuleBrowser.__init__	__init__(self, module, path, file, tree, inpackage)	todo		
-Lib/pyclbr.py	195	218	_ModuleBrowser.visit_ClassDef	visit_ClassDef(self, node)	todo		
-Lib/pyclbr.py	220	228	_ModuleBrowser.visit_FunctionDef	visit_FunctionDef(self, node, *, is_async=False)	todo		
-Lib/pyclbr.py	230	231	_ModuleBrowser.visit_AsyncFunctionDef	visit_AsyncFunctionDef(self, node)	todo		
-Lib/pyclbr.py	233	246	_ModuleBrowser.visit_Import	visit_Import(self, node)	todo		
-Lib/pyclbr.py	248	266	_ModuleBrowser.visit_ImportFrom	visit_ImportFrom(self, node)	todo		
-Lib/pyclbr.py	269	272	_create_tree	_create_tree(fullmodule, path, fname, source, tree, inpackage)	todo		
-Lib/pyclbr.py	275	311	_main	_main()	todo		
+Lib/pyclbr.py	122	182	_readmodule	_readmodule(module, path, inpackage=None)	todo		changed-in-3.15:
+Lib/pyclbr.py	186	192	_ModuleBrowser.__init__	__init__(self, module, path, file, tree, inpackage)	todo		
+Lib/pyclbr.py	194	217	_ModuleBrowser.visit_ClassDef	visit_ClassDef(self, node)	todo		
+Lib/pyclbr.py	219	227	_ModuleBrowser.visit_FunctionDef	visit_FunctionDef(self, node, *, is_async=False)	todo		
+Lib/pyclbr.py	229	230	_ModuleBrowser.visit_AsyncFunctionDef	visit_AsyncFunctionDef(self, node)	todo		
+Lib/pyclbr.py	232	245	_ModuleBrowser.visit_Import	visit_Import(self, node)	todo		
+Lib/pyclbr.py	247	265	_ModuleBrowser.visit_ImportFrom	visit_ImportFrom(self, node)	todo		
+Lib/pyclbr.py	268	271	_create_tree	_create_tree(fullmodule, path, fname, source, tree, inpackage)	todo		
+Lib/pyclbr.py	274	310	_main	_main()	todo		

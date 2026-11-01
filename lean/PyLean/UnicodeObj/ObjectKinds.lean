@@ -70,7 +70,7 @@ theorem isAsciiKind_proven : IsAsciiKind := by
       omega
     simp [this]
 
-/-- `PyUnicode_Concat`, unicodeobject.c:11634-11680, on two strings: the text and the
+/-- `PyUnicode_Concat`, unicodeobject.c:11359-11405, on two strings: the text and the
 `maxchar` passed to `PyUnicode_New`. `right` being a `str` is the type check. -/
 def pyUnicodeConcat (l r : Str) : Py (Str × Nat) :=
   if l.isEmpty then .ok (r, (canonicalKind r).maxChar)
@@ -134,13 +134,13 @@ theorem concatKind_proven : ConcatKind := by
         rw [maxCharOf_append]
         exact kind_max _ _ hml hmr
 
-/-- `kind_maxchar_limit`, unicodeobject.c:2291-2303. -/
+/-- `kind_maxchar_limit`, unicodeobject.c:2157-2169. -/
 def kindMaxcharLimit : Kind → Nat
   | .ascii | .ucs1 => 0x80
   | .ucs2 => 0x100
   | .ucs4 => 0x10000
 
-/-- The `max_char` loop of `unicode_subscript`, unicodeobject.c:14621-14630, with its
+/-- The `max_char` loop of `unicode_subscript`, unicodeobject.c:13842-13851, with its
 early `break`. -/
 def sliceMaxLoop (limit : Nat) : List Nat → Nat → Nat
   | [], m => m
@@ -148,7 +148,7 @@ def sliceMaxLoop (limit : Nat) : List Nat → Nat → Nat
     if c > m then (if c ≥ limit then c else sliceMaxLoop limit cs c)
     else sliceMaxLoop limit cs m
 
-/-- `max_char` of the general case of `unicode_subscript`, unicodeobject.c:14619-14633. -/
+/-- `max_char` of the general case of `unicode_subscript`, unicodeobject.c:13840-13854. -/
 def sliceMaxChar (src sub : Str) : Nat :=
   if isAscii src then 127 else sliceMaxLoop (kindMaxcharLimit (canonicalKind src)) sub 0
 
@@ -215,7 +215,7 @@ theorem sliceKind_proven : SliceKind := by
       simp only [maxCharOf] at *
       cases k <;> simp only [kindMaxcharLimit] at h1 <;> grind
 
-/-- `unicode_repeat`, unicodeobject.c:12816-12867, for `len` a `Py_ssize_t`. -/
+/-- `unicode_repeat`, unicodeobject.c:12561-12612, for `len` a `Py_ssize_t`. -/
 def unicodeRepeat (s : Str) (len : Int) : Py Str :=
   if len < 1 then .ok []
   else if len = 1 then .ok s
@@ -267,7 +267,7 @@ theorem repeatLength_proven : RepeatLength := by
       rw [flatten_replicate_length, Int.natCast_mul, Int.toNat_of_nonneg (by omega)]
     exact ⟨_, rfl, hlen, by omega⟩
 
-/-- `unicode_compare`, unicodeobject.c:11194-11307: -1, 0 or 1 by code points. The
+/-- `unicode_compare`, unicodeobject.c:10960-11073: -1, 0 or 1 by code points. The
 twelve kind pairs and the `memcmp` paths all compute this. -/
 def unicodeCompare : Str → Str → Int
   | [], [] => 0

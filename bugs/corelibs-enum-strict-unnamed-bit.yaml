@@ -14,7 +14,7 @@ likelihood: |
   Low. It needs a multi-bit member whose bits are not all named, which verify(NAMED_FLAGS) exists to
   forbid but which is allowed by default, and a value built from part of it.
 maybe_intended: |
-  Probably not intended: the comment at Lib/enum.py:1460 says a value "must not include any skipped
+  Probably not intended: the comment at Lib/enum.py:1488 says a value "must not include any skipped
   flags". A maintainer might answer that such a class should use verify(NAMED_FLAGS).
 reproducer: |
   from enum import Flag
@@ -38,10 +38,10 @@ observed: |
   python3 3.14.7: F(2) is <F: 2>, F(3) and F(2) | F.A raise ValueError. REPRODUCED.
   main (python.exe 3.16.0a1+dev): same, REPRODUCED.
 promised_by: |
-  The docstring of FlagBoundary at Lib/enum.py:1389, "strict" -> error is raised, and the comment at
-  Lib/enum.py:1460.
+  The docstring of FlagBoundary at Lib/enum.py:1417, "strict" -> error is raised, and the comment at
+  Lib/enum.py:1488.
 cause: |
-  Lib/enum.py:1524-1527: `if not combined_value: pseudo_member._name_ = None` comes first, so
+  Lib/enum.py:1555-1558: `if not combined_value: pseudo_member._name_ = None` comes first, so
   `elif unknown and cls._boundary_ is STRICT` is not reached when no member matched.
 possible_fix: |
   Test `unknown and cls._boundary_ is STRICT` first.

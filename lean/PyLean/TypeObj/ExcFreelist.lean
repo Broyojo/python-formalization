@@ -1,7 +1,7 @@
 import PyLean.TypeObj.ExcCore
 
 /-!
-The `MemoryError` freelist, `Objects/exceptions.c:4024-4150`.
+The `MemoryError` freelist, `Objects/exceptions.c:4101-4227`.
 
 The object model has no reference counts, so `dealloc` never runs in a scenario. The freelist
 is modelled on its own here: a list of the `PyBaseExceptionObject` bodies that
@@ -12,10 +12,10 @@ is visible: the object survives it.
 
 namespace PyLean.TypeObj
 
-/-- `MEMERRORS_SAVE`, `Objects/exceptions.c:4024`. -/
+/-- `MEMERRORS_SAVE`, `Objects/exceptions.c:4101`. -/
 def memerrorsSave : Nat := 16
 
-/-- `BaseException_clear`, `Objects/exceptions.c:133`: `dict`, `args`, `notes`, `traceback`,
+/-- `BaseException_clear`, `Objects/exceptions.c:125`: `dict`, `args`, `notes`, `traceback`,
 `cause` and `context`, and nothing else. `suppress_context` is not a reference. -/
 def baseExceptionClear (d : ExcData) : ExcData :=
   { d with args := [], notes := none, traceback := .none, cause := none, context := none }
@@ -23,7 +23,7 @@ def baseExceptionClear (d : ExcData) : ExcData :=
 /-- `state->memerrors_freelist`, most recently freed first. -/
 abbrev MemFreelist := List ExcData
 
-/-- `MemoryError_dealloc`, `Objects/exceptions.c:4093`. `exact` is
+/-- `MemoryError_dealloc`, `Objects/exceptions.c:4170`. `exact` is
 `Py_IS_TYPE(self, PyExc_MemoryError)`. -/
 def memoryErrorDealloc (exact : Bool) (d : ExcData) (s : MemFreelist) : MemFreelist :=
   let d := baseExceptionClear d
@@ -38,21 +38,21 @@ inductive MemGot where
   | lastResort
   | fresh (d : ExcData)
 
-/-- `get_memory_error`, `Objects/exceptions.c:4035`. The freelist path ignores `args`. -/
+/-- `get_memory_error`, `Objects/exceptions.c:4112`. The freelist path ignores `args`. -/
 def getMemoryError (allowAllocation : Bool) (args : List Val) (s : MemFreelist) :
     MemGot × MemFreelist :=
   match s with
   | d :: rest => (.reused { d with args := [] }, rest)
   | [] => if allowAllocation then (.fresh { args := args }, []) else (.lastResort, [])
 
-/-- `_PyErr_NoMemory`, `Objects/exceptions.c:4077`, past the startup check. -/
+/-- `_PyErr_NoMemory`, `Objects/exceptions.c:4154`, past the startup check. -/
 def pyErrNoMemory (s : MemFreelist) : MemGot × MemFreelist := getMemoryError false [] s
 
-/-- `preallocate_memerrors`, `Objects/exceptions.c:4122`: sixteen objects made and released. -/
+/-- `preallocate_memerrors`, `Objects/exceptions.c:4199`: sixteen objects made and released. -/
 def preallocateMemerrors : MemFreelist :=
   (List.range memerrorsSave).foldl (fun s _ => memoryErrorDealloc true { args := [] } s) []
 
-/-- `free_preallocated_memerrors`, `Objects/exceptions.c:4143`. -/
+/-- `free_preallocated_memerrors`, `Objects/exceptions.c:4220`. -/
 def freePreallocatedMemerrors (_s : MemFreelist) : MemFreelist := []
 
 end PyLean.TypeObj

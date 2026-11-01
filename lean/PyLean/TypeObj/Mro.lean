@@ -2,7 +2,7 @@ import PyLean.TypeObj.Protocol
 
 /-!
 C3 linearization: `tail_contains`, `pmerge`, `mro_implementation_unlocked`
-(`Objects/typeobject.c:3146-3415`).
+(`Objects/typeobject.c:3286-3556`).
 
 The C code keeps an index `remain[i]` into each list of `to_merge`. Here the state is the
 list of remaining suffixes, `rests[i] = to_merge[i][remain[i]:]`, so:
@@ -19,21 +19,21 @@ namespace PyLean.TypeObj
 
 variable {α : Type} [DecidableEq α]
 
-/-- `tail_contains(lst, remain, c)`, `Objects/typeobject.c:3146`. -/
+/-- `tail_contains(lst, remain, c)`, `Objects/typeobject.c:3286`. -/
 def tailContains (rest : List α) (c : α) : Bool := rest.tail.contains c
 
-/-- The inner test at `Objects/typeobject.c:3298-3302`: `c` is in no tail. -/
+/-- The inner test at `Objects/typeobject.c:3439-3443`: `c` is in no tail. -/
 def goodHead (rests : List (List α)) (c : α) : Bool :=
   !rests.any (fun r => tailContains r c)
 
-/-- The scan of `Objects/typeobject.c:3280-3316`: the first list whose head is in no
+/-- The scan of `Objects/typeobject.c:3421-3457`: the first list whose head is in no
 tail. -/
 def candidateOf (all : List (List α)) : List (List α) → Option α
   | [] => none
   | [] :: rest => candidateOf all rest
   | (c :: _) :: rest => if goodHead all c then some c else candidateOf all rest
 
-/-- `remain[j]++` when list `j` is headed by the candidate, `:3307-3313`. -/
+/-- `remain[j]++` when list `j` is headed by the candidate, `:3448-3454`. -/
 def advance1 (c : α) : List α → List α
   | [] => []
   | x :: t => if x = c then t else x :: t
@@ -49,7 +49,7 @@ inductive Merge (α : Type) where
   | conflict (rests : List (List α))
   | fuel
 
-/-- `pmerge`, `Objects/typeobject.c:3260`, the `goto again` loop by fuel. -/
+/-- `pmerge`, `Objects/typeobject.c:3401`, the `goto again` loop by fuel. -/
 def pmerge : Nat → List (List α) → Merge α
   | 0, _ => .fuel
   | fuel + 1, rests =>
@@ -294,7 +294,7 @@ theorem pmerge_nodup (fuel : Nat) (rests : List (List α)) (m : List α)
 
 /-! ### Linearization -/
 
-/-- The result of `mro_implementation_unlocked`, `Objects/typeobject.c:3330`, for a class
+/-- The result of `mro_implementation_unlocked`, `Objects/typeobject.c:3471`, for a class
 `self` given its bases and the MRO of each base. `duplicate` is `check_duplicates`.
 `baseMro b = none` is `lookup_tp_mro(base) == NULL`. -/
 inductive Lin (α : Type) where
@@ -304,12 +304,12 @@ inductive Lin (α : Type) where
   | conflict (rests : List (List α))
   | fuel
 
-/-- The first repeated item of a list, `check_duplicates`, `Objects/typeobject.c:3169`. -/
+/-- The first repeated item of a list, `check_duplicates`, `Objects/typeobject.c:3310`. -/
 def firstDuplicate : List α → Option α
   | [] => none
   | x :: xs => if xs.contains x then some x else firstDuplicate xs
 
-/-- The first base without an MRO, the check at `Objects/typeobject.c:3341-3350`. -/
+/-- The first base without an MRO, the check at `Objects/typeobject.c:3482-3491`. -/
 def firstIncomplete (baseMro : α → Option (List α)) : List α → Option α
   | [] => none
   | b :: bs =>
@@ -317,7 +317,7 @@ def firstIncomplete (baseMro : α → Option (List α)) : List α → Option α
     | none => some b
     | some _ => firstIncomplete baseMro bs
 
-/-- The list `to_merge`, `Objects/typeobject.c:3394-3400`. -/
+/-- The list `to_merge`, `Objects/typeobject.c:3535-3541`. -/
 def toMerge (baseMro : α → Option (List α)) (bases : List α) : List (List α) :=
   bases.map (fun b => (baseMro b).getD []) ++ [bases]
 
@@ -332,7 +332,7 @@ def c3Merge (self : α) (baseMro : α → Option (List α)) (bases : List α) : 
     | .conflict r => .conflict r
     | .fuel => .fuel
 
-/-- `mro_implementation_unlocked`, `Objects/typeobject.c:3330`. -/
+/-- `mro_implementation_unlocked`, `Objects/typeobject.c:3471`. -/
 def mroImpl (self : α) (baseMro : α → Option (List α)) (bases : List α) : Lin α :=
   match firstIncomplete baseMro bases with
   | some b => .incomplete b
@@ -376,7 +376,7 @@ theorem pmerge_single (l : List α) (hnd : l.Nodup) (fuel : Nat) (hf : l.length 
       rw [ih (List.nodup_cons.mp hnd).2 n (by simpa using hf)]
 
 /-- Slow-path output for the single-base case agrees with the fast path, when the MRO of
-the base starts with the base and has no duplicates: `Objects/typeobject.c:3352-3372` is
+the base starts with the base and has no duplicates: `Objects/typeobject.c:3493-3513` is
 purely an optimisation of `pmerge` under the invariants of a C3-computed MRO. -/
 theorem fast_slow_agree (self b : α) (baseMro : α → Option (List α)) (m : List α)
     (hm : baseMro b = some (b :: m)) (hnd : (b :: m).Nodup) :

@@ -54,8 +54,8 @@ promised_by: |
   No documentation; the invariant is that the fast path (range_iterator) and the slow path
   (longrange_iterator) of the same object type behave alike.
 cause: |
-  Objects/rangeobject.c:888 `long index = PyLong_AsLong(state);` propagates OverflowError
-  before the clipping at :891-895, whereas longrangeiter_setstate (:1042-1085) compares and
+  Objects/rangeobject.c:929 `long index = PyLong_AsLong(state);` propagates OverflowError
+  before the clipping at :932-936, whereas longrangeiter_setstate (:1099-1142) compares and
   clips in PyLong arithmetic.
 possible_fix: |
   Use PyLong_AsLongAndOverflow() in rangeiter_setstate and map overflow > 0 to r->len and

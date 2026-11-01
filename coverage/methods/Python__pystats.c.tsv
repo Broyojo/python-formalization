@@ -1,0 +1,37 @@
+file	line	endline	name	signature	status	entry	note
+Python/pystats.c	18	25	_PyStats_GetLocal	_PyStats_GetLocal(void)	todo		changed-in-3.15: new function
+Python/pystats.c	56	89	stats_to_dict	stats_to_dict(SpecializationStats *stats)	todo		
+Python/pystats.c	110	141	_Py_GetSpecializationStats	_Py_GetSpecializationStats(void) {	todo		changed-in-3.15: new function
+Python/pystats.c	150	192	print_spec_stats	print_spec_stats(FILE *out, OpcodeStats *stats)	todo		
+Python/pystats.c	197	206	print_call_stats	print_call_stats(FILE *out, CallStats *stats)	todo		
+Python/pystats.c	209	236	print_object_stats	print_object_stats(FILE *out, ObjectStats *stats)	todo		
+Python/pystats.c	239	248	print_gc_stats	print_gc_stats(FILE *out, GCStats *stats)	todo		
+Python/pystats.c	252	257	print_histogram	print_histogram(FILE *out, const char *name, uint64_t hist[_Py_UOP_HIST_SIZE])	todo		
+Python/pystats.c	262	334	print_optimization_stats	print_optimization_stats(FILE *out, OptimizationStats *stats)	todo		changed-in-3.15: new function
+Python/pystats.c	339	344	print_ft_stats	print_ft_stats(FILE *out, FTStats *stats)	todo		changed-in-3.15: new function
+Python/pystats.c	348	357	print_rare_event_stats	print_rare_event_stats(FILE *out, RareEventStats *stats)	todo		
+Python/pystats.c	360	373	print_stats	print_stats(FILE *out, PyStats *stats)	todo		changed-in-3.15: new function
+Python/pystats.c	378	389	merge_specialization_stats	merge_specialization_stats(SpecializationStats *dest, const SpecializationStats *src)	todo		changed-in-3.15: new function
+Python/pystats.c	392	401	merge_opcode_stats_array	merge_opcode_stats_array(OpcodeStats *dest, const OpcodeStats *src)	todo		changed-in-3.15: new function
+Python/pystats.c	404	413	merge_call_stats	merge_call_stats(CallStats *dest, const CallStats *src)	todo		changed-in-3.15: new function
+Python/pystats.c	416	444	merge_object_stats	merge_object_stats(ObjectStats *dest, const ObjectStats *src)	todo		changed-in-3.15: new function
+Python/pystats.c	447	456	merge_uop_stats_array	merge_uop_stats_array(UOpStats *dest, const UOpStats *src)	todo		changed-in-3.15: new function
+Python/pystats.c	459	500	merge_optimization_stats	merge_optimization_stats(OptimizationStats *dest, const OptimizationStats *src)	todo		changed-in-3.15: new function
+Python/pystats.c	503	508	merge_ft_stats	merge_ft_stats(FTStats *dest, const FTStats *src)	todo		changed-in-3.15: new function
+Python/pystats.c	511	520	merge_rare_event_stats	merge_rare_event_stats(RareEventStats *dest, const RareEventStats *src)	todo		changed-in-3.15: new function
+Python/pystats.c	523	532	merge_gc_stats_array	merge_gc_stats_array(GCStats *dest, const GCStats *src)	todo		changed-in-3.15: new function
+Python/pystats.c	535	541	stats_zero_thread	stats_zero_thread(_PyThreadStateImpl *tstate)	todo		changed-in-3.15: new function
+Python/pystats.c	545	562	stats_merge_thread	stats_merge_thread(_PyThreadStateImpl *tstate)	todo		changed-in-3.15: new function
+Python/pystats.c	567	607	stats_toggle_on_off	stats_toggle_on_off(PyThreadState *tstate, int on)	todo		changed-in-3.15: new function
+Python/pystats.c	611	631	stats_zero_all	stats_zero_all(void)	todo		changed-in-3.15: new function
+Python/pystats.c	635	653	stats_merge_all	stats_merge_all(void)	todo		changed-in-3.15: new function
+Python/pystats.c	656	660	_Py_StatsOn	_Py_StatsOn(void)	todo		changed-in-3.15: new function
+Python/pystats.c	663	667	_Py_StatsOff	_Py_StatsOff(void)	todo		changed-in-3.15: new function
+Python/pystats.c	670	673	_Py_StatsClear	_Py_StatsClear(void)	todo		changed-in-3.15: new function
+Python/pystats.c	676	685	mem_is_zero	mem_is_zero(unsigned char *ptr, size_t size)	todo		
+Python/pystats.c	688	752	_Py_PrintSpecializationStats	_Py_PrintSpecializationStats(int to_file)	todo		changed-in-3.15: new function
+Python/pystats.c	755	767	_PyStats_InterpInit	_PyStats_InterpInit(PyInterpreterState *interp)	todo		changed-in-3.15: new function
+Python/pystats.c	770	782	_PyStats_ThreadInit	_PyStats_ThreadInit(PyInterpreterState *interp, _PyThreadStateImpl *tstate)	todo		changed-in-3.15: new function
+Python/pystats.c	785	793	_PyStats_ThreadFini	_PyStats_ThreadFini(_PyThreadStateImpl *tstate)	todo		changed-in-3.15: new function
+Python/pystats.c	796	812	_PyStats_Attach	_PyStats_Attach(_PyThreadStateImpl *tstate_impl)	todo		changed-in-3.15: new function
+Python/pystats.c	815	818	_PyStats_Detach	_PyStats_Detach(_PyThreadStateImpl *tstate_impl)	todo		changed-in-3.15: new function

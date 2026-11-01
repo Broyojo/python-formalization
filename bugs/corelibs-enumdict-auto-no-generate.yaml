@@ -41,7 +41,7 @@ promised_by: |
   Doc/library/enum.rst, EnumDict: "It is exposed to allow subclasses of EnumType with advanced behavior". update
   overrides the MutableMapping method, and no mapping should be read as an iterable of pairs.
 cause: |
-  Lib/enum.py:334-340 does not set _generate_next_value, which :423 reads. :449-452 catches AttributeError around
+  Lib/enum.py:335-341 does not set _generate_next_value, which :424 reads. :450-453 catches AttributeError around
   the assignments as well as around members.keys().
 possible_fix: |
   Give __init__ a default generator or raise a clear TypeError, and take keys = members.keys() in the try, with the loop

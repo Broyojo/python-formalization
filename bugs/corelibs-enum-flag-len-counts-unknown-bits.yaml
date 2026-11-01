@@ -31,9 +31,9 @@ observed: |
   python3 3.14.7: len(Perm(12)) is 2 and list(Perm(12)) is [Perm.R]. REPRODUCED.
   main (python.exe 3.16.0a1+dev): same, REPRODUCED.
 promised_by: |
-  Doc/library/enum.rst:650, "Returns number of members in flag".
+  Doc/library/enum.rst:645, "Returns number of members in flag".
 cause: |
-  Lib/enum.py:1556-1557, against the mask at :1432.
+  Lib/enum.py:1587-1588, against the mask at :1460.
 possible_fix: |
   `return (self._value_ & self._flag_mask_).bit_count()`, or a documentation note.
 duplicates:

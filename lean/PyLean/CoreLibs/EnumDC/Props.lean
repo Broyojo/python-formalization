@@ -52,8 +52,8 @@ theorem conformKeepsMask_proven : ConformKeepsMask := by
 
 /-- A value of a `STRICT` flag class that the class accepts and that is not zero has a name: it is a
 combination of members. False: with `A = 1` and `X = 6`, `F(3)` raises "no members with value 2", but
-`F(2)` is accepted as a nameless pseudo-member, because the test at Lib/enum.py:1524 returns before the
-strict test at :1526. Then `F(2) | F.A` raises `ValueError` on two valid operands. -/
+`F(2)` is accepted as a nameless pseudo-member, because the test at Lib/enum.py:1555 returns before the
+strict test at :1557. Then `F(2) | F.A` raises `ValueError` on two valid operands. -/
 def StrictValuesAreNamed : Prop :=
   ∀ (c : FlagCls) (v : Int) (n : Nat) (name : Option String), c.boundary = .strict →
     c.call v = .ok (.flag n name) → n ≠ 0 → name.isSome = true
@@ -92,7 +92,7 @@ theorem autoValues_proven : AutoValues := by
   · intro s
     simp [flagNext]
 
-/-- The if-statement version of the table, from bpo-32929 referenced at Lib/dataclasses.py:981. -/
+/-- The if-statement version of the table, from bpo-32929 referenced at Lib/dataclasses.py:974. -/
 def hashByIf (unsafeHash eq frozen explicit : Bool) : HashAction :=
   if unsafeHash then (if explicit then .exception else .add)
   else if eq then

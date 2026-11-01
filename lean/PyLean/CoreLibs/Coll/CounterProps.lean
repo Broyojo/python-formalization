@@ -32,8 +32,8 @@ theorem cSlow_eq_py (m : Ctr κ) (xs : List κ) : countElementsCSlow m xs = coun
   split <;> omega
 
 /-- The three implementations of `_count_elements` write the same dict, keys in
-the same order: the C fast path (Modules/_collectionsmodule.c:2568-2613), the C slow path
-(:2614-2640) and the Python original (Lib/collections/__init__.py:540-544). -/
+the same order: the C fast path (Modules/_collectionsmodule.c:2572-2617), the C slow path
+(:2618-2644) and the Python original (Lib/collections/__init__.py:540-544). -/
 def CountElementsTwins : Prop :=
   ∀ (κ : Type) [DecidableEq κ] (m : Ctr κ) (xs : List κ),
     countElementsCFast m xs = countElementsPy m xs ∧ countElementsCSlow m xs = countElementsPy m xs
@@ -86,7 +86,7 @@ theorem slowLoop_fresh {items : List (κ × Int)} {c : Ctr κ} (h : WF items)
       exact hn hx
 
 /-- `Counter.update` on a mapping takes a fast path when the counter is empty
-(`super().update(iterable)`, :710) instead of adding count by count (:705-707).
+(`super().update(iterable)`, :705) instead of adding count by count (:700-702).
 The two paths build the same dict, keys in the same order, for every dict of
 int counts. -/
 def UpdateFastEqSlow : Prop :=
@@ -160,7 +160,7 @@ theorem cGet_update (c : Ctr κ) (s : Src κ) (k : List (κ × Int)) (hs : SrcWF
 /-- `Counter.update` adds counts: for every counter (zero and negative counts
 included), every source and every keyword dict, the count of `x` afterwards is its count
 before plus what the sources bring. `Counter(src, **kw)` is the case of an
-empty counter, `self[x]` for a missing `x` being 0. Docstrings at :605-615, :683. -/
+empty counter, `self[x]` for a missing `x` being 0. Docstrings at :605-615, :678. -/
 def UpdateAddsCounts : Prop :=
   ∀ (κ : Type) [DecidableEq κ] (c : Ctr κ) (s : Src κ) (k : List (κ × Int)) (x : κ),
     SrcWF s → WF k →
@@ -249,7 +249,7 @@ theorem cGet_subtract (c : Ctr κ) (s : Src κ) (k : List (κ × Int)) (hs : Src
     rfl
 
 /-- `subtract` undoes `update`: "Like dict.update() but subtracts counts instead
-of replacing them", :717. The result can hold zero counts for new keys, and is `==`
+of replacing them", :721. The result can hold zero counts for new keys, and is `==`
 to the original, since `Counter.__eq__` treats missing as zero. -/
 def SubtractUndoesUpdate : Prop :=
   ∀ (κ : Type) [DecidableEq κ] (c : Ctr κ) (s : Src κ) (k : List (κ × Int)) (x : κ),
@@ -343,7 +343,7 @@ theorem copyReduceFaithful_proven : CopyReduceFaithful := by
 /-! ### `__delitem__` -/
 
 /-- `del c[e]` is total, unlike on a plain dict, and removes exactly `e`
-(docstring :751). -/
+(docstring :755). -/
 def DelitemTotal : Prop :=
   ∀ (κ : Type) [DecidableEq κ] (c : Ctr κ) (e : κ), WF c →
     WF (delitem c e) ∧ e ∉ keys (delitem c e) ∧
@@ -425,7 +425,7 @@ theorem neC_iff (a b : Ctr κ) : neC a b = true ↔ ∃ x, cGet a x ≠ cGet b x
   simp
 
 /-- The six comparisons are the pointwise orders of the count functions, with
-missing as zero. Docstrings at :801-831: "True if all counts agree", "a subset",
+missing as zero. Docstrings at :805-835: "True if all counts agree", "a subset",
 "a proper subset", "a superset", "a proper superset". They hold for every pair of
 counters, whatever their keys and order, negative counts included. -/
 def ComparisonsPointwise : Prop :=

@@ -1,0 +1,33 @@
+file	line	endline	name	signature	status	entry	note
+Lib/profiling/sampling/cli.py	63	65	DiffFlamegraphAction.__call__	__call__(self, parser, namespace, values, option_string=None)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	123	134	_setup_child_monitor	_setup_child_monitor(args, parent_pid)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	137	140	_get_child_monitor_context	_get_child_monitor_context(args, pid)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	143	178	_build_child_profiler_args	_build_child_profiler_args(args)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	181	202	_build_output_pattern	_build_output_pattern(args)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	205	213	_parse_mode	_parse_mode(mode_string)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	216	231	_check_process_died	_check_process_died(process)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	234	261	_wait_for_ready_signal	_wait_for_ready_signal(sync_sock, process, timeout)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	264	316	_run_with_sync	_run_with_sync(original_cmd, suppress_output=False)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	334	363	_parse_sampling_rate	_parse_sampling_rate(rate_str: str)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	366	430	_add_sampling_options	_add_sampling_options(parser)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	433	451	_add_mode_options	_add_mode_options(parser)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	454	540	_add_format_options	_add_format_options(parser, include_compression=True, include_binary=True)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	543	571	_add_pstats_options	_add_pstats_options(parser)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	574	616	_add_dump_options	_add_dump_options(parser)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	619	630	_sort_to_mode	_sort_to_mode(sort_choice)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	633	640	_capture_config_from_args	_capture_config_from_args(args)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	643	700	_create_collector	_create_collector(format_type, sample_interval_usec, skip_idle, opcodes=False, mode=None, output_file=None, compression='auto', diff_baseline=None, capture_config=None)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	703	717	_generate_output_filename	_generate_output_filename(format_type, pid)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	720	743	_open_in_browser	_open_in_browser(path)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	746	761	_validate_replay_input_file	_validate_replay_input_file(filename)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	764	831	_replay_with_reader	_replay_with_reader(args, reader)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	834	879	_handle_output	_handle_output(collector, args, pid, mode)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	882	1002	_validate_args	_validate_args(args, parser)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	1005	1013	main	main()	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	1016	1169	_main	_main()	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	1172	1220	_handle_attach	_handle_attach(args)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	1223	1248	_handle_dump	_handle_dump(args)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	1251	1339	_handle_run	_handle_run(args)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	1342	1374	_handle_live_attach	_handle_live_attach(args, pid)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	1377	1444	_handle_live_run	_handle_live_run(args)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/cli.py	1447	1458	_handle_replay	_handle_replay(args)	todo		changed-in-3.15: new function

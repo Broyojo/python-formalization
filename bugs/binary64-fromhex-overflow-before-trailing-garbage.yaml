@@ -36,13 +36,13 @@ expected: |
 promised_by: |
   Doc/library/stdtypes.rst, float.fromhex: the string has the form
   [sign] ['0x'] integer ['.' fraction] ['p' exponent] with optional surrounding whitespace.
-  floatobject.c:1464 has the error for anything else.
+  floatobject.c:1454 has the error for anything else.
 cause: |
-  Objects/floatobject.c:1384, :1400 and :1442 `goto overflow_error` while the check for
-  trailing characters is at :1449-1452, after `finished:`.
+  Objects/floatobject.c:1374, :1390 and :1432 `goto overflow_error` while the check for
+  trailing characters is at :1439-1442, after `finished:`.
 possible_fix: |
   Validate the whole string before computing the value: finish the grammar scan (the
-  trailing whitespace loop and `s != s_end`) right after the exponent at :1365, then turn
+  trailing whitespace loop and `s != s_end`) right after the exponent at :1355, then turn
   the `goto overflow_error` paths back on. The `finished:` path can then drop its check.
 tested: |
   python3 3.14.7: REPRODUCED. main: REPRODUCED.

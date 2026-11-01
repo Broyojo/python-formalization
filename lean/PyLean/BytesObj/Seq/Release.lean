@@ -13,31 +13,31 @@ open PyLean
 variable {α : Type}
 
 /-- `i = Py_SIZE(op); while (--i >= 0) f(op->ob_item[i])`: `tuple_dealloc`,
-tupleobject.c:229-232, `list_dealloc`, listobject.c:559-562, `list_clear_impl`,
-:852-858. `tuple_traverse`, tupleobject.c:653-655, and `list_traverse`, listobject.c:3390-3391,
+tupleobject.c:275-278, `list_dealloc`, listobject.c:586-589, `list_clear_impl`,
+:903-909. `tuple_traverse`, tupleobject.c:731-733, and `list_traverse`, listobject.c:3453-3454,
 are the same walk with `Py_VISIT`. `i` slots are left to visit. -/
 def backLoop (items : List α) : Nat → List (Option α)
   | 0 => []
   | i + 1 => items[i]? :: backLoop items i
 
-/-- `tuple_dealloc(self)`, tupleobject.c:208-237: the empty singleton returns at once. -/
+/-- `tuple_dealloc(self)`, tupleobject.c:254-283: the empty singleton returns at once. -/
 def tupleDeallocOrder (items : List α) : List (Option α) :=
   if items.length = 0 then [] else backLoop items items.length
 
-/-- `list_dealloc(self)`, listobject.c:548-572. -/
+/-- `list_dealloc(self)`, listobject.c:575-599. -/
 def listDeallocOrder (o : LObj α) : List (Option α) :=
   if o.hasItems then backLoop o.items o.items.length else []
 
-/-- `tuple_traverse(self, visit, arg)`, tupleobject.c:649-657. -/
+/-- `tuple_traverse(self, visit, arg)`, tupleobject.c:727-735. -/
 def tupleTraverse (items : List α) : List (Option α) := backLoop items items.length
 
-/-- `list_traverse(self, visit, arg)`, listobject.c:3384-3393. -/
+/-- `list_traverse(self, visit, arg)`, listobject.c:3447-3456. -/
 def listTraverse (items : List α) : List (Option α) := backLoop items items.length
 
-/-- `tupleiter_traverse`, tupleobject.c:1036-1042: `Py_VISIT(it->it_seq)`. -/
+/-- `tupleiter_traverse`, tupleobject.c:1139-1145: `Py_VISIT(it->it_seq)`. -/
 def tupleIterTraverse (it : TupleIter α) : List (List α) := it.seq.toList
 
-/-- `listiter_traverse`, listobject.c:4011-4016, and `listreviter_traverse`, :4165-4170:
+/-- `listiter_traverse`, listobject.c:4081-4086, and `listreviter_traverse`, :4235-4240:
 `Py_VISIT(it->it_seq)`, so `gc.get_referents` shows whether the iterator holds its list. -/
 def listIterTraverse (it : ListIter) (l : List α) : List (List α) := if it.alive then [l] else []
 
@@ -181,9 +181,9 @@ theorem listIterReleases_proven : ListIterReleases := by
 
 /-- `reversed(l)` lets go of the list once it is exhausted, as `iter(l)` does and as
 the comment on `it_seq` says ("Set to NULL when iterator is exhausted",
-listobject.c:4084). It does not: the last item leaves `it_index` at `-1`, and
-`listreviter_next` then returns at its early `index < 0` test (:4178), so the code that
-clears `it_seq` (:4189-4193) only runs when the list has shrunk under the iterator. -/
+listobject.c:4154). It does not: the last item leaves `it_index` at `-1`, and
+`listreviter_next` then returns at its early `index < 0` test (:4248), so the code that
+clears `it_seq` (:4259-4263) only runs when the list has shrunk under the iterator. -/
 def ListRevIterReleases : Prop :=
   ∀ (α : Type) (l : List α) (n : Nat) (it it' : ListIter),
     iterRun listRevIterNext l n (listReversed l) = .ok it → listRevIterNext it l = .ok (none, it') →

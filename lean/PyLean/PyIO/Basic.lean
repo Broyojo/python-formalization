@@ -78,7 +78,7 @@ def InCInt (v : Int) : Prop := intMin ≤ v ∧ v ≤ intMax
 instance (v : Int) : Decidable (InCInt v) := inferInstanceAs (Decidable (_ ∧ _))
 
 /-- `Py_ssize_t(accept={int, NoneType})`: `_Py_convert_optional_to_ssize_t`
-(Python/modsupport.c:14-34) calls `PyNumber_AsSsize_t(obj, PyExc_OverflowError)`
+(Python/modsupport.c:15-35) calls `PyNumber_AsSsize_t(obj, PyExc_OverflowError)`
 (Objects/abstract.c), whose message names the type. `None` keeps the default. -/
 def optSsize (dflt : Int) : Option Int → Py Int
   | none => .ok dflt

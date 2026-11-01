@@ -29,7 +29,7 @@ likelihood: |
   When it does happen the result is silently wrong (one extra item), not an exception.
 maybe_intended: |
   No. The (size_t) cast and the `lz->next < oldnext` test were added precisely to handle this
-  overflow (comment at :1730-1731: "avoids the danger of undefined behaviour from signed
+  overflow (comment at :1724-1725: "avoids the danger of undefined behaviour from signed
   integer overflow"); the handling is only wrong for the stop=None sentinel. The documented
   equivalent (rst:478-496) and sequence slicing both give one item.
 reproducer: |
@@ -51,11 +51,11 @@ observed: |
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical (islice_next is unchanged on
   main). REPRODUCED.
 promised_by: |
-  Doc/library/itertools.rst:459-496: islice "works like sequence slicing", the "Roughly
+  Doc/library/itertools.rst:464-501: islice "works like sequence slicing", the "Roughly
   equivalent to" code yields only indices start, start+step, ...; the C error messages accept
   0 <= x <= sys.maxsize for every argument.
 cause: |
-  Modules/itertoolsmodule.c:1729-1734 (islice_next):
+  Modules/itertoolsmodule.c:1723-1728 (islice_next):
       oldnext = lz->next;
       lz->next += (size_t)lz->step;
       if (lz->next < oldnext || (stop != -1 && lz->next > stop))

@@ -48,8 +48,8 @@ promised_by: |
   timedelta(hours=24)"); datetime.astimezone docs ("If self.tzinfo is tz, self.astimezone(tz)
   is equal to self: no adjustment of date or time data is performed.").
 cause: |
-  Lib/_pydatetime.py:2094-2104: `myoffset = mytz.utcoffset(self)` at :2099, unchecked, ahead of
-  `if tz is mytz` at :2104. Modules/_datetimemodule.c:6747 compares the tzinfo objects first,
+  Lib/_pydatetime.py:2143-2153: `myoffset = mytz.utcoffset(self)` at :2148, unchecked, ahead of
+  `if tz is mytz` at :2153. Modules/_datetimemodule.c:6936 compares the tzinfo objects first,
   then uses call_utcoffset.
 possible_fix: |
   Move the `tz is mytz` test ahead of the offset call and use `self.utcoffset()`.

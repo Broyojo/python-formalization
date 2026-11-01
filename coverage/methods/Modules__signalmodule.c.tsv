@@ -1,45 +1,45 @@
 file	line	endline	name	signature	status	entry	note
-Modules/signalmodule.c	127	131	get_handler	Py_LOCAL_INLINE(PyObject *) get_handler(int i)	todo		
-Modules/signalmodule.c	133	139	set_handler	Py_LOCAL_INLINE(void) set_handler(int i, PyObject* func)	todo		
-Modules/signalmodule.c	143	148	get_signal_state	get_signal_state(PyObject *module)	todo		
-Modules/signalmodule.c	152	164	compare_handler	compare_handler(PyObject *func, PyObject *dfl_ign_handler)	todo		
-Modules/signalmodule.c	169	182	timeval_from_double	timeval_from_double(PyObject *obj, struct timeval *tv)	todo		
-Modules/signalmodule.c	187	191	double_from_timeval	Py_LOCAL_INLINE(double) double_from_timeval(struct timeval *tv)	todo		
-Modules/signalmodule.c	194	217	itimer_retval	itimer_retval(struct itimerval *iv)	todo		
-Modules/signalmodule.c	232	238	signal_default_int_handler_impl	signal_default_int_handler_impl(PyObject *module, int signalnum, PyObject *frame) /*[clinic end generated code: output=bb11c2eb115ace4e input=efcd4a56a207acfd]*/	todo		
-Modules/signalmodule.c	242	253	report_wakeup_write_error	report_wakeup_write_error(void *data)	todo		
-Modules/signalmodule.c	257	270	report_wakeup_send_error	report_wakeup_send_error(void* data)	todo		
-Modules/signalmodule.c	274	346	trip_signal	trip_signal(int sig_num)	todo		
-Modules/signalmodule.c	349	379	signal_handler	signal_handler(int sig_num)	todo		
-Modules/signalmodule.c	394	399	signal_alarm_impl	signal_alarm_impl(PyObject *module, int seconds) /*[clinic end generated code: output=144232290814c298 input=0d5e97e0e6f39e86]*/	todo		
-Modules/signalmodule.c	412	425	signal_pause_impl	signal_pause_impl(PyObject *module) /*[clinic end generated code: output=391656788b3c3929 input=f03de0f875752062]*/	todo		
-Modules/signalmodule.c	439	460	signal_raise_signal_impl	signal_raise_signal_impl(PyObject *module, int signalnum) /*[clinic end generated code: output=e2b014220aa6111d input=e90c0f9a42358de6]*/	todo		
-Modules/signalmodule.c	481	550	signal_signal_impl	signal_signal_impl(PyObject *module, int signalnum, PyObject *handler) /*[clinic end generated code: output=b44cfda43780f3a1 input=99ce4035ec56ffc1]*/	todo		
-Modules/signalmodule.c	569	585	signal_getsignal_impl	signal_getsignal_impl(PyObject *module, int signalnum) /*[clinic end generated code: output=35b3e0e796fd555e input=ac23a00f19dfa509]*/	todo		
-Modules/signalmodule.c	602	664	signal_strsignal_impl	signal_strsignal_impl(PyObject *module, int signalnum) /*[clinic end generated code: output=44e12e1e3b666261 input=238b335847778bc0]*/	todo		
-Modules/signalmodule.c	682	707	signal_siginterrupt_impl	signal_siginterrupt_impl(PyObject *module, int signalnum, int flag) /*[clinic end generated code: output=063816243d85dd19 input=4160acacca3e2099]*/	todo		
-Modules/signalmodule.c	729	832	signal_set_wakeup_fd_impl	signal_set_wakeup_fd_impl(PyObject *module, PyObject *fdobj, int warn_on_full_buffer) /*[clinic end generated code: output=2280d72dd2a54c4f input=5b545946a28b8339]*/	todo		
-Modules/signalmodule.c	836	846	PySignal_SetWakeupFd	PySignal_SetWakeupFd(int fd)	todo		
-Modules/signalmodule.c	867	889	signal_setitimer_impl	signal_setitimer_impl(PyObject *module, int which, PyObject *seconds, PyObject *interval) /*[clinic end generated code: output=65f9dcbddc35527b input=bd9f0d2ed8614193]*/	todo		
-Modules/signalmodule.c	904	916	signal_getitimer_impl	signal_getitimer_impl(PyObject *module, int which) /*[clinic end generated code: output=9e053175d517db40 input=f7d21d38f3490627]*/	todo		
-Modules/signalmodule.c	923	954	sigset_to_set	sigset_to_set(sigset_t mask)	todo		
-Modules/signalmodule.c	970	988	signal_pthread_sigmask_impl	signal_pthread_sigmask_impl(PyObject *module, int how, sigset_t mask) /*[clinic end generated code: output=0562c0fb192981a8 input=85bcebda442fa77f]*/	todo		
-Modules/signalmodule.c	1005	1014	signal_sigpending_impl	signal_sigpending_impl(PyObject *module) /*[clinic end generated code: output=53375ffe89325022 input=e0036c016f874e29]*/	todo		
-Modules/signalmodule.c	1035	1049	signal_sigwait_impl	signal_sigwait_impl(PyObject *module, sigset_t sigset) /*[clinic end generated code: output=f43770699d682f96 input=91773742dd416a3e]*/	todo		
-Modules/signalmodule.c	1066	1090	signal_valid_signals_impl	signal_valid_signals_impl(PyObject *module) /*[clinic end generated code: output=1609cffbcfcf1314 input=86a3717ff25288f2]*/	todo		
-Modules/signalmodule.c	1123	1154	fill_siginfo	fill_siginfo(_signal_module_state *state, siginfo_t *si)	todo		
-Modules/signalmodule.c	1172	1196	signal_sigwaitinfo_impl	signal_sigwaitinfo_impl(PyObject *module, sigset_t sigset) /*[clinic end generated code: output=1eb2f1fa236fdbca input=3d1a7e1f27fc664c]*/	todo		
-Modules/signalmodule.c	1215	1265	signal_sigtimedwait_impl	signal_sigtimedwait_impl(PyObject *module, sigset_t sigset, PyObject *timeout_obj) /*[clinic end generated code: output=59c8971e8ae18a64 input=955773219c1596cd]*/	todo		
-Modules/signalmodule.c	1284	1306	signal_pthread_kill_impl	signal_pthread_kill_impl(PyObject *module, unsigned long thread_id, int signalnum) /*[clinic end generated code: output=7629919b791bc27f input=1d901f2c7bb544ff]*/	todo		
-Modules/signalmodule.c	1413	1576	signal_add_constants	signal_add_constants(PyObject *module)	todo		
-Modules/signalmodule.c	1580	1616	signal_get_set_handlers	signal_get_set_handlers(signal_state_t *state, PyObject *mod_dict)	todo		
-Modules/signalmodule.c	1620	1679	signal_module_exec	signal_module_exec(PyObject *m)	todo		
-Modules/signalmodule.c	1684	1690	_signal_module_traverse	_signal_module_traverse(PyObject *module, visitproc visit, void *arg)	todo		
-Modules/signalmodule.c	1693	1699	_signal_module_clear	_signal_module_clear(PyObject *module)	todo		
-Modules/signalmodule.c	1702	1705	_signal_module_free	_signal_module_free(void *module)	todo		
-Modules/signalmodule.c	1732	1735	PyInit__signal	PyInit__signal(void)	todo		
-Modules/signalmodule.c	1739	1767	_PySignal_Fini	_PySignal_Fini(void)	todo		
-Modules/signalmodule.c	1772	1796	PyErr_CheckSignals	PyErr_CheckSignals(void)	todo		
+Modules/signalmodule.c	128	132	get_handler	Py_LOCAL_INLINE(PyObject *) get_handler(int i)	todo		
+Modules/signalmodule.c	134	140	set_handler	Py_LOCAL_INLINE(void) set_handler(int i, PyObject* func)	todo		
+Modules/signalmodule.c	144	149	get_signal_state	get_signal_state(PyObject *module)	todo		
+Modules/signalmodule.c	153	165	compare_handler	compare_handler(PyObject *func, PyObject *dfl_ign_handler)	todo		
+Modules/signalmodule.c	170	183	timeval_from_double	timeval_from_double(PyObject *obj, struct timeval *tv)	todo		
+Modules/signalmodule.c	188	192	double_from_timeval	Py_LOCAL_INLINE(double) double_from_timeval(struct timeval *tv)	todo		
+Modules/signalmodule.c	195	207	itimer_retval	itimer_retval(struct itimerval *iv)	todo		changed-in-3.15:
+Modules/signalmodule.c	222	228	signal_default_int_handler_impl	signal_default_int_handler_impl(PyObject *module, int signalnum, PyObject *frame) /*[clinic end generated code: output=bb11c2eb115ace4e input=efcd4a56a207acfd]*/	todo		
+Modules/signalmodule.c	232	243	report_wakeup_write_error	report_wakeup_write_error(void *data)	todo		
+Modules/signalmodule.c	247	260	report_wakeup_send_error	report_wakeup_send_error(void* data)	todo		
+Modules/signalmodule.c	264	336	trip_signal	trip_signal(int sig_num)	todo		
+Modules/signalmodule.c	339	369	signal_handler	signal_handler(int sig_num)	todo		
+Modules/signalmodule.c	384	389	signal_alarm_impl	signal_alarm_impl(PyObject *module, int seconds) /*[clinic end generated code: output=144232290814c298 input=0d5e97e0e6f39e86]*/	todo		
+Modules/signalmodule.c	402	415	signal_pause_impl	signal_pause_impl(PyObject *module) /*[clinic end generated code: output=391656788b3c3929 input=f03de0f875752062]*/	todo		
+Modules/signalmodule.c	429	450	signal_raise_signal_impl	signal_raise_signal_impl(PyObject *module, int signalnum) /*[clinic end generated code: output=e2b014220aa6111d input=e90c0f9a42358de6]*/	todo		
+Modules/signalmodule.c	471	540	signal_signal_impl	signal_signal_impl(PyObject *module, int signalnum, PyObject *handler) /*[clinic end generated code: output=b44cfda43780f3a1 input=99ce4035ec56ffc1]*/	todo		
+Modules/signalmodule.c	559	575	signal_getsignal_impl	signal_getsignal_impl(PyObject *module, int signalnum) /*[clinic end generated code: output=35b3e0e796fd555e input=ac23a00f19dfa509]*/	todo		
+Modules/signalmodule.c	592	654	signal_strsignal_impl	signal_strsignal_impl(PyObject *module, int signalnum) /*[clinic end generated code: output=44e12e1e3b666261 input=238b335847778bc0]*/	todo		
+Modules/signalmodule.c	672	697	signal_siginterrupt_impl	signal_siginterrupt_impl(PyObject *module, int signalnum, int flag) /*[clinic end generated code: output=063816243d85dd19 input=4160acacca3e2099]*/	todo		
+Modules/signalmodule.c	720	823	signal_set_wakeup_fd_impl	signal_set_wakeup_fd_impl(PyObject *module, PyObject *fdobj, int warn_on_full_buffer) /*[clinic end generated code: output=2280d72dd2a54c4f input=1b914d48079e9274]*/	todo		
+Modules/signalmodule.c	827	837	PySignal_SetWakeupFd	PySignal_SetWakeupFd(int fd)	todo		
+Modules/signalmodule.c	858	880	signal_setitimer_impl	signal_setitimer_impl(PyObject *module, int which, PyObject *seconds, PyObject *interval) /*[clinic end generated code: output=65f9dcbddc35527b input=bd9f0d2ed8614193]*/	todo		
+Modules/signalmodule.c	895	907	signal_getitimer_impl	signal_getitimer_impl(PyObject *module, int which) /*[clinic end generated code: output=9e053175d517db40 input=f7d21d38f3490627]*/	todo		
+Modules/signalmodule.c	914	945	sigset_to_set	sigset_to_set(sigset_t mask)	todo		
+Modules/signalmodule.c	961	979	signal_pthread_sigmask_impl	signal_pthread_sigmask_impl(PyObject *module, int how, sigset_t mask) /*[clinic end generated code: output=0562c0fb192981a8 input=85bcebda442fa77f]*/	todo		
+Modules/signalmodule.c	996	1005	signal_sigpending_impl	signal_sigpending_impl(PyObject *module) /*[clinic end generated code: output=53375ffe89325022 input=e0036c016f874e29]*/	todo		
+Modules/signalmodule.c	1026	1040	signal_sigwait_impl	signal_sigwait_impl(PyObject *module, sigset_t sigset) /*[clinic end generated code: output=f43770699d682f96 input=91773742dd416a3e]*/	todo		
+Modules/signalmodule.c	1057	1081	signal_valid_signals_impl	signal_valid_signals_impl(PyObject *module) /*[clinic end generated code: output=1609cffbcfcf1314 input=86a3717ff25288f2]*/	todo		
+Modules/signalmodule.c	1114	1145	fill_siginfo	fill_siginfo(_signal_module_state *state, siginfo_t *si)	todo		
+Modules/signalmodule.c	1163	1187	signal_sigwaitinfo_impl	signal_sigwaitinfo_impl(PyObject *module, sigset_t sigset) /*[clinic end generated code: output=1eb2f1fa236fdbca input=3d1a7e1f27fc664c]*/	todo		
+Modules/signalmodule.c	1206	1256	signal_sigtimedwait_impl	signal_sigtimedwait_impl(PyObject *module, sigset_t sigset, PyObject *timeout_obj) /*[clinic end generated code: output=59c8971e8ae18a64 input=f89af57d645e48e0]*/	todo		
+Modules/signalmodule.c	1275	1297	signal_pthread_kill_impl	signal_pthread_kill_impl(PyObject *module, unsigned long thread_id, int signalnum) /*[clinic end generated code: output=7629919b791bc27f input=1d901f2c7bb544ff]*/	todo		
+Modules/signalmodule.c	1404	1567	signal_add_constants	signal_add_constants(PyObject *module)	todo		
+Modules/signalmodule.c	1571	1607	signal_get_set_handlers	signal_get_set_handlers(signal_state_t *state, PyObject *mod_dict)	todo		
+Modules/signalmodule.c	1611	1670	signal_module_exec	signal_module_exec(PyObject *m)	todo		
+Modules/signalmodule.c	1675	1681	_signal_module_traverse	_signal_module_traverse(PyObject *module, visitproc visit, void *arg)	todo		
+Modules/signalmodule.c	1684	1690	_signal_module_clear	_signal_module_clear(PyObject *module)	todo		
+Modules/signalmodule.c	1693	1696	_signal_module_free	_signal_module_free(void *module)	todo		
+Modules/signalmodule.c	1724	1727	PyInit__signal	PyInit__signal(void)	todo		
+Modules/signalmodule.c	1731	1759	_PySignal_Fini	_PySignal_Fini(void)	todo		
+Modules/signalmodule.c	1764	1796	PyErr_CheckSignals	PyErr_CheckSignals(void)	todo		changed-in-3.15:
 Modules/signalmodule.c	1801	1885	_PyErr_CheckSignalsTstate	_PyErr_CheckSignalsTstate(PyThreadState *tstate)	todo		
 Modules/signalmodule.c	1890	1894	_PyErr_CheckSignals	_PyErr_CheckSignals(void)	todo		
 Modules/signalmodule.c	1902	1915	PyErr_SetInterruptEx	PyErr_SetInterruptEx(int signum)	todo		

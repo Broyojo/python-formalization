@@ -62,15 +62,15 @@ observed: |
   ValueError; bytearray(b'\x02\x04'). REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
 promised_by: |
-  Doc/library/stdtypes.rst:1252-1269, mutable sequence table row `s[i:j:k] = t` with note (1)
+  Doc/library/stdtypes.rst@3.14.7:1252-1269, mutable sequence table row `s[i:j:k] = t` with note (1)
   "If k is not equal to 1, t must have the same length as the slice it is replacing";
   Doc/reference/simple_stmts.rst (slice assignment); Doc/library/array.rst (arrays "behave very
   much like lists").
 cause: |
-  Modules/arraymodule.c:2695-2723 (3.14.7): after the step == 1 case, `else if (needed == 0)`
+  Modules/arraymodule.c:2902-2930: after the step == 1 case, `else if (needed == 0)`
   runs the deletion loop without comparing needed with slicelength; the length check
-  `needed != slicelength` only exists in the final `else` (:2727-2735). Same structure in
-  Objects/bytearrayobject.c:823-846. list_ass_subscript_lock_held (Objects/listobject.c:3806-3815)
+  `needed != slicelength` only exists in the final `else` (:2934-2942). Same structure in
+  Objects/bytearrayobject.c:879-902. list_ass_subscript_lock_held (Objects/listobject.c:3868-3877)
   checks the length for every extended-slice assignment.
 possible_fix: |
   In array_ass_subscr (and bytearray_ass_subscript_lock_held), take the deletion branch only for

@@ -358,8 +358,8 @@ theorem iterReduceResumes_proven : IterReduceResumes := by
 
 /-- `it.__setstate__(state)` clips the state into `[0, len]` for every
 range iterator and every int state: it succeeds and leaves
-`L - clip(state)` values. `longrangeiter_setstate` (rangeobject.c:1042-1085)
-does exactly that; `rangeiter_setstate` (:884-899) first converts with
+`L - clip(state)` values. `longrangeiter_setstate` (rangeobject.c:1099-1142)
+does exactly that; `rangeiter_setstate` (:925-940) first converts with
 `PyLong_AsLong` and raises `OverflowError` for states outside the C `long`
 range. -/
 def SetstateClips : Prop :=

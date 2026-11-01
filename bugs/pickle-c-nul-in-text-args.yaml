@@ -34,8 +34,8 @@ observed: |
 promised_by: |
   Twin relation; `int(bytes)` behaviour.
 cause: |
-  Modules/_pickle.c:5412 (strtol, with `*endptr != '\0'` accepted at :5414), :5568, :6400, :6580
-  (PyLong_FromString on the line). Objects/longobject.c:3084-3101 `_PyLong_FromBytes` has the length
+  Modules/_pickle.c:5535 (strtol, with `*endptr != '\0'` accepted at :5537), :5691, :6551, :6716
+  (PyLong_FromString on the line). Objects/longobject.c:3166-3183 `_PyLong_FromBytes` has the length
   check these callers lack.
 possible_fix: |
   gh-157728: use `_PyLong_FromBytes`, or compare `strlen` with the line length.

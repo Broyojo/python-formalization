@@ -2,8 +2,8 @@ import PyLean.Itertools.TeeProps
 
 /-!
 `tee` with its re-entry guard: this is the mirror of
-`teedataobject_getitem_lock_held` (Modules/itertoolsmodule.c:784-809), its
-wrapper `teedataobject_getitem` (:811-819) and `tee_next` (:952-975, GIL build),
+`teedataobject_getitem_lock_held` (Modules/itertoolsmodule.c:780-805), its
+wrapper `teedataobject_getitem` (:807-815) and `tee_next` (:948-971, GIL build),
 with the input able to call back into the tees. `hooks` holds, for successive
 items, the operations performed after the item is taken and before it is returned
 (as a `map` function does); they run through `tsRun`, the function that runs
@@ -23,10 +23,10 @@ open PyLean
 
 variable {α : Type} [Inhabited α]
 
-/-- `RuntimeError` of :796-797. -/
+/-- `RuntimeError` of :792-793. -/
 def teeReenterError : PyExc := .named "RuntimeError" "cannot re-enter the tee iterator"
 
-/-- The chain of `teedataobject`s as in `CTee`, with `running` (:738), the blocks
+/-- The chain of `teedataobject`s as in `CTee`, with `running` (:734), the blocks
 whose `tdo->running` is set; what successive `__next__` calls do; and the results
 so far. -/
 structure TeeS (α : Type) where
@@ -37,7 +37,7 @@ structure TeeS (α : Type) where
   hooks : List (List TeeOp) := []
   log : List (NextRes α) := []
 
-/-- `teedataobject_jumplink` (:773-782) as used by `tee_next` (:961-968). -/
+/-- `teedataobject_jumplink` (:769-778) as used by `tee_next` (:957-964). -/
 def tsJump (t : TeeS α) (b i : Nat) : TeeS α × Nat × Nat :=
   if i ≥ LINKCELLS then
     let t := if b + 1 < t.blocks.length then t else { t with blocks := t.blocks ++ [[]] }
@@ -50,9 +50,9 @@ def tsHook (run : List TeeOp → TeeS α → TeeS α) (t : TeeS α) : TeeS α :=
   | [] => t
   | h :: hs => run h { t with hooks := hs }
 
-/-- `teedataobject_getitem_lock_held` (:785-809) and the `to->index++` of
-`tee_next` (:969-973): a stored value (:790-791), or for the lead iterator the
-guard (:795-799), then `PyIter_Next` with `running` set (:800-802), which is
+/-- `teedataobject_getitem_lock_held` (:781-805) and the `to->index++` of
+`tee_next` (:965-969): a stored value (:786-787), or for the lead iterator the
+guard (:791-795), then `PyIter_Next` with `running` set (:796-798), which is
 cleared before its result is looked at, so also when it failed. -/
 def tsGetitem (run : List TeeOp → TeeS α → TeeS α) (t : TeeS α) (k b i : Nat) : NextRes α × TeeS α :=
   let blk := t.blocks.getD b []
@@ -70,7 +70,7 @@ def tsGetitem (run : List TeeOp → TeeS α → TeeS α) (t : TeeS α) (k b i : 
       (.val v, { t with blocks := t.blocks.set b (t.blocks.getD b [] ++ [v]),
                         tees := t.tees.set k (b, i + 1) })
 
-/-- `tee_next` (:952-975, GIL build). -/
+/-- `tee_next` (:948-971, GIL build). -/
 def tsNext (run : List TeeOp → TeeS α → TeeS α) (t : TeeS α) (k : Nat) : NextRes α × TeeS α :=
   let (b, i) := t.tees.getD k (0, 0)
   let (t, b, i) := tsJump t b i
@@ -90,7 +90,7 @@ def tsOp (run : List TeeOp → TeeS α → TeeS α) : TeeOp → TeeS α → TeeS
   | .copy k, t =>
     if k < t.tees.length then { t with tees := t.tees ++ [t.tees.getD k (0, 0)] } else t
   | .ctor k, t =>
-    -- `tee_fromiterable` on a tee copies it (:1063-1066)
+    -- `tee_fromiterable` on a tee copies it (:1059-1062)
     if k < t.tees.length then { t with tees := t.tees ++ [t.tees.getD k (0, 0)] } else t
 
 def tsFold (run : List TeeOp → TeeS α → TeeS α) (ops : List TeeOp) (t : TeeS α) : TeeS α :=
@@ -102,8 +102,8 @@ def tsRun : Nat → List TeeOp → TeeS α → TeeS α
   | 0, _, t => t
   | d + 1, ops, t => tsFold (tsRun d) ops t
 
-/-- `tee_fromiterable` (:1055-1086) on an input that is not a tee: one fresh
-block (`teedataobject_newinternal`, :756-770, `running = 0`), one iterator. A tee
+/-- `tee_fromiterable` (:1051-1082) on an input that is not a tee: one fresh
+block (`teedataobject_newinternal`, :752-766, `running = 0`), one iterator. A tee
 input is the `ctor` operation. -/
 def teeFromIterable (iterable : Obj α) (hooks : List (List TeeOp)) : Py (TeeS α) :=
   match getIter iterable with
@@ -116,7 +116,7 @@ def tsResult (it : Src α) (hooks : List (List TeeOp)) (ops : List TeeOp) (t : T
   let t' := tsRun (hooks.length + 1) ops t
   (t'.log, it.items.length - t'.it.items.length)
 
-/-- `itertools_tee_impl` (:1165-1204) on a non-tee input: `n` through the
+/-- `itertools_tee_impl` (:1161-1196) on a non-tee input: `n` through the
 `Py_ssize_t` converter, `n == 0` returns `()` without touching the iterable, then
 `tee_fromiterable` and `n - 1` calls of `tee_copy`. -/
 def cTeeR (iterable : Obj α) (n : Int) (hooks : List (List TeeOp)) (ops : List TeeOp) :
@@ -131,7 +131,7 @@ def cTeeR (iterable : Obj α) (n : Int) (hooks : List (List TeeOp)) (ops : List 
       | .error e => .error e
       | .ok t => .ok (tsResult t.it hooks ops { t with tees := List.replicate n.toNat (0, 0) })
 
-/-- `itertools__tee_impl` (:1097-1102) on an input that is not a tee. -/
+/-- `itertools__tee_impl` (:1093-1098) on an input that is not a tee. -/
 def cTeeWrap (iterable : Obj α) (hooks : List (List TeeOp)) (ops : List TeeOp) :
     Py (List (NextRes α) × Nat) :=
   match teeFromIterable iterable hooks with
@@ -321,7 +321,7 @@ theorem tsRun_running : ∀ (d : Nat) (ops : List TeeOp) (t : TeeS α), (tsRun d
 
 /-- The flag cannot stick: for every state, hook and sequence of operations,
 including inputs that raise and hooks that hit the guard, `running` ends as it
-began (:800-802 clears it before looking at the result). So no later `next()`
+began (:796-798 clears it before looking at the result). So no later `next()`
 gets a spurious `RuntimeError`. -/
 def TeeRunningBalanced : Prop :=
   ∀ (α : Type) [Inhabited α] (d : Nat) (ops : List TeeOp) (t : TeeS α),
@@ -332,7 +332,7 @@ theorem teeRunningBalanced_proven : TeeRunningBalanced := by
   exact tsRun_running d ops t
 
 /-- The guard, for every state: `next()` on a tee at the frontier of a block whose
-pull is in progress raises `RuntimeError` and takes nothing (:795-799). And it is
+pull is in progress raises `RuntimeError` and takes nothing (:791-795). And it is
 reached: an input whose `__next__` calls `next()` on the other tee gets that
 exception, after which the outer `next()` still delivers its item. -/
 def TeeReentryGuard : Prop :=
@@ -396,7 +396,7 @@ inductive WRef where
   | cb (id : Nat)
   deriving Repr, DecidableEq
 
-/-- `insert_weakref` (Objects/weakrefobject.c:374-397) with `try_reuse_basic_ref`:
+/-- `insert_weakref` (Objects/weakrefobject.c:378-401) with `try_reuse_basic_ref`:
 the basic reference is shared and stays at the head; a reference with a callback
 goes right after it, or at the head when there is none. So the newest reference
 with a callback comes first. -/
@@ -413,9 +413,9 @@ inductive ClearEvent where
   | unraisable (id : Nat) (e : PyExc)
   deriving Repr, DecidableEq
 
-/-- `PyObject_ClearWeakRefs` (Objects/weakrefobject.c:1007-1088): every reference
-is cleared first (:1028-1037, :1056-1074), then the callbacks run in list order
-(:1076-1082), and `handle_callback` (:987-998) does not let an exception out. -/
+/-- `PyObject_ClearWeakRefs` (Objects/weakrefobject.c:1036-1117): every reference
+is cleared first (:1057-1066, :1085-1103), then the callbacks run in list order
+(:1105-1111), and `handle_callback` (:1016-1027) does not let an exception out. -/
 def clearWeakRefs (cb : Nat → Py Unit) : List WRef → List ClearEvent
   | [] => []
   | .basic :: rest => clearWeakRefs cb rest
@@ -424,18 +424,18 @@ def clearWeakRefs (cb : Nat → Py Unit) : List WRef → List ClearEvent
       | .ok _ => [.called i]
       | .error e => [.called i, .unraisable i e]) ++ clearWeakRefs cb rest
 
-/-- The parts of a `teeobject` these two functions touch (:745-751). -/
+/-- The parts of a `teeobject` these two functions touch (:773-779). -/
 structure TeeObj (β : Type) where
   dataobj : Option β
   weakreflist : List WRef
 
-/-- `tee_clear` (:1105-1112): the callbacks run while `dataobj` is still set. It
+/-- `tee_clear` (:1134-1141): the callbacks run while `dataobj` is still set. It
 returns 0 whatever they did. -/
 def teeClear {β : Type} (cb : Nat → Py Unit) (t : TeeObj β) : TeeObj β × List ClearEvent :=
   let ev := if t.weakreflist != [] then clearWeakRefs cb t.weakreflist else []
   ({ dataobj := none, weakreflist := [] }, ev)
 
-/-- `tee_dealloc` (:1115-1122): `tee_clear`; `PyObject_GC_UnTrack`, `PyObject_GC_Del`
+/-- `tee_dealloc` (:1144-1151): `tee_clear`; `PyObject_GC_UnTrack`, `PyObject_GC_Del`
 and the type's reference have no effect a Python program sees here. -/
 def teeDealloc {β : Type} (cb : Nat → Py Unit) (t : TeeObj β) : List ClearEvent := (teeClear cb t).2
 

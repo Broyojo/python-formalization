@@ -98,7 +98,7 @@ def appendAllocs : Nat → LObj Unit → List Int
     | .ok o' => o'.allocated :: appendAllocs n o'
     | .error _ => []
 
-/-- The growth pattern in the comment at listobject.c:129: "0, 4, 8, 16, 24, 32, 40,
+/-- The growth pattern in the comment at listobject.c:144: "0, 4, 8, 16, 24, 32, 40,
 52, 64, 76". The capacity after each of the first 65 appends, dropping repeats, is
 that sequence (the 65th append is the one that reaches 76). -/
 def ListGrowthPattern : Prop :=

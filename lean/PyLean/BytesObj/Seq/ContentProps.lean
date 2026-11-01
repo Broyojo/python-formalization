@@ -56,7 +56,7 @@ from a sequence or a sized container, `l.extend(l)`, `l += x` from a sequence an
 not iterable, which leaves `l` alone, `l *= n`, `a + b`, `l.copy()`, `len(l)`,
 `__init__` without an argument, and `__init__` with something not iterable, which
 drops the old contents and then raises, because the clear comes first
-(listobject.c:3491-3499). A method that fails with `MemoryError` is the `.ok`
+(listobject.c:3554-3562). A method that fails with `MemoryError` is the `.ok`
 hypothesis not holding. -/
 def ListContents : Prop :=
   ∀ (α : Type) (o o' : LObj α) (a b s : List α) (v : α) (w : Int) (name : String), o.WF →
@@ -543,7 +543,7 @@ theorem unsafeTuple_go (E : ElemOps α ρ) (ht : ∀ b, E.truth (E.ofBool b) = .
           simp only [unsafeTupleCompare.go, hc]
           split <;> rfl
 
-/-- `PyList_Sort(v)`, listobject.c:3166-3180. -/
+/-- `PyList_Sort(v)`, listobject.c:3231-3245. -/
 def pyListSort (lt : α → α → Bool) (op : Option (List α)) : Py (List α) :=
   match op with
   | none => .error systemError

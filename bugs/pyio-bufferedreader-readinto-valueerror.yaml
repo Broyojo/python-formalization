@@ -39,14 +39,14 @@ expected: |
 observed: |
   python3 3.14.7: io returns (3, b'bcd'); _pyio raises ValueError "memoryview assignment: lvalue
   and rvalue have different structures". REPRODUCED.
-  main (python.exe 3.16.0a1+dev): identical. REPRODUCED. Lib/_pyio.py:1211 on main has the same line.
+  main (python.exe 3.16.0a1+dev): identical. REPRODUCED. Lib/_pyio.py:1230 on main has the same line.
 promised_by: |
   Lib/_pyio.py is the pure-Python twin of the C module. Doc/library/io.rst documents
   BufferedIOBase.readinto as reading bytes into a pre-allocated buffer and returning the count,
   with no such error.
 cause: |
-  Lib/_pyio.py:1175 `avail = min(len(self._read_buf) - self._read_pos, len(buf))` should bound by
-  the remaining space. The assignment follows at :1177-1178 and the loop starts at :1172.
+  Lib/_pyio.py:1194 `avail = min(len(self._read_buf) - self._read_pos, len(buf))` should bound by
+  the remaining space. The assignment follows at :1196-1197 and the loop starts at :1191.
 possible_fix: |
   Use `avail = min(len(self._read_buf) - self._read_pos, len(buf) - written)`, and add a test that
   calls readinto with a partly filled internal buffer to test_io for both implementations.

@@ -77,7 +77,7 @@ def nsmallestKeyLoop (key : Int → Int) (result : List (Int × Int × Int)) (to
     else nsmallestKeyLoop key result top order rest
 
 /-- `heapq.nsmallest(n, iterable, key=key)`, Lib/heapq.py:477-535. `sized`
-says whether `len(iterable)` works (:491-497). `zip(range(n), it)` takes the
+says whether `len(iterable)` works (@3.14.7:491-497). `zip(range(n), it)` takes the
 first `max(n, 0)` items without consuming more. -/
 def nsmallest (n : Int) (it : List Int) (sized : Bool) (key : Option (Int → Int)) : Py (List Int) := do
   if n = 1 then

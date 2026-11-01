@@ -18,7 +18,7 @@ likelihood: |
   Needs a quotient above 2**51, where the operands differ by 15 or more decimal digits and
   float results are already coarse. Random operands at that scale hit it a few percent of the time.
 maybe_intended: |
-  Largely yes. The comment at floatobject.c:629-634 says the division is an approximation
+  Largely yes. The comment at floatobject.c:619-624 says the division is an approximation
   and the code snaps to the nearest integer, and the docs hedge. A maintainer could fairly
   close this as working as documented; the one solid point is that the hedge in the divmod
   docs is too narrow, so a docs change may be all that is wanted.
@@ -46,8 +46,8 @@ promised_by: |
   Doc/library/functions.rst, divmod: "q is usually math.floor(a / b) but may be 1 less than
   that". Doc/library/stdtypes.rst: x // y is the floored quotient.
 cause: |
-  Objects/floatobject.c:635 `div = (vx - *mod) / wx` rounds twice (once in the subtraction,
-  once in the division). :651-654 can only snap to an integer next to that inexact div.
+  Objects/floatobject.c:625 `div = (vx - *mod) / wx` rounds twice (once in the subtraction,
+  once in the division). :641-644 can only snap to an integer next to that inexact div.
 possible_fix: |
   Compute the quotient with fma so vx - mod does not round twice, or when |div| >= 2**50
   correct it with one exact residual check. Or leave the code and widen the hedge in the

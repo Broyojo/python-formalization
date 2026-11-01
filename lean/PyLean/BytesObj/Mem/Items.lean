@@ -456,7 +456,7 @@ theorem assItemInt_proven : AssItemInt := by
 /-- The rejected subscripts, each with its message, for every view with a single-character
 format: a 0-dim view takes only `()` and `...`; `m[i]` on two or more dimensions, a tuple
 of the wrong length, a tuple of slices, and anything that is not an index or slice are
-refused (memoryobject.c:2588-2639). Hypotheses: a live view. -/
+refused (memoryobject.c:2668-2719). Hypotheses: a live view. -/
 def KeyRejections : Prop :=
   ∀ (st : St) (self : Nat) (fmt : List Char),
     baseInaccessible st self = false → adjustFmt (st.mv self).view = .ok fmt →

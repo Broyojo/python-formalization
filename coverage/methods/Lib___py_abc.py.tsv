@@ -5,5 +5,5 @@ Lib/_py_abc.py	54	70	ABCMeta.register	register(cls, subclass)	todo		candidates:c
 Lib/_py_abc.py	72	81	ABCMeta._dump_registry	_dump_registry(cls, file=None)	todo		
 Lib/_py_abc.py	83	85	ABCMeta._abc_registry_clear	_abc_registry_clear(cls)	todo		
 Lib/_py_abc.py	87	90	ABCMeta._abc_caches_clear	_abc_caches_clear(cls)	todo		
-Lib/_py_abc.py	92	106	ABCMeta.__instancecheck__	__instancecheck__(cls, instance)	todo		
-Lib/_py_abc.py	108	147	ABCMeta.__subclasscheck__	__subclasscheck__(cls, subclass)	todo		
+Lib/_py_abc.py	92	111	ABCMeta.__instancecheck__	__instancecheck__(cls, instance)	todo		changed-in-3.15:
+Lib/_py_abc.py	113	152	ABCMeta.__subclasscheck__	__subclasscheck__(cls, subclass)	todo		

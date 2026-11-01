@@ -240,7 +240,7 @@ def fltDiv (x y : Flt) : Py Flt :=
   | .zero _ => .error (.zeroDivisionError "division by zero")
   | _ => .ok (Flt.div x y)
 
-/-! ## `math.fsum`, Modules/mathmodule.c:1363-1484 -/
+/-! ## `math.fsum`, Modules/mathmodule.c@3.14.7:1363-1484 -/
 
 /-- The partials loop for one `x`: returns the new partial list (in order) and the final `x`. -/
 def fsumInner : List Flt → Flt → List Flt → List Flt × Flt
@@ -268,7 +268,7 @@ def fsumStep (st : FsumState) (xsave : Flt) : Py FsumState :=
             special := Flt.add st.special xsave }
   else .ok { st with partials := p ++ [x] }
 
-/-- The final summation of the partials, mathmodule.c:1447-1476; `ps` is reversed (top first). -/
+/-- The final summation of the partials, mathmodule.c:1365-1394; `ps` is reversed (top first). -/
 def fsumFinish : List Flt → Flt
   | [] => Flt.pz
   | top :: rest =>
@@ -290,14 +290,14 @@ def fsumFinish : List Flt → Flt
         if Flt.eq y yr then x else hi
       else hi
 
-/-- The end of `math.fsum`, mathmodule.c:1439-1476. -/
+/-- The end of `math.fsum`, mathmodule.c:1357-1394. -/
 def fsumEnd (st : FsumState) : Py Flt :=
   if !Flt.eq st.special Flt.pz then
     if st.infSum.isNan then .error (.valueError "-inf + inf in fsum")
     else .ok st.special
   else .ok (fsumFinish st.partials.reverse)
 
-/-! ## Compensated arithmetic, Modules/mathmodule.c:92-187 -/
+/-! ## Compensated arithmetic, Modules/mathmodule.c:93-188 -/
 
 structure DL where
   hi : Flt
@@ -332,7 +332,7 @@ def tlToD (t : TL) : Flt :=
   let last := dlSum t.lo t.hi
   Flt.add (Flt.add t.tiny last.lo) last.hi
 
-/-! ## `math.hypot(x, y)`, `vector_norm`, Modules/mathmodule.c:2534-2573 -/
+/-! ## `math.hypot(x, y)`, `vector_norm`, Modules/mathmodule.c:1897-1936 -/
 
 /-- `vector_norm` for finite coordinates without the subnormal recursion. -/
 def vectorNormCore (vec : List Flt) (maxE : Int) : Flt :=
@@ -369,7 +369,7 @@ def vectorNorm (vec : List Flt) (mx : Flt) (foundNan : Bool) : Flt :=
       Flt.mul dblMin (vectorNormCore vec' (Flt.frexpExp mx'.toRat))
     else vectorNormCore vec e
 
-/-- `math.hypot(x, y)`, Modules/mathmodule.c:2703-2733. -/
+/-- `math.hypot(x, y)`, Modules/mathmodule.c:2066-2096. -/
 def hypot (x y : Flt) : Flt :=
   let a := Flt.abs x
   let b := Flt.abs y
@@ -377,7 +377,7 @@ def hypot (x y : Flt) : Flt :=
   let mx := if Flt.lt mx0 b then b else mx0
   vectorNorm [a, b] mx (a.isNan || b.isNan)
 
-/-! ## Built-in `sum` over floats, Python/bltinmodule.c:2747-2770 and :2887-2931 -/
+/-! ## Built-in `sum` over floats, Python/bltinmodule.c:2832-2855 and :2973-3017 -/
 
 structure CS where
   hi : Flt

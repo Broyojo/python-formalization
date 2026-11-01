@@ -1,7 +1,7 @@
 import PyLean.DictSet.Common
 
 /-!
-The probe sequence reaches every slot. `Objects/dictobject.c:323-325` cites this as folklore:
+The probe sequence reaches every slot. `Objects/dictobject.c:363-365` cites this as folklore:
 "repeating that 2**i times generates each int in range(2**i) exactly once". Here it is
 proved from scratch: `j -> 5*j + 1` has full period modulo every power of two, and `perturb`,
 a 64-bit value shifted right by 5, is 0 after 13 steps.
@@ -138,7 +138,7 @@ theorem probe_perturb (mask u k : Nat) : (probeState mask u k).2 = u >>> (5 * k)
     simp only [probeStep, PERTURB_SHIFT, ih]
     rw [show 5 * (k + 1) = 5 * k + 5 by omega, Nat.shiftRight_add]
 
-/-- A 64-bit `perturb` is 0 after 13 shifts (`dictobject.c:354-356`), and stays 0. -/
+/-- A 64-bit `perturb` is 0 after 13 shifts (`dictobject.c:394-396`), and stays 0. -/
 theorem probe_perturb_zero (mask u k : Nat) (hu : u < 2 ^ 64) (hk : 13 ≤ k) :
     (probeState mask u k).2 = 0 := by
   rw [probe_perturb, Nat.shiftRight_eq_div_pow]
@@ -178,7 +178,7 @@ theorem probe_lcg (n u k : Nat) (hu : u < 2 ^ 64) :
     rw [Nat.add_mod, Nat.mul_mod, Nat.mod_mod, ← Nat.mul_mod, ← Nat.add_mod, Nat.mul_comm a 5]
 
 /-- Every slot lies on the probe sequence of every hash, within `2^n + 13` steps. This is the
-termination argument at `dictobject.c:357-358`. -/
+termination argument at `dictobject.c:397-398`. -/
 theorem probe_reaches_all (n u s : Nat) (hu : u < 2 ^ 64) (hs : s < 2 ^ n) :
     ∃ j, j < 2 ^ n + 13 ∧ (probeState (2 ^ n - 1) u j).1 = s := by
   obtain ⟨k, hk, he⟩ := lcg_full_period n (probeState (2 ^ n - 1) u 13).1 s

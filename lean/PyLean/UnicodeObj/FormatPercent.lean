@@ -4,7 +4,7 @@ import PyLean.Binary64.Float
 
 /-!
 `%`-formatting, `PyUnicode_Format` and its helpers,
-Objects/unicodeobject.c:14684-15598.
+Objects/unicodeobject.c@3.14.7:14684-15598.
 
 Arguments are a small universe of objects: `int`, `bool`, `float`, `str`, `None`.
 Generic objects would go through their `__str__`, `__repr__` and `__index__`; those
@@ -69,7 +69,7 @@ def FArgs.obj : FArgs → FObj
   | .single o => o
   | _ => .none
 
-/-- `unicode_format_getnextarg`, unicodeobject.c:14684-14698. -/
+/-- `unicode_format_getnextarg`, unicodeobject.c@3.14.7:14684-14698. -/
 def getNextArg (ctx : FCtx) : Py (FObj × FCtx) :=
   if ctx.argidx < ctx.arglen then
     let ctx' := { ctx with argidx := ctx.argidx + 1 }
@@ -94,7 +94,7 @@ def FParse.next (p : FParse) : FParse :=
   | [] => { p with exhausted := true }
   | c :: t => { p with arg := { p.arg with ch := c }, rest := t }
 
-/-- The flag loop, unicodeobject.c:15085-15096. -/
+/-- The flag loop, unicodeobject.c@3.14.7:15085-15096. -/
 def parseFlagsLoop : Nat → FParse → FParse
   | 0, p => p
   | fuel + 1, p =>
@@ -145,11 +145,11 @@ def FObj.asLong : FObj → Option Int
   | .bool b => some (if b then 1 else 0)
   | _ => Option.none
 
-/-- `-arg->width` in `Py_ssize_t`, unicodeobject.c:15113. Negating `PY_SSIZE_T_MIN`
+/-- `-arg->width` in `Py_ssize_t`, unicodeobject.c@3.14.7:15113. Negating `PY_SSIZE_T_MIN`
 is undefined in C; builds use `-fno-strict-overflow`, and it wraps to itself. -/
 def ssizeNeg (w : Int) : Int := if w = ssizeMin then ssizeMin else -w
 
-/-- The `*` and digit width, unicodeobject.c:15099-15137. -/
+/-- The `*` and digit width, unicodeobject.c@3.14.7:15099-15137. -/
 def parseWidthArg (fuel : Nat) (p : FParse) : Py FParse := do
   if p.arg.ch == 42 then
     let (v, ctx) ← getNextArg p.ctx
@@ -163,7 +163,7 @@ def parseWidthArg (fuel : Nat) (p : FParse) : Py FParse := do
     .ok { p' with arg := { p'.arg with width := w } }
   else .ok p
 
-/-- The precision, unicodeobject.c:15140-15179. -/
+/-- The precision, unicodeobject.c@3.14.7:15140-15179. -/
 def parsePrecArg (fuel : Nat) (p : FParse) : Py FParse := do
   if p.arg.ch != 46 then .ok p
   else
@@ -178,7 +178,7 @@ def parsePrecArg (fuel : Nat) (p : FParse) : Py FParse := do
       .ok { p' with arg := { p'.arg with prec := v } }
     else .ok p
 
-/-- The key of `%(key)`, unicodeobject.c:15053-15062: the key and what follows, or
+/-- The key of `%(key)`, unicodeobject.c@3.14.7:15053-15062: the key and what follows, or
 `none` for an incomplete key. -/
 def scanKey : Nat → Nat → List Nat → List Nat → Option (List Nat × List Nat)
   | _, _, _, [] => none
@@ -191,7 +191,7 @@ def scanKey : Nat → Nat → List Nat → List Nat → Option (List Nat × List
 /-- `str(key)` as `KeyError` prints it. -/
 def keyErrorText (key : Str) : String := toLeanString (unicodeRepr key)
 
-/-- `unicode_format_arg_parse`, unicodeobject.c:15029-15199. On entry `p.rest` starts
+/-- `unicode_format_arg_parse`, unicodeobject.c@3.14.7:15029-15199. On entry `p.rest` starts
 at the character after `%`, which the flag loop reads again (`fmtpos` has not moved),
 and `p.arg.ch` already holds it. -/
 def formatArgParse (p : FParse) : Py FParse := do
@@ -218,7 +218,7 @@ def formatArgParse (p : FParse) : Py FParse := do
     if !p.exhausted && (p.arg.ch == 104 || p.arg.ch == 108 || p.arg.ch == 76) then p.next else p
   if p.exhausted then .error (.valueError "incomplete format") else .ok p
 
-/-- `_PyUnicode_FormatLong`, unicodeobject.c:14762-14884. -/
+/-- `_PyUnicode_FormatLong`, unicodeobject.c@3.14.7:14762-14884. -/
 def formatLongStr (v : Int) (alt : Bool) (prec : Int) (type : Nat) : Py Str := do
   if prec > 2 ^ 31 - 1 - 3 then .error (.overflowError "precision too large")
   else
@@ -256,7 +256,7 @@ def FObj.reprOf : FObj → Py Str
   | .str s => .ok (unicodeRepr s)
   | o => o.strOf
 
-/-- `backslashreplace` on the non-ASCII characters, unicodeobject.c:851-912. -/
+/-- `backslashreplace` on the non-ASCII characters, unicodeobject.c@3.14.7:851-912. -/
 def asciiEscapeChar (c : Nat) : Str :=
   if c < 128 then [c]
   else if c < 0x100 then [92, 120] ++ hexDigits 2 c
@@ -275,7 +275,7 @@ inductive FOut where
   | viaOutput (s : Str) (sign : Bool)
   deriving Repr, DecidableEq
 
-/-- `mainformatlong`, unicodeobject.c:14891-14982. -/
+/-- `mainformatlong`, unicodeobject.c@3.14.7:14891-14982. -/
 def mainFormatLong (v : FObj) (arg : FArg) : Py FOut := do
   let t := arg.ch
   let wrong : PyExc :=
@@ -299,7 +299,7 @@ def mainFormatLong (v : FObj) (arg : FArg) : Py FOut := do
   else
     return .viaOutput (← formatLongStr iobj arg.flags.alt arg.prec t) true
 
-/-- `formatchar`, unicodeobject.c:14985-15020. -/
+/-- `formatchar`, unicodeobject.c@3.14.7:14985-15020. -/
 def formatChar : FObj → Py Nat
   | .str s =>
     match s with
@@ -322,13 +322,13 @@ def FObj.asDouble : FObj → Py F64
   | .bool b => .ok (F64.ofInt (if b then 1 else 0))
   | v => .error (.typeError s!"must be real number, not {v.typeName}")
 
-/-- `formatfloat`, unicodeobject.c:14707-14737. -/
+/-- `formatfloat`, unicodeobject.c@3.14.7:14707-14737. -/
 def formatFloatPct (v : FObj) (arg : FArg) : Py Str := do
   let x ← v.asDouble
   let prec : Int := if arg.prec < 0 then 6 else arg.prec
   doubleToString x arg.ch prec { alt := arg.flags.alt }
 
-/-- `unicode_format_arg_format`, unicodeobject.c:15216-15317. `index` is `fmtpos - 1`. -/
+/-- `unicode_format_arg_format`, unicodeobject.c@3.14.7:15216-15317. `index` is `fmtpos - 1`. -/
 def formatArgFormat (ctx : FCtx) (arg : FArg) (index : Nat) : Py (FOut × FCtx) := do
   let (v, ctx) ← getNextArg ctx
   let c := arg.ch
@@ -358,7 +358,7 @@ def formatArgFormat (ctx : FCtx) (arg : FArg) (index : Nat) : Py (FOut × FCtx) 
       s!"unsupported format character '{shown}' (0x{hexPlain c}) at index {index}")
 
 /-- The part of `unicode_format_arg_output` after the sign is known,
-unicodeobject.c:15380-15469: `sign`, `signchar`, `len`, `pindex` on entry. -/
+unicodeobject.c@3.14.7:15380-15469: `sign`, `signchar`, `len`, `pindex` on entry. -/
 def formatArgTail (arg : FArg) (fill : Nat) (sign : Bool) (signchar : Nat) (len : Int) (pindex : Nat)
     (str : Str) : Str :=
   let fl := arg.flags
@@ -378,7 +378,7 @@ def formatArgTail (arg : FArg) (fill : Nat) (sign : Bool) (signchar : Nat) (len 
   let tail : Nat := if width > lenAfter then (width - lenAfter).toNat else 0
   out1 ++ out2 ++ List.replicate pad fill ++ out3 ++ out4 ++ body ++ List.replicate tail 32
 
-/-- `unicode_format_arg_output`, unicodeobject.c:15320-15469, with `sign0` for
+/-- `unicode_format_arg_output`, unicodeobject.c@3.14.7:15320-15469, with `sign0` for
 `arg->sign`. A negative width that is not -1 takes the first test. -/
 def formatArgOutput (arg : FArg) (sign0 : Bool) (str : Str) : Str :=
   let fl := arg.flags
@@ -406,7 +406,7 @@ def checkDictArgs (ctx : FCtx) : Py Unit :=
     .error (.typeError "not all arguments converted during string formatting")
   else .ok ()
 
-/-- `unicode_format_arg`, unicodeobject.c:15474-15515: output, what follows, context. -/
+/-- `unicode_format_arg`, unicodeobject.c@3.14.7:15474-15515: output, what follows, context. -/
 def formatArg (fmtlen : Nat) (rest : List Nat) (ctx : FCtx) : Py (Str × List Nat × FCtx) := do
   let ch := rest.headD 0
   if ch == 37 then return ([37], rest.tail, ctx)
@@ -429,7 +429,7 @@ def formatLoop (fmtlen : Nat) : Nat → List Nat → FCtx → Str → Py (Str ×
       let (o, rest, ctx') ← formatArg fmtlen t ctx
       formatLoop fmtlen fuel rest ctx' (out ++ o)
 
-/-- `PyUnicode_Format`, unicodeobject.c:15518-15598. -/
+/-- `PyUnicode_Format`, unicodeobject.c@3.14.7:15518-15598. -/
 def pyUnicodeFormat (format : Str) (args : FArgs) : Py Str := do
   let ctx : FCtx := match args with
     | .tuple items => { cur := args, arglen := items.length, argidx := 0, dict := none }

@@ -8,7 +8,7 @@ namespace PyLean.MathInt
 
 open PyLean
 
-/-- `math.isqrt` docs: the argument must be nonnegative; mathmodule.c:1707-1712
+/-- `math.isqrt` docs: the argument must be nonnegative; mathmodule.c@3.14.7:1707-1712
 raises `ValueError` otherwise. -/
 def IsqrtRejectsNegative : Prop :=
   ∀ n : Int, n < 0 → (isqrt n).raises "ValueError"
@@ -47,7 +47,7 @@ theorem combPermZeroAbove_proven : CombPermZeroAbove := by
 
 /-- `math.factorial` docs: "Raises ValueError if n is not integral or is
 negative"; arguments above `LONG_MAX` raise `OverflowError`
-(mathmodule.c:2029-2033). -/
+(mathmodule.c@3.14.7:2029-2033). -/
 def FactorialArgErrors : Prop :=
   ∀ n : Int, (n < 0 → (factorial n).raises "ValueError") ∧
     (n > llongMax → (factorial n).raises "OverflowError")

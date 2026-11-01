@@ -1,14 +1,14 @@
 file	line	endline	name	signature	status	entry	note
-Lib/email/charset.py	104	129	add_charset	add_charset(charset, header_enc=None, body_enc=None, output_charset=None)	todo		
-Lib/email/charset.py	132	138	add_alias	add_alias(alias, canonical)	todo		
-Lib/email/charset.py	141	148	add_codec	add_codec(charset, codecname)	todo		
-Lib/email/charset.py	153	157	_encode	_encode(string, codec)	todo		
-Lib/email/charset.py	204	235	Charset.__init__	__init__(self, input_charset=DEFAULT_CHARSET)	todo		
-Lib/email/charset.py	237	238	Charset.__repr__	__repr__(self)	todo		
-Lib/email/charset.py	240	241	Charset.__eq__	__eq__(self, other)	todo		
-Lib/email/charset.py	243	262	Charset.get_body_encoding	get_body_encoding(self)	todo		
-Lib/email/charset.py	264	270	Charset.get_output_charset	get_output_charset(self)	todo		
-Lib/email/charset.py	272	289	Charset.header_encode	header_encode(self, string)	todo		
-Lib/email/charset.py	291	350	Charset.header_encode_lines	header_encode_lines(self, string, maxlengths)	todo		
-Lib/email/charset.py	352	365	Charset._get_encoder	_get_encoder(self, header_bytes)	todo		
-Lib/email/charset.py	367	396	Charset.body_encode	body_encode(self, string)	todo		
+Lib/email/charset.py	139	164	add_charset	add_charset(charset, header_enc=None, body_enc=None, output_charset=None)	todo		
+Lib/email/charset.py	167	173	add_alias	add_alias(alias, canonical)	todo		
+Lib/email/charset.py	176	183	add_codec	add_codec(charset, codecname)	todo		
+Lib/email/charset.py	188	192	_encode	_encode(string, codec)	todo		
+Lib/email/charset.py	239	281	Charset.__init__	__init__(self, input_charset=DEFAULT_CHARSET)	todo		changed-in-3.15:
+Lib/email/charset.py	283	284	Charset.__repr__	__repr__(self)	todo		
+Lib/email/charset.py	286	287	Charset.__eq__	__eq__(self, other)	todo		
+Lib/email/charset.py	289	308	Charset.get_body_encoding	get_body_encoding(self)	todo		
+Lib/email/charset.py	310	316	Charset.get_output_charset	get_output_charset(self)	todo		
+Lib/email/charset.py	318	335	Charset.header_encode	header_encode(self, string)	todo		
+Lib/email/charset.py	337	396	Charset.header_encode_lines	header_encode_lines(self, string, maxlengths)	todo		
+Lib/email/charset.py	398	411	Charset._get_encoder	_get_encoder(self, header_bytes)	todo		
+Lib/email/charset.py	413	442	Charset.body_encode	body_encode(self, string)	todo		

@@ -1,71 +1,71 @@
 file	line	endline	name	signature	status	entry	note
 Lib/http/client.py	173	185	_encode	_encode(data, name='data')	todo		
 Lib/http/client.py	187	193	_strip_ipv6_iface	_strip_ipv6_iface(enc_name: bytes)	todo		
-Lib/http/client.py	202	223	HTTPMessage.getallmatchingheaders	getallmatchingheaders(self, name)	todo		
-Lib/http/client.py	225	241	_read_headers	_read_headers(fp)	todo		
-Lib/http/client.py	243	255	_parse_header_lines	_parse_header_lines(header_lines, _class=HTTPMessage)	todo		
-Lib/http/client.py	257	261	parse_headers	parse_headers(fp, _class=HTTPMessage)	todo		
-Lib/http/client.py	273	301	HTTPResponse.__init__	__init__(self, sock, debuglevel=0, method=None, url=None)	todo		
-Lib/http/client.py	303	334	HTTPResponse._read_status	_read_status(self)	todo		
-Lib/http/client.py	336	409	HTTPResponse.begin	begin(self)	todo		
-Lib/http/client.py	411	438	HTTPResponse._check_close	_check_close(self)	todo		
-Lib/http/client.py	440	443	HTTPResponse._close_conn	_close_conn(self)	todo		
-Lib/http/client.py	445	450	HTTPResponse.close	close(self)	todo		
-Lib/http/client.py	457	460	HTTPResponse.flush	flush(self)	todo		
-Lib/http/client.py	462	464	HTTPResponse.readable	readable(self)	todo		
-Lib/http/client.py	468	476	HTTPResponse.isclosed	isclosed(self)	todo		
-Lib/http/client.py	478	516	HTTPResponse.read	read(self, amt=None)	todo		candidates:pyio-bytesio-read-after-seek
-Lib/http/client.py	518	550	HTTPResponse.readinto	readinto(self, b)	todo		
-Lib/http/client.py	552	566	HTTPResponse._read_next_chunk_size	_read_next_chunk_size(self)	todo		
-Lib/http/client.py	568	589	HTTPResponse._read_and_discard_trailer	_read_and_discard_trailer(self)	todo		
-Lib/http/client.py	591	613	HTTPResponse._get_chunk_left	_get_chunk_left(self)	todo		
-Lib/http/client.py	615	633	HTTPResponse._read_chunked	_read_chunked(self, amt=None)	todo		
-Lib/http/client.py	635	657	HTTPResponse._readinto_chunked	_readinto_chunked(self, b)	todo		
-Lib/http/client.py	659	684	HTTPResponse._safe_read	_safe_read(self, amt)	todo		
-Lib/http/client.py	686	692	HTTPResponse._safe_readinto	_safe_readinto(self, b)	todo		
-Lib/http/client.py	694	711	HTTPResponse.read1	read1(self, n=-1)	todo		
-Lib/http/client.py	713	720	HTTPResponse.peek	peek(self, n=-1)	todo		
-Lib/http/client.py	722	737	HTTPResponse.readline	readline(self, limit=-1)	todo		
-Lib/http/client.py	739	751	HTTPResponse._read1_chunked	_read1_chunked(self, n)	todo		
-Lib/http/client.py	753	764	HTTPResponse._peek_chunked	_peek_chunked(self, n)	todo		
-Lib/http/client.py	766	767	HTTPResponse.fileno	fileno(self)	todo		
-Lib/http/client.py	769	787	HTTPResponse.getheader	getheader(self, name, default=None)	todo		
-Lib/http/client.py	789	793	HTTPResponse.getheaders	getheaders(self)	todo		
-Lib/http/client.py	797	798	HTTPResponse.__iter__	__iter__(self)	todo		
-Lib/http/client.py	802	823	HTTPResponse.info	info(self)	todo		
-Lib/http/client.py	825	835	HTTPResponse.geturl	geturl(self)	todo		
-Lib/http/client.py	837	842	HTTPResponse.getcode	getcode(self)	todo		
-Lib/http/client.py	845	855	_create_https_context	_create_https_context(http_version)	todo		
-Lib/http/client.py	869	872	HTTPConnection._is_textIO	_is_textIO(stream)	todo		
-Lib/http/client.py	875	904	HTTPConnection._get_content_length	_get_content_length(body, method)	todo		
-Lib/http/client.py	906	927	HTTPConnection.__init__	__init__(self, host, port=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, source_address=None, blocksize=8192)	todo		
-Lib/http/client.py	929	963	HTTPConnection.set_tunnel	set_tunnel(self, host, port=None, headers=None)	todo		
-Lib/http/client.py	965	983	HTTPConnection._get_hostport	_get_hostport(self, host, port)	todo		
-Lib/http/client.py	985	986	HTTPConnection.set_debuglevel	set_debuglevel(self, level)	todo		
-Lib/http/client.py	988	991	HTTPConnection._wrap_ipv6	_wrap_ipv6(self, ip)	todo		
-Lib/http/client.py	993	1032	HTTPConnection._tunnel	_tunnel(self)	todo		
-Lib/http/client.py	1034	1046	HTTPConnection.get_proxy_response_headers	get_proxy_response_headers(self)	todo		
-Lib/http/client.py	1048	1061	HTTPConnection.connect	connect(self)	todo		
-Lib/http/client.py	1063	1075	HTTPConnection.close	close(self)	todo		
-Lib/http/client.py	1077	1112	HTTPConnection.send	send(self, data)	todo		
-Lib/http/client.py	1114	1119	HTTPConnection._output	_output(self, s)	todo		
-Lib/http/client.py	1121	1130	HTTPConnection._read_readable	_read_readable(self, readable)	todo		
-Lib/http/client.py	1132	1184	HTTPConnection._send_output	_send_output(self, message_body=None, encode_chunked=False)	todo		
-Lib/http/client.py	1186	1311	HTTPConnection.putrequest	putrequest(self, method, url, skip_host=False, skip_accept_encoding=False)	todo		
-Lib/http/client.py	1313	1315	HTTPConnection._encode_request	_encode_request(self, request)	todo		
-Lib/http/client.py	1317	1324	HTTPConnection._validate_method	_validate_method(self, method)	todo		
-Lib/http/client.py	1326	1332	HTTPConnection._validate_path	_validate_path(self, url)	todo		
-Lib/http/client.py	1334	1340	HTTPConnection._validate_host	_validate_host(self, host)	todo		
-Lib/http/client.py	1342	1368	HTTPConnection.putheader	putheader(self, header, *values)	todo		
-Lib/http/client.py	1370	1381	HTTPConnection.endheaders	endheaders(self, message_body=None, *, encode_chunked=False)	todo		
-Lib/http/client.py	1383	1386	HTTPConnection.request	request(self, method, url, body=None, headers={}, *, encode_chunked=False)	todo		
-Lib/http/client.py	1388	1432	HTTPConnection._send_request	_send_request(self, method, url, body, headers, encode_chunked)	todo		
-Lib/http/client.py	1434	1495	HTTPConnection.getresponse	getresponse(self)	todo		
-Lib/http/client.py	1507	1515	HTTPSConnection.__init__	__init__(self, host, port=None, *, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, source_address=None, context=None, blocksize=8192)	todo		
-Lib/http/client.py	1517	1528	HTTPSConnection.connect	connect(self)	todo		
-Lib/http/client.py	1544	1546	UnknownProtocol.__init__	__init__(self, version)	todo		
-Lib/http/client.py	1555	1558	IncompleteRead.__init__	__init__(self, partial, expected=None)	todo		
-Lib/http/client.py	1559	1565	IncompleteRead.__repr__	__repr__(self)	todo		
-Lib/http/client.py	1581	1585	BadStatusLine.__init__	__init__(self, line)	todo		
-Lib/http/client.py	1588	1590	LineTooLong.__init__	__init__(self, line_type)	todo		
-Lib/http/client.py	1593	1595	RemoteDisconnected.__init__	__init__(self, *pos, **kw)	todo		
+Lib/http/client.py	201	222	HTTPMessage.getallmatchingheaders	getallmatchingheaders(self, name)	todo		
+Lib/http/client.py	224	242	_read_headers	_read_headers(fp, max_headers)	todo		changed-in-3.15:
+Lib/http/client.py	244	256	_parse_header_lines	_parse_header_lines(header_lines, _class=HTTPMessage)	todo		
+Lib/http/client.py	258	262	parse_headers	parse_headers(fp, _class=HTTPMessage, *, _max_headers=None)	todo		changed-in-3.15:
+Lib/http/client.py	274	303	HTTPResponse.__init__	__init__(self, sock, debuglevel=0, method=None, url=None)	todo		changed-in-3.15:
+Lib/http/client.py	305	336	HTTPResponse._read_status	_read_status(self)	todo		
+Lib/http/client.py	338	418	HTTPResponse.begin	begin(self, *, _max_headers=None)	todo		changed-in-3.15:
+Lib/http/client.py	420	447	HTTPResponse._check_close	_check_close(self)	todo		
+Lib/http/client.py	449	452	HTTPResponse._close_conn	_close_conn(self)	todo		
+Lib/http/client.py	454	459	HTTPResponse.close	close(self)	todo		
+Lib/http/client.py	466	469	HTTPResponse.flush	flush(self)	todo		
+Lib/http/client.py	471	473	HTTPResponse.readable	readable(self)	todo		
+Lib/http/client.py	477	485	HTTPResponse.isclosed	isclosed(self)	todo		
+Lib/http/client.py	487	525	HTTPResponse.read	read(self, amt=None)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/http/client.py	527	559	HTTPResponse.readinto	readinto(self, b)	todo		
+Lib/http/client.py	561	575	HTTPResponse._read_next_chunk_size	_read_next_chunk_size(self)	todo		
+Lib/http/client.py	577	600	HTTPResponse._read_and_discard_trailer	_read_and_discard_trailer(self)	todo		changed-in-3.15:
+Lib/http/client.py	602	624	HTTPResponse._get_chunk_left	_get_chunk_left(self)	todo		
+Lib/http/client.py	626	644	HTTPResponse._read_chunked	_read_chunked(self, amt=None)	todo		
+Lib/http/client.py	646	668	HTTPResponse._readinto_chunked	_readinto_chunked(self, b)	todo		
+Lib/http/client.py	670	695	HTTPResponse._safe_read	_safe_read(self, amt)	todo		
+Lib/http/client.py	697	703	HTTPResponse._safe_readinto	_safe_readinto(self, b)	todo		
+Lib/http/client.py	705	722	HTTPResponse.read1	read1(self, n=-1)	todo		
+Lib/http/client.py	724	731	HTTPResponse.peek	peek(self, n=-1)	todo		
+Lib/http/client.py	733	748	HTTPResponse.readline	readline(self, limit=-1)	todo		
+Lib/http/client.py	750	762	HTTPResponse._read1_chunked	_read1_chunked(self, n)	todo		
+Lib/http/client.py	764	775	HTTPResponse._peek_chunked	_peek_chunked(self, n)	todo		
+Lib/http/client.py	777	778	HTTPResponse.fileno	fileno(self)	todo		
+Lib/http/client.py	780	798	HTTPResponse.getheader	getheader(self, name, default=None)	todo		
+Lib/http/client.py	800	804	HTTPResponse.getheaders	getheaders(self)	todo		
+Lib/http/client.py	808	809	HTTPResponse.__iter__	__iter__(self)	todo		
+Lib/http/client.py	813	834	HTTPResponse.info	info(self)	todo		
+Lib/http/client.py	836	846	HTTPResponse.geturl	geturl(self)	todo		
+Lib/http/client.py	848	853	HTTPResponse.getcode	getcode(self)	todo		
+Lib/http/client.py	856	866	_create_https_context	_create_https_context(http_version)	todo		
+Lib/http/client.py	880	883	HTTPConnection._is_textIO	_is_textIO(stream)	todo		
+Lib/http/client.py	886	915	HTTPConnection._get_content_length	_get_content_length(body, method)	todo		
+Lib/http/client.py	917	939	HTTPConnection.__init__	__init__(self, host, port=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, source_address=None, blocksize=8192, *, max_response_headers=None)	todo		changed-in-3.15:
+Lib/http/client.py	941	975	HTTPConnection.set_tunnel	set_tunnel(self, host, port=None, headers=None)	todo		
+Lib/http/client.py	977	995	HTTPConnection._get_hostport	_get_hostport(self, host, port)	todo		
+Lib/http/client.py	997	998	HTTPConnection.set_debuglevel	set_debuglevel(self, level)	todo		
+Lib/http/client.py	1000	1003	HTTPConnection._wrap_ipv6	_wrap_ipv6(self, ip)	todo		
+Lib/http/client.py	1005	1044	HTTPConnection._tunnel	_tunnel(self)	todo		changed-in-3.15:
+Lib/http/client.py	1046	1058	HTTPConnection.get_proxy_response_headers	get_proxy_response_headers(self)	todo		
+Lib/http/client.py	1060	1073	HTTPConnection.connect	connect(self)	todo		
+Lib/http/client.py	1075	1087	HTTPConnection.close	close(self)	todo		
+Lib/http/client.py	1089	1124	HTTPConnection.send	send(self, data)	todo		
+Lib/http/client.py	1126	1131	HTTPConnection._output	_output(self, s)	todo		
+Lib/http/client.py	1133	1142	HTTPConnection._read_readable	_read_readable(self, readable)	todo		
+Lib/http/client.py	1144	1196	HTTPConnection._send_output	_send_output(self, message_body=None, encode_chunked=False)	todo		
+Lib/http/client.py	1198	1323	HTTPConnection.putrequest	putrequest(self, method, url, skip_host=False, skip_accept_encoding=False)	todo		
+Lib/http/client.py	1325	1327	HTTPConnection._encode_request	_encode_request(self, request)	todo		
+Lib/http/client.py	1329	1336	HTTPConnection._validate_method	_validate_method(self, method)	todo		
+Lib/http/client.py	1338	1344	HTTPConnection._validate_path	_validate_path(self, url)	todo		
+Lib/http/client.py	1346	1352	HTTPConnection._validate_host	_validate_host(self, host)	todo		
+Lib/http/client.py	1354	1380	HTTPConnection.putheader	putheader(self, header, *values)	todo		
+Lib/http/client.py	1382	1393	HTTPConnection.endheaders	endheaders(self, message_body=None, *, encode_chunked=False)	todo		
+Lib/http/client.py	1395	1398	HTTPConnection.request	request(self, method, url, body=None, headers={}, *, encode_chunked=False)	todo		
+Lib/http/client.py	1400	1444	HTTPConnection._send_request	_send_request(self, method, url, body, headers, encode_chunked)	todo		
+Lib/http/client.py	1446	1509	HTTPConnection.getresponse	getresponse(self)	todo		changed-in-3.15:
+Lib/http/client.py	1521	1531	HTTPSConnection.__init__	__init__(self, host, port=None, *, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, source_address=None, context=None, blocksize=8192, max_response_headers=None)	todo		changed-in-3.15:
+Lib/http/client.py	1533	1544	HTTPSConnection.connect	connect(self)	todo		
+Lib/http/client.py	1560	1562	UnknownProtocol.__init__	__init__(self, version)	todo		
+Lib/http/client.py	1571	1574	IncompleteRead.__init__	__init__(self, partial, expected=None)	todo		
+Lib/http/client.py	1575	1581	IncompleteRead.__repr__	__repr__(self)	todo		
+Lib/http/client.py	1597	1601	BadStatusLine.__init__	__init__(self, line)	todo		
+Lib/http/client.py	1604	1606	LineTooLong.__init__	__init__(self, line_type)	todo		
+Lib/http/client.py	1609	1611	RemoteDisconnected.__init__	__init__(self, *pos, **kw)	todo		

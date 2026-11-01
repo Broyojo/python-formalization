@@ -228,7 +228,7 @@ theorem encodeCallbackPosition_proven : EncodeCallbackPosition := by
 
 /-! ## The standard handlers through the callback path -/
 
-/-- `get_standard_encoding_impl`, Python/codecs.c:1157-1205, on the names the decoders pass. -/
+/-- `get_standard_encoding_impl`, Python/codecs.c:1148-1198, on the names the decoders pass. -/
 def codeOf (enc : String) : EncCode :=
   if enc == "utf-8" then .utf8
   else if enc == "utf-16-le" then .utf16le

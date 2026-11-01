@@ -1,4 +1,5 @@
 file	line	endline	name	signature	status	entry	note
-Python/structmember.c	12	21	member_get_object	member_get_object(const char *addr, const char *obj_addr, PyMemberDef *l)	todo		
-Python/structmember.c	24	135	PyMember_GetOne	PyMember_GetOne(const char *obj_addr, PyMemberDef *l)	todo		
-Python/structmember.c	144	382	PyMember_SetOne	PyMember_SetOne(char *addr, PyMemberDef *l, PyObject *v)	todo		
+Python/structmember.c	13	22	member_get_object	member_get_object(const char *addr, const char *obj_addr, PyMemberDef *l)	todo		
+Python/structmember.c	25	33	_PyMember_GetOffset	_PyMember_GetOffset(PyObject *obj, PyMemberDef *mp)	todo		changed-in-3.15: new function
+Python/structmember.c	36	147	PyMember_GetOne	PyMember_GetOne(const char *obj_addr, PyMemberDef *l)	todo		changed-in-3.15:
+Python/structmember.c	156	392	PyMember_SetOne	PyMember_SetOne(char *addr, PyMemberDef *l, PyObject *v)	todo		changed-in-3.15:

@@ -1,121 +1,122 @@
 file	line	endline	name	signature	status	entry	note
-Lib/optparse.py	80	81	_repr	_repr(self)	todo		
-Lib/optparse.py	92	93	OptParseError.__init__	__init__(self, msg)	todo		
-Lib/optparse.py	95	96	OptParseError.__str__	__str__(self)	todo		
-Lib/optparse.py	105	107	OptionError.__init__	__init__(self, msg, option)	todo		
-Lib/optparse.py	109	113	OptionError.__str__	__str__(self)	todo		
-Lib/optparse.py	130	131	BadOptionError.__init__	__init__(self, opt_str)	todo		
-Lib/optparse.py	133	134	BadOptionError.__str__	__str__(self)	todo		
-Lib/optparse.py	140	142	AmbiguousOptionError.__init__	__init__(self, opt_str, possibilities)	todo		
-Lib/optparse.py	144	146	AmbiguousOptionError.__str__	__str__(self)	todo		
-Lib/optparse.py	194	217	HelpFormatter.__init__	__init__(self, indent_increment, max_help_position, width, short_first)	todo		
-Lib/optparse.py	219	220	HelpFormatter.set_parser	set_parser(self, parser)	todo		
-Lib/optparse.py	222	226	HelpFormatter.set_short_opt_delimiter	set_short_opt_delimiter(self, delim)	todo		
-Lib/optparse.py	228	232	HelpFormatter.set_long_opt_delimiter	set_long_opt_delimiter(self, delim)	todo		
-Lib/optparse.py	234	236	HelpFormatter.indent	indent(self)	todo		
-Lib/optparse.py	238	241	HelpFormatter.dedent	dedent(self)	todo		
-Lib/optparse.py	243	244	HelpFormatter.format_usage	format_usage(self, usage)	todo		
-Lib/optparse.py	246	247	HelpFormatter.format_heading	format_heading(self, heading)	todo		
-Lib/optparse.py	249	260	HelpFormatter._format_text	_format_text(self, text)	todo		
-Lib/optparse.py	262	266	HelpFormatter.format_description	format_description(self, description)	todo		
-Lib/optparse.py	268	272	HelpFormatter.format_epilog	format_epilog(self, epilog)	todo		
-Lib/optparse.py	275	283	HelpFormatter.expand_default	expand_default(self, option)	todo		
-Lib/optparse.py	285	319	HelpFormatter.format_option	format_option(self, option)	todo		
-Lib/optparse.py	321	337	HelpFormatter.store_option_strings	store_option_strings(self, parser)	todo		
-Lib/optparse.py	339	356	HelpFormatter.format_option_strings	format_option_strings(self, option)	todo		
-Lib/optparse.py	362	368	IndentedHelpFormatter.__init__	__init__(self, indent_increment=2, max_help_position=24, width=None, short_first=1)	todo		
-Lib/optparse.py	370	371	IndentedHelpFormatter.format_usage	format_usage(self, usage)	todo		
-Lib/optparse.py	373	374	IndentedHelpFormatter.format_heading	format_heading(self, heading)	todo		
-Lib/optparse.py	381	387	TitledHelpFormatter.__init__	__init__(self, indent_increment=0, max_help_position=24, width=None, short_first=0)	todo		
-Lib/optparse.py	389	390	TitledHelpFormatter.format_usage	format_usage(self, usage)	todo		
-Lib/optparse.py	392	393	TitledHelpFormatter.format_heading	format_heading(self, heading)	todo		
-Lib/optparse.py	396	407	_parse_num	_parse_num(val, type)	todo		
-Lib/optparse.py	409	410	_parse_int	_parse_int(val)	todo		
-Lib/optparse.py	417	423	check_builtin	check_builtin(option, opt, value)	todo		
-Lib/optparse.py	425	432	check_choice	check_choice(option, opt, value)	todo		
-Lib/optparse.py	554	571	Option.__init__	__init__(self, *opts, **attrs)	todo		
-Lib/optparse.py	573	580	Option._check_opt_strings	_check_opt_strings(self, opts)	todo		
-Lib/optparse.py	582	601	Option._set_opt_strings	_set_opt_strings(self, opts)	todo		
-Lib/optparse.py	603	617	Option._set_attrs	_set_attrs(self, attrs)	todo		
-Lib/optparse.py	622	626	Option._check_action	_check_action(self)	todo		
-Lib/optparse.py	628	650	Option._check_type	_check_type(self)	todo		
-Lib/optparse.py	652	663	Option._check_choice	_check_choice(self)	todo		
-Lib/optparse.py	665	678	Option._check_dest	_check_dest(self)	todo		
-Lib/optparse.py	680	684	Option._check_const	_check_const(self)	todo		
-Lib/optparse.py	686	693	Option._check_nargs	_check_nargs(self)	todo		
-Lib/optparse.py	695	720	Option._check_callback	_check_callback(self)	todo		
-Lib/optparse.py	734	735	Option.__str__	__str__(self)	todo		
-Lib/optparse.py	739	740	Option.takes_value	takes_value(self)	todo		
-Lib/optparse.py	742	746	Option.get_opt_string	get_opt_string(self)	todo		
-Lib/optparse.py	751	756	Option.check_value	check_value(self, opt, value)	todo		
-Lib/optparse.py	758	763	Option.convert_value	convert_value(self, opt, value)	todo		
-Lib/optparse.py	765	775	Option.process	process(self, opt, value, values, parser)	todo		
-Lib/optparse.py	777	805	Option.take_action	take_action(self, action, dest, opt, value, values, parser)	todo		
-Lib/optparse.py	815	818	Values.__init__	__init__(self, defaults=None)	todo		
-Lib/optparse.py	820	821	Values.__str__	__str__(self)	todo		
-Lib/optparse.py	825	831	Values.__eq__	__eq__(self, other)	todo		
-Lib/optparse.py	833	844	Values._update_careful	_update_careful(self, dict)	todo		
-Lib/optparse.py	846	852	Values._update_loose	_update_loose(self, dict)	todo		
-Lib/optparse.py	854	860	Values._update	_update(self, dict, mode)	todo		
-Lib/optparse.py	862	865	Values.read_module	read_module(self, modname, mode='careful')	todo		
-Lib/optparse.py	867	870	Values.read_file	read_file(self, filename, mode='careful')	todo		
-Lib/optparse.py	872	875	Values.ensure_value	ensure_value(self, attr, value)	todo		
-Lib/optparse.py	910	919	OptionContainer.__init__	__init__(self, option_class, conflict_handler, description)	todo		
-Lib/optparse.py	921	927	OptionContainer._create_option_mappings	_create_option_mappings(self)	todo		
-Lib/optparse.py	930	935	OptionContainer._share_option_mappings	_share_option_mappings(self, parser)	todo		
-Lib/optparse.py	937	940	OptionContainer.set_conflict_handler	set_conflict_handler(self, handler)	todo		
-Lib/optparse.py	942	943	OptionContainer.set_description	set_description(self, description)	todo		
-Lib/optparse.py	945	946	OptionContainer.get_description	get_description(self)	todo		
-Lib/optparse.py	949	953	OptionContainer.destroy	destroy(self)	todo		
-Lib/optparse.py	958	983	OptionContainer._check_conflict	_check_conflict(self, option)	todo		
-Lib/optparse.py	985	1013	OptionContainer.add_option	add_option(self, *args, **kwargs)	todo		
-Lib/optparse.py	1015	1017	OptionContainer.add_options	add_options(self, option_list)	todo		
-Lib/optparse.py	1021	1023	OptionContainer.get_option	get_option(self, opt_str)	todo		
-Lib/optparse.py	1025	1027	OptionContainer.has_option	has_option(self, opt_str)	todo		
-Lib/optparse.py	1029	1040	OptionContainer.remove_option	remove_option(self, opt_str)	todo		
-Lib/optparse.py	1045	1052	OptionContainer.format_option_help	format_option_help(self, formatter)	todo		
-Lib/optparse.py	1054	1055	OptionContainer.format_description	format_description(self, formatter)	todo		
-Lib/optparse.py	1057	1063	OptionContainer.format_help	format_help(self, formatter)	todo		
-Lib/optparse.py	1068	1072	OptionGroup.__init__	__init__(self, parser, title, description=None)	todo		
-Lib/optparse.py	1074	1076	OptionGroup._create_option_list	_create_option_list(self)	todo		
-Lib/optparse.py	1078	1079	OptionGroup.set_title	set_title(self, title)	todo		
-Lib/optparse.py	1081	1084	OptionGroup.destroy	destroy(self)	todo		
-Lib/optparse.py	1088	1093	OptionGroup.format_help	format_help(self, formatter)	todo		
-Lib/optparse.py	1168	1199	OptionParser.__init__	__init__(self, usage=None, option_list=None, option_class=Option, version=None, conflict_handler='error', description=None, formatter=None, add_help_option=True, prog=None, epilog=None)	todo		
-Lib/optparse.py	1202	1214	OptionParser.destroy	destroy(self)	todo		
-Lib/optparse.py	1220	1223	OptionParser._create_option_list	_create_option_list(self)	todo		
-Lib/optparse.py	1225	1228	OptionParser._add_help_option	_add_help_option(self)	todo		
-Lib/optparse.py	1230	1233	OptionParser._add_version_option	_add_version_option(self)	todo		
-Lib/optparse.py	1235	1243	OptionParser._populate_option_list	_populate_option_list(self, option_list, add_help=True)	todo		
-Lib/optparse.py	1245	1249	OptionParser._init_parsing_state	_init_parsing_state(self)	todo		
-Lib/optparse.py	1254	1263	OptionParser.set_usage	set_usage(self, usage)	todo		
-Lib/optparse.py	1265	1271	OptionParser.enable_interspersed_args	enable_interspersed_args(self)	todo		
-Lib/optparse.py	1273	1279	OptionParser.disable_interspersed_args	disable_interspersed_args(self)	todo		
-Lib/optparse.py	1281	1282	OptionParser.set_process_default_values	set_process_default_values(self, process)	todo		
-Lib/optparse.py	1284	1285	OptionParser.set_default	set_default(self, dest, value)	todo		
-Lib/optparse.py	1287	1288	OptionParser.set_defaults	set_defaults(self, **kwargs)	todo		
-Lib/optparse.py	1290	1294	OptionParser._get_all_options	_get_all_options(self)	todo		
-Lib/optparse.py	1296	1308	OptionParser.get_default_values	get_default_values(self)	todo		
-Lib/optparse.py	1313	1327	OptionParser.add_option_group	add_option_group(self, *args, **kwargs)	todo		
-Lib/optparse.py	1329	1334	OptionParser.get_option_group	get_option_group(self, opt_str)	todo		
-Lib/optparse.py	1339	1343	OptionParser._get_args	_get_args(self, args)	todo		
-Lib/optparse.py	1345	1382	OptionParser.parse_args	parse_args(self, args=None, values=None)	todo		
-Lib/optparse.py	1384	1395	OptionParser.check_values	check_values(self, values, args)	todo		
-Lib/optparse.py	1397	1426	OptionParser._process_args	_process_args(self, largs, rargs, values)	todo		
-Lib/optparse.py	1448	1455	OptionParser._match_long_opt	_match_long_opt(self, opt)	todo		
-Lib/optparse.py	1457	1491	OptionParser._process_long_opt	_process_long_opt(self, rargs, values)	todo		
-Lib/optparse.py	1493	1529	OptionParser._process_short_opts	_process_short_opts(self, rargs, values)	todo		
-Lib/optparse.py	1534	1538	OptionParser.get_prog_name	get_prog_name(self)	todo		
-Lib/optparse.py	1540	1541	OptionParser.expand_prog_name	expand_prog_name(self, s)	todo		
-Lib/optparse.py	1543	1544	OptionParser.get_description	get_description(self)	todo		
-Lib/optparse.py	1546	1549	OptionParser.exit	exit(self, status=0, msg=None)	todo		
-Lib/optparse.py	1551	1559	OptionParser.error	error(self, msg)	todo		
-Lib/optparse.py	1561	1566	OptionParser.get_usage	get_usage(self)	todo		
-Lib/optparse.py	1568	1578	OptionParser.print_usage	print_usage(self, file=None)	todo		
-Lib/optparse.py	1580	1584	OptionParser.get_version	get_version(self)	todo		
-Lib/optparse.py	1586	1595	OptionParser.print_version	print_version(self, file=None)	todo		
-Lib/optparse.py	1597	1612	OptionParser.format_option_help	format_option_help(self, formatter=None)	todo		
-Lib/optparse.py	1614	1615	OptionParser.format_epilog	format_epilog(self, formatter)	todo		
-Lib/optparse.py	1617	1627	OptionParser.format_help	format_help(self, formatter=None)	todo		
-Lib/optparse.py	1629	1637	OptionParser.print_help	print_help(self, file=None)	todo		
-Lib/optparse.py	1642	1664	_match_abbrev	_match_abbrev(s, wordmap)	todo		
+Lib/optparse.py	71	72	_repr	_repr(self)	todo		
+Lib/optparse.py	83	84	OptParseError.__init__	__init__(self, msg)	todo		
+Lib/optparse.py	86	87	OptParseError.__str__	__str__(self)	todo		
+Lib/optparse.py	96	98	OptionError.__init__	__init__(self, msg, option)	todo		
+Lib/optparse.py	100	104	OptionError.__str__	__str__(self)	todo		
+Lib/optparse.py	121	122	BadOptionError.__init__	__init__(self, opt_str)	todo		
+Lib/optparse.py	124	125	BadOptionError.__str__	__str__(self)	todo		
+Lib/optparse.py	131	133	AmbiguousOptionError.__init__	__init__(self, opt_str, possibilities)	todo		
+Lib/optparse.py	135	137	AmbiguousOptionError.__str__	__str__(self)	todo		
+Lib/optparse.py	185	208	HelpFormatter.__init__	__init__(self, indent_increment, max_help_position, width, short_first)	todo		
+Lib/optparse.py	210	211	HelpFormatter.set_parser	set_parser(self, parser)	todo		
+Lib/optparse.py	213	217	HelpFormatter.set_short_opt_delimiter	set_short_opt_delimiter(self, delim)	todo		
+Lib/optparse.py	219	223	HelpFormatter.set_long_opt_delimiter	set_long_opt_delimiter(self, delim)	todo		
+Lib/optparse.py	225	227	HelpFormatter.indent	indent(self)	todo		
+Lib/optparse.py	229	232	HelpFormatter.dedent	dedent(self)	todo		
+Lib/optparse.py	234	235	HelpFormatter.format_usage	format_usage(self, usage)	todo		
+Lib/optparse.py	237	238	HelpFormatter.format_heading	format_heading(self, heading)	todo		
+Lib/optparse.py	240	251	HelpFormatter._format_text	_format_text(self, text)	todo		
+Lib/optparse.py	253	257	HelpFormatter.format_description	format_description(self, description)	todo		
+Lib/optparse.py	259	263	HelpFormatter.format_epilog	format_epilog(self, epilog)	todo		
+Lib/optparse.py	266	274	HelpFormatter.expand_default	expand_default(self, option)	todo		
+Lib/optparse.py	276	310	HelpFormatter.format_option	format_option(self, option)	todo		
+Lib/optparse.py	312	328	HelpFormatter.store_option_strings	store_option_strings(self, parser)	todo		
+Lib/optparse.py	330	347	HelpFormatter.format_option_strings	format_option_strings(self, option)	todo		
+Lib/optparse.py	353	359	IndentedHelpFormatter.__init__	__init__(self, indent_increment=2, max_help_position=24, width=None, short_first=1)	todo		
+Lib/optparse.py	361	362	IndentedHelpFormatter.format_usage	format_usage(self, usage)	todo		
+Lib/optparse.py	364	365	IndentedHelpFormatter.format_heading	format_heading(self, heading)	todo		
+Lib/optparse.py	372	378	TitledHelpFormatter.__init__	__init__(self, indent_increment=0, max_help_position=24, width=None, short_first=0)	todo		
+Lib/optparse.py	380	381	TitledHelpFormatter.format_usage	format_usage(self, usage)	todo		
+Lib/optparse.py	383	384	TitledHelpFormatter.format_heading	format_heading(self, heading)	todo		
+Lib/optparse.py	387	398	_parse_num	_parse_num(val, type)	todo		
+Lib/optparse.py	400	401	_parse_int	_parse_int(val)	todo		
+Lib/optparse.py	410	416	check_builtin	check_builtin(option, opt, value)	todo		
+Lib/optparse.py	418	425	check_choice	check_choice(option, opt, value)	todo		
+Lib/optparse.py	547	564	Option.__init__	__init__(self, *opts, **attrs)	todo		
+Lib/optparse.py	566	573	Option._check_opt_strings	_check_opt_strings(self, opts)	todo		
+Lib/optparse.py	575	594	Option._set_opt_strings	_set_opt_strings(self, opts)	todo		
+Lib/optparse.py	596	610	Option._set_attrs	_set_attrs(self, attrs)	todo		
+Lib/optparse.py	615	619	Option._check_action	_check_action(self)	todo		
+Lib/optparse.py	621	643	Option._check_type	_check_type(self)	todo		
+Lib/optparse.py	645	656	Option._check_choice	_check_choice(self)	todo		
+Lib/optparse.py	658	671	Option._check_dest	_check_dest(self)	todo		
+Lib/optparse.py	673	677	Option._check_const	_check_const(self)	todo		
+Lib/optparse.py	679	686	Option._check_nargs	_check_nargs(self)	todo		
+Lib/optparse.py	688	713	Option._check_callback	_check_callback(self)	todo		
+Lib/optparse.py	727	728	Option.__str__	__str__(self)	todo		
+Lib/optparse.py	732	733	Option.takes_value	takes_value(self)	todo		
+Lib/optparse.py	735	739	Option.get_opt_string	get_opt_string(self)	todo		
+Lib/optparse.py	744	749	Option.check_value	check_value(self, opt, value)	todo		
+Lib/optparse.py	751	756	Option.convert_value	convert_value(self, opt, value)	todo		
+Lib/optparse.py	758	768	Option.process	process(self, opt, value, values, parser)	todo		
+Lib/optparse.py	770	798	Option.take_action	take_action(self, action, dest, opt, value, values, parser)	todo		
+Lib/optparse.py	808	811	Values.__init__	__init__(self, defaults=None)	todo		
+Lib/optparse.py	813	814	Values.__str__	__str__(self)	todo		
+Lib/optparse.py	818	824	Values.__eq__	__eq__(self, other)	todo		
+Lib/optparse.py	826	837	Values._update_careful	_update_careful(self, dict)	todo		
+Lib/optparse.py	839	845	Values._update_loose	_update_loose(self, dict)	todo		
+Lib/optparse.py	847	853	Values._update	_update(self, dict, mode)	todo		
+Lib/optparse.py	855	858	Values.read_module	read_module(self, modname, mode='careful')	todo		
+Lib/optparse.py	860	863	Values.read_file	read_file(self, filename, mode='careful')	todo		
+Lib/optparse.py	865	868	Values.ensure_value	ensure_value(self, attr, value)	todo		
+Lib/optparse.py	903	912	OptionContainer.__init__	__init__(self, option_class, conflict_handler, description)	todo		
+Lib/optparse.py	914	920	OptionContainer._create_option_mappings	_create_option_mappings(self)	todo		
+Lib/optparse.py	923	928	OptionContainer._share_option_mappings	_share_option_mappings(self, parser)	todo		
+Lib/optparse.py	930	933	OptionContainer.set_conflict_handler	set_conflict_handler(self, handler)	todo		
+Lib/optparse.py	935	936	OptionContainer.set_description	set_description(self, description)	todo		
+Lib/optparse.py	938	939	OptionContainer.get_description	get_description(self)	todo		
+Lib/optparse.py	942	946	OptionContainer.destroy	destroy(self)	todo		
+Lib/optparse.py	951	976	OptionContainer._check_conflict	_check_conflict(self, option)	todo		
+Lib/optparse.py	978	1006	OptionContainer.add_option	add_option(self, *args, **kwargs)	todo		
+Lib/optparse.py	1008	1010	OptionContainer.add_options	add_options(self, option_list)	todo		
+Lib/optparse.py	1014	1016	OptionContainer.get_option	get_option(self, opt_str)	todo		
+Lib/optparse.py	1018	1020	OptionContainer.has_option	has_option(self, opt_str)	todo		
+Lib/optparse.py	1022	1033	OptionContainer.remove_option	remove_option(self, opt_str)	todo		
+Lib/optparse.py	1038	1045	OptionContainer.format_option_help	format_option_help(self, formatter)	todo		
+Lib/optparse.py	1047	1048	OptionContainer.format_description	format_description(self, formatter)	todo		
+Lib/optparse.py	1050	1056	OptionContainer.format_help	format_help(self, formatter)	todo		
+Lib/optparse.py	1061	1065	OptionGroup.__init__	__init__(self, parser, title, description=None)	todo		
+Lib/optparse.py	1067	1069	OptionGroup._create_option_list	_create_option_list(self)	todo		
+Lib/optparse.py	1071	1072	OptionGroup.set_title	set_title(self, title)	todo		
+Lib/optparse.py	1074	1077	OptionGroup.destroy	destroy(self)	todo		
+Lib/optparse.py	1081	1086	OptionGroup.format_help	format_help(self, formatter)	todo		
+Lib/optparse.py	1161	1192	OptionParser.__init__	__init__(self, usage=None, option_list=None, option_class=Option, version=None, conflict_handler='error', description=None, formatter=None, add_help_option=True, prog=None, epilog=None)	todo		
+Lib/optparse.py	1195	1207	OptionParser.destroy	destroy(self)	todo		
+Lib/optparse.py	1213	1216	OptionParser._create_option_list	_create_option_list(self)	todo		
+Lib/optparse.py	1218	1221	OptionParser._add_help_option	_add_help_option(self)	todo		
+Lib/optparse.py	1223	1226	OptionParser._add_version_option	_add_version_option(self)	todo		
+Lib/optparse.py	1228	1236	OptionParser._populate_option_list	_populate_option_list(self, option_list, add_help=True)	todo		
+Lib/optparse.py	1238	1242	OptionParser._init_parsing_state	_init_parsing_state(self)	todo		
+Lib/optparse.py	1247	1256	OptionParser.set_usage	set_usage(self, usage)	todo		
+Lib/optparse.py	1258	1264	OptionParser.enable_interspersed_args	enable_interspersed_args(self)	todo		
+Lib/optparse.py	1266	1272	OptionParser.disable_interspersed_args	disable_interspersed_args(self)	todo		
+Lib/optparse.py	1274	1275	OptionParser.set_process_default_values	set_process_default_values(self, process)	todo		
+Lib/optparse.py	1277	1278	OptionParser.set_default	set_default(self, dest, value)	todo		
+Lib/optparse.py	1280	1281	OptionParser.set_defaults	set_defaults(self, **kwargs)	todo		
+Lib/optparse.py	1283	1287	OptionParser._get_all_options	_get_all_options(self)	todo		
+Lib/optparse.py	1289	1301	OptionParser.get_default_values	get_default_values(self)	todo		
+Lib/optparse.py	1306	1320	OptionParser.add_option_group	add_option_group(self, *args, **kwargs)	todo		
+Lib/optparse.py	1322	1327	OptionParser.get_option_group	get_option_group(self, opt_str)	todo		
+Lib/optparse.py	1332	1336	OptionParser._get_args	_get_args(self, args)	todo		
+Lib/optparse.py	1338	1375	OptionParser.parse_args	parse_args(self, args=None, values=None)	todo		changed-in-3.15:
+Lib/optparse.py	1377	1388	OptionParser.check_values	check_values(self, values, args)	todo		
+Lib/optparse.py	1390	1419	OptionParser._process_args	_process_args(self, largs, rargs, values)	todo		
+Lib/optparse.py	1441	1448	OptionParser._match_long_opt	_match_long_opt(self, opt)	todo		
+Lib/optparse.py	1450	1484	OptionParser._process_long_opt	_process_long_opt(self, rargs, values)	todo		
+Lib/optparse.py	1486	1522	OptionParser._process_short_opts	_process_short_opts(self, rargs, values)	todo		
+Lib/optparse.py	1527	1531	OptionParser.get_prog_name	get_prog_name(self)	todo		
+Lib/optparse.py	1533	1534	OptionParser.expand_prog_name	expand_prog_name(self, s)	todo		
+Lib/optparse.py	1536	1537	OptionParser.get_description	get_description(self)	todo		
+Lib/optparse.py	1539	1542	OptionParser.exit	exit(self, status=0, msg=None)	todo		
+Lib/optparse.py	1544	1552	OptionParser.error	error(self, msg)	todo		
+Lib/optparse.py	1554	1559	OptionParser.get_usage	get_usage(self)	todo		
+Lib/optparse.py	1561	1571	OptionParser.print_usage	print_usage(self, file=None)	todo		
+Lib/optparse.py	1573	1577	OptionParser.get_version	get_version(self)	todo		
+Lib/optparse.py	1579	1588	OptionParser.print_version	print_version(self, file=None)	todo		
+Lib/optparse.py	1590	1605	OptionParser.format_option_help	format_option_help(self, formatter=None)	todo		
+Lib/optparse.py	1607	1608	OptionParser.format_epilog	format_epilog(self, formatter)	todo		
+Lib/optparse.py	1610	1620	OptionParser.format_help	format_help(self, formatter=None)	todo		
+Lib/optparse.py	1622	1630	OptionParser.print_help	print_help(self, file=None)	todo		
+Lib/optparse.py	1635	1657	_match_abbrev	_match_abbrev(s, wordmap)	todo		
+Lib/optparse.py	1667	1673	__getattr__	__getattr__(name)	todo		changed-in-3.15: new function

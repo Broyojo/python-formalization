@@ -1,0 +1,16 @@
+file	line	endline	name	signature	status	entry	note
+Python/jit_unwind.c	138	149	elfctx_append_string	static uint32_t elfctx_append_string(ELFObjectContext* ctx, const char* str) {	todo		
+Python/jit_unwind.c	161	171	elfctx_append_sleb128	static void elfctx_append_sleb128(ELFObjectContext* ctx, int32_t v) {	todo		
+Python/jit_unwind.c	182	192	elfctx_append_uleb128	static void elfctx_append_uleb128(ELFObjectContext* ctx, uint32_t v) {	todo		
+Python/jit_unwind.c	233	244	elf_init_ehframe	static inline void elf_init_ehframe(ELFObjectContext* ctx, int absolute_addr) {	todo		changed-in-3.15: new function
+Python/jit_unwind.c	247	263	_PyJitUnwind_EhFrameSize	_PyJitUnwind_EhFrameSize(int absolute_addr)	todo		changed-in-3.15: new function
+Python/jit_unwind.c	266	288	_PyJitUnwind_BuildEhFrame	_PyJitUnwind_BuildEhFrame(uint8_t *buffer, size_t buffer_size, const void *code_addr, size_t code_size, int absolute_addr)	todo		changed-in-3.15: new function
+Python/jit_unwind.c	318	649	elf_init_ehframe_perf	static void elf_init_ehframe_perf(ELFObjectContext* ctx) {	todo		changed-in-3.15: new function
+Python/jit_unwind.c	663	698	elf_init_ehframe_gdb	static void elf_init_ehframe_gdb(ELFObjectContext* ctx) {	todo		changed-in-3.15: new function
+Python/jit_unwind.c	729	737	__attribute__	Py_EXPORTED_SYMBOL void __attribute__((noinline)) __jit_debug_register_code(void)	todo		changed-in-3.15: new function
+Python/jit_unwind.c	740	750	gdb_jit_machine_id	gdb_jit_machine_id(void)	todo		changed-in-3.15: new function
+Python/jit_unwind.c	753	930	gdb_jit_register_code	gdb_jit_register_code( const void *code_addr, size_t code_size, const char *symname, const uint8_t *eh_frame, size_t eh_frame_size )	todo		changed-in-3.15: new function
+Python/jit_unwind.c	934	973	_PyJitUnwind_GdbRegisterCode	_PyJitUnwind_GdbRegisterCode(const void *code_addr, size_t code_size, const char *entry, const char *filename)	todo		changed-in-3.15: new function
+Python/jit_unwind.c	976	1008	_PyJitUnwind_GdbUnregisterCode	_PyJitUnwind_GdbUnregisterCode(void *handle)	todo		changed-in-3.15: new function
+Python/jit_unwind.c	1012	1049	_PyJitUnwind_GnuBacktraceRegisterCode	_PyJitUnwind_GnuBacktraceRegisterCode(const void *code_addr, size_t code_size)	todo		changed-in-3.15: new function
+Python/jit_unwind.c	1052	1059	_PyJitUnwind_GnuBacktraceUnregisterCode	_PyJitUnwind_GnuBacktraceUnregisterCode(void *handle)	todo		changed-in-3.15: new function

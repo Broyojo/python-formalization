@@ -1,29 +1,29 @@
 file	line	endline	name	signature	status	entry	note
-Lib/tkinter/simpledialog.py	33	63	SimpleDialog.__init__	__init__(self, master, text='', buttons=[], default=None, cancel=None, title=None, class_=None)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	65	70	SimpleDialog.go	go(self)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	72	76	SimpleDialog.return_event	return_event(self, event)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	78	82	SimpleDialog.wm_delete_window	wm_delete_window(self)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	84	86	SimpleDialog.done	done(self, num)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	96	145	Dialog.__init__	__init__(self, parent, title=None)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	147	151	Dialog.destroy	destroy(self)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	156	163	Dialog.body	body(self, master)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	165	181	Dialog.buttonbox	buttonbox(self)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	186	198	Dialog.ok	ok(self, event=None)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	200	205	Dialog.cancel	cancel(self, event=None)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	210	217	Dialog.validate	validate(self)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	219	226	Dialog.apply	apply(self)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	231	257	_place_window	_place_window(w, parent=None)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	260	265	_setup_dialog	_setup_dialog(w)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	272	283	_QueryDialog.__init__	__init__(self, title, prompt, initialvalue=None, minvalue=None, maxvalue=None, parent=None)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	285	287	_QueryDialog.destroy	destroy(self)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	289	301	_QueryDialog.body	body(self, master)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	303	334	_QueryDialog.validate	validate(self)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	340	341	_QueryInteger.getresult	getresult(self)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	344	356	askinteger	askinteger(title, prompt, **kw)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	362	363	_QueryFloat.getresult	getresult(self)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	366	378	askfloat	askfloat(title, prompt, **kw)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	382	388	_QueryString.__init__	__init__(self, *args, **kw)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	390	394	_QueryString.body	body(self, master)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	396	397	_QueryString.getresult	getresult(self)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	400	412	askstring	askstring(title, prompt, **kw)	excluded		platform: GUI toolkit
-Lib/tkinter/simpledialog.py	417	439	test	test()	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	36	66	SimpleDialog.__init__	__init__(self, master, text='', buttons=[], default=None, cancel=None, title=None, class_=None)	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	68	73	SimpleDialog.go	go(self)	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	75	79	SimpleDialog.return_event	return_event(self, event)	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	81	85	SimpleDialog.wm_delete_window	wm_delete_window(self)	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	87	89	SimpleDialog.done	done(self, num)	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	99	148	Dialog.__init__	__init__(self, parent, title=None)	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	150	154	Dialog.destroy	destroy(self)	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	159	166	Dialog.body	body(self, master)	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	168	184	Dialog.buttonbox	buttonbox(self)	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	189	201	Dialog.ok	ok(self, event=None)	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	203	208	Dialog.cancel	cancel(self, event=None)	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	213	220	Dialog.validate	validate(self)	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	222	229	Dialog.apply	apply(self)	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	234	260	_place_window	_place_window(w, parent=None)	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	263	271	_setup_dialog	_setup_dialog(w)	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	278	289	_QueryDialog.__init__	__init__(self, title, prompt, initialvalue=None, minvalue=None, maxvalue=None, parent=None)	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	291	293	_QueryDialog.destroy	destroy(self)	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	295	307	_QueryDialog.body	body(self, master)	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	309	340	_QueryDialog.validate	validate(self)	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	346	347	_QueryInteger.getresult	getresult(self)	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	350	362	askinteger	askinteger(title, prompt, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	368	369	_QueryFloat.getresult	getresult(self)	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	372	384	askfloat	askfloat(title, prompt, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	388	394	_QueryString.__init__	__init__(self, *args, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	396	400	_QueryString.body	body(self, master)	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	402	403	_QueryString.getresult	getresult(self)	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	406	418	askstring	askstring(title, prompt, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/simpledialog.py	423	445	test	test()	excluded		platform: GUI toolkit

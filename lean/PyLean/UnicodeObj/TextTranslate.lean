@@ -2,7 +2,7 @@ import PyLean.UnicodeObj.TextCase
 
 /-!
 `str.translate`, `PyUnicode_Translate` and `str.maketrans`,
-Objects/unicodeobject.c:9195-9611 and :13384-13549.
+Objects/unicodeobject.c:9096-9512 and :13135-13301.
 
 The table is an abstract pure function from ordinal to what `__getitem__` does
 (`Mapping`), which covers every dict, list or other mapping whose `__getitem__`
@@ -38,7 +38,7 @@ inductive Looked where
   | str (s : Str)
   deriving Repr, DecidableEq
 
-/-- `charmaptranslate_lookup`, unicodeobject.c:9281-9332. `PyLong_AsLong`
+/-- `charmaptranslate_lookup`, unicodeobject.c:9182-9233. `PyLong_AsLong`
 failing returns -1, which lands in the same `value < 0` branch. -/
 def charmaptranslateLookup (m : Mapping) (c : Nat) : Py Looked :=
   match m c with
@@ -52,7 +52,7 @@ def charmaptranslateLookup (m : Mapping) (c : Nat) : Py Looked :=
   | .str s => .ok (.str s)
   | .wrong => .error (.typeError "character mapping must return integer, None or str")
 
-/-- `charmaptranslate_output`, unicodeobject.c:9338-9381: the characters written,
+/-- `charmaptranslate_output`, unicodeobject.c:9239-9282: the characters written,
 or `none` for an undefined mapping. -/
 def charmaptranslateOutput (m : Mapping) (ch : Nat) : Py (Option Str) := do
   match ← charmaptranslateLookup m ch with
@@ -66,7 +66,7 @@ abbrev AsciiTable := Nat → Nat
 
 def tableSet (t : AsciiTable) (ch v : Nat) : AsciiTable := fun c => if c = ch then v else t c
 
-/-- `unicode_fast_translate_lookup`, unicodeobject.c:9384-9430. -/
+/-- `unicode_fast_translate_lookup`, unicodeobject.c:9285-9331. -/
 def fastTranslateLookup (m : Mapping) (ch : Nat) (t : AsciiTable) : Py (Bool × AsciiTable) := do
   match ← charmaptranslateLookup m ch with
   | .pyNone => .ok (true, tableSet t ch 0xfe)
@@ -79,7 +79,7 @@ def fastTranslateLookup (m : Mapping) (ch : Nat) (t : AsciiTable) : Py (Bool × 
       if replace > 127 then .ok (false, t) else .ok (true, tableSet t ch replace)
     | _ => .ok (false, t)
 
-/-- `unicode_fast_translate`'s loop, unicodeobject.c:9457-9478. Returns `res`, the
+/-- `unicode_fast_translate`'s loop, unicodeobject.c:9358-9379. Returns `res`, the
 writer contents and `*input_pos`. -/
 def fastTranslateLoop (m : Mapping) (ignore : Bool) :
     List Nat → AsciiTable → Str → Nat → Py (Bool × Str × Nat)
@@ -97,7 +97,7 @@ def fastTranslateLoop (m : Mapping) (ignore : Bool) :
     else step t ch2
 
 /-- The inner `while (collend < size)` of `_PyUnicode_TranslateCharmap`,
-unicodeobject.c:9563-9573: the input left from `collend` on. -/
+unicodeobject.c:9464-9474: the input left from `collend` on. -/
 def collectUndefined (m : Mapping) : List Nat → Py (List Nat)
   | [] => .ok []
   | c :: cs => do
@@ -124,7 +124,7 @@ def translateError (input : Str) (start stop : Nat) : PyExc :=
       s!"can't translate characters in position {start}-{stop - 1}: {reason}"
 
 /-- The outer `while (i<size)` of `_PyUnicode_TranslateCharmap`,
-unicodeobject.c:9537-9591. `input` is the whole string. -/
+unicodeobject.c:9438-9492. `input` is the whole string. -/
 def translateLoop (m : Mapping) (ignore : Bool) (input : Str) :
     Nat → Nat → List Nat → Str → Py Str
   | 0, _, _, _ => .error .modelFuel
@@ -138,7 +138,7 @@ def translateLoop (m : Mapping) (ignore : Bool) (input : Str) :
       if ignore then translateLoop m ignore input fuel collend rest out
       else .error (translateError input i collend)
 
-/-- `_PyUnicode_TranslateCharmap`, unicodeobject.c:9487-9601. -/
+/-- `_PyUnicode_TranslateCharmap`, unicodeobject.c:9388-9502. -/
 def translateCharmap (m : Mapping) (ignore : Bool) (input : Str) : Py Str :=
   if input.length = 0 then .ok input
   else
@@ -149,10 +149,10 @@ def translateCharmap (m : Mapping) (ignore : Bool) (input : Str) : Py Str :=
       else translateLoop m ignore input fuel i (input.drop i) out
     else translateLoop m ignore input fuel 0 input []
 
-/-- `unicode_translate`, unicodeobject.c:13545-13549. -/
+/-- `unicode_translate`, unicodeobject.c:13297-13301. -/
 def unicodeTranslate (s : Str) (m : Mapping) : Py Str := translateCharmap m true s
 
-/-- `PyUnicode_Translate(str, mapping, NULL)`, unicodeobject.c:9604-9611. -/
+/-- `PyUnicode_Translate(str, mapping, NULL)`, unicodeobject.c:9505-9512. -/
 def pyUnicodeTranslateStrict (s : Str) (m : Mapping) : Py Str := translateCharmap m false s
 
 /-! ## `str.maketrans` -/
@@ -178,7 +178,7 @@ def dictSet : TransDict → Int → MapItem → TransDict
   | [], k, v => [(k, v)]
   | e :: es, k, v => if e.1 = k then (k, v) :: es else e :: dictSet es k v
 
-/-- The `while (PyDict_Next ...)` loop, unicodeobject.c:13384-13420. The two
+/-- The `while (PyDict_Next ...)` loop, unicodeobject.c:13135-13171. The two
 messages lack a space in the C source. -/
 def maketransFromDict (items : List (MkKey × MapItem)) (d : TransDict) : Py TransDict :=
   match items with
@@ -191,16 +191,16 @@ def maketransFromDict (items : List (MkKey × MapItem)) (d : TransDict) : Py Tra
   | (.other, _) :: _ =>
     .error (.typeError "keys in translate table mustbe strings or integers")
 
-/-- The first loop of `unicode_maketrans_impl`, unicodeobject.c:13478-13492. -/
+/-- The first loop of `unicode_maketrans_impl`, unicodeobject.c:13229-13243. -/
 def maketransPairs (d : TransDict) : List Nat → List Nat → TransDict
   | x :: xs, y :: ys => maketransPairs (dictSet d x (.int y)) xs ys
   | _, _ => d
 
-/-- The second loop, unicodeobject.c:13497-13505. -/
+/-- The second loop, unicodeobject.c:13248-13256. -/
 def maketransDelete (d : TransDict) (z : List Nat) : TransDict :=
   z.foldl (fun d (c : Nat) => dictSet d c .pyNone) d
 
-/-- `unicode_maketrans_impl`, unicodeobject.c:13448-13526. -/
+/-- `unicode_maketrans_impl`, unicodeobject.c:13199-13277. -/
 def unicodeMaketrans (x : MkArg) (y z : Option Str) : Py TransDict :=
   match y with
   | some y =>

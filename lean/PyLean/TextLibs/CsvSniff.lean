@@ -2,7 +2,7 @@ import PyLean.TextLibs.CsvModel
 import PyLean.TextLibs.ReApi
 
 /-!
-Model of `csv.Sniffer.sniff`, `Lib/csv.py:243-463`, CPython 3.14.7. Main has replaced this code.
+Model of `csv.Sniffer.sniff`, `Lib/csv.py:241-463`, CPython 3.14.7. Main has replaced this code.
 
 The two `_guess` functions run the `re` model and count characters; the dictionaries are association
 lists, in insertion order, which is what `max` and `.items()` see. The one float in the code is
@@ -66,7 +66,7 @@ structure GQ where
   spaces : Nat := 0
   deriving Repr, Inhabited
 
-/-- The `for m in matches`, `Lib/csv.py:312-329`. `di` and `si` are `none` for the `KeyError`. -/
+/-- The `for m in matches`, `Lib/csv.py:310-327`. `di` and `si` are `none` for the `KeyError`. -/
 def tally (delimiters : Option (List Nat)) (qi : Nat) (di si : Option Nat) : List Re.FindItem → GQ → GQ
   | [], g => g
   | m :: ms, g =>
@@ -88,7 +88,7 @@ def isInfix : List Nat → List Nat → Bool
   | a, [] => a.isEmpty
   | a, b :: r => (a.isPrefixOf (b :: r)) || isInfix a r
 
-/-- `dq_regexp`, `Lib/csv.py:348-355`. -/
+/-- `dq_regexp`, `Lib/csv.py:346-353`. -/
 def dqPattern (delim quote : List Nat) : List Nat :=
   let d := Re.escape delim
   [40, 63, 58, 40, 63, 60, 61] ++ d ++ [41, 124, 94, 41] ++
@@ -96,7 +96,7 @@ def dqPattern (delim quote : List Nat) : List Nat :=
     [40, 40, 63, 58] ++ quote ++ quote ++ [124, 91, 94] ++ quote ++ [93, 43, 43, 41, 42, 43, 41] ++
     quote ++ [40, 63, 58] ++ d ++ [124, 36, 41]
 
-/-- The end of `_guess_quote_and_delimiter`, `Lib/csv.py:331-360`. -/
+/-- The end of `_guess_quote_and_delimiter`, `Lib/csv.py:329-358`. -/
 def gqFinish (data : List Nat) (g : GQ) : Py (List Nat × Bool × List Nat × Bool) := do
   let quotechar := maxKey g.quotes
   let (delim, skip) :=
@@ -116,7 +116,7 @@ def gqFinish (data : List Nat) (g : GQ) : Py (List Nat × Bool × List Nat × Bo
     else pure false
   return (quotechar, dq, delim, skip)
 
-/-- `_guess_quote_and_delimiter`, `Lib/csv.py:278-360`: the first regexp that finds anything. -/
+/-- `_guess_quote_and_delimiter`, `Lib/csv.py:276-358`: the first regexp that finds anything. -/
 def guessQuote (data : List Nat) (delimiters : Option (List Nat)) :
     Py (List Nat × Bool × List Nat × Bool) := do
   let rec go : List (List Nat × Nat × Option Nat × Option Nat) → Py (List Nat × Bool × List Nat × Bool)
@@ -148,7 +148,7 @@ def countPair (d : Nat) : List Nat → Nat
   | _ => 0
 termination_by l => l.length
 
-/-- `charFrequency`, `Lib/csv.py:395-402`, for one line: every character of `ascii`, in order. -/
+/-- `charFrequency`, `Lib/csv.py@3.14.7:395-402`, for one line: every character of `ascii`, in order. -/
 def addLine (cf : List (Nat × List (Nat × Nat))) (line : List Nat) : List (Nat × List (Nat × Nat)) :=
   cf.map fun x => (x.1, bump x.2 (count1 line x.1))
 
@@ -157,7 +157,7 @@ def maxItem : List (Nat × Nat) → Nat × Nat
   | [] => (0, 0)
   | x :: r => r.foldl (fun b y => if y.2 > b.2 then y else b) x
 
-/-- `modes[char]`, `Lib/csv.py:405-417`, or `none` for the `continue`. -/
+/-- `modes[char]`, `Lib/csv.py@3.14.7:405-417`, or `none` for the `continue`. -/
 def modeOf (items : List (Nat × Nat)) : Option (Nat × Int) :=
   match items with
   | [] => none
@@ -172,7 +172,7 @@ def setKey {β : Type} : List (Nat × β) → Nat → β → List (Nat × β)
   | [], k, v => [(k, v)]
   | (x, w) :: r, k, v => if x == k then (x, v) :: r else (x, w) :: setKey r k v
 
-/-- The `for char in charFrequency.keys()`, `Lib/csv.py:404-417`. -/
+/-- The `for char in charFrequency.keys()`, `Lib/csv.py@3.14.7:404-417`. -/
 def updateModes (modes : List (Nat × (Nat × Int))) : List (Nat × List (Nat × Nat)) → List (Nat × (Nat × Int))
   | [] => modes
   | (c, items) :: r =>
@@ -219,7 +219,7 @@ def skipOf (data : List (List Nat)) (d : Nat) : Bool :=
   let l := data.headD []
   count1 l d == countPair d l
 
-/-- The `while start < len(data)`, `Lib/csv.py:393-442`. `.inl` is a return from inside it. -/
+/-- The `while start < len(data)`, `Lib/csv.py:392-442`. `.inl` is a return from inside it. -/
 def gdLoop (delimiters : Option (List Nat)) (data : List (List Nat)) (chunk : Nat) :
     (fuel iteration start stop : Nat) → List (Nat × List (Nat × Nat)) → List (Nat × (Nat × Int)) →
     List (Nat × (Nat × Int)) → Sum (Nat × Bool) (List (Nat × (Nat × Int)))
@@ -246,7 +246,7 @@ def lastItem : List (Nat × (Nat × Int)) → Nat
       if decide (y.2.1 > b.2.1) || (decide (y.2.1 == b.2.1) && (decide (y.2.2 > b.2.2) ||
           (decide (y.2.2 == b.2.2) && decide (y.1 > b.1)))) then y else b) x).1
 
-/-- `_guess_delimiter`, `Lib/csv.py:363-463`: the delimiter, `[]` for `''`, and `skipinitialspace`. -/
+/-- `_guess_delimiter`, `Lib/csv.py:361-463`: the delimiter, `[]` for `''`, and `skipinitialspace`. -/
 def guessDelimiter (sample : List Nat) (delimiters : Option (List Nat)) : List Nat × Bool :=
   let data := (splitNL sample).filter (!·.isEmpty)
   let chunk := min 10 data.length
@@ -278,7 +278,7 @@ structure Sniffed where
   skipinitialspace : Bool
   deriving Repr, DecidableEq, Inhabited
 
-/-- `Sniffer.sniff`, `Lib/csv.py:243-275`. -/
+/-- `Sniffer.sniff`, `Lib/csv.py:241-273`. -/
 def sniff (sample : List Nat) (delimiters : Option (List Nat)) : Py Sniffed := do
   let sample := (crlf sample).map fun c => if c == 13 then 10 else c
   let (q, dq, d, skip) ← guessQuote sample delimiters

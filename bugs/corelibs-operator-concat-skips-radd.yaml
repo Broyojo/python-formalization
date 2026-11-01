@@ -46,8 +46,8 @@ observed: |
 promised_by: |
   Docstrings at Modules/_operator.c:457 and Lib/operator.py:155, "Same as a + b, for a and b sequences".
 cause: |
-  Objects/abstract.c:1718-1723 returns from sq_concat before any nb_add. PyNumber_Add,
-  Objects/abstract.c:1128, tries nb_add through binary_op1 first and sq_concat only after that.
+  Objects/abstract.c:1727-1732 returns from sq_concat before any nb_add. PyNumber_Add,
+  Objects/abstract.c:1138, tries nb_add through binary_op1 first and sq_concat only after that.
 possible_fix: |
   Have _operator_concat_impl check for a sequence as Lib/operator.py does, then call PyNumber_Add;
   likewise PyNumber_InPlaceAdd for iconcat. Or document the difference.

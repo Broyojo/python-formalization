@@ -3,7 +3,7 @@ import PyLean.UnicodeObj.TextCase
 /-!
 The format specification mini-language: Python/formatter_unicode.c and
 Objects/stringlib/localeutil.h, with `_PyUnicode_InsertThousandsGrouping`,
-Objects/unicodeobject.c:9791-9899.
+Objects/unicodeobject.c@3.14.7:9791-9899.
 
 Abstractions:
 * `int` and `str` are rendered in full here. `float` and `complex` stop at the
@@ -18,14 +18,14 @@ namespace PyLean.UnicodeObj
 
 open PyLean
 
-/-- `enum LocaleType`, formatter_unicode.c:122-128. -/
+/-- `enum LocaleType`, formatter_unicode.c@3.14.7:122-128. -/
 def LT_NO_LOCALE : Nat := 0
 def LT_DEFAULT_LOCALE : Nat := 44
 def LT_UNDERSCORE_LOCALE : Nat := 95
 def LT_UNDER_FOUR_LOCALE : Nat := 96
 def LT_CURRENT_LOCALE : Nat := 97
 
-/-- `InternalFormatSpec`, formatter_unicode.c:130-141. -/
+/-- `InternalFormatSpec`, formatter_unicode.c@3.14.7:130-141. -/
 structure FormatSpec where
   fillChar : Nat := 32
   align : Nat
@@ -43,24 +43,24 @@ structure FormatSpec where
 def hexPlain (n : Nat) : String :=
   String.ofList (Nat.toDigits 16 n)
 
-/-- `unknown_presentation_type`, formatter_unicode.c:15-31. -/
+/-- `unknown_presentation_type`, formatter_unicode.c@3.14.7:15-31. -/
 def unknownPresentationType (t : Nat) (typeName : String) : PyExc :=
   if t > 32 ∧ t < 128 then
     .valueError s!"Unknown format code '{Char.ofNat t}' for object of type '{typeName}'"
   else
     .valueError s!"Unknown format code '\\x{hexPlain t}' for object of type '{typeName}'"
 
-/-- `invalid_thousands_separator_type`, formatter_unicode.c:34-45. -/
+/-- `invalid_thousands_separator_type`, formatter_unicode.c@3.14.7:34-45. -/
 def invalidThousandsSeparatorType (specifier t : Nat) : PyExc :=
   if t > 32 ∧ t < 128 then
     .valueError s!"Cannot specify '{Char.ofNat specifier}' with '{Char.ofNat t}'."
   else
     .valueError s!"Cannot specify '{Char.ofNat specifier}' with '\\x{hexPlain t}'."
 
-/-- `invalid_comma_and_underscore`, formatter_unicode.c:48-51. -/
+/-- `invalid_comma_and_underscore`, formatter_unicode.c@3.14.7:48-51. -/
 def invalidCommaAndUnderscore : PyExc := .valueError "Cannot specify both ',' and '_'."
 
-/-- `get_integer`, formatter_unicode.c:61-91: value, digits consumed, what is left. -/
+/-- `get_integer`, formatter_unicode.c@3.14.7:61-91: value, digits consumed, what is left. -/
 def getInteger : List Nat → Int → Nat → Py (Int × Nat × List Nat)
   | [], acc, n => .ok (acc, n, [])
   | c :: cs, acc, n =>
@@ -70,15 +70,15 @@ def getInteger : List Nat → Int → Nat → Py (Int × Nat × List Nat)
       .error (.valueError "Too many decimal digits in format string")
     else getInteger cs (acc * 10 + digitval) (n + 1)
 
-/-- `is_alignment_token`, formatter_unicode.c:98-107. -/
+/-- `is_alignment_token`, formatter_unicode.c@3.14.7:98-107. -/
 def isAlignmentToken (c : Nat) : Bool := c == 60 || c == 62 || c == 61 || c == 94
-/-- `is_sign_element`, formatter_unicode.c:110-119. -/
+/-- `is_sign_element`, formatter_unicode.c@3.14.7:110-119. -/
 def isSignElement (c : Nat) : Bool := c == 32 || c == 43 || c == 45
 
 /-- What the head of `rest` is, when there is one. -/
 def headIs (rest : List Nat) (c : Nat) : Bool := rest.head? == some c
 
-/-- The validation at the end of the parser, formatter_unicode.c:331-367. -/
+/-- The validation at the end of the parser, formatter_unicode.c@3.14.7:331-367. -/
 def validateSpec (f : FormatSpec) : Py FormatSpec := do
   let f ←
     if f.thousands != 0 then
@@ -95,7 +95,7 @@ def validateSpec (f : FormatSpec) : Py FormatSpec := do
     .error (invalidThousandsSeparatorType f.fracThousands f.type)
   else .ok f
 
-/-- The `.precision` part, formatter_unicode.c:258-301. -/
+/-- The `.precision` part, formatter_unicode.c@3.14.7:258-301. -/
 def parsePrecision (f : FormatSpec) (rest : List Nat) : Py (FormatSpec × List Nat) := do
   let (p, consumed0, rest) ← getInteger rest 0 0
   let f := { f with precision := p }
@@ -116,7 +116,7 @@ def parsePrecision (f : FormatSpec) (rest : List Nat) : Py (FormatSpec × List N
   else if consumed = 0 then .error (.valueError "Format specifier missing precision")
   else .ok (f, rest)
 
-/-- Fill and alignment, formatter_unicode.c:182-193: the spec so far,
+/-- Fill and alignment, formatter_unicode.c@3.14.7:182-193: the spec so far,
 `align_specified`, `fill_char_specified`, the rest. -/
 def parseAlign (f : FormatSpec) (spec : Str) : FormatSpec × Bool × Bool × List Nat :=
   match spec with
@@ -128,7 +128,7 @@ def parseAlign (f : FormatSpec) (spec : Str) : FormatSpec × Bool × Bool × Lis
            else (f, false, false, [c])
   | [] => (f, false, false, [])
 
-/-- Sign, `z` and `#`, formatter_unicode.c:196-213. -/
+/-- Sign, `z` and `#`, formatter_unicode.c@3.14.7:196-213. -/
 def parseFlags (f : FormatSpec) (rest : List Nat) : FormatSpec × List Nat :=
   let p : FormatSpec × List Nat := match rest with
     | c :: t => if isSignElement c then ({ f with sign := c }, t) else (f, c :: t)
@@ -136,7 +136,7 @@ def parseFlags (f : FormatSpec) (rest : List Nat) : FormatSpec × List Nat :=
   let p := if headIs p.2 122 then ({ p.1 with noNeg0 := true }, p.2.tail) else p
   if headIs p.2 35 then ({ p.1 with alternate := true }, p.2.tail) else p
 
-/-- The first part of `parse_internal_render_format_spec`, formatter_unicode.c:169-222,
+/-- The first part of `parse_internal_render_format_spec`, formatter_unicode.c@3.14.7:169-222,
 which cannot fail. -/
 def parseHead (spec : Str) (defaultType defaultAlign : Nat) : FormatSpec × List Nat :=
   let a := parseAlign { align := defaultAlign, type := defaultType } spec
@@ -146,7 +146,7 @@ def parseHead (spec : Str) (defaultType defaultAlign : Nat) : FormatSpec × List
                 align := if !a.2.1 && defaultAlign == 62 then 61 else p.1.align }, p.2.tail)
   else p
 
-/-- Width and thousands separators, formatter_unicode.c:224-255. -/
+/-- Width and thousands separators, formatter_unicode.c@3.14.7:224-255. -/
 def parseWidth (f : FormatSpec) (rest : List Nat) : Py (FormatSpec × List Nat) := do
   let (w, consumed, rest) ← getInteger rest 0 0
   let f := { f with width := if consumed = 0 then -1 else w }
@@ -160,7 +160,7 @@ def parseWidth (f : FormatSpec) (rest : List Nat) : Py (FormatSpec × List Nat) 
   if headIs p.2 44 && p.1.thousands == LT_UNDERSCORE_LOCALE then .error invalidCommaAndUnderscore
   else .ok p
 
-/-- The type field, formatter_unicode.c:305-325, and the validation. -/
+/-- The type field, formatter_unicode.c@3.14.7:305-325, and the validation. -/
 def parseType (typeName : String) (spec : Str) (f : FormatSpec) (rest : List Nat) :
     Py FormatSpec :=
   match rest with
@@ -170,20 +170,20 @@ def parseType (typeName : String) (spec : Str) (f : FormatSpec) (rest : List Nat
     .error (.valueError
       s!"Invalid format specifier '{toLeanString spec}' for object of type '{typeName}'")
 
-/-- The rest of `parse_internal_render_format_spec`, formatter_unicode.c:224-372. -/
+/-- The rest of `parse_internal_render_format_spec`, formatter_unicode.c@3.14.7:224-372. -/
 def parseTail (typeName : String) (spec : Str) (f : FormatSpec) (rest : List Nat) :
     Py FormatSpec := do
   let p ← parseWidth f rest
   let q ← if headIs p.2 46 then parsePrecision p.1 p.2.tail else pure p
   parseType typeName spec q.1 q.2
 
-/-- `parse_internal_render_format_spec`, formatter_unicode.c:151-372. -/
+/-- `parse_internal_render_format_spec`, formatter_unicode.c@3.14.7:151-372. -/
 def parseFormatSpec (typeName : String) (spec : Str) (defaultType defaultAlign : Nat) :
     Py FormatSpec :=
   let (f, rest) := parseHead spec defaultType defaultAlign
   parseTail typeName spec f rest
 
-/-- `calc_padding`, formatter_unicode.c:376-405: `(lpadding, rpadding, total)`. -/
+/-- `calc_padding`, formatter_unicode.c@3.14.7:376-405: `(lpadding, rpadding, total)`. -/
 def calcPadding (nchars : Nat) (width : Int) (align : Nat) : Nat × Nat × Nat :=
   let total := if width ≥ 0 then (if (nchars : Int) > width then nchars else width.toNat) else nchars
   let l := if align == 62 then total - nchars
@@ -191,14 +191,14 @@ def calcPadding (nchars : Nat) (width : Int) (align : Nat) : Nat × Nat × Nat :
     else 0
   (l, total - nchars - l, total)
 
-/-- `fill_padding`, formatter_unicode.c:410-432, together with the copy of the
+/-- `fill_padding`, formatter_unicode.c@3.14.7:410-432, together with the copy of the
 content that its callers do. -/
 def fillPadding (content : Str) (fill l r : Nat) : Str :=
   List.replicate l fill ++ content ++ List.replicate r fill
 
 /-! ## Grouping -/
 
-/-- `GroupGenerator_next`, localeutil.h:21-40: value, `i`, `previous`. `127` is
+/-- `GroupGenerator_next`, localeutil.h@3.14.7:21-40: value, `i`, `previous`. `127` is
 `CHAR_MAX`; the end of the list is the terminating NUL. -/
 def groupNext (grouping : List Nat) (i prev : Nat) : Nat × Nat × Nat :=
   match grouping[i]? with
@@ -215,7 +215,7 @@ def groupPiece (sep : Str) (useSep : Bool) (nChars nZeros : Nat) (digitsRev out 
    List.replicate nZeros 48 ++ (digitsRev.take nChars).reverse ++ (if useSep then sep else []) ++ out)
 
 /-- The `while` loop of `_PyUnicode_InsertThousandsGrouping`,
-unicodeobject.c:9852-9879. Returns `count`, the text and the iterations made. -/
+unicodeobject.c@3.14.7:9852-9879. Returns `count`, the text and the iterations made. -/
 def groupLoop (grouping : List Nat) (sep : Str) :
     Nat → Nat → Nat → Bool → Int → Int → List Nat → Nat → List Nat → Nat →
       Py (Nat × List Nat × Nat)
@@ -223,7 +223,7 @@ def groupLoop (grouping : List Nat) (sep : Str) :
   | fuel + 1, i, prev, useSep, remaining, minWidth, digitsRev, count, out, iters =>
     let (len0, i, prev) := groupNext grouping i prev
     let finish : Py (Nat × List Nat × Nat) :=
-      -- the part after the loop, unicodeobject.c:9881-9892
+      -- the part after the loop, unicodeobject.c@3.14.7:9881-9892
       let len : Int := max (max remaining minWidth) 1
       let nZeros := max 0 (len - remaining)
       let nChars := max 0 (min remaining len)
@@ -244,7 +244,7 @@ def groupLoop (grouping : List Nat) (sep : Str) :
           count out (iters + 1)
     else finish
 
-/-- `_PyUnicode_InsertThousandsGrouping`, unicodeobject.c:9791-9899, for `forward = 0`
+/-- `_PyUnicode_InsertThousandsGrouping`, unicodeobject.c@3.14.7:9791-9899, for `forward = 0`
 and with the first (counting) and second (writing) calls merged: it returns the
 `count` of the first together with the text of the second. The fuel is enough for
 every call the model makes: each round lowers `remaining` or `minWidth`. -/
@@ -253,7 +253,7 @@ def insertThousandsGrouping (digits : Str) (minWidth : Int) (grouping : List Nat
   groupLoop grouping sep (digits.length + (max 0 minWidth).toNat + 2) 0 0 false digits.length
     (max 0 minWidth) digits.reverse 0 [] 0
 
-/-- `LocaleInfo` as `get_locale_info` fills it, formatter_unicode.c:786-846, in the
+/-- `LocaleInfo` as `get_locale_info` fills it, formatter_unicode.c@3.14.7:786-846, in the
 C locale: `(thousands_sep, grouping)`. -/
 def localeInfo (type : Nat) : Str × List Nat :=
   if type == LT_CURRENT_LOCALE then ([], [])
@@ -288,7 +288,7 @@ def longFormat (v : Int) (base : Nat) (alternate : Bool := true) : Py Str :=
       else if base == 16 then [48, 120] else []
     .ok ((if v < 0 then [45] else []) ++ pfx ++ ds)
 
-/-- `spec` of `calc_number_widths`, formatter_unicode.c:524-666, for numbers with no
+/-- `spec` of `calc_number_widths`, formatter_unicode.c@3.14.7:524-666, for numbers with no
 fraction or decimal point: `(n_lpadding, sign, n_spadding, n_rpadding, n_min_width,
 n_grouped_digits, text of the grouped digits)`. -/
 def calcNumberWidths (nPrefix : Nat) (signChar : Nat) (digits : Str) (nRemainder : Nat)
@@ -315,7 +315,7 @@ def calcNumberWidths (nPrefix : Nat) (signChar : Nat) (digits : Str) (nRemainder
     else (0, 0, 0)
   .ok (l, sign, s, r, text)
 
-/-- `fill_number`, formatter_unicode.c:672-777, without decimal point or fraction. -/
+/-- `fill_number`, formatter_unicode.c@3.14.7:672-777, without decimal point or fraction. -/
 def fillNumber (l : Nat) (sign : Option Nat) (pfx : Str) (s : Nat) (text remainder : Str)
     (r fill : Nat) (toupper : Bool) : Str :=
   let up (x : Str) := if toupper then x.map pyToUpper else x
@@ -327,7 +327,7 @@ def longFormatWriter (v : Int) (base : Nat) (alternate : Bool) : Py Str :=
   longFormat v base alternate
 
 /-- The part of `format_long_internal` after the `_PyLong_FormatWriter` test,
-formatter_unicode.c:1056-1130, for the digit types. -/
+formatter_unicode.c@3.14.7:1056-1130, for the digit types. -/
 def formatLongSlow (v : Int) (f : FormatSpec) (base : Nat) (skip : Nat) : Py Str := do
   let nPrefix := if f.alternate then skip else 0
   let tmp ← longFormat v base
@@ -338,7 +338,7 @@ def formatLongSlow (v : Int) (f : FormatSpec) (base : Nat) (skip : Nat) : Py Str
   let (l, sign, s, r, text) ← calcNumberWidths nPrefix signChar digits 0 sep grouping f
   .ok (fillNumber l sign pfx s text [] r f.fillChar (f.type == 88))
 
-/-- `format_long_internal`, formatter_unicode.c:960-1130. `exact` is
+/-- `format_long_internal`, formatter_unicode.c@3.14.7:960-1130. `exact` is
 `PyLong_CheckExact(value)`. -/
 def formatLongInternal (v : Int) (f : FormatSpec) (exact : Bool) : Py Str := do
   if f.precision != -1 then
@@ -368,7 +368,7 @@ def formatLongInternal (v : Int) (f : FormatSpec) (exact : Bool) : Py Str := do
 
 /-! ## `str` -/
 
-/-- `format_string_internal`, formatter_unicode.c:862-952. -/
+/-- `format_string_internal`, formatter_unicode.c@3.14.7:862-952. -/
 def formatStringInternal (value : Str) (f : FormatSpec) : Py Str :=
   if f.sign != 0 then
     if f.sign == 32 then .error (.valueError "Space not allowed in string format specifier")
@@ -389,7 +389,7 @@ def formatStringInternal (value : Str) (f : FormatSpec) : Py Str :=
 
 /-! ## The dispatchers -/
 
-/-- `_PyUnicode_FormatAdvancedWriter`, formatter_unicode.c:1554-1587. `exact` is
+/-- `_PyUnicode_FormatAdvancedWriter`, formatter_unicode.c@3.14.7:1554-1587. `exact` is
 `PyUnicode_CheckExact(obj)`; both branches for an empty spec write `str(obj)`. -/
 def formatStrAdvanced (value spec : Str) : Py Str := do
   if spec.isEmpty then .ok value
@@ -398,11 +398,11 @@ def formatStrAdvanced (value spec : Str) : Py Str := do
     if f.type == 115 then formatStringInternal value f
     else .error (unknownPresentationType f.type "str")
 
-/-- The check `format_float_internal` makes first, formatter_unicode.c:1167-1171. -/
+/-- The check `format_float_internal` makes first, formatter_unicode.c@3.14.7:1167-1171. -/
 def formatFloatChecks (f : FormatSpec) : Py Unit :=
   if f.precision > 2 ^ 31 - 1 then .error (.valueError "precision too big") else .ok ()
 
-/-- `_PyLong_FormatAdvancedWriter`, formatter_unicode.c:1590-1649. A float type
+/-- `_PyLong_FormatAdvancedWriter`, formatter_unicode.c@3.14.7:1590-1649. A float type
 stops at the checks: the result is `none`, for "goes on to format a float". `name`
 is `int` or `bool`. -/
 def formatLongAdvanced (v : Int) (name : String) (spec : Str) (emptyStr : Str) :
@@ -422,7 +422,7 @@ def formatLongAdvanced (v : Int) (name : String) (spec : Str) (emptyStr : Str) :
         .ok none
     else .error (unknownPresentationType t name)
 
-/-- `_PyFloat_FormatAdvancedWriter`, formatter_unicode.c:1652-1688, up to its call of
+/-- `_PyFloat_FormatAdvancedWriter`, formatter_unicode.c@3.14.7:1652-1688, up to its call of
 `format_float_internal`: `none` for the empty spec, else the parsed spec. -/
 def formatFloatDispatch (spec : Str) : Py (Option FormatSpec) := do
   if spec.isEmpty then .ok none
@@ -433,7 +433,7 @@ def formatFloatDispatch (spec : Str) : Py (Option FormatSpec) := do
         t == 110 || t == 37 then .ok (some f)
     else .error (unknownPresentationType t "float")
 
-/-- `_PyComplex_FormatAdvancedWriter`, formatter_unicode.c:1691-1726, up to its call of
+/-- `_PyComplex_FormatAdvancedWriter`, formatter_unicode.c@3.14.7:1691-1726, up to its call of
 `format_complex_internal`. -/
 def formatComplexDispatch (spec : Str) : Py (Option FormatSpec) := do
   if spec.isEmpty then .ok none

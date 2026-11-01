@@ -72,18 +72,18 @@ expected: |
   The same results as _decimal (the values are exactly representable; the products are rounded
   to the context precision), and no ValueError from internal conversions.
 promised_by: |
-  Doc/library/decimal.rst:63-65: "the decimal module has a user alterable precision (defaulting to
+  Doc/library/decimal.rst:55-57: "the decimal module has a user alterable precision (defaulting to
   28 places) which can be as large as needed for a given problem". Decimal(value) takes any int or
-  numeric string; the __floor__ and __ceil__ docstrings (_pydecimal.py:1846, :1861); hashing of
+  numeric string; the __floor__ and __ceil__ docstrings (_pydecimal.py:1946, :1961); hashing of
   numeric types (Built-in Types); agreement between the twins.
 cause: |
-  Lib/_pydecimal.py: :504 `self._int = str(int(intpart+fracpart))` (and :503 for the exponent,
-  :511 for NaN payloads); :530 `self._int = str(abs(value))`; :918 `int(self._int)` in __hash__;
-  :954 in as_integer_ratio; :1843, :1858, :1873 `int(self._rescale(0, ...))` after _rescale pads
-  the coefficient with zeros; :5610 `self.int = int(value._int)` in _WorkRep (used by +, -, *);
-  :5640 `len(str(tmp.int))` in _normalize; :545 `str(value.int)`; :1271
-  `str(op1.int * op2.int)` in __mul__; :2607 and :1669 `str(int(coeff)+1)` when rounding up.
-  On main the same lines exist (constructor at :596).
+  Lib/_pydecimal.py: :596 `self._int = str(int(intpart+fracpart))` (and :595 for the exponent,
+  :603 for NaN payloads); :622 `self._int = str(abs(value))`; :1010 `int(self._int)` in __hash__;
+  :1046 in as_integer_ratio; :1943, :1958, :1973 `int(self._rescale(0, ...))` after _rescale pads
+  the coefficient with zeros; :5710 `self.int = int(value._int)` in _WorkRep (used by +, -, *);
+  :5740 `len(str(tmp.int))` in _normalize; :637 `str(value.int)`; :1363
+  `str(op1.int * op2.int)` in __mul__; :2707 and :1768 `str(int(coeff)+1)` when rounding up.
+  On main the same lines exist (constructor at :688).
 possible_fix: |
   None proposed, given #96589. That thread also rules out the obvious one: the limit is
   process-wide, so _pydecimal cannot safely lift it around its own conversions. It notes that a

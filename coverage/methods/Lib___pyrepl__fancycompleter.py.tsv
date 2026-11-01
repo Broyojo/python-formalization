@@ -1,0 +1,14 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_pyrepl/fancycompleter.py	20	29	safe_getattr	safe_getattr(obj, name)	todo		changed-in-3.15: new function
+Lib/_pyrepl/fancycompleter.py	32	36	colorize_matches	colorize_matches(names: list[str], values: list[Any], theme: Theme)	todo		changed-in-3.15: new function
+Lib/_pyrepl/fancycompleter.py	38	41	_color_for_obj	_color_for_obj(name: str, value: Any, theme: Theme)	todo		changed-in-3.15: new function
+Lib/_pyrepl/fancycompleter.py	44	50	_color_by_type	_color_by_type(t, theme)	todo		changed-in-3.15: new function
+Lib/_pyrepl/fancycompleter.py	61	90	Completer.__init__	__init__(self, namespace=None, *, use_colors='auto', consider_getitems=True)	todo		changed-in-3.15: new function
+Lib/_pyrepl/fancycompleter.py	92	98	Completer.complete	complete(self, text, state)	todo		changed-in-3.15: new function
+Lib/_pyrepl/fancycompleter.py	100	102	Completer._callable_postfix	_callable_postfix(self, val, word)	todo		changed-in-3.15: new function
+Lib/_pyrepl/fancycompleter.py	104	105	Completer._callable_attr_postfix	_callable_attr_postfix(self, val, word)	todo		changed-in-3.15: new function
+Lib/_pyrepl/fancycompleter.py	107	126	Completer.global_matches	global_matches(self, text)	todo		changed-in-3.15: new function
+Lib/_pyrepl/fancycompleter.py	128	150	Completer.attr_matches	attr_matches(self, text)	todo		changed-in-3.15: new function
+Lib/_pyrepl/fancycompleter.py	152	198	Completer._attr_matches	_attr_matches(self, text)	todo		changed-in-3.15: new function
+Lib/_pyrepl/fancycompleter.py	200	201	Completer.colorize_matches	colorize_matches(self, names, values)	todo		changed-in-3.15: new function
+Lib/_pyrepl/fancycompleter.py	204	213	commonprefix	commonprefix(names)	todo		changed-in-3.15: new function

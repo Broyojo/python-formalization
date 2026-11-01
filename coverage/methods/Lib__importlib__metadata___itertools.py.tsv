@@ -1,3 +1,8 @@
 file	line	endline	name	signature	status	entry	note
-Lib/importlib/metadata/_itertools.py	4	19	unique_everseen	unique_everseen(iterable, key=None)	todo		
-Lib/importlib/metadata/_itertools.py	23	73	always_iterable	always_iterable(obj, base_type=(str, bytes))	todo		
+Lib/importlib/metadata/_itertools.py	5	20	unique_everseen	unique_everseen(iterable, key=None)	todo		
+Lib/importlib/metadata/_itertools.py	24	74	always_iterable	always_iterable(obj, base_type=(str, bytes))	todo		
+Lib/importlib/metadata/_itertools.py	114	118	bucket.__init__	__init__(self, iterable, key, validator=None)	todo		changed-in-3.15: new function
+Lib/importlib/metadata/_itertools.py	120	131	bucket.__contains__	__contains__(self, value)	todo		changed-in-3.15: new function
+Lib/importlib/metadata/_itertools.py	133	157	bucket._get_values	_get_values(self, value)	todo		changed-in-3.15: new function
+Lib/importlib/metadata/_itertools.py	159	165	bucket.__iter__	__iter__(self)	todo		changed-in-3.15: new function
+Lib/importlib/metadata/_itertools.py	167	171	bucket.__getitem__	__getitem__(self, value)	todo		changed-in-3.15: new function

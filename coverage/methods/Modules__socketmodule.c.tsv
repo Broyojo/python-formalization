@@ -1,130 +1,126 @@
 file	line	endline	name	signature	status	entry	note
-Modules/socketmodule.c	347	404	remove_unusable_flags	remove_unusable_flags(PyObject *m)	todo		
-Modules/socketmodule.c	565	576	set_sock_fd	set_sock_fd(PySocketSockObject *s, SOCKET_T fd)	todo		
-Modules/socketmodule.c	579	590	get_sock_fd	get_sock_fd(PySocketSockObject *s)	todo		
-Modules/socketmodule.c	595	600	get_module_state	get_module_state(PyObject *mod)	todo		
-Modules/socketmodule.c	605	610	find_module_state_by_def	find_module_state_by_def(PyTypeObject *type)	todo		
-Modules/socketmodule.c	690	694	select_error	select_error(void)	todo		
-Modules/socketmodule.c	723	735	set_error	set_error(void)	todo		
-Modules/socketmodule.c	742	745	decode_error_message	decode_error_message(const char *str)	todo		
-Modules/socketmodule.c	750	765	set_herror	set_herror(socket_state *state, int h_error)	todo		
-Modules/socketmodule.c	771	792	set_gaierror	set_gaierror(socket_state *state, int error)	todo		
-Modules/socketmodule.c	798	847	internal_setblocking	internal_setblocking(PySocketSockObject *s, int block)	todo		
-Modules/socketmodule.c	850	941	internal_select	internal_select(PySocketSockObject *s, int writing, PyTime_t interval, int connect)	todo		
-Modules/socketmodule.c	963	1089	sock_call_ex	sock_call_ex(PySocketSockObject *s, int writing, int (*sock_func) (PySocketSockObject *s, void *data), void *data, int connect, int *err, PyTime_t timeout)	todo		
-Modules/socketmodule.c	1092	1098	sock_call	sock_call(PySocketSockObject *s, int writing, int (*func) (PySocketSockObject *s, void *data), void *data)	todo		
-Modules/socketmodule.c	1104	1143	init_sockobject	init_sockobject(socket_state *state, PySocketSockObject *s, SOCKET_T fd, int family, int type, int proto)	todo		
-Modules/socketmodule.c	1153	1166	new_sockobject	new_sockobject(socket_state *state, SOCKET_T fd, int family, int type, int proto)	todo		
-Modules/socketmodule.c	1185	1336	setipaddr	setipaddr(socket_state *state, const char *name, struct sockaddr *addr_ret, size_t addr_ret_size, int af)	todo		
-Modules/socketmodule.c	1342	1350	make_ipv4_addr	make_ipv4_addr(const struct sockaddr_in *addr)	todo		
-Modules/socketmodule.c	1356	1364	make_ipv6_addr	make_ipv6_addr(const struct sockaddr_in6 *addr)	todo		
-Modules/socketmodule.c	1373	1404	setbdaddr	setbdaddr(const char *name, bdaddr_t *bdaddr)	todo		
-Modules/socketmodule.c	1411	1429	makebdaddr	makebdaddr(bdaddr_t *bdaddr)	todo		
-Modules/socketmodule.c	1433	1436	unicode_fsdecode	unicode_fsdecode(void *arg)	todo		
-Modules/socketmodule.c	1445	1789	makesockaddr	makesockaddr(SOCKET_T sockfd, struct sockaddr *addr, size_t addrlen, int proto)	todo		
-Modules/socketmodule.c	1800	1803	idna_cleanup	idna_cleanup(struct maybe_idna *data)	todo		
-Modules/socketmodule.c	1806	1853	idna_converter	idna_converter(PyObject *obj, void *arg)	todo		
-Modules/socketmodule.c	1861	2730	getsockaddrarg	getsockaddrarg(PySocketSockObject *s, PyObject *args, sock_addr_t *addrbuf, int *len_ret, const char *caller)	todo		
-Modules/socketmodule.c	2739	2894	getsockaddrlen	getsockaddrlen(PySocketSockObject *s, socklen_t *len_ret)	todo		
-Modules/socketmodule.c	2909	2920	get_CMSG_LEN	get_CMSG_LEN(size_t length, size_t *result)	todo		
-Modules/socketmodule.c	2926	2939	get_CMSG_SPACE	get_CMSG_SPACE(size_t length, size_t *result)	todo		
-Modules/socketmodule.c	2946	2981	cmsg_min_space	cmsg_min_space(struct msghdr *msg, struct cmsghdr *cmsgh, size_t space)	todo		
-Modules/socketmodule.c	2988	3000	get_cmsg_data_space	get_cmsg_data_space(struct msghdr *msg, struct cmsghdr *cmsgh, size_t *space)	todo		
-Modules/socketmodule.c	3010	3026	get_cmsg_data_len	get_cmsg_data_len(struct msghdr *msg, struct cmsghdr *cmsgh, size_t *data_len)	todo		
-Modules/socketmodule.c	3039	3074	sock_accept_impl	sock_accept_impl(PySocketSockObject *s, void *data)	todo		
-Modules/socketmodule.c	3079	3147	sock_accept	sock_accept(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
-Modules/socketmodule.c	3164	3178	sock_setblocking	sock_setblocking(PyObject *self, PyObject *arg)	todo		
-Modules/socketmodule.c	3192	3201	sock_getblocking	sock_getblocking(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
-Modules/socketmodule.c	3210	3248	socket_parse_timeout	socket_parse_timeout(PyTime_t *timeout, PyObject *timeout_obj)	todo		
-Modules/socketmodule.c	3257	3293	sock_settimeout	sock_settimeout(PyObject *self, PyObject *arg)	todo		
-Modules/socketmodule.c	3306	3316	sock_gettimeout_impl	sock_gettimeout_impl(PyObject *self, void *Py_UNUSED(ignored))	todo		
-Modules/socketmodule.c	3319	3322	sock_gettimeout_method	sock_gettimeout_method(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
-Modules/socketmodule.c	3325	3328	sock_gettimeout_getter	sock_gettimeout_getter(PyObject *self, void *Py_UNUSED(closure))	todo		
-Modules/socketmodule.c	3347	3430	sock_setsockopt	sock_setsockopt(PyObject *self, PyObject *args)	todo		
-Modules/socketmodule.c	3448	3511	sock_getsockopt	sock_getsockopt(PyObject *self, PyObject *args)	todo		
-Modules/socketmodule.c	3525	3547	sock_bind	sock_bind(PyObject *self, PyObject *addro)	todo		
-Modules/socketmodule.c	3572	3596	_socket_socket_close_impl	_socket_socket_close_impl(PySocketSockObject *s) /*[clinic end generated code: output=038b2418e07f6f6c input=dc487e470e55a83c]*/	todo		
-Modules/socketmodule.c	3599	3605	sock_detach	sock_detach(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
-Modules/socketmodule.c	3616	3634	sock_connect_impl	sock_connect_impl(PySocketSockObject *s, void* Py_UNUSED(data))	todo		
-Modules/socketmodule.c	3649	3712	internal_connect	internal_connect(PySocketSockObject *s, struct sockaddr *addr, int addrlen, int raise)	todo		
-Modules/socketmodule.c	3717	3740	sock_connect	sock_connect(PyObject *self, PyObject *addro)	todo		
-Modules/socketmodule.c	3752	3774	sock_connect_ex	sock_connect_ex(PyObject *self, PyObject *addro)	todo		
-Modules/socketmodule.c	3787	3791	sock_fileno	sock_fileno(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
-Modules/socketmodule.c	3803	3821	sock_getsockname	sock_getsockname(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
-Modules/socketmodule.c	3837	3855	sock_getpeername	sock_getpeername(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
-Modules/socketmodule.c	3870	3891	sock_listen	sock_listen(PyObject *self, PyObject *args)	todo		
-Modules/socketmodule.c	3910	3922	sock_recv_impl	sock_recv_impl(PySocketSockObject *s, void *data)	todo		
-Modules/socketmodule.c	3935	3955	sock_recv_guts	sock_recv_guts(PySocketSockObject *s, char* cbuf, Py_ssize_t len, int flags)	todo		
-Modules/socketmodule.c	3961	3998	sock_recv	sock_recv(PyObject *self, PyObject *args)	todo		
-Modules/socketmodule.c	4012	4060	sock_recv_into	sock_recv_into(PyObject *self, PyObject *args, PyObject *kwds)	todo		
-Modules/socketmodule.c	4082	4098	sock_recvfrom_impl	sock_recvfrom_impl(PySocketSockObject *s, void *data)	todo		
-Modules/socketmodule.c	4113	4144	sock_recvfrom_guts	sock_recvfrom_guts(PySocketSockObject *s, char* cbuf, Py_ssize_t len, int flags, PyObject** addr)	todo		
-Modules/socketmodule.c	4149	4192	sock_recvfrom	sock_recvfrom(PyObject *self, PyObject *args)	todo		
-Modules/socketmodule.c	4203	4250	sock_recvfrom_into	sock_recvfrom_into(PyObject *self, PyObject *args, PyObject* kwds)	todo		
-Modules/socketmodule.c	4268	4274	sock_recvmsg_impl	sock_recvmsg_impl(PySocketSockObject *s, void *data)	todo		
-Modules/socketmodule.c	4287	4416	sock_recvmsg_guts	sock_recvmsg_guts(PySocketSockObject *s, struct iovec *iov, int iovlen, int flags, Py_ssize_t controllen, PyObject *(*makeval)(ssize_t, void *), void *makeval_data)	todo		
-Modules/socketmodule.c	4420	4427	makeval_recvmsg	makeval_recvmsg(ssize_t received, void *data)	todo		
-Modules/socketmodule.c	4432	4460	sock_recvmsg	sock_recvmsg(PyObject *self, PyObject *args)	todo		
-Modules/socketmodule.c	4493	4496	makeval_recvmsg_into	makeval_recvmsg_into(ssize_t received, void *data)	todo		
-Modules/socketmodule.c	4501	4554	sock_recvmsg_into	sock_recvmsg_into(PyObject *self, PyObject *args)	todo		
-Modules/socketmodule.c	4599	4611	sock_send_impl	sock_send_impl(PySocketSockObject *s, void *data)	todo		
-Modules/socketmodule.c	4616	4641	sock_send	sock_send(PyObject *self, PyObject *args)	todo		
-Modules/socketmodule.c	4654	4720	sock_sendall	sock_sendall(PyObject *self, PyObject *args)	todo		
-Modules/socketmodule.c	4742	4756	sock_sendto_impl	sock_sendto_impl(PySocketSockObject *s, void *data)	todo		
-Modules/socketmodule.c	4761	4820	sock_sendto	sock_sendto(PyObject *self, PyObject *args)	todo		
-Modules/socketmodule.c	4897	4903	sock_sendmsg_impl	sock_sendmsg_impl(PySocketSockObject *s, void *data)	todo		
-Modules/socketmodule.c	4908	5095	sock_sendmsg	sock_sendmsg(PyObject *self, PyObject *args)	todo		
-Modules/socketmodule.c	5117	5274	sock_sendmsg_afalg	sock_sendmsg_afalg(PyObject *s, PyObject *args, PyObject *kwds)	todo		
-Modules/socketmodule.c	5287	5303	sock_shutdown	sock_shutdown(PyObject *self, PyObject *arg)	todo		
-Modules/socketmodule.c	5314	5360	sock_ioctl	sock_ioctl(PyObject *self, PyObject *arg)	todo		
-Modules/socketmodule.c	5372	5389	sock_share	sock_share(PyObject *self, PyObject *arg)	todo		
-Modules/socketmodule.c	5500	5533	sock_finalize	sock_finalize(PyObject *self)	todo		
-Modules/socketmodule.c	5536	5540	sock_traverse	sock_traverse(PyObject *s, visitproc visit, void *arg)	todo		
-Modules/socketmodule.c	5543	5552	sock_dealloc	sock_dealloc(PyObject *s)	todo		
-Modules/socketmodule.c	5556	5583	sock_repr	sock_repr(PyObject *self)	todo		
-Modules/socketmodule.c	5589	5603	sock_new	sock_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
-Modules/socketmodule.c	5613	5617	socket	socket(int domain, int type, int protocol)	todo		
-Modules/socketmodule.c	5629	5833	sock_initobj_impl	sock_initobj_impl(PySocketSockObject *self, int family, int type, int proto, PyObject *fdobj) /*[clinic end generated code: output=d114d026b9a9a810 input=04cfc32953f5cc25]*/	todo		
-Modules/socketmodule.c	5866	5920	socket_gethostname	socket_gethostname(PyObject *self, PyObject *unused)	todo		
-Modules/socketmodule.c	5934	5968	socket_sethostname	socket_sethostname(PyObject *self, PyObject *args)	todo		
-Modules/socketmodule.c	5976	5997	socket_gethostbyname	socket_gethostbyname(PyObject *self, PyObject *args)	todo		
-Modules/socketmodule.c	6008	6018	sock_decode_hostname	sock_decode_hostname(const char *name)	todo		
-Modules/socketmodule.c	6023	6160	gethost_common	gethost_common(socket_state *state, struct hostent *h, struct sockaddr *addr, size_t alen, int af)	todo		
-Modules/socketmodule.c	6168	6233	socket_gethostbyname_ex	socket_gethostbyname_ex(PyObject *self, PyObject *args)	todo		
-Modules/socketmodule.c	6247	6334	socket_gethostbyaddr	socket_gethostbyaddr(PyObject *self, PyObject *args)	todo		
-Modules/socketmodule.c	6350	6369	socket_getservbyname	socket_getservbyname(PyObject *self, PyObject *args)	todo		
-Modules/socketmodule.c	6386	6412	socket_getservbyport	socket_getservbyport(PyObject *self, PyObject *args)	todo		
-Modules/socketmodule.c	6429	6443	socket_getprotobyname	socket_getprotobyname(PyObject *self, PyObject *args)	todo		
-Modules/socketmodule.c	6452	6469	socket_close	socket_close(PyObject *self, PyObject *fdobj)	todo		
-Modules/socketmodule.c	6481	6523	socket_dup	socket_dup(PyObject *self, PyObject *fdobj)	todo		
-Modules/socketmodule.c	6540	6612	socket_socketpair	socket_socketpair(PyObject *self, PyObject *args)	todo		
-Modules/socketmodule.c	6634	6638	_socket_ntohs_impl	_socket_ntohs_impl(PyObject *module, uint16_t x) /*[clinic end generated code: output=8e991859ddcedcc9 input=a702372437396511]*/	todo		
-Modules/socketmodule.c	6650	6654	_socket_ntohl_impl	_socket_ntohl_impl(PyObject *module, uint32_t x) /*[clinic end generated code: output=158bcc5ba449f795 input=a0406faf2236bd1f]*/	todo		
-Modules/socketmodule.c	6666	6670	_socket_htons_impl	_socket_htons_impl(PyObject *module, uint16_t x) /*[clinic end generated code: output=35aa2bcc370fd80b input=78047a26d51866d1]*/	todo		
-Modules/socketmodule.c	6682	6686	_socket_htonl_impl	_socket_htonl_impl(PyObject *module, uint32_t x) /*[clinic end generated code: output=283eb6857d5f7e0d input=89a9077647082806]*/	todo		
-Modules/socketmodule.c	6699	6760	_socket_inet_aton_impl	_socket_inet_aton_impl(PyObject *module, const char *ip_addr) /*[clinic end generated code: output=f2c2f772eb721b6e input=3a52dec207bf8956]*/	todo		
-Modules/socketmodule.c	6772	6791	_socket_inet_ntoa_impl	_socket_inet_ntoa_impl(PyObject *module, Py_buffer *packed_ip) /*[clinic end generated code: output=3077324c50af0935 input=2850d4f57e4db345]*/	todo		
-Modules/socketmodule.c	6803	6845	socket_inet_pton	socket_inet_pton(PyObject *self, PyObject *args)	todo		
-Modules/socketmodule.c	6853	6901	socket_inet_ntop	socket_inet_ntop(PyObject *self, PyObject *args)	todo		
-Modules/socketmodule.c	6910	7036	socket_getaddrinfo	socket_getaddrinfo(PyObject *self, PyObject *args, PyObject* kwargs)	todo		
-Modules/socketmodule.c	7050	7145	socket_getnameinfo	socket_getnameinfo(PyObject *self, PyObject *args)	todo		
-Modules/socketmodule.c	7156	7167	socket_getdefaulttimeout	socket_getdefaulttimeout(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
-Modules/socketmodule.c	7177	7188	socket_setdefaulttimeout	socket_setdefaulttimeout(PyObject *self, PyObject *arg)	todo		
-Modules/socketmodule.c	7201	7279	socket_if_nameindex	socket_if_nameindex(PyObject *self, PyObject *arg)	todo		
-Modules/socketmodule.c	7295	7312	_socket_if_nametoindex_impl	_socket_if_nametoindex_impl(PyObject *module, PyObject *oname) /*[clinic end generated code: output=289a411614f30244 input=6125dc20683560cf]*/	todo		
-Modules/socketmodule.c	7324	7335	_socket_if_indextoname_impl	_socket_if_indextoname_impl(PyObject *module, NET_IFINDEX index) /*[clinic end generated code: output=e48bc324993052e0 input=c93f753d0cf6d7d1]*/	todo		
-Modules/socketmodule.c	7344	7356	socket_CMSG_LEN	socket_CMSG_LEN(PyObject *self, PyObject *args)	todo		
-Modules/socketmodule.c	7374	7387	socket_CMSG_SPACE	socket_CMSG_SPACE(PyObject *self, PyObject *args)	todo		
-Modules/socketmodule.c	7497	7500	os_cleanup	os_cleanup(void)	todo		
-Modules/socketmodule.c	7503	7527	os_init	os_init(void)	todo		
-Modules/socketmodule.c	7535	7538	os_init	os_init(void)	todo		
-Modules/socketmodule.c	7542	7548	sock_capi_traverse	sock_capi_traverse(PyObject *capsule, visitproc visit, void *arg)	todo		
-Modules/socketmodule.c	7551	7557	sock_capi_clear	sock_capi_clear(PyObject *capsule)	todo		
-Modules/socketmodule.c	7560	7566	sock_capi_free	sock_capi_free(PySocketModule_APIObject *capi)	todo		
-Modules/socketmodule.c	7569	7574	sock_capi_destroy	sock_capi_destroy(PyObject *capsule)	todo		
-Modules/socketmodule.c	7577	7589	sock_get_api	sock_get_api(socket_state *state)	todo		
-Modules/socketmodule.c	7608	7626	socket_exec	socket_exec(PyObject *m)	todo		
-Modules/socketmodule.c	9277	9284	socket_traverse	socket_traverse(PyObject *mod, visitproc visit, void *arg)	todo		
-Modules/socketmodule.c	9287	9294	socket_clear	socket_clear(PyObject *mod)	todo		
-Modules/socketmodule.c	9297	9300	socket_free	socket_free(void *mod)	todo		
-Modules/socketmodule.c	9315	9318	PyInit__socket	PyInit__socket(void)	todo		
+Modules/socketmodule.c	349	406	remove_unusable_flags	remove_unusable_flags(PyObject *m)	todo		
+Modules/socketmodule.c	567	578	set_sock_fd	set_sock_fd(PySocketSockObject *s, SOCKET_T fd)	todo		
+Modules/socketmodule.c	581	592	get_sock_fd	get_sock_fd(PySocketSockObject *s)	todo		
+Modules/socketmodule.c	597	602	get_module_state	get_module_state(PyObject *mod)	todo		
+Modules/socketmodule.c	607	612	find_module_state_by_def	find_module_state_by_def(PyTypeObject *type)	todo		
+Modules/socketmodule.c	692	696	select_error	select_error(void)	todo		
+Modules/socketmodule.c	725	737	set_error	set_error(void)	todo		
+Modules/socketmodule.c	744	747	decode_error_message	decode_error_message(const char *str)	todo		
+Modules/socketmodule.c	752	769	set_herror	set_herror(socket_state *state, int h_error)	todo		changed-in-3.15:
+Modules/socketmodule.c	775	798	set_gaierror	set_gaierror(socket_state *state, int error)	todo		changed-in-3.15:
+Modules/socketmodule.c	804	853	internal_setblocking	internal_setblocking(PySocketSockObject *s, int block)	todo		
+Modules/socketmodule.c	856	947	internal_select	internal_select(PySocketSockObject *s, int writing, PyTime_t interval, int connect)	todo		
+Modules/socketmodule.c	969	1095	sock_call_ex	sock_call_ex(PySocketSockObject *s, int writing, int (*sock_func) (PySocketSockObject *s, void *data), void *data, int connect, int *err, PyTime_t timeout)	todo		
+Modules/socketmodule.c	1098	1104	sock_call	sock_call(PySocketSockObject *s, int writing, int (*func) (PySocketSockObject *s, void *data), void *data)	todo		
+Modules/socketmodule.c	1110	1149	init_sockobject	init_sockobject(socket_state *state, PySocketSockObject *s, SOCKET_T fd, int family, int type, int proto)	todo		
+Modules/socketmodule.c	1159	1172	new_sockobject	new_sockobject(socket_state *state, SOCKET_T fd, int family, int type, int proto)	todo		
+Modules/socketmodule.c	1191	1342	setipaddr	setipaddr(socket_state *state, const char *name, struct sockaddr *addr_ret, size_t addr_ret_size, int af)	todo		
+Modules/socketmodule.c	1348	1356	make_ipv4_addr	make_ipv4_addr(const struct sockaddr_in *addr)	todo		
+Modules/socketmodule.c	1362	1370	make_ipv6_addr	make_ipv6_addr(const struct sockaddr_in6 *addr)	todo		
+Modules/socketmodule.c	1379	1410	setbdaddr	setbdaddr(const char *name, bdaddr_t *bdaddr)	todo		
+Modules/socketmodule.c	1417	1435	makebdaddr	makebdaddr(bdaddr_t *bdaddr)	todo		
+Modules/socketmodule.c	1439	1442	unicode_fsdecode	unicode_fsdecode(void *arg)	todo		
+Modules/socketmodule.c	1451	1798	makesockaddr	makesockaddr(SOCKET_T sockfd, struct sockaddr *addr, size_t addrlen, int proto)	todo		changed-in-3.15:
+Modules/socketmodule.c	1809	1812	idna_cleanup	idna_cleanup(struct maybe_idna *data)	todo		
+Modules/socketmodule.c	1815	1862	idna_converter	idna_converter(PyObject *obj, void *arg)	todo		
+Modules/socketmodule.c	1870	2739	getsockaddrarg	getsockaddrarg(PySocketSockObject *s, PyObject *args, sock_addr_t *addrbuf, int *len_ret, const char *caller)	todo		
+Modules/socketmodule.c	2748	2903	getsockaddrlen	getsockaddrlen(PySocketSockObject *s, socklen_t *len_ret)	todo		
+Modules/socketmodule.c	2918	2929	get_CMSG_LEN	get_CMSG_LEN(size_t length, size_t *result)	todo		
+Modules/socketmodule.c	2935	2948	get_CMSG_SPACE	get_CMSG_SPACE(size_t length, size_t *result)	todo		
+Modules/socketmodule.c	2955	2990	cmsg_min_space	cmsg_min_space(struct msghdr *msg, struct cmsghdr *cmsgh, size_t space)	todo		
+Modules/socketmodule.c	2997	3009	get_cmsg_data_space	get_cmsg_data_space(struct msghdr *msg, struct cmsghdr *cmsgh, size_t *space)	todo		
+Modules/socketmodule.c	3019	3035	get_cmsg_data_len	get_cmsg_data_len(struct msghdr *msg, struct cmsghdr *cmsgh, size_t *data_len)	todo		
+Modules/socketmodule.c	3048	3083	sock_accept_impl	sock_accept_impl(PySocketSockObject *s, void *data)	todo		
+Modules/socketmodule.c	3088	3155	sock_accept	sock_accept(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		changed-in-3.15:
+Modules/socketmodule.c	3172	3186	sock_setblocking	sock_setblocking(PyObject *self, PyObject *arg)	todo		
+Modules/socketmodule.c	3200	3209	sock_getblocking	sock_getblocking(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Modules/socketmodule.c	3218	3256	socket_parse_timeout	socket_parse_timeout(PyTime_t *timeout, PyObject *timeout_obj)	todo		
+Modules/socketmodule.c	3265	3301	sock_settimeout	sock_settimeout(PyObject *self, PyObject *arg)	todo		
+Modules/socketmodule.c	3314	3324	sock_gettimeout_impl	sock_gettimeout_impl(PyObject *self, void *Py_UNUSED(ignored))	todo		
+Modules/socketmodule.c	3327	3330	sock_gettimeout_method	sock_gettimeout_method(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Modules/socketmodule.c	3333	3336	sock_gettimeout_getter	sock_gettimeout_getter(PyObject *self, void *Py_UNUSED(closure))	todo		
+Modules/socketmodule.c	3355	3468	sock_setsockopt	sock_setsockopt(PyObject *self, PyObject *args)	todo		changed-in-3.15:
+Modules/socketmodule.c	3486	3548	sock_getsockopt	sock_getsockopt(PyObject *self, PyObject *args)	todo		changed-in-3.15:
+Modules/socketmodule.c	3562	3584	sock_bind	sock_bind(PyObject *self, PyObject *addro)	todo		
+Modules/socketmodule.c	3609	3633	_socket_socket_close_impl	_socket_socket_close_impl(PySocketSockObject *s) /*[clinic end generated code: output=038b2418e07f6f6c input=dc487e470e55a83c]*/	todo		
+Modules/socketmodule.c	3636	3642	sock_detach	sock_detach(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Modules/socketmodule.c	3653	3671	sock_connect_impl	sock_connect_impl(PySocketSockObject *s, void* Py_UNUSED(data))	todo		
+Modules/socketmodule.c	3686	3749	internal_connect	internal_connect(PySocketSockObject *s, struct sockaddr *addr, int addrlen, int raise)	todo		
+Modules/socketmodule.c	3754	3777	sock_connect	sock_connect(PyObject *self, PyObject *addro)	todo		
+Modules/socketmodule.c	3789	3811	sock_connect_ex	sock_connect_ex(PyObject *self, PyObject *addro)	todo		
+Modules/socketmodule.c	3824	3828	sock_fileno	sock_fileno(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Modules/socketmodule.c	3840	3858	sock_getsockname	sock_getsockname(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Modules/socketmodule.c	3874	3892	sock_getpeername	sock_getpeername(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Modules/socketmodule.c	3907	3928	sock_listen	sock_listen(PyObject *self, PyObject *args)	todo		
+Modules/socketmodule.c	3947	3959	sock_recv_impl	sock_recv_impl(PySocketSockObject *s, void *data)	todo		
+Modules/socketmodule.c	3972	3992	sock_recv_guts	sock_recv_guts(PySocketSockObject *s, char* cbuf, Py_ssize_t len, int flags)	todo		
+Modules/socketmodule.c	3998	4030	sock_recv	sock_recv(PyObject *self, PyObject *args)	todo		changed-in-3.15:
+Modules/socketmodule.c	4044	4092	sock_recv_into	sock_recv_into(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/socketmodule.c	4114	4130	sock_recvfrom_impl	sock_recvfrom_impl(PySocketSockObject *s, void *data)	todo		
+Modules/socketmodule.c	4145	4176	sock_recvfrom_guts	sock_recvfrom_guts(PySocketSockObject *s, char* cbuf, Py_ssize_t len, int flags, PyObject** addr)	todo		
+Modules/socketmodule.c	4181	4220	sock_recvfrom	sock_recvfrom(PyObject *self, PyObject *args)	todo		changed-in-3.15:
+Modules/socketmodule.c	4231	4278	sock_recvfrom_into	sock_recvfrom_into(PyObject *self, PyObject *args, PyObject* kwds)	todo		
+Modules/socketmodule.c	4296	4302	sock_recvmsg_impl	sock_recvmsg_impl(PySocketSockObject *s, void *data)	todo		
+Modules/socketmodule.c	4315	4444	sock_recvmsg_guts	sock_recvmsg_guts(PySocketSockObject *s, struct iovec *iov, int iovlen, int flags, Py_ssize_t controllen, PyObject *(*makeval)(ssize_t, void *), void *makeval_data)	todo		
+Modules/socketmodule.c	4448	4454	makeval_recvmsg	makeval_recvmsg(ssize_t received, void *data)	todo		changed-in-3.15:
+Modules/socketmodule.c	4459	4488	sock_recvmsg	sock_recvmsg(PyObject *self, PyObject *args)	todo		changed-in-3.15:
+Modules/socketmodule.c	4521	4524	makeval_recvmsg_into	makeval_recvmsg_into(ssize_t received, void *data)	todo		
+Modules/socketmodule.c	4529	4582	sock_recvmsg_into	sock_recvmsg_into(PyObject *self, PyObject *args)	todo		
+Modules/socketmodule.c	4627	4639	sock_send_impl	sock_send_impl(PySocketSockObject *s, void *data)	todo		
+Modules/socketmodule.c	4766	4780	sock_sendto_impl	sock_sendto_impl(PySocketSockObject *s, void *data)	todo		
+Modules/socketmodule.c	4785	4844	sock_sendto	sock_sendto(PyObject *self, PyObject *args)	todo		
+Modules/socketmodule.c	4919	4925	sock_sendmsg_impl	sock_sendmsg_impl(PySocketSockObject *s, void *data)	todo		
+Modules/socketmodule.c	5143	5300	sock_sendmsg_afalg	sock_sendmsg_afalg(PyObject *s, PyObject *args, PyObject *kwds)	todo		
+Modules/socketmodule.c	5313	5329	sock_shutdown	sock_shutdown(PyObject *self, PyObject *arg)	todo		
+Modules/socketmodule.c	5340	5386	sock_ioctl	sock_ioctl(PyObject *self, PyObject *arg)	todo		
+Modules/socketmodule.c	5398	5415	sock_share	sock_share(PyObject *self, PyObject *arg)	todo		
+Modules/socketmodule.c	5526	5559	sock_finalize	sock_finalize(PyObject *self)	todo		
+Modules/socketmodule.c	5562	5571	sock_dealloc	sock_dealloc(PyObject *s)	todo		
+Modules/socketmodule.c	5575	5602	sock_repr	sock_repr(PyObject *self)	todo		
+Modules/socketmodule.c	5608	5622	sock_new	sock_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Modules/socketmodule.c	5632	5636	socket	socket(int domain, int type, int protocol)	todo		
+Modules/socketmodule.c	5648	5852	sock_initobj_impl	sock_initobj_impl(PySocketSockObject *self, int family, int type, int proto, PyObject *fdobj) /*[clinic end generated code: output=d114d026b9a9a810 input=04cfc32953f5cc25]*/	todo		
+Modules/socketmodule.c	5885	5939	socket_gethostname	socket_gethostname(PyObject *self, PyObject *unused)	todo		
+Modules/socketmodule.c	5953	5987	socket_sethostname	socket_sethostname(PyObject *self, PyObject *args)	todo		
+Modules/socketmodule.c	5995	6016	socket_gethostbyname	socket_gethostbyname(PyObject *self, PyObject *args)	todo		
+Modules/socketmodule.c	6027	6037	sock_decode_hostname	sock_decode_hostname(const char *name)	todo		
+Modules/socketmodule.c	6042	6179	gethost_common	gethost_common(socket_state *state, struct hostent *h, struct sockaddr *addr, size_t alen, int af, int h_error)	todo		changed-in-3.15:
+Modules/socketmodule.c	6187	6253	socket_gethostbyname_ex	socket_gethostbyname_ex(PyObject *self, PyObject *args)	todo		changed-in-3.15:
+Modules/socketmodule.c	6267	6353	socket_gethostbyaddr	socket_gethostbyaddr(PyObject *self, PyObject *args)	todo		changed-in-3.15:
+Modules/socketmodule.c	6369	6388	socket_getservbyname	socket_getservbyname(PyObject *self, PyObject *args)	todo		
+Modules/socketmodule.c	6405	6432	socket_getservbyport	socket_getservbyport(PyObject *self, PyObject *args)	todo		changed-in-3.15:
+Modules/socketmodule.c	6449	6463	socket_getprotobyname	socket_getprotobyname(PyObject *self, PyObject *args)	todo		
+Modules/socketmodule.c	6472	6489	socket_close	socket_close(PyObject *self, PyObject *fdobj)	todo		
+Modules/socketmodule.c	6501	6543	socket_dup	socket_dup(PyObject *self, PyObject *fdobj)	todo		
+Modules/socketmodule.c	6560	6629	socket_socketpair	socket_socketpair(PyObject *self, PyObject *args)	todo		changed-in-3.15:
+Modules/socketmodule.c	6651	6655	_socket_ntohs_impl	_socket_ntohs_impl(PyObject *module, uint16_t x) /*[clinic end generated code: output=8e991859ddcedcc9 input=a702372437396511]*/	todo		
+Modules/socketmodule.c	6667	6671	_socket_ntohl_impl	_socket_ntohl_impl(PyObject *module, uint32_t x) /*[clinic end generated code: output=158bcc5ba449f795 input=a0406faf2236bd1f]*/	todo		
+Modules/socketmodule.c	6683	6687	_socket_htons_impl	_socket_htons_impl(PyObject *module, uint16_t x) /*[clinic end generated code: output=35aa2bcc370fd80b input=78047a26d51866d1]*/	todo		
+Modules/socketmodule.c	6699	6703	_socket_htonl_impl	_socket_htonl_impl(PyObject *module, uint32_t x) /*[clinic end generated code: output=283eb6857d5f7e0d input=89a9077647082806]*/	todo		
+Modules/socketmodule.c	6717	6778	_socket_inet_aton_impl	_socket_inet_aton_impl(PyObject *module, const char *ip_addr) /*[clinic end generated code: output=f2c2f772eb721b6e input=0bd9e5ee400fafd6]*/	todo		
+Modules/socketmodule.c	6790	6809	_socket_inet_ntoa_impl	_socket_inet_ntoa_impl(PyObject *module, Py_buffer *packed_ip) /*[clinic end generated code: output=3077324c50af0935 input=2850d4f57e4db345]*/	todo		
+Modules/socketmodule.c	6821	6863	socket_inet_pton	socket_inet_pton(PyObject *self, PyObject *args)	todo		
+Modules/socketmodule.c	6871	6919	socket_inet_ntop	socket_inet_ntop(PyObject *self, PyObject *args)	todo		
+Modules/socketmodule.c	6928	7054	socket_getaddrinfo	socket_getaddrinfo(PyObject *self, PyObject *args, PyObject* kwargs)	todo		
+Modules/socketmodule.c	7068	7163	socket_getnameinfo	socket_getnameinfo(PyObject *self, PyObject *args)	todo		
+Modules/socketmodule.c	7174	7185	socket_getdefaulttimeout	socket_getdefaulttimeout(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Modules/socketmodule.c	7195	7206	socket_setdefaulttimeout	socket_setdefaulttimeout(PyObject *self, PyObject *arg)	todo		
+Modules/socketmodule.c	7219	7297	socket_if_nameindex	socket_if_nameindex(PyObject *self, PyObject *arg)	todo		
+Modules/socketmodule.c	7313	7330	_socket_if_nametoindex_impl	_socket_if_nametoindex_impl(PyObject *module, PyObject *oname) /*[clinic end generated code: output=289a411614f30244 input=6125dc20683560cf]*/	todo		
+Modules/socketmodule.c	7343	7354	_socket_if_indextoname_impl	_socket_if_indextoname_impl(PyObject *module, NET_IFINDEX index) /*[clinic end generated code: output=e48bc324993052e0 input=2a0026b271cd43ae]*/	todo		
+Modules/socketmodule.c	7363	7375	socket_CMSG_LEN	socket_CMSG_LEN(PyObject *self, PyObject *args)	todo		
+Modules/socketmodule.c	7393	7406	socket_CMSG_SPACE	socket_CMSG_SPACE(PyObject *self, PyObject *args)	todo		
+Modules/socketmodule.c	7516	7519	os_cleanup	os_cleanup(void)	todo		
+Modules/socketmodule.c	7522	7546	os_init	os_init(void)	todo		
+Modules/socketmodule.c	7554	7557	os_init	os_init(void)	todo		
+Modules/socketmodule.c	7561	7567	sock_capi_traverse	sock_capi_traverse(PyObject *capsule, visitproc visit, void *arg)	todo		
+Modules/socketmodule.c	7570	7576	sock_capi_clear	sock_capi_clear(PyObject *capsule)	todo		
+Modules/socketmodule.c	7579	7585	sock_capi_free	sock_capi_free(PySocketModule_APIObject *capi)	todo		
+Modules/socketmodule.c	7588	7593	sock_capi_destroy	sock_capi_destroy(PyObject *capsule)	todo		
+Modules/socketmodule.c	7596	7608	sock_get_api	sock_get_api(socket_state *state)	todo		
+Modules/socketmodule.c	7627	7645	socket_exec	socket_exec(PyObject *m)	todo		
+Modules/socketmodule.c	9340	9347	socket_traverse	socket_traverse(PyObject *mod, visitproc visit, void *arg)	todo		
+Modules/socketmodule.c	9350	9357	socket_clear	socket_clear(PyObject *mod)	todo		
+Modules/socketmodule.c	9360	9363	socket_free	socket_free(void *mod)	todo		
+Modules/socketmodule.c	9378	9381	PyInit__socket	PyInit__socket(void)	todo		

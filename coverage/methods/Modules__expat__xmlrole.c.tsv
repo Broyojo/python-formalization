@@ -1,4 +1,4 @@
 file	line	endline	name	signature	status	entry	note
-Modules/expat/xmlrole.c	1225	1234	common	common(PROLOG_STATE *state, int tok) {	excluded		vendored: third-party code
-Modules/expat/xmlrole.c	1237	1244	XmlPrologStateInit	XmlPrologStateInit(PROLOG_STATE *state) {	excluded		vendored: third-party code
-Modules/expat/xmlrole.c	1249	1253	XmlPrologStateInitExternalEntity	XmlPrologStateInitExternalEntity(PROLOG_STATE *state) {	excluded		vendored: third-party code
+Modules/expat/xmlrole.c	1226	1235	common	common(PROLOG_STATE *state, int tok) {	excluded		vendored: third-party code
+Modules/expat/xmlrole.c	1238	1245	XmlPrologStateInit	XmlPrologStateInit(PROLOG_STATE *state) {	excluded		vendored: third-party code
+Modules/expat/xmlrole.c	1250	1254	XmlPrologStateInitExternalEntity	XmlPrologStateInitExternalEntity(PROLOG_STATE *state) {	excluded		vendored: third-party code

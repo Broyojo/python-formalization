@@ -12,7 +12,7 @@ open PyLean
 
 namespace Delta
 
-/-- `delta_str`, _datetimemodule.c:2981-3007. -/
+/-- `delta_str`, _datetimemodule.c:2992-3018. -/
 def strC (t : Delta) : String :=
   let us := t.us
   let minutes := t.seconds / 60
@@ -28,7 +28,7 @@ def strC (t : Delta) : String :=
   else if us ≠ 0 then s!"{fmtD hours}:{fmt0 2 minutes}:{fmt0 2 seconds}.{fmt0 6 us}"
   else s!"{fmtD hours}:{fmt0 2 minutes}:{fmt0 2 seconds}"
 
-/-- `delta_repr`, _datetimemodule.c:2932-2978. -/
+/-- `delta_repr`, _datetimemodule.c:2943-2989. -/
 def reprC (t : Delta) : String :=
   let args := if t.days ≠ 0 then s!"days={fmtD t.days}" else ""
   let sep := if t.days ≠ 0 then ", " else ""
@@ -37,7 +37,7 @@ def reprC (t : Delta) : String :=
   let args := if args.isEmpty then "0" else args
   s!"datetime.timedelta({args})"
 
-/-- `timedelta.__reduce__`, Py:943-944, and `delta_reduce`, :3045-3049: the
+/-- `timedelta.__reduce__`, Py:943-944, and `delta_reduce`, :3056-3060: the
 constructor arguments. -/
 def reduceArgs (t : Delta) : List Int := t.getstate
 
@@ -65,7 +65,7 @@ def timezoneNewPy (oid : Nat) (offset : Delta) (name : TzName) : Py Tz :=
     | .ok _ => .ok ⟨oid, .timezone offset (some s)⟩
     | .error e => .error e
 
-/-- `timezone_new`, :4295-4304, `new_timezone`, :1451-1471, `create_timezone`, :1423-1445. -/
+/-- `timezone_new`, @3.14.7:4295-4304, `new_timezone`, :1459-1479, `create_timezone`, :1431-1453. -/
 def timezoneNewC (oid : Nat) (offset : Delta) (name : TzName) : Py Tz :=
   match name with
   | .other => .error (.typeError "~timezone() argument 2 must be str")
@@ -82,17 +82,17 @@ def timezoneNewC (oid : Nat) (offset : Delta) (name : TzName) : Py Tz :=
 /-- `timezone.__eq__`, Py:2438-2441: offsets compare, names do not. -/
 def timezoneEqPy (a b : Delta) : Bool := a.richPy .eq b
 
-/-- `timezone_richcompare`, :4316-4326: `none` is `NotImplemented`. -/
+/-- `timezone_richcompare`, :4379-4389: `none` is `NotImplemented`. -/
 def timezoneRichC (op : CmpOp) (a b : Delta) : Option Bool :=
   if op = .eq ∨ op = .ne then some (a.richC op b) else none
 
-/-- `timezone.__hash__`, Py:2443-2444, and `timezone_hash`, :4329-4333. -/
+/-- `timezone.__hash__`, Py:2443-2444, and `timezone_hash`, :4392-4396. -/
 def timezoneHashKey (offset : Delta) : HashKey := offset.hashKey
 
-/-- `timezone.__getinitargs__`, Py:2432-2436, and `timezone_getinitargs`, :4463-4469. -/
+/-- `timezone.__getinitargs__`, Py:2432-2436, and `timezone_getinitargs`, :4526-4532. -/
 def timezoneGetinitargs (offset : Delta) (name : Option String) : Delta × Option String := (offset, name)
 
-/-- `tzinfo.__reduce__`, Py:1345-1351, and `tzinfo_reduce`, :4198-4224: the
+/-- `tzinfo.__reduce__`, Py:1345-1351, and `tzinfo_reduce`, :4257-4283: the
 constructor arguments (from `__getinitargs__` if there is one) and the state. -/
 def tzinfoReduce {α σ : Type} (getinitargs : Option (Unit → Py (List α))) (state : Py σ) :
     Py (List α × σ) := do
@@ -102,7 +102,7 @@ def tzinfoReduce {α σ : Type} (getinitargs : Option (Unit → Py (List α))) (
   return (args, ← state)
 
 /-- `isinstance(dt, datetime) or dt is None` for an argument of a `timezone` method:
-Py:2469-2487 and `_timezone_check_argument`, :4340-4347. `ok` says the argument
+Py:2469-2487 and `_timezone_check_argument`, :4403-4410. `ok` says the argument
 is acceptable. -/
 def timezoneCheckArg (ok : Bool) (meth : String) : Py Unit :=
   if ok then .ok () else .error (.typeError s!"~{meth}() argument must be a datetime instance or None")
@@ -113,7 +113,7 @@ def timezoneInitSubclass : Py Unit :=
 
 /-! ### POSIX seconds -/
 
-/-- `utc_to_seconds`, :5448-5462: `ord` here is `ymd_to_ord`. -/
+/-- `utc_to_seconds`, :5571-5585: `ord` here is `ymd_to_ord`. -/
 def utcToSecondsC (y m d hh mi s : Int) : Py Int :=
   if y < MINYEAR ∨ y > MAXYEAR then .error (.valueError s!"year must be in 1..9999, not {y}")
   else .ok (((ymdToOrdC y m d * 24 + hh) * 60 + mi) * 60 + s)
@@ -140,7 +140,7 @@ def mktimePy (loc : Int → Py Int) (t fold : Int) : Py Int := do
   -- `(max, min)[self.fold](u1, u2)`
   return if fold = 0 then max u1 u2 else min u1 u2
 
-/-- `local_to_seconds`, :6844-6888, over `local` (:5465-5484), here `loc`; `t` is
+/-- `local_to_seconds`, :7033-7077, over `local` (:5588-5607), here `loc`; `t` is
 `utc_to_seconds` of the fields. -/
 def localToSecondsC (loc : Int → Py Int) (t fold : Int) : Py Int := do
   let maxFoldSeconds : Int := 24 * 3600

@@ -44,7 +44,7 @@ inductive Step where
   /-- `POP_CONTEXT` -/
   | pop
 
-/-- The visits of each `case`, `Python/ast_preprocess.c:519-965`. -/
+/-- The visits of each `case`, `Python/ast_preprocess.c:521-969`. -/
 def visits : Ctor → List Step
   -- astfold_expr
   | .BoolOp => [.fld 1]
@@ -106,7 +106,7 @@ def visits : Ctor → List Step
   | .ParamSpec | .TypeVarTuple => [.fld 1]
   | _ => []
 
-/-- `_PyAST_GetDocString`, `Python/ast.c:1077-1091`. -/
+/-- `_PyAST_GetDocString`, `Python/ast.c:1101-1115`. -/
 def getDocString : List Ast → Option (List Nat)
   | .node .Expr [.node .Constant (.const (.str s) :: _) _] _ :: _ => some s
   | _ => none
@@ -129,7 +129,7 @@ def beforeLoopExit (l : Loc) (kw : String) : FM Unit := fun s =>
   | true, (fin, _, loop) :: _ => if fin && !loop then cfWarn kw l s else ((), s)
   | _, _ => ((), s)
 
-/-- `parse_literal`, `Python/ast_preprocess.c:169-209`, on the rest of the format: the
+/-- `parse_literal`, `Python/ast_preprocess.c:171-211`, on the rest of the format: the
 literal text with `%%` collapsed, and what follows. -/
 def parseLiteral : List Nat → List Nat × List Nat
   | [] => ([], [])
@@ -166,7 +166,7 @@ def flagsLoop : List Nat → Bool → Option (Bool × Nat × List Nat)
     else if c == 43 || c == 32 || c == 35 || c == 48 then flagsLoop r lj
     else some (lj, c, r)
 
-/-- `simple_format_arg_parse`, `Python/ast_preprocess.c:214-226`. Returns
+/-- `simple_format_arg_parse`, `Python/ast_preprocess.c:216-228`. Returns
 `(spec, ljust, width, prec, rest)`, width and prec `-1` when absent. -/
 def simpleFormatArgParse (s : List Nat) : Option (Nat × Bool × Int × Int × List Nat) := do
   let (lj, ch, rest) ← flagsLoop s false
@@ -191,7 +191,7 @@ def simpleFormatArgParse (s : List Nat) : Option (Nat × Bool × Int × Int × L
 def constAtM1 (s : List Nat) : Ast :=
   .node .Constant [.const (.str s), .null] (some ⟨-1, -1, -1, -1⟩)
 
-/-- `parse_format`, `Python/ast_preprocess.c:274-314`. -/
+/-- `parse_format`, `Python/ast_preprocess.c:276-316`. -/
 def parseFormat (s : List Nat) (arg : Ast) : Option (Ast × List Nat) := do
   let (spec, lj, width, prec, rest) ← simpleFormatArgParse s
   if spec == 115 || spec == 114 || spec == 97 then
@@ -205,7 +205,7 @@ def parseFormat (s : List Nat) (arg : Ast) : Option (Ast × List Nat) := do
     some (.node .FormattedValue [arg, .int spec, fs] (some l), rest)
   else none
 
-/-- The loop of `optimize_format`, `Python/ast_preprocess.c:317-366`: `none` leaves the
+/-- The loop of `optimize_format`, `Python/ast_preprocess.c:319-368`: `none` leaves the
 node as it is. -/
 def formatLoop : Nat → List Nat → List Ast → List Ast → Option (List Ast)
   | 0, _, _, _ => none
@@ -222,7 +222,7 @@ def formatLoop : Nat → List Nat → List Ast → List Ast → Option (List Ast
         | some (x, r) => formatLoop f r es (x :: acc)
         | none => none
 
-/-- `fold_binop`, `Python/ast_preprocess.c:369-391`. -/
+/-- `fold_binop`, `Python/ast_preprocess.c:371-393`. -/
 def foldBinop (st : PState) (node : Ast) : Ast :=
   if st.syntaxCheckOnly then node else
   match node with
@@ -282,7 +282,7 @@ def complexArith (add : Bool) (l r : PyConst) : Option PyConst :=
     | none => none
   | _ => none
 
-/-- `fold_const_match_patterns`, `Python/ast_preprocess.c:857-895`. -/
+/-- `fold_const_match_patterns`, `Python/ast_preprocess.c:861-899`. -/
 def foldMatchValue (st : PState) : Nat → Ast → Ast
   | 0, e => e
   | f + 1, e =>
@@ -309,7 +309,7 @@ def foldMatchValue (st : PState) : Nat → Ast → Ast
       | _, _ => e
     | _ => e
 
-/-- `remove_docstring`, `Python/ast_preprocess.c:440-462`, at index 0. -/
+/-- `remove_docstring`, `Python/ast_preprocess.c:442-464`, at index 0. -/
 def removeDocstring : List Ast → List Ast
   | [.node _ _ (some l)] =>
     [.node .Pass [] (some ⟨l.lineno, l.colOffset, l.lineno, l.colOffset + 4⟩)]
@@ -412,7 +412,7 @@ mutual
       | .pop => runSteps f rest fs { st with cf := st.cf.drop 1 }
 end
 
-/-- `astfold_mod`, `Python/ast_preprocess.c:495-514`. -/
+/-- `astfold_mod`, `Python/ast_preprocess.c:497-516`. -/
 def foldMod (fuel : Nat) (m : Ast) : FM Ast := fun st =>
   match m with
   | .node .Module (b :: rest) l =>
@@ -472,7 +472,7 @@ def futureParse (m : Ast) : Except FutureError Bool :=
     futureLoop (if (getDocString body).isSome then body.drop 1 else body) false
   | _ => .ok false
 
-/-- `_PyCompile_AstPreprocess`, `Python/compile.c:1498-1513`, when the tree is kept:
+/-- `_PyCompile_AstPreprocess`, `Python/compile.c:1544-1562`, when the tree is kept:
 `optimize` as given (`-1` means `0` here), `no_const_folding` as stated. -/
 def astPreprocess (m : Ast) (optimize : Int) (syntaxOnly : Bool) :
     Except FutureError Ast := do

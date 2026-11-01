@@ -1,0 +1,11 @@
+file	line	endline	name	signature	status	entry	note
+Lib/profiling/sampling/live_collector/trend_tracker.py	34	45	TrendTracker.__init__	__init__(self, colors: Dict[str, int], enabled: bool=True)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/trend_tracker.py	48	50	TrendTracker.enabled	enabled(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/trend_tracker.py	52	60	TrendTracker.toggle	toggle(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/trend_tracker.py	62	64	TrendTracker.set_enabled	set_enabled(self, enabled: bool)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/trend_tracker.py	66	96	TrendTracker.update	update(self, key: Any, metric: str, value: float)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/trend_tracker.py	98	111	TrendTracker.get_trend	get_trend(self, key: Any, metric: str)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/trend_tracker.py	113	131	TrendTracker.get_color	get_color(self, trend: TrendDirection)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/trend_tracker.py	133	147	TrendTracker.update_metrics	update_metrics(self, key: Any, metrics: Dict[str, float])	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/trend_tracker.py	149	151	TrendTracker.clear	clear(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/trend_tracker.py	153	157	TrendTracker.__repr__	__repr__(self)	todo		changed-in-3.15: new function

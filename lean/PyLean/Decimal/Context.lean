@@ -29,7 +29,7 @@ inductive Arg where
 /-- `"Unable to convert %s to Decimal" % other`, formatted text the model does not render. -/
 def unableMsg : String := "~Unable to convert to Decimal"
 
-/-- `_convert_other(other, raiseit)`, _pydecimal.py:5996-6013, without `allow_float`,
+/-- `_convert_other(other, raiseit)`, _pydecimal.py:6096-6113, without `allow_float`,
 which nothing in the module passes. `none` is `NotImplemented`. -/
 def convertOther (raiseit : Bool) : Arg → Py (Option Dec)
   | .dec d => .ok (some d)
@@ -50,8 +50,8 @@ def opArg {α : Type} (f : Ctx → Dec → Dec → DM α) (c : Ctx) (a : Dec) (b
   | none => return none
 
 /-- A reflected operator: `__rsub__`, `__rtruediv__`, `__rdivmod__`, `__rmod__`,
-`__rfloordiv__`, _pydecimal.py:1212-1218, :1369-1374, :1412-1417, :1446-1451,
-:1556-1561: `other.__op__(self, context=context)` after the same prologue. -/
+`__rfloordiv__`, _pydecimal.py:1304-1310, :1466-1471, :1509-1514, :1543-1548,
+:1655-1660: `other.__op__(self, context=context)` after the same prologue. -/
 def ropArg {α : Type} (f : Ctx → Dec → Dec → DM α) (c : Ctx) (a : Dec) (b : Arg) : DM (Option α) := do
   match ← liftPy (convertOther false b) with
   | some o => return some (← f c o a)
@@ -86,8 +86,8 @@ def ctxUn {α : Type} (f : Ctx → Dec → DM α) (c : Ctx) (a : Arg) : DM α :=
   let x ← liftPy (convertRaise a)
   f c x
 
-/-- `Context.fma`, _pydecimal.py:4446-4467; `Decimal.fma` converts `other` and
-`third` first, :1875-1896. -/
+/-- `Context.fma`, _pydecimal.py:4546-4567; `Decimal.fma` converts `other` and
+`third` first, :1975-1996. -/
 def contextFma (c : Ctx) (a b t : Arg) : DM Dec := do
   let x ← liftPy (convertRaise a)
   let y ← liftPy (convertRaise b)
@@ -148,21 +148,21 @@ def contextIsSigned := ctxUn (fun _ a => (pure (isSigned a) : DM Bool))
 def contextIsSnan := ctxUn (fun _ a => (pure (isSnan a) : DM Bool))
 def contextIsZero := ctxUn (fun _ a => (pure (isZero a) : DM Bool))
 
-/-- `Context.radix`, _pydecimal.py:5262-5268. -/
+/-- `Context.radix`, _pydecimal.py:5362-5368. -/
 def contextRadix : Dec := radixD
 
-/-- `Context.canonical`, _pydecimal.py:4155-4166: unlike the other methods this one
+/-- `Context.canonical`, _pydecimal.py:4255-4266: unlike the other methods this one
 takes only a Decimal. -/
 def contextCanonical : Arg → Py Dec
   | .dec d => .ok (canonicalD d)
   | _ => .error (.typeError "canonical requires a Decimal as an argument.")
 
-/-- `Context.is_canonical`, _pydecimal.py:4469-4480. -/
+/-- `Context.is_canonical`, _pydecimal.py:4569-4580. -/
 def contextIsCanonical : Arg → Py Bool
   | .dec d => .ok (isCanonical d)
   | _ => .error (.typeError "is_canonical requires a Decimal as an argument.")
 
-/-- `Context._apply`, _pydecimal.py:4152-4153. -/
+/-- `Context._apply`, _pydecimal.py:4252-4253. -/
 def contextApply (c : Ctx) (a : Dec) : DM (List Char) := do
   let r ← fix c a
   liftPy (pyStr r c.capitals)
@@ -183,7 +183,7 @@ inductive Cond where
   | plain (s : Signal)
   deriving Repr
 
-/-- `_condition_map.get(condition, condition)`, _pydecimal.py:333-336. -/
+/-- `_condition_map.get(condition, condition)`, _pydecimal.py:336-339. -/
 def Cond.signal : Cond → Signal
   | .invalidOperation _ | .conversionSyntax | .divisionImpossible
   | .divisionUndefined | .invalidContext => .invalidOperation
@@ -191,14 +191,14 @@ def Cond.signal : Cond → Signal
   | .overflow _ => .overflow
   | .plain s => s
 
-/-- `_NaN`, _pydecimal.py:6389. -/
+/-- `_NaN`, _pydecimal.py:6489. -/
 def nanD : Dec := .nan false false 0
 
-/-- The `handle` methods: `DecimalException.handle` (:116-117, `none`),
-`InvalidOperation.handle` (:155-159), `ConversionSyntax.handle` (:168-169),
-`DivisionByZero.handle` (:184-185), `DivisionImpossible.handle` (:195-196),
-`DivisionUndefined.handle` (:206-207), `InvalidContext.handle` (:233-234),
-`Overflow.handle` (:281-294, `overflowResult`). -/
+/-- The `handle` methods: `DecimalException.handle` (:119-120, `none`),
+`InvalidOperation.handle` (:158-162), `ConversionSyntax.handle` (:171-172),
+`DivisionByZero.handle` (:187-188), `DivisionImpossible.handle` (:198-199),
+`DivisionUndefined.handle` (:209-210), `InvalidContext.handle` (:236-237),
+`Overflow.handle` (:284-297, `overflowResult`). -/
 def handle (c : Ctx) : Cond → Option Dec
   | .invalidOperation (some a) => some (quietOf c a)
   | .invalidOperation none => some nanD
@@ -207,7 +207,7 @@ def handle (c : Ctx) : Cond → Option Dec
   | .overflow sign => some (overflowResult c sign)
   | .plain _ => none
 
-/-- `Context._raise_error`, _pydecimal.py:4005-4025. -/
+/-- `Context._raise_error`, _pydecimal.py:4105-4125. -/
 def raiseError (c : Ctx) (ignored : List Signal) (cnd : Cond) : DM (Option Dec) := do
   let error := cnd.signal
   if error ∈ ignored then return handle c cnd
@@ -217,7 +217,7 @@ def raiseError (c : Ctx) (ignored : List Signal) (cnd : Cond) : DM (Option Dec) 
 
 /-! ## The `Context` object -/
 
-/-- `_signals`, _pydecimal.py:329-330. -/
+/-- `_signals`, _pydecimal.py:332-333. -/
 def pySignals : List Signal :=
   [.clamped, .divisionByZero, .inexact, .overflow, .rounded,
    .underflow, .invalidOperation, .subnormal, .floatOperation]
@@ -258,13 +258,13 @@ def Rounding.name : Rounding → String
   | .floor => "ROUND_FLOOR" | .halfUp => "ROUND_HALF_UP" | .halfDown => "ROUND_HALF_DOWN"
   | .halfEven => "ROUND_HALF_EVEN" | .r05up => "ROUND_05UP"
 
-/-- `_rounding_modes`, _pydecimal.py:339-340. -/
+/-- `_rounding_modes`, _pydecimal.py:342-343. -/
 def roundingModes : List Rounding :=
   [.down, .halfUp, .halfEven, .ceiling, .floor, .up, .halfDown, .r05up]
 
 def roundingOfName (s : String) : Option Rounding := roundingModes.find? (fun r => r.name == s)
 
-/-- `Context._set_integer_check`, _pydecimal.py:3905-3917: `none` is `'-inf'` / `'inf'`. -/
+/-- `Context._set_integer_check`, _pydecimal.py:4005-4017: `none` is `'-inf'` / `'inf'`. -/
 def setIntegerCheck (name : String) (v : CtxArg) (vmin vmax : Option Int) : Py Int :=
   match v with
   | .int value =>
@@ -289,7 +289,7 @@ def sigEntries (d : List (SigKey × Bool)) : SigDict :=
     | .sig s => some (s, p.2)
     | .other => none)
 
-/-- `Context._set_signal_dict`, _pydecimal.py:3919-3928. -/
+/-- `Context._set_signal_dict`, _pydecimal.py:4019-4028. -/
 def setSignalDict (v : CtxArg) : Py SigDict :=
   match v with
   | .dict d =>
@@ -298,7 +298,7 @@ def setSignalDict (v : CtxArg) : Py SigDict :=
     else .ok (sigEntries d)
   | _ => .error (.typeError "~must be a signal dict")
 
-/-- `Context.__setattr__`, _pydecimal.py:3930-3953. -/
+/-- `Context.__setattr__`, _pydecimal.py:4030-4053. -/
 def pySetattr (c : PyContext) (name : String) (v : CtxArg) : Py PyContext := do
   if name == "prec" then return { c with prec := ← setIntegerCheck name v (some 1) none }
   else if name == "Emin" then return { c with emin := ← setIntegerCheck name v none (some 0) }
@@ -316,7 +316,7 @@ def pySetattr (c : PyContext) (name : String) (v : CtxArg) : Py PyContext := do
   else if name == "traps" then return { c with traps := ← setSignalDict v }
   else throw (.named "AttributeError" s!"'decimal.Context' object has no attribute '{name}'")
 
-/-- `Context.__delattr__`, _pydecimal.py:3955-3956. -/
+/-- `Context.__delattr__`, _pydecimal.py:4055-4056. -/
 def pyDelattr (name : String) : Py Unit :=
   .error (.named "AttributeError" s!"{name} cannot be deleted")
 
@@ -333,13 +333,13 @@ structure CtxInit where
   ignored : Option (List Signal) := none
   deriving Repr, Inhabited
 
-/-- `dict((s, int(s in l)) for s in _signals + l)`, _pydecimal.py:3894: a key
+/-- `dict((s, int(s in l)) for s in _signals + l)`, _pydecimal.py:3994: a key
 outside `_signals` stays in the dict for `_set_signal_dict` to refuse. -/
 def signalDictOf (l : List SigKey) : List (SigKey × Bool) :=
   pySignals.map (fun s => (SigKey.sig s, l.contains (.sig s))) ++
     (if l.contains .other then [(.other, true)] else [])
 
-/-- The value `Context()` assigns to `traps` or `flags`, _pydecimal.py:3891-3903. A
+/-- The value `Context()` assigns to `traps` or `flags`, _pydecimal.py:3991-4003. A
 value that is neither a dict nor a list fails at `_signals + value`. -/
 def signalArg (dflt : List (SigKey × Bool)) : CtxArg → Py CtxArg
   | .none => .ok (.dict dflt)
@@ -354,7 +354,7 @@ def orElseArg (a dflt : CtxArg) : CtxArg :=
 
 def keyed (d : SigDict) : List (SigKey × Bool) := d.map (fun p => (.sig p.1, p.2))
 
-/-- `Context.__init__(...)`, _pydecimal.py:3869-3903; `dc` is `DefaultContext`. -/
+/-- `Context.__init__(...)`, _pydecimal.py:3969-4003; `dc` is `DefaultContext`. -/
 def pyContextNew (dc : PyContext) (a : CtxInit) : Py PyContext := do
   let c := dc
   let c ← pySetattr c "prec" (orElseArg a.prec (.int dc.prec))
@@ -367,7 +367,7 @@ def pyContextNew (dc : PyContext) (a : CtxInit) : Py PyContext := do
   let c ← pySetattr c "traps" (← signalArg (keyed dc.traps) a.traps)
   pySetattr c "flags" (← signalArg (keyed (pySignals.map (fun s => (s, false)))) a.flags)
 
-/-- `Context.__repr__`, _pydecimal.py:3966-3977: the names in dict order. -/
+/-- `Context.__repr__`, _pydecimal.py:4066-4077: the names in dict order. -/
 def setNames (d : SigDict) : List String := (d.filter (·.2)).map (fun p => p.1.name)
 
 def pyContextRepr (c : PyContext) : String :=
@@ -375,38 +375,38 @@ def pyContextRepr (c : PyContext) : String :=
     s!"capitals={c.capitals}, clamp={c.clamp}, flags=[{", ".intercalate (setNames c.flags)}], " ++
     s!"traps=[{", ".intercalate (setNames c.traps)}])"
 
-/-- `Context.clear_flags`, `clear_traps`, _pydecimal.py:3979-3987. -/
+/-- `Context.clear_flags`, `clear_traps`, _pydecimal.py:4079-4087. -/
 def clearDict (d : SigDict) : SigDict := d.map (fun p => (p.1, false))
 def clearFlags (c : PyContext) : PyContext := { c with flags := clearDict c.flags }
 def clearTraps (c : PyContext) : PyContext := { c with traps := clearDict c.traps }
 
-/-- `Context.copy`, _pydecimal.py:3996-4002, and `Context._shallow_copy`, :3989-3994. -/
+/-- `Context.copy`, _pydecimal.py:4096-4102, and `Context._shallow_copy`, :4089-4094. -/
 def contextCopy (dc c : PyContext) : Py PyContext :=
   pyContextNew dc
     { prec := .int c.prec, rounding := .str c.rounding.name, emin := .int c.emin, emax := .int c.emax
       capitals := .int c.capitals, clamp := .int c.clamp, flags := .dict (keyed c.flags)
       traps := .dict (keyed c.traps), ignored := some c.ignored }
 
-/-- `Context.__reduce__`, _pydecimal.py:3959-3964: the arguments to rebuild the context. -/
+/-- `Context.__reduce__`, _pydecimal.py:4059-4064: the arguments to rebuild the context. -/
 def contextReduce (c : PyContext) : CtxInit :=
   { prec := .int c.prec, rounding := .str c.rounding.name, emin := .int c.emin, emax := .int c.emax
     capitals := .int c.capitals, clamp := .int c.clamp
     flags := .list ((c.flags.filter (·.2)).map (fun p => .sig p.1))
     traps := .list ((c.traps.filter (·.2)).map (fun p => .sig p.1)) }
 
-/-- `Context._set_rounding`, _pydecimal.py:4056-4073. -/
+/-- `Context._set_rounding`, _pydecimal.py:4156-4173. -/
 def setRounding (c : PyContext) (type : CtxArg) : Py (PyContext × Rounding) := do
   let c' ← pySetattr c "rounding" type
   return (c', c.rounding)
 
-/-- `Context._ignore_flags`, _pydecimal.py:4031-4036. -/
+/-- `Context._ignore_flags`, _pydecimal.py:4131-4136. -/
 def ignoreFlags (c : PyContext) (fl : List Signal) : PyContext × List Signal :=
   ({ c with ignored := c.ignored ++ fl }, fl)
 
-/-- `Context._ignore_all_flags`, _pydecimal.py:4027-4029. -/
+/-- `Context._ignore_all_flags`, _pydecimal.py:4127-4129. -/
 def ignoreAllFlags (c : PyContext) : PyContext × List Signal := ignoreFlags c pySignals
 
-/-- `Context._regard_flags`, _pydecimal.py:4038-4043: `self._ignored_flags.remove(flag)`
+/-- `Context._regard_flags`, _pydecimal.py:4138-4143: `self._ignored_flags.remove(flag)`
 for each flag, which raises when one is missing. -/
 def regardFlags (c : PyContext) : List Signal → Py PyContext
   | [] => .ok c
@@ -422,10 +422,10 @@ def PyContext.toCtx (c : PyContext) : Ctx :=
 
 /-! ## `create_decimal` -/
 
-/-- `num != num.strip() or '_' in num`, _pydecimal.py:4081. -/
+/-- `num != num.strip() or '_' in num`, _pydecimal.py:4181. -/
 def needsStrip (s : List Char) : Bool := strip s != s || s.contains '_'
 
-/-- `Context.create_decimal(num)` for a str, _pydecimal.py:4075-4090. -/
+/-- `Context.create_decimal(num)` for a str, _pydecimal.py:4175-4190. -/
 def createDecimalStr (c : Ctx) (s : List Char) : DM Dec := do
   if needsStrip s then return ← invalid c
   match pyParse s with
@@ -451,7 +451,7 @@ structure ThreadCtx where
   current : Option PyContext
   deriving Repr, DecidableEq, Inhabited
 
-/-- `getcontext`, _pydecimal.py:355-367: a thread with no context gets `Context()`. -/
+/-- `getcontext`, _pydecimal.py:358-370: a thread with no context gets `Context()`. -/
 def getContext (dc : PyContext) (t : ThreadCtx) : Py (PyContext × ThreadCtx) :=
   match t.current with
   | some c => .ok (c, t)
@@ -459,7 +459,7 @@ def getContext (dc : PyContext) (t : ThreadCtx) : Py (PyContext × ThreadCtx) :=
     let c ← pyContextNew dc {}
     return (c, { current := some c })
 
-/-- `setcontext`, _pydecimal.py:369-374. `template` says that the object is
+/-- `setcontext`, _pydecimal.py:372-377. `template` says that the object is
 `DefaultContext`, `BasicContext` or `ExtendedContext`. -/
 def setContext (dc : PyContext) (ctx : PyContext) (template : Bool) : Py ThreadCtx := do
   if template then
@@ -467,17 +467,17 @@ def setContext (dc : PyContext) (ctx : PyContext) (template : Bool) : Py ThreadC
     return { current := some (clearFlags c) }
   return { current := some ctx }
 
-/-- `_ContextManager`, _pydecimal.py:3835-3848. -/
+/-- `_ContextManager`, _pydecimal.py:3935-3948. -/
 structure CtxManager where
   newContext : PyContext
   saved : Option PyContext := none
   deriving Repr, Inhabited
 
-/-- `_ContextManager.__init__`, _pydecimal.py:3841-3842. -/
+/-- `_ContextManager.__init__`, _pydecimal.py:3941-3942. -/
 def managerInit (dc ctx : PyContext) : Py CtxManager := do
   return { newContext := ← contextCopy dc ctx }
 
-/-- `_ContextManager.__enter__`, _pydecimal.py:3843-3846. -/
+/-- `_ContextManager.__enter__`, _pydecimal.py:3943-3946. -/
 def managerEnter (dc : PyContext) (m : CtxManager) (t : ThreadCtx) :
     Py (CtxManager × ThreadCtx × PyContext) := do
   let (saved, t1) ← getContext dc t
@@ -486,13 +486,13 @@ def managerEnter (dc : PyContext) (m : CtxManager) (t : ThreadCtx) :
   let _ := t1
   return (m', t2, m.newContext)
 
-/-- `_ContextManager.__exit__`, _pydecimal.py:3847-3848. -/
+/-- `_ContextManager.__exit__`, _pydecimal.py:3947-3948. -/
 def managerExit (dc : PyContext) (m : CtxManager) : Py ThreadCtx :=
   match m.saved with
   | some s => setContext dc s false
   | none => .error (.named "AttributeError" "~saved_context")
 
-/-- `_context_attributes`, _pydecimal.py:351-353. -/
+/-- `_context_attributes`, _pydecimal.py:354-356. -/
 def contextAttributes : List String :=
   ["prec", "Emin", "Emax", "capitals", "clamp", "rounding", "flags", "traps"]
 
@@ -505,7 +505,7 @@ def applyKwargs (m : CtxManager) : List (String × CtxArg) → Py CtxManager
       applyKwargs { m with newContext := nc } rest
     else .error (.typeError s!"'{key}' is an invalid keyword argument for this function")
 
-/-- `localcontext`, _pydecimal.py:378-421. -/
+/-- `localcontext`, _pydecimal.py:381-424. -/
 def localContext (dc : PyContext) (t : ThreadCtx) (ctx : Option PyContext)
     (kwargs : List (String × CtxArg)) : Py (CtxManager × ThreadCtx) := do
   let (base, t1) ← match ctx with
@@ -515,10 +515,10 @@ def localContext (dc : PyContext) (t : ThreadCtx) (ctx : Option PyContext)
   let m ← applyKwargs m kwargs
   return (m, t1)
 
-/-- `IEEE_CONTEXT_MAX_BITS`, _pydecimal.py:86, for a 64-bit `sys.maxsize`. -/
+/-- `IEEE_CONTEXT_MAX_BITS`, _pydecimal.py:89, for a 64-bit `sys.maxsize`. -/
 def ieeeMaxBits : Int := 512
 
-/-- `IEEEContext`, _pydecimal.py:424-442. -/
+/-- `IEEEContext`, _pydecimal.py:427-445. -/
 def ieeeContext (dc : PyContext) (bits : Int) : Py PyContext := do
   if bits ≤ 0 ∨ bits > ieeeMaxBits ∨ bits % 32 ≠ 0 then
     throw (.valueError s!"argument must be a multiple of 32, with a maximum of {ieeeMaxBits}")
@@ -533,7 +533,7 @@ def ieeeContext (dc : PyContext) (bits : Int) : Py PyContext := do
 
 /-! ## Numbers the module exports -/
 
-/-- `DefaultContext`, _pydecimal.py:6057-6065. -/
+/-- `DefaultContext`, _pydecimal.py:6157-6165. -/
 def defaultContext : PyContext :=
   { prec := 28, rounding := .halfEven, emin := -999999, emax := 999999, capitals := 1, clamp := 0
     flags := pySignals.map (fun s => (s, false))

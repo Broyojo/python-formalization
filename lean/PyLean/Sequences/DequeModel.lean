@@ -54,7 +54,7 @@ structure Deque (α : Type) where
 
 instance {α : Type} : Inhabited (Deque α) := ⟨⟨CENTER + 1, CENTER, [], -1, 0, "deque"⟩⟩
 
-/-- `finalize_iterator` (_collectionsmodule.c:434-446): `StopIteration` raised by
+/-- `finalize_iterator` (_collectionsmodule.c:438-450): `StopIteration` raised by
 `tp_iternext` is cleared, any other exception propagates. -/
 def finalizeIterator (e : Option PyExc) : Py Unit :=
   match e with
@@ -159,26 +159,26 @@ def snd' (r : Py (α × Deque α)) (d : Deque α) : Deque α :=
   | .ok (_, d') => d'
   | .error _ => d
 
-/-- `deque_append_lock_held` (_collectionsmodule.c:341-364): a new right
+/-- `deque_append_lock_held` (_collectionsmodule.c:341-366): a new right
 block when `rightindex == BLOCKLEN - 1`, store, then trim from the left. -/
 def appendM (d : Deque α) (x : α) (maxlen : Int) : Deque α :=
   let right := if d.right = 64 - 1 then -1 else d.right
   let d := { d with items := d.items ++ [x], right := right + 1 }
   if d.needsTrim maxlen then snd' d.popleft d else { d with state := d.state + 1 }
 
-/-- `deque_appendleft_lock_held` (_collectionsmodule.c:387-411). -/
+/-- `deque_appendleft_lock_held` (_collectionsmodule.c:389-415). -/
 def appendleftM (d : Deque α) (x : α) (maxlen : Int) : Deque α :=
   let left := if d.left = 0 then 64 else d.left
   let d := { d with items := x :: d.items, left := left - 1 }
   if d.needsTrim maxlen then snd' d.pop d else { d with state := d.state + 1 }
 
-/-- `d.append(x)` / `d.appendleft(x)` (_collectionsmodule.c:378-384, 425-431). -/
+/-- `d.append(x)` / `d.appendleft(x)` (_collectionsmodule.c:380-386, 425-431). -/
 def append (d : Deque α) (x : α) : Deque α := d.appendM x d.maxlen
 def appendleft (d : Deque α) (x : α) : Deque α := d.appendleftM x d.maxlen
 
-/-- The body of `deque_extend_impl` (_collectionsmodule.c:475-516) after
+/-- The body of `deque_extend_impl` (_collectionsmodule.c:479-520) after
 `PyObject_GetIter`, for an iterator yielding `xs`: nothing at all when
-`maxlen == 0` (`consume_iterator`, :451-461), otherwise the "start filling from
+`maxlen == 0` (`consume_iterator`, :455-465), otherwise the "start filling from
 the left" heuristic on an empty deque and one `deque_append_lock_held` per
 item. -/
 def extend (d : Deque α) (xs : List α) : Deque α :=
@@ -187,7 +187,7 @@ def extend (d : Deque α) (xs : List α) : Deque α :=
     let d := if d.size = 0 then { d with left := 1, right := 0 } else d
     xs.foldl (fun d x => d.appendM x d.maxlen) d
 
-/-- `deque_extendleft_impl` (_collectionsmodule.c:530-572), the same after
+/-- `deque_extendleft_impl` (_collectionsmodule.c:534-575), the same after
 `PyObject_GetIter`. -/
 def extendleft (d : Deque α) (xs : List α) : Deque α :=
   if d.maxlen = 0 then d
@@ -208,22 +208,22 @@ def extendleftIter (d : Deque α) (src : PyIterable α) : Py Unit × Deque α :=
   | .notIterable t => (.error (notIterableErr t), d)
   | .iter xs e => (finalizeIterator e, d.extendleft xs)
 
-/-- `d += iterable` (`deque_inplace_concat`, _collectionsmodule.c:575-587). -/
+/-- `d += iterable` (`deque_inplace_concat`, _collectionsmodule.c:578-590). -/
 def iadd (d : Deque α) (src : PyIterable α) : Py Unit × Deque α := d.extendIter src
 
 /-- `d.extend(d)` / `d.extendleft(d)` / `d += d`: `PySequence_List(d)` first
-(_collectionsmodule.c:483-491, 538-546). -/
+(_collectionsmodule.c:487-495, 538-546). -/
 def extendSelf (d : Deque α) : Deque α := d.extend d.items
 def extendleftSelf (d : Deque α) : Deque α := d.extendleft d.items
 
-/-- `deque_clear` (_collectionsmodule.c:718-800): a fresh centred block. The
+/-- `deque_clear` (_collectionsmodule.c:721-803): a fresh centred block. The
 `alternate_method` needs a failed `newblock`. `d.clear()`
-(`deque_clearmethod_impl`, :812-817) calls it. -/
+(`deque_clearmethod_impl`, :815-820) calls it. -/
 def clear (d : Deque α) : Deque α :=
   if d.size = 0 then d
   else { d with items := [], left := CENTER + 1, right := CENTER, state := d.state + 1 }
 
-/-- The fill of `deque_copy_impl` (_collectionsmodule.c:605-645), exact `deque`
+/-- The fill of `deque_copy_impl` (_collectionsmodule.c:608-648), exact `deque`
 type: a new deque with the same `maxlen`, filled from the left by walking the
 blocks of the old one. -/
 def copyExact (d : Deque α) : Deque α :=
@@ -232,7 +232,7 @@ def copyExact (d : Deque α) : Deque α :=
     (d.items.foldl (fun nd x => nd.appendM x nd.maxlen) { nd with left := 1, right := 0 })
   else nd
 
-/-- `deque_init_impl` (_collectionsmodule.c:1751-1774) for an iterable other
+/-- `deque_init_impl` (_collectionsmodule.c:1755-1778) for an iterable other
 than `d`. `xs` is what the iterable yields after the clear. -/
 def init (d : Deque α) (src : PyIterable α) (maxlenobj : MaxlenArg) : Py Unit × Deque α :=
   let parsed : Py Int := match maxlenobj with
@@ -259,19 +259,19 @@ def makeOf (tname : String) (xs : List α) (maxlen : MaxlenArg) : Py (Deque α) 
 /-- `deque(xs, maxlen)`. -/
 def make (xs : List α) (maxlen : MaxlenArg) : Py (Deque α) := makeOf "deque" xs maxlen
 
-/-- `deque_copy_impl` (_collectionsmodule.c:599-658): the exact type fills a new
+/-- `deque_copy_impl` (_collectionsmodule.c:602-661): the exact type fills a new
 deque; a subclass calls `type(d)(d)` or `PyObject_CallFunction(type(d), "Oi", d,
 d.maxlen)`, where the `"i"` format reads the `Py_ssize_t` `maxlen` as a C `int`
-(:648-649). `d.__copy__()` (`deque___copy___impl`, :668-672) is the same. The
-"must return a deque" check (:650-656) needs a subclass with its own `__new__`. -/
+(@3.14.7:648-649). `d.__copy__()` (`deque___copy___impl`, :671-675) is the same. The
+"must return a deque" check (:653-659) needs a subclass with its own `__new__`. -/
 def copy (d : Deque α) : Py (Deque α) :=
   if d.tname = "deque" then .ok d.copyExact
   else if d.maxlen < 0 then makeOf d.tname d.items .absent
   else makeOf d.tname d.items (.int (wrap32 d.maxlen))
 
-/-- `d + other` (`deque_concat_lock_held`, _collectionsmodule.c:675-704; `other`
+/-- `d + other` (`deque_concat_lock_held`, _collectionsmodule.c:678-707; `other`
 is a deque, or `.inr` the type name of anything else): copy, then
-`deque_extend_impl` with the other deque's items. `deque_concat` (:707-715) adds
+`deque_extend_impl` with the other deque's items. `deque_concat` (:710-718) adds
 only the lock. -/
 def concat (d : Deque α) (other : Deque α ⊕ String) : Py (Deque α) :=
   match other with
@@ -283,7 +283,7 @@ def concat (d : Deque α) (other : Deque α ⊕ String) : Py (Deque α) :=
 
 /-! ### Rotation -/
 
-/-- The `n > 0` loop of `_deque_rotate` (_collectionsmodule.c:975-1018): a
+/-- The `n > 0` loop of `_deque_rotate` (_collectionsmodule.c:978-1021): a
 new left block when `leftindex == 0`, then move the last
 `m = min(n, rightindex + 1, leftindex)` items from the right block to the
 left block, freeing the right block once it empties. -/
@@ -302,7 +302,7 @@ def rotRight : Nat → Int → Int → List α → Int → Py (Int × Int × Lis
       rotRight fuel li ri items n
     else .ok (li, ri, items)
 
-/-- The `n < 0` loop of `_deque_rotate` (_collectionsmodule.c:1019-1062). -/
+/-- The `n < 0` loop of `_deque_rotate` (_collectionsmodule.c:1022-1065). -/
 def rotLeft : Nat → Int → Int → List α → Int → Py (Int × Int × List α)
   | 0, _, _, _, _ => .error .modelFuel
   | fuel + 1, li, ri, items, n =>
@@ -317,7 +317,7 @@ def rotLeft : Nat → Int → Int → List α → Int → Py (Int × Int × List
       rotLeft fuel li ri items n
     else .ok (li, ri, items)
 
-/-- The normalisation at the top of `_deque_rotate` (_collectionsmodule.c:962-970);
+/-- The normalisation at the top of `_deque_rotate` (_collectionsmodule.c:965-973);
 C `%` truncates. -/
 def rotNorm (len n : Int) : Int :=
   let halflen := len / 2
@@ -326,7 +326,7 @@ def rotNorm (len n : Int) : Int :=
     if n > halflen then n - len else if n < -halflen then n + len else n
   else n
 
-/-- `_deque_rotate(deque, n)` (_collectionsmodule.c:951-1073). -/
+/-- `_deque_rotate(deque, n)` (_collectionsmodule.c:954-1076). -/
 def rotateC (d : Deque α) (n : Int) : Py (Deque α) :=
   if d.size ≤ 1 then .ok d
   else
@@ -339,7 +339,7 @@ def rotateC (d : Deque α) (n : Int) : Py (Deque α) :=
     | .error e => .error e
 
 /-- `d.rotate(n)`: Argument Clinic `Py_ssize_t` (default 1), then
-`deque_rotate_impl` (_collectionsmodule.c:1086-1093). -/
+`deque_rotate_impl` (_collectionsmodule.c:1090-1097). -/
 def rotate (d : Deque α) (n : Int) : Py (Deque α) := do
   let n ← asSsize n
   d.rotateC n
@@ -350,7 +350,7 @@ def rotate (d : Deque α) (n : Int) : Py (Deque α) := do
 BLOCKLEN) { b = b->rightlink; index = 0; }`). -/
 def step1 (b j : Int) : Int × Int := if j + 1 = 64 then (b + 1, 0) else (b, j + 1)
 
-/-- The loop of `deque_count_impl` (_collectionsmodule.c:1165-1187): `count`
+/-- The loop of `deque_count_impl` (_collectionsmodule.c:1169-1191): `count`
 matches so far, `n` items left. -/
 def countLoop (cmp : Cmp α) (v : α) (st : Nat) : Nat → Int → Int → Int → Deque α → Py Int × Deque α
   | 0, _, _, count, d => (.ok count, d)
@@ -367,12 +367,12 @@ def countLoop (cmp : Cmp α) (v : α) (st : Nat) : Nat → Int → Int → Int �
           let (b', j') := step1 b j
           countLoop cmp v st n b' j' count d
 
-/-- `d.count(v)`, `deque_count_impl` (_collectionsmodule.c:1155-1189). -/
+/-- `d.count(v)`, `deque_count_impl` (_collectionsmodule.c:1159-1193). -/
 def count (d : Deque α) (cmp : Cmp α) (v : α) : Py Int × Deque α :=
   countLoop cmp v d.state d.items.length 0 d.left 0 d
 
-/-- The search loops of `deque_index_impl` (_collectionsmodule.c:1297-1317),
-`deque_contains_lock_held` (:1200-1219) and `deque_remove_impl` (:1468-1488):
+/-- The search loops of `deque_index_impl` (_collectionsmodule.c:1301-1321),
+`deque_contains_lock_held` (:1204-1223) and `deque_remove_impl` (:1472-1492):
 walk `n` items comparing with `v`, starting at position `i`. A match wins over
 the mutation check unless `checkFirst` (only `remove` tests the state before the
 match), and mutation raises `mutExc`. -/
@@ -396,13 +396,13 @@ def scanLoop (cmp : Cmp α) (v : α) (st : Nat) (checkFirst : Bool) (mutExc : Py
 def mutatedErr : PyExc := .named "RuntimeError" "deque mutated during iteration"
 
 /-- `v in d`: `deque_contains_lock_held` and `deque_contains`
-(_collectionsmodule.c:1192-1232). -/
+(_collectionsmodule.c:1196-1236). -/
 def contains (d : Deque α) (cmp : Cmp α) (v : α) : Py Bool × Deque α :=
   match scanLoop cmp v d.state false mutatedErr d.items.length 0 0 d.left d with
   | (.ok r, d) => (.ok r.isSome, d)
   | (.error e, d) => (.error e, d)
 
-/-- `deque_index_impl` (_collectionsmodule.c:1258-1320) after argument
+/-- `deque_index_impl` (_collectionsmodule.c:1262-1324) after argument
 conversion: clip, skip whole blocks, skip single slots, then search. The C code
 returns `stop - n - 1`, which is the position `i` kept by `scanLoop`. -/
 def indexC (d : Deque α) (cmp : Cmp α) (v : α) (start stop : Int) : Py Int × Deque α :=
@@ -430,8 +430,8 @@ def index (d : Deque α) (cmp : Cmp α) (v : α) (start stop : Option Int) : Py 
 
 /-! ### Item access -/
 
-/-- `deque_item_lock_held` (_collectionsmodule.c:1380-1416) for `i` already
-made non-negative by `PySequence_GetItem`; `deque_item` (:1419-1427) adds only
+/-- `deque_item_lock_held` (_collectionsmodule.c:1384-1420) for `i` already
+made non-negative by `PySequence_GetItem`; `deque_item` (:1423-1431) adds only
 the lock. -/
 def itemC (d : Deque α) (i : Int) : Py α :=
   if !validIndex i d.size then .error (.indexError "deque index out of range")
@@ -448,19 +448,19 @@ def itemC (d : Deque α) (i : Int) : Py α :=
       d.read (d.rbNum - n) i
 
 /-- `d[i]`: `PyObject_GetItem` → `PyNumber_AsSsize_t(key, IndexError)` →
-`PySequence_GetItem` (adds `len` to a negative index), Objects/abstract.c:153-178, 1832-1853. -/
+`PySequence_GetItem` (adds `len` to a negative index), Objects/abstract.c:155-180, 1832-1853. -/
 def getitem (d : Deque α) (i : Int) : Py α := do
   let i ← subIndex i
   d.itemC (if i < 0 then i + d.size else i)
 
-/-- `deque_del_item` (_collectionsmodule.c:1430-1443): rotate, popleft, rotate back. -/
+/-- `deque_del_item` (_collectionsmodule.c:1434-1447): rotate, popleft, rotate back. -/
 def delItem (d : Deque α) (i : Int) : Py (Deque α) := do
   let d ← d.rotateC (-i)
   let (_, d) ← d.popleft
   d.rotateC i
 
-/-- `deque_ass_item_lock_held` (_collectionsmodule.c:1499-1528); `deque_ass_item`
-(:1531-1539) adds only the lock. -/
+/-- `deque_ass_item_lock_held` (_collectionsmodule.c:1503-1532); `deque_ass_item`
+(:1535-1543) adds only the lock. -/
 def assItemC (d : Deque α) (i : Int) (v : Option α) : Py (Deque α) :=
   let len := d.size
   let halflen := (len + 1) / 2
@@ -482,7 +482,7 @@ def setitem (d : Deque α) (i : Int) (v : Option α) : Py (Deque α) := do
   let i ← subIndex i
   d.assItemC (if i < 0 then i + d.size else i) v
 
-/-- `deque_remove_impl` (_collectionsmodule.c:1457-1496). The mutation check
+/-- `deque_remove_impl` (_collectionsmodule.c:1461-1500). The mutation check
 raises `IndexError` here, unlike the other searches. -/
 def remove (d : Deque α) (cmp : Cmp α) (v : α) : Py Unit × Deque α :=
   match scanLoop cmp v d.state true (.indexError "deque mutated during iteration")
@@ -494,7 +494,7 @@ def remove (d : Deque α) (cmp : Cmp α) (v : α) : Py Unit × Deque α :=
     | .ok d => (.ok (), d)
     | .error e => (.error e, d)
 
-/-- `deque_insert_impl` (_collectionsmodule.c:1343-1369) after the clinic
+/-- `deque_insert_impl` (_collectionsmodule.c:1347-1373) after the clinic
 `Py_ssize_t` conversion. -/
 def insertC (d : Deque α) (index : Int) (v : α) : Py (Deque α) := do
   let n := d.size
@@ -509,7 +509,7 @@ def insert (d : Deque α) (index : Int) (v : α) : Py (Deque α) := do
   let i ← asSsize index
   d.insertC i v
 
-/-- `deque_reverse_impl` (_collectionsmodule.c:1105-1141): swap the items
+/-- `deque_reverse_impl` (_collectionsmodule.c:1109-1145): swap the items
 under a left cursor and a right cursor `len / 2` times. -/
 def reverseLoop (d : Deque α) : Nat → Int → Int → Int → Int → Py (Deque α)
   | 0, _, _, _, _ => .ok d
@@ -527,8 +527,8 @@ def reverse (d : Deque α) : Py (Deque α) :=
 
 /-! ### Repetition -/
 
-/-- `deque_inplace_repeat_lock_held` (_collectionsmodule.c:820-894) for a
-`Py_ssize_t` count; `deque_inplace_repeat` (:897-905) adds only the lock. The
+/-- `deque_inplace_repeat_lock_held` (_collectionsmodule.c:823-897) for a
+`Py_ssize_t` count; `deque_inplace_repeat` (:900-908) adds only the lock. The
 single-item case fills blocks directly. -/
 def irepeatC (d : Deque α) (n : Int) : Py (Deque α) := do
   let size := d.size
@@ -551,7 +551,7 @@ def irepeat (d : Deque α) (n : Int) : Py (Deque α) := do
   let n ← repeatCount n
   d.irepeatC n
 
-/-- `d * n` (`deque_repeat`, _collectionsmodule.c:908-924): copy, then
+/-- `d * n` (`deque_repeat`, _collectionsmodule.c:911-927): copy, then
 repeat the copy in place. -/
 def mul (d : Deque α) (n : Int) : Py (Deque α) := do
   let n ← repeatCount n
@@ -560,14 +560,14 @@ def mul (d : Deque α) (n : Int) : Py (Deque α) := do
 
 /-! ### Small slots -/
 
-/-- `len(d)` (`deque_len`, _collectionsmodule.c:1235-1239). -/
+/-- `len(d)` (`deque_len`, _collectionsmodule.c:1239-1243). -/
 def len (d : Deque α) : Int := d.size
 
-/-- `d.maxlen` (`deque_get_maxlen`, _collectionsmodule.c:1799-1805). -/
+/-- `d.maxlen` (`deque_get_maxlen`, _collectionsmodule.c:1803-1809). -/
 def getMaxlen (d : Deque α) : Option Int := if d.maxlen < 0 then none else some d.maxlen
 
 /-- Blocks in use, as `deque___sizeof___impl` counts them
-(_collectionsmodule.c:1786-1796). -/
+(_collectionsmodule.c:1790-1800). -/
 def blocks (d : Deque α) : Int := (d.left + d.size + 64 - 1) / 64
 
 /-- `d.__sizeof__()`: `_PyObject_SIZE(type)` plus the blocks; a block is 528
@@ -576,7 +576,7 @@ def sizeof (d : Deque α) (basicsize : Int) : Int := basicsize + d.blocks * 528
 
 /-! ### Iterators -/
 
-/-- `dequeiterobject` (_collectionsmodule.c:1904-1910). `b` is numbered from the
+/-- `dequeiterobject` (_collectionsmodule.c:1908-1914). `b` is numbered from the
 `leftblock` of the deque at the time of the call; every operation that moves
 blocks also changes `state`, so a stale `b` is never dereferenced. -/
 structure Iter where
@@ -586,14 +586,14 @@ structure Iter where
   counter : Int
   deriving Repr, DecidableEq
 
-/-- `deque_iter` (_collectionsmodule.c:1916-1934). -/
+/-- `deque_iter` (_collectionsmodule.c:1920-1938). -/
 def iter (d : Deque α) : Iter := ⟨0, d.left, d.state, d.size⟩
 
-/-- `deque_reviter` (_collectionsmodule.c:2096-2113). -/
+/-- `deque_reviter` (_collectionsmodule.c:2100-2117). -/
 def reviter (d : Deque α) : Iter := ⟨d.rbNum, d.right, d.state, d.size⟩
 
-/-- `dequeiter_next_lock_held` (_collectionsmodule.c:1965-1989) and
-`dequeiter_next` (:1992-2004): `.ok none` is `NULL` without an exception. -/
+/-- `dequeiter_next_lock_held` (_collectionsmodule.c:1969-1993) and
+`dequeiter_next` (:1996-2008): `.ok none` is `NULL` without an exception. -/
 def iterNext (d : Deque α) (it : Iter) : Py (Option α) × Iter :=
   if d.state ≠ it.state then (.error mutatedErr, { it with counter := 0 })
   else if it.counter = 0 then (.ok none, it)
@@ -607,8 +607,8 @@ def iterNext (d : Deque α) (it : Iter) : Py (Option α) × Iter :=
         else { it with index, counter }
       (.ok (some item), it')
 
-/-- `dequereviter_next_lock_held` (_collectionsmodule.c:2116-2140) and
-`dequereviter_next` (:2143-2154). The exhausted test comes first here, the state
+/-- `dequereviter_next_lock_held` (_collectionsmodule.c:2120-2144) and
+`dequereviter_next` (:2147-2158). The exhausted test comes first here, the state
 test first in `iterNext`. -/
 def reviterNext (d : Deque α) (it : Iter) : Py (Option α) × Iter :=
   if it.counter = 0 then (.ok none, it)
@@ -623,8 +623,8 @@ def reviterNext (d : Deque α) (it : Iter) : Py (Option α) × Iter :=
         else { it with index, counter }
       (.ok (some item), it')
 
-/-- The consuming loop of `dequeiter_new` (_collectionsmodule.c:2007-2039) and
-`dequereviter_new` (:2157-2189): `for (i = 0; i < index; i++)`. -/
+/-- The consuming loop of `dequeiter_new` (_collectionsmodule.c:2011-2043) and
+`dequereviter_new` (:2161-2193): `for (i = 0; i < index; i++)`. -/
 def iterAdvance (next : Deque α → Iter → Py (Option α) × Iter) (d : Deque α) : Nat → Iter → Py Iter
   | 0, it => .ok it
   | n + 1, it =>
@@ -648,11 +648,11 @@ def reviterNew (d : Deque α) (index : Int) : Py Iter := do
   let index ← asSsize index
   iterAdvance reviterNext d (min index.toNat (d.items.length + 1)) d.reviter
 
-/-- `it.__length_hint__()` (`dequeiter_len`, _collectionsmodule.c:2042-2047). -/
+/-- `it.__length_hint__()` (`dequeiter_len`, _collectionsmodule.c:2046-2051). -/
 def iterLen (it : Iter) : Int := it.counter
 
 /-- The second argument of `it.__reduce__()` (`dequeiter_reduce`,
-_collectionsmodule.c:2052-2065): `(type(it), (d, len(d) - it.counter))`. -/
+_collectionsmodule.c:2056-2069): `(type(it), (d, len(d) - it.counter))`. -/
 def iterReduce (d : Deque α) (it : Iter) : Int := d.size - it.counter
 
 /-! ### Comparison, repr, pickling -/
@@ -663,7 +663,7 @@ def listRepr (r : α → Py String) (xs : List α) : Py String := do
   let ss ← xs.mapM r
   return "[" ++ ", ".intercalate ss ++ "]"
 
-/-- `deque_repr` (_collectionsmodule.c:1629-1657). `entered` is `Py_ReprEnter`
+/-- `deque_repr` (_collectionsmodule.c:1633-1661). `entered` is `Py_ReprEnter`
 having found this deque already being printed. -/
 def repr (d : Deque α) (r : α → Py String) (entered : Bool) : Py String := do
   if entered then return "[...]"
@@ -671,16 +671,16 @@ def repr (d : Deque α) (r : α → Py String) (entered : Bool) : Py String := d
   if d.maxlen ≥ 0 then return s!"{d.tname}({s}, maxlen={d.maxlen})"
   else return s!"{d.tname}({s})"
 
-/-- `deque___reduce___impl` (_collectionsmodule.c:1600-1624):
+/-- `deque___reduce___impl` (_collectionsmodule.c:1604-1628):
 `(type(d), (), state, iter(d))` or `(type(d), ((), maxlen), state, iter(d))`;
 the part that depends on the deque is the optional `maxlen` and the iterator. -/
 def reduce (d : Deque α) : Option Int × Iter :=
   (if d.maxlen < 0 then none else some d.maxlen, d.iter)
 
-/-- The search loop of `deque_richcompare` (_collectionsmodule.c:1692-1717) over two
+/-- The search loop of `deque_richcompare` (_collectionsmodule.c:1696-1721) over two
 iterators; `eq` and `rich` are `PyObject_RichCompareBool` for `Py_EQ` and for
 `op`, assumed not to mutate the deques. The result for exhausted iterators
-is the `switch` at :1720-1727. -/
+is the `switch` at :1724-1731. -/
 def richLoop (eq : α → α → Py Bool) (rich : α → α → Py Bool) (op : CmpOp) (v w : Deque α) :
     Nat → Iter → Iter → Py Bool
   | 0, _, _ => .error .modelFuel
@@ -706,8 +706,8 @@ def richLoop (eq : α → α → Py Bool) (rich : α → α → Py Bool) (op : C
           | .gt => .ok x.isSome
           | .ge => .ok y.isNone
 
-/-- `deque_richcompare` (_collectionsmodule.c:1660-1736) for two deques: `same`
-says `v is w`. A non-deque operand gives `NotImplemented` (:1668-1671), which
+/-- `deque_richcompare` (_collectionsmodule.c:1664-1740) for two deques: `same`
+says `v is w`. A non-deque operand gives `NotImplemented` (:1672-1675), which
 the difftest checks separately. -/
 def richcompare (eq rich : α → α → Py Bool) (op : CmpOp) (same : Bool) (v w : Deque α) : Py Bool :=
   let vs := v.size

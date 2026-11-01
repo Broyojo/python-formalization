@@ -9,20 +9,20 @@ Objects/unionobject.c	160	165	unionbuilder_finalize	unionbuilder_finalize(unionb
 Objects/unionobject.c	168	205	unionbuilder_add_single_unchecked	unionbuilder_add_single_unchecked(unionbuilder *ub, PyObject *arg)	todo		
 Objects/unionobject.c	208	229	unionbuilder_add_single	unionbuilder_add_single(unionbuilder *ub, PyObject *arg)	todo		
 Objects/unionobject.c	232	241	unionbuilder_add_tuple	unionbuilder_add_tuple(unionbuilder *ub, PyObject *tuple)	todo		
-Objects/unionobject.c	244	254	is_unionable	is_unionable(PyObject *obj)	todo		
-Objects/unionobject.c	257	276	_Py_union_type_or	_Py_union_type_or(PyObject* self, PyObject* other)	todo		
-Objects/unionobject.c	279	317	union_repr	union_repr(PyObject *self)	todo		
-Objects/unionobject.c	326	338	union_init_parameters	union_init_parameters(unionobject *alias)	todo		
-Objects/unionobject.c	341	356	union_getitem	union_getitem(PyObject *self, PyObject *item)	todo		
-Objects/unionobject.c	363	370	union_parameters	union_parameters(PyObject *self, void *Py_UNUSED(unused))	todo		
-Objects/unionobject.c	373	376	union_name	union_name(PyObject *Py_UNUSED(self), void *Py_UNUSED(ignored))	todo		
-Objects/unionobject.c	379	382	union_origin	union_origin(PyObject *Py_UNUSED(self), void *Py_UNUSED(ignored))	todo		
-Objects/unionobject.c	397	409	union_nb_or	union_nb_or(PyObject *a, PyObject *b)	todo		
-Objects/unionobject.c	421	435	union_getattro	union_getattro(PyObject *self, PyObject *name)	todo		
-Objects/unionobject.c	438	442	_Py_union_args	_Py_union_args(PyObject *self)	todo		
-Objects/unionobject.c	445	460	call_typing_func_object	call_typing_func_object(const char *name, PyObject **args, size_t nargs)	todo		
-Objects/unionobject.c	463	481	type_check	type_check(PyObject *arg, const char *msg)	todo		
-Objects/unionobject.c	484	503	_Py_union_from_tuple	_Py_union_from_tuple(PyObject *args)	todo		
-Objects/unionobject.c	506	509	union_class_getitem	union_class_getitem(PyObject *cls, PyObject *args)	todo		
-Objects/unionobject.c	512	516	union_mro_entries	union_mro_entries(PyObject *self, PyObject *args)	todo		
-Objects/unionobject.c	550	600	make_union	make_union(unionbuilder *ub)	todo		
+Objects/unionobject.c	244	255	is_unionable	is_unionable(PyObject *obj)	todo		changed-in-3.15:
+Objects/unionobject.c	258	277	_Py_union_type_or	_Py_union_type_or(PyObject* self, PyObject* other)	todo		
+Objects/unionobject.c	280	318	union_repr	union_repr(PyObject *self)	todo		
+Objects/unionobject.c	327	339	union_init_parameters	union_init_parameters(unionobject *alias)	todo		
+Objects/unionobject.c	342	357	union_getitem	union_getitem(PyObject *self, PyObject *item)	todo		
+Objects/unionobject.c	364	371	union_parameters	union_parameters(PyObject *self, void *Py_UNUSED(unused))	todo		
+Objects/unionobject.c	374	377	union_name	union_name(PyObject *Py_UNUSED(self), void *Py_UNUSED(ignored))	todo		
+Objects/unionobject.c	380	383	union_origin	union_origin(PyObject *Py_UNUSED(self), void *Py_UNUSED(ignored))	todo		
+Objects/unionobject.c	398	410	union_nb_or	union_nb_or(PyObject *a, PyObject *b)	todo		
+Objects/unionobject.c	422	436	union_getattro	union_getattro(PyObject *self, PyObject *name)	todo		
+Objects/unionobject.c	439	443	_Py_union_args	_Py_union_args(PyObject *self)	todo		
+Objects/unionobject.c	446	461	call_typing_func_object	call_typing_func_object(const char *name, PyObject **args, size_t nargs)	todo		
+Objects/unionobject.c	464	482	type_check	type_check(PyObject *arg, const char *msg)	todo		
+Objects/unionobject.c	485	504	_Py_union_from_tuple	_Py_union_from_tuple(PyObject *args)	todo		
+Objects/unionobject.c	507	510	union_class_getitem	union_class_getitem(PyObject *cls, PyObject *args)	todo		
+Objects/unionobject.c	513	517	union_mro_entries	union_mro_entries(PyObject *self, PyObject *args)	todo		
+Objects/unionobject.c	551	601	make_union	make_union(unionbuilder *ub)	todo		

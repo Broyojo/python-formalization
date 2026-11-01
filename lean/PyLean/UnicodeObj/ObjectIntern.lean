@@ -1,7 +1,7 @@
 import PyLean.UnicodeObj.CodecProps
 
 /-!
-Interning: Objects/unicodeobject.c:15994-16213, for the default build. The paths under
+Interning: Objects/unicodeobject.c:14290-14510, for the default build. The paths under
 `Py_GIL_DISABLED` are a platform branch.
 
 Interning is about which object you get, so objects have ids and the state is a heap. Equal text
@@ -52,16 +52,16 @@ structure IWorld where
 def IWorld.setObj (W : IWorld) (i : ObjId) (o : UObj) : IWorld :=
   { W with objs := fun j => if j = i then o else W.objs j }
 
-/-- `immortalize_interned`, unicodeobject.c:15963-15980. -/
+/-- `immortalize_interned`, unicodeobject.c:14259-14276. -/
 def immortalizeInterned (W : IWorld) (s : ObjId) : IWorld :=
   W.setObj s { W.objs s with immortal := true, state := .immortal }
 
-/-- The test at unicodeobject.c:16051: one character, of the one-byte kind. -/
+/-- The test at unicodeobject.c:14347: one character, of the one-byte kind. -/
 def latin1Of : Str → Option Nat
   | [c] => if c < 256 then some c else none
   | _ => none
 
-/-- `intern_common`, unicodeobject.c:15995-16163, without the free-threaded paths. -/
+/-- `intern_common`, unicodeobject.c:14291-14460, without the free-threaded paths. -/
 def internCommon (W : IWorld) (s : ObjId) (immortalize : Bool) : IWorld × ObjId :=
   let o := W.objs s
   if !o.isStr then (W, s)
@@ -109,7 +109,7 @@ def newObj (W : IWorld) (o : UObj) : IWorld × ObjId :=
   let i := W.next
   ({ W.setObj i o with next := i + 1 }, i)
 
-/-- `PyUnicode_InternFromString`, unicodeobject.c:16204-16213: a strict decode that can fail. -/
+/-- `PyUnicode_InternFromString`, unicodeobject.c:14501-14510: a strict decode that can fail. -/
 def internFromString (W : IWorld) (b : Bytes) : Py (IWorld × ObjId) :=
   match utf8Decode b .strict with
   | .error e => .error e

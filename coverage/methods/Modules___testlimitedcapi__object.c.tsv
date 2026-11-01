@@ -1,5 +1,5 @@
 file	line	endline	name	signature	status	entry	note
-Modules/_testlimitedcapi/object.c	13	26	get_constant	get_constant(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/object.c	31	44	get_constant_borrowed	get_constant_borrowed(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/object.c	49	63	test_constants	test_constants(PyObject *Py_UNUSED(module), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/object.c	73	80	_PyTestLimitedCAPI_Init_Object	_PyTestLimitedCAPI_Init_Object(PyObject *m)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/object.c	15	28	get_constant	get_constant(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/object.c	33	46	get_constant_borrowed	get_constant_borrowed(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/object.c	51	65	test_constants	test_constants(PyObject *Py_UNUSED(module), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/object.c	75	82	_PyTestLimitedCAPI_Init_Object	_PyTestLimitedCAPI_Init_Object(PyObject *m)	excluded		test-support: only for CPython's own tests

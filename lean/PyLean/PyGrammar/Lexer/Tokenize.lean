@@ -15,7 +15,7 @@ def prefixTwelve (s : List Nat) : List Nat :=
 /-- Literal as code points. -/
 @[inline] def lit (s : String) : List Nat := s.toList.map Char.toNat
 
-/-- `get_normal_name`, `Parser/tokenizer/helpers.c:356-382`. -/
+/-- `get_normal_name`, `Parser/tokenizer/helpers.c:377-403`. -/
 def cGetNormalName (s : List Nat) : List Nat :=
   let buf := prefixTwelve (s.takeWhile (· != 0))
   if buf == lit "utf-8" || (lit "utf-8-").isPrefixOf buf then lit "utf-8"
@@ -24,7 +24,7 @@ def cGetNormalName (s : List Nat) : List Nat :=
       || (lit "iso-latin-1-").isPrefixOf buf then lit "iso-8859-1"
   else s
 
-/-- `_get_normal_name`, `Lib/tokenize.py:347-356`, with `str.lower` on ASCII. -/
+/-- `_get_normal_name`, `Lib/tokenize.py:348-357`, with `str.lower` on ASCII. -/
 def pyGetNormalName (orig : List Nat) : List Nat :=
   let enc := prefixTwelve orig
   if enc == lit "utf-8" || (lit "utf-8-").isPrefixOf enc then lit "utf-8"
@@ -56,7 +56,7 @@ def findCoding : List Nat → Option (List Nat)
       | [] => findCoding r
     else findCoding r
 
-/-- `get_coding_spec`, `Parser/tokenizer/helpers.c:386-432`: only whitespace may come before
+/-- `get_coding_spec`, `Parser/tokenizer/helpers.c:407-453`: only whitespace may come before
 the `#`, and the search stops 6 bytes from the end of the line. -/
 def cGetCodingSpec (line : List Nat) : Option (List Nat) :=
   let rest := line.dropWhile (fun c => c == 32 || c == 9 || c == 12)
@@ -66,7 +66,7 @@ def cGetCodingSpec (line : List Nat) : Option (List Nat) :=
     if spaces + 6 < line.length then (findCoding rest).map cGetNormalName else none
   | _ => none
 
-/-- `cookie_re`, `Lib/tokenize.py:39`: `^[ \t\f]*#.*?coding[:=][ \t]*([-\w.]+)`, ASCII,
+/-- `cookie_re`, `Lib/tokenize.py:40`: `^[ \t\f]*#.*?coding[:=][ \t]*([-\w.]+)`, ASCII,
 with `.` stopping at a newline. Result normalized by `_get_normal_name`. -/
 def pyFindCookie (line : List Nat) : Option (List Nat) :=
   let rest := line.dropWhile (fun c => c == 32 || c == 9 || c == 12)
@@ -74,14 +74,14 @@ def pyFindCookie (line : List Nat) : Option (List Nat) :=
   | 35 :: _ => (findCoding (rest.takeWhile (· != 10))).map pyGetNormalName
   | _ => none
 
-/-- `blank_re`, `Lib/tokenize.py:40`: `^[ \t\f]*(?:[#\r\n]|$)`. -/
+/-- `blank_re`, `Lib/tokenize.py:41`: `^[ \t\f]*(?:[#\r\n]|$)`. -/
 def pyBlank (line : List Nat) : Bool :=
   match line.dropWhile (fun c => c == 32 || c == 9 || c == 12) with
   | [] => true
   | c :: _ => c == 35 || c == 13 || c == 10
 
 /-- `Stop checking coding spec after a line containing anything except a comment`:
-the loop of `_PyTokenizer_check_coding_spec`, `Parser/tokenizer/helpers.c:439-489`. -/
+the loop of `_PyTokenizer_check_coding_spec`, `Parser/tokenizer/helpers.c:460-510`. -/
 def cSeeksNext (line : List Nat) : Bool :=
   match line.dropWhile (fun c => c == 32 || c == 9 || c == 12) with
   | [] => true
@@ -115,7 +115,7 @@ def cCookie (s : List Nat) : Option (List Nat) :=
         | [] => none
       else none
 
-/-- The cookie `detect_encoding` finds, `Lib/tokenize.py:396-454` without the BOM. -/
+/-- The cookie `detect_encoding` finds, `Lib/tokenize.py:397-455` without the BOM. -/
 def pyCookie (s : List Nat) : Option (List Nat) :=
   match splitLinesLF s with
   | [] => none
@@ -135,7 +135,7 @@ def isSpaceCp (c : Nat) : Bool :=
     || (0x2000 ≤ c && c ≤ 0x200A) || c == 0x2028 || c == 0x2029 || c == 0x202F || c == 0x205F
     || c == 0x3000
 
-/-- `Untokenizer`, `Lib/tokenize.py:165-323`. `tokens` is newest first. -/
+/-- `Untokenizer`, `Lib/tokenize.py:166-324`. `tokens` is newest first. -/
 structure Unt where
   tokens : List (List Nat) := []
   prevRow : Int := 1
@@ -164,7 +164,7 @@ def addWhitespace (u : Unt) (row col : Int) : Option Unt :=
   let off := col - u.prevCol
   some (if off != 0 then { u with tokens := List.replicate off.toNat 32 :: u.tokens } else u)
 
-/-- `escape_brackets`, `Lib/tokenize.py:202-223`. `chars` is newest first. -/
+/-- `escape_brackets`, `Lib/tokenize.py:203-224`. `chars` is newest first. -/
 def escapeBrackets : List Nat → List Nat → Bool → List Nat
   | [], chars, _ => chars.reverse
   | c :: rest, chars, consume =>
@@ -235,7 +235,7 @@ def untokLoop : List TokInfo → Unt → List (List Nat) → Bool → Option Unt
 def untokenize (ts : List TokInfo) : Option (List Nat) :=
   (untokLoop ts {} [] false).map fun u => (u.tokens.reverse).flatten
 
-/-- `_transform_msg`, `Lib/tokenize.py:571-579`. -/
+/-- `_transform_msg`, `Lib/tokenize.py:617-625`. -/
 def transformMsg (m : String) : String :=
   let hasIt (s : List Char) : Bool :=
     let needle := "unterminated triple-quoted string literal".toList
@@ -245,7 +245,7 @@ def transformMsg (m : String) : String :=
     go s
   if hasIt m.toList then "EOF in multi-line string" else m
 
-/-- `TokenInfo.exact_type`, `Lib/tokenize.py:54-58`. -/
+/-- `TokenInfo.exact_type`, `Lib/tokenize.py:55-59`. -/
 def exactType (t : TokInfo) : Nat :=
   if t.type == TokKind.OP.num then
     let k := exactLookup (utf8Encode t.str)

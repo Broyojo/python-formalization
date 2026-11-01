@@ -53,16 +53,16 @@ observed: |
   python3 3.14.7: one-item deque -> deque([1, 1, 1], maxlen=3); two-item deque *= and * ->
   MemoryError. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical (the same code is at
-  Modules/_collectionsmodule.c:883-893 on main). REPRODUCED.
+  Modules/_collectionsmodule.c:886-896 on main). REPRODUCED.
 promised_by: |
-  Doc/library/collections.rst:475-478 (bounded deques discard items from the opposite end
-  instead of growing), :599-600 (deques support __mul__ and __imul__), and the code's own
+  Doc/library/collections.rst:479-482 (bounded deques discard items from the opposite end
+  instead of growing), :603-604 (deques support __mul__ and __imul__), and the code's own
   single-item path, which applies maxlen before repeating.
 cause: |
-  Modules/_collectionsmodule.c:871-873 (3.14.7) `if ((size_t)size > PY_SSIZE_T_MAX /
-  (size_t)n) return PyErr_NoMemory();` precedes the reduction at :879-881
+  Modules/_collectionsmodule.c:874-876 `if ((size_t)size > PY_SSIZE_T_MAX /
+  (size_t)n) return PyErr_NoMemory();` precedes the reduction at :882-884
   `if (deque->maxlen >= 0 && n * size > deque->maxlen) n = (deque->maxlen + size - 1) / size;`.
-  The size == 1 branch (:836-869) clamps n to maxlen first (:840-841). deque_repeat (:907-924)
+  The size == 1 branch (:839-872) clamps n to maxlen first (:843-844). deque_repeat (:910-927)
   copies and calls the same function, so `*` is affected too.
 possible_fix: |
   Apply maxlen before the guard, without the product, e.g.

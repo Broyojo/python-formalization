@@ -12,7 +12,7 @@ open PyLean
 
 /-- `list.__sizeof__()` never reports less than an empty list's 40 bytes, in any
 state a list can be in, including while `list.sort` runs. It does not hold: `sort`
-sets `allocated` to `-1` (listobject.c:2929), and `list___sizeof___impl` casts that
+sets `allocated` to `-1` (listobject.c:2994), and `list___sizeof___impl` casts that
 to `size_t` and multiplies, wrapping to `32`. -/
 def ListSizeofBase : Prop :=
   ∀ (α : Type) (o : LObj α), (o.WF ∨ o = listDuringSort) → 40 ≤ listSizeof o
@@ -60,7 +60,7 @@ theorem listHintInert_refuted : ¬ ListHintInert := by
   decide
 
 /-- The same hint is ignored for a one-item list, because `m > PY_SSIZE_T_MAX - n`
-skips the allocation (listobject.c:1241): the outcome depends on whether the list is
+skips the allocation (listobject.c:1317): the outcome depends on whether the list is
 empty, not only on the hint. -/
 def ListHintIgnoredWhenOverflowing : Prop :=
   ∀ (α : Type) (x : α) (src : IterSrc α), src.hint = .ok ssizeMax → src.err = none → src.items = [] →

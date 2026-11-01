@@ -3,7 +3,7 @@ import PyLean.ListSort.Search
 /-!
 # `merge_lo` is a stable merge
 
-Preconditions, as established by `merge_at` (`listobject.c:2265-2270`, `:2569-2584`): both
+Preconditions, as established by `merge_at` (`listobject.c:2341-2346`, `:2645-2660`): both
 runs sorted, the first item of B strictly below the first of A, and the last
 item of A strictly above every item of B. Then `merge_lo` produces the stable
 sort of `A ++ B`, whatever `min_gallop` is.

@@ -1,10 +1,10 @@
 import PyLean.UnicodeObj.CodecHandlers
 
 /-!
-UTF-16 and UTF-32: `PyUnicode_DecodeUTF16Stateful` (unicodeobject.c:6285-6437),
-`_PyUnicode_EncodeUTF16` (:6440-6601), `PyUnicode_DecodeUTF32Stateful` (:5978-6120),
-`_PyUnicode_EncodeUTF32` (:6123-6265), with `STRINGLIB(utf16_decode)`, `utf16_encode`
-and `utf32_encode` (stringlib/codecs.h:500-828).
+UTF-16 and UTF-32: `PyUnicode_DecodeUTF16Stateful` (unicodeobject.c:6176-6328),
+`_PyUnicode_EncodeUTF16` (:6331-6494), `PyUnicode_DecodeUTF32Stateful` (:5860-6002),
+`_PyUnicode_EncodeUTF32` (:6005-6156), with `STRINGLIB(utf16_decode)`, `utf16_encode`
+and `utf32_encode` (stringlib/codecs.h:512-840).
 
 Abstractions, each checked by the difftest:
 * The aligned long reads and the unrolled loops only move runs of characters that the
@@ -58,7 +58,7 @@ def isLowSurrogate (c : Nat) : Bool := decide (0xDC00 ≤ c) && decide (c ≤ 0x
 def joinSurrogates (hi lo : Nat) : Nat := 0x10000 + (hi % 1024) * 1024 + lo % 1024
 
 /-- One round of `STRINGLIB(utf16_decode)` and the `switch (ch)` after it,
-codecs.h:500-612 and unicodeobject.c:6364-6407. -/
+codecs.h:500-612 and unicodeobject.c:6255-6298. -/
 def step16 (le consumed : Bool) : List Nat → DStep
   | [] => .stop
   | [_] => if consumed then .stop else .fail "truncated data" 0 1
@@ -75,7 +75,7 @@ def step16 (le consumed : Bool) : List Nat → DStep
       | _ =>
         if consumed then .stop else .fail "unexpected end of data" 0 (2 + t.length)
 
-/-- The body of the UTF-32 decoder's loop, unicodeobject.c:6049-6104. -/
+/-- The body of the UTF-32 decoder's loop, unicodeobject.c:5931-5986. -/
 def step32 (le consumed : Bool) : List Nat → DStep
   | a :: b :: c :: d :: _ =>
     let ch := if le then d * 16777216 + c * 65536 + b * 256 + a
@@ -87,7 +87,7 @@ def step32 (le consumed : Bool) : List Nat → DStep
   | [] => .stop
   | rest => if consumed then .stop else .fail "truncated data" 0 rest.length
 
-/-- The BOM check of the UTF-16 decoder, unicodeobject.c:6308-6321. -/
+/-- The BOM check of the UTF-16 decoder, unicodeobject.c:6199-6212. -/
 def bom16 (bo : Int) (b : Bytes) : Int × Nat :=
   match b with
   | a :: c :: _ =>
@@ -97,7 +97,7 @@ def bom16 (bo : Int) (b : Bytes) : Int × Nat :=
     else (bo, 0)
   | _ => (bo, 0)
 
-/-- The BOM check of the UTF-32 decoder, unicodeobject.c:6002-6016. -/
+/-- The BOM check of the UTF-32 decoder, unicodeobject.c:5884-5898. -/
 def bom32 (bo : Int) (b : Bytes) : Int × Nat :=
   match b with
   | a :: c :: d :: e :: _ =>
@@ -107,7 +107,7 @@ def bom32 (bo : Int) (b : Bytes) : Int × Nat :=
     else (bo, 0)
   | _ => (bo, 0)
 
-/-- `PyUnicode_DecodeUTF16Stateful`, unicodeobject.c:6285-6437. `final = false` is
+/-- `PyUnicode_DecodeUTF16Stateful`, unicodeobject.c:6176-6328. `final = false` is
 `consumed != NULL`. Returns the text and the bytes consumed. -/
 def utf16DecodeFull (input : Bytes) (bo : Int) (h : ErrHandler) (final : Bool) : Py (Str × Nat) :=
   let (bo, q) := bom16 bo input
@@ -118,7 +118,7 @@ def utf16DecodeFull (input : Bytes) (bo : Int) (h : ErrHandler) (final : Bool) :
     decodeDriver (step16 le !final) h (if le then "utf-16-le" else "utf-16-be")
       (if le then .utf16le else .utf16be) input (input.length + 1) q rest []
 
-/-- `PyUnicode_DecodeUTF32Stateful`, unicodeobject.c:5978-6120. -/
+/-- `PyUnicode_DecodeUTF32Stateful`, unicodeobject.c:5860-6002. -/
 def utf32DecodeFull (input : Bytes) (bo : Int) (h : ErrHandler) (final : Bool) : Py (Str × Nat) :=
   let (bo, q) := bom32 bo input
   let rest := input.drop q
@@ -147,7 +147,7 @@ def utf32Char (le : Bool) (c : Nat) : List Nat :=
   else [c / 16777216 % 256, c / 65536 % 256, c / 256 % 256, c % 256]
 
 /-- The `while (pos < len)` of `_PyUnicode_EncodeUTF16` and `_PyUnicode_EncodeUTF32`,
-unicodeobject.c:6524-6585 and :6174-6248. `unitSize` is 2 or 4. A `bytes` replacement must
+unicodeobject.c:6422-6484 and @3.14.7:6174-6248. `unitSize` is 2 or 4. A `bytes` replacement must
 be a whole number of units and a `str` one must be ASCII, and each str character is
 written as a character. -/
 def encodeWideLoop (charBytes : Nat → List Nat) (unitSize : Nat) (h : ErrHandler)
@@ -172,7 +172,7 @@ def encodeWideLoop (charBytes : Nat → List Nat) (unitSize : Nat) (h : ErrHandl
         | .str r =>
           if !(r.all (· < 128)) then .error bad else next (r.flatMap charBytes)
 
-/-- `_PyUnicode_EncodeUTF16`, unicodeobject.c:6440-6601. `byteorder` is -1, 0 or 1. -/
+/-- `_PyUnicode_EncodeUTF16`, unicodeobject.c:6331-6494. `byteorder` is -1, 0 or 1. -/
 def utf16EncodeFull (s : Str) (byteorder : Int) (h : ErrHandler) (nameOf : Nat → Option Str) :
     Py Bytes :=
   let le := decide (byteorder ≤ 0)
@@ -181,7 +181,7 @@ def utf16EncodeFull (s : Str) (byteorder : Int) (h : ErrHandler) (nameOf : Nat �
   encodeWideLoop (utf16Char le) 2 h nameOf enc (if le then .utf16le else .utf16be) s
     (s.length + 1) 0 s bom
 
-/-- `_PyUnicode_EncodeUTF32`, unicodeobject.c:6123-6265. -/
+/-- `_PyUnicode_EncodeUTF32`, unicodeobject.c:6005-6156. -/
 def utf32EncodeFull (s : Str) (byteorder : Int) (h : ErrHandler) (nameOf : Nat → Option Str) :
     Py Bytes :=
   let le := decide (byteorder ≤ 0)

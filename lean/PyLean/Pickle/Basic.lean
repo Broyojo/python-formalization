@@ -17,7 +17,7 @@ open PyLean
 
 abbrev Bytes := List UInt8
 
-/-! ## Opcodes (`Lib/pickle.py:105-186`) -/
+/-! ## Opcodes (`Lib/pickle.py:104-185`) -/
 
 def oMARK : UInt8 := 0x28            -- '('
 def oSTOP : UInt8 := 0x2e            -- '.'
@@ -271,7 +271,7 @@ theorem readHex_len {k acc : Nat} {r r' : Bytes} {ch : Nat} (h : readHex k acc r
       · simp at h
 
 /-- `_PyUnicode_DecodeRawUnicodeEscapeStateful` with `errors='strict'` and no
-`consumed` (`Objects/unicodeobject.c:7045-7176`). -/
+`consumed` (`Objects/unicodeobject.c:6924-7055`). -/
 def rueDecode : Bytes → Option (List Nat)
   | [] => some []
   | [c] => some [c.toNat]

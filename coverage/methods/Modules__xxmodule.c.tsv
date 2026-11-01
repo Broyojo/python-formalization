@@ -10,4 +10,4 @@ Modules/xxmodule.c	186	201	xx_bug	xx_bug(PyObject *self, PyObject *args)	exclude
 Modules/xxmodule.c	206	213	xx_roj	xx_roj(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
 Modules/xxmodule.c	267	270	null_richcompare	null_richcompare(PyObject *self, PyObject *other, int op)	excluded		test-support: only for CPython's own tests
 Modules/xxmodule.c	341	386	xx_exec	xx_exec(PyObject *m)	excluded		test-support: only for CPython's own tests
-Modules/xxmodule.c	410	413	PyInit_xx	PyInit_xx(void)	excluded		test-support: only for CPython's own tests
+Modules/xxmodule.c	411	414	PyInit_xx	PyInit_xx(void)	excluded		test-support: only for CPython's own tests

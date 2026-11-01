@@ -80,10 +80,10 @@ observed: |
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical (the doc code is unchanged).
   REPRODUCED.
 promised_by: |
-  Doc/library/itertools.rst:232-254, :275-294, :548-576 ("Roughly equivalent to").
+  Doc/library/itertools.rst:237-259, :280-299, :553-581 ("Roughly equivalent to").
 cause: |
-  The doc code lacks the `r < 0` check that Modules/itertoolsmodule.c:2366-2369, :2620-2623 and
-  :2881-2884 perform.
+  The doc code lacks the `r < 0` check that Modules/itertoolsmodule.c@3.14.7:2366-2369, @3.14.7:2620-2623 and
+  :2871-2874 perform.
 possible_fix: |
   Add `if r < 0: raise ValueError('r must be non-negative')` to the three equivalents (after
   `r = n if r is None else r` for permutations).

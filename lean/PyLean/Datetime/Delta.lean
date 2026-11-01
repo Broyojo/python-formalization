@@ -2,9 +2,9 @@ import PyLean.Core
 
 /-!
 `timedelta` with integer arguments: the pure-Python class
-(`Lib/_pydatetime.py:616-976`) and the C type (`Modules/_datetimemodule.c`,
-`delta_new` :2803-2921, `microseconds_to_delta_ex` :2207-2274, `new_delta_ex`
-:1375-1403 and the number methods).
+(`Lib/_pydatetime.py:635-995`) and the C type (`Modules/_datetimemodule.c`,
+`delta_new` :2831-2932, `microseconds_to_delta_ex` :2217-2284, `new_delta_ex`
+:1383-1411 and the number methods).
 
 Float arguments are out of scope. Python's `divmod` and `//`, `%` by a positive
 constant are Lean's `/`, `%` on `Int` (Euclidean division agrees with floor
@@ -25,8 +25,8 @@ structure Delta where
 
 def MAX_DELTA_DAYS : Int := 999999999
 
-/-- `timedelta._to_microseconds`, _pydatetime.py:854-856; C
-`delta_to_microseconds`, :2128-2180. -/
+/-- `timedelta._to_microseconds`, _pydatetime.py:873-875; C
+`delta_to_microseconds`, :2177-2233. -/
 def Delta.toUs (t : Delta) : Int := (t.days * 86400 + t.seconds) * 1000000 + t.us
 
 /-- The field invariant every constructed `timedelta` satisfies. -/
@@ -39,31 +39,31 @@ instance (t : Delta) : Decidable t.Valid := by unfold Delta.Valid; infer_instanc
 /-! ### Pure Python -/
 
 /-- `timedelta(days, seconds, microseconds, milliseconds, minutes, hours,
-weeks)` with int arguments, _pydatetime.py:638-748. The float branches are not
-taken; `round(microseconds + usdouble)` (:723) is the identity because
+weeks)` with int arguments, _pydatetime.py:657-767. The float branches are not
+taken; `round(microseconds + usdouble)` (:742) is the identity because
 `usdouble == 0.0` and `|microseconds| < 10**6` there. -/
 def deltaPy (days seconds microseconds milliseconds minutes hours weeks : Int) : Py Delta :=
-  -- :662-668
+  -- :681-687
   let days := days + weeks * 7
   let seconds := seconds + minutes * 60 + hours * 3600
   let microseconds := microseconds + milliseconds * 1000
-  -- :682-683 (int branch)
+  -- :701-702 (int branch)
   let d := days
   let s : Int := 0
-  -- :699-702
+  -- :718-721
   let d := d + seconds / 86400
   let s := s + seconds % 86400
-  -- :717-723 (int branch)
+  -- :736-742 (int branch)
   let sec2 := microseconds / 1000000
   let microseconds := microseconds % 1000000
   let d := d + sec2 / 86400
   let s := s + sec2 % 86400
-  -- :731-735
+  -- :750-754
   let s := s + microseconds / 1000000
   let us := microseconds % 1000000
   let d := d + s / 86400
   let s := s % 86400
-  -- :741-742
+  -- :760-761
   if d.natAbs > 999999999 then .error (.overflowError s!"timedelta # of days is too large: {d}")
   else .ok ⟨d, s, us⟩
 
@@ -75,7 +75,7 @@ def pyDivmod (a b : Int) : Py (Int × Int) :=
   if b = 0 then .error (.zeroDivisionError "division by zero")
   else .ok (a.fdiv b, a.fmod b)
 
-/-- `_divide_and_round`, _pydatetime.py:592-611 (round half to even). -/
+/-- `_divide_and_round`, _pydatetime.py:611-630 (round half to even). -/
 def divideAndRound (a b : Int) : Py Int := do
   let (q, r) ← pyDivmod a b
   let r := r * 2
@@ -84,27 +84,27 @@ def divideAndRound (a b : Int) : Py Int := do
 
 namespace Delta
 
-/-- `__add__`, _pydatetime.py:798-805. -/
+/-- `__add__`, _pydatetime.py:817-824. -/
 def addPy (a b : Delta) : Py Delta := deltaPy (a.days + b.days) (a.seconds + b.seconds) (a.us + b.us) 0 0 0 0
-/-- `__sub__`, :809-816. -/
+/-- `__sub__`, :828-835. -/
 def subPy (a b : Delta) : Py Delta := deltaPy (a.days - b.days) (a.seconds - b.seconds) (a.us - b.us) 0 0 0 0
-/-- `__neg__`, :823-828. -/
+/-- `__neg__`, :842-847. -/
 def negPy (a : Delta) : Py Delta := deltaPy (-a.days) (-a.seconds) (-a.us) 0 0 0 0
-/-- `__abs__`, :833-837. -/
+/-- `__abs__`, :852-856. -/
 def absPy (a : Delta) : Py Delta := if a.days < 0 then a.negPy else .ok a
-/-- `__mul__` with an int, :839-845. -/
+/-- `__mul__` with an int, :858-864. -/
 def mulPy (a : Delta) (k : Int) : Py Delta := deltaPy (a.days * k) (a.seconds * k) (a.us * k) 0 0 0 0
-/-- `__floordiv__` with an int, :858-865. -/
+/-- `__floordiv__` with an int, :877-884. -/
 def floordivIntPy (a : Delta) (k : Int) : Py Delta := do
   let (q, _) ← pyDivmod a.toUs k
   usToDeltaPy q
 /-- `__floordiv__` with a timedelta. -/
 def floordivPy (a b : Delta) : Py Int := do return (← pyDivmod a.toUs b.toUs).1
-/-- `__truediv__` with an int, :867-877. -/
+/-- `__truediv__` with an int, :886-896. -/
 def truedivIntPy (a : Delta) (k : Int) : Py Delta := do usToDeltaPy (← divideAndRound a.toUs k)
-/-- `__mod__`, :879-883. -/
+/-- `__mod__`, :898-902. -/
 def modPy (a b : Delta) : Py Delta := do usToDeltaPy (← pyDivmod a.toUs b.toUs).2
-/-- `__divmod__`, :885-890. -/
+/-- `__divmod__`, :904-909. -/
 def divmodPy (a b : Delta) : Py (Int × Delta) := do
   let (q, r) ← pyDivmod a.toUs b.toUs
   return (q, ← usToDeltaPy r)
@@ -118,12 +118,12 @@ def asCInt (x : Int) : Py Int :=
   if -2 ^ 31 ≤ x ∧ x ≤ 2 ^ 31 - 1 then .ok x
   else .error (.overflowError "Python int too large to convert to C int")
 
-/-- `check_delta_day_range`, _datetimemodule.c:641-650. -/
+/-- `check_delta_day_range`, _datetimemodule.c:644-653. -/
 def checkDeltaDayRange (d : Int) : Py Unit :=
   if -MAX_DELTA_DAYS ≤ d ∧ d ≤ MAX_DELTA_DAYS then .ok ()
   else .error (.overflowError s!"days={d}; must have magnitude <= 999999999")
 
-/-- `microseconds_to_delta_ex`, :2207-2274. The `BadDivmod` branches are dead
+/-- `microseconds_to_delta_ex`, :2217-2284. The `BadDivmod` branches are dead
 for int `divmod`. -/
 def usToDeltaC (x : Int) : Py Delta := do
   let us := x % 1000000
@@ -133,21 +133,21 @@ def usToDeltaC (x : Int) : Py Delta := do
   checkDeltaDayRange d
   return ⟨d, s, us⟩
 
-/-- `delta_new` with int arguments, :2803-2921: the arguments are accumulated
-into an exact microsecond count (`accum`, :2723-2802) in the order
+/-- `delta_new` with int arguments, :2831-2932: the arguments are accumulated
+into an exact microsecond count (`accum`, :2733-2812) in the order
 microseconds, milliseconds, seconds, minutes, hours, days, weeks. -/
 def deltaC (days seconds microseconds milliseconds minutes hours weeks : Int) : Py Delta :=
   usToDeltaC (microseconds + milliseconds * 1000 + seconds * 1000000 + minutes * 60000000 +
     hours * 3600000000 + days * 86400000000 + weeks * 604800000000)
 
-/-- `normalize_pair`, :721-732, using the C `divmod` helper (:370-383), which
+/-- `normalize_pair`, :724-735, using the C `divmod` helper (:373-386), which
 rounds towards minus infinity. The callers' inputs are within a few times the
 field ranges, so the C `int` arithmetic does not overflow. -/
 def normalizePair (hi lo factor : Int) : Int × Int :=
   if lo < 0 ∨ lo ≥ factor then (hi + lo / factor, lo % factor) else (hi, lo)
 
-/-- `new_delta(d, s, us, 1)`: `normalize_d_s_us` (:741-764) then the day range
-check, :1375-1403. -/
+/-- `new_delta(d, s, us, 1)`: `normalize_d_s_us` (:744-767) then the day range
+check, :1383-1411. -/
 def newDeltaNormC (d s us : Int) : Py Delta := do
   let (s, us) := if us < 0 ∨ us ≥ 1000000 then normalizePair s us 1000000 else (s, us)
   let (d, s) := if s < 0 ∨ s ≥ 86400 then normalizePair d s 86400 else (d, s)
@@ -156,26 +156,26 @@ def newDeltaNormC (d s us : Int) : Py Delta := do
 
 namespace Delta
 
-/-- `delta_add`, :2445-2465. -/
+/-- `delta_add`, :2455-2475. -/
 def addC (a b : Delta) : Py Delta := newDeltaNormC (a.days + b.days) (a.seconds + b.seconds) (a.us + b.us)
-/-- `delta_subtract`, :2504-2524. -/
+/-- `delta_subtract`, :2514-2534. -/
 def subC (a b : Delta) : Py Delta := newDeltaNormC (a.days - b.days) (a.seconds - b.seconds) (a.us - b.us)
-/-- `delta_negative`, :2467-2474. -/
+/-- `delta_negative`, :2477-2484. -/
 def negC (a : Delta) : Py Delta := newDeltaNormC (-a.days) (-a.seconds) (-a.us)
-/-- `delta_abs`, :2488-2502 (`delta_positive` copies without normalizing). -/
+/-- `delta_abs`, :2498-2512 (`delta_positive` copies without normalizing). -/
 def absC (a : Delta) : Py Delta := if a.days < 0 then a.negC else .ok a
-/-- `multiply_int_timedelta`, :2280-2300. -/
+/-- `multiply_int_timedelta`, :2290-2310. -/
 def mulC (a : Delta) (k : Int) : Py Delta := usToDeltaC (k * a.toUs)
-/-- `divide_timedelta_int`, :2360-2379 (`PyNumber_FloorDivide`). -/
+/-- `divide_timedelta_int`, :2370-2389 (`PyNumber_FloorDivide`). -/
 def floordivIntC (a : Delta) (k : Int) : Py Delta := do usToDeltaC (← pyDivmod a.toUs k).1
-/-- `delta_divide` with a timedelta, :2595-2615 and `divide_timedelta_timedelta`, :2381-2405. -/
+/-- `delta_divide` with a timedelta, :2605-2625 and `divide_timedelta_timedelta`, :2391-2415. -/
 def floordivC (a b : Delta) : Py Int := do return (← pyDivmod a.toUs b.toUs).1
-/-- `truedivide_timedelta_int`, :2427-2443 (`divide_nearest`, :389-400, i.e.
+/-- `truedivide_timedelta_int`, :2437-2453 (`divide_nearest`, :392-403, i.e.
 `_PyLong_DivmodNear`, which also rounds half to even). -/
 def truedivIntC (a : Delta) (k : Int) : Py Delta := do usToDeltaC (← divideAndRound a.toUs k)
-/-- `delta_remainder`, :2640-2673. -/
+/-- `delta_remainder`, :2650-2683. -/
 def modC (a b : Delta) : Py Delta := do usToDeltaC (← pyDivmod a.toUs b.toUs).2
-/-- `delta_divmod`, :2675-2716. -/
+/-- `delta_divmod`, :2685-2726. -/
 def divmodC (a b : Delta) : Py (Int × Delta) := do
   let (q, r) ← pyDivmod a.toUs b.toUs
   return (q, ← usToDeltaC r)
@@ -204,7 +204,7 @@ def padInt (width : Nat) (n : Int) : List Char :=
 /-- `'%d' % n`. -/
 def showInt (n : Int) : List Char := padInt 0 n
 
-/-- `timedelta.__str__`, _pydatetime.py:765-775; C `delta_str`, :2980-3007. -/
+/-- `timedelta.__str__`, _pydatetime.py:784-794; C `delta_str`, :3035-3062. -/
 def Delta.str (t : Delta) : String :=
   let mm := t.seconds / 60
   let ss := t.seconds % 60
@@ -217,7 +217,7 @@ def Delta.str (t : Delta) : String :=
   let s := if t.us ≠ 0 then s ++ ['.'] ++ padInt 6 t.us else s
   String.ofList s
 
-/-- `timedelta.__repr__`, _pydatetime.py:751-763; C `delta_repr`, :2931-2978. -/
+/-- `timedelta.__repr__`, _pydatetime.py:770-782; C `delta_repr`, :2986-3033. -/
 def Delta.repr (t : Delta) : String :=
   let args := (if t.days ≠ 0 then ["days=" ++ String.ofList (showInt t.days)] else []) ++
     (if t.seconds ≠ 0 then ["seconds=" ++ String.ofList (showInt t.seconds)] else []) ++

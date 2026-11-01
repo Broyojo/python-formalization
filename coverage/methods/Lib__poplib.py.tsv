@@ -2,31 +2,31 @@ file	line	endline	name	signature	status	entry	note
 Lib/poplib.py	98	107	POP3.__init__	__init__(self, host, port=POP3_PORT, timeout=socket._GLOBAL_DEFAULT_TIMEOUT)	todo		
 Lib/poplib.py	109	112	POP3._create_socket	_create_socket(self, timeout)	todo		
 Lib/poplib.py	114	117	POP3._putline	_putline(self, line)	todo		
-Lib/poplib.py	122	125	POP3._putcmd	_putcmd(self, line)	todo		
-Lib/poplib.py	132	147	POP3._getline	_getline(self)	todo		
-Lib/poplib.py	153	158	POP3._getresp	_getresp(self)	todo		
-Lib/poplib.py	163	174	POP3._getlongresp	_getlongresp(self)	todo		
-Lib/poplib.py	179	181	POP3._shortcmd	_shortcmd(self, line)	todo		
-Lib/poplib.py	186	188	POP3._longcmd	_longcmd(self, line)	todo		
-Lib/poplib.py	193	194	POP3.getwelcome	getwelcome(self)	todo		
-Lib/poplib.py	197	198	POP3.set_debuglevel	set_debuglevel(self, level)	todo		
-Lib/poplib.py	203	208	POP3.user	user(self, user)	todo		
-Lib/poplib.py	211	218	POP3.pass_	pass_(self, pswd)	todo		
-Lib/poplib.py	221	242	POP3.stat	stat(self)	todo		
-Lib/poplib.py	245	256	POP3.list	list(self, which=None)	todo		
-Lib/poplib.py	259	264	POP3.retr	retr(self, which)	todo		
-Lib/poplib.py	267	272	POP3.dele	dele(self, which)	todo		
-Lib/poplib.py	275	280	POP3.noop	noop(self)	todo		
-Lib/poplib.py	283	285	POP3.rset	rset(self)	todo		
-Lib/poplib.py	288	292	POP3.quit	quit(self)	todo		
-Lib/poplib.py	294	315	POP3.close	close(self)	todo		
-Lib/poplib.py	322	324	POP3.rpop	rpop(self, user)	todo		
-Lib/poplib.py	329	347	POP3.apop	apop(self, user, password)	todo		
-Lib/poplib.py	350	356	POP3.top	top(self, which, howmuch)	todo		
-Lib/poplib.py	359	368	POP3.uidl	uidl(self, which=None)	todo		
-Lib/poplib.py	371	374	POP3.utf8	utf8(self)	todo		
-Lib/poplib.py	377	403	POP3.capa	capa(self)	todo		
-Lib/poplib.py	406	425	POP3.stls	stls(self, context=None)	todo		
-Lib/poplib.py	442	447	POP3_SSL.__init__	__init__(self, host, port=POP3_SSL_PORT, *, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, context=None)	todo		
-Lib/poplib.py	449	453	POP3_SSL._create_socket	_create_socket(self, timeout)	todo		
-Lib/poplib.py	455	460	POP3_SSL.stls	stls(self, context=None)	todo		
+Lib/poplib.py	122	127	POP3._putcmd	_putcmd(self, line)	todo		changed-in-3.15:
+Lib/poplib.py	134	149	POP3._getline	_getline(self)	todo		
+Lib/poplib.py	155	160	POP3._getresp	_getresp(self)	todo		
+Lib/poplib.py	165	176	POP3._getlongresp	_getlongresp(self)	todo		
+Lib/poplib.py	181	183	POP3._shortcmd	_shortcmd(self, line)	todo		
+Lib/poplib.py	188	190	POP3._longcmd	_longcmd(self, line)	todo		
+Lib/poplib.py	195	196	POP3.getwelcome	getwelcome(self)	todo		
+Lib/poplib.py	199	200	POP3.set_debuglevel	set_debuglevel(self, level)	todo		
+Lib/poplib.py	205	210	POP3.user	user(self, user)	todo		
+Lib/poplib.py	213	220	POP3.pass_	pass_(self, pswd)	todo		
+Lib/poplib.py	223	244	POP3.stat	stat(self)	todo		
+Lib/poplib.py	247	258	POP3.list	list(self, which=None)	todo		
+Lib/poplib.py	261	266	POP3.retr	retr(self, which)	todo		
+Lib/poplib.py	269	274	POP3.dele	dele(self, which)	todo		
+Lib/poplib.py	277	282	POP3.noop	noop(self)	todo		
+Lib/poplib.py	285	287	POP3.rset	rset(self)	todo		
+Lib/poplib.py	290	294	POP3.quit	quit(self)	todo		
+Lib/poplib.py	296	317	POP3.close	close(self)	todo		
+Lib/poplib.py	324	326	POP3.rpop	rpop(self, user)	todo		
+Lib/poplib.py	331	349	POP3.apop	apop(self, user, password)	todo		
+Lib/poplib.py	352	358	POP3.top	top(self, which, howmuch)	todo		
+Lib/poplib.py	361	370	POP3.uidl	uidl(self, which=None)	todo		
+Lib/poplib.py	373	376	POP3.utf8	utf8(self)	todo		
+Lib/poplib.py	379	405	POP3.capa	capa(self)	todo		
+Lib/poplib.py	408	427	POP3.stls	stls(self, context=None)	todo		
+Lib/poplib.py	444	449	POP3_SSL.__init__	__init__(self, host, port=POP3_SSL_PORT, *, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, context=None)	todo		
+Lib/poplib.py	451	455	POP3_SSL._create_socket	_create_socket(self, timeout)	todo		
+Lib/poplib.py	457	462	POP3_SSL.stls	stls(self, context=None)	todo		

@@ -21,21 +21,21 @@ open PyLean
 
 variable {α β : Type}
 
-/-! ## accumulate (:3083-3224; rst:102-119) -/
+/-! ## accumulate (:3088-3229; rst:102-119) -/
 
 structure AccState (α : Type) where
   it : Src α
   total : Option α
   initial : Option α
 
-/-- `itertools_accumulate_impl` (:3107-3134): `PyObject_GetIter`; the default
+/-- `itertools_accumulate_impl` (:3112-3139): `PyObject_GetIter`; the default
 `func` is addition, passed as `add` (`PyNumber_Add`). -/
 def cAccumulateNew (iterable : Obj α) (initial : Option α) : Py (AccState α) :=
   match getIter iterable with
   | .error e => .error e
   | .ok it => .ok { it := it, total := none, initial := initial }
 
-/-- `accumulate_next_lock_held` (:3163-3193). `binop` is `func`, or addition
+/-- `accumulate_next_lock_held` (:3168-3198). `binop` is `func`, or addition
 for `func=None`. -/
 def cAccumulateNext (binop : α → α → Py α) (s : AccState α) : Step (AccState α) α :=
   match s.initial with
@@ -77,14 +77,14 @@ def docAccumulate (f : α → α → Py α) (initial : Option α) (iterable : Ob
       | x :: xs => Run.cons x (docAccumulateLoop f err x xs)
     | some t => Run.cons t (docAccumulateLoop f err t l)
 
-/-! ## batched (:98-271; rst:175-183) -/
+/-! ## batched (:95-276; rst:175-183) -/
 
 structure BatchedState (α : Type) where
   it : Src α
   batchSize : Int
   strict : Bool
 
-/-- `batched_new_impl` (:137-167); `n` went through the `Py_ssize_t` converter. -/
+/-- `batched_new_impl` (:134-164); `n` went through the `Py_ssize_t` converter. -/
 def cBatchedNew (iterable : Obj α) (n : Int) (strict : Bool) : Py (BatchedState α) :=
   match asSsize n with
   | .error e => .error e
@@ -94,7 +94,7 @@ def cBatchedNew (iterable : Obj α) (n : Int) (strict : Bool) : Py (BatchedState
       | .error e => .error e
       | .ok it => .ok { it := it, batchSize := n, strict := strict }
 
-/-- `batched_next` (:190-249). The `for (i=0; i < n; i++)` loop pulls items
+/-- `batched_next` (:187-254). The `for (i=0; i < n; i++)` loop pulls items
 until `n` are read or the input runs out, i.e. takes `min(n, len)` items. -/
 def cBatchedNext (s : BatchedState α) : Step (BatchedState α) (List α) :=
   let n := s.batchSize
@@ -137,30 +137,30 @@ def docBatched (iterable : Obj α) (n : Int) (strict : Bool) : Run (List α) :=
     | .error e => Run.err e
     | .ok ⟨l, err⟩ => docBatchedLoop n strict err (l.length + 2) l
 
-/-! ## chain, chain.from_iterable (:1883-2057; rst:198-201, :209-212) -/
+/-! ## chain, chain.from_iterable (:1888-2062; rst:198-201, :210-213) -/
 
 structure ChainState (α : Type) where
   source : Option (Src (Obj α))
   active : Option (Src α)
 
-/-- `chain_new_internal` (:1894-1907). -/
+/-- `chain_new_internal` (:1899-1912). -/
 def chainNewInternal (source : Src (Obj α)) : ChainState α := { source := some source, active := none }
 
-/-- `chain_new` (:1910-1925): the source is an iterator over `args`. Keywords are
+/-- `chain_new` (:1915-1930): the source is an iterator over `args`. Keywords are
 rejected only for `chain` itself and subclasses that inherit its `tp_init`
-(:1916); `customInit` is a subclass defining `__init__`, which sees them. -/
+(:1921); `customInit` is a subclass defining `__init__`, which sees them. -/
 def cChainNew (args : List (Obj α)) (hasKw : Bool) (customInit : Bool := false) : Py (ChainState α) :=
   if hasKw && !customInit then .error (.typeError "chain() takes no keyword arguments")
   else .ok (chainNewInternal ⟨args, none⟩)
 
-/-- `itertools_chain_from_iterable_impl` (:1936-1946). -/
+/-- `itertools_chain_from_iterable_impl` (:1941-1951). -/
 def cChainFromIterable (arg : Obj (Obj α)) : Py (ChainState α) :=
   match getIter arg with
   | .error e => .error e
   | .ok source => .ok (chainNewInternal source)
 
 /-- The `while (lz->source != NULL)` loop of `chain_next_lock_held`
-(:1971-2007) from "`active` is `NULL`", by recursion on the remaining sources.
+(:1976-2012) from "`active` is `NULL`", by recursion on the remaining sources.
 A failed pull or `PyObject_GetIter` clears `source`. -/
 def cChainPull (serr : Option PyExc) : List (Obj α) → Step (ChainState α) α
   | [] =>
@@ -176,7 +176,7 @@ def cChainPull (serr : Option PyExc) : List (Obj α) → Step (ChainState α) α
       | .fail e a' => .raise e { source := some ⟨src, serr⟩, active := some a' }
       | .done => cChainPull serr src
 
-/-- `chain_next_lock_held` (:1971-2007) and its wrapper `chain_next` (:2010-2017). -/
+/-- `chain_next_lock_held` (:1976-2012) and its wrapper `chain_next` (:2015-2022). -/
 def cChainNext (s : ChainState α) : Step (ChainState α) α :=
   match s.source with
   | none => .stop s
@@ -230,9 +230,9 @@ def docChainFrom (arg : Obj (Obj α)) : Run α :=
   | .error e => Run.err e
   | .ok ⟨ls, serr⟩ => docChainLoop serr ls
 
-/-! ## compress (:3226-3360; rst:306-308) -/
+/-! ## compress (:3231-3365; rst:306-308) -/
 
-/-- `itertools_compress_impl` (:3255-3280). -/
+/-- `itertools_compress_impl` (:3260-3285). -/
 def cCompressNew (data : Obj α) (selectors : Obj β) : Py (Src α × Src β) :=
   match getIter data with
   | .error e => .error e
@@ -241,7 +241,7 @@ def cCompressNew (data : Obj α) (selectors : Obj β) : Py (Src α × Src β) :=
     | .error e => .error e
     | .ok s => .ok (d, s)
 
-/-- The `while (1)` loop of `compress_next` (:3305-3339): pull a datum, pull a
+/-- The `while (1)` loop of `compress_next` (:3310-3344): pull a datum, pull a
 selector, evaluate the selector (`truth` is `PyObject_IsTrue`). -/
 def cCompressLoop (truth : β → Py Bool) (derr : Option PyExc) :
     List α → Src β → Step (Src α × Src β) α
@@ -288,20 +288,20 @@ def docCompress (truth : β → Py Bool) (data : Obj α) (selectors : Obj β) : 
     | .error e => Run.err e
     | .ok sel => docCompressLoop truth derr d sel
 
-/-! ## cycle (:1207-1338; rst:342-352) -/
+/-! ## cycle (:1212-1343; rst:342-352) -/
 
 structure CycleState (α : Type) where
   it : Option (Src α)
   saved : List α
   index : Int
 
-/-- `itertools_cycle_impl` (:1227-1257). -/
+/-- `itertools_cycle_impl` (:1232-1262). -/
 def cCycleNew (iterable : Obj α) : Py (CycleState α) :=
   match getIter iterable with
   | .error e => .error e
   | .ok it => .ok { it := some it, saved := [], index := -1 }
 
-/-- The part of `cycle_next` after the first pass (:1302-1316). -/
+/-- The part of `cycle_next` after the first pass (:1307-1321). -/
 def cCycleSaved [Inhabited α] (s : CycleState α) : Step (CycleState α) α :=
   if s.saved.length = 0 then .stop s
   else
@@ -310,7 +310,7 @@ def cCycleSaved [Inhabited α] (s : CycleState α) : Step (CycleState α) α :=
     let index := if index ≥ s.saved.length then 0 else index
     .yield item { s with index := index }
 
-/-- `cycle_next` (:1282-1317). -/
+/-- `cycle_next` (:1287-1322). -/
 def cCycleNext [Inhabited α] (s : CycleState α) : Step (CycleState α) α :=
   if s.index < 0 then
     match s.it with
@@ -351,15 +351,15 @@ def docCycle (iterable : Obj α) (k : Nat) : Run α :=
       | some e => (first, some e)
       | none => Run.ok (first ++ docCycleSaved l (k - first.length) [])
 
-/-! ## dropwhile, takewhile, filterfalse (:1340-1579, :3362-3482) -/
+/-! ## dropwhile, takewhile, filterfalse (:1345-1584, :3367-3487) -/
 
 /-- The constructors share one shape: `PyObject_GetIter(seq)`, then the flag
-(`itertools_dropwhile_impl`, :1363-1385; `itertools_takewhile_impl`,
-:1485-1507; `itertools_filterfalse_impl`, :3384-3405; `itertools_starmap_impl`,
-:1794-1815). -/
+(`itertools_dropwhile_impl`, :1368-1390; `itertools_takewhile_impl`,
+:1490-1512; `itertools_filterfalse_impl`, :3389-3410; `itertools_starmap_impl`,
+:1799-1820). -/
 def cIterNew (iterable : Obj α) : Py (Src α) := getIter iterable
 
-/-- `dropwhile_next` (:1410-1441); the flag is `lz->start`. -/
+/-- `dropwhile_next` (:1415-1446); the flag is `lz->start`. -/
 def cDropwhileNext (pred : α → Py Bool) : Src α × Bool → Step (Src α × Bool) α
   | (⟨[], err⟩, start) =>
     match err with
@@ -391,7 +391,7 @@ where
       | .ok false => (x :: xs, err)
       | .ok true => go err xs
 
-/-- `takewhile_next` (:1532-1559); the flag is `lz->stop`. -/
+/-- `takewhile_next` (:1537-1564); the flag is `lz->stop`. -/
 def cTakewhileNext (pred : α → Py Bool) : Src α × Bool → Step (Src α × Bool) α
   | (s, true) => .stop (s, true)
   | (s, false) =>
@@ -430,7 +430,7 @@ def ffTest (truth : α → Py Bool) (pred : Option (α → Py Bool)) (x : α) : 
   | none => truth x
   | some f => f x
 
-/-- `filterfalse_next` (:3430-3462). -/
+/-- `filterfalse_next` (:3435-3467). -/
 def cFilterfalseNext (truth : α → Py Bool) (pred : Option (α → Py Bool)) : Src α → Step (Src α) α
   | ⟨[], err⟩ =>
     match err with
@@ -461,13 +461,13 @@ where
       | .ok false => Run.cons x (go p err xs)
       | .ok true => go p err xs
 
-/-! ## pairwise (:273-424; rst:513-521) -/
+/-! ## pairwise (:278-429; rst:513-521) -/
 
 structure PairwiseState (α : Type) where
   it : Option (Src α)
   old : Option α
 
-/-- `pairwise_new_impl` (:296-319). -/
+/-- `pairwise_new_impl` (:301-324). -/
 def cPairwiseNew (iterable : Obj α) : Py (PairwiseState α) :=
   match getIter iterable with
   | .error e => .error e
@@ -480,7 +480,7 @@ def cPairwiseNew2 (old : α) (s : Src α) : Step (PairwiseState α) (α × α) :
   | .fail e _ => .raise e { it := none, old := none }
   | .item new rest => .yield (old, new) { it := some rest, old := some new }
 
-/-- `pairwise_next` (:346-402); a failed pull clears `it` and `old`. -/
+/-- `pairwise_next` (:351-407); a failed pull clears `it` and `old`. -/
 def cPairwiseNext (s : PairwiseState α) : Step (PairwiseState α) (α × α) :=
   match s.it with
   | none => .stop s
@@ -512,9 +512,9 @@ def docPairwise (iterable : Obj α) : Run (α × α) :=
     | [] => ([], err)
     | a :: rest => docPairwiseLoop err a rest
 
-/-! ## starmap (:1774-1881; rst:654-657) -/
+/-! ## starmap (:1779-1886; rst:654-657) -/
 
-/-- `starmap_next` (:1840-1860): each input item is an argument object;
+/-- `starmap_next` (:1845-1865): each input item is an argument object;
 `PySequence_Tuple` unless it is a tuple, then the call. -/
 def cStarmapNext (func : List α → Py β) (s : Src (Obj α)) : Step (Src (Obj α)) β :=
   match s.next with
@@ -554,7 +554,7 @@ def docStarmap (func : List α → Py β) (iterable : Obj (Obj α)) : Run β :=
   | .error e => Run.err e
   | .ok ⟨l, err⟩ => docStarmapLoop func err l
 
-/-! ## zip_longest (:3859-4076; rst:768-788) -/
+/-! ## zip_longest (:3864-4081; rst:768-788) -/
 
 structure ZipLongestState (α : Type) where
   its : List (Option (Src α))
@@ -572,14 +572,14 @@ def RowRes.cons (v : Option α) (it : Option (Src α)) : RowRes α → RowRes α
   | .row r its na => .row (v :: r) (it :: its) na
   | r => r
 
-/-- `kwds`: `fillvalue` alone, or `TypeError` (:3882-3893). -/
+/-- `kwds`: `fillvalue` alone, or `TypeError` (:3887-3898). -/
 def zipFill (kw : List (String × Option α)) : Py (Option α) :=
   match kw with
   | [] => .ok none
   | [("fillvalue", v)] => .ok v
   | _ => .error (.typeError "zip_longest() got an unexpected keyword argument")
 
-/-- `zip_longest_new` (:3873-3938). -/
+/-- `zip_longest_new` (:3878-3943). -/
 def cZipLongestNew (args : List (Obj α)) (kw : List (String × Option α)) : Py (ZipLongestState α) :=
   match zipFill kw with
   | .error e => .error e
@@ -589,7 +589,7 @@ def cZipLongestNew (args : List (Obj α)) (kw : List (String × Option α)) : Py
     | .ok its => .ok { its := its.map some, numactive := args.length, fill := fill }
 
 /-- The per-iterator loop of `zip_longest_next_lock_held` (both copies of the
-loop, :3965-4034): `stop` is the "all exhausted" `return NULL`, `raise` the
+loop, :3970-4039): `stop` is the "all exhausted" `return NULL`, `raise` the
 "`PyErr_Occurred()`" one. -/
 def cZipLongestRow (fill : Option α) : List (Option (Src α)) → Nat → RowRes α
   | [], numactive => .row [] [] numactive
@@ -603,7 +603,7 @@ def cZipLongestRow (fill : Option α) : List (Option (Src α)) → Nat → RowRe
       if numactive = 0 then .stop
       else (cZipLongestRow fill its numactive).cons fill none
 
-/-- `zip_longest_next_lock_held` and its wrapper `zip_longest_next` (:4037-4044). -/
+/-- `zip_longest_next_lock_held` and its wrapper `zip_longest_next` (:4042-4049). -/
 def cZipLongestNext (s : ZipLongestState α) : Step (ZipLongestState α) (List (Option α)) :=
   if s.its.length = 0 then .stop s
   else if s.numactive = 0 then .stop s

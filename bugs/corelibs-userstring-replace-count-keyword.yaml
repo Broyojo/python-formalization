@@ -30,13 +30,13 @@ observed: |
   python3 3.14.7: TypeError "UserString.replace() got an unexpected keyword argument 'count'". REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
 promised_by: |
-  Doc/library/stdtypes.rst:2502-2503: "Changed in version 3.13: count is now supported as a keyword argument."
-  Doc/library/collections.rst:1403: "Class that simulates a string object."
+  Doc/library/stdtypes.rst@3.14.7:2502-2503: "Changed in version 3.13: count is now supported as a keyword argument."
+  Doc/library/collections.rst:1414: "Class that simulates a string object."
 cause: |
-  Lib/collections/__init__.py:1558 `def replace(self, old, new, maxsplit=-1):`, unchanged when gh-106487
+  Lib/collections/__init__.py:1613 `def replace(self, old, new, maxsplit=-1):`, unchanged when gh-106487
   added the keyword to str.replace.
 possible_fix: |
-  `def replace(self, old, new, count=-1):` and pass `count` through at :1563.
+  `def replace(self, old, new, count=-1):` and pass `count` through at :1618.
 duplicates:
   issues: []
   queries: ["UserString replace count", "UserString keyword argument", "UserString maxsplit",

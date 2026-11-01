@@ -11,13 +11,13 @@ namespace PyLean.DictSet
 
 open PyLean
 
-/-- `DictKeysKind` (`pycore_dict.h:171-175`). -/
+/-- `DictKeysKind` (`pycore_dict.h:193-197`). -/
 inductive Kind where
   | general | unicode | split
   deriving DecidableEq, Repr, Inhabited
 
 /-- `PyDictKeyEntry`. A `PyDictUnicodeEntry` has no hash field: C reads the hash
-cached in the string (`unicode_get_hash`, :401-406), which is this field. -/
+cached in the string (`unicode_get_hash`, :433-438), which is this field. -/
 structure Ent (K V : Type) where
   key : K
   hash : Int
@@ -26,7 +26,7 @@ structure Ent (K V : Type) where
 
 /-- `PyDictKeysObject`. `entries` is `dk_entries[0 .. dk_nentries)`, so
 `dk_nentries` is its length; `none` is a slot whose key and value are NULL.
-`ident` is the object's address, used by `dk == mp->ma_keys` (:1062) and by odict's
+`ident` is the object's address, used by `dk == mp->ma_keys` (:1103) and by odict's
 `od_resize_sentinel`. For a split table `V` is `Unit`: the values live in the dict. -/
 structure Keys (K V : Type) where
   ident : Nat
@@ -38,7 +38,7 @@ structure Keys (K V : Type) where
   version : Nat := 0
   deriving Repr, Inhabited
 
-/-- `DKIX_EMPTY`, `DKIX_DUMMY`, `DKIX_KEY_CHANGED` (`pycore_dict.h:165-168`).
+/-- `DKIX_EMPTY`, `DKIX_DUMMY`, `DKIX_KEY_CHANGED` (`pycore_dict.h:184-190`).
 `DKIX_ERROR` is an exception in `M`. -/
 def DKIX_EMPTY : Int := -1
 def DKIX_DUMMY : Int := -2
@@ -49,27 +49,27 @@ def PyDict_MINSIZE : Nat := 8
 def SHARED_KEYS_MAX_SIZE : Nat := 30
 def NEXT_LOG2_SHARED_KEYS_MAX_SIZE : Nat := 6
 
-/-- `USABLE_FRACTION(n)` (:543). -/
+/-- `USABLE_FRACTION(n)` (:584). -/
 def usableFraction (n : Nat) : Nat := (n <<< 1) / 3
 
-/-- `GROWTH_RATE(d)` (:590). -/
+/-- `GROWTH_RATE(d)` (:631). -/
 def growthRate (used : Nat) : Nat := used * 3
 
-/-- `calculate_log2_keysize` (:546-566), the 64-bit `_Py_bit_length` branch. -/
+/-- `calculate_log2_keysize` (:587-607), the 64-bit `_Py_bit_length` branch. -/
 def calculateLog2Keysize (minsize : Nat) : Nat :=
   bitLength (max minsize PyDict_MINSIZE - 1)
 
-/-- `estimate_log2_keysize` (:573-577). -/
+/-- `estimate_log2_keysize` (:614-618). -/
 def estimateLog2Keysize (n : Nat) : Nat := calculateLog2Keysize ((n * 3 + 1) / 2)
 
-/-- `dk_log2_index_bytes` as chosen by `new_keys_object` (:765-778). -/
+/-- `dk_log2_index_bytes` as chosen by `new_keys_object` (:806-819). -/
 def log2IndexBytes (log2Size : Nat) : Nat :=
   if log2Size < 8 then log2Size
   else if log2Size < 16 then log2Size + 1
   else if log2Size >= 32 then log2Size + 3
   else log2Size + 2
 
-/-- `new_keys_object` (:755-809). -/
+/-- `new_keys_object` (:796-850). -/
 def newKeysObject {K V : Type} (ident log2Size : Nat) (unicode : Bool) : Keys K V :=
   { ident, log2Size
     kind := if unicode then .unicode else .general
@@ -78,7 +78,7 @@ def newKeysObject {K V : Type} (ident log2Size : Nat) (unicode : Bool) : Keys K 
     entries := []
     version := 0 }
 
-/-- `Py_EMPTY_KEYS` (:598-613). `dk_log2_size` is 0, which no allocated table has,
+/-- `Py_EMPTY_KEYS` (:639-654). `dk_log2_size` is 0, which no allocated table has,
 so `log2Size = 0` is the test `keys == Py_EMPTY_KEYS`. -/
 def emptyKeys {K V : Type} : Keys K V :=
   { ident := 0, log2Size := 0, kind := .unicode, usable := 0
@@ -93,19 +93,19 @@ def size (k : Keys K V) : Nat := 2 ^ k.log2Size
 def mask (k : Keys K V) : Nat := k.size - 1
 /-- `dk_nentries`. -/
 def nentries (k : Keys K V) : Nat := k.entries.length
-/-- `DK_IS_UNICODE(k)` (`pycore_dict.h:265`). -/
+/-- `DK_IS_UNICODE(k)` (`pycore_dict.h:287`). -/
 def isUnicode (k : Keys K V) : Bool := k.kind != .general
-/-- `dictkeys_get_index` (:479-501). The C width switch is storage only; the widths are
+/-- `dictkeys_get_index` (:520-542). The C width switch is storage only; the widths are
 checked by `indexWidthFits`. -/
 def getIndex (k : Keys K V) (i : Nat) : Int := k.indices.getD i DKIX_EMPTY
-/-- `dictkeys_set_index` (:504-529). -/
+/-- `dictkeys_set_index` (:545-570). -/
 def setIndex (k : Keys K V) (i : Nat) (ix : Int) : Keys K V :=
   { k with indices := k.indices.set i ix }
 /-- `DK_ENTRIES(k)[ix]`, if `me_key` is not NULL. -/
 def entry (k : Keys K V) (ix : Nat) : Option (Ent K V) := (k.entries[ix]?).join
 /-- Is this `Py_EMPTY_KEYS`? -/
 def isEmpty (k : Keys K V) : Bool := k.log2Size == 0
-/-- `_PyDict_KeysSize` (:4751-4760): 32 is `sizeof(PyDictKeysObject)`, 24 and 16 the
+/-- `_PyDict_KeysSize` (:4792-4801): 32 is `sizeof(PyDictKeysObject)`, 24 and 16 the
 entry sizes on a 64-bit build. -/
 def bytes (k : Keys K V) : Nat :=
   let es := if k.kind == .general then 24 else 16
@@ -113,7 +113,7 @@ def bytes (k : Keys K V) : Nat :=
 
 end Keys
 
-/-- `PyDictValues` (`pycore_dict.h:235`). `order` is the insertion-order array, so
+/-- `PyDictValues` (`pycore_dict.h:257`). `order` is the insertion-order array, so
 `size` is its length. `capacity` is `values.length`. -/
 structure Values (V : Type) where
   values : List (Option V)
@@ -125,26 +125,26 @@ structure Values (V : Type) where
 namespace Values
 variable {V : Type}
 def capacity (v : Values V) : Nat := v.values.length
-/-- `get_index_from_order` (:624-631). -/
+/-- `get_index_from_order` (:665-672). -/
 def indexFromOrder (v : Values V) (i : Nat) : Nat := v.order.getD i 0
-/-- `_PyDictValues_AddToInsertionOrder` (`pycore_dict.h:309-319`). -/
+/-- `_PyDictValues_AddToInsertionOrder` (`pycore_dict.h:337-347`). -/
 def addToOrder (v : Values V) (ix : Nat) : Values V := { v with order := v.order ++ [ix] }
-/-- `delete_index_from_values` (:2772-2788): find `ix`, shift the rest down. -/
+/-- `delete_index_from_values` (:2813-2829): find `ix`, shift the rest down. -/
 def deleteIndex (v : Values V) (ix : Nat) : Values V := { v with order := v.order.erase ix }
 /-- `values->values[ix]`. -/
 def get (v : Values V) (ix : Nat) : Option V := (v.values[ix]?).join
 def set (v : Values V) (ix : Nat) (x : Option V) : Values V :=
   { v with values := v.values.set ix x }
-/-- `new_values` (:840-853), all slots NULL (`new_dict_with_shared_keys`, :905-907). -/
+/-- `new_values` (:881-894), all slots NULL (`new_dict_with_shared_keys`, :946-948). -/
 def new (size : Nat) : Values V := { values := List.replicate size none, order := [] }
 end Values
 
-/-- `values_size_from_count` (:828-836). -/
+/-- `values_size_from_count` (:869-877). -/
 def valuesSizeFromCount (count : Nat) : Nat :=
   let suffix := (count + 7) / 8 * 8
   (count + 1) * 8 + suffix
 
-/-- `shared_keys_usable_size` (`pycore_dict.h:321-333`). -/
+/-- `shared_keys_usable_size` (`pycore_dict.h:353-365`). -/
 def sharedKeysUsableSize {K V : Type} (k : Keys K V) : Nat :=
   (k.entries.length + k.usable).toNat
 
@@ -170,7 +170,7 @@ fresh `Keys.ident`s.
 
 `peer` is not a field of the C struct. The state of `DM` is what a callback can reach, and
 during `dict_dict_merge` that is two objects: the receiver and the source, which a key's
-`__eq__` may mutate (`orig_size` at :3981 exists for this). `peer` carries the source; every
+`__eq__` may mutate (`orig_size` at :4022 exists for this). `peer` carries the source; every
 table operation leaves it alone, so only a callback, through `Proto.eq`, can change it. -/
 structure PyDict (K V : Type) where
   ident : Nat := 0
@@ -222,7 +222,7 @@ def isEmptyKeys (b : Body K V) : Bool := b.log2Size == 0
 def entryKH : Body K V → Nat → Option (K × Int)
   | .combined k, ix => (k.entry ix).map fun e => (e.key, e.hash)
   | .split k _, ix => (k.entry ix).map fun e => (e.key, e.hash)
-/-- `*value_addr` of `_Py_dict_lookup` (:1285-1295, :1302-1307). -/
+/-- `*value_addr` of `_Py_dict_lookup` (:1326-1336, :1343-1348). -/
 def valueAt : Body K V → Nat → Option V
   | .combined k, ix => (k.entry ix).map (·.value)
   | .split _ v, ix => v.get ix
@@ -235,7 +235,7 @@ empty slot: at most 13 shifts bring a 64-bit `perturb` to 0, and `5*i+1` then ha
 period (`Probe.lean`). -/
 def probeFuel (log2 : Nat) : Nat := 2 ^ log2 + 14
 
-/-- `do_lookup` (:1001-1043): the probe loop, over any `check_lookup`. The two copies of
+/-- `do_lookup` (:1042-1084): the probe loop, over any `check_lookup`. The two copies of
 the loop body in C are a manual unrolling; `check` returning a negative value is
 `DKIX_KEY_CHANGED` (exceptions travel in `M`). The index table is re-read at every step
 because `dk` is a pointer: a comparison that leaves `dk == mp->ma_keys` may still have
@@ -261,14 +261,14 @@ abbrev DM (K V : Type) := M (PyDict K V)
 section Lookup
 variable [DecidableEq K] (P : Proto K (PyDict K V))
 
-/-- After a comparison: `dk == mp->ma_keys && ep->me_key == startkey` (:1062, :1118). -/
+/-- After a comparison: `dk == mp->ma_keys && ep->me_key == startkey` (:1103, :1159). -/
 def stillThere (mp : PyDict K V) (dk ix : Nat) (startkey : K) : Bool :=
   decide (mp.body.ident = dk) &&
     match mp.body.entryKH ix with
     | some (k, _) => decide (k = startkey)
     | none => false
 
-/-- `compare_unicode_generic` (:1045-1071). -/
+/-- `compare_unicode_generic` (:1086-1112). -/
 def compareUnicodeGeneric (ix : Nat) (key : K) (hash : Int) : DM K V Int := fun mp =>
   match mp.body.entryKH ix with
   | none => (.error .modelFuel, mp)
@@ -281,7 +281,7 @@ def compareUnicodeGeneric (ix : Nat) (key : K) (hash : Int) : DM K V Int := fun 
         else (.ok DKIX_KEY_CHANGED, mp')
     else (.ok 0, mp)
 
-/-- `compare_generic` (:1101-1127). -/
+/-- `compare_generic` (:1142-1168). -/
 def compareGeneric (ix : Nat) (key : K) (hash : Int) : DM K V Int := fun mp =>
   match mp.body.entryKH ix with
   | none => (.error .modelFuel, mp)
@@ -295,13 +295,13 @@ def compareGeneric (ix : Nat) (key : K) (hash : Int) : DM K V Int := fun mp =>
         else (.ok DKIX_KEY_CHANGED, mp')
     else (.ok 0, mp)
 
-/-- `compare_unicode_unicode` (:1080-1093). No callback can run here. -/
+/-- `compare_unicode_unicode` (:1121-1134). No callback can run here. -/
 def compareUnicodeUnicode (e : Option (K × Int)) (key : K) (hash : Int) : Bool :=
   match e with
   | some (epKey, epHash) => decide (epKey = key) || (decide (epHash = hash) && P.strEq epKey key)
   | none => false
 
-/-- `unicodekeys_lookup_unicode` (:1095-1099) on a keys object, with no dict at hand. -/
+/-- `unicodekeys_lookup_unicode` (:1136-1140) on a keys object, with no dict at hand. -/
 def unicodekeysLookupUnicode {W : Type} (dk : Keys K W) (key : K) (hash : Int) : Py Int :=
   let u := toU64 hash
   (doLookup (σ := Unit) (fun _ i => dk.getIndex i)
@@ -316,12 +316,12 @@ def bodyIx (s : PyDict K V) (i : Nat) : Int := s.body.getIndex i
 def checkUnicode (key : K) (hash : Int) : Nat → DM K V Int := fun ix s =>
   (.ok (if compareUnicodeUnicode P (s.body.entryKH ix) key hash then 1 else 0), s)
 
-/-- `unicodekeys_lookup_generic` (:1074-1078). -/
+/-- `unicodekeys_lookup_generic` (:1115-1119). -/
 def unicodekeysLookupGeneric (mask : Nat) (fuel : Nat) (key : K) (hash : Int) : DM K V Int :=
   let u := toU64 hash
   doLookup bodyIx (fun ix => compareUnicodeGeneric P ix key hash) fuel mask (u &&& mask) u
 
-/-- `dictkeys_generic_lookup` (:1129-1133). -/
+/-- `dictkeys_generic_lookup` (:1170-1174). -/
 def dictkeysGenericLookup (mask : Nat) (fuel : Nat) (key : K) (hash : Int) : DM K V Int :=
   let u := toU64 hash
   doLookup bodyIx (fun ix => compareGeneric P ix key hash) fuel mask (u &&& mask) u
@@ -329,7 +329,7 @@ def dictkeysGenericLookup (mask : Nat) (fuel : Nat) (key : K) (hash : Int) : DM 
 /-- How many times `goto start` may run in the model. -/
 def restartFuel : Nat := 256
 
-/-- `_Py_dict_lookup` (:1247-1311): `(ix, *value_addr)`. An exception here is
+/-- `_Py_dict_lookup` (:1288-1352): `(ix, *value_addr)`. An exception here is
 `DKIX_ERROR`. The value is read after the loop, from the current state. -/
 def dictLookupAux (key : K) (hash : Int) : Nat → DM K V (Int × Option V)
   | 0 => M.throw .modelFuel
@@ -356,7 +356,7 @@ def dictLookup (key : K) (hash : Int) : DM K V (Int × Option V) :=
 
 end Lookup
 
-/-- `lookdict_index` (:979-999): the slot holding entry `index`, or `DKIX_EMPTY`. -/
+/-- `lookdict_index` (:1020-1040): the slot holding entry `index`, or `DKIX_EMPTY`. -/
 def lookdictIndexLoop (indices : List Int) (mask index : Nat) : Nat → Nat → Nat → Py Int
   | 0, _, _ => .error .modelFuel
   | fuel + 1, i, perturb =>
@@ -371,8 +371,8 @@ def lookdictIndex {W : Type} (k : Keys K W) (hash : Int) (index : Nat) : Py Int 
   let u := toU64 hash
   lookdictIndexLoop k.indices k.mask index (probeFuel k.log2Size) (u &&& k.mask) u
 
-/-- The loop of `find_empty_slot` (:1773-1777) and of `build_indices_*` (:2016-2019,
-:2032-2035): walk the probe sequence until `stop (slot)`. -/
+/-- The loop of `find_empty_slot` (:1814-1818) and of `build_indices_*` (:2057-2060,
+:2073-2076): walk the probe sequence until `stop (slot)`. -/
 def probeUntil (stop : Int → Bool) (indices : List Int) (mask : Nat) : Nat → Nat → Nat → Py Nat
   | 0, _, _ => .error .modelFuel
   | fuel + 1, i, perturb =>
@@ -381,17 +381,17 @@ def probeUntil (stop : Int → Bool) (indices : List Int) (mask : Nat) : Nat →
       let next := probeStep mask i perturb
       probeUntil stop indices mask fuel next.1 next.2
 
-/-- `is_unusable_slot` (:1752-1760), the GIL build: a slot with an entry. -/
+/-- `is_unusable_slot` (:1793-1801), the GIL build: a slot with an entry. -/
 def isUnusableSlot (ix : Int) : Bool := decide (ix ≥ 0)
 
-/-- `find_empty_slot` (:1765-1779): the first slot that holds no entry, reusing a
+/-- `find_empty_slot` (:1806-1820): the first slot that holds no entry, reusing a
 `DKIX_DUMMY`. -/
 def findEmptySlot {W : Type} (k : Keys K W) (hash : Int) : Py Nat :=
   let u := toU64 hash
   probeUntil (fun ix => !isUnusableSlot ix) k.indices k.mask (probeFuel k.log2Size)
     (u &&& k.mask) u
 
-/-- `build_indices_generic` / `build_indices_unicode` (:2009-2038): the two differ only
+/-- `build_indices_generic` / `build_indices_unicode` (:2050-2079): the two differ only
 in where the hash is read from. -/
 def buildIndices (mask fuel : Nat) : List Int → Nat → List Int → Py (List Int)
   | indices, _, [] => .ok indices
@@ -402,7 +402,7 @@ def buildIndices (mask fuel : Nat) : List Int → Nat → List Int → Py (List 
     | .error e => .error e
 
 /-- The entries a split table holds for this dict, in insertion order
-(:2112-2119, :2125-2131). -/
+(:2153-2160, :2166-2172). -/
 def splitLive (k : Keys K Unit) (v : Values V) (numentries : Nat) : List (Ent K V) :=
   (v.order.take numentries).filterMap fun index =>
     match k.entry index, v.get index with
@@ -410,11 +410,11 @@ def splitLive (k : Keys K Unit) (v : Values V) (numentries : Nat) : List (Ent K 
     | _, _ => none
 
 /-- The live entries of a combined table: the `while (ep->me_value == NULL) ep++`
-loops of `dictresize` (:2157-2162, :2174-2179, :2185-2193); when nothing was deleted
+loops of `dictresize` (:2198-2203, :2215-2220, :2226-2234); when nothing was deleted
 this is the `memcpy` branch. -/
 def liveEntries (k : Keys K V) : List (Ent K V) := k.entries.filterMap id
 
-/-- `dictresize` (:2064-2214). -/
+/-- `dictresize` (:2105-2255). -/
 def dictResize (log2New : Nat) (unicode : Bool) : DM K V Unit := fun mp =>
   if log2New ≥ 64 then (.error memoryError, mp) else
   let unicode := if mp.body.isUnicode then unicode else false
@@ -434,11 +434,11 @@ def dictResize (log2New : Nat) (unicode : Bool) : DM K V Unit := fun mp =>
         entries := live.map some
         usable := newkeys.usable - numentries } })
 
-/-- `insertion_resize` (:1781-1785). -/
+/-- `insertion_resize` (:1822-1826). -/
 def insertionResize (unicode : Bool) : DM K V Unit := fun mp =>
   dictResize (calculateLog2Keysize (growthRate mp.used)) unicode mp
 
-/-- The body of `insert_combined_dict` after any resize (:1806-1826). -/
+/-- The body of `insert_combined_dict` after any resize (:1847-1867). -/
 def appendEntry (k : Keys K V) (key : K) (hash : Int) (value : V) : Py (Keys K V) :=
   match findEmptySlot k hash with
   | .ok hashpos =>
@@ -448,7 +448,7 @@ def appendEntry (k : Keys K V) (key : K) (hash : Int) (value : V) : Py (Keys K V
       version := 0 }
   | .error e => .error e
 
-/-- `insert_combined_dict` (:1787-1829). -/
+/-- `insert_combined_dict` (:1828-1870). -/
 def insertCombinedDict (KO : KeyOps K) (hash : Int) (key : K) (value : V) : DM K V Unit := fun mp0 =>
   -- gh-140551: the dict may have been cleared during the lookup.
   match (if mp0.body.isUnicode && !KO.isStr key then insertionResize false mp0
@@ -468,7 +468,7 @@ def insertCombinedDict (KO : KeyOps K) (hash : Int) (key : K) (value : V) : DM K
 section Split
 variable [DecidableEq K] (P : Proto K (PyDict K V))
 
-/-- `insert_split_key` (:1831-1860): `(ix, shared keys after)`. -/
+/-- `insert_split_key` (:1872-1901): `(ix, shared keys after)`. -/
 def insertSplitKey (keys : Keys K Unit) (key : K) (hash : Int) : Py (Int × Keys K Unit) :=
   match unicodekeysLookupUnicode P keys key hash with
   | .error e => .error e
@@ -479,7 +479,7 @@ def insertSplitKey (keys : Keys K Unit) (key : K) (hash : Int) : Py (Int × Keys
       | .error e => .error e
     else .ok (ix, keys)
 
-/-- `insert_split_value` (:1862-1882). -/
+/-- `insert_split_value` (:1903-1923). -/
 def insertSplitValue (value : V) (ix : Nat) : DM K V Unit := do
   let mp ← M.get
   match mp.body with
@@ -493,7 +493,7 @@ def insertSplitValue (value : V) (ix : Nat) : DM K V Unit := do
       M.put { mp with body := .split k (v.set ix (some value)) }
   | .combined _ => M.unreachable
 
-/-- Overwrite the value at `ix` (:1931-1947). -/
+/-- Overwrite the value at `ix` (:1972-1988). -/
 def storeValue (value : V) (ix : Nat) : DM K V Unit := fun mp =>
   match mp.body with
   | .split k v => (.ok (), { mp with body := .split k (v.set ix (some value)) })
@@ -504,7 +504,7 @@ def storeValue (value : V) (ix : Nat) : DM K V Unit := fun mp =>
         body := .combined { k with entries := k.entries.set ix (some { e with value := value }) } })
     | _ => (.error .modelFuel, mp)
 
-/-- The tail of `insertdict` (:1915-1951), after the lookup. -/
+/-- The tail of `insertdict` (:1956-1992), after the lookup. -/
 def insertAfterLookup (key : K) (hash : Int) (value : V) (ix : Int) (old : Option V) :
     DM K V Unit := fun mp =>
   match old with
@@ -514,7 +514,7 @@ def insertAfterLookup (key : K) (hash : Int) (value : V) (ix : Int) (old : Optio
     | (.error e, s) => (.error e, s)
   | some _ => storeValue value ix.toNat mp
 
-/-- `insertdict` (:1890-1957). -/
+/-- `insertdict` (:1931-1998). -/
 def insertDict (key : K) (hash : Int) (value : V) : DM K V Unit := fun mp =>
   let viaLookup : Py Unit × PyDict K V :=
     match dictLookup P key hash mp with
@@ -533,7 +533,7 @@ def insertDict (key : K) (hash : Int) (value : V) : DM K V Unit := fun mp =>
     else viaLookup
   | .combined _ => viaLookup
 
-/-- `insert_to_emptydict` (:1959-2004). -/
+/-- `insert_to_emptydict` (:2000-2045). -/
 def insertToEmptyDict (key : K) (hash : Int) (value : V) : DM K V Unit := fun mp =>
   let unicode := P.isStr key
   let newkeys : Keys K V := newKeysObject mp.nextId PyDict_LOG_MINSIZE unicode
@@ -545,7 +545,7 @@ def insertToEmptyDict (key : K) (hash : Int) (value : V) : DM K V Unit := fun mp
       entries := [some ⟨key, hash, value⟩]
       usable := newkeys.usable - 1 } })
 
-/-- `dict_unhashable_type` (:2352-2366): only an exact `TypeError` is rewritten. -/
+/-- `dict_unhashable_type` (:2393-2407): only an exact `TypeError` is rewritten. -/
 def dictUnhashableType (key : K) (e : PyExc) : PyExc :=
   match e with
   | .typeError m => .typeError s!"cannot use '{P.typeName key}' as a dict key ({m})"
@@ -558,7 +558,7 @@ def hashKey (key : K) : DM K V Int :=
   | .ok h => pure h
   | .error e => M.throw (dictUnhashableType P key e)
 
-/-- `setitem_take2_lock_held` (:2676-2700), with `PyDict_SetItem`, `setitem_lock_held`
+/-- `setitem_take2_lock_held` (:2717-2741), with `PyDict_SetItem`, `setitem_lock_held`
 and `_PyDict_SetItem_Take2`, which differ only in reference counting. -/
 def dictSetItem (key : K) (value : V) : DM K V Unit := fun mp =>
   match P.hash key with
@@ -567,7 +567,7 @@ def dictSetItem (key : K) (value : V) : DM K V Unit := fun mp =>
     if mp.body.isEmptyKeys then insertToEmptyDict P key hash value mp
     else insertDict P key hash value mp
 
-/-- `_PyDict_SetItem_KnownHash_LockHeld` (:2741-2751). -/
+/-- `_PyDict_SetItem_KnownHash_LockHeld` (:2782-2792). -/
 def dictSetItemKnownHash (key : K) (value : V) (hash : Int) : DM K V Unit := do
   let mp ← M.get
   if mp.body.isEmptyKeys then
@@ -575,7 +575,7 @@ def dictSetItemKnownHash (key : K) (value : V) (hash : Int) : DM K V Unit := do
   else
     insertDict P key hash value
 
-/-- `delitem_common` (:2790-2831). -/
+/-- `delitem_common` (:2831-2872). -/
 def delitemCommon (hash : Int) (ix : Nat) : DM K V Unit := fun mp =>
   match mp.body with
   | .split k v =>
@@ -597,7 +597,7 @@ def delitemCommon (hash : Int) (ix : Nat) : DM K V Unit := fun mp =>
           entries := k.entries.set ix none
           version := 0 } })
 
-/-- `_PyDict_DelItem_KnownHash_LockHeld` (:2846-2875), and `_PyDict_DelItem_KnownHash`. -/
+/-- `_PyDict_DelItem_KnownHash_LockHeld` (:2887-2916), and `_PyDict_DelItem_KnownHash`. -/
 def dictDelItemKnownHash (key : K) (hash : Int) : DM K V Unit := fun mp =>
   match dictLookup P key hash mp with
   | (.error e, s) => (.error e, s)
@@ -608,11 +608,11 @@ def dictDelItemKnownHash (key : K) (hash : Int) : DM K V Unit := fun mp =>
       else delitemCommon hash ix.toNat s
     | none => (.error (keyErr P key), s)
 
-/-- `_PyDict_DelItem_KnownHash_LockHeld` with its `PyDict_Check` (:2853-2856). -/
+/-- `_PyDict_DelItem_KnownHash_LockHeld` with its `PyDict_Check` (:2894-2897). -/
 def dictDelItemKnownHashChecked (isDict : Bool) (key : K) (hash : Int) : DM K V Unit :=
   if isDict then dictDelItemKnownHash P key hash else M.throw badInternalCallT
 
-/-- `PyDict_DelItem` (:2833-2844). -/
+/-- `PyDict_DelItem` (:2874-2885). -/
 def dictDelItem (key : K) : DM K V Unit := fun mp =>
   match P.hash key with
   | .error e => (.error (dictUnhashableType P key e), mp)
@@ -620,13 +620,13 @@ def dictDelItem (key : K) : DM K V Unit := fun mp =>
 
 end Split
 
-/-- The scan of `_PyDict_Next` (:3052-3055): first non-NULL slot at or after `i`. -/
+/-- The scan of `_PyDict_Next` (:3093-3096): first non-NULL slot at or after `i`. -/
 def scanFrom : List (Option (Ent K V)) → Nat → Option (Nat × Ent K V)
   | [], _ => none
   | none :: t, i => scanFrom t (i + 1)
   | some e :: _, i => some (i, e)
 
-/-- `_PyDict_Next` (:3022-3083): `(new pos, key, value, hash)`. -/
+/-- `_PyDict_Next` (:3063-3124): `(new pos, key, value, hash)`. -/
 def dictNext (mp : PyDict K V) (pos : Int) : Option (Int × K × V × Int) :=
   let i := pos
   match mp.body with
@@ -657,7 +657,7 @@ def dictNextAll (mp : PyDict K V) : Nat → Int → List (K × V × Int)
 def dictItems (mp : PyDict K V) : List (K × V × Int) :=
   dictNextAll mp (mp.body.nentries + mp.used + 1) 0
 
-/-- `_PyDict_SizeOf_LockHeld` (:4722-4738). `sizeof(PyDictObject)` is 48. A split dict's
+/-- `_PyDict_SizeOf_LockHeld` (:4763-4779). `sizeof(PyDictObject)` is 48. A split dict's
 keys are shared (with the type at least), so `dk_refcnt != 1`. -/
 def dictSizeOf (mp : PyDict K V) : Nat :=
   match mp.body with

@@ -196,7 +196,7 @@ theorem memberNamesNew_proven : MemberNamesNew := by
   · exact .inr ⟨hm, storeMember_names h⟩
 
 /-- A `_ignore_` name cannot be set to a name that is already a member, and an ignored name never becomes one: the
-`ValueError` of Lib/enum.py:381-385, and the branch at :392. `__order__` is stored as `_order_`. Everything `_generate_next_value_`
+`ValueError` of Lib/enum.py:382-386, and the branch at :393. `__order__` is stored as `_order_`. Everything `_generate_next_value_`
 needs: it is a `TypeError` once `auto()` has been used, and otherwise it is what the next `auto()` calls. -/
 def EnumDictSunders : Prop :=
   ∀ (d : EnumDict) (l : List Name) (v : EV) (g : Gen), d.privateName "_ignore_".toList = false →
@@ -714,7 +714,7 @@ theorem valueAliasBinds_proven : ValueAliasBinds := by
   · simp [EClass.bindValue, hv]
   · simp [enumContains, EClass.bindValue, hv, List.contains_append]
 
-/-- The same sentence for every value. False: for an unhashable value the check at Lib/enum.py:1220-1224 reads the
+/-- The same sentence for every value. False: for an unhashable value the check at Lib/enum.py:1248-1252 reads the
 `_value_` of the members only, so a value linked with `_add_value_alias_` is not seen, and the second member gets it
 as well. -/
 def ValueAliasExclusive : Prop :=
@@ -732,7 +732,7 @@ theorem valueAliasExclusive_refuted : ¬ValueAliasExclusive := by
   cases he
 
 /-- With the value bound as a member's `_value_`, the same sentence fails another way: the `ValueError` is formatted with
-`cls._value2member_map_[value]`, at Lib/enum.py:1223, so hashing the unhashable value again raises `TypeError`. -/
+`cls._value2member_map_[value]`, at Lib/enum.py:1251, so hashing the unhashable value again raises `TypeError`. -/
 def ValueAliasBoundError : Prop :=
   ∀ (c : EClass) (f : Name → Name) (m m' : Name) (v : EV), m ≠ m' → c.findEqual v = some m' →
     (c.addValueAlias f m v).raises "ValueError"
@@ -781,7 +781,7 @@ theorem uniqueNamed_proven : UniqueNamed := by
     simpa using h
 
 /-- `Enum.__new__` finds a value bound by `_add_value_alias_`, as in the example of the docs,
-`Color.RED._add_value_alias_(42)` and then `Color(42)`. False for a class with a `name` of its own: Lib/enum.py:1234 files the value under `self.name` and :1165 does `cls[name]`, which is
+`Color.RED._add_value_alias_(42)` and then `Color(42)`. False for a class with a `name` of its own: Lib/enum.py:1262 files the value under `self.name` and :1193 does `cls[name]`, which is
 a `KeyError` from a lookup that should end in the member. -/
 def ValueAliasFound : Prop :=
   ∀ (c c' : EClass) (f : Name → Name) (m : Name) (v : EV), c.memberMap.lookup m = some m →

@@ -1,20 +1,23 @@
 file	line	endline	name	signature	status	entry	note
-Lib/genericpath.py	16	22	exists	exists(path)	todo		
-Lib/genericpath.py	26	32	lexists	lexists(path)	todo		
-Lib/genericpath.py	36	42	isfile	isfile(path)	todo		
-Lib/genericpath.py	48	54	isdir	isdir(s)	todo		
-Lib/genericpath.py	60	66	islink	islink(path)	todo		
-Lib/genericpath.py	70	74	isjunction	isjunction(path)	todo		
-Lib/genericpath.py	77	81	isdevdrive	isdevdrive(path)	todo		
-Lib/genericpath.py	84	86	getsize	getsize(filename)	todo		
-Lib/genericpath.py	89	91	getmtime	getmtime(filename)	todo		
-Lib/genericpath.py	94	96	getatime	getatime(filename)	todo		
-Lib/genericpath.py	99	101	getctime	getctime(filename)	todo		
-Lib/genericpath.py	105	119	commonprefix	commonprefix(m)	todo		
-Lib/genericpath.py	123	126	samestat	samestat(s1, s2)	todo		
-Lib/genericpath.py	130	138	samefile	samefile(f1, f2)	todo		
-Lib/genericpath.py	143	147	sameopenfile	sameopenfile(fp1, fp2)	todo		
-Lib/genericpath.py	157	178	_splitext	_splitext(p, sep, altsep, extsep)	todo		
-Lib/genericpath.py	180	191	_check_arg_types	_check_arg_types(funcname, *args)	todo		
-Lib/genericpath.py	197	198	ALLOW_MISSING.__repr__	__repr__(self)	todo		
-Lib/genericpath.py	199	200	ALLOW_MISSING.__reduce__	__reduce__(self)	todo		
+Lib/genericpath.py	17	23	exists	exists(path)	todo		
+Lib/genericpath.py	27	33	lexists	lexists(path)	todo		
+Lib/genericpath.py	37	43	isfile	isfile(path)	todo		
+Lib/genericpath.py	49	55	isdir	isdir(s)	todo		
+Lib/genericpath.py	61	67	islink	islink(path)	todo		
+Lib/genericpath.py	71	75	isjunction	isjunction(path)	todo		
+Lib/genericpath.py	78	82	isdevdrive	isdevdrive(path)	todo		
+Lib/genericpath.py	85	87	getsize	getsize(filename, /)	todo		changed-in-3.15:
+Lib/genericpath.py	90	92	getmtime	getmtime(filename, /)	todo		changed-in-3.15:
+Lib/genericpath.py	95	97	getatime	getatime(filename, /)	todo		changed-in-3.15:
+Lib/genericpath.py	100	102	getctime	getctime(filename, /)	todo		changed-in-3.15:
+Lib/genericpath.py	106	113	commonprefix	commonprefix(m, /)	todo		changed-in-3.15:
+Lib/genericpath.py	115	129	_commonprefix	_commonprefix(m, /)	todo		changed-in-3.15: new function
+Lib/genericpath.py	133	136	samestat	samestat(s1, s2, /)	todo		changed-in-3.15:
+Lib/genericpath.py	140	148	samefile	samefile(f1, f2, /)	todo		changed-in-3.15:
+Lib/genericpath.py	153	157	sameopenfile	sameopenfile(fp1, fp2)	todo		
+Lib/genericpath.py	167	188	_splitext	_splitext(p, sep, altsep, extsep)	todo		
+Lib/genericpath.py	190	201	_check_arg_types	_check_arg_types(funcname, *args)	todo		
+Lib/genericpath.py	209	210	ALL_BUT_LAST.__repr__	__repr__(self)	todo		changed-in-3.15: new function
+Lib/genericpath.py	211	212	ALL_BUT_LAST.__reduce__	__reduce__(self)	todo		changed-in-3.15: new function
+Lib/genericpath.py	217	218	ALLOW_MISSING.__repr__	__repr__(self)	todo		
+Lib/genericpath.py	219	220	ALLOW_MISSING.__reduce__	__reduce__(self)	todo		

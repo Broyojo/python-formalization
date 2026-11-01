@@ -273,9 +273,9 @@ theorem strhexWithSepM_len (arg : M (List Nat)) (r : Ret Int) (rel : Option Nat)
       · simp [h1, h2, M.bind_app, M.throw_app, M.pure_app]
       · simp [h1, h2, M.bind_app, M.throw_app, M.pure_app]
 
-/-- `memoryview_hex_impl`, :2337-2373, with a `sep` whose `__len__` calls `self.release()`.
+/-- `memoryview_hex_impl`, :2448-2484, with a `sep` whose `__len__` calls `self.release()`.
 `hex` raises in every case. A contiguous view hexes its own memory, so it holds an export over
-the call (:2352-2354, gh-143195): the release is refused and the view is exactly as before. A
+the call (:2463-2465, gh-143195): the release is refused and the view is exactly as before. A
 view that is not contiguous hexes a private copy and holds nothing: it is released, and that is
 safe, because `bytes` is not the view's memory. Hypotheses: a live view; an export count is not
 negative; `tobytes` succeeds, otherwise `__len__` never runs. -/
@@ -318,7 +318,7 @@ theorem hexHoldsExport_proven : HexHoldsExport := by
     rw [hx, hs']
     exact ⟨rfl, memoryRelease_released self st hv⟩
 
-/-- What `memory_hash` checks before it asks the exporter for a hash, :3217-3227. -/
+/-- What `memory_hash` checks before it asks the exporter for a hash, :3328-3338. -/
 structure HashGuards (st : St) (i : Nat) : Prop where
   valid : i < st.mvs.length
   live : baseInaccessible st i = false
@@ -326,7 +326,7 @@ structure HashGuards (st : St) (i : Nat) : Prop where
   readonly : (st.mv i).view.readonly = true
   format : ∃ c size, getNativeFmtchar ((st.mv i).view.format.getD []) = some (c, size) ∧ isByteFormat c = true
 
-/-- `memory_hash`, :3231-3233, holds an export around `PyObject_Hash(view->obj)` (gh-142664).
+/-- `memory_hash`, :3342-3344, holds an export around `PyObject_Hash(view->obj)` (gh-142664).
 A `__hash__` that calls `self.release()` is refused and the view stays live; a `__hash__` that
 raises passes its exception up, with the export given back and no cached hash, so a later `hash`
 asks again. A `__hash__` that releases another view succeeds at that. Hypotheses: the checks of
@@ -343,7 +343,7 @@ def HashHoldsExport : Prop :=
     (∀ j, st.hashHook.getD e none = some j → j ≠ self → j < st.mvs.length → (st.mv j).exports = 0 →
       ((memoryHash self st).2.mv j).flags.released = true)
 
-/-- The end of `memory_hash`, :3237-3257: the bytes, and the cache. -/
+/-- The end of `memory_hash`, :3348-3368: the bytes, and the cache. -/
 def hashTail (st : St) (self : Nat) : M (List Nat) := do
   let mem ← if !(st.mv self).flags.isC then M.lift (bufferToContiguous st.mem (st.mv self).view 'C')
     else pure (rdBytes st.mem (st.mv self).view.buf (st.mv self).view.len.toNat)
@@ -524,7 +524,7 @@ theorem getBufferFull_val (b : Buf) (st : St) (hn : b.ndim ≤ 64) :
   rw [if_neg (by omega)]
   rfl
 
-/-- `memory_richcompare`, :3192-3199: the right side's buffer is released after the result is
+/-- `memory_richcompare`, :3303-3310: the right side's buffer is released after the result is
 known, and that release is Python code when the right side has `__release_buffer__`. `v == w`
 gives what the two buffers compare to, even when that callback releases `v` itself, and the
 callback's release has happened by the time `==` returns. Hypotheses: a live `v`; `__buffer__`
@@ -586,7 +586,7 @@ theorem count_start (st : St) (self : Nat) (n d : Int) (f : List Char) (c : Char
     simp [newIter, List.getD_eq_getElem?_getD]
   simp only [memoryviewCount, M.bind_app, memoryIter_spec st self n d f [c] hL hf, M.get, hlen]
 
-/-- The loops of `memoryview_count_impl`, :2797-2816, and `memoryview_index_impl`, :2872-2895,
+/-- The loops of `memoryview_count_impl`, :2908-2927, and `memoryview_index_impl`, :2983-3006,
 with a value whose `__eq__` runs Python code. An exception from `__eq__` is passed up at once. An
 `__eq__` that calls `self.release()` succeeds, because an iterator holds no export, and the next
 step refuses with the `CHECK_RELEASED` of `memoryiter_next` or `memory_item`. On a view of one
@@ -689,9 +689,9 @@ theorem eqFailures_proven : EqFailures := by
 /-! ## Views that are not 1-D -/
 
 /-- What iteration, `len`, `count`, `index` and `m[i]` do on views that are not 1-D. `len` is
-`shape[0]` on every view with dimensions (:2746-2756), and a 0-dim view has none. A 0-dim view
-has no iterator, no items and no lookup (:3529-3532, :2466-2469, :2847-2850); a view of two or more
-dimensions refuses them as not implemented (:3533-3537, :2476-2478, :2900-2903), and so does
+`shape[0]` on every view with dimensions (:2857-2867), and a 0-dim view has none. A 0-dim view
+has no iterator, no items and no lookup (:3640-3643, :2577-2580, :2958-2961); a view of two or more
+dimensions refuses them as not implemented (:3644-3648, :2587-2589, :3011-3014), and so does
 `count`, which iterates. Hypotheses: a live view, and for `m[i]` a format `adjust_fmt` accepts. -/
 def RankRules : Prop :=
   ∀ (st : St) (self : Nat) (v : Obj) (a b i : Int) (fmt : List Char),
@@ -734,7 +734,7 @@ theorem rankRules_proven : RankRules := by
 
 /-! ## `ptr == NULL` in `memoryiter_next` -/
 
-/-- `memoryiter_next`, :3508-3510: an item at `NULL` returns NULL with no exception set, which
+/-- `memoryiter_next`, :3619-3621: an item at `NULL` returns NULL with no exception set, which
 is `StopIteration`, though the iterator has not reached `it_length` and keeps its view: it has
 stepped past the item, so the next `next` goes on from the item after. Hypotheses: a live view,
 the iterator inside it, and the case itself, the item's address being `NULL`. -/
@@ -764,7 +764,7 @@ theorem sliceStage_miss (a p : SlicePart) (rel : Option Nat) (fail : Option Slic
     sliceStage a p rel fail s = (.ok (), s) := by
   simp only [sliceStage, h, ↓reduceIte, M.pure_app]
 
-/-- `PySlice_Unpack`, Objects/sliceobject.c:218-258, on a slice with a part that fails: `step`
+/-- `PySlice_Unpack`, Objects/sliceobject.c:219-259, on a slice with a part that fails: `step`
 is converted first, so its failure comes first; a zero step is refused next, so with a zero step
 the `__index__` of `start` and `stop` never runs; then `start`, then `stop`. Hypothesis: the
 failing part's callback fails with `e`, the case. -/
@@ -821,7 +821,7 @@ theorem sliceFailures_proven : SliceFailures := by
   · obtain ⟨s', he, -⟩ := sliceEvents_fail s rel f e st hfail (Or.inr h0)
     rw [he]
 
-/-- `memory_subscript`, :2616-2623, and `memory_ass_sub`, :2699-2718, when `PySlice_Unpack`
+/-- `memory_subscript`, :2619-2626, and `memory_ass_sub`, :2702-2721, when `PySlice_Unpack`
 fails. `m[s]` has already made the sliced view with `mbuf_add_view`, and the `Py_DECREF(sliced)`
 gives its export of the managed buffer back; `m[s] = x` has already asked `x` for its buffer,
 and gives that back, running its `__release_buffer__`. Hypotheses: a live 1-D view, the failing

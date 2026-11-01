@@ -13,7 +13,7 @@ namespace PyLean.LongObj
 
 open PyLean PyLean.MathInt PyLean.Registry
 
-/-- The argument `x` of `int(x, base)`, by the checks of longobject.c:5904-5913. -/
+/-- The argument `x` of `int(x, base)`, by the checks of longobject.c:6003-6012. -/
 inductive IntArg (α : Type) where
   | str (s : α)
   | bytes (b : α)
@@ -30,7 +30,7 @@ structure IntOps (α : Type) where
   /-- `_PyLong_FromBytes(string, size, base)`. -/
   fromBytes : α → Int → Py Int
 
-/-- `long_new_impl(type, x, obase)`, longobject.c:5876-5919, for `type == int`. -/
+/-- `long_new_impl(type, x, obase)`, longobject.c:5975-6018, for `type == int`. -/
 def longNew {α : Type} (ops : IntOps α) (x : Option (IntArg α)) (obase : Option α) : Py Int :=
   match x with
   | none =>
@@ -52,7 +52,7 @@ def longNew {α : Type} (ops : IntOps α) (x : Option (IntArg α)) (obase : Opti
           | .bytes s => ops.fromBytes s base
           | .other _ => .error (.typeError "int() can't convert non-string with explicit base")
 
-/-- `long_subtype_new(type, x, obase)`, longobject.c:5927-5955: the value of `int(...)`,
+/-- `long_subtype_new(type, x, obase)`, longobject.c:6026-6059: the value of `int(...)`,
 copied digit by digit into the subclass instance. `n == 0` becomes one digit of the
 always-present `ob_digit[0]`. -/
 def longSubtypeNew {α : Type} (ops : IntOps α) (x : Option (IntArg α)) (obase : Option α) : Py Int :=
@@ -64,7 +64,7 @@ def longSubtypeNew {α : Type} (ops : IntOps α) (x : Option (IntArg α)) (obase
     let copied : Long := ⟨l.neg, (l.ds ++ [0]).take n |>.take l.ds.length⟩
     .ok copied.toInt
 
-/-- `long_vectorcall(type, args, nargsf, kwnames)`, longobject.c:6425-6445, without keywords. -/
+/-- `long_vectorcall(type, args, nargsf, kwnames)`, longobject.c:6533-6553, without keywords. -/
 def longVectorcall {α : Type} (ops : IntOps α) (args : List (IntArg α)) (base : IntArg α → α) :
     Py Int :=
   match args with
@@ -73,20 +73,20 @@ def longVectorcall {α : Type} (ops : IntOps α) (args : List (IntArg α)) (base
   | [x, b] => longNew ops (some x) (some (base b))
   | _ => .error (.typeError s!"int expected at most 2 arguments, got {args.length}")
 
-/-- `_resolve_endianness(&endianness)`, longobject.c:1192-1201, on a little-endian build. -/
+/-- `_resolve_endianness(&endianness)`, longobject.c:1270-1279, on a little-endian build. -/
 def resolveEndianness (flags : Int) : Bool :=
   if flags = -1 ∨ (flags.toNat &&& 2 ≠ 0) then true else flags.toNat &&& 1 = 1
 
-/-- `PyLong_FromNativeBytes(buffer, n, flags)`, longobject.c:1389-1407. -/
+/-- `PyLong_FromNativeBytes(buffer, n, flags)`, longobject.c:1467-1485. -/
 def fromNativeBytes (bs : List Nat) (flags : Int) : Py Int :=
   fromBytes bs (if resolveEndianness flags then "little" else "big")
     (flags = -1 ∨ flags.toNat &&& 4 = 0)
 
-/-- `PyLong_FromUnsignedNativeBytes(buffer, n, flags)`, longobject.c:1411-1424. -/
+/-- `PyLong_FromUnsignedNativeBytes(buffer, n, flags)`, longobject.c:1489-1502. -/
 def fromUnsignedNativeBytes (bs : List Nat) (flags : Int) : Py Int :=
   fromBytes bs (if resolveEndianness flags then "little" else "big") false
 
-/-- `PyLong_LAYOUT`, longobject.c:6755-6760, as `PyLong_GetNativeLayout` returns it:
+/-- `PyLong_LAYOUT`, longobject.c:6867-6872, as `PyLong_GetNativeLayout` returns it:
 `bits_per_digit`, `digit_size`, `digits_order`, `digit_endianness`. -/
 def nativeLayout : Nat × Nat × Int × Int := (30, 4, -1, -1)
 
@@ -184,7 +184,7 @@ theorem nativeLayoutExact_proven : NativeLayoutExact := rfl
 def entriesIntNew : List Entry := [
   { id := "longobj-int-new", pyFile := "Objects/longobject.c", pyFns := ["long_new_impl"]
     statement := "int() is 0; int(base=b) raises TypeError; a base outside {0} and 2..36 raises ValueError before the value is examined; otherwise the type of the value picks the parser, and a non-string raises TypeError."
-    source := "int() docs; longobject.c:5883-5918", status := .proven
+    source := "int() docs; longobject.c:5982-6017", status := .proven
     prop := ``IntNewDispatch, thm := some ``intNewDispatch_proven
     notes := "Generic over PyNumber_Long, PyNumber_AsSsize_t and the parsers." }
 ]

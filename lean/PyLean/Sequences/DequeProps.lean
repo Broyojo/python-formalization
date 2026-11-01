@@ -15,7 +15,7 @@ variable {α : Type} [Inhabited α]
 
 /-- The deque end operations are the documented list operations, with
 "items discarded from the opposite end" once a bounded deque is full
-(Doc/library/collections.rst:475-481): for every deque satisfying the layout
+(Doc/library/collections.rst:479-485): for every deque satisfying the layout
 invariant (type invariant `Deque.WF`, preserved by every operation), of any
 element type, every `x` and every iterable `xs` (other than the deque itself,
 which is `extendSelf`):
@@ -156,7 +156,7 @@ def iterPy (f : Deque α → Py (Deque α)) : Nat → Deque α → Py (Deque α)
   | 0, d => .ok d
   | k + 1, d => do iterPy f k (← f d)
 
-/-- `d.rotate(n)` is the documented loop (Doc/library/collections.rst:574-581):
+/-- `d.rotate(n)` is the documented loop (Doc/library/collections.rst:578-585):
 for every non-empty deque (`WF`) and every int `n`, `rotate(n)` raises
 `OverflowError` exactly when `n` is outside `Py_ssize_t`, and otherwise
 leaves the same items (and `maxlen`) as `n` repetitions of

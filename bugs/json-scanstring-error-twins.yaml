@@ -29,7 +29,7 @@ maybe_intended: |
   another scanstring divergence. Invalid escapes were not touched by either; which of the two
   positions is right is a small judgement call. The message difference has existed since the C
   scanner was added and gh-154941 left it alone (it tests pos, lineno and colno, not the message;
-  test_decode.py:118-121 only looks for 'escape'), so it is probably tolerated.
+  test_decode.py:143-146 only looks for 'escape'), so it is probably tolerated.
 reproducer: |
   import json
   from test.support.import_helper import import_fresh_module
@@ -62,11 +62,11 @@ promised_by: |
   test_fail.py asserts identical msg/pos/lineno/colno for all other decode errors. The
   JSONDecodeError docs define pos as "the start index of doc where parsing failed".
 cause: |
-  Modules/_json.c:452-471 (scanstring_unicode, 3.14.7): `end = next + 1; ... default: c = 0;`
+  Modules/_json.c:552-571 (scanstring_unicode, 3.14.7): `end = next + 1; ... default: c = 0;`
   then `raise_errmsg("Invalid \\escape", pystr, end - 2)`, i.e. the backslash's index.
   Lib/json/decoder.py:110-115: `esc = s[end]` (the character after the backslash),
   `raise JSONDecodeError("Invalid \\escape: {0!r}".format(esc), s, end)`.
-  Control characters: Modules/_json.c:413-415 `raise_errmsg("Invalid control character at",
+  Control characters: Modules/_json.c:509-511 `raise_errmsg("Invalid control character at",
   pystr, next)` vs Lib/json/decoder.py:97-100 `"Invalid control character {0!r} at"`.
   Unchanged on main.
 possible_fix: |

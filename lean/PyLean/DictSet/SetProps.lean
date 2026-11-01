@@ -22,7 +22,7 @@ theorem foldl_xor_perm {α : Type} (f : α → Nat) {l l' : List α} (h : l.Perm
   | trans _ _ ih1 ih2 => exact (ih1 a).trans (ih2 a)
 
 /-- The frozenset hash does not depend on where entries sit: two tables with the same slots in any
-order, the same mask, `fill` and `used`, hash alike (`setobject.c:785-793`: "a frozenset hash should
+order, the same mask, `fill` and `used`, hash alike (`setobject.c:979-987`: "a frozenset hash should
 be independent of order"). -/
 def FrozensetHashOrderFree : Prop :=
   ∀ (K : Type) (a b : SetObj K), a.table.Perm b.table → a.mask = b.mask → a.fill = b.fill →
@@ -33,7 +33,7 @@ theorem frozensetHashOrderFree_proven : FrozensetHashOrderFree := by
   have h0 := foldl_xor_perm (fun s : Slot K => shuffleBits s.hashU) hp 0
   simp only [frozensetHashImpl, h0, hm, hf, hu]
 
-/-- `-1` is reserved: the frozenset hash is never the error value (`setobject.c:813-815`). -/
+/-- `-1` is reserved: the frozenset hash is never the error value (`setobject.c:1007-1009`). -/
 def FrozensetHashNotMinusOne : Prop :=
   ∀ (K : Type) (s : SetObj K), frozensetHashImpl s ≠ -1
 
@@ -107,7 +107,7 @@ theorem setNewSizeMinimal_proven : SetNewSizeMinimal := by
     omega)
   exact ⟨a, b, d⟩
 
-/-- `set.clear()` leaves no entries (`setobject.c:456-504`), and a cleared table has no dummies and
+/-- `set.clear()` leaves no entries (`setobject.c:645-694`), and a cleared table has no dummies and
 is the small table. Holds when a small table with `fill == 0` holds no entries, which `fill`
 counts. -/
 def SetClearEmpties : Prop :=

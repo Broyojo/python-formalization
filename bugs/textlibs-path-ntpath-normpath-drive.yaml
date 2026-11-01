@@ -26,7 +26,7 @@ expected: |
 observed: |
   python3 3.14.7: c:\windows, False, True, .\c:\windows. REPRODUCED.
   main 3.16.0a1+dev: the same. REPRODUCED.
-  This ran the pure-Python fallback on Linux. Python/fileutils.c:2539-2550 skips `.\` the same way.
+  This ran the pure-Python fallback on Linux. Python/fileutils.c:2564-2575 skips `.\` the same way.
 promised_by: |
   Doc/library/os.path.rst on normpath, which describes collapsing, not a change of what is referred to.
 cause: |

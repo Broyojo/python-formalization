@@ -321,8 +321,8 @@ theorem wrapsAcceptsAnything_refuted : ¬WrapsAcceptsAnything := by
   cases hp
 
 /-- A cached function reports its own `cache_parameters()`: "a function `cache_parameters()` ... for introspection". False
-when the wrapped object is a cached function itself: `update_wrapper` at Lib/functools.py:596 runs after `cache_parameters`
-is set at :595 and copies the `__dict__` of the inner cache over it, so the outer cache reports the inner's `maxsize` and
+when the wrapped object is a cached function itself: `update_wrapper` at Lib/functools.py:600 runs after `cache_parameters`
+is set at :599 and copies the `__dict__` of the inner cache over it, so the outer cache reports the inner's `maxsize` and
 `typed`. On the Python wrapper `cache_info` and `cache_clear` are overwritten too. -/
 def LruOwnParams : Prop :=
   ∀ (τ : Type) (py : Bool) (id : Nat) (mode : Option Int → Py LruMode) (arg : MaxsizeArg) (t : τ) (m : Option Int)
@@ -389,7 +389,7 @@ theorem lruParamsFresh_proven : LruParamsFresh := by
 /-- `lru_cache` as a decorator, in both twins: `cache` is the unbounded wrapper with `maxsize=None` and
 `typed=False`, connecting `cache` to the mode; a negative `maxsize` is `0`, which is uncached, and
 `cache_parameters()` then says `0`; the bare form takes `128`; `typed` is kept; an exception from
-`update_wrapper` comes out of the decoration. Lib/functools.py:579-597. -/
+`update_wrapper` comes out of the decoration. Lib/functools.py:581-601. -/
 def LruDecorates : Prop :=
   ∀ (n : Int) (t : Bool) (e : PyExc), n < 0 →
     cacheDecorate (wrapperCMode true) none = .ok ⟨.infinite, none, false⟩ ∧
@@ -651,7 +651,7 @@ theorem sdmRegisterThenCall_proven : SdmRegisterThenCall := by
 
 /-- The class of the first argument picks the object `__get__` is called on, and that may not have one: a
 callable that passes `__init__` is usable. False: `__init__` accepts any callable, and the call at
-Lib/functools.py:1069 does `.__get__` with no fallback, so a callable without `__get__` raises `AttributeError`
+Lib/functools.py@3.14.7:1069 does `.__get__` with no fallback, so a callable without `__get__` raises `AttributeError`
 on the first call, where `partialmethod` treats it as an instance method. -/
 def SdmCallableUsable : Prop :=
   ∀ (f : SdmFunc Nat) (s : Sdm Nat) (o : Nat), sdmNew 0 f = .ok s →

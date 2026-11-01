@@ -1,23 +1,34 @@
 file	line	endline	name	signature	status	entry	note
-Python/jit.c	38	47	get_page_size	get_page_size(void)	todo		
-Python/jit.c	50	58	jit_error	jit_error(const char *message)	todo		
-Python/jit.c	61	80	jit_alloc	jit_alloc(size_t size)	todo		
-Python/jit.c	83	98	jit_free	jit_free(unsigned char *memory, size_t size)	todo		
-Python/jit.c	101	125	mark_executable	mark_executable(unsigned char *memory, size_t size)	todo		
-Python/jit.c	148	152	get_bits	get_bits(uint64_t value, uint8_t value_start, uint8_t width)	todo		
-Python/jit.c	156	166	set_bits	set_bits(uint32_t *loc, uint8_t loc_start, uint64_t value, uint8_t value_start, uint8_t width)	todo		
-Python/jit.c	203	209	patch_32	patch_32(unsigned char *location, uint64_t value)	todo		
-Python/jit.c	213	221	patch_32r	patch_32r(unsigned char *location, uint64_t value)	todo		
-Python/jit.c	225	229	patch_64	patch_64(unsigned char *location, uint64_t value)	todo		
-Python/jit.c	234	249	patch_aarch64_12	patch_aarch64_12(unsigned char *location, uint64_t value)	todo		
-Python/jit.c	253	260	patch_aarch64_16a	patch_aarch64_16a(unsigned char *location, uint64_t value)	todo		
-Python/jit.c	264	271	patch_aarch64_16b	patch_aarch64_16b(unsigned char *location, uint64_t value)	todo		
-Python/jit.c	275	282	patch_aarch64_16c	patch_aarch64_16c(unsigned char *location, uint64_t value)	todo		
-Python/jit.c	286	293	patch_aarch64_16d	patch_aarch64_16d(unsigned char *location, uint64_t value)	todo		
-Python/jit.c	298	309	patch_aarch64_21r	patch_aarch64_21r(unsigned char *location, uint64_t value)	todo		
-Python/jit.c	313	324	patch_aarch64_26r	patch_aarch64_26r(unsigned char *location, uint64_t value)	todo		
-Python/jit.c	328	355	patch_x86_64_32rx	patch_x86_64_32rx(unsigned char *location, uint64_t value)	todo		
-Python/jit.c	370	411	patch_aarch64_trampoline	patch_aarch64_trampoline(unsigned char *location, int ordinal, jit_state *state)	todo		
-Python/jit.c	414	420	combine_symbol_mask	combine_symbol_mask(const symbol_mask src, symbol_mask dest)	todo		
-Python/jit.c	424	505	_PyJIT_Compile	_PyJIT_Compile(_PyExecutorObject *executor, const _PyUOpInstruction trace[], size_t length)	todo		
-Python/jit.c	508	521	_PyJIT_Free	_PyJIT_Free(_PyExecutorObject *executor)	todo		
+Python/jit.c	43	52	get_page_size	get_page_size(void)	todo		
+Python/jit.c	55	63	jit_error	jit_error(const char *message)	todo		
+Python/jit.c	66	80	address_in_executor_array	address_in_executor_array(_PyExecutorObject **ptrs, size_t count, uintptr_t addr)	todo		changed-in-3.15: new function
+Python/jit.c	83	99	address_in_executor_list	address_in_executor_list(_PyExecutorObject *head, uintptr_t addr)	todo		changed-in-3.15: new function
+Python/jit.c	101	114	_PyJIT_AddressInJitCode	PyAPI_FUNC(int) _PyJIT_AddressInJitCode(PyInterpreterState *interp, uintptr_t addr)	todo		changed-in-3.15: new function
+Python/jit.c	117	143	jit_alloc	jit_alloc(size_t size)	todo		changed-in-3.15:
+Python/jit.c	146	161	jit_free	jit_free(unsigned char *memory, size_t size)	todo		
+Python/jit.c	164	188	mark_executable	mark_executable(unsigned char *memory, size_t size)	todo		changed-in-3.15:
+Python/jit.c	213	217	get_bits	get_bits(uint64_t value, uint8_t value_start, uint8_t width)	todo		
+Python/jit.c	221	237	set_bits	set_bits(uint32_t *loc, uint8_t loc_start, uint64_t value, uint8_t value_start, uint8_t width)	todo		changed-in-3.15:
+Python/jit.c	273	288	get_symbol_slot	get_symbol_slot(int ordinal, symbol_state *state, int size)	todo		changed-in-3.15: new function
+Python/jit.c	292	295	got_symbol_address	got_symbol_address(int ordinal, jit_state *state)	todo		changed-in-3.15: new function
+Python/jit.c	304	310	patch_32	patch_32(unsigned char *location, uint64_t value)	todo		changed-in-3.15:
+Python/jit.c	314	322	patch_32r	patch_32r(unsigned char *location, uint64_t value)	todo		changed-in-3.15:
+Python/jit.c	326	329	patch_64	patch_64(unsigned char *location, uint64_t value)	todo		changed-in-3.15:
+Python/jit.c	334	349	patch_aarch64_12	patch_aarch64_12(unsigned char *location, uint64_t value)	todo		
+Python/jit.c	354	357	patch_aarch64_12x	patch_aarch64_12x(unsigned char *location, uint64_t value)	todo		changed-in-3.15: new function
+Python/jit.c	361	368	patch_aarch64_16a	patch_aarch64_16a(unsigned char *location, uint64_t value)	todo		
+Python/jit.c	372	379	patch_aarch64_16b	patch_aarch64_16b(unsigned char *location, uint64_t value)	todo		
+Python/jit.c	383	390	patch_aarch64_16c	patch_aarch64_16c(unsigned char *location, uint64_t value)	todo		
+Python/jit.c	394	401	patch_aarch64_16d	patch_aarch64_16d(unsigned char *location, uint64_t value)	todo		
+Python/jit.c	406	417	patch_aarch64_21r	patch_aarch64_21r(unsigned char *location, uint64_t value)	todo		
+Python/jit.c	422	425	patch_aarch64_21rx	patch_aarch64_21rx(unsigned char *location, uint64_t value)	todo		changed-in-3.15: new function
+Python/jit.c	429	440	patch_aarch64_19r	patch_aarch64_19r(unsigned char *location, uint64_t value)	todo		changed-in-3.15: new function
+Python/jit.c	444	455	patch_aarch64_26r	patch_aarch64_26r(unsigned char *location, uint64_t value)	todo		
+Python/jit.c	459	505	patch_aarch64_33rx	patch_aarch64_33rx(unsigned char *location_a, unsigned char *location_b, uint64_t value)	todo		changed-in-3.15: new function
+Python/jit.c	509	539	patch_x86_64_32rx	patch_x86_64_32rx(unsigned char *location, uint64_t value)	todo		changed-in-3.15:
+Python/jit.c	562	567	patch_got_symbol	patch_got_symbol(jit_state *state, int ordinal)	todo		changed-in-3.15: new function
+Python/jit.c	572	600	patch_aarch64_trampoline	patch_aarch64_trampoline(unsigned char *location, int ordinal, jit_state *state)	todo		changed-in-3.15:
+Python/jit.c	604	631	patch_x86_64_trampoline	patch_x86_64_trampoline(unsigned char *location, int ordinal, jit_state *state)	todo		changed-in-3.15: new function
+Python/jit.c	634	640	combine_symbol_mask	combine_symbol_mask(const symbol_mask src, symbol_mask dest)	todo		
+Python/jit.c	644	726	_PyJIT_Compile	_PyJIT_Compile(_PyExecutorObject *executor, const _PyUOpInstruction trace[], size_t length)	todo		changed-in-3.15:
+Python/jit.c	730	744	_PyJIT_Free	_PyJIT_Free(_PyExecutorObject *executor)	todo		changed-in-3.15:

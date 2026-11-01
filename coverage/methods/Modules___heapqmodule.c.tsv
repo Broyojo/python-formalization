@@ -6,17 +6,17 @@ Modules/_heapqmodule.c	153	183	heappop_internal	heappop_internal(PyObject *heap,
 Modules/_heapqmodule.c	196	200	_heapq_heappop_impl	_heapq_heappop_impl(PyObject *module, PyObject *heap) /*[clinic end generated code: output=96dfe82d37d9af76 input=ed396461b153dd51]*/	todo		
 Modules/_heapqmodule.c	203	220	heapreplace_internal	heapreplace_internal(PyObject *heap, PyObject *item, int siftup_func(PyListObject *, Py_ssize_t))	todo		
 Modules/_heapqmodule.c	243	247	_heapq_heapreplace_impl	_heapq_heapreplace_impl(PyObject *module, PyObject *heap, PyObject *item) /*[clinic end generated code: output=82ea55be8fbe24b4 input=9be1678b817ef1a9]*/	todo		
-Modules/_heapqmodule.c	264	297	_heapq_heappushpop_impl	_heapq_heappushpop_impl(PyObject *module, PyObject *heap, PyObject *item) /*[clinic end generated code: output=67231dc98ed5774f input=db05c81b1dd92c44]*/	todo		
-Modules/_heapqmodule.c	300	309	keep_top_bit	keep_top_bit(Py_ssize_t n)	todo		
-Modules/_heapqmodule.c	332	362	cache_friendly_heapify	cache_friendly_heapify(PyObject *heap, int siftup_func(PyListObject *, Py_ssize_t))	modelled	accel-heapify-twins-agree	
-Modules/_heapqmodule.c	365	388	heapify_internal	heapify_internal(PyObject *heap, int siftup_func(PyListObject *, Py_ssize_t))	todo		
-Modules/_heapqmodule.c	401	405	_heapq_heapify_impl	_heapq_heapify_impl(PyObject *module, PyObject *heap) /*[clinic end generated code: output=e63a636fcf83d6d0 input=aaaaa028b9b6af08]*/	todo		
-Modules/_heapqmodule.c	408	449	siftdown_max	siftdown_max(PyListObject *heap, Py_ssize_t startpos, Py_ssize_t pos)	todo		
-Modules/_heapqmodule.c	452	499	siftup_max	siftup_max(PyListObject *heap, Py_ssize_t pos)	todo		
-Modules/_heapqmodule.c	513	532	_heapq_heappush_max_impl	_heapq_heappush_max_impl(PyObject *module, PyObject *heap, PyObject *item) /*[clinic end generated code: output=c869d5f9deb08277 input=c437e3d1ff8dcb70]*/	todo		
-Modules/_heapqmodule.c	545	549	_heapq_heappop_max_impl	_heapq_heappop_max_impl(PyObject *module, PyObject *heap) /*[clinic end generated code: output=2f051195ab404b77 input=5d70c997798aec64]*/	todo		
-Modules/_heapqmodule.c	563	567	_heapq_heapreplace_max_impl	_heapq_heapreplace_max_impl(PyObject *module, PyObject *heap, PyObject *item) /*[clinic end generated code: output=8770778b5a9cbe9b input=fe70175356e4a649]*/	todo		
-Modules/_heapqmodule.c	580	584	_heapq_heapify_max_impl	_heapq_heapify_max_impl(PyObject *module, PyObject *heap) /*[clinic end generated code: output=8401af3856529807 input=4eee63231e7d1573]*/	todo		
-Modules/_heapqmodule.c	601	635	_heapq_heappushpop_max_impl	_heapq_heappushpop_max_impl(PyObject *module, PyObject *heap, PyObject *item) /*[clinic end generated code: output=ff0019f0941aca0d input=52030929667a4c08]*/	todo		
-Modules/_heapqmodule.c	780	786	heapq_exec	heapq_exec(PyObject *m)	todo		
-Modules/_heapqmodule.c	808	811	PyInit__heapq	PyInit__heapq(void)	todo		
+Modules/_heapqmodule.c	265	298	_heapq_heappushpop_impl	_heapq_heappushpop_impl(PyObject *module, PyObject *heap, PyObject *item) /*[clinic end generated code: output=67231dc98ed5774f input=491178a1c7d417ba]*/	todo		
+Modules/_heapqmodule.c	301	310	keep_top_bit	keep_top_bit(Py_ssize_t n)	todo		
+Modules/_heapqmodule.c	333	363	cache_friendly_heapify	cache_friendly_heapify(PyObject *heap, int siftup_func(PyListObject *, Py_ssize_t))	modelled	accel-heapify-twins-agree	
+Modules/_heapqmodule.c	366	389	heapify_internal	heapify_internal(PyObject *heap, int siftup_func(PyListObject *, Py_ssize_t))	todo		
+Modules/_heapqmodule.c	402	406	_heapq_heapify_impl	_heapq_heapify_impl(PyObject *module, PyObject *heap) /*[clinic end generated code: output=e63a636fcf83d6d0 input=aaaaa028b9b6af08]*/	todo		
+Modules/_heapqmodule.c	409	450	siftdown_max	siftdown_max(PyListObject *heap, Py_ssize_t startpos, Py_ssize_t pos)	todo		
+Modules/_heapqmodule.c	453	500	siftup_max	siftup_max(PyListObject *heap, Py_ssize_t pos)	todo		
+Modules/_heapqmodule.c	514	533	_heapq_heappush_max_impl	_heapq_heappush_max_impl(PyObject *module, PyObject *heap, PyObject *item) /*[clinic end generated code: output=c869d5f9deb08277 input=c437e3d1ff8dcb70]*/	todo		
+Modules/_heapqmodule.c	546	550	_heapq_heappop_max_impl	_heapq_heappop_max_impl(PyObject *module, PyObject *heap) /*[clinic end generated code: output=2f051195ab404b77 input=5d70c997798aec64]*/	todo		
+Modules/_heapqmodule.c	564	568	_heapq_heapreplace_max_impl	_heapq_heapreplace_max_impl(PyObject *module, PyObject *heap, PyObject *item) /*[clinic end generated code: output=8770778b5a9cbe9b input=fe70175356e4a649]*/	todo		
+Modules/_heapqmodule.c	581	585	_heapq_heapify_max_impl	_heapq_heapify_max_impl(PyObject *module, PyObject *heap) /*[clinic end generated code: output=8401af3856529807 input=4eee63231e7d1573]*/	todo		
+Modules/_heapqmodule.c	602	636	_heapq_heappushpop_max_impl	_heapq_heappushpop_max_impl(PyObject *module, PyObject *heap, PyObject *item) /*[clinic end generated code: output=ff0019f0941aca0d input=52030929667a4c08]*/	todo		
+Modules/_heapqmodule.c	781	787	heapq_exec	heapq_exec(PyObject *m)	todo		
+Modules/_heapqmodule.c	810	813	PyInit__heapq	PyInit__heapq(void)	todo		

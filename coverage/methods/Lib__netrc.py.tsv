@@ -5,10 +5,10 @@ Lib/netrc.py	25	29	NetrcParseError.__init__	__init__(self, msg, filename=None, l
 Lib/netrc.py	31	32	NetrcParseError.__str__	__str__(self)	todo		
 Lib/netrc.py	36	40	_netrclex.__init__	__init__(self, fp)	todo		
 Lib/netrc.py	42	46	_netrclex._read_char	_read_char(self)	todo		
-Lib/netrc.py	48	73	_netrclex.get_token	get_token(self)	todo		
-Lib/netrc.py	75	76	_netrclex.push_token	push_token(self, token)	todo		
-Lib/netrc.py	80	91	netrc.__init__	__init__(self, file=None)	todo		
-Lib/netrc.py	93	155	netrc._parse	_parse(self, file, fp, default_netrc)	todo		
-Lib/netrc.py	157	171	netrc._security_check	_security_check(self, fp, default_netrc, login)	todo		
-Lib/netrc.py	173	180	netrc.authenticators	authenticators(self, host)	todo		
-Lib/netrc.py	182	196	netrc.__repr__	__repr__(self)	todo		
+Lib/netrc.py	48	74	_netrclex.get_token	get_token(self)	todo		changed-in-3.15:
+Lib/netrc.py	76	77	_netrclex.push_token	push_token(self, token)	todo		
+Lib/netrc.py	81	92	netrc.__init__	__init__(self, file=None)	todo		
+Lib/netrc.py	94	162	netrc._parse	_parse(self, file, fp, default_netrc)	todo		changed-in-3.15:
+Lib/netrc.py	164	177	netrc._security_check	_security_check(self, fp)	todo		changed-in-3.15:
+Lib/netrc.py	179	186	netrc.authenticators	authenticators(self, host)	todo		
+Lib/netrc.py	188	202	netrc.__repr__	__repr__(self)	todo		

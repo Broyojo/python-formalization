@@ -46,13 +46,13 @@ expected: |
   The append goes through PyByteArray_Resize and stays inside the allocation.
 observed: |
   python3 3.14.7: the object grows to offset + len + 1 > ob_alloc with the allocation unchanged. REPRODUCED.
-  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same, Objects/bytearrayobject.c:1163 there still
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same, Objects/bytearrayobject.c@3.14.7:1163 there still
   has the test. REPRODUCED.
 promised_by: |
   Invariant: no write outside an allocation.
 cause: |
-  Objects/bytearrayobject.c:1070-1073 (3.14.7): the test ignores `ob_start - ob_bytes`. Same test at
-  :1163 on main.
+  Objects/bytearrayobject.c:1165-1168: the test ignores `ob_start - ob_bytes`. Same test at
+  @3.14.7:1163 on main.
 possible_fix: |
   Compare with PyByteArray_AS_STRING/ob_alloc offset, or always call PyByteArray_Resize, which has the
   right test.

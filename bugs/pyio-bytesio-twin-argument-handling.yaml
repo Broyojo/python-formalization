@@ -67,7 +67,7 @@ promised_by: |
   No documentation. Invariant: Lib/_pyio.py is a Python implementation of the same API.
 cause: |
   Argument Clinic conversions run before the impl bodies (Modules/_io/clinic/bytesio.c.h:239, :278,
-  :318, :475, :486); Modules/_io/bytesio.c:596 (readlines) and :703 (truncate) narrow with
+  :318, :475, :486); Modules/_io/bytesio.c:597 (readlines) and :704 (truncate) narrow with
   PyLong_AsSsize_t / PyLong_AsLong; Lib/_pyio.py:546 skips the read for size 0.
 possible_fix: |
   None needed. If anything: saturate the readlines hint in C.

@@ -45,23 +45,23 @@ Lib/asyncio/sslproto.py	612	631	SSLProtocol._start_shutdown	_start_shutdown(self
 Lib/asyncio/sslproto.py	633	641	SSLProtocol._check_shutdown_timeout	_check_shutdown_timeout(self)	todo		
 Lib/asyncio/sslproto.py	643	646	SSLProtocol._do_flush	_do_flush(self)	todo		
 Lib/asyncio/sslproto.py	648	659	SSLProtocol._do_shutdown	_do_shutdown(self)	todo		
-Lib/asyncio/sslproto.py	661	669	SSLProtocol._on_shutdown_complete	_on_shutdown_complete(self, shutdown_exc)	todo		
-Lib/asyncio/sslproto.py	671	674	SSLProtocol._abort	_abort(self, exc)	todo		
-Lib/asyncio/sslproto.py	678	700	SSLProtocol._write_appdata	_write_appdata(self, list_of_data)	todo		
-Lib/asyncio/sslproto.py	702	716	SSLProtocol._do_write	_do_write(self)	todo		
-Lib/asyncio/sslproto.py	718	723	SSLProtocol._process_outgoing	_process_outgoing(self)	todo		
-Lib/asyncio/sslproto.py	727	747	SSLProtocol._do_read	_do_read(self)	todo		
-Lib/asyncio/sslproto.py	749	776	SSLProtocol._do_read__buffered	_do_read__buffered(self)	todo		
-Lib/asyncio/sslproto.py	778	806	SSLProtocol._do_read__copied	_do_read__copied(self)	todo		
-Lib/asyncio/sslproto.py	808	819	SSLProtocol._call_eof_received	_call_eof_received(self)	todo		
-Lib/asyncio/sslproto.py	823	850	SSLProtocol._control_app_writing	_control_app_writing(self)	todo		
-Lib/asyncio/sslproto.py	852	853	SSLProtocol._get_write_buffer_size	_get_write_buffer_size(self)	todo		
-Lib/asyncio/sslproto.py	855	859	SSLProtocol._set_write_buffer_limits	_set_write_buffer_limits(self, high=None, low=None)	todo		
-Lib/asyncio/sslproto.py	863	864	SSLProtocol._pause_reading	_pause_reading(self)	todo		
-Lib/asyncio/sslproto.py	866	877	SSLProtocol._resume_reading	_resume_reading(self)	todo		
-Lib/asyncio/sslproto.py	881	888	SSLProtocol._control_ssl_reading	_control_ssl_reading(self)	todo		
-Lib/asyncio/sslproto.py	890	894	SSLProtocol._set_read_buffer_limits	_set_read_buffer_limits(self, high=None, low=None)	todo		
-Lib/asyncio/sslproto.py	896	897	SSLProtocol._get_read_buffer_size	_get_read_buffer_size(self)	todo		
-Lib/asyncio/sslproto.py	901	906	SSLProtocol.pause_writing	pause_writing(self)	todo		
-Lib/asyncio/sslproto.py	908	914	SSLProtocol.resume_writing	resume_writing(self)	todo		
-Lib/asyncio/sslproto.py	916	929	SSLProtocol._fatal_error	_fatal_error(self, exc, message='Fatal error on transport')	todo		
+Lib/asyncio/sslproto.py	661	677	SSLProtocol._on_shutdown_complete	_on_shutdown_complete(self, shutdown_exc)	todo		changed-in-3.15:
+Lib/asyncio/sslproto.py	679	682	SSLProtocol._abort	_abort(self, exc)	todo		
+Lib/asyncio/sslproto.py	686	708	SSLProtocol._write_appdata	_write_appdata(self, list_of_data)	todo		
+Lib/asyncio/sslproto.py	710	724	SSLProtocol._do_write	_do_write(self)	todo		
+Lib/asyncio/sslproto.py	726	731	SSLProtocol._process_outgoing	_process_outgoing(self)	todo		
+Lib/asyncio/sslproto.py	735	755	SSLProtocol._do_read	_do_read(self)	todo		
+Lib/asyncio/sslproto.py	757	784	SSLProtocol._do_read__buffered	_do_read__buffered(self)	todo		
+Lib/asyncio/sslproto.py	786	814	SSLProtocol._do_read__copied	_do_read__copied(self)	todo		
+Lib/asyncio/sslproto.py	816	827	SSLProtocol._call_eof_received	_call_eof_received(self)	todo		
+Lib/asyncio/sslproto.py	831	858	SSLProtocol._control_app_writing	_control_app_writing(self)	todo		
+Lib/asyncio/sslproto.py	860	861	SSLProtocol._get_write_buffer_size	_get_write_buffer_size(self)	todo		
+Lib/asyncio/sslproto.py	863	867	SSLProtocol._set_write_buffer_limits	_set_write_buffer_limits(self, high=None, low=None)	todo		
+Lib/asyncio/sslproto.py	871	872	SSLProtocol._pause_reading	_pause_reading(self)	todo		
+Lib/asyncio/sslproto.py	874	885	SSLProtocol._resume_reading	_resume_reading(self)	todo		
+Lib/asyncio/sslproto.py	889	896	SSLProtocol._control_ssl_reading	_control_ssl_reading(self)	todo		
+Lib/asyncio/sslproto.py	898	902	SSLProtocol._set_read_buffer_limits	_set_read_buffer_limits(self, high=None, low=None)	todo		
+Lib/asyncio/sslproto.py	904	905	SSLProtocol._get_read_buffer_size	_get_read_buffer_size(self)	todo		
+Lib/asyncio/sslproto.py	909	914	SSLProtocol.pause_writing	pause_writing(self)	todo		
+Lib/asyncio/sslproto.py	916	922	SSLProtocol.resume_writing	resume_writing(self)	todo		
+Lib/asyncio/sslproto.py	924	937	SSLProtocol._fatal_error	_fatal_error(self, exc, message='Fatal error on transport')	todo		

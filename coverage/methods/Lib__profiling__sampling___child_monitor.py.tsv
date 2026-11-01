@@ -1,0 +1,13 @@
+file	line	endline	name	signature	status	entry	note
+Lib/profiling/sampling/_child_monitor.py	28	39	get_child_pids	get_child_pids(pid, recursive=True)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/_child_monitor.py	42	52	is_python_process	is_python_process(pid)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/_child_monitor.py	66	84	ChildProcessMonitor.__init__	__init__(self, pid, cli_args, output_pattern)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/_child_monitor.py	86	93	ChildProcessMonitor.__enter__	__enter__(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/_child_monitor.py	95	115	ChildProcessMonitor.__exit__	__exit__(self, exc_type, exc_val, exc_tb)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/_child_monitor.py	117	134	ChildProcessMonitor._cleanup_process	_cleanup_process(self, proc, terminate_timeout=2.0, kill_timeout=1.0)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/_child_monitor.py	137	139	ChildProcessMonitor.spawned_profilers	spawned_profilers(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/_child_monitor.py	141	168	ChildProcessMonitor.wait_for_profilers	wait_for_profilers(self, timeout=_DEFAULT_WAIT_TIMEOUT_SEC)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/_child_monitor.py	170	202	ChildProcessMonitor._monitor_loop	_monitor_loop(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/_child_monitor.py	204	209	ChildProcessMonitor._cleanup_completed_profilers	_cleanup_completed_profilers(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/_child_monitor.py	211	262	ChildProcessMonitor._spawn_profiler_for_child	_spawn_profiler_for_child(self, child_pid)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/_child_monitor.py	264	279	ChildProcessMonitor._build_child_cli_args	_build_child_cli_args(self, child_pid)	todo		changed-in-3.15: new function

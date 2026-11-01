@@ -31,7 +31,7 @@ likelihood: |
   32-byte block on purpose.
 maybe_intended: |
   Partly. The docs say only "Copy data from src to dest buffer. Can convert between C-style
-  and or Fortran-style buffers" (Doc/c-api/buffer.rst:528), which suggests same-shaped views,
+  and or Fortran-style buffers" (Doc/c-api/buffer.rst:524), which suggests same-shaped views,
   so a shape check is arguably the caller's job, as with memcpy. Writing outside a view after
   reporting success is still not something a caller can diagnose, and the function already
   takes responsibility for the size check. The memcpy path does give different shapes a
@@ -77,8 +77,8 @@ promised_by: |
   abstract.c:690 raises "destination is too small to receive data from source", so the
   function does claim to guard this.
 cause: |
-  Objects/abstract.c:690 compares `len` only. Objects/abstract.c:712-719 sizes and zeroes
-  `indices` from `view_src`, and :727-732 applies that vector to both views through
+  Objects/abstract.c:700 compares `len` only. Objects/abstract.c:722-729 sizes and zeroes
+  `indices` from `view_src`, and :737-742 applies that vector to both views through
   `PyBuffer_GetPointer` (abstract.c:534), which trusts `view->ndim` and does not bounds-check.
 possible_fix: |
   Outside the memcpy path, either raise BufferError unless ndim and shape match, or walk

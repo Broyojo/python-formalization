@@ -39,7 +39,7 @@ observed: |
 promised_by: |
   Nothing explicit: the C twin.
 cause: |
-  Lib/functools.py:549 uses set membership on the type; Modules/_functoolsmodule.c:1140-1199 uses exact type checks.
+  Lib/functools.py:551 uses set membership on the type; Modules/_functoolsmodule.c:1236-1295 uses exact type checks.
 possible_fix: |
   Compare the type with str and int by identity.
 duplicates:

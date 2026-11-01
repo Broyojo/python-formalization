@@ -1,0 +1,9 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testlimitedcapi/build.c	6	10	return_string	return_string(const char *str)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/build.c	15	18	py_getversion	py_getversion(PyObject *Py_UNUSED(module), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/build.c	23	26	py_getplatform	py_getplatform(PyObject *Py_UNUSED(module), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/build.c	31	34	py_getcopyright	py_getcopyright(PyObject *Py_UNUSED(module), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/build.c	39	42	py_getcompiler	py_getcompiler(PyObject *Py_UNUSED(module), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/build.c	47	50	py_getbuildinfo	py_getbuildinfo(PyObject *Py_UNUSED(module), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/build.c	55	61	_py_getbuiltwithassert	_py_getbuiltwithassert(PyObject *Py_UNUSED(module), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/build.c	75	78	_PyTestLimitedCAPI_Init_Build	_PyTestLimitedCAPI_Init_Build(PyObject *m)	excluded		test-support: only for CPython's own tests

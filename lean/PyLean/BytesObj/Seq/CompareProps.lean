@@ -1,7 +1,7 @@
 import PyLean.BytesObj.Seq.SearchProps
 
 /-!
-`list_richcompare_impl` against `tuple_richcompare`. The note at tupleobject.c:675-680
+`list_richcompare_impl` against `tuple_richcompare`. The note at tupleobject.c:753-758
 says lists have an early out for `==` and `!=` on different lengths that tuples
 lack. `CompareAgree` says that this is the only difference, for every comparison,
 including one that raises (where the early out shows: `[x] == [x, y]` never calls
@@ -82,8 +82,8 @@ theorem cmpLoop_pure (E : ElemOps α ρ) (v w : List α) (f i : Nat)
 /-- For every element type, every comparison (which may raise or return a non-bool),
 every operator and all lists, when the comparison leaves the lists alone: a list
 comparison is the tuple comparison, except for the early out on `==` and `!=` when
-the lengths differ. That is the difference the note at tupleobject.c:675-680 states,
-and it is the only one. The explicit identity skip of listobject.c:3419 changes
+the lengths differ. That is the difference the note at tupleobject.c:753-758 states,
+and it is the only one. The explicit identity skip of listobject.c:3482 changes
 nothing, since `PyObject_RichCompareBool` has the same shortcut. -/
 def CompareAgree : Prop :=
   ∀ (α ρ : Type) (E : ElemOps α ρ) (op : CmpOp) (v w : List α) (fuel : Nat),

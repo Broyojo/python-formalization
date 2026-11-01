@@ -1,6 +1,10 @@
 file	line	endline	name	signature	status	entry	note
-Python/pystrhex.c	7	143	_Py_strhex_impl	static PyObject *_Py_strhex_impl(const char* argbuf, const Py_ssize_t arglen, PyObject* sep, int bytes_per_sep_group, const int return_bytes)	todo		
-Python/pystrhex.c	145	148	_Py_strhex	PyObject * _Py_strhex(const char* argbuf, const Py_ssize_t arglen)	todo		
-Python/pystrhex.c	152	155	_Py_strhex_bytes	PyObject* _Py_strhex_bytes(const char* argbuf, const Py_ssize_t arglen)	todo		
-Python/pystrhex.c	159	163	_Py_strhex_with_sep	PyObject* _Py_strhex_with_sep(const char* argbuf, const Py_ssize_t arglen, PyObject* sep, const int bytes_per_group)	todo		
-Python/pystrhex.c	167	171	_Py_strhex_bytes_with_sep	PyObject* _Py_strhex_bytes_with_sep(const char* argbuf, const Py_ssize_t arglen, PyObject* sep, const int bytes_per_group)	todo		
+Python/pystrhex.c	10	22	_Py_hexlify_scalar	_Py_hexlify_scalar(const unsigned char *src, Py_UCS1 *dst, Py_ssize_t len)	todo		changed-in-3.15: new function
+Python/pystrhex.c	51	54	v16u8_splat	v16u8_splat(unsigned char x)	todo		changed-in-3.15: new function
+Python/pystrhex.c	57	60	v16s8_splat	v16s8_splat(signed char x)	todo		changed-in-3.15: new function
+Python/pystrhex.c	65	111	_Py_hexlify_simd	_Py_hexlify_simd(const unsigned char *src, Py_UCS1 *dst, Py_ssize_t len)	todo		changed-in-3.15: new function
+Python/pystrhex.c	116	254	_Py_strhex_impl	_Py_strhex_impl(const char* argbuf, Py_ssize_t arglen, PyObject* sep, Py_ssize_t bytes_per_sep_group, int return_bytes)	todo		changed-in-3.15:
+Python/pystrhex.c	256	259	_Py_strhex	PyObject * _Py_strhex(const char* argbuf, Py_ssize_t arglen)	todo		changed-in-3.15:
+Python/pystrhex.c	263	266	_Py_strhex_bytes	PyObject* _Py_strhex_bytes(const char* argbuf, Py_ssize_t arglen)	todo		changed-in-3.15:
+Python/pystrhex.c	270	274	_Py_strhex_with_sep	PyObject* _Py_strhex_with_sep(const char* argbuf, Py_ssize_t arglen, PyObject* sep, Py_ssize_t bytes_per_group)	todo		changed-in-3.15:
+Python/pystrhex.c	278	282	_Py_strhex_bytes_with_sep	PyObject* _Py_strhex_bytes_with_sep(const char* argbuf, Py_ssize_t arglen, PyObject* sep, Py_ssize_t bytes_per_group)	todo		changed-in-3.15:

@@ -8,9 +8,9 @@ functions: ["super_descr_get", "supercheck"]
 summary: |
   `super` keeps its fields NULL until `super_init` runs, and `__new__` can be called on its
   own. `super_getattro` and `super_repr` tolerate the NULL type, but `super_descr_get` does
-  not: when `su->obj` is NULL it calls `supercheck(su->type, obj)` (typeobject.c:12049).
+  not: when `su->obj` is NULL it calls `supercheck(su->type, obj)` (typeobject.c:12902).
   `PyType_IsSubtype(x, NULL)` answers no without dereferencing, so `supercheck` falls through
-  to its error message, which reads `type->tp_name` (:12015).
+  to its error message, which reads `type->tp_name` (:12868).
 
       s = super.__new__(super)
       s.__get__(1)          # segfault
@@ -21,7 +21,7 @@ summary: |
           s = super.__new__(super)
       A().s                 # segfault
 
-  A subclass of `super` takes the other branch at :12042 and gets a clean
+  A subclass of `super` takes the other branch at :12895 and gets a clean
   `RuntimeError: super(): no arguments`.
 likelihood: |
   Low. It takes `__new__` without `__init__` on `super` itself, and then binding the object.
@@ -48,10 +48,10 @@ observed: |
 promised_by: |
   Undisputed invariant: pure Python must not crash the interpreter.
 cause: |
-  Objects/typeobject.c:12038 tests `su->obj` but not `su->type`; :12049 passes the NULL on;
-  :12015 dereferences it. :12058 would also `Py_NewRef(su->type)` if control got that far.
+  Objects/typeobject.c:12891 tests `su->obj` but not `su->type`; :12902 passes the NULL on;
+  :12868 dereferences it. :12911 would also `Py_NewRef(su->type)` if control got that far.
 possible_fix: |
-  Treat a NULL `su->type` like an already-bound object at :12038 and return `self`, or raise
+  Treat a NULL `su->type` like an already-bound object at :12891 and return `self`, or raise
   TypeError. Open PR #155379 addresses the dereference.
 duplicates:
   issues:

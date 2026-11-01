@@ -41,8 +41,8 @@ tested: "REPRODUCED on python3 3.14.7 and on main (3.16.0a1+dev) by scripts/chec
 promised_by: |
   Invariant: no hang. calc_number_widths and the format with no separator handle the same width at once.
 cause: |
-  Objects/unicodeobject.c:9852-9879, the `while` loop of _PyUnicode_InsertThousandsGrouping, called
-  with writer == NULL from Python/formatter_unicode.c:617-620 with n_min_width near the width.
+  Objects/unicodeobject.c@3.14.7:9852-9879, the `while` loop of _PyUnicode_InsertThousandsGrouping, called
+  with writer == NULL from Python/formatter_unicode.c@3.14.7:617-620 with n_min_width near the width.
 possible_fix: |
   Check the padded size against PY_SSIZE_T_MAX, or compute the count in closed form when `grouping`
   repeats, before entering the loop.

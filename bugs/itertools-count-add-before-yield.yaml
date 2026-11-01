@@ -42,10 +42,10 @@ observed: |
   python3 3.14.7 (Linux build pod): OverflowError: int too large to convert to float. REPRODUCED.
   main (python.exe 3.16.0a1+dev ef1fce0): identical. REPRODUCED.
 promised_by: |
-  Doc/library/itertools.rst:320-326 ("Roughly equivalent to") and the docstring at
-  Modules/itertoolsmodule.c:3520-3525, which says "Equivalent to", without "roughly".
+  Doc/library/itertools.rst:325-331 ("Roughly equivalent to") and the docstring at
+  Modules/itertoolsmodule.c:3511-3516, which says "Equivalent to", without "roughly".
 cause: |
-  Modules/itertoolsmodule.c:3643-3647: stepped_up = PyNumber_Add(long_cnt, lz->long_step), and
+  Modules/itertoolsmodule.c@3.14.7:3643-3647: stepped_up = PyNumber_Add(long_cnt, lz->long_step), and
   return NULL on failure, before long_cnt is returned.
 possible_fix: |
   Say "Roughly equivalent to" in the docstring, or nothing. Computing the sum lazily would change

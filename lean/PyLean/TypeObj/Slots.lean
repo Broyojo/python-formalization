@@ -1,9 +1,9 @@
 import PyLean.TypeObj.Model
 
 /-!
-`slotdefs` and slot maintenance: `Objects/typeobject.c:10969-11508`.
+`slotdefs` and slot maintenance: `Objects/typeobject.c:11684-12358`.
 
-Omitted from `slotdefs`: the four `tp_getattr`/`tp_setattr` lines (`:10970-10973`). Those
+Omitted from `slotdefs`: the four `tp_getattr`/`tp_setattr` lines (`:11685-11688`). Those
 slots are NULL in every type this model has, so `resolve_slotdups` skips them and
 `update_one_slot` leaves them NULL.
 -/
@@ -13,7 +13,7 @@ namespace PyLean.TypeObj
 private def d (n : Name) (s : Slot) (g : Option SlotFn) (wr : Option WrapKind) : SlotDef :=
   { name := n, slot := s, generic := g, wrapper := wr }
 
-/-- `slotdefs`, `Objects/typeobject.c:10969-11166`, in table order. -/
+/-- `slotdefs`, `Objects/typeobject.c:11684-11881`, in table order. -/
 def slotdefs : List SlotDef := [
   d "__repr__" .tp_repr (some .generic) (some .unary),
   d "__hash__" .tp_hash (some .generic) (some .hash),
@@ -117,7 +117,7 @@ def setSlot (slots : List (Slot × SlotFn)) (s : Slot) (v : Option SlotFn) :
 /-- `slotptr(type, offset) != NULL`: the struct holding `s` exists. -/
 def slotExists (w : World) (t : Addr) (s : Slot) : Bool := hasGroup w t s.group
 
-/-- `resolve_slotdups`, `Objects/typeobject.c:11213`: the unique filled slot among the
+/-- `resolve_slotdups`, `Objects/typeobject.c@3.14.7:11213`: the unique filled slot among the
 slotdefs named `n`, if exactly one is filled. -/
 def resolveSlotdups (w : World) (t : Addr) (n : Name) : Option Slot :=
   let filled := (slotdefs.filter (·.name == n)).filter fun p =>
@@ -133,8 +133,8 @@ structure UpdState where
   useGeneric : Bool := false
   deriving Inhabited
 
-/-- One iteration of the loop in `update_one_slot`, `Objects/typeobject.c:11336-11415`.
-The `*ptr == ml_meth` test at `:11401` holds for the `METH_COEXIST` methods
+/-- One iteration of the loop in `update_one_slot`, `Objects/typeobject.c:12038-12138`.
+The `*ptr == ml_meth` test at `:12122` holds for the `METH_COEXIST` methods
 `list.__getitem__` and `dict.__getitem__`, whose `ml_meth` is `mp_subscript`. -/
 def updateOneSlotStep (w : World) (t : Addr) (ptr : Slot) (st : UpdState) (p : SlotDef) :
     UpdState :=
@@ -174,7 +174,7 @@ def updateOneSlotStep (w : World) (t : Addr) (ptr : Slot) (st : UpdState) (p : S
         else { st with useGeneric := true, generic := p.generic }
       | _ => { st with useGeneric := true, generic := p.generic }
 
-/-- `update_one_slot`, `Objects/typeobject.c:11308`, for the slot `ptr`. -/
+/-- `update_one_slot`, `Objects/typeobject.c@3.14.7:11308`, for the slot `ptr`. -/
 def updateOneSlotValue (w : World) (t : Addr) (ptr : Slot) : Option SlotFn :=
   let st := (slotdefs.filter (·.slot == ptr)).foldl (updateOneSlotStep w t ptr) {}
   if st.specific.isSome && !st.useGeneric then st.specific else st.generic
@@ -192,15 +192,15 @@ def updateOneSlot (w : World) (t : Addr) (s : Slot) : World :=
 def allSlots : List Slot :=
   (slotdefs.map (·.slot)).eraseDups
 
-/-- `fixup_slot_dispatchers`, `Objects/typeobject.c:11478`. -/
+/-- `fixup_slot_dispatchers`, `Objects/typeobject.c:12232`. -/
 def fixupSlotDispatchers (w : World) (t : Addr) : World :=
   allSlots.foldl (fun w s => updateOneSlot w t s) w
 
 /-- The slots affected by a change to attribute `n`: the first half of `update_slot`
-(`Objects/typeobject.c:11450-11467`). -/
+(`Objects/typeobject.c:12199-12216`). -/
 def slotsNamed (n : Name) : List Slot := ((slotdefs.filter (·.name == n)).map (·.slot)).eraseDups
 
-/-- `update_subclasses` / `recurse_down_subclasses`, `Objects/typeobject.c:11608-11659`.
+/-- `update_subclasses` / `recurse_down_subclasses`, `Objects/typeobject.c:12458-12509`.
 Fuel bounds the subclass depth. -/
 def updateSubclasses (attr : Name) (slots : List Slot) : Nat → World → Addr → World
   | 0, w, _ => w
@@ -210,24 +210,24 @@ def updateSubclasses (attr : Name) (slots : List Slot) : Nat → World → Addr 
       if NameDict.contains (tdata w sub).dict attr then w
       else updateSubclasses attr slots fuel w sub) w
 
-/-- `update_slot`, `Objects/typeobject.c:11439`. -/
+/-- `update_slot`, `Objects/typeobject.c@3.14.7:11439`. -/
 def updateSlot (w : World) (t : Addr) (n : Name) : World :=
   match slotsNamed n with
   | [] => w
   | slots => updateSubclasses n slots w.heap.size w t
 
-/-- `is_dunder_name`, `Objects/typeobject.c:5772`. Names are compared as characters: the
+/-- `is_dunder_name`, `Objects/typeobject.c:6248`. Names are compared as characters: the
 `PyUnicode_1BYTE_KIND` test matters only for non-Latin-1 names, which no special method
 has. -/
 def isDunderName (n : Name) : Bool :=
   let cs := n.toList
   cs.length > 4 && cs.take 2 == ['_', '_'] && cs.drop (cs.length - 2) == ['_', '_']
 
-/-- `update_all_slots`, `Objects/typeobject.c:11494`. -/
+/-- `update_all_slots`, `Objects/typeobject.c:12277`. -/
 def updateAllSlots (w : World) (t : Addr) : World :=
   slotdefs.foldl (fun w p => updateSlot w t p.name) w
 
-/-- `add_operators`, `Objects/typeobject.c:11712`, for type `t`: each filled slot gets a
+/-- `add_operators`, `Objects/typeobject.c:12562`, for type `t`: each filled slot gets a
 wrapper descriptor in `tp_dict` unless the name is already there. The `slot_inherited`
 test applies to static builtins, which `Builtins.lean` prepares separately. -/
 def addOperators (t : Addr) : M Unit := do

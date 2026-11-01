@@ -53,11 +53,11 @@ observed: |
   dict_items gives False, False, False and returns from the operators. REPRODUCED.
   main (python.exe 3.16.0a1+dev): same. REPRODUCED.
 promised_by: |
-  Nothing explicit. Doc/library/collections.abc.rst:169 lists ItemsView with __contains__ among its
+  Nothing explicit. Doc/library/collections.abc.rst:166 lists ItemsView with __contains__ among its
   mixins, without saying how it treats non-pairs. The expectation comes from dict_items.
 cause: |
-  Lib/_collections_abc.py:873 `key, value = item`, before the try at :874. Compare
-  Objects/dictobject.c:6595-6612, whose check at :6602 returns 0 for a non-2-tuple.
+  Lib/_collections_abc.py:874 `key, value = item`, before the try at :875. Compare
+  Objects/dictobject.c:7039-7056, whose check at :7046 returns 0 for a non-2-tuple.
 possible_fix: |
   if not (isinstance(item, tuple) and len(item) == 2):
       return False

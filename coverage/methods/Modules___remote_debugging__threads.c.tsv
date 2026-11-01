@@ -1,0 +1,19 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_remote_debugging/threads.c	162	278	get_thread_status	get_thread_status(RemoteUnwinderObject *unwinder, uint64_t tid, uint64_t pthread_id) {	todo		changed-in-3.15: new function
+Modules/_remote_debugging/threads.c	297	329	read_thread_state_and_maybe_frame	read_thread_state_and_maybe_frame( RemoteUnwinderObject *unwinder, uintptr_t tstate_addr, size_t tstate_size, char *tstate_buffer, uintptr_t predicted_frame_addr, char *frame_buffer, int *frame_read)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/threads.c	644	648	_Py_RemoteDebug_InitThreadsState	_Py_RemoteDebug_InitThreadsState(RemoteUnwinderObject *unwinder, _Py_RemoteDebug_ThreadsState *st)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/threads.c	651	670	_Py_RemoteDebug_StopAllThreads	_Py_RemoteDebug_StopAllThreads(RemoteUnwinderObject *unwinder, _Py_RemoteDebug_ThreadsState *st)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/threads.c	673	681	_Py_RemoteDebug_ResumeAllThreads	_Py_RemoteDebug_ResumeAllThreads(RemoteUnwinderObject *unwinder, _Py_RemoteDebug_ThreadsState *st)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/threads.c	686	690	_Py_RemoteDebug_InitThreadsState	_Py_RemoteDebug_InitThreadsState(RemoteUnwinderObject *unwinder, _Py_RemoteDebug_ThreadsState *st)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/threads.c	693	768	read_thread_ids	read_thread_ids(RemoteUnwinderObject *unwinder, _Py_RemoteDebug_ThreadsState *st)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/threads.c	771	776	detach_threads	detach_threads(_Py_RemoteDebug_ThreadsState *st, size_t up_to)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/threads.c	779	807	seize_thread	seize_thread(pid_t tid, int *err)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/threads.c	810	873	_Py_RemoteDebug_StopAllThreads	_Py_RemoteDebug_StopAllThreads(RemoteUnwinderObject *unwinder, _Py_RemoteDebug_ThreadsState *st)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/threads.c	876	884	_Py_RemoteDebug_ResumeAllThreads	_Py_RemoteDebug_ResumeAllThreads(RemoteUnwinderObject *unwinder, _Py_RemoteDebug_ThreadsState *st)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/threads.c	889	969	wait_for_threads_to_stop	wait_for_threads_to_stop(RemoteUnwinderObject *unwinder)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/threads.c	972	976	_Py_RemoteDebug_InitThreadsState	_Py_RemoteDebug_InitThreadsState(RemoteUnwinderObject *unwinder, _Py_RemoteDebug_ThreadsState *st)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/threads.c	979	1019	_Py_RemoteDebug_StopAllThreads	_Py_RemoteDebug_StopAllThreads(RemoteUnwinderObject *unwinder, _Py_RemoteDebug_ThreadsState *st)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/threads.c	1022	1044	_Py_RemoteDebug_ResumeAllThreads	_Py_RemoteDebug_ResumeAllThreads(RemoteUnwinderObject *unwinder, _Py_RemoteDebug_ThreadsState *st)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/threads.c	1049	1053	_Py_RemoteDebug_InitThreadsState	_Py_RemoteDebug_InitThreadsState(RemoteUnwinderObject *unwinder, _Py_RemoteDebug_ThreadsState *st)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/threads.c	1056	1061	_Py_RemoteDebug_StopAllThreads	_Py_RemoteDebug_StopAllThreads(RemoteUnwinderObject *unwinder, _Py_RemoteDebug_ThreadsState *st)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/threads.c	1064	1068	_Py_RemoteDebug_ResumeAllThreads	_Py_RemoteDebug_ResumeAllThreads(RemoteUnwinderObject *unwinder, _Py_RemoteDebug_ThreadsState *st)	todo		changed-in-3.15: new function

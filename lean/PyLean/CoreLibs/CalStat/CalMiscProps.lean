@@ -567,7 +567,7 @@ theorem moduleGetattrSpec_proven : ModuleGetattrSpec := by
 
 /-- `_localized_month` and `_localized_day` behave as read-only lists: lengths 13 and 7, the
 empty string at month 0, negative indices count from the end, an index out of range is
-`IndexError`, and `[:]` gives the whole table. January 1, 2001 is a Monday (calendar.py:117),
+`IndexError`, and `[:]` gives the whole table. January 1, 2001 is a Monday (calendar.py:118),
 so `date(2001, 1, i+1)` names weekday `i`. -/
 def LocalizedTables : Prop :=
   (localizedMonthList cNames.monthName).length = localizedMonthLen ∧

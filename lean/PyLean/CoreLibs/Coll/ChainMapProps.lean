@@ -368,7 +368,7 @@ theorem chainMapUnionFlat_proven : ChainMapUnionFlat := by
 
 /-! ### Construction, `new_child`, `parents`, `fromkeys` -/
 
-/-- `__init__` establishes "always at least one map" (:1017), and `new_child` and
+/-- `__init__` establishes "always at least one map" (:1021), and `new_child` and
 `parents` are inverse on the map list: `new_child(m)` puts `m` (updated from the
 keywords, or the keywords alone when `m` is `None`) in front and `.parents` takes
 it off again, an empty `maps` coming back as the `[{}]` of `__init__`.

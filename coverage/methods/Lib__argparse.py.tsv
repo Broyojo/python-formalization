@@ -1,139 +1,146 @@
 file	line	endline	name	signature	status	entry	note
-Lib/argparse.py	118	131	_AttributeHolder.__repr__	__repr__(self)	todo		
-Lib/argparse.py	133	134	_AttributeHolder._get_kwargs	_get_kwargs(self)	todo		
-Lib/argparse.py	136	137	_AttributeHolder._get_args	_get_args(self)	todo		
-Lib/argparse.py	140	149	_copy_items	_copy_items(items)	todo		
-Lib/argparse.py	152	153	_identity	_identity(value)	todo		
-Lib/argparse.py	168	197	HelpFormatter.__init__	__init__(self, prog, indent_increment=2, max_help_position=24, width=None, color=True)	todo		
-Lib/argparse.py	199	207	HelpFormatter._set_color	_set_color(self, color)	todo		
-Lib/argparse.py	213	215	HelpFormatter._indent	_indent(self)	todo		
-Lib/argparse.py	217	220	HelpFormatter._dedent	_dedent(self)	todo		
-Lib/argparse.py	224	228	HelpFormatter._Section.__init__	__init__(self, formatter, parent, heading=None)	todo		
-Lib/argparse.py	230	256	HelpFormatter._Section.format_help	format_help(self)	todo		
-Lib/argparse.py	258	259	HelpFormatter._add_item	_add_item(self, func, args)	todo		
-Lib/argparse.py	265	269	HelpFormatter.start_section	start_section(self, heading)	todo		
-Lib/argparse.py	271	273	HelpFormatter.end_section	end_section(self)	todo		
-Lib/argparse.py	275	277	HelpFormatter.add_text	add_text(self, text)	todo		
-Lib/argparse.py	279	282	HelpFormatter.add_usage	add_usage(self, usage, actions, groups, prefix=None)	todo		
-Lib/argparse.py	284	299	HelpFormatter.add_argument	add_argument(self, action)	todo		
-Lib/argparse.py	301	303	HelpFormatter.add_arguments	add_arguments(self, actions)	todo		
-Lib/argparse.py	309	314	HelpFormatter.format_help	format_help(self)	todo		
-Lib/argparse.py	316	319	HelpFormatter._join_parts	_join_parts(self, part_strings)	todo		
-Lib/argparse.py	321	409	HelpFormatter._format_usage	_format_usage(self, usage, actions, groups, prefix)	todo		
-Lib/argparse.py	411	412	HelpFormatter._is_long_option	_is_long_option(self, string)	todo		
-Lib/argparse.py	414	518	HelpFormatter._get_actions_usage_parts	_get_actions_usage_parts(self, actions, groups)	todo		
-Lib/argparse.py	520	525	HelpFormatter._format_text	_format_text(self, text)	todo		
-Lib/argparse.py	527	580	HelpFormatter._format_action	_format_action(self, action)	todo		
-Lib/argparse.py	582	618	HelpFormatter._format_action_invocation	_format_action_invocation(self, action)	todo		
-Lib/argparse.py	620	633	HelpFormatter._metavar_formatter	_metavar_formatter(self, action, default_metavar)	todo		
-Lib/argparse.py	635	661	HelpFormatter._format_args	_format_args(self, action, default_metavar)	todo		
-Lib/argparse.py	663	676	HelpFormatter._expand_help	_expand_help(self, action)	todo		
-Lib/argparse.py	678	686	HelpFormatter._iter_indented_subactions	_iter_indented_subactions(self, action)	todo		
-Lib/argparse.py	688	693	HelpFormatter._split_lines	_split_lines(self, text, width)	todo		
-Lib/argparse.py	695	700	HelpFormatter._fill_text	_fill_text(self, text, width, indent)	todo		
-Lib/argparse.py	702	703	HelpFormatter._get_help_string	_get_help_string(self, action)	todo		
-Lib/argparse.py	705	706	HelpFormatter._get_default_metavar_for_optional	_get_default_metavar_for_optional(self, action)	todo		
-Lib/argparse.py	708	709	HelpFormatter._get_default_metavar_for_positional	_get_default_metavar_for_positional(self, action)	todo		
-Lib/argparse.py	719	720	RawDescriptionHelpFormatter._fill_text	_fill_text(self, text, width, indent)	todo		
-Lib/argparse.py	730	731	RawTextHelpFormatter._split_lines	_split_lines(self, text, width)	todo		
-Lib/argparse.py	741	754	ArgumentDefaultsHelpFormatter._get_help_string	_get_help_string(self, action)	todo		
-Lib/argparse.py	766	767	MetavarTypeHelpFormatter._get_default_metavar_for_optional	_get_default_metavar_for_optional(self, action)	todo		
-Lib/argparse.py	769	770	MetavarTypeHelpFormatter._get_default_metavar_for_positional	_get_default_metavar_for_positional(self, action)	todo		
-Lib/argparse.py	777	797	_get_action_name	_get_action_name(argument)	todo		
-Lib/argparse.py	807	809	ArgumentError.__init__	__init__(self, argument, message)	todo		
-Lib/argparse.py	811	817	ArgumentError.__str__	__str__(self)	todo		
-Lib/argparse.py	880	902	Action.__init__	__init__(self, option_strings, dest, nargs=None, const=None, default=None, type=None, choices=None, required=False, help=None, metavar=None, deprecated=False)	todo		
-Lib/argparse.py	904	918	Action._get_kwargs	_get_kwargs(self)	todo		
-Lib/argparse.py	920	921	Action.format_usage	format_usage(self)	todo		
-Lib/argparse.py	923	924	Action.__call__	__call__(self, parser, namespace, values, option_string=None)	todo		
-Lib/argparse.py	928	954	BooleanOptionalAction.__init__	__init__(self, option_strings, dest, default=None, required=False, help=None, deprecated=False)	todo		
-Lib/argparse.py	957	959	BooleanOptionalAction.__call__	__call__(self, parser, namespace, values, option_string=None)	todo		
-Lib/argparse.py	961	962	BooleanOptionalAction.format_usage	format_usage(self)	todo		
-Lib/argparse.py	967	996	_StoreAction.__init__	__init__(self, option_strings, dest, nargs=None, const=None, default=None, type=None, choices=None, required=False, help=None, metavar=None, deprecated=False)	todo		
-Lib/argparse.py	998	999	_StoreAction.__call__	__call__(self, parser, namespace, values, option_string=None)	todo		
-Lib/argparse.py	1004	1021	_StoreConstAction.__init__	__init__(self, option_strings, dest, const=None, default=None, required=False, help=None, metavar=None, deprecated=False)	todo		
-Lib/argparse.py	1023	1024	_StoreConstAction.__call__	__call__(self, parser, namespace, values, option_string=None)	todo		
-Lib/argparse.py	1029	1043	_StoreTrueAction.__init__	__init__(self, option_strings, dest, default=False, required=False, help=None, deprecated=False)	todo		
-Lib/argparse.py	1048	1062	_StoreFalseAction.__init__	__init__(self, option_strings, dest, default=True, required=False, help=None, deprecated=False)	todo		
-Lib/argparse.py	1067	1096	_AppendAction.__init__	__init__(self, option_strings, dest, nargs=None, const=None, default=None, type=None, choices=None, required=False, help=None, metavar=None, deprecated=False)	todo		
-Lib/argparse.py	1098	1102	_AppendAction.__call__	__call__(self, parser, namespace, values, option_string=None)	todo		
-Lib/argparse.py	1107	1125	_AppendConstAction.__init__	__init__(self, option_strings, dest, const=None, default=None, required=False, help=None, metavar=None, deprecated=False)	todo		
-Lib/argparse.py	1127	1131	_AppendConstAction.__call__	__call__(self, parser, namespace, values, option_string=None)	todo		
-Lib/argparse.py	1136	1150	_CountAction.__init__	__init__(self, option_strings, dest, default=None, required=False, help=None, deprecated=False)	todo		
-Lib/argparse.py	1152	1156	_CountAction.__call__	__call__(self, parser, namespace, values, option_string=None)	todo		
-Lib/argparse.py	1161	1173	_HelpAction.__init__	__init__(self, option_strings, dest=SUPPRESS, default=SUPPRESS, help=None, deprecated=False)	todo		
-Lib/argparse.py	1175	1177	_HelpAction.__call__	__call__(self, parser, namespace, values, option_string=None)	todo		
-Lib/argparse.py	1182	1197	_VersionAction.__init__	__init__(self, option_strings, version=None, dest=SUPPRESS, default=SUPPRESS, help=None, deprecated=False)	todo		
-Lib/argparse.py	1199	1206	_VersionAction.__call__	__call__(self, parser, namespace, values, option_string=None)	todo		
-Lib/argparse.py	1213	1219	_SubParsersAction._ChoicesPseudoAction.__init__	__init__(self, name, aliases, help)	todo		
-Lib/argparse.py	1221	1244	_SubParsersAction.__init__	__init__(self, option_strings, prog, parser_class, dest=SUPPRESS, required=False, help=None, metavar=None)	todo		
-Lib/argparse.py	1246	1285	_SubParsersAction.add_parser	add_parser(self, name, *, deprecated=False, **kwargs)	todo		
-Lib/argparse.py	1287	1288	_SubParsersAction._get_subactions	_get_subactions(self)	todo		
-Lib/argparse.py	1290	1325	_SubParsersAction.__call__	__call__(self, parser, namespace, values, option_string=None)	todo		
-Lib/argparse.py	1328	1332	_ExtendAction.__call__	__call__(self, parser, namespace, values, option_string=None)	todo		
-Lib/argparse.py	1355	1365	FileType.__init__	__init__(self, mode='r', bufsize=-1, encoding=None, errors=None)	todo		
-Lib/argparse.py	1367	1385	FileType.__call__	__call__(self, string)	todo		
-Lib/argparse.py	1387	1393	FileType.__repr__	__repr__(self)	todo		
-Lib/argparse.py	1406	1408	Namespace.__init__	__init__(self, **kwargs)	todo		
-Lib/argparse.py	1410	1413	Namespace.__eq__	__eq__(self, other)	todo		
-Lib/argparse.py	1415	1416	Namespace.__contains__	__contains__(self, key)	todo		
-Lib/argparse.py	1421	1469	_ActionsContainer.__init__	__init__(self, description, prefix_chars, argument_default, conflict_handler)	todo		
-Lib/argparse.py	1475	1477	_ActionsContainer.register	register(self, registry_name, value, object)	todo		candidates:calstat-statistics-kernels-centred
-Lib/argparse.py	1479	1480	_ActionsContainer._registry_get	_registry_get(self, registry_name, value, default=None)	todo		
-Lib/argparse.py	1486	1493	_ActionsContainer.set_defaults	set_defaults(self, **kwargs)	todo		
-Lib/argparse.py	1495	1499	_ActionsContainer.get_default	get_default(self, dest)	todo		
-Lib/argparse.py	1506	1563	_ActionsContainer.add_argument	add_argument(self, *args, **kwargs)	todo		
-Lib/argparse.py	1565	1568	_ActionsContainer.add_argument_group	add_argument_group(self, *args, **kwargs)	todo		
-Lib/argparse.py	1570	1573	_ActionsContainer.add_mutually_exclusive_group	add_mutually_exclusive_group(self, **kwargs)	todo		
-Lib/argparse.py	1575	1594	_ActionsContainer._add_action	_add_action(self, action)	todo		
-Lib/argparse.py	1596	1597	_ActionsContainer._remove_action	_remove_action(self, action)	todo		
-Lib/argparse.py	1599	1643	_ActionsContainer._add_container_actions	_add_container_actions(self, container)	todo		
-Lib/argparse.py	1645	1660	_ActionsContainer._get_positional_kwargs	_get_positional_kwargs(self, dest, **kwargs)	todo		
-Lib/argparse.py	1662	1692	_ActionsContainer._get_optional_kwargs	_get_optional_kwargs(self, *args, **kwargs)	todo		
-Lib/argparse.py	1694	1696	_ActionsContainer._pop_action_class	_pop_action_class(self, kwargs, default=None)	todo		
-Lib/argparse.py	1698	1705	_ActionsContainer._get_handler	_get_handler(self)	todo		
-Lib/argparse.py	1707	1719	_ActionsContainer._check_conflict	_check_conflict(self, action)	todo		
-Lib/argparse.py	1721	1728	_ActionsContainer._handle_conflict_error	_handle_conflict_error(self, action, conflicting_actions)	todo		
-Lib/argparse.py	1730	1742	_ActionsContainer._handle_conflict_resolve	_handle_conflict_resolve(self, action, conflicting_actions)	todo		
-Lib/argparse.py	1744	1750	_ActionsContainer._check_help	_check_help(self, action)	todo		
-Lib/argparse.py	1755	1783	_ArgumentGroup.__init__	__init__(self, container, title=None, description=None, **kwargs)	todo		
-Lib/argparse.py	1785	1788	_ArgumentGroup._add_action	_add_action(self, action)	todo		
-Lib/argparse.py	1790	1792	_ArgumentGroup._remove_action	_remove_action(self, action)	todo		
-Lib/argparse.py	1794	1795	_ArgumentGroup.add_argument_group	add_argument_group(self, *args, **kwargs)	todo		
-Lib/argparse.py	1799	1802	_MutuallyExclusiveGroup.__init__	__init__(self, container, required=False)	todo		
-Lib/argparse.py	1804	1810	_MutuallyExclusiveGroup._add_action	_add_action(self, action)	todo		
-Lib/argparse.py	1812	1814	_MutuallyExclusiveGroup._remove_action	_remove_action(self, action)	todo		
-Lib/argparse.py	1816	1817	_MutuallyExclusiveGroup.add_mutually_exclusive_group	add_mutually_exclusive_group(self, **kwargs)	todo		
-Lib/argparse.py	1819	1841	_prog_name	_prog_name(prog=None)	todo		
-Lib/argparse.py	1869	1930	ArgumentParser.__init__	__init__(self, prog=None, usage=None, description=None, epilog=None, parents=[], formatter_class=HelpFormatter, prefix_chars='-', fromfile_prefix_chars=None, argument_default=None, conflict_handler='error', add_help=True, allow_abbrev=True, exit_on_error=True, *, suggest_on_error=False, color=True)	todo		
-Lib/argparse.py	1936	1945	ArgumentParser._get_kwargs	_get_kwargs(self)	todo		
-Lib/argparse.py	1951	1984	ArgumentParser.add_subparsers	add_subparsers(self, **kwargs)	todo		
-Lib/argparse.py	1986	1991	ArgumentParser._add_action	_add_action(self, action)	todo		
-Lib/argparse.py	1993	1996	ArgumentParser._get_optional_actions	_get_optional_actions(self)	todo		
-Lib/argparse.py	1998	2001	ArgumentParser._get_positional_actions	_get_positional_actions(self)	todo		
-Lib/argparse.py	2007	2015	ArgumentParser.parse_args	parse_args(self, args=None, namespace=None)	todo		
-Lib/argparse.py	2017	2018	ArgumentParser.parse_known_args	parse_known_args(self, args=None, namespace=None)	todo		
-Lib/argparse.py	2020	2056	ArgumentParser._parse_known_args2	_parse_known_args2(self, args, namespace, intermixed)	todo		
-Lib/argparse.py	2058	2363	ArgumentParser._parse_known_args	_parse_known_args(self, arg_strings, namespace, intermixed)	todo		
-Lib/argparse.py	2365	2390	ArgumentParser._read_args_from_files	_read_args_from_files(self, arg_strings)	todo		
-Lib/argparse.py	2392	2393	ArgumentParser.convert_arg_line_to_args	convert_arg_line_to_args(self, arg_line)	todo		
-Lib/argparse.py	2395	2415	ArgumentParser._match_argument	_match_argument(self, action, arg_strings_pattern)	todo		
-Lib/argparse.py	2417	2432	ArgumentParser._match_arguments_partial	_match_arguments_partial(self, actions, arg_strings_pattern)	todo		
-Lib/argparse.py	2434	2478	ArgumentParser._parse_optional	_parse_optional(self, arg_string)	todo		
-Lib/argparse.py	2480	2522	ArgumentParser._get_option_tuples	_get_option_tuples(self, option_string)	todo		
-Lib/argparse.py	2524	2564	ArgumentParser._get_nargs_pattern	_get_nargs_pattern(self, action)	todo		
-Lib/argparse.py	2570	2578	ArgumentParser.parse_intermixed_args	parse_intermixed_args(self, args=None, namespace=None)	todo		
-Lib/argparse.py	2580	2596	ArgumentParser.parse_known_intermixed_args	parse_known_intermixed_args(self, args=None, namespace=None)	todo		
-Lib/argparse.py	2602	2647	ArgumentParser._get_values	_get_values(self, action, arg_strings)	todo		
-Lib/argparse.py	2649	2671	ArgumentParser._get_value	_get_value(self, action, arg_string)	todo		
-Lib/argparse.py	2673	2696	ArgumentParser._check_value	_check_value(self, action, value)	todo		
-Lib/argparse.py	2702	2706	ArgumentParser.format_usage	format_usage(self)	todo		
-Lib/argparse.py	2708	2729	ArgumentParser.format_help	format_help(self)	todo		
-Lib/argparse.py	2731	2734	ArgumentParser._get_formatter	_get_formatter(self)	todo		
-Lib/argparse.py	2736	2741	ArgumentParser._get_validation_formatter	_get_validation_formatter(self)	todo		
-Lib/argparse.py	2747	2750	ArgumentParser.print_usage	print_usage(self, file=None)	todo		
-Lib/argparse.py	2752	2755	ArgumentParser.print_help	print_help(self, file=None)	todo		
-Lib/argparse.py	2757	2763	ArgumentParser._print_message	_print_message(self, message, file=None)	todo		
-Lib/argparse.py	2769	2772	ArgumentParser.exit	exit(self, status=0, message=None)	todo		
-Lib/argparse.py	2774	2785	ArgumentParser.error	error(self, message)	todo		
-Lib/argparse.py	2787	2789	ArgumentParser._warning	_warning(self, message)	todo		
+Lib/argparse.py	119	132	_AttributeHolder.__repr__	__repr__(self)	todo		
+Lib/argparse.py	134	135	_AttributeHolder._get_kwargs	_get_kwargs(self)	todo		
+Lib/argparse.py	137	138	_AttributeHolder._get_args	_get_args(self)	todo		
+Lib/argparse.py	141	150	_copy_items	_copy_items(items)	todo		
+Lib/argparse.py	153	154	_identity	_identity(value)	todo		
+Lib/argparse.py	163	168	_ColorlessTheme.__getattr__	__getattr__(self, name)	todo		changed-in-3.15: new function
+Lib/argparse.py	180	209	HelpFormatter.__init__	__init__(self, prog, indent_increment=2, max_help_position=24, width=None)	todo		changed-in-3.15:
+Lib/argparse.py	211	216	HelpFormatter._set_color	_set_color(self, color, *, file=None)	todo		changed-in-3.15:
+Lib/argparse.py	218	225	HelpFormatter._get_theme_and_decolor	_get_theme_and_decolor(self)	todo		changed-in-3.15: new function
+Lib/argparse.py	228	231	HelpFormatter._theme	_theme(self)	todo		changed-in-3.15: new function
+Lib/argparse.py	234	237	HelpFormatter._decolor	_decolor(self)	todo		changed-in-3.15: new function
+Lib/argparse.py	243	245	HelpFormatter._indent	_indent(self)	todo		
+Lib/argparse.py	247	250	HelpFormatter._dedent	_dedent(self)	todo		
+Lib/argparse.py	254	258	HelpFormatter._Section.__init__	__init__(self, formatter, parent, heading=None)	todo		
+Lib/argparse.py	260	286	HelpFormatter._Section.format_help	format_help(self)	todo		
+Lib/argparse.py	288	289	HelpFormatter._add_item	_add_item(self, func, args)	todo		
+Lib/argparse.py	295	299	HelpFormatter.start_section	start_section(self, heading)	todo		
+Lib/argparse.py	301	303	HelpFormatter.end_section	end_section(self)	todo		
+Lib/argparse.py	305	307	HelpFormatter.add_text	add_text(self, text)	todo		
+Lib/argparse.py	309	312	HelpFormatter.add_usage	add_usage(self, usage, actions, groups, prefix=None)	todo		
+Lib/argparse.py	314	329	HelpFormatter.add_argument	add_argument(self, action)	todo		
+Lib/argparse.py	331	333	HelpFormatter.add_arguments	add_arguments(self, actions)	todo		
+Lib/argparse.py	339	344	HelpFormatter.format_help	format_help(self)	todo		
+Lib/argparse.py	346	349	HelpFormatter._join_parts	_join_parts(self, part_strings)	todo		
+Lib/argparse.py	351	439	HelpFormatter._format_usage	_format_usage(self, usage, actions, groups, prefix)	todo		
+Lib/argparse.py	441	442	HelpFormatter._is_long_option	_is_long_option(self, string)	todo		
+Lib/argparse.py	444	548	HelpFormatter._get_actions_usage_parts	_get_actions_usage_parts(self, actions, groups)	todo		
+Lib/argparse.py	550	557	HelpFormatter._format_text	_format_text(self, text)	todo		changed-in-3.15:
+Lib/argparse.py	559	575	HelpFormatter._apply_text_markup	_apply_text_markup(self, text)	todo		changed-in-3.15: new function
+Lib/argparse.py	577	630	HelpFormatter._format_action	_format_action(self, action)	todo		
+Lib/argparse.py	632	668	HelpFormatter._format_action_invocation	_format_action_invocation(self, action)	todo		
+Lib/argparse.py	670	683	HelpFormatter._metavar_formatter	_metavar_formatter(self, action, default_metavar)	todo		
+Lib/argparse.py	685	711	HelpFormatter._format_args	_format_args(self, action, default_metavar)	todo		
+Lib/argparse.py	713	762	HelpFormatter._expand_help	_expand_help(self, action)	todo		changed-in-3.15:
+Lib/argparse.py	764	772	HelpFormatter._iter_indented_subactions	_iter_indented_subactions(self, action)	todo		
+Lib/argparse.py	774	807	HelpFormatter._split_lines	_split_lines(self, text, width)	todo		changed-in-3.15:
+Lib/argparse.py	809	814	HelpFormatter._fill_text	_fill_text(self, text, width, indent)	todo		
+Lib/argparse.py	816	817	HelpFormatter._get_help_string	_get_help_string(self, action)	todo		
+Lib/argparse.py	819	820	HelpFormatter._get_default_metavar_for_optional	_get_default_metavar_for_optional(self, action)	todo		
+Lib/argparse.py	822	823	HelpFormatter._get_default_metavar_for_positional	_get_default_metavar_for_positional(self, action)	todo		
+Lib/argparse.py	833	834	RawDescriptionHelpFormatter._fill_text	_fill_text(self, text, width, indent)	todo		
+Lib/argparse.py	844	845	RawTextHelpFormatter._split_lines	_split_lines(self, text, width)	todo		
+Lib/argparse.py	855	875	ArgumentDefaultsHelpFormatter._get_help_string	_get_help_string(self, action)	todo		changed-in-3.15:
+Lib/argparse.py	887	888	MetavarTypeHelpFormatter._get_default_metavar_for_optional	_get_default_metavar_for_optional(self, action)	todo		
+Lib/argparse.py	890	891	MetavarTypeHelpFormatter._get_default_metavar_for_positional	_get_default_metavar_for_positional(self, action)	todo		
+Lib/argparse.py	898	918	_get_action_name	_get_action_name(argument)	todo		
+Lib/argparse.py	928	930	ArgumentError.__init__	__init__(self, argument, message)	todo		
+Lib/argparse.py	932	938	ArgumentError.__str__	__str__(self)	todo		
+Lib/argparse.py	1001	1023	Action.__init__	__init__(self, option_strings, dest, nargs=None, const=None, default=None, type=None, choices=None, required=False, help=None, metavar=None, deprecated=False)	todo		
+Lib/argparse.py	1025	1039	Action._get_kwargs	_get_kwargs(self)	todo		
+Lib/argparse.py	1041	1042	Action.format_usage	format_usage(self)	todo		
+Lib/argparse.py	1044	1045	Action.__call__	__call__(self, parser, namespace, values, option_string=None)	todo		
+Lib/argparse.py	1049	1087	BooleanOptionalAction.__init__	__init__(self, option_strings, dest, default=None, required=False, help=None, deprecated=False)	todo		changed-in-3.15:
+Lib/argparse.py	1090	1092	BooleanOptionalAction.__call__	__call__(self, parser, namespace, values, option_string=None)	todo		changed-in-3.15:
+Lib/argparse.py	1094	1095	BooleanOptionalAction.format_usage	format_usage(self)	todo		
+Lib/argparse.py	1100	1129	_StoreAction.__init__	__init__(self, option_strings, dest, nargs=None, const=None, default=None, type=None, choices=None, required=False, help=None, metavar=None, deprecated=False)	todo		
+Lib/argparse.py	1131	1132	_StoreAction.__call__	__call__(self, parser, namespace, values, option_string=None)	todo		
+Lib/argparse.py	1137	1154	_StoreConstAction.__init__	__init__(self, option_strings, dest, const=None, default=None, required=False, help=None, metavar=None, deprecated=False)	todo		
+Lib/argparse.py	1156	1157	_StoreConstAction.__call__	__call__(self, parser, namespace, values, option_string=None)	todo		
+Lib/argparse.py	1162	1176	_StoreTrueAction.__init__	__init__(self, option_strings, dest, default=False, required=False, help=None, deprecated=False)	todo		
+Lib/argparse.py	1181	1195	_StoreFalseAction.__init__	__init__(self, option_strings, dest, default=True, required=False, help=None, deprecated=False)	todo		
+Lib/argparse.py	1200	1229	_AppendAction.__init__	__init__(self, option_strings, dest, nargs=None, const=None, default=None, type=None, choices=None, required=False, help=None, metavar=None, deprecated=False)	todo		
+Lib/argparse.py	1231	1235	_AppendAction.__call__	__call__(self, parser, namespace, values, option_string=None)	todo		
+Lib/argparse.py	1240	1258	_AppendConstAction.__init__	__init__(self, option_strings, dest, const=None, default=None, required=False, help=None, metavar=None, deprecated=False)	todo		
+Lib/argparse.py	1260	1264	_AppendConstAction.__call__	__call__(self, parser, namespace, values, option_string=None)	todo		
+Lib/argparse.py	1269	1283	_CountAction.__init__	__init__(self, option_strings, dest, default=None, required=False, help=None, deprecated=False)	todo		
+Lib/argparse.py	1285	1289	_CountAction.__call__	__call__(self, parser, namespace, values, option_string=None)	todo		
+Lib/argparse.py	1294	1306	_HelpAction.__init__	__init__(self, option_strings, dest=SUPPRESS, default=SUPPRESS, help=None, deprecated=False)	todo		
+Lib/argparse.py	1308	1310	_HelpAction.__call__	__call__(self, parser, namespace, values, option_string=None)	todo		
+Lib/argparse.py	1315	1330	_VersionAction.__init__	__init__(self, option_strings, version=None, dest=SUPPRESS, default=SUPPRESS, help=None, deprecated=False)	todo		
+Lib/argparse.py	1332	1339	_VersionAction.__call__	__call__(self, parser, namespace, values, option_string=None)	todo		
+Lib/argparse.py	1346	1352	_SubParsersAction._ChoicesPseudoAction.__init__	__init__(self, name, aliases, help)	todo		
+Lib/argparse.py	1354	1377	_SubParsersAction.__init__	__init__(self, option_strings, prog, parser_class, dest=SUPPRESS, required=False, help=None, metavar=None)	todo		
+Lib/argparse.py	1379	1418	_SubParsersAction.add_parser	add_parser(self, name, *, deprecated=False, **kwargs)	todo		
+Lib/argparse.py	1420	1421	_SubParsersAction._get_subactions	_get_subactions(self)	todo		
+Lib/argparse.py	1423	1458	_SubParsersAction.__call__	__call__(self, parser, namespace, values, option_string=None)	todo		
+Lib/argparse.py	1461	1465	_ExtendAction.__call__	__call__(self, parser, namespace, values, option_string=None)	todo		
+Lib/argparse.py	1488	1498	FileType.__init__	__init__(self, mode='r', bufsize=-1, encoding=None, errors=None)	todo		
+Lib/argparse.py	1500	1518	FileType.__call__	__call__(self, string)	todo		
+Lib/argparse.py	1520	1526	FileType.__repr__	__repr__(self)	todo		
+Lib/argparse.py	1539	1541	Namespace.__init__	__init__(self, **kwargs)	todo		
+Lib/argparse.py	1543	1546	Namespace.__eq__	__eq__(self, other)	todo		
+Lib/argparse.py	1548	1549	Namespace.__contains__	__contains__(self, key)	todo		
+Lib/argparse.py	1554	1602	_ActionsContainer.__init__	__init__(self, description, prefix_chars, argument_default, conflict_handler)	todo		
+Lib/argparse.py	1608	1610	_ActionsContainer.register	register(self, registry_name, value, object)	todo		candidates:calstat-statistics-kernels-centred
+Lib/argparse.py	1612	1613	_ActionsContainer._registry_get	_registry_get(self, registry_name, value, default=None)	todo		
+Lib/argparse.py	1619	1626	_ActionsContainer.set_defaults	set_defaults(self, **kwargs)	todo		
+Lib/argparse.py	1628	1632	_ActionsContainer.get_default	get_default(self, dest)	todo		
+Lib/argparse.py	1639	1696	_ActionsContainer.add_argument	add_argument(self, *args, **kwargs)	todo		
+Lib/argparse.py	1698	1701	_ActionsContainer.add_argument_group	add_argument_group(self, *args, **kwargs)	todo		
+Lib/argparse.py	1703	1706	_ActionsContainer.add_mutually_exclusive_group	add_mutually_exclusive_group(self, **kwargs)	todo		
+Lib/argparse.py	1708	1727	_ActionsContainer._add_action	_add_action(self, action)	todo		
+Lib/argparse.py	1729	1730	_ActionsContainer._remove_action	_remove_action(self, action)	todo		
+Lib/argparse.py	1732	1776	_ActionsContainer._add_container_actions	_add_container_actions(self, container)	todo		
+Lib/argparse.py	1778	1793	_ActionsContainer._get_positional_kwargs	_get_positional_kwargs(self, dest, **kwargs)	todo		
+Lib/argparse.py	1795	1831	_ActionsContainer._get_optional_kwargs	_get_optional_kwargs(self, *args, **kwargs)	todo		changed-in-3.15:
+Lib/argparse.py	1833	1835	_ActionsContainer._pop_action_class	_pop_action_class(self, kwargs, default=None)	todo		
+Lib/argparse.py	1837	1844	_ActionsContainer._get_handler	_get_handler(self)	todo		
+Lib/argparse.py	1846	1858	_ActionsContainer._check_conflict	_check_conflict(self, action)	todo		
+Lib/argparse.py	1860	1867	_ActionsContainer._handle_conflict_error	_handle_conflict_error(self, action, conflicting_actions)	todo		
+Lib/argparse.py	1869	1881	_ActionsContainer._handle_conflict_resolve	_handle_conflict_resolve(self, action, conflicting_actions)	todo		
+Lib/argparse.py	1883	1889	_ActionsContainer._check_help	_check_help(self, action)	todo		
+Lib/argparse.py	1894	1922	_ArgumentGroup.__init__	__init__(self, container, title=None, description=None, **kwargs)	todo		
+Lib/argparse.py	1924	1927	_ArgumentGroup._add_action	_add_action(self, action)	todo		
+Lib/argparse.py	1929	1931	_ArgumentGroup._remove_action	_remove_action(self, action)	todo		
+Lib/argparse.py	1933	1934	_ArgumentGroup.add_argument_group	add_argument_group(self, *args, **kwargs)	todo		
+Lib/argparse.py	1938	1941	_MutuallyExclusiveGroup.__init__	__init__(self, container, required=False)	todo		
+Lib/argparse.py	1943	1949	_MutuallyExclusiveGroup._add_action	_add_action(self, action)	todo		
+Lib/argparse.py	1951	1953	_MutuallyExclusiveGroup._remove_action	_remove_action(self, action)	todo		
+Lib/argparse.py	1955	1956	_MutuallyExclusiveGroup.add_mutually_exclusive_group	add_mutually_exclusive_group(self, **kwargs)	todo		
+Lib/argparse.py	1958	1980	_prog_name	_prog_name(prog=None)	todo		
+Lib/argparse.py	2008	2069	ArgumentParser.__init__	__init__(self, prog=None, usage=None, description=None, epilog=None, parents=[], formatter_class=HelpFormatter, prefix_chars='-', fromfile_prefix_chars=None, argument_default=None, conflict_handler='error', add_help=True, allow_abbrev=True, exit_on_error=True, *, suggest_on_error=True, color=True)	todo		changed-in-3.15:
+Lib/argparse.py	2075	2084	ArgumentParser._get_kwargs	_get_kwargs(self)	todo		
+Lib/argparse.py	2090	2125	ArgumentParser.add_subparsers	add_subparsers(self, **kwargs)	todo		changed-in-3.15:
+Lib/argparse.py	2127	2132	ArgumentParser._add_action	_add_action(self, action)	todo		
+Lib/argparse.py	2134	2137	ArgumentParser._get_optional_actions	_get_optional_actions(self)	todo		
+Lib/argparse.py	2139	2142	ArgumentParser._get_positional_actions	_get_positional_actions(self)	todo		
+Lib/argparse.py	2148	2156	ArgumentParser.parse_args	parse_args(self, args=None, namespace=None)	todo		
+Lib/argparse.py	2158	2159	ArgumentParser.parse_known_args	parse_known_args(self, args=None, namespace=None)	todo		
+Lib/argparse.py	2161	2197	ArgumentParser._parse_known_args2	_parse_known_args2(self, args, namespace, intermixed)	todo		
+Lib/argparse.py	2199	2504	ArgumentParser._parse_known_args	_parse_known_args(self, arg_strings, namespace, intermixed)	todo		
+Lib/argparse.py	2506	2531	ArgumentParser._read_args_from_files	_read_args_from_files(self, arg_strings)	todo		
+Lib/argparse.py	2533	2534	ArgumentParser.convert_arg_line_to_args	convert_arg_line_to_args(self, arg_line)	todo		
+Lib/argparse.py	2536	2556	ArgumentParser._match_argument	_match_argument(self, action, arg_strings_pattern)	todo		
+Lib/argparse.py	2558	2573	ArgumentParser._match_arguments_partial	_match_arguments_partial(self, actions, arg_strings_pattern)	todo		
+Lib/argparse.py	2575	2619	ArgumentParser._parse_optional	_parse_optional(self, arg_string)	todo		changed-in-3.15:
+Lib/argparse.py	2621	2663	ArgumentParser._get_option_tuples	_get_option_tuples(self, option_string)	todo		
+Lib/argparse.py	2665	2705	ArgumentParser._get_nargs_pattern	_get_nargs_pattern(self, action)	todo		changed-in-3.15:
+Lib/argparse.py	2711	2719	ArgumentParser.parse_intermixed_args	parse_intermixed_args(self, args=None, namespace=None)	todo		
+Lib/argparse.py	2721	2737	ArgumentParser.parse_known_intermixed_args	parse_known_intermixed_args(self, args=None, namespace=None)	todo		
+Lib/argparse.py	2743	2788	ArgumentParser._get_values	_get_values(self, action, arg_strings)	todo		
+Lib/argparse.py	2790	2812	ArgumentParser._get_value	_get_value(self, action, arg_string)	todo		
+Lib/argparse.py	2814	2837	ArgumentParser._check_value	_check_value(self, action, value)	todo		
+Lib/argparse.py	2843	2848	ArgumentParser.format_usage	format_usage(self, formatter=None)	todo		changed-in-3.15:
+Lib/argparse.py	2850	2872	ArgumentParser.format_help	format_help(self, formatter=None)	todo		changed-in-3.15:
+Lib/argparse.py	2874	2877	ArgumentParser._get_formatter	_get_formatter(self, file=None)	todo		changed-in-3.15:
+Lib/argparse.py	2879	2888	ArgumentParser._get_validation_formatter	_get_validation_formatter(self)	todo		changed-in-3.15:
+Lib/argparse.py	2894	2904	ArgumentParser.print_usage	print_usage(self, file=None)	todo		changed-in-3.15:
+Lib/argparse.py	2906	2916	ArgumentParser.print_help	print_help(self, file=None)	todo		changed-in-3.15:
+Lib/argparse.py	2918	2924	ArgumentParser._print_message	_print_message(self, message, file=None)	todo		
+Lib/argparse.py	2926	2931	ArgumentParser._get_theme	_get_theme(self, file=None)	todo		changed-in-3.15: new function
+Lib/argparse.py	2937	2940	ArgumentParser.exit	exit(self, status=0, message=None)	todo		
+Lib/argparse.py	2942	2958	ArgumentParser.error	error(self, message)	todo		changed-in-3.15:
+Lib/argparse.py	2960	2966	ArgumentParser._warning	_warning(self, message)	todo		changed-in-3.15:
+Lib/argparse.py	2968	2974	__getattr__	__getattr__(name)	todo		changed-in-3.15: new function

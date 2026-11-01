@@ -1,9 +1,9 @@
 file	line	endline	name	signature	status	entry	note
 Objects/fileobject.c	33	51	PyFile_FromFd	PyFile_FromFd(int fd, const char *name, const char *mode, int buffering, const char *encoding, const char *errors, const char *newline, int closefd)	todo		
-Objects/fileobject.c	54	102	PyFile_GetLine	PyFile_GetLine(PyObject *f, int n)	todo		
+Objects/fileobject.c	54	102	PyFile_GetLine	PyFile_GetLine(PyObject *f, int n)	todo		changed-in-3.15:
 Objects/fileobject.c	107	134	PyFile_WriteObject	PyFile_WriteObject(PyObject *v, PyObject *f, int flags)	todo		
 Objects/fileobject.c	137	157	PyFile_WriteString	PyFile_WriteString(const char *s, PyObject *f)	todo		
-Objects/fileobject.c	167	217	PyObject_AsFileDescriptor	PyObject_AsFileDescriptor(PyObject *o)	todo		
+Objects/fileobject.c	167	217	PyObject_AsFileDescriptor	PyObject_AsFileDescriptor(PyObject *o)	todo		changed-in-3.15:
 Objects/fileobject.c	220	228	_PyLong_FileDescriptor_Converter	_PyLong_FileDescriptor_Converter(PyObject *o, void *ptr)	todo		
 Objects/fileobject.c	231	262	_Py_UniversalNewlineFgetsWithSize	_Py_UniversalNewlineFgetsWithSize(char *buf, int n, FILE *stream, PyObject *fobj, size_t* size)	todo		
 Objects/fileobject.c	274	277	Py_UniversalNewlineFgets	Py_UniversalNewlineFgets(char *buf, int n, FILE *stream, PyObject *fobj) {	todo		

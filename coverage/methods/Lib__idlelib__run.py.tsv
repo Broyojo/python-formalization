@@ -1,41 +1,42 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/run.py	52	63	idle_formatwarning	idle_formatwarning(message, category, filename, lineno, line=None)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	65	77	idle_showwarning_subproc	idle_showwarning_subproc(message, category, filename, lineno, file=None, line=None)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	81	92	capture_warnings	capture_warnings(capture)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	99	100	handle_tk_events	handle_tk_events()	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	104	108	handle_tk_events	handle_tk_events(tcl=tcl)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	118	194	main	main(del_exitfunc=False)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	196	213	manage_socket	manage_socket(address)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	215	229	show_socket_error	show_socket_error(err, address)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	232	241	get_message_lines	get_message_lines(typ, exc, tb)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	244	342	print_exception	print_exception()	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	344	373	cleanup_traceback	cleanup_traceback(tb, exclude)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	375	376	flush_stdout	flush_stdout()	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	378	390	exit	exit()	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	395	397	fixdoc	fixdoc(fun, text)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	401	438	install_recursionlimit_wrappers	install_recursionlimit_wrappers()	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	441	453	uninstall_recursionlimit_wrappers	uninstall_recursionlimit_wrappers()	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	458	491	MyRPCServer.handle_error	handle_error(self, request, client_address)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	498	505	StdioFile.__init__	__init__(self, shell, tags, encoding='utf-8', errors='strict')	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	508	509	StdioFile.encoding	encoding(self)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	512	513	StdioFile.errors	errors(self)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	516	517	StdioFile.name	name(self)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	519	520	StdioFile.isatty	isatty(self)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	525	526	StdOutputFile.writable	writable(self)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	528	532	StdOutputFile.write	write(self, s)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	538	539	StdInputFile.readable	readable(self)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	541	560	StdInputFile.read	read(self, size=-1)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	562	576	StdInputFile.readline	readline(self, size=-1)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	578	579	StdInputFile.close	close(self)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	584	608	MyHandler.handle	handle(self)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	610	612	MyHandler.exithook	exithook(self)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	614	618	MyHandler.EOFhook	EOFhook(self)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	620	624	MyHandler.decode_interrupthook	decode_interrupthook(self)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	629	636	Executive.__init__	__init__(self, rpchandler)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	638	669	Executive.runcode	runcode(self, code)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	671	673	Executive.interrupt_the_server	interrupt_the_server(self)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	675	676	Executive.start_the_debugger	start_the_debugger(self, gui_adap_oid)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	678	680	Executive.stop_the_debugger	stop_the_debugger(self, idb_adap_oid)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	682	683	Executive.get_the_calltip	get_the_calltip(self, name)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	685	686	Executive.get_the_completion_list	get_the_completion_list(self, what, mode)	excluded		platform: GUI toolkit
-Lib/idlelib/run.py	688	700	Executive.stackviewer	stackviewer(self, flist_oid=None)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	33	45	scrub_tkinter_submodules	scrub_tkinter_submodules()	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	57	68	idle_formatwarning	idle_formatwarning(message, category, filename, lineno, line=None)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	70	82	idle_showwarning_subproc	idle_showwarning_subproc(message, category, filename, lineno, file=None, line=None)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	86	97	capture_warnings	capture_warnings(capture)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	104	105	handle_tk_events	handle_tk_events()	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	109	113	handle_tk_events	handle_tk_events(tcl=tcl)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	123	207	main	main(del_exitfunc=False)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	209	226	manage_socket	manage_socket(address)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	228	242	show_socket_error	show_socket_error(err, address)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	245	247	get_message_lines	get_message_lines(typ, exc, tb)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	250	348	print_exception	print_exception()	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	350	379	cleanup_traceback	cleanup_traceback(tb, exclude)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	381	382	flush_stdout	flush_stdout()	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	384	396	exit	exit()	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	401	403	fixdoc	fixdoc(fun, text)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	407	444	install_recursionlimit_wrappers	install_recursionlimit_wrappers()	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	447	459	uninstall_recursionlimit_wrappers	uninstall_recursionlimit_wrappers()	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	464	497	MyRPCServer.handle_error	handle_error(self, request, client_address)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	504	511	StdioFile.__init__	__init__(self, shell, tags, encoding='utf-8', errors='strict')	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	514	515	StdioFile.encoding	encoding(self)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	518	519	StdioFile.errors	errors(self)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	522	523	StdioFile.name	name(self)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	525	526	StdioFile.isatty	isatty(self)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	531	532	StdOutputFile.writable	writable(self)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	534	538	StdOutputFile.write	write(self, s)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	544	545	StdInputFile.readable	readable(self)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	547	566	StdInputFile.read	read(self, size=-1)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	568	582	StdInputFile.readline	readline(self, size=-1)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	584	585	StdInputFile.close	close(self)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	590	614	MyHandler.handle	handle(self)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	616	618	MyHandler.exithook	exithook(self)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	620	624	MyHandler.EOFhook	EOFhook(self)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	626	630	MyHandler.decode_interrupthook	decode_interrupthook(self)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	635	642	Executive.__init__	__init__(self, rpchandler)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	644	675	Executive.runcode	runcode(self, code)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	677	691	Executive.interrupt_the_server	interrupt_the_server(self)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	693	694	Executive.start_the_debugger	start_the_debugger(self, gui_adap_oid)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	696	698	Executive.stop_the_debugger	stop_the_debugger(self, idb_adap_oid)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	700	701	Executive.get_the_calltip	get_the_calltip(self, name)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	703	704	Executive.get_the_completion_list	get_the_completion_list(self, what, mode)	excluded		platform: GUI toolkit
+Lib/idlelib/run.py	706	718	Executive.stackviewer	stackviewer(self, flist_oid=None)	excluded		platform: GUI toolkit

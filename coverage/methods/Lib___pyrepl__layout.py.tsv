@@ -1,0 +1,10 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_pyrepl/layout.py	30	31	LayoutRow.width	width(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/layout.py	34	38	LayoutRow.screeninfo	screeninfo(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/layout.py	56	57	LayoutMap.empty	empty(cls)	todo		changed-in-3.15: new function
+Lib/_pyrepl/layout.py	60	61	LayoutMap.screeninfo	screeninfo(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/layout.py	63	64	LayoutMap.max_column	max_column(self, y: int)	todo		changed-in-3.15: new function
+Lib/_pyrepl/layout.py	66	67	LayoutMap.max_row	max_row(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/layout.py	69	87	LayoutMap.pos_to_xy	pos_to_xy(self, pos: int)	todo		changed-in-3.15: new function
+Lib/_pyrepl/layout.py	89	115	LayoutMap.xy_to_pos	xy_to_pos(self, x: int, y: int)	todo		changed-in-3.15: new function
+Lib/_pyrepl/layout.py	144	268	layout_content_lines	layout_content_lines(lines: tuple[ContentLine, ...], width: int, start_offset: int)	todo		changed-in-3.15: new function

@@ -55,7 +55,7 @@ promised_by: |
   (Modules/_bisectmodule.c:1 "Drop in replacement for bisect.py").
 cause: |
   Modules/clinic/_bisectmodule.c.h: lo goes through _PyNumber_Index + PyLong_AsSsize_t and hi
-  through _Py_convert_optional_to_ssize_t (Python/modsupport.c:14-34, PyNumber_AsSsize_t with
+  through _Py_convert_optional_to_ssize_t (Python/modsupport.c:15-35, PyNumber_AsSsize_t with
   OverflowError). Lib/bisect.py:34-46 uses unbounded ints and only fails when a[mid] is
   converted (IndexError from list_subscript). On main, the lo check moved into the clinic
   converter (allow_negative=False) with a different message.

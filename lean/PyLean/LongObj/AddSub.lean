@@ -12,7 +12,7 @@ open PyLean PyLean.MathInt
 
 /-! ## `x_add` -/
 
-/-- Second loop of `x_add` and the store of the final carry, longobject.c:3672-3677. -/
+/-- Second loop of `x_add` and the store of the final carry, longobject.c:3771-3776. -/
 def xAddTail : List Nat → Nat → Py (List Nat)
   | [], carry => .ok [carry]
   | a :: as, carry => do
@@ -20,7 +20,7 @@ def xAddTail : List Nat → Nat → Py (List Nat)
     let r ← xAddTail as (c >>> 30)
     return (c &&& MASK) :: r
 
-/-- First loop of `x_add`, longobject.c:3667-3671. -/
+/-- First loop of `x_add`, longobject.c:3766-3770. -/
 def xAddLoop : List Nat → List Nat → Nat → Py (List Nat)
   | as, [], carry => xAddTail as carry
   | a :: as, b :: bs, carry => do
@@ -30,7 +30,7 @@ def xAddLoop : List Nat → List Nat → Nat → Py (List Nat)
     return (c &&& MASK) :: r
   | [], _ :: _, _ => .error cOverflow
 
-/-- `x_add(a, b)`, longobject.c:3650-3679. -/
+/-- `x_add(a, b)`, longobject.c:3749-3778. -/
 def xAdd (a b : List Nat) : Py (List Nat) :=
   let (a, b) := if a.length < b.length then (b, a) else (a, b)
   do
@@ -102,8 +102,8 @@ theorem xAdd_spec {a b : List Nat} (ha : IsDigits a) (hb : IsDigits b)
 
 /-! ## `x_sub` -/
 
-/-- Second loop of `x_sub`, longobject.c:3724-3729, returning the digits and the
-final borrow (asserted to be zero at :3730). -/
+/-- Second loop of `x_sub`, longobject.c:3823-3828, returning the digits and the
+final borrow (asserted to be zero at :3829). -/
 def xSubTail : List Nat → Nat → List Nat × Nat
   | [], borrow => ([], borrow)
   | a :: as, borrow =>
@@ -111,7 +111,7 @@ def xSubTail : List Nat → Nat → List Nat × Nat
     let (r, b) := xSubTail as ((t >>> 30) &&& 1)
     ((t &&& MASK) :: r, b)
 
-/-- First loop of `x_sub`, longobject.c:3716-3723. -/
+/-- First loop of `x_sub`, longobject.c:3815-3822. -/
 def xSubLoop : List Nat → List Nat → Nat → List Nat × Nat
   | as, [], borrow => xSubTail as borrow
   | a :: as, b :: bs, borrow =>
@@ -120,7 +120,7 @@ def xSubLoop : List Nat → List Nat → Nat → List Nat × Nat
     ((t &&& MASK) :: r, c)
   | [], _ :: _, borrow => ([], borrow)
 
-/-- The scan `while (--i >= 0 && a[i] == b[i]);`, longobject.c:3702-3704. -/
+/-- The scan `while (--i >= 0 && a[i] == b[i]);`, longobject.c:3801-3803. -/
 def scanDiff (a b : List Nat) : Nat → Option Nat
   | 0 => none
   | i + 1 => if a.getD i 0 = b.getD i 0 then scanDiff a b i else some i
@@ -131,7 +131,7 @@ def xSubGo (neg : Bool) (a b : List Nat) : Py Long := do
   let (z, _) := xSubLoop a b 0
   return (if neg then Long.flip else id) ⟨false, normalize z⟩
 
-/-- `x_sub(a, b)`, longobject.c:3684-3735. -/
+/-- `x_sub(a, b)`, longobject.c:3783-3834. -/
 def xSub (a b : List Nat) : Py Long :=
   if a.length < b.length then xSubGo true b a
   else if a.length = b.length then
@@ -372,12 +372,12 @@ theorem xSub_spec {a b : List Nat} (ha : IsDigits a) (hb : IsDigits b) (na : Nor
 
 /-! ## `long_add`, `long_sub` -/
 
-/-- `x_add` with a sign, as `_PyLong_FlipSign(z)` leaves it (longobject.c:3755, :3800). -/
+/-- `x_add` with a sign, as `_PyLong_FlipSign(z)` leaves it (longobject.c:3854, :3901). -/
 def xAddSigned (neg : Bool) (a b : List Nat) : Py Long := do
   let z ← xAdd a b
   return (if neg then Long.flip else id) ⟨false, z⟩
 
-/-- `long_add(a, b)`, longobject.c:3738-3768. -/
+/-- `long_add(a, b)`, longobject.c:3837-3867. -/
 def longAdd (a b : Long) : Py Long :=
   if bothCompact a b then do
     let z ← chkS64 (a.medium + b.medium)
@@ -388,7 +388,7 @@ def longAdd (a b : Long) : Py Long :=
   else if b.neg then xSub a.ds b.ds
   else xAddSigned false a.ds b.ds
 
-/-- `long_sub(a, b)`, longobject.c:3785-3811. -/
+/-- `long_sub(a, b)`, longobject.c:3886-3912. -/
 def longSub (a b : Long) : Py Long :=
   if bothCompact a b then do
     let z ← chkS64 (a.medium - b.medium)
@@ -527,7 +527,7 @@ theorem longSub_spec (a b : Int) (ha : Sized a) (hb : Sized b) :
 
 /-! ## `v_iadd`, `v_isub` -/
 
-/-- Second loop of `v_iadd`, longobject.c:1791-1796: stops when the carry dies. -/
+/-- Second loop of `v_iadd`, longobject.c:1866-1871: stops when the carry dies. -/
 def vIAddTail : List Nat → Nat → Py (List Nat × Nat)
   | [], carry => .ok ([], carry)
   | x :: xs, carry =>
@@ -537,7 +537,7 @@ def vIAddTail : List Nat → Nat → Py (List Nat × Nat)
       let (r, c') ← vIAddTail xs (c >>> 30)
       return ((c &&& MASK) :: r, c')
 
-/-- `v_iadd(x, m, y, n)`, longobject.c:1779-1798, with `m = x.length` and
+/-- `v_iadd(x, m, y, n)`, longobject.c:1854-1873, with `m = x.length` and
 `n = y.length`; returns the updated `x` and the final carry. -/
 def vIAddGo : List Nat → List Nat → Nat → Py (List Nat × Nat)
   | xs, [], carry => vIAddTail xs carry
@@ -591,7 +591,7 @@ theorem vIAddGo_spec : ∀ (xs ys : List Nat) (carry : Nat), IsDigits xs → IsD
       grind
   | [], _ :: _, _, _, _, hl, _ => by simp at hl
 
-/-- Second loop of `v_isub`, longobject.c:1817-1822. -/
+/-- Second loop of `v_isub`, longobject.c:1892-1897. -/
 def vISubTail : List Nat → Nat → List Nat × Nat
   | [], borrow => ([], borrow)
   | x :: xs, borrow =>
@@ -601,7 +601,7 @@ def vISubTail : List Nat → Nat → List Nat × Nat
       let (r, b) := vISubTail xs ((t >>> 30) &&& 1)
       ((t &&& MASK) :: r, b)
 
-/-- `v_isub(x, m, y, n)`, longobject.c:1805-1824. -/
+/-- `v_isub(x, m, y, n)`, longobject.c:1880-1899. -/
 def vISubGo : List Nat → List Nat → Nat → List Nat × Nat
   | xs, [], borrow => vISubTail xs borrow
   | x :: xs, y :: ys, borrow =>

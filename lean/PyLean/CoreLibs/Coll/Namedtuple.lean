@@ -16,7 +16,7 @@ from Python/symtable.c. The other uses of the field names, the class namespace, 
 `str.isidentifier` and the NFKC map come from the Unicode database, so they are a
 parameter `UniId`.
 
-Field names are `str` after `map(str, field_names)`. `type(name) is not str` (:403) needs a
+Field names are `str` after `map(str, field_names)`. `type(name) is not str` (:406) needs a
 `__str__` returning a subclass, and `_sys.intern` refuses that for the type name; it is not
 modelled. `__module__` and the `_tuplegetter` descriptors are out of scope. Values are abstract.
 -/
@@ -52,26 +52,26 @@ inductive FieldNames where
   | list (l : List String)
   deriving Repr, DecidableEq
 
-/-- `field_names.replace(',', ' ').split()`, :388. -/
+/-- `field_names.replace(',', ' ').split()`, :389. -/
 def splitNames (s : String) : List String :=
   let cps := s.toList.map (fun c => if c = ',' then 32 else c.toNat)
   match StrSearch.strSplit cps none (-1) with
   | .ok l => l.map (fun w => String.ofList (w.map Char.ofNat))
   | .error _ => []
 
-/-- :387-389. -/
+/-- :388-390. -/
 def fieldList : FieldNames → List String
   | .str s => splitNames s
   | .list l => l
 
-/-- The `if rename:` loop, :392-400. `seen` gets the original name. -/
+/-- The `if rename:` loop, :393-401. `seen` gets the original name. -/
 def renameLoop (U : UniId) (seen : List String) (index : Nat) : List String → List String
   | [] => []
   | name :: t =>
     let bad := !U.isidentifier name || iskeyword name || startsUnderscore name || seen.contains name
     (if bad then posName index else name) :: renameLoop U (name :: seen) (index + 1) t
 
-/-- The `for name in [typename] + field_names` loop, :402-410. -/
+/-- The `for name in [typename] + field_names` loop, :403-411. -/
 def checkNames (U : UniId) : List String → Py Unit
   | [] => .ok ()
   | name :: t =>
@@ -81,7 +81,7 @@ def checkNames (U : UniId) : List String → Py Unit
       .error (.valueError ("Type names and field names cannot be a keyword: " ++ pyStrRepr name))
     else checkNames U t
 
-/-- The second `seen` loop, :412-419. -/
+/-- The second `seen` loop, :413-420. -/
 def checkSeen (rename : Bool) (seen : List String) : List String → Py Unit
   | [] => .ok ()
   | name :: t =>
@@ -96,7 +96,7 @@ def firstDup (seen : List String) : List String → Option String
   | [] => none
   | a :: t => if seen.contains a then some a else firstDup (a :: seen) t
 
-/-- What `eval(code, namespace)`, :446-447, does with the field names: returns the parameter
+/-- What `eval(code, namespace)`, :447-448, does with the field names: returns the parameter
 names of `__new__`, `_cls` first dropped. -/
 def compileNew (U : UniId) (names : List String) : Py (List String) :=
   let args := names.map U.nfkc
@@ -108,7 +108,7 @@ def compileNew (U : UniId) (names : List String) : Py (List String) :=
       .error (.named "SyntaxError" s!"duplicate argument '{a}' in function definition (<string>, line 1)")
     | none => .ok args
 
-/-- `arg_list`, :432-434. -/
+/-- `arg_list`, :433-435. -/
 def argListOf (names : List String) : String :=
   ", ".intercalate names ++ (if names.length = 1 then "," else "")
 
@@ -126,11 +126,11 @@ structure NT (ν : Type) where
   doc : String
   newDoc : String
 
-/-- `dict(reversed(list(zip(reversed(field_names), reversed(defaults)))))`, :426-427. -/
+/-- `dict(reversed(list(zip(reversed(field_names), reversed(defaults)))))`, :427-428. -/
 def fieldDefaultsOf {ν : Type} (names : List String) (d : List ν) : D String ν :=
   D.update [] (names.reverse.zip d.reverse).reverse
 
-/-- `namedtuple(typename, field_names, rename=rename, defaults=defaults)`, :387-533. -/
+/-- `namedtuple(typename, field_names, rename=rename, defaults=defaults)`, :388-534. -/
 def namedtuple {ν : Type} (U : UniId) (typename : String) (fn : FieldNames) (rename : Bool)
     (defaults : Option (List ν)) : Py (NT ν) := do
   let names := fieldList fn
@@ -186,7 +186,7 @@ def ntCall (T : NT ν) (pos : List ν) (kw : D String ν) : Py (List ν) := do
   let r ← fillRest kw T.defaults n pos.length (T.args.drop pos.length)
   return pos ++ r
 
-/-- `_make`, :453-458. -/
+/-- `_make`, :155-160. -/
 def ntMake (T : NT ν) (items : List ν) : Py (List ν) :=
   if items.length ≠ T.fields.length then
     .error (.typeError s!"Expected {T.fields.length} arguments, got {items.length}")
@@ -202,7 +202,7 @@ def replLoop (kwds : D String ν) : List String → List ν → List ν × D Str
     (x :: r, k)
   | _, _ => ([], kwds)
 
-/-- `_replace`, :463-467, also `__replace__`. `rk` is `repr` on the leftover list. -/
+/-- `_replace`, @3.14.7:463-467, also `__replace__`. `rk` is `repr` on the leftover list. -/
 def ntReplace (T : NT ν) (vals : List ν) (kwds : D String ν) : Py (List ν) := do
   let (r, left) := replLoop kwds T.fields vals
   let result ← ntMake T r
@@ -211,14 +211,14 @@ def ntReplace (T : NT ν) (vals : List ν) (kwds : D String ν) : Py (List ν) :
       ", ".intercalate (left.map (fun p => pyStrRepr p.1)) ++ "]"))
   return result
 
-/-- `__repr__`, :472-474. -/
+/-- `__repr__`, :182-184. -/
 def ntRepr (rv : ν → String) (T : NT ν) (vals : List ν) : String :=
   T.typename ++ "(" ++ ", ".intercalate ((T.fields.zip vals).map (fun p => p.1 ++ "=" ++ rv p.2)) ++ ")"
 
-/-- `_asdict`, :476-478: `dict(zip(self._fields, self))`. -/
+/-- `_asdict`, :186-188: `dict(zip(self._fields, self))`. -/
 def ntAsdict (T : NT ν) (vals : List ν) : D String ν := D.update [] (T.fields.zip vals)
 
-/-- `getattr(p, name)`: the descriptors live under the raw field name, :511-513. -/
+/-- `getattr(p, name)`: the descriptors live under the raw field name, :221-223. -/
 def ntGetattr (T : NT ν) (vals : List ν) (name : String) : Option ν :=
   D.get? (T.fields.zip vals) name
 

@@ -56,10 +56,10 @@ promised_by: |
   Twin: io.StringIO. No doc sentence promises tell() after readlines(hint); the documented
   restriction is only about next().
 cause: |
-  Lib/_pyio.py:2605-2612 sets _telling False and restores it only on exhaustion; Lib/_pyio.py:576-580
-  breaks out of the for loop. C: Modules/_io/textio.c:3201 and Modules/_io/iobase.c:765-766. The
-  AssertionError comes from flush() (Lib/_pyio.py:2231-2233) setting _telling back while decoded
-  chars remain and the snapshot is None, so Lib/_pyio.py:2394-2396 fires.
+  Lib/_pyio.py:2629-2636 sets _telling False and restores it only on exhaustion; Lib/_pyio.py:576-580
+  breaks out of the for loop. C: Modules/_io/textio.c:3291 and Modules/_io/iobase.c:766-767. The
+  AssertionError comes from flush() (Lib/_pyio.py:2255-2257) setting _telling back while decoded
+  chars remain and the snapshot is None, so Lib/_pyio.py:2418-2420 fires.
 possible_fix: |
   Resolve gh-81217 by dropping the `telling` optimisation, or have readlines() read with readline()
   on text streams so iteration state is not left behind.

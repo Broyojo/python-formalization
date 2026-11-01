@@ -162,7 +162,7 @@ def Obj.len {α : Type} : Obj α → Nat
 
 /-! ## C integer conversions -/
 
-/-- `PyLong_AsSsize_t` overflow message, Objects/longobject.c:668. -/
+/-- `PyLong_AsSsize_t` overflow message, Objects/longobject.c:748. -/
 def ssizeOverflowMsg : String := "Python int too large to convert to C ssize_t"
 
 /-- `PyLong_AsSsize_t` / `PyNumber_AsSsize_t(o, PyExc_OverflowError)` / the
@@ -179,7 +179,7 @@ instance (x : Int) : Decidable (InSsize x) := inferInstanceAs (Decidable (_ ∧ 
 def two64 : Int := 18446744073709551616
 
 /-- `(Py_ssize_t)(size_t)x`: two's complement wraparound to 64 bits. CPython is
-built with `-fno-strict-overflow`, and itertoolsmodule.c:1730-1732 adds via
+built with `-fno-strict-overflow`, and itertoolsmodule.c:1724-1726 adds via
 `size_t` precisely to get this. -/
 def wrapSsize (x : Int) : Int :=
   if x % two64 > ssizeMax then x % two64 - two64 else x % two64
@@ -205,7 +205,7 @@ def memoryError : PyExc := .named "MemoryError" ""
 
 /-- Python `lst * n` for a list of `size` items (`sequence_repeat` narrows `n`
 with `PyNumber_AsSsize_t(n, PyExc_OverflowError)`, Objects/abstract.c; then
-`list_repeat_lock_held`, Objects/listobject.c:790-801, and `list_new_prealloc`
+`list_repeat_lock_held`, Objects/listobject.c:841-852, and `list_new_prealloc`
 → `PyMem_New`). `ok` means the repeat succeeds. -/
 def listRepeatCheck (size : Nat) (n : Int) : Py Unit :=
   if n < ssizeMin ∨ n > ssizeMax then .error (.overflowError "cannot fit 'int' into an index-sized integer")

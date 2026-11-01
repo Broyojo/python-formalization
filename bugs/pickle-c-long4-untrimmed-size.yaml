@@ -44,8 +44,8 @@ observed: |
 promised_by: |
   Twin relation; the size limit itself comes from pickletools' `long4` (signed 4-byte length).
 cause: |
-  Modules/_pickle.c:2320-2324 tests `nbytes > 0x7fffffffL` on the untrimmed size; the trim is at
-  :2339-2344. Lib/pickle.py:825-829 packs `len(encode_long(x))`, the trimmed size.
+  Modules/_pickle.c:2428-2432 tests `nbytes > 0x7fffffffL` on the untrimmed size; the trim is at
+  :2447-2452. Lib/pickle.py:841-845 packs `len(encode_long(x))`, the trimmed size.
 possible_fix: |
   Compare against 0x80000000 and re-check after trimming, or move the check after the trim.
 duplicates:

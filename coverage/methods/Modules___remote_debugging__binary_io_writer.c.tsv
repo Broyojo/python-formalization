@@ -1,0 +1,29 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_remote_debugging/binary_io_writer.c	59	107	grow_parallel_arrays	grow_parallel_arrays(void **array1, void **array2, size_t *capacity, size_t elem_size1, size_t elem_size2)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_writer.c	113	132	fwrite_checked_allow_threads	fwrite_checked_allow_threads(const void *data, size_t size, FILE *fp)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_writer.c	139	144	writer_write_varint_u32	writer_write_varint_u32(BinaryWriter *writer, uint32_t value)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_writer.c	152	159	binary_io_zstd_available	binary_io_zstd_available(void)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_writer.c	162	169	binary_io_get_best_compression	binary_io_get_best_compression(void)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_writer.c	176	212	writer_init_zstd	writer_init_zstd(BinaryWriter *writer)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_writer.c	215	259	writer_flush_buffer	writer_flush_buffer(BinaryWriter *writer)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_writer.c	262	285	writer_write_bytes	writer_write_bytes(BinaryWriter *writer, const void *data, size_t size)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_writer.c	293	302	string_hash_func	string_hash_func(const void *key)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_writer.c	305	318	string_compare_func	string_compare_func(const void *key1, const void *key2)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_writer.c	321	324	string_key_destroy	string_key_destroy(void *key)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_writer.c	327	347	frame_key_hash_func	frame_key_hash_func(const void *key)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_writer.c	350	361	frame_key_compare_func	frame_key_compare_func(const void *key1, const void *key2)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_writer.c	364	367	frame_key_destroy	frame_key_destroy(void *key)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_writer.c	370	432	writer_intern_string	writer_intern_string(BinaryWriter *writer, PyObject *string, uint32_t *index)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_writer.c	435	482	writer_intern_frame	writer_intern_frame(BinaryWriter *writer, const FrameEntry *entry, uint32_t *index)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_writer.c	488	540	writer_get_or_create_thread_entry	writer_get_or_create_thread_entry(BinaryWriter *writer, uint64_t thread_id, uint32_t interpreter_id, int *is_new)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_writer.c	550	615	compare_stacks	compare_stacks(const uint32_t *prev_stack, size_t prev_depth, const uint32_t *curr_stack, size_t curr_depth, size_t *shared_count, size_t *pop_count, size_t *push_count)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_writer.c	620	627	write_sample_header	write_sample_header(BinaryWriter *writer, ThreadEntry *entry, uint8_t encoding)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_writer.c	633	665	flush_pending_rle	flush_pending_rle(BinaryWriter *writer, ThreadEntry *entry)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_writer.c	670	745	write_sample_with_encoding	write_sample_with_encoding(BinaryWriter *writer, ThreadEntry *entry, uint64_t timestamp_delta, uint8_t status, int encoding_type, const uint32_t *frame_indices, size_t stack_depth, size_t shared_count, size_t pop_count, size_t push_count)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_writer.c	748	850	binary_writer_create	binary_writer_create(PyObject *path, uint64_t sample_interval_us, int compression_type, uint64_t start_time_us, int profiling_mode, int capture_features)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_writer.c	855	941	build_frame_stack	build_frame_stack(BinaryWriter *writer, PyObject *frame_list, uint32_t *curr_stack, size_t *curr_depth)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_writer.c	946	1035	process_thread_sample	process_thread_sample(BinaryWriter *writer, PyObject *thread_info, uint32_t interpreter_id, uint64_t timestamp_us)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_writer.c	1038	1076	binary_writer_write_sample	binary_writer_write_sample(BinaryWriter *writer, PyObject *stack_frames, uint64_t timestamp_us)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_writer.c	1079	1269	binary_writer_finalize	binary_writer_finalize(BinaryWriter *writer)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_writer.c	1272	1304	binary_writer_set_stats	binary_writer_set_stats(BinaryWriter *writer, double duration_sec, double sample_rate, double error_rate, double missed_samples, uint32_t present)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_writer.c	1307	1351	binary_writer_destroy	binary_writer_destroy(BinaryWriter *writer)	todo		changed-in-3.15: new function

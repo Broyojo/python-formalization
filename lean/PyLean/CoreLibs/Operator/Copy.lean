@@ -40,7 +40,7 @@ inductive Cell where
   | method (func self : Nat)
   /-- A class whose type is `type`, which `deepcopy` returns at Lib/copy.py:118, before reading `memo`. -/
   | cls (id : Nat)
-  /-- A class with another metaclass: `issubclass(cls, type)`, reached at Lib/copy.py:133 after the `memo` lookup. -/
+  /-- A class with another metaclass: `issubclass(cls, type)`, reached at Lib/copy.py:132 after the `memo` lookup. -/
   | metaCls (id : Nat)
   | hooked (copier deepcopier : Option (Option PyExc)) (reduce : Option RvSpec)
   deriving Repr, DecidableEq, Inhabited
@@ -65,19 +65,19 @@ def Heap.remember (h : Heap) (x y : Nat) : Heap := { h with memo := (x, y) :: h.
 def attrName (k : Nat) : String := "k" ++ toString k
 
 /-- `_reconstruct`'s first lines with `size` checked: the call `_reconstruct(x, memo, *rv)` takes `func` and `args`
-and three more, Lib/copy.py:228-230. -/
+and three more, Lib/copy.py:242-244. -/
 def reconArity (size : Nat) : Option PyExc :=
   if size < 2 then some (.typeError "~_reconstruct() missing required positional arguments")
   else if size > 5 then some (.typeError "~_reconstruct() takes too many positional arguments")
   else none
 
-/-- `y.append(item)`, Lib/copy.py:258 and :261. -/
+/-- `y.append(item)`, Lib/copy.py:272 and :275. -/
 def appendTo (h : Heap) (y item : Nat) : Py Heap :=
   match h.get y with
   | .list l => .ok (h.set y (.list (l ++ [item])))
   | _ => .error (.named "AttributeError" "~object has no attribute 'append'")
 
-/-- `y[key] = value`, Lib/copy.py:267 and :270. -/
+/-- `y[key] = value`, Lib/copy.py:281 and :284. -/
 def setItemOf (h : Heap) (y k v : Nat) : Py Heap :=
   match h.get y with
   | .dict l => .ok (h.set y (.dict (l ++ [(k, v)])))
@@ -101,7 +101,7 @@ def noneCell (h : Heap) (s : Nat) : Bool :=
   | .atom 0 => true
   | _ => false
 
-/-- The state step without `__setstate__`, Lib/copy.py:244-252, on a state that is already copied: a two-item tuple
+/-- The state step without `__setstate__`, Lib/copy.py:258-266, on a state that is already copied: a two-item tuple
 is `(state, slotstate)`; the state goes through `__dict__.update`, the slot state through `setattr`. `None` is the
 atom `0` in the model's graphs. -/
 def stateStep (h : Heap) (y st : Nat) : Py Heap :=
@@ -133,7 +133,7 @@ def freshOf (kind : BuildKind) (args : List Nat) : Cell :=
   | .list => .list []
   | .dict => .dict []
 
-/-- The steps of `_reconstruct` after `y` exists, when `deep` is false: nothing is copied. Lib/copy.py:238-271. -/
+/-- The steps of `_reconstruct` after `y` exists, when `deep` is false: nothing is copied. Lib/copy.py:252-285. -/
 def reconRest (h : Heap) (y : Nat) (state : Option Nat) (listiter : Option (List Nat))
     (dictiter : Option (List (Nat × Nat))) (setstate : Option (Option PyExc)) : Py Heap :=
   let h1 : Py Heap :=
@@ -166,7 +166,7 @@ def reconRest (h : Heap) (y : Nat) (state : Option Nat) (listiter : Option (List
           | .error e => .error e
           | .ok h => setItemOf h y p.1 p.2) (.ok h4)
 
-/-- `_reconstruct(x, None, *rv)`, Lib/copy.py:228-271, with `deep` false, on a tuple of that shape. -/
+/-- `_reconstruct(x, None, *rv)`, Lib/copy.py:242-285, with `deep` false, on a tuple of that shape. -/
 def reconShallow (h : Heap) (r : RvSpec) (x : Nat) : Py (Heap × Nat) :=
   match r with
   | .str => .ok (h, x)
@@ -183,7 +183,7 @@ def reconShallow (h : Heap) (r : RvSpec) (x : Nat) : Py (Heap × Nat) :=
         | .error e => .error e
         | .ok h2 => .ok (h2, y)
 
-/-- `copy.Error` of `copy`, Lib/copy.py:96, and of `deepcopy`, :152. -/
+/-- `copy.Error` of `copy`, Lib/copy.py:96, and of `deepcopy`, :151. -/
 def uncopyable (deep : Bool) : PyExc :=
   .named "Error" (if deep then "~un(deep)copyable object of type" else "~un(shallow)copyable object of type")
 
@@ -205,8 +205,8 @@ def copyShallow (h : Heap) (x : Nat) : Py (Heap × Nat) :=
       | some r => reconShallow h r x
 
 mutual
-  /-- `deepcopy(x, memo)`, Lib/copy.py:110-163, with the dispatch table of `_deepcopy_list`, :172-178,
-  `_deepcopy_tuple`, :181-195, `_deepcopy_dict`, :198-203, and `_deepcopy_method`, :206-207. -/
+  /-- `deepcopy(x, memo)`, Lib/copy.py@3.14.7:110-163, with the dispatch table of `_deepcopy_list`, :171-177,
+  `_deepcopy_tuple`, :180-194, `_deepcopy_dict`, :197-202, and `_deepcopy_method`, :220-221. -/
   def deepcopy : Nat → Heap → Nat → Py (Heap × Nat)
     | 0, _, _ => .error .modelFuel
     | fuel + 1, h, x =>
@@ -303,7 +303,7 @@ mutual
         | .error e => .error e
         | .ok (h2, ys) => .ok (h2, y :: ys)
 
-  /-- `y[deepcopy(key, memo)] = deepcopy(value, memo)`, Lib/copy.py:201. An assignment evaluates its right side
+  /-- `y[deepcopy(key, memo)] = deepcopy(value, memo)`, Lib/copy.py:200. An assignment evaluates its right side
   first, so the value is copied before the key. -/
   def deepPairs : Nat → Heap → List (Nat × Nat) → Py (Heap × List (Nat × Nat))
     | 0, _, _ => .error .modelFuel
@@ -339,7 +339,7 @@ mutual
       | .error e => .error e
       | .ok (h1, s') => .ok (h1, some s')
 
-  /-- `for item in listiter: item = deepcopy(item, memo); y.append(item)`, Lib/copy.py:256-258. -/
+  /-- `for item in listiter: item = deepcopy(item, memo); y.append(item)`, Lib/copy.py:270-272. -/
   def deepAppend : Nat → Heap → Nat → List Nat → Py Heap
     | 0, _, _, _ => .error .modelFuel
     | _ + 1, h, _, [] => .ok h
@@ -351,7 +351,7 @@ mutual
         | .error e => .error e
         | .ok h2 => deepAppend fuel h2 y rest
 
-  /-- The same for `dictiter`, Lib/copy.py:264-267: the key, the value, then the store. -/
+  /-- The same for `dictiter`, Lib/copy.py:278-281: the key, the value, then the store. -/
   def deepSetItems : Nat → Heap → Nat → List (Nat × Nat) → Py Heap
     | 0, _, _, _ => .error .modelFuel
     | _ + 1, h, _, [] => .ok h
@@ -370,7 +370,7 @@ end
 /-- `pickle` accepts two to six items, Modules/_pickle.c `save_reduce`. -/
 def pickleReduceOk (n : Nat) : Bool := decide (2 ≤ n) && decide (n ≤ 6)
 
-/-- `replace(obj, **changes)`, Lib/copy.py:276-286: the class's `__replace__`, called, or `TypeError`. -/
+/-- `replace(obj, **changes)`, Lib/copy.py:290-300: the class's `__replace__`, called, or `TypeError`. -/
 def replaceOp {β : Type} (meth : Option (Py β)) (cls : String) : Py β :=
   match meth with
   | some r => r

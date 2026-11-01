@@ -15,7 +15,7 @@ summary: |
 likelihood: |
   Low. Code holding a view normally writes through the view.
 maybe_intended: |
-  Yes for C: the comment at bytesio.c:43 says "exports > 0. ... any modifications are forbidden",
+  Yes for C: the comment at bytesio.c:44 says "exports > 0. ... any modifications are forbidden",
   so C is deliberately strict. A maintainer would not change C. The _pyio empty-close case is a
   corner case of a corner case.
 reproducer: |
@@ -52,11 +52,11 @@ observed: |
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): write and truncate identical, REPRODUCED; close() now succeeds in C too (gh-111331, GH-155383),
   so the close difference is gone; the docs there now say "Closing it does not invalidate the view".
 promised_by: |
-  Doc/library/io.rst:770-771: "As long as the view exists, the BytesIO object cannot be resized or
+  Doc/library/io.rst:752-753: "As long as the view exists, the BytesIO object cannot be resized or
   closed."
 cause: |
-  Modules/_io/bytesio.c:245 `check_exports` runs before any size test, and :695 in truncate.
-  Lib/_pyio.py:941-958 relies on bytearray, which only checks exports when resizing.
+  Modules/_io/bytesio.c:246 `check_exports` runs before any size test, and :696 in truncate.
+  Lib/_pyio.py@3.14.7:941-958 relies on bytearray, which only checks exports when resizing.
 possible_fix: |
   Keep C; align _pyio with explicit checks if exact twin behaviour is wanted.
 duplicates:

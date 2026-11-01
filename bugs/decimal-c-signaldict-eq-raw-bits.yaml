@@ -26,10 +26,10 @@ likelihood: |
   ExtendedContext, and code that compares flags as mappings rather than reading single signals. It
   is silent when it happens.
 maybe_intended: |
-  Unlikely. SignalDict derives from MutableMapping (_decimal.c:6079-6080), whose __eq__ compares items
+  Unlikely. SignalDict derives from MutableMapping (_decimal.c:7796-7797), whose __eq__ compares items
   (Lib/_collections_abc.py:822), and _pydecimal's plain dict behaves that way. The word comparison
   looks like a shortcut written for the common case, where a signal has one bit. The test suite
-  compares flags with assertEqual (for example Lib/test/test_decimal.py:3010, :3072, :3790), but
+  compares flags with assertEqual (for example Lib/test/test_decimal.py:3041, :3103, :3821), but
   those contexts are not left with a partial InvalidOperation word, so the difference does not show.
 reproducer: |
   import _decimal as C, _pydecimal as P
@@ -49,10 +49,10 @@ expected: |
   flags == flags.copy() is True, and two flag mappings with the same items are equal, as in _pydecimal.
 promised_by: |
   The Mapping contract: Lib/_collections_abc.py:822 `return dict(self.items()) == dict(other.items())`,
-  and SignalDict is declared a MutableMapping at Modules/_decimal/_decimal.c:6079-6080. Twin agreement.
+  and SignalDict is declared a MutableMapping at Modules/_decimal/_decimal.c:7796-7797. Twin agreement.
 cause: |
-  Modules/_decimal/_decimal.c signaldict_richcompare, :787-820: `SdFlags(v)==SdFlags(w)` and
-  `SdFlags(v)==flags` compare whole words. dict_as_flags (:538-578) sets `cm->flag`, which for
+  Modules/_decimal/_decimal.c signaldict_richcompare, :791-824: `SdFlags(v)==SdFlags(w)` and
+  `SdFlags(v)==flags` compare whole words. dict_as_flags (:549-589) sets `cm->flag`, which for
   InvalidOperation is MPD_IEEE_Invalid_operation (Modules/_decimal/libmpdec/mpdecimal.h:274-280), while
   an operation sets a single condition bit such as MPD_Division_undefined. flags_as_dict (:516-535) and
   signaldict_getitem (:691-705) already treat any of those bits as the one signal, so the mapping view

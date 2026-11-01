@@ -7,7 +7,7 @@ Nothing about the answers can survive: such a comparison can make a lookup miss 
 and a lying one can put two equal keys in a table. What survives is what memory safety rests on.
 
 `_Py_dict_lookup` re-checks `dk == mp->ma_keys && ep->me_key == startkey` after every comparison
-(`dictobject.c:1062`, `:1118`). The first theorem here is what that check buys: an index the lookup
+(`dictobject.c:1142`, `:1198`). The first theorem here is what that check buys: an index the lookup
 reports is one the table has when the lookup returns, for every key protocol, with no hypothesis.
 The second is that the table's structure, `Chain` and its counts, survives `insertdict` and delete
 when every comparison may run any mutation that keeps it, which is what the operations themselves do.
@@ -58,7 +58,7 @@ theorem doLookup_valid {σ : Type} (getIx : σ → Nat → Int) (check : Nat →
 
 variable (P : Proto K (PyDict K V))
 
-/-- `stillThere` is the check at `:1062` and `:1118`: it holds only of an entry the table has. -/
+/-- `stillThere` is the check at `:1142` and `:1198`: it holds only of an entry the table has. -/
 theorem stillThere_entry (mp : PyDict K V) (dk ix : Nat) (k : K) (h : stillThere mp dk ix k = true) :
     (mp.body.entryKH ix).isSome = true := by
   simp only [stillThere, Bool.and_eq_true] at h
@@ -580,7 +580,7 @@ theorem dictLookup_inv (key : K) (hash : Int) (mp : PyDict K V) (hs : I mp) :
 
 end Keep
 
-/-- `*value_addr` is NULL on a negative index (:1285-1307). -/
+/-- `*value_addr` is NULL on a negative index (:1365-1387). -/
 theorem dictLookupAux_some (P : Proto K (PyDict K V)) (key : K) (hash : Int) :
     ∀ (n : Nat) (mp s : PyDict K V) (ix : Int) (v : V),
       dictLookupAux P key hash n mp = (.ok (ix, some v), s) → 0 ≤ ix := by

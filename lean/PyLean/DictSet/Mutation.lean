@@ -6,8 +6,8 @@ A lying `__eq__`: one that answers anything, and may raise, but leaves the dict 
 writes only through `__eq__` (`dictLookup_stable`), so such a comparison leaves the table identical,
 and every invariant of it survives. A comparison that mutates the dict is a different question, and
 this file does not answer it; note that `DKIX_KEY_CHANGED` does not catch every mutation either,
-since a mutation that keeps the keys object and the entry passes the test at `dictobject.c:1062`
-and `:1118`.
+since a mutation that keeps the keys object and the entry passes the test at `dictobject.c:1142`
+and `:1198`.
 -/
 
 namespace PyLean.DictSet

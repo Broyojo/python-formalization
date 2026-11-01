@@ -32,7 +32,7 @@ def piF : Flt := .fin (mkRat 884279719003555 281474976710656)
 /-- `math.tau`. -/
 def tauF : Flt := .fin (mkRat 884279719003555 140737488355328)
 
-/-- `math_1`, Modules/mathmodule.c:921-958. The messages that embed the argument are not rendered. -/
+/-- `math_1`, Modules/mathmodule.c:788-825. The messages that embed the argument are not rendered. -/
 def math1 (f : Flt → Flt) (canOverflow : Bool) (msg : String) (x : Flt) : Py Flt :=
   let r := f x
   if r.isNan && !x.isNan then .error (.valueError msg)
@@ -50,7 +50,7 @@ def mathAsin (L : Libm) := math1 L.asin false "~expected a number in range from 
 def mathAcos (L : Libm) := math1 L.acos false "~expected a number in range from -1 up to 1"
 def mathAtan (L : Libm) := math1 L.atan false "math domain error"
 
-/-- `m_log`, Modules/mathmodule.c:628-648. -/
+/-- `m_log`, Modules/mathmodule.c:629-649. -/
 def mLog (L : Libm) (x : Flt) : Flt :=
   match x with
   | .nan => .nan
@@ -66,7 +66,7 @@ def mathErfc (L : Libm) (x : Flt) : Flt := L.erfc x
 def mathLogF (L : Libm) (x : Flt) : Py Flt :=
   math1 (mLog L) false "~expected a positive input" x
 
-/-- `loghelper`, Modules/mathmodule.c:2243-2276, `math.log(x)` for any real `x`. -/
+/-- `loghelper`, Modules/mathmodule.c@3.14.7:2243-2276, `math.log(x)` for any real `x`. -/
 def mathLog (L : Libm) (v : Val) : Py Flt :=
   match v with
   | .int i =>
@@ -95,7 +95,7 @@ def floatPow (L : Libm) (x y : Flt) : Py Flt :=
     let r := L.pow x y
     if r.isInf then .error (.overflowError "~(34, 'Result too large')") else .ok r
 
-/-! ## `_normal_dist_inv_cdf`, Modules/_statisticsmodule.c:37-126, statistics.py:1797-1872 -/
+/-! ## `_normal_dist_inv_cdf`, Modules/_statisticsmodule.c:37-126, statistics.py:1798-1873 -/
 
 /-- A horner polynomial with coefficients given highest degree first. -/
 def horner (r : Flt) : List Rat → Flt
@@ -165,7 +165,7 @@ def invDen3 : List Rat := [
   1]
 
 /-- The C function `_normal_dist_inv_cdf`; statistics.py imports it over the Python one
-(statistics.py:1875-1879). Only the errors differ between the twins: the C function has the extra
+(statistics.py:1876-1880). Only the errors differ between the twins: the C function has the extra
 range checks and the `den == 0.0` checks. -/
 def normalDistInvCdf (L : Libm) (p mu sigma : Flt) : Py Flt :=
   let err : PyExc := .valueError "inv_cdf undefined for these parameters"
@@ -196,7 +196,7 @@ def normalDistInvCdf (L : Libm) (p mu sigma : Flt) : Py Flt :=
           let x := if Flt.lt q Flt.pz then Flt.neg x else x
           .ok (Flt.add mu (Flt.mul x sigma))
 
-/-! ## Kernels, statistics.py:820-928 -/
+/-! ## Kernels, statistics.py:821-929 -/
 
 structure Kernel where
   pdf : Flt → Py Flt
@@ -212,7 +212,7 @@ def fdiv := fltDiv
 def sumprodF (a b : List Flt) : Py Flt := do
   toFloat (← sumprod (a.map (fun x => (Val.flt x).toN)) (b.map (fun x => (Val.flt x).toN)))
 
-/-- `_newton_raphson`, statistics.py:875-882. The `while` runs on fuel. -/
+/-- `_newton_raphson`, statistics.py:876-883. The `while` runs on fuel. -/
 def newtonLoop (f fPrime : Flt → Py Flt) (y : Flt) : Nat → Flt → Py Flt
   | 0, _ => .error .modelFuel
   | fuel + 1, x => do
@@ -231,7 +231,7 @@ def fq (n d : Int) : Flt := Flt.ofRat ((n : Rat) / (d : Rat))
 def signSplit (p : Flt) : Flt × Flt :=
   if Flt.le p Flt.half then (Flt.one, p) else (Flt.neg Flt.one, Flt.sub Flt.one p)
 
-/-- `_quartic_invcdf_estimate`, statistics.py:884-892. -/
+/-- `_quartic_invcdf_estimate`, statistics.py:885-893. -/
 def quarticEstimate (L : Libm) (p : Flt) : Py Flt := do
   let (sign, p) := signSplit p
   if Flt.lt p (Flt.ofRat (dec10 106 4)) then
@@ -246,7 +246,7 @@ def quarticEstimate (L : Libm) (p : Flt) : Py Flt := do
     else pure x
   return Flt.mul x sign
 
-/-- `_triweight_invcdf_estimate`, statistics.py:903-909. -/
+/-- `_triweight_invcdf_estimate`, statistics.py:904-910. -/
 def triweightEstimate (L : Libm) (p : Flt) : Py Flt := do
   let (sign, p) := signSplit p
   let b ← floatPow L (Flt.mul Flt.two p) (Flt.ofRat (dec10 3400218741872791 16))
@@ -364,7 +364,7 @@ def cosineKernel (L : Libm) : Kernel :=
       fltDiv (Flt.mul Flt.two a) piF
     support := some Flt.one }
 
-/-- `_kernel_specs.get(kernel)`, as filled by `register`, statistics.py:811-818. -/
+/-- `_kernel_specs.get(kernel)`, as filled by `register`, statistics.py:812-819. -/
 def kernelSpec (L : Libm) (name : String) : Option Kernel :=
   match name with
   | "normal" | "gauss" => some (normalKernel L)
@@ -378,9 +378,9 @@ def kernelSpec (L : Libm) (name : String) : Option Kernel :=
   | "cosine" => some (cosineKernel L)
   | _ => none
 
-/-! ## `kde`, `kde_random`, statistics.py:935-1136 -/
+/-! ## `kde`, `kde_random`, statistics.py:936-1137 -/
 
-/-- The checks shared by `kde` and `kde_random`, statistics.py:1035-1047. -/
+/-- The checks shared by `kde` and `kde_random`, statistics.py:1036-1048. -/
 def kdeSpec (L : Libm) (data : List PyN) (h : Val) (kernel : String) : Py Kernel := do
   if data.isEmpty then throw (statErr "Empty data sequence")
   match (pick data 0).v with
@@ -406,19 +406,19 @@ structure KdeState where
   n : Nat
   sample : List PyN
 
-/-- `if len(data) != n: sample = sorted(data); n = len(data)`, statistics.py:1067-1069 and :1077-1079. -/
+/-- `if len(data) != n: sample = sorted(data); n = len(data)`, statistics.py:1068-1070 and :1078-1080. -/
 def kdeRefresh (st : KdeState) (data : List PyN) : Py KdeState :=
   if data.length != st.n then do
     return { n := data.length, sample := ← pySorted data }
   else .ok st
 
-/-- `sample[i : j]` with the bisections, statistics.py:1070-1072. -/
+/-- `sample[i : j]` with the bisections, statistics.py:1071-1073. -/
 def supported (sample : List PyN) (x bandwidth : Val) : Py (Nat × List PyN) := do
   let i := bisectLeft (fun a b => vlt a.v b.v) sample (← vsub x bandwidth).toN
   let j := bisectRight (fun a b => vlt a.v b.v) sample (← vadd x bandwidth).toN
   return (i, (sample.take j).drop i)
 
-/-- `pdf(x)` of `kde`, statistics.py:1054-1055 and :1065-1073. -/
+/-- `pdf(x)` of `kde`, statistics.py:1055-1056 and :1066-1074. -/
 def kdePdf (k : Kernel) (h : Val) (st : KdeState) (data : List PyN) (x : Val) : Py Val := do
   match k.support with
   | none =>
@@ -431,7 +431,7 @@ def kdePdf (k : Kernel) (h : Val) (st : KdeState) (data : List PyN) (x : Val) : 
     let vals ← sup.mapM (fun p => do k.pdf (← scaledT x p.v h))
     vdiv (sumF 0 vals) (← vmul (.int st.n) h)
 
-/-- `cdf(x)` of `kde`, statistics.py:1057-1058 and :1075-1083. -/
+/-- `cdf(x)` of `kde`, statistics.py:1058-1059 and :1076-1084. -/
 def kdeCdf (k : Kernel) (h : Val) (st : KdeState) (data : List PyN) (x : Val) : Py Val := do
   match k.support with
   | none =>
@@ -453,7 +453,7 @@ def kdeAt (L : Libm) (data data' : List PyN) (h : Val) (kernel : String) (cumula
     | none => pure { n := data.length, sample := [] }
   if cumulative then kdeCdf k h st data' x else kdePdf k h st data' x
 
-/-- `rand()` of `kde_random`, statistics.py:1131-1132, given what `prng.choice(data)` and
+/-- `rand()` of `kde_random`, statistics.py:1132-1133, given what `prng.choice(data)` and
 `prng.random()` returned. -/
 def kdeRandomOnce (k : Kernel) (h : Val) (chosen : Val) (u : Flt) : Py Val := do
   vadd chosen (← vmul h (.flt (← k.invcdf u)))
@@ -463,7 +463,7 @@ def kdeRandomAt (L : Libm) (data : List PyN) (h : Val) (kernel : String)
   let k ← kdeSpec L data h kernel
   draws.mapM (fun d => kdeRandomOnce k h (pick data d.1).v d.2)
 
-/-! ## `geometric_mean`, statistics.py:224-261 -/
+/-! ## `geometric_mean`, statistics.py:225-262 -/
 
 structure GmSt where
   n : Nat := 0
@@ -487,28 +487,28 @@ def geometricMean (L : Libm) (data : List PyN) : Py Flt := do
   if st.foundZero then return if Flt.eq total (.inf false) then .nan else Flt.pz
   mathExp L (← fltDiv total (Flt.ofInt st.n))
 
-/-! ## `NormalDist`, statistics.py:1228-1448 -/
+/-! ## `NormalDist`, statistics.py:1229-1449 -/
 
 structure ND where
   mu : Flt
   sigma : Flt
   deriving DecidableEq, Inhabited, Repr
 
-/-- `NormalDist.__init__`, statistics.py:1238-1243. -/
+/-- `NormalDist.__init__`, statistics.py:1239-1244. -/
 def ND.mk' (mu sigma : Val) : Py ND := do
   if ← vltPy sigma (.flt Flt.pz) then throw (statErr "sigma must be non-negative")
   return ⟨← toFloat mu, ← toFloat sigma⟩
 
-/-- `NormalDist.from_samples`, statistics.py:1245-1248. -/
+/-- `NormalDist.from_samples`, statistics.py:1246-1249. -/
 def ND.fromSamples (data : List PyN) : Py ND := do
   let (m, s) ← meanStdev data
   ND.mk' (.flt m) (.flt s)
 
-/-- `NormalDist.samples`, statistics.py:1250-1256; `us` are the values of `rnd()`. -/
+/-- `NormalDist.samples`, statistics.py:1251-1257; `us` are the values of `rnd()`. -/
 def ND.samples (L : Libm) (X : ND) (us : List Flt) : Py (List Flt) :=
   us.mapM (fun u => normalDistInvCdf L u X.mu X.sigma)
 
-/-- `NormalDist.pdf`, statistics.py:1258-1264. -/
+/-- `NormalDist.pdf`, statistics.py@3.14.7:1258-1264. -/
 def ND.pdf (L : Libm) (X : ND) (x : Val) : Py Val := do
   let variance := Flt.mul X.sigma X.sigma
   if !variance.truthy then throw (statErr "pdf() not defined when sigma is zero")
@@ -520,33 +520,33 @@ def ND.pdf (L : Libm) (X : ND) (x : Val) : Py Val := do
 
 def sqrt2 : Flt := Flt.sqrt Flt.two
 
-/-- `NormalDist.cdf`, statistics.py:1266-1270. -/
+/-- `NormalDist.cdf`, statistics.py:1267-1271. -/
 def ND.cdf (L : Libm) (X : ND) (x : Val) : Py Val := do
   if !X.sigma.truthy then throw (statErr "cdf() not defined when sigma is zero")
   let top ← vsub (.flt X.mu) x
   let a ← vdiv top (.flt (Flt.mul X.sigma sqrt2))
   return .flt (Flt.mul Flt.half (mathErfc L (← asDouble a)))
 
-/-- `NormalDist.inv_cdf`, statistics.py:1272-1284. -/
+/-- `NormalDist.inv_cdf`, statistics.py:1273-1285. -/
 def ND.invCdf (L : Libm) (X : ND) (p : Val) : Py Flt := do
   if (← vlePy p (.flt Flt.pz)) || (← vlePy (.flt Flt.one) p) then
     throw (statErr "p must be in the range 0.0 < p < 1.0")
   normalDistInvCdf L (← toFloat p) X.mu X.sigma
 
-/-- `NormalDist.quantiles`, statistics.py:1286-1295. -/
+/-- `NormalDist.quantiles`, statistics.py:1287-1296. -/
 def ND.quantiles (L : Libm) (X : ND) (n : Int) : Py (List Flt) :=
   (rangeI 1 n).mapM (fun i => do ND.invCdf L X (.flt (← intTrueDiv i n)))
 
-/-- The `mean`, `median`, `mode` and `stdev` properties, statistics.py:1342-1364. -/
+/-- The `mean`, `median`, `mode` and `stdev` properties, statistics.py:1343-1365. -/
 def ND.meanP (X : ND) : Flt := X.mu
 def ND.medianP (X : ND) : Flt := X.mu
 def ND.modeP (X : ND) : Flt := X.mu
 def ND.stdevP (X : ND) : Flt := X.sigma
 
-/-- `NormalDist.variance`, statistics.py:1367-1369. -/
+/-- `NormalDist.variance`, statistics.py:1368-1370. -/
 def ND.variance (X : ND) : Flt := Flt.mul X.sigma X.sigma
 
-/-- `NormalDist.overlap`, statistics.py:1297-1329 (`other` a `NormalDist`). -/
+/-- `NormalDist.overlap`, statistics.py:1298-1330 (`other` a `NormalDist`). -/
 def ND.overlap (L : Libm) (A B : ND) : Py Flt := do
   let swap := Flt.lt B.sigma A.sigma || (Flt.eq B.sigma A.sigma && Flt.lt B.mu A.mu)
   let (X, Y) := if swap then (B, A) else (A, B)
@@ -568,63 +568,63 @@ def ND.overlap (L : Libm) (A B : ND) : Py Flt := do
   let t2 := Flt.abs (Flt.sub (← c Y x2) (← c X x2))
   return Flt.sub Flt.one (Flt.add t1 t2)
 
-/-- `NormalDist.zscore`, statistics.py:1331-1340. -/
+/-- `NormalDist.zscore`, statistics.py:1332-1341. -/
 def ND.zscore (X : ND) (x : Val) : Py Val := do
   if !X.sigma.truthy then throw (statErr "zscore() not defined when sigma is zero")
   vdiv (← vsub x (.flt X.mu)) (.flt X.sigma)
 
-/-- `NormalDist.__add__` with a constant, statistics.py:1383; `__radd__` is the same method. -/
+/-- `NormalDist.__add__` with a constant, statistics.py:1384; `__radd__` is the same method. -/
 def ND.addConst (X : ND) (c : Val) : Py ND := do
   ND.mk' (← vadd (.flt X.mu) c) (.flt X.sigma)
 
-/-- `NormalDist.__add__` with a `NormalDist`, statistics.py:1381-1382. -/
+/-- `NormalDist.__add__` with a `NormalDist`, statistics.py:1382-1383. -/
 def ND.add (X Y : ND) : Py ND :=
   ND.mk' (.flt (Flt.add X.mu Y.mu)) (.flt (hypot X.sigma Y.sigma))
 
-/-- `NormalDist.__sub__` with a constant, statistics.py:1397. -/
+/-- `NormalDist.__sub__` with a constant, statistics.py:1398. -/
 def ND.subConst (X : ND) (c : Val) : Py ND := do
   ND.mk' (← vsub (.flt X.mu) c) (.flt X.sigma)
 
-/-- `NormalDist.__sub__` with a `NormalDist`, statistics.py:1395-1396. -/
+/-- `NormalDist.__sub__` with a `NormalDist`, statistics.py:1396-1397. -/
 def ND.sub (X Y : ND) : Py ND :=
   ND.mk' (.flt (Flt.sub X.mu Y.mu)) (.flt (hypot X.sigma Y.sigma))
 
-/-- `NormalDist.__mul__`, statistics.py:1399-1405; `__rmul__` is the same method. -/
+/-- `NormalDist.__mul__`, statistics.py:1400-1406; `__rmul__` is the same method. -/
 def ND.mulConst (X : ND) (c : Val) : Py ND := do
   let m ← vmul (.flt X.mu) c
   let f ← mathFabs c
   ND.mk' m (.flt (Flt.mul X.sigma f))
 
-/-- `NormalDist.__truediv__`, statistics.py:1407-1413. -/
+/-- `NormalDist.__truediv__`, statistics.py:1408-1414. -/
 def ND.divConst (X : ND) (c : Val) : Py ND := do
   let m ← vdiv (.flt X.mu) c
   let f ← mathFabs c
   ND.mk' m (.flt (← fltDiv X.sigma f))
 
-/-- `NormalDist.__pos__`, statistics.py:1415-1417. -/
+/-- `NormalDist.__pos__`, statistics.py:1416-1418. -/
 def ND.pos (X : ND) : Py ND := ND.mk' (.flt X.mu) (.flt X.sigma)
 
-/-- `NormalDist.__neg__`, statistics.py:1419-1421. -/
+/-- `NormalDist.__neg__`, statistics.py:1420-1422. -/
 def ND.neg (X : ND) : Py ND := ND.mk' (.flt (Flt.neg X.mu)) (.flt X.sigma)
 
-/-- `NormalDist.__rsub__`, statistics.py:1425-1427: `-(x1 - x2)` for a constant `x2`. -/
+/-- `NormalDist.__rsub__`, statistics.py:1426-1428: `-(x1 - x2)` for a constant `x2`. -/
 def ND.rsubConst (X : ND) (c : Val) : Py ND := do
   ND.neg (← ND.subConst X c)
 
-/-- `NormalDist.__eq__` between two instances, statistics.py:1431-1435. -/
+/-- `NormalDist.__eq__` between two instances, statistics.py:1432-1436. -/
 def ND.beq (X Y : ND) : Bool := Flt.eq X.mu Y.mu && Flt.eq X.sigma Y.sigma
 
-/-- `NormalDist.__hash__`, statistics.py:1437-1439. -/
+/-- `NormalDist.__hash__`, statistics.py:1438-1440. -/
 def ND.hash (X : ND) : Int := hashTuple [hashFlt X.mu, hashFlt X.sigma]
 
-/-- `NormalDist.__repr__`, statistics.py:1441-1442. -/
+/-- `NormalDist.__repr__`, statistics.py:1442-1443. -/
 def ND.repr (X : ND) : String :=
   s!"NormalDist(mu={fltRepr X.mu}, sigma={fltRepr X.sigma})"
 
-/-- `NormalDist.__getstate__`, statistics.py:1444-1445. -/
+/-- `NormalDist.__getstate__`, statistics.py:1445-1446. -/
 def ND.getstate (X : ND) : Flt × Flt := (X.mu, X.sigma)
 
-/-- `NormalDist.__setstate__`, statistics.py:1447-1448. -/
+/-- `NormalDist.__setstate__`, statistics.py:1448-1449. -/
 def ND.setstate (_X : ND) (s : Flt × Flt) : ND := ⟨s.1, s.2⟩
 
 end PyLean.CoreLibs.CalStat

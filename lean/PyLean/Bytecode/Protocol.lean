@@ -109,7 +109,7 @@ def opDunder : Nat → String
 def cpow (a b : Binary64.F64) : Binary64.F64 :=
   Binary64.F64.ofBits (Float.pow (Float.ofBits (ofF a)) (Float.ofBits (ofF b))).toBits.toNat
 
-/-- `float` arithmetic, `Objects/floatobject.c:551-813`, through the exact mirrors in
+/-- `float` arithmetic, `Objects/floatobject.c:541-803`, through the exact mirrors in
 `Binary64/Float.lean`. `(-2.5) ** 0.5` hands off to `complex_pow`, and the model has no
 `complex` value: `bytecode_diff.py` excludes that case by name (`float-pow-complex`). -/
 def floatBinary (nb : Nat) (a b : UInt64) : RM (Option Val) :=
@@ -171,7 +171,7 @@ def intBinary (nb : Nat) (a b : Int) : RM (Option Val) :=
   | 10 => pure (some (.int (a - b)))
   | 11 =>
     if b == 0 then raiseS "ZeroDivisionError" "division by zero"
-    -- `long_true_divide`, longobject.c:4750-4751: `negate ? -0.0 : 0.0`
+    -- `long_true_divide`, longobject.c:4853-4854: `negate ? -0.0 : 0.0`
     else if a == 0 then pure (some (.float (if b < 0 then 0x8000000000000000 else 0)))
     else
       let n := if b < 0 then -a else a
@@ -197,7 +197,7 @@ def adjustIndices (length start stop step : Int) : Int × Int × Int :=
     else (if start < stop then (stop - start - 1) / step + 1 else 0)
   (start, stop, n)
 
-/-- `_PyEval_SliceIndex`, `Python/ceval.c:3075-3095`, for ints; `dflt` when `None`.
+/-- `_PyEval_SliceIndex`, `Python/ceval.c:2948-2955`, for ints; `dflt` when `None`.
 Out-of-range values saturate to `Py_ssize_t`. -/
 def sliceIndex (v : Val) (dflt : Int) : RM Int :=
   let clamp (i : Int) : Int := max PyLean.ssizeMin (min PyLean.ssizeMax i)
@@ -283,7 +283,7 @@ def cmpNats : List Nat → List Nat → Ordering
 section
 variable (P : Program) (om : ObjModel) (ctx : Ctx)
 
-/-- `_PyEval_Vector`, `Python/ceval.c:2070-2114`. -/
+/-- `_PyEval_Vector`, `Python/ceval.c:2139-2183`. -/
 def evalVector (f : Val) (locals : Val) (args : List Val) (kw : List String) : RM Val := do
   let nf ← framePushAndInit P f locals args kw
   ctx.evalFrame nf none
@@ -792,7 +792,7 @@ def hashImpl (v : Val) : RM Int := do
     | .set true items =>
       pure (frozensetHash items)
     | .range start _ step len =>
-      -- `range_hash`, rangeobject.c:579: `hash((len(r), None, None))` when empty,
+      -- `range_hash`, rangeobject.c:594: `hash((len(r), None, None))` when empty,
       -- `hash((len(r), r.start, None))` for one element, else `(len, start, step)`.
       let hs := [hashInt len,
         if len == 0 then 0x123456 else hashInt start,
@@ -1029,7 +1029,7 @@ def getIterImpl (v : Val) : RM Val := do
     | _ => notIter
   | _ => notIter
 
-/-- Exact generator `yf`, `_PyGen_yf`, `Objects/genobject.c:373-384`. -/
+/-- Exact generator `yf`, `_PyGen_yf`, `Objects/genobject.c@3.14.7:373-384`. -/
 def genYf (g : GenObj) : Option Val :=
   if g.frameState == -1 then g.frame.stack.head? else none
 
@@ -1040,7 +1040,7 @@ inductive Send where
   /-- `PYGEN_ERROR` with no exception set: an exhausted `next()`. -/
   | none
 
-/-- `gen_send_ex2`, `Objects/genobject.c:191-288`. `exc` is the exception being
+/-- `gen_send_ex2`, `Objects/genobject.c@3.14.7:191-288`. `exc` is the exception being
 thrown in, if any. -/
 def genSendEx2 (a : Addr) (arg : Option Val) (exc : Option Val) (closing : Bool) : RM Send := do
   let g ← getGen a
@@ -1074,11 +1074,11 @@ def genSendEx2 (a : Addr) (arg : Option Val) (exc : Option Val) (closing : Bool)
   if result == .none && g'.kind != .asyncGen && arg.isNone then return .none
   return .ret result
 
-/-- `_PyGen_SetStopIterationValue`, `Objects/genobject.c:651-668`. -/
+/-- `_PyGen_SetStopIterationValue`, `Objects/genobject.c:782-799`. -/
 def stopIter {α : Type} (v : Val) : RM α := do
   throw (.exc (← newExc (.cls "StopIteration") (if v == .none then [] else [v])))
 
-/-- `gen_send_ex`, `Objects/genobject.c:297-315`. -/
+/-- `gen_send_ex`, `Objects/genobject.c:384-399`. -/
 def genSendEx (a : Addr) (arg : Option Val) (exc : Option Val) (closing : Bool) : RM Val := do
   match ← genSendEx2 ctx a arg exc closing with
   | .next v => pure v
@@ -1095,7 +1095,7 @@ def genClearFrame (a : Addr) : RM Unit := do
   let g ← getGen a
   setObj a (.gen { g with excValue := .null, frame := { g.frame with fast := #[], stack := [] } })
 
-/-- `gen_iternext`, `Objects/genobject.c:629-643`. -/
+/-- `gen_iternext`, `Objects/genobject.c:760-774`. -/
 def genIterNext (a : Addr) : RM (Option Val) := do
   match ← genSendEx2 ctx a none none false with
   | .next v => pure (some v)
@@ -1104,7 +1104,7 @@ def genIterNext (a : Addr) : RM (Option Val) := do
 
 mutual
 
-/-- `gen_close_iter`, `Objects/genobject.c:335-360`. -/
+/-- `gen_close_iter`, `Objects/genobject.c:424-449`. -/
 def genCloseIter (n : Nat) (yf : Val) : RM Unit := do
   match n with
   | 0 => throw .fuel
@@ -1119,7 +1119,7 @@ def genCloseIter (n : Nat) (yf : Val) : RM Unit := do
       | some m => let _ ← call1 om ctx m []; pure ()
       | none => pure ()
 
-/-- `gen_close`, `Objects/genobject.c:386-453`. -/
+/-- `gen_close`, `Objects/genobject.c:463-601`. -/
 def genClose (n : Nat) (a : Addr) : RM Val := do
   match n with
   | 0 => throw .fuel

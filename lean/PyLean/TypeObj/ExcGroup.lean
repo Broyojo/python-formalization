@@ -1,7 +1,7 @@
 import PyLean.TypeObj.ExcCore
 
 /-!
-`BaseExceptionGroup`: `Objects/exceptions.c:878-1789`. Construction, `str`/`repr`, `derive`,
+`BaseExceptionGroup`: `Objects/exceptions.c:874-1783`. Construction, `str`/`repr`, `derive`,
 `exceptiongroup_subset`, the split recursion, and `_PyExc_PrepReraiseStar`.
 
 The recursion of `exceptiongroup_split_recursive` is `splitRecursive`, one level of it being
@@ -12,7 +12,7 @@ proofs in `ExcProps` can induct on the fuel with one lemma about the list.
 namespace PyLean.TypeObj
 
 /-- `Item %zd of second argument (exceptions) is not an exception` and the
-`nested_base_exceptions` flag, `Objects/exceptions.c:937-957`. -/
+`nested_base_exceptions` flag, `Objects/exceptions.c:933-953`. -/
 def egCheckItems (rt : Rt) : Nat → Bool → List Val → M Bool
   | _, nested, [] => pure nested
   | i, nested, exc :: rest => do
@@ -22,7 +22,7 @@ def egCheckItems (rt : Rt) : Nat → Bool → List Val → M Bool
     let nonbase ← excIsInstanceOf rt exc B.Exception
     egCheckItems rt (i + 1) (nested || !nonbase) rest
 
-/-- The class of the new group, `Objects/exceptions.c:959-989`. -/
+/-- The class of the new group, `Objects/exceptions.c:955-985`. -/
 def egChooseClass (t : Addr) (nested : Bool) : M Addr := do
   let w ← getW
   if t == B.ExceptionGroup then
@@ -36,7 +36,7 @@ def egChooseClass (t : Addr) (nested : Bool) : M Addr := do
     else pure t
   else pure t
 
-/-- `BaseExceptionGroup_new`, `Objects/exceptions.c:896-996`: everything before the object is
+/-- `BaseExceptionGroup_new`, `Objects/exceptions.c:892-992`: everything before the object is
 made. The result is the message, the items, `exceptions_str` and the class. -/
 def egNewParse (rt : Rt) (t : Addr) (args : List Val) :
     M (Val × List Val × Option String × Addr) := do
@@ -57,23 +57,23 @@ def egNewParse (rt : Rt) (t : Addr) (args : List Val) :
   let cls ← egChooseClass t nested
   pure (message, excs, excsStr, cls)
 
-/-- `BaseExceptionGroup_new`, `Objects/exceptions.c:886`. -/
+/-- `BaseExceptionGroup_new`, `Objects/exceptions.c:882`. -/
 def baseExceptionGroupNew (rt : Rt) (t : Addr) (args : List Val) : M Val := do
   let (message, excs, excsStr, cls) ← egNewParse rt t args
   alloc cls (.exc { args := args, egMessage := some message, egExceptions := excs,
                     egExcsStr := excsStr })
 
-/-- `_PyExc_CreateExceptionGroup`, `Objects/exceptions.c:1014`. -/
+/-- `_PyExc_CreateExceptionGroup`, `Objects/exceptions.c:1010`. -/
 def createExceptionGroup (rt : Rt) (msg : String) (excs : Val) : M Val :=
   rt.call (.obj B.BaseExceptionGroup) [.str msg, excs] []
 
-/-- `BaseExceptionGroup_init`, `Objects/exceptions.c:1031`. -/
+/-- `BaseExceptionGroup_init`, `Objects/exceptions.c:1026`. -/
 def baseExceptionGroupInit (self : Val) (args : List Val) (kw : Kw) : M Unit := do
   let w ← getW
   argNoKeywords (typeName w self) kw
   baseExceptionInit self args kw
 
-/-- `BaseExceptionGroup_str`, `Objects/exceptions.c:1071`. -/
+/-- `BaseExceptionGroup_str`, `Objects/exceptions.c:1066`. -/
 def baseExceptionGroupStr (rt : Rt) (self : Val) : M Val := do
   let w ← getW
   let d := excDataOf w self
@@ -82,12 +82,12 @@ def baseExceptionGroupStr (rt : Rt) (self : Val) : M Val := do
   pure (.str s!"{m} ({n} sub-exception{if n > 1 then "s" else ""})")
 
 /-- Does `BaseExceptionGroup_repr` read `args[1]` out of bounds? `self->args` is writable
-and `__init__` replaces it, but `:1103` indexes it with `PyTuple_GET_ITEM`. -/
+and `__init__` replaces it, but `@3.14.7:1103` indexes it with `PyTuple_GET_ITEM`. -/
 def egReprOutOfBounds (d : ExcData) : Bool :=
   d.egExcsStr.isNone && decide (d.args.length < 2)
 
-/-- `BaseExceptionGroup_repr`, `Objects/exceptions.c:1085`. In 3.14.7 an out-of-bounds read
-at `:1103` is undefined behaviour (a crash in practice), which is not a Python outcome, so
+/-- `BaseExceptionGroup_repr`, `Objects/exceptions.c:1080`. In 3.14.7 an out-of-bounds read
+at `@3.14.7:1103` is undefined behaviour (a crash in practice), which is not a Python outcome, so
 the model stops there: see `egReprOutOfBounds`. -/
 def baseExceptionGroupRepr (rt : Rt) (self : Val) : M Val := do
   let w ← getW
@@ -105,7 +105,7 @@ def baseExceptionGroupRepr (rt : Rt) (self : Val) : M Val := do
   let m ← rt.repr (d.egMessage.getD .none)
   pure (.str s!"{pyTypeName w (typeOf w self)}({m}, {exStr})")
 
-/-- `BaseExceptionGroup_derive_impl`, `Objects/exceptions.c:1140`. -/
+/-- `BaseExceptionGroup_derive_impl`, `Objects/exceptions.c:1136`. -/
 def baseExceptionGroupDerive (rt : Rt) (self excs : Val) : M Val := do
   let w ← getW
   rt.call (.obj B.BaseExceptionGroup) [(excDataOf w self).egMessage.getD .none, excs] []
@@ -118,7 +118,7 @@ def callMethodO (rt : Rt) (obj : Val) (name : Name) (arg : Val) : M Val := do
     typeErr s!"attribute of type '{trunc 200 (typeName w f)}' is not callable"
   rt.call f [arg] []
 
-/-- The metadata part of `exceptiongroup_subset`, `Objects/exceptions.c:1191-1200`. The cause
+/-- The metadata part of `exceptiongroup_subset`, `Objects/exceptions.c:1187-1196`. The cause
 goes through `PyException_SetCause`, which also sets `suppress_context`. -/
 def subsetCopyMeta (orig eg : Val) : M Unit := do
   let w ← getW
@@ -129,7 +129,7 @@ def subsetCopyMeta (orig eg : Val) : M Unit := do
   pyExceptionSetContext eg (pyExceptionGetContext w orig)
   pyExceptionSetCause eg (pyExceptionGetCause w orig)
 
-/-- `exceptiongroup_subset`, `Objects/exceptions.c:1155`. `excs` is the list being wrapped;
+/-- `exceptiongroup_subset`, `Objects/exceptions.c:1151`. `excs` is the list being wrapped;
 `PySequence_Size` of an exact list cannot fail. `none` is `*result == NULL`. -/
 def exceptiongroupSubset (rt : Rt) (orig : Val) (excs : List Val) : M (Option Val) := do
   if excs.isEmpty then return none
@@ -150,14 +150,14 @@ def exceptiongroupSubset (rt : Rt) (orig : Val) (excs : List Val) : M (Option Va
       pure (some eg)
     else pure (some eg)
 
-/-- `_exceptiongroup_split_matcher_type`, `Objects/exceptions.c:1236`. The set of leaf ids is
+/-- `_exceptiongroup_split_matcher_type`, `Objects/exceptions.c:1232`. The set of leaf ids is
 the list of the leaves themselves. -/
 inductive MatcherType where
   | byType
   | byPredicate
   | instanceIds (ids : List Val)
 
-/-- `get_matcher_type`, `Objects/exceptions.c:1249`. -/
+/-- `get_matcher_type`, `Objects/exceptions.c:1245`. -/
 def getMatcherType (value : Val) : M MatcherType := do
   let w ← getW
   if excCallableCheck w value && !typeCheck w value then return .byPredicate
@@ -184,7 +184,7 @@ def givenExceptionMatches (w : World) (err exc : Val) : Bool :=
   | some xs => xs.any (givenMatchesClass w err)
   | none => givenMatchesClass w err exc
 
-/-- `exceptiongroup_split_check_match`, `Objects/exceptions.c:1283`. -/
+/-- `exceptiongroup_split_check_match`, `Objects/exceptions.c:1279`. -/
 def splitCheckMatch (rt : Rt) (exc : Val) (mt : MatcherType) (mv : Val) : M Bool := do
   match mt with
   | .byType =>
@@ -197,7 +197,7 @@ def splitCheckMatch (rt : Rt) (exc : Val) (mt : MatcherType) (mv : Val) : M Bool
     let w ← getW
     if egCheck w exc then pure false else pure (ids.any (Val.is · exc))
 
-/-- The loop over `eg->excs`, `Objects/exceptions.c:1378-1411`. -/
+/-- The loop over `eg->excs`, `Objects/exceptions.c:1374-1407`. -/
 def splitKids (rec : Val → M (Option Val × Option Val)) :
     List Val → List Val → List Val → M (List Val × List Val)
   | [], ml, rl => pure (ml, rl)
@@ -208,7 +208,7 @@ def splitKids (rec : Val → M (Option Val × Option Val)) :
 /-- Recursion bound: `_Py_EnterRecursiveCall` raises `RecursionError` long before it. -/
 def excRecFuel : Nat := 2000
 
-/-- `exceptiongroup_split_recursive`, `Objects/exceptions.c:1326`. The result is
+/-- `exceptiongroup_split_recursive`, `Objects/exceptions.c:1322`. The result is
 `(result->match, result->rest)`. -/
 def splitRecursive (rt : Rt) (mt : MatcherType) (mv : Val) (constructRest : Bool) :
     Nat → Val → M (Option Val × Option Val)
@@ -227,19 +227,19 @@ def splitRecursive (rt : Rt) (mt : MatcherType) (mv : Val) (constructRest : Bool
       pure (m, r)
     else pure (m, none)
 
-/-- `BaseExceptionGroup_split_impl`, `Objects/exceptions.c:1444`. -/
+/-- `BaseExceptionGroup_split_impl`, `Objects/exceptions.c:1440`. -/
 def baseExceptionGroupSplit (rt : Rt) (self mv : Val) : M Val := do
   let mt ← getMatcherType mv
   let (m, r) ← splitRecursive rt mt mv true excRecFuel self
   pure (.tuple [m.getD .none, r.getD .none])
 
-/-- `BaseExceptionGroup_subgroup_impl`, `Objects/exceptions.c:1479`. -/
+/-- `BaseExceptionGroup_subgroup_impl`, `Objects/exceptions.c:1473`. -/
 def baseExceptionGroupSubgroup (rt : Rt) (self mv : Val) : M Val := do
   let mt ← getMatcherType mv
   let (m, _) ← splitRecursive rt mt mv false excRecFuel self
   pure (m.getD .none)
 
-/-- `collect_exception_group_leaf_ids`, `Objects/exceptions.c:1505`. -/
+/-- `collect_exception_group_leaf_ids`, `Objects/exceptions.c:1499`. -/
 def collectLeafIds (w : World) : Nat → Val → List Val
   | 0, _ => []
   | fuel + 1, exc =>
@@ -251,7 +251,7 @@ def collectLeafIds (w : World) : Nat → Val → List Val
         | e :: es => collectLeafIds w fuel e ++ go es
       go (excDataOf w exc).egExceptions
 
-/-- `exception_group_projection`, `Objects/exceptions.c:1549`. -/
+/-- `exception_group_projection`, `Objects/exceptions.c:1543`. -/
 def exceptionGroupProjection (rt : Rt) (eg : Val) (keep : List Val) : M Val := do
   let w ← getW
   let ids := keep.flatMap (collectLeafIds w excRecFuel)
@@ -264,7 +264,7 @@ def sameRef : Option Val → Option Val → Bool
   | some a, some b => a.is b
   | _, _ => false
 
-/-- `is_same_exception_metadata`, `Objects/exceptions.c:1587`. The `notes` it compares is the
+/-- `is_same_exception_metadata`, `Objects/exceptions.c:1581`. The `notes` it compares is the
 unused C field, not `__notes__`. -/
 def isSameExceptionMetadata (w : World) (exc1 exc2 : Val) : Bool :=
   let e1 := excDataOf w exc1
@@ -272,7 +272,7 @@ def isSameExceptionMetadata (w : World) (exc1 exc2 : Val) : Bool :=
   sameRef e1.notes e2.notes && e1.traceback.is e2.traceback &&
     sameRef e1.cause e2.cause && sameRef e1.context e2.context
 
-/-- `_PyExc_PrepReraiseStar`, `Objects/exceptions.c:1618`. -/
+/-- `_PyExc_PrepReraiseStar`, `Objects/exceptions.c:1612`. -/
 def excPrepReraiseStar (rt : Rt) (orig : Val) (excs : List Val) : M Val := do
   if excs.isEmpty then return .none
   let w ← getW
@@ -294,7 +294,7 @@ def firstNonExc (w : World) : Nat → List Val → Option Nat
   | i, e :: es =>
     if excInstanceCheck w e || e.is .none then firstNonExc w (i + 1) es else some i
 
-/-- `PyUnstable_Exc_PrepReraiseStar`, `Objects/exceptions.c:1711`. -/
+/-- `PyUnstable_Exc_PrepReraiseStar`, `Objects/exceptions.c:1705`. -/
 def pyUnstableExcPrepReraiseStar (rt : Rt) (orig excs : Val) : M Val := do
   let w ← getW
   unless excInstanceCheck w orig do typeErr "orig must be an exception instance"
@@ -308,7 +308,7 @@ def pyUnstableExcPrepReraiseStar (rt : Rt) (orig excs : Val) : M Val := do
       | none => valueErr "orig must be a raised exception"
       | some _ => excPrepReraiseStar rt orig xs
 
-/-- `create_exception_group_class`, `Objects/exceptions.c:1774`: the bases, in order. `rowBases`
+/-- `create_exception_group_class`, `Objects/exceptions.c:1768`: the bases, in order. `rowBases`
 and `rowMro` of `Builtins.lean` use the same pair. -/
 def exceptionGroupBases : List Addr := [B.BaseExceptionGroup, B.Exception]
 

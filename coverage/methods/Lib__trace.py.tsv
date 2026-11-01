@@ -24,4 +24,4 @@ Lib/trace.py	554	571	Trace.localtrace_trace_and_count	localtrace_trace_and_count
 Lib/trace.py	573	588	Trace.localtrace_trace	localtrace_trace(self, frame, why, arg)	todo		
 Lib/trace.py	590	596	Trace.localtrace_count	localtrace_count(self, frame, why, arg)	todo		
 Lib/trace.py	598	602	Trace.results	results(self)	todo		
-Lib/trace.py	604	748	main	main()	todo		candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output
+Lib/trace.py	604	746	main	main()	todo		changed-in-3.15: candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output

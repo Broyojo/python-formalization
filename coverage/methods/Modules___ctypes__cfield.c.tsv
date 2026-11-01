@@ -21,41 +21,42 @@ Modules/_ctypes/cfield.c	718	728	g_set	g_set(void *ptr, PyObject *value, Py_ssiz
 Modules/_ctypes/cfield.c	731	737	g_get	g_get(void *ptr, Py_ssize_t size)	todo		
 Modules/_ctypes/cfield.c	741	751	d_set	d_set(void *ptr, PyObject *value, Py_ssize_t size)	todo		
 Modules/_ctypes/cfield.c	754	760	d_get	d_get(void *ptr, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	772	783	D_set	D_set(void *ptr, PyObject *value, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	786	793	D_get	D_get(void *ptr, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	796	818	D_set_sw	D_set_sw(void *ptr, PyObject *value, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	821	831	D_get_sw	D_get_sw(void *ptr, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	835	846	F_set	F_set(void *ptr, PyObject *value, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	849	856	F_get	F_get(void *ptr, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	859	881	F_set_sw	F_set_sw(void *ptr, PyObject *value, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	884	894	F_get_sw	F_get_sw(void *ptr, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	898	909	G_set	G_set(void *ptr, PyObject *value, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	912	919	G_get	G_get(void *ptr, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	924	940	d_set_sw	d_set_sw(void *ptr, PyObject *value, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	943	951	d_get_sw	d_get_sw(void *ptr, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	955	965	f_set	f_set(void *ptr, PyObject *value, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	968	974	f_get	f_get(void *ptr, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	977	993	f_set_sw	f_set_sw(void *ptr, PyObject *value, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	996	1004	f_get_sw	f_get_sw(void *ptr, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	1018	1030	O_get	O_get(void *ptr, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	1033	1039	O_set	O_set(void *ptr, PyObject *value, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	1044	1087	c_set	c_set(void *ptr, PyObject *value, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	1091	1095	c_get	c_get(void *ptr, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	1099	1129	u_set	u_set(void *ptr, PyObject *value, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	1133	1137	u_get	u_get(void *ptr, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	1141	1161	U_get	U_get(void *ptr, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	1164	1195	U_set	U_set(void *ptr, PyObject *value, Py_ssize_t length)	todo		
-Modules/_ctypes/cfield.c	1200	1212	s_get	s_get(void *ptr, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	1215	1246	s_set	s_set(void *ptr, PyObject *value, Py_ssize_t length)	todo		
-Modules/_ctypes/cfield.c	1250	1271	z_set	z_set(void *ptr, PyObject *value, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	1274	1283	z_get	z_get(void *ptr, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	1287	1324	Z_set	Z_set(void *ptr, PyObject *value, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	1327	1336	Z_get	Z_get(void *ptr, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	1342	1382	X_set	X_set(void *ptr, PyObject *value, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	1386	1398	X_get	X_get(void *ptr, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	1403	1432	P_set	P_set(void *ptr, PyObject *value, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	1435	1442	P_get	P_get(void *ptr, Py_ssize_t size)	todo		
-Modules/_ctypes/cfield.c	1513	1540	_ctypes_fixint_fielddesc	_ctypes_fixint_fielddesc(Py_ssize_t nbytes, bool is_signed)	todo		
-Modules/_ctypes/cfield.c	1563	1758	_ctypes_init_fielddesc	_ctypes_init_fielddesc(void)	todo		
-Modules/_ctypes/cfield.c	1763	1765	_ctypes_get_simple_type_chars	_ctypes_get_simple_type_chars(void) {	todo		
-Modules/_ctypes/cfield.c	1768	1812	_ctypes_get_fielddesc	_ctypes_get_fielddesc(const char *fmt)	todo		
+Modules/_ctypes/cfield.c	772	783	Zd_set	Zd_set(void *ptr, PyObject *value, Py_ssize_t size)	todo		changed-in-3.15: new function
+Modules/_ctypes/cfield.c	786	793	Zd_get	Zd_get(void *ptr, Py_ssize_t size)	todo		changed-in-3.15: new function
+Modules/_ctypes/cfield.c	796	818	Zd_set_sw	Zd_set_sw(void *ptr, PyObject *value, Py_ssize_t size)	todo		changed-in-3.15: new function
+Modules/_ctypes/cfield.c	821	831	Zd_get_sw	Zd_get_sw(void *ptr, Py_ssize_t size)	todo		changed-in-3.15: new function
+Modules/_ctypes/cfield.c	835	846	Zf_set	Zf_set(void *ptr, PyObject *value, Py_ssize_t size)	todo		changed-in-3.15: new function
+Modules/_ctypes/cfield.c	849	856	Zf_get	Zf_get(void *ptr, Py_ssize_t size)	todo		changed-in-3.15: new function
+Modules/_ctypes/cfield.c	859	881	Zf_set_sw	Zf_set_sw(void *ptr, PyObject *value, Py_ssize_t size)	todo		changed-in-3.15: new function
+Modules/_ctypes/cfield.c	884	894	Zf_get_sw	Zf_get_sw(void *ptr, Py_ssize_t size)	todo		changed-in-3.15: new function
+Modules/_ctypes/cfield.c	898	909	Zg_set	Zg_set(void *ptr, PyObject *value, Py_ssize_t size)	todo		changed-in-3.15: new function
+Modules/_ctypes/cfield.c	912	919	Zg_get	Zg_get(void *ptr, Py_ssize_t size)	todo		changed-in-3.15: new function
+Modules/_ctypes/cfield.c	925	941	d_set_sw	d_set_sw(void *ptr, PyObject *value, Py_ssize_t size)	todo		
+Modules/_ctypes/cfield.c	944	952	d_get_sw	d_get_sw(void *ptr, Py_ssize_t size)	todo		
+Modules/_ctypes/cfield.c	956	966	f_set	f_set(void *ptr, PyObject *value, Py_ssize_t size)	todo		
+Modules/_ctypes/cfield.c	969	975	f_get	f_get(void *ptr, Py_ssize_t size)	todo		
+Modules/_ctypes/cfield.c	978	994	f_set_sw	f_set_sw(void *ptr, PyObject *value, Py_ssize_t size)	todo		
+Modules/_ctypes/cfield.c	997	1005	f_get_sw	f_get_sw(void *ptr, Py_ssize_t size)	todo		
+Modules/_ctypes/cfield.c	1019	1031	O_get	O_get(void *ptr, Py_ssize_t size)	todo		
+Modules/_ctypes/cfield.c	1034	1040	O_set	O_set(void *ptr, PyObject *value, Py_ssize_t size)	todo		
+Modules/_ctypes/cfield.c	1045	1088	c_set	c_set(void *ptr, PyObject *value, Py_ssize_t size)	todo		
+Modules/_ctypes/cfield.c	1092	1096	c_get	c_get(void *ptr, Py_ssize_t size)	todo		
+Modules/_ctypes/cfield.c	1100	1130	u_set	u_set(void *ptr, PyObject *value, Py_ssize_t size)	todo		
+Modules/_ctypes/cfield.c	1134	1138	u_get	u_get(void *ptr, Py_ssize_t size)	todo		
+Modules/_ctypes/cfield.c	1142	1162	U_get	U_get(void *ptr, Py_ssize_t size)	todo		
+Modules/_ctypes/cfield.c	1165	1196	U_set	U_set(void *ptr, PyObject *value, Py_ssize_t length)	todo		
+Modules/_ctypes/cfield.c	1201	1213	s_get	s_get(void *ptr, Py_ssize_t size)	todo		
+Modules/_ctypes/cfield.c	1216	1247	s_set	s_set(void *ptr, PyObject *value, Py_ssize_t length)	todo		
+Modules/_ctypes/cfield.c	1251	1272	z_set	z_set(void *ptr, PyObject *value, Py_ssize_t size)	todo		
+Modules/_ctypes/cfield.c	1275	1284	z_get	z_get(void *ptr, Py_ssize_t size)	todo		
+Modules/_ctypes/cfield.c	1288	1325	Z_set	Z_set(void *ptr, PyObject *value, Py_ssize_t size)	todo		
+Modules/_ctypes/cfield.c	1328	1337	Z_get	Z_get(void *ptr, Py_ssize_t size)	todo		changed-in-3.15:
+Modules/_ctypes/cfield.c	1343	1383	X_set	X_set(void *ptr, PyObject *value, Py_ssize_t size)	todo		
+Modules/_ctypes/cfield.c	1387	1399	X_get	X_get(void *ptr, Py_ssize_t size)	todo		
+Modules/_ctypes/cfield.c	1404	1433	P_set	P_set(void *ptr, PyObject *value, Py_ssize_t size)	todo		
+Modules/_ctypes/cfield.c	1436	1443	P_get	P_get(void *ptr, Py_ssize_t size)	todo		
+Modules/_ctypes/cfield.c	1514	1541	_ctypes_fixint_fielddesc	_ctypes_fixint_fielddesc(Py_ssize_t nbytes, bool is_signed)	todo		
+Modules/_ctypes/cfield.c	1564	1756	_ctypes_init_fielddesc	_ctypes_init_fielddesc(void)	todo		changed-in-3.15:
+Modules/_ctypes/cfield.c	1761	1763	_ctypes_get_simple_type_chars	_ctypes_get_simple_type_chars(void) {	todo		
+Modules/_ctypes/cfield.c	1766	1773	_ctypes_get_complex_type_formats	_ctypes_get_complex_type_formats(void) {	todo		changed-in-3.15: new function
+Modules/_ctypes/cfield.c	1776	1835	_ctypes_get_fielddesc	_ctypes_get_fielddesc(const char *fmt)	todo		changed-in-3.15:

@@ -1,22 +1,22 @@
 file	line	endline	name	signature	status	entry	note
-Lib/mimetypes.py	67	79	MimeTypes.__init__	__init__(self, filenames=(), strict=True)	todo		
-Lib/mimetypes.py	81	110	MimeTypes.add_type	add_type(self, type, ext, strict=True)	todo		
-Lib/mimetypes.py	112	166	MimeTypes.guess_type	guess_type(self, url, strict=True)	todo		
-Lib/mimetypes.py	168	178	MimeTypes.guess_file_type	guess_file_type(self, path, *, strict=True)	todo		
-Lib/mimetypes.py	180	200	MimeTypes._guess_file_type	_guess_file_type(self, path, strict, splitext)	todo		
-Lib/mimetypes.py	202	219	MimeTypes.guess_all_extensions	guess_all_extensions(self, type, strict=True)	todo		
-Lib/mimetypes.py	221	237	MimeTypes.guess_extension	guess_extension(self, type, strict=True)	todo		
-Lib/mimetypes.py	239	248	MimeTypes.read	read(self, filename, strict=True)	todo		candidates:pyio-bytesio-read-after-seek
-Lib/mimetypes.py	250	268	MimeTypes.readfp	readfp(self, fp, strict=True)	todo		
-Lib/mimetypes.py	270	290	MimeTypes.read_windows_registry	read_windows_registry(self, strict=True)	todo		
-Lib/mimetypes.py	293	320	MimeTypes._read_windows_registry	_read_windows_registry(cls, add_type)	todo		
-Lib/mimetypes.py	322	342	guess_type	guess_type(url, strict=True)	todo		
-Lib/mimetypes.py	345	352	guess_file_type	guess_file_type(path, *, strict=True)	todo		
-Lib/mimetypes.py	355	370	guess_all_extensions	guess_all_extensions(type, strict=True)	todo		
-Lib/mimetypes.py	372	386	guess_extension	guess_extension(type, strict=True)	todo		
-Lib/mimetypes.py	388	402	add_type	add_type(type, ext, strict=True)	todo		
-Lib/mimetypes.py	405	433	init	init(files=None)	todo		
-Lib/mimetypes.py	436	444	read_mime_types	read_mime_types(file)	todo		
-Lib/mimetypes.py	447	692	_default_mime_types	_default_mime_types()	todo		
-Lib/mimetypes.py	698	716	_parse_args	_parse_args(args)	todo		
-Lib/mimetypes.py	719	739	_main	_main(args=None)	todo		
+Lib/mimetypes.py	75	87	MimeTypes.__init__	__init__(self, filenames=(), strict=True)	todo		
+Lib/mimetypes.py	89	118	MimeTypes.add_type	add_type(self, type, ext, strict=True)	todo		
+Lib/mimetypes.py	120	174	MimeTypes.guess_type	guess_type(self, url, strict=True)	todo		
+Lib/mimetypes.py	176	186	MimeTypes.guess_file_type	guess_file_type(self, path, *, strict=True)	todo		
+Lib/mimetypes.py	188	208	MimeTypes._guess_file_type	_guess_file_type(self, path, strict, splitext)	todo		
+Lib/mimetypes.py	210	227	MimeTypes.guess_all_extensions	guess_all_extensions(self, type, strict=True)	todo		
+Lib/mimetypes.py	229	245	MimeTypes.guess_extension	guess_extension(self, type, strict=True)	todo		
+Lib/mimetypes.py	247	256	MimeTypes.read	read(self, filename, strict=True)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/mimetypes.py	258	276	MimeTypes.readfp	readfp(self, fp, strict=True)	todo		
+Lib/mimetypes.py	278	298	MimeTypes.read_windows_registry	read_windows_registry(self, strict=True)	todo		
+Lib/mimetypes.py	301	328	MimeTypes._read_windows_registry	_read_windows_registry(cls, add_type)	todo		
+Lib/mimetypes.py	330	350	guess_type	guess_type(url, strict=True)	todo		
+Lib/mimetypes.py	353	360	guess_file_type	guess_file_type(path, *, strict=True)	todo		
+Lib/mimetypes.py	363	378	guess_all_extensions	guess_all_extensions(type, strict=True)	todo		
+Lib/mimetypes.py	380	394	guess_extension	guess_extension(type, strict=True)	todo		
+Lib/mimetypes.py	396	410	add_type	add_type(type, ext, strict=True)	todo		
+Lib/mimetypes.py	413	441	init	init(files=None)	todo		
+Lib/mimetypes.py	444	452	read_mime_types	read_mime_types(file)	todo		
+Lib/mimetypes.py	455	713	_default_mime_types	_default_mime_types()	todo		changed-in-3.15:
+Lib/mimetypes.py	719	737	_parse_args	_parse_args(args)	todo		changed-in-3.15:
+Lib/mimetypes.py	740	760	_main	_main(args=None)	todo		

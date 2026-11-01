@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Lib/profiling/sampling/_format_utils.py	4	5	fmt	fmt(value: int | float, decimals: int=1)	todo		changed-in-3.15: new function

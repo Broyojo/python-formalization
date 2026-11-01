@@ -44,7 +44,7 @@ theorem userListSimulatesList_proven : UserListSimulatesList := by
 
 /-- The read-only methods answer as the wrapped `list` does: `len`, `in`, `count`, `index`,
 item access, `repr`, and a slice is the list's slice re-wrapped in `self.__class__`
-(`__getitem__`, :1272-1273). -/
+(`__getitem__`, :1276-1277). -/
 def UserListObservers : Prop :=
   ∀ (α : Type) (ops : ListOps α) (u : UL α) (x : α) (i : Int) (s : Slice) (a b : Option Int),
     ulLen u = u.data.length ∧
@@ -66,7 +66,7 @@ theorem userListObservers_proven : UserListObservers := by
 `extend` give the same result for a `UserList`, a `list` or any other iterable with the same
 items, concatenating in the right order, and a non-iterable is the same `TypeError`
 from each. `__init__` likewise reads the three kinds alike. Comparison against a `UserList`
-is comparison against its list (`__cast`, :1262-1263). -/
+is comparison against its list (`__cast`, :1266-1267). -/
 def UserListOperandsAgree : Prop :=
   ∀ (α : Type) (ops : ListOps α) (u : UL α) (l : List α) (ty cls : String) (op : CmpOp),
     ulAdd u (.user l) = .ok ⟨u.cls, u.data ++ l⟩ ∧ ulAdd u (.list l) = ulAdd u (.user l) ∧

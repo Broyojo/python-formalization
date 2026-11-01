@@ -3,7 +3,7 @@ import PyLean.MathInt.Isqrt
 import PyLean.MathInt.Factorial
 
 /-!
-`int.to_bytes` (`_PyLong_AsByteArray`, longobject.c:1031-1170) writes `v mod
+`int.to_bytes` (`_PyLong_AsByteArray`, longobject.c:1109-1248) writes `v mod
 256**n` and raises `OverflowError` exactly when `v` does not fit in `n` bytes.
 -/
 

@@ -45,8 +45,8 @@ promised_by: |
   ISO 8601 notation for midnight at the end of a day (gh-102450). Day 00 and year 0000 are
   not valid dates for the datetime class (date.fromisoformat and datetime(...) reject them).
 cause: |
-  Lib/_pydatetime.py:1948-1960 (`# Only wrap day/month when it was previously valid` /
-  `if 1 <= month <= 12 and day <= days_in_month`) and Modules/_datetimemodule.c:5989-6007
+  Lib/_pydatetime.py:1998-2010 (`# Only wrap day/month when it was previously valid` /
+  `if 1 <= month <= 12 and day <= days_in_month`) and Modules/_datetimemodule.c:6154-6172
   (`if ((hour == 24) && (month >= 1 && month <= 12))` then `if (day <= d_in_month)`)
   increment the day before `check_date_args` / `_check_date_fields` run on the result. The
   comment states the intent (only wrap a valid date); the check is incomplete.

@@ -186,7 +186,7 @@ theorem skip_spec (mem : Seq) : ∀ (t : Seq) (i fuel : Nat), mem.drop (i + 1) =
           simp
         · simpa using k4
 
-/-- The part of the loop of `_PyBytes_FromHex` after the whitespace, bytesobject.c:2583-2600. -/
+/-- The part of the loop of `_PyBytes_FromHex` after the whitespace, bytesobject.c:2695-2712. -/
 def hexBody (mem : Seq) (len fuel j : Nat) (out : Seq) : Py Seq :=
   match memRead mem j with
   | .error e => .error e

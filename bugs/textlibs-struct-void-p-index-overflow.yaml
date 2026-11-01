@@ -39,7 +39,7 @@ observed: |
 promised_by: |
   invariant: struct documents struct.error for out-of-range values.
 cause: |
-  Modules/_struct.c:819-834 (no range error) and :2236-2241 (rewrite gated on PyLong_Check).
+  Modules/_struct.c:820-835 (no range error) and :2402-2407 (rewrite gated on PyLong_Check).
 possible_fix: |
   Test the converted value in s_pack_internal, or give np_void_p a RANGE_ERROR path.
 duplicates: |

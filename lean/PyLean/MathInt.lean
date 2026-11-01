@@ -60,7 +60,7 @@ def entries : List Entry := [
     notes := "Includes the unsigned long tight loop of factorial_partial_product (no wraparound under its num_operands * max_bits <= 64 guard)." },
   { id := "mathint-isqrt-negative", pyFile := "Modules/mathmodule.c", pyFns := ["math.isqrt"]
     statement := "isqrt(n) raises ValueError for every n < 0."
-    source := "math.isqrt docs; mathmodule.c:1707-1712", status := .proven
+    source := "math.isqrt docs; mathmodule.c@3.14.7:1707-1712", status := .proven
     prop := ``IsqrtRejectsNegative, thm := some ``isqrtRejectsNegative_proven },
   { id := "mathint-comb-perm-negative", pyFile := "Modules/mathmodule.c"
     pyFns := ["math.comb", "math.perm"]
@@ -76,7 +76,7 @@ def entries : List Entry := [
   { id := "mathint-factorial-arg-errors", pyFile := "Modules/mathmodule.c"
     pyFns := ["math.factorial"]
     statement := "factorial(n) raises ValueError for n < 0 and OverflowError for n > LONG_MAX."
-    source := "math.factorial docs; mathmodule.c:2025-2039", status := .proven
+    source := "math.factorial docs; mathmodule.c@3.14.7:2025-2039", status := .proven
     prop := ``FactorialArgErrors, thm := some ``factorialArgErrors_proven },
   { id := "mathint-to-bytes-exact", pyFile := "Objects/longobject.c"
     pyFns := ["int.to_bytes", "_PyLong_AsByteArray"]
@@ -98,7 +98,7 @@ def entries : List Entry := [
   { id := "mathint-bytes-arg-errors", pyFile := "Objects/longobject.c"
     pyFns := ["int.to_bytes", "int.from_bytes"]
     statement := "A byteorder other than 'little'/'big' raises ValueError in to_bytes and from_bytes; a negative length raises ValueError; a length outside Py_ssize_t raises OverflowError."
-    source := "int.to_bytes / int.from_bytes docs; longobject.c:6306-6324", status := .proven
+    source := "int.to_bytes / int.from_bytes docs; longobject.c@3.14.7:6306-6324", status := .proven
     prop := ``BytesArgErrors, thm := some ``bytesArgErrors_proven },
   { id := "mathint-gcd-small", pyFile := "Modules/mathmodule.c"
     pyFns := ["math.gcd", "_PyLong_GCD"]
@@ -117,7 +117,7 @@ def entries : List Entry := [
     statement := "For all int arguments, gcd(*args) is the nonnegative greatest common divisor (gcd() == 0)."
     source := "math.gcd docs", status := .proven
     prop := ``GcdGeneral, thm := some ``gcdGeneral_proven
-    notes := "Includes Lehmer's step of _PyLong_GCD (longobject.c:5683-5808): the cofactors accepted by the test B + q*D <= x - q*y are the true Euclidean cofactors of (a, b), so the digit loop yields two consecutive nonnegative remainders below 2**(30*size_a) (no wraparound), b strictly decreases, and no int64_t intermediate of the inner loop exceeds 2**62 in absolute value." },
+    notes := "Includes Lehmer's step of _PyLong_GCD (longobject.c:5782-5907): the cofactors accepted by the test B + q*D <= x - q*y are the true Euclidean cofactors of (a, b), so the digit loop yields two consecutive nonnegative remainders below 2**(30*size_a) (no wraparound), b strictly decreases, and no int64_t intermediate of the inner loop exceeds 2**62 in absolute value." },
   { id := "mathint-lcm-general", pyFile := "Modules/mathmodule.c"
     pyFns := ["math.lcm", "long_lcm"]
     statement := "For all int arguments, lcm(*args) is the nonnegative least common multiple (lcm() == 1, 0 if any argument is 0)."

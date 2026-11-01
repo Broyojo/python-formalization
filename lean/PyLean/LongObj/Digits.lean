@@ -28,7 +28,7 @@ open PyLean PyLean.MathInt
 /-- `PyLong_MASK`. -/
 def MASK : Nat := 2 ^ 30 - 1
 
-/-- `MAX_LONG_DIGITS` on a 64-bit build, longobject.c:153: `(INT64_MAX-1) / PyLong_SHIFT`. -/
+/-- `MAX_LONG_DIGITS` on a 64-bit build, longobject.c:155: `(INT64_MAX-1) / PyLong_SHIFT`. -/
 def maxLongDigits : Nat := (2 ^ 63 - 2) / 30
 
 /-- Not a Python outcome: an intermediate did not fit its C type, or a pointer
@@ -43,11 +43,11 @@ def chk64 (x : Nat) : Py Nat := if x < 2 ^ 64 then .ok x else .error cOverflow
 def chkS64 (x : Int) : Py Int :=
   if -(2 ^ 63 : Int) ≤ x ∧ x < 2 ^ 63 then .ok x else .error cOverflow
 
-/-- `a - b - c` on `uint32_t`, longobject.c:3719: wraps modulo `2^32`. -/
+/-- `a - b - c` on `uint32_t`, longobject.c:3818: wraps modulo `2^32`. -/
 def subU32 (a b c : Nat) : Nat := (((a : Int) - b - c) % 2 ^ 32).toNat
 
-/-- `long_alloc(size)`, longobject.c:157-192, as far as it is observable: the
-limit check at :161-165. `MemoryError` from `PyObject_Malloc` is not modelled. -/
+/-- `long_alloc(size)`, longobject.c:159-197, as far as it is observable: the
+limit check at :163-167. `MemoryError` from `PyObject_Malloc` is not modelled. -/
 def longAlloc (size : Nat) : Py Unit :=
   if size > maxLongDigits then .error (.overflowError "too many digits in integer")
   else .ok ()
@@ -144,12 +144,12 @@ theorem val_take_add_drop (l : List Nat) (n : Nat) :
 
 /-! ## `long_normalize` -/
 
-/-- The loop `while (i > 0 && ob_digit[i-1] == 0) --i;`, longobject.c:129-130. -/
+/-- The loop `while (i > 0 && ob_digit[i-1] == 0) --i;`, longobject.c:131-132. -/
 def topNonzero (l : List Nat) : Nat → Nat
   | 0 => 0
   | i + 1 => if l.getD i 0 = 0 then topNonzero l i else i + 1
 
-/-- `long_normalize(v)`, longobject.c:124-140: drop the leading zero digits. -/
+/-- `long_normalize(v)`, longobject.c:126-142: drop the leading zero digits. -/
 def normalize (l : List Nat) : List Nat := l.take (topNonzero l l.length)
 
 theorem normal_nil : Normal [] := fun h => absurd rfl h
@@ -296,7 +296,7 @@ def Long.ofInt (v : Int) : Long := ⟨decide (v < 0), digitsOf v.natAbs⟩
 /-- The Python value of an object. -/
 def Long.toInt (x : Long) : Int := if x.neg then -(val x.ds : Int) else val x.ds
 
-/-- `_PyLong_FlipSign`, pycore_long.h:311-316: the tag of zero is unchanged. -/
+/-- `_PyLong_FlipSign`, pycore_long.h:321-326: the tag of zero is unchanged. -/
 def Long.flip (x : Long) : Long := if x.ds = [] then x else { x with neg := !x.neg }
 
 theorem Long.toInt_ofInt (v : Int) : (Long.ofInt v).toInt = v := by
@@ -344,7 +344,7 @@ theorem Long.ofInt_neg_natCast {n : Nat} (hn : 0 < n) :
 /-- `_PyLong_IsCompact(x)`, longintrepr.h:122-125: at most one digit. -/
 def Long.isCompact (x : Long) : Bool := x.ds.length ≤ 1
 
-/-- `medium_value(x)`, longobject.c:25 / `_PyLong_CompactValue`, longintrepr.h:130-137. -/
+/-- `medium_value(x)`, longobject.c:27 / `_PyLong_CompactValue`, longintrepr.h:130-142. -/
 def Long.medium (x : Long) : Int :=
   if x.neg then -(x.ds.headD 0 : Int) else x.ds.headD 0
 
@@ -378,15 +378,15 @@ theorem Long.medium_ofInt {v : Int} (h : v.natAbs < 2 ^ 30) : (Long.ofInt v).med
 
 /-! ## Constructing small objects -/
 
-/-- `_PY_NSMALLPOSINTS`, pycore_runtime_structs.h:109. -/
+/-- `_PY_NSMALLPOSINTS`, pycore_runtime_structs.h@3.14.7:109. -/
 def nSmallPos : Int := 257
-/-- `_PY_NSMALLNEGINTS`, pycore_runtime_structs.h:110. -/
+/-- `_PY_NSMALLNEGINTS`, pycore_runtime_structs.h:98. -/
 def nSmallNeg : Int := 5
 
 /-- `IS_SMALL_INT(ival)`, pycore_long.h:67-68. -/
 def isSmallInt (x : Int) : Bool := decide (-nSmallNeg ≤ x) && decide (x < nSmallPos)
 
-/-- `is_medium_int(x)`, longobject.c:51-56: the unsigned comparison
+/-- `is_medium_int(x)`, longobject.c:53-58: the unsigned comparison
 `(twodigits)x + MASK < MASK + BASE`, with `uint64_t` wraparound. -/
 def isMediumInt (x : Int) : Bool :=
   decide (((x + MASK) % 2 ^ 64).toNat < MASK + 2 ^ 30)
@@ -397,24 +397,24 @@ theorem isMediumInt_iff {x : Int} (h1 : -(2 ^ 63 : Int) ≤ x) (h2 : x < 2 ^ 63)
   apply decide_eq_decide.2
   omega
 
-/-- `get_small_int(ival)`, longobject.c:59-63, and `_PyLong_FromMedium(x)`,
-longobject.c:246-264: an object of one digit `|x|` (none for zero, which the
+/-- `get_small_int(ival)`, longobject.c:61-65, and `_PyLong_FromMedium(x)`,
+longobject.c:251-270: an object of one digit `|x|` (none for zero, which the
 static table holds with digit count 0). -/
 def fromSingle (x : Int) : Long :=
   ⟨decide (x < 0), if x = 0 then [] else [x.natAbs]⟩
 
-/-- `*p++ = t & MASK; t >>= SHIFT;` until `t` is zero, longobject.c:296-300,
-:361-365 and :401-404. -/
+/-- `*p++ = t & MASK; t >>= SHIFT;` until `t` is zero, longobject.c:302-306,
+:395-399 and :435-438. -/
 def digitLoop : Nat → Nat → List Nat
   | 0, _ => []
   | f + 1, t => if t ≠ 0 then (t &&& MASK) :: digitLoop f (t >>> 30) else []
 
-/-- `_PyLong_FromLarge(ival)`, longobject.c:267-303 (64 bits need at most 3 digits;
-the counting loop at :285-290 only sizes the allocation). -/
+/-- `_PyLong_FromLarge(ival)`, longobject.c:273-309 (64 bits need at most 3 digits;
+the counting loop at :291-296 only sizes the allocation). -/
 def fromLarge (x : Int) : Long :=
   ⟨decide (x < 0), digitLoop 3 ((if x < 0 then (-x).toNat else x.toNat))⟩
 
-/-- `_PyLong_FromSTwoDigits(x)`, longobject.c:307-317. -/
+/-- `_PyLong_FromSTwoDigits(x)`, longobject.c:313-323. -/
 def fromSTwoDigits (x : Int) : Long :=
   if isSmallInt x then fromSingle x
   else if isMediumInt x then fromSingle x

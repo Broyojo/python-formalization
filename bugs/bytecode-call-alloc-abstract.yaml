@@ -9,14 +9,14 @@ functions: ["_CHECK_AND_ALLOCATE_OBJECT", "_CREATE_INIT_FRAME", "specialize_clas
 summary: |
   Calling a class whose `tp_new is object.__new__` and whose `__init__` is a simple Python
   function specializes the CALL to `CALL_ALLOC_AND_ENTER_INIT`. The specialized opcode's
-  `_CHECK_AND_ALLOCATE_OBJECT` uop (Python/bytecodes.c:4137) allocates the instance directly with
+  `_CHECK_AND_ALLOCATE_OBJECT` uop (Python/bytecodes.c@3.14.7:4137) allocates the instance directly with
   `PyType_GenericAlloc` and then runs `__init__`; it never calls `tp_new`/`object_new`. But
-  `object_new` (Objects/typeobject.c:6852-6867) is where `Py_TPFLAGS_IS_ABSTRACT` is enforced:
+  `object_new` (Objects/typeobject.c:7462-7477) is where `Py_TPFLAGS_IS_ABSTRACT` is enforced:
   it raises `TypeError: Can't instantiate abstract class ... without an implementation for
   abstract method ...`. So a class with a non-empty `__abstractmethods__` that reaches this
   specialization can be instantiated once it is hot, even though the first (generic) call
   correctly raised `TypeError`. `specialize_class_call` / `get_init_for_simple_managed_python_class`
-  (Python/specialize.c:1937-2012) check `tp_new == object.__new__`, `tp_alloc ==
+  (Python/specialize.c:1626-1701) check `tp_new == object.__new__`, `tp_alloc ==
   PyType_GenericAlloc`, heap type, and a simple-function `__init__`, but never
   `Py_TPFLAGS_IS_ABSTRACT`.
 likelihood: |
@@ -59,12 +59,12 @@ observed: |
   python3 3.14.7: created 39, errors 1. REPRODUCED.
   main (vendor/cpython-main/python.exe, 3.16.0a1+dev): created 39, errors 1. REPRODUCED.
 promised_by: |
-  object_new, Objects/typeobject.c:6867 ("if (type->tp_flags & Py_TPFLAGS_IS_ABSTRACT)"); the
+  object_new, Objects/typeobject.c:7477 ("if (type->tp_flags & Py_TPFLAGS_IS_ABSTRACT)"); the
   generic CALL path reaches it and raises, the specialized path does not.
 cause: |
-  Python/specialize.c:1995-2012 (specialize_class_call) and 1937-1963
+  Python/specialize.c:1684-1701 (specialize_class_call) and 1937-1963
   (get_init_for_simple_managed_python_class) do not reject `tp->tp_flags & Py_TPFLAGS_IS_ABSTRACT`,
-  so `_CHECK_AND_ALLOCATE_OBJECT` (Python/bytecodes.c:4137-4159) allocates and enters `__init__`
+  so `_CHECK_AND_ALLOCATE_OBJECT` (Python/bytecodes.c@3.14.7:4137-4159) allocates and enters `__init__`
   without ever running `object_new`'s abstract-method check.
 possible_fix: |
   Add `if (tp->tp_flags & Py_TPFLAGS_IS_ABSTRACT) { SPECIALIZATION_FAIL(...); goto generic; }` to

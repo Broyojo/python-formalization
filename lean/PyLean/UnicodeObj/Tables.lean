@@ -8,7 +8,7 @@ point by `difftest/unicodeobj_diff.py`.
 
 namespace PyLean.UnicodeObj.Tables
 
-/-- `#define SHIFT`, unicodetype_db.h:1758. -/
+/-- `#define SHIFT`, unicodetype_db.h@3.14.7:1758. -/
 def shift : Nat := 6
 /-- Number of entries of `_PyUnicode_TypeRecords`. -/
 def recordCount : Nat := 509
@@ -80,7 +80,7 @@ def typeRecordsChunk (k : Nat) : Nat :=
 
 /-- Number of entries of `_PyUnicode_ExtendedCase`. -/
 def extendedCaseCount : Nat := 1236
-/-- `_PyUnicode_ExtendedCase` (unicodetype_db.h:518), cut into chunks of 32 entries of 32 bits. -/
+/-- `_PyUnicode_ExtendedCase` (unicodetype_db.h:520), cut into chunks of 32 entries of 32 bits. -/
 def extendedCaseChunk (k : Nat) : Nat :=
   cond (Nat.ble 19 k)
     (cond (Nat.ble 29 k)
@@ -160,7 +160,7 @@ def extendedCaseChunk (k : Nat) : Nat :=
             (0x3a1000003c1000003f10000039a000003ba000003f0000003a0000003c0000003d6000003a6000003c6000003d500000398000003b8000003d100000392000003b2000003d0000003a3000003c3000003c20000030100000308000003a50000030100000308000003c5000003b000000301000003080000039900000301)
             (0x308000003b90000039000000399000003b9000003450000030c0000004a0000030c0000006a000001f000000053000000730000017f0000004e000002bc0000006e000002bc00000149000001300000030700000069000000730000005300000053000000530000007300000073000000df0000039c000003bc000000b5)))))
 
-/-- `index1` (unicodetype_db.h:1759), cut into chunks of 64 entries of 16 bits. -/
+/-- `index1` (unicodetype_db.h:1761), cut into chunks of 64 entries of 16 bits. -/
 def index1Chunk (k : Nat) : Nat :=
   cond (Nat.ble 136 k)
     (cond (Nat.ble 204 k)
@@ -706,7 +706,7 @@ def index1Chunk (k : Nat) : Nat :=
                   (0x6f006e006d006c006a006b006a006a000c0069006800670066006500640063006200610060005f005e005d005c005b005a0059005800570056005500540053005200510050004f004e004d004c001a001a001a001a001a001a001a001a004b004a004900480047004600450044001a001a001a001a001a0043004200410040)
                   (0x3f003e003d003c003b003a0039003800370036003500340033003200310030002f002e002d002c002b002a0029002800270026002500240023002200210020001f001e001d001c001b001a0019001800170016001500140013001200110010000f000e000d000c000b000a0009000800070006000500040003000200010000))))))))
 
-/-- `index2` (unicodetype_db.h:2972), cut into chunks of 64 entries of 16 bits. -/
+/-- `index2` (unicodetype_db.h:2368), cut into chunks of 64 entries of 16 bits. -/
 def index2Chunk (k : Nat) : Nat :=
   cond (Nat.ble 229 k)
     (cond (Nat.ble 343 k)
@@ -1628,9 +1628,9 @@ def index2Chunk (k : Nat) : Nat :=
 def blockCount : Nat := 458
 /-- Bit `b` is set when block `b` has a record with a non-zero case delta. -/
 def deltaBlocks : Nat := 0x6000000000000020000000018000000006c00006f00018000010007b00000000000000f0c70ff200000000c00000000007fe7fa
-/-- The `case` labels of `_PyUnicode_IsWhitespace` (unicodetype_db.h:6676). -/
+/-- The `case` labels of `_PyUnicode_IsWhitespace` (unicodetype_db.h:6546). -/
 def whitespace : List Nat := [9, 10, 11, 12, 13, 28, 29, 30, 31, 32, 133, 160, 5760, 8192, 8193, 8194, 8195, 8196, 8197, 8198, 8199, 8200, 8201, 8202, 8232, 8233, 8239, 8287, 12288]
-/-- The `case` labels of `_PyUnicode_IsLinebreak` (unicodetype_db.h:6717). -/
+/-- The `case` labels of `_PyUnicode_IsLinebreak` (unicodetype_db.h:6587). -/
 def linebreak : List Nat := [10, 11, 12, 13, 28, 29, 30, 133, 8232, 8233]
 
 end PyLean.UnicodeObj.Tables

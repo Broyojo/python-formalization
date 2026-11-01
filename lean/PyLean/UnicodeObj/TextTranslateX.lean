@@ -44,7 +44,7 @@ def fastTranslateLoopX (m : MapH) (ignore : Bool) :
       else step t' (t' ch) (hist ++ [ch])
     else step t ch2 hist
 
-/-- The inner `while (collend < size)` of `_PyUnicode_TranslateCharmap`, unicodeobject.c:9563-9573.
+/-- The inner `while (collend < size)` of `_PyUnicode_TranslateCharmap`, unicodeobject.c:9464-9474.
 Every lookup here is thrown away, the last one included: the main loop asks again. -/
 def collectUndefinedX (m : MapH) : List Nat → List Nat → Py (List Nat × List Nat)
   | [], hist => .ok ([], hist)
@@ -77,8 +77,8 @@ inductive TH where
   | strict
   | custom (cb : TransCB)
 
-/-- `unicode_translate_call_errorhandler`, unicodeobject.c:9224-9274, with
-`make_translate_exception`, :9197-9218. -/
+/-- `unicode_translate_call_errorhandler`, unicodeobject.c:9125-9175, with
+`make_translate_exception`, :9098-9119. -/
 def translateCallback (cb : TransCB) (hist : List TransView) (input : Str) (start stop : Nat) :
     Py (List TransView × Str × Nat) := do
   let hist' := hist ++ [{ object := input, start, stop, reason := "character maps to <undefined>" }]
@@ -93,7 +93,7 @@ def translateCallback (cb : TransCB) (hist : List TransView) (input : Str) (star
       .error (.indexError s!"position {newpos} from error handler out of bounds")
     else .ok (hist', rep, newpos.toNat)
 
-/-- The outer `while (i<size)` of `_PyUnicode_TranslateCharmap`, unicodeobject.c:9537-9591. -/
+/-- The outer `while (i<size)` of `_PyUnicode_TranslateCharmap`, unicodeobject.c:9438-9492. -/
 def translateLoopX (m : MapH) (H : TH) (input : Str) :
     Nat → Nat → List Nat → Str → List Nat → List TransView → Py Str
   | 0, _, _, _, _, _ => .error .modelFuel
@@ -111,12 +111,12 @@ def translateLoopX (m : MapH) (H : TH) (input : Str) :
         let (th', rep, newpos) ← translateCallback cb th input i collend
         translateLoopX m H input fuel newpos (input.drop newpos) (out ++ rep) hist' th'
 
-/-- `ignore = (errors != NULL && strcmp(errors, "ignore") == 0)`, unicodeobject.c:9520. -/
+/-- `ignore = (errors != NULL && strcmp(errors, "ignore") == 0)`, unicodeobject.c:9421. -/
 def TH.isIgnore : TH → Bool
   | .ignore => true
   | _ => false
 
-/-- `_PyUnicode_TranslateCharmap`, unicodeobject.c:9487-9601. -/
+/-- `_PyUnicode_TranslateCharmap`, unicodeobject.c:9388-9502. -/
 def translateCharmapX (m : MapH) (H : TH) (input : Str) (fuel : Nat) : Py Str :=
   if input.length = 0 then .ok input
   else

@@ -807,7 +807,7 @@ theorem bloomSuperset_proven : BloomSuperset := by
 /-! ## Dedent -/
 
 /-- `_PyUnicode_Dedent` is defined on every string: the `memcpy` length
-`new_line_len` is never negative (`assert(new_line_len >= 0)`, unicodeobject.c:14487). -/
+`new_line_len` is never negative (`assert(new_line_len >= 0)`, unicodeobject.c:13708). -/
 def DedentDefined : Prop := ∀ src : Str, (pyUnicodeDedent src).isSome = true
 
 /-- A final blank line shorter than the margin, with no newline after it. -/

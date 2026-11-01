@@ -42,7 +42,7 @@ promised_by: |
 cause: |
   Lib/fractions.py:302-303: `raise ZeroDivisionError('Fraction(%s, 0)' % numerator)`; the
   '%s' conversion calls int.__str__, which raises ValueError past the digit limit
-  (Objects/longobject.c:2131-2140). Same lines on main.
+  (Objects/longobject.c:2207-2216). Same lines on main.
 possible_fix: |
   Do not embed the numerator (e.g. raise ZeroDivisionError('Fraction(..., 0)') or
   'division by zero'), or format it with repr-safe truncation; at minimum build the

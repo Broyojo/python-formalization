@@ -1,64 +1,65 @@
 file	line	endline	name	signature	status	entry	note
 Python/pythonrun.c	64	91	_PyRun_AnyFile	_PyRun_AnyFile(FILE *fp, PyObject *filename, int closeit, PyCompilerFlags *flags)	todo		
 Python/pythonrun.c	94	114	PyRun_AnyFileExFlags	PyRun_AnyFileExFlags(FILE *fp, const char *filename, int closeit, PyCompilerFlags *flags)	todo		
-Python/pythonrun.c	118	191	_PyRun_InteractiveLoop	_PyRun_InteractiveLoop(FILE *fp, PyObject *filename, PyCompilerFlags *flags)	todo		
+Python/pythonrun.c	118	191	_PyRun_InteractiveLoop	_PyRun_InteractiveLoop(FILE *fp, PyObject *filename, PyCompilerFlags *flags)	todo		changed-in-3.15:
 Python/pythonrun.c	195	211	PyRun_InteractiveLoopFlags	PyRun_InteractiveLoopFlags(FILE *fp, const char *filename, PyCompilerFlags *flags)	todo		
-Python/pythonrun.c	216	300	pyrun_one_parse_ast	pyrun_one_parse_ast(FILE *fp, PyObject *filename, PyCompilerFlags *flags, PyArena *arena, mod_ty *pmod, PyObject** interactive_src)	todo		
+Python/pythonrun.c	216	300	pyrun_one_parse_ast	pyrun_one_parse_ast(FILE *fp, PyObject *filename, PyCompilerFlags *flags, PyArena *arena, mod_ty *pmod, PyObject** interactive_src)	todo		changed-in-3.15:
 Python/pythonrun.c	306	375	_PyRun_InteractiveOne	_PyRun_InteractiveOne(FILE *fp, PyObject *filename, PyCompilerFlags *flags)	todo		
 Python/pythonrun.c	378	386	PyRun_InteractiveOneObject	PyRun_InteractiveOneObject(FILE *fp, PyObject *filename, PyCompilerFlags *flags)	todo		
 Python/pythonrun.c	389	402	PyRun_InteractiveOneFlags	PyRun_InteractiveOneFlags(FILE *fp, const char *filename_str, PyCompilerFlags *flags)	todo		
 Python/pythonrun.c	409	451	maybe_pyc_file	maybe_pyc_file(FILE *fp, PyObject *filename, int closeit)	todo		
 Python/pythonrun.c	455	477	set_main_loader	set_main_loader(PyObject *d, PyObject *filename, const char *loader_name)	todo		
-Python/pythonrun.c	481	556	_PyRun_SimpleFile	_PyRun_SimpleFile(FILE *fp, PyObject *filename, int closeit, PyCompilerFlags *flags)	todo		
-Python/pythonrun.c	560	575	PyRun_SimpleFileExFlags	PyRun_SimpleFileExFlags(FILE *fp, const char *filename, int closeit, PyCompilerFlags *flags)	todo		
-Python/pythonrun.c	579	592	_PyRun_SimpleString	_PyRun_SimpleString(const char *command, PyObject* name, PyCompilerFlags *flags)	todo		
-Python/pythonrun.c	595	604	PyRun_SimpleStringFlags	PyRun_SimpleStringFlags(const char *command, PyCompilerFlags *flags)	todo		
-Python/pythonrun.c	607	628	parse_exit_code	parse_exit_code(PyObject *code, int *exitcode_p)	todo		
-Python/pythonrun.c	631	689	_Py_HandleSystemExitAndKeyboardInterrupt	_Py_HandleSystemExitAndKeyboardInterrupt(int *exitcode_p)	todo		
-Python/pythonrun.c	693	699	handle_system_exit	handle_system_exit(void)	todo		
-Python/pythonrun.c	703	774	_PyErr_PrintEx	_PyErr_PrintEx(PyThreadState *tstate, int set_sys_last_vars)	todo		
-Python/pythonrun.c	777	780	_PyErr_Print	_PyErr_Print(PyThreadState *tstate)	todo		
-Python/pythonrun.c	783	787	PyErr_PrintEx	PyErr_PrintEx(int set_sys_last_vars)	todo		
-Python/pythonrun.c	790	793	PyErr_Print	PyErr_Print(void)	todo		
-Python/pythonrun.c	802	818	print_exception_invalid_type	print_exception_invalid_type(struct exception_print_context *ctx, PyObject *value)	todo		
-Python/pythonrun.c	821	833	print_exception_traceback	print_exception_traceback(struct exception_print_context *ctx, PyObject *value)	todo		
-Python/pythonrun.c	836	883	print_exception_file_and_line	print_exception_file_and_line(struct exception_print_context *ctx, PyObject **value_p)	todo		
-Python/pythonrun.c	887	971	print_exception_message	print_exception_message(struct exception_print_context *ctx, PyObject *type, PyObject *value)	todo		
-Python/pythonrun.c	974	1007	print_exception	print_exception(struct exception_print_context *ctx, PyObject *value)	todo		
-Python/pythonrun.c	1021	1044	print_chained	print_chained(struct exception_print_context* ctx, PyObject *value, const char * message, const char *tag)	todo		
-Python/pythonrun.c	1053	1074	print_exception_seen_lookup	print_exception_seen_lookup(struct exception_print_context *ctx, PyObject *value)	todo		
-Python/pythonrun.c	1077	1114	print_exception_cause_and_context	print_exception_cause_and_context(struct exception_print_context *ctx, PyObject *value)	todo		
-Python/pythonrun.c	1117	1138	print_exception_recursive	print_exception_recursive(struct exception_print_context *ctx, PyObject *value)	todo		
-Python/pythonrun.c	1141	1204	_PyErr_Display	_PyErr_Display(PyObject *file, PyObject *unused, PyObject *value, PyObject *tb)	todo		
-Python/pythonrun.c	1207	1229	PyErr_Display	PyErr_Display(PyObject *unused, PyObject *value, PyObject *tb)	todo		
-Python/pythonrun.c	1231	1234	_PyErr_DisplayException	void _PyErr_DisplayException(PyObject *file, PyObject *exc)	todo		
-Python/pythonrun.c	1236	1239	PyErr_DisplayException	void PyErr_DisplayException(PyObject *exc)	todo		
-Python/pythonrun.c	1242	1251	check_start	check_start(int start)	todo		
-Python/pythonrun.c	1254	1290	_PyRun_String	_PyRun_String(const char *str, PyObject* name, int start, PyObject *globals, PyObject *locals, PyCompilerFlags *flags, int generate_new_source)	todo		
-Python/pythonrun.c	1301	1331	_PyRun_File	_PyRun_File(FILE *fp, PyObject *filename, int start, PyObject *globals, PyObject *locals, int closeit, PyCompilerFlags *flags)	todo		
-Python/pythonrun.c	1335	1349	PyRun_FileExFlags	PyRun_FileExFlags(FILE *fp, const char *filename, int start, PyObject *globals, PyObject *locals, int closeit, PyCompilerFlags *flags)	todo		
-Python/pythonrun.c	1352	1364	flush_io_stream	flush_io_stream(PyThreadState *tstate, PyObject *name)	todo		
-Python/pythonrun.c	1367	1374	flush_io	flush_io(void)	todo		
-Python/pythonrun.c	1377	1397	run_eval_code_obj	run_eval_code_obj(PyThreadState *tstate, PyCodeObject *co, PyObject *globals, PyObject *locals)	todo		
-Python/pythonrun.c	1400	1420	get_interactive_filename	get_interactive_filename(PyObject *filename, Py_ssize_t count)	todo		
-Python/pythonrun.c	1423	1493	run_mod	run_mod(mod_ty mod, PyObject *filename, PyObject *globals, PyObject *locals, PyCompilerFlags *flags, PyArena *arena, PyObject* interactive_src, int generate_new_source)	todo		
-Python/pythonrun.c	1496	1536	run_pyc_file	run_pyc_file(FILE *fp, PyObject *globals, PyObject *locals, PyCompilerFlags *flags)	todo		
-Python/pythonrun.c	1539	1570	Py_CompileStringObject	Py_CompileStringObject(const char *str, PyObject *filename, int start, PyCompilerFlags *flags, int optimize)	todo		
-Python/pythonrun.c	1573	1583	Py_CompileStringExFlags	Py_CompileStringExFlags(const char *str, const char *filename_str, int start, PyCompilerFlags *flags, int optimize)	todo		
-Python/pythonrun.c	1586	1603	_PyObject_SupportedAsScript	_PyObject_SupportedAsScript(PyObject *cmd)	todo		
-Python/pythonrun.c	1606	1652	_Py_SourceAsString	_Py_SourceAsString(PyObject *cmd, const char *funcname, const char *what, PyCompilerFlags *cf, PyObject **cmd_copy)	todo		
-Python/pythonrun.c	1662	1666	PyOS_CheckStack	PyOS_CheckStack(void)	todo		
-Python/pythonrun.c	1673	1677	PyRun_AnyFile	PyAPI_FUNC(int) PyRun_AnyFile(FILE *fp, const char *name)	todo		
-Python/pythonrun.c	1680	1684	PyRun_AnyFileEx	PyAPI_FUNC(int) PyRun_AnyFileEx(FILE *fp, const char *name, int closeit)	todo		
-Python/pythonrun.c	1687	1691	PyRun_AnyFileFlags	PyAPI_FUNC(int) PyRun_AnyFileFlags(FILE *fp, const char *name, PyCompilerFlags *flags)	todo		
-Python/pythonrun.c	1694	1698	PyRun_File	PyAPI_FUNC(PyObject *) PyRun_File(FILE *fp, const char *p, int s, PyObject *g, PyObject *l)	todo		
-Python/pythonrun.c	1701	1705	PyRun_FileEx	PyAPI_FUNC(PyObject *) PyRun_FileEx(FILE *fp, const char *p, int s, PyObject *g, PyObject *l, int c)	todo		
-Python/pythonrun.c	1708	1713	PyRun_FileFlags	PyAPI_FUNC(PyObject *) PyRun_FileFlags(FILE *fp, const char *p, int s, PyObject *g, PyObject *l, PyCompilerFlags *flags)	todo		
-Python/pythonrun.c	1716	1720	PyRun_SimpleFile	PyAPI_FUNC(int) PyRun_SimpleFile(FILE *f, const char *p)	todo		
-Python/pythonrun.c	1723	1727	PyRun_SimpleFileEx	PyAPI_FUNC(int) PyRun_SimpleFileEx(FILE *f, const char *p, int c)	todo		
-Python/pythonrun.c	1731	1735	PyRun_String	PyAPI_FUNC(PyObject *) PyRun_String(const char *str, int s, PyObject *g, PyObject *l)	todo		
-Python/pythonrun.c	1738	1742	PyRun_SimpleString	PyAPI_FUNC(int) PyRun_SimpleString(const char *s)	todo		
-Python/pythonrun.c	1745	1749	Py_CompileString	PyAPI_FUNC(PyObject *) Py_CompileString(const char *str, const char *p, int s)	todo		
-Python/pythonrun.c	1753	1757	Py_CompileStringFlags	Py_CompileStringFlags(const char *str, const char *p, int s, PyCompilerFlags *flags)	todo		
-Python/pythonrun.c	1760	1764	PyRun_InteractiveOne	PyAPI_FUNC(int) PyRun_InteractiveOne(FILE *f, const char *p)	todo		
-Python/pythonrun.c	1767	1771	PyRun_InteractiveLoop	PyAPI_FUNC(int) PyRun_InteractiveLoop(FILE *f, const char *p)	todo		
+Python/pythonrun.c	481	550	_PyRun_SimpleFile	_PyRun_SimpleFile(FILE *fp, PyObject *filename, int closeit, PyCompilerFlags *flags)	todo		changed-in-3.15:
+Python/pythonrun.c	554	569	PyRun_SimpleFileExFlags	PyRun_SimpleFileExFlags(FILE *fp, const char *filename, int closeit, PyCompilerFlags *flags)	todo		
+Python/pythonrun.c	573	586	_PyRun_SimpleString	_PyRun_SimpleString(const char *command, PyObject* name, PyCompilerFlags *flags)	todo		
+Python/pythonrun.c	589	598	PyRun_SimpleStringFlags	PyRun_SimpleStringFlags(const char *command, PyCompilerFlags *flags)	todo		
+Python/pythonrun.c	601	622	parse_exit_code	parse_exit_code(PyObject *code, int *exitcode_p)	todo		
+Python/pythonrun.c	625	683	_Py_HandleSystemExitAndKeyboardInterrupt	_Py_HandleSystemExitAndKeyboardInterrupt(int *exitcode_p)	todo		changed-in-3.15:
+Python/pythonrun.c	687	693	handle_system_exit	handle_system_exit(void)	todo		
+Python/pythonrun.c	697	768	_PyErr_PrintEx	_PyErr_PrintEx(PyThreadState *tstate, int set_sys_last_vars)	todo		changed-in-3.15:
+Python/pythonrun.c	771	774	_PyErr_Print	_PyErr_Print(PyThreadState *tstate)	todo		
+Python/pythonrun.c	777	781	PyErr_PrintEx	PyErr_PrintEx(int set_sys_last_vars)	todo		
+Python/pythonrun.c	784	787	PyErr_Print	PyErr_Print(void)	todo		
+Python/pythonrun.c	796	812	print_exception_invalid_type	print_exception_invalid_type(struct exception_print_context *ctx, PyObject *value)	todo		
+Python/pythonrun.c	815	827	print_exception_traceback	print_exception_traceback(struct exception_print_context *ctx, PyObject *value)	todo		
+Python/pythonrun.c	830	877	print_exception_file_and_line	print_exception_file_and_line(struct exception_print_context *ctx, PyObject **value_p)	todo		
+Python/pythonrun.c	881	965	print_exception_message	print_exception_message(struct exception_print_context *ctx, PyObject *type, PyObject *value)	todo		
+Python/pythonrun.c	968	1001	print_exception	print_exception(struct exception_print_context *ctx, PyObject *value)	todo		
+Python/pythonrun.c	1015	1038	print_chained	print_chained(struct exception_print_context* ctx, PyObject *value, const char * message, const char *tag)	todo		
+Python/pythonrun.c	1047	1068	print_exception_seen_lookup	print_exception_seen_lookup(struct exception_print_context *ctx, PyObject *value)	todo		
+Python/pythonrun.c	1071	1108	print_exception_cause_and_context	print_exception_cause_and_context(struct exception_print_context *ctx, PyObject *value)	todo		
+Python/pythonrun.c	1111	1132	print_exception_recursive	print_exception_recursive(struct exception_print_context *ctx, PyObject *value)	todo		
+Python/pythonrun.c	1135	1198	_PyErr_Display	_PyErr_Display(PyObject *file, PyObject *unused, PyObject *value, PyObject *tb)	todo		changed-in-3.15:
+Python/pythonrun.c	1201	1223	PyErr_Display	PyErr_Display(PyObject *unused, PyObject *value, PyObject *tb)	todo		changed-in-3.15:
+Python/pythonrun.c	1225	1228	_PyErr_DisplayException	void _PyErr_DisplayException(PyObject *file, PyObject *exc)	todo		
+Python/pythonrun.c	1230	1233	PyErr_DisplayException	void PyErr_DisplayException(PyObject *exc)	todo		
+Python/pythonrun.c	1236	1245	check_start	check_start(int start)	todo		
+Python/pythonrun.c	1248	1291	_PyRun_String	_PyRun_String(const char *str, PyObject* name, int start, PyObject *globals, PyObject *locals, PyCompilerFlags *flags, int generate_new_source)	todo		changed-in-3.15:
+Python/pythonrun.c	1302	1332	_PyRun_File	_PyRun_File(FILE *fp, PyObject *filename, int start, PyObject *globals, PyObject *locals, int closeit, PyCompilerFlags *flags)	todo		
+Python/pythonrun.c	1336	1350	PyRun_FileExFlags	PyRun_FileExFlags(FILE *fp, const char *filename, int start, PyObject *globals, PyObject *locals, int closeit, PyCompilerFlags *flags)	todo		
+Python/pythonrun.c	1353	1365	flush_io_stream	flush_io_stream(PyThreadState *tstate, PyObject *name)	todo		changed-in-3.15:
+Python/pythonrun.c	1368	1375	flush_io	flush_io(void)	todo		
+Python/pythonrun.c	1378	1399	run_eval_code_obj	run_eval_code_obj(PyThreadState *tstate, PyCodeObject *co, PyObject *globals, PyObject *locals)	todo		changed-in-3.15:
+Python/pythonrun.c	1402	1422	get_interactive_filename	get_interactive_filename(PyObject *filename, Py_ssize_t count)	todo		
+Python/pythonrun.c	1425	1504	run_mod	run_mod(mod_ty mod, PyObject *filename, PyObject *globals, PyObject *locals, PyCompilerFlags *flags, PyArena *arena, PyObject* interactive_src, int generate_new_source)	todo		changed-in-3.15:
+Python/pythonrun.c	1507	1547	run_pyc_file	run_pyc_file(FILE *fp, PyObject *globals, PyObject *locals, PyCompilerFlags *flags)	todo		
+Python/pythonrun.c	1550	1554	Py_CompileStringObject	Py_CompileStringObject(const char *str, PyObject *filename, int start, PyCompilerFlags *flags, int optimize)	todo		changed-in-3.15:
+Python/pythonrun.c	1557	1590	_Py_CompileString	_Py_CompileString(const char *str, PyObject *filename, int start, PyCompilerFlags *flags, int optimize, PyObject *module)	todo		changed-in-3.15: new function
+Python/pythonrun.c	1593	1603	Py_CompileStringExFlags	Py_CompileStringExFlags(const char *str, const char *filename_str, int start, PyCompilerFlags *flags, int optimize)	todo		
+Python/pythonrun.c	1606	1623	_PyObject_SupportedAsScript	_PyObject_SupportedAsScript(PyObject *cmd)	todo		
+Python/pythonrun.c	1626	1672	_Py_SourceAsString	_Py_SourceAsString(PyObject *cmd, const char *funcname, const char *what, PyCompilerFlags *cf, PyObject **cmd_copy)	todo		
+Python/pythonrun.c	1682	1686	PyOS_CheckStack	PyOS_CheckStack(void)	todo		
+Python/pythonrun.c	1693	1697	PyRun_AnyFile	PyAPI_FUNC(int) PyRun_AnyFile(FILE *fp, const char *name)	todo		
+Python/pythonrun.c	1700	1704	PyRun_AnyFileEx	PyAPI_FUNC(int) PyRun_AnyFileEx(FILE *fp, const char *name, int closeit)	todo		
+Python/pythonrun.c	1707	1711	PyRun_AnyFileFlags	PyAPI_FUNC(int) PyRun_AnyFileFlags(FILE *fp, const char *name, PyCompilerFlags *flags)	todo		
+Python/pythonrun.c	1714	1718	PyRun_File	PyAPI_FUNC(PyObject *) PyRun_File(FILE *fp, const char *p, int s, PyObject *g, PyObject *l)	todo		
+Python/pythonrun.c	1721	1725	PyRun_FileEx	PyAPI_FUNC(PyObject *) PyRun_FileEx(FILE *fp, const char *p, int s, PyObject *g, PyObject *l, int c)	todo		
+Python/pythonrun.c	1728	1733	PyRun_FileFlags	PyAPI_FUNC(PyObject *) PyRun_FileFlags(FILE *fp, const char *p, int s, PyObject *g, PyObject *l, PyCompilerFlags *flags)	todo		
+Python/pythonrun.c	1736	1740	PyRun_SimpleFile	PyAPI_FUNC(int) PyRun_SimpleFile(FILE *f, const char *p)	todo		
+Python/pythonrun.c	1743	1747	PyRun_SimpleFileEx	PyAPI_FUNC(int) PyRun_SimpleFileEx(FILE *f, const char *p, int c)	todo		
+Python/pythonrun.c	1751	1755	PyRun_String	PyAPI_FUNC(PyObject *) PyRun_String(const char *str, int s, PyObject *g, PyObject *l)	todo		
+Python/pythonrun.c	1758	1762	PyRun_SimpleString	PyAPI_FUNC(int) PyRun_SimpleString(const char *s)	todo		
+Python/pythonrun.c	1765	1769	Py_CompileString	PyAPI_FUNC(PyObject *) Py_CompileString(const char *str, const char *p, int s)	todo		
+Python/pythonrun.c	1773	1777	Py_CompileStringFlags	Py_CompileStringFlags(const char *str, const char *p, int s, PyCompilerFlags *flags)	todo		
+Python/pythonrun.c	1780	1784	PyRun_InteractiveOne	PyAPI_FUNC(int) PyRun_InteractiveOne(FILE *f, const char *p)	todo		
+Python/pythonrun.c	1787	1791	PyRun_InteractiveLoop	PyAPI_FUNC(int) PyRun_InteractiveLoop(FILE *f, const char *p)	todo		

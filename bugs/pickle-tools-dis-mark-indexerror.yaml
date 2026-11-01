@@ -37,13 +37,13 @@ observed: |
   python3 3.14.7: REPRODUCED.
   main (python.exe 3.16.0a1+dev): REPRODUCED.
 promised_by: |
-  The docstring of `dis`, Lib/pickletools.py:2420-2431, lists the sanity checks; every check it makes
-  raises ValueError (:2530, :2534, :2546). No explicit promise on the exception class.
+  The docstring of `dis`, Lib/pickletools.py:2448-2459, lists the sanity checks; every check it makes
+  raises ValueError (:2572, :2576, :2592). No explicit promise on the exception class.
 cause: |
-  Lib/pickletools.py:2461-2463 consider a mark only when `stack_before` has one or for POP, and :2536-2537
-  delete `numtopop` items without looking at them. :2475 then assumes `stack` still holds a mark.
+  Lib/pickletools.py:2495-2497 consider a mark only when `stack_before` has one or for POP, and :2578-2579
+  delete `numtopop` items without looking at them. :2509 then assumes `stack` still holds a mark.
 possible_fix: |
-  Before :2537, set `errormsg` when `markobject in stack[-numtopop:]`, or guard the loop at :2475 with
+  Before :2579, set `errormsg` when `markobject in stack[-numtopop:]`, or guard the loop at :2509 with
   `if markobject not in stack`.
 duplicates:
   issues:

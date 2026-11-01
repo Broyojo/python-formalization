@@ -1,6 +1,6 @@
 import PyLean.Core
 
-/-! `crctab_hqx`, copied mechanically from `Modules/binascii.c:108-141`. -/
+/-! `crctab_hqx`, copied mechanically from `Modules/binascii.c:373-406`. -/
 
 namespace PyLean.TextLibs.Binascii
 

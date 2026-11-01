@@ -45,15 +45,15 @@ reproducer: |
 expected: |
   InvalidOperation from both twins (or, if the leniency were wanted, acceptance by both).
 promised_by: |
-  Twin agreement. Doc/library/decimal.rst:377-393 gives the numeric-string grammar, with the
+  Twin agreement. Doc/library/decimal.rst:369-385 gives the numeric-string grammar, with the
   keywords 'Infinity', 'Inf', 'NaN', 'sNaN', and adds "Case is not significant, so, for example,
   inf, Inf, INFINITY, and iNfINity are all acceptable spellings". The same paragraph extends digits
   to Unicode explicitly but says nothing of the kind for letters.
 cause: |
-  Lib/_pydecimal.py:6117 `""", re.VERBOSE | re.IGNORECASE).match`. Under IGNORECASE the str
+  Lib/_pydecimal.py:6217 `""", re.VERBOSE | re.IGNORECASE).match`. Under IGNORECASE the str
   pattern's `I` and `s` also match their Unicode case variants. The C path rejects these
-  characters in numeric_as_ascii (Modules/_decimal/_decimal.c:2184-2189), which only passes ASCII,
-  whitespace and decimal digits. On main the flags are at Lib/_pydecimal.py:6232.
+  characters in numeric_as_ascii (Modules/_decimal/_decimal.c:2311-2316), which only passes ASCII,
+  whitespace and decimal digits. On main the flags are at Lib/_pydecimal.py:6332.
 possible_fix: |
   Spell the keywords with explicit ASCII classes ([Ii][Nn][Ff]...) and drop re.IGNORECASE, keeping
   `\d` Unicode-aware; or check `.isascii()` on the keyword part. `[eE]` covers the exponent marker.

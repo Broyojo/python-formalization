@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Modules/expat/xcs.c	45	60	xcslen	xcslen(const XML_Char *s) {	excluded		vendored: third-party code
+Modules/expat/xcs.c	63	75	xcscmp	xcscmp(const XML_Char *a, const XML_Char *b) {	excluded		vendored: third-party code
+Modules/expat/xcs.c	78	90	xcsncmp	xcsncmp(const XML_Char *a, const XML_Char *b, size_t len) {	excluded		vendored: third-party code

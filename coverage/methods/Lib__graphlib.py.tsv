@@ -8,5 +8,5 @@ Lib/graphlib.py	112	136	TopologicalSorter.get_ready	get_ready(self)	modelled	mis
 Lib/graphlib.py	138	150	TopologicalSorter.is_active	is_active(self)	modelled	misc-graphlib-active-ready,misc-graphlib-prepare-guards,misc-graphlib-static-order	
 Lib/graphlib.py	152	153	TopologicalSorter.__bool__	__bool__(self)	modelled	misc-graphlib-active-ready,misc-graphlib-prepare-guards	
 Lib/graphlib.py	155	200	TopologicalSorter.done	done(self, *nodes)	modelled	misc-graphlib-done-validation,misc-graphlib-prepare-guards,misc-graphlib-static-order	
-Lib/graphlib.py	202	237	TopologicalSorter._find_cycle	_find_cycle(self)	modelled	misc-graphlib-find-cycle-sound,misc-graphlib-find-cycle-total,misc-graphlib-no-report-no-cycle,misc-graphlib-static-order	
-Lib/graphlib.py	239	252	TopologicalSorter.static_order	static_order(self)	modelled	misc-graphlib-static-order	
+Lib/graphlib.py	203	240	TopologicalSorter._find_cycle	_find_cycle(self)	modelled	misc-graphlib-find-cycle-sound,misc-graphlib-find-cycle-total,misc-graphlib-no-report-no-cycle,misc-graphlib-static-order	
+Lib/graphlib.py	242	255	TopologicalSorter.static_order	static_order(self)	modelled	misc-graphlib-static-order	

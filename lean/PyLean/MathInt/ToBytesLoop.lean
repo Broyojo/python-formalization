@@ -1,7 +1,7 @@
 import PyLean.MathInt.FromBytes
 
 /-!
-The digit loop of `_PyLong_AsByteArray` (longobject.c:1077-1113) in closed
+The digit loop of `_PyLong_AsByteArray` (longobject.c:1155-1191) in closed
 form: it emits the low bytes of the (two's-complemented) digit value, and
 fails exactly when more than `n` whole bytes are produced.
 -/
@@ -62,7 +62,7 @@ theorem lowBytes_mod (x y k : Nat) (h : x % 256 ^ k = y % 256 ^ k) : lowBytes x 
       exact Nat.eq_of_mul_eq_mul_left (by decide) this
     rw [h1, ih _ _ h2]
 
-/-- `storeBytes`, longobject.c:1103-1112: emit `accumbits / 8` low bytes unless
+/-- `storeBytes`, longobject.c:1181-1190: emit `accumbits / 8` low bytes unless
 that would exceed `n` bytes. -/
 theorem storeBytes_spec (n : Nat) : ∀ fuel (st : ABState), st.accumbits < 8 * fuel + 8 →
     st.out.length ≤ n →
@@ -108,7 +108,7 @@ theorem storeBytes_spec (n : Nat) : ∀ fuel (st : ABState), st.accumbits < 8 * 
 
 /-! ### The effective digits -/
 
-/-- The per-digit two's-complement transform of longobject.c:1080-1084. -/
+/-- The per-digit two's-complement transform of longobject.c:1158-1162. -/
 def effStep (twos : Bool) (d c : Nat) : Nat × Nat :=
   if twos then (((d ^^^ digitMask) + c) &&& digitMask, ((d ^^^ digitMask) + c) >>> 30) else (d, c)
 
@@ -123,7 +123,7 @@ def effCarry (twos : Bool) : List Nat → Nat → Nat
   | d :: ds, c => effCarry twos ds (effStep twos d c).2
 
 /-- Bits counted: 30 per digit, and the significant bits of the last
-(complemented, for negative numbers) digit, longobject.c:1090-1102. -/
+(complemented, for negative numbers) digit, longobject.c:1168-1180. -/
 def effBits (twos : Bool) : List Nat → Nat → Nat
   | [], _ => 0
   | [d], c => bitLength (if twos then (effStep twos d c).1 ^^^ digitMask else (effStep twos d c).1)

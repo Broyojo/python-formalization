@@ -1,5 +1,5 @@
 file	line	endline	name	signature	status	entry	note
-Lib/xml/sax/__init__.py	29	33	parse	parse(source, handler, errorHandler=ErrorHandler())	todo		
-Lib/xml/sax/__init__.py	35	48	parseString	parseString(string, handler, errorHandler=ErrorHandler())	todo		
-Lib/xml/sax/__init__.py	66	88	make_parser	make_parser(parser_list=())	todo		
-Lib/xml/sax/__init__.py	92	94	_create_parser	_create_parser(parser_name)	todo		
+Lib/xml/sax/__init__.py	29	38	parse	parse(source, handler, errorHandler=ErrorHandler())	todo		
+Lib/xml/sax/__init__.py	40	57	parseString	parseString(string, handler, errorHandler=ErrorHandler())	todo		
+Lib/xml/sax/__init__.py	75	97	make_parser	make_parser(parser_list=())	todo		
+Lib/xml/sax/__init__.py	101	103	_create_parser	_create_parser(parser_name)	todo		

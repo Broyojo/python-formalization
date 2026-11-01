@@ -1,4 +1,4 @@
 file	line	endline	name	signature	status	entry	note
 Modules/_typingmodule.c	31	35	_typing__idfunc	_typing__idfunc(PyObject *module, PyObject *x) /*[clinic end generated code: output=63c38be4a6ec5f2c input=49f17284b43de451]*/	todo		
 Modules/_typingmodule.c	47	74	_typing_exec	_typing_exec(PyObject *m)	todo		
-Modules/_typingmodule.c	96	99	PyInit__typing	PyInit__typing(void)	todo		
+Modules/_typingmodule.c	97	100	PyInit__typing	PyInit__typing(void)	todo		

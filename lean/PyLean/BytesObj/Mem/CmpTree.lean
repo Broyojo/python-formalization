@@ -468,8 +468,8 @@ def unpackAt (m : Mem) (u : Unpacker) (p : Int) : List Item :=
   u.fmt.codes.flatMap (unpackCode u.fmt.big (rdBytes m p u.itemsize.toNat))
 
 /-- `memory_richcompare` on 1-D views when a format is not native, as `<i` or `2B`, or the two
-differ: `get_native_fmtchar` fails, so both go through `struct` (:3140-3158), and `v == w` is true
-exactly when each pair of unpacked items agrees under `struct_unpack_cmp`, :2931-2956, which
+differ: `get_native_fmtchar` fails, so both go through `struct` (@3.14.7:3140-3158), and `v == w` is true
+exactly when each pair of unpacked items agrees under `struct_unpack_cmp`, @3.14.7:2931-2956, which
 compares one-value tuples by that value and longer tuples as tuples. Hypotheses: the case; both
 formats compile, and each fits its itemsize, otherwise `unpack_from` raises. -/
 def CmpNonNative : Prop :=
@@ -509,7 +509,7 @@ theorem cmpNonNative_proven : CmpNonNative := by
 
 /-! ## `import struct` fails -/
 
-/-- `fix_struct_error_int`, :2917-2928: anything from `struct` itself means "not equal" and is
+/-- `fix_struct_error_int`, @3.14.7:2917-2928: anything from `struct` itself means "not equal" and is
 cleared; `ImportError`, `MemoryError` and their subclasses are real errors and pass through. -/
 def FixStructRules : Prop :=
   ∀ (msg : String),
@@ -526,9 +526,9 @@ theorem fixStructRules_proven : FixStructRules := by
   intro msg
   simp [fixStructError, structError, importStruct, excMatches, PyExc.className, excBases]
 
-/-- `memory_richcompare` with `sys.modules['struct'] = None`, :3144-3158: two views of the same native
+/-- `memory_richcompare` with `sys.modules['struct'] = None`, @3.14.7:3144-3158: two views of the same native
 format take the `switch` and never import `struct`, so `==` is unchanged; when the formats differ or
-one is not native, `struct_get_unpacker` fails, :2084-2086, and `fix_struct_error_int` lets the
+one is not native, `struct_get_unpacker` fails, @3.14.7:2084-2086, and `fix_struct_error_int` lets the
 `ModuleNotFoundError` out of `==`, where a bad format would be "not equal". Hypotheses: the shapes
 pass `equiv_shape`, the case. -/
 def CmpImportFails : Prop :=
@@ -618,7 +618,7 @@ theorem shapeLoop_iff (a b : List Int) (h : a.length = b.length) :
           simp only [List.take_succ_cons, List.cons.injEq] at h2
           exact hc h2.1
 
-/-- `equiv_structure`, :327-339, with `equiv_format`, :287-305, and `equiv_shape`, :307-323: the
+/-- `equiv_structure`, @3.14.7:327-339, with `equiv_format`, @3.14.7:287-305, and `equiv_shape`, @3.14.7:307-323: the
 assignment `dest[...] = src` goes ahead exactly if the formats are the same apart from a leading
 `@`, the item sizes are equal, the dimensions are equal, and the shapes are equal up to the first
 dimension of length 0, past which they can differ. Otherwise `ValueError`. Hypothesis: the shape
@@ -659,8 +659,8 @@ theorem equivRules_proven : EquivRules := by
       | true =>
         exact absurd (hb.1 (by simp [hf, hs])) h
 
-/-- `copy_single`, :404-432: `m[s] = x` re-checks the view after the Python code that got `x`'s
-buffer (`CHECK_RELEASED_INT_AGAIN`, :407), and refuses a source of another structure, in that
+/-- `copy_single`, @3.14.7:404-432: `m[s] = x` re-checks the view after the Python code that got `x`'s
+buffer (`CHECK_RELEASED_INT_AGAIN`, @3.14.7:407), and refuses a source of another structure, in that
 order, writing nothing. Hypothesis: the view or the structures are as the case says. -/
 def CopySingleRefuses : Prop :=
   ∀ (st : St) (self : Nat) (dest src : Buf),
@@ -677,7 +677,7 @@ theorem copySingleRefuses_proven : CopySingleRefuses := by
   · intro h1 h2
     simp [copySingle, M.bind_app, checkReleased_ok _ _ h1, M.lift, equivStructure, h2]
 
-/-- `adjust_fmt`, :2152-2164: the format after an optional `@` must be one character, which it
+/-- `adjust_fmt`, @3.14.7:2152-2164: the format after an optional `@` must be one character, which it
 returns, and anything else raises `NotImplementedError` naming the whole format. Formats are C
 strings here. Hypothesis: no NUL in the format, a type invariant. -/
 def AdjustFmtRules : Prop :=

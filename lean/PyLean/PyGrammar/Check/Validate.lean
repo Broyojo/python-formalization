@@ -219,7 +219,7 @@ mutual
           validateExprs f (seqL kwDefaults) .Load true
       | _ => ok1
 
-  /-- `validate_expr`, `Python/ast.c:210-410`. -/
+  /-- `validate_expr`, `Python/ast.c:210-412`. -/
   def validateExpr : Nat → Ast → Ctor → V
     | 0, _, _ => .error .modelFuel
     | f + 1, exp, ctx =>
@@ -314,7 +314,7 @@ mutual
           else verr "None disallowed in expression list"
         else (validateExpr f e ctx).and fun _ => validateExprs f rest ctx nullOk
 
-  /-- `validate_pattern_match_value`, `Python/ast.c:484-536`. -/
+  /-- `validate_pattern_match_value`, `Python/ast.c:486-538`. -/
   def validateMatchValue : Nat → Ast → V
     | 0, _ => .error .modelFuel
     | f + 1, exp =>
@@ -344,7 +344,7 @@ mutual
         | .node .Constant (.const .false_ :: _) _ => validateMappingKeys f rest
         | _ => (validateMatchValue f key).and fun _ => validateMappingKeys f rest
 
-  /-- `validate_pattern`, `Python/ast.c:550-699`. -/
+  /-- `validate_pattern`, `Python/ast.c:552-701`. -/
   def validatePattern : Nat → Ast → Bool → V
     | 0, _, _ => .error .modelFuel
     | f + 1, p, starOk =>
@@ -501,7 +501,7 @@ mutual
         (if isNull tp then ok1 else validateTypeParam f tp).and fun _ =>
         validateTypeParams f rest
 
-  /-- `validate_stmt`, `Python/ast.c:727-951`. -/
+  /-- `validate_stmt`, `Python/ast.c:746-975`. -/
   def validateStmt : Nat → Ast → V
     | 0, _ => .error .modelFuel
     | f + 1, stmt =>
@@ -610,7 +610,7 @@ where
     | [] => 0
     | x :: xs => astSize x + sizeList xs
 
-/-- `_PyAST_Validate`, `Python/ast.c:1047-1074`. -/
+/-- `_PyAST_Validate`, `Python/ast.c:1071-1098`. -/
 def validate (m : Ast) : V :=
   let f := 8 * astSize m + 64
   match m with

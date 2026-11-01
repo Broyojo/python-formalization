@@ -153,10 +153,10 @@ theorem clip1_bounds (v : Option Int) (dflt n : Int) (hn : 0 ≤ n) (h0 : 0 ≤ 
   | some x => simp only; split <;> (try split) <;> omega
 
 /-- The normalisation of a saturated `slice_index` start/stop in
-`list_index_impl` (listobject.c:3287-3296): add `len` when negative, clip at 0. -/
+`list_index_impl` (listobject.c:3350-3359): add `len` when negative, clip at 0. -/
 def normIdx (v n : Int) : Int := if v < 0 then (if v + n < 0 then 0 else v + n) else v
 
-/-- `array_array_index_impl`'s stop (arraymodule.c:3302-3304): no clip at 0. -/
+/-- `array_array_index_impl`'s stop (arraymodule.c:3511-3512): no clip at 0. -/
 def normIdxA (v n : Int) : Int := if v < 0 then v + n else v
 
 theorem normIdx_nonneg (v n : Int) (hn : 0 ≤ n) : 0 ≤ normIdx v n := by

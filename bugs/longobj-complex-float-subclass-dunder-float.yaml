@@ -34,12 +34,12 @@ reproducer: |
 expected: |
   (42+0j) from all three forms, as in 3.13.
 promised_by: |
-  Doc/library/functions.rst:426-431: complex(x) delegates to x.__complex__(), then falls
+  Doc/library/functions.rst@3.14.7:426-431: complex(x) delegates to x.__complex__(), then falls
   back to __float__() and then __index__().
 cause: |
-  Objects/complexobject.c:1141 calls PyFloat_AsDouble, whose PyFloat_Check shortcut
-  (Objects/floatobject.c:268-270) skips nb_float; line 1256 calls PyNumber_Float, which
-  checks PyFloat_CheckExact and so does call it (Objects/abstract.c:1598-1603).
+  Objects/complexobject.c:1161 calls PyFloat_AsDouble, whose PyFloat_Check shortcut
+  (Objects/floatobject.c:258-260) skips nb_float; line 1256 calls PyNumber_Float, which
+  checks PyFloat_CheckExact and so does call it (Objects/abstract.c:1608-1613).
 possible_fix: |
   Use PyNumber_Float on line 1141, as 3.13 did for this path, or document the difference.
 tested:

@@ -1,116 +1,147 @@
 file	line	endline	name	signature	status	entry	note
-Modules/_testinternalcapi.c	49	63	_get_current_module	_get_current_module(void)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	73	79	get_module_state	get_module_state(PyObject *mod)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	82	86	traverse_module_state	traverse_module_state(module_state *state, visitproc visit, void *arg)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	89	93	clear_module_state	clear_module_state(module_state *state)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	103	106	get_configs	get_configs(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	110	115	get_recursion_depth	get_recursion_depth(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	119	126	get_c_recursion_remaining	get_c_recursion_remaining(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	129	133	get_stack_pointer	get_stack_pointer(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	136	139	get_stack_margin	get_stack_margin(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	142	166	test_bswap	test_bswap(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	170	182	check_popcount	check_popcount(uint32_t x, int expected)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	186	206	test_popcount	test_popcount(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	210	222	check_bit_length	check_bit_length(unsigned long x, int expected)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	226	245	test_bit_length	test_bit_length(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	253	257	hash_char	hash_char(const void *key)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	261	271	hashtable_cb	hashtable_cb(_Py_hashtable_t *table, const void *key_ptr, const void *value_ptr, void *user_data)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	275	335	test_hashtable	test_hashtable(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	339	343	test_reset_path_config	test_reset_path_config(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(arg))	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	347	395	check_edit_cost	check_edit_cost(const char *a, const char *b, Py_ssize_t expected)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	398	428	test_edit_cost	test_edit_cost(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	432	470	check_bytes_find	check_bytes_find(const char *haystack0, const char *needle0, Py_ssize_t offset, Py_ssize_t expected)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	473	490	check_bytes_find_large	check_bytes_find_large(Py_ssize_t len_haystack, Py_ssize_t len_needle, const char *needle)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	493	540	test_bytes_find	test_bytes_find(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	544	556	normalize_path	normalize_path(PyObject *self, PyObject *filename)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	559	561	get_getpath_codeobject	get_getpath_codeobject(PyObject *self, PyObject *Py_UNUSED(args)) {	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	565	610	encode_locale_ex	encode_locale_ex(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	614	653	decode_locale_ex	decode_locale_ex(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	656	662	set_eval_frame_default	set_eval_frame_default(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	665	679	record_eval	record_eval(PyThreadState *tstate, struct _PyInterpreterFrame *f, int exc)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	683	693	set_eval_frame_record	set_eval_frame_record(PyObject *self, PyObject *list)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	705	709	_testinternalcapi_compiler_cleandoc_impl	_testinternalcapi_compiler_cleandoc_impl(PyObject *module, PyObject *doc) /*[clinic end generated code: output=2dd203a80feff5bc input=2de03fab931d9cdc]*/	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	719	723	_testinternalcapi_new_instruction_sequence_impl	_testinternalcapi_new_instruction_sequence_impl(PyObject *module) /*[clinic end generated code: output=ea4243fddb9057fd input=1dec2591b173be83]*/	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	742	749	_testinternalcapi_compiler_codegen_impl	_testinternalcapi_compiler_codegen_impl(PyObject *module, PyObject *ast, PyObject *filename, int optimize, int compile_mode) /*[clinic end generated code: output=40a68f6e13951cc8 input=e0c65e5c80efe30e]*/	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	767	772	_testinternalcapi_optimize_cfg_impl	_testinternalcapi_optimize_cfg_impl(PyObject *module, PyObject *instructions, PyObject *consts, int nlocals) /*[clinic end generated code: output=57c53c3a3dfd1df0 input=905c3d935e063b27]*/	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	775	781	get_nonnegative_int_from_dict	get_nonnegative_int_from_dict(PyObject *dict, const char *key) {	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	841	889	get_interp_settings	get_interp_settings(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	893	903	clear_extension	clear_extension(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	906	926	write_perf_map_entry	write_perf_map_entry(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	929	933	perf_map_state_teardown	perf_map_state_teardown(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	936	944	iframe_getcode	iframe_getcode(PyObject *self, PyObject *frame)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	947	955	iframe_getline	iframe_getline(PyObject *self, PyObject *frame)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	958	966	iframe_getlasti	iframe_getlasti(PyObject *self, PyObject *frame)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	969	978	code_returns_only_none	code_returns_only_none(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	981	989	get_co_framesize	get_co_framesize(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	992	1020	get_co_localskinds	get_co_localskinds(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1023	1189	get_code_var_counts	get_code_var_counts(PyObject *self, PyObject *_args, PyObject *_kwargs)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1192	1230	verify_stateless_code	verify_stateless_code(PyObject *self, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1235	1244	add_executor_dependency	add_executor_dependency(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1247	1252	invalidate_executors	invalidate_executors(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1256	1264	_pending_callback	static int _pending_callback(void *arg)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1270	1323	pending_threadfunc	pending_threadfunc(PyObject *self, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1331	1339	_pending_identify_callback	_pending_identify_callback(void *arg)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1342	1387	pending_identify	pending_identify(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1390	1404	tracemalloc_get_traceback	tracemalloc_get_traceback(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1409	1425	test_tstate_capi	test_tstate_capi(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1430	1436	unicode_transformdecimalandspacetoascii	unicode_transformdecimalandspacetoascii(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1439	1447	test_pyobject_is_freed	test_pyobject_is_freed(const char *test_name, PyObject *op)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1450	1454	check_pyobject_null_is_freed	check_pyobject_null_is_freed(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1458	1469	check_pyobject_uninitialized_is_freed	check_pyobject_uninitialized_is_freed(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1473	1486	check_pyobject_forbidden_bytes_is_freed	check_pyobject_forbidden_bytes_is_freed(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1490	1506	check_pyobject_freed_is_freed	check_pyobject_freed_is_freed(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1510	1518	test_pymem_getallocatorsname	test_pymem_getallocatorsname(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1521	1551	get_object_dict_values	get_object_dict_values(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1555	1558	new_hamt	new_hamt(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1562	1579	dict_getitem_knownhash	dict_getitem_knownhash(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1583	1601	_init_interp_config_from_object	_init_interp_config_from_object(PyInterpreterConfig *config, PyObject *obj)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1604	1657	_new_interpreter	_new_interpreter(PyInterpreterConfig *config, long whence)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1662	1709	create_interpreter	create_interpreter(PyObject *self, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1714	1753	destroy_interpreter	destroy_interpreter(PyObject *self, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1758	1806	exec_interpreter	exec_interpreter(PyObject *self, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1816	1883	run_in_subinterp_with_config	run_in_subinterp_with_config(PyObject *self, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1887	1894	normalize_interp_id	normalize_interp_id(PyObject *self, PyObject *idobj)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1897	1901	next_interpreter_id	next_interpreter_id(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1904	1909	unused_interpreter_id	unused_interpreter_id(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1912	1924	interpreter_exists	interpreter_exists(PyObject *self, PyObject *idobj)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1927	1934	get_interpreter_refcount	get_interpreter_refcount(PyObject *self, PyObject *idobj)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1937	1946	link_interpreter_refcount	link_interpreter_refcount(PyObject *self, PyObject *idobj)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1949	1958	unlink_interpreter_refcount	unlink_interpreter_refcount(PyObject *self, PyObject *idobj)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1961	1971	interpreter_refcount_linked	interpreter_refcount_linked(PyObject *self, PyObject *idobj)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1975	1982	_xid_capsule_destructor	_xid_capsule_destructor(PyObject *capsule)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	1985	2072	get_crossinterp_data	get_crossinterp_data(PyObject *self, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2075	2087	restore_crossinterp_data	restore_crossinterp_data(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2091	2095	raiseTestError	raiseTestError(const char* test_name, const char* msg)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2103	2147	_testinternalcapi_test_long_numbits_impl	_testinternalcapi_test_long_numbits_impl(PyObject *module) /*[clinic end generated code: output=745d62d120359434 input=f14ca6f638e44dad]*/	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2150	2162	compile_perf_trampoline_entry	compile_perf_trampoline_entry(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2165	2177	perf_trampoline_set_persist_after_fork	perf_trampoline_set_persist_after_fork(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2181	2193	get_rare_event_counters	get_rare_event_counters(PyObject *self, PyObject *type)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2196	2207	reset_rare_event_counters	reset_rare_event_counters(PyObject *self, PyObject *Py_UNUSED(type))	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2212	2217	get_py_thread_id	get_py_thread_id(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2220	2231	get_code	get_code(PyObject *obj)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2234	2245	get_tlbc	get_tlbc(PyObject *Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2248	2259	get_tlbc_id	get_tlbc_id(PyObject *Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2262	2265	get_long_lived_total	get_long_lived_total(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2270	2277	has_inline_values	has_inline_values(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2280	2286	has_split_table	has_split_table(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2291	2301	type_assign_specific_version_unsafe	type_assign_specific_version_unsafe(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2312	2318	gh_119213_getargs_impl	gh_119213_getargs_impl(PyObject *module, PyObject *spam) /*[clinic end generated code: output=d8d9c95d5b446802 input=65ef47511da80fc2]*/	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2325	2331	get_next_dict_keys_version_impl	get_next_dict_keys_version_impl(PyObject *module) /*[clinic end generated code: output=e5405a509cf9d423 input=bd1cee7c6b9d3a3c]*/	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2334	2337	get_static_builtin_types	get_static_builtin_types(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2341	2344	identify_type_slot_wrappers	identify_type_slot_wrappers(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2348	2351	has_deferred_refcount	has_deferred_refcount(PyObject *self, PyObject *op)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2354	2357	get_tracked_heap_size	get_tracked_heap_size(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2360	2366	is_static_immortal	is_static_immortal(PyObject *self, PyObject *op)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2369	2373	incref_decref_delayed	incref_decref_delayed(PyObject *self, PyObject *op)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2397	2403	emscripten_set_up_async_input_device	emscripten_set_up_async_input_device(PyObject *self, PyObject *Py_UNUSED(ignored)) {	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2407	2411	vectorcall_nop	vectorcall_nop(PyObject *callable, PyObject *const *args, size_t nargsf, PyObject *kwnames)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2414	2423	set_vectorcall_nop	set_vectorcall_nop(PyObject *self, PyObject *func)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2427	2437	check_threadstate_set_stack_protection	check_threadstate_set_stack_protection(PyThreadState *tstate, void *start, size_t size)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2441	2474	test_threadstate_set_stack_protection	test_threadstate_set_stack_protection(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2478	2488	_pyerr_setkeyerror	_pyerr_setkeyerror(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2610	2674	module_exec	module_exec(PyObject *module)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2684	2690	module_traverse	module_traverse(PyObject *module, visitproc visit, void *arg)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2693	2699	module_clear	module_clear(PyObject *module)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2702	2707	module_free	module_free(void *module)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi.c	2723	2726	PyInit__testinternalcapi	PyInit__testinternalcapi(void)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	114	128	_get_current_module	_get_current_module(void)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	138	144	get_module_state	get_module_state(PyObject *mod)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	147	151	traverse_module_state	traverse_module_state(module_state *state, visitproc visit, void *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	154	158	clear_module_state	clear_module_state(module_state *state)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	168	171	get_configs	get_configs(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	175	180	get_recursion_depth	get_recursion_depth(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	184	191	get_c_recursion_remaining	get_c_recursion_remaining(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	194	198	get_stack_pointer	get_stack_pointer(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	201	204	get_stack_margin	get_stack_margin(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	207	221	test_stop_the_world	test_stop_the_world(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	225	252	classify_address	classify_address(uintptr_t addr, int jit_enabled, PyInterpreterState *interp)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	255	278	classify_address	classify_address(uintptr_t addr, int jit_enabled, PyInterpreterState *interp)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	281	289	classify_address	classify_address(uintptr_t addr, int jit_enabled, PyInterpreterState *interp)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	293	333	classify_stack_addresses	classify_stack_addresses(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	336	381	get_jit_code_ranges	get_jit_code_ranges(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	384	393	get_jit_backend	get_jit_backend(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	396	405	stack_address_is_valid	stack_address_is_valid(uintptr_t addr, uintptr_t stack_min, uintptr_t stack_max)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	408	438	frame_pointer_slot_is_valid	frame_pointer_slot_is_valid(uintptr_t *frame_pointer, Py_ssize_t offset, uintptr_t stack_min, uintptr_t stack_max)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	441	457	next_frame_pointer_is_valid	next_frame_pointer_is_valid(uintptr_t *frame_pointer, uintptr_t *next_fp, uintptr_t stack_min, uintptr_t stack_max)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	460	541	manual_unwind_from_fp	manual_unwind_from_fp(uintptr_t *frame_pointer)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	545	574	gnu_backtrace_unwind	gnu_backtrace_unwind(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	577	582	gnu_backtrace_unwind	gnu_backtrace_unwind(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	587	591	manual_frame_pointer_unwind	manual_frame_pointer_unwind(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	594	602	manual_frame_pointer_unwind	manual_frame_pointer_unwind(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	605	610	manual_frame_pointer_unwind	manual_frame_pointer_unwind(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	614	638	test_bswap	test_bswap(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	642	654	check_popcount	check_popcount(uint32_t x, int expected)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	658	678	test_popcount	test_popcount(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	682	694	check_bit_length	check_bit_length(unsigned long x, int expected)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	698	717	test_bit_length	test_bit_length(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	725	729	hash_char	hash_char(const void *key)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	733	743	hashtable_cb	hashtable_cb(_Py_hashtable_t *table, const void *key_ptr, const void *value_ptr, void *user_data)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	747	807	test_hashtable	test_hashtable(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	811	815	test_reset_path_config	test_reset_path_config(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(arg))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	819	867	check_edit_cost	check_edit_cost(const char *a, const char *b, Py_ssize_t expected)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	870	900	test_edit_cost	test_edit_cost(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	904	942	check_bytes_find	check_bytes_find(const char *haystack0, const char *needle0, Py_ssize_t offset, Py_ssize_t expected)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	945	962	check_bytes_find_large	check_bytes_find_large(Py_ssize_t len_haystack, Py_ssize_t len_needle, const char *needle)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	965	1012	test_bytes_find	test_bytes_find(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1016	1028	normalize_path	normalize_path(PyObject *self, PyObject *filename)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1031	1033	get_getpath_codeobject	get_getpath_codeobject(PyObject *self, PyObject *Py_UNUSED(args)) {	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1037	1082	encode_locale_ex	encode_locale_ex(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1086	1125	decode_locale_ex	decode_locale_ex(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1128	1134	set_eval_frame_default	set_eval_frame_default(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1137	1151	record_eval	record_eval(PyThreadState *tstate, struct _PyInterpreterFrame *f, int exc)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1155	1165	set_eval_frame_record	set_eval_frame_record(PyObject *self, PyObject *list)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1173	1195	get_eval_frame_stats	get_eval_frame_stats(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1198	1213	record_eval_interp	record_eval_interp(PyThreadState *tstate, struct _PyInterpreterFrame *f, int exc)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1216	1234	set_eval_frame_interp	set_eval_frame_interp(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1237	1241	is_specialization_enabled	is_specialization_enabled(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1253	1257	_testinternalcapi_compiler_cleandoc_impl	_testinternalcapi_compiler_cleandoc_impl(PyObject *module, PyObject *doc) /*[clinic end generated code: output=2dd203a80feff5bc input=2de03fab931d9cdc]*/	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1267	1271	_testinternalcapi_new_instruction_sequence_impl	_testinternalcapi_new_instruction_sequence_impl(PyObject *module) /*[clinic end generated code: output=ea4243fddb9057fd input=1dec2591b173be83]*/	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1290	1297	_testinternalcapi_compiler_codegen_impl	_testinternalcapi_compiler_codegen_impl(PyObject *module, PyObject *ast, PyObject *filename, int optimize, int compile_mode) /*[clinic end generated code: output=40a68f6e13951cc8 input=e0c65e5c80efe30e]*/	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1315	1320	_testinternalcapi_optimize_cfg_impl	_testinternalcapi_optimize_cfg_impl(PyObject *module, PyObject *instructions, PyObject *consts, int nlocals) /*[clinic end generated code: output=57c53c3a3dfd1df0 input=905c3d935e063b27]*/	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1323	1329	get_nonnegative_int_from_dict	get_nonnegative_int_from_dict(PyObject *dict, const char *key) {	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1389	1437	get_interp_settings	get_interp_settings(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1441	1451	clear_extension	clear_extension(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1454	1480	write_perf_map_entry	write_perf_map_entry(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1483	1487	perf_map_state_teardown	perf_map_state_teardown(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1490	1498	iframe_getcode	iframe_getcode(PyObject *self, PyObject *frame)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1501	1509	iframe_getline	iframe_getline(PyObject *self, PyObject *frame)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1512	1520	iframe_getlasti	iframe_getlasti(PyObject *self, PyObject *frame)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1523	1532	code_returns_only_none	code_returns_only_none(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1535	1543	get_co_framesize	get_co_framesize(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1546	1574	get_co_localskinds	get_co_localskinds(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1577	1743	get_code_var_counts	get_code_var_counts(PyObject *self, PyObject *_args, PyObject *_kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1746	1784	verify_stateless_code	verify_stateless_code(PyObject *self, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1789	1798	add_executor_dependency	add_executor_dependency(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1801	1806	invalidate_executors	invalidate_executors(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1809	1814	clear_executor_deletion_list	clear_executor_deletion_list(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1817	1830	get_exit_executor	get_exit_executor(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1834	1842	_pending_callback	static int _pending_callback(void *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1848	1901	pending_threadfunc	pending_threadfunc(PyObject *self, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1909	1917	_pending_identify_callback	_pending_identify_callback(void *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1920	1965	pending_identify	pending_identify(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1968	1982	tracemalloc_get_traceback	tracemalloc_get_traceback(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	1987	2003	test_tstate_capi	test_tstate_capi(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2008	2014	unicode_transformdecimalandspacetoascii	unicode_transformdecimalandspacetoascii(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2017	2025	test_pyobject_is_freed	test_pyobject_is_freed(const char *test_name, PyObject *op)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2028	2032	check_pyobject_null_is_freed	check_pyobject_null_is_freed(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2036	2047	check_pyobject_uninitialized_is_freed	check_pyobject_uninitialized_is_freed(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2051	2064	check_pyobject_forbidden_bytes_is_freed	check_pyobject_forbidden_bytes_is_freed(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2068	2084	check_pyobject_freed_is_freed	check_pyobject_freed_is_freed(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2088	2096	test_pymem_getallocatorsname	test_pymem_getallocatorsname(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2099	2129	get_object_dict_values	get_object_dict_values(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2133	2136	new_hamt	new_hamt(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2140	2157	dict_getitem_knownhash	dict_getitem_knownhash(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2161	2179	_init_interp_config_from_object	_init_interp_config_from_object(PyInterpreterConfig *config, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2182	2235	_new_interpreter	_new_interpreter(PyInterpreterConfig *config, long whence)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2240	2287	create_interpreter	create_interpreter(PyObject *self, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2292	2331	destroy_interpreter	destroy_interpreter(PyObject *self, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2336	2384	exec_interpreter	exec_interpreter(PyObject *self, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2394	2461	run_in_subinterp_with_config	run_in_subinterp_with_config(PyObject *self, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2465	2472	normalize_interp_id	normalize_interp_id(PyObject *self, PyObject *idobj)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2475	2479	next_interpreter_id	next_interpreter_id(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2482	2487	unused_interpreter_id	unused_interpreter_id(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2490	2502	interpreter_exists	interpreter_exists(PyObject *self, PyObject *idobj)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2505	2512	get_interpreter_refcount	get_interpreter_refcount(PyObject *self, PyObject *idobj)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2515	2524	link_interpreter_refcount	link_interpreter_refcount(PyObject *self, PyObject *idobj)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2527	2536	unlink_interpreter_refcount	unlink_interpreter_refcount(PyObject *self, PyObject *idobj)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2539	2549	interpreter_refcount_linked	interpreter_refcount_linked(PyObject *self, PyObject *idobj)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2553	2560	_xid_capsule_destructor	_xid_capsule_destructor(PyObject *capsule)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2563	2653	get_crossinterp_data	get_crossinterp_data(PyObject *self, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2656	2668	restore_crossinterp_data	restore_crossinterp_data(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2672	2676	raiseTestError	raiseTestError(const char* test_name, const char* msg)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2684	2728	_testinternalcapi_test_long_numbits_impl	_testinternalcapi_test_long_numbits_impl(PyObject *module) /*[clinic end generated code: output=745d62d120359434 input=f14ca6f638e44dad]*/	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2731	2743	compile_perf_trampoline_entry	compile_perf_trampoline_entry(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2746	2758	perf_trampoline_set_persist_after_fork	perf_trampoline_set_persist_after_fork(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2762	2774	get_rare_event_counters	get_rare_event_counters(PyObject *self, PyObject *type)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2777	2788	reset_rare_event_counters	reset_rare_event_counters(PyObject *self, PyObject *Py_UNUSED(type))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2793	2798	get_py_thread_id	get_py_thread_id(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2801	2811	get_code	get_code(PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2814	2825	get_tlbc	get_tlbc(PyObject *Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2828	2839	get_tlbc_id	get_tlbc_id(PyObject *Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2842	2845	get_long_lived_total	get_long_lived_total(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2850	2857	has_inline_values	has_inline_values(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2860	2866	has_split_table	has_split_table(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2871	2881	type_assign_specific_version_unsafe	type_assign_specific_version_unsafe(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2892	2898	gh_119213_getargs_impl	gh_119213_getargs_impl(PyObject *module, PyObject *spam) /*[clinic end generated code: output=d8d9c95d5b446802 input=65ef47511da80fc2]*/	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2905	2911	get_next_dict_keys_version_impl	get_next_dict_keys_version_impl(PyObject *module) /*[clinic end generated code: output=e5405a509cf9d423 input=bd1cee7c6b9d3a3c]*/	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2914	2917	get_static_builtin_types	get_static_builtin_types(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2921	2924	identify_type_slot_wrappers	identify_type_slot_wrappers(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2928	2931	has_deferred_refcount	has_deferred_refcount(PyObject *self, PyObject *op)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2934	2937	get_tracked_heap_size	get_tracked_heap_size(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2940	2946	is_static_immortal	is_static_immortal(PyObject *self, PyObject *op)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2949	2953	incref_decref_delayed	incref_decref_delayed(PyObject *self, PyObject *op)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2977	2983	emscripten_set_up_async_input_device	emscripten_set_up_async_input_device(PyObject *self, PyObject *Py_UNUSED(ignored)) {	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2987	2994	simple_pending_call	simple_pending_call(PyObject *self, PyObject *callable)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	2997	3001	vectorcall_nop	vectorcall_nop(PyObject *callable, PyObject *const *args, size_t nargsf, PyObject *kwnames)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	3004	3013	set_vectorcall_nop	set_vectorcall_nop(PyObject *self, PyObject *func)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	3016	3041	module_get_gc_hooks	module_get_gc_hooks(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	3045	3055	check_threadstate_set_stack_protection	check_threadstate_set_stack_protection(PyThreadState *tstate, void *start, size_t size)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	3059	3092	test_threadstate_set_stack_protection	test_threadstate_set_stack_protection(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	3097	3126	test_interp_guard_countdown	test_interp_guard_countdown(PyObject *self, PyObject *unused)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	3129	3154	test_interp_view_countdown	test_interp_view_countdown(PyObject *self, PyObject *unused)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	3159	3169	_pyerr_setkeyerror	_pyerr_setkeyerror(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	3172	3216	test_thread_state_ensure_from_view_interp_switch	test_thread_state_ensure_from_view_interp_switch(PyObject *self, PyObject *unused)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	3226	3234	new_self_interrupting	new_self_interrupting(PyTypeObject *type, PyObject *args, PyObject *kwds)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	3237	3247	self_interrupting_enter	self_interrupting_enter(PyObject *op, PyObject *Py_UNUSED(dummy))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	3250	3253	self_interrupting_within	self_interrupting_within(PyObject *op, PyObject *Py_UNUSED(dummy))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	3256	3259	self_interrupting_exit	self_interrupting_exit(PyObject *op, PyObject *Py_UNUSED(args)) {	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	3413	3511	module_exec	module_exec(PyObject *module)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	3524	3530	module_traverse	module_traverse(PyObject *module, visitproc visit, void *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	3533	3539	module_clear	module_clear(PyObject *module)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	3542	3547	module_free	module_free(void *module)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi.c	3563	3566	PyInit__testinternalcapi	PyInit__testinternalcapi(void)	excluded		test-support: only for CPython's own tests

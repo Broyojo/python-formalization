@@ -10,7 +10,7 @@ The chunk property for UTF-8.
 UTF-8 is the one decoder where `handler_loc` is not enough. `surrogatepass` reads three bytes from
 the start of the error, and an error can sit in fewer than that at the end of a chunk. So what
 happens at a short end has to be worked out, and it is why the decoder has its odd case for
-`ED A0..BF` at the end of the input with `consumed`, unicodeobject.c:5346-5353: those two bytes are
+`ED A0..BF` at the end of the input with `consumed`, unicodeobject.c:5227-5234: those two bytes are
 an error by themselves, but with a third they are a surrogate to `surrogatepass`.
 -/
 

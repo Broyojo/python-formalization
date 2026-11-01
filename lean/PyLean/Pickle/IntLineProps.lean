@@ -2,8 +2,8 @@ import PyLean.Pickle.Long
 
 /-!
 The protocol-0 `INT` and `LONG` opcodes: the C and Python unpicklers parse
-the text argument (`load_int`/`load_long`, `Lib/pickle.py:1376-1404` and
-`Modules/_pickle.c:5398-5577`) differently.
+the text argument (`load_int`/`load_long`, `Lib/pickle.py:1402-1430` and
+`Modules/_pickle.c:5521-5700`) differently.
 
 A line is `body ++ [\n]` with no newline in `body`: what both `readline`s
 return when the line is complete.

@@ -1,3 +1,2 @@
 file	line	endline	name	signature	status	entry	note
 Lib/importlib/_abc.py	10	18	Loader.create_module	create_module(self, spec)	todo		
-Lib/importlib/_abc.py	23	39	Loader.load_module	load_module(self, fullname)	todo		

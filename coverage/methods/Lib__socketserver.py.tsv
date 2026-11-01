@@ -1,56 +1,57 @@
 file	line	endline	name	signature	status	entry	note
-Lib/socketserver.py	203	208	BaseServer.__init__	__init__(self, server_address, RequestHandlerClass)	todo		
-Lib/socketserver.py	210	216	BaseServer.server_activate	server_activate(self)	todo		
-Lib/socketserver.py	218	245	BaseServer.serve_forever	serve_forever(self, poll_interval=0.5)	todo		
-Lib/socketserver.py	247	255	BaseServer.shutdown	shutdown(self)	todo		
-Lib/socketserver.py	257	263	BaseServer.service_actions	service_actions(self)	todo		
-Lib/socketserver.py	276	303	BaseServer.handle_request	handle_request(self)	todo		
-Lib/socketserver.py	305	326	BaseServer._handle_request_noblock	_handle_request_noblock(self)	todo		
-Lib/socketserver.py	328	333	BaseServer.handle_timeout	handle_timeout(self)	todo		
-Lib/socketserver.py	335	341	BaseServer.verify_request	verify_request(self, request, client_address)	todo		
-Lib/socketserver.py	343	350	BaseServer.process_request	process_request(self, request, client_address)	todo		
-Lib/socketserver.py	352	358	BaseServer.server_close	server_close(self)	todo		
-Lib/socketserver.py	360	362	BaseServer.finish_request	finish_request(self, request, client_address)	todo		
-Lib/socketserver.py	364	366	BaseServer.shutdown_request	shutdown_request(self, request)	todo		
-Lib/socketserver.py	368	370	BaseServer.close_request	close_request(self, request)	todo		
-Lib/socketserver.py	372	383	BaseServer.handle_error	handle_error(self, request, client_address)	todo		
-Lib/socketserver.py	385	386	BaseServer.__enter__	__enter__(self)	todo		
-Lib/socketserver.py	388	389	BaseServer.__exit__	__exit__(self, *args)	todo		
-Lib/socketserver.py	450	461	TCPServer.__init__	__init__(self, server_address, RequestHandlerClass, bind_and_activate=True)	todo		
-Lib/socketserver.py	463	479	TCPServer.server_bind	server_bind(self)	todo		
-Lib/socketserver.py	481	487	TCPServer.server_activate	server_activate(self)	todo		
-Lib/socketserver.py	489	495	TCPServer.server_close	server_close(self)	todo		
-Lib/socketserver.py	497	503	TCPServer.fileno	fileno(self)	todo		
-Lib/socketserver.py	505	511	TCPServer.get_request	get_request(self)	todo		
-Lib/socketserver.py	513	521	TCPServer.shutdown_request	shutdown_request(self, request)	todo		
-Lib/socketserver.py	523	525	TCPServer.close_request	close_request(self, request)	todo		
-Lib/socketserver.py	540	542	UDPServer.get_request	get_request(self)	todo		
-Lib/socketserver.py	544	546	UDPServer.server_activate	server_activate(self)	todo		
-Lib/socketserver.py	548	550	UDPServer.shutdown_request	shutdown_request(self, request)	todo		
-Lib/socketserver.py	552	554	UDPServer.close_request	close_request(self, request)	todo		
-Lib/socketserver.py	566	599	ForkingMixIn.collect_children	collect_children(self, *, blocking=False)	todo		
-Lib/socketserver.py	601	606	ForkingMixIn.handle_timeout	handle_timeout(self)	todo		
-Lib/socketserver.py	608	613	ForkingMixIn.service_actions	service_actions(self)	todo		
-Lib/socketserver.py	615	638	ForkingMixIn.process_request	process_request(self, request, client_address)	todo		
-Lib/socketserver.py	640	642	ForkingMixIn.server_close	server_close(self)	todo		
-Lib/socketserver.py	649	653	_Threads.append	append(self, thread)	todo		
-Lib/socketserver.py	655	657	_Threads.pop_all	pop_all(self)	todo		
-Lib/socketserver.py	659	661	_Threads.join	join(self)	todo		
-Lib/socketserver.py	663	664	_Threads.reap	reap(self)	todo		
-Lib/socketserver.py	671	672	_NoThreads.append	append(self, thread)	todo		
-Lib/socketserver.py	674	675	_NoThreads.join	join(self)	todo		
-Lib/socketserver.py	690	701	ThreadingMixIn.process_request_thread	process_request_thread(self, request, client_address)	todo		
-Lib/socketserver.py	703	711	ThreadingMixIn.process_request	process_request(self, request, client_address)	todo		
-Lib/socketserver.py	713	715	ThreadingMixIn.server_close	server_close(self)	todo		
-Lib/socketserver.py	760	768	BaseRequestHandler.__init__	__init__(self, request, client_address, server)	todo		
-Lib/socketserver.py	770	771	BaseRequestHandler.setup	setup(self)	todo		
-Lib/socketserver.py	773	774	BaseRequestHandler.handle	handle(self)	todo		
-Lib/socketserver.py	776	777	BaseRequestHandler.finish	finish(self)	todo		
-Lib/socketserver.py	809	820	StreamRequestHandler.setup	setup(self)	todo		
-Lib/socketserver.py	822	831	StreamRequestHandler.finish	finish(self)	todo		
-Lib/socketserver.py	838	839	_SocketWriter.__init__	__init__(self, sock)	todo		
-Lib/socketserver.py	841	842	_SocketWriter.writable	writable(self)	todo		
-Lib/socketserver.py	844	847	_SocketWriter.write	write(self, b)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
-Lib/socketserver.py	849	850	_SocketWriter.fileno	fileno(self)	todo		
-Lib/socketserver.py	856	860	DatagramRequestHandler.setup	setup(self)	todo		
-Lib/socketserver.py	862	863	DatagramRequestHandler.finish	finish(self)	todo		
+Lib/socketserver.py	200	205	BaseServer.__init__	__init__(self, server_address, RequestHandlerClass)	todo		
+Lib/socketserver.py	207	213	BaseServer.server_activate	server_activate(self)	todo		
+Lib/socketserver.py	215	242	BaseServer.serve_forever	serve_forever(self, poll_interval=0.5)	todo		
+Lib/socketserver.py	244	252	BaseServer.shutdown	shutdown(self)	todo		
+Lib/socketserver.py	254	260	BaseServer.service_actions	service_actions(self)	todo		
+Lib/socketserver.py	273	300	BaseServer.handle_request	handle_request(self)	todo		
+Lib/socketserver.py	302	323	BaseServer._handle_request_noblock	_handle_request_noblock(self)	todo		
+Lib/socketserver.py	325	330	BaseServer.handle_timeout	handle_timeout(self)	todo		
+Lib/socketserver.py	332	338	BaseServer.verify_request	verify_request(self, request, client_address)	todo		
+Lib/socketserver.py	340	347	BaseServer.process_request	process_request(self, request, client_address)	todo		
+Lib/socketserver.py	349	355	BaseServer.server_close	server_close(self)	todo		
+Lib/socketserver.py	357	359	BaseServer.finish_request	finish_request(self, request, client_address)	todo		
+Lib/socketserver.py	361	363	BaseServer.shutdown_request	shutdown_request(self, request)	todo		
+Lib/socketserver.py	365	367	BaseServer.close_request	close_request(self, request)	todo		
+Lib/socketserver.py	369	380	BaseServer.handle_error	handle_error(self, request, client_address)	todo		
+Lib/socketserver.py	382	383	BaseServer.__enter__	__enter__(self)	todo		
+Lib/socketserver.py	385	386	BaseServer.__exit__	__exit__(self, *args)	todo		
+Lib/socketserver.py	447	458	TCPServer.__init__	__init__(self, server_address, RequestHandlerClass, bind_and_activate=True)	todo		
+Lib/socketserver.py	460	476	TCPServer.server_bind	server_bind(self)	todo		
+Lib/socketserver.py	478	484	TCPServer.server_activate	server_activate(self)	todo		
+Lib/socketserver.py	486	492	TCPServer.server_close	server_close(self)	todo		
+Lib/socketserver.py	494	500	TCPServer.fileno	fileno(self)	todo		
+Lib/socketserver.py	502	508	TCPServer.get_request	get_request(self)	todo		
+Lib/socketserver.py	510	518	TCPServer.shutdown_request	shutdown_request(self, request)	todo		
+Lib/socketserver.py	520	522	TCPServer.close_request	close_request(self, request)	todo		
+Lib/socketserver.py	537	539	UDPServer.get_request	get_request(self)	todo		
+Lib/socketserver.py	541	543	UDPServer.server_activate	server_activate(self)	todo		
+Lib/socketserver.py	545	547	UDPServer.shutdown_request	shutdown_request(self, request)	todo		
+Lib/socketserver.py	549	551	UDPServer.close_request	close_request(self, request)	todo		
+Lib/socketserver.py	563	596	ForkingMixIn.collect_children	collect_children(self, *, blocking=False)	todo		
+Lib/socketserver.py	598	603	ForkingMixIn.handle_timeout	handle_timeout(self)	todo		
+Lib/socketserver.py	605	610	ForkingMixIn.service_actions	service_actions(self)	todo		
+Lib/socketserver.py	612	635	ForkingMixIn.process_request	process_request(self, request, client_address)	todo		
+Lib/socketserver.py	637	639	ForkingMixIn.server_close	server_close(self)	todo		
+Lib/socketserver.py	646	650	_Threads.append	append(self, thread)	todo		
+Lib/socketserver.py	652	654	_Threads.pop_all	pop_all(self)	todo		
+Lib/socketserver.py	656	658	_Threads.join	join(self)	todo		
+Lib/socketserver.py	660	661	_Threads.reap	reap(self)	todo		
+Lib/socketserver.py	668	669	_NoThreads.append	append(self, thread)	todo		
+Lib/socketserver.py	671	672	_NoThreads.join	join(self)	todo		
+Lib/socketserver.py	687	698	ThreadingMixIn.process_request_thread	process_request_thread(self, request, client_address)	todo		
+Lib/socketserver.py	700	708	ThreadingMixIn.process_request	process_request(self, request, client_address)	todo		
+Lib/socketserver.py	710	712	ThreadingMixIn.server_close	server_close(self)	todo		
+Lib/socketserver.py	757	765	BaseRequestHandler.__init__	__init__(self, request, client_address, server)	todo		
+Lib/socketserver.py	767	768	BaseRequestHandler.setup	setup(self)	todo		
+Lib/socketserver.py	770	771	BaseRequestHandler.handle	handle(self)	todo		
+Lib/socketserver.py	773	774	BaseRequestHandler.finish	finish(self)	todo		
+Lib/socketserver.py	806	817	StreamRequestHandler.setup	setup(self)	todo		
+Lib/socketserver.py	819	828	StreamRequestHandler.finish	finish(self)	todo		
+Lib/socketserver.py	835	836	_SocketWriter.__init__	__init__(self, sock)	todo		
+Lib/socketserver.py	838	839	_SocketWriter.writable	writable(self)	todo		
+Lib/socketserver.py	841	844	_SocketWriter.write	write(self, b)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/socketserver.py	846	847	_SocketWriter.fileno	fileno(self)	todo		
+Lib/socketserver.py	853	857	DatagramRequestHandler.setup	setup(self)	todo		
+Lib/socketserver.py	859	860	DatagramRequestHandler.finish	finish(self)	todo		
+Lib/socketserver.py	863	869	__getattr__	__getattr__(name)	todo		changed-in-3.15: new function

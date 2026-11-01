@@ -7,7 +7,7 @@ Nothing here assumes `Honest`. Each reader is shown to be a fixed function of wh
 `_Py_dict_lookup` returns in the current state, so the three paths that `Honest` hides are on
 record: a hash that raises, a lookup (that is, an `__eq__`) that raises or mutates the table, and
 a lookup that returns `ix >= 0` with no value, which is the split-table case the setdefault crash
-mishandles (`dictobject.c:1915-1922`, `insertdict`'s "ix may not be DKIX_EMPTY because split table
+mishandles (`dictobject.c:2025-2032`, `insertdict`'s "ix may not be DKIX_EMPTY because split table
 may have key without value"). In every reader but setdefault, that case is read as "absent".
 -/
 
@@ -33,7 +33,7 @@ theorem hashKey_run {β : Type} (P : Proto K (PyDict K V)) (key : K) (f : Int �
 section Wrap
 variable (P : Proto K (PyDict K V)) (key : K) (hash : Int) (mp : PyDict K V)
 
-/-- `_PyDict_GetItemRef_KnownHash` (:2438-2462): the value `_Py_dict_lookup` left, unchanged;
+/-- `_PyDict_GetItemRef_KnownHash` (:2538-2562): the value `_Py_dict_lookup` left, unchanged;
 a NULL value (`r.2 = none`, the split-absent case) is "not found". -/
 theorem refKnownHash_wrap :
     dictGetItemRefKnownHash P key hash mp =
@@ -46,7 +46,7 @@ theorem refKnownHash_wrap :
   · rfl
   · cases v <;> rfl
 
-/-- `_PyDict_Contains_KnownHash` (:4860-4882): found iff the slot is non-empty and holds a value,
+/-- `_PyDict_Contains_KnownHash` (:5270-5292): found iff the slot is non-empty and holds a value,
 so a split key with no value is not contained. -/
 theorem containsKnownHash_wrap :
     dictContainsKnownHash P key hash mp =
@@ -62,7 +62,7 @@ end Wrap
 section Top
 variable (P : Proto K (PyDict K V)) (key : K) (mp : PyDict K V)
 
-/-- `PyDict_GetItemRef` (:2464-2481) on a real dict: hash, then the known-hash reader. -/
+/-- `PyDict_GetItemRef` (:2564-2581) on a real dict: hash, then the known-hash reader. -/
 theorem getItemRef_wrap :
     pyDictGetItemRef P true key mp =
       match P.hash key with
@@ -76,7 +76,7 @@ theorem getItemRef_wrap :
     simp only [pyDictGetItemRef, hashKey, Bool.not_true, Bool.false_eq_true, if_false,
       M.bind_run, M.pure_run, M.throw_run, hh]
 
-/-- `PyDict_GetItemWithError` (:2515-2541) on a real dict: it returns the raw lookup value,
+/-- `PyDict_GetItemWithError` (:2615-2641) on a real dict: it returns the raw lookup value,
 including NULL as not-found, and never consults `ix`. -/
 theorem getItemWithError_wrap :
     pyDictGetItemWithError P true key mp =
@@ -96,7 +96,7 @@ theorem getItemWithError_wrap :
     rcases hl : dictLookup P key h mp with ⟨a, s⟩
     rcases a with e | ⟨ix, v⟩ <;> rfl
 
-/-- `PyDict_Contains` (:4835-4846), behind `key in d`. -/
+/-- `PyDict_Contains` (@3.14.7:4835-4846), behind `key in d`. -/
 theorem contains_wrap :
     pyDictContains P key mp =
       match P.hash key with
@@ -113,7 +113,7 @@ theorem contains_wrap :
     rcases hl : dictLookup P key h mp with ⟨a, s⟩
     rcases a with e | ⟨ix, v⟩ <;> rfl
 
-/-- `dict_subscript` (:3504-3538) on an exact dict (`missing = none`): the value when the slot
+/-- `dict_subscript` (@3.14.7:3504-3538) on an exact dict (`missing = none`): the value when the slot
 holds one, else `KeyError`. A NULL value raises `KeyError` too. -/
 theorem subscript_wrap :
     dictSubscript P none key mp =
@@ -138,7 +138,7 @@ theorem subscript_wrap :
       | none => rfl
       | some w => by_cases he : ix == DKIX_EMPTY <;> simp [he, subscriptMissing]
 
-/-- `dict.get` (`dict_get_impl`, :4386-4406): the value or the default; a NULL value is the
+/-- `dict.get` (`dict_get_impl`, :4749-4769): the value or the default; a NULL value is the
 default, and `ix == DKIX_EMPTY` is the default. -/
 theorem get_wrap (dflt : V) :
     dictGet P key dflt mp =

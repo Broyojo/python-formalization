@@ -13,7 +13,7 @@ open Lean PyLean PyLean.Diff
 
 /-! ## The keyword form of `localcontext` in `_decimal` -/
 
-/-- `ctxmanager_new`'s keywords, _decimal.c:1926-1930: `PyArg_ParseTupleAndKeywords`
+/-- `ctxmanager_new`'s keywords, _decimal.c@3.14.7:1926-1930: `PyArg_ParseTupleAndKeywords`
 refuses an unknown keyword before any field is set. -/
 def cInitOfKwargs (kw : List (String × CtxArg)) : Py CtxInit := do
   if kw.any (fun p => !contextAttributes.contains p.1) then

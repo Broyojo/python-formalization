@@ -1,169 +1,170 @@
 file	line	endline	name	signature	status	entry	note
-Objects/exceptions.c	38	42	get_exc_state	get_exc_state(void)	excluded		internal-bootstrap: returns the per-interpreter state pointer; the model has one interpreter
-Objects/exceptions.c	50	54	PyBaseExceptionObject_CAST	PyBaseExceptionObject_CAST(PyObject *exc)	excluded		no-behaviour: pointer cast with a debug assert
-Objects/exceptions.c	60	85	BaseException_new	BaseException_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-vectorcall-twin	
-Objects/exceptions.c	88	96	BaseException_init	BaseException_init(PyObject *op, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-vectorcall-twin	
-Objects/exceptions.c	100	129	BaseException_vectorcall	BaseException_vectorcall(PyObject *type_obj, PyObject * const*args, size_t nargsf, PyObject *kwnames)	modelled	typeobj-exc-vectorcall-twin	
-Objects/exceptions.c	133	143	BaseException_clear	BaseException_clear(PyObject *op)	modelled	typeobj-exc-memoryerror-freelist-fresh	
-Objects/exceptions.c	146	155	BaseException_dealloc	BaseException_dealloc(PyObject *op)	excluded		no-behaviour: deallocation; the object model has no reference counts
-Objects/exceptions.c	158	168	BaseException_traverse	BaseException_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse
-Objects/exceptions.c	171	190	BaseException_str	BaseException_str(PyObject *op)	todo		
-Objects/exceptions.c	193	210	BaseException_repr	BaseException_repr(PyObject *op)	todo		
-Objects/exceptions.c	220	227	BaseException___reduce___impl	BaseException___reduce___impl(PyBaseExceptionObject *self) /*[clinic end generated code: output=af87c1247ef98748 input=283be5a10d9c964f]*/	modelled	typeobj-exc-reduce,typeobj-exc-nameerror-reduce	
-Objects/exceptions.c	243	266	BaseException___setstate___impl	BaseException___setstate___impl(PyBaseExceptionObject *self, PyObject *state) /*[clinic end generated code: output=f3834889950453ab input=f9b1aea70382cdb6]*/	modelled	typeobj-exc-setstate	
-Objects/exceptions.c	279	286	BaseException_with_traceback_impl	BaseException_with_traceback_impl(PyBaseExceptionObject *self, PyObject *tb) /*[clinic end generated code: output=81e92f2387927f10 input=b5fb64d834717e36]*/	modelled	typeobj-exc-traceback-setter	
-Objects/exceptions.c	298	326	BaseException_add_note_impl	BaseException_add_note_impl(PyBaseExceptionObject *self, PyObject *note) /*[clinic end generated code: output=fb7cbcba611c187b input=e60a6b6e9596acaf]*/	modelled	typeobj-exc-add-note	
-Objects/exceptions.c	343	350	BaseException_args_get_impl	BaseException_args_get_impl(PyBaseExceptionObject *self) /*[clinic end generated code: output=e02e34e35cf4d677 input=64282386e4d7822d]*/	modelled	typeobj-exc-args-set	
-Objects/exceptions.c	359	372	BaseException_args_set_impl	BaseException_args_set_impl(PyBaseExceptionObject *self, PyObject *value) /*[clinic end generated code: output=331137e11d8f9e80 input=2400047ea5970a84]*/	modelled	typeobj-exc-args-set	
-Objects/exceptions.c	381	388	BaseException___traceback___get_impl	BaseException___traceback___get_impl(PyBaseExceptionObject *self) /*[clinic end generated code: output=17cf874a52339398 input=a2277f0de62170cf]*/	todo		
-Objects/exceptions.c	398	418	BaseException___traceback___set_impl	BaseException___traceback___set_impl(PyBaseExceptionObject *self, PyObject *value) /*[clinic end generated code: output=a82c86d9f29f48f0 input=12676035676badad]*/	modelled	typeobj-exc-traceback-setter	
-Objects/exceptions.c	427	434	BaseException___context___get_impl	BaseException___context___get_impl(PyBaseExceptionObject *self) /*[clinic end generated code: output=6ec5d296ce8d1c93 input=b2d22687937e66ab]*/	todo		
-Objects/exceptions.c	443	461	BaseException___context___set_impl	BaseException___context___set_impl(PyBaseExceptionObject *self, PyObject *value) /*[clinic end generated code: output=b4cb52dcca1da3bd input=c0971adf47fa1858]*/	modelled	typeobj-exc-context-set	
-Objects/exceptions.c	470	477	BaseException___cause___get_impl	BaseException___cause___get_impl(PyBaseExceptionObject *self) /*[clinic end generated code: output=987f6c4d8a0bdbab input=40e0eac427b6e602]*/	todo		
-Objects/exceptions.c	486	505	BaseException___cause___set_impl	BaseException___cause___set_impl(PyBaseExceptionObject *self, PyObject *value) /*[clinic end generated code: output=6161315398aaf541 input=e1b403c0bde3f62a]*/	modelled	typeobj-exc-cause-suppress	
-Objects/exceptions.c	519	526	PyException_GetTraceback	PyException_GetTraceback(PyObject *self)	todo		
-Objects/exceptions.c	530	537	PyException_SetTraceback	PyException_SetTraceback(PyObject *self, PyObject *tb)	todo		
-Objects/exceptions.c	540	547	PyException_GetCause	PyException_GetCause(PyObject *self)	todo		
-Objects/exceptions.c	551	558	PyException_SetCause	PyException_SetCause(PyObject *self, PyObject *cause)	modelled	typeobj-exc-cause-suppress,typeobj-exc-subset-suppress-context	
-Objects/exceptions.c	561	568	PyException_GetContext	PyException_GetContext(PyObject *self)	todo		
-Objects/exceptions.c	572	577	PyException_SetContext	PyException_SetContext(PyObject *self, PyObject *context)	modelled	typeobj-exc-context-set	
-Objects/exceptions.c	580	587	PyException_GetArgs	PyException_GetArgs(PyObject *self)	todo		
-Objects/exceptions.c	590	596	PyException_SetArgs	PyException_SetArgs(PyObject *self, PyObject *args)	todo		
-Objects/exceptions.c	599	603	PyExceptionClass_Name	PyExceptionClass_Name(PyObject *ob)	todo		
-Objects/exceptions.c	747	751	PyStopIterationObject_CAST	PyStopIterationObject_CAST(PyObject *self)	excluded		no-behaviour: pointer cast with a debug assert
-Objects/exceptions.c	754	769	StopIteration_init	StopIteration_init(PyObject *op, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-stopiteration-value	
-Objects/exceptions.c	772	777	StopIteration_clear	StopIteration_clear(PyObject *op)	excluded		no-behaviour: GC tp_clear; drops references, no Python-visible effect while the object is reachable
-Objects/exceptions.c	780	785	StopIteration_dealloc	StopIteration_dealloc(PyObject *self)	excluded		no-behaviour: deallocation; the object model has no reference counts
-Objects/exceptions.c	788	793	StopIteration_traverse	StopIteration_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse
-Objects/exceptions.c	812	816	PySystemExitObject_CAST	PySystemExitObject_CAST(PyObject *self)	excluded		no-behaviour: pointer cast with a debug assert
-Objects/exceptions.c	819	836	SystemExit_init	SystemExit_init(PyObject *op, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-systemexit-code	
-Objects/exceptions.c	839	844	SystemExit_clear	SystemExit_clear(PyObject *op)	excluded		no-behaviour: GC tp_clear; drops references, no Python-visible effect while the object is reachable
-Objects/exceptions.c	847	852	SystemExit_dealloc	SystemExit_dealloc(PyObject *self)	excluded		no-behaviour: deallocation; the object model has no reference counts
-Objects/exceptions.c	855	860	SystemExit_traverse	SystemExit_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse
-Objects/exceptions.c	879	883	PyBaseExceptionGroupObject_CAST	PyBaseExceptionGroupObject_CAST(PyObject *exc)	excluded		no-behaviour: pointer cast with a debug assert
-Objects/exceptions.c	886	1011	BaseExceptionGroup_new	BaseExceptionGroup_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-eg-rejects-non-exception,typeobj-exc-eg-no-base-in-exception,typeobj-exc-eg-wraps,typeobj-exc-eg-rejects-empty,typeobj-exc-eg-repr-after-new	
-Objects/exceptions.c	1014	1028	_PyExc_CreateExceptionGroup	_PyExc_CreateExceptionGroup(const char *msg_str, PyObject *excs)	modelled	typeobj-exc-eg-created-through-class	
-Objects/exceptions.c	1031	1040	BaseExceptionGroup_init	BaseExceptionGroup_init(PyObject *self, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-eg-init	
-Objects/exceptions.c	1043	1050	BaseExceptionGroup_clear	BaseExceptionGroup_clear(PyObject *op)	excluded		no-behaviour: GC tp_clear; drops references, no Python-visible effect while the object is reachable
-Objects/exceptions.c	1053	1058	BaseExceptionGroup_dealloc	BaseExceptionGroup_dealloc(PyObject *self)	excluded		no-behaviour: deallocation; the object model has no reference counts
-Objects/exceptions.c	1061	1068	BaseExceptionGroup_traverse	BaseExceptionGroup_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse
-Objects/exceptions.c	1071	1082	BaseExceptionGroup_str	BaseExceptionGroup_str(PyObject *op)	modelled	typeobj-exc-eg-str	
-Objects/exceptions.c	1085	1130	BaseExceptionGroup_repr	BaseExceptionGroup_repr(PyObject *op)	modelled	typeobj-exc-eg-repr-in-bounds,typeobj-exc-eg-repr-after-new,typeobj-exc-eg-repr-saved	
-Objects/exceptions.c	1140	1152	BaseExceptionGroup_derive_impl	BaseExceptionGroup_derive_impl(PyBaseExceptionGroupObject *self, PyObject *excs) /*[clinic end generated code: output=4307564218dfbf06 input=f72009d38e98cec1]*/	modelled	typeobj-exc-eg-created-through-class	
-Objects/exceptions.c	1155	1234	exceptiongroup_subset	exceptiongroup_subset( PyBaseExceptionGroupObject *_orig, PyObject *excs, PyObject **result)	modelled	typeobj-exc-subset-metadata,typeobj-exc-subset-suppress-context,typeobj-exc-subset-checks,typeobj-exc-split-partition	
-Objects/exceptions.c	1249	1280	get_matcher_type	get_matcher_type(PyObject *value, _exceptiongroup_split_matcher_type *type)	modelled	typeobj-exc-matcher-type	
-Objects/exceptions.c	1283	1318	exceptiongroup_split_check_match	exceptiongroup_split_check_match(PyObject *exc, _exceptiongroup_split_matcher_type matcher_type, PyObject *matcher_value)	modelled	typeobj-exc-match-by-type,typeobj-exc-split-partition,typeobj-exc-instance-ids	
-Objects/exceptions.c	1326	1434	exceptiongroup_split_recursive	exceptiongroup_split_recursive(PyObject *exc, _exceptiongroup_split_matcher_type matcher_type, PyObject *matcher_value, bool construct_rest, _exceptiongroup_split_result *result)	modelled	typeobj-exc-split-partition,typeobj-exc-split-structure,typeobj-exc-subgroup-is-split-match,typeobj-exc-split-identity,typeobj-exc-split-leaf	
-Objects/exceptions.c	1444	1469	BaseExceptionGroup_split_impl	BaseExceptionGroup_split_impl(PyBaseExceptionGroupObject *self, PyObject *matcher_value) /*[clinic end generated code: output=d74db579da4df6e2 input=0c5cfbfed57e0052]*/	modelled	typeobj-exc-split-partition,typeobj-exc-split-structure,typeobj-exc-split-identity	
-Objects/exceptions.c	1479	1502	BaseExceptionGroup_subgroup_impl	BaseExceptionGroup_subgroup_impl(PyBaseExceptionGroupObject *self, PyObject *matcher_value) /*[clinic end generated code: output=07dbec8f77d4dd8e input=988ffdd755a151ce]*/	modelled	typeobj-exc-split-identity	
-Objects/exceptions.c	1505	1540	collect_exception_group_leaf_ids	collect_exception_group_leaf_ids(PyObject *exc, PyObject *leaf_ids)	modelled	typeobj-exc-leaf-ids	
-Objects/exceptions.c	1549	1584	exception_group_projection	exception_group_projection(PyObject *eg, PyObject *keep)	modelled	typeobj-exc-instance-ids,typeobj-exc-same-metadata-notes	
-Objects/exceptions.c	1587	1599	is_same_exception_metadata	is_same_exception_metadata(PyObject *exc1, PyObject *exc2)	modelled	typeobj-exc-same-metadata-notes	
-Objects/exceptions.c	1618	1708	_PyExc_PrepReraiseStar	_PyExc_PrepReraiseStar(PyObject *orig, PyObject *excs)	modelled	typeobj-exc-prep-reraise-short,typeobj-exc-same-metadata-notes	
-Objects/exceptions.c	1711	1744	PyUnstable_Exc_PrepReraiseStar	PyUnstable_Exc_PrepReraiseStar(PyObject *orig, PyObject *excs)	modelled	typeobj-exc-prep-reraise-validates	
-Objects/exceptions.c	1774	1789	create_exception_group_class	create_exception_group_class(void) {	todo		
-Objects/exceptions.c	1803	1807	PyImportErrorObject_CAST	PyImportErrorObject_CAST(PyObject *self)	excluded		no-behaviour: pointer cast with a debug assert
-Objects/exceptions.c	1810	1843	ImportError_init	ImportError_init(PyObject *op, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-importerror-msg	
-Objects/exceptions.c	1846	1854	ImportError_clear	ImportError_clear(PyObject *op)	excluded		no-behaviour: GC tp_clear; drops references, no Python-visible effect while the object is reachable
-Objects/exceptions.c	1857	1862	ImportError_dealloc	ImportError_dealloc(PyObject *self)	excluded		no-behaviour: deallocation; the object model has no reference counts
-Objects/exceptions.c	1865	1873	ImportError_traverse	ImportError_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse
-Objects/exceptions.c	1876	1883	ImportError_str	ImportError_str(PyObject *op)	modelled	typeobj-exc-importerror-msg	
-Objects/exceptions.c	1886	1914	ImportError_getstate	ImportError_getstate(PyObject *op)	modelled	typeobj-exc-reduce-keeps-name	
-Objects/exceptions.c	1918	1931	ImportError_reduce	ImportError_reduce(PyObject *self, PyObject *Py_UNUSED(ignored))	modelled	typeobj-exc-reduce-keeps-name	
-Objects/exceptions.c	1969	1973	PyOSErrorObject_CAST	PyOSErrorObject_CAST(PyObject *self)	excluded		no-behaviour: pointer cast with a debug assert
-Objects/exceptions.c	2114	2131	oserror_use_init	oserror_use_init(PyTypeObject *type)	modelled	typeobj-exc-oserror-parsed-once	
-Objects/exceptions.c	2134	2199	OSError_new	OSError_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
-Objects/exceptions.c	2202	2238	OSError_init	OSError_init(PyObject *op, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-oserror-positions	
-Objects/exceptions.c	2241	2252	OSError_clear	OSError_clear(PyObject *op)	excluded		no-behaviour: GC tp_clear; drops references, no Python-visible effect while the object is reachable
-Objects/exceptions.c	2255	2260	OSError_dealloc	OSError_dealloc(PyObject *self)	excluded		no-behaviour: deallocation; the object model has no reference counts
-Objects/exceptions.c	2263	2274	OSError_traverse	OSError_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse
-Objects/exceptions.c	2277	2320	OSError_str	OSError_str(PyObject *op)	modelled	typeobj-exc-oserror-str	
-Objects/exceptions.c	2323	2361	OSError_reduce	OSError_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
-Objects/exceptions.c	2364	2372	OSError_written_get	OSError_written_get(PyObject *op, void *context)	modelled	typeobj-exc-oserror-written	
-Objects/exceptions.c	2375	2392	OSError_written_set	OSError_written_set(PyObject *op, PyObject *arg, void *context)	modelled	typeobj-exc-oserror-written	
-Objects/exceptions.c	2497	2501	PyNameErrorObject_CAST	PyNameErrorObject_CAST(PyObject *self)	excluded		no-behaviour: pointer cast with a debug assert
-Objects/exceptions.c	2504	2528	NameError_init	NameError_init(PyObject *op, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-nameerror-init	
-Objects/exceptions.c	2531	2536	NameError_clear	NameError_clear(PyObject *op)	excluded		no-behaviour: GC tp_clear; drops references, no Python-visible effect while the object is reachable
-Objects/exceptions.c	2539	2544	NameError_dealloc	NameError_dealloc(PyObject *self)	excluded		no-behaviour: deallocation; the object model has no reference counts
-Objects/exceptions.c	2547	2552	NameError_traverse	NameError_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse
-Objects/exceptions.c	2580	2584	PyAttributeErrorObject_CAST	PyAttributeErrorObject_CAST(PyObject *self)	excluded		no-behaviour: pointer cast with a debug assert
-Objects/exceptions.c	2587	2613	AttributeError_init	AttributeError_init(PyObject *op, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-attributeerror-init	
-Objects/exceptions.c	2616	2622	AttributeError_clear	AttributeError_clear(PyObject *op)	excluded		no-behaviour: GC tp_clear; drops references, no Python-visible effect while the object is reachable
-Objects/exceptions.c	2625	2630	AttributeError_dealloc	AttributeError_dealloc(PyObject *self)	excluded		no-behaviour: deallocation; the object model has no reference counts
-Objects/exceptions.c	2633	2639	AttributeError_traverse	AttributeError_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse
-Objects/exceptions.c	2643	2669	AttributeError_getstate	AttributeError_getstate(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	typeobj-exc-reduce-keeps-name	
-Objects/exceptions.c	2672	2683	AttributeError_reduce	AttributeError_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	typeobj-exc-reduce-keeps-name	
-Objects/exceptions.c	2707	2711	PySyntaxErrorObject_CAST	PySyntaxErrorObject_CAST(PyObject *self)	excluded		no-behaviour: pointer cast with a debug assert
-Objects/exceptions.c	2714	2760	SyntaxError_init	SyntaxError_init(PyObject *op, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-syntaxerror-init	
-Objects/exceptions.c	2763	2776	SyntaxError_clear	SyntaxError_clear(PyObject *op)	excluded		no-behaviour: GC tp_clear; drops references, no Python-visible effect while the object is reachable
-Objects/exceptions.c	2779	2784	SyntaxError_dealloc	SyntaxError_dealloc(PyObject *self)	excluded		no-behaviour: deallocation; the object model has no reference counts
-Objects/exceptions.c	2787	2800	SyntaxError_traverse	SyntaxError_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse
-Objects/exceptions.c	2806	2827	my_basename	my_basename(PyObject *name)	modelled	typeobj-exc-my-basename	
-Objects/exceptions.c	2831	2874	SyntaxError_str	SyntaxError_str(PyObject *op)	modelled	typeobj-exc-syntaxerror-lineno	
-Objects/exceptions.c	2942	2958	KeyError_str	KeyError_str(PyObject *op)	todo		
-Objects/exceptions.c	2988	3004	check_unicode_error_attribute	check_unicode_error_attribute(PyObject *attr, const char *name, int as_bytes)	modelled	typeobj-exc-unicode-attr-check	
-Objects/exceptions.c	3017	3021	as_unicode_error_attribute	as_unicode_error_attribute(PyObject *attr, const char *name, int as_bytes)	modelled	typeobj-exc-unicode-attr-check	
-Objects/exceptions.c	3051	3060	check_unicode_error_type	check_unicode_error_type(PyObject *self, const char *expect_type)	modelled	typeobj-exc-unicode-capi	
-Objects/exceptions.c	3073	3078	unicode_error_get_encoding_impl	unicode_error_get_encoding_impl(PyObject *self)	modelled	typeobj-exc-unicode-capi-attrs	
-Objects/exceptions.c	3086	3091	unicode_error_get_object_impl	unicode_error_get_object_impl(PyObject *self, int as_bytes)	modelled	typeobj-exc-unicode-capi-attrs	
-Objects/exceptions.c	3098	3103	unicode_error_get_reason_impl	unicode_error_get_reason_impl(PyObject *self)	modelled	typeobj-exc-unicode-capi-attrs	
-Objects/exceptions.c	3112	3122	unicode_error_set_reason_impl	unicode_error_set_reason_impl(PyObject *self, const char *reason)	modelled	typeobj-exc-unicode-capi-attrs	
-Objects/exceptions.c	3131	3137	unicode_error_set_start_impl	unicode_error_set_start_impl(PyObject *self, Py_ssize_t start)	modelled	typeobj-exc-unicode-capi	
-Objects/exceptions.c	3146	3152	unicode_error_set_end_impl	unicode_error_set_end_impl(PyObject *self, Py_ssize_t end)	modelled	typeobj-exc-unicode-capi	
-Objects/exceptions.c	3166	3176	unicode_error_adjust_start	unicode_error_adjust_start(Py_ssize_t start, Py_ssize_t objlen)	modelled	typeobj-exc-unicode-adjust	
-Objects/exceptions.c	3182	3191	assert_adjusted_unicode_error_start	assert_adjusted_unicode_error_start(Py_ssize_t start, Py_ssize_t objlen)	modelled	typeobj-exc-unicode-adjust	
-Objects/exceptions.c	3207	3217	unicode_error_adjust_end	unicode_error_adjust_end(Py_ssize_t end, Py_ssize_t objlen)	modelled	typeobj-exc-unicode-adjust	
-Objects/exceptions.c	3227	3236	assert_adjusted_unicode_error_end	assert_adjusted_unicode_error_end(Py_ssize_t end, Py_ssize_t objlen)	modelled	typeobj-exc-unicode-adjust	
-Objects/exceptions.c	3253	3260	unicode_error_adjust_len	unicode_error_adjust_len(Py_ssize_t start, Py_ssize_t end, Py_ssize_t objlen)	modelled	typeobj-exc-unicode-adjust	
-Objects/exceptions.c	3266	3271	assert_adjusted_unicode_error_len	assert_adjusted_unicode_error_len(Py_ssize_t ranlen, Py_ssize_t objlen)	modelled	typeobj-exc-unicode-adjust	
-Objects/exceptions.c	3306	3354	_PyUnicodeError_GetParams	_PyUnicodeError_GetParams(PyObject *self, PyObject **obj, Py_ssize_t *objlen, Py_ssize_t *start, Py_ssize_t *end, Py_ssize_t *slen, int as_bytes)	todo		
-Objects/exceptions.c	3361	3365	PyUnicodeEncodeError_GetEncoding	PyUnicodeEncodeError_GetEncoding(PyObject *self)	todo		
-Objects/exceptions.c	3369	3373	PyUnicodeDecodeError_GetEncoding	PyUnicodeDecodeError_GetEncoding(PyObject *self)	todo		
-Objects/exceptions.c	3379	3383	PyUnicodeEncodeError_GetObject	PyUnicodeEncodeError_GetObject(PyObject *self)	todo		
-Objects/exceptions.c	3387	3391	PyUnicodeDecodeError_GetObject	PyUnicodeDecodeError_GetObject(PyObject *self)	todo		
-Objects/exceptions.c	3395	3399	PyUnicodeTranslateError_GetObject	PyUnicodeTranslateError_GetObject(PyObject *self)	todo		
-Objects/exceptions.c	3411	3417	unicode_error_get_start_impl	unicode_error_get_start_impl(PyObject *self, Py_ssize_t *start, int as_bytes)	modelled	typeobj-exc-unicode-capi	
-Objects/exceptions.c	3421	3425	PyUnicodeEncodeError_GetStart	PyUnicodeEncodeError_GetStart(PyObject *self, Py_ssize_t *start)	todo		
-Objects/exceptions.c	3429	3433	PyUnicodeDecodeError_GetStart	PyUnicodeDecodeError_GetStart(PyObject *self, Py_ssize_t *start)	todo		
-Objects/exceptions.c	3437	3441	PyUnicodeTranslateError_GetStart	PyUnicodeTranslateError_GetStart(PyObject *self, Py_ssize_t *start)	todo		
-Objects/exceptions.c	3447	3451	PyUnicodeEncodeError_SetStart	PyUnicodeEncodeError_SetStart(PyObject *self, Py_ssize_t start)	todo		
-Objects/exceptions.c	3455	3459	PyUnicodeDecodeError_SetStart	PyUnicodeDecodeError_SetStart(PyObject *self, Py_ssize_t start)	todo		
-Objects/exceptions.c	3463	3467	PyUnicodeTranslateError_SetStart	PyUnicodeTranslateError_SetStart(PyObject *self, Py_ssize_t start)	todo		
-Objects/exceptions.c	3479	3485	unicode_error_get_end_impl	unicode_error_get_end_impl(PyObject *self, Py_ssize_t *end, int as_bytes)	modelled	typeobj-exc-unicode-capi	
-Objects/exceptions.c	3489	3493	PyUnicodeEncodeError_GetEnd	PyUnicodeEncodeError_GetEnd(PyObject *self, Py_ssize_t *end)	todo		
-Objects/exceptions.c	3497	3501	PyUnicodeDecodeError_GetEnd	PyUnicodeDecodeError_GetEnd(PyObject *self, Py_ssize_t *end)	todo		
-Objects/exceptions.c	3505	3509	PyUnicodeTranslateError_GetEnd	PyUnicodeTranslateError_GetEnd(PyObject *self, Py_ssize_t *end)	todo		
-Objects/exceptions.c	3515	3519	PyUnicodeEncodeError_SetEnd	PyUnicodeEncodeError_SetEnd(PyObject *self, Py_ssize_t end)	todo		
-Objects/exceptions.c	3523	3527	PyUnicodeDecodeError_SetEnd	PyUnicodeDecodeError_SetEnd(PyObject *self, Py_ssize_t end)	todo		
-Objects/exceptions.c	3531	3535	PyUnicodeTranslateError_SetEnd	PyUnicodeTranslateError_SetEnd(PyObject *self, Py_ssize_t end)	todo		
-Objects/exceptions.c	3541	3545	PyUnicodeEncodeError_GetReason	PyUnicodeEncodeError_GetReason(PyObject *self)	todo		
-Objects/exceptions.c	3549	3553	PyUnicodeDecodeError_GetReason	PyUnicodeDecodeError_GetReason(PyObject *self)	todo		
-Objects/exceptions.c	3557	3561	PyUnicodeTranslateError_GetReason	PyUnicodeTranslateError_GetReason(PyObject *self)	todo		
-Objects/exceptions.c	3567	3571	PyUnicodeEncodeError_SetReason	PyUnicodeEncodeError_SetReason(PyObject *self, const char *reason)	todo		
-Objects/exceptions.c	3575	3579	PyUnicodeDecodeError_SetReason	PyUnicodeDecodeError_SetReason(PyObject *self, const char *reason)	todo		
-Objects/exceptions.c	3583	3587	PyUnicodeTranslateError_SetReason	PyUnicodeTranslateError_SetReason(PyObject *self, const char *reason)	todo		
-Objects/exceptions.c	3591	3598	UnicodeError_clear	UnicodeError_clear(PyObject *self)	excluded		no-behaviour: GC tp_clear; drops references, no Python-visible effect while the object is reachable
-Objects/exceptions.c	3601	3607	UnicodeError_dealloc	UnicodeError_dealloc(PyObject *self)	excluded		no-behaviour: deallocation; the object model has no reference counts
-Objects/exceptions.c	3610	3617	UnicodeError_traverse	UnicodeError_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse
-Objects/exceptions.c	3639	3661	UnicodeEncodeError_init	UnicodeEncodeError_init(PyObject *self, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-unicode-init-encode	
-Objects/exceptions.c	3664	3724	UnicodeEncodeError_str	UnicodeEncodeError_str(PyObject *self)	modelled	typeobj-exc-unicode-str-bounds,typeobj-exc-unicode-str-unset	
-Objects/exceptions.c	3746	3784	UnicodeDecodeError_init	UnicodeDecodeError_init(PyObject *self, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-unicode-init-others	
-Objects/exceptions.c	3787	3837	UnicodeDecodeError_str	UnicodeDecodeError_str(PyObject *self)	modelled	typeobj-exc-unicode-str-bounds,typeobj-exc-unicode-str-unset	
-Objects/exceptions.c	3854	3860	PyUnicodeDecodeError_Create	PyUnicodeDecodeError_Create( const char *encoding, const char *object, Py_ssize_t length, Py_ssize_t start, Py_ssize_t end, const char *reason)	modelled	typeobj-exc-unicode-create	
-Objects/exceptions.c	3868	3887	UnicodeTranslateError_init	UnicodeTranslateError_init(PyObject *self, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-unicode-init-others	
-Objects/exceptions.c	3891	3943	UnicodeTranslateError_str	UnicodeTranslateError_str(PyObject *self)	modelled	typeobj-exc-unicode-str-bounds,typeobj-exc-unicode-str-unset	
-Objects/exceptions.c	3960	3966	_PyUnicodeTranslateError_Create	_PyUnicodeTranslateError_Create( PyObject *object, Py_ssize_t start, Py_ssize_t end, const char *reason)	modelled	typeobj-exc-unicode-create	
-Objects/exceptions.c	4035	4063	get_memory_error	get_memory_error(int allow_allocation, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-memoryerror-freelist-bound,typeobj-exc-memoryerror-freelist-fresh,typeobj-exc-memoryerror-new-args	
-Objects/exceptions.c	4066	4074	MemoryError_new	MemoryError_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-memoryerror-freelist-fresh,typeobj-exc-memoryerror-new-args	
-Objects/exceptions.c	4077	4090	_PyErr_NoMemory	_PyErr_NoMemory(PyThreadState *tstate)	modelled	typeobj-exc-memoryerror-freelist-bound	
-Objects/exceptions.c	4093	4119	MemoryError_dealloc	MemoryError_dealloc(PyObject *op)	modelled	typeobj-exc-memoryerror-freelist-bound,typeobj-exc-memoryerror-freelist-fresh	
-Objects/exceptions.c	4122	4140	preallocate_memerrors	preallocate_memerrors(void)	modelled	typeobj-exc-memoryerror-freelist-bound	
-Objects/exceptions.c	4143	4150	free_preallocated_memerrors	free_preallocated_memerrors(struct _Py_exc_state *state)	modelled	typeobj-exc-memoryerror-freelist-bound	
-Objects/exceptions.c	4417	4431	_PyExc_InitTypes	_PyExc_InitTypes(PyInterpreterState *interp)	excluded		internal-bootstrap: PyType_Ready over the static types and tp_vectorcall installation; Builtins.lean bootstrap and typeobj-exc-vectorcall-twin
-Objects/exceptions.c	4435	4441	_PyExc_FiniTypes	_PyExc_FiniTypes(PyInterpreterState *interp)	excluded		internal-bootstrap: interpreter teardown
-Objects/exceptions.c	4445	4451	_PyExc_InitGlobalObjects	_PyExc_InitGlobalObjects(PyInterpreterState *interp)	excluded		internal-bootstrap: calls preallocate_memerrors at startup
-Objects/exceptions.c	4454	4509	_PyExc_InitState	_PyExc_InitState(PyInterpreterState *interp)	todo		
-Objects/exceptions.c	4514	4554	_PyBuiltins_AddExceptions	_PyBuiltins_AddExceptions(PyObject *bltinmod)	excluded		internal-bootstrap: fills the builtins namespace; initialState in Builtins.lean binds the same names and aliases
-Objects/exceptions.c	4557	4561	_PyExc_ClearExceptionGroupType	_PyExc_ClearExceptionGroupType(PyInterpreterState *interp)	excluded		internal-bootstrap: interpreter teardown
-Objects/exceptions.c	4564	4571	_PyExc_Fini	_PyExc_Fini(PyInterpreterState *interp)	excluded		internal-bootstrap: interpreter teardown
-Objects/exceptions.c	4574	4586	_PyException_AddNote	_PyException_AddNote(PyObject *exc, PyObject *note)	todo		
+Objects/exceptions.c	30	34	get_exc_state	get_exc_state(void)	excluded		internal-bootstrap: returns the per-interpreter state pointer; the model has one interpreter
+Objects/exceptions.c	42	46	PyBaseExceptionObject_CAST	PyBaseExceptionObject_CAST(PyObject *exc)	excluded		no-behaviour: pointer cast with a debug assert
+Objects/exceptions.c	52	77	BaseException_new	BaseException_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-vectorcall-twin	
+Objects/exceptions.c	80	88	BaseException_init	BaseException_init(PyObject *op, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-vectorcall-twin	
+Objects/exceptions.c	92	121	BaseException_vectorcall	BaseException_vectorcall(PyObject *type_obj, PyObject * const*args, size_t nargsf, PyObject *kwnames)	todo		changed-in-3.15: was typeobj-exc-vectorcall-twin
+Objects/exceptions.c	125	135	BaseException_clear	BaseException_clear(PyObject *op)	modelled	typeobj-exc-memoryerror-freelist-fresh	
+Objects/exceptions.c	138	147	BaseException_dealloc	BaseException_dealloc(PyObject *op)	excluded		no-behaviour: deallocation; the object model has no reference counts
+Objects/exceptions.c	150	160	BaseException_traverse	BaseException_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse
+Objects/exceptions.c	163	182	BaseException_str	BaseException_str(PyObject *op)	todo		
+Objects/exceptions.c	185	202	BaseException_repr	BaseException_repr(PyObject *op)	todo		
+Objects/exceptions.c	212	219	BaseException___reduce___impl	BaseException___reduce___impl(PyBaseExceptionObject *self) /*[clinic end generated code: output=af87c1247ef98748 input=283be5a10d9c964f]*/	todo		changed-in-3.15: was typeobj-exc-reduce,typeobj-exc-nameerror-reduce
+Objects/exceptions.c	235	258	BaseException___setstate___impl	BaseException___setstate___impl(PyBaseExceptionObject *self, PyObject *state) /*[clinic end generated code: output=f3834889950453ab input=f9b1aea70382cdb6]*/	modelled	typeobj-exc-setstate	
+Objects/exceptions.c	271	278	BaseException_with_traceback_impl	BaseException_with_traceback_impl(PyBaseExceptionObject *self, PyObject *tb) /*[clinic end generated code: output=81e92f2387927f10 input=b5fb64d834717e36]*/	modelled	typeobj-exc-traceback-setter	
+Objects/exceptions.c	290	318	BaseException_add_note_impl	BaseException_add_note_impl(PyBaseExceptionObject *self, PyObject *note) /*[clinic end generated code: output=fb7cbcba611c187b input=e60a6b6e9596acaf]*/	modelled	typeobj-exc-add-note	
+Objects/exceptions.c	335	342	BaseException_args_get_impl	BaseException_args_get_impl(PyBaseExceptionObject *self) /*[clinic end generated code: output=e02e34e35cf4d677 input=64282386e4d7822d]*/	modelled	typeobj-exc-args-set	
+Objects/exceptions.c	352	365	BaseException_args_set_impl	BaseException_args_set_impl(PyBaseExceptionObject *self, PyObject *value) /*[clinic end generated code: output=331137e11d8f9e80 input=177ad350c8b45219]*/	modelled	typeobj-exc-args-set	
+Objects/exceptions.c	374	381	BaseException___traceback___get_impl	BaseException___traceback___get_impl(PyBaseExceptionObject *self) /*[clinic end generated code: output=17cf874a52339398 input=a2277f0de62170cf]*/	todo		
+Objects/exceptions.c	392	412	BaseException___traceback___set_impl	BaseException___traceback___set_impl(PyBaseExceptionObject *self, PyObject *value) /*[clinic end generated code: output=a82c86d9f29f48f0 input=53a1df586023d786]*/	modelled	typeobj-exc-traceback-setter	
+Objects/exceptions.c	421	428	BaseException___context___get_impl	BaseException___context___get_impl(PyBaseExceptionObject *self) /*[clinic end generated code: output=6ec5d296ce8d1c93 input=b2d22687937e66ab]*/	todo		
+Objects/exceptions.c	438	456	BaseException___context___set_impl	BaseException___context___set_impl(PyBaseExceptionObject *self, PyObject *value) /*[clinic end generated code: output=b4cb52dcca1da3bd input=fe79e7c0a0854004]*/	modelled	typeobj-exc-context-set	
+Objects/exceptions.c	465	472	BaseException___cause___get_impl	BaseException___cause___get_impl(PyBaseExceptionObject *self) /*[clinic end generated code: output=987f6c4d8a0bdbab input=40e0eac427b6e602]*/	todo		
+Objects/exceptions.c	482	501	BaseException___cause___set_impl	BaseException___cause___set_impl(PyBaseExceptionObject *self, PyObject *value) /*[clinic end generated code: output=6161315398aaf541 input=3fdd9a0d1674abc9]*/	modelled	typeobj-exc-cause-suppress	
+Objects/exceptions.c	515	522	PyException_GetTraceback	PyException_GetTraceback(PyObject *self)	todo		
+Objects/exceptions.c	526	533	PyException_SetTraceback	PyException_SetTraceback(PyObject *self, PyObject *tb)	todo		
+Objects/exceptions.c	536	543	PyException_GetCause	PyException_GetCause(PyObject *self)	todo		
+Objects/exceptions.c	547	554	PyException_SetCause	PyException_SetCause(PyObject *self, PyObject *cause)	modelled	typeobj-exc-cause-suppress,typeobj-exc-subset-suppress-context	
+Objects/exceptions.c	557	564	PyException_GetContext	PyException_GetContext(PyObject *self)	todo		
+Objects/exceptions.c	568	573	PyException_SetContext	PyException_SetContext(PyObject *self, PyObject *context)	modelled	typeobj-exc-context-set	
+Objects/exceptions.c	576	583	PyException_GetArgs	PyException_GetArgs(PyObject *self)	todo		
+Objects/exceptions.c	586	592	PyException_SetArgs	PyException_SetArgs(PyObject *self, PyObject *args)	todo		
+Objects/exceptions.c	595	599	PyExceptionClass_Name	PyExceptionClass_Name(PyObject *ob)	todo		
+Objects/exceptions.c	743	747	PyStopIterationObject_CAST	PyStopIterationObject_CAST(PyObject *self)	excluded		no-behaviour: pointer cast with a debug assert
+Objects/exceptions.c	750	765	StopIteration_init	StopIteration_init(PyObject *op, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-stopiteration-value	
+Objects/exceptions.c	768	773	StopIteration_clear	StopIteration_clear(PyObject *op)	excluded		no-behaviour: GC tp_clear; drops references, no Python-visible effect while the object is reachable
+Objects/exceptions.c	776	781	StopIteration_dealloc	StopIteration_dealloc(PyObject *self)	excluded		no-behaviour: deallocation; the object model has no reference counts
+Objects/exceptions.c	784	789	StopIteration_traverse	StopIteration_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse
+Objects/exceptions.c	808	812	PySystemExitObject_CAST	PySystemExitObject_CAST(PyObject *self)	excluded		no-behaviour: pointer cast with a debug assert
+Objects/exceptions.c	815	832	SystemExit_init	SystemExit_init(PyObject *op, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-systemexit-code	
+Objects/exceptions.c	835	840	SystemExit_clear	SystemExit_clear(PyObject *op)	excluded		no-behaviour: GC tp_clear; drops references, no Python-visible effect while the object is reachable
+Objects/exceptions.c	843	848	SystemExit_dealloc	SystemExit_dealloc(PyObject *self)	excluded		no-behaviour: deallocation; the object model has no reference counts
+Objects/exceptions.c	851	856	SystemExit_traverse	SystemExit_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse
+Objects/exceptions.c	875	879	PyBaseExceptionGroupObject_CAST	PyBaseExceptionGroupObject_CAST(PyObject *exc)	excluded		no-behaviour: pointer cast with a debug assert
+Objects/exceptions.c	882	1007	BaseExceptionGroup_new	BaseExceptionGroup_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		changed-in-3.15: was typeobj-exc-eg-rejects-non-exception,typeobj-exc-eg-no-base-in-exception,typeobj-exc-eg-wraps,typeobj-exc-eg-rejects-empty,typeobj-exc-eg-repr-after-new
+Objects/exceptions.c	1010	1023	_PyExc_CreateExceptionGroup	_PyExc_CreateExceptionGroup(const char *msg_str, PyObject *excs)	todo		changed-in-3.15: was typeobj-exc-eg-created-through-class
+Objects/exceptions.c	1026	1035	BaseExceptionGroup_init	BaseExceptionGroup_init(PyObject *self, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-eg-init	
+Objects/exceptions.c	1038	1045	BaseExceptionGroup_clear	BaseExceptionGroup_clear(PyObject *op)	excluded		no-behaviour: GC tp_clear; drops references, no Python-visible effect while the object is reachable
+Objects/exceptions.c	1048	1053	BaseExceptionGroup_dealloc	BaseExceptionGroup_dealloc(PyObject *self)	excluded		no-behaviour: deallocation; the object model has no reference counts
+Objects/exceptions.c	1056	1063	BaseExceptionGroup_traverse	BaseExceptionGroup_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse
+Objects/exceptions.c	1066	1077	BaseExceptionGroup_str	BaseExceptionGroup_str(PyObject *op)	modelled	typeobj-exc-eg-str	
+Objects/exceptions.c	1080	1126	BaseExceptionGroup_repr	BaseExceptionGroup_repr(PyObject *op)	todo		changed-in-3.15: was typeobj-exc-eg-repr-in-bounds,typeobj-exc-eg-repr-after-new,typeobj-exc-eg-repr-saved
+Objects/exceptions.c	1136	1148	BaseExceptionGroup_derive_impl	BaseExceptionGroup_derive_impl(PyBaseExceptionGroupObject *self, PyObject *excs) /*[clinic end generated code: output=4307564218dfbf06 input=f72009d38e98cec1]*/	todo		changed-in-3.15: was typeobj-exc-eg-created-through-class
+Objects/exceptions.c	1151	1230	exceptiongroup_subset	exceptiongroup_subset( PyBaseExceptionGroupObject *_orig, PyObject *excs, PyObject **result)	modelled	typeobj-exc-subset-metadata,typeobj-exc-subset-suppress-context,typeobj-exc-subset-checks,typeobj-exc-split-partition	
+Objects/exceptions.c	1245	1276	get_matcher_type	get_matcher_type(PyObject *value, _exceptiongroup_split_matcher_type *type)	modelled	typeobj-exc-matcher-type	
+Objects/exceptions.c	1279	1314	exceptiongroup_split_check_match	exceptiongroup_split_check_match(PyObject *exc, _exceptiongroup_split_matcher_type matcher_type, PyObject *matcher_value)	modelled	typeobj-exc-match-by-type,typeobj-exc-split-partition,typeobj-exc-instance-ids	
+Objects/exceptions.c	1322	1430	exceptiongroup_split_recursive	exceptiongroup_split_recursive(PyObject *exc, _exceptiongroup_split_matcher_type matcher_type, PyObject *matcher_value, bool construct_rest, _exceptiongroup_split_result *result)	modelled	typeobj-exc-split-partition,typeobj-exc-split-structure,typeobj-exc-subgroup-is-split-match,typeobj-exc-split-identity,typeobj-exc-split-leaf	
+Objects/exceptions.c	1440	1463	BaseExceptionGroup_split_impl	BaseExceptionGroup_split_impl(PyBaseExceptionGroupObject *self, PyObject *matcher_value) /*[clinic end generated code: output=d74db579da4df6e2 input=0c5cfbfed57e0052]*/	todo		changed-in-3.15: was typeobj-exc-split-partition,typeobj-exc-split-structure,typeobj-exc-split-identity
+Objects/exceptions.c	1473	1496	BaseExceptionGroup_subgroup_impl	BaseExceptionGroup_subgroup_impl(PyBaseExceptionGroupObject *self, PyObject *matcher_value) /*[clinic end generated code: output=07dbec8f77d4dd8e input=988ffdd755a151ce]*/	modelled	typeobj-exc-split-identity	
+Objects/exceptions.c	1499	1534	collect_exception_group_leaf_ids	collect_exception_group_leaf_ids(PyObject *exc, PyObject *leaf_ids)	modelled	typeobj-exc-leaf-ids	
+Objects/exceptions.c	1543	1578	exception_group_projection	exception_group_projection(PyObject *eg, PyObject *keep)	modelled	typeobj-exc-instance-ids,typeobj-exc-same-metadata-notes	
+Objects/exceptions.c	1581	1593	is_same_exception_metadata	is_same_exception_metadata(PyObject *exc1, PyObject *exc2)	modelled	typeobj-exc-same-metadata-notes	
+Objects/exceptions.c	1612	1702	_PyExc_PrepReraiseStar	_PyExc_PrepReraiseStar(PyObject *orig, PyObject *excs)	modelled	typeobj-exc-prep-reraise-short,typeobj-exc-same-metadata-notes	
+Objects/exceptions.c	1705	1738	PyUnstable_Exc_PrepReraiseStar	PyUnstable_Exc_PrepReraiseStar(PyObject *orig, PyObject *excs)	modelled	typeobj-exc-prep-reraise-validates	
+Objects/exceptions.c	1768	1783	create_exception_group_class	create_exception_group_class(void) {	todo		changed-in-3.15:
+Objects/exceptions.c	1797	1801	PyImportErrorObject_CAST	PyImportErrorObject_CAST(PyObject *self)	excluded		no-behaviour: pointer cast with a debug assert
+Objects/exceptions.c	1804	1837	ImportError_init	ImportError_init(PyObject *op, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-importerror-msg	
+Objects/exceptions.c	1840	1848	ImportError_clear	ImportError_clear(PyObject *op)	excluded		no-behaviour: GC tp_clear; drops references, no Python-visible effect while the object is reachable
+Objects/exceptions.c	1851	1856	ImportError_dealloc	ImportError_dealloc(PyObject *self)	excluded		no-behaviour: deallocation; the object model has no reference counts
+Objects/exceptions.c	1859	1867	ImportError_traverse	ImportError_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse
+Objects/exceptions.c	1870	1877	ImportError_str	ImportError_str(PyObject *op)	modelled	typeobj-exc-importerror-msg	
+Objects/exceptions.c	1880	1908	ImportError_getstate	ImportError_getstate(PyObject *op)	modelled	typeobj-exc-reduce-keeps-name	
+Objects/exceptions.c	1912	1925	ImportError_reduce	ImportError_reduce(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		changed-in-3.15: was typeobj-exc-reduce-keeps-name
+Objects/exceptions.c	1928	1981	ImportError_repr	ImportError_repr(PyObject *self)	todo		changed-in-3.15: new function
+Objects/exceptions.c	2039	2043	PyOSErrorObject_CAST	PyOSErrorObject_CAST(PyObject *self)	excluded		no-behaviour: pointer cast with a debug assert
+Objects/exceptions.c	2184	2201	oserror_use_init	oserror_use_init(PyTypeObject *type)	modelled	typeobj-exc-oserror-parsed-once	
+Objects/exceptions.c	2204	2269	OSError_new	OSError_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Objects/exceptions.c	2272	2308	OSError_init	OSError_init(PyObject *op, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-oserror-positions	
+Objects/exceptions.c	2311	2322	OSError_clear	OSError_clear(PyObject *op)	excluded		no-behaviour: GC tp_clear; drops references, no Python-visible effect while the object is reachable
+Objects/exceptions.c	2325	2330	OSError_dealloc	OSError_dealloc(PyObject *self)	excluded		no-behaviour: deallocation; the object model has no reference counts
+Objects/exceptions.c	2333	2344	OSError_traverse	OSError_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse
+Objects/exceptions.c	2347	2390	OSError_str	OSError_str(PyObject *op)	modelled	typeobj-exc-oserror-str	
+Objects/exceptions.c	2393	2431	OSError_reduce	OSError_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		changed-in-3.15:
+Objects/exceptions.c	2434	2442	OSError_written_get	OSError_written_get(PyObject *op, void *context)	modelled	typeobj-exc-oserror-written	
+Objects/exceptions.c	2445	2462	OSError_written_set	OSError_written_set(PyObject *op, PyObject *arg, void *context)	modelled	typeobj-exc-oserror-written	
+Objects/exceptions.c	2574	2578	PyNameErrorObject_CAST	PyNameErrorObject_CAST(PyObject *self)	excluded		no-behaviour: pointer cast with a debug assert
+Objects/exceptions.c	2581	2605	NameError_init	NameError_init(PyObject *op, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-nameerror-init	
+Objects/exceptions.c	2608	2613	NameError_clear	NameError_clear(PyObject *op)	excluded		no-behaviour: GC tp_clear; drops references, no Python-visible effect while the object is reachable
+Objects/exceptions.c	2616	2621	NameError_dealloc	NameError_dealloc(PyObject *self)	excluded		no-behaviour: deallocation; the object model has no reference counts
+Objects/exceptions.c	2624	2629	NameError_traverse	NameError_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse
+Objects/exceptions.c	2657	2661	PyAttributeErrorObject_CAST	PyAttributeErrorObject_CAST(PyObject *self)	excluded		no-behaviour: pointer cast with a debug assert
+Objects/exceptions.c	2664	2690	AttributeError_init	AttributeError_init(PyObject *op, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-attributeerror-init	
+Objects/exceptions.c	2693	2699	AttributeError_clear	AttributeError_clear(PyObject *op)	excluded		no-behaviour: GC tp_clear; drops references, no Python-visible effect while the object is reachable
+Objects/exceptions.c	2702	2707	AttributeError_dealloc	AttributeError_dealloc(PyObject *self)	excluded		no-behaviour: deallocation; the object model has no reference counts
+Objects/exceptions.c	2710	2716	AttributeError_traverse	AttributeError_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse
+Objects/exceptions.c	2720	2746	AttributeError_getstate	AttributeError_getstate(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	typeobj-exc-reduce-keeps-name	
+Objects/exceptions.c	2749	2760	AttributeError_reduce	AttributeError_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	typeobj-exc-reduce-keeps-name	
+Objects/exceptions.c	2784	2788	PySyntaxErrorObject_CAST	PySyntaxErrorObject_CAST(PyObject *self)	excluded		no-behaviour: pointer cast with a debug assert
+Objects/exceptions.c	2791	2837	SyntaxError_init	SyntaxError_init(PyObject *op, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-syntaxerror-init	
+Objects/exceptions.c	2840	2853	SyntaxError_clear	SyntaxError_clear(PyObject *op)	excluded		no-behaviour: GC tp_clear; drops references, no Python-visible effect while the object is reachable
+Objects/exceptions.c	2856	2861	SyntaxError_dealloc	SyntaxError_dealloc(PyObject *self)	excluded		no-behaviour: deallocation; the object model has no reference counts
+Objects/exceptions.c	2864	2877	SyntaxError_traverse	SyntaxError_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse
+Objects/exceptions.c	2883	2904	my_basename	my_basename(PyObject *name)	modelled	typeobj-exc-my-basename	
+Objects/exceptions.c	2908	2951	SyntaxError_str	SyntaxError_str(PyObject *op)	modelled	typeobj-exc-syntaxerror-lineno	
+Objects/exceptions.c	3019	3035	KeyError_str	KeyError_str(PyObject *op)	todo		
+Objects/exceptions.c	3065	3081	check_unicode_error_attribute	check_unicode_error_attribute(PyObject *attr, const char *name, int as_bytes)	modelled	typeobj-exc-unicode-attr-check	
+Objects/exceptions.c	3094	3098	as_unicode_error_attribute	as_unicode_error_attribute(PyObject *attr, const char *name, int as_bytes)	modelled	typeobj-exc-unicode-attr-check	
+Objects/exceptions.c	3128	3137	check_unicode_error_type	check_unicode_error_type(PyObject *self, const char *expect_type)	modelled	typeobj-exc-unicode-capi	
+Objects/exceptions.c	3150	3155	unicode_error_get_encoding_impl	unicode_error_get_encoding_impl(PyObject *self)	modelled	typeobj-exc-unicode-capi-attrs	
+Objects/exceptions.c	3163	3168	unicode_error_get_object_impl	unicode_error_get_object_impl(PyObject *self, int as_bytes)	modelled	typeobj-exc-unicode-capi-attrs	
+Objects/exceptions.c	3175	3180	unicode_error_get_reason_impl	unicode_error_get_reason_impl(PyObject *self)	modelled	typeobj-exc-unicode-capi-attrs	
+Objects/exceptions.c	3189	3199	unicode_error_set_reason_impl	unicode_error_set_reason_impl(PyObject *self, const char *reason)	modelled	typeobj-exc-unicode-capi-attrs	
+Objects/exceptions.c	3208	3214	unicode_error_set_start_impl	unicode_error_set_start_impl(PyObject *self, Py_ssize_t start)	modelled	typeobj-exc-unicode-capi	
+Objects/exceptions.c	3223	3229	unicode_error_set_end_impl	unicode_error_set_end_impl(PyObject *self, Py_ssize_t end)	modelled	typeobj-exc-unicode-capi	
+Objects/exceptions.c	3243	3253	unicode_error_adjust_start	unicode_error_adjust_start(Py_ssize_t start, Py_ssize_t objlen)	modelled	typeobj-exc-unicode-adjust	
+Objects/exceptions.c	3259	3268	assert_adjusted_unicode_error_start	assert_adjusted_unicode_error_start(Py_ssize_t start, Py_ssize_t objlen)	modelled	typeobj-exc-unicode-adjust	
+Objects/exceptions.c	3284	3294	unicode_error_adjust_end	unicode_error_adjust_end(Py_ssize_t end, Py_ssize_t objlen)	modelled	typeobj-exc-unicode-adjust	
+Objects/exceptions.c	3304	3313	assert_adjusted_unicode_error_end	assert_adjusted_unicode_error_end(Py_ssize_t end, Py_ssize_t objlen)	modelled	typeobj-exc-unicode-adjust	
+Objects/exceptions.c	3330	3337	unicode_error_adjust_len	unicode_error_adjust_len(Py_ssize_t start, Py_ssize_t end, Py_ssize_t objlen)	modelled	typeobj-exc-unicode-adjust	
+Objects/exceptions.c	3343	3348	assert_adjusted_unicode_error_len	assert_adjusted_unicode_error_len(Py_ssize_t ranlen, Py_ssize_t objlen)	modelled	typeobj-exc-unicode-adjust	
+Objects/exceptions.c	3383	3431	_PyUnicodeError_GetParams	_PyUnicodeError_GetParams(PyObject *self, PyObject **obj, Py_ssize_t *objlen, Py_ssize_t *start, Py_ssize_t *end, Py_ssize_t *slen, int as_bytes)	todo		
+Objects/exceptions.c	3438	3442	PyUnicodeEncodeError_GetEncoding	PyUnicodeEncodeError_GetEncoding(PyObject *self)	todo		
+Objects/exceptions.c	3446	3450	PyUnicodeDecodeError_GetEncoding	PyUnicodeDecodeError_GetEncoding(PyObject *self)	todo		
+Objects/exceptions.c	3456	3460	PyUnicodeEncodeError_GetObject	PyUnicodeEncodeError_GetObject(PyObject *self)	todo		
+Objects/exceptions.c	3464	3468	PyUnicodeDecodeError_GetObject	PyUnicodeDecodeError_GetObject(PyObject *self)	todo		
+Objects/exceptions.c	3472	3476	PyUnicodeTranslateError_GetObject	PyUnicodeTranslateError_GetObject(PyObject *self)	todo		
+Objects/exceptions.c	3488	3494	unicode_error_get_start_impl	unicode_error_get_start_impl(PyObject *self, Py_ssize_t *start, int as_bytes)	modelled	typeobj-exc-unicode-capi	
+Objects/exceptions.c	3498	3502	PyUnicodeEncodeError_GetStart	PyUnicodeEncodeError_GetStart(PyObject *self, Py_ssize_t *start)	todo		
+Objects/exceptions.c	3506	3510	PyUnicodeDecodeError_GetStart	PyUnicodeDecodeError_GetStart(PyObject *self, Py_ssize_t *start)	todo		
+Objects/exceptions.c	3514	3518	PyUnicodeTranslateError_GetStart	PyUnicodeTranslateError_GetStart(PyObject *self, Py_ssize_t *start)	todo		
+Objects/exceptions.c	3524	3528	PyUnicodeEncodeError_SetStart	PyUnicodeEncodeError_SetStart(PyObject *self, Py_ssize_t start)	todo		
+Objects/exceptions.c	3532	3536	PyUnicodeDecodeError_SetStart	PyUnicodeDecodeError_SetStart(PyObject *self, Py_ssize_t start)	todo		
+Objects/exceptions.c	3540	3544	PyUnicodeTranslateError_SetStart	PyUnicodeTranslateError_SetStart(PyObject *self, Py_ssize_t start)	todo		
+Objects/exceptions.c	3556	3562	unicode_error_get_end_impl	unicode_error_get_end_impl(PyObject *self, Py_ssize_t *end, int as_bytes)	modelled	typeobj-exc-unicode-capi	
+Objects/exceptions.c	3566	3570	PyUnicodeEncodeError_GetEnd	PyUnicodeEncodeError_GetEnd(PyObject *self, Py_ssize_t *end)	todo		
+Objects/exceptions.c	3574	3578	PyUnicodeDecodeError_GetEnd	PyUnicodeDecodeError_GetEnd(PyObject *self, Py_ssize_t *end)	todo		
+Objects/exceptions.c	3582	3586	PyUnicodeTranslateError_GetEnd	PyUnicodeTranslateError_GetEnd(PyObject *self, Py_ssize_t *end)	todo		
+Objects/exceptions.c	3592	3596	PyUnicodeEncodeError_SetEnd	PyUnicodeEncodeError_SetEnd(PyObject *self, Py_ssize_t end)	todo		
+Objects/exceptions.c	3600	3604	PyUnicodeDecodeError_SetEnd	PyUnicodeDecodeError_SetEnd(PyObject *self, Py_ssize_t end)	todo		
+Objects/exceptions.c	3608	3612	PyUnicodeTranslateError_SetEnd	PyUnicodeTranslateError_SetEnd(PyObject *self, Py_ssize_t end)	todo		
+Objects/exceptions.c	3618	3622	PyUnicodeEncodeError_GetReason	PyUnicodeEncodeError_GetReason(PyObject *self)	todo		
+Objects/exceptions.c	3626	3630	PyUnicodeDecodeError_GetReason	PyUnicodeDecodeError_GetReason(PyObject *self)	todo		
+Objects/exceptions.c	3634	3638	PyUnicodeTranslateError_GetReason	PyUnicodeTranslateError_GetReason(PyObject *self)	todo		
+Objects/exceptions.c	3644	3648	PyUnicodeEncodeError_SetReason	PyUnicodeEncodeError_SetReason(PyObject *self, const char *reason)	todo		
+Objects/exceptions.c	3652	3656	PyUnicodeDecodeError_SetReason	PyUnicodeDecodeError_SetReason(PyObject *self, const char *reason)	todo		
+Objects/exceptions.c	3660	3664	PyUnicodeTranslateError_SetReason	PyUnicodeTranslateError_SetReason(PyObject *self, const char *reason)	todo		
+Objects/exceptions.c	3668	3675	UnicodeError_clear	UnicodeError_clear(PyObject *self)	excluded		no-behaviour: GC tp_clear; drops references, no Python-visible effect while the object is reachable
+Objects/exceptions.c	3678	3684	UnicodeError_dealloc	UnicodeError_dealloc(PyObject *self)	excluded		no-behaviour: deallocation; the object model has no reference counts
+Objects/exceptions.c	3687	3694	UnicodeError_traverse	UnicodeError_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse
+Objects/exceptions.c	3716	3738	UnicodeEncodeError_init	UnicodeEncodeError_init(PyObject *self, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-unicode-init-encode	
+Objects/exceptions.c	3741	3801	UnicodeEncodeError_str	UnicodeEncodeError_str(PyObject *self)	modelled	typeobj-exc-unicode-str-bounds,typeobj-exc-unicode-str-unset	
+Objects/exceptions.c	3823	3861	UnicodeDecodeError_init	UnicodeDecodeError_init(PyObject *self, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-unicode-init-others	
+Objects/exceptions.c	3864	3914	UnicodeDecodeError_str	UnicodeDecodeError_str(PyObject *self)	modelled	typeobj-exc-unicode-str-bounds,typeobj-exc-unicode-str-unset	
+Objects/exceptions.c	3931	3937	PyUnicodeDecodeError_Create	PyUnicodeDecodeError_Create( const char *encoding, const char *object, Py_ssize_t length, Py_ssize_t start, Py_ssize_t end, const char *reason)	modelled	typeobj-exc-unicode-create	
+Objects/exceptions.c	3945	3964	UnicodeTranslateError_init	UnicodeTranslateError_init(PyObject *self, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-unicode-init-others	
+Objects/exceptions.c	3968	4020	UnicodeTranslateError_str	UnicodeTranslateError_str(PyObject *self)	modelled	typeobj-exc-unicode-str-bounds,typeobj-exc-unicode-str-unset	
+Objects/exceptions.c	4037	4043	_PyUnicodeTranslateError_Create	_PyUnicodeTranslateError_Create( PyObject *object, Py_ssize_t start, Py_ssize_t end, const char *reason)	modelled	typeobj-exc-unicode-create	
+Objects/exceptions.c	4112	4140	get_memory_error	get_memory_error(int allow_allocation, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-memoryerror-freelist-bound,typeobj-exc-memoryerror-freelist-fresh,typeobj-exc-memoryerror-new-args	
+Objects/exceptions.c	4143	4151	MemoryError_new	MemoryError_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-memoryerror-freelist-fresh,typeobj-exc-memoryerror-new-args	
+Objects/exceptions.c	4154	4167	_PyErr_NoMemory	_PyErr_NoMemory(PyThreadState *tstate)	modelled	typeobj-exc-memoryerror-freelist-bound	
+Objects/exceptions.c	4170	4196	MemoryError_dealloc	MemoryError_dealloc(PyObject *op)	modelled	typeobj-exc-memoryerror-freelist-bound,typeobj-exc-memoryerror-freelist-fresh	
+Objects/exceptions.c	4199	4217	preallocate_memerrors	preallocate_memerrors(void)	modelled	typeobj-exc-memoryerror-freelist-bound	
+Objects/exceptions.c	4220	4227	free_preallocated_memerrors	free_preallocated_memerrors(struct _Py_exc_state *state)	modelled	typeobj-exc-memoryerror-freelist-bound	
+Objects/exceptions.c	4495	4509	_PyExc_InitTypes	_PyExc_InitTypes(PyInterpreterState *interp)	excluded		internal-bootstrap: PyType_Ready over the static types and tp_vectorcall installation; Builtins.lean bootstrap and typeobj-exc-vectorcall-twin
+Objects/exceptions.c	4513	4519	_PyExc_FiniTypes	_PyExc_FiniTypes(PyInterpreterState *interp)	excluded		internal-bootstrap: interpreter teardown
+Objects/exceptions.c	4523	4529	_PyExc_InitGlobalObjects	_PyExc_InitGlobalObjects(PyInterpreterState *interp)	excluded		internal-bootstrap: calls preallocate_memerrors at startup
+Objects/exceptions.c	4532	4587	_PyExc_InitState	_PyExc_InitState(PyInterpreterState *interp)	todo		
+Objects/exceptions.c	4592	4626	_PyBuiltins_AddExceptions	_PyBuiltins_AddExceptions(PyObject *bltinmod)	todo		changed-in-3.15: was excluded: internal-bootstrap: fills the builtins namespace; initialState in Builtins.lean binds the same names and aliases
+Objects/exceptions.c	4629	4633	_PyExc_ClearExceptionGroupType	_PyExc_ClearExceptionGroupType(PyInterpreterState *interp)	excluded		internal-bootstrap: interpreter teardown
+Objects/exceptions.c	4636	4643	_PyExc_Fini	_PyExc_Fini(PyInterpreterState *interp)	excluded		internal-bootstrap: interpreter teardown
+Objects/exceptions.c	4646	4658	_PyException_AddNote	_PyException_AddNote(PyObject *exc, PyObject *note)	todo		

@@ -50,14 +50,14 @@ def startLocation (mark : Nat) : PM (Option (Int × Int)) := fun p =>
   let t := e.2.tokenAt mark
   (some (t.lineno, t.colOffset), e.2)
 
-/-- `_PyPegen_expect_forced_result`, `Parser/pegen.c:430-440`. -/
+/-- `_PyPegen_expect_forced_result`, `Parser/pegen.c:422-432`. -/
 def forcedResult (res : Ast) (expected : String) : PM Ast := fun p =>
   if p.errorIndicator then (.null, p) else
   match res with
   | .null => (.null, (raiseError "SyntaxError" false s!"expected ({expected})" p).2)
   | r => (r, p)
 
-/-- `_PyPegen_expect_forced_token`, `Parser/pegen.c:443-462`. -/
+/-- `_PyPegen_expect_forced_token`, `Parser/pegen.c:435-454`. -/
 def forcedToken (ty : Nat) (expected : String) : PM Ast := fun p =>
   if p.errorIndicator then (.null, p) else
   let e := ensureToken p
@@ -243,7 +243,7 @@ def parseStart (fuel : Nat) : PM Ast := do
   | .eval => callRule fuel rule_eval
   | .funcType => callRule fuel rule_func_type
 
-/-- `bad_single_statement`, `Parser/pegen.c:755-778`, over the bytes after `tok->cur`. -/
+/-- `bad_single_statement`, `Parser/pegen.c:747-770`, over the bytes after `tok->cur`. -/
 def badSingleStatement : Nat → List Nat → Bool
   | 0, _ => false
   | f + 1, s =>
@@ -254,18 +254,18 @@ def badSingleStatement : Nat → List Nat → Bool
     | 35 :: r => badSingleStatement f (r.dropWhile (· != 10))
     | _ => true
 
-/-- `reset_parser_state_for_error_pass`, `Parser/pegen.c:880-894`. -/
+/-- `reset_parser_state_for_error_pass`, `Parser/pegen.c:872-886`. -/
 def resetForErrorPass : PM Unit :=
   modify fun p =>
     { p with lastStmt := (0, 0), memo := p.memo.map (fun _ => []), mark := 0,
              callInvalidRules := true }
 
-/-- `_is_end_of_source`, `Parser/pegen.c:896-899`. -/
+/-- `_is_end_of_source`, `Parser/pegen.c:888-891`. -/
 def isEndOfSource (p : PS) : Bool :=
   let err := p.tok.done
   err == E_EOF || err == E_EOFS || err == E_EOLS
 
-/-- `_PyPegen_run_parser`, `Parser/pegen.c:948-1000`. `_PyPegen_set_syntax_error_metadata` fills
+/-- `_PyPegen_run_parser`, `Parser/pegen.c:940-992`. `_PyPegen_set_syntax_error_metadata` fills
 `SyntaxError._metadata`, which is outside `PyError`. -/
 def runParser (fuel : Nat) : PM Ast := do
   let res ← parseStart fuel
@@ -299,7 +299,7 @@ def parseResult (p : PS) (r : Ast) : Except PyError Ast :=
     | .null => .error { cls := "SystemError", msg := "parser returned NULL without error" }
     | t => .ok t
 
-/-- `compute_parser_flags`, `Parser/pegen.c:780-803`: `PyCF_*` and `CO_FUTURE_BARRY_AS_BDFL` bits
+/-- `compute_parser_flags`, `Parser/pegen.c:772-795`: `PyCF_*` and `CO_FUTURE_BARRY_AS_BDFL` bits
 to `PyPARSE_*` bits. -/
 def computeParserFlags (cf : Nat) : Nat :=
   (if cf &&& 0x200 != 0 then 0x0002 else 0)
@@ -308,7 +308,7 @@ def computeParserFlags (cf : Nat) : Nat :=
     ||| (if cf &&& 0x1000 != 0 then 0x0040 else 0)
     ||| (if cf &&& 0x4000 != 0 then 0x0100 else 0)
 
-/-- `_PyPegen_Parser_New`, `Parser/pegen.c:807-865`, with `PyPARSE_*` flags. -/
+/-- `_PyPegen_Parser_New`, `Parser/pegen.c:799-857`, with `PyPARSE_*` flags. -/
 def parserNew (tok : TokState) (start : StartRule) (flags featureVersion : Nat) (cfg : Cfg) : PS :=
   { tok := { tok with typeComments := flags &&& 0x0040 != 0 }, startRule := start, cfg,
     flagBarry := flags &&& 0x0020 != 0, flagDontImplyDedent := flags &&& 0x0002 != 0,
@@ -322,7 +322,7 @@ def fromUtf8 (src : List Nat) (execInput preserveCrlf : Bool) : TokState :=
 /-- Default fuel: call depth is bounded by `MAXSTACK` and loops by the token count. -/
 def defaultFuel (n : Nat) : Nat := 20000 + 64 * n
 
-/-- `_PyPegen_run_parser_from_string` with `PyCF_IGNORE_COOKIE`, `Parser/pegen.c:1054-1096`:
+/-- `_PyPegen_run_parser_from_string` with `PyCF_IGNORE_COOKIE`, `Parser/pegen.c:1052-1096`:
 what `compile(str, ...)` and `ast.parse(str)` do. `cfFlags` are the other compile flags. -/
 def parseStr (cfg : Cfg) (src : List Nat) (start : StartRule) (typeComments := false)
     (featureVersion := 14) (cfFlags : Nat := 0) (fuel := defaultFuel src.length) :

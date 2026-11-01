@@ -34,8 +34,8 @@ def readlinesLoop (hint : Int) : Nat → Int → List Atom → TM Val
       if hint > 0 ∧ (l.length : Int) > hint - length then pure (.list acc.reverse)
       else readlinesLoop hint fuel (length + l.length) acc
 
-/-- `_io_TextIOWrapper_reconfigure_impl`, textio.c:1372-1447, with `set_newline`
-(:859-892). Encoding and errors stay. -/
+/-- `_io_TextIOWrapper_reconfigure_impl`, textio.c:1438-1513, with `set_newline`
+(:926-959). Encoding and errors stay. -/
 def reconfigure (nl : Option (Option (List Nat))) (lb wt : Option Bool) : TM Val := do
   let t ← SM.get
   if t.decodedNN ∧ nl.isSome then
@@ -66,7 +66,7 @@ def stepOp (t : TC) : TXOp → TC × Py Val
     | .ok n => (read n) t
   | .readline none => (t, .error (.typeError "'NoneType' object cannot be interpreted as an integer"))
   | .readline (some n) =>
-    -- textio.c:2375: `size: Py_ssize_t = -1`, so unlike `read` no `None`
+    -- textio.c:2451: `size: Py_ssize_t = -1`, so unlike `read` no `None`
     if !InSsize n then (t, .error (.overflowError "Python int too large to convert to C ssize_t"))
     else (do checkAttached; let r ← readlineRaw n; pure (Val.str r)) t
   | .next => next t
@@ -127,7 +127,7 @@ end TCm
 namespace TP
 
 /-- `TextIOWrapper(BytesIO(data), 'utf-8', 'surrogatepass', newline)`,
-_pyio.py:2066-2096 and `_configure`, :2104-2119 (`os.linesep` is `\n`). -/
+_pyio.py:2090-2120 and `_configure`, :2128-2143 (`os.linesep` is `\n`). -/
 def initW (data : List Nat) (newline : Option (List Nat)) : Py TState :=
   match newline with
   | some nl =>
@@ -145,7 +145,7 @@ where
         | some [] | none => [10]
         | some nl => nl }
 
-/-- `TextIOWrapper.detach`, _pyio.py:2490-2496. -/
+/-- `TextIOWrapper.detach`, _pyio.py:2514-2520. -/
 def stepW (t : TState) : TXOp → TState × Py Val
   | .read n => step t (.read n)
   | .readline n => step t (.readline n)

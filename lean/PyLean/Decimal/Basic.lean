@@ -17,7 +17,7 @@ Two implementations are modelled side by side:
 For every value either twin can build from a well-formed input, both carry
 the same information, captured by `Dec`. `_pydecimal`'s `_int` is the decimal
 spelling of `Dec.fin`'s `coeff` (`str(int(...))` everywhere it is built,
-_pydecimal.py:504, :530, :545), except when a constructor is fed digits
+_pydecimal.py:596, :622, :637), except when a constructor is fed digits
 that are not plain ints; that case is modelled separately in `Tuple.lean`.
 -/
 
@@ -41,20 +41,20 @@ def numDigits (n : Nat) : Nat := (Nat.toDigits 10 n).length
 /-- `sys.flags.int_max_str_digits` default, Include/internal/pycore_long.h:29. -/
 def maxStrDigits : Nat := 4300
 
-/-- `_MAX_STR_DIGITS_ERROR_FMT_TO_INT`, Objects/longobject.c:30. -/
+/-- `_MAX_STR_DIGITS_ERROR_FMT_TO_INT`, Objects/longobject.c:32. -/
 def limitToIntMsg (digits : Nat) : String :=
   s!"Exceeds the limit (4300 digits) for integer string conversion: value has {digits} digits; use sys.set_int_max_str_digits() to increase the limit"
 
-/-- `_MAX_STR_DIGITS_ERROR_FMT_TO_STR`, Objects/longobject.c:31. -/
+/-- `_MAX_STR_DIGITS_ERROR_FMT_TO_STR`, Objects/longobject.c:33. -/
 def limitToStrMsg : String :=
   "Exceeds the limit (4300 digits) for integer string conversion; use sys.set_int_max_str_digits() to increase the limit"
 
-/-- `int(s)` for a string of `n` decimal digits (Objects/longobject.c:2940-2950:
+/-- `int(s)` for a string of `n` decimal digits (Objects/longobject.c:3022-3032:
 the digit count, leading zeros included, is compared with the limit). -/
 def intLimit (n : Nat) : Py Unit :=
   if n > maxStrDigits then .error (.valueError (limitToIntMsg n)) else .ok ()
 
-/-- `str(i)` for an int with `|i| = n` (Objects/longobject.c:2131-2140). -/
+/-- `str(i)` for an int with `|i| = n` (Objects/longobject.c:2207-2216). -/
 def strLimit (n : Nat) : Py Unit :=
   if numDigits n > maxStrDigits then .error (.valueError limitToStrMsg) else .ok ()
 
@@ -93,7 +93,7 @@ def isSpace (c : Char) : Bool :=
 
 /-- `str.strip()` with no argument (Objects/unicodeobject.c `do_strip`,
 `Py_UNICODE_ISSPACE` at both ends); also `numeric_as_ascii`'s `strip_ws`
-loops, Modules/_decimal/_decimal.c:2164-2171. -/
+loops, Modules/_decimal/_decimal.c:2291-2298. -/
 def strip (s : List Char) : List Char :=
   ((s.dropWhile isSpace).reverse.dropWhile isSpace).reverse
 
@@ -140,7 +140,7 @@ def invalidOp : PyExc := .named "InvalidOperation" "~"
 def fmtSigned (n : Int) : List Char :=
   (if n < 0 then '-' else '+') :: Nat.toDigits 10 n.natAbs
 
-/-- The finite branch of `Decimal.__str__(eng=False)`, _pydecimal.py:999-1034,
+/-- The finite branch of `Decimal.__str__(eng=False)`, _pydecimal.py:1091-1126,
 for `_int = ds` (a non-empty digit string), `_exp = e` and the context's
 `capitals`. The C twin's `mpd_to_sci` (libmpdec/io.c `_mpd_to_string` with
 `MPD_DEFAULT_DOTPLACE`) produces the same spelling. -/
@@ -156,7 +156,7 @@ def sciFinite (neg : Bool) (ds : List Char) (e : Int) (caps : Bool) : List Char 
     (if caps then 'E' else 'e') :: fmtSigned (leftdigits - dotplace)
   sign ++ intpart ++ fracpart ++ exp
 
-/-- `str(d)` (`capitals = 1`, the default). Specials: _pydecimal.py:990-997. -/
+/-- `str(d)` (`capitals = 1`, the default). Specials: _pydecimal.py:1082-1089. -/
 def toSci (d : Dec) (caps : Bool := true) : List Char :=
   match d with
   | .inf neg => (if neg then ['-'] else []) ++ "Infinity".toList

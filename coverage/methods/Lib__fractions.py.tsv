@@ -2,7 +2,7 @@ file	line	endline	name	signature	status	entry	note
 Lib/fractions.py	24	54	_hash_algorithm	_hash_algorithm(numerator, denominator)	modelled	fractions-hash-decimal,fractions-hash-int	
 Lib/fractions.py	73	99	_round_to_exponent	_round_to_exponent(n, d, exponent, no_neg_zero=False)	modelled	fractions-format-f-matches-round	
 Lib/fractions.py	102	138	_round_to_figures	_round_to_figures(n, d, figures)	modelled	fractions-format-e-total	
-Lib/fractions.py	206	311	Fraction.__new__	__new__(cls, numerator=0, denominator=None)	modelled	fractions-ctor-normalizes,fractions-ctor-zero-denominator,fractions-format-f-matches-round,fractions-str-roundtrip	
+Lib/fractions.py	206	311	Fraction.__new__	__new__(cls, numerator=0, denominator=None)	todo		changed-in-3.15: was fractions-ctor-normalizes,fractions-ctor-zero-denominator,fractions-format-f-matches-round,fractions-str-roundtrip
 Lib/fractions.py	314	333	Fraction.from_number	from_number(cls, number)	todo		
 Lib/fractions.py	336	347	Fraction.from_float	from_float(cls, f)	todo		
 Lib/fractions.py	350	359	Fraction.from_decimal	from_decimal(cls, dec)	todo		

@@ -126,7 +126,7 @@ theorem genericGetattrMissingSuppressed_proven : GenericGetattrMissingSuppressed
   simp [genericGetAttrSup, hl, genericGetAttrTail, hi]
 
 /-- A missing attribute raises `AttributeError` with the exact message of
-`Objects/object.c:1919`, for every object. -/
+`Objects/object.c:1998`, for every object. -/
 def GenericGetattrMissingRaises : Prop :=
   ∀ (rt : Rt) (obj : Val) (n : Name) (w : World),
     findInMro w (typeOf w obj) n = none →
@@ -155,7 +155,7 @@ theorem typeGetattroMetaDataDescriptorFirst_proven : TypeGetattroMetaDataDescrip
   cases h : callDescrGet rt g m (some ty) (some (.obj (typeOf w ty))) w <;> simp [h]
 
 /-- The class's own lookup beats non-data attributes of the metaclass, and is bound with
-`obj = NULL`, `Objects/typeobject.c:6156`. -/
+`obj = NULL`, `Objects/typeobject.c@3.14.7:6156`. -/
 def TypeGetattroClassAttrNext : Prop :=
   ∀ (rt : Rt) (ty : Val) (t : Addr) (n : Name) (a : Val) (lg : SlotFn) (w : World),
     ty = .obj t →

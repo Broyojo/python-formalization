@@ -24,7 +24,7 @@ expected: |
 promised_by: |
   The real case: float('inf') ** 1 is inf.
 cause: |
-  Objects/complexobject.c:740 applies _Py_ADJUST_ERANGE2 to the result of c_powi whatever
+  Objects/complexobject.c:756 applies _Py_ADJUST_ERANGE2 to the result of c_powi whatever
   the base was, and line 336 does the same in _Py_c_pow.
 possible_fix: |
   Main applies the adjustment only when the operands are finite. That is the fix to

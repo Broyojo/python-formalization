@@ -38,7 +38,7 @@ theorem wrapperArity1_proven : WrapperArity1 := by
     simp [wrapperApply, h1, checkNumArgs, h3, typeErr, raiseC]
 
 /-- `wrap_ternaryfunc` and `wrap_ternaryfunc_r` accept one or two arguments,
-`Objects/typeobject.c:9236`. -/
+`Objects/typeobject.c:9928`. -/
 def WrapperArityPow : Prop :=
   ∀ (rt : Rt) (p : SlotDef) (f : SlotFn) (self : Val) (args : List Val) (wr : WrapKind) (w : World),
     p.wrapper = some wr → wr ∈ [.ternary, .ternaryR] → args.length ≠ 1 → args.length ≠ 2 →
@@ -50,7 +50,7 @@ theorem wrapperArityPow_proven : WrapperArityPow := by
   simp only [List.mem_cons, List.not_mem_nil, or_false] at h2
   rcases h2 with rfl | rfl <;> simp [wrapperApply, h1, checkPowArgs, h3, h4, typeErr, raiseC]
 
-/-- `wrap_init` returns `None` on success, `Objects/typeobject.c:9811`. -/
+/-- `wrap_init` returns `None` on success, `Objects/typeobject.c:10503`. -/
 def WrapInitReturnsNone : Prop :=
   ∀ (rt : Rt) (p : SlotDef) (f : SlotFn) (self : Val) (args : List Val) (kw : Kw) (w w1 : World),
     p.wrapper = some .init → callTpInit rt f self args kw w = .ok () w1 →
@@ -75,7 +75,7 @@ theorem wrapLenHash_proven : WrapLenHash := by
   · intro h1 h2; simp [wrapperApply, h1, checkNumArgs, h2]
 
 /-- `object.__eq__(a, b)` and friends apply the comparison slot with the wrapper's `op`:
-`wrap_richcmpfunc`, `Objects/typeobject.c:9661`. -/
+`wrap_richcmpfunc`, `Objects/typeobject.c:10353`. -/
 def WrapRichcmp : Prop :=
   ∀ (rt : Rt) (p : SlotDef) (f : SlotFn) (self other : Val) (op : CmpOp) (w : World),
     p.wrapper = some (.richcmp op) →
@@ -99,7 +99,7 @@ theorem wrapperDescrSelfChecked_proven : WrapperDescrSelfChecked := by
   simp [wrapperdescrCall, h, typeErr, raiseC]
 
 /-- **`type.__new__` argument parsing**: the messages of `PyArg_ParseTuple(args, "UO!O!")`,
-`Objects/typeobject.c:4774`. -/
+`Objects/typeobject.c@3.14.7:4774`. -/
 def TypeNewArgs : Prop :=
   ∀ (rt : Rt) (m : Addr) (a b c : Val) (args : List Val) (kw : Kw) (w : World),
     (args.length ≠ 3 → typeNew rt m args kw w =
@@ -120,7 +120,7 @@ theorem typeNewArgs_proven : TypeNewArgs := by
   · intro h
     simp [typeNew, h]
 
-/-- **Empty bases mean `object`**: `Objects/typeobject.c:4699-4707`. -/
+/-- **Empty bases mean `object`**: `Objects/typeobject.c:5050-5058`. -/
 def TypeNewEmptyBases : Prop :=
   ∀ (rt : Rt) (ctx : TypeNewCtx) (w : World),
     ctx.bases = [] →
@@ -131,7 +131,7 @@ theorem typeNewEmptyBases_proven : TypeNewEmptyBases := by
   simp [typeNewGetBases, h]
 
 /-- A non-class base with `__mro_entries__` is refused by `type()`, which unlike the
-`class` statement does not resolve it, `Objects/typeobject.c:4715-4724`. -/
+`class` statement does not resolve it, `Objects/typeobject.c:5066-5075`. -/
 def TypeNewMroEntries : Prop :=
   ∀ (rt : Rt) (ctx : TypeNewCtx) (b m : Val) (rest : List Val) (w w1 : World),
     ctx.bases = b :: rest → typeCheck w b = false →
@@ -143,7 +143,7 @@ theorem typeNewMroEntries_proven : TypeNewMroEntries := by
   intro rt ctx b m rest w w1 h1 h2 h3
   simp [typeNewGetBases, h1, checkMroEntries, h2, h3, typeErr, raiseC]
 
-/-- `__classcell__` must be a cell: `Objects/typeobject.c:4485`. -/
+/-- `__classcell__` must be a cell: `Objects/typeobject.c:4821`. -/
 def ClassCellChecked : Prop :=
   ∀ (key : Name) (value cell : Val) (dict : NameDict) (w : World),
     NameDict.get? dict key = some cell → (∀ c, payloadOf w cell ≠ some (.cell c)) →
@@ -191,7 +191,7 @@ theorem typeNameGetters_proven : TypeNameGetters := by
   constructor <;> simp [getsetGetImpl, h1, h2, h0, typeQualname]
 
 /-- `object.__class__` is `type(obj)` for every object: `object_get_class`,
-`Objects/typeobject.c:7017`. -/
+`Objects/typeobject.c:7627`. -/
 def ObjectGetClass : Prop :=
   ∀ (rt : Rt) (obj : Val) (w : World),
     getsetGetImpl rt B.object "__class__" obj w = .ok (.obj (typeOf w obj)) w
@@ -200,7 +200,7 @@ theorem objectGetClass_proven : ObjectGetClass := by
   intro rt obj w
   simp [getsetGetImpl]
 
-/-- `type_repr` of a heap class in a module, `Objects/typeobject.c:2318`. -/
+/-- `type_repr` of a heap class in a module, `Objects/typeobject.c:2458`. -/
 def TypeReprHeap : Prop :=
   ∀ (w : World) (t : Addr) (m : String),
     (tdata w t).heap = true → NameDict.get? (tdata w t).dict "__module__" = some (.str m) →
@@ -211,7 +211,7 @@ theorem typeReprHeap_proven : TypeReprHeap := by
   simp [typeRepr, h1, h2, h3, typeQualname]
 
 /-- `object_repr` and `object_str`: `str()` of an object with the default `__str__` is its
-`tp_repr`, `Objects/typeobject.c:6956`. -/
+`tp_repr`, `Objects/typeobject.c:7566`. -/
 def ObjectStrUsesRepr : Prop :=
   ∀ (rt : Rt) (v : Val) (r : SlotFn) (w : World),
     slotOf w (typeOf w v) .tp_repr = some r →
@@ -220,7 +220,7 @@ def ObjectStrUsesRepr : Prop :=
 /-- **Binding `super` never checks against a NULL type.** For the object `super.__new__(super)`
 allocates, and every `obj`, `super_descr_get` does not reach `supercheck` with a NULL type.
 No hypothesis: `obj = None` is one of the cases covered, and returns `self` at
-`Objects/typeobject.c:12038`. FALSE: `__init__` is what sets `su->type`, and `__new__` can be
+`Objects/typeobject.c:12891`. FALSE: `__init__` is what sets `su->type`, and `__new__` can be
 called alone, so `super.__new__(super).__get__(1)` is a NULL dereference. -/
 def SuperBindHasType : Prop :=
   ∀ (w w' : World) (v o : Val),

@@ -1,50 +1,56 @@
 file	line	endline	name	signature	status	entry	note
-Modules/zlibmodule.c	30	39	OutputBuffer_InitAndGrow	OutputBuffer_InitAndGrow(_BlocksOutputBuffer *buffer, Py_ssize_t max_length, Bytef **next_out, uint32_t *avail_out)	todo		
-Modules/zlibmodule.c	44	53	OutputBuffer_Grow	OutputBuffer_Grow(_BlocksOutputBuffer *buffer, Bytef **next_out, uint32_t *avail_out)	todo		
-Modules/zlibmodule.c	56	59	OutputBuffer_GetDataSize	OutputBuffer_GetDataSize(_BlocksOutputBuffer *buffer, uint32_t avail_out)	todo		
-Modules/zlibmodule.c	62	65	OutputBuffer_Finish	OutputBuffer_Finish(_BlocksOutputBuffer *buffer, uint32_t avail_out)	todo		
-Modules/zlibmodule.c	68	71	OutputBuffer_OnError	OutputBuffer_OnError(_BlocksOutputBuffer *buffer)	todo		
-Modules/zlibmodule.c	98	114	OutputBuffer_WindowInitWithSize	OutputBuffer_WindowInitWithSize(_BlocksOutputBuffer *buffer, _Uint32Window *window, Py_ssize_t init_size, Bytef **next_out, uint32_t *avail_out)	todo		
-Modules/zlibmodule.c	121	153	OutputBuffer_WindowGrow	OutputBuffer_WindowGrow(_BlocksOutputBuffer *buffer, _Uint32Window *window, Bytef **next_out, uint32_t *avail_out)	todo		
-Modules/zlibmodule.c	160	165	OutputBuffer_WindowFinish	OutputBuffer_WindowFinish(_BlocksOutputBuffer *buffer, _Uint32Window *window, uint32_t avail_out)	todo		
-Modules/zlibmodule.c	168	171	OutputBuffer_WindowOnError	OutputBuffer_WindowOnError(_BlocksOutputBuffer *buffer, _Uint32Window *window)	todo		
-Modules/zlibmodule.c	205	210	get_zlib_state	get_zlib_state(PyObject *module)	todo		
-Modules/zlibmodule.c	227	253	zlib_error	zlib_error(zlibstate *state, z_stream zst, int err, const char *msg)	todo		
-Modules/zlibmodule.c	263	291	newcompobject	newcompobject(PyTypeObject *type)	todo		
-Modules/zlibmodule.c	294	301	PyZlib_Malloc	PyZlib_Malloc(voidpf ctx, uInt items, uInt size)	todo		
-Modules/zlibmodule.c	304	307	PyZlib_Free	PyZlib_Free(voidpf ctx, void *ptr)	todo		
-Modules/zlibmodule.c	310	314	arrange_input_buffer	arrange_input_buffer(z_stream *zst, Py_ssize_t *remains)	todo		
-Modules/zlibmodule.c	331	412	zlib_compress_impl	zlib_compress_impl(PyObject *module, Py_buffer *data, int level, int wbits) /*[clinic end generated code: output=46bd152fadd66df2 input=c4d06ee5782a7e3f]*/	todo		
-Modules/zlibmodule.c	429	536	zlib_decompress_impl	zlib_decompress_impl(PyObject *module, Py_buffer *data, int wbits, Py_ssize_t bufsize) /*[clinic end generated code: output=77c7e35111dc8c42 input=a9ac17beff1f893f]*/	todo		
-Modules/zlibmodule.c	567	622	zlib_compressobj_impl	zlib_compressobj_impl(PyObject *module, int level, int method, int wbits, int memLevel, int strategy, Py_buffer *zdict) /*[clinic end generated code: output=8b5bed9c8fc3814d input=1a6f61d8a8885c0d]*/	todo		
-Modules/zlibmodule.c	625	646	set_inflate_zdict	set_inflate_zdict(zlibstate *state, compobject *self)	todo		
-Modules/zlibmodule.c	661	708	zlib_decompressobj_impl	zlib_decompressobj_impl(PyObject *module, int wbits, PyObject *zdict) /*[clinic end generated code: output=3069b99994f36906 input=d3832b8511fc977b]*/	todo		
-Modules/zlibmodule.c	711	725	compobject_dealloc_impl	compobject_dealloc_impl(PyObject *op, int (*dealloc)(z_streamp))	todo		
-Modules/zlibmodule.c	728	734	compobject_traverse	compobject_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/zlibmodule.c	737	740	Comp_dealloc	Comp_dealloc(PyObject *op)	todo		
-Modules/zlibmodule.c	743	746	Decomp_dealloc	Decomp_dealloc(PyObject *op)	todo		
-Modules/zlibmodule.c	764	817	zlib_Compress_compress_impl	zlib_Compress_compress_impl(compobject *self, PyTypeObject *cls, Py_buffer *data) /*[clinic end generated code: output=6731b3f0ff357ca6 input=04d00f65ab01d260]*/	todo		
-Modules/zlibmodule.c	822	862	save_unconsumed_input	save_unconsumed_input(compobject *self, Py_buffer *data, int err)	todo		
-Modules/zlibmodule.c	884	979	zlib_Decompress_decompress_impl	zlib_Decompress_decompress_impl(compobject *self, PyTypeObject *cls, Py_buffer *data, Py_ssize_t max_length) /*[clinic end generated code: output=b024a93c2c922d57 input=b8c9e2d124fe4720]*/	todo		
-Modules/zlibmodule.c	996	1068	zlib_Compress_flush_impl	zlib_Compress_flush_impl(compobject *self, PyTypeObject *cls, int mode) /*[clinic end generated code: output=c7efd13efd62add2 input=286146e29442eb6c]*/	todo		
-Modules/zlibmodule.c	1081	1123	zlib_Compress_copy_impl	zlib_Compress_copy_impl(compobject *self, PyTypeObject *cls) /*[clinic end generated code: output=c4d2cfb4b0d7350b input=235497e482d40986]*/	todo		
-Modules/zlibmodule.c	1133	1137	zlib_Compress___copy___impl	zlib_Compress___copy___impl(compobject *self, PyTypeObject *cls) /*[clinic end generated code: output=074613db332cb668 input=5c0188367ab0fe64]*/	todo		
-Modules/zlibmodule.c	1149	1154	zlib_Compress___deepcopy___impl	zlib_Compress___deepcopy___impl(compobject *self, PyTypeObject *cls, PyObject *memo) /*[clinic end generated code: output=24b3aed785f54033 input=c90347319a514430]*/	todo		
-Modules/zlibmodule.c	1165	1208	zlib_Decompress_copy_impl	zlib_Decompress_copy_impl(compobject *self, PyTypeObject *cls) /*[clinic end generated code: output=a7ddc016e1d0a781 input=20ef3aa208282ff2]*/	todo		
-Modules/zlibmodule.c	1218	1222	zlib_Decompress___copy___impl	zlib_Decompress___copy___impl(compobject *self, PyTypeObject *cls) /*[clinic end generated code: output=cf1e6473744f53fa input=cc3143067b622bdf]*/	todo		
-Modules/zlibmodule.c	1234	1239	zlib_Decompress___deepcopy___impl	zlib_Decompress___deepcopy___impl(compobject *self, PyTypeObject *cls, PyObject *memo) /*[clinic end generated code: output=34f7b719a0c0d51b input=fc13b9c58622544e]*/	todo		
-Modules/zlibmodule.c	1255	1350	zlib_Decompress_flush_impl	zlib_Decompress_flush_impl(compobject *self, PyTypeObject *cls, Py_ssize_t length) /*[clinic end generated code: output=4532fc280bd0f8f2 input=42f1f4b75230e2cd]*/	todo		
-Modules/zlibmodule.c	1378	1392	ZlibDecompressor_dealloc	ZlibDecompressor_dealloc(PyObject *op)	todo		
-Modules/zlibmodule.c	1395	1401	ZlibDecompressor_traverse	ZlibDecompressor_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/zlibmodule.c	1404	1425	set_inflate_zdict_ZlibDecompressor	set_inflate_zdict_ZlibDecompressor(zlibstate *state, ZlibDecompressor *self)	todo		
-Modules/zlibmodule.c	1428	1464	arrange_output_buffer_with_maximum	arrange_output_buffer_with_maximum(uint32_t *avail_out, uint8_t **next_out, PyObject **buffer, Py_ssize_t length, Py_ssize_t max_length)	todo		
-Modules/zlibmodule.c	1473	1567	decompress_buf	decompress_buf(ZlibDecompressor *self, Py_ssize_t max_length)	todo		
-Modules/zlibmodule.c	1571	1681	decompress	decompress(ZlibDecompressor *self, uint8_t *data, size_t len, Py_ssize_t max_length)	todo		
-Modules/zlibmodule.c	1742	1809	ZlibDecompressor__new__	ZlibDecompressor__new__(PyTypeObject *cls, PyObject *args, PyObject *kwargs)	todo		
-Modules/zlibmodule.c	1880	1903	zlib_adler32_impl	zlib_adler32_impl(PyObject *module, Py_buffer *data, unsigned int value) /*[clinic end generated code: output=422106f5ca8c92c0 input=6ff4557872160e88]*/	todo		
-Modules/zlibmodule.c	1919	1950	zlib_crc32_impl	zlib_crc32_impl(PyObject *module, Py_buffer *data, unsigned int value) /*[clinic end generated code: output=b217562e4fe6d6a6 input=1229cb2fb5ea948a]*/	todo		
-Modules/zlibmodule.c	2041	2049	zlib_clear	zlib_clear(PyObject *mod)	todo		
-Modules/zlibmodule.c	2052	2060	zlib_traverse	zlib_traverse(PyObject *mod, visitproc visit, void *arg)	todo		
-Modules/zlibmodule.c	2063	2066	zlib_free	zlib_free(void *mod)	todo		
-Modules/zlibmodule.c	2069	2156	zlib_exec	zlib_exec(PyObject *mod)	todo		
-Modules/zlibmodule.c	2178	2181	PyInit_zlib	PyInit_zlib(void)	todo		
+Modules/zlibmodule.c	41	50	OutputBuffer_InitAndGrow	OutputBuffer_InitAndGrow(_BlocksOutputBuffer *buffer, Py_ssize_t max_length, Bytef **next_out, uint32_t *avail_out)	todo		
+Modules/zlibmodule.c	55	64	OutputBuffer_Grow	OutputBuffer_Grow(_BlocksOutputBuffer *buffer, Bytef **next_out, uint32_t *avail_out)	todo		
+Modules/zlibmodule.c	67	70	OutputBuffer_GetDataSize	OutputBuffer_GetDataSize(_BlocksOutputBuffer *buffer, uint32_t avail_out)	todo		
+Modules/zlibmodule.c	73	76	OutputBuffer_Finish	OutputBuffer_Finish(_BlocksOutputBuffer *buffer, uint32_t avail_out)	todo		
+Modules/zlibmodule.c	79	82	OutputBuffer_OnError	OutputBuffer_OnError(_BlocksOutputBuffer *buffer)	todo		
+Modules/zlibmodule.c	109	125	OutputBuffer_WindowInitWithSize	OutputBuffer_WindowInitWithSize(_BlocksOutputBuffer *buffer, _Uint32Window *window, Py_ssize_t init_size, Bytef **next_out, uint32_t *avail_out)	todo		
+Modules/zlibmodule.c	132	164	OutputBuffer_WindowGrow	OutputBuffer_WindowGrow(_BlocksOutputBuffer *buffer, _Uint32Window *window, Bytef **next_out, uint32_t *avail_out)	todo		
+Modules/zlibmodule.c	171	176	OutputBuffer_WindowFinish	OutputBuffer_WindowFinish(_BlocksOutputBuffer *buffer, _Uint32Window *window, uint32_t avail_out)	todo		
+Modules/zlibmodule.c	179	182	OutputBuffer_WindowOnError	OutputBuffer_WindowOnError(_BlocksOutputBuffer *buffer, _Uint32Window *window)	todo		
+Modules/zlibmodule.c	207	212	get_zlib_state	get_zlib_state(PyObject *module)	todo		
+Modules/zlibmodule.c	229	255	zlib_error	zlib_error(zlibstate *state, z_stream zst, int err, const char *msg)	todo		
+Modules/zlibmodule.c	265	288	newcompobject	newcompobject(PyTypeObject *type)	todo		changed-in-3.15:
+Modules/zlibmodule.c	291	298	PyZlib_Malloc	PyZlib_Malloc(voidpf ctx, uInt items, uInt size)	todo		
+Modules/zlibmodule.c	301	304	PyZlib_Free	PyZlib_Free(voidpf ctx, void *ptr)	todo		
+Modules/zlibmodule.c	307	311	arrange_input_buffer	arrange_input_buffer(z_stream *zst, Py_ssize_t *remains)	todo		
+Modules/zlibmodule.c	328	409	zlib_compress_impl	zlib_compress_impl(PyObject *module, Py_buffer *data, int level, int wbits) /*[clinic end generated code: output=46bd152fadd66df2 input=c4d06ee5782a7e3f]*/	todo		changed-in-3.15:
+Modules/zlibmodule.c	426	530	zlib_decompress_impl	zlib_decompress_impl(PyObject *module, Py_buffer *data, int wbits, Py_ssize_t bufsize) /*[clinic end generated code: output=77c7e35111dc8c42 input=530077065b3a2233]*/	todo		changed-in-3.15:
+Modules/zlibmodule.c	561	616	zlib_compressobj_impl	zlib_compressobj_impl(PyObject *module, int level, int method, int wbits, int memLevel, int strategy, Py_buffer *zdict) /*[clinic end generated code: output=8b5bed9c8fc3814d input=1a6f61d8a8885c0d]*/	todo		
+Modules/zlibmodule.c	619	640	set_inflate_zdict	set_inflate_zdict(zlibstate *state, compobject *self)	todo		
+Modules/zlibmodule.c	655	702	zlib_decompressobj_impl	zlib_decompressobj_impl(PyObject *module, int wbits, PyObject *zdict) /*[clinic end generated code: output=3069b99994f36906 input=d3832b8511fc977b]*/	todo		
+Modules/zlibmodule.c	705	719	compobject_dealloc_impl	compobject_dealloc_impl(PyObject *op, int (*dealloc)(z_streamp))	todo		changed-in-3.15:
+Modules/zlibmodule.c	722	728	compobject_traverse	compobject_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/zlibmodule.c	731	734	Comp_dealloc	Comp_dealloc(PyObject *op)	todo		
+Modules/zlibmodule.c	737	740	Decomp_dealloc	Decomp_dealloc(PyObject *op)	todo		
+Modules/zlibmodule.c	758	811	zlib_Compress_compress_impl	zlib_Compress_compress_impl(compobject *self, PyTypeObject *cls, Py_buffer *data) /*[clinic end generated code: output=6731b3f0ff357ca6 input=04d00f65ab01d260]*/	todo		changed-in-3.15:
+Modules/zlibmodule.c	816	859	save_unconsumed_input	save_unconsumed_input(compobject *self, Py_buffer *data, int err)	todo		changed-in-3.15:
+Modules/zlibmodule.c	882	974	zlib_Decompress_decompress_impl	zlib_Decompress_decompress_impl(compobject *self, PyTypeObject *cls, Py_buffer *data, Py_ssize_t max_length) /*[clinic end generated code: output=b024a93c2c922d57 input=9035027c9e4be7fd]*/	todo		changed-in-3.15:
+Modules/zlibmodule.c	991	1063	zlib_Compress_flush_impl	zlib_Compress_flush_impl(compobject *self, PyTypeObject *cls, int mode) /*[clinic end generated code: output=c7efd13efd62add2 input=286146e29442eb6c]*/	todo		changed-in-3.15:
+Modules/zlibmodule.c	1076	1118	zlib_Compress_copy_impl	zlib_Compress_copy_impl(compobject *self, PyTypeObject *cls) /*[clinic end generated code: output=c4d2cfb4b0d7350b input=235497e482d40986]*/	todo		changed-in-3.15:
+Modules/zlibmodule.c	1128	1132	zlib_Compress___copy___impl	zlib_Compress___copy___impl(compobject *self, PyTypeObject *cls) /*[clinic end generated code: output=074613db332cb668 input=5c0188367ab0fe64]*/	todo		
+Modules/zlibmodule.c	1144	1149	zlib_Compress___deepcopy___impl	zlib_Compress___deepcopy___impl(compobject *self, PyTypeObject *cls, PyObject *memo) /*[clinic end generated code: output=24b3aed785f54033 input=c90347319a514430]*/	todo		
+Modules/zlibmodule.c	1160	1203	zlib_Decompress_copy_impl	zlib_Decompress_copy_impl(compobject *self, PyTypeObject *cls) /*[clinic end generated code: output=a7ddc016e1d0a781 input=20ef3aa208282ff2]*/	todo		changed-in-3.15:
+Modules/zlibmodule.c	1213	1217	zlib_Decompress___copy___impl	zlib_Decompress___copy___impl(compobject *self, PyTypeObject *cls) /*[clinic end generated code: output=cf1e6473744f53fa input=cc3143067b622bdf]*/	todo		
+Modules/zlibmodule.c	1229	1234	zlib_Decompress___deepcopy___impl	zlib_Decompress___deepcopy___impl(compobject *self, PyTypeObject *cls, PyObject *memo) /*[clinic end generated code: output=34f7b719a0c0d51b input=fc13b9c58622544e]*/	todo		
+Modules/zlibmodule.c	1250	1356	zlib_Decompress_flush_impl	zlib_Decompress_flush_impl(compobject *self, PyTypeObject *cls, Py_ssize_t length) /*[clinic end generated code: output=4532fc280bd0f8f2 input=42f1f4b75230e2cd]*/	todo		changed-in-3.15:
+Modules/zlibmodule.c	1384	1398	ZlibDecompressor_dealloc	ZlibDecompressor_dealloc(PyObject *op)	todo		changed-in-3.15:
+Modules/zlibmodule.c	1401	1407	ZlibDecompressor_traverse	ZlibDecompressor_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/zlibmodule.c	1410	1431	set_inflate_zdict_ZlibDecompressor	set_inflate_zdict_ZlibDecompressor(zlibstate *state, ZlibDecompressor *self)	todo		
+Modules/zlibmodule.c	1434	1470	arrange_output_buffer_with_maximum	arrange_output_buffer_with_maximum(uint32_t *avail_out, uint8_t **next_out, PyObject **buffer, Py_ssize_t length, Py_ssize_t max_length)	todo		
+Modules/zlibmodule.c	1479	1573	decompress_buf	decompress_buf(ZlibDecompressor *self, Py_ssize_t max_length)	todo		changed-in-3.15:
+Modules/zlibmodule.c	1577	1687	decompress	decompress(ZlibDecompressor *self, uint8_t *data, size_t len, Py_ssize_t max_length)	todo		changed-in-3.15:
+Modules/zlibmodule.c	1749	1796	zlib__ZlibDecompressor_impl	zlib__ZlibDecompressor_impl(PyTypeObject *type, int wbits, PyObject *zdict) /*[clinic end generated code: output=1065607df0d33baa input=9ebad0be6de226e2]*/	todo		changed-in-3.15: new function
+Modules/zlibmodule.c	1826	1834	Decomp_unused_data_get	Decomp_unused_data_get(PyObject *op, void *Py_UNUSED(ignored))	todo		changed-in-3.15: new function
+Modules/zlibmodule.c	1837	1845	Decomp_unconsumed_tail_get	Decomp_unconsumed_tail_get(PyObject *op, void *Py_UNUSED(ignored))	todo		changed-in-3.15: new function
+Modules/zlibmodule.c	1869	1877	ZlibDecompressor_unused_data_get	ZlibDecompressor_unused_data_get(PyObject *op, void *Py_UNUSED(ignored))	todo		changed-in-3.15: new function
+Modules/zlibmodule.c	1908	1931	zlib_adler32_impl	zlib_adler32_impl(PyObject *module, Py_buffer *data, unsigned int value) /*[clinic end generated code: output=422106f5ca8c92c0 input=6ff4557872160e88]*/	todo		
+Modules/zlibmodule.c	1954	1970	zlib_adler32_combine_impl	zlib_adler32_combine_impl(PyObject *module, unsigned int adler1, unsigned int adler2, PyObject *len2) /*[clinic end generated code: output=61842cefb16afb1b input=51bb045c95130c6f]*/	todo		changed-in-3.15: new function
+Modules/zlibmodule.c	1988	2019	zlib_crc32_impl	zlib_crc32_impl(PyObject *module, Py_buffer *data, unsigned int value) /*[clinic end generated code: output=b217562e4fe6d6a6 input=1229cb2fb5ea948a]*/	todo		
+Modules/zlibmodule.c	2042	2058	zlib_crc32_combine_impl	zlib_crc32_combine_impl(PyObject *module, unsigned int crc1, unsigned int crc2, PyObject *len2) /*[clinic end generated code: output=c4def907c602e6eb input=9c8a065d9040dc66]*/	todo		changed-in-3.15: new function
+Modules/zlibmodule.c	2061	2079	zlib_getattr	zlib_getattr(PyObject *self, PyObject *args)	todo		changed-in-3.15: new function
+Modules/zlibmodule.c	2179	2187	zlib_clear	zlib_clear(PyObject *mod)	todo		
+Modules/zlibmodule.c	2190	2198	zlib_traverse	zlib_traverse(PyObject *mod, visitproc visit, void *arg)	todo		
+Modules/zlibmodule.c	2201	2204	zlib_free	zlib_free(void *mod)	todo		
+Modules/zlibmodule.c	2207	2291	zlib_exec	zlib_exec(PyObject *mod)	todo		changed-in-3.15:
+Modules/zlibmodule.c	2314	2317	PyInit_zlib	PyInit_zlib(void)	todo		

@@ -1,7 +1,7 @@
 import PyLean.CoreLibs.Coll.Counter
 
 /-!
-`collections.ChainMap`, Lib/collections/__init__.py:998-1126 (CPython 3.14.7).
+`collections.ChainMap`, Lib/collections/__init__.py:1040-1168 (CPython 3.14.7).
 
 Each underlying mapping is a plain dict over abstract keys and values. `self.maps` is
 a public list, so a `ChainMap` is its list of dicts, and the "at least one map"
@@ -46,12 +46,12 @@ structure CMap (κ ν : Type) where
   maps : List (D κ ν)
   deriving Repr, DecidableEq
 
-/-- `ChainMap(*maps)`, :1012-1017: `list(maps) or [{}]`. -/
+/-- `ChainMap(*maps)`, :1054-1059: `list(maps) or [{}]`. -/
 def cmNew : List (D κ ν) → CMap κ ν
   | [] => ⟨[[]]⟩
   | l => ⟨l⟩
 
-/-- The `for mapping in self.maps` loop of `__getitem__`, :1023-1027. -/
+/-- The `for mapping in self.maps` loop of `__getitem__`, :1065-1069. -/
 def cmLookup : List (D κ ν) → κ → Option ν
   | [], _ => none
   | m :: t, k =>
@@ -59,76 +59,76 @@ def cmLookup : List (D κ ν) → κ → Option ν
     | some v => some v
     | none => cmLookup t k
 
-/-- `ChainMap.__missing__`, :1019-1020; a subclass may replace it. -/
+/-- `ChainMap.__missing__`, :1061-1062; a subclass may replace it. -/
 def cmMissing {β : Type} (rk : κ → String) (k : κ) : Py β := .error (.keyError (rk k))
 
-/-- `ChainMap.__getitem__`, :1022-1028, with `self.__missing__` as `miss`. -/
+/-- `ChainMap.__getitem__`, :1064-1070, with `self.__missing__` as `miss`. -/
 def cmGetitem (miss : κ → Py ν) (c : CMap κ ν) (k : κ) : Py ν :=
   match cmLookup c.maps k with
   | some v => .ok v
   | none => miss k
 
-/-- `ChainMap.__contains__`, :1042-1046. -/
+/-- `ChainMap.__contains__`, :1084-1088. -/
 def cmContains (c : CMap κ ν) (k : κ) : Bool := c.maps.any (fun m => D.mem m k)
 
-/-- `ChainMap.get`, :1030-1031. -/
+/-- `ChainMap.get`, :1072-1073. -/
 def cmGet (miss : κ → Py ν) (c : CMap κ ν) (k : κ) (default : Option ν) : Py (Option ν) :=
   if cmContains c k then (cmGetitem miss c k).map some else .ok default
 
-/-- `ChainMap.__len__`, :1033-1034: `len(set().union(*self.maps))`. -/
+/-- `ChainMap.__len__`, :1075-1076: `len(set().union(*self.maps))`. -/
 def cmLen (c : CMap κ ν) : Nat :=
   (c.maps.foldl (fun s m => (D.keys m).foldl addK s) []).length
 
-/-- `list(ChainMap)`, `__iter__`, :1036-1040: scan the maps from last to first. -/
+/-- `list(ChainMap)`, `__iter__`, :1078-1082: scan the maps from last to first. -/
 def cmIter (c : CMap κ ν) : List κ :=
   D.keys ((c.maps.reverse.map (fun m => D.fromkeys (D.keys m) ())).foldl D.or_ [])
 
-/-- `ChainMap.__bool__`, :1048-1049: `any(self.maps)`. -/
+/-- `ChainMap.__bool__`, :1090-1091: `any(self.maps)`. -/
 def cmBool (c : CMap κ ν) : Bool := c.maps.any (fun m => !m.isEmpty)
 
-/-- `ChainMap.__repr__`, :1051-1053. -/
+/-- `ChainMap.__repr__`, :1093-1095. -/
 def cmRepr (cls : String) (rk : κ → String) (rv : ν → String) (c : CMap κ ν) : String :=
   cls ++ "(" ++ ", ".intercalate (c.maps.map (reprD rk rv)) ++ ")"
 
-/-- `ChainMap.fromkeys`, :1055-1058. -/
+/-- `ChainMap.fromkeys`, :1097-1100. -/
 def cmFromkeys (it : List κ) (value : ν) : CMap κ ν := cmNew [D.fromkeys it value]
 
 /-- `self.maps[0]` on an empty `maps`. -/
 def noMap : PyExc := .indexError "list index out of range"
 
-/-- `ChainMap.copy`, :1060-1062: `self.__class__(self.maps[0].copy(), *self.maps[1:])`. -/
+/-- `ChainMap.copy`, :1102-1104: `self.__class__(self.maps[0].copy(), *self.maps[1:])`. -/
 def cmCopy (c : CMap κ ν) : Py (CMap κ ν) :=
   match c.maps with
   | [] => .error noMap
   | m :: t => .ok (cmNew (m :: t))
 
-/-- `ChainMap.new_child`, :1066-1075. `m` is the mapping argument, `kwargs` the keywords. -/
+/-- `ChainMap.new_child`, :1108-1117. `m` is the mapping argument, `kwargs` the keywords. -/
 def cmNewChild (c : CMap κ ν) (m : Option (D κ ν)) (kwargs : D κ ν) : CMap κ ν :=
   let child := match m with
     | none => kwargs
     | some m => if kwargs.isEmpty then m else D.update m kwargs
   cmNew (child :: c.maps)
 
-/-- `ChainMap.parents`, :1077-1080: `self.__class__(*self.maps[1:])`. -/
+/-- `ChainMap.parents`, :1119-1122: `self.__class__(*self.maps[1:])`. -/
 def cmParents (c : CMap κ ν) : CMap κ ν := cmNew c.maps.tail
 
-/-- `ChainMap.__setitem__`, :1082-1083. -/
+/-- `ChainMap.__setitem__`, :1124-1125. -/
 def cmSetitem (c : CMap κ ν) (k : κ) (v : ν) : Py (CMap κ ν) :=
   match c.maps with
   | [] => .error noMap
   | m :: t => .ok ⟨D.set m k v :: t⟩
 
-/-- The `KeyError` of `__delitem__` and `pop`, :1089, :1103. -/
+/-- The `KeyError` of `__delitem__` and `pop`, :1131, :1145. -/
 def notInFirst (rk : κ → String) (k : κ) : PyExc :=
   keyErrorStr ("Key not found in the first mapping: " ++ rk k)
 
-/-- `ChainMap.__delitem__`, :1085-1089. -/
+/-- `ChainMap.__delitem__`, :1127-1131. -/
 def cmDelitem (rk : κ → String) (c : CMap κ ν) (k : κ) : Py (CMap κ ν) :=
   match c.maps with
   | [] => .error noMap
   | m :: t => if D.mem m k then .ok ⟨D.del m k :: t⟩ else .error (notInFirst rk k)
 
-/-- `ChainMap.popitem`, :1091-1096. -/
+/-- `ChainMap.popitem`, :1133-1138. -/
 def cmPopitem (c : CMap κ ν) : Py ((κ × ν) × CMap κ ν) :=
   match c.maps with
   | [] => .error noMap
@@ -137,7 +137,7 @@ def cmPopitem (c : CMap κ ν) : Py ((κ × ν) × CMap κ ν) :=
     | some (p, m') => .ok (p, ⟨m' :: t⟩)
     | none => .error (keyErrorStr "No keys found in the first mapping.")
 
-/-- `ChainMap.pop`, :1098-1103: `dict.pop(key, *args)` on `maps[0]`. -/
+/-- `ChainMap.pop`, :1140-1145: `dict.pop(key, *args)` on `maps[0]`. -/
 def cmPop (rk : κ → String) (c : CMap κ ν) (k : κ) (default : Option ν) : Py (ν × CMap κ ν) :=
   match c.maps with
   | [] => .error noMap
@@ -147,25 +147,25 @@ def cmPop (rk : κ → String) (c : CMap κ ν) (k : κ) (default : Option ν) :
     | none, some d => .ok (d, c)
     | none, none => .error (notInFirst rk k)
 
-/-- `ChainMap.clear`, :1105-1107. -/
+/-- `ChainMap.clear`, :1147-1149. -/
 def cmClear (c : CMap κ ν) : Py (CMap κ ν) :=
   match c.maps with
   | [] => .error noMap
   | _ :: t => .ok ⟨[] :: t⟩
 
-/-- `ChainMap.__ior__`, :1109-1111, on a mapping's items. -/
+/-- `ChainMap.__ior__`, :1151-1153, on a mapping's items. -/
 def cmIor (c : CMap κ ν) (other : List (κ × ν)) : Py (CMap κ ν) :=
   match c.maps with
   | [] => .error noMap
   | m :: t => .ok ⟨D.update m other :: t⟩
 
-/-- `ChainMap.__or__`, :1113-1118; `none` is `NotImplemented`. -/
+/-- `ChainMap.__or__`, :1155-1160; `none` is `NotImplemented`. -/
 def cmOr (c : CMap κ ν) (other : Option (List (κ × ν))) : Option (Py (CMap κ ν)) :=
   other.map (fun o => do
     let r ← cmCopy c
     cmIor r o)
 
-/-- `ChainMap.__ror__`, :1120-1126. -/
+/-- `ChainMap.__ror__`, :1162-1168. -/
 def cmRor (c : CMap κ ν) (other : Option (D κ ν)) : Option (CMap κ ν) :=
   other.map (fun o =>
     let m := c.maps.reverse.foldl D.update (D.update [] o)

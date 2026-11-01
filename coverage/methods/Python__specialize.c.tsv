@@ -1,76 +1,73 @@
 file	line	endline	name	signature	status	entry	note
-Python/specialize.c	56	89	stats_to_dict	stats_to_dict(SpecializationStats *stats)	todo		
-Python/specialize.c	109	135	_Py_GetSpecializationStats	_Py_GetSpecializationStats(void) {	todo		
-Python/specialize.c	144	186	print_spec_stats	print_spec_stats(FILE *out, OpcodeStats *stats)	todo		
-Python/specialize.c	191	200	print_call_stats	print_call_stats(FILE *out, CallStats *stats)	todo		
-Python/specialize.c	203	230	print_object_stats	print_object_stats(FILE *out, ObjectStats *stats)	todo		
-Python/specialize.c	233	242	print_gc_stats	print_gc_stats(FILE *out, GCStats *stats)	todo		
-Python/specialize.c	246	251	print_histogram	print_histogram(FILE *out, const char *name, uint64_t hist[_Py_UOP_HIST_SIZE])	todo		
-Python/specialize.c	254	325	print_optimization_stats	print_optimization_stats(FILE *out, OptimizationStats *stats)	todo		
-Python/specialize.c	329	338	print_rare_event_stats	print_rare_event_stats(FILE *out, RareEventStats *stats)	todo		
-Python/specialize.c	341	351	print_stats	print_stats(FILE *out, PyStats *stats)	todo		
-Python/specialize.c	354	357	_Py_StatsOn	_Py_StatsOn(void)	todo		
-Python/specialize.c	360	363	_Py_StatsOff	_Py_StatsOff(void)	todo		
-Python/specialize.c	366	371	_Py_StatsClear	_Py_StatsClear(void)	todo		
-Python/specialize.c	374	383	mem_is_zero	mem_is_zero(unsigned char *ptr, size_t size)	todo		
-Python/specialize.c	386	439	_Py_PrintSpecializationStats	_Py_PrintSpecializationStats(int to_file)	todo		
-Python/specialize.c	459	501	_PyCode_Quicken	_PyCode_Quicken(_Py_CODEUNIT *instructions, Py_ssize_t size, int enable_counters)	todo		
-Python/specialize.c	702	720	set_opcode	set_opcode(_Py_CODEUNIT *instr, uint8_t opcode)	todo		
-Python/specialize.c	723	727	set_counter	set_counter(_Py_BackoffCounter *counter, _Py_BackoffCounter value)	todo		
-Python/specialize.c	730	736	load_counter	load_counter(_Py_BackoffCounter *counter)	todo		
-Python/specialize.c	739	750	specialize	specialize(_Py_CODEUNIT *instr, uint8_t specialized_opcode)	todo		
-Python/specialize.c	753	766	unspecialize	unspecialize(_Py_CODEUNIT *instr)	todo		
-Python/specialize.c	773	805	specialize_module_load_attr_lock_held	specialize_module_load_attr_lock_held(PyDictObject *dict, _Py_CODEUNIT *instr, PyObject *name)	todo		
-Python/specialize.c	808	823	specialize_module_load_attr	specialize_module_load_attr( PyObject *owner, _Py_CODEUNIT *instr, PyObject *name)	todo		
-Python/specialize.c	828	847	_Py_Specialize_LoadSuperAttr	_Py_Specialize_LoadSuperAttr(_PyStackRef global_super_st, _PyStackRef cls_st, _Py_CODEUNIT *instr, int load_method) {	todo		
-Python/specialize.c	868	907	classify_descriptor	classify_descriptor(PyObject *descriptor, bool has_getattr)	todo		
-Python/specialize.c	910	914	descriptor_is_class	descriptor_is_class(PyObject *descriptor, PyObject *name)	todo		
-Python/specialize.c	917	974	analyze_descriptor_load	analyze_descriptor_load(PyTypeObject *type, PyObject *name, PyObject **descr, unsigned int *tp_version) {	todo		
-Python/specialize.c	977	989	analyze_descriptor_store	analyze_descriptor_store(PyTypeObject *type, PyObject *name, PyObject **descr, unsigned int *tp_version)	todo		
-Python/specialize.c	992	1019	specialize_dict_access_inline	specialize_dict_access_inline( PyObject *owner, _Py_CODEUNIT *instr, PyTypeObject *type, PyObject *name, unsigned int tp_version, int base_op, int values_op)	todo		
-Python/specialize.c	1022	1051	specialize_dict_access_hint	specialize_dict_access_hint( PyDictObject *dict, _Py_CODEUNIT *instr, PyTypeObject *type, PyObject *name, unsigned int tp_version, int base_op, int hint_op)	todo		
-Python/specialize.c	1055	1102	specialize_dict_access	specialize_dict_access( PyObject *owner, _Py_CODEUNIT *instr, PyTypeObject *type, DescriptorClassification kind, PyObject *name, unsigned int tp_version, int base_op, int values_op, int hint_op)	todo		
-Python/specialize.c	1118	1144	instance_has_key	instance_has_key(PyObject *obj, PyObject *name, uint32_t *shared_keys_version)	todo		
-Python/specialize.c	1147	1327	do_specialize_instance_load_attr	do_specialize_instance_load_attr(PyObject* owner, _Py_CODEUNIT* instr, PyObject* name, bool shadow, uint32_t shared_keys_version, DescriptorClassification kind, PyObject *descr, unsigned int tp_version)	todo		
-Python/specialize.c	1330	1342	specialize_instance_load_attr	specialize_instance_load_attr(PyObject* owner, _Py_CODEUNIT* instr, PyObject* name)	todo		
-Python/specialize.c	1345	1373	_Py_Specialize_LoadAttr	_Py_Specialize_LoadAttr(_PyStackRef owner_st, _Py_CODEUNIT *instr, PyObject *name)	todo		
-Python/specialize.c	1376	1473	_Py_Specialize_StoreAttr	_Py_Specialize_StoreAttr(_PyStackRef owner_st, _Py_CODEUNIT *instr, PyObject *name)	todo		
-Python/specialize.c	1477	1509	load_attr_fail_kind	load_attr_fail_kind(DescriptorClassification kind)	todo		
-Python/specialize.c	1513	1589	specialize_class_load_attr	specialize_class_load_attr(PyObject *owner, _Py_CODEUNIT *instr, PyObject *name)	todo		
-Python/specialize.c	1595	1679	specialize_attr_loadclassattr	specialize_attr_loadclassattr(PyObject *owner, _Py_CODEUNIT *instr, PyObject *name, PyObject *descr, unsigned int tp_version, DescriptorClassification kind, bool is_method, uint32_t shared_keys_version)	todo		
-Python/specialize.c	1683	1772	specialize_load_global_lock_held	specialize_load_global_lock_held( PyObject *globals, PyObject *builtins, _Py_CODEUNIT *instr, PyObject *name)	todo		
-Python/specialize.c	1775	1782	_Py_Specialize_LoadGlobal	_Py_Specialize_LoadGlobal( PyObject *globals, PyObject *builtins, _Py_CODEUNIT *instr, PyObject *name)	todo		
-Python/specialize.c	1785	1794	function_kind	function_kind(PyCodeObject *code) {	todo		
-Python/specialize.c	1798	1813	function_check_args	function_check_args(PyObject *o, int expected_argcount, int opcode)	todo		
-Python/specialize.c	1817	1827	function_get_version	function_get_version(PyObject *o, int opcode)	todo		
-Python/specialize.c	1831	1891	store_subscr_fail_kind	store_subscr_fail_kind(PyObject *container, PyObject *sub)	todo		
-Python/specialize.c	1895	1933	_Py_Specialize_StoreSubscr	_Py_Specialize_StoreSubscr(_PyStackRef container_st, _PyStackRef sub_st, _Py_CODEUNIT *instr)	todo		
-Python/specialize.c	1937	1963	get_init_for_simple_managed_python_class	get_init_for_simple_managed_python_class(PyTypeObject *tp, unsigned int *tp_version)	todo		
-Python/specialize.c	1966	2016	specialize_class_call	specialize_class_call(PyObject *callable, _Py_CODEUNIT *instr, int nargs)	todo		
-Python/specialize.c	2019	2061	specialize_method_descriptor	specialize_method_descriptor(PyMethodDescrObject *descr, _Py_CODEUNIT *instr, int nargs)	todo		
-Python/specialize.c	2064	2103	specialize_py_call	specialize_py_call(PyFunctionObject *func, _Py_CODEUNIT *instr, int nargs, bool bound_method)	todo		
-Python/specialize.c	2107	2134	specialize_py_call_kw	specialize_py_call_kw(PyFunctionObject *func, _Py_CODEUNIT *instr, int nargs, bool bound_method)	todo		
-Python/specialize.c	2137	2180	specialize_c_call	specialize_c_call(PyObject *callable, _Py_CODEUNIT *instr, int nargs)	todo		
-Python/specialize.c	2183	2220	_Py_Specialize_Call	_Py_Specialize_Call(_PyStackRef callable_st, _Py_CODEUNIT *instr, int nargs)	todo		
-Python/specialize.c	2223	2251	_Py_Specialize_CallKw	_Py_Specialize_CallKw(_PyStackRef callable_st, _Py_CODEUNIT *instr, int nargs)	todo		
-Python/specialize.c	2255	2437	binary_op_fail_kind	binary_op_fail_kind(int oparg, PyObject *lhs, PyObject *rhs)	todo		
-Python/specialize.c	2445	2449	is_compactlong	is_compactlong(PyObject *v)	todo		
-Python/specialize.c	2452	2455	compactlongs_guard	compactlongs_guard(PyObject *lhs, PyObject *rhs)	todo		
-Python/specialize.c	2473	2481	float_compactlong_guard	float_compactlong_guard(PyObject *lhs, PyObject *rhs)	todo		
-Python/specialize.c	2484	2489	nonzero_float_compactlong_guard	nonzero_float_compactlong_guard(PyObject *lhs, PyObject *rhs)	todo		
-Python/specialize.c	2508	2516	compactlong_float_guard	compactlong_float_guard(PyObject *lhs, PyObject *rhs)	todo		
-Python/specialize.c	2519	2524	nonzero_compactlong_float_guard	nonzero_compactlong_float_guard(PyObject *lhs, PyObject *rhs)	todo		
-Python/specialize.c	2563	2575	binary_op_extended_specialization	binary_op_extended_specialization(PyObject *lhs, PyObject *rhs, int oparg, _PyBinaryOpSpecializationDescr **descr)	todo		
-Python/specialize.c	2578	2701	_Py_Specialize_BinaryOp	_Py_Specialize_BinaryOp(_PyStackRef lhs_st, _PyStackRef rhs_st, _Py_CODEUNIT *instr, int oparg, _PyStackRef *locals)	todo		
-Python/specialize.c	2706	2736	compare_op_fail_kind	compare_op_fail_kind(PyObject *lhs, PyObject *rhs)	todo		
-Python/specialize.c	2740	2786	_Py_Specialize_CompareOp	_Py_Specialize_CompareOp(_PyStackRef lhs_st, _PyStackRef rhs_st, _Py_CODEUNIT *instr, int oparg)	todo		
-Python/specialize.c	2790	2799	unpack_sequence_fail_kind	unpack_sequence_fail_kind(PyObject *seq)	todo		
-Python/specialize.c	2803	2834	_Py_Specialize_UnpackSequence	_Py_Specialize_UnpackSequence(_PyStackRef seq_st, _Py_CODEUNIT *instr, int oparg)	todo		
-Python/specialize.c	2910	2962	_Py_Specialize_ForIter	_Py_Specialize_ForIter(_PyStackRef iter, _Py_CODEUNIT *instr, int oparg)	todo		
-Python/specialize.c	2965	2985	_Py_Specialize_Send	_Py_Specialize_Send(_PyStackRef receiver_st, _Py_CODEUNIT *instr)	todo		
-Python/specialize.c	2989	3013	to_bool_fail_kind	to_bool_fail_kind(PyObject *value)	todo		
-Python/specialize.c	3017	3032	check_type_always_true	check_type_always_true(PyTypeObject *ty)	todo		
-Python/specialize.c	3035	3087	_Py_Specialize_ToBool	_Py_Specialize_ToBool(_PyStackRef value_o, _Py_CODEUNIT *instr)	todo		
-Python/specialize.c	3091	3105	containsop_fail_kind	containsop_fail_kind(PyObject *value) {	todo		
-Python/specialize.c	3109	3127	_Py_Specialize_ContainsOp	_Py_Specialize_ContainsOp(_PyStackRef value_st, _Py_CODEUNIT *instr)	todo		
-Python/specialize.c	3131	3172	_Py_GatherStats_GetIter	_Py_GatherStats_GetIter(_PyStackRef iterable)	todo		
+Python/specialize.c	47	59	fixup_getiter	fixup_getiter(_Py_CODEUNIT *instruction, int flags)	todo		changed-in-3.15: new function
+Python/specialize.c	63	123	_PyCode_Quicken	_PyCode_Quicken(_Py_CODEUNIT *instructions, Py_ssize_t size, int enable_counters, int flags)	todo		changed-in-3.15:
+Python/specialize.c	326	344	set_opcode	set_opcode(_Py_CODEUNIT *instr, uint8_t opcode)	todo		
+Python/specialize.c	347	351	set_counter	set_counter(_Py_BackoffCounter *counter, _Py_BackoffCounter value)	todo		
+Python/specialize.c	354	360	load_counter	load_counter(_Py_BackoffCounter *counter)	todo		
+Python/specialize.c	363	374	specialize	specialize(_Py_CODEUNIT *instr, uint8_t specialized_opcode)	todo		
+Python/specialize.c	377	390	unspecialize	unspecialize(_Py_CODEUNIT *instr)	todo		
+Python/specialize.c	398	407	maybe_enable_deferred_ref_count	maybe_enable_deferred_ref_count(PyObject *op)	todo		changed-in-3.15: new function
+Python/specialize.c	412	446	specialize_module_load_attr_lock_held	specialize_module_load_attr_lock_held(PyDictObject *dict, _Py_CODEUNIT *instr, PyObject *name)	todo		changed-in-3.15:
+Python/specialize.c	449	464	specialize_module_load_attr	specialize_module_load_attr( PyObject *owner, _Py_CODEUNIT *instr, PyObject *name)	todo		
+Python/specialize.c	469	488	_Py_Specialize_LoadSuperAttr	_Py_Specialize_LoadSuperAttr(_PyStackRef global_super_st, _PyStackRef cls_st, _Py_CODEUNIT *instr, int load_method) {	todo		changed-in-3.15:
+Python/specialize.c	509	548	classify_descriptor	classify_descriptor(PyObject *descriptor, bool has_getattr)	todo		
+Python/specialize.c	551	555	descriptor_is_class	descriptor_is_class(PyObject *descriptor, PyObject *name)	todo		
+Python/specialize.c	558	615	analyze_descriptor_load	analyze_descriptor_load(PyTypeObject *type, PyObject *name, PyObject **descr, unsigned int *tp_version) {	todo		
+Python/specialize.c	618	630	analyze_descriptor_store	analyze_descriptor_store(PyTypeObject *type, PyObject *name, PyObject **descr, unsigned int *tp_version)	todo		
+Python/specialize.c	633	660	specialize_dict_access_inline	specialize_dict_access_inline( PyObject *owner, _Py_CODEUNIT *instr, PyTypeObject *type, PyObject *name, unsigned int tp_version, int base_op, int values_op)	todo		
+Python/specialize.c	663	692	specialize_dict_access_hint	specialize_dict_access_hint( PyDictObject *dict, _Py_CODEUNIT *instr, PyTypeObject *type, PyObject *name, unsigned int tp_version, int base_op, int hint_op)	todo		
+Python/specialize.c	696	743	specialize_dict_access	specialize_dict_access( PyObject *owner, _Py_CODEUNIT *instr, PyTypeObject *type, DescriptorClassification kind, PyObject *name, unsigned int tp_version, int base_op, int values_op, int hint_op)	todo		
+Python/specialize.c	759	785	instance_has_key	instance_has_key(PyObject *obj, PyObject *name, uint32_t *shared_keys_version)	todo		
+Python/specialize.c	788	977	do_specialize_instance_load_attr	do_specialize_instance_load_attr(PyObject* owner, _Py_CODEUNIT* instr, PyObject* name, bool shadow, uint32_t shared_keys_version, DescriptorClassification kind, PyObject *descr, unsigned int tp_version)	todo		changed-in-3.15:
+Python/specialize.c	980	992	specialize_instance_load_attr	specialize_instance_load_attr(PyObject* owner, _Py_CODEUNIT* instr, PyObject* name)	todo		
+Python/specialize.c	995	1023	_Py_Specialize_LoadAttr	_Py_Specialize_LoadAttr(_PyStackRef owner_st, _Py_CODEUNIT *instr, PyObject *name)	todo		changed-in-3.15:
+Python/specialize.c	1026	1127	_Py_Specialize_StoreAttr	_Py_Specialize_StoreAttr(_PyStackRef owner_st, _Py_CODEUNIT *instr, PyObject *name)	todo		changed-in-3.15:
+Python/specialize.c	1131	1163	load_attr_fail_kind	load_attr_fail_kind(DescriptorClassification kind)	todo		
+Python/specialize.c	1167	1254	specialize_class_load_attr	specialize_class_load_attr(PyObject *owner, _Py_CODEUNIT *instr, PyObject *name)	todo		changed-in-3.15:
+Python/specialize.c	1260	1344	specialize_attr_loadclassattr	specialize_attr_loadclassattr(PyObject *owner, _Py_CODEUNIT *instr, PyObject *name, PyObject *descr, unsigned int tp_version, DescriptorClassification kind, bool is_method, uint32_t shared_keys_version)	todo		
+Python/specialize.c	1347	1451	specialize_load_global_lock_held	specialize_load_global_lock_held( PyObject *globals, PyObject *builtins, _Py_CODEUNIT *instr, PyObject *name)	todo		changed-in-3.15:
+Python/specialize.c	1454	1469	_Py_Specialize_LoadGlobal	_Py_Specialize_LoadGlobal( PyObject *globals, PyObject *builtins, _Py_CODEUNIT *instr, PyObject *name)	todo		changed-in-3.15:
+Python/specialize.c	1472	1481	function_kind	function_kind(PyCodeObject *code) {	todo		
+Python/specialize.c	1485	1500	function_check_args	function_check_args(PyObject *o, int expected_argcount, int opcode)	todo		
+Python/specialize.c	1504	1514	function_get_version	function_get_version(PyObject *o, int opcode)	todo		
+Python/specialize.c	1518	1578	store_subscr_fail_kind	store_subscr_fail_kind(PyObject *container, PyObject *sub)	todo		
+Python/specialize.c	1582	1622	_Py_Specialize_StoreSubscr	_Py_Specialize_StoreSubscr(_PyStackRef container_st, _PyStackRef sub_st, _Py_CODEUNIT *instr)	todo		changed-in-3.15:
+Python/specialize.c	1626	1652	get_init_for_simple_managed_python_class	get_init_for_simple_managed_python_class(PyTypeObject *tp, unsigned int *tp_version)	todo		
+Python/specialize.c	1655	1705	specialize_class_call	specialize_class_call(PyObject *callable, _Py_CODEUNIT *instr, int nargs)	todo		
+Python/specialize.c	1708	1751	specialize_method_descriptor	specialize_method_descriptor(PyMethodDescrObject *descr, PyObject *self_or_null, _Py_CODEUNIT *instr, int nargs)	todo		changed-in-3.15:
+Python/specialize.c	1754	1793	specialize_py_call	specialize_py_call(PyFunctionObject *func, _Py_CODEUNIT *instr, int nargs, bool bound_method)	todo		changed-in-3.15:
+Python/specialize.c	1797	1824	specialize_py_call_kw	specialize_py_call_kw(PyFunctionObject *func, _Py_CODEUNIT *instr, int nargs, bool bound_method)	todo		changed-in-3.15:
+Python/specialize.c	1827	1870	specialize_c_call	specialize_c_call(PyObject *callable, _Py_CODEUNIT *instr, int nargs)	todo		changed-in-3.15:
+Python/specialize.c	1873	1912	_Py_Specialize_Call	_Py_Specialize_Call(_PyStackRef callable_st, _PyStackRef self_or_null_st, _Py_CODEUNIT *instr, int nargs)	todo		changed-in-3.15:
+Python/specialize.c	1915	1943	_Py_Specialize_CallKw	_Py_Specialize_CallKw(_PyStackRef callable_st, _Py_CODEUNIT *instr, int nargs)	todo		changed-in-3.15:
+Python/specialize.c	1947	2129	binary_op_fail_kind	binary_op_fail_kind(int oparg, PyObject *lhs, PyObject *rhs)	todo		changed-in-3.15:
+Python/specialize.c	2137	2141	is_compactlong	is_compactlong(PyObject *v)	todo		
+Python/specialize.c	2147	2155	seq_int_multiply	seq_int_multiply(PyObject *seq, PyObject *n, ssizeargfunc repeat)	todo		changed-in-3.15: new function
+Python/specialize.c	2158	2161	str_int_multiply	str_int_multiply(PyObject *lhs, PyObject *rhs)	todo		changed-in-3.15: new function
+Python/specialize.c	2164	2167	int_str_multiply	int_str_multiply(PyObject *lhs, PyObject *rhs)	todo		changed-in-3.15: new function
+Python/specialize.c	2170	2173	bytes_int_multiply	bytes_int_multiply(PyObject *lhs, PyObject *rhs)	todo		changed-in-3.15: new function
+Python/specialize.c	2176	2179	int_bytes_multiply	int_bytes_multiply(PyObject *lhs, PyObject *rhs)	todo		changed-in-3.15: new function
+Python/specialize.c	2182	2185	tuple_int_multiply	tuple_int_multiply(PyObject *lhs, PyObject *rhs)	todo		changed-in-3.15: new function
+Python/specialize.c	2188	2191	int_tuple_multiply	int_tuple_multiply(PyObject *lhs, PyObject *rhs)	todo		changed-in-3.15: new function
+Python/specialize.c	2194	2197	compactlongs_guard	compactlongs_guard(PyObject *lhs, PyObject *rhs)	todo		
+Python/specialize.c	2215	2223	float_compactlong_guard	float_compactlong_guard(PyObject *lhs, PyObject *rhs)	todo		changed-in-3.15:
+Python/specialize.c	2226	2231	nonzero_float_compactlong_guard	nonzero_float_compactlong_guard(PyObject *lhs, PyObject *rhs)	todo		changed-in-3.15:
+Python/specialize.c	2250	2258	compactlong_float_guard	compactlong_float_guard(PyObject *lhs, PyObject *rhs)	todo		changed-in-3.15:
+Python/specialize.c	2261	2266	nonzero_compactlong_float_guard	nonzero_compactlong_float_guard(PyObject *lhs, PyObject *rhs)	todo		changed-in-3.15:
+Python/specialize.c	2351	2369	binary_op_extended_specialization	binary_op_extended_specialization(PyObject *lhs, PyObject *rhs, int oparg, _PyBinaryOpSpecializationDescr **descr)	todo		changed-in-3.15:
+Python/specialize.c	2372	2502	_Py_Specialize_BinaryOp	_Py_Specialize_BinaryOp(_PyStackRef lhs_st, _PyStackRef rhs_st, _Py_CODEUNIT *instr, int oparg, _PyStackRef *locals)	todo		changed-in-3.15:
+Python/specialize.c	2507	2537	compare_op_fail_kind	compare_op_fail_kind(PyObject *lhs, PyObject *rhs)	todo		
+Python/specialize.c	2541	2587	_Py_Specialize_CompareOp	_Py_Specialize_CompareOp(_PyStackRef lhs_st, _PyStackRef rhs_st, _Py_CODEUNIT *instr, int oparg)	todo		changed-in-3.15:
+Python/specialize.c	2591	2600	unpack_sequence_fail_kind	unpack_sequence_fail_kind(PyObject *seq)	todo		
+Python/specialize.c	2604	2635	_Py_Specialize_UnpackSequence	_Py_Specialize_UnpackSequence(_PyStackRef seq_st, _Py_CODEUNIT *instr, int oparg)	todo		changed-in-3.15:
+Python/specialize.c	2711	2769	_Py_Specialize_ForIter	_Py_Specialize_ForIter(_PyStackRef iter, _PyStackRef null_or_index, _Py_CODEUNIT *instr, int oparg)	todo		changed-in-3.15:
+Python/specialize.c	2772	2800	_Py_Specialize_Send	_Py_Specialize_Send(_PyStackRef receiver_st, _Py_CODEUNIT *instr)	todo		changed-in-3.15:
+Python/specialize.c	2803	2822	_Py_Specialize_CallFunctionEx	_Py_Specialize_CallFunctionEx(_PyStackRef func_st, _Py_CODEUNIT *instr)	todo		changed-in-3.15: new function
+Python/specialize.c	2826	2850	to_bool_fail_kind	to_bool_fail_kind(PyObject *value)	todo		
+Python/specialize.c	2854	2869	check_type_always_true	check_type_always_true(PyTypeObject *ty)	todo		
+Python/specialize.c	2872	2924	_Py_Specialize_ToBool	_Py_Specialize_ToBool(_PyStackRef value_o, _Py_CODEUNIT *instr)	todo		changed-in-3.15:
+Python/specialize.c	2928	2942	containsop_fail_kind	containsop_fail_kind(PyObject *value) {	todo		
+Python/specialize.c	2946	2964	_Py_Specialize_ContainsOp	_Py_Specialize_ContainsOp(_PyStackRef value_st, _Py_CODEUNIT *instr)	todo		changed-in-3.15:
+Python/specialize.c	2967	2982	_Py_Specialize_GetIter	_Py_Specialize_GetIter(_PyStackRef iterable, _Py_CODEUNIT *instr)	todo		changed-in-3.15: new function
+Python/specialize.c	2985	3003	_Py_Specialize_Resume	_Py_Specialize_Resume(_Py_CODEUNIT *instr, PyThreadState *tstate, _PyInterpreterFrame *frame)	todo		changed-in-3.15: new function
+Python/specialize.c	3007	3048	_Py_GatherStats_GetIter	_Py_GatherStats_GetIter(_PyStackRef iterable)	todo		

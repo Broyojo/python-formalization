@@ -1,4 +1,23 @@
 file	line	endline	name	signature	status	entry	note
-Modules/_testcapi/bytes.c	7	37	bytes_resize	bytes_resize(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/bytes.c	42	51	bytes_join	bytes_join(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/bytes.c	61	68	_PyTestCapi_Init_Bytes	_PyTestCapi_Init_Bytes(PyObject *m)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/bytes.c	14	61	bytes_resize	bytes_resize(PyObject *Py_UNUSED(module), PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/bytes.c	66	75	bytes_join	bytes_join(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/bytes.c	87	95	writer_new	writer_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/bytes.c	99	127	writer_init	writer_init(PyObject *self_raw, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/bytes.c	131	140	writer_dealloc	writer_dealloc(PyObject *self_raw)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/bytes.c	144	151	writer_check	writer_check(WriterObject *self)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/bytes.c	155	177	writer_write	writer_write(PyObject *self_raw, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/bytes.c	181	198	writer_write_bytes	writer_write_bytes(PyObject *self_raw, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/bytes.c	202	219	writer_format_i	writer_format_i(PyObject *self_raw, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/bytes.c	224	240	writer_format_s	writer_format_s(PyObject *self_raw, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/bytes.c	245	261	writer_resize	writer_resize(PyObject *self_raw, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/bytes.c	266	282	writer_grow	writer_grow(PyObject *self_raw, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/bytes.c	286	296	writer_get_data	writer_get_data(PyObject *self_raw, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/bytes.c	300	309	writer_get_size	writer_get_size(PyObject *self_raw, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/bytes.c	313	323	writer_finish	writer_finish(PyObject *self_raw, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/bytes.c	327	342	writer_finish_with_size	writer_finish_with_size(PyObject *self_raw, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/bytes.c	376	387	byteswriter_abc	byteswriter_abc(PyObject *Py_UNUSED(module), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/bytes.c	391	419	byteswriter_resize	byteswriter_resize(PyObject *Py_UNUSED(module), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/bytes.c	423	440	byteswriter_highlevel	byteswriter_highlevel(PyObject *Py_UNUSED(module), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/bytes.c	444	448	pybyteswriter_small_buffer_size	pybyteswriter_small_buffer_size(void)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/bytes.c	453	542	test_byteswriter_ptr	test_byteswriter_ptr(PyObject *Py_UNUSED(module), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/bytes.c	556	578	_PyTestCapi_Init_Bytes	_PyTestCapi_Init_Bytes(PyObject *m)	excluded		test-support: only for CPython's own tests

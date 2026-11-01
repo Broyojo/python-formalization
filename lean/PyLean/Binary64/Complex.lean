@@ -208,10 +208,10 @@ def _Py_c_abs (m : Libm) (stale : Bool) (z : C) : F64 × Bool :=
 
 /-! ## Object level -/
 
-/-- `real_to_double`, complexobject.c:644-656. -/
+/-- `real_to_double`, complexobject.c:660-672. -/
 def real_to_double (o : Obj) : Py (Option F64) := convertToDouble o
 
-/-- `real_to_complex`, complexobject.c:658-663. -/
+/-- `real_to_complex`, complexobject.c:674-679. -/
 def real_to_complex (o : Obj) : Py (Option C) := do
   let some r ← real_to_double o | return none
   return some ⟨r, d0⟩
@@ -222,7 +222,7 @@ inductive CObj where
   | real (o : Obj)
   deriving Repr
 
-/-- `COMPLEX_BINOP`, complexobject.c:680-716. -/
+/-- `COMPLEX_BINOP`, complexobject.c:696-732. -/
 def complexBinop (cc : C → C → C × Bool) (rc : F64 → C → C × Bool) (cr : C → F64 → C × Bool)
     (v w : CObj) : Py (Option C) :=
   let finish (r : C × Bool) : Py (Option C) :=
@@ -237,31 +237,31 @@ def complexBinop (cc : C → C → C × Bool) (rc : F64 → C → C × Bool) (cr
     let some b ← real_to_double o | return none
     finish (cr a b)
 
-/-- `complex_add`, complexobject.c:718. -/
+/-- `complex_add`, complexobject.c:734. -/
 def complex_add : CObj → CObj → Py (Option C) :=
   complexBinop (fun a b => (_Py_c_sum a b, false)) (fun a b => (_Py_rc_sum a b, false))
     (fun a b => (_Py_cr_sum a b, false))
 
-/-- `complex_sub`, complexobject.c:720. -/
+/-- `complex_sub`, complexobject.c:736. -/
 def complex_sub : CObj → CObj → Py (Option C) :=
   complexBinop (fun a b => (_Py_c_diff a b, false)) (fun a b => (_Py_rc_diff a b, false))
     (fun a b => (_Py_cr_diff a b, false))
 
-/-- `complex_mul`, complexobject.c:719. -/
+/-- `complex_mul`, complexobject.c:735. -/
 def complex_mul : CObj → CObj → Py (Option C) :=
   complexBinop (fun a b => (_Py_c_prod a b, false)) (fun a b => (_Py_rc_prod a b, false))
     (fun a b => (_Py_cr_prod a b, false))
 
-/-- `complex_div`, complexobject.c:721. -/
+/-- `complex_div`, complexobject.c:737. -/
 def complex_div : CObj → CObj → Py (Option C) :=
   complexBinop _Py_c_quot _Py_rc_quot _Py_cr_quot
 
-/-- `TO_COMPLEX`, complexobject.c:638-642. -/
+/-- `TO_COMPLEX`, complexobject.c:654-658. -/
 def toComplex : CObj → Py (Option C)
   | .complex z => .ok (some z)
   | .real o => real_to_complex o
 
-/-- `complex_pow`, complexobject.c:723-757, after the `z != None` check. -/
+/-- `complex_pow`, complexobject.c:739-773, after the `z != None` check. -/
 def complex_pow (m : Libm) (v w : CObj) : Py (Option C) := do
   let some a ← toComplex v | return none
   let some b ← toComplex w | return none
@@ -275,30 +275,30 @@ def complex_pow (m : Libm) (v w : CObj) : Py (Option C) := do
   | .erange => .error (.overflowError "complex exponentiation")
   | .none => .ok (some p)
 
-/-- `complex_neg`, complexobject.c:759-767. -/
+/-- `complex_neg`, complexobject.c:775-783. -/
 def complex_neg (z : C) : C := ⟨z.re.neg, z.im.neg⟩
 
-/-- `complex_pos`, complexobject.c:769-777. -/
+/-- `complex_pos`, complexobject.c:785-793. -/
 def complex_pos (z : C) : C := z
 
-/-- `complex_abs`, complexobject.c:779-790. -/
+/-- `complex_abs`, complexobject.c:795-809. -/
 def complex_abs (m : Libm) (stale : Bool) (z : C) : Py F64 :=
   let (r, erange) := _Py_c_abs m stale z
   if erange then .error (.overflowError "absolute value too large") else .ok r
 
-/-- `complex_bool`, complexobject.c:792-797. -/
+/-- `complex_bool`, complexobject.c:811-816. -/
 def complex_bool (z : C) : Bool := F64.ne z.re d0 || F64.ne z.im d0
 
-/-- `complex_conjugate_impl`, complexobject.c:861-868. -/
+/-- `complex_conjugate_impl`, complexobject.c:881-888. -/
 def complex_conjugate (z : C) : C := ⟨z.re, z.im.neg⟩
 
-/-- `complex___getnewargs___impl`, complexobject.c:875-881. -/
+/-- `complex___getnewargs___impl`, complexobject.c:895-901. -/
 def complex_getnewargs (z : C) : F64 × F64 := (z.re, z.im)
 
-/-- `complex___complex___impl`, complexobject.c:917-927. -/
+/-- `complex___complex___impl`, complexobject.c:937-947. -/
 def complex_complex (z : C) : C := z
 
-/-- `complex_richcompare`, complexobject.c:799-853. `none` is `NotImplemented`. `ne` picks
+/-- `complex_richcompare`, complexobject.c:818-872. `none` is `NotImplemented`. `ne` picks
 `Py_NE` over `Py_EQ`; other operators are `NotImplemented`. -/
 def complex_richcompare (v : C) (w : CObj) (op : CmpOp) : Option Bool :=
   if op != .eq && op != .ne then none
@@ -312,7 +312,7 @@ def complex_richcompare (v : C) (w : CObj) (op : CmpOp) : Option Bool :=
     | .complex j => some (result (F64.eq v.re j.re && F64.eq v.im j.im))
     | .real (.other ..) => none
 
-/-- `complex_hash`, complexobject.c:614-635, for real and imaginary parts that are not
+/-- `complex_hash`, complexobject.c:630-651, for real and imaginary parts that are not
 NaNs. `_PyHASH_IMAG` is `1000003`. -/
 def complex_hash (z : C) : Option Int :=
   match _Py_HashDouble z.re, _Py_HashDouble z.im with
@@ -323,7 +323,7 @@ def complex_hash (z : C) : Option Int :=
     some (toSigned64 (if combined = 2 ^ 64 - 1 then 2 ^ 64 - 2 else combined))
   | _, _ => none
 
-/-- `complex_repr`, complexobject.c:557-612. -/
+/-- `complex_repr`, complexobject.c:573-628. -/
 def complex_repr (z : C) : Option (List Nat) :=
   if F64.eq z.re d0 && !z.re.sign then
     (PyOS_double_to_string z.im 114 0 {}).map fun r => render r.1 ++ [106]
@@ -332,7 +332,7 @@ def complex_repr (z : C) : Option (List Nat) :=
     | some pre, some im => some (40 :: render pre.1 ++ render im.1 ++ [106, 41])
     | _, _ => none
 
-/-- `complex_from_string_inner`, complexobject.c:930-1051: `s` with its length. `none` is
+/-- `complex_from_string_inner`, complexobject.c:950-1071: `s` with its length. `none` is
 the model's fuel running out. -/
 def complex_from_string_inner (s : List Nat) (len : Nat) : Py C :=
   let bad {α} : Py α := .error (.valueError "complex() arg is a malformed string")
@@ -376,7 +376,7 @@ def complex_from_string_inner (s : List Nat) (len : Nat) : Py C :=
       | none => bad
       | some e => if e != len then bad else .ok ⟨x, y⟩
 
-/-- `complex_subtype_from_string`, complexobject.c:1053-1081, for a `str`. -/
+/-- `complex_subtype_from_string`, complexobject.c:1073-1101, for a `str`. -/
 def complex_subtype_from_string (cps : List Nat) : Py C :=
   _Py_string_to_number_with_underscores (transformDecimalAndSpace cps) "complex"
     complex_from_string_inner

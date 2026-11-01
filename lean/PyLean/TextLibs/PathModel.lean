@@ -3,7 +3,7 @@ import PyLean.UnicodeObj.TextCase
 
 /-!
 Model of the pure part of `Lib/posixpath.py`, `Lib/ntpath.py` and `Lib/genericpath.py`, CPython 3.14.7,
-with `_Py_normpath_and_size`, `Python/fileutils.c:2495-2607`, as the `posix` build runs it.
+with `_Py_normpath_and_size`, `Python/fileutils.c:2520-2632`, as the `posix` build runs it.
 
 Values keep their kind, because `str` and `bytes` do not mix: `ntpath.join` can raise or succeed on a
 mix, depending on which operation meets it. `__fspath__` is a callback, so it can raise or return
@@ -61,13 +61,13 @@ def rstrip (p : Nat → Bool) (s : List Nat) : List Nat := (s.reverse.dropWhile 
 
 /-! ### `genericpath` -/
 
-/-- The last separator of `_splitext`, `Lib/genericpath.py:164-167`. -/
+/-- The last separator of `_splitext`, `Lib/genericpath.py:174-177`. -/
 def sepIdx (p : List Nat) (sep : Nat) (altsep : Option Nat) : Int :=
   match altsep with
   | some a => max (rfind sep p) (rfind a p)
   | none => rfind sep p
 
-/-- `_splitext`, `Lib/genericpath.py:157-178`. -/
+/-- `_splitext`, `Lib/genericpath.py:167-188`. -/
 def splitextL (p : List Nat) (sep : Nat) (altsep : Option Nat) : List Nat × List Nat :=
   let sepIndex := sepIdx p sep altsep
   let dotIndex := rfind 46 p
@@ -86,7 +86,7 @@ def splitextL (p : List Nat) (sep : Nat) (altsep : Option Nat) : List Nat × Lis
 
 def isSepP (c : Nat) : Bool := c == 47
 
-/-- `_path_splitroot_ex` on POSIX, `Python/fileutils.c`, and the fallback at `Lib/posixpath.py:145-161`. -/
+/-- `_path_splitroot_ex` on POSIX, `Python/fileutils.c`, and the fallback at `Lib/posixpath.py:146-162`. -/
 def splitrootP (p : List Nat) : List Nat × List Nat × List Nat :=
   match p with
   | 47 :: 47 :: 47 :: _ => ([], [47], p.drop 1)
@@ -94,12 +94,12 @@ def splitrootP (p : List Nat) : List Nat × List Nat × List Nat :=
   | 47 :: _ => ([], [47], p.drop 1)
   | _ => ([], [], p)
 
-/-- `posixpath.isabs`, `Lib/posixpath.py:58-62`. -/
+/-- `posixpath.isabs`, `Lib/posixpath.py:59-63`. -/
 def isabsP (a : PathArg) : Py Bool := do
   let v ← fspath a
   return v.s.head? == some 47
 
-/-- `posixpath.split`, `Lib/posixpath.py:96-105`. -/
+/-- `posixpath.split`, `Lib/posixpath.py:97-106`. -/
 def splitP (a : PathArg) : Py (PV × PV) := do
   let v ← fspath a
   let i := (rfind 47 v.s + 1).toNat
@@ -108,25 +108,25 @@ def splitP (a : PathArg) : Py (PV × PV) := do
   let head := if !head.isEmpty && head != List.replicate head.length 47 then rstrip isSepP head else head
   return (⟨v.isb, head⟩, ⟨v.isb, tail⟩)
 
-/-- `posixpath.splitext`, `Lib/posixpath.py:112-120`. -/
+/-- `posixpath.splitext`, `Lib/posixpath.py:113-121`. -/
 def splitextP (a : PathArg) : Py (PV × PV) := do
   let v ← fspath a
   let (r, e) := splitextL v.s 47 none
   return (⟨v.isb, r⟩, ⟨v.isb, e⟩)
 
-/-- `posixpath.basename`, `Lib/posixpath.py:166-171`. -/
+/-- `posixpath.basename`, `Lib/posixpath.py@3.14.7:166-171`. -/
 def basenameP (a : PathArg) : Py PV := do
   let v ← fspath a
   return ⟨v.isb, v.s.drop (rfind 47 v.s + 1).toNat⟩
 
-/-- `posixpath.dirname`, `Lib/posixpath.py:176-184`. -/
+/-- `posixpath.dirname`, `Lib/posixpath.py@3.14.7:176-184`. -/
 def dirnameP (a : PathArg) : Py PV := do
   let v ← fspath a
   let i := (rfind 47 v.s + 1).toNat
   let head := v.s.take i
   return ⟨v.isb, if !head.isEmpty && head != List.replicate head.length 47 then rstrip isSepP head else head⟩
 
-/-- The body of the `for b in p` of `posixpath.join`, `Lib/posixpath.py:74-84`. `none` is a `TypeError`
+/-- The body of the `for b in p` of `posixpath.join`, `Lib/posixpath.py:75-85`. `none` is a `TypeError`
 in the `try`, from mixing kinds or from `os.fspath`; `some (.error e)` is any other exception. -/
 def joinStep (sep : PV) (path : PV) (b : PathArg) : Option (Py PV) :=
   match fspath b with
@@ -141,7 +141,7 @@ def joinStep (sep : PV) (path : PV) (b : PathArg) : Option (Py PV) :=
     else if path.s.getLast? == some 47 then some (.ok ⟨sep.isb, path.s ++ b.s⟩)
     else some (.ok ⟨sep.isb, path.s ++ [47] ++ b.s⟩)
 
-/-- `posixpath.join`, `Lib/posixpath.py:66-88`. -/
+/-- `posixpath.join`, `Lib/posixpath.py:67-89`. -/
 def joinP (a : PathArg) (ps : List PathArg) : Py PV := do
   let a0 ← fspath a
   let sep : PV := ⟨a0.isb, [47]⟩
@@ -159,7 +159,7 @@ def joinP (a : PathArg) (ps : List PathArg) : Py PV := do
     -- `raise`: the exception caught, when the check finds nothing wrong.
     .error (.typeError "~path join")
 
-/-- The fallback `normpath`, `Lib/posixpath.py:344-370`. -/
+/-- The fallback `normpath`, `Lib/posixpath.py:345-371`. -/
 def normpathPy (p : List Nat) : List Nat :=
   if p.isEmpty then [46]
   else
@@ -180,7 +180,7 @@ def sepOrEnd (l : List Nat) : Bool :=
   | [] => true
   | c :: _ => c == 47
 
-/-- The back scan of `..`, `Python/fileutils.c:2566-2567`: `p3`, an index in `out`. -/
+/-- The back scan of `..`, `Python/fileutils.c:2591-2592`: `p3`, an index in `out`. -/
 def backScan (out : List Nat) (m : Nat) : Nat :=
   let rec first : (fuel i : Nat) → Nat
     | 0, i => i
@@ -194,7 +194,7 @@ def backScan (out : List Nat) (m : Nat) : Nat :=
       if i != m && out.getD (i - 1) 0 != 47 then second fuel (i - 1) else i
   second out.length (first out.length out.length)
 
-/-- The `for` of `_Py_normpath_and_size`, `Python/fileutils.c:2553-2594`. `out` is `path[:p2]`, `m` is
+/-- The `for` of `_Py_normpath_and_size`, `Python/fileutils.c:2578-2619`. `out` is `path[:p2]`, `m` is
 `minP2`, and `lastC` the last character seen. -/
 def cLoop (m : Nat) : (fuel : Nat) → List Nat → List Nat → Nat → List Nat
   | 0, _, out, _ => out
@@ -216,7 +216,7 @@ def cLoop (m : Nat) : (fuel : Nat) → List Nat → List Nat → Nat → List Na
       else cLoop m fuel r (out ++ [c]) c
     else cLoop m fuel r (out ++ [c]) c
 
-/-- The strip at the end, `Python/fileutils.c:2595-2602`: how much of `out` stays. -/
+/-- The strip at the end, `Python/fileutils.c:2620-2627`: how much of `out` stays. -/
 def cTrim (out : List Nat) (m : Nat) : List Nat :=
   if out.length != m then
     let rec go : (fuel i : Nat) → Nat
@@ -273,7 +273,7 @@ def splitrootN (p : List Nat) : List Nat × List Nat × List Nat :=
     else (p.take 2, [], p.drop 2)
   else ([], [], p)
 
-/-- `ntpath.isabs`, `Lib/ntpath.py:80-94`. -/
+/-- `ntpath.isabs`, `Lib/ntpath.py@3.14.7:80-94`. -/
 def isabsN (a : PathArg) : Py Bool := do
   let v ← fspath a
   let s := toBack (v.s.take 3)

@@ -1,7 +1,7 @@
 import PyLean.UnicodeObj.ObjectKinds
 
 /-!
-`PyUnicode_Join` and `_PyUnicode_JoinArray`: Objects/unicodeobject.c:10254-10444.
+`PyUnicode_Join` and `_PyUnicode_JoinArray`: Objects/unicodeobject.c:10019-10209.
 
 Once the items are in an array nothing here runs Python code, so the only fallible objects are
 those of `PySequence_Fast`, Objects/abstract.c, before that. `PyUnicode_New` failing is allocation
@@ -62,7 +62,7 @@ def strMaxValue (s : Str) : Nat :=
 /-- `%.80s`. -/
 def tpName80 (n : String) : String := String.ofList (n.toList.take 80)
 
-/-- The state of the pre-pass, unicodeobject.c:10342-10375. `last` is the width of `last_obj`. -/
+/-- The state of the pre-pass, unicodeobject.c:10107-10140. `last` is the width of `last_obj`. -/
 structure JPass where
   sz : Nat
   maxchar : Nat
@@ -94,7 +94,7 @@ def JItem.text : JItem → Str
   | .exact s | .sub s => s
   | .other _ => []
 
-/-- The copy loops, unicodeobject.c:10392-10434. `use_memcpy` only chooses how bytes move, so both
+/-- The copy loops, unicodeobject.c:10157-10199. `use_memcpy` only chooses how bytes move, so both
 loops are this one; `JoinMemcpySafe` is the fact that makes the `memcpy` one valid. -/
 def joinCopy (sep : Str) (seplen : Nat) : Nat → List JItem → Str
   | _, [] => []
@@ -109,7 +109,7 @@ inductive JOut where
   | fresh (text : Str) (kind : Kind) (memcpy : Bool)
   deriving Repr, DecidableEq
 
-/-- `_PyUnicode_JoinArray`, unicodeobject.c:10280-10444. -/
+/-- `_PyUnicode_JoinArray`, unicodeobject.c:10045-10209. -/
 def joinArray (separator : JSep) (items : List JItem) : Py JOut :=
   let run (sepText : Str) (seplen maxchar : Nat) (last : Option Nat) : Py JOut :=
     match joinPrepass seplen 0 items { sz := 0, maxchar, useMemcpy := true, last } with
@@ -126,7 +126,7 @@ def joinArray (separator : JSep) (items : List JItem) : Py JOut :=
       .error (.typeError s!"separator: expected str instance, {tpName80 tp} found")
     | .str s => run s s.length (strMaxValue s) (some (canonicalKind s).width)
 
-/-- `PyUnicode_Join`, unicodeobject.c:10255-10277. -/
+/-- `PyUnicode_Join`, unicodeobject.c:10020-10042. -/
 def pyUnicodeJoin (separator : JSep) (seq : JSeq) : Py JOut := do
   joinArray separator (← sequenceFast seq)
 

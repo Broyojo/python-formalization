@@ -34,8 +34,8 @@ theorem pySaveLong_not_overflow (p : Nat) (x : Int) (m : String) :
     split at h <;> simp [bind, Except.bind, structError] at h
 
 /-- `pickle.dumps(x)` and `pickle._dumps(x)` encode every int identically
-(protocols 0-5). Source: twin agreement; `save_long` at `Lib/pickle.py:806-835`
-and `Modules/_pickle.c:2230-2393`. -/
+(protocols 0-5). Source: twin agreement; `save_long` at `Lib/pickle.py:822-851`
+and `Modules/_pickle.c:2338-2501`. -/
 def SaveLongTwinsAgree : Prop :=
   ∀ (proto : Nat) (x : Int), proto ≤ 5 → cSaveLong proto x = pySaveLong proto x
 

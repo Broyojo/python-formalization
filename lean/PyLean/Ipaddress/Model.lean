@@ -26,35 +26,35 @@ structure Net where
   prefixlen : Nat
   deriving Repr, DecidableEq, Inhabited
 
-/-- `_ALL_ONES`, ipaddress.py:1146 and :1622. -/
+/-- `_ALL_ONES`, ipaddress.py:1143 and :1623. -/
 def allOnes (bits : Nat) : Nat := 2 ^ bits - 1
 
-/-- `_ip_int_from_prefix`, ipaddress.py:427-437. -/
+/-- `_ip_int_from_prefix`, ipaddress.py:424-434. -/
 def ipIntFromPrefix (bits prefixlen : Nat) : Nat :=
   allOnes bits ^^^ (allOnes bits >>> prefixlen)
 
 /-- `int(self.netmask)`. -/
 def Net.netmask (n : Net) : Nat := ipIntFromPrefix n.bits n.prefixlen
 
-/-- `hostmask`, ipaddress.py:758-760. -/
+/-- `hostmask`, ipaddress.py:755-757. -/
 def Net.hostmask (n : Net) : Nat := n.netmask ^^^ allOnes n.bits
 
-/-- `broadcast_address`, ipaddress.py:753-756. -/
+/-- `broadcast_address`, ipaddress.py:750-753. -/
 def Net.broadcast (n : Net) : Nat := n.addr ||| n.hostmask
 
-/-- `num_addresses`, ipaddress.py:774-777. -/
+/-- `num_addresses`, ipaddress.py:771-774. -/
 def Net.numAddresses (n : Net) : Nat := n.broadcast - n.addr + 1
 
-/-- `_check_int_address`, ipaddress.py:410-417. -/
+/-- `_check_int_address`, ipaddress.py:407-414. -/
 def checkIntAddress (bits : Nat) (a : Int) : Py Nat :=
   if a < 0 then .error (.named "AddressValueError" "~(< 0) is not permitted")
   else if a > allOnes bits then .error (.named "AddressValueError" "~(>= 2**n) is not permitted")
   else .ok a.toNat
 
 /-- `IPv4Network((addr, prefixlen))` / `IPv6Network(...)` with `strict=True`
-and int arguments, ipaddress.py:1498-1550 and :2293-2335, through
-`_split_addr_prefix` (:529-550) and the int branch of `_make_netmask`
-(:1157-1181, :1628-1646). -/
+and int arguments, ipaddress.py:1499-1551 and :2298-2340, through
+`_split_addr_prefix` (:526-547) and the int branch of `_make_netmask`
+(:1154-1178, :1629-1647). -/
 def mkNet (bits : Nat) (addr prefixlen : Int) : Py Net := do
   let a ← checkIntAddress bits addr
   if ¬(0 ≤ prefixlen ∧ prefixlen ≤ bits) then
@@ -64,12 +64,12 @@ def mkNet (bits : Nat) (addr prefixlen : Int) : Py Net := do
     throw (.valueError "~has host bits set")
   return ⟨bits, a, p⟩
 
-/-- `_count_righthand_zero_bits`, ipaddress.py:184-197. -/
+/-- `_count_righthand_zero_bits`, ipaddress.py:181-194. -/
 def countRighthandZeroBits (number bits : Nat) : Nat :=
   if number = 0 then bits
   else min bits (bitLength (notAnd number (number - 1)))
 
-/-- The `while` loop of `summarize_address_range`, ipaddress.py:244-253.
+/-- The `while` loop of `summarize_address_range`, ipaddress.py:241-250.
 `fuel` bounds the iteration count; the caller passes the range length plus one,
 which suffices because each iteration advances `first` by at least one and
 the extra unit pays for the final `first > last` test. -/
@@ -86,7 +86,7 @@ def summarizeLoop (bits last : Nat) : Nat → Nat → Py (List Net)
     else .ok []
 
 /-- `list(summarize_address_range(first, last))` for two addresses of the same
-version, ipaddress.py:200-253. -/
+version, ipaddress.py:197-250. -/
 def summarizeAddressRange (bits first last : Nat) : Py (List Net) :=
   if first > last then .error (.valueError "last IP address must be greater than first")
   else summarizeLoop bits last (last - first + 2) first
@@ -99,7 +99,7 @@ where
     | 0, _ => []
     | fuel + 1, x => if x < stop then x :: go fuel (x + step) else []
 
-/-- `list(self.subnets(prefixlen_diff, new_prefix))`, ipaddress.py:924-975. -/
+/-- `list(self.subnets(prefixlen_diff, new_prefix))`, ipaddress.py:921-972. -/
 def subnets (n : Net) (prefixlenDiff : Int) (newPrefix : Option Int) : Py (List Net) := do
   if n.prefixlen = n.bits then return [n]
   let mut diff := prefixlenDiff
@@ -114,7 +114,7 @@ def subnets (n : Net) (prefixlenDiff : Int) (newPrefix : Option Int) : Py (List 
   let step := (n.hostmask + 1) >>> diff.toNat
   (pyRange n.addr (n.broadcast + 1) step).mapM (fun (a : Nat) => mkNet n.bits a newPrefixlen)
 
-/-- `self.supernet(prefixlen_diff, new_prefix)`, ipaddress.py:977-1016.
+/-- `self.supernet(prefixlen_diff, new_prefix)`, ipaddress.py:974-1013.
 `int(self.netmask) << prefixlen_diff` raises for a negative shift count. -/
 def supernet (n : Net) (prefixlenDiff : Int) (newPrefix : Option Int) : Py Net := do
   if n.prefixlen = 0 then return n
@@ -129,7 +129,7 @@ def supernet (n : Net) (prefixlenDiff : Int) (newPrefix : Option Int) : Py Net :
   if diff < 0 then throw (.valueError "negative shift count")
   mkNet n.bits (n.addr &&& (n.netmask <<< diff.toNat)) newPrefixlen
 
-/-- `int(self[i])`, ipaddress.py:698-709. -/
+/-- `int(self[i])`, ipaddress.py:695-706. -/
 def getitem (n : Net) (i : Int) : Py Nat :=
   let network : Int := n.addr
   let broadcast : Int := n.broadcast
@@ -141,13 +141,13 @@ def getitem (n : Net) (i : Int) : Py Nat :=
     if broadcast + i < network then .error (.indexError "address out of range")
     else .ok (broadcast + i).toNat
 
-/-- `address in self` for an address of the same version, ipaddress.py:734-744. -/
+/-- `address in self` for an address of the same version, ipaddress.py:731-741. -/
 def contains (n : Net) (a : Nat) : Bool := a &&& n.netmask == n.addr
 
-/-- `a.subnet_of(b)` for networks of the same version, ipaddress.py:1031-1044. -/
+/-- `a.subnet_of(b)` for networks of the same version, ipaddress.py:1028-1041. -/
 def subnetOf (a b : Net) : Bool := b.addr ≤ a.addr && b.broadcast ≥ a.broadcast
 
-/-- `self.overlaps(other)`, ipaddress.py:746-751. -/
+/-- `self.overlaps(other)`, ipaddress.py:743-748. -/
 def overlaps (s o : Net) : Bool :=
   contains o s.addr || contains o s.broadcast || contains s o.addr || contains s o.broadcast
 
@@ -158,7 +158,7 @@ def halves (n : Net) : Py (Net × Net) := do
   | [_] => throw (.valueError "not enough values to unpack (expected 2, got 1)")
   | _ => throw (.valueError "~too many values to unpack")
 
-/-- The `while` loop and tail of `address_exclude`, ipaddress.py:844-864. -/
+/-- The `while` loop and tail of `address_exclude`, ipaddress.py:841-861. -/
 def excludeLoop (other : Net) : Nat → Net → Net → Py (List Net)
   | 0, _, _ => .error .modelFuel
   | fuel + 1, s1, s2 =>
@@ -175,8 +175,8 @@ def excludeLoop (other : Net) : Nat → Net → Net → Py (List Net)
     else .error (.assertionError "~Error performing exclusion")
 
 /-- `list(self.address_exclude(other))` for two networks of the same version,
-ipaddress.py:791-864. Re-creating `other` from its network address and
-prefix length (:842-843) is the identity on `Net`. -/
+ipaddress.py:788-861. Re-creating `other` from its network address and
+prefix length (:839-840) is the identity on `Net`. -/
 def addressExclude (s other : Net) : Py (List Net) := do
   if ¬subnetOf other s then throw (.valueError "~not contained in")
   if other = s then return []

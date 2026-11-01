@@ -1,0 +1,3 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testlimitedcapi/threadstate.c	5	14	threadstate_set_async_exc	threadstate_set_async_exc(PyObject *module, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/threadstate.c	22	25	_PyTestLimitedCAPI_Init_ThreadState	_PyTestLimitedCAPI_Init_ThreadState(PyObject *m)	excluded		test-support: only for CPython's own tests

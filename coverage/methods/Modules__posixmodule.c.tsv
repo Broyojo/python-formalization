@@ -1,358 +1,365 @@
 file	line	endline	name	signature	status	entry	note
-Modules/posixmodule.c	626	660	run_at_forkers	run_at_forkers(PyObject *lst, int reverse)	todo		
-Modules/posixmodule.c	663	671	PyOS_BeforeFork	PyOS_BeforeFork(void)	todo		
-Modules/posixmodule.c	674	682	PyOS_AfterFork_Parent	PyOS_AfterFork_Parent(void)	todo		
-Modules/posixmodule.c	685	690	reset_remotedebug_data	reset_remotedebug_data(PyThreadState *tstate)	todo		
-Modules/posixmodule.c	693	698	reset_asyncio_state	reset_asyncio_state(_PyThreadStateImpl *tstate)	todo		
-Modules/posixmodule.c	702	767	PyOS_AfterFork_Child	PyOS_AfterFork_Child(void)	todo		
-Modules/posixmodule.c	770	780	register_at_forker	register_at_forker(PyObject **lst, PyObject *func)	todo		
-Modules/posixmodule.c	786	791	PyOS_AfterFork	PyOS_AfterFork(void)	todo		
-Modules/posixmodule.c	807	812	_PyLong_FromUid	_PyLong_FromUid(uid_t uid)	todo		
-Modules/posixmodule.c	815	820	_PyLong_FromGid	_PyLong_FromGid(gid_t gid)	todo		
-Modules/posixmodule.c	823	926	_Py_Uid_Converter	_Py_Uid_Converter(PyObject *obj, uid_t *p)	todo		
-Modules/posixmodule.c	929	1033	_Py_Gid_Converter	_Py_Gid_Converter(PyObject *obj, gid_t *p)	todo		
-Modules/posixmodule.c	1038	1046	_PyLong_FromDev	_PyLong_FromDev(dev_t dev)	todo		
-Modules/posixmodule.c	1051	1091	_Py_Dev_Converter	_Py_Dev_Converter(PyObject *obj, void *p)	todo		
-Modules/posixmodule.c	1109	1143	_fd_converter	_fd_converter(PyObject *o, int *p)	todo		
-Modules/posixmodule.c	1146	1161	dir_fd_converter	dir_fd_converter(PyObject *o, void *p)	todo		
-Modules/posixmodule.c	1191	1196	get_posix_state	get_posix_state(PyObject *module)	todo		
-Modules/posixmodule.c	1332	1339	path_cleanup	path_cleanup(path_t *path)	todo		
-Modules/posixmodule.c	1342	1541	path_converter	path_converter(PyObject *o, void *p)	todo		
-Modules/posixmodule.c	1544	1551	argument_unavailable_error	argument_unavailable_error(const char *function_name, const char *argument_name)	todo		
-Modules/posixmodule.c	1554	1565	dir_fd_unavailable	dir_fd_unavailable(PyObject *o, void *p)	todo		
-Modules/posixmodule.c	1568	1575	fd_specified	fd_specified(const char *function_name, int fd)	todo		
-Modules/posixmodule.c	1578	1585	follow_symlinks_specified	follow_symlinks_specified(const char *function_name, int follow_symlinks)	todo		
-Modules/posixmodule.c	1588	1597	path_and_dir_fd_invalid	path_and_dir_fd_invalid(const char *function_name, path_t *path, int dir_fd)	todo		
-Modules/posixmodule.c	1600	1609	dir_fd_and_fd_invalid	dir_fd_and_fd_invalid(const char *function_name, int dir_fd, int fd)	todo		
-Modules/posixmodule.c	1612	1622	fd_and_follow_symlinks_invalid	fd_and_follow_symlinks_invalid(const char *function_name, int fd, int follow_symlinks)	todo		
-Modules/posixmodule.c	1625	1635	dir_fd_and_follow_symlinks_invalid	dir_fd_and_follow_symlinks_invalid(const char *function_name, int dir_fd, int follow_symlinks)	todo		
-Modules/posixmodule.c	1639	1647	idtype_t_converter	idtype_t_converter(PyObject *arg, void *addr)	todo		
-Modules/posixmodule.c	1657	1667	Py_off_t_converter	Py_off_t_converter(PyObject *arg, void *addr)	todo		
-Modules/posixmodule.c	1670	1677	PyLong_FromPy_off_t	PyLong_FromPy_off_t(Py_off_t offset)	todo		
-Modules/posixmodule.c	1683	1737	_Py_Sigset_Converter	_Py_Sigset_Converter(PyObject *obj, void *addr)	todo		
-Modules/posixmodule.c	1753	1819	convertenviron	convertenviron(void)	todo		
-Modules/posixmodule.c	1824	1827	posix_error	posix_error(void)	todo		
-Modules/posixmodule.c	1831	1843	win32_error	win32_error(const char* function, const char* filename)	todo		
-Modules/posixmodule.c	1846	1856	win32_error_object_err	win32_error_object_err(const char* function, PyObject* filename, DWORD err)	todo		
-Modules/posixmodule.c	1859	1863	win32_error_object	win32_error_object(const char* function, PyObject* filename)	todo		
-Modules/posixmodule.c	1868	1871	posix_path_object_error	posix_path_object_error(PyObject *path)	todo		
-Modules/posixmodule.c	1874	1882	path_object_error	path_object_error(PyObject *path)	todo		
-Modules/posixmodule.c	1885	1893	path_object_error2	path_object_error2(PyObject *path, PyObject *path2)	todo		
-Modules/posixmodule.c	1896	1899	path_error	path_error(path_t *path)	todo		
-Modules/posixmodule.c	1902	1905	posix_path_error	posix_path_error(path_t *path)	todo		
-Modules/posixmodule.c	1908	1911	path_error2	path_error2(path_t *path, path_t *path2)	todo		
-Modules/posixmodule.c	1917	1932	posix_fildes_fd	posix_fildes_fd(int fd, int (*func)(int))	todo		
-Modules/posixmodule.c	1942	1974	win32_wchdir	win32_wchdir(LPCWSTR path)	todo		
-Modules/posixmodule.c	1989	2005	find_data_to_file_info	find_data_to_file_info(WIN32_FIND_DATAW *pFileData, BY_HANDLE_FILE_INFORMATION *info, ULONG *reparse_tag)	todo		
-Modules/posixmodule.c	2008	2041	attributes_from_dir	attributes_from_dir(LPCWSTR pszFile, BY_HANDLE_FILE_INFORMATION *info, ULONG *reparse_tag)	todo		
-Modules/posixmodule.c	2045	2065	update_st_mode_from_path	update_st_mode_from_path(const wchar_t *path, DWORD attr, struct _Py_stat_struct *result)	todo		
-Modules/posixmodule.c	2069	2254	win32_xstat_slow_impl	win32_xstat_slow_impl(const wchar_t *path, struct _Py_stat_struct *result, BOOL traverse)	todo		
-Modules/posixmodule.c	2257	2287	win32_xstat_impl	win32_xstat_impl(const wchar_t *path, struct _Py_stat_struct *result, BOOL traverse)	todo		
-Modules/posixmodule.c	2290	2301	win32_xstat	win32_xstat(const wchar_t *path, struct _Py_stat_struct *result, BOOL traverse)	todo		
-Modules/posixmodule.c	2313	2316	win32_lstat	win32_lstat(const wchar_t* path, struct _Py_stat_struct *result)	todo		
-Modules/posixmodule.c	2319	2322	win32_stat	win32_stat(const wchar_t* path, struct _Py_stat_struct *result)	todo		
-Modules/posixmodule.c	2512	2543	statresult_new	statresult_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
-Modules/posixmodule.c	2546	2568	_posix_clear	_posix_clear(PyObject *module)	todo		
-Modules/posixmodule.c	2571	2593	_posix_traverse	_posix_traverse(PyObject *module, visitproc visit, void *arg)	todo		
-Modules/posixmodule.c	2596	2599	_posix_free	_posix_free(void *module)	todo		
-Modules/posixmodule.c	2602	2654	fill_time	fill_time(PyObject *module, PyObject *v, int s_index, int f_index, int ns_index, time_t sec, unsigned long nsec)	todo		
-Modules/posixmodule.c	2658	2680	_pystat_l128_from_l64_l64	_pystat_l128_from_l64_l64(uint64_t low, uint64_t high)	todo		
-Modules/posixmodule.c	2686	2805	_pystat_fromstructstat	_pystat_fromstructstat(PyObject *module, STRUCT_STAT *st)	todo		
-Modules/posixmodule.c	2811	2873	posix_do_stat	posix_do_stat(PyObject *module, const char *function_name, path_t *path, int dir_fd, int follow_symlinks)	todo		
-Modules/posixmodule.c	3238	3242	os_stat_impl	os_stat_impl(PyObject *module, path_t *path, int dir_fd, int follow_symlinks) /*[clinic end generated code: output=7d4976e6f18a59c5 input=01d362ebcc06996b]*/	todo		
-Modules/posixmodule.c	3261	3266	os_lstat_impl	os_lstat_impl(PyObject *module, path_t *path, int dir_fd) /*[clinic end generated code: output=ef82a5d35ce8ab37 input=0b7474765927b925]*/	todo		
-Modules/posixmodule.c	3309	3397	os_access_impl	os_access_impl(PyObject *module, path_t *path, int mode, int dir_fd, int effective_ids, int follow_symlinks) /*[clinic end generated code: output=cf84158bc90b1a77 input=3ffe4e650ee3bf20]*/	todo		
-Modules/posixmodule.c	3426	3447	os_ttyname_impl	os_ttyname_impl(PyObject *module, int fd) /*[clinic end generated code: output=c424d2e9d1cd636a input=9ff5a58b08115c55]*/	todo		
-Modules/posixmodule.c	3458	3472	os_ctermid_impl	os_ctermid_impl(PyObject *module) /*[clinic end generated code: output=02f017e6c9e620db input=3b87fdd52556382d]*/	todo		
-Modules/posixmodule.c	3489	3517	os_chdir_impl	os_chdir_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=3be6400eee26eaae input=64673c342e4369f1]*/	todo		
-Modules/posixmodule.c	3534	3541	os_fchdir_impl	os_fchdir_impl(PyObject *module, int fd) /*[clinic end generated code: output=42e064ec4dc00ab0 input=18e816479a2fa985]*/	todo		
-Modules/posixmodule.c	3552	3565	win32_lchmod	win32_lchmod(LPCWSTR path, int mode)	todo		
-Modules/posixmodule.c	3568	3584	win32_hchmod	win32_hchmod(HANDLE hfile, int mode)	todo		
-Modules/posixmodule.c	3587	3595	win32_fchmod	win32_fchmod(int fd, int mode)	todo		
-Modules/posixmodule.c	3637	3763	os_chmod_impl	os_chmod_impl(PyObject *module, path_t *path, int mode, int dir_fd, int follow_symlinks) /*[clinic end generated code: output=5cf6a94915cc7bff input=7b6e2eeadd8bf199]*/	todo		
-Modules/posixmodule.c	3784	3813	os_fchmod_impl	os_fchmod_impl(PyObject *module, int fd, int mode) /*[clinic end generated code: output=afd9bc05b4e426b3 input=d24331f9fdc17f49]*/	todo		
-Modules/posixmodule.c	3831	3856	os_lchmod_impl	os_lchmod_impl(PyObject *module, path_t *path, int mode) /*[clinic end generated code: output=082344022b51a1d5 input=074b9b520f1f3008]*/	todo		
-Modules/posixmodule.c	3879	3907	os_chflags_impl	os_chflags_impl(PyObject *module, path_t *path, unsigned long flags, int follow_symlinks) /*[clinic end generated code: output=85571c6737661ce9 input=31391927707be1de]*/	todo		
-Modules/posixmodule.c	3925	3939	os_lchflags_impl	os_lchflags_impl(PyObject *module, path_t *path, unsigned long flags) /*[clinic end generated code: output=30ae958695c07316 input=f9f82ea8b585ca9d]*/	todo		
-Modules/posixmodule.c	3953	3963	os_chroot_impl	os_chroot_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=de80befc763a4475 input=14822965652c3dc3]*/	todo		
-Modules/posixmodule.c	3977	3981	os_fsync_impl	os_fsync_impl(PyObject *module, int fd) /*[clinic end generated code: output=4a10d773f52b3584 input=21c3645c056967f2]*/	todo		
-Modules/posixmodule.c	3993	4000	os_sync_impl	os_sync_impl(PyObject *module) /*[clinic end generated code: output=2796b1f0818cd71c input=84749fe5e9b404ff]*/	todo		
-Modules/posixmodule.c	4018	4022	os_fdatasync_impl	os_fdatasync_impl(PyObject *module, int fd) /*[clinic end generated code: output=b4b9698b5d7e26dd input=bc74791ee54dd291]*/	todo		
-Modules/posixmodule.c	4069	4130	os_chown_impl	os_chown_impl(PyObject *module, path_t *path, uid_t uid, gid_t gid, int dir_fd, int follow_symlinks) /*[clinic end generated code: output=4beadab0db5f70cd input=509c91b7a0e72f52]*/	todo		
-Modules/posixmodule.c	4149	4168	os_fchown_impl	os_fchown_impl(PyObject *module, int fd, uid_t uid, gid_t gid) /*[clinic end generated code: output=97d21cbd5a4350a6 input=3af544ba1b13a0d7]*/	todo		
-Modules/posixmodule.c	4187	4201	os_lchown_impl	os_lchown_impl(PyObject *module, path_t *path, uid_t uid, gid_t gid) /*[clinic end generated code: output=25eaf6af412fdf2f input=b1c6014d563a7161]*/	todo		
-Modules/posixmodule.c	4206	4317	posix_getcwd	posix_getcwd(int use_bytes)	todo		
-Modules/posixmodule.c	4327	4331	os_getcwd_impl	os_getcwd_impl(PyObject *module) /*[clinic end generated code: output=21badfae2ea99ddc input=f069211bb70e3d39]*/	todo		
-Modules/posixmodule.c	4341	4345	os_getcwdb_impl	os_getcwdb_impl(PyObject *module) /*[clinic end generated code: output=3dd47909480e4824 input=f6f6a378dad3d9cb]*/	todo		
-Modules/posixmodule.c	4379	4456	os_link_impl	os_link_impl(PyObject *module, path_t *src, path_t *dst, int src_dir_fd, int dst_dir_fd, int follow_symlinks) /*[clinic end generated code: output=7f00f6007fd5269a input=a28e6866fbd20a01]*/	todo		
-Modules/posixmodule.c	4466	4547	_listdir_windows_no_opendir	_listdir_windows_no_opendir(path_t *path, PyObject *list)	todo		
-Modules/posixmodule.c	4552	4662	_posix_listdir	_posix_listdir(path_t *path, PyObject *list)	todo		
-Modules/posixmodule.c	4687	4699	os_listdir_impl	os_listdir_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=293045673fcd1a75 input=4eefe7c6a42ec9b2]*/	todo		
-Modules/posixmodule.c	4714	4749	os_listdrives_impl	os_listdrives_impl(PyObject *module) /*[clinic end generated code: output=aaece9dacdf682b5 input=1af9ccc9e583798e]*/	todo		
-Modules/posixmodule.c	4761	4810	os_listvolumes_impl	os_listvolumes_impl(PyObject *module) /*[clinic end generated code: output=534e10ea2bf9d386 input=f6e4e70371f11e99]*/	todo		
-Modules/posixmodule.c	4825	4890	os_listmounts_impl	os_listmounts_impl(PyObject *module, path_t *volume) /*[clinic end generated code: output=06da49679de4512e input=a8a27178e3f67845]*/	todo		
-Modules/posixmodule.c	4903	4979	os__path_isdevdrive_impl	os__path_isdevdrive_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=1f437ea6677433a2 input=ee83e4996a48e23d]*/	todo		
-Modules/posixmodule.c	4983	5021	_PyOS_getfullpathname	_PyOS_getfullpathname(const wchar_t *path, wchar_t **abspath_p)	todo		
-Modules/posixmodule.c	5034	5055	os__getfullpathname_impl	os__getfullpathname_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=bb8679d56845bc9b input=332ed537c29d0a3e]*/	todo		
-Modules/posixmodule.c	5068	5134	os__getfinalpathname_impl	os__getfinalpathname_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=621a3c79bc29ebfa input=2b6b6c7cbad5fb84]*/	todo		
-Modules/posixmodule.c	5144	5165	os__findfirstfile_impl	os__findfirstfile_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=106dd3f0779c83dd input=0734dff70f60e1a8]*/	todo		
-Modules/posixmodule.c	5177	5213	os__getvolumepathname_impl	os__getvolumepathname_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=804c63fd13a1330b input=722b40565fa21552]*/	todo		
-Modules/posixmodule.c	5225	5259	os__path_splitroot_impl	os__path_splitroot_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=ab7f1a88b654581c input=dc93b1d3984cffb6]*/	todo		
-Modules/posixmodule.c	5270	5293	_testInfo	_testInfo(DWORD attributes, DWORD reparseTag, BOOL diskDevice, int testedType)	todo		
-Modules/posixmodule.c	5296	5317	_testFileTypeByHandle	_testFileTypeByHandle(HANDLE hfile, int testedType, BOOL diskOnly)	todo		
-Modules/posixmodule.c	5320	5381	_testFileTypeByName	_testFileTypeByName(LPCWSTR path, int testedType)	todo		
-Modules/posixmodule.c	5385	5438	_testFileExistsByName	_testFileExistsByName(LPCWSTR path, BOOL followLinks)	todo		
-Modules/posixmodule.c	5442	5464	_testFileExists	_testFileExists(path_t *path, BOOL followLinks)	todo		
-Modules/posixmodule.c	5468	5488	_testFileType	_testFileType(path_t *path, int testedType)	todo		
-Modules/posixmodule.c	5501	5505	os__path_exists_impl	os__path_exists_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=8da13acf666e16ba input=142beabfc66783eb]*/	todo		
-Modules/posixmodule.c	5518	5522	os__path_lexists_impl	os__path_lexists_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=e7240ed5fc45bff3 input=208205112a3cc1ed]*/	todo		
-Modules/posixmodule.c	5535	5539	os__path_isdir_impl	os__path_isdir_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=d5786196f9e2fa7a input=132a3b5301aecf79]*/	todo		
-Modules/posixmodule.c	5552	5556	os__path_isfile_impl	os__path_isfile_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=5c3073bc212b9863 input=4ac1fd350b30a39e]*/	todo		
-Modules/posixmodule.c	5569	5573	os__path_islink_impl	os__path_islink_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=30da7bda8296adcc input=7510ce05b547debb]*/	todo		
-Modules/posixmodule.c	5586	5590	os__path_isjunction_impl	os__path_isjunction_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=e1d17a9dd18a9945 input=7dcb8bc4e972fcaf]*/	todo		
-Modules/posixmodule.c	5613	5654	os__path_splitroot_ex_impl	os__path_splitroot_ex_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=4b0072b6cdf4b611 input=4556b615c7cc13f2]*/	todo		
-Modules/posixmodule.c	5666	5686	os__path_normpath_impl	os__path_normpath_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=d353e7ed9410c044 input=3d4ac23b06332dcb]*/	todo		
-Modules/posixmodule.c	5712	5794	os_mkdir_impl	os_mkdir_impl(PyObject *module, path_t *path, int mode, int dir_fd) /*[clinic end generated code: output=a70446903abe821f input=30270d369599634b]*/	todo		
-Modules/posixmodule.c	5814	5839	os_nice_impl	os_nice_impl(PyObject *module, int increment) /*[clinic end generated code: output=9dad8a9da8109943 input=864be2d402a21da2]*/	todo		
-Modules/posixmodule.c	5854	5864	os_getpriority_impl	os_getpriority_impl(PyObject *module, int which, int who) /*[clinic end generated code: output=c41b7b63c7420228 input=9be615d40e2544ef]*/	todo		
-Modules/posixmodule.c	5880	5889	os_setpriority_impl	os_setpriority_impl(PyObject *module, int which, int who, int priority) /*[clinic end generated code: output=3d910d95a7771eb2 input=710ccbf65b9dc513]*/	todo		
-Modules/posixmodule.c	5894	5959	internal_rename	internal_rename(path_t *src, path_t *dst, int src_dir_fd, int dst_dir_fd, int is_replace)	todo		
-Modules/posixmodule.c	5982	5987	os_rename_impl	os_rename_impl(PyObject *module, path_t *src, path_t *dst, int src_dir_fd, int dst_dir_fd) /*[clinic end generated code: output=59e803072cf41230 input=7d320d687c715fd6]*/	todo		
-Modules/posixmodule.c	6004	6009	os_replace_impl	os_replace_impl(PyObject *module, path_t *src, path_t *dst, int src_dir_fd, int dst_dir_fd) /*[clinic end generated code: output=1968c02e7857422b input=44ed6b762d5953fc]*/	todo		
-Modules/posixmodule.c	6029	6072	os_rmdir_impl	os_rmdir_impl(PyObject *module, path_t *path, int dir_fd) /*[clinic end generated code: output=080eb54f506e8301 input=84325211e33a98e0]*/	todo		
-Modules/posixmodule.c	6086	6101	os_system_impl	os_system_impl(PyObject *module, const wchar_t *command) /*[clinic end generated code: output=dd528cbd5943a679 input=303f5ce97df606b0]*/	todo		
-Modules/posixmodule.c	6112	6126	os_system_impl	os_system_impl(PyObject *module, PyObject *command) /*[clinic end generated code: output=290fc437dd4f33a0 input=47c6f24b6dc92881]*/	todo		
-Modules/posixmodule.c	6142	6149	os_umask_impl	os_umask_impl(PyObject *module, int mask) /*[clinic end generated code: output=a2e33ce3bc1a6e33 input=ab6bfd9b24d8a7e8]*/	todo		
-Modules/posixmodule.c	6157	6188	Py_DeleteFileW	BOOL WINAPI Py_DeleteFileW(LPCWSTR lpFileName)	todo		
-Modules/posixmodule.c	6210	6255	os_unlink_impl	os_unlink_impl(PyObject *module, path_t *path, int dir_fd) /*[clinic end generated code: output=621797807b9963b1 input=1a2ef2579207eab1]*/	todo		
-Modules/posixmodule.c	6271	6275	os_remove_impl	os_remove_impl(PyObject *module, path_t *path, int dir_fd) /*[clinic end generated code: output=a8535b28f0068883 input=9f6e66912126bd56]*/	todo		
-Modules/posixmodule.c	6314	6351	os_uname_impl	os_uname_impl(PyObject *module) /*[clinic end generated code: output=e6a49cf1a1508a19 input=e68bd246db3043ed]*/	todo		
-Modules/posixmodule.c	6420	6445	utime_dir_fd	utime_dir_fd(utime_t *ut, int dir_fd, const char *path, int follow_symlinks)	todo		
-Modules/posixmodule.c	6455	6483	utime_fd	utime_fd(utime_t *ut, int fd)	todo		
-Modules/posixmodule.c	6497	6522	utime_nofollow_symlinks	utime_nofollow_symlinks(utime_t *ut, const char *path)	todo		
-Modules/posixmodule.c	6529	6552	utime_default	utime_default(utime_t *ut, const char *path)	todo		
-Modules/posixmodule.c	6557	6581	split_py_long_to_s_and_ns	split_py_long_to_s_and_ns(PyObject *module, PyObject *py_long, time_t *s, long *ns)	todo		
-Modules/posixmodule.c	6622	6775	os_utime_impl	os_utime_impl(PyObject *module, path_t *path, PyObject *times, PyObject *ns, int dir_fd, int follow_symlinks) /*[clinic end generated code: output=cfcac69d027b82cf input=5ab470b2bc250788]*/	todo		
-Modules/posixmodule.c	6789	6794	os__exit_impl	os__exit_impl(PyObject *module, int status) /*[clinic end generated code: output=116e52d9c2260d54 input=5e6d57556b0c4a62]*/	todo		
-Modules/posixmodule.c	6804	6810	free_string_array	free_string_array(EXECV_CHAR **array, Py_ssize_t count)	todo		
-Modules/posixmodule.c	6813	6837	fsconvert_strdup	fsconvert_strdup(PyObject *o, EXECV_CHAR **out)	todo		
-Modules/posixmodule.c	6842	6945	parse_envlist	parse_envlist(PyObject* env, Py_ssize_t *envc_ptr)	todo		
-Modules/posixmodule.c	6948	6972	parse_arglist	parse_arglist(PyObject* argv, Py_ssize_t *argc)	todo		
-Modules/posixmodule.c	6991	7047	os_execv_impl	os_execv_impl(PyObject *module, path_t *path, PyObject *argv) /*[clinic end generated code: output=3b52fec34cd0dafd input=9bac31efae07dac7]*/	todo		
-Modules/posixmodule.c	7064	7139	os_execve_impl	os_execve_impl(PyObject *module, path_t *path, PyObject *argv, PyObject *env) /*[clinic end generated code: output=ff9fa8e4da8bde58 input=626804fa092606d9]*/	todo		
-Modules/posixmodule.c	7160	7298	parse_posix_spawn_flags	parse_posix_spawn_flags(PyObject *module, const char *func_name, PyObject *setpgroup, int resetids, int setsid, PyObject *setsigmask, PyObject *setsigdef, PyObject *scheduler, posix_spawnattr_t *attrp)	todo		
-Modules/posixmodule.c	7301	7428	parse_file_actions	parse_file_actions(PyObject *file_actions, posix_spawn_file_actions_t *file_actionsp, PyObject *temp_buffer)	todo		
-Modules/posixmodule.c	7432	7573	py_posix_spawn	py_posix_spawn(int use_posix_spawnp, PyObject *module, path_t *path, PyObject *argv, PyObject *env, PyObject *file_actions, PyObject *setpgroup, int resetids, int setsid, PyObject *setsigmask, PyObject *setsigdef, PyObject *scheduler)	todo		
-Modules/posixmodule.c	7607	7617	os_posix_spawn_impl	os_posix_spawn_impl(PyObject *module, path_t *path, PyObject *argv, PyObject *env, PyObject *file_actions, PyObject *setpgroup, int resetids, int setsid, PyObject *setsigmask, PyObject *setsigdef, PyObject *scheduler) /*[clinic end generated code: output=14a1098c566bc675 input=c7592dcbc96e8114]*/	todo		
-Modules/posixmodule.c	7654	7664	os_posix_spawnp_impl	os_posix_spawnp_impl(PyObject *module, path_t *path, PyObject *argv, PyObject *env, PyObject *file_actions, PyObject *setpgroup, int resetids, int setsid, PyObject *setsigmask, PyObject *setsigdef, PyObject *scheduler) /*[clinic end generated code: output=7b9aaefe3031238d input=43ccc1452cae2be3]*/	todo		
-Modules/posixmodule.c	7669	7698	_rtp_spawn	_rtp_spawn(int mode, const char *rtpFileName, const char *argv[], const char *envp[])	todo		
-Modules/posixmodule.c	7717	7815	os_spawnv_impl	os_spawnv_impl(PyObject *module, int mode, path_t *path, PyObject *argv) /*[clinic end generated code: output=71cd037a9d96b816 input=43224242303291be]*/	todo		
-Modules/posixmodule.c	7834	7943	os_spawnve_impl	os_spawnve_impl(PyObject *module, int mode, path_t *path, PyObject *argv, PyObject *env) /*[clinic end generated code: output=30fe85be56fe37ad input=3e40803ee7c4c586]*/	todo		
-Modules/posixmodule.c	7953	7961	check_null_or_callable	check_null_or_callable(PyObject *obj, const char* obj_name)	todo		
-Modules/posixmodule.c	7982	8009	os_register_at_fork_impl	os_register_at_fork_impl(PyObject *module, PyObject *before, PyObject *after_in_child, PyObject *after_in_parent) /*[clinic end generated code: output=5398ac75e8e97625 input=cd1187aa85d2312e]*/	todo		
-Modules/posixmodule.c	8020	8081	warn_about_fork_with_threads	warn_about_fork_with_threads( const char* name, // Name of the API to use in the warning message. const Py_ssize_t num_os_threads // Only trusted when >= 1. )	todo		
-Modules/posixmodule.c	8085	8126	get_number_of_os_threads	static Py_ssize_t get_number_of_os_threads(void)	todo		
-Modules/posixmodule.c	8139	8173	os_fork1_impl	os_fork1_impl(PyObject *module) /*[clinic end generated code: output=0de8e67ce2a310bc input=12db02167893926e]*/	todo		
-Modules/posixmodule.c	8187	8224	os_fork_impl	os_fork_impl(PyObject *module) /*[clinic end generated code: output=3626c81f98985d49 input=13c956413110eeaa]*/	todo		
-Modules/posixmodule.c	8239	8248	os_sched_get_priority_max_impl	os_sched_get_priority_max_impl(PyObject *module, int policy) /*[clinic end generated code: output=9e465c6e43130521 input=2097b7998eca6874]*/	todo		
-Modules/posixmodule.c	8260	8269	os_sched_get_priority_min_impl	os_sched_get_priority_min_impl(PyObject *module, int policy) /*[clinic end generated code: output=7595c1138cc47a6d input=21bc8fa0d70983bf]*/	todo		
-Modules/posixmodule.c	8285	8294	os_sched_getscheduler_impl	os_sched_getscheduler_impl(PyObject *module, pid_t pid) /*[clinic end generated code: output=dce4c0bd3f1b34c8 input=8d99dac505485ac8]*/	todo		
-Modules/posixmodule.c	8312	8322	os_sched_param_impl	os_sched_param_impl(PyTypeObject *type, PyObject *sched_priority) /*[clinic end generated code: output=48f4067d60f48c13 input=eb42909a2c0e3e6c]*/	todo		
-Modules/posixmodule.c	8325	8328	os_sched_param_reduce	os_sched_param_reduce(PyObject *self, PyObject *Py_UNUSED(dummy))	todo		
-Modules/posixmodule.c	8349	8366	convert_sched_param	convert_sched_param(PyObject *module, PyObject *param, struct sched_param *res)	todo		
-Modules/posixmodule.c	8386	8403	os_sched_setscheduler_impl	os_sched_setscheduler_impl(PyObject *module, pid_t pid, int policy, PyObject *param_obj) /*[clinic end generated code: output=cde27faa55dc993e input=73013d731bd8fbe9]*/	todo		
-Modules/posixmodule.c	8420	8440	os_sched_getparam_impl	os_sched_getparam_impl(PyObject *module, pid_t pid) /*[clinic end generated code: output=b194e8708dcf2db8 input=18a1ef9c2efae296]*/	todo		
-Modules/posixmodule.c	8456	8467	os_sched_setparam_impl	os_sched_setparam_impl(PyObject *module, pid_t pid, PyObject *param_obj) /*[clinic end generated code: output=f19fe020a53741c1 input=27b98337c8b2dcc7]*/	todo		
-Modules/posixmodule.c	8483	8495	os_sched_rr_get_interval_impl	os_sched_rr_get_interval_impl(PyObject *module, pid_t pid) /*[clinic end generated code: output=7e2d935833ab47dc input=2a973da15cca6fae]*/	todo		
-Modules/posixmodule.c	8506	8517	os_sched_yield_impl	os_sched_yield_impl(PyObject *module) /*[clinic end generated code: output=902323500f222cac input=e54d6f98189391d4]*/	todo		
-Modules/posixmodule.c	8535	8620	os_sched_setaffinity_impl	os_sched_setaffinity_impl(PyObject *module, pid_t pid, PyObject *mask) /*[clinic end generated code: output=882d7dd9a229335b input=a0791a597c7085ba]*/	todo		
-Modules/posixmodule.c	8634	8692	os_sched_getaffinity_impl	os_sched_getaffinity_impl(PyObject *module, pid_t pid) /*[clinic end generated code: output=f726f2c193c17a4f input=983ce7cb4a565980]*/	todo		
-Modules/posixmodule.c	8713	8737	os_posix_openpt_impl	os_posix_openpt_impl(PyObject *module, int oflag) /*[clinic end generated code: output=ee0bc2624305fc79 input=3ce4eb297fa64307]*/	todo		
-Modules/posixmodule.c	8754	8775	os_grantpt_impl	os_grantpt_impl(PyObject *module, int fd) /*[clinic end generated code: output=dfd580015cf548ab input=0668e3b96760e849]*/	todo		
-Modules/posixmodule.c	8792	8799	os_unlockpt_impl	os_unlockpt_impl(PyObject *module, int fd) /*[clinic end generated code: output=e08d354dec12d30c input=de7ab1f59f69a2b4]*/	todo		
-Modules/posixmodule.c	8804	8814	py_ptsname	py_ptsname(int fd)	todo		
-Modules/posixmodule.c	8830	8853	os_ptsname_impl	os_ptsname_impl(PyObject *module, int fd) /*[clinic end generated code: output=ef300fadc5675872 input=1369ccc0546f3130]*/	todo		
-Modules/posixmodule.c	8892	9000	os_openpty_impl	os_openpty_impl(PyObject *module) /*[clinic end generated code: output=98841ce5ec9cef3c input=f3d99fd99e762907]*/	todo		
-Modules/posixmodule.c	9023	9050	os_login_tty_impl	os_login_tty_impl(PyObject *module, int fd) /*[clinic end generated code: output=495a79911b4cc1bc input=5f298565099903a2]*/	todo		
-Modules/posixmodule.c	9067	9103	os_forkpty_impl	os_forkpty_impl(PyObject *module) /*[clinic end generated code: output=60d0a5c7512e4087 input=f1f7f4bae3966010]*/	todo		
-Modules/posixmodule.c	9115	9119	os_getegid_impl	os_getegid_impl(PyObject *module) /*[clinic end generated code: output=67d9be7ac68898a2 input=1596f79ad1107d5d]*/	todo		
-Modules/posixmodule.c	9131	9135	os_geteuid_impl	os_geteuid_impl(PyObject *module) /*[clinic end generated code: output=ea1b60f0d6abb66e input=4644c662d3bd9f19]*/	todo		
-Modules/posixmodule.c	9147	9151	os_getgid_impl	os_getgid_impl(PyObject *module) /*[clinic end generated code: output=4f28ebc9d3e5dfcf input=58796344cd87c0f6]*/	todo		
-Modules/posixmodule.c	9163	9171	os_getpid_impl	os_getpid_impl(PyObject *module) /*[clinic end generated code: output=9ea6fdac01ed2b3c input=5a9a00f0ab68aa00]*/	todo		
-Modules/posixmodule.c	9311	9356	os_getgroups_impl	os_getgroups_impl(PyObject *module) /*[clinic end generated code: output=42b0c17758561b56 input=d3f109412e6a155c]*/	todo		
-Modules/posixmodule.c	9418	9425	os_getpgid_impl	os_getpgid_impl(PyObject *module, pid_t pid) /*[clinic end generated code: output=1db95a97be205d18 input=39d710ae3baaf1c7]*/	todo		
-Modules/posixmodule.c	9437	9445	os_getpgrp_impl	os_getpgrp_impl(PyObject *module) /*[clinic end generated code: output=c4fc381e51103cf3 input=6846fb2bb9a3705e]*/	todo		
-Modules/posixmodule.c	9457	9467	os_setpgrp_impl	os_setpgrp_impl(PyObject *module) /*[clinic end generated code: output=2554735b0a60f0a0 input=1f0619fcb5731e7e]*/	todo		
-Modules/posixmodule.c	9497	9547	win32_getppid_fast	win32_getppid_fast(void)	todo		
-Modules/posixmodule.c	9550	9582	win32_getppid	win32_getppid(void)	todo		
-Modules/posixmodule.c	9597	9605	os_getppid_impl	os_getppid_impl(PyObject *module) /*[clinic end generated code: output=43b2a946a8c603b4 input=e17c1de18f41316b]*/	todo		
-Modules/posixmodule.c	9617	9666	os_getlogin_impl	os_getlogin_impl(PyObject *module) /*[clinic end generated code: output=a32e66a7e5715dac input=2a21ab1e917163df]*/	todo		
-Modules/posixmodule.c	9678	9682	os_getuid_impl	os_getuid_impl(PyObject *module) /*[clinic end generated code: output=415c0b401ebed11a input=b53c8b35f110a516]*/	todo		
-Modules/posixmodule.c	9702	9750	os_kill_impl	os_kill_impl(PyObject *module, pid_t pid, Py_ssize_t signal) /*[clinic end generated code: output=8e346a6701c88568 input=61a36b86ca275ab9]*/	todo		
-Modules/posixmodule.c	9766	9779	os_killpg_impl	os_killpg_impl(PyObject *module, pid_t pgid, int signal) /*[clinic end generated code: output=6dbcd2f1fdf5fdba input=38b5449eb8faec19]*/	todo		
-Modules/posixmodule.c	9797	9803	os_plock_impl	os_plock_impl(PyObject *module, int op) /*[clinic end generated code: output=81424167033b168e input=e6e5e348e1525f60]*/	todo		
-Modules/posixmodule.c	9818	9824	os_setuid_impl	os_setuid_impl(PyObject *module, uid_t uid) /*[clinic end generated code: output=a0a41fd0d1ec555f input=c921a3285aa22256]*/	todo		
-Modules/posixmodule.c	9839	9845	os_seteuid_impl	os_seteuid_impl(PyObject *module, uid_t euid) /*[clinic end generated code: output=102e3ad98361519a input=ba93d927e4781aa9]*/	todo		
-Modules/posixmodule.c	9860	9866	os_setegid_impl	os_setegid_impl(PyObject *module, gid_t egid) /*[clinic end generated code: output=4e4b825a6a10258d input=4080526d0ccd6ce3]*/	todo		
-Modules/posixmodule.c	9882	9890	os_setreuid_impl	os_setreuid_impl(PyObject *module, uid_t ruid, uid_t euid) /*[clinic end generated code: output=62d991210006530a input=0ca8978de663880c]*/	todo		
-Modules/posixmodule.c	9906	9912	os_setregid_impl	os_setregid_impl(PyObject *module, gid_t rgid, gid_t egid) /*[clinic end generated code: output=aa803835cf5342f3 input=c59499f72846db78]*/	todo		
-Modules/posixmodule.c	9926	9932	os_setgid_impl	os_setgid_impl(PyObject *module, gid_t gid) /*[clinic end generated code: output=bdccd7403f6ad8c3 input=27d30c4059045dc6]*/	todo		
-Modules/posixmodule.c	9947	9998	os_setgroups	os_setgroups(PyObject *module, PyObject *groups) /*[clinic end generated code: output=3fcb32aad58c5ecd input=fa742ca3daf85a7e]*/	todo		
-Modules/posixmodule.c	10003	10062	wait_helper	wait_helper(PyObject *module, pid_t pid, int status, struct rusage *ru)	todo		
-Modules/posixmodule.c	10078	10096	os_wait3_impl	os_wait3_impl(PyObject *module, int options) /*[clinic end generated code: output=92c3224e6f28217a input=8ac4c56956b61710]*/	todo		
-Modules/posixmodule.c	10115	10133	os_wait4_impl	os_wait4_impl(PyObject *module, pid_t pid, int options) /*[clinic end generated code: output=66195aa507b35f70 input=d11deed0750600ba]*/	todo		
-Modules/posixmodule.c	10157	10203	os_waitid_impl	os_waitid_impl(PyObject *module, idtype_t idtype, id_t id, int options) /*[clinic end generated code: output=5d2e1c0bde61f4d8 input=14956bc8d102b5db]*/	todo		
-Modules/posixmodule.c	10223	10240	os_waitpid_impl	os_waitpid_impl(PyObject *module, pid_t pid, int options) /*[clinic end generated code: output=5c37c06887a20270 input=0bf1666b8758fda3]*/	todo		
-Modules/posixmodule.c	10258	10279	os_waitpid_impl	os_waitpid_impl(PyObject *module, intptr_t pid, int options) /*[clinic end generated code: output=be836b221271d538 input=40f2440c515410f8]*/	todo		
-Modules/posixmodule.c	10294	10311	os_wait_impl	os_wait_impl(PyObject *module) /*[clinic end generated code: output=6bc419ac32fb364b input=03b0182d4a4700ce]*/	todo		
-Modules/posixmodule.c	10330	10338	os_pidfd_open_impl	os_pidfd_open_impl(PyObject *module, pid_t pid, unsigned int flags) /*[clinic end generated code: output=5c7252698947dc41 input=03058b32c389f874]*/	todo		
-Modules/posixmodule.c	10354	10368	os_setns_impl	os_setns_impl(PyObject *module, int fd, int nstype) /*[clinic end generated code: output=5dbd055bfb66ecd0 input=42787871226bf3ee]*/	todo		
-Modules/posixmodule.c	10382	10396	os_unshare_impl	os_unshare_impl(PyObject *module, int flags) /*[clinic end generated code: output=1b3177906dd237ee input=9e065db3232b8b1b]*/	todo		
-Modules/posixmodule.c	10419	10524	os_readlink_impl	os_readlink_impl(PyObject *module, path_t *path, int dir_fd) /*[clinic end generated code: output=d21b732a2e814030 input=03d10130870dbca8]*/	todo		
-Modules/posixmodule.c	10531	10547	_dirnameW	_dirnameW(WCHAR *path)	todo		
-Modules/posixmodule.c	10557	10561	_is_absW	_is_absW(const WCHAR *path)	todo		
-Modules/posixmodule.c	10565	10580	_joinW	_joinW(WCHAR *dest_path, const WCHAR *root, const WCHAR *rest)	todo		
-Modules/posixmodule.c	10584	10603	_check_dirW	_check_dirW(LPCWSTR src, LPCWSTR dest)	todo		
-Modules/posixmodule.c	10631	10726	os_symlink_impl	os_symlink_impl(PyObject *module, path_t *src, path_t *dst, int target_is_directory, int dir_fd) /*[clinic end generated code: output=08ca9f3f3cf960f6 input=71b75467b31c45f7]*/	todo		
-Modules/posixmodule.c	10756	10784	build_times_result	build_times_result(PyObject *module, double user, double system, double children_user, double children_system, double elapsed)	todo		
-Modules/posixmodule.c	10798	10838	os_times_impl	os_times_impl(PyObject *module) /*[clinic end generated code: output=35f640503557d32a input=8dbfe33a2dcc3df3]*/	todo		
-Modules/posixmodule.c	10847	10866	build_itimerspec	build_itimerspec(const struct itimerspec* curr_value)	todo		
-Modules/posixmodule.c	10869	10879	build_itimerspec_ns	build_itimerspec_ns(const struct itimerspec* curr_value)	todo		
-Modules/posixmodule.c	10939	10971	os_timerfd_settime_impl	os_timerfd_settime_impl(PyObject *module, int fd, int flags, double initial_double, double interval_double) /*[clinic end generated code: output=df4c1bce6859224e input=81d2c0d7e936e8a7]*/	todo		
-Modules/posixmodule.c	10992	11014	os_timerfd_settime_ns_impl	os_timerfd_settime_ns_impl(PyObject *module, int fd, int flags, long long initial, long long interval) /*[clinic end generated code: output=6273ec7d7b4cc0b3 input=261e105d6e42f5bc]*/	todo		
-Modules/posixmodule.c	11027	11039	os_timerfd_gettime_impl	os_timerfd_gettime_impl(PyObject *module, int fd) /*[clinic end generated code: output=ec5a94a66cfe6ab4 input=8148e3430870da1c]*/	todo		
-Modules/posixmodule.c	11053	11065	os_timerfd_gettime_ns_impl	os_timerfd_gettime_ns_impl(PyObject *module, int fd) /*[clinic end generated code: output=580633a4465f39fe input=a825443e4c6b40ac]*/	todo		
-Modules/posixmodule.c	11083	11091	os_getsid_impl	os_getsid_impl(PyObject *module, pid_t pid) /*[clinic end generated code: output=112deae56b306460 input=eeb2b923a30ce04e]*/	todo		
-Modules/posixmodule.c	11103	11109	os_setsid_impl	os_setsid_impl(PyObject *module) /*[clinic end generated code: output=e2ddedd517086d77 input=5fff45858e2f0776]*/	todo		
-Modules/posixmodule.c	11125	11131	os_setpgid_impl	os_setpgid_impl(PyObject *module, pid_t pid, pid_t pgrp) /*[clinic end generated code: output=6461160319a43d6a input=fceb395eca572e1a]*/	todo		
-Modules/posixmodule.c	11146	11153	os_tcgetpgrp_impl	os_tcgetpgrp_impl(PyObject *module, int fd) /*[clinic end generated code: output=f865e88be86c272b input=7f6c18eac10ada86]*/	todo		
-Modules/posixmodule.c	11169	11175	os_tcsetpgrp_impl	os_tcsetpgrp_impl(PyObject *module, int fd, pid_t pgid) /*[clinic end generated code: output=f1821a381b9daa39 input=5bdc997c6a619020]*/	todo		
-Modules/posixmodule.c	11203	11272	os_open_impl	os_open_impl(PyObject *module, path_t *path, int flags, int mode, int dir_fd) /*[clinic end generated code: output=abc7227888c8bc73 input=75f7b4eaf92f2225]*/	todo		
-Modules/posixmodule.c	11284	11300	os_close_impl	os_close_impl(PyObject *module, int fd) /*[clinic end generated code: output=2fe4e93602822c14 input=2bc42451ca5c3223]*/	todo		
-Modules/posixmodule.c	11313	11320	os_closerange_impl	os_closerange_impl(PyObject *module, int fd_low, int fd_high) /*[clinic end generated code: output=0ce5c20fcda681c2 input=5855a3d053ebd4ec]*/	todo		
-Modules/posixmodule.c	11333	11337	os_dup_impl	os_dup_impl(PyObject *module, int fd) /*[clinic end generated code: output=486f4860636b2a9f input=6f10f7ea97f7852a]*/	todo		
-Modules/posixmodule.c	11352	11435	os_dup2_impl	os_dup2_impl(PyObject *module, int fd, int fd2, int inheritable) /*[clinic end generated code: output=bc059d34a73404d1 input=c3cddda8922b038d]*/	todo		
-Modules/posixmodule.c	11456	11473	os_lockf_impl	os_lockf_impl(PyObject *module, int fd, int command, Py_off_t length) /*[clinic end generated code: output=af7051f3e7c29651 input=65da41d2106e9b79]*/	todo		
-Modules/posixmodule.c	11498	11525	os_lseek_impl	os_lseek_impl(PyObject *module, int fd, Py_off_t position, int how) /*[clinic end generated code: output=971e1efb6b30bd2f input=32ea0788da7cb44b]*/	todo		
-Modules/posixmodule.c	11538	11565	os_read_impl	os_read_impl(PyObject *module, int fd, Py_ssize_t length) /*[clinic end generated code: output=dafbe9a5cddb987b input=1df2eaa27c0bf1d3]*/	todo		
-Modules/posixmodule.c	11587	11597	os_readinto_impl	os_readinto_impl(PyObject *module, int fd, Py_buffer *buffer) /*[clinic end generated code: output=8091a3513c683a80 input=2a5f8b212cb5730c]*/	todo		
-Modules/posixmodule.c	11604	11642	iov_setup	iov_setup(struct iovec **iov, Py_buffer **buf, PyObject *seq, Py_ssize_t cnt, int type)	todo		
-Modules/posixmodule.c	11645	11653	iov_cleanup	iov_cleanup(struct iovec *iov, Py_buffer *buf, int cnt)	todo		
-Modules/posixmodule.c	11677	11715	os_readv_impl	os_readv_impl(PyObject *module, int fd, PyObject *buffers) /*[clinic end generated code: output=792da062d3fcebdb input=e679eb5dbfa0357d]*/	todo		
-Modules/posixmodule.c	11735	11768	os_pread_impl	os_pread_impl(PyObject *module, int fd, Py_ssize_t length, Py_off_t offset) /*[clinic end generated code: output=3f875c1eef82e32f input=85cb4a5589627144]*/	todo		
-Modules/posixmodule.c	11800	11872	os_preadv_impl	os_preadv_impl(PyObject *module, int fd, PyObject *buffers, Py_off_t offset, int flags) /*[clinic end generated code: output=26fc9c6e58e7ada5 input=a7911fe42877e9de]*/	todo		
-Modules/posixmodule.c	11887	11891	os_write_impl	os_write_impl(PyObject *module, int fd, Py_buffer *data) /*[clinic end generated code: output=e4ef5bc904b58ef9 input=3207e28963234f3c]*/	todo		
-Modules/posixmodule.c	12148	12159	os__fcopyfile_impl	os__fcopyfile_impl(PyObject *module, int in_fd, int out_fd, int flags) /*[clinic end generated code: output=c9d1a35a992e401b input=1e34638a86948795]*/	todo		
-Modules/posixmodule.c	12175	12196	os_fstat_impl	os_fstat_impl(PyObject *module, int fd) /*[clinic end generated code: output=efc038cb5f654492 input=27e0e0ebbe5600c9]*/	todo		
-Modules/posixmodule.c	12211	12221	os_isatty_impl	os_isatty_impl(PyObject *module, int fd) /*[clinic end generated code: output=6a48c8b4e644ca00 input=08ce94aa1eaf7b5e]*/	todo		
-Modules/posixmodule.c	12235	12301	os_pipe_impl	os_pipe_impl(PyObject *module) /*[clinic end generated code: output=ff9b76255793b440 input=02535e8c8fa6c4d4]*/	todo		
-Modules/posixmodule.c	12322	12332	os_pipe2_impl	os_pipe2_impl(PyObject *module, int flags) /*[clinic end generated code: output=25751fb43a45540f input=f261b6e7e63c6817]*/	todo		
-Modules/posixmodule.c	12350	12383	os_writev_impl	os_writev_impl(PyObject *module, int fd, PyObject *buffers) /*[clinic end generated code: output=56565cfac3aac15b input=5b8d17fe4189d2fe]*/	todo		
-Modules/posixmodule.c	12404	12421	os_pwrite_impl	os_pwrite_impl(PyObject *module, int fd, Py_buffer *buffer, Py_off_t offset) /*[clinic end generated code: output=c74da630758ee925 input=614acbc7e5a0339a]*/	todo		
-Modules/posixmodule.c	12455	12527	os_pwritev_impl	os_pwritev_impl(PyObject *module, int fd, PyObject *buffers, Py_off_t offset, int flags) /*[clinic end generated code: output=e3dd3e9d11a6a5c7 input=43ee144dd99584e5]*/	todo		
-Modules/posixmodule.c	12552	12596	os_copy_file_range_impl	os_copy_file_range_impl(PyObject *module, int src, int dst, Py_ssize_t count, PyObject *offset_src, PyObject *offset_dst) /*[clinic end generated code: output=1a91713a1d99fc7a input=42fdce72681b25a9]*/	todo		
-Modules/posixmodule.c	12624	12665	os_splice_impl	os_splice_impl(PyObject *module, int src, int dst, Py_ssize_t count, PyObject *offset_src, PyObject *offset_dst, unsigned int flags) /*[clinic end generated code: output=d0386f25a8519dc5 input=047527c66c6d2e0a]*/	todo		
-Modules/posixmodule.c	12687	12725	os_mkfifo_impl	os_mkfifo_impl(PyObject *module, path_t *path, int mode, int dir_fd) /*[clinic end generated code: output=ce41cfad0e68c940 input=d2fb917c01e888d6]*/	todo		
-Modules/posixmodule.c	12756	12793	os_mknod_impl	os_mknod_impl(PyObject *module, path_t *path, int mode, dev_t device, int dir_fd) /*[clinic end generated code: output=92e55d3ca8917461 input=7d0099e85c6b4cba]*/	todo		
-Modules/posixmodule.c	12799	12807	major_minor_conv	major_minor_conv(unsigned int value)	todo		
-Modules/posixmodule.c	12810	12818	major_minor_check	major_minor_check(dev_t value)	todo		
-Modules/posixmodule.c	12830	12834	os_major_impl	os_major_impl(PyObject *module, dev_t device) /*[clinic end generated code: output=4071ffee17647891 input=b1a0a14ec9448229]*/	todo		
-Modules/posixmodule.c	12847	12851	os_minor_impl	os_minor_impl(PyObject *module, dev_t device) /*[clinic end generated code: output=306cb78e3bc5004f input=2f686e463682a9da]*/	todo		
-Modules/posixmodule.c	12865	12874	os_makedev_impl	os_makedev_impl(PyObject *module, dev_t major, dev_t minor) /*[clinic end generated code: output=cad6125c51f5af80 input=2146126ec02e55c1]*/	todo		
-Modules/posixmodule.c	12890	12915	os_ftruncate_impl	os_ftruncate_impl(PyObject *module, int fd, Py_off_t length) /*[clinic end generated code: output=fba15523721be7e4 input=63b43641e52818f2]*/	todo		
-Modules/posixmodule.c	12933	12969	os_truncate_impl	os_truncate_impl(PyObject *module, path_t *path, Py_off_t length) /*[clinic end generated code: output=43009c8df5c0a12b input=ce33fd7808a511c4]*/	todo		
-Modules/posixmodule.c	13002	13027	os_posix_fallocate_impl	os_posix_fallocate_impl(PyObject *module, int fd, Py_off_t offset, Py_off_t length) /*[clinic end generated code: output=73f107139564aa9d input=54f630ac8b5d3733]*/	todo		
-Modules/posixmodule.c	13053	13078	os_posix_fadvise_impl	os_posix_fadvise_impl(PyObject *module, int fd, Py_off_t offset, Py_off_t length, int advice) /*[clinic end generated code: output=412ef4aa70c98642 input=961b01a4518ef727]*/	todo		
-Modules/posixmodule.c	13084	13142	win32_putenv	win32_putenv(PyObject *name, PyObject *value)	todo		
-Modules/posixmodule.c	13158	13165	os_putenv_impl	os_putenv_impl(PyObject *module, PyObject *name, PyObject *value) /*[clinic end generated code: output=d29a567d6b2327d2 input=ba586581c2e6105f]*/	todo		
-Modules/posixmodule.c	13178	13197	os_putenv_impl	os_putenv_impl(PyObject *module, PyObject *name, PyObject *value) /*[clinic end generated code: output=d29a567d6b2327d2 input=84fcd30f873c8c45]*/	todo		
-Modules/posixmodule.c	13211	13218	os_unsetenv_impl	os_unsetenv_impl(PyObject *module, PyObject *name) /*[clinic end generated code: output=54c4137ab1834f02 input=4d6a1747cc526d2f]*/	todo		
-Modules/posixmodule.c	13229	13245	os_unsetenv_impl	os_unsetenv_impl(PyObject *module, PyObject *name) /*[clinic end generated code: output=54c4137ab1834f02 input=78ff12e505ade80a]*/	todo		
-Modules/posixmodule.c	13259	13269	os_strerror_impl	os_strerror_impl(PyObject *module, int code) /*[clinic end generated code: output=baebf09fa02a78f2 input=75a8673d97915a91]*/	todo		
-Modules/posixmodule.c	13284	13290	os_WCOREDUMP_impl	os_WCOREDUMP_impl(PyObject *module, int status) /*[clinic end generated code: output=1a584b147b16bd18 input=8b05e7ab38528d04]*/	todo		
-Modules/posixmodule.c	13307	13313	os_WIFCONTINUED_impl	os_WIFCONTINUED_impl(PyObject *module, int status) /*[clinic end generated code: output=1e35295d844364bd input=e777e7d38eb25bd9]*/	todo		
-Modules/posixmodule.c	13327	13333	os_WIFSTOPPED_impl	os_WIFSTOPPED_impl(PyObject *module, int status) /*[clinic end generated code: output=fdb57122a5c9b4cb input=043cb7f1289ef904]*/	todo		
-Modules/posixmodule.c	13347	13353	os_WIFSIGNALED_impl	os_WIFSIGNALED_impl(PyObject *module, int status) /*[clinic end generated code: output=d1dde4dcc819a5f5 input=d55ba7cc9ce5dc43]*/	todo		
-Modules/posixmodule.c	13367	13373	os_WIFEXITED_impl	os_WIFEXITED_impl(PyObject *module, int status) /*[clinic end generated code: output=01c09d6ebfeea397 input=d63775a6791586c0]*/	todo		
-Modules/posixmodule.c	13387	13393	os_WEXITSTATUS_impl	os_WEXITSTATUS_impl(PyObject *module, int status) /*[clinic end generated code: output=6e3efbba11f6488d input=e1fb4944e377585b]*/	todo		
-Modules/posixmodule.c	13407	13413	os_WTERMSIG_impl	os_WTERMSIG_impl(PyObject *module, int status) /*[clinic end generated code: output=172f7dfc8dcfc3ad input=727fd7f84ec3f243]*/	todo		
-Modules/posixmodule.c	13427	13433	os_WSTOPSIG_impl	os_WSTOPSIG_impl(PyObject *module, int status) /*[clinic end generated code: output=0ab7586396f5d82b input=46ebf1d1b293c5c1]*/	todo		
-Modules/posixmodule.c	13453	13496	_pystatvfs_fromstructstatfs	_pystatvfs_fromstructstatfs(PyObject *module, struct statfs st) {	todo		
-Modules/posixmodule.c	13503	13555	_pystatvfs_fromstructstatvfs	_pystatvfs_fromstructstatvfs(PyObject *module, struct statvfs st) {	todo		
-Modules/posixmodule.c	13571	13605	os_fstatvfs_impl	os_fstatvfs_impl(PyObject *module, int fd) /*[clinic end generated code: output=53547cf0cc55e6c5 input=d8122243ac50975e]*/	todo		
-Modules/posixmodule.c	13625	13669	os_statvfs_impl	os_statvfs_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=87106dd1beb8556e input=1cfd9a4fd36f7425]*/	todo		
-Modules/posixmodule.c	13683	13721	os__getdiskusage_impl	os__getdiskusage_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=3bd3991f5e5c5dfb input=6af8d1b7781cc042]*/	todo		
-Modules/posixmodule.c	13742	13774	conv_confname	conv_confname(PyObject *module, PyObject *arg, int *valuep, const char *tablename)	todo		
-Modules/posixmodule.c	13881	13892	os_fpathconf_impl	os_fpathconf_impl(PyObject *module, int fd, int name) /*[clinic end generated code: output=d5b7042425fc3e21 input=023d44589c9ed6aa]*/	todo		
-Modules/posixmodule.c	13911	13933	os_pathconf_impl	os_pathconf_impl(PyObject *module, path_t *path, int name) /*[clinic end generated code: output=5bedee35b293a089 input=e86f6eacfa006426]*/	todo		
-Modules/posixmodule.c	14101	14133	os_confstr_impl	os_confstr_impl(PyObject *module, int name) /*[clinic end generated code: output=bfb0b1b1e49b9383 input=4c6ffca2837ec959]*/	todo		
-Modules/posixmodule.c	14649	14659	os_sysconf_impl	os_sysconf_impl(PyObject *module, int name) /*[clinic end generated code: output=3662f945fc0cc756 input=930b8f23b5d15086]*/	todo		
-Modules/posixmodule.c	14664	14681	setup_confname_table	setup_confname_table(struct constdef *table, size_t tablesize, const char *tablename, PyObject *module)	todo		
-Modules/posixmodule.c	14685	14709	setup_confname_tables	setup_confname_tables(PyObject *module)	todo		
-Modules/posixmodule.c	14722	14734	os_abort_impl	os_abort_impl(PyObject *module) /*[clinic end generated code: output=dcf52586dad2467c input=ee8bd0ed690440ab]*/	todo		
-Modules/posixmodule.c	14742	14764	check_ShellExecute	check_ShellExecute(void)	todo		
-Modules/posixmodule.c	14804	14837	os_startfile_impl	os_startfile_impl(PyObject *module, path_t *filepath, const wchar_t *operation, const wchar_t *arguments, path_t *cwd, int show_cmd) /*[clinic end generated code: output=1c6f2f3340e31ffa input=8248997b80669622]*/	todo		
-Modules/posixmodule.c	14853	14862	os_getloadavg_impl	os_getloadavg_impl(PyObject *module) /*[clinic end generated code: output=9ad3a11bfb4f4bd2 input=3d6d826b76d8a34e]*/	todo		
-Modules/posixmodule.c	14877	14881	os_device_encoding_impl	os_device_encoding_impl(PyObject *module, int fd) /*[clinic end generated code: output=e0d294bbab7e8c2b input=9e1d4a42b66df312]*/	todo		
-Modules/posixmodule.c	14897	14903	os_setresuid_impl	os_setresuid_impl(PyObject *module, uid_t ruid, uid_t euid, uid_t suid) /*[clinic end generated code: output=834a641e15373e97 input=9e33cb79a82792f3]*/	todo		
-Modules/posixmodule.c	14920	14926	os_setresgid_impl	os_setresgid_impl(PyObject *module, gid_t rgid, gid_t egid, gid_t sgid) /*[clinic end generated code: output=6aa402f3d2e514a9 input=33e9e0785ef426b1]*/	todo		
-Modules/posixmodule.c	14938	14947	os_getresuid_impl	os_getresuid_impl(PyObject *module) /*[clinic end generated code: output=8e0becff5dece5bf input=41ccfa8e1f6517ad]*/	todo		
-Modules/posixmodule.c	14959	14968	os_getresgid_impl	os_getresgid_impl(PyObject *module) /*[clinic end generated code: output=2719c4bfcf27fb9f input=517e68db9ca32df6]*/	todo		
-Modules/posixmodule.c	14992	15047	os_getxattr_impl	os_getxattr_impl(PyObject *module, path_t *path, path_t *attribute, int follow_symlinks) /*[clinic end generated code: output=5f2f44200a43cff2 input=db1021ed738d9754]*/	todo		
-Modules/posixmodule.c	15071	15103	os_setxattr_impl	os_setxattr_impl(PyObject *module, path_t *path, path_t *attribute, Py_buffer *value, int flags, int follow_symlinks) /*[clinic end generated code: output=98b83f63fdde26bb input=6c4ee6724e8947a4]*/	todo		
-Modules/posixmodule.c	15125	15152	os_removexattr_impl	os_removexattr_impl(PyObject *module, path_t *path, path_t *attribute, int follow_symlinks) /*[clinic end generated code: output=521a51817980cda6 input=a7ec62a86aa83f01]*/	todo		
-Modules/posixmodule.c	15173	15256	os_listxattr_impl	os_listxattr_impl(PyObject *module, path_t *path, int follow_symlinks) /*[clinic end generated code: output=bebdb4e2ad0ce435 input=cb4a6414afaa99bd]*/	todo		
-Modules/posixmodule.c	15270	15289	os_urandom_impl	os_urandom_impl(PyObject *module, Py_ssize_t size) /*[clinic end generated code: output=42c5cca9d18068e9 input=4067cdb1b6776c29]*/	todo		
-Modules/posixmodule.c	15301	15313	os_memfd_create_impl	os_memfd_create_impl(PyObject *module, PyObject *name, unsigned int flags) /*[clinic end generated code: output=6681ede983bdb9a6 input=cd0eb092cfac474b]*/	todo		
-Modules/posixmodule.c	15351	15363	os_eventfd_read_impl	os_eventfd_read_impl(PyObject *module, int fd) /*[clinic end generated code: output=8f2c7b59a3521fd1 input=110f8b57fa596afe]*/	todo		
-Modules/posixmodule.c	15375	15386	os_eventfd_write_impl	os_eventfd_write_impl(PyObject *module, int fd, unsigned long long value) /*[clinic end generated code: output=bebd9040bbf987f5 input=156de8555be5a949]*/	todo		
-Modules/posixmodule.c	15430	15492	os_get_terminal_size_impl	os_get_terminal_size_impl(PyObject *module, int fd) /*[clinic end generated code: output=fbab93acef980508 input=ead5679b82ddb920]*/	todo		
-Modules/posixmodule.c	15504	15546	os_cpu_count_impl	os_cpu_count_impl(PyObject *module) /*[clinic end generated code: output=5fc29463c3936a9c input=ba2f6f8980a0e2eb]*/	todo		
-Modules/posixmodule.c	15559	15567	os_get_inheritable_impl	os_get_inheritable_impl(PyObject *module, int fd) /*[clinic end generated code: output=0445e20e149aa5b8 input=89ac008dc9ab6b95]*/	todo		
-Modules/posixmodule.c	15580	15591	os_set_inheritable_impl	os_set_inheritable_impl(PyObject *module, int fd, int inheritable) /*[clinic end generated code: output=f1b1918a2f3c38c2 input=9ceaead87a1e2402]*/	todo		
-Modules/posixmodule.c	15608	15619	os_get_handle_inheritable_impl	os_get_handle_inheritable_impl(PyObject *module, intptr_t handle) /*[clinic end generated code: output=36be5afca6ea84d8 input=cfe99f9c05c70ad1]*/	todo		
-Modules/posixmodule.c	15632	15642	os_set_handle_inheritable_impl	os_set_handle_inheritable_impl(PyObject *module, intptr_t handle, int inheritable) /*[clinic end generated code: output=021d74fe6c96baa3 input=7a7641390d8364fc]*/	todo		
-Modules/posixmodule.c	15656	15665	os_get_blocking_impl	os_get_blocking_impl(PyObject *module, int fd) /*[clinic end generated code: output=336a12ad76a61482 input=f4afb59d51560179]*/	todo		
-Modules/posixmodule.c	15680	15691	os_set_blocking_impl	os_set_blocking_impl(PyObject *module, int fd, int blocking) /*[clinic end generated code: output=384eb43aa0762a9d input=7e9dfc9b14804dd4]*/	todo		
-Modules/posixmodule.c	15722	15733	DirEntry_dealloc	DirEntry_dealloc(PyObject *op)	todo		
-Modules/posixmodule.c	15749	15764	os_DirEntry_is_symlink_impl	os_DirEntry_is_symlink_impl(DirEntry *self, PyTypeObject *defining_class) /*[clinic end generated code: output=293096d589b6d47c input=e9acc5ee4d511113]*/	todo		
-Modules/posixmodule.c	15773	15781	os_DirEntry_is_junction_impl	os_DirEntry_is_junction_impl(DirEntry *self) /*[clinic end generated code: output=97f64d5d99eeccb5 input=4fc8e701eea118a1]*/	todo		
-Modules/posixmodule.c	15784	15842	DirEntry_fetch_stat	DirEntry_fetch_stat(PyObject *module, DirEntry *self, int follow_symlinks)	todo		
-Modules/posixmodule.c	15845	15856	DirEntry_get_lstat	DirEntry_get_lstat(PyTypeObject *defining_class, DirEntry *self)	todo		
-Modules/posixmodule.c	15869	15892	os_DirEntry_stat_impl	os_DirEntry_stat_impl(DirEntry *self, PyTypeObject *defining_class, int follow_symlinks) /*[clinic end generated code: output=23f803e19c3e780e input=e816273c4e67ee98]*/	todo		
-Modules/posixmodule.c	15896	15972	DirEntry_test_mode	DirEntry_test_mode(PyTypeObject *defining_class, DirEntry *self, int follow_symlinks, unsigned short mode_bits)	todo		
-Modules/posixmodule.c	15985	15990	os_DirEntry_is_dir_impl	os_DirEntry_is_dir_impl(DirEntry *self, PyTypeObject *defining_class, int follow_symlinks) /*[clinic end generated code: output=0cd453b9c0987fdf input=1a4ffd6dec9920cb]*/	todo		
-Modules/posixmodule.c	16003	16008	os_DirEntry_is_file_impl	os_DirEntry_is_file_impl(DirEntry *self, PyTypeObject *defining_class, int follow_symlinks) /*[clinic end generated code: output=f7c277ab5ba80908 input=0a64c5a12e802e3b]*/	todo		
-Modules/posixmodule.c	16017	16050	os_DirEntry_inode_impl	os_DirEntry_inode_impl(DirEntry *self) /*[clinic end generated code: output=156bb3a72162440e input=3ee7b872ae8649f0]*/	todo		
-Modules/posixmodule.c	16053	16057	DirEntry_repr	DirEntry_repr(PyObject *op)	todo		
-Modules/posixmodule.c	16066	16070	os_DirEntry___fspath___impl	os_DirEntry___fspath___impl(DirEntry *self) /*[clinic end generated code: output=6dd7f7ef752e6f4f input=3c49d0cf38df4fac]*/	todo		
-Modules/posixmodule.c	16115	16118	is_extended_path	is_extended_path(const wchar_t *path)	todo		
-Modules/posixmodule.c	16121	16175	join_path_filenameW	join_path_filenameW(const wchar_t *path_wide, const wchar_t *filename, int normalize)	todo		
-Modules/posixmodule.c	16178	16231	DirEntry_from_find_data	DirEntry_from_find_data(PyObject *module, path_t *path, WIN32_FIND_DATAW *dataW)	todo		
-Modules/posixmodule.c	16236	16265	join_path_filename	join_path_filename(const char *path_narrow, const char* filename, Py_ssize_t filename_len)	todo		
-Modules/posixmodule.c	16353	16356	ScandirIterator_is_closed	ScandirIterator_is_closed(ScandirIterator *iterator)	todo		
-Modules/posixmodule.c	16359	16370	ScandirIterator_closedir	ScandirIterator_closedir(ScandirIterator *iterator)	todo		
-Modules/posixmodule.c	16373	16415	ScandirIterator_iternext	ScandirIterator_iternext(PyObject *op)	todo		
-Modules/posixmodule.c	16420	16423	ScandirIterator_is_closed	ScandirIterator_is_closed(ScandirIterator *iterator)	todo		
-Modules/posixmodule.c	16426	16442	ScandirIterator_closedir	ScandirIterator_closedir(ScandirIterator *iterator)	todo		
-Modules/posixmodule.c	16445	16494	ScandirIterator_iternext	ScandirIterator_iternext(PyObject *op)	todo		
-Modules/posixmodule.c	16499	16504	ScandirIterator_close	ScandirIterator_close(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
-Modules/posixmodule.c	16507	16510	ScandirIterator_enter	ScandirIterator_enter(PyObject *self, PyObject *Py_UNUSED(dummy))	todo		
-Modules/posixmodule.c	16513	16518	ScandirIterator_exit	ScandirIterator_exit(PyObject *op, PyObject *Py_UNUSED(args))	todo		
-Modules/posixmodule.c	16521	16545	ScandirIterator_finalize	ScandirIterator_finalize(PyObject *op)	todo		
-Modules/posixmodule.c	16548	16557	ScandirIterator_dealloc	ScandirIterator_dealloc(PyObject *op)	todo		
-Modules/posixmodule.c	16601	16701	os_scandir_impl	os_scandir_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=6eb2668b675ca89e input=6ab9600993f51577]*/	todo		
-Modules/posixmodule.c	16711	16746	PyOS_FSPath	PyOS_FSPath(PyObject *path)	todo		
-Modules/posixmodule.c	16761	16765	os_fspath_impl	os_fspath_impl(PyObject *module, PyObject *path) /*[clinic end generated code: output=c3c3b78ecff2914f input=d3c54404240d5da0]*/	todo		
-Modules/posixmodule.c	16778	16825	os_getrandom_impl	os_getrandom_impl(PyObject *module, Py_ssize_t size, int flags) /*[clinic end generated code: output=b3a618196a61409c input=59bafac39c594947]*/	todo		
-Modules/posixmodule.c	16850	16872	os__add_dll_directory_impl	os__add_dll_directory_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=80b025daebb5d683 input=1de3e6c13a5808c8]*/	todo		
-Modules/posixmodule.c	16887	16918	os__remove_dll_directory_impl	os__remove_dll_directory_impl(PyObject *module, PyObject *cookie) /*[clinic end generated code: output=594350433ae535bc input=c1d16a7e7d9dc5dc]*/	todo		
-Modules/posixmodule.c	16951	17012	os_waitstatus_to_exitcode_impl	os_waitstatus_to_exitcode_impl(PyObject *module, PyObject *status_obj) /*[clinic end generated code: output=db50b1b0ba3c7153 input=3b44a23f5090006c]*/	todo		
-Modules/posixmodule.c	17023	17032	os__supports_virtual_terminal_impl	os__supports_virtual_terminal_impl(PyObject *module) /*[clinic end generated code: output=bd0556a6d9d99fe6 input=0752c98e5d321542]*/	todo		
-Modules/posixmodule.c	17042	17052	os__inputhook_impl	os__inputhook_impl(PyObject *module) /*[clinic end generated code: output=525aca4ef3c6149f input=fc531701930d064f]*/	todo		
-Modules/posixmodule.c	17061	17065	os__is_inputhook_installed_impl	os__is_inputhook_installed_impl(PyObject *module) /*[clinic end generated code: output=3b3eab4f672c689a input=ff177c9938dd76d8]*/	todo		
-Modules/posixmodule.c	17074	17078	os__create_environ_impl	os__create_environ_impl(PyObject *module) /*[clinic end generated code: output=19d9039ab14f8ad4 input=a4c05686b34635e8]*/	todo		
-Modules/posixmodule.c	17089	17094	os__emscripten_debugger_impl	os__emscripten_debugger_impl(PyObject *module) /*[clinic end generated code: output=ad47dc3bf0661343 input=d814b1877fb6083a]*/	todo		
-Modules/posixmodule.c	17108	17113	os__emscripten_log_impl	os__emscripten_log_impl(PyObject *module, const char *arg) /*[clinic end generated code: output=9749e5e293c42784 input=350aa1f70bc1e905]*/	todo		
-Modules/posixmodule.c	17338	17973	all_ins	all_ins(PyObject *m)	todo		
-Modules/posixmodule.c	18207	18362	posixmodule_exec	posixmodule_exec(PyObject *m)	todo		
+Modules/posixmodule.c	668	702	run_at_forkers	run_at_forkers(PyObject *lst, int reverse)	todo		
+Modules/posixmodule.c	705	714	PyOS_BeforeFork	PyOS_BeforeFork(void)	todo		changed-in-3.15:
+Modules/posixmodule.c	717	725	PyOS_AfterFork_Parent	PyOS_AfterFork_Parent(void)	todo		
+Modules/posixmodule.c	728	733	reset_remotedebug_data	reset_remotedebug_data(PyThreadState *tstate)	todo		
+Modules/posixmodule.c	736	741	reset_asyncio_state	reset_asyncio_state(_PyThreadStateImpl *tstate)	todo		
+Modules/posixmodule.c	745	820	PyOS_AfterFork_Child	PyOS_AfterFork_Child(void)	todo		changed-in-3.15:
+Modules/posixmodule.c	823	833	register_at_forker	register_at_forker(PyObject **lst, PyObject *func)	todo		
+Modules/posixmodule.c	839	844	PyOS_AfterFork	PyOS_AfterFork(void)	todo		
+Modules/posixmodule.c	860	865	_PyLong_FromUid	_PyLong_FromUid(uid_t uid)	todo		
+Modules/posixmodule.c	868	873	_PyLong_FromGid	_PyLong_FromGid(gid_t gid)	todo		
+Modules/posixmodule.c	876	979	_Py_Uid_Converter	_Py_Uid_Converter(PyObject *obj, uid_t *p)	todo		
+Modules/posixmodule.c	982	1086	_Py_Gid_Converter	_Py_Gid_Converter(PyObject *obj, gid_t *p)	todo		
+Modules/posixmodule.c	1091	1099	_PyLong_FromDev	_PyLong_FromDev(dev_t dev)	todo		
+Modules/posixmodule.c	1104	1144	_Py_Dev_Converter	_Py_Dev_Converter(PyObject *obj, void *p)	todo		
+Modules/posixmodule.c	1162	1196	_fd_converter	_fd_converter(PyObject *o, int *p)	todo		
+Modules/posixmodule.c	1199	1214	dir_fd_converter	dir_fd_converter(PyObject *o, void *p)	todo		
+Modules/posixmodule.c	1247	1252	get_posix_state	get_posix_state(PyObject *module)	todo		
+Modules/posixmodule.c	1388	1395	path_cleanup	path_cleanup(path_t *path)	todo		
+Modules/posixmodule.c	1398	1597	path_converter	path_converter(PyObject *o, void *p)	todo		
+Modules/posixmodule.c	1600	1607	argument_unavailable_error	argument_unavailable_error(const char *function_name, const char *argument_name)	todo		
+Modules/posixmodule.c	1610	1621	dir_fd_unavailable	dir_fd_unavailable(PyObject *o, void *p)	todo		
+Modules/posixmodule.c	1624	1631	fd_specified	fd_specified(const char *function_name, int fd)	todo		
+Modules/posixmodule.c	1634	1641	follow_symlinks_specified	follow_symlinks_specified(const char *function_name, int follow_symlinks)	todo		
+Modules/posixmodule.c	1644	1653	path_and_dir_fd_invalid	path_and_dir_fd_invalid(const char *function_name, path_t *path, int dir_fd)	todo		
+Modules/posixmodule.c	1656	1665	dir_fd_and_fd_invalid	dir_fd_and_fd_invalid(const char *function_name, int dir_fd, int fd)	todo		
+Modules/posixmodule.c	1668	1678	fd_and_follow_symlinks_invalid	fd_and_follow_symlinks_invalid(const char *function_name, int is_fd, int follow_symlinks)	todo		changed-in-3.15:
+Modules/posixmodule.c	1681	1691	dir_fd_and_follow_symlinks_invalid	dir_fd_and_follow_symlinks_invalid(const char *function_name, int dir_fd, int follow_symlinks)	todo		
+Modules/posixmodule.c	1695	1703	idtype_t_converter	idtype_t_converter(PyObject *arg, void *addr)	todo		
+Modules/posixmodule.c	1713	1723	Py_off_t_converter	Py_off_t_converter(PyObject *arg, void *addr)	todo		
+Modules/posixmodule.c	1726	1733	PyLong_FromPy_off_t	PyLong_FromPy_off_t(Py_off_t offset)	todo		
+Modules/posixmodule.c	1739	1793	_Py_Sigset_Converter	_Py_Sigset_Converter(PyObject *obj, void *addr)	todo		
+Modules/posixmodule.c	1809	1875	convertenviron	convertenviron(void)	todo		changed-in-3.15:
+Modules/posixmodule.c	1880	1883	posix_error	posix_error(void)	todo		
+Modules/posixmodule.c	1887	1899	win32_error	win32_error(const char* function, const char* filename)	todo		
+Modules/posixmodule.c	1902	1912	win32_error_object_err	win32_error_object_err(const char* function, PyObject* filename, DWORD err)	todo		
+Modules/posixmodule.c	1915	1919	win32_error_object	win32_error_object(const char* function, PyObject* filename)	todo		
+Modules/posixmodule.c	1924	1927	posix_path_object_error	posix_path_object_error(PyObject *path)	todo		
+Modules/posixmodule.c	1930	1938	path_object_error	path_object_error(PyObject *path)	todo		
+Modules/posixmodule.c	1941	1949	path_object_error2	path_object_error2(PyObject *path, PyObject *path2)	todo		
+Modules/posixmodule.c	1952	1955	path_error	path_error(path_t *path)	todo		
+Modules/posixmodule.c	1958	1961	posix_path_error	posix_path_error(path_t *path)	todo		
+Modules/posixmodule.c	1964	1967	path_error2	path_error2(path_t *path, path_t *path2)	todo		
+Modules/posixmodule.c	1973	1988	posix_fildes_fd	posix_fildes_fd(int fd, int (*func)(int))	todo		
+Modules/posixmodule.c	1998	2030	win32_wchdir	win32_wchdir(LPCWSTR path)	todo		
+Modules/posixmodule.c	2047	2050	is_extended_path	is_extended_path(const wchar_t *path)	todo		
+Modules/posixmodule.c	2053	2069	find_data_to_file_info	find_data_to_file_info(WIN32_FIND_DATAW *pFileData, BY_HANDLE_FILE_INFORMATION *info, ULONG *reparse_tag)	todo		
+Modules/posixmodule.c	2072	2105	attributes_from_dir	attributes_from_dir(LPCWSTR pszFile, BY_HANDLE_FILE_INFORMATION *info, ULONG *reparse_tag)	todo		
+Modules/posixmodule.c	2109	2137	update_st_mode_from_path	update_st_mode_from_path(const wchar_t *path, DWORD attr, struct _Py_stat_struct *result)	todo		changed-in-3.15:
+Modules/posixmodule.c	2141	2326	win32_xstat_slow_impl	win32_xstat_slow_impl(const wchar_t *path, struct _Py_stat_struct *result, BOOL traverse)	todo		
+Modules/posixmodule.c	2329	2359	win32_xstat_impl	win32_xstat_impl(const wchar_t *path, struct _Py_stat_struct *result, BOOL traverse)	todo		
+Modules/posixmodule.c	2362	2373	win32_xstat	win32_xstat(const wchar_t *path, struct _Py_stat_struct *result, BOOL traverse)	todo		
+Modules/posixmodule.c	2385	2388	win32_lstat	win32_lstat(const wchar_t* path, struct _Py_stat_struct *result)	todo		
+Modules/posixmodule.c	2391	2394	win32_stat	win32_stat(const wchar_t* path, struct _Py_stat_struct *result)	todo		
+Modules/posixmodule.c	2584	2615	statresult_new	statresult_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Modules/posixmodule.c	2618	2643	_posix_clear	_posix_clear(PyObject *module)	todo		changed-in-3.15:
+Modules/posixmodule.c	2646	2671	_posix_traverse	_posix_traverse(PyObject *module, visitproc visit, void *arg)	todo		changed-in-3.15:
+Modules/posixmodule.c	2674	2677	_posix_free	_posix_free(void *module)	todo		
+Modules/posixmodule.c	2682	2715	stat_nanosecond_timestamp	stat_nanosecond_timestamp(_posixstate *state, time_t sec, unsigned long nsec)	todo		changed-in-3.15: new function
+Modules/posixmodule.c	2718	2750	fill_time	fill_time(_posixstate *state, PyObject *v, int s_index, int f_index, int ns_index, time_t sec, unsigned long nsec)	todo		changed-in-3.15:
+Modules/posixmodule.c	2755	2777	_pystat_l128_from_l64_l64	_pystat_l128_from_l64_l64(uint64_t low, uint64_t high)	todo		
+Modules/posixmodule.c	2783	2903	_pystat_fromstructstat	_pystat_fromstructstat(PyObject *module, STRUCT_STAT *st)	todo		changed-in-3.15:
+Modules/posixmodule.c	2909	2972	posix_do_stat	posix_do_stat(PyObject *module, const char *function_name, path_t *path, int dir_fd, int follow_symlinks)	todo		changed-in-3.15:
+Modules/posixmodule.c	3337	3341	os_stat_impl	os_stat_impl(PyObject *module, path_t *path, int dir_fd, int follow_symlinks) /*[clinic end generated code: output=7d4976e6f18a59c5 input=01d362ebcc06996b]*/	todo		
+Modules/posixmodule.c	3361	3366	os_lstat_impl	os_lstat_impl(PyObject *module, path_t *path, int dir_fd) /*[clinic end generated code: output=ef82a5d35ce8ab37 input=024102124f88e743]*/	todo		
+Modules/posixmodule.c	3438	3445	pystatx_result_get_stx_mode	pystatx_result_get_stx_mode(PyObject *op, void *Py_UNUSED(context))	todo		changed-in-3.15: new function
+Modules/posixmodule.c	3558	3620	pystatx_result_repr	pystatx_result_repr(PyObject *op)	todo		changed-in-3.15: new function
+Modules/posixmodule.c	3623	3627	pystatx_result_traverse	pystatx_result_traverse(PyObject *self, visitproc visit, void *arg)	todo		changed-in-3.15: new function
+Modules/posixmodule.c	3630	3637	pystatx_result_dealloc	pystatx_result_dealloc(PyObject *op)	todo		changed-in-3.15: new function
+Modules/posixmodule.c	3690	3744	os_statx_impl	os_statx_impl(PyObject *module, path_t *path, unsigned int mask, int flags, int dir_fd, int follow_symlinks) /*[clinic end generated code: output=e3765979ac6fe15b input=f0116380c5dc4f2f]*/	todo		changed-in-3.15: new function
+Modules/posixmodule.c	3788	3876	os_access_impl	os_access_impl(PyObject *module, path_t *path, int mode, int dir_fd, int effective_ids, int follow_symlinks) /*[clinic end generated code: output=cf84158bc90b1a77 input=c33565f7584b99e4]*/	todo		
+Modules/posixmodule.c	3905	3926	os_ttyname_impl	os_ttyname_impl(PyObject *module, int fd) /*[clinic end generated code: output=c424d2e9d1cd636a input=9ff5a58b08115c55]*/	todo		
+Modules/posixmodule.c	3937	3951	os_ctermid_impl	os_ctermid_impl(PyObject *module) /*[clinic end generated code: output=02f017e6c9e620db input=3b87fdd52556382d]*/	todo		
+Modules/posixmodule.c	3968	3996	os_chdir_impl	os_chdir_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=3be6400eee26eaae input=64673c342e4369f1]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	4013	4020	os_fchdir_impl	os_fchdir_impl(PyObject *module, int fd) /*[clinic end generated code: output=42e064ec4dc00ab0 input=18e816479a2fa985]*/	todo		
+Modules/posixmodule.c	4031	4044	win32_lchmod	win32_lchmod(LPCWSTR path, int mode)	todo		
+Modules/posixmodule.c	4047	4063	win32_hchmod	win32_hchmod(HANDLE hfile, int mode)	todo		
+Modules/posixmodule.c	4066	4074	win32_fchmod	win32_fchmod(int fd, int mode)	todo		
+Modules/posixmodule.c	4116	4243	os_chmod_impl	os_chmod_impl(PyObject *module, path_t *path, int mode, int dir_fd, int follow_symlinks) /*[clinic end generated code: output=5cf6a94915cc7bff input=7b6e2eeadd8bf199]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	4264	4293	os_fchmod_impl	os_fchmod_impl(PyObject *module, int fd, int mode) /*[clinic end generated code: output=afd9bc05b4e426b3 input=d24331f9fdc17f49]*/	todo		
+Modules/posixmodule.c	4312	4337	os_lchmod_impl	os_lchmod_impl(PyObject *module, path_t *path, int mode) /*[clinic end generated code: output=082344022b51a1d5 input=13110fb62911b015]*/	todo		
+Modules/posixmodule.c	4360	4388	os_chflags_impl	os_chflags_impl(PyObject *module, path_t *path, unsigned long flags, int follow_symlinks) /*[clinic end generated code: output=85571c6737661ce9 input=31391927707be1de]*/	todo		
+Modules/posixmodule.c	4406	4420	os_lchflags_impl	os_lchflags_impl(PyObject *module, path_t *path, unsigned long flags) /*[clinic end generated code: output=30ae958695c07316 input=f9f82ea8b585ca9d]*/	todo		
+Modules/posixmodule.c	4434	4444	os_chroot_impl	os_chroot_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=de80befc763a4475 input=14822965652c3dc3]*/	todo		
+Modules/posixmodule.c	4458	4462	os_fsync_impl	os_fsync_impl(PyObject *module, int fd) /*[clinic end generated code: output=4a10d773f52b3584 input=21c3645c056967f2]*/	todo		
+Modules/posixmodule.c	4474	4481	os_sync_impl	os_sync_impl(PyObject *module) /*[clinic end generated code: output=2796b1f0818cd71c input=84749fe5e9b404ff]*/	todo		
+Modules/posixmodule.c	4499	4503	os_fdatasync_impl	os_fdatasync_impl(PyObject *module, int fd) /*[clinic end generated code: output=b4b9698b5d7e26dd input=bc74791ee54dd291]*/	todo		
+Modules/posixmodule.c	4550	4611	os_chown_impl	os_chown_impl(PyObject *module, path_t *path, uid_t uid, gid_t gid, int dir_fd, int follow_symlinks) /*[clinic end generated code: output=4beadab0db5f70cd input=509c91b7a0e72f52]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	4630	4649	os_fchown_impl	os_fchown_impl(PyObject *module, int fd, uid_t uid, gid_t gid) /*[clinic end generated code: output=97d21cbd5a4350a6 input=3af544ba1b13a0d7]*/	todo		
+Modules/posixmodule.c	4668	4682	os_lchown_impl	os_lchown_impl(PyObject *module, path_t *path, uid_t uid, gid_t gid) /*[clinic end generated code: output=25eaf6af412fdf2f input=b1c6014d563a7161]*/	todo		
+Modules/posixmodule.c	4687	4798	posix_getcwd	posix_getcwd(int use_bytes)	todo		
+Modules/posixmodule.c	4808	4812	os_getcwd_impl	os_getcwd_impl(PyObject *module) /*[clinic end generated code: output=21badfae2ea99ddc input=f069211bb70e3d39]*/	todo		
+Modules/posixmodule.c	4822	4826	os_getcwdb_impl	os_getcwdb_impl(PyObject *module) /*[clinic end generated code: output=3dd47909480e4824 input=f6f6a378dad3d9cb]*/	todo		
+Modules/posixmodule.c	4860	4937	os_link_impl	os_link_impl(PyObject *module, path_t *src, path_t *dst, int src_dir_fd, int dst_dir_fd, int follow_symlinks) /*[clinic end generated code: output=7f00f6007fd5269a input=a28e6866fbd20a01]*/	todo		
+Modules/posixmodule.c	4947	5028	_listdir_windows_no_opendir	_listdir_windows_no_opendir(path_t *path, PyObject *list)	todo		
+Modules/posixmodule.c	5033	5143	_posix_listdir	_posix_listdir(path_t *path, PyObject *list)	todo		changed-in-3.15:
+Modules/posixmodule.c	5168	5180	os_listdir_impl	os_listdir_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=293045673fcd1a75 input=4eefe7c6a42ec9b2]*/	todo		
+Modules/posixmodule.c	5195	5230	os_listdrives_impl	os_listdrives_impl(PyObject *module) /*[clinic end generated code: output=aaece9dacdf682b5 input=1af9ccc9e583798e]*/	todo		
+Modules/posixmodule.c	5246	5295	os_listvolumes_impl	os_listvolumes_impl(PyObject *module) /*[clinic end generated code: output=534e10ea2bf9d386 input=f6e4e70371f11e99]*/	todo		
+Modules/posixmodule.c	5313	5378	os_listmounts_impl	os_listmounts_impl(PyObject *module, path_t *volume) /*[clinic end generated code: output=06da49679de4512e input=a8a27178e3f67845]*/	todo		
+Modules/posixmodule.c	5394	5470	os__path_isdevdrive_impl	os__path_isdevdrive_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=1f437ea6677433a2 input=ee83e4996a48e23d]*/	todo		
+Modules/posixmodule.c	5474	5512	_PyOS_getfullpathname	_PyOS_getfullpathname(const wchar_t *path, wchar_t **abspath_p)	todo		
+Modules/posixmodule.c	5525	5546	os__getfullpathname_impl	os__getfullpathname_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=bb8679d56845bc9b input=332ed537c29d0a3e]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	5559	5625	os__getfinalpathname_impl	os__getfinalpathname_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=621a3c79bc29ebfa input=2b6b6c7cbad5fb84]*/	todo		
+Modules/posixmodule.c	5636	5657	os__findfirstfile_impl	os__findfirstfile_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=106dd3f0779c83dd input=48c319aaa48d05d4]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	5669	5706	os__getvolumepathname_impl	os__getvolumepathname_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=804c63fd13a1330b input=722b40565fa21552]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	5719	5753	os__path_splitroot_impl	os__path_splitroot_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=ab7f1a88b654581c input=d356de1edb6050a2]*/	todo		
+Modules/posixmodule.c	5764	5787	_testInfo	_testInfo(DWORD attributes, DWORD reparseTag, BOOL diskDevice, int testedType)	todo		
+Modules/posixmodule.c	5790	5811	_testFileTypeByHandle	_testFileTypeByHandle(HANDLE hfile, int testedType, BOOL diskOnly)	todo		
+Modules/posixmodule.c	5814	5875	_testFileTypeByName	_testFileTypeByName(LPCWSTR path, int testedType)	todo		
+Modules/posixmodule.c	5879	5932	_testFileExistsByName	_testFileExistsByName(LPCWSTR path, BOOL followLinks)	todo		
+Modules/posixmodule.c	5936	5958	_testFileExists	_testFileExists(path_t *path, BOOL followLinks)	todo		changed-in-3.15:
+Modules/posixmodule.c	5962	5982	_testFileType	_testFileType(path_t *path, int testedType)	todo		changed-in-3.15:
+Modules/posixmodule.c	5995	5999	os__path_exists_impl	os__path_exists_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=8da13acf666e16ba input=142beabfc66783eb]*/	todo		
+Modules/posixmodule.c	6012	6016	os__path_lexists_impl	os__path_lexists_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=e7240ed5fc45bff3 input=208205112a3cc1ed]*/	todo		
+Modules/posixmodule.c	6030	6034	os__path_isdir_impl	os__path_isdir_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=d5786196f9e2fa7a input=b15f9b697a7a759f]*/	todo		
+Modules/posixmodule.c	6047	6051	os__path_isfile_impl	os__path_isfile_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=5c3073bc212b9863 input=4ac1fd350b30a39e]*/	todo		
+Modules/posixmodule.c	6064	6068	os__path_islink_impl	os__path_islink_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=30da7bda8296adcc input=7510ce05b547debb]*/	todo		
+Modules/posixmodule.c	6081	6085	os__path_isjunction_impl	os__path_isjunction_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=e1d17a9dd18a9945 input=7dcb8bc4e972fcaf]*/	todo		
+Modules/posixmodule.c	6109	6150	os__path_splitroot_ex_impl	os__path_splitroot_ex_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=4b0072b6cdf4b611 input=012fbfad14888b2b]*/	todo		
+Modules/posixmodule.c	6162	6182	os__path_normpath_impl	os__path_normpath_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=d353e7ed9410c044 input=3d4ac23b06332dcb]*/	todo		
+Modules/posixmodule.c	6208	6294	os_mkdir_impl	os_mkdir_impl(PyObject *module, path_t *path, int mode, int dir_fd) /*[clinic end generated code: output=a70446903abe821f input=30270d369599634b]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	6314	6339	os_nice_impl	os_nice_impl(PyObject *module, int increment) /*[clinic end generated code: output=9dad8a9da8109943 input=864be2d402a21da2]*/	todo		
+Modules/posixmodule.c	6354	6364	os_getpriority_impl	os_getpriority_impl(PyObject *module, int which, int who) /*[clinic end generated code: output=c41b7b63c7420228 input=9be615d40e2544ef]*/	todo		
+Modules/posixmodule.c	6380	6389	os_setpriority_impl	os_setpriority_impl(PyObject *module, int which, int who, int priority) /*[clinic end generated code: output=3d910d95a7771eb2 input=710ccbf65b9dc513]*/	todo		
+Modules/posixmodule.c	6394	6459	internal_rename	internal_rename(path_t *src, path_t *dst, int src_dir_fd, int dst_dir_fd, int is_replace)	todo		
+Modules/posixmodule.c	6482	6487	os_rename_impl	os_rename_impl(PyObject *module, path_t *src, path_t *dst, int src_dir_fd, int dst_dir_fd) /*[clinic end generated code: output=59e803072cf41230 input=7d320d687c715fd6]*/	todo		
+Modules/posixmodule.c	6504	6509	os_replace_impl	os_replace_impl(PyObject *module, path_t *src, path_t *dst, int src_dir_fd, int dst_dir_fd) /*[clinic end generated code: output=1968c02e7857422b input=44ed6b762d5953fc]*/	todo		
+Modules/posixmodule.c	6529	6572	os_rmdir_impl	os_rmdir_impl(PyObject *module, path_t *path, int dir_fd) /*[clinic end generated code: output=080eb54f506e8301 input=84325211e33a98e0]*/	todo		
+Modules/posixmodule.c	6586	6601	os_system_impl	os_system_impl(PyObject *module, const wchar_t *command) /*[clinic end generated code: output=dd528cbd5943a679 input=303f5ce97df606b0]*/	todo		
+Modules/posixmodule.c	6612	6626	os_system_impl	os_system_impl(PyObject *module, PyObject *command) /*[clinic end generated code: output=290fc437dd4f33a0 input=47c6f24b6dc92881]*/	todo		
+Modules/posixmodule.c	6642	6649	os_umask_impl	os_umask_impl(PyObject *module, int mask) /*[clinic end generated code: output=a2e33ce3bc1a6e33 input=ab6bfd9b24d8a7e8]*/	todo		
+Modules/posixmodule.c	6657	6688	Py_DeleteFileW	BOOL WINAPI Py_DeleteFileW(LPCWSTR lpFileName)	todo		
+Modules/posixmodule.c	6710	6755	os_unlink_impl	os_unlink_impl(PyObject *module, path_t *path, int dir_fd) /*[clinic end generated code: output=621797807b9963b1 input=1a2ef2579207eab1]*/	todo		
+Modules/posixmodule.c	6771	6775	os_remove_impl	os_remove_impl(PyObject *module, path_t *path, int dir_fd) /*[clinic end generated code: output=a8535b28f0068883 input=9f6e66912126bd56]*/	todo		
+Modules/posixmodule.c	6814	6851	os_uname_impl	os_uname_impl(PyObject *module) /*[clinic end generated code: output=e6a49cf1a1508a19 input=e68bd246db3043ed]*/	todo		
+Modules/posixmodule.c	6920	6945	utime_dir_fd	utime_dir_fd(utime_t *ut, int dir_fd, const char *path, int follow_symlinks)	todo		
+Modules/posixmodule.c	6955	6983	utime_fd	utime_fd(utime_t *ut, int fd)	todo		
+Modules/posixmodule.c	6997	7022	utime_nofollow_symlinks	utime_nofollow_symlinks(utime_t *ut, const char *path)	todo		
+Modules/posixmodule.c	7029	7052	utime_default	utime_default(utime_t *ut, const char *path)	todo		
+Modules/posixmodule.c	7057	7081	split_py_long_to_s_and_ns	split_py_long_to_s_and_ns(PyObject *module, PyObject *py_long, time_t *s, long *ns)	todo		
+Modules/posixmodule.c	7122	7275	os_utime_impl	os_utime_impl(PyObject *module, path_t *path, PyObject *times, PyObject *ns, int dir_fd, int follow_symlinks) /*[clinic end generated code: output=cfcac69d027b82cf input=5ab470b2bc250788]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	7290	7295	os__exit_impl	os__exit_impl(PyObject *module, int status) /*[clinic end generated code: output=116e52d9c2260d54 input=c35d282acfebe8fd]*/	todo		
+Modules/posixmodule.c	7305	7311	free_string_array	free_string_array(EXECV_CHAR **array, Py_ssize_t count)	todo		
+Modules/posixmodule.c	7314	7338	fsconvert_strdup	fsconvert_strdup(PyObject *o, EXECV_CHAR **out)	todo		
+Modules/posixmodule.c	7343	7446	parse_envlist	parse_envlist(PyObject* env, Py_ssize_t *envc_ptr)	todo		
+Modules/posixmodule.c	7449	7473	parse_arglist	parse_arglist(PyObject* argv, Py_ssize_t *argc)	todo		
+Modules/posixmodule.c	7492	7548	os_execv_impl	os_execv_impl(PyObject *module, path_t *path, PyObject *argv) /*[clinic end generated code: output=3b52fec34cd0dafd input=9bac31efae07dac7]*/	todo		
+Modules/posixmodule.c	7565	7640	os_execve_impl	os_execve_impl(PyObject *module, path_t *path, PyObject *argv, PyObject *env) /*[clinic end generated code: output=ff9fa8e4da8bde58 input=626804fa092606d9]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	7661	7799	parse_posix_spawn_flags	parse_posix_spawn_flags(PyObject *module, const char *func_name, PyObject *setpgroup, int resetids, int setsid, PyObject *setsigmask, PyObject *setsigdef, PyObject *scheduler, posix_spawnattr_t *attrp)	todo		
+Modules/posixmodule.c	7802	7929	parse_file_actions	parse_file_actions(PyObject *file_actions, posix_spawn_file_actions_t *file_actionsp, PyObject *temp_buffer)	todo		
+Modules/posixmodule.c	7933	8074	py_posix_spawn	py_posix_spawn(int use_posix_spawnp, PyObject *module, path_t *path, PyObject *argv, PyObject *env, PyObject *file_actions, PyObject *setpgroup, int resetids, int setsid, PyObject *setsigmask, PyObject *setsigdef, PyObject *scheduler)	todo		
+Modules/posixmodule.c	8108	8118	os_posix_spawn_impl	os_posix_spawn_impl(PyObject *module, path_t *path, PyObject *argv, PyObject *env, PyObject *file_actions, PyObject *setpgroup, int resetids, int setsid, PyObject *setsigmask, PyObject *setsigdef, PyObject *scheduler) /*[clinic end generated code: output=14a1098c566bc675 input=c7592dcbc96e8114]*/	todo		
+Modules/posixmodule.c	8155	8165	os_posix_spawnp_impl	os_posix_spawnp_impl(PyObject *module, path_t *path, PyObject *argv, PyObject *env, PyObject *file_actions, PyObject *setpgroup, int resetids, int setsid, PyObject *setsigmask, PyObject *setsigdef, PyObject *scheduler) /*[clinic end generated code: output=7b9aaefe3031238d input=43ccc1452cae2be3]*/	todo		
+Modules/posixmodule.c	8170	8199	_rtp_spawn	_rtp_spawn(int mode, const char *rtpFileName, const char *argv[], const char *envp[])	todo		
+Modules/posixmodule.c	8218	8316	os_spawnv_impl	os_spawnv_impl(PyObject *module, int mode, path_t *path, PyObject *argv) /*[clinic end generated code: output=71cd037a9d96b816 input=43224242303291be]*/	todo		
+Modules/posixmodule.c	8335	8444	os_spawnve_impl	os_spawnve_impl(PyObject *module, int mode, path_t *path, PyObject *argv, PyObject *env) /*[clinic end generated code: output=30fe85be56fe37ad input=3e40803ee7c4c586]*/	todo		
+Modules/posixmodule.c	8454	8462	check_null_or_callable	check_null_or_callable(PyObject *obj, const char* obj_name)	todo		
+Modules/posixmodule.c	8483	8510	os_register_at_fork_impl	os_register_at_fork_impl(PyObject *module, PyObject *before, PyObject *after_in_child, PyObject *after_in_parent) /*[clinic end generated code: output=5398ac75e8e97625 input=cd1187aa85d2312e]*/	todo		
+Modules/posixmodule.c	8521	8582	warn_about_fork_with_threads	warn_about_fork_with_threads( const char* name, // Name of the API to use in the warning message. const Py_ssize_t num_os_threads // Only trusted when >= 1. )	todo		changed-in-3.15:
+Modules/posixmodule.c	8586	8627	get_number_of_os_threads	static Py_ssize_t get_number_of_os_threads(void)	todo		
+Modules/posixmodule.c	8640	8676	os_fork1_impl	os_fork1_impl(PyObject *module) /*[clinic end generated code: output=0de8e67ce2a310bc input=12db02167893926e]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	8690	8728	os_fork_impl	os_fork_impl(PyObject *module) /*[clinic end generated code: output=3626c81f98985d49 input=13c956413110eeaa]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	8743	8752	os_sched_get_priority_max_impl	os_sched_get_priority_max_impl(PyObject *module, int policy) /*[clinic end generated code: output=9e465c6e43130521 input=2097b7998eca6874]*/	todo		
+Modules/posixmodule.c	8764	8773	os_sched_get_priority_min_impl	os_sched_get_priority_min_impl(PyObject *module, int policy) /*[clinic end generated code: output=7595c1138cc47a6d input=21bc8fa0d70983bf]*/	todo		
+Modules/posixmodule.c	8789	8798	os_sched_getscheduler_impl	os_sched_getscheduler_impl(PyObject *module, pid_t pid) /*[clinic end generated code: output=dce4c0bd3f1b34c8 input=8d99dac505485ac8]*/	todo		
+Modules/posixmodule.c	8816	8826	os_sched_param_impl	os_sched_param_impl(PyTypeObject *type, PyObject *sched_priority) /*[clinic end generated code: output=48f4067d60f48c13 input=eb42909a2c0e3e6c]*/	todo		
+Modules/posixmodule.c	8829	8832	os_sched_param_reduce	os_sched_param_reduce(PyObject *self, PyObject *Py_UNUSED(dummy))	todo		
+Modules/posixmodule.c	8853	8870	convert_sched_param	convert_sched_param(PyObject *module, PyObject *param, struct sched_param *res)	todo		
+Modules/posixmodule.c	8890	8907	os_sched_setscheduler_impl	os_sched_setscheduler_impl(PyObject *module, pid_t pid, int policy, PyObject *param_obj) /*[clinic end generated code: output=cde27faa55dc993e input=73013d731bd8fbe9]*/	todo		
+Modules/posixmodule.c	8924	8944	os_sched_getparam_impl	os_sched_getparam_impl(PyObject *module, pid_t pid) /*[clinic end generated code: output=b194e8708dcf2db8 input=18a1ef9c2efae296]*/	todo		
+Modules/posixmodule.c	8960	8971	os_sched_setparam_impl	os_sched_setparam_impl(PyObject *module, pid_t pid, PyObject *param_obj) /*[clinic end generated code: output=f19fe020a53741c1 input=27b98337c8b2dcc7]*/	todo		
+Modules/posixmodule.c	8988	9000	os_sched_rr_get_interval_impl	os_sched_rr_get_interval_impl(PyObject *module, pid_t pid) /*[clinic end generated code: output=7e2d935833ab47dc input=cab0b83586776b10]*/	todo		
+Modules/posixmodule.c	9011	9022	os_sched_yield_impl	os_sched_yield_impl(PyObject *module) /*[clinic end generated code: output=902323500f222cac input=e54d6f98189391d4]*/	todo		
+Modules/posixmodule.c	9040	9125	os_sched_setaffinity_impl	os_sched_setaffinity_impl(PyObject *module, pid_t pid, PyObject *mask) /*[clinic end generated code: output=882d7dd9a229335b input=a0791a597c7085ba]*/	todo		
+Modules/posixmodule.c	9140	9198	os_sched_getaffinity_impl	os_sched_getaffinity_impl(PyObject *module, pid_t pid) /*[clinic end generated code: output=f726f2c193c17a4f input=cb79ff13579ef091]*/	todo		
+Modules/posixmodule.c	9219	9243	os_posix_openpt_impl	os_posix_openpt_impl(PyObject *module, int oflag) /*[clinic end generated code: output=ee0bc2624305fc79 input=3ce4eb297fa64307]*/	todo		
+Modules/posixmodule.c	9260	9281	os_grantpt_impl	os_grantpt_impl(PyObject *module, int fd) /*[clinic end generated code: output=dfd580015cf548ab input=0668e3b96760e849]*/	todo		
+Modules/posixmodule.c	9298	9305	os_unlockpt_impl	os_unlockpt_impl(PyObject *module, int fd) /*[clinic end generated code: output=e08d354dec12d30c input=de7ab1f59f69a2b4]*/	todo		
+Modules/posixmodule.c	9310	9320	py_ptsname	py_ptsname(int fd)	todo		
+Modules/posixmodule.c	9336	9359	os_ptsname_impl	os_ptsname_impl(PyObject *module, int fd) /*[clinic end generated code: output=ef300fadc5675872 input=1369ccc0546f3130]*/	todo		
+Modules/posixmodule.c	9398	9506	os_openpty_impl	os_openpty_impl(PyObject *module) /*[clinic end generated code: output=98841ce5ec9cef3c input=f3d99fd99e762907]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	9530	9557	os_login_tty_impl	os_login_tty_impl(PyObject *module, int fd) /*[clinic end generated code: output=495a79911b4cc1bc input=b102a7c36e8baf00]*/	todo		
+Modules/posixmodule.c	9575	9619	os_forkpty_impl	os_forkpty_impl(PyObject *module) /*[clinic end generated code: output=60d0a5c7512e4087 input=24765e0f33275b3b]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	9631	9635	os_getegid_impl	os_getegid_impl(PyObject *module) /*[clinic end generated code: output=67d9be7ac68898a2 input=1596f79ad1107d5d]*/	todo		
+Modules/posixmodule.c	9647	9651	os_geteuid_impl	os_geteuid_impl(PyObject *module) /*[clinic end generated code: output=ea1b60f0d6abb66e input=4644c662d3bd9f19]*/	todo		
+Modules/posixmodule.c	9663	9667	os_getgid_impl	os_getgid_impl(PyObject *module) /*[clinic end generated code: output=4f28ebc9d3e5dfcf input=58796344cd87c0f6]*/	todo		
+Modules/posixmodule.c	9679	9687	os_getpid_impl	os_getpid_impl(PyObject *module) /*[clinic end generated code: output=9ea6fdac01ed2b3c input=5a9a00f0ab68aa00]*/	todo		
+Modules/posixmodule.c	9827	9872	os_getgroups_impl	os_getgroups_impl(PyObject *module) /*[clinic end generated code: output=42b0c17758561b56 input=d3f109412e6a155c]*/	todo		
+Modules/posixmodule.c	9934	9941	os_getpgid_impl	os_getpgid_impl(PyObject *module, pid_t pid) /*[clinic end generated code: output=1db95a97be205d18 input=39d710ae3baaf1c7]*/	todo		
+Modules/posixmodule.c	9953	9961	os_getpgrp_impl	os_getpgrp_impl(PyObject *module) /*[clinic end generated code: output=c4fc381e51103cf3 input=6846fb2bb9a3705e]*/	todo		
+Modules/posixmodule.c	9973	9983	os_setpgrp_impl	os_setpgrp_impl(PyObject *module) /*[clinic end generated code: output=2554735b0a60f0a0 input=1f0619fcb5731e7e]*/	todo		
+Modules/posixmodule.c	10013	10063	win32_getppid_fast	win32_getppid_fast(void)	todo		
+Modules/posixmodule.c	10066	10098	win32_getppid	win32_getppid(void)	todo		
+Modules/posixmodule.c	10113	10121	os_getppid_impl	os_getppid_impl(PyObject *module) /*[clinic end generated code: output=43b2a946a8c603b4 input=e17c1de18f41316b]*/	todo		
+Modules/posixmodule.c	10133	10183	os_getlogin_impl	os_getlogin_impl(PyObject *module) /*[clinic end generated code: output=a32e66a7e5715dac input=2a21ab1e917163df]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	10195	10199	os_getuid_impl	os_getuid_impl(PyObject *module) /*[clinic end generated code: output=415c0b401ebed11a input=b53c8b35f110a516]*/	todo		
+Modules/posixmodule.c	10219	10267	os_kill_impl	os_kill_impl(PyObject *module, pid_t pid, Py_ssize_t signal) /*[clinic end generated code: output=8e346a6701c88568 input=61a36b86ca275ab9]*/	todo		
+Modules/posixmodule.c	10283	10296	os_killpg_impl	os_killpg_impl(PyObject *module, pid_t pgid, int signal) /*[clinic end generated code: output=6dbcd2f1fdf5fdba input=38b5449eb8faec19]*/	todo		
+Modules/posixmodule.c	10314	10320	os_plock_impl	os_plock_impl(PyObject *module, int op) /*[clinic end generated code: output=81424167033b168e input=e6e5e348e1525f60]*/	todo		
+Modules/posixmodule.c	10335	10341	os_setuid_impl	os_setuid_impl(PyObject *module, uid_t uid) /*[clinic end generated code: output=a0a41fd0d1ec555f input=c921a3285aa22256]*/	todo		
+Modules/posixmodule.c	10356	10362	os_seteuid_impl	os_seteuid_impl(PyObject *module, uid_t euid) /*[clinic end generated code: output=102e3ad98361519a input=ba93d927e4781aa9]*/	todo		
+Modules/posixmodule.c	10377	10383	os_setegid_impl	os_setegid_impl(PyObject *module, gid_t egid) /*[clinic end generated code: output=4e4b825a6a10258d input=4080526d0ccd6ce3]*/	todo		
+Modules/posixmodule.c	10399	10407	os_setreuid_impl	os_setreuid_impl(PyObject *module, uid_t ruid, uid_t euid) /*[clinic end generated code: output=62d991210006530a input=0ca8978de663880c]*/	todo		
+Modules/posixmodule.c	10423	10429	os_setregid_impl	os_setregid_impl(PyObject *module, gid_t rgid, gid_t egid) /*[clinic end generated code: output=aa803835cf5342f3 input=c59499f72846db78]*/	todo		
+Modules/posixmodule.c	10443	10449	os_setgid_impl	os_setgid_impl(PyObject *module, gid_t gid) /*[clinic end generated code: output=bdccd7403f6ad8c3 input=27d30c4059045dc6]*/	todo		
+Modules/posixmodule.c	10464	10515	os_setgroups	os_setgroups(PyObject *module, PyObject *groups) /*[clinic end generated code: output=3fcb32aad58c5ecd input=fa742ca3daf85a7e]*/	todo		
+Modules/posixmodule.c	10520	10579	wait_helper	wait_helper(PyObject *module, pid_t pid, int status, struct rusage *ru)	todo		
+Modules/posixmodule.c	10595	10613	os_wait3_impl	os_wait3_impl(PyObject *module, int options) /*[clinic end generated code: output=92c3224e6f28217a input=8ac4c56956b61710]*/	todo		
+Modules/posixmodule.c	10632	10650	os_wait4_impl	os_wait4_impl(PyObject *module, pid_t pid, int options) /*[clinic end generated code: output=66195aa507b35f70 input=d11deed0750600ba]*/	todo		
+Modules/posixmodule.c	10674	10720	os_waitid_impl	os_waitid_impl(PyObject *module, idtype_t idtype, id_t id, int options) /*[clinic end generated code: output=5d2e1c0bde61f4d8 input=14956bc8d102b5db]*/	todo		
+Modules/posixmodule.c	10740	10757	os_waitpid_impl	os_waitpid_impl(PyObject *module, pid_t pid, int options) /*[clinic end generated code: output=5c37c06887a20270 input=0bf1666b8758fda3]*/	todo		
+Modules/posixmodule.c	10775	10796	os_waitpid_impl	os_waitpid_impl(PyObject *module, intptr_t pid, int options) /*[clinic end generated code: output=be836b221271d538 input=40f2440c515410f8]*/	todo		
+Modules/posixmodule.c	10811	10828	os_wait_impl	os_wait_impl(PyObject *module) /*[clinic end generated code: output=6bc419ac32fb364b input=03b0182d4a4700ce]*/	todo		
+Modules/posixmodule.c	10847	10855	os_pidfd_open_impl	os_pidfd_open_impl(PyObject *module, pid_t pid, unsigned int flags) /*[clinic end generated code: output=5c7252698947dc41 input=03058b32c389f874]*/	todo		
+Modules/posixmodule.c	10871	10885	os_setns_impl	os_setns_impl(PyObject *module, int fd, int nstype) /*[clinic end generated code: output=5dbd055bfb66ecd0 input=42787871226bf3ee]*/	todo		
+Modules/posixmodule.c	10899	10913	os_unshare_impl	os_unshare_impl(PyObject *module, int flags) /*[clinic end generated code: output=1b3177906dd237ee input=9e065db3232b8b1b]*/	todo		
+Modules/posixmodule.c	10936	11041	os_readlink_impl	os_readlink_impl(PyObject *module, path_t *path, int dir_fd) /*[clinic end generated code: output=d21b732a2e814030 input=03d10130870dbca8]*/	todo		
+Modules/posixmodule.c	11048	11064	_dirnameW	_dirnameW(WCHAR *path)	todo		
+Modules/posixmodule.c	11074	11078	_is_absW	_is_absW(const WCHAR *path)	todo		
+Modules/posixmodule.c	11082	11097	_joinW	_joinW(WCHAR *dest_path, const WCHAR *root, const WCHAR *rest)	todo		
+Modules/posixmodule.c	11101	11120	_check_dirW	_check_dirW(LPCWSTR src, LPCWSTR dest)	todo		
+Modules/posixmodule.c	11148	11243	os_symlink_impl	os_symlink_impl(PyObject *module, path_t *src, path_t *dst, int target_is_directory, int dir_fd) /*[clinic end generated code: output=08ca9f3f3cf960f6 input=71b75467b31c45f7]*/	todo		
+Modules/posixmodule.c	11273	11301	build_times_result	build_times_result(PyObject *module, double user, double system, double children_user, double children_system, double elapsed)	todo		
+Modules/posixmodule.c	11315	11355	os_times_impl	os_times_impl(PyObject *module) /*[clinic end generated code: output=35f640503557d32a input=8dbfe33a2dcc3df3]*/	todo		
+Modules/posixmodule.c	11364	11380	build_itimerspec	build_itimerspec(const struct itimerspec* curr_value)	todo		changed-in-3.15:
+Modules/posixmodule.c	11383	11393	build_itimerspec_ns	build_itimerspec_ns(const struct itimerspec* curr_value)	todo		
+Modules/posixmodule.c	11453	11485	os_timerfd_settime_impl	os_timerfd_settime_impl(PyObject *module, int fd, int flags, double initial_double, double interval_double) /*[clinic end generated code: output=df4c1bce6859224e input=81d2c0d7e936e8a7]*/	todo		
+Modules/posixmodule.c	11506	11528	os_timerfd_settime_ns_impl	os_timerfd_settime_ns_impl(PyObject *module, int fd, int flags, long long initial, long long interval) /*[clinic end generated code: output=6273ec7d7b4cc0b3 input=94bdcea7292157eb]*/	todo		
+Modules/posixmodule.c	11542	11554	os_timerfd_gettime_impl	os_timerfd_gettime_impl(PyObject *module, int fd) /*[clinic end generated code: output=ec5a94a66cfe6ab4 input=7b0a7cc61ea9e31a]*/	todo		
+Modules/posixmodule.c	11569	11581	os_timerfd_gettime_ns_impl	os_timerfd_gettime_ns_impl(PyObject *module, int fd) /*[clinic end generated code: output=580633a4465f39fe input=89702268455fa93b]*/	todo		
+Modules/posixmodule.c	11599	11607	os_getsid_impl	os_getsid_impl(PyObject *module, pid_t pid) /*[clinic end generated code: output=112deae56b306460 input=eeb2b923a30ce04e]*/	todo		
+Modules/posixmodule.c	11619	11625	os_setsid_impl	os_setsid_impl(PyObject *module) /*[clinic end generated code: output=e2ddedd517086d77 input=5fff45858e2f0776]*/	todo		
+Modules/posixmodule.c	11641	11647	os_setpgid_impl	os_setpgid_impl(PyObject *module, pid_t pid, pid_t pgrp) /*[clinic end generated code: output=6461160319a43d6a input=fceb395eca572e1a]*/	todo		
+Modules/posixmodule.c	11662	11669	os_tcgetpgrp_impl	os_tcgetpgrp_impl(PyObject *module, int fd) /*[clinic end generated code: output=f865e88be86c272b input=7f6c18eac10ada86]*/	todo		
+Modules/posixmodule.c	11685	11691	os_tcsetpgrp_impl	os_tcsetpgrp_impl(PyObject *module, int fd, pid_t pgid) /*[clinic end generated code: output=f1821a381b9daa39 input=5bdc997c6a619020]*/	todo		
+Modules/posixmodule.c	11719	11788	os_open_impl	os_open_impl(PyObject *module, path_t *path, int flags, int mode, int dir_fd) /*[clinic end generated code: output=abc7227888c8bc73 input=75f7b4eaf92f2225]*/	todo		
+Modules/posixmodule.c	11800	11816	os_close_impl	os_close_impl(PyObject *module, int fd) /*[clinic end generated code: output=2fe4e93602822c14 input=2bc42451ca5c3223]*/	todo		
+Modules/posixmodule.c	11829	11836	os_closerange_impl	os_closerange_impl(PyObject *module, int fd_low, int fd_high) /*[clinic end generated code: output=0ce5c20fcda681c2 input=5855a3d053ebd4ec]*/	todo		
+Modules/posixmodule.c	11849	11853	os_dup_impl	os_dup_impl(PyObject *module, int fd) /*[clinic end generated code: output=486f4860636b2a9f input=6f10f7ea97f7852a]*/	todo		
+Modules/posixmodule.c	11868	11965	os_dup2_impl	os_dup2_impl(PyObject *module, int fd, int fd2, int inheritable) /*[clinic end generated code: output=bc059d34a73404d1 input=c3cddda8922b038d]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	11986	12003	os_lockf_impl	os_lockf_impl(PyObject *module, int fd, int command, Py_off_t length) /*[clinic end generated code: output=af7051f3e7c29651 input=65da41d2106e9b79]*/	todo		
+Modules/posixmodule.c	12028	12055	os_lseek_impl	os_lseek_impl(PyObject *module, int fd, Py_off_t position, int how) /*[clinic end generated code: output=971e1efb6b30bd2f input=32ea0788da7cb44b]*/	todo		
+Modules/posixmodule.c	12068	12090	os_read_impl	os_read_impl(PyObject *module, int fd, Py_ssize_t length) /*[clinic end generated code: output=dafbe9a5cddb987b input=1df2eaa27c0bf1d3]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	12112	12122	os_readinto_impl	os_readinto_impl(PyObject *module, int fd, Py_buffer *buffer) /*[clinic end generated code: output=8091a3513c683a80 input=2a5f8b212cb5730c]*/	todo		
+Modules/posixmodule.c	12129	12167	iov_setup	iov_setup(struct iovec **iov, Py_buffer **buf, PyObject *seq, Py_ssize_t cnt, int type)	todo		
+Modules/posixmodule.c	12170	12178	iov_cleanup	iov_cleanup(struct iovec *iov, Py_buffer *buf, int cnt)	todo		
+Modules/posixmodule.c	12202	12240	os_readv_impl	os_readv_impl(PyObject *module, int fd, PyObject *buffers) /*[clinic end generated code: output=792da062d3fcebdb input=e679eb5dbfa0357d]*/	todo		
+Modules/posixmodule.c	12261	12292	os_pread_impl	os_pread_impl(PyObject *module, int fd, Py_ssize_t length, Py_off_t offset) /*[clinic end generated code: output=3f875c1eef82e32f input=5943beb009d3da04]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	12326	12398	os_preadv_impl	os_preadv_impl(PyObject *module, int fd, PyObject *buffers, Py_off_t offset, int flags) /*[clinic end generated code: output=26fc9c6e58e7ada5 input=bbc70c63b4f4e877]*/	todo		
+Modules/posixmodule.c	12413	12417	os_write_impl	os_write_impl(PyObject *module, int fd, Py_buffer *data) /*[clinic end generated code: output=e4ef5bc904b58ef9 input=3207e28963234f3c]*/	todo		
+Modules/posixmodule.c	12685	12696	os__fcopyfile_impl	os__fcopyfile_impl(PyObject *module, int in_fd, int out_fd, int flags) /*[clinic end generated code: output=c9d1a35a992e401b input=80b53ad8863c9101]*/	todo		
+Modules/posixmodule.c	12712	12733	os_fstat_impl	os_fstat_impl(PyObject *module, int fd) /*[clinic end generated code: output=efc038cb5f654492 input=27e0e0ebbe5600c9]*/	todo		
+Modules/posixmodule.c	12748	12758	os_isatty_impl	os_isatty_impl(PyObject *module, int fd) /*[clinic end generated code: output=6a48c8b4e644ca00 input=08ce94aa1eaf7b5e]*/	todo		
+Modules/posixmodule.c	12772	12864	os_pipe_impl	os_pipe_impl(PyObject *module) /*[clinic end generated code: output=ff9b76255793b440 input=02535e8c8fa6c4d4]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	12885	12903	os_pipe2_impl	os_pipe2_impl(PyObject *module, int flags) /*[clinic end generated code: output=25751fb43a45540f input=f261b6e7e63c6817]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	12922	12955	os_writev_impl	os_writev_impl(PyObject *module, int fd, PyObject *buffers) /*[clinic end generated code: output=56565cfac3aac15b input=5771a0f0c2b326f2]*/	todo		
+Modules/posixmodule.c	12976	12993	os_pwrite_impl	os_pwrite_impl(PyObject *module, int fd, Py_buffer *buffer, Py_off_t offset) /*[clinic end generated code: output=c74da630758ee925 input=614acbc7e5a0339a]*/	todo		
+Modules/posixmodule.c	13030	13102	os_pwritev_impl	os_pwritev_impl(PyObject *module, int fd, PyObject *buffers, Py_off_t offset, int flags) /*[clinic end generated code: output=e3dd3e9d11a6a5c7 input=b2e352a22f030e9a]*/	todo		
+Modules/posixmodule.c	13127	13166	os_copy_file_range_impl	os_copy_file_range_impl(PyObject *module, int src, int dst, Py_ssize_t count, PyObject *offset_src, PyObject *offset_dst) /*[clinic end generated code: output=1a91713a1d99fc7a input=08dacb760869b87c]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	13194	13231	os_splice_impl	os_splice_impl(PyObject *module, int src, int dst, Py_ssize_t count, PyObject *offset_src, PyObject *offset_dst, unsigned int flags) /*[clinic end generated code: output=d0386f25a8519dc5 input=034852a7b2e7af35]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	13253	13291	os_mkfifo_impl	os_mkfifo_impl(PyObject *module, path_t *path, int mode, int dir_fd) /*[clinic end generated code: output=ce41cfad0e68c940 input=d2fb917c01e888d6]*/	todo		
+Modules/posixmodule.c	13322	13359	os_mknod_impl	os_mknod_impl(PyObject *module, path_t *path, int mode, dev_t device, int dir_fd) /*[clinic end generated code: output=92e55d3ca8917461 input=7d0099e85c6b4cba]*/	todo		
+Modules/posixmodule.c	13365	13373	major_minor_conv	major_minor_conv(unsigned int value)	todo		
+Modules/posixmodule.c	13376	13384	major_minor_check	major_minor_check(dev_t value)	todo		
+Modules/posixmodule.c	13396	13400	os_major_impl	os_major_impl(PyObject *module, dev_t device) /*[clinic end generated code: output=4071ffee17647891 input=b1a0a14ec9448229]*/	todo		
+Modules/posixmodule.c	13413	13417	os_minor_impl	os_minor_impl(PyObject *module, dev_t device) /*[clinic end generated code: output=306cb78e3bc5004f input=2f686e463682a9da]*/	todo		
+Modules/posixmodule.c	13431	13440	os_makedev_impl	os_makedev_impl(PyObject *module, dev_t major, dev_t minor) /*[clinic end generated code: output=cad6125c51f5af80 input=2146126ec02e55c1]*/	todo		
+Modules/posixmodule.c	13456	13481	os_ftruncate_impl	os_ftruncate_impl(PyObject *module, int fd, Py_off_t length) /*[clinic end generated code: output=fba15523721be7e4 input=63b43641e52818f2]*/	todo		
+Modules/posixmodule.c	13499	13535	os_truncate_impl	os_truncate_impl(PyObject *module, path_t *path, Py_off_t length) /*[clinic end generated code: output=43009c8df5c0a12b input=ce33fd7808a511c4]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	13559	13584	os_posix_fallocate_impl	os_posix_fallocate_impl(PyObject *module, int fd, Py_off_t offset, Py_off_t length) /*[clinic end generated code: output=73f107139564aa9d input=c718971d18b96896]*/	todo		
+Modules/posixmodule.c	13610	13635	os_posix_fadvise_impl	os_posix_fadvise_impl(PyObject *module, int fd, Py_off_t offset, Py_off_t length, int advice) /*[clinic end generated code: output=412ef4aa70c98642 input=961b01a4518ef727]*/	todo		
+Modules/posixmodule.c	13641	13699	win32_putenv	win32_putenv(PyObject *name, PyObject *value)	todo		
+Modules/posixmodule.c	13715	13722	os_putenv_impl	os_putenv_impl(PyObject *module, PyObject *name, PyObject *value) /*[clinic end generated code: output=d29a567d6b2327d2 input=ba586581c2e6105f]*/	todo		
+Modules/posixmodule.c	13735	13754	os_putenv_impl	os_putenv_impl(PyObject *module, PyObject *name, PyObject *value) /*[clinic end generated code: output=d29a567d6b2327d2 input=84fcd30f873c8c45]*/	todo		
+Modules/posixmodule.c	13768	13775	os_unsetenv_impl	os_unsetenv_impl(PyObject *module, PyObject *name) /*[clinic end generated code: output=54c4137ab1834f02 input=4d6a1747cc526d2f]*/	todo		
+Modules/posixmodule.c	13786	13802	os_unsetenv_impl	os_unsetenv_impl(PyObject *module, PyObject *name) /*[clinic end generated code: output=54c4137ab1834f02 input=78ff12e505ade80a]*/	todo		
+Modules/posixmodule.c	13812	13825	os__clearenv_impl	os__clearenv_impl(PyObject *module) /*[clinic end generated code: output=2d6705d62c014b51 input=47d2fa7f323c43ca]*/	todo		changed-in-3.15: new function
+Modules/posixmodule.c	13839	13843	os_strerror_impl	os_strerror_impl(PyObject *module, int code) /*[clinic end generated code: output=baebf09fa02a78f2 input=75a8673d97915a91]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	13858	13864	os_WCOREDUMP_impl	os_WCOREDUMP_impl(PyObject *module, int status) /*[clinic end generated code: output=1a584b147b16bd18 input=8b05e7ab38528d04]*/	todo		
+Modules/posixmodule.c	13882	13888	os_WIFCONTINUED_impl	os_WIFCONTINUED_impl(PyObject *module, int status) /*[clinic end generated code: output=1e35295d844364bd input=7b577845a0f8b12f]*/	todo		
+Modules/posixmodule.c	13902	13908	os_WIFSTOPPED_impl	os_WIFSTOPPED_impl(PyObject *module, int status) /*[clinic end generated code: output=fdb57122a5c9b4cb input=043cb7f1289ef904]*/	todo		
+Modules/posixmodule.c	13922	13928	os_WIFSIGNALED_impl	os_WIFSIGNALED_impl(PyObject *module, int status) /*[clinic end generated code: output=d1dde4dcc819a5f5 input=d55ba7cc9ce5dc43]*/	todo		
+Modules/posixmodule.c	13943	13949	os_WIFEXITED_impl	os_WIFEXITED_impl(PyObject *module, int status) /*[clinic end generated code: output=01c09d6ebfeea397 input=8c24a82148709b30]*/	todo		
+Modules/posixmodule.c	13963	13969	os_WEXITSTATUS_impl	os_WEXITSTATUS_impl(PyObject *module, int status) /*[clinic end generated code: output=6e3efbba11f6488d input=e1fb4944e377585b]*/	todo		
+Modules/posixmodule.c	13984	13990	os_WTERMSIG_impl	os_WTERMSIG_impl(PyObject *module, int status) /*[clinic end generated code: output=172f7dfc8dcfc3ad input=89072f6cbf3f8050]*/	todo		
+Modules/posixmodule.c	14005	14011	os_WSTOPSIG_impl	os_WSTOPSIG_impl(PyObject *module, int status) /*[clinic end generated code: output=0ab7586396f5d82b input=4698db1a6a320433]*/	todo		
+Modules/posixmodule.c	14031	14074	_pystatvfs_fromstructstatfs	_pystatvfs_fromstructstatfs(PyObject *module, struct statfs st) {	todo		
+Modules/posixmodule.c	14081	14133	_pystatvfs_fromstructstatvfs	_pystatvfs_fromstructstatvfs(PyObject *module, struct statvfs st) {	todo		
+Modules/posixmodule.c	14149	14183	os_fstatvfs_impl	os_fstatvfs_impl(PyObject *module, int fd) /*[clinic end generated code: output=53547cf0cc55e6c5 input=d8122243ac50975e]*/	todo		
+Modules/posixmodule.c	14203	14247	os_statvfs_impl	os_statvfs_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=87106dd1beb8556e input=1cfd9a4fd36f7425]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	14262	14300	os__getdiskusage_impl	os__getdiskusage_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=3bd3991f5e5c5dfb input=aee7e38bc3e7fb08]*/	todo		
+Modules/posixmodule.c	14321	14353	conv_confname	conv_confname(PyObject *module, PyObject *arg, int *valuep, const char *tablename)	todo		
+Modules/posixmodule.c	14460	14471	os_fpathconf_impl	os_fpathconf_impl(PyObject *module, int fd, int name) /*[clinic end generated code: output=d5b7042425fc3e21 input=023d44589c9ed6aa]*/	todo		
+Modules/posixmodule.c	14490	14512	os_pathconf_impl	os_pathconf_impl(PyObject *module, path_t *path, int name) /*[clinic end generated code: output=5bedee35b293a089 input=e86f6eacfa006426]*/	todo		
+Modules/posixmodule.c	14680	14712	os_confstr_impl	os_confstr_impl(PyObject *module, int name) /*[clinic end generated code: output=bfb0b1b1e49b9383 input=4c6ffca2837ec959]*/	todo		
+Modules/posixmodule.c	15228	15238	os_sysconf_impl	os_sysconf_impl(PyObject *module, int name) /*[clinic end generated code: output=3662f945fc0cc756 input=930b8f23b5d15086]*/	todo		
+Modules/posixmodule.c	15243	15260	setup_confname_table	setup_confname_table(struct constdef *table, size_t tablesize, const char *tablename, PyObject *module)	todo		
+Modules/posixmodule.c	15264	15288	setup_confname_tables	setup_confname_tables(PyObject *module)	todo		
+Modules/posixmodule.c	15301	15313	os_abort_impl	os_abort_impl(PyObject *module) /*[clinic end generated code: output=dcf52586dad2467c input=ee8bd0ed690440ab]*/	todo		
+Modules/posixmodule.c	15321	15343	check_ShellExecute	check_ShellExecute(void)	todo		
+Modules/posixmodule.c	15383	15416	os_startfile_impl	os_startfile_impl(PyObject *module, path_t *filepath, const wchar_t *operation, const wchar_t *arguments, path_t *cwd, int show_cmd) /*[clinic end generated code: output=1c6f2f3340e31ffa input=8248997b80669622]*/	todo		
+Modules/posixmodule.c	15432	15441	os_getloadavg_impl	os_getloadavg_impl(PyObject *module) /*[clinic end generated code: output=9ad3a11bfb4f4bd2 input=3d6d826b76d8a34e]*/	todo		
+Modules/posixmodule.c	15456	15460	os_device_encoding_impl	os_device_encoding_impl(PyObject *module, int fd) /*[clinic end generated code: output=e0d294bbab7e8c2b input=9e1d4a42b66df312]*/	todo		
+Modules/posixmodule.c	15476	15482	os_setresuid_impl	os_setresuid_impl(PyObject *module, uid_t ruid, uid_t euid, uid_t suid) /*[clinic end generated code: output=834a641e15373e97 input=9e33cb79a82792f3]*/	todo		
+Modules/posixmodule.c	15499	15505	os_setresgid_impl	os_setresgid_impl(PyObject *module, gid_t rgid, gid_t egid, gid_t sgid) /*[clinic end generated code: output=6aa402f3d2e514a9 input=33e9e0785ef426b1]*/	todo		
+Modules/posixmodule.c	15518	15527	os_getresuid_impl	os_getresuid_impl(PyObject *module) /*[clinic end generated code: output=8e0becff5dece5bf input=ddf95881f492cb97]*/	todo		
+Modules/posixmodule.c	15540	15549	os_getresgid_impl	os_getresgid_impl(PyObject *module) /*[clinic end generated code: output=2719c4bfcf27fb9f input=ad9adadc86fbdb17]*/	todo		
+Modules/posixmodule.c	15573	15618	os_getxattr_impl	os_getxattr_impl(PyObject *module, path_t *path, path_t *attribute, int follow_symlinks) /*[clinic end generated code: output=5f2f44200a43cff2 input=db1021ed738d9754]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	15642	15674	os_setxattr_impl	os_setxattr_impl(PyObject *module, path_t *path, path_t *attribute, Py_buffer *value, int flags, int follow_symlinks) /*[clinic end generated code: output=98b83f63fdde26bb input=6c4ee6724e8947a4]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	15696	15723	os_removexattr_impl	os_removexattr_impl(PyObject *module, path_t *path, path_t *attribute, int follow_symlinks) /*[clinic end generated code: output=521a51817980cda6 input=a7ec62a86aa83f01]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	15744	15827	os_listxattr_impl	os_listxattr_impl(PyObject *module, path_t *path, int follow_symlinks) /*[clinic end generated code: output=bebdb4e2ad0ce435 input=cb4a6414afaa99bd]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	15842	15861	os_urandom_impl	os_urandom_impl(PyObject *module, Py_ssize_t size) /*[clinic end generated code: output=42c5cca9d18068e9 input=58a0def87dbc2c22]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	15873	15885	os_memfd_create_impl	os_memfd_create_impl(PyObject *module, PyObject *name, unsigned int flags) /*[clinic end generated code: output=6681ede983bdb9a6 input=cd0eb092cfac474b]*/	todo		
+Modules/posixmodule.c	15923	15935	os_eventfd_read_impl	os_eventfd_read_impl(PyObject *module, int fd) /*[clinic end generated code: output=8f2c7b59a3521fd1 input=110f8b57fa596afe]*/	todo		
+Modules/posixmodule.c	15947	15958	os_eventfd_write_impl	os_eventfd_write_impl(PyObject *module, int fd, unsigned long long value) /*[clinic end generated code: output=bebd9040bbf987f5 input=156de8555be5a949]*/	todo		
+Modules/posixmodule.c	16002	16071	os_get_terminal_size_impl	os_get_terminal_size_impl(PyObject *module, int fd) /*[clinic end generated code: output=fbab93acef980508 input=ead5679b82ddb920]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	16083	16125	os_cpu_count_impl	os_cpu_count_impl(PyObject *module) /*[clinic end generated code: output=5fc29463c3936a9c input=ba2f6f8980a0e2eb]*/	todo		
+Modules/posixmodule.c	16138	16146	os_get_inheritable_impl	os_get_inheritable_impl(PyObject *module, int fd) /*[clinic end generated code: output=0445e20e149aa5b8 input=89ac008dc9ab6b95]*/	todo		
+Modules/posixmodule.c	16159	16170	os_set_inheritable_impl	os_set_inheritable_impl(PyObject *module, int fd, int inheritable) /*[clinic end generated code: output=f1b1918a2f3c38c2 input=9ceaead87a1e2402]*/	todo		
+Modules/posixmodule.c	16187	16198	os_get_handle_inheritable_impl	os_get_handle_inheritable_impl(PyObject *module, intptr_t handle) /*[clinic end generated code: output=36be5afca6ea84d8 input=cfe99f9c05c70ad1]*/	todo		
+Modules/posixmodule.c	16211	16221	os_set_handle_inheritable_impl	os_set_handle_inheritable_impl(PyObject *module, intptr_t handle, int inheritable) /*[clinic end generated code: output=021d74fe6c96baa3 input=7a7641390d8364fc]*/	todo		
+Modules/posixmodule.c	16235	16244	os_get_blocking_impl	os_get_blocking_impl(PyObject *module, int fd) /*[clinic end generated code: output=336a12ad76a61482 input=f4afb59d51560179]*/	todo		
+Modules/posixmodule.c	16259	16270	os_set_blocking_impl	os_set_blocking_impl(PyObject *module, int fd, int blocking) /*[clinic end generated code: output=384eb43aa0762a9d input=7e9dfc9b14804dd4]*/	todo		
+Modules/posixmodule.c	16301	16312	DirEntry_dealloc	DirEntry_dealloc(PyObject *op)	todo		
+Modules/posixmodule.c	16328	16343	os_DirEntry_is_symlink_impl	os_DirEntry_is_symlink_impl(DirEntry *self, PyTypeObject *defining_class) /*[clinic end generated code: output=293096d589b6d47c input=e9acc5ee4d511113]*/	todo		
+Modules/posixmodule.c	16352	16360	os_DirEntry_is_junction_impl	os_DirEntry_is_junction_impl(DirEntry *self) /*[clinic end generated code: output=97f64d5d99eeccb5 input=4fc8e701eea118a1]*/	todo		
+Modules/posixmodule.c	16363	16421	DirEntry_fetch_stat	DirEntry_fetch_stat(PyObject *module, DirEntry *self, int follow_symlinks)	todo		
+Modules/posixmodule.c	16424	16435	DirEntry_get_lstat	DirEntry_get_lstat(PyTypeObject *defining_class, DirEntry *self)	todo		
+Modules/posixmodule.c	16448	16471	os_DirEntry_stat_impl	os_DirEntry_stat_impl(DirEntry *self, PyTypeObject *defining_class, int follow_symlinks) /*[clinic end generated code: output=23f803e19c3e780e input=e816273c4e67ee98]*/	todo		
+Modules/posixmodule.c	16475	16551	DirEntry_test_mode	DirEntry_test_mode(PyTypeObject *defining_class, DirEntry *self, int follow_symlinks, unsigned short mode_bits)	todo		
+Modules/posixmodule.c	16564	16569	os_DirEntry_is_dir_impl	os_DirEntry_is_dir_impl(DirEntry *self, PyTypeObject *defining_class, int follow_symlinks) /*[clinic end generated code: output=0cd453b9c0987fdf input=1a4ffd6dec9920cb]*/	todo		
+Modules/posixmodule.c	16582	16587	os_DirEntry_is_file_impl	os_DirEntry_is_file_impl(DirEntry *self, PyTypeObject *defining_class, int follow_symlinks) /*[clinic end generated code: output=f7c277ab5ba80908 input=0a64c5a12e802e3b]*/	todo		
+Modules/posixmodule.c	16596	16629	os_DirEntry_inode_impl	os_DirEntry_inode_impl(DirEntry *self) /*[clinic end generated code: output=156bb3a72162440e input=3ee7b872ae8649f0]*/	todo		
+Modules/posixmodule.c	16632	16636	DirEntry_repr	DirEntry_repr(PyObject *op)	todo		
+Modules/posixmodule.c	16645	16649	os_DirEntry___fspath___impl	os_DirEntry___fspath___impl(DirEntry *self) /*[clinic end generated code: output=6dd7f7ef752e6f4f input=3c49d0cf38df4fac]*/	todo		
+Modules/posixmodule.c	16697	16751	join_path_filenameW	join_path_filenameW(const wchar_t *path_wide, const wchar_t *filename, int normalize)	todo		
+Modules/posixmodule.c	16754	16807	DirEntry_from_find_data	DirEntry_from_find_data(PyObject *module, path_t *path, WIN32_FIND_DATAW *dataW)	todo		
+Modules/posixmodule.c	16812	16841	join_path_filename	join_path_filename(const char *path_narrow, const char* filename, Py_ssize_t filename_len)	todo		
+Modules/posixmodule.c	16936	16939	ScandirIterator_is_closed	ScandirIterator_is_closed(ScandirIterator *iterator)	todo		changed-in-3.15:
+Modules/posixmodule.c	16942	16959	ScandirIterator_closedir	ScandirIterator_closedir(ScandirIterator *iterator)	todo		changed-in-3.15:
+Modules/posixmodule.c	16962	17020	ScandirIterator_iternext	ScandirIterator_iternext(PyObject *op)	todo		changed-in-3.15:
+Modules/posixmodule.c	17025	17028	ScandirIterator_is_closed	ScandirIterator_is_closed(ScandirIterator *iterator)	todo		changed-in-3.15:
+Modules/posixmodule.c	17031	17053	ScandirIterator_closedir	ScandirIterator_closedir(ScandirIterator *iterator)	todo		changed-in-3.15:
+Modules/posixmodule.c	17056	17146	ScandirIterator_iternext	ScandirIterator_iternext(PyObject *op)	todo		changed-in-3.15:
+Modules/posixmodule.c	17151	17156	ScandirIterator_close	ScandirIterator_close(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
+Modules/posixmodule.c	17159	17162	ScandirIterator_enter	ScandirIterator_enter(PyObject *self, PyObject *Py_UNUSED(dummy))	todo		
+Modules/posixmodule.c	17165	17170	ScandirIterator_exit	ScandirIterator_exit(PyObject *op, PyObject *Py_UNUSED(args))	todo		
+Modules/posixmodule.c	17173	17199	ScandirIterator_finalize	ScandirIterator_finalize(PyObject *op)	todo		changed-in-3.15:
+Modules/posixmodule.c	17202	17211	ScandirIterator_dealloc	ScandirIterator_dealloc(PyObject *op)	todo		
+Modules/posixmodule.c	17258	17361	os_scandir_impl	os_scandir_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=6eb2668b675ca89e input=6ab9600993f51577]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	17371	17406	PyOS_FSPath	PyOS_FSPath(PyObject *path)	todo		
+Modules/posixmodule.c	17421	17425	os_fspath_impl	os_fspath_impl(PyObject *module, PyObject *path) /*[clinic end generated code: output=c3c3b78ecff2914f input=d3c54404240d5da0]*/	todo		
+Modules/posixmodule.c	17438	17478	os_getrandom_impl	os_getrandom_impl(PyObject *module, Py_ssize_t size, int flags) /*[clinic end generated code: output=b3a618196a61409c input=59bafac39c594947]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	17503	17525	os__add_dll_directory_impl	os__add_dll_directory_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=80b025daebb5d683 input=1de3e6c13a5808c8]*/	todo		
+Modules/posixmodule.c	17540	17571	os__remove_dll_directory_impl	os__remove_dll_directory_impl(PyObject *module, PyObject *cookie) /*[clinic end generated code: output=594350433ae535bc input=c1d16a7e7d9dc5dc]*/	todo		
+Modules/posixmodule.c	17604	17665	os_waitstatus_to_exitcode_impl	os_waitstatus_to_exitcode_impl(PyObject *module, PyObject *status_obj) /*[clinic end generated code: output=db50b1b0ba3c7153 input=3b44a23f5090006c]*/	todo		
+Modules/posixmodule.c	17676	17689	os__supports_virtual_terminal_impl	os__supports_virtual_terminal_impl(PyObject *module) /*[clinic end generated code: output=bd0556a6d9d99fe6 input=0752c98e5d321542]*/	todo		changed-in-3.15:
+Modules/posixmodule.c	17699	17709	os__inputhook_impl	os__inputhook_impl(PyObject *module) /*[clinic end generated code: output=525aca4ef3c6149f input=b5018fa1ec3aa440]*/	todo		
+Modules/posixmodule.c	17718	17722	os__is_inputhook_installed_impl	os__is_inputhook_installed_impl(PyObject *module) /*[clinic end generated code: output=3b3eab4f672c689a input=757820f79f48820c]*/	todo		
+Modules/posixmodule.c	17731	17735	os__create_environ_impl	os__create_environ_impl(PyObject *module) /*[clinic end generated code: output=19d9039ab14f8ad4 input=a4c05686b34635e8]*/	todo		
+Modules/posixmodule.c	17746	17751	os__emscripten_debugger_impl	os__emscripten_debugger_impl(PyObject *module) /*[clinic end generated code: output=ad47dc3bf0661343 input=d814b1877fb6083a]*/	todo		
+Modules/posixmodule.c	17765	17770	os__emscripten_log_impl	os__emscripten_log_impl(PyObject *module, const char *arg) /*[clinic end generated code: output=9749e5e293c42784 input=350aa1f70bc1e905]*/	todo		
+Modules/posixmodule.c	17997	18685	all_ins	all_ins(PyObject *m)	todo		changed-in-3.15:
+Modules/posixmodule.c	18919	19103	posixmodule_exec	posixmodule_exec(PyObject *m)	todo		changed-in-3.15:

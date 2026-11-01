@@ -43,10 +43,10 @@ tested: "REPRODUCED on python3 3.14.7 by scripts/check_bugs.py; same spans on ma
 promised_by: |
   Internal consistency only: no documentation fixes the span for this case.
 cause: |
-  Objects/unicodeobject.c:7468-7481: the inline case advances pos past the escapable prefix and sets
-  collstart = pos before falling through to the handler call. Python/codecs.c:1423
+  Objects/unicodeobject.c:7335-7348: the inline case advances pos past the escapable prefix and sets
+  collstart = pos before falling through to the handler call. Python/codecs.c:1416
   (_PyCodec_SurrogateEscapeUnicodeEncodeError) checks the whole [start, end) range and raises the
-  exception it was given. Objects/stringlib/codecs.h:369-382 is the same shape as the UCS1 case.
+  exception it was given. Objects/stringlib/codecs.h:372-385 is the same shape as the UCS1 case.
 possible_fix: |
   None needed in practice. If wanted, the generic handler could narrow exc.start to the first
   character it cannot escape.

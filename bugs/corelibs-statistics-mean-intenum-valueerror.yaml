@@ -17,7 +17,7 @@ likelihood: |
   failure depends on the data, so it can pass tests and fail later.
 maybe_intended: |
   Partly. Keeping the input type is deliberate (_convert, and the CoerceTest cases), and the coercion
-  rules are called an implementation detail at statistics.py:1568. The exception is not designed
+  rules are called an implementation detail at statistics.py:1569. The exception is not designed
   behaviour: nothing documents it and it leaks an enum lookup error for valid numeric input.
 reproducer: |
   import enum, statistics
@@ -39,7 +39,7 @@ promised_by: |
   Doc/library/statistics.rst, mean(): "Return the sample arithmetic mean of data"; the function accepts
   int subclasses and documents no ValueError.
 cause: |
-  Lib/statistics.py:1630-1635. `issubclass(T, int) and value.denominator != 1` handles non-whole
+  Lib/statistics.py:1631-1636. `issubclass(T, int) and value.denominator != 1` handles non-whole
   values by switching to float; a whole value goes to `T(value)`, and only TypeError is caught.
 possible_fix: |
   Catch ValueError around `T(value)` and fall back to the base numeric value, or skip the

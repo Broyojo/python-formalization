@@ -1,96 +1,111 @@
 file	line	endline	name	signature	status	entry	note
-Objects/bytesobject.c	48	53	bytes_get_empty	static inline PyObject* bytes_get_empty(void)	modelled	bytesobj-bytes-capi	
-Objects/bytesobject.c	57	67	set_ob_shash	set_ob_shash(PyBytesObject *a, Py_hash_t hash)	modelled	bytesobj-bytes-hash-cache	
-Objects/bytesobject.c	70	80	get_ob_shash	get_ob_shash(PyBytesObject *a)	modelled	bytesobj-bytes-hash-cache	
-Objects/bytesobject.c	106	135	_PyBytes_FromSize	_PyBytes_FromSize(Py_ssize_t size, int use_calloc)	modelled	bytesobj-bytes-capi	
-Objects/bytesobject.c	138	163	PyBytes_FromStringAndSize	PyBytes_FromStringAndSize(const char *str, Py_ssize_t size)	modelled	bytesobj-bytes-capi	
-Objects/bytesobject.c	166	197	PyBytes_FromString	PyBytes_FromString(const char *str)	modelled	bytesobj-bytes-capi	
-Objects/bytesobject.c	200	388	PyBytes_FromFormatV	PyBytes_FromFormatV(const char *format, va_list vargs)	modelled	bytesobj-bytes-capi	
-Objects/bytesobject.c	391	400	PyBytes_FromFormat	PyBytes_FromFormat(const char *format, ...)	modelled	bytesobj-bytes-capi	
-Objects/bytesobject.c	404	418	getnextarg	Py_LOCAL_INLINE(PyObject *) getnextarg(PyObject *args, Py_ssize_t arglen, Py_ssize_t *p_argidx)	modelled	bytesobj-bytes-format-long-types	
-Objects/bytesobject.c	423	467	formatfloat	formatfloat(PyObject *v, int flags, int prec, int type, PyObject **p_result, _PyBytesWriter *writer, char *str)	modelled	bytesobj-bytes-format-float-error,bytesobj-bytes-format-float-type	
-Objects/bytesobject.c	470	496	formatlong	formatlong(PyObject *v, int flags, int prec, int type)	modelled	bytesobj-bytes-format-fast-slow,bytesobj-bytes-format-long-types,bytesobj-bytes-index-raises	
-Objects/bytesobject.c	499	542	byte_converter	byte_converter(PyObject *arg, char *p)	modelled	bytesobj-bytes-format-converters,bytesobj-bytes-index-raises	
-Objects/bytesobject.c	547	594	format_obj	format_obj(PyObject *v, const char **pbuf, Py_ssize_t *plen)	modelled	bytesobj-bytes-call-raises,bytesobj-bytes-format-converters	
-Objects/bytesobject.c	599	1078	_PyBytes_FormatEx	_PyBytes_FormatEx(const char *format, Py_ssize_t format_len, PyObject *args, int use_bytearray)	modelled	bytesobj-bytes-format-bad-conv,bytesobj-bytes-format-bad-conv-ascii,bytesobj-bytes-format-fast-slow,bytesobj-bytes-format-field,bytesobj-bytes-format-literal,bytesobj-bytes-format-star-min,bytesobj-bytes-format-star-other	
-Objects/bytesobject.c	1081	1197	_PyBytes_DecodeEscape2	PyObject *_PyBytes_DecodeEscape2(const char *s, Py_ssize_t len, const char *errors, int *first_invalid_escape_char, const char **first_invalid_escape_ptr)	modelled	bytesobj-bytes-escape-roundtrip,bytesobj-bytes-escape-warning	
-Objects/bytesobject.c	1199	1235	PyBytes_DecodeEscape	PyObject *PyBytes_DecodeEscape(const char *s, Py_ssize_t len, const char *errors, Py_ssize_t Py_UNUSED(unicode), const char *Py_UNUSED(recode_encoding))	modelled	bytesobj-bytes-escape-roundtrip,bytesobj-bytes-escape-warning	
-Objects/bytesobject.c	1240	1248	PyBytes_Size	PyBytes_Size(PyObject *op)	modelled	bytesobj-bytes-capi	
-Objects/bytesobject.c	1251	1259	PyBytes_AsString	PyBytes_AsString(PyObject *op)	modelled	bytesobj-bytes-capi	
-Objects/bytesobject.c	1262	1286	PyBytes_AsStringAndSize	PyBytes_AsStringAndSize(PyObject *obj, char **s, Py_ssize_t *len)	modelled	bytesobj-bytes-capi	
-Objects/bytesobject.c	1309	1332	_PyBytes_Find	_PyBytes_Find(const char *haystack, Py_ssize_t len_haystack, const char *needle, Py_ssize_t len_needle, Py_ssize_t offset)	modelled	bytesobj-bytes-private-find	
-Objects/bytesobject.c	1335	1341	_PyBytes_ReverseFind	_PyBytes_ReverseFind(const char *haystack, Py_ssize_t len_haystack, const char *needle, Py_ssize_t len_needle, Py_ssize_t offset)	modelled	bytesobj-bytes-private-find	
-Objects/bytesobject.c	1344	1416	PyBytes_Repr	PyBytes_Repr(PyObject *obj, int smartquotes)	modelled	bytesobj-bytes-escape-roundtrip,bytesobj-bytes-repr-size,bytesobj-bytes-repr-spec	
-Objects/bytesobject.c	1419	1422	bytes_repr	bytes_repr(PyObject *op)	modelled	bytesobj-bytes-escape-roundtrip	
-Objects/bytesobject.c	1425	1434	bytes_str	bytes_str(PyObject *op)	modelled	bytesobj-bytes-escape-roundtrip	
-Objects/bytesobject.c	1437	1441	bytes_length	bytes_length(PyObject *self)	modelled	bytesobj-bytes-capi	
-Objects/bytesobject.c	1445	1486	bytes_concat	bytes_concat(PyObject *a, PyObject *b)	modelled	bytesobj-bytes-concat,bytesobj-bytes-concat-value	
-Objects/bytesobject.c	1489	1523	bytes_repeat	bytes_repeat(PyObject *self, Py_ssize_t n)	modelled	bytesobj-bytes-repeat	
-Objects/bytesobject.c	1526	1529	bytes_contains	bytes_contains(PyObject *self, PyObject *arg)	modelled	bytesobj-bytes-contains	
-Objects/bytesobject.c	1532	1540	bytes_item	bytes_item(PyObject *self, Py_ssize_t i)	modelled	bytesobj-bytes-subscript-spec,bytesobj-bytes-subscript-twins	
-Objects/bytesobject.c	1543	1557	bytes_compare_eq	bytes_compare_eq(PyBytesObject *a, PyBytesObject *b)	modelled	bytesobj-bytes-richcompare-twins	
-Objects/bytesobject.c	1560	1620	bytes_richcompare	bytes_richcompare(PyObject *aa, PyObject *bb, int op)	modelled	bytesobj-bytes-rich-lex,bytesobj-bytes-richcompare-twins	
-Objects/bytesobject.c	1623	1633	bytes_hash	bytes_hash(PyObject *self)	modelled	bytesobj-bytes-hash-cache	
-Objects/bytesobject.c	1636	1699	bytes_subscript	bytes_subscript(PyObject *op, PyObject* item)	modelled	bytesobj-bytes-subscript-spec,bytesobj-bytes-subscript-twins	
-Objects/bytesobject.c	1702	1707	bytes_buffer_getbuffer	bytes_buffer_getbuffer(PyObject *op, Py_buffer *view, int flags)	modelled	bytesobj-bytes-buffer	
-Objects/bytesobject.c	1738	1747	bytes___bytes___impl	bytes___bytes___impl(PyBytesObject *self) /*[clinic end generated code: output=63a306a9bc0caac5 input=34ec5ddba98bd6bb]*/	modelled	bytesobj-bytes-buffer	
-Objects/bytesobject.c	1769	1789	bytes_split_impl	bytes_split_impl(PyBytesObject *self, PyObject *sep, Py_ssize_t maxsplit) /*[clinic end generated code: output=52126b5844c1d8ef input=9c0faeffc870f672]*/	modelled	strsearch-replace-split-join,strsearch-split-char-fast-path,strsearch-split-rsplit-agree,strsearch-split-str-bytes	
-Objects/bytesobject.c	1808	1816	bytes_partition_impl	bytes_partition_impl(PyBytesObject *self, Py_buffer *sep) /*[clinic end generated code: output=f532b392a17ff695 input=2e6e551ea4f8b95a]*/	modelled	strsearch-partition-find	
-Objects/bytesobject.c	1836	1844	bytes_rpartition_impl	bytes_rpartition_impl(PyBytesObject *self, Py_buffer *sep) /*[clinic end generated code: output=191b114cbb028e50 input=f7d24f722a5470a4]*/	modelled	strsearch-partition-find	
-Objects/bytesobject.c	1856	1876	bytes_rsplit_impl	bytes_rsplit_impl(PyBytesObject *self, PyObject *sep, Py_ssize_t maxsplit) /*[clinic end generated code: output=ba698d9ea01e1c8f input=7fd643d4337b6a9b]*/	modelled	strsearch-split-char-fast-path,strsearch-split-rsplit-agree,strsearch-split-str-bytes	
-Objects/bytesobject.c	1895	1899	bytes_join_impl	bytes_join_impl(PyBytesObject *self, PyObject *iterable_of_bytes) /*[clinic end generated code: output=0687abb94d7d438e input=7fe377b95bd549d2]*/	modelled	bytesobj-bytes-join,bytesobj-bytes-join-intercalate	
-Objects/bytesobject.c	1902	1915	PyBytes_Join	PyBytes_Join(PyObject *sep, PyObject *iterable)	modelled	bytesobj-bytes-call-raises,bytesobj-bytes-hint-rules,bytesobj-bytes-iter-raises,bytesobj-bytes-join,bytesobj-bytes-join-intercalate	
-Objects/bytesobject.c	1934	1940	bytes_find_impl	bytes_find_impl(PyBytesObject *self, PyObject *sub, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=d5961a1c77b472a1 input=3171e62a8ae7f240]*/	modelled	strsearch-find-str-bytes	
-Objects/bytesobject.c	1951	1957	bytes_index_impl	bytes_index_impl(PyBytesObject *self, PyObject *sub, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=0da25cc74683ba42 input=aa34ad71ba0bafe3]*/	modelled	strsearch-find-str-bytes	
-Objects/bytesobject.c	1968	1974	bytes_rfind_impl	bytes_rfind_impl(PyBytesObject *self, PyObject *sub, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=51b60fa4ad011c09 input=864c3e7f3010b33c]*/	modelled	strsearch-find-str-bytes	
-Objects/bytesobject.c	1985	1991	bytes_rindex_impl	bytes_rindex_impl(PyBytesObject *self, PyObject *sub, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=42bf674e0a0aabf6 input=21051fc5cfeacf2c]*/	modelled	strsearch-find-str-bytes	
-Objects/bytesobject.c	1994	2031	do_xstrip	Py_LOCAL_INLINE(PyObject *) do_xstrip(PyBytesObject *self, int striptype, PyObject *sepobj)	modelled	bytesobj-bytes-strip-spec,bytesobj-bytes-strip-twins	
-Objects/bytesobject.c	2034	2060	do_strip	Py_LOCAL_INLINE(PyObject *) do_strip(PyBytesObject *self, int striptype)	modelled	bytesobj-bytes-strip-spec,bytesobj-bytes-strip-twins	
-Objects/bytesobject.c	2063	2070	do_argstrip	Py_LOCAL_INLINE(PyObject *) do_argstrip(PyBytesObject *self, int striptype, PyObject *bytes)	modelled	bytesobj-bytes-strip-spec,bytesobj-bytes-strip-twins	
-Objects/bytesobject.c	2085	2089	bytes_strip_impl	bytes_strip_impl(PyBytesObject *self, PyObject *bytes) /*[clinic end generated code: output=c7c228d3bd104a1b input=9ffea5f752032bd0]*/	modelled	strsearch-strip-paths	
-Objects/bytesobject.c	2103	2107	bytes_lstrip_impl	bytes_lstrip_impl(PyBytesObject *self, PyObject *bytes) /*[clinic end generated code: output=28602e586f524e82 input=9baff4398c3f6857]*/	modelled	bytesobj-bytes-strip-twins	
-Objects/bytesobject.c	2121	2125	bytes_rstrip_impl	bytes_rstrip_impl(PyBytesObject *self, PyObject *bytes) /*[clinic end generated code: output=547e3815c95447da input=b78af445c727e32b]*/	modelled	bytesobj-bytes-strip-twins	
-Objects/bytesobject.c	2135	2141	bytes_count_impl	bytes_count_impl(PyBytesObject *self, PyObject *sub, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=9848140b9be17d0f input=b6e4a5ed515e1e59]*/	modelled	strsearch-find-str-bytes	
-Objects/bytesobject.c	2160	2270	bytes_translate_impl	bytes_translate_impl(PyBytesObject *self, PyObject *table, PyObject *deletechars) /*[clinic end generated code: output=43be3437f1956211 input=4e4460a981d768c5]*/	modelled	bytesobj-bytes-translate-spec,bytesobj-bytes-translate-twins	
-Objects/bytesobject.c	2291	2295	bytes_maketrans_impl	bytes_maketrans_impl(Py_buffer *frm, Py_buffer *to) /*[clinic end generated code: output=a36f6399d4b77f6f input=c88bcc17621f785d]*/	modelled	bytesobj-bytes-maketrans	
-Objects/bytesobject.c	2315	2322	bytes_replace_impl	bytes_replace_impl(PyBytesObject *self, Py_buffer *old, Py_buffer *new, Py_ssize_t count) /*[clinic end generated code: output=994fa588b6b9c104 input=b2fbbf0bf04de8e5]*/	modelled	strsearch-replace-split-join,strsearch-replace-str-bytes	
-Objects/bytesobject.c	2340	2361	bytes_removeprefix_impl	bytes_removeprefix_impl(PyBytesObject *self, Py_buffer *prefix) /*[clinic end generated code: output=f006865331a06ab6 input=8f371f9421b8addd]*/	modelled	bytesobj-bytes-remove-affix	
-Objects/bytesobject.c	2377	2399	bytes_removesuffix_impl	bytes_removesuffix_impl(PyBytesObject *self, Py_buffer *suffix) /*[clinic end generated code: output=d887d308e3242eeb input=35eada0260d1171b]*/	modelled	bytesobj-bytes-remove-affix,bytesobj-bytes-removesuffix-miss	
-Objects/bytesobject.c	2417	2423	bytes_startswith_impl	bytes_startswith_impl(PyBytesObject *self, PyObject *subobj, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=b1e8da1cbd528e8c input=8a4165df8adfa6c9]*/	modelled	strsearch-tailmatch-str-bytes	
-Objects/bytesobject.c	2441	2447	bytes_endswith_impl	bytes_endswith_impl(PyBytesObject *self, PyObject *subobj, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=038b633111f3629d input=b5c3407a2a5c9aac]*/	modelled	strsearch-tailmatch-str-bytes	
-Objects/bytesobject.c	2466	2471	bytes_decode_impl	bytes_decode_impl(PyBytesObject *self, const char *encoding, const char *errors) /*[clinic end generated code: output=5649a53dde27b314 input=94e9b8524f1d7f37]*/	modelled	bytesobj-bytes-decode	
-Objects/bytesobject.c	2486	2493	bytes_splitlines_impl	bytes_splitlines_impl(PyBytesObject *self, int keepends) /*[clinic end generated code: output=3484149a5d880ffb input=8b7b6915be775bcf]*/	modelled	strsearch-splitlines-str-bytes	
-Objects/bytesobject.c	2509	2517	bytes_fromhex_impl	bytes_fromhex_impl(PyTypeObject *type, PyObject *string) /*[clinic end generated code: output=0973acc63661bb2e input=f37d98ed51088a21]*/	modelled	bytesobj-bytes-fromhex-roundtrip,bytesobj-bytes-fromhex-spec	
-Objects/bytesobject.c	2520	2628	_PyBytes_FromHex	_PyBytes_FromHex(PyObject *string, int use_bytearray)	modelled	bytesobj-bytes-fromhex-roundtrip,bytesobj-bytes-fromhex-spec,bytesobj-bytes-fromhex-tail,bytesobj-bytes-fromhex-terminated	
-Objects/bytesobject.c	2655	2661	bytes_hex_impl	bytes_hex_impl(PyBytesObject *self, PyObject *sep, int bytes_per_sep) /*[clinic end generated code: output=1f134da504064139 input=67d7bb5f70f0d6f2]*/	modelled	bytesobj-bytes-fromhex-roundtrip,bytesobj-bytes-hex-groups,bytesobj-bytes-hex-sep	
-Objects/bytesobject.c	2664	2668	bytes_getnewargs	bytes_getnewargs(PyObject *op, PyObject *Py_UNUSED(dummy))	modelled	bytesobj-bytes-buffer	
-Objects/bytesobject.c	2731	2738	bytes_mod	bytes_mod(PyObject *self, PyObject *arg)	modelled	bytesobj-bytes-format-field,bytesobj-bytes-format-literal	
-Objects/bytesobject.c	2761	2844	bytes_new_impl	bytes_new_impl(PyTypeObject *type, PyObject *x, const char *encoding, const char *errors) /*[clinic end generated code: output=1e0c471be311a425 input=f0a966d19b7262b4]*/	modelled	bytesobj-bytes-call-raises,bytesobj-bytes-index-raises,bytesobj-bytes-new	
-Objects/bytesobject.c	2847	2868	_PyBytes_FromBuffer	_PyBytes_FromBuffer(PyObject *x)	modelled	bytesobj-bytes-new	
-Objects/bytesobject.c	2871	2914	_PyBytes_FromList	_PyBytes_FromList(PyObject *x)	modelled	bytesobj-bytes-new	
-Objects/bytesobject.c	2917	2948	_PyBytes_FromTuple	_PyBytes_FromTuple(PyObject *x)	modelled	bytesobj-bytes-new	
-Objects/bytesobject.c	2951	3010	_PyBytes_FromIterator	_PyBytes_FromIterator(PyObject *it, PyObject *x)	modelled	bytesobj-bytes-hint-rules,bytesobj-bytes-iter-raises,bytesobj-bytes-new	
-Objects/bytesobject.c	3013	3052	PyBytes_FromObject	PyBytes_FromObject(PyObject *x)	modelled	bytesobj-bytes-call-raises,bytesobj-bytes-iter-raises,bytesobj-bytes-new	
-Objects/bytesobject.c	3060	3068	bytes_alloc	bytes_alloc(PyTypeObject *self, Py_ssize_t nitems)	modelled	bytesobj-bytes-hash-cache	
-Objects/bytesobject.c	3071	3087	bytes_subtype_new	bytes_subtype_new(PyTypeObject *type, PyObject *tmp)	modelled	bytesobj-bytes-hash-cache	
-Objects/bytesobject.c	3150	3196	PyBytes_Concat	PyBytes_Concat(PyObject **pv, PyObject *w)	modelled	bytesobj-bytes-concat,bytesobj-bytes-concat-value	
-Objects/bytesobject.c	3199	3203	PyBytes_ConcatAndDel	PyBytes_ConcatAndDel(PyObject **pv, PyObject *w)	modelled	bytesobj-bytes-concat	
-Objects/bytesobject.c	3219	3279	_PyBytes_Resize	_PyBytes_Resize(PyObject **pv, Py_ssize_t newsize)	modelled	bytesobj-bytes-hash-cache	
-Objects/bytesobject.c	3293	3299	striter_dealloc	striter_dealloc(PyObject *op)	excluded		no-behaviour: reference counting and GC untracking of the iterator
-Objects/bytesobject.c	3302	3307	striter_traverse	striter_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
-Objects/bytesobject.c	3310	3329	striter_next	striter_next(PyObject *op)	modelled	bytesobj-bytes-iter	
-Objects/bytesobject.c	3332	3339	striter_len	striter_len(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	bytesobj-bytes-iter	
-Objects/bytesobject.c	3345	3358	striter_reduce	striter_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	bytesobj-bytes-iter	
-Objects/bytesobject.c	3363	3377	striter_setstate	striter_setstate(PyObject *op, PyObject *state)	modelled	bytesobj-bytes-iter	
-Objects/bytesobject.c	3422	3437	bytes_iter	bytes_iter(PyObject *seq)	modelled	bytesobj-bytes-iter	
-Objects/bytesobject.c	3451	3459	_PyBytesWriter_Init	_PyBytesWriter_Init(_PyBytesWriter *writer)	modelled	bytesobj-bytes-writer	
-Objects/bytesobject.c	3462	3465	_PyBytesWriter_Dealloc	_PyBytesWriter_Dealloc(_PyBytesWriter *writer)	excluded		no-behaviour: drops the temporary buffer on an error path; the exception is already set and the buffer is never visible
-Objects/bytesobject.c	3467	3482	_PyBytesWriter_AsString	Py_LOCAL_INLINE(char*) _PyBytesWriter_AsString(_PyBytesWriter *writer)	modelled	bytesobj-bytes-writer	
-Objects/bytesobject.c	3484	3492	_PyBytesWriter_GetSize	Py_LOCAL_INLINE(Py_ssize_t) _PyBytesWriter_GetSize(_PyBytesWriter *writer, char *str)	modelled	bytesobj-bytes-writer	
-Objects/bytesobject.c	3495	3528	_PyBytesWriter_CheckConsistency	Py_LOCAL_INLINE(int) _PyBytesWriter_CheckConsistency(_PyBytesWriter *writer, char *str)	excluded		no-behaviour: debug-build assertion helper, compiled out with NDEBUG; its invariant is proven in bytesobj-bytes-writer
-Objects/bytesobject.c	3532	3599	_PyBytesWriter_Resize	_PyBytesWriter_Resize(_PyBytesWriter *writer, void *str, Py_ssize_t size)	modelled	bytesobj-bytes-writer	
-Objects/bytesobject.c	3602	3626	_PyBytesWriter_Prepare	_PyBytesWriter_Prepare(_PyBytesWriter *writer, void *str, Py_ssize_t size)	modelled	bytesobj-bytes-writer	
-Objects/bytesobject.c	3632	3659	_PyBytesWriter_Alloc	_PyBytesWriter_Alloc(_PyBytesWriter *writer, Py_ssize_t size)	modelled	bytesobj-bytes-writer	
-Objects/bytesobject.c	3662	3703	_PyBytesWriter_Finish	_PyBytesWriter_Finish(_PyBytesWriter *writer, void *str)	modelled	bytesobj-bytes-writer	
-Objects/bytesobject.c	3706	3719	_PyBytesWriter_WriteBytes	_PyBytesWriter_WriteBytes(_PyBytesWriter *writer, void *ptr, const void *bytes, Py_ssize_t size)	modelled	bytesobj-bytes-writer	
-Objects/bytesobject.c	3723	3743	_PyBytes_Repeat	_PyBytes_Repeat(char* dest, Py_ssize_t len_dest, const char* src, Py_ssize_t len_src)	modelled	bytesobj-bytes-repeat-fill	
+Objects/bytesobject.c	45	50	bytes_get_empty	static inline PyObject* bytes_get_empty(void)	modelled	bytesobj-bytes-capi	
+Objects/bytesobject.c	54	64	set_ob_shash	set_ob_shash(PyBytesObject *a, Py_hash_t hash)	modelled	bytesobj-bytes-hash-cache	
+Objects/bytesobject.c	92	121	_PyBytes_FromSize	_PyBytes_FromSize(Py_ssize_t size, int use_calloc)	modelled	bytesobj-bytes-capi	
+Objects/bytesobject.c	124	149	PyBytes_FromStringAndSize	PyBytes_FromStringAndSize(const char *str, Py_ssize_t size)	modelled	bytesobj-bytes-capi	
+Objects/bytesobject.c	152	183	PyBytes_FromString	PyBytes_FromString(const char *str)	modelled	bytesobj-bytes-capi	
+Objects/bytesobject.c	187	358	bytes_fromformat	bytes_fromformat(PyBytesWriter *writer, Py_ssize_t writer_pos, const char *format, va_list vargs)	todo		changed-in-3.15: new function
+Objects/bytesobject.c	362	377	PyBytes_FromFormatV	PyBytes_FromFormatV(const char *format, va_list vargs)	todo		changed-in-3.15: was bytesobj-bytes-capi
+Objects/bytesobject.c	381	390	PyBytes_FromFormat	PyBytes_FromFormat(const char *format, ...)	modelled	bytesobj-bytes-capi	
+Objects/bytesobject.c	409	426	getnextarg	Py_LOCAL_INLINE(PyObject *) getnextarg(PyObject *args, Py_ssize_t arglen, Py_ssize_t *p_argidx, int allowone)	todo		changed-in-3.15: was bytesobj-bytes-format-long-types
+Objects/bytesobject.c	431	479	formatfloat	formatfloat(PyObject *v, Py_ssize_t argidx, PyObject *key, int flags, int prec, int type, PyObject **p_result, PyBytesWriter *writer, char *str)	todo		changed-in-3.15: was bytesobj-bytes-format-float-error,bytesobj-bytes-format-float-type
+Objects/bytesobject.c	482	510	formatlong	formatlong(PyObject *v, Py_ssize_t argidx, PyObject *key, int flags, int prec, int type)	todo		changed-in-3.15: was bytesobj-bytes-format-fast-slow,bytesobj-bytes-format-long-types,bytesobj-bytes-index-raises
+Objects/bytesobject.c	513	557	byte_converter	byte_converter(PyObject *arg, Py_ssize_t argidx, PyObject *key, char *p)	todo		changed-in-3.15: was bytesobj-bytes-format-converters,bytesobj-bytes-index-raises
+Objects/bytesobject.c	562	613	format_obj	format_obj(PyObject *v, Py_ssize_t argidx, PyObject *key, const char **pbuf, Py_ssize_t *plen)	todo		changed-in-3.15: was bytesobj-bytes-call-raises,bytesobj-bytes-format-converters
+Objects/bytesobject.c	618	1167	_PyBytes_FormatEx	_PyBytes_FormatEx(const char *format, Py_ssize_t format_len, PyObject *args, int use_bytearray)	todo		changed-in-3.15: was bytesobj-bytes-format-bad-conv,bytesobj-bytes-format-bad-conv-ascii,bytesobj-bytes-format-fast-slow,bytesobj-bytes-format-field,bytesobj-bytes-format-literal,bytesobj-bytes-format-star-min,bytesobj-bytes-format-star-other
+Objects/bytesobject.c	1170	1282	_PyBytes_DecodeEscape2	PyObject *_PyBytes_DecodeEscape2(const char *s, Py_ssize_t len, const char *errors, int *first_invalid_escape_char, const char **first_invalid_escape_ptr)	todo		changed-in-3.15: was bytesobj-bytes-escape-roundtrip,bytesobj-bytes-escape-warning
+Objects/bytesobject.c	1284	1320	PyBytes_DecodeEscape	PyObject *PyBytes_DecodeEscape(const char *s, Py_ssize_t len, const char *errors, Py_ssize_t Py_UNUSED(unicode), const char *Py_UNUSED(recode_encoding))	modelled	bytesobj-bytes-escape-roundtrip,bytesobj-bytes-escape-warning	
+Objects/bytesobject.c	1325	1333	PyBytes_Size	PyBytes_Size(PyObject *op)	modelled	bytesobj-bytes-capi	
+Objects/bytesobject.c	1336	1344	PyBytes_AsString	PyBytes_AsString(PyObject *op)	modelled	bytesobj-bytes-capi	
+Objects/bytesobject.c	1347	1371	PyBytes_AsStringAndSize	PyBytes_AsStringAndSize(PyObject *obj, char **s, Py_ssize_t *len)	modelled	bytesobj-bytes-capi	
+Objects/bytesobject.c	1394	1417	_PyBytes_Find	_PyBytes_Find(const char *haystack, Py_ssize_t len_haystack, const char *needle, Py_ssize_t len_needle, Py_ssize_t offset)	modelled	bytesobj-bytes-private-find	
+Objects/bytesobject.c	1420	1426	_PyBytes_ReverseFind	_PyBytes_ReverseFind(const char *haystack, Py_ssize_t len_haystack, const char *needle, Py_ssize_t len_needle, Py_ssize_t offset)	modelled	bytesobj-bytes-private-find	
+Objects/bytesobject.c	1429	1433	PyBytes_Repr	PyBytes_Repr(PyObject *obj, int smartquotes)	todo		changed-in-3.15: was bytesobj-bytes-escape-roundtrip,bytesobj-bytes-repr-size,bytesobj-bytes-repr-spec
+Objects/bytesobject.c	1436	1507	_Py_bytes_repr	_Py_bytes_repr(const char *data, Py_ssize_t length, int smartquotes, const char *classname)	todo		changed-in-3.15: new function
+Objects/bytesobject.c	1510	1513	bytes_repr	bytes_repr(PyObject *op)	modelled	bytesobj-bytes-escape-roundtrip	
+Objects/bytesobject.c	1516	1525	bytes_str	bytes_str(PyObject *op)	modelled	bytesobj-bytes-escape-roundtrip	
+Objects/bytesobject.c	1528	1532	bytes_length	bytes_length(PyObject *self)	modelled	bytesobj-bytes-capi	
+Objects/bytesobject.c	1536	1577	_PyBytes_Concat	_PyBytes_Concat(PyObject *a, PyObject *b)	todo		changed-in-3.15: new function
+Objects/bytesobject.c	1580	1614	bytes_repeat	bytes_repeat(PyObject *self, Py_ssize_t n)	modelled	bytesobj-bytes-repeat	
+Objects/bytesobject.c	1617	1620	bytes_contains	bytes_contains(PyObject *self, PyObject *arg)	modelled	bytesobj-bytes-contains	
+Objects/bytesobject.c	1623	1631	bytes_item	bytes_item(PyObject *self, Py_ssize_t i)	modelled	bytesobj-bytes-subscript-spec,bytesobj-bytes-subscript-twins	
+Objects/bytesobject.c	1634	1648	bytes_compare_eq	bytes_compare_eq(PyBytesObject *a, PyBytesObject *b)	modelled	bytesobj-bytes-richcompare-twins	
+Objects/bytesobject.c	1651	1711	bytes_richcompare	bytes_richcompare(PyObject *aa, PyObject *bb, int op)	modelled	bytesobj-bytes-rich-lex,bytesobj-bytes-richcompare-twins	
+Objects/bytesobject.c	1714	1724	bytes_hash	bytes_hash(PyObject *self)	modelled	bytesobj-bytes-hash-cache	
+Objects/bytesobject.c	1727	1790	bytes_subscript	bytes_subscript(PyObject *op, PyObject* item)	modelled	bytesobj-bytes-subscript-spec,bytesobj-bytes-subscript-twins	
+Objects/bytesobject.c	1793	1798	bytes_buffer_getbuffer	bytes_buffer_getbuffer(PyObject *op, Py_buffer *view, int flags)	modelled	bytesobj-bytes-buffer	
+Objects/bytesobject.c	1829	1838	bytes___bytes___impl	bytes___bytes___impl(PyBytesObject *self) /*[clinic end generated code: output=63a306a9bc0caac5 input=34ec5ddba98bd6bb]*/	modelled	bytesobj-bytes-buffer	
+Objects/bytesobject.c	1861	1881	bytes_split_impl	bytes_split_impl(PyBytesObject *self, PyObject *sep, Py_ssize_t maxsplit) /*[clinic end generated code: output=52126b5844c1d8ef input=330ff95d92544b05]*/	modelled	strsearch-replace-split-join,strsearch-split-char-fast-path,strsearch-split-rsplit-agree,strsearch-split-str-bytes	
+Objects/bytesobject.c	1900	1908	bytes_partition_impl	bytes_partition_impl(PyBytesObject *self, Py_buffer *sep) /*[clinic end generated code: output=f532b392a17ff695 input=2e6e551ea4f8b95a]*/	modelled	strsearch-partition-find	
+Objects/bytesobject.c	1928	1936	bytes_rpartition_impl	bytes_rpartition_impl(PyBytesObject *self, Py_buffer *sep) /*[clinic end generated code: output=191b114cbb028e50 input=f7d24f722a5470a4]*/	modelled	strsearch-partition-find	
+Objects/bytesobject.c	1949	1969	bytes_rsplit_impl	bytes_rsplit_impl(PyBytesObject *self, PyObject *sep, Py_ssize_t maxsplit) /*[clinic end generated code: output=ba698d9ea01e1c8f input=ba9bee56285f43e4]*/	modelled	strsearch-split-char-fast-path,strsearch-split-rsplit-agree,strsearch-split-str-bytes	
+Objects/bytesobject.c	1988	1992	bytes_join_impl	bytes_join_impl(PyBytesObject *self, PyObject *iterable_of_bytes) /*[clinic end generated code: output=0687abb94d7d438e input=7fe377b95bd549d2]*/	modelled	bytesobj-bytes-join,bytesobj-bytes-join-intercalate	
+Objects/bytesobject.c	1995	2008	PyBytes_Join	PyBytes_Join(PyObject *sep, PyObject *iterable)	modelled	bytesobj-bytes-call-raises,bytesobj-bytes-hint-rules,bytesobj-bytes-iter-raises,bytesobj-bytes-join,bytesobj-bytes-join-intercalate	
+Objects/bytesobject.c	2028	2034	bytes_find_impl	bytes_find_impl(PyBytesObject *self, PyObject *sub, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=d5961a1c77b472a1 input=47d0929adafc6b0b]*/	modelled	strsearch-find-str-bytes	
+Objects/bytesobject.c	2046	2052	bytes_index_impl	bytes_index_impl(PyBytesObject *self, PyObject *sub, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=0da25cc74683ba42 input=1cb45ce71456a269]*/	modelled	strsearch-find-str-bytes	
+Objects/bytesobject.c	2064	2070	bytes_rfind_impl	bytes_rfind_impl(PyBytesObject *self, PyObject *sub, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=51b60fa4ad011c09 input=c9473d714251f1ab]*/	modelled	strsearch-find-str-bytes	
+Objects/bytesobject.c	2082	2088	bytes_rindex_impl	bytes_rindex_impl(PyBytesObject *self, PyObject *sub, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=42bf674e0a0aabf6 input=bb5f473c64610c43]*/	modelled	strsearch-find-str-bytes	
+Objects/bytesobject.c	2091	2128	do_xstrip	Py_LOCAL_INLINE(PyObject *) do_xstrip(PyBytesObject *self, int striptype, PyObject *sepobj)	modelled	bytesobj-bytes-strip-spec,bytesobj-bytes-strip-twins	
+Objects/bytesobject.c	2131	2157	do_strip	Py_LOCAL_INLINE(PyObject *) do_strip(PyBytesObject *self, int striptype)	modelled	bytesobj-bytes-strip-spec,bytesobj-bytes-strip-twins	
+Objects/bytesobject.c	2160	2167	do_argstrip	Py_LOCAL_INLINE(PyObject *) do_argstrip(PyBytesObject *self, int striptype, PyObject *bytes)	modelled	bytesobj-bytes-strip-spec,bytesobj-bytes-strip-twins	
+Objects/bytesobject.c	2182	2186	bytes_strip_impl	bytes_strip_impl(PyBytesObject *self, PyObject *bytes) /*[clinic end generated code: output=c7c228d3bd104a1b input=9ffea5f752032bd0]*/	modelled	strsearch-strip-paths	
+Objects/bytesobject.c	2200	2204	bytes_lstrip_impl	bytes_lstrip_impl(PyBytesObject *self, PyObject *bytes) /*[clinic end generated code: output=28602e586f524e82 input=9baff4398c3f6857]*/	modelled	bytesobj-bytes-strip-twins	
+Objects/bytesobject.c	2218	2222	bytes_rstrip_impl	bytes_rstrip_impl(PyBytesObject *self, PyObject *bytes) /*[clinic end generated code: output=547e3815c95447da input=b78af445c727e32b]*/	modelled	bytesobj-bytes-strip-twins	
+Objects/bytesobject.c	2233	2239	bytes_count_impl	bytes_count_impl(PyBytesObject *self, PyObject *sub, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=9848140b9be17d0f input=bb2f136f83f0d30e]*/	modelled	strsearch-find-str-bytes	
+Objects/bytesobject.c	2259	2373	bytes_translate_impl	bytes_translate_impl(PyBytesObject *self, PyObject *table, PyObject *deletechars) /*[clinic end generated code: output=43be3437f1956211 input=bddcdef0a87895d2]*/	todo		changed-in-3.15: was bytesobj-bytes-translate-spec,bytesobj-bytes-translate-twins
+Objects/bytesobject.c	2395	2399	bytes_maketrans_impl	bytes_maketrans_impl(Py_buffer *frm, Py_buffer *to) /*[clinic end generated code: output=a36f6399d4b77f6f input=3a577e5badfea8f7]*/	modelled	bytesobj-bytes-maketrans	
+Objects/bytesobject.c	2419	2426	bytes_replace_impl	bytes_replace_impl(PyBytesObject *self, Py_buffer *old, Py_buffer *new, Py_ssize_t count) /*[clinic end generated code: output=994fa588b6b9c104 input=cdf3cf8639297745]*/	modelled	strsearch-replace-split-join,strsearch-replace-str-bytes	
+Objects/bytesobject.c	2445	2466	bytes_removeprefix_impl	bytes_removeprefix_impl(PyBytesObject *self, Py_buffer *prefix) /*[clinic end generated code: output=f006865331a06ab6 input=3a2672bcee61d7a7]*/	modelled	bytesobj-bytes-remove-affix	
+Objects/bytesobject.c	2483	2505	bytes_removesuffix_impl	bytes_removesuffix_impl(PyBytesObject *self, Py_buffer *suffix) /*[clinic end generated code: output=d887d308e3242eeb input=04df5f18a36f69d7]*/	modelled	bytesobj-bytes-remove-affix,bytesobj-bytes-removesuffix-miss	
+Objects/bytesobject.c	2524	2530	bytes_startswith_impl	bytes_startswith_impl(PyBytesObject *self, PyObject *subobj, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=b1e8da1cbd528e8c input=a14efd070f15be80]*/	modelled	strsearch-tailmatch-str-bytes	
+Objects/bytesobject.c	2549	2555	bytes_endswith_impl	bytes_endswith_impl(PyBytesObject *self, PyObject *subobj, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=038b633111f3629d input=49e383eaaf292713]*/	modelled	strsearch-tailmatch-str-bytes	
+Objects/bytesobject.c	2574	2579	bytes_decode_impl	bytes_decode_impl(PyBytesObject *self, const char *encoding, const char *errors) /*[clinic end generated code: output=5649a53dde27b314 input=94e9b8524f1d7f37]*/	modelled	bytesobj-bytes-decode	
+Objects/bytesobject.c	2595	2602	bytes_splitlines_impl	bytes_splitlines_impl(PyBytesObject *self, int keepends) /*[clinic end generated code: output=3484149a5d880ffb input=8734672f34430514]*/	modelled	strsearch-splitlines-str-bytes	
+Objects/bytesobject.c	2618	2626	bytes_fromhex_impl	bytes_fromhex_impl(PyTypeObject *type, PyObject *string) /*[clinic end generated code: output=0973acc63661bb2e input=f37d98ed51088a21]*/	modelled	bytesobj-bytes-fromhex-roundtrip,bytesobj-bytes-fromhex-spec	
+Objects/bytesobject.c	2629	2741	_PyBytes_FromHex	_PyBytes_FromHex(PyObject *string, int use_bytearray)	todo		changed-in-3.15: was bytesobj-bytes-fromhex-roundtrip,bytesobj-bytes-fromhex-spec,bytesobj-bytes-fromhex-tail,bytesobj-bytes-fromhex-terminated
+Objects/bytesobject.c	2767	2773	bytes_hex_impl	bytes_hex_impl(PyBytesObject *self, PyObject *sep, Py_ssize_t bytes_per_sep) /*[clinic end generated code: output=588821f02cb9d8f5 input=b8d40cf203d172dc]*/	todo		changed-in-3.15: was bytesobj-bytes-fromhex-roundtrip,bytesobj-bytes-hex-groups,bytesobj-bytes-hex-sep
+Objects/bytesobject.c	2776	2780	bytes_getnewargs	bytes_getnewargs(PyObject *op, PyObject *Py_UNUSED(dummy))	modelled	bytesobj-bytes-buffer	
+Objects/bytesobject.c	2843	2850	bytes_mod	bytes_mod(PyObject *self, PyObject *arg)	modelled	bytesobj-bytes-format-field,bytesobj-bytes-format-literal	
+Objects/bytesobject.c	2873	2956	bytes_new_impl	bytes_new_impl(PyTypeObject *type, PyObject *x, const char *encoding, const char *errors) /*[clinic end generated code: output=1e0c471be311a425 input=f0a966d19b7262b4]*/	todo		changed-in-3.15: was bytesobj-bytes-call-raises,bytesobj-bytes-index-raises,bytesobj-bytes-new
+Objects/bytesobject.c	2959	2982	_PyBytes_FromBuffer	_PyBytes_FromBuffer(PyObject *x)	todo		changed-in-3.15: was bytesobj-bytes-new
+Objects/bytesobject.c	2985	3027	_PyBytes_FromList	_PyBytes_FromList(PyObject *x)	todo		changed-in-3.15: was bytesobj-bytes-new
+Objects/bytesobject.c	3030	3060	_PyBytes_FromTuple	_PyBytes_FromTuple(PyObject *x)	todo		changed-in-3.15: was bytesobj-bytes-new
+Objects/bytesobject.c	3063	3122	_PyBytes_FromIterator	_PyBytes_FromIterator(PyObject *it, PyObject *x)	todo		changed-in-3.15: was bytesobj-bytes-hint-rules,bytesobj-bytes-iter-raises,bytesobj-bytes-new
+Objects/bytesobject.c	3125	3164	PyBytes_FromObject	PyBytes_FromObject(PyObject *x)	modelled	bytesobj-bytes-call-raises,bytesobj-bytes-iter-raises,bytesobj-bytes-new	
+Objects/bytesobject.c	3172	3180	bytes_alloc	bytes_alloc(PyTypeObject *self, Py_ssize_t nitems)	modelled	bytesobj-bytes-hash-cache	
+Objects/bytesobject.c	3183	3199	bytes_subtype_new	bytes_subtype_new(PyTypeObject *type, PyObject *tmp)	modelled	bytesobj-bytes-hash-cache	
+Objects/bytesobject.c	3218	3226	bytes_iteritem	bytes_iteritem(PyObject *obj, Py_ssize_t index)	todo		changed-in-3.15: new function
+Objects/bytesobject.c	3275	3321	PyBytes_Concat	PyBytes_Concat(PyObject **pv, PyObject *w)	todo		changed-in-3.15: was bytesobj-bytes-concat,bytesobj-bytes-concat-value
+Objects/bytesobject.c	3324	3328	PyBytes_ConcatAndDel	PyBytes_ConcatAndDel(PyObject **pv, PyObject *w)	modelled	bytesobj-bytes-concat	
+Objects/bytesobject.c	3336	3354	_PyBytes_IsMutable	_PyBytes_IsMutable(PyObject *self)	todo		changed-in-3.15: new function
+Objects/bytesobject.c	3359	3401	bytes_resize_inplace	bytes_resize_inplace(PyObject **pv, Py_ssize_t newsize)	todo		changed-in-3.15: new function
+Objects/bytesobject.c	3418	3471	_PyBytes_ResizeKeepOnError	_PyBytes_ResizeKeepOnError(PyObject **pv, Py_ssize_t newsize)	todo		changed-in-3.15: new function
+Objects/bytesobject.c	3475	3484	_PyBytes_Resize	_PyBytes_Resize(PyObject **pv, Py_ssize_t newsize)	todo		changed-in-3.15: was bytesobj-bytes-hash-cache
+Objects/bytesobject.c	3498	3504	striter_dealloc	striter_dealloc(PyObject *op)	excluded		no-behaviour: reference counting and GC untracking of the iterator
+Objects/bytesobject.c	3507	3512	striter_traverse	striter_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
+Objects/bytesobject.c	3515	3534	striter_next	striter_next(PyObject *op)	modelled	bytesobj-bytes-iter	
+Objects/bytesobject.c	3537	3544	striter_len	striter_len(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	bytesobj-bytes-iter	
+Objects/bytesobject.c	3550	3563	striter_reduce	striter_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	bytesobj-bytes-iter	
+Objects/bytesobject.c	3568	3582	striter_setstate	striter_setstate(PyObject *op, PyObject *state)	modelled	bytesobj-bytes-iter	
+Objects/bytesobject.c	3627	3642	bytes_iter	bytes_iter(PyObject *seq)	modelled	bytesobj-bytes-iter	
+Objects/bytesobject.c	3646	3666	_PyBytes_Repeat	_PyBytes_Repeat(char* dest, Py_ssize_t len_dest, const char* src, Py_ssize_t len_src)	modelled	bytesobj-bytes-repeat-fill	
+Objects/bytesobject.c	3674	3677	byteswriter_data	byteswriter_data(PyBytesWriter *writer)	todo		changed-in-3.15: new function
+Objects/bytesobject.c	3681	3692	byteswriter_allocated	byteswriter_allocated(PyBytesWriter *writer)	todo		changed-in-3.15: new function
+Objects/bytesobject.c	3697	3718	byteswriter_check_consistency	byteswriter_check_consistency(PyBytesWriter *writer)	todo		changed-in-3.15: new function
+Objects/bytesobject.c	3731	3798	byteswriter_resize	byteswriter_resize(PyBytesWriter *writer, Py_ssize_t size, int resize)	todo		changed-in-3.15: new function
+Objects/bytesobject.c	3802	3835	byteswriter_create	byteswriter_create(Py_ssize_t size, int use_bytearray)	todo		changed-in-3.15: new function
+Objects/bytesobject.c	3838	3841	PyBytesWriter_Create	PyBytesWriter_Create(Py_ssize_t size)	todo		changed-in-3.15: new function
+Objects/bytesobject.c	3844	3847	_PyBytesWriter_CreateByteArray	_PyBytesWriter_CreateByteArray(Py_ssize_t size)	todo		changed-in-3.15: new function
+Objects/bytesobject.c	3851	3861	PyBytesWriter_Discard	PyBytesWriter_Discard(PyBytesWriter *writer)	todo		changed-in-3.15: new function
+Objects/bytesobject.c	3865	3923	PyBytesWriter_FinishWithSize	PyBytesWriter_FinishWithSize(PyBytesWriter *writer, Py_ssize_t size)	todo		changed-in-3.15: new function
+Objects/bytesobject.c	3926	3929	PyBytesWriter_Finish	PyBytesWriter_Finish(PyBytesWriter *writer)	todo		changed-in-3.15: new function
+Objects/bytesobject.c	3933	3937	PyBytesWriter_FinishWithPointer	PyBytesWriter_FinishWithPointer(PyBytesWriter *writer, void *buf)	todo		changed-in-3.15: new function
+Objects/bytesobject.c	3941	3946	PyBytesWriter_GetData	PyBytesWriter_GetData(PyBytesWriter *writer)	todo		changed-in-3.15: new function
+Objects/bytesobject.c	3950	3955	PyBytesWriter_GetSize	PyBytesWriter_GetSize(PyBytesWriter *writer)	todo		changed-in-3.15: new function
+Objects/bytesobject.c	3959	3978	PyBytesWriter_Resize	PyBytesWriter_Resize(PyBytesWriter *writer, Py_ssize_t size)	todo		changed-in-3.15: new function
+Objects/bytesobject.c	3982	3990	_PyBytesWriter_ResizeAndUpdatePointer	_PyBytesWriter_ResizeAndUpdatePointer(PyBytesWriter *writer, Py_ssize_t size, void *data)	todo		changed-in-3.15: new function
+Objects/bytesobject.c	3994	4023	PyBytesWriter_Grow	PyBytesWriter_Grow(PyBytesWriter *writer, Py_ssize_t grow)	todo		changed-in-3.15: new function
+Objects/bytesobject.c	4027	4035	PyBytesWriter_GrowAndUpdatePointer	PyBytesWriter_GrowAndUpdatePointer(PyBytesWriter *writer, Py_ssize_t size, void *buf)	todo		changed-in-3.15: new function
+Objects/bytesobject.c	4039	4060	PyBytesWriter_WriteBytes	PyBytesWriter_WriteBytes(PyBytesWriter *writer, const void *bytes, Py_ssize_t size)	todo		changed-in-3.15: new function
+Objects/bytesobject.c	4064	4085	PyBytesWriter_Format	PyBytesWriter_Format(PyBytesWriter *writer, const char *format, ...)	todo		changed-in-3.15: new function
+Objects/bytesobject.c	4092	4099	_PyBytesWriter_ResizeToAllocated	_PyBytesWriter_ResizeToAllocated(PyBytesWriter *writer)	todo		changed-in-3.15: new function

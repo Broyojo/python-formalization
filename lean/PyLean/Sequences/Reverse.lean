@@ -149,7 +149,7 @@ theorem reverseLoop_spec (l : List α) : ∀ (m : Nat) (d : Deque α) (k : Nat) 
 
 end Deque
 
-/-- `d.reverse()` reverses the items in place (Doc/library/collections.rst:567-571):
+/-- `d.reverse()` reverses the items in place (Doc/library/collections.rst:571-575):
 for every deque with the layout invariant, the two-cursor swap loop over the
 blocks (`deque_reverse_impl`) only touches used slots and leaves exactly the
 reversed items, with the layout and `maxlen` unchanged. -/

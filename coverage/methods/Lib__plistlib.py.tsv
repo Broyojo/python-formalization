@@ -5,60 +5,61 @@ Lib/plistlib.py	93	94	UID.__repr__	__repr__(self)	todo
 Lib/plistlib.py	96	97	UID.__reduce__	__reduce__(self)	todo		
 Lib/plistlib.py	99	102	UID.__eq__	__eq__(self, other)	todo		
 Lib/plistlib.py	104	105	UID.__hash__	__hash__(self)	todo		
-Lib/plistlib.py	124	131	_encode_base64	_encode_base64(s, maxlinelength=76)	todo		
-Lib/plistlib.py	133	138	_decode_base64	_decode_base64(s)	todo		
-Lib/plistlib.py	146	157	_date_from_string	_date_from_string(s, aware_datetime)	todo		
-Lib/plistlib.py	160	166	_date_to_string	_date_to_string(d, aware_datetime)	todo		
-Lib/plistlib.py	168	178	_escape	_escape(text)	todo		
-Lib/plistlib.py	181	186	_PlistParser.__init__	__init__(self, dict_type, aware_datetime=False)	todo		
-Lib/plistlib.py	188	195	_PlistParser.parse	parse(self, fileobj)	todo		
-Lib/plistlib.py	197	201	_PlistParser.handle_entity_decl	handle_entity_decl(self, entity_name, is_parameter_entity, value, base, system_id, public_id, notation_name)	todo		
-Lib/plistlib.py	203	207	_PlistParser.handle_begin_element	handle_begin_element(self, element, attrs)	todo		
-Lib/plistlib.py	209	212	_PlistParser.handle_end_element	handle_end_element(self, element)	todo		
-Lib/plistlib.py	214	215	_PlistParser.handle_data	handle_data(self, data)	todo		
-Lib/plistlib.py	217	231	_PlistParser.add_object	add_object(self, value)	todo		
-Lib/plistlib.py	233	236	_PlistParser.get_data	get_data(self)	todo		
-Lib/plistlib.py	240	243	_PlistParser.begin_dict	begin_dict(self, attrs)	todo		
-Lib/plistlib.py	245	249	_PlistParser.end_dict	end_dict(self)	todo		
-Lib/plistlib.py	251	255	_PlistParser.end_key	end_key(self)	todo		
-Lib/plistlib.py	257	260	_PlistParser.begin_array	begin_array(self, attrs)	todo		
-Lib/plistlib.py	262	263	_PlistParser.end_array	end_array(self)	todo		
-Lib/plistlib.py	265	266	_PlistParser.end_true	end_true(self)	todo		
-Lib/plistlib.py	268	269	_PlistParser.end_false	end_false(self)	todo		
-Lib/plistlib.py	271	276	_PlistParser.end_integer	end_integer(self)	todo		
-Lib/plistlib.py	278	279	_PlistParser.end_real	end_real(self)	todo		
-Lib/plistlib.py	281	282	_PlistParser.end_string	end_string(self)	todo		
-Lib/plistlib.py	284	285	_PlistParser.end_data	end_data(self)	todo		
-Lib/plistlib.py	287	289	_PlistParser.end_date	end_date(self)	todo		
-Lib/plistlib.py	293	297	_DumbXMLWriter.__init__	__init__(self, file, indent_level=0, indent='\\t')	todo		
-Lib/plistlib.py	299	302	_DumbXMLWriter.begin_element	begin_element(self, element)	todo		
-Lib/plistlib.py	304	308	_DumbXMLWriter.end_element	end_element(self, element)	todo		
-Lib/plistlib.py	310	316	_DumbXMLWriter.simple_element	simple_element(self, element, value=None)	todo		
-Lib/plistlib.py	318	327	_DumbXMLWriter.writeln	writeln(self, line)	todo		
-Lib/plistlib.py	331	340	_PlistWriter.__init__	__init__(self, file, indent_level=0, indent=b'\\t', writeHeader=1, sort_keys=True, skipkeys=False, aware_datetime=False)	todo		
-Lib/plistlib.py	342	345	_PlistWriter.write	write(self, value)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
-Lib/plistlib.py	347	380	_PlistWriter.write_value	write_value(self, value)	todo		
-Lib/plistlib.py	382	393	_PlistWriter.write_bytes	write_bytes(self, data)	todo		
-Lib/plistlib.py	395	413	_PlistWriter.write_dict	write_dict(self, d)	todo		
-Lib/plistlib.py	415	423	_PlistWriter.write_array	write_array(self, array)	todo		
-Lib/plistlib.py	426	452	_is_fmt_xml	_is_fmt_xml(header)	todo		
-Lib/plistlib.py	460	461	InvalidFileException.__init__	__init__(self, message='Invalid file')	todo		
-Lib/plistlib.py	475	477	_BinaryPlistParser.__init__	__init__(self, dict_type, aware_datetime=False)	todo		
-Lib/plistlib.py	479	502	_BinaryPlistParser.parse	parse(self, fp)	todo		
-Lib/plistlib.py	504	512	_BinaryPlistParser._get_size	_get_size(self, tokenL)	todo		
-Lib/plistlib.py	514	524	_BinaryPlistParser._read	_read(self, size)	todo		
-Lib/plistlib.py	526	534	_BinaryPlistParser._read_ints	_read_ints(self, n, size)	todo		
-Lib/plistlib.py	536	537	_BinaryPlistParser._read_refs	_read_refs(self, n)	todo		
-Lib/plistlib.py	539	636	_BinaryPlistParser._read_object	_read_object(self, ref)	todo		
-Lib/plistlib.py	638	649	_count_to_size	_count_to_size(count)	todo		
-Lib/plistlib.py	654	658	_BinaryPlistWriter.__init__	__init__(self, fp, sort_keys, skipkeys, aware_datetime=False)	todo		
-Lib/plistlib.py	660	703	_BinaryPlistWriter.write	write(self, value)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
-Lib/plistlib.py	705	745	_BinaryPlistWriter._flatten	_flatten(self, value)	todo		
-Lib/plistlib.py	747	751	_BinaryPlistWriter._getrefnum	_getrefnum(self, value)	todo		
-Lib/plistlib.py	753	767	_BinaryPlistWriter._write_size	_write_size(self, token, size)	todo		
-Lib/plistlib.py	769	868	_BinaryPlistWriter._write_object	_write_object(self, value)	todo		
-Lib/plistlib.py	871	872	_is_fmt_binary	_is_fmt_binary(header)	todo		
-Lib/plistlib.py	893	912	load	load(fp, *, fmt=None, dict_type=dict, aware_datetime=False)	todo		
-Lib/plistlib.py	915	925	loads	loads(value, *, fmt=None, dict_type=dict, aware_datetime=False)	todo		candidates:pickle-loads-twins-accept,pickle-loads-twins-exact
-Lib/plistlib.py	928	938	dump	dump(value, fp, *, fmt=FMT_XML, sort_keys=True, skipkeys=False, aware_datetime=False)	todo		
-Lib/plistlib.py	941	948	dumps	dumps(value, *, fmt=FMT_XML, skipkeys=False, sort_keys=True, aware_datetime=False)	todo		candidates:pickle-dumps-twins,pickle-dumps-twins-batch-ok,pickle-dumps-twins-batch-ok-long,pickle-dumps-twins-narrow
+Lib/plistlib.py	124	125	_encode_base64	_encode_base64(s, maxlinelength=76)	todo		changed-in-3.15:
+Lib/plistlib.py	127	132	_decode_base64	_decode_base64(s)	todo		
+Lib/plistlib.py	140	151	_date_from_string	_date_from_string(s, aware_datetime)	todo		
+Lib/plistlib.py	154	160	_date_to_string	_date_to_string(d, aware_datetime)	todo		
+Lib/plistlib.py	162	178	_dict_items	_dict_items(d, sort_keys, skipkeys)	todo		changed-in-3.15: new function
+Lib/plistlib.py	181	191	_escape	_escape(text)	todo		
+Lib/plistlib.py	194	199	_PlistParser.__init__	__init__(self, dict_type, aware_datetime=False)	todo		
+Lib/plistlib.py	201	208	_PlistParser.parse	parse(self, fileobj)	todo		
+Lib/plistlib.py	210	214	_PlistParser.handle_entity_decl	handle_entity_decl(self, entity_name, is_parameter_entity, value, base, system_id, public_id, notation_name)	todo		
+Lib/plistlib.py	216	220	_PlistParser.handle_begin_element	handle_begin_element(self, element, attrs)	todo		
+Lib/plistlib.py	222	225	_PlistParser.handle_end_element	handle_end_element(self, element)	todo		
+Lib/plistlib.py	227	228	_PlistParser.handle_data	handle_data(self, data)	todo		
+Lib/plistlib.py	230	244	_PlistParser.add_object	add_object(self, value)	todo		
+Lib/plistlib.py	246	249	_PlistParser.get_data	get_data(self)	todo		
+Lib/plistlib.py	253	256	_PlistParser.begin_dict	begin_dict(self, attrs)	todo		
+Lib/plistlib.py	258	262	_PlistParser.end_dict	end_dict(self)	todo		
+Lib/plistlib.py	264	268	_PlistParser.end_key	end_key(self)	todo		
+Lib/plistlib.py	270	273	_PlistParser.begin_array	begin_array(self, attrs)	todo		
+Lib/plistlib.py	275	276	_PlistParser.end_array	end_array(self)	todo		
+Lib/plistlib.py	278	279	_PlistParser.end_true	end_true(self)	todo		
+Lib/plistlib.py	281	282	_PlistParser.end_false	end_false(self)	todo		
+Lib/plistlib.py	284	289	_PlistParser.end_integer	end_integer(self)	todo		
+Lib/plistlib.py	291	292	_PlistParser.end_real	end_real(self)	todo		
+Lib/plistlib.py	294	295	_PlistParser.end_string	end_string(self)	todo		
+Lib/plistlib.py	297	298	_PlistParser.end_data	end_data(self)	todo		
+Lib/plistlib.py	300	302	_PlistParser.end_date	end_date(self)	todo		
+Lib/plistlib.py	306	310	_DumbXMLWriter.__init__	__init__(self, file, indent_level=0, indent='\\t')	todo		
+Lib/plistlib.py	312	315	_DumbXMLWriter.begin_element	begin_element(self, element)	todo		
+Lib/plistlib.py	317	321	_DumbXMLWriter.end_element	end_element(self, element)	todo		
+Lib/plistlib.py	323	329	_DumbXMLWriter.simple_element	simple_element(self, element, value=None)	todo		
+Lib/plistlib.py	331	340	_DumbXMLWriter.writeln	writeln(self, line)	todo		
+Lib/plistlib.py	344	353	_PlistWriter.__init__	__init__(self, file, indent_level=0, indent=b'\\t', writeHeader=1, sort_keys=True, skipkeys=False, aware_datetime=False)	todo		
+Lib/plistlib.py	355	358	_PlistWriter.write	write(self, value)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/plistlib.py	360	393	_PlistWriter.write_value	write_value(self, value)	todo		changed-in-3.15:
+Lib/plistlib.py	395	405	_PlistWriter.write_bytes	write_bytes(self, data)	todo		changed-in-3.15:
+Lib/plistlib.py	407	421	_PlistWriter.write_dict	write_dict(self, d)	todo		changed-in-3.15:
+Lib/plistlib.py	423	431	_PlistWriter.write_array	write_array(self, array)	todo		
+Lib/plistlib.py	434	460	_is_fmt_xml	_is_fmt_xml(header)	todo		
+Lib/plistlib.py	468	469	InvalidFileException.__init__	__init__(self, message='Invalid file')	todo		
+Lib/plistlib.py	483	485	_BinaryPlistParser.__init__	__init__(self, dict_type, aware_datetime=False)	todo		
+Lib/plistlib.py	487	510	_BinaryPlistParser.parse	parse(self, fp)	todo		
+Lib/plistlib.py	512	520	_BinaryPlistParser._get_size	_get_size(self, tokenL)	todo		
+Lib/plistlib.py	522	532	_BinaryPlistParser._read	_read(self, size)	todo		
+Lib/plistlib.py	534	542	_BinaryPlistParser._read_ints	_read_ints(self, n, size)	todo		
+Lib/plistlib.py	544	545	_BinaryPlistParser._read_refs	_read_refs(self, n)	todo		
+Lib/plistlib.py	547	644	_BinaryPlistParser._read_object	_read_object(self, ref)	todo		
+Lib/plistlib.py	646	657	_count_to_size	_count_to_size(count)	todo		
+Lib/plistlib.py	662	666	_BinaryPlistWriter.__init__	__init__(self, fp, sort_keys, skipkeys, aware_datetime=False)	todo		
+Lib/plistlib.py	668	711	_BinaryPlistWriter.write	write(self, value)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/plistlib.py	713	750	_BinaryPlistWriter._flatten	_flatten(self, value)	todo		changed-in-3.15:
+Lib/plistlib.py	752	756	_BinaryPlistWriter._getrefnum	_getrefnum(self, value)	todo		
+Lib/plistlib.py	758	772	_BinaryPlistWriter._write_size	_write_size(self, token, size)	todo		
+Lib/plistlib.py	774	869	_BinaryPlistWriter._write_object	_write_object(self, value)	todo		changed-in-3.15:
+Lib/plistlib.py	872	873	_is_fmt_binary	_is_fmt_binary(header)	todo		
+Lib/plistlib.py	894	913	load	load(fp, *, fmt=None, dict_type=dict, aware_datetime=False)	todo		
+Lib/plistlib.py	916	926	loads	loads(value, *, fmt=None, dict_type=dict, aware_datetime=False)	todo		candidates:pickle-loads-twins-accept,pickle-loads-twins-exact
+Lib/plistlib.py	929	939	dump	dump(value, fp, *, fmt=FMT_XML, sort_keys=True, skipkeys=False, aware_datetime=False)	todo		
+Lib/plistlib.py	942	949	dumps	dumps(value, *, fmt=FMT_XML, skipkeys=False, sort_keys=True, aware_datetime=False)	todo		candidates:pickle-dumps-twins,pickle-dumps-twins-batch-ok,pickle-dumps-twins-batch-ok-long,pickle-dumps-twins-narrow

@@ -1,63 +1,64 @@
 file	line	endline	name	signature	status	entry	note
 Lib/os.py	41	42	_exists	_exists(name)	todo		
 Lib/os.py	44	48	_get_exports_list	_get_exports_list(module)	todo		
-Lib/os.py	112	114	_add	_add(str, fn)	todo		
-Lib/os.py	211	241	makedirs	makedirs(name, mode=511, exist_ok=False)	todo		
-Lib/os.py	243	263	removedirs	removedirs(name)	todo		
-Lib/os.py	265	289	renames	renames(old, new)	todo		
-Lib/os.py	297	433	walk	walk(top, topdown=True, onerror=None, followlinks=False)	todo		
-Lib/os.py	439	484	fwalk	fwalk(top='.', topdown=True, onerror=None, *, follow_symlinks=False, dir_fd=None)	todo		
-Lib/os.py	491	563	_fwalk	_fwalk(stack, isbytes, topdown, onerror, follow_symlinks)	todo		
-Lib/os.py	567	572	execl	execl(file, *args)	todo		
-Lib/os.py	574	580	execle	execle(file, *args)	todo		
-Lib/os.py	582	587	execlp	execlp(file, *args)	todo		
-Lib/os.py	589	596	execlpe	execlpe(file, *args)	todo		
-Lib/os.py	598	604	execvp	execvp(file, args)	todo		
-Lib/os.py	606	613	execvpe	execvpe(file, args, env)	todo		
-Lib/os.py	617	646	_execvpe	_execvpe(file, args, env=None)	todo		
-Lib/os.py	649	690	get_exec_path	get_exec_path(env=None)	todo		
-Lib/os.py	697	702	_Environ.__init__	__init__(self, data, encodekey, decodekey, encodevalue, decodevalue)	todo		
-Lib/os.py	704	710	_Environ.__getitem__	__getitem__(self, key)	todo		
-Lib/os.py	712	716	_Environ.__setitem__	__setitem__(self, key, value)	todo		
-Lib/os.py	718	725	_Environ.__delitem__	__delitem__(self, key)	todo		
-Lib/os.py	727	731	_Environ.__iter__	__iter__(self)	todo		
-Lib/os.py	733	734	_Environ.__len__	__len__(self)	todo		
-Lib/os.py	736	741	_Environ.__repr__	__repr__(self)	todo		
-Lib/os.py	743	744	_Environ.copy	copy(self)	todo		
-Lib/os.py	746	749	_Environ.setdefault	setdefault(self, key, value)	todo		
-Lib/os.py	751	753	_Environ.__ior__	__ior__(self, other)	todo		
-Lib/os.py	755	760	_Environ.__or__	__or__(self, other)	todo		
-Lib/os.py	762	767	_Environ.__ror__	__ror__(self, other)	todo		
-Lib/os.py	769	796	_create_environ_mapping	_create_environ_mapping()	todo		
-Lib/os.py	804	814	reload_environ	reload_environ()	todo		
-Lib/os.py	818	822	getenv	getenv(key, default=None)	todo		
-Lib/os.py	828	831	_check_bytes	_check_bytes(value)	todo		
-Lib/os.py	839	843	getenvb	getenvb(key, default=None)	todo		
-Lib/os.py	847	875	_fscodec	_fscodec()	todo		
-Lib/os.py	892	917	_spawnvef	_spawnvef(mode, file, args, env, func)	todo		
-Lib/os.py	919	926	spawnv	spawnv(mode, file, args)	todo		
-Lib/os.py	928	936	spawnve	spawnve(mode, file, args, env)	todo		
-Lib/os.py	940	948	spawnvp	spawnvp(mode, file, args)	todo		
-Lib/os.py	950	958	spawnvpe	spawnvpe(mode, file, args, env)	todo		
-Lib/os.py	968	975	spawnl	spawnl(mode, file, *args)	todo		
-Lib/os.py	977	986	spawnle	spawnle(mode, file, *args)	todo		
-Lib/os.py	995	1003	spawnlp	spawnlp(mode, file, *args)	todo		
-Lib/os.py	1005	1014	spawnlpe	spawnlpe(mode, file, *args)	todo		
-Lib/os.py	1023	1042	popen	popen(cmd, mode='r', buffering=-1)	todo		
-Lib/os.py	1046	1048	_wrap_close.__init__	__init__(self, stream, proc)	todo		
-Lib/os.py	1049	1057	_wrap_close.close	close(self)	todo		
-Lib/os.py	1058	1059	_wrap_close.__enter__	__enter__(self)	todo		
-Lib/os.py	1060	1061	_wrap_close.__exit__	__exit__(self, *args)	todo		
-Lib/os.py	1062	1063	_wrap_close.__getattr__	__getattr__(self, name)	todo		candidates:calstat-calendar-module-getattr
-Lib/os.py	1064	1065	_wrap_close.__iter__	__iter__(self)	todo		
-Lib/os.py	1070	1076	fdopen	fdopen(fd, mode='r', buffering=-1, encoding=None, *args, **kwargs)	todo		
-Lib/os.py	1081	1114	_fspath	_fspath(path)	todo		
-Lib/os.py	1130	1132	PathLike.__fspath__	__fspath__(self)	todo		
-Lib/os.py	1135	1138	PathLike.__subclasshook__	__subclasshook__(cls, subclass)	todo		
-Lib/os.py	1145	1148	_AddedDllDirectory.__init__	__init__(self, path, cookie, remove_dll_directory)	todo		
-Lib/os.py	1149	1151	_AddedDllDirectory.close	close(self)	todo		
-Lib/os.py	1152	1153	_AddedDllDirectory.__enter__	__enter__(self)	todo		
-Lib/os.py	1154	1155	_AddedDllDirectory.__exit__	__exit__(self, *args)	todo		
-Lib/os.py	1156	1159	_AddedDllDirectory.__repr__	__repr__(self)	todo		
-Lib/os.py	1161	1177	add_dll_directory	add_dll_directory(path)	todo		
-Lib/os.py	1181	1188	process_cpu_count	process_cpu_count()	todo		
+Lib/os.py	117	119	_add	_add(str, fn)	todo		
+Lib/os.py	222	259	makedirs	makedirs(name, mode=511, exist_ok=False, *, parent_mode=None)	todo		changed-in-3.15:
+Lib/os.py	261	281	removedirs	removedirs(name)	todo		
+Lib/os.py	283	307	renames	renames(old, new)	todo		
+Lib/os.py	315	453	walk	walk(top, topdown=True, onerror=None, followlinks=False)	todo		changed-in-3.15:
+Lib/os.py	459	504	fwalk	fwalk(top='.', topdown=True, onerror=None, *, follow_symlinks=False, dir_fd=None)	todo		
+Lib/os.py	511	583	_fwalk	_fwalk(stack, isbytes, topdown, onerror, follow_symlinks)	todo		
+Lib/os.py	587	592	execl	execl(file, *args)	todo		
+Lib/os.py	594	600	execle	execle(file, *args)	todo		
+Lib/os.py	602	607	execlp	execlp(file, *args)	todo		
+Lib/os.py	609	616	execlpe	execlpe(file, *args)	todo		
+Lib/os.py	618	624	execvp	execvp(file, args)	todo		
+Lib/os.py	626	633	execvpe	execvpe(file, args, env)	todo		
+Lib/os.py	637	666	_execvpe	_execvpe(file, args, env=None)	todo		
+Lib/os.py	669	710	get_exec_path	get_exec_path(env=None)	todo		
+Lib/os.py	717	722	_Environ.__init__	__init__(self, data, encodekey, decodekey, encodevalue, decodevalue)	todo		
+Lib/os.py	724	730	_Environ.__getitem__	__getitem__(self, key)	todo		
+Lib/os.py	732	736	_Environ.__setitem__	__setitem__(self, key, value)	todo		
+Lib/os.py	738	745	_Environ.__delitem__	__delitem__(self, key)	todo		
+Lib/os.py	747	751	_Environ.__iter__	__iter__(self)	todo		
+Lib/os.py	753	754	_Environ.__len__	__len__(self)	todo		
+Lib/os.py	756	761	_Environ.__repr__	__repr__(self)	todo		
+Lib/os.py	763	764	_Environ.copy	copy(self)	todo		
+Lib/os.py	766	769	_Environ.setdefault	setdefault(self, key, value)	todo		
+Lib/os.py	771	773	_Environ.__ior__	__ior__(self, other)	todo		
+Lib/os.py	775	780	_Environ.__or__	__or__(self, other)	todo		
+Lib/os.py	782	787	_Environ.__ror__	__ror__(self, other)	todo		
+Lib/os.py	790	792	_Environ.clear	clear(self)	todo		changed-in-3.15: new function
+Lib/os.py	795	822	_create_environ_mapping	_create_environ_mapping()	todo		
+Lib/os.py	830	840	reload_environ	reload_environ()	todo		
+Lib/os.py	844	848	getenv	getenv(key, default=None)	todo		
+Lib/os.py	854	857	_check_bytes	_check_bytes(value)	todo		
+Lib/os.py	865	869	getenvb	getenvb(key, default=None)	todo		
+Lib/os.py	873	901	_fscodec	_fscodec()	todo		
+Lib/os.py	918	943	_spawnvef	_spawnvef(mode, file, args, env, func)	todo		
+Lib/os.py	945	952	spawnv	spawnv(mode, file, args)	todo		
+Lib/os.py	954	962	spawnve	spawnve(mode, file, args, env)	todo		
+Lib/os.py	966	974	spawnvp	spawnvp(mode, file, args)	todo		
+Lib/os.py	976	984	spawnvpe	spawnvpe(mode, file, args, env)	todo		
+Lib/os.py	994	1001	spawnl	spawnl(mode, file, *args)	todo		
+Lib/os.py	1003	1012	spawnle	spawnle(mode, file, *args)	todo		
+Lib/os.py	1021	1029	spawnlp	spawnlp(mode, file, *args)	todo		
+Lib/os.py	1031	1040	spawnlpe	spawnlpe(mode, file, *args)	todo		
+Lib/os.py	1049	1068	popen	popen(cmd, mode='r', buffering=-1)	todo		
+Lib/os.py	1072	1074	_wrap_close.__init__	__init__(self, stream, proc)	todo		
+Lib/os.py	1075	1083	_wrap_close.close	close(self)	todo		
+Lib/os.py	1084	1085	_wrap_close.__enter__	__enter__(self)	todo		
+Lib/os.py	1086	1087	_wrap_close.__exit__	__exit__(self, *args)	todo		
+Lib/os.py	1088	1089	_wrap_close.__getattr__	__getattr__(self, name)	todo		candidates:calstat-calendar-module-getattr
+Lib/os.py	1090	1091	_wrap_close.__iter__	__iter__(self)	todo		
+Lib/os.py	1096	1102	fdopen	fdopen(fd, mode='r', buffering=-1, encoding=None, *args, **kwargs)	todo		
+Lib/os.py	1107	1140	_fspath	_fspath(path)	todo		
+Lib/os.py	1156	1158	PathLike.__fspath__	__fspath__(self)	todo		
+Lib/os.py	1161	1164	PathLike.__subclasshook__	__subclasshook__(cls, subclass)	todo		
+Lib/os.py	1171	1174	_AddedDllDirectory.__init__	__init__(self, path, cookie, remove_dll_directory)	todo		
+Lib/os.py	1175	1177	_AddedDllDirectory.close	close(self)	todo		
+Lib/os.py	1178	1179	_AddedDllDirectory.__enter__	__enter__(self)	todo		
+Lib/os.py	1180	1181	_AddedDllDirectory.__exit__	__exit__(self, *args)	todo		
+Lib/os.py	1182	1185	_AddedDllDirectory.__repr__	__repr__(self)	todo		
+Lib/os.py	1187	1203	add_dll_directory	add_dll_directory(path)	todo		
+Lib/os.py	1207	1214	process_cpu_count	process_cpu_count()	todo		

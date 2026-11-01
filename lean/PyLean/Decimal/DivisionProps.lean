@@ -110,7 +110,7 @@ the operands scaled to their lower exponent: `X = q·Y + r`, `0 ≤ r < Y`, the 
 exponent 0 with the sign of the product, the remainder at `min(ea, eb)` with the sign of
 the dividend. If the quotient needs more than `prec` digits, both results are NaN and
 InvalidOperation is set. This is the identity `x == (x // y) * y + x % y` of
-Doc/library/decimal.rst:449. -/
+Doc/library/decimal.rst:441. -/
 def DivideCorrect : Prop :=
   ∀ (c : Ctx) (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) (cb : Nat) (eb : Int)
     (fl fl' : List Signal) (q r : Dec),
@@ -388,7 +388,7 @@ theorem truedivCoreCorrect_proven : TruedivCoreCorrect := by
 /-! ## `//`, `%`, `divmod` -/
 
 /-- `//`, `%` and `divmod` run the same `_divide`, so for finite operands with a
-non-zero divisor `divmod(x, y)` is `(x // y, x % y)`, as Doc/reference/datamodel.rst:3395 asks of `__divmod__`,
+non-zero divisor `divmod(x, y)` is `(x // y, x % y)`, as Doc/reference/datamodel.rst:3418 asks of `__divmod__`,
 with the remainder alone going through `_fix`. -/
 def DivmodConsistent : Prop :=
   ∀ (c : Ctx) (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) (cb : Nat) (eb : Int) (fl : List Signal),

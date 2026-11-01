@@ -54,7 +54,7 @@ def mergeKw {α : Type} (a b : List (String × α)) : List (String × α) :=
 
 /-- Fill the placeholders of `base` from `new`, left to right. A placeholder with nothing left stays;
 what is left of `new` after the last slot goes at the end. This is the loop at
-Modules/_functoolsmodule.c:262-277, with `i` walking `base` and `j` walking `new`. -/
+Modules/_functoolsmodule.c:260-275, with `i` walking `base` and `j` walking `new`. -/
 def fill {α : Type} : List (PArg α) → List (PArg α) → List (PArg α)
   | [], new => new
   | .ph :: rest, n :: new => n :: fill rest new
@@ -156,7 +156,7 @@ def duckNewPy {α : Type} (outer : Option Nat) (inner : Fn α) (pargs : List (PA
   | .error e => .error e
   | .ok (t, k, p) => .ok (.pobj outer none inner t k p)
 
-/-- The checks of `partial_new`, Modules/_functoolsmodule.c:181-211, in that order. -/
+/-- The checks of `partial_new`, Modules/_functoolsmodule.c:174-204, in that order. -/
 def validateNew {α : Type} (func : Fn α) (args : List (PArg α)) (kw : List (String × PArg α)) :
     Py (List (String × α)) :=
   if !func.isCallable then .error (.typeError "the first argument must be callable")
@@ -166,8 +166,8 @@ def validateNew {α : Type} (func : Fn α) (args : List (PArg α)) (kw : List (S
     | none => .error (.typeError kwPhMsg)
     | some kw' => .ok kw'
 
-/-- The flattening of `partial_new`, Modules/_functoolsmodule.c:213-295, which takes a `partial`
-instance apart only when its `__dict__` was never created, :219-230. -/
+/-- The flattening of `partial_new`, Modules/_functoolsmodule.c:206-293, which takes a `partial`
+instance apart only when its `__dict__` was never created, :212-223. -/
 def flattenC {α : Type} (outer : Option Nat) (func : Fn α) (args : List (PArg α))
     (kw' : List (String × α)) : Fn α :=
   match func with
@@ -184,7 +184,7 @@ def partialNewC {α : Type} (outer : Option Nat) (func : Fn α) (args : List (PA
     (kw : List (String × PArg α)) : Py (Fn α) := do
   pure (flattenC outer func args (← validateNew func args kw))
 
-/-- `partial()` with no function at all: :174-178 in C, and the signature of `_partial_new` in Python. -/
+/-- `partial()` with no function at all: :167-171 in C, and the signature of `_partial_new` in Python. -/
 def partialNoFuncC : PyExc := .typeError "type 'partial' takes at least one argument"
 def partialNoFuncPy : PyExc :=
   .typeError "_partial_new() missing 1 required positional argument: 'func'"
@@ -238,8 +238,8 @@ def partialCallPy {α : Type} (func : Fn α) (pargs : List (PArg α)) (pkw : Lis
 /-- A read past the end of the call's argument array, which C does not check. -/
 def oobRead : PyExc := .named "SIGSEGV" "read past the end of the call arguments"
 
-/-- The first loop of the merge in `partial_call`, Modules/_functoolsmodule.c:550-558, and of
-`partial_vectorcall`, :450-458: `none` when `args[j]` is past the end. -/
+/-- The first loop of the merge in `partial_call`, Modules/_functoolsmodule.c:645-653, and of
+`partial_vectorcall`, :535-543: `none` when `args[j]` is past the end. -/
 def cMergeLoop {α : Type} (args : List α) : List (PArg α) → Nat → Option (List α × Nat)
   | [], j => some ([], j)
   | .ph :: rest, j =>
@@ -248,7 +248,7 @@ def cMergeLoop {α : Type} (args : List α) : List (PArg α) → Nat → Option 
     | some a => (cMergeLoop args rest (j + 1)).map (fun r => (a :: r.1, r.2))
   | .val v :: rest, j => (cMergeLoop args rest j).map (fun r => (v :: r.1, r.2))
 
-/-- The whole merge, with `phcount` taken from the object as C does: the second loop, :560-565, copies
+/-- The whole merge, with `phcount` taken from the object as C does: the second loop, :655-660, copies
 `nargs - phcount` items from `j` on. -/
 def cMerge {α : Type} (pargs : List (PArg α)) (ph : Nat) (args : List α) : Option (List α) :=
   match cMergeLoop args pargs 0 with
@@ -257,7 +257,7 @@ def cMerge {α : Type} (pargs : List (PArg α)) (ph : Nat) (args : List α) : Op
     if j + (args.length - ph) ≤ args.length then some (h ++ (args.drop j).take (args.length - ph))
     else none
 
-/-- `partial_call`, Modules/_functoolsmodule.c:497-580. -/
+/-- `partial_call`, Modules/_functoolsmodule.c:592-675. -/
 def partialCallC {α : Type} (func : Fn α) (pargs : List (PArg α)) (pkw : List (String × α))
     (ph : Nat) (args : List α) (kw : List (String × α)) : Py (Called α) :=
   if args.length < ph then .error (.typeError (missingMsg ph args.length))
@@ -272,8 +272,8 @@ def partialCallC {α : Type} (func : Fn α) (pargs : List (PArg α)) (pkw : List
 /-- A `memcpy` past the end of the stack array, which C does not check. -/
 def oobWrite : PyExc := .named "SIGABRT" "write past the end of the stack array"
 
-/-- The merge of `partial_vectorcall`, :450-462. The stack holds `pto_nargs + nargs - phcount` items, sized by
-`phcount`, and the `memcpy` at :460-462 copies `nargs - j` items after the stored ones, so it stays inside only
+/-- The merge of `partial_vectorcall`, :535-548. The stack holds `pto_nargs + nargs - phcount` items, sized by
+`phcount`, and the `memcpy` at @3.14.7:460-462 copies `nargs - j` items after the stored ones, so it stays inside only
 when `j` is `phcount`. -/
 def vecMerge {α : Type} (pargs : List (PArg α)) (ph : Nat) (args : List α) : Py (List α) :=
   match cMergeLoop args pargs 0 with
@@ -285,9 +285,9 @@ def vecMerge {α : Type} (pargs : List (PArg α)) (ph : Nat) (args : List α) : 
       | none => .error oobRead
       | some tot => .ok tot
 
-/-- `partial_vectorcall`, Modules/_functoolsmodule.c:386-476, reached when the wrapped function
-supports vectorcall (`partial_setvectorcall`, :480-492); `partial_vectorcall_fallback`, :374-383,
-sends a `partial` with stored keywords to `partial_call`. The fast path for a one-element tuple, :419-428,
+/-- `partial_vectorcall`, Modules/_functoolsmodule.c:369-571, reached when the wrapped function
+supports vectorcall (`partial_setvectorcall`, :575-587); `partial_vectorcall_fallback`, @3.14.7:374-383,
+sends a `partial` with stored keywords to `partial_call`. The fast path for a one-element tuple, @3.14.7:419-428,
 gives the same call on a well-formed object, where such a tuple has no placeholder. -/
 def partialVectorcall {α : Type} (func : Fn α) (pargs : List (PArg α)) (pkw : List (String × α))
     (ph : Nat) (args : List α) (kw : List (String × α)) : Py (Called α) :=
@@ -299,8 +299,8 @@ def partialVectorcall {α : Type} (func : Fn α) (pargs : List (PArg α)) (pkw :
     | .ok tot => callFn func tot kw
   else callFn func (valsOf pargs ++ args) kw
 
-/-- `partial.__get__`, Lib/functools.py:395-398, `partial_descr_get`, Modules/_functoolsmodule.c:362-368, and
-`lru_cache_descr_get`, :1658-1664: `None` gives the object itself, anything else a `MethodType`. -/
+/-- `partial.__get__`, Lib/functools.py:395-398, `partial_descr_get`, Modules/_functoolsmodule.c:360-366, and
+`lru_cache_descr_get`, :1754-1760: `None` gives the object itself, anything else a `MethodType`. -/
 def descrGet {α : Type} (self : Fn α) (obj : Option α) : Fn α :=
   match obj with
   | none => self
@@ -335,7 +335,7 @@ def partialReprPy {α : Type} (E : ReprEnv α) (cls : String) (func : Py String)
   let k ← mapPy (kwRepr E) kw
   pure (cls ++ "(" ++ joinComma (f :: a ++ k) ++ ")")
 
-/-- The fold at Modules/_functoolsmodule.c:639-646 and :648-661: `arglist` grows by `", x"`. -/
+/-- The fold at Modules/_functoolsmodule.c:734-741 and :743-756: `arglist` grows by `", x"`. -/
 def reprFold {β : Type} (f : β → Py String) : String → List β → Py String
   | acc, [] => .ok acc
   | acc, x :: xs =>
@@ -343,7 +343,7 @@ def reprFold {β : Type} (f : β → Py String) : String → List β → Py Stri
     | .error e => .error e
     | .ok s => reprFold f (acc ++ ", " ++ s) xs
 
-/-- `partial_repr`, Modules/_functoolsmodule.c:610-687: the arguments, the keywords, and `repr(fn)` last. -/
+/-- `partial_repr`, Modules/_functoolsmodule.c:705-782: the arguments, the keywords, and `repr(fn)` last. -/
 def partialReprC {α : Type} (E : ReprEnv α) (cls : String) (func : Py String)
     (args : List (PArg α)) (kw : List (String × α)) : Py String := do
   let a ← reprFold (argRepr E) "" args
@@ -365,7 +365,7 @@ def kwLoopPy {α : Type} (E : ReprEnv α) (grows : α → Bool) : List (String �
         | .error e => .error e
         | .ok l => .ok (s :: l)
 
-/-- The `PyDict_Next` loop of `partial_repr`, Modules/_functoolsmodule.c:648-661, which has no check on the size: a `repr` that
+/-- The `PyDict_Next` loop of `partial_repr`, Modules/_functoolsmodule.c:743-756, which has no check on the size: a `repr` that
 adds `extra` to the dict only makes the loop go further. -/
 def kwLoopC {α : Type} (E : ReprEnv α) (grows : α → Bool) (extra : String × α) : String → List (String × α) → Py String
   | acc, [] => .ok acc
@@ -387,7 +387,7 @@ def partialReprFullPy {α : Type} (E : ReprEnv α) (grows : α → Bool) (mod qu
   let k ← kwLoopPy E grows kw
   pure (m ++ "." ++ q ++ "(" ++ joinComma (f :: a ++ k) ++ ")")
 
-/-- `partial_repr`, Modules/_functoolsmodule.c:610-687, in its order: the arguments, the keywords, the module and the qualified
+/-- `partial_repr`, Modules/_functoolsmodule.c:705-782, in its order: the arguments, the keywords, the module and the qualified
 name from the type itself, and `repr(fn)` last. -/
 def partialReprFullC {α : Type} (E : ReprEnv α) (grows : α → Bool) (extra : String × α) (cls : String) (func : Py String)
     (args : List (PArg α)) (kw : List (String × α)) : Py String := do
@@ -407,7 +407,7 @@ def reprGuard (running : Bool) (body : Py String) : Py String :=
 /-- A tuple subclass in a state. `raw` is what `PyTuple_GET_ITEM` sees, so what C reads. The Python twin goes through the
 protocol, which a subclass can override: `truth` is `bool(args)` at Lib/functools.py:415, `last` is `args[-1]` there, `len` is
 `len(args)` at :300, and `iter1` and `iter2` are the iterations at :303 and :419, which a stateful `__iter__` can make differ.
-C iterates once, at Modules/_functoolsmodule.c:739-743, which is `iter1`. -/
+C iterates once, at Modules/_functoolsmodule.c:834-838, which is `iter1`. -/
 structure TupSub (α : Type) where
   raw : List (PArg α)
   truth : Py Bool
@@ -456,7 +456,7 @@ def StArgs.raw {α : Type} : StArgs α → Option (List (PArg α))
   | .sub t => some t.raw
   | .other => none
 
-/-- Whether the tuple and dict checks at Lib/functools.py:410-412, Modules/_functoolsmodule.c:716-719, pass. -/
+/-- Whether the tuple and dict checks at Lib/functools.py:410-412, Modules/_functoolsmodule.c:811-814, pass. -/
 def stateShapeOk {α : Type} (func : Fn α) (args : StArgs α) (kw : StKw α) (ns : StNs α) : Bool :=
   func.isCallable && (args.raw.isSome) &&
     (match kw with
@@ -533,8 +533,8 @@ def setstatePy {α : Type} (outer : Option Nat) : PState α → Py (Fn α)
             | _ => []
           .ok (.pobj outer (some n) func items d phcount)
 
-/-- `partial_setstate`, Modules/_functoolsmodule.c:706-768. The placeholders are counted on the raw tuple
-at :732-737, and `PySequence_Tuple` runs after that, at :739-743, so `phcount` can describe another tuple. -/
+/-- `partial_setstate`, Modules/_functoolsmodule.c:801-863. The placeholders are counted on the raw tuple
+at :827-832, and `PySequence_Tuple` runs after that, at :834-838, so `phcount` can describe another tuple. -/
 def setstateC {α : Type} (outer : Option Nat) : PState α → Py (Fn α)
   | .notTuple | .size _ => .error (.typeError invalidState)
   | .four func args kw ns =>
@@ -576,7 +576,7 @@ def pReducePy {α : Type} : Fn α → PState α
        | _ => .none)
   | _ => .notTuple
 
-/-- `partial_reduce`, Modules/_functoolsmodule.c:697-703: keeps the empty dict of keywords, and a created
+/-- `partial_reduce`, Modules/_functoolsmodule.c:792-798: keeps the empty dict of keywords, and a created
 `__dict__` even when it is empty. -/
 def pReduceC {α : Type} : Fn α → PState α
   | .pobj _ d f a k _ =>

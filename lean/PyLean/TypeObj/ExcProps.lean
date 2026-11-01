@@ -57,7 +57,7 @@ def excEntries : List Entry := [
     "exceptions.c:443-461" ``ContextSetKeepsSuppress ``contextSetKeepsSuppress_proven,
   p "typeobj-exc-suppress-bool" []
     "__suppress_context__ stores True or False, rejects any other value with TypeError, and cannot be deleted."
-    "BaseException_members, exceptions.c:605; Py_T_BOOL in Python/structmember.c:170"
+    "BaseException_members, exceptions.c:605; Py_T_BOOL in Python/structmember.c:180"
     ``SuppressContextOnlyBool ``suppressContextOnlyBool_proven,
   p "typeobj-exc-args-set" ["BaseException_args_set_impl", "BaseException_args_get_impl"]
     "e.args = t stores t's items for a tuple t; args cannot be deleted."

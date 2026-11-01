@@ -6,7 +6,7 @@ module: bytesobj
 files: [Objects/listobject.c]
 functions: ["list___sizeof___impl", "list_sort_impl"]
 summary: |
-  While list.sort runs, list_sort_impl sets self->allocated to -1 (listobject.c:2929).
+  While list.sort runs, list_sort_impl sets self->allocated to -1 (listobject.c:2994).
   list___sizeof___impl then computes `(size_t)self->allocated * sizeof(PyObject *)` with no check
   for that sentinel, which wraps: 40 + (2**64 - 1) * 8 modulo 2**64 is 32. So l.__sizeof__(), called
   from a key function or a comparison during l.sort(), reports 32 bytes, which is less than the
@@ -40,11 +40,11 @@ observed: |
   python3 3.14.7: during sort: 32, empty list: 40. REPRODUCED.
   main (python.exe 3.16.0a1+dev, ef1fce0): during sort: 32, empty list: 40. REPRODUCED.
 promised_by: |
-  Doc/library/sys.rst:899-900 ("Return the size of an object in bytes ... All built-in objects will
+  Doc/library/sys.rst:980-981 ("Return the size of an object in bytes ... All built-in objects will
   return correct results"), via sys.getsizeof, which calls __sizeof__.
 cause: |
-  Objects/listobject.c:3547 (3.14.7): `res += (size_t)self->allocated * sizeof(PyObject *);` with
-  self->allocated == -1, set at :2929 for the duration of list_sort_impl.
+  Objects/listobject.c:3612: `res += (size_t)self->allocated * sizeof(PyObject *);` with
+  self->allocated == -1, set at :2994 for the duration of list_sort_impl.
 possible_fix: |
   Treat a negative allocated as zero in list___sizeof___impl, for example
   `if (self->allocated > 0) res += ...`.

@@ -37,11 +37,11 @@ observed: |
   main (python.exe 3.16.0a1+dev): REPRODUCED, same behaviour.
 promised_by: |
   Doc/library/pickle.rst (Pickler): "Specifying a negative protocol version selects the highest
-  protocol version supported"; the same sentence is in the docstrings at Lib/pickle.py:425-427 and
+  protocol version supported"; the same sentence is in the docstrings at Lib/pickle.py:441-443 and
   in Modules/_pickle.c.
 cause: |
-  Modules/_pickle.c:1192-1196 returns -1 when `PyLong_AsLong` overflows, instead of testing the
-  sign with `PyLong_AsLongAndOverflow`. Lib/pickle.py:455-458 compares the Python int.
+  Modules/_pickle.c:1191-1195 returns -1 when `PyLong_AsLong` overflows, instead of testing the
+  sign with `PyLong_AsLongAndOverflow`. Lib/pickle.py:471-474 compares the Python int.
 possible_fix: |
   Use `PyLong_AsLongAndOverflow`: overflow < 0 means highest protocol, overflow > 0 means ValueError.
 duplicates:

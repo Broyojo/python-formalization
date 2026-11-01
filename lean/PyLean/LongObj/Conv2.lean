@@ -16,7 +16,7 @@ namespace PyLean.LongObj
 
 open PyLean PyLean.MathInt PyLean.Registry
 
-/-- `PyLong_AsLongLong(vv)`, longobject.c:1505-1544, for an exact int. -/
+/-- `PyLong_AsLongLong(vv)`, longobject.c:1583-1622, for an exact int. -/
 def asLongLong (v : Long) : Py Int :=
   if v.isCompact = true then .ok v.medium
   else
@@ -24,7 +24,7 @@ def asLongLong (v : Long) : Py Int :=
     | .ok bs => .ok (s64of (bytesVal bs))
     | .error e => .error e
 
-/-- `PyLong_AsUnsignedLongLong(vv)`, longobject.c:1550-1591, for an exact int. -/
+/-- `PyLong_AsUnsignedLongLong(vv)`, longobject.c:1628-1669, for an exact int. -/
 def asUnsignedLongLong (v : Long) : Py Nat :=
   if !v.neg && v.isCompact then .ok v.medium.toNat
   else
@@ -32,7 +32,7 @@ def asUnsignedLongLong (v : Long) : Py Nat :=
     | .ok bs => .ok (bytesVal bs)
     | .error e => .error e
 
-/-- `PyLong_AsVoidPtr(vv)`, longobject.c:1447-1477, as the pointer's bit pattern. -/
+/-- `PyLong_AsVoidPtr(vv)`, longobject.c:1525-1555, as the pointer's bit pattern. -/
 def asVoidPtr (v : Long) : Py Nat :=
   if v.neg then
     match asLong v with
@@ -40,7 +40,7 @@ def asVoidPtr (v : Long) : Py Nat :=
     | .error e => .error e
   else asUnsignedLong v
 
-/-- `_PyLong_FromDigits(negative, digit_count, digits)`, longobject.c:201-214. -/
+/-- `_PyLong_FromDigits(negative, digit_count, digits)`, longobject.c:206-219. -/
 def fromDigits (negative : Bool) (ds : List Nat) : Py Long :=
   if ds.length = 0 then .ok ⟨false, []⟩
   else
@@ -48,13 +48,13 @@ def fromDigits (negative : Bool) (ds : List Nat) : Py Long :=
     | .error e => .error e
     | .ok _ => .ok ⟨negative, ds⟩
 
-/-- `_fits_in_n_bits(v, n)`, longobject.c:1180-1189. -/
+/-- `_fits_in_n_bits(v, n)`, longobject.c:1258-1267. -/
 def fitsNBits (v : Int) (n : Nat) : Bool :=
   n ≥ 64 || (let e := v / 2 ^ (n - 1); e == 0 || e == -1)
 
-/-- The result of `PyLong_AsNativeBytes(vv, buffer, n, flags)`, longobject.c:1248-1378,
-for `n` bytes. `ub` is `Py_ASNATIVEBYTES_UNSIGNED_BUFFER`. The edge-case tests at :1349-1359
-and :1369 are stated on the buffer's value. -/
+/-- The result of `PyLong_AsNativeBytes(vv, buffer, n, flags)`, longobject.c:1326-1456,
+for `n` bytes. `ub` is `Py_ASNATIVEBYTES_UNSIGNED_BUFFER`. The edge-case tests at :1427-1437
+and :1447 are stated on the buffer's value. -/
 def asNativeRes (v : Long) (n : Nat) (ub : Bool) : Nat :=
   if v.isCompact = true then
     let cv := v.medium
@@ -78,7 +78,7 @@ bytes, as signed, or as unsigned when the caller asked for that. -/
 def NativeFit (a : Int) (n : Nat) (ub : Bool) : Prop :=
   (-(2 ^ (8 * n - 1) : Int) ≤ a ∧ a < 2 ^ (8 * n - 1)) ∨ (ub = true ∧ 0 ≤ a ∧ a < 2 ^ (8 * n))
 
-/-- `LONG_TO_INT` and `LONG_TO_UINT`, longobject.c:6700-6742, with `n` bytes. -/
+/-- `LONG_TO_INT` and `LONG_TO_UINT`, longobject.c@3.14.7:6700-6742, with `n` bytes. -/
 def toFixed (v : Long) (n : Nat) (unsigned : Bool) (name : String) : Py Unit :=
   if unsigned ∧ v.neg = true then .error (.valueError "Cannot convert negative int")
   else if asNativeRes v n unsigned > n then

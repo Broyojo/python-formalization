@@ -1,206 +1,205 @@
 file	line	endline	name	signature	status	entry	note
-Lib/typing.py	166	170	_LazyAnnotationLib.__getattr__	__getattr__(self, attr)	todo		candidates:calstat-calendar-module-getattr
-Lib/typing.py	175	181	_type_convert	_type_convert(arg, module=None, *, allow_special_forms=False, owner=None)	todo		
-Lib/typing.py	184	214	_type_check	_type_check(arg, msg, is_argument=True, module=None, *, allow_special_forms=False, owner=None)	todo		
-Lib/typing.py	217	219	_is_param_expr	_is_param_expr(arg)	todo		
-Lib/typing.py	222	243	_should_unflatten_callable_args	_should_unflatten_callable_args(typ, args)	todo		
-Lib/typing.py	246	257	_type_repr	_type_repr(obj)	todo		
-Lib/typing.py	260	307	_collect_type_parameters	_collect_type_parameters(args, *, enforce_default_ordering: bool=True)	todo		
-Lib/typing.py	310	338	_check_generic_specialization	_check_generic_specialization(cls, arguments)	todo		
-Lib/typing.py	341	349	_unpack_args	_unpack_args(*args)	todo		
-Lib/typing.py	351	363	_deduplicate	_deduplicate(params, *, unhashable_fallback=False)	todo		
-Lib/typing.py	365	373	_flatten_literal_params	_flatten_literal_params(parameters)	todo		
-Lib/typing.py	380	408	_tp_cache	_tp_cache(func=None, /, *, typed=False)	todo		
-Lib/typing.py	411	421	_deprecation_warning_for_no_type_params_passed	_deprecation_warning_for_no_type_params_passed(funcname: str)	todo		
-Lib/typing.py	426	427	_Sentinel.__repr__	__repr__(self)	todo		
-Lib/typing.py	433	493	_eval_type	_eval_type(t, globalns, localns, type_params=_sentinel, *, recursive_guard=frozenset(), format=None, owner=None, parent_fwdref=None, prefer_fwd_module=False)	todo		
-Lib/typing.py	501	503	_Final.__init_subclass__	__init_subclass__(cls, /, *args, **kwds)	todo		
-Lib/typing.py	529	532	_SpecialForm.__init__	__init__(self, getitem)	todo		
-Lib/typing.py	534	538	_SpecialForm.__getattr__	__getattr__(self, item)	todo		candidates:calstat-calendar-module-getattr
-Lib/typing.py	540	541	_SpecialForm.__mro_entries__	__mro_entries__(self, bases)	todo		
-Lib/typing.py	543	544	_SpecialForm.__repr__	__repr__(self)	todo		
-Lib/typing.py	546	547	_SpecialForm.__reduce__	__reduce__(self)	todo		
-Lib/typing.py	549	550	_SpecialForm.__call__	__call__(self, *args, **kwds)	todo		
-Lib/typing.py	552	553	_SpecialForm.__or__	__or__(self, other)	todo		
-Lib/typing.py	555	556	_SpecialForm.__ror__	__ror__(self, other)	todo		
-Lib/typing.py	558	559	_SpecialForm.__instancecheck__	__instancecheck__(self, obj)	todo		
-Lib/typing.py	561	562	_SpecialForm.__subclasscheck__	__subclasscheck__(self, cls)	todo		
-Lib/typing.py	565	566	_SpecialForm.__getitem__	__getitem__(self, parameters)	todo		
-Lib/typing.py	570	573	_TypedCacheSpecialForm.__getitem__	__getitem__(self, parameters)	todo		
-Lib/typing.py	577	580	_AnyMeta.__instancecheck__	__instancecheck__(self, obj)	todo		
-Lib/typing.py	582	585	_AnyMeta.__repr__	__repr__(self)	todo		
-Lib/typing.py	600	603	Any.__new__	__new__(cls, *args, **kwargs)	todo		
-Lib/typing.py	607	622	NoReturn	NoReturn(self, parameters)	todo		
-Lib/typing.py	628	649	Never	Never(self, parameters)	todo		
-Lib/typing.py	653	669	Self	Self(self, parameters)	todo		
-Lib/typing.py	673	696	LiteralString	LiteralString(self, parameters)	todo		
-Lib/typing.py	700	719	ClassVar	ClassVar(self, parameters)	todo		
-Lib/typing.py	722	741	Final	Final(self, parameters)	todo		
-Lib/typing.py	744	747	Optional	Optional(self, parameters)	todo		
-Lib/typing.py	751	784	Literal	Literal(self, *parameters)	todo		
-Lib/typing.py	788	801	TypeAlias	TypeAlias(self, parameters)	todo		
-Lib/typing.py	805	827	Concatenate	Concatenate(self, parameters)	todo		
-Lib/typing.py	831	883	TypeGuard	TypeGuard(self, parameters)	todo		
-Lib/typing.py	887	952	TypeIs	TypeIs(self, parameters)	todo		
-Lib/typing.py	955	964	_make_forward_ref	_make_forward_ref(code, *, parent_fwdref=None, **kwargs)	todo		
-Lib/typing.py	967	1026	evaluate_forward_ref	evaluate_forward_ref(forward_ref, *, owner=None, globals=None, locals=None, type_params=None, format=None, _recursive_guard=frozenset())	todo		
-Lib/typing.py	1029	1033	_is_unpacked_typevartuple	_is_unpacked_typevartuple(x: Any)	todo		
-Lib/typing.py	1036	1037	_is_typevar_like	_is_typevar_like(x: Any)	todo		
-Lib/typing.py	1040	1046	_typevar_subst	_typevar_subst(self, arg)	todo		
-Lib/typing.py	1049	1087	_typevartuple_prepare_subst	_typevartuple_prepare_subst(self, alias, args)	todo		
-Lib/typing.py	1090	1096	_paramspec_subst	_paramspec_subst(self, arg)	todo		
-Lib/typing.py	1099	1113	_paramspec_prepare_subst	_paramspec_prepare_subst(self, alias, args)	todo		
-Lib/typing.py	1117	1174	_generic_class_getitem	_generic_class_getitem(cls, args)	todo		
-Lib/typing.py	1177	1212	_generic_init_subclass	_generic_init_subclass(cls, *args, **kwargs)	todo		
-Lib/typing.py	1215	1216	_is_dunder	_is_dunder(attr)	todo		
-Lib/typing.py	1228	1232	_BaseGenericAlias.__init__	__init__(self, origin, *, inst=True, name=None)	todo		
-Lib/typing.py	1234	1245	_BaseGenericAlias.__call__	__call__(self, *args, **kwargs)	todo		
-Lib/typing.py	1247	1277	_BaseGenericAlias.__mro_entries__	__mro_entries__(self, bases)	todo		
-Lib/typing.py	1279	1287	_BaseGenericAlias.__getattr__	__getattr__(self, attr)	todo		candidates:calstat-calendar-module-getattr
-Lib/typing.py	1289	1293	_BaseGenericAlias.__setattr__	__setattr__(self, attr, val)	todo		
-Lib/typing.py	1295	1296	_BaseGenericAlias.__instancecheck__	__instancecheck__(self, obj)	todo		
-Lib/typing.py	1298	1300	_BaseGenericAlias.__subclasscheck__	__subclasscheck__(self, cls)	todo		
-Lib/typing.py	1302	1304	_BaseGenericAlias.__dir__	__dir__(self)	todo		
-Lib/typing.py	1348	1360	_GenericAlias.__init__	__init__(self, origin, args, *, inst=True, name=None)	todo		
-Lib/typing.py	1362	1366	_GenericAlias.__eq__	__eq__(self, other)	todo		
-Lib/typing.py	1368	1369	_GenericAlias.__hash__	__hash__(self)	todo		
-Lib/typing.py	1371	1372	_GenericAlias.__or__	__or__(self, right)	todo		
-Lib/typing.py	1374	1375	_GenericAlias.__ror__	__ror__(self, left)	todo		
-Lib/typing.py	1378	1407	_GenericAlias.__getitem__	__getitem__(self, args)	todo		
-Lib/typing.py	1409	1436	_GenericAlias._determine_new_args	_determine_new_args(self, args)	todo		
-Lib/typing.py	1438	1498	_GenericAlias._make_substitution	_make_substitution(self, args, new_arg_by_param)	todo		
-Lib/typing.py	1500	1501	_GenericAlias.copy_with	copy_with(self, args)	todo		
-Lib/typing.py	1503	1513	_GenericAlias.__repr__	__repr__(self)	todo		
-Lib/typing.py	1515	1523	_GenericAlias.__reduce__	__reduce__(self)	todo		
-Lib/typing.py	1525	1538	_GenericAlias.__mro_entries__	__mro_entries__(self, bases)	todo		
-Lib/typing.py	1540	1541	_GenericAlias.__iter__	__iter__(self)	todo		
-Lib/typing.py	1549	1558	_SpecialGenericAlias.__init__	__init__(self, origin, nparams, *, inst=True, name=None, defaults=())	todo		
-Lib/typing.py	1561	1582	_SpecialGenericAlias.__getitem__	__getitem__(self, params)	todo		
-Lib/typing.py	1584	1586	_SpecialGenericAlias.copy_with	copy_with(self, params)	todo		
-Lib/typing.py	1588	1589	_SpecialGenericAlias.__repr__	__repr__(self)	todo		
-Lib/typing.py	1591	1596	_SpecialGenericAlias.__subclasscheck__	__subclasscheck__(self, cls)	todo		
-Lib/typing.py	1598	1599	_SpecialGenericAlias.__reduce__	__reduce__(self)	todo		
-Lib/typing.py	1601	1602	_SpecialGenericAlias.__or__	__or__(self, right)	todo		
-Lib/typing.py	1604	1605	_SpecialGenericAlias.__ror__	__ror__(self, left)	todo		
-Lib/typing.py	1609	1613	_DeprecatedGenericAlias.__init__	__init__(self, origin, nparams, *, removal_version, inst=True, name=None)	todo		
-Lib/typing.py	1615	1620	_DeprecatedGenericAlias.__instancecheck__	__instancecheck__(self, inst)	todo		
-Lib/typing.py	1624	1631	_CallableGenericAlias.__repr__	__repr__(self)	todo		
-Lib/typing.py	1633	1637	_CallableGenericAlias.__reduce__	__reduce__(self)	todo		
-Lib/typing.py	1641	1643	_CallableType.copy_with	copy_with(self, params)	todo		
-Lib/typing.py	1645	1657	_CallableType.__getitem__	__getitem__(self, params)	todo		
-Lib/typing.py	1660	1670	_CallableType.__getitem_inner__	__getitem_inner__(self, params)	todo		
-Lib/typing.py	1675	1684	_TupleType.__getitem__	__getitem__(self, params)	todo		
-Lib/typing.py	1688	1691	_UnionGenericAliasMeta.__instancecheck__	__instancecheck__(self, inst: object)	todo		
-Lib/typing.py	1693	1696	_UnionGenericAliasMeta.__subclasscheck__	__subclasscheck__(self, inst: type)	todo		
-Lib/typing.py	1698	1703	_UnionGenericAliasMeta.__eq__	__eq__(self, other)	todo		
-Lib/typing.py	1705	1706	_UnionGenericAliasMeta.__hash__	__hash__(self)	todo		
-Lib/typing.py	1718	1721	_UnionGenericAlias.__new__	__new__(cls, self_cls, parameters, /, *, name=None)	todo		
-Lib/typing.py	1724	1725	_value_and_type_iter	_value_and_type_iter(parameters)	todo		
-Lib/typing.py	1729	1733	_LiteralGenericAlias.__eq__	__eq__(self, other)	todo		
-Lib/typing.py	1735	1736	_LiteralGenericAlias.__hash__	__hash__(self)	todo		
-Lib/typing.py	1740	1745	_ConcatenateGenericAlias.copy_with	copy_with(self, params)	todo		
-Lib/typing.py	1749	1796	Unpack	Unpack(self, parameters)	todo		
-Lib/typing.py	1800	1803	_UnpackGenericAlias.__repr__	__repr__(self)	todo		
-Lib/typing.py	1805	1808	_UnpackGenericAlias.__getitem__	__getitem__(self, args)	todo		
-Lib/typing.py	1811	1819	_UnpackGenericAlias.__typing_unpacked_tuple_args__	__typing_unpacked_tuple_args__(self)	todo		
-Lib/typing.py	1822	1825	_UnpackGenericAlias.__typing_is_unpacked_typevartuple__	__typing_is_unpacked_typevartuple__(self)	todo		
-Lib/typing.py	1850	1870	_get_protocol_attrs	_get_protocol_attrs(cls)	todo		
-Lib/typing.py	1873	1899	_no_init_or_replace_init	_no_init_or_replace_init(self, *args, **kwargs)	todo		
-Lib/typing.py	1902	1911	_caller	_caller(depth=1, default='__main__')	todo		
-Lib/typing.py	1913	1919	_allow_reckless_class_checks	_allow_reckless_class_checks(depth=2)	todo		
-Lib/typing.py	1935	1939	_lazy_load_getattr_static	_lazy_load_getattr_static()	todo		
-Lib/typing.py	1944	1945	_pickle_psargs	_pickle_psargs(psargs)	todo		
-Lib/typing.py	1949	1950	_pickle_pskwargs	_pickle_pskwargs(pskwargs)	todo		
-Lib/typing.py	1965	1979	_type_check_issubclass_arg_1	_type_check_issubclass_arg_1(arg)	todo		
-Lib/typing.py	1985	2002	_ProtocolMeta.__new__	__new__(mcls, name, bases, namespace, /, **kwargs)	todo		
-Lib/typing.py	2004	2007	_ProtocolMeta.__init__	__init__(cls, *args, **kwargs)	todo		
-Lib/typing.py	2009	2033	_ProtocolMeta.__subclasscheck__	__subclasscheck__(cls, other)	todo		
-Lib/typing.py	2035	2066	_ProtocolMeta.__instancecheck__	__instancecheck__(cls, instance)	todo		
-Lib/typing.py	2070	2096	_proto_hook	_proto_hook(cls, other)	todo		
-Lib/typing.py	2136	2149	Protocol.__init_subclass__	__init_subclass__(cls, *args, **kwargs)	todo		
-Lib/typing.py	2163	2168	_AnnotatedAlias.__init__	__init__(self, origin, metadata)	todo		
-Lib/typing.py	2170	2173	_AnnotatedAlias.copy_with	copy_with(self, params)	todo		
-Lib/typing.py	2175	2179	_AnnotatedAlias.__repr__	__repr__(self)	todo		
-Lib/typing.py	2181	2184	_AnnotatedAlias.__reduce__	__reduce__(self)	todo		
-Lib/typing.py	2186	2190	_AnnotatedAlias.__eq__	__eq__(self, other)	todo		
-Lib/typing.py	2192	2193	_AnnotatedAlias.__hash__	__hash__(self)	todo		
-Lib/typing.py	2195	2198	_AnnotatedAlias.__getattr__	__getattr__(self, attr)	todo		candidates:calstat-calendar-module-getattr
-Lib/typing.py	2200	2201	_AnnotatedAlias.__mro_entries__	__mro_entries__(self, bases)	todo		
-Lib/typing.py	2206	2263	Annotated	Annotated(self, *params)	todo		
-Lib/typing.py	2266	2305	runtime_checkable	runtime_checkable(cls)	todo		
-Lib/typing.py	2308	2316	cast	cast(typ, val)	todo		
-Lib/typing.py	2319	2332	assert_type	assert_type(val, typ, /)	todo		
-Lib/typing.py	2335	2453	get_type_hints	get_type_hints(obj, globalns=None, localns=None, include_extras=False, *, format=None)	todo		
-Lib/typing.py	2458	2467	_add_type_params_to_scope	_add_type_params_to_scope(type_params, globalns, localns, is_class)	todo		
-Lib/typing.py	2470	2492	_strip_annotations	_strip_annotations(t)	todo		
-Lib/typing.py	2495	2522	get_origin	get_origin(tp)	todo		
-Lib/typing.py	2525	2548	get_args	get_args(tp)	todo		
-Lib/typing.py	2551	2566	is_typeddict	is_typeddict(tp)	todo		
-Lib/typing.py	2572	2594	assert_never	assert_never(arg: Never, /)	todo		
-Lib/typing.py	2597	2630	no_type_check	no_type_check(arg)	todo		
-Lib/typing.py	2633	2647	no_type_check_decorator	no_type_check_decorator(decorator)	todo		
-Lib/typing.py	2650	2656	_overload_dummy	_overload_dummy(*args, **kwds)	todo		
-Lib/typing.py	2663	2700	overload	overload(func)	todo		
-Lib/typing.py	2703	2712	get_overloads	get_overloads(func)	todo		
-Lib/typing.py	2715	2717	clear_overloads	clear_overloads()	todo		
-Lib/typing.py	2720	2753	final	final(f)	todo		
-Lib/typing.py	2875	2876	SupportsInt.__int__	__int__(self)	todo		
-Lib/typing.py	2886	2887	SupportsFloat.__float__	__float__(self)	todo		
-Lib/typing.py	2897	2898	SupportsComplex.__complex__	__complex__(self)	todo		
-Lib/typing.py	2908	2909	SupportsBytes.__bytes__	__bytes__(self)	todo		
-Lib/typing.py	2919	2920	SupportsIndex.__index__	__index__(self)	todo		
-Lib/typing.py	2930	2931	SupportsAbs.__abs__	__abs__(self)	todo		
-Lib/typing.py	2941	2942	SupportsRound.__round__	__round__(self, ndigits: int=0)	todo		
-Lib/typing.py	2945	2949	_make_nmtuple	_make_nmtuple(name, fields, annotate_func, module, defaults=())	todo		
-Lib/typing.py	2952	2963	_make_eager_annotate	_make_eager_annotate(types)	todo		
-Lib/typing.py	2976	3049	NamedTupleMeta.__new__	__new__(cls, typename, bases, ns)	todo		
-Lib/typing.py	3052	3116	NamedTuple	NamedTuple(typename, fields=_sentinel, /, **kwargs)	todo		
-Lib/typing.py	3120	3122	_namedtuple_mro_entries	_namedtuple_mro_entries(bases)	todo		
-Lib/typing.py	3127	3146	_get_typeddict_qualifiers	_get_typeddict_qualifiers(annotation_type)	todo		
-Lib/typing.py	3150	3273	_TypedDictMeta.__new__	__new__(cls, name, bases, ns, total=True)	todo		
-Lib/typing.py	3277	3279	_TypedDictMeta.__subclasscheck__	__subclasscheck__(cls, other)	todo		
-Lib/typing.py	3284	3366	TypedDict	TypedDict(typename, fields=_sentinel, /, *, total=True)	todo		
-Lib/typing.py	3373	3393	Required	Required(self, parameters)	todo		
-Lib/typing.py	3397	3412	NotRequired	NotRequired(self, parameters)	todo		
-Lib/typing.py	3416	3432	ReadOnly	ReadOnly(self, parameters)	todo		
-Lib/typing.py	3459	3467	NewType.__init__	__init__(self, name, tp)	todo		
-Lib/typing.py	3469	3482	NewType.__mro_entries__	__mro_entries__(self, bases)	todo		
-Lib/typing.py	3484	3485	NewType.__repr__	__repr__(self)	todo		
-Lib/typing.py	3487	3488	NewType.__reduce__	__reduce__(self)	todo		
-Lib/typing.py	3490	3491	NewType.__or__	__or__(self, other)	todo		
-Lib/typing.py	3493	3494	NewType.__ror__	__ror__(self, other)	todo		
-Lib/typing.py	3522	3523	IO.mode	mode(self)	todo		candidates:calstat-statistics-mode-spec
-Lib/typing.py	3527	3528	IO.name	name(self)	todo		
-Lib/typing.py	3531	3532	IO.close	close(self)	todo		
-Lib/typing.py	3536	3537	IO.closed	closed(self)	todo		
-Lib/typing.py	3540	3541	IO.fileno	fileno(self)	todo		
-Lib/typing.py	3544	3545	IO.flush	flush(self)	todo		
-Lib/typing.py	3548	3549	IO.isatty	isatty(self)	todo		
-Lib/typing.py	3552	3553	IO.read	read(self, n: int=-1)	todo		candidates:pyio-bytesio-read-after-seek
-Lib/typing.py	3556	3557	IO.readable	readable(self)	todo		
-Lib/typing.py	3560	3561	IO.readline	readline(self, limit: int=-1)	todo		
-Lib/typing.py	3564	3565	IO.readlines	readlines(self, hint: int=-1)	todo		candidates:pyio-bytesio-readlines-hint-doc
-Lib/typing.py	3568	3569	IO.seek	seek(self, offset: int, whence: int=0)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
-Lib/typing.py	3572	3573	IO.seekable	seekable(self)	todo		
-Lib/typing.py	3576	3577	IO.tell	tell(self)	todo		
-Lib/typing.py	3580	3581	IO.truncate	truncate(self, size: int | None=None)	todo		candidates:pyio-truncate-keeps-position
-Lib/typing.py	3584	3585	IO.writable	writable(self)	todo		
-Lib/typing.py	3588	3589	IO.write	write(self, s: AnyStr)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
-Lib/typing.py	3592	3593	IO.writelines	writelines(self, lines: list[AnyStr])	todo		
-Lib/typing.py	3596	3597	IO.__enter__	__enter__(self)	todo		
-Lib/typing.py	3600	3601	IO.__exit__	__exit__(self, type, value, traceback)	todo		
-Lib/typing.py	3610	3611	BinaryIO.write	write(self, s: bytes | bytearray)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
-Lib/typing.py	3614	3615	BinaryIO.__enter__	__enter__(self)	todo		
-Lib/typing.py	3625	3626	TextIO.buffer	buffer(self)	todo		
-Lib/typing.py	3630	3631	TextIO.encoding	encoding(self)	todo		
-Lib/typing.py	3635	3636	TextIO.errors	errors(self)	todo		
-Lib/typing.py	3640	3641	TextIO.line_buffering	line_buffering(self)	todo		
-Lib/typing.py	3645	3646	TextIO.newlines	newlines(self)	todo		
-Lib/typing.py	3649	3650	TextIO.__enter__	__enter__(self)	todo		
-Lib/typing.py	3653	3669	reveal_type	reveal_type(obj: T, /)	todo		
-Lib/typing.py	3673	3674	_IdentityCallable.__call__	__call__(self, arg: T, /)	todo		
-Lib/typing.py	3677	3758	dataclass_transform	dataclass_transform(*, eq_default: bool=True, order_default: bool=False, kw_only_default: bool=False, frozen_default: bool=False, field_specifiers: tuple[type[Any] | Callable[..., Any], ...]=(), **kwargs: Any)	todo		
-Lib/typing.py	3764	3796	override	override(method: F, /)	todo		
-Lib/typing.py	3799	3817	is_protocol	is_protocol(tp: type, /)	todo		
-Lib/typing.py	3820	3836	get_protocol_members	get_protocol_members(tp: type, /)	todo		
-Lib/typing.py	3839	3866	__getattr__	__getattr__(attr)	todo		candidates:calstat-calendar-module-getattr
+Lib/typing.py	168	174	_type_convert	_type_convert(arg, module=None, *, allow_special_forms=False, owner=None)	todo		
+Lib/typing.py	177	207	_type_check	_type_check(arg, msg, is_argument=True, module=None, *, allow_special_forms=False, owner=None)	todo		
+Lib/typing.py	210	212	_is_param_expr	_is_param_expr(arg)	todo		
+Lib/typing.py	215	236	_should_unflatten_callable_args	_should_unflatten_callable_args(typ, args)	todo		
+Lib/typing.py	239	250	_type_repr	_type_repr(obj)	todo		changed-in-3.15:
+Lib/typing.py	253	322	_collect_type_parameters	_collect_type_parameters(args, *, enforce_default_ordering: bool=True, validate_all: bool=False)	todo		changed-in-3.15:
+Lib/typing.py	325	353	_check_generic_specialization	_check_generic_specialization(cls, arguments)	todo		
+Lib/typing.py	356	364	_unpack_args	_unpack_args(*args)	todo		
+Lib/typing.py	366	378	_deduplicate	_deduplicate(params, *, unhashable_fallback=False)	todo		
+Lib/typing.py	380	388	_flatten_literal_params	_flatten_literal_params(parameters)	todo		
+Lib/typing.py	395	423	_tp_cache	_tp_cache(func=None, /, *, typed=False)	todo		
+Lib/typing.py	426	434	_rebuild_generic_alias	_rebuild_generic_alias(alias: GenericAlias, args: tuple[object, ...])	todo		changed-in-3.15: new function
+Lib/typing.py	437	447	_deprecation_warning_for_no_type_params_passed	_deprecation_warning_for_no_type_params_passed(funcname: str)	todo		
+Lib/typing.py	450	502	_eval_type	_eval_type(t, globalns, localns, type_params, *, recursive_guard=frozenset(), format=None, owner=None, parent_fwdref=None, prefer_fwd_module=False)	todo		changed-in-3.15:
+Lib/typing.py	510	512	_Final.__init_subclass__	__init_subclass__(cls, /, *args, **kwds)	todo		
+Lib/typing.py	538	541	_SpecialForm.__init__	__init__(self, getitem)	todo		
+Lib/typing.py	543	547	_SpecialForm.__getattr__	__getattr__(self, item)	todo		candidates:calstat-calendar-module-getattr
+Lib/typing.py	549	550	_SpecialForm.__mro_entries__	__mro_entries__(self, bases)	todo		
+Lib/typing.py	552	553	_SpecialForm.__repr__	__repr__(self)	todo		
+Lib/typing.py	555	556	_SpecialForm.__reduce__	__reduce__(self)	todo		
+Lib/typing.py	558	559	_SpecialForm.__call__	__call__(self, *args, **kwds)	todo		
+Lib/typing.py	561	562	_SpecialForm.__or__	__or__(self, other)	todo		
+Lib/typing.py	564	565	_SpecialForm.__ror__	__ror__(self, other)	todo		
+Lib/typing.py	567	568	_SpecialForm.__instancecheck__	__instancecheck__(self, obj)	todo		
+Lib/typing.py	570	571	_SpecialForm.__subclasscheck__	__subclasscheck__(self, cls)	todo		
+Lib/typing.py	574	575	_SpecialForm.__getitem__	__getitem__(self, parameters)	todo		
+Lib/typing.py	579	582	_TypedCacheSpecialForm.__getitem__	__getitem__(self, parameters)	todo		
+Lib/typing.py	588	589	_TypeFormForm.__call__	__call__(self, obj, /)	todo		changed-in-3.15: new function
+Lib/typing.py	593	596	_AnyMeta.__instancecheck__	__instancecheck__(self, obj)	todo		
+Lib/typing.py	598	601	_AnyMeta.__repr__	__repr__(self)	todo		
+Lib/typing.py	616	619	Any.__new__	__new__(cls, *args, **kwargs)	todo		
+Lib/typing.py	623	638	NoReturn	NoReturn(self, parameters)	todo		
+Lib/typing.py	644	665	Never	Never(self, parameters)	todo		
+Lib/typing.py	669	685	Self	Self(self, parameters)	todo		
+Lib/typing.py	689	712	LiteralString	LiteralString(self, parameters)	todo		
+Lib/typing.py	716	735	ClassVar	ClassVar(self, parameters)	todo		
+Lib/typing.py	738	757	Final	Final(self, parameters)	todo		
+Lib/typing.py	760	763	Optional	Optional(self, parameters)	todo		
+Lib/typing.py	767	800	Literal	Literal(self, *parameters)	todo		
+Lib/typing.py	804	817	TypeAlias	TypeAlias(self, parameters)	todo		
+Lib/typing.py	821	843	Concatenate	Concatenate(self, parameters)	todo		
+Lib/typing.py	847	899	TypeGuard	TypeGuard(self, parameters)	todo		
+Lib/typing.py	903	924	TypeForm	TypeForm(self, parameters)	todo		changed-in-3.15: new function
+Lib/typing.py	928	993	TypeIs	TypeIs(self, parameters)	todo		
+Lib/typing.py	996	1005	_make_forward_ref	_make_forward_ref(code, *, parent_fwdref=None, **kwargs)	todo		changed-in-3.15:
+Lib/typing.py	1008	1067	evaluate_forward_ref	evaluate_forward_ref(forward_ref, *, owner=None, globals=None, locals=None, type_params=None, format=None, _recursive_guard=frozenset())	todo		changed-in-3.15:
+Lib/typing.py	1070	1074	_is_unpacked_typevartuple	_is_unpacked_typevartuple(x: Any)	todo		
+Lib/typing.py	1077	1078	_is_typevar_like	_is_typevar_like(x: Any)	todo		
+Lib/typing.py	1081	1087	_typevar_subst	_typevar_subst(self, arg)	todo		
+Lib/typing.py	1090	1128	_typevartuple_prepare_subst	_typevartuple_prepare_subst(self, alias, args)	todo		
+Lib/typing.py	1131	1137	_paramspec_subst	_paramspec_subst(self, arg)	todo		
+Lib/typing.py	1140	1154	_paramspec_prepare_subst	_paramspec_prepare_subst(self, alias, args)	todo		
+Lib/typing.py	1158	1215	_generic_class_getitem	_generic_class_getitem(cls, args)	todo		
+Lib/typing.py	1218	1255	_generic_init_subclass	_generic_init_subclass(cls, *args, **kwargs)	todo		changed-in-3.15:
+Lib/typing.py	1258	1259	_is_dunder	_is_dunder(attr)	todo		
+Lib/typing.py	1271	1275	_BaseGenericAlias.__init__	__init__(self, origin, *, inst=True, name=None)	todo		
+Lib/typing.py	1277	1288	_BaseGenericAlias.__call__	__call__(self, *args, **kwargs)	todo		
+Lib/typing.py	1290	1320	_BaseGenericAlias.__mro_entries__	__mro_entries__(self, bases)	todo		
+Lib/typing.py	1322	1330	_BaseGenericAlias.__getattr__	__getattr__(self, attr)	todo		candidates:calstat-calendar-module-getattr
+Lib/typing.py	1332	1336	_BaseGenericAlias.__setattr__	__setattr__(self, attr, val)	todo		
+Lib/typing.py	1338	1339	_BaseGenericAlias.__instancecheck__	__instancecheck__(self, obj)	todo		
+Lib/typing.py	1341	1343	_BaseGenericAlias.__subclasscheck__	__subclasscheck__(self, cls)	todo		
+Lib/typing.py	1345	1347	_BaseGenericAlias.__dir__	__dir__(self)	todo		
+Lib/typing.py	1391	1403	_GenericAlias.__init__	__init__(self, origin, args, *, inst=True, name=None)	todo		
+Lib/typing.py	1405	1409	_GenericAlias.__eq__	__eq__(self, other)	todo		
+Lib/typing.py	1411	1412	_GenericAlias.__hash__	__hash__(self)	todo		
+Lib/typing.py	1414	1415	_GenericAlias.__or__	__or__(self, right)	todo		
+Lib/typing.py	1417	1418	_GenericAlias.__ror__	__ror__(self, left)	todo		
+Lib/typing.py	1421	1450	_GenericAlias.__getitem__	__getitem__(self, args)	todo		
+Lib/typing.py	1452	1479	_GenericAlias._determine_new_args	_determine_new_args(self, args)	todo		
+Lib/typing.py	1481	1541	_GenericAlias._make_substitution	_make_substitution(self, args, new_arg_by_param)	todo		
+Lib/typing.py	1543	1544	_GenericAlias.copy_with	copy_with(self, args)	todo		
+Lib/typing.py	1546	1556	_GenericAlias.__repr__	__repr__(self)	todo		
+Lib/typing.py	1558	1566	_GenericAlias.__reduce__	__reduce__(self)	todo		
+Lib/typing.py	1568	1581	_GenericAlias.__mro_entries__	__mro_entries__(self, bases)	todo		
+Lib/typing.py	1583	1584	_GenericAlias.__iter__	__iter__(self)	todo		
+Lib/typing.py	1592	1601	_SpecialGenericAlias.__init__	__init__(self, origin, nparams, *, inst=True, name=None, defaults=())	todo		
+Lib/typing.py	1604	1625	_SpecialGenericAlias.__getitem__	__getitem__(self, params)	todo		
+Lib/typing.py	1627	1629	_SpecialGenericAlias.copy_with	copy_with(self, params)	todo		
+Lib/typing.py	1631	1632	_SpecialGenericAlias.__repr__	__repr__(self)	todo		
+Lib/typing.py	1634	1639	_SpecialGenericAlias.__subclasscheck__	__subclasscheck__(self, cls)	todo		
+Lib/typing.py	1641	1642	_SpecialGenericAlias.__reduce__	__reduce__(self)	todo		
+Lib/typing.py	1644	1645	_SpecialGenericAlias.__or__	__or__(self, right)	todo		
+Lib/typing.py	1647	1648	_SpecialGenericAlias.__ror__	__ror__(self, left)	todo		
+Lib/typing.py	1652	1659	_CallableGenericAlias.__repr__	__repr__(self)	todo		
+Lib/typing.py	1661	1665	_CallableGenericAlias.__reduce__	__reduce__(self)	todo		
+Lib/typing.py	1669	1671	_CallableType.copy_with	copy_with(self, params)	todo		
+Lib/typing.py	1673	1685	_CallableType.__getitem__	__getitem__(self, params)	todo		
+Lib/typing.py	1688	1698	_CallableType.__getitem_inner__	__getitem_inner__(self, params)	todo		
+Lib/typing.py	1703	1712	_TupleType.__getitem__	__getitem__(self, params)	todo		
+Lib/typing.py	1716	1719	_UnionGenericAliasMeta.__instancecheck__	__instancecheck__(self, inst: object)	todo		
+Lib/typing.py	1721	1724	_UnionGenericAliasMeta.__subclasscheck__	__subclasscheck__(self, inst: type)	todo		
+Lib/typing.py	1726	1731	_UnionGenericAliasMeta.__eq__	__eq__(self, other)	todo		
+Lib/typing.py	1733	1734	_UnionGenericAliasMeta.__hash__	__hash__(self)	todo		
+Lib/typing.py	1746	1749	_UnionGenericAlias.__new__	__new__(cls, self_cls, parameters, /, *, name=None)	todo		
+Lib/typing.py	1752	1753	_value_and_type_iter	_value_and_type_iter(parameters)	todo		
+Lib/typing.py	1757	1761	_LiteralGenericAlias.__eq__	__eq__(self, other)	todo		
+Lib/typing.py	1763	1764	_LiteralGenericAlias.__hash__	__hash__(self)	todo		
+Lib/typing.py	1768	1773	_ConcatenateGenericAlias.copy_with	copy_with(self, params)	todo		
+Lib/typing.py	1777	1824	Unpack	Unpack(self, parameters)	todo		
+Lib/typing.py	1828	1831	_UnpackGenericAlias.__repr__	__repr__(self)	todo		
+Lib/typing.py	1833	1836	_UnpackGenericAlias.__getitem__	__getitem__(self, args)	todo		
+Lib/typing.py	1839	1847	_UnpackGenericAlias.__typing_unpacked_tuple_args__	__typing_unpacked_tuple_args__(self)	todo		
+Lib/typing.py	1850	1853	_UnpackGenericAlias.__typing_is_unpacked_typevartuple__	__typing_is_unpacked_typevartuple__(self)	todo		
+Lib/typing.py	1879	1899	_get_protocol_attrs	_get_protocol_attrs(cls)	todo		changed-in-3.15:
+Lib/typing.py	1902	1928	_no_init_or_replace_init	_no_init_or_replace_init(self, *args, **kwargs)	todo		
+Lib/typing.py	1931	1940	_caller	_caller(depth=1, default='__main__')	todo		
+Lib/typing.py	1942	1950	_allow_reckless_class_checks	_allow_reckless_class_checks(depth=2)	todo		changed-in-3.15:
+Lib/typing.py	1966	1970	_lazy_load_getattr_static	_lazy_load_getattr_static()	todo		
+Lib/typing.py	1975	1976	_pickle_psargs	_pickle_psargs(psargs)	todo		
+Lib/typing.py	1980	1981	_pickle_pskwargs	_pickle_pskwargs(pskwargs)	todo		
+Lib/typing.py	1996	2010	_type_check_issubclass_arg_1	_type_check_issubclass_arg_1(arg)	todo		
+Lib/typing.py	2016	2033	_ProtocolMeta.__new__	__new__(mcls, name, bases, namespace, /, **kwargs)	todo		
+Lib/typing.py	2035	2038	_ProtocolMeta.__init__	__init__(cls, *args, **kwargs)	todo		
+Lib/typing.py	2040	2074	_ProtocolMeta.__subclasscheck__	__subclasscheck__(cls, other)	todo		changed-in-3.15:
+Lib/typing.py	2076	2119	_ProtocolMeta.__instancecheck__	__instancecheck__(cls, instance)	todo		changed-in-3.15:
+Lib/typing.py	2123	2149	_proto_hook	_proto_hook(cls, other)	todo		changed-in-3.15:
+Lib/typing.py	2189	2207	Protocol.__init_subclass__	__init_subclass__(cls, *args, **kwargs)	todo		changed-in-3.15:
+Lib/typing.py	2221	2226	_AnnotatedAlias.__init__	__init__(self, origin, metadata)	todo		
+Lib/typing.py	2228	2231	_AnnotatedAlias.copy_with	copy_with(self, params)	todo		
+Lib/typing.py	2233	2237	_AnnotatedAlias.__repr__	__repr__(self)	todo		
+Lib/typing.py	2239	2242	_AnnotatedAlias.__reduce__	__reduce__(self)	todo		
+Lib/typing.py	2244	2248	_AnnotatedAlias.__eq__	__eq__(self, other)	todo		
+Lib/typing.py	2250	2251	_AnnotatedAlias.__hash__	__hash__(self)	todo		
+Lib/typing.py	2253	2256	_AnnotatedAlias.__getattr__	__getattr__(self, attr)	todo		candidates:calstat-calendar-module-getattr
+Lib/typing.py	2258	2259	_AnnotatedAlias.__mro_entries__	__mro_entries__(self, bases)	todo		
+Lib/typing.py	2264	2321	Annotated	Annotated(self, *params)	todo		
+Lib/typing.py	2324	2366	runtime_checkable	runtime_checkable(cls)	todo		changed-in-3.15:
+Lib/typing.py	2369	2377	cast	cast(typ, val)	todo		
+Lib/typing.py	2380	2393	assert_type	assert_type(val, typ, /)	todo		
+Lib/typing.py	2396	2514	get_type_hints	get_type_hints(obj, globalns=None, localns=None, include_extras=False, *, format=None)	todo		changed-in-3.15:
+Lib/typing.py	2519	2528	_add_type_params_to_scope	_add_type_params_to_scope(type_params, globalns, localns, is_class)	todo		
+Lib/typing.py	2531	2553	_strip_annotations	_strip_annotations(t)	todo		changed-in-3.15:
+Lib/typing.py	2556	2583	get_origin	get_origin(tp)	todo		
+Lib/typing.py	2586	2609	get_args	get_args(tp)	todo		
+Lib/typing.py	2612	2627	is_typeddict	is_typeddict(tp)	todo		
+Lib/typing.py	2633	2655	assert_never	assert_never(arg: Never, /)	todo		
+Lib/typing.py	2658	2691	no_type_check	no_type_check(arg)	todo		
+Lib/typing.py	2694	2700	_overload_dummy	_overload_dummy(*args, **kwds)	todo		
+Lib/typing.py	2707	2744	overload	overload(func)	todo		
+Lib/typing.py	2747	2756	get_overloads	get_overloads(func)	todo		
+Lib/typing.py	2759	2761	clear_overloads	clear_overloads()	todo		
+Lib/typing.py	2764	2797	final	final(f)	todo		
+Lib/typing.py	2800	2820	disjoint_base	disjoint_base(cls)	todo		changed-in-3.15: new function
+Lib/typing.py	2939	2940	SupportsInt.__int__	__int__(self)	todo		
+Lib/typing.py	2950	2951	SupportsFloat.__float__	__float__(self)	todo		
+Lib/typing.py	2961	2962	SupportsComplex.__complex__	__complex__(self)	todo		
+Lib/typing.py	2972	2973	SupportsBytes.__bytes__	__bytes__(self)	todo		
+Lib/typing.py	2983	2984	SupportsIndex.__index__	__index__(self)	todo		
+Lib/typing.py	2994	2995	SupportsAbs.__abs__	__abs__(self)	todo		
+Lib/typing.py	3005	3006	SupportsRound.__round__	__round__(self, ndigits: int=0)	todo		
+Lib/typing.py	3009	3013	_make_nmtuple	_make_nmtuple(name, fields, annotate_func, module, defaults=())	todo		
+Lib/typing.py	3016	3027	_make_eager_annotate	_make_eager_annotate(types)	todo		changed-in-3.15:
+Lib/typing.py	3040	3113	NamedTupleMeta.__new__	__new__(cls, typename, bases, ns)	todo		changed-in-3.15:
+Lib/typing.py	3116	3140	NamedTuple	NamedTuple(typename, fields, /)	todo		changed-in-3.15:
+Lib/typing.py	3144	3146	_namedtuple_mro_entries	_namedtuple_mro_entries(bases)	todo		
+Lib/typing.py	3154	3173	_get_typeddict_qualifiers	_get_typeddict_qualifiers(annotation_type)	todo		
+Lib/typing.py	3177	3305	_TypedDictMeta.__new__	__new__(cls, name, bases, ns, total=True, closed=None, extra_items=NoExtraItems)	todo		changed-in-3.15:
+Lib/typing.py	3309	3311	_TypedDictMeta.__subclasscheck__	__subclasscheck__(cls, other)	todo		
+Lib/typing.py	3316	3407	TypedDict	TypedDict(typename, fields, /, *, total=True, closed=None, extra_items=NoExtraItems)	todo		changed-in-3.15:
+Lib/typing.py	3414	3434	Required	Required(self, parameters)	todo		
+Lib/typing.py	3438	3453	NotRequired	NotRequired(self, parameters)	todo		
+Lib/typing.py	3457	3473	ReadOnly	ReadOnly(self, parameters)	todo		
+Lib/typing.py	3500	3508	NewType.__init__	__init__(self, name, tp)	todo		
+Lib/typing.py	3510	3523	NewType.__mro_entries__	__mro_entries__(self, bases)	todo		
+Lib/typing.py	3525	3526	NewType.__repr__	__repr__(self)	todo		
+Lib/typing.py	3528	3529	NewType.__reduce__	__reduce__(self)	todo		
+Lib/typing.py	3531	3532	NewType.__or__	__or__(self, other)	todo		
+Lib/typing.py	3534	3535	NewType.__ror__	__ror__(self, other)	todo		
+Lib/typing.py	3563	3564	IO.mode	mode(self)	todo		candidates:calstat-statistics-mode-spec
+Lib/typing.py	3568	3569	IO.name	name(self)	todo		
+Lib/typing.py	3572	3573	IO.close	close(self)	todo		
+Lib/typing.py	3577	3578	IO.closed	closed(self)	todo		
+Lib/typing.py	3581	3582	IO.fileno	fileno(self)	todo		
+Lib/typing.py	3585	3586	IO.flush	flush(self)	todo		
+Lib/typing.py	3589	3590	IO.isatty	isatty(self)	todo		
+Lib/typing.py	3593	3594	IO.read	read(self, n: int=-1, /)	todo		changed-in-3.15: candidates:pyio-bytesio-read-after-seek
+Lib/typing.py	3597	3598	IO.readable	readable(self)	todo		
+Lib/typing.py	3601	3602	IO.readline	readline(self, limit: int=-1, /)	todo		changed-in-3.15:
+Lib/typing.py	3605	3606	IO.readlines	readlines(self, hint: int=-1, /)	todo		changed-in-3.15: candidates:pyio-bytesio-readlines-hint-doc
+Lib/typing.py	3609	3610	IO.seek	seek(self, offset: int, whence: int=0, /)	todo		changed-in-3.15: candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
+Lib/typing.py	3613	3614	IO.seekable	seekable(self)	todo		
+Lib/typing.py	3617	3618	IO.tell	tell(self)	todo		
+Lib/typing.py	3621	3622	IO.truncate	truncate(self, size: int | None=None, /)	todo		changed-in-3.15: candidates:pyio-truncate-keeps-position
+Lib/typing.py	3625	3626	IO.writable	writable(self)	todo		
+Lib/typing.py	3629	3630	IO.write	write(self, s: AnyStr, /)	todo		changed-in-3.15: candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/typing.py	3633	3634	IO.writelines	writelines(self, lines: list[AnyStr], /)	todo		changed-in-3.15:
+Lib/typing.py	3637	3638	IO.__enter__	__enter__(self)	todo		
+Lib/typing.py	3641	3642	IO.__exit__	__exit__(self, type, value, traceback, /)	todo		changed-in-3.15:
+Lib/typing.py	3651	3652	BinaryIO.write	write(self, s: bytes | bytearray, /)	todo		changed-in-3.15: candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/typing.py	3655	3656	BinaryIO.__enter__	__enter__(self)	todo		
+Lib/typing.py	3666	3667	TextIO.buffer	buffer(self)	todo		
+Lib/typing.py	3671	3672	TextIO.encoding	encoding(self)	todo		
+Lib/typing.py	3676	3677	TextIO.errors	errors(self)	todo		
+Lib/typing.py	3681	3682	TextIO.line_buffering	line_buffering(self)	todo		
+Lib/typing.py	3686	3687	TextIO.newlines	newlines(self)	todo		
+Lib/typing.py	3690	3691	TextIO.__enter__	__enter__(self)	todo		
+Lib/typing.py	3694	3710	reveal_type	reveal_type(obj: T, /)	todo		
+Lib/typing.py	3714	3715	_IdentityCallable.__call__	__call__(self, arg: T, /)	todo		
+Lib/typing.py	3718	3799	dataclass_transform	dataclass_transform(*, eq_default: bool=True, order_default: bool=False, kw_only_default: bool=False, frozen_default: bool=False, field_specifiers: tuple[type[Any] | Callable[..., Any], ...]=(), **kwargs: Any)	todo		
+Lib/typing.py	3805	3837	override	override(method: F, /)	todo		
+Lib/typing.py	3840	3858	is_protocol	is_protocol(tp: type, /)	todo		
+Lib/typing.py	3861	3877	get_protocol_members	get_protocol_members(tp: type, /)	todo		
+Lib/typing.py	3880	3949	__getattr__	__getattr__(attr)	todo		changed-in-3.15: candidates:calstat-calendar-module-getattr

@@ -859,7 +859,7 @@ theorem replaceOk_proven : ReplaceOk := by
 
 /-- Any instance can be made once its arguments bind: "`__init__` raises only what binding raises". False: an `InitVar`
 with `init=False` is not a parameter, and the generated `__post_init__` call names it, so `__init__` raises `NameError`.
-The comment at Lib/dataclasses.py:894-898 knows that `init=<anything>` on an `InitVar` makes no sense, and does not
+The comment at Lib/dataclasses.py:887-891 knows that `init=<anything>` on an `InitVar` makes no sense, and does not
 check it. -/
 def InitBindsAlways : Prop :=
   ∀ (c : DClass) (i : DInfo) (args : List Int) (kw b : List (String × Int)), processClass c = .ok i →
@@ -1362,7 +1362,7 @@ def FastSlowAgree : Prop := ∀ v : DV, asdictV .dict v = asdictV .dictLike v
 
 theorem fastSlowAgree_proven : FastSlowAgree := fastSlowV
 
-/-- A dict subclass comes back with its items: Lib/dataclasses.py:1565 calls `obj_type` on pairs. False for `Counter`,
+/-- A dict subclass comes back with its items: Lib/dataclasses.py:1577 calls `obj_type` on pairs. False for `Counter`,
 which counts what it is given, so a `Counter` field becomes a `Counter` of `(key, count)` pairs, in `asdict` and in
 `astuple`. -/
 def CounterSurvives : Prop :=

@@ -50,7 +50,7 @@ def insertByLen (x : String) : List String → List String
 def sortByLenDesc (xs : List String) : List String :=
   xs.foldl (fun acc x => insertByLen x acc) []
 
-/-- `TimeRE.__seqToRE`, _strptime.py:426-444. -/
+/-- `TimeRE.__seqToRE`, _strptime.py:433-451. -/
 def seqToRE (toConvert : List String) (directive : String) (altregex : Option String := none) : String :=
   let sorted := sortByLenDesc toConvert
   if sorted.all (· == "") then ""
@@ -85,11 +85,11 @@ def isReSpace (c : Char) : Bool :=
   c = ' ' || (9 ≤ c.toNat && c.toNat ≤ 13) || (28 ≤ c.toNat && c.toNat ≤ 31) ||
     unicodeSpaces.contains c.toNat
 
-/-- `re_sub(r"([\\.^$*+?\(\){}\[\]|])", r"\\\1", format)`, _strptime.py:454. -/
+/-- `re_sub(r"([\\.^$*+?\(\){}\[\]|])", r"\\\1", format)`, _strptime.py:461. -/
 def escapeFormat (s : List Char) : List Char :=
   s.flatMap fun c => if "\\.^$*+?(){}[]|".toList.contains c then ['\\', c] else [c]
 
-/-- `re_sub(r'\s+', r'\\s+', format)`, _strptime.py:455; `fuel` is the length. -/
+/-- `re_sub(r'\s+', r'\\s+', format)`, _strptime.py:462; `fuel` is the length. -/
 def spaceFormatF : Nat → List Char → List Char
   | 0, _ => []
   | _ + 1, [] => []
@@ -99,7 +99,7 @@ def spaceFormatF : Nat → List Char → List Char
 
 def spaceFormat (s : List Char) : List Char := spaceFormatF s.length s
 
-/-- `re_sub(r"'", "['ʼ]", format)`, _strptime.py:456. -/
+/-- `re_sub(r"'", "['ʼ]", format)`, _strptime.py:463. -/
 def quoteFormat (s : List Char) : List Char :=
   s.flatMap fun c => if c = '\'' then "['ʼ]".toList else [c]
 
@@ -118,7 +118,7 @@ def directiveAt (s : List Char) : List Char × List Char :=
     | [] => ([], [])
   (a ++ b ++ d, s)
 
-/-- The directive scan of `TimeRE.pattern`, _strptime.py:470: `re_sub` with `repl`.
+/-- The directive scan of `TimeRE.pattern`, _strptime.py@3.14.7:470: `re_sub` with `repl`.
 A key missing from the mapping is the `KeyError` of `self[format_char]`. `fuel` is the
 length of the string. -/
 def replaceDirectives (map : String → Option String) : Nat → List Char → Except String (List Char)
@@ -134,7 +134,7 @@ def replaceDirectives (map : String → Option String) : Nat → List Char → E
       | none => .error k
     | c :: r => do return c :: (← replaceDirectives map fuel r)
 
-/-- `TimeRE.pattern(format)`, _strptime.py:446-482, without the `DeprecationWarning`
+/-- `TimeRE.pattern(format)`, _strptime.py:453-500, without the `DeprecationWarning`
 for a day of month with no year. `Except` carries the `KeyError` argument. -/
 def timeREPattern (map : String → Option String) (format : String) : Except String String := do
   let s := quoteFormat (spaceFormat (escapeFormat format.toList))
@@ -143,7 +143,7 @@ def timeREPattern (map : String → Option String) (format : String) : Except St
 /-- `s.replace(a, b)` on strings. -/
 def strReplace (s a b : String) : String := b.intercalate (s.splitOn a)
 
-/-- The `mapping` of `TimeRE.__init__`, _strptime.py:351-417, before `T`, `R`, `r`,
+/-- The `mapping` of `TimeRE.__init__`, _strptime.py:351-422, before `T`, `R`, `r`,
 `X`, `x`, `c`. -/
 def timeREBase (lt : LocaleTimeV) : List (String × String) :=
   let digit0 := "(?P<U>5[0-3]|[0-4]\\d|\\d)"
@@ -192,7 +192,7 @@ def timeREBase (lt : LocaleTimeV) : List (String × String) :=
   let od := (alt.lookup "Od").getD ""
   core ++ alt ++ [("e", d), ("Oe", od), ("P", p), ("Op", p), ("W", strReplace digit0 "U" "W")]
 
-/-- The full `TimeRE` mapping: `base.__setitem__` calls of `__init__`, :419-424. -/
+/-- The full `TimeRE` mapping: `base.__setitem__` calls of `__init__`, :426-431. -/
 def timeREMap (lt : LocaleTimeV) : Except String (List (String × String)) := do
   let add (m : List (String × String)) (k fmt : String) : Except String (List (String × String)) := do
     return (k, ← timeREPattern (fun k => List.lookup k m) fmt) :: m
@@ -204,7 +204,7 @@ def timeREMap (lt : LocaleTimeV) : Except String (List (String × String)) := do
   let m ← add m "x" lt.lcDate
   add m "c" lt.lcDateTime
 
-/-- The `KeyError` handler of `_strptime`, _strptime.py:541-550. -/
+/-- The `KeyError` handler of `_strptime`, _strptime.py:560-569. -/
 def badDirectiveError (bad format : String) : PyExc :=
   let bad := strReplace bad "\\s" ""
   if bad.isEmpty then .valueError s!"stray % in format '{format}'"
@@ -215,7 +215,7 @@ def badDirectiveError (bad format : String) : PyExc :=
       | (before, []) => String.ofList before
     .valueError s!"'{bad}' is a bad directive in format '{format}'"
 
-/-- `TimeRE.compile`, _strptime.py:484-486, with the `except KeyError` of `_strptime`,
+/-- `TimeRE.compile`, _strptime.py:502-504, with the `except KeyError` of `_strptime`,
 up to the regex compilation: the pattern string or the `ValueError`. -/
 def strptimeCompile (lt : LocaleTimeV) (format : String) : Py String :=
   match timeREMap lt with
@@ -227,7 +227,7 @@ def strptimeCompile (lt : LocaleTimeV) (format : String) : Py String :=
 
 /-! ### `_strptime` after the match -/
 
-/-- `_calc_julian_from_U_or_W`, _strptime.py:495-513. -/
+/-- `_calc_julian_from_U_or_W`, _strptime.py:513-531. -/
 def calcJulianFromUorW (year weekOfYear dayOfWeek : Int) (weekStartsMon : Bool) : Py Int := do
   let _ ← checkDate year 1 1
   let firstWeekday := dateWeekdayC year 1 1
@@ -239,7 +239,7 @@ def calcJulianFromUorW (year weekOfYear dayOfWeek : Int) (weekStartsMon : Bool) 
     let daysToWeek := week0Length + 7 * (weekOfYear - 1)
     return 1 + daysToWeek + dayOfWeek
 
-/-- The local variables of `_strptime`, :557-571. -/
+/-- The local variables of `_strptime`, :576-599. -/
 structure StrpState where
   isoYear : Option Int := none
   year : Option Int := none
@@ -265,7 +265,7 @@ def listIndex (xs : List String) (x : String) : Py Int :=
   | some i => .ok i
   | none => .error (.valueError "~is not in list")
 
-/-- `parse_int`, _strptime.py:574-581. -/
+/-- `parse_int`, _strptime.py:602-609. -/
 def parseIntLt (lt : LocaleTimeV) (s : String) : Py Int :=
   match lt.altDigits with
   | some ds =>
@@ -275,7 +275,7 @@ def parseIntLt (lt : LocaleTimeV) (s : String) : Py Int :=
       | none => pyInt s.toList
   | none => pyInt s.toList
 
-/-- The `%z` branch, _strptime.py:666-686: `gmtoff` and `gmtoff_fraction`. -/
+/-- The `%z` branch, _strptime.py@3.14.7:666-686: `gmtoff` and `gmtoff_fraction`. -/
 def parseZ (found : String) : Py (Int × Option Int) := do
   let z0 := found.toList
   if z0 = ['Z'] then return (0, some 0)
@@ -295,7 +295,7 @@ def parseZ (found : String) : Py (Int × Option Int) := do
   if z.head? = some '-' then return (-frac, some (-gmtoff))
   return (frac, some gmtoff)
 
-/-- One round of `for group_key in found_dict.keys()`, _strptime.py:583-704. -/
+/-- One round of `for group_key in found_dict.keys()`, _strptime.py:611-733. -/
 def strpStep (lt : LocaleTimeV) (found : List (String × String)) (st : StrpState) (key : String) :
     Py StrpState := do
   let v := (found.lookup key).getD ""
@@ -373,10 +373,10 @@ structure StrpResult where
 /-- `datetime_date(y, m, d)` as `_strptime` uses it. -/
 def dateC (y m d : Int) : Py (Int × Int × Int) := checkDate y m d
 
-/-- `_strptime`, _strptime.py:516-778, from `found.groupdict()` on. -/
+/-- `_strptime`, _strptime.py:534-807, from `found.groupdict()` on. -/
 def strptimeCore (lt : LocaleTimeV) (found : List (String × String)) : Py StrpResult := do
   let st ← (found.map (·.1)).foldlM (strpStep lt found) ({} : StrpState)
-  -- :706-724
+  -- :735-753
   if st.isoYear.isSome then
     if st.julian.isSome then
       throw (.valueError "Day of the year directive '%j' is not compatible with ISO year directive '%G'. Use '%Y' instead.")
@@ -387,12 +387,12 @@ def strptimeCore (lt : LocaleTimeV) (found : List (String × String)) : Py StrpR
       throw (.valueError "ISO week directive '%V' must be used with the ISO year directive '%G' and a weekday directive ('%A', '%a', '%w', or '%u').")
     else
       throw (.valueError "ISO week directive '%V' is incompatible with the year directive '%Y'. Use the ISO year '%G' instead.")
-  -- :726-731
+  -- :755-760
   let (year, leapYearFix) : Int × Bool := match st.year with
     | some y => (y, false)
     | none => if st.month = 2 ∧ st.day = 29 then (1904, true) else (1900, false)
   let (year, month, day) := (year, st.month, st.day)
-  -- :735-748
+  -- :764-777
   let (year, month, day, julian) ← match st.julian, st.weekday with
     | none, some weekday =>
       let (year, month, day, julian) ← match st.weekOfYear, st.isoYear, st.isoWeek with
@@ -412,7 +412,7 @@ def strptimeCore (lt : LocaleTimeV) (found : List (String × String)) : Py StrpR
         else pure (year, month, day, some j)
       | none => pure (year, month, day, none)
     | j, _ => pure (year, month, day, j)
-  -- :750-762
+  -- :779-791
   let (year, month, day, julian) ← match julian with
     | none => do
       let _ ← dateC year month day
@@ -422,7 +422,7 @@ def strptimeCore (lt : LocaleTimeV) (found : List (String × String)) : Py StrpR
       let _ ← dateC year 1 1
       let (y, m, d) ← fromordinalC ((j - 1) + ymdToOrdC year 1 1)
       pure (y, m, d, j)
-  -- :763-764
+  -- :792-793
   let weekday ← match st.weekday with
     | some w => pure w
     | none => do
@@ -433,16 +433,16 @@ def strptimeCore (lt : LocaleTimeV) (found : List (String × String)) : Py StrpR
   return ⟨year, month, day, st.hour, st.minute, st.second, weekday, julian, st.tz, tzname, st.gmtoff,
     st.fraction, st.gmtoffFraction⟩
 
-/-- `_strptime_time`, _strptime.py:780-784: the eleven items of the `struct_time`. -/
+/-- `_strptime_time`, _strptime.py:809-813: the eleven items of the `struct_time`. -/
 def strptimeTime (lt : LocaleTimeV) (found : List (String × String)) : Py StrpResult :=
   strptimeCore lt found
 
-/-- `_strptime_datetime_date`, _strptime.py:786-791. -/
+/-- `_strptime_datetime_date`, _strptime.py:815-820. -/
 def strptimeDate (lt : LocaleTimeV) (found : List (String × String)) : Py (Int × Int × Int) := do
   let r ← strptimeCore lt found
   checkDate r.year r.month r.day
 
-/-- `_parse_tz`, _strptime.py:793-798: a `timezone`, as its offset and name. -/
+/-- `_parse_tz`, _strptime.py:822-827: a `timezone`, as its offset and name. -/
 def parseTz (tzname : Option String) (gmtoff gmtoffFraction : Int) : Py Tz := do
   let tzdelta ← deltaPy 0 gmtoff gmtoffFraction 0 0 0 0
   let named := tzname.filter (· ≠ "")
@@ -450,7 +450,7 @@ def parseTz (tzname : Option String) (gmtoff gmtoffFraction : Int) : Py Tz := do
   let _ ← timezonePy tzdelta
   return ⟨1, .timezone tzdelta named⟩
 
-/-- `_strptime_datetime_time`, _strptime.py:800-810. -/
+/-- `_strptime_datetime_time`, _strptime.py:829-839. -/
 def strptimeDatetimeTime (lt : LocaleTimeV) (found : List (String × String)) : Py TM := do
   let r ← strptimeCore lt found
   match r.gmtoff with
@@ -459,7 +459,7 @@ def strptimeDatetimeTime (lt : LocaleTimeV) (found : List (String × String)) : 
     let tz ← parseTz r.tzname g r.gmtoffFraction
     newTM ⟨r.hour, r.minute, r.second, r.fraction, 0, some tz⟩
 
-/-- `_strptime_datetime_datetime`, _strptime.py:812-822. -/
+/-- `_strptime_datetime_datetime`, _strptime.py:841-851. -/
 def strptimeDatetime (lt : LocaleTimeV) (found : List (String × String)) : Py DT := do
   let r ← strptimeCore lt found
   match r.gmtoff with

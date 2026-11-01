@@ -46,8 +46,8 @@ promised_by: |
   Doc/library/csv.rst: sniff returns "a Dialect subclass reflecting the parameters found". A subclass
   that reader rejects reflects nothing usable.
 cause: |
-  Lib/csv.py:384 counts every ASCII character as a possible delimiter, including both quote
-  characters. Lib/csv.py:272 then defaults quotechar to `"` with no test against delimiter.
+  Lib/csv.py@3.14.7:384 counts every ASCII character as a possible delimiter, including both quote
+  characters. Lib/csv.py:270 then defaults quotechar to `"` with no test against delimiter.
 possible_fix: |
   Leave the quote characters out of `ascii` in _guess_delimiter, or raise Error when delimiter equals
   quotechar. A 3.14 branch fix only, since main has moved on.

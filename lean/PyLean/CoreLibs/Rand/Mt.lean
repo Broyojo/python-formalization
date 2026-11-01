@@ -309,7 +309,7 @@ def cSetstate (state : CStateArg) : Py State :=
 
 /-! ### `getrandbits`, _randommodule.c:506-550 -/
 
-/-- `_PyLong_UInt64_Converter`, Objects/longobject.c:1737-1755 and :1765, the
+/-- `_PyLong_UInt64_Converter`, Objects/longobject.c:1812-1830 and :1840, the
 clinic `uint64` converter (Modules/clinic/_randommodule.c.h:136). -/
 inductive IntArg where
   | int (n : Int)

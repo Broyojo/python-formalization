@@ -4,8 +4,8 @@ import PyLean.PyIO.StringPy
 /-!
 The remaining `StringIO` attributes of both twins: inquiries, `flush`, `isatty`,
 `fileno`, `detach`, `encoding`, `errors`, `line_buffering`, `name`, and the C
-pickling state (`Modules/_io/stringio.c:794-989`, `Modules/_io/iobase.c`,
-`Modules/_io/textio.c:67-185`, `Lib/_pyio.py:2220-2253`, :2749-2764).
+pickling state (`Modules/_io/stringio.c:804-999`, `Modules/_io/iobase.c`,
+`Modules/_io/textio.c:67-185`, `Lib/_pyio.py:2244-2277`, :2773-2788).
 -/
 
 namespace PyLean.PyIO
@@ -22,7 +22,7 @@ inductive SXOp where
 
 namespace SC
 
-/-- `_io_StringIO___setstate___impl`, stringio.c:889-989: `__init__` runs on the
+/-- `_io_StringIO___setstate___impl`, stringio.c:899-999: `__init__` runs on the
 state, then the buffer is replaced verbatim and the position range-checked. -/
 def setstate (s : SCState) (v nl : Option (List Nat)) (pos : Int) : SCState × Py Val :=
   if s.closed then (s, .error closedErr) else
@@ -36,7 +36,7 @@ def setstate (s : SCState) (v nl : Option (List Nat)) (pos : Int) : SCState × P
       if p < 0 then (t, .error (.valueError "position value cannot be negative"))
       else ({ t with pos := p.toNat }, .ok .none)
 
-/-- stringio.c:794-832 (`readable`..), :1012-1018 (`line_buffering`), :853-878
+/-- stringio.c:804-842 (`readable`..), :1022-1028 (`line_buffering`), :863-888
 (`__getstate__`); `flush` and `isatty` are `_IOBase`'s (iobase.c:172-185,
 :544-550): `flush` only sees `__IOBase_closed`, which `StringIO.close` does not set. -/
 def xstep (s : SCState) : SXOp → SCState × Py Val
@@ -61,10 +61,10 @@ end SC
 
 namespace TP
 
-/-- `TextIOWrapper.readable/writable` (_pyio.py:2225-2229) and `seekable`
-(:2220-2223), `flush` (:2231-2233), `isatty` (:2253-2254), `fileno` (:2250-2251,
-`IOBase.fileno`), `name` (:2246-2248), `StringIO.encoding/errors/detach`
-(:2754-2764), `line_buffering` (:2165-2167). -/
+/-- `TextIOWrapper.readable/writable` (_pyio.py:2249-2253) and `seekable`
+(:2244-2247), `flush` (:2255-2257), `isatty` (:2277-2278), `fileno` (:2274-2275,
+`IOBase.fileno`), `name` (:2270-2272), `StringIO.encoding/errors/detach`
+(:2778-2788), `line_buffering` (:2189-2191). -/
 def xstep (t : TState) : SXOp → TState × Py Val
   | .readable | .writable | .seekable =>
     if t.b.closed then (t, .error closedDot) else (t, .ok (.bool true))

@@ -434,7 +434,7 @@ mutual
           block none (visitList f (seqU orelse))
   termination_by structural f _ => f
 
-  /-- `visit_arguments`, `Lib/_ast_unparse.py:994-1043`. -/
+  /-- `visit_arguments`, `Lib/_ast_unparse.py:998-1047`. -/
   def visitArguments : Nat → List Ast → UM Unit
     | 0, _ => throw .modelFuel
     | f + 1, [posonly, args, vararg, kwonly, kwDefaults, kwarg, defaults] => do

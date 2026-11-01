@@ -1,5 +1,11 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/util.py	24	33	fix_scaling	fix_scaling(root)	excluded		platform: GUI toolkit
-Lib/idlelib/util.py	40	46	fix_win_hidpi	fix_win_hidpi()	excluded		platform: GUI toolkit
-Lib/idlelib/util.py	48	54	fix_word_breaks	fix_word_breaks(root)	excluded		platform: GUI toolkit
-Lib/idlelib/util.py	57	65	fix_x11_paste	fix_x11_paste(root)	excluded		platform: GUI toolkit
+Lib/idlelib/util.py	25	34	fix_scaling	fix_scaling(root)	excluded		platform: GUI toolkit
+Lib/idlelib/util.py	41	47	fix_win_hidpi	fix_win_hidpi()	excluded		platform: GUI toolkit
+Lib/idlelib/util.py	49	55	fix_word_breaks	fix_word_breaks(root)	excluded		platform: GUI toolkit
+Lib/idlelib/util.py	58	66	fix_x11_paste	fix_x11_paste(root)	excluded		platform: GUI toolkit
+Lib/idlelib/util.py	71	81	x11_buttons	x11_buttons(widget)	excluded		platform: GUI toolkit
+Lib/idlelib/util.py	84	90	bind_wheel	bind_wheel(widget, func)	excluded		platform: GUI toolkit
+Lib/idlelib/util.py	93	115	wheel_event	wheel_event(event, widget=None)	excluded		platform: GUI toolkit
+Lib/idlelib/util.py	125	152	_split_windows	_split_windows(cli_string)	excluded		platform: GUI toolkit
+Lib/idlelib/util.py	155	160	split_cli_args	split_cli_args(cli_string)	excluded		platform: GUI toolkit
+Lib/idlelib/util.py	163	169	join_cli_args	join_cli_args(cli_args)	excluded		platform: GUI toolkit

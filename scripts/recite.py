@@ -28,8 +28,10 @@ SUFFIXES = {".c", ".h", ".py", ".gram", ".rst", ".asdl"}
 MARK = "@3.14.7"
 
 PATH = r"(?:[A-Za-z0-9_.-]+/)*[A-Za-z0-9_.-]+\.(?:c|h|py|gram|rst|asdl)"
-SPAN = r"(?P<a>\d+)(?:-(?P<b>\d+))?(?![\w:])"
-TOKEN = re.compile(rf"(?<![\w/.-])(?P<path>{PATH})(?::{SPAN})?|(?<=[\s(,`])(?P<bare>:)(?P<x>\d+)(?:-(?P<y>\d+))?(?![\w:])")
+# A citation may be followed by a colon, as in `Lib/a.py:12: the test`, but not by
+# more digits. ` (3.14.7)` after one is dropped: every citation names 3.15.2 now.
+SPAN = r"(?P<a>\d+)(?:-(?P<b>\d+))?(?!\w|:\d)(?P<label> \(3\.14(?:\.7)?\))?"
+TOKEN = re.compile(rf"(?<![\w/.-])(?P<path>{PATH})(?::{SPAN})?|(?<=[\s(,`])(?P<bare>:)(?P<x>\d+)(?:-(?P<y>\d+))?(?!\w|:\d)")
 HUNK = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@", re.M)
 
 
@@ -186,7 +188,9 @@ def main():
     sources = Sources(args.old.resolve(), args.new.resolve())
 
     targets = [(p, rewrite_lean) for p in sorted((ROOT / "lean").rglob("*.lean")) if ".lake" not in p.parts]
-    targets += [(p, rewrite_yaml) for p in sorted((ROOT / "bugs").glob("*.yaml"))]
+    # A record of behaviour 3.15.2 no longer has keeps citing the code it describes.
+    gone = set((ROOT / "coverage" / "gone-in-3.15.txt").read_text().split())
+    targets += [(p, rewrite_yaml) for p in sorted((ROOT / "bugs").glob("*.yaml")) if p.stem not in gone]
     targets += [(p, lambda t, s, c: rewrite(t, s, {}, False, c)) for p in sorted((ROOT / "difftest").glob("*.py"))]
     targets += [(p, rewrite_tsv) for p in sorted((ROOT / "coverage" / "review").glob("*.tsv"))]
     targets += [(p, rewrite_tsv) for p in sorted((ROOT / "coverage" / "methods").glob("*.tsv"))]

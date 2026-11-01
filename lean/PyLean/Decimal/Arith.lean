@@ -16,7 +16,7 @@ modelled arithmetically: for a coefficient `c` and `k ≥ 1` dropped digits,
 Every `int(s)` / `str(i)` / `len(str(i))` on a coefficient goes through
 `intLimit` / `strLimit`, which raise `ValueError` past 4300 digits.
 
-Signals (`Context._raise_error`, _pydecimal.py:4005-4025) set a flag and
+Signals (`Context._raise_error`, _pydecimal.py:4105-4125) set a flag and
 raise when the signal is trapped; the monad `DM` threads the flags and the
 exception. When a trap fires the flags are not compared (the C twin sets all
 of an operation's flags before raising; `_pydecimal` stops at the first
@@ -45,7 +45,7 @@ def Signal.name : Signal → String
 
 /-- A `Context` (only the fields the modelled operations read). Type
 invariant (enforced by `Context.__init__`/`_set_integer_check`,
-_pydecimal.py:3905-3953): `prec ≥ 1`, `emin ≤ 0 ≤ emax`. -/
+_pydecimal.py:4005-4053): `prec ≥ 1`, `emin ≤ 0 ≤ emax`. -/
 structure Ctx where
   prec : Nat := 28
   rounding : Rounding := .halfEven
@@ -72,7 +72,7 @@ def raiseSig (c : Ctx) (s : Signal) : DM Unit := do
 /-! ## Rounding -/
 
 /-- The rounding functions `_round_down` ... `_round_05up`
-(_pydecimal.py:1716-1781) on a coefficient whose kept prefix is `q`, whose
+(_pydecimal.py:1815-1880) on a coefficient whose kept prefix is `q`, whose
 dropped digits read as `r`, with `h = 5·10^(k-1)` for `k` dropped digits.
 `1`: round away from zero; `0`: exact; `-1`: truncate inexactly. -/
 def roundDir (m : Rounding) (neg : Bool) (q r h : Nat) : Int :=
@@ -101,7 +101,7 @@ def incr (q digits : Nat) : Py Nat := do
   strLimit (q + 1)
   return q + 1
 
-/-- `Decimal._rescale(exp, rounding)`, _pydecimal.py:2576-2608. Quiet. -/
+/-- `Decimal._rescale(exp, rounding)`, _pydecimal.py:2676-2708. Quiet. -/
 def rescale (d : Dec) (exp : Int) (m : Rounding) : Py Dec :=
   match d with
   | .fin neg co e =>
@@ -118,13 +118,13 @@ def rescale (d : Dec) (exp : Int) (m : Rounding) : Py Dec :=
 
 /-! ## `_fix` -/
 
-/-- `_fix_nan`, _pydecimal.py:1602-1612: keep the last `prec - clamp` digits
+/-- `_fix_nan`, _pydecimal.py:1701-1711: keep the last `prec - clamp` digits
 of the payload. -/
 def fixNan (c : Ctx) (neg sig : Bool) (p : Nat) : Dec :=
   let maxLen := c.prec - (if c.clamp then 1 else 0)
   if numDigits p > maxLen ∧ p ≠ 0 then .nan neg sig (p % 10 ^ maxLen) else .nan neg sig p
 
-/-- `Overflow.handle`, _pydecimal.py:281-294. -/
+/-- `Overflow.handle`, _pydecimal.py:284-297. -/
 def overflowResult (c : Ctx) (neg : Bool) : Dec :=
   let maxv := Dec.fin neg (10 ^ c.prec - 1) (c.emax - c.prec + 1)
   match c.rounding with
@@ -138,19 +138,19 @@ def isZero : Dec → Bool
   | _ => false
 
 /-- `digits`, and the replacement of `self` by `10^(exp_min-1)` when it is
-negative, _pydecimal.py:1661-1664. -/
+negative, _pydecimal.py:1760-1763. -/
 def fixDigits (co : Nat) (e expMin : Int) : Nat × Nat :=
   let digits : Int := numDigits co + e - expMin
   if digits < 0 then (1, 0) else (co, digits.toNat)
 
-/-- The increment and renormalization, _pydecimal.py:1667-1672. -/
+/-- The increment and renormalization, _pydecimal.py:1766-1771. -/
 def fixCarry (c : Ctx) (q : Nat) (changed : Int) (dg : Nat) (expMin : Int) : DM (Nat × Int) :=
   if changed > 0 then do
     let q1 ← liftPy (incr q dg)
     if numDigits q1 > c.prec then pure (q1 / 10, expMin + 1) else pure (q1, expMin)
   else pure (q, expMin)
 
-/-- The result and its signals, _pydecimal.py:1675-1692. -/
+/-- The result and its signals, _pydecimal.py:1774-1791. -/
 def fixFinish (c : Ctx) (neg : Bool) (coeff : Nat) (expMin : Int) (changed : Int) (sub : Bool) : DM Dec := do
   let ans ← if expMin > c.etop then do
       raiseSig c .overflow
@@ -163,14 +163,14 @@ def fixFinish (c : Ctx) (neg : Bool) (coeff : Nat) (expMin : Int) (changed : Int
   if isZero ans then raiseSig c .clamped
   return ans
 
-/-- The rounding branch of `_fix`, _pydecimal.py:1660-1692. -/
+/-- The rounding branch of `_fix`, _pydecimal.py:1759-1791. -/
 def fixRound (c : Ctx) (neg : Bool) (co : Nat) (e expMin : Int) (sub : Bool) : DM Dec := do
   let p := fixDigits co e expMin
   let r := roundKeep c.rounding neg p.1 p.2
   let t ← fixCarry c r.1 r.2 p.2 expMin
   fixFinish c neg t.1 t.2 r.2 sub
 
-/-- `Decimal._fix(context)`, _pydecimal.py:1614-1704. -/
+/-- `Decimal._fix(context)`, _pydecimal.py:1713-1803. -/
 def fix (c : Ctx) : Dec → DM Dec
   | .nan neg sig p => pure (fixNan c neg sig p)
   | .inf neg => pure (.inf neg)
@@ -199,7 +199,7 @@ def fix (c : Ctx) : Dec → DM Dec
       return .fin neg (co * 10 ^ (e - etop).toNat) etop
     return .fin neg co e
 
-/-- `_check_nans(other, context)`, _pydecimal.py:698-728: `none` when no
+/-- `_check_nans(other, context)`, _pydecimal.py:790-820: `none` when no
 operand is a NaN. A signaling NaN raises InvalidOperation, whose handler
 returns the quiet NaN with the same sign and payload. -/
 def checkNans (c : Ctx) (a : Dec) (b : Option Dec) : DM (Option Dec) :=
@@ -214,12 +214,12 @@ def checkNans (c : Ctx) (a : Dec) (b : Option Dec) : DM (Option Dec) :=
 the result is a positive quiet NaN. -/
 def invalid (c : Ctx) : DM Dec := do raiseSig c .invalidOperation; return .nan false false 0
 
-/-! ## Value comparison (`_cmp`, _pydecimal.py:770-832, for non-NaNs) -/
+/-! ## Value comparison (`_cmp`, _pydecimal.py:862-924, for non-NaNs) -/
 
 /-- `(-1)**sign` as an ordering. -/
 def signOrd (neg : Bool) : Ordering := if neg then .lt else .gt
 
-/-- `Decimal._cmp`, _pydecimal.py:770-832, for operands that are not NaNs.
+/-- `Decimal._cmp`, _pydecimal.py:862-924, for operands that are not NaNs.
 When the adjusted exponents agree, the zero-padded digit strings have equal
 length, so comparing them as strings compares them as numbers. -/
 def cmpVal : Dec → Dec → Ordering
@@ -245,7 +245,7 @@ def cmpVal : Dec → Dec → Ordering
 
 def adjustedD (co : Nat) (e : Int) : Int := e + numDigits co - 1
 
-/-- The tail of `quantize`, _pydecimal.py:2551-2559: Inexact and Rounded, then `_fix`. -/
+/-- The tail of `quantize`, _pydecimal.py:2651-2659: Inexact and Rounded, then `_fix`. -/
 def quantizeFlags (c : Ctx) (ans : Dec) (ae : Int) (neg : Bool) (co : Nat) (e : Int) : DM Dec := do
   if ae > e then
     if cmpVal ans (.fin neg co e) ≠ .eq then raiseSig c .inexact
@@ -253,7 +253,7 @@ def quantizeFlags (c : Ctx) (ans : Dec) (ae : Int) (neg : Bool) (co : Nat) (e : 
   fix c ans
 
 /-- The finite-operand part of `quantize` after the checks on rounding,
-_pydecimal.py:2523-2559: the operand is `±co·10^e`, the target exponent `qe`. -/
+_pydecimal.py:2623-2659: the operand is `±co·10^e`, the target exponent `qe`. -/
 def quantizeFin (c : Ctx) (m : Rounding) (neg : Bool) (co : Nat) (e qe : Int) : DM Dec := do
   if ¬(c.etiny ≤ qe ∧ qe ≤ c.emax) then return (← invalid c)
   if co = 0 then return (← fix c (.fin neg 0 qe))
@@ -269,7 +269,7 @@ def quantizeFin (c : Ctx) (m : Rounding) (neg : Bool) (co : Nat) (e qe : Int) : 
     quantizeFlags c ans ae neg co e
   | _ => return ans
 
-/-- `Decimal.quantize(exp, rounding, context)`, _pydecimal.py:2500-2559. -/
+/-- `Decimal.quantize(exp, rounding, context)`, _pydecimal.py:2600-2659. -/
 def quantize (c : Ctx) (a q : Dec) (rnd : Option Rounding := none) : DM Dec := do
   let m := rnd.getD c.rounding
   match a, q with
@@ -280,14 +280,14 @@ def quantize (c : Ctx) (a q : Dec) (rnd : Option Rounding := none) : DM Dec := d
     | .inf _, .inf _ => return a
     | _, _ => invalid c
 
-/-- `to_integral_value(rounding, context)`, _pydecimal.py:2662-2676. -/
+/-- `to_integral_value(rounding, context)`, _pydecimal.py:2762-2776. -/
 def toIntegralValue (c : Ctx) (a : Dec) (rnd : Option Rounding := none) : DM Dec := do
   let m := rnd.getD c.rounding
   match a with
   | .fin _ _ e => if e ≥ 0 then return a else liftPy (rescale a 0 m)
   | _ => return ((← checkNans c a none).getD a)
 
-/-- `to_integral_exact(rounding, context)`, _pydecimal.py:2633-2660. -/
+/-- `to_integral_exact(rounding, context)`, _pydecimal.py:2733-2760. -/
 def toIntegralExact (c : Ctx) (a : Dec) (rnd : Option Rounding := none) : DM Dec := do
   match a with
   | .fin neg co e =>
@@ -299,13 +299,13 @@ def toIntegralExact (c : Ctx) (a : Dec) (rnd : Option Rounding := none) : DM Dec
     return ans
   | _ => return ((← checkNans c a none).getD a)
 
-/-- `round(d, n)`, _pydecimal.py:1830-1835: `self.quantize(Decimal((0, (1,), -n)))`. -/
+/-- `round(d, n)`, _pydecimal.py:1930-1935: `self.quantize(Decimal((0, (1,), -n)))`. -/
 def roundN (c : Ctx) (a : Dec) (n : Int) : DM Dec := quantize c a (.fin false 1 (-n))
 
 /-- Python truncating division toward zero of an int by `10^k`. -/
 def truncDiv (neg : Bool) (v : Nat) : Int := if neg then -(v : Int) else v
 
-/-- `Decimal.__int__`, _pydecimal.py:1573-1584. -/
+/-- `Decimal.__int__`, _pydecimal.py:1672-1683. -/
 def pyInt : Dec → Py Int
   | .nan _ _ _ => .error (.valueError "Cannot convert NaN to integer")
   | .inf _ => .error (.overflowError "Cannot convert infinity to integer")
@@ -319,7 +319,7 @@ def pyInt : Dec → Py Int
       intLimit (if kept ≤ 0 then 1 else kept.toNat)
       return truncDiv neg (co / 10 ^ e.natAbs)
 
-/-- `__round__()`, `__floor__`, `__ceil__` (_pydecimal.py:1837-1873):
+/-- `__round__()`, `__floor__`, `__ceil__` (_pydecimal.py:1937-1973):
 `int(self._rescale(0, mode))`. -/
 def pyToInt (m : Rounding) : Dec → Py Int
   | .nan _ _ _ => .error (.valueError "cannot round a NaN")
@@ -328,7 +328,7 @@ def pyToInt (m : Rounding) : Dec → Py Int
 
 /-! ## normalize, copy_sign, compare_total -/
 
-/-- `Decimal.normalize(context)`, _pydecimal.py:2475-2498. -/
+/-- `Decimal.normalize(context)`, _pydecimal.py:2575-2598. -/
 def normalize (c : Ctx) (a : Dec) : DM Dec := do
   if let .fin _ _ _ := a then pure () else
     if let some ans ← checkNans c a none then return ans
@@ -354,7 +354,7 @@ def Dec.withSign (d : Dec) (n : Bool) : Dec :=
   | .inf _ => .inf n
   | .nan _ s p => .nan n s p
 
-/-- `copy_sign`, _pydecimal.py:2995-2999. -/
+/-- `copy_sign`, _pydecimal.py:3095-3099. -/
 def copySign (a b : Dec) : Dec := a.withSign b.neg
 
 /-- NaN kind as `_isnan()` reports it: 0, 1 (quiet), 2 (signaling). -/
@@ -372,7 +372,7 @@ def expOf : Dec → Int
   | _ => 0
 
 /-- `compare_total` once both operands have the sign `sign`,
-_pydecimal.py:2913-2969. -/
+_pydecimal.py:3013-3069. -/
 def compareTotalSame (sign : Bool) (a b : Dec) : Int :=
   let flip (x : Int) : Int := if sign then -x else x
   let na := nanKind a
@@ -393,7 +393,7 @@ def compareTotalSame (sign : Bool) (a b : Dec) : Int :=
     | .eq =>
       if expOf a < expOf b then flip (-1) else if expOf a > expOf b then flip 1 else 0
 
-/-- `compare_total`, _pydecimal.py:2899-2969, as -1/0/1. -/
+/-- `compare_total`, _pydecimal.py:2999-3069, as -1/0/1. -/
 def compareTotal (a b : Dec) : Int :=
   match a.neg, b.neg with
   | true, false => -1
@@ -402,7 +402,7 @@ def compareTotal (a b : Dec) : Int :=
 
 /-! ## Arithmetic (`Decimal.__add__`, `__sub__`, `__mul__`) -/
 
-/-- `_normalize(op1, op2, prec)`, _pydecimal.py:5623-5649, on `_WorkRep`s
+/-- `_normalize(op1, op2, prec)`, _pydecimal.py:5723-5749, on `_WorkRep`s
 `(sign, int, exp)`. -/
 def workNormalize (prec : Nat) (o1 o2 : Bool × Nat × Int) :
     Py ((Bool × Nat × Int) × (Bool × Nat × Int)) := do
@@ -417,7 +417,7 @@ def workNormalize (prec : Nat) (o1 o2 : Bool × Nat × Int) :
   let tmp := (tmp.1, tmp.2.1 * 10 ^ (tmp.2.2 - other.2.2).toNat, other.2.2)
   return if swap then (other, tmp) else (tmp, other)
 
-/-- `Decimal.__add__(other, context)`, _pydecimal.py:1110-1194. -/
+/-- `Decimal.__add__(other, context)`, _pydecimal.py:1202-1286. -/
 def add (c : Ctx) (a b : Dec) : DM Dec := do
   match a, b with
   | .fin _ _ _, .fin _ _ _ => pure ()
@@ -459,7 +459,7 @@ def add (c : Ctx) (a b : Dec) : DM Dec := do
 
 def negate (d : Dec) : Dec := d.withSign (!d.neg)
 
-/-- `Decimal.__sub__`, _pydecimal.py:1198-1210. -/
+/-- `Decimal.__sub__`, _pydecimal.py:1290-1302. -/
 def sub (c : Ctx) (a b : Dec) : DM Dec := do
   match a, b with
   | .fin _ _ _, .fin _ _ _ => pure ()
@@ -467,7 +467,7 @@ def sub (c : Ctx) (a b : Dec) : DM Dec := do
     if let some ans ← checkNans c a (some b) then return ans
   add c a (negate b)
 
-/-- The finite operands of `__mul__`, _pydecimal.py:1249-1272. -/
+/-- The finite operands of `__mul__`, _pydecimal.py:1341-1364. -/
 def mulFin (c : Ctx) (rs : Bool) (ca : Nat) (ea : Int) (cb : Nat) (eb : Int) : DM Dec := do
   let re := ea + eb
   if ca = 0 ∨ cb = 0 then return (← fix c (.fin rs 0 re))
@@ -478,7 +478,7 @@ def mulFin (c : Ctx) (rs : Bool) (ca : Nat) (ea : Int) (cb : Nat) (eb : Int) : D
   liftPy (strLimit (ca * cb))
   fix c (.fin rs (ca * cb) re)
 
-/-- `Decimal.__mul__`, _pydecimal.py:1220-1274. -/
+/-- `Decimal.__mul__`, _pydecimal.py:1312-1366. -/
 def mul (c : Ctx) (a b : Dec) : DM Dec := do
   let rs := a.neg != b.neg
   match a, b with
@@ -495,14 +495,14 @@ def mul (c : Ctx) (a b : Dec) : DM Dec := do
 /-- The hash of a finite decimal once its coefficient is an int:
 `coeff * 10^exp mod P` (with `pow(_PyHASH_10INV, -exp, P)` for a negative
 exponent), negated for a negative non-zero value, `-1 → -2`
-(_pydecimal.py:914-920). This is `PyLean.Fractions.decimalHash`, whose
-`tenInv` is `_PyHASH_10INV = pow(10, P - 2, P)` (_pydecimal.py:6405). -/
+(_pydecimal.py:1006-1012). This is `PyLean.Fractions.decimalHash`, whose
+`tenInv` is `_PyHASH_10INV = pow(10, P - 2, P)` (_pydecimal.py:6505). -/
 abbrev hashFinite (neg : Bool) (co : Nat) (e : Int) : Int := PyLean.Fractions.decimalHash neg co e
 
 def hashInf : Int := PyLean.Fractions.hashInf
 def intHash (n : Int) : Int := PyLean.Fractions.intHash n
 
-/-- `_pydecimal.Decimal.__hash__`, _pydecimal.py:896-920. NaNs hash by
+/-- `_pydecimal.Decimal.__hash__`, _pydecimal.py:988-1012. NaNs hash by
 identity (not modelled: `none`). -/
 def pyHash : Dec → Py (Option Int)
   | .nan _ true _ => .error (.typeError "Cannot hash a signaling NaN value.")
@@ -512,7 +512,7 @@ def pyHash : Dec → Py (Option Int)
     intLimit (numDigits co)      -- int(self._int)
     return some (hashFinite neg co e)
 
-/-- `_decimal`'s `_dec_hash`, _decimal.c:4896-5008: the same formula computed
+/-- `_decimal`'s `_dec_hash`, _decimal.c:5820-5932: the same formula computed
 with libmpdec (`mpd_qpowmod` with the literal `inv10_p = 2075258708292324556`,
 `mpd_qmul`, `mpd_qrem` under an extended max context), so no string
 conversion is involved. (`inv10_p` is `tenInv`: `tenInv_eq` below.) -/
@@ -522,8 +522,8 @@ def cHash : Dec → Py (Option Int)
   | .inf neg => .ok (some (if neg then -hashInf else hashInf))
   | .fin neg co e => .ok (some (hashFinite neg co e))
 
-/-- `as_integer_ratio`, _pydecimal.py:929-977. The source strips factors of 5 and
-of 2 from `n` and `10^-exp` in turn (:960-973), which yields the fraction in
+/-- `as_integer_ratio`, _pydecimal.py:1021-1069. The source strips factors of 5 and
+of 2 from `n` and `10^-exp` in turn (:1052-1065), which yields the fraction in
 lowest terms; the model writes that fraction with a gcd. -/
 def pyRatio : Dec → Py (Int × Int)
   | .nan _ _ _ => .error (.valueError "cannot convert NaN to integer ratio")
@@ -538,7 +538,7 @@ def pyRatio : Dec → Py (Int × Int)
         (co / g, 10 ^ e.natAbs / g)
     return (if neg then -(n : Int) else n, d)
 
-/-- `_decimal`'s `as_integer_ratio` (`dec_as_integer_ratio`, _decimal.c:3770-3870): numerator and
+/-- `_decimal`'s `as_integer_ratio` (`dec_as_integer_ratio`, _decimal.c@3.14.7:3770-3870): numerator and
 `10^-exp` reduced by their gcd, via libmpdec. -/
 def cRatio : Dec → Py (Int × Int)
   | .nan _ _ _ => .error (.valueError "cannot convert NaN to integer ratio")
@@ -553,7 +553,7 @@ def cRatio : Dec → Py (Int × Int)
 
 /-- Integer value of a finite decimal rounded with mode `m` (exact math):
 `mpd_qround_to_int` then the digit export of `dec_as_long`
-(_decimal.c:3684-3760). -/
+(_decimal.c:3894-3970). -/
 def roundToIntExact (m : Rounding) (neg : Bool) (co : Nat) (e : Int) : Int :=
   if e ≥ 0 then truncDiv neg (co * 10 ^ e.toNat)
   else
@@ -570,12 +570,12 @@ def cToInt (m : Rounding) : Dec → Py Int
   | .inf _ => .error (.overflowError "cannot convert Infinity to integer")
   | .fin neg co e => .ok (roundToIntExact m neg co e)
 
-/-- `_pydecimal.Decimal(int)`, _pydecimal.py:523-532: `str(abs(value))`. -/
+/-- `_pydecimal.Decimal(int)`, _pydecimal.py:615-624: `str(abs(value))`. -/
 def pyFromInt (n : Int) : Py Dec := do
   strLimit n.natAbs
   return .fin (n < 0) n.natAbs 0
 
-/-- `_decimal.Decimal(int)`, `dec_from_long` (_decimal.c:2361-2402),
+/-- `_decimal.Decimal(int)`, `dec_from_long` (_decimal.c:2488-2529),
 importing the digits with `mpd_qimport_u32`. -/
 def cFromInt (n : Int) : Py Dec := .ok (.fin (n < 0) n.natAbs 0)
 

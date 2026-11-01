@@ -7,8 +7,8 @@ A specification is a list of code points (`List Nat`), so that lone
 surrogates, which a Python `str` may contain but a Lean `Char` may not, are
 representable.
 
-**`_pydecimal`** (`_parse_format_specifier`, _pydecimal.py:6161-6242): the
-regex at :6131-6149
+**`_pydecimal`** (`_parse_format_specifier`, _pydecimal.py:6261-6342): the
+regex at :6231-6249
 
 ```
 \A (?:(?P<fill>.)?(?P<align>[<>=^]))? (?P<sign>[-+ ])? (?P<no_neg_0>z)? (?P<alt>\#)?
@@ -17,19 +17,19 @@ regex at :6131-6149
    (?P<type>[eEfFgGn%])? \z          (re.VERBOSE | re.DOTALL)
 ```
 
-followed by the checks at :6192-6199 (`0` with an explicit fill or alignment),
-:6210-6212 (`int()` on the width and the precision, which applies the
-4300-digit limit) and :6227-6229 (`n` with a thousands separator). The regex
+followed by the checks at :6292-6299 (`0` with an explicit fill or alignment),
+:6310-6312 (`int()` on the width and the precision, which applies the
+4300-digit limit) and :6327-6329 (`n` with a thousands separator). The regex
 has a unique match: each optional piece is followed by pieces that cannot
 start with the characters it consumes, except
 `(?P<zeropad>0)?(?P<minimumwidth>\d+)?`, where both readings leave the same
 remainder.
 
-**`_decimal`** (`dec_format`, _decimal.c:3538-3679): the `str` is encoded
-with `PyUnicode_AsUTF8AndSize` (:3562, which fails on a lone surrogate), a NUL
-fill character in position 0 is replaced by `'_'` (:3575-3584), and the *C
+**`_decimal`** (`dec_format`, _decimal.c@3.14.7:3538-3679): the `str` is encoded
+with `PyUnicode_AsUTF8AndSize` (@3.14.7:3562, which fails on a lone surrogate), a NUL
+fill character in position 0 is replaced by `'_'` (@3.14.7:3575-3584), and the *C
 string* is handed to `mpd_parse_fmt_str`, which stops at the first NUL byte.
-If that parser rejects the spec, `pydec_format` (:3500-3534) falls back to
+If that parser rejects the spec, `pydec_format` (:3710-3744) falls back to
 `_pydecimal`'s `__format__` on the full `str`. A spec accepted by
 `mpd_parse_fmt_str` is rejected later only if its width exceeds `MPD_MAX_PREC`
 (`mpd_qformat_spec`, io.c:1268-1271).

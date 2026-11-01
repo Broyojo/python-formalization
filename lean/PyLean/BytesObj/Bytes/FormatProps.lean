@@ -11,7 +11,7 @@ open PyLean PyLean.StrSearch
 
 /-! ## The field writer is exact -/
 
-/-- The `assert((res - before) == alloc)` of bytesobject.c:1052, for every flag
+/-- The `assert((res - before) == alloc)` of bytesobject.c:1136, for every flag
 combination, sign, width and length: the writes of lines 988-1040 produce exactly the
 `alloc` bytes reserved at lines 970-983, so the preallocation can neither overflow
 nor leave a gap. Hypotheses are the invariants at that point: `len` bytes are
@@ -91,7 +91,7 @@ def slowLong (v : Int) (c : Int) (alt : Bool) : Py Seq := do
   return renderLong { alt } c temp
 
 /-- Fast path against slow path. `%d %i %u %o %x` of an exact int with no width,
-precision or sign flag (`_PyLong_FormatBytesWriter`, bytesobject.c:864-898) gives the
+precision or sign flag (`_PyLong_FormatBytesWriter`, bytesobject.c:924-957) gives the
 same text as the general path through `formatlong` and the field writer, for every
 int, also where both raise (the digit limit). `X` has no fast path. The hypothesis is
 the `llen > INT_MAX` guard of `_PyUnicode_FormatLong`, which the fast path does not

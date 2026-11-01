@@ -25,7 +25,7 @@ likelihood: |
   `_testlimitedcapi.slice_getindices(slice(None, None, 2**64), 10)` aborts with
   "Assertion failed: (!PyErr_Occurred()), function slice_getindices, file slice.c, line 56".
 maybe_intended: |
-  The function is legacy ("XXX support long ints", sliceobject.c:190) and indices that do not
+  The function is legacy ("XXX support long ints", sliceobject.c:191) and indices that do not
   fit are expected to be rejected; returning success with an exception set is not a plausible
   design choice. A very similar typo-level bug in the same function (checking r->step instead
   of r->start, bpo-34229 / gh-78410) was fixed by maintainers as a "good catch".
@@ -79,9 +79,9 @@ promised_by: |
   (unless one of the indices was not None and failed to be converted to an integer, in which
   case -1 is returned with an exception set)."
 cause: |
-  Objects/sliceobject.c:195, :201 and :208 call PyLong_AsSsize_t() without the usual
+  Objects/sliceobject.c:196, :202 and :209 call PyLong_AsSsize_t() without the usual
   `if (x == -1 && PyErr_Occurred()) return -1;`. The failure value -1 then flows into
-  `if (*start < 0) *start += length;` (:202, :209) and the bounds checks at :211-213, which
+  `if (*start < 0) *start += length;` (:203, :210) and the bounds checks at :212-214, which
   accept it. Same code on main (only the PySlice_New refactor differs in that file).
 possible_fix: |
   After each PyLong_AsSsize_t() call add

@@ -1,0 +1,12 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_remote_debugging/frame_cache.c	16	24	frame_cache_init	frame_cache_init(RemoteUnwinderObject *unwinder)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/frame_cache.c	27	38	frame_cache_cleanup	frame_cache_cleanup(RemoteUnwinderObject *unwinder)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/frame_cache.c	42	55	frame_cache_find	frame_cache_find(RemoteUnwinderObject *unwinder, uint64_t thread_id)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/frame_cache.c	58	70	frame_cache_find_by_tstate	frame_cache_find_by_tstate(RemoteUnwinderObject *unwinder, uintptr_t tstate_addr)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/frame_cache.c	75	94	frame_cache_alloc_slot	frame_cache_alloc_slot(RemoteUnwinderObject *unwinder, uint64_t thread_id)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/frame_cache.c	100	155	frame_cache_invalidate_stale	frame_cache_invalidate_stale(RemoteUnwinderObject *unwinder, PyObject *result)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/frame_cache.c	158	185	read_last_profiled_anchor	read_last_profiled_anchor(RemoteUnwinderObject *unwinder, uintptr_t thread_state_addr, FrameCacheAnchor *anchor)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/frame_cache.c	188	201	find_cached_frame_addr	find_cached_frame_addr(const FrameCacheEntry *entry, uintptr_t frame_addr, uintptr_t *real_pops)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/frame_cache.c	204	215	frame_cache_anchor_matches	frame_cache_anchor_matches( RemoteUnwinderObject *unwinder, uintptr_t thread_state_addr, FrameCacheAnchor anchor)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/frame_cache.c	220	297	frame_cache_lookup_and_extend	frame_cache_lookup_and_extend( RemoteUnwinderObject *unwinder, uint64_t thread_id, uintptr_t thread_state_addr, FrameCacheAnchor anchor, PyObject *frame_info, uintptr_t *frame_addrs, Py_ssize_t *num_addrs, Py_ssize_t max_addrs)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/frame_cache.c	303	366	frame_cache_store	frame_cache_store( RemoteUnwinderObject *unwinder, uint64_t thread_id, PyObject *frame_list, const uintptr_t *addrs, Py_ssize_t num_addrs, uintptr_t thread_state_addr, uintptr_t last_profiled_frame_seq, uintptr_t base_frame_addr, uintptr_t last_frame_visited)	todo		changed-in-3.15: new function

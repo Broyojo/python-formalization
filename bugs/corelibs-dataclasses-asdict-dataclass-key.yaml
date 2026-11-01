@@ -36,7 +36,7 @@ observed: |
 promised_by: |
   Doc/library/dataclasses.rst: dicts are recursed into.
 cause: |
-  Lib/dataclasses.py:1528-1531 builds a dict with the converted key.
+  Lib/dataclasses.py:1540-1543 builds a dict with the converted key.
 possible_fix: |
   Leave keys unconverted, or convert a dataclass key some other way.
 duplicates:

@@ -7,7 +7,7 @@ files: [Objects/frameobject.c]
 functions: ["stack_swap", "mark_stacks", "compatible_stack", "frame_lineno_set_impl"]
 summary: |
   `mark_stacks` models the evaluation stack of each offset as an `int64_t`, three bits per entry
-  (Objects/frameobject.c:1161-1519). `stack_swap` (lines 1231-1241) computes the swapped stack in
+  (Objects/frameobject.c:1169-1531). `stack_swap` (lines 1231-1241) computes the swapped stack in
   `int64_t` but is declared to return `Kind` (an enum, 32-bit on the usual ABI), so its result is
   truncated to 32 bits -- it is assigned straight to `next_stack` at line 1455. For a function
   nested deeply enough that the stack at a `SWAP` needs more than ~10 entries (> 32 bits), the
@@ -78,9 +78,9 @@ observed: |
   (the harness runs it in a child and detects the negative return code).
 promised_by: |
   invariant: `frame.f_lineno = n` from a trace function must not corrupt the interpreter;
-  `compatible_stack`/`mark_stacks` (Objects/frameobject.c:1161-1540) exist to guarantee it.
+  `compatible_stack`/`mark_stacks` (Objects/frameobject.c:1169-1552) exist to guarantee it.
 cause: |
-  Objects/frameobject.c:1231 declares `static Kind stack_swap(int64_t stack, int n)`; the body
+  Objects/frameobject.c:1239 declares `static Kind stack_swap(int64_t stack, int n)`; the body
   (1232-1240) builds an `int64_t` but the `Kind` return type narrows it to 32 bits. Line 1455
   assigns that to `next_stack`. For stacks over ~32 bits the recorded stack is wrong, so
   `compatible_stack` (1521-1540) is consulted with bad data.

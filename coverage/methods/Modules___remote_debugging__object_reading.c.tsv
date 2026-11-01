@@ -1,0 +1,3 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_remote_debugging/object_reading.c	31	39	read_py_ptr	read_py_ptr(RemoteUnwinderObject *unwinder, uintptr_t address, uintptr_t *ptr_addr)	todo		
+Modules/_remote_debugging/object_reading.c	230	326	read_py_long	read_py_long( RemoteUnwinderObject *unwinder, uintptr_t address )	todo		

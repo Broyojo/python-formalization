@@ -47,8 +47,8 @@ observed: |
 promised_by: |
   The message itself, which names os.PathLike as acceptable.
 cause: |
-  Lib/genericpath.py:180-191 tests only str and bytes, so a PathLike in `*args` reaches the raise.
-  Lib/posixpath.py:84 and Lib/ntpath.py:138 call it from `except (TypeError, AttributeError, ...)`
+  Lib/genericpath.py:190-201 tests only str and bytes, so a PathLike in `*args` reaches the raise.
+  Lib/posixpath.py:85 and Lib/ntpath.py:138 call it from `except (TypeError, AttributeError, ...)`
   around the whole loop, including os.fspath, with the original arguments.
 possible_fix: |
   In _check_arg_types, accept os.PathLike and apply os.fspath before testing, or re-raise when every

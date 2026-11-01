@@ -1,14 +1,14 @@
 import PyLean.Itertools.Model
 
 /-!
-`itertools.count` (Modules/itertoolsmodule.c:3485-3727) and `itertools.repeat`
-(:3729-3857), driven by a sequence of operations (`next(it)`, `repr(it)`,
-`it.__length_hint__()`), and their doc equivalents (rst:320-326, :626-633).
+`itertools.count` (Modules/itertoolsmodule.c:3475-3721) and `itertools.repeat`
+(:3723-3851), driven by a sequence of operations (`next(it)`, `repr(it)`,
+`it.__length_hint__()`), and their doc equivalents (rst:320-326, :622-629).
 
 `count` keeps a C `Py_ssize_t cnt` while in "fast mode" (int start that fits,
 step exactly 1) and otherwise, or at `PY_SSIZE_T_MAX`, adds Python objects. Its
 arguments are any numbers ("Either long_cnt or long_step may be a float, Fraction,
-or Decimal", :3510): a `CVal ν` says what the C code can see of one, and `NumOps`
+or Decimal", :3500): a `CVal ν` says what the C code can see of one, and `NumOps`
 gives `PyNumber_Add` and `%R` for everything but exact ints, so the model is
 generic in the number types. `CountFloat.lean` instantiates it with `float`.
 
@@ -79,7 +79,7 @@ def pyRepr (N : NumOps ν) : CVal ν → Py String
   | .int a => .ok (toString a)
   | v => N.repr v
 
-/-- `countobject` (:3487-3492): `longCnt = none` is `long_cnt == NULL`. -/
+/-- `countobject` (:3477-3482): `longCnt = none` is `long_cnt == NULL`. -/
 structure CountState (ν : Type) where
   cnt : Int
   longCnt : Option (CVal ν)
@@ -98,14 +98,14 @@ def argLong : Option (CVal ν) → Bool
   | some v => v.isLong
   | none => true
 
-/-- `itertools_count_impl` (:3529-3604). `cnt` is only ever kept in fast mode. -/
+/-- `itertools_count_impl` (:3520-3595). `cnt` is only ever kept in fast mode. -/
 def cCountNew (start step : Option (CVal ν)) : Py (CountState ν) :=
-  -- :3538-3542
+  -- :3529-3533
   if argBad start || argBad step then .error (.typeError "a number is required")
   else
-    -- :3544-3545
+    -- :3535-3536
     let fast := argLong start && argLong step
-    -- :3548-3560: `PyLong_AsSsize_t`, overflow clears `fast_mode`
+    -- :3539-3551: `PyLong_AsSsize_t`, overflow clears `fast_mode`
     let (cnt, longCnt, fast) : Int × CVal ν × Bool :=
       match start with
       | some s =>
@@ -115,17 +115,17 @@ def cCountNew (start step : Option (CVal ν)) : Py (CountState ν) :=
           | .error _ => (-1, s, false)
         else (0, s, false)
       | none => (0, .int 0, fast)
-    -- :3564-3566
+    -- :3555-3557
     let longStep := step.getD (.int 1)
-    -- :3572-3580: fast mode only works when the step is 1
+    -- :3563-3571: fast mode only works when the step is 1
     let fast := fast && asLongOrMinus1 longStep.longVal == 1
-    -- :3582-3585
+    -- :3573-3576
     if fast then .ok { cnt := cnt, longCnt := none, longStep := longStep }
     else .ok { cnt := ssizeMax, longCnt := some longCnt, longStep := longStep }
 
-/-- `count_next` (:3651-3678, GIL build) and `count_nextlong` (:3629-3648): the sum
+/-- `count_next` (:3645-3672, GIL build) and `count_nextlong` (:3620-3642): the sum
 is computed before the current value is handed over, so a failed add raises in its
-place (:3643-3645) and leaves the state as it was. In fast mode `cnt` becomes an
+place (@3.14.7:3643-3645) and leaves the state as it was. In fast mode `cnt` becomes an
 exact int: the type of a `bool` start, and `__add__` of an int subclass, are not
 consulted. -/
 def cCountNext (N : NumOps ν) (s : CountState ν) : OpRes (CVal ν) × CountState ν :=
@@ -136,10 +136,10 @@ def cCountNext (N : NumOps ν) (s : CountState ν) : OpRes (CVal ν) × CountSta
     | .ok up => (.val lc, { s with longCnt := some up })
   else (.val (.int s.cnt), { s with cnt := s.cnt + 1 })
 
-/-- `PyLong_Check(lz->long_step)` and its value is 1 (:3690-3695). -/
+/-- `PyLong_Check(lz->long_step)` and its value is 1 (:3684-3689). -/
 def stepIsOne (step : CVal ν) : Bool := step.isLong && asLongOrMinus1 step.longVal == 1
 
-/-- `count_repr` (:3681-3705). `ty` is `_PyType_Name(Py_TYPE(lz))`. -/
+/-- `count_repr` (:3675-3699). `ty` is `_PyType_Name(Py_TYPE(lz))`. -/
 def cCountRepr (N : NumOps ν) (ty : String) (s : CountState ν) : Py String :=
   match s.longCnt with
   | none => .ok s!"{ty}({s.cnt})"
@@ -187,14 +187,14 @@ def docCountRun (N : NumOps ν) (step : CVal ν) : Nat → CVal ν → Run (CVal
 
 /-! ## repeat -/
 
-/-- `repeatobject` (:3731-3735): `cnt = -1` is "endless". -/
+/-- `repeatobject` (:3725-3729): `cnt = -1` is "endless". -/
 structure RepeatState (α : Type) where
   elem : α
   cnt : Int
 
 variable {α : Type}
 
-/-- `repeat_new` (:3740-3763): `times` parsed with format `n`; a supplied
+/-- `repeat_new` (:3734-3757): `times` parsed with format `n`; a supplied
 negative `times` becomes 0. -/
 def cRepeatNew (elem : α) (times : Option Int) : Py (RepeatState α) :=
   match times with
@@ -204,17 +204,17 @@ def cRepeatNew (elem : α) (times : Option Int) : Py (RepeatState α) :=
     | .error e => .error e
     | .ok c => .ok { elem := elem, cnt := if c < 0 then 0 else c }
 
-/-- `repeat_next` (:3786-3798). -/
+/-- `repeat_next` (:3780-3792). -/
 def cRepeatNext (s : RepeatState α) : Option α × RepeatState α :=
   if s.cnt = 0 then (none, s)
   else if s.cnt > 0 then (some s.elem, { s with cnt := s.cnt - 1 })
   else (some s.elem, s)
 
-/-- `repeat_repr` (:3801-3811); `rp` is `repr` of the element. -/
+/-- `repeat_repr` (:3795-3805); `rp` is `repr` of the element. -/
 def cRepeatRepr (rp : α → String) (s : RepeatState α) : String :=
   if s.cnt = -1 then s!"repeat({rp s.elem})" else s!"repeat({rp s.elem}, {s.cnt})"
 
-/-- `repeat_len` (:3814-3822), i.e. `__length_hint__`. -/
+/-- `repeat_len` (:3808-3816), i.e. `__length_hint__`. -/
 def cRepeatHint (s : RepeatState α) : OpRes Int :=
   if s.cnt = -1 then .exc (.typeError "len() of unsized object") else .val s.cnt
 

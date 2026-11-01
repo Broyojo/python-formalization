@@ -33,68 +33,68 @@ Lib/configparser.py	582	585	_Line.__init__	__init__(self, val, comments)	todo
 Lib/configparser.py	589	600	_CommentSpec.__init__	__init__(self, full_prefixes, inline_prefixes)	todo		
 Lib/configparser.py	602	603	_CommentSpec.strip	strip(self, text)	todo		candidates:strsearch-strip-paths
 Lib/configparser.py	605	606	_CommentSpec.wrap	wrap(self, text)	todo		
-Lib/configparser.py	654	698	RawConfigParser.__init__	__init__(self, defaults=None, dict_type=_default_dict, allow_no_value=False, *, delimiters=('=', ':'), comment_prefixes=('#', ';'), inline_comment_prefixes=None, strict=True, empty_lines_in_values=True, default_section=DEFAULTSECT, interpolation=_UNSET, converters=_UNSET, allow_unnamed_section=False)	todo		
-Lib/configparser.py	700	701	RawConfigParser.defaults	defaults(self)	todo		
-Lib/configparser.py	703	706	RawConfigParser.sections	sections(self)	todo		
-Lib/configparser.py	708	724	RawConfigParser.add_section	add_section(self, section)	todo		
-Lib/configparser.py	726	731	RawConfigParser.has_section	has_section(self, section)	todo		
-Lib/configparser.py	733	740	RawConfigParser.options	options(self, section)	todo		
-Lib/configparser.py	742	767	RawConfigParser.read	read(self, filenames, encoding=None)	todo		candidates:pyio-bytesio-read-after-seek
-Lib/configparser.py	769	782	RawConfigParser.read_file	read_file(self, f, source=None)	todo		
-Lib/configparser.py	784	787	RawConfigParser.read_string	read_string(self, string, source='<string>')	todo		
-Lib/configparser.py	789	819	RawConfigParser.read_dict	read_dict(self, dictionary, source='<dict>')	todo		
-Lib/configparser.py	821	856	RawConfigParser.get	get(self, section, option, *, raw=False, vars=None, fallback=_UNSET)	todo		
-Lib/configparser.py	858	859	RawConfigParser._get	_get(self, section, conv, option, **kwargs)	todo		
-Lib/configparser.py	861	869	RawConfigParser._get_conv	_get_conv(self, section, option, conv, *, raw=False, vars=None, fallback=_UNSET, **kwargs)	todo		
-Lib/configparser.py	872	875	RawConfigParser.getint	getint(self, section, option, *, raw=False, vars=None, fallback=_UNSET, **kwargs)	todo		
-Lib/configparser.py	877	880	RawConfigParser.getfloat	getfloat(self, section, option, *, raw=False, vars=None, fallback=_UNSET, **kwargs)	todo		
-Lib/configparser.py	882	885	RawConfigParser.getboolean	getboolean(self, section, option, *, raw=False, vars=None, fallback=_UNSET, **kwargs)	todo		
-Lib/configparser.py	887	915	RawConfigParser.items	items(self, section=_UNSET, raw=False, vars=None)	todo		
-Lib/configparser.py	917	928	RawConfigParser.popitem	popitem(self)	todo		
-Lib/configparser.py	930	931	RawConfigParser.optionxform	optionxform(self, optionstr)	todo		
-Lib/configparser.py	933	945	RawConfigParser.has_option	has_option(self, section, option)	todo		
-Lib/configparser.py	947	959	RawConfigParser.set	set(self, section, option, value=None)	todo		
-Lib/configparser.py	961	984	RawConfigParser.write	write(self, fp, space_around_delimiters=True)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
-Lib/configparser.py	986	1001	RawConfigParser._write_section	_write_section(self, fp, section_name, section_items, delimiter, unnamed=False)	todo		
-Lib/configparser.py	1003	1016	RawConfigParser.remove_option	remove_option(self, section, option)	todo		
-Lib/configparser.py	1018	1024	RawConfigParser.remove_section	remove_section(self, section)	todo		
-Lib/configparser.py	1026	1029	RawConfigParser.__getitem__	__getitem__(self, key)	todo		
-Lib/configparser.py	1031	1042	RawConfigParser.__setitem__	__setitem__(self, key, value)	todo		
-Lib/configparser.py	1044	1049	RawConfigParser.__delitem__	__delitem__(self, key)	todo		
-Lib/configparser.py	1051	1052	RawConfigParser.__contains__	__contains__(self, key)	todo		
-Lib/configparser.py	1054	1055	RawConfigParser.__len__	__len__(self)	todo		
-Lib/configparser.py	1057	1059	RawConfigParser.__iter__	__iter__(self)	todo		
-Lib/configparser.py	1061	1081	RawConfigParser._read	_read(self, fp, fpname)	todo		
-Lib/configparser.py	1083	1109	RawConfigParser._read_inner	_read_inner(self, fp, fpname)	todo		
-Lib/configparser.py	1111	1119	RawConfigParser._handle_continuation_line	_handle_continuation_line(self, st, line, fpname)	todo		
-Lib/configparser.py	1121	1133	RawConfigParser._handle_rest	_handle_rest(self, st, line, fpname)	todo		
-Lib/configparser.py	1135	1151	RawConfigParser._handle_header	_handle_header(self, st, sectname, fpname)	todo		
-Lib/configparser.py	1153	1182	RawConfigParser._handle_option	_handle_option(self, st, line, fpname)	todo		
-Lib/configparser.py	1184	1194	RawConfigParser._join_multiline_values	_join_multiline_values(self)	todo		
-Lib/configparser.py	1196	1200	RawConfigParser._read_defaults	_read_defaults(self, defaults)	todo		
-Lib/configparser.py	1202	1220	RawConfigParser._unify_values	_unify_values(self, section, vars)	todo		
-Lib/configparser.py	1222	1227	RawConfigParser._convert_to_boolean	_convert_to_boolean(self, value)	todo		
-Lib/configparser.py	1229	1238	RawConfigParser._validate_key_contents	_validate_key_contents(self, key)	todo		
-Lib/configparser.py	1240	1259	RawConfigParser._validate_value_types	_validate_value_types(self, *, section='', option='', value='')	todo		
-Lib/configparser.py	1262	1263	RawConfigParser.converters	converters(self)	todo		
-Lib/configparser.py	1271	1275	ConfigParser.set	set(self, section, option, value=None)	todo		
-Lib/configparser.py	1277	1282	ConfigParser.add_section	add_section(self, section)	todo		
-Lib/configparser.py	1284	1295	ConfigParser._read_defaults	_read_defaults(self, defaults)	todo		
-Lib/configparser.py	1301	1308	SectionProxy.__init__	__init__(self, parser, name)	todo		
-Lib/configparser.py	1310	1311	SectionProxy.__repr__	__repr__(self)	todo		
-Lib/configparser.py	1313	1316	SectionProxy.__getitem__	__getitem__(self, key)	todo		
-Lib/configparser.py	1318	1320	SectionProxy.__setitem__	__setitem__(self, key, value)	todo		
-Lib/configparser.py	1322	1325	SectionProxy.__delitem__	__delitem__(self, key)	todo		
-Lib/configparser.py	1327	1328	SectionProxy.__contains__	__contains__(self, key)	todo		
-Lib/configparser.py	1330	1331	SectionProxy.__len__	__len__(self)	todo		
-Lib/configparser.py	1333	1334	SectionProxy.__iter__	__iter__(self)	todo		
-Lib/configparser.py	1336	1340	SectionProxy._options	_options(self)	todo		
-Lib/configparser.py	1343	1345	SectionProxy.parser	parser(self)	todo		
-Lib/configparser.py	1348	1350	SectionProxy.name	name(self)	todo		
-Lib/configparser.py	1352	1365	SectionProxy.get	get(self, option, fallback=None, *, raw=False, vars=None, _impl=None, **kwargs)	todo		
-Lib/configparser.py	1378	1385	ConverterMapping.__init__	__init__(self, parser)	todo		
-Lib/configparser.py	1387	1388	ConverterMapping.__getitem__	__getitem__(self, key)	todo		
-Lib/configparser.py	1390	1404	ConverterMapping.__setitem__	__setitem__(self, key, value)	todo		
-Lib/configparser.py	1406	1418	ConverterMapping.__delitem__	__delitem__(self, key)	todo		
-Lib/configparser.py	1420	1421	ConverterMapping.__iter__	__iter__(self)	todo		
-Lib/configparser.py	1423	1424	ConverterMapping.__len__	__len__(self)	todo		
+Lib/configparser.py	656	700	RawConfigParser.__init__	__init__(self, defaults=None, dict_type=_default_dict, allow_no_value=False, *, delimiters=('=', ':'), comment_prefixes=('#', ';'), inline_comment_prefixes=None, strict=True, empty_lines_in_values=True, default_section=DEFAULTSECT, interpolation=_UNSET, converters=_UNSET, allow_unnamed_section=False)	todo		
+Lib/configparser.py	702	703	RawConfigParser.defaults	defaults(self)	todo		
+Lib/configparser.py	705	708	RawConfigParser.sections	sections(self)	todo		
+Lib/configparser.py	710	726	RawConfigParser.add_section	add_section(self, section)	todo		
+Lib/configparser.py	728	733	RawConfigParser.has_section	has_section(self, section)	todo		
+Lib/configparser.py	735	742	RawConfigParser.options	options(self, section)	todo		
+Lib/configparser.py	744	769	RawConfigParser.read	read(self, filenames, encoding=None)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/configparser.py	771	784	RawConfigParser.read_file	read_file(self, f, source=None)	todo		
+Lib/configparser.py	786	789	RawConfigParser.read_string	read_string(self, string, source='<string>')	todo		
+Lib/configparser.py	791	821	RawConfigParser.read_dict	read_dict(self, dictionary, source='<dict>')	todo		
+Lib/configparser.py	823	858	RawConfigParser.get	get(self, section, option, *, raw=False, vars=None, fallback=_UNSET)	todo		
+Lib/configparser.py	860	861	RawConfigParser._get	_get(self, section, conv, option, **kwargs)	todo		
+Lib/configparser.py	863	871	RawConfigParser._get_conv	_get_conv(self, section, option, conv, *, raw=False, vars=None, fallback=_UNSET, **kwargs)	todo		
+Lib/configparser.py	874	877	RawConfigParser.getint	getint(self, section, option, *, raw=False, vars=None, fallback=_UNSET, **kwargs)	todo		
+Lib/configparser.py	879	882	RawConfigParser.getfloat	getfloat(self, section, option, *, raw=False, vars=None, fallback=_UNSET, **kwargs)	todo		
+Lib/configparser.py	884	887	RawConfigParser.getboolean	getboolean(self, section, option, *, raw=False, vars=None, fallback=_UNSET, **kwargs)	todo		
+Lib/configparser.py	889	917	RawConfigParser.items	items(self, section=_UNSET, raw=False, vars=None)	todo		
+Lib/configparser.py	919	930	RawConfigParser.popitem	popitem(self)	todo		
+Lib/configparser.py	932	933	RawConfigParser.optionxform	optionxform(self, optionstr)	todo		
+Lib/configparser.py	935	947	RawConfigParser.has_option	has_option(self, section, option)	todo		
+Lib/configparser.py	949	961	RawConfigParser.set	set(self, section, option, value=None)	todo		
+Lib/configparser.py	963	986	RawConfigParser.write	write(self, fp, space_around_delimiters=True)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/configparser.py	988	1003	RawConfigParser._write_section	_write_section(self, fp, section_name, section_items, delimiter, unnamed=False)	todo		
+Lib/configparser.py	1005	1018	RawConfigParser.remove_option	remove_option(self, section, option)	todo		
+Lib/configparser.py	1020	1026	RawConfigParser.remove_section	remove_section(self, section)	todo		
+Lib/configparser.py	1028	1031	RawConfigParser.__getitem__	__getitem__(self, key)	todo		
+Lib/configparser.py	1033	1044	RawConfigParser.__setitem__	__setitem__(self, key, value)	todo		
+Lib/configparser.py	1046	1051	RawConfigParser.__delitem__	__delitem__(self, key)	todo		
+Lib/configparser.py	1053	1054	RawConfigParser.__contains__	__contains__(self, key)	todo		
+Lib/configparser.py	1056	1057	RawConfigParser.__len__	__len__(self)	todo		
+Lib/configparser.py	1059	1061	RawConfigParser.__iter__	__iter__(self)	todo		
+Lib/configparser.py	1063	1083	RawConfigParser._read	_read(self, fp, fpname)	todo		
+Lib/configparser.py	1085	1111	RawConfigParser._read_inner	_read_inner(self, fp, fpname)	todo		
+Lib/configparser.py	1113	1121	RawConfigParser._handle_continuation_line	_handle_continuation_line(self, st, line, fpname)	todo		
+Lib/configparser.py	1123	1135	RawConfigParser._handle_rest	_handle_rest(self, st, line, fpname)	todo		
+Lib/configparser.py	1137	1153	RawConfigParser._handle_header	_handle_header(self, st, sectname, fpname)	todo		
+Lib/configparser.py	1155	1184	RawConfigParser._handle_option	_handle_option(self, st, line, fpname)	todo		
+Lib/configparser.py	1186	1196	RawConfigParser._join_multiline_values	_join_multiline_values(self)	todo		
+Lib/configparser.py	1198	1202	RawConfigParser._read_defaults	_read_defaults(self, defaults)	todo		
+Lib/configparser.py	1204	1222	RawConfigParser._unify_values	_unify_values(self, section, vars)	todo		
+Lib/configparser.py	1224	1229	RawConfigParser._convert_to_boolean	_convert_to_boolean(self, value)	todo		
+Lib/configparser.py	1231	1240	RawConfigParser._validate_key_contents	_validate_key_contents(self, key)	todo		
+Lib/configparser.py	1242	1261	RawConfigParser._validate_value_types	_validate_value_types(self, *, section='', option='', value='')	todo		
+Lib/configparser.py	1264	1265	RawConfigParser.converters	converters(self)	todo		
+Lib/configparser.py	1273	1277	ConfigParser.set	set(self, section, option, value=None)	todo		
+Lib/configparser.py	1279	1284	ConfigParser.add_section	add_section(self, section)	todo		
+Lib/configparser.py	1286	1297	ConfigParser._read_defaults	_read_defaults(self, defaults)	todo		
+Lib/configparser.py	1303	1310	SectionProxy.__init__	__init__(self, parser, name)	todo		
+Lib/configparser.py	1312	1313	SectionProxy.__repr__	__repr__(self)	todo		
+Lib/configparser.py	1315	1318	SectionProxy.__getitem__	__getitem__(self, key)	todo		
+Lib/configparser.py	1320	1322	SectionProxy.__setitem__	__setitem__(self, key, value)	todo		
+Lib/configparser.py	1324	1327	SectionProxy.__delitem__	__delitem__(self, key)	todo		
+Lib/configparser.py	1329	1330	SectionProxy.__contains__	__contains__(self, key)	todo		
+Lib/configparser.py	1332	1333	SectionProxy.__len__	__len__(self)	todo		
+Lib/configparser.py	1335	1336	SectionProxy.__iter__	__iter__(self)	todo		
+Lib/configparser.py	1338	1342	SectionProxy._options	_options(self)	todo		
+Lib/configparser.py	1345	1347	SectionProxy.parser	parser(self)	todo		
+Lib/configparser.py	1350	1352	SectionProxy.name	name(self)	todo		
+Lib/configparser.py	1354	1367	SectionProxy.get	get(self, option, fallback=None, *, raw=False, vars=None, _impl=None, **kwargs)	todo		
+Lib/configparser.py	1380	1387	ConverterMapping.__init__	__init__(self, parser)	todo		
+Lib/configparser.py	1389	1390	ConverterMapping.__getitem__	__getitem__(self, key)	todo		
+Lib/configparser.py	1392	1406	ConverterMapping.__setitem__	__setitem__(self, key, value)	todo		
+Lib/configparser.py	1408	1420	ConverterMapping.__delitem__	__delitem__(self, key)	todo		
+Lib/configparser.py	1422	1423	ConverterMapping.__iter__	__iter__(self)	todo		
+Lib/configparser.py	1425	1426	ConverterMapping.__len__	__len__(self)	todo		

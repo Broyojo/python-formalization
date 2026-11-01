@@ -1,0 +1,10 @@
+file	line	endline	name	signature	status	entry	note
+Lib/importlib/metadata/_context.py	44	45	ExceptionTrap.__init__	__init__(self, exceptions=(Exception,))	todo		changed-in-3.15: new function
+Lib/importlib/metadata/_context.py	47	48	ExceptionTrap.__enter__	__enter__(self)	todo		changed-in-3.15: new function
+Lib/importlib/metadata/_context.py	51	52	ExceptionTrap.type	type(self)	todo		changed-in-3.15: new function
+Lib/importlib/metadata/_context.py	55	56	ExceptionTrap.value	value(self)	todo		changed-in-3.15: new function
+Lib/importlib/metadata/_context.py	59	60	ExceptionTrap.tb	tb(self)	todo		changed-in-3.15: new function
+Lib/importlib/metadata/_context.py	62	67	ExceptionTrap.__exit__	__exit__(self, *exc_info)	todo		changed-in-3.15: new function
+Lib/importlib/metadata/_context.py	69	70	ExceptionTrap.__bool__	__bool__(self)	todo		changed-in-3.15: new function
+Lib/importlib/metadata/_context.py	72	97	ExceptionTrap.raises	raises(self, func, *, _test=bool)	todo		changed-in-3.15: new function
+Lib/importlib/metadata/_context.py	99	118	ExceptionTrap.passes	passes(self, func)	todo		changed-in-3.15: new function

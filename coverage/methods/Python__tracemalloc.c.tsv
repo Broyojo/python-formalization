@@ -1,64 +1,63 @@
 file	line	endline	name	signature	status	entry	note
-Python/tracemalloc.c	78	87	tracemalloc_error	tracemalloc_error(const char *format, ...)	todo		
-Python/tracemalloc.c	97	109	get_reentrant	get_reentrant(void)	todo		
-Python/tracemalloc.c	112	125	set_reentrant	set_reentrant(int reentrant)	todo		
-Python/tracemalloc.c	129	133	hashtable_hash_pyobject	hashtable_hash_pyobject(const void *key)	todo		
-Python/tracemalloc.c	137	147	hashtable_compare_unicode	hashtable_compare_unicode(const void *key1, const void *key2)	todo		
-Python/tracemalloc.c	151	155	hashtable_hash_uint	hashtable_hash_uint(const void *key_raw)	todo		
-Python/tracemalloc.c	159	168	hashtable_new	hashtable_new(_Py_hashtable_hash_func hash_func, _Py_hashtable_compare_func compare_func, _Py_hashtable_destroy_func key_destroy_func, _Py_hashtable_destroy_func value_destroy_func)	todo		
-Python/tracemalloc.c	172	175	raw_malloc	raw_malloc(size_t size)	todo		
-Python/tracemalloc.c	178	181	raw_free	raw_free(void *ptr)	todo		
-Python/tracemalloc.c	185	189	hashtable_hash_traceback	hashtable_hash_traceback(const void *key)	todo		
-Python/tracemalloc.c	193	218	hashtable_compare_traceback	hashtable_compare_traceback(const void *key1, const void *key2)	todo		
-Python/tracemalloc.c	222	276	tracemalloc_get_frame	tracemalloc_get_frame(_PyInterpreterFrame *pyframe, frame_t *frame)	todo		
-Python/tracemalloc.c	280	302	traceback_hash	traceback_hash(traceback_t *traceback)	todo		
-Python/tracemalloc.c	306	323	traceback_get_frames	traceback_get_frames(traceback_t *traceback)	todo		
-Python/tracemalloc.c	327	373	traceback_new	traceback_new(void)	todo		
-Python/tracemalloc.c	377	382	tracemalloc_create_traces_table	tracemalloc_create_traces_table(void)	todo		
-Python/tracemalloc.c	386	390	tracemalloc_destroy_domain	tracemalloc_destroy_domain(void *value)	todo		
-Python/tracemalloc.c	394	400	tracemalloc_create_domains_table	tracemalloc_create_domains_table(void)	todo		
-Python/tracemalloc.c	404	412	tracemalloc_get_traces_table	tracemalloc_get_traces_table(unsigned int domain)	todo		
-Python/tracemalloc.c	416	432	tracemalloc_remove_trace_unlocked	tracemalloc_remove_trace_unlocked(unsigned int domain, uintptr_t ptr)	todo		
-Python/tracemalloc.c	439	492	tracemalloc_add_trace_unlocked	tracemalloc_add_trace_unlocked(unsigned int domain, uintptr_t ptr, size_t size)	todo		
-Python/tracemalloc.c	499	559	tracemalloc_alloc	tracemalloc_alloc(int need_gil, int use_calloc, void *ctx, size_t nelem, size_t elsize)	todo		
-Python/tracemalloc.c	563	638	tracemalloc_realloc	tracemalloc_realloc(int need_gil, void *ctx, void *ptr, size_t new_size)	todo		
-Python/tracemalloc.c	642	663	tracemalloc_free	tracemalloc_free(void *ctx, void *ptr)	todo		
-Python/tracemalloc.c	667	670	tracemalloc_malloc_gil	tracemalloc_malloc_gil(void *ctx, size_t size)	todo		
-Python/tracemalloc.c	674	677	tracemalloc_calloc_gil	tracemalloc_calloc_gil(void *ctx, size_t nelem, size_t elsize)	todo		
-Python/tracemalloc.c	681	684	tracemalloc_realloc_gil	tracemalloc_realloc_gil(void *ctx, void *ptr, size_t new_size)	todo		
-Python/tracemalloc.c	688	691	tracemalloc_raw_malloc	tracemalloc_raw_malloc(void *ctx, size_t size)	todo		
-Python/tracemalloc.c	695	698	tracemalloc_raw_calloc	tracemalloc_raw_calloc(void *ctx, size_t nelem, size_t elsize)	todo		
-Python/tracemalloc.c	702	705	tracemalloc_raw_realloc	tracemalloc_raw_realloc(void *ctx, void *ptr, size_t new_size)	todo		
-Python/tracemalloc.c	709	713	tracemalloc_clear_filename	tracemalloc_clear_filename(void *value)	todo		
-Python/tracemalloc.c	717	733	tracemalloc_clear_traces_unlocked	tracemalloc_clear_traces_unlocked(void)	todo		
-Python/tracemalloc.c	737	773	_PyTraceMalloc_Init	_PyTraceMalloc_Init(void)	todo		
-Python/tracemalloc.c	777	792	tracemalloc_deinit	tracemalloc_deinit(void)	todo		
-Python/tracemalloc.c	796	854	_PyTraceMalloc_Start	_PyTraceMalloc_Start(int max_nframe)	todo		
-Python/tracemalloc.c	858	887	_PyTraceMalloc_Stop	_PyTraceMalloc_Stop(void)	todo		
-Python/tracemalloc.c	892	911	frame_to_pyobject	frame_to_pyobject(frame_t *frame)	todo		
-Python/tracemalloc.c	915	949	traceback_to_pyobject	traceback_to_pyobject(traceback_t *traceback, _Py_hashtable_t *intern_table)	todo		
-Python/tracemalloc.c	953	992	trace_to_pyobject	trace_to_pyobject(unsigned int domain, const trace_t *trace, _Py_hashtable_t *intern_tracebacks)	todo		
-Python/tracemalloc.c	1005	1022	tracemalloc_copy_trace	tracemalloc_copy_trace(_Py_hashtable_t *traces, const void *key, const void *value, void *user_data)	todo		
-Python/tracemalloc.c	1026	1041	tracemalloc_copy_traces	tracemalloc_copy_traces(_Py_hashtable_t *traces)	todo		
-Python/tracemalloc.c	1045	1062	tracemalloc_copy_domain	tracemalloc_copy_domain(_Py_hashtable_t *domains, const void *key, const void *value, void *user_data)	todo		
-Python/tracemalloc.c	1066	1081	tracemalloc_copy_domains	tracemalloc_copy_domains(_Py_hashtable_t *domains)	todo		
-Python/tracemalloc.c	1085	1104	tracemalloc_get_traces_fill	tracemalloc_get_traces_fill(_Py_hashtable_t *traces, const void *key, const void *value, void *user_data)	todo		
-Python/tracemalloc.c	1108	1120	tracemalloc_get_traces_domain	tracemalloc_get_traces_domain(_Py_hashtable_t *domains, const void *key, const void *value, void *user_data)	todo		
-Python/tracemalloc.c	1124	1128	tracemalloc_pyobject_decref	tracemalloc_pyobject_decref(void *value)	todo		
-Python/tracemalloc.c	1132	1148	tracemalloc_get_traceback_unlocked	tracemalloc_get_traceback_unlocked(unsigned int domain, uintptr_t ptr)	todo		
-Python/tracemalloc.c	1154	1161	_PyMem_DumpFrame	_PyMem_DumpFrame(int fd, frame_t * frame)	todo		
-Python/tracemalloc.c	1166	1190	_PyMem_DumpTraceback	_PyMem_DumpTraceback(int fd, const void *ptr)	todo		
-Python/tracemalloc.c	1196	1204	tracemalloc_get_tracemalloc_memory_cb	tracemalloc_get_tracemalloc_memory_cb(_Py_hashtable_t *domains, const void *key, const void *value, void *user_data)	todo		
-Python/tracemalloc.c	1207	1229	PyTraceMalloc_Track	PyTraceMalloc_Track(unsigned int domain, uintptr_t ptr, size_t size)	todo		
-Python/tracemalloc.c	1233	1254	PyTraceMalloc_Untrack	PyTraceMalloc_Untrack(unsigned int domain, uintptr_t ptr)	todo		
-Python/tracemalloc.c	1258	1262	_PyTraceMalloc_Fini	_PyTraceMalloc_Fini(void)	todo		
-Python/tracemalloc.c	1271	1305	_PyTraceMalloc_TraceRef	_PyTraceMalloc_TraceRef(PyObject *op, PyRefTracerEvent event, void* Py_UNUSED(ignore))	todo		
-Python/tracemalloc.c	1309	1326	_PyTraceMalloc_GetTraceback	_PyTraceMalloc_GetTraceback(unsigned int domain, uintptr_t ptr)	todo		
-Python/tracemalloc.c	1329	1335	_PyTraceMalloc_IsTracing	_PyTraceMalloc_IsTracing(void)	todo		
-Python/tracemalloc.c	1338	1345	_PyTraceMalloc_ClearTraces	_PyTraceMalloc_ClearTraces(void)	todo		
-Python/tracemalloc.c	1348	1425	_PyTraceMalloc_GetTraces	_PyTraceMalloc_GetTraces(void)	todo		
-Python/tracemalloc.c	1428	1435	_PyTraceMalloc_GetObjectTraceback	_PyTraceMalloc_GetObjectTraceback(PyObject *obj) /*[clinic end generated code: output=41ee0553a658b0aa input=29495f1b21c53212]*/	todo		
-Python/tracemalloc.c	1437	1440	_PyTraceMalloc_GetTracebackLimit	int _PyTraceMalloc_GetTracebackLimit(void)	todo		
-Python/tracemalloc.c	1443	1460	_PyTraceMalloc_GetMemory	_PyTraceMalloc_GetMemory(void)	todo		
-Python/tracemalloc.c	1464	1479	_PyTraceMalloc_GetTracedMemory	_PyTraceMalloc_GetTracedMemory(void)	todo		
-Python/tracemalloc.c	1482	1489	_PyTraceMalloc_ResetPeak	_PyTraceMalloc_ResetPeak(void)	todo		
+Python/tracemalloc.c	84	93	tracemalloc_error	tracemalloc_error(const char *format, ...)	todo		
+Python/tracemalloc.c	103	115	get_reentrant	get_reentrant(void)	todo		
+Python/tracemalloc.c	118	131	set_reentrant	set_reentrant(int reentrant)	todo		
+Python/tracemalloc.c	135	139	hashtable_hash_filename	hashtable_hash_filename(const void *key)	todo		changed-in-3.15: new function
+Python/tracemalloc.c	143	148	hashtable_compare_filename	hashtable_compare_filename(const void *key1, const void *key2)	todo		changed-in-3.15: new function
+Python/tracemalloc.c	152	156	hashtable_hash_uint	hashtable_hash_uint(const void *key_raw)	todo		
+Python/tracemalloc.c	160	169	hashtable_new	hashtable_new(_Py_hashtable_hash_func hash_func, _Py_hashtable_compare_func compare_func, _Py_hashtable_destroy_func key_destroy_func, _Py_hashtable_destroy_func value_destroy_func)	todo		
+Python/tracemalloc.c	173	176	raw_malloc	raw_malloc(size_t size)	todo		
+Python/tracemalloc.c	179	182	raw_free	raw_free(void *ptr)	todo		
+Python/tracemalloc.c	188	227	tracemalloc_encode_filename	tracemalloc_encode_filename(PyObject *obj)	todo		changed-in-3.15: new function
+Python/tracemalloc.c	234	276	tracemalloc_intern_filename	tracemalloc_intern_filename(PyObject *obj)	todo		changed-in-3.15: new function
+Python/tracemalloc.c	280	284	hashtable_hash_traceback	hashtable_hash_traceback(const void *key)	todo		
+Python/tracemalloc.c	288	313	hashtable_compare_traceback	hashtable_compare_traceback(const void *key1, const void *key2)	todo		changed-in-3.15:
+Python/tracemalloc.c	317	360	tracemalloc_get_frame	tracemalloc_get_frame(_PyInterpreterFrame *pyframe, frame_t *frame)	todo		changed-in-3.15:
+Python/tracemalloc.c	364	387	traceback_hash	traceback_hash(traceback_t *traceback)	todo		changed-in-3.15:
+Python/tracemalloc.c	391	405	traceback_get_frames	traceback_get_frames(traceback_t *traceback, PyThreadState *tstate)	todo		changed-in-3.15:
+Python/tracemalloc.c	409	479	traceback_new	traceback_new(void)	todo		changed-in-3.15:
+Python/tracemalloc.c	483	488	tracemalloc_create_traces_table	tracemalloc_create_traces_table(void)	todo		
+Python/tracemalloc.c	492	496	tracemalloc_destroy_domain	tracemalloc_destroy_domain(void *value)	todo		
+Python/tracemalloc.c	500	506	tracemalloc_create_domains_table	tracemalloc_create_domains_table(void)	todo		
+Python/tracemalloc.c	510	518	tracemalloc_get_traces_table	tracemalloc_get_traces_table(unsigned int domain)	todo		
+Python/tracemalloc.c	522	538	tracemalloc_remove_trace_unlocked	tracemalloc_remove_trace_unlocked(unsigned int domain, uintptr_t ptr)	todo		
+Python/tracemalloc.c	545	598	tracemalloc_add_trace_unlocked	tracemalloc_add_trace_unlocked(unsigned int domain, uintptr_t ptr, size_t size)	todo		
+Python/tracemalloc.c	605	654	tracemalloc_alloc	tracemalloc_alloc(int use_calloc, void *ctx, size_t nelem, size_t elsize)	todo		changed-in-3.15:
+Python/tracemalloc.c	658	726	tracemalloc_realloc	tracemalloc_realloc(void *ctx, void *ptr, size_t new_size)	todo		changed-in-3.15:
+Python/tracemalloc.c	730	751	tracemalloc_free	tracemalloc_free(void *ctx, void *ptr)	todo		
+Python/tracemalloc.c	755	758	tracemalloc_malloc	tracemalloc_malloc(void *ctx, size_t size)	todo		changed-in-3.15: new function
+Python/tracemalloc.c	762	765	tracemalloc_calloc	tracemalloc_calloc(void *ctx, size_t nelem, size_t elsize)	todo		changed-in-3.15: new function
+Python/tracemalloc.c	769	782	tracemalloc_clear_traces_unlocked	tracemalloc_clear_traces_unlocked(void)	todo		changed-in-3.15:
+Python/tracemalloc.c	786	827	_PyTraceMalloc_Init	_PyTraceMalloc_Init(void)	todo		changed-in-3.15:
+Python/tracemalloc.c	831	849	tracemalloc_deinit	tracemalloc_deinit(void)	todo		changed-in-3.15:
+Python/tracemalloc.c	853	906	_PyTraceMalloc_Start	_PyTraceMalloc_Start(int max_nframe)	todo		changed-in-3.15:
+Python/tracemalloc.c	910	939	_PyTraceMalloc_Stop	_PyTraceMalloc_Stop(void)	todo		
+Python/tracemalloc.c	946	978	filename_to_pyobject	filename_to_pyobject(const char *filename, _Py_hashtable_t *intern_filenames)	todo		changed-in-3.15: new function
+Python/tracemalloc.c	982	1008	frame_to_pyobject	frame_to_pyobject(frame_t *frame, _Py_hashtable_t *intern_filenames)	todo		changed-in-3.15:
+Python/tracemalloc.c	1012	1048	traceback_to_pyobject	traceback_to_pyobject(traceback_t *traceback, _Py_hashtable_t *intern_table, _Py_hashtable_t *intern_filenames)	todo		changed-in-3.15:
+Python/tracemalloc.c	1052	1093	trace_to_pyobject	trace_to_pyobject(unsigned int domain, const trace_t *trace, _Py_hashtable_t *intern_tracebacks, _Py_hashtable_t *intern_filenames)	todo		changed-in-3.15:
+Python/tracemalloc.c	1107	1124	tracemalloc_copy_trace	tracemalloc_copy_trace(_Py_hashtable_t *traces, const void *key, const void *value, void *user_data)	todo		
+Python/tracemalloc.c	1128	1143	tracemalloc_copy_traces	tracemalloc_copy_traces(_Py_hashtable_t *traces)	todo		
+Python/tracemalloc.c	1147	1164	tracemalloc_copy_domain	tracemalloc_copy_domain(_Py_hashtable_t *domains, const void *key, const void *value, void *user_data)	todo		
+Python/tracemalloc.c	1168	1183	tracemalloc_copy_domains	tracemalloc_copy_domains(_Py_hashtable_t *domains)	todo		
+Python/tracemalloc.c	1187	1207	tracemalloc_get_traces_fill	tracemalloc_get_traces_fill(_Py_hashtable_t *traces, const void *key, const void *value, void *user_data)	todo		changed-in-3.15:
+Python/tracemalloc.c	1211	1223	tracemalloc_get_traces_domain	tracemalloc_get_traces_domain(_Py_hashtable_t *domains, const void *key, const void *value, void *user_data)	todo		
+Python/tracemalloc.c	1227	1231	tracemalloc_pyobject_decref	tracemalloc_pyobject_decref(void *value)	todo		
+Python/tracemalloc.c	1235	1251	tracemalloc_get_traceback_unlocked	tracemalloc_get_traceback_unlocked(unsigned int domain, uintptr_t ptr)	todo		
+Python/tracemalloc.c	1259	1284	_PyMem_DumpFilename	_PyMem_DumpFilename(int fd, const char *filename)	todo		changed-in-3.15: new function
+Python/tracemalloc.c	1287	1294	_PyMem_DumpFrame	_PyMem_DumpFrame(int fd, frame_t * frame)	todo		changed-in-3.15:
+Python/tracemalloc.c	1299	1323	_PyMem_DumpTraceback	_PyMem_DumpTraceback(int fd, const void *ptr)	todo		
+Python/tracemalloc.c	1329	1337	tracemalloc_get_tracemalloc_memory_cb	tracemalloc_get_tracemalloc_memory_cb(_Py_hashtable_t *domains, const void *key, const void *value, void *user_data)	todo		
+Python/tracemalloc.c	1340	1360	PyTraceMalloc_Track	PyTraceMalloc_Track(unsigned int domain, uintptr_t ptr, size_t size)	todo		changed-in-3.15:
+Python/tracemalloc.c	1364	1385	PyTraceMalloc_Untrack	PyTraceMalloc_Untrack(unsigned int domain, uintptr_t ptr)	todo		
+Python/tracemalloc.c	1389	1393	_PyTraceMalloc_Fini	_PyTraceMalloc_Fini(void)	todo		
+Python/tracemalloc.c	1402	1436	_PyTraceMalloc_TraceRef	_PyTraceMalloc_TraceRef(PyObject *op, PyRefTracerEvent event, void* Py_UNUSED(ignore))	todo		
+Python/tracemalloc.c	1440	1457	_PyTraceMalloc_GetTraceback	_PyTraceMalloc_GetTraceback(unsigned int domain, uintptr_t ptr)	todo		changed-in-3.15:
+Python/tracemalloc.c	1460	1466	_PyTraceMalloc_IsTracing	_PyTraceMalloc_IsTracing(void)	todo		
+Python/tracemalloc.c	1469	1476	_PyTraceMalloc_ClearTraces	_PyTraceMalloc_ClearTraces(void)	todo		
+Python/tracemalloc.c	1479	1569	_PyTraceMalloc_GetTraces	_PyTraceMalloc_GetTraces(void)	todo		changed-in-3.15:
+Python/tracemalloc.c	1572	1579	_PyTraceMalloc_GetObjectTraceback	_PyTraceMalloc_GetObjectTraceback(PyObject *obj) /*[clinic end generated code: output=41ee0553a658b0aa input=29495f1b21c53212]*/	todo		
+Python/tracemalloc.c	1581	1584	_PyTraceMalloc_GetTracebackLimit	int _PyTraceMalloc_GetTracebackLimit(void)	todo		
+Python/tracemalloc.c	1587	1604	_PyTraceMalloc_GetMemory	_PyTraceMalloc_GetMemory(void)	todo		
+Python/tracemalloc.c	1608	1623	_PyTraceMalloc_GetTracedMemory	_PyTraceMalloc_GetTracedMemory(void)	todo		
+Python/tracemalloc.c	1626	1633	_PyTraceMalloc_ResetPeak	_PyTraceMalloc_ResetPeak(void)	todo		

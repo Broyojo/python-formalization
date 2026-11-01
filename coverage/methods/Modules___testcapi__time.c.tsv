@@ -1,11 +1,11 @@
 file	line	endline	name	signature	status	entry	note
-Modules/_testcapi/time.c	5	21	pytime_from_nanoseconds	pytime_from_nanoseconds(PyTime_t *tp, PyObject *obj)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/time.c	25	37	test_pytime_assecondsdouble	test_pytime_assecondsdouble(PyObject *Py_UNUSED(self), PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/time.c	41	44	pytime_as_float	pytime_as_float(PyTime_t t)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/time.c	49	59	test_pytime_monotonic	test_pytime_monotonic(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/time.c	63	77	test_pytime_monotonic_raw	test_pytime_monotonic_raw(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/time.c	81	91	test_pytime_perf_counter	test_pytime_perf_counter(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/time.c	95	109	test_pytime_perf_counter_raw	test_pytime_perf_counter_raw(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/time.c	113	123	test_pytime_time	test_pytime_time(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/time.c	127	141	test_pytime_time_raw	test_pytime_time_raw(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/time.c	156	169	_PyTestCapi_Init_Time	_PyTestCapi_Init_Time(PyObject *m)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/time.c	5	20	pytime_from_nanoseconds	pytime_from_nanoseconds(PyTime_t *tp, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/time.c	24	36	test_pytime_assecondsdouble	test_pytime_assecondsdouble(PyObject *Py_UNUSED(self), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/time.c	40	43	pytime_as_float	pytime_as_float(PyTime_t t)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/time.c	48	58	test_pytime_monotonic	test_pytime_monotonic(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/time.c	62	76	test_pytime_monotonic_raw	test_pytime_monotonic_raw(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/time.c	80	90	test_pytime_perf_counter	test_pytime_perf_counter(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/time.c	94	108	test_pytime_perf_counter_raw	test_pytime_perf_counter_raw(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/time.c	112	122	test_pytime_time	test_pytime_time(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/time.c	126	140	test_pytime_time_raw	test_pytime_time_raw(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/time.c	155	168	_PyTestCapi_Init_Time	_PyTestCapi_Init_Time(PyObject *m)	excluded		test-support: only for CPython's own tests

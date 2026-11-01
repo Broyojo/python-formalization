@@ -1,24 +1,24 @@
 file	line	endline	name	signature	status	entry	note
-Lib/idlelib/iomenu.py	25	35	IOBinding.__init__	__init__(self, editwin)	excluded		platform: GUI toolkit
-Lib/idlelib/iomenu.py	37	47	IOBinding.close	close(self)	excluded		platform: GUI toolkit
-Lib/idlelib/iomenu.py	49	50	IOBinding.get_saved	get_saved(self)	excluded		platform: GUI toolkit
-Lib/idlelib/iomenu.py	52	53	IOBinding.set_saved	set_saved(self, flag)	excluded		platform: GUI toolkit
-Lib/idlelib/iomenu.py	55	56	IOBinding.reset_undo	reset_undo(self)	excluded		platform: GUI toolkit
-Lib/idlelib/iomenu.py	60	61	IOBinding.set_filename_change_hook	set_filename_change_hook(self, hook)	excluded		platform: GUI toolkit
-Lib/idlelib/iomenu.py	67	76	IOBinding.set_filename	set_filename(self, filename)	excluded		platform: GUI toolkit
-Lib/idlelib/iomenu.py	78	120	IOBinding.open	open(self, event=None, editFile=None)	excluded		platform: GUI toolkit
-Lib/idlelib/iomenu.py	124	184	IOBinding.loadfile	loadfile(self, filename)	excluded		platform: GUI toolkit
-Lib/idlelib/iomenu.py	186	207	IOBinding.maybesave	maybesave(self)	excluded		platform: GUI toolkit
-Lib/idlelib/iomenu.py	209	239	IOBinding.save	save(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/iomenu.py	241	254	IOBinding.save_as	save_as(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/iomenu.py	256	262	IOBinding.save_a_copy	save_a_copy(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/iomenu.py	264	276	IOBinding.writefile	writefile(self, filename)	excluded		platform: GUI toolkit
-Lib/idlelib/iomenu.py	278	279	IOBinding.getmtime	getmtime(self, filename)	excluded		platform: GUI toolkit
-Lib/idlelib/iomenu.py	281	295	IOBinding.fixnewlines	fixnewlines(self)	excluded		platform: GUI toolkit
-Lib/idlelib/iomenu.py	297	326	IOBinding.encode	encode(self, chars)	excluded		platform: GUI toolkit
-Lib/idlelib/iomenu.py	328	376	IOBinding.print_window	print_window(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/iomenu.py	398	404	IOBinding.askopenfile	askopenfile(self)	excluded		platform: GUI toolkit
-Lib/idlelib/iomenu.py	406	416	IOBinding.defaultfilename	defaultfilename(self, mode='open')	excluded		platform: GUI toolkit
-Lib/idlelib/iomenu.py	418	426	IOBinding.asksavefile	asksavefile(self)	excluded		platform: GUI toolkit
-Lib/idlelib/iomenu.py	428	431	IOBinding.updaterecentfileslist	updaterecentfileslist(self, filename)	excluded		platform: GUI toolkit
-Lib/idlelib/iomenu.py	434	469	_io_binding	_io_binding(parent)	excluded		platform: GUI toolkit
+Lib/idlelib/iomenu.py	27	37	IOBinding.__init__	__init__(self, editwin)	excluded		platform: GUI toolkit
+Lib/idlelib/iomenu.py	39	49	IOBinding.close	close(self)	excluded		platform: GUI toolkit
+Lib/idlelib/iomenu.py	51	52	IOBinding.get_saved	get_saved(self)	excluded		platform: GUI toolkit
+Lib/idlelib/iomenu.py	54	55	IOBinding.set_saved	set_saved(self, flag)	excluded		platform: GUI toolkit
+Lib/idlelib/iomenu.py	57	58	IOBinding.reset_undo	reset_undo(self)	excluded		platform: GUI toolkit
+Lib/idlelib/iomenu.py	62	63	IOBinding.set_filename_change_hook	set_filename_change_hook(self, hook)	excluded		platform: GUI toolkit
+Lib/idlelib/iomenu.py	69	78	IOBinding.set_filename	set_filename(self, filename)	excluded		platform: GUI toolkit
+Lib/idlelib/iomenu.py	80	122	IOBinding.open	open(self, event=None, editFile=None)	excluded		platform: GUI toolkit
+Lib/idlelib/iomenu.py	126	186	IOBinding.loadfile	loadfile(self, filename)	excluded		platform: GUI toolkit
+Lib/idlelib/iomenu.py	188	209	IOBinding.maybesave	maybesave(self)	excluded		platform: GUI toolkit
+Lib/idlelib/iomenu.py	211	241	IOBinding.save	save(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/iomenu.py	243	256	IOBinding.save_as	save_as(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/iomenu.py	258	264	IOBinding.save_a_copy	save_a_copy(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/iomenu.py	266	278	IOBinding.writefile	writefile(self, filename)	excluded		platform: GUI toolkit
+Lib/idlelib/iomenu.py	280	281	IOBinding.getmtime	getmtime(self, filename)	excluded		platform: GUI toolkit
+Lib/idlelib/iomenu.py	283	297	IOBinding.fixnewlines	fixnewlines(self)	excluded		platform: GUI toolkit
+Lib/idlelib/iomenu.py	299	328	IOBinding.encode	encode(self, chars)	excluded		platform: GUI toolkit
+Lib/idlelib/iomenu.py	330	378	IOBinding.print_window	print_window(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/iomenu.py	402	408	IOBinding.askopenfile	askopenfile(self)	excluded		platform: GUI toolkit
+Lib/idlelib/iomenu.py	410	425	IOBinding.defaultfilename	defaultfilename(self, mode='open')	excluded		platform: GUI toolkit
+Lib/idlelib/iomenu.py	427	435	IOBinding.asksavefile	asksavefile(self)	excluded		platform: GUI toolkit
+Lib/idlelib/iomenu.py	437	440	IOBinding.updaterecentfileslist	updaterecentfileslist(self, filename)	excluded		platform: GUI toolkit
+Lib/idlelib/iomenu.py	443	478	_io_binding	_io_binding(parent)	excluded		platform: GUI toolkit

@@ -116,7 +116,7 @@ def toI64 (u : Nat) : Int :=
 def PERTURB_SHIFT : Nat := 5
 
 /-- One step of the probe recurrence, shared by `do_lookup`, `lookdict_index`,
-`find_empty_slot` and `build_indices_*` (`dictobject.c:995-996`):
+`find_empty_slot` and `build_indices_*` (`dictobject.c:1075-1076`):
 `perturb >>= PERTURB_SHIFT; i = mask & (i*5 + perturb + 1)`. -/
 def probeStep (mask i perturb : Nat) : Nat × Nat :=
   let p := perturb >>> PERTURB_SHIFT

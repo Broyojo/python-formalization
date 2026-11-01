@@ -1,2 +1,2 @@
 file	line	endline	name	signature	status	entry	note
-Lib/asyncio/staggered.py	14	179	staggered_race	staggered_race(coro_fns, delay, *, loop=None)	todo		
+Lib/asyncio/staggered.py	14	178	staggered_race	staggered_race(coro_fns, delay, *, loop=None)	todo		

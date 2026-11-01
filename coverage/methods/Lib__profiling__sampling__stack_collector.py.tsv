@@ -1,0 +1,33 @@
+file	line	endline	name	signature	status	entry	note
+Lib/profiling/sampling/stack_collector.py	21	23	StackTraceCollector.__init__	__init__(self, sample_interval_usec, *, skip_idle=False)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	25	28	StackTraceCollector.collect	collect(self, stack_frames, timestamps_us=None)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	30	31	StackTraceCollector.process_frames	process_frames(self, frames, thread_id, weight=1)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	35	37	CollapsedStackCollector.__init__	__init__(self, *args, **kwargs)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	39	45	CollapsedStackCollector.process_frames	process_frames(self, frames, thread_id, weight=1)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	47	68	CollapsedStackCollector.export	export(self, filename)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	76	105	FlamegraphCollector.__init__	__init__(self, *args, **kwargs)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	107	141	FlamegraphCollector.collect	collect(self, stack_frames, timestamps_us=None)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	143	153	FlamegraphCollector.set_stats	set_stats(self, sample_interval_usec, duration_sec, sample_rate, error_rate=None, missed_samples=None, mode=None)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	155	168	FlamegraphCollector.set_replay_stats	set_replay_stats(self, info)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	169	170	FlamegraphCollector.set_mode	set_mode(self, mode)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	172	207	FlamegraphCollector.export	export(self, filename)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	211	223	FlamegraphCollector._format_function_name	_format_function_name(func)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	227	234	FlamegraphCollector._format_module_name	_format_module_name(func, module_name)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	236	241	FlamegraphCollector._get_module_name	_get_module_name(self, filename, path_info)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	243	427	FlamegraphCollector._convert_to_flamegraph_format	_convert_to_flamegraph_format(self, *, min_samples=None)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	429	479	FlamegraphCollector.process_frames	process_frames(self, frames, thread_id, weight=1)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	481	498	FlamegraphCollector._get_source_lines	_get_source_lines(self, func)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	500	581	FlamegraphCollector._create_flamegraph_html	_create_flamegraph_html(self, data)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	587	596	DiffFlamegraphCollector.__init__	__init__(self, sample_interval_usec, *, baseline_binary_path, skip_idle=False, mode=None, capture_config=None)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	598	638	DiffFlamegraphCollector._load_baseline	_load_baseline(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	640	672	DiffFlamegraphCollector._aggregate_path_samples	_aggregate_path_samples(self, root_node, path=None)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	674	700	DiffFlamegraphCollector._convert_to_flamegraph_format	_convert_to_flamegraph_format(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	702	716	DiffFlamegraphCollector._annotate_nodes_with_diff	_annotate_nodes_with_diff(self, current_flamegraph, current_stats, baseline_stats, scale)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	718	770	DiffFlamegraphCollector._add_diff_data_to_node	_add_diff_data_to_node(self, node, path, current_stats, baseline_stats, scale)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	773	778	DiffFlamegraphCollector._sample_weight	_sample_weight(value, aggregate, fallback_value, fallback_aggregate)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	780	782	DiffFlamegraphCollector._is_promoted_root	_is_promoted_root(self, data)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	784	801	DiffFlamegraphCollector._add_elided_flamegraph	_add_elided_flamegraph(self, current_flamegraph, current_stats, baseline_stats, scale)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	803	840	DiffFlamegraphCollector._build_elided_flamegraph	_build_elided_flamegraph(self, baseline_stats, scale)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	842	871	DiffFlamegraphCollector._extract_elided_nodes	_extract_elided_nodes(self, node, path)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	873	916	DiffFlamegraphCollector._add_elided_metadata	_add_elided_metadata(self, node, baseline_stats, scale, path)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/stack_collector.py	918	928	DiffFlamegraphCollector._extract_func_key	_extract_func_key(self, node, string_table)	todo		changed-in-3.15: new function

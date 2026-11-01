@@ -33,7 +33,7 @@ expected: |
 promised_by: |
   The twin: Lib/tokenize.py detect_encoding against Parser/tokenizer/string_tokenizer.c decode_str.
 cause: |
-  Lib/tokenize.py:39 cookie_re `.*?` matches CR; readline splits at LF only.
+  Lib/tokenize.py:40 cookie_re `.*?` matches CR; readline splits at LF only.
   Parser/tokenizer/string_tokenizer.c translates newlines before splitting the first two lines.
 possible_fix: |
   In find_cookie, cut the line at the first CR before matching.

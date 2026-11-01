@@ -7,19 +7,34 @@ Modules/_testcapi/unicode.c	114	142	unicode_asucs4	unicode_asucs4(PyObject *self
 Modules/_testcapi/unicode.c	148	168	unicode_asucs4copy	unicode_asucs4copy(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
 Modules/_testcapi/unicode.c	173	188	unicode_asutf8	unicode_asutf8(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
 Modules/_testcapi/unicode.c	193	221	unicode_copycharacters	unicode_copycharacters(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/unicode.c	233	241	writer_new	writer_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/unicode.c	245	263	writer_init	writer_init(PyObject *self_raw, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/unicode.c	267	276	writer_dealloc	writer_dealloc(PyObject *self_raw)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/unicode.c	280	287	writer_check	writer_check(WriterObject *self)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/unicode.c	291	307	writer_write_char	writer_write_char(PyObject *self_raw, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/unicode.c	311	328	writer_write_utf8	writer_write_utf8(PyObject *self_raw, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/unicode.c	332	349	writer_write_ascii	writer_write_ascii(PyObject *self_raw, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/unicode.c	353	381	writer_write_widechar	writer_write_widechar(PyObject *self_raw, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/unicode.c	385	413	writer_write_ucs4	writer_write_ucs4(PyObject *self_raw, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/unicode.c	417	429	writer_write_str	writer_write_str(PyObject *self_raw, PyObject *obj)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/unicode.c	433	445	writer_write_repr	writer_write_repr(PyObject *self_raw, PyObject *obj)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/unicode.c	449	467	writer_write_substring	writer_write_substring(PyObject *self_raw, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/unicode.c	471	500	writer_decodeutf8stateful	writer_decodeutf8stateful(PyObject *self_raw, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/unicode.c	504	512	writer_get_pointer	writer_get_pointer(PyObject *self_raw, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/unicode.c	516	526	writer_finish	writer_finish(PyObject *self_raw, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/unicode.c	572	588	_PyTestCapi_Init_Unicode	_PyTestCapi_Init_Unicode(PyObject *m) {	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	226	229	unicode_GET_CACHED_HASH	unicode_GET_CACHED_HASH(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	242	278	test_py_identifier	test_py_identifier(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	283	297	corrupt_unicode	corrupt_unicode(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	302	313	unicode_read_char	unicode_read_char(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	318	331	unicode_read	unicode_read(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	336	357	unicode_write	unicode_write(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	362	368	unicode_kind	unicode_kind(PyObject *self, PyObject *unicode)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	373	379	unicode_max_char_value	unicode_max_char_value(PyObject *self, PyObject *unicode)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	384	388	unicode_getlength_macro	unicode_getlength_macro(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	393	403	unicode_equal	unicode_equal(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	408	412	unicode_check_interned	unicode_check_interned(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	417	421	unicode_is_ascii	unicode_is_ascii(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	426	430	unicode_is_compact	unicode_is_compact(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	435	439	unicode_is_compact_ascii	unicode_is_compact_ascii(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	451	459	writer_new	writer_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	463	481	writer_init	writer_init(PyObject *self_raw, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	485	494	writer_dealloc	writer_dealloc(PyObject *self_raw)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	498	505	writer_check	writer_check(WriterObject *self)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	509	525	writer_write_char	writer_write_char(PyObject *self_raw, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	529	546	writer_write_utf8	writer_write_utf8(PyObject *self_raw, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	550	567	writer_write_ascii	writer_write_ascii(PyObject *self_raw, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	571	599	writer_write_widechar	writer_write_widechar(PyObject *self_raw, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	603	631	writer_write_ucs4	writer_write_ucs4(PyObject *self_raw, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	635	647	writer_write_str	writer_write_str(PyObject *self_raw, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	651	663	writer_write_repr	writer_write_repr(PyObject *self_raw, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	667	685	writer_write_substring	writer_write_substring(PyObject *self_raw, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	689	711	writer_write_latin1	writer_write_latin1(PyObject *self_raw, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	715	744	writer_decodeutf8stateful	writer_decodeutf8stateful(PyObject *self_raw, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	748	756	writer_get_pointer	writer_get_pointer(PyObject *self_raw, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	760	770	writer_finish	writer_finish(PyObject *self_raw, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/unicode.c	831	847	_PyTestCapi_Init_Unicode	_PyTestCapi_Init_Unicode(PyObject *m) {	excluded		test-support: only for CPython's own tests

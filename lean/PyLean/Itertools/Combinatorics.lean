@@ -4,7 +4,7 @@ import PyLean.Itertools.Model
 The combinatoric iterators: `product` (:2060-2326), `combinations`
 (:2328-2553), `combinations_with_replacement` (:2555-2801) and `permutations`
 (:2803-3081) of Modules/itertoolsmodule.c, and their doc equivalents
-(Doc/library/itertools.rst:234-254, :277-294, :550-576, :599-612).
+(Doc/library/itertools.rst:239-259, :282-299, :555-581, :604-617).
 
 Each C object keeps an index array (`Py_ssize_t *indices`, plus `cycles` for
 permutations) and a cached result tuple; the result tuple is always
@@ -69,9 +69,9 @@ structure ProductState (α : Type) where
 def prodPools (args : List (List α)) (rep : Int) : List (List α) :=
   if args.length = 0 then [] else (List.replicate rep.toNat args).flatten
 
-/-- `product_new` (:2073-2153). `rep? = none` is "no keyword" (repeat 1). -/
+/-- `product_new` (:2078-2158). `rep? = none` is "no keyword" (repeat 1). -/
 def cProductNew (args : List (Obj α)) (rep? : Option Int) : Py (ProductState α) :=
-  -- :2081-2097
+  -- :2086-2102
   let parsed : Py Int :=
     match rep? with
     | none => .ok 1
@@ -83,24 +83,24 @@ def cProductNew (args : List (Obj α)) (rep? : Option Int) : Py (ProductState α
   match parsed with
   | .error e => .error e
   | .ok rep =>
-    -- :2099-2109
+    -- :2104-2114
     let nargs : Int := if rep = 0 then 0 else args.length
     if rep ≠ 0 ∧ nargs > ssizeMax / 8 / rep then
       .error (.overflowError "repeat argument too large")
     else
       let npools := nargs * rep
-      -- :2111-2119
+      -- :2116-2124
       if !memNewOk npools then .error memoryError
       else if !tupleNewOk npools then .error memoryError
       else
-        -- :2120-2127: with `repeat == 0` no argument is touched (`nargs` is 0)
+        -- :2125-2132: with `repeat == 0` no argument is touched (`nargs` is 0)
         match (if rep = 0 then .ok [] else args.mapM tupleOf) with
         | .error e => .error e
         | .ok ls =>
           .ok { pools := prodPools ls rep, indices := List.replicate npools.toNat 0,
                 started := false, stopped := false }
 
-/-- The right-to-left odometer loop of `product_next_lock_held` (:2241-2262),
+/-- The right-to-left odometer loop of `product_next_lock_held` (:2246-2267),
 by recursion on `i + 1`: `none` is "`i` went negative". -/
 def cProductAdvance (pools : List (List α)) : Nat → List Nat → Option (List Nat)
   | 0, _ => none
@@ -110,7 +110,7 @@ def cProductAdvance (pools : List (List α)) : Nat → List Nat → Option (List
     if v = pool.length then cProductAdvance pools i (idx.set i 0)
     else some (idx.set i v)
 
-/-- `product_next_lock_held` (:2190-2274). -/
+/-- `product_next_lock_held` (:2195-2279). -/
 def cProductNext (s : ProductState α) : Step (ProductState α) (List α) :=
   if s.stopped then .stop s
   else if !s.started then
@@ -157,7 +157,7 @@ structure CombState (α : Type) where
   stopped : Bool
 
 /-- Argument Clinic converts `r` before the body runs (`Py_ssize_t`), then
-`itertools_combinations_impl` (:2352-2398) builds the pool, checks `r`,
+`itertools_combinations_impl` (:2357-2403) builds the pool, checks `r`,
 allocates `indices` and sets `stopped = r > n`. -/
 def cCombinationsNew (iterable : Obj α) (r : Int) : Py (CombState α) := do
   let r ← asSsize r
@@ -167,19 +167,19 @@ def cCombinationsNew (iterable : Obj α) (r : Int) : Py (CombState α) := do
   return { pool := pool, indices := List.range r.toNat, r := r.toNat, started := false,
            stopped := decide (r > pool.length) }
 
-/-- `for (i=r-1 ; i >= 0 && indices[i] == i+n-r ; i--)` (:2483-2484), by
+/-- `for (i=r-1 ; i >= 0 && indices[i] == i+n-r ; i--)` (:2488-2489), by
 recursion on `i + 1`; `none` is `i < 0`. -/
 def cCombScan (n r : Nat) (idx : List Nat) : Nat → Option Nat
   | 0 => none
   | i + 1 => if ix idx i = i + n - r then cCombScan n r idx i else some i
 
-/-- `for (j=i+1 ; j<r ; j++) indices[j] = indices[j-1] + 1;` (:2496-2497),
+/-- `for (j=i+1 ; j<r ; j++) indices[j] = indices[j-1] + 1;` (:2501-2502),
 with `k = r - j` iterations left. -/
 def cCombFill (j : Nat) : Nat → List Nat → List Nat
   | 0, idx => idx
   | k + 1, idx => cCombFill (j + 1) k (idx.set j (ix idx (j - 1) + 1))
 
-/-- `combinations_next_lock_held` (:2433-2516). -/
+/-- `combinations_next_lock_held` (:2438-2521). -/
 def cCombinationsNext (s : CombState α) : Step (CombState α) (List α) :=
   if s.stopped then .stop s
   else if !s.started then
@@ -242,7 +242,7 @@ def docCombinations (iterable : Obj α) (r : Int) : Run (List α) :=
 
 /-! ## combinations_with_replacement -/
 
-/-- `itertools_combinations_with_replacement_impl` (:2605-2652). -/
+/-- `itertools_combinations_with_replacement_impl` (:2610-2657). -/
 def cCwrNew (iterable : Obj α) (r : Int) : Py (CombState α) := do
   let r ← asSsize r
   let pool ← tupleOf iterable
@@ -251,17 +251,17 @@ def cCwrNew (iterable : Obj α) (r : Int) : Py (CombState α) := do
   return { pool := pool, indices := List.replicate r.toNat 0, r := r.toNat, started := false,
            stopped := pool.length == 0 && r != 0 }
 
-/-- `for (i=r-1 ; i >= 0 && indices[i] == n-1; i--)` (:2737-2738). -/
+/-- `for (i=r-1 ; i >= 0 && indices[i] == n-1; i--)` (:2742-2743). -/
 def cCwrScan (n : Nat) (idx : List Nat) : Nat → Option Nat
   | 0 => none
   | i + 1 => if (ix idx i : Int) = (n : Int) - 1 then cCwrScan n idx i else some i
 
-/-- `for ( ; i<r ; i++) indices[i] = index;` (:2750-2756). -/
+/-- `for ( ; i<r ; i++) indices[i] = index;` (:2755-2761). -/
 def cCwrFill (v : Nat) (i : Nat) : Nat → List Nat → List Nat
   | 0, idx => idx
   | k + 1, idx => cCwrFill v (i + 1) k (idx.set i v)
 
-/-- `cwr_next_lock_held` (:2687-2764). -/
+/-- `cwr_next_lock_held` (:2692-2769). -/
 def cCwrNext (s : CombState α) : Step (CombState α) (List α) :=
   if s.stopped then .stop s
   else if !s.started then
@@ -326,7 +326,7 @@ structure PermState (α : Type) where
   started : Bool
   stopped : Bool
 
-/-- `itertools_permutations_impl` (:2854-2919): the pool is built first, then
+/-- `itertools_permutations_impl` (:2859-2924): the pool is built first, then
 `r` (`None` → `n`) goes through `PyLong_AsSsize_t`. -/
 def cPermutationsNew (iterable : Obj α) (robj : Option Int) (badR : Bool := false) : Py (PermState α) := do
   let pool ← tupleOf iterable
@@ -342,7 +342,7 @@ def cPermutationsNew (iterable : Obj α) (robj : Option Int) (badR : Bool := fal
            started := false, stopped := decide (r > n) }
 
 /-- The rotation `indices[i:] = indices[i+1:] + indices[i:i+1]` as the C loop
-(:3009-3013): shift `indices[i+1..n)` left by one, put the old `indices[i]` last. -/
+(:3014-3018): shift `indices[i+1..n)` left by one, put the old `indices[i]` last. -/
 def cPermRotate (n i : Nat) (idx : List Nat) : List Nat :=
   let index := ix idx i
   let idx := go i (n - 1 - i) idx
@@ -353,7 +353,7 @@ where
     | j, k + 1, idx => go (j + 1) k (idx.set j (ix idx (j + 1)))
 
 /-- The `for (i=r-1 ; i>=0 ; i--)` loop of `permutations_next_lock_held`
-(:3006-3036), by recursion on `i + 1`; `none` is "`i` went negative". -/
+(:3011-3041), by recursion on `i + 1`; `none` is "`i` went negative". -/
 def cPermLoop (n : Nat) : Nat → List Nat → List Int → Option (List Nat × List Int) ⊕ (List Nat × List Int)
   | 0, idx, cyc => .inr (idx, cyc)
   | i + 1, idx, cyc =>
@@ -368,7 +368,7 @@ def cPermLoop (n : Nat) : Nat → List Nat → List Int → Option (List Nat × 
       let idx := idx.set (n - j) index
       .inl (some (idx, cyc))
 
-/-- `permutations_next_lock_held` (:2956-3044). -/
+/-- `permutations_next_lock_held` (:2961-3049). -/
 def cPermutationsNext (s : PermState α) : Step (PermState α) (List α) :=
   if s.stopped then .stop s
   else if !s.started then
@@ -445,13 +445,13 @@ def docPermutations (iterable : Obj α) (robj : Option Int) : Run (List α) :=
 
 /-! ## `__sizeof__` -/
 
-/-- `product_sizeof` (:2169-2175): `basic` is `_PyObject_SIZE(type)`. -/
+/-- `product_sizeof` (:2174-2180): `basic` is `_PyObject_SIZE(type)`. -/
 def cProductSizeof (basic : Nat) (s : ProductState α) : Nat := basic + s.pools.length * 8
 
-/-- `combinations_sizeof` (:2414-2420) and `cwr_sizeof` (:2668-2674). -/
+/-- `combinations_sizeof` (:2419-2425) and `cwr_sizeof` (:2673-2679). -/
 def cCombSizeof (basic : Nat) (s : CombState α) : Nat := basic + s.r * 8
 
-/-- `permutations_sizeof` (:2936-2943). -/
+/-- `permutations_sizeof` (:2941-2948). -/
 def cPermSizeof (basic : Nat) (s : PermState α) : Nat := basic + s.pool.length * 8 + s.r * 8
 
 end PyLean.Itertools

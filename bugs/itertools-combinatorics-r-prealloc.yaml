@@ -49,14 +49,14 @@ observed: |
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical (main only moved the r < 0 check
   into Argument Clinic). REPRODUCED.
 promised_by: |
-  Doc/library/itertools.rst:219-223 and :536-539 ("The length of the output is given by
+  Doc/library/itertools.rst:224-228 and :541-544 ("The length of the output is given by
   math.comb/math.perm ... or zero when r > n"); for combinations_with_replacement the "Roughly
-  equivalent to" code's `if not n and r: return` (:282). All three doc equivalents return
+  equivalent to" code's `if not n and r: return` (:287). All three doc equivalents return
   before allocating anything.
 cause: |
-  Modules/itertoolsmodule.c:2371-2378 (combinations: PyMem_New(Py_ssize_t, r) and fill, then
-  `co->stopped = r > n` at :2389), :2625-2632 (cwr: same, `stopped = !n && r` at :2643),
-  :2886-2896 (permutations: PyMem_New(Py_ssize_t, r) for cycles, `stopped = r > n` at :2908).
+  Modules/itertoolsmodule.c:2363-2370 (combinations: PyMem_New(Py_ssize_t, r) and fill, then
+  `co->stopped = r > n` at :2381), :2615-2622 (cwr: same, `stopped = !n && r` at :2633),
+  :2876-2886 (permutations: PyMem_New(Py_ssize_t, r) for cycles, `stopped = r > n` at :2898).
 possible_fix: |
   When the result is known to be empty (r > n for combinations/permutations, n == 0 && r > 0
   for cwr), allocate no index arrays (or allocate 0 entries) and just set stopped = 1.

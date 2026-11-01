@@ -4,14 +4,14 @@ Lib/idlelib/autocomplete_w.py	64	76	AutoCompleteWindow._change_start	_change_sta
 Lib/idlelib/autocomplete_w.py	78	89	AutoCompleteWindow._binary_search	_binary_search(self, s)	excluded		platform: GUI toolkit
 Lib/idlelib/autocomplete_w.py	91	121	AutoCompleteWindow._complete_string	_complete_string(self, s)	excluded		platform: GUI toolkit
 Lib/idlelib/autocomplete_w.py	123	159	AutoCompleteWindow._selection_changed	_selection_changed(self)	excluded		platform: GUI toolkit
-Lib/idlelib/autocomplete_w.py	161	231	AutoCompleteWindow.show_window	show_window(self, comp_lists, index, complete, mode, userWantsWin)	excluded		platform: GUI toolkit
-Lib/idlelib/autocomplete_w.py	233	284	AutoCompleteWindow.winconfig_event	winconfig_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/autocomplete_w.py	286	296	AutoCompleteWindow._hide_event_check	_hide_event_check(self)	excluded		platform: GUI toolkit
-Lib/idlelib/autocomplete_w.py	298	309	AutoCompleteWindow.hide_event	hide_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/autocomplete_w.py	311	315	AutoCompleteWindow.listselect_event	listselect_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/autocomplete_w.py	317	321	AutoCompleteWindow.doubleclick_event	doubleclick_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/autocomplete_w.py	323	437	AutoCompleteWindow.keypress_event	keypress_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/autocomplete_w.py	439	445	AutoCompleteWindow.keyrelease_event	keyrelease_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/autocomplete_w.py	447	448	AutoCompleteWindow.is_active	is_active(self)	excluded		platform: GUI toolkit
-Lib/idlelib/autocomplete_w.py	450	451	AutoCompleteWindow.complete	complete(self)	excluded		platform: GUI toolkit
-Lib/idlelib/autocomplete_w.py	454	491	AutoCompleteWindow.hide_window	hide_window(self)	excluded		platform: GUI toolkit
+Lib/idlelib/autocomplete_w.py	161	233	AutoCompleteWindow.show_window	show_window(self, comp_lists, index, complete, mode, userWantsWin)	excluded		platform: GUI toolkit
+Lib/idlelib/autocomplete_w.py	235	286	AutoCompleteWindow.winconfig_event	winconfig_event(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/autocomplete_w.py	288	298	AutoCompleteWindow._hide_event_check	_hide_event_check(self)	excluded		platform: GUI toolkit
+Lib/idlelib/autocomplete_w.py	300	311	AutoCompleteWindow.hide_event	hide_event(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/autocomplete_w.py	313	317	AutoCompleteWindow.listselect_event	listselect_event(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/autocomplete_w.py	319	323	AutoCompleteWindow.doubleclick_event	doubleclick_event(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/autocomplete_w.py	325	439	AutoCompleteWindow.keypress_event	keypress_event(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/autocomplete_w.py	441	447	AutoCompleteWindow.keyrelease_event	keyrelease_event(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/autocomplete_w.py	449	450	AutoCompleteWindow.is_active	is_active(self)	excluded		platform: GUI toolkit
+Lib/idlelib/autocomplete_w.py	452	453	AutoCompleteWindow.complete	complete(self)	excluded		platform: GUI toolkit
+Lib/idlelib/autocomplete_w.py	456	493	AutoCompleteWindow.hide_window	hide_window(self)	excluded		platform: GUI toolkit

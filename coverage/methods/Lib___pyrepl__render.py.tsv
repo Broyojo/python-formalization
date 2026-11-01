@@ -1,0 +1,25 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_pyrepl/render.py	24	24	_ThemeSyntax.__getitem__	__getitem__(self, key: str, /)	todo		changed-in-3.15: new function
+Lib/_pyrepl/render.py	43	44	RenderCell.terminal_text	terminal_text(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/render.py	47	48	_theme_style	_theme_style(theme: _ThemeSyntax, tag: str)	todo		changed-in-3.15: new function
+Lib/_pyrepl/render.py	51	56	_style_escape	_style_escape(style: StyleRef)	todo		changed-in-3.15: new function
+Lib/_pyrepl/render.py	59	62	_update_terminal_state	_update_terminal_state(state: str, escape: str)	todo		changed-in-3.15: new function
+Lib/_pyrepl/render.py	65	103	_cells_from_rendered_text	_cells_from_rendered_text(text: str)	todo		changed-in-3.15: new function
+Lib/_pyrepl/render.py	119	125	RenderLine.from_cells	from_cells(cls, cells: Iterable[RenderCell])	todo		changed-in-3.15: new function
+Lib/_pyrepl/render.py	128	148	RenderLine.from_parts	from_parts(cls, parts: Sequence[str], widths: Sequence[int], styles: Sequence[RenderStyle] | None=None)	todo		changed-in-3.15: new function
+Lib/_pyrepl/render.py	151	152	RenderLine.from_rendered_text	from_rendered_text(cls, text: str)	todo		changed-in-3.15: new function
+Lib/_pyrepl/render.py	195	196	RenderedScreen.__post_init__	__post_init__(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/render.py	198	222	RenderedScreen._compose	_compose(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/render.py	225	226	RenderedScreen.empty	empty(cls)	todo		changed-in-3.15: new function
+Lib/_pyrepl/render.py	229	238	RenderedScreen.from_screen_lines	from_screen_lines(cls, screen: Sequence[str], cursor: CursorXY)	todo		changed-in-3.15: new function
+Lib/_pyrepl/render.py	240	249	RenderedScreen.with_overlay	with_overlay(self, y: int, lines: Iterable[RenderLine])	todo		changed-in-3.15: new function
+Lib/_pyrepl/render.py	252	253	RenderedScreen.screen_lines	screen_lines(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/render.py	277	278	LineDiff.old_text	old_text(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/render.py	281	282	LineDiff.new_text	new_text(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/render.py	285	286	LineDiff.old_changed_width	old_changed_width(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/render.py	289	290	LineDiff.new_changed_width	new_changed_width(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/render.py	311	312	LineUpdate.__post_init__	__post_init__(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/render.py	315	317	_controls_require_cursor_resync	_controls_require_cursor_resync(controls: Sequence[str])	todo		changed-in-3.15: new function
+Lib/_pyrepl/render.py	320	321	requires_cursor_resync	requires_cursor_resync(cells: Sequence[RenderCell])	todo		changed-in-3.15: new function
+Lib/_pyrepl/render.py	324	357	render_cells	render_cells(cells: Sequence[RenderCell], visual_style: str | None=None)	todo		changed-in-3.15: new function
+Lib/_pyrepl/render.py	360	399	diff_render_lines	diff_render_lines(old: RenderLine, new: RenderLine)	todo		changed-in-3.15: new function

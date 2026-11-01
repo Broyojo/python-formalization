@@ -60,7 +60,7 @@ def argCInt (x : Int) : Py Int :=
     .error (.overflowError "Python int too large to convert to C int")
   else .ok x
 
-/-- `ADJUST_INDICES`, unicodeobject.c:9662-9678 and bytes_methods.c:434-450. -/
+/-- `ADJUST_INDICES`, unicodeobject.c:9563-9579 and bytes_methods.c:432-448. -/
 def adjustIndices (start «end» len : Int) : Int × Int :=
   let e := if «end» > len then len
     else if «end» < 0 then (if «end» + len < 0 then 0 else «end» + len)
@@ -191,7 +191,7 @@ def maxCharValue (s : Seq) : Nat :=
 
 /-! ## find / rfind / index / rindex / count -/
 
-/-- `any_find_slice`, unicodeobject.c:9681-9761. `forward` is `direction > 0`. -/
+/-- `any_find_slice`, unicodeobject.c:9582-9662. `forward` is `direction > 0`. -/
 def anyFindSlice (s sub : Seq) (start «end» : Int) (forward : Bool) : Int :=
   if kindOf s < kindOf sub then -1
   else
@@ -203,17 +203,17 @@ def anyFindSlice (s sub : Seq) (start «end» : Int) (forward : Bool) : Int :=
     else if forward then stringlibFind (window s start («end» - start)) sub start
     else stringlibRFind (window s start («end» - start)) sub start
 
-/-- `str.find` / `str.rfind`, unicodeobject.c:11968-11980 and :13062-13073. -/
+/-- `str.find` / `str.rfind`, unicodeobject.c:11695-11707 and :12808-12819. -/
 def strFind (s sub : Seq) (start «end» : Option Int) (forward : Bool := true) : Int :=
   let r := anyFindSlice s sub (argStart start) (argEnd «end») forward
   if r < 0 then -1 else r
 
-/-- `str.index` / `str.rindex`, unicodeobject.c:12031-12043 and :13083-13096. -/
+/-- `str.index` / `str.rindex`, unicodeobject.c:11759-11771 and :12830-12843. -/
 def strIndex (s sub : Seq) (start «end» : Option Int) (forward : Bool := true) : Py Int :=
   let r := anyFindSlice s sub (argStart start) (argEnd «end») forward
   if r = -1 then .error (.valueError "substring not found") else .ok r
 
-/-- `str.count`, unicodeobject.c:11783-11841. -/
+/-- `str.count`, unicodeobject.c:11509-11567. -/
 def strCount (s sub : Seq) (start «end» : Option Int) : Int :=
   if kindOf s < kindOf sub then 0
   else
@@ -227,7 +227,7 @@ inductive BSub where
   | buf (b : Seq)
   deriving Repr, DecidableEq
 
-/-- `parse_args_finds_byte`, bytes_methods.c:403-431: an int is converted with
+/-- `parse_args_finds_byte`, bytes_methods.c:401-429: an int is converted with
 `PyNumber_AsSsize_t(sub, NULL)` (clamping) and must lie in `range(0, 256)`. -/
 def parseFindsByte : BSub → Py Seq
   | .buf b => .ok b
@@ -236,7 +236,7 @@ def parseFindsByte : BSub → Py Seq
     if v < 0 ∨ v > 255 then .error (.valueError "byte must be in range(0, 256)")
     else .ok [v.toNat]
 
-/-- `find_internal`, bytes_methods.c:452-509. -/
+/-- `find_internal`, bytes_methods.c:450-507. -/
 def bytesFindInternal (s : Seq) (sub : BSub) (start «end» : Int) (forward : Bool) : Py Int := do
   let sub ← parseFindsByte sub
   let (start, «end») := adjustIndices start «end» s.length
@@ -247,17 +247,17 @@ def bytesFindInternal (s : Seq) (sub : BSub) (start «end» : Int) (forward : Bo
   else if forward then return stringlibFind (window s start («end» - start)) sub start
   else return stringlibRFind (window s start («end» - start)) sub start
 
-/-- `bytes.find` / `bytes.rfind` (and `bytearray`), bytes_methods.c:511-546. -/
+/-- `bytes.find` / `bytes.rfind` (and `bytearray`), bytes_methods.c:509-544. -/
 def bytesFind (s : Seq) (sub : BSub) (start «end» : Option Int) (forward : Bool := true) : Py Int :=
   bytesFindInternal s sub (argStart start) (argEnd «end») forward
 
-/-- `bytes.index` / `bytes.rindex`, bytes_methods.c:521-560. -/
+/-- `bytes.index` / `bytes.rindex`, bytes_methods.c:519-558. -/
 def bytesIndex (s : Seq) (sub : BSub) (start «end» : Option Int) (forward : Bool := true) : Py Int := do
   let r ← bytesFindInternal s sub (argStart start) (argEnd «end») forward
   if r = -1 then throw (.valueError "subsection not found")
   return r
 
-/-- `_Py_bytes_count`, bytes_methods.c:562-596. -/
+/-- `_Py_bytes_count`, bytes_methods.c:560-594. -/
 def bytesCount (s : Seq) (sub : BSub) (start «end» : Option Int) : Py Int := do
   let sub ← parseFindsByte sub
   let (start, «end») := adjustIndices (argStart start) (argEnd «end») s.length
@@ -274,7 +274,7 @@ inductive Affix where
 /-- `s[i:i+len(p)] == p` for in-range `i ≥ 0` (the `memcmp`). -/
 def matchAt (s p : Seq) (i : Int) : Bool := p.isPrefixOf (s.drop i.toNat)
 
-/-- `tailmatch`, unicodeobject.c:9946-10007. The first/last character
+/-- `tailmatch`, unicodeobject.c:9711-9772. The first/last character
 comparison before the `memcmp` does not change the result. -/
 def strTailmatch (s sub : Seq) (start «end» : Int) (forward : Bool) : Bool :=
   let (start, «end») := adjustIndices start «end» s.length
@@ -283,7 +283,7 @@ def strTailmatch (s sub : Seq) (start «end» : Int) (forward : Bool) : Bool :=
   else if sub.length = 0 then true
   else matchAt s sub (if forward then «end» else start)
 
-/-- `tailmatch`, bytes_methods.c:640-686. `forward` is `direction >= 0` (endswith). -/
+/-- `tailmatch`, bytes_methods.c:638-684. `forward` is `direction >= 0` (endswith). -/
 def bytesTailmatch (s sub : Seq) (start «end» : Int) (forward : Bool) : Bool :=
   let len : Int := s.length
   let slen : Int := sub.length
@@ -302,7 +302,7 @@ def bytesTailmatch (s sub : Seq) (start «end» : Int) (forward : Bool) : Bool :
       else matchAt s sub start
 
 /-- The tuple loop of `unicode_startswith_impl`/`unicode_endswith_impl`
-(unicodeobject.c:13627-13723) and `_Py_bytes_tailmatch` (bytes_methods.c:688-718). -/
+(unicodeobject.c@3.14.7:13627-13723) and `_Py_bytes_tailmatch` (bytes_methods.c:686-716). -/
 def affixMatch (tm : Seq → Bool) : Affix → Bool
   | .one p => tm p
   | .tuple ps => ps.any tm
@@ -321,19 +321,19 @@ def bytesEndswith (s : Seq) (a : Affix) (start «end» : Option Int) : Bool :=
 
 /-! ## removeprefix / removesuffix -/
 
-/-- `unicode_removeprefix_impl`, unicodeobject.c:12919-12931. -/
+/-- `unicode_removeprefix_impl`, unicodeobject.c:12664-12676. -/
 def strRemoveprefix (s p : Seq) : Seq :=
   if strTailmatch s p 0 ssizeMax false then s.drop p.length else s
 
-/-- `unicode_removesuffix_impl`, unicodeobject.c:12947-12959. -/
+/-- `unicode_removesuffix_impl`, unicodeobject.c:12692-12704. -/
 def strRemovesuffix (s p : Seq) : Seq :=
   if strTailmatch s p 0 ssizeMax true then s.take (s.length - p.length) else s
 
-/-- `bytes_removeprefix_impl`, bytesobject.c:2340-2360 (and bytearray). -/
+/-- `bytes_removeprefix_impl`, bytesobject.c:2445-2465 (and bytearray). -/
 def bytesRemoveprefix (s p : Seq) : Seq :=
   if s.length ≥ p.length ∧ p.length > 0 ∧ p.isPrefixOf s then s.drop p.length else s
 
-/-- `bytes_removesuffix_impl`, bytesobject.c:2377-2398 (and bytearray). -/
+/-- `bytes_removesuffix_impl`, bytesobject.c:2483-2504 (and bytearray). -/
 def bytesRemovesuffix (s p : Seq) : Seq :=
   if s.length ≥ p.length ∧ p.length > 0 ∧ p.isPrefixOf (s.drop (s.length - p.length))
   then s.take (s.length - p.length) else s
@@ -356,18 +356,18 @@ def stringlibRPartition (s sep : Seq) : Py (Seq × Seq × Seq) :=
     if pos < 0 then .ok ([], [], s)
     else .ok (s.take pos.toNat, sep, s.drop (pos.toNat + sep.length))
 
-/-- `PyUnicode_Partition`, unicodeobject.c:13168-13218. -/
+/-- `PyUnicode_Partition`, unicodeobject.c:12916-12966. -/
 def strPartition (s sep : Seq) : Py (Seq × Seq × Seq) :=
   if kindOf s < kindOf sep ∨ s.length < sep.length then .ok (s, [], [])
   else stringlibPartition s sep
 
-/-- `PyUnicode_RPartition`, unicodeobject.c:13221-13271. -/
+/-- `PyUnicode_RPartition`, unicodeobject.c:12969-13019. -/
 def strRPartition (s sep : Seq) : Py (Seq × Seq × Seq) :=
   if kindOf s < kindOf sep ∨ s.length < sep.length then .ok ([], [], s)
   else stringlibRPartition s sep
 
 /-- `bytes.partition`/`bytearray.partition`: `stringlib_partition` on the
-buffer (bytesobject.c:1808-1815, bytearrayobject.c:1806-1824). -/
+buffer (bytesobject.c:1900-1907, bytearrayobject.c:1921-1939). -/
 def bytesPartition (s sep : Seq) : Py (Seq × Seq × Seq) := stringlibPartition s sep
 
 def bytesRPartition (s sep : Seq) : Py (Seq × Seq × Seq) := stringlibRPartition s sep
@@ -383,7 +383,7 @@ def uniSpace (c : Nat) : Bool :=
 /-- `Py_ISSPACE` (pyctype.h): ASCII whitespace, as used by `bytes`. -/
 def byteSpace (c : Nat) : Bool := (9 ≤ c ∧ c ≤ 13) || c == 32
 
-/-- `_Py_ascii_whitespace`, unicodeobject.c:470-505, used by the ASCII fast
+/-- `_Py_ascii_whitespace`, unicodeobject.c:381-415, used by the ASCII fast
 path of `str.strip()`. -/
 def asciiWhitespaceTable (c : Nat) : Bool := c < 128 && ((9 ≤ c ∧ c ≤ 13) || (0x1c ≤ c ∧ c ≤ 0x20))
 
@@ -485,19 +485,19 @@ def stringlibRSplit (s sep : Seq) (maxcount : Int) : Py (List Seq) :=
   else .ok (rsplitLoop sep maxcount s).reverse
 
 /-- `maxcount` for `str.split()`/`str.rsplit()` without a separator:
-`(len1 - 1) / 2 + 1` in C division (unicodeobject.c:10579-10581). -/
+`(len1 - 1) / 2 + 1` in C division (unicodeobject.c:10345-10347). -/
 def strWsMaxcount (len : Nat) (maxcount : Int) : Int :=
   if maxcount < 0 then Int.tdiv ((len : Int) - 1) 2 + 1 else maxcount
 
 /-- `maxcount` for `str.split(sep)`: `len1 / len2 + 1`, and `len1` if that
-overflowed (unicodeobject.c:10609-10614). -/
+overflowed (unicodeobject.c:10375-10380). -/
 def strSepMaxcount (len1 len2 : Nat) (maxcount : Int) : Int :=
   if maxcount < 0 then
     let m : Int := if len2 = 0 then 0 else (len1 / len2 : Nat) + 1
     if m > ssizeMax then len1 else m
   else maxcount
 
-/-- `str.split`, unicodeobject.c:10568-10658 and :13153-13165. -/
+/-- `str.split`, unicodeobject.c:10334-10424 and :12901-12913. -/
 def strSplit (s : Seq) (sep : Option Seq) (maxsplit : Int) : Py (List Seq) := do
   let maxcount ← argSsize maxsplit
   match sep with
@@ -507,7 +507,7 @@ def strSplit (s : Seq) (sep : Option Seq) (maxsplit : Int) : Py (List Seq) := do
     if kindOf s < kindOf sep ∨ s.length < sep.length then return [s]
     stringlibSplit s sep maxcount
 
-/-- `str.rsplit`, unicodeobject.c:10660-10750. -/
+/-- `str.rsplit`, unicodeobject.c:10426-10516. -/
 def strRSplit (s : Seq) (sep : Option Seq) (maxsplit : Int) : Py (List Seq) := do
   let maxcount ← argSsize maxsplit
   match sep with
@@ -517,8 +517,8 @@ def strRSplit (s : Seq) (sep : Option Seq) (maxsplit : Int) : Py (List Seq) := d
     if kindOf s < kindOf sep ∨ s.length < sep.length then return [s]
     stringlibRSplit s sep maxcount
 
-/-- `bytes.split` (bytesobject.c:1769-1789) and `bytearray.split`
-(bytearrayobject.c:1754-1784). -/
+/-- `bytes.split` (bytesobject.c:1861-1881) and `bytearray.split`
+(bytearrayobject.c:1869-1899). -/
 def bytesSplit (s : Seq) (sep : Option Seq) (maxsplit : Int) : Py (List Seq) := do
   let maxsplit ← argSsize maxsplit
   let maxsplit := if maxsplit < 0 then ssizeMax else maxsplit
@@ -526,7 +526,7 @@ def bytesSplit (s : Seq) (sep : Option Seq) (maxsplit : Int) : Py (List Seq) := 
   | none => return splitWs byteSpace maxsplit s
   | some sep => stringlibSplit s sep maxsplit
 
-/-- `bytes.rsplit` (bytesobject.c:1856-1876) and `bytearray.rsplit`. -/
+/-- `bytes.rsplit` (bytesobject.c:1949-1969) and `bytearray.rsplit`. -/
 def bytesRSplit (s : Seq) (sep : Option Seq) (maxsplit : Int) : Py (List Seq) := do
   let maxsplit ← argSsize maxsplit
   let maxsplit := if maxsplit < 0 then ssizeMax else maxsplit
@@ -592,7 +592,7 @@ def bytesSplitlines (s : Seq) (keepends : Bool) : List Seq := splitlines byteLin
 /-! ## replace -/
 
 /-- `replace_1char_inplace` (stringlib/replace.h:7-56) and
-`stringlib_replace_single_character_in_place` (transmogrify.h:422-461), by
+`stringlib_replace_single_character_in_place` (transmogrify.h:423-462), by
 result: the first `maxcount` occurrences of `u1` become `u2`. -/
 def replaceChars (u1 u2 : Nat) : Int → Seq → Seq
   | _, [] => []
@@ -601,7 +601,7 @@ def replaceChars (u1 u2 : Nat) : Int → Seq → Seq
     else c :: replaceChars u1 u2 mc cs
 
 /-- The `while (--maxcount > 0)` loop of the equal-length substring
-replacement (unicodeobject.c:10927-10937, transmogrify.h:500-509), on the
+replacement (unicodeobject.c:10693-10703, transmogrify.h:501-510), on the
 remainder after the first match. -/
 def replaceInplace (old new : Seq) (maxcount : Int) (rest : Seq) : Seq :=
   if maxcount > 0 ∧ old ≠ [] then
@@ -616,7 +616,7 @@ decreasing_by
   simp; omega
 
 /-- The copy loop that performs `n` counted replacements
-(unicodeobject.c:10991-11021, transmogrify.h:402-418, :564-587, :656-680). -/
+(unicodeobject.c:10757-10787, transmogrify.h:403-419, :565-588, :657-681). -/
 def replaceLoop (old new : Seq) : Nat → Seq → Seq
   | 0, rest => rest
   | n + 1, rest =>
@@ -625,13 +625,13 @@ def replaceLoop (old new : Seq) : Nat → Seq → Seq
     | some j => rest.take j ++ new ++ replaceLoop old new n (rest.drop (j + old.length))
 
 /-- Insert `new` before each of the first `n` characters (and at the end if
-`n = len + 1`): unicodeobject.c:11023-11040, transmogrify.h:310-336. -/
+`n = len + 1`): unicodeobject.c:10789-10806, transmogrify.h:311-337. -/
 def interleave (new : Seq) : Nat → Seq → Seq
   | 0, rest => rest
   | n + 1, rest => new ++ (if n = 0 then rest else rest.take 1 ++ interleave new n (rest.drop 1))
 
-/-- `str.replace`: `replace`, unicodeobject.c:10811-11067. The
-`if (str1 == str2) goto nothing` identity shortcut (:10835) is omitted:
+/-- `str.replace`: `replace`, unicodeobject.c:10577-10833. The
+`if (str1 == str2) goto nothing` identity shortcut (:10601) is omitted:
 replacing a string by an equal one yields the same value. -/
 def strReplace (s old new : Seq) (count : Int) : Py Seq := do
   let maxcount ← argSsize count
@@ -664,11 +664,11 @@ def strReplace (s old new : Seq) (count : Int) : Py Seq := do
     if len1 > 0 then return replaceLoop old new n.toNat s
     else return interleave new n.toNat s
 
-/-- `countchar`, transmogrify.h:256-271. -/
+/-- `countchar`, transmogrify.h:257-272. -/
 def countChar (s : Seq) (c : Nat) (maxcount : Int) : Int := min ((s.filter (· == c)).length : Int) maxcount
 
-/-- `stringlib_replace`, transmogrify.h:681-737, with its seven helpers
-(transmogrify.h:276-679); used by `bytes.replace` and `bytearray.replace`. -/
+/-- `stringlib_replace`, transmogrify.h:682-738, with its seven helpers
+(transmogrify.h:277-680); used by `bytes.replace` and `bytearray.replace`. -/
 def bytesReplace (s old new : Seq) (count : Int) : Py Seq := do
   let maxcount ← argSsize count
   let selfLen : Int := s.length
@@ -679,41 +679,41 @@ def bytesReplace (s old new : Seq) (count : Int) : Py Seq := do
   if maxcount = 0 then return s
   if fromLen = 0 then
     if toLen = 0 then return s
-    -- stringlib_replace_interleave, transmogrify.h:276-337
+    -- stringlib_replace_interleave, transmogrify.h:277-338
     let cnt : Int := if maxcount ≤ selfLen then maxcount else selfLen + 1
     if toLen > (ssizeMax - selfLen) / cnt then throw (.overflowError "replace bytes is too long")
     return interleave new cnt.toNat s
   if toLen = 0 then
     if fromLen = 1 then
-      -- stringlib_replace_delete_single_character, transmogrify.h:341-379
+      -- stringlib_replace_delete_single_character, transmogrify.h:342-380
       let cnt := countChar s old.head! maxcount
       if cnt = 0 then return s
       return replaceLoop old [] cnt.toNat s
     else
-      -- stringlib_replace_delete_substring, transmogrify.h:383-420
+      -- stringlib_replace_delete_substring, transmogrify.h:384-421
       let cnt := stringlibCount s selfLen old maxcount
       if cnt = 0 then return s
       return replaceLoop old [] cnt.toNat s
   if fromLen = toLen then
     if fromLen = 1 then
-      -- stringlib_replace_single_character_in_place, transmogrify.h:422-461
+      -- stringlib_replace_single_character_in_place, transmogrify.h:423-462
       let next := findChar s old.head! true
       if next < 0 then return s
       return s.take next.toNat ++ replaceChars old.head! new.head! maxcount (s.drop next.toNat)
     else
-      -- stringlib_replace_substring_in_place, transmogrify.h:463-512
+      -- stringlib_replace_substring_in_place, transmogrify.h:464-513
       let offset := stringlibFind s old 0
       if offset = -1 then return s
       return s.take offset.toNat ++ new ++
         replaceInplace old new (maxcount - 1) (s.drop (offset.toNat + old.length))
   if fromLen = 1 then
-    -- stringlib_replace_single_character, transmogrify.h:514-590
+    -- stringlib_replace_single_character, transmogrify.h:515-591
     let cnt := countChar s old.head! maxcount
     if cnt = 0 then return s
     if toLen - 1 > (ssizeMax - selfLen) / cnt then throw (.overflowError "replace bytes is too long")
     return replaceLoop old new cnt.toNat s
   else
-    -- stringlib_replace_substring, transmogrify.h:592-679
+    -- stringlib_replace_substring, transmogrify.h:593-680
     let cnt := stringlibCount s selfLen old maxcount
     if cnt = 0 then return s
     if toLen - fromLen > (ssizeMax - selfLen) / cnt then throw (.overflowError "replace bytes is too long")
@@ -721,7 +721,7 @@ def bytesReplace (s old new : Seq) (count : Int) : Py Seq := do
 
 /-! ## expandtabs -/
 
-/-- First pass of `unicode_expandtabs_impl`, unicodeobject.c:11893-11917:
+/-- First pass of `unicode_expandtabs_impl`, unicodeobject.c:11619-11643:
 the output size `j` (`none` on `goto overflow`) and whether a tab was seen. -/
 def strExpandSize (tabsize : Int) : Seq → Int → Int → Bool → Option (Int × Bool)
   | [], j, _, found => some (j, found)
@@ -752,7 +752,7 @@ def bytesExpandSize (tabsize : Int) : Seq → Int → Int → Option Int
       else bytesExpandSize tabsize rest (i + (j + 1)) 0
     else bytesExpandSize tabsize rest i (j + 1)
 
-/-- Second pass, identical in unicodeobject.c:11926-11942 and transmogrify.h:79-93. -/
+/-- Second pass, identical in unicodeobject.c:11652-11668 and transmogrify.h:79-93. -/
 def expandFill (tabsize : Int) : Seq → Int → Seq
   | [], _ => []
   | ch :: rest, col =>
@@ -763,7 +763,7 @@ def expandFill (tabsize : Int) : Seq → Int → Seq
       else expandFill tabsize rest col
     else ch :: expandFill tabsize rest (if ch = 10 ∨ ch = 13 then 0 else col + 1)
 
-/-- `str.expandtabs`, unicodeobject.c:11882-11948. -/
+/-- `str.expandtabs`, unicodeobject.c:11608-11674. -/
 def strExpandtabs (s : Seq) (tabsize : Int) : Py Seq := do
   let tabsize ← argCInt tabsize
   match strExpandSize tabsize s 0 0 false with
@@ -780,7 +780,7 @@ def bytesExpandtabs (s : Seq) (tabsize : Int) : Py Seq := do
 
 /-! ## Padding -/
 
-/-- `pad`, unicodeobject.c:10492-10531. -/
+/-- `pad`, unicodeobject.c:10257-10297. -/
 def strPad (s : Seq) (left right : Int) (fill : Nat) : Py Seq :=
   let left := if left < 0 then 0 else left
   let right := if right < 0 then 0 else right
@@ -800,7 +800,7 @@ def bytesPad (s : Seq) (left right : Int) (fill : Nat) : Seq :=
 def centerLeft (marg width : Int) : Int :=
   marg / 2 + ((marg.toNat &&& width.toNat &&& 1 : Nat) : Int)
 
-/-- `str.center`, unicodeobject.c:11176-11188. -/
+/-- `str.center`, unicodeobject.c:10942-10954. -/
 def strCenter (s : Seq) (width : Int) (fill : Nat := 32) : Py Seq := do
   let width ← argSsize width
   if s.length ≥ width then return s
@@ -808,13 +808,13 @@ def strCenter (s : Seq) (width : Int) (fill : Nat := 32) : Py Seq := do
   let left := centerLeft marg width
   strPad s left (marg - left) fill
 
-/-- `str.ljust`, unicodeobject.c:12561-12568. -/
+/-- `str.ljust`, unicodeobject.c:12293-12300. -/
 def strLjust (s : Seq) (width : Int) (fill : Nat := 32) : Py Seq := do
   let width ← argSsize width
   if s.length ≥ width then return s
   strPad s 0 (width - s.length) fill
 
-/-- `str.rjust`, unicodeobject.c:13110-13117. -/
+/-- `str.rjust`, unicodeobject.c:12857-12864. -/
 def strRjust (s : Seq) (width : Int) (fill : Nat := 32) : Py Seq := do
   let width ← argSsize width
   if s.length ≥ width then return s
@@ -826,7 +826,7 @@ def zfillSign (u : Seq) (fill : Nat) : Seq :=
   let chr := u.getD fill 0
   if chr = 43 ∨ chr = 45 then (u.set 0 chr).set fill 48 else u
 
-/-- `str.zfill`, unicodeobject.c:13577-13608. -/
+/-- `str.zfill`, unicodeobject.c:13330-13361. -/
 def strZfill (s : Seq) (width : Int) : Py Seq := do
   let width ← argSsize width
   if s.length ≥ width then return s
@@ -854,7 +854,7 @@ def bytesRjust (s : Seq) (width : Int) (fill : Nat := 32) : Py Seq := do
   if s.length ≥ width then return s
   return bytesPad s (width - s.length) 0 fill
 
-/-- `bytes.zfill`, transmogrify.h:220-246. -/
+/-- `bytes.zfill`, transmogrify.h:221-247. -/
 def bytesZfill (s : Seq) (width : Int) : Py Seq := do
   let width ← argSsize width
   if s.length ≥ width then return s
@@ -874,21 +874,21 @@ def stripWith (mem : Nat → Bool) (t : StripType) (s : Seq) : Seq :=
   let j := if t ≠ .left then i + ((s.drop i).reverse.dropWhile mem).length else s.length
   (s.drop i).take (j - i)
 
-/-- `str.strip`/`lstrip`/`rstrip`: `do_strip` (unicodeobject.c:12677-12729,
+/-- `str.strip`/`lstrip`/`rstrip`: `do_strip` (unicodeobject.c:12421-12473,
 ASCII fast path with `_Py_ascii_whitespace`) for `chars=None`, else
-`_PyUnicode_XStrip` (:12596-12640). -/
+`_PyUnicode_XStrip` (:12328-12372). -/
 def strStrip (s : Seq) (chars : Option Seq) (t : StripType) : Seq :=
   match chars with
   | none => if isAscii s then stripWith asciiWhitespaceTable t s else stripWith uniSpace t s
   | some cs => stripWith (fun c => cs.contains c) t s
 
-/-- `bytes.strip`...: `do_strip` (bytesobject.c:2034-2061) and `do_xstrip` (:1994-2031). -/
+/-- `bytes.strip`...: `do_strip` (bytesobject.c:2131-2158) and `do_xstrip` (:2091-2128). -/
 def bytesStrip (s : Seq) (chars : Option Seq) (t : StripType) : Seq :=
   match chars with
   | none => stripWith byteSpace t s
   | some cs => stripWith (fun c => cs.contains c) t s
 
-/-- `bytearray_strip_impl_helper`, bytearrayobject.c:2320-2356: `None` means
+/-- `bytearray_strip_impl_helper`, bytearrayobject.c:2427-2463: `None` means
 the six bytes of `"\t\n\r\f\v "`. -/
 def bytearrayStrip (s : Seq) (chars : Option Seq) (t : StripType) : Seq :=
   let cs := chars.getD [9, 10, 13, 12, 11, 32]

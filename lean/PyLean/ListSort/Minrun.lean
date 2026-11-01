@@ -3,7 +3,7 @@ import PyLean.ListSort.Model
 /-!
 # `merge_compute_minrun`
 
-`merge_compute_minrun(n)` (`listobject.c:2700-2711`) keeps the top 6 bits of
+`merge_compute_minrun(n)` (`listobject.c@3.14.7:2700-2711`) keeps the top 6 bits of
 `n` and adds 1 if any bit shifted off is set: it is `⌈n / 2^e⌉` for the `e` with
 `32 <= n / 2^e < 64` (`listsort.txt:313-318`).
 -/

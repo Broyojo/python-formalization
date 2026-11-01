@@ -1,0 +1,32 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/module.c	14	20	module_from_slots_empty	module_from_slots_empty(PyObject *self, PyObject *spec)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	23	30	module_from_slots_minimal	module_from_slots_minimal(PyObject *self, PyObject *spec)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	33	36	module_from_slots_null	module_from_slots_null(PyObject *self, PyObject *spec)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	39	49	module_from_slots_name	module_from_slots_name(PyObject *self, PyObject *spec)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	52	62	module_from_slots_doc	module_from_slots_doc(PyObject *self, PyObject *spec)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	65	79	module_from_slots_size	module_from_slots_size(PyObject *self, PyObject *spec)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	82	85	a_method	a_method(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	93	103	module_from_slots_methods	module_from_slots_methods(PyObject *self, PyObject *spec)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	105	107	noop_traverse	static int noop_traverse(PyObject *self, visitproc visit, void *arg) {	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	112	140	module_from_slots_gc	module_from_slots_gc(PyObject *self, PyObject *spec)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	145	167	module_from_slots_token	module_from_slots_token(PyObject *self, PyObject *spec)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	170	173	simple_exec	simple_exec(PyObject *module)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	176	200	module_from_slots_exec	module_from_slots_exec(PyObject *self, PyObject *spec)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	203	207	create_attr_from_spec	create_attr_from_spec(PyObject *spec, PyModuleDef *def)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	210	220	module_from_slots_create	module_from_slots_create(PyObject *self, PyObject *spec)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	224	235	slot_from_object	slot_from_object(PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	238	253	module_from_slots_repeat_slot	module_from_slots_repeat_slot(PyObject *self, PyObject *spec)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	256	270	module_from_slots_null_slot	module_from_slots_null_slot(PyObject *self, PyObject *spec)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	273	297	module_from_def_slot	module_from_def_slot(PyObject *self, PyObject *spec)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	328	341	module_from_def_slot_parrot	module_from_def_slot_parrot(PyObject *self, PyObject *spec)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	344	358	module_from_bad_abiinfo	module_from_bad_abiinfo(PyObject *self, PyObject *spec)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	361	378	module_from_multiple_abiinfo	module_from_multiple_abiinfo(PyObject *self, PyObject *spec)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	381	404	another_exec	another_exec(PyObject *module)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	407	423	module_from_def_multiple_exec	module_from_def_multiple_exec(PyObject *self, PyObject *spec)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	426	432	pymodule_exec	pymodule_exec(PyObject *self, PyObject *module)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	435	447	pymodule_get_token	pymodule_get_token(PyObject *self, PyObject *module)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	450	457	pymodule_get_def	pymodule_get_def(PyObject *self, PyObject *module)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	460	467	pymodule_get_state_size	pymodule_get_state_size(PyObject *self, PyObject *module)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	470	491	module_from_null_def_slot	module_from_null_def_slot(PyObject* Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	494	514	module_from_def_nonstatic_nested	module_from_def_nonstatic_nested(PyObject* Py_UNUSED(module), PyObject *spec)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/module.c	545	567	_PyTestCapi_Init_Module	_PyTestCapi_Init_Module(PyObject *m)	excluded		test-support: only for CPython's own tests

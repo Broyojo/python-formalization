@@ -1,12 +1,12 @@
 file	line	endline	name	signature	status	entry	note
-Lib/pkgutil.py	24	34	read_code	read_code(stream)	todo		
-Lib/pkgutil.py	37	91	walk_packages	walk_packages(path=None, prefix='', onerror=None)	todo		
-Lib/pkgutil.py	94	117	iter_modules	iter_modules(path=None, prefix='')	todo		
-Lib/pkgutil.py	121	124	iter_importer_modules	iter_importer_modules(importer, prefix='')	todo		
-Lib/pkgutil.py	128	166	_iter_file_finder_modules	_iter_file_finder_modules(importer, prefix='')	todo		
-Lib/pkgutil.py	176	202	iter_zipimport_modules	iter_zipimport_modules(importer, prefix='')	todo		
-Lib/pkgutil.py	210	232	get_importer	get_importer(path_item)	todo		
-Lib/pkgutil.py	235	261	iter_importers	iter_importers(fullname='')	todo		
-Lib/pkgutil.py	264	355	extend_path	extend_path(path, name)	todo		
-Lib/pkgutil.py	358	398	get_data	get_data(package, resource)	todo		
-Lib/pkgutil.py	403	474	resolve_name	resolve_name(name)	todo		
+Lib/pkgutil.py	27	37	read_code	read_code(stream)	todo		
+Lib/pkgutil.py	40	94	walk_packages	walk_packages(path=None, prefix='', onerror=None)	todo		
+Lib/pkgutil.py	97	120	iter_modules	iter_modules(path=None, prefix='')	todo		
+Lib/pkgutil.py	124	127	iter_importer_modules	iter_importer_modules(importer, prefix='')	todo		
+Lib/pkgutil.py	131	169	_iter_file_finder_modules	_iter_file_finder_modules(importer, prefix='')	todo		
+Lib/pkgutil.py	179	205	iter_zipimport_modules	iter_zipimport_modules(importer, prefix='')	todo		
+Lib/pkgutil.py	213	235	get_importer	get_importer(path_item)	todo		
+Lib/pkgutil.py	238	264	iter_importers	iter_importers(fullname='')	todo		
+Lib/pkgutil.py	267	358	extend_path	extend_path(path, name)	todo		
+Lib/pkgutil.py	361	401	get_data	get_data(package, resource)	todo		
+Lib/pkgutil.py	407	492	resolve_name	resolve_name(name, *, strict=False)	todo		changed-in-3.15:

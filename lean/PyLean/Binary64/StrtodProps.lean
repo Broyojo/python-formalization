@@ -358,7 +358,7 @@ theorem strtodFastPathExact_proven : StrtodFastPathExact := by
       exact hn0 this
     simp only [hq, ↓reduceIte]
 
-/-- `bigcomp` chooses between `rv` and `rv + ulp`, as its comment says: dtoa.c:1233-1238. -/
+/-- `bigcomp` chooses between `rv` and `rv + ulp`, as its comment says: dtoa.c:1235-1240. -/
 def BigcompChoice : Prop :=
   ∀ (rv : F64) (dig : Nat → Nat) (bc : BCinfo),
     bigcomp rv dig bc = rv ∨ bigcomp rv dig bc = F64.add rv (sulp rv bc.scale)

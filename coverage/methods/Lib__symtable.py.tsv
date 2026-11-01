@@ -1,5 +1,5 @@
 file	line	endline	name	signature	status	entry	note
-Lib/symtable.py	20	27	symtable	symtable(code, filename, compile_type)	todo		
+Lib/symtable.py	20	27	symtable	symtable(code, filename, compile_type, *, module=None)	todo		changed-in-3.15:
 Lib/symtable.py	30	31	SymbolTableFactory.__init__	__init__(self)	todo		
 Lib/symtable.py	33	38	SymbolTableFactory.new	new(self, table, filename)	todo		
 Lib/symtable.py	40	45	SymbolTableFactory.__call__	__call__(self, table, filename)	todo		
@@ -18,33 +18,35 @@ Lib/symtable.py	157	161	SymbolTable.get_symbols	get_symbols(self)	todo
 Lib/symtable.py	163	166	SymbolTable.__check_children	__check_children(self, name)	todo		
 Lib/symtable.py	168	172	SymbolTable.get_children	get_children(self)	todo		
 Lib/symtable.py	175	176	_get_scope	_get_scope(flags)	todo		
-Lib/symtable.py	188	190	Function.__idents_matching	__idents_matching(self, test_func)	todo		
-Lib/symtable.py	192	197	Function.get_parameters	get_parameters(self)	todo		
-Lib/symtable.py	199	206	Function.get_locals	get_locals(self)	todo		
-Lib/symtable.py	208	215	Function.get_globals	get_globals(self)	todo		
-Lib/symtable.py	217	222	Function.get_nonlocals	get_nonlocals(self)	todo		
-Lib/symtable.py	224	230	Function.get_frees	get_frees(self)	todo		
-Lib/symtable.py	237	280	Class.get_methods	get_methods(self)	todo		
-Lib/symtable.py	285	290	Symbol.__init__	__init__(self, name, flags, namespaces=None, *, module_scope=False)	todo		
-Lib/symtable.py	292	294	Symbol.__repr__	__repr__(self)	todo		
-Lib/symtable.py	296	297	Symbol._scope_str	_scope_str(self)	todo		
-Lib/symtable.py	299	302	Symbol._flags_str	_flags_str(self)	todo		
-Lib/symtable.py	304	307	Symbol.get_name	get_name(self)	todo		
-Lib/symtable.py	309	313	Symbol.is_referenced	is_referenced(self)	todo		
-Lib/symtable.py	315	318	Symbol.is_parameter	is_parameter(self)	todo		
-Lib/symtable.py	320	323	Symbol.is_type_parameter	is_type_parameter(self)	todo		
-Lib/symtable.py	325	329	Symbol.is_global	is_global(self)	todo		
-Lib/symtable.py	331	333	Symbol.is_nonlocal	is_nonlocal(self)	todo		
-Lib/symtable.py	335	338	Symbol.is_declared_global	is_declared_global(self)	todo		
-Lib/symtable.py	340	344	Symbol.is_local	is_local(self)	todo		
-Lib/symtable.py	346	349	Symbol.is_annotated	is_annotated(self)	todo		
-Lib/symtable.py	351	355	Symbol.is_free	is_free(self)	todo		
-Lib/symtable.py	357	360	Symbol.is_free_class	is_free_class(self)	todo		
-Lib/symtable.py	362	366	Symbol.is_imported	is_imported(self)	todo		
-Lib/symtable.py	368	370	Symbol.is_assigned	is_assigned(self)	todo		
-Lib/symtable.py	372	375	Symbol.is_comp_iter	is_comp_iter(self)	todo		
-Lib/symtable.py	377	380	Symbol.is_comp_cell	is_comp_cell(self)	todo		
-Lib/symtable.py	382	393	Symbol.is_namespace	is_namespace(self)	todo		
-Lib/symtable.py	395	397	Symbol.get_namespaces	get_namespaces(self)	todo		
-Lib/symtable.py	399	410	Symbol.get_namespace	get_namespace(self)	todo		
-Lib/symtable.py	419	446	main	main(args)	todo		candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output
+Lib/symtable.py	189	191	Function.__idents_matching	__idents_matching(self, test_func)	todo		
+Lib/symtable.py	193	198	Function.get_parameters	get_parameters(self)	todo		
+Lib/symtable.py	200	207	Function.get_locals	get_locals(self)	todo		
+Lib/symtable.py	209	216	Function.get_globals	get_globals(self)	todo		
+Lib/symtable.py	218	223	Function.get_nonlocals	get_nonlocals(self)	todo		
+Lib/symtable.py	225	231	Function.get_frees	get_frees(self)	todo		
+Lib/symtable.py	233	239	Function.get_cells	get_cells(self)	todo		changed-in-3.15: new function
+Lib/symtable.py	246	277	Class.get_methods	get_methods(self)	todo		changed-in-3.15:
+Lib/symtable.py	282	287	Symbol.__init__	__init__(self, name, flags, namespaces=None, *, module_scope=False)	todo		
+Lib/symtable.py	289	291	Symbol.__repr__	__repr__(self)	todo		
+Lib/symtable.py	293	294	Symbol._scope_str	_scope_str(self)	todo		
+Lib/symtable.py	296	299	Symbol._flags_str	_flags_str(self)	todo		
+Lib/symtable.py	301	304	Symbol.get_name	get_name(self)	todo		
+Lib/symtable.py	306	310	Symbol.is_referenced	is_referenced(self)	todo		
+Lib/symtable.py	312	315	Symbol.is_parameter	is_parameter(self)	todo		
+Lib/symtable.py	317	320	Symbol.is_type_parameter	is_type_parameter(self)	todo		
+Lib/symtable.py	322	326	Symbol.is_global	is_global(self)	todo		
+Lib/symtable.py	328	330	Symbol.is_nonlocal	is_nonlocal(self)	todo		
+Lib/symtable.py	332	335	Symbol.is_declared_global	is_declared_global(self)	todo		
+Lib/symtable.py	337	341	Symbol.is_local	is_local(self)	todo		
+Lib/symtable.py	343	346	Symbol.is_annotated	is_annotated(self)	todo		
+Lib/symtable.py	348	352	Symbol.is_free	is_free(self)	todo		
+Lib/symtable.py	354	356	Symbol.is_cell	is_cell(self)	todo		changed-in-3.15: new function
+Lib/symtable.py	358	361	Symbol.is_free_class	is_free_class(self)	todo		
+Lib/symtable.py	363	367	Symbol.is_imported	is_imported(self)	todo		
+Lib/symtable.py	369	371	Symbol.is_assigned	is_assigned(self)	todo		
+Lib/symtable.py	373	376	Symbol.is_comp_iter	is_comp_iter(self)	todo		
+Lib/symtable.py	378	381	Symbol.is_comp_cell	is_comp_cell(self)	todo		
+Lib/symtable.py	383	394	Symbol.is_namespace	is_namespace(self)	todo		
+Lib/symtable.py	396	398	Symbol.get_namespaces	get_namespaces(self)	todo		
+Lib/symtable.py	400	411	Symbol.get_namespace	get_namespace(self)	todo		
+Lib/symtable.py	420	447	main	main(args)	todo		candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output

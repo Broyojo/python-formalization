@@ -29,8 +29,8 @@ reproducer: |
 expected: ValueError('Invalid isoformat string: ...').
 promised_by: date.fromisoformat docs ("any valid ISO 8601 format").
 cause: |
-  Lib/_pydatetime.py:358-393 and Modules/_datetimemodule.c:939-1009 do not check that the
-  parse ended at the end of the string; C date_fromisoformat (:3385-3423) checks the
+  Lib/_pydatetime.py:366-404 and Modules/_datetimemodule.c:942-1012 do not check that the
+  parse ended at the end of the string; C date_fromisoformat (:3405-3462) checks the
   UTF-8 byte length.
 possible_fix: Require the parse to consume the whole input (see PR gh-160737).
 reproduces:

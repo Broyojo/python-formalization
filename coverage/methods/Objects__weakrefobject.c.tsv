@@ -10,40 +10,41 @@ Objects/weakrefobject.c	159	168	gc_clear	gc_clear(PyObject *op)	todo
 Objects/weakrefobject.c	172	187	weakref_vectorcall	weakref_vectorcall(PyObject *self, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
 Objects/weakrefobject.c	190	202	weakref_hash_lock_held	weakref_hash_lock_held(PyWeakReference *self)	todo		
 Objects/weakrefobject.c	205	213	weakref_hash	weakref_hash(PyObject *op)	todo		
-Objects/weakrefobject.c	216	238	weakref_repr	weakref_repr(PyObject *self)	todo		
-Objects/weakrefobject.c	245	269	weakref_richcompare	weakref_richcompare(PyObject* self, PyObject* other, int op)	todo		
-Objects/weakrefobject.c	277	298	get_basic_refs	get_basic_refs(PyWeakReference *head, PyWeakReference **refp, PyWeakReference **proxyp)	todo		
-Objects/weakrefobject.c	302	309	insert_after	insert_after(PyWeakReference *newref, PyWeakReference *prev)	todo		
-Objects/weakrefobject.c	315	324	insert_head	insert_head(PyWeakReference *newref, PyWeakReference **list)	todo		
-Objects/weakrefobject.c	330	353	try_reuse_basic_ref	try_reuse_basic_ref(PyWeakReference *list, PyTypeObject *type, PyObject *callback)	todo		
-Objects/weakrefobject.c	356	359	is_basic_ref	is_basic_ref(PyWeakReference *ref)	todo		
-Objects/weakrefobject.c	362	365	is_basic_proxy	is_basic_proxy(PyWeakReference *proxy)	todo		
-Objects/weakrefobject.c	368	371	is_basic_ref_or_proxy	is_basic_ref_or_proxy(PyWeakReference *wr)	todo		
-Objects/weakrefobject.c	375	397	insert_weakref	insert_weakref(PyWeakReference *newref, PyWeakReference **list)	todo		
-Objects/weakrefobject.c	400	408	allocate_weakref	allocate_weakref(PyTypeObject *type, PyObject *obj, PyObject *callback)	todo		
-Objects/weakrefobject.c	411	453	get_or_create_weakref	get_or_create_weakref(PyTypeObject *type, PyObject *obj, PyObject *callback)	todo		
-Objects/weakrefobject.c	456	460	parse_weakref_init_args	parse_weakref_init_args(const char *funcname, PyObject *args, PyObject *kwargs, PyObject **obp, PyObject **callbackp)	todo		
-Objects/weakrefobject.c	463	470	weakref___new__	weakref___new__(PyTypeObject *type, PyObject *args, PyObject *kwargs)	todo		
-Objects/weakrefobject.c	473	484	weakref___init__	weakref___init__(PyObject *self, PyObject *args, PyObject *kwargs)	todo		
-Objects/weakrefobject.c	524	532	proxy_check_ref	proxy_check_ref(PyObject *obj)	todo		
-Objects/weakrefobject.c	605	621	proxy_repr	proxy_repr(PyObject *proxy)	todo		
-Objects/weakrefobject.c	625	634	proxy_setattr	proxy_setattr(PyObject *proxy, PyObject *name, PyObject *value)	todo		
-Objects/weakrefobject.c	637	645	proxy_richcompare	proxy_richcompare(PyObject *proxy, PyObject *v, int op)	todo		
-Objects/weakrefobject.c	684	693	proxy_bool	proxy_bool(PyObject *proxy)	todo		
-Objects/weakrefobject.c	696	701	proxy_dealloc	proxy_dealloc(PyObject *self)	todo		
-Objects/weakrefobject.c	706	715	proxy_contains	proxy_contains(PyObject *proxy, PyObject *value)	todo		
-Objects/weakrefobject.c	720	729	proxy_length	proxy_length(PyObject *proxy)	todo		
-Objects/weakrefobject.c	734	748	proxy_setitem	proxy_setitem(PyObject *proxy, PyObject *key, PyObject *value)	todo		
-Objects/weakrefobject.c	753	762	proxy_iter	proxy_iter(PyObject *proxy)	todo		
-Objects/weakrefobject.c	765	781	proxy_iternext	proxy_iternext(PyObject *proxy)	todo		
-Objects/weakrefobject.c	920	924	PyWeakref_NewRef	PyWeakref_NewRef(PyObject *ob, PyObject *callback)	todo		
-Objects/weakrefobject.c	927	934	PyWeakref_NewProxy	PyWeakref_NewProxy(PyObject *ob, PyObject *callback)	todo		
-Objects/weakrefobject.c	937	948	PyWeakref_IsDead	PyWeakref_IsDead(PyObject *ref)	todo		
-Objects/weakrefobject.c	951	965	PyWeakref_GetRef	PyWeakref_GetRef(PyObject *ref, PyObject **pobj)	todo		
-Objects/weakrefobject.c	969	981	PyWeakref_GetObject	PyWeakref_GetObject(PyObject *ref)	todo		
-Objects/weakrefobject.c	987	998	handle_callback	handle_callback(PyWeakReference *ref, PyObject *callback)	todo		
-Objects/weakrefobject.c	1007	1088	PyObject_ClearWeakRefs	PyObject_ClearWeakRefs(PyObject *object)	todo		
-Objects/weakrefobject.c	1091	1096	PyUnstable_Object_ClearWeakRefsNoCallbacks	PyUnstable_Object_ClearWeakRefsNoCallbacks(PyObject *obj)	todo		
-Objects/weakrefobject.c	1105	1114	_PyStaticType_ClearWeakRefs	_PyStaticType_ClearWeakRefs(PyInterpreterState *interp, PyTypeObject *type)	todo		
-Objects/weakrefobject.c	1117	1129	_PyWeakref_ClearWeakRefsNoCallbacks	_PyWeakref_ClearWeakRefsNoCallbacks(PyObject *obj)	todo		
-Objects/weakrefobject.c	1132	1135	_PyWeakref_IsDead	_PyWeakref_IsDead(PyObject *weakref)	todo		
+Objects/weakrefobject.c	216	242	weakref_repr	weakref_repr(PyObject *self)	todo		changed-in-3.15:
+Objects/weakrefobject.c	249	273	weakref_richcompare	weakref_richcompare(PyObject* self, PyObject* other, int op)	todo		
+Objects/weakrefobject.c	281	302	get_basic_refs	get_basic_refs(PyWeakReference *head, PyWeakReference **refp, PyWeakReference **proxyp)	todo		
+Objects/weakrefobject.c	306	313	insert_after	insert_after(PyWeakReference *newref, PyWeakReference *prev)	todo		
+Objects/weakrefobject.c	319	328	insert_head	insert_head(PyWeakReference *newref, PyWeakReference **list)	todo		
+Objects/weakrefobject.c	334	357	try_reuse_basic_ref	try_reuse_basic_ref(PyWeakReference *list, PyTypeObject *type, PyObject *callback)	todo		
+Objects/weakrefobject.c	360	363	is_basic_ref	is_basic_ref(PyWeakReference *ref)	todo		
+Objects/weakrefobject.c	366	369	is_basic_proxy	is_basic_proxy(PyWeakReference *proxy)	todo		
+Objects/weakrefobject.c	372	375	is_basic_ref_or_proxy	is_basic_ref_or_proxy(PyWeakReference *wr)	todo		
+Objects/weakrefobject.c	379	401	insert_weakref	insert_weakref(PyWeakReference *newref, PyWeakReference **list)	todo		
+Objects/weakrefobject.c	404	412	allocate_weakref	allocate_weakref(PyTypeObject *type, PyObject *obj, PyObject *callback)	todo		
+Objects/weakrefobject.c	415	457	get_or_create_weakref	get_or_create_weakref(PyTypeObject *type, PyObject *obj, PyObject *callback)	todo		
+Objects/weakrefobject.c	460	464	parse_weakref_init_args	parse_weakref_init_args(const char *funcname, PyObject *args, PyObject *kwargs, PyObject **obp, PyObject **callbackp)	todo		
+Objects/weakrefobject.c	467	474	weakref___new__	weakref___new__(PyTypeObject *type, PyObject *args, PyObject *kwargs)	todo		
+Objects/weakrefobject.c	477	488	weakref___init__	weakref___init__(PyObject *self, PyObject *args, PyObject *kwargs)	todo		
+Objects/weakrefobject.c	528	536	proxy_check_ref	proxy_check_ref(PyObject *obj)	todo		
+Objects/weakrefobject.c	543	553	proxy_unwrap	proxy_unwrap(PyObject *obj)	todo		changed-in-3.15: new function
+Objects/weakrefobject.c	629	645	proxy_repr	proxy_repr(PyObject *proxy)	todo		
+Objects/weakrefobject.c	649	658	proxy_setattr	proxy_setattr(PyObject *proxy, PyObject *name, PyObject *value)	todo		
+Objects/weakrefobject.c	661	673	proxy_richcompare	proxy_richcompare(PyObject *proxy, PyObject *v, int op)	todo		changed-in-3.15:
+Objects/weakrefobject.c	712	721	proxy_bool	proxy_bool(PyObject *proxy)	todo		
+Objects/weakrefobject.c	724	729	proxy_dealloc	proxy_dealloc(PyObject *self)	todo		
+Objects/weakrefobject.c	734	743	proxy_contains	proxy_contains(PyObject *proxy, PyObject *value)	todo		
+Objects/weakrefobject.c	748	757	proxy_length	proxy_length(PyObject *proxy)	todo		
+Objects/weakrefobject.c	762	776	proxy_setitem	proxy_setitem(PyObject *proxy, PyObject *key, PyObject *value)	todo		
+Objects/weakrefobject.c	781	790	proxy_iter	proxy_iter(PyObject *proxy)	todo		
+Objects/weakrefobject.c	793	809	proxy_iternext	proxy_iternext(PyObject *proxy)	todo		
+Objects/weakrefobject.c	948	952	PyWeakref_NewRef	PyWeakref_NewRef(PyObject *ob, PyObject *callback)	todo		
+Objects/weakrefobject.c	955	962	PyWeakref_NewProxy	PyWeakref_NewProxy(PyObject *ob, PyObject *callback)	todo		
+Objects/weakrefobject.c	965	976	PyWeakref_IsDead	PyWeakref_IsDead(PyObject *ref)	todo		
+Objects/weakrefobject.c	979	993	PyWeakref_GetRef	PyWeakref_GetRef(PyObject *ref, PyObject **pobj)	todo		
+Objects/weakrefobject.c	997	1010	PyWeakref_GetObject	PyAPI_FUNC(PyObject *) PyWeakref_GetObject(PyObject *ref)	todo		changed-in-3.15:
+Objects/weakrefobject.c	1016	1027	handle_callback	handle_callback(PyWeakReference *ref, PyObject *callback)	todo		
+Objects/weakrefobject.c	1036	1117	PyObject_ClearWeakRefs	PyObject_ClearWeakRefs(PyObject *object)	todo		
+Objects/weakrefobject.c	1120	1125	PyUnstable_Object_ClearWeakRefsNoCallbacks	PyUnstable_Object_ClearWeakRefsNoCallbacks(PyObject *obj)	todo		
+Objects/weakrefobject.c	1134	1143	_PyStaticType_ClearWeakRefs	_PyStaticType_ClearWeakRefs(PyInterpreterState *interp, PyTypeObject *type)	todo		
+Objects/weakrefobject.c	1146	1158	_PyWeakref_ClearWeakRefsNoCallbacks	_PyWeakref_ClearWeakRefsNoCallbacks(PyObject *obj)	todo		
+Objects/weakrefobject.c	1161	1164	_PyWeakref_IsDead	_PyWeakref_IsDead(PyObject *weakref)	todo		

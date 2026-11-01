@@ -1,9 +1,9 @@
 import PyLean.BytesObj.Bytes.Writer
 
 /-!
-`bytes % args` and `bytearray % args`: `_PyBytes_FormatEx`, Objects/bytesobject.c:598-1078,
+`bytes % args` and `bytearray % args`: `_PyBytes_FormatEx`, Objects/bytesobject.c:617-1167,
 and its helpers `getnextarg`, `formatfloat`, `formatlong`, `byte_converter`,
-`format_obj`, plus `_PyUnicode_FormatLong` (Objects/unicodeobject.c:14762-14884),
+`format_obj`, plus `_PyUnicode_FormatLong` (Objects/unicodeobject.c@3.14.7:14762-14884),
 which `formatlong` delegates to.
 
 `pos` and `cnt` are the C variables `fmt - format` and `fmtcnt`; reading at `pos`
@@ -39,7 +39,7 @@ structure FS where
 
 /-! ## getnextarg, formatlong, formatfloat, byte_converter, format_obj -/
 
-/-- `getnextarg`, bytesobject.c:404-418. -/
+/-- `getnextarg`, bytesobject.c:409-426. -/
 def getNextArg (st : FS) : Py (Obj × FS) :=
   if st.argidx < st.arglen then
     let st' := { st with argidx := st.argidx + 1 }
@@ -50,11 +50,11 @@ def getNextArg (st : FS) : Py (Obj × FS) :=
   else .error (.typeError "not enough arguments for format string")
 
 /-- The base-marker removal and sign fix-up of `_PyUnicode_FormatLong`,
-unicodeobject.c:14824-14838: `buf + 2`, with `buf[0] = '-'` when negative. -/
+unicodeobject.c@3.14.7:14824-14838: `buf + 2`, with `buf[0] = '-'` when negative. -/
 def dropMarker (sign : Bool) (buf : Seq) : Seq :=
   if sign then 45 :: (buf.drop 3) else buf.drop 2
 
-/-- The text manipulation of `_PyUnicode_FormatLong`, unicodeobject.c:14816-14876,
+/-- The text manipulation of `_PyUnicode_FormatLong`, unicodeobject.c@3.14.7:14816-14876,
 on `result = PyNumber_ToBase(val, base)`. -/
 def formatLongText (result : Seq) (alt : Bool) (prec : Int) (type : Nat) : Seq :=
   let isBased := type = 111 ∨ type = 120 ∨ type = 88
@@ -75,11 +75,11 @@ def formatLongText (result : Seq) (alt : Bool) (prec : Int) (type : Nat) : Seq :
   -- Fix up case for hex conversions
   if type = 88 then buf.map (fun c => if 97 ≤ c ∧ c ≤ 120 then c - 32 else c) else buf
 
-/-- The base of a conversion, unicodeobject.c:14780-14797. -/
+/-- The base of a conversion, unicodeobject.c@3.14.7:14780-14797. -/
 def longBase (type : Nat) : Nat :=
   if type = 111 then 8 else if type = 120 ∨ type = 88 then 16 else 10
 
-/-- `_PyUnicode_FormatLong(val, alt, prec, type)`, unicodeobject.c:14762-14884. -/
+/-- `_PyUnicode_FormatLong(val, alt, prec, type)`, unicodeobject.c@3.14.7:14762-14884. -/
 def unicodeFormatLong (val : Int) (alt : Bool) (prec : Int) (type : Nat) : Py Seq := do
   if prec > intMax - 3 then throw (.overflowError "precision too large")
   let result ← numberToBase val (longBase type)
@@ -87,7 +87,7 @@ def unicodeFormatLong (val : Int) (alt : Bool) (prec : Int) (type : Nat) : Py Se
     throw (.valueError "string too large in _PyUnicode_FormatLong")
   return formatLongText result alt prec type
 
-/-- `formatlong`, bytesobject.c:469-496. -/
+/-- `formatlong`, bytesobject.c:481-510. -/
 def formatLong (v : Obj) (fl : Fl) (prec : Int) (type : Nat) : Py Seq :=
   let typeName := v.typeName
   let unsupported : PyExc :=
@@ -110,7 +110,7 @@ def formatLong (v : Obj) (fl : Fl) (prec : Int) (type : Nat) : Py Seq :=
       | .error e => if isTypeError e then .error unsupported else .error e
     else .error unsupported
 
-/-- The conversion part of `formatfloat`, bytesobject.c:423-450. Every error of
+/-- The conversion part of `formatfloat`, bytesobject.c@3.14.7:423-450. Every error of
 `PyFloat_AsDouble` becomes this `TypeError`. -/
 def formatFloatText (v : Obj) (fl : Fl) (prec : Int) (type : Nat) : Py Seq :=
   match asDouble v with
@@ -119,8 +119,8 @@ def formatFloatText (v : Obj) (fl : Fl) (prec : Int) (type : Nat) : Py Seq :=
     let prec := if prec < 0 then 6 else prec
     .ok (dtoa x type prec.toNat fl.alt)
 
-/-- `byte_converter`, bytesobject.c:498-542. The message is for an object with no `__index__`:
-one whose `__index__` fails keeps its exception, :526-528. -/
+/-- `byte_converter`, bytesobject.c:512-557. The message is for an object with no `__index__`:
+one whose `__index__` fails keeps its exception, :540-542. -/
 def byteConverter (arg : Obj) : Py Nat :=
   match arg with
   | .bytes s =>
@@ -142,7 +142,7 @@ def byteConverter (arg : Obj) : Py Nat :=
     | some (.error e) => .error e
     | none => .error bad
 
-/-- `format_obj`, bytesobject.c:546-594. -/
+/-- `format_obj`, bytesobject.c:561-613. -/
 def formatObj (v : Obj) : Py Seq :=
   match v with
   | .bytes s => .ok s
@@ -173,15 +173,15 @@ def signStep (isNum : Bool) (fl : Fl) (pbuf : Seq) (len : Int) : Nat × Seq × I
       else (0, pbuf, len)
   else (0, pbuf, len)
 
-/-- `alloc`, bytesobject.c:970-975. -/
+/-- `alloc`, bytesobject.c:1053-1058. -/
 def fieldAlloc (sign : Nat) (width len : Int) : Int :=
   let width := if width < len then len else width
   if sign ≠ 0 ∧ len = width then width + 1 else width
 
-/-- The prefix condition, bytesobject.c:999 and :1024. -/
+/-- The prefix condition, bytesobject.c:1082 and :1107. -/
 def hasPrefix (fl : Fl) (c : Int) : Bool := fl.alt && (c == 111 || c == 120 || c == 88)
 
-/-- The writes of bytesobject.c:988-1040 for the sign-processed field `pbuf`,
+/-- The writes of bytesobject.c:1071-1123 for the sign-processed field `pbuf`,
 `len`: returns the bytes written. `width` is the value after line 971. -/
 def fieldWrites (fl : Fl) (c : Int) (fill : Nat) (sign : Nat) (width len : Int) (pbuf : Seq) : Seq :=
   -- Write the sign if needed
@@ -212,7 +212,7 @@ def fieldWrites (fl : Fl) (c : Int) (fill : Nat) (sign : Nat) (width len : Int) 
 /-- `*fmt` as `c = *fmt++` stores it. -/
 def readSigned (format : Seq) (st : FS) : Int := sgnChar (format.getD st.pos 0)
 
-/-- The key loop, bytesobject.c:694-700. -/
+/-- The key loop, bytesobject.c:717-723. -/
 def keyLoop (format : Seq) : Nat → FS → Nat → Py (FS × Nat)
   | 0, _, _ => .error .modelFuel
   | fuel + 1, st, pcount =>
@@ -235,7 +235,7 @@ def mappingGet (d : Obj) (key : Seq) : Py Obj :=
   | .list _ => .error (.typeError "list indices must be integers or slices, not bytes")
   | _ => .error (.typeError "~not subscriptable")
 
-/-- Flag parsing, bytesobject.c:726-735. -/
+/-- Flag parsing, bytesobject.c:759-768. -/
 def flagsLoop (format : Seq) : Nat → FS → Fl → Int → Py (FS × Fl × Int)
   | 0, _, _, _ => .error .modelFuel
   | fuel + 1, st, fl, c =>
@@ -251,7 +251,7 @@ def flagsLoop (format : Seq) : Nat → FS → Fl → Int → Py (FS × Fl × Int
       else .ok (st, fl, c)
     else .ok ({ st with cnt }, fl, c)
 
-/-- A number after the first digit, bytesobject.c:759-770 and :798-809: `limit`
+/-- A number after the first digit, bytesobject.c:807-818 and :857-868: `limit`
 is `PY_SSIZE_T_MAX` or `INT_MAX`. -/
 def digitsLoop (format : Seq) (limit : Int) (tooBig : String) :
     Nat → FS → Int → Int → Py (FS × Int × Int)
@@ -266,7 +266,7 @@ def digitsLoop (format : Seq) (limit : Int) (tooBig : String) :
       else digitsLoop format limit tooBig fuel st (n * 10 + (c - 48)) c
     else .ok ({ st with cnt }, n, c)
 
-/-- `if (--fmtcnt >= 0) c = *fmt++;`, bytesobject.c:754-755 and :776-777, :793-794, :814-815. -/
+/-- `if (--fmtcnt >= 0) c = *fmt++;`, bytesobject.c:802-803 and :824-825, :852-853, :873-874. -/
 def nextC (format : Seq) (st : FS) (c : Int) : FS × Int :=
   let cnt := st.cnt - 1
   if cnt ≥ 0 then ({ st with cnt, pos := st.pos + 1 }, readSigned format st)
@@ -282,7 +282,7 @@ def starWidth (v : Obj) : Py Int :=
     else .ok i
 
 /-- `-width` for a negative `Py_ssize_t`, under `-fwrapv`: `-PY_SSIZE_T_MIN` wraps
-to itself (bytesobject.c:752). -/
+to itself (bytesobject.c:800). -/
 def negWrap (w : Int) : Int := if w = ssizeMin then ssizeMin else -w
 
 /-- `PyLong_AsInt` on the `*` precision. -/
@@ -294,7 +294,7 @@ def starPrec (v : Obj) : Py Int :=
       .error (.overflowError "Python int too large to convert to C int")
     else .ok i
 
-/-- Width parsing, bytesobject.c:737-771. -/
+/-- Width parsing, bytesobject.c:770-819. -/
 def parseWidth (format : Seq) (st : FS) (fl : Fl) (c : Int) : Py (FS × Fl × Int × Int) := do
   if c = 42 then
     let (v, st) ← getNextArg st
@@ -308,7 +308,7 @@ def parseWidth (format : Seq) (st : FS) (fl : Fl) (c : Int) : Py (FS × Fl × In
     return (st, fl, width, c)
   else return (st, fl, -1, c)
 
-/-- Precision parsing, bytesobject.c:773-811. -/
+/-- Precision parsing, bytesobject.c:821-870. -/
 def parsePrec (format : Seq) (st : FS) (c : Int) : Py (FS × Int × Int) := do
   if c = 46 then
     let (st, c) := nextC format st c
@@ -326,7 +326,7 @@ def parsePrec (format : Seq) (st : FS) (c : Int) : Py (FS × Int × Int) := do
   else return (st, -1, c)
 
 /-- The text of the fast path `_PyLong_FormatBytesWriter(&writer, res, v, base,
-alternate)`, Objects/longobject.c:2662-2709 and :2096-2157: the sign, the base
+alternate)`, Objects/longobject.c:2743-2790 and :2172-2235: the sign, the base
 marker for `alternate`, the digits. -/
 def fastLong (v : Int) (c : Int) (alt : Bool) : Py Seq :=
   if c = 111 then
@@ -335,14 +335,14 @@ def fastLong (v : Int) (c : Int) (alt : Bool) : Py Seq :=
     .ok ((if v < 0 then [45] else []) ++ (if alt then asc "0x" else []) ++ digitsBase 16 v.natAbs)
   else intRepr v
 
-/-- Is `c` one of the integer conversions? bytesobject.c:858-863. -/
+/-- Is `c` one of the integer conversions? bytesobject.c:918-923. -/
 def isIntConv (c : Int) : Bool := c == 105 || c == 100 || c == 117 || c == 111 || c == 120 || c == 88
 
-/-- Is `c` one of the float conversions? bytesobject.c:911-916. -/
+/-- Is `c` one of the float conversions? bytesobject.c:970-975. -/
 def isFloatConv (c : Int) : Bool :=
   c == 101 || c == 69 || c == 102 || c == 70 || c == 103 || c == 71
 
-/-- The message of the `default:` case, bytesobject.c:949-955. `%c` of a
+/-- The message of the `default:` case, bytesobject.c:1007-1038. `%c` of a
 `PyErr_Format` takes an `int`; for a byte above 127 `c` is negative and
 `unicode_fromformat_arg` raises `OverflowError` instead (Objects/unicodeobject.c,
 "character argument not in range(0x110000)"). -/
@@ -366,7 +366,7 @@ def writeField (dict : Bool) (st : FS) (fl : Fl) (c : Int) (fill : Nat) (isNum :
     throw (.typeError "not all arguments converted during bytes formatting")
   return { st with w, out }
 
-/-- One specifier, bytesobject.c:658-1054. On entry `st.pos` is at the `%` and
+/-- One specifier, bytesobject.c:679-1138. On entry `st.pos` is at the `%` and
 `--fmtcnt` has been done. -/
 def formatSpec (format : Seq) (dict : Option Obj) (useBytearray : Bool) (st : FS) : Py FS := do
   let st := { st with pos := st.pos + 1 }
@@ -442,7 +442,7 @@ def formatSpec (format : Seq) (dict : Option Obj) (useBytearray : Bool) (st : FS
   else
     throw (unsupportedChar c ((st.pos : Int) - 1))
 
-/-- `_PyBytes_FormatEx`'s main loop, bytesobject.c:640-1059. A literal run,
+/-- `_PyBytes_FormatEx`'s main loop, bytesobject.c:661-1143. A literal run,
 lines 641-656; a specifier otherwise. Every iteration consumes at least one byte. -/
 def formatLoop (format : Seq) (dict : Option Obj) (useBytearray : Bool) : Nat → FS → Py FS
   | 0, _ => .error .modelFuel
@@ -465,13 +465,13 @@ def formatLoop (format : Seq) (dict : Option Obj) (useBytearray : Bool) : Nat �
         | .error e => .error e
     else .ok { st with cnt }
 
-/-- The mapping test of `_PyBytes_FormatEx`, bytesobject.c:634-638. -/
+/-- The mapping test of `_PyBytes_FormatEx`, bytesobject.c:655-659. -/
 def asMapping (args : Obj) : Option Obj :=
   match args with
   | .dict _ | .list _ | .memview _ _ => some args
   | _ => none
 
-/-- `_PyBytes_FormatEx(format, format_len, args, use_bytearray)`, bytesobject.c:598-1078. -/
+/-- `_PyBytes_FormatEx(format, format_len, args, use_bytearray)`, bytesobject.c:617-1167. -/
 def bytesFormatEx (format : Seq) (args : Obj) (useBytearray : Bool) : Py Seq := do
   let w ← writerAlloc (writerInit useBytearray) format.length
   let w := if !useBytearray then { w with overallocate := true } else w
@@ -486,10 +486,10 @@ def bytesFormatEx (format : Seq) (args : Obj) (useBytearray : Bool) : Py Seq := 
     throw (.typeError "not all arguments converted during bytes formatting")
   return writerFinish st.w st.out
 
-/-- `bytes_mod`, bytesobject.c:2730-2738. -/
+/-- `bytes_mod`, bytesobject.c:2842-2850. -/
 def bytesMod (format : Seq) (args : Obj) : Py Seq := bytesFormatEx format args false
 
-/-- `bytearray_mod`, bytearrayobject.c:2795-2827. -/
+/-- `bytearray_mod`, bytearrayobject.c:2913-2945. -/
 def bytearrayMod (format : Seq) (args : Obj) : Py Seq := bytesFormatEx format args true
 
 end PyLean.BytesObj.Bytes

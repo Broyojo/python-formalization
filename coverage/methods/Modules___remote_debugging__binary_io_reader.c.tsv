@@ -1,0 +1,23 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_remote_debugging/binary_io_reader.c	44	129	reader_parse_header	reader_parse_header(BinaryReader *reader, const uint8_t *data, size_t file_size)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_reader.c	132	149	reader_parse_footer	reader_parse_footer(BinaryReader *reader, const uint8_t *data, size_t file_size)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_reader.c	152	231	reader_parse_profile_stats	reader_parse_profile_stats(BinaryReader *reader, const uint8_t *data, size_t file_size)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_reader.c	238	344	reader_decompress_samples	reader_decompress_samples(BinaryReader *reader, const uint8_t *data)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_reader.c	351	362	reader_validate_count	reader_validate_count(const char *what, uint32_t count, size_t available_bytes, size_t min_entry_size)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_reader.c	365	400	reader_parse_string_table	reader_parse_string_table(BinaryReader *reader, const uint8_t *data, size_t file_size)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_reader.c	403	494	reader_parse_frame_table	reader_parse_frame_table(BinaryReader *reader, const uint8_t *data, size_t file_size)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_reader.c	497	713	binary_reader_open	binary_reader_open(PyObject *path)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_reader.c	717	768	reader_get_or_create_thread_state	reader_get_or_create_thread_state(BinaryReader *reader, uint64_t thread_id, uint32_t interpreter_id)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_reader.c	777	786	validate_stack_depth	validate_stack_depth(ReaderThreadState *ts, uint64_t final_depth)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_reader.c	792	817	decode_stack_full	decode_stack_full(ReaderThreadState *ts, const uint8_t *data, size_t *offset, size_t max_size)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_reader.c	823	876	decode_stack_suffix	decode_stack_suffix(ReaderThreadState *ts, const uint8_t *data, size_t *offset, size_t max_size)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_reader.c	882	921	decode_stack_pop_push	decode_stack_pop_push(ReaderThreadState *ts, const uint8_t *data, size_t *offset, size_t max_size)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_reader.c	925	996	build_frame_list	build_frame_list(RemoteDebuggingState *state, BinaryReader *reader, const uint32_t *frame_indices, size_t stack_depth)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_reader.c	1000	1063	build_sample_list	build_sample_list(RemoteDebuggingState *state, BinaryReader *reader, uint64_t thread_id, uint32_t interpreter_id, uint8_t status, const uint32_t *frame_indices, size_t stack_depth)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_reader.c	1067	1087	emit_sample	emit_sample(RemoteDebuggingState *state, PyObject *collector, uint64_t thread_id, uint32_t interpreter_id, uint8_t status, const uint32_t *frame_indices, size_t stack_depth, BinaryReader *reader, PyObject *timestamps_list)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_reader.c	1091	1102	invoke_progress_callback	invoke_progress_callback(PyObject *callback, Py_ssize_t current, uint64_t total)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_reader.c	1105	1364	binary_reader_replay	binary_reader_replay(BinaryReader *reader, PyObject *collector, PyObject *progress_callback)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_reader.c	1367	1447	binary_reader_get_info	binary_reader_get_info(BinaryReader *reader)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_reader.c	1450	1476	binary_writer_get_stats	binary_writer_get_stats(BinaryWriter *writer)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_reader.c	1479	1497	binary_reader_get_stats	binary_reader_get_stats(BinaryReader *reader)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/binary_io_reader.c	1500	1546	binary_reader_close	binary_reader_close(BinaryReader *reader)	todo		changed-in-3.15: new function

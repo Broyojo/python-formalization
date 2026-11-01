@@ -21,7 +21,7 @@ inductive CGroup where
   | key | string | number | boolean | null
   deriving DecidableEq, Repr
 
-/-- `_group_to_theme_color`, tool.py:25-31. -/
+/-- `_group_to_theme_color`, tool.py@3.14.7:25-31. -/
 def groupColor : CGroup → String
   | .key => "definition"
   | .string => "string"
@@ -86,7 +86,7 @@ def colorizeLoop (th : Theme) : Nat → PStr → PStr
 /-- `_colorize_json(json_str, theme)`, tool.py:34-41. -/
 def colorizeJson (th : Theme) (s : PStr) : PStr := colorizeLoop th (s.length + 1) s
 
-/-! ### `main`, tool.py:44-115 -/
+/-! ### `main`, tool.py:44-116 -/
 
 /-- The value of `--indent`, `--tab`, `--no-indent`. -/
 inductive ToolIndent where
@@ -94,7 +94,7 @@ inductive ToolIndent where
   | tab
   | none
 
-/-- `parser.parse_args()`, tool.py:47-73. -/
+/-- `parser.parse_args()`, tool.py@3.14.7:47-73. -/
 structure ToolOpts where
   sortKeys : Bool := false
   ensureAscii : Bool := true
@@ -102,7 +102,7 @@ structure ToolOpts where
   indent : ToolIndent := .num 4
   compact : Bool := false
 
-/-- `dump_args`, tool.py:75-82. -/
+/-- `dump_args`, tool.py:76-83. -/
 def toolArgs (o : ToolOpts) : EncArgs :=
   if o.compact then
     { sortKeys := o.sortKeys, ensureAscii := o.ensureAscii, indent := .none
@@ -156,7 +156,7 @@ def isValueError : PyExc → Bool
   | .named c _ => c == "JSONDecodeError" || c == "UnicodeEncodeError"
   | _ => false
 
-/-- `raise SystemExit(e)`, tool.py:114-115. -/
+/-- `raise SystemExit(e)`, tool.py:115-116. -/
 def toolExc (e : PyExc) : PyExc := if isValueError e then .named "SystemExit" e.message else e
 
 /-- The configuration of `main`'s environment. -/
@@ -168,7 +168,7 @@ structure ToolEnv where
   /-- What writing a chunk to the output stream raises. -/
   wr : PStr → Option PyExc := fun _ => none
 
-/-- One iteration of `for obj in objs`, tool.py:104-113. -/
+/-- One iteration of `for obj in objs`, tool.py:105-114. -/
 def toolWrite (o : ToolOpts) (env : ToolEnv) (obj : JVal) : Yield :=
   let v := obj.toE env.fl
   let a := toolArgs o

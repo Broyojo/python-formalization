@@ -125,7 +125,7 @@ def pyHeapify (lt : α → α → Bool) (x : List α) : List α :=
 /-! ### C accelerator -/
 
 /-- The `while (pos > startpos)` loop of `siftdown`, Modules/_heapqmodule.c:43-66
-(`siftdown_max` :425-447 with `maxLt lt`). `newitem` is read once before the
+(`siftdown_max` :426-448 with `maxLt lt`). `newitem` is read once before the
 loop (:42) and compared with the parent (:48); the swap re-reads both slots
 (:60-64). -/
 def cSiftdownLoop (lt : α → α → Bool) (newitem : α) (startpos : Nat) :
@@ -148,7 +148,7 @@ def cSiftdown (lt : α → α → Bool) (heap : List α) (startpos pos : Nat) : 
   else .ok (cSiftdownLoop lt (at! heap pos) startpos pos heap pos)
 
 /-- The `while (pos < limit)` loop of `siftup`, Modules/_heapqmodule.c:88-115
-(`siftup_max` :469-496 compares `arr[childpos + 1] < arr[childpos]`, which is
+(`siftup_max` :470-497 compares `arr[childpos + 1] < arr[childpos]`, which is
 `maxLt lt arr[childpos] arr[childpos + 1]`). -/
 def cSiftupLoop (lt : α → α → Bool) (endpos limit : Nat) : Nat → List α → Nat → List α × Nat
   | 0, arr, pos => (arr, pos)
@@ -174,13 +174,13 @@ def cSiftup (lt : α → α → Bool) (heap : List α) (pos : Nat) : Py (List α
     let (arr, pos) := cSiftupLoop lt endpos limit endpos heap pos
     cSiftdown lt arr startpos pos
 
-/-- `_heapq.heappush`, Modules/_heapqmodule.c:131-150; `heappush_max` :512-532. -/
+/-- `_heapq.heappush`, Modules/_heapqmodule.c:131-150; `heappush_max` :513-533. -/
 def cHeappush (lt : α → α → Bool) (heap : List α) (item : α) : Py (List α) :=
   let heap := heap ++ [item]
   cSiftdown lt heap 0 (heap.length - 1)
 
 /-- `heappop_internal`, Modules/_heapqmodule.c:152-183 (`heappop` :195-200,
-`heappop_max` :544-549). -/
+`heappop_max` :545-550). -/
 def cHeappop (lt : α → α → Bool) (heap : List α) : Py (α × List α) := do
   let n := heap.length
   if n = 0 then throw (.indexError "index out of range")
@@ -193,15 +193,15 @@ def cHeappop (lt : α → α → Bool) (heap : List α) : Py (α × List α) := 
   return (returnitem, heap)
 
 /-- `heapreplace_internal`, Modules/_heapqmodule.c:202-220 (`heapreplace`
-:242-247, `heapreplace_max` :562-567). -/
+:242-247, `heapreplace_max` :563-568). -/
 def cHeapreplace (lt : α → α → Bool) (heap : List α) (item : α) : Py (α × List α) := do
   if heap.length = 0 then throw (.indexError "index out of range")
   let returnitem := at! heap 0
   let heap ← cSiftup lt (heap.set 0 item) 0
   return (returnitem, heap)
 
-/-- `_heapq.heappushpop`, Modules/_heapqmodule.c:263-297 (`top < item`), and
-`heappushpop_max` :600-635 (`item < top`, i.e. `maxLt lt top item`). -/
+/-- `_heapq.heappushpop`, Modules/_heapqmodule.c:264-298 (`top < item`), and
+`heappushpop_max` :601-636 (`item < top`, i.e. `maxLt lt top item`). -/
 def cHeappushpop (lt : α → α → Bool) (heap : List α) (item : α) : Py (α × List α) := do
   if heap.length = 0 then return (item, heap)
   let top := at! heap 0
@@ -215,7 +215,7 @@ def cHeappushpop (lt : α → α → Bool) (heap : List α) (item : α) : Py (α
 def forDown (body : List α → Nat → Py (List α)) (h : List α) (is : List Nat) : Py (List α) :=
   is.foldlM body h
 
-/-- `keep_top_bit(n)`, Modules/_heapqmodule.c:299-309, for `n ≥ 1`. -/
+/-- `keep_top_bit(n)`, Modules/_heapqmodule.c:300-310, for `n ≥ 1`. -/
 def keepTopBit (n : Nat) : Nat :=
   go n 0 n
 where
@@ -223,8 +223,8 @@ where
     | 0, i, n => n <<< i
     | fuel + 1, i, n => if n > 1 then go fuel (i + 1) (n >>> 1) else n <<< i
 
-/-- The inner `while (1)` of `cache_friendly_heapify`, Modules/_heapqmodule.c:342-348
-and :353-359: sift `j`, stop at an even `j`, else continue with `j >>= 1`. -/
+/-- The inner `while (1)` of `cache_friendly_heapify`, Modules/_heapqmodule.c:343-349
+and :354-360: sift `j`, stop at an even `j`, else continue with `j >>= 1`. -/
 def climb (lt : α → α → Bool) : Nat → List α → Nat → Py (List α)
   | 0, h, _ => .ok h
   | fuel + 1, h, j => do
@@ -235,7 +235,7 @@ def climb (lt : α → α → Bool) : Nat → List α → Nat → Py (List α)
 /-- Indices `hi - 1, hi - 2, ..., lo` (empty when `hi ≤ lo`). -/
 def downFrom (lo hi : Nat) : List Nat := (List.range (hi - lo)).map (fun k => hi - 1 - k)
 
-/-- `cache_friendly_heapify`, Modules/_heapqmodule.c:331-362. -/
+/-- `cache_friendly_heapify`, Modules/_heapqmodule.c:332-363. -/
 def cCacheFriendlyHeapify (lt : α → α → Bool) (heap : List α) : Py (List α) := do
   let m := heap.length >>> 1
   let leftmost := keepTopBit (m + 1) - 1
@@ -243,8 +243,8 @@ def cCacheFriendlyHeapify (lt : α → α → Bool) (heap : List α) : Py (List 
   let heap ← forDown (fun h i => climb lt (i + 1) h i) heap (downFrom mhalf leftmost)
   forDown (fun h i => climb lt (i + 1) h i) heap (downFrom leftmost m)
 
-/-- `heapify_internal`, Modules/_heapqmodule.c:364-388 (`heapify` :400-405,
-`heapify_max` :579-584): the cache-friendly order above 2500 elements, otherwise
+/-- `heapify_internal`, Modules/_heapqmodule.c:365-389 (`heapify` :401-406,
+`heapify_max` :580-585): the cache-friendly order above 2500 elements, otherwise
 `for (i = (n >> 1) - 1; i >= 0; i--) siftup(heap, i)`. -/
 def cHeapify (lt : α → α → Bool) (heap : List α) : Py (List α) :=
   let n := heap.length

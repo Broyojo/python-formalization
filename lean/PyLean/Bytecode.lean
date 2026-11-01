@@ -129,7 +129,7 @@ def entries : List Entry := GenObj.entries ++ [
     pyFns := ["enum_new_impl", "enumerate_vectorcall", "enum_next", "enum_next_long",
               "increment_longindex_lock_held"]
     statement := "enumerate(iterable, start) yields the indices start, start+1, ... for every start and length, across the Py_ssize_t fast path and the PyLong slow path and their switch at PY_SSIZE_T_MAX."
-    source := "enum_next/enum_next_long, Objects/enumobject.c:197-286"
+    source := "enum_next/enum_next_long, Objects/enumobject.c:199-272"
     status := .proven, prop := ``IterObj.EnumCounts, thm := some ``IterObj.enumCounts_proven },
   { id := "bytecode-cell-new", pyFile := "Objects/cellobject.c"
     pyFns := ["cell_new", "PyCell_New"]
@@ -140,47 +140,47 @@ def entries : List Entry := GenObj.entries ++ [
   { id := "bytecode-return-value", pyFile := "Python/bytecodes.c"
     pyFns := [op "RETURN_VALUE"]
     statement := "RETURN_VALUE pops the frame, restores the Python recursion budget, and resumes the caller at instr_ptr + return_offset with the returned value on top, for every caller stack."
-    source := "RETURN_VALUE, Python/bytecodes.c:1202-1217"
+    source := "RETURN_VALUE, Python/bytecodes.c@3.14.7:1202-1217"
     status := .proven, prop := ``ReturnValue, thm := some ``returnValue_proven },
   { id := "bytecode-unwind-to-handler", pyFile := "Python/bytecodes.c"
     pyFns := [op "RAISE_VARARGS", "get_exception_handler", "scan_back_to_entry_start", "skip_to_next_entry"]
     statement := "exception_unwind truncates the stack to the handler's recorded depth, pushes lasti if the entry says so, pushes the exception, and jumps to the handler; every value below the recorded level survives."
-    source := "exception_unwind, Python/bytecodes.c:5424-5460; get_exception_handler, Python/ceval.c:1630-1678"
+    source := "exception_unwind, Python/bytecodes.c:6485-6524; get_exception_handler, Python/ceval.c@3.14.7:1630-1678"
     status := .proven, prop := ``UnwindToHandler, thm := some ``unwindToHandler_proven },
   { id := "bytecode-unwind-no-handler", pyFile := "Python/bytecodes.c"
     pyFns := ["_PyEval_FrameClearAndPop", "clear_thread_frame"]
     statement := "With no handler, exception_unwind pops the frame, restores the recursion budget, and continues the search in the caller; the frame's own stack is discarded."
-    source := "exception_unwind / exit_unwind, Python/bytecodes.c:5429-5507"
+    source := "exception_unwind / exit_unwind, Python/bytecodes.c:6493-6577"
     status := .proven, prop := ``UnwindNoHandler, thm := some ``unwindNoHandler_proven },
   { id := "bytecode-unwind-exit", pyFile := "Python/bytecodes.c"
     pyFns := []
     statement := "With no handler in the last frame above the entry frame, _PyEval_EvalFrameDefault returns NULL with the exception set, leaving the heap as it was."
-    source := "exit_unwind, Python/bytecodes.c:5479-5503"
+    source := "exit_unwind, Python/bytecodes.c:6543-6573"
     status := .proven, prop := ``UnwindExit, thm := some ``unwindExit_proven },
   { id := "bytecode-exc-info-nests", pyFile := "Python/bytecodes.c"
     pyFns := [op "PUSH_EXC_INFO", op "POP_EXCEPT"]
     statement := "PUSH_EXC_INFO then POP_EXCEPT restores tstate->exc_info->exc_value, so except blocks nest: the handled exception after a block is the one before it."
-    source := "PUSH_EXC_INFO/POP_EXCEPT, Python/bytecodes.c:1421-1426, 3579-3592"
+    source := "PUSH_EXC_INFO/POP_EXCEPT, Python/bytecodes.c:1911-1916, 3579-3592"
     status := .proven, prop := ``ExcInfoNests, thm := some ``excInfoNests_proven },
   { id := "bytecode-for-iter-exhausted", pyFile := "Python/bytecodes.c"
     pyFns := [op "FOR_ITER", op "_FOR_ITER", op "_SPECIALIZE_FOR_ITER"]
     statement := "FOR_ITER on an exhausted iterator jumps over END_FOR with only the iterator left on the stack (the folded END_FOR/POP_ITER), for every iterator."
-    source := "_FOR_ITER, Python/bytecodes.c:3146-3175"
+    source := "_FOR_ITER, Python/bytecodes.c@3.14.7:3146-3175"
     status := .proven, prop := ``ForIterExhausted, thm := some ``forIterExhausted_proven },
   { id := "bytecode-for-iter-next", pyFile := "Python/bytecodes.c"
     pyFns := [op "FOR_ITER"]
     statement := "FOR_ITER with a next item pushes it above the iterator, for every iterator."
-    source := "_FOR_ITER, Python/bytecodes.c:3146-3175"
+    source := "_FOR_ITER, Python/bytecodes.c@3.14.7:3146-3175"
     status := .proven, prop := ``ForIterNext, thm := some ``forIterNext_proven },
   { id := "bytecode-frame-swap-shallow", pyFile := "Objects/frameobject.c"
     pyFns := ["stack_swap", "peek"]
     statement := "stack_swap is correct while its result fits 32 bits (at most ten stack entries): there the truncating version equals the full 64-bit computation."
-    source := "stack_swap, Objects/frameobject.c:1231-1241"
+    source := "stack_swap, Objects/frameobject.c:1239-1249"
     status := .proven, prop := ``FrameObj.StackSwapShallow, thm := some ``FrameObj.stackSwapShallow_proven },
   { id := "bytecode-frame-first-line", pyFile := "Objects/frameobject.c"
     pyFns := ["first_line_not_before", "marklines"]
     statement := "first_line_not_before returns a line that is in the table and not before the request, or -1 when none exists."
-    source := "first_line_not_before, Objects/frameobject.c:1594-1607"
+    source := "first_line_not_before, Objects/frameobject.c:1606-1619"
     status := .proven, prop := ``FrameObj.FirstLine, thm := some ``FrameObj.firstLine_proven },
   { id := "bytecode-iter-setstate", pyFile := "Objects/iterobject.c"
     pyFns := ["iter_setstate"]
@@ -197,32 +197,32 @@ def entries : List Entry := GenObj.entries ++ [
   { id := "bytecode-anext-coroutine", pyFile := "Objects/iterobject.c"
     pyFns := ["anextawaitable_iternext", "anextawaitable_getiter"]
     statement := "For a coroutine from __anext__ (state kept in the object), await anext(a, default) drives it to completion like await a.__anext__(), when it does not raise StopAsyncIteration."
-    source := "anextawaitable_iternext, Objects/iterobject.c:369-407"
+    source := "anextawaitable_iternext, Objects/iterobject.c:370-408"
     status := .open, prop := ``IterObj.AnextCoroutine
     notes := "Proof did not survive; needs induction over runAnext and runAwait. The refuted bytecode-anext-default-restarts-await is the non-coroutine case." },
   { id := "bytecode-enum-reduce", pyFile := "Objects/enumobject.c"
     pyFns := ["enum_reduce"]
     statement := "Pickling enumerate and rebuilding continues the count unbroken, in both the fast and the slow index state."
-    source := "enum_reduce, Objects/enumobject.c:288-303"
+    source := "enum_reduce, Objects/enumobject.c:274-289"
     status := .open, prop := ``IterObj.EnumReduce
     notes := "Proof did not survive; needs an invariant over the enum_next fold across PY_SSIZE_T_MAX." },
   { id := "bytecode-reversed-setstate", pyFile := "Objects/enumobject.c"
     pyFns := ["reversed_setstate", "reversed_len"]
     statement := "reversed.__setstate__ clamps the index to [-1, n-1] and leaves an exhausted iterator alone; __length_hint__ is then in [0, n]."
-    source := "reversed_setstate/reversed_len, Objects/enumobject.c:480-534"
+    source := "reversed_setstate/reversed_len, Objects/enumobject.c:466-520"
     status := .open, prop := ``IterObj.RevSetstate
     notes := "Proof did not survive; needs the clamp arithmetic of reversed_setstate." },
   { id := "bytecode-yield-suspends", pyFile := "Python/bytecodes.c"
     pyFns := [op "YIELD_VALUE"]
     statement := "YIELD_VALUE sets gi_frame_state to FRAME_SUSPENDED + oparg, stores the frame with instr_ptr advanced and its stack saved, resumes the caller after the SEND/FOR_ITER, and moves the generator's handled exception back into the generator, for every state."
-    source := "YIELD_VALUE, Python/bytecodes.c:1370-1402"
+    source := "YIELD_VALUE, Python/bytecodes.c@3.14.7:1370-1402"
     status := .open, prop := ``YieldSuspends
     notes := "Proof did not survive: excInfo and prev are projections of regs, so they cannot be substituted; needs rewriting with the hypotheses instead." },
   -- frameobject stack analysis facts.,
   { id := "bytecode-frame-push-pop", pyFile := "Objects/frameobject.c"
     pyFns := ["push_value", "pop_value", "top_of_stack"]
     statement := "Below the overflow threshold, pop_value undoes push_value and top_of_stack reads the kind pushed."
-    source := "push_value/pop_value/top_of_stack, Objects/frameobject.c:1199-1222"
+    source := "push_value/pop_value/top_of_stack, Objects/frameobject.c:1207-1230"
     status := .open, prop := ``FrameObj.PushPop
     notes := "Proof did not survive: needs the shift arithmetic of push_value below the overflow threshold in core Lean." },
   { id := "bytecode-lawful-builtin", pyFile := "Python/bytecodes.c"
@@ -234,13 +234,13 @@ def entries : List Entry := GenObj.entries ++ [
   { id := "bytecode-gap-str-percent", pyFile := "Objects/unicodeobject.c"
     pyFns := []
     statement := "str % args and bytes % args with a conversion in the template format their arguments."
-    source := "PyUnicode_Format, unicodeobject.c:15549; _PyBytes_FormatEx, bytesobject.c:634"
+    source := "PyUnicode_Format, unicodeobject.c@3.14.7:15549; _PyBytes_FormatEx, bytesobject.c:655"
     status := .open, prop := ``FormatRuns
     notes := "The model has no conversions and faults. bytecode_diff.py exclusion: str-percent-conversion. Not started." },
   { id := "bytecode-gap-float-pow-complex", pyFile := "Objects/floatobject.c"
     pyFns := []
     statement := "A negative float to a non-integer power gives a complex."
-    source := "float_pow, floatobject.c:696-813"
+    source := "float_pow, floatobject.c:686-803"
     status := .open, prop := ``FloatPowRuns
     notes := "The machine has no complex value and faults. bytecode_diff.py exclusion: float-pow-complex." },
   { id := "bytecode-gap-huge-shift", pyFile := "Objects/longobject.c"

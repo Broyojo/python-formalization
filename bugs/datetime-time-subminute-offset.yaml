@@ -38,9 +38,9 @@ promised_by: |
   datetime docs: "If both comparands are aware and have different tzinfo attributes, the
   comparands are first adjusted by subtracting their UTC offsets."; __hash__ contract.
 cause: |
-  Lib/_pydatetime.py:1538-1540 (`myhhmm = self._hour * 60 + self._minute - myoff//timedelta(minutes=1)`),
-  :1559-1563 (`assert not m % timedelta(minutes=1), "whole minute"`);
-  Modules/_datetimemodule.c:4951-4962 (offset seconds only).
+  Lib/_pydatetime.py:1568-1570 (`myhhmm = self._hour * 60 + self._minute - myoff//timedelta(minutes=1)`),
+  :1589-1593 (`assert not m % timedelta(minutes=1), "whole minute"`);
+  Modules/_datetimemodule.c:5071-5082 (offset seconds only).
 possible_fix: |
   Fixed on main by the change for gh-99772.
 reproduces:

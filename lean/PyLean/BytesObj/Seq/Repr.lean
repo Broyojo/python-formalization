@@ -1,9 +1,9 @@
 import PyLean.BytesObj.Seq.ListModel
 
 /-!
-`repr` of tuples and lists: `tuple_repr` (tupleobject.c:239-307), `list_repr`
-(listobject.c:629-641) and `list_repr_impl` (:574-627), with `Py_ReprEnter` /
-`Py_ReprLeave` (Objects/object.c:3003-3060).
+`repr` of tuples and lists: `tuple_repr` (tupleobject.c:285-353), `list_repr`
+(listobject.c:656-668) and `list_repr_impl` (:601-654), with `Py_ReprEnter` /
+`Py_ReprLeave` (Objects/object.c:3108-3165).
 
 Two layers:
 
@@ -22,7 +22,7 @@ open PyLean
 
 variable {α : Type}
 
-/-- The element loop of `tuple_repr`, tupleobject.c:276-289. -/
+/-- The element loop of `tuple_repr`, tupleobject.c:322-335. -/
 def tupleReprLoop (elem : α → Py String) : Nat → List α → String → Py String
   | _, [], acc => .ok acc
   | i, x :: xs, acc =>
@@ -31,19 +31,19 @@ def tupleReprLoop (elem : α → Py String) : Nat → List α → String → Py 
     | .ok s => tupleReprLoop elem (i + 1) xs (acc ++ s)
     | .error e => .error e
 
-/-- `tuple_repr` after `Py_ReprEnter` returned 0, tupleobject.c:257-301. -/
+/-- `tuple_repr` after `Py_ReprEnter` returned 0, tupleobject.c:303-347. -/
 def tupleReprBody (elem : α → Py String) (items : List α) : Py String :=
   match tupleReprLoop elem 0 items "(" with
   | .ok acc => .ok (acc ++ (if items.length = 1 then ",)" else ")"))
   | .error e => .error e
 
-/-- `tuple_repr(self)`, tupleobject.c:239-307. `entered` is `Py_ReprEnter` returning 1. -/
+/-- `tuple_repr(self)`, tupleobject.c:285-353. `entered` is `Py_ReprEnter` returning 1. -/
 def tupleRepr (elem : α → Py String) (entered : Bool) (items : List α) : Py String :=
   if items.length = 0 then .ok "()"
   else if entered then .ok "(...)"
   else tupleReprBody elem items
 
-/-- The element loop of `list_repr_impl`, listobject.c:596-613: the size and the
+/-- The element loop of `list_repr_impl`, listobject.c:623-640: the size and the
 slot are reread on each pass because `repr(item)` may change the list. -/
 def listReprLoop (elem : LObj α → α → Py String × LObj α) :
     Nat → Nat → String → LObj α → Py String × LObj α
@@ -57,7 +57,7 @@ def listReprLoop (elem : LObj α → α → Py String × LObj α) :
       | (.error e, o') => (.error e, o')
     else (.ok (acc ++ "]"), o)
 
-/-- `list_repr(self)`, listobject.c:629-641, with `list_repr_impl`, :574-627. -/
+/-- `list_repr(self)`, listobject.c:656-668, with `list_repr_impl`, :601-654. -/
 def listRepr (elem : LObj α → α → Py String × LObj α) (fuel : Nat) (entered : Bool) (o : LObj α) :
     Py String × LObj α :=
   if o.items.length = 0 then (.ok "[]", o)

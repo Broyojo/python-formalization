@@ -63,17 +63,17 @@ def tupleAlloc (size : Int) : Py Unit :=
 /-- `Py_uhash_t` arithmetic is modulo `2^64`. -/
 def U64 : Nat := 2 ^ 64
 
-/-- `_PyTuple_HASH_XXPRIME_1`, Include/internal/pycore_tuple.h:60. -/
+/-- `_PyTuple_HASH_XXPRIME_1`, Include/internal/pycore_tuple.h:66. -/
 def XXP1 : Nat := 11400714785074694791
-/-- `_PyTuple_HASH_XXPRIME_2`, pycore_tuple.h:61. -/
+/-- `_PyTuple_HASH_XXPRIME_2`, pycore_tuple.h:67. -/
 def XXP2 : Nat := 14029467366897019727
-/-- `_PyTuple_HASH_XXPRIME_5`, pycore_tuple.h:62. -/
+/-- `_PyTuple_HASH_XXPRIME_5`, pycore_tuple.h:68. -/
 def XXP5 : Nat := 2870177450012600261
 
-/-- `_PyTuple_HASH_XXROTATE(x)`, pycore_tuple.h:63: `(x << 31) | (x >> 33)` on 64 bits. -/
+/-- `_PyTuple_HASH_XXROTATE(x)`, pycore_tuple.h:69: `(x << 31) | (x >> 33)` on 64 bits. -/
 def xxRotate (x : Nat) : Nat := ((x <<< 31) % U64) ||| (x >>> 33)
 
-/-- The loop body of `tuple_hash`, tupleobject.c:340-342. -/
+/-- The loop body of `tuple_hash`, tupleobject.c:398-400. -/
 def hashRound (acc lane : Nat) : Nat :=
   let acc := (acc + lane * XXP2) % U64
   let acc := xxRotate acc
@@ -85,7 +85,7 @@ def toUhash (x : Int) : Nat := (x % (U64 : Int)).toNat
 /-- `(Py_hash_t)acc` on return. -/
 def toHash (acc : Nat) : Int := if acc ≥ 2 ^ 63 then (acc : Int) - U64 else acc
 
-/-- The hash loop, tupleobject.c:335-343. `PyObject_Hash` failing is the `.error`
+/-- The hash loop, tupleobject.c:392-401. `PyObject_Hash` failing is the `.error`
 case (`lane == (Py_uhash_t)-1`). -/
 def hashLoop (hashE : α → Py Int) : List α → Nat → Py Nat
   | [], acc => .ok acc
@@ -95,12 +95,12 @@ def hashLoop (hashE : α → Py Int) : List α → Nat → Py Nat
     | .error e => .error e
 
 /-- `acc += len ^ (_PyTuple_HASH_XXPRIME_5 ^ 3527539UL)` and the `-1` remap,
-tupleobject.c:346-350. -/
+tupleobject.c:405-409. -/
 def hashFinish (acc len : Nat) : Nat :=
   let acc := (acc + (len ^^^ (XXP5 ^^^ 3527539))) % U64
   if acc = U64 - 1 then 1546275796 else acc
 
-/-- `tuple_hash(op)`, tupleobject.c:322-355: the cached value when there is one,
+/-- `tuple_hash(op)`, tupleobject.c:371-414: the cached value when there is one,
 otherwise the xxHash-style loop, and the cache is written on success only. -/
 def tupleHash (hashE : α → Py Int) (t : Tup α) : Py (Int × Tup α) :=
   if toUhash t.hash ≠ U64 - 1 then .ok (t.hash, t)
@@ -113,10 +113,10 @@ def tupleHash (hashE : α → Py Int) (t : Tup α) : Py (Int × Tup α) :=
 
 /-! ## Item access -/
 
-/-- `tuple_length(self)`, tupleobject.c:357-362: `Py_SIZE`. -/
+/-- `tuple_length(self)`, tupleobject.c:416-421: `Py_SIZE`. -/
 def tupleLength (a : List α) : Int := a.length
 
-/-- `tuple_contains(self, el)`, tupleobject.c:364-373: `item == el`, item on the left. -/
+/-- `tuple_contains(self, el)`, tupleobject.c:423-432: `item == el`, item on the left. -/
 def tupleContains (E : ElemOps α ρ) (el : α) : List α → Py Bool
   | [] => .ok false
   | x :: xs =>
@@ -124,14 +124,14 @@ def tupleContains (E : ElemOps α ρ) (el : α) : List α → Py Bool
     | .ok false => tupleContains E el xs
     | r => r
 
-/-- `tuple_item(op, i)`, tupleobject.c:375-384. -/
+/-- `tuple_item(op, i)`, tupleobject.c:434-443. -/
 def tupleItem (a : List α) (i : Int) : Py α :=
   if i < 0 ∨ i ≥ a.length then .error (.indexError "tuple index out of range")
   else match slot a i with
     | some v => .ok v
     | none => .error (cUB "read outside the items array")
 
-/-- `_PyTuple_FromArray(src, n)`, tupleobject.c:386-410: untracked unless an item
+/-- `_PyTuple_FromArray(src, n)`, tupleobject.c:445-469: untracked unless an item
 may be tracked (`maybe_tracked`, :165-169). -/
 def tupleFromArray (mayTrack : α → Bool) (src : List α) : Py (TRes α) :=
   if src.length = 0 then .ok .empty
@@ -140,11 +140,11 @@ def tupleFromArray (mayTrack : α → Bool) (src : List α) : Py (TRes α) :=
     | .ok () => .ok (.fresh { items := src, tracked := src.any mayTrack })
     | .error e => .error e
 
-/-- `_PyTuple_FromStackRefStealOnSuccess`, tupleobject.c:412-435: as above. -/
+/-- `_PyTuple_FromStackRefStealOnSuccess`, tupleobject.c:471-494: as above. -/
 def tupleFromStackRef (mayTrack : α → Bool) (src : List α) : Py (TRes α) :=
   tupleFromArray mayTrack src
 
-/-- `_PyTuple_FromArraySteal(src, n)`, tupleobject.c:437-457: always tracked. -/
+/-- `_PyTuple_FromArraySteal(src, n)`, tupleobject.c:496-516: always tracked. -/
 def tupleFromArraySteal (src : List α) : Py (TRes α) :=
   if src.length = 0 then .ok .empty
   else
@@ -168,7 +168,7 @@ def tupleMaybeUntrack (mayBeTracked : α → Bool) (exact : Bool) (tracked : Boo
   else if items.any (fun e => match e with | none => true | some x => mayBeTracked x) then tracked
   else false
 
-/-- `tuple_slice(a, ilow, ihigh)`, tupleobject.c:459-473. -/
+/-- `tuple_slice(a, ilow, ihigh)`, tupleobject.c:518-551. -/
 def tupleSlice (mayTrack : α → Bool) (a : Tup α) (ilow ihigh : Int) : Py (TRes α) :=
   let n : Int := a.items.length
   let ilow := if ilow < 0 then 0 else ilow
@@ -177,7 +177,7 @@ def tupleSlice (mayTrack : α → Bool) (a : Tup α) (ilow ihigh : Int) : Py (TR
   if ilow = 0 ∧ ihigh = n ∧ a.exact then .ok (.arg 0)
   else tupleFromArray mayTrack ((a.items.drop ilow.toNat).take (ihigh - ilow).toNat)
 
-/-- `PyTuple_GetSlice(op, i, j)`, tupleobject.c:475-483. `none` is a non-tuple or `NULL`. -/
+/-- `PyTuple_GetSlice(op, i, j)`, tupleobject.c:553-561. `none` is a non-tuple or `NULL`. -/
 def pyTupleGetSlice (mayTrack : α → Bool) (op : Option (Tup α)) (i j : Int) : Py (TRes α) :=
   match op with
   | none => .error systemError
@@ -188,7 +188,7 @@ inductive ConcatArg (α : Type) where
   | tuple (t : Tup α)
   | other (typeName : String)
 
-/-- `tuple_concat(aa, bb)`, tupleobject.c:485-530. -/
+/-- `tuple_concat(aa, bb)`, tupleobject.c@3.14.7:485-530. -/
 def tupleConcat (a : Tup α) (bb : ConcatArg α) : Py (TRes α) :=
   let exactB : Bool := match bb with | .tuple t => t.exact | .other _ => false
   if a.items.length = 0 ∧ exactB then .ok (.arg 1)
@@ -206,7 +206,7 @@ def tupleConcat (a : Tup α) (bb : ConcatArg α) : Py (TRes α) :=
           | .ok () => .ok (.fresh { items := a.items ++ b.items, tracked := true })
           | .error e => .error e
 
-/-- `tuple_repeat(self, n)`, tupleobject.c:532-579. -/
+/-- `tuple_repeat(self, n)`, tupleobject.c:610-657. -/
 def tupleRepeat (a : Tup α) (n : Int) : Py (TRes α) :=
   let inputSize : Int := a.items.length
   if (inputSize = 0 ∨ n = 1) ∧ a.exact then .ok (.arg 0)
@@ -222,7 +222,7 @@ def tupleMul (a : Tup α) (n : Int) : Py (TRes α) := do
   let n ← PyLean.Sequences.repeatCount n
   tupleRepeat a n
 
-/-- The search loop of `tuple_index_impl`, tupleobject.c:612-618. `xs` is the
+/-- The search loop of `tuple_index_impl`, tupleobject.c:690-696. `xs` is the
 tail of the items from `i` on, `stop` the (clipped) bound. -/
 def tupleIndexLoop (E : ElemOps α ρ) (value : α) (stop : Int) : List α → Int → Py (Option Int)
   | [], _ => .ok none
@@ -234,7 +234,7 @@ def tupleIndexLoop (E : ElemOps α ρ) (value : α) (stop : Int) : List α → I
       | .error e => .error e
     else .ok none
 
-/-- `start` and `stop` of `tuple_index_impl`, tupleobject.c:601-611, after the
+/-- `start` and `stop` of `tuple_index_impl`, tupleobject.c:679-689, after the
 `slice_index(accept={int})` conversions (saturating). -/
 def tupleIndexBounds (n : Int) (start stop : Option Int) : Int × Int :=
   let start := PyLean.Sequences.sliceIndex (start.getD 0)
@@ -243,7 +243,7 @@ def tupleIndexBounds (n : Int) (start stop : Option Int) : Int × Int :=
   let stop := if stop < 0 then stop + n else if stop > n then n else stop
   (start, stop)
 
-/-- `t.index(value, start, stop)`, `tuple_index_impl`, tupleobject.c:594-621. -/
+/-- `t.index(value, start, stop)`, `tuple_index_impl`, tupleobject.c:672-699. -/
 def tupleIndex (E : ElemOps α ρ) (t : List α) (value : α) (start stop : Option Int) : Py Int :=
   let (start, stop) := tupleIndexBounds t.length start stop
   match tupleIndexLoop E value stop (t.drop start.toNat) start with
@@ -251,7 +251,7 @@ def tupleIndex (E : ElemOps α ρ) (t : List α) (value : α) (start stop : Opti
   | .ok none => .error (.valueError "tuple.index(x): x not in tuple")
   | .error e => .error e
 
-/-- `t.count(value)`, `tuple_count_impl`, tupleobject.c:632-647. -/
+/-- `t.count(value)`, `tuple_count_impl`, tupleobject.c:710-725. -/
 def tupleCount (E : ElemOps α ρ) (value : α) : List α → Int → Py Int
   | [], count => .ok count
   | x :: xs, count =>
@@ -262,7 +262,7 @@ def tupleCount (E : ElemOps α ρ) (value : α) : List α → Int → Py Int
 
 /-! ## Rich comparison -/
 
-/-- The search of `tuple_richcompare`, tupleobject.c:686-693: the first pair that
+/-- The search of `tuple_richcompare`, tupleobject.c:764-771: the first pair that
 is not equal, or `none` when one side runs out. -/
 def tupleFirstDiff (E : ElemOps α ρ) : List α → List α → Py (Option (α × α))
   | x :: xs, y :: ys =>
@@ -272,7 +272,7 @@ def tupleFirstDiff (E : ElemOps α ρ) : List α → List α → Py (Option (α 
     | .error e => .error e
   | _, _ => .ok none
 
-/-- `tuple_richcompare(v, w, op)`, tupleobject.c:659-710. `NotImplemented` for a
+/-- `tuple_richcompare(v, w, op)`, tupleobject.c:737-788. `NotImplemented` for a
 non-tuple operand is handled by the caller. -/
 def tupleRichcompare (E : ElemOps α ρ) (op : CmpOp) (v w : List α) : Py ρ :=
   match tupleFirstDiff E v w with
@@ -285,7 +285,7 @@ def tupleRichcompare (E : ElemOps α ρ) (op : CmpOp) (v w : List α) : Py ρ :=
 
 /-! ## Construction -/
 
-/-- `PySequence_Tuple(v)` on a sequence argument (Objects/abstract.c:1996-2070), with
+/-- `PySequence_Tuple(v)` on a sequence argument (Objects/abstract.c:2005-2079), with
 `tuple_new_impl` and `tuple_vectorcall`. The argument is what the type does:
 an exact tuple is returned, a list goes through `PyList_AsTuple`
 (`_PyTuple_FromArray`), other iterables through a buffer or a list and
@@ -300,13 +300,13 @@ def pySequenceTuple (mayTrack : α → Bool) : TupleSrc α → Py (TRes α)
   | .exactList l => tupleFromArray mayTrack l
   | .iterable items => tupleFromArraySteal items
 
-/-- `tuple_new_impl(type, iterable)`, tupleobject.c:729-742 for `type == tuple`. -/
+/-- `tuple_new_impl(type, iterable)`, tupleobject.c:807-820 for `type == tuple`. -/
 def tupleNew (mayTrack : α → Bool) (iterable : Option (TupleSrc α)) : Py (TRes α) :=
   match iterable with
   | none => .ok .empty
   | some src => pySequenceTuple mayTrack src
 
-/-- `tuple_subtype_new(type, iterable)`, tupleobject.c:765-798: a fresh subclass
+/-- `tuple_subtype_new(type, iterable)`, tupleobject.c:843-876: a fresh subclass
 instance holding the items of `tuple(iterable)`, tracked, with no cached hash. -/
 def tupleSubtypeNew (mayTrack : α → Bool) (iterable : Option (TupleSrc α)) : Py (Tup α) :=
   let items := fun (r : TRes α) (src : Option (TupleSrc α)) =>
@@ -317,7 +317,7 @@ def tupleSubtypeNew (mayTrack : α → Bool) (iterable : Option (TupleSrc α)) :
   | .ok r => .ok { items := items r iterable, exact := false, tracked := true, hash := -1 }
   | .error e => .error e
 
-/-- `tuple_vectorcall(type, args, nargsf, kwnames)`, tupleobject.c:744-763:
+/-- `tuple_vectorcall(type, args, nargsf, kwnames)`, tupleobject.c:822-841:
 keyword names and the argument count are checked in that order. -/
 def tupleVectorcall (mayTrack : α → Bool) (args : List (TupleSrc α)) (nkw : Nat) : Py (TRes α) :=
   if nkw ≠ 0 then .error (.typeError "tuple() takes no keyword arguments")
@@ -328,19 +328,19 @@ def tupleVectorcall (mayTrack : α → Bool) (args : List (TupleSrc α)) (nkw : 
     | src :: _ => tupleNew mayTrack (some src)
     | [] => .ok .empty
 
-/-- `tuple.__getnewargs__`, tupleobject.c:871-876: `(tuple_slice(self, 0, n),)`. -/
+/-- `tuple.__getnewargs__`, tupleobject.c:960-965: `(tuple_slice(self, 0, n),)`. -/
 def tupleGetnewargs (mayTrack : α → Bool) (a : Tup α) : Py (TRes α) :=
   tupleSlice mayTrack a 0 a.items.length
 
 /-! ## Subscript -/
 
-/-- `tuple_subscript(op, item)` for an int item, tupleobject.c:815-821. -/
+/-- `tuple_subscript(op, item)` for an int item, tupleobject.c:904-910. -/
 def tupleGetItem (a : List α) (i : Int) : Py α := do
   let i ← PyLean.Sequences.subIndex i
   let i := if i < 0 then i + a.length else i
   tupleItem a i
 
-/-- `tuple_subscript(op, item)` for a slice, tupleobject.c:823-857. -/
+/-- `tuple_subscript(op, item)` for a slice, tupleobject.c:912-946. -/
 def tupleGetSlice (a : Tup α) (s : Slice) : Py (TRes α) := do
   let (start, stop, step) ← sliceUnpack s
   let (start, _, slicelength) := adjustIndices a.items.length start stop step
@@ -390,9 +390,9 @@ def pyTupleSetItem (op : Option (List α)) (unique : Bool) (i : Int) (v : α) : 
     else if i < 0 ∨ i ≥ a.length then .error (.indexError "tuple assignment index out of range")
     else .ok (a.set i.toNat v)
 
-/-- `_PyTuple_Resize(pv, newsize)`, tupleobject.c:955-1020, on the items. The
+/-- `_PyTuple_Resize(pv, newsize)`, tupleobject.c:1045-1123, on the items. The
 checks on line 964 fail with an internal error; `NULL` items pad a growing tuple
-(`memset`, :1015). A negative `newsize` runs the `Py_CLEAR` loop of :999 from
+(`memset`, :1118). A negative `newsize` runs the `Py_CLEAR` loop of :1097 from
 `ob_item[newsize]`, outside the object. -/
 def tupleResize (v : Option (List (Option α))) (isExact unique : Bool) (newsize : Int) :
     Py (List (Option α)) :=
@@ -418,10 +418,10 @@ structure TupleIter (α : Type) where
   seq : Option (List α)
   deriving Repr, DecidableEq
 
-/-- `tuple_iter(seq)`, tupleobject.c:1173-1190. -/
+/-- `tuple_iter(seq)`, tupleobject.c:1276-1293. -/
 def tupleIter (t : List α) : TupleIter α := ⟨0, some t⟩
 
-/-- `tupleiter_next(self)`, tupleobject.c:1044-1071. -/
+/-- `tupleiter_next(self)`, tupleobject.c:1147-1174. -/
 def tupleIterNext (it : TupleIter α) : Option α × TupleIter α :=
   match it.seq with
   | none => (none, it)
@@ -429,20 +429,20 @@ def tupleIterNext (it : TupleIter α) : Option α × TupleIter α :=
     if it.index < s.length then (slot s it.index, { it with index := it.index + 1 })
     else (none, { it with seq := none })
 
-/-- `tupleiter_len(self)`, tupleobject.c:1073-1088. -/
+/-- `tupleiter_len(self)`, tupleobject.c:1176-1191. -/
 def tupleIterLen (it : TupleIter α) : Int :=
   match it.seq with
   | some s => (s.length : Int) - it.index
   | none => 0
 
-/-- `tupleiter_reduce(self)`, tupleobject.c:1092-1111, as `(args, state)`:
+/-- `tupleiter_reduce(self)`, tupleobject.c:1195-1214, as `(args, state)`:
 `iter(seq)` plus the index, or `iter(())` when exhausted. -/
 def tupleIterReduce (it : TupleIter α) : List α × Option Int :=
   match it.seq with
   | some s => (s, some it.index)
   | none => ([], none)
 
-/-- `tupleiter_setstate(self, state)`, tupleobject.c:1113-1128. -/
+/-- `tupleiter_setstate(self, state)`, tupleobject.c:1216-1231. -/
 def tupleIterSetstate (it : TupleIter α) (state : Int) : Py (TupleIter α) := do
   let index ← PyLean.Sequences.asSsize state
   match it.seq with

@@ -2,11 +2,11 @@ import PyLean.LongObj.ComplexCore
 
 /-!
 String parsing for `complex()`: `complex_from_string_inner` and
-`complex_subtype_from_string` (`Objects/complexobject.c:930-1081`), with the two
+`complex_subtype_from_string` (`Objects/complexobject.c:950-1101`), with the two
 helpers they call, `_Py_string_to_number_with_underscores`
 (`Python/pystrtod.c:345-402`) and `_PyUnicode_TransformDecimalAndSpaceToASCII`
-(`Objects/unicodeobject.c:9614-9657`), and `float_from_string_inner`
-(`Objects/floatobject.c:149-187`) for the twin property.
+(`Objects/unicodeobject.c:9515-9558`), and `float_from_string_inner`
+(`Objects/floatobject.c:139-177`) for the twin property.
 
 A `const char *` is the remaining suffix as a `List Nat` of code units, and
 reading past the end gives the terminating NUL (`cur`). A string may hold NUL
@@ -188,7 +188,7 @@ def complex_from_str (db : UniDB) (sd : Strtod R) (v : List Nat) (objRepr : Stri
   let s := transformDecimalAndSpace db v
   withUnderscores s s.length "complex" objRepr (complex_from_string_inner sd)
 
-/-- `while (s < last && Py_ISSPACE(*s)) s++;`, `Objects/floatobject.c:156-158`. -/
+/-- `while (s < last && Py_ISSPACE(*s)) s++;`, `Objects/floatobject.c:146-148`. -/
 def floatLead (len : Nat) : List Nat → Nat → Nat × List Nat
   | [], i => (i, [])
   | c :: t, i =>
@@ -202,7 +202,7 @@ def floatTrail (s : List Nat) (i : Nat) : Nat → Nat → Nat
     if i + 1 < last && isSpaceC (s.getD (last - 1) 0) then floatTrail s i fuel (last - 1)
     else last
 
-/-- `float_from_string_inner`, `Objects/floatobject.c:149-187`, up to the
+/-- `float_from_string_inner`, `Objects/floatobject.c:139-177`, up to the
 allocation of the result. The twin of `complex_from_string_inner`. `last` is the
 index one past the end. -/
 def float_from_string_inner (sd : Strtod R) (s : List Nat) (len : Nat) (objRepr : String) :
@@ -215,7 +215,7 @@ def float_from_string_inner (sd : Strtod R) (s : List Nat) (len : Nat) (objRepr 
     let (x, n) := sd p
     if i + n != last then err else .ok x
 
-/-- `PyFloat_FromString` on a `str`, `Objects/floatobject.c:190-237`, the path
+/-- `PyFloat_FromString` on a `str`, `Objects/floatobject.c:180-227`, the path
 that goes through the same transform and `float_from_string_inner`. -/
 def float_from_str (db : UniDB) (sd : Strtod R) (v : List Nat) (objRepr : String) : Py R :=
   let s := transformDecimalAndSpace db v

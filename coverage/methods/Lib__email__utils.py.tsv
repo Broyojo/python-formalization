@@ -18,5 +18,5 @@ Lib/email/utils.py	360	367	unquote	unquote(str)	todo
 Lib/email/utils.py	372	377	decode_rfc2231	decode_rfc2231(s)	todo		
 Lib/email/utils.py	380	392	encode_rfc2231	encode_rfc2231(s, charset=None, language=None)	todo		
 Lib/email/utils.py	398	450	decode_params	decode_params(params)	todo		
-Lib/email/utils.py	452	469	collapse_rfc2231_value	collapse_rfc2231_value(value, errors='replace', fallback_charset='us-ascii')	todo		
-Lib/email/utils.py	478	489	localtime	localtime(dt=None)	todo		
+Lib/email/utils.py	452	473	collapse_rfc2231_value	collapse_rfc2231_value(value, errors='replace', fallback_charset='us-ascii')	todo		changed-in-3.15:
+Lib/email/utils.py	482	493	localtime	localtime(dt=None)	todo		

@@ -11,5 +11,6 @@ Lib/idlelib/multicall.py	231	236	_ComplexBinder.unbind	unbind(self, triplet, fun
 Lib/idlelib/multicall.py	238	244	_ComplexBinder.__del__	__del__(self)	excluded		platform: GUI toolkit
 Lib/idlelib/multicall.py	267	304	_parse_sequence	_parse_sequence(sequence)	excluded		platform: GUI toolkit
 Lib/idlelib/multicall.py	306	311	_triplet_to_sequence	_triplet_to_sequence(triplet)	excluded		platform: GUI toolkit
-Lib/idlelib/multicall.py	314	415	MultiCallCreator	MultiCallCreator(widget)	excluded		platform: GUI toolkit
-Lib/idlelib/multicall.py	418	444	_multi_call	_multi_call(parent)	excluded		platform: GUI toolkit
+Lib/idlelib/multicall.py	314	321	warn_bad_binding	warn_bad_binding(virtual, sequence, err)	excluded		platform: GUI toolkit
+Lib/idlelib/multicall.py	325	444	MultiCallCreator	MultiCallCreator(widget)	excluded		platform: GUI toolkit
+Lib/idlelib/multicall.py	447	473	_multi_call	_multi_call(parent)	excluded		platform: GUI toolkit

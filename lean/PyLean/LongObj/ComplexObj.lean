@@ -163,7 +163,7 @@ def warnDep (E : Env R) (msg : String) : M Unit :=
 
 def intTooLarge : PyExc := .overflowError "int too large to convert to float"
 
-/-- `PyLong_AsDouble`, `Objects/longobject.c:3484-3513`. -/
+/-- `PyLong_AsDouble`, `Objects/longobject.c:3567-3596`. -/
 def longAsDouble (n : Int) : Py R :=
   match ofInt n with
   | some x => .ok x
@@ -192,7 +192,7 @@ def callSlot (name : String) (s : Slot R) (self : Obj R) : M (Obj R) :=
         pure (mkFloat x)
     | _ => throw .modelFuel
 
-/-- `_PyNumber_Index`, `Objects/abstract.c:1400-1439`. -/
+/-- `_PyNumber_Index`, `Objects/abstract.c:1410-1449`. -/
 def _PyNumber_Index (E : Env R) (item : Obj R) : M Int :=
   match item.val with
   | .long n => pure n
@@ -223,7 +223,7 @@ def nonFloatDep (op res : Obj R) : String :=
     "The ability to return an instance of a strict subclass of float " ++
     "is deprecated, and may be removed in a future version of Python."
 
-/-- `PyFloat_AsDouble`, `Objects/floatobject.c:257-313`. A `float` subclass is
+/-- `PyFloat_AsDouble`, `Objects/floatobject.c:247-303`. A `float` subclass is
 read directly: its `__float__` is not consulted. -/
 def PyFloat_AsDouble (E : Env R) (op : Obj R) : M R :=
   match op.val with
@@ -245,7 +245,7 @@ def PyFloat_AsDouble (E : Env R) (op : Obj R) : M R :=
           pure x
       | _ => throw (.typeError (nonFloatMsg op res))
 
-/-- `PyNumber_Float`, `Objects/abstract.c:1592-1649`. A `float` subclass goes
+/-- `PyNumber_Float`, `Objects/abstract.c:1602-1658`. A `float` subclass goes
 through its `nb_float` here, unlike in `PyFloat_AsDouble`. The final
 `PyFloat_FromString` is not reachable from this file, since `complex_new_impl`
 only calls this after finding `nb_float` or `nb_index`; its `TypeError` for a
@@ -353,7 +353,7 @@ def complex_hash (hd : R → Int) (v : Cx R) : Int :=
   toHash combined
 
 /-- `real_to_double`, lines 644-656, with `_Py_convert_int_to_double`,
-`Objects/floatobject.c:330-346`. `.ok none` is `NotImplemented`. -/
+`Objects/floatobject.c:320-336`. `.ok none` is `NotImplemented`. -/
 def real_to_double (obj : Obj R) : Py (Option R) :=
   match obj.val with
   | .flt x => .ok (some x)
@@ -500,7 +500,7 @@ def complex_conjugate_impl (self : Cx R) : Cx R := ⟨self.real, ⊖self.imag⟩
 def complex___getnewargs___impl (self : Cx R) : R × R := (self.real, self.imag)
 
 /-- `complex___format___impl`, lines 893-909, with the empty-spec test of
-`_PyComplex_FormatAdvancedWriter`, `Python/formatter_unicode.c:1691-1701`.
+`_PyComplex_FormatAdvancedWriter`, `Python/formatter_unicode.c@3.14.7:1691-1701`.
 `advanced` stands for the rest of that function, which is outside this file. -/
 def complex___format___impl (ds : R → Bool → String)
     (advanced : Cx R → List Nat → Py String) (self : Cx R) (spec : List Nat) : Py String :=

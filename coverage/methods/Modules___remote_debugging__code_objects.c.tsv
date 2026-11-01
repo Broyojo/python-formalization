@@ -1,0 +1,11 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_remote_debugging/code_objects.c	19	26	tlbc_cache_entry_destroy	tlbc_cache_entry_destroy(void *ptr)	todo		
+Modules/_remote_debugging/code_objects.c	29	44	get_tlbc_cache_entry	get_tlbc_cache_entry(RemoteUnwinderObject *self, uintptr_t code_addr, uint32_t current_generation)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/code_objects.c	47	122	cache_tlbc_array	cache_tlbc_array(RemoteUnwinderObject *unwinder, uintptr_t code_addr, uintptr_t tlbc_array_addr, uint32_t generation)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/code_objects.c	132	139	read_byte	read_byte(const uint8_t **ptr, const uint8_t *end, uint8_t *out)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/code_objects.c	142	162	scan_varint	scan_varint(const uint8_t **ptr, const uint8_t *end)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/code_objects.c	165	177	scan_signed_varint	scan_signed_varint(const uint8_t **ptr, const uint8_t *end)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/code_objects.c	180	270	parse_linetable	parse_linetable(const uintptr_t addrq, const char* linetable, Py_ssize_t linetable_size, int firstlineno, LocationInfo* info)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/code_objects.c	277	316	make_location_info	make_location_info(RemoteUnwinderObject *unwinder, int lineno, int end_lineno, int col_offset, int end_col_offset)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/code_objects.c	319	337	make_frame_info	make_frame_info(RemoteUnwinderObject *unwinder, PyObject *file, PyObject *location, PyObject *func, PyObject *opcode)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/code_objects.c	340	604	parse_code_object	parse_code_object(RemoteUnwinderObject *unwinder, PyObject **result, const CodeObjectContext *ctx)	todo		changed-in-3.15: new function

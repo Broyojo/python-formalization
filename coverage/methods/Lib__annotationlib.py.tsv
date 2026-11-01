@@ -1,49 +1,49 @@
 file	line	endline	name	signature	status	entry	note
 Lib/annotationlib.py	69	98	ForwardRef.__init__	__init__(self, arg, *, module=None, owner=None, is_argument=True, is_class=False)	todo		
 Lib/annotationlib.py	100	101	ForwardRef.__init_subclass__	__init_subclass__(cls, /, *args, **kwds)	todo		
-Lib/annotationlib.py	103	227	ForwardRef.evaluate	evaluate(self, *, globals=None, locals=None, type_params=None, owner=None, format=Format.VALUE)	todo		
-Lib/annotationlib.py	229	250	ForwardRef._evaluate	_evaluate(self, globalns, localns, type_params=_sentinel, *, recursive_guard)	todo		
-Lib/annotationlib.py	253	261	ForwardRef.__forward_arg__	__forward_arg__(self)	todo		
-Lib/annotationlib.py	264	279	ForwardRef.__resolved_str__	__resolved_str__(self)	todo		
-Lib/annotationlib.py	282	290	ForwardRef.__forward_code__	__forward_code__(self)	todo		
-Lib/annotationlib.py	292	314	ForwardRef.__eq__	__eq__(self, other)	todo		
-Lib/annotationlib.py	316	328	ForwardRef.__hash__	__hash__(self)	todo		
-Lib/annotationlib.py	330	331	ForwardRef.__or__	__or__(self, other)	todo		
-Lib/annotationlib.py	333	334	ForwardRef.__ror__	__ror__(self, other)	todo		
-Lib/annotationlib.py	336	344	ForwardRef.__repr__	__repr__(self)	todo		
-Lib/annotationlib.py	355	380	_Stringifier.__init__	__init__(self, node, globals=None, owner=None, is_class=False, cell=None, *, stringifier_dict, extra_names=None)	todo		
-Lib/annotationlib.py	382	423	_Stringifier.__convert_to_ast	__convert_to_ast(self, other)	todo		
-Lib/annotationlib.py	425	443	_Stringifier.__convert_to_ast_getitem	__convert_to_ast_getitem(self, other)	todo		
-Lib/annotationlib.py	445	449	_Stringifier.__get_ast	__get_ast(self)	todo		
-Lib/annotationlib.py	451	466	_Stringifier.__make_new	__make_new(self, node, extra_names=None)	todo		
-Lib/annotationlib.py	470	471	_Stringifier.__hash__	__hash__(self)	todo		
-Lib/annotationlib.py	473	490	_Stringifier.__getitem__	__getitem__(self, other)	todo		
-Lib/annotationlib.py	492	493	_Stringifier.__getattr__	__getattr__(self, attr)	todo		candidates:calstat-calendar-module-getattr
-Lib/annotationlib.py	495	509	_Stringifier.__call__	__call__(self, *args, **kwargs)	todo		
-Lib/annotationlib.py	511	512	_Stringifier.__iter__	__iter__(self)	todo		
-Lib/annotationlib.py	514	517	_Stringifier.__repr__	__repr__(self)	todo		
-Lib/annotationlib.py	519	520	_Stringifier.__format__	__format__(self, format_spec)	todo		candidates:coll-userstring-format-spec
-Lib/annotationlib.py	522	529	_Stringifier._make_binop	_make_binop(op: ast.AST)	todo		
-Lib/annotationlib.py	547	554	_Stringifier._make_rbinop	_make_rbinop(op: ast.AST)	todo		
-Lib/annotationlib.py	572	584	_Stringifier._make_compare	_make_compare(op)	todo		
-Lib/annotationlib.py	595	599	_Stringifier._make_unary_op	_make_unary_op(op)	todo		
-Lib/annotationlib.py	608	626	_template_to_ast_constructor	_template_to_ast_constructor(template)	todo		
-Lib/annotationlib.py	629	648	_template_to_ast_literal	_template_to_ast_literal(template, parsed)	todo		
-Lib/annotationlib.py	651	669	_template_to_ast	_template_to_ast(template)	todo		
-Lib/annotationlib.py	673	681	_StringifierDict.__init__	__init__(self, namespace, *, globals=None, owner=None, is_class=False, format)	todo		
-Lib/annotationlib.py	683	692	_StringifierDict.__missing__	__missing__(self, key)	todo		
-Lib/annotationlib.py	694	702	_StringifierDict.transmogrify	transmogrify(self, cell_dict)	todo		
-Lib/annotationlib.py	704	707	_StringifierDict.create_unique_name	create_unique_name(self)	todo		
-Lib/annotationlib.py	710	715	call_evaluate_function	call_evaluate_function(evaluate, format, *, owner=None)	todo		
-Lib/annotationlib.py	718	871	call_annotate_function	call_annotate_function(annotate, format, *, owner=None, _is_evaluate=False)	todo		
-Lib/annotationlib.py	874	901	_build_closure	_build_closure(annotate, owner, is_class, stringifier_dict, *, allow_evaluation)	todo		
-Lib/annotationlib.py	904	913	_stringify_single	_stringify_single(anno)	todo		
-Lib/annotationlib.py	916	925	get_annotate_from_class_namespace	get_annotate_from_class_namespace(obj)	todo		
-Lib/annotationlib.py	928	1104	get_annotations	get_annotations(obj, *, globals=None, locals=None, eval_str=False, format=Format.VALUE)	todo		
-Lib/annotationlib.py	1107	1124	type_repr	type_repr(value)	todo		
-Lib/annotationlib.py	1127	1135	annotations_to_string	annotations_to_string(annotations)	todo		
-Lib/annotationlib.py	1138	1145	_rewrite_star_unpack	_rewrite_star_unpack(arg)	todo		
-Lib/annotationlib.py	1148	1159	_get_and_call_annotate	_get_and_call_annotate(obj, format)	todo		
-Lib/annotationlib.py	1165	1186	_get_dunder_annotations	_get_dunder_annotations(obj)	todo		
-Lib/annotationlib.py	1191	1192	_ExtraNameFixer.__init__	__init__(self, extra_names)	todo		
-Lib/annotationlib.py	1194	1197	_ExtraNameFixer.visit_Name	visit_Name(self, node: ast.Name)	todo		
+Lib/annotationlib.py	103	242	ForwardRef.evaluate	evaluate(self, *, globals=None, locals=None, type_params=None, owner=None, format=Format.VALUE)	todo		changed-in-3.15:
+Lib/annotationlib.py	244	265	ForwardRef._evaluate	_evaluate(self, globalns, localns, type_params=_sentinel, *, recursive_guard)	todo		
+Lib/annotationlib.py	268	276	ForwardRef.__forward_arg__	__forward_arg__(self)	todo		
+Lib/annotationlib.py	279	294	ForwardRef.__resolved_str__	__resolved_str__(self)	todo		
+Lib/annotationlib.py	297	305	ForwardRef.__forward_code__	__forward_code__(self)	todo		
+Lib/annotationlib.py	307	329	ForwardRef.__eq__	__eq__(self, other)	todo		
+Lib/annotationlib.py	331	343	ForwardRef.__hash__	__hash__(self)	todo		
+Lib/annotationlib.py	345	346	ForwardRef.__or__	__or__(self, other)	todo		
+Lib/annotationlib.py	348	349	ForwardRef.__ror__	__ror__(self, other)	todo		
+Lib/annotationlib.py	351	359	ForwardRef.__repr__	__repr__(self)	todo		
+Lib/annotationlib.py	370	395	_Stringifier.__init__	__init__(self, node, globals=None, owner=None, is_class=False, cell=None, *, stringifier_dict, extra_names=None)	todo		
+Lib/annotationlib.py	397	438	_Stringifier.__convert_to_ast	__convert_to_ast(self, other)	todo		
+Lib/annotationlib.py	440	458	_Stringifier.__convert_to_ast_getitem	__convert_to_ast_getitem(self, other)	todo		
+Lib/annotationlib.py	460	464	_Stringifier.__get_ast	__get_ast(self)	todo		
+Lib/annotationlib.py	466	481	_Stringifier.__make_new	__make_new(self, node, extra_names=None)	todo		
+Lib/annotationlib.py	485	486	_Stringifier.__hash__	__hash__(self)	todo		
+Lib/annotationlib.py	488	505	_Stringifier.__getitem__	__getitem__(self, other)	todo		
+Lib/annotationlib.py	507	508	_Stringifier.__getattr__	__getattr__(self, attr)	todo		candidates:calstat-calendar-module-getattr
+Lib/annotationlib.py	510	524	_Stringifier.__call__	__call__(self, *args, **kwargs)	todo		
+Lib/annotationlib.py	526	527	_Stringifier.__iter__	__iter__(self)	todo		
+Lib/annotationlib.py	529	532	_Stringifier.__repr__	__repr__(self)	todo		
+Lib/annotationlib.py	534	535	_Stringifier.__format__	__format__(self, format_spec)	todo		candidates:coll-userstring-format-spec
+Lib/annotationlib.py	537	544	_Stringifier._make_binop	_make_binop(op: ast.AST)	todo		
+Lib/annotationlib.py	562	569	_Stringifier._make_rbinop	_make_rbinop(op: ast.AST)	todo		
+Lib/annotationlib.py	587	599	_Stringifier._make_compare	_make_compare(op)	todo		
+Lib/annotationlib.py	610	614	_Stringifier._make_unary_op	_make_unary_op(op)	todo		
+Lib/annotationlib.py	623	641	_template_to_ast_constructor	_template_to_ast_constructor(template)	todo		
+Lib/annotationlib.py	644	663	_template_to_ast_literal	_template_to_ast_literal(template, parsed)	todo		
+Lib/annotationlib.py	666	684	_template_to_ast	_template_to_ast(template)	todo		
+Lib/annotationlib.py	688	696	_StringifierDict.__init__	__init__(self, namespace, *, globals=None, owner=None, is_class=False, format)	todo		
+Lib/annotationlib.py	698	707	_StringifierDict.__missing__	__missing__(self, key)	todo		
+Lib/annotationlib.py	709	717	_StringifierDict.transmogrify	transmogrify(self, cell_dict)	todo		
+Lib/annotationlib.py	719	722	_StringifierDict.create_unique_name	create_unique_name(self)	todo		
+Lib/annotationlib.py	725	730	call_evaluate_function	call_evaluate_function(evaluate, format, *, owner=None)	todo		
+Lib/annotationlib.py	733	886	call_annotate_function	call_annotate_function(annotate, format, *, owner=None, _is_evaluate=False)	todo		
+Lib/annotationlib.py	889	916	_build_closure	_build_closure(annotate, owner, is_class, stringifier_dict, *, allow_evaluation)	todo		
+Lib/annotationlib.py	919	928	_stringify_single	_stringify_single(anno)	todo		
+Lib/annotationlib.py	931	940	get_annotate_from_class_namespace	get_annotate_from_class_namespace(obj)	todo		
+Lib/annotationlib.py	943	1119	get_annotations	get_annotations(obj, *, globals=None, locals=None, eval_str=False, format=Format.VALUE)	todo		
+Lib/annotationlib.py	1122	1147	type_repr	type_repr(value)	todo		changed-in-3.15:
+Lib/annotationlib.py	1150	1158	annotations_to_string	annotations_to_string(annotations)	todo		
+Lib/annotationlib.py	1161	1168	_rewrite_star_unpack	_rewrite_star_unpack(arg)	todo		
+Lib/annotationlib.py	1171	1182	_get_and_call_annotate	_get_and_call_annotate(obj, format)	todo		
+Lib/annotationlib.py	1188	1209	_get_dunder_annotations	_get_dunder_annotations(obj)	todo		
+Lib/annotationlib.py	1214	1215	_ExtraNameFixer.__init__	__init__(self, extra_names)	todo		
+Lib/annotationlib.py	1217	1220	_ExtraNameFixer.visit_Name	visit_Name(self, node: ast.Name)	todo		

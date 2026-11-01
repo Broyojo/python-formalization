@@ -1,4 +1,9 @@
 file	line	endline	name	signature	status	entry	note
-Modules/_testcapi/import.c	6	16	pyimport_importmoduleattr	pyimport_importmoduleattr(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/import.c	21	30	pyimport_importmoduleattrstring	pyimport_importmoduleattrstring(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/import.c	40	43	_PyTestCapi_Init_Import	_PyTestCapi_Init_Import(PyObject *m)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/import.c	5	23	pyimport_lazyimportwithoutframe	pyimport_lazyimportwithoutframe(PyObject *self, PyObject *name)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/import.c	27	37	pyimport_importmoduleattr	pyimport_importmoduleattr(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/import.c	42	51	pyimport_importmoduleattrstring	pyimport_importmoduleattrstring(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/import.c	55	71	pyimport_setlazyimportsmode	pyimport_setlazyimportsmode(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/import.c	74	85	pyimport_getlazyimportsmode	pyimport_getlazyimportsmode(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/import.c	88	100	pyimport_setlazyimportsfilter	pyimport_setlazyimportsfilter(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/import.c	103	110	pyimport_getlazyimportsfilter	pyimport_getlazyimportsfilter(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/import.c	124	127	_PyTestCapi_Init_Import	_PyTestCapi_Init_Import(PyObject *m)	excluded		test-support: only for CPython's own tests

@@ -4,18 +4,18 @@ Lib/venv/__init__.py	64	92	EnvBuilder.create	create(self, env_dir)	excluded		pla
 Lib/venv/__init__.py	94	100	EnvBuilder.clear_directory	clear_directory(self, path)	excluded		platform: installs pip and creates environments
 Lib/venv/__init__.py	102	107	EnvBuilder._venv_path	_venv_path(self, env_dir, name)	excluded		platform: installs pip and creates environments
 Lib/venv/__init__.py	110	134	EnvBuilder._same_path	_same_path(cls, path1, path2)	excluded		platform: installs pip and creates environments
-Lib/venv/__init__.py	136	218	EnvBuilder.ensure_directories	ensure_directories(self, env_dir)	excluded		platform: installs pip and creates environments
-Lib/venv/__init__.py	220	264	EnvBuilder.create_configuration	create_configuration(self, context)	excluded		platform: installs pip and creates environments
-Lib/venv/__init__.py	266	286	EnvBuilder.symlink_or_copy	symlink_or_copy(self, src, dst, relative_symlinks_ok=False)	excluded		platform: installs pip and creates environments
-Lib/venv/__init__.py	288	299	EnvBuilder.create_git_ignore_file	create_git_ignore_file(self, context)	excluded		platform: installs pip and creates environments
-Lib/venv/__init__.py	302	327	EnvBuilder.setup_python	setup_python(self, context)	excluded		platform: installs pip and creates environments
-Lib/venv/__init__.py	330	439	EnvBuilder.setup_python	setup_python(self, context)	excluded		platform: installs pip and creates environments
-Lib/venv/__init__.py	441	454	EnvBuilder._call_new_python	_call_new_python(self, context, *py_args, **kwargs)	excluded		platform: installs pip and creates environments
-Lib/venv/__init__.py	456	459	EnvBuilder._setup_pip	_setup_pip(self, context)	excluded		platform: installs pip and creates environments
-Lib/venv/__init__.py	461	474	EnvBuilder.setup_scripts	setup_scripts(self, context)	excluded		platform: installs pip and creates environments
-Lib/venv/__init__.py	476	484	EnvBuilder.post_setup	post_setup(self, context)	excluded		platform: installs pip and creates environments
-Lib/venv/__init__.py	486	532	EnvBuilder.replace_variables	replace_variables(self, text, context)	excluded		platform: installs pip and creates environments
-Lib/venv/__init__.py	534	595	EnvBuilder.install_scripts	install_scripts(self, context, path)	excluded		platform: installs pip and creates environments
-Lib/venv/__init__.py	597	602	EnvBuilder.upgrade_dependencies	upgrade_dependencies(self, context)	excluded		platform: installs pip and creates environments
-Lib/venv/__init__.py	605	613	create	create(env_dir, system_site_packages=False, clear=False, symlinks=False, with_pip=False, prompt=None, upgrade_deps=False, *, scm_ignore_files=frozenset())	excluded		platform: installs pip and creates environments
-Lib/venv/__init__.py	616	690	main	main(args=None)	excluded		platform: installs pip and creates environments
+Lib/venv/__init__.py	136	215	EnvBuilder.ensure_directories	ensure_directories(self, env_dir)	excluded		platform: installs pip and creates environments
+Lib/venv/__init__.py	217	261	EnvBuilder.create_configuration	create_configuration(self, context)	excluded		platform: installs pip and creates environments
+Lib/venv/__init__.py	263	283	EnvBuilder.symlink_or_copy	symlink_or_copy(self, src, dst, relative_symlinks_ok=False)	excluded		platform: installs pip and creates environments
+Lib/venv/__init__.py	285	296	EnvBuilder.create_git_ignore_file	create_git_ignore_file(self, context)	excluded		platform: installs pip and creates environments
+Lib/venv/__init__.py	299	320	EnvBuilder.setup_python	setup_python(self, context)	excluded		platform: installs pip and creates environments
+Lib/venv/__init__.py	323	435	EnvBuilder.setup_python	setup_python(self, context)	excluded		platform: installs pip and creates environments
+Lib/venv/__init__.py	437	450	EnvBuilder._call_new_python	_call_new_python(self, context, *py_args, **kwargs)	excluded		platform: installs pip and creates environments
+Lib/venv/__init__.py	452	455	EnvBuilder._setup_pip	_setup_pip(self, context)	excluded		platform: installs pip and creates environments
+Lib/venv/__init__.py	457	470	EnvBuilder.setup_scripts	setup_scripts(self, context)	excluded		platform: installs pip and creates environments
+Lib/venv/__init__.py	472	480	EnvBuilder.post_setup	post_setup(self, context)	excluded		platform: installs pip and creates environments
+Lib/venv/__init__.py	482	528	EnvBuilder.replace_variables	replace_variables(self, text, context)	excluded		platform: installs pip and creates environments
+Lib/venv/__init__.py	530	591	EnvBuilder.install_scripts	install_scripts(self, context, path)	excluded		platform: installs pip and creates environments
+Lib/venv/__init__.py	593	598	EnvBuilder.upgrade_dependencies	upgrade_dependencies(self, context)	excluded		platform: installs pip and creates environments
+Lib/venv/__init__.py	601	609	create	create(env_dir, system_site_packages=False, clear=False, symlinks=False, with_pip=False, prompt=None, upgrade_deps=False, *, scm_ignore_files=frozenset())	excluded		platform: installs pip and creates environments
+Lib/venv/__init__.py	612	685	main	main(args=None)	excluded		platform: installs pip and creates environments

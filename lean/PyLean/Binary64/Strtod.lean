@@ -10,13 +10,13 @@ The `goto`s become a small exit type.
 
 namespace PyLean.Binary64
 
-/-- `tens[i]`, dtoa.c:1103-1108: exact for `i ≤ 22`. -/
+/-- `tens[i]`, dtoa.c:1105-1110: exact for `i ≤ 22`. -/
 def tens (i : Nat) : F64 := F64.ofInt (10 ^ i)
 
-/-- `bigtens`, dtoa.c:1110-1111. -/
+/-- `bigtens`, dtoa.c:1112-1113. -/
 def bigtens (j : Nat) : F64 := F64.ofInt (10 ^ (16 * 2 ^ j))
 
-/-- `tinytens`, dtoa.c:1112-1115. -/
+/-- `tinytens`, dtoa.c:1114-1117. -/
 def tinytens (j : Nat) : F64 :=
   if j < 4 then F64.ofRat (mkRat 1 (10 ^ (16 * 2 ^ j)))
   else F64.mul (F64.ofInt (2 ^ 53)) (F64.ofRat (mkRat (2 ^ 53) (10 ^ 256)))
@@ -38,11 +38,11 @@ structure Parsed where
   se : Nat
   deriving DecidableEq, Repr
 
-/-- The exponent digits, with `abs_exp` wrapping in 32 bits, dtoa.c:1492-1496. -/
+/-- The exponent digits, with `abs_exp` wrapping in 32 bits, dtoa.c:1494-1498. -/
 def expDigits (s : List Nat) (i stop : Nat) : Nat :=
   (List.range (stop - i)).foldl (fun acc k => (10 * acc + (at_ s (i + k) - 48)) % 2 ^ 32) 0
 
-/-- The parsing half of `_Py_dg_strtod`, dtoa.c:1402-1520. `none` is `parse_error`,
+/-- The parsing half of `_Py_dg_strtod`, dtoa.c:1404-1522. `none` is `parse_error`,
 which also sets `*se = s00`. -/
 def strtodParse (s : List Nat) (s00 : Nat) : Option Parsed := do
   let c0 := at_ s s00
@@ -97,8 +97,8 @@ def sigChar (s : List Nat) (s0 : Nat) (nd0 : Int) (i : Nat) : Nat :=
 def sigDig (s : List Nat) (s0 : Nat) (nd0 : Int) (i : Nat) : Nat :=
   sigChar s s0 nd0 i - 48
 
-/-- `for (i = n; i > 0; ) { --i; if (dig != '0') { ++i; break; } }`, dtoa.c:1526-1532
-and :1704-1712. -/
+/-- `for (i = n; i > 0; ) { --i; if (dig != '0') { ++i; break; } }`, dtoa.c:1528-1534
+and :1706-1714. -/
 def stripZeros (s : List Nat) (s0 : Nat) (nd0 : Int) : Nat → Nat
   | 0 => 0
   | i + 1 => if sigChar s s0 nd0 i != 48 then i + 1 else stripZeros s s0 nd0 i
@@ -110,7 +110,7 @@ inductive StrtodExit where
   | ovfl
   deriving DecidableEq, Repr
 
-/-- `rv * 10 ** e1` for `e1 > 0`, dtoa.c:1622-1647. -/
+/-- `rv * 10 ** e1` for `e1 > 0`, dtoa.c:1624-1649. -/
 def scaleUp (rv0 : F64) (e1 : Nat) : Except StrtodExit F64 := do
   let i := e1 &&& 15
   let rv1 := if i != 0 then F64.mul rv0 (tens i) else rv0
@@ -130,7 +130,7 @@ def scaleUp (rv0 : F64) (e1 : Nat) : Except StrtodExit F64 := do
   if Exp_msk1 * (1024 + Bias - 1 - P) < z then return mkWords Big0 Big1
   return setWord0 rv4 (word0 rv4 + P * Exp_msk1)
 
-/-- `rv * 10 ** -e1` for `e1 > 0`, dtoa.c:1659-1685: the result and `bc.scale`. -/
+/-- `rv * 10 ** -e1` for `e1 > 0`, dtoa.c:1661-1687: the result and `bc.scale`. -/
 def scaleDown (rv0 : F64) (e0 : Nat) : Except StrtodExit (F64 × Nat) := do
   let i := e0 &&& 15
   let rv1 := if i != 0 then F64.div rv0 (tens i) else rv0
@@ -153,7 +153,7 @@ def scaleDown (rv0 : F64) (e0 : Nat) : Except StrtodExit (F64 × Nat) := do
   if rv3.isZero then throw .undfl
   return (rv3, scale)
 
-/-- One pass of the digit comparison in `bigcomp`, dtoa.c:1354-1375. -/
+/-- One pass of the digit comparison in `bigcomp`, dtoa.c:1356-1377. -/
 def bigcompLoop (dig : Nat → Nat) (nd : Nat) (d : Bigint) : Nat → Nat → Bigint → Int
   | 0, _, _ => -1
   | fuel + 1, i, b0 =>
@@ -166,11 +166,11 @@ def bigcompLoop (dig : Nat → Nat) (nd : Nat) (d : Bigint) : Nat → Nat → Bi
     else if !(decide (i' < nd)) then -1
     else bigcompLoop dig nd d fuel i' b1
 
-/-- The last step of `bigcomp`, dtoa.c:1379-1380. -/
+/-- The last step of `bigcomp`, dtoa.c:1381-1382. -/
 def bigcompRound (rv : F64) (scale : Nat) (dd : Int) (odd : Bool) : F64 :=
   if 0 < dd || (dd == 0 && odd) then F64.add rv (sulp rv scale) else rv
 
-/-- `bigcomp`, dtoa.c:1274-1382. -/
+/-- `bigcomp`, dtoa.c:1276-1384. -/
 def bigcomp (rv : F64) (dig : Nat → Nat) (bc : BCinfo) : F64 :=
   let nd := bc.nd
   let p5 : Int := (nd : Int) + bc.e0
@@ -202,14 +202,14 @@ inductive Step where
   | exit (e : StrtodExit)
   deriving DecidableEq, Repr
 
-/-- `y` in `bc.scale && y <= 2*P*Exp_msk1 ? ... : 0xffffffff`, dtoa.c:1926-1930. -/
+/-- `y` in `bc.scale && y <= 2*P*Exp_msk1 ? ... : 0xffffffff`, dtoa.c:1928-1932. -/
 def word1Top (rv : F64) (scale : Nat) : Nat :=
   let y := word0 rv &&& Exp_mask
   if scale != 0 && decide (y ≤ 2 * P * Exp_msk1) then
     0xffffffff &&& ((0xffffffff * 2 ^ (2 * P + 1 - y / 2 ^ Exp_shift)) % 2 ^ 32)
   else 0xffffffff
 
-/-- `drop_down:`, dtoa.c:1941-1959. -/
+/-- `drop_down:`, dtoa.c:1943-1961. -/
 def dropDown (rv : F64) (scale nd bcnd : Nat) : Step :=
   let L := word0 rv &&& Exp_mask
   if scale != 0 && decide (L ≤ (2 * P + 1) * Exp_msk1) then
@@ -220,7 +220,7 @@ def dropDown (rv : F64) (scale nd bcnd : Nat) : Step :=
     let L' := L + 2 ^ 32 - Exp_msk1
     .brk (mkWords ((L' % 2 ^ 32) ||| Bndry_mask) 0xffffffff) bcnd
 
-/-- The adjustment after `ratio`, dtoa.c:1976-2061. -/
+/-- The adjustment after `ratio`, dtoa.c:1978-2063. -/
 def adjustStep (rv : F64) (scale nd bcnd : Nat) (dsign : Bool) (delta bs : Bigint) : Step :=
   let aadj0 := ratio delta bs
   let adjust (aadj aadj1 : F64) : Step :=
@@ -274,7 +274,7 @@ def adjustStep (rv : F64) (scale nd bcnd : Nat) (dsign : Bool) (delta bs : Bigin
     let a := F64.mul aadj0 dHalf
     adjust a (if dsign then a else a.neg)
 
-/-- One pass of the correction loop, dtoa.c:1742-2061. -/
+/-- One pass of the correction loop, dtoa.c:1744-2063. -/
 def strtodStep (bd0 : Bigint) (e : Int) (nd scale bcnd : Nat) (rv : F64) : Step :=
   let (bb0, bbe) := sd2b rv scale
   let odd := bb0.x0 % 2 == 1
@@ -297,7 +297,7 @@ def strtodStep (bd0 : Bigint) (e : Int) (nd scale bcnd : Nat) (rv : F64) : Step 
   let dsign := delta0.sign
   let delta : Bigint := { delta0 with sign := false }
   let i1 := cmp delta bs
-  -- dtoa.c:1868-1899
+  -- dtoa.c:1870-1901
   let early : Step ⊕ (Int × Nat) :=
     if nd < bcnd && i1 ≤ 0 then
       if dsign then .inl (.brk rv bcnd)
@@ -344,14 +344,14 @@ def strtodLoop (bd0 : Bigint) (e : Int) (nd scale : Nat) : Nat → Nat → F64 �
     | .cont rv' bcnd' => strtodLoop bd0 e nd scale fuel bcnd' rv'
     | st => st
 
-/-- The first 16 digits, dtoa.c:1576-1583: `y` from digits below 9, `z` from the
+/-- The first 16 digits, dtoa.c:1578-1585: `y` from digits below 9, `z` from the
 next seven. -/
 def firstDigits (dig : Nat → Nat) (nd : Nat) : Nat × Nat :=
   let n := min nd 16
   (List.range n).foldl (fun (st : Nat × Nat) i =>
     if i < 9 then (10 * st.1 + dig i, st.2) else (st.1, 10 * st.2 + dig i)) (0, 0)
 
-/-- The Clinger fast path, dtoa.c:1590-1615: `some rv` when it applies. -/
+/-- The Clinger fast path, dtoa.c:1592-1617: `some rv` when it applies. -/
 def strtodFast (rv : F64) (nd : Nat) (e : Int) : Option F64 :=
   if nd ≤ 15 then
     if e == 0 then some rv
@@ -366,7 +366,7 @@ def strtodFast (rv : F64) (nd : Nat) (e : Int) : Option F64 :=
     else none
   else none
 
-/-- `_Py_dg_strtod`, the numeric half, dtoa.c:1522-2074, before the sign goes on at
+/-- `_Py_dg_strtod`, the numeric half, dtoa.c:1524-2076, before the sign goes on at
 `ret:`, `undfl:` and `ovfl:`: `(|value|, errno == ERANGE)`. `none` means the model's
 loop fuel ran out. -/
 def strtodAbs (s : List Nat) (p : Parsed) : Option (F64 × Bool) :=
@@ -395,7 +395,7 @@ def strtodAbs (s : List Nat) (p : Parsed) : Option (F64 × Bool) :=
       | .error (.ret r) => some (r, false)
       | .ok (rv2, scale) =>
         let bcnd0 := nd
-        -- truncate to 18 digits for very long inputs, dtoa.c:1696-1724
+        -- truncate to 18 digits for very long inputs, dtoa.c:1698-1726
         let (ndT, nd0T, eT, yT) : Nat × Int × Int × Nat :=
           if STRTOD_DIGLIM < nd then
             let it := stripZeros s p.s0 nd0 18
@@ -423,11 +423,11 @@ def strtodAbs (s : List Nat) (p : Parsed) : Option (F64 × Bool) :=
             if scale != 0 then F64.mul rv4 (mkWords (Exp_1 - 2 * P * Exp_msk1) 0) else rv4
           some (rv5, false)
 
-/-- The sign goes on last, dtoa.c:2076, :2089 and :2097. -/
+/-- The sign goes on last, dtoa.c:2078, :2091 and :2099. -/
 def strtodValue (s : List Nat) (p : Parsed) : Option (F64 × Bool) :=
   (strtodAbs s p).map fun r => (if p.sign then r.1.neg else r.1, r.2)
 
-/-- `_Py_dg_strtod`, dtoa.c:1385-2108: value, `*se`, and whether `errno` is
+/-- `_Py_dg_strtod`, dtoa.c:1387-2110: value, `*se`, and whether `errno` is
 `ERANGE`. `none` means the model's fuel ran out. -/
 def _Py_dg_strtod (s : List Nat) (s00 : Nat) : Option (F64 × Nat × Bool) :=
   match strtodParse s s00 with

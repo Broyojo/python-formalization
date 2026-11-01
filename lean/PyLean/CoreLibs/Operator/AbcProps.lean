@@ -14,7 +14,7 @@ theorem put_get (s : AbcState) (c : Nat) (d : AbcData) : (s.put c d).get c = d :
 theorem addCache_mem (s : AbcState) (c sub : Nat) : sub ∈ ((addCache s c sub).get c).cache := by
   simp [addCache, put_get]
 
-/-- `issubclass(sub, cls)` on an ABC, in the order of Modules/_abc.c:705-842: the positive cache answers true with
+/-- `issubclass(sub, cls)` on an ABC, in the order of Modules/_abc.c:717-854: the positive cache answers true with
 no hook, whatever the world says now; a valid negative cache answers false with no hook; then
 `__subclasshook__`, whose exception propagates with no cache written, whose `True` and `False` are final and
 cached, and whose other results are an `AssertionError`; then a real subclass. -/

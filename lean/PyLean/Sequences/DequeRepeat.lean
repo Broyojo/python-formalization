@@ -218,7 +218,7 @@ theorem dequeIRepeatChecked_proven : DequeIRepeatChecked := by
     rw [length_rep, Int.natCast_mul, hlen, show ((k.toNat : Nat) : Int) = k by omega, Int.mul_comm]
     exact hmk
 
-/-- `l *= n` and `l * n` (note (2) of Doc/library/stdtypes.rst:1263-1275 and
+/-- `l *= n` and `l * n` (note (2) of Doc/library/stdtypes.rst@3.14.7:1263-1275 and
 the `s * n` row of the common-sequence table): for every list of ints and
 every int `n`: outside `Py_ssize_t` both raise `OverflowError`; `n <= 0`
 gives `[]`; otherwise the result is `l` repeated `n` times, and `MemoryError`
@@ -279,7 +279,7 @@ theorem listRepeat_proven : ListRepeat := by
 /-- `d.copy()`, `d + other`: for every deque (type invariant `WF`) and every other
 deque, `copy()` has the same items, `maxlen` and type, and `d + other` holds the last
 `d.maxlen` items of `list(d) + list(other)` with `d`'s `maxlen` and type
-(Doc/library/collections.rst:503-507, 599-600); all results keep the invariant.
+(Doc/library/collections.rst:507-511, 599-600); all results keep the invariant.
 `__copy__` is the same function. -/
 def DequeCopyConcat : Prop :=
   ∀ (α : Type) [Inhabited α] (d : Deque α), d.WF → ∀ (other : Deque α),

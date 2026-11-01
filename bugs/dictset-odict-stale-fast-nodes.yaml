@@ -62,15 +62,15 @@ promised_by: |
   Invariant: no crash, no hang. Objects/odictobject.c:3-4: "necessarily explicitly equivalent to
   the pure Python OrderedDict", where the same calls raise KeyError and never loop.
 cause: |
-  Objects/odictobject.c:549-551 returns keys->dk_nentries for DKIX_EMPTY; it was correct as "index
+  Objects/odictobject.c:548-550 returns keys->dk_nentries for DKIX_EMPTY; it was correct as "index
   of new entry" only while nothing but odict code shrinks dk_nentries, and dict_popitem_impl does
-  (Objects/dictobject.c:4675). _odict_find_node_hash (:631) and _odict_find_node (:650) trust
+  (Objects/dictobject.c:5041). _odict_find_node_hash (:669) and _odict_find_node (:688) trust
   od_fast_nodes[index] without checking that the node's key is the key looked up.
-  :1096-1099 `if (_PyDict_Pop_KnownHash(...) == 0) value = Py_NewRef(failobj);` with failobj NULL
-  from OrderedDict_popitem_impl (:1171) or OrderedDict_pop_impl with no default.
-  :1767-1785 advances from whichever node that lookup returned.
+  :1176-1179 `if (_PyDict_Pop_KnownHash(...) == 0) value = Py_NewRef(failobj);` with failobj NULL
+  from OrderedDict_popitem_impl (:1251) or OrderedDict_pop_impl with no default.
+  :1847-1865 advances from whichever node that lookup returned.
 possible_fix: |
-  Crash: test failobj at :1098 and raise KeyError, which is what open PR gh-154818 does.
+  Crash: test failobj at :1178 and raise KeyError, which is what open PR gh-154818 does.
   Hang: _odict_find_node* could return NULL when ix == DKIX_EMPTY instead of consulting
   od_fast_nodes; _odict_add_new_node, the one caller that wants the "new entry" index, can keep
   using _odict_get_index directly. That also closes the stale-node path behind the crash.

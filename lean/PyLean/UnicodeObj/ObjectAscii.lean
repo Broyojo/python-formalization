@@ -1,7 +1,7 @@
 import PyLean.UnicodeObj.ObjectUtf8Writer
 
 /-!
-`PyUnicode_DecodeASCII` as C writes it, unicodeobject.c:7578-7675: the fast paths, the writer, and the
+`PyUnicode_DecodeASCII` as C writes it, unicodeobject.c:7452-7549: the fast paths, the writer, and the
 three handlers written out inside the loop. `asciiDecodeX` goes through `handlerStep` for all of them.
 
 `AsciiDecodeSpec` is that the two are the same decoder, and that the kind of the result is canonical.
@@ -14,7 +14,7 @@ namespace PyLean.UnicodeObj
 
 open PyLean
 
-/-- The `while (s < e)` of `PyUnicode_DecodeASCII`, unicodeobject.c:7616-7665. -/
+/-- The `while (s < e)` of `PyUnicode_DecodeASCII`, unicodeobject.c:7490-7539. -/
 def asciiLoopC (H : DH) : Nat → Bytes → List DecView → Nat → List Nat → UWriter → Py UWriter
   | 0, _, _, _, _, _ => .error .modelFuel
   | _ + 1, _, _, _, [], w => .ok w
@@ -201,7 +201,7 @@ theorem asciiDriver_skip (H : DH) (input : Bytes) (hist : List DecView) (pre : B
     rw [e2]
     simp
 
-/-- `PyUnicode_DecodeASCII`, unicodeobject.c:7578-7675. The inline `replace`, `surrogateescape` and
+/-- `PyUnicode_DecodeASCII`, unicodeobject.c:7452-7549. The inline `replace`, `surrogateescape` and
 `ignore` do what the registered handlers do, the two fast paths and `ascii_decode` change nothing,
 and the kind of the result is canonical, for every handler, including one that rewinds or replaces
 the object.

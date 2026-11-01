@@ -1,14 +1,15 @@
 file	line	endline	name	signature	status	entry	note
-Lib/dbm/sqlite3.py	28	33	_normalize_uri	_normalize_uri(path)	todo		
-Lib/dbm/sqlite3.py	38	77	_Database.__init__	__init__(self, path, /, *, flag, mode)	todo		
-Lib/dbm/sqlite3.py	79	85	_Database._execute	_execute(self, *args, **kwargs)	todo		
-Lib/dbm/sqlite3.py	87	90	_Database.__len__	__len__(self)	todo		
-Lib/dbm/sqlite3.py	92	97	_Database.__getitem__	__getitem__(self, key)	todo		
-Lib/dbm/sqlite3.py	99	100	_Database.__setitem__	__setitem__(self, key, value)	todo		
-Lib/dbm/sqlite3.py	102	105	_Database.__delitem__	__delitem__(self, key)	todo		
-Lib/dbm/sqlite3.py	107	113	_Database.__iter__	__iter__(self)	todo		
-Lib/dbm/sqlite3.py	115	118	_Database.close	close(self)	todo		
-Lib/dbm/sqlite3.py	120	121	_Database.keys	keys(self)	todo		
-Lib/dbm/sqlite3.py	123	124	_Database.__enter__	__enter__(self)	todo		
-Lib/dbm/sqlite3.py	126	127	_Database.__exit__	__exit__(self, *args)	todo		
-Lib/dbm/sqlite3.py	130	144	open	open(filename, /, flag='r', mode=438)	todo		
+Lib/dbm/sqlite3.py	29	34	_normalize_uri	_normalize_uri(path)	todo		
+Lib/dbm/sqlite3.py	39	78	_Database.__init__	__init__(self, path, /, *, flag, mode)	todo		
+Lib/dbm/sqlite3.py	80	86	_Database._execute	_execute(self, *args, **kwargs)	todo		
+Lib/dbm/sqlite3.py	88	91	_Database.__len__	__len__(self)	todo		
+Lib/dbm/sqlite3.py	93	98	_Database.__getitem__	__getitem__(self, key)	todo		
+Lib/dbm/sqlite3.py	100	101	_Database.__setitem__	__setitem__(self, key, value)	todo		
+Lib/dbm/sqlite3.py	103	106	_Database.__delitem__	__delitem__(self, key)	todo		
+Lib/dbm/sqlite3.py	108	114	_Database.__iter__	__iter__(self)	todo		
+Lib/dbm/sqlite3.py	116	119	_Database.close	close(self)	todo		
+Lib/dbm/sqlite3.py	121	122	_Database.keys	keys(self)	todo		
+Lib/dbm/sqlite3.py	124	125	_Database.__enter__	__enter__(self)	todo		
+Lib/dbm/sqlite3.py	127	128	_Database.__exit__	__exit__(self, *args)	todo		
+Lib/dbm/sqlite3.py	130	131	_Database.reorganize	reorganize(self)	todo		changed-in-3.15: new function
+Lib/dbm/sqlite3.py	134	148	open	open(filename, /, flag='r', mode=438)	todo		

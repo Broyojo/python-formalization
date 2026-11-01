@@ -537,7 +537,7 @@ theorem countLoop_pure (E : ElemOps α ρ) (o : LObj α) (v : α)
 
 /-- `list.count` and `tuple.count` agree, for every element type and comparison
 (which may raise), when the comparison does not change the list. The explicit
-`obj == value` test of `list_count_impl` (listobject.c:3334) is the same as the
+`obj == value` test of `list_count_impl` (listobject.c:3397) is the same as the
 shortcut inside `PyObject_RichCompareBool`, which `tuple_count_impl` relies on. -/
 def CountAgree : Prop :=
   ∀ (α ρ : Type) (E : ElemOps α ρ) (o : LObj α) (v : α) (fuel : Nat),

@@ -2,7 +2,7 @@ import PyLean.TypeObj.TypeNew
 
 /-!
 `object.__getstate__`, `object.__reduce__` and `object.__reduce_ex__`,
-`Objects/typeobject.c:7286-7835`, with the parts of `Lib/copyreg.py` they call.
+`Objects/typeobject.c:7912-8461`, with the parts of `Lib/copyreg.py` they call.
 
 `copyreg` is Python code, so the mirror of it goes through `Rt` wherever the source does attribute
 access, a call or a truth test: a metaclass `__getattribute__` or a raising `__getstate__` acts
@@ -16,7 +16,7 @@ namespace PyLean.TypeObj
 def copyregFunc (n : Name) : M Val :=
   alloc B.function (.func { name := n, qualname := n, module := .str "copyreg", code := 1000000 })
 
-/-- The `__dict__` of an object, `PyObject_GenericGetDict`, `Objects/dictobject.c:7607`. -/
+/-- The `__dict__` of an object, `PyObject_GenericGetDict`, `Objects/dictobject.c:8058`. -/
 def genericGetDict (obj : Val) : M Val := do
   let w ← getW
   if hasDictPtr w obj then
@@ -24,7 +24,7 @@ def genericGetDict (obj : Val) : M Val := do
     pure (.obj d)
   else attrErr "This object has no __dict__"
 
-/-- `_PyObject_IsInstanceDictEmpty`, `Objects/dictobject.c:7216`. -/
+/-- `_PyObject_IsInstanceDictEmpty`, `Objects/dictobject.c:7670`. -/
 def instanceDictEmpty (w : World) (obj : Val) : Bool :=
   if (tdata w (typeOf w obj)).dictoffset == 0 then true
   else
@@ -91,7 +91,7 @@ def copyregSlotnames (rt : Rt) (cls : Addr) : M Val := do
   exceptAll (rt.setAttr (.obj cls) "__slotnames__" (some l))
   pure l
 
-/-- `_PyType_GetSlotNames`, `Objects/typeobject.c:7304`. -/
+/-- `_PyType_GetSlotNames`, `Objects/typeobject.c:7930`. -/
 def typeGetSlotNames (rt : Rt) (cls : Addr) : M Val := do
   let w ← getW
   match NameDict.get? (tdata w cls).dict "__slotnames__" with
@@ -104,7 +104,7 @@ def typeGetSlotNames (rt : Rt) (cls : Addr) : M Val := do
     if s.is .none || (listOf w s).isSome then pure s
     else typeErr "copyreg._slotnames didn't return a list or None"
 
-/-- One round of the loop of `object_getstate_default`, `Objects/typeobject.c:7420-7436`. -/
+/-- One round of the loop of `object_getstate_default`, `Objects/typeobject.c:8046-8062`. -/
 def getstateSlotStep (rt : Rt) (obj names : Val) (slots : Addr) (i : Nat) : M Unit := do
   let w ← getW
   let name := ((listOf w names).getD [])[i]?.getD .none
@@ -115,8 +115,8 @@ def getstateSlotStep (rt : Rt) (obj names : Val) (slots : Addr) (i : Nat) : M Un
   | none => pure ()
   | some v => dictSetAt rt slots name v
 
-/-- The loop of `object_getstate_default`, `Objects/typeobject.c:7417-7454`. The list lives on the
-class, so a getter can change it, which `:7440` catches. -/
+/-- The loop of `object_getstate_default`, `Objects/typeobject.c:8043-8080`. The list lives on the
+class, so a getter can change it, which `:8066` catches. -/
 def getstateSlotsLoop (rt : Rt) (obj names : Val) (size : Nat) (slots : Addr) :
     Nat → Nat → M Unit
   | 0, _ => raise .fuel
@@ -128,7 +128,7 @@ def getstateSlotsLoop (rt : Rt) (obj names : Val) (size : Nat) (slots : Addr) :
       runtimeErr "__slotnames__ changed size during iteration"
     getstateSlotsLoop rt obj names size slots fuel (i + 1)
 
-/-- `object_getstate_default`, `Objects/typeobject.c:7353`. `required` is the pickling check on
+/-- `object_getstate_default`, `Objects/typeobject.c:7979`. `required` is the pickling check on
 objects that hold more than their `__dict__` and slots. -/
 def objectGetstateDefault (rt : Rt) (obj : Val) (required : Bool) : M Val := do
   let w ← getW
@@ -147,7 +147,7 @@ def objectGetstateDefault (rt : Rt) (obj : Val) (required : Bool) : M Val := do
   let w ← getW
   let count := ((listOf w names).getD []).length
   if required then
-    -- `:7383-7395`: a dict held in the object and a weakref list count as expected, and each slot
+    -- `:8009-8021`: a dict held in the object and a weakref list count as expected, and each slot
     -- as a pointer. `tp_dictoffset` is -1 for a managed dict, which takes no room.
     let base : Int := (tdata w B.object).basicsize
     let base := if d.dictoffset != 0 && d.dictoffset != -1 then base + 8 else base
@@ -163,7 +163,7 @@ def objectGetstateDefault (rt : Rt) (obj : Val) (required : Bool) : M Val := do
     else pure (.tuple [state, .obj slots])
   else pure state
 
-/-- `object_getstate`, `Objects/typeobject.c:7478`: `__getstate__` is looked up on the object, and
+/-- `object_getstate`, `Objects/typeobject.c:8104`: `__getstate__` is looked up on the object, and
 only `object`'s own, bound to this object, gets the `required` argument. -/
 def objectGetstate (rt : Rt) (obj : Val) (required : Bool) : M Val := do
   let g ← rt.getAttr obj "__getstate__"
@@ -173,7 +173,7 @@ def objectGetstate (rt : Rt) (obj : Val) (required : Bool) : M Val := do
     if s.is obj then objectGetstateDefault rt obj required else rt.call g [] []
   | _ => rt.call g [] []
 
-/-- The two outcomes of `__getnewargs_ex__`, checked as `Objects/typeobject.c:7538-7574` does. -/
+/-- The two outcomes of `__getnewargs_ex__`, checked as `Objects/typeobject.c:8164-8200` does. -/
 def checkNewargsEx (newargs : Val) : M (Val × Val) := do
   let w ← getW
   match tupleOf w newargs with
@@ -188,7 +188,7 @@ def checkNewargsEx (newargs : Val) : M (Val × Val) := do
   | some xs =>
     valueErr s!"__getnewargs_ex__ should return a tuple of length 2, not {xs.length}"
 
-/-- `_PyObject_GetNewArguments`, `Objects/typeobject.c:7520`. -/
+/-- `_PyObject_GetNewArguments`, `Objects/typeobject.c:8146`. -/
 def getNewArguments (rt : Rt) (obj : Val) : M (Option Val × Option Val) := do
   match ← lookupSpecial rt obj "__getnewargs_ex__" with
   | some m =>
@@ -205,7 +205,7 @@ def getNewArguments (rt : Rt) (obj : Val) : M (Option Val × Option Val) := do
       pure (some a, none)
     | none => pure (none, none)
 
-/-- `_PyObject_GetItemsIter`, `Objects/typeobject.c:7612`. -/
+/-- `_PyObject_GetItemsIter`, `Objects/typeobject.c:8238`. -/
 def getItemsIter (rt : Rt) (obj : Val) : M (Val × Val) := do
   let w ← getW
   let l ← if (listOf w obj).isSome then rt.getIter obj else pure .none
@@ -217,7 +217,7 @@ def getItemsIter (rt : Rt) (obj : Val) : M (Val × Val) := do
     else pure .none
   pure (l, d)
 
-/-- `reduce_newobj`, `Objects/typeobject.c:7652`. -/
+/-- `reduce_newobj`, `Objects/typeobject.c:8278`. -/
 def reduceNewobj (rt : Rt) (obj : Val) : M Val := do
   let w ← getW
   let cls := Val.obj (typeOf w obj)
@@ -302,11 +302,11 @@ def copyregReduceEx (rt : Rt) (self : Val) (proto : Int) : M Val := do
   if ← rt.isTrue dict then pure (.tuple [f, args, dict])
   else pure (.tuple [f, args])
 
-/-- `_common_reduce`, `Objects/typeobject.c:7764`. -/
+/-- `_common_reduce`, `Objects/typeobject.c:8390`. -/
 def commonReduce (rt : Rt) (self : Val) (proto : Int) : M Val :=
   if proto ≥ 2 then reduceNewobj rt self else copyregReduceEx rt self proto
 
-/-- `object___reduce_ex___impl`, `Objects/typeobject.c:7804`: `__reduce__` is called only if the
+/-- `object___reduce_ex___impl`, `Objects/typeobject.c:8430`: `__reduce__` is called only if the
 type overrides it, which is told from `object`'s by identity. -/
 def objectReduceEx (rt : Rt) (self : Val) (proto : Int) : M Val := do
   match ← rt.getOptionalAttr self "__reduce__" with
@@ -320,8 +320,8 @@ def objectReduceEx (rt : Rt) (self : Val) (proto : Int) : M Val := do
       if clsreduce.is objreduce then commonReduce rt self proto else rt.call reduce [] []
     | none => gap%
 
-/-- `merge_class_dict`, `Objects/typeobject.c:6524`: the class's `__dict__`, then each base in the
-order of `__bases__`, recursively. A failed `PySequence_Size` is dropped (`:6555`). -/
+/-- `merge_class_dict`, `Objects/typeobject.c:7134`: the class's `__dict__`, then each base in the
+order of `__bases__`, recursively. A failed `PySequence_Size` is dropped (`:7165`). -/
 def mergeClassDict (rt : Rt) (d : Addr) : Nat → Val → M Unit
   | 0, _ => raise .fuel
   | fuel + 1, aclass => do
@@ -344,7 +344,7 @@ def dictKeysList (d : Addr) : M Val := do
   let w ← getW
   alloc B.list (.list ((dictEntries w d).map (·.1)))
 
-/-- `type___dir___impl`, `Objects/typeobject.c:6587`. -/
+/-- `type___dir___impl`, `Objects/typeobject.c:7197`. -/
 def typeDirImpl (rt : Rt) (self : Val) : M Val := do
   let d ← allocCell (.val { cls := B.dict, body := .dict [] })
   mergeClassDict rt d iterFuel self

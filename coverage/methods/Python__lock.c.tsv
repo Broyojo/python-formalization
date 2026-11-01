@@ -1,34 +1,35 @@
 file	line	endline	name	signature	status	entry	note
-Python/lock.c	43	50	_Py_yield	_Py_yield(void)	todo		
-Python/lock.c	53	137	_PyMutex_LockTimed	_PyMutex_LockTimed(PyMutex *m, PyTime_t timeout, _PyLockFlags flags)	todo		
-Python/lock.c	140	160	mutex_unpark	mutex_unpark(void *arg, void *park_arg, int has_more_waiters)	todo		
-Python/lock.c	163	181	_PyMutex_TryUnlock	_PyMutex_TryUnlock(PyMutex *m)	todo		
-Python/lock.c	191	228	_PyRawMutex_LockSlow	_PyRawMutex_LockSlow(_PyRawMutex *m)	todo		
-Python/lock.c	231	253	_PyRawMutex_UnlockSlow	_PyRawMutex_UnlockSlow(_PyRawMutex *m)	todo		
-Python/lock.c	256	260	_PyEvent_IsSet	_PyEvent_IsSet(PyEvent *evt)	todo		
-Python/lock.c	263	278	_PyEvent_Notify	_PyEvent_Notify(PyEvent *evt)	todo		
-Python/lock.c	281	285	PyEvent_Wait	PyEvent_Wait(PyEvent *evt)	todo		
-Python/lock.c	288	308	PyEvent_WaitTimed	PyEvent_WaitTimed(PyEvent *evt, PyTime_t timeout_ns, int detach)	todo		
-Python/lock.c	311	332	unlock_once	unlock_once(_PyOnceFlag *o, int res)	todo		
-Python/lock.c	335	366	_PyOnceFlag_CallOnceSlow	_PyOnceFlag_CallOnceSlow(_PyOnceFlag *flag, _Py_once_fn_t *fn, void *arg)	todo		
-Python/lock.c	369	372	recursive_mutex_is_owned_by	recursive_mutex_is_owned_by(_PyRecursiveMutex *m, PyThread_ident_t tid)	todo		
-Python/lock.c	375	378	_PyRecursiveMutex_IsLockedByCurrentThread	_PyRecursiveMutex_IsLockedByCurrentThread(_PyRecursiveMutex *m)	todo		
-Python/lock.c	381	391	_PyRecursiveMutex_Lock	_PyRecursiveMutex_Lock(_PyRecursiveMutex *m)	todo		
-Python/lock.c	394	407	_PyRecursiveMutex_LockTimed	_PyRecursiveMutex_LockTimed(_PyRecursiveMutex *m, PyTime_t timeout, _PyLockFlags flags)	todo		
-Python/lock.c	410	416	_PyRecursiveMutex_Unlock	_PyRecursiveMutex_Unlock(_PyRecursiveMutex *m)	todo		
-Python/lock.c	419	433	_PyRecursiveMutex_TryUnlock	_PyRecursiveMutex_TryUnlock(_PyRecursiveMutex *m)	todo		
-Python/lock.c	440	454	rwmutex_set_parked_and_wait	rwmutex_set_parked_and_wait(_PyRWMutex *rwmutex, uintptr_t bits)	todo		
-Python/lock.c	458	461	rwmutex_reader_count	rwmutex_reader_count(uintptr_t bits)	todo		
-Python/lock.c	464	492	_PyRWMutex_RLock	_PyRWMutex_RLock(_PyRWMutex *rwmutex)	todo		
-Python/lock.c	495	505	_PyRWMutex_RUnlock	_PyRWMutex_RUnlock(_PyRWMutex *rwmutex)	todo		
-Python/lock.c	508	526	_PyRWMutex_Lock	_PyRWMutex_Lock(_PyRWMutex *rwmutex)	todo		
-Python/lock.c	529	539	_PyRWMutex_Unlock	_PyRWMutex_Unlock(_PyRWMutex *rwmutex)	todo		
-Python/lock.c	543	562	_PySeqLock_LockWrite	void _PySeqLock_LockWrite(_PySeqLock *seqlock)	todo		
-Python/lock.c	564	569	_PySeqLock_AbandonWrite	void _PySeqLock_AbandonWrite(_PySeqLock *seqlock)	todo		
-Python/lock.c	571	576	_PySeqLock_UnlockWrite	void _PySeqLock_UnlockWrite(_PySeqLock *seqlock)	todo		
-Python/lock.c	578	587	_PySeqLock_BeginRead	uint32_t _PySeqLock_BeginRead(_PySeqLock *seqlock)	todo		
-Python/lock.c	589	602	_PySeqLock_EndRead	int _PySeqLock_EndRead(_PySeqLock *seqlock, uint32_t previous)	todo		
-Python/lock.c	604	614	_PySeqLock_AfterFork	int _PySeqLock_AfterFork(_PySeqLock *seqlock)	todo		
-Python/lock.c	618	621	PyMutex_Lock	PyMutex_Lock(PyMutex *m)	todo		
-Python/lock.c	625	630	PyMutex_Unlock	PyMutex_Unlock(PyMutex *m)	todo		
-Python/lock.c	635	638	PyMutex_IsLocked	PyMutex_IsLocked(PyMutex *m)	todo		
+Python/lock.c	44	51	_Py_yield	_Py_yield(void)	todo		
+Python/lock.c	54	158	_PyMutex_LockTimed	_PyMutex_LockTimed(PyMutex *m, PyTime_t timeout, _PyLockFlags flags)	todo		changed-in-3.15:
+Python/lock.c	161	181	mutex_unpark	mutex_unpark(void *arg, void *park_arg, int has_more_waiters)	todo		
+Python/lock.c	184	202	_PyMutex_TryUnlock	_PyMutex_TryUnlock(PyMutex *m)	todo		
+Python/lock.c	212	249	_PyRawMutex_LockSlow	_PyRawMutex_LockSlow(_PyRawMutex *m)	todo		changed-in-3.15:
+Python/lock.c	252	274	_PyRawMutex_UnlockSlow	_PyRawMutex_UnlockSlow(_PyRawMutex *m)	todo		
+Python/lock.c	277	281	_PyEvent_IsSet	_PyEvent_IsSet(PyEvent *evt)	todo		
+Python/lock.c	284	299	_PyEvent_Notify	_PyEvent_Notify(PyEvent *evt)	todo		
+Python/lock.c	302	306	PyEvent_Wait	PyEvent_Wait(PyEvent *evt)	todo		
+Python/lock.c	309	329	PyEvent_WaitTimed	PyEvent_WaitTimed(PyEvent *evt, PyTime_t timeout_ns, int detach)	todo		
+Python/lock.c	332	353	unlock_once	unlock_once(_PyOnceFlag *o, int res)	todo		
+Python/lock.c	356	387	_PyOnceFlag_CallOnceSlow	_PyOnceFlag_CallOnceSlow(_PyOnceFlag *flag, _Py_once_fn_t *fn, void *arg)	todo		
+Python/lock.c	390	393	recursive_mutex_is_owned_by	recursive_mutex_is_owned_by(_PyRecursiveMutex *m, PyThread_ident_t tid)	todo		
+Python/lock.c	396	399	_PyRecursiveMutex_IsLockedByCurrentThread	_PyRecursiveMutex_IsLockedByCurrentThread(_PyRecursiveMutex *m)	todo		
+Python/lock.c	402	412	_PyRecursiveMutex_Lock	_PyRecursiveMutex_Lock(_PyRecursiveMutex *m)	todo		
+Python/lock.c	415	428	_PyRecursiveMutex_LockTimed	_PyRecursiveMutex_LockTimed(_PyRecursiveMutex *m, PyTime_t timeout, _PyLockFlags flags)	todo		
+Python/lock.c	431	437	_PyRecursiveMutex_Unlock	_PyRecursiveMutex_Unlock(_PyRecursiveMutex *m)	todo		
+Python/lock.c	440	454	_PyRecursiveMutex_TryUnlock	_PyRecursiveMutex_TryUnlock(_PyRecursiveMutex *m)	todo		
+Python/lock.c	463	472	_PyRecursiveMutex_at_fork_reinit	_PyRecursiveMutex_at_fork_reinit(_PyRecursiveMutex *m, int owned)	todo		changed-in-3.15: new function
+Python/lock.c	480	494	rwmutex_set_parked_and_wait	rwmutex_set_parked_and_wait(_PyRWMutex *rwmutex, uintptr_t bits)	todo		
+Python/lock.c	498	501	rwmutex_reader_count	rwmutex_reader_count(uintptr_t bits)	todo		
+Python/lock.c	504	532	_PyRWMutex_RLock	_PyRWMutex_RLock(_PyRWMutex *rwmutex)	todo		
+Python/lock.c	535	545	_PyRWMutex_RUnlock	_PyRWMutex_RUnlock(_PyRWMutex *rwmutex)	todo		
+Python/lock.c	548	566	_PyRWMutex_Lock	_PyRWMutex_Lock(_PyRWMutex *rwmutex)	todo		
+Python/lock.c	569	579	_PyRWMutex_Unlock	_PyRWMutex_Unlock(_PyRWMutex *rwmutex)	todo		
+Python/lock.c	583	602	_PySeqLock_LockWrite	void _PySeqLock_LockWrite(_PySeqLock *seqlock)	todo		
+Python/lock.c	604	609	_PySeqLock_AbandonWrite	void _PySeqLock_AbandonWrite(_PySeqLock *seqlock)	todo		
+Python/lock.c	611	616	_PySeqLock_UnlockWrite	void _PySeqLock_UnlockWrite(_PySeqLock *seqlock)	todo		
+Python/lock.c	618	627	_PySeqLock_BeginRead	uint32_t _PySeqLock_BeginRead(_PySeqLock *seqlock)	todo		
+Python/lock.c	629	642	_PySeqLock_EndRead	int _PySeqLock_EndRead(_PySeqLock *seqlock, uint32_t previous)	todo		
+Python/lock.c	644	654	_PySeqLock_AfterFork	int _PySeqLock_AfterFork(_PySeqLock *seqlock)	todo		
+Python/lock.c	658	661	PyMutex_Lock	PyMutex_Lock(PyMutex *m)	todo		
+Python/lock.c	665	670	PyMutex_Unlock	PyMutex_Unlock(PyMutex *m)	todo		
+Python/lock.c	675	678	PyMutex_IsLocked	PyMutex_IsLocked(PyMutex *m)	todo		

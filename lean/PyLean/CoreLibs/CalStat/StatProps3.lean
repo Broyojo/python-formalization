@@ -167,7 +167,7 @@ theorem br_gt {α : Type} (lt : α → α → Bool) (a : List α) (x : α) (t : 
     · omega
 
 /-- In `median_grouped` over sorted data the run of the middle value is never empty: with
-`(i, j)` the bisections of statistics.py:449-450, `i <= n//2 < j <= n`, so the `f = j - i` the
+`(i, j)` the bisections of statistics.py:450-451, `i <= n//2 < j <= n`, so the `f = j - i` the
 formula divides by is positive and `ZeroDivisionError` cannot come out of ordered data.
 (A NaN in the data can break this, since `sorted` then does not give sorted output.) Empty data
 raises. -/
@@ -669,7 +669,7 @@ theorem quantExc_eq (vs : List Rat) (n i ld m j0 j δ : Int) (h2 : 2 ≤ vs.leng
   have e3 : ∀ x y : Rat, vadd (.frac x) (.frac y) = .ok (.frac (x + y)) := fun _ _ => rfl
   simp only [e1, e3, vdiv_frac_intI _ n (by omega)]
 
-/-- `quantiles(method='exclusive')` of sorted `Fraction` data: the clamp at statistics.py:1217 keeps
+/-- `quantiles(method='exclusive')` of sorted `Fraction` data: the clamp at statistics.py:1218 keeps
 `1 <= j <= len(data) - 1`, so both indices are valid for all `n`, also where `m*i/n` falls outside the
 data; between the data points (`1 <= i*m//n <= len-1`) the cut point is the interpolation between the
 neighbours. -/
@@ -805,7 +805,7 @@ def QuantilesMethodChecked : Prop :=
   ∀ (data : List PyN) (n : Int) (me : String), 1 ≤ n → data ≠ [] →
     me ≠ "inclusive" → me ≠ "exclusive" → (quantiles data n me).raises "ValueError"
 
-/-- The single-point shortcut at statistics.py:1198-1201 returns before the method is looked at. -/
+/-- The single-point shortcut at statistics.py:1199-1202 returns before the method is looked at. -/
 theorem quantilesMethodChecked_refuted : ¬QuantilesMethodChecked := by
   intro h
   obtain ⟨e, he, hc⟩ := h [(Val.int 1).toN] 4 "bogus" (by decide) (by simp) (by decide) (by decide)

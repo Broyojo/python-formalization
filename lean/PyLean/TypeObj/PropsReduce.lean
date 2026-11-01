@@ -1,7 +1,7 @@
 import PyLean.TypeObj.Reduce
 
 /-!
-Properties of the pickling support in `Objects/typeobject.c:7286-7835`. They quantify over every
+Properties of the pickling support in `Objects/typeobject.c:7912-8461`. They quantify over every
 `Rt`, so over every `__getstate__`, `__getattribute__` and `__slotnames__` a class can define.
 -/
 
@@ -10,7 +10,7 @@ namespace PyLean.TypeObj
 /-- **`__getnewargs_ex__` passes a tuple and a dict, and nothing else.** `checkNewargsEx` succeeds
 on exactly the pairs whose first item is a tuple and whose second is a dict, and returns those
 two, with the world unchanged. So `reduce_newobj` can read both directly, which it does at
-`Objects/typeobject.c:7687` and `:7676`. -/
+`Objects/typeobject.c:8313` and `:8302`. -/
 def NewargsExValidated : Prop :=
   ∀ (v a k : Val) (w : World),
     (∃ w', checkNewargsEx v w = .ok (a, k) w') ↔
@@ -89,7 +89,7 @@ theorem getNewArgumentsOrder_proven : GetNewArgumentsOrder := by
 
 /-- **The slot names are `None` or a list.** For every class and every `Rt`, a value that
 `_PyType_GetSlotNames` hands back is `None` or a list, which the `assert` at
-`Objects/typeobject.c:7381` relies on before `PyList_GET_SIZE`. A cached value of that kind is
+`Objects/typeobject.c:8007` relies on before `PyList_GET_SIZE`. A cached value of that kind is
 returned as it is, with no call of `copyreg`, and a cached value of any other type is the exact
 `TypeError`. -/
 def SlotNamesWellTyped : Prop :=
@@ -134,7 +134,7 @@ theorem slotNamesWellTyped_proven : SlotNamesWellTyped := by
 
 /-- **The guard on `__slotnames__` holds.** After a round of the loop of
 `object_getstate_default` at `i`, for every getter: a list of another size is the exact
-`RuntimeError` (`Objects/typeobject.c:7440`), the same size ends the loop at the last index, and
+`RuntimeError` (`Objects/typeobject.c:8066`), the same size ends the loop at the last index, and
 if the loop completes at all, the list has its original size. -/
 def GetstateSlotsGuard : Prop :=
   (∀ (rt : Rt) (obj names : Val) (size : Nat) (slots : Addr) (fuel i : Nat) (w w' : World),

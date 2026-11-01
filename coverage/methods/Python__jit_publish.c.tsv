@@ -1,0 +1,8 @@
+file	line	endline	name	signature	status	entry	note
+Python/jit_publish.c	18	34	jit_register_perf_code	jit_register_perf_code(const void *code_addr, size_t code_size, const char *entry, const char *filename)	todo		changed-in-3.15: new function
+Python/jit_publish.c	38	44	jit_register_gdb_code	jit_register_gdb_code(_PyJitCodeRegistration *registration, const void *code_addr, size_t code_size, const char *entry, const char *filename)	todo		changed-in-3.15: new function
+Python/jit_publish.c	47	53	jit_unregister_gdb_code	jit_unregister_gdb_code(_PyJitCodeRegistration *registration)	todo		changed-in-3.15: new function
+Python/jit_publish.c	58	63	jit_register_gnu_backtrace_code	jit_register_gnu_backtrace_code(_PyJitCodeRegistration *registration, const void *code_addr, size_t code_size)	todo		changed-in-3.15: new function
+Python/jit_publish.c	66	73	jit_unregister_gnu_backtrace_code	jit_unregister_gnu_backtrace_code(_PyJitCodeRegistration *registration)	todo		changed-in-3.15: new function
+Python/jit_publish.c	77	113	_PyJit_RegisterCode	_PyJit_RegisterCode(const void *code_addr, size_t code_size, const char *entry, const char *filename)	todo		changed-in-3.15: new function
+Python/jit_publish.c	116	135	_PyJit_UnregisterCode	_PyJit_UnregisterCode(_PyJitCodeRegistration *registration)	todo		changed-in-3.15: new function

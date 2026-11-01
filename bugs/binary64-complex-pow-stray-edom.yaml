@@ -31,7 +31,7 @@ promised_by: |
   The message itself: the base is not zero. complexobject.c:318-322 sets EDOM only for a zero
   base.
 cause: |
-  Objects/complexobject.c:333-334 can leave EDOM from cos and sin, and :746 reports any EDOM as
+  Objects/complexobject.c:333-334 can leave EDOM from cos and sin, and :762 reports any EDOM as
   a zero base. _Py_ADJUST_ERANGE2 at :336 only handles ERANGE.
 possible_fix: |
   Already done upstream by gh-156886.

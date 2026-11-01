@@ -2,9 +2,9 @@ file	line	endline	name	signature	status	entry	note
 Lib/idlelib/runscript.py	38	46	ScriptBinding.__init__	__init__(self, editwin)	excluded		platform: GUI toolkit
 Lib/idlelib/runscript.py	48	59	ScriptBinding.check_module_event	check_module_event(self, event)	excluded		platform: GUI toolkit
 Lib/idlelib/runscript.py	61	77	ScriptBinding.tabnanny	tabnanny(self, filename)	excluded		platform: GUI toolkit
-Lib/idlelib/runscript.py	79	107	ScriptBinding.checksyntax	checksyntax(self, filename)	excluded		platform: GUI toolkit
-Lib/idlelib/runscript.py	109	110	ScriptBinding.run_custom_event	run_custom_event(self, event)	excluded		platform: GUI toolkit
-Lib/idlelib/runscript.py	112	171	ScriptBinding.run_module_event	run_module_event(self, event, *, customize=False)	excluded		platform: GUI toolkit
-Lib/idlelib/runscript.py	173	198	ScriptBinding.getfilename	getfilename(self)	excluded		platform: GUI toolkit
-Lib/idlelib/runscript.py	200	206	ScriptBinding.ask_save_dialog	ask_save_dialog(self)	excluded		platform: GUI toolkit
-Lib/idlelib/runscript.py	208	212	ScriptBinding.errorbox	errorbox(self, title, message)	excluded		platform: GUI toolkit
+Lib/idlelib/runscript.py	79	111	ScriptBinding.checksyntax	checksyntax(self, filename)	excluded		platform: GUI toolkit
+Lib/idlelib/runscript.py	113	114	ScriptBinding.run_custom_event	run_custom_event(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/runscript.py	116	175	ScriptBinding.run_module_event	run_module_event(self, event, *, customize=False)	excluded		platform: GUI toolkit
+Lib/idlelib/runscript.py	177	202	ScriptBinding.getfilename	getfilename(self)	excluded		platform: GUI toolkit
+Lib/idlelib/runscript.py	204	210	ScriptBinding.ask_save_dialog	ask_save_dialog(self)	excluded		platform: GUI toolkit
+Lib/idlelib/runscript.py	212	216	ScriptBinding.errorbox	errorbox(self, title, message)	excluded		platform: GUI toolkit

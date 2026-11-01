@@ -10,7 +10,7 @@ open PyLean.Registry
 def entriesArith : List Entry := [
   { id := "longobj-normalize", pyFile := "Objects/longobject.c", pyFns := ["long_normalize"]
     statement := "long_normalize keeps the value, leaves a non-zero top digit and never lengthens the vector."
-    source := "invariant: comment at longobject.c:119-121", status := .proven
+    source := "invariant: comment at longobject.c:121-123", status := .proven
     prop := ``NormalizeSpec, thm := some ``normalizeSpec_proven },
   { id := "longobj-from-stwodigits", pyFile := "Objects/longobject.c"
     pyFns := ["_PyLong_FromSTwoDigits", "_PyLong_FromMedium", "_PyLong_FromLarge", "is_medium_int"]
@@ -19,11 +19,11 @@ def entriesArith : List Entry := [
     prop := ``FromSTwoDigitsCanonical, thm := some ``fromSTwoDigitsCanonical_proven },
   { id := "longobj-x-add", pyFile := "Objects/longobject.c", pyFns := ["x_add"]
     statement := "x_add is exact on all digit vectors, normalized, and its digit carry never wraps."
-    source := "comment at longobject.c:3647", status := .proven
+    source := "comment at longobject.c:3746", status := .proven
     prop := ``XAddExact, thm := some ``xAddExact_proven },
   { id := "longobj-x-sub", pyFile := "Objects/longobject.c", pyFns := ["x_sub"]
     statement := "On normalized magnitudes x_sub returns the canonical object of val(a) - val(b), through the wrapping uint32_t borrow."
-    source := "comment at longobject.c:3681", status := .proven
+    source := "comment at longobject.c:3780", status := .proven
     prop := ``XSubExact, thm := some ``xSubExact_proven },
   { id := "longobj-add-sub", pyFile := "Objects/longobject.c"
     pyFns := ["long_add", "_PyLong_Add", "long_sub", "_PyLong_Subtract"]
@@ -33,12 +33,12 @@ def entriesArith : List Entry := [
     notes := "The slot wrappers are in longobj-binary-methods." },
   { id := "longobj-vector-add-sub", pyFile := "Objects/longobject.c", pyFns := ["v_iadd", "v_isub"]
     statement := "v_iadd and v_isub are exact modulo the width of x, returning a carry or borrow of 0 or 1."
-    source := "comments at longobject.c:1774-1777, :1800-1803", status := .proven
+    source := "comments at longobject.c:1849-1852, :1800-1803", status := .proven
     prop := ``VectorAddSub, thm := some ``vectorAddSub_proven },
   { id := "longobj-k-mul", pyFile := "Objects/longobject.c"
     pyFns := ["k_mul", "k_lopsided_mul", "kmul_split"]
     statement := "k_mul is exact on all digit vectors, including the non-normalized slices of k_lopsided_mul, and every memcpy and v_iadd stays inside ret."
-    source := "comment at longobject.c:3965-3968 and the (*) comment at :4134-4177", status := .proven
+    source := "comment at longobject.c:4068-4071 and the (*) comment at :4134-4177", status := .proven
     prop := ``KMulExact, thm := some ``kMulExact_proven },
   { id := "longobj-mul", pyFile := "Objects/longobject.c"
     pyFns := ["long_mul", "_PyLong_Multiply", "_PyLong_Negate", "Py_LOCAL_INLINE"]
@@ -47,21 +47,21 @@ def entriesArith : List Entry := [
     prop := ``LongMulExact, thm := some ``longMulExact_proven },
   { id := "longobj-vector-shifts", pyFile := "Objects/longobject.c", pyFns := ["v_lshift", "v_rshift"]
     statement := "v_lshift and v_rshift by d < PyLong_SHIFT are exact and return the bits shifted out."
-    source := "comments at longobject.c:1826-1828, :1844-1846", status := .proven
+    source := "comments at longobject.c:1901-1903, :1844-1846", status := .proven
     prop := ``VectorShifts, thm := some ``vectorShifts_proven },
   { id := "longobj-divrem-one-digit", pyFile := "Objects/longobject.c"
     pyFns := ["inplace_divrem1", "divrem1", "inplace_rem1"]
     statement := "Division of a digit vector by a non-zero digit gives the exact quotient and remainder; inplace_rem1 agrees with inplace_divrem1."
-    source := "comments at longobject.c:1863-1867, :1920-1921", status := .proven
+    source := "comments at longobject.c:1938-1942, :1920-1921", status := .proven
     prop := ``DivremOneDigit, thm := some ``divremOneDigit_proven },
   { id := "longobj-knuth-digit", pyFile := "Objects/longobject.c", pyFns := []
     statement := "One digit of Algorithm D: with wm1 >= BASE/2 and V < BASE*W the estimate, its corrections and the add-back give the true digit and remainder, with q <= BASE after the loop and no overflow."
-    source := "comment at longobject.c:3252-3256 and the asserts at :3314, :3332, :3347, :3359", status := .proven
+    source := "comment at longobject.c:3334-3338 and the asserts at :3314, :3332, :3347, :3359", status := .proven
     prop := ``KnuthDigit, thm := some ``knuthDigit_proven },
   { id := "longobj-divrem", pyFile := "Objects/longobject.c"
     pyFns := ["long_divrem", "long_rem", "rem1"]
     statement := "long_divrem and long_rem give the canonical truncated quotient and remainder, and raise ZeroDivisionError for b == 0."
-    source := "comment at longobject.c:4357-4370", status := .proven
+    source := "comment at longobject.c:4460-4473", status := .proven
     prop := ``LongDivremExact, thm := some ``longDivremExact_proven
     notes := "The |a| < |b| test is only sufficient: equal top digits fall through to the general path, which handles them." },
   { id := "longobj-l-divmod-refines", pyFile := "Objects/longobject.c"
@@ -87,7 +87,7 @@ def entriesArith : List Entry := [
     prop := ``LshiftExact, thm := some ``lshiftExact_proven },
   { id := "longobj-v-complement", pyFile := "Objects/longobject.c", pyFns := ["v_complement"]
     statement := "On a non-zero vector, v_complement computes 2**(30*m) - val(a) with no carry out."
-    source := "comment at longobject.c:5459-5461", status := .proven
+    source := "comment at longobject.c:5553-5555", status := .proven
     prop := ``VComplementExact, thm := some ``vComplementExact_proven },
   { id := "longobj-bitwise", pyFile := "Objects/longobject.c"
     pyFns := ["long_bitwise"]

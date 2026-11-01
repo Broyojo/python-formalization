@@ -6,9 +6,9 @@ module: bytecode
 files: [Objects/frameobject.c, Python/bytecodes.c]
 functions: ["mark_stacks", "compatible_stack", "frame_lineno_set_impl"]
 summary: |
-  `mark_stacks` (Objects/frameobject.c:1308-1519) assigns a `Kind` to each stack slot; `Null` marks
+  `mark_stacks` (Objects/frameobject.c:1316-1531) assigns a `Kind` to each stack slot; `Null` marks
   a `NULL` placeholder such as the `self_or_null` that `LOAD_SPECIAL` / `_INSERT_NULL` push for a
-  `with` statement's `__enter__`/`__exit__` lookup (Python/bytecodes.c:3496-3521). `compatible_kind`
+  `with` statement's `__enter__`/`__exit__` lookup (Python/bytecodes.c:4125-4151). `compatible_kind`
   (lines 1175-1187) allows anything to flow *to* a `Null` slot but, crucially, `mark_stacks`
   records the slot that a bound method / `__exit__` is loaded into via the `default:` case as
   `Object` (line 1480), not `Null`. The jump-target analysis in `frame_lineno_set_impl` then
@@ -69,7 +69,7 @@ observed: |
 promised_by: |
   invariant: `frame.f_lineno = n` from a trace function must not corrupt the interpreter.
 cause: |
-  Objects/frameobject.c:1471-1484 (the `default:` arm of `mark_stacks`) records pushed slots as
+  Objects/frameobject.c:1483-1496 (the `default:` arm of `mark_stacks`) records pushed slots as
   `Object`, so the `NULL` slot of a `with`/`LOAD_SPECIAL` sequence is analysed as `Object` and
   `compatible_stack` (1521-1540) approves a jump into it; the NULL-fixup at 1788-1812 covers only
   locals.

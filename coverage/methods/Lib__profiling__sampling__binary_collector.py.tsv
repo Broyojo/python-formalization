@@ -1,0 +1,12 @@
+file	line	endline	name	signature	status	entry	note
+Lib/profiling/sampling/binary_collector.py	23	29	encode_capture_config	encode_capture_config(capture_config)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/binary_collector.py	32	55	_resolve_compression	_resolve_compression(compression)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/binary_collector.py	69	94	BinaryCollector.__init__	__init__(self, filename, sample_interval_usec, *, skip_idle=False, compression='auto', mode=None, capture_config=None)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/binary_collector.py	96	119	BinaryCollector.collect	collect(self, stack_frames, timestamp_us=None)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/binary_collector.py	121	123	BinaryCollector.collect_failed_sample	collect_failed_sample(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/binary_collector.py	125	130	BinaryCollector.set_stats	set_stats(self, sample_interval_usec, duration_sec, sample_rate, error_rate=None, missed_samples=None, **kwargs)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/binary_collector.py	132	139	BinaryCollector.export	export(self, filename=None)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/binary_collector.py	142	143	BinaryCollector.total_samples	total_samples(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/binary_collector.py	145	152	BinaryCollector.get_stats	get_stats(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/binary_collector.py	154	155	BinaryCollector.__enter__	__enter__(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/binary_collector.py	157	159	BinaryCollector.__exit__	__exit__(self, exc_type, exc_val, exc_tb)	todo		changed-in-3.15: new function

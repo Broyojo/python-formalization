@@ -1,59 +1,59 @@
 file	line	endline	name	signature	status	entry	note
-Lib/dis.py	72	83	_try_compile	_try_compile(source, name)	todo		
-Lib/dis.py	85	137	dis	dis(x=None, *, file=None, depth=None, show_caches=False, adaptive=False, show_offsets=False, show_positions=False)	todo		
-Lib/dis.py	139	150	distb	distb(tb=None, *, file=None, show_caches=False, adaptive=False, show_offsets=False, show_positions=False)	todo		
-Lib/dis.py	170	182	pretty_flags	pretty_flags(flags)	todo		
-Lib/dis.py	185	186	_Unknown.__repr__	__repr__(self)	todo		
-Lib/dis.py	191	212	_get_code_object	_get_code_object(x)	todo		
-Lib/dis.py	214	216	_deoptop	_deoptop(op)	todo		
-Lib/dis.py	218	239	_get_code_array	_get_code_array(co, adaptive)	todo		
-Lib/dis.py	241	243	code_info	code_info(x)	todo		
-Lib/dis.py	245	275	_format_code_info	_format_code_info(co)	todo		
-Lib/dis.py	277	282	show_code	show_code(co, *, file=None)	todo		
-Lib/dis.py	339	340	_get_cache_size	_get_cache_size(opname)	todo		
-Lib/dis.py	342	358	_get_jump_target	_get_jump_target(op, arg, offset)	todo		
-Lib/dis.py	382	387	Instruction.make	make(opname, arg, argval, argrepr, offset, start_offset, starts_line, line_number, label=None, positions=None, cache_info=None)	todo		
-Lib/dis.py	390	392	Instruction.oparg	oparg(self)	todo		
-Lib/dis.py	395	400	Instruction.baseopcode	baseopcode(self)	todo		
-Lib/dis.py	403	408	Instruction.baseopname	baseopname(self)	todo		
-Lib/dis.py	411	413	Instruction.cache_offset	cache_offset(self)	todo		
-Lib/dis.py	416	418	Instruction.end_offset	end_offset(self)	todo		
-Lib/dis.py	421	426	Instruction.jump_target	jump_target(self)	todo		
-Lib/dis.py	429	431	Instruction.is_jump_target	is_jump_target(self)	todo		
-Lib/dis.py	433	437	Instruction.__str__	__str__(self)	todo		
-Lib/dis.py	442	461	Formatter.__init__	__init__(self, file=None, lineno_width=0, offset_width=0, label_width=0, line_offset=0, show_caches=False, *, show_positions=False)	todo		
-Lib/dis.py	463	479	Formatter.print_instruction	print_instruction(self, instr, mark_as_current=False)	todo		
-Lib/dis.py	481	542	Formatter.print_instruction_line	print_instruction_line(self, instr, mark_as_current)	todo		
+Lib/dis.py	73	84	_try_compile	_try_compile(source, name)	todo		
+Lib/dis.py	86	138	dis	dis(x=None, *, file=None, depth=None, show_caches=False, adaptive=False, show_offsets=False, show_positions=False)	todo		
+Lib/dis.py	140	151	distb	distb(tb=None, *, file=None, show_caches=False, adaptive=False, show_offsets=False, show_positions=False)	todo		
+Lib/dis.py	171	183	pretty_flags	pretty_flags(flags)	todo		
+Lib/dis.py	186	187	_Unknown.__repr__	__repr__(self)	todo		
+Lib/dis.py	192	213	_get_code_object	_get_code_object(x)	todo		
+Lib/dis.py	215	217	_deoptop	_deoptop(op)	todo		
+Lib/dis.py	219	240	_get_code_array	_get_code_array(co, adaptive)	todo		
+Lib/dis.py	242	244	code_info	code_info(x)	todo		
+Lib/dis.py	246	276	_format_code_info	_format_code_info(co)	todo		
+Lib/dis.py	278	283	show_code	show_code(co, *, file=None)	todo		
+Lib/dis.py	340	341	_get_cache_size	_get_cache_size(opname)	todo		
+Lib/dis.py	343	359	_get_jump_target	_get_jump_target(op, arg, offset)	todo		
+Lib/dis.py	383	388	Instruction.make	make(opname, arg, argval, argrepr, offset, start_offset, starts_line, line_number, label=None, positions=None, cache_info=None)	todo		
+Lib/dis.py	391	393	Instruction.oparg	oparg(self)	todo		
+Lib/dis.py	396	401	Instruction.baseopcode	baseopcode(self)	todo		
+Lib/dis.py	404	409	Instruction.baseopname	baseopname(self)	todo		
+Lib/dis.py	412	414	Instruction.cache_offset	cache_offset(self)	todo		
+Lib/dis.py	417	419	Instruction.end_offset	end_offset(self)	todo		
+Lib/dis.py	422	427	Instruction.jump_target	jump_target(self)	todo		
+Lib/dis.py	430	432	Instruction.is_jump_target	is_jump_target(self)	todo		
+Lib/dis.py	434	438	Instruction.__str__	__str__(self)	todo		
+Lib/dis.py	443	462	Formatter.__init__	__init__(self, file=None, lineno_width=0, offset_width=0, label_width=0, line_offset=0, show_caches=False, *, show_positions=False)	todo		
+Lib/dis.py	464	480	Formatter.print_instruction	print_instruction(self, instr, mark_as_current=False)	todo		
+Lib/dis.py	482	542	Formatter.print_instruction_line	print_instruction_line(self, instr, mark_as_current)	todo		changed-in-3.15:
 Lib/dis.py	544	553	Formatter.print_exception_table	print_exception_table(self, exception_entries)	todo		
 Lib/dis.py	557	561	ArgResolver.__init__	__init__(self, co_consts=None, names=None, varname_from_oparg=None, labels_map=None)	todo		
 Lib/dis.py	563	573	ArgResolver.offset_from_jump_arg	offset_from_jump_arg(self, op, arg, offset)	todo		
 Lib/dis.py	575	576	ArgResolver.get_label_for_offset	get_label_for_offset(self, offset)	todo		
-Lib/dis.py	578	650	ArgResolver.get_argval_argrepr	get_argval_argrepr(self, op, arg, offset)	todo		
-Lib/dis.py	652	680	get_instructions	get_instructions(x, *, first_line=None, show_caches=None, adaptive=False)	todo		
-Lib/dis.py	682	696	_get_const_value	_get_const_value(op, arg, co_consts)	todo		
-Lib/dis.py	698	708	_get_const_info	_get_const_info(op, arg, co_consts)	todo		
-Lib/dis.py	710	722	_get_name_info	_get_name_info(name_index, get_name, **extrainfo)	todo		
-Lib/dis.py	724	731	_parse_varint	_parse_varint(iterator)	todo		
-Lib/dis.py	733	747	_parse_exception_table	_parse_exception_table(code)	todo		
-Lib/dis.py	749	752	_is_backward_jump	_is_backward_jump(op)	todo		
-Lib/dis.py	754	807	_get_instructions_bytes	_get_instructions_bytes(code, linestarts=None, line_offset=0, co_positions=None, original_code=None, arg_resolver=None)	todo		
-Lib/dis.py	810	833	disassemble	disassemble(co, lasti=-1, *, file=None, show_caches=False, adaptive=False, show_offsets=False, show_positions=False)	todo		
-Lib/dis.py	835	847	_disassemble_recursive	_disassemble_recursive(co, *, file=None, depth=None, show_caches=False, adaptive=False, show_offsets=False, show_positions=False)	todo		
-Lib/dis.py	850	863	_make_labels_map	_make_labels_map(original_code, exception_entries=())	todo		
-Lib/dis.py	867	877	_get_lineno_width	_get_lineno_width(linestarts)	todo		
-Lib/dis.py	879	894	_get_positions_width	_get_positions_width(code)	todo		
-Lib/dis.py	896	910	_disassemble_bytes	_disassemble_bytes(code, lasti=-1, linestarts=None, *, line_offset=0, exception_entries=(), co_positions=None, original_code=None, arg_resolver=None, formatter=None)	todo		
-Lib/dis.py	913	920	print_instructions	print_instructions(instrs, exception_entries, formatter, lasti=-1)	todo		
-Lib/dis.py	922	924	_disassemble_str	_disassemble_str(source, **kwargs)	todo		
-Lib/dis.py	934	963	_unpack_opargs	_unpack_opargs(code)	todo		
-Lib/dis.py	965	979	findlabels	findlabels(code)	todo		
-Lib/dis.py	981	993	findlinestarts	findlinestarts(code)	todo		
-Lib/dis.py	995	1016	_find_imports	_find_imports(co)	todo		
-Lib/dis.py	1018	1031	_find_store_names	_find_store_names(co)	todo		
-Lib/dis.py	1042	1057	Bytecode.__init__	__init__(self, x, *, first_line=None, current_offset=None, show_caches=False, adaptive=False, show_offsets=False, show_positions=False)	todo		
-Lib/dis.py	1059	1072	Bytecode.__iter__	__iter__(self)	todo		
-Lib/dis.py	1074	1076	Bytecode.__repr__	__repr__(self)	todo		
-Lib/dis.py	1079	1085	Bytecode.from_traceback	from_traceback(cls, tb, *, show_caches=False, adaptive=False)	todo		
-Lib/dis.py	1087	1089	Bytecode.info	info(self)	todo		
-Lib/dis.py	1091	1128	Bytecode.dis	dis(self)	todo		
-Lib/dis.py	1131	1154	main	main(args=None)	todo		candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output
+Lib/dis.py	578	657	ArgResolver.get_argval_argrepr	get_argval_argrepr(self, op, arg, offset)	todo		changed-in-3.15:
+Lib/dis.py	659	687	get_instructions	get_instructions(x, *, first_line=None, show_caches=None, adaptive=False)	todo		
+Lib/dis.py	689	708	_get_const_value	_get_const_value(op, arg, co_consts)	todo		changed-in-3.15:
+Lib/dis.py	710	720	_get_const_info	_get_const_info(op, arg, co_consts)	todo		
+Lib/dis.py	722	734	_get_name_info	_get_name_info(name_index, get_name, **extrainfo)	todo		
+Lib/dis.py	736	743	_parse_varint	_parse_varint(iterator)	todo		
+Lib/dis.py	745	759	_parse_exception_table	_parse_exception_table(code)	todo		
+Lib/dis.py	761	764	_is_backward_jump	_is_backward_jump(op)	todo		
+Lib/dis.py	766	819	_get_instructions_bytes	_get_instructions_bytes(code, linestarts=None, line_offset=0, co_positions=None, original_code=None, arg_resolver=None)	todo		
+Lib/dis.py	822	845	disassemble	disassemble(co, lasti=-1, *, file=None, show_caches=False, adaptive=False, show_offsets=False, show_positions=False)	todo		
+Lib/dis.py	847	859	_disassemble_recursive	_disassemble_recursive(co, *, file=None, depth=None, show_caches=False, adaptive=False, show_offsets=False, show_positions=False)	todo		
+Lib/dis.py	862	875	_make_labels_map	_make_labels_map(original_code, exception_entries=())	todo		
+Lib/dis.py	879	889	_get_lineno_width	_get_lineno_width(linestarts)	todo		
+Lib/dis.py	891	906	_get_positions_width	_get_positions_width(code)	todo		
+Lib/dis.py	908	922	_disassemble_bytes	_disassemble_bytes(code, lasti=-1, linestarts=None, *, line_offset=0, exception_entries=(), co_positions=None, original_code=None, arg_resolver=None, formatter=None)	todo		
+Lib/dis.py	925	932	print_instructions	print_instructions(instrs, exception_entries, formatter, lasti=-1)	todo		
+Lib/dis.py	934	936	_disassemble_str	_disassemble_str(source, **kwargs)	todo		
+Lib/dis.py	946	975	_unpack_opargs	_unpack_opargs(code)	todo		
+Lib/dis.py	977	991	findlabels	findlabels(code)	todo		
+Lib/dis.py	993	1005	findlinestarts	findlinestarts(code)	todo		
+Lib/dis.py	1007	1031	_find_imports	_find_imports(co)	todo		changed-in-3.15:
+Lib/dis.py	1033	1046	_find_store_names	_find_store_names(co)	todo		
+Lib/dis.py	1057	1072	Bytecode.__init__	__init__(self, x, *, first_line=None, current_offset=None, show_caches=False, adaptive=False, show_offsets=False, show_positions=False)	todo		
+Lib/dis.py	1074	1087	Bytecode.__iter__	__iter__(self)	todo		
+Lib/dis.py	1089	1091	Bytecode.__repr__	__repr__(self)	todo		
+Lib/dis.py	1094	1100	Bytecode.from_traceback	from_traceback(cls, tb, *, show_caches=False, adaptive=False)	todo		
+Lib/dis.py	1102	1104	Bytecode.info	info(self)	todo		
+Lib/dis.py	1106	1143	Bytecode.dis	dis(self)	todo		
+Lib/dis.py	1146	1169	main	main(args=None)	todo		changed-in-3.15: candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output

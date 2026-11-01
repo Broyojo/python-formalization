@@ -44,12 +44,12 @@ observed: |
   '\ud800'. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
 promised_by: |
-  Doc/library/array.rst:262 tounicode; invariant
+  Doc/library/array.rst:291 tounicode; invariant
   round-trip with array('w', s) and fromunicode.
 cause: |
-  Modules/arraymodule.c:1942-1944 (3.14.7) `int byteorder = 0; // native byteorder`
+  Modules/arraymodule.c:2072-2074 `int byteorder = 0; // native byteorder`
   and `PyUnicode_DecodeUTF32(ob_item, Py_SIZE(self) * 4, NULL, &byteorder)`. main has it at
-  :2016-2018.
+  :2152-2154.
 possible_fix: |
   PyUnicode_FromKindAndData(PyUnicode_4BYTE_KIND, ob_item, Py_SIZE(self)) keeps every code
   point; it raises ValueError only above U+10FFFF. Or use `byteorder = -1 / 1` per endianness

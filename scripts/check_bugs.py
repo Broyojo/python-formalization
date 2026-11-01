@@ -43,8 +43,13 @@ def main():
         if bug_id in gone and not args.ids:
             print(f"{'GONE':15s} {bug_id}")
             continue
-        r = subprocess.run([args.python, "-I", "-c", load_reproducer(path)],
-                           capture_output=True, text=True, timeout=120)
+        try:
+            r = subprocess.run([args.python, "-I", "-c", load_reproducer(path)],
+                               capture_output=True, text=True, timeout=120)
+        except subprocess.TimeoutExpired:
+            failures += 1
+            print(f"{'NOT REPRODUCED':15s} {bug_id}\ntimed out after 120 s")
+            continue
         ok = f"REPRODUCED {bug_id}" in r.stdout
         failures += not ok
         print(f"{'REPRODUCED' if ok else 'NOT REPRODUCED':15s} {bug_id}")

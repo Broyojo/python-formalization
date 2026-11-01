@@ -90,7 +90,7 @@ def entries : List Entry := [
     statement := "For every finite Decimal d, hash(Fraction(d)) == hash(d)."
     source := "Built-in Types, Hashing of numeric types: hash(x) == hash(y) whenever x == y"
     status := .proven, prop := ``HashMatchesDecimal, thm := some ``hashMatchesDecimal_proven
-    notes := "Decimal.__hash__ modelled from Lib/_pydecimal.py:896-920; the proof needs only that 10 is invertible mod 2**61-1." },
+    notes := "Decimal.__hash__ modelled from Lib/_pydecimal.py:988-1012; the proof needs only that 10 is invertible mod 2**61-1." },
   { id := "fractions-str-roundtrip", pyFile := "Lib/fractions.py"
     pyFns := ["Fraction.__str__", "Fraction.__new__"]
     statement := "For every Fraction x whose str() succeeds, Fraction(str(x)) == x (same numerator and denominator)."

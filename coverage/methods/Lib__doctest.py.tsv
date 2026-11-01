@@ -1,102 +1,110 @@
 file	line	endline	name	signature	status	entry	note
-Lib/doctest.py	115	118	TestResults.__new__	__new__(cls, failed, attempted, *, skipped=0)	todo		
-Lib/doctest.py	120	128	TestResults.__repr__	__repr__(self)	todo		
-Lib/doctest.py	153	155	register_optionflag	register_optionflag(name)	todo		
-Lib/doctest.py	204	214	_extract_future_flags	_extract_future_flags(globs)	todo		
-Lib/doctest.py	216	239	_normalize_module	_normalize_module(module, depth=2)	todo		
-Lib/doctest.py	241	243	_newline_convert	_newline_convert(data)	todo		
-Lib/doctest.py	245	261	_load_testfile	_load_testfile(filename, package, module_relative, encoding)	todo		
-Lib/doctest.py	263	269	_indent	_indent(s, indent=4)	todo		
-Lib/doctest.py	271	280	_exception_traceback	_exception_traceback(exc_info)	todo		
-Lib/doctest.py	284	291	_SpoofOut.getvalue	getvalue(self)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
-Lib/doctest.py	293	295	_SpoofOut.truncate	truncate(self, size=None)	todo		candidates:pyio-truncate-keeps-position
-Lib/doctest.py	298	345	_ellipsis_match	_ellipsis_match(want, got)	todo		
-Lib/doctest.py	347	353	_comment_line	_comment_line(line)	todo		
-Lib/doctest.py	355	379	_strip_exception_details	_strip_exception_details(msg)	todo		
-Lib/doctest.py	387	393	_OutputRedirectingPdb.__init__	__init__(self, out)	todo		
-Lib/doctest.py	395	399	_OutputRedirectingPdb.set_trace	set_trace(self, frame=None, *, commands=None)	todo		
-Lib/doctest.py	401	405	_OutputRedirectingPdb.set_continue	set_continue(self)	todo		
-Lib/doctest.py	407	415	_OutputRedirectingPdb.trace_dispatch	trace_dispatch(self, *args)	todo		
-Lib/doctest.py	418	450	_module_relative_path	_module_relative_path(module, test_path)	todo		
-Lib/doctest.py	499	515	Example.__init__	__init__(self, source, want, exc_msg=None, lineno=0, indent=0, options=None)	todo		
-Lib/doctest.py	517	526	Example.__eq__	__eq__(self, other)	todo		
-Lib/doctest.py	528	530	Example.__hash__	__hash__(self)	todo		
-Lib/doctest.py	556	568	DocTest.__init__	__init__(self, examples, globs, name, filename, lineno, docstring)	todo		
-Lib/doctest.py	570	579	DocTest.__repr__	__repr__(self)	todo		
-Lib/doctest.py	581	590	DocTest.__eq__	__eq__(self, other)	todo		
-Lib/doctest.py	592	593	DocTest.__hash__	__hash__(self)	todo		
-Lib/doctest.py	596	603	DocTest.__lt__	__lt__(self, other)	todo		
-Lib/doctest.py	657	694	DocTestParser.parse	parse(self, string, name='<string>')	todo		
-Lib/doctest.py	696	706	DocTestParser.get_doctest	get_doctest(self, string, globs, name, filename, lineno)	todo		
-Lib/doctest.py	708	720	DocTestParser.get_examples	get_examples(self, string, name='<string>')	todo		
-Lib/doctest.py	722	764	DocTestParser._parse_example	_parse_example(self, m, name, lineno)	todo		
-Lib/doctest.py	776	800	DocTestParser._find_options	_find_options(self, source, name, lineno)	todo		
-Lib/doctest.py	806	812	DocTestParser._min_indent	_min_indent(self, s)	todo		
-Lib/doctest.py	814	826	DocTestParser._check_prompt_blank	_check_prompt_blank(self, lines, indent, name, lineno)	todo		
-Lib/doctest.py	828	837	DocTestParser._check_prefix	_check_prefix(self, lines, prefix, name, lineno)	todo		
-Lib/doctest.py	853	873	DocTestFinder.__init__	__init__(self, verbose=False, parser=DocTestParser(), recurse=True, exclude_empty=True)	todo		
-Lib/doctest.py	875	975	DocTestFinder.find	find(self, obj, name=None, module=None, globs=None, extraglobs=None)	todo		candidates:strsearch-count-repeated-find,strsearch-find-extreme,strsearch-find-slice-literal,strsearch-find-str-bytes,strsearch-rfind-reverse
-Lib/doctest.py	977	1004	DocTestFinder._from_module	_from_module(self, module, object)	todo		
-Lib/doctest.py	1006	1015	DocTestFinder._is_routine	_is_routine(self, obj)	todo		
-Lib/doctest.py	1017	1076	DocTestFinder._find	_find(self, tests, obj, name, module, source_lines, globs, seen)	todo		
-Lib/doctest.py	1078	1114	DocTestFinder._get_test	_get_test(self, obj, name, module, globs, source_lines)	todo		
-Lib/doctest.py	1116	1177	DocTestFinder._find_lineno	_find_lineno(self, obj, source_lines)	todo		
-Lib/doctest.py	1249	1280	DocTestRunner.__init__	__init__(self, checker=None, verbose=None, optionflags=0)	todo		
-Lib/doctest.py	1286	1297	DocTestRunner.report_start	report_start(self, out, test, example)	todo		
-Lib/doctest.py	1299	1305	DocTestRunner.report_success	report_success(self, out, test, example, got)	todo		
-Lib/doctest.py	1307	1312	DocTestRunner.report_failure	report_failure(self, out, test, example, got)	todo		
-Lib/doctest.py	1314	1319	DocTestRunner.report_unexpected_exception	report_unexpected_exception(self, out, test, example, exc_info)	todo		
-Lib/doctest.py	1321	1338	DocTestRunner._failure_header	_failure_header(self, test, example)	todo		
-Lib/doctest.py	1344	1483	DocTestRunner.__run	__run(self, test, compileflags, out)	todo		
-Lib/doctest.py	1485	1496	DocTestRunner.__record_outcome	__record_outcome(self, test, failures, tries, skips)	todo		
-Lib/doctest.py	1501	1507	DocTestRunner.__patched_linecache_getlines	__patched_linecache_getlines(self, filename, module_globals=None)	todo		
-Lib/doctest.py	1509	1585	DocTestRunner.run	run(self, test, compileflags=None, out=None, clear_globs=True)	todo		
-Lib/doctest.py	1590	1665	DocTestRunner.summarize	summarize(self, verbose=None)	todo		
-Lib/doctest.py	1670	1678	DocTestRunner.merge	merge(self, other)	todo		
-Lib/doctest.py	1681	1687	_n_items	_n_items(items: list | dict)	todo		
-Lib/doctest.py	1698	1702	OutputChecker._toAscii	_toAscii(self, s)	todo		
-Lib/doctest.py	1704	1764	OutputChecker.check_output	check_output(self, want, got, optionflags)	todo		
-Lib/doctest.py	1767	1788	OutputChecker._do_a_fancy_diff	_do_a_fancy_diff(self, want, got, optionflags)	todo		
-Lib/doctest.py	1790	1834	OutputChecker.output_difference	output_difference(self, example, got, optionflags)	todo		
-Lib/doctest.py	1847	1850	DocTestFailure.__init__	__init__(self, test, example, got)	todo		
-Lib/doctest.py	1852	1853	DocTestFailure.__str__	__str__(self)	todo		
-Lib/doctest.py	1866	1869	UnexpectedException.__init__	__init__(self, test, example, exc_info)	todo		
-Lib/doctest.py	1871	1872	UnexpectedException.__str__	__str__(self)	todo		
-Lib/doctest.py	1965	1969	DebugRunner.run	run(self, test, compileflags=None, out=None, clear_globs=True)	todo		
-Lib/doctest.py	1971	1972	DebugRunner.report_unexpected_exception	report_unexpected_exception(self, out, test, example, exc_info)	todo		
-Lib/doctest.py	1974	1975	DebugRunner.report_failure	report_failure(self, out, test, example, got)	todo		
-Lib/doctest.py	1986	2088	testmod	testmod(m=None, name=None, globs=None, verbose=None, report=True, optionflags=0, extraglobs=None, raise_on_error=False, exclude_empty=False)	todo		
-Lib/doctest.py	2091	2212	testfile	testfile(filename, module_relative=True, name=None, package=None, globs=None, verbose=None, report=True, optionflags=0, extraglobs=None, raise_on_error=False, parser=DocTestParser(), encoding=None)	todo		
-Lib/doctest.py	2215	2236	run_docstring_examples	run_docstring_examples(f, globs, verbose=False, name='NoName', compileflags=None, optionflags=0)	todo		
-Lib/doctest.py	2244	2277	set_unittest_reportflags	set_unittest_reportflags(flags)	todo		
-Lib/doctest.py	2282	2290	DocTestCase.__init__	__init__(self, test, optionflags=0, setUp=None, tearDown=None, checker=None)	todo		
-Lib/doctest.py	2292	2297	DocTestCase.setUp	setUp(self)	todo		
-Lib/doctest.py	2299	2307	DocTestCase.tearDown	tearDown(self)	todo		
-Lib/doctest.py	2309	2332	DocTestCase.runTest	runTest(self)	todo		
-Lib/doctest.py	2334	2344	DocTestCase.format_failure	format_failure(self, err)	todo		
-Lib/doctest.py	2346	2416	DocTestCase.debug	debug(self)	todo		
-Lib/doctest.py	2418	2419	DocTestCase.id	id(self)	todo		
-Lib/doctest.py	2421	2429	DocTestCase.__eq__	__eq__(self, other)	todo		
-Lib/doctest.py	2431	2433	DocTestCase.__hash__	__hash__(self)	todo		
-Lib/doctest.py	2435	2437	DocTestCase.__repr__	__repr__(self)	todo		
-Lib/doctest.py	2441	2442	DocTestCase.shortDescription	shortDescription(self)	todo		
-Lib/doctest.py	2445	2447	SkipDocTestCase.__init__	__init__(self, module)	todo		
-Lib/doctest.py	2449	2450	SkipDocTestCase.setUp	setUp(self)	todo		
-Lib/doctest.py	2452	2453	SkipDocTestCase.test_skip	test_skip(self)	todo		
-Lib/doctest.py	2455	2456	SkipDocTestCase.shortDescription	shortDescription(self)	todo		
-Lib/doctest.py	2463	2464	_DocTestSuite._removeTestAtIndex	_removeTestAtIndex(self, index)	todo		
-Lib/doctest.py	2467	2529	DocTestSuite	DocTestSuite(module=None, globs=None, extraglobs=None, test_finder=None, **options)	todo		
-Lib/doctest.py	2533	2534	DocFileCase.id	id(self)	todo		
-Lib/doctest.py	2536	2537	DocFileCase.__repr__	__repr__(self)	todo		
-Lib/doctest.py	2539	2542	DocFileCase.format_failure	format_failure(self, err)	todo		
-Lib/doctest.py	2544	2568	DocFileTest	DocFileTest(path, module_relative=True, package=None, globs=None, parser=DocTestParser(), encoding=None, **options)	todo		
-Lib/doctest.py	2570	2637	DocFileSuite	DocFileSuite(*paths, **kw)	todo		
-Lib/doctest.py	2643	2723	script_from_examples	script_from_examples(s)	todo		
-Lib/doctest.py	2725	2739	testsource	testsource(module, name)	todo		
-Lib/doctest.py	2741	2744	debug_src	debug_src(src, pm=False, globs=None)	todo		
-Lib/doctest.py	2746	2764	debug_script	debug_script(src, pm=False, globs=None)	todo		
-Lib/doctest.py	2766	2775	debug	debug(module, name, pm=False)	todo		
-Lib/doctest.py	2794	2802	_TestClass.__init__	__init__(self, val)	todo		
-Lib/doctest.py	2804	2812	_TestClass.square	square(self)	todo		
-Lib/doctest.py	2814	2822	_TestClass.get	get(self)	todo		
-Lib/doctest.py	2875	2917	_test	_test()	todo		
+Lib/doctest.py	114	117	TestResults.__new__	__new__(cls, failed, attempted, *, skipped=0)	todo		
+Lib/doctest.py	119	127	TestResults.__repr__	__repr__(self)	todo		
+Lib/doctest.py	152	154	register_optionflag	register_optionflag(name)	todo		
+Lib/doctest.py	203	213	_extract_future_flags	_extract_future_flags(globs)	todo		
+Lib/doctest.py	215	238	_normalize_module	_normalize_module(module, depth=2)	todo		
+Lib/doctest.py	240	255	_load_testfile	_load_testfile(filename, package, module_relative, encoding)	todo		changed-in-3.15:
+Lib/doctest.py	257	263	_indent	_indent(s, indent=4)	todo		
+Lib/doctest.py	265	274	_exception_traceback	_exception_traceback(exc_info)	todo		
+Lib/doctest.py	278	285	_SpoofOut.getvalue	getvalue(self)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/doctest.py	287	290	_SpoofOut.truncate	truncate(self, size=None)	todo		changed-in-3.15: candidates:pyio-truncate-keeps-position
+Lib/doctest.py	293	340	_ellipsis_match	_ellipsis_match(want, got)	todo		
+Lib/doctest.py	342	348	_comment_line	_comment_line(line)	todo		
+Lib/doctest.py	350	374	_strip_exception_details	_strip_exception_details(msg)	todo		
+Lib/doctest.py	382	388	_OutputRedirectingPdb.__init__	__init__(self, out)	todo		changed-in-3.15:
+Lib/doctest.py	390	394	_OutputRedirectingPdb.set_trace	set_trace(self, frame=None, *, commands=None)	todo		
+Lib/doctest.py	396	400	_OutputRedirectingPdb.set_continue	set_continue(self)	todo		
+Lib/doctest.py	402	410	_OutputRedirectingPdb.trace_dispatch	trace_dispatch(self, *args)	todo		
+Lib/doctest.py	413	445	_module_relative_path	_module_relative_path(module, test_path)	todo		
+Lib/doctest.py	494	510	Example.__init__	__init__(self, source, want, exc_msg=None, lineno=0, indent=0, options=None)	todo		
+Lib/doctest.py	512	521	Example.__eq__	__eq__(self, other)	todo		
+Lib/doctest.py	523	525	Example.__hash__	__hash__(self)	todo		
+Lib/doctest.py	551	563	DocTest.__init__	__init__(self, examples, globs, name, filename, lineno, docstring)	todo		
+Lib/doctest.py	565	574	DocTest.__repr__	__repr__(self)	todo		
+Lib/doctest.py	576	585	DocTest.__eq__	__eq__(self, other)	todo		
+Lib/doctest.py	587	588	DocTest.__hash__	__hash__(self)	todo		
+Lib/doctest.py	591	598	DocTest.__lt__	__lt__(self, other)	todo		
+Lib/doctest.py	652	689	DocTestParser.parse	parse(self, string, name='<string>')	todo		
+Lib/doctest.py	691	701	DocTestParser.get_doctest	get_doctest(self, string, globs, name, filename, lineno)	todo		
+Lib/doctest.py	703	715	DocTestParser.get_examples	get_examples(self, string, name='<string>')	todo		
+Lib/doctest.py	717	759	DocTestParser._parse_example	_parse_example(self, m, name, lineno)	todo		
+Lib/doctest.py	771	795	DocTestParser._find_options	_find_options(self, source, name, lineno)	todo		
+Lib/doctest.py	801	807	DocTestParser._min_indent	_min_indent(self, s)	todo		
+Lib/doctest.py	809	821	DocTestParser._check_prompt_blank	_check_prompt_blank(self, lines, indent, name, lineno)	todo		
+Lib/doctest.py	823	832	DocTestParser._check_prefix	_check_prefix(self, lines, prefix, name, lineno)	todo		
+Lib/doctest.py	848	868	DocTestFinder.__init__	__init__(self, verbose=False, parser=DocTestParser(), recurse=True, exclude_empty=True)	todo		
+Lib/doctest.py	870	970	DocTestFinder.find	find(self, obj, name=None, module=None, globs=None, extraglobs=None)	todo		changed-in-3.15: candidates:strsearch-count-repeated-find,strsearch-find-extreme,strsearch-find-slice-literal,strsearch-find-str-bytes,strsearch-rfind-reverse
+Lib/doctest.py	972	999	DocTestFinder._from_module	_from_module(self, module, object)	todo		
+Lib/doctest.py	1001	1010	DocTestFinder._is_routine	_is_routine(self, obj)	todo		
+Lib/doctest.py	1012	1071	DocTestFinder._find	_find(self, tests, obj, name, module, source_lines, globs, seen)	todo		
+Lib/doctest.py	1073	1109	DocTestFinder._get_test	_get_test(self, obj, name, module, globs, source_lines)	todo		
+Lib/doctest.py	1111	1198	DocTestFinder._find_lineno	_find_lineno(self, obj, source_lines)	todo		changed-in-3.15:
+Lib/doctest.py	1270	1301	DocTestRunner.__init__	__init__(self, checker=None, verbose=None, optionflags=0)	todo		
+Lib/doctest.py	1307	1310	DocTestRunner.report_skip	report_skip(self, out, test, example)	todo		changed-in-3.15: new function
+Lib/doctest.py	1312	1323	DocTestRunner.report_start	report_start(self, out, test, example)	todo		
+Lib/doctest.py	1325	1331	DocTestRunner.report_success	report_success(self, out, test, example, got)	todo		
+Lib/doctest.py	1333	1338	DocTestRunner.report_failure	report_failure(self, out, test, example, got)	todo		
+Lib/doctest.py	1340	1345	DocTestRunner.report_unexpected_exception	report_unexpected_exception(self, out, test, example, exc_info)	todo		
+Lib/doctest.py	1347	1364	DocTestRunner._failure_header	_failure_header(self, test, example)	todo		
+Lib/doctest.py	1370	1511	DocTestRunner.__run	__run(self, test, compileflags, out)	todo		changed-in-3.15:
+Lib/doctest.py	1513	1524	DocTestRunner.__record_outcome	__record_outcome(self, test, failures, tries, skips)	todo		
+Lib/doctest.py	1529	1535	DocTestRunner.__patched_linecache_getlines	__patched_linecache_getlines(self, filename, module_globals=None)	todo		
+Lib/doctest.py	1537	1613	DocTestRunner.run	run(self, test, compileflags=None, out=None, clear_globs=True)	todo		
+Lib/doctest.py	1618	1693	DocTestRunner.summarize	summarize(self, verbose=None)	todo		
+Lib/doctest.py	1698	1706	DocTestRunner.merge	merge(self, other)	todo		
+Lib/doctest.py	1709	1715	_n_items	_n_items(items: list | dict)	todo		
+Lib/doctest.py	1726	1730	OutputChecker._toAscii	_toAscii(self, s)	todo		
+Lib/doctest.py	1732	1792	OutputChecker.check_output	check_output(self, want, got, optionflags)	todo		
+Lib/doctest.py	1795	1816	OutputChecker._do_a_fancy_diff	_do_a_fancy_diff(self, want, got, optionflags)	todo		
+Lib/doctest.py	1818	1862	OutputChecker.output_difference	output_difference(self, example, got, optionflags)	todo		
+Lib/doctest.py	1875	1878	DocTestFailure.__init__	__init__(self, test, example, got)	todo		
+Lib/doctest.py	1880	1881	DocTestFailure.__str__	__str__(self)	todo		
+Lib/doctest.py	1894	1897	UnexpectedException.__init__	__init__(self, test, example, exc_info)	todo		
+Lib/doctest.py	1899	1900	UnexpectedException.__str__	__str__(self)	todo		
+Lib/doctest.py	1993	1997	DebugRunner.run	run(self, test, compileflags=None, out=None, clear_globs=True)	todo		
+Lib/doctest.py	1999	2000	DebugRunner.report_unexpected_exception	report_unexpected_exception(self, out, test, example, exc_info)	todo		
+Lib/doctest.py	2002	2003	DebugRunner.report_failure	report_failure(self, out, test, example, got)	todo		
+Lib/doctest.py	2014	2116	testmod	testmod(m=None, name=None, globs=None, verbose=None, report=True, optionflags=0, extraglobs=None, raise_on_error=False, exclude_empty=False)	todo		
+Lib/doctest.py	2119	2240	testfile	testfile(filename, module_relative=True, name=None, package=None, globs=None, verbose=None, report=True, optionflags=0, extraglobs=None, raise_on_error=False, parser=DocTestParser(), encoding=None)	todo		
+Lib/doctest.py	2243	2264	run_docstring_examples	run_docstring_examples(f, globs, verbose=False, name='NoName', compileflags=None, optionflags=0)	todo		
+Lib/doctest.py	2272	2305	set_unittest_reportflags	set_unittest_reportflags(flags)	todo		
+Lib/doctest.py	2310	2314	_DocTestCaseRunner.__init__	__init__(self, *args, test_case, test_result, **kwargs)	todo		changed-in-3.15: new function
+Lib/doctest.py	2316	2319	_DocTestCaseRunner._subTest	_subTest(self)	todo		changed-in-3.15: new function
+Lib/doctest.py	2321	2322	_DocTestCaseRunner.report_skip	report_skip(self, out, test, example)	todo		changed-in-3.15: new function
+Lib/doctest.py	2324	2325	_DocTestCaseRunner.report_success	report_success(self, out, test, example, got)	todo		changed-in-3.15: new function
+Lib/doctest.py	2327	2330	_DocTestCaseRunner.report_unexpected_exception	report_unexpected_exception(self, out, test, example, exc_info)	todo		changed-in-3.15: new function
+Lib/doctest.py	2332	2338	_DocTestCaseRunner.report_failure	report_failure(self, out, test, example, got)	todo		changed-in-3.15: new function
+Lib/doctest.py	2340	2356	_DocTestCaseRunner._add_traceback	_add_traceback(self, traceback, test, example)	todo		changed-in-3.15: new function
+Lib/doctest.py	2361	2369	DocTestCase.__init__	__init__(self, test, optionflags=0, setUp=None, tearDown=None, checker=None)	todo		changed-in-3.15:
+Lib/doctest.py	2371	2376	DocTestCase.setUp	setUp(self)	todo		
+Lib/doctest.py	2378	2386	DocTestCase.tearDown	tearDown(self)	todo		
+Lib/doctest.py	2388	2390	DocTestCase.run	run(self, result=None)	todo		changed-in-3.15: new function
+Lib/doctest.py	2392	2409	DocTestCase.runTest	runTest(self)	todo		changed-in-3.15:
+Lib/doctest.py	2411	2421	DocTestCase.format_failure	format_failure(self, err)	todo		
+Lib/doctest.py	2423	2493	DocTestCase.debug	debug(self)	todo		
+Lib/doctest.py	2495	2496	DocTestCase.id	id(self)	todo		
+Lib/doctest.py	2498	2506	DocTestCase.__eq__	__eq__(self, other)	todo		
+Lib/doctest.py	2508	2510	DocTestCase.__hash__	__hash__(self)	todo		
+Lib/doctest.py	2512	2514	DocTestCase.__repr__	__repr__(self)	todo		
+Lib/doctest.py	2518	2519	DocTestCase.shortDescription	shortDescription(self)	todo		
+Lib/doctest.py	2522	2524	SkipDocTestCase.__init__	__init__(self, module)	todo		changed-in-3.15:
+Lib/doctest.py	2526	2527	SkipDocTestCase.setUp	setUp(self)	todo		
+Lib/doctest.py	2529	2530	SkipDocTestCase.test_skip	test_skip(self)	todo		
+Lib/doctest.py	2532	2533	SkipDocTestCase.shortDescription	shortDescription(self)	todo		
+Lib/doctest.py	2540	2541	_DocTestSuite._removeTestAtIndex	_removeTestAtIndex(self, index)	todo		
+Lib/doctest.py	2544	2606	DocTestSuite	DocTestSuite(module=None, globs=None, extraglobs=None, test_finder=None, **options)	todo		
+Lib/doctest.py	2610	2611	DocFileCase.id	id(self)	todo		
+Lib/doctest.py	2613	2614	DocFileCase.__repr__	__repr__(self)	todo		
+Lib/doctest.py	2616	2619	DocFileCase.format_failure	format_failure(self, err)	todo		
+Lib/doctest.py	2621	2645	DocFileTest	DocFileTest(path, module_relative=True, package=None, globs=None, parser=DocTestParser(), encoding=None, **options)	todo		
+Lib/doctest.py	2647	2714	DocFileSuite	DocFileSuite(*paths, **kw)	todo		
+Lib/doctest.py	2720	2800	script_from_examples	script_from_examples(s)	todo		
+Lib/doctest.py	2802	2816	testsource	testsource(module, name)	todo		
+Lib/doctest.py	2818	2821	debug_src	debug_src(src, pm=False, globs=None)	todo		
+Lib/doctest.py	2823	2841	debug_script	debug_script(src, pm=False, globs=None)	todo		
+Lib/doctest.py	2843	2852	debug	debug(module, name, pm=False)	todo		
+Lib/doctest.py	2871	2879	_TestClass.__init__	__init__(self, val)	todo		
+Lib/doctest.py	2881	2889	_TestClass.square	square(self)	todo		
+Lib/doctest.py	2891	2899	_TestClass.get	get(self)	todo		
+Lib/doctest.py	2952	2994	_test	_test()	todo		changed-in-3.15:

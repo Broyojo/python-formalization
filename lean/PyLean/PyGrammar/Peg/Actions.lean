@@ -60,7 +60,7 @@ def recField (p : Ast) (i : Nat) : Ast :=
   | .node _ fs _ => fs.getD i .null
   | _ => .null
 
-/-- `_PyPegen_set_expr_context`, `Parser/action_helpers.c:318-346`. Recursion is on
+/-- `_PyPegen_set_expr_context`, `Parser/action_helpers.c:320-348`. Recursion is on
 `Starred`, `Tuple` and `List` nesting; `f` exceeds any parser depth (`MAXSTACK`). -/
 def setExprContext (ctx : Ast) : Nat → Ast → Ast
   | 0, e => e

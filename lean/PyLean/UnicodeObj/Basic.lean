@@ -50,7 +50,7 @@ def Kind.maxChar : Kind → Nat
   | .ucs2 => 0xffff
   | .ucs4 => 0x10ffff
 
-/-- The kind selection of `PyUnicode_New`, unicodeobject.c:1370-1463. -/
+/-- The kind selection of `PyUnicode_New`, unicodeobject.c:1278-1371. -/
 def kindOfMax (maxchar : Nat) : Kind :=
   if maxchar < 128 then .ascii
   else if maxchar < 256 then .ucs1

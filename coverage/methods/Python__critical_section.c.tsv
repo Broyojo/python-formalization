@@ -1,12 +1,12 @@
 file	line	endline	name	signature	status	entry	note
 Python/critical_section.c	14	17	untag_critical_section	untag_critical_section(uintptr_t tag)	todo		
-Python/critical_section.c	21	63	_PyCriticalSection_BeginSlow	_PyCriticalSection_BeginSlow(PyCriticalSection *c, PyMutex *m)	todo		
-Python/critical_section.c	66	105	_PyCriticalSection2_BeginSlow	_PyCriticalSection2_BeginSlow(PyCriticalSection2 *c, PyMutex *m1, PyMutex *m2, int is_m1_locked)	todo		
-Python/critical_section.c	111	132	_PyCriticalSection_SuspendAll	_PyCriticalSection_SuspendAll(PyThreadState *tstate)	todo		
-Python/critical_section.c	135	167	_PyCriticalSection_Resume	_PyCriticalSection_Resume(PyThreadState *tstate)	todo		
-Python/critical_section.c	171	176	PyCriticalSection_Begin	PyCriticalSection_Begin(PyCriticalSection *c, PyObject *op)	todo		
-Python/critical_section.c	180	185	PyCriticalSection_BeginMutex	PyCriticalSection_BeginMutex(PyCriticalSection *c, PyMutex *m)	todo		
-Python/critical_section.c	189	194	PyCriticalSection_End	PyCriticalSection_End(PyCriticalSection *c)	todo		
-Python/critical_section.c	198	203	PyCriticalSection2_Begin	PyCriticalSection2_Begin(PyCriticalSection2 *c, PyObject *a, PyObject *b)	todo		
-Python/critical_section.c	207	212	PyCriticalSection2_BeginMutex	PyCriticalSection2_BeginMutex(PyCriticalSection2 *c, PyMutex *m1, PyMutex *m2)	todo		
-Python/critical_section.c	216	221	PyCriticalSection2_End	PyCriticalSection2_End(PyCriticalSection2 *c)	todo		
+Python/critical_section.c	21	62	_PyCriticalSection_BeginSlow	_PyCriticalSection_BeginSlow(PyThreadState *tstate, PyCriticalSection *c, PyMutex *m)	todo		changed-in-3.15:
+Python/critical_section.c	65	103	_PyCriticalSection2_BeginSlow	_PyCriticalSection2_BeginSlow(PyThreadState *tstate, PyCriticalSection2 *c, PyMutex *m1, PyMutex *m2, int is_m1_locked)	todo		changed-in-3.15:
+Python/critical_section.c	109	130	_PyCriticalSection_SuspendAll	_PyCriticalSection_SuspendAll(PyThreadState *tstate)	todo		
+Python/critical_section.c	133	165	_PyCriticalSection_Resume	_PyCriticalSection_Resume(PyThreadState *tstate)	todo		
+Python/critical_section.c	169	174	PyCriticalSection_Begin	PyCriticalSection_Begin(PyCriticalSection *c, PyObject *op)	todo		changed-in-3.15:
+Python/critical_section.c	178	183	PyCriticalSection_BeginMutex	PyCriticalSection_BeginMutex(PyCriticalSection *c, PyMutex *m)	todo		changed-in-3.15:
+Python/critical_section.c	187	192	PyCriticalSection_End	PyCriticalSection_End(PyCriticalSection *c)	todo		changed-in-3.15:
+Python/critical_section.c	196	201	PyCriticalSection2_Begin	PyCriticalSection2_Begin(PyCriticalSection2 *c, PyObject *a, PyObject *b)	todo		changed-in-3.15:
+Python/critical_section.c	205	210	PyCriticalSection2_BeginMutex	PyCriticalSection2_BeginMutex(PyCriticalSection2 *c, PyMutex *m1, PyMutex *m2)	todo		changed-in-3.15:
+Python/critical_section.c	214	219	PyCriticalSection2_End	PyCriticalSection2_End(PyCriticalSection2 *c)	todo		changed-in-3.15:

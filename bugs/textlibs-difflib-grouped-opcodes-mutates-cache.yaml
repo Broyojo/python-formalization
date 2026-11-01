@@ -40,12 +40,12 @@ observed: |
   python3 3.14.7: opcodes start at 7 after the call, and get_grouped_opcodes(3) gives one line of context, not three. REPRODUCED.
   main 3.16.0a1+dev: the same. REPRODUCED.
 promised_by: |
-  Lib/difflib.py:495-497: "The first tuple has i1 == j1 == 0, and remaining tuples have i1 == the i2 from
+  Lib/difflib.py:496-498: "The first tuple has i1 == j1 == 0, and remaining tuples have i1 == the i2 from
   the tuple preceding it".
 cause: |
-  Lib/difflib.py:572 takes the list that :524 stored in self.opcodes, and :578 and :581 assign into it.
+  Lib/difflib.py:573 takes the list that :525 stored in self.opcodes, and :579 and :582 assign into it.
 possible_fix: |
-  `codes = list(self.get_opcodes())` at Lib/difflib.py:572.
+  `codes = list(self.get_opcodes())` at Lib/difflib.py:573.
 duplicates: |
   None found. Bugforge has four difflib entries, none on this. #54194 (closed) was about get_matching_blocks
   and a different caching problem. Queries: gh search issues --repo python/cpython get_grouped_opcodes;

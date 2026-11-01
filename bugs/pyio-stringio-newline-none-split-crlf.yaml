@@ -54,7 +54,7 @@ observed: |
   'a\nb'; _pyio 'a\nb' for both; the two-piece file reads back as 'a\nb'. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
 promised_by: |
-  Doc/library/io.rst:1142: StringIO's newline "works like that of TextIOWrapper"; there, universal
+  Doc/library/io.rst:1124: StringIO's newline "works like that of TextIOWrapper"; there, universal
   newlines translate '\r\n' to '\n'. The twin is the main evidence; no doc sentence states
   independence from write chunking.
 cause: |

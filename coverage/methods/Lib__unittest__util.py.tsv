@@ -1,10 +1,12 @@
 file	line	endline	name	signature	status	entry	note
-Lib/unittest/util.py	18	22	_shorten	_shorten(s, prefixlen, suffixlen)	todo		
-Lib/unittest/util.py	24	43	_common_shorten_repr	_common_shorten_repr(*args)	todo		
-Lib/unittest/util.py	45	52	safe_repr	safe_repr(obj, short=False)	todo		
-Lib/unittest/util.py	54	55	strclass	strclass(cls)	todo		
-Lib/unittest/util.py	57	95	sorted_list_difference	sorted_list_difference(expected, actual)	todo		
-Lib/unittest/util.py	98	113	unorderable_list_difference	unorderable_list_difference(expected, actual)	todo		
-Lib/unittest/util.py	115	117	three_way_cmp	three_way_cmp(x, y)	todo		
-Lib/unittest/util.py	121	154	_count_diff_all_purpose	_count_diff_all_purpose(actual, expected)	todo		
-Lib/unittest/util.py	156	170	_count_diff_hashable	_count_diff_hashable(actual, expected)	todo		
+Lib/unittest/util.py	17	21	_shorten	_shorten(s, prefixlen, suffixlen)	todo		
+Lib/unittest/util.py	23	31	_common_prefix	_common_prefix(m)	todo		changed-in-3.15: new function
+Lib/unittest/util.py	33	52	_common_shorten_repr	_common_shorten_repr(*args)	todo		changed-in-3.15:
+Lib/unittest/util.py	54	61	safe_repr	safe_repr(obj, short=False)	todo		
+Lib/unittest/util.py	63	64	strclass	strclass(cls)	todo		
+Lib/unittest/util.py	66	72	_dedupe_sorted	_dedupe_sorted(lst)	todo		changed-in-3.15: new function
+Lib/unittest/util.py	74	112	sorted_list_difference	sorted_list_difference(expected, actual)	todo		changed-in-3.15:
+Lib/unittest/util.py	115	130	unorderable_list_difference	unorderable_list_difference(expected, actual)	todo		
+Lib/unittest/util.py	132	134	three_way_cmp	three_way_cmp(x, y)	todo		
+Lib/unittest/util.py	138	171	_count_diff_all_purpose	_count_diff_all_purpose(actual, expected)	todo		
+Lib/unittest/util.py	173	187	_count_diff_hashable	_count_diff_hashable(actual, expected)	todo		

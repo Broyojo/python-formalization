@@ -48,7 +48,7 @@ structure PyObj where
   exp : PExp
   deriving Repr, DecidableEq
 
-/-- `_pydecimal.Decimal.__str__()`, _pydecimal.py:984-1034, on raw attributes.
+/-- `_pydecimal.Decimal.__str__()`, _pydecimal.py:1076-1126, on raw attributes.
 `"%+d" % n` formats an int, so a more than 4300-digit exponent raises. -/
 def pyStrObj (o : PyObj) (caps : Bool := true) : Py (List Char) :=
   let sign := if o.sign then ['-'] else []
@@ -71,7 +71,7 @@ def Dec.toPyObj : Dec → PyObj
 /-- `str(d)` in `_pydecimal`. -/
 def pyStr (d : Dec) (caps : Bool := true) : Py (List Char) := pyStrObj d.toPyObj caps
 
-/-- `isinstance(value[0], int) and value[0] in (0, 1)`, _pydecimal.py:556-560. -/
+/-- `isinstance(value[0], int) and value[0] in (0, 1)`, _pydecimal.py:648-652. -/
 def pySign (s : PyVal) : Py Bool :=
   match s.asInt? with
   | some 0 => pure false
@@ -79,7 +79,7 @@ def pySign (s : PyVal) : Py Bool :=
   | _ => throw (.valueError "Invalid sign.  The first value in the tuple should be an integer; either 0 for a positive number or 1 for a negative number.")
 
 /-- `_pydecimal.Decimal(value)` for a tuple `value = (s, digits, e)`,
-_pydecimal.py:550-593 (the length check at :552 is the shape of the
+_pydecimal.py:642-685 (the length check at :644 is the shape of the
 argument here). `digits = none` is an object that is not iterable. -/
 def pyFromTuple (s : PyVal) (digits : Option (List PyVal)) (e : PyVal) : Py PyObj := do
   let sign ← pySign s
@@ -106,7 +106,7 @@ def pyFromTuple (s : PyVal) (digits : Option (List PyVal)) (e : PyVal) : Py PyOb
     | some x => return ⟨sign, if kept = [] then ['0'] else joined, .num x⟩
     | none => throw (.valueError "The third value in the tuple must be an integer, or one of the strings 'F', 'n', 'N'.")
 
-/-- One coefficient digit in `dectuple_as_str` (_decimal.c:2754-2776). -/
+/-- One coefficient digit in `dectuple_as_str` (_decimal.c:2881-2903). -/
 def cDigit (d : PyVal) : Py Nat :=
   match d.asInt? with
   | none => .error (.valueError "coefficient must be a tuple of digits")
@@ -116,8 +116,8 @@ def cDigit (d : PyVal) : Py Nat :=
     else .ok v.toNat
 
 /-- `_decimal.Decimal(value)` for a tuple: `dectuple_as_str`
-(_decimal.c:2652-2799) builds a numeric string which
-`PyDecType_FromCStringExact` (:2224-2250) converts under the max context. -/
+(_decimal.c:2779-2926) builds a numeric string which
+`PyDecType_FromCStringExact` (:2351-2377) converts under the max context. -/
 def cFromTuple (s : PyVal) (digits : Option (List PyVal)) (e : PyVal) : Py Dec := do
   -- sign
   let some sv := s.asInt? | throw (.valueError "sign must be an integer with the value 0 or 1")
@@ -153,8 +153,8 @@ def cFromTuple (s : PyVal) (digits : Option (List PyVal)) (e : PyVal) : Py Dec :
     let d := Dec.fin neg p x
     if InCLimits d then return d else throw invalidOp
 
-/-- `Decimal.as_tuple()` of `_pydecimal` (_pydecimal.py:922-927) and of
-`_decimal` (`PyDec_AsTuple`, _decimal.c:4038-4129): sign, coefficient
+/-- `Decimal.as_tuple()` of `_pydecimal` (_pydecimal.py:1014-1019) and of
+`_decimal` (`PyDec_AsTuple`, _decimal.c@3.14.7:4038-4129): sign, coefficient
 digits (`(0,)` for an infinity, `()` for a NaN without payload) and the
 exponent or code. -/
 def asTuple (d : Dec) : PyVal × List PyVal × PyVal :=

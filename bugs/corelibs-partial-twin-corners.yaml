@@ -73,8 +73,8 @@ observed: |
 promised_by: |
   Nothing explicit: the two twins.
 cause: |
-  Lib/functools.py:329 against Modules/_functoolsmodule.c:215; :365 against :651-660; :422-423 against PyDict_Copy at
-  Modules/_functoolsmodule.c:748-749; :415-419 against :725-743.
+  Lib/functools.py:329 against Modules/_functoolsmodule.c:208; :363 against :746-755; @3.14.7:422-423 against PyDict_Copy at
+  Modules/_functoolsmodule.c:843-844; @3.14.7:415-419 against :820-838.
 possible_fix: |
   None needed, apart from the C defect recorded on its own.
 duplicates:

@@ -8,7 +8,7 @@ namespace PyLean.Ipaddress
 
 open PyLean
 
-/-- `summarize_address_range` docstring, ipaddress.py:201-232: for
+/-- `summarize_address_range` docstring, ipaddress.py:198-229: for
 `first <= last` it returns networks that cover exactly the range
 `first..last`, in ascending order, each a valid network of the same version. -/
 def SummarizeExactCover : Prop :=

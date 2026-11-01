@@ -4,33 +4,30 @@ Lib/glob.py	46	88	iglob	iglob(pathname, *, root_dir=None, dir_fd=None, recursive
 Lib/glob.py	90	129	_iglob	_iglob(pathname, root_dir, dir_fd, recursive, dironly, include_hidden=False)	todo		
 Lib/glob.py	135	139	_glob1	_glob1(dirname, pattern, dir_fd, dironly, include_hidden=False)	todo		
 Lib/glob.py	141	150	_glob0	_glob0(dirname, basename, dir_fd, dironly, include_hidden=False)	todo		
-Lib/glob.py	157	160	glob0	glob0(dirname, pattern)	todo		
-Lib/glob.py	162	165	glob1	glob1(dirname, pattern)	todo		
-Lib/glob.py	170	175	_glob2	_glob2(dirname, pattern, dir_fd, dironly, include_hidden=False)	todo		
-Lib/glob.py	179	211	_iterdir	_iterdir(dirname, dir_fd, dironly)	todo		
-Lib/glob.py	213	215	_listdir	_listdir(dirname, dir_fd, dironly)	todo		
-Lib/glob.py	218	226	_rlistdir	_rlistdir(dirname, dir_fd, dironly, include_hidden=False)	todo		
-Lib/glob.py	229	238	_lexists	_lexists(pathname, dir_fd)	todo		
-Lib/glob.py	240	249	_isdir	_isdir(pathname, dir_fd)	todo		
-Lib/glob.py	251	255	_join	_join(dirname, basename)	todo		
-Lib/glob.py	260	265	has_magic	has_magic(s)	todo		
-Lib/glob.py	267	268	_ishidden	_ishidden(path)	todo		
-Lib/glob.py	270	274	_isrecursive	_isrecursive(pattern)	todo		
-Lib/glob.py	276	286	escape	escape(pathname)	todo		
-Lib/glob.py	294	346	translate	translate(pat, *, recursive=False, include_hidden=False, seps=None)	todo		
-Lib/glob.py	350	355	_compile_pattern	_compile_pattern(pat, seps, case_sensitive, recursive=True)	todo		
-Lib/glob.py	362	366	_GlobberBase.__init__	__init__(self, sep, case_sensitive, case_pedantic=False, recursive=False)	todo		
-Lib/glob.py	371	374	_GlobberBase.lexists	lexists(path)	todo		
-Lib/glob.py	377	380	_GlobberBase.scandir	scandir(path)	todo		
-Lib/glob.py	383	386	_GlobberBase.concat_path	concat_path(path, text)	todo		
-Lib/glob.py	390	392	_GlobberBase.compile	compile(self, pat, altsep=None)	todo		
-Lib/glob.py	394	409	_GlobberBase.selector	selector(self, parts)	todo		
-Lib/glob.py	411	421	_GlobberBase.special_selector	special_selector(self, part, parts)	todo		
-Lib/glob.py	423	440	_GlobberBase.literal_selector	literal_selector(self, part, parts)	todo		
-Lib/glob.py	442	470	_GlobberBase.wildcard_selector	wildcard_selector(self, part, parts)	todo		
-Lib/glob.py	472	532	_GlobberBase.recursive_selector	recursive_selector(self, part, parts)	todo		
-Lib/glob.py	534	542	_GlobberBase.select_exists	select_exists(self, path, exists=False)	todo		
-Lib/glob.py	552	557	_StringGlobber.scandir	scandir(path)	todo		
-Lib/glob.py	565	566	_PathGlobber.lexists	lexists(path)	todo		
-Lib/glob.py	569	570	_PathGlobber.scandir	scandir(path)	todo		
-Lib/glob.py	573	574	_PathGlobber.concat_path	concat_path(path, text)	todo		
+Lib/glob.py	155	160	_glob2	_glob2(dirname, pattern, dir_fd, dironly, include_hidden=False)	todo		
+Lib/glob.py	164	196	_iterdir	_iterdir(dirname, dir_fd, dironly)	todo		
+Lib/glob.py	198	200	_listdir	_listdir(dirname, dir_fd, dironly)	todo		
+Lib/glob.py	203	211	_rlistdir	_rlistdir(dirname, dir_fd, dironly, include_hidden=False)	todo		
+Lib/glob.py	214	223	_lexists	_lexists(pathname, dir_fd)	todo		
+Lib/glob.py	225	234	_isdir	_isdir(pathname, dir_fd)	todo		
+Lib/glob.py	236	240	_join	_join(dirname, basename)	todo		
+Lib/glob.py	245	250	has_magic	has_magic(s)	todo		
+Lib/glob.py	252	253	_ishidden	_ishidden(path)	todo		
+Lib/glob.py	255	259	_isrecursive	_isrecursive(pattern)	todo		
+Lib/glob.py	261	271	escape	escape(pathname)	todo		
+Lib/glob.py	279	331	translate	translate(pat, *, recursive=False, include_hidden=False, seps=None)	todo		
+Lib/glob.py	335	340	_compile_pattern	_compile_pattern(pat, seps, case_sensitive, recursive=True)	todo		
+Lib/glob.py	347	351	_GlobberBase.__init__	__init__(self, sep, case_sensitive, case_pedantic=False, recursive=False)	todo		
+Lib/glob.py	356	359	_GlobberBase.lexists	lexists(path)	todo		
+Lib/glob.py	362	365	_GlobberBase.scandir	scandir(path)	todo		
+Lib/glob.py	368	371	_GlobberBase.concat_path	concat_path(path, text)	todo		
+Lib/glob.py	374	377	_GlobberBase.stringify_path	stringify_path(path)	todo		changed-in-3.15: new function
+Lib/glob.py	381	383	_GlobberBase.compile	compile(self, pat, altsep=None)	todo		
+Lib/glob.py	385	400	_GlobberBase.selector	selector(self, parts)	todo		
+Lib/glob.py	402	412	_GlobberBase.special_selector	special_selector(self, part, parts)	todo		
+Lib/glob.py	414	431	_GlobberBase.literal_selector	literal_selector(self, part, parts)	todo		
+Lib/glob.py	433	461	_GlobberBase.wildcard_selector	wildcard_selector(self, part, parts)	todo		
+Lib/glob.py	463	524	_GlobberBase.recursive_selector	recursive_selector(self, part, parts)	todo		changed-in-3.15:
+Lib/glob.py	526	534	_GlobberBase.select_exists	select_exists(self, path, exists=False)	todo		
+Lib/glob.py	544	549	_StringGlobber.scandir	scandir(path)	todo		
+Lib/glob.py	552	553	_StringGlobber.stringify_path	stringify_path(path)	todo		changed-in-3.15: new function

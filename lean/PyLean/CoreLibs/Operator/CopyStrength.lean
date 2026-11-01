@@ -147,8 +147,8 @@ theorem deepcopyDictExact_proven : DeepcopyDictExact := by
   · rw [set_memo, fresh_lookup_self]
 
 /-- The order inside the copy of a dict, and the reverse order in `_reconstruct`. `y[deepcopy(key, memo)] =
-deepcopy(value, memo)` evaluates its right side first, so at Lib/copy.py:201 a failing value hides a failing key. The
-explicit lines of `_reconstruct`, :265-267, copy the key first. Inside `deepList`, a failing item stops the list. -/
+deepcopy(value, memo)` evaluates its right side first, so at Lib/copy.py:200 a failing value hides a failing key. The
+explicit lines of `_reconstruct`, :279-281, copy the key first. Inside `deepList`, a failing item stops the list. -/
 def DeepCopyOrder : Prop :=
   ∀ (fuel : Nat) (h h1 : Heap) (k v y a v' : Nat) (r : List (Nat × Nat)) (as : List Nat) (e : PyExc),
     (deepcopy fuel h v = .error e → deepPairs (fuel + 1) h ((k, v) :: r) = .error e) ∧
@@ -212,7 +212,7 @@ theorem deepcopyAliasing_proven : DeepcopyAliasing := by
 
 /-- `_deepcopy_tuple`, the two paths past the atoms of `DeepcopyTupleIdentity`. A tuple holding something mutable
 becomes a new tuple of the copies, recorded in `memo`. A tuple reached again through its own items is the point of
-the second `memo` read at Lib/copy.py:185: for `t = ([t],)`, the inner call builds the one copy, the outer call finds
+the second `memo` read at Lib/copy.py:184: for `t = ([t],)`, the inner call builds the one copy, the outer call finds
 it, and the copied list and tuple refer to each other. Without that read there would be two tuples. -/
 def DeepcopyTupleExact : Prop :=
   ∀ (fuel : Nat) (h : Heap) (x a : Nat), h.memo.lookup x = none → h.memo.lookup a = none →
@@ -336,7 +336,7 @@ theorem reconstructDeepSteps_proven : ReconstructDeepSteps := by
     simp only [hc, hm]
     simp [reconArity, h5, h6, h4, h7]
 
-/-- `memo[id(x)] = y` comes before the state is copied, Lib/copy.py:234-239: an object whose state refers back to it
+/-- `memo[id(x)] = y` comes before the state is copied, Lib/copy.py:248-253: an object whose state refers back to it
 gets a copy whose state refers to the copy. With the two lines swapped the state copy would recurse for ever. -/
 def ReconstructMemoFirst : Prop :=
   ∀ (fuel : Nat) (h : Heap) (x st n : Nat) (c : Option (Option PyExc)), 2 ≤ n → n ≤ 5 → x < h.cells.length →

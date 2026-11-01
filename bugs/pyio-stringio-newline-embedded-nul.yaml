@@ -51,13 +51,13 @@ observed: |
   '\r\n\x00' as '\r\n'. _pyio.StringIO and io.TextIOWrapper raise ValueError for all six. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
 promised_by: |
-  Doc/library/io.rst:1019 and :1142: newline "can be None, '', '\n', '\r', or '\r\n'", and
-  StringIO's argument "works like that of TextIOWrapper". Twin: Lib/_pyio.py:2098-2102 rejects
+  Doc/library/io.rst:1001 and :1124: newline "can be None, '', '\n', '\r', or '\r\n'", and
+  StringIO's argument "works like that of TextIOWrapper". Twin: Lib/_pyio.py:2122-2126 rejects
   anything else.
 cause: |
-  Modules/_io/stringio.c:693 `newline = PyUnicode_AsUTF8(newline_obj);` drops the length, the
-  check at :698-701 then compares newline[0..2] against '\0'-terminated literals, and :725
-  `self->readnl = PyUnicode_FromString(newline)` stores the truncated value. :729 treats a
+  Modules/_io/stringio.c:703 `newline = PyUnicode_AsUTF8(newline_obj);` drops the length, the
+  check at :708-711 then compares newline[0..2] against '\0'-terminated literals, and :735
+  `self->readnl = PyUnicode_FromString(newline)` stores the truncated value. :739 treats a
   leading NUL as the empty string.
 possible_fix: |
   Use PyUnicode_AsUTF8AndSize() and raise ValueError when strlen(newline) != size, exactly as

@@ -38,14 +38,14 @@ expected: |
   None, with the array still empty, as for array('w', 'x').fromunicode('').
 observed: |
   python3 3.14.7: SystemError ... returned a result with an exception set, caused by
-  SystemError: Objects/unicodeobject.c:2652: bad argument to internal function. REPRODUCED.
-  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical, at unicodeobject.c:2567.
+  SystemError: Objects/unicodeobject.c:2558: bad argument to internal function. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical, at unicodeobject.c:2473.
   REPRODUCED.
 promised_by: |
-  Invariant: no internal error from a valid call; Doc/library/array.rst:193 fromunicode.
+  Invariant: no internal error from a valid call; Doc/library/array.rst:222 fromunicode.
 cause: |
-  Modules/arraymodule.c:1907-1911 (3.14.7): the call is not guarded by ustr_length > 0, as the
-  'u' branch at :1881-1893 is, and `assert(u != NULL)` is compiled out. main has it at :1987.
+  Modules/arraymodule.c:2037-2041: the call is not guarded by ustr_length > 0, as the
+  'u' branch at :2011-2023 is, and `assert(u != NULL)` is compiled out. main has it at :2117.
 possible_fix: |
   `if (ustr_length > 0) { ... }` around PyUnicode_AsUCS4, as the 'u' branch does.
 duplicates:

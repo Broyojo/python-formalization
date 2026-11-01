@@ -35,5 +35,5 @@ Lib/logging/config.py	911	927	DictConfigurator.common_logger_config	common_logge
 Lib/logging/config.py	929	936	DictConfigurator.configure_logger	configure_logger(self, name, config, incremental=False)	todo		
 Lib/logging/config.py	938	941	DictConfigurator.configure_root	configure_root(self, config, incremental=False)	todo		
 Lib/logging/config.py	945	947	dictConfig	dictConfig(config)	todo		
-Lib/logging/config.py	950	1082	listen	listen(port=DEFAULT_LOGGING_CONFIG_PORT, verify=None)	todo		
-Lib/logging/config.py	1084	1092	stopListening	stopListening()	todo		
+Lib/logging/config.py	950	1083	listen	listen(port=DEFAULT_LOGGING_CONFIG_PORT, verify=None)	todo		changed-in-3.15:
+Lib/logging/config.py	1085	1093	stopListening	stopListening()	todo		

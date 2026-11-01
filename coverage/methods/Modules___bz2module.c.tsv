@@ -1,28 +1,27 @@
 file	line	endline	name	signature	status	entry	note
-Modules/_bz2module.c	26	31	get_module_state	get_module_state(PyObject *module)	todo		
-Modules/_bz2module.c	36	41	find_module_state_by_def	find_module_state_by_def(PyTypeObject *type)	todo		
-Modules/_bz2module.c	46	55	OutputBuffer_InitAndGrow	OutputBuffer_InitAndGrow(_BlocksOutputBuffer *buffer, Py_ssize_t max_length, char **next_out, uint32_t *avail_out)	todo		
-Modules/_bz2module.c	60	69	OutputBuffer_Grow	OutputBuffer_Grow(_BlocksOutputBuffer *buffer, char **next_out, uint32_t *avail_out)	todo		
-Modules/_bz2module.c	72	75	OutputBuffer_GetDataSize	OutputBuffer_GetDataSize(_BlocksOutputBuffer *buffer, uint32_t avail_out)	todo		
-Modules/_bz2module.c	78	81	OutputBuffer_Finish	OutputBuffer_Finish(_BlocksOutputBuffer *buffer, uint32_t avail_out)	todo		
-Modules/_bz2module.c	84	87	OutputBuffer_OnError	OutputBuffer_OnError(_BlocksOutputBuffer *buffer)	todo		
-Modules/_bz2module.c	139	185	catch_bz2_error	catch_bz2_error(int bzerror)	todo		
-Modules/_bz2module.c	191	242	compress	compress(BZ2Compressor *c, char *data, size_t len, int action)	todo		candidates:itertools-simple-doc-agree
-Modules/_bz2module.c	270	282	_bz2_BZ2Compressor_compress_impl	_bz2_BZ2Compressor_compress_impl(BZ2Compressor *self, Py_buffer *data) /*[clinic end generated code: output=59365426e941fbcc input=85c963218070fc4c]*/	todo		
-Modules/_bz2module.c	295	309	_bz2_BZ2Compressor_flush_impl	_bz2_BZ2Compressor_flush_impl(BZ2Compressor *self) /*[clinic end generated code: output=3ef03fc1b092a701 input=d64405d3c6f76691]*/	todo		
-Modules/_bz2module.c	312	321	BZ2_Malloc	BZ2_Malloc(void* ctx, int items, int size)	todo		
-Modules/_bz2module.c	324	327	BZ2_Free	BZ2_Free(void* ctx, void *ptr)	todo		
-Modules/_bz2module.c	343	380	_bz2_BZ2Compressor_impl	_bz2_BZ2Compressor_impl(PyTypeObject *type, int compresslevel) /*[clinic end generated code: output=83346c96beaacad7 input=d4500d2a52c8b263]*/	todo		
-Modules/_bz2module.c	383	393	BZ2Compressor_dealloc	BZ2Compressor_dealloc(PyObject *op)	todo		
-Modules/_bz2module.c	396	400	BZ2Compressor_traverse	BZ2Compressor_traverse(PyObject *self, visitproc visit, void *arg)	todo		
-Modules/_bz2module.c	435	491	decompress_buf	decompress_buf(BZ2Decompressor *d, Py_ssize_t max_length)	todo		
-Modules/_bz2module.c	495	603	decompress	decompress(BZ2Decompressor *d, char *data, size_t len, Py_ssize_t max_length)	todo		
-Modules/_bz2module.c	629	649	_bz2_BZ2Decompressor_decompress_impl	_bz2_BZ2Decompressor_decompress_impl(BZ2Decompressor *self, Py_buffer *data, Py_ssize_t max_length) /*[clinic end generated code: output=23e41045deb240a3 input=7f68faa9ff7a1b51]*/	todo		
-Modules/_bz2module.c	661	698	_bz2_BZ2Decompressor_impl	_bz2_BZ2Decompressor_impl(PyTypeObject *type) /*[clinic end generated code: output=5150d51ccaab220e input=b87413ce51853528]*/	todo		
-Modules/_bz2module.c	701	717	BZ2Decompressor_dealloc	BZ2Decompressor_dealloc(PyObject *op)	todo		
-Modules/_bz2module.c	720	724	BZ2Decompressor_traverse	BZ2Decompressor_traverse(PyObject *self, visitproc visit, void *arg)	todo		
-Modules/_bz2module.c	774	796	_bz2_exec	_bz2_exec(PyObject *module)	todo		
-Modules/_bz2module.c	799	805	_bz2_traverse	_bz2_traverse(PyObject *module, visitproc visit, void *arg)	todo		
-Modules/_bz2module.c	808	814	_bz2_clear	_bz2_clear(PyObject *module)	todo		
-Modules/_bz2module.c	817	820	_bz2_free	_bz2_free(void *module)	todo		
-Modules/_bz2module.c	840	843	PyInit__bz2	PyInit__bz2(void)	todo		
+Modules/_bz2module.c	27	32	get_module_state	get_module_state(PyObject *module)	todo		
+Modules/_bz2module.c	37	42	find_module_state_by_def	find_module_state_by_def(PyTypeObject *type)	todo		
+Modules/_bz2module.c	47	56	OutputBuffer_InitAndGrow	OutputBuffer_InitAndGrow(_BlocksOutputBuffer *buffer, Py_ssize_t max_length, char **next_out, uint32_t *avail_out)	todo		
+Modules/_bz2module.c	61	70	OutputBuffer_Grow	OutputBuffer_Grow(_BlocksOutputBuffer *buffer, char **next_out, uint32_t *avail_out)	todo		
+Modules/_bz2module.c	73	76	OutputBuffer_GetDataSize	OutputBuffer_GetDataSize(_BlocksOutputBuffer *buffer, uint32_t avail_out)	todo		
+Modules/_bz2module.c	79	82	OutputBuffer_Finish	OutputBuffer_Finish(_BlocksOutputBuffer *buffer, uint32_t avail_out)	todo		
+Modules/_bz2module.c	85	88	OutputBuffer_OnError	OutputBuffer_OnError(_BlocksOutputBuffer *buffer)	todo		
+Modules/_bz2module.c	131	177	catch_bz2_error	catch_bz2_error(int bzerror)	todo		
+Modules/_bz2module.c	183	234	compress	compress(BZ2Compressor *c, char *data, size_t len, int action)	todo		changed-in-3.15: candidates:itertools-simple-doc-agree
+Modules/_bz2module.c	262	274	_bz2_BZ2Compressor_compress_impl	_bz2_BZ2Compressor_compress_impl(BZ2Compressor *self, Py_buffer *data) /*[clinic end generated code: output=59365426e941fbcc input=85c963218070fc4c]*/	todo		changed-in-3.15:
+Modules/_bz2module.c	287	301	_bz2_BZ2Compressor_flush_impl	_bz2_BZ2Compressor_flush_impl(BZ2Compressor *self) /*[clinic end generated code: output=3ef03fc1b092a701 input=d64405d3c6f76691]*/	todo		changed-in-3.15:
+Modules/_bz2module.c	304	313	BZ2_Malloc	BZ2_Malloc(void* ctx, int items, int size)	todo		
+Modules/_bz2module.c	316	319	BZ2_Free	BZ2_Free(void* ctx, void *ptr)	todo		
+Modules/_bz2module.c	335	366	_bz2_BZ2Compressor_impl	_bz2_BZ2Compressor_impl(PyTypeObject *type, int compresslevel) /*[clinic end generated code: output=83346c96beaacad7 input=d4500d2a52c8b263]*/	todo		changed-in-3.15:
+Modules/_bz2module.c	369	377	BZ2Compressor_dealloc	BZ2Compressor_dealloc(PyObject *op)	todo		changed-in-3.15:
+Modules/_bz2module.c	411	467	decompress_buf	decompress_buf(BZ2Decompressor *d, Py_ssize_t max_length)	todo		changed-in-3.15:
+Modules/_bz2module.c	471	581	decompress	decompress(BZ2Decompressor *d, char *data, size_t len, Py_ssize_t max_length)	todo		changed-in-3.15:
+Modules/_bz2module.c	607	627	_bz2_BZ2Decompressor_decompress_impl	_bz2_BZ2Decompressor_decompress_impl(BZ2Decompressor *self, Py_buffer *data, Py_ssize_t max_length) /*[clinic end generated code: output=23e41045deb240a3 input=7f68faa9ff7a1b51]*/	todo		changed-in-3.15:
+Modules/_bz2module.c	639	668	_bz2_BZ2Decompressor_impl	_bz2_BZ2Decompressor_impl(PyTypeObject *type) /*[clinic end generated code: output=5150d51ccaab220e input=b87413ce51853528]*/	todo		changed-in-3.15:
+Modules/_bz2module.c	671	685	BZ2Decompressor_dealloc	BZ2Decompressor_dealloc(PyObject *op)	todo		changed-in-3.15:
+Modules/_bz2module.c	702	713	BZ2Decompressor_unused_data_get	BZ2Decompressor_unused_data_get(PyObject *op, void *Py_UNUSED(ignored))	todo		changed-in-3.15: new function
+Modules/_bz2module.c	753	775	_bz2_exec	_bz2_exec(PyObject *module)	todo		
+Modules/_bz2module.c	778	784	_bz2_traverse	_bz2_traverse(PyObject *module, visitproc visit, void *arg)	todo		
+Modules/_bz2module.c	787	793	_bz2_clear	_bz2_clear(PyObject *module)	todo		
+Modules/_bz2module.c	796	799	_bz2_free	_bz2_free(void *module)	todo		
+Modules/_bz2module.c	820	823	PyInit__bz2	PyInit__bz2(void)	todo		

@@ -1,85 +1,85 @@
 file	line	endline	name	signature	status	entry	note
-Modules/_interpqueuesmodule.c	35	63	_release_xid_data	_release_xid_data(_PyXIData_t *data, int flags)	todo		
-Modules/_interpqueuesmodule.c	66	71	_get_current_interp	_get_current_interp(void)	todo		
-Modules/_interpqueuesmodule.c	74	87	_get_current_module	_get_current_module(void)	todo		
-Modules/_interpqueuesmodule.c	98	133	idarg_int64_converter	idarg_int64_converter(PyObject *arg, void *ptr)	todo		
-Modules/_interpqueuesmodule.c	137	146	ensure_highlevel_module_loaded	ensure_highlevel_module_loaded(void)	todo		
-Modules/_interpqueuesmodule.c	163	169	get_module_state	get_module_state(PyObject *mod)	todo		
-Modules/_interpqueuesmodule.c	172	184	traverse_module_state	traverse_module_state(module_state *state, visitproc visit, void *arg)	todo		
-Modules/_interpqueuesmodule.c	187	202	clear_module_state	clear_module_state(module_state *state)	todo		
-Modules/_interpqueuesmodule.c	221	266	resolve_module_errcode	resolve_module_errcode(module_state *state, int errcode, int64_t qid, PyObject **p_exctype, PyObject **p_msgobj)	todo		
-Modules/_interpqueuesmodule.c	272	292	add_exctype	add_exctype(PyObject *mod, PyObject **p_state_field, const char *qualname, const char *doc, PyObject *base)	todo		
-Modules/_interpqueuesmodule.c	295	315	add_QueueError	add_QueueError(PyObject *mod)	todo		
-Modules/_interpqueuesmodule.c	318	334	set_external_exc_types	set_external_exc_types(module_state *state, PyObject *emptyerror, PyObject *fullerror)	todo		
-Modules/_interpqueuesmodule.c	337	352	ensure_external_exc_types	ensure_external_exc_types(module_state *state)	todo		
-Modules/_interpqueuesmodule.c	355	389	handle_queue_error	handle_queue_error(int err, PyObject *mod, int64_t qid)	todo		
-Modules/_interpqueuesmodule.c	408	425	_queueitem_init	_queueitem_init(_queueitem *item, int64_t interpid, _PyXIData_t *data, unboundop_t unboundop)	todo		
-Modules/_interpqueuesmodule.c	428	436	_queueitem_clear_data	_queueitem_clear_data(_queueitem *item)	todo		
-Modules/_interpqueuesmodule.c	439	443	_queueitem_clear	_queueitem_clear(_queueitem *item)	todo		
-Modules/_interpqueuesmodule.c	446	455	_queueitem_new	_queueitem_new(int64_t interpid, _PyXIData_t *data, int unboundop)	todo		
-Modules/_interpqueuesmodule.c	458	462	_queueitem_free	_queueitem_free(_queueitem *item)	todo		
-Modules/_interpqueuesmodule.c	465	472	_queueitem_free_all	_queueitem_free_all(_queueitem *item)	todo		
-Modules/_interpqueuesmodule.c	475	483	_queueitem_popped	_queueitem_popped(_queueitem *item, _PyXIData_t **p_data, unboundop_t *p_unboundop)	todo		
-Modules/_interpqueuesmodule.c	486	511	_queueitem_clear_interpreter	_queueitem_clear_interpreter(_queueitem *item)	todo		
-Modules/_interpqueuesmodule.c	533	549	_queue_init	_queue_init(_queue *queue, Py_ssize_t maxsize, struct _queuedefaults defaults)	todo		
-Modules/_interpqueuesmodule.c	552	560	_queue_clear	_queue_clear(_queue *queue)	todo		
-Modules/_interpqueuesmodule.c	565	578	_queue_kill_and_wait	_queue_kill_and_wait(_queue *queue)	todo		
-Modules/_interpqueuesmodule.c	581	592	_queue_mark_waiter	_queue_mark_waiter(_queue *queue, PyThread_type_lock parent_mutex)	todo		
-Modules/_interpqueuesmodule.c	595	606	_queue_unmark_waiter	_queue_unmark_waiter(_queue *queue, PyThread_type_lock parent_mutex)	todo		
-Modules/_interpqueuesmodule.c	609	618	_queue_lock	_queue_lock(_queue *queue)	todo		
-Modules/_interpqueuesmodule.c	621	624	_queue_unlock	_queue_unlock(_queue *queue)	todo		
-Modules/_interpqueuesmodule.c	627	660	_queue_add	_queue_add(_queue *queue, int64_t interpid, _PyXIData_t *data, int unboundop)	todo		
-Modules/_interpqueuesmodule.c	663	686	_queue_next	_queue_next(_queue *queue, _PyXIData_t **p_data, int *p_unboundop)	todo		
-Modules/_interpqueuesmodule.c	689	700	_queue_get_maxsize	_queue_get_maxsize(_queue *queue, Py_ssize_t *p_maxsize)	todo		
-Modules/_interpqueuesmodule.c	703	718	_queue_is_full	_queue_is_full(_queue *queue, int *p_is_full)	todo		
-Modules/_interpqueuesmodule.c	721	732	_queue_get_count	_queue_get_count(_queue *queue, Py_ssize_t *p_count)	todo		
-Modules/_interpqueuesmodule.c	735	769	_queue_clear_interpreter	_queue_clear_interpreter(_queue *queue, int64_t interpid)	todo		
-Modules/_interpqueuesmodule.c	784	799	_queuerefs_find	_queuerefs_find(_queueref *first, int64_t qid, _queueref **pprev)	todo		
-Modules/_interpqueuesmodule.c	802	825	_queuerefs_clear	_queuerefs_clear(_queueref *head)	todo		
-Modules/_interpqueuesmodule.c	838	848	_queues_init	_queues_init(_queues *queues, PyThread_type_lock mutex)	todo		
-Modules/_interpqueuesmodule.c	851	865	_queues_fini	_queues_fini(_queues *queues, PyThread_type_lock *p_mutex)	todo		
-Modules/_interpqueuesmodule.c	868	877	_queues_next_id	_queues_next_id(_queues *queues) // needs lock	todo		
-Modules/_interpqueuesmodule.c	880	898	_queues_lookup	_queues_lookup(_queues *queues, int64_t qid, _queue **res)	todo		
-Modules/_interpqueuesmodule.c	901	931	_queues_add	_queues_add(_queues *queues, _queue *queue)	todo		
-Modules/_interpqueuesmodule.c	934	951	_queues_remove_ref	_queues_remove_ref(_queues *queues, _queueref *ref, _queueref *prev, _queue **p_queue)	todo		
-Modules/_interpqueuesmodule.c	954	969	_queues_remove	_queues_remove(_queues *queues, int64_t qid, _queue **p_queue)	todo		
-Modules/_interpqueuesmodule.c	972	990	_queues_incref	_queues_incref(_queues *queues, int64_t qid)	todo		
-Modules/_interpqueuesmodule.c	993	1028	_queues_decref	_queues_decref(_queues *queues, int64_t qid)	todo		
-Modules/_interpqueuesmodule.c	1036	1057	_queues_list_all	_queues_list_all(_queues *queues, int64_t *p_count)	todo		
-Modules/_interpqueuesmodule.c	1060	1071	_queues_clear_interpreter	_queues_clear_interpreter(_queues *queues, int64_t interpid)	todo		
-Modules/_interpqueuesmodule.c	1077	1081	_queue_free	_queue_free(_queue *queue)	todo		
-Modules/_interpqueuesmodule.c	1085	1104	queue_create	queue_create(_queues *queues, Py_ssize_t maxsize, struct _queuedefaults defaults)	todo		
-Modules/_interpqueuesmodule.c	1108	1118	queue_destroy	queue_destroy(_queues *queues, int64_t qid)	todo		
-Modules/_interpqueuesmodule.c	1122	1161	queue_put	queue_put(_queues *queues, int64_t qid, PyObject *obj, unboundop_t unboundop, xidata_fallback_t fallback)	todo		
-Modules/_interpqueuesmodule.c	1166	1212	queue_get	queue_get(_queues *queues, int64_t qid, PyObject **res, int *p_unboundop)	todo		
-Modules/_interpqueuesmodule.c	1215	1226	queue_get_defaults	queue_get_defaults(_queues *queues, int64_t qid, struct _queuedefaults *p_defaults)	todo		
-Modules/_interpqueuesmodule.c	1229	1239	queue_get_maxsize	queue_get_maxsize(_queues *queues, int64_t qid, Py_ssize_t *p_maxsize)	todo		
-Modules/_interpqueuesmodule.c	1242	1252	queue_is_full	queue_is_full(_queues *queues, int64_t qid, int *p_is_full)	todo		
-Modules/_interpqueuesmodule.c	1255	1265	queue_get_count	queue_get_count(_queues *queues, int64_t qid, Py_ssize_t *p_count)	todo		
-Modules/_interpqueuesmodule.c	1273	1288	set_external_queue_type	set_external_queue_type(module_state *state, PyTypeObject *queue_type)	todo		
-Modules/_interpqueuesmodule.c	1291	1305	get_external_queue_type	get_external_queue_type(PyObject *module)	todo		
-Modules/_interpqueuesmodule.c	1317	1331	_queueid_xid_new	_queueid_xid_new(int64_t qid)	todo		
-Modules/_interpqueuesmodule.c	1334	1347	_queueid_xid_free	_queueid_xid_free(void *data)	todo		
-Modules/_interpqueuesmodule.c	1350	1376	_queueobj_from_xid	_queueobj_from_xid(_PyXIData_t *data)	todo		
-Modules/_interpqueuesmodule.c	1379	1402	_queueobj_shared	_queueobj_shared(PyThreadState *tstate, PyObject *queueobj, _PyXIData_t *data)	todo		
-Modules/_interpqueuesmodule.c	1417	1434	_globals_init	_globals_init(void)	todo		
-Modules/_interpqueuesmodule.c	1437	1449	_globals_fini	_globals_fini(void)	todo		
-Modules/_interpqueuesmodule.c	1452	1455	_get_global_queues	_get_global_queues(void)	todo		
-Modules/_interpqueuesmodule.c	1459	1468	clear_interpreter	clear_interpreter(void *data)	todo		
-Modules/_interpqueuesmodule.c	1474	1481	qidarg_converter	qidarg_converter(PyObject *arg, void *ptr)	todo		
-Modules/_interpqueuesmodule.c	1485	1527	queuesmod_create	queuesmod_create(PyObject *self, PyObject *args, PyObject *kwds)	todo		
-Modules/_interpqueuesmodule.c	1539	1554	queuesmod_destroy	queuesmod_destroy(PyObject *self, PyObject *args, PyObject *kwds)	todo		
-Modules/_interpqueuesmodule.c	1563	1592	queuesmod_list_all	queuesmod_list_all(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
-Modules/_interpqueuesmodule.c	1601	1639	queuesmod_put	queuesmod_put(PyObject *self, PyObject *args, PyObject *kwds)	todo		
-Modules/_interpqueuesmodule.c	1647	1671	queuesmod_get	queuesmod_get(PyObject *self, PyObject *args, PyObject *kwds)	todo		
-Modules/_interpqueuesmodule.c	1682	1702	queuesmod_bind	queuesmod_bind(PyObject *self, PyObject *args, PyObject *kwds)	todo		
-Modules/_interpqueuesmodule.c	1711	1732	queuesmod_release	queuesmod_release(PyObject *self, PyObject *args, PyObject *kwds)	todo		
-Modules/_interpqueuesmodule.c	1741	1758	queuesmod_get_maxsize	queuesmod_get_maxsize(PyObject *self, PyObject *args, PyObject *kwds)	todo		
-Modules/_interpqueuesmodule.c	1766	1785	queuesmod_get_queue_defaults	queuesmod_get_queue_defaults(PyObject *self, PyObject *args, PyObject *kwds)	todo		
-Modules/_interpqueuesmodule.c	1793	1813	queuesmod_is_full	queuesmod_is_full(PyObject *self, PyObject *args, PyObject *kwds)	todo		
-Modules/_interpqueuesmodule.c	1821	1839	queuesmod_get_count	queuesmod_get_count(PyObject *self, PyObject *args, PyObject *kwds)	todo		
-Modules/_interpqueuesmodule.c	1847	1884	queuesmod__register_heap_types	queuesmod__register_heap_types(PyObject *self, PyObject *args, PyObject *kwds)	todo		
-Modules/_interpqueuesmodule.c	1923	1944	module_exec	module_exec(PyObject *mod)	todo		
-Modules/_interpqueuesmodule.c	1954	1958	module_traverse	module_traverse(PyObject *mod, visitproc visit, void *arg)	todo		
-Modules/_interpqueuesmodule.c	1961	1967	module_clear	module_clear(PyObject *mod)	todo		
-Modules/_interpqueuesmodule.c	1970	1978	module_free	module_free(void *mod)	todo		
+Modules/_interpqueuesmodule.c	40	68	_release_xid_data	_release_xid_data(_PyXIData_t *data, int flags)	todo		
+Modules/_interpqueuesmodule.c	71	76	_get_current_interp	_get_current_interp(void)	todo		
+Modules/_interpqueuesmodule.c	79	92	_get_current_module	_get_current_module(void)	todo		
+Modules/_interpqueuesmodule.c	103	138	idarg_int64_converter	idarg_int64_converter(PyObject *arg, void *ptr)	todo		
+Modules/_interpqueuesmodule.c	142	151	ensure_highlevel_module_loaded	ensure_highlevel_module_loaded(void)	todo		
+Modules/_interpqueuesmodule.c	168	174	get_module_state	get_module_state(PyObject *mod)	todo		
+Modules/_interpqueuesmodule.c	177	189	traverse_module_state	traverse_module_state(module_state *state, visitproc visit, void *arg)	todo		
+Modules/_interpqueuesmodule.c	192	207	clear_module_state	clear_module_state(module_state *state)	todo		
+Modules/_interpqueuesmodule.c	226	271	resolve_module_errcode	resolve_module_errcode(module_state *state, int errcode, int64_t qid, PyObject **p_exctype, PyObject **p_msgobj)	todo		
+Modules/_interpqueuesmodule.c	277	297	add_exctype	add_exctype(PyObject *mod, PyObject **p_state_field, const char *qualname, const char *doc, PyObject *base)	todo		
+Modules/_interpqueuesmodule.c	300	320	add_QueueError	add_QueueError(PyObject *mod)	todo		
+Modules/_interpqueuesmodule.c	323	339	set_external_exc_types	set_external_exc_types(module_state *state, PyObject *emptyerror, PyObject *fullerror)	todo		
+Modules/_interpqueuesmodule.c	342	357	ensure_external_exc_types	ensure_external_exc_types(module_state *state)	todo		
+Modules/_interpqueuesmodule.c	360	394	handle_queue_error	handle_queue_error(int err, PyObject *mod, int64_t qid)	todo		
+Modules/_interpqueuesmodule.c	413	430	_queueitem_init	_queueitem_init(_queueitem *item, int64_t interpid, _PyXIData_t *data, unboundop_t unboundop)	todo		
+Modules/_interpqueuesmodule.c	433	441	_queueitem_clear_data	_queueitem_clear_data(_queueitem *item)	todo		
+Modules/_interpqueuesmodule.c	444	448	_queueitem_clear	_queueitem_clear(_queueitem *item)	todo		
+Modules/_interpqueuesmodule.c	451	460	_queueitem_new	_queueitem_new(int64_t interpid, _PyXIData_t *data, int unboundop)	todo		
+Modules/_interpqueuesmodule.c	463	467	_queueitem_free	_queueitem_free(_queueitem *item)	todo		
+Modules/_interpqueuesmodule.c	470	477	_queueitem_free_all	_queueitem_free_all(_queueitem *item)	todo		
+Modules/_interpqueuesmodule.c	480	488	_queueitem_popped	_queueitem_popped(_queueitem *item, _PyXIData_t **p_data, unboundop_t *p_unboundop)	todo		
+Modules/_interpqueuesmodule.c	491	516	_queueitem_clear_interpreter	_queueitem_clear_interpreter(_queueitem *item)	todo		
+Modules/_interpqueuesmodule.c	538	554	_queue_init	_queue_init(_queue *queue, Py_ssize_t maxsize, struct _queuedefaults defaults)	todo		
+Modules/_interpqueuesmodule.c	557	565	_queue_clear	_queue_clear(_queue *queue)	todo		
+Modules/_interpqueuesmodule.c	570	583	_queue_kill_and_wait	_queue_kill_and_wait(_queue *queue)	todo		
+Modules/_interpqueuesmodule.c	586	597	_queue_mark_waiter	_queue_mark_waiter(_queue *queue, PyThread_type_lock parent_mutex)	todo		
+Modules/_interpqueuesmodule.c	600	611	_queue_unmark_waiter	_queue_unmark_waiter(_queue *queue, PyThread_type_lock parent_mutex)	todo		
+Modules/_interpqueuesmodule.c	614	623	_queue_lock	_queue_lock(_queue *queue)	todo		
+Modules/_interpqueuesmodule.c	626	629	_queue_unlock	_queue_unlock(_queue *queue)	todo		
+Modules/_interpqueuesmodule.c	632	665	_queue_add	_queue_add(_queue *queue, int64_t interpid, _PyXIData_t *data, int unboundop)	todo		
+Modules/_interpqueuesmodule.c	668	691	_queue_next	_queue_next(_queue *queue, _PyXIData_t **p_data, int *p_unboundop)	todo		
+Modules/_interpqueuesmodule.c	694	705	_queue_get_maxsize	_queue_get_maxsize(_queue *queue, Py_ssize_t *p_maxsize)	todo		
+Modules/_interpqueuesmodule.c	708	723	_queue_is_full	_queue_is_full(_queue *queue, int *p_is_full)	todo		
+Modules/_interpqueuesmodule.c	726	737	_queue_get_count	_queue_get_count(_queue *queue, Py_ssize_t *p_count)	todo		
+Modules/_interpqueuesmodule.c	740	774	_queue_clear_interpreter	_queue_clear_interpreter(_queue *queue, int64_t interpid)	todo		
+Modules/_interpqueuesmodule.c	789	804	_queuerefs_find	_queuerefs_find(_queueref *first, int64_t qid, _queueref **pprev)	todo		
+Modules/_interpqueuesmodule.c	807	830	_queuerefs_clear	_queuerefs_clear(_queueref *head)	todo		
+Modules/_interpqueuesmodule.c	843	853	_queues_init	_queues_init(_queues *queues, PyThread_type_lock mutex)	todo		
+Modules/_interpqueuesmodule.c	856	870	_queues_fini	_queues_fini(_queues *queues, PyThread_type_lock *p_mutex)	todo		
+Modules/_interpqueuesmodule.c	873	882	_queues_next_id	_queues_next_id(_queues *queues) // needs lock	todo		
+Modules/_interpqueuesmodule.c	885	903	_queues_lookup	_queues_lookup(_queues *queues, int64_t qid, _queue **res)	todo		
+Modules/_interpqueuesmodule.c	906	936	_queues_add	_queues_add(_queues *queues, _queue *queue)	todo		
+Modules/_interpqueuesmodule.c	939	956	_queues_remove_ref	_queues_remove_ref(_queues *queues, _queueref *ref, _queueref *prev, _queue **p_queue)	todo		
+Modules/_interpqueuesmodule.c	959	974	_queues_remove	_queues_remove(_queues *queues, int64_t qid, _queue **p_queue)	todo		
+Modules/_interpqueuesmodule.c	977	995	_queues_incref	_queues_incref(_queues *queues, int64_t qid)	todo		
+Modules/_interpqueuesmodule.c	998	1033	_queues_decref	_queues_decref(_queues *queues, int64_t qid)	todo		
+Modules/_interpqueuesmodule.c	1041	1062	_queues_list_all	_queues_list_all(_queues *queues, int64_t *p_count)	todo		
+Modules/_interpqueuesmodule.c	1065	1076	_queues_clear_interpreter	_queues_clear_interpreter(_queues *queues, int64_t interpid)	todo		
+Modules/_interpqueuesmodule.c	1082	1086	_queue_free	_queue_free(_queue *queue)	todo		
+Modules/_interpqueuesmodule.c	1090	1109	queue_create	queue_create(_queues *queues, Py_ssize_t maxsize, struct _queuedefaults defaults)	todo		
+Modules/_interpqueuesmodule.c	1113	1123	queue_destroy	queue_destroy(_queues *queues, int64_t qid)	todo		
+Modules/_interpqueuesmodule.c	1127	1166	queue_put	queue_put(_queues *queues, int64_t qid, PyObject *obj, unboundop_t unboundop, xidata_fallback_t fallback)	todo		
+Modules/_interpqueuesmodule.c	1171	1217	queue_get	queue_get(_queues *queues, int64_t qid, PyObject **res, int *p_unboundop)	todo		
+Modules/_interpqueuesmodule.c	1220	1231	queue_get_defaults	queue_get_defaults(_queues *queues, int64_t qid, struct _queuedefaults *p_defaults)	todo		
+Modules/_interpqueuesmodule.c	1234	1244	queue_get_maxsize	queue_get_maxsize(_queues *queues, int64_t qid, Py_ssize_t *p_maxsize)	todo		
+Modules/_interpqueuesmodule.c	1247	1257	queue_is_full	queue_is_full(_queues *queues, int64_t qid, int *p_is_full)	todo		
+Modules/_interpqueuesmodule.c	1260	1270	queue_get_count	queue_get_count(_queues *queues, int64_t qid, Py_ssize_t *p_count)	todo		
+Modules/_interpqueuesmodule.c	1278	1293	set_external_queue_type	set_external_queue_type(module_state *state, PyTypeObject *queue_type)	todo		
+Modules/_interpqueuesmodule.c	1296	1310	get_external_queue_type	get_external_queue_type(PyObject *module)	todo		
+Modules/_interpqueuesmodule.c	1322	1336	_queueid_xid_new	_queueid_xid_new(int64_t qid)	todo		
+Modules/_interpqueuesmodule.c	1339	1352	_queueid_xid_free	_queueid_xid_free(void *data)	todo		
+Modules/_interpqueuesmodule.c	1355	1381	_queueobj_from_xid	_queueobj_from_xid(_PyXIData_t *data)	todo		
+Modules/_interpqueuesmodule.c	1384	1407	_queueobj_shared	_queueobj_shared(PyThreadState *tstate, PyObject *queueobj, _PyXIData_t *data)	todo		
+Modules/_interpqueuesmodule.c	1422	1439	_globals_init	_globals_init(void)	todo		
+Modules/_interpqueuesmodule.c	1442	1454	_globals_fini	_globals_fini(void)	todo		
+Modules/_interpqueuesmodule.c	1457	1460	_get_global_queues	_get_global_queues(void)	todo		
+Modules/_interpqueuesmodule.c	1464	1473	clear_interpreter	clear_interpreter(void *data)	todo		
+Modules/_interpqueuesmodule.c	1486	1495	qidarg_converter	qidarg_converter(PyObject *arg, void *ptr)	todo		changed-in-3.15:
+Modules/_interpqueuesmodule.c	1514	1549	_interpqueues_create_impl	_interpqueues_create_impl(PyObject *module, Py_ssize_t maxsize, int unboundarg, int fallbackarg) /*[clinic end generated code: output=9a889b93773251eb input=4f79b710a87360e1]*/	todo		changed-in-3.15: new function
+Modules/_interpqueuesmodule.c	1562	1570	_interpqueues_destroy_impl	_interpqueues_destroy_impl(PyObject *module, int64_t qid) /*[clinic end generated code: output=46b35623f080cbff input=75136ad807e28677]*/	todo		changed-in-3.15: new function
+Modules/_interpqueuesmodule.c	1581	1611	_interpqueues_list_all_impl	_interpqueues_list_all_impl(PyObject *module) /*[clinic end generated code: output=974280cb6442afdb input=19495f02cbb38b33]*/	todo		changed-in-3.15: new function
+Modules/_interpqueuesmodule.c	1624	1652	_interpqueues_put_impl	_interpqueues_put_impl(PyObject *module, int64_t qid, PyObject *obj, int unboundarg, int fallbackarg) /*[clinic end generated code: output=2e0b31c6eaec29c9 input=4906550ab5c73be3]*/	todo		changed-in-3.15: new function
+Modules/_interpqueuesmodule.c	1664	1681	_interpqueues_get_impl	_interpqueues_get_impl(PyObject *module, int64_t qid) /*[clinic end generated code: output=b0988a0e29194f05 input=c5bccbc409ad0190]*/	todo		changed-in-3.15: new function
+Modules/_interpqueuesmodule.c	1693	1706	_interpqueues_bind_impl	_interpqueues_bind_impl(PyObject *module, int64_t qid) /*[clinic end generated code: output=02b515e203c3f926 input=b0efd1a6ce0e576e]*/	todo		changed-in-3.15: new function
+Modules/_interpqueuesmodule.c	1718	1732	_interpqueues_release_impl	_interpqueues_release_impl(PyObject *module, int64_t qid) /*[clinic end generated code: output=a59545d7c61fc6ee input=664125cf0262ff6f]*/	todo		changed-in-3.15: new function
+Modules/_interpqueuesmodule.c	1742	1751	_interpqueues_get_maxsize_impl	_interpqueues_get_maxsize_impl(PyObject *module, int64_t qid) /*[clinic end generated code: output=074202b9c6dc37bf input=ef55def3496cc379]*/	todo		changed-in-3.15: new function
+Modules/_interpqueuesmodule.c	1761	1772	_interpqueues_get_queue_defaults_impl	_interpqueues_get_queue_defaults_impl(PyObject *module, int64_t qid) /*[clinic end generated code: output=b1b8b8103834191a input=3102315a7bff77fc]*/	todo		changed-in-3.15: new function
+Modules/_interpqueuesmodule.c	1782	1794	_interpqueues_is_full_impl	_interpqueues_is_full_impl(PyObject *module, int64_t qid) /*[clinic end generated code: output=47a6e18477cddfee input=25d86a327ed3a2e7]*/	todo		changed-in-3.15: new function
+Modules/_interpqueuesmodule.c	1804	1814	_interpqueues_get_count_impl	_interpqueues_get_count_impl(PyObject *module, int64_t qid) /*[clinic end generated code: output=fb9e66e829cdd964 input=ce47690e7598884b]*/	todo		changed-in-3.15: new function
+Modules/_interpqueuesmodule.c	1826	1853	_interpqueues__register_heap_types_impl	_interpqueues__register_heap_types_impl(PyObject *module, PyTypeObject *queuetype, PyObject *emptyerror, PyObject *fullerror) /*[clinic end generated code: output=f33f6e8b5af905cd input=57d24ae405eda521]*/	todo		changed-in-3.15: new function
+Modules/_interpqueuesmodule.c	1880	1901	module_exec	module_exec(PyObject *mod)	todo		
+Modules/_interpqueuesmodule.c	1912	1916	module_traverse	module_traverse(PyObject *mod, visitproc visit, void *arg)	todo		
+Modules/_interpqueuesmodule.c	1919	1925	module_clear	module_clear(PyObject *mod)	todo		
+Modules/_interpqueuesmodule.c	1928	1936	module_free	module_free(void *mod)	todo		

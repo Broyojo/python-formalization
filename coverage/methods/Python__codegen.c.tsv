@@ -2,161 +2,165 @@ file	line	endline	name	signature	status	entry	note
 Python/codegen.c	110	115	_Py_CArray_Init	_Py_CArray_Init(_Py_c_array_t* array, int item_size, int initial_num_entries) {	todo		
 Python/codegen.c	118	124	_Py_CArray_Fini	_Py_CArray_Fini(_Py_c_array_t* array)	todo		
 Python/codegen.c	127	170	_Py_CArray_EnsureCapacity	_Py_CArray_EnsureCapacity(_Py_c_array_t *c_array, int idx)	todo		
-Python/codegen.c	254	267	codegen_addop_i	codegen_addop_i(instr_sequence *seq, int opcode, Py_ssize_t oparg, location loc)	todo		
-Python/codegen.c	276	281	codegen_addop_noarg	codegen_addop_noarg(instr_sequence *seq, int opcode, location loc)	todo		
-Python/codegen.c	290	298	codegen_addop_load_const	codegen_addop_load_const(compiler *c, location loc, PyObject *o)	todo		
-Python/codegen.c	321	328	codegen_addop_o	codegen_addop_o(compiler *c, location loc, int opcode, PyObject *dict, PyObject *o)	todo		
-Python/codegen.c	354	394	codegen_addop_name	codegen_addop_name(compiler *c, location loc, int opcode, PyObject *dict, PyObject *o)	todo		
-Python/codegen.c	400	407	codegen_addop_j	codegen_addop_j(instr_sequence *seq, location loc, int opcode, jump_target_label target)	todo		
-Python/codegen.c	462	469	codegen_call_exit_with_nones	codegen_call_exit_with_nones(compiler *c, location loc)	todo		
-Python/codegen.c	472	494	codegen_add_yield_from	codegen_add_yield_from(compiler *c, location loc, int await)	todo		
-Python/codegen.c	497	510	codegen_pop_except_and_reraise	codegen_pop_except_and_reraise(compiler *c, location loc)	todo		
-Python/codegen.c	518	618	codegen_unwind_fblock	codegen_unwind_fblock(compiler *c, location *ploc, fblockinfo *info, int preserve_tos)	todo		
-Python/codegen.c	622	645	codegen_unwind_fblock_stack	codegen_unwind_fblock_stack(compiler *c, location *ploc, int preserve_tos, fblockinfo **loop)	todo		
-Python/codegen.c	648	663	codegen_enter_scope	codegen_enter_scope(compiler *c, identifier name, int scope_type, void *key, int lineno, PyObject *private, _PyCompile_CodeUnitMetadata *umd)	todo		
-Python/codegen.c	666	689	codegen_setup_annotations_scope	codegen_setup_annotations_scope(compiler *c, location loc, void *key, PyObject *name)	todo		
-Python/codegen.c	692	734	codegen_leave_annotations_scope	codegen_leave_annotations_scope(compiler *c, location loc)	todo		
-Python/codegen.c	737	787	codegen_deferred_annotations_body	codegen_deferred_annotations_body(compiler *c, location loc, PyObject *deferred_anno, PyObject *conditional_annotation_indices, int scope_type)	todo		
-Python/codegen.c	790	844	codegen_process_deferred_annotations	codegen_process_deferred_annotations(compiler *c, location loc)	todo		
-Python/codegen.c	848	852	_PyCodegen_Expression	_PyCodegen_Expression(compiler *c, expr_ty e)	todo		
-Python/codegen.c	858	865	_PyCodegen_Module	_PyCodegen_Module(compiler *c, location loc, asdl_stmt_seq *stmts, bool is_interactive)	todo		
-Python/codegen.c	868	910	codegen_body	codegen_body(compiler *c, location loc, asdl_stmt_seq *stmts, bool is_interactive)	todo		
-Python/codegen.c	913	920	_PyCodegen_EnterAnonymousScope	_PyCodegen_EnterAnonymousScope(compiler* c, mod_ty mod)	todo		
-Python/codegen.c	923	960	codegen_make_closure	codegen_make_closure(compiler *c, location loc, PyCodeObject *co, Py_ssize_t flags)	todo		
-Python/codegen.c	963	973	codegen_decorators	codegen_decorators(compiler *c, asdl_expr_seq* decos)	todo		
-Python/codegen.c	976	987	codegen_apply_decorators	codegen_apply_decorators(compiler *c, asdl_expr_seq* decos)	todo		
-Python/codegen.c	990	1018	codegen_kwonlydefaults	codegen_kwonlydefaults(compiler *c, location loc, asdl_arg_seq *kwonlyargs, asdl_expr_seq *kw_defaults)	todo		
-Python/codegen.c	1021	1026	codegen_visit_annexpr	codegen_visit_annexpr(compiler *c, expr_ty annotation)	todo		
-Python/codegen.c	1029	1060	codegen_argannotation	codegen_argannotation(compiler *c, identifier id, expr_ty annotation, Py_ssize_t *annotations_len, location loc)	todo		
-Python/codegen.c	1063	1078	codegen_argannotations	codegen_argannotations(compiler *c, asdl_arg_seq* args, Py_ssize_t *annotations_len, location loc)	todo		
-Python/codegen.c	1081	1110	codegen_annotations_in_scope	codegen_annotations_in_scope(compiler *c, location loc, arguments_ty args, expr_ty returns, Py_ssize_t *annotations_len)	todo		
-Python/codegen.c	1113	1143	codegen_function_annotations	codegen_function_annotations(compiler *c, location loc, arguments_ty args, expr_ty returns)	todo		
-Python/codegen.c	1146	1152	codegen_defaults	codegen_defaults(compiler *c, arguments_ty args, location loc)	todo		
-Python/codegen.c	1155	1173	codegen_default_arguments	codegen_default_arguments(compiler *c, location loc, arguments_ty args)	todo		
-Python/codegen.c	1176	1192	codegen_wrap_in_stopiteration_handler	codegen_wrap_in_stopiteration_handler(compiler *c)	todo		
-Python/codegen.c	1195	1219	codegen_type_param_bound_or_default	codegen_type_param_bound_or_default(compiler *c, expr_ty e, identifier name, void *key, bool allow_starred)	todo		
-Python/codegen.c	1222	1308	codegen_type_params	codegen_type_params(compiler *c, asdl_type_param_seq *type_params)	todo		
-Python/codegen.c	1311	1387	codegen_function_body	codegen_function_body(compiler *c, stmt_ty s, int is_async, Py_ssize_t funcflags, int firstlineno)	todo		
-Python/codegen.c	1390	1502	codegen_function	codegen_function(compiler *c, stmt_ty s, int is_async)	todo		
-Python/codegen.c	1505	1511	codegen_set_type_params_in_class	codegen_set_type_params_in_class(compiler *c, location loc)	todo		
-Python/codegen.c	1515	1620	codegen_class_body	codegen_class_body(compiler *c, stmt_ty s, int firstlineno)	todo		
-Python/codegen.c	1623	1697	codegen_class	codegen_class(compiler *c, stmt_ty s)	todo		
-Python/codegen.c	1700	1724	codegen_typealias_body	codegen_typealias_body(compiler *c, stmt_ty s)	todo		
-Python/codegen.c	1727	1773	codegen_typealias	codegen_typealias(compiler *c, stmt_ty s)	todo		
-Python/codegen.c	1776	1785	is_const_tuple	is_const_tuple(asdl_expr_seq *elts)	todo		
-Python/codegen.c	1790	1803	check_is_arg	check_is_arg(expr_ty e)	todo		
-Python/codegen.c	1811	1836	codegen_check_compare	codegen_check_compare(compiler *c, expr_ty e)	todo		
-Python/codegen.c	1839	1882	codegen_addcompare	codegen_addcompare(compiler *c, location loc, cmpop_ty op)	todo		
-Python/codegen.c	1885	1976	codegen_jump_if	codegen_jump_if(compiler *c, location loc, expr_ty e, jump_target_label next, int cond)	todo		
-Python/codegen.c	1979	1996	codegen_ifexp	codegen_ifexp(compiler *c, expr_ty e)	todo		
-Python/codegen.c	1999	2040	codegen_lambda	codegen_lambda(compiler *c, expr_ty e)	todo		
-Python/codegen.c	2043	2068	codegen_if	codegen_if(compiler *c, stmt_ty s)	todo		
-Python/codegen.c	2071	2114	codegen_for	codegen_for(compiler *c, stmt_ty s)	todo		
-Python/codegen.c	2117	2162	codegen_async_for	codegen_async_for(compiler *c, stmt_ty s)	todo		
-Python/codegen.c	2165	2188	codegen_while	codegen_while(compiler *c, stmt_ty s)	todo		
-Python/codegen.c	2191	2229	codegen_return	codegen_return(compiler *c, stmt_ty s)	todo		
-Python/codegen.c	2232	2245	codegen_break	codegen_break(compiler *c, location loc)	todo		
-Python/codegen.c	2248	2260	codegen_continue	codegen_continue(compiler *c, location loc)	todo		
-Python/codegen.c	2293	2341	codegen_try_finally	codegen_try_finally(compiler *c, stmt_ty s)	todo		
-Python/codegen.c	2344	2392	codegen_try_star_finally	codegen_try_star_finally(compiler *c, stmt_ty s)	todo		
-Python/codegen.c	2424	2552	codegen_try_except	codegen_try_except(compiler *c, stmt_ty s)	todo		
-Python/codegen.c	2607	2771	codegen_try_star_except	codegen_try_star_except(compiler *c, stmt_ty s)	todo		
-Python/codegen.c	2774	2779	codegen_try	codegen_try(compiler *c, stmt_ty s) {	todo		
-Python/codegen.c	2782	2790	codegen_try_star	codegen_try_star(compiler *c, stmt_ty s)	todo		
-Python/codegen.c	2793	2832	codegen_import_as	codegen_import_as(compiler *c, location loc, identifier name, identifier asname)	todo		
-Python/codegen.c	2835	2878	codegen_import	codegen_import(compiler *c, stmt_ty s)	todo		
-Python/codegen.c	2881	2929	codegen_from_import	codegen_from_import(compiler *c, stmt_ty s)	todo		
-Python/codegen.c	2932	2959	codegen_assert	codegen_assert(compiler *c, stmt_ty s)	todo		
-Python/codegen.c	2962	2980	codegen_stmt_expr	codegen_stmt_expr(compiler *c, location loc, expr_ty value)	todo		
-Python/codegen.c	2991	3095	codegen_visit_stmt	codegen_visit_stmt(compiler *c, stmt_ty s)	todo		
-Python/codegen.c	3098	3110	unaryop	unaryop(unaryop_ty op)	todo		
-Python/codegen.c	3113	3164	addop_binary	addop_binary(compiler *c, location loc, operator_ty binop, bool inplace)	todo		
-Python/codegen.c	3168	3176	codegen_addop_yield	codegen_addop_yield(compiler *c, location loc) {	todo		
-Python/codegen.c	3179	3183	codegen_load_classdict_freevar	codegen_load_classdict_freevar(compiler *c, location loc)	todo		
-Python/codegen.c	3186	3287	codegen_nameop	codegen_nameop(compiler *c, location loc, identifier name, expr_context_ty ctx)	todo		
-Python/codegen.c	3290	3315	codegen_boolop	codegen_boolop(compiler *c, expr_ty e)	todo		
-Python/codegen.c	3318	3379	starunpack_helper_impl	starunpack_helper_impl(compiler *c, location loc, asdl_expr_seq *elts, PyObject *injected_arg, int pushed, int build, int add, int extend, int tuple)	todo		
-Python/codegen.c	3382	3388	starunpack_helper	starunpack_helper(compiler *c, location loc, asdl_expr_seq *elts, int pushed, int build, int add, int extend, int tuple)	todo		
-Python/codegen.c	3391	3416	unpack_helper	unpack_helper(compiler *c, location loc, asdl_expr_seq *elts)	todo		
-Python/codegen.c	3419	3428	assignment_helper	assignment_helper(compiler *c, location loc, asdl_expr_seq *elts)	todo		
-Python/codegen.c	3431	3446	codegen_list	codegen_list(compiler *c, expr_ty e)	todo		
-Python/codegen.c	3449	3464	codegen_tuple	codegen_tuple(compiler *c, expr_ty e)	todo		
-Python/codegen.c	3467	3472	codegen_set	codegen_set(compiler *c, expr_ty e)	todo		
-Python/codegen.c	3475	3494	codegen_subdict	codegen_subdict(compiler *c, expr_ty e, Py_ssize_t begin, Py_ssize_t end)	todo		
-Python/codegen.c	3497	3549	codegen_dict	codegen_dict(compiler *c, expr_ty e)	todo		
-Python/codegen.c	3552	3590	codegen_compare	codegen_compare(compiler *c, expr_ty e)	todo		
-Python/codegen.c	3593	3622	infer_type	infer_type(expr_ty e)	todo		
-Python/codegen.c	3625	3649	check_caller	check_caller(compiler *c, expr_ty e)	todo		
-Python/codegen.c	3652	3680	check_subscripter	check_subscripter(compiler *c, expr_ty e)	todo		
-Python/codegen.c	3683	3716	check_index	check_index(compiler *c, expr_ty e, expr_ty s)	todo		
-Python/codegen.c	3719	3734	is_import_originated	is_import_originated(compiler *c, expr_ty e)	todo		
-Python/codegen.c	3737	3789	can_optimize_super_call	can_optimize_super_call(compiler *c, expr_ty attr)	todo		
-Python/codegen.c	3792	3819	load_args_for_super	load_args_for_super(compiler *c, expr_ty e) {	todo		
-Python/codegen.c	3824	3847	update_start_location_to_match_attr	update_start_location_to_match_attr(compiler *c, location loc, expr_ty attr)	todo		
-Python/codegen.c	3850	3940	maybe_optimize_function_call	maybe_optimize_function_call(compiler *c, expr_ty e, jump_target_label end)	todo		
-Python/codegen.c	3944	4016	maybe_optimize_method_call	maybe_optimize_method_call(compiler *c, expr_ty e)	todo		
-Python/codegen.c	4019	4035	codegen_validate_keywords	codegen_validate_keywords(compiler *c, asdl_keyword_seq *keywords)	todo		
-Python/codegen.c	4038	4060	codegen_call	codegen_call(compiler *c, expr_ty e)	todo		
-Python/codegen.c	4063	4103	codegen_template_str	codegen_template_str(compiler *c, expr_ty e)	todo		
-Python/codegen.c	4106	4132	codegen_joined_str	codegen_joined_str(compiler *c, expr_ty e)	todo		
-Python/codegen.c	4135	4163	codegen_interpolation	codegen_interpolation(compiler *c, expr_ty e)	todo		
-Python/codegen.c	4167	4196	codegen_formatted_value	codegen_formatted_value(compiler *c, expr_ty e)	todo		
-Python/codegen.c	4199	4222	codegen_subkwargs	codegen_subkwargs(compiler *c, location loc, asdl_keyword_seq *keywords, Py_ssize_t begin, Py_ssize_t end)	todo		
-Python/codegen.c	4228	4242	codegen_call_simple_kw_helper	codegen_call_simple_kw_helper(compiler *c, location loc, asdl_keyword_seq *keywords, Py_ssize_t nkwelts)	todo		
-Python/codegen.c	4246	4350	codegen_call_helper_impl	codegen_call_helper_impl(compiler *c, location loc, int n, /* Args already pushed */ asdl_expr_seq *args, PyObject *injected_arg, asdl_keyword_seq *keywords)	todo		
-Python/codegen.c	4353	4359	codegen_call_helper	codegen_call_helper(compiler *c, location loc, int n, /* Args already pushed */ asdl_expr_seq *args, asdl_keyword_seq *keywords)	todo		
-Python/codegen.c	4379	4396	codegen_comprehension_generator	codegen_comprehension_generator(compiler *c, location loc, asdl_comprehension_seq *generators, int gen_index, int depth, expr_ty elt, expr_ty val, int type, int iter_on_stack)	todo		
-Python/codegen.c	4399	4519	codegen_sync_comprehension_generator	codegen_sync_comprehension_generator(compiler *c, location loc, asdl_comprehension_seq *generators, int gen_index, int depth, expr_ty elt, expr_ty val, int type, int iter_on_stack)	todo		
-Python/codegen.c	4522	4620	codegen_async_comprehension_generator	codegen_async_comprehension_generator(compiler *c, location loc, asdl_comprehension_seq *generators, int gen_index, int depth, expr_ty elt, expr_ty val, int type, int iter_on_stack)	todo		
-Python/codegen.c	4623	4688	codegen_push_inlined_comprehension_locals	codegen_push_inlined_comprehension_locals(compiler *c, location loc, PySTEntryObject *comp, _PyCompile_InlinedComprehensionState *state)	todo		
-Python/codegen.c	4691	4700	push_inlined_comprehension_state	push_inlined_comprehension_state(compiler *c, location loc, PySTEntryObject *comp, _PyCompile_InlinedComprehensionState *state)	todo		
-Python/codegen.c	4703	4722	restore_inlined_comprehension_locals	restore_inlined_comprehension_locals(compiler *c, location loc, _PyCompile_InlinedComprehensionState *state)	todo		
-Python/codegen.c	4725	4747	codegen_pop_inlined_comprehension_locals	codegen_pop_inlined_comprehension_locals(compiler *c, location loc, _PyCompile_InlinedComprehensionState *state)	todo		
-Python/codegen.c	4750	4756	pop_inlined_comprehension_state	pop_inlined_comprehension_state(compiler *c, location loc, _PyCompile_InlinedComprehensionState *state)	todo		
-Python/codegen.c	4759	4769	codegen_comprehension_iter	codegen_comprehension_iter(compiler *c, comprehension_ty comp)	todo		
-Python/codegen.c	4772	4890	codegen_comprehension	codegen_comprehension(compiler *c, expr_ty e, int type, identifier name, asdl_comprehension_seq *generators, expr_ty elt, expr_ty val)	todo		
-Python/codegen.c	4893	4900	codegen_genexp	codegen_genexp(compiler *c, expr_ty e)	todo		
-Python/codegen.c	4903	4910	codegen_listcomp	codegen_listcomp(compiler *c, expr_ty e)	todo		
-Python/codegen.c	4913	4920	codegen_setcomp	codegen_setcomp(compiler *c, expr_ty e)	todo		
-Python/codegen.c	4924	4931	codegen_dictcomp	codegen_dictcomp(compiler *c, expr_ty e)	todo		
-Python/codegen.c	4935	4939	codegen_visit_keyword	codegen_visit_keyword(compiler *c, keyword_ty k)	todo		
-Python/codegen.c	4943	4964	codegen_with_except_finish	codegen_with_except_finish(compiler *c, jump_target_label cleanup) {	todo		
-Python/codegen.c	4991	5069	codegen_async_with_inner	codegen_async_with_inner(compiler *c, stmt_ty s, int pos)	todo		
-Python/codegen.c	5072	5075	codegen_async_with	codegen_async_with(compiler *c, stmt_ty s)	todo		
-Python/codegen.c	5100	5166	codegen_with_inner	codegen_with_inner(compiler *c, stmt_ty s, int pos)	todo		
-Python/codegen.c	5169	5172	codegen_with	codegen_with(compiler *c, stmt_ty s)	todo		
-Python/codegen.c	5175	5325	codegen_visit_expr	codegen_visit_expr(compiler *c, expr_ty e)	todo		
-Python/codegen.c	5328	5337	is_constant_slice	is_constant_slice(expr_ty s)	todo		
-Python/codegen.c	5340	5345	should_apply_two_element_slice_optimization	should_apply_two_element_slice_optimization(expr_ty s)	todo		
-Python/codegen.c	5348	5420	codegen_augassign	codegen_augassign(compiler *c, stmt_ty s)	todo		
-Python/codegen.c	5423	5428	codegen_check_ann_expr	codegen_check_ann_expr(compiler *c, expr_ty e)	todo		
-Python/codegen.c	5431	5445	codegen_check_annotation	codegen_check_annotation(compiler *c, stmt_ty s)	todo		
-Python/codegen.c	5448	5475	codegen_check_ann_subscr	codegen_check_ann_subscr(compiler *c, expr_ty e)	todo		
-Python/codegen.c	5478	5547	codegen_annassign	codegen_annassign(compiler *c, stmt_ty s)	todo		
-Python/codegen.c	5550	5588	codegen_subscript	codegen_subscript(compiler *c, expr_ty e)	todo		
-Python/codegen.c	5591	5608	codegen_slice_two_parts	codegen_slice_two_parts(compiler *c, expr_ty s)	todo		
-Python/codegen.c	5611	5646	codegen_slice	codegen_slice(compiler *c, expr_ty s)	todo		
-Python/codegen.c	5673	5691	ensure_fail_pop	ensure_fail_pop(compiler *c, pattern_context *pc, Py_ssize_t n)	todo		
-Python/codegen.c	5695	5704	jump_to_fail_pop	jump_to_fail_pop(compiler *c, location loc, pattern_context *pc, int op)	todo		
-Python/codegen.c	5708	5728	emit_and_reset_fail_pop	emit_and_reset_fail_pop(compiler *c, location loc, pattern_context *pc)	todo		
-Python/codegen.c	5731	5735	codegen_error_duplicate_store	codegen_error_duplicate_store(compiler *c, location loc, identifier n)	todo		
-Python/codegen.c	5739	5745	codegen_pattern_helper_rotate	codegen_pattern_helper_rotate(compiler *c, location loc, Py_ssize_t count)	todo		
-Python/codegen.c	5748	5766	codegen_pattern_helper_store_name	codegen_pattern_helper_store_name(compiler *c, location loc, identifier n, pattern_context *pc)	todo		
-Python/codegen.c	5770	5796	codegen_pattern_unpack_helper	codegen_pattern_unpack_helper(compiler *c, location loc, asdl_pattern_seq *elts)	todo		
-Python/codegen.c	5799	5815	pattern_helper_sequence_unpack	pattern_helper_sequence_unpack(compiler *c, location loc, asdl_pattern_seq *patterns, Py_ssize_t star, pattern_context *pc)	todo		
-Python/codegen.c	5821	5855	pattern_helper_sequence_subscr	pattern_helper_sequence_subscr(compiler *c, location loc, asdl_pattern_seq *patterns, Py_ssize_t star, pattern_context *pc)	todo		
-Python/codegen.c	5859	5867	codegen_pattern_subpattern	codegen_pattern_subpattern(compiler *c, pattern_ty p, pattern_context *pc)	todo		
-Python/codegen.c	5870	5893	codegen_pattern_as	codegen_pattern_as(compiler *c, pattern_ty p, pattern_context *pc)	todo		
-Python/codegen.c	5896	5902	codegen_pattern_star	codegen_pattern_star(compiler *c, pattern_ty p, pattern_context *pc)	todo		
-Python/codegen.c	5905	5922	validate_kwd_attrs	validate_kwd_attrs(compiler *c, asdl_identifier_seq *attrs, asdl_pattern_seq* patterns)	todo		
-Python/codegen.c	5925	5986	codegen_pattern_class	codegen_pattern_class(compiler *c, pattern_ty p, pattern_context *pc)	todo		
-Python/codegen.c	5989	6016	codegen_pattern_mapping_key	codegen_pattern_mapping_key(compiler *c, PyObject *seen, pattern_ty p, Py_ssize_t i)	todo		
-Python/codegen.c	6019	6117	codegen_pattern_mapping	codegen_pattern_mapping(compiler *c, pattern_ty p, pattern_context *pc)	todo		
-Python/codegen.c	6120	6268	codegen_pattern_or	codegen_pattern_or(compiler *c, pattern_ty p, pattern_context *pc)	todo		
-Python/codegen.c	6272	6327	codegen_pattern_sequence	codegen_pattern_sequence(compiler *c, pattern_ty p, pattern_context *pc)	todo		
-Python/codegen.c	6330	6343	codegen_pattern_value	codegen_pattern_value(compiler *c, pattern_ty p, pattern_context *pc)	todo		
-Python/codegen.c	6346	6353	codegen_pattern_singleton	codegen_pattern_singleton(compiler *c, pattern_ty p, pattern_context *pc)	todo		
-Python/codegen.c	6356	6380	codegen_pattern	codegen_pattern(compiler *c, pattern_ty p, pattern_context *pc)	todo		
-Python/codegen.c	6383	6458	codegen_match_inner	codegen_match_inner(compiler *c, stmt_ty s, pattern_context *pc)	todo		
-Python/codegen.c	6461	6468	codegen_match	codegen_match(compiler *c, stmt_ty s)	todo		
-Python/codegen.c	6475	6485	_PyCodegen_AddReturnAtEnd	_PyCodegen_AddReturnAtEnd(compiler *c, int addNone)	todo		
+Python/codegen.c	260	273	codegen_addop_i	codegen_addop_i(instr_sequence *seq, int opcode, Py_ssize_t oparg, location loc)	todo		
+Python/codegen.c	282	287	codegen_addop_noarg	codegen_addop_noarg(instr_sequence *seq, int opcode, location loc)	todo		
+Python/codegen.c	296	304	codegen_addop_load_const	codegen_addop_load_const(compiler *c, location loc, PyObject *o)	todo		
+Python/codegen.c	313	321	codegen_addop_load_const_new	codegen_addop_load_const_new(compiler *c, location loc, PyObject *o)	todo		changed-in-3.15: new function
+Python/codegen.c	331	338	codegen_addop_o	codegen_addop_o(compiler *c, location loc, int opcode, PyObject *dict, PyObject *o)	todo		
+Python/codegen.c	364	378	codegen_addop_name_custom	codegen_addop_name_custom(compiler *c, location loc, int opcode, PyObject *dict, PyObject *o, int shift, int low)	todo		changed-in-3.15: new function
+Python/codegen.c	381	412	codegen_addop_name	codegen_addop_name(compiler *c, location loc, int opcode, PyObject *dict, PyObject *o)	todo		changed-in-3.15:
+Python/codegen.c	421	428	codegen_addop_j	codegen_addop_j(instr_sequence *seq, location loc, int opcode, jump_target_label target)	todo		
+Python/codegen.c	483	490	codegen_call_exit_with_nones	codegen_call_exit_with_nones(compiler *c, location loc)	todo		
+Python/codegen.c	493	515	codegen_add_yield_from	codegen_add_yield_from(compiler *c, location loc, int await)	todo		
+Python/codegen.c	518	531	codegen_pop_except_and_reraise	codegen_pop_except_and_reraise(compiler *c, location loc)	todo		
+Python/codegen.c	539	650	codegen_unwind_fblock	codegen_unwind_fblock(compiler *c, location *ploc, fblockinfo *info, int preserve_tos)	todo		changed-in-3.15:
+Python/codegen.c	654	678	codegen_unwind_fblock_stack	codegen_unwind_fblock_stack(compiler *c, location *ploc, int preserve_tos, fblockinfo **loop)	todo		changed-in-3.15:
+Python/codegen.c	681	709	codegen_enter_scope	codegen_enter_scope(compiler *c, identifier name, int scope_type, void *key, int lineno, PyObject *private, _PyCompile_CodeUnitMetadata *umd)	todo		changed-in-3.15:
+Python/codegen.c	712	731	codegen_emit_annotations_prologue	codegen_emit_annotations_prologue(compiler *c, location loc)	todo		changed-in-3.15: new function
+Python/codegen.c	734	746	codegen_setup_annotations_scope	codegen_setup_annotations_scope(compiler *c, location loc, void *key, PyObject *name)	todo		changed-in-3.15:
+Python/codegen.c	749	791	codegen_finish_annotations_scope	codegen_finish_annotations_scope(compiler *c, location loc)	todo		changed-in-3.15: new function
+Python/codegen.c	794	847	codegen_deferred_annotations_body	codegen_deferred_annotations_body(compiler *c, location loc, PyObject *deferred_anno, PyObject *conditional_annotation_indices, int scope_type)	todo		
+Python/codegen.c	850	904	codegen_process_deferred_annotations	codegen_process_deferred_annotations(compiler *c, location loc)	todo		changed-in-3.15:
+Python/codegen.c	908	912	_PyCodegen_Expression	_PyCodegen_Expression(compiler *c, expr_ty e)	todo		
+Python/codegen.c	918	925	_PyCodegen_Module	_PyCodegen_Module(compiler *c, location loc, asdl_stmt_seq *stmts, bool is_interactive)	todo		
+Python/codegen.c	928	970	codegen_body	codegen_body(compiler *c, location loc, asdl_stmt_seq *stmts, bool is_interactive)	todo		
+Python/codegen.c	973	980	_PyCodegen_EnterAnonymousScope	_PyCodegen_EnterAnonymousScope(compiler* c, mod_ty mod)	todo		
+Python/codegen.c	983	1020	codegen_make_closure	codegen_make_closure(compiler *c, location loc, PyCodeObject *co, Py_ssize_t flags)	todo		
+Python/codegen.c	1023	1033	codegen_decorators	codegen_decorators(compiler *c, asdl_expr_seq* decos)	todo		
+Python/codegen.c	1036	1047	codegen_apply_decorators	codegen_apply_decorators(compiler *c, asdl_expr_seq* decos)	todo		
+Python/codegen.c	1050	1078	codegen_kwonlydefaults	codegen_kwonlydefaults(compiler *c, location loc, asdl_arg_seq *kwonlyargs, asdl_expr_seq *kw_defaults)	todo		
+Python/codegen.c	1081	1086	codegen_visit_annexpr	codegen_visit_annexpr(compiler *c, expr_ty annotation)	todo		
+Python/codegen.c	1089	1120	codegen_argannotation	codegen_argannotation(compiler *c, identifier id, expr_ty annotation, Py_ssize_t *annotations_len, location loc)	todo		
+Python/codegen.c	1123	1138	codegen_argannotations	codegen_argannotations(compiler *c, asdl_arg_seq* args, Py_ssize_t *annotations_len, location loc)	todo		
+Python/codegen.c	1141	1170	codegen_annotations_in_scope	codegen_annotations_in_scope(compiler *c, location loc, arguments_ty args, expr_ty returns, Py_ssize_t *annotations_len)	todo		changed-in-3.15:
+Python/codegen.c	1173	1203	codegen_function_annotations	codegen_function_annotations(compiler *c, location loc, arguments_ty args, expr_ty returns)	todo		changed-in-3.15:
+Python/codegen.c	1206	1212	codegen_defaults	codegen_defaults(compiler *c, arguments_ty args, location loc)	todo		
+Python/codegen.c	1215	1233	codegen_default_arguments	codegen_default_arguments(compiler *c, location loc, arguments_ty args)	todo		
+Python/codegen.c	1236	1262	codegen_wrap_in_stopiteration_handler	codegen_wrap_in_stopiteration_handler(compiler *c)	todo		changed-in-3.15:
+Python/codegen.c	1265	1289	codegen_type_param_bound_or_default	codegen_type_param_bound_or_default(compiler *c, expr_ty e, identifier name, void *key, bool allow_starred)	todo		
+Python/codegen.c	1292	1378	codegen_type_params	codegen_type_params(compiler *c, asdl_type_param_seq *type_params)	todo		
+Python/codegen.c	1381	1416	codegen_emit_function_body	codegen_emit_function_body(compiler *c, asdl_stmt_seq *body)	todo		changed-in-3.15: new function
+Python/codegen.c	1419	1463	codegen_function_body	codegen_function_body(compiler *c, stmt_ty s, int is_async, Py_ssize_t funcflags, int firstlineno)	todo		changed-in-3.15:
+Python/codegen.c	1466	1578	codegen_function	codegen_function(compiler *c, stmt_ty s, int is_async)	todo		
+Python/codegen.c	1581	1587	codegen_set_type_params_in_class	codegen_set_type_params_in_class(compiler *c, location loc)	todo		
+Python/codegen.c	1591	1690	codegen_class_body	codegen_class_body(compiler *c, stmt_ty s, int firstlineno)	todo		changed-in-3.15:
+Python/codegen.c	1693	1767	codegen_class	codegen_class(compiler *c, stmt_ty s)	todo		
+Python/codegen.c	1770	1794	codegen_typealias_body	codegen_typealias_body(compiler *c, stmt_ty s)	todo		
+Python/codegen.c	1797	1843	codegen_typealias	codegen_typealias(compiler *c, stmt_ty s)	todo		
+Python/codegen.c	1846	1855	is_const_tuple	is_const_tuple(asdl_expr_seq *elts)	todo		
+Python/codegen.c	1860	1873	check_is_arg	check_is_arg(expr_ty e)	todo		
+Python/codegen.c	1881	1906	codegen_check_compare	codegen_check_compare(compiler *c, expr_ty e)	todo		
+Python/codegen.c	1909	1952	codegen_addcompare	codegen_addcompare(compiler *c, location loc, cmpop_ty op)	todo		
+Python/codegen.c	1955	2046	codegen_jump_if	codegen_jump_if(compiler *c, location loc, expr_ty e, jump_target_label next, int cond)	todo		
+Python/codegen.c	2049	2066	codegen_ifexp	codegen_ifexp(compiler *c, expr_ty e)	todo		
+Python/codegen.c	2069	2110	codegen_lambda	codegen_lambda(compiler *c, expr_ty e)	todo		
+Python/codegen.c	2113	2138	codegen_if	codegen_if(compiler *c, stmt_ty s)	todo		
+Python/codegen.c	2141	2184	codegen_for	codegen_for(compiler *c, stmt_ty s)	todo		changed-in-3.15:
+Python/codegen.c	2187	2233	codegen_async_for	codegen_async_for(compiler *c, stmt_ty s)	todo		changed-in-3.15:
+Python/codegen.c	2236	2259	codegen_while	codegen_while(compiler *c, stmt_ty s)	todo		
+Python/codegen.c	2262	2300	codegen_return	codegen_return(compiler *c, stmt_ty s)	todo		
+Python/codegen.c	2303	2316	codegen_break	codegen_break(compiler *c, location loc)	todo		
+Python/codegen.c	2319	2331	codegen_continue	codegen_continue(compiler *c, location loc)	todo		
+Python/codegen.c	2364	2412	codegen_try_finally	codegen_try_finally(compiler *c, stmt_ty s)	todo		
+Python/codegen.c	2415	2463	codegen_try_star_finally	codegen_try_star_finally(compiler *c, stmt_ty s)	todo		
+Python/codegen.c	2495	2623	codegen_try_except	codegen_try_except(compiler *c, stmt_ty s)	todo		
+Python/codegen.c	2678	2842	codegen_try_star_except	codegen_try_star_except(compiler *c, stmt_ty s)	todo		
+Python/codegen.c	2845	2850	codegen_try	codegen_try(compiler *c, stmt_ty s) {	todo		
+Python/codegen.c	2853	2861	codegen_try_star	codegen_try_star(compiler *c, stmt_ty s)	todo		
+Python/codegen.c	2864	2903	codegen_import_as	codegen_import_as(compiler *c, location loc, identifier name, identifier asname)	todo		
+Python/codegen.c	2906	2914	codegen_validate_lazy_import	codegen_validate_lazy_import(compiler *c, location loc)	todo		changed-in-3.15: new function
+Python/codegen.c	2917	2971	codegen_import	codegen_import(compiler *c, stmt_ty s)	todo		changed-in-3.15:
+Python/codegen.c	2974	3038	codegen_from_import	codegen_from_import(compiler *c, stmt_ty s)	todo		changed-in-3.15:
+Python/codegen.c	3041	3068	codegen_assert	codegen_assert(compiler *c, stmt_ty s)	todo		
+Python/codegen.c	3071	3089	codegen_stmt_expr	codegen_stmt_expr(compiler *c, location loc, expr_ty value)	todo		
+Python/codegen.c	3100	3204	codegen_visit_stmt	codegen_visit_stmt(compiler *c, stmt_ty s)	todo		
+Python/codegen.c	3207	3219	unaryop	unaryop(unaryop_ty op)	todo		
+Python/codegen.c	3222	3273	addop_binary	addop_binary(compiler *c, location loc, operator_ty binop, bool inplace)	todo		
+Python/codegen.c	3277	3285	codegen_addop_yield	codegen_addop_yield(compiler *c, location loc) {	todo		
+Python/codegen.c	3288	3292	codegen_load_classdict_freevar	codegen_load_classdict_freevar(compiler *c, location loc)	todo		
+Python/codegen.c	3295	3399	codegen_nameop	codegen_nameop(compiler *c, location loc, identifier name, expr_context_ty ctx)	todo		changed-in-3.15:
+Python/codegen.c	3402	3427	codegen_boolop	codegen_boolop(compiler *c, expr_ty e)	todo		
+Python/codegen.c	3430	3491	starunpack_helper_impl	starunpack_helper_impl(compiler *c, location loc, asdl_expr_seq *elts, PyObject *injected_arg, int pushed, int build, int add, int extend, int tuple)	todo		
+Python/codegen.c	3494	3500	starunpack_helper	starunpack_helper(compiler *c, location loc, asdl_expr_seq *elts, int pushed, int build, int add, int extend, int tuple)	todo		
+Python/codegen.c	3503	3528	unpack_helper	unpack_helper(compiler *c, location loc, asdl_expr_seq *elts)	todo		
+Python/codegen.c	3531	3540	assignment_helper	assignment_helper(compiler *c, location loc, asdl_expr_seq *elts)	todo		
+Python/codegen.c	3543	3558	codegen_list	codegen_list(compiler *c, expr_ty e)	todo		
+Python/codegen.c	3561	3576	codegen_tuple	codegen_tuple(compiler *c, expr_ty e)	todo		
+Python/codegen.c	3579	3584	codegen_set	codegen_set(compiler *c, expr_ty e)	todo		
+Python/codegen.c	3587	3606	codegen_subdict	codegen_subdict(compiler *c, expr_ty e, Py_ssize_t begin, Py_ssize_t end)	todo		
+Python/codegen.c	3609	3661	codegen_dict	codegen_dict(compiler *c, expr_ty e)	todo		
+Python/codegen.c	3664	3702	codegen_compare	codegen_compare(compiler *c, expr_ty e)	todo		
+Python/codegen.c	3705	3734	infer_type	infer_type(expr_ty e)	todo		
+Python/codegen.c	3737	3761	check_caller	check_caller(compiler *c, expr_ty e)	todo		
+Python/codegen.c	3764	3792	check_subscripter	check_subscripter(compiler *c, expr_ty e)	todo		
+Python/codegen.c	3795	3828	check_index	check_index(compiler *c, expr_ty e, expr_ty s)	todo		
+Python/codegen.c	3831	3846	is_import_originated	is_import_originated(compiler *c, expr_ty e)	todo		
+Python/codegen.c	3849	3901	can_optimize_super_call	can_optimize_super_call(compiler *c, expr_ty attr)	todo		
+Python/codegen.c	3904	3931	load_args_for_super	load_args_for_super(compiler *c, expr_ty e) {	todo		
+Python/codegen.c	3936	3959	update_start_location_to_match_attr	update_start_location_to_match_attr(compiler *c, location loc, expr_ty attr)	todo		
+Python/codegen.c	3962	4070	maybe_optimize_function_call	maybe_optimize_function_call(compiler *c, expr_ty e, jump_target_label end)	todo		changed-in-3.15:
+Python/codegen.c	4074	4146	maybe_optimize_method_call	maybe_optimize_method_call(compiler *c, expr_ty e)	todo		
+Python/codegen.c	4149	4165	codegen_validate_keywords	codegen_validate_keywords(compiler *c, asdl_keyword_seq *keywords)	todo		
+Python/codegen.c	4168	4190	codegen_call	codegen_call(compiler *c, expr_ty e)	todo		
+Python/codegen.c	4193	4233	codegen_template_str	codegen_template_str(compiler *c, expr_ty e)	todo		
+Python/codegen.c	4236	4262	codegen_joined_str	codegen_joined_str(compiler *c, expr_ty e)	todo		
+Python/codegen.c	4265	4293	codegen_interpolation	codegen_interpolation(compiler *c, expr_ty e)	todo		
+Python/codegen.c	4297	4326	codegen_formatted_value	codegen_formatted_value(compiler *c, expr_ty e)	todo		
+Python/codegen.c	4329	4352	codegen_subkwargs	codegen_subkwargs(compiler *c, location loc, asdl_keyword_seq *keywords, Py_ssize_t begin, Py_ssize_t end)	todo		
+Python/codegen.c	4358	4372	codegen_call_simple_kw_helper	codegen_call_simple_kw_helper(compiler *c, location loc, asdl_keyword_seq *keywords, Py_ssize_t nkwelts)	todo		
+Python/codegen.c	4376	4480	codegen_call_helper_impl	codegen_call_helper_impl(compiler *c, location loc, int n, /* Args already pushed */ asdl_expr_seq *args, PyObject *injected_arg, asdl_keyword_seq *keywords)	todo		
+Python/codegen.c	4483	4489	codegen_call_helper	codegen_call_helper(compiler *c, location loc, int n, /* Args already pushed */ asdl_expr_seq *args, asdl_keyword_seq *keywords)	todo		
+Python/codegen.c	4509	4526	codegen_comprehension_generator	codegen_comprehension_generator(compiler *c, location loc, asdl_comprehension_seq *generators, int gen_index, int depth, expr_ty elt, expr_ty val, int type, IterStackPosition iter_pos)	todo		changed-in-3.15:
+Python/codegen.c	4529	4688	codegen_sync_comprehension_generator	codegen_sync_comprehension_generator(compiler *c, location loc, asdl_comprehension_seq *generators, int gen_index, int depth, expr_ty elt, expr_ty val, int type, IterStackPosition iter_pos)	todo		changed-in-3.15:
+Python/codegen.c	4691	4827	codegen_async_comprehension_generator	codegen_async_comprehension_generator(compiler *c, location loc, asdl_comprehension_seq *generators, int gen_index, int depth, expr_ty elt, expr_ty val, int type, IterStackPosition iter_pos)	todo		changed-in-3.15:
+Python/codegen.c	4830	4898	codegen_push_inlined_comprehension_locals	codegen_push_inlined_comprehension_locals(compiler *c, location loc, PySTEntryObject *comp, _PyCompile_InlinedComprehensionState *state)	todo		changed-in-3.15:
+Python/codegen.c	4901	4910	push_inlined_comprehension_state	push_inlined_comprehension_state(compiler *c, location loc, PySTEntryObject *comp, _PyCompile_InlinedComprehensionState *state)	todo		
+Python/codegen.c	4913	4932	restore_inlined_comprehension_locals	restore_inlined_comprehension_locals(compiler *c, location loc, _PyCompile_InlinedComprehensionState *state)	todo		
+Python/codegen.c	4935	4959	codegen_pop_inlined_comprehension_locals	codegen_pop_inlined_comprehension_locals(compiler *c, location loc, _PyCompile_InlinedComprehensionState *state)	todo		changed-in-3.15:
+Python/codegen.c	4962	4968	pop_inlined_comprehension_state	pop_inlined_comprehension_state(compiler *c, location loc, _PyCompile_InlinedComprehensionState *state)	todo		
+Python/codegen.c	4971	4996	codegen_comprehension_init_container	codegen_comprehension_init_container(compiler *c, location loc, int type, int is_inlined)	todo		changed-in-3.15: new function
+Python/codegen.c	4999	5120	codegen_comprehension	codegen_comprehension(compiler *c, expr_ty e, int type, identifier name, asdl_comprehension_seq *generators, expr_ty elt, expr_ty val)	todo		changed-in-3.15:
+Python/codegen.c	5123	5130	codegen_genexp	codegen_genexp(compiler *c, expr_ty e)	todo		
+Python/codegen.c	5133	5140	codegen_listcomp	codegen_listcomp(compiler *c, expr_ty e)	todo		
+Python/codegen.c	5143	5150	codegen_setcomp	codegen_setcomp(compiler *c, expr_ty e)	todo		
+Python/codegen.c	5154	5161	codegen_dictcomp	codegen_dictcomp(compiler *c, expr_ty e)	todo		
+Python/codegen.c	5165	5169	codegen_visit_keyword	codegen_visit_keyword(compiler *c, keyword_ty k)	todo		
+Python/codegen.c	5173	5194	codegen_with_except_finish	codegen_with_except_finish(compiler *c, jump_target_label cleanup) {	todo		
+Python/codegen.c	5221	5302	codegen_async_with_inner	codegen_async_with_inner(compiler *c, stmt_ty s, int pos)	todo		changed-in-3.15:
+Python/codegen.c	5305	5308	codegen_async_with	codegen_async_with(compiler *c, stmt_ty s)	todo		
+Python/codegen.c	5333	5399	codegen_with_inner	codegen_with_inner(compiler *c, stmt_ty s, int pos)	todo		
+Python/codegen.c	5402	5405	codegen_with	codegen_with(compiler *c, stmt_ty s)	todo		
+Python/codegen.c	5408	5559	codegen_visit_expr	codegen_visit_expr(compiler *c, expr_ty e)	todo		changed-in-3.15:
+Python/codegen.c	5562	5571	is_constant_slice	is_constant_slice(expr_ty s)	todo		
+Python/codegen.c	5574	5579	should_apply_two_element_slice_optimization	should_apply_two_element_slice_optimization(expr_ty s)	todo		
+Python/codegen.c	5582	5654	codegen_augassign	codegen_augassign(compiler *c, stmt_ty s)	todo		
+Python/codegen.c	5657	5662	codegen_check_ann_expr	codegen_check_ann_expr(compiler *c, expr_ty e)	todo		
+Python/codegen.c	5665	5692	codegen_check_ann_subscr	codegen_check_ann_subscr(compiler *c, expr_ty e)	todo		
+Python/codegen.c	5695	5760	codegen_annassign	codegen_annassign(compiler *c, stmt_ty s)	todo		changed-in-3.15:
+Python/codegen.c	5763	5801	codegen_subscript	codegen_subscript(compiler *c, expr_ty e)	todo		
+Python/codegen.c	5804	5821	codegen_slice_two_parts	codegen_slice_two_parts(compiler *c, expr_ty s)	todo		
+Python/codegen.c	5824	5859	codegen_slice	codegen_slice(compiler *c, expr_ty s)	todo		
+Python/codegen.c	5886	5904	ensure_fail_pop	ensure_fail_pop(compiler *c, pattern_context *pc, Py_ssize_t n)	todo		
+Python/codegen.c	5908	5917	jump_to_fail_pop	jump_to_fail_pop(compiler *c, location loc, pattern_context *pc, int op)	todo		
+Python/codegen.c	5921	5941	emit_and_reset_fail_pop	emit_and_reset_fail_pop(compiler *c, location loc, pattern_context *pc)	todo		
+Python/codegen.c	5944	5948	codegen_error_duplicate_store	codegen_error_duplicate_store(compiler *c, location loc, identifier n)	todo		
+Python/codegen.c	5952	5958	codegen_pattern_helper_rotate	codegen_pattern_helper_rotate(compiler *c, location loc, Py_ssize_t count)	todo		
+Python/codegen.c	5961	5979	codegen_pattern_helper_store_name	codegen_pattern_helper_store_name(compiler *c, location loc, identifier n, pattern_context *pc)	todo		
+Python/codegen.c	5983	6009	codegen_pattern_unpack_helper	codegen_pattern_unpack_helper(compiler *c, location loc, asdl_pattern_seq *elts)	todo		
+Python/codegen.c	6012	6028	pattern_helper_sequence_unpack	pattern_helper_sequence_unpack(compiler *c, location loc, asdl_pattern_seq *patterns, Py_ssize_t star, pattern_context *pc)	todo		
+Python/codegen.c	6034	6068	pattern_helper_sequence_subscr	pattern_helper_sequence_subscr(compiler *c, location loc, asdl_pattern_seq *patterns, Py_ssize_t star, pattern_context *pc)	todo		
+Python/codegen.c	6072	6080	codegen_pattern_subpattern	codegen_pattern_subpattern(compiler *c, pattern_ty p, pattern_context *pc)	todo		
+Python/codegen.c	6083	6106	codegen_pattern_as	codegen_pattern_as(compiler *c, pattern_ty p, pattern_context *pc)	todo		
+Python/codegen.c	6109	6115	codegen_pattern_star	codegen_pattern_star(compiler *c, pattern_ty p, pattern_context *pc)	todo		
+Python/codegen.c	6118	6135	validate_kwd_attrs	validate_kwd_attrs(compiler *c, asdl_identifier_seq *attrs, asdl_pattern_seq* patterns)	todo		
+Python/codegen.c	6138	6199	codegen_pattern_class	codegen_pattern_class(compiler *c, pattern_ty p, pattern_context *pc)	todo		
+Python/codegen.c	6202	6229	codegen_pattern_mapping_key	codegen_pattern_mapping_key(compiler *c, PyObject *seen, pattern_ty p, Py_ssize_t i)	todo		
+Python/codegen.c	6232	6330	codegen_pattern_mapping	codegen_pattern_mapping(compiler *c, pattern_ty p, pattern_context *pc)	todo		
+Python/codegen.c	6333	6481	codegen_pattern_or	codegen_pattern_or(compiler *c, pattern_ty p, pattern_context *pc)	todo		
+Python/codegen.c	6485	6540	codegen_pattern_sequence	codegen_pattern_sequence(compiler *c, pattern_ty p, pattern_context *pc)	todo		
+Python/codegen.c	6543	6556	codegen_pattern_value	codegen_pattern_value(compiler *c, pattern_ty p, pattern_context *pc)	todo		
+Python/codegen.c	6559	6566	codegen_pattern_singleton	codegen_pattern_singleton(compiler *c, pattern_ty p, pattern_context *pc)	todo		
+Python/codegen.c	6569	6593	codegen_pattern	codegen_pattern(compiler *c, pattern_ty p, pattern_context *pc)	todo		
+Python/codegen.c	6596	6671	codegen_match_inner	codegen_match_inner(compiler *c, stmt_ty s, pattern_context *pc)	todo		
+Python/codegen.c	6674	6681	codegen_match	codegen_match(compiler *c, stmt_ty s)	todo		
+Python/codegen.c	6688	6698	_PyCodegen_AddReturnAtEnd	_PyCodegen_AddReturnAtEnd(compiler *c, int addNone)	todo		

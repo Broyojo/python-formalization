@@ -949,8 +949,8 @@ theorem composeMroSpec_proven : ComposeMroSpec := by
   rename_i abcs ha
   exact ⟨abcs, ha, h, c3MroRelated_proven W L fuel cls abcs r h⟩
 
-/-- The ABCs passed on from `_compose_mro` have no repeats. False: the loop at Lib/functools.py:838-839 appends `typ`
-without the test that :845 has, so a type already added through a subclass of an earlier one goes in twice, and
+/-- The ABCs passed on from `_compose_mro` have no repeats. False: the loop at Lib/functools.py:859-860 appends `typ`
+without the test that :866 has, so a type already added through a subclass of an earlier one goes in twice, and
 `_c3_merge` then sees it in a tail of its own list and raises `RuntimeError`. -/
 def ComposeNoRepeat : Prop :=
   ∀ (W : World) (cls : Cls) (types r : List Cls), composeAbcs W cls types = .ok r → r.Nodup

@@ -1,216 +1,216 @@
 file	line	endline	name	signature	status	entry	note
-Lib/xml/dom/minidom.py	43	44	Node.__bool__	__bool__(self)	todo		
-Lib/xml/dom/minidom.py	46	47	Node.toxml	toxml(self, encoding=None, standalone=None)	todo		
-Lib/xml/dom/minidom.py	49	66	Node.toprettyxml	toprettyxml(self, indent='\\t', newl='\\n', encoding=None, standalone=None)	todo		
-Lib/xml/dom/minidom.py	68	69	Node.hasChildNodes	hasChildNodes(self)	todo		
-Lib/xml/dom/minidom.py	71	72	Node._get_childNodes	_get_childNodes(self)	todo		
-Lib/xml/dom/minidom.py	74	76	Node._get_firstChild	_get_firstChild(self)	todo		
-Lib/xml/dom/minidom.py	78	80	Node._get_lastChild	_get_lastChild(self)	todo		
-Lib/xml/dom/minidom.py	82	112	Node.insertBefore	insertBefore(self, newChild, refChild)	todo		
-Lib/xml/dom/minidom.py	114	129	Node.appendChild	appendChild(self, node)	todo		
-Lib/xml/dom/minidom.py	131	161	Node.replaceChild	replaceChild(self, newChild, oldChild)	todo		
-Lib/xml/dom/minidom.py	163	177	Node.removeChild	removeChild(self, oldChild)	todo		
-Lib/xml/dom/minidom.py	179	204	Node.normalize	normalize(self)	todo		
-Lib/xml/dom/minidom.py	206	207	Node.cloneNode	cloneNode(self, deep)	todo		
-Lib/xml/dom/minidom.py	209	210	Node.isSupported	isSupported(self, feature, version)	todo		
-Lib/xml/dom/minidom.py	212	214	Node._get_localName	_get_localName(self)	todo		
-Lib/xml/dom/minidom.py	218	219	Node.isSameNode	isSameNode(self, other)	todo		
-Lib/xml/dom/minidom.py	221	225	Node.getInterface	getInterface(self, feature)	todo		
-Lib/xml/dom/minidom.py	231	235	Node.getUserData	getUserData(self, key)	todo		
-Lib/xml/dom/minidom.py	237	253	Node.setUserData	setUserData(self, key, data, handler)	todo		
-Lib/xml/dom/minidom.py	255	259	Node._call_user_data_handler	_call_user_data_handler(self, operation, src, dst)	todo		
-Lib/xml/dom/minidom.py	263	270	Node.unlink	unlink(self)	todo		
-Lib/xml/dom/minidom.py	274	275	Node.__enter__	__enter__(self)	todo		
-Lib/xml/dom/minidom.py	277	278	Node.__exit__	__exit__(self, et, ev, tb)	todo		
-Lib/xml/dom/minidom.py	285	293	_append_child	_append_child(self, node)	todo		
-Lib/xml/dom/minidom.py	296	317	_write_data	_write_data(writer, text, attr)	todo		
-Lib/xml/dom/minidom.py	319	325	_get_elements_by_tagName_helper	_get_elements_by_tagName_helper(parent, name, rc)	todo		
-Lib/xml/dom/minidom.py	327	334	_get_elements_by_tagName_ns_helper	_get_elements_by_tagName_ns_helper(parent, nsURI, localName, rc)	todo		
-Lib/xml/dom/minidom.py	350	351	DocumentFragment.__init__	__init__(self)	todo		
-Lib/xml/dom/minidom.py	364	376	Attr.__init__	__init__(self, qName, namespaceURI=EMPTY_NAMESPACE, localName=None, prefix=None)	todo		
-Lib/xml/dom/minidom.py	380	384	Attr._get_localName	_get_localName(self)	todo		
-Lib/xml/dom/minidom.py	386	387	Attr._get_specified	_get_specified(self)	todo		
-Lib/xml/dom/minidom.py	389	390	Attr._get_name	_get_name(self)	todo		
-Lib/xml/dom/minidom.py	392	395	Attr._set_name	_set_name(self, value)	todo		
-Lib/xml/dom/minidom.py	399	400	Attr._get_value	_get_value(self)	todo		
-Lib/xml/dom/minidom.py	402	407	Attr._set_value	_set_value(self, value)	todo		
-Lib/xml/dom/minidom.py	411	412	Attr._get_prefix	_get_prefix(self)	todo		
-Lib/xml/dom/minidom.py	414	427	Attr._set_prefix	_set_prefix(self, prefix)	todo		
-Lib/xml/dom/minidom.py	431	446	Attr.unlink	unlink(self)	todo		
-Lib/xml/dom/minidom.py	448	462	Attr._get_isId	_get_isId(self)	todo		
-Lib/xml/dom/minidom.py	464	476	Attr._get_schemaType	_get_schemaType(self)	todo		
-Lib/xml/dom/minidom.py	494	497	NamedNodeMap.__init__	__init__(self, attrs, attrsNS, ownerElement)	todo		
-Lib/xml/dom/minidom.py	499	500	NamedNodeMap._get_length	_get_length(self)	todo		
-Lib/xml/dom/minidom.py	502	506	NamedNodeMap.item	item(self, index)	todo		
-Lib/xml/dom/minidom.py	508	512	NamedNodeMap.items	items(self)	todo		
-Lib/xml/dom/minidom.py	514	518	NamedNodeMap.itemsNS	itemsNS(self)	todo		
-Lib/xml/dom/minidom.py	520	524	NamedNodeMap.__contains__	__contains__(self, key)	todo		
-Lib/xml/dom/minidom.py	526	527	NamedNodeMap.keys	keys(self)	todo		
-Lib/xml/dom/minidom.py	529	530	NamedNodeMap.keysNS	keysNS(self)	todo		
-Lib/xml/dom/minidom.py	532	533	NamedNodeMap.values	values(self)	todo		
-Lib/xml/dom/minidom.py	535	536	NamedNodeMap.get	get(self, name, value=None)	todo		
-Lib/xml/dom/minidom.py	540	544	NamedNodeMap._cmp	_cmp(self, other)	todo		
-Lib/xml/dom/minidom.py	546	547	NamedNodeMap.__eq__	__eq__(self, other)	todo		
-Lib/xml/dom/minidom.py	549	550	NamedNodeMap.__ge__	__ge__(self, other)	todo		
-Lib/xml/dom/minidom.py	552	553	NamedNodeMap.__gt__	__gt__(self, other)	todo		
-Lib/xml/dom/minidom.py	555	556	NamedNodeMap.__le__	__le__(self, other)	todo		
-Lib/xml/dom/minidom.py	558	559	NamedNodeMap.__lt__	__lt__(self, other)	todo		
-Lib/xml/dom/minidom.py	561	565	NamedNodeMap.__getitem__	__getitem__(self, attname_or_tuple)	todo		
-Lib/xml/dom/minidom.py	568	581	NamedNodeMap.__setitem__	__setitem__(self, attname, value)	todo		
-Lib/xml/dom/minidom.py	583	587	NamedNodeMap.getNamedItem	getNamedItem(self, name)	todo		
-Lib/xml/dom/minidom.py	589	593	NamedNodeMap.getNamedItemNS	getNamedItemNS(self, namespaceURI, localName)	todo		
-Lib/xml/dom/minidom.py	595	605	NamedNodeMap.removeNamedItem	removeNamedItem(self, name)	todo		
-Lib/xml/dom/minidom.py	607	617	NamedNodeMap.removeNamedItemNS	removeNamedItemNS(self, namespaceURI, localName)	todo		
-Lib/xml/dom/minidom.py	619	630	NamedNodeMap.setNamedItem	setNamedItem(self, node)	todo		
-Lib/xml/dom/minidom.py	632	633	NamedNodeMap.setNamedItemNS	setNamedItemNS(self, node)	todo		
-Lib/xml/dom/minidom.py	635	638	NamedNodeMap.__delitem__	__delitem__(self, attname_or_tuple)	todo		
-Lib/xml/dom/minidom.py	640	641	NamedNodeMap.__getstate__	__getstate__(self)	todo		
-Lib/xml/dom/minidom.py	643	644	NamedNodeMap.__setstate__	__setstate__(self, state)	todo		
-Lib/xml/dom/minidom.py	655	657	TypeInfo.__init__	__init__(self, namespace, name)	todo		
-Lib/xml/dom/minidom.py	659	664	TypeInfo.__repr__	__repr__(self)	todo		
-Lib/xml/dom/minidom.py	666	667	TypeInfo._get_name	_get_name(self)	todo		
-Lib/xml/dom/minidom.py	669	670	TypeInfo._get_namespace	_get_namespace(self)	todo		
-Lib/xml/dom/minidom.py	691	710	Element.__init__	__init__(self, tagName, namespaceURI=EMPTY_NAMESPACE, prefix=None, localName=None)	todo		
-Lib/xml/dom/minidom.py	712	715	Element._ensure_attributes	_ensure_attributes(self)	todo		
-Lib/xml/dom/minidom.py	717	721	Element._get_localName	_get_localName(self)	todo		
-Lib/xml/dom/minidom.py	723	724	Element._get_tagName	_get_tagName(self)	todo		
-Lib/xml/dom/minidom.py	726	732	Element.unlink	unlink(self)	todo		
-Lib/xml/dom/minidom.py	734	748	Element.getAttribute	getAttribute(self, attname)	todo		
-Lib/xml/dom/minidom.py	750	756	Element.getAttributeNS	getAttributeNS(self, namespaceURI, localName)	todo		
-Lib/xml/dom/minidom.py	758	768	Element.setAttribute	setAttribute(self, attname, value)	todo		
-Lib/xml/dom/minidom.py	770	785	Element.setAttributeNS	setAttributeNS(self, namespaceURI, qualifiedName, value)	todo		
-Lib/xml/dom/minidom.py	787	790	Element.getAttributeNode	getAttributeNode(self, attrname)	todo		
-Lib/xml/dom/minidom.py	792	795	Element.getAttributeNodeNS	getAttributeNodeNS(self, namespaceURI, localName)	todo		
-Lib/xml/dom/minidom.py	797	814	Element.setAttributeNode	setAttributeNode(self, attr)	todo		
-Lib/xml/dom/minidom.py	818	825	Element.removeAttribute	removeAttribute(self, name)	todo		
-Lib/xml/dom/minidom.py	827	834	Element.removeAttributeNS	removeAttributeNS(self, namespaceURI, localName)	todo		
-Lib/xml/dom/minidom.py	836	848	Element.removeAttributeNode	removeAttributeNode(self, node)	todo		
-Lib/xml/dom/minidom.py	852	860	Element.hasAttribute	hasAttribute(self, name)	todo		
-Lib/xml/dom/minidom.py	862	865	Element.hasAttributeNS	hasAttributeNS(self, namespaceURI, localName)	todo		
-Lib/xml/dom/minidom.py	867	873	Element.getElementsByTagName	getElementsByTagName(self, name)	todo		
-Lib/xml/dom/minidom.py	875	877	Element.getElementsByTagNameNS	getElementsByTagNameNS(self, namespaceURI, localName)	todo		
-Lib/xml/dom/minidom.py	879	880	Element.__repr__	__repr__(self)	todo		
-Lib/xml/dom/minidom.py	882	912	Element.writexml	writexml(self, writer, indent='', addindent='', newl='')	todo		
-Lib/xml/dom/minidom.py	914	916	Element._get_attributes	_get_attributes(self)	todo		
-Lib/xml/dom/minidom.py	918	922	Element.hasAttributes	hasAttributes(self)	todo		
-Lib/xml/dom/minidom.py	926	928	Element.setIdAttribute	setIdAttribute(self, name)	todo		
-Lib/xml/dom/minidom.py	930	932	Element.setIdAttributeNS	setIdAttributeNS(self, namespaceURI, localName)	todo		
-Lib/xml/dom/minidom.py	934	943	Element.setIdAttributeNode	setIdAttributeNode(self, idAttr)	todo		
-Lib/xml/dom/minidom.py	951	960	_set_attribute_node	_set_attribute_node(element, attr)	todo		
-Lib/xml/dom/minidom.py	973	974	Childless._get_firstChild	_get_firstChild(self)	todo		
-Lib/xml/dom/minidom.py	976	977	Childless._get_lastChild	_get_lastChild(self)	todo		
-Lib/xml/dom/minidom.py	979	981	Childless.appendChild	appendChild(self, node)	todo		
-Lib/xml/dom/minidom.py	983	984	Childless.hasChildNodes	hasChildNodes(self)	todo		
-Lib/xml/dom/minidom.py	986	988	Childless.insertBefore	insertBefore(self, newChild, refChild)	todo		
-Lib/xml/dom/minidom.py	990	992	Childless.removeChild	removeChild(self, oldChild)	todo		
-Lib/xml/dom/minidom.py	994	996	Childless.normalize	normalize(self)	todo		
-Lib/xml/dom/minidom.py	998	1000	Childless.replaceChild	replaceChild(self, newChild, oldChild)	todo		
-Lib/xml/dom/minidom.py	1007	1009	ProcessingInstruction.__init__	__init__(self, target, data)	todo		
-Lib/xml/dom/minidom.py	1012	1013	ProcessingInstruction._get_nodeValue	_get_nodeValue(self)	todo		
-Lib/xml/dom/minidom.py	1014	1015	ProcessingInstruction._set_nodeValue	_set_nodeValue(self, value)	todo		
-Lib/xml/dom/minidom.py	1019	1020	ProcessingInstruction._get_nodeName	_get_nodeName(self)	todo		
-Lib/xml/dom/minidom.py	1021	1022	ProcessingInstruction._set_nodeName	_set_nodeName(self, value)	todo		
-Lib/xml/dom/minidom.py	1025	1026	ProcessingInstruction.writexml	writexml(self, writer, indent='', addindent='', newl='')	todo		
-Lib/xml/dom/minidom.py	1032	1036	CharacterData.__init__	__init__(self)	todo		
-Lib/xml/dom/minidom.py	1038	1039	CharacterData._get_length	_get_length(self)	todo		
-Lib/xml/dom/minidom.py	1042	1043	CharacterData._get_data	_get_data(self)	todo		
-Lib/xml/dom/minidom.py	1044	1045	CharacterData._set_data	_set_data(self, data)	todo		
-Lib/xml/dom/minidom.py	1049	1056	CharacterData.__repr__	__repr__(self)	todo		
-Lib/xml/dom/minidom.py	1058	1065	CharacterData.substringData	substringData(self, offset, count)	todo		
-Lib/xml/dom/minidom.py	1067	1068	CharacterData.appendData	appendData(self, arg)	todo		
-Lib/xml/dom/minidom.py	1070	1077	CharacterData.insertData	insertData(self, offset, arg)	todo		
-Lib/xml/dom/minidom.py	1079	1087	CharacterData.deleteData	deleteData(self, offset, count)	todo		
-Lib/xml/dom/minidom.py	1089	1098	CharacterData.replaceData	replaceData(self, offset, count, arg)	todo		
-Lib/xml/dom/minidom.py	1110	1123	Text.splitText	splitText(self, offset)	todo		
-Lib/xml/dom/minidom.py	1125	1126	Text.writexml	writexml(self, writer, indent='', addindent='', newl='')	todo		
-Lib/xml/dom/minidom.py	1130	1146	Text._get_wholeText	_get_wholeText(self)	todo		
-Lib/xml/dom/minidom.py	1148	1174	Text.replaceWholeText	replaceWholeText(self, content)	todo		
-Lib/xml/dom/minidom.py	1176	1186	Text._get_isWhitespaceInElementContent	_get_isWhitespaceInElementContent(self)	todo		
-Lib/xml/dom/minidom.py	1195	1201	_get_containing_element	_get_containing_element(node)	todo		
-Lib/xml/dom/minidom.py	1203	1209	_get_containing_entref	_get_containing_entref(node)	todo		
-Lib/xml/dom/minidom.py	1216	1218	Comment.__init__	__init__(self, data)	todo		
-Lib/xml/dom/minidom.py	1220	1223	Comment.writexml	writexml(self, writer, indent='', addindent='', newl='')	todo		
-Lib/xml/dom/minidom.py	1232	1235	CDATASection.writexml	writexml(self, writer, indent='', addindent='', newl='')	todo		
-Lib/xml/dom/minidom.py	1241	1243	ReadOnlySequentialNamedNodeMap.__init__	__init__(self, seq=())	todo		
-Lib/xml/dom/minidom.py	1245	1246	ReadOnlySequentialNamedNodeMap.__len__	__len__(self)	todo		
-Lib/xml/dom/minidom.py	1248	1249	ReadOnlySequentialNamedNodeMap._get_length	_get_length(self)	todo		
-Lib/xml/dom/minidom.py	1251	1254	ReadOnlySequentialNamedNodeMap.getNamedItem	getNamedItem(self, name)	todo		
-Lib/xml/dom/minidom.py	1256	1259	ReadOnlySequentialNamedNodeMap.getNamedItemNS	getNamedItemNS(self, namespaceURI, localName)	todo		
-Lib/xml/dom/minidom.py	1261	1268	ReadOnlySequentialNamedNodeMap.__getitem__	__getitem__(self, name_or_tuple)	todo		
-Lib/xml/dom/minidom.py	1270	1276	ReadOnlySequentialNamedNodeMap.item	item(self, index)	todo		
-Lib/xml/dom/minidom.py	1278	1280	ReadOnlySequentialNamedNodeMap.removeNamedItem	removeNamedItem(self, name)	todo		
-Lib/xml/dom/minidom.py	1282	1284	ReadOnlySequentialNamedNodeMap.removeNamedItemNS	removeNamedItemNS(self, namespaceURI, localName)	todo		
-Lib/xml/dom/minidom.py	1286	1288	ReadOnlySequentialNamedNodeMap.setNamedItem	setNamedItem(self, node)	todo		
-Lib/xml/dom/minidom.py	1290	1292	ReadOnlySequentialNamedNodeMap.setNamedItemNS	setNamedItemNS(self, node)	todo		
-Lib/xml/dom/minidom.py	1294	1295	ReadOnlySequentialNamedNodeMap.__getstate__	__getstate__(self)	todo		
-Lib/xml/dom/minidom.py	1297	1298	ReadOnlySequentialNamedNodeMap.__setstate__	__setstate__(self, state)	todo		
-Lib/xml/dom/minidom.py	1309	1311	Identified._identified_mixin_init	_identified_mixin_init(self, publicId, systemId)	todo		
-Lib/xml/dom/minidom.py	1313	1314	Identified._get_publicId	_get_publicId(self)	todo		
-Lib/xml/dom/minidom.py	1316	1317	Identified._get_systemId	_get_systemId(self)	todo		
-Lib/xml/dom/minidom.py	1327	1333	DocumentType.__init__	__init__(self, qualifiedName)	todo		
-Lib/xml/dom/minidom.py	1335	1336	DocumentType._get_internalSubset	_get_internalSubset(self)	todo		
-Lib/xml/dom/minidom.py	1338	1363	DocumentType.cloneNode	cloneNode(self, deep)	todo		
-Lib/xml/dom/minidom.py	1365	1377	DocumentType.writexml	writexml(self, writer, indent='', addindent='', newl='')	todo		
-Lib/xml/dom/minidom.py	1388	1392	Entity.__init__	__init__(self, name, publicId, systemId, notation)	todo		
-Lib/xml/dom/minidom.py	1394	1395	Entity._get_actualEncoding	_get_actualEncoding(self)	todo		
-Lib/xml/dom/minidom.py	1397	1398	Entity._get_encoding	_get_encoding(self)	todo		
-Lib/xml/dom/minidom.py	1400	1401	Entity._get_version	_get_version(self)	todo		
-Lib/xml/dom/minidom.py	1403	1405	Entity.appendChild	appendChild(self, newChild)	todo		
-Lib/xml/dom/minidom.py	1407	1409	Entity.insertBefore	insertBefore(self, newChild, refChild)	todo		
-Lib/xml/dom/minidom.py	1411	1413	Entity.removeChild	removeChild(self, oldChild)	todo		
-Lib/xml/dom/minidom.py	1415	1417	Entity.replaceChild	replaceChild(self, newChild, oldChild)	todo		
-Lib/xml/dom/minidom.py	1423	1425	Notation.__init__	__init__(self, name, publicId, systemId)	todo		
-Lib/xml/dom/minidom.py	1439	1442	DOMImplementation.hasFeature	hasFeature(self, feature, version)	todo		
-Lib/xml/dom/minidom.py	1444	1487	DOMImplementation.createDocument	createDocument(self, namespaceURI, qualifiedName, doctype)	todo		
-Lib/xml/dom/minidom.py	1489	1493	DOMImplementation.createDocumentType	createDocumentType(self, qualifiedName, publicId, systemId)	todo		
-Lib/xml/dom/minidom.py	1497	1501	DOMImplementation.getInterface	getInterface(self, feature)	todo		
-Lib/xml/dom/minidom.py	1504	1505	DOMImplementation._create_document	_create_document(self)	todo		
-Lib/xml/dom/minidom.py	1518	1519	ElementInfo.__init__	__init__(self, name)	todo		
-Lib/xml/dom/minidom.py	1521	1522	ElementInfo.getAttributeType	getAttributeType(self, aname)	todo		
-Lib/xml/dom/minidom.py	1524	1525	ElementInfo.getAttributeTypeNS	getAttributeTypeNS(self, namespaceURI, localName)	todo		
-Lib/xml/dom/minidom.py	1527	1528	ElementInfo.isElementContent	isElementContent(self)	todo		
-Lib/xml/dom/minidom.py	1530	1533	ElementInfo.isEmpty	isEmpty(self)	todo		
-Lib/xml/dom/minidom.py	1535	1537	ElementInfo.isId	isId(self, aname)	todo		
-Lib/xml/dom/minidom.py	1539	1541	ElementInfo.isIdNS	isIdNS(self, namespaceURI, localName)	todo		
-Lib/xml/dom/minidom.py	1543	1544	ElementInfo.__getstate__	__getstate__(self)	todo		
-Lib/xml/dom/minidom.py	1546	1547	ElementInfo.__setstate__	__setstate__(self, state)	todo		
-Lib/xml/dom/minidom.py	1549	1555	_clear_id_cache	_clear_id_cache(node)	todo		
-Lib/xml/dom/minidom.py	1584	1591	Document.__init__	__init__(self)	todo		
-Lib/xml/dom/minidom.py	1593	1598	Document._get_elem_info	_get_elem_info(self, element)	todo		
-Lib/xml/dom/minidom.py	1600	1601	Document._get_actualEncoding	_get_actualEncoding(self)	todo		
-Lib/xml/dom/minidom.py	1603	1604	Document._get_doctype	_get_doctype(self)	todo		
-Lib/xml/dom/minidom.py	1606	1607	Document._get_documentURI	_get_documentURI(self)	todo		
-Lib/xml/dom/minidom.py	1609	1610	Document._get_encoding	_get_encoding(self)	todo		
-Lib/xml/dom/minidom.py	1612	1613	Document._get_errorHandler	_get_errorHandler(self)	todo		
-Lib/xml/dom/minidom.py	1615	1616	Document._get_standalone	_get_standalone(self)	todo		
-Lib/xml/dom/minidom.py	1618	1619	Document._get_strictErrorChecking	_get_strictErrorChecking(self)	todo		
-Lib/xml/dom/minidom.py	1621	1622	Document._get_version	_get_version(self)	todo		
-Lib/xml/dom/minidom.py	1624	1638	Document.appendChild	appendChild(self, node)	todo		
-Lib/xml/dom/minidom.py	1640	1650	Document.removeChild	removeChild(self, oldChild)	todo		
-Lib/xml/dom/minidom.py	1652	1655	Document._get_documentElement	_get_documentElement(self)	todo		
-Lib/xml/dom/minidom.py	1657	1661	Document.unlink	unlink(self)	todo		
-Lib/xml/dom/minidom.py	1663	1682	Document.cloneNode	cloneNode(self, deep)	todo		
-Lib/xml/dom/minidom.py	1684	1687	Document.createDocumentFragment	createDocumentFragment(self)	todo		
-Lib/xml/dom/minidom.py	1689	1692	Document.createElement	createElement(self, tagName)	todo		
-Lib/xml/dom/minidom.py	1694	1700	Document.createTextNode	createTextNode(self, data)	todo		
-Lib/xml/dom/minidom.py	1702	1708	Document.createCDATASection	createCDATASection(self, data)	todo		
-Lib/xml/dom/minidom.py	1710	1713	Document.createComment	createComment(self, data)	todo		
-Lib/xml/dom/minidom.py	1715	1718	Document.createProcessingInstruction	createProcessingInstruction(self, target, data)	todo		
-Lib/xml/dom/minidom.py	1720	1724	Document.createAttribute	createAttribute(self, qName)	todo		
-Lib/xml/dom/minidom.py	1726	1730	Document.createElementNS	createElementNS(self, namespaceURI, qualifiedName)	todo		
-Lib/xml/dom/minidom.py	1732	1737	Document.createAttributeNS	createAttributeNS(self, namespaceURI, qualifiedName)	todo		
-Lib/xml/dom/minidom.py	1742	1745	Document._create_entity	_create_entity(self, name, publicId, systemId, notationName)	todo		
-Lib/xml/dom/minidom.py	1747	1750	Document._create_notation	_create_notation(self, name, publicId, systemId)	todo		
-Lib/xml/dom/minidom.py	1752	1808	Document.getElementById	getElementById(self, id)	todo		
-Lib/xml/dom/minidom.py	1810	1811	Document.getElementsByTagName	getElementsByTagName(self, name)	todo		
-Lib/xml/dom/minidom.py	1813	1815	Document.getElementsByTagNameNS	getElementsByTagNameNS(self, namespaceURI, localName)	todo		
-Lib/xml/dom/minidom.py	1817	1818	Document.isSupported	isSupported(self, feature, version)	todo		
-Lib/xml/dom/minidom.py	1820	1825	Document.importNode	importNode(self, node, deep)	todo		
-Lib/xml/dom/minidom.py	1827	1839	Document.writexml	writexml(self, writer, indent='', addindent='', newl='', encoding=None, standalone=None)	todo		
-Lib/xml/dom/minidom.py	1843	1894	Document.renameNode	renameNode(self, n, namespaceURI, name)	todo		
-Lib/xml/dom/minidom.py	1900	1979	_clone_node	_clone_node(node, deep, newOwnerDocument)	todo		
-Lib/xml/dom/minidom.py	1982	1987	_nssplit	_nssplit(qualifiedName)	todo		
-Lib/xml/dom/minidom.py	1990	1995	_do_pulldom_parse	_do_pulldom_parse(func, args, kwargs)	todo		
-Lib/xml/dom/minidom.py	1997	2005	parse	parse(file, parser=None, bufsize=None)	todo		
-Lib/xml/dom/minidom.py	2007	2015	parseString	parseString(string, parser=None)	todo		
-Lib/xml/dom/minidom.py	2017	2024	getDOMImplementation	getDOMImplementation(features=None)	todo		
+Lib/xml/dom/minidom.py	46	47	Node.__bool__	__bool__(self)	todo		
+Lib/xml/dom/minidom.py	49	50	Node.toxml	toxml(self, encoding=None, standalone=None)	todo		
+Lib/xml/dom/minidom.py	52	69	Node.toprettyxml	toprettyxml(self, indent='\\t', newl='\\n', encoding=None, standalone=None)	todo		
+Lib/xml/dom/minidom.py	71	72	Node.hasChildNodes	hasChildNodes(self)	todo		
+Lib/xml/dom/minidom.py	74	75	Node._get_childNodes	_get_childNodes(self)	todo		
+Lib/xml/dom/minidom.py	77	79	Node._get_firstChild	_get_firstChild(self)	todo		
+Lib/xml/dom/minidom.py	81	83	Node._get_lastChild	_get_lastChild(self)	todo		
+Lib/xml/dom/minidom.py	85	115	Node.insertBefore	insertBefore(self, newChild, refChild)	todo		
+Lib/xml/dom/minidom.py	117	132	Node.appendChild	appendChild(self, node)	todo		
+Lib/xml/dom/minidom.py	134	164	Node.replaceChild	replaceChild(self, newChild, oldChild)	todo		
+Lib/xml/dom/minidom.py	166	180	Node.removeChild	removeChild(self, oldChild)	todo		
+Lib/xml/dom/minidom.py	182	207	Node.normalize	normalize(self)	todo		
+Lib/xml/dom/minidom.py	209	210	Node.cloneNode	cloneNode(self, deep)	todo		
+Lib/xml/dom/minidom.py	212	213	Node.isSupported	isSupported(self, feature, version)	todo		
+Lib/xml/dom/minidom.py	215	217	Node._get_localName	_get_localName(self)	todo		
+Lib/xml/dom/minidom.py	221	222	Node.isSameNode	isSameNode(self, other)	todo		
+Lib/xml/dom/minidom.py	224	228	Node.getInterface	getInterface(self, feature)	todo		
+Lib/xml/dom/minidom.py	234	238	Node.getUserData	getUserData(self, key)	todo		
+Lib/xml/dom/minidom.py	240	256	Node.setUserData	setUserData(self, key, data, handler)	todo		
+Lib/xml/dom/minidom.py	258	262	Node._call_user_data_handler	_call_user_data_handler(self, operation, src, dst)	todo		
+Lib/xml/dom/minidom.py	266	273	Node.unlink	unlink(self)	todo		
+Lib/xml/dom/minidom.py	277	278	Node.__enter__	__enter__(self)	todo		
+Lib/xml/dom/minidom.py	280	281	Node.__exit__	__exit__(self, et, ev, tb)	todo		
+Lib/xml/dom/minidom.py	288	296	_append_child	_append_child(self, node)	todo		
+Lib/xml/dom/minidom.py	299	320	_write_data	_write_data(writer, text, attr)	todo		
+Lib/xml/dom/minidom.py	322	328	_get_elements_by_tagName_helper	_get_elements_by_tagName_helper(parent, name, rc)	todo		
+Lib/xml/dom/minidom.py	330	337	_get_elements_by_tagName_ns_helper	_get_elements_by_tagName_ns_helper(parent, nsURI, localName, rc)	todo		
+Lib/xml/dom/minidom.py	353	354	DocumentFragment.__init__	__init__(self)	todo		
+Lib/xml/dom/minidom.py	367	379	Attr.__init__	__init__(self, qName, namespaceURI=EMPTY_NAMESPACE, localName=None, prefix=None)	todo		
+Lib/xml/dom/minidom.py	383	387	Attr._get_localName	_get_localName(self)	todo		
+Lib/xml/dom/minidom.py	389	390	Attr._get_specified	_get_specified(self)	todo		
+Lib/xml/dom/minidom.py	392	393	Attr._get_name	_get_name(self)	todo		
+Lib/xml/dom/minidom.py	395	398	Attr._set_name	_set_name(self, value)	todo		
+Lib/xml/dom/minidom.py	402	403	Attr._get_value	_get_value(self)	todo		
+Lib/xml/dom/minidom.py	405	410	Attr._set_value	_set_value(self, value)	todo		
+Lib/xml/dom/minidom.py	414	415	Attr._get_prefix	_get_prefix(self)	todo		
+Lib/xml/dom/minidom.py	417	430	Attr._set_prefix	_set_prefix(self, prefix)	todo		
+Lib/xml/dom/minidom.py	434	449	Attr.unlink	unlink(self)	todo		
+Lib/xml/dom/minidom.py	451	465	Attr._get_isId	_get_isId(self)	todo		
+Lib/xml/dom/minidom.py	467	479	Attr._get_schemaType	_get_schemaType(self)	todo		
+Lib/xml/dom/minidom.py	497	500	NamedNodeMap.__init__	__init__(self, attrs, attrsNS, ownerElement)	todo		
+Lib/xml/dom/minidom.py	502	503	NamedNodeMap._get_length	_get_length(self)	todo		
+Lib/xml/dom/minidom.py	505	509	NamedNodeMap.item	item(self, index)	todo		
+Lib/xml/dom/minidom.py	511	515	NamedNodeMap.items	items(self)	todo		
+Lib/xml/dom/minidom.py	517	521	NamedNodeMap.itemsNS	itemsNS(self)	todo		
+Lib/xml/dom/minidom.py	523	527	NamedNodeMap.__contains__	__contains__(self, key)	todo		
+Lib/xml/dom/minidom.py	529	530	NamedNodeMap.keys	keys(self)	todo		
+Lib/xml/dom/minidom.py	532	533	NamedNodeMap.keysNS	keysNS(self)	todo		
+Lib/xml/dom/minidom.py	535	536	NamedNodeMap.values	values(self)	todo		
+Lib/xml/dom/minidom.py	538	539	NamedNodeMap.get	get(self, name, value=None)	todo		
+Lib/xml/dom/minidom.py	543	547	NamedNodeMap._cmp	_cmp(self, other)	todo		
+Lib/xml/dom/minidom.py	549	550	NamedNodeMap.__eq__	__eq__(self, other)	todo		
+Lib/xml/dom/minidom.py	552	553	NamedNodeMap.__ge__	__ge__(self, other)	todo		
+Lib/xml/dom/minidom.py	555	556	NamedNodeMap.__gt__	__gt__(self, other)	todo		
+Lib/xml/dom/minidom.py	558	559	NamedNodeMap.__le__	__le__(self, other)	todo		
+Lib/xml/dom/minidom.py	561	562	NamedNodeMap.__lt__	__lt__(self, other)	todo		
+Lib/xml/dom/minidom.py	564	568	NamedNodeMap.__getitem__	__getitem__(self, attname_or_tuple)	todo		
+Lib/xml/dom/minidom.py	571	584	NamedNodeMap.__setitem__	__setitem__(self, attname, value)	todo		
+Lib/xml/dom/minidom.py	586	590	NamedNodeMap.getNamedItem	getNamedItem(self, name)	todo		
+Lib/xml/dom/minidom.py	592	596	NamedNodeMap.getNamedItemNS	getNamedItemNS(self, namespaceURI, localName)	todo		
+Lib/xml/dom/minidom.py	598	608	NamedNodeMap.removeNamedItem	removeNamedItem(self, name)	todo		
+Lib/xml/dom/minidom.py	610	620	NamedNodeMap.removeNamedItemNS	removeNamedItemNS(self, namespaceURI, localName)	todo		
+Lib/xml/dom/minidom.py	622	633	NamedNodeMap.setNamedItem	setNamedItem(self, node)	todo		
+Lib/xml/dom/minidom.py	635	636	NamedNodeMap.setNamedItemNS	setNamedItemNS(self, node)	todo		
+Lib/xml/dom/minidom.py	638	641	NamedNodeMap.__delitem__	__delitem__(self, attname_or_tuple)	todo		
+Lib/xml/dom/minidom.py	643	644	NamedNodeMap.__getstate__	__getstate__(self)	todo		
+Lib/xml/dom/minidom.py	646	647	NamedNodeMap.__setstate__	__setstate__(self, state)	todo		
+Lib/xml/dom/minidom.py	658	660	TypeInfo.__init__	__init__(self, namespace, name)	todo		
+Lib/xml/dom/minidom.py	662	667	TypeInfo.__repr__	__repr__(self)	todo		
+Lib/xml/dom/minidom.py	669	670	TypeInfo._get_name	_get_name(self)	todo		
+Lib/xml/dom/minidom.py	672	673	TypeInfo._get_namespace	_get_namespace(self)	todo		
+Lib/xml/dom/minidom.py	694	713	Element.__init__	__init__(self, tagName, namespaceURI=EMPTY_NAMESPACE, prefix=None, localName=None)	todo		
+Lib/xml/dom/minidom.py	715	718	Element._ensure_attributes	_ensure_attributes(self)	todo		
+Lib/xml/dom/minidom.py	720	724	Element._get_localName	_get_localName(self)	todo		
+Lib/xml/dom/minidom.py	726	727	Element._get_tagName	_get_tagName(self)	todo		
+Lib/xml/dom/minidom.py	729	735	Element.unlink	unlink(self)	todo		
+Lib/xml/dom/minidom.py	737	751	Element.getAttribute	getAttribute(self, attname)	todo		
+Lib/xml/dom/minidom.py	753	759	Element.getAttributeNS	getAttributeNS(self, namespaceURI, localName)	todo		
+Lib/xml/dom/minidom.py	761	771	Element.setAttribute	setAttribute(self, attname, value)	todo		
+Lib/xml/dom/minidom.py	773	788	Element.setAttributeNS	setAttributeNS(self, namespaceURI, qualifiedName, value)	todo		
+Lib/xml/dom/minidom.py	790	793	Element.getAttributeNode	getAttributeNode(self, attrname)	todo		
+Lib/xml/dom/minidom.py	795	798	Element.getAttributeNodeNS	getAttributeNodeNS(self, namespaceURI, localName)	todo		
+Lib/xml/dom/minidom.py	800	817	Element.setAttributeNode	setAttributeNode(self, attr)	todo		
+Lib/xml/dom/minidom.py	821	828	Element.removeAttribute	removeAttribute(self, name)	todo		
+Lib/xml/dom/minidom.py	830	837	Element.removeAttributeNS	removeAttributeNS(self, namespaceURI, localName)	todo		
+Lib/xml/dom/minidom.py	839	851	Element.removeAttributeNode	removeAttributeNode(self, node)	todo		
+Lib/xml/dom/minidom.py	855	863	Element.hasAttribute	hasAttribute(self, name)	todo		
+Lib/xml/dom/minidom.py	865	868	Element.hasAttributeNS	hasAttributeNS(self, namespaceURI, localName)	todo		
+Lib/xml/dom/minidom.py	870	876	Element.getElementsByTagName	getElementsByTagName(self, name)	todo		
+Lib/xml/dom/minidom.py	878	880	Element.getElementsByTagNameNS	getElementsByTagNameNS(self, namespaceURI, localName)	todo		
+Lib/xml/dom/minidom.py	882	883	Element.__repr__	__repr__(self)	todo		
+Lib/xml/dom/minidom.py	885	915	Element.writexml	writexml(self, writer, indent='', addindent='', newl='')	todo		
+Lib/xml/dom/minidom.py	917	919	Element._get_attributes	_get_attributes(self)	todo		
+Lib/xml/dom/minidom.py	921	925	Element.hasAttributes	hasAttributes(self)	todo		
+Lib/xml/dom/minidom.py	929	931	Element.setIdAttribute	setIdAttribute(self, name)	todo		
+Lib/xml/dom/minidom.py	933	935	Element.setIdAttributeNS	setIdAttributeNS(self, namespaceURI, localName)	todo		
+Lib/xml/dom/minidom.py	937	946	Element.setIdAttributeNode	setIdAttributeNode(self, idAttr)	todo		
+Lib/xml/dom/minidom.py	954	963	_set_attribute_node	_set_attribute_node(element, attr)	todo		
+Lib/xml/dom/minidom.py	976	977	Childless._get_firstChild	_get_firstChild(self)	todo		
+Lib/xml/dom/minidom.py	979	980	Childless._get_lastChild	_get_lastChild(self)	todo		
+Lib/xml/dom/minidom.py	982	984	Childless.appendChild	appendChild(self, node)	todo		
+Lib/xml/dom/minidom.py	986	987	Childless.hasChildNodes	hasChildNodes(self)	todo		
+Lib/xml/dom/minidom.py	989	991	Childless.insertBefore	insertBefore(self, newChild, refChild)	todo		
+Lib/xml/dom/minidom.py	993	995	Childless.removeChild	removeChild(self, oldChild)	todo		
+Lib/xml/dom/minidom.py	997	999	Childless.normalize	normalize(self)	todo		
+Lib/xml/dom/minidom.py	1001	1003	Childless.replaceChild	replaceChild(self, newChild, oldChild)	todo		
+Lib/xml/dom/minidom.py	1010	1012	ProcessingInstruction.__init__	__init__(self, target, data)	todo		
+Lib/xml/dom/minidom.py	1015	1016	ProcessingInstruction._get_nodeValue	_get_nodeValue(self)	todo		
+Lib/xml/dom/minidom.py	1017	1018	ProcessingInstruction._set_nodeValue	_set_nodeValue(self, value)	todo		
+Lib/xml/dom/minidom.py	1022	1023	ProcessingInstruction._get_nodeName	_get_nodeName(self)	todo		
+Lib/xml/dom/minidom.py	1024	1025	ProcessingInstruction._set_nodeName	_set_nodeName(self, value)	todo		
+Lib/xml/dom/minidom.py	1028	1029	ProcessingInstruction.writexml	writexml(self, writer, indent='', addindent='', newl='')	todo		
+Lib/xml/dom/minidom.py	1035	1039	CharacterData.__init__	__init__(self)	todo		
+Lib/xml/dom/minidom.py	1041	1042	CharacterData._get_length	_get_length(self)	todo		
+Lib/xml/dom/minidom.py	1045	1046	CharacterData._get_data	_get_data(self)	todo		
+Lib/xml/dom/minidom.py	1047	1048	CharacterData._set_data	_set_data(self, data)	todo		
+Lib/xml/dom/minidom.py	1052	1059	CharacterData.__repr__	__repr__(self)	todo		
+Lib/xml/dom/minidom.py	1061	1068	CharacterData.substringData	substringData(self, offset, count)	todo		
+Lib/xml/dom/minidom.py	1070	1071	CharacterData.appendData	appendData(self, arg)	todo		
+Lib/xml/dom/minidom.py	1073	1080	CharacterData.insertData	insertData(self, offset, arg)	todo		
+Lib/xml/dom/minidom.py	1082	1090	CharacterData.deleteData	deleteData(self, offset, count)	todo		
+Lib/xml/dom/minidom.py	1092	1101	CharacterData.replaceData	replaceData(self, offset, count, arg)	todo		
+Lib/xml/dom/minidom.py	1113	1126	Text.splitText	splitText(self, offset)	todo		
+Lib/xml/dom/minidom.py	1128	1129	Text.writexml	writexml(self, writer, indent='', addindent='', newl='')	todo		
+Lib/xml/dom/minidom.py	1133	1149	Text._get_wholeText	_get_wholeText(self)	todo		
+Lib/xml/dom/minidom.py	1151	1177	Text.replaceWholeText	replaceWholeText(self, content)	todo		
+Lib/xml/dom/minidom.py	1179	1189	Text._get_isWhitespaceInElementContent	_get_isWhitespaceInElementContent(self)	todo		changed-in-3.15:
+Lib/xml/dom/minidom.py	1198	1204	_get_containing_element	_get_containing_element(node)	todo		
+Lib/xml/dom/minidom.py	1206	1212	_get_containing_entref	_get_containing_entref(node)	todo		
+Lib/xml/dom/minidom.py	1219	1221	Comment.__init__	__init__(self, data)	todo		
+Lib/xml/dom/minidom.py	1223	1226	Comment.writexml	writexml(self, writer, indent='', addindent='', newl='')	todo		
+Lib/xml/dom/minidom.py	1235	1238	CDATASection.writexml	writexml(self, writer, indent='', addindent='', newl='')	todo		
+Lib/xml/dom/minidom.py	1244	1246	ReadOnlySequentialNamedNodeMap.__init__	__init__(self, seq=())	todo		
+Lib/xml/dom/minidom.py	1248	1249	ReadOnlySequentialNamedNodeMap.__len__	__len__(self)	todo		
+Lib/xml/dom/minidom.py	1251	1252	ReadOnlySequentialNamedNodeMap._get_length	_get_length(self)	todo		
+Lib/xml/dom/minidom.py	1254	1257	ReadOnlySequentialNamedNodeMap.getNamedItem	getNamedItem(self, name)	todo		
+Lib/xml/dom/minidom.py	1259	1262	ReadOnlySequentialNamedNodeMap.getNamedItemNS	getNamedItemNS(self, namespaceURI, localName)	todo		
+Lib/xml/dom/minidom.py	1264	1271	ReadOnlySequentialNamedNodeMap.__getitem__	__getitem__(self, name_or_tuple)	todo		
+Lib/xml/dom/minidom.py	1273	1279	ReadOnlySequentialNamedNodeMap.item	item(self, index)	todo		
+Lib/xml/dom/minidom.py	1281	1283	ReadOnlySequentialNamedNodeMap.removeNamedItem	removeNamedItem(self, name)	todo		
+Lib/xml/dom/minidom.py	1285	1287	ReadOnlySequentialNamedNodeMap.removeNamedItemNS	removeNamedItemNS(self, namespaceURI, localName)	todo		
+Lib/xml/dom/minidom.py	1289	1291	ReadOnlySequentialNamedNodeMap.setNamedItem	setNamedItem(self, node)	todo		
+Lib/xml/dom/minidom.py	1293	1295	ReadOnlySequentialNamedNodeMap.setNamedItemNS	setNamedItemNS(self, node)	todo		
+Lib/xml/dom/minidom.py	1297	1298	ReadOnlySequentialNamedNodeMap.__getstate__	__getstate__(self)	todo		
+Lib/xml/dom/minidom.py	1300	1301	ReadOnlySequentialNamedNodeMap.__setstate__	__setstate__(self, state)	todo		
+Lib/xml/dom/minidom.py	1312	1314	Identified._identified_mixin_init	_identified_mixin_init(self, publicId, systemId)	todo		
+Lib/xml/dom/minidom.py	1316	1317	Identified._get_publicId	_get_publicId(self)	todo		
+Lib/xml/dom/minidom.py	1319	1320	Identified._get_systemId	_get_systemId(self)	todo		
+Lib/xml/dom/minidom.py	1330	1336	DocumentType.__init__	__init__(self, qualifiedName)	todo		
+Lib/xml/dom/minidom.py	1338	1339	DocumentType._get_internalSubset	_get_internalSubset(self)	todo		
+Lib/xml/dom/minidom.py	1341	1366	DocumentType.cloneNode	cloneNode(self, deep)	todo		
+Lib/xml/dom/minidom.py	1368	1380	DocumentType.writexml	writexml(self, writer, indent='', addindent='', newl='')	todo		
+Lib/xml/dom/minidom.py	1391	1395	Entity.__init__	__init__(self, name, publicId, systemId, notation)	todo		
+Lib/xml/dom/minidom.py	1397	1398	Entity._get_actualEncoding	_get_actualEncoding(self)	todo		
+Lib/xml/dom/minidom.py	1400	1401	Entity._get_encoding	_get_encoding(self)	todo		
+Lib/xml/dom/minidom.py	1403	1404	Entity._get_version	_get_version(self)	todo		
+Lib/xml/dom/minidom.py	1406	1408	Entity.appendChild	appendChild(self, newChild)	todo		
+Lib/xml/dom/minidom.py	1410	1412	Entity.insertBefore	insertBefore(self, newChild, refChild)	todo		
+Lib/xml/dom/minidom.py	1414	1416	Entity.removeChild	removeChild(self, oldChild)	todo		
+Lib/xml/dom/minidom.py	1418	1420	Entity.replaceChild	replaceChild(self, newChild, oldChild)	todo		
+Lib/xml/dom/minidom.py	1426	1428	Notation.__init__	__init__(self, name, publicId, systemId)	todo		
+Lib/xml/dom/minidom.py	1442	1445	DOMImplementation.hasFeature	hasFeature(self, feature, version)	todo		
+Lib/xml/dom/minidom.py	1447	1490	DOMImplementation.createDocument	createDocument(self, namespaceURI, qualifiedName, doctype)	todo		
+Lib/xml/dom/minidom.py	1492	1496	DOMImplementation.createDocumentType	createDocumentType(self, qualifiedName, publicId, systemId)	todo		
+Lib/xml/dom/minidom.py	1500	1504	DOMImplementation.getInterface	getInterface(self, feature)	todo		
+Lib/xml/dom/minidom.py	1507	1508	DOMImplementation._create_document	_create_document(self)	todo		
+Lib/xml/dom/minidom.py	1521	1522	ElementInfo.__init__	__init__(self, name)	todo		
+Lib/xml/dom/minidom.py	1524	1525	ElementInfo.getAttributeType	getAttributeType(self, aname)	todo		
+Lib/xml/dom/minidom.py	1527	1528	ElementInfo.getAttributeTypeNS	getAttributeTypeNS(self, namespaceURI, localName)	todo		
+Lib/xml/dom/minidom.py	1530	1531	ElementInfo.isElementContent	isElementContent(self)	todo		
+Lib/xml/dom/minidom.py	1533	1536	ElementInfo.isEmpty	isEmpty(self)	todo		
+Lib/xml/dom/minidom.py	1538	1540	ElementInfo.isId	isId(self, aname)	todo		
+Lib/xml/dom/minidom.py	1542	1544	ElementInfo.isIdNS	isIdNS(self, namespaceURI, localName)	todo		
+Lib/xml/dom/minidom.py	1546	1547	ElementInfo.__getstate__	__getstate__(self)	todo		
+Lib/xml/dom/minidom.py	1549	1550	ElementInfo.__setstate__	__setstate__(self, state)	todo		
+Lib/xml/dom/minidom.py	1552	1558	_clear_id_cache	_clear_id_cache(node)	todo		
+Lib/xml/dom/minidom.py	1587	1594	Document.__init__	__init__(self)	todo		
+Lib/xml/dom/minidom.py	1596	1601	Document._get_elem_info	_get_elem_info(self, element)	todo		
+Lib/xml/dom/minidom.py	1603	1604	Document._get_actualEncoding	_get_actualEncoding(self)	todo		
+Lib/xml/dom/minidom.py	1606	1607	Document._get_doctype	_get_doctype(self)	todo		
+Lib/xml/dom/minidom.py	1609	1610	Document._get_documentURI	_get_documentURI(self)	todo		
+Lib/xml/dom/minidom.py	1612	1613	Document._get_encoding	_get_encoding(self)	todo		
+Lib/xml/dom/minidom.py	1615	1616	Document._get_errorHandler	_get_errorHandler(self)	todo		
+Lib/xml/dom/minidom.py	1618	1619	Document._get_standalone	_get_standalone(self)	todo		
+Lib/xml/dom/minidom.py	1621	1622	Document._get_strictErrorChecking	_get_strictErrorChecking(self)	todo		
+Lib/xml/dom/minidom.py	1624	1625	Document._get_version	_get_version(self)	todo		
+Lib/xml/dom/minidom.py	1627	1641	Document.appendChild	appendChild(self, node)	todo		
+Lib/xml/dom/minidom.py	1643	1653	Document.removeChild	removeChild(self, oldChild)	todo		
+Lib/xml/dom/minidom.py	1655	1658	Document._get_documentElement	_get_documentElement(self)	todo		
+Lib/xml/dom/minidom.py	1660	1664	Document.unlink	unlink(self)	todo		
+Lib/xml/dom/minidom.py	1666	1685	Document.cloneNode	cloneNode(self, deep)	todo		
+Lib/xml/dom/minidom.py	1687	1690	Document.createDocumentFragment	createDocumentFragment(self)	todo		
+Lib/xml/dom/minidom.py	1692	1695	Document.createElement	createElement(self, tagName)	todo		
+Lib/xml/dom/minidom.py	1697	1703	Document.createTextNode	createTextNode(self, data)	todo		
+Lib/xml/dom/minidom.py	1705	1711	Document.createCDATASection	createCDATASection(self, data)	todo		
+Lib/xml/dom/minidom.py	1713	1716	Document.createComment	createComment(self, data)	todo		
+Lib/xml/dom/minidom.py	1718	1721	Document.createProcessingInstruction	createProcessingInstruction(self, target, data)	todo		
+Lib/xml/dom/minidom.py	1723	1727	Document.createAttribute	createAttribute(self, qName)	todo		
+Lib/xml/dom/minidom.py	1729	1733	Document.createElementNS	createElementNS(self, namespaceURI, qualifiedName)	todo		
+Lib/xml/dom/minidom.py	1735	1740	Document.createAttributeNS	createAttributeNS(self, namespaceURI, qualifiedName)	todo		
+Lib/xml/dom/minidom.py	1745	1748	Document._create_entity	_create_entity(self, name, publicId, systemId, notationName)	todo		
+Lib/xml/dom/minidom.py	1750	1753	Document._create_notation	_create_notation(self, name, publicId, systemId)	todo		
+Lib/xml/dom/minidom.py	1755	1811	Document.getElementById	getElementById(self, id)	todo		
+Lib/xml/dom/minidom.py	1813	1814	Document.getElementsByTagName	getElementsByTagName(self, name)	todo		
+Lib/xml/dom/minidom.py	1816	1818	Document.getElementsByTagNameNS	getElementsByTagNameNS(self, namespaceURI, localName)	todo		
+Lib/xml/dom/minidom.py	1820	1821	Document.isSupported	isSupported(self, feature, version)	todo		
+Lib/xml/dom/minidom.py	1823	1828	Document.importNode	importNode(self, node, deep)	todo		
+Lib/xml/dom/minidom.py	1830	1842	Document.writexml	writexml(self, writer, indent='', addindent='', newl='', encoding=None, standalone=None)	todo		
+Lib/xml/dom/minidom.py	1846	1897	Document.renameNode	renameNode(self, n, namespaceURI, name)	todo		
+Lib/xml/dom/minidom.py	1903	1982	_clone_node	_clone_node(node, deep, newOwnerDocument)	todo		
+Lib/xml/dom/minidom.py	1985	1990	_nssplit	_nssplit(qualifiedName)	todo		
+Lib/xml/dom/minidom.py	1993	1998	_do_pulldom_parse	_do_pulldom_parse(func, args, kwargs)	todo		
+Lib/xml/dom/minidom.py	2000	2008	parse	parse(file, parser=None, bufsize=None)	todo		
+Lib/xml/dom/minidom.py	2010	2018	parseString	parseString(string, parser=None)	todo		
+Lib/xml/dom/minidom.py	2020	2027	getDOMImplementation	getDOMImplementation(features=None)	todo		

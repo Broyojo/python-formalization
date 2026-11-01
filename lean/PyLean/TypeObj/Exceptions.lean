@@ -119,7 +119,7 @@ def methNoArgs (name : String) (args : List Val) : M Unit :=
   | _ => typeErr s!"{name}() takes no arguments ({args.length} given)"
 
 /-- `_testcapi` wrappers of the Unicode error getters and setters,
-`Modules/_testcapi/exceptions.c:363-520`: `name` is `unicode_<kind>_<get|set>_<start|end>`. -/
+`Modules/_testcapi/exceptions.c:384-541`: `name` is `unicode_<kind>_<get|set>_<start|end>`. -/
 def excTestcapiUnicode (rt : Rt) (name : Name) (args : List Val) : M Val := do
   let (k, rest) : UKind × String :=
     if name.startsWith "unicode_encode_" then (.encode, name.drop 15 |>.toString)

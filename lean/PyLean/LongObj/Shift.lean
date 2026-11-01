@@ -3,7 +3,7 @@ import PyLean.LongObj.DivOps
 /-!
 Shifts on the digit model: `long_rshift1`, `long_rshift`, `_PyLong_Rshift`,
 `long_lshift1`, `long_lshift_method`, `long_lshift_int64`, `_PyLong_Lshift`,
-longobject.c:5222-5456.
+longobject.c:5314-5550.
 -/
 
 namespace PyLean.LongObj
@@ -17,8 +17,8 @@ def asInt64 (b : Int) : Option Nat :=
 
 /-! ## Right shift -/
 
-/-- The loop of `long_rshift1`, longobject.c:5295-5299, and the store of the final
-`accum` at :5301. -/
+/-- The loop of `long_rshift1`, longobject.c:5387-5391, and the store of the final
+`accum` at :5393. -/
 def rshiftLoop (hishift : Nat) : List Nat → Nat → Py (List Nat)
   | [], accum => .ok [u32 accum]
   | d :: ds, accum => do
@@ -26,17 +26,17 @@ def rshiftLoop (hishift : Nat) : List Nat → Nat → Py (List Nat)
     let r ← rshiftLoop hishift ds (acc >>> 30)
     return (acc &&& MASK) :: r
 
-/-- `sticky |= ob_digit[j]`, longobject.c:5287-5290. -/
+/-- `sticky |= ob_digit[j]`, longobject.c:5379-5382. -/
 def stickyOf : List Nat → Nat → Nat
   | [], s => s
   | d :: ds, s => stickyOf ds (s ||| d)
 
-/-- The compact path of `long_rshift1`, longobject.c:5234-5241: `~(~m >> shift)` for
+/-- The compact path of `long_rshift1`, longobject.c:5326-5333: `~(~m >> shift)` for
 negative `m`, on `stwodigits`. -/
 def compactRshift (m : Int) (shift : Nat) : Int :=
   if m < 0 then -(((-m - 1) / 2 ^ shift)) - 1 else m / 2 ^ shift
 
-/-- The general path of `long_rshift1`, longobject.c:5243-5304, after the
+/-- The general path of `long_rshift1`, longobject.c:5335-5396, after the
 adjustment of `remshift` for a negative `a`. -/
 def rshiftBig (neg : Bool) (ds : List Nat) (wordshift remshift : Nat) : Py Long :=
   let sizeA := ds.length
@@ -54,7 +54,7 @@ def rshiftBig (neg : Bool) (ds : List Nat) (wordshift remshift : Nat) : Py Long 
     let n := normalize z
     return ⟨neg && !n.isEmpty, n⟩
 
-/-- `long_rshift1(a, wordshift, remshift)`, longobject.c:5222-5305. -/
+/-- `long_rshift1(a, wordshift, remshift)`, longobject.c:5314-5397. -/
 def longRshift1 (a : Long) (wordshift remshift : Nat) : Py Long :=
   if a.isCompact then
     .ok (fromSTwoDigits (compactRshift a.medium (if wordshift = 0 then remshift else 30)))
@@ -65,13 +65,13 @@ def longRshift1 (a : Long) (wordshift remshift : Nat) : Py Long :=
     else rshiftBig true a.ds wordshift remshift
   else rshiftBig false a.ds wordshift remshift
 
-/-- `_PyLong_Rshift(a, shiftby)`, longobject.c:5338-5361. The range check at
-:5348-5357 is compiled out on a 64-bit build. -/
+/-- `_PyLong_Rshift(a, shiftby)`, longobject.c:5430-5453. The range check at
+:5440-5449 is compiled out on a 64-bit build. -/
 def pyLongRshift (a : Long) (shiftby : Nat) : Py Long :=
   if a.ds = [] then .ok ⟨false, []⟩
   else longRshift1 a (shiftby / 30) (shiftby % 30)
 
-/-- `long_rshift(a, b)`, longobject.c:5308-5334. -/
+/-- `long_rshift(a, b)`, longobject.c:5400-5426. -/
 def longRshift (a b : Long) : Py Long :=
   if b.neg then .error (.valueError "negative shift count")
   else if a.ds = [] then .ok ⟨false, []⟩
@@ -496,12 +496,12 @@ theorem longRshift_spec (a b : Int) (hs : digitCount a.natAbs ≤ maxLongDigits)
 
 /-! ## Left shift -/
 
-/-- The compact path of `long_lshift1`, longobject.c:5370-5375: `-(-m << remshift)`. -/
+/-- The compact path of `long_lshift1`, longobject.c:5462-5467: `-(-m << remshift)`. -/
 def compactLshift (m : Int) (r : Nat) : Int :=
   if m < 0 then -((-m) * 2 ^ r) else m * 2 ^ r
 
-/-- `long_lshift1(a, wordshift, remshift)`, longobject.c:5364-5402. The digit loop at
-:5391-5395 is the loop of `v_lshift`, carry going through `accum`. -/
+/-- `long_lshift1(a, wordshift, remshift)`, longobject.c:5456-5494. The digit loop at
+:5483-5487 is the loop of `v_lshift`, carry going through `accum`. -/
 def longLshift1 (a : Long) (wordshift remshift : Nat) : Py Long :=
   if wordshift = 0 ∧ a.isCompact = true then do
     let x ← chkS64 (compactLshift a.medium remshift)
@@ -513,12 +513,12 @@ def longLshift1 (a : Long) (wordshift remshift : Nat) : Py Long :=
     let n := normalize z
     return ⟨a.neg && !n.isEmpty, n⟩
 
-/-- `long_lshift_int64(a, shiftby)` and `_PyLong_Lshift`, longobject.c:5433-5456. -/
+/-- `long_lshift_int64(a, shiftby)` and `_PyLong_Lshift`, longobject.c:5525-5550. -/
 def longLshiftInt64 (a : Long) (shiftby : Nat) : Py Long :=
   if a.ds = [] then .ok ⟨false, []⟩
   else longLshift1 a (shiftby / 30) (shiftby % 30)
 
-/-- `long_lshift_method(aa, bb)`, longobject.c:5406-5429. -/
+/-- `long_lshift_method(aa, bb)`, longobject.c:5498-5521. -/
 def longLshift (a b : Long) : Py Long :=
   if b.neg then .error (.valueError "negative shift count")
   else if a.ds = [] then .ok ⟨false, []⟩

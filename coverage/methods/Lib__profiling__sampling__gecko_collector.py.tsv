@@ -1,0 +1,40 @@
+file	line	endline	name	signature	status	entry	note
+Lib/profiling/sampling/gecko_collector.py	75	82	SpillColumn.__init__	__init__(self, directory, basename, *, buffer_bytes=None)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	84	87	SpillColumn.append	append(self, value)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	89	92	SpillColumn.flush	flush(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	94	97	SpillColumn.iter_tokens	iter_tokens(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	112	117	GeckoThreadSpill.__init__	__init__(self, directory, tid)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	119	122	GeckoThreadSpill.append_sample	append_sample(self, stack_index, time_ms)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	124	131	GeckoThreadSpill.append_marker	append_marker(self, name_idx, start_time, end_time, phase, category, data)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	133	135	GeckoThreadSpill.prepare_read	prepare_read(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	141	185	GeckoCollector.__init__	__init__(self, sample_interval_usec, *, skip_idle=False, opcodes=False)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	187	220	GeckoCollector._track_state_transition	_track_state_transition(self, tid, condition, active_dict, inactive_dict, active_name, inactive_name, category, current_time)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	222	359	GeckoCollector.collect	collect(self, stack_frames, timestamps_us=None)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	361	390	GeckoCollector._record_stack_sample	_record_stack_sample(self, thread_data, frames, tid, times, first_time)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	392	467	GeckoCollector._create_thread	_create_thread(self, tid, is_main_thread)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	469	470	GeckoCollector._is_python	_is_python(self, filename: str)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	472	473	GeckoCollector._get_category	_get_category(self, filename: str)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	475	482	GeckoCollector._intern_string	_intern_string(self, s)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	484	498	GeckoCollector._add_marker	_add_marker(self, tid, name, start_time, end_time, category)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	500	524	GeckoCollector._add_opcode_interval_marker	_add_opcode_interval_marker(self, tid, opcode, lineno, col_offset, funcname, start_time, end_time)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	526	582	GeckoCollector._process_stack	_process_stack(self, thread_data, frames)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	584	629	GeckoCollector._get_or_create_func	_get_or_create_func(self, thread_data, filename, funcname, lineno)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	631	657	GeckoCollector._get_or_create_resource	_get_or_create_resource(self, thread_data, filename)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	659	702	GeckoCollector._get_or_create_frame	_get_or_create_frame(self, thread_data, func_idx, lineno, col_offset=-1)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	704	731	GeckoCollector._finalize_markers	_finalize_markers(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	733	784	GeckoCollector.export	export(self, filename)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	786	809	GeckoCollector._build_marker_schema	_build_marker_schema(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	811	820	GeckoCollector._build_profile	_build_profile(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	822	853	GeckoCollector._profile_head	_profile_head(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	855	862	GeckoCollector._profile_tail	_profile_tail(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	864	873	GeckoCollector._prepare_for_serialization	_prepare_for_serialization(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	875	878	GeckoCollector._cleanup_spills	_cleanup_spills(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	880	896	GeckoCollector._stream_profile	_stream_profile(self, file)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	898	930	GeckoCollector._stream_thread	_stream_thread(self, file, tid, thread_data)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	932	946	GeckoCollector._stream_samples	_stream_samples(self, file, spill)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	948	961	GeckoCollector._stream_markers	_stream_markers(self, file, spill)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	964	966	_write_json	_write_json(file, value)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	969	974	_write_member_name	_write_member_name(file, name, first)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	977	980	_write_json_member	_write_json_member(file, name, value, first)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	983	991	_stream_column_table	_stream_column_table(file, columns, expected_count, trailing_members=())	todo		changed-in-3.15: new function
+Lib/profiling/sampling/gecko_collector.py	994	1006	_stream_array	_stream_array(file, token_iter, expected_count, label='array')	todo		changed-in-3.15: new function

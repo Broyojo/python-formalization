@@ -77,7 +77,7 @@ def withBodyStack : Int :=
 /-- Two ordinary values on the stack, as in the middle of `(a, b,\n c)`. -/
 def exprStack : Int := pushValue (pushValue EMPTY_STACK Object) Object
 
-/-- `self_or_null` of `LOAD_SPECIAL` can be `NULL` (`Python/bytecodes.c:3502`), so a jump
+/-- `self_or_null` of `LOAD_SPECIAL` can be `NULL` (`Python/bytecodes.c:4131`), so a jump
 from a `with` body must not land where an object is required. False: the analysis
 gives the slot kind `Object` and accepts the jump. -/
 def JumpKeepsObjects : Prop :=

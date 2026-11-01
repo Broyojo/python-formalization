@@ -1,8 +1,8 @@
 file	line	endline	name	signature	status	entry	note
-Lib/sysconfig/__main__.py	28	153	_parse_makefile	_parse_makefile(filename, vars=None, keep_unresolved=True)	todo		
-Lib/sysconfig/__main__.py	156	160	_print_config_dict	_print_config_dict(d, stream)	todo		
-Lib/sysconfig/__main__.py	163	167	_get_pybuilddir	_get_pybuilddir()	todo		
-Lib/sysconfig/__main__.py	170	173	_get_json_data_name	_get_json_data_name()	todo		
-Lib/sysconfig/__main__.py	176	248	_generate_posix_vars	_generate_posix_vars()	todo		
-Lib/sysconfig/__main__.py	251	255	_print_dict	_print_dict(title, data)	todo		
-Lib/sysconfig/__main__.py	258	269	_main	_main()	todo		
+Lib/sysconfig/__main__.py	29	127	_parse_makefile	_parse_makefile(filename, vars=None, keep_unresolved=True)	todo		changed-in-3.15:
+Lib/sysconfig/__main__.py	130	134	_print_config_dict	_print_config_dict(d, stream)	todo		
+Lib/sysconfig/__main__.py	137	141	_get_pybuilddir	_get_pybuilddir()	todo		
+Lib/sysconfig/__main__.py	144	147	_get_json_data_name	_get_json_data_name()	todo		
+Lib/sysconfig/__main__.py	150	222	_generate_posix_vars	_generate_posix_vars()	todo		
+Lib/sysconfig/__main__.py	225	229	_print_dict	_print_dict(title, data)	todo		
+Lib/sysconfig/__main__.py	232	243	_main	_main()	todo		

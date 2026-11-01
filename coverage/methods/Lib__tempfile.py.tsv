@@ -1,73 +1,76 @@
 file	line	endline	name	signature	status	entry	note
-Lib/tempfile.py	77	83	_exists	_exists(fn)	todo		
-Lib/tempfile.py	86	112	_infer_return_type	_infer_return_type(*args)	todo		
-Lib/tempfile.py	115	130	_sanitize_params	_sanitize_params(prefix, suffix, dir)	todo		
-Lib/tempfile.py	144	149	_RandomNameSequence.rng	rng(self)	todo		
-Lib/tempfile.py	151	152	_RandomNameSequence.__iter__	__iter__(self)	todo		
-Lib/tempfile.py	154	155	_RandomNameSequence.__next__	__next__(self)	todo		
-Lib/tempfile.py	157	182	_candidate_tempdir_list	_candidate_tempdir_list()	todo		
-Lib/tempfile.py	184	224	_get_default_tempdir	_get_default_tempdir(dirlist=None)	todo		
-Lib/tempfile.py	228	239	_get_candidate_names	_get_candidate_names()	todo		
-Lib/tempfile.py	242	267	_mkstemp_inner	_mkstemp_inner(dir, pre, suf, flags, output_type)	todo		
-Lib/tempfile.py	269	274	_dont_follow_symlinks	_dont_follow_symlinks(func, path, *args)	todo		
-Lib/tempfile.py	276	283	_resetperms	_resetperms(path)	todo		
-Lib/tempfile.py	288	290	gettempprefix	gettempprefix()	todo		
-Lib/tempfile.py	292	294	gettempprefixb	gettempprefixb()	todo		
-Lib/tempfile.py	298	308	_gettempdir	_gettempdir()	todo		
-Lib/tempfile.py	310	312	gettempdir	gettempdir()	todo		
-Lib/tempfile.py	314	316	gettempdirb	gettempdirb()	todo		
-Lib/tempfile.py	318	354	mkstemp	mkstemp(suffix=None, prefix=None, dir=None, text=False)	todo		
-Lib/tempfile.py	357	399	mkdtemp	mkdtemp(suffix=None, prefix=None, dir=None)	todo		
-Lib/tempfile.py	401	430	mktemp	mktemp(suffix='', prefix=template, dir=None)	todo		
-Lib/tempfile.py	441	453	_TemporaryFileCloser.__init__	__init__(self, file, name, delete=True, delete_on_close=True, warn_message='Implicitly cleaning up unknown file')	todo		
-Lib/tempfile.py	455	469	_TemporaryFileCloser.cleanup	cleanup(self, windows=_os.name == 'nt', unlink=_os.unlink)	todo		
-Lib/tempfile.py	471	478	_TemporaryFileCloser.close	close(self)	todo		
-Lib/tempfile.py	480	484	_TemporaryFileCloser.__del__	__del__(self)	todo		
-Lib/tempfile.py	495	504	_TemporaryFileWrapper.__init__	__init__(self, file, name, delete=True, delete_on_close=True)	todo		
-Lib/tempfile.py	506	508	_TemporaryFileWrapper.__repr__	__repr__(self)	todo		
-Lib/tempfile.py	510	527	_TemporaryFileWrapper.__getattr__	__getattr__(self, name)	todo		candidates:calstat-calendar-module-getattr
-Lib/tempfile.py	531	533	_TemporaryFileWrapper.__enter__	__enter__(self)	todo		
-Lib/tempfile.py	537	540	_TemporaryFileWrapper.__exit__	__exit__(self, exc, value, tb)	todo		
-Lib/tempfile.py	542	546	_TemporaryFileWrapper.close	close(self)	todo		
-Lib/tempfile.py	549	556	_TemporaryFileWrapper.__iter__	__iter__(self)	todo		
-Lib/tempfile.py	558	618	NamedTemporaryFile	NamedTemporaryFile(mode='w+b', buffering=-1, encoding=None, newline=None, suffix=None, prefix=None, dir=None, delete=True, *, errors=None, delete_on_close=True)	todo		
-Lib/tempfile.py	631	704	TemporaryFile	TemporaryFile(mode='w+b', buffering=-1, encoding=None, newline=None, suffix=None, prefix=None, dir=None, *, errors=None)	todo		
-Lib/tempfile.py	713	728	SpooledTemporaryFile.__init__	__init__(self, max_size=0, mode='w+b', buffering=-1, encoding=None, newline=None, suffix=None, prefix=None, dir=None, *, errors=None)	todo		
-Lib/tempfile.py	732	736	SpooledTemporaryFile._check	_check(self, file)	todo		
-Lib/tempfile.py	738	751	SpooledTemporaryFile.rollover	rollover(self)	todo		
-Lib/tempfile.py	759	762	SpooledTemporaryFile.__enter__	__enter__(self)	todo		
-Lib/tempfile.py	764	765	SpooledTemporaryFile.__exit__	__exit__(self, exc, value, tb)	todo		
-Lib/tempfile.py	768	769	SpooledTemporaryFile.__iter__	__iter__(self)	todo		
-Lib/tempfile.py	771	779	SpooledTemporaryFile.__del__	__del__(self)	todo		
-Lib/tempfile.py	781	782	SpooledTemporaryFile.close	close(self)	todo		
-Lib/tempfile.py	785	786	SpooledTemporaryFile.closed	closed(self)	todo		
-Lib/tempfile.py	789	790	SpooledTemporaryFile.encoding	encoding(self)	todo		
-Lib/tempfile.py	793	794	SpooledTemporaryFile.errors	errors(self)	todo		
-Lib/tempfile.py	796	798	SpooledTemporaryFile.fileno	fileno(self)	todo		
-Lib/tempfile.py	800	801	SpooledTemporaryFile.flush	flush(self)	todo		
-Lib/tempfile.py	803	804	SpooledTemporaryFile.isatty	isatty(self)	todo		
-Lib/tempfile.py	807	811	SpooledTemporaryFile.mode	mode(self)	todo		candidates:calstat-statistics-mode-spec
-Lib/tempfile.py	814	818	SpooledTemporaryFile.name	name(self)	todo		
-Lib/tempfile.py	821	822	SpooledTemporaryFile.newlines	newlines(self)	todo		
-Lib/tempfile.py	824	825	SpooledTemporaryFile.readable	readable(self)	todo		
-Lib/tempfile.py	827	828	SpooledTemporaryFile.read	read(self, *args)	todo		candidates:pyio-bytesio-read-after-seek
-Lib/tempfile.py	830	831	SpooledTemporaryFile.read1	read1(self, *args)	todo		
-Lib/tempfile.py	833	834	SpooledTemporaryFile.readinto	readinto(self, b)	todo		
-Lib/tempfile.py	836	837	SpooledTemporaryFile.readinto1	readinto1(self, b)	todo		
-Lib/tempfile.py	839	840	SpooledTemporaryFile.readline	readline(self, *args)	todo		
-Lib/tempfile.py	842	843	SpooledTemporaryFile.readlines	readlines(self, *args)	todo		candidates:pyio-bytesio-readlines-hint-doc
-Lib/tempfile.py	845	846	SpooledTemporaryFile.seekable	seekable(self)	todo		
-Lib/tempfile.py	848	849	SpooledTemporaryFile.seek	seek(self, *args)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
-Lib/tempfile.py	851	852	SpooledTemporaryFile.tell	tell(self)	todo		
-Lib/tempfile.py	854	860	SpooledTemporaryFile.truncate	truncate(self, size=None)	todo		candidates:pyio-truncate-keeps-position
-Lib/tempfile.py	862	863	SpooledTemporaryFile.writable	writable(self)	todo		
-Lib/tempfile.py	865	869	SpooledTemporaryFile.write	write(self, s)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
-Lib/tempfile.py	871	879	SpooledTemporaryFile.writelines	writelines(self, iterable)	todo		
-Lib/tempfile.py	881	882	SpooledTemporaryFile.detach	detach(self)	todo		
-Lib/tempfile.py	905	913	TemporaryDirectory.__init__	__init__(self, suffix=None, prefix=None, dir=None, ignore_cleanup_errors=False, *, delete=True)	todo		
-Lib/tempfile.py	916	956	TemporaryDirectory._rmtree	_rmtree(cls, name, ignore_errors=False, repeated=False)	todo		
-Lib/tempfile.py	959	962	TemporaryDirectory._cleanup	_cleanup(cls, name, warn_message, ignore_errors=False, delete=True)	todo		
-Lib/tempfile.py	964	965	TemporaryDirectory.__repr__	__repr__(self)	todo		
-Lib/tempfile.py	967	968	TemporaryDirectory.__enter__	__enter__(self)	todo		
-Lib/tempfile.py	970	972	TemporaryDirectory.__exit__	__exit__(self, exc, value, tb)	todo		
-Lib/tempfile.py	974	976	TemporaryDirectory.cleanup	cleanup(self)	todo		
+Lib/tempfile.py	78	84	_exists	_exists(fn)	todo		
+Lib/tempfile.py	87	113	_infer_return_type	_infer_return_type(*args)	todo		
+Lib/tempfile.py	116	131	_sanitize_params	_sanitize_params(prefix, suffix, dir)	todo		
+Lib/tempfile.py	145	150	_RandomNameSequence.rng	rng(self)	todo		
+Lib/tempfile.py	152	153	_RandomNameSequence.__iter__	__iter__(self)	todo		
+Lib/tempfile.py	155	156	_RandomNameSequence.__next__	__next__(self)	todo		
+Lib/tempfile.py	158	183	_candidate_tempdir_list	_candidate_tempdir_list()	todo		
+Lib/tempfile.py	185	225	_get_default_tempdir	_get_default_tempdir(dirlist=None)	todo		
+Lib/tempfile.py	229	240	_get_candidate_names	_get_candidate_names()	todo		
+Lib/tempfile.py	243	268	_mkstemp_inner	_mkstemp_inner(dir, pre, suf, flags, output_type)	todo		
+Lib/tempfile.py	270	275	_dont_follow_symlinks	_dont_follow_symlinks(func, path, *args)	todo		
+Lib/tempfile.py	277	283	_resetflags	_resetflags(path)	todo		changed-in-3.15: new function
+Lib/tempfile.py	285	287	_resetperms	_resetperms(path)	todo		changed-in-3.15:
+Lib/tempfile.py	296	302	_resetperms_fd	_resetperms_fd(dir_fd, path)	todo		changed-in-3.15: new function
+Lib/tempfile.py	309	337	_resetperms_at	_resetperms_at(name, dir_fd, path)	todo		changed-in-3.15: new function
+Lib/tempfile.py	342	344	gettempprefix	gettempprefix()	todo		
+Lib/tempfile.py	346	348	gettempprefixb	gettempprefixb()	todo		
+Lib/tempfile.py	352	362	_gettempdir	_gettempdir()	todo		
+Lib/tempfile.py	364	366	gettempdir	gettempdir()	todo		
+Lib/tempfile.py	368	370	gettempdirb	gettempdirb()	todo		
+Lib/tempfile.py	372	408	mkstemp	mkstemp(suffix=None, prefix=None, dir=None, text=False)	todo		
+Lib/tempfile.py	411	453	mkdtemp	mkdtemp(suffix=None, prefix=None, dir=None)	todo		
+Lib/tempfile.py	455	484	mktemp	mktemp(suffix='', prefix=template, dir=None)	todo		
+Lib/tempfile.py	495	507	_TemporaryFileCloser.__init__	__init__(self, file, name, delete=True, delete_on_close=True, warn_message='Implicitly cleaning up unknown file')	todo		
+Lib/tempfile.py	509	523	_TemporaryFileCloser.cleanup	cleanup(self, windows=_os.name == 'nt', unlink=_os.unlink)	todo		
+Lib/tempfile.py	525	532	_TemporaryFileCloser.close	close(self)	todo		
+Lib/tempfile.py	534	538	_TemporaryFileCloser.__del__	__del__(self)	todo		
+Lib/tempfile.py	549	558	_TemporaryFileWrapper.__init__	__init__(self, file, name, delete=True, delete_on_close=True)	todo		
+Lib/tempfile.py	560	562	_TemporaryFileWrapper.__repr__	__repr__(self)	todo		
+Lib/tempfile.py	564	581	_TemporaryFileWrapper.__getattr__	__getattr__(self, name)	todo		candidates:calstat-calendar-module-getattr
+Lib/tempfile.py	585	587	_TemporaryFileWrapper.__enter__	__enter__(self)	todo		
+Lib/tempfile.py	591	594	_TemporaryFileWrapper.__exit__	__exit__(self, exc, value, tb)	todo		
+Lib/tempfile.py	596	600	_TemporaryFileWrapper.close	close(self)	todo		
+Lib/tempfile.py	603	610	_TemporaryFileWrapper.__iter__	__iter__(self)	todo		
+Lib/tempfile.py	612	672	NamedTemporaryFile	NamedTemporaryFile(mode='w+b', buffering=-1, encoding=None, newline=None, suffix=None, prefix=None, dir=None, delete=True, *, errors=None, delete_on_close=True)	todo		
+Lib/tempfile.py	685	758	TemporaryFile	TemporaryFile(mode='w+b', buffering=-1, encoding=None, newline=None, suffix=None, prefix=None, dir=None, *, errors=None)	todo		changed-in-3.15:
+Lib/tempfile.py	767	782	SpooledTemporaryFile.__init__	__init__(self, max_size=0, mode='w+b', buffering=-1, encoding=None, newline=None, suffix=None, prefix=None, dir=None, *, errors=None)	todo		
+Lib/tempfile.py	786	790	SpooledTemporaryFile._check	_check(self, file)	todo		
+Lib/tempfile.py	792	805	SpooledTemporaryFile.rollover	rollover(self)	todo		
+Lib/tempfile.py	813	816	SpooledTemporaryFile.__enter__	__enter__(self)	todo		
+Lib/tempfile.py	818	819	SpooledTemporaryFile.__exit__	__exit__(self, exc, value, tb)	todo		
+Lib/tempfile.py	822	823	SpooledTemporaryFile.__iter__	__iter__(self)	todo		
+Lib/tempfile.py	825	833	SpooledTemporaryFile.__del__	__del__(self)	todo		
+Lib/tempfile.py	835	836	SpooledTemporaryFile.close	close(self)	todo		
+Lib/tempfile.py	839	840	SpooledTemporaryFile.closed	closed(self)	todo		
+Lib/tempfile.py	843	844	SpooledTemporaryFile.encoding	encoding(self)	todo		
+Lib/tempfile.py	847	848	SpooledTemporaryFile.errors	errors(self)	todo		
+Lib/tempfile.py	850	852	SpooledTemporaryFile.fileno	fileno(self)	todo		
+Lib/tempfile.py	854	855	SpooledTemporaryFile.flush	flush(self)	todo		
+Lib/tempfile.py	857	858	SpooledTemporaryFile.isatty	isatty(self)	todo		
+Lib/tempfile.py	861	865	SpooledTemporaryFile.mode	mode(self)	todo		candidates:calstat-statistics-mode-spec
+Lib/tempfile.py	868	872	SpooledTemporaryFile.name	name(self)	todo		
+Lib/tempfile.py	875	876	SpooledTemporaryFile.newlines	newlines(self)	todo		
+Lib/tempfile.py	878	879	SpooledTemporaryFile.readable	readable(self)	todo		
+Lib/tempfile.py	881	882	SpooledTemporaryFile.read	read(self, *args)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/tempfile.py	884	885	SpooledTemporaryFile.read1	read1(self, *args)	todo		
+Lib/tempfile.py	887	888	SpooledTemporaryFile.readinto	readinto(self, b)	todo		
+Lib/tempfile.py	890	891	SpooledTemporaryFile.readinto1	readinto1(self, b)	todo		
+Lib/tempfile.py	893	894	SpooledTemporaryFile.readline	readline(self, *args)	todo		
+Lib/tempfile.py	896	897	SpooledTemporaryFile.readlines	readlines(self, *args)	todo		candidates:pyio-bytesio-readlines-hint-doc
+Lib/tempfile.py	899	900	SpooledTemporaryFile.seekable	seekable(self)	todo		
+Lib/tempfile.py	902	903	SpooledTemporaryFile.seek	seek(self, *args)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
+Lib/tempfile.py	905	906	SpooledTemporaryFile.tell	tell(self)	todo		
+Lib/tempfile.py	908	914	SpooledTemporaryFile.truncate	truncate(self, size=None)	todo		candidates:pyio-truncate-keeps-position
+Lib/tempfile.py	916	917	SpooledTemporaryFile.writable	writable(self)	todo		
+Lib/tempfile.py	919	923	SpooledTemporaryFile.write	write(self, s)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/tempfile.py	925	933	SpooledTemporaryFile.writelines	writelines(self, iterable)	todo		
+Lib/tempfile.py	935	936	SpooledTemporaryFile.detach	detach(self)	todo		
+Lib/tempfile.py	959	967	TemporaryDirectory.__init__	__init__(self, suffix=None, prefix=None, dir=None, ignore_cleanup_errors=False, *, delete=True)	todo		
+Lib/tempfile.py	970	1035	TemporaryDirectory._rmtree	_rmtree(cls, name, ignore_errors=False, repeated=False, dir_fd=None, fullname=None)	todo		changed-in-3.15:
+Lib/tempfile.py	1038	1041	TemporaryDirectory._cleanup	_cleanup(cls, name, warn_message, ignore_errors=False, delete=True)	todo		
+Lib/tempfile.py	1043	1044	TemporaryDirectory.__repr__	__repr__(self)	todo		
+Lib/tempfile.py	1046	1047	TemporaryDirectory.__enter__	__enter__(self)	todo		
+Lib/tempfile.py	1049	1051	TemporaryDirectory.__exit__	__exit__(self, exc, value, tb)	todo		
+Lib/tempfile.py	1053	1055	TemporaryDirectory.cleanup	cleanup(self)	todo		

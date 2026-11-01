@@ -15,7 +15,7 @@ likelihood: |
   Modest for the C wrapper: stacking two caches is rare, but wrapping an already cached function from a library is
   not, and the wrong answer is silent. The Python wrapper only runs without _functools.
 maybe_intended: |
-  No. The two lines at Lib/functools.py:587-588 and :595-596 are in the wrong order for this case; the same applies to any
+  No. The two lines at Lib/functools.py:590-591 and :599-600 are in the wrong order for this case; the same applies to any
   attribute the user function has under those names.
 reproducer: |
   from functools import lru_cache
@@ -39,7 +39,7 @@ observed: |
 promised_by: |
   Doc/library/functools.rst: the decorated function has cache_parameters() for viewing the values of maxsize and typed.
 cause: |
-  Lib/functools.py:587-588 and :595-596: update_wrapper runs after the assignment; Lib/functools.py:596 copies __dict__.
+  Lib/functools.py:590-591 and :599-600: update_wrapper runs after the assignment; Lib/functools.py:600 copies __dict__.
 possible_fix: |
   Set cache_parameters after update_wrapper, and in pure Python set cache_info and cache_clear after it as well.
 duplicates:

@@ -6,7 +6,7 @@ module: corelibs
 files: [Lib/contextlib.py]
 functions: ["ExitStack.__exit__", "AsyncExitStack.__aexit__"]
 summary: |
-  `_fix_exception_context` (Lib/contextlib.py:578-590) has two related defects.
+  `_fix_exception_context` (Lib/contextlib.py:637-649) has two related defects.
 
   1. It assigns `new_exc.__context__ = old_exc` without checking that `new_exc` is not already in
   the chain of `old_exc`. A callback that re-raises an exception from the chain of the current one
@@ -101,12 +101,12 @@ observed: |
   REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same. REPRODUCED.
 promised_by: |
-  The comments at Lib/contextlib.py:575-576 ("We manipulate the exception state so it behaves as
-  though we were actually nesting multiple with statements") and :592-593. Not hanging is an
+  The comments at Lib/contextlib.py:634-635 ("We manipulate the exception state so it behaves as
+  though we were actually nesting multiple with statements") and :651-652. Not hanging is an
   invariant, and Python/errors.c:203-205 states it for the same walk.
 cause: |
-  Lib/contextlib.py:578-590, and the copy at :723-735: `while 1` with no bound and no cycle check,
-  and `new_exc.__context__ = old_exc` at :590 and :735 with no check that `old_exc`'s chain reaches
+  Lib/contextlib.py:637-649, and the copy at :768-780: `while 1` with no bound and no cycle check,
+  and `new_exc.__context__ = old_exc` at :649 and :780 with no check that `old_exc`'s chain reaches
   `new_exc`.
 possible_fix: |
   Before the assignment, walk the chain of `old_exc` and cut a link that reaches `new_exc`, as

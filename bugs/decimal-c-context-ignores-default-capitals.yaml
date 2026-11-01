@@ -50,15 +50,15 @@ expected: |
   capitals 0 from Context() and IEEEContext(), as in _pydecimal and as _decimal's own new-thread
   context does.
 promised_by: |
-  Doc/library/decimal.rst:1117-1118: "If a field is not specified or is None, the default values
-  are copied from the DefaultContext." :1094-1096: "Changing a field (such a precision) has the
+  Doc/library/decimal.rst:1109-1110: "If a field is not specified or is None, the default values
+  are copied from the DefaultContext." :1086-1088: "Changing a field (such a precision) has the
   effect of changing the default for new contexts created by the Context constructor." Twin
-  agreement: Lib/_pydecimal.py:3883 `self.capitals = capitals if capitals is not None else dc.capitals`.
+  agreement: Lib/_pydecimal.py:3983 `self.capitals = capitals if capitals is not None else dc.capitals`.
 cause: |
-  Modules/_decimal/_decimal.c:1430 `CtxCaps(self) = 1;` in context_new, whether or not a template was
-  copied at :1421. context_copy keeps the source's value (:1623). Same on main at :1476.
+  Modules/_decimal/_decimal.c:1477 `CtxCaps(self) = 1;` in context_new, whether or not a template was
+  copied at :1468. context_copy keeps the source's value (@3.14.7:1623). Same on main at :1523.
 possible_fix: |
-  Set capitals from the template when there is one, next to the copy at :1421, and use 1 only in the
+  Set capitals from the template when there is one, next to the copy at :1468, and use 1 only in the
   branch that takes dflt_ctx.
 tested:
   python3 (3.14.7, Linux, bundled libmpdec 2.5.1): REPRODUCED

@@ -8,15 +8,15 @@ functions: ["gen_send_ex2", "_gen_throw"]
 summary: |
   An exception thrown into a FRAME_CREATED frame is raised at the first RESUME, outside the handler
   the compiler wraps the body in, so stopiteration_error does not convert it. gen_send_ex2 asserts at
-  :279-281 that no StopIteration (in an async generator, no StopAsyncIteration) comes out of a frame.
-  So gen().throw(StopIteration) aborts a debug build at :279, and agen().athrow(StopAsyncIteration)
-  at :280. A release build raises StopIteration from throw(), which a caller's `for` or `yield from`
+  :277-279 that no StopIteration (in an async generator, no StopAsyncIteration) comes out of a frame.
+  So gen().throw(StopIteration) aborts a debug build at :277, and agen().athrow(StopAsyncIteration)
+  at :278. A release build raises StopIteration from throw(), which a caller's `for` or `yield from`
   takes as the end of iteration: the case PEP 479 exists to remove.
 likelihood: |
   Low. Needs throw(StopIteration) on an unstarted generator; contrived in practice, per the issue.
 maybe_intended: |
   No: the assert states the intent. Already reported as python/cpython#152685, still open. Recorded
-  here because the model reaches the same conclusion; the async generator case at :280 is not in that
+  here because the model reaches the same conclusion; the async generator case at :278 is not in that
   report and could be added to it.
 reproducer: |
   def g():
@@ -32,15 +32,15 @@ expected: |
   RuntimeError("generator raised StopIteration"), as for a started generator, or at least no failed
   assert.
 observed: |
-  python3 3.14.7: StopIteration escapes. Debug build of 3.14.7: Assertion at Objects/genobject.c:279
-  failed; async generator: at :280. REPRODUCED.
-  main (python.exe 3.16.0a1+dev ef1fce0): same; debug build of main: asserts at genobject.c:320 and
-  :321 failed. REPRODUCED.
+  python3 3.14.7: StopIteration escapes. Debug build of 3.14.7: Assertion at Objects/genobject.c:318
+  failed; async generator: at :319. REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): same; debug build of main: asserts at genobject.c:404 and
+  :405 failed. REPRODUCED.
 promised_by: |
-  PEP 479; the asserts at Objects/genobject.c:279-281.
+  PEP 479; the asserts at Objects/genobject.c:318-320.
 cause: |
   The STOPITERATION_ERROR handler does not cover the first RESUME, and the throw path enters there;
-  Python/intrinsics.c:143-184 never runs.
+  Python/intrinsics.c:141-182 never runs.
 possible_fix: |
   See the discussion on python/cpython#152685: extend the handler over the first RESUME, or convert in
   gen_send_ex2 for FRAME_CREATED.

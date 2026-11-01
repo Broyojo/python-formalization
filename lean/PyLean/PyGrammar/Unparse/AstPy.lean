@@ -22,7 +22,7 @@ def moveLoc (n : Int) (x : Loc) : Loc :=
   { x with lineno := x.lineno + n, endLineno := x.endLineno + n }
 
 mutual
-  /-- `increment_lineno`, `Lib/ast.py:245-265`: every located node, and the `lineno` field of
+  /-- `increment_lineno`, `Lib/ast.py:281-301`: every located node, and the `lineno` field of
   `TypeIgnore`, moves by `n`. -/
   def incrementLineno (n : Int) : Ast → Ast
     | .node c fs l =>
@@ -101,7 +101,7 @@ theorem lineMatch_append (s : List Nat) : (lineMatch s).1 ++ (lineMatch s).2 = s
 theorem lineMatch_ne (s : List Nat) (h : s ≠ []) : (lineMatch s).1 ≠ [] := by
   fun_induction lineMatch s <;> simp_all
 
-/-- `_splitlines_no_ff`, `Lib/ast.py:319-335`, by `finditer`. -/
+/-- `_splitlines_no_ff`, `Lib/ast.py:355-371`, by `finditer`. -/
 def splitNoFF : Nat → List Nat → List (List Nat)
   | 0, _ => []
   | _ + 1, [] => [[]]
@@ -128,7 +128,7 @@ theorem splitLinesLossless_proven : SplitLinesLossless := by
       simp only [splitNoFF, List.flatten_cons]
       rw [ih _ (by omega), ha]
 
-/-- `_pad_whitespace`, `Lib/ast.py:338-346`. -/
+/-- `_pad_whitespace`, `Lib/ast.py:374-382`. -/
 def padWhitespace (s : List Nat) : List Nat :=
   s.map fun c => if c == 12 || c == 9 then c else 32
 
@@ -153,7 +153,7 @@ theorem padKeepsColumns_proven : PadKeepsColumns := by
 
 /-! ### Docstrings: three copies of one rule -/
 
-/-- `get_docstring(node, clean=False)`, `Lib/ast.py:294-315`, on a body. -/
+/-- `get_docstring(node, clean=False)`, `Lib/ast.py:330-351`, on a body. -/
 def pyGetDocstring (body : List Ast) : Option (List Nat) :=
   match body with
   | .node .Expr (v :: _) _ :: _ =>
@@ -233,7 +233,7 @@ def signed (n : Ast) : Except PyExc LVal :=
   | .error e => .error e
 
 mutual
-  /-- `_convert`, `Lib/ast.py:80-105`. -/
+  /-- `_convert`, `Lib/ast.py@3.14.7:80-105`. -/
   def convert : Nat → Ast → Except PyExc LVal
     | 0, _ => .error .modelFuel
     | f + 1, node =>

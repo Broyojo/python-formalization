@@ -3,27 +3,28 @@ Lib/_pyrepl/historical_reader.py	57	62	next_history.do	do(self)	todo
 Lib/_pyrepl/historical_reader.py	66	71	previous_history.do	do(self)	todo		
 Lib/_pyrepl/historical_reader.py	75	77	history_search_backward.do	do(self)	todo		
 Lib/_pyrepl/historical_reader.py	81	83	history_search_forward.do	do(self)	todo		
-Lib/_pyrepl/historical_reader.py	87	93	restore_history.do	do(self)	todo		
+Lib/_pyrepl/historical_reader.py	87	93	restore_history.do	do(self)	todo		changed-in-3.15:
 Lib/_pyrepl/historical_reader.py	97	98	first_history.do	do(self)	todo		
 Lib/_pyrepl/historical_reader.py	102	103	last_history.do	do(self)	todo		
 Lib/_pyrepl/historical_reader.py	107	108	operate_and_get_next.do	do(self)	todo		
-Lib/_pyrepl/historical_reader.py	112	136	yank_arg.do	do(self)	todo		
-Lib/_pyrepl/historical_reader.py	140	146	forward_history_isearch.do	do(self)	todo		
-Lib/_pyrepl/historical_reader.py	150	156	reverse_history_isearch.do	do(self)	todo		
-Lib/_pyrepl/historical_reader.py	160	166	isearch_cancel.do	do(self)	todo		
-Lib/_pyrepl/historical_reader.py	170	177	isearch_add_character.do	do(self)	todo		
-Lib/_pyrepl/historical_reader.py	181	187	isearch_backspace.do	do(self)	todo		
-Lib/_pyrepl/historical_reader.py	191	194	isearch_forwards.do	do(self)	todo		
-Lib/_pyrepl/historical_reader.py	198	201	isearch_backwards.do	do(self)	todo		
-Lib/_pyrepl/historical_reader.py	205	210	isearch_end.do	do(self)	todo		
-Lib/_pyrepl/historical_reader.py	230	257	HistoricalReader.__post_init__	__post_init__(self)	todo		
+Lib/_pyrepl/historical_reader.py	112	137	yank_arg.do	do(self)	todo		changed-in-3.15:
+Lib/_pyrepl/historical_reader.py	141	147	forward_history_isearch.do	do(self)	todo		changed-in-3.15:
+Lib/_pyrepl/historical_reader.py	151	157	reverse_history_isearch.do	do(self)	todo		changed-in-3.15:
+Lib/_pyrepl/historical_reader.py	161	167	isearch_cancel.do	do(self)	todo		changed-in-3.15:
+Lib/_pyrepl/historical_reader.py	171	178	isearch_add_character.do	do(self)	todo		changed-in-3.15:
+Lib/_pyrepl/historical_reader.py	182	188	isearch_backspace.do	do(self)	todo		changed-in-3.15:
+Lib/_pyrepl/historical_reader.py	192	195	isearch_forwards.do	do(self)	todo		
+Lib/_pyrepl/historical_reader.py	199	202	isearch_backwards.do	do(self)	todo		
+Lib/_pyrepl/historical_reader.py	206	211	isearch_end.do	do(self)	todo		changed-in-3.15:
+Lib/_pyrepl/historical_reader.py	231	257	HistoricalReader.__post_init__	__post_init__(self)	todo		changed-in-3.15:
 Lib/_pyrepl/historical_reader.py	259	272	HistoricalReader.collect_keymap	collect_keymap(self)	todo		
-Lib/_pyrepl/historical_reader.py	274	283	HistoricalReader.select_item	select_item(self, i: int)	todo		
-Lib/_pyrepl/historical_reader.py	285	289	HistoricalReader.get_item	get_item(self, i: int)	todo		
-Lib/_pyrepl/historical_reader.py	292	294	HistoricalReader.suspend	suspend(self)	todo		
-Lib/_pyrepl/historical_reader.py	297	303	HistoricalReader.suspend_history	suspend_history(self)	todo		
-Lib/_pyrepl/historical_reader.py	305	319	HistoricalReader.prepare	prepare(self)	todo		
-Lib/_pyrepl/historical_reader.py	321	326	HistoricalReader.get_prompt	get_prompt(self, lineno: int, cursor_on_line: bool)	todo		
-Lib/_pyrepl/historical_reader.py	328	379	HistoricalReader.search_next	search_next(self, *, forwards: bool)	todo		
-Lib/_pyrepl/historical_reader.py	381	407	HistoricalReader.isearch_next	isearch_next(self)	todo		
-Lib/_pyrepl/historical_reader.py	409	416	HistoricalReader.finish	finish(self)	todo		
+Lib/_pyrepl/historical_reader.py	274	282	HistoricalReader.select_item	select_item(self, i: int)	todo		changed-in-3.15:
+Lib/_pyrepl/historical_reader.py	284	288	HistoricalReader.get_item	get_item(self, i: int)	todo		
+Lib/_pyrepl/historical_reader.py	291	293	HistoricalReader.suspend	suspend(self)	todo		
+Lib/_pyrepl/historical_reader.py	296	299	HistoricalReader.suspend_history	suspend_history(self)	todo		changed-in-3.15:
+Lib/_pyrepl/historical_reader.py	302	307	HistoricalReader.suspend_history_writes	suspend_history_writes(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/historical_reader.py	309	323	HistoricalReader.prepare	prepare(self)	todo		
+Lib/_pyrepl/historical_reader.py	325	330	HistoricalReader.get_prompt	get_prompt(self, lineno: int, cursor_on_line: bool)	todo		
+Lib/_pyrepl/historical_reader.py	332	383	HistoricalReader.search_next	search_next(self, *, forwards: bool)	todo		changed-in-3.15:
+Lib/_pyrepl/historical_reader.py	385	411	HistoricalReader.isearch_next	isearch_next(self)	todo		
+Lib/_pyrepl/historical_reader.py	413	420	HistoricalReader.finish	finish(self)	todo		

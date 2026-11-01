@@ -1,8 +1,26 @@
 file	line	endline	name	signature	status	entry	note
-Lib/getpass.py	29	102	unix_getpass	unix_getpass(prompt='Password: ', stream=None, *, echo_char=None)	todo		
-Lib/getpass.py	105	132	win_getpass	win_getpass(prompt='Password: ', stream=None, *, echo_char=None)	todo		
-Lib/getpass.py	135	143	fallback_getpass	fallback_getpass(prompt='Password: ', stream=None, *, echo_char=None)	todo		
-Lib/getpass.py	146	159	_check_echo_char	_check_echo_char(echo_char)	todo		
-Lib/getpass.py	162	186	_raw_input	_raw_input(prompt='', stream=None, input=None, echo_char=None)	todo		
-Lib/getpass.py	189	215	_readline_with_echo_char	_readline_with_echo_char(stream, input, echo_char)	todo		
-Lib/getpass.py	218	239	getuser	getuser()	todo		
+Lib/getpass.py	44	65	_get_terminal_ctrl_chars	_get_terminal_ctrl_chars(fd)	todo		changed-in-3.15: new function
+Lib/getpass.py	68	153	unix_getpass	unix_getpass(prompt='Password: ', stream=None, *, echo_char=None)	todo		changed-in-3.15:
+Lib/getpass.py	156	183	win_getpass	win_getpass(prompt='Password: ', stream=None, *, echo_char=None)	todo		
+Lib/getpass.py	186	194	fallback_getpass	fallback_getpass(prompt='Password: ', stream=None, *, echo_char=None)	todo		
+Lib/getpass.py	197	210	_check_echo_char	_check_echo_char(echo_char)	todo		
+Lib/getpass.py	213	239	_raw_input	_raw_input(prompt='', stream=None, input=None, echo_char=None, term_ctrl_chars=None)	todo		changed-in-3.15:
+Lib/getpass.py	242	249	_readline_with_echo_char	_readline_with_echo_char(stream, input, echo_char, term_ctrl_chars=None, prompt='')	todo		changed-in-3.15:
+Lib/getpass.py	255	277	_PasswordLineEditor.__init__	__init__(self, stream, echo_char, ctrl_chars, prompt='')	todo		changed-in-3.15: new function
+Lib/getpass.py	279	291	_PasswordLineEditor.refresh_display	refresh_display(self, prev_len=None)	todo		changed-in-3.15: new function
+Lib/getpass.py	293	302	_PasswordLineEditor.insert_char	insert_char(self, char)	todo		changed-in-3.15: new function
+Lib/getpass.py	304	306	_PasswordLineEditor.is_eol	is_eol(self, char)	todo		changed-in-3.15: new function
+Lib/getpass.py	308	310	_PasswordLineEditor.is_eof	is_eof(self, char)	todo		changed-in-3.15: new function
+Lib/getpass.py	312	315	_PasswordLineEditor.handle_move_start	handle_move_start(self)	todo		changed-in-3.15: new function
+Lib/getpass.py	317	320	_PasswordLineEditor.handle_move_end	handle_move_end(self)	todo		changed-in-3.15: new function
+Lib/getpass.py	322	330	_PasswordLineEditor.handle_erase	handle_erase(self)	todo		changed-in-3.15: new function
+Lib/getpass.py	332	337	_PasswordLineEditor.handle_kill_line	handle_kill_line(self)	todo		changed-in-3.15: new function
+Lib/getpass.py	339	343	_PasswordLineEditor.handle_kill_forward	handle_kill_forward(self)	todo		changed-in-3.15: new function
+Lib/getpass.py	345	357	_PasswordLineEditor.handle_erase_word	handle_erase_word(self)	todo		changed-in-3.15: new function
+Lib/getpass.py	359	362	_PasswordLineEditor.handle_literal_next	handle_literal_next(self)	todo		changed-in-3.15: new function
+Lib/getpass.py	364	367	_PasswordLineEditor.handle_eof	handle_eof(self)	todo		changed-in-3.15: new function
+Lib/getpass.py	369	371	_PasswordLineEditor.handle_interrupt	handle_interrupt(self)	todo		changed-in-3.15: new function
+Lib/getpass.py	373	374	_PasswordLineEditor.handle_nop	handle_nop(self)	todo		changed-in-3.15: new function
+Lib/getpass.py	376	382	_PasswordLineEditor.handle	handle(self, char)	todo		changed-in-3.15: new function
+Lib/getpass.py	384	409	_PasswordLineEditor.readline	readline(self, input)	todo		changed-in-3.15: new function
+Lib/getpass.py	412	433	getuser	getuser()	todo		

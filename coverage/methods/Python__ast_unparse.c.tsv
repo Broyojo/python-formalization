@@ -18,31 +18,31 @@ Python/ast_unparse.c	424	434	append_ast_comprehensions	append_ast_comprehensions
 Python/ast_unparse.c	437	443	append_ast_genexp	append_ast_genexp(PyUnicodeWriter *writer, expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Python/ast_unparse.c	446	452	append_ast_listcomp	append_ast_listcomp(PyUnicodeWriter *writer, expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Python/ast_unparse.c	455	461	append_ast_setcomp	append_ast_setcomp(PyUnicodeWriter *writer, expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast_unparse.c	464	472	append_ast_dictcomp	append_ast_dictcomp(PyUnicodeWriter *writer, expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast_unparse.c	475	536	append_ast_compare	append_ast_compare(PyUnicodeWriter *writer, expr_ty e, int level)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast_unparse.c	539	554	append_ast_keyword	append_ast_keyword(PyUnicodeWriter *writer, keyword_ty kw)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast_unparse.c	557	589	append_ast_call	append_ast_call(PyUnicodeWriter *writer, expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast_unparse.c	592	605	escape_braces	escape_braces(PyObject *orig)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast_unparse.c	608	618	append_fstring_unicode	append_fstring_unicode(PyUnicodeWriter *writer, PyObject *unicode)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast_unparse.c	621	639	append_fstring_element	append_fstring_element(PyUnicodeWriter *writer, expr_ty e, bool is_format_spec)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast_unparse.c	644	663	build_ftstring_body	build_ftstring_body(asdl_expr_seq *values, bool is_format_spec)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast_unparse.c	666	681	append_templatestr	append_templatestr(PyUnicodeWriter *writer, expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast_unparse.c	684	704	append_joinedstr	append_joinedstr(PyUnicodeWriter *writer, expr_ty e, bool is_format_spec)	modelled	pygrammar-unparse-c-roundtrip	
-Python/ast_unparse.c	707	722	append_interpolation_str	append_interpolation_str(PyUnicodeWriter *writer, PyObject *str)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast_unparse.c	725	736	append_interpolation_value	append_interpolation_value(PyUnicodeWriter *writer, expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast_unparse.c	739	763	append_interpolation_conversion	append_interpolation_conversion(PyUnicodeWriter *writer, int conversion)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast_unparse.c	766	776	append_interpolation_format_spec	append_interpolation_format_spec(PyUnicodeWriter *writer, expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast_unparse.c	779	794	append_interpolation	append_interpolation(PyUnicodeWriter *writer, expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast_unparse.c	797	812	append_formattedvalue	append_formattedvalue(PyUnicodeWriter *writer, expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast_unparse.c	815	833	append_ast_constant	append_ast_constant(PyUnicodeWriter *writer, PyObject *constant)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast_unparse.c	836	853	append_ast_attribute	append_ast_attribute(PyUnicodeWriter *writer, expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast_unparse.c	856	873	append_ast_slice	append_ast_slice(PyUnicodeWriter *writer, expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast_unparse.c	876	882	append_ast_subscript	append_ast_subscript(PyUnicodeWriter *writer, expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast_unparse.c	885	890	append_ast_starred	append_ast_starred(PyUnicodeWriter *writer, expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast_unparse.c	893	902	append_ast_yield	append_ast_yield(PyUnicodeWriter *writer, expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast_unparse.c	905	910	append_ast_yield_from	append_ast_yield_from(PyUnicodeWriter *writer, expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast_unparse.c	913	920	append_ast_await	append_ast_await(PyUnicodeWriter *writer, expr_ty e, int level)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast_unparse.c	923	931	append_named_expr	append_named_expr(PyUnicodeWriter *writer, expr_ty e, int level)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast_unparse.c	934	1008	append_ast_expr	append_ast_expr(PyUnicodeWriter *writer, expr_ty e, int level)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast_unparse.c	1011	1023	expr_as_unicode	expr_as_unicode(expr_ty e, int level)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast_unparse.c	1026	1029	_PyAST_ExprAsUnicode	_PyAST_ExprAsUnicode(expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_unparse.c	464	478	append_ast_dictcomp	append_ast_dictcomp(PyUnicodeWriter *writer, expr_ty e)	todo		changed-in-3.15: withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_unparse.c	481	542	append_ast_compare	append_ast_compare(PyUnicodeWriter *writer, expr_ty e, int level)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_unparse.c	545	560	append_ast_keyword	append_ast_keyword(PyUnicodeWriter *writer, keyword_ty kw)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_unparse.c	563	595	append_ast_call	append_ast_call(PyUnicodeWriter *writer, expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_unparse.c	598	611	escape_braces	escape_braces(PyObject *orig)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_unparse.c	614	624	append_fstring_unicode	append_fstring_unicode(PyUnicodeWriter *writer, PyObject *unicode)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_unparse.c	627	645	append_fstring_element	append_fstring_element(PyUnicodeWriter *writer, expr_ty e, bool is_format_spec)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_unparse.c	650	669	build_ftstring_body	build_ftstring_body(asdl_expr_seq *values, bool is_format_spec)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_unparse.c	672	687	append_templatestr	append_templatestr(PyUnicodeWriter *writer, expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_unparse.c	690	710	append_joinedstr	append_joinedstr(PyUnicodeWriter *writer, expr_ty e, bool is_format_spec)	modelled	pygrammar-unparse-c-roundtrip	
+Python/ast_unparse.c	713	728	append_interpolation_str	append_interpolation_str(PyUnicodeWriter *writer, PyObject *str)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_unparse.c	731	742	append_interpolation_value	append_interpolation_value(PyUnicodeWriter *writer, expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_unparse.c	745	769	append_interpolation_conversion	append_interpolation_conversion(PyUnicodeWriter *writer, int conversion)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_unparse.c	772	782	append_interpolation_format_spec	append_interpolation_format_spec(PyUnicodeWriter *writer, expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_unparse.c	785	800	append_interpolation	append_interpolation(PyUnicodeWriter *writer, expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_unparse.c	803	818	append_formattedvalue	append_formattedvalue(PyUnicodeWriter *writer, expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_unparse.c	821	839	append_ast_constant	append_ast_constant(PyUnicodeWriter *writer, PyObject *constant)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_unparse.c	842	859	append_ast_attribute	append_ast_attribute(PyUnicodeWriter *writer, expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_unparse.c	862	879	append_ast_slice	append_ast_slice(PyUnicodeWriter *writer, expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_unparse.c	882	888	append_ast_subscript	append_ast_subscript(PyUnicodeWriter *writer, expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_unparse.c	891	896	append_ast_starred	append_ast_starred(PyUnicodeWriter *writer, expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_unparse.c	899	908	append_ast_yield	append_ast_yield(PyUnicodeWriter *writer, expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_unparse.c	911	916	append_ast_yield_from	append_ast_yield_from(PyUnicodeWriter *writer, expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_unparse.c	919	926	append_ast_await	append_ast_await(PyUnicodeWriter *writer, expr_ty e, int level)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_unparse.c	929	937	append_named_expr	append_named_expr(PyUnicodeWriter *writer, expr_ty e, int level)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_unparse.c	940	1014	append_ast_expr	append_ast_expr(PyUnicodeWriter *writer, expr_ty e, int level)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_unparse.c	1017	1029	expr_as_unicode	expr_as_unicode(expr_ty e, int level)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_unparse.c	1032	1035	_PyAST_ExprAsUnicode	_PyAST_ExprAsUnicode(expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body

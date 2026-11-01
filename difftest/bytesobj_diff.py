@@ -1193,7 +1193,7 @@ def b_cap_stars(fmt, arg):
     OverflowError, as a width it pads to 1 TiB, which the model would build as a list.
     A bare `%` part before a `%.*` spec re-parses as `%%` and shifts every later
     argument by one, so a value generated as a precision can become a width. This
-    walks the format as `_PyBytes_FormatEx` does (bytesobject.c:672-823) to find what
+    walks the format as `_PyBytes_FormatEx` does (bytesobject.c@3.14.7:672-823) to find what
     each `*` takes. Only a tuple can get as far as allocating: a single argument is
     used up by the `*`, and the `getnextarg` at :823 then raises.
     """
@@ -3133,7 +3133,7 @@ class _Script:
 
 def _run_restricted(ex):
     """What `__release_buffer__` of a subclass of a C exporter can do with its view, which
-    is restricted when no Python `__buffer__` made it (Objects/typeobject.c:10820-10833)."""
+    is restricted when no Python `__buffer__` made it (Objects/typeobject.c:11535-11548)."""
     out = []
 
     def probe(f):

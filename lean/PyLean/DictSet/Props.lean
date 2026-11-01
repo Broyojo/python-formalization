@@ -18,7 +18,7 @@ def ProbeReachesAll : Prop :=
   ∀ n u s : Nat, u < 2 ^ 64 → s < 2 ^ n → ∃ j, j < 2 ^ n + 13 ∧ (probeState (2 ^ n - 1) u j).1 = s
 theorem probeReachesAll_proven : ProbeReachesAll := probe_reaches_all
 
-/-- `0 < USABLE_FRACTION(n) < n` for `n >= 2` (`dictobject.c:537-538`). -/
+/-- `0 < USABLE_FRACTION(n) < n` for `n >= 2` (`dictobject.c:575-576`). -/
 def UsableFractionBounds : Prop := ∀ n, 2 ≤ n → 0 < usableFraction n ∧ usableFraction n < n
 theorem usableFractionBounds_proven : UsableFractionBounds := by
   intro n h
@@ -31,7 +31,7 @@ def Log2KeysizeRoom : Prop := ∀ m, max m 8 ≤ 2 ^ calculateLog2Keysize m
 theorem log2KeysizeRoom_proven : Log2KeysizeRoom := calculateLog2_room
 
 /-- `estimate_log2_keysize`: "reserve enough size to insert n entries without resizing"
-(`dictobject.c:568-572`). -/
+(`dictobject.c:606-610`). -/
 def EstimateRoom : Prop := ∀ n, n ≤ usableFraction (2 ^ estimateLog2Keysize n)
 theorem estimateRoom_proven : EstimateRoom := by
   intro n
@@ -43,7 +43,7 @@ theorem estimateRoom_proven : EstimateRoom := by
   omega
 
 /-- Every entry index fits the signed slot width `dictkeys_set_index` picks for the table size
-(`dictobject.c:512-528`): its `assert(ix <= 0x7f)` and `assert(ix <= 0x7fff)` cannot fail. The
+(`dictobject.c:550-566`): its `assert(ix <= 0x7f)` and `assert(ix <= 0x7fff)` cannot fail. The
 largest index is below `USABLE_FRACTION(2**n)`. -/
 def IndexWidthFits : Prop :=
   ∀ n, (n < 8 → usableFraction (2 ^ n) ≤ 0x7f + 1) ∧ (n < 16 → usableFraction (2 ^ n) ≤ 0x7fff + 1) ∧

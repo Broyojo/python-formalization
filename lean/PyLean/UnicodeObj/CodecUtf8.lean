@@ -2,8 +2,8 @@ import PyLean.UnicodeObj.CodecHandlers
 
 /-!
 UTF-8: `STRINGLIB(utf8_decode)` and `STRINGLIB(utf8_encoder)`,
-Objects/stringlib/codecs.h:22-252 and :260-470, driven by `unicode_decode_utf8_impl`,
-Objects/unicodeobject.c:5306-5425.
+Objects/stringlib/codecs.h:22-252 and @3.14.7:260-470, driven by `unicode_decode_utf8_impl`,
+Objects/unicodeobject.c:5187-5306.
 
 The four instantiations of `utf8_decode` differ in `STRINGLIB_MAX_CHAR`, and the
 out-of-range return only widens the writer, so one model covers them. Byte fields use
@@ -81,7 +81,7 @@ def utf8Step : List Nat → U8
     else .err 1
 
 /-- The `switch (ch)` and the error handling of `unicode_decode_utf8_impl`,
-unicodeobject.c:5325-5417. `input` is the whole buffer, `pos` the offset of `rest`,
+unicodeobject.c:5206-5298. `input` is the whole buffer, `pos` the offset of `rest`,
 `consumed` is true for `final=False`. Returns the text and the bytes consumed. -/
 def utf8DecodeLoop (input : Bytes) (h : ErrHandler) (consumed : Bool) :
     Nat → Nat → List Nat → Str → Py (Str × Nat)

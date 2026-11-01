@@ -8,142 +8,145 @@ Lib/email/_header_value_parser.py	145	147	TokenList.__repr__	__repr__(self)	todo
 Lib/email/_header_value_parser.py	150	151	TokenList.value	value(self)	todo		
 Lib/email/_header_value_parser.py	154	155	TokenList.all_defects	all_defects(self)	todo		
 Lib/email/_header_value_parser.py	157	158	TokenList.startswith_fws	startswith_fws(self)	todo		
-Lib/email/_header_value_parser.py	161	163	TokenList.as_ew_allowed	as_ew_allowed(self)	todo		
-Lib/email/_header_value_parser.py	166	170	TokenList.comments	comments(self)	todo		
-Lib/email/_header_value_parser.py	172	173	TokenList.fold	fold(self, *, policy)	todo		
-Lib/email/_header_value_parser.py	175	176	TokenList.pprint	pprint(self, indent='')	todo		
-Lib/email/_header_value_parser.py	178	179	TokenList.ppstr	ppstr(self, indent='')	todo		
-Lib/email/_header_value_parser.py	181	196	TokenList._pp	_pp(self, indent='')	todo		
-Lib/email/_header_value_parser.py	202	203	WhiteSpaceTokenList.value	value(self)	todo		
-Lib/email/_header_value_parser.py	206	207	WhiteSpaceTokenList.comments	comments(self)	todo		
-Lib/email/_header_value_parser.py	246	249	QuotedString.content	content(self)	todo		
-Lib/email/_header_value_parser.py	252	259	QuotedString.quoted_value	quoted_value(self)	todo		
-Lib/email/_header_value_parser.py	262	265	QuotedString.stripped_value	stripped_value(self)	todo		
-Lib/email/_header_value_parser.py	272	273	BareQuotedString.__str__	__str__(self)	todo		
-Lib/email/_header_value_parser.py	276	277	BareQuotedString.value	value(self)	todo		
-Lib/email/_header_value_parser.py	284	289	Comment.__str__	__str__(self)	todo		
-Lib/email/_header_value_parser.py	291	296	Comment.quote	quote(self, value)	todo		
-Lib/email/_header_value_parser.py	299	300	Comment.content	content(self)	todo		
-Lib/email/_header_value_parser.py	303	304	Comment.comments	comments(self)	todo		
-Lib/email/_header_value_parser.py	311	312	AddressList.addresses	addresses(self)	todo		
-Lib/email/_header_value_parser.py	315	317	AddressList.mailboxes	mailboxes(self)	todo		
-Lib/email/_header_value_parser.py	320	322	AddressList.all_mailboxes	all_mailboxes(self)	todo		
-Lib/email/_header_value_parser.py	330	332	Address.display_name	display_name(self)	todo		
-Lib/email/_header_value_parser.py	335	340	Address.mailboxes	mailboxes(self)	todo		
-Lib/email/_header_value_parser.py	343	348	Address.all_mailboxes	all_mailboxes(self)	todo		
-Lib/email/_header_value_parser.py	355	356	MailboxList.mailboxes	mailboxes(self)	todo		
-Lib/email/_header_value_parser.py	359	361	MailboxList.all_mailboxes	all_mailboxes(self)	todo		
-Lib/email/_header_value_parser.py	369	372	GroupList.mailboxes	mailboxes(self)	todo		
-Lib/email/_header_value_parser.py	375	378	GroupList.all_mailboxes	all_mailboxes(self)	todo		
-Lib/email/_header_value_parser.py	386	389	Group.mailboxes	mailboxes(self)	todo		
-Lib/email/_header_value_parser.py	392	395	Group.all_mailboxes	all_mailboxes(self)	todo		
-Lib/email/_header_value_parser.py	398	399	Group.display_name	display_name(self)	todo		
-Lib/email/_header_value_parser.py	407	410	NameAddr.display_name	display_name(self)	todo		
-Lib/email/_header_value_parser.py	413	414	NameAddr.local_part	local_part(self)	todo		
-Lib/email/_header_value_parser.py	417	418	NameAddr.domain	domain(self)	todo		
-Lib/email/_header_value_parser.py	421	422	NameAddr.route	route(self)	todo		
-Lib/email/_header_value_parser.py	425	426	NameAddr.addr_spec	addr_spec(self)	todo		
-Lib/email/_header_value_parser.py	434	437	AngleAddr.local_part	local_part(self)	todo		
-Lib/email/_header_value_parser.py	440	443	AngleAddr.domain	domain(self)	todo		
-Lib/email/_header_value_parser.py	446	449	AngleAddr.route	route(self)	todo		
-Lib/email/_header_value_parser.py	452	460	AngleAddr.addr_spec	addr_spec(self)	todo		
-Lib/email/_header_value_parser.py	468	469	ObsRoute.domains	domains(self)	todo		
-Lib/email/_header_value_parser.py	477	479	Mailbox.display_name	display_name(self)	todo		
-Lib/email/_header_value_parser.py	482	483	Mailbox.local_part	local_part(self)	todo		
-Lib/email/_header_value_parser.py	486	487	Mailbox.domain	domain(self)	todo		
-Lib/email/_header_value_parser.py	490	492	Mailbox.route	route(self)	todo		
-Lib/email/_header_value_parser.py	495	496	Mailbox.addr_spec	addr_spec(self)	todo		
-Lib/email/_header_value_parser.py	504	505	InvalidMailbox.display_name	display_name(self)	todo		
-Lib/email/_header_value_parser.py	516	517	Domain.domain	domain(self)	todo		
-Lib/email/_header_value_parser.py	540	541	AddrSpec.local_part	local_part(self)	todo		
-Lib/email/_header_value_parser.py	544	547	AddrSpec.domain	domain(self)	todo		
-Lib/email/_header_value_parser.py	550	553	AddrSpec.value	value(self)	todo		
-Lib/email/_header_value_parser.py	556	564	AddrSpec.addr_spec	addr_spec(self)	todo		
-Lib/email/_header_value_parser.py	579	595	DisplayName.display_name	display_name(self)	todo		
-Lib/email/_header_value_parser.py	598	618	DisplayName.value	value(self)	todo		
-Lib/email/_header_value_parser.py	627	631	LocalPart.value	value(self)	todo		
-Lib/email/_header_value_parser.py	634	654	LocalPart.local_part	local_part(self)	todo		
-Lib/email/_header_value_parser.py	663	664	DomainLiteral.domain	domain(self)	todo		
-Lib/email/_header_value_parser.py	667	670	DomainLiteral.ip	ip(self)	todo		
-Lib/email/_header_value_parser.py	688	691	Parameter.section_number	section_number(self)	todo		
-Lib/email/_header_value_parser.py	694	705	Parameter.param_value	param_value(self)	todo		
-Lib/email/_header_value_parser.py	718	721	Attribute.stripped_value	stripped_value(self)	todo		
-Lib/email/_header_value_parser.py	734	741	Value.stripped_value	stripped_value(self)	todo		
-Lib/email/_header_value_parser.py	750	817	MimeParameters.params	params(self)	todo		
-Lib/email/_header_value_parser.py	819	827	MimeParameters.__str__	__str__(self)	todo		
-Lib/email/_header_value_parser.py	837	841	ParameterizedHeaderValue.params	params(self)	todo		
-Lib/email/_header_value_parser.py	872	874	MsgID.fold	fold(self, policy)	todo		
-Lib/email/_header_value_parser.py	888	889	MessageIDList.message_ids	message_ids(self)	todo		
-Lib/email/_header_value_parser.py	905	909	Terminal.__new__	__new__(cls, value, token_type)	todo		
-Lib/email/_header_value_parser.py	911	912	Terminal.__repr__	__repr__(self)	todo		
-Lib/email/_header_value_parser.py	914	915	Terminal.pprint	pprint(self)	todo		
-Lib/email/_header_value_parser.py	918	919	Terminal.all_defects	all_defects(self)	todo		
-Lib/email/_header_value_parser.py	921	928	Terminal._pp	_pp(self, indent='')	todo		
-Lib/email/_header_value_parser.py	930	932	Terminal.pop_trailing_ws	pop_trailing_ws(self)	todo		
-Lib/email/_header_value_parser.py	935	936	Terminal.comments	comments(self)	todo		
-Lib/email/_header_value_parser.py	938	939	Terminal.__getnewargs__	__getnewargs__(self)	todo		
-Lib/email/_header_value_parser.py	945	946	WhiteSpaceTerminal.value	value(self)	todo		
-Lib/email/_header_value_parser.py	948	949	WhiteSpaceTerminal.startswith_fws	startswith_fws(self)	todo		
-Lib/email/_header_value_parser.py	955	956	ValueTerminal.value	value(self)	todo		
-Lib/email/_header_value_parser.py	958	959	ValueTerminal.startswith_fws	startswith_fws(self)	todo		
-Lib/email/_header_value_parser.py	965	966	EWWhiteSpaceTerminal.value	value(self)	todo		
-Lib/email/_header_value_parser.py	968	969	EWWhiteSpaceTerminal.__str__	__str__(self)	todo		
-Lib/email/_header_value_parser.py	1017	1025	_validate_xtext	_validate_xtext(xtext)	todo		
-Lib/email/_header_value_parser.py	1027	1057	_get_ptext_to_endchars	_get_ptext_to_endchars(value, endchars)	todo		
-Lib/email/_header_value_parser.py	1059	1069	get_fws	get_fws(value)	todo		
-Lib/email/_header_value_parser.py	1071	1118	get_encoded_word	get_encoded_word(value, terminal_type='vtext')	todo		
-Lib/email/_header_value_parser.py	1120	1185	get_unstructured	get_unstructured(value)	todo		
-Lib/email/_header_value_parser.py	1187	1202	get_qp_ctext	get_qp_ctext(value)	todo		
-Lib/email/_header_value_parser.py	1204	1217	get_qcontent	get_qcontent(value)	todo		
-Lib/email/_header_value_parser.py	1219	1233	get_atext	get_atext(value)	todo		
-Lib/email/_header_value_parser.py	1235	1275	get_bare_quoted_string	get_bare_quoted_string(value)	todo		
-Lib/email/_header_value_parser.py	1277	1300	get_comment	get_comment(value)	todo		
-Lib/email/_header_value_parser.py	1302	1313	get_cfws	get_cfws(value)	todo		
-Lib/email/_header_value_parser.py	1315	1331	get_quoted_string	get_quoted_string(value)	todo		
-Lib/email/_header_value_parser.py	1333	1358	get_atom	get_atom(value)	todo		
-Lib/email/_header_value_parser.py	1360	1377	get_dot_atom_text	get_dot_atom_text(value)	todo		
-Lib/email/_header_value_parser.py	1379	1402	get_dot_atom	get_dot_atom(value)	todo		
-Lib/email/_header_value_parser.py	1404	1436	get_word	get_word(value)	todo		
-Lib/email/_header_value_parser.py	1438	1484	get_phrase	get_phrase(value)	todo		
-Lib/email/_header_value_parser.py	1486	1523	get_local_part	get_local_part(value)	todo		
-Lib/email/_header_value_parser.py	1525	1575	get_obs_local_part	get_obs_local_part(value)	todo		
-Lib/email/_header_value_parser.py	1577	1595	get_dtext	get_dtext(value)	todo		
-Lib/email/_header_value_parser.py	1597	1603	_check_for_early_dl_end	_check_for_early_dl_end(value, domain_literal)	todo		
-Lib/email/_header_value_parser.py	1605	1642	get_domain_literal	get_domain_literal(value)	todo		
-Lib/email/_header_value_parser.py	1644	1680	get_domain	get_domain(value)	todo		
-Lib/email/_header_value_parser.py	1682	1696	get_addr_spec	get_addr_spec(value)	todo		
-Lib/email/_header_value_parser.py	1698	1739	get_obs_route	get_obs_route(value)	todo		
-Lib/email/_header_value_parser.py	1741	1785	get_angle_addr	get_angle_addr(value)	todo		
-Lib/email/_header_value_parser.py	1787	1799	get_display_name	get_display_name(value)	todo		
-Lib/email/_header_value_parser.py	1802	1836	get_name_addr	get_name_addr(value)	todo		
-Lib/email/_header_value_parser.py	1838	1857	get_mailbox	get_mailbox(value)	todo		
-Lib/email/_header_value_parser.py	1859	1875	get_invalid_mailbox	get_invalid_mailbox(value, endchars)	todo		
-Lib/email/_header_value_parser.py	1877	1931	get_mailbox_list	get_mailbox_list(value)	todo		
-Lib/email/_header_value_parser.py	1934	1969	get_group_list	get_group_list(value)	todo		
-Lib/email/_header_value_parser.py	1971	1999	get_group	get_group(value)	todo		
-Lib/email/_header_value_parser.py	2001	2028	get_address	get_address(value)	todo		
-Lib/email/_header_value_parser.py	2030	2080	get_address_list	get_address_list(value)	todo		
-Lib/email/_header_value_parser.py	2083	2103	get_no_fold_literal	get_no_fold_literal(value)	todo		
-Lib/email/_header_value_parser.py	2105	2171	get_msg_id	get_msg_id(value)	todo		
-Lib/email/_header_value_parser.py	2174	2192	parse_message_id	parse_message_id(value)	todo		
-Lib/email/_header_value_parser.py	2194	2218	parse_message_ids	parse_message_ids(value)	todo		
-Lib/email/_header_value_parser.py	2228	2294	parse_mime_version	parse_mime_version(value)	todo		
-Lib/email/_header_value_parser.py	2296	2312	get_invalid_parameter	get_invalid_parameter(value)	todo		
-Lib/email/_header_value_parser.py	2314	2331	get_ttext	get_ttext(value)	todo		
-Lib/email/_header_value_parser.py	2333	2354	get_token	get_token(value)	todo		
-Lib/email/_header_value_parser.py	2356	2373	get_attrtext	get_attrtext(value)	todo		
-Lib/email/_header_value_parser.py	2375	2396	get_attribute	get_attribute(value)	todo		
-Lib/email/_header_value_parser.py	2398	2414	get_extended_attrtext	get_extended_attrtext(value)	todo		
-Lib/email/_header_value_parser.py	2416	2436	get_extended_attribute	get_extended_attribute(value)	todo		
-Lib/email/_header_value_parser.py	2438	2465	get_section	get_section(value)	todo		
-Lib/email/_header_value_parser.py	2468	2488	get_value	get_value(value)	todo		
-Lib/email/_header_value_parser.py	2490	2629	get_parameter	get_parameter(value)	todo		
-Lib/email/_header_value_parser.py	2631	2681	parse_mime_parameters	parse_mime_parameters(value)	todo		
-Lib/email/_header_value_parser.py	2683	2697	_find_mime_parameters	_find_mime_parameters(tokenlist, value)	todo		
-Lib/email/_header_value_parser.py	2699	2753	parse_content_type_header	parse_content_type_header(value)	todo		
-Lib/email/_header_value_parser.py	2755	2783	parse_content_disposition_header	parse_content_disposition_header(value)	todo		
-Lib/email/_header_value_parser.py	2785	2814	parse_content_transfer_encoding_header	parse_content_transfer_encoding_header(value)	todo		
-Lib/email/_header_value_parser.py	2832	2840	_steal_trailing_WSP_if_exists	_steal_trailing_WSP_if_exists(lines)	todo		
-Lib/email/_header_value_parser.py	2843	3000	_refold_parse_tree	_refold_parse_tree(parse_tree, *, policy)	todo		
-Lib/email/_header_value_parser.py	3002	3078	_fold_as_ew	_fold_as_ew(to_encode, lines, maxlen, last_ew, ew_combine_allowed, charset, last_word_is_ew)	todo		
-Lib/email/_header_value_parser.py	3080	3153	_fold_mime_parameters	_fold_mime_parameters(part, lines, maxlen, encoding)	todo		
+Lib/email/_header_value_parser.py	163	167	TokenList.comments	comments(self)	todo		
+Lib/email/_header_value_parser.py	169	175	TokenList.contains_token_type	contains_token_type(self, *token_types)	todo		changed-in-3.15: new function
+Lib/email/_header_value_parser.py	177	178	TokenList.fold	fold(self, *, policy)	todo		
+Lib/email/_header_value_parser.py	180	181	TokenList.pprint	pprint(self, indent='')	todo		
+Lib/email/_header_value_parser.py	183	184	TokenList.ppstr	ppstr(self, indent='')	todo		
+Lib/email/_header_value_parser.py	186	201	TokenList._pp	_pp(self, indent='')	todo		
+Lib/email/_header_value_parser.py	207	208	WhiteSpaceTokenList.value	value(self)	todo		
+Lib/email/_header_value_parser.py	211	212	WhiteSpaceTokenList.comments	comments(self)	todo		
+Lib/email/_header_value_parser.py	251	254	QuotedString.content	content(self)	todo		
+Lib/email/_header_value_parser.py	257	264	QuotedString.quoted_value	quoted_value(self)	todo		
+Lib/email/_header_value_parser.py	267	270	QuotedString.stripped_value	stripped_value(self)	todo		
+Lib/email/_header_value_parser.py	277	278	BareQuotedString.__str__	__str__(self)	todo		
+Lib/email/_header_value_parser.py	281	282	BareQuotedString.value	value(self)	todo		
+Lib/email/_header_value_parser.py	289	294	Comment.__str__	__str__(self)	todo		
+Lib/email/_header_value_parser.py	296	301	Comment.quote	quote(self, value)	todo		
+Lib/email/_header_value_parser.py	304	305	Comment.content	content(self)	todo		
+Lib/email/_header_value_parser.py	308	309	Comment.comments	comments(self)	todo		
+Lib/email/_header_value_parser.py	316	317	AddressList.addresses	addresses(self)	todo		
+Lib/email/_header_value_parser.py	320	322	AddressList.mailboxes	mailboxes(self)	todo		
+Lib/email/_header_value_parser.py	325	327	AddressList.all_mailboxes	all_mailboxes(self)	todo		
+Lib/email/_header_value_parser.py	335	337	Address.display_name	display_name(self)	todo		
+Lib/email/_header_value_parser.py	340	345	Address.mailboxes	mailboxes(self)	todo		
+Lib/email/_header_value_parser.py	348	353	Address.all_mailboxes	all_mailboxes(self)	todo		
+Lib/email/_header_value_parser.py	360	361	MailboxList.mailboxes	mailboxes(self)	todo		
+Lib/email/_header_value_parser.py	364	366	MailboxList.all_mailboxes	all_mailboxes(self)	todo		
+Lib/email/_header_value_parser.py	374	377	GroupList.mailboxes	mailboxes(self)	todo		
+Lib/email/_header_value_parser.py	380	383	GroupList.all_mailboxes	all_mailboxes(self)	todo		
+Lib/email/_header_value_parser.py	391	394	Group.mailboxes	mailboxes(self)	todo		
+Lib/email/_header_value_parser.py	397	400	Group.all_mailboxes	all_mailboxes(self)	todo		
+Lib/email/_header_value_parser.py	403	404	Group.display_name	display_name(self)	todo		
+Lib/email/_header_value_parser.py	412	415	NameAddr.display_name	display_name(self)	todo		
+Lib/email/_header_value_parser.py	418	419	NameAddr.local_part	local_part(self)	todo		
+Lib/email/_header_value_parser.py	422	423	NameAddr.domain	domain(self)	todo		
+Lib/email/_header_value_parser.py	426	427	NameAddr.route	route(self)	todo		
+Lib/email/_header_value_parser.py	430	431	NameAddr.addr_spec	addr_spec(self)	todo		
+Lib/email/_header_value_parser.py	440	443	AngleAddr.local_part	local_part(self)	todo		
+Lib/email/_header_value_parser.py	446	449	AngleAddr.domain	domain(self)	todo		
+Lib/email/_header_value_parser.py	452	455	AngleAddr.route	route(self)	todo		
+Lib/email/_header_value_parser.py	458	466	AngleAddr.addr_spec	addr_spec(self)	todo		
+Lib/email/_header_value_parser.py	474	475	ObsRoute.domains	domains(self)	todo		
+Lib/email/_header_value_parser.py	483	485	Mailbox.display_name	display_name(self)	todo		
+Lib/email/_header_value_parser.py	488	489	Mailbox.local_part	local_part(self)	todo		
+Lib/email/_header_value_parser.py	492	493	Mailbox.domain	domain(self)	todo		
+Lib/email/_header_value_parser.py	496	498	Mailbox.route	route(self)	todo		
+Lib/email/_header_value_parser.py	501	502	Mailbox.addr_spec	addr_spec(self)	todo		
+Lib/email/_header_value_parser.py	510	511	InvalidMailbox.display_name	display_name(self)	todo		
+Lib/email/_header_value_parser.py	522	523	Domain.domain	domain(self)	todo		
+Lib/email/_header_value_parser.py	546	547	AddrSpec.local_part	local_part(self)	todo		
+Lib/email/_header_value_parser.py	550	553	AddrSpec.domain	domain(self)	todo		
+Lib/email/_header_value_parser.py	556	559	AddrSpec.value	value(self)	todo		
+Lib/email/_header_value_parser.py	562	570	AddrSpec.addr_spec	addr_spec(self)	todo		
+Lib/email/_header_value_parser.py	585	601	DisplayName.display_name	display_name(self)	todo		
+Lib/email/_header_value_parser.py	604	624	DisplayName.value	value(self)	todo		
+Lib/email/_header_value_parser.py	633	637	LocalPart.value	value(self)	todo		
+Lib/email/_header_value_parser.py	640	660	LocalPart.local_part	local_part(self)	todo		
+Lib/email/_header_value_parser.py	669	670	DomainLiteral.domain	domain(self)	todo		
+Lib/email/_header_value_parser.py	673	676	DomainLiteral.ip	ip(self)	todo		
+Lib/email/_header_value_parser.py	694	697	Parameter.section_number	section_number(self)	todo		
+Lib/email/_header_value_parser.py	700	711	Parameter.param_value	param_value(self)	todo		
+Lib/email/_header_value_parser.py	724	727	Attribute.stripped_value	stripped_value(self)	todo		
+Lib/email/_header_value_parser.py	740	747	Value.stripped_value	stripped_value(self)	todo		
+Lib/email/_header_value_parser.py	756	827	MimeParameters.params	params(self)	todo		changed-in-3.15:
+Lib/email/_header_value_parser.py	829	837	MimeParameters.__str__	__str__(self)	todo		
+Lib/email/_header_value_parser.py	847	851	ParameterizedHeaderValue.params	params(self)	todo		
+Lib/email/_header_value_parser.py	878	880	MsgID.fold	fold(self, policy)	todo		
+Lib/email/_header_value_parser.py	894	895	MessageIDList.message_ids	message_ids(self)	todo		
+Lib/email/_header_value_parser.py	911	915	Terminal.__new__	__new__(cls, value, token_type)	todo		
+Lib/email/_header_value_parser.py	917	918	Terminal.__repr__	__repr__(self)	todo		
+Lib/email/_header_value_parser.py	920	921	Terminal.pprint	pprint(self)	todo		
+Lib/email/_header_value_parser.py	924	925	Terminal.all_defects	all_defects(self)	todo		
+Lib/email/_header_value_parser.py	927	934	Terminal._pp	_pp(self, indent='')	todo		
+Lib/email/_header_value_parser.py	936	938	Terminal.pop_trailing_ws	pop_trailing_ws(self)	todo		
+Lib/email/_header_value_parser.py	941	942	Terminal.comments	comments(self)	todo		
+Lib/email/_header_value_parser.py	944	945	Terminal.contains_token_type	contains_token_type(self, *token_types)	todo		changed-in-3.15: new function
+Lib/email/_header_value_parser.py	947	948	Terminal.__getnewargs__	__getnewargs__(self)	todo		
+Lib/email/_header_value_parser.py	954	955	WhiteSpaceTerminal.value	value(self)	todo		
+Lib/email/_header_value_parser.py	957	958	WhiteSpaceTerminal.startswith_fws	startswith_fws(self)	todo		
+Lib/email/_header_value_parser.py	964	965	ValueTerminal.value	value(self)	todo		
+Lib/email/_header_value_parser.py	967	968	ValueTerminal.startswith_fws	startswith_fws(self)	todo		
+Lib/email/_header_value_parser.py	974	975	EWWhiteSpaceTerminal.value	value(self)	todo		
+Lib/email/_header_value_parser.py	977	978	EWWhiteSpaceTerminal.__str__	__str__(self)	todo		
+Lib/email/_header_value_parser.py	1026	1034	_validate_xtext	_validate_xtext(xtext)	todo		
+Lib/email/_header_value_parser.py	1036	1066	_get_ptext_to_endchars	_get_ptext_to_endchars(value, endchars)	todo		
+Lib/email/_header_value_parser.py	1068	1078	get_fws	get_fws(value)	todo		
+Lib/email/_header_value_parser.py	1080	1127	get_encoded_word	get_encoded_word(value, terminal_type='vtext')	todo		
+Lib/email/_header_value_parser.py	1129	1194	get_unstructured	get_unstructured(value)	todo		
+Lib/email/_header_value_parser.py	1196	1211	get_qp_ctext	get_qp_ctext(value)	todo		
+Lib/email/_header_value_parser.py	1213	1226	get_qcontent	get_qcontent(value)	todo		
+Lib/email/_header_value_parser.py	1228	1242	get_atext	get_atext(value)	todo		
+Lib/email/_header_value_parser.py	1244	1284	get_bare_quoted_string	get_bare_quoted_string(value)	todo		
+Lib/email/_header_value_parser.py	1286	1309	get_comment	get_comment(value)	todo		
+Lib/email/_header_value_parser.py	1311	1322	get_cfws	get_cfws(value)	todo		
+Lib/email/_header_value_parser.py	1324	1340	get_quoted_string	get_quoted_string(value)	todo		
+Lib/email/_header_value_parser.py	1342	1367	get_atom	get_atom(value)	todo		
+Lib/email/_header_value_parser.py	1369	1386	get_dot_atom_text	get_dot_atom_text(value)	todo		
+Lib/email/_header_value_parser.py	1388	1411	get_dot_atom	get_dot_atom(value)	todo		
+Lib/email/_header_value_parser.py	1413	1445	get_word	get_word(value)	todo		
+Lib/email/_header_value_parser.py	1447	1493	get_phrase	get_phrase(value)	todo		
+Lib/email/_header_value_parser.py	1495	1527	get_local_part	get_local_part(value)	todo		changed-in-3.15:
+Lib/email/_header_value_parser.py	1529	1579	get_obs_local_part	get_obs_local_part(value)	todo		
+Lib/email/_header_value_parser.py	1581	1599	get_dtext	get_dtext(value)	todo		
+Lib/email/_header_value_parser.py	1601	1607	_check_for_early_dl_end	_check_for_early_dl_end(value, domain_literal)	todo		
+Lib/email/_header_value_parser.py	1609	1646	get_domain_literal	get_domain_literal(value)	todo		
+Lib/email/_header_value_parser.py	1648	1684	get_domain	get_domain(value)	todo		
+Lib/email/_header_value_parser.py	1686	1700	get_addr_spec	get_addr_spec(value)	todo		
+Lib/email/_header_value_parser.py	1702	1743	get_obs_route	get_obs_route(value)	todo		
+Lib/email/_header_value_parser.py	1745	1789	get_angle_addr	get_angle_addr(value)	todo		
+Lib/email/_header_value_parser.py	1791	1803	get_display_name	get_display_name(value)	todo		
+Lib/email/_header_value_parser.py	1806	1840	get_name_addr	get_name_addr(value)	todo		
+Lib/email/_header_value_parser.py	1842	1861	get_mailbox	get_mailbox(value)	todo		
+Lib/email/_header_value_parser.py	1863	1879	get_invalid_mailbox	get_invalid_mailbox(value, endchars)	todo		
+Lib/email/_header_value_parser.py	1881	1935	get_mailbox_list	get_mailbox_list(value)	todo		
+Lib/email/_header_value_parser.py	1938	1973	get_group_list	get_group_list(value)	todo		
+Lib/email/_header_value_parser.py	1975	2003	get_group	get_group(value)	todo		
+Lib/email/_header_value_parser.py	2005	2032	get_address	get_address(value)	todo		
+Lib/email/_header_value_parser.py	2034	2084	get_address_list	get_address_list(value)	todo		
+Lib/email/_header_value_parser.py	2087	2107	get_no_fold_literal	get_no_fold_literal(value)	todo		
+Lib/email/_header_value_parser.py	2109	2175	get_msg_id	get_msg_id(value)	todo		
+Lib/email/_header_value_parser.py	2178	2196	parse_message_id	parse_message_id(value)	todo		
+Lib/email/_header_value_parser.py	2198	2222	parse_message_ids	parse_message_ids(value)	todo		
+Lib/email/_header_value_parser.py	2232	2298	parse_mime_version	parse_mime_version(value)	todo		
+Lib/email/_header_value_parser.py	2300	2316	get_invalid_parameter	get_invalid_parameter(value)	todo		
+Lib/email/_header_value_parser.py	2318	2335	get_ttext	get_ttext(value)	todo		
+Lib/email/_header_value_parser.py	2337	2358	get_token	get_token(value)	todo		
+Lib/email/_header_value_parser.py	2360	2377	get_attrtext	get_attrtext(value)	todo		
+Lib/email/_header_value_parser.py	2379	2400	get_attribute	get_attribute(value)	todo		
+Lib/email/_header_value_parser.py	2402	2418	get_extended_attrtext	get_extended_attrtext(value)	todo		
+Lib/email/_header_value_parser.py	2420	2440	get_extended_attribute	get_extended_attribute(value)	todo		
+Lib/email/_header_value_parser.py	2442	2469	get_section	get_section(value)	todo		
+Lib/email/_header_value_parser.py	2472	2492	get_value	get_value(value)	todo		
+Lib/email/_header_value_parser.py	2494	2633	get_parameter	get_parameter(value)	todo		
+Lib/email/_header_value_parser.py	2635	2685	parse_mime_parameters	parse_mime_parameters(value)	todo		
+Lib/email/_header_value_parser.py	2687	2701	_find_mime_parameters	_find_mime_parameters(tokenlist, value)	todo		
+Lib/email/_header_value_parser.py	2703	2757	parse_content_type_header	parse_content_type_header(value)	todo		
+Lib/email/_header_value_parser.py	2759	2787	parse_content_disposition_header	parse_content_disposition_header(value)	todo		
+Lib/email/_header_value_parser.py	2789	2818	parse_content_transfer_encoding_header	parse_content_transfer_encoding_header(value)	todo		
+Lib/email/_header_value_parser.py	2836	2844	_steal_trailing_WSP_if_exists	_steal_trailing_WSP_if_exists(lines)	todo		
+Lib/email/_header_value_parser.py	2847	2856	_refold_parse_tree	_refold_parse_tree(parse_tree, *, policy)	todo		changed-in-3.15:
+Lib/email/_header_value_parser.py	2858	2903	_refold_without_ew	_refold_without_ew(parse_tree, lines, maxlen, encoding, *, policy)	todo		changed-in-3.15: new function
+Lib/email/_header_value_parser.py	2906	3063	_refold_with_ew	_refold_with_ew(parse_tree, lines, maxlen, encoding, *, policy)	todo		changed-in-3.15: new function
+Lib/email/_header_value_parser.py	3065	3141	_fold_as_ew	_fold_as_ew(to_encode, lines, maxlen, last_ew, ew_combine_allowed, charset, last_word_is_ew)	todo		
+Lib/email/_header_value_parser.py	3143	3216	_fold_mime_parameters	_fold_mime_parameters(part, lines, maxlen, encoding)	todo		

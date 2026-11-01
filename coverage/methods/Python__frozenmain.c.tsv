@@ -1,2 +1,2 @@
 file	line	endline	name	signature	status	entry	note
-Python/frozenmain.c	21	99	Py_FrozenMain	Py_FrozenMain(int argc, char **argv)	todo		
+Python/frozenmain.c	20	98	Py_FrozenMain	Py_FrozenMain(int argc, char **argv)	todo		changed-in-3.15:

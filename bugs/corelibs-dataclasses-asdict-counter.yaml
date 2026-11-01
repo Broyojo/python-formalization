@@ -31,7 +31,7 @@ observed: |
 promised_by: |
   Doc/library/dataclasses.rst: dataclasses, dicts, lists and tuples are recursed into.
 cause: |
-  Lib/dataclasses.py:1565-1567 and :1630-1631 pass pairs to obj_type, as if it took them as dict does.
+  Lib/dataclasses.py:1577-1579 and :1643-1644 pass pairs to obj_type, as if it took them as dict does.
 possible_fix: |
   Copy the container and assign the converted items, as the defaultdict branch does.
 duplicates:

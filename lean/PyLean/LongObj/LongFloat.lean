@@ -17,15 +17,15 @@ namespace PyLean.LongObj
 
 open PyLean PyLean.MathInt PyLean.Registry Cplx
 
-/-- `half_even_correction`, longobject.c:3397. -/
+/-- `half_even_correction`, longobject.c:3480. -/
 def halfEvenCorrection (i : Nat) : Int := ([0, -1, -2, 1, 0, -1, 2, 1] : List Int).getD i 0
 
 /-- `DBL_MANT_DIG + 2`. -/
 def frexpBits : Nat := 55
 
-/-- `_PyLong_Frexp(a, &e)`, longobject.c:3385-3478, for a non-zero magnitude: the rounded
+/-- `_PyLong_Frexp(a, &e)`, longobject.c:3468-3561, for a non-zero magnitude: the rounded
 `x_digits` value, a multiple of 4 with `dx = x / 2**55`, and the exponent. The significand
-`0.5 <= dx < 1` comes back as `x`, with the correction at :3470-3474 applied. -/
+`0.5 <= dx < 1` comes back as `x`, with the correction at :3553-3557 applied. -/
 def frexpMag (ds : List Nat) : Nat × Nat :=
   let aBits := numBits ⟨false, ds⟩
   let xs : List Nat :=
@@ -49,7 +49,7 @@ def frexpMag (ds : List Nat) : Nat × Nat :=
   let x := val rounded
   if x = 2 ^ 55 then (2 ^ 54, aBits + 1) else (x, aBits)
 
-/-- `PyLong_AsDouble(v)`, longobject.c:3484-3513, for an exact int. -/
+/-- `PyLong_AsDouble(v)`, longobject.c:3567-3596, for an exact int. -/
 def asDouble (v : Long) : Py Dbl :=
   if v.isCompact = true then .ok (Dbl.roundQ (v.neg && !v.ds.isEmpty) (val v.ds) 1)
   else
@@ -57,11 +57,11 @@ def asDouble (v : Long) : Py Dbl :=
     if e > 1024 then .error (.overflowError "int too large to convert to float")
     else .ok (Dbl.roundQ v.neg (x * 2 ^ e) (2 ^ 55))
 
-/-- `long_float(v)`, longobject.c:5855-5862. -/
+/-- `long_float(v)`, longobject.c:5954-5961. -/
 def longFloat (v : Long) : Py Dbl := asDouble v
 
-/-- `PyLong_FromDouble(dval)`, longobject.c:435-487. Below `LONG_MAX + 1` the C cast
-truncates; above it the digit loop at :477-482 copies every bit of the significand, which
+/-- `PyLong_FromDouble(dval)`, longobject.c:469-521. Below `LONG_MAX + 1` the C cast
+truncates; above it the digit loop at :511-516 copies every bit of the significand, which
 for those values is the integer itself. -/
 def fromDouble (d : Dbl) : Py Int :=
   let small := !d.isNaN && !d.isInf && d.mag < 2 ^ (63 + 1074)
@@ -70,24 +70,24 @@ def fromDouble (d : Dbl) : Py Int :=
   else if d.isNaN then .error (.valueError "cannot convert float NaN to integer")
   else .ok (if d.sign then -((d.mag >>> 1074 : Nat) : Int) else (d.mag >>> 1074 : Nat))
 
-/-- `MANT_DIG_DIGITS` and `MANT_DIG_BITS`, longobject.c:4500-4501. -/
+/-- `MANT_DIG_DIGITS` and `MANT_DIG_BITS`, longobject.c:4603-4604. -/
 def mantDigDigits : Nat := 53 / 30
 def mantDigBits : Nat := 53 % 30
 
-/-- `a_is_small`, longobject.c:4619-4621. -/
+/-- `a_is_small`, longobject.c:4722-4724. -/
 def isSmallForDouble (ds : List Nat) : Bool :=
   decide (ds.length ≤ mantDigDigits) ||
     (decide (ds.length = mantDigDigits + 1) && decide (ds.getD mantDigDigits 0 >>> mantDigBits = 0))
 
 def divOverflow : PyExc := .overflowError "integer division result too large for a float"
 
-/-- Rounding by modifying the low digit, longobject.c:4729-4733. -/
+/-- Rounding by modifying the low digit, longobject.c:4832-4836. -/
 def roundLow (low extra : Nat) : Nat :=
   let mask := 1 <<< (extra - 1)
   let low := if low &&& mask ≠ 0 ∧ low &&& (3 * mask - 1) ≠ 0 then low + mask else low
   low - low % (2 * mask)
 
-/-- `x //= b` with the inexact flag, longobject.c:4703-4719. -/
+/-- `x //= b` with the inexact flag, longobject.c:4806-4822. -/
 def xDivB (x bs : List Nat) (inexact : Bool) : Py (List Nat × Bool) :=
   if bs.length = 1 then
     let (q, rem) := inplaceDivrem1 (bs.getD 0 0) x
@@ -97,7 +97,7 @@ def xDivB (x bs : List Nat) (inexact : Bool) : Py (List Nat × Bool) :=
     | .ok (q, rem) => .ok (q, inexact || !rem.isEmpty)
     | .error e => .error e
 
-/-- Steps 2 to 5 of `long_true_divide`, longobject.c:4657-4745. -/
+/-- Steps 2 to 5 of `long_true_divide`, longobject.c:4760-4848. -/
 def trueDivideSlow (as bs : List Nat) (negate : Bool) (shift : Int) : Py Dbl :=
   let start : Py (List Nat × Bool) :=
     if shift ≤ 0 then
@@ -133,7 +133,7 @@ def trueDivideSlow (as bs : List Nat) (negate : Bool) (shift : Int) : Py Dbl :=
       else if shift ≥ 0 then .ok (Dbl.roundQ negate (dx * 2 ^ shift.toNat) 1)
       else .ok (Dbl.roundQ negate dx (2 ^ (-shift).toNat))
 
-/-- `long_true_divide(v, w)`, longobject.c:4504-4758. -/
+/-- `long_true_divide(v, w)`, longobject.c:4607-4861. -/
 def trueDivide (a b : Long) : Py Dbl :=
   let negate := a.neg != b.neg
   if b.ds.length = 0 then .error (.zeroDivisionError "division by zero")
@@ -157,13 +157,13 @@ Each states the documented rounding. They need a theory of `Dbl.roundQ`: that it
 nearest double, and that it is exact on the values these functions build. -/
 
 /-- "Rounds to the nearest double, using the round-half-to-even rule in the case of a tie",
-longobject.c:3480-3481, with `OverflowError` exactly when that rounds to infinity. -/
+longobject.c:3563-3564, with `OverflowError` exactly when that rounds to infinity. -/
 def AsDoubleRounds : Prop :=
   ∀ a : Int, match asDouble (.ofInt a) with
     | .ok d => d = Dbl.roundQ (decide (a < 0)) a.natAbs 1
     | .error _ => Dbl.isInf (Dbl.roundQ (decide (a < 0)) a.natAbs 1) = true
 
-/-- "PyLong/PyLong -> float, with correctly rounded result", longobject.c:4498. -/
+/-- "PyLong/PyLong -> float, with correctly rounded result", longobject.c:4601. -/
 def TrueDivideRounds : Prop :=
   ∀ a b : Int, b ≠ 0 → match trueDivide (.ofInt a) (.ofInt b) with
     | .ok d => d = Dbl.roundQ (decide (a < 0) != decide (b < 0)) a.natAbs b.natAbs
@@ -179,19 +179,19 @@ def entriesFloat : List Entry := [
   { id := "longobj-as-double-rounds", pyFile := "Objects/longobject.c"
     pyFns := ["PyLong_AsDouble", "_PyLong_Frexp", "long_float"]
     statement := "float(a) is a rounded to the nearest double, ties to even, and raises OverflowError exactly when that rounds to infinity."
-    source := "comment at longobject.c:3480-3481", status := .open
+    source := "comment at longobject.c:3563-3564", status := .open
     prop := ``AsDoubleRounds
     notes := "Mirrored and difftested. Open: needs a rounding theory of Dbl.roundQ, or the Binary64 model." },
   { id := "longobj-true-divide-rounds", pyFile := "Objects/longobject.c", pyFns := ["long_true_divide"]
     statement := "a / b is the correctly rounded quotient, and raises OverflowError exactly when that rounds to infinity."
-    source := "comment at longobject.c:4498", status := .open
+    source := "comment at longobject.c:4601", status := .open
     prop := ``TrueDivideRounds
     notes := "Mirrored and difftested. Open: needs a rounding theory of Dbl.roundQ, or the Binary64 model." },
   { id := "longobj-from-double", pyFile := "Objects/longobject.c", pyFns := ["PyLong_FromDouble"]
     statement := "int(x) of an integral double x is that integer."
     source := "invariant: round trip", status := .open
     prop := ``FromDoubleRoundTrip
-    notes := "The model takes the value from the significand and does not mirror the digit loop at longobject.c:477-482 line by line, so this entry stays open and its row unmodelled." }
+    notes := "The model takes the value from the significand and does not mirror the digit loop at longobject.c:511-516 line by line, so this entry stays open and its row unmodelled." }
 ]
 
 end PyLean.LongObj

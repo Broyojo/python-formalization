@@ -1,7 +1,7 @@
 file	line	endline	name	signature	status	entry	note
 Modules/_scproxy.c	16	22	cfnum_to_int32	cfnum_to_int32(CFNumberRef num)	todo		
 Modules/_scproxy.c	25	57	cfstring_to_pystring	cfstring_to_pystring(CFStringRef ref)	todo		
-Modules/_scproxy.c	61	131	get_proxy_settings	get_proxy_settings(PyObject* Py_UNUSED(mod), PyObject *Py_UNUSED(ignored))	todo		
-Modules/_scproxy.c	134	168	set_proxy	set_proxy(PyObject* proxies, const char* proto, CFDictionaryRef proxyDict, CFStringRef enabledKey, CFStringRef hostKey, CFStringRef portKey)	todo		
-Modules/_scproxy.c	173	222	get_proxies	get_proxies(PyObject* Py_UNUSED(mod), PyObject *Py_UNUSED(ignored))	todo		
-Modules/_scproxy.c	255	258	PyInit__scproxy	PyInit__scproxy(void)	todo		
+Modules/_scproxy.c	61	132	get_proxy_settings	get_proxy_settings(PyObject* Py_UNUSED(mod), PyObject *Py_UNUSED(ignored))	todo		changed-in-3.15:
+Modules/_scproxy.c	135	170	set_proxy	set_proxy(PyObject* proxies, const char* proto, CFDictionaryRef proxyDict, CFStringRef enabledKey, CFStringRef hostKey, CFStringRef portKey)	todo		changed-in-3.15:
+Modules/_scproxy.c	175	224	get_proxies	get_proxies(PyObject* Py_UNUSED(mod), PyObject *Py_UNUSED(ignored))	todo		
+Modules/_scproxy.c	257	260	PyInit__scproxy	PyInit__scproxy(void)	todo		

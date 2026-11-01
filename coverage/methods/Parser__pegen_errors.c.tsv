@@ -1,10 +1,11 @@
 file	line	endline	name	signature	status	entry	note
-Parser/pegen_errors.c	13	20	raise_unclosed_parentheses_error	raise_unclosed_parentheses_error(Parser *p) {	modelled	pygrammar-peg-raise-unclosed	
-Parser/pegen_errors.c	23	80	_Pypegen_tokenizer_error	_Pypegen_tokenizer_error(Parser *p)	modelled	pygrammar-peg-tokenizer-error	
-Parser/pegen_errors.c	83	114	_Pypegen_raise_decode_error	_Pypegen_raise_decode_error(Parser *p)	modelled	pygrammar-peg-decode-error	
-Parser/pegen_errors.c	117	176	_PyPegen_tokenize_full_source_to_check_for_errors	_PyPegen_tokenize_full_source_to_check_for_errors(Parser *p) {	modelled	pygrammar-peg-tokenize-full-source	
-Parser/pegen_errors.c	181	224	_PyPegen_raise_error	_PyPegen_raise_error(Parser *p, PyObject *errtype, int use_mark, const char *errmsg, ...)	modelled	pygrammar-peg-raise-error	
-Parser/pegen_errors.c	227	267	get_error_line_from_tokenizer_buffers	get_error_line_from_tokenizer_buffers(Parser *p, Py_ssize_t lineno)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Parser/pegen_errors.c	270	364	_PyPegen_raise_error_known_location	_PyPegen_raise_error_known_location(Parser *p, PyObject *errtype, Py_ssize_t lineno, Py_ssize_t col_offset, Py_ssize_t end_lineno, Py_ssize_t end_col_offset, const char *errmsg, va_list va)	modelled	pygrammar-peg-raise-known-location	
-Parser/pegen_errors.c	367	407	_Pypegen_set_syntax_error	_Pypegen_set_syntax_error(Parser* p, Token* last_token) {	modelled	pygrammar-peg-set-syntax-error	
-Parser/pegen_errors.c	410	415	_Pypegen_stack_overflow	_Pypegen_stack_overflow(Parser *p)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/pegen_errors.c	14	21	raise_unclosed_parentheses_error	raise_unclosed_parentheses_error(Parser *p) {	modelled	pygrammar-peg-raise-unclosed	
+Parser/pegen_errors.c	24	81	_Pypegen_tokenizer_error	_Pypegen_tokenizer_error(Parser *p)	modelled	pygrammar-peg-tokenizer-error	
+Parser/pegen_errors.c	84	87	_Pypegen_raise_decode_error	_Pypegen_raise_decode_error(Parser *p)	todo		changed-in-3.15: was pygrammar-peg-decode-error
+Parser/pegen_errors.c	90	131	_Pypegen_raise_decode_error_known_location	_Pypegen_raise_decode_error_known_location(Parser *p, expr_ty a)	todo		changed-in-3.15: new function
+Parser/pegen_errors.c	134	193	_PyPegen_tokenize_full_source_to_check_for_errors	_PyPegen_tokenize_full_source_to_check_for_errors(Parser *p) {	modelled	pygrammar-peg-tokenize-full-source	
+Parser/pegen_errors.c	198	241	_PyPegen_raise_error	_PyPegen_raise_error(Parser *p, PyObject *errtype, int use_mark, const char *errmsg, ...)	modelled	pygrammar-peg-raise-error	
+Parser/pegen_errors.c	244	284	get_error_line_from_tokenizer_buffers	get_error_line_from_tokenizer_buffers(Parser *p, Py_ssize_t lineno)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/pegen_errors.c	287	381	_PyPegen_raise_error_known_location	_PyPegen_raise_error_known_location(Parser *p, PyObject *errtype, Py_ssize_t lineno, Py_ssize_t col_offset, Py_ssize_t end_lineno, Py_ssize_t end_col_offset, const char *errmsg, va_list va)	todo		changed-in-3.15: was pygrammar-peg-raise-known-location
+Parser/pegen_errors.c	384	424	_Pypegen_set_syntax_error	_Pypegen_set_syntax_error(Parser* p, Token* last_token) {	modelled	pygrammar-peg-set-syntax-error	
+Parser/pegen_errors.c	427	432	_Pypegen_stack_overflow	_Pypegen_stack_overflow(Parser *p)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body

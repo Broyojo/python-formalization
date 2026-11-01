@@ -1,18 +1,19 @@
 file	line	endline	name	signature	status	entry	note
-Modules/_sqlite/module.c	57	90	pysqlite_connect	pysqlite_connect(PyObject *module, PyObject *const *args, Py_ssize_t nargsf, PyObject *kwnames)	todo		
-Modules/_sqlite/module.c	101	109	pysqlite_complete_statement_impl	pysqlite_complete_statement_impl(PyObject *module, const char *statement) /*[clinic end generated code: output=e55f1ff1952df558 input=ac45d257375bb828]*/	todo		
-Modules/_sqlite/module.c	122	144	pysqlite_register_adapter_impl	pysqlite_register_adapter_impl(PyObject *module, PyTypeObject *type, PyObject *caster) /*[clinic end generated code: output=a287e8db18e8af23 input=29a5e0f213030242]*/	todo		
-Modules/_sqlite/module.c	157	179	pysqlite_register_converter_impl	pysqlite_register_converter_impl(PyObject *module, PyObject *orig_name, PyObject *callable) /*[clinic end generated code: output=a2f2bfeed7230062 input=159a444971b40378]*/	todo		
-Modules/_sqlite/module.c	191	198	pysqlite_enable_callback_trace_impl	pysqlite_enable_callback_trace_impl(PyObject *module, int enable) /*[clinic end generated code: output=4ff1d051c698f194 input=cb79d3581eb77c40]*/	todo		
-Modules/_sqlite/module.c	212	218	pysqlite_adapt_impl	pysqlite_adapt_impl(PyObject *module, PyObject *obj, PyObject *proto, PyObject *alt) /*[clinic end generated code: output=0c3927c5fcd23dd9 input=a53dc9993e81e15f]*/	todo		
-Modules/_sqlite/module.c	220	229	converters_init	static int converters_init(PyObject* module)	todo		
-Modules/_sqlite/module.c	232	240	load_functools_lru_cache	load_functools_lru_cache(PyObject *module)	todo		
-Modules/_sqlite/module.c	393	403	add_error_constants	add_error_constants(PyObject *module)	todo		
-Modules/_sqlite/module.c	406	415	pysqlite_error_name	pysqlite_error_name(int rc)	todo		
-Modules/_sqlite/module.c	418	517	add_integer_constants	add_integer_constants(PyObject *module) {	todo		
-Modules/_sqlite/module.c	523	539	get_threadsafety	get_threadsafety(pysqlite_state *state)	todo		
-Modules/_sqlite/module.c	542	572	module_traverse	module_traverse(PyObject *module, visitproc visit, void *arg)	todo		
-Modules/_sqlite/module.c	575	615	module_clear	module_clear(PyObject *module)	todo		
-Modules/_sqlite/module.c	618	621	module_free	module_free(void *module)	todo		
-Modules/_sqlite/module.c	649	749	module_exec	module_exec(PyObject *module)	todo		
-Modules/_sqlite/module.c	770	773	PyInit__sqlite3	PyInit__sqlite3(void)	todo		
+Modules/_sqlite/module.c	58	81	pysqlite_connect	pysqlite_connect(PyObject *module, PyObject *const *args, Py_ssize_t nargsf, PyObject *kwnames)	todo		changed-in-3.15:
+Modules/_sqlite/module.c	92	100	pysqlite_complete_statement_impl	pysqlite_complete_statement_impl(PyObject *module, const char *statement) /*[clinic end generated code: output=e55f1ff1952df558 input=ac45d257375bb828]*/	todo		
+Modules/_sqlite/module.c	113	135	pysqlite_register_adapter_impl	pysqlite_register_adapter_impl(PyObject *module, PyTypeObject *type, PyObject *caster) /*[clinic end generated code: output=a287e8db18e8af23 input=29a5e0f213030242]*/	todo		
+Modules/_sqlite/module.c	148	170	pysqlite_register_converter_impl	pysqlite_register_converter_impl(PyObject *module, PyObject *orig_name, PyObject *callable) /*[clinic end generated code: output=a2f2bfeed7230062 input=159a444971b40378]*/	todo		
+Modules/_sqlite/module.c	182	189	pysqlite_enable_callback_trace_impl	pysqlite_enable_callback_trace_impl(PyObject *module, int enable) /*[clinic end generated code: output=4ff1d051c698f194 input=cb79d3581eb77c40]*/	todo		
+Modules/_sqlite/module.c	203	209	pysqlite_adapt_impl	pysqlite_adapt_impl(PyObject *module, PyObject *obj, PyObject *proto, PyObject *alt) /*[clinic end generated code: output=0c3927c5fcd23dd9 input=a53dc9993e81e15f]*/	todo		
+Modules/_sqlite/module.c	211	220	converters_init	static int converters_init(PyObject* module)	todo		
+Modules/_sqlite/module.c	223	231	load_functools_lru_cache	load_functools_lru_cache(PyObject *module)	todo		
+Modules/_sqlite/module.c	384	394	add_error_constants	add_error_constants(PyObject *module)	todo		
+Modules/_sqlite/module.c	397	406	pysqlite_error_name	pysqlite_error_name(int rc)	todo		
+Modules/_sqlite/module.c	409	440	add_keyword_tuple	add_keyword_tuple(PyObject *module)	todo		changed-in-3.15: new function
+Modules/_sqlite/module.c	443	542	add_integer_constants	add_integer_constants(PyObject *module) {	todo		
+Modules/_sqlite/module.c	548	564	get_threadsafety	get_threadsafety(pysqlite_state *state)	todo		
+Modules/_sqlite/module.c	567	597	module_traverse	module_traverse(PyObject *module, visitproc visit, void *arg)	todo		
+Modules/_sqlite/module.c	600	640	module_clear	module_clear(PyObject *module)	todo		
+Modules/_sqlite/module.c	643	646	module_free	module_free(void *module)	todo		
+Modules/_sqlite/module.c	674	778	module_exec	module_exec(PyObject *module)	todo		changed-in-3.15:
+Modules/_sqlite/module.c	800	803	PyInit__sqlite3	PyInit__sqlite3(void)	todo		

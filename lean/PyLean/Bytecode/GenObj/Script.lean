@@ -11,9 +11,9 @@ the `resume` argument for the difftest and the one place the `Hooks` knot is tie
 `hooksAt n` re-enters the model with `hooksAt (n - 1)`, so a body can call
 `next(self)`.
 
-The `yield from` loop mirrors `SEND` (`Python/bytecodes.c:1297-1343`) and
-`CLEANUP_THROW` (`:1470-1488`); `await` adds `_PyEval_GetAwaitable`
-(`Python/ceval.c:3644-3665`).
+The `yield from` loop mirrors `SEND` (`Python/bytecodes.c@3.14.7:1297-1343`) and
+`CLEANUP_THROW` (`@3.14.7:1470-1488`); `await` adds `_PyEval_GetAwaitable`
+(`Python/ceval.c:3646-3667`).
 -/
 
 namespace PyLean.Bytecode.GenObj.Script
@@ -309,7 +309,7 @@ def logReOp (h : H) (n : Nat) (w : W) (r : Ref) (op : ReOp) : W :=
   let (w1, res) := doReOp h n w r op
   log w1 ("re:" ++ opName op ++ ":" ++ retRender res ++ ":" ++ boolStr (runningFlag w1 r))
 
-/-- The receiver of `SEND`, `Python/bytecodes.c:1301-1326`. An exact generator or
+/-- The receiver of `SEND`, `Python/bytecodes.c@3.14.7:1301-1326`. An exact generator or
 coroutine below `FRAME_EXECUTING` is resumed inline (same as `gen_send_ex2`);
 otherwise `tp_iternext` for `None` when there is one, else the `send` method. -/
 def doSend (h : H) (w : W) (recv : O) (v : O) : W × Ret SV :=
@@ -328,7 +328,7 @@ def doSend (h : H) (w : W) (recv : O) (v : O) : W × Ret SV :=
   | _ => (w, .err (some (mkExc "TypeError" "bad receiver")))
 
 /-- `yield from sub`/`await sub`: make the receiver. For `await` this is
-`_PyEval_GetAwaitable`, `Python/ceval.c:3644-3665`, on an object that the script
+`_PyEval_GetAwaitable`, `Python/ceval.c:3646-3667`, on an object that the script
 just made. -/
 def startSub (h : H) (w : W) (kind : GenKind) (s : Sub) : W × Except (Exc SV) O :=
   match s, kind with

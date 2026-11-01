@@ -1,41 +1,74 @@
 file	line	endline	name	signature	status	entry	note
-Lib/_pyrepl/reader.py	44	52	make_default_syntax_table	make_default_syntax_table()	todo		
-Lib/_pyrepl/reader.py	55	61	make_default_commands	make_default_commands()	todo		
-Lib/_pyrepl/reader.py	229	239	Reader.RefreshCache.update_cache	update_cache(self, reader: Reader, screen: list[str], screeninfo: list[tuple[int, list[int]]])	todo		
-Lib/_pyrepl/reader.py	241	246	Reader.RefreshCache.valid	valid(self, reader: Reader)	todo		
-Lib/_pyrepl/reader.py	248	261	Reader.RefreshCache.get_cached_location	get_cached_location(self, reader: Reader)	todo		
-Lib/_pyrepl/reader.py	265	281	Reader.__post_init__	__post_init__(self)	todo		
-Lib/_pyrepl/reader.py	283	284	Reader.collect_keymap	collect_keymap(self)	todo		
-Lib/_pyrepl/reader.py	286	389	Reader.calc_screen	calc_screen(self)	todo		
-Lib/_pyrepl/reader.py	392	401	Reader.process_prompt	process_prompt(prompt: str)	todo		
-Lib/_pyrepl/reader.py	403	418	Reader.bow	bow(self, p: int | None=None)	todo		
-Lib/_pyrepl/reader.py	420	434	Reader.eow	eow(self, p: int | None=None)	todo		
-Lib/_pyrepl/reader.py	436	447	Reader.bol	bol(self, p: int | None=None)	todo		
-Lib/_pyrepl/reader.py	449	459	Reader.eol	eol(self, p: int | None=None)	todo		
-Lib/_pyrepl/reader.py	461	463	Reader.max_column	max_column(self, y: int)	todo		
-Lib/_pyrepl/reader.py	465	466	Reader.max_row	max_row(self)	todo		
-Lib/_pyrepl/reader.py	468	474	Reader.get_arg	get_arg(self, default: int=1)	todo		
-Lib/_pyrepl/reader.py	476	496	Reader.get_prompt	get_prompt(self, lineno: int, cursor_on_line: bool)	todo		
-Lib/_pyrepl/reader.py	498	500	Reader.push_input_trans	push_input_trans(self, itrans: input.KeymapTranslator)	todo		
-Lib/_pyrepl/reader.py	502	503	Reader.pop_input_trans	pop_input_trans(self)	todo		
-Lib/_pyrepl/reader.py	505	529	Reader.setpos_from_xy	setpos_from_xy(self, x: int, y: int)	todo		
-Lib/_pyrepl/reader.py	531	559	Reader.pos2xy	pos2xy(self)	todo		
-Lib/_pyrepl/reader.py	561	565	Reader.insert	insert(self, text: str | list[str])	todo		
-Lib/_pyrepl/reader.py	567	571	Reader.update_cursor	update_cursor(self)	todo		
-Lib/_pyrepl/reader.py	573	578	Reader.after_command	after_command(self, cmd: Command)	todo		
-Lib/_pyrepl/reader.py	580	599	Reader.prepare	prepare(self)	todo		
-Lib/_pyrepl/reader.py	601	604	Reader.last_command_is	last_command_is(self, cls: type)	todo		
-Lib/_pyrepl/reader.py	606	608	Reader.restore	restore(self)	todo		
-Lib/_pyrepl/reader.py	611	620	Reader.suspend	suspend(self)	todo		
-Lib/_pyrepl/reader.py	623	629	Reader.suspend_colorization	suspend_colorization(self)	todo		
-Lib/_pyrepl/reader.py	632	634	Reader.finish	finish(self)	todo		
-Lib/_pyrepl/reader.py	636	639	Reader.error	error(self, msg: str='none')	todo		
-Lib/_pyrepl/reader.py	641	643	Reader.update_screen	update_screen(self)	todo		
-Lib/_pyrepl/reader.py	645	651	Reader.refresh	refresh(self)	todo		
-Lib/_pyrepl/reader.py	653	682	Reader.do_cmd	do_cmd(self, cmd: tuple[str, list[str]])	todo		
-Lib/_pyrepl/reader.py	684	700	Reader.run_hooks	run_hooks(self)	todo		
-Lib/_pyrepl/reader.py	702	743	Reader.handle1	handle1(self, block: bool=True)	todo		
-Lib/_pyrepl/reader.py	745	747	Reader.push_char	push_char(self, char: int | bytes)	todo		
-Lib/_pyrepl/reader.py	749	763	Reader.readline	readline(self, startup_hook: Callback | None=None)	todo		
-Lib/_pyrepl/reader.py	765	769	Reader.bind	bind(self, spec: KeySpec, command: CommandName)	todo		
-Lib/_pyrepl/reader.py	771	773	Reader.get_unicode	get_unicode(self)	todo		
+Lib/_pyrepl/reader.py	69	77	make_default_syntax_table	make_default_syntax_table()	todo		
+Lib/_pyrepl/reader.py	80	86	make_default_commands	make_default_commands()	todo		changed-in-3.15:
+Lib/_pyrepl/reader.py	173	174	RefreshInvalidation.empty	empty(cls)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	177	188	RefreshInvalidation.needs_screen_refresh	needs_screen_refresh(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	191	192	RefreshInvalidation.is_cursor_only	is_cursor_only(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	195	198	RefreshInvalidation.buffer_rebuild_from_pos	buffer_rebuild_from_pos(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	200	203	RefreshInvalidation.with_cursor	with_cursor(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	205	209	RefreshInvalidation.with_buffer	with_buffer(self, from_pos: int)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	211	212	RefreshInvalidation.with_prompt	with_prompt(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	214	215	RefreshInvalidation.with_layout	with_layout(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	217	218	RefreshInvalidation.with_theme	with_theme(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	220	221	RefreshInvalidation.with_message	with_message(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	223	224	RefreshInvalidation.with_overlay	with_overlay(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	226	227	RefreshInvalidation.with_full	with_full(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	323	333	Reader.RefreshCache.update_cache	update_cache(self, reader: Reader, render_lines: list[RenderLine], layout_rows: list[LayoutRow], line_end_offsets: list[int])	todo		changed-in-3.15:
+Lib/_pyrepl/reader.py	335	338	Reader.RefreshCache.valid	valid(self, reader: Reader)	todo		changed-in-3.15:
+Lib/_pyrepl/reader.py	340	377	Reader.RefreshCache.get_cached_location	get_cached_location(self, reader: Reader, buffer_from_pos: int | None=None, *, reuse_full: bool=False)	todo		changed-in-3.15:
+Lib/_pyrepl/reader.py	381	399	Reader.__post_init__	__post_init__(self)	todo		changed-in-3.15:
+Lib/_pyrepl/reader.py	402	403	Reader.screen	screen(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	406	407	Reader.screeninfo	screeninfo(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	409	410	Reader.collect_keymap	collect_keymap(self)	todo		changed-in-3.15:
+Lib/_pyrepl/reader.py	412	467	Reader.calc_screen	calc_screen(self)	todo		changed-in-3.15:
+Lib/_pyrepl/reader.py	469	477	Reader._buffer_refresh_from_pos	_buffer_refresh_from_pos(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	479	487	Reader._compute_lxy	_compute_lxy(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	489	530	Reader._build_source_lines	_build_source_lines(self, offset: int, first_lineno: int)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	532	562	Reader._build_content_lines	_build_content_lines(self, source_lines: tuple[SourceLine, ...], *, prompt_from_cache: bool)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	564	569	Reader._layout_content	_layout_content(self, content_lines: tuple[ContentLine, ...], offset: int)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	571	582	Reader._render_wrapped_rows	_render_wrapped_rows(self, wrapped_rows: tuple[WrappedRow, ...])	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	584	599	Reader._render_message_lines	_render_message_lines(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	601	602	Reader.get_screen_overlays	get_screen_overlays(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	604	611	Reader.compose_rendered_screen	compose_rendered_screen(self, base_screen: RenderedScreen)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	617	649	Reader._render_line	_render_line(self, prefix: str, fragments: tuple[ContentFragment, ...], suffix: str='')	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	652	660	Reader.process_prompt	process_prompt(prompt: str)	todo		changed-in-3.15:
+Lib/_pyrepl/reader.py	662	677	Reader.bow	bow(self, p: int | None=None)	todo		
+Lib/_pyrepl/reader.py	679	693	Reader.eow	eow(self, p: int | None=None)	todo		
+Lib/_pyrepl/reader.py	695	706	Reader.bol	bol(self, p: int | None=None)	todo		
+Lib/_pyrepl/reader.py	708	718	Reader.eol	eol(self, p: int | None=None)	todo		
+Lib/_pyrepl/reader.py	720	722	Reader.max_column	max_column(self, y: int)	todo		changed-in-3.15:
+Lib/_pyrepl/reader.py	724	725	Reader.max_row	max_row(self)	todo		changed-in-3.15:
+Lib/_pyrepl/reader.py	727	733	Reader.get_arg	get_arg(self, default: int=1)	todo		
+Lib/_pyrepl/reader.py	735	751	Reader.get_prompt	get_prompt(self, lineno: int, cursor_on_line: bool)	todo		changed-in-3.15:
+Lib/_pyrepl/reader.py	753	755	Reader.push_input_trans	push_input_trans(self, itrans: input.KeymapTranslator)	todo		
+Lib/_pyrepl/reader.py	757	758	Reader.pop_input_trans	pop_input_trans(self)	todo		
+Lib/_pyrepl/reader.py	760	762	Reader.setpos_from_xy	setpos_from_xy(self, x: int, y: int)	todo		changed-in-3.15:
+Lib/_pyrepl/reader.py	764	767	Reader.pos2xy	pos2xy(self)	todo		changed-in-3.15:
+Lib/_pyrepl/reader.py	769	774	Reader.insert	insert(self, text: str | list[str])	todo		changed-in-3.15:
+Lib/_pyrepl/reader.py	776	777	Reader.invalidate_cursor	invalidate_cursor(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	779	780	Reader.invalidate_buffer	invalidate_buffer(self, from_pos: int)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	782	784	Reader.invalidate_prompt	invalidate_prompt(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	786	787	Reader.invalidate_layout	invalidate_layout(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	789	791	Reader.invalidate_theme	invalidate_theme(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	793	794	Reader.invalidate_message	invalidate_message(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	796	797	Reader.invalidate_overlay	invalidate_overlay(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	799	800	Reader.invalidate_full	invalidate_full(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	802	803	Reader.clear_invalidation	clear_invalidation(self)	todo		changed-in-3.15: new function
+Lib/_pyrepl/reader.py	805	809	Reader.update_cursor	update_cursor(self)	todo		
+Lib/_pyrepl/reader.py	811	816	Reader.after_command	after_command(self, cmd: Command)	todo		changed-in-3.15:
+Lib/_pyrepl/reader.py	818	843	Reader.prepare	prepare(self)	todo		changed-in-3.15:
+Lib/_pyrepl/reader.py	845	848	Reader.last_command_is	last_command_is(self, cls: CommandClass)	todo		changed-in-3.15:
+Lib/_pyrepl/reader.py	850	852	Reader.restore	restore(self)	todo		
+Lib/_pyrepl/reader.py	855	864	Reader.suspend	suspend(self)	todo		
+Lib/_pyrepl/reader.py	867	873	Reader.suspend_colorization	suspend_colorization(self)	todo		
+Lib/_pyrepl/reader.py	875	877	Reader.finish	finish(self)	todo		
+Lib/_pyrepl/reader.py	879	882	Reader.error	error(self, msg: str='none')	todo		changed-in-3.15:
+Lib/_pyrepl/reader.py	884	889	Reader.update_screen	update_screen(self)	todo		changed-in-3.15:
+Lib/_pyrepl/reader.py	891	908	Reader.refresh	refresh(self)	todo		changed-in-3.15:
+Lib/_pyrepl/reader.py	910	940	Reader.do_cmd	do_cmd(self, cmd: CommandInput)	todo		changed-in-3.15:
+Lib/_pyrepl/reader.py	942	958	Reader.run_hooks	run_hooks(self)	todo		
+Lib/_pyrepl/reader.py	960	1005	Reader.handle1	handle1(self, block: bool=True)	todo		changed-in-3.15:
+Lib/_pyrepl/reader.py	1007	1009	Reader.push_char	push_char(self, char: int | bytes)	todo		
+Lib/_pyrepl/reader.py	1011	1025	Reader.readline	readline(self, startup_hook: Callback | None=None)	todo		
+Lib/_pyrepl/reader.py	1027	1031	Reader.bind	bind(self, spec: KeySpec, command: CommandName)	todo		
+Lib/_pyrepl/reader.py	1033	1035	Reader.get_unicode	get_unicode(self)	todo		

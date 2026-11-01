@@ -1,0 +1,10 @@
+file	line	endline	name	signature	status	entry	note
+Lib/profiling/sampling/pstats_collector.py	13	23	PstatsCollector.__init__	__init__(self, sample_interval_usec, *, skip_idle=False)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/pstats_collector.py	25	56	PstatsCollector._process_frames	_process_frames(self, frames, weight=1)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/pstats_collector.py	58	61	PstatsCollector.collect	collect(self, stack_frames, timestamps_us=None)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/pstats_collector.py	63	66	PstatsCollector.export	export(self, filename)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/pstats_collector.py	68	72	PstatsCollector._dump_stats	_dump_stats(self, file)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/pstats_collector.py	75	89	PstatsCollector.create_stats	create_stats(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/pstats_collector.py	91	260	PstatsCollector.print_stats	print_stats(self, sort=-1, limit=None, show_summary=True, mode=None)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/pstats_collector.py	263	270	PstatsCollector._determine_best_unit	_determine_best_unit(max_value)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/pstats_collector.py	272	429	PstatsCollector._print_summary	_print_summary(self, stats_list, total_samples)	todo		changed-in-3.15: new function

@@ -1,0 +1,12 @@
+file	line	endline	name	signature	status	entry	note
+Lib/profiling/sampling/jsonl_collector.py	93	108	JsonlCollector.__init__	__init__(self, sample_interval_usec, *, skip_idle=False, mode=None)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/jsonl_collector.py	110	128	JsonlCollector.process_frames	process_frames(self, frames, _thread_id, weight=1)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/jsonl_collector.py	130	168	JsonlCollector.export	export(self, filename)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/jsonl_collector.py	170	183	JsonlCollector._build_meta_record	_build_meta_record(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/jsonl_collector.py	185	193	JsonlCollector._build_end_record	_build_end_record(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/jsonl_collector.py	195	202	JsonlCollector._iter_final_agg_entries	_iter_final_agg_entries(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/jsonl_collector.py	204	231	JsonlCollector._get_or_create_frame_id	_get_or_create_frame_id(self, filename, location, funcname)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/jsonl_collector.py	233	242	JsonlCollector._intern_string	_intern_string(self, value)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/jsonl_collector.py	245	257	JsonlCollector._location_to_export_fields	_location_to_export_fields(location)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/jsonl_collector.py	259	263	JsonlCollector._write_chunked_records	_write_chunked_records(self, output, base_record, chunk_field, entries)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/jsonl_collector.py	266	268	JsonlCollector._write_message	_write_message(output, record)	todo		changed-in-3.15: new function

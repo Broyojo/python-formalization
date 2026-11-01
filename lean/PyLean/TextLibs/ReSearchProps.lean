@@ -1,7 +1,7 @@
 import PyLean.TextLibs.ReCompileProps
 
 /-!
-The literal-prefix search of `SRE(search)`, `Modules/_sre/sre_lib.h:1774-1823`, against the search it
+The literal-prefix search of `SRE(search)`, `Modules/_sre/sre_lib.h:1829-1878`, against the search it
 replaces. `searchOuter` and `searchInner` are the KMP scan: on a partial match they move the pattern
 along by the overlap table and never look at the same text twice. `NaiveR` tries each start in turn,
 and runs the rest of the pattern wherever the prefix occurs. The scan tries the same starts in the

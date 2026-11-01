@@ -4,7 +4,7 @@ import PyLean.JsonMod.DecFuel
 `strict`: "If strict is false (true is the default), then control characters
 will be allowed inside strings. Control characters in this context are those
 with character codes in the 0-31 range" (`JSONDecoder.__init__`,
-decoder.py:322-325). `strict=True` differs from `strict=False` only by an
+decoder.py:334-337). `strict=True` differs from `strict=False` only by an
 "Invalid control character" error at such a character, in both twins.
 -/
 
@@ -349,7 +349,7 @@ theorem stopToJde_srel {α : Type} {s : PStr} {msg : Nat → String} {a b : DR �
 
 /-- For every document, `strict=True` and `strict=False` give the same result,
 except that `strict=True` may raise "Invalid control character" at a character
-in the range 0-31, in both twins (`JSONDecoder.__init__`, decoder.py:322-325). -/
+in the range 0-31, in both twins (`JSONDecoder.__init__`, decoder.py:334-337). -/
 def StrictOnlyControl : Prop :=
   ∀ (cfg : DCfg) (s : PStr),
     SRel s ctrlMsgPy (loadsPy { cfg with strict := true } s) (loadsPy { cfg with strict := false } s) ∧

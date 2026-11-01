@@ -10,5 +10,6 @@ Modules/_testcapi/long.c	133	141	pylong_aspid	pylong_aspid(PyObject *module, PyO
 Modules/_testcapi/long.c	145	152	layout_to_dict	layout_to_dict(const PyLongLayout *layout)	excluded		test-support: only for CPython's own tests
 Modules/_testcapi/long.c	156	204	pylong_export	pylong_export(PyObject *module, PyObject *obj)	excluded		test-support: only for CPython's own tests
 Modules/_testcapi/long.c	208	254	pylongwriter_create	pylongwriter_create(PyObject *module, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/long.c	258	262	get_pylong_layout	get_pylong_layout(PyObject *module, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/long.c	282	288	_PyTestCapi_Init_Long	_PyTestCapi_Init_Long(PyObject *mod)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/long.c	258	273	pylongwriter_finish_bug	pylongwriter_finish_bug(PyObject *module, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/long.c	277	281	get_pylong_layout	get_pylong_layout(PyObject *module, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/long.c	302	308	_PyTestCapi_Init_Long	_PyTestCapi_Init_Long(PyObject *mod)	excluded		test-support: only for CPython's own tests

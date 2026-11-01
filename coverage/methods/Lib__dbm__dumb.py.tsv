@@ -1,22 +1,23 @@
 file	line	endline	name	signature	status	entry	note
-Lib/dbm/dumb.py	48	72	_Database.__init__	__init__(self, filebasename, mode, flag='c')	todo		
-Lib/dbm/dumb.py	74	90	_Database._create	_create(self, flag)	todo		
-Lib/dbm/dumb.py	93	109	_Database._update	_update(self, flag)	todo		
-Lib/dbm/dumb.py	114	138	_Database._commit	_commit(self)	todo		
-Lib/dbm/dumb.py	142	144	_Database._verify_open	_verify_open(self)	todo		
-Lib/dbm/dumb.py	146	154	_Database.__getitem__	__getitem__(self, key)	todo		
-Lib/dbm/dumb.py	160	168	_Database._addval	_addval(self, val)	todo		
-Lib/dbm/dumb.py	174	178	_Database._setval	_setval(self, pos, val)	todo		
-Lib/dbm/dumb.py	183	187	_Database._addkey	_addkey(self, key, pos_and_siz_pair)	todo		
-Lib/dbm/dumb.py	189	216	_Database.__setitem__	__setitem__(self, key, val)	todo		
-Lib/dbm/dumb.py	226	239	_Database.__delitem__	__delitem__(self, key)	todo		
-Lib/dbm/dumb.py	241	245	_Database.keys	keys(self)	todo		
-Lib/dbm/dumb.py	247	249	_Database.items	items(self)	todo		
-Lib/dbm/dumb.py	251	260	_Database.__contains__	__contains__(self, key)	todo		
-Lib/dbm/dumb.py	262	266	_Database.iterkeys	iterkeys(self)	todo		
-Lib/dbm/dumb.py	269	273	_Database.__len__	__len__(self)	todo		
-Lib/dbm/dumb.py	275	279	_Database.close	close(self)	todo		
-Lib/dbm/dumb.py	283	284	_Database._chmod	_chmod(self, file)	todo		
-Lib/dbm/dumb.py	286	287	_Database.__enter__	__enter__(self)	todo		
-Lib/dbm/dumb.py	289	290	_Database.__exit__	__exit__(self, *args)	todo		
-Lib/dbm/dumb.py	293	319	open	open(file, flag='c', mode=438)	todo		
+Lib/dbm/dumb.py	46	70	_Database.__init__	__init__(self, filebasename, mode, flag='c')	todo		
+Lib/dbm/dumb.py	72	88	_Database._create	_create(self, flag)	todo		
+Lib/dbm/dumb.py	91	107	_Database._update	_update(self, flag)	todo		
+Lib/dbm/dumb.py	112	136	_Database._commit	_commit(self)	todo		
+Lib/dbm/dumb.py	140	142	_Database._verify_open	_verify_open(self)	todo		
+Lib/dbm/dumb.py	144	152	_Database.__getitem__	__getitem__(self, key)	todo		
+Lib/dbm/dumb.py	158	166	_Database._addval	_addval(self, val)	todo		
+Lib/dbm/dumb.py	172	176	_Database._setval	_setval(self, pos, val)	todo		
+Lib/dbm/dumb.py	181	185	_Database._addkey	_addkey(self, key, pos_and_siz_pair)	todo		
+Lib/dbm/dumb.py	187	214	_Database.__setitem__	__setitem__(self, key, val)	todo		
+Lib/dbm/dumb.py	224	237	_Database.__delitem__	__delitem__(self, key)	todo		
+Lib/dbm/dumb.py	239	243	_Database.keys	keys(self)	todo		
+Lib/dbm/dumb.py	245	247	_Database.items	items(self)	todo		
+Lib/dbm/dumb.py	249	258	_Database.__contains__	__contains__(self, key)	todo		
+Lib/dbm/dumb.py	260	264	_Database.iterkeys	iterkeys(self)	todo		
+Lib/dbm/dumb.py	267	271	_Database.__len__	__len__(self)	todo		
+Lib/dbm/dumb.py	273	277	_Database.close	close(self)	todo		
+Lib/dbm/dumb.py	281	282	_Database._chmod	_chmod(self, file)	todo		
+Lib/dbm/dumb.py	284	285	_Database.__enter__	__enter__(self)	todo		
+Lib/dbm/dumb.py	287	288	_Database.__exit__	__exit__(self, *args)	todo		
+Lib/dbm/dumb.py	290	316	_Database.reorganize	reorganize(self)	todo		changed-in-3.15: new function
+Lib/dbm/dumb.py	320	346	open	open(file, flag='c', mode=438)	todo		

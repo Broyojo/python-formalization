@@ -74,7 +74,7 @@ theorem same_py {a b : DCfg} (h : Same a b) (s : PStr) : ∀ n : Nat,
     · simp only [pyObjLoop, h.strict, hs, h.mkObj, ho]
 
 /-- `object_pairs_hook` takes priority (`JSONDecoder.__init__` docstring,
-decoder.py:300-305): when it is given, `object_hook` is never called, for every
+decoder.py:304-309): when it is given, `object_hook` is never called, for every
 document, in both twins. -/
 def PairsHookPriority : Prop :=
   ∀ (cfg : DCfg) (g : List (PStr × JVal) → DR JVal) (s : PStr), cfg.pairsHook.isSome = true →

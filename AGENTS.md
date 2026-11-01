@@ -85,7 +85,7 @@ from inside your worktree:
 
 The wrapper syncs your worktree to the pod and runs the command there, so edit
 files locally as usual; do not edit on the pod, because the next sync overwrites
-it. `python3` on the pod is 3.14.7 and the `vendor/` paths below work there too.
+it. `python3` on the pod is 3.15.2 and the `vendor/` paths below work there too.
 Reading files, git and `gh` stay local. Scratch `.lean` files must live inside
 your worktree to be synced (not under `lean/PyLean/`, and do not commit them).
 
@@ -114,17 +114,39 @@ Shared files (`Core.lean`, `DiffCore.lean`, `Registry.lean`, `DiffMain.lean`,
 Do not edit them. If you truly need a new `PyExc` constructor or helper, put a
 local definition in your module and mention it in your report.
 
-Python version: everything is pinned to 3.14.7 today, and the project will migrate
-to 3.15.2, the latest release, once the current quality round ends. Until a module
-is told to migrate, keep citing 3.14.7. Formalize one version; other versions get
-reproducers and difftests only.
+Python version: the project formalizes CPython 3.15.2, the latest release, and only
+that version. A bug counts if it reproduces on 3.15.2. Main gets reproducers only.
+
+Moving from 3.14.7, where the project started. `scripts/repin.py` compared every
+function with its 3.15.2 body:
+- A row with an unchanged body kept its status, but only that function's own text
+  was compared. A changed callee, macro, header or clinic converter does not show,
+  so the difftest on 3.15.2 is what checks it.
+- A changed or new row is `todo` with a note starting `changed-in-3.15:`, and
+  `check_coverage.py --prefill` will not credit it. Mirror the 3.15.2 body, update
+  the theorem, then delete the note from the row. Deleting the note is your claim
+  that the model now matches that body, so do not delete it for any other reason.
+- `coverage/repin-3.15.2.tsv` lists every changed, moved, removed and new row, with
+  the entries they used to have. Use it as your worklist, most-modelled file first.
+- A citation that fell in changed code reads `Objects/x.c@3.14.7:12`, or `@3.14.7:12`
+  when bare. `grep -rn '@3.14.7:' lean/PyLean/<M>` lists yours. Each is a line nobody
+  has checked against 3.15.2, so fix it when you recheck that function.
+- `coverage/difftest-migrating.txt` lists difftests that still fail on 3.15.2. A
+  failure there does not fail the audit. A mismatch on 3.15.2 is a real model change
+  until proven otherwise: fix the model and reach 100% on several seeds, as always,
+  then remove your line. Do not delete a generator case to get there.
+- `coverage/gone-in-3.15.txt` lists bug records and entries for 3.14.7 behaviour
+  that 3.15.2 does not have. `check_bugs.py` skips them and they credit no row. The
+  model of that function still describes 3.14.7: update it, state what is true now,
+  and remove the id once the entry describes 3.15.2.
+- Reviews of changed rows are in `coverage/review/archive-3.14.7/`. They no longer
+  count, but they say what the last reviewer found wrong.
 
 Sources (absolute paths; `vendor/` is not in git worktrees):
-- CPython 3.14.7 source (matches `python3`, cite these line numbers):
-  `/Users/broyojo/code/projects/python-formalization/vendor/cpython-3.14`
-- CPython 3.15.2 source, the migration target:
+- CPython 3.15.2 source (matches `python3`, cite these line numbers):
   `/Users/broyojo/code/projects/python-formalization/vendor/cpython-3.15`
-  (its interpreter on the pod is `$HOME/pf/vendor/cpython-3.15/python`)
+- CPython 3.14.7 source, only for diffing what changed:
+  `/Users/broyojo/code/projects/python-formalization/vendor/cpython-3.14`
 - CPython main source: `/Users/broyojo/code/projects/python-formalization/vendor/cpython-main`
 - CPython main interpreter (to check bugs still exist on main):
   `/Users/broyojo/code/projects/python-formalization/vendor/cpython-main/python.exe`
@@ -194,7 +216,7 @@ validation done in the wrong order. Look there first.
 
 - `theorem fooBar_proven : FooBar` or `theorem fooBar_refuted : ¬FooBar`; the
   registry entry names both. A refutation needs `bugs/<id>.yaml` whose
-  reproducer prints `REPRODUCED <id>` on python3 3.14.7; also run it with the
+  reproducer prints `REPRODUCED <id>` on python3 3.15.2; also run it with the
   main interpreter and record the result.
 - Never weaken a statement to get a proof. If it is false, refute it.
 - Forbidden: `sorry`, `admit`, `native_decide`, `bv_decide`, `ofReduceBool`,

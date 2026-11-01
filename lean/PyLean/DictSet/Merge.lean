@@ -5,7 +5,7 @@ import PyLean.DictSet.Props3
 
 `dict_dict_merge` reads the source with `_PyDict_Next` while `__eq__` of the source's keys runs
 against the receiver, and that `__eq__` can change either dict. Its only defence is the count test
-at `dictobject.c:3981`. These statements hold for every key protocol, with no `Honest`.
+at `dictobject.c:4249`. These statements hold for every key protocol, with no `Honest`.
 -/
 
 namespace PyLean.DictSet
@@ -18,14 +18,14 @@ section Loop
 variable (P : Proto K (PyDict K V)) (ov orig fuel : Nat) (pos pos' : Int) (mp s : PyDict K V)
   (src src' : PeerDict K V) (key : K) (value : V) (hash : Int)
 
-/-- A failure in the loop body comes first: the test at :3978 precedes the one at :3981. -/
+/-- A failure in the loop body comes first: the test at :4246 precedes the one at :4249. -/
 theorem mergeLive_error (e : PyExc) (h1 : mp.peer = some src)
     (h2 : dictNext src.toDict pos = some (pos', key, value, hash))
     (h3 : mergeStep P ov key hash value mp = (.error e, s)) :
     mergeLive P ov orig (fuel + 1) pos mp = (.error e, s) := by
   simp only [mergeLive, h1, h2, h3]
 
-/-- The test at :3981 fires on a changed count, in the state the callback left. -/
+/-- The test at :4249 fires on a changed count, in the state the callback left. -/
 theorem mergeLive_guard (h1 : mp.peer = some src)
     (h2 : dictNext src.toDict pos = some (pos', key, value, hash))
     (h3 : mergeStep P ov key hash value mp = (.ok (), s)) (h4 : s.peer = some src')
@@ -79,7 +79,7 @@ def MergeQuiet : Prop :=
 theorem mergeQuiet_proven : MergeQuiet := fun _ _ _ _ hp ov other ok hob d =>
   mergeLive_items hp ov other ok hob d
 
-/-- `override` is forced to 1 on an empty receiver (:3905). -/
+/-- `override` is forced to 1 on an empty receiver (:4183). -/
 def MergeEmptyTarget : Prop :=
   ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (other mp : PyDict K V) (ov : Nat),
     mp.used = 0 → dictDictMerge P other ov mp = dictDictMerge P other 1 mp
@@ -143,7 +143,7 @@ theorem dictDictMergeBody_proven : DictDictMergeBody := by
         simp only [dictDictMerge, e1, e2, e3, Bool.false_or, Bool.false_eq_true, if_false, if_true, ho]
         cases mp.body <;> rfl
 
-/-- The one big resize at the top of the rest of `dict_dict_merge` (:3933-3946): it runs only when the
+/-- The one big resize at the top of the rest of `dict_dict_merge` (:4205-4217): it runs only when the
 source does not fit, a failure ends the merge, and the loop starts from what it left, with the source
 in hand and its count as `orig_size`. -/
 def MergeRestBody : Prop :=
@@ -168,7 +168,7 @@ theorem mergeRestBody_proven : MergeRestBody := by
   · simp only [mergeRest]
     rw [if_neg h]
 
-/-- The branches of the loop body of `dict_dict_merge` on `override` (:3956-3975). -/
+/-- The branches of the loop body of `dict_dict_merge` on `override` (:4227-4243). -/
 def MergeStepBody : Prop :=
   ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (key : K) (hash : Int) (value : V)
     (ov : Nat) (d s : PyDict K V) (e : PyExc),
@@ -238,7 +238,7 @@ def isMutated : Py Unit → Bool
 
 end Witness
 
-/-- The test at :3981 is reachable through `dictMerge` itself. -/
+/-- The test at :4249 is reachable through `dictMerge` itself. -/
 def MergeGuardReachable : Prop :=
   ∃ (P : Proto Nat (PyDict Nat Nat)) (mp other : PyDict Nat Nat),
     isMutated (dictMerge P (.dict other) 1 mp).1 = true

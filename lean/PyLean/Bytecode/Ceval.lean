@@ -367,7 +367,7 @@ def framePushAndInit (P : Program) (funcv locals : Val) (args : List Val)
   pure { f with fast := fast }
 
 /-- `PyFunction_New`-time `locals`: `code_flags & CO_OPTIMIZED ? NULL : globals`
-(`Python/bytecodes.c:3763`). -/
+(`Python/bytecodes.c:4402`). -/
 def localsFor (co : Code) (func : FuncObj) : Val :=
   if flagSet co.flags coOptimized then .null else func.globals
 
@@ -529,8 +529,8 @@ def eqBool (a b : Val) : RM Bool := do
   if a == b then pure true
   else om.isTrue ctx (← om.richCompare ctx a b 2)
 
-/-- `dict_unhashable_type`, `Objects/dictobject.c:2352`, and its twin
-`set_unhashable_type`, `Objects/setobject.c:228`: an exact `TypeError` from
+/-- `dict_unhashable_type`, `Objects/dictobject.c:2441`, and its twin
+`set_unhashable_type`, `Objects/setobject.c:346`: an exact `TypeError` from
 `hash()` is re-raised with the container in the message. -/
 def hashFor (what : String) (key : Val) : RM Int :=
   tryExc (om.hash ctx key) fun e => do
@@ -579,7 +579,7 @@ def setAdd (sv key : Val) : RM Unit := do
 def frozensetHash (items : Array (Int × Val)) : Int :=
   items.toList.foldl (fun h kv => (h + kv.1) % 2305843009213693951) 7
 
-/-- `_PySet_Contains`, `set_contains_lock_held`, `Objects/setobject.c:2270-2285`:
+/-- `_PySet_Contains`, `set_contains_lock_held`, `Objects/setobject.c@3.14.7:2270-2285`:
 an unhashable `set` key is looked up as if it were a `frozenset`. -/
 def setContains (sv key : Val) : RM Bool := do
   let h ← tryExc (hashFor om ctx "set element" key) fun e => do

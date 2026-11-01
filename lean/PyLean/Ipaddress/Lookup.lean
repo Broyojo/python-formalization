@@ -150,7 +150,7 @@ def ContainsMem : Prop :=
 theorem containsMem_proven : ContainsMem :=
   fun n x hn hx => contains_eq_mem n x hn hx
 
-/-- `overlaps` docstring, ipaddress.py:747: "Tell if self is partly contained
+/-- `overlaps` docstring, ipaddress.py:744: "Tell if self is partly contained
 in other", i.e. the two blocks share an address. -/
 def OverlapsShareAddress : Prop :=
   ∀ a b : Net, a.Valid → b.Valid → a.bits = b.bits →

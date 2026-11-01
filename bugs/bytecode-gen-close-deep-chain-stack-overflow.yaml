@@ -6,9 +6,9 @@ module: bytecode
 files: [Objects/genobject.c]
 functions: ["gen_close", "gen_close_iter", "_gen_throw", "_PyGen_Finalize"]
 summary: |
-  gen_close (:386-453) closes the sub-iterator of a suspended `yield from` through
-  gen_close_iter (:335-360), which calls gen_close directly for an exact generator or
-  coroutine; _gen_throw (:465-595) calls itself at :506 in the same way. Neither has a
+  gen_close (:463-601) closes the sub-iterator of a suspended `yield from` through
+  gen_close_iter (:424-449), which calls gen_close directly for an exact generator or
+  coroutine; _gen_throw (:624-726) calls itself at :683 in the same way. Neither has a
   recursion check: the walk down the chain runs no Python code, so nothing reaches
   _Py_EnterRecursiveCall or the eval loop's limit. A chain does not need deep Python
   recursion to build, because a delegation link is formed by one short resume of the
@@ -73,8 +73,8 @@ promised_by: |
   The Python docs for sys.setrecursionlimit() tie crashes to raising the limit; this needs
   no such thing.
 cause: |
-  Objects/genobject.c:341 (gen_close_iter calls gen_close) and :405 (gen_close calls
-  gen_close_iter), and :506 (_gen_throw calls itself), with no _Py_EnterRecursiveCall or
+  Objects/genobject.c:430 (gen_close_iter calls gen_close) and :495 (gen_close calls
+  gen_close_iter), and :683 (_gen_throw calls itself), with no _Py_EnterRecursiveCall or
   _Py_ReachedRecursionLimit on the path. Main has the same recursion
   (Objects/genobject.c gen_close_iter:432, gen_close).
 possible_fix: |

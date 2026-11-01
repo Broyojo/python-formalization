@@ -1,2 +1,0 @@
-file	line	endline	name	signature	status	entry	note
-Modules/expat/xcsinc.c	33	48	xcslen	xcslen(const XML_Char *s) {	excluded		vendored: third-party code

@@ -20,7 +20,7 @@ def calendarEntries : List Entry := [
     "invariant (Gregorian cycle)" ``IsleapCycle ``isleapCycle_proven,
   cal "weekday-cycle" ["weekday"]
     "weekday results are in 0..6, and adding any multiple of 400 to the year keeps the result, for all int years; so the substitution 2000 + year % 400 is exact."
-    "invariant; calendar.py:158-159" ``WeekdayCycle ``weekdayCycle_proven,
+    "invariant; calendar.py:177-178" ``WeekdayCycle ``weekdayCycle_proven,
   cal "weekday-next-day" ["weekday", "_nextmonth"]
     "Consecutive days have consecutive weekdays in every int year, also over month and year ends and across years 0 and 10000."
     "invariant" ``WeekdayNextDay ``weekdayNextDay_proven,
@@ -37,7 +37,7 @@ def calendarEntries : List Entry := [
   cal "firstweekday-modulo" ["Calendar.__init__", "Calendar.getfirstweekday",
       "Calendar.setfirstweekday", "Calendar.iterweekdays"]
     "For every int first weekday, getfirstweekday is that int mod 7 and iterweekdays is a permutation of 0..6 starting there; fw and fw + 7 give the same week."
-    "docstring of iterweekdays; calendar.py:204" ``FirstweekdayModulo ``firstweekdayModulo_proven,
+    "docstring of iterweekdays; calendar.py:223" ``FirstweekdayModulo ``firstweekdayModulo_proven,
   cal "itermonthdays-shape" ["Calendar.itermonthdays"]
     "itermonthdays yields 28 to 42 entries, a multiple of 7, whose non-zero entries are exactly 1..ndays, for every int year and first weekday."
     "docstring" ``ItermonthdaysShape ``itermonthdaysShape_proven,
@@ -90,16 +90,16 @@ def calendarEntries : List Entry := [
     "docstring" ``FormatmonthLines ``formatmonthLines_proven,
   cal "formatmonthname" ["TextCalendar.formatmonthname", "HTMLCalendar.formatmonthname"]
     "Both formatmonthname raise IllegalMonthError for a month outside 1..12, including 0; a valid month gives the centred name."
-    "calendar.py:378, :511" ``FormatmonthnameSpec ``formatmonthnameSpec_proven,
+    "calendar.py:397, :511" ``FormatmonthnameSpec ``formatmonthnameSpec_proven,
   cal "formatyear-lines" ["TextCalendar.formatyear", "TextCalendar.pryear"]
     "For m >= 1, formatyear has a title block and, per month row, a blank block, a names line, a header line and height week lines, each followed by max(1, l) newlines; pryear prints the same."
     "docstring" ``FormatyearLines ``formatyearLines_proven,
   cal "text-year-months" ["TextCalendar.formatyear", "_CLIDemoCalendar.formatyear"]
-    "For every m >= 1 the months computed for row i at calendar.py:422 are the months yeardays2calendar lays out in row i."
+    "For every m >= 1 the months computed for row i at calendar.py:441 are the months yeardays2calendar lays out in row i."
     "invariant" ``TextYearMonths ``textYearMonths_proven,
   cal "formatyear-month-count" ["TextCalendar.formatyear", "HTMLCalendar.formatyear"]
     "TextCalendar.formatyear with m == 0 raises the ValueError of range(); HTMLCalendar.formatyear with width <= 0 behaves as width 1."
-    "calendar.py:545, :551; actual behaviour of the two clamps" ``FormatyearMonthCount
+    "calendar.py:561, :551; actual behaviour of the two clamps" ``FormatyearMonthCount
     ``formatyearMonthCount_proven,
   cal "demo-is-text" ["_CLIDemoCalendar.__init__", "_CLIDemoCalendar.formatweek",
       "_CLIDemoCalendar.formatmonth", "_CLIDemoCalendar.formatyear", "_CLIDemoLocaleCalendar.__init__"]
@@ -107,17 +107,17 @@ def calendarEntries : List Entry := [
     "twin: subclass vs base class" ``DemoIsText ``demoIsText_proven,
   cal "demo-year-column" ["_CLIDemoCalendar.formatyear"]
     "In a row of distinct months, formatweek gets the highlighted day exactly in the column of the highlighted month."
-    "calendar.py:727-749" ``DemoYearColumn ``demoYearColumn_proven,
+    "calendar.py:795-817" ``DemoYearColumn ``demoYearColumn_proven,
   cal "html-month-lines" ["HTMLCalendar.formatday", "HTMLCalendar.formatweek",
       "HTMLCalendar.formatweekday", "HTMLCalendar.formatweekheader", "HTMLCalendar.formatmonth"]
     "formatmonth succeeds for every year and first weekday and has one line each for the table tag, the name row, the header row, each week and the closing tag."
     "docstring" ``HtmlMonthLines ``htmlMonthLines_proven,
   cal "html-year-months" ["HTMLCalendar.formatyear"]
     "For every width >= 1 the rows of formatyear hold January..December exactly once, at most width per row."
-    "docstring; calendar.py:551-553" ``HtmlYearMonths ``htmlYearMonths_proven,
+    "docstring; calendar.py:565-567" ``HtmlYearMonths ``htmlYearMonths_proven,
   cal "xmlcharref-ascii" ["HTMLCalendar.formatyearpage"]
     "encode(ascii, xmlcharrefreplace) gives only ASCII and leaves ASCII unchanged, so formatyearpage(encoding='ascii') is pure ASCII for every css."
-    "calendar.py:584" ``XmlcharrefAscii ``xmlcharrefAscii_proven,
+    "calendar.py:603" ``XmlcharrefAscii ``xmlcharrefAscii_proven,
   cal "different-locale-restores" ["different_locale.__init__", "different_locale.__enter__",
       "different_locale.__exit__"]
     "If the locale can be set, the body runs under it and LC_TIME is restored afterwards, also after an exception in the body; otherwise locale.Error is raised and nothing changed."
@@ -125,28 +125,28 @@ def calendarEntries : List Entry := [
   cal "get-default-locale" ["_get_default_locale", "LocaleTextCalendar.__init__",
       "LocaleHTMLCalendar.__init__"]
     "_get_default_locale is the current LC_TIME, or the user's locale when that is C; the calendars keep an explicit locale."
-    "calendar.py:600-607" ``GetDefaultLocaleSpec ``getDefaultLocaleSpec_proven,
+    "calendar.py:633-640" ``GetDefaultLocaleSpec ``getDefaultLocaleSpec_proven,
   cal "locale-calendar-methods" ["LocaleTextCalendar.formatweekday", "LocaleTextCalendar.formatmonthname",
       "LocaleHTMLCalendar.formatweekday", "LocaleHTMLCalendar.formatmonthname"]
     "The overridden locale methods return the base method with that locale's names and leave LC_TIME unchanged."
     "docstrings of the locale classes" ``LocaleCalendarMethods ``localeCalendarMethods_proven,
   cal "main-checks" ["main"]
     "main exits with status 2 for --locale without --encoding and for a month with -t html, and raises IllegalMonthError for a bad month in text mode."
-    "calendar.py:875-911" ``MainChecks ``mainChecks_proven,
+    "calendar.py:945-982" ``MainChecks ``mainChecks_proven,
   cal "main-month-output" ["main"]
     "python -m calendar YEAR MONTH prints _CLIDemoCalendar.formatmonth; for another month than today's, that is TextCalendar.formatmonth."
-    "calendar.py:912-922" ``MainMonthOutput ``mainMonthOutput_proven,
+    "calendar.py:983-993" ``MainMonthOutput ``mainMonthOutput_proven,
   cal "setfirstweekday" ["setfirstweekday", "IllegalWeekdayError.__init__", "IllegalWeekdayError.__str__"]
     "Module setfirstweekday stores 0..6 and raises IllegalWeekdayError with the source's message otherwise."
     "Doc/library/calendar.rst" ``SetfirstweekdaySpec ``setfirstweekdaySpec_proven,
   cal "module-getattr" ["__getattr__"]
     "calendar.January and calendar.February are 1 and 2; other missing names raise AttributeError."
-    "calendar.py:46-56" ``ModuleGetattrSpec ``moduleGetattrSpec_proven,
+    "calendar.py:47-57" ``ModuleGetattrSpec ``moduleGetattrSpec_proven,
   cal "localized-tables" ["_localized_month.__init__", "_localized_month.__getitem__",
       "_localized_month.__len__", "_localized_day.__init__", "_localized_day.__getitem__",
       "_localized_day.__len__"]
     "month_name and day_name have lengths 13 and 7, month 0 is empty, negative indices count from the end, out-of-range is IndexError, [:] is the whole table, and date(2001, 1, i+1) is weekday i."
-    "calendar.py:96-131" ``LocalizedTables ``localizedTables_proven
+    "calendar.py:97-132" ``LocalizedTables ``localizedTables_proven
 ]
 
 end PyLean.CoreLibs.CalStat

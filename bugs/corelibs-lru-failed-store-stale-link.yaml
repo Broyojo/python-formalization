@@ -11,7 +11,7 @@ summary: |
   `__eq__` on a colliding key, the link stays in the ring with no dict entry. The ring is now one longer than
   the dict, and once the wrapper is full it picks that link as oldest and `del cache[oldkey]` raises KeyError
   from a call that has nothing to do with the failed key. The C wrapper stores first and links afterwards
-  (Modules/_functoolsmodule.c:1403-1408), so it recovers. The twin's own comment at
+  (Modules/_functoolsmodule.c:1499-1504), so it recovers. The twin's own comment at
   bounded_lru_cache_update_lock_held explains why that order was chosen.
 likelihood: |
   Very low. It needs a key class whose `__eq__` raises on a hash collision, and the pure-Python wrapper, which
@@ -62,7 +62,7 @@ observed: |
 promised_by: |
   Twin agreement, and the docstring of the C function, which says the order is deliberate.
 cause: |
-  Lib/functools.py:692, where the chained assignment links the ring before `cache[key] = link`.
+  Lib/functools.py:710, where the chained assignment links the ring before `cache[key] = link`.
 possible_fix: |
   Write `cache[key] = link` as its own statement before linking.
 duplicates:

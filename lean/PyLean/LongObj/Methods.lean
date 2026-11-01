@@ -10,23 +10,23 @@ namespace PyLean.LongObj
 
 open PyLean PyLean.MathInt PyLean.Registry
 
-/-- `long_long(v)`, longobject.c:5636-5644, `long_long_meth`, :6400-6403 and
-`long_long_getter`, :6406-6409: the value, as an exact `int`. `_PyLong_Copy`,
-longobject.c:217-243, for a subclass instance gives the same digits. -/
+/-- `long_long(v)`, longobject.c:5735-5743, `long_long_meth`, :6507-6510 and
+`long_long_getter`, :6513-6516: the value, as an exact `int`. `_PyLong_Copy`,
+longobject.c:222-248, for a subclass instance gives the same digits. -/
 def longLong (v : Long) : Long := v
 
-/-- `long_get0`, longobject.c:5969-5972 (`int.imag`). -/
+/-- `long_get0`, longobject.c:6073-6076 (`int.imag`). -/
 def longGet0 : Long := ⟨false, []⟩
-/-- `long_get1`, longobject.c:5975-5978 (`int.denominator`). -/
+/-- `long_get1`, longobject.c:6079-6082 (`int.denominator`). -/
 def longGet1 : Long := ⟨false, [1]⟩
 
-/-- `int___getnewargs___impl`, longobject.c:5962-5966: a one-element tuple. -/
+/-- `int___getnewargs___impl`, longobject.c:6066-6070: a one-element tuple. -/
 def getNewArgs (v : Long) : List Long := [longLong v]
 
-/-- `int_as_integer_ratio_impl`, longobject.c:6263-6274. -/
+/-- `int_as_integer_ratio_impl`, longobject.c:6361-6369. -/
 def asIntegerRatio (v : Long) : Long × Long := (longLong v, longGet1)
 
-/-- `int_is_integer_impl`, longobject.c:6418-6422. -/
+/-- `int_is_integer_impl`, longobject.c:6526-6530. -/
 def isInteger (_ : Long) : Bool := true
 
 /-- `tp_basicsize` and `tp_itemsize` of `int`: `offsetof(PyLongObject, ob_digit)` and
@@ -34,20 +34,20 @@ def isInteger (_ : Long) : Bool := true
 def intBasicSize : Nat := 24
 def intItemSize : Nat := 4
 
-/-- `int___sizeof___impl`, longobject.c:6177-6184. -/
+/-- `int___sizeof___impl`, longobject.c:6274-6281. -/
 def intSizeof (v : Long) : Nat := intBasicSize + intItemSize * max v.ds.length 1
 
-/-- The values `PyLong_GetInfo`, longobject.c:6613-6640, stores in `sys.int_info`:
+/-- The values `PyLong_GetInfo`, longobject.c:6721-6748, stores in `sys.int_info`:
 `bits_per_digit`, `sizeof_digit`, `default_max_str_digits`,
 `str_digits_check_threshold`. -/
 def intInfo : List Nat := [30, 4, 4300, 640]
 
-/-- `PyUnstable_Long_IsCompact`, longobject.c:6668-6670. -/
+/-- `PyUnstable_Long_IsCompact`, longobject.c:6776-6778. -/
 def unstableIsCompact (v : Long) : Bool := v.isCompact
-/-- `PyUnstable_Long_CompactValue`, longobject.c:6675-6677. -/
+/-- `PyUnstable_Long_CompactValue`, longobject.c:6783-6785. -/
 def unstableCompactValue (v : Long) : Int := v.medium
 
-/-- What `PyLong_Export`, longobject.c:6771-6810, fills in: a value that fits `int64_t`,
+/-- What `PyLong_Export`, longobject.c:6883-6922, fills in: a value that fits `int64_t`,
 or the sign and the digit array. -/
 inductive LongExport where
   | value (x : Int)
@@ -59,8 +59,8 @@ def longExport (v : Long) : LongExport :=
   if overflow = 0 then .value x
   else .digits v.neg (if v.ds.length = 0 then [0] else v.ds)
 
-/-- `PyLongWriter_Create`, longobject.c:6827-6849, filled with `ds`, then
-`PyLongWriter_Finish`, :6866-6875. -/
+/-- `PyLongWriter_Create`, longobject.c:6939-6961, filled with `ds`, then
+`PyLongWriter_Finish`, :6978-7009. -/
 def longWriter (negative : Bool) (ds : List Nat) : Py Long :=
   if ds.length = 0 then .error (.valueError "ndigits must be positive")
   else

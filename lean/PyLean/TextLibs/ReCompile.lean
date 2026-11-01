@@ -59,19 +59,19 @@ def OP_RANGE_UNI_IGNORE : Nat := 42
 
 def MAXCODE : Nat := 2 ^ 32 - 1
 
-/-- `_sre.ascii_iscased`, `Modules/_sre/sre.c:436-437`. -/
+/-- `_sre.ascii_iscased`, `Modules/_sre/sre.c:437-438`. -/
 def asciiIscased (c : Nat) : Bool := c < 128 && isLetter c
 
-/-- `sre_lower_ascii`, `Modules/_sre/sre.c:143-146`. -/
+/-- `sre_lower_ascii`, `Modules/_sre/sre.c:144-147`. -/
 def lowerAscii (c : Nat) : Nat := if 65 ≤ c ∧ c ≤ 90 then c + 32 else c
 
-/-- `sre_lower_unicode`, `Modules/_sre/sre.c:172-175`. -/
+/-- `sre_lower_unicode`, `Modules/_sre/sre.c:173-176`. -/
 def lowerUnicode (c : Nat) : Nat := PyLean.UnicodeObj.toLowercase c
 
-/-- `sre_upper_unicode`, `Modules/_sre/sre.c:177-180`. -/
+/-- `sre_upper_unicode`, `Modules/_sre/sre.c:178-181`. -/
 def upperUnicode (c : Nat) : Nat := PyLean.UnicodeObj.toUppercase c
 
-/-- `_sre.unicode_iscased`, `Modules/_sre/sre.c:452-453`. -/
+/-- `_sre.unicode_iscased`, `Modules/_sre/sre.c:453-454`. -/
 def unicodeIscased (c : Nat) : Bool := c != lowerUnicode c || c != upperUnicode c
 
 /-- The `iscased`, `tolower`, `fixes` triple of `_compile`, `Lib/re/_compiler.py:47-57`. -/
@@ -268,7 +268,7 @@ def bytesToCodes (b : List Nat) : List Nat :=
       ((s.take 4).foldr (fun x acc => acc * 256 + x) 0) :: go fuel (s.drop 4)
   go b.length b
 
-/-- The chunking of a big charset, `:378-392`. -/
+/-- The chunking of a big charset, `@3.14.7:378-392`. -/
 def bigCharset (cm : Array Bool) : List Nat :=
   let bits := cm.toList
   let rec go2 : (i : Nat) → List Bool → List (List Bool × Nat) → List Nat → Nat → List Bool →

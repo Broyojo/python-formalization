@@ -84,7 +84,7 @@ def entries : List Entry := [
   { id := "json-dumps-fast-path", pyFile := "Lib/json/__init__.py"
     pyFns := ["dumps", "dump", "JSONEncoder.__init__"]
     statement := "With every keyword argument at its default, the cached encoder of dumps and dump is the encoder JSONEncoder(...) would build."
-    source := "invariant: fast path vs slow path, Lib/json/__init__.py:167-169, 231-233", status := .proven
+    source := "invariant: fast path vs slow path, Lib/json/__init__.py:166-168, 231-233", status := .proven
     prop := ``DumpsFastPath, thm := some ``dumpsFastPath_proven },
   { id := "json-dump-is-dumps", pyFile := "Lib/json/__init__.py"
     pyFns := ["dump", "dumps", "_make_iterencode", "JSONEncoder.iterencode"]
@@ -157,12 +157,12 @@ def entries : List Entry := [
   { id := "json-strict-only-control", pyFile := "Lib/json/decoder.py"
     pyFns := ["JSONDecoder.__init__", "py_scanstring", "scanstring_unicode"]
     statement := "For every document, loads with strict=True gives the same result as with strict=False, or an 'Invalid control character' error at a character of code 0-31, in both twins."
-    source := "JSONDecoder.__init__ docstring, Lib/json/decoder.py:322-325", status := .proven
+    source := "JSONDecoder.__init__ docstring, Lib/json/decoder.py:334-337", status := .proven
     prop := ``StrictOnlyControl, thm := some ``strictOnlyControl_proven },
   { id := "json-strict-literal", pyFile := "Lib/json/decoder.py"
     pyFns := ["py_scanstring", "scanstring_unicode"]
     statement := "A string literal without quotes or backslashes is accepted with strict=False and gives its characters back; with strict=True it is accepted exactly when it has no character of code 0-31; in both twins."
-    source := "JSONDecoder.__init__ docstring, Lib/json/decoder.py:322-325", status := .proven
+    source := "JSONDecoder.__init__ docstring, Lib/json/decoder.py:334-337", status := .proven
     prop := ``StrictLiteral, thm := some ``strictLiteral_proven },
   { id := "json-ensure-ascii-output", pyFile := "Lib/json/encoder.py"
     pyFns := ["JSONEncoder.encode", "py_encode_basestring_ascii", "ascii_escape_unicode", "ascii_escape_unichar"]
@@ -183,12 +183,12 @@ def entries : List Entry := [
   { id := "json-loads-rejects", pyFile := "Lib/json/__init__.py"
     pyFns := ["loads"]
     statement := "json.loads rejects an argument that is not str, bytes or bytearray with TypeError naming its type, and a str with a leading U+FEFF with JSONDecodeError at pos 0, whatever the options."
-    source := "Lib/json/__init__.py:339-347", status := .proven
+    source := "Lib/json/__init__.py:357-365", status := .proven
     prop := ``LoadsRejects, thm := some ``loadsRejects_proven },
   { id := "json-loads-fast-path", pyFile := "Lib/json/__init__.py"
     pyFns := ["loads", "JSONDecoder.__init__"]
     statement := "The fast path of json.loads agrees with an explicit JSONDecoder with the default options, on every argument."
-    source := "invariant: fast path vs slow path, Lib/json/__init__.py:349-352", status := .proven
+    source := "invariant: fast path vs slow path, Lib/json/__init__.py:367-371", status := .proven
     prop := ``LoadsFastPath, thm := some ``loadsFastPath_proven },
   { id := "json-load-read", pyFile := "Lib/json/__init__.py"
     pyFns := ["load", "loads"]
@@ -198,13 +198,13 @@ def entries : List Entry := [
   { id := "json-detect-encoding", pyFile := "Lib/json/__init__.py"
     pyFns := ["detect_encoding"]
     statement := "A str of at least two characters whose first two are ASCII and not NUL, encoded in UTF-8, UTF-16-LE/BE or UTF-32-LE/BE without a BOM, is detected as that encoding."
-    source := "RFC 4627 section 3, cited by Lib/json/__init__.py:248-275", status := .proven
+    source := "RFC 4627 section 3, cited by Lib/json/__init__.py:247-274", status := .proven
     prop := ``DetectEncoding, thm := some ``detectEncoding_proven
     notes := "Hypothesis: ASCII and not NUL is what RFC 4627 relies on. A one-character text: json-detect-encoding-1." },
   { id := "json-detect-bom", pyFile := "Lib/json/__init__.py"
     pyFns := ["detect_encoding"]
     statement := "With a BOM, detect_encoding names the codec that consumes it: utf-8-sig, utf-32, utf-16, unless a UTF-16-LE BOM is followed by two NUL bytes, which is the UTF-32-LE BOM."
-    source := "Lib/json/__init__.py:250-255", status := .proven
+    source := "Lib/json/__init__.py:249-254", status := .proven
     prop := ``DetectBom, thm := some ``detectBom_proven },
   { id := "json-detect-encoding-1", pyFile := "Lib/json/__init__.py"
     pyFns := ["detect_encoding"]
@@ -224,13 +224,13 @@ def entries : List Entry := [
   { id := "json-decoder-init", pyFile := "Lib/json/decoder.py"
     pyFns := ["JSONDecoder.__init__"]
     statement := "JSONDecoder.__init__: the defaults give the default decoder, a false parse_float, parse_int or parse_constant behaves as if it were not given, and an unknown keyword raises TypeError."
-    source := "Lib/json/decoder.py:327-337", status := .proven
+    source := "Lib/json/decoder.py:339-350", status := .proven
     prop := ``DecoderInit, thm := some ``decoderInit_proven
     notes := "The false-callable behaviour is `parse_float or float`; bugforge reported it as cpython#158729, closed." },
   { id := "json-pairs-hook-priority", pyFile := "Lib/json/decoder.py"
     pyFns := ["JSONObject", "_parse_object_unicode", "JSONDecoder.__init__"]
     statement := "When object_pairs_hook is given, object_hook is never called: for every document, setting object_hook changes nothing, in both twins."
-    source := "JSONDecoder.__init__ docstring, Lib/json/decoder.py:300-305", status := .proven
+    source := "JSONDecoder.__init__ docstring, Lib/json/decoder.py:304-309", status := .proven
     prop := ``PairsHookPriority, thm := some ``pairsHookPriority_proven },
   { id := "json-scanstring-twins", pyFile := "Lib/json/decoder.py"
     pyFns := ["py_scanstring"]
@@ -253,12 +253,12 @@ def entries : List Entry := [
   { id := "json-scanner-call-raw", pyFile := "Modules/_json.c"
     pyFns := ["scanner_call", "raise_stop_iteration", "_build_rval_index_tuple"]
     statement := "JSONDecoder.raw_decode with the C scanner is scanner_call with StopIteration turned into JSONDecodeError, on every str and int index."
-    source := "Lib/json/decoder.py:360-363", status := .proven
+    source := "Lib/json/decoder.py:373-376", status := .proven
     prop := ``ScannerCallRaw, thm := some ``scannerCallRaw_proven },
   { id := "json-scanner-new", pyFile := "Modules/_json.c"
     pyFns := ["scanner_new"]
     statement := "make_scanner accepts an object with the six attributes, reading strict by truth value, and one without strict raises AttributeError naming it."
-    source := "Modules/_json.c:1174-1196", status := .proven
+    source := "Modules/_json.c:1254-1280", status := .proven
     prop := ``ScannerNew, thm := some ``scannerNew_proven },
   { id := "json-encoder-new", pyFile := "Modules/_json.c"
     pyFns := ["encoder_new"]
@@ -273,12 +273,12 @@ def entries : List Entry := [
   { id := "json-encoder-string", pyFile := "Modules/_json.c"
     pyFns := ["encoder_encode_string"]
     statement := "encoder_encode_string: with fast_encode the C function; otherwise the result of encoder, which must be a str, and its exception propagates."
-    source := "Modules/_json.c:1449-1467", status := .proven
+    source := "Modules/_json.c@3.14.7:1449-1467", status := .proven
     prop := ``EncoderString, thm := some ``encoderString_proven },
   { id := "json-indent-cache", pyFile := "Modules/_json.c"
     pyFns := ["create_indent_cache", "update_indent_cache", "get_item_separator", "write_newline_indent"]
     statement := "From create_indent_cache at any level i >= 0, at every level k reached one at a time, get_item_separator returns item_separator + '\\n' + indent * (k + i), write_newline_indent returns '\\n' + indent * (k + i), and the invariant of the comment holds."
-    source := "the comment at Modules/_json.c:1275-1284", status := .proven
+    source := "the comment at Modules/_json.c:1362-1371", status := .proven
     prop := ``IndentCacheSpec, thm := some ``indentCacheSpec_proven
     notes := "This is what makes cEnc, which writes those strings directly, faithful to the C code. A negative level cannot come from iterencode, which passes 0." },
   { id := "json-indent-cache-size", pyFile := "Modules/_json.c"
@@ -295,13 +295,13 @@ def entries : List Entry := [
   { id := "json-tool-invalid", pyFile := "Lib/json/tool.py"
     pyFns := ["main"]
     statement := "python -m json.tool on an invalid document writes nothing and ends with SystemExit carrying the text of the exception."
-    source := "Lib/json/tool.py:114-115", status := .proven
+    source := "Lib/json/tool.py:115-116", status := .proven
     prop := ``ToolInvalid, thm := some ``toolInvalid_proven
     notes := "main is modelled after parser.parse_args(); argparse itself is out of scope." },
   { id := "json-tool-lines", pyFile := "Lib/json/tool.py"
     pyFns := ["main"]
     statement := "With --json-lines the objects are decoded lazily: a line is written before the next one is decoded, so the lines before a bad one reach the output."
-    source := "Lib/json/tool.py:92", status := .proven
+    source := "Lib/json/tool.py:93", status := .proven
     prop := ``ToolLinesPrefix, thm := some ``toolLinesPrefix_proven },
   { id := "json-tool-roundtrip", pyFile := "Lib/json/tool.py"
     pyFns := ["main"]

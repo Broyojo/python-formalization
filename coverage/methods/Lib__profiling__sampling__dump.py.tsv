@@ -1,0 +1,17 @@
+file	line	endline	name	signature	status	entry	note
+Lib/profiling/sampling/dump.py	32	37	_theme_for	_theme_for(file, colorize)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/dump.py	40	43	_color	_color(text, color, theme)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/dump.py	46	59	_frame_fields	_frame_fields(frame)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/dump.py	62	69	_location_field	_location_field(location, index, default=None)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/dump.py	72	81	_status_text	_status_text(status)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/dump.py	84	85	_is_async_dump	_is_async_dump(stack_frames)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/dump.py	88	110	_iter_dump_sections	_iter_dump_sections(stack_frames)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/dump.py	113	120	_display_filename	_display_filename(filename)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/dump.py	123	150	_format_frame	_format_frame(frame, theme)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/dump.py	153	168	_source_offsets	_source_offsets(line, location, lineno)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/dump.py	171	181	_trim_source_line	_trim_source_line(line, offsets)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/dump.py	184	195	_highlight_source_line	_highlight_source_line(line, offsets, theme)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/dump.py	198	209	_source_line	_source_line(filename, location, lineno, theme)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/dump.py	212	242	_section_header	_section_header(*, pid, interpreter_id, thread_id, status, label, show_pid, show_interpreter, theme)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/dump.py	245	288	format_stack_dump	format_stack_dump(stack_frames, *, pid=None, file=None, colorize=None)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/dump.py	291	295	print_stack_dump	print_stack_dump(stack_frames, *, pid=None, file=None, colorize=None)	todo		changed-in-3.15: new function

@@ -81,7 +81,7 @@ theorem findEnd_gt (s : TokState) (n : Nat) (f i e : Nat)
         omega
 
 /-- `buf <= cur <= inp` (the invariant in the comment on `struct tok_state`,
-`Parser/lexer/state.h:78`) survives one `tok_nextc`: the tokenizer never reads past the end
+`Parser/lexer/state.h:79`) survives one `tok_nextc`: the tokenizer never reads past the end
 of the data it holds. -/
 def NextcStaysInBuffer : Prop :=
   ∀ s : TokState, s.cur ≤ s.inp → (nextcS s).2.cur ≤ (nextcS s).2.inp

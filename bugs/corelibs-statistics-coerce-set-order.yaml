@@ -15,7 +15,7 @@ likelihood: |
   Low. It takes two unrelated numeric subclasses in one data set. When it happens it is hard to
   debug, since it changes from run to run.
 maybe_intended: |
-  Partly. "Coercion rules are currently an implementation detail" (statistics.py:1568), so the exact
+  Partly. "Coercion rules are currently an implementation detail" (statistics.py:1569), so the exact
   type may be free; a function that sometimes raises on the same input is still not a rule. On the
   built-in numeric types the order does not matter: that narrowed statement is proven
   (`CoerceBuiltinOrder`).
@@ -50,11 +50,11 @@ observed: |
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same. REPRODUCED.
 promised_by: |
   Invariant: equal data in the same order should give the same result. The source's "Coerce types T
-  and S to a common type, or raise TypeError" (statistics.py:1566).
+  and S to a common type, or raise TypeError" (statistics.py:1567).
 cause: |
-  Lib/statistics.py:1507 and :1554 reduce over the set built at :1487 and :1525. At :1585-1586 two
-  unrelated int subclasses resolve to whichever comes second; at :1588-1591 a Fraction subclass and
-  float give float, while two sibling Fraction subclasses fall through to the TypeError at :1594.
+  Lib/statistics.py:1508 and :1555 reduce over the set built at :1488 and :1526. At :1586-1587 two
+  unrelated int subclasses resolve to whichever comes second; at :1589-1592 a Fraction subclass and
+  float give float, while two sibling Fraction subclasses fall through to the TypeError at :1595.
 possible_fix: |
   Keep the types in first-seen order (a dict instead of a set), which makes the result
   deterministic for a given data order.

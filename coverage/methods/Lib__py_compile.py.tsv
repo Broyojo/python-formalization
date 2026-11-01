@@ -3,4 +3,4 @@ Lib/py_compile.py	46	60	PyCompileError.__init__	__init__(self, exc_type, exc_val
 Lib/py_compile.py	62	63	PyCompileError.__str__	__str__(self)	todo		
 Lib/py_compile.py	72	76	_get_default_invalidation_mode	_get_default_invalidation_mode()	todo		
 Lib/py_compile.py	79	173	compile	compile(file, cfile=None, dfile=None, doraise=False, optimize=-1, invalidation_mode=None, quiet=0)	todo		
-Lib/py_compile.py	176	208	main	main()	todo		candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output
+Lib/py_compile.py	176	210	main	main()	todo		changed-in-3.15: candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output

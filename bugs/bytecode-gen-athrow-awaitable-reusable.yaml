@@ -6,15 +6,15 @@ module: bytecode
 files: [Objects/genobject.c]
 functions: ["async_gen_athrow_send", "async_gen_athrow_iternext", "async_gen_unwrap_value"]
 summary: |
-  async_gen_athrow_send closes the awaitable on the first step (check_error, :2214-2217), but later
-  steps in athrow() mode end at :2189-2190:
+  async_gen_athrow_send closes the awaitable on the first step (check_error, :2404-2407), but later
+  steps in athrow() mode end at @3.14.7:2189-2190:
       if (o->agt_args) { return async_gen_unwrap_value(o->agt_gen, retval); }
   That clears ag_running_async and raises StopIteration(value), and returns without setting
-  agt_state = AWAITABLE_STATE_CLOSED. asend (:1819-1821), athrow's own throw (:2269-2272) and aclose
+  agt_state = AWAITABLE_STATE_CLOSED. asend (:2003-2005), athrow's own throw (:2459-2462) and aclose
   mode (check_error) all do. So once a body handles the thrown exception by awaiting something and
   then yields, the athrow() awaitable has finished but stays in AWAITABLE_STATE_ITER. Sending to it
   again does not raise "cannot reuse already awaited aclose()/athrow()": it resumes the generator
-  through :2188, with ag_running False, because only the INIT path sets the flag. While it sits at
+  through :2378, with ag_running False, because only the INIT path sets the flag. While it sits at
   its next await, a concurrent __anext__() is not detected as running.
 likelihood: |
   Low: a finished awaitable has to be driven again, which normal `await` never does. Hand-written
@@ -63,9 +63,9 @@ observed: |
   aclose()/athrow(). NOT REPRODUCED.
   3.14 branch tip on 2026-11-01 (gh api contents, ref=3.14): this code is unchanged from 3.14.7.
 promised_by: |
-  The error message itself, and the sibling paths at :1819-1821 and :2269-2272.
+  The error message itself, and the sibling paths at :2003-2005 and :2459-2462.
 cause: |
-  Objects/genobject.c:2189-2190 return without the two lines the throw path has at :2269-2272.
+  Objects/genobject.c@3.14.7:2189-2190 return without the two lines the throw path has at :2459-2462.
 possible_fix: |
   Same as main:
       retval = async_gen_unwrap_value(o->agt_gen, retval);

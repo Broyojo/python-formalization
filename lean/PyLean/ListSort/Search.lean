@@ -6,8 +6,8 @@ import PyLean.ListSort.Stable
 For a predicate `P` on indices `[0, n)` that is true exactly below some `k`,
 the shared binary-search loop and both galloping searches return `k`, for every
 `hint < n` (`gallopCore_spec`). On a sorted vector this gives the documented
-results of `gallop_left` (`a[k-1] < key <= a[k]`, `listobject.c:2009-2011`) and
-`gallop_right` (`a[k-1] <= key < a[k]`, `:2098-2100`).
+results of `gallop_left` (`a[k-1] < key <= a[k]`, `listobject.c:2077-2079`) and
+`gallop_right` (`a[k-1] <= key < a[k]`, `:2166-2168`).
 -/
 
 namespace PyLean.ListSort

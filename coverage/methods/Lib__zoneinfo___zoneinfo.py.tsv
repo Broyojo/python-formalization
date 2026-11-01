@@ -10,7 +10,7 @@ Lib/zoneinfo/_zoneinfo.py	106	107	ZoneInfo.key	key(self)	todo
 Lib/zoneinfo/_zoneinfo.py	109	110	ZoneInfo.utcoffset	utcoffset(self, dt)	todo		
 Lib/zoneinfo/_zoneinfo.py	112	113	ZoneInfo.dst	dst(self, dt)	todo		
 Lib/zoneinfo/_zoneinfo.py	115	116	ZoneInfo.tzname	tzname(self, dt)	todo		
-Lib/zoneinfo/_zoneinfo.py	118	160	ZoneInfo.fromutc	fromutc(self, dt)	todo		
+Lib/zoneinfo/_zoneinfo.py	118	160	ZoneInfo.fromutc	fromutc(self, dt)	todo		changed-in-3.15:
 Lib/zoneinfo/_zoneinfo.py	162	187	ZoneInfo._find_trans	_find_trans(self, dt)	todo		
 Lib/zoneinfo/_zoneinfo.py	189	195	ZoneInfo._get_local_timestamp	_get_local_timestamp(self, dt)	todo		
 Lib/zoneinfo/_zoneinfo.py	197	201	ZoneInfo.__str__	__str__(self)	todo		
@@ -31,7 +31,7 @@ Lib/zoneinfo/_zoneinfo.py	465	487	_TZStr._get_trans_info	_get_trans_info(self, t
 Lib/zoneinfo/_zoneinfo.py	489	511	_TZStr._get_trans_info_fromutc	_get_trans_info_fromutc(self, ts, year)	todo		
 Lib/zoneinfo/_zoneinfo.py	514	517	_post_epoch_days_before_year	_post_epoch_days_before_year(year)	todo		
 Lib/zoneinfo/_zoneinfo.py	523	532	_DayOffset.__init__	__init__(self, d, julian, hour=2, minute=0, second=0)	todo		
-Lib/zoneinfo/_zoneinfo.py	534	544	_DayOffset.year_to_epoch	year_to_epoch(self, year)	todo		
+Lib/zoneinfo/_zoneinfo.py	534	544	_DayOffset.year_to_epoch	year_to_epoch(self, year)	todo		changed-in-3.15:
 Lib/zoneinfo/_zoneinfo.py	566	581	_CalendarOffset.__init__	__init__(self, m, w, d, hour=2, minute=0, second=0)	todo		
 Lib/zoneinfo/_zoneinfo.py	584	590	_CalendarOffset._ymd2ord	_ymd2ord(cls, year, month, day)	todo		
 Lib/zoneinfo/_zoneinfo.py	593	624	_CalendarOffset.year_to_epoch	year_to_epoch(self, year)	todo		

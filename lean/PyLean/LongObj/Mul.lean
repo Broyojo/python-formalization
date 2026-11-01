@@ -1,7 +1,7 @@
 import PyLean.LongObj.AddSub
 
 /-!
-`x_mul`, longobject.c:3831-3926, both the gradeschool path and the squaring path
+`x_mul`, longobject.c:3934-4029, both the gradeschool path and the squaring path
 (HAC 14.16) taken when the two operands are the same object. Every `twodigits`
 carry is checked to fit `uint64_t`, every pointer store to stay in the buffer.
 -/
@@ -12,7 +12,7 @@ open PyLean PyLean.MathInt
 
 /-! ## Gradeschool -/
 
-/-- One outer iteration of the gradeschool path, longobject.c:3914-3922: add
+/-- One outer iteration of the gradeschool path, longobject.c:4017-4025: add
 `f * b[0:]` into `z` starting at the row's offset. -/
 def mulRow (f : Nat) : List Nat → List Nat → Nat → Py (List Nat)
   | zs, [], carry =>
@@ -29,7 +29,7 @@ def mulRow (f : Nat) : List Nat → List Nat → Nat → Py (List Nat)
     return (c &&& MASK) :: r
   | [], _ :: _, _ => .error cOverflow
 
-/-- The outer loop `for (i = 0; i < size_a; ++i)`, longobject.c:3902-3923. The
+/-- The outer loop `for (i = 0; i < size_a; ++i)`, longobject.c:4005-4026. The
 argument `zs` is `z + i`; the digit below it is finished. -/
 def schoolLoop (bs : List Nat) : List Nat → List Nat → Py (List Nat)
   | [], zs => .ok zs
@@ -100,7 +100,7 @@ theorem schoolLoop_spec {bs : List Nat} (hb : IsDigits bs) : ∀ (as mid : List 
 
 /-! ## Squaring -/
 
-/-- `if (carry) { ... }`, longobject.c:3877-3898. -/
+/-- `if (carry) { ... }`, longobject.c:3980-4001. -/
 def sqEnd (zs : List Nat) (carry : Nat) : Py (List Nat) :=
   if carry ≠ 0 then
     match zs with
@@ -116,7 +116,7 @@ def sqEnd (zs : List Nat) (carry : Nat) : Py (List Nat) :=
       else return d :: t
   else .ok zs
 
-/-- `while (pa < paend)`, longobject.c:3871-3876. -/
+/-- `while (pa < paend)`, longobject.c:3974-3979. -/
 def sqInner (f : Nat) : List Nat → List Nat → Nat → Py (List Nat)
   | [], zs, carry => sqEnd zs carry
   | p :: pa, z :: zs, carry => do
@@ -125,7 +125,7 @@ def sqInner (f : Nat) : List Nat → List Nat → Nat → Py (List Nat)
     return (c &&& MASK) :: r
   | _ :: _, [], _ => .error cOverflow
 
-/-- One outer iteration of the squaring path, longobject.c:3853-3898. `pa` is
+/-- One outer iteration of the squaring path, longobject.c:3956-4001. `pa` is
 `a + i + 1`, `zs` is `z + 2*i`. -/
 def sqRow (f : Nat) (pa : List Nat) (zs : List Nat) : Py (List Nat) :=
   match zs with
@@ -135,7 +135,7 @@ def sqRow (f : Nat) (pa : List Nat) (zs : List Nat) : Py (List Nat) :=
     let r ← sqInner (f <<< 1) pa zs (c >>> 30)
     return (c &&& MASK) :: r
 
-/-- The outer loop of the squaring path, longobject.c:3851-3899. -/
+/-- The outer loop of the squaring path, longobject.c:3954-4002. -/
 def sqLoop : List Nat → List Nat → Py (List Nat)
   | [], zs => .ok zs
   | f :: as, zs => do
@@ -434,7 +434,7 @@ theorem sqLoop_spec (rest : List Nat) : ∀ (f : Nat) (m : List Nat) (e : Nat),
 
 /-! ## `x_mul` -/
 
-/-- `x_mul(a, b)`, longobject.c:3831-3926. `same` is the pointer test `a == b` at :3843. -/
+/-- `x_mul(a, b)`, longobject.c:3934-4029. `same` is the pointer test `a == b` at :3946. -/
 def xMul (same : Bool) (a b : List Nat) : Py (List Nat) := do
   longAlloc (a.length + b.length)
   let z := List.replicate (a.length + b.length) 0

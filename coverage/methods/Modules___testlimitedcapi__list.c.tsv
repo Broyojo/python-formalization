@@ -1,16 +1,16 @@
 file	line	endline	name	signature	status	entry	note
-Modules/_testlimitedcapi/list.c	11	15	list_check	list_check(PyObject* Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/list.c	18	22	list_check_exact	list_check_exact(PyObject* Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/list.c	25	28	list_new	list_new(PyObject* Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/list.c	31	35	list_size	list_size(PyObject *Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/list.c	38	47	list_getitem	list_getitem(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/list.c	50	59	list_get_item_ref	list_get_item_ref(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/list.c	62	73	list_setitem	list_setitem(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/list.c	76	87	list_insert	list_insert(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/list.c	90	99	list_append	list_append(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/list.c	102	112	list_getslice	list_getslice(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/list.c	115	125	list_setslice	list_setslice(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/list.c	128	132	list_sort	list_sort(PyObject* Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/list.c	135	139	list_reverse	list_reverse(PyObject* Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/list.c	142	146	list_astuple	list_astuple(PyObject* Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/list.c	168	175	_PyTestLimitedCAPI_Init_List	_PyTestLimitedCAPI_Init_List(PyObject *m)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/list.c	13	17	list_check	list_check(PyObject* Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/list.c	20	24	list_check_exact	list_check_exact(PyObject* Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/list.c	27	30	list_new	list_new(PyObject* Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/list.c	33	37	list_size	list_size(PyObject *Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/list.c	40	49	list_getitem	list_getitem(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/list.c	52	61	list_get_item_ref	list_get_item_ref(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/list.c	64	75	list_setitem	list_setitem(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/list.c	78	89	list_insert	list_insert(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/list.c	92	101	list_append	list_append(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/list.c	104	114	list_getslice	list_getslice(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/list.c	117	127	list_setslice	list_setslice(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/list.c	130	134	list_sort	list_sort(PyObject* Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/list.c	137	141	list_reverse	list_reverse(PyObject* Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/list.c	144	148	list_astuple	list_astuple(PyObject* Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/list.c	170	177	_PyTestLimitedCAPI_Init_List	_PyTestLimitedCAPI_Init_List(PyObject *m)	excluded		test-support: only for CPython's own tests

@@ -36,7 +36,7 @@ reproducer: |
 expected: |
   ValueError "identifier field can't represent 'None' constant", as for any other Name.
 promised_by: |
-  Python/ast.c validates hand-built trees before compilation; `assert` in Python/codegen.c:3189
+  Python/ast.c validates hand-built trees before compilation; `assert` in Python/codegen.c:3298
   (codegen_nameop) states the invariant that validation must establish.
 cause: |
   Python/ast.c, validate_expr, NamedExpr_kind: `ret = validate_expr(exp->v.NamedExpr.value, Load);`

@@ -16,13 +16,13 @@ Lib/locale.py	326	328	atof	atof(string, func=float)	todo
 Lib/locale.py	330	332	atoi	atoi(string)	todo		
 Lib/locale.py	334	341	_test	_test()	todo		
 Lib/locale.py	352	373	_replace_encoding	_replace_encoding(code, encoding)	todo		
-Lib/locale.py	375	384	_append_modifier	_append_modifier(code, modifier)	todo		
-Lib/locale.py	386	467	normalize	normalize(localename)	todo		
-Lib/locale.py	469	501	_parse_localename	_parse_localename(localename)	todo		
-Lib/locale.py	503	522	_build_localename	_build_localename(localetuple)	todo		
-Lib/locale.py	524	548	getdefaultlocale	getdefaultlocale(envvars=('LC_ALL', 'LC_CTYPE', 'LANG', 'LANGUAGE'))	todo		
-Lib/locale.py	551	578	_getdefaultlocale	_getdefaultlocale(envvars=('LC_ALL', 'LC_CTYPE', 'LANG', 'LANGUAGE'))	todo		
-Lib/locale.py	581	597	getlocale	getlocale(category=LC_CTYPE)	todo		
-Lib/locale.py	599	614	setlocale	setlocale(category, locale=None)	todo		
-Lib/locale.py	641	664	getpreferredencoding	getpreferredencoding(do_setlocale=True)	todo		
-Lib/locale.py	1931	1974	_print_locale	_print_locale()	todo		
+Lib/locale.py	375	386	_append_modifier	_append_modifier(code, modifier)	todo		changed-in-3.15:
+Lib/locale.py	388	469	normalize	normalize(localename)	todo		
+Lib/locale.py	471	508	_parse_localename	_parse_localename(localename)	todo		changed-in-3.15:
+Lib/locale.py	510	536	_build_localename	_build_localename(localetuple)	todo		changed-in-3.15:
+Lib/locale.py	538	562	getdefaultlocale	getdefaultlocale(envvars=('LC_ALL', 'LC_CTYPE', 'LANG', 'LANGUAGE'))	todo		
+Lib/locale.py	565	588	_getdefaultlocale	_getdefaultlocale(envvars=('LC_ALL', 'LC_CTYPE', 'LANG', 'LANGUAGE'))	todo		changed-in-3.15:
+Lib/locale.py	591	607	getlocale	getlocale(category=LC_CTYPE)	todo		
+Lib/locale.py	609	624	setlocale	setlocale(category, locale=None)	todo		
+Lib/locale.py	651	675	getpreferredencoding	getpreferredencoding(do_setlocale=True)	todo		
+Lib/locale.py	1946	1989	_print_locale	_print_locale()	todo		

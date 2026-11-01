@@ -1,34 +1,40 @@
 file	line	endline	name	signature	status	entry	note
-Lib/_pyrepl/_module_completer.py	31	33	make_default_module_completer	make_default_module_completer()	todo		
-Lib/_pyrepl/_module_completer.py	52	56	ModuleCompleter.__init__	__init__(self, namespace: Mapping[str, Any] | None=None)	todo		
-Lib/_pyrepl/_module_completer.py	58	68	ModuleCompleter.get_completions	get_completions(self, line: str)	todo		
-Lib/_pyrepl/_module_completer.py	70	85	ModuleCompleter.complete	complete(self, from_name: str | None, name: str | None)	todo		
-Lib/_pyrepl/_module_completer.py	87	92	ModuleCompleter.find_modules	find_modules(self, path: str, prefix: str)	todo		
-Lib/_pyrepl/_module_completer.py	94	138	ModuleCompleter._find_modules	_find_modules(self, path: str, prefix: str)	todo		
-Lib/_pyrepl/_module_completer.py	140	142	ModuleCompleter._is_stdlib_module	_is_stdlib_module(self, module_info: pkgutil.ModuleInfo)	todo		
-Lib/_pyrepl/_module_completer.py	144	149	ModuleCompleter.is_suggestion_match	is_suggestion_match(self, module_name: str, prefix: str)	todo		
-Lib/_pyrepl/_module_completer.py	151	159	ModuleCompleter.iter_submodules	iter_submodules(self, parent_modules: list[pkgutil.ModuleInfo])	todo		
-Lib/_pyrepl/_module_completer.py	161	181	ModuleCompleter.get_path_and_prefix	get_path_and_prefix(self, dotted_name: str)	todo		
-Lib/_pyrepl/_module_completer.py	183	186	ModuleCompleter.format_completion	format_completion(self, path: str, module: str)	todo		
-Lib/_pyrepl/_module_completer.py	188	204	ModuleCompleter.resolve_relative_name	resolve_relative_name(self, name: str, package: str)	todo		
-Lib/_pyrepl/_module_completer.py	207	212	ModuleCompleter.global_cache	global_cache(self)	todo		
-Lib/_pyrepl/_module_completer.py	237	253	ImportParser.__init__	__init__(self, code: str)	todo		
-Lib/_pyrepl/_module_completer.py	255	258	ImportParser.parse	parse(self)	todo		
-Lib/_pyrepl/_module_completer.py	260	264	ImportParser._parse	_parse(self)	todo		
-Lib/_pyrepl/_module_completer.py	266	282	ImportParser.parse_import	parse_import(self)	todo		
-Lib/_pyrepl/_module_completer.py	284	301	ImportParser.parse_from_import	parse_from_import(self)	todo		
-Lib/_pyrepl/_module_completer.py	303	310	ImportParser.parse_empty_from_import	parse_empty_from_import(self)	todo		
-Lib/_pyrepl/_module_completer.py	312	315	ImportParser.parse_from	parse_from(self)	todo		
-Lib/_pyrepl/_module_completer.py	317	322	ImportParser.parse_dotted_as_name	parse_dotted_as_name(self)	todo		
-Lib/_pyrepl/_module_completer.py	324	348	ImportParser.parse_dotted_name	parse_dotted_name(self)	todo		
-Lib/_pyrepl/_module_completer.py	350	354	ImportParser.parse_as_names	parse_as_names(self)	todo		
-Lib/_pyrepl/_module_completer.py	356	360	ImportParser.parse_as_name	parse_as_name(self)	todo		
-Lib/_pyrepl/_module_completer.py	376	379	TokenQueue.__init__	__init__(self, tokens: list[TokenInfo])	todo		
-Lib/_pyrepl/_module_completer.py	382	389	TokenQueue.save_state	save_state(self)	todo		
-Lib/_pyrepl/_module_completer.py	391	392	TokenQueue.__bool__	__bool__(self)	todo		
-Lib/_pyrepl/_module_completer.py	394	397	TokenQueue.peek	peek(self)	todo		
-Lib/_pyrepl/_module_completer.py	399	402	TokenQueue.peek_name	peek_name(self)	todo		
-Lib/_pyrepl/_module_completer.py	404	408	TokenQueue.pop_name	pop_name(self)	todo		
-Lib/_pyrepl/_module_completer.py	410	413	TokenQueue.peek_string	peek_string(self, string: str)	todo		
-Lib/_pyrepl/_module_completer.py	415	419	TokenQueue.pop_string	pop_string(self, string: str)	todo		
-Lib/_pyrepl/_module_completer.py	421	426	TokenQueue.pop	pop(self)	todo		
+Lib/_pyrepl/_module_completer.py	47	49	make_default_module_completer	make_default_module_completer()	todo		
+Lib/_pyrepl/_module_completer.py	68	73	ModuleCompleter.__init__	__init__(self, namespace: Mapping[str, Any] | None=None)	todo		changed-in-3.15:
+Lib/_pyrepl/_module_completer.py	75	99	ModuleCompleter.get_completions	get_completions(self, line: str, *, include_values: bool=True)	todo		changed-in-3.15:
+Lib/_pyrepl/_module_completer.py	101	141	ModuleCompleter.complete	complete(self, from_name: str | None, name: str | None, *, include_values: bool=True)	todo		changed-in-3.15:
+Lib/_pyrepl/_module_completer.py	143	148	ModuleCompleter.find_modules	find_modules(self, path: str, prefix: str)	todo		
+Lib/_pyrepl/_module_completer.py	150	196	ModuleCompleter._find_modules	_find_modules(self, path: str, prefix: str)	todo		changed-in-3.15:
+Lib/_pyrepl/_module_completer.py	198	200	ModuleCompleter._is_stdlib_module	_is_stdlib_module(self, module_info: pkgutil.ModuleInfo)	todo		
+Lib/_pyrepl/_module_completer.py	202	211	ModuleCompleter.find_attributes	find_attributes(self, path: str, prefix: str)	todo		changed-in-3.15: new function
+Lib/_pyrepl/_module_completer.py	213	238	ModuleCompleter._find_attributes	_find_attributes(self, path: str, prefix: str)	todo		changed-in-3.15: new function
+Lib/_pyrepl/_module_completer.py	240	245	ModuleCompleter.is_suggestion_match	is_suggestion_match(self, module_name: str, prefix: str)	todo		
+Lib/_pyrepl/_module_completer.py	247	255	ModuleCompleter.iter_submodules	iter_submodules(self, parent_modules: list[pkgutil.ModuleInfo])	todo		
+Lib/_pyrepl/_module_completer.py	257	277	ModuleCompleter.get_path_and_prefix	get_path_and_prefix(self, dotted_name: str)	todo		
+Lib/_pyrepl/_module_completer.py	279	282	ModuleCompleter.format_completion	format_completion(self, path: str, module: str)	todo		
+Lib/_pyrepl/_module_completer.py	284	289	ModuleCompleter._resolve_relative_path	_resolve_relative_path(self, path: str)	todo		changed-in-3.15: new function
+Lib/_pyrepl/_module_completer.py	291	307	ModuleCompleter.resolve_relative_name	resolve_relative_name(self, name: str, package: str)	todo		
+Lib/_pyrepl/_module_completer.py	310	316	ModuleCompleter.global_cache	global_cache(self)	todo		changed-in-3.15:
+Lib/_pyrepl/_module_completer.py	318	331	ModuleCompleter._maybe_import_module	_maybe_import_module(self, fqname: str)	todo		changed-in-3.15: new function
+Lib/_pyrepl/_module_completer.py	333	346	ModuleCompleter._get_import_completion_action	_get_import_completion_action(self, path: str)	todo		changed-in-3.15: new function
+Lib/_pyrepl/_module_completer.py	348	366	ModuleCompleter._remove_separated_words	_remove_separated_words(self, line: str, completion: str)	todo		changed-in-3.15: new function
+Lib/_pyrepl/_module_completer.py	391	407	ImportParser.__init__	__init__(self, code: str)	todo		
+Lib/_pyrepl/_module_completer.py	409	412	ImportParser.parse	parse(self)	todo		
+Lib/_pyrepl/_module_completer.py	414	418	ImportParser._parse	_parse(self)	todo		
+Lib/_pyrepl/_module_completer.py	420	436	ImportParser.parse_import	parse_import(self)	todo		
+Lib/_pyrepl/_module_completer.py	438	455	ImportParser.parse_from_import	parse_from_import(self)	todo		
+Lib/_pyrepl/_module_completer.py	457	464	ImportParser.parse_empty_from_import	parse_empty_from_import(self)	todo		
+Lib/_pyrepl/_module_completer.py	466	469	ImportParser.parse_from	parse_from(self)	todo		
+Lib/_pyrepl/_module_completer.py	471	476	ImportParser.parse_dotted_as_name	parse_dotted_as_name(self)	todo		
+Lib/_pyrepl/_module_completer.py	478	502	ImportParser.parse_dotted_name	parse_dotted_name(self)	todo		
+Lib/_pyrepl/_module_completer.py	504	508	ImportParser.parse_as_names	parse_as_names(self)	todo		
+Lib/_pyrepl/_module_completer.py	510	514	ImportParser.parse_as_name	parse_as_name(self)	todo		
+Lib/_pyrepl/_module_completer.py	530	533	TokenQueue.__init__	__init__(self, tokens: list[TokenInfo])	todo		
+Lib/_pyrepl/_module_completer.py	536	543	TokenQueue.save_state	save_state(self)	todo		
+Lib/_pyrepl/_module_completer.py	545	546	TokenQueue.__bool__	__bool__(self)	todo		
+Lib/_pyrepl/_module_completer.py	548	551	TokenQueue.peek	peek(self)	todo		
+Lib/_pyrepl/_module_completer.py	553	556	TokenQueue.peek_name	peek_name(self)	todo		
+Lib/_pyrepl/_module_completer.py	558	562	TokenQueue.pop_name	pop_name(self)	todo		
+Lib/_pyrepl/_module_completer.py	564	567	TokenQueue.peek_string	peek_string(self, string: str)	todo		
+Lib/_pyrepl/_module_completer.py	569	573	TokenQueue.pop_string	pop_string(self, string: str)	todo		
+Lib/_pyrepl/_module_completer.py	575	580	TokenQueue.pop	pop(self)	todo		

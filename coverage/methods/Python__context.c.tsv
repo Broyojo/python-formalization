@@ -1,65 +1,68 @@
 file	line	endline	name	signature	status	entry	note
-Python/context.c	69	72	_PyContext_NewHamtForTests	_PyContext_NewHamtForTests(void)	todo		
-Python/context.c	76	79	PyContext_New	PyContext_New(void)	todo		
-Python/context.c	83	88	PyContext_Copy	PyContext_Copy(PyObject * octx)	todo		
-Python/context.c	92	100	PyContext_CopyCurrent	PyContext_CopyCurrent(void)	todo		
-Python/context.c	103	111	context_event_name	context_event_name(PyContextEvent event) {	todo		
-Python/context.c	114	142	notify_context_watchers	notify_context_watchers(PyThreadState *ts, PyContextEvent event, PyObject *ctx)	todo		
-Python/context.c	146	161	PyContext_AddWatcher	PyContext_AddWatcher(PyContext_WatchCallback callback)	todo		
-Python/context.c	165	180	PyContext_ClearWatcher	PyContext_ClearWatcher(int watcher_id)	todo		
-Python/context.c	184	190	context_switched	context_switched(PyThreadState *ts)	todo		
-Python/context.c	194	211	_PyContext_Enter	_PyContext_Enter(PyThreadState *ts, PyObject *octx)	todo		
-Python/context.c	215	220	PyContext_Enter	PyContext_Enter(PyObject *octx)	todo		
-Python/context.c	224	249	_PyContext_Exit	_PyContext_Exit(PyThreadState *ts, PyObject *octx)	todo		
-Python/context.c	252	257	PyContext_Exit	PyContext_Exit(PyObject *octx)	todo		
-Python/context.c	261	270	PyContextVar_New	PyContextVar_New(const char *name, PyObject *def)	todo		
-Python/context.c	274	337	PyContextVar_Get	PyContextVar_Get(PyObject *ovar, PyObject *def, PyObject **val)	todo		
-Python/context.c	341	370	PyContextVar_Set	PyContextVar_Set(PyObject *ovar, PyObject *val)	todo		
-Python/context.c	374	408	PyContextVar_Reset	PyContextVar_Reset(PyObject *ovar, PyObject *otok)	todo		
-Python/context.c	423	439	_context_alloc	_context_alloc(void)	todo		
-Python/context.c	443	458	context_new_empty	context_new_empty(void)	todo		
-Python/context.c	462	473	context_new_from_vars	context_new_from_vars(PyHamtObject *vars)	todo		
-Python/context.c	477	490	context_get	context_get(void)	todo		
-Python/context.c	493	502	context_check_key_type	context_check_key_type(PyObject *key)	todo		
-Python/context.c	505	513	context_tp_new	context_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
-Python/context.c	516	522	context_tp_clear	context_tp_clear(PyObject *op)	todo		
-Python/context.c	525	531	context_tp_traverse	context_tp_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Python/context.c	534	544	context_tp_dealloc	context_tp_dealloc(PyObject *self)	todo		
-Python/context.c	547	551	context_tp_iter	context_tp_iter(PyObject *op)	todo		
-Python/context.c	554	578	context_tp_richcompare	context_tp_richcompare(PyObject *v, PyObject *w, int op)	todo		
-Python/context.c	581	585	context_tp_len	context_tp_len(PyObject *op)	todo		
-Python/context.c	588	604	context_tp_subscript	context_tp_subscript(PyObject *op, PyObject *key)	todo		
-Python/context.c	607	615	context_tp_contains	context_tp_contains(PyObject *op, PyObject *key)	todo		
-Python/context.c	631	648	_contextvars_Context_get_impl	_contextvars_Context_get_impl(PyContext *self, PyObject *key, PyObject *default_value) /*[clinic end generated code: output=0c54aa7664268189 input=d1be897231334ea9]*/	todo		
-Python/context.c	660	664	_contextvars_Context_items_impl	_contextvars_Context_items_impl(PyContext *self) /*[clinic end generated code: output=fa1655c8a08502af input=00db64ae379f9f42]*/	todo		
-Python/context.c	674	678	_contextvars_Context_keys_impl	_contextvars_Context_keys_impl(PyContext *self) /*[clinic end generated code: output=177227c6b63ec0e2 input=114b53aebca3449c]*/	todo		
-Python/context.c	688	692	_contextvars_Context_values_impl	_contextvars_Context_values_impl(PyContext *self) /*[clinic end generated code: output=d286dabfc8db6dde input=ce8075d04a6ea526]*/	todo		
-Python/context.c	702	706	_contextvars_Context_copy_impl	_contextvars_Context_copy_impl(PyContext *self) /*[clinic end generated code: output=30ba8896c4707a15 input=ebafdbdd9c72d592]*/	todo		
-Python/context.c	710	734	context_run	context_run(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)	todo		
-Python/context.c	780	806	contextvar_set	contextvar_set(PyContextVar *var, PyObject *val)	todo		
-Python/context.c	809	834	contextvar_del	contextvar_del(PyContextVar *var)	todo		
-Python/context.c	837	862	contextvar_generate_hash	contextvar_generate_hash(void *addr, PyObject *name)	todo		
-Python/context.c	865	899	contextvar_new	contextvar_new(PyObject *name, PyObject *def)	todo		
-Python/context.c	912	925	contextvar_tp_new	contextvar_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
-Python/context.c	928	939	contextvar_tp_clear	contextvar_tp_clear(PyObject *op)	todo		
-Python/context.c	942	948	contextvar_tp_traverse	contextvar_tp_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Python/context.c	951	956	contextvar_tp_dealloc	contextvar_tp_dealloc(PyObject *self)	todo		
-Python/context.c	959	963	contextvar_tp_hash	contextvar_tp_hash(PyObject *op)	todo		
-Python/context.c	966	1003	contextvar_tp_repr	contextvar_tp_repr(PyObject *op)	todo		
-Python/context.c	1023	1037	_contextvars_ContextVar_get_impl	_contextvars_ContextVar_get_impl(PyContextVar *self, PyObject *default_value) /*[clinic end generated code: output=0746bd0aa2ced7bf input=83814c6aef4a9fe3]*/	todo		
-Python/context.c	1054	1058	_contextvars_ContextVar_set_impl	_contextvars_ContextVar_set_impl(PyContextVar *self, PyObject *value) /*[clinic end generated code: output=1b562d35cc79c806 input=6ffee66796d67896]*/	todo		
-Python/context.c	1072	1086	_contextvars_ContextVar_reset_impl	_contextvars_ContextVar_reset_impl(PyContextVar *self, PyObject *token) /*[clinic end generated code: output=3205d2bdff568521 input=dd33cfcb18c00e37]*/	todo		
-Python/context.c	1137	1142	token_tp_new	token_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
-Python/context.c	1145	1152	token_tp_clear	token_tp_clear(PyObject *op)	todo		
-Python/context.c	1155	1162	token_tp_traverse	token_tp_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Python/context.c	1165	1170	token_tp_dealloc	token_tp_dealloc(PyObject *self)	todo		
-Python/context.c	1173	1202	token_tp_repr	token_tp_repr(PyObject *op)	todo		
-Python/context.c	1205	1209	token_get_var	token_get_var(PyObject *op, void *Py_UNUSED(ignored))	todo		
-Python/context.c	1212	1220	token_get_old_value	token_get_old_value(PyObject *op, void *Py_UNUSED(ignored))	todo		
-Python/context.c	1235	1239	token_enter_impl	token_enter_impl(PyContextToken *self) /*[clinic end generated code: output=9af4d2054e93fb75 input=41a3d6c4195fd47a]*/	todo		
-Python/context.c	1253	1262	token_exit_impl	token_exit_impl(PyContextToken *self, PyObject *type, PyObject *val, PyObject *tb) /*[clinic end generated code: output=3e6a1c95d3da703a input=7f117445f0ccd92e]*/	todo		
-Python/context.c	1291	1308	token_new	token_new(PyContext *ctx, PyContextVar *var, PyObject *val)	todo		
-Python/context.c	1315	1318	context_token_missing_tp_repr	context_token_missing_tp_repr(PyObject *self)	todo		
-Python/context.c	1321	1329	context_token_missing_tp_dealloc	context_token_missing_tp_dealloc(PyObject *Py_UNUSED(self))	todo		
-Python/context.c	1344	1347	get_token_missing	get_token_missing(void)	todo		
-Python/context.c	1354	1367	_PyContext_Init	_PyContext_Init(PyInterpreterState *interp)	todo		
+Python/context.c	70	79	context_get_vars	context_get_vars(PyContext *ctx)	todo		changed-in-3.15: new function
+Python/context.c	82	89	context_get_current_vars	context_get_current_vars(PyContext *ctx)	todo		changed-in-3.15: new function
+Python/context.c	94	102	context_set_vars	context_set_vars(PyContext *ctx, PyHamtObject *new_vars)	todo		changed-in-3.15: new function
+Python/context.c	106	109	_PyContext_NewHamtForTests	_PyContext_NewHamtForTests(void)	todo		
+Python/context.c	113	116	PyContext_New	PyContext_New(void)	todo		
+Python/context.c	120	128	PyContext_Copy	PyContext_Copy(PyObject * octx)	todo		changed-in-3.15:
+Python/context.c	132	140	PyContext_CopyCurrent	PyContext_CopyCurrent(void)	todo		changed-in-3.15:
+Python/context.c	143	151	context_event_name	context_event_name(PyContextEvent event) {	todo		
+Python/context.c	154	182	notify_context_watchers	notify_context_watchers(PyThreadState *ts, PyContextEvent event, PyObject *ctx)	todo		changed-in-3.15:
+Python/context.c	186	201	PyContext_AddWatcher	PyContext_AddWatcher(PyContext_WatchCallback callback)	todo		
+Python/context.c	205	220	PyContext_ClearWatcher	PyContext_ClearWatcher(int watcher_id)	todo		
+Python/context.c	224	230	context_switched	context_switched(PyThreadState *ts)	todo		
+Python/context.c	234	255	_PyContext_Enter	_PyContext_Enter(PyThreadState *ts, PyObject *octx)	todo		changed-in-3.15:
+Python/context.c	259	264	PyContext_Enter	PyContext_Enter(PyObject *octx)	todo		
+Python/context.c	268	294	_PyContext_Exit	_PyContext_Exit(PyThreadState *ts, PyObject *octx)	todo		changed-in-3.15:
+Python/context.c	297	302	PyContext_Exit	PyContext_Exit(PyObject *octx)	todo		
+Python/context.c	306	315	PyContextVar_New	PyContextVar_New(const char *name, PyObject *def)	todo		
+Python/context.c	319	382	PyContextVar_Get	PyContextVar_Get(PyObject *ovar, PyObject *def, PyObject **val)	todo		changed-in-3.15:
+Python/context.c	386	416	PyContextVar_Set	PyContextVar_Set(PyObject *ovar, PyObject *val)	todo		changed-in-3.15:
+Python/context.c	420	454	PyContextVar_Reset	PyContextVar_Reset(PyObject *ovar, PyObject *otok)	todo		
+Python/context.c	469	485	_context_alloc	_context_alloc(void)	todo		
+Python/context.c	489	504	context_new_empty	context_new_empty(void)	todo		
+Python/context.c	508	519	context_new_from_vars	context_new_from_vars(PyHamtObject *vars)	todo		
+Python/context.c	523	536	context_get	context_get(void)	todo		
+Python/context.c	539	548	context_check_key_type	context_check_key_type(PyObject *key)	todo		
+Python/context.c	551	559	context_tp_new	context_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Python/context.c	562	568	context_tp_clear	context_tp_clear(PyObject *op)	todo		
+Python/context.c	571	577	context_tp_traverse	context_tp_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Python/context.c	580	590	context_tp_dealloc	context_tp_dealloc(PyObject *self)	todo		
+Python/context.c	593	600	context_tp_iter	context_tp_iter(PyObject *op)	todo		changed-in-3.15:
+Python/context.c	603	630	context_tp_richcompare	context_tp_richcompare(PyObject *v, PyObject *w, int op)	todo		changed-in-3.15:
+Python/context.c	633	640	context_tp_len	context_tp_len(PyObject *op)	todo		changed-in-3.15:
+Python/context.c	643	662	context_tp_subscript	context_tp_subscript(PyObject *op, PyObject *key)	todo		changed-in-3.15:
+Python/context.c	665	676	context_tp_contains	context_tp_contains(PyObject *op, PyObject *key)	todo		changed-in-3.15:
+Python/context.c	693	713	_contextvars_Context_get_impl	_contextvars_Context_get_impl(PyContext *self, PyObject *key, PyObject *default_value) /*[clinic end generated code: output=0c54aa7664268189 input=d669a0d56fabb0a5]*/	todo		changed-in-3.15:
+Python/context.c	725	732	_contextvars_Context_items_impl	_contextvars_Context_items_impl(PyContext *self) /*[clinic end generated code: output=fa1655c8a08502af input=00db64ae379f9f42]*/	todo		changed-in-3.15:
+Python/context.c	742	749	_contextvars_Context_keys_impl	_contextvars_Context_keys_impl(PyContext *self) /*[clinic end generated code: output=177227c6b63ec0e2 input=114b53aebca3449c]*/	todo		changed-in-3.15:
+Python/context.c	759	766	_contextvars_Context_values_impl	_contextvars_Context_values_impl(PyContext *self) /*[clinic end generated code: output=d286dabfc8db6dde input=ce8075d04a6ea526]*/	todo		changed-in-3.15:
+Python/context.c	776	783	_contextvars_Context_copy_impl	_contextvars_Context_copy_impl(PyContext *self) /*[clinic end generated code: output=30ba8896c4707a15 input=ebafdbdd9c72d592]*/	todo		changed-in-3.15:
+Python/context.c	787	811	context_run	context_run(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)	todo		
+Python/context.c	857	883	contextvar_set	contextvar_set(PyContextVar *var, PyObject *val)	todo		changed-in-3.15:
+Python/context.c	886	911	contextvar_del	contextvar_del(PyContextVar *var)	todo		changed-in-3.15:
+Python/context.c	914	939	contextvar_generate_hash	contextvar_generate_hash(void *addr, PyObject *name)	todo		
+Python/context.c	942	976	contextvar_new	contextvar_new(PyObject *name, PyObject *def)	todo		
+Python/context.c	989	1002	contextvar_tp_new	contextvar_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Python/context.c	1005	1016	contextvar_tp_clear	contextvar_tp_clear(PyObject *op)	todo		
+Python/context.c	1019	1025	contextvar_tp_traverse	contextvar_tp_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Python/context.c	1028	1033	contextvar_tp_dealloc	contextvar_tp_dealloc(PyObject *self)	todo		
+Python/context.c	1036	1040	contextvar_tp_hash	contextvar_tp_hash(PyObject *op)	todo		
+Python/context.c	1043	1080	contextvar_tp_repr	contextvar_tp_repr(PyObject *op)	todo		
+Python/context.c	1100	1114	_contextvars_ContextVar_get_impl	_contextvars_ContextVar_get_impl(PyContextVar *self, PyObject *default_value) /*[clinic end generated code: output=0746bd0aa2ced7bf input=83814c6aef4a9fe3]*/	todo		
+Python/context.c	1132	1136	_contextvars_ContextVar_set_impl	_contextvars_ContextVar_set_impl(PyContextVar *self, PyObject *value) /*[clinic end generated code: output=1b562d35cc79c806 input=04ef8dcd810f5be6]*/	todo		
+Python/context.c	1150	1164	_contextvars_ContextVar_reset_impl	_contextvars_ContextVar_reset_impl(PyContextVar *self, PyObject *token) /*[clinic end generated code: output=3205d2bdff568521 input=dd33cfcb18c00e37]*/	todo		
+Python/context.c	1215	1220	token_tp_new	token_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Python/context.c	1223	1230	token_tp_clear	token_tp_clear(PyObject *op)	todo		
+Python/context.c	1233	1240	token_tp_traverse	token_tp_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Python/context.c	1243	1248	token_tp_dealloc	token_tp_dealloc(PyObject *self)	todo		
+Python/context.c	1251	1280	token_tp_repr	token_tp_repr(PyObject *op)	todo		
+Python/context.c	1283	1287	token_get_var	token_get_var(PyObject *op, void *Py_UNUSED(ignored))	todo		
+Python/context.c	1290	1298	token_get_old_value	token_get_old_value(PyObject *op, void *Py_UNUSED(ignored))	todo		
+Python/context.c	1313	1317	token_enter_impl	token_enter_impl(PyContextToken *self) /*[clinic end generated code: output=9af4d2054e93fb75 input=41a3d6c4195fd47a]*/	todo		
+Python/context.c	1331	1340	token_exit_impl	token_exit_impl(PyContextToken *self, PyObject *type, PyObject *val, PyObject *tb) /*[clinic end generated code: output=3e6a1c95d3da703a input=7f117445f0ccd92e]*/	todo		
+Python/context.c	1369	1386	token_new	token_new(PyContext *ctx, PyContextVar *var, PyObject *val)	todo		
+Python/context.c	1393	1396	context_token_missing_tp_repr	context_token_missing_tp_repr(PyObject *self)	todo		
+Python/context.c	1399	1407	context_token_missing_tp_dealloc	context_token_missing_tp_dealloc(PyObject *Py_UNUSED(self))	todo		
+Python/context.c	1422	1425	get_token_missing	get_token_missing(void)	todo		
+Python/context.c	1432	1445	_PyContext_Init	_PyContext_Init(PyInterpreterState *interp)	todo		

@@ -4,7 +4,7 @@ import PyLean.Bytecode.Uops3
 The interpreter loop: instruction dispatch and the labels `error`,
 `exception_unwind`, `exit_unwind` and `start_frame` of `Python/bytecodes.c`
 (lines 5401-5531) and the entry protocol of `_PyEval_EvalFrameDefault`
-(`Python/ceval.c:1147-1258`).
+(`Python/ceval.c:1241-1353`).
 
 `Program` indices 0 and 1 are reserved for the two static code objects the
 interpreter uses itself: the entry trampoline
@@ -25,7 +25,7 @@ def withDeopt (m g : M Unit) : M Unit := fun s =>
   | .error .deopt _ => g s
   | r => r
 
-/-- The descriptors of `BINARY_OP_EXTEND`, `Python/specialize.c:2458-2530`. A cache
+/-- The descriptors of `BINARY_OP_EXTEND`, `Python/specialize.c@3.14.7:2458-2530`. A cache
 of `[.tagged k]` selects one. The guards are `compactlongs_guard` and
 `float_compactlong_guard`/`compactlong_float_guard`. -/
 def extendDescr (k : Nat) : ExtendDescr :=
@@ -279,7 +279,7 @@ def execOp (e : Env) : Op → M Unit
   | .EXTENDED_ARG => fault "EXTENDED_ARG handled by the fetch"
 
 /-- `frame->instr_ptr = next_instr; next_instr += INSTRUCTION_SIZE`. `END_FOR` is
-`no_save_ip`, `Python/bytecodes.c:408`. -/
+`no_save_ip`, `Python/bytecodes.c:393`. -/
 def beginInstr (o : Op) (s : St) : St :=
   let this := s.regs.next
   let f := s.regs.frame
@@ -314,7 +314,7 @@ inductive Outcome where
   /-- Fuel or undefined behaviour: not a Python outcome. -/
   | stop (e : Err) (rt : Rt)
 
-/-- `label(exception_unwind)` and `label(exit_unwind)`, `Python/bytecodes.c:5424-5507`.
+/-- `label(exception_unwind)` and `label(exit_unwind)`, `Python/bytecodes.c:6485-6577`.
 `next_instr` is what the handler lookup uses; `frame->instr_ptr` is what is pushed
 as `lasti`. Fuel bounds the number of frames unwound. -/
 def unwind (P : Program) : Nat → Val → St → Outcome
@@ -374,11 +374,11 @@ def afterInstr (P : Program) : EStateM.Result Err St Unit → Outcome
   | .error e s => .stop e s.regs.rt
 
 /-- The frame `_PyEval_EvalFrameDefault` puts below the frame it runs,
-`Python/ceval.c:1189-1202`. -/
+`Python/ceval.c:1289-1302`. -/
 def entryFrame : Frame := { code := 0, instrPtr := 1, owner := .interpreter }
 
 /-- `_PyEval_EvalFrameDefault` up to the dispatch: start a frame, or with
-`throwflag` go straight to `error`, `Python/ceval.c:1211-1256`. -/
+`throwflag` go straight to `error`, `Python/ceval.c:1311-1351`. -/
 def enterEval (P : Program) (f : Frame) (exc : Option Val) (rt : Rt) : Outcome :=
   let s : St := { regs := { rt := rt, frame := f, prev := [entryFrame], next := f.instrPtr },
                   stack := f.stack }

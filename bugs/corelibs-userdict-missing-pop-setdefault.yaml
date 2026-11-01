@@ -21,7 +21,7 @@ likelihood: |
   Medium-low. `__missing__` on a UserDict subclass is the documented hook, and pop with a default is
   common on such a class. It fails loudly (KeyError) for pop and silently for setdefault.
 maybe_intended: |
-  No: the comment at :1162 states the goal and gh-83445 fixed the sibling. It is a gap left by that fix.
+  No: the comment at :1163 states the goal and gh-83445 fixed the sibling. It is a gap left by that fix.
   ChainMap has a __missing__ hook as well: its pop does not consult it, but setdefault and
   (k, v) in items() act as above.
 reproducer: |
@@ -51,13 +51,13 @@ observed: |
   False. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
 promised_by: |
-  Lib/collections/__init__.py:1162-1163: "Modify __contains__ and get() to work like dict does when
-  __missing__ is present." Doc/library/collections.rst:1337: "Class that simulates a dictionary."
-  Lib/_collections_abc.py:930-932, pop: "If key is not found, d is returned if given".
+  Lib/collections/__init__.py:1204-1205: "Modify __contains__ and get() to work like dict does when
+  __missing__ is present." Doc/library/collections.rst:1341: "Class that simulates a dictionary."
+  Lib/_collections_abc.py:931-933, pop: "If key is not found, d is returned if given".
 cause: |
-  Lib/_collections_abc.py:934-942 `pop` reads `self[key]` in the try and deletes in the else, and
-  :987-990 `setdefault` and :874-877 `ItemsView.__contains__` rely on the KeyError of `self[key]`.
-  Lib/collections/__init__.py:1149-1150 answers through __missing__ instead.
+  Lib/_collections_abc.py:935-943 `pop` reads `self[key]` in the try and deletes in the else, and
+  :988-991 `setdefault` and :875-878 `ItemsView.__contains__` rely on the KeyError of `self[key]`.
+  Lib/collections/__init__.py:1191-1192 answers through __missing__ instead.
 possible_fix: |
   In UserDict, next to get and __contains__, with the same `key in self` test:
       def pop(self, key, *args): return self.data.pop(key, *args)

@@ -193,7 +193,7 @@ theorem caseOutputBound_proven : CaseOutputBound := by
 def SigmaSeq (l : List Nat) : Prop :=
   ∃ ign c rest, l = ign ++ c :: rest ∧ (∀ x ∈ ign, isCaseIgnorable x = true) ∧ isCased c = true
 
-/-- The rule in the comment of `handle_capital_sigma` (unicodeobject.c:10047-10051)
+/-- The rule in the comment of `handle_capital_sigma` (unicodeobject.c:9812-9816)
 and in Table 3-17 of the Unicode Standard: the sigma is final exactly when
 `\p{cased}\p{case-ignorable}*` precedes it and `\p{case-ignorable}*\p{cased}` does not
 follow it. -/

@@ -218,7 +218,7 @@ theorem pyHeapify_correct {lt : α → α → Bool} (hlt : StrictWeak lt) (x : L
 
 /-- The heap invariant (Lib/heapq.py:3-4, `heap[k] <= heap[2*k+1]` and
 `heap[k] <= heap[2*k+2]`; for the `*_max` functions the max-heap invariant,
-Doc/library/heapq.rst:104-150) is kept by every operation on an int heap, the
+Doc/library/heapq.rst:99-145) is kept by every operation on an int heap, the
 list is permuted as documented, and the popped / returned item is the
 smallest (largest for `_max`) one. Stated for the Python twins; the C twins
 compute the same lists (`HeapTwinsAgree`). -/

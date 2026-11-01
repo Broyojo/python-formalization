@@ -273,7 +273,7 @@ theorem writerDecodeX_proven : WriterDecodeX := by
         · rw [e, hi, ht, need_empty]
           omega
 
-/-- `PyUnicodeWriter_DecodeUTF8Stateful`, unicodeobject.c:14171-14192, with any handler. `size` picks
+/-- `PyUnicodeWriter_DecodeUTF8Stateful`, unicodeobject.c@3.14.7:14171-14192, with any handler. `size` picks
 the bytes, negative meaning up to the first NUL. With `consumed` the result is `*consumed`; without
 it nothing is reported. On a failure the position is put back, so no text stays, and `*consumed` is
 0 however far the decoder got. -/
@@ -523,7 +523,7 @@ theorem leadCap_value (ch : Nat) : CapValue (leadCap ch) := by
   repeat' split
   all_goals omega
 
-/-- `PyUnicode_DecodeUTF8Stateful` and `unicode_decode_utf8`, unicodeobject.c:5429-5518. The fast paths
+/-- `PyUnicode_DecodeUTF8Stateful` and `unicode_decode_utf8`, unicodeobject.c:5310-5399. The fast paths
 and the guess of `maxchr` change nothing: the result is what the plain loop gives, and its kind is
 the canonical kind of the text, for every handler. The guess is the part that could go wrong: a
 buffer too wide stays too wide, since `_PyUnicodeWriter_Finish` does not narrow it. It is safe

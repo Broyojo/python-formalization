@@ -1,46 +1,60 @@
 file	line	endline	name	signature	status	entry	note
-Objects/moduleobject.c	41	50	_PyModule_IsExtension	_PyModule_IsExtension(PyObject *obj)	todo		
-Objects/moduleobject.c	54	63	PyModuleDef_Init	PyModuleDef_Init(PyModuleDef* def)	todo		
-Objects/moduleobject.c	66	88	module_init_dict	module_init_dict(PyModuleObject *mod, PyObject *md_dict, PyObject *name, PyObject *doc)	todo		
-Objects/moduleobject.c	91	107	new_module_notrack	new_module_notrack(PyTypeObject *mt)	todo		
-Objects/moduleobject.c	110	115	track_module	track_module(PyModuleObject *m)	todo		
-Objects/moduleobject.c	118	125	new_module	new_module(PyTypeObject *mt, PyObject *args, PyObject *kws)	todo		
-Objects/moduleobject.c	128	141	PyModule_NewObject	PyModule_NewObject(PyObject *name)	todo		
-Objects/moduleobject.c	144	153	PyModule_New	PyModule_New(const char *name)	todo		
-Objects/moduleobject.c	160	173	check_api_version	check_api_version(const char *name, int module_api_version)	todo		
-Objects/moduleobject.c	176	202	_add_methods_to_object	_add_methods_to_object(PyObject *module, PyObject *name, PyMethodDef *functions)	todo		
-Objects/moduleobject.c	205	213	PyModule_Create2	PyModule_Create2(PyModuleDef* module, int module_api_version)	todo		
-Objects/moduleobject.c	216	266	_PyModule_CreateInitialized	_PyModule_CreateInitialized(PyModuleDef* module, int module_api_version)	todo		
-Objects/moduleobject.c	269	447	PyModule_FromDefAndSpec2	PyModule_FromDefAndSpec2(PyModuleDef* def, PyObject *spec, int module_api_version)	todo		
-Objects/moduleobject.c	451	459	PyUnstable_Module_SetGIL	PyUnstable_Module_SetGIL(PyObject *module, void *gil)	todo		
-Objects/moduleobject.c	463	529	PyModule_ExecDef	PyModule_ExecDef(PyObject *module, PyModuleDef *def)	todo		
-Objects/moduleobject.c	532	543	PyModule_AddFunctions	PyModule_AddFunctions(PyObject *m, PyMethodDef *functions)	todo		
-Objects/moduleobject.c	546	557	PyModule_SetDocString	PyModule_SetDocString(PyObject *m, const char *doc)	todo		
-Objects/moduleobject.c	560	567	PyModule_GetDict	PyModule_GetDict(PyObject *m)	todo		
-Objects/moduleobject.c	570	596	PyModule_GetNameObject	PyModule_GetNameObject(PyObject *mod)	todo		
-Objects/moduleobject.c	599	608	PyModule_GetName	PyModule_GetName(PyObject *m)	todo		
-Objects/moduleobject.c	611	642	_PyModule_GetFilenameObject	_PyModule_GetFilenameObject(PyObject *mod)	todo		
-Objects/moduleobject.c	645	656	PyModule_GetFilenameObject	PyModule_GetFilenameObject(PyObject *mod)	todo		
-Objects/moduleobject.c	659	669	PyModule_GetFilename	PyModule_GetFilename(PyObject *m)	todo		
-Objects/moduleobject.c	672	700	_PyModule_GetFilenameUTF8	_PyModule_GetFilenameUTF8(PyObject *mod, char *buffer, Py_ssize_t maxlen)	todo		
-Objects/moduleobject.c	703	710	PyModule_GetDef	PyModule_GetDef(PyObject* m)	todo		
-Objects/moduleobject.c	713	720	PyModule_GetState	PyModule_GetState(PyObject* m)	todo		
-Objects/moduleobject.c	723	728	_PyModule_Clear	_PyModule_Clear(PyObject *m)	todo		
-Objects/moduleobject.c	731	792	_PyModule_ClearDict	_PyModule_ClearDict(PyObject *d)	todo		
-Objects/moduleobject.c	814	818	module___init___impl	module___init___impl(PyModuleObject *self, PyObject *name, PyObject *doc) /*[clinic end generated code: output=e7e721c26ce7aad7 input=57f9e177401e5e1e]*/	todo		
-Objects/moduleobject.c	821	845	module_dealloc	module_dealloc(PyObject *self)	todo		
-Objects/moduleobject.c	848	853	module_repr	module_repr(PyObject *self)	todo		
-Objects/moduleobject.c	858	870	_PyModuleSpec_IsInitializing	_PyModuleSpec_IsInitializing(PyObject *spec)	todo		
-Objects/moduleobject.c	876	889	_PyModuleSpec_IsUninitializedSubmodule	_PyModuleSpec_IsUninitializedSubmodule(PyObject *spec, PyObject *name)	todo		
-Objects/moduleobject.c	892	920	_PyModuleSpec_GetFileOrigin	_PyModuleSpec_GetFileOrigin(PyObject *spec, PyObject **p_origin)	todo		
-Objects/moduleobject.c	923	984	_PyModule_IsPossiblyShadowing	_PyModule_IsPossiblyShadowing(PyObject *origin)	todo		
-Objects/moduleobject.c	987	1136	_Py_module_getattro_impl	_Py_module_getattro_impl(PyModuleObject *m, PyObject *name, int suppress)	todo		
-Objects/moduleobject.c	1140	1144	_Py_module_getattro	_Py_module_getattro(PyObject *self, PyObject *name)	todo		
-Objects/moduleobject.c	1147	1162	module_traverse	module_traverse(PyObject *self, visitproc visit, void *arg)	todo		
-Objects/moduleobject.c	1165	1184	module_clear	module_clear(PyObject *self)	todo		
-Objects/moduleobject.c	1187	1209	module_dir	module_dir(PyObject *self, PyObject *args)	todo		
-Objects/moduleobject.c	1218	1230	module_get_dict	module_get_dict(PyModuleObject *m)	todo		
-Objects/moduleobject.c	1233	1251	module_get_annotate	module_get_annotate(PyObject *self, void *Py_UNUSED(ignored))	todo		
-Objects/moduleobject.c	1254	1285	module_set_annotate	module_set_annotate(PyObject *self, PyObject *value, void *Py_UNUSED(ignored))	todo		
-Objects/moduleobject.c	1288	1356	module_get_annotations	module_get_annotations(PyObject *self, void *Py_UNUSED(ignored))	todo		
-Objects/moduleobject.c	1359	1390	module_set_annotations	module_set_annotations(PyObject *self, PyObject *value, void *Py_UNUSED(ignored))	todo		
+Objects/moduleobject.c	33	51	assert_def_missing_or_redundant	assert_def_missing_or_redundant(PyModuleObject *m)	todo		changed-in-3.15: new function
+Objects/moduleobject.c	63	78	_PyModule_IsExtension	_PyModule_IsExtension(PyObject *obj)	todo		changed-in-3.15:
+Objects/moduleobject.c	82	144	PyModuleDef_Init	PyModuleDef_Init(PyModuleDef* def)	todo		changed-in-3.15:
+Objects/moduleobject.c	147	169	module_init_dict	module_init_dict(PyModuleObject *mod, PyObject *md_dict, PyObject *name, PyObject *doc)	todo		
+Objects/moduleobject.c	172	197	new_module_notrack	new_module_notrack(PyTypeObject *mt)	todo		changed-in-3.15:
+Objects/moduleobject.c	204	216	module_dict_watcher	module_dict_watcher(PyDict_WatchEvent event, PyObject *dict, PyObject *key, PyObject *new_value)	todo		changed-in-3.15: new function
+Objects/moduleobject.c	219	225	_PyModule_InitModuleDictWatcher	_PyModule_InitModuleDictWatcher(PyInterpreterState *interp)	todo		changed-in-3.15: new function
+Objects/moduleobject.c	228	234	track_module	track_module(PyModuleObject *m)	todo		changed-in-3.15:
+Objects/moduleobject.c	237	244	new_module	new_module(PyTypeObject *mt, PyObject *args, PyObject *kws)	todo		
+Objects/moduleobject.c	247	260	PyModule_NewObject	PyModule_NewObject(PyObject *name)	todo		
+Objects/moduleobject.c	263	272	PyModule_New	PyModule_New(const char *name)	todo		
+Objects/moduleobject.c	279	292	check_api_version	check_api_version(const char *name, int module_api_version)	todo		
+Objects/moduleobject.c	295	321	_add_methods_to_object	_add_methods_to_object(PyObject *module, PyObject *name, PyMethodDef *functions)	todo		
+Objects/moduleobject.c	324	332	PyModule_Create2	PyModule_Create2(PyModuleDef* module, int module_api_version)	todo		
+Objects/moduleobject.c	335	343	module_copy_members_from_deflike	module_copy_members_from_deflike( PyModuleObject *md, PyModuleDef *def_like /* not necessarily a valid Python object */)	todo		changed-in-3.15: new function
+Objects/moduleobject.c	346	398	_PyModule_CreateInitialized	_PyModule_CreateInitialized(PyModuleDef* module, int module_api_version)	todo		changed-in-3.15:
+Objects/moduleobject.c	403	667	module_from_slots_and_spec	module_from_slots_and_spec( const PySlot *slots, PyObject *spec, int module_api_version, PyModuleDef* original_def /* NULL if not defined by a def */)	todo		changed-in-3.15: new function
+Objects/moduleobject.c	670	674	PyModule_FromDefAndSpec2	PyModule_FromDefAndSpec2(PyModuleDef* def, PyObject *spec, int module_api_version)	todo		changed-in-3.15:
+Objects/moduleobject.c	677	688	PyModule_FromSlotsAndSpec	PyModule_FromSlotsAndSpec(const PySlot *slots, PyObject *spec)	todo		changed-in-3.15: new function
+Objects/moduleobject.c	692	701	PyUnstable_Module_SetGIL	PyUnstable_Module_SetGIL(PyObject *module, void *gil)	todo		changed-in-3.15:
+Objects/moduleobject.c	705	725	run_exec_func	run_exec_func(PyObject *module, int (*exec)(PyObject *))	todo		changed-in-3.15: new function
+Objects/moduleobject.c	728	749	alloc_state	alloc_state(PyObject *module)	todo		changed-in-3.15: new function
+Objects/moduleobject.c	752	768	PyModule_Exec	PyModule_Exec(PyObject *module)	todo		changed-in-3.15: new function
+Objects/moduleobject.c	771	799	PyModule_ExecDef	PyModule_ExecDef(PyObject *module, PyModuleDef *def)	todo		changed-in-3.15:
+Objects/moduleobject.c	802	813	PyModule_AddFunctions	PyModule_AddFunctions(PyObject *m, PyMethodDef *functions)	todo		
+Objects/moduleobject.c	816	827	PyModule_SetDocString	PyModule_SetDocString(PyObject *m, const char *doc)	todo		
+Objects/moduleobject.c	830	837	PyModule_GetDict	PyModule_GetDict(PyObject *m)	todo		
+Objects/moduleobject.c	840	850	PyModule_GetStateSize	PyModule_GetStateSize(PyObject *m, Py_ssize_t *size_p)	todo		changed-in-3.15: new function
+Objects/moduleobject.c	853	861	PyModule_GetToken_DuringGC	PyModule_GetToken_DuringGC(PyObject *m, void **token_p)	todo		changed-in-3.15: new function
+Objects/moduleobject.c	864	873	PyModule_GetToken	PyModule_GetToken(PyObject *m, void **token_p)	todo		changed-in-3.15: new function
+Objects/moduleobject.c	876	902	PyModule_GetNameObject	PyModule_GetNameObject(PyObject *mod)	todo		
+Objects/moduleobject.c	905	914	PyModule_GetName	PyModule_GetName(PyObject *m)	todo		
+Objects/moduleobject.c	917	948	_PyModule_GetFilenameObject	_PyModule_GetFilenameObject(PyObject *mod)	todo		
+Objects/moduleobject.c	951	962	PyModule_GetFilenameObject	PyModule_GetFilenameObject(PyObject *mod)	todo		
+Objects/moduleobject.c	965	975	PyModule_GetFilename	PyModule_GetFilename(PyObject *m)	todo		
+Objects/moduleobject.c	978	1010	_PyModule_GetFilenameUTF8	_PyModule_GetFilenameUTF8(PyObject *mod, char *buffer, Py_ssize_t maxlen)	todo		changed-in-3.15:
+Objects/moduleobject.c	1013	1020	PyModule_GetDef	PyModule_GetDef(PyObject* m)	todo		changed-in-3.15:
+Objects/moduleobject.c	1023	1029	PyModule_GetState_DuringGC	PyModule_GetState_DuringGC(PyObject* m)	todo		changed-in-3.15: new function
+Objects/moduleobject.c	1032	1039	PyModule_GetState	PyModule_GetState(PyObject* m)	todo		
+Objects/moduleobject.c	1042	1047	_PyModule_Clear	_PyModule_Clear(PyObject *m)	todo		
+Objects/moduleobject.c	1050	1111	_PyModule_ClearDict	_PyModule_ClearDict(PyObject *d)	todo		
+Objects/moduleobject.c	1133	1137	module___init___impl	module___init___impl(PyModuleObject *self, PyObject *name, PyObject *doc) /*[clinic end generated code: output=e7e721c26ce7aad7 input=57f9e177401e5e1e]*/	todo		
+Objects/moduleobject.c	1140	1165	module_dealloc	module_dealloc(PyObject *self)	todo		changed-in-3.15:
+Objects/moduleobject.c	1168	1173	module_repr	module_repr(PyObject *self)	todo		
+Objects/moduleobject.c	1178	1190	_PyModuleSpec_IsInitializing	_PyModuleSpec_IsInitializing(PyObject *spec)	todo		
+Objects/moduleobject.c	1196	1209	_PyModuleSpec_IsUninitializedSubmodule	_PyModuleSpec_IsUninitializedSubmodule(PyObject *spec, PyObject *name)	todo		
+Objects/moduleobject.c	1212	1240	_PyModuleSpec_GetFileOrigin	_PyModuleSpec_GetFileOrigin(PyObject *spec, PyObject **p_origin)	todo		
+Objects/moduleobject.c	1243	1314	_PyModule_IsPossiblyShadowing	_PyModule_IsPossiblyShadowing(PyObject *origin)	todo		changed-in-3.15:
+Objects/moduleobject.c	1317	1331	module_get_resolved_dict_item	module_get_resolved_dict_item(PyObject *dict, PyObject *name, PyObject **result)	todo		changed-in-3.15: new function
+Objects/moduleobject.c	1334	1520	_Py_module_getattro_impl	_Py_module_getattro_impl(PyModuleObject *m, PyObject *name, int suppress)	todo		changed-in-3.15:
+Objects/moduleobject.c	1524	1528	_Py_module_getattro	_Py_module_getattro(PyObject *self, PyObject *name)	todo		
+Objects/moduleobject.c	1531	1546	module_traverse	module_traverse(PyObject *self, visitproc visit, void *arg)	todo		changed-in-3.15:
+Objects/moduleobject.c	1549	1569	module_clear	module_clear(PyObject *self)	todo		changed-in-3.15:
+Objects/moduleobject.c	1572	1602	module_dir	module_dir(PyObject *self, PyObject *args)	todo		changed-in-3.15:
+Objects/moduleobject.c	1611	1623	module_load_dict	module_load_dict(PyModuleObject *m)	todo		changed-in-3.15: new function
+Objects/moduleobject.c	1626	1644	module_get_annotate	module_get_annotate(PyObject *self, void *Py_UNUSED(ignored))	todo		changed-in-3.15:
+Objects/moduleobject.c	1647	1678	module_set_annotate	module_set_annotate(PyObject *self, PyObject *value, void *Py_UNUSED(ignored))	todo		changed-in-3.15:
+Objects/moduleobject.c	1681	1750	module_get_annotations	module_get_annotations(PyObject *self, void *Py_UNUSED(ignored))	todo		changed-in-3.15:
+Objects/moduleobject.c	1753	1784	module_set_annotations	module_set_annotations(PyObject *self, PyObject *value, void *Py_UNUSED(ignored))	todo		changed-in-3.15:

@@ -1,33 +1,37 @@
 file	line	endline	name	signature	status	entry	note
 Modules/_sqlite/cursor.c	51	59	check_cursor_locked	check_cursor_locked(pysqlite_Cursor *cur)	todo		
-Modules/_sqlite/cursor.c	73	87	register_cursor	register_cursor(pysqlite_Connection *connection, PyObject *cursor)	todo		
-Modules/_sqlite/cursor.c	98	135	pysqlite_cursor_init_impl	pysqlite_cursor_init_impl(pysqlite_Cursor *self, pysqlite_Connection *connection) /*[clinic end generated code: output=ac59dce49a809ca8 input=23d4265b534989fb]*/	todo		
-Modules/_sqlite/cursor.c	138	149	stmt_reset	stmt_reset(pysqlite_Statement *self)	todo		
-Modules/_sqlite/cursor.c	152	163	cursor_traverse	cursor_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/_sqlite/cursor.c	166	181	cursor_clear	cursor_clear(PyObject *op)	todo		
-Modules/_sqlite/cursor.c	184	193	cursor_dealloc	cursor_dealloc(PyObject *op)	todo		
-Modules/_sqlite/cursor.c	196	217	_pysqlite_get_converter	_pysqlite_get_converter(pysqlite_state *state, const char *keystr, Py_ssize_t keylen)	todo		
-Modules/_sqlite/cursor.c	220	297	pysqlite_build_row_cast_map	pysqlite_build_row_cast_map(pysqlite_Cursor* self)	todo		
-Modules/_sqlite/cursor.c	300	320	_pysqlite_build_column_name	_pysqlite_build_column_name(pysqlite_Cursor *self, const char *colname)	todo		
-Modules/_sqlite/cursor.c	329	458	_pysqlite_fetch_one_row	_pysqlite_fetch_one_row(pysqlite_Cursor* self)	todo		
-Modules/_sqlite/cursor.c	465	486	check_cursor	static int check_cursor(pysqlite_Cursor* cur)	todo		
-Modules/_sqlite/cursor.c	489	515	begin_transaction	begin_transaction(pysqlite_Connection *self)	todo		
-Modules/_sqlite/cursor.c	518	524	get_statement_from_cache	get_statement_from_cache(pysqlite_Cursor *self, PyObject *operation)	todo		
-Modules/_sqlite/cursor.c	527	536	stmt_step	stmt_step(sqlite3_stmt *statement)	todo		
-Modules/_sqlite/cursor.c	539	621	bind_param	bind_param(pysqlite_state *state, pysqlite_Statement *self, int pos, PyObject *parameter)	todo		
-Modules/_sqlite/cursor.c	625	637	need_adapt	need_adapt(pysqlite_state *state, PyObject *obj)	todo		
-Modules/_sqlite/cursor.c	640	778	bind_parameters	bind_parameters(pysqlite_state *state, pysqlite_Statement *self, PyObject *parameters)	todo		
-Modules/_sqlite/cursor.c	781	981	_pysqlite_query_execute	_pysqlite_query_execute(pysqlite_Cursor* self, int multiple, PyObject* operation, PyObject* second_argument)	todo		
-Modules/_sqlite/cursor.c	994	999	pysqlite_cursor_execute_impl	pysqlite_cursor_execute_impl(pysqlite_Cursor *self, PyObject *sql, PyObject *parameters) /*[clinic end generated code: output=d81b4655c7c0bbad input=a8e0200a11627f94]*/	todo		
-Modules/_sqlite/cursor.c	1012	1017	pysqlite_cursor_executemany_impl	pysqlite_cursor_executemany_impl(pysqlite_Cursor *self, PyObject *sql, PyObject *seq_of_parameters) /*[clinic end generated code: output=2c65a3c4733fb5d8 input=0d0a52e5eb7ccd35]*/	todo		
-Modules/_sqlite/cursor.c	1029	1094	pysqlite_cursor_executescript_impl	pysqlite_cursor_executescript_impl(pysqlite_Cursor *self, const char *sql_script) /*[clinic end generated code: output=8fd726dde1c65164 input=78f093be415a8a2c]*/	todo		
-Modules/_sqlite/cursor.c	1097	1140	pysqlite_cursor_iternext	pysqlite_cursor_iternext(PyObject *op)	todo		
-Modules/_sqlite/cursor.c	1149	1160	pysqlite_cursor_fetchone_impl	pysqlite_cursor_fetchone_impl(pysqlite_Cursor *self) /*[clinic end generated code: output=4bd2eabf5baaddb0 input=e78294ec5980fdba]*/	todo		
-Modules/_sqlite/cursor.c	1172	1198	pysqlite_cursor_fetchmany_impl	pysqlite_cursor_fetchmany_impl(pysqlite_Cursor *self, uint32_t maxrows) /*[clinic end generated code: output=3325f2b477c71baf input=a509c412aa70b27e]*/	todo		
-Modules/_sqlite/cursor.c	1207	1232	pysqlite_cursor_fetchall_impl	pysqlite_cursor_fetchall_impl(pysqlite_Cursor *self) /*[clinic end generated code: output=d5da12aca2da4b27 input=f5d401086a8df25a]*/	todo		
-Modules/_sqlite/cursor.c	1244	1248	pysqlite_cursor_setinputsizes_impl	pysqlite_cursor_setinputsizes_impl(pysqlite_Cursor *self, PyObject *sizes) /*[clinic end generated code: output=a06c12790bd05f2e input=de7950a3aec79bdf]*/	todo		
-Modules/_sqlite/cursor.c	1261	1266	pysqlite_cursor_setoutputsize_impl	pysqlite_cursor_setoutputsize_impl(pysqlite_Cursor *self, PyObject *size, PyObject *column) /*[clinic end generated code: output=018d7e9129d45efe input=607a6bece8bbb273]*/	todo		
-Modules/_sqlite/cursor.c	1275	1301	pysqlite_cursor_close_impl	pysqlite_cursor_close_impl(pysqlite_Cursor *self) /*[clinic end generated code: output=b6055e4ec6fe63b6 input=08b36552dbb9a986]*/	todo		
-Modules/_sqlite/cursor.c	1309	1313	_sqlite3_Cursor_arraysize_get_impl	_sqlite3_Cursor_arraysize_get_impl(pysqlite_Cursor *self) /*[clinic end generated code: output=e0919d97175e6c50 input=3278f8d3ecbd90e3]*/	todo		
-Modules/_sqlite/cursor.c	1321	1325	_sqlite3_Cursor_arraysize_set_impl	_sqlite3_Cursor_arraysize_set_impl(pysqlite_Cursor *self, PyObject *value) /*[clinic end generated code: output=af59a6b09f8cce6e input=ace48cb114e26060]*/	todo		
-Modules/_sqlite/cursor.c	1382	1391	pysqlite_cursor_setup_types	pysqlite_cursor_setup_types(PyObject *module)	todo		
+Modules/_sqlite/cursor.c	62	68	get_module_state_by_cursor	get_module_state_by_cursor(pysqlite_Cursor *cursor)	todo		changed-in-3.15: new function
+Modules/_sqlite/cursor.c	71	86	cursor_sqlite3_internal_error	cursor_sqlite3_internal_error(pysqlite_Cursor *cursor, const char *error_message, int chain_exceptions)	todo		changed-in-3.15: new function
+Modules/_sqlite/cursor.c	89	94	cursor_cannot_reset_stmt_error	cursor_cannot_reset_stmt_error(pysqlite_Cursor *cursor, int chain_exceptions)	todo		changed-in-3.15: new function
+Modules/_sqlite/cursor.c	111	144	pysqlite_cursor_init_impl	pysqlite_cursor_init_impl(pysqlite_Cursor *self, pysqlite_Connection *connection) /*[clinic end generated code: output=ac59dce49a809ca8 input=23d4265b534989fb]*/	todo		changed-in-3.15:
+Modules/_sqlite/cursor.c	147	158	stmt_reset	stmt_reset(pysqlite_Statement *self)	todo		
+Modules/_sqlite/cursor.c	161	172	cursor_traverse	cursor_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_sqlite/cursor.c	175	194	cursor_clear	cursor_clear(PyObject *op)	todo		changed-in-3.15:
+Modules/_sqlite/cursor.c	197	206	cursor_dealloc	cursor_dealloc(PyObject *op)	todo		
+Modules/_sqlite/cursor.c	209	233	_pysqlite_get_converter	_pysqlite_get_converter(pysqlite_state *state, const char *keystr, Py_ssize_t keylen)	todo		changed-in-3.15:
+Modules/_sqlite/cursor.c	236	312	pysqlite_build_row_cast_map	pysqlite_build_row_cast_map(pysqlite_Cursor* self)	todo		changed-in-3.15:
+Modules/_sqlite/cursor.c	315	335	_pysqlite_build_column_name	_pysqlite_build_column_name(pysqlite_Cursor *self, const char *colname)	todo		
+Modules/_sqlite/cursor.c	344	473	_pysqlite_fetch_one_row	_pysqlite_fetch_one_row(pysqlite_Cursor* self)	todo		
+Modules/_sqlite/cursor.c	480	501	check_cursor	static int check_cursor(pysqlite_Cursor* cur)	todo		
+Modules/_sqlite/cursor.c	504	530	begin_transaction	begin_transaction(pysqlite_Connection *self)	todo		
+Modules/_sqlite/cursor.c	533	539	get_statement_from_cache	get_statement_from_cache(pysqlite_Cursor *self, PyObject *operation)	todo		
+Modules/_sqlite/cursor.c	542	551	stmt_step	stmt_step(sqlite3_stmt *statement)	todo		
+Modules/_sqlite/cursor.c	554	636	bind_param	bind_param(pysqlite_state *state, pysqlite_Statement *self, int pos, PyObject *parameter)	todo		
+Modules/_sqlite/cursor.c	640	652	need_adapt	need_adapt(pysqlite_state *state, PyObject *obj)	todo		
+Modules/_sqlite/cursor.c	655	792	bind_parameters	bind_parameters(pysqlite_state *state, pysqlite_Statement *self, PyObject *parameters)	todo		changed-in-3.15:
+Modules/_sqlite/cursor.c	795	1022	_pysqlite_query_execute	_pysqlite_query_execute(pysqlite_Cursor* self, int multiple, PyObject* operation, PyObject* second_argument)	todo		changed-in-3.15:
+Modules/_sqlite/cursor.c	1035	1040	pysqlite_cursor_execute_impl	pysqlite_cursor_execute_impl(pysqlite_Cursor *self, PyObject *sql, PyObject *parameters) /*[clinic end generated code: output=d81b4655c7c0bbad input=a8e0200a11627f94]*/	todo		
+Modules/_sqlite/cursor.c	1053	1058	pysqlite_cursor_executemany_impl	pysqlite_cursor_executemany_impl(pysqlite_Cursor *self, PyObject *sql, PyObject *seq_of_parameters) /*[clinic end generated code: output=2c65a3c4733fb5d8 input=0d0a52e5eb7ccd35]*/	todo		
+Modules/_sqlite/cursor.c	1070	1135	pysqlite_cursor_executescript_impl	pysqlite_cursor_executescript_impl(pysqlite_Cursor *self, const char *sql_script) /*[clinic end generated code: output=8fd726dde1c65164 input=78f093be415a8a2c]*/	todo		
+Modules/_sqlite/cursor.c	1138	1191	pysqlite_cursor_iternext	pysqlite_cursor_iternext(PyObject *op)	todo		changed-in-3.15:
+Modules/_sqlite/cursor.c	1200	1211	pysqlite_cursor_fetchone_impl	pysqlite_cursor_fetchone_impl(pysqlite_Cursor *self) /*[clinic end generated code: output=4bd2eabf5baaddb0 input=e78294ec5980fdba]*/	todo		
+Modules/_sqlite/cursor.c	1223	1249	pysqlite_cursor_fetchmany_impl	pysqlite_cursor_fetchmany_impl(pysqlite_Cursor *self, uint32_t maxrows) /*[clinic end generated code: output=3325f2b477c71baf input=a509c412aa70b27e]*/	todo		
+Modules/_sqlite/cursor.c	1258	1283	pysqlite_cursor_fetchall_impl	pysqlite_cursor_fetchall_impl(pysqlite_Cursor *self) /*[clinic end generated code: output=d5da12aca2da4b27 input=f5d401086a8df25a]*/	todo		
+Modules/_sqlite/cursor.c	1295	1299	pysqlite_cursor_setinputsizes_impl	pysqlite_cursor_setinputsizes_impl(pysqlite_Cursor *self, PyObject *sizes) /*[clinic end generated code: output=a06c12790bd05f2e input=de7950a3aec79bdf]*/	todo		
+Modules/_sqlite/cursor.c	1312	1317	pysqlite_cursor_setoutputsize_impl	pysqlite_cursor_setoutputsize_impl(pysqlite_Cursor *self, PyObject *size, PyObject *column) /*[clinic end generated code: output=018d7e9129d45efe input=607a6bece8bbb273]*/	todo		
+Modules/_sqlite/cursor.c	1326	1359	pysqlite_cursor_close_impl	pysqlite_cursor_close_impl(pysqlite_Cursor *self) /*[clinic end generated code: output=b6055e4ec6fe63b6 input=08b36552dbb9a986]*/	todo		changed-in-3.15:
+Modules/_sqlite/cursor.c	1367	1371	_sqlite3_Cursor_arraysize_get_impl	_sqlite3_Cursor_arraysize_get_impl(pysqlite_Cursor *self) /*[clinic end generated code: output=e0919d97175e6c50 input=3278f8d3ecbd90e3]*/	todo		
+Modules/_sqlite/cursor.c	1379	1388	_sqlite3_Cursor_arraysize_set_impl	_sqlite3_Cursor_arraysize_set_impl(pysqlite_Cursor *self, PyObject *value) /*[clinic end generated code: output=af59a6b09f8cce6e input=ace48cb114e26060]*/	todo		changed-in-3.15:
+Modules/_sqlite/cursor.c	1414	1418	cursor_get_row_factory	cursor_get_row_factory(PyObject *op, void *Py_UNUSED(closure))	todo		changed-in-3.15: new function
+Modules/_sqlite/cursor.c	1421	1431	cursor_set_row_factory	cursor_set_row_factory(PyObject *op, PyObject *value, void *Py_UNUSED(closure))	todo		changed-in-3.15: new function
+Modules/_sqlite/cursor.c	1465	1474	pysqlite_cursor_setup_types	pysqlite_cursor_setup_types(PyObject *module)	todo		

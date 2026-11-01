@@ -21,7 +21,7 @@ likelihood: |
   in a batch, and a caller looping until [] still sees every line.
 maybe_intended: |
   Partly. "hint" is a hint, and BytesIO.readlines's docstring calls it "an approximate bound"
-  (bytesio.c:581). No test pins the boundary (test_memoryio's only hint case, readlines(15) over
+  (bytesio.c:582). No test pins the boundary (test_memoryio's only hint case, readlines(15) over
   11-character lines, passes under both rules). A maintainer would likely accept aligning the code
   as a cleanup, with low urgency, and could equally choose to soften the docs.
 reproducer: |
@@ -50,12 +50,12 @@ observed: |
   io.BufferedReader, io.StringIO and io.TextIOWrapper return two. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
 promised_by: |
-  Doc/library/io.rst:409-413: "no more lines will be read if the total size (in bytes/characters)
+  Doc/library/io.rst:388-392: "no more lines will be read if the total size (in bytes/characters)
   of all lines so far exceeds hint". Lib/_pyio.py:568-570 repeats the sentence in the docstring of
   the code that does not follow it.
 cause: |
-  Modules/_io/bytesio.c:627 `if (maxsize > 0 && size >= maxsize) break;` and Lib/_pyio.py:579
-  `if n >= hint: break` use >=; Modules/_io/iobase.c:765 `if (line_length > hint - length) break;`
+  Modules/_io/bytesio.c:628 `if (maxsize > 0 && size >= maxsize) break;` and Lib/_pyio.py:579
+  `if n >= hint: break` use >=; Modules/_io/iobase.c:766 `if (line_length > hint - length) break;`
   uses >.
 possible_fix: |
   Change the two >= to >, or (the other way round) change iobase.c and reword the docs to "reaches

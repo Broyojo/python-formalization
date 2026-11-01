@@ -38,11 +38,11 @@ tested: "REPRODUCED on python3 3.14.7 by scripts/check_bugs.py; '1' on main (3.1
 promised_by: |
   Doc/library/string.rst: conversion is one of r, s or a.
 cause: |
-  Objects/stringlib/unicode_format.h:564 initialises *conversion to '\0', :606 reads the character
-  after !, and :822 tests conversion != '\0'. Nothing separates "no conversion" from a NUL read at
-  :606.
+  Objects/stringlib/unicode_format.h:565 initialises *conversion to '\0', :607 reads the character
+  after !, and :823 tests conversion != '\0'. Nothing separates "no conversion" from a NUL read at
+  :607.
 possible_fix: |
-  In parse_field, reject a conversion character of '\0' at :606, with the existing message.
+  In parse_field, reject a conversion character of '\0' at :607, with the existing message.
 lean: |
   Refuted by conversionChecked_refuted (lean/PyLean/UnicodeObj/FormatStrProps.lean), on the whole of
   doStringFormat. conversionRejected_proven shows every other character is refused with the exact

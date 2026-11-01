@@ -12,7 +12,7 @@ open PyLean
 
 /-! ## Two's-complement encodings -/
 
-/-- `encode_long` (`Lib/pickle.py:356-384`). `x.bit_length()` is the bit length
+/-- `encode_long` (`Lib/pickle.py:372-400`). `x.bit_length()` is the bit length
 of `|x|`. -/
 def encodeLong (x : Int) : Bytes :=
   if x = 0 then [] else
@@ -24,7 +24,7 @@ def encodeLong (x : Int) : Bytes :=
     else result
   else result
 
-/-- `decode_long` (`Lib/pickle.py:386-404`) and `_PyLong_FromByteArray(.., 1, 1)`. -/
+/-- `decode_long` (`Lib/pickle.py:402-420`) and `_PyLong_FromByteArray(.., 1, 1)`. -/
 def decodeLong (b : Bytes) : Int := leInt b
 
 /-- `struct.pack("<i", n)`. -/
@@ -37,7 +37,7 @@ def packU32 (n : Nat) : Py Bytes :=
   if n ≤ 4294967295 then .ok (leBytes n 4)
   else .error (structError "'I' format requires 0 <= number <= 4294967295")
 
-/-- `_Pickler.save_long` (`Lib/pickle.py:806-835`). `bin` is `proto >= 1`. -/
+/-- `_Pickler.save_long` (`Lib/pickle.py:822-851`). `bin` is `proto >= 1`. -/
 def pySaveLong (proto : Nat) (x : Int) : Py Bytes :=
   let bin := proto ≥ 1
   let fits32 := -0x80000000 ≤ x ∧ x ≤ 0x7fffffff
@@ -57,7 +57,7 @@ def pySaveLong (proto : Nat) (x : Int) : Py Bytes :=
     .ok (oLONG :: r ++ [0x4c, nl])
 
 /-- The C byte count and two's-complement bytes of a nonzero int
-(`Modules/_pickle.c:2296-2333`): `nbytes` is computed before trimming and
+(`Modules/_pickle.c:2404-2441`): `nbytes` is computed before trimming and
 checked against `0x7fffffff`. -/
 def cLongBytes (x : Int) : Py Bytes :=
   let nbits := bitLength x.natAbs
@@ -69,7 +69,7 @@ def cLongBytes (x : Int) : Py Bytes :=
     then .ok (pdata.take (nbytes - 1))
     else .ok pdata
 
-/-- `save_long` in `Modules/_pickle.c:2230-2393`. The 4-byte fast path writes
+/-- `save_long` in `Modules/_pickle.c:2338-2501`. The 4-byte fast path writes
 the low bytes of `val` and picks the opcode from which bytes are nonzero. -/
 def cSaveLong (proto : Nat) (x : Int) : Py Bytes :=
   let bin := proto ≥ 1
@@ -94,7 +94,7 @@ def cSaveLong (proto : Nat) (x : Int) : Py Bytes :=
 /-! ## Text parsers -/
 
 /-- Result of `PyLong_FromString(str, &pend, 10)` on a NUL-terminated string
-(`Objects/longobject.c:2973-3077`, `long_from_string_base` at :2880-2970). -/
+(`Objects/longobject.c:3055-3159`, `long_from_string_base` at :2962-3052). -/
 inductive PLRes where
   /-- success; the value. `pend` then points at the terminating NUL. -/
   | ok (v : Int)
@@ -130,7 +130,7 @@ def signSplit : Bytes → Bool × Bytes
   | 0x2d :: r => (true, r)
   | r => (false, r)
 
-/-- `long_from_string_base` (`Objects/longobject.c:2880-2970`) on the text
+/-- `long_from_string_base` (`Objects/longobject.c:2962-3052`) on the text
 after the sign, then the sign. -/
 def lfsBase (neg : Bool) (s2 : Bytes) : PLRes :=
   match s2 with
@@ -145,7 +145,7 @@ def lfsBase (neg : Bool) (s2 : Bytes) : PLRes :=
       let v : Int := digitsVal ds
       .ok (if neg then -v else v)
 
-/-- `PyLong_FromString(s, pend, 10)` (`Objects/longobject.c:2973-3077`) where
+/-- `PyLong_FromString(s, pend, 10)` (`Objects/longobject.c:3055-3159`) where
 `s` is the C string (the bytes before the first NUL): leading whitespace, an
 optional sign, then `long_from_string_base`. -/
 def pyLongFromString (s : Bytes) : PLRes :=
@@ -155,7 +155,7 @@ def pyLongFromString (s : Bytes) : PLRes :=
 def invalidLiteral (b : Bytes) : PyExc :=
   .valueError s!"invalid literal for int() with base 10: {(bytesRepr (b.take 200)).take 200}"
 
-/-- `int(b)` for a bytes object: `_PyLong_FromBytes` (`Objects/longobject.c:3084-3101`)
+/-- `int(b)` for a bytes object: `_PyLong_FromBytes` (`Objects/longobject.c:3166-3183`)
 rejects anything after an embedded NUL. -/
 def pyIntOfBytes (b : Bytes) : Py Int :=
   let cstr := b.takeWhile (· ≠ 0)
@@ -166,13 +166,13 @@ def pyIntOfBytes (b : Bytes) : Py Int :=
 
 /-- The exception `PyLong_FromString` raises in C for a syntax error: the
 message is built from the first 200 bytes decoded as UTF-8, which itself raises
-`UnicodeDecodeError` on invalid UTF-8 (`Objects/longobject.c:3068-3076`). -/
+`UnicodeDecodeError` on invalid UTF-8 (`Objects/longobject.c:3150-3158`). -/
 def cLongSyntaxError (cstr : Bytes) : PyExc :=
   if (utf8Dec false (cstr.take 200)).isSome then .valueError "~invalid literal for int() with base 10"
   else unicodeDecodeError
 
 /-- `PyLong_FromString(s, NULL, 10)` in C on the line buffer (NUL-terminated
-copy of the line, `Modules/_pickle.c:1557-1570`). -/
+copy of the line, `Modules/_pickle.c:1585-1598`). -/
 def cLongFromLine (line : Bytes) : Py Int :=
   let cstr := line.takeWhile (· ≠ 0)
   match pyLongFromString cstr with
@@ -210,13 +210,13 @@ inductive IntVal where
   | bool (b : Bool)
   deriving Repr, DecidableEq
 
-/-- `_Unpickler.load_int` after `readline()` (`Lib/pickle.py:1376-1385`). -/
+/-- `_Unpickler.load_int` after `readline()` (`Lib/pickle.py:1402-1411`). -/
 def pyLoadIntLine (data : Bytes) : Py IntVal :=
   if data = [0x30, 0x30, nl] then .ok (.bool false)
   else if data = [0x30, 0x31, nl] then .ok (.bool true)
   else .int <$> pyIntOfBytes data
 
-/-- `load_int` (`Modules/_pickle.c:5398-5439`) on a line returned by
+/-- `load_int` (`Modules/_pickle.c:5521-5562`) on a line returned by
 `_Unpickler_Readline` (which always ends in `\n`). -/
 def cLoadIntLine (s : Bytes) : Py IntVal :=
   if s.length < 2 then .error (unpicklingError "pickle data was truncated")
@@ -230,13 +230,13 @@ def cLoadIntLine (s : Bytes) : Py IntVal :=
     else if s.length = 3 ∧ (x = 0 ∨ x = 1) then .ok (.bool (x = 1))
     else .ok (.int x)
 
-/-- `_Unpickler.load_long` after `readline()` (`Lib/pickle.py:1399-1404`). -/
+/-- `_Unpickler.load_long` after `readline()` (`Lib/pickle.py:1425-1430`). -/
 def pyLoadLongLine (line : Bytes) : Py Int :=
   let val := line.dropLast
   let val := if val ≠ [] ∧ val.getLast? = some 0x4c then val.dropLast else val
   pyIntOfBytes val
 
-/-- `load_long` (`Modules/_pickle.c:5551-5577`): a final `L` before the newline
+/-- `load_long` (`Modules/_pickle.c:5674-5700`): a final `L` before the newline
 is overwritten with NUL. -/
 def cLoadLongLine (s : Bytes) : Py Int :=
   if s.length < 2 then .error (unpicklingError "pickle data was truncated")

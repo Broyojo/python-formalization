@@ -4,7 +4,7 @@ import PyLean.TypeObj.FloatOps
 The abstract object protocols: rich comparison, truth, hashing, repr/str
 (`Objects/object.c`), numbers, sequences, mappings, iteration, `isinstance`
 (`Objects/abstract.c`), and the `slot_*` dispatchers behind them
-(`Objects/typeobject.c:9941-10630`).
+(`Objects/typeobject.c:10643-11344`).
 
 Each `call*` function applies the C function stored in a slot. The builtin value types
 (`int`, `str`, `tuple`, `list`, `dict`) have just enough of their C slots to exercise the
@@ -19,7 +19,7 @@ def iterFuel : Nat := 100000
 
 /-! ## Truth and comparison -/
 
-/-- `PyObject_RichCompareBool`, `Objects/object.c:1119`. -/
+/-- `PyObject_RichCompareBool`, `Objects/object.c:1122`. -/
 def richCompareBool (rt : Rt) (v w : Val) (op : CmpOp) : M Bool := do
   if v.is w then
     if op == .eq then return true
@@ -33,8 +33,8 @@ def richCompareBool (rt : Rt) (v w : Val) (op : CmpOp) : M Bool := do
 def cmpInt (a b : Int) : CmpOp → Bool
   | .lt => a < b | .le => a ≤ b | .eq => a = b | .ne => a ≠ b | .gt => a > b | .ge => a ≥ b
 
-/-- The shared loop of `list_richcompare_impl` (`Objects/listobject.c:3396`) and
-`tuple_richcompare` (`Objects/tupleobject.c:660`) after the length shortcut: find the
+/-- The shared loop of `list_richcompare_impl` (`Objects/listobject.c:3459`) and
+`tuple_richcompare` (`Objects/tupleobject.c:738`) after the length shortcut: find the
 first index whose items are not equal. `none` means one sequence ran out. -/
 def firstDiff (rt : Rt) : List Val → List Val → M (Option (Val × Val))
   | [], _ | _, [] => pure none
@@ -44,7 +44,7 @@ def firstDiff (rt : Rt) : List Val → List Val → M (Option (Val × Val))
       let k ← richCompareBool rt a b .eq
       if k then firstDiff rt as bs else pure (some (a, b))
 
-/-- `tuple_richcompare`, `Objects/tupleobject.c:660`, given both item lists. -/
+/-- `tuple_richcompare`, `Objects/tupleobject.c:738`, given both item lists. -/
 def seqRichcompare (rt : Rt) (vs ws : List Val) (op : CmpOp) : M Val := do
   match ← firstDiff rt vs ws with
   | none => pure (.bool (cmpInt vs.length ws.length op))
@@ -53,7 +53,7 @@ def seqRichcompare (rt : Rt) (vs ws : List Val) (op : CmpOp) : M Val := do
     else if op == .ne then pure (.bool true)
     else rt.richCompare a b op
 
-/-- `list_richcompare_impl`, `Objects/listobject.c:3396`: adds the length shortcut. -/
+/-- `list_richcompare_impl`, `Objects/listobject.c:3459`: adds the length shortcut. -/
 def listRichcompare (rt : Rt) (vs ws : List Val) (op : CmpOp) : M Val :=
   if vs.length != ws.length && (op == .eq || op == .ne) then
     pure (.bool (op == .ne))
@@ -67,7 +67,7 @@ def strCompare : List Char → List Char → Int
   | a :: as, b :: bs =>
     if a.toNat < b.toNat then -1 else if b.toNat < a.toNat then 1 else strCompare as bs
 
-/-- `object_richcompare`, `Objects/typeobject.c:6967`, for the cases that do not recurse
+/-- `object_richcompare`, `Objects/typeobject.c:7577`, for the cases that do not recurse
 into the slot. `eqSlot` is `tp_richcompare(self, other, Py_EQ)`. -/
 def objectRichcompare (rt : Rt) (eqSlot : M Val) (self other : Val) (op : CmpOp) : M Val :=
   match op with
@@ -81,13 +81,13 @@ def objectRichcompare (rt : Rt) (eqSlot : M Val) (self other : Val) (op : CmpOp)
       pure (.bool (!ok))
   | _ => pure .notImpl
 
-/-- `slot_tp_richcompare`, `Objects/typeobject.c:10471`. -/
+/-- `slot_tp_richcompare`, `Objects/typeobject.c:11172`. -/
 def slotTpRichcompare (rt : Rt) (self other : Val) (op : CmpOp) : M Val := do
   match ← maybeCallSpecial rt self op.dunder [other] false with
   | .res r => pure r
   | _ => pure .notImpl
 
-/-- `method_richcompare`, `Objects/classobject.c:210`. -/
+/-- `method_richcompare`, `Objects/classobject.c:225`. -/
 def methodRichcompare (rt : Rt) (self other : Val) (op : CmpOp) : M Val := do
   let w ← getW
   match op, payloadOf w self, payloadOf w other with
@@ -98,13 +98,13 @@ def methodRichcompare (rt : Rt) (self other : Val) (op : CmpOp) : M Val := do
     pure (.bool (if op == .eq then eq else !eq))
   | _, _, _ => pure .notImpl
 
-/-- `Py_RETURN_RICHCOMPARE` result for `long_richcompare`, `Objects/longobject.c:3543`. -/
+/-- `Py_RETURN_RICHCOMPARE` result for `long_richcompare`, `Objects/longobject.c:3626`. -/
 def longRichcompare (w : World) (a b : Val) (op : CmpOp) : Val :=
   match intOf w a, intOf w b with
   | some x, some y => .bool (cmpInt x y op)
   | _, _ => .notImpl
 
-/-- `PyUnicode_RichCompare`, `Objects/unicodeobject.c:11538`. -/
+/-- `PyUnicode_RichCompare`, `Objects/unicodeobject.c:11263`. -/
 def unicodeRichcompare (w : World) (a b : Val) (op : CmpOp) : Val :=
   match strOf w a, strOf w b with
   | some x, some y => .bool (cmpInt (strCompare x.toList y.toList) 0 op)
@@ -131,9 +131,9 @@ def storedHash (w : World) (a : Addr) (k : Val) : Int :=
   | none, .str t => strHash t
   | none, _ => 0
 
-/-- `_Py_dict_lookup`, `Objects/dictobject.c:1248`, through `compare_generic`, `:1102`: identity,
+/-- `_Py_dict_lookup`, `Objects/dictobject.c:1328`, through `compare_generic`, `:1182`: identity,
 then the stored hash, then `PyObject_RichCompareBool(startkey, key, Py_EQ)`, and a restart when
-the entry changed under the comparison (`:1118`). `some i` is the index of the entry.
+the entry changed under the comparison (`:1198`). `some i` is the index of the entry.
 
 The model has no hash table, so it visits entries in insertion order. Only entries of equal hash
 can be compared, and those share a probe sequence in the same order, unless a deletion left a slot
@@ -158,7 +158,7 @@ def dictProbe (rt : Rt) (a : Addr) (key : Val) (hash : Int) : Nat → Nat → M 
         | none => dictProbe rt a key hash fuel 0
       else dictProbe rt a key hash fuel (i + 1)
 
-/-- The loop of `dict_equal_lock_held`, `Objects/dictobject.c:4270`: for each entry of `a`, look
+/-- The loop of `dict_equal_lock_held`, `Objects/dictobject.c:4633`: for each entry of `a`, look
 its key up in `b` with the stored hash, then compare `aval` with `bval`. Both dicts are read again
 each time, because the comparisons can change them. -/
 def dictEqualLoop (rt : Rt) (a b : Addr) : Nat → Nat → M Bool
@@ -178,7 +178,7 @@ def dictEqualLoop (rt : Rt) (a b : Addr) : Nat → Nat → M Bool
           if ← richCompareBool rt aval bval .eq then dictEqualLoop rt a b fuel (i + 1)
           else pure false
 
-/-- `dict_richcompare`, `Objects/dictobject.c:4332`. -/
+/-- `dict_richcompare`, `Objects/dictobject.c:4695`. -/
 def dictRichcompare (rt : Rt) (a b : Addr) (op : CmpOp) : M Val := do
   if op == .eq || op == .ne then
     let w ← getW
@@ -223,7 +223,7 @@ def callRichcompareEq (rt : Rt) (f : SlotFn) (a b : Val) (op : CmpOp) : M Val :=
     | .obj x, .obj y, some _, some _ => dictRichcompare rt x y op
     | _, _, _, _ => pure .notImpl
   | .c .float =>
-    -- `float_richcompare`, `Objects/floatobject.c:416`, with its exact comparison of an int.
+    -- `float_richcompare`, `Objects/floatobject.c:406`, with its exact comparison of an int.
     match floatOf w a with
     | some x =>
       let bop : Binary64.CmpOp := match op with
@@ -249,7 +249,7 @@ def callRichcompareEq (rt : Rt) (f : SlotFn) (a b : Val) (op : CmpOp) : M Val :=
       pure (.bool (if op == .eq then same else !same))
     | _, _, _ => pure .notImpl
   | .c .methodWrapper =>
-    -- `wrapper_richcompare`, `Objects/descrobject.c:1320`.
+    -- `wrapper_richcompare`, `Objects/descrobject.c:1344`.
     match op, payloadOf w a, payloadOf w b with
     | .eq, some (.methodWrapper d1 s1), some (.methodWrapper d2 s2)
     | .ne, some (.methodWrapper d1 s1), some (.methodWrapper d2 s2) =>
@@ -271,7 +271,7 @@ def callRichcompare (rt : Rt) (f : SlotFn) (a b : Val) (op : CmpOp) : M Val := d
     objectRichcompare rt eqSlot a b op
   | _ => callRichcompareEq rt f a b op
 
-/-- `do_richcompare`, `Objects/object.c:1046`. -/
+/-- `do_richcompare`, `Objects/object.c:1049`. -/
 def doRichcompare (rt : Rt) (v w' : Val) (op : CmpOp) : M Val := do
   let w ← getW
   let tv := typeOf w v
@@ -311,7 +311,7 @@ def doRichcompare (rt : Rt) (v w' : Val) (op : CmpOp) : M Val := do
     | r => pure r
   | r => pure r
 
-/-- `PyObject_Hash` failure, `PyObject_HashNotImplemented`, `Objects/object.c:1145`. -/
+/-- `PyObject_Hash` failure, `PyObject_HashNotImplemented`, `Objects/object.c:1151`. -/
 def hashNotImplemented {α : Type} (v : Val) : M α := do
   let w ← getW
   typeErr s!"unhashable type: '{trunc 200 (typeName w v)}'"
@@ -325,12 +325,12 @@ def longHash (i : Int) : Int :=
   let r : Int := if i < 0 then -(h : Int) else h
   if r == -1 then -2 else r
 
-/-- The transformation of `slot_tp_hash`, `Objects/typeobject.c:10325-10335`. -/
+/-- The transformation of `slot_tp_hash`, `Objects/typeobject.c:11026-11036`. -/
 def hashOfInt (i : Int) : Int :=
   let h := if inSsize i then i else longHash i
   if h == -1 then -2 else h
 
-/-- `slot_tp_hash`, `Objects/typeobject.c:10303`. -/
+/-- `slot_tp_hash`, `Objects/typeobject.c:11004`. -/
 def slotTpHash (rt : Rt) (self : Val) : M Int := do
   let m ← maybeCallSpecial rt self "__hash__" [] true
   match m with
@@ -341,7 +341,7 @@ def slotTpHash (rt : Rt) (self : Val) : M Int := do
     | none => typeErr "__hash__ method should return an integer"
     | some i => pure (hashOfInt i)
 
-/-- The loop of `tuple_hash`, `Objects/tupleobject.c:335-343`, over 64-bit unsigned values. -/
+/-- The loop of `tuple_hash`, `Objects/tupleobject.c:392-401`, over 64-bit unsigned values. -/
 def tupleHashLoop (rt : Rt) (acc : Nat) : List Val → M Nat
   | [] => pure acc
   | x :: xs => do
@@ -351,7 +351,7 @@ def tupleHashLoop (rt : Rt) (acc : Nat) : List Val → M Nat
     let acc := ((acc <<< 31) % 2 ^ 64) ||| (acc >>> 33)
     tupleHashLoop rt ((acc * 11400714785074694791) % 2 ^ 64) xs
 
-/-- `tuple_hash`, `Objects/tupleobject.c:323`. -/
+/-- `tuple_hash`, `Objects/tupleobject.c:372`. -/
 def tupleHash (rt : Rt) (xs : List Val) : M Int := do
   let acc : Nat ← tupleHashLoop rt 2870177450012600261 xs
   let acc : Nat := (acc + (xs.length ^^^ (2870177450012600261 ^^^ 3527539))) % 2 ^ 64
@@ -384,7 +384,7 @@ def callHash (rt : Rt) (f : SlotFn) (v : Val) : M Int := do
       | .obj a => (a : Int)
       | _ => 0)
   | .c .method =>
-    -- `method_hash`, `Objects/classobject.c:266`: the hash of `__func__` can raise.
+    -- `method_hash`, `Objects/classobject.c:281`: the hash of `__func__` can raise.
     match payloadOf w v with
     | some (.bound func s) =>
       let y ← rt.hash func
@@ -396,7 +396,7 @@ def callHash (rt : Rt) (f : SlotFn) (v : Val) : M Int := do
     | some (.builtin b s) => pure (hashMix (genericHash (s.getD .none)) (strHash (toString (repr b))))
     | _ => gap%
   | .c .methodWrapper =>
-    -- `wrapper_hash`, `Objects/descrobject.c:1346`.
+    -- `wrapper_hash`, `Objects/descrobject.c:1370`.
     match payloadOf w v with
     | some (.methodWrapper d s) => pure (hashMix (genericHash s) (genericHash d))
     | _ => gap%
@@ -406,7 +406,7 @@ def callHash (rt : Rt) (f : SlotFn) (v : Val) : M Int := do
     rt.hash m
   | .c .str => pure (strHash ((strOf w v).getD ""))
   | .c .float =>
-    -- `float_hash`, `Objects/floatobject.c:542`: a NaN hashes by address.
+    -- `float_hash`, `Objects/floatobject.c:532`: a NaN hashes by address.
     match floatOf w v with
     | some x =>
       match Binary64.float_hash x with
@@ -416,19 +416,19 @@ def callHash (rt : Rt) (f : SlotFn) (v : Val) : M Int := do
         | _ => 0)
     | none => gap%
   | .c .tuple =>
-    -- `tuple_hash`, `Objects/tupleobject.c:323`. C keeps the result in `ob_hash`, so a second
+    -- `tuple_hash`, `Objects/tupleobject.c:372`. C keeps the result in `ob_hash`, so a second
     -- hash of one tuple does not call the items again; a tuple value here has no such place.
     tupleHash rt ((tupleOf w v).getD [])
   | _ => gap%
 
-/-- `PyObject_Hash`, `Objects/object.c:1153`. -/
+/-- `PyObject_Hash`, `Objects/object.c:1159`. -/
 def pyHash (rt : Rt) (v : Val) : M Int := do
   let w ← getW
   match slotOf w (typeOf w v) .tp_hash with
   | some f => callHash rt f v
   | none => hashNotImplemented v
 
-/-- `slot_tp_repr`, `Objects/typeobject.c:10287`. The address is rendered as `0x0`:
+/-- `slot_tp_repr`, `Objects/typeobject.c:10988`. The address is rendered as `0x0`:
 addresses are not part of the model. -/
 def slotTpRepr (rt : Rt) (self : Val) : M Val := do
   match ← maybeCallSpecial rt self "__repr__" [] false with
@@ -437,7 +437,7 @@ def slotTpRepr (rt : Rt) (self : Val) : M Val := do
     let w ← getW
     pure (.str s!"<{typeName w self} object at 0x0>")
 
-/-- `object_repr`, `Objects/typeobject.c:6928`. -/
+/-- `object_repr`, `Objects/typeobject.c:7538`. -/
 def objectRepr (w : World) (self : Val) : String :=
   let tp := typeOf w self
   let d := tdata w tp
@@ -456,7 +456,7 @@ def objectRepr (w : World) (self : Val) : String :=
     else s!"<{d.name} object at 0x0>"
   | none => s!"<{d.name} object at 0x0>"
 
-/-- `type_repr`, `Objects/typeobject.c:2294`. -/
+/-- `type_repr`, `Objects/typeobject.c:2434`. -/
 def typeRepr (w : World) (t : Addr) : String :=
   let d := tdata w t
   let mod : Option String :=
@@ -489,12 +489,12 @@ def reprList (rt : Rt) : List Val → M (List String)
     let rs ← reprList rt xs
     pure (r :: rs)
 
-/-- Remove the first entry that is `v`: the search of `Py_ReprLeave`, `Objects/object.c:3053`. -/
+/-- Remove the first entry that is `v`: the search of `Py_ReprLeave`, `Objects/object.c:3158`. -/
 def reprStackErase (v : Val) : List Val → List Val
   | [] => []
   | x :: xs => if x.is v then xs else x :: reprStackErase v xs
 
-/-- `Py_ReprEnter`, `Objects/object.c:3003`, and `Py_ReprLeave`, `:3037`, around `body`: an
+/-- `Py_ReprEnter`, `Objects/object.c:3108`, and `Py_ReprLeave`, `:3142`, around `body`: an
 object already on the stack gives `cycle`, and every exit from `body` leaves the stack, as the
 `error:` labels of `list_repr_impl` and `dict_repr_lock_held` do. -/
 def withRepr (v : Val) (cycle : String) (body : M Val) : M Val := do
@@ -509,7 +509,7 @@ def withRepr (v : Val) (cycle : String) (body : M Val) : M Val := do
     leave
     pure r
 
-/-- The loop of `list_repr_impl`, `Objects/listobject.c:596`: `repr` may mutate the list, so the
+/-- The loop of `list_repr_impl`, `Objects/listobject.c:623`: `repr` may mutate the list, so the
 size and the item are read again each time. -/
 def listReprLoop (rt : Rt) (v : Val) : Nat → Nat → List String → M (List String)
   | 0, _, _ => raise .fuel
@@ -521,7 +521,7 @@ def listReprLoop (rt : Rt) (v : Val) : Nat → Nat → List String → M (List S
       let r ← rt.repr item
       listReprLoop rt v fuel (i + 1) (r :: acc)
 
-/-- The loop of `dict_repr_lock_held`, `Objects/dictobject.c:3434`: `repr(key)`, then
+/-- The loop of `dict_repr_lock_held`, `Objects/dictobject.c@3.14.7:3434`: `repr(key)`, then
 `repr(value)`, pair by pair, with the dict read again each time. A deletion during the loop is
 not exact: `_PyDict_Next` walks a table with dummy entries, and the model has a list. -/
 def dictReprLoop (rt : Rt) (v : Val) : Nat → Nat → List String → M (List String)
@@ -601,7 +601,7 @@ def builtinName (b : Builtin) : Option String :=
     let n := (builtinConv b).1
     if n == "" then none else some n
 
-/-- `descr_repr`, `Objects/descrobject.c:42`, with the format of its callers there. -/
+/-- `descr_repr`, `Objects/descrobject.c@3.14.7:42`, with the format of its callers there. -/
 def descrRepr (w : World) (kind : String) (o : Addr) (n : Name) : String :=
   s!"<{kind} '{n}' of '{tpName w o}' objects>"
 
@@ -625,7 +625,7 @@ def callRepr (rt : Rt) (f : SlotFn) (v : Val) : M Val := do
     | .obj a => pure (.str (typeRepr w a))
     | _ => gap%
   | .c .tuple =>
-    -- `tuple_repr`, `Objects/tupleobject.c:240`: the empty check comes before the guard.
+    -- `tuple_repr`, `Objects/tupleobject.c:286`: the empty check comes before the guard.
     let xs := (tupleOf w v).getD []
     if xs.isEmpty then pure (.str "()") else
     withRepr v "(...)" do
@@ -634,12 +634,12 @@ def callRepr (rt : Rt) (f : SlotFn) (v : Val) : M Val := do
       | [r] => pure (.str s!"({r},)")
       | _ => pure (.str ("(" ++ ", ".intercalate rs ++ ")"))
   | .c .list =>
-    -- `list_repr_impl`, `Objects/listobject.c:575`.
+    -- `list_repr_impl`, `Objects/listobject.c:602`.
     withRepr v "[...]" do
       let rs ← listReprLoop rt v iterFuel 0 []
       pure (.str ("[" ++ ", ".intercalate rs ++ "]"))
   | .c .dict =>
-    -- `dict_repr_lock_held`, `Objects/dictobject.c:3403`: the guard comes before the empty check.
+    -- `dict_repr_lock_held`, `Objects/dictobject.c@3.14.7:3403`: the guard comes before the empty check.
     withRepr v "{...}" do
       let rs ← dictReprLoop rt v iterFuel 0 []
       pure (.str ("{" ++ ", ".intercalate rs ++ "}"))
@@ -665,12 +665,12 @@ def callRepr (rt : Rt) (f : SlotFn) (v : Val) : M Val := do
     | some (.getsetDescr o n _) => pure (.str (descrRepr w "attribute" o n))
     | _ => gap%
   | .c .function =>
-    -- `func_repr`, `Objects/funcobject.c:1249`.
+    -- `func_repr`, `Objects/funcobject.c:1237`.
     match payloadOf w v with
     | some (.func fd) => pure (.str s!"<function {fd.qualname} at 0x0>")
     | _ => gap%
   | .c .method =>
-    -- `method_repr`, `Objects/classobject.c:238`: `__qualname__`, then `__name__`, and `?`
+    -- `method_repr`, `Objects/classobject.c:253`: `__qualname__`, then `__name__`, and `?`
     -- when neither is a str. Either lookup can raise.
     match payloadOf w v with
     | some (.bound func self) =>
@@ -696,7 +696,7 @@ def callRepr (rt : Rt) (f : SlotFn) (v : Val) : M Val := do
       | none, _ => gap%
     | _ => gap%
   | .c .methodWrapper =>
-    -- `wrapper_repr`, `Objects/descrobject.c:1359`.
+    -- `wrapper_repr`, `Objects/descrobject.c:1383`.
     match payloadOf w v with
     | some (.methodWrapper d s) =>
       match payloadOf w d with
@@ -705,17 +705,17 @@ def callRepr (rt : Rt) (f : SlotFn) (v : Val) : M Val := do
       | _ => gap%
     | _ => gap%
   | .c .classmethod =>
-    -- `cm_repr`, `Objects/funcobject.c:1652`.
+    -- `cm_repr`, `Objects/funcobject.c:1655`.
     match payloadOf w v with
     | some (.classmethod f) => pure (.str s!"<classmethod({← rt.repr f})>")
     | _ => gap%
   | .c .staticmethod =>
-    -- `sm_repr`, `Objects/funcobject.c:1902`.
+    -- `sm_repr`, `Objects/funcobject.c:1923`.
     match payloadOf w v with
     | some (.staticmethod f) => pure (.str s!"<staticmethod({← rt.repr f})>")
     | _ => gap%
   | .c .super =>
-    -- `super_repr`, `Objects/typeobject.c:11820`, which tolerates a NULL type.
+    -- `super_repr`, `Objects/typeobject.c:12673`, which tolerates a NULL type.
     match payloadOf w v with
     | some (.super ty _ ot) =>
       let t := match ty with
@@ -740,7 +740,7 @@ def callRepr (rt : Rt) (f : SlotFn) (v : Val) : M Val := do
   | .c e => if isExcFamily e then excCallRepr rt e v else gap%
   | _ => gap%
 
-/-- `PyObject_Repr`, `Objects/object.c:757`. -/
+/-- `PyObject_Repr`, `Objects/object.c:760`. -/
 def pyRepr (rt : Rt) (v : Val) : M String := do
   let w ← getW
   let res ← match slotOf w (typeOf w v) .tp_repr with
@@ -771,7 +771,7 @@ def callStr (rt : Rt) (f : SlotFn) (v : Val) : M Val := do
     | _ => gap%
   | _ => gap%
 
-/-- `PyObject_Str`, `Objects/object.c:799`. -/
+/-- `PyObject_Str`, `Objects/object.c:801`. -/
 def pyStr (rt : Rt) (v : Val) : M String := do
   match v with
   | .str s => pure s
@@ -826,7 +826,7 @@ def callUnaryNb (rt : Rt) (s : Slot) (dunder : Name) (f : SlotFn) (v : Val) : M 
     mkFloat x
   | _, _ => gap%
 
-/-- `_PyNumber_Index`, `Objects/abstract.c:1400`. The `DeprecationWarning` for a strict
+/-- `_PyNumber_Index`, `Objects/abstract.c:1410`. The `DeprecationWarning` for a strict
 `int` subclass does not change the result. -/
 def numberIndex (rt : Rt) (item : Val) : M Val := do
   let w ← getW
@@ -845,13 +845,13 @@ def numberIndex (rt : Rt) (item : Val) : M Val := do
         | some _ => pure result
         | none => typeErr s!"__index__ returned non-int (type {trunc 200 (typeName w result)})"
 
-/-- `PyNumber_Index`, `Objects/abstract.c:1446`: an exact `int`. -/
+/-- `PyNumber_Index`, `Objects/abstract.c:1456`: an exact `int`. -/
 def pyNumberIndex (rt : Rt) (item : Val) : M Int := do
   let v ← numberIndex rt item
   let w ← getW
   pure ((intOf w v).getD 0)
 
-/-- `PyNumber_AsSsize_t`, `Objects/abstract.c:1458`. `err = none` clips to the
+/-- `PyNumber_AsSsize_t`, `Objects/abstract.c:1468`. `err = none` clips to the
 `Py_ssize_t` range. -/
 def numberAsSsize (rt : Rt) (item : Val) (err : Option Addr) : M Int := do
   let i ← pyNumberIndex rt item
@@ -864,7 +864,7 @@ def numberAsSsize (rt : Rt) (item : Val) (err : Option Addr) : M Int := do
 
 /-! ## Sizes -/
 
-/-- `slot_sq_length`, `Objects/typeobject.c:10018`. -/
+/-- `slot_sq_length`, `Objects/typeobject.c:10720`. -/
 def slotSqLength (rt : Rt) (self : Val) : M Int := do
   let res ← vectorcallMethod rt "__len__" [self]
   let idx ← pyNumberIndex rt res
@@ -895,7 +895,7 @@ def callLen (rt : Rt) (f : SlotFn) (v : Val) : M Int := do
 def slotIn (w : World) (v : Val) (s : Slot) : Option SlotFn :=
   if hasGroup w (typeOf w v) s.group then slotOf w (typeOf w v) s else none
 
-/-- `PyMapping_Size`, `Objects/abstract.c:2267`. -/
+/-- `PyMapping_Size`, `Objects/abstract.c:2276`. -/
 def pyMappingSize (rt : Rt) (o : Val) : M Int := do
   let w ← getW
   match slotIn w o .mp_length with
@@ -912,7 +912,7 @@ def pyObjectSize (rt : Rt) (o : Val) : M Int := do
   | some f => callLen rt f o
   | none => pyMappingSize rt o
 
-/-- `PySequence_Size`, `Objects/abstract.c:1681`. -/
+/-- `PySequence_Size`, `Objects/abstract.c:1690`. -/
 def pySequenceSize (rt : Rt) (s : Val) : M Int := do
   let w ← getW
   match slotIn w s .sq_length with
@@ -953,7 +953,7 @@ def pyLengthHint (rt : Rt) (o : Val) (dflt : Int) : M Int := do
           else if i < 0 then valueErr "__length_hint__() should return >= 0"
           else pure i
 
-/-- `slot_nb_bool`, `Objects/typeobject.c:10202`. -/
+/-- `slot_nb_bool`, `Objects/typeobject.c:10904`. -/
 def slotNbBool (rt : Rt) (self : Val) : M Bool := do
   let m ← maybeCallSpecial rt self "__bool__" [] true
   let w ← getW
@@ -968,7 +968,7 @@ def slotNbBool (rt : Rt) (self : Val) : M Bool := do
     | .bool b => pure b
     | _ => typeErr s!"__bool__ should return bool, returned {typeName w value}"
 
-/-- `PyObject_IsTrue`, `Objects/object.c:2060`. -/
+/-- `PyObject_IsTrue`, `Objects/object.c:2139`. -/
 def pyIsTrue (rt : Rt) (v : Val) : M Bool := do
   match v with
   | .bool b => pure b
@@ -1001,7 +1001,7 @@ def pyIsTrue (rt : Rt) (v : Val) : M Bool := do
 
 /-! ## Binary operators -/
 
-/-- `method_is_overloaded`, `Objects/typeobject.c:9941`. -/
+/-- `method_is_overloaded`, `Objects/typeobject.c:10643`. -/
 def methodIsOverloaded (rt : Rt) (left right : Val) (n : Name) : M Bool := do
   let w ← getW
   match ← rt.getOptionalAttr (.obj (typeOf w right)) n with
@@ -1012,8 +1012,8 @@ def methodIsOverloaded (rt : Rt) (left right : Val) (n : Name) : M Bool := do
     | none => pure true
     | some a => richCompareBool rt a b .ne
 
-/-- `SLOT1BINFULL`, `Objects/typeobject.c:9971`, for slot `s` with `extra` trailing
-arguments (`slot_nb_power` with a modulus copies this macro, `:10149`). -/
+/-- `SLOT1BINFULL`, `Objects/typeobject.c:10673`, for slot `s` with `extra` trailing
+arguments (`slot_nb_power` with a modulus copies this macro, `:10851`). -/
 def slot1Bin (rt : Rt) (s : Slot) (dunder rdunder : Name) (self other : Val)
     (extra : List Val) : M Val := do
   let w ← getW
@@ -1111,9 +1111,9 @@ def dictHashKey (rt : Rt) (key : Val) : M Int := do
       else raise e
     | _ => raise e
 
-/-- `_PyErr_FormatNote`, `Python/errors.c:1262`: `_PyException_AddNote` on the raised exception,
+/-- `_PyErr_FormatNote`, `Python/errors.c:1271`: `_PyException_AddNote` on the raised exception,
 which is raised again. If adding the note fails, that error is what propagates; C chains the first
-exception to it (`:1283`), which the model does not. -/
+exception to it (`:1292`), which the model does not. -/
 def raiseWithNote {α : Type} (rt : Rt) (e : PyErr) (note : String) : M α := do
   let x ← excObject e
   pyExceptionAddNote rt x (.str note)
@@ -1121,7 +1121,7 @@ def raiseWithNote {α : Type} (rt : Rt) (e : PyErr) (note : String) : M α := do
     | .exc c m _ => .exc c m (some x)
     | e => e)
 
-/-- `insertdict`, `Objects/dictobject.c:1891`, with a known hash: an existing entry keeps its key
+/-- `insertdict`, `Objects/dictobject.c@3.14.7:1891`, with a known hash: an existing entry keeps its key
 and takes the value; otherwise the pair goes at the end with its hash recorded. -/
 def dictInsert (rt : Rt) (addr : Addr) (k : Val) (h : Int) (v : Val) : M Unit := do
   match ← dictProbe rt addr k h iterFuel 0 with
@@ -1142,7 +1142,7 @@ def dictSetAt (rt : Rt) (addr : Addr) (k v : Val) : M Unit := do
   let h ← dictHashKey rt k
   dictInsert rt addr k h v
 
-/-- The loop of `dict_dict_merge`, `Objects/dictobject.c:3952`: `_PyDict_Next` over `other`, each
+/-- The loop of `dict_dict_merge`, `Objects/dictobject.c:4223`: `_PyDict_Next` over `other`, each
 pair through `insertdict` with its stored hash, which can run `__eq__`, and that can change
 `other`. -/
 def dictDictMergeLoop (rt : Rt) (addr other : Addr) (orig : Nat) : Nat → Nat → M Unit
@@ -1157,8 +1157,8 @@ def dictDictMergeLoop (rt : Rt) (addr other : Addr) (orig : Nat) : Nat → Nat �
       if (dictEntries w other).length != orig then runtimeErr "dict mutated during update"
       dictDictMergeLoop rt addr other orig fuel (i + 1)
 
-/-- `dict_dict_merge`, `Objects/dictobject.c:3892`. An empty target takes a clone of the table,
-which C does only for a clean `other` (`:3909`); the model has no table to test that on, and the
+/-- `dict_dict_merge`, `Objects/dictobject.c@3.14.7:3892`. An empty target takes a clone of the table,
+which C does only for a clean `other` (`:4187`); the model has no table to test that on, and the
 difference shows only for keys of equal hash. -/
 def dictDictMerge (rt : Rt) (addr other : Addr) : M Unit := do
   let w ← getW
@@ -1182,7 +1182,7 @@ def seqFastItems (rt : Rt) (v : Val) : M (List Val) := do
       if excMatches w e B.TypeError then typeErr "object is not iterable" else raise e
     rt.listItems it
 
-/-- The loop of `PyDict_MergeFromSeq2`, `Objects/dictobject.c:3810-3866`: each pair is stored as
+/-- The loop of `PyDict_MergeFromSeq2`, `Objects/dictobject.c:4068-4126`: each pair is stored as
 it arrives, so the pairs before a failure stay in the dict. -/
 def mergeSeq2Loop (rt : Rt) (addr : Addr) (it : Val) : Nat → Nat → M Unit
   | 0, _ => raise .fuel
@@ -1202,7 +1202,7 @@ def mergeSeq2Loop (rt : Rt) (addr : Addr) (it : Val) : Nat → Nat → M Unit
       | _ =>
         valueErr s!"dictionary update sequence element #{i} has length {items.length}; 2 is required"
 
-/-- The generic loop of `dict_merge`, `Objects/dictobject.c:4042-4075`: `b[key]`, then the store,
+/-- The generic loop of `dict_merge`, `Objects/dictobject.c:4305-4341`: `b[key]`, then the store,
 key by key. -/
 def dictMergeLoop (rt : Rt) (addr : Addr) (b it : Val) : Nat → M Unit
   | 0 => raise .fuel
@@ -1214,13 +1214,13 @@ def dictMergeLoop (rt : Rt) (addr : Addr) (b it : Val) : Nat → M Unit
       dictSetAt rt addr k v
       dictMergeLoop rt addr b it fuel
 
-/-- `dict_merge`, `Objects/dictobject.c:3991`, with `override` 1. -/
+/-- `dict_merge`, `Objects/dictobject.c@3.14.7:3991`, with `override` 1. -/
 def dictMerge (rt : Rt) (addr : Addr) (x : Val) : M Unit := do
   let w ← getW
   match x, dictOf w x, slotOf w (typeOf w x) .tp_iter == some (.c .dict) with
   | .obj other, some _, true => dictDictMerge rt addr other
   | _, _, _ =>
-    -- `PyMapping_Keys`, then `method_output_as_list`, `Objects/abstract.c:2424`: an exact
+    -- `PyMapping_Keys`, then `method_output_as_list`, `Objects/abstract.c:2433`: an exact
     -- list is returned as it is, so the loop below sees later changes to it.
     let f ← rt.getAttr x "keys"
     let out ← rt.call f [] []
@@ -1236,7 +1236,7 @@ def dictMerge (rt : Rt) (addr : Addr) (x : Val) : M Unit := do
     let it ← rt.getIter keys
     dictMergeLoop rt addr x it iterFuel
 
-/-- `dict_update_arg`, `Objects/dictobject.c:3735`, into the dict at `addr`, which `dict_or`,
+/-- `dict_update_arg`, `Objects/dictobject.c:3992`, into the dict at `addr`, which `dict_or`,
 `dict_ior` and `dict_update_common` each supply. -/
 def dictUpdateArg (rt : Rt) (addr : Addr) (x : Val) : M Unit := do
   let w ← getW
@@ -1248,8 +1248,8 @@ def dictUpdateArg (rt : Rt) (addr : Addr) (x : Val) : M Unit := do
       let it ← rt.getIter x
       mergeSeq2Loop rt addr it iterFuel 0
 
-/-- `PyDict_Copy`, `Objects/dictobject.c:4228`: a fresh dict, filled by `dict_merge` when the type
-overrides `tp_iter` (`:4184`), so an override is seen. -/
+/-- `PyDict_Copy`, `Objects/dictobject.c:4549`: a fresh dict, filled by `dict_merge` when the type
+overrides `tp_iter` (`:4490`), so an override is seen. -/
 def dictCopy (rt : Rt) (x : Val) : M Addr := do
   let d ← allocCell (.val { cls := B.dict, body := .dict [] })
   dictMerge rt d x
@@ -1346,7 +1346,7 @@ def callNbBinary (rt : Rt) (s : Slot) (f : SlotFn) (a b : Val) : M Val := do
     | _, _ => pure .notImpl
   | _ => gap%
 
-/-- `binary_op1`, `Objects/abstract.c:930`. -/
+/-- `binary_op1`, `Objects/abstract.c:940`. -/
 def binaryOp1 (rt : Rt) (v w' : Val) (s : Slot) : M Val := do
   let w ← getW
   let slotv := slotIn w v s
@@ -1381,12 +1381,12 @@ def binaryOp1 (rt : Rt) (v w' : Val) (s : Slot) : M Val := do
       | x => pure x
   | none => afterV slotw0
 
-/-- `binop_type_error`, `Objects/abstract.c:989`. -/
+/-- `binop_type_error`, `Objects/abstract.c:999`. -/
 def binopTypeError {α : Type} (v w' : Val) (name : String) : M α := do
   let w ← getW
   typeErr s!"unsupported operand type(s) for {trunc 100 name}: '{trunc 100 (typeName w v)}' and '{trunc 100 (typeName w w')}'"
 
-/-- `binary_op`, `Objects/abstract.c:1001`. -/
+/-- `binary_op`, `Objects/abstract.c:1011`. -/
 def binaryOp (rt : Rt) (v w' : Val) (s : Slot) (name : String) : M Val := do
   match ← binaryOp1 rt v w' s with
   | .notImpl => binopTypeError v w' name
@@ -1449,15 +1449,15 @@ def listAppendAll (addr : Addr) (items : List Val) : M Unit :=
     | .list xs => { o with body := .list (xs ++ items) }
     | body => { o with body := body }
 
-/-- The reservation of `list_extend_iter_lock_held`, `Objects/listobject.c:1241-1259`. When
-`m + n` overflows the hint is ignored (:1241), so the loop still runs. Otherwise
+/-- The reservation of `list_extend_iter_lock_held`, `Objects/listobject.c:1317-1335`. When
+`m + n` overflows the hint is ignored (:1317), so the loop still runs. Otherwise
 `list_preallocate_exact` or `list_resize` fails on a size no allocator can serve. -/
 def listReserve (m n : Int) : M Unit :=
   if m > PyLean.ssizeMax - n then pure ()
   else if m + n ≥ 2 ^ 48 then raiseC B.MemoryError ""
   else pure ()
 
-/-- The loop of `list_extend_iter_lock_held`, `Objects/listobject.c:1262-1283`: each item goes
+/-- The loop of `list_extend_iter_lock_held`, `Objects/listobject.c:1338-1359`: each item goes
 into the list as it arrives, so the items before a raising `__next__` stay, and the iterator
 sees and can change the list. -/
 def listExtendLoop (rt : Rt) (addr : Addr) (it : Val) : Nat → M Unit
@@ -1469,7 +1469,7 @@ def listExtendLoop (rt : Rt) (addr : Addr) (it : Val) : Nat → M Unit
       listAppendAll addr [x]
       listExtendLoop rt addr it fuel
 
-/-- `list_extend_iter_lock_held`, `Objects/listobject.c:1225`. -/
+/-- `list_extend_iter_lock_held`, `Objects/listobject.c:1301`. -/
 def listExtendIter (rt : Rt) (addr : Addr) (b : Val) : M Unit := do
   let it ← rt.getIter b
   let n ← pyLengthHint rt b 8
@@ -1480,8 +1480,8 @@ def listExtendIter (rt : Rt) (addr : Addr) (b : Val) : M Unit := do
 /-- The keys of a dict, in order. -/
 def dictKeyList (w : World) (d : Val) : List Val := ((dictOf w d).getD []).map (·.1)
 
-/-- `_list_extend`, `Objects/listobject.c:1402`, in the order of its branches. Extending a list
-with itself is `list_inplace_repeat(self, 2)` (:1407) and runs no Python code; exact lists,
+/-- `_list_extend`, `Objects/listobject.c:1478`, in the order of its branches. Extending a list
+with itself is `list_inplace_repeat(self, 2)` (:1483) and runs no Python code; exact lists,
 tuples, dicts and `dict_keys` are read directly; anything else is iterated. -/
 def listExtend (rt : Rt) (self : Val) (addr : Addr) (b : Val) : M Unit := do
   let w ← getW
@@ -1517,7 +1517,7 @@ def callSqInplaceRepeat (f : SlotFn) (a : Val) (n : Int) : M Val := do
     pure a
   | _, _ => callSqRepeat f a n
 
-/-- `sequence_repeat`, `Objects/abstract.c:1147`. -/
+/-- `sequence_repeat`, `Objects/abstract.c:1157`. -/
 def sequenceRepeat (rt : Rt) (f : SlotFn) (seq n : Val) : M Val := do
   let w ← getW
   if indexCheck w n then
@@ -1533,7 +1533,7 @@ def sequenceRepeatInplace (rt : Rt) (f : SlotFn) (seq n : Val) : M Val := do
     callSqInplaceRepeat f seq count
   else typeErr s!"can't multiply sequence by non-int of type '{trunc 200 (typeName w n)}'"
 
-/-- `PyNumber_Add`, `Objects/abstract.c:1128`. -/
+/-- `PyNumber_Add`, `Objects/abstract.c:1138`. -/
 def pyNumberAdd (rt : Rt) (v w' : Val) : M Val := do
   match ← binaryOp1 rt v w' .nb_add with
   | .notImpl =>
@@ -1543,7 +1543,7 @@ def pyNumberAdd (rt : Rt) (v w' : Val) : M Val := do
     | none => binopTypeError v w' "+"
   | r => pure r
 
-/-- `PyNumber_Multiply`, `Objects/abstract.c:1166`. -/
+/-- `PyNumber_Multiply`, `Objects/abstract.c:1176`. -/
 def pyNumberMultiply (rt : Rt) (v w' : Val) : M Val := do
   match ← binaryOp1 rt v w' .nb_multiply with
   | .notImpl =>
@@ -1556,7 +1556,7 @@ def pyNumberMultiply (rt : Rt) (v w' : Val) : M Val := do
       | none => binopTypeError v w' "*"
   | r => pure r
 
-/-- `binary_iop1`, `Objects/abstract.c:1218`. -/
+/-- `binary_iop1`, `Objects/abstract.c:1228`. -/
 def binaryIop1 (rt : Rt) (v w' : Val) (islot s : Slot) : M Val := do
   let w ← getW
   let r1 ← match slotIn w v islot with
@@ -1573,12 +1573,12 @@ where
     | .nb_inplace_lshift => nbLshift | .nb_inplace_rshift => nbRshift
     | .nb_inplace_and => nbAnd | .nb_inplace_or => nbOr | .nb_inplace_xor => nbXor
     | _ => nbAdd
-  /-- `SLOT1(slot_nb_inplace_*, __i*__)`, `Objects/typeobject.c:10263`. -/
+  /-- `SLOT1(slot_nb_inplace_*, __i*__)`, `Objects/typeobject.c:10964`. -/
   callInplace (rt : Rt) (f : SlotFn) (idunder : Name) (a b : Val) : M Val := do
     match f, a with
     | .generic, _ => vectorcallMethod rt idunder [a, b]
     | .c .dict, .obj addr =>
-      -- `dict_ior`, `Objects/dictobject.c:4793`.
+      -- `dict_ior`, `Objects/dictobject.c@3.14.7:4793`.
       dictUpdateArg rt addr b
       pure a
     | .c .mappingproxy, _ =>
@@ -1591,13 +1591,13 @@ where
       if idunder == "__iadd__" then callSqInplaceConcat rt f a b else gap%
     | _, _ => gap%
 
-/-- `binary_iop`, `Objects/abstract.c:1250`. -/
+/-- `binary_iop`, `Objects/abstract.c:1260`. -/
 def binaryIop (rt : Rt) (v w' : Val) (islot s : Slot) (name : String) : M Val := do
   match ← binaryIop1 rt v w' islot s with
   | .notImpl => binopTypeError v w' name
   | r => pure r
 
-/-- `PyNumber_InPlaceAdd`, `Objects/abstract.c:1297`. -/
+/-- `PyNumber_InPlaceAdd`, `Objects/abstract.c:1307`. -/
 def pyNumberInPlaceAdd (rt : Rt) (v w' : Val) : M Val := do
   match ← binaryIop1 rt v w' .nb_inplace_add .nb_add with
   | .notImpl =>
@@ -1610,7 +1610,7 @@ def pyNumberInPlaceAdd (rt : Rt) (v w' : Val) : M Val := do
     else binopTypeError v w' "+="
   | r => pure r
 
-/-- `PyNumber_InPlaceMultiply`, `Objects/abstract.c:1320`. Note the `else if` at `:1336`:
+/-- `PyNumber_InPlaceMultiply`, `Objects/abstract.c:1330`. Note the `else if` at `:1346`:
 the right operand's `sq_repeat` is consulted only when the left operand has no
 `tp_as_sequence` at all. -/
 def pyNumberInPlaceMultiply (rt : Rt) (v w' : Val) : M Val := do
@@ -1629,7 +1629,7 @@ def pyNumberInPlaceMultiply (rt : Rt) (v w' : Val) : M Val := do
     else binopTypeError v w' "*="
   | r => pure r
 
-/-- `slot_nb_power`, `Objects/typeobject.c:10149`. -/
+/-- `slot_nb_power`, `Objects/typeobject.c:10851`. -/
 def slotNbPower (rt : Rt) (self other modulus : Val) : M Val :=
   match modulus with
   | .none => slot1Bin rt .nb_power "__pow__" "__rpow__" self other []
@@ -1660,7 +1660,7 @@ def callNbPower (rt : Rt) (f : SlotFn) (a b c : Val) : M Val := do
   | .c .float => floatPow a b c
   | _ => gap%
 
-/-- `ternary_op`, `Objects/abstract.c:1020`. -/
+/-- `ternary_op`, `Objects/abstract.c:1030`. -/
 def ternaryOp (rt : Rt) (v w' z : Val) (name : String) : M Val := do
   let w ← getW
   let s : Slot := .nb_power
@@ -1714,11 +1714,11 @@ def ternaryOp (rt : Rt) (v w' z : Val) (name : String) : M Val := do
       | x => pure x
   | none => afterV slotw0
 
-/-- `PyNumber_Power`, `Objects/abstract.c:1190`. -/
+/-- `PyNumber_Power`, `Objects/abstract.c:1200`. -/
 def pyNumberPower (rt : Rt) (v w' z : Val) : M Val := ternaryOp rt v w' z "** or pow()"
 
-/-- `ternary_iop`, `Objects/abstract.c:1262`. `slot_nb_inplace_power` drops the third
-argument (`Objects/typeobject.c:10270`). -/
+/-- `ternary_iop`, `Objects/abstract.c:1272`. `slot_nb_inplace_power` drops the third
+argument (`Objects/typeobject.c:10971`). -/
 def ternaryIop (rt : Rt) (v w' z : Val) : M Val := do
   let w ← getW
   let x ← match slotIn w v .nb_inplace_power with
@@ -1729,7 +1729,7 @@ def ternaryIop (rt : Rt) (v w' z : Val) : M Val := do
   | .notImpl => ternaryOp rt v w' z "**="
   | x => pure x
 
-/-- `UNARY_FUNC`, `Objects/abstract.c:1364`. -/
+/-- `UNARY_FUNC`, `Objects/abstract.c:1374`. -/
 def unaryFunc (rt : Rt) (s : Slot) (dunder descr : String) (o : Val) : M Val := do
   let w ← getW
   match slotIn w o s with
@@ -1741,7 +1741,7 @@ def pyNumberPositive (rt : Rt) := unaryFunc rt .nb_positive "__pos__" "unary +"
 def pyNumberInvert (rt : Rt) := unaryFunc rt .nb_invert "__invert__" "unary ~"
 def pyNumberAbsolute (rt : Rt) := unaryFunc rt .nb_absolute "__abs__" "abs()"
 
-/-- `PyNumber_Check`, `Objects/abstract.c:903` (no `complex` in this model). -/
+/-- `PyNumber_Check`, `Objects/abstract.c:913` (no `complex` in this model). -/
 def pyNumberCheck (w : World) (o : Val) : Bool :=
   (slotIn w o .nb_index).isSome || (slotIn w o .nb_int).isSome || (slotIn w o .nb_float).isSome
 
@@ -1758,7 +1758,7 @@ def parseIntLiteral (s : String) : Option Int :=
     let n : Nat := digits.foldl (fun acc c => acc * 10 + (c.toNat - 48)) 0
     some (if neg then -(n : Int) else n)
 
-/-- `PyNumber_Long`, `Objects/abstract.c:1509`, up to the string-parsing fallbacks. -/
+/-- `PyNumber_Long`, `Objects/abstract.c:1519`, up to the string-parsing fallbacks. -/
 def pyNumberLong (rt : Rt) (o : Val) : M Val := do
   match o with
   | .int _ => pure o
@@ -1788,7 +1788,7 @@ def pyNumberLong (rt : Rt) (o : Val) : M Val := do
         | none =>
           typeErr s!"int() argument must be a string, a bytes-like object or a real number, not '{trunc 200 (typeName w o)}'"
 
-/-- `PyFloat_FromString`, `Objects/floatobject.c:189`, for a str. Bytes and other buffers are not
+/-- `PyFloat_FromString`, `Objects/floatobject.c:179`, for a str. Bytes and other buffers are not
 in the object model, and any other object is the exact `TypeError`. -/
 def floatFromString (rt : Rt) (o : Val) : M Val := do
   let w ← getW
@@ -1803,7 +1803,7 @@ def floatFromString (rt : Rt) (o : Val) : M Val := do
   | none =>
     typeErr s!"float() argument must be a string or a real number, not '{trunc 200 (typeName w o)}'"
 
-/-- `PyNumber_Float`, `Objects/abstract.c:1592`. `__float__` may return a subclass of `float`,
+/-- `PyNumber_Float`, `Objects/abstract.c:1602`. `__float__` may return a subclass of `float`,
 which gives a plain copy. -/
 def pyNumberFloat (rt : Rt) (o : Val) : M Val := do
   let w ← getW
@@ -1832,14 +1832,14 @@ def pyNumberFloat (rt : Rt) (o : Val) : M Val := do
         | none => floatFromString rt o
 
 /-- `slot_sq_contains`, `sq_item`, ... use these. `PySequence_Check`,
-`Objects/abstract.c:1672`. -/
+`Objects/abstract.c:1681`. -/
 def pySequenceCheck (w : World) (s : Val) : Bool :=
   (dictOf w s).isNone && (slotIn w s .sq_item).isSome
 
-/-- `PyMapping_Check`, `Objects/abstract.c:2260`. -/
+/-- `PyMapping_Check`, `Objects/abstract.c:2269`. -/
 def pyMappingCheck (w : World) (o : Val) : Bool := (slotIn w o .mp_subscript).isSome
 
-/-- `slot_sq_item`, `Objects/typeobject.c:10046`, and `sq_item` of builtin sequences. -/
+/-- `slot_sq_item`, `Objects/typeobject.c:10748`, and `sq_item` of builtin sequences. -/
 def callSqItem (rt : Rt) (f : SlotFn) (s : Val) (i : Int) : M Val := do
   let w ← getW
   let at' (xs : List Val) (msg : String) : M Val :=
@@ -1874,7 +1874,7 @@ def callMpSubscript (rt : Rt) (f : SlotFn) (o key : Val) : M Val := do
   | .c .tuple => bySeq f "tuple"
   | .c .str => bySeq f "str"
   | .c .dict =>
-    -- `dict_subscript`, `Objects/dictobject.c:3505`.
+    -- `dict_subscript`, `Objects/dictobject.c@3.14.7:3505`.
     let h ← dictHashKey rt key
     let found ← match o with
       | .obj a =>
@@ -1900,7 +1900,7 @@ def callMpSubscript (rt : Rt) (f : SlotFn) (o key : Val) : M Val := do
     rt.getItem m key
   | _ => gap%
 
-/-- `PySequence_GetItem`, `Objects/abstract.c:1832`. -/
+/-- `PySequence_GetItem`, `Objects/abstract.c:1841`. -/
 def pySequenceGetItem (rt : Rt) (s : Val) (i : Int) : M Val := do
   let w ← getW
   match slotIn w s .sq_item with
@@ -1918,7 +1918,7 @@ def pySequenceGetItem (rt : Rt) (s : Val) (i : Int) : M Val := do
     | some _ => typeErr s!"{trunc 200 (typeName w s)} is not a sequence"
     | none => typeErr s!"'{trunc 200 (typeName w s)}' object does not support indexing"
 
-/-- `PyObject_GetItem`, `Objects/abstract.c:153`. `type[int]` (generic aliases) is left
+/-- `PyObject_GetItem`, `Objects/abstract.c:155`. `type[int]` (generic aliases) is left
 out. -/
 def pyGetItem (rt : Rt) (o key : Val) : M Val := do
   let w ← getW
@@ -1953,7 +1953,7 @@ def callAssSubscript (rt : Rt) (f : SlotFn) (o key : Val) (value : Option Val) :
     | none => let _ ← vectorcallMethod rt "__delitem__" [o, key]
     | some v => let _ ← vectorcallMethod rt "__setitem__" [o, key, v]
   | .c .dict =>
-    -- `dict_ass_sub`, `Objects/dictobject.c:3541`, then `insertdict` or `PyDict_DelItem`.
+    -- `dict_ass_sub`, `Objects/dictobject.c@3.14.7:3541`, then `insertdict` or `PyDict_DelItem`.
     let h ← dictHashKey rt key
     match o with
     | .obj a =>
@@ -1983,7 +1983,7 @@ def callAssSubscript (rt : Rt) (f : SlotFn) (o key : Val) (value : Option Val) :
     else typeErr s!"list indices must be integers or slices, not {trunc 200 (typeName w key)}"
   | _ => gap%
 
-/-- `PySequence_SetItem`/`PySequence_DelItem`, `Objects/abstract.c:1884`, `:1917`. -/
+/-- `PySequence_SetItem`/`PySequence_DelItem`, `Objects/abstract.c:1893`, `:1926`. -/
 def pySequenceSetItem (rt : Rt) (s : Val) (i : Int) (value : Option Val) : M Unit := do
   let w ← getW
   let verb := match value with
@@ -2004,7 +2004,7 @@ def pySequenceSetItem (rt : Rt) (s : Val) (i : Int) (value : Option Val) : M Uni
     | some _ => typeErr s!"{trunc 200 (typeName w s)} is not a sequence"
     | none => typeErr s!"'{trunc 200 (typeName w s)}' object {verb}"
 
-/-- `PyObject_SetItem` and `PyObject_DelItem`, `Objects/abstract.c:226`, `:260`. -/
+/-- `PyObject_SetItem` and `PyObject_DelItem`, `Objects/abstract.c:236`, `:270`. -/
 def pySetItem (rt : Rt) (o key : Val) (value : Option Val) : M Unit := do
   let w ← getW
   let verb := match value with
@@ -2025,7 +2025,7 @@ def pySetItem (rt : Rt) (o key : Val) (value : Option Val) : M Unit := do
 /-- `PySeqIter_New`, `Objects/iterobject.c`. -/
 def pySeqIterNew (seq : Val) : M Val := alloc B.seqIter (.seqIter (some seq) 0)
 
-/-- `slot_tp_iter`, `Objects/typeobject.c:10496`. -/
+/-- `slot_tp_iter`, `Objects/typeobject.c:11197`. -/
 def slotTpIter (rt : Rt) (self : Val) : M Val := do
   let m ← maybeCallSpecial rt self "__iter__" [] true
   match m with
@@ -2053,7 +2053,7 @@ def callIter (rt : Rt) (f : SlotFn) (o : Val) : M Val := do
     let keys ← alloc B.list (.list (((dictOf w o).getD []).map (·.1)))
     alloc B.dictKeyIter (.seqIter (some keys) 0)
   | .c .dictKeys =>
-    -- `dictkeys_iter`, `Objects/dictobject.c:6150`: a key iterator over the view's dict.
+    -- `dictkeys_iter`, `Objects/dictobject.c:6592`: a key iterator over the view's dict.
     let w ← getW
     match o with
     | .obj a =>
@@ -2078,13 +2078,13 @@ def callIter (rt : Rt) (f : SlotFn) (o : Val) : M Val := do
   | .c .seqIter | .c .listIter | .c .tupleIter | .c .strIter => pure o
   | _ => gap%
 
-/-- `PyIter_Check`, `Objects/abstract.c:2850`. -/
+/-- `PyIter_Check`, `Objects/abstract.c:2856`. -/
 def pyIterCheck (w : World) (o : Val) : Bool :=
   match slotOf w (typeOf w o) .tp_iternext with
   | none | some .nextNotImpl => false
   | some _ => true
 
-/-- `PyObject_GetIter`, `Objects/abstract.c:2806`. -/
+/-- `PyObject_GetIter`, `Objects/abstract.c:2813`. -/
 def pyGetIter (rt : Rt) (o : Val) : M Val := do
   let w ← getW
   match slotOf w (typeOf w o) .tp_iter with
@@ -2118,7 +2118,7 @@ def seqIterNext (rt : Rt) (a : Addr) : M (Option Val) := do
   | _ => gap%
 
 /-- `listiter_next`/`tupleiter_next`/`unicodeiter_next`: stop at the end of the sequence
-and drop the reference, `Objects/listobject.c:4019`. -/
+and drop the reference, `Objects/listobject.c:4089`. -/
 def builtinIterNext (rt : Rt) (f : SlotFn) (a : Addr) : M (Option Val) := do
   let w ← getW
   match w.get a with
@@ -2149,7 +2149,7 @@ def callIterNext (rt : Rt) (f : SlotFn) (it : Val) : M (Option Val) := do
     builtinIterNext rt f a
   | _, _ => gap%
 
-/-- `iternext` and `PyIter_Next`, `Objects/abstract.c:2867`, `:2917`. -/
+/-- `iternext` and `PyIter_Next`, `Objects/abstract.c:2873`, `:2923`. -/
 def pyIterNext (rt : Rt) (it : Val) : M (Option Val) := do
   let w ← getW
   match slotOf w (typeOf w it) .tp_iternext with
@@ -2166,8 +2166,8 @@ def collectIter (rt : Rt) (it : Val) : Nat → M (List Val)
       let rest ← collectIter rt it fuel
       pure (x :: rest)
 
-/-- `PySequence_Tuple`, `Objects/abstract.c:1996`, items only. The eight-item stack
-buffer of `:2021` changes nothing visible. -/
+/-- `PySequence_Tuple`, `Objects/abstract.c:2005`, items only. The eight-item stack
+buffer of `:2030` changes nothing visible. -/
 def pySequenceTuple (rt : Rt) (v : Val) : M (List Val) := do
   match v with
   | .tuple xs => pure xs
@@ -2179,7 +2179,7 @@ def pySequenceTuple (rt : Rt) (v : Val) : M (List Val) := do
       let it ← rt.getIter v
       collectIter rt it iterFuel
 
-/-- `PySequence_List`, `Objects/abstract.c:2072`, items only, through `list_extend`
+/-- `PySequence_List`, `Objects/abstract.c:2081`, items only, through `list_extend`
 (`Objects/listobject.c`): exact lists and tuples are copied, anything else is iterated
 after `PyObject_LengthHint(iterable, 8)` sizes the result. The hint is observable: it
 calls `__len__` or `__length_hint__`. -/
@@ -2202,7 +2202,7 @@ inductive IterSearchOp where
   | count | index | contains
   deriving DecidableEq, Repr
 
-/-- The loop of `_PySequence_IterSearch`, `Objects/abstract.c:2156-2203`. -/
+/-- The loop of `_PySequence_IterSearch`, `Objects/abstract.c:2165-2212`. -/
 def iterSearchLoop (rt : Rt) (it obj : Val) (op : IterSearchOp) : Nat → Int → M (Option Int)
   | 0, _ => raise .fuel
   | fuel + 1, n => do
@@ -2229,7 +2229,7 @@ def iterCountLoop (rt : Rt) (it obj : Val) : Nat → Int → M Int
       let cmp ← richCompareBool rt item obj .eq
       iterCountLoop rt it obj fuel (if cmp then n + 1 else n)
 
-/-- `_PySequence_IterSearch`, `Objects/abstract.c:2129`. -/
+/-- `_PySequence_IterSearch`, `Objects/abstract.c:2138`. -/
 def pySequenceIterSearch (rt : Rt) (seq obj : Val) (op : IterSearchOp) : M Int := do
   let it ← tryM (rt.getIter seq) fun e => do
     let w ← getW
@@ -2250,7 +2250,7 @@ def pySequenceIterSearch (rt : Rt) (seq obj : Val) (op : IterSearchOp) : M Int :
     | some n => pure n
     | none => pure 0
 
-/-- `slot_sq_contains`, `Objects/typeobject.c:10089`. -/
+/-- `slot_sq_contains`, `Objects/typeobject.c:10791`. -/
 def slotSqContains (rt : Rt) (self value : Val) : M Bool := do
   match ← maybeCallSpecial rt self "__contains__" [value] true with
   | .isNone =>
@@ -2281,7 +2281,7 @@ def callContains (rt : Rt) (f : SlotFn) (seq ob : Val) : M Bool := do
   | .c .tuple => anyEq rt ob ((tupleOf w seq).getD [])
   | .c .list => anyEq rt ob ((listOf w seq).getD [])
   | .c .dict =>
-    -- `PyDict_Contains`, `Objects/dictobject.c:4837`.
+    -- `PyDict_Contains`, `Objects/dictobject.c@3.14.7:4837`.
     let h ← dictHashKey rt ob
     match seq with
     | .obj a => pure (← dictProbe rt a ob h iterFuel 0).isSome
@@ -2305,7 +2305,7 @@ def callContains (rt : Rt) (f : SlotFn) (seq ob : Val) : M Bool := do
       typeErr s!"'in <string>' requires string as left operand, not {trunc 200 (typeName w ob)}"
   | _ => gap%
 
-/-- `PySequence_Contains`, `Objects/abstract.c:2231`. -/
+/-- `PySequence_Contains`, `Objects/abstract.c:2240`. -/
 def pySequenceContains (rt : Rt) (seq ob : Val) : M Bool := do
   let w ← getW
   match slotIn w seq .sq_contains with
@@ -2316,7 +2316,7 @@ def pySequenceContains (rt : Rt) (seq ob : Val) : M Bool := do
 
 /-! ## `isinstance` and `issubclass` -/
 
-/-- `abstract_get_bases`, `Objects/abstract.c:2515`. -/
+/-- `abstract_get_bases`, `Objects/abstract.c:2522`. -/
 def abstractGetBases (rt : Rt) (cls : Val) : M (Option (List Val)) := do
   match ← rt.getOptionalAttr cls "__bases__" with
   | none => pure none
@@ -2325,7 +2325,7 @@ def abstractGetBases (rt : Rt) (cls : Val) : M (Option (List Val)) := do
     pure (tupleOf w b)
 
 mutual
-  /-- `abstract_issubclass`, `Objects/abstract.c:2529`. `fuel` stands in for the
+  /-- `abstract_issubclass`, `Objects/abstract.c:2536`. `fuel` stands in for the
   recursion limit and bounds the loop. -/
   def abstractIssubclass (rt : Rt) (fuel : Nat) (derived cls : Val) : M Bool :=
     match fuel with
@@ -2337,7 +2337,7 @@ mutual
       | some [] => pure false
       | some [b] => abstractIssubclass rt fuel b cls
       | some bs => abstractAny rt fuel bs cls
-  /-- The `for` at `Objects/abstract.c:2568`. -/
+  /-- The `for` at `Objects/abstract.c:2575`. -/
   def abstractAny (rt : Rt) (fuel : Nat) (bs : List Val) (cls : Val) : M Bool :=
     match bs with
     | [] => pure false
@@ -2349,7 +2349,7 @@ mutual
         | fuel + 1 => abstractAny rt fuel rest cls
 end
 
-/-- `check_class`, `Objects/abstract.c:2580`: `false` raises. -/
+/-- `check_class`, `Objects/abstract.c:2587`: `false` raises. -/
 def checkClass (rt : Rt) (cls : Val) (error : String) : M Unit := do
   match ← abstractGetBases rt cls with
   | none => typeErr error
@@ -2359,7 +2359,7 @@ def checkClass (rt : Rt) (cls : Val) (error : String) : M Unit := do
 `RecursionError` first. -/
 def walkFuel : Nat := 2000
 
-/-- `object_isinstance`, `Objects/abstract.c:2596`. -/
+/-- `object_isinstance`, `Objects/abstract.c:2603`. -/
 def objectIsinstance (rt : Rt) (inst cls : Val) : M Bool := do
   let w ← getW
   match asType w cls with
@@ -2380,7 +2380,7 @@ def objectIsinstance (rt : Rt) (inst cls : Val) : M Bool := do
     | none => pure false
     | some icls => abstractIssubclass rt walkFuel icls cls
 
-/-- `object_recursive_isinstance`, `Objects/abstract.c:2632`. Union objects are left
+/-- `object_recursive_isinstance`, `Objects/abstract.c:2639`. Union objects are left
 out. -/
 def objectRecursiveIsinstance (rt : Rt) : Nat → Val → Val → M Bool
   | 0, _, _ => raise .fuel
@@ -2403,11 +2403,11 @@ where
     | x :: xs => do
       if ← objectRecursiveIsinstance rt fuel inst x then pure true else anyTuple fuel inst xs
 
-/-- `PyObject_IsInstance`, `Objects/abstract.c:2697`. -/
+/-- `PyObject_IsInstance`, `Objects/abstract.c:2704`. -/
 def pyIsInstance (rt : Rt) (inst cls : Val) : M Bool :=
   objectRecursiveIsinstance rt walkFuel inst cls
 
-/-- `recursive_issubclass`, `Objects/abstract.c:2705`. -/
+/-- `recursive_issubclass`, `Objects/abstract.c:2712`. -/
 def recursiveIssubclass (rt : Rt) (derived cls : Val) : M Bool := do
   let w ← getW
   match asType w cls, asType w derived with
@@ -2417,7 +2417,7 @@ def recursiveIssubclass (rt : Rt) (derived cls : Val) : M Bool := do
     checkClass rt cls "issubclass() arg 2 must be a class, a tuple of classes, or a union"
     abstractIssubclass rt walkFuel derived cls
 
-/-- `object_issubclass`, `Objects/abstract.c:2725`. -/
+/-- `object_issubclass`, `Objects/abstract.c:2732`. -/
 def objectIssubclass (rt : Rt) : Nat → Val → Val → M Bool
   | 0, _, _ => raise .fuel
   | fuel + 1, derived, cls => do
@@ -2439,7 +2439,7 @@ where
     | x :: xs => do
       if ← objectIssubclass rt fuel derived x then pure true else anyTuple fuel derived xs
 
-/-- `PyObject_IsSubclass`, `Objects/abstract.c:2785`. -/
+/-- `PyObject_IsSubclass`, `Objects/abstract.c:2792`. -/
 def pyIsSubclass (rt : Rt) (derived cls : Val) : M Bool :=
   objectIssubclass rt walkFuel derived cls
 

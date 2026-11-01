@@ -10,19 +10,19 @@ namespace PyLean.CoreLibs.EnumDC
 
 open PyLean
 
-/-! ### Name classification, Lib/enum.py:46-88 -/
+/-! ### Name classification, Lib/enum.py:47-89 -/
 
-/-- `_is_dunder`, Lib/enum.py:46-55. -/
+/-- `_is_dunder`, Lib/enum.py:47-56. -/
 def isDunder (name : List Char) : Bool :=
   name.length > 4 && name.take 2 == ['_', '_'] && name.reverse.take 2 == ['_', '_'] &&
     name[2]? != some '_' && name.reverse[2]? != some '_'
 
-/-- `_is_sunder`, Lib/enum.py:57-66. -/
+/-- `_is_sunder`, Lib/enum.py:58-67. -/
 def isSunder (name : List Char) : Bool :=
   name.length > 2 && name.head? == some '_' && name.reverse.head? == some '_' &&
     name[1]? != some '_' && name.reverse[1]? != some '_'
 
-/-- `_is_private`, Lib/enum.py:77-88. -/
+/-- `_is_private`, Lib/enum.py:78-89. -/
 def isPrivate (cls name : List Char) : Bool :=
   let pattern := ['_'] ++ cls ++ ['_', '_']
   name.length > pattern.length && pattern.isPrefixOf name &&
@@ -30,11 +30,11 @@ def isPrivate (cls name : List Char) : Bool :=
 
 /-! ### Bits -/
 
-/-- `_is_single_bit`, Lib/enum.py:90-97: `num &= num - 1`. -/
+/-- `_is_single_bit`, Lib/enum.py:91-98: `num &= num - 1`. -/
 def isSingleBit (num : Nat) : Bool :=
   if num = 0 then false else (num &&& (num - 1)) == 0
 
-/-- `_high_bit`, Lib/enum.py:639-643. -/
+/-- `_high_bit`, Lib/enum.py:663-667. -/
 def highBit (value : Nat) : Int := (bitLength value : Int) - 1
 
 def lowBitAux : (fuel : Nat) → Nat → Nat
@@ -44,7 +44,7 @@ def lowBitAux : (fuel : Nat) → Nat → Nat
 /-- The lowest set bit, `num & (~num + 1)`. -/
 def lowBit (n : Nat) : Nat := lowBitAux (bitLength n) n
 
-/-- `_iter_bits_lsb`, Lib/enum.py:114-124, for a non-negative `num`: `num ^= b` until zero. -/
+/-- `_iter_bits_lsb`, Lib/enum.py:115-125, for a non-negative `num`: `num ^= b` until zero. -/
 def iterBits : (fuel : Nat) → Nat → List Nat
   | 0, _ => []
   | fuel + 1, num =>
@@ -57,7 +57,7 @@ def bitsOf (n : Nat) : List Nat := iterBits (bitLength n + 1) n
 /-- Python `v & m` for a non-negative mask `m`. -/
 def andMask (v : Int) (m : Nat) : Nat := (v % (2 ^ bitLength m : Nat)).toNat &&& m
 
-/-- `FlagBoundary`, Lib/enum.py:1394-1397. -/
+/-- `FlagBoundary`, Lib/enum.py:1422-1425. -/
 inductive Boundary where
   | strict | conform | eject | keep
   deriving Repr, DecidableEq, Inhabited
@@ -69,14 +69,14 @@ structure FlagCls where
   boundary : Boundary
   deriving Repr, DecidableEq, Inhabited
 
-/-- `_flag_mask_`, Lib/enum.py:277. -/
+/-- `_flag_mask_`, Lib/enum.py:278. -/
 def FlagCls.flagMask (c : FlagCls) : Nat := c.members.foldl (fun m p => m ||| p.2) 0
 
-/-- `_singles_mask_`, Lib/enum.py:278-279. -/
+/-- `_singles_mask_`, Lib/enum.py:279-280. -/
 def FlagCls.singlesMask (c : FlagCls) : Nat :=
   c.members.foldl (fun m p => if isSingleBit p.2 then m ||| p.2 else m) 0
 
-/-- `_all_bits_`, Lib/enum.py:280. -/
+/-- `_all_bits_`, Lib/enum.py:281. -/
 def FlagCls.allBits (c : FlagCls) : Nat := 2 ^ bitLength c.flagMask - 1
 
 /-- `_value2member_map_`: the first member with this value, the rest being aliases. -/
@@ -93,9 +93,9 @@ inductive FlagVal where
   | plain (v : Int)
   deriving Repr, DecidableEq, Inhabited
 
-/-- `Flag._iter_member_by_value_`, Lib/enum.py:1428-1433, and `_iter_member_by_def_`, :1438-1445: the
+/-- `Flag._iter_member_by_value_`, Lib/enum.py:1456-1461, and `_iter_member_by_def_`, :1466-1473: the
 members for the bits of `value & _flag_mask_`, in value order, or in definition order for a class
-whose members are not sorted, Lib/enum.py:640-642. `none` is `_value2member_map_.get(val)` failing. -/
+whose members are not sorted, Lib/enum.py:664-666. `none` is `_value2member_map_.get(val)` failing. -/
 def FlagCls.iterMembers (c : FlagCls) (value : Nat) : List (Option (String × Nat)) :=
   let byValue := (bitsOf (value &&& c.flagMask)).map (fun v => (c.memberOf v).map (fun n => (n, v)))
   let values := (c.canonical.filter (fun p => isSingleBit p.2)).map Prod.snd
@@ -105,7 +105,7 @@ def FlagCls.iterMembers (c : FlagCls) (value : Nat) : List (Option (String × Na
       if (bitsOf (value &&& c.flagMask)).contains p.2 then some (some p) else none)) ++
     (byValue.filter Option.isNone)
 
-/-- The name loop of `Flag._missing_`, Lib/enum.py:1510-1529. -/
+/-- The name loop of `Flag._missing_`, Lib/enum.py:1541-1560. -/
 def FlagCls.nameOf (c : FlagCls) (value memberValue aliases : Nat) : Py (Option String) :=
   if memberValue != 0 || aliases != 0 then
     let first := (c.iterMembers memberValue).filterMap id
@@ -126,8 +126,8 @@ def FlagCls.nameOf (c : FlagCls) (value memberValue aliases : Nat) : Py (Option 
     else .ok (some joined)
   else .ok none
 
-/-- `Flag._missing_`, Lib/enum.py:1448-1538, for an `int`. The pseudo-member is identified by its value
-and name, so the singleton bookkeeping at :1535-1537 has no effect here. -/
+/-- `Flag._missing_`, Lib/enum.py:1476-1569, for an `int`. The pseudo-member is identified by its value
+and name, so the singleton bookkeeping at :1566-1568 has no effect here. -/
 def FlagCls.missing (c : FlagCls) (value : Int) : Py FlagVal := do
   let fm := c.flagMask
   let sm := c.singlesMask
@@ -150,12 +150,12 @@ def FlagCls.missing (c : FlagCls) (value : Int) : Py FlagVal := do
   let memberValue := v2 &&& sm
   if unknown != 0 && c.boundary != .keep then throw (.valueError "~unknown values")
   let name ← c.nameOf v2 memberValue aliases
-  -- `_value2member_map_.setdefault(value, pseudo_member)`, :1535: an existing member wins
+  -- `_value2member_map_.setdefault(value, pseudo_member)`, :1566: an existing member wins
   pure (.flag v2 (match c.memberOf v2 with
     | some n => some n
     | none => name))
 
-/-- `Color(value)`: `Enum.__new__`, Lib/enum.py:1147-1206, for a `Flag` and an `int`: the value map, then
+/-- `Color(value)`: `Enum.__new__`, Lib/enum.py:1175-1234, for a `Flag` and an `int`: the value map, then
 `_missing_`. -/
 def FlagCls.call (c : FlagCls) (value : Int) : Py FlagVal :=
   if value ≥ 0 then
@@ -164,48 +164,48 @@ def FlagCls.call (c : FlagCls) (value : Int) : Py FlagVal :=
     | none => c.missing value
   else c.missing value
 
-/-- `Flag.__or__`, `__and__`, `__xor__`, Lib/enum.py:1584-1615, on two values of the class. -/
+/-- `Flag.__or__`, `__and__`, `__xor__`, Lib/enum.py:1615-1646, on two values of the class. -/
 def FlagCls.orOp (c : FlagCls) (a b : Nat) : Py FlagVal := c.call (a ||| b : Nat)
 def FlagCls.andOp (c : FlagCls) (a b : Nat) : Py FlagVal := c.call (a &&& b : Nat)
 def FlagCls.xorOp (c : FlagCls) (a b : Nat) : Py FlagVal := c.call (a ^^^ b : Nat)
 
-/-- `Flag.__invert__`, Lib/enum.py:1617-1626, without the cache: `~value` for `EJECT` and `KEEP`, and
+/-- `Flag.__invert__`, Lib/enum.py:1648-1657, without the cache: `~value` for `EJECT` and `KEEP`, and
 `_singles_mask_ & ~value` otherwise. -/
 def FlagCls.invert (c : FlagCls) (a : Nat) : Py FlagVal :=
   match c.boundary with
   | .eject | .keep => c.call (-(a : Int) - 1)
   | .strict | .conform => c.call (notAnd a c.singlesMask : Nat)
 
-/-- `Flag.__contains__`, Lib/enum.py:1540-1548. -/
+/-- `Flag.__contains__`, Lib/enum.py:1571-1579. -/
 def flagContains (self other : Nat) : Bool := (other &&& self) == other
 
-/-- `Flag.__len__`, Lib/enum.py:1556-1557: `self._value_.bit_count()`. -/
+/-- `Flag.__len__`, Lib/enum.py:1587-1588: `self._value_.bit_count()`. -/
 def bitCount (n : Nat) : Nat := (bitsOf n).length
 
-/-- `Flag.__repr__`, Lib/enum.py:1559-1565. -/
+/-- `Flag.__repr__`, Lib/enum.py:1590-1596. -/
 def flagRepr (cls : String) (name : Option String) (value : Nat) : String :=
   match name with
   | none => s!"<{cls}: {value}>"
   | some n => s!"<{cls}.{n}: {value}>"
 
-/-- `Flag.__str__`, Lib/enum.py:1567-1572. -/
+/-- `Flag.__str__`, Lib/enum.py:1598-1603. -/
 def flagStr (cls : String) (name : Option String) (value : Nat) : String :=
   match name with
   | none => s!"{cls}({value})"
   | some n => s!"{cls}.{n}"
 
-/-- `Flag._generate_next_value_`, Lib/enum.py:1409-1425. -/
+/-- `Flag._generate_next_value_`, Lib/enum.py:1437-1453. -/
 def flagNext (start : Option Nat) (count : Nat) (last : List Nat) : Nat :=
   if count = 0 then start.getD 1
   else 2 ^ ((highBit (last.foldl max 0) + 1).toNat)
 
-/-- `Enum._generate_next_value_`, Lib/enum.py:1237-1255, on `int` values. -/
+/-- `Enum._generate_next_value_`, Lib/enum.py:1265-1283, on `int` values. -/
 def enumNext (start : Int) (last : List Int) : Int :=
   match last with
   | [] => start
   | x :: xs => xs.foldl max x + 1
 
-/-- `unique`, Lib/enum.py:1645-1658: the `(alias, name)` pairs. -/
+/-- `unique`, Lib/enum.py:1676-1689: the `(alias, name)` pairs. -/
 def aliasPairs (members : List (String × Nat)) : List (String × String) :=
   members.filterMap (fun p =>
     match (members.find? (fun q => q.2 == p.2)) with
@@ -214,7 +214,7 @@ def aliasPairs (members : List (String × Nat)) : List (String × String) :=
 
 /-! ### Dataclasses -/
 
-/-- `_hash_action`, Lib/dataclasses.py:955-980. -/
+/-- `_hash_action`, Lib/dataclasses.py:948-973. -/
 inductive HashAction where
   | none | setNone | add | exception
   deriving Repr, DecidableEq
@@ -249,17 +249,17 @@ structure FieldSpec where
   kind : Nat := 0
   deriving Repr, DecidableEq, Inhabited
 
-/-- `field(default=..., default_factory=...)`, Lib/dataclasses.py:408-409. -/
+/-- `field(default=..., default_factory=...)`, Lib/dataclasses.py:401-402. -/
 def fieldCheck (hasDefault hasFactory : Bool) : Py Unit :=
   if hasDefault && hasFactory then
     .error (.valueError "cannot specify both default and default_factory")
   else .ok ()
 
-/-- `_fields_in_init_order`, Lib/dataclasses.py:415-421. -/
+/-- `_fields_in_init_order`, Lib/dataclasses.py:408-414. -/
 def initOrder (fs : List FieldSpec) : List FieldSpec × List FieldSpec :=
   (fs.filter (fun f => f.init && !f.kwOnly), fs.filter (fun f => f.init && f.kwOnly))
 
-/-- The check at the top of `_init_fn`, Lib/dataclasses.py:680-688, on the standard fields. -/
+/-- The check at the top of `_init_fn`, Lib/dataclasses.py:673-681, on the standard fields. -/
 def initDefaultOrder : Option String → List FieldSpec → Py Unit
   | _, [] => .ok ()
   | seen, f :: fs =>
@@ -272,15 +272,15 @@ def initDefaultOrder : Option String → List FieldSpec → Py Unit
         | none => initDefaultOrder none fs
     else initDefaultOrder seen fs
 
-/-- `_tuple_str`, Lib/dataclasses.py:424-433. -/
+/-- `_tuple_str`, Lib/dataclasses.py:417-426. -/
 def tupleStr (obj : String) (names : List String) : String :=
   if names.isEmpty then "()"
   else s!"({",".intercalate (names.map fun n => obj ++ "." ++ n)},)"
 
-/-- `fields()`, Lib/dataclasses.py:1454-1469: pseudo-fields are left out. -/
+/-- `fields()`, Lib/dataclasses.py:1465-1480: pseudo-fields are left out. -/
 def fieldsOf (fs : List FieldSpec) : List FieldSpec := fs.filter (fun f => f.kind == 0)
 
-/-- One step of the loop of `_replace`, Lib/dataclasses.py:1788-1805. -/
+/-- One step of the loop of `_replace`, Lib/dataclasses.py:1801-1818. -/
 def replaceStep {α : Type} (changes : List (String × α)) (get : String → α)
     (acc : List (String × α)) (f : FieldSpec) : Py (List (String × α)) :=
   if f.kind == 1 then .ok acc
@@ -295,13 +295,13 @@ def replaceStep {α : Type} (changes : List (String × α)) (get : String → α
     else .ok (acc ++ [(f.name, get f.name)])
   else .ok acc
 
-/-- `_replace`, Lib/dataclasses.py:1782-1813: the keyword arguments of the new `__init__` call. `get` is
+/-- `_replace`, Lib/dataclasses.py:1795-1826: the keyword arguments of the new `__init__` call. `get` is
 `getattr(self, f.name)`, and `changes` the caller's keywords. -/
 def replaceArgs {α : Type} (fs : List FieldSpec) (get : String → α) (changes : List (String × α)) :
     Py (List (String × α)) :=
   fs.foldlM (replaceStep changes get) changes
 
-/-- The decorator checks at Lib/dataclasses.py:1096-1102 and :1120. -/
+/-- The decorator checks at Lib/dataclasses.py:1113-1119 and :1137. -/
 def decoratorCheck (order eq frozen anyFrozenBase hasBase : Bool) : Py Unit :=
   if hasBase && anyFrozenBase && !frozen then
     .error (.typeError "cannot inherit non-frozen dataclass from a frozen one")

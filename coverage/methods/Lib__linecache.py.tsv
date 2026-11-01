@@ -7,7 +7,9 @@ Lib/linecache.py	53	54	_make_key	_make_key(code)	todo
 Lib/linecache.py	56	61	_getlines_from_code	_getlines_from_code(code)	todo		
 Lib/linecache.py	64	71	_source_unavailable	_source_unavailable(filename)	todo		
 Lib/linecache.py	74	103	checkcache	checkcache(filename=None)	todo		
-Lib/linecache.py	106	197	updatecache	updatecache(filename, module_globals=None)	todo		
-Lib/linecache.py	200	221	lazycache	lazycache(filename, module_globals)	todo		
-Lib/linecache.py	224	240	_make_lazycache_entry	_make_lazycache_entry(filename, module_globals)	todo		
-Lib/linecache.py	244	256	_register_code	_register_code(code, string, name)	todo		
+Lib/linecache.py	106	207	updatecache	updatecache(filename, module_globals=None)	todo		changed-in-3.15:
+Lib/linecache.py	210	243	_read_from_archive	_read_from_archive(filename)	todo		changed-in-3.15: new function
+Lib/linecache.py	246	267	lazycache	lazycache(filename, module_globals)	todo		
+Lib/linecache.py	270	294	_make_lazycache_entry	_make_lazycache_entry(filename, module_globals)	todo		changed-in-3.15:
+Lib/linecache.py	296	324	_bless_my_loader	_bless_my_loader(module_globals)	todo		changed-in-3.15: new function
+Lib/linecache.py	327	339	_register_code	_register_code(code, string, name)	todo		

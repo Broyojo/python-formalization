@@ -46,17 +46,17 @@ namespace SetObj
 def slot (so : SetObj K) (i : Nat) : Slot K := so.table.getD i .null
 /-- `PyFrozenSet_CheckExact(so)`. -/
 def frozenExact (so : SetObj K) : Bool := so.frozen && so.exact
-/-- `sizeof(PySetObject)` is 200 on a 64-bit build; `set___sizeof___impl` (:2469-2478). -/
+/-- `sizeof(PySetObject)` is 200 on a 64-bit build; `set___sizeof___impl` (:2741-2750). -/
 def sizeOf (so : SetObj K) : Nat := if so.tableId != 0 then 200 + (so.mask + 1) * 16 else 200
 end SetObj
 
-/-- The set probe recurrence (:127-128): `perturb >>= PERTURB_SHIFT;
+/-- The set probe recurrence (:244-245): `perturb >>= PERTURB_SHIFT;
 i = (i * 5 + 1 + perturb) & mask`. -/
 def setProbeStep (mask i perturb : Nat) : Nat × Nat :=
   let p := perturb >>> PERTURB_SHIFT
   ((i * 5 + 1 + p) &&& mask, p)
 
-/-- `probes = (i + LINEAR_PROBES <= mask) ? LINEAR_PROBES : 0` (:93). -/
+/-- `probes = (i + LINEAR_PROBES <= mask) ? LINEAR_PROBES : 0` (:232). -/
 def linearProbes (i mask : Nat) : Nat := if i + LINEAR_PROBES ≤ mask then LINEAR_PROBES else 0
 
 /-- What one `do { ... } while (probes--)` block of `set_lookkey` ends with. -/
@@ -70,14 +70,14 @@ section Look
 variable [DecidableEq K] (P : Proto K (SetObj K))
 
 /-- Is the entry still what it was before the comparison?
-`table != so->table || entry->key != startkey` (:118). -/
+`table != so->table || entry->key != startkey` (@3.14.7:118). -/
 def setChanged (so : SetObj K) (table slot : Nat) (startkey : K) : Bool :=
   decide (table ≠ so.tableId) ||
     match so.slot slot with
     | .active k _ => decide (k ≠ startkey)
     | _ => true
 
-/-- One pass of the body of the `do` loop of `set_lookkey` (:95-125): `.inl` ends the block, `.inr`
+/-- One pass of the body of the `do` loop of `set_lookkey` (@3.14.7:95-125): `.inl` ends the block, `.inr`
 carries on at the next entry with this `mask`. -/
 def lookStep (frozen : Bool) (key : K) (hash : Int) (slot mask : Nat) : SM K (LookScan ⊕ Nat) := do
   let so ← M.get
@@ -98,7 +98,7 @@ def lookStep (frozen : Bool) (key : K) (hash : Int) (slot mask : Nat) : SM K (Lo
       return .inr so'.mask
     else return .inr mask
 
-/-- The inner loop of `set_lookkey` (:94-126): `do { ... } while (probes--)`. -/
+/-- The inner loop of `set_lookkey` (:233-243): `do { ... } while (probes--)`. -/
 def lookScan (frozen : Bool) (key : K) (hash : Int) : Nat → Nat → Nat → SM K LookScan
   | 0, slot, mask => do
     match ← lookStep P frozen key hash slot mask with
@@ -109,7 +109,7 @@ def lookScan (frozen : Bool) (key : K) (hash : Int) : Nat → Nat → Nat → SM
     | .inl r => return r
     | .inr m => lookScan frozen key hash p (slot + 1) m
 
-/-- The outer loop of `set_lookkey` (:91-129). -/
+/-- The outer loop of `set_lookkey` (:230-246). -/
 def lookOuter (frozen : Bool) (key : K) (hash : Int) : Nat → Nat → Nat → Nat → SM K (Option Nat)
   | 0, _, _, _ => M.throw .modelFuel
   | fuel + 1, i, perturb, mask => do
@@ -123,8 +123,8 @@ def lookOuter (frozen : Bool) (key : K) (hash : Int) : Nat → Nat → Nat → N
 
 def setProbeFuel (mask : Nat) : Nat := mask + 15
 
-/-- `set_lookkey` (:78-130): the slot where the search stopped; an exception is the NULL
-return. A restart is the recursive call at :119. -/
+/-- `set_lookkey` (@3.14.7:78-130): the slot where the search stopped; an exception is the NULL
+return. A restart is the recursive call at @3.14.7:119. -/
 def setLookkeyAux (key : K) (hash : Int) : Nat → SM K Nat
   | 0 => M.throw .modelFuel
   | restarts + 1 => do
@@ -139,7 +139,7 @@ def setLookkey (key : K) (hash : Int) : SM K Nat := setLookkeyAux P key hash 256
 
 end Look
 
-/-- The first-NULL search inside one block of `set_insert_clean` (:274-283). -/
+/-- The first-NULL search inside one block of `set_insert_clean` (:392-401). -/
 def cleanScan (table : List (Slot K)) (i j : Nat) : Option Nat :=
   match j with
   | 0 => none
@@ -148,7 +148,7 @@ def cleanScan (table : List (Slot K)) (i j : Nat) : Option Nat :=
     | .null => some (i + LINEAR_PROBES - j)
     | _ => cleanScan table i j
 
-/-- `set_insert_clean` (:265-290): the slot. -/
+/-- `set_insert_clean` (:383-408): the slot. -/
 def setInsertCleanSlot (table : List (Slot K)) (mask : Nat) : Nat → Nat → Nat → Py Nat
   | 0, _, _ => .error .modelFuel
   | fuel + 1, i, perturb =>
@@ -168,7 +168,7 @@ def setInsertClean (table : List (Slot K)) (mask : Nat) (key : K) (hash : Int) :
   | .ok s => .ok (table.set s (.active key hash))
   | .error e => .error e
 
-/-- Reinsert the active entries in table order (:359-372). -/
+/-- Reinsert the active entries in table order (:543-556). -/
 def reinsertAll (mask : Nat) : List (Slot K) → List (Slot K) → Py (List (Slot K))
   | acc, [] => .ok acc
   | acc, .active k h :: rest =>
@@ -177,18 +177,18 @@ def reinsertAll (mask : Nat) : List (Slot K) → List (Slot K) → Py (List (Slo
     | .error e => .error e
   | acc, _ :: rest => reinsertAll mask acc rest
 
-/-- The smallest table size greater than `minused` (:313-316). -/
+/-- The smallest table size greater than `minused` (:497-500). -/
 def setNewSize (minused : Nat) : Nat → Nat → Nat
   | 0, n => n
   | f + 1, n => if n ≤ minused then setNewSize minused f (n <<< 1) else n
 
-/-- `set_table_resize` (:300-377). -/
+/-- `set_table_resize` (:483-563). -/
 def setTableResize (minused : Nat) : SM K Unit := do
   let so ← M.get
   let newsize := setNewSize minused 64 PySet_MINSIZE
   if newsize == PySet_MINSIZE && so.mask + 1 == PySet_MINSIZE && so.fill == so.used then
     return ()
-  -- `PyMem_NEW(setentry, newsize)` (:343): a request above PY_SSIZE_T_MAX / sizeof(setentry)
+  -- `PyMem_NEW(setentry, newsize)` (:527): a request above PY_SSIZE_T_MAX / sizeof(setentry)
   -- fails without calling the allocator; an allocator that gives up earlier is not modelled.
   if newsize > (2 ^ 63 - 1) / 16 then M.throw (.named "MemoryError" "")
   let fresh : List (Slot K) := List.replicate newsize .null
@@ -200,8 +200,8 @@ def setTableResize (minused : Nat) : SM K Unit := do
     tableId := if newsize == PySet_MINSIZE then 0 else so.nextId
     nextId := so.nextId + 1 }
 
-/-- The resize at the end of `set_add_entry_takeref` (:206-208) and of
-`set_difference_update_internal` (:1765). -/
+/-- The resize at the end of `set_add_entry_takeref` (:324-326) and of
+`set_difference_update_internal` (:2028). -/
 def setGrow : SM K Unit := do
   let so ← M.get
   setTableResize (if so.used > 50000 then so.used * 2 else so.used * 4)
@@ -217,7 +217,7 @@ inductive AddScan where
 section Add
 variable [DecidableEq K] (P : Proto K (SetObj K))
 
-/-- One pass of the body of the `do` loop of `set_add_entry_takeref` (:157-184). -/
+/-- One pass of the body of the `do` loop of `set_add_entry_takeref` (:275-302). -/
 def addStep (key : K) (hash : Int) (slot mask : Nat) (freeslot : Option Nat) :
     SM K (AddScan ⊕ (Nat × Option Nat)) := do
   let so ← M.get
@@ -238,7 +238,7 @@ def addStep (key : K) (hash : Int) (slot mask : Nat) (freeslot : Option Nat) :
       return .inr (so'.mask, freeslot)
     else return .inr (mask, freeslot)
 
-/-- The inner loop of `set_add_entry_takeref` (:156-185). -/
+/-- The inner loop of `set_add_entry_takeref` (:274-303). -/
 def addScan (key : K) (hash : Int) : Nat → Nat → Nat → Option Nat → SM K AddScan
   | 0, slot, mask, freeslot => do
     match ← addStep P key hash slot mask freeslot with
@@ -259,7 +259,7 @@ def addOuter (key : K) (hash : Int) : Nat → Nat → Nat → Nat → Option Nat
       addOuter key hash fuel n.1 n.2 mask' fs
     | r => return r
 
-/-- `set_add_entry_takeref` (:134-217), `set_add_entry` (:219-225). -/
+/-- `set_add_entry_takeref` (:252-335), `set_add_entry` (:337-343). -/
 def setAddEntryAux (key : K) (hash : Int) : Nat → SM K Unit
   | 0 => M.throw .modelFuel
   | restarts + 1 => do
@@ -290,7 +290,7 @@ def setAddEntryAux (key : K) (hash : Int) : Nat → SM K Unit
 
 def setAddEntry (key : K) (hash : Int) : SM K Unit := setAddEntryAux P key hash 256
 
-/-- `set_unhashable_type` (:227-241). -/
+/-- `set_unhashable_type` (:345-359). -/
 def setUnhashableType (key : K) (e : PyExc) : PyExc :=
   match e with
   | .typeError m => .typeError s!"cannot use '{P.typeName key}' as a set element ({m})"
@@ -302,13 +302,13 @@ def setHashKey (key : K) : SM K Int :=
   | .ok h => pure h
   | .error e => M.throw (setUnhashableType P key e)
 
-/-- `set_add_key` (:412-421), `_PySet_AddTakeRef` (:243-255), `PySet_Add` (:2821-2835),
-`set.add` (:2260-2267). -/
+/-- `set_add_key` (:600-609), `_PySet_AddTakeRef` (:361-373), `PySet_Add` (:3097-3123),
+`set.add` (:2535-2542). -/
 def setAddKey (key : K) : SM K Unit := do
   let hash ← setHashKey P key
   setAddEntry P key hash
 
-/-- `set_contains_entry` (:379-388). -/
+/-- `set_contains_entry` (:565-574). -/
 def setContainsEntry (key : K) (hash : Int) : SM K Bool := do
   let s ← setLookkey P key hash
   let so ← M.get
@@ -316,12 +316,12 @@ def setContainsEntry (key : K) (hash : Int) : SM K Bool := do
   | .null => return false
   | _ => return true
 
-/-- `set_contains_key` (:423-432), `PySet_Contains` (:2789-2804). -/
+/-- `set_contains_key` (:611-620), `PySet_Contains` (:3065-3080). -/
 def setContainsKey (key : K) : SM K Bool := do
   let hash ← setHashKey P key
   setContainsEntry P key hash
 
-/-- `set_discard_entry` (:393-410): `true` is `DISCARD_FOUND`. -/
+/-- `set_discard_entry` (:579-598): `true` is `DISCARD_FOUND`. -/
 def setDiscardEntry (key : K) (hash : Int) : SM K Bool := do
   let s ← setLookkey P key hash
   let so ← M.get
@@ -331,14 +331,14 @@ def setDiscardEntry (key : K) (hash : Int) : SM K Bool := do
     M.put { so with used := so.used - 1, table := so.table.set s .dummy }
     return true
 
-/-- `set_discard_key` (:434-443), `PySet_Discard` (:2806-2819). -/
+/-- `set_discard_key` (:622-631), `PySet_Discard` (:3082-3095). -/
 def setDiscardKey (key : K) : SM K Bool := do
   let hash ← setHashKey P key
   setDiscardEntry P key hash
 
 end Add
 
-/-- `set_empty_to_minsize` (:445-454). -/
+/-- `set_empty_to_minsize` (:633-643). -/
 def setEmptyToMinsize (so : SetObj K) : SetObj K :=
   { so with
     table := List.replicate 8 .null
@@ -348,13 +348,13 @@ def setEmptyToMinsize (so : SetObj K) : SetObj K :=
     tableId := 0
     hash := -1 }
 
-/-- `set_clear_internal` (:456-504), `_PySet_ClearInternal`, `PySet_Clear`, `set.clear`. -/
+/-- `set_clear_internal` (:645-694), `_PySet_ClearInternal`, `PySet_Clear`, `set.clear`. -/
 def setClearInternal (so : SetObj K) : SetObj K :=
   if so.tableId != 0 then setEmptyToMinsize so
   else if so.fill > 0 then setEmptyToMinsize so
   else so
 
-/-- `set_next` (:519-541): `(pos after, key, hash)`. -/
+/-- `set_next` (:709-731): `(pos after, key, hash)`. -/
 def setNext (table : List (Slot K)) (mask : Nat) : Nat → Nat → Option (Nat × K × Int)
   | 0, _ => none
   | fuel + 1, i =>
@@ -365,16 +365,16 @@ def setNext (table : List (Slot K)) (mask : Nat) : Nat → Nat → Option (Nat �
       | _ => setNext table mask fuel (i + 1)
 
 /-- The active entries in table order: the `while (set_next(...))` loops, and
-`_PySet_NextEntry` / `_PySet_NextEntryRef` (:2837-2868). -/
+`_PySet_NextEntry` / `_PySet_NextEntryRef` (:3125-3156). -/
 def setEntries (so : SetObj K) : List (K × Int) :=
   so.table.filterMap fun
     | .active k h => some (k, h)
     | _ => none
 
-/-- `set_len` (:630-635), `PySet_Size`. -/
+/-- `set_len` (:821-826), `PySet_Size`. -/
 def setLen (so : SetObj K) : Nat := so.used
 
-/-- `set_pop_impl` (:719-743), `PySet_Pop`. -/
+/-- `set_pop_impl` (:910-934), `PySet_Pop`. -/
 def setPop : SM K K := do
   let so ← M.get
   if so.used == 0 then M.throw (.keyError "'pop from an empty set'")
@@ -393,7 +393,7 @@ def setPop : SM K K := do
       finger := i + 1 }
     return key
 
-/-- `_shuffle_bits` (:762-766) on `Py_uhash_t`. -/
+/-- `_shuffle_bits` (:953-957) on `Py_uhash_t`. -/
 def shuffleBits (h : Nat) : Nat :=
   (((h ^^^ 89869747) ^^^ ((h <<< 16) % 2 ^ 64)) * 3644798167) % 2 ^ 64
 
@@ -403,7 +403,7 @@ def Slot.hashU : Slot K → Nat
   | .dummy => toU64 (-1)
   | .active _ h => toU64 h
 
-/-- `frozenset_hash_impl` (:778-818). It runs on sets too (`set_contains_lock_held`). -/
+/-- `frozenset_hash_impl` (:972-1012). It runs on sets too (`set_contains_lock_held`). -/
 def frozensetHashImpl (so : SetObj K) : Int :=
   let h0 := so.table.foldl (fun h s => h ^^^ shuffleBits s.hashU) 0
   let h1 := if (so.mask + 1 - so.fill) % 2 == 1 then h0 ^^^ shuffleBits 0 else h0
@@ -414,14 +414,14 @@ def frozensetHashImpl (so : SetObj K) : Int :=
   let h6 := if h5 == 2 ^ 64 - 1 then 590923713 else h5
   toI64 h6
 
-/-- `frozenset_hash` (:820-833): the hash and the object caching it. -/
+/-- `frozenset_hash` (:1014-1027): the hash and the object caching it. -/
 def frozensetHash (so : SetObj K) : Int × SetObj K :=
   if so.hash != -1 then (so.hash, so)
   else
     let h := frozensetHashImpl so
     (h, { so with hash := h })
 
-/-- `setiterobject` (:837-843). `alive` is `si_set != NULL`. -/
+/-- `setiterobject` (:1031-1037). `alive` is `si_set != NULL`. -/
 structure SetIter where
   alive : Bool := true
   used : Int
@@ -429,15 +429,15 @@ structure SetIter where
   len : Int
   deriving Repr, Inhabited
 
-/-- `set_iter` (:977-990). -/
+/-- `set_iter` (:1171-1184). -/
 def setIterNew (so : SetObj K) : SetIter := { used := so.used, len := so.used }
 
-/-- `setiter_len` (:863-871): `PyLong_FromSsize_t(len)`; 3.14.7 can return a negative
+/-- `setiter_len` (:1057-1065): `PyLong_FromSsize_t(len)`; 3.14.7 can return a negative
 number here, see `setIterLenNonneg`. -/
 def setiterLen (so : SetObj K) (si : SetIter) : Int :=
   if si.alive && decide (si.used = so.used) then si.len else 0
 
-/-- `setiter_iternext` (:901-942). -/
+/-- `setiter_iternext` (:1095-1136). -/
 def setiterNext (so : SetObj K) (si : SetIter) : Py (Option K) × SetIter :=
   if !si.alive then (.ok none, si)
   else if si.used != so.used then
@@ -468,10 +468,10 @@ def setiterToList (so : SetObj K) (si : SetIter) : Py (List K) × SetIter :=
   | .error e => (.error e, si)
   | .ok _ => setiterDrain so (so.mask + 3) si []
 
-/-- `setiter_reduce` (:875-891): drain a copy. -/
+/-- `setiter_reduce` (@3.14.7:875-891): drain a copy. -/
 def setiterReduce (so : SetObj K) (si : SetIter) : Py (List K) := (setiterToList so si).1
 
-/-- `set_repr_lock_held` (:565-617), `set_repr`. -/
+/-- `set_repr_lock_held` (@3.14.7:565-617), `set_repr`. -/
 def setRepr (krepr : K → Py String) (inRepr : Bool) (so : SetObj K) : Py String :=
   if inRepr then .ok s!"{so.tname}(...)"
   else if so.used == 0 then .ok s!"{so.tname}()"

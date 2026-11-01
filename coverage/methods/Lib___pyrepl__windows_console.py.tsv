@@ -1,37 +1,40 @@
 file	line	endline	name	signature	status	entry	note
-Lib/_pyrepl/windows_console.py	129	133	_supports_vt	_supports_vt()	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	136	172	WindowsConsole.__init__	__init__(self, f_in: IO[bytes] | int=0, f_out: IO[bytes] | int=1, term: str='', encoding: str='')	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	174	241	WindowsConsole.refresh	refresh(self, screen: list[str], c_xy: tuple[int, int])	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	244	248	WindowsConsole.input_hook	input_hook(self)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	250	292	WindowsConsole.__write_changed_line	__write_changed_line(self, y: int, oldline: str, newline: str, px_coord: int)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	294	311	WindowsConsole._scroll	_scroll(self, top: int, bottom: int, left: int | None=None, right: int | None=None)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	313	314	WindowsConsole._hide_cursor	_hide_cursor(self)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	316	317	WindowsConsole._show_cursor	_show_cursor(self)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	319	320	WindowsConsole._enable_blinking	_enable_blinking(self)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	322	323	WindowsConsole._disable_blinking	_disable_blinking(self)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	325	326	WindowsConsole._enable_bracketed_paste	_enable_bracketed_paste(self)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	328	329	WindowsConsole._disable_bracketed_paste	_disable_bracketed_paste(self)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	331	339	WindowsConsole.__write	__write(self, text: str)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	342	346	WindowsConsole.screen_xy	screen_xy(self)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	348	349	WindowsConsole._erase_to_end	_erase_to_end(self)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	351	362	WindowsConsole.prepare	prepare(self)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	364	368	WindowsConsole.restore	restore(self)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	370	382	WindowsConsole._move_relative	_move_relative(self, x: int, y: int)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	384	392	WindowsConsole.move_cursor	move_cursor(self, x: int, y: int)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	394	398	WindowsConsole.set_cursor_vis	set_cursor_vis(self, visible: bool)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	400	409	WindowsConsole.getheightwidth	getheightwidth(self)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	411	416	WindowsConsole._getscrollbacksize	_getscrollbacksize(self)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	418	424	WindowsConsole._read_input	_read_input(self)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	426	434	WindowsConsole._read_input_bulk	_read_input_bulk(self, n: int)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	436	498	WindowsConsole.get_event	get_event(self, block: bool=True)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	500	504	WindowsConsole.push_char	push_char(self, char: int | bytes)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	506	507	WindowsConsole.beep	beep(self)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	509	513	WindowsConsole.clear	clear(self)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	515	522	WindowsConsole.finish	finish(self)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	524	529	WindowsConsole.flushoutput	flushoutput(self)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	531	534	WindowsConsole.forgetinput	forgetinput(self)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	536	563	WindowsConsole.getpending	getpending(self)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	565	576	WindowsConsole.wait_for_event	wait_for_event(self, timeout: float | None)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	578	585	WindowsConsole.wait	wait(self, timeout: float | None)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	587	588	WindowsConsole.repaint	repaint(self)	excluded		platform: Windows only
-Lib/_pyrepl/windows_console.py	718	719	_win_only	_win_only(*args, **kwargs)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	148	152	_supports_vt	_supports_vt()	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	155	192	WindowsConsole.__init__	__init__(self, f_in: IO[bytes] | int=0, f_out: IO[bytes] | int=1, term: str='', encoding: str='')	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	194	212	WindowsConsole.refresh	refresh(self, rendered_screen: RenderedScreen)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	214	273	WindowsConsole.__plan_refresh	__plan_refresh(self, rendered_screen: RenderedScreen, c_xy: tuple[int, int])	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	275	311	WindowsConsole.__apply_refresh_plan	__apply_refresh_plan(self, plan: WindowsRefreshPlan)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	314	318	WindowsConsole.input_hook	input_hook(self)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	320	383	WindowsConsole.__plan_changed_line	__plan_changed_line(self, y: int, oldline: RenderLine, newline: RenderLine, px_coord: int)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	385	411	WindowsConsole.__apply_line_update	__apply_line_update(self, update: LineUpdate, visual_style: str | None=None)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	413	430	WindowsConsole._scroll	_scroll(self, top: int, bottom: int, left: int | None=None, right: int | None=None)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	432	433	WindowsConsole._hide_cursor	_hide_cursor(self)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	435	436	WindowsConsole._show_cursor	_show_cursor(self)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	438	439	WindowsConsole._enable_blinking	_enable_blinking(self)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	441	442	WindowsConsole._disable_blinking	_disable_blinking(self)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	444	445	WindowsConsole._enable_bracketed_paste	_enable_bracketed_paste(self)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	447	448	WindowsConsole._disable_bracketed_paste	_disable_bracketed_paste(self)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	450	458	WindowsConsole.__write	__write(self, text: str)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	461	465	WindowsConsole.screen_xy	screen_xy(self)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	467	468	WindowsConsole._erase_to_end	_erase_to_end(self)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	470	481	WindowsConsole.prepare	prepare(self)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	483	490	WindowsConsole.restore	restore(self)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	492	504	WindowsConsole._move_relative	_move_relative(self, x: int, y: int)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	506	522	WindowsConsole.move_cursor	move_cursor(self, x: int, y: int)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	524	528	WindowsConsole.set_cursor_vis	set_cursor_vis(self, visible: bool)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	530	539	WindowsConsole.getheightwidth	getheightwidth(self)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	541	546	WindowsConsole._getscrollbacksize	_getscrollbacksize(self)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	548	554	WindowsConsole._read_input	_read_input(self)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	556	564	WindowsConsole._read_input_bulk	_read_input_bulk(self, n: int)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	566	628	WindowsConsole.get_event	get_event(self, block: bool=True)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	630	634	WindowsConsole.push_char	push_char(self, char: int | bytes)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	636	637	WindowsConsole.beep	beep(self)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	639	644	WindowsConsole.clear	clear(self)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	646	655	WindowsConsole.finish	finish(self)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	657	662	WindowsConsole.flushoutput	flushoutput(self)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	664	667	WindowsConsole.forgetinput	forgetinput(self)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	669	696	WindowsConsole.getpending	getpending(self)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	698	709	WindowsConsole.wait_for_event	wait_for_event(self, timeout: float | None)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	711	718	WindowsConsole.wait	wait(self, timeout: float | None)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	720	722	WindowsConsole.repaint	repaint(self)	excluded		platform: Windows only
+Lib/_pyrepl/windows_console.py	852	853	_win_only	_win_only(*args, **kwargs)	excluded		platform: Windows only

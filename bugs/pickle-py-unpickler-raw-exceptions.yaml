@@ -38,8 +38,8 @@ observed: |
 promised_by: |
   Nothing; see `maybe_intended`.
 cause: |
-  Lib/pickle.py:1294-1323 has no handler around `dispatch[key[0]](self)`; :1325-1329 and the
-  `stack.pop()` / `stack[-1]` sites rely on list errors. Modules/_pickle.c:519-528, :5376-5388.
+  Lib/pickle.py:1320-1349 has no handler around `dispatch[key[0]](self)`; :1351-1355 and the
+  `stack.pop()` / `stack[-1]` sites rely on list errors. Modules/_pickle.c:517-526, :5499-5511.
 possible_fix: |
   None needed.
 duplicates:

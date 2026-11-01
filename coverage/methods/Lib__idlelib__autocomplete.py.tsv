@@ -7,6 +7,6 @@ Lib/idlelib/autocomplete.py	65	68	AutoComplete.force_open_completions_event	forc
 Lib/idlelib/autocomplete.py	70	82	AutoComplete.autocomplete_event	autocomplete_event(self, event)	excluded		platform: GUI toolkit
 Lib/idlelib/autocomplete.py	84	93	AutoComplete.try_open_completions_event	try_open_completions_event(self, event=None)	excluded		platform: GUI toolkit
 Lib/idlelib/autocomplete.py	95	99	AutoComplete._delayed_open_completions	_delayed_open_completions(self, args)	excluded		platform: GUI toolkit
-Lib/idlelib/autocomplete.py	101	159	AutoComplete.open_completions	open_completions(self, args)	excluded		platform: GUI toolkit
-Lib/idlelib/autocomplete.py	161	217	AutoComplete.fetch_completions	fetch_completions(self, what, mode)	excluded		platform: GUI toolkit
-Lib/idlelib/autocomplete.py	219	221	AutoComplete.get_entity	get_entity(self, name)	excluded		platform: GUI toolkit
+Lib/idlelib/autocomplete.py	101	163	AutoComplete.open_completions	open_completions(self, args)	excluded		platform: GUI toolkit
+Lib/idlelib/autocomplete.py	165	221	AutoComplete.fetch_completions	fetch_completions(self, what, mode)	excluded		platform: GUI toolkit
+Lib/idlelib/autocomplete.py	223	225	AutoComplete.get_entity	get_entity(self, name)	excluded		platform: GUI toolkit

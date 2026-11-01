@@ -1,7 +1,7 @@
 import PyLean.UnicodeObj.FormatStr
 
 /-!
-The iterators of `str`: Objects/unicodeobject.c:16305-16507.
+The iterators of `str`: Objects/unicodeobject.c:14602-14804.
 
 `__reduce__` looks `iter` up in the builtins of the current frame before it reads the iterator,
 and that lookup can run Python code, which can advance or exhaust this same iterator (issue
@@ -20,18 +20,18 @@ structure UIter where
   asciiType : Bool
   deriving Repr, DecidableEq
 
-/-- `unicode_iter`, unicodeobject.c:16487-16507. `PyUnicode_IS_COMPACT_ASCII` is false for an
+/-- `unicode_iter`, unicodeobject.c:14784-14804. `PyUnicode_IS_COMPACT_ASCII` is false for an
 instance of a subclass of `str`, which is not compact. The `PyErr_BadInternalCall` for a non-`str`
 cannot be reached: this is `tp_iter` of `str`. -/
 def unicodeIter (s : Str) (exact : Bool) : UIter :=
   { index := 0, seq := some s, asciiType := exact && s.all (· < 128) }
 
-/-- `unicode_char`, unicodeobject.c:1967-1990: the singleton below 256, a new string above. -/
+/-- `unicode_char`, unicodeobject.c:1834-1855: the singleton below 256, a new string above. -/
 def unicodeChar (ch : Nat) : Str × Kind :=
   if ch < 256 then ([ch], if ch < 128 then .ascii else .ucs1)
   else ([ch], kindOfMax ch)
 
-/-- `unicodeiter_next`, unicodeobject.c:16331-16353. -/
+/-- `unicodeiter_next`, unicodeobject.c:14628-14650. -/
 def unicodeiterNext (it : UIter) : UIter × Option (Str × Kind) :=
   match it.seq with
   | none => (it, none)
@@ -40,7 +40,7 @@ def unicodeiterNext (it : UIter) : UIter × Option (Str × Kind) :=
       ({ it with index := it.index + 1 }, some (unicodeChar (s.getD it.index.toNat 0)))
     else ({ it with seq := none }, none)
 
-/-- `unicode_ascii_iter_next`, unicodeobject.c:16356-16376: one byte, and the ASCII singleton. -/
+/-- `unicode_ascii_iter_next`, unicodeobject.c:14653-14673: one byte, and the ASCII singleton. -/
 def unicodeAsciiIterNext (it : UIter) : UIter × Option (Str × Kind) :=
   match it.seq with
   | none => (it, none)
@@ -53,13 +53,13 @@ def unicodeAsciiIterNext (it : UIter) : UIter × Option (Str × Kind) :=
 def UIter.next (it : UIter) : UIter × Option (Str × Kind) :=
   if it.asciiType then unicodeAsciiIterNext it else unicodeiterNext it
 
-/-- `unicodeiter_len`, unicodeobject.c:16379-16386. -/
+/-- `unicodeiter_len`, unicodeobject.c:14676-14683. -/
 def unicodeiterLen (it : UIter) : Int :=
   match it.seq with
   | some s => (s.length : Int) - it.index
   | none => 0
 
-/-- `PyLong_AsSsize_t`, Objects/longobject.c:628-680. It does not call `__index__`. -/
+/-- `PyLong_AsSsize_t`, Objects/longobject.c@3.14.7:628-680. It does not call `__index__`. -/
 def longAsSsize : GObj → Py Int
   | .int v =>
     if v > ssizeMax ∨ v < ssizeMin then
@@ -68,7 +68,7 @@ def longAsSsize : GObj → Py Int
   | .bool b => .ok (if b then 1 else 0)
   | _ => .error (.typeError "an integer is required")
 
-/-- `unicodeiter_setstate`, unicodeobject.c:16415-16429. The conversion comes first, so it raises
+/-- `unicodeiter_setstate`, unicodeobject.c:14712-14726. The conversion comes first, so it raises
 for an exhausted iterator too. -/
 def unicodeiterSetstate (it : UIter) (state : GObj) : Py UIter := do
   let index ← longAsSsize state
@@ -91,7 +91,7 @@ inductive BuiltinIter where
 /-- The result of `__reduce__`: the callable, the string, and the index unless exhausted. -/
 abbrev IterReduced := Nat × Str × Option Int
 
-/-- `unicodeiter_reduce`, unicodeobject.c:16391-16410. `lookup` is `_PyEval_GetBuiltin`, which can
+/-- `unicodeiter_reduce`, unicodeobject.c:14688-14707. `lookup` is `_PyEval_GetBuiltin`, which can
 change the iterator, so nothing is read from it before. A NULL from the lookup goes through
 `Py_BuildValue`, which passes on the exception that is set. -/
 def unicodeiterReduce (lookup : UIter → UIter × BuiltinIter) (it : UIter) : UIter × Py IterReduced :=

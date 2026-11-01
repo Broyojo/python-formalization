@@ -7,7 +7,7 @@ the shift-and-mask loop of `long_format_binary`.
 
 `interp->long_state.max_str_digits` is the explicit parameter `lim`
 (`sys.set_int_max_str_digits` allows `0`, meaning no limit, or at least `640`,
-sysmodule.c:4533).
+sysmodule.c:4733).
 
 Output buffers are filled right to left in C (`*--p = ...`): the model conses
 onto `acc`, and the final length check stands for `assert(p == start)`. A theorem
@@ -32,16 +32,16 @@ def decShift : Nat := 9
 def decBase : Nat := 10 ^ 9
 
 /-- `sys.set_int_max_str_digits` admits `0` or anything from the threshold up,
-sysmodule.c:4533. -/
+sysmodule.c:4733. -/
 def ValidLimit (lim : Nat) : Prop := lim = 0 ∨ strDigitsThreshold ≤ lim
 
-/-- `_MAX_STR_DIGITS_ERROR_FMT_TO_STR`, longobject.c:31. -/
+/-- `_MAX_STR_DIGITS_ERROR_FMT_TO_STR`, longobject.c:33. -/
 def limitToStrMsg (lim : Nat) : String :=
   s!"Exceeds the limit ({lim} digits) for integer string conversion; use sys.set_int_max_str_digits() to increase the limit"
 
 /-! ## Decimal conversion, base `10^9` limbs -/
 
-/-- The inner `for (j = 0; j < size; j++)` loop, longobject.c:2102-2107. -/
+/-- The inner `for (j = 0; j < size; j++)` loop, longobject.c:2178-2183. -/
 def decStep : List Nat → Nat → Py (List Nat × Nat)
   | [], hi => .ok ([], hi)
   | p :: ps, hi => do
@@ -52,7 +52,7 @@ def decStep : List Nat → Nat → Py (List Nat × Nat)
     return (p' :: r, h)
 
 /-- `while (hi) { pout[size++] = hi % DECIMAL_BASE; hi /= DECIMAL_BASE; }`,
-longobject.c:2108-2111. `cap` is the allocated size of `scratch`. -/
+longobject.c:2184-2187. `cap` is the allocated size of `scratch`. -/
 def pushHi (cap : Nat) : Nat → List Nat → Nat → Py (List Nat)
   | 0, _, _ => .error .modelFuel
   | f + 1, pout, hi =>
@@ -61,7 +61,7 @@ def pushHi (cap : Nat) : Nat → List Nat → Nat → Py (List Nat)
       else .error cOverflow
     else .ok pout
 
-/-- The outer loop `for (i = size_a; --i >= 0; )`, longobject.c:2100-2117, reading
+/-- The outer loop `for (i = size_a; --i >= 0; )`, longobject.c:2176-2193, reading
 `pin` from the top digit; `SIGCHECK` has no effect on a value. -/
 def decLoop (cap : Nat) : List Nat → List Nat → Py (List Nat)
   | [], pout => .ok pout
@@ -70,7 +70,7 @@ def decLoop (cap : Nat) : List Nat → List Nat → Py (List Nat)
     let p' ← pushHi cap 3 p hi
     decLoop cap ds p'
 
-/-- `while (rem >= tenpow) { tenpow *= 10; strlen++; }`, longobject.c:2127-2130;
+/-- `while (rem >= tenpow) { tenpow *= 10; strlen++; }`, longobject.c:2203-2206;
 `tenpow` is a `digit`. Returns the number of `strlen++`. -/
 def lenLoop : Nat → Nat → Nat → Nat → Py Nat
   | 0, _, _, _ => .error .modelFuel
@@ -80,20 +80,20 @@ def lenLoop : Nat → Nat → Nat → Nat → Py Nat
       lenLoop f rem t (n + 1)
     else .ok n
 
-/-- `*--p = '0' + rem % 10; rem /= 10;` repeated `j` times, longobject.c:2169-2172. -/
+/-- `*--p = '0' + rem % 10; rem /= 10;` repeated `j` times, longobject.c:2247-2250. -/
 def writeFixed : Nat → Nat → List Char → List Char
   | 0, _, acc => acc
   | j + 1, rem, acc => writeFixed j (rem / 10) (Char.ofNat (48 + rem % 10) :: acc)
 
 /-- `do { *--p = '0' + rem % 10; rem /= 10; } while (rem != 0);`,
-longobject.c:2176-2179. -/
+longobject.c:2254-2257. -/
 def writeTop : Nat → Nat → List Char → Py (List Char)
   | 0, _, _ => .error .modelFuel
   | f + 1, rem, acc =>
     let acc' := Char.ofNat (48 + rem % 10) :: acc
     if rem / 10 ≠ 0 then writeTop f (rem / 10) acc' else .ok acc'
 
-/-- The `for` loop over `pout[0..size-2]` and the top limb, longobject.c:2167-2179. -/
+/-- The `for` loop over `pout[0..size-2]` and the top limb, longobject.c:2245-2257. -/
 def writeLimbs : List Nat → List Char → Py (List Char)
   | [], _ => .error cOverflow
   | [t], acc => writeTop 10 t acc
@@ -119,7 +119,7 @@ def decCore (lim : Nat) (x : Long) : Py (List Char) := do
     let acc := if x.neg then '-' :: acc else acc
     if acc.length = strlen then return acc else throw cOverflow
 
-/-- The pre-check at longobject.c:2049-2059, based on `10/3 >= log2(10)`. -/
+/-- The pre-check at longobject.c:2125-2135, based on `10/3 >= log2(10)`. -/
 def decPreCheck (lim size_a : Nat) : Py Unit :=
   if size_a ≥ 10 * strDigitsThreshold / (3 * 30) + 2 then
     if lim > 0 ∧ lim / (3 * 30) ≤ (size_a - 11) / 10 then
@@ -127,8 +127,8 @@ def decPreCheck (lim size_a : Nat) : Py Unit :=
     else .ok ()
   else .ok ()
 
-/-- `long_to_decimal_string_internal(aa, ...)`, longobject.c:2020-2240; `pyl` is
-`pylong_int_to_decimal_string` (the switch at :2061-2070). -/
+/-- `long_to_decimal_string_internal(aa, ...)`, longobject.c:2096-2318; `pyl` is
+`pylong_int_to_decimal_string` (the switch at :2137-2146). -/
 def longToDecimalWith (pyl : Long → Py (List Char)) (lim : Nat) (x : Long) : Py (List Char) := do
   let size_a := x.ds.length
   decPreCheck lim size_a
@@ -136,17 +136,17 @@ def longToDecimalWith (pyl : Long → Py (List Char)) (lim : Nat) (x : Long) : P
 
 /-! ## Power-of-two bases -/
 
-/-- `bit_length_digit(x)`, longobject.c:889, through `_Py_bit_length`. -/
+/-- `bit_length_digit(x)`, longobject.c:966, through `_Py_bit_length`. -/
 def bitLengthDigit (x : Nat) : Nat := bitLength x
 
 /-- `PY_SSIZE_T_MAX`. -/
 def ssizeMax : Nat := 2 ^ 63 - 1
 
-/-- `cdigit += (cdigit < 10) ? '0' : 'a'-10;`, longobject.c:2347. -/
+/-- `cdigit += (cdigit < 10) ? '0' : 'a'-10;`, longobject.c:2428. -/
 def hexCharC (cdigit : Nat) : Char :=
   Char.ofNat (cdigit + (if cdigit < 10 then 48 else 97 - 10))
 
-/-- The `do { ... } while` loop of `WRITE_DIGITS`, longobject.c:2344-2351. `last`
+/-- The `do { ... } while` loop of `WRITE_DIGITS`, longobject.c:2425-2432. `last`
 is `i == size_a-1`. `accumbits` is a C `int`; on the last digit it may go below
 zero, where it is no longer read, so saturating `Nat` subtraction changes nothing. -/
 def fmtWhile (base bits : Nat) (last : Bool) :
@@ -160,7 +160,7 @@ def fmtWhile (base bits : Nat) (last : Bool) :
       fmtWhile base bits last f accum' ab' acc'
     else .ok (accum', ab', acc')
 
-/-- The `for (i = 0; i < size_a; ++i)` loop, longobject.c:2340-2352. -/
+/-- The `for (i = 0; i < size_a; ++i)` loop, longobject.c:2421-2433. -/
 def fmtLoop (base bits : Nat) : List Nat → Nat → Nat → List Char → Py (List Char)
   | [], _, _, acc => .ok acc
   | d :: ds, accum, ab, acc => do
@@ -168,7 +168,7 @@ def fmtLoop (base bits : Nat) : List Nat → Nat → Nat → List Char → Py (L
     let (a', ab', acc') ← fmtWhile base bits ds.isEmpty 64 a (ab + 30) acc
     fmtLoop base bits ds a' ab' acc'
 
-/-- `long_format_binary(aa, base, alternate, ...)`, longobject.c:2257-2419, for
+/-- `long_format_binary(aa, base, alternate, ...)`, longobject.c:2335-2500, for
 `base` one of 2, 8, 16. All output targets receive the same characters. -/
 def longFormatBinary (x : Long) (base : Nat) (alternate : Bool) : Py (List Char) := do
   let size_a := x.ds.length
@@ -190,13 +190,13 @@ def longFormatBinary (x : Long) (base : Nat) (alternate : Bool) : Py (List Char)
   let acc := if x.neg then '-' :: acc else acc
   if acc.length = sz then return acc else throw cOverflow
 
-/-- `_PyLong_Format(obj, base)`, longobject.c:2422-2433. -/
+/-- `_PyLong_Format(obj, base)`, longobject.c:2503-2514. -/
 def pyLongFormatWith (pyl : Long → Py (List Char)) (lim : Nat) (x : Long) (base : Nat) :
     Py (List Char) :=
   if base = 10 then longToDecimalWith pyl lim x else longFormatBinary x base true
 
-/-- `_PyLong_FormatWriter(writer, obj, base, alternate)`, longobject.c:2436-2446,
-and `_PyLong_FormatBytesWriter(...)`, longobject.c:2449-2466: the same dispatch
+/-- `_PyLong_FormatWriter(writer, obj, base, alternate)`, longobject.c:2517-2527,
+and `_PyLong_FormatBytesWriter(...)`, longobject.c@3.14.7:2449-2466: the same dispatch
 into a writer. -/
 def pyLongFormatWriterWith (pyl : Long → Py (List Char)) (lim : Nat) (x : Long) (base : Nat)
     (alternate : Bool) : Py (List Char) :=

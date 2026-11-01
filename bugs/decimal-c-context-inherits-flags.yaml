@@ -44,13 +44,13 @@ reproducer: |
 expected: |
   All flags of a new Context() are clear, as in _pydecimal.
 promised_by: |
-  Doc/library/decimal.rst:1118-1119: "If the flags field is not specified or is None, all flags
-  are cleared." Twin agreement: Lib/_pydecimal.py:3898-3899 `self.flags = dict.fromkeys(_signals, 0)`.
+  Doc/library/decimal.rst:1110-1111: "If the flags field is not specified or is None, all flags
+  are cleared." Twin agreement: Lib/_pydecimal.py:3998-3999 `self.flags = dict.fromkeys(_signals, 0)`.
 cause: |
-  Modules/_decimal/_decimal.c:1421 `*ctx = *CTX(state->default_context_template);` in context_new
-  copies the status word, and context_setattrs (:1304) only writes it when flags is not None. The
-  sibling paths clear it after copying: init_current_context at :1841 and PyDec_SetCurrentContext at
-  :1902 (`CTX(tl_context)->status = 0`, `CTX(v)->status = 0`). Same on main at :1466-1467.
+  Modules/_decimal/_decimal.c:1468 `*ctx = *CTX(state->default_context_template);` in context_new
+  copies the status word, and context_setattrs (:1337) only writes it when flags is not None. The
+  sibling paths clear it after copying: init_current_context at :1938 and PyDec_SetCurrentContext at
+  :1999 (`CTX(tl_context)->status = 0`, `CTX(v)->status = 0`). Same on main at :1513-1514.
 possible_fix: |
   Add `ctx->status = 0;` after the template copy in context_new.
 tested:

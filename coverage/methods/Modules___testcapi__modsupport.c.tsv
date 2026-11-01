@@ -1,0 +1,5 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/modsupport.c	6	26	pyabiinfo_check	pyabiinfo_check(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/modsupport.c	29	36	pyarg_parsearray	pyarg_parsearray(PyObject* self, PyObject* const* args, Py_ssize_t nargs)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/modsupport.c	39	50	pyarg_parsearrayandkeywords	pyarg_parsearrayandkeywords(PyObject* self, PyObject* const* args, Py_ssize_t nargs, PyObject* kwnames)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/modsupport.c	62	83	_PyTestCapi_Init_Modsupport	_PyTestCapi_Init_Modsupport(PyObject *m)	excluded		test-support: only for CPython's own tests

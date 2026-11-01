@@ -1,6 +1,0 @@
-file	line	endline	name	signature	status	entry	note
-Objects/stringlib/fastsearch.h	49	104	Py_LOCAL_INLINE	Py_LOCAL_INLINE(Py_ssize_t) STRINGLIB(find_char)(const STRINGLIB_CHAR* s, Py_ssize_t n, STRINGLIB_CHAR ch)	todo		
-Objects/stringlib/fastsearch.h	115	177	Py_LOCAL_INLINE	Py_LOCAL_INLINE(Py_ssize_t) STRINGLIB(rfind_char)(const STRINGLIB_CHAR* s, Py_ssize_t n, STRINGLIB_CHAR ch)	todo		
-Objects/stringlib/fastsearch.h	196	246	Py_LOCAL_INLINE	Py_LOCAL_INLINE(Py_ssize_t) STRINGLIB(_lex_search)(const STRINGLIB_CHAR *needle, Py_ssize_t len_needle, Py_ssize_t *return_period, int invert_alphabet)	todo		
-Objects/stringlib/fastsearch.h	248	305	Py_LOCAL_INLINE	Py_LOCAL_INLINE(Py_ssize_t) STRINGLIB(_factorize)(const STRINGLIB_CHAR *needle, Py_ssize_t len_needle, Py_ssize_t *return_period)	todo		
-Objects/stringlib/fastsearch.h	772	829	Py_LOCAL_INLINE	Py_LOCAL_INLINE(Py_ssize_t) FASTSEARCH(const STRINGLIB_CHAR* s, Py_ssize_t n, const STRINGLIB_CHAR* p, Py_ssize_t m, Py_ssize_t maxcount, int mode)	todo		

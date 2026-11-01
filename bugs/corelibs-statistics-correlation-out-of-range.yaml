@@ -30,9 +30,9 @@ observed: |
   python3 3.14.7: -1.0000000000000002. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): -1.0000000000000002. REPRODUCED.
 promised_by: |
-  statistics.py:690-691: "Pearson's correlation coefficient r takes values between -1 and +1."
+  statistics.py:691-692: "Pearson's correlation coefficient r takes values between -1 and +1."
 cause: |
-  Lib/statistics.py:736: `sxy / _sqrtprod(sxx, syy)` has no clamp, and each of the three float results
+  Lib/statistics.py:737: `sxy / _sqrtprod(sxx, syy)` has no clamp, and each of the three float results
   carries its own rounding.
 possible_fix: |
   `max(-1.0, min(1.0, r))` on the result, after the NaN case.

@@ -4,7 +4,7 @@ import PyLean.CoreLibs.Misc.Contextlib.Model
 Properties of `ExitStack` and `AsyncExitStack`.
 
 `nested` is what the class promises to imitate, "Callbacks are invoked in LIFO order to match the
-behaviour of nested context managers" (Lib/contextlib.py:592): each level of a nested `with` calls
+behaviour of nested context managers" (Lib/contextlib.py:651): each level of a nested `with` calls
 its `__exit__` with the exception leaving the level inside it, and passes on nothing if the result
 is true, the same exception if false, or the exception `__exit__` raised. It carries no flags. The
 loop of `ExitStack.__exit__` works with `suppressed_exc` and `pending_raise` instead, and
@@ -188,7 +188,7 @@ theorem exitLifo_proven : ExitLifo := by
         rw [d, hr.heap, hlg]
         simp
 
-/-- The walk of `_fix_exception_context`, `while 1:` at Lib/contextlib.py:580, ends. Refuted: an
+/-- The walk of `_fix_exception_context`, `while 1:` at Lib/contextlib.py:639, ends. Refuted: an
 exception raised by a callback whose `__context__` chain is a cycle meets neither `None`, `old_exc`
 nor `frame_exc`, so `ExitStack.__exit__` never returns. -/
 def ExitStackTerminates : Prop :=

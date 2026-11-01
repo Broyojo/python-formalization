@@ -1,23 +1,23 @@
 file	line	endline	name	signature	status	entry	note
-Objects/unicodectype.c	44	57	gettyperecord	gettyperecord(Py_UCS4 code)	modelled	unicodeobj-text-case-tables	
-Objects/unicodectype.c	62	69	_PyUnicode_ToTitlecase	Py_UCS4 _PyUnicode_ToTitlecase(Py_UCS4 ch)	modelled	unicodeobj-text-case-tables	
-Objects/unicodectype.c	74	79	_PyUnicode_IsTitlecase	int _PyUnicode_IsTitlecase(Py_UCS4 ch)	modelled	unicodeobj-text-is-case-doc	
-Objects/unicodectype.c	84	89	_PyUnicode_IsXidStart	int _PyUnicode_IsXidStart(Py_UCS4 ch)	modelled	unicodeobj-text-case-tables	
-Objects/unicodectype.c	94	99	_PyUnicode_IsXidContinue	int _PyUnicode_IsXidContinue(Py_UCS4 ch)	modelled	unicodeobj-text-case-tables	
-Objects/unicodectype.c	104	109	_PyUnicode_ToDecimalDigit	int _PyUnicode_ToDecimalDigit(Py_UCS4 ch)	modelled	unicodeobj-text-is-predicates	
-Objects/unicodectype.c	111	116	_PyUnicode_IsDecimalDigit	int _PyUnicode_IsDecimalDigit(Py_UCS4 ch)	modelled	unicodeobj-text-is-predicates	
-Objects/unicodectype.c	121	126	_PyUnicode_ToDigit	int _PyUnicode_ToDigit(Py_UCS4 ch)	modelled	unicodeobj-text-is-predicates	
-Objects/unicodectype.c	128	133	_PyUnicode_IsDigit	int _PyUnicode_IsDigit(Py_UCS4 ch)	modelled	unicodeobj-text-is-predicates	
-Objects/unicodectype.c	138	143	_PyUnicode_IsNumeric	int _PyUnicode_IsNumeric(Py_UCS4 ch)	modelled	unicodeobj-text-is-predicates	
-Objects/unicodectype.c	150	155	_PyUnicode_IsPrintable	int _PyUnicode_IsPrintable(Py_UCS4 ch)	todo		
-Objects/unicodectype.c	160	165	_PyUnicode_IsLowercase	int _PyUnicode_IsLowercase(Py_UCS4 ch)	modelled	unicodeobj-text-is-case-doc	
-Objects/unicodectype.c	170	175	_PyUnicode_IsUppercase	int _PyUnicode_IsUppercase(Py_UCS4 ch)	modelled	unicodeobj-text-is-case-doc	
-Objects/unicodectype.c	180	187	_PyUnicode_ToUppercase	Py_UCS4 _PyUnicode_ToUppercase(Py_UCS4 ch)	modelled	unicodeobj-text-case-tables	
-Objects/unicodectype.c	192	199	_PyUnicode_ToLowercase	Py_UCS4 _PyUnicode_ToLowercase(Py_UCS4 ch)	modelled	unicodeobj-text-case-tables	
-Objects/unicodectype.c	201	215	_PyUnicode_ToLowerFull	int _PyUnicode_ToLowerFull(Py_UCS4 ch, Py_UCS4 *res)	modelled	unicodeobj-text-case-tables	
-Objects/unicodectype.c	217	231	_PyUnicode_ToTitleFull	int _PyUnicode_ToTitleFull(Py_UCS4 ch, Py_UCS4 *res)	modelled	unicodeobj-text-case-tables	
-Objects/unicodectype.c	233	247	_PyUnicode_ToUpperFull	int _PyUnicode_ToUpperFull(Py_UCS4 ch, Py_UCS4 *res)	modelled	unicodeobj-text-case-tables	
-Objects/unicodectype.c	249	262	_PyUnicode_ToFoldedFull	int _PyUnicode_ToFoldedFull(Py_UCS4 ch, Py_UCS4 *res)	modelled	unicodeobj-text-case-tables	
-Objects/unicodectype.c	264	269	_PyUnicode_IsCased	int _PyUnicode_IsCased(Py_UCS4 ch)	modelled	unicodeobj-text-case-tables	
-Objects/unicodectype.c	271	276	_PyUnicode_IsCaseIgnorable	int _PyUnicode_IsCaseIgnorable(Py_UCS4 ch)	todo		
-Objects/unicodectype.c	281	286	_PyUnicode_IsAlpha	int _PyUnicode_IsAlpha(Py_UCS4 ch)	todo		
+Objects/unicodectype.c	45	58	gettyperecord	gettyperecord(Py_UCS4 code)	modelled	unicodeobj-text-case-tables	
+Objects/unicodectype.c	63	70	_PyUnicode_ToTitlecase	Py_UCS4 _PyUnicode_ToTitlecase(Py_UCS4 ch)	modelled	unicodeobj-text-case-tables	
+Objects/unicodectype.c	75	80	_PyUnicode_IsTitlecase	int _PyUnicode_IsTitlecase(Py_UCS4 ch)	modelled	unicodeobj-text-is-case-doc	
+Objects/unicodectype.c	85	90	_PyUnicode_IsXidStart	int _PyUnicode_IsXidStart(Py_UCS4 ch)	modelled	unicodeobj-text-case-tables	
+Objects/unicodectype.c	95	100	_PyUnicode_IsXidContinue	int _PyUnicode_IsXidContinue(Py_UCS4 ch)	modelled	unicodeobj-text-case-tables	
+Objects/unicodectype.c	105	110	_PyUnicode_ToDecimalDigit	int _PyUnicode_ToDecimalDigit(Py_UCS4 ch)	modelled	unicodeobj-text-is-predicates	
+Objects/unicodectype.c	112	117	_PyUnicode_IsDecimalDigit	int _PyUnicode_IsDecimalDigit(Py_UCS4 ch)	modelled	unicodeobj-text-is-predicates	
+Objects/unicodectype.c	122	127	_PyUnicode_ToDigit	int _PyUnicode_ToDigit(Py_UCS4 ch)	modelled	unicodeobj-text-is-predicates	
+Objects/unicodectype.c	129	134	_PyUnicode_IsDigit	int _PyUnicode_IsDigit(Py_UCS4 ch)	modelled	unicodeobj-text-is-predicates	
+Objects/unicodectype.c	139	144	_PyUnicode_IsNumeric	int _PyUnicode_IsNumeric(Py_UCS4 ch)	modelled	unicodeobj-text-is-predicates	
+Objects/unicodectype.c	151	156	_PyUnicode_IsPrintable	int _PyUnicode_IsPrintable(Py_UCS4 ch)	todo		
+Objects/unicodectype.c	161	166	_PyUnicode_IsLowercase	int _PyUnicode_IsLowercase(Py_UCS4 ch)	modelled	unicodeobj-text-is-case-doc	
+Objects/unicodectype.c	171	176	_PyUnicode_IsUppercase	int _PyUnicode_IsUppercase(Py_UCS4 ch)	modelled	unicodeobj-text-is-case-doc	
+Objects/unicodectype.c	181	188	_PyUnicode_ToUppercase	Py_UCS4 _PyUnicode_ToUppercase(Py_UCS4 ch)	modelled	unicodeobj-text-case-tables	
+Objects/unicodectype.c	193	200	_PyUnicode_ToLowercase	Py_UCS4 _PyUnicode_ToLowercase(Py_UCS4 ch)	modelled	unicodeobj-text-case-tables	
+Objects/unicodectype.c	202	216	_PyUnicode_ToLowerFull	int _PyUnicode_ToLowerFull(Py_UCS4 ch, Py_UCS4 *res)	modelled	unicodeobj-text-case-tables	
+Objects/unicodectype.c	218	232	_PyUnicode_ToTitleFull	int _PyUnicode_ToTitleFull(Py_UCS4 ch, Py_UCS4 *res)	modelled	unicodeobj-text-case-tables	
+Objects/unicodectype.c	234	248	_PyUnicode_ToUpperFull	int _PyUnicode_ToUpperFull(Py_UCS4 ch, Py_UCS4 *res)	modelled	unicodeobj-text-case-tables	
+Objects/unicodectype.c	250	263	_PyUnicode_ToFoldedFull	int _PyUnicode_ToFoldedFull(Py_UCS4 ch, Py_UCS4 *res)	modelled	unicodeobj-text-case-tables	
+Objects/unicodectype.c	265	270	_PyUnicode_IsCased	int _PyUnicode_IsCased(Py_UCS4 ch)	modelled	unicodeobj-text-case-tables	
+Objects/unicodectype.c	272	277	_PyUnicode_IsCaseIgnorable	int _PyUnicode_IsCaseIgnorable(Py_UCS4 ch)	todo		
+Objects/unicodectype.c	282	287	_PyUnicode_IsAlpha	int _PyUnicode_IsAlpha(Py_UCS4 ch)	todo		

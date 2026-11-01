@@ -1,7 +1,7 @@
 import PyLean.BytesObj.Bytes.Writer
 
 /-!
-`_PyBytes_DecodeEscape2` and `PyBytes_DecodeEscape`, Objects/bytesobject.c:1081-1235,
+`_PyBytes_DecodeEscape2` and `PyBytes_DecodeEscape`, Objects/bytesobject.c:1170-1320,
 reached from Python as `codecs.escape_decode`.
 -/
 
@@ -9,7 +9,7 @@ namespace PyLean.BytesObj.Bytes
 
 open PyLean PyLean.StrSearch
 
-/-- `_PyLong_DigitValue[c]`, Objects/longobject.c:3112-3129: 37 for a non-digit. -/
+/-- `_PyLong_DigitValue[c]`, Objects/longobject.c:3194-3211: 37 for a non-digit. -/
 def digitValue (c : Nat) : Nat :=
   if 48 ≤ c ∧ c ≤ 57 then c - 48
   else if 65 ≤ c ∧ c ≤ 90 then c - 55
@@ -19,7 +19,7 @@ def digitValue (c : Nat) : Nat :=
 /-- `'0' <= c && c <= '7'`. -/
 def isOct (c : Nat) : Bool := decide (48 ≤ c ∧ c ≤ 55)
 
-/-- The `case 'x'` failure branch, bytesobject.c:1157-1179: the error handler,
+/-- The `case 'x'` failure branch, bytesobject.c:1242-1264: the error handler,
 then the hex digit skip. `pos` is the offset of the backslash; `rest` the input
 after `\x`. -/
 def badHex (errors : Option String) (pos : Nat) (rest out : Seq) : Py (Seq × Seq × Nat) :=
@@ -41,7 +41,7 @@ def badHex (errors : Option String) (pos : Nat) (rest out : Seq) : Py (Seq × Se
 /-- The first invalid escape: `(character value, offset)`. -/
 abbrev FirstBad := Option (Nat × Nat)
 
-/-- The simple one-character escapes, bytesobject.c:1119-1128. -/
+/-- The simple one-character escapes, bytesobject.c:1202-1211. -/
 def simpleEscape (e : Nat) : Option Nat :=
   if e = 92 then some 92
   else if e = 39 then some 39
@@ -55,7 +55,7 @@ def simpleEscape (e : Nat) : Option Nat :=
   else if e = 97 then some 7
   else none
 
-/-- The main loop of `_PyBytes_DecodeEscape2`, bytesobject.c:1103-1190. `pos` is
+/-- The main loop of `_PyBytes_DecodeEscape2`, bytesobject.c:1186-1275. `pos` is
 `s - (end - len)`, `rest` the input from `s`. -/
 def decodeLoop (errors : Option String) : Nat → Nat → Seq → Seq → FirstBad → Py (Seq × FirstBad)
   | 0, _, _, _, _ => .error .modelFuel
@@ -101,12 +101,12 @@ def decodeLoop (errors : Option String) : Nat → Nat → Seq → Seq → FirstB
           let fb := if fb.isNone then some (e, pos + 1) else fb
           decodeLoop errors fuel (pos + 1) (e :: rest) (out ++ [92]) fb
 
-/-- `_PyBytes_DecodeEscape2`, bytesobject.c:1081-1197. Fuel: each step consumes
+/-- `_PyBytes_DecodeEscape2`, bytesobject.c:1170-1282. Fuel: each step consumes
 input or turns an invalid escape into a plain byte. -/
 def decodeEscape2 (s : Seq) (errors : Option String) : Py (Seq × FirstBad) :=
   decodeLoop errors (2 * s.length + 2) 0 s [] none
 
-/-- The warning of `PyBytes_DecodeEscape`, bytesobject.c:1212-1233. -/
+/-- The warning of `PyBytes_DecodeEscape`, bytesobject.c:1297-1318. -/
 def escapeWarning : FirstBad → Option String
   | none => none
   | some (c, _) =>
@@ -116,7 +116,7 @@ def escapeWarning : FirstBad → Option String
     else
       some ("b\"\\" ++ String.ofList [Char.ofNat c] ++ "\" is an invalid escape sequence. Such sequences will not work in the future. ")
 
-/-- `PyBytes_DecodeEscape`, bytesobject.c:1199-1235: the bytes and the
+/-- `PyBytes_DecodeEscape`, bytesobject.c:1284-1320: the bytes and the
 `DeprecationWarning` text. -/
 def bytesDecodeEscape (s : Seq) (errors : Option String) : Py (Seq × Option String) := do
   let (r, fb) ← decodeEscape2 s errors

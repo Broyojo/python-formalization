@@ -55,7 +55,7 @@ theorem leInt_trim (l : Bytes) (d : UInt8) (hd : 128 ≤ d.toNat) :
   rw [if_pos ⟨c1, by omega⟩, if_pos ⟨c2, by omega⟩]
   omega
 
-/-- `decode_long(encode_long(x)) == x` for every int (`Lib/pickle.py:356-404`). -/
+/-- `decode_long(encode_long(x)) == x` for every int (`Lib/pickle.py:372-420`). -/
 def DecodeEncodeLong : Prop := ∀ x : Int, decodeLong (encodeLong x) = x
 
 theorem decodeEncodeLong_proven : DecodeEncodeLong := by

@@ -22,7 +22,7 @@ inductive Data where
   | raises (ty : String) (e : PyExc)
   deriving Repr, DecidableEq, Inhabited
 
-/-- `ascii_buffer_converter`, `Modules/binascii.c:163-190`. -/
+/-- `ascii_buffer_converter`, `Modules/binascii.c:428-455`. -/
 def asciiBuffer : Data → Py (List Nat)
   | .bytes b => .ok b
   | .str s =>
@@ -38,7 +38,7 @@ def bufData : Data → Py (List Nat)
   | .notBuffer t => .error (.typeError s!"a bytes-like object is required, not '{t}'")
   | .raises _ e => .error e
 
-/-- `table_b2a_base64`, `Modules/binascii.c:104-105`. -/
+/-- `table_b2a_base64`, `Modules/binascii.c@3.14.7:104-105`. -/
 def b2aChar (v : Nat) : Nat :=
   if v < 26 then 65 + v
   else if v < 52 then 97 + (v - 26)
@@ -46,7 +46,7 @@ def b2aChar (v : Nat) : Nat :=
   else if v = 62 then 43
   else 47
 
-/-- `table_a2b_base64`, `Modules/binascii.c:78-97`; `255` is its `-1`, and the `'='`
+/-- `table_a2b_base64`, `Modules/binascii.c:79-99`; `255` is its `-1`, and the `'='`
 entry is never read because padding is handled first. -/
 def a2bChar (c : Nat) : Nat :=
   if 65 ≤ c ∧ c ≤ 90 then c - 65
@@ -64,7 +64,7 @@ structure Dec where
   out : List Nat := []
   deriving Repr, DecidableEq, Inhabited
 
-/-- The `switch (quad_pos)`, `Modules/binascii.c:465-485`. -/
+/-- The `switch (quad_pos)`, `Modules/binascii.c:875-897`. -/
 def decStep (st : Dec) (v : Nat) : Dec :=
   match st.quad with
   | 0 => { st with quad := 1, left := v }
@@ -72,7 +72,7 @@ def decStep (st : Dec) (v : Nat) : Dec :=
   | 2 => { st with quad := 3, out := st.out ++ [(st.left * 16 + v / 4) % 256], left := v % 4 }
   | _ => { st with quad := 0, out := st.out ++ [(st.left * 64 + v) % 256], left := 0 }
 
-/-- The `for` loop of `binascii_a2b_base64_impl`, `Modules/binascii.c:407-486`. `i` is the
+/-- The `for` loop of `binascii_a2b_base64_impl`, `Modules/binascii.c@3.14.7:407-486`. `i` is the
 loop index, used only by the "Leading padding" test. -/
 def a2bLoop (strict : Bool) : List Nat → (i : Nat) → Dec → Py Dec
   | [], _, st => .ok st
@@ -95,7 +95,7 @@ def a2bLoop (strict : Bool) : List Nat → (i : Nat) → Dec → Py Dec
                      else "Discontinuous padding not allowed"))
       else a2bLoop strict cs (i + 1) (decStep { st with pads := 0 } v)
 
-/-- `binascii_a2b_base64_impl`, `Modules/binascii.c:385-517`. -/
+/-- `binascii_a2b_base64_impl`, `Modules/binascii.c:749-942`. -/
 def a2bBase64Bytes (strict : Bool) (b : List Nat) : Py (List Nat) := do
   let st ← a2bLoop strict b 0 {}
   if st.quad = 1 then
@@ -107,7 +107,7 @@ def a2bBase64Bytes (strict : Bool) (b : List Nat) : Py (List Nat) := do
 def a2bBase64 (strict : Bool) (d : Data) : Py (List Nat) := do
   a2bBase64Bytes strict (← asciiBuffer d)
 
-/-- The `while (leftbits >= 6)` of `binascii_b2a_base64_impl`, `Modules/binascii.c:575-579`. -/
+/-- The `while (leftbits >= 6)` of `binascii_b2a_base64_impl`, `Modules/binascii.c@3.14.7:575-579`. -/
 def b2aDrain (left : Nat) : (fuel : Nat) → (bits : Nat) → List Nat × Nat
   | 0, bits => ([], bits)
   | fuel + 1, bits =>
@@ -117,7 +117,7 @@ def b2aDrain (left : Nat) : (fuel : Nat) → (bits : Nat) → List Nat × Nat
       (c :: r, bits')
     else ([], bits)
 
-/-- The byte loop, `Modules/binascii.c:569-580`. `leftchar` is 32-bit and wraps. -/
+/-- The byte loop, `Modules/binascii.c@3.14.7:569-580`. `leftchar` is 32-bit and wraps. -/
 def b2aLoop : List Nat → (left bits : Nat) → List Nat × Nat × Nat
   | [], left, bits => ([], left, bits)
   | b :: bs, left, bits =>
@@ -126,7 +126,7 @@ def b2aLoop : List Nat → (left bits : Nat) → List Nat × Nat × Nat
     let (r, l2, b2) := b2aLoop bs left' bits'
     (out ++ r, l2, b2)
 
-/-- `binascii_b2a_base64_impl`, `Modules/binascii.c:531-593`. -/
+/-- `binascii_b2a_base64_impl`, `Modules/binascii.c:960-1637`. -/
 def b2aBase64 (data : List Nat) (newline : Bool) : List Nat :=
   let (out, left, bits) := b2aLoop data 0 0
   let tail :=
@@ -142,7 +142,7 @@ def digitValue (c : Nat) : Nat :=
   else if 65 ≤ c ∧ c ≤ 90 then c - 65 + 10
   else 37
 
-/-- The loop of `binascii_a2b_hex_impl`, `Modules/binascii.c:922-935`. -/
+/-- The loop of `binascii_a2b_hex_impl`, `Modules/binascii.c@3.14.7:922-935`. -/
 def a2bHexLoop : List Nat → Py (List Nat)
   | a :: b :: r =>
     let top := digitValue a
@@ -151,7 +151,7 @@ def a2bHexLoop : List Nat → Py (List Nat)
     else do return (top * 16 + bot) :: (← a2bHexLoop r)
   | _ => .ok []
 
-/-- `binascii_a2b_hex_impl`, `Modules/binascii.c:888-941`. -/
+/-- `binascii_a2b_hex_impl`, `Modules/binascii.c:2283-2350`. -/
 def a2bHexBytes (b : List Nat) : Py (List Nat) :=
   if b.length % 2 ≠ 0 then .error (err "Odd-length string") else a2bHexLoop b
 
@@ -159,7 +159,7 @@ def a2bHex (d : Data) : Py (List Nat) := do a2bHexBytes (← asciiBuffer d)
 
 def hexDigit (v : Nat) : Nat := if v < 10 then 48 + v else 97 + (v - 10)
 
-/-- `_Py_strhex_bytes_with_sep` without a separator, `Modules/binascii.c:849-856`. -/
+/-- `_Py_strhex_bytes_with_sep` without a separator, `Modules/binascii.c:2241-2248`. -/
 def b2aHex : List Nat → List Nat
   | [] => []
   | b :: r => hexDigit (b / 16) :: hexDigit (b % 16) :: b2aHex r
@@ -174,7 +174,7 @@ inductive SepArg where
   | lenRaises (e : PyExc)
   deriving Repr, DecidableEq, Inhabited
 
-/-- The checks of `_Py_strhex_impl`, `Python/pystrhex.c:13-43`, with `return_bytes` set: the separator
+/-- The checks of `_Py_strhex_impl`, `Python/pystrhex.c:122-152`, with `return_bytes` set: the separator
 byte. `PyUnicode_KIND` of a non-ASCII `str` of one character below 256 is `1BYTE`, so it passes. -/
 def strhexSep : SepArg → Py (Option Nat)
   | .absent => .ok none
@@ -185,19 +185,19 @@ def strhexSep : SepArg → Py (Option Nat)
   | .seqlen 1 => .error (.typeError "sep must be str or bytes.")
   | _ => .error (.valueError "sep must be length 1.")
 
-/-- The negative `bytes_per_sep_group` loop, `Python/pystrhex.c:97-113`: groups count from the left. -/
+/-- The negative `bytes_per_sep_group` loop, `Python/pystrhex.c@3.14.7:97-113`: groups count from the left. -/
 def hexLeft (sep k : Nat) : (chunks : Nat) → List Nat → List Nat
   | 0, l => b2aHex l
   | c + 1, l => b2aHex (l.take k) ++ [sep] ++ hexLeft sep k c (l.drop k)
 
-/-- The positive loop, `Python/pystrhex.c:115-133`, which fills from the end: groups count from the
+/-- The positive loop, `Python/pystrhex.c:226-244`, which fills from the end: groups count from the
 right. -/
 def hexRight (sep k : Nat) : (chunks : Nat) → List Nat → List Nat
   | 0, l => b2aHex l
   | c + 1, l =>
     hexRight sep k c (l.take (l.length - k)) ++ [sep] ++ b2aHex (l.drop (l.length - k))
 
-/-- `_Py_strhex_impl`, `Python/pystrhex.c:7-143`, returning bytes. -/
+/-- `_Py_strhex_impl`, `Python/pystrhex.c@3.14.7:7-143`, returning bytes. -/
 def strhexBytes (data : List Nat) (sep : SepArg) (group : Int) : Py (List Nat) := do
   let sc ← strhexSep sep
   match sc with
@@ -211,7 +211,7 @@ def strhexBytes (data : List Nat) (sep : SepArg) (group : Int) : Py (List Nat) :
 
 /-! ### `Lib/base64.py` -/
 
-/-- `_bytes_from_decode_data`, `Lib/base64.py:31-43`: `memoryview(s)` failing with `TypeError` is
+/-- `_bytes_from_decode_data`, `Lib/base64.py:32-44`: `memoryview(s)` failing with `TypeError` is
 replaced, and any other exception passes through. -/
 def bytesFromDecodeData : Data → Py (List Nat)
   | .bytes b => .ok b
@@ -239,7 +239,7 @@ def upper (s : List Nat) : List Nat := s.map fun c => if 97 ≤ c ∧ c ≤ 122 
 
 def plusSlash : List Nat := [43, 47]
 
-/-- `b64encode`, `Lib/base64.py:48-59`. -/
+/-- `b64encode`, `Lib/base64.py@3.14.7:48-59`. -/
 def b64encode (s : List Nat) (alt : Option (List Nat)) : Py (List Nat) :=
   let encoded := b2aBase64 s false
   match alt with
@@ -248,7 +248,7 @@ def b64encode (s : List Nat) (alt : Option (List Nat)) : Py (List Nat) :=
     if a.length ≠ 2 then .error (.assertionError "~repr(altchars)")
     else .ok (translate plusSlash a encoded)
 
-/-- `b64decode`, `Lib/base64.py:62-85`. -/
+/-- `b64decode`, `Lib/base64.py@3.14.7:62-85`. -/
 def b64decode (s : Data) (alt : Option Data) (validate : Bool) : Py (List Nat) := do
   let s ← bytesFromDecodeData s
   match alt with
@@ -260,10 +260,10 @@ def b64decode (s : Data) (alt : Option Data) (validate : Bool) : Py (List Nat) :
 
 def dashUnderscore : List Nat := [45, 95]
 
-/-- `urlsafe_b64encode`, `Lib/base64.py:109-116`. -/
+/-- `urlsafe_b64encode`, `Lib/base64.py@3.14.7:109-116`. -/
 def urlsafeEncode (s : List Nat) : List Nat := translate plusSlash dashUnderscore (b2aBase64 s false)
 
-/-- `urlsafe_b64decode`, `Lib/base64.py:118-131`. -/
+/-- `urlsafe_b64decode`, `Lib/base64.py@3.14.7:118-131`. -/
 def urlsafeDecode (s : Data) : Py (List Nat) := do
   let s ← bytesFromDecodeData s
   b64decode (.bytes (translate dashUnderscore plusSlash s)) none false
@@ -271,11 +271,11 @@ def urlsafeDecode (s : Data) : Py (List Nat) := do
 def b32alphabet : List Nat := "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567".toList.map Char.toNat
 def b32hexalphabet : List Nat := "0123456789ABCDEFGHIJKLMNOPQRSTUV".toList.map Char.toNat
 
-/-- `b32tab2[x]`, `Lib/base64.py:167-168`. -/
+/-- `b32tab2[x]`, `Lib/base64.py@3.14.7:167-168`. -/
 def b32pair (alpha : List Nat) (x : Nat) : List Nat :=
   [alpha.getD (x / 32) 0, alpha.getD (x % 32) 0]
 
-/-- The `for i in range(0, len(s), 5)` loop, `Lib/base64.py:180-186`. -/
+/-- The `for i in range(0, len(s), 5)` loop, `Lib/base64.py@3.14.7:180-186`. -/
 def b32Chunks (alpha : List Nat) : (fuel : Nat) → List Nat → List Nat
   | 0, _ => []
   | _ + 1, [] => []
@@ -285,7 +285,7 @@ def b32Chunks (alpha : List Nat) : (fuel : Nat) → List Nat → List Nat
       b32pair alpha (q / 2 ^ 10 % 1024) ++ b32pair alpha (q % 1024) ++
       b32Chunks alpha fuel (s.drop 5)
 
-/-- `_b32encode`, `Lib/base64.py:163-196`. -/
+/-- `_b32encode`, `Lib/base64.py@3.14.7:163-196`. -/
 def b32encode (alpha s : List Nat) : List Nat :=
   let leftover := s.length % 5
   let s' := if leftover ≠ 0 then s ++ List.replicate (5 - leftover) 0 else s
@@ -300,7 +300,7 @@ def b32rev (alpha : List Nat) (c : Nat) : Option Nat := alpha.findIdx? (· == c)
 def toBytes5 (acc : Nat) : List Nat :=
   [acc / 2 ^ 32 % 256, acc / 2 ^ 24 % 256, acc / 2 ^ 16 % 256, acc / 2 ^ 8 % 256, acc % 256]
 
-/-- The inner `for c in quanta` loop, `Lib/base64.py:227-231`. -/
+/-- The inner `for c in quanta` loop, `Lib/base64.py@3.14.7:227-231`. -/
 def b32Quanta (alpha : List Nat) (acc : Nat) : List Nat → Py Nat
   | [] => .ok acc
   | c :: cs =>
@@ -308,7 +308,7 @@ def b32Quanta (alpha : List Nat) (acc : Nat) : List Nat → Py Nat
     | none => .error (err "Non-base32 digit found")
     | some v => b32Quanta alpha (acc * 32 + v) cs
 
-/-- The outer loop, `Lib/base64.py:224-232`: the bytes and the last `acc`. -/
+/-- The outer loop, `Lib/base64.py@3.14.7:224-232`: the bytes and the last `acc`. -/
 def b32DecLoop (alpha : List Nat) : (fuel : Nat) → List Nat → List Nat → Nat → Py (List Nat × Nat)
   | 0, _, dec, acc => .ok (dec, acc)
   | _ + 1, [], dec, acc => .ok (dec, acc)
@@ -319,7 +319,7 @@ def b32DecLoop (alpha : List Nat) : (fuel : Nat) → List Nat → List Nat → N
 /-- `s.rstrip(b'=')`. -/
 def rstripPad (s : List Nat) : List Nat := (s.reverse.dropWhile (· == 61)).reverse
 
-/-- `_b32decode`, `Lib/base64.py:198-241`. -/
+/-- `_b32decode`, `Lib/base64.py@3.14.7:198-241`. -/
 def b32decode (alpha : List Nat) (s0 : Data) (casefold : Bool) (map01 : Option Data) :
     Py (List Nat) := do
   let s ← bytesFromDecodeData s0
@@ -342,10 +342,10 @@ def b32decode (alpha : List Nat) (s0 : Data) (casefold : Bool) (map01 : Option D
     return decoded.take (decoded.length - 5) ++ (toBytes5 acc).take leftover
   return decoded
 
-/-- `b16encode`, `Lib/base64.py:267-270`. -/
+/-- `b16encode`, `Lib/base64.py@3.14.7:267-270`. -/
 def b16encode (s : List Nat) : List Nat := upper (b2aHex s)
 
-/-- `b16decode`, `Lib/base64.py:273-288`. -/
+/-- `b16decode`, `Lib/base64.py@3.14.7:273-288`. -/
 def b16decode (s0 : Data) (casefold : Bool) : Py (List Nat) := do
   let s ← bytesFromDecodeData s0
   let s := if casefold then upper s else s

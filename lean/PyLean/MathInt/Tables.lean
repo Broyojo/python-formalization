@@ -2,13 +2,13 @@
 Lookup tables of `Modules/mathmodule.c` (CPython 3.14.7), copied by a script
 that parses the C initialisers (values in decimal).
 
-* `isqrtTab`: `_approximate_isqrt_tab`, mathmodule.c:1651-1668.
-* `reducedFactorialOddPart`: mathmodule.c:3445-3478.
-* `invertedFactorialOddPart`: mathmodule.c:3492-3525.
-* `factorialTrailingZeros`: mathmodule.c:3539-3548.
-* `fastCombLimits1`, `fastCombLimits2`, `fastPermLimits`: mathmodule.c:3567-3572,
-  :3597-3600, :3614-3618 (`ULLONG_MAX` is `2^64 - 1`).
-* `smallFactorials`: `SmallFactorials`, mathmodule.c:1998-2006 (LP64: 21 entries).
+* `isqrtTab`: `_approximate_isqrt_tab`, mathmodule.c@3.14.7:1651-1668.
+* `reducedFactorialOddPart`: mathmodule.c@3.14.7:3445-3478.
+* `invertedFactorialOddPart`: mathmodule.c@3.14.7:3492-3525.
+* `factorialTrailingZeros`: mathmodule.c@3.14.7:3539-3548.
+* `fastCombLimits1`, `fastCombLimits2`, `fastPermLimits`: mathmodule.c@3.14.7:3567-3572,
+  @3.14.7:3597-3600, @3.14.7:3614-3618 (`ULLONG_MAX` is `2^64 - 1`).
+* `smallFactorials`: `SmallFactorials`, mathmodule.c@3.14.7:1998-2006 (LP64: 21 entries).
 -/
 
 namespace PyLean.MathInt

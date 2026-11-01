@@ -45,24 +45,24 @@ end Bigint
 /-- `(ULong)(x << n)` for `n < 32`. -/
 def shl32 (x n : Nat) : Nat := (x * 2 ^ n) % 2 ^ 32
 
-/-- The `do ... while(++i < wds)` loop of `multadd`, dtoa.c:454-459, and the store
-of a final carry at :460-473. -/
+/-- The `do ... while(++i < wds)` loop of `multadd`, dtoa.c:456-461, and the store
+of a final carry at :462-475. -/
 def multaddLoop (m : Nat) : List Nat → Nat → List Nat
   | [], carry => if carry != 0 then [carry] else []
   | d :: ds, carry =>
     let y := d * m + carry
     (y % 2 ^ 32) :: multaddLoop m ds (y / 2 ^ 32)
 
-/-- `multadd`, dtoa.c:442-475. -/
+/-- `multadd`, dtoa.c:444-477. -/
 def multadd (b : Bigint) (m a : Nat) : Bigint := { b with x := multaddLoop m b.x a }
 
-/-- `s2b`'s two loops, dtoa.c:502-512: `dig i` is the `i`th significant digit. -/
+/-- `s2b`'s two loops, dtoa.c:504-514: `dig i` is the `i`th significant digit. -/
 def s2bLoop (dig : Nat → Nat) : Nat → Nat → Bigint → Bigint
   | 0, _, b => b
   | n + 1, i, b => s2bLoop dig n (i + 1) (multadd b 10 (dig i))
 
-/-- `s2b`, dtoa.c:483-514. The caller passes the digit accessor, which skips the
-decimal point exactly as the `s++` at :507 does. -/
+/-- `s2b`, dtoa.c:485-516. The caller passes the digit accessor, which skips the
+decimal point exactly as the `s++` at :509 does. -/
 def s2b (dig : Nat → Nat) (nd y9 : Nat) : Bigint :=
   let b : Bigint := { x := [y9] }
   if nd ≤ 9 then b else s2bLoop dig (nd - 9) 9 b
@@ -71,7 +71,7 @@ def s2b (dig : Nat → Nat) (nd y9 : Nat) : Bigint :=
 def hiStep (mask s : Nat) (st : Nat × Nat) : Nat × Nat :=
   if st.2 &&& mask == 0 then (st.1 + s, shl32 st.2 s) else st
 
-/-- `hi0bits`, dtoa.c:518-545. -/
+/-- `hi0bits`, dtoa.c:520-547. -/
 def hi0bits (x0 : Nat) : Nat :=
   let st := hiStep 0xc0000000 2 (hiStep 0xf0000000 4 (hiStep 0xff000000 8
     (hiStep 0xffff0000 16 (0, x0))))
@@ -83,7 +83,7 @@ def hi0bits (x0 : Nat) : Nat :=
 def loStep (mask s : Nat) (st : Nat × Nat) : Nat × Nat :=
   if st.2 &&& mask == 0 then (st.1 + s, st.2 / 2 ^ s) else st
 
-/-- `lo0bits`, dtoa.c:550-591: the count, and `*y` afterwards. -/
+/-- `lo0bits`, dtoa.c:552-593: the count, and `*y` afterwards. -/
 def lo0bits (y : Nat) : Nat × Nat :=
   let x := y
   if x &&& 7 != 0 then
@@ -97,13 +97,13 @@ def lo0bits (y : Nat) : Nat × Nat :=
       if x5 == 0 then (32, y) else (st.1 + 1, x5)
     else st
 
-/-- `i2b`, dtoa.c:595-606. -/
+/-- `i2b`, dtoa.c:597-608. -/
 def i2b (i : Nat) : Bigint := { x := [i] }
 
 /-- Drop high zero limbs. -/
 def trimHigh (x : List Nat) : List Nat := (x.reverse.dropWhile (· == 0)).reverse
 
-/-- The inner `do` loop of `mult`, dtoa.c:655-661: add `a * y` into `xc`. -/
+/-- The inner `do` loop of `mult`, dtoa.c:657-663: add `a * y` into `xc`. -/
 def multInner (y : Nat) : List Nat → List Nat → Nat → List Nat
   | [], [], _ => []
   | [], _ :: cs, carry => carry :: cs
@@ -112,7 +112,7 @@ def multInner (y : Nat) : List Nat → List Nat → Nat → List Nat
     let z := a * y + c + carry
     (z % 2 ^ 32) :: multInner y as cs (z / 2 ^ 32)
 
-/-- The outer loop of `mult`, dtoa.c:650-663: `xc0` walks up `c`. -/
+/-- The outer loop of `mult`, dtoa.c:652-665: `xc0` walks up `c`. -/
 def multOuter (xa : List Nat) : List Nat → List Nat → List Nat
   | [], xc => xc
   | y :: ys, xc =>
@@ -120,7 +120,7 @@ def multOuter (xa : List Nat) : List Nat → List Nat → List Nat
     | [] => []
     | c :: cs => c :: multOuter xa ys cs
 
-/-- `mult`, dtoa.c:611-667. -/
+/-- `mult`, dtoa.c:613-669. -/
 def mult (a0 b0 : Bigint) : Bigint :=
   if a0.isZero || b0.isZero then { x := [0] }
   else
@@ -128,29 +128,29 @@ def mult (a0 b0 : Bigint) : Bigint :=
     let wc := a.wds + b.wds
     { x := trimHigh (multOuter a.x b.x (List.replicate wc 0)) }
 
-/-- `interp->dtoa.p5s`, built by `_PyDtoa_Init`, dtoa.c:2807-2830: `5 ** (2 ** (i + 2))`. -/
+/-- `interp->dtoa.p5s`, built by `_PyDtoa_Init`, dtoa.c:2819-2842: `5 ** (2 ** (i + 2))`. -/
 def p5s : Array Bigint :=
   (List.range 7).foldl (fun acc _ => let p := acc.back!; acc.push (mult p p)) #[i2b 625]
 
-/-- The `for(;;)` loop of `pow5mult`, dtoa.c:699-712. -/
+/-- The `for(;;)` loop of `pow5mult`, dtoa.c:701-714. -/
 def pow5Loop : Nat → Nat → Nat → Bigint → Bigint
   | 0, _, _, b => b
   | fuel + 1, i, k, b =>
     let b1 := if k &&& 1 != 0 then mult b (p5s[i]!) else b
     if k / 2 == 0 then b1 else pow5Loop fuel (i + 1) (k / 2) b1
 
-/-- `pow5mult`, dtoa.c:675-714 (and the uncached twin at :721-764). -/
+/-- `pow5mult`, dtoa.c:677-716 (and the uncached twin at :723-766). -/
 def pow5mult (b0 : Bigint) (k : Nat) : Bigint :=
   let i := k &&& 3
   let b := if i != 0 then multadd b0 ([5, 25, 125].getD (i - 1) 0) 0 else b0
   if k / 4 == 0 then b else pow5Loop 8 0 (k / 4) b
 
-/-- The shifting `do` loop of `lshift`, dtoa.c:800-805: the limbs, then the last `z`. -/
+/-- The shifting `do` loop of `lshift`, dtoa.c:802-807: the limbs, then the last `z`. -/
 def lshiftLoop (k : Nat) : List Nat → Nat → List Nat
   | [], z => if z != 0 then [z] else []
   | d :: ds, z => (shl32 d k ||| z) :: lshiftLoop k ds (d / 2 ^ (32 - k))
 
-/-- `lshift`, dtoa.c:772-814. -/
+/-- `lshift`, dtoa.c:774-816. -/
 def lshift (b : Bigint) (k : Nat) : Bigint :=
   if k == 0 || b.isZero then b
   else
@@ -160,17 +160,17 @@ def lshift (b : Bigint) (k : Nat) : Bigint :=
     if k' != 0 then { x := low ++ lshiftLoop k' b.x 0 }
     else { x := low ++ b.x }
 
-/-- The limb loop of `cmp`, dtoa.c:839-845, from the top limb down. -/
+/-- The limb loop of `cmp`, dtoa.c:841-847, from the top limb down. -/
 def cmpLoop : List Nat → List Nat → Int
   | a :: as, b :: bs => if a != b then (if a < b then -1 else 1) else cmpLoop as bs
   | _, _ => 0
 
-/-- `cmp`, dtoa.c:819-846. -/
+/-- `cmp`, dtoa.c:821-848. -/
 def cmp (a b : Bigint) : Int :=
   let i := (a.wds : Int) - b.wds
   if i != 0 then i else cmpLoop a.x.reverse b.x.reverse
 
-/-- The subtraction loops of `diff`, dtoa.c:889-899, with `y` a wrapping `ULLong`. -/
+/-- The subtraction loops of `diff`, dtoa.c:891-901, with `y` a wrapping `ULLong`. -/
 def diffLoop : List Nat → List Nat → Nat → List Nat
   | [], _, _ => []
   | a :: as, [], borrow =>
@@ -180,7 +180,7 @@ def diffLoop : List Nat → List Nat → Nat → List Nat
     let y := (a + 2 ^ 64 - b - borrow) % 2 ^ 64
     (y % 2 ^ 32) :: diffLoop as bs (y / 2 ^ 32 % 2)
 
-/-- `diff`, dtoa.c:852-904. -/
+/-- `diff`, dtoa.c:854-906. -/
 def diff (a0 b0 : Bigint) : Bigint :=
   let i := cmp a0 b0
   if i == 0 then { x := [0] }
@@ -214,12 +214,12 @@ def Frac_mask : Nat := 0xfffff
 def Bndry_mask : Nat := 0xfffff
 def Sign_bit : Nat := 0x80000000
 
-/-- `ulp`, dtoa.c:909-919. `L` wraps in 32 bits if `x` is too small for the "normal
+/-- `ulp`, dtoa.c:911-921. `L` wraps in 32 bits if `x` is too small for the "normal
 result" the comment asks for; the callers do not go there. -/
 def ulpD (x : F64) : F64 :=
   mkWords (((word0 x &&& Exp_mask) + 2 ^ 32 - (P - 1) * Exp_msk1) % 2 ^ 32) 0
 
-/-- `b2d`, dtoa.c:923-956: the double in `[1, 2)` holding the top bits of `a`, and
+/-- `b2d`, dtoa.c:925-958: the double in `[1, 2)` holding the top bits of `a`, and
 the exponent. Reading below `x[0]` gives `0`. -/
 def b2d (a : Bigint) : F64 × Nat :=
   let rev := a.x.reverse
@@ -243,7 +243,7 @@ def b2d (a : Bigint) : F64 × Nat :=
       (mkWords w0 w1, e)
     else (mkWords (Exp_1 ||| y) z, e)
 
-/-- `sd2b`, dtoa.c:979-1026. -/
+/-- `sd2b`, dtoa.c:981-1028. -/
 def sd2b (d : F64) (scale0 : Nat) : Bigint × Int :=
   let x0 := word1 d
   let x1 := word0 d &&& Frac_mask
@@ -263,7 +263,7 @@ def sd2b (d : F64) (scale0 : Nat) : Bigint × Int :=
     else (e1, x0, x1)
   ({ x := if x1' == 0 then [x0'] else [x0', x1'] }, e2)
 
-/-- `d2b`, dtoa.c:1037-1080: `(b, *e, *bits)`. -/
+/-- `d2b`, dtoa.c:1039-1082: `(b, *e, *bits)`. -/
 def d2b (d : F64) : Bigint × Int × Nat :=
   let z0 := word0 d &&& Frac_mask
   let w0 := word0 d &&& 0x7fffffff
@@ -287,7 +287,7 @@ def d2b (d : F64) : Bigint × Int × Nat :=
   else
     (b, (de : Int) - Bias - (P - 1) + 1 + k, 32 * limbs.length - hi0bits (limbs.getLastD 0))
 
-/-- `ratio`, dtoa.c:1085-1101. -/
+/-- `ratio`, dtoa.c:1087-1103. -/
 def ratio (a b : Bigint) : F64 :=
   let (da, ka) := b2d a
   let (db, kb) := b2d b
@@ -297,13 +297,13 @@ def ratio (a b : Bigint) : F64 :=
   else
     F64.div da (setWord0 db (word0 db + (-k).toNat * Exp_msk1))
 
-/-- `dshift`, dtoa.c:1126-1133. -/
+/-- `dshift`, dtoa.c:1128-1135. -/
 def dshift (b : Bigint) (p2 : Int) : Nat :=
   let rv0 : Int := (hi0bits b.top : Int) - 4
   let rv := if 0 < p2 then rv0 - p2 else rv0
   (rv % 32).toNat
 
-/-- The subtraction loops of `quorem`, dtoa.c:1165-1172 and :1186-1193: walk `S`
+/-- The subtraction loops of `quorem`, dtoa.c:1167-1174 and :1188-1195: walk `S`
 and `b` together, with `y` and `ys` wrapping `ULLong`s. -/
 def quoremSub (q : Nat) : List Nat → List Nat → Nat → Nat → List Nat
   | [], bs, _, _ => bs
@@ -321,7 +321,7 @@ def trimKeep1 (x : List Nat) : List Nat :=
   | [] => x.take 1
   | l => l
 
-/-- `quorem`, dtoa.c:1139-1203: the quotient digit and the updated `b`. -/
+/-- `quorem`, dtoa.c:1141-1205: the quotient digit and the updated `b`. -/
 def quorem (b : Bigint) (S : Bigint) : Nat × Bigint :=
   if b.wds < S.wds then (0, b)
   else
@@ -342,7 +342,7 @@ structure BCinfo where
   nd0 : Nat
   scale : Nat
 
-/-- `sulp`, dtoa.c:1211-1226. -/
+/-- `sulp`, dtoa.c:1213-1228. -/
 def sulp (x : F64) (scale : Nat) : F64 :=
   if scale != 0 && decide ((word0 x &&& Exp_mask) / 2 ^ Exp_shift < 2 * P + 1) then
     mkWords ((P + 2) * Exp_msk1) 0

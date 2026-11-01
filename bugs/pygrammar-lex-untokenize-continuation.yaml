@@ -7,9 +7,9 @@ files: [Parser/lexer/lexer.c, Lib/tokenize.py]
 functions: ["tok_get_normal_mode", "Untokenizer.untokenize"]
 summary: |
   A body may take its indentation from a backslash-continued line: `if x:\n    \\\ny\n` is valid, and
-  cont_line_col gives the block its depth (lexer.c:532-541). In readline mode the continuation reads
+  cont_line_col gives the block its depth (lexer.c:490-499). In readline mode the continuation reads
   the next line, which moves tok->buf, so INDENT has p_start = tok->buf = p_end and an empty string
-  (lexer.c:627-633). Untokenizer stores that empty indent, so the text it writes has no indentation
+  (lexer.c:585-591). Untokenizer stores that empty indent, so the text it writes has no indentation
   before `y`. Its docstring guarantees that the output tokenizes back to the same types and strings.
 likelihood: |
   Low: indentation by continuation is rare, and the guarantee only fails for such files.
@@ -33,7 +33,7 @@ promised_by: |
   Lib/tokenize.py untokenize docstring: "The result is guaranteed to tokenize back to match the input
   so that the conversion is lossless and round-trips are assured."
 cause: |
-  Parser/lexer/lexer.c:627-633 uses tok->buf as the start of INDENT's text, and tok->buf moved when
+  Parser/lexer/lexer.c:585-591 uses tok->buf as the start of INDENT's text, and tok->buf moved when
   the continuation line was read (Parser/tokenizer/readline_tokenizer.c:75-77).
 possible_fix: |
   In Untokenizer, when an INDENT string is empty and its start column is not 0, derive the indentation

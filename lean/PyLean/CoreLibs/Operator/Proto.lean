@@ -42,14 +42,14 @@ structure BinArgs (α : Type) where
   lt : String
   rt : String
 
-/-- `slotw` of `binary_op1`, Objects/abstract.c:944-952: null for the same type and for the same slot. -/
+/-- `slotw` of `binary_op1`, Objects/abstract.c:954-962: null for the same type and for the same slot. -/
 def BinArgs.slotw {α : Type} (A : BinArgs α) : Option (Slot α) :=
   if A.sameType then none else
   match A.sw, A.sv with
   | some w, some v => if w.id = v.id then none else some w
   | w, _ => w
 
-/-- `binary_op1`, Objects/abstract.c:930-980. -/
+/-- `binary_op1`, Objects/abstract.c:940-990. -/
 def binaryOp1 {α : Type} (A : BinArgs α) (v w : α) : Py (Ret α) :=
   match A.sv with
   | none =>
@@ -74,7 +74,7 @@ def binaryOp1 {α : Type} (A : BinArgs α) (v w : α) : Py (Ret α) :=
 def binopError (sym lt rt : String) : PyExc :=
   .typeError s!"unsupported operand type(s) for {sym}: '{lt}' and '{rt}'"
 
-/-- `binary_op`, Objects/abstract.c:993-1001: `PyNumber_Subtract` and the rest of `BINARY_FUNC`, so the body of
+/-- `binary_op`, Objects/abstract.c:1003-1011: `PyNumber_Subtract` and the rest of `BINARY_FUNC`, so the body of
 `a - b`, `a & b`, ... in Python and of `_operator_sub_impl`, ... in C. -/
 def binaryOp {α : Type} (A : BinArgs α) (sym : String) (v w : α) : Py α :=
   match binaryOp1 A v w with
@@ -135,12 +135,12 @@ structure SeqArgs (α : Type) where
   index : α → Option (Py Int)
   tn : α → String
 
-/-- The range test of `PyNumber_AsSsize_t`, Objects/abstract.c:1458-1502, with `err` as the exception. -/
+/-- The range test of `PyNumber_AsSsize_t`, Objects/abstract.c:1468-1512, with `err` as the exception. -/
 def fitSsize (mk : String → PyExc) (tn : String) (n : Int) : Py Int :=
   if n > ssizeMax ∨ n < ssizeMin then .error (mk s!"cannot fit '{tn}' into an index-sized integer")
   else .ok n
 
-/-- `sequence_repeat`, Objects/abstract.c:1147-1164. -/
+/-- `sequence_repeat`, Objects/abstract.c:1157-1174. -/
 def sequenceRepeat {α : Type} (Q : SeqArgs α) (f : α → Int → Py α) (seq n : α) : Py α :=
   match Q.index n with
   | none => .error (.typeError s!"can't multiply sequence by non-int of type '{Q.tn n}'")
@@ -152,7 +152,7 @@ def sequenceRepeat {α : Type} (Q : SeqArgs α) (f : α → Int → Py α) (seq 
       | .error e => .error e
       | .ok c => f seq c
 
-/-- `PyNumber_Add`, Objects/abstract.c:1128-1145, for `a + b` and `_operator_add_impl`. -/
+/-- `PyNumber_Add`, Objects/abstract.c:1138-1155, for `a + b` and `_operator_add_impl`. -/
 def numberAdd {α : Type} (A : BinArgs α) (Q : SeqArgs α) (v w : α) : Py α :=
   match binaryOp1 A v w with
   | .error e => .error e
@@ -162,7 +162,7 @@ def numberAdd {α : Type} (A : BinArgs α) (Q : SeqArgs α) (v w : α) : Py α :
     | some f => f v w
     | none => .error (binopError "+" A.lt A.rt)
 
-/-- `PyNumber_Multiply`, Objects/abstract.c:1166-1182, for `a * b` and `_operator_mul_impl`. -/
+/-- `PyNumber_Multiply`, Objects/abstract.c:1176-1192, for `a * b` and `_operator_mul_impl`. -/
 def numberMul {α : Type} (A : BinArgs α) (Q : SeqArgs α) (v w : α) : Py α :=
   match binaryOp1 A v w with
   | .error e => .error e
@@ -175,7 +175,7 @@ def numberMul {α : Type} (A : BinArgs α) (Q : SeqArgs α) (v w : α) : Py α :
       | some f => sequenceRepeat Q f w v
       | none => .error (binopError "*" A.lt A.rt)
 
-/-- `ternary_op`, Objects/abstract.c:1016-1099, with `z` being `None`: `NoneType` has no `nb_power`, so the
+/-- `ternary_op`, Objects/abstract.c:1026-1109, with `z` being `None`: `NoneType` has no `nb_power`, so the
 third step finds nothing and the order is that of `binary_op1`. `op_name` is what the error says. -/
 def ternaryOp {α : Type} (A : BinArgs α) (name : String) (v w : α) : Py α :=
   binaryOp A name v w
@@ -185,7 +185,7 @@ def numberPow {α : Type} (A : BinArgs α) (v w : α) : Py α := ternaryOp A "**
 
 /-! ### In-place operators -/
 
-/-- `binary_iop1`, Objects/abstract.c:1218-1239: the in-place slot, then `binary_op1`. -/
+/-- `binary_iop1`, Objects/abstract.c:1228-1249: the in-place slot, then `binary_op1`. -/
 def binaryIop1 {α : Type} (iop : Option (α → α → Py (Ret α))) (A : BinArgs α) (v w : α) : Py (Ret α) :=
   match iop with
   | none => binaryOp1 A v w
@@ -195,7 +195,7 @@ def binaryIop1 {α : Type} (iop : Option (α → α → Py (Ret α))) (A : BinAr
     | .ok (.val x) => .ok (.val x)
     | .ok .notImplemented => binaryOp1 A v w
 
-/-- `binary_iop`, Objects/abstract.c:1248-1257: `PyNumber_InPlaceSubtract` and the rest of `INPLACE_BINOP`. -/
+/-- `binary_iop`, Objects/abstract.c:1258-1267: `PyNumber_InPlaceSubtract` and the rest of `INPLACE_BINOP`. -/
 def inplaceOp {α : Type} (iop : Option (α → α → Py (Ret α))) (A : BinArgs α) (sym : String) (v w : α) :
     Py α :=
   match binaryIop1 iop A v w with
@@ -203,7 +203,7 @@ def inplaceOp {α : Type} (iop : Option (α → α → Py (Ret α))) (A : BinArg
   | .ok (.val x) => .ok x
   | .ok .notImplemented => .error (binopError sym A.lt A.rt)
 
-/-- `PyNumber_InPlaceAdd`, Objects/abstract.c:1296-1316. -/
+/-- `PyNumber_InPlaceAdd`, Objects/abstract.c:1306-1326. -/
 def inplaceAdd {α : Type} (iop : Option (α → α → Py (Ret α))) (A : BinArgs α) (Q : SeqArgs α) (v w : α) :
     Py α :=
   match binaryIop1 iop A v w with
@@ -220,7 +220,7 @@ def inplaceAdd {α : Type} (iop : Option (α → α → Py (Ret α))) (A : BinAr
         | none => err
     else err
 
-/-- `PyNumber_InPlaceMultiply`, Objects/abstract.c:1318-1344. The right operand's `sq_repeat` is tried only
+/-- `PyNumber_InPlaceMultiply`, Objects/abstract.c:1328-1354. The right operand's `sq_repeat` is tried only
 under `else if (mw != NULL)`, so only when the left type has no `tp_as_sequence` at all. A heap class always
 has it, with or without a repeat slot, which is where this differs from `PyNumber_Multiply`. -/
 def inplaceMul {α : Type} (iop : Option (α → α → Py (Ret α))) (A : BinArgs α) (Q : SeqArgs α) (v w : α) :
@@ -243,7 +243,7 @@ def inplaceMul {α : Type} (iop : Option (α → α → Py (Ret α))) (A : BinAr
       | none => err
     else err
 
-/-- `ternary_iop`, Objects/abstract.c:1261-1276, with `z` being `None`: `PyNumber_InPlacePower`. -/
+/-- `ternary_iop`, Objects/abstract.c:1271-1286, with `z` being `None`: `PyNumber_InPlacePower`. -/
 def inplacePow {α : Type} (iop : Option (α → α → Py (Ret α))) (A : BinArgs α) (v w : α) : Py α :=
   match iop with
   | none => ternaryOp A "**=" v w
@@ -262,7 +262,7 @@ inductive RichOp where
 def RichOp.sym : RichOp → String
   | .lt => "<" | .le => "<=" | .eq => "==" | .ne => "!=" | .gt => ">" | .ge => ">="
 
-/-- `_Py_swapped_op`, Objects/object.c:1041. -/
+/-- `_Py_swapped_op`, Objects/object.c:1044. -/
 def RichOp.swapped : RichOp → RichOp
   | .lt => .gt | .le => .ge | .eq => .eq | .ne => .ne | .gt => .lt | .ge => .le
 
@@ -278,7 +278,7 @@ structure CmpArgs (α : Type) where
   lt : String
   rt : String
 
-/-- `do_richcompare`, Objects/object.c:1046-1094. The result is what the method returned, unconverted. -/
+/-- `do_richcompare`, Objects/object.c:1049-1097. The result is what the method returned, unconverted. -/
 def richCompare {α : Type} (A : CmpArgs α) (op : RichOp) (v w : α) : Py α :=
   let default : Py α :=
     match op with
@@ -355,7 +355,7 @@ def sqLength (r : Py Int) : Py Int :=
     if n < 0 then .error (.valueError "__len__() should return >= 0")
     else fitSsize .overflowError "int" n
 
-/-- `PyObject_IsTrue`, Objects/object.c:2060-2085, with `slot_nb_bool`, Objects/typeobject.c:10202. -/
+/-- `PyObject_IsTrue`, Objects/object.c:2139-2164, with `slot_nb_bool`, Objects/typeobject.c:10904. -/
 def isTrue : TruthObj → Py Bool
   | .tru => .ok true
   | .fals => .ok false
@@ -372,7 +372,7 @@ def isTrue : TruthObj → Py Bool
 /-- `truth(a)`, Lib/operator.py:57-59: `True if a else False`; `_operator_truth_impl`, Modules/_operator.c:51. -/
 def truthOp (o : TruthObj) : Py Bool := isTrue o
 
-/-- `not_(a)`, Lib/operator.py:53-55, and `PyObject_Not`, Objects/object.c:2088-2095, through
+/-- `not_(a)`, Lib/operator.py:53-55, and `PyObject_Not`, Objects/object.c:2167-2174, through
 `_operator_not__impl`, Modules/_operator.c:253. -/
 def notOp (o : TruthObj) : Py Bool :=
   match isTrue o with
@@ -388,7 +388,7 @@ inductive UnOp where
 def UnOp.desc : UnOp → String
   | .neg => "unary -" | .pos => "unary +" | .abs => "abs()" | .inv => "unary ~"
 
-/-- `UNARY_FUNC`, Objects/abstract.c:1361-1379: `-a`, `+a`, `abs(a)` and `~a` in Python, and `PyNumber_Negative`
+/-- `UNARY_FUNC`, Objects/abstract.c:1371-1389: `-a`, `+a`, `abs(a)` and `~a` in Python, and `PyNumber_Negative`
 and the others in `_operator_neg`, ... in C. -/
 def unaryOp {α : Type} (slot : Option (α → Py α)) (op : UnOp) (tn : String) (v : α) : Py α :=
   match slot with
@@ -413,7 +413,7 @@ structure IndexObj where
   /-- An `__index__` in the instance dict, run. A type attribute that is not a data descriptor loses to it. -/
   inst : Option (Py IndexRet)
   tn : String
-  /-- The `DeprecationWarning` of Objects/abstract.c:1432, when it raises. -/
+  /-- The `DeprecationWarning` of Objects/abstract.c:1442, when it raises. -/
   warn : Option PyExc
 
 /-- `index(a)`, Lib/operator.py:95-97: `a.__index__()`, whatever that returns. -/
@@ -428,8 +428,8 @@ def indexPy (o : IndexObj) : Py IndexRet :=
       | some r => r
       | none => .error (.named "AttributeError" s!"'{o.tn}' object has no attribute '__index__'")
 
-/-- `_operator_index`, Modules/_operator.c:698-702, through `PyNumber_Index`, Objects/abstract.c:1442-1450, and
-`_PyNumber_Index`, :1400-1437. -/
+/-- `_operator_index`, Modules/_operator.c:698-702, through `PyNumber_Index`, Objects/abstract.c:1452-1460, and
+`_PyNumber_Index`, :1410-1447. -/
 def indexC (o : IndexObj) : Py IndexRet :=
   match o.isInt with
   | some n => .ok (.exact n)
@@ -464,7 +464,7 @@ structure GetArgs (α : Type) where
   tn : String
   keyTn : String
 
-/-- `PySequence_GetItem`, Objects/abstract.c:1832-1858, with `sq_item` present. -/
+/-- `PySequence_GetItem`, Objects/abstract.c:1841-1867, with `sq_item` present. -/
 def sequenceGetItem {α : Type} (A : GetArgs α) (f : Int → Py α) (i : Int) : Py α :=
   if i < 0 then
     match A.sqLen with
@@ -475,7 +475,7 @@ def sequenceGetItem {α : Type} (A : GetArgs α) (f : Int → Py α) (i : Int) :
       | .ok n => f (i + n)
   else f i
 
-/-- `PyObject_GetItem`, Objects/abstract.c:153-199: `a[b]`, and `_operator_getitem_impl`. -/
+/-- `PyObject_GetItem`, Objects/abstract.c:155-201: `a[b]`, and `_operator_getitem_impl`. -/
 def getItem {α : Type} (A : GetArgs α) : Py α :=
   match A.mp with
   | some r => r
@@ -515,7 +515,7 @@ structure SetArgs (σ : Type) where
 
 def objMsg (tn what : String) : PyExc := .typeError s!"'{tn}' object {what}"
 
-/-- `PySequence_SetItem`, :1884-1908, and `PySequence_DelItem`, :1917-1941, with the message of the last line. -/
+/-- `PySequence_SetItem`, :1893-1917, and `PySequence_DelItem`, :1926-1950, with the message of the last line. -/
 def sequenceSet {σ : Type} (A : SetArgs σ) (i : Int) (notSupported : String) : Py σ :=
   match A.sqAss with
   | some f =>
@@ -532,7 +532,7 @@ def sequenceSet {σ : Type} (A : SetArgs σ) (i : Int) (notSupported : String) :
     | some _ => .error (.typeError s!"{A.tn} is not a sequence")
     | none => .error (objMsg A.tn notSupported)
 
-/-- The shared body of `PyObject_SetItem`, Objects/abstract.c:226-257, and `PyObject_DelItem`, :260-291. -/
+/-- The shared body of `PyObject_SetItem`, Objects/abstract.c:236-267, and `PyObject_DelItem`, :270-301. -/
 def assignItem {σ : Type} (A : SetArgs σ) (bottom seqBottom : String) : Py σ :=
   match A.mp with
   | some r => r
@@ -557,7 +557,7 @@ def assignItem {σ : Type} (A : SetArgs σ) (bottom seqBottom : String) : Py σ 
 def setItem {σ : Type} (A : SetArgs σ) : Py σ :=
   assignItem A "does not support item assignment" "does not support item assignment"
 
-/-- `del a[b]`, and `_operator_delitem_impl`. The sequence path has another wording, Objects/abstract.c:1939. -/
+/-- `del a[b]`, and `_operator_delitem_impl`. The sequence path has another wording, Objects/abstract.c:1948. -/
 def delItem {σ : Type} (A : SetArgs σ) : Py σ :=
   assignItem A "does not support item deletion" "doesn't support item deletion"
 
@@ -568,11 +568,11 @@ inductive IterArg (α : Type) where
   | fail (e : PyExc)
   | items (xs : List α) (err : Option PyExc)
 
-/-- `i is b or i == b` in Python, and `PyObject_RichCompareBool(item, obj, Py_EQ)`, Objects/object.c:1119-1148,
+/-- `i is b or i == b` in Python, and `PyObject_RichCompareBool(item, obj, Py_EQ)`, Objects/object.c:1122-1154,
 in C, with the truth test of the result. The `==` may raise, and so may `__bool__` of what it returns. -/
 abbrev Same (α : Type) := α → α → Py Bool
 
-/-- The `TypeError` handling of `_PySequence_IterSearch`, Objects/abstract.c:2141-2153. -/
+/-- The `TypeError` handling of `_PySequence_IterSearch`, Objects/abstract.c:2150-2162. -/
 def iterError (tn : String) (contains : Bool) (e : PyExc) : PyExc :=
   match e with
   | .typeError _ =>
@@ -581,7 +581,7 @@ def iterError (tn : String) (contains : Bool) (e : PyExc) : PyExc :=
   | e => e
 
 /-- The loop of `countOf`, Lib/operator.py:168-171, and of `_PySequence_IterSearch` with
-`PY_ITERSEARCH_COUNT`, Objects/abstract.c:2157-2206. The next item is read after the comparison. -/
+`PY_ITERSEARCH_COUNT`, Objects/abstract.c:2166-2215. The next item is read after the comparison. -/
 def countLoop {α : Type} (same : Same α) (b : α) : Nat → List α → Option PyExc → Py Nat
   | n, [], none => .ok n
   | _, [], some e => .error e
@@ -630,7 +630,7 @@ def containsLoop {α : Type} (same : Same α) (b : α) : List α → Option PyEx
     | .ok true => .ok true
     | .ok false => containsLoop same b xs e
 
-/-- `PySequence_Contains`, Objects/abstract.c:2231-2241: `b in a`, Lib/operator.py:161-163, and
+/-- `PySequence_Contains`, Objects/abstract.c:2240-2250: `b in a`, Lib/operator.py:161-163, and
 `_operator_contains_impl`, Modules/_operator.c:491. The container is the first argument of `contains`. -/
 def containsOp {α : Type} (slot : Option (Py Bool)) (same : Same α) (tn : String) (b : α) (a : IterArg α) :
     Py Bool :=
@@ -674,7 +674,7 @@ structure ConcatArgs (α : Type) where
 
 def noConcat (tn : String) : PyExc := .typeError s!"'{tn}' object can't be concatenated"
 
-/-- `PyNumber_Add`, Objects/abstract.c:1128: `nb_add`, then `sq_concat`. -/
+/-- `PyNumber_Add`, Objects/abstract.c:1138: `nb_add`, then `sq_concat`. -/
 def plus {α : Type} (A : ConcatArgs α) (lt rt : String) (a b : α) : Py α := do
   match ← A.nbAdd a b with
   | .val x => pure x
@@ -683,7 +683,7 @@ def plus {α : Type} (A : ConcatArgs α) (lt rt : String) (a b : α) : Py α := 
     | some f => f a b
     | none => throw (binopError "+" lt rt)
 
-/-- `PyNumber_InPlaceAdd`, Objects/abstract.c:1297: `nb_inplace_add` and `nb_add`, then the sequence
+/-- `PyNumber_InPlaceAdd`, Objects/abstract.c:1307: `nb_inplace_add` and `nb_add`, then the sequence
 slots. -/
 def plusEq {α : Type} (A : ConcatArgs α) (lt rt : String) (a b : α) : Py α := do
   match ← A.nbIAdd a b with
@@ -703,7 +703,7 @@ def iconcatPy {α : Type} (A : ConcatArgs α) (lt rt : String) (a b : α) : Py �
   if !A.hasGetitem then .error (noConcat lt) else plusEq A lt rt a b
 
 /-- `_operator_concat_impl`, Modules/_operator.c:461-465, through `PySequence_Concat`,
-Objects/abstract.c:1712-1735. -/
+Objects/abstract.c:1721-1744. -/
 def concatC {α : Type} (A : ConcatArgs α) (lt : String) (a b : α) : Py α :=
   match A.sqConcat with
   | some f => f a b
@@ -715,7 +715,7 @@ def concatC {α : Type} (A : ConcatArgs α) (lt : String) (a b : α) : Py α :=
     else .error (noConcat lt)
 
 /-- `_operator_iconcat_impl`, Modules/_operator.c:474-478, through `PySequence_InPlaceConcat`,
-Objects/abstract.c:1769-1795. -/
+Objects/abstract.c:1778-1804. -/
 def iconcatC {α : Type} (A : ConcatArgs α) (lt : String) (a b : α) : Py α :=
   match A.sqInplace, A.sqConcat with
   | some f, _ => f a b

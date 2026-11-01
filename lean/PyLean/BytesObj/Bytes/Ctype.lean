@@ -93,7 +93,7 @@ def bytesIsTitle (s : Seq) : Bool :=
   else if s.length = 0 then false
   else titleLoop false false s
 
-/-- `_Py_bytes_isascii`, bytes_methods.c:730-740: `stringlib_find_max_char`
+/-- `_Py_bytes_isascii`, bytes_methods.c:728-738: `stringlib_find_max_char`
 returns 127 or a larger value, so only the comparison with 127 matters. -/
 def bytesIsAscii (s : Seq) : Bool :=
   if maxCharValue s > 127 then false else true
@@ -129,14 +129,14 @@ def swapC (c : Nat) : Nat :=
 /-- `_Py_bytes_swapcase`, bytes_methods.c:328-345. -/
 def bytesSwapcase (s : Seq) : Seq := s.map swapC
 
-/-! ## maketrans, bytes_methods.c:356-379 -/
+/-! ## maketrans, bytes_methods.c:356-377 -/
 
-/-- The loop `p[frm[i]] = to[i]`, bytes_methods.c:374-376. -/
+/-- The loop `p[frm[i]] = to[i]`, bytes_methods.c:372-374. -/
 def maketransLoop (p : Seq) : Seq → Seq → Seq
   | f :: frm, t :: to => maketransLoop (p.set f t) frm to
   | _, _ => p
 
-/-- `_Py_bytes_maketrans`, bytes_methods.c:356-379. -/
+/-- `_Py_bytes_maketrans`, bytes_methods.c:356-377. -/
 def bytesMaketrans (frm to : Seq) : Py Seq :=
   if frm.length ≠ to.length then
     .error (.valueError "maketrans arguments must have same length")

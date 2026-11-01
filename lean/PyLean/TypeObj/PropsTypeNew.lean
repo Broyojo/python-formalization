@@ -117,7 +117,7 @@ theorem bestBaseRefusesFinal_proven : BestBaseRefusesFinal := by
   simp [bestBaseLoop, h1, h2]
 
 /-- **No `__slots__`, then a dict and a weakref slot**: without `__slots__` a class gets a
-`__dict__` and `__weakref__` unless its base has them, `Objects/typeobject.c:4164-4171`. -/
+`__dict__` and `__weakref__` unless its base has them, `Objects/typeobject.c:4448-4455`. -/
 def NoSlotsAddsDictWeak : Prop :=
   ∀ (ctx : TypeNewCtx) (dict : NameDict) (r : TypeNewCtx × Option (List Name)) (w w1 : World),
     ctx.slots = none → typeNewSlots ctx dict w = .ok r w1 →
@@ -131,7 +131,7 @@ theorem noSlotsAddsDictWeak_proven : NoSlotsAddsDictWeak := by
   simp
 
 /-- A string `__slots__` is one name, not an iterable of characters,
-`Objects/typeobject.c:4593`. -/
+`Objects/typeobject.c:4941`. -/
 def SlotsStringIsOneName : Prop :=
   ∀ (rt : Rt) (ctx : TypeNewCtx) (dict : NameDict) (slots : Val) (st : String) (w : World),
     NameDict.get? dict "__slots__" = some slots → strOf w slots = some st →
@@ -155,7 +155,7 @@ theorem slotDictTwiceRejected_proven : SlotDictTwiceRejected := by
 
 /-- **Plain functions named `__new__` become staticmethods, and
 `__init_subclass__`/`__class_getitem__` become classmethods**,
-`Objects/typeobject.c:4547-4560`. Anything else, or an absent name, leaves the dict as it
+`Objects/typeobject.c:4883-4896`. Anything else, or an absent name, leaves the dict as it
 was. -/
 def WrapInDictOnlyFunctions : Prop :=
   ∀ (dict : NameDict) (attr : Name) (cls : Addr) (mk : Val → Payload) (v : Val) (w : World),
@@ -176,7 +176,7 @@ theorem wrapInDictOnlyFunctions_proven : WrapInDictOnlyFunctions := by
       | func f => exact (h2 f hp).elim
       | _ => rfl
 
-/-- `tp_new` is inherited from `tp_base` for a heap type, `Objects/typeobject.c:8857-8862`. -/
+/-- `tp_new` is inherited from `tp_base` for a heap type, `Objects/typeobject.c:9505-9510`. -/
 def TypeReadyNewInherited : Prop :=
   ∀ (t b : Addr) (w w1 : World),
     (tdata w t).base = some b → (slotOf w t .tp_new).isSome = true →
@@ -222,7 +222,7 @@ theorem updateSlotCleared_proven : UpdateSlotCleared := by
   rfl
 
 /-- `__hash__ = None` in a class, however deep, makes the slot
-`PyObject_HashNotImplemented`, `Objects/typeobject.c:11392`. -/
+`PyObject_HashNotImplemented`, `Objects/typeobject.c:12113`. -/
 def UpdateHashNone : Prop :=
   ∀ (w : World) (t : Addr),
     findInMro w t "__hash__" = some .none →
@@ -238,7 +238,7 @@ theorem updateHashNone_proven : UpdateHashNone := by
   simp [updateOneSlotValue, hashSlotdefs, updateOneSlotStep, h, payloadOf]
 
 /-- `is_subtype_with_mro` is membership in the MRO for a finished class,
-`Objects/typeobject.c:2807`. -/
+`Objects/typeobject.c:2947`. -/
 def SubtypeIsMroMember : Prop :=
   ∀ (w : World) (a b : Addr) (m : List Addr),
     (tdata w a).mro = some m → isSubtype w a b = m.contains b
@@ -248,7 +248,7 @@ theorem subtypeIsMroMember_proven : SubtypeIsMroMember := by
   simp [isSubtype, h]
 
 /-- Assigning `__class__` needs a class: the first two checks of `object_set_class`,
-`Objects/typeobject.c:7228-7238`. -/
+`Objects/typeobject.c:7859-7869`. -/
 def SetClassChecks : Prop :=
   ∀ (self v : Val) (w : World),
     objectSetClass self none w = (typeErr "can't delete __class__ attribute" : M Unit) w ∧
@@ -264,7 +264,7 @@ theorem setClassChecks_proven : SetClassChecks := by
     simp [objectSetClass, h]
 
 /-- `__class__` assignment to or from an immutable type is refused: `(1).__class__ = C` and
-`C().__class__ = int`, `Objects/typeobject.c:7178-7186`. -/
+`C().__class__ = int`, `Objects/typeobject.c:7809-7817`. -/
 def SetClassImmutable : Prop :=
   ∀ (self v : Val) (t : Addr) (w : World),
     asType w v = some t →
@@ -279,7 +279,7 @@ theorem setClassImmutable_proven : SetClassImmutable := by
   simp [objectSetClass, h1, h3, typeErr, raiseC]
 
 /-- `object.__format__` refuses a non-empty spec and is `str()` otherwise,
-`Objects/typeobject.c:7880-7886`. -/
+`Objects/typeobject.c:8506-8512`. -/
 def ObjectFormatSpec : Prop :=
   ∀ (rt : Rt) (self : Val) (spec : String) (w : World),
     (spec.length > 0 → objectFormat rt self spec w =
@@ -294,7 +294,7 @@ theorem objectFormatSpec_proven : ObjectFormatSpec := by
     subst h
     simp [objectFormat, hs]
 
-/-- `type.__init__` accepts one or three arguments, `Objects/typeobject.c:3895`. -/
+/-- `type.__init__` accepts one or three arguments, `Objects/typeobject.c:4187`. -/
 def TypeInitArity : Prop :=
   ∀ (args : List Val) (w : World), args.length ≠ 1 → args.length ≠ 3 →
     typeInit args [] w = (typeErr "type.__init__() takes 1 or 3 arguments" : M Unit) w
@@ -313,7 +313,7 @@ theorem typeCallTwoArgs_proven : TypeCallTwoArgs := by
   simp [typeCall, typeErr, raiseC]
 
 /-- `tp_new_wrapper` refuses a first argument that is not a type or not a subtype,
-`Objects/typeobject.c:9840-9857`. -/
+`Objects/typeobject.c:10532-10549`. -/
 def NewWrapperChecks : Prop :=
   ∀ (rt : Rt) (ty : Addr) (x : Val) (rest : List Val) (kw : Kw) (w : World),
     (asType w x = none → tpNewWrapper rt ty (x :: rest) kw w =
@@ -351,7 +351,7 @@ theorem descriptorFromClass_proven : DescriptorFromClass := by
   simp [methodGet, wrapperdescrGet, memberGet, getsetDescrGet]
 
 /-- An unset `__slots__` member raises `AttributeError`; deleting it twice as well,
-`Python/structmember.c:16`, `:324`. -/
+`Python/structmember.c:17`, `:334`. -/
 def SlotMemberUnset : Prop :=
   ∀ (rt : Rt) (d o : Val) (owner : Addr) (name : Name) (w : World),
     isSubtype w (typeOf w o) owner = true → (tdata w owner).heap = true →

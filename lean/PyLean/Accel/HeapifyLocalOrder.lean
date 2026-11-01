@@ -2,7 +2,7 @@ import PyLean.Accel.HeapifyLocalCanon
 
 /-!
 The Python heapify order and the C cache-friendly order
-(`Modules/_heapqmodule.c:331-362`) both sift every internal node exactly
+(`Modules/_heapqmodule.c:332-363`) both sift every internal node exactly
 once, each after its internal children.
 
 In 1-based numbering `u = i + 1`, the climb started at loop index `i` sifts

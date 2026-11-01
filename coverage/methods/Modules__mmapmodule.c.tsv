@@ -1,61 +1,62 @@
 file	line	endline	name	signature	status	entry	note
-Modules/mmapmodule.c	47	52	my_getpagesize	my_getpagesize(void)	todo		
-Modules/mmapmodule.c	55	61	my_getallocationgranularity	my_getallocationgranularity (void)	todo		
-Modules/mmapmodule.c	71	74	my_getpagesize	my_getpagesize(void)	todo		
-Modules/mmapmodule.c	147	156	_As_Py_ssize_t	_As_Py_ssize_t(PyObject *arg) {	todo		
-Modules/mmapmodule.c	160	164	mmap_object_traverse	mmap_object_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/mmapmodule.c	167	200	mmap_object_dealloc	mmap_object_dealloc(PyObject *op)	todo		
-Modules/mmapmodule.c	209	259	mmap_mmap_close_impl	mmap_mmap_close_impl(mmap_object *self) /*[clinic end generated code: output=a1ae0c727546f78d input=25020035f047eae1]*/	todo		
-Modules/mmapmodule.c	299	308	filter_page_exception	filter_page_exception(EXCEPTION_POINTERS *ptrs, EXCEPTION_RECORD *record)	todo		
-Modules/mmapmodule.c	311	327	filter_page_exception_method	filter_page_exception_method(mmap_object *self, EXCEPTION_POINTERS *ptrs, EXCEPTION_RECORD *record)	todo		
-Modules/mmapmodule.c	388	394	safe_memcpy	safe_memcpy(void *dest, const void *src, size_t count)	todo		
-Modules/mmapmodule.c	397	403	safe_byte_copy	safe_byte_copy(char *dest, const char *src)	todo		
-Modules/mmapmodule.c	406	412	safe_memchr	safe_memchr(char **out, const void *ptr, int ch, size_t count)	todo		
-Modules/mmapmodule.c	415	421	safe_memmove	safe_memmove(void *dest, const void *src, size_t count)	todo		
-Modules/mmapmodule.c	424	435	safe_copy_from_slice	safe_copy_from_slice(char *dest, const char *src, Py_ssize_t start, Py_ssize_t step, Py_ssize_t slicelen)	todo		
-Modules/mmapmodule.c	438	449	safe_copy_to_slice	safe_copy_to_slice(char *dest, const char *src, Py_ssize_t start, Py_ssize_t step, Py_ssize_t slicelen)	todo		
-Modules/mmapmodule.c	453	461	_safe_PyBytes_Find	_safe_PyBytes_Find(Py_ssize_t *out, mmap_object *self, const char *haystack, Py_ssize_t len_haystack, const char *needle, Py_ssize_t len_needle, Py_ssize_t offset)	todo		
-Modules/mmapmodule.c	464	474	_safe_PyBytes_ReverseFind	_safe_PyBytes_ReverseFind(Py_ssize_t *out, mmap_object *self, const char *haystack, Py_ssize_t len_haystack, const char *needle, Py_ssize_t len_needle, Py_ssize_t offset)	todo		
-Modules/mmapmodule.c	477	497	_safe_PyBytes_FromStringAndSize	_safe_PyBytes_FromStringAndSize(char *start, size_t num_bytes) {	todo		
-Modules/mmapmodule.c	506	520	mmap_mmap_read_byte_impl	mmap_mmap_read_byte_impl(mmap_object *self) /*[clinic end generated code: output=d931da1319f3869b input=5b8c6a904bdddda9]*/	todo		
-Modules/mmapmodule.c	529	556	mmap_mmap_readline_impl	mmap_mmap_readline_impl(mmap_object *self) /*[clinic end generated code: output=b9d2bf9999283311 input=2c4efd1d06e1cdd1]*/	todo		
-Modules/mmapmodule.c	568	586	mmap_mmap_read_impl	mmap_mmap_read_impl(mmap_object *self, Py_ssize_t num_bytes) /*[clinic end generated code: output=3b4d4f3704ed0969 input=8f97f361d435e357]*/	todo		
-Modules/mmapmodule.c	589	655	mmap_gfind_lock_held	mmap_gfind_lock_held(mmap_object *self, Py_buffer *view, PyObject *start_obj, PyObject *end_obj, int reverse)	todo		
-Modules/mmapmodule.c	669	674	mmap_mmap_find_impl	mmap_mmap_find_impl(mmap_object *self, Py_buffer *view, PyObject *start, PyObject *end) /*[clinic end generated code: output=ef8878a322f00192 input=0135504494b52c2b]*/	todo		
-Modules/mmapmodule.c	683	688	mmap_mmap_rfind_impl	mmap_mmap_rfind_impl(mmap_object *self, Py_buffer *view, PyObject *start, PyObject *end) /*[clinic end generated code: output=73b918940d67c2b8 input=8aecdd1f70c06c62]*/	todo		
-Modules/mmapmodule.c	691	697	is_writable	is_writable(mmap_object *self)	todo		
-Modules/mmapmodule.c	700	720	is_resizeable	is_resizeable(mmap_object *self)	todo		
-Modules/mmapmodule.c	733	756	mmap_mmap_write_impl	mmap_mmap_write_impl(mmap_object *self, Py_buffer *data) /*[clinic end generated code: output=9e97063efb6fb27b input=3f16fa79aa89d6f7]*/	todo		
-Modules/mmapmodule.c	768	786	mmap_mmap_write_byte_impl	mmap_mmap_write_byte_impl(mmap_object *self, unsigned char value) /*[clinic end generated code: output=aa11adada9b17510 input=32740bfa174f0991]*/	todo		
-Modules/mmapmodule.c	795	833	mmap_mmap_size_impl	mmap_mmap_size_impl(mmap_object *self) /*[clinic end generated code: output=c177e65e83a648ff input=f69c072efd2e1595]*/	todo		
-Modules/mmapmodule.c	854	1007	mmap_mmap_resize_impl	mmap_mmap_resize_impl(mmap_object *self, Py_ssize_t new_size) /*[clinic end generated code: output=6f262537ce9c2dcc input=b6b5dee52a41b79f]*/	todo		
-Modules/mmapmodule.c	1016	1021	mmap_mmap_tell_impl	mmap_mmap_tell_impl(mmap_object *self) /*[clinic end generated code: output=6034958630e1b1d1 input=fd163acacf45c3a5]*/	todo		
-Modules/mmapmodule.c	1034	1073	mmap_mmap_flush_impl	mmap_mmap_flush_impl(mmap_object *self, Py_ssize_t offset, PyObject *size_obj) /*[clinic end generated code: output=41a10c349ed1608a input=7e6bb8f9462f53e6]*/	todo		
-Modules/mmapmodule.c	1086	1117	mmap_mmap_seek_impl	mmap_mmap_seek_impl(mmap_object *self, Py_ssize_t dist, int how) /*[clinic end generated code: output=00310494e8b8c592 input=e2fda5d081c3db22]*/	todo		
-Modules/mmapmodule.c	1125	1129	mmap_mmap_seekable_impl	mmap_mmap_seekable_impl(mmap_object *self) /*[clinic end generated code: output=6311dc3ea300fa38 input=5132505f6e259001]*/	todo		
-Modules/mmapmodule.c	1143	1168	mmap_mmap_move_impl	mmap_mmap_move_impl(mmap_object *self, Py_ssize_t dest, Py_ssize_t src, Py_ssize_t cnt) /*[clinic end generated code: output=391f549a44181793 input=cf8cfe10d9f6b448]*/	todo		
-Modules/mmapmodule.c	1171	1183	mmap_closed_get	mmap_closed_get(PyObject *op, void *Py_UNUSED(closure))	todo		
-Modules/mmapmodule.c	1192	1198	mmap_mmap___enter___impl	mmap_mmap___enter___impl(mmap_object *self) /*[clinic end generated code: output=92cfc59f4c4e2d26 input=a446541fbfe0b890]*/	todo		
-Modules/mmapmodule.c	1212	1217	mmap_mmap___exit___impl	mmap_mmap___exit___impl(mmap_object *self, PyObject *exc_type, PyObject *exc_value, PyObject *traceback) /*[clinic end generated code: output=bec7e3e319c1f07e input=5f28e91cf752bc64]*/	todo		
-Modules/mmapmodule.c	1220	1262	mmap__repr__method_lock_held	mmap__repr__method_lock_held(PyObject *op)	todo		
-Modules/mmapmodule.c	1265	1272	mmap__repr__method	mmap__repr__method(PyObject *op)	todo		
-Modules/mmapmodule.c	1282	1290	mmap_mmap___sizeof___impl	mmap_mmap___sizeof___impl(mmap_object *self) /*[clinic end generated code: output=1aed30daff807d09 input=8a648868a089553c]*/	todo		
-Modules/mmapmodule.c	1306	1322	mmap_mmap__protect_impl	mmap_mmap__protect_impl(mmap_object *self, unsigned int flNewProtect, Py_ssize_t start, Py_ssize_t length) /*[clinic end generated code: output=a87271a34d1ad6cf input=9170498c5e1482da]*/	todo		
-Modules/mmapmodule.c	1338	1378	mmap_mmap_madvise_impl	mmap_mmap_madvise_impl(mmap_object *self, int option, Py_ssize_t start, PyObject *length_obj) /*[clinic end generated code: output=816be656f08c0e3c input=2d37f7a4c87f1053]*/	todo		
-Modules/mmapmodule.c	1419	1428	mmap_buffer_getbuf_lock_held	mmap_buffer_getbuf_lock_held(PyObject *op, Py_buffer *view, int flags)	todo		
-Modules/mmapmodule.c	1431	1438	mmap_buffer_getbuf	mmap_buffer_getbuf(PyObject *op, Py_buffer *view, int flags)	todo		
-Modules/mmapmodule.c	1441	1447	mmap_buffer_releasebuf	mmap_buffer_releasebuf(PyObject *op, Py_buffer *Py_UNUSED(view))	todo		
-Modules/mmapmodule.c	1450	1455	mmap_length_lock_held	mmap_length_lock_held(PyObject *op)	todo		
-Modules/mmapmodule.c	1458	1465	mmap_length	mmap_length(PyObject *op)	todo		
-Modules/mmapmodule.c	1468	1482	mmap_item_lock_held	mmap_item_lock_held(PyObject *op, Py_ssize_t i)	todo		
-Modules/mmapmodule.c	1485	1491	mmap_item	mmap_item(PyObject *op, Py_ssize_t i) {	todo		
-Modules/mmapmodule.c	1494	1554	mmap_subscript_lock_held	mmap_subscript_lock_held(PyObject *op, PyObject *item)	todo		
-Modules/mmapmodule.c	1557	1564	mmap_subscript	mmap_subscript(PyObject *op, PyObject *item)	todo		
-Modules/mmapmodule.c	1567	1595	mmap_ass_item_lock_held	mmap_ass_item_lock_held(PyObject *op, Py_ssize_t i, PyObject *v)	todo		
-Modules/mmapmodule.c	1598	1605	mmap_ass_item	mmap_ass_item(PyObject *op, Py_ssize_t i, PyObject *v)	todo		
-Modules/mmapmodule.c	1608	1702	mmap_ass_subscript_lock_held	mmap_ass_subscript_lock_held(PyObject *op, PyObject *item, PyObject *value)	todo		
-Modules/mmapmodule.c	1705	1712	mmap_ass_subscript	mmap_ass_subscript(PyObject *op, PyObject *item, PyObject *value)	todo		
-Modules/mmapmodule.c	1785	1956	new_mmap_object	new_mmap_object(PyTypeObject *type, PyObject *args, PyObject *kwdict)	todo		
-Modules/mmapmodule.c	1967	2164	new_mmap_object	new_mmap_object(PyTypeObject *type, PyObject *args, PyObject *kwdict)	todo		
-Modules/mmapmodule.c	2168	2362	mmap_exec	mmap_exec(PyObject *module)	todo		
-Modules/mmapmodule.c	2379	2382	PyInit_mmap	PyInit_mmap(void)	todo		
+Modules/mmapmodule.c	48	53	my_getpagesize	my_getpagesize(void)	todo		
+Modules/mmapmodule.c	56	62	my_getallocationgranularity	my_getallocationgranularity (void)	todo		
+Modules/mmapmodule.c	72	75	my_getpagesize	my_getpagesize(void)	todo		
+Modules/mmapmodule.c	148	157	_As_Py_ssize_t	_As_Py_ssize_t(PyObject *arg) {	todo		
+Modules/mmapmodule.c	160	193	mmap_object_dealloc	mmap_object_dealloc(PyObject *op)	todo		
+Modules/mmapmodule.c	202	252	mmap_mmap_close_impl	mmap_mmap_close_impl(mmap_object *self) /*[clinic end generated code: output=a1ae0c727546f78d input=25020035f047eae1]*/	todo		
+Modules/mmapmodule.c	292	301	filter_page_exception	filter_page_exception(EXCEPTION_POINTERS *ptrs, EXCEPTION_RECORD *record)	todo		
+Modules/mmapmodule.c	304	320	filter_page_exception_method	filter_page_exception_method(mmap_object *self, EXCEPTION_POINTERS *ptrs, EXCEPTION_RECORD *record)	todo		
+Modules/mmapmodule.c	323	338	_PyErr_SetFromNTSTATUS	_PyErr_SetFromNTSTATUS(ULONG status)	todo		changed-in-3.15: new function
+Modules/mmapmodule.c	395	401	safe_memcpy	safe_memcpy(void *dest, const void *src, size_t count)	todo		
+Modules/mmapmodule.c	404	410	safe_byte_copy	safe_byte_copy(char *dest, const char *src)	todo		
+Modules/mmapmodule.c	413	419	safe_memchr	safe_memchr(char **out, const void *ptr, int ch, size_t count)	todo		
+Modules/mmapmodule.c	422	428	safe_memmove	safe_memmove(void *dest, const void *src, size_t count)	todo		
+Modules/mmapmodule.c	431	442	safe_copy_from_slice	safe_copy_from_slice(char *dest, const char *src, Py_ssize_t start, Py_ssize_t step, Py_ssize_t slicelen)	todo		
+Modules/mmapmodule.c	445	456	safe_copy_to_slice	safe_copy_to_slice(char *dest, const char *src, Py_ssize_t start, Py_ssize_t step, Py_ssize_t slicelen)	todo		
+Modules/mmapmodule.c	460	468	_safe_PyBytes_Find	_safe_PyBytes_Find(Py_ssize_t *out, mmap_object *self, const char *haystack, Py_ssize_t len_haystack, const char *needle, Py_ssize_t len_needle, Py_ssize_t offset)	todo		
+Modules/mmapmodule.c	471	481	_safe_PyBytes_ReverseFind	_safe_PyBytes_ReverseFind(Py_ssize_t *out, mmap_object *self, const char *haystack, Py_ssize_t len_haystack, const char *needle, Py_ssize_t len_needle, Py_ssize_t offset)	todo		
+Modules/mmapmodule.c	484	506	_safe_PyBytes_FromStringAndSize	_safe_PyBytes_FromStringAndSize(char *start, size_t num_bytes)	todo		changed-in-3.15:
+Modules/mmapmodule.c	515	529	mmap_mmap_read_byte_impl	mmap_mmap_read_byte_impl(mmap_object *self) /*[clinic end generated code: output=d931da1319f3869b input=5b8c6a904bdddda9]*/	todo		
+Modules/mmapmodule.c	538	565	mmap_mmap_readline_impl	mmap_mmap_readline_impl(mmap_object *self) /*[clinic end generated code: output=b9d2bf9999283311 input=2c4efd1d06e1cdd1]*/	todo		
+Modules/mmapmodule.c	577	595	mmap_mmap_read_impl	mmap_mmap_read_impl(mmap_object *self, Py_ssize_t num_bytes) /*[clinic end generated code: output=3b4d4f3704ed0969 input=8f97f361d435e357]*/	todo		
+Modules/mmapmodule.c	598	662	mmap_gfind_lock_held	mmap_gfind_lock_held(mmap_object *self, Py_buffer *view, PyObject *start_obj, PyObject *end_obj, int reverse)	todo		changed-in-3.15:
+Modules/mmapmodule.c	676	681	mmap_mmap_find_impl	mmap_mmap_find_impl(mmap_object *self, Py_buffer *view, PyObject *start, PyObject *end) /*[clinic end generated code: output=ef8878a322f00192 input=0135504494b52c2b]*/	todo		
+Modules/mmapmodule.c	690	695	mmap_mmap_rfind_impl	mmap_mmap_rfind_impl(mmap_object *self, Py_buffer *view, PyObject *start, PyObject *end) /*[clinic end generated code: output=73b918940d67c2b8 input=8aecdd1f70c06c62]*/	todo		
+Modules/mmapmodule.c	698	704	is_writable	is_writable(mmap_object *self)	todo		
+Modules/mmapmodule.c	708	726	is_resizeable	is_resizeable(mmap_object *self)	todo		changed-in-3.15:
+Modules/mmapmodule.c	740	763	mmap_mmap_write_impl	mmap_mmap_write_impl(mmap_object *self, Py_buffer *data) /*[clinic end generated code: output=9e97063efb6fb27b input=3f16fa79aa89d6f7]*/	todo		
+Modules/mmapmodule.c	775	793	mmap_mmap_write_byte_impl	mmap_mmap_write_byte_impl(mmap_object *self, unsigned char value) /*[clinic end generated code: output=aa11adada9b17510 input=32740bfa174f0991]*/	todo		
+Modules/mmapmodule.c	802	846	mmap_mmap_size_impl	mmap_mmap_size_impl(mmap_object *self) /*[clinic end generated code: output=c177e65e83a648ff input=f69c072efd2e1595]*/	todo		changed-in-3.15:
+Modules/mmapmodule.c	868	1014	mmap_mmap_resize_impl	mmap_mmap_resize_impl(mmap_object *self, Py_ssize_t new_size) /*[clinic end generated code: output=6f262537ce9c2dcc input=b6b5dee52a41b79f]*/	todo		changed-in-3.15:
+Modules/mmapmodule.c	1024	1029	mmap_mmap_tell_impl	mmap_mmap_tell_impl(mmap_object *self) /*[clinic end generated code: output=6034958630e1b1d1 input=fd163acacf45c3a5]*/	todo		
+Modules/mmapmodule.c	1044	1079	mmap_mmap_flush_impl	mmap_mmap_flush_impl(mmap_object *self, Py_ssize_t offset, Py_ssize_t size, int flags) /*[clinic end generated code: output=4225f4174dc75a53 input=42ba5fb716b6c294]*/	todo		changed-in-3.15:
+Modules/mmapmodule.c	1092	1123	mmap_mmap_seek_impl	mmap_mmap_seek_impl(mmap_object *self, Py_ssize_t dist, int how) /*[clinic end generated code: output=00310494e8b8c592 input=e2fda5d081c3db22]*/	todo		
+Modules/mmapmodule.c	1135	1165	mmap_mmap_set_name_impl	mmap_mmap_set_name_impl(mmap_object *self, const char *name) /*[clinic end generated code: output=1edaf4fd51277760 input=7c0e2a17ca6d1adc]*/	todo		changed-in-3.15: new function
+Modules/mmapmodule.c	1173	1177	mmap_mmap_seekable_impl	mmap_mmap_seekable_impl(mmap_object *self) /*[clinic end generated code: output=6311dc3ea300fa38 input=5132505f6e259001]*/	todo		
+Modules/mmapmodule.c	1191	1216	mmap_mmap_move_impl	mmap_mmap_move_impl(mmap_object *self, Py_ssize_t dest, Py_ssize_t src, Py_ssize_t cnt) /*[clinic end generated code: output=391f549a44181793 input=cf8cfe10d9f6b448]*/	todo		
+Modules/mmapmodule.c	1219	1231	mmap_closed_get	mmap_closed_get(PyObject *op, void *Py_UNUSED(closure))	todo		
+Modules/mmapmodule.c	1240	1246	mmap_mmap___enter___impl	mmap_mmap___enter___impl(mmap_object *self) /*[clinic end generated code: output=92cfc59f4c4e2d26 input=a446541fbfe0b890]*/	todo		
+Modules/mmapmodule.c	1260	1265	mmap_mmap___exit___impl	mmap_mmap___exit___impl(mmap_object *self, PyObject *exc_type, PyObject *exc_value, PyObject *traceback) /*[clinic end generated code: output=bec7e3e319c1f07e input=5f28e91cf752bc64]*/	todo		
+Modules/mmapmodule.c	1268	1310	mmap__repr__method_lock_held	mmap__repr__method_lock_held(PyObject *op)	todo		
+Modules/mmapmodule.c	1313	1320	mmap__repr__method	mmap__repr__method(PyObject *op)	todo		
+Modules/mmapmodule.c	1330	1338	mmap_mmap___sizeof___impl	mmap_mmap___sizeof___impl(mmap_object *self) /*[clinic end generated code: output=1aed30daff807d09 input=8a648868a089553c]*/	todo		
+Modules/mmapmodule.c	1354	1370	mmap_mmap__protect_impl	mmap_mmap__protect_impl(mmap_object *self, unsigned int flNewProtect, Py_ssize_t start, Py_ssize_t length) /*[clinic end generated code: output=a87271a34d1ad6cf input=9170498c5e1482da]*/	todo		
+Modules/mmapmodule.c	1386	1426	mmap_mmap_madvise_impl	mmap_mmap_madvise_impl(mmap_object *self, int option, Py_ssize_t start, PyObject *length_obj) /*[clinic end generated code: output=816be656f08c0e3c input=2d37f7a4c87f1053]*/	todo		
+Modules/mmapmodule.c	1468	1477	mmap_buffer_getbuf_lock_held	mmap_buffer_getbuf_lock_held(PyObject *op, Py_buffer *view, int flags)	todo		
+Modules/mmapmodule.c	1480	1487	mmap_buffer_getbuf	mmap_buffer_getbuf(PyObject *op, Py_buffer *view, int flags)	todo		
+Modules/mmapmodule.c	1490	1496	mmap_buffer_releasebuf	mmap_buffer_releasebuf(PyObject *op, Py_buffer *Py_UNUSED(view))	todo		
+Modules/mmapmodule.c	1499	1504	mmap_length_lock_held	mmap_length_lock_held(PyObject *op)	todo		
+Modules/mmapmodule.c	1507	1514	mmap_length	mmap_length(PyObject *op)	todo		
+Modules/mmapmodule.c	1517	1531	mmap_item_lock_held	mmap_item_lock_held(PyObject *op, Py_ssize_t i)	todo		
+Modules/mmapmodule.c	1534	1540	mmap_item	mmap_item(PyObject *op, Py_ssize_t i) {	todo		
+Modules/mmapmodule.c	1543	1603	mmap_subscript_lock_held	mmap_subscript_lock_held(PyObject *op, PyObject *item)	todo		
+Modules/mmapmodule.c	1606	1613	mmap_subscript	mmap_subscript(PyObject *op, PyObject *item)	todo		
+Modules/mmapmodule.c	1616	1644	mmap_ass_item_lock_held	mmap_ass_item_lock_held(PyObject *op, Py_ssize_t i, PyObject *v)	todo		
+Modules/mmapmodule.c	1647	1654	mmap_ass_item	mmap_ass_item(PyObject *op, Py_ssize_t i, PyObject *v)	todo		
+Modules/mmapmodule.c	1657	1757	mmap_ass_subscript_lock_held	mmap_ass_subscript_lock_held(PyObject *op, PyObject *item, PyObject *value)	todo		changed-in-3.15:
+Modules/mmapmodule.c	1760	1767	mmap_ass_subscript	mmap_ass_subscript(PyObject *op, PyObject *item, PyObject *value)	todo		
+Modules/mmapmodule.c	1840	2016	new_mmap_object	new_mmap_object(PyTypeObject *type, PyObject *args, PyObject *kwdict)	todo		changed-in-3.15:
+Modules/mmapmodule.c	2027	2231	new_mmap_object	new_mmap_object(PyTypeObject *type, PyObject *args, PyObject *kwdict)	todo		changed-in-3.15:
+Modules/mmapmodule.c	2235	2439	mmap_exec	mmap_exec(PyObject *module)	todo		changed-in-3.15:
+Modules/mmapmodule.c	2457	2460	PyInit_mmap	PyInit_mmap(void)	todo		

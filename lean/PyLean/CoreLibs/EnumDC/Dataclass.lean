@@ -36,7 +36,7 @@ structure DField where
   kwOnly : Option Bool := none
   deriving Repr, DecidableEq, Inhabited
 
-/-- `field(...)`, Lib/dataclasses.py:409-412. -/
+/-- `field(...)`, Lib/dataclasses.py:402-405. -/
 def mkField (f : DField) : Py DField :=
   if f.dflt.isSome && f.factory.isSome then .error (.valueError "cannot specify both default and default_factory")
   else .ok f
@@ -50,7 +50,7 @@ inductive ClsAttr where
   | field (f : DField)
   deriving Repr, DecidableEq, Inhabited
 
-/-- `_get_field`, Lib/dataclasses.py:825-920. `k` is what `_is_classvar` and `_is_initvar` decide. -/
+/-- `_get_field`, Lib/dataclasses.py:820-913. `k` is what `_is_classvar` and `_is_initvar` decide. -/
 def getField (attr : ClsAttr) (name : String) (k : FKind) (defaultKw : Bool) : Py DField :=
   let f0 : DField := match attr with
     | .field f => f
@@ -79,7 +79,7 @@ structure Ann where
   attr : ClsAttr
   deriving Repr, DecidableEq, Inhabited
 
-/-- The loop over `cls_annotations`, Lib/dataclasses.py:1051-1066. -/
+/-- The loop over `cls_annotations`, Lib/dataclasses.py:1067-1083. -/
 def scanAnns : List Ann → Bool → Bool → Py (List DField)
   | [], _, _ => .ok []
   | a :: r, kw, seen =>
@@ -129,11 +129,11 @@ structure DClass where
   hasSlots : Bool := false
   deriving Repr, DecidableEq, Inhabited
 
-/-- The frozen state of the bases, Lib/dataclasses.py:1013-1030: `any_frozen_base` and `all_frozen_bases`. -/
+/-- The frozen state of the bases, Lib/dataclasses.py:1029-1046: `any_frozen_base` and `all_frozen_bases`. -/
 def anyFrozen (bases : List (List DField × Bool)) : Bool := bases.any (·.2)
 def allFrozen (bases : List (List DField × Bool)) : Bool := bases.all (·.2)
 
-/-- `_init_fn`'s check, Lib/dataclasses.py:680-688. -/
+/-- `_init_fn`'s check, Lib/dataclasses.py:673-681. -/
 def initCheck : Option String → List DField → Py Unit
   | _, [] => .ok ()
   | seen, f :: r =>
@@ -145,7 +145,7 @@ def initCheck : Option String → List DField → Py Unit
         | none => initCheck none r
     else initCheck seen r
 
-/-- `_fields_in_init_order`, Lib/dataclasses.py:415-421, on real and pseudo-fields. -/
+/-- `_fields_in_init_order`, Lib/dataclasses.py:408-414, on real and pseudo-fields. -/
 def initFields (fs : List DField) : List DField × List DField :=
   (fs.filter (fun f => f.init && f.kwOnly != some true), fs.filter (fun f => f.init && f.kwOnly == some true))
 
@@ -160,7 +160,7 @@ def methodNames (p : DParams) : List (String × Option String) :=
    else []) ++
   (if p.frozen then [("__setattr__", some ""), ("__delattr__", some "")] else [])
 
-/-- `add_fns_to_class`, Lib/dataclasses.py:510-533, by way of `_set_new_attribute`, :922-928: an existing attribute is kept,
+/-- `add_fns_to_class`, Lib/dataclasses.py:503-526, by way of `_set_new_attribute`, :915-921: an existing attribute is kept,
 and is an error for a method with an `overwrite_error`. The result is the methods that went in. -/
 def addFns (cls : String) (defined : List String) : List (String × Option String) → Py (List String)
   | [] => .ok []
@@ -188,18 +188,18 @@ structure DInfo where
 /-- `field_list`: real fields only. -/
 def DInfo.real (i : DInfo) : List DField := i.fields.filter (fun f => f.kind == .plain)
 
-/-- `has_explicit_hash`, Lib/dataclasses.py:1113-1115. -/
+/-- `has_explicit_hash`, Lib/dataclasses.py:1130-1132. -/
 def explicitHash (c : DClass) : Bool :=
   match c.hashAttr with
   | none => false
   | some true => true
   | some false => !c.defined.contains "__eq__"
 
-/-- The fields of the bases and of the class, Lib/dataclasses.py:1018-1069. -/
+/-- The fields of the bases and of the class, Lib/dataclasses.py:1034-1086. -/
 def allFields (c : DClass) (own : List DField) : List DField :=
   own.foldl fieldsPut (c.bases.foldl (fun m b => b.1.foldl fieldsPut m) [])
 
-/-- `_process_class`, Lib/dataclasses.py:986-1243, in the order of its failures. -/
+/-- `_process_class`, Lib/dataclasses.py:1002-1250, in the order of its failures. -/
 def processClass (c : DClass) : Py DInfo :=
   match scanAnns c.anns c.params.kwOnly false with
   | .error e => .error e
@@ -249,7 +249,7 @@ def bindArgs (std kw : List DField) (args : List Int) (kwargs : List (String × 
         .error (.typeError "~missing required argument")
       else .ok bound
 
-/-- The value `_field_init`, Lib/dataclasses.py:591-648, gives a field, or `none` where it assigns nothing. -/
+/-- The value `_field_init`, Lib/dataclasses.py:584-641, gives a field, or `none` where it assigns nothing. -/
 def fieldValue (slots : Bool) (bound : List (String × Int)) (f : DField) : Option Int :=
   match f.factory with
   | some n => if f.init then some ((bound.lookup f.name).getD n) else some n
@@ -267,7 +267,7 @@ structure DObj where
   post : Option (List Int) := none
   deriving Repr, DecidableEq, Inhabited
 
-/-- The body of `__init__`, Lib/dataclasses.py:696-707. An `InitVar` is not assigned. -/
+/-- The body of `__init__`, Lib/dataclasses.py:689-700. An `InitVar` is not assigned. -/
 def initBody (i : DInfo) (hasPost : Bool) (bound : List (String × Int)) : DObj :=
   let all := i.fields.filter (fun f => f.kind != .classVar)
   { attrs := (all.filter (fun f => f.kind == .plain)).filterMap (fun f =>
@@ -275,7 +275,7 @@ def initBody (i : DInfo) (hasPost : Bool) (bound : List (String × Int)) : DObj 
     post := if hasPost then some ((all.filter (fun f => f.kind == .initVar)).filterMap
       (fun f => fieldValue i.params.slots bound f)) else none }
 
-/-- `C(*args, **kwargs)`. The call of `__post_init__` at Lib/dataclasses.py:705-707 names every `InitVar`, and one with
+/-- `C(*args, **kwargs)`. The call of `__post_init__` at Lib/dataclasses.py:698-700 names every `InitVar`, and one with
 `init=False` is not a parameter of `__init__`, so it is a `NameError` when the instance is made. -/
 def callInit (i : DInfo) (hasPost : Bool) (args : List Int) (kwargs : List (String × Int)) : Py DObj :=
   match bindArgs i.std i.kw args kwargs with
@@ -296,7 +296,7 @@ def getAttrD (i : DInfo) (o : DObj) (name : String) : Py Int :=
       | some v => .ok v
       | none => .error (.named "AttributeError" ("~" ++ name))
 
-/-- The loop of `_replace`, Lib/dataclasses.py:1789-1806. -/
+/-- The loop of `_replace`, Lib/dataclasses.py:1802-1819. -/
 def replaceLoop (i : DInfo) (o : DObj) : List DField → List (String × Int) → Py (List (String × Int))
   | [], ch => .ok ch
   | f :: r, ch =>
@@ -314,7 +314,7 @@ def replaceLoop (i : DInfo) (o : DObj) : List DField → List (String × Int) �
         | .ok v => replaceLoop i o r (ch ++ [(f.name, v)])
     else replaceLoop i o r ch
 
-/-- `replace(obj, **changes)`, Lib/dataclasses.py:1763-1813. -/
+/-- `replace(obj, **changes)`, Lib/dataclasses.py:1776-1826. -/
 def dcReplace (i : DInfo) (hasPost : Bool) (o : DObj) (changes : List (String × Int)) : Py DObj :=
   match replaceLoop i o i.fields changes with
   | .error e => .error e
@@ -322,7 +322,7 @@ def dcReplace (i : DInfo) (hasPost : Bool) (o : DObj) (changes : List (String ×
 
 /-! ### `__eq__`, the ordering methods, `__hash__`, frozen -/
 
-/-- `a and b and c`, Lib/dataclasses.py:1171: the first falsy result, or the last, lazily. `terms` hold each `==` as a
+/-- `a and b and c`, Lib/dataclasses.py:1188: the first falsy result, or the last, lazily. `terms` hold each `==` as a
 result and its truth; `terms` being empty is the `True` of the source, here `whenEmpty`. -/
 def andChain {α : Type} (whenEmpty : α) : List (Py (α × Bool)) → Py α
   | [] => .ok whenEmpty
@@ -335,7 +335,7 @@ def andChain {α : Type} (whenEmpty : α) : List (Py (α × Bool)) → Py α
     | .error e => .error e
     | .ok (x, b) => if b then andChain whenEmpty r else .ok x
 
-/-- The generated `__eq__`, Lib/dataclasses.py:1172-1178. The outer `none` is `NotImplemented`. `yes` is `True`. -/
+/-- The generated `__eq__`, Lib/dataclasses.py:1189-1195. The outer `none` is `NotImplemented`. `yes` is `True`. -/
 def dcEq {α : Type} (yes : α) (isSame sameClass : Bool) (terms : List (Py (α × Bool))) : Option (Py α) :=
   if isSame then some (.ok yes)
   else if sameClass then some (andChain yes terms)
@@ -348,7 +348,7 @@ def tupLt : List Int → List Int → Bool
   | _ :: _, [] => false
   | a :: r, b :: s => if a == b then tupLt r s else decide (a < b)
 
-/-- The generated `__lt__`, `__le__`, `__gt__`, `__ge__`, Lib/dataclasses.py:1185-1199: the values of the fields with
+/-- The generated `__lt__`, `__le__`, `__gt__`, `__ge__`, Lib/dataclasses.py:1202-1216: the values of the fields with
 `compare`, as tuples. `none` is `NotImplemented`. -/
 def dcOrder (op : String) (sameClass : Bool) (a b : List Int) : Option Bool :=
   if !sameClass then none
@@ -359,13 +359,13 @@ def dcOrder (op : String) (sameClass : Bool) (a b : List Int) : Option Bool :=
       | "gt" => tupLt b a
       | _ => tupLt b a || a == b)
 
-/-- `_hash_add`, Lib/dataclasses.py:943-949: the fields of `hash(...)`. -/
+/-- `_hash_add`, Lib/dataclasses.py:936-942: the fields of `hash(...)`. -/
 def hashFields (fs : List DField) : List DField :=
   fs.filter (fun f => match f.hash with
     | none => f.compare
     | some h => h)
 
-/-- `_frozen_set_del_attr`, Lib/dataclasses.py:728-748: `exact` is `type(self) is __class__`. -/
+/-- `_frozen_set_del_attr`, Lib/dataclasses.py:721-741: `exact` is `type(self) is __class__`. -/
 def frozenSet (exact : Bool) (fields : List String) (name : String) : Py Unit :=
   if exact || fields.contains name then .error (.named "FrozenInstanceError" s!"cannot assign to field '{name}'")
   else .ok ()
@@ -399,7 +399,7 @@ def kwList : List String :=
    "elif", "else", "except", "finally", "for", "from", "global", "if", "import", "in", "is", "lambda", "nonlocal",
    "not", "or", "pass", "raise", "return", "try", "while", "with", "yield"]
 
-/-- The loop of `make_dataclass`, Lib/dataclasses.py:1674-1694. -/
+/-- The loop of `make_dataclass`, Lib/dataclasses.py:1687-1707. -/
 def makeNames : List MakeItem → List String → Py (List String)
   | [], seen => .ok seen
   | it :: r, seen =>
@@ -456,7 +456,7 @@ end
 def dvPut (m : List (DV × DV)) (k v : DV) : List (DV × DV) :=
   if m.any (fun p => p.1 == k) then m.map (fun p => if p.1 == k then (p.1, v) else p) else m ++ [(k, v)]
 
-/-- A `dict` from pairs: a key that is not hashable is a `TypeError`, as Lib/dataclasses.py:1528 meets it. -/
+/-- A `dict` from pairs: a key that is not hashable is a `TypeError`, as Lib/dataclasses.py:1540 meets it. -/
 def dvPairs (ks vs : List DV) : Py (List (DV × DV)) :=
   if ks.all DV.hashable then .ok ((ks.zip vs).foldl (fun m p => dvPut m p.1 p.2) [])
   else .error (.typeError "~unhashable type")
@@ -486,7 +486,7 @@ def wrapDict (mk : List DV → List DV → DV) (r : Py (List (DV × DV))) : Py D
   | .ok m => .ok (mk (m.map Prod.fst) (m.map Prod.snd))
 
 mutual
-  /-- `_asdict_inner`, Lib/dataclasses.py:1508-1573. -/
+  /-- `_asdict_inner`, Lib/dataclasses.py:1520-1585. -/
   def asdictV (fact : DictFact) : DV → Py DV
     | .atom n => .ok (.atom n)
     | .str s => .ok (.str s)
@@ -559,7 +559,7 @@ inductive TupFact where
   deriving Repr, DecidableEq, Inhabited
 
 mutual
-  /-- `_astuple_inner`, Lib/dataclasses.py:1600-1633. -/
+  /-- `_astuple_inner`, Lib/dataclasses.py:1613-1646. -/
   def astupleV (fact : TupFact) : DV → Py DV
     | .atom n => .ok (.atom n)
     | .str s => .ok (.str s)

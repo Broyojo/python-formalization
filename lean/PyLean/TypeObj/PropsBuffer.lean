@@ -53,7 +53,7 @@ theorem fillStridesContiguous_proven : FillStridesContiguous := by
     simp [isCContiguous, fillContiguousStrides, hrev, stridesMatch_fillF]
 
 /-- `PyBuffer_IsContiguous` is false for a view with suboffsets, and unknown orders are
-false, `Objects/abstract.c:521`, `:529`. -/
+false, `Objects/abstract.c:531`, `:539`. -/
 def IsContiguousGuards : Prop :=
   ∀ (v : BufView) (o : Char),
     (v.hasSuboffsets = true → isContiguous v o = false) ∧

@@ -3,7 +3,7 @@ import PyLean.PyIO.Text
 /-!
 `IncrementalNewlineDecoder` as a Python-visible class: the C implementation
 (`_PyIncrementalNewlineDecoder_decode`, `Modules/_io/textio.c:248-663`) and the
-Python twin (`Lib/_pyio.py:1948-2031`). The wrapped decoder is `None` (the input
+Python twin (`Lib/_pyio.py:1972-2055`). The wrapped decoder is `None` (the input
 is text) or the UTF-8 decoder with buffer `ubuf` (the input is bytes).
 -/
 
@@ -33,7 +33,7 @@ def NDec.inputStep (d : NDec) (input : List Nat) (final : Bool) : Py (NDec × Li
     | .ok (out, rest) => .ok ({ d with inner := some rest }, out)
 
 /-- `self.pendingcr and (output or final)`, then keeping a final `\r` back:
-textio.c:350-384, _pyio.py:1968-1977. -/
+textio.c:350-384, _pyio.py:1992-2001. -/
 def NDec.pendStep (d : NDec) (out : List Nat) (final : Bool) : NDec × List Nat :=
   let (d, out) := if d.pendingcr && (final || !out.isEmpty) then
       ({ d with pendingcr := false }, 13 :: out) else (d, out)
@@ -102,7 +102,7 @@ end NC
 
 namespace NP
 
-/-- `IncrementalNewlineDecoder.decode`, _pyio.py:1962-1991: `count`, then
+/-- `IncrementalNewlineDecoder.decode`, _pyio.py:1986-2015: `count`, then
 `replace`, which `nlKinds` and `translateNl` compute. -/
 def decode (d : NDec) (input : List Nat) (final : Bool) : Py (NDec × List Nat) :=
   match d.inputStep input final with
@@ -114,16 +114,16 @@ def decode (d : NDec) (input : List Nat) (final : Bool) : Py (NDec × List Nat) 
 
 end NP
 
-/-- `getstate()`: textio.c:542-578, _pyio.py:1993-2002. -/
+/-- `getstate()`: textio.c:542-578, _pyio.py:2017-2026. -/
 def NDec.getstate (d : NDec) : List Nat × Nat :=
   (d.inner.getD [], if d.pendingcr then 1 else 0)
 
-/-- `setstate((buf, flag))`: textio.c:588-617, _pyio.py:2004-2008 (the low bit is
+/-- `setstate((buf, flag))`: textio.c:588-617, _pyio.py:2028-2032 (the low bit is
 `pendingcr`; `flag >> 1` goes to the wrapped decoder, which ignores it). -/
 def NDec.setstate (d : NDec) (buf : List Nat) (flag : Int) : NDec :=
   { d with pendingcr := flag % 2 = 1, inner := d.inner.map (fun _ => buf) }
 
-/-- `reset()`: textio.c:625-636, _pyio.py:2010-2014. -/
+/-- `reset()`: textio.c:625-636, _pyio.py:2034-2038. -/
 def NDec.reset (d : NDec) : NDec :=
   { d with pendingcr := false, seennl := ⟨false, false, false⟩, inner := d.inner.map (fun _ => []) }
 

@@ -3,7 +3,7 @@ import PyLean.DictSet.ODict
 
 /-!
 Views over a well-formed dict, and the `OrderedDict` list operations. The list operations are stated
-without the dict: `od_state` "is incremented whenever the LL changes" (`odictobject.c:500`), which is
+without the dict: `od_state` "is incremented whenever the LL changes" (`odictobject.c:499`), which is
 what lets an iterator detect mutation.
 -/
 

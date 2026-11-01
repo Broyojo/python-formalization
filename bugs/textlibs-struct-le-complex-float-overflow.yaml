@@ -36,11 +36,11 @@ observed: |
 promised_by: |
   invariant: byte order changes the bytes, not whether a value is representable; `f` raises.
 cause: |
-  Modules/_struct.c:791-799 (np_float_complex casts) against :1128-1141 (bp_float_complex uses
-  PyFloat_Pack4, which detects overflow at Objects/floatobject.c:2184); the swap is at
-  Modules/_struct.c:1537-1545, which skips only `f`, `d` and `?`.
+  Modules/_struct.c:792-800 (np_float_complex casts) against :1131-1144 (bp_float_complex uses
+  PyFloat_Pack4, which detects overflow at Objects/floatobject.c@3.14.7:2184); the swap is at
+  Modules/_struct.c@3.14.7:1537-1545, which skips only `f`, `d` and `?`.
 possible_fix: |
-  Use PyFloat_Pack4 in np_float_complex, as main does (Modules/_struct.c:800 on main).
+  Use PyFloat_Pack4 in np_float_complex, as main does (Modules/_struct.c:801 on main).
 duplicates: |
   Duplicate of python/cpython#156865, fixed on main by PR #156868. The 3.14.7 build still has
   the bug, so at most this is a backport question for the 3.14 branch.

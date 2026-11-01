@@ -226,7 +226,7 @@ theorem count_flatMap {c : Ctr κ} (hw : WF c) (x : κ) :
 
 /-- `elements()`: "Iterator over elements repeating each as many times as its
 count ... if an element's count has been set to zero or is a negative number,
-elements() will ignore it" (:648-662). For every counter whose counts fit
+elements() will ignore it" (:652-666). For every counter whose counts fit
 `Py_ssize_t`, counting the elements gives back the positive part of the counter,
 and the elements come in insertion order. -/
 def ElementsRoundTrip : Prop :=
@@ -251,7 +251,7 @@ theorem WF_sortedItems {c : Ctr κ} (h : WF c) : WF (sortedItems c) := by
   unfold WF keys at *
   exact ((perm_atIndices c).map _).nodup_iff.mpr h
 
-/-- `__repr__`, :755-764: the comment "dict() preserves the ordering returned by
+/-- `__repr__`, :759-768: the comment "dict() preserves the ordering returned by
 most_common()" holds, so a non-empty counter prints its items in `most_common` order; the
 empty counter prints `Counter()`, whatever the class name. -/
 def ReprMostCommonOrder : Prop :=

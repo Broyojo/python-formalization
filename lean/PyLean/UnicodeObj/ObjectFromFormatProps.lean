@@ -53,7 +53,7 @@ theorem fromFormatNegativeStarOmitted_refuted : ¬FromFormatNegativeStarOmitted 
   decide +kernel
 
 /-- The integer conversions do read a negative `*` precision as omitted, with any flags, width and
-size. This is what the sentinel -2 at unicodeobject.c:2853 is safe for. -/
+size. This is what the sentinel -2 at unicodeobject.c:2761 is safe for. -/
 def FromFormatIntStarOmitted : Prop :=
   ∀ (w : UWriter) (p : List Nat) (s : FSpec) (c : Nat) (g : List Nat) (args : List VArg),
     (c = 100 ∨ c = 105 ∨ c = 111 ∨ c = 117 ∨ c = 120 ∨ c = 88) →

@@ -1,19 +1,18 @@
 file	line	endline	name	signature	status	entry	note
-Modules/sha1module.c	59	64	sha1_get_state	sha1_get_state(PyObject *module)	todo		
-Modules/sha1module.c	67	77	newSHA1object	newSHA1object(SHA1State *st)	todo		
-Modules/sha1module.c	82	86	SHA1_traverse	SHA1_traverse(PyObject *ptr, visitproc visit, void *arg)	todo		
-Modules/sha1module.c	89	100	SHA1_dealloc	SHA1_dealloc(PyObject *op)	todo		
-Modules/sha1module.c	114	132	SHA1Type_copy_impl	SHA1Type_copy_impl(SHA1object *self, PyTypeObject *cls) /*[clinic end generated code: output=b32d4461ce8bc7a7 input=6c22e66fcc34c58e]*/	todo		
-Modules/sha1module.c	141	149	SHA1Type_digest_impl	SHA1Type_digest_impl(SHA1object *self) /*[clinic end generated code: output=2f05302a7aa2b5cb input=13824b35407444bd]*/	todo		
-Modules/sha1module.c	158	166	SHA1Type_hexdigest_impl	SHA1Type_hexdigest_impl(SHA1object *self) /*[clinic end generated code: output=4161fd71e68c6659 input=97691055c0c74ab0]*/	todo		
-Modules/sha1module.c	169	185	update	update(Hacl_Hash_SHA1_state_t *state, uint8_t *buf, Py_ssize_t len)	todo		
-Modules/sha1module.c	197	219	SHA1Type_update_impl	SHA1Type_update_impl(SHA1object *self, PyObject *obj) /*[clinic end generated code: output=cdc8e0e106dbec5f input=aad8e07812edbba3]*/	todo		
-Modules/sha1module.c	230	233	SHA1_get_block_size	SHA1_get_block_size(PyObject *Py_UNUSED(self), void *Py_UNUSED(closure))	todo		
-Modules/sha1module.c	236	239	SHA1_get_name	SHA1_get_name(PyObject *Py_UNUSED(self), void *Py_UNUSED(closure))	todo		
-Modules/sha1module.c	242	245	sha1_get_digest_size	sha1_get_digest_size(PyObject *Py_UNUSED(self), void *Py_UNUSED(closure))	todo		
-Modules/sha1module.c	284	331	_sha1_sha1_impl	_sha1_sha1_impl(PyObject *module, PyObject *data, int usedforsecurity, PyObject *string_obj) /*[clinic end generated code: output=0d453775924f88a7 input=807f25264e0ac656]*/	todo		
-Modules/sha1module.c	342	347	_sha1_traverse	_sha1_traverse(PyObject *module, visitproc visit, void *arg)	todo		
-Modules/sha1module.c	350	355	_sha1_clear	_sha1_clear(PyObject *module)	todo		
-Modules/sha1module.c	358	361	_sha1_free	_sha1_free(void *module)	todo		
-Modules/sha1module.c	364	384	_sha1_exec	_sha1_exec(PyObject *module)	todo		
-Modules/sha1module.c	408	411	PyInit__sha1	PyInit__sha1(void)	todo		
+Modules/sha1module.c	51	56	sha1_get_state	sha1_get_state(PyObject *module)	todo		
+Modules/sha1module.c	71	82	newSHA1object	newSHA1object(SHA1State *st)	todo		changed-in-3.15:
+Modules/sha1module.c	87	98	SHA1_dealloc	SHA1_dealloc(PyObject *op)	todo		changed-in-3.15:
+Modules/sha1module.c	112	130	SHA1Type_copy_impl	SHA1Type_copy_impl(SHA1object *self, PyTypeObject *cls) /*[clinic end generated code: output=b32d4461ce8bc7a7 input=6c22e66fcc34c58e]*/	todo		changed-in-3.15:
+Modules/sha1module.c	139	147	SHA1Type_digest_impl	SHA1Type_digest_impl(SHA1object *self) /*[clinic end generated code: output=2f05302a7aa2b5cb input=13824b35407444bd]*/	todo		changed-in-3.15:
+Modules/sha1module.c	156	164	SHA1Type_hexdigest_impl	SHA1Type_hexdigest_impl(SHA1object *self) /*[clinic end generated code: output=4161fd71e68c6659 input=97691055c0c74ab0]*/	todo		changed-in-3.15:
+Modules/sha1module.c	167	183	update	update(Hacl_Hash_SHA1_state_t *state, uint8_t *buf, Py_ssize_t len)	todo		
+Modules/sha1module.c	195	206	SHA1Type_update_impl	SHA1Type_update_impl(SHA1object *self, PyObject *obj) /*[clinic end generated code: output=cdc8e0e106dbec5f input=aad8e07812edbba3]*/	todo		changed-in-3.15:
+Modules/sha1module.c	217	220	SHA1_get_block_size	SHA1_get_block_size(PyObject *Py_UNUSED(self), void *Py_UNUSED(closure))	todo		
+Modules/sha1module.c	223	226	SHA1_get_name	SHA1_get_name(PyObject *Py_UNUSED(self), void *Py_UNUSED(closure))	todo		
+Modules/sha1module.c	229	232	sha1_get_digest_size	sha1_get_digest_size(PyObject *Py_UNUSED(self), void *Py_UNUSED(closure))	todo		
+Modules/sha1module.c	271	314	_sha1_sha1_impl	_sha1_sha1_impl(PyObject *module, PyObject *data, int usedforsecurity, PyObject *string_obj) /*[clinic end generated code: output=0d453775924f88a7 input=807f25264e0ac656]*/	todo		changed-in-3.15:
+Modules/sha1module.c	325	330	_sha1_traverse	_sha1_traverse(PyObject *module, visitproc visit, void *arg)	todo		
+Modules/sha1module.c	333	338	_sha1_clear	_sha1_clear(PyObject *module)	todo		
+Modules/sha1module.c	341	344	_sha1_free	_sha1_free(void *module)	todo		
+Modules/sha1module.c	347	367	_sha1_exec	_sha1_exec(PyObject *module)	todo		
+Modules/sha1module.c	392	395	PyInit__sha1	PyInit__sha1(void)	todo		

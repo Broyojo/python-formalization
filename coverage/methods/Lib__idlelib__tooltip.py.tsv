@@ -1,18 +1,18 @@
 file	line	endline	name	signature	status	entry	note
 Lib/idlelib/tooltip.py	13	21	TooltipBase.__init__	__init__(self, anchor_widget)	excluded		platform: GUI toolkit
 Lib/idlelib/tooltip.py	23	24	TooltipBase.__del__	__del__(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tooltip.py	26	45	TooltipBase.showtip	showtip(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tooltip.py	47	52	TooltipBase.position_window	position_window(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tooltip.py	54	63	TooltipBase.get_position	get_position(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tooltip.py	65	68	TooltipBase.showcontents	showcontents(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tooltip.py	70	79	TooltipBase.hidetip	hidetip(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tooltip.py	85	101	OnHoverTooltipBase.__init__	__init__(self, anchor_widget, hover_delay=1000)	excluded		platform: GUI toolkit
-Lib/idlelib/tooltip.py	103	110	OnHoverTooltipBase.__del__	__del__(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tooltip.py	112	117	OnHoverTooltipBase._show_event	_show_event(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/tooltip.py	119	121	OnHoverTooltipBase._hide_event	_hide_event(self, event=None)	excluded		platform: GUI toolkit
-Lib/idlelib/tooltip.py	123	127	OnHoverTooltipBase.schedule	schedule(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tooltip.py	129	134	OnHoverTooltipBase.unschedule	unschedule(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tooltip.py	136	142	OnHoverTooltipBase.hidetip	hidetip(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tooltip.py	147	161	Hovertip.__init__	__init__(self, anchor_widget, text, hover_delay=1000, foreground='#000000', background='#ffffe0')	excluded		platform: GUI toolkit
-Lib/idlelib/tooltip.py	163	167	Hovertip.showcontents	showcontents(self)	excluded		platform: GUI toolkit
-Lib/idlelib/tooltip.py	170	182	_tooltip	_tooltip(parent)	excluded		platform: GUI toolkit
+Lib/idlelib/tooltip.py	26	46	TooltipBase.showtip	showtip(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tooltip.py	48	53	TooltipBase.position_window	position_window(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tooltip.py	55	64	TooltipBase.get_position	get_position(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tooltip.py	66	69	TooltipBase.showcontents	showcontents(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tooltip.py	71	80	TooltipBase.hidetip	hidetip(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tooltip.py	86	102	OnHoverTooltipBase.__init__	__init__(self, anchor_widget, hover_delay=1000)	excluded		platform: GUI toolkit
+Lib/idlelib/tooltip.py	104	111	OnHoverTooltipBase.__del__	__del__(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tooltip.py	113	118	OnHoverTooltipBase._show_event	_show_event(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/tooltip.py	120	122	OnHoverTooltipBase._hide_event	_hide_event(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/tooltip.py	124	128	OnHoverTooltipBase.schedule	schedule(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tooltip.py	130	135	OnHoverTooltipBase.unschedule	unschedule(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tooltip.py	137	143	OnHoverTooltipBase.hidetip	hidetip(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tooltip.py	148	162	Hovertip.__init__	__init__(self, anchor_widget, text, hover_delay=1000, foreground='#000000', background='#ffffe0')	excluded		platform: GUI toolkit
+Lib/idlelib/tooltip.py	164	168	Hovertip.showcontents	showcontents(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tooltip.py	171	183	_tooltip	_tooltip(parent)	excluded		platform: GUI toolkit

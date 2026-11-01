@@ -132,7 +132,7 @@ inductive DateCls where
   /-- A subclass: its constructor is called with `year, month, day`. -/
   | sub (ctor : Int → Int → Int → Py DT)
 
-/-- `new_date_subclass_ex`, :1182-1198. A plain `date` is the `datetime` at midnight
+/-- `new_date_subclass_ex`, :1197-1213. A plain `date` is the `datetime` at midnight
 with no tzinfo in this result type. -/
 def newDateSubclassC (y m d : Int) : DateCls → Py DT
   | .date => do
@@ -141,16 +141,16 @@ def newDateSubclassC (y m d : Int) : DateCls → Py DT
   | .datetime => newDT ⟨y, m, d, 0, 0, 0, 0, 0, none⟩
   | .sub ctor => ctor y m d
 
-/-- `call_subclass_fold`, :1246-1277: `fold` is passed as a keyword only when nonzero. -/
+/-- `call_subclass_fold`, :1261-1292: `fold` is passed as a keyword only when nonzero. -/
 def callSubclassFold {α : Type} (cls : Option Int → Py α) (fold : Int) : Py α :=
   cls (if fold ≠ 0 then some fold else none)
 
-/-- `new_datetime_subclass_fold_ex`, :1280-1297. `none` is `datetime` itself. -/
+/-- `new_datetime_subclass_fold_ex`, :1295-1312. `none` is `datetime` itself. -/
 def newDatetimeSubclassFoldC (dt : DT) : Option (Option Int → Py DT) → Py DT
   | none => newDT dt
   | some cls => callSubclassFold cls dt.fold
 
-/-- `new_time_subclass_fold_ex`, :1350-1365. -/
+/-- `new_time_subclass_fold_ex`, :1365-1380. -/
 def newTimeSubclassFoldC (t : TM) : Option (Option Int → Py TM) → Py TM
   | none => newTM t
   | some cls => callSubclassFold cls t.fold
@@ -233,7 +233,7 @@ theorem tzinfoReduce_proven : TzinfoReduce := by
 /-- `Py_UNICODE_IS_SURROGATE`. -/
 def isSurrogate (c : Nat) : Bool := 0xD800 ≤ c && c ≤ 0xDFFF
 
-/-- The search of `_sanitize_isoformat_str`, :5777-5791: reading index `len` gives NUL. -/
+/-- The search of `_sanitize_isoformat_str`, :5792-5806: reading index `len` gives NUL. -/
 def surrogateSeparator (s : List Nat) : Nat :=
   let rec go : List Nat → Nat
     | [] => 0
@@ -242,7 +242,7 @@ def surrogateSeparator (s : List Nat) : Nat :=
       else if isSurrogate (s.getD pos 0) then pos else go rest
   go [7, 8, 10]
 
-/-- `_sanitize_isoformat_str`, :5755-5807, over code points; `none` is `NULL`. -/
+/-- `_sanitize_isoformat_str`, :5770-5822, over code points; `none` is `NULL`. -/
 def sanitizeIsoformatC (s : List Nat) : Option (List Nat) :=
   if s.length < 7 then none
   else

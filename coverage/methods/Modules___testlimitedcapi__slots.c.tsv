@@ -1,0 +1,15 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testlimitedcapi/slots.c	18	28	demo_getbuffer	demo_getbuffer(PyObject *exporter, Py_buffer *view, int flags)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/slots.c	32	43	demo_releasebuffer	demo_releasebuffer(PyObject *exporter, Py_buffer *view)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/slots.c	47	51	demo_ass_subscript	demo_ass_subscript(PyObject *o, PyObject *key, PyObject *v)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/slots.c	55	58	demo_length	demo_length(PyObject *o)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/slots.c	69	300	type_from_slots	type_from_slots(PyObject* module, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/slots.c	303	315	type_from_null_slot	type_from_null_slot(PyObject* module, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/slots.c	318	331	type_from_null_spec_slot	type_from_null_spec_slot(PyObject* Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/slots.c	334	338	demo_create	demo_create(PyObject *spec, PyModuleDef *def)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/slots.c	341	344	demo_exec	demo_exec(PyObject *mod)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/slots.c	349	568	module_from_slots	module_from_slots(PyObject* Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/slots.c	571	583	module_from_gil_slot	module_from_gil_slot(PyObject* Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/slots.c	586	609	module_from_null_slot	module_from_null_slot(PyObject* Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/slots.c	614	650	type_from_base_slots	type_from_base_slots( PyObject *self, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/slots.c	666	673	_PyTestLimitedCAPI_Init_Slots	_PyTestLimitedCAPI_Init_Slots(PyObject *m)	excluded		test-support: only for CPython's own tests

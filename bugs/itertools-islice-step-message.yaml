@@ -41,7 +41,7 @@ promised_by: |
   No documentation; invariant that an error message describes the violated constraint (the
   sibling messages for start/stop do).
 cause: |
-  Modules/itertoolsmodule.c:1650-1659: `step = PyNumber_AsSsize_t(a3, PyExc_OverflowError)`;
+  Modules/itertoolsmodule.c:1644-1653: `step = PyNumber_AsSsize_t(a3, PyExc_OverflowError)`;
   on overflow the error is cleared and step stays -1, then "Step for islice() must be a positive
   integer or None." is raised.
 possible_fix: |

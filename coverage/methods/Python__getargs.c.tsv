@@ -1,53 +1,57 @@
 file	line	endline	name	signature	status	entry	note
-Python/getargs.c	71	80	PyArg_Parse	PyArg_Parse(PyObject *args, const char *format, ...)	todo		
-Python/getargs.c	82	92	_PyArg_Parse_SizeT	PyAPI_FUNC(int) _PyArg_Parse_SizeT(PyObject *args, const char *format, ...)	todo		
-Python/getargs.c	96	105	PyArg_ParseTuple	PyArg_ParseTuple(PyObject *args, const char *format, ...)	todo		
-Python/getargs.c	108	117	_PyArg_ParseTuple_SizeT	_PyArg_ParseTuple_SizeT(PyObject *args, const char *format, ...)	todo		
-Python/getargs.c	121	130	_PyArg_ParseStack	_PyArg_ParseStack(PyObject *const *args, Py_ssize_t nargs, const char *format, ...)	todo		
-Python/getargs.c	133	143	PyArg_VaParse	PyArg_VaParse(PyObject *args, const char *format, va_list va)	todo		
-Python/getargs.c	146	156	_PyArg_VaParse_SizeT	_PyArg_VaParse_SizeT(PyObject *args, const char *format, va_list va)	todo		
-Python/getargs.c	162	168	cleanup_ptr	cleanup_ptr(PyObject *self, void *ptr)	todo		
-Python/getargs.c	171	178	cleanup_buffer	cleanup_buffer(PyObject *self, void *ptr)	todo		
-Python/getargs.c	181	192	addcleanup	addcleanup(void *ptr, freelist_t *freelist, destr_t destructor)	todo		
-Python/getargs.c	195	211	cleanreturn	cleanreturn(int retval, freelist_t *freelist)	todo		
-Python/getargs.c	215	369	vgetargs1_impl	vgetargs1_impl(PyObject *compat_args, PyObject *const *stack, Py_ssize_t nargs, const char *format, va_list *p_va, int flags)	todo		
-Python/getargs.c	372	395	vgetargs1	vgetargs1(PyObject *args, const char *format, va_list *p_va, int flags)	todo		
-Python/getargs.c	399	438	seterror	seterror(Py_ssize_t iarg, const char *msg, int *levels, const char *fname, const char *message)	todo		
-Python/getargs.c	460	585	converttuple	converttuple(PyObject *arg, const char **p_format, va_list *p_va, int flags, int *levels, char *msgbuf, size_t bufsize, freelist_t *freelist)	todo		
-Python/getargs.c	591	613	convertitem	convertitem(PyObject *arg, const char **p_format, va_list *p_va, int flags, int *levels, char *msgbuf, size_t bufsize, freelist_t *freelist)	todo		
-Python/getargs.c	622	629	_PyArg_BadArgument	_PyArg_BadArgument(const char *fname, const char *displayname, const char *expected, PyObject *arg)	todo		
-Python/getargs.c	632	646	converterr	converterr(const char *expected, PyObject *arg, char *msgbuf, size_t bufsize)	todo		
-Python/getargs.c	649	657	convertcharerr	convertcharerr(const char *expected, const char *what, Py_ssize_t size, char *msgbuf, size_t bufsize)	todo		
-Python/getargs.c	671	1297	convertsimple	convertsimple(PyObject *arg, const char **p_format, va_list *p_va, int flags, char *msgbuf, size_t bufsize, freelist_t *freelist)	todo		
-Python/getargs.c	1300	1319	convertbuffer	convertbuffer(PyObject *arg, const void **p, const char **errmsg)	todo		
-Python/getargs.c	1322	1331	getbuffer	getbuffer(PyObject *arg, Py_buffer *view, const char **errmsg)	todo		
-Python/getargs.c	1338	1359	PyArg_ParseTupleAndKeywords	PyArg_ParseTupleAndKeywords(PyObject *args, PyObject *keywords, const char *format, const char * const *kwlist, ...)	todo		
-Python/getargs.c	1362	1384	_PyArg_ParseTupleAndKeywords_SizeT	_PyArg_ParseTupleAndKeywords_SizeT(PyObject *args, PyObject *keywords, const char *format, const char * const *kwlist, ...)	todo		
-Python/getargs.c	1388	1410	PyArg_VaParseTupleAndKeywords	PyArg_VaParseTupleAndKeywords(PyObject *args, PyObject *keywords, const char *format, const char * const *kwlist, va_list va)	todo		
-Python/getargs.c	1413	1436	_PyArg_VaParseTupleAndKeywords_SizeT	_PyArg_VaParseTupleAndKeywords_SizeT(PyObject *args, PyObject *keywords, const char *format, const char * const *kwlist, va_list va)	todo		
-Python/getargs.c	1438	1449	_PyArg_ParseTupleAndKeywordsFast	PyAPI_FUNC(int) _PyArg_ParseTupleAndKeywordsFast(PyObject *args, PyObject *keywords, struct _PyArg_Parser *parser, ...)	todo		
-Python/getargs.c	1452	1462	_PyArg_ParseTupleAndKeywordsFast_SizeT	_PyArg_ParseTupleAndKeywordsFast_SizeT(PyObject *args, PyObject *keywords, struct _PyArg_Parser *parser, ...)	todo		
-Python/getargs.c	1465	1475	_PyArg_ParseStackAndKeywords	_PyArg_ParseStackAndKeywords(PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames, struct _PyArg_Parser *parser, ...)	todo		
-Python/getargs.c	1478	1488	_PyArg_ParseStackAndKeywords_SizeT	_PyArg_ParseStackAndKeywords_SizeT(PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames, struct _PyArg_Parser *parser, ...)	todo		
-Python/getargs.c	1492	1552	error_unexpected_keyword_arg	error_unexpected_keyword_arg(PyObject *kwargs, PyObject *kwnames, PyObject *kwtuple, const char *fname)	todo		
-Python/getargs.c	1555	1567	PyArg_ValidateKeywordArguments	PyArg_ValidateKeywordArguments(PyObject *kwargs)	todo		
-Python/getargs.c	1575	1879	vgetargskeywords	vgetargskeywords(PyObject *args, PyObject *kwargs, const char *format, const char * const *kwlist, va_list *p_va, int flags)	todo		
-Python/getargs.c	1883	1901	scan_keywords	scan_keywords(const char * const *keywords, int *ptotal, int *pposonly)	todo		
-Python/getargs.c	1904	1982	parse_format	parse_format(const char *format, int total, int npos, const char **pfname, const char **pcustommsg, int *pmin, int *pmax)	todo		
-Python/getargs.c	1985	2004	new_kwtuple	new_kwtuple(const char * const *keywords, int total, int pos)	todo		
-Python/getargs.c	2007	2081	_parser_init	_parser_init(void *arg)	todo		
-Python/getargs.c	2084	2087	parser_init	parser_init(struct _PyArg_Parser *parser)	todo		
-Python/getargs.c	2090	2108	parser_clear	parser_clear(struct _PyArg_Parser *parser)	todo		
-Python/getargs.c	2111	2134	find_keyword	find_keyword(PyObject *kwnames, PyObject *const *kwstack, PyObject *key)	todo		
-Python/getargs.c	2137	2349	vgetargskeywordsfast_impl	vgetargskeywordsfast_impl(PyObject *const *args, Py_ssize_t nargs, PyObject *kwargs, PyObject *kwnames, struct _PyArg_Parser *parser, va_list *p_va, int flags)	todo		
-Python/getargs.c	2352	2370	vgetargskeywordsfast	vgetargskeywordsfast(PyObject *args, PyObject *keywords, struct _PyArg_Parser *parser, va_list *p_va, int flags)	todo		
-Python/getargs.c	2376	2552	_PyArg_UnpackKeywords	_PyArg_UnpackKeywords(PyObject *const *args, Py_ssize_t nargs, PyObject *kwargs, PyObject *kwnames, struct _PyArg_Parser *parser, int minpos, int maxpos, int minkw, int varpos, PyObject **buf)	todo		
-Python/getargs.c	2555	2687	skipitem	skipitem(const char **p_format, va_list *p_va, int flags)	todo		
-Python/getargs.c	2693	2734	_PyArg_CheckPositional	_PyArg_CheckPositional(const char *name, Py_ssize_t nargs, Py_ssize_t min, Py_ssize_t max)	todo		
-Python/getargs.c	2737	2752	unpack_stack	unpack_stack(PyObject *const *args, Py_ssize_t nargs, const char *name, Py_ssize_t min, Py_ssize_t max, va_list vargs)	todo		
-Python/getargs.c	2755	2774	PyArg_UnpackTuple	PyArg_UnpackTuple(PyObject *args, const char *name, Py_ssize_t min, Py_ssize_t max, ...)	todo		
-Python/getargs.c	2777	2787	_PyArg_UnpackStack	_PyArg_UnpackStack(PyObject *const *args, Py_ssize_t nargs, const char *name, Py_ssize_t min, Py_ssize_t max, ...)	todo		
-Python/getargs.c	2800	2816	_PyArg_NoKeywords	_PyArg_NoKeywords(const char *funcname, PyObject *kwargs)	todo		
-Python/getargs.c	2819	2833	_PyArg_NoPositional	_PyArg_NoPositional(const char *funcname, PyObject *args)	todo		
-Python/getargs.c	2836	2850	_PyArg_NoKwnames	_PyArg_NoKwnames(const char *funcname, PyObject *kwnames)	todo		
-Python/getargs.c	2853	2863	_PyArg_Fini	_PyArg_Fini(void)	todo		
+Python/getargs.c	78	87	PyArg_Parse	PyArg_Parse(PyObject *args, const char *format, ...)	todo		
+Python/getargs.c	89	99	_PyArg_Parse_SizeT	PyAPI_FUNC(int) _PyArg_Parse_SizeT(PyObject *args, const char *format, ...)	todo		
+Python/getargs.c	103	112	PyArg_ParseTuple	PyArg_ParseTuple(PyObject *args, const char *format, ...)	todo		
+Python/getargs.c	115	124	_PyArg_ParseTuple_SizeT	_PyArg_ParseTuple_SizeT(PyObject *args, const char *format, ...)	todo		
+Python/getargs.c	128	137	_PyArg_ParseStack	_PyArg_ParseStack(PyObject *const *args, Py_ssize_t nargs, const char *format, ...)	todo		
+Python/getargs.c	140	147	PyArg_ParseArray	PyArg_ParseArray(PyObject *const *args, Py_ssize_t nargs, const char *format, ...)	todo		changed-in-3.15: new function
+Python/getargs.c	150	170	PyArg_ParseArrayAndKeywords	PyArg_ParseArrayAndKeywords(PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames, const char *format, const char * const *kwlist, ...)	todo		changed-in-3.15: new function
+Python/getargs.c	174	184	PyArg_VaParse	PyArg_VaParse(PyObject *args, const char *format, va_list va)	todo		
+Python/getargs.c	187	197	_PyArg_VaParse_SizeT	_PyArg_VaParse_SizeT(PyObject *args, const char *format, va_list va)	todo		
+Python/getargs.c	203	209	cleanup_ptr	cleanup_ptr(PyObject *self, void *ptr)	todo		
+Python/getargs.c	212	219	cleanup_buffer	cleanup_buffer(PyObject *self, void *ptr)	todo		
+Python/getargs.c	222	233	addcleanup	addcleanup(void *ptr, freelist_t *freelist, destr_t destructor)	todo		
+Python/getargs.c	236	252	cleanreturn	cleanreturn(int retval, freelist_t *freelist)	todo		
+Python/getargs.c	256	410	vgetargs1_impl	vgetargs1_impl(PyObject *compat_args, PyObject *const *stack, Py_ssize_t nargs, const char *format, va_list *p_va, int flags)	todo		
+Python/getargs.c	413	436	vgetargs1	vgetargs1(PyObject *args, const char *format, va_list *p_va, int flags)	todo		
+Python/getargs.c	440	479	seterror	seterror(Py_ssize_t iarg, const char *msg, int *levels, const char *fname, const char *message)	todo		
+Python/getargs.c	501	626	converttuple	converttuple(PyObject *arg, const char **p_format, va_list *p_va, int flags, int *levels, char *msgbuf, size_t bufsize, freelist_t *freelist)	todo		
+Python/getargs.c	632	654	convertitem	convertitem(PyObject *arg, const char **p_format, va_list *p_va, int flags, int *levels, char *msgbuf, size_t bufsize, freelist_t *freelist)	todo		
+Python/getargs.c	663	670	_PyArg_BadArgument	_PyArg_BadArgument(const char *fname, const char *displayname, const char *expected, PyObject *arg)	todo		
+Python/getargs.c	673	687	converterr	converterr(const char *expected, PyObject *arg, char *msgbuf, size_t bufsize)	todo		
+Python/getargs.c	690	698	convertcharerr	convertcharerr(const char *expected, const char *what, Py_ssize_t size, char *msgbuf, size_t bufsize)	todo		
+Python/getargs.c	712	1381	convertsimple	convertsimple(PyObject *arg, const char **p_format, va_list *p_va, int flags, char *msgbuf, size_t bufsize, freelist_t *freelist)	todo		changed-in-3.15:
+Python/getargs.c	1384	1403	convertbuffer	convertbuffer(PyObject *arg, const void **p, const char **errmsg)	todo		
+Python/getargs.c	1406	1415	getbuffer	getbuffer(PyObject *arg, Py_buffer *view, const char **errmsg)	todo		
+Python/getargs.c	1422	1443	PyArg_ParseTupleAndKeywords	PyArg_ParseTupleAndKeywords(PyObject *args, PyObject *keywords, const char *format, const char * const *kwlist, ...)	todo		
+Python/getargs.c	1446	1468	_PyArg_ParseTupleAndKeywords_SizeT	_PyArg_ParseTupleAndKeywords_SizeT(PyObject *args, PyObject *keywords, const char *format, const char * const *kwlist, ...)	todo		
+Python/getargs.c	1472	1494	PyArg_VaParseTupleAndKeywords	PyArg_VaParseTupleAndKeywords(PyObject *args, PyObject *keywords, const char *format, const char * const *kwlist, va_list va)	todo		
+Python/getargs.c	1497	1520	_PyArg_VaParseTupleAndKeywords_SizeT	_PyArg_VaParseTupleAndKeywords_SizeT(PyObject *args, PyObject *keywords, const char *format, const char * const *kwlist, va_list va)	todo		
+Python/getargs.c	1522	1533	_PyArg_ParseTupleAndKeywordsFast	PyAPI_FUNC(int) _PyArg_ParseTupleAndKeywordsFast(PyObject *args, PyObject *keywords, struct _PyArg_Parser *parser, ...)	todo		
+Python/getargs.c	1536	1546	_PyArg_ParseTupleAndKeywordsFast_SizeT	_PyArg_ParseTupleAndKeywordsFast_SizeT(PyObject *args, PyObject *keywords, struct _PyArg_Parser *parser, ...)	todo		
+Python/getargs.c	1549	1559	_PyArg_ParseStackAndKeywords	_PyArg_ParseStackAndKeywords(PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames, struct _PyArg_Parser *parser, ...)	todo		
+Python/getargs.c	1562	1572	_PyArg_ParseStackAndKeywords_SizeT	_PyArg_ParseStackAndKeywords_SizeT(PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames, struct _PyArg_Parser *parser, ...)	todo		
+Python/getargs.c	1576	1636	error_unexpected_keyword_arg	error_unexpected_keyword_arg(PyObject *kwargs, PyObject *kwnames, PyObject *kwtuple, const char *fname)	todo		
+Python/getargs.c	1639	1651	PyArg_ValidateKeywordArguments	PyArg_ValidateKeywordArguments(PyObject *kwargs)	todo		
+Python/getargs.c	1657	1668	find_keyword_str	find_keyword_str(PyObject *kwnames, PyObject *const *kwstack, const char *key)	todo		changed-in-3.15: new function
+Python/getargs.c	1673	2012	vgetargskeywords_impl	vgetargskeywords_impl(PyObject *const *args, Py_ssize_t nargs, PyObject *kwargs, PyObject *kwnames, const char *format, const char * const *kwlist, va_list *p_va, int flags)	todo		changed-in-3.15: new function
+Python/getargs.c	2015	2023	vgetargskeywords	vgetargskeywords(PyObject *argstuple, PyObject *kwargs, const char *format, const char * const *kwlist, va_list *p_va, int flags)	todo		changed-in-3.15:
+Python/getargs.c	2026	2044	scan_keywords	scan_keywords(const char * const *keywords, int *ptotal, int *pposonly)	todo		
+Python/getargs.c	2047	2125	parse_format	parse_format(const char *format, int total, int npos, const char **pfname, const char **pcustommsg, int *pmin, int *pmax)	todo		
+Python/getargs.c	2128	2147	new_kwtuple	new_kwtuple(const char * const *keywords, int total, int pos)	todo		
+Python/getargs.c	2150	2224	_parser_init	_parser_init(void *arg)	todo		
+Python/getargs.c	2227	2230	parser_init	parser_init(struct _PyArg_Parser *parser)	todo		
+Python/getargs.c	2233	2251	parser_clear	parser_clear(struct _PyArg_Parser *parser)	todo		
+Python/getargs.c	2254	2277	find_keyword	find_keyword(PyObject *kwnames, PyObject *const *kwstack, PyObject *key)	todo		
+Python/getargs.c	2280	2492	vgetargskeywordsfast_impl	vgetargskeywordsfast_impl(PyObject *const *args, Py_ssize_t nargs, PyObject *kwargs, PyObject *kwnames, struct _PyArg_Parser *parser, va_list *p_va, int flags)	todo		
+Python/getargs.c	2495	2513	vgetargskeywordsfast	vgetargskeywordsfast(PyObject *args, PyObject *keywords, struct _PyArg_Parser *parser, va_list *p_va, int flags)	todo		
+Python/getargs.c	2519	2695	_PyArg_UnpackKeywords	_PyArg_UnpackKeywords(PyObject *const *args, Py_ssize_t nargs, PyObject *kwargs, PyObject *kwnames, struct _PyArg_Parser *parser, int minpos, int maxpos, int minkw, int varpos, PyObject **buf)	todo		
+Python/getargs.c	2698	2830	skipitem	skipitem(const char **p_format, va_list *p_va, int flags)	todo		
+Python/getargs.c	2836	2877	_PyArg_CheckPositional	_PyArg_CheckPositional(const char *name, Py_ssize_t nargs, Py_ssize_t min, Py_ssize_t max)	todo		
+Python/getargs.c	2880	2895	unpack_stack	unpack_stack(PyObject *const *args, Py_ssize_t nargs, const char *name, Py_ssize_t min, Py_ssize_t max, va_list vargs)	todo		
+Python/getargs.c	2898	2917	PyArg_UnpackTuple	PyArg_UnpackTuple(PyObject *args, const char *name, Py_ssize_t min, Py_ssize_t max, ...)	todo		
+Python/getargs.c	2920	2930	_PyArg_UnpackStack	_PyArg_UnpackStack(PyObject *const *args, Py_ssize_t nargs, const char *name, Py_ssize_t min, Py_ssize_t max, ...)	todo		
+Python/getargs.c	2943	2959	_PyArg_NoKeywords	_PyArg_NoKeywords(const char *funcname, PyObject *kwargs)	todo		
+Python/getargs.c	2962	2976	_PyArg_NoPositional	_PyArg_NoPositional(const char *funcname, PyObject *args)	todo		
+Python/getargs.c	2979	2993	_PyArg_NoKwnames	_PyArg_NoKwnames(const char *funcname, PyObject *kwnames)	todo		
+Python/getargs.c	2996	3006	_PyArg_Fini	_PyArg_Fini(void)	todo		

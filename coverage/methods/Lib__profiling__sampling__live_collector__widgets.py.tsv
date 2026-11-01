@@ -1,0 +1,28 @@
+file	line	endline	name	signature	status	entry	note
+Lib/profiling/sampling/live_collector/widgets.py	40	49	Widget.__init__	__init__(self, display, colors)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/widgets.py	52	64	Widget.render	render(self, line, width, **kwargs)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/widgets.py	66	68	Widget.add_str	add_str(self, line, col, text, attr=0)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/widgets.py	74	76	ProgressBarWidget.render	render(self, line, width, **kwargs)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/widgets.py	78	105	ProgressBarWidget.render_bar	render_bar(self, filled, total, max_width, fill_char='█', empty_char='░')	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/widgets.py	111	122	HeaderWidget.__init__	__init__(self, display, colors, collector)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/widgets.py	124	159	HeaderWidget.render	render(self, line, width, **kwargs)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/widgets.py	161	170	HeaderWidget.format_uptime	format_uptime(self, elapsed)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/widgets.py	172	235	HeaderWidget.draw_header_info	draw_header_info(self, line, width, elapsed)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/widgets.py	237	244	HeaderWidget.format_rate_with_units	format_rate_with_units(self, rate_hz)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/widgets.py	246	308	HeaderWidget.draw_sample_stats	draw_sample_stats(self, line, width, elapsed)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/widgets.py	310	343	HeaderWidget.draw_efficiency_bar	draw_efficiency_bar(self, line, width)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/widgets.py	345	370	HeaderWidget._add_percentage_stat	_add_percentage_stat(self, line, col, value, label, color, add_separator=False)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/widgets.py	372	446	HeaderWidget.draw_thread_status	draw_thread_status(self, line, width)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/widgets.py	448	492	HeaderWidget.draw_function_stats	draw_function_stats(self, line, width, stats_list)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/widgets.py	494	561	HeaderWidget.draw_top_functions	draw_top_functions(self, line, width, stats_list)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/widgets.py	563	592	HeaderWidget.draw_finished_banner	draw_finished_banner(self, line, width)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/widgets.py	598	608	TableWidget.__init__	__init__(self, display, colors, collector)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/widgets.py	610	641	TableWidget.render	render(self, line, width, **kwargs)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/widgets.py	643	727	TableWidget.draw_column_headers	draw_column_headers(self, line, width)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/widgets.py	729	853	TableWidget.draw_stats_rows	draw_stats_rows(self, line, height, width, stats_list, column_flags)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/widgets.py	859	869	FooterWidget.__init__	__init__(self, display, colors, collector)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/widgets.py	871	930	FooterWidget.render	render(self, line, width, **kwargs)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/widgets.py	932	939	FooterWidget.render_filter_input_prompt	render_filter_input_prompt(self, line, width)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/widgets.py	945	996	HelpWidget.render	render(self, line, width, **kwargs)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/widgets.py	1002	1004	OpcodePanel.__init__	__init__(self, display, colors, collector)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/widgets.py	1006	1090	OpcodePanel.render	render(self, line, width, **kwargs)	todo		changed-in-3.15: new function

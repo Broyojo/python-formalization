@@ -325,7 +325,7 @@ theorem lookup_found (H : Honest P hf eqv) (mp : PyDict K V) (k : Keys K V)
   lookupAux_found H mp k hb w key ix e he heq 255
 
 /-- `_Py_dict_lookup` on a table without an equal key: it stops at an empty slot. This is the
-termination claim at `dictobject.c:145-150` and `:357-358`. -/
+termination claim at `dictobject.c:156-161` and `:397-398`. -/
 theorem lookup_missing (H : Honest P hf eqv) (mp : PyDict K V) (k : Keys K V)
     (hb : mp.body = .combined k) (w : WF hf eqv P.isStr k) (key : K)
     (hno : ∀ ix e, k.entry ix = some e → eqv e.key key = false) :

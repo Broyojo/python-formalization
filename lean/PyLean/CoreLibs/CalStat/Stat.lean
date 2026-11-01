@@ -18,7 +18,7 @@ def statErr (m : String) : PyExc := .named "StatisticsError" m
 /-- `xs[i]` for an index the source has established to be in range. -/
 def pick {α : Type} [Inhabited α] (xs : List α) (i : Nat) : α := xs.getD i default
 
-/-! ## `_exact_ratio`, statistics.py:1597-1620 -/
+/-! ## `_exact_ratio`, statistics.py:1598-1621 -/
 
 inductive Ratio where
   | ratio (n : Int) (d : Nat)
@@ -38,13 +38,13 @@ def exactRatio (x : Val) : Py Ratio :=
   | .abc n d => .ok (.ratio n d)
   | v => .error (.typeError s!"can't convert type '{v.cls.name}' to numerator/denominator")
 
-/-- `_isfinite`, statistics.py:1558-1562. -/
+/-- `_isfinite`, statistics.py:1559-1563. -/
 def isFiniteV (x : Val) : Py Bool :=
   match x with
   | .dec d => .ok d.isFinite
   | v => do return (← asDouble v).isFinite
 
-/-! ## `_coerce`, statistics.py:1565-1594 -/
+/-! ## `_coerce`, statistics.py:1566-1595 -/
 
 def coerce (T S : Cls) : Py Cls :=
   if T.same clsBool then .error (.assertionError "initial type T is bool")
@@ -66,7 +66,7 @@ def reduceCoerce (types : List Cls) : Py Cls := types.foldlM coerce clsInt
 def addType (types : List Cls) (c : Cls) : List Cls :=
   if types.any (fun t => t.same c) then types else types ++ [c]
 
-/-! ## `_sum`, statistics.py:1453-1508 -/
+/-! ## `_sum`, statistics.py:1454-1509 -/
 
 structure SumSt where
   count : Nat := 0
@@ -96,7 +96,7 @@ def sumStep (st : SumSt) (x : PyN) : Py SumSt := do
     let s ← vadd (st.special.getD (.int 0)) v
     return { st with count := st.count + 1, special := some s }
 
-/-- The end of `_sum`; the `reduce` comes last, statistics.py:1498-1508. `order` is the iteration
+/-- The end of `_sum`; the `reduce` comes last, statistics.py:1499-1509. `order` is the iteration
 order of the set of types. -/
 def sumFinish (order : List Cls → List Cls) (st : SumSt) : Py (Cls × Val × Nat) := do
   let total : Val := match st.special with
@@ -108,7 +108,7 @@ def sumFinish (order : List Cls → List Cls) (st : SumSt) : Py (Cls × Val × N
 def sumOf (data : List PyN) (order : List Cls → List Cls := id) : Py (Cls × Val × Nat) := do
   sumFinish order (← data.foldlM sumStep {})
 
-/-! ## `_ss`, statistics.py:1511-1555 -/
+/-! ## `_ss`, statistics.py:1512-1556 -/
 
 structure SsSt where
   count : Nat := 0
@@ -158,7 +158,7 @@ def ssOf (data : List PyN) (c : Option PyN) (order : List Cls → List Cls := id
     let T ← reduceCoerce (order st.types)
     return (T, ssd, c, st.count)
 
-/-! ## `_convert`, statistics.py:1623-1640 -/
+/-! ## `_convert`, statistics.py:1624-1641 -/
 
 /-- `T(value)` for a value that is a `Fraction`, or a NaN or infinity. -/
 def construct (T : Cls) (value : Val) : Py PyN :=
@@ -194,7 +194,7 @@ def convert (value : Val) (T : Cls) : Py PyN :=
       | _ => T
     construct T' value
 
-/-! ## `_fail_neg`, statistics.py:1643-1648 -/
+/-! ## `_fail_neg`, statistics.py:1644-1649 -/
 
 /-- `_fail_neg(values, errmsg)` consumed to the end. -/
 def failNeg (values : List Val) (errmsg : String) : Py (List Val) :=
@@ -203,13 +203,13 @@ def failNeg (values : List Val) (errmsg : String) : Py (List Val) :=
 
 /-! ## Averages -/
 
-/-- `mean`, statistics.py:158-178. -/
+/-- `mean`, statistics.py:159-179. -/
 def mean (data : List PyN) (order : List Cls → List Cls := id) : Py PyN := do
   let (T, total, n) ← sumOf data order
   if n < 1 then throw (statErr "mean requires at least one data point")
   convert (← vdiv total (.int n)) T
 
-/-- `fmean`, statistics.py:181-221. Iterators and sequences take the same path through `fsum`,
+/-- `fmean`, statistics.py:182-222. Iterators and sequences take the same path through `fsum`,
 except that for an iterator `n` is counted while it is consumed. -/
 def fmean (data : List PyN) (weights : Option (List PyN)) : Py Val := do
   match weights with
@@ -226,20 +226,20 @@ def fmean (data : List PyN) (weights : Option (List PyN)) : Py Val := do
     if !den.truthy then throw (statErr "sum of weights must be non-zero")
     vdiv num (.flt den)
 
-/-- The part of `median_low` after sorting, statistics.py:367-373, for any element type. -/
+/-- The part of `median_low` after sorting, statistics.py:368-374, for any element type. -/
 def medianLowSorted {α : Type} [Inhabited α] (data : List α) : Py α :=
   let n := data.length
   if n = 0 then .error (statErr "no median for empty data")
   else if n % 2 = 1 then .ok (pick data (n / 2))
   else .ok (pick data (n / 2 - 1))
 
-/-- The part of `median_high` after sorting, statistics.py:389-392. -/
+/-- The part of `median_high` after sorting, statistics.py:390-393. -/
 def medianHighSorted {α : Type} [Inhabited α] (data : List α) : Py α :=
   let n := data.length
   if n = 0 then .error (statErr "no median for empty data")
   else .ok (pick data (n / 2))
 
-/-- The part of `median` after sorting, statistics.py:341-348, with `avg` for `(a + b) / 2`. -/
+/-- The part of `median` after sorting, statistics.py:342-349, with `avg` for `(a + b) / 2`. -/
 def medianSorted {α : Type} [Inhabited α] (avg : α → α → Py α) (data : List α) : Py α :=
   let n := data.length
   if n = 0 then .error (statErr "no median for empty data")
@@ -252,22 +252,22 @@ def medianSorted {α : Type} [Inhabited α] (avg : α → α → Py α) (data : 
 def avgN (a b : PyN) : Py PyN := do
   return (← vdiv (← vadd a.v b.v) (.int 2)).toN
 
-/-- `median`, statistics.py:327-348. -/
+/-- `median`, statistics.py:328-349. -/
 def median (data : List PyN) : Py PyN := do medianSorted avgN (← pySorted data)
 
-/-- `median_low`, statistics.py:351-373. -/
+/-- `median_low`, statistics.py:352-374. -/
 def medianLow (data : List PyN) : Py PyN := do medianLowSorted (← pySorted data)
 
-/-- `median_high`, statistics.py:376-392. -/
+/-- `median_high`, statistics.py:377-393. -/
 def medianHigh (data : List PyN) : Py PyN := do medianHighSorted (← pySorted data)
 
-/-- The bisection of `median_grouped`, statistics.py:445-450. -/
+/-- The bisection of `median_grouped`, statistics.py:446-451. -/
 def groupedBounds {α : Type} [Inhabited α] (lt : α → α → Bool) (data : List α) : Nat × Nat :=
   let x := pick data (data.length / 2)
   let i := bisectLeft lt data x
   (i, bisectRight lt data x i)
 
-/-- `median_grouped`, statistics.py:395-464. -/
+/-- `median_grouped`, statistics.py:396-465. -/
 def medianGrouped (data : List PyN) (interval : Val) : Py Flt := do
   let data ← pySorted data
   let n := data.length
@@ -303,14 +303,14 @@ def firstMax {α : Type} : List (α × Nat) → Option (α × Nat)
   | a :: rest =>
     some (rest.foldl (fun best x => if x.2 > best.2 then x else best) a)
 
-/-- `mode`, statistics.py:467-494: `Counter(data).most_common(1)`, which is `heapq.nlargest(1, ...)`,
+/-- `mode`, statistics.py:468-495: `Counter(data).most_common(1)`, which is `heapq.nlargest(1, ...)`,
 which is `max`. -/
 def mode {α : Type} (eq : α → α → Bool) (data : List α) : Py α :=
   match firstMax (counterOf eq data) with
   | some p => .ok p.1
   | none => .error (statErr "no mode for empty data")
 
-/-- `multimode`, statistics.py:497-515. -/
+/-- `multimode`, statistics.py:498-516. -/
 def multimode {α : Type} (eq : α → α → Bool) (data : List α) : List α :=
   let counts := counterOf eq data
   match counts with
@@ -326,15 +326,15 @@ def bitLen (n : Int) : Int := (bitLength n.natAbs : Int)
 /-- `math.isqrt` on the values reached here. -/
 def isqrtInt (n : Int) : Py Int := (fun (r : Nat) => (r : Int)) <$> MathInt.isqrt n
 
-/-- `_integer_sqrt_of_frac_rto`, statistics.py:1705-1709. -/
+/-- `_integer_sqrt_of_frac_rto`, statistics.py:1706-1710. -/
 def integerSqrtOfFracRto (n m : Int) : Py Int := do
   let a ← isqrtInt (n / m)
   return if a * a * m ≠ n then ((a.toNat ||| 1 : Nat) : Int) else a
 
-/-- `_sqrt_bit_width`, statistics.py:1714. -/
+/-- `_sqrt_bit_width`, statistics.py:1715. -/
 def sqrtBitWidth : Int := 2 * 53 + 3
 
-/-- `_float_sqrt_of_frac`, statistics.py:1717-1727. -/
+/-- `_float_sqrt_of_frac`, statistics.py:1718-1728. -/
 def floatSqrtOfFrac (n m : Int) : Py Flt := do
   let q := (bitLen n - bitLen m - sqrtBitWidth) / 2
   if q ≥ 0 then
@@ -344,7 +344,7 @@ def floatSqrtOfFrac (n m : Int) : Py Flt := do
     let r ← integerSqrtOfFracRto (n * 2 ^ (-2 * q).toNat) m
     intTrueDiv r (2 ^ (-q).toNat)
 
-/-- `_decimal_sqrt_of_frac`, statistics.py:1730-1755. -/
+/-- `_decimal_sqrt_of_frac`, statistics.py:1731-1756. -/
 def decimalSqrtOfFrac (n m : Int) : Py Rat :=
   if n = 0 then .ok 0
   else
@@ -371,19 +371,19 @@ def decimalSqrtOfFrac (n m : Int) : Py Rat :=
 
 /-! ## Spread -/
 
-/-- `variance`, statistics.py:520-563. -/
+/-- `variance`, statistics.py:521-564. -/
 def variance (data : List PyN) (xbar : Option PyN) : Py PyN := do
   let (T, ss, _, n) ← ssOf data xbar
   if n < 2 then throw (statErr "variance requires at least two data points")
   convert (← vdiv ss (.int ((n : Int) - 1))) T
 
-/-- `pvariance`, statistics.py:566-606. -/
+/-- `pvariance`, statistics.py:567-607. -/
 def pvariance (data : List PyN) (mu : Option PyN) : Py PyN := do
   let (T, ss, _, n) ← ssOf data mu
   if n < 1 then throw (statErr "pvariance requires at least one data point")
   convert (← vdiv ss (.int n)) T
 
-/-- The common tail of `stdev` and `pstdev`, statistics.py:622-629 and :645-652. -/
+/-- The common tail of `stdev` and `pstdev`, statistics.py:623-630 and :646-653. -/
 def sqrtTail (T : Cls) (mss : Val) : Py Val :=
   match mss with
   | .frac q =>
@@ -391,19 +391,19 @@ def sqrtTail (T : Cls) (mss : Val) : Py Val :=
     else .flt <$> floatSqrtOfFrac q.num q.den
   | _ => .error (.valueError "inf or nan encountered in data")
 
-/-- `stdev`, statistics.py:609-629. -/
+/-- `stdev`, statistics.py:610-630. -/
 def stdev (data : List PyN) (xbar : Option PyN) : Py Val := do
   let (T, ss, _, n) ← ssOf data xbar
   if n < 2 then throw (statErr "stdev requires at least two data points")
   sqrtTail T (← vdiv ss (.int ((n : Int) - 1)))
 
-/-- `pstdev`, statistics.py:632-652. -/
+/-- `pstdev`, statistics.py:633-653. -/
 def pstdev (data : List PyN) (mu : Option PyN) : Py Val := do
   let (T, ss, _, n) ← ssOf data mu
   if n < 1 then throw (statErr "pstdev requires at least one data point")
   sqrtTail T (← vdiv ss (.int n))
 
-/-- `_mean_stdev`, statistics.py:1758-1768. -/
+/-- `_mean_stdev`, statistics.py:1759-1769. -/
 def meanStdev (data : List PyN) : Py (Flt × Flt) := do
   let (_, ss, xbar, n) ← ssOf data none
   if n < 2 then throw (statErr "stdev requires at least two data points")
@@ -427,7 +427,7 @@ def centered (x : List PyN) (c : Flt) : Py (List PyN) :=
 def fbar (x : List PyN) : Py Flt := do
   fltDiv (← fsumV (x.map (·.v))) (Flt.ofInt x.length)
 
-/-- `covariance`, statistics.py:657-683. -/
+/-- `covariance`, statistics.py:658-684. -/
 def covariance (x y : List PyN) : Py Val := do
   let n := x.length
   if y.length != n then
@@ -445,7 +445,7 @@ def mathSqrt (x : Flt) : Py Flt :=
     .error (.valueError s!"~expected a nonnegative input, got {fltRepr x}")
   else .ok r
 
-/-- `_sqrtprod`, statistics.py:1771-1794. The two rescaling branches recurse at most once more. -/
+/-- `_sqrtprod`, statistics.py:1772-1795. The two rescaling branches recurse at most once more. -/
 def sqrtprodGo : Nat → Flt → Flt → Py Flt
   | 0, _, _ => .error .modelFuel
   | f + 1, x, y => do
@@ -483,7 +483,7 @@ def groupRuns : List (Val × Nat) → List (List (Val × Nat))
       | some h => if veq a.1 h.1 then (a :: g) :: gs else [a] :: g :: gs
       | none => [a] :: gs
 
-/-- The rank assignment loop, statistics.py:1693-1701. -/
+/-- The rank assignment loop, statistics.py:1694-1702. -/
 def rankLoop : Val → List (List (Val × Nat)) → List (Nat × Val) → Py (List (Nat × Val))
   | _, [], acc => .ok acc
   | i, g :: gs, acc => do
@@ -494,7 +494,7 @@ def rankLoop : Val → List (List (Val × Nat)) → List (Nat × Val) → Py (Li
     let i ← vadd i (.int size)
     rankLoop i gs acc
 
-/-- `_rank(data, ties=ties, reverse=reverse, start=start)`, statistics.py:1651-1702. -/
+/-- `_rank(data, ties=ties, reverse=reverse, start=start)`, statistics.py:1652-1703. -/
 def rankOf (data : List Val) (reverse : Bool) (ties : String) (start : Val) : Py (List Val) := do
   if ties != "average" then throw (.valueError s!"~Unknown tie resolution method: '{ties}'")
   let _ ← pySorted (data.map Val.toN)
@@ -506,7 +506,7 @@ def rankOf (data : List Val) (reverse : Bool) (ties : String) (start : Val) : Py
     | some p => p.2
     | none => .int 0)
 
-/-- `correlation`, statistics.py:686-738. -/
+/-- `correlation`, statistics.py:687-739. -/
 def correlation (x y : List PyN) (method : String) : Py Val := do
   let n := x.length
   if y.length != n then
@@ -531,7 +531,7 @@ def correlation (x y : List PyN) (method : String) : Py Val := do
   | .error (.zeroDivisionError _) => .error (statErr "at least one of the inputs is constant")
   | r => r
 
-/-- The tail of `linear_regression`, statistics.py:795-804. -/
+/-- The tail of `linear_regression`, statistics.py:796-805. -/
 def lrCore (x' y' : List PyN) (proportional : Bool) (xbar ybar : Flt) : Py (Val × Val) := do
   let sxy ← vadd (← sumprod x' y') (.flt Flt.pz)
   let sxx ← sumprod x' x'
@@ -542,7 +542,7 @@ def lrCore (x' y' : List PyN) (proportional : Bool) (xbar ybar : Flt) : Py (Val 
     else do vsub (.flt ybar) (← vmul slope (.flt xbar))
   return (slope, intercept)
 
-/-- `linear_regression`, statistics.py:744-804. -/
+/-- `linear_regression`, statistics.py:745-805. -/
 def linearRegression (x y : List PyN) (proportional : Bool) : Py (Val × Val) := do
   let n := x.length
   if y.length != n then
@@ -557,7 +557,7 @@ def linearRegression (x y : List PyN) (proportional : Bool) : Py (Val × Val) :=
 
 /-! ## Harmonic and geometric mean -/
 
-/-- The `try` body of `harmonic_mean`, statistics.py:315-317: the items of
+/-- The `try` body of `harmonic_mean`, statistics.py:316-318: the items of
 `_sum(w / x if w else 0 for w, x in zip(weights, _fail_neg(data)))`. -/
 def hmSum (ws data : List Val) (errmsg : String) : Py (Cls × Val × Nat) := do
   let st ← (ws.zip data).foldlM (fun st p => do
@@ -569,7 +569,7 @@ def hmSum (ws data : List Val) (errmsg : String) : Py (Cls × Val × Nat) := do
 
 def hmErrmsg : String := "harmonic mean does not support negative values"
 
-/-- `harmonic_mean` from statistics.py:305 on, past the single-value shortcut. -/
+/-- `harmonic_mean` from statistics.py:306 on, past the single-value shortcut. -/
 def hmGeneral (data : List PyN) (weights : Option (List PyN)) : Py PyN := do
   let n := data.length
   let (ws, sumWeights) ← match weights with
@@ -587,7 +587,7 @@ def hmGeneral (data : List PyN) (weights : Option (List PyN)) : Py PyN := do
     if ← vlePy total (.int 0) then throw (statErr "Weighted sum must be positive")
     convert (← vdiv sumWeights total) T
 
-/-- `harmonic_mean`, statistics.py:264-324. -/
+/-- `harmonic_mean`, statistics.py:265-325. -/
 def harmonicMean (data : List PyN) (weights : Option (List PyN)) : Py PyN := do
   let n := data.length
   if n < 1 then throw (statErr "harmonic_mean requires at least one data point")
@@ -600,9 +600,9 @@ def harmonicMean (data : List PyN) (weights : Option (List PyN)) : Py PyN := do
     | _ => throw (.typeError "unsupported type")
   | _, _ => hmGeneral data weights
 
-/-! ## `quantiles`, statistics.py:1175-1223 -/
+/-! ## `quantiles`, statistics.py:1176-1224 -/
 
-/-- The inclusive interpolation, statistics.py:1206-1209. -/
+/-- The inclusive interpolation, statistics.py:1207-1210. -/
 def quantInclusive (data : List Val) (n : Int) (m i : Int) : Py Val := do
   let j := (i * m) / n
   let delta := (i * m) % n
@@ -610,7 +610,7 @@ def quantInclusive (data : List Val) (n : Int) (m i : Int) : Py Val := do
   let b ← vmul (pick data (j.toNat + 1)) (.int delta)
   vdiv (← vadd a b) (.int n)
 
-/-- The exclusive interpolation, statistics.py:1215-1220. -/
+/-- The exclusive interpolation, statistics.py:1216-1221. -/
 def quantExclusive (data : List Val) (n : Int) (ld m i : Int) : Py Val := do
   let j0 := (i * m) / n
   let j := if j0 < 1 then 1 else if j0 > ld - 1 then ld - 1 else j0

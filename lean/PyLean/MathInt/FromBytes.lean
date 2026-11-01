@@ -1,7 +1,7 @@
 import PyLean.MathInt.BytesBase
 
 /-!
-`int.from_bytes` (`_PyLong_FromByteArray`, longobject.c:923-1029) computes the
+`int.from_bytes` (`_PyLong_FromByteArray`, longobject.c:1000-1107) computes the
 unsigned or two's-complement value of its bytes.
 -/
 
@@ -13,7 +13,7 @@ open PyLean
 def bytesSigned (bs : List Nat) (signed : Bool) : Int :=
   if signed ∧ bs.getLastD 0 ≥ 128 then (bytesVal bs : Int) - 256 ^ bs.length else bytesVal bs
 
-/-- One byte entering the 30-bit digit accumulator (longobject.c:995-1007). -/
+/-- One byte entering the 30-bit digit accumulator (longobject.c:1072-1084). -/
 theorem pack_step (accum bits b R : Nat) (ha : accum < 2 ^ bits) (hb : b < 256) :
     accum ||| (b <<< bits) = accum + b * 2 ^ bits ∧
     accum + b * 2 ^ bits < 2 ^ (bits + 8) ∧
@@ -187,7 +187,7 @@ theorem bytesVal_pos_of_last (bs : List Nat) (h : 128 ≤ bs.getLastD 0) : 1 ≤
       rw [List.getLast?_eq_getLast (by simp)]; simpa using this
     have := hz _ hm; omega
 
-/-- `_PyLong_FromByteArray`, longobject.c:923-1029: the unsigned value of the
+/-- `_PyLong_FromByteArray`, longobject.c:1000-1107: the unsigned value of the
 bytes, or their two's-complement value when `is_signed` and the top bit is set. -/
 theorem fromByteArray_spec (lsb : List Nat) (signed : Bool) (hall : AllBytes lsb) :
     fromByteArray lsb signed = bytesSigned lsb signed := by

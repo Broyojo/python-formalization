@@ -14,5 +14,8 @@ Modules/_testlimitedcapi/set.c	98	107	set_discard	set_discard(PyObject *self, Py
 Modules/_testlimitedcapi/set.c	110	114	set_pop	set_pop(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
 Modules/_testlimitedcapi/set.c	117	121	set_clear	set_clear(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
 Modules/_testlimitedcapi/set.c	124	156	test_frozenset_add_in_capi	test_frozenset_add_in_capi(PyObject *self, PyObject *Py_UNUSED(obj))	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/set.c	159	201	test_set_contains_does_not_convert_unhashable_key	test_set_contains_does_not_convert_unhashable_key(PyObject *self, PyObject *Py_UNUSED(obj))	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/set.c	229	236	_PyTestLimitedCAPI_Init_Set	_PyTestLimitedCAPI_Init_Set(PyObject *m)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/set.c	159	163	raiseTestError	raiseTestError(const char* test_name, const char* msg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/set.c	166	184	test_frozenset_add_in_capi_tracking_immutable	test_frozenset_add_in_capi_tracking_immutable(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/set.c	187	221	test_frozenset_add_in_capi_tracking	test_frozenset_add_in_capi_tracking(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/set.c	225	267	test_set_contains_does_not_convert_unhashable_key	test_set_contains_does_not_convert_unhashable_key(PyObject *self, PyObject *Py_UNUSED(obj))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/set.c	297	304	_PyTestLimitedCAPI_Init_Set	_PyTestLimitedCAPI_Init_Set(PyObject *m)	excluded		test-support: only for CPython's own tests

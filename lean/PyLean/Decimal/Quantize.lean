@@ -417,7 +417,7 @@ theorem quantizeCorrect_proven : QuantizeCorrect := by
 integer at exponent 0, Rounded is set, and Inexact is set exactly when non-zero
 digits were dropped (docs: "signaling Inexact or Rounded as appropriate if
 rounding occurs"; the source raises Rounded even when the dropped digits are
-zeros, _pydecimal.py:2659, and so does libmpdec). -/
+zeros, _pydecimal.py:2759, and so does libmpdec). -/
 def ToIntegralExactCorrect : Prop :=
   ∀ (c : Ctx) (r : Option Rounding) (neg : Bool) (co : Nat) (e : Int) (fl fl' : List Signal) (d : Dec),
     e < 0 → co ≠ 0 →

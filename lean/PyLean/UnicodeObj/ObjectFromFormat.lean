@@ -1,14 +1,14 @@
 import PyLean.UnicodeObj.ObjectWriter
 
 /-!
-`PyUnicode_FromFormat` and `PyUnicodeWriter_Format`: Objects/unicodeobject.c:2670-3299.
+`PyUnicode_FromFormat` and `PyUnicodeWriter_Format`: Objects/unicodeobject.c:2576-3217.
 
 `va_arg` is a list of `VArg`. Asking for an argument of the wrong type is undefined behaviour by
 the C standard, so the model gives `.modelFuel` for it, and the difftest never does it. Sizes are
 those of LP64: `int` has 32 bits, everything else here 64.
 
 Three things are not modelled. Allocation failure, which is what `MemoryError` from a huge width
-comes to. The signed overflow of `precision + sign` at unicodeobject.c:2974, which needs a precision
+comes to. The signed overflow of `precision + sign` at unicodeobject.c:2882, which needs a precision
 of exactly `PY_SSIZE_T_MAX` and a negative number, and which ended in the same `MemoryError` as its
 neighbours when probed. And `writer->overallocate`, which decides how much memory is held; it does
 send a first write of the last chunk through the `readonly` branches of
@@ -83,7 +83,7 @@ def ffChar : List Nat → Nat
 
 def isDigitC (c : Nat) : Bool := 48 ≤ c && c ≤ 57
 
-/-- The flags, unicodeobject.c:2814-2822. -/
+/-- The flags, unicodeobject.c:2722-2730. -/
 def ffParseFlags (s : FSpec) : List Nat → FSpec × List Nat
   | [] => (s, [])
   | c :: t =>
@@ -101,7 +101,7 @@ def digitLoop (msg : String) (v : Int) : List Nat → Py (Int × List Nat)
       else digitLoop msg (v * 10 + ((c : Int) - 48)) t
     else .ok (v, c :: t)
 
-/-- unicodeobject.c:2825-2846. -/
+/-- unicodeobject.c:2733-2754. -/
 def ffParseWidth (s : FSpec) (f : List Nat) (args : List VArg) :
     Py (FSpec × List Nat × List VArg) :=
   match f with
@@ -116,7 +116,7 @@ def ffParseWidth (s : FSpec) (f : List Nat) (args : List VArg) :
     else .ok (s, c :: t, args)
   | [] => .ok (s, [], args)
 
-/-- unicodeobject.c:2847-2870. A negative `*` becomes -2, and `.` alone leaves -1. -/
+/-- unicodeobject.c:2755-2778. A negative `*` becomes -2, and `.` alone leaves -1. -/
 def ffParsePrecision (s : FSpec) (f : List Nat) (args : List VArg) :
     Py (FSpec × List Nat × List VArg) :=
   match f with
@@ -131,7 +131,7 @@ def ffParsePrecision (s : FSpec) (f : List Nat) (args : List VArg) :
   | [46] => .ok (s, [], args)
   | f => .ok (s, f, args)
 
-/-- unicodeobject.c:2872-2894. -/
+/-- unicodeobject.c:2780-2802. -/
 def parseSizemod : List Nat → Nat × List Nat
   | 108 :: 108 :: t => (F_LONGLONG, t)
   | 108 :: t => (F_LONG, t)
@@ -148,7 +148,7 @@ def parseSpec (f : List Nat) (args : List VArg) : Py (FSpec × List Nat × List 
   let (sizemod, f4) := parseSizemod f3
   .ok ({ s with sizemod }, f4, args)
 
-/-- `unicode_fromformat_write_str`, unicodeobject.c:2671-2712. `length` goes negative for a
+/-- `unicode_fromformat_write_str`, unicodeobject.c:2577-2620. `length` goes negative for a
 precision of -2, and the copy at line 2701 does not look. -/
 def fmtWriteStr (w : UWriter) (str : Str) (width precision : Int) (ljust : Bool) : Py UWriter :=
   let total : Int := str.length
@@ -171,7 +171,7 @@ def cstrOf (b : Bytes) : Bytes := b.takeWhile (· != 0)
 def boundedLen (s : List Nat) (precision : Int) : Nat :=
   if precision ≤ 0 then 0 else min precision.toNat s.length
 
-/-- `unicode_fromformat_write_utf8`, unicodeobject.c:2715-2753. `*consumed` is asked for when the
+/-- `unicode_fromformat_write_utf8`, unicodeobject.c:2623-2661. `*consumed` is asked for when the
 precision stopped the scan, which truncates a trailing incomplete sequence. -/
 def fmtWriteUtf8 (w : UWriter) (str : Bytes) (width precision : Int) (ljust : Bool) :
     Py UWriter := do
@@ -191,7 +191,7 @@ def fmtWriteUtf8 (w : UWriter) (str : Bytes) (width precision : Int) (ljust : Bo
       else utf8Decode bytes .replace
     fmtWriteStr w unicode width (-1) ljust
 
-/-- `unicode_fromformat_write_wcstr`, unicodeobject.c:2756-2782. -/
+/-- `unicode_fromformat_write_wcstr`, unicodeobject.c:2664-2690. -/
 def fmtWriteWcstr (w : UWriter) (str : Str) (width precision : Int) (ljust : Bool) :
     Py UWriter := do
   let s := str.takeWhile (· != 0)
@@ -216,7 +216,7 @@ def wrapS (bits : Nat) (v : Int) : Int :=
 
 def sizeBits (sizemod : Nat) : Nat := if sizemod = 0 then 32 else 64
 
-/-- What `sprintf` leaves in `buffer`, unicodeobject.c:2947-2963. `%X` is `%x` in capitals. -/
+/-- What `sprintf` leaves in `buffer`, unicodeobject.c:2855-2871. `%X` is `%x` in capitals. -/
 def sprintInt (conv sizemod : Nat) (v : Int) : Str :=
   let bits := sizeBits sizemod
   let u := wrapU bits v
@@ -228,7 +228,7 @@ def sprintInt (conv sizemod : Nat) (v : Int) : Str :=
     let n := wrapS bits v
     (if n < 0 then [45] else []) ++ digitsOf 10 n.natAbs
 
-/-- The layout of an integer, unicodeobject.c:2970-3009. -/
+/-- The layout of an integer, unicodeobject.c:2878-2919. -/
 def intLayout (buffer : Str) (width0 precision0 : Int) (zero ljust : Bool) : Str :=
   let sign : Bool := buffer.head? == some 45
   let signN : Int := if sign then 1 else 0
@@ -243,7 +243,7 @@ def intLayout (buffer : Str) (width0 precision0 : Int) (zero ljust : Bool) : Str
     (if sign then [45] else []) ++ List.replicate zeropad 48 ++ digits ++
     (if spacepad != 0 && ljust then List.replicate spacepad 32 else [])
 
-/-- `sprintf("%p")` on glibc, which prints NULL as `(nil)`, then unicodeobject.c:3020-3029. -/
+/-- `sprintf("%p")` on glibc, which prints NULL as `(nil)`, then unicodeobject.c:2930-2939. -/
 def pointerText (v : Nat) : Str :=
   let number := if v = 0 then lit "(nil)" else lit "0x" ++ digitsOf 16 v
   if number.getD 1 0 = 120 then number else lit "0x" ++ number
@@ -254,7 +254,7 @@ def invalidFormat (p : List Nat) : PyExc :=
 /-- The separator of `%#T` and `%#N`. -/
 def typeSep (alt : Bool) : Nat := if alt then 58 else 46
 
-/-- The first `switch`, unicodeobject.c:2898-2911: what a size modifier, a width or a precision may
+/-- The first `switch`, unicodeobject.c:2806-2819: what a size modifier, a width or a precision may
 go with. -/
 def ffBad (s : FSpec) (c : Nat) : Bool :=
   if c = 100 ∨ c = 105 ∨ c = 111 ∨ c = 117 ∨ c = 120 ∨ c = 88 then false
@@ -262,7 +262,7 @@ def ffBad (s : FSpec) (c : Nat) : Bool :=
   else if c = 115 ∨ c = 86 then s.sizemod != 0 && s.sizemod != F_LONG
   else s.sizemod != 0
 
-/-- The second `switch`, unicodeobject.c:2913-3199. Returns the writer and what is left of the
+/-- The second `switch`, unicodeobject.c:2821-3109. Returns the writer and what is left of the
 arguments. `p` is the text of the specification, for the message. -/
 def fromFormatSwitch (w : UWriter) (p : List Nat) (s : FSpec) (c : Nat) (args : List VArg) :
     Py (UWriter × List VArg) :=
@@ -337,7 +337,7 @@ def fromFormatConv (w : UWriter) (p : List Nat) (s : FSpec) (f : List Nat) (args
   if ffBad s (ffChar f) then .error (invalidFormat p)
   else fromFormatSwitch w p s (ffChar f) args
 
-/-- `unicode_fromformat_arg`, unicodeobject.c:2791-3203, with `p` at the `%`. -/
+/-- `unicode_fromformat_arg`, unicodeobject.c:2699-3113, with `p` at the `%`. -/
 def fromFormatArg (w : UWriter) (p : List Nat) (args : List VArg) :
     Py (UWriter × List Nat × List VArg) := do
   match p with
@@ -350,7 +350,7 @@ def fromFormatArg (w : UWriter) (p : List Nat) (args : List VArg) :
       let (w', args'') ← fromFormatConv w p s f args'
       .ok (w', f.tail, args'')
 
-/-- The loop of `unicode_from_format`, unicodeobject.c:3229-3250. A failure comes with the writer
+/-- The loop of `unicode_from_format`, unicodeobject.c:3139-3160. A failure comes with the writer
 as it stood, which `PyUnicodeWriter_Format` needs. -/
 def fromFormatLoop : Nat → List Nat → List VArg → UWriter → UWriter × Py Unit
   | 0, _, _, w => (w, .error .modelFuel)
@@ -367,7 +367,7 @@ def fromFormatLoop : Nat → List Nat → List VArg → UWriter → UWriter × P
 /-- `0x%02x`. -/
 def ffHex2 (b : Nat) : String := toLeanString (hexDigits 2 b)
 
-/-- `unicode_from_format`, unicodeobject.c:3206-3257. -/
+/-- `unicode_from_format`, unicodeobject.c:3116-3167. -/
 def unicodeFromFormat (w : UWriter) (format : Bytes) (args : List VArg) : UWriter × Py Unit :=
   let f := cstrOf format
   match f.find? (· > 127) with
@@ -376,14 +376,14 @@ def unicodeFromFormat (w : UWriter) (format : Bytes) (args : List VArg) : UWrite
       s!"got a non-ASCII byte: 0x{ffHex2 b}")))
   | none => fromFormatLoop (f.length + 1) f args w
 
-/-- `PyUnicode_FromFormat`, unicodeobject.c:3260-3282. -/
+/-- `PyUnicode_FromFormat`, unicodeobject.c:3170-3192. -/
 def pyUnicodeFromFormat (format : Bytes) (args : List VArg) : Py (Str × Kind) :=
   let (w, r) := unicodeFromFormat {} format args
   match r with
   | .ok _ => .ok w.finish
   | .error e => .error e
 
-/-- `PyUnicodeWriter_Format`, unicodeobject.c:3285-3299: `pos` is put back, and only `pos`. -/
+/-- `PyUnicodeWriter_Format`, unicodeobject.c:3195-3217: `pos` is put back, and only `pos`. -/
 def writerFormat (w : UWriter) (format : Bytes) (args : List VArg) : UWriter × Py Unit :=
   let (w', r) := unicodeFromFormat w format args
   match r with

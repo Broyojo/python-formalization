@@ -54,7 +54,7 @@ def stateOf (kind : String) : Arg → Option (List Nat × Py (List Nat))
 
 /-! ### `date` -/
 
-/-- `date.__new__`, _pydatetime.py:982-1012. -/
+/-- `date.__new__`, _pydatetime.py:1001-1031. -/
 def dateNewPy (year month day : Arg) : Py (Int × Int × Int) :=
   let pickled : Option (Py (List Nat)) := match stateOf "date" year with
     | some (u, enc) =>
@@ -72,7 +72,7 @@ def dateNewPy (year month day : Arg) : Py (Int × Int × Int) :=
     let d ← pyIndex day
     checkDate y m d
 
-/-- `date_new`, _datetimemodule.c:3233-3277. `MONTH_IS_SANE` is `1..12`. -/
+/-- `date_new`, _datetimemodule.c:3235-3288. `MONTH_IS_SANE` is `1..12`. -/
 def dateNewC (args : List Arg) : Py (Int × Int × Int) :=
   let pickled : Option (Py (List Nat)) := match args with
     | [state] => match stateOf "date" state with
@@ -100,19 +100,19 @@ def dateNewC (args : List Arg) : Py (Int × Int × Int) :=
 
 /-! ### `tzinfo` argument -/
 
-/-- `_check_tzinfo_arg(tz)`, _pydatetime.py:589-594. -/
+/-- `_check_tzinfo_arg(tz)`, _pydatetime.py:608-613. -/
 def checkTzinfoArgPy : Arg → Py (Option Tz)
   | .none_ => .ok none
   | .tz t => .ok (some t)
   | _ => .error (.typeError "~tzinfo argument must be None or of a tzinfo subclass")
 
-/-- `check_tzinfo_subclass`, _datetimemodule.c:1481-1490. -/
+/-- `check_tzinfo_subclass`, _datetimemodule.c:1489-1498. -/
 def checkTzinfoSubclassC : Arg → Py (Option Tz)
   | .none_ => .ok none
   | .tz t => .ok (some t)
   | _ => .error (.typeError "~tzinfo argument must be None or of a tzinfo subclass")
 
-/-- The `tzinfo` check of `__setstate`, Py:1722-1723 and :2365-2366, and of
+/-- The `tzinfo` check of `__setstate`, Py:1722-1723 and :2375-2376, and of
 `time_from_pickle`/`datetime_from_pickle`. -/
 def stateTz : Arg → Py (Option Tz)
   | .none_ => .ok none
@@ -121,7 +121,7 @@ def stateTz : Arg → Py (Option Tz)
 
 /-! ### `time` -/
 
-/-- `time.__new__`, _pydatetime.py:1411-1448. -/
+/-- `time.__new__`, _pydatetime.py:1436-1473. -/
 def timeNewPy (hour minute second us tz : Arg) (fold : Int) : Py TM :=
   let pickled : Option (Py (List Nat)) := match stateOf "time" hour with
     | some (u, enc) => if u.length = 6 ∧ u.getD 0 0 % 128 < 24 then some enc else none
@@ -144,7 +144,7 @@ def timeNewPy (hour minute second us tz : Arg) (fold : Int) : Py TM :=
     let t ← checkTzinfoArgPy tz
     return ⟨h, mi, s, u, fold, t⟩
 
-/-- `time_new`, _datetimemodule.c:4653-4706, for positional arguments and `fold`. -/
+/-- `time_new`, _datetimemodule.c:4710-4749, for positional arguments and `fold`. -/
 def timeNewC (args : List Arg) (fold : Int) : Py TM :=
   let pickled : Option (Py (List Nat) × Arg) := match args with
     | state :: rest =>
@@ -175,7 +175,7 @@ def timeNewC (args : List Arg) (fold : Int) : Py TM :=
 
 /-! ### `datetime` -/
 
-/-- `datetime.__new__`, _pydatetime.py:1755-1788. -/
+/-- `datetime.__new__`, _pydatetime.py:1800-1833. -/
 def datetimeNewPy (year month day hour minute second us tz : Arg) (fold : Int) : Py DT :=
   let pickled : Option (Py (List Nat)) := match stateOf "datetime" year with
     | some (u, enc) =>
@@ -203,7 +203,7 @@ def datetimeNewPy (year month day hour minute second us tz : Arg) (fold : Int) :
     let t ← checkTzinfoArgPy tz
     return ⟨y, m, d, h, mi, s, u, fold, t⟩
 
-/-- `datetime_new`, _datetimemodule.c:5378-5435, for positional arguments and `fold`. -/
+/-- `datetime_new`, _datetimemodule.c:5487-5558, for positional arguments and `fold`. -/
 def datetimeNewC (args : List Arg) (fold : Int) : Py DT :=
   let pickled : Option (Py (List Nat) × Arg) := match args with
     | state :: rest =>

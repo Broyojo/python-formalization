@@ -1,19 +1,19 @@
 file	line	endline	name	signature	status	entry	note
 Lib/xml/etree/ElementTree.py	121	123	iselement	iselement(element)	todo		
-Lib/xml/etree/ElementTree.py	170	176	Element.__init__	__init__(self, tag, attrib={}, **extra)	todo		
-Lib/xml/etree/ElementTree.py	178	179	Element.__repr__	__repr__(self)	todo		
-Lib/xml/etree/ElementTree.py	181	190	Element.makeelement	makeelement(self, tag, attrib)	todo		
-Lib/xml/etree/ElementTree.py	192	197	Element.__copy__	__copy__(self)	todo		
-Lib/xml/etree/ElementTree.py	199	200	Element.__len__	__len__(self)	todo		
-Lib/xml/etree/ElementTree.py	202	209	Element.__bool__	__bool__(self)	todo		
-Lib/xml/etree/ElementTree.py	211	212	Element.__getitem__	__getitem__(self, index)	todo		
-Lib/xml/etree/ElementTree.py	214	220	Element.__setitem__	__setitem__(self, index, element)	todo		
-Lib/xml/etree/ElementTree.py	222	223	Element.__delitem__	__delitem__(self, index)	todo		
-Lib/xml/etree/ElementTree.py	225	234	Element.append	append(self, subelement)	todo		
-Lib/xml/etree/ElementTree.py	236	244	Element.extend	extend(self, elements)	todo		
-Lib/xml/etree/ElementTree.py	246	249	Element.insert	insert(self, index, subelement)	todo		
-Lib/xml/etree/ElementTree.py	251	255	Element._assert_is_element	_assert_is_element(self, e)	todo		
-Lib/xml/etree/ElementTree.py	257	274	Element.remove	remove(self, subelement)	todo		
+Lib/xml/etree/ElementTree.py	167	173	Element.__init__	__init__(self, tag, /, attrib={}, **extra)	todo		changed-in-3.15:
+Lib/xml/etree/ElementTree.py	175	176	Element.__repr__	__repr__(self)	todo		
+Lib/xml/etree/ElementTree.py	178	187	Element.makeelement	makeelement(self, tag, attrib)	todo		
+Lib/xml/etree/ElementTree.py	189	194	Element.__copy__	__copy__(self)	todo		
+Lib/xml/etree/ElementTree.py	196	197	Element.__len__	__len__(self)	todo		
+Lib/xml/etree/ElementTree.py	199	206	Element.__bool__	__bool__(self)	todo		
+Lib/xml/etree/ElementTree.py	208	209	Element.__getitem__	__getitem__(self, index)	todo		
+Lib/xml/etree/ElementTree.py	211	217	Element.__setitem__	__setitem__(self, index, element)	todo		
+Lib/xml/etree/ElementTree.py	219	220	Element.__delitem__	__delitem__(self, index)	todo		
+Lib/xml/etree/ElementTree.py	222	231	Element.append	append(self, subelement)	todo		
+Lib/xml/etree/ElementTree.py	233	241	Element.extend	extend(self, elements)	todo		
+Lib/xml/etree/ElementTree.py	243	246	Element.insert	insert(self, index, subelement)	todo		
+Lib/xml/etree/ElementTree.py	248	252	Element._assert_is_element	_assert_is_element(self, e)	todo		
+Lib/xml/etree/ElementTree.py	254	274	Element.remove	remove(self, subelement)	todo		changed-in-3.15:
 Lib/xml/etree/ElementTree.py	276	286	Element.find	find(self, path, namespaces=None)	todo		candidates:strsearch-count-repeated-find,strsearch-find-extreme,strsearch-find-slice-literal,strsearch-find-str-bytes,strsearch-rfind-reverse
 Lib/xml/etree/ElementTree.py	288	301	Element.findtext	findtext(self, path, default=None, namespaces=None)	todo		
 Lib/xml/etree/ElementTree.py	303	313	Element.findall	findall(self, path, namespaces=None)	todo		
@@ -21,96 +21,98 @@ Lib/xml/etree/ElementTree.py	315	325	Element.iterfind	iterfind(self, path, names
 Lib/xml/etree/ElementTree.py	327	336	Element.clear	clear(self)	todo		
 Lib/xml/etree/ElementTree.py	338	349	Element.get	get(self, key, default=None)	todo		
 Lib/xml/etree/ElementTree.py	351	359	Element.set	set(self, key, value)	todo		
-Lib/xml/etree/ElementTree.py	361	368	Element.keys	keys(self)	todo		
-Lib/xml/etree/ElementTree.py	370	379	Element.items	items(self)	todo		
-Lib/xml/etree/ElementTree.py	381	401	Element.iter	iter(self, tag=None)	todo		
-Lib/xml/etree/ElementTree.py	403	420	Element.itertext	itertext(self)	todo		
-Lib/xml/etree/ElementTree.py	423	438	SubElement	SubElement(parent, tag, attrib={}, **extra)	todo		
-Lib/xml/etree/ElementTree.py	441	452	Comment	Comment(text=None)	todo		
-Lib/xml/etree/ElementTree.py	455	469	ProcessingInstruction	ProcessingInstruction(target, text=None)	todo		
-Lib/xml/etree/ElementTree.py	488	491	QName.__init__	__init__(self, text_or_uri, tag=None)	todo		
-Lib/xml/etree/ElementTree.py	492	493	QName.__str__	__str__(self)	todo		
-Lib/xml/etree/ElementTree.py	494	495	QName.__repr__	__repr__(self)	todo		
-Lib/xml/etree/ElementTree.py	496	497	QName.__hash__	__hash__(self)	todo		
-Lib/xml/etree/ElementTree.py	498	501	QName.__le__	__le__(self, other)	todo		
-Lib/xml/etree/ElementTree.py	502	505	QName.__lt__	__lt__(self, other)	todo		
-Lib/xml/etree/ElementTree.py	506	509	QName.__ge__	__ge__(self, other)	todo		
-Lib/xml/etree/ElementTree.py	510	513	QName.__gt__	__gt__(self, other)	todo		
-Lib/xml/etree/ElementTree.py	514	517	QName.__eq__	__eq__(self, other)	todo		
-Lib/xml/etree/ElementTree.py	533	539	ElementTree.__init__	__init__(self, element=None, file=None)	todo		
-Lib/xml/etree/ElementTree.py	541	543	ElementTree.getroot	getroot(self)	todo		
-Lib/xml/etree/ElementTree.py	545	555	ElementTree._setroot	_setroot(self, element)	todo		
-Lib/xml/etree/ElementTree.py	557	589	ElementTree.parse	parse(self, source, parser=None)	todo		
-Lib/xml/etree/ElementTree.py	591	602	ElementTree.iter	iter(self, tag=None)	todo		
-Lib/xml/etree/ElementTree.py	604	625	ElementTree.find	find(self, path, namespaces=None)	todo		candidates:strsearch-count-repeated-find,strsearch-find-extreme,strsearch-find-slice-literal,strsearch-find-str-bytes,strsearch-rfind-reverse
-Lib/xml/etree/ElementTree.py	627	648	ElementTree.findtext	findtext(self, path, default=None, namespaces=None)	todo		
-Lib/xml/etree/ElementTree.py	650	671	ElementTree.findall	findall(self, path, namespaces=None)	todo		
-Lib/xml/etree/ElementTree.py	673	693	ElementTree.iterfind	iterfind(self, path, namespaces=None)	todo		
-Lib/xml/etree/ElementTree.py	695	750	ElementTree.write	write(self, file_or_filename, encoding=None, xml_declaration=None, default_namespace=None, method=None, *, short_empty_elements=True)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
-Lib/xml/etree/ElementTree.py	752	754	ElementTree.write_c14n	write_c14n(self, file)	todo		
-Lib/xml/etree/ElementTree.py	760	807	_get_writer	_get_writer(file_or_filename, encoding)	todo		
-Lib/xml/etree/ElementTree.py	809	868	_namespaces	_namespaces(elem, default_namespace=None)	todo		
-Lib/xml/etree/ElementTree.py	870	918	_serialize_xml	_serialize_xml(write, elem, qnames, namespaces, short_empty_elements, **kwargs)	todo		
-Lib/xml/etree/ElementTree.py	927	975	_serialize_html	_serialize_html(write, elem, qnames, namespaces, **kwargs)	todo		
-Lib/xml/etree/ElementTree.py	977	981	_serialize_text	_serialize_text(write, elem)	todo		
-Lib/xml/etree/ElementTree.py	992	1009	register_namespace	register_namespace(prefix, uri)	todo		
-Lib/xml/etree/ElementTree.py	1026	1029	_raise_serialization_error	_raise_serialization_error(text)	todo		
-Lib/xml/etree/ElementTree.py	1031	1045	_escape_cdata	_escape_cdata(text)	todo		
-Lib/xml/etree/ElementTree.py	1047	1073	_escape_attrib	_escape_attrib(text)	todo		
-Lib/xml/etree/ElementTree.py	1075	1086	_escape_attrib_html	_escape_attrib_html(text)	todo		
-Lib/xml/etree/ElementTree.py	1090	1112	tostring	tostring(element, encoding=None, method=None, *, xml_declaration=None, default_namespace=None, short_empty_elements=True)	todo		
-Lib/xml/etree/ElementTree.py	1116	1117	_ListDataStream.__init__	__init__(self, lst)	todo		
-Lib/xml/etree/ElementTree.py	1119	1120	_ListDataStream.writable	writable(self)	todo		
-Lib/xml/etree/ElementTree.py	1122	1123	_ListDataStream.seekable	seekable(self)	todo		
-Lib/xml/etree/ElementTree.py	1125	1126	_ListDataStream.write	write(self, b)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
-Lib/xml/etree/ElementTree.py	1128	1129	_ListDataStream.tell	tell(self)	todo		
-Lib/xml/etree/ElementTree.py	1131	1141	tostringlist	tostringlist(element, encoding=None, method=None, *, xml_declaration=None, default_namespace=None, short_empty_elements=True)	todo		
-Lib/xml/etree/ElementTree.py	1144	1160	dump	dump(elem)	todo		
-Lib/xml/etree/ElementTree.py	1163	1210	indent	indent(tree, space=' ', level=0)	todo		
-Lib/xml/etree/ElementTree.py	1217	1228	parse	parse(source, parser=None)	todo		
-Lib/xml/etree/ElementTree.py	1231	1292	iterparse	iterparse(source, events=None, parser=None)	todo		
-Lib/xml/etree/ElementTree.py	1297	1307	XMLPullParser.__init__	__init__(self, events=None, *, _parser=None)	todo		
-Lib/xml/etree/ElementTree.py	1309	1317	XMLPullParser.feed	feed(self, data)	todo		
-Lib/xml/etree/ElementTree.py	1319	1323	XMLPullParser._close_and_return_root	_close_and_return_root(self)	todo		
-Lib/xml/etree/ElementTree.py	1325	1331	XMLPullParser.close	close(self)	todo		
-Lib/xml/etree/ElementTree.py	1333	1345	XMLPullParser.read_events	read_events(self)	todo		
-Lib/xml/etree/ElementTree.py	1347	1350	XMLPullParser.flush	flush(self)	todo		
-Lib/xml/etree/ElementTree.py	1353	1367	XML	XML(text, parser=None)	todo		
-Lib/xml/etree/ElementTree.py	1370	1389	XMLID	XMLID(text, parser=None)	todo		
-Lib/xml/etree/ElementTree.py	1394	1407	fromstringlist	fromstringlist(sequence, parser=None)	todo		
-Lib/xml/etree/ElementTree.py	1432	1450	TreeBuilder.__init__	__init__(self, element_factory=None, *, comment_factory=None, pi_factory=None, insert_comments=False, insert_pis=False)	todo		
-Lib/xml/etree/ElementTree.py	1452	1456	TreeBuilder.close	close(self)	todo		
-Lib/xml/etree/ElementTree.py	1458	1468	TreeBuilder._flush	_flush(self)	todo		
-Lib/xml/etree/ElementTree.py	1470	1472	TreeBuilder.data	data(self, data)	todo		
-Lib/xml/etree/ElementTree.py	1474	1489	TreeBuilder.start	start(self, tag, attrs)	todo		
-Lib/xml/etree/ElementTree.py	1491	1503	TreeBuilder.end	end(self, tag)	todo		
-Lib/xml/etree/ElementTree.py	1505	1511	TreeBuilder.comment	comment(self, text)	todo		
-Lib/xml/etree/ElementTree.py	1513	1520	TreeBuilder.pi	pi(self, target, text=None)	todo		
-Lib/xml/etree/ElementTree.py	1522	1530	TreeBuilder._handle_single	_handle_single(self, factory, insert, *args)	todo		
-Lib/xml/etree/ElementTree.py	1544	1587	XMLParser.__init__	__init__(self, *, target=None, encoding=None)	todo		
-Lib/xml/etree/ElementTree.py	1589	1640	XMLParser._setevents	_setevents(self, events_queue, events_to_report)	todo		
-Lib/xml/etree/ElementTree.py	1642	1646	XMLParser._raiseerror	_raiseerror(self, value)	todo		
-Lib/xml/etree/ElementTree.py	1648	1657	XMLParser._fixname	_fixname(self, key)	todo		
-Lib/xml/etree/ElementTree.py	1659	1660	XMLParser._start_ns	_start_ns(self, prefix, uri)	todo		
-Lib/xml/etree/ElementTree.py	1662	1663	XMLParser._end_ns	_end_ns(self, prefix)	todo		
-Lib/xml/etree/ElementTree.py	1665	1675	XMLParser._start	_start(self, tag, attr_list)	todo		
-Lib/xml/etree/ElementTree.py	1677	1678	XMLParser._end	_end(self, tag)	todo		
-Lib/xml/etree/ElementTree.py	1680	1732	XMLParser._default	_default(self, text)	todo		
-Lib/xml/etree/ElementTree.py	1734	1739	XMLParser.feed	feed(self, data)	todo		
-Lib/xml/etree/ElementTree.py	1741	1756	XMLParser.close	close(self)	todo		
-Lib/xml/etree/ElementTree.py	1758	1766	XMLParser.flush	flush(self)	todo		
-Lib/xml/etree/ElementTree.py	1771	1799	canonicalize	canonicalize(xml_data=None, *, out=None, from_file=None, **options)	todo		
-Lib/xml/etree/ElementTree.py	1830	1865	C14NWriterTarget.__init__	__init__(self, write, *, with_comments=False, strip_text=False, rewrite_prefixes=False, qname_aware_tags=None, qname_aware_attrs=None, exclude_attrs=None, exclude_tags=None)	todo		
-Lib/xml/etree/ElementTree.py	1867	1870	C14NWriterTarget._iter_namespaces	_iter_namespaces(self, ns_stack, _reversed=reversed)	todo		
-Lib/xml/etree/ElementTree.py	1872	1877	C14NWriterTarget._resolve_prefix_name	_resolve_prefix_name(self, prefixed_name)	todo		
-Lib/xml/etree/ElementTree.py	1879	1914	C14NWriterTarget._qname	_qname(self, qname, uri=None)	todo		
-Lib/xml/etree/ElementTree.py	1916	1918	C14NWriterTarget.data	data(self, data)	todo		
-Lib/xml/etree/ElementTree.py	1920	1932	C14NWriterTarget._flush	_flush(self, _join_text=''.join)	todo		
-Lib/xml/etree/ElementTree.py	1934	1940	C14NWriterTarget.start_ns	start_ns(self, prefix, uri)	todo		
-Lib/xml/etree/ElementTree.py	1942	1957	C14NWriterTarget.start	start(self, tag, attrs)	todo		
-Lib/xml/etree/ElementTree.py	1959	2026	C14NWriterTarget._start	_start(self, tag, attrs, new_namespaces, qname_text=None)	todo		
-Lib/xml/etree/ElementTree.py	2028	2038	C14NWriterTarget.end	end(self, tag)	todo		
-Lib/xml/etree/ElementTree.py	2040	2051	C14NWriterTarget.comment	comment(self, text)	todo		
-Lib/xml/etree/ElementTree.py	2053	2063	C14NWriterTarget.pi	pi(self, target, data)	todo		
-Lib/xml/etree/ElementTree.py	2066	2082	_escape_cdata_c14n	_escape_cdata_c14n(text)	todo		
-Lib/xml/etree/ElementTree.py	2085	2102	_escape_attrib_c14n	_escape_attrib_c14n(text)	todo		
+Lib/xml/etree/ElementTree.py	361	367	Element.keys	keys(self)	todo		
+Lib/xml/etree/ElementTree.py	369	375	Element.items	items(self)	todo		
+Lib/xml/etree/ElementTree.py	377	397	Element.iter	iter(self, tag=None)	todo		
+Lib/xml/etree/ElementTree.py	399	416	Element.itertext	itertext(self)	todo		
+Lib/xml/etree/ElementTree.py	419	434	SubElement	SubElement(parent, tag, /, attrib={}, **extra)	todo		changed-in-3.15:
+Lib/xml/etree/ElementTree.py	437	448	Comment	Comment(text=None)	todo		
+Lib/xml/etree/ElementTree.py	451	465	ProcessingInstruction	ProcessingInstruction(target, text=None)	todo		
+Lib/xml/etree/ElementTree.py	484	487	QName.__init__	__init__(self, text_or_uri, tag=None)	todo		
+Lib/xml/etree/ElementTree.py	488	489	QName.__str__	__str__(self)	todo		
+Lib/xml/etree/ElementTree.py	490	491	QName.__repr__	__repr__(self)	todo		
+Lib/xml/etree/ElementTree.py	492	493	QName.__hash__	__hash__(self)	todo		
+Lib/xml/etree/ElementTree.py	494	497	QName.__le__	__le__(self, other)	todo		
+Lib/xml/etree/ElementTree.py	498	501	QName.__lt__	__lt__(self, other)	todo		
+Lib/xml/etree/ElementTree.py	502	505	QName.__ge__	__ge__(self, other)	todo		
+Lib/xml/etree/ElementTree.py	506	509	QName.__gt__	__gt__(self, other)	todo		
+Lib/xml/etree/ElementTree.py	510	513	QName.__eq__	__eq__(self, other)	todo		
+Lib/xml/etree/ElementTree.py	529	535	ElementTree.__init__	__init__(self, element=None, file=None)	todo		
+Lib/xml/etree/ElementTree.py	537	539	ElementTree.getroot	getroot(self)	todo		
+Lib/xml/etree/ElementTree.py	541	551	ElementTree._setroot	_setroot(self, element)	todo		
+Lib/xml/etree/ElementTree.py	553	585	ElementTree.parse	parse(self, source, parser=None)	todo		
+Lib/xml/etree/ElementTree.py	587	598	ElementTree.iter	iter(self, tag=None)	todo		
+Lib/xml/etree/ElementTree.py	600	621	ElementTree.find	find(self, path, namespaces=None)	todo		candidates:strsearch-count-repeated-find,strsearch-find-extreme,strsearch-find-slice-literal,strsearch-find-str-bytes,strsearch-rfind-reverse
+Lib/xml/etree/ElementTree.py	623	644	ElementTree.findtext	findtext(self, path, default=None, namespaces=None)	todo		
+Lib/xml/etree/ElementTree.py	646	667	ElementTree.findall	findall(self, path, namespaces=None)	todo		
+Lib/xml/etree/ElementTree.py	669	689	ElementTree.iterfind	iterfind(self, path, namespaces=None)	todo		
+Lib/xml/etree/ElementTree.py	691	746	ElementTree.write	write(self, file_or_filename, encoding=None, xml_declaration=None, default_namespace=None, method=None, *, short_empty_elements=True)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/xml/etree/ElementTree.py	748	750	ElementTree.write_c14n	write_c14n(self, file)	todo		
+Lib/xml/etree/ElementTree.py	756	803	_get_writer	_get_writer(file_or_filename, encoding)	todo		
+Lib/xml/etree/ElementTree.py	805	864	_namespaces	_namespaces(elem, default_namespace=None)	todo		
+Lib/xml/etree/ElementTree.py	866	914	_serialize_xml	_serialize_xml(write, elem, qnames, namespaces, short_empty_elements, **kwargs)	todo		
+Lib/xml/etree/ElementTree.py	923	974	_serialize_html	_serialize_html(write, elem, qnames, namespaces, **kwargs)	todo		changed-in-3.15:
+Lib/xml/etree/ElementTree.py	976	980	_serialize_text	_serialize_text(write, elem)	todo		
+Lib/xml/etree/ElementTree.py	991	1008	register_namespace	register_namespace(prefix, uri)	todo		
+Lib/xml/etree/ElementTree.py	1025	1028	_raise_serialization_error	_raise_serialization_error(text)	todo		
+Lib/xml/etree/ElementTree.py	1030	1044	_escape_cdata	_escape_cdata(text)	todo		
+Lib/xml/etree/ElementTree.py	1046	1072	_escape_attrib	_escape_attrib(text)	todo		
+Lib/xml/etree/ElementTree.py	1074	1085	_escape_attrib_html	_escape_attrib_html(text)	todo		
+Lib/xml/etree/ElementTree.py	1089	1111	tostring	tostring(element, encoding=None, method=None, *, xml_declaration=None, default_namespace=None, short_empty_elements=True)	todo		
+Lib/xml/etree/ElementTree.py	1115	1116	_ListDataStream.__init__	__init__(self, lst)	todo		
+Lib/xml/etree/ElementTree.py	1118	1119	_ListDataStream.writable	writable(self)	todo		
+Lib/xml/etree/ElementTree.py	1121	1122	_ListDataStream.seekable	seekable(self)	todo		
+Lib/xml/etree/ElementTree.py	1124	1125	_ListDataStream.write	write(self, b)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/xml/etree/ElementTree.py	1127	1128	_ListDataStream.tell	tell(self)	todo		
+Lib/xml/etree/ElementTree.py	1130	1140	tostringlist	tostringlist(element, encoding=None, method=None, *, xml_declaration=None, default_namespace=None, short_empty_elements=True)	todo		
+Lib/xml/etree/ElementTree.py	1143	1159	dump	dump(elem)	todo		
+Lib/xml/etree/ElementTree.py	1162	1209	indent	indent(tree, space=' ', level=0)	todo		changed-in-3.15:
+Lib/xml/etree/ElementTree.py	1216	1227	parse	parse(source, parser=None)	todo		
+Lib/xml/etree/ElementTree.py	1230	1295	iterparse	iterparse(source, events=None, parser=None)	todo		changed-in-3.15:
+Lib/xml/etree/ElementTree.py	1300	1310	XMLPullParser.__init__	__init__(self, events=None, *, _parser=None)	todo		
+Lib/xml/etree/ElementTree.py	1312	1320	XMLPullParser.feed	feed(self, data)	todo		
+Lib/xml/etree/ElementTree.py	1322	1326	XMLPullParser._close_and_return_root	_close_and_return_root(self)	todo		
+Lib/xml/etree/ElementTree.py	1328	1334	XMLPullParser.close	close(self)	todo		
+Lib/xml/etree/ElementTree.py	1336	1348	XMLPullParser.read_events	read_events(self)	todo		
+Lib/xml/etree/ElementTree.py	1350	1353	XMLPullParser.flush	flush(self)	todo		
+Lib/xml/etree/ElementTree.py	1356	1370	XML	XML(text, parser=None)	todo		
+Lib/xml/etree/ElementTree.py	1373	1392	XMLID	XMLID(text, parser=None)	todo		
+Lib/xml/etree/ElementTree.py	1397	1410	fromstringlist	fromstringlist(sequence, parser=None)	todo		
+Lib/xml/etree/ElementTree.py	1435	1453	TreeBuilder.__init__	__init__(self, element_factory=None, *, comment_factory=None, pi_factory=None, insert_comments=False, insert_pis=False)	todo		
+Lib/xml/etree/ElementTree.py	1455	1459	TreeBuilder.close	close(self)	todo		
+Lib/xml/etree/ElementTree.py	1461	1471	TreeBuilder._flush	_flush(self)	todo		
+Lib/xml/etree/ElementTree.py	1473	1475	TreeBuilder.data	data(self, data)	todo		
+Lib/xml/etree/ElementTree.py	1477	1492	TreeBuilder.start	start(self, tag, attrs)	todo		
+Lib/xml/etree/ElementTree.py	1494	1506	TreeBuilder.end	end(self, tag)	todo		
+Lib/xml/etree/ElementTree.py	1508	1514	TreeBuilder.comment	comment(self, text)	todo		
+Lib/xml/etree/ElementTree.py	1516	1523	TreeBuilder.pi	pi(self, target, text=None)	todo		
+Lib/xml/etree/ElementTree.py	1525	1533	TreeBuilder._handle_single	_handle_single(self, factory, insert, *args)	todo		
+Lib/xml/etree/ElementTree.py	1547	1590	XMLParser.__init__	__init__(self, *, target=None, encoding=None)	todo		changed-in-3.15:
+Lib/xml/etree/ElementTree.py	1592	1643	XMLParser._setevents	_setevents(self, events_queue, events_to_report)	todo		
+Lib/xml/etree/ElementTree.py	1645	1649	XMLParser._raiseerror	_raiseerror(self, value)	todo		
+Lib/xml/etree/ElementTree.py	1651	1660	XMLParser._fixname	_fixname(self, key)	todo		
+Lib/xml/etree/ElementTree.py	1662	1663	XMLParser._start_ns	_start_ns(self, prefix, uri)	todo		
+Lib/xml/etree/ElementTree.py	1665	1666	XMLParser._end_ns	_end_ns(self, prefix)	todo		
+Lib/xml/etree/ElementTree.py	1668	1678	XMLParser._start	_start(self, tag, attr_list)	todo		
+Lib/xml/etree/ElementTree.py	1680	1681	XMLParser._end	_end(self, tag)	todo		
+Lib/xml/etree/ElementTree.py	1683	1703	XMLParser._default	_default(self, text)	todo		changed-in-3.15:
+Lib/xml/etree/ElementTree.py	1705	1712	XMLParser._start_doctype	_start_doctype(self, name, system, pubid, has_internal_subset)	todo		changed-in-3.15: new function
+Lib/xml/etree/ElementTree.py	1714	1719	XMLParser.feed	feed(self, data)	todo		
+Lib/xml/etree/ElementTree.py	1721	1736	XMLParser.close	close(self)	todo		
+Lib/xml/etree/ElementTree.py	1738	1746	XMLParser.flush	flush(self)	todo		
+Lib/xml/etree/ElementTree.py	1751	1779	canonicalize	canonicalize(xml_data=None, *, out=None, from_file=None, **options)	todo		
+Lib/xml/etree/ElementTree.py	1810	1845	C14NWriterTarget.__init__	__init__(self, write, *, with_comments=False, strip_text=False, rewrite_prefixes=False, qname_aware_tags=None, qname_aware_attrs=None, exclude_attrs=None, exclude_tags=None)	todo		
+Lib/xml/etree/ElementTree.py	1847	1850	C14NWriterTarget._iter_namespaces	_iter_namespaces(self, ns_stack, _reversed=reversed)	todo		
+Lib/xml/etree/ElementTree.py	1852	1857	C14NWriterTarget._resolve_prefix_name	_resolve_prefix_name(self, prefixed_name)	todo		
+Lib/xml/etree/ElementTree.py	1859	1894	C14NWriterTarget._qname	_qname(self, qname, uri=None)	todo		
+Lib/xml/etree/ElementTree.py	1896	1898	C14NWriterTarget.data	data(self, data)	todo		
+Lib/xml/etree/ElementTree.py	1900	1912	C14NWriterTarget._flush	_flush(self, _join_text=''.join)	todo		changed-in-3.15:
+Lib/xml/etree/ElementTree.py	1914	1920	C14NWriterTarget.start_ns	start_ns(self, prefix, uri)	todo		
+Lib/xml/etree/ElementTree.py	1922	1937	C14NWriterTarget.start	start(self, tag, attrs)	todo		
+Lib/xml/etree/ElementTree.py	1939	2006	C14NWriterTarget._start	_start(self, tag, attrs, new_namespaces, qname_text=None)	todo		
+Lib/xml/etree/ElementTree.py	2008	2018	C14NWriterTarget.end	end(self, tag)	todo		
+Lib/xml/etree/ElementTree.py	2020	2031	C14NWriterTarget.comment	comment(self, text)	todo		
+Lib/xml/etree/ElementTree.py	2033	2043	C14NWriterTarget.pi	pi(self, target, data)	todo		
+Lib/xml/etree/ElementTree.py	2046	2062	_escape_cdata_c14n	_escape_cdata_c14n(text)	todo		
+Lib/xml/etree/ElementTree.py	2065	2082	_escape_attrib_c14n	_escape_attrib_c14n(text)	todo		
+Lib/xml/etree/ElementTree.py	2105	2111	__getattr__	__getattr__(name)	todo		changed-in-3.15: new function

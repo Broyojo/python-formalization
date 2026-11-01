@@ -16,7 +16,7 @@ summary: |
                  f"{x:\ud800}" a raw surrogate: none of them survive ast.parse.
 
   Doubling is the wrong escape in a spec: the tokenizer never collapses `{{` or `}}` there
-  (Parser/lexer/lexer.c:1529 `peek != '{' || in_format_spec` and :1559 `!in_format_spec`),
+  (Parser/lexer/lexer.c:1492 `peek != '{' || in_format_spec` and :1523 `!in_format_spec`),
   and the literal text of a spec is not routed through _str_literal_helper as the top level
   of an f-string is.
 likelihood: |
@@ -48,7 +48,7 @@ promised_by: |
   back to an ast (using ast.parse) will generate an AST equivalent to *node*". The `ast.unparse`
   docs warn only that the code "may not be equal to the original" text.
 cause: |
-  Lib/_ast_unparse.py:556-563 (3.14.7): `value = node.value.replace("{", "{{").replace("}", "}}")`
+  Lib/_ast_unparse.py:556-563: `value = node.value.replace("{", "{{").replace("}", "}}")`
   applies to specs too, and the `if is_format_spec:` block covers only backslash, quotes, newline.
 possible_fix: |
   In a format spec, escape instead of doubling: write `{`, `}` and every non-printable character

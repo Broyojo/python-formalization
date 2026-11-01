@@ -1,0 +1,41 @@
+file	line	endline	name	signature	status	entry	note
+Lib/profiling/sampling/live_collector/display.py	12	14	DisplayInterface.get_dimensions	get_dimensions(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	17	19	DisplayInterface.clear	clear(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	22	24	DisplayInterface.refresh	refresh(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	27	29	DisplayInterface.redraw	redraw(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	32	34	DisplayInterface.add_str	add_str(self, line, col, text, attr=0)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	37	39	DisplayInterface.get_input	get_input(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	42	44	DisplayInterface.set_nodelay	set_nodelay(self, flag)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	47	49	DisplayInterface.has_colors	has_colors(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	52	54	DisplayInterface.init_color_pair	init_color_pair(self, pair_id, fg, bg)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	57	59	DisplayInterface.get_color_pair	get_color_pair(self, pair_id)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	62	64	DisplayInterface.get_attr	get_attr(self, name)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	70	71	CursesDisplay.__init__	__init__(self, stdscr)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	73	74	CursesDisplay.get_dimensions	get_dimensions(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	76	79	CursesDisplay.clear	clear(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	81	82	CursesDisplay.refresh	refresh(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	84	87	CursesDisplay.redraw	redraw(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	89	98	CursesDisplay.add_str	add_str(self, line, col, text, attr=0)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	100	104	CursesDisplay.get_input	get_input(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	106	107	CursesDisplay.set_nodelay	set_nodelay(self, flag)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	109	110	CursesDisplay.has_colors	has_colors(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	112	116	CursesDisplay.init_color_pair	init_color_pair(self, pair_id, fg, bg)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	118	119	CursesDisplay.get_color_pair	get_color_pair(self, pair_id)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	121	122	CursesDisplay.get_attr	get_attr(self, name)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	128	138	MockDisplay.__init__	__init__(self, height=40, width=160)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	140	141	MockDisplay.get_dimensions	get_dimensions(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	143	145	MockDisplay.clear	clear(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	147	148	MockDisplay.refresh	refresh(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	150	151	MockDisplay.redraw	redraw(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	153	158	MockDisplay.add_str	add_str(self, line, col, text, attr=0)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	160	163	MockDisplay.get_input	get_input(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	165	166	MockDisplay.set_nodelay	set_nodelay(self, flag)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	168	169	MockDisplay.has_colors	has_colors(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	171	172	MockDisplay.init_color_pair	init_color_pair(self, pair_id, fg, bg)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	174	175	MockDisplay.get_color_pair	get_color_pair(self, pair_id)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	177	185	MockDisplay.get_attr	get_attr(self, name)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	187	189	MockDisplay.simulate_input	simulate_input(self, char)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	191	195	MockDisplay.get_text_at	get_text_at(self, line, col)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	197	229	MockDisplay.get_all_lines	get_all_lines(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	231	236	MockDisplay.find_text	find_text(self, pattern)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/live_collector/display.py	238	240	MockDisplay.contains_text	contains_text(self, text)	todo		changed-in-3.15: new function

@@ -870,7 +870,7 @@ theorem twoInputChecks_proven : TwoInputChecks := by
 /-- `0.1` as a float. -/
 def f01 : Flt := .fin (mkRat 3602879701896397 36028797018963968)
 
-/-- `correlation` promises `StatisticsError` for constant input (Doc/library/statistics.rst:760:
+/-- `correlation` promises `StatisticsError` for constant input (Doc/library/statistics.rst:757:
 inputs "need not to be constant, otherwise StatisticsError is raised"). -/
 def ConstantInputDetected : Prop :=
   ∀ (c : Flt) (y : List Int), c.isFinite = true → 2 ≤ y.length →
@@ -885,7 +885,7 @@ theorem constantInputDetected_refuted : ¬ConstantInputDetected := by
   rw [show ([1, 2, 3] : List Int).length = 3 from rfl, hv] at he
   cases he
 
-/-- Pearson's `r` "takes values between -1 and +1" (statistics.py:690-691). -/
+/-- Pearson's `r` "takes values between -1 and +1" (statistics.py:691-692). -/
 def CorrelationBounded : Prop :=
   ∀ (x y : List PyN) (r : Flt), correlation x y "linear" = .ok (.flt r) →
     Flt.le (Flt.neg Flt.one) r = true ∧ Flt.le r Flt.one = true
@@ -937,7 +937,7 @@ theorem rankSpec_proven : RankSpec := by
           · cases h
             simp
 
-/-- `_decimal_sqrt_of_frac`: `0 / m` is `0` and the sign normalization at statistics.py:1735-1738
+/-- `_decimal_sqrt_of_frac`: `0 / m` is `0` and the sign normalization at statistics.py:1736-1739
 makes `(-n) / (-m)` the same as `n / m`. -/
 def DecimalSqrtSign : Prop :=
   ∀ n m : Int, 0 < n →

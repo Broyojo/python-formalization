@@ -1,28 +1,27 @@
 file	line	endline	name	signature	status	entry	note
-Modules/sha3module.c	39	44	sha3_get_state	sha3_get_state(PyObject *module)	todo		
-Modules/sha3module.c	74	84	newSHA3object	newSHA3object(PyTypeObject *type)	todo		
-Modules/sha3module.c	87	103	sha3_update	sha3_update(Hacl_Hash_SHA3_state_t *state, uint8_t *buf, Py_ssize_t len)	todo		
-Modules/sha3module.c	118	190	py_sha3_new_impl	py_sha3_new_impl(PyTypeObject *type, PyObject *data_obj, int usedforsecurity, PyObject *string) /*[clinic end generated code: output=dcec1eca20395f2a input=c106e0b4e2d67d58]*/	todo		
-Modules/sha3module.c	196	204	SHA3_clear	SHA3_clear(PyObject *op)	todo		
-Modules/sha3module.c	207	214	SHA3_dealloc	SHA3_dealloc(PyObject *self)	todo		
-Modules/sha3module.c	217	221	SHA3_traverse	SHA3_traverse(PyObject *self, visitproc visit, void *arg)	todo		
-Modules/sha3module.c	233	249	_sha3_sha3_224_copy_impl	_sha3_sha3_224_copy_impl(SHA3object *self) /*[clinic end generated code: output=6c537411ecdcda4c input=93a44aaebea51ba8]*/	todo		
-Modules/sha3module.c	259	270	_sha3_sha3_224_digest_impl	_sha3_sha3_224_digest_impl(SHA3object *self) /*[clinic end generated code: output=fd531842e20b2d5b input=5b2a659536bbd248]*/	todo		
-Modules/sha3module.c	280	289	_sha3_sha3_224_hexdigest_impl	_sha3_sha3_224_hexdigest_impl(SHA3object *self) /*[clinic end generated code: output=75ad03257906918d input=2d91bb6e0d114ee3]*/	todo		
-Modules/sha3module.c	302	324	_sha3_sha3_224_update_impl	_sha3_sha3_224_update_impl(SHA3object *self, PyObject *data) /*[clinic end generated code: output=390b7abf7c9795a5 input=a887f54dcc4ae227]*/	todo		
-Modules/sha3module.c	337	342	SHA3_get_block_size	SHA3_get_block_size(PyObject *op, void *Py_UNUSED(closure))	todo		
-Modules/sha3module.c	346	369	SHA3_get_name	SHA3_get_name(PyObject *self, void *Py_UNUSED(closure))	todo		
-Modules/sha3module.c	373	381	SHA3_get_digest_size	SHA3_get_digest_size(PyObject *op, void *Py_UNUSED(closure))	todo		
-Modules/sha3module.c	385	392	SHA3_get_capacity_bits	SHA3_get_capacity_bits(PyObject *op, void *Py_UNUSED(closure))	todo		
-Modules/sha3module.c	396	401	SHA3_get_rate_bits	SHA3_get_rate_bits(PyObject *op, void *Py_UNUSED(closure))	todo		
-Modules/sha3module.c	404	408	SHA3_get_suffix	SHA3_get_suffix(PyObject *Py_UNUSED(self), void *Py_UNUSED(closure))	todo		
-Modules/sha3module.c	476	506	_SHAKE_digest	_SHAKE_digest(PyObject *op, unsigned long digestlen, int hex)	todo		
-Modules/sha3module.c	518	522	_sha3_shake_128_digest_impl	_sha3_shake_128_digest_impl(SHA3object *self, unsigned long length) /*[clinic end generated code: output=2313605e2f87bb8f input=93d6d6ff32904f18]*/	todo		
-Modules/sha3module.c	534	538	_sha3_shake_128_hexdigest_impl	_sha3_shake_128_hexdigest_impl(SHA3object *self, unsigned long length) /*[clinic end generated code: output=bf8e2f1e490944a8 input=562d74e7060b56ab]*/	todo		
-Modules/sha3module.c	541	544	SHAKE_get_digest_size	SHAKE_get_digest_size(PyObject *Py_UNUSED(self), void *Py_UNUSED(closure))	todo		
-Modules/sha3module.c	547	551	SHAKE_get_suffix	SHAKE_get_suffix(PyObject *Py_UNUSED(self), void *Py_UNUSED(closure))	todo		
-Modules/sha3module.c	591	601	_sha3_traverse	_sha3_traverse(PyObject *module, visitproc visit, void *arg)	todo		
-Modules/sha3module.c	604	614	_sha3_clear	_sha3_clear(PyObject *module)	todo		
-Modules/sha3module.c	617	620	_sha3_free	_sha3_free(void *module)	todo		
-Modules/sha3module.c	623	655	_sha3_exec	_sha3_exec(PyObject *m)	todo		
-Modules/sha3module.c	677	680	PyInit__sha3	PyInit__sha3(void)	todo		
+Modules/sha3module.c	56	61	sha3_get_state	sha3_get_state(PyObject *module)	todo		
+Modules/sha3module.c	98	109	newSHA3object	newSHA3object(PyTypeObject *type)	todo		changed-in-3.15:
+Modules/sha3module.c	112	128	sha3_update	sha3_update(Hacl_Hash_SHA3_state_t *state, uint8_t *buf, Py_ssize_t len)	todo		
+Modules/sha3module.c	143	216	py_sha3_new_impl	py_sha3_new_impl(PyTypeObject *type, PyObject *data_obj, int usedforsecurity, PyObject *string) /*[clinic end generated code: output=dcec1eca20395f2a input=c106e0b4e2d67d58]*/	todo		changed-in-3.15:
+Modules/sha3module.c	222	230	SHA3_clear	SHA3_clear(PyObject *op)	todo		
+Modules/sha3module.c	233	240	SHA3_dealloc	SHA3_dealloc(PyObject *self)	todo		changed-in-3.15:
+Modules/sha3module.c	254	271	_sha3_sha3_224_copy_impl	_sha3_sha3_224_copy_impl(SHA3object *self, PyTypeObject *cls) /*[clinic end generated code: output=13958b44c244013e input=7134b4dc0a2fbcac]*/	todo		changed-in-3.15:
+Modules/sha3module.c	281	291	_sha3_sha3_224_digest_impl	_sha3_sha3_224_digest_impl(SHA3object *self) /*[clinic end generated code: output=fd531842e20b2d5b input=5b2a659536bbd248]*/	todo		changed-in-3.15:
+Modules/sha3module.c	301	309	_sha3_sha3_224_hexdigest_impl	_sha3_sha3_224_hexdigest_impl(SHA3object *self) /*[clinic end generated code: output=75ad03257906918d input=2d91bb6e0d114ee3]*/	todo		changed-in-3.15:
+Modules/sha3module.c	322	333	_sha3_sha3_224_update_impl	_sha3_sha3_224_update_impl(SHA3object *self, PyObject *data) /*[clinic end generated code: output=390b7abf7c9795a5 input=a887f54dcc4ae227]*/	todo		changed-in-3.15:
+Modules/sha3module.c	346	350	SHA3_get_block_size	SHA3_get_block_size(PyObject *op, void *Py_UNUSED(closure))	todo		changed-in-3.15:
+Modules/sha3module.c	354	377	SHA3_get_name	SHA3_get_name(PyObject *self, void *Py_UNUSED(closure))	todo		
+Modules/sha3module.c	381	386	SHA3_get_digest_size	SHA3_get_digest_size(PyObject *op, void *Py_UNUSED(closure))	todo		changed-in-3.15:
+Modules/sha3module.c	390	397	SHA3_get_capacity_bits	SHA3_get_capacity_bits(PyObject *op, void *Py_UNUSED(closure))	todo		changed-in-3.15:
+Modules/sha3module.c	401	405	SHA3_get_rate_bits	SHA3_get_rate_bits(PyObject *op, void *Py_UNUSED(closure))	todo		changed-in-3.15:
+Modules/sha3module.c	408	412	SHA3_get_suffix	SHA3_get_suffix(PyObject *Py_UNUSED(self), void *Py_UNUSED(closure))	todo		
+Modules/sha3module.c	480	493	sha3_shake_check_digest_length	sha3_shake_check_digest_length(Py_ssize_t length)	todo		changed-in-3.15: new function
+Modules/sha3module.c	505	533	_sha3_shake_128_digest_impl	_sha3_shake_128_digest_impl(SHA3object *self, Py_ssize_t length) /*[clinic end generated code: output=6c53fb71a6cff0a0 input=1160c9f86ae0f867]*/	todo		changed-in-3.15:
+Modules/sha3module.c	545	570	_sha3_shake_128_hexdigest_impl	_sha3_shake_128_hexdigest_impl(SHA3object *self, Py_ssize_t length) /*[clinic end generated code: output=a27412d404f64512 input=ff06c9362949d2c8]*/	todo		changed-in-3.15:
+Modules/sha3module.c	573	576	SHAKE_get_digest_size	SHAKE_get_digest_size(PyObject *Py_UNUSED(self), void *Py_UNUSED(closure))	todo		
+Modules/sha3module.c	579	583	SHAKE_get_suffix	SHAKE_get_suffix(PyObject *Py_UNUSED(self), void *Py_UNUSED(closure))	todo		
+Modules/sha3module.c	623	633	_sha3_traverse	_sha3_traverse(PyObject *module, visitproc visit, void *arg)	todo		
+Modules/sha3module.c	636	646	_sha3_clear	_sha3_clear(PyObject *module)	todo		
+Modules/sha3module.c	649	652	_sha3_free	_sha3_free(void *module)	todo		
+Modules/sha3module.c	655	687	_sha3_exec	_sha3_exec(PyObject *m)	todo		
+Modules/sha3module.c	710	713	PyInit__sha3	PyInit__sha3(void)	todo		

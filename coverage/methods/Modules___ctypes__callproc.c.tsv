@@ -1,52 +1,53 @@
 file	line	endline	name	signature	status	entry	note
-Modules/_ctypes/callproc.c	113	119	pymem_destructor	static void pymem_destructor(PyObject *ptr)	todo		
-Modules/_ctypes/callproc.c	156	194	_ctypes_get_errobj	_ctypes_get_errobj(ctypes_state *st, int **pspace)	todo		
-Modules/_ctypes/callproc.c	197	209	get_error_internal	get_error_internal(PyObject *self, PyObject *args, int index)	todo		
-Modules/_ctypes/callproc.c	212	229	set_error_internal	set_error_internal(PyObject *self, PyObject *args, int index)	todo		
-Modules/_ctypes/callproc.c	232	238	get_errno	get_errno(PyObject *self, PyObject *args)	todo		
-Modules/_ctypes/callproc.c	241	247	set_errno	set_errno(PyObject *self, PyObject *args)	todo		
-Modules/_ctypes/callproc.c	252	258	get_last_error	get_last_error(PyObject *self, PyObject *args)	todo		
-Modules/_ctypes/callproc.c	261	267	set_last_error	set_last_error(PyObject *self, PyObject *args)	todo		
-Modules/_ctypes/callproc.c	269	288	FormatError	static WCHAR *FormatError(DWORD code)	todo		
-Modules/_ctypes/callproc.c	291	441	SetException	static void SetException(DWORD code, EXCEPTION_RECORD *pr)	todo		
-Modules/_ctypes/callproc.c	443	454	HandleException	static DWORD HandleException(EXCEPTION_POINTERS *ptrs, DWORD *pdw, EXCEPTION_RECORD *record)	todo		
-Modules/_ctypes/callproc.c	458	466	check_hresult	check_hresult(PyObject *self, PyObject *args)	todo		
-Modules/_ctypes/callproc.c	473	485	PyCArgObject_new	PyCArgObject_new(ctypes_state *st)	todo		
-Modules/_ctypes/callproc.c	488	494	PyCArg_traverse	PyCArg_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/_ctypes/callproc.c	497	502	PyCArg_clear	PyCArg_clear(PyObject *op)	todo		
-Modules/_ctypes/callproc.c	505	512	PyCArg_dealloc	PyCArg_dealloc(PyObject *self)	todo		
-Modules/_ctypes/callproc.c	515	518	is_literal_char	is_literal_char(unsigned char c)	todo		
-Modules/_ctypes/callproc.c	521	587	PyCArg_repr	PyCArg_repr(PyObject *op)	todo		
-Modules/_ctypes/callproc.c	667	764	ConvParam	static int ConvParam(ctypes_state *st, PyObject *obj, Py_ssize_t index, struct argument *pa)	todo		
-Modules/_ctypes/callproc.c	772	775	can_return_struct_as_int	int can_return_struct_as_int(size_t s)	todo		
-Modules/_ctypes/callproc.c	777	785	can_return_struct_as_sint64	int can_return_struct_as_sint64(size_t s)	todo		
-Modules/_ctypes/callproc.c	790	816	_ctypes_get_ffi_type	ffi_type *_ctypes_get_ffi_type(ctypes_state *st, PyObject *obj)	todo		
-Modules/_ctypes/callproc.c	831	988	_call_function_pointer	static int _call_function_pointer(ctypes_state *st, int flags, PPROC pProc, void **avalues, ffi_type **atypes, ffi_type *restype, void *resmem, int argcount, int argtypecount)	todo		
-Modules/_ctypes/callproc.c	1000	1042	GetResult	static PyObject *GetResult(ctypes_state *st, PyObject *restype, void *result, PyObject *checker)	todo		
-Modules/_ctypes/callproc.c	1048	1089	_ctypes_extend_error	void _ctypes_extend_error(PyObject *exc_class, const char *fmt, ...)	todo		
-Modules/_ctypes/callproc.c	1095	1160	GetComError	GetComError(ctypes_state *st, HRESULT errcode, GUID *riid, IUnknown *pIunk)	todo		
-Modules/_ctypes/callproc.c	1366	1373	_parse_voidp	_parse_voidp(PyObject *obj, void *arg)	todo		
-Modules/_ctypes/callproc.c	1382	1399	format_error	static PyObject *format_error(PyObject *self, PyObject *args)	todo		
-Modules/_ctypes/callproc.c	1408	1450	load_library	static PyObject *load_library(PyObject *self, PyObject *args)	todo		
-Modules/_ctypes/callproc.c	1456	1473	free_library	static PyObject *free_library(PyObject *self, PyObject *args)	todo		
-Modules/_ctypes/callproc.c	1479	1507	copy_com_pointer	copy_com_pointer(PyObject *self, PyObject *args)	todo		
-Modules/_ctypes/callproc.c	1523	1528	__attribute__	__attribute__((constructor)) void load_dyld_shared_cache_contains_path(void) {	todo		
-Modules/_ctypes/callproc.c	1530	1534	__attribute__	__attribute__((destructor)) void unload_dyld_shared_cache_contains_path(void) {	todo		
-Modules/_ctypes/callproc.c	1539	1611	py_dyld_shared_cache_contains_path	static PyObject *py_dyld_shared_cache_contains_path(PyObject *self, PyObject *args)	todo		
-Modules/_ctypes/callproc.c	1613	1629	py_dl_close	static PyObject *py_dl_close(PyObject *self, PyObject *args)	todo		
-Modules/_ctypes/callproc.c	1631	1669	py_dl_sym	static PyObject *py_dl_sym(PyObject *self, PyObject *args)	todo		
-Modules/_ctypes/callproc.c	1676	1686	_dllist_callback	_dllist_callback(struct dl_phdr_info *info, size_t size, void *data)	todo		
-Modules/_ctypes/callproc.c	1689	1704	dllist	dllist(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
-Modules/_ctypes/callproc.c	1714	1739	call_function	call_function(PyObject *self, PyObject *args)	todo		
-Modules/_ctypes/callproc.c	1747	1772	call_cdeclfunction	call_cdeclfunction(PyObject *self, PyObject *args)	todo		
-Modules/_ctypes/callproc.c	1787	1810	_ctypes_sizeof	_ctypes_sizeof(PyObject *module, PyObject *obj) /*[clinic end generated code: output=ed38a3f364d7bd3e input=321fd0f65cb2d623]*/	todo		
-Modules/_ctypes/callproc.c	1818	1831	align_func	align_func(PyObject *self, PyObject *obj)	todo		
-Modules/_ctypes/callproc.c	1845	1859	_ctypes_byref_impl	_ctypes_byref_impl(PyObject *module, PyObject *obj, Py_ssize_t offset) /*[clinic end generated code: output=60dec5ed520c71de input=6ec02d95d15fbd56]*/	todo		
-Modules/_ctypes/callproc.c	1871	1878	_ctypes_addressof_impl	_ctypes_addressof_impl(PyObject *module, PyObject *obj) /*[clinic end generated code: output=30d8e80c4bab70c7 input=d83937d105d3a442]*/	todo		
-Modules/_ctypes/callproc.c	1881	1886	converter	converter(PyObject *obj, void *arg)	todo		
-Modules/_ctypes/callproc.c	1889	1899	My_PyObj_FromPtr	My_PyObj_FromPtr(PyObject *self, PyObject *args)	todo		
-Modules/_ctypes/callproc.c	1902	1907	My_Py_INCREF	My_Py_INCREF(PyObject *self, PyObject *arg)	todo		
-Modules/_ctypes/callproc.c	1910	1915	My_Py_DECREF	My_Py_DECREF(PyObject *self, PyObject *arg)	todo		
-Modules/_ctypes/callproc.c	1927	1975	_ctypes_resize_impl	_ctypes_resize_impl(PyObject *module, CDataObject *obj, Py_ssize_t size) /*[clinic end generated code: output=11c89c7dbdbcd53f input=bf5a6aaea8514261]*/	todo		
-Modules/_ctypes/callproc.c	1978	2005	unpickle	unpickle(PyObject *self, PyObject *args)	todo		
-Modules/_ctypes/callproc.c	2008	2034	buffer_info	buffer_info(PyObject *self, PyObject *arg)	todo		
+Modules/_ctypes/callproc.c	106	112	pymem_destructor	static void pymem_destructor(PyObject *ptr)	todo		
+Modules/_ctypes/callproc.c	149	187	_ctypes_get_errobj	_ctypes_get_errobj(ctypes_state *st, int **pspace)	todo		
+Modules/_ctypes/callproc.c	190	202	get_error_internal	get_error_internal(PyObject *self, PyObject *args, int index)	todo		
+Modules/_ctypes/callproc.c	205	222	set_error_internal	set_error_internal(PyObject *self, PyObject *args, int index)	todo		
+Modules/_ctypes/callproc.c	225	231	get_errno	get_errno(PyObject *self, PyObject *args)	todo		
+Modules/_ctypes/callproc.c	234	240	set_errno	set_errno(PyObject *self, PyObject *args)	todo		
+Modules/_ctypes/callproc.c	245	251	get_last_error	get_last_error(PyObject *self, PyObject *args)	todo		
+Modules/_ctypes/callproc.c	254	260	set_last_error	set_last_error(PyObject *self, PyObject *args)	todo		
+Modules/_ctypes/callproc.c	262	281	FormatError	static WCHAR *FormatError(DWORD code)	todo		
+Modules/_ctypes/callproc.c	284	434	SetException	static void SetException(DWORD code, EXCEPTION_RECORD *pr)	todo		
+Modules/_ctypes/callproc.c	436	447	HandleException	static DWORD HandleException(EXCEPTION_POINTERS *ptrs, DWORD *pdw, EXCEPTION_RECORD *record)	todo		
+Modules/_ctypes/callproc.c	451	459	check_hresult	check_hresult(PyObject *self, PyObject *args)	todo		
+Modules/_ctypes/callproc.c	466	478	PyCArgObject_new	PyCArgObject_new(ctypes_state *st)	todo		changed-in-3.15:
+Modules/_ctypes/callproc.c	481	487	PyCArg_traverse	PyCArg_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_ctypes/callproc.c	490	495	PyCArg_clear	PyCArg_clear(PyObject *op)	todo		
+Modules/_ctypes/callproc.c	498	505	PyCArg_dealloc	PyCArg_dealloc(PyObject *self)	todo		
+Modules/_ctypes/callproc.c	508	511	is_literal_char	is_literal_char(unsigned char c)	todo		
+Modules/_ctypes/callproc.c	514	581	PyCArg_repr	PyCArg_repr(PyObject *op)	todo		changed-in-3.15:
+Modules/_ctypes/callproc.c	661	762	ConvParam	static int ConvParam(ctypes_state *st, PyObject *obj, Py_ssize_t index, struct argument *pa)	todo		changed-in-3.15:
+Modules/_ctypes/callproc.c	770	773	can_return_struct_as_int	int can_return_struct_as_int(size_t s)	todo		
+Modules/_ctypes/callproc.c	775	783	can_return_struct_as_sint64	int can_return_struct_as_sint64(size_t s)	todo		
+Modules/_ctypes/callproc.c	788	814	_ctypes_get_ffi_type	ffi_type *_ctypes_get_ffi_type(ctypes_state *st, PyObject *obj)	todo		
+Modules/_ctypes/callproc.c	829	986	_call_function_pointer	static int _call_function_pointer(ctypes_state *st, int flags, PPROC pProc, void **avalues, ffi_type **atypes, ffi_type *restype, void *resmem, int argcount, int argtypecount)	todo		
+Modules/_ctypes/callproc.c	998	1040	GetResult	static PyObject *GetResult(ctypes_state *st, PyObject *restype, void *result, PyObject *checker)	todo		
+Modules/_ctypes/callproc.c	1046	1087	_ctypes_extend_error	void _ctypes_extend_error(PyObject *exc_class, const char *fmt, ...)	todo		
+Modules/_ctypes/callproc.c	1093	1158	GetComError	GetComError(ctypes_state *st, HRESULT errcode, GUID *riid, IUnknown *pIunk)	todo		
+Modules/_ctypes/callproc.c	1364	1371	_parse_voidp	_parse_voidp(PyObject *obj, void *arg)	todo		
+Modules/_ctypes/callproc.c	1380	1397	format_error	static PyObject *format_error(PyObject *self, PyObject *args)	todo		changed-in-3.15:
+Modules/_ctypes/callproc.c	1406	1448	load_library	static PyObject *load_library(PyObject *self, PyObject *args)	todo		
+Modules/_ctypes/callproc.c	1454	1471	free_library	static PyObject *free_library(PyObject *self, PyObject *args)	todo		
+Modules/_ctypes/callproc.c	1477	1505	copy_com_pointer	copy_com_pointer(PyObject *self, PyObject *args)	todo		
+Modules/_ctypes/callproc.c	1521	1526	__attribute__	__attribute__((constructor)) void load_dyld_shared_cache_contains_path(void) {	todo		
+Modules/_ctypes/callproc.c	1528	1532	__attribute__	__attribute__((destructor)) void unload_dyld_shared_cache_contains_path(void) {	todo		
+Modules/_ctypes/callproc.c	1537	1609	py_dyld_shared_cache_contains_path	static PyObject *py_dyld_shared_cache_contains_path(PyObject *self, PyObject *args)	todo		
+Modules/_ctypes/callproc.c	1611	1627	py_dl_close	static PyObject *py_dl_close(PyObject *self, PyObject *args)	todo		
+Modules/_ctypes/callproc.c	1629	1667	py_dl_sym	static PyObject *py_dl_sym(PyObject *self, PyObject *args)	todo		
+Modules/_ctypes/callproc.c	1674	1684	_dllist_callback	_dllist_callback(struct dl_phdr_info *info, size_t size, void *data)	todo		
+Modules/_ctypes/callproc.c	1687	1702	dllist	dllist(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Modules/_ctypes/callproc.c	1712	1737	call_function	call_function(PyObject *self, PyObject *args)	todo		
+Modules/_ctypes/callproc.c	1745	1770	call_cdeclfunction	call_cdeclfunction(PyObject *self, PyObject *args)	todo		
+Modules/_ctypes/callproc.c	1785	1808	_ctypes_sizeof	_ctypes_sizeof(PyObject *module, PyObject *obj) /*[clinic end generated code: output=ed38a3f364d7bd3e input=321fd0f65cb2d623]*/	todo		
+Modules/_ctypes/callproc.c	1816	1829	align_func	align_func(PyObject *self, PyObject *obj)	todo		
+Modules/_ctypes/callproc.c	1844	1858	_ctypes_byref_impl	_ctypes_byref_impl(PyObject *module, PyObject *obj, Py_ssize_t offset) /*[clinic end generated code: output=60dec5ed520c71de input=870076149a2de427]*/	todo		changed-in-3.15:
+Modules/_ctypes/callproc.c	1870	1877	_ctypes_addressof_impl	_ctypes_addressof_impl(PyObject *module, PyObject *obj) /*[clinic end generated code: output=30d8e80c4bab70c7 input=d83937d105d3a442]*/	todo		
+Modules/_ctypes/callproc.c	1880	1885	converter	converter(PyObject *obj, void *arg)	todo		
+Modules/_ctypes/callproc.c	1888	1898	My_PyObj_FromPtr	My_PyObj_FromPtr(PyObject *self, PyObject *args)	todo		
+Modules/_ctypes/callproc.c	1901	1906	My_Py_INCREF	My_Py_INCREF(PyObject *self, PyObject *arg)	todo		
+Modules/_ctypes/callproc.c	1909	1914	My_Py_DECREF	My_Py_DECREF(PyObject *self, PyObject *arg)	todo		
+Modules/_ctypes/callproc.c	1926	1974	_ctypes_resize_impl	_ctypes_resize_impl(PyObject *module, CDataObject *obj, Py_ssize_t size) /*[clinic end generated code: output=11c89c7dbdbcd53f input=bf5a6aaea8514261]*/	todo		
+Modules/_ctypes/callproc.c	1977	2004	unpickle	unpickle(PyObject *self, PyObject *args)	todo		
+Modules/_ctypes/callproc.c	2007	2033	buffer_info	buffer_info(PyObject *self, PyObject *arg)	todo		
+Modules/_ctypes/callproc.c	2037	2057	_ctypes_getattr	_ctypes_getattr(PyObject *Py_UNUSED(self), PyObject *args)	todo		changed-in-3.15: new function

@@ -1,39 +1,40 @@
 file	line	endline	name	signature	status	entry	note
-Lib/xml/sax/expatreader.py	51	52	ExpatLocator.__init__	__init__(self, parser)	todo		
-Lib/xml/sax/expatreader.py	54	58	ExpatLocator.getColumnNumber	getColumnNumber(self)	todo		
-Lib/xml/sax/expatreader.py	60	64	ExpatLocator.getLineNumber	getLineNumber(self)	todo		
-Lib/xml/sax/expatreader.py	66	70	ExpatLocator.getPublicId	getPublicId(self)	todo		
-Lib/xml/sax/expatreader.py	72	76	ExpatLocator.getSystemId	getSystemId(self)	todo		
-Lib/xml/sax/expatreader.py	84	93	ExpatParser.__init__	__init__(self, namespaceHandling=0, bufsize=2 ** 16 - 20)	todo		
-Lib/xml/sax/expatreader.py	97	111	ExpatParser.parse	parse(self, source)	todo		
-Lib/xml/sax/expatreader.py	113	115	ExpatParser.prepareParser	prepareParser(self, source)	todo		
-Lib/xml/sax/expatreader.py	119	122	ExpatParser.setContentHandler	setContentHandler(self, handler)	todo		
-Lib/xml/sax/expatreader.py	124	134	ExpatParser.getFeature	getFeature(self, name)	todo		
-Lib/xml/sax/expatreader.py	136	164	ExpatParser.setFeature	setFeature(self, name, state)	todo		
-Lib/xml/sax/expatreader.py	166	182	ExpatParser.getProperty	getProperty(self, name)	todo		
-Lib/xml/sax/expatreader.py	184	196	ExpatParser.setProperty	setProperty(self, name, value)	todo		
-Lib/xml/sax/expatreader.py	200	215	ExpatParser.feed	feed(self, data, isFinal=False)	todo		
-Lib/xml/sax/expatreader.py	217	229	ExpatParser.flush	flush(self)	todo		
-Lib/xml/sax/expatreader.py	231	240	ExpatParser._close_source	_close_source(self)	todo		
-Lib/xml/sax/expatreader.py	242	261	ExpatParser.close	close(self)	todo		
-Lib/xml/sax/expatreader.py	263	266	ExpatParser._reset_cont_handler	_reset_cont_handler(self)	todo		
-Lib/xml/sax/expatreader.py	268	282	ExpatParser._reset_lex_handler_prop	_reset_lex_handler_prop(self)	todo		
-Lib/xml/sax/expatreader.py	284	319	ExpatParser.reset	reset(self)	todo		
-Lib/xml/sax/expatreader.py	323	326	ExpatParser.getColumnNumber	getColumnNumber(self)	todo		
-Lib/xml/sax/expatreader.py	328	331	ExpatParser.getLineNumber	getLineNumber(self)	todo		
-Lib/xml/sax/expatreader.py	333	334	ExpatParser.getPublicId	getPublicId(self)	todo		
-Lib/xml/sax/expatreader.py	336	337	ExpatParser.getSystemId	getSystemId(self)	todo		
-Lib/xml/sax/expatreader.py	340	341	ExpatParser.start_element	start_element(self, name, attrs)	todo		
-Lib/xml/sax/expatreader.py	343	344	ExpatParser.end_element	end_element(self, name)	todo		
-Lib/xml/sax/expatreader.py	346	378	ExpatParser.start_element_ns	start_element_ns(self, name, attrs)	todo		
-Lib/xml/sax/expatreader.py	380	389	ExpatParser.end_element_ns	end_element_ns(self, name)	todo		
-Lib/xml/sax/expatreader.py	392	393	ExpatParser.processing_instruction	processing_instruction(self, target, data)	todo		
-Lib/xml/sax/expatreader.py	396	397	ExpatParser.character_data	character_data(self, data)	todo		
-Lib/xml/sax/expatreader.py	399	400	ExpatParser.start_namespace_decl	start_namespace_decl(self, prefix, uri)	todo		
-Lib/xml/sax/expatreader.py	402	403	ExpatParser.end_namespace_decl	end_namespace_decl(self, prefix)	todo		
-Lib/xml/sax/expatreader.py	405	406	ExpatParser.start_doctype_decl	start_doctype_decl(self, name, sysid, pubid, has_internal_subset)	todo		
-Lib/xml/sax/expatreader.py	408	409	ExpatParser.unparsed_entity_decl	unparsed_entity_decl(self, name, base, sysid, pubid, notation_name)	todo		
-Lib/xml/sax/expatreader.py	411	412	ExpatParser.notation_decl	notation_decl(self, name, base, sysid, pubid)	todo		
-Lib/xml/sax/expatreader.py	414	434	ExpatParser.external_entity_ref	external_entity_ref(self, context, base, sysid, pubid)	todo		
-Lib/xml/sax/expatreader.py	436	440	ExpatParser.skipped_entity_handler	skipped_entity_handler(self, name, is_pe)	todo		
-Lib/xml/sax/expatreader.py	444	445	create_parser	create_parser(*args, **kwargs)	todo		
+Lib/xml/sax/expatreader.py	49	50	ExpatLocator.__init__	__init__(self, parser)	todo		
+Lib/xml/sax/expatreader.py	52	56	ExpatLocator.getColumnNumber	getColumnNumber(self)	todo		
+Lib/xml/sax/expatreader.py	58	62	ExpatLocator.getLineNumber	getLineNumber(self)	todo		
+Lib/xml/sax/expatreader.py	64	68	ExpatLocator.getPublicId	getPublicId(self)	todo		
+Lib/xml/sax/expatreader.py	70	74	ExpatLocator.getSystemId	getSystemId(self)	todo		
+Lib/xml/sax/expatreader.py	82	91	ExpatParser.__init__	__init__(self, namespaceHandling=0, bufsize=2 ** 16 - 20)	todo		
+Lib/xml/sax/expatreader.py	95	109	ExpatParser.parse	parse(self, source)	todo		
+Lib/xml/sax/expatreader.py	111	113	ExpatParser.prepareParser	prepareParser(self, source)	todo		
+Lib/xml/sax/expatreader.py	117	120	ExpatParser.setContentHandler	setContentHandler(self, handler)	todo		
+Lib/xml/sax/expatreader.py	122	132	ExpatParser.getFeature	getFeature(self, name)	todo		
+Lib/xml/sax/expatreader.py	134	162	ExpatParser.setFeature	setFeature(self, name, state)	todo		
+Lib/xml/sax/expatreader.py	164	180	ExpatParser.getProperty	getProperty(self, name)	todo		
+Lib/xml/sax/expatreader.py	182	194	ExpatParser.setProperty	setProperty(self, name, value)	todo		
+Lib/xml/sax/expatreader.py	198	213	ExpatParser.feed	feed(self, data, isFinal=False)	todo		
+Lib/xml/sax/expatreader.py	215	227	ExpatParser.flush	flush(self)	todo		
+Lib/xml/sax/expatreader.py	229	238	ExpatParser._close_source	_close_source(self)	todo		
+Lib/xml/sax/expatreader.py	240	259	ExpatParser.close	close(self)	todo		
+Lib/xml/sax/expatreader.py	261	264	ExpatParser._reset_cont_handler	_reset_cont_handler(self)	todo		
+Lib/xml/sax/expatreader.py	266	280	ExpatParser._reset_lex_handler_prop	_reset_lex_handler_prop(self)	todo		
+Lib/xml/sax/expatreader.py	282	317	ExpatParser.reset	reset(self)	todo		
+Lib/xml/sax/expatreader.py	321	324	ExpatParser.getColumnNumber	getColumnNumber(self)	todo		
+Lib/xml/sax/expatreader.py	326	329	ExpatParser.getLineNumber	getLineNumber(self)	todo		
+Lib/xml/sax/expatreader.py	331	332	ExpatParser.getPublicId	getPublicId(self)	todo		
+Lib/xml/sax/expatreader.py	334	335	ExpatParser.getSystemId	getSystemId(self)	todo		
+Lib/xml/sax/expatreader.py	338	339	ExpatParser.start_element	start_element(self, name, attrs)	todo		
+Lib/xml/sax/expatreader.py	341	342	ExpatParser.end_element	end_element(self, name)	todo		
+Lib/xml/sax/expatreader.py	344	376	ExpatParser.start_element_ns	start_element_ns(self, name, attrs)	todo		
+Lib/xml/sax/expatreader.py	378	387	ExpatParser.end_element_ns	end_element_ns(self, name)	todo		
+Lib/xml/sax/expatreader.py	390	391	ExpatParser.processing_instruction	processing_instruction(self, target, data)	todo		
+Lib/xml/sax/expatreader.py	394	395	ExpatParser.character_data	character_data(self, data)	todo		
+Lib/xml/sax/expatreader.py	397	398	ExpatParser.start_namespace_decl	start_namespace_decl(self, prefix, uri)	todo		
+Lib/xml/sax/expatreader.py	400	401	ExpatParser.end_namespace_decl	end_namespace_decl(self, prefix)	todo		
+Lib/xml/sax/expatreader.py	403	404	ExpatParser.start_doctype_decl	start_doctype_decl(self, name, sysid, pubid, has_internal_subset)	todo		
+Lib/xml/sax/expatreader.py	406	407	ExpatParser.unparsed_entity_decl	unparsed_entity_decl(self, name, base, sysid, pubid, notation_name)	todo		
+Lib/xml/sax/expatreader.py	409	410	ExpatParser.notation_decl	notation_decl(self, name, base, sysid, pubid)	todo		
+Lib/xml/sax/expatreader.py	412	432	ExpatParser.external_entity_ref	external_entity_ref(self, context, base, sysid, pubid)	todo		
+Lib/xml/sax/expatreader.py	434	438	ExpatParser.skipped_entity_handler	skipped_entity_handler(self, name, is_pe)	todo		
+Lib/xml/sax/expatreader.py	442	443	create_parser	create_parser(*args, **kwargs)	todo		
+Lib/xml/sax/expatreader.py	447	453	__getattr__	__getattr__(name)	todo		changed-in-3.15: new function

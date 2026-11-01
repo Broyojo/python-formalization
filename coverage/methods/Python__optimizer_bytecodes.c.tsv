@@ -1,2 +1,2 @@
 file	line	endline	name	signature	status	entry	note
-Python/optimizer_bytecodes.c	52	1107	dummy_func	dummy_func(void) {	todo		
+Python/optimizer_bytecodes.c	70	2755	dummy_func	dummy_func(void) {	todo		changed-in-3.15:

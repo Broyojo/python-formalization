@@ -1,7 +1,7 @@
 import PyLean.TypeObj.Slots
 
 /-!
-Descriptors and attribute access: `Objects/object.c:1289-2053`, `Objects/typeobject.c`
+Descriptors and attribute access: `Objects/object.c:1310-2132`, `Objects/typeobject.c`
 (`_Py_type_getattro_impl`, `type_setattro`, the `lookup_method` family, the getattr
 hooks, `super`), `Objects/descrobject.c` (the `tp_descr_get/set` of each descriptor),
 `Objects/funcobject.c` and `Objects/classobject.c` (`func_descr_get`, `method_getattro`).
@@ -126,7 +126,7 @@ def excMembers (w : World) (v : Val) : NameDict :=
   | some (.exc e) => e.members
   | _ => []
 
-/-- The augmentation in `_PyObject_SetAttributeErrorContext`, `Objects/object.c:1276-1283`:
+/-- The augmentation in `_PyObject_SetAttributeErrorContext`, `Objects/object.c:1296-1304`:
 set `.name` and `.obj` unless already set. -/
 def attachContext (x v : Val) (n : Name) : M Unit := do
   let w ← getW
@@ -143,7 +143,7 @@ def attachContext (x v : Val) (n : Name) : M Unit := do
         | _ => o
     | _ => pure ()
 
-/-- `_PyObject_SetAttributeErrorContext`, `Objects/object.c:1263`, then re-raise. -/
+/-- `_PyObject_SetAttributeErrorContext`, `Objects/object.c:1283`, then re-raise. -/
 def setAttributeErrorContext {α : Type} (v : Val) (n : Name) (e : PyErr) : M α := do
   let w ← getW
   if excMatches w e B.AttributeError then
@@ -156,16 +156,16 @@ def setAttributeErrorContext {α : Type} (v : Val) (n : Name) (e : PyErr) : M α
 
 /-! ## `tp_descr_get` -/
 
-/-- `PyMethod_New`, `Objects/classobject.c:64`. -/
+/-- `PyMethod_New`, `Objects/classobject.c:65`. -/
 def pyMethodNew (func self : Val) : M Val := alloc B.method (.bound func self)
 
-/-- `func_descr_get`, `Objects/funcobject.c:1279`. -/
+/-- `func_descr_get`, `Objects/funcobject.c:1267`. -/
 def funcDescrGet (f : Val) (obj : Option Val) : M Val :=
   match obj with
   | none | some .none => pure f
   | some o => pyMethodNew f o
 
-/-- `cm_descr_get`, `Objects/funcobject.c:1546`. `cm_callable` is `None` before
+/-- `cm_descr_get`, `Objects/funcobject.c:1535`. `cm_callable` is `None` before
 `__init__`, set by `cm_new`, so the "uninitialized" branch cannot be reached. -/
 def cmDescrGet (cm : Val) (obj : Option Val) (ty : Option Val) : M Val := do
   let w ← getW
@@ -178,20 +178,20 @@ def cmDescrGet (cm : Val) (obj : Option Val) (ty : Option Val) : M Val := do
     pyMethodNew f t
   | _ => runtimeErr "uninitialized classmethod object"
 
-/-- `sm_descr_get`, `Objects/funcobject.c:1792`. -/
+/-- `sm_descr_get`, `Objects/funcobject.c:1799`. -/
 def smDescrGet (sm : Val) : M Val := do
   let w ← getW
   match payloadOf w sm with
   | some (.staticmethod f) => pure f
   | _ => runtimeErr "uninitialized staticmethod object"
 
-/-- `PyType_GetQualName(type)`: `type_qualname`, `Objects/typeobject.c:1470`. -/
+/-- `PyType_GetQualName(type)`: `type_qualname`, `Objects/typeobject.c:1570`. -/
 def typeQualname (w : World) (t : Addr) : String :=
   let d := tdata w t
   if d.heap then d.qualname
   else ((d.name.splitOn ".").getLast?).getD d.name
 
-/-- `_PyType_GetFullyQualifiedName(type, '.')`, `Objects/typeobject.c:1589`: `%T`. -/
+/-- `_PyType_GetFullyQualifiedName(type, '.')`, `Objects/typeobject.c:1694`: `%T`. -/
 def typeFQN (w : World) (t : Addr) : String :=
   let d := tdata w t
   if !d.heap then d.name else
@@ -233,7 +233,7 @@ def classmethodGet (owner : Addr) (name : Name) (b : Builtin) (obj ty : Option V
       typeErr s!"descriptor '{name}' requires a subtype of '{trunc 100 (tpName w owner)}' but received '{trunc 100 (tpName w ta)}'"
     alloc B.builtinFn (.builtin b (some t))
 
-/-- `wrapperdescr_get`, `Objects/descrobject.c:204`; `PyWrapper_New` at `:1488`. -/
+/-- `wrapperdescr_get`, `Objects/descrobject.c:204`; `PyWrapper_New` at `:1512`. -/
 def wrapperdescrGet (d : Val) (owner : Addr) (name : Name) (obj : Option Val) : M Val :=
   match obj with
   | none => pure d
@@ -251,7 +251,7 @@ def slotValue (w : World) (obj : Val) (n : Name) : Option Val :=
   | _ => none
 
 /-- `member_get`, `Objects/descrobject.c:163`, with `PyMember_GetOne` for
-`Py_T_OBJECT_EX` (`Python/structmember.c:105`). Members of static types go through the
+`Py_T_OBJECT_EX` (`Python/structmember.c:117`). Members of static types go through the
 `getsetGet` hook. -/
 def memberGet (rt : Rt) (d : Val) (owner : Addr) (name : Name) (obj : Option Val) : M Val :=
   match obj with
@@ -274,7 +274,7 @@ def getsetDescrGet (rt : Rt) (d : Val) (owner : Addr) (name : Name) (obj : Optio
     descrCheck owner name o
     rt.getsetGet owner name o
 
-/-- `property_name`, `Objects/descrobject.c:1647`. -/
+/-- `property_name`, `Objects/descrobject.c:1671`. -/
 def propertyName (rt : Rt) (fget : Val) (name : Option Val) : M (Option Val) :=
   match name with
   | some n => pure (some n)
@@ -291,7 +291,7 @@ def propertyFields (w : World) (p : Val) : Option (Val × Val × Val × Val × O
   | some (.property g s d doc n gd) => some (g, s, d, doc, n, gd)
   | _ => none
 
-/-- `property_descr_get`, `Objects/descrobject.c:1661`. -/
+/-- `property_descr_get`, `Objects/descrobject.c:1685`. -/
 def propertyDescrGet (rt : Rt) (self : Val) (obj : Option Val) : M Val := do
   match obj with
   | none | some .none => pure self
@@ -312,7 +312,7 @@ def propertyDescrGet (rt : Rt) (self : Val) (obj : Option Val) : M Val := do
         | none => attrErr s!"property of {reprStr qual} object has no getter"
       | f => rt.call f [o] []
 
-/-- `property_descr_set`, `Objects/descrobject.c:1697`. -/
+/-- `property_descr_set`, `Objects/descrobject.c:1721`. -/
 def propertyDescrSet (rt : Rt) (self obj : Val) (value : Option Val) : M Unit := do
   let w ← getW
   match propertyFields w self with
@@ -339,7 +339,7 @@ def propertyDescrSet (rt : Rt) (self obj : Val) (value : Option Val) : M Unit :=
       | none => do let _ ← rt.call f [obj] []
       | some v => do let _ ← rt.call f [obj, v] []
 
-/-- `supercheck`, `Objects/typeobject.c:11955`. -/
+/-- `supercheck`, `Objects/typeobject.c:12808`. -/
 def supercheck (rt : Rt) (ty : Addr) (obj : Val) : M Addr := do
   let w ← getW
   match asType w obj with
@@ -362,16 +362,16 @@ def supercheck (rt : Rt) (ty : Addr) (obj : Val) : M Addr := do
     | none => ("instance of", typeName w obj)
   typeErr s!"super(type, obj): obj ({kind} {trunc 200 nm}) is not an instance or subtype of type ({trunc 200 (tpName w ty)})."
 
-/-- Does `super_descr_get` reach `supercheck(su->type, obj)`, `Objects/typeobject.c:12049`, with
+/-- Does `super_descr_get` reach `supercheck(su->type, obj)`, `Objects/typeobject.c:12902`, with
 `su->type == NULL`? Nothing tests for it. `tp_new` leaves the field NULL (`super_init` fills it),
-`PyType_IsSubtype` then just answers no, and the error at :12015 reads `type->tp_name`. -/
+`PyType_IsSubtype` then just answers no, and the error at :12868 reads `type->tp_name`. -/
 def superBindsNullType (w : World) (self o : Val) : Bool :=
   match payloadOf w self, o with
   | _, .none => false
   | some (.super none none _), _ => typeOf w self == B.super
   | _, _ => false
 
-/-- `super_descr_get`, `Objects/typeobject.c:12033`. The `none` branch is `superBindsNullType`:
+/-- `super_descr_get`, `Objects/typeobject.c:12886`. The `none` branch is `superBindsNullType`:
 CPython goes on into a NULL dereference, which is no Python outcome, so the model stops. -/
 def superDescrGet (rt : Rt) (self : Val) (obj : Option Val) : M Val := do
   let w ← getW
@@ -394,7 +394,7 @@ def superDescrGet (rt : Rt) (self : Val) (obj : Option Val) : M Val := do
           alloc B.super (.super (some t) (some o) (some objType))
   | _ => gap%
 
-/-- `slot_tp_descr_get`, `Objects/typeobject.c:10524`. -/
+/-- `slot_tp_descr_get`, `Objects/typeobject.c:11231`. -/
 def slotTpDescrGet (rt : Rt) (self : Val) (obj ty : Option Val) : M Val := do
   let w ← getW
   match findInMro w (typeOf w self) "__get__" with
@@ -429,7 +429,7 @@ def bindDescr (rt : Rt) (res self : Val) : M Val := do
   | some f => callDescrGet rt f res (some self) (some (.obj (typeOf w self)))
   | none => pure res
 
-/-- `_PyObject_LookupSpecial`, `Objects/typeobject.c:2850`. -/
+/-- `_PyObject_LookupSpecial`, `Objects/typeobject.c:2990`. -/
 def lookupSpecial (rt : Rt) (self : Val) (attr : Name) : M (Option Val) := do
   let w ← getW
   match findInMro w (typeOf w self) attr with
@@ -444,7 +444,7 @@ inductive Looked where
   | bound (f : Val)
   deriving Repr, Inhabited
 
-/-- `lookup_method_ex`, `Objects/typeobject.c:2898`. -/
+/-- `lookup_method_ex`, `Objects/typeobject.c:3038`. -/
 def lookupMethodEx (rt : Rt) (self : Val) (attr : Name) (raiseAE : Bool) : M Looked := do
   let w ← getW
   match findInMro w (typeOf w self) attr with
@@ -461,26 +461,26 @@ def lookupMethodEx (rt : Rt) (self : Val) (attr : Name) (raiseAE : Bool) : M Loo
         if raiseAE then get else catchMatch B.AttributeError get (pure .missing)
       | none => pure (.bound value)
 
-/-- `vectorcall_unbound`, `Objects/typeobject.c:2946`: `args` starts with `self`. -/
+/-- `vectorcall_unbound`, `Objects/typeobject.c:3086`: `args` starts with `self`. -/
 def callUnbound (rt : Rt) (l : Looked) (args : List Val) : M Val :=
   match l with
   | .unbound f => rt.call f args []
   | .bound f => rt.call f (args.drop 1) []
   | .missing => gap%
 
-/-- `vectorcall_method`, `Objects/typeobject.c:3016`. -/
+/-- `vectorcall_method`, `Objects/typeobject.c:3156`. -/
 def vectorcallMethod (rt : Rt) (name : Name) (args : List Val) : M Val := do
   let l ← lookupMethodEx rt (args.headD .none) name true
   callUnbound rt l args
 
-/-- `vectorcall_maybe`, `Objects/typeobject.c:3037`: `NotImplemented` if missing. -/
+/-- `vectorcall_maybe`, `Objects/typeobject.c:3177`: `NotImplemented` if missing. -/
 def vectorcallMaybe (rt : Rt) (name : Name) (args : List Val) : M Val := do
   let l ← lookupMethodEx rt (args.headD .none) name false
   match l with
   | .missing => pure .notImpl
   | l => callUnbound rt l args
 
-/-- `call_method`, `Objects/typeobject.c:2990`. -/
+/-- `call_method`, `Objects/typeobject.c:3130`. -/
 def callMethod (rt : Rt) (self : Val) (attr : Name) (args : List Val) (kw : Kw) : M Val := do
   let l ← lookupMethodEx rt self attr true
   match l with
@@ -496,7 +496,7 @@ inductive Maybe where
   | res (v : Val)
   deriving Repr, Inhabited
 
-/-- `maybe_call_special_no_args`/`_one_arg`, `Objects/typeobject.c:3064-3103`.
+/-- `maybe_call_special_no_args`/`_one_arg`, `Objects/typeobject.c:3204-3243`.
 `checkNone` is `attr_is_none != NULL`. -/
 def maybeCallSpecial (rt : Rt) (self : Val) (attr : Name) (args : List Val)
     (checkNone : Bool) : M Maybe := do
@@ -512,7 +512,7 @@ def maybeCallSpecial (rt : Rt) (self : Val) (attr : Name) (args : List Val)
 
 /-! ## `_PyType_LookupRef`-based attribute access -/
 
-/-- `f(descr, obj, type)` with the `suppress` handling of `Objects/object.c:1848-1852`. -/
+/-- `f(descr, obj, type)` with the `suppress` handling of `Objects/object.c:1927-1931`. -/
 def runDescrGet (rt : Rt) (fn : SlotFn) (d obj : Val) (tv : Val) (suppress : Bool) :
     M (Option Val) :=
   if suppress then
@@ -530,7 +530,7 @@ def instDictGet (w : World) (obj : Val) (n : Name) : Option Val :=
     | none => none
   else none
 
-/-- `Objects/object.c:1856-1924`: instance dict, then non-data descriptor, then class
+/-- `Objects/object.c:1935-2003`: instance dict, then non-data descriptor, then class
 attribute, then `AttributeError`. -/
 def genericGetAttrTail (rt : Rt) (obj : Val) (n : Name) (descr : Option Val)
     (f : Option SlotFn) (suppress : Bool) : M (Option Val) := do
@@ -548,7 +548,7 @@ def genericGetAttrTail (rt : Rt) (obj : Val) (n : Name) (descr : Option Val)
         tryM (raiseC B.AttributeError s!"'{trunc 100 (tpName w tp)}' object has no attribute '{n}'")
           (setAttributeErrorContext obj n)
 
-/-- `_PyObject_GenericGetAttrWithDict`, `Objects/object.c:1809`, with `dict == NULL`.
+/-- `_PyObject_GenericGetAttrWithDict`, `Objects/object.c:1888`, with `dict == NULL`.
 `suppress` returns `none` for a missing attribute instead of raising. -/
 def genericGetAttrSup (rt : Rt) (obj : Val) (n : Name) (suppress : Bool) : M (Option Val) := do
   let w ← getW
@@ -563,13 +563,13 @@ def genericGetAttrSup (rt : Rt) (obj : Val) (n : Name) (suppress : Bool) : M (Op
     else genericGetAttrTail rt obj n descr f suppress
   | _, _ => genericGetAttrTail rt obj n descr f suppress
 
-/-- `PyObject_GenericGetAttr`, `Objects/object.c:1932`. -/
+/-- `PyObject_GenericGetAttr`, `Objects/object.c:2011`. -/
 def genericGetAttr (rt : Rt) (obj : Val) (n : Name) : M Val := do
   match ← genericGetAttrSup rt obj n false with
   | some v => pure v
   | none => gap%
 
-/-- `_Py_type_getattro_impl`, `Objects/typeobject.c:6103`. `suppress` is
+/-- `_Py_type_getattro_impl`, `Objects/typeobject.c@3.14.7:6103`. `suppress` is
 `suppress_missing_attribute != NULL`. -/
 def typeGetattroImpl (rt : Rt) (ty : Val) (n : Name) (suppress : Bool) : M (Option Val) := do
   let w ← getW
@@ -599,13 +599,13 @@ def typeGetattroImpl (rt : Rt) (ty : Val) (n : Name) (suppress : Bool) : M (Opti
   if suppress then pure none
   else attrErr s!"type object '{trunc 100 (tpName w tyA)}' has no attribute '{n}'"
 
-/-- `_Py_type_getattro`, `Objects/typeobject.c:6195`. -/
+/-- `_Py_type_getattro`, `Objects/typeobject.c@3.14.7:6195`. -/
 def typeGetattro (rt : Rt) (ty : Val) (n : Name) : M Val := do
   match ← typeGetattroImpl rt ty n false with
   | some v => pure v
   | none => gap%
 
-/-- `_super_lookup_descr`, `Objects/typeobject.c:11840`: search the MRO of `objType`
+/-- `_super_lookup_descr`, `Objects/typeobject.c@3.14.7:11840`: search the MRO of `objType`
 strictly after `suType`. -/
 def superLookupDescr (w : World) (suType objType : Addr) (n : Name) : Option Val :=
   match (tdata w objType).mro with
@@ -616,7 +616,7 @@ def superLookupDescr (w : World) (suType objType : Addr) (n : Name) : Option Val
       | none => mro.length
     findInMroList w (mro.drop start) n
 
-/-- `do_super_lookup`, `Objects/typeobject.c:11889`, without the method shortcut. -/
+/-- `do_super_lookup`, `Objects/typeobject.c:12742`, without the method shortcut. -/
 def doSuperLookup (rt : Rt) (self : Val) (suType : Addr) (suObj : Option Val)
     (suObjType : Option Addr) (n : Name) : M Val := do
   let w ← getW
@@ -636,7 +636,7 @@ def doSuperLookup (rt : Rt) (self : Val) (suType : Addr) (suObj : Option Val)
           | none => none
         callDescrGet rt f res o (some (.obj ot))
 
-/-- `super_getattro`, `Objects/typeobject.c:11940`. -/
+/-- `super_getattro`, `Objects/typeobject.c:12793`. -/
 def superGetattro (rt : Rt) (self : Val) (n : Name) : M Val := do
   if n == "__class__" then
     genericGetAttr rt self n
@@ -647,7 +647,7 @@ def superGetattro (rt : Rt) (self : Val) (n : Name) : M Val := do
     | some (.super none _ _) => genericGetAttr rt self n
     | _ => gap%
 
-/-- `method_getattro`, `Objects/classobject.c:140`. -/
+/-- `method_getattro`, `Objects/classobject.c:155`. -/
 def methodGetattro (rt : Rt) (obj : Val) (n : Name) : M Val := do
   let w ← getW
   match findInMro w (typeOf w obj) n with
@@ -657,7 +657,7 @@ def methodGetattro (rt : Rt) (obj : Val) (n : Name) : M Val := do
     | some (.bound f _) => rt.getAttr f n
     | _ => gap%
 
-/-- `call_attribute`, `Objects/typeobject.c:10365`. -/
+/-- `call_attribute`, `Objects/typeobject.c:11066`. -/
 def callAttribute (rt : Rt) (self attr : Val) (n : Name) : M Val := do
   let w ← getW
   if (tdata w (typeOf w attr)).methodDescriptor then
@@ -669,11 +669,11 @@ def callAttribute (rt : Rt) (self attr : Val) (n : Name) : M Val := do
       rt.call b [.str n] []
     | none => rt.call attr [.str n] []
 
-/-- `_Py_slot_tp_getattro`, `Objects/typeobject.c:10358`. -/
+/-- `_Py_slot_tp_getattro`, `Objects/typeobject.c:11059`. -/
 def slotTpGetattro (rt : Rt) (self : Val) (n : Name) : M Val :=
   vectorcallMethod rt "__getattribute__" [self, .str n]
 
-/-- `_Py_slot_tp_getattr_hook`, `Objects/typeobject.c:10390`. -/
+/-- `_Py_slot_tp_getattr_hook`, `Objects/typeobject.c:11091`. -/
 def slotTpGetattrHook (rt : Rt) (self : Val) (n : Name) : M Val := do
   let w ← getW
   let tp := typeOf w self
@@ -709,7 +709,7 @@ def callGetattro (rt : Rt) (f : SlotFn) (v : Val) (n : Name) : M Val :=
   | .c .method => methodGetattro rt v n
   | _ => gap%
 
-/-- `PyObject_GetAttr`, `Objects/object.c:1290`. Name type checks are made by callers:
+/-- `PyObject_GetAttr`, `Objects/object.c:1311`. Name type checks are made by callers:
 `n` is a `str` here. -/
 def pyGetAttr (rt : Rt) (v : Val) (n : Name) : M Val := do
   let w ← getW
@@ -720,7 +720,7 @@ def pyGetAttr (rt : Rt) (v : Val) (n : Name) : M Val := do
     | none => attrErr s!"'{trunc 100 (tpName w tp)}' object has no attribute '{n}'"
   tryM run (setAttributeErrorContext v n)
 
-/-- `PyObject_GetOptionalAttr`, `Objects/object.c:1324`. -/
+/-- `PyObject_GetOptionalAttr`, `Objects/object.c:1393`. -/
 def pyGetOptionalAttr (rt : Rt) (v : Val) (n : Name) : M (Option Val) := do
   let w ← getW
   let tp := typeOf w v
@@ -731,7 +731,7 @@ def pyGetOptionalAttr (rt : Rt) (v : Val) (n : Name) : M (Option Val) := do
   | some f => catchMatch B.AttributeError (some <$> callGetattro rt f v n) (pure none)
   | none => pure none
 
-/-- `_PyObject_GetMethod`, `Objects/object.c:1579`. Returns `(callable, found_method)`:
+/-- `_PyObject_GetMethod`, `Objects/object.c:1657`. Returns `(callable, found_method)`:
 with `found_method`, the result is an unbound method descriptor and `obj` goes in as
 `self`. The difference from `_PyObject_GenericGetAttrWithDict` is that a method
 descriptor is not bound. -/
@@ -767,14 +767,14 @@ def pyGetMethod (rt : Rt) (obj : Val) (n : Name) : M (Val × Bool) := do
 
 /-! ## `tp_setattro` -/
 
-/-- `slot_tp_descr_set`, `Objects/typeobject.c:10549`. -/
+/-- `slot_tp_descr_set`, `Objects/typeobject.c:11259`. -/
 def slotTpDescrSet (rt : Rt) (self target : Val) (value : Option Val) : M Unit := do
   match value with
   | none => let _ ← vectorcallMethod rt "__delete__" [self, target]
   | some v => let _ ← vectorcallMethod rt "__set__" [self, target, v]
 
 /-- `member_set` and `PyMember_SetOne` for `Py_T_OBJECT_EX`,
-`Objects/descrobject.c:233`, `Python/structmember.c:313-326`. -/
+`Objects/descrobject.c:233`, `Python/structmember.c:323-336`. -/
 def memberSet (rt : Rt) (owner : Addr) (name : Name) (readonly : Bool) (obj : Val)
     (value : Option Val) : M Unit := do
   descrCheck owner name obj
@@ -814,7 +814,7 @@ def callDescrSet (rt : Rt) (f : SlotFn) (d obj : Val) (value : Option Val) : M U
     | _, _ => gap%
   | _ => gap%
 
-/-- `_PyObject_GenericSetAttrWithDict`, `Objects/object.c:1938`, with `dict == NULL`. -/
+/-- `_PyObject_GenericSetAttrWithDict`, `Objects/object.c:2017`, with `dict == NULL`. -/
 def genericSetAttr (rt : Rt) (obj : Val) (n : Name) (value : Option Val) : M Unit := do
   let w ← getW
   let tp := typeOf w obj
@@ -864,7 +864,7 @@ def genericSetAttr (rt : Rt) (obj : Val) (n : Name) (value : Option Val) : M Uni
       | some _ =>
         attrErr s!"'{trunc 100 (tpName w tp)}' object attribute '{n}' is read-only"
 
-/-- `type_update_dict`, `Objects/typeobject.c:6202`. -/
+/-- `type_update_dict`, `Objects/typeobject.c:6743`. -/
 def typeUpdateDict (t : Addr) (n : Name) (value : Option Val) : M Unit := do
   let w ← getW
   match value with
@@ -879,7 +879,7 @@ def typeUpdateDict (t : Addr) (n : Name) (value : Option Val) : M Unit := do
   if isDunderName n then
     modW fun w => updateSlot w t n
 
-/-- `type_setattro`, `Objects/typeobject.c:6238`. -/
+/-- `type_setattro`, `Objects/typeobject.c:6804`. -/
 def typeSetattro (rt : Rt) (ty : Val) (n : Name) (value : Option Val) : M Unit := do
   let w ← getW
   let t := match ty with
@@ -895,7 +895,7 @@ def typeSetattro (rt : Rt) (ty : Val) (n : Name) (value : Option Val) : M Unit :
     | none => typeUpdateDict t n value
   | none => typeUpdateDict t n value
 
-/-- `slot_tp_setattro`, `Objects/typeobject.c:10441`. -/
+/-- `slot_tp_setattro`, `Objects/typeobject.c:11142`. -/
 def slotTpSetattro (rt : Rt) (self : Val) (n : Name) (value : Option Val) : M Unit := do
   match value with
   | none => let _ ← vectorcallMethod rt "__delattr__" [self, .str n]
@@ -909,11 +909,11 @@ def callSetattro (rt : Rt) (f : SlotFn) (v : Val) (n : Name) (value : Option Val
   | .c .type => typeSetattro rt v n value
   | _ => gap%
 
-/-- The message at `Objects/object.c:1480`. -/
+/-- The message at `Objects/object.c:1558`. -/
 def roAttrMsg (tp what n : String) : String :=
   s!"'{trunc 100 tp}' object has only read-only attributes ({what} .{n})"
 
-/-- `PyObject_SetAttr`, `Objects/object.c:1440`. -/
+/-- `PyObject_SetAttr`, `Objects/object.c:1509`. -/
 def pySetAttr (rt : Rt) (v : Val) (n : Name) (value : Option Val) : M Unit := do
   let w ← getW
   let tp := typeOf w v

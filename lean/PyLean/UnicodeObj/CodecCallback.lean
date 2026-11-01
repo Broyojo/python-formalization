@@ -80,8 +80,8 @@ def decObject (input : Bytes) : ObjEdit → Py Bytes
   | .wrongType => .error (.typeError "UnicodeError 'object' attribute must be a bytes")
   | .deleted => .error (.typeError "UnicodeError 'object' attribute is not set")
 
-/-- `unicode_decode_call_errorhandler_writer`, unicodeobject.c:4537-4635, with
-`make_decode_exception`, :4386-4408. Returns the history, the object, the replacement and the new
+/-- `unicode_decode_call_errorhandler_writer`, unicodeobject.c:4431-4529, with
+`make_decode_exception`, :4280-4302. Returns the history, the object, the replacement and the new
 position. The position is checked against the object as the handler left it. -/
 def decodeCallback (cb : DecCB) (hist : List DecView) (enc reason : String) (input : Bytes)
     (start stop : Nat) : Py (List DecView × Bytes × Str × Nat) := do
@@ -159,7 +159,7 @@ theorem decodeDriverX_std (step : List Nat → DStep) (h : ErrHandler) (enc : St
         exact ih ..
 
 /-- `unicode_decode_utf8` with any handler. The three names C handles inline are matched first,
-the way `error_handler` is switched on at unicodeobject.c:5365-5398. -/
+the way `error_handler` is switched on at unicodeobject.c:5246-5279. -/
 def utf8DecodeLoopX (H : DH) (consumed : Bool) :
     Nat → Bytes → List DecView → Nat → List Nat → Str → Py (Str × Nat)
   | 0, _, _, _, _, _ => .error .modelFuel
@@ -333,7 +333,7 @@ theorem utf7LoopX_std (input : Bytes) (h : ErrHandler) (consumed : Bool) :
 
 /-! ## The entry points -/
 
-/-- `PyUnicode_DecodeUTF16Stateful`, unicodeobject.c:6285-6437, with any handler. `fuel` has to
+/-- `PyUnicode_DecodeUTF16Stateful`, unicodeobject.c:6176-6328, with any handler. `fuel` has to
 outlast a handler that moves the position back. -/
 def utf16DecodeX (input : Bytes) (bo : Int) (H : DH) (final : Bool) (fuel : Nat) : Py (Str × Nat) :=
   let (bo, q) := bom16 bo input
@@ -344,7 +344,7 @@ def utf16DecodeX (input : Bytes) (bo : Int) (H : DH) (final : Bool) (fuel : Nat)
     decodeDriverX (step16 le !final) H (if le then "utf-16-le" else "utf-16-be")
       (if le then .utf16le else .utf16be) none fuel input [] q rest []
 
-/-- `PyUnicode_DecodeUTF32Stateful`, unicodeobject.c:5978-6120, with any handler. -/
+/-- `PyUnicode_DecodeUTF32Stateful`, unicodeobject.c:5860-6002, with any handler. -/
 def utf32DecodeX (input : Bytes) (bo : Int) (H : DH) (final : Bool) (fuel : Nat) : Py (Str × Nat) :=
   let (bo, q) := bom32 bo input
   let rest := input.drop q
@@ -354,12 +354,12 @@ def utf32DecodeX (input : Bytes) (bo : Int) (H : DH) (final : Bool) (fuel : Nat)
     decodeDriverX (step32 le !final) H (if le then "utf-32-le" else "utf-32-be")
       (if le then .utf32le else .utf32be) none fuel input [] q rest []
 
-/-- `PyUnicode_DecodeASCII`, unicodeobject.c:7579-7675, with any handler. -/
+/-- `PyUnicode_DecodeASCII`, unicodeobject.c:7453-7549, with any handler. -/
 def asciiDecodeX (input : Bytes) (H : DH) (fuel : Nat) : Py Str := do
   let (s, _) ← decodeDriverX stepAscii H "ascii" .unknown none fuel input [] 0 input []
   .ok s
 
-/-- `_PyUnicode_DecodeUnicodeEscapeInternal2`, unicodeobject.c:6629-6876, with any handler. -/
+/-- `_PyUnicode_DecodeUnicodeEscapeInternal2`, unicodeobject.c:6522-6769, with any handler. -/
 def unicodeEscapeDecodeX (input : Bytes) (H : DH) (nameToCode : List Nat → Option Nat)
     (final : Bool) (fuel : Nat) : Py (Str × Nat) :=
   if input.isEmpty then .ok ([], 0)
@@ -367,14 +367,14 @@ def unicodeEscapeDecodeX (input : Bytes) (H : DH) (nameToCode : List Nat → Opt
     decodeDriverX (stepUnicodeEscape nameToCode !final) H "unicodeescape" .unknown (some input.length)
       fuel input [] 0 input []
 
-/-- `_PyUnicode_DecodeRawUnicodeEscapeStateful`, unicodeobject.c:7045-7178, with any handler. -/
+/-- `_PyUnicode_DecodeRawUnicodeEscapeStateful`, unicodeobject.c:6924-7057, with any handler. -/
 def rawEscapeDecodeX (input : Bytes) (H : DH) (final : Bool) (fuel : Nat) : Py (Str × Nat) :=
   if input.isEmpty then .ok ([], 0)
   else
     decodeDriverX (stepRawEscape !final) H "rawunicodeescape" .unknown (some input.length) fuel input
       [] 0 input []
 
-/-- `PyUnicode_DecodeCharmap`, unicodeobject.c:8620-8651, with any handler. -/
+/-- `PyUnicode_DecodeCharmap`, unicodeobject.c:8479-8510, with any handler. -/
 def charmapDecodeX (input : Bytes) (mapping : DecMap) (H : DH) (fuel : Nat) : Py Str := do
   if input.isEmpty then .ok []
   else
@@ -384,7 +384,7 @@ def charmapDecodeX (input : Bytes) (mapping : DecMap) (H : DH) (fuel : Nat) : Py
     let (s, _) ← decodeDriverX step H "charmap" .unknown none fuel input [] 0 input []
     .ok s
 
-/-- `PyUnicode_DecodeUTF7Stateful`, unicodeobject.c:4734-4928, with any handler. -/
+/-- `PyUnicode_DecodeUTF7Stateful`, unicodeobject.c:4625-4819, with any handler. -/
 def utf7DecodeX (input : Bytes) (H : DH) (final : Bool) (fuel : Nat) : Py (Str × Nat) :=
   if input.isEmpty then .ok ([], 0)
   else
@@ -428,8 +428,8 @@ inductive EH where
   | custom (cb : EncCB)
   | missing (name : String)
 
-/-- `unicode_encode_call_errorhandler`, unicodeobject.c:7320-7374, with `make_encode_exception`,
-:7278-7300. -/
+/-- `unicode_encode_call_errorhandler`, unicodeobject.c:7188-7242, with `make_encode_exception`,
+:7146-7168. -/
 def encodeCallback (cb : EncCB) (hist : List EncView) (enc reason : String) (input : Str)
     (start stop : Nat) : Py (List EncView × EncRep × Nat) := do
   let hist' := hist ++ [{ object := input, encoding := enc, start, stop, reason }]
@@ -559,7 +559,7 @@ def utf8EncodeLoopX (input : Str) (H : EH) (nameOf : Nat → Option Str) :
       | .std .strict => fail pos
       | _ => viaHandler
 
-/-- `charmap_encoding_error`, unicodeobject.c:8975-9112, with any handler. -/
+/-- `charmap_encoding_error`, unicodeobject.c:8836-8973, with any handler. -/
 def charmapEncodingErrorX (input : Str) (mapping : EncMap) (H : EH) (nameOf : Nat → Option Str)
     (hist : List EncView) (inpos : Nat) : Py (List EncView × Bytes × Nat) := do
   let n ← charmapCollect mapping (input.drop (inpos + 1))

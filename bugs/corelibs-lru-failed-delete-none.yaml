@@ -9,7 +9,7 @@ summary: |
   The bounded wrapper empties the oldest link and makes it the new root before `del cache[oldkey]`. If that raises, from the
   __eq__ of a key that collides with it, the dict keeps oldkey, and its link is now the root, whose key and result are
   None. The next call with oldkey is a hit that returns None, and rewires the root to point at itself; a later eviction
-  raises KeyError. The comment at :684-686 is careful about the assignment after the del, and not about the del itself.
+  raises KeyError. The comment at :701-703 is careful about the assignment after the del, and not about the del itself.
   The C wrapper puts the link back, and keeps the value.
 likelihood: |
   Very low: it needs a colliding key whose __eq__ raises only at that moment, and the pure Python twin.
@@ -54,7 +54,7 @@ observed: |
 promised_by: |
   The docs of lru_cache: the function is memoized, so a call returns what the function returned.
 cause: |
-  Lib/functools.py:678-683: root[KEY] and root[RESULT] are cleared before `del cache[oldkey]`, which can raise.
+  Lib/functools.py:693-699: root[KEY] and root[RESULT] are cleared before `del cache[oldkey]`, which can raise.
 possible_fix: |
   Delete the key first, or restore the link on failure, as bounded_lru_cache_update_lock_held does.
 duplicates:

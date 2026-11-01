@@ -18,7 +18,7 @@ Python's `//` and `%` are floor division and floor modulo (`Int.fdiv`,
 `Int.fmod`). Every place where the source formats an int into a message goes
 through `strInt`, which models CPython's `int_max_str_digits` limit (default
 4300 digits): `str(i)` raises `ValueError` when `i` has more than 4300 decimal
-digits (Objects/longobject.c:2044-2058 and :2131-2140).
+digits (Objects/longobject.c:2120-2134 and :2207-2216).
 -/
 
 namespace PyLean.Fractions
@@ -51,13 +51,13 @@ def maxStrDigits : Nat := 4300
 /-- Number of decimal digits of a natural number (`len(str(n))`). -/
 def numDigits (n : Nat) : Nat := (Nat.toDigits 10 n).length
 
-/-- `_MAX_STR_DIGITS_ERROR_FMT_TO_STR`, Objects/longobject.c:31. -/
+/-- `_MAX_STR_DIGITS_ERROR_FMT_TO_STR`, Objects/longobject.c:33. -/
 def limitToStrMsg : String :=
   "Exceeds the limit (4300 digits) for integer string conversion; use sys.set_int_max_str_digits() to increase the limit"
 
-/-- `str(i)` for an int, Objects/longobject.c:2040-2140: the pre-check at
-:2049-2058 only fires for values that also fail the exact check at
-:2131-2140, which compares the digit count without the sign to the limit. -/
+/-- `str(i)` for an int, Objects/longobject.c:2116-2216: the pre-check at
+:2125-2134 only fires for values that also fail the exact check at
+:2207-2216, which compares the digit count without the sign to the limit. -/
 def strInt (i : Int) : Py (List Char) :=
   if numDigits i.natAbs > maxStrDigits then .error (.valueError limitToStrMsg)
   else .ok ((if i < 0 then ['-'] else []) ++ Nat.toDigits 10 i.natAbs)
@@ -244,7 +244,7 @@ def modInv (d : Int) (m : Nat) : Option Int :=
   let r := egcd (m + 1) (d % m) m
   if r.1 = 1 then some (r.2.1 % m) else none
 
-/-- `hash(i)` for an int, Objects/longobject.c:3590-3644: `|i| mod P` with
+/-- `hash(i)` for an int, Objects/longobject.c:3673-3743: `|i| mod P` with
 the sign of `i`, and `-1` replaced by `-2`. -/
 def intHash (i : Int) : Int :=
   let h : Int := (i.natAbs % hashModulus : Nat)
@@ -292,10 +292,10 @@ def limitDenominator (x : Frac) (maxDen : Int) : Py Frac := do
 /-! ## `decimal.Decimal` values (oracle for the hash and format properties)
 
 A finite `Decimal` is `(-1)**sign * coefficient * 10**exponent`. Its hash is
-`Decimal.__hash__`, Lib/_pydecimal.py:896-920 (the C `_decimal` computes the
+`Decimal.__hash__`, Lib/_pydecimal.py:988-1012 (the C `_decimal` computes the
 same function, Modules/_decimal/_decimal.c `_dec_hash`). -/
 
-/-- `_PyHASH_10INV = pow(10, P - 2, P)`, Lib/_pydecimal.py:6405. -/
+/-- `_PyHASH_10INV = pow(10, P - 2, P)`, Lib/_pydecimal.py:6505. -/
 def tenInv : Nat := Nat.powMod 10 (hashModulus - 2) hashModulus
 
 /-- `hash(Decimal((sign, digits, exponent)))` for a finite Decimal. -/
@@ -309,7 +309,7 @@ def decimalHash (neg : Bool) (coeff : Nat) (exp : Int) : Int :=
   if ans = -1 then -2 else ans
 
 /-- `Fraction(Decimal((sign, digits, exponent)))` through
-`Decimal.as_integer_ratio()` (fractions.py:249-255), which returns the ratio in
+`Decimal.as_integer_ratio()` (fractions.py@3.14.7:249-255), which returns the ratio in
 lowest terms with a positive denominator, i.e. the normalized pair. -/
 def ofDecimal (neg : Bool) (coeff : Nat) (exp : Int) : Frac :=
   let n : Int := if neg then -(coeff : Int) else coeff

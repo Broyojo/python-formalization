@@ -136,12 +136,12 @@ def wrapsCall {α : Type} (p : Fn (WArg α)) (w : Wrapper α) : Py (Wrapper α) 
 /-- What `lru_cache(...)(f)` builds. -/
 structure LruRec where
   mode : LruMode
-  /-- `wrapper.cache_parameters()`, :595 and :587. -/
+  /-- `wrapper.cache_parameters()`, :599 and :590. -/
   maxsize : Option Int
   typed : Bool
   deriving Repr, DecidableEq
 
-/-- `lru_cache(maxsize, typed)`, Lib/functools.py:579-597, applied to a user function, with the twin's
+/-- `lru_cache(maxsize, typed)`, Lib/functools.py:581-601, applied to a user function, with the twin's
 `_lru_cache_wrapper` given as `mode`. `update_wrapper` follows in the same call; it reads `f`, and any
 failure of it is `fail`. -/
 def lruDecorate (mode : Option Int → Py LruMode) (arg : MaxsizeArg) (typed : Bool) (fail : Option PyExc) :
@@ -156,7 +156,7 @@ def lruDecorate (mode : Option Int → Py LruMode) (arg : MaxsizeArg) (typed : B
       | some e => .error e
       | none => .ok ⟨w, m, typed⟩
 
-/-- `cache(user_function)`, Lib/functools.py:726-728. -/
+/-- `cache(user_function)`, Lib/functools.py:747-749. -/
 def cacheDecorate (mode : Option Int → Py LruMode) (fail : Option PyExc) : Py LruRec :=
   lruDecorate mode .none false fail
 
@@ -170,12 +170,12 @@ inductive LruAttr (τ : Type) where
   deriving Repr, DecidableEq
 
 /-- The `__dict__` of a cached function before `update_wrapper`. The Python wrapper is a function that was given
-`cache_info` and `cache_clear` at Lib/functools.py:712-713; the C one has them as methods of its type, which are not in the
-`__dict__`. Both get `cache_parameters` at :587 and :595. -/
+`cache_info` and `cache_clear` at Lib/functools.py:733-734; the C one has them as methods of its type, which are not in the
+`__dict__`. Both get `cache_parameters` at :590 and :599. -/
 def lruDict {τ : Type} (py : Bool) (id : Nat) (m : Option Int) (t : τ) : Attrs (LruAttr τ) :=
   (if py then [("cache_info", .info id), ("cache_clear", .clear id)] else []) ++ [("cache_parameters", .params m t)]
 
-/-- `lru_cache(maxsize, typed)(f)`, Lib/functools.py:579-597, with the real `update_wrapper` at :588 and :596, on an object
+/-- `lru_cache(maxsize, typed)(f)`, Lib/functools.py:581-601, with the real `update_wrapper` at :591 and :600, on an object
 that is its own attribute table. `id` is this cache, and `self` it as an attribute value. -/
 def lruBuild {τ : Type} (py : Bool) (id : Nat) (mode : Option Int → Py LruMode) (arg : MaxsizeArg) (t : τ)
     (user : Wrapped (LruAttr τ)) (self : LruAttr τ) : Py (LruMode × Wrapper (LruAttr τ)) :=
@@ -195,7 +195,7 @@ def lruAsWrapped {τ : Type} (w : Wrapper (LruAttr τ)) : Wrapped (LruAttr τ) :
 
 /-! ### `_warn_python_reduce_kwargs` -/
 
-/-- The `wrapper` of `_warn_python_reduce_kwargs`, Lib/functools.py:1141-1152. `warn` is `warnings.warn(...)`,
+/-- The `wrapper` of `_warn_python_reduce_kwargs`, Lib/functools.py:1184-1195. `warn` is `warnings.warn(...)`,
 which raises under `-W error`, and `call` is `py_reduce(*args, **kwargs)`, run after it. The second component
 says whether it warned. -/
 def reduceWarnWrapper {β : Type} (kwnames : List String) (warn : Py Unit) (call : Py β) : Py β × Bool :=
@@ -224,7 +224,7 @@ structure CachedProp (α : Type) where
   doc : α
   module : α
 
-/-- `cached_property.__init__`, Lib/functools.py:1095-1099: reading `__doc__` or `__module__` may fail,
+/-- `cached_property.__init__`, Lib/functools.py:1138-1142: reading `__doc__` or `__module__` may fail,
 `AttributeError` included, and the object is not built. -/
 def cachedNew {α : Type} (func : Attrs α → Py α × Attrs α) (read : String → Py (Option α)) :
     Py (CachedProp α) :=
@@ -237,7 +237,7 @@ def cachedNew {α : Type} (func : Attrs α → Py α × Attrs α) (read : String
     | .ok none => .error (.named "AttributeError" "~object has no attribute '__module__'")
     | .ok (some m) => .ok ⟨func, none, d, m⟩
 
-/-- `cached_property.__set_name__`, Lib/functools.py:1101-1108. -/
+/-- `cached_property.__set_name__`, Lib/functools.py:1144-1151. -/
 def setName (attrname : Option String) (name : String) : Py (Option String) :=
   match attrname with
   | none => .ok (some name)
@@ -252,8 +252,8 @@ inductive CachedOut (α : Type) where
   | self
   | val (v : α)
 
-/-- `cached_property.__get__`, Lib/functools.py:1110-1135: its result, and the instance dict afterwards, when there is
-one. `obj` is `none` for class access. The function may have stored under the same name while it ran; the store at :1128
+/-- `cached_property.__get__`, Lib/functools.py:1153-1178: its result, and the instance dict afterwards, when there is
+one. `obj` is `none` for class access. The function may have stored under the same name while it ran; the store at :1171
 overwrites it. A function that raises leaves the dict as it left it. -/
 def cachedGet {α : Type} (c : CachedProp α) (obj : Option (InstDict α)) : Py (CachedOut α) × Option (Attrs α) :=
   match obj with
@@ -304,7 +304,7 @@ structure Sdm (α : Type) where
   /-- The wrapper of `singledispatch`, after `update_wrapper`. -/
   wrapper : Wrapper String
 
-/-- `singledispatch(func)` as `singledispatchmethod` runs it: `funcname` at :984 and `update_wrapper` at :990. -/
+/-- `singledispatch(func)` as `singledispatchmethod` runs it: `funcname` at :1005 and `update_wrapper` at :1011. -/
 def sdmDispatcher {α : Type} (object : Cls) (f : SdmFunc α) : Py (Dispatcher (MKind α) × Wrapper String) :=
   match singledispatch object f.impl (f.read "__name__") with
   | .error e => .error e
@@ -313,25 +313,25 @@ def sdmDispatcher {α : Type} (object : Cls) (f : SdmFunc α) : Py (Dispatcher (
     | .error e => .error e
     | .ok w => .ok (d, w)
 
-/-- `singledispatchmethod.__init__`, Lib/functools.py:1001-1006. -/
+/-- `singledispatchmethod.__init__`, Lib/functools.py:1023-1028. -/
 def sdmNew {α : Type} (object : Cls) (f : SdmFunc α) : Py (Sdm α) :=
   if !f.callable && !f.hasGet then .error (.typeError "~is not callable or a descriptor") else
   match sdmDispatcher object f with
   | .error e => .error e
   | .ok (d, w) => .ok ⟨d, f, w⟩
 
-/-- `singledispatchmethod.register`, Lib/functools.py:1008-1013: `func=method`. -/
+/-- `singledispatchmethod.register`, Lib/functools.py:1030-1035: `func=method`. -/
 def sdmRegister {α : Type} (W : World) (tok : Nat) (s : Sdm α) (cls : RegFirst (MKind α))
     (method : Option (MKind α)) : Py (Registered (MKind α) × Sdm α) :=
   match register W tok s.dispatcher cls method with
   | .error e => .error e
   | .ok (r, d) => .ok (r, { s with dispatcher := d })
 
-/-- `singledispatchmethod.__isabstractmethod__`, Lib/functools.py:1018-1020: `none` for the default `False`. -/
+/-- `singledispatchmethod.__isabstractmethod__`, Lib/functools.py:1040-1042: `none` for the default `False`. -/
 def sdmIsAbstract {α : Type} (s : Sdm α) : Py (Option α) := s.func.abstract
 
 /-- `name = x.__qualname__`, falling back to `__name__`, then to `'?'`, on `AttributeError` only:
-Lib/functools.py:1023-1029, and :1051-1057 through `__getattr__`. -/
+Lib/functools.py:1045-1051, and :1078-1084 through `__getattr__`. -/
 def nameOf (read : String → Py (Option String)) : Py String :=
   match read "__qualname__" with
   | .error e => .error e
@@ -342,7 +342,7 @@ def nameOf (read : String → Py (Option String)) : Py String :=
     | .ok (some n) => .ok n
     | .ok none => .ok "?"
 
-/-- `singledispatchmethod.__repr__`, Lib/functools.py:1022-1030. -/
+/-- `singledispatchmethod.__repr__`, Lib/functools.py:1044-1052. -/
 def sdmRepr {α : Type} (s : Sdm α) : Py String :=
   match nameOf s.func.read with
   | .error e => .error e
@@ -357,7 +357,7 @@ structure SdmGet (α : Type) where
   module : Option String
   doc : Option String
 
-/-- `singledispatchmethod.__get__`, :1015-1016, with `_singledispatchmethod_get.__init__`, :1033-1048. -/
+/-- `singledispatchmethod.__get__`, :1037-1038, with `_singledispatchmethod_get.__init__`, :1055-1075. -/
 def sdmGet {α : Type} (s : Sdm α) (obj : Option α) (cls : α) : Py (SdmGet α) :=
   match s.func.read "__module__" with
   | .error e => .error e
@@ -366,14 +366,14 @@ def sdmGet {α : Type} (s : Sdm α) (obj : Option α) (cls : α) : Py (SdmGet α
     | .error e => .error e
     | .ok d => .ok ⟨s, obj, cls, m, d⟩
 
-/-- `_singledispatchmethod_get.__getattr__`, Lib/functools.py:1071-1077: a bare `AttributeError` outside the
+/-- `_singledispatchmethod_get.__getattr__`, Lib/functools.py:1114-1120: a bare `AttributeError` outside the
 five names, and a read of the function inside them. -/
 def sdmGetattr {α : Type} (g : SdmGet α) (name : String) : Py (Option String) :=
   if name ∉ ["__name__", "__qualname__", "__isabstractmethod__", "__annotations__", "__type_params__"] then
     .ok none
   else g.unbound.func.read name
 
-/-- `_singledispatchmethod_get.__repr__`, Lib/functools.py:1050-1061. -/
+/-- `_singledispatchmethod_get.__repr__`, Lib/functools.py:1077-1088. -/
 def sdmGetRepr {α : Type} (g : SdmGet α) (repr : α → Py String) : Py String :=
   match nameOf (sdmGetattr g) with
   | .error e => .error e
@@ -385,7 +385,7 @@ def sdmGetRepr {α : Type} (g : SdmGet α) (repr : α → Py String) : Py String
       | .error e => .error e
       | .ok r => .ok ("<bound single dispatch method " ++ n ++ " of " ++ r ++ ">")
 
-/-- `impl.__get__(obj, cls)(*args, **kwargs)`, the end of Lib/functools.py:1069. There is no fallback for an
+/-- `impl.__get__(obj, cls)(*args, **kwargs)`, the end of Lib/functools.py@3.14.7:1069. There is no fallback for an
 object without `__get__`, which `__init__` accepts when it is callable. -/
 def implCall {α : Type} (impl : MKind α) (obj : Option α) (cls : α) (args : List α)
     (kw : List (String × α)) : Py (Called α) :=
@@ -404,7 +404,7 @@ def implCall {α : Type} (impl : MKind α) (obj : Option α) (cls : α) (args : 
     | .ok none => callFn call args kw
     | .ok (some nf) => callFn nf args kw
 
-/-- `_singledispatchmethod_get.__call__`, Lib/functools.py:1063-1069. `classes` is `args[0].__class__`. -/
+/-- `_singledispatchmethod_get.__call__`, Lib/functools.py@3.14.7:1063-1069. `classes` is `args[0].__class__`. -/
 def sdmCall {α : Type} (W : World) (fuel tok : Nat) (g : SdmGet α) (classOf : α → Cls) (args : List α)
     (kw : List (String × α)) : Py (Called α) × Dispatcher (MKind α) :=
   let d := g.unbound.dispatcher
@@ -421,10 +421,10 @@ def sdmCall {α : Type} (W : World) (fuel tok : Nat) (g : SdmGet α) (classOf : 
     | (.ok none, d) => (.error (.named "AttributeError" "'NoneType' object has no attribute '__get__'"), d)
     | (.ok (some impl), d) => (implCall impl g.obj g.cls args kw, d)
 
-/-- `_singledispatchmethod_get.__wrapped__`, :1079-1081. -/
+/-- `_singledispatchmethod_get.__wrapped__`, :1122-1124. -/
 def sdmWrapped {α : Type} (g : SdmGet α) : SdmFunc α := g.unbound.func
 
-/-- `_singledispatchmethod_get.register`, :1083-1085: the bound `register` of the `singledispatchmethod`. -/
+/-- `_singledispatchmethod_get.register`, :1126-1128: the bound `register` of the `singledispatchmethod`. -/
 def sdmGetRegister {α : Type} (W : World) (tok : Nat) (g : SdmGet α) :
     RegFirst (MKind α) → Option (MKind α) → Py (Registered (MKind α) × Sdm α) :=
   sdmRegister W tok g.unbound

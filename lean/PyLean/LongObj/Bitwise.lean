@@ -74,7 +74,7 @@ theorem xor_mask {d : Nat} (hd : d < 2 ^ 30) : d ^^^ MASK = MASK - d := by
 
 /-! ## `v_complement` -/
 
-/-- `v_complement(z, a, m)`, longobject.c:5464-5474, returning `z` and the final carry. -/
+/-- `v_complement(z, a, m)`, longobject.c:5558-5568, returning `z` and the final carry. -/
 def vComplGo : List Nat → Nat → Py (List Nat × Nat)
   | [], carry => .ok ([], carry)
   | a :: as, carry => do
@@ -163,27 +163,27 @@ theorem BitOp.lt (op : BitOp) {a b k : Nat} (ha : a < 2 ^ k) (hb : b < 2 ^ k) :
 theorem BitOp.comm (op : BitOp) (a b : Bool) : op.bool a b = op.bool b a := by
   cases op <;> cases a <;> cases b <;> rfl
 
-/-- Compute digits for the overlap of `a` and `b`, longobject.c:5562-5577. -/
+/-- Compute digits for the overlap of `a` and `b`, longobject.c:5661-5676. -/
 def bwOverlap (op : BitOp) : List Nat → List Nat → List Nat
   | _, [] => []
   | [], _ :: _ => []
   | a :: as, b :: bs => op.nat a b :: bwOverlap op as bs
 
-/-- `size_z`, longobject.c:5535-5550. -/
+/-- `size_z`, longobject.c:5628-5643. -/
 def bwSize (op : BitOp) (x y : List Nat) (ny : Bool) : Nat :=
   match op with
   | .xor => x.length
   | .and => if ny = true then x.length else y.length
   | .or => if ny = true then y.length else x.length
 
-/-- The digits of `z` before the final complement, longobject.c:5561-5585. -/
+/-- The digits of `z` before the final complement, longobject.c:5660-5684. -/
 def zOf (op : BitOp) (x y : List Nat) (ny : Bool) : List Nat :=
   let sizeZ := bwSize op x y ny
   bwOverlap op x y ++
     (if op = .xor ∧ ny = true then (x.drop y.length).map (· ^^^ MASK)
      else (x.drop y.length).take (sizeZ - y.length))
 
-/-- Complement the result if negative, and normalize, longobject.c:5588-5596. -/
+/-- Complement the result if negative, and normalize, longobject.c:5687-5695. -/
 def bwFinish (negz : Bool) (z : List Nat) : Py Long :=
   if negz = true then
     match vComplGo (z ++ [MASK]) 1 with
@@ -199,7 +199,7 @@ def bwCore (op : BitOp) (x y : List Nat) (nx ny : Bool) : Py Long := do
   longAlloc (bwSize op x y ny + (if op.bool nx ny = true then 1 else 0))
   bwFinish (op.bool nx ny) (zOf op x y ny)
 
-/-- If negative, replace by the two's complement, longobject.c:5493-5519. -/
+/-- If negative, replace by the two's complement, longobject.c@3.14.7:5493-5519. -/
 def twosOf (neg : Bool) (ds : List Nat) : Py (List Nat) :=
   if neg then
     match longAlloc ds.length, vComplGo ds 1 with
@@ -208,7 +208,7 @@ def twosOf (neg : Bool) (ds : List Nat) : Py (List Nat) :=
     | _, .error e => .error e
   else .ok ds
 
-/-- `long_bitwise(a, op, b)`, longobject.c:5479-5597. -/
+/-- `long_bitwise(a, op, b)`, longobject.c:5573-5696. -/
 def longBitwise (a : Long) (op : BitOp) (b : Long) : Py Long :=
   match twosOf a.neg a.ds, twosOf b.neg b.ds with
   | .ok x, .ok y =>
@@ -222,7 +222,7 @@ def u64of (x : Int) : Nat := (x % 2 ^ 64).toNat
 /-- A `uint64_t` bit pattern read back as `stwodigits`. -/
 def s64of (m : Nat) : Int := if m < 2 ^ 63 then m else (m : Int) - 2 ^ 64
 
-/-- `long_and`, `long_or`, `long_xor`, longobject.c:5600-5633. -/
+/-- `long_and`, `long_or`, `long_xor`, longobject.c:5699-5732. -/
 def longBit (op : BitOp) (a b : Long) : Py Long :=
   if a.isCompact = true ∧ b.isCompact = true then
     .ok (fromSTwoDigits (s64of (op.nat (u64of a.medium) (u64of b.medium))))
@@ -353,7 +353,7 @@ theorem bitZ_tcVal {x : List Nat} (hx : IsDigits x) (s : Bool) (i : Nat) :
     bitZ (tcVal x s) i = if i < 30 * x.length then (val x).testBit i else s :=
   bitZ_tc (val_lt hx)
 
-/-- Complementing back (longobject.c:5588-5592) yields the canonical object of the
+/-- Complementing back (longobject.c:5687-5691) yields the canonical object of the
 two's complement value, and the extra digit makes that complement exact. -/
 theorem complBack {z : List Nat} (hz : IsDigits z) :
     ∃ u c, vComplGo (z ++ [MASK]) 1 = .ok (u, c) ∧
@@ -591,7 +591,7 @@ theorem longBit_spec (op : BitOp) (a b : Int)
 
 /-! ## `~x`, `-x`, `abs(x)`, `bool(x)` -/
 
-/-- `long_invert(v)`, longobject.c:5159-5174. `~m` on `stwodigits` is `-m - 1`. -/
+/-- `long_invert(v)`, longobject.c:5251-5266. `~m` on `stwodigits` is `-m - 1`. -/
 def longInvert (v : Long) : Py Long :=
   if v.isCompact = true then .ok (fromSTwoDigits (-v.medium - 1))
   else
@@ -599,14 +599,14 @@ def longInvert (v : Long) : Py Long :=
     | .ok x => .ok x.flip
     | .error e => .error e
 
-/-- `long_neg(v)`, longobject.c:5177-5188. -/
+/-- `long_neg(v)`, longobject.c:5269-5280. -/
 def longNeg (v : Long) : Long :=
   if v.isCompact = true then fromSTwoDigits (-v.medium) else v.flip
 
-/-- `long_abs(v)`, longobject.c:5197-5203. -/
+/-- `long_abs(v)`, longobject.c:5289-5295. -/
 def longAbs (v : Long) : Long := if v.neg then longNeg v else v
 
-/-- `long_bool(v)`, longobject.c:5212-5215. -/
+/-- `long_bool(v)`, longobject.c:5304-5307. -/
 def longBool (v : Long) : Bool := !v.ds.isEmpty
 
 theorem longInvert_spec (a : Int) (ha : digitCount a.natAbs + 1 ≤ maxLongDigits) :

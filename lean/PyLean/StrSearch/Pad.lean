@@ -53,7 +53,7 @@ theorem strPad_ok {s : Seq} {l r : Int} {fill : Nat} (hl : 0 ≤ l) (hr : 0 ≤ 
 
 /-- `str` and `bytes` padding agree for every width and fill character:
 `center`, `ljust`, `rjust` and `zfill`. In particular the overflow check of
-the `str` `pad` (unicodeobject.c:10510-10514) can never fire, so a width that
+the `str` `pad` (unicodeobject.c:10275-10279) can never fire, so a width that
 is a valid `Py_ssize_t` never raises `OverflowError` ("padded string is too
 long"). Precondition: `len(s) ≤ sys.maxsize` (type invariant). -/
 def PadStrBytes : Prop :=
@@ -135,7 +135,7 @@ theorem zfillSign_eq (s : Seq) (f : Nat) (hf : 1 ≤ f) :
       rw [this]; rfl
     · rfl
 
-/-- `zfill` docstring and stdtypes.rst:2892-2898: "left filled with ASCII '0'
+/-- `zfill` docstring and stdtypes.rst@3.14.7:2892-2898: "left filled with ASCII '0'
 digits to make a string of length width. A leading sign prefix ('+'/'-') is
 handled by inserting the padding after the sign character rather than before.
 The original string is returned if width is less than or equal to len(s)."
@@ -257,7 +257,7 @@ theorem expandFill_notab (t : Int) : ∀ (s : Seq) (col : Int), s.any (· == 9) 
     simp only [expandFill, h9, ↓reduceIte]
     rw [ih _ h.2]
 
-/-- `str.expandtabs` (unicodeobject.c:11882-11948) and `bytes.expandtabs`
+/-- `str.expandtabs` (unicodeobject.c:11608-11674) and `bytes.expandtabs`
 (transmogrify.h:36-98) compute their sizes with different overflow checks
 (`str` bounds the running total; `bytes` bounds the column and adds whole
 lines). Both return the same expansion when it has at most `PY_SSIZE_T_MAX`

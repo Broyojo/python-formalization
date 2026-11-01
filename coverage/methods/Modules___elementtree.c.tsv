@@ -1,124 +1,125 @@
 file	line	endline	name	signature	status	entry	note
-Modules/_elementtree.c	62	68	_set_joined_ptr	Py_LOCAL_INLINE(void) _set_joined_ptr(PyObject **p, PyObject *new_joined_ptr)	todo		
-Modules/_elementtree.c	73	78	_clear_joined_ptr	static void _clear_joined_ptr(PyObject **p)	todo		
-Modules/_elementtree.c	112	117	get_elementtree_state	get_elementtree_state(PyObject *module)	todo		
-Modules/_elementtree.c	120	125	get_elementtree_state_by_cls	get_elementtree_state_by_cls(PyTypeObject *cls)	todo		
-Modules/_elementtree.c	128	133	get_elementtree_state_by_type	get_elementtree_state_by_type(PyTypeObject *tp)	todo		
-Modules/_elementtree.c	136	164	elementtree_clear	elementtree_clear(PyObject *m)	todo		
-Modules/_elementtree.c	167	183	elementtree_traverse	elementtree_traverse(PyObject *m, visitproc visit, void *arg)	todo		
-Modules/_elementtree.c	186	189	elementtree_free	elementtree_free(void *m)	todo		
-Modules/_elementtree.c	194	206	list_join	list_join(PyObject* list)	todo		
-Modules/_elementtree.c	211	214	is_empty_dict	is_empty_dict(PyObject *obj)	todo		
-Modules/_elementtree.c	270	285	create_extra	create_extra(ElementObject* self, PyObject* attrib)	todo		
-Modules/_elementtree.c	288	305	dealloc_extra	dealloc_extra(ElementObjectExtra *extra)	todo		
-Modules/_elementtree.c	308	321	clear_extra	clear_extra(ElementObject* self)	todo		
-Modules/_elementtree.c	327	350	create_new_element	create_new_element(elementtreestate *st, PyObject *tag, PyObject *attrib)	todo		
-Modules/_elementtree.c	353	364	element_new	element_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
-Modules/_elementtree.c	375	403	get_attrib_from_keywords	get_attrib_from_keywords(PyObject *kwds)	todo		
-Modules/_elementtree.c	414	460	element_init	element_init(PyObject *self, PyObject *args, PyObject *kwds)	todo		
-Modules/_elementtree.c	463	518	element_resize	element_resize(ElementObject* self, Py_ssize_t extra)	todo		
-Modules/_elementtree.c	521	526	raise_type_error	raise_type_error(PyObject *element)	todo		
-Modules/_elementtree.c	529	546	element_add_subelement	element_add_subelement(elementtreestate *st, ElementObject *self, PyObject *element)	todo		
-Modules/_elementtree.c	549	562	element_get_attrib	element_get_attrib(ElementObject* self)	todo		
-Modules/_elementtree.c	565	583	element_get_text	element_get_text(ElementObject* self)	todo		
-Modules/_elementtree.c	586	604	element_get_tail	element_get_tail(ElementObject* self)	todo		
-Modules/_elementtree.c	607	650	subelement	subelement(PyObject *self, PyObject *args, PyObject *kwds)	todo		
-Modules/_elementtree.c	653	669	element_gc_traverse	element_gc_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/_elementtree.c	672	684	element_gc_clear	element_gc_clear(PyObject *op)	todo		
-Modules/_elementtree.c	687	703	element_dealloc	element_dealloc(PyObject *op)	todo		
-Modules/_elementtree.c	717	726	_elementtree_Element_append_impl	_elementtree_Element_append_impl(ElementObject *self, PyTypeObject *cls, PyObject *subelement) /*[clinic end generated code: output=d00923711ea317fc input=8baf92679f9717b8]*/	todo		
-Modules/_elementtree.c	734	743	_elementtree_Element_clear_impl	_elementtree_Element_clear_impl(ElementObject *self) /*[clinic end generated code: output=8bcd7a51f94cfff6 input=3c719ff94bf45dd6]*/	todo		
-Modules/_elementtree.c	754	788	_elementtree_Element___copy___impl	_elementtree_Element___copy___impl(ElementObject *self, PyTypeObject *cls) /*[clinic end generated code: output=da22894421ff2b36 input=91edb92d9f441213]*/	todo		
-Modules/_elementtree.c	802	912	_elementtree_Element___deepcopy___impl	_elementtree_Element___deepcopy___impl(ElementObject *self, PyObject *memo) /*[clinic end generated code: output=eefc3df50465b642 input=a2d40348c0aade10]*/	todo		
-Modules/_elementtree.c	915	964	deepcopy	deepcopy(elementtreestate *st, PyObject *object, PyObject *memo)	todo		
-Modules/_elementtree.c	973	984	_elementtree_Element___sizeof___impl	_elementtree_Element___sizeof___impl(ElementObject *self) /*[clinic end generated code: output=baae4e7ae9fe04ec input=54e298c501f3e0d0]*/	todo		
-Modules/_elementtree.c	1005	1037	_elementtree_Element___getstate___impl	_elementtree_Element___getstate___impl(ElementObject *self) /*[clinic end generated code: output=37279aeeb6bb5b04 input=f0d16d7ec2f7adc1]*/	todo		
-Modules/_elementtree.c	1040	1124	element_setstate_from_attributes	element_setstate_from_attributes(elementtreestate *st, ElementObject *self, PyObject *tag, PyObject *attrib, PyObject *text, PyObject *tail, PyObject *children)	todo		
-Modules/_elementtree.c	1131	1154	element_setstate_from_Python	element_setstate_from_Python(elementtreestate *st, ElementObject *self, PyObject *state)	todo		
-Modules/_elementtree.c	1166	1180	_elementtree_Element___setstate___impl	_elementtree_Element___setstate___impl(ElementObject *self, PyTypeObject *cls, PyObject *state) /*[clinic end generated code: output=598bfb5730f71509 input=13830488d35d51f7]*/	todo		
-Modules/_elementtree.c	1183	1235	checkpath	checkpath(PyObject* tag)	todo		
-Modules/_elementtree.c	1247	1273	_elementtree_Element_extend_impl	_elementtree_Element_extend_impl(ElementObject *self, PyTypeObject *cls, PyObject *elements) /*[clinic end generated code: output=3e86d37fac542216 input=6479b1b5379d09ae]*/	todo		
-Modules/_elementtree.c	1286	1315	_elementtree_Element_find_impl	_elementtree_Element_find_impl(ElementObject *self, PyTypeObject *cls, PyObject *path, PyObject *namespaces) /*[clinic end generated code: output=18f77d393c9fef1b input=94df8a83f956acc6]*/	todo		
-Modules/_elementtree.c	1329	1365	_elementtree_Element_findtext_impl	_elementtree_Element_findtext_impl(ElementObject *self, PyTypeObject *cls, PyObject *path, PyObject *default_value, PyObject *namespaces) /*[clinic end generated code: output=6af7a2d96aac32cb input=32f252099f62a3d2]*/	todo		
-Modules/_elementtree.c	1378	1411	_elementtree_Element_findall_impl	_elementtree_Element_findall_impl(ElementObject *self, PyTypeObject *cls, PyObject *path, PyObject *namespaces) /*[clinic end generated code: output=65e39a1208f3b59e input=7aa0db45673fc9a5]*/	todo		
-Modules/_elementtree.c	1424	1433	_elementtree_Element_iterfind_impl	_elementtree_Element_iterfind_impl(ElementObject *self, PyTypeObject *cls, PyObject *path, PyObject *namespaces) /*[clinic end generated code: output=be5c3f697a14e676 input=88766875a5c9a88b]*/	todo		
-Modules/_elementtree.c	1444	1458	_elementtree_Element_get_impl	_elementtree_Element_get_impl(ElementObject *self, PyObject *key, PyObject *default_value) /*[clinic end generated code: output=523c614142595d75 input=ee153bbf8cdb246e]*/	todo		
-Modules/_elementtree.c	1475	1490	_elementtree_Element_iter_impl	_elementtree_Element_iter_impl(ElementObject *self, PyTypeObject *cls, PyObject *tag) /*[clinic end generated code: output=bff29dc5d4566c68 input=f6944c48d3f84c58]*/	todo		
-Modules/_elementtree.c	1502	1507	_elementtree_Element_itertext_impl	_elementtree_Element_itertext_impl(ElementObject *self, PyTypeObject *cls) /*[clinic end generated code: output=fdeb2a3bca0ae063 input=a1ef1f0fc872a586]*/	todo		
-Modules/_elementtree.c	1511	1524	element_getitem	element_getitem(PyObject *op, Py_ssize_t index)	todo		
-Modules/_elementtree.c	1527	1541	element_bool	element_bool(PyObject *op)	todo		
-Modules/_elementtree.c	1553	1583	_elementtree_Element_insert_impl	_elementtree_Element_insert_impl(ElementObject *self, Py_ssize_t index, PyObject *subelement) /*[clinic end generated code: output=990adfef4d424c0b input=9530f4905aa401ca]*/	todo		
-Modules/_elementtree.c	1591	1598	_elementtree_Element_items_impl	_elementtree_Element_items_impl(ElementObject *self) /*[clinic end generated code: output=6db2c778ce3f5a4d input=adbe09aaea474447]*/	todo		
-Modules/_elementtree.c	1606	1613	_elementtree_Element_keys_impl	_elementtree_Element_keys_impl(ElementObject *self) /*[clinic end generated code: output=bc5bfabbf20eeb3c input=f02caf5b496b5b0b]*/	todo		
-Modules/_elementtree.c	1616	1623	element_length	element_length(PyObject *op)	todo		
-Modules/_elementtree.c	1636	1652	_elementtree_Element_makeelement_impl	_elementtree_Element_makeelement_impl(ElementObject *self, PyTypeObject *cls, PyObject *tag, PyObject *attrib) /*[clinic end generated code: output=d50bb17a47077d47 input=589829dab92f26e8]*/	todo		
-Modules/_elementtree.c	1663	1712	_elementtree_Element_remove_impl	_elementtree_Element_remove_impl(ElementObject *self, PyObject *subelement) /*[clinic end generated code: output=38fe6c07d6d87d1f input=6133e1d05597d5ee]*/	todo		
-Modules/_elementtree.c	1715	1734	element_repr	element_repr(PyObject *op)	todo		
-Modules/_elementtree.c	1746	1765	_elementtree_Element_set_impl	_elementtree_Element_set_impl(ElementObject *self, PyObject *key, PyObject *value) /*[clinic end generated code: output=fb938806be3c5656 input=1efe90f7d82b3fe9]*/	todo		
-Modules/_elementtree.c	1768	1800	element_setitem	element_setitem(PyObject *op, Py_ssize_t index, PyObject* item)	todo		
-Modules/_elementtree.c	1803	1856	element_subscr	element_subscr(PyObject *op, PyObject *item)	todo		
-Modules/_elementtree.c	1859	2045	element_ass_subscr	element_ass_subscr(PyObject *op, PyObject *item, PyObject *value)	todo		
-Modules/_elementtree.c	2048	2053	element_tag_getter	element_tag_getter(PyObject *op, void *closure)	todo		
-Modules/_elementtree.c	2056	2060	element_text_getter	element_text_getter(PyObject *op, void *closure)	todo		
-Modules/_elementtree.c	2063	2067	element_tail_getter	element_tail_getter(PyObject *op, void *closure)	todo		
-Modules/_elementtree.c	2070	2080	element_attrib_getter	element_attrib_getter(PyObject *op, void *closure)	todo		
-Modules/_elementtree.c	2092	2098	element_tag_setter	element_tag_setter(PyObject *op, PyObject *value, void *closure)	todo		
-Modules/_elementtree.c	2101	2107	element_text_setter	element_text_setter(PyObject *op, PyObject *value, void *closure)	todo		
-Modules/_elementtree.c	2110	2116	element_tail_setter	element_tail_setter(PyObject *op, PyObject *value, void *closure)	todo		
-Modules/_elementtree.c	2119	2135	element_attrib_setter	element_attrib_setter(PyObject *op, PyObject *value, void *closure)	todo		
-Modules/_elementtree.c	2166	2183	elementiter_dealloc	elementiter_dealloc(PyObject *op)	todo		
-Modules/_elementtree.c	2186	2197	elementiter_traverse	elementiter_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/_elementtree.c	2202	2219	parent_stack_push_new	parent_stack_push_new(ElementIterObject *it, ElementObject *parent)	todo		
-Modules/_elementtree.c	2222	2331	elementiter_next	elementiter_next(PyObject *op)	todo		
-Modules/_elementtree.c	2354	2379	create_elementiter	create_elementiter(elementtreestate *st, ElementObject *self, PyObject *tag, int gettext)	todo		
-Modules/_elementtree.c	2425	2453	treebuilder_new	treebuilder_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
-Modules/_elementtree.c	2468	2506	_elementtree_TreeBuilder___init___impl	_elementtree_TreeBuilder___init___impl(TreeBuilderObject *self, PyObject *element_factory, PyObject *comment_factory, PyObject *pi_factory, int insert_comments, int insert_pis) /*[clinic end generated code: output=8571d4dcadfdf952 input=ae98a94df20b5cc3]*/	todo		
-Modules/_elementtree.c	2509	2530	treebuilder_gc_traverse	treebuilder_gc_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/_elementtree.c	2533	2553	treebuilder_gc_clear	treebuilder_gc_clear(PyObject *op)	todo		
-Modules/_elementtree.c	2556	2563	treebuilder_dealloc	treebuilder_dealloc(PyObject *self)	todo		
-Modules/_elementtree.c	2581	2615	_elementtree__set_factories_impl	_elementtree__set_factories_impl(PyObject *module, PyObject *comment_factory, PyObject *pi_factory) /*[clinic end generated code: output=813b408adee26535 input=99d17627aea7fb3b]*/	todo		
-Modules/_elementtree.c	2618	2670	treebuilder_extend_element_text_or_tail	treebuilder_extend_element_text_or_tail(elementtreestate *st, PyObject *element, PyObject **data, PyObject **dest, PyObject *name)	todo		
-Modules/_elementtree.c	2673	2691	treebuilder_flush_data	treebuilder_flush_data(TreeBuilderObject* self)	todo		
-Modules/_elementtree.c	2694	2709	treebuilder_add_subelement	treebuilder_add_subelement(elementtreestate *st, PyObject *element, PyObject *child)	todo		
-Modules/_elementtree.c	2712	2727	treebuilder_append_event	treebuilder_append_event(TreeBuilderObject *self, PyObject *action, PyObject *node)	todo		
-Modules/_elementtree.c	2733	2802	treebuilder_handle_start	treebuilder_handle_start(TreeBuilderObject* self, PyObject* tag, PyObject* attrib)	todo		
-Modules/_elementtree.c	2805	2840	treebuilder_handle_data	treebuilder_handle_data(TreeBuilderObject* self, PyObject* data)	todo		
-Modules/_elementtree.c	2843	2870	treebuilder_handle_end	treebuilder_handle_end(TreeBuilderObject* self, PyObject* tag)	todo		
-Modules/_elementtree.c	2873	2908	treebuilder_handle_comment	treebuilder_handle_comment(TreeBuilderObject* self, PyObject* text)	todo		
-Modules/_elementtree.c	2911	2951	treebuilder_handle_pi	treebuilder_handle_pi(TreeBuilderObject* self, PyObject* target, PyObject* text)	todo		
-Modules/_elementtree.c	2954	2972	treebuilder_handle_start_ns	treebuilder_handle_start_ns(TreeBuilderObject* self, PyObject* prefix, PyObject* uri)	todo		
-Modules/_elementtree.c	2975	2984	treebuilder_handle_end_ns	treebuilder_handle_end_ns(TreeBuilderObject* self, PyObject* prefix)	todo		
-Modules/_elementtree.c	2998	3002	_elementtree_TreeBuilder_data_impl	_elementtree_TreeBuilder_data_impl(TreeBuilderObject *self, PyObject *data) /*[clinic end generated code: output=dfa02b68f732b8c0 input=a0540c532b284d29]*/	todo		
-Modules/_elementtree.c	3013	3017	_elementtree_TreeBuilder_end_impl	_elementtree_TreeBuilder_end_impl(TreeBuilderObject *self, PyObject *tag) /*[clinic end generated code: output=84cb6ca9008ec740 input=22dc3674236f5745]*/	todo		
-Modules/_elementtree.c	3028	3033	_elementtree_TreeBuilder_comment_impl	_elementtree_TreeBuilder_comment_impl(TreeBuilderObject *self, PyObject *text) /*[clinic end generated code: output=a555ef39027c3823 input=47e7ebc48ed01dfa]*/	todo		
-Modules/_elementtree.c	3045	3050	_elementtree_TreeBuilder_pi_impl	_elementtree_TreeBuilder_pi_impl(TreeBuilderObject *self, PyObject *target, PyObject *text) /*[clinic end generated code: output=21eb95ec9d04d1d9 input=349342bd79c35570]*/	todo		
-Modules/_elementtree.c	3053	3065	treebuilder_done	treebuilder_done(TreeBuilderObject* self)	todo		
-Modules/_elementtree.c	3073	3077	_elementtree_TreeBuilder_close_impl	_elementtree_TreeBuilder_close_impl(TreeBuilderObject *self) /*[clinic end generated code: output=b441fee3202f61ee input=f7c9c65dc718de14]*/	todo		
-Modules/_elementtree.c	3089	3094	_elementtree_TreeBuilder_start_impl	_elementtree_TreeBuilder_start_impl(TreeBuilderObject *self, PyObject *tag, PyObject *attrs) /*[clinic end generated code: output=e7e9dc2861349411 input=7288e9e38e63b2b6]*/	todo		
-Modules/_elementtree.c	3135	3198	makeuniversal	makeuniversal(XMLParserObject* self, const char* string)	todo		
-Modules/_elementtree.c	3205	3248	expat_set_error	expat_set_error(elementtreestate *st, enum XML_Error error_code, Py_ssize_t line, Py_ssize_t column, const char *message)	todo		
-Modules/_elementtree.c	3254	3298	expat_default_handler	expat_default_handler(void *op, const XML_Char *data_in, int data_len)	todo		
-Modules/_elementtree.c	3301	3376	expat_start_handler	expat_start_handler(void *op, const XML_Char *tag_in, const XML_Char **attrib_in)	todo		
-Modules/_elementtree.c	3379	3405	expat_data_handler	expat_data_handler(void *op, const XML_Char *data_in, int data_len)	todo		
-Modules/_elementtree.c	3408	3433	expat_end_handler	expat_end_handler(void *op, const XML_Char *tag_in)	todo		
-Modules/_elementtree.c	3436	3488	expat_start_ns_handler	expat_start_ns_handler(void *op, const XML_Char *prefix_in, const XML_Char *uri_in)	todo		
-Modules/_elementtree.c	3491	3521	expat_end_ns_handler	expat_end_ns_handler(void *op, const XML_Char *prefix_in)	todo		
-Modules/_elementtree.c	3524	3554	expat_comment_handler	expat_comment_handler(void *op, const XML_Char *comment_in)	todo		
-Modules/_elementtree.c	3557	3613	expat_start_doctype_handler	expat_start_doctype_handler(void *op, const XML_Char *doctype_name, const XML_Char *sysid, const XML_Char *pubid, int has_internal_subset)	todo		
-Modules/_elementtree.c	3616	3664	expat_pi_handler	expat_pi_handler(void *op, const XML_Char *target_in, const XML_Char *data_in)	todo		
-Modules/_elementtree.c	3669	3686	xmlparser_new	xmlparser_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
-Modules/_elementtree.c	3689	3698	ignore_attribute_error	ignore_attribute_error(PyObject *value)	todo		
-Modules/_elementtree.c	3710	3831	_elementtree_XMLParser___init___impl	_elementtree_XMLParser___init___impl(XMLParserObject *self, PyObject *target, const char *encoding) /*[clinic end generated code: output=3ae45ec6cdf344e4 input=7e716dd6e4f3e439]*/	todo		
-Modules/_elementtree.c	3834	3853	xmlparser_gc_traverse	xmlparser_gc_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/_elementtree.c	3856	3882	xmlparser_gc_clear	xmlparser_gc_clear(PyObject *op)	todo		
-Modules/_elementtree.c	3885	3892	xmlparser_dealloc	xmlparser_dealloc(PyObject *self)	todo		
-Modules/_elementtree.c	3894	3903	_check_xmlparser	Py_LOCAL_INLINE(int) _check_xmlparser(XMLParserObject* self)	todo		
-Modules/_elementtree.c	3906	3929	expat_parse	expat_parse(elementtreestate *st, XMLParserObject *self, const char *data, int data_len, int final)	todo		
-Modules/_elementtree.c	3937	3963	_elementtree_XMLParser_close_impl	_elementtree_XMLParser_close_impl(XMLParserObject *self) /*[clinic end generated code: output=d68d375dd23bc7fb input=ca7909ca78c3abfe]*/	todo		
-Modules/_elementtree.c	3971	3997	_elementtree_XMLParser_flush_impl	_elementtree_XMLParser_flush_impl(XMLParserObject *self) /*[clinic end generated code: output=42fdb8795ca24509 input=effbecdb28715949]*/	todo		
-Modules/_elementtree.c	4008	4045	_elementtree_XMLParser_feed_impl	_elementtree_XMLParser_feed_impl(XMLParserObject *self, PyObject *data) /*[clinic end generated code: output=503e6fbf1adf17ab input=fe231b6b8de3ce1f]*/	todo		
-Modules/_elementtree.c	4056	4135	_elementtree_XMLParser__parse_whole_impl	_elementtree_XMLParser__parse_whole_impl(XMLParserObject *self, PyObject *file) /*[clinic end generated code: output=60718a4e63d237d2 input=19ecc893b6f3e752]*/	todo		
-Modules/_elementtree.c	4147	4249	_elementtree_XMLParser__setevents_impl	_elementtree_XMLParser__setevents_impl(XMLParserObject *self, PyObject *events_queue, PyObject *events_to_report) /*[clinic end generated code: output=1440092922b13ed1 input=abf90830a1c3b0fc]*/	todo		
-Modules/_elementtree.c	4258	4263	xmlparser_version_getter	xmlparser_version_getter(PyObject *op, void *closure)	todo		
-Modules/_elementtree.c	4442	4536	module_exec	module_exec(PyObject *m)	todo		
-Modules/_elementtree.c	4557	4560	PyInit__elementtree	PyInit__elementtree(void)	todo		
+Modules/_elementtree.c	64	70	_set_joined_ptr	Py_LOCAL_INLINE(void) _set_joined_ptr(PyObject **p, PyObject *new_joined_ptr)	todo		
+Modules/_elementtree.c	75	80	_clear_joined_ptr	static void _clear_joined_ptr(PyObject **p)	todo		
+Modules/_elementtree.c	114	119	get_elementtree_state	get_elementtree_state(PyObject *module)	todo		
+Modules/_elementtree.c	122	127	get_elementtree_state_by_cls	get_elementtree_state_by_cls(PyTypeObject *cls)	todo		
+Modules/_elementtree.c	130	135	get_elementtree_state_by_type	get_elementtree_state_by_type(PyTypeObject *tp)	todo		
+Modules/_elementtree.c	138	166	elementtree_clear	elementtree_clear(PyObject *m)	todo		
+Modules/_elementtree.c	169	185	elementtree_traverse	elementtree_traverse(PyObject *m, visitproc visit, void *arg)	todo		
+Modules/_elementtree.c	188	191	elementtree_free	elementtree_free(void *m)	todo		
+Modules/_elementtree.c	196	208	list_join	list_join(PyObject* list)	todo		
+Modules/_elementtree.c	213	216	is_empty_dict	is_empty_dict(PyObject *obj)	todo		
+Modules/_elementtree.c	272	287	create_extra	create_extra(ElementObject* self, PyObject* attrib)	todo		
+Modules/_elementtree.c	290	307	dealloc_extra	dealloc_extra(ElementObjectExtra *extra)	todo		
+Modules/_elementtree.c	310	323	clear_extra	clear_extra(ElementObject* self)	todo		
+Modules/_elementtree.c	329	352	create_new_element	create_new_element(elementtreestate *st, PyObject *tag, PyObject *attrib)	todo		
+Modules/_elementtree.c	355	366	element_new	element_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Modules/_elementtree.c	377	406	get_attrib_from_keywords	get_attrib_from_keywords(PyObject *kwds)	todo		changed-in-3.15:
+Modules/_elementtree.c	417	469	element_init	element_init(PyObject *self, PyObject *args, PyObject *kwds)	todo		changed-in-3.15:
+Modules/_elementtree.c	472	527	element_resize	element_resize(ElementObject* self, Py_ssize_t extra)	todo		
+Modules/_elementtree.c	530	535	raise_type_error	raise_type_error(PyObject *element)	todo		
+Modules/_elementtree.c	538	555	element_add_subelement	element_add_subelement(elementtreestate *st, ElementObject *self, PyObject *element)	todo		
+Modules/_elementtree.c	558	571	element_get_attrib	element_get_attrib(ElementObject* self)	todo		
+Modules/_elementtree.c	574	592	element_get_text	element_get_text(ElementObject* self)	todo		
+Modules/_elementtree.c	595	613	element_get_tail	element_get_tail(ElementObject* self)	todo		
+Modules/_elementtree.c	616	659	subelement	subelement(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_elementtree.c	662	678	element_gc_traverse	element_gc_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_elementtree.c	681	693	element_gc_clear	element_gc_clear(PyObject *op)	todo		
+Modules/_elementtree.c	696	712	element_dealloc	element_dealloc(PyObject *op)	todo		
+Modules/_elementtree.c	726	735	_elementtree_Element_append_impl	_elementtree_Element_append_impl(ElementObject *self, PyTypeObject *cls, PyObject *subelement) /*[clinic end generated code: output=d00923711ea317fc input=8baf92679f9717b8]*/	todo		
+Modules/_elementtree.c	743	752	_elementtree_Element_clear_impl	_elementtree_Element_clear_impl(ElementObject *self) /*[clinic end generated code: output=8bcd7a51f94cfff6 input=3c719ff94bf45dd6]*/	todo		
+Modules/_elementtree.c	763	797	_elementtree_Element___copy___impl	_elementtree_Element___copy___impl(ElementObject *self, PyTypeObject *cls) /*[clinic end generated code: output=da22894421ff2b36 input=91edb92d9f441213]*/	todo		
+Modules/_elementtree.c	811	921	_elementtree_Element___deepcopy___impl	_elementtree_Element___deepcopy___impl(ElementObject *self, PyObject *memo) /*[clinic end generated code: output=eefc3df50465b642 input=a2d40348c0aade10]*/	todo		
+Modules/_elementtree.c	924	973	deepcopy	deepcopy(elementtreestate *st, PyObject *object, PyObject *memo)	todo		
+Modules/_elementtree.c	982	993	_elementtree_Element___sizeof___impl	_elementtree_Element___sizeof___impl(ElementObject *self) /*[clinic end generated code: output=baae4e7ae9fe04ec input=54e298c501f3e0d0]*/	todo		
+Modules/_elementtree.c	1014	1046	_elementtree_Element___getstate___impl	_elementtree_Element___getstate___impl(ElementObject *self) /*[clinic end generated code: output=37279aeeb6bb5b04 input=f0d16d7ec2f7adc1]*/	todo		
+Modules/_elementtree.c	1049	1133	element_setstate_from_attributes	element_setstate_from_attributes(elementtreestate *st, ElementObject *self, PyObject *tag, PyObject *attrib, PyObject *text, PyObject *tail, PyObject *children)	todo		
+Modules/_elementtree.c	1140	1163	element_setstate_from_Python	element_setstate_from_Python(elementtreestate *st, ElementObject *self, PyObject *state)	todo		
+Modules/_elementtree.c	1175	1189	_elementtree_Element___setstate___impl	_elementtree_Element___setstate___impl(ElementObject *self, PyTypeObject *cls, PyObject *state) /*[clinic end generated code: output=598bfb5730f71509 input=13830488d35d51f7]*/	todo		
+Modules/_elementtree.c	1192	1244	checkpath	checkpath(PyObject* tag)	todo		
+Modules/_elementtree.c	1256	1282	_elementtree_Element_extend_impl	_elementtree_Element_extend_impl(ElementObject *self, PyTypeObject *cls, PyObject *elements) /*[clinic end generated code: output=3e86d37fac542216 input=6479b1b5379d09ae]*/	todo		
+Modules/_elementtree.c	1295	1324	_elementtree_Element_find_impl	_elementtree_Element_find_impl(ElementObject *self, PyTypeObject *cls, PyObject *path, PyObject *namespaces) /*[clinic end generated code: output=18f77d393c9fef1b input=94df8a83f956acc6]*/	todo		
+Modules/_elementtree.c	1338	1374	_elementtree_Element_findtext_impl	_elementtree_Element_findtext_impl(ElementObject *self, PyTypeObject *cls, PyObject *path, PyObject *default_value, PyObject *namespaces) /*[clinic end generated code: output=6af7a2d96aac32cb input=32f252099f62a3d2]*/	todo		
+Modules/_elementtree.c	1387	1420	_elementtree_Element_findall_impl	_elementtree_Element_findall_impl(ElementObject *self, PyTypeObject *cls, PyObject *path, PyObject *namespaces) /*[clinic end generated code: output=65e39a1208f3b59e input=7aa0db45673fc9a5]*/	todo		
+Modules/_elementtree.c	1433	1442	_elementtree_Element_iterfind_impl	_elementtree_Element_iterfind_impl(ElementObject *self, PyTypeObject *cls, PyObject *path, PyObject *namespaces) /*[clinic end generated code: output=be5c3f697a14e676 input=88766875a5c9a88b]*/	todo		
+Modules/_elementtree.c	1453	1467	_elementtree_Element_get_impl	_elementtree_Element_get_impl(ElementObject *self, PyObject *key, PyObject *default_value) /*[clinic end generated code: output=523c614142595d75 input=ee153bbf8cdb246e]*/	todo		
+Modules/_elementtree.c	1484	1499	_elementtree_Element_iter_impl	_elementtree_Element_iter_impl(ElementObject *self, PyTypeObject *cls, PyObject *tag) /*[clinic end generated code: output=bff29dc5d4566c68 input=f6944c48d3f84c58]*/	todo		
+Modules/_elementtree.c	1511	1516	_elementtree_Element_itertext_impl	_elementtree_Element_itertext_impl(ElementObject *self, PyTypeObject *cls) /*[clinic end generated code: output=fdeb2a3bca0ae063 input=a1ef1f0fc872a586]*/	todo		
+Modules/_elementtree.c	1520	1533	element_getitem	element_getitem(PyObject *op, Py_ssize_t index)	todo		
+Modules/_elementtree.c	1536	1550	element_bool	element_bool(PyObject *op)	todo		
+Modules/_elementtree.c	1562	1592	_elementtree_Element_insert_impl	_elementtree_Element_insert_impl(ElementObject *self, Py_ssize_t index, PyObject *subelement) /*[clinic end generated code: output=990adfef4d424c0b input=9530f4905aa401ca]*/	todo		
+Modules/_elementtree.c	1600	1607	_elementtree_Element_items_impl	_elementtree_Element_items_impl(ElementObject *self) /*[clinic end generated code: output=6db2c778ce3f5a4d input=adbe09aaea474447]*/	todo		
+Modules/_elementtree.c	1615	1622	_elementtree_Element_keys_impl	_elementtree_Element_keys_impl(ElementObject *self) /*[clinic end generated code: output=bc5bfabbf20eeb3c input=f02caf5b496b5b0b]*/	todo		
+Modules/_elementtree.c	1625	1632	element_length	element_length(PyObject *op)	todo		
+Modules/_elementtree.c	1645	1661	_elementtree_Element_makeelement_impl	_elementtree_Element_makeelement_impl(ElementObject *self, PyTypeObject *cls, PyObject *tag, PyObject *attrib) /*[clinic end generated code: output=d50bb17a47077d47 input=589829dab92f26e8]*/	todo		
+Modules/_elementtree.c	1672	1720	_elementtree_Element_remove_impl	_elementtree_Element_remove_impl(ElementObject *self, PyObject *subelement) /*[clinic end generated code: output=38fe6c07d6d87d1f input=6133e1d05597d5ee]*/	todo		changed-in-3.15:
+Modules/_elementtree.c	1723	1742	element_repr	element_repr(PyObject *op)	todo		
+Modules/_elementtree.c	1754	1773	_elementtree_Element_set_impl	_elementtree_Element_set_impl(ElementObject *self, PyObject *key, PyObject *value) /*[clinic end generated code: output=fb938806be3c5656 input=1efe90f7d82b3fe9]*/	todo		
+Modules/_elementtree.c	1776	1808	element_setitem	element_setitem(PyObject *op, Py_ssize_t index, PyObject* item)	todo		
+Modules/_elementtree.c	1811	1864	element_subscr	element_subscr(PyObject *op, PyObject *item)	todo		
+Modules/_elementtree.c	1867	2053	element_ass_subscr	element_ass_subscr(PyObject *op, PyObject *item, PyObject *value)	todo		
+Modules/_elementtree.c	2056	2061	element_tag_getter	element_tag_getter(PyObject *op, void *closure)	todo		
+Modules/_elementtree.c	2064	2068	element_text_getter	element_text_getter(PyObject *op, void *closure)	todo		
+Modules/_elementtree.c	2071	2075	element_tail_getter	element_tail_getter(PyObject *op, void *closure)	todo		
+Modules/_elementtree.c	2078	2088	element_attrib_getter	element_attrib_getter(PyObject *op, void *closure)	todo		
+Modules/_elementtree.c	2100	2106	element_tag_setter	element_tag_setter(PyObject *op, PyObject *value, void *closure)	todo		
+Modules/_elementtree.c	2109	2115	element_text_setter	element_text_setter(PyObject *op, PyObject *value, void *closure)	todo		
+Modules/_elementtree.c	2118	2124	element_tail_setter	element_tail_setter(PyObject *op, PyObject *value, void *closure)	todo		
+Modules/_elementtree.c	2127	2143	element_attrib_setter	element_attrib_setter(PyObject *op, PyObject *value, void *closure)	todo		changed-in-3.15:
+Modules/_elementtree.c	2174	2191	elementiter_dealloc	elementiter_dealloc(PyObject *op)	todo		
+Modules/_elementtree.c	2194	2205	elementiter_traverse	elementiter_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_elementtree.c	2210	2227	parent_stack_push_new	parent_stack_push_new(ElementIterObject *it, ElementObject *parent)	todo		
+Modules/_elementtree.c	2230	2339	elementiter_next	elementiter_next(PyObject *op)	todo		
+Modules/_elementtree.c	2362	2387	create_elementiter	create_elementiter(elementtreestate *st, ElementObject *self, PyObject *tag, int gettext)	todo		
+Modules/_elementtree.c	2433	2461	treebuilder_new	treebuilder_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Modules/_elementtree.c	2476	2514	_elementtree_TreeBuilder___init___impl	_elementtree_TreeBuilder___init___impl(TreeBuilderObject *self, PyObject *element_factory, PyObject *comment_factory, PyObject *pi_factory, int insert_comments, int insert_pis) /*[clinic end generated code: output=8571d4dcadfdf952 input=ae98a94df20b5cc3]*/	todo		
+Modules/_elementtree.c	2517	2538	treebuilder_gc_traverse	treebuilder_gc_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_elementtree.c	2541	2561	treebuilder_gc_clear	treebuilder_gc_clear(PyObject *op)	todo		
+Modules/_elementtree.c	2564	2571	treebuilder_dealloc	treebuilder_dealloc(PyObject *self)	todo		
+Modules/_elementtree.c	2590	2624	_elementtree__set_factories_impl	_elementtree__set_factories_impl(PyObject *module, PyObject *comment_factory, PyObject *pi_factory) /*[clinic end generated code: output=813b408adee26535 input=0f415cb6b821f768]*/	todo		changed-in-3.15:
+Modules/_elementtree.c	2627	2679	treebuilder_extend_element_text_or_tail	treebuilder_extend_element_text_or_tail(elementtreestate *st, PyObject *element, PyObject **data, PyObject **dest, PyObject *name)	todo		
+Modules/_elementtree.c	2682	2700	treebuilder_flush_data	treebuilder_flush_data(TreeBuilderObject* self)	todo		
+Modules/_elementtree.c	2703	2718	treebuilder_add_subelement	treebuilder_add_subelement(elementtreestate *st, PyObject *element, PyObject *child)	todo		
+Modules/_elementtree.c	2721	2736	treebuilder_append_event	treebuilder_append_event(TreeBuilderObject *self, PyObject *action, PyObject *node)	todo		changed-in-3.15:
+Modules/_elementtree.c	2742	2811	treebuilder_handle_start	treebuilder_handle_start(TreeBuilderObject* self, PyObject* tag, PyObject* attrib)	todo		
+Modules/_elementtree.c	2814	2849	treebuilder_handle_data	treebuilder_handle_data(TreeBuilderObject* self, PyObject* data)	todo		
+Modules/_elementtree.c	2852	2882	treebuilder_handle_end	treebuilder_handle_end(TreeBuilderObject* self, PyObject* tag)	todo		changed-in-3.15:
+Modules/_elementtree.c	2885	2920	treebuilder_handle_comment	treebuilder_handle_comment(TreeBuilderObject* self, PyObject* text)	todo		
+Modules/_elementtree.c	2923	2963	treebuilder_handle_pi	treebuilder_handle_pi(TreeBuilderObject* self, PyObject* target, PyObject* text)	todo		changed-in-3.15:
+Modules/_elementtree.c	2966	2984	treebuilder_handle_start_ns	treebuilder_handle_start_ns(TreeBuilderObject* self, PyObject* prefix, PyObject* uri)	todo		changed-in-3.15:
+Modules/_elementtree.c	2987	2996	treebuilder_handle_end_ns	treebuilder_handle_end_ns(TreeBuilderObject* self, PyObject* prefix)	todo		
+Modules/_elementtree.c	3010	3014	_elementtree_TreeBuilder_data_impl	_elementtree_TreeBuilder_data_impl(TreeBuilderObject *self, PyObject *data) /*[clinic end generated code: output=dfa02b68f732b8c0 input=a0540c532b284d29]*/	todo		
+Modules/_elementtree.c	3025	3029	_elementtree_TreeBuilder_end_impl	_elementtree_TreeBuilder_end_impl(TreeBuilderObject *self, PyObject *tag) /*[clinic end generated code: output=84cb6ca9008ec740 input=22dc3674236f5745]*/	todo		
+Modules/_elementtree.c	3040	3045	_elementtree_TreeBuilder_comment_impl	_elementtree_TreeBuilder_comment_impl(TreeBuilderObject *self, PyObject *text) /*[clinic end generated code: output=a555ef39027c3823 input=47e7ebc48ed01dfa]*/	todo		
+Modules/_elementtree.c	3057	3062	_elementtree_TreeBuilder_pi_impl	_elementtree_TreeBuilder_pi_impl(TreeBuilderObject *self, PyObject *target, PyObject *text) /*[clinic end generated code: output=21eb95ec9d04d1d9 input=349342bd79c35570]*/	todo		
+Modules/_elementtree.c	3065	3077	treebuilder_done	treebuilder_done(TreeBuilderObject* self)	todo		
+Modules/_elementtree.c	3085	3089	_elementtree_TreeBuilder_close_impl	_elementtree_TreeBuilder_close_impl(TreeBuilderObject *self) /*[clinic end generated code: output=b441fee3202f61ee input=f7c9c65dc718de14]*/	todo		
+Modules/_elementtree.c	3101	3106	_elementtree_TreeBuilder_start_impl	_elementtree_TreeBuilder_start_impl(TreeBuilderObject *self, PyObject *tag, PyObject *attrs) /*[clinic end generated code: output=e7e9dc2861349411 input=7288e9e38e63b2b6]*/	todo		
+Modules/_elementtree.c	3147	3210	makeuniversal	makeuniversal(XMLParserObject* self, const char* string)	todo		
+Modules/_elementtree.c	3217	3260	expat_set_error	expat_set_error(elementtreestate *st, enum XML_Error error_code, Py_ssize_t line, Py_ssize_t column, const char *message)	todo		
+Modules/_elementtree.c	3266	3310	expat_default_handler	expat_default_handler(void *op, const XML_Char *data_in, int data_len)	todo		
+Modules/_elementtree.c	3313	3388	expat_start_handler	expat_start_handler(void *op, const XML_Char *tag_in, const XML_Char **attrib_in)	todo		
+Modules/_elementtree.c	3391	3417	expat_data_handler	expat_data_handler(void *op, const XML_Char *data_in, int data_len)	todo		
+Modules/_elementtree.c	3420	3445	expat_end_handler	expat_end_handler(void *op, const XML_Char *tag_in)	todo		
+Modules/_elementtree.c	3448	3500	expat_start_ns_handler	expat_start_ns_handler(void *op, const XML_Char *prefix_in, const XML_Char *uri_in)	todo		
+Modules/_elementtree.c	3503	3533	expat_end_ns_handler	expat_end_ns_handler(void *op, const XML_Char *prefix_in)	todo		
+Modules/_elementtree.c	3536	3566	expat_comment_handler	expat_comment_handler(void *op, const XML_Char *comment_in)	todo		
+Modules/_elementtree.c	3569	3625	expat_start_doctype_handler	expat_start_doctype_handler(void *op, const XML_Char *doctype_name, const XML_Char *sysid, const XML_Char *pubid, int has_internal_subset)	todo		
+Modules/_elementtree.c	3628	3676	expat_pi_handler	expat_pi_handler(void *op, const XML_Char *target_in, const XML_Char *data_in)	todo		
+Modules/_elementtree.c	3681	3698	xmlparser_new	xmlparser_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Modules/_elementtree.c	3701	3710	ignore_attribute_error	ignore_attribute_error(PyObject *value)	todo		
+Modules/_elementtree.c	3722	3843	_elementtree_XMLParser___init___impl	_elementtree_XMLParser___init___impl(XMLParserObject *self, PyObject *target, const char *encoding) /*[clinic end generated code: output=3ae45ec6cdf344e4 input=7e716dd6e4f3e439]*/	todo		
+Modules/_elementtree.c	3846	3865	xmlparser_gc_traverse	xmlparser_gc_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_elementtree.c	3868	3894	xmlparser_gc_clear	xmlparser_gc_clear(PyObject *op)	todo		
+Modules/_elementtree.c	3897	3904	xmlparser_dealloc	xmlparser_dealloc(PyObject *self)	todo		
+Modules/_elementtree.c	3906	3915	_check_xmlparser	Py_LOCAL_INLINE(int) _check_xmlparser(XMLParserObject* self)	todo		
+Modules/_elementtree.c	3918	3941	expat_parse	expat_parse(elementtreestate *st, XMLParserObject *self, const char *data, int data_len, int final)	todo		
+Modules/_elementtree.c	3947	3962	expat_parse_large	expat_parse_large(elementtreestate *st, XMLParserObject *self, const char *data, Py_ssize_t data_len, int final)	todo		changed-in-3.15: new function
+Modules/_elementtree.c	3970	3996	_elementtree_XMLParser_close_impl	_elementtree_XMLParser_close_impl(XMLParserObject *self) /*[clinic end generated code: output=d68d375dd23bc7fb input=ca7909ca78c3abfe]*/	todo		
+Modules/_elementtree.c	4004	4030	_elementtree_XMLParser_flush_impl	_elementtree_XMLParser_flush_impl(XMLParserObject *self) /*[clinic end generated code: output=42fdb8795ca24509 input=effbecdb28715949]*/	todo		
+Modules/_elementtree.c	4041	4069	_elementtree_XMLParser_feed_impl	_elementtree_XMLParser_feed_impl(XMLParserObject *self, PyObject *data) /*[clinic end generated code: output=503e6fbf1adf17ab input=fe231b6b8de3ce1f]*/	todo		changed-in-3.15:
+Modules/_elementtree.c	4080	4160	_elementtree_XMLParser__parse_whole_impl	_elementtree_XMLParser__parse_whole_impl(XMLParserObject *self, PyObject *file) /*[clinic end generated code: output=60718a4e63d237d2 input=19ecc893b6f3e752]*/	todo		changed-in-3.15:
+Modules/_elementtree.c	4172	4277	_elementtree_XMLParser__setevents_impl	_elementtree_XMLParser__setevents_impl(XMLParserObject *self, PyObject *events_queue, PyObject *events_to_report) /*[clinic end generated code: output=1440092922b13ed1 input=abf90830a1c3b0fc]*/	todo		changed-in-3.15:
+Modules/_elementtree.c	4286	4291	xmlparser_version_getter	xmlparser_version_getter(PyObject *op, void *closure)	todo		
+Modules/_elementtree.c	4470	4564	module_exec	module_exec(PyObject *m)	todo		
+Modules/_elementtree.c	4586	4589	PyInit__elementtree	PyInit__elementtree(void)	todo		

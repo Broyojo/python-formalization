@@ -110,7 +110,7 @@ theorem slotLenInRange_proven : SlotLenInRange := by
         · simp [hs, getW, raiseC] at h
 
 /-- `PySequence_GetItem` adds `len(s)` once to a negative index, then calls `sq_item`:
-`Objects/abstract.c:1840-1850`. -/
+`Objects/abstract.c:1849-1859`. -/
 def SequenceGetItemNegativeIndex : Prop :=
   ∀ (rt : Rt) (s : Val) (i n : Int) (f lf : SlotFn) (w w1 : World),
     i < 0 → slotIn w s .sq_item = some f → slotIn w s .sq_length = some lf →
@@ -122,7 +122,7 @@ theorem sequenceGetItemNegativeIndex_proven : SequenceGetItemNegativeIndex := by
   simp [pySequenceGetItem, hf, hl, hc, hi]
 
 /-- `PyObject_GetItem` prefers the mapping protocol: with `mp_subscript` the sequence slot
-never runs, so the key is passed unconverted, `Objects/abstract.c:159-164`. -/
+never runs, so the key is passed unconverted, `Objects/abstract.c:161-166`. -/
 def GetItemMappingFirst : Prop :=
   ∀ (rt : Rt) (o key : Val) (f : SlotFn) (w : World),
     slotIn w o .mp_subscript = some f →
@@ -174,7 +174,7 @@ theorem getIterSequenceFallback_proven : GetIterSequenceFallback := by
   simp [pyGetIter, h1, h2]
 
 /-- **`__iter__ = None` disables the `__getitem__` fallback**, with the same `TypeError` as
-a type that is not iterable, `Objects/typeobject.c:10507`. -/
+a type that is not iterable, `Objects/typeobject.c:11208`. -/
 def IterNoneNotIterable : Prop :=
   ∀ (rt : Rt) (self : Val) (w w1 w2 : World) (l : Looked),
     maybeCallSpecial rt self "__iter__" [] true w = .ok .isNone w1 →
@@ -201,7 +201,7 @@ theorem seqIterExhaustionSticky_proven : SeqIterExhaustionSticky := by
     subst h2
     simp [seqIterNext, h1]
 
-/-- `x in y` uses `__contains__` when the type has it: `Objects/abstract.c:2234`. -/
+/-- `x in y` uses `__contains__` when the type has it: `Objects/abstract.c:2243`. -/
 def ContainsUsesSlot : Prop :=
   ∀ (rt : Rt) (seq ob : Val) (f : SlotFn) (w : World),
     slotIn w seq .sq_contains = some f →
@@ -212,7 +212,7 @@ theorem containsUsesSlot_proven : ContainsUsesSlot := by
   simp [pySequenceContains, h]
 
 /-- `__contains__ = None` blocks the iteration fallback,
-`Objects/typeobject.c:10094-10099`. -/
+`Objects/typeobject.c:10796-10801`. -/
 def ContainsNoneNotContainer : Prop :=
   ∀ (rt : Rt) (self value : Val) (w w1 : World),
     maybeCallSpecial rt self "__contains__" [value] true w = .ok .isNone w1 →
@@ -224,7 +224,7 @@ theorem containsNoneNotContainer_proven : ContainsNoneNotContainer := by
   simp [slotSqContains, h]
 
 /-- The iteration fallback of `in` compares with identity first: the `PyObject_RichCompareBool`
-at `Objects/abstract.c:2166`, so a search finds an object by identity whatever its
+at `Objects/abstract.c:2175`, so a search finds an object by identity whatever its
 `__eq__` says. The loop stops at the first item identical to `obj`. -/
 def IterSearchIdentity : Prop :=
   ∀ (rt : Rt) (it obj : Val) (fuel : Nat) (n : Int) (w w1 : World),
@@ -238,7 +238,7 @@ theorem iterSearchIdentity_proven : IterSearchIdentity := by
 /-! ## `isinstance`, `issubclass` -/
 
 /-- **Exact type match is a shortcut.** `isinstance(x, type(x))` is true without looking up
-`__instancecheck__`, so a metaclass cannot override it, `Objects/abstract.c:2635`. -/
+`__instancecheck__`, so a metaclass cannot override it, `Objects/abstract.c:2642`. -/
 def IsinstanceExactType : Prop :=
   ∀ (rt : Rt) (x : Val) (w : World),
     typeCheck w (.obj (typeOf w x)) = true →
@@ -276,7 +276,7 @@ theorem objectIsinstanceSubtype_proven : ObjectIsinstanceSubtype := by
   intro rt inst cls ca w h1 h2
   simp [objectIsinstance, h1, h2]
 
-/-- `issubclass(C, D)` on real classes is `D in C.__mro__`, `Objects/abstract.c:2707`. -/
+/-- `issubclass(C, D)` on real classes is `D in C.__mro__`, `Objects/abstract.c:2714`. -/
 def RecursiveIssubclassMro : Prop :=
   ∀ (rt : Rt) (derived cls : Val) (c d : Addr) (w : World),
     asType w cls = some c → asType w derived = some d →
@@ -334,7 +334,7 @@ theorem objectNewInitTable_proven : ObjectNewInitTable := by
     · simp [objectNew, hx, h1, h2, ha, alloc, allocCell]
     · simp [objectInit, hx, ht, h2, typeErr, raiseC]
 
-/-- `type(x)` with one argument never constructs anything: `Objects/typeobject.c:2346`. -/
+/-- `type(x)` with one argument never constructs anything: `Objects/typeobject.c:2486`. -/
 def TypeCallOneArg : Prop :=
   ∀ (rt : Rt) (x : Val) (w : World), typeCall rt B.type [x] [] w = .ok (.obj (typeOf w x)) w
 
@@ -343,7 +343,7 @@ theorem typeCallOneArg_proven : TypeCallOneArg := by
   simp [typeCall]
 
 /-- **`__init__` is skipped when `__new__` returns a non-instance**,
-`Objects/typeobject.c:2379`, for every `__new__` and `__init__`. -/
+`Objects/typeobject.c:2519`, for every `__new__` and `__init__`. -/
 def TypeCallSkipsInit : Prop :=
   ∀ (rt : Rt) (t : Addr) (f : SlotFn) (obj : Val) (args : List Val) (kw : Kw) (w w1 : World),
     t ≠ B.type → slotOf w t .tp_new = some f →
@@ -369,7 +369,7 @@ theorem typeCallInitsResultType_proven : TypeCallInitsResultType := by
   intro rt t f g obj args kw w w1 w2 h0 h1 h2 h3 h4 h5
   simp [typeCall, h0, h1, h2, h3, h4, h5]
 
-/-- A non-`None` result of `__init__` is a `TypeError`, `Objects/typeobject.c:10575`. -/
+/-- A non-`None` result of `__init__` is a `TypeError`, `Objects/typeobject.c:11285`. -/
 def InitMustReturnNone : Prop :=
   ∀ (rt : Rt) (self res : Val) (args : List Val) (kw : Kw) (w w1 : World),
     callMethod rt self "__init__" args kw w = .ok res w1 →
@@ -384,7 +384,7 @@ theorem initMustReturnNone_proven : InitMustReturnNone := by
 /-! ## Functions and methods -/
 
 /-- **`__get__` of a function**: from an instance it binds; from the class it returns the
-function, `Objects/funcobject.c:1279`. `None` is treated as no instance. -/
+function, `Objects/funcobject.c:1267`. `None` is treated as no instance. -/
 def FunctionBinding : Prop :=
   ∀ (f o : Val) (w : World),
     funcDescrGet f none w = .ok f w ∧ funcDescrGet f (some .none) w = .ok f w ∧
@@ -397,7 +397,7 @@ theorem functionBinding_proven : FunctionBinding := by
   cases o <;> first | (simp [Val.is] at h; done) | simp [funcDescrGet]
 
 /-- **A bound method call prepends `self`**: `method_vectorcall`,
-`Objects/classobject.c:46`. -/
+`Objects/classobject.c:47`. -/
 def BoundMethodPrependsSelf : Prop :=
   ∀ (rt : Rt) (m func self : Val) (args : List Val) (kw : Kw) (w : World),
     payloadOf w m = some (.bound func self) →
@@ -408,7 +408,7 @@ theorem boundMethodPrependsSelf_proven : BoundMethodPrependsSelf := by
   simp [callTpCall, h]
 
 /-- `classmethod` binds the class whether reached from the class or an instance, and
-`staticmethod` returns the callable unchanged, `Objects/funcobject.c:1546`, `:1792`. -/
+`staticmethod` returns the callable unchanged, `Objects/funcobject.c:1535`, `:1799`. -/
 def ClassStaticBinding : Prop :=
   ∀ (cm sm f g o ty : Val) (w : World),
     payloadOf w cm = some (.classmethod f) → payloadOf w sm = some (.staticmethod g) →
@@ -422,7 +422,7 @@ theorem classStaticBinding_proven : ClassStaticBinding := by
   simp [cmDescrGet, smDescrGet, h1, h2]
 
 /-- **`property`**: from the class the property itself, from an instance `fget(obj)`,
-`Objects/descrobject.c:1661`. -/
+`Objects/descrobject.c:1685`. -/
 def PropertyGet : Prop :=
   ∀ (rt : Rt) (p o : Val) (w : World),
     propertyDescrGet rt p none w = .ok p w ∧ propertyDescrGet rt p (some .none) w = .ok p w ∧
@@ -443,7 +443,7 @@ theorem propertyGet_proven : PropertyGet := by
     | simp only [propertyDescrGet, M.bind_app, getW_app, h2]
 
 /-- `super` searches strictly after `__thisclass__` in the MRO of the object's type:
-`Objects/typeobject.c:11859-11869`. -/
+`Objects/typeobject.c:12712-12722`. -/
 def SuperSkipsThisClass : Prop :=
   ∀ (w : World) (pre post : List Addr) (su ot : Addr) (n : Name) (last : Addr),
     (tdata w ot).mro = some (pre ++ su :: post ++ [last]) →

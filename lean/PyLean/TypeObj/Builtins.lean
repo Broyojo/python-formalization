@@ -112,7 +112,7 @@ def methodOf (tn n : String) : Builtin :=
   | _, _ => .stub (tn ++ "." ++ n)
 
 /-- The `__bases__` of a builtin. `ExceptionGroup` is the one multiple-inheritance
-builtin here (`create_exception_group_class`, `Objects/exceptions.c:1774`). -/
+builtin here (`create_exception_group_class`, `Objects/exceptions.c:1768`). -/
 def rowBases (r : BuiltinRow) : List Addr :=
   if r.addr == B.ExceptionGroup then [B.BaseExceptionGroup, B.Exception]
   else match r.base with
@@ -156,7 +156,7 @@ def wrapperDefFor (w : World) (t : Addr) (n : Name) : Option SlotDef :=
   (slotdefs.filter (·.name == n)).find? fun p => (slotOf w t p.slot).isSome
 
 /-- `tp_new` through the static hierarchy, `type_ready_set_new`,
-`Objects/typeobject.c:8823`: a static type with base `object` and no `tp_new` cannot be
+`Objects/typeobject.c:9471`: a static type with base `object` and no `tp_new` cannot be
 instantiated. -/
 def resolveNew (w : World) (r : BuiltinRow) : Option SlotFn :=
   match slotOf w r.addr .tp_new with
@@ -190,7 +190,7 @@ def fillRow (r : BuiltinRow) : M Unit := do
     modType t fun d => { d with dict := NameDict.set d.dict n v }
 
 /-- `tp_as_*` of a static type: it has one if it fills a slot of that group, or inherits
-the pointer (`type_ready_inherit_as_structs`, `Objects/typeobject.c:8702`). -/
+the pointer (`type_ready_inherit_as_structs`, `Objects/typeobject.c:9350`). -/
 def groupFlags (w : World) (t : Addr) : TypeData → TypeData := fun d =>
   let any (g : SlotGroup) := d.slots.any (fun p => p.1.group == g)
   let up (g : SlotGroup) := ((tdata w t).mro.getD []).any fun b =>
@@ -236,7 +236,7 @@ def initialState : World × NameDict :=
     bootstrap
     let mut env : NameDict := builtinTable.filterMap fun r =>
       if r.name == "NoneType" || r.name == "ellipsis" then none else some (r.name, Val.obj r.addr)
-    -- `INIT_ALIAS`, `Objects/exceptions.c:4545`.
+    -- `INIT_ALIAS`, `Objects/exceptions.c@3.14.7:4545`.
     env := NameDict.set (NameDict.set env "EnvironmentError" (.obj B.OSError)) "IOError" (.obj B.OSError)
     env := NameDict.set (NameDict.set env "NotImplemented" .notImpl) "Ellipsis" .ellipsis
     for (n, b) in builtinFunctions do

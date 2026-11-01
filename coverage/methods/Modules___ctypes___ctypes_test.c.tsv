@@ -1,34 +1,34 @@
 file	line	endline	name	signature	status	entry	note
-Modules/_ctypes/_ctypes_test.c	44	48	_testfunc_cbk_reg_int	_testfunc_cbk_reg_int(int a, int b, int c, int d, int e, int (*func)(int, int, int, int, int))	todo		
-Modules/_ctypes/_ctypes_test.c	51	55	_testfunc_cbk_reg_double	_testfunc_cbk_reg_double(double a, double b, double c, double d, double e, double (*func)(double, double, double, double, double))	todo		
-Modules/_ctypes/_ctypes_test.c	70	73	_testfunc_cbk_large_struct	_testfunc_cbk_large_struct(Test in, void (*func)(Test))	todo		
-Modules/_ctypes/_ctypes_test.c	81	86	_testfunc_large_struct_update_value	_testfunc_large_struct_update_value(Test in)	todo		
-Modules/_ctypes/_ctypes_test.c	98	103	_testfunc_reg_struct_update_value	_testfunc_reg_struct_update_value(TestReg in)	todo		
-Modules/_ctypes/_ctypes_test.c	114	124	_testfunc_array_in_struct2	_testfunc_array_in_struct2(Test2 in)	todo		
-Modules/_ctypes/_ctypes_test.c	137	150	_testfunc_array_in_struct3A	_testfunc_array_in_struct3A(Test3A in)	todo		
-Modules/_ctypes/_ctypes_test.c	183	186	_testfunc_array_in_struct3B	_testfunc_array_in_struct3B(Test3B in)	todo		
-Modules/_ctypes/_ctypes_test.c	189	193	_testfunc_array_in_struct3B_set_defaults	_testfunc_array_in_struct3B_set_defaults(void)	todo		
-Modules/_ctypes/_ctypes_test.c	207	210	_testfunc_array_in_struct3C	_testfunc_array_in_struct3C(Test3C in)	todo		
-Modules/_ctypes/_ctypes_test.c	213	217	_testfunc_array_in_struct3C_set_defaults	_testfunc_array_in_struct3C_set_defaults(void)	todo		
-Modules/_ctypes/_ctypes_test.c	231	234	_testfunc_array_in_struct3D	_testfunc_array_in_struct3D(Test3D in)	todo		
-Modules/_ctypes/_ctypes_test.c	237	241	_testfunc_array_in_struct3D_set_defaults	_testfunc_array_in_struct3D_set_defaults(void)	todo		
-Modules/_ctypes/_ctypes_test.c	252	255	_testfunc_array_in_struct3E	_testfunc_array_in_struct3E(Test3E in)	todo		
-Modules/_ctypes/_ctypes_test.c	258	262	_testfunc_array_in_struct3E_set_defaults	_testfunc_array_in_struct3E_set_defaults(void)	todo		
-Modules/_ctypes/_ctypes_test.c	282	290	_testfunc_union_by_value1	_testfunc_union_by_value1(Test4 in) {	todo		
-Modules/_ctypes/_ctypes_test.c	293	301	_testfunc_union_by_value2	_testfunc_union_by_value2(Test5 in) {	todo		
-Modules/_ctypes/_ctypes_test.c	304	309	_testfunc_union_by_reference1	_testfunc_union_by_reference1(Test4 *in) {	todo		
-Modules/_ctypes/_ctypes_test.c	312	317	_testfunc_union_by_reference2	_testfunc_union_by_reference2(Test4 *in) {	todo		
-Modules/_ctypes/_ctypes_test.c	320	325	_testfunc_union_by_reference3	_testfunc_union_by_reference3(Test5 *in) {	todo		
-Modules/_ctypes/_ctypes_test.c	332	340	_testfunc_bitfield_by_value1	_testfunc_bitfield_by_value1(Test6 in) {	todo		
-Modules/_ctypes/_ctypes_test.c	343	348	_testfunc_bitfield_by_reference1	_testfunc_bitfield_by_reference1(Test6 *in) {	todo		
-Modules/_ctypes/_ctypes_test.c	355	360	_testfunc_bitfield_by_reference2	_testfunc_bitfield_by_reference2(Test7 *in) {	todo		
-Modules/_ctypes/_ctypes_test.c	376	385	_testfunc_bitfield_by_reference3	_testfunc_bitfield_by_reference3(Test9 *in, long pos) {	todo		
-Modules/_ctypes/_ctypes_test.c	392	400	_testfunc_bitfield_by_value2	_testfunc_bitfield_by_value2(Test8 in) {	todo		
-Modules/_ctypes/_ctypes_test.c	689	695	integrate	integrate(double a, double b, double (*f)(double), long nstep)	todo		
-Modules/_ctypes/_ctypes_test.c	701	710	_xxx_init	static void _xxx_init(void *(*Xalloc)(int), void (*Xfree)(void *))	todo		
-Modules/_ctypes/_ctypes_test.c	732	739	py_func_si	PyObject *py_func_si(PyObject *self, PyObject *args)	todo		
-Modules/_ctypes/_ctypes_test.c	745	748	py_func	PyObject *py_func(PyObject *self, PyObject *args)	todo		
-Modules/_ctypes/_ctypes_test.c	840	843	get_last_tf_arg_s	PyObject *get_last_tf_arg_s(PyObject *self, PyObject *noargs)	todo		
-Modules/_ctypes/_ctypes_test.c	845	848	get_last_tf_arg_u	PyObject *get_last_tf_arg_u(PyObject *self, PyObject *noargs)	todo		
-Modules/_ctypes/_ctypes_test.c	1278	1281	_testfunc_pylist_append	_testfunc_pylist_append(PyObject *list, PyObject *item)	todo		
-Modules/_ctypes/_ctypes_test.c	1302	1305	PyInit__ctypes_test	PyInit__ctypes_test(void)	todo		
+Modules/_ctypes/_ctypes_test.c	34	38	_testfunc_cbk_reg_int	_testfunc_cbk_reg_int(int a, int b, int c, int d, int e, int (*func)(int, int, int, int, int))	todo		
+Modules/_ctypes/_ctypes_test.c	41	45	_testfunc_cbk_reg_double	_testfunc_cbk_reg_double(double a, double b, double c, double d, double e, double (*func)(double, double, double, double, double))	todo		
+Modules/_ctypes/_ctypes_test.c	60	63	_testfunc_cbk_large_struct	_testfunc_cbk_large_struct(Test in, void (*func)(Test))	todo		
+Modules/_ctypes/_ctypes_test.c	71	76	_testfunc_large_struct_update_value	_testfunc_large_struct_update_value(Test in)	todo		
+Modules/_ctypes/_ctypes_test.c	88	93	_testfunc_reg_struct_update_value	_testfunc_reg_struct_update_value(TestReg in)	todo		
+Modules/_ctypes/_ctypes_test.c	104	114	_testfunc_array_in_struct2	_testfunc_array_in_struct2(Test2 in)	todo		
+Modules/_ctypes/_ctypes_test.c	127	140	_testfunc_array_in_struct3A	_testfunc_array_in_struct3A(Test3A in)	todo		
+Modules/_ctypes/_ctypes_test.c	173	176	_testfunc_array_in_struct3B	_testfunc_array_in_struct3B(Test3B in)	todo		
+Modules/_ctypes/_ctypes_test.c	179	183	_testfunc_array_in_struct3B_set_defaults	_testfunc_array_in_struct3B_set_defaults(void)	todo		
+Modules/_ctypes/_ctypes_test.c	197	200	_testfunc_array_in_struct3C	_testfunc_array_in_struct3C(Test3C in)	todo		
+Modules/_ctypes/_ctypes_test.c	203	207	_testfunc_array_in_struct3C_set_defaults	_testfunc_array_in_struct3C_set_defaults(void)	todo		
+Modules/_ctypes/_ctypes_test.c	221	224	_testfunc_array_in_struct3D	_testfunc_array_in_struct3D(Test3D in)	todo		
+Modules/_ctypes/_ctypes_test.c	227	231	_testfunc_array_in_struct3D_set_defaults	_testfunc_array_in_struct3D_set_defaults(void)	todo		
+Modules/_ctypes/_ctypes_test.c	242	245	_testfunc_array_in_struct3E	_testfunc_array_in_struct3E(Test3E in)	todo		
+Modules/_ctypes/_ctypes_test.c	248	252	_testfunc_array_in_struct3E_set_defaults	_testfunc_array_in_struct3E_set_defaults(void)	todo		
+Modules/_ctypes/_ctypes_test.c	272	280	_testfunc_union_by_value1	_testfunc_union_by_value1(Test4 in) {	todo		
+Modules/_ctypes/_ctypes_test.c	283	291	_testfunc_union_by_value2	_testfunc_union_by_value2(Test5 in) {	todo		
+Modules/_ctypes/_ctypes_test.c	294	299	_testfunc_union_by_reference1	_testfunc_union_by_reference1(Test4 *in) {	todo		
+Modules/_ctypes/_ctypes_test.c	302	307	_testfunc_union_by_reference2	_testfunc_union_by_reference2(Test4 *in) {	todo		
+Modules/_ctypes/_ctypes_test.c	310	315	_testfunc_union_by_reference3	_testfunc_union_by_reference3(Test5 *in) {	todo		
+Modules/_ctypes/_ctypes_test.c	322	330	_testfunc_bitfield_by_value1	_testfunc_bitfield_by_value1(Test6 in) {	todo		
+Modules/_ctypes/_ctypes_test.c	333	338	_testfunc_bitfield_by_reference1	_testfunc_bitfield_by_reference1(Test6 *in) {	todo		
+Modules/_ctypes/_ctypes_test.c	345	350	_testfunc_bitfield_by_reference2	_testfunc_bitfield_by_reference2(Test7 *in) {	todo		
+Modules/_ctypes/_ctypes_test.c	366	375	_testfunc_bitfield_by_reference3	_testfunc_bitfield_by_reference3(Test9 *in, long pos) {	todo		
+Modules/_ctypes/_ctypes_test.c	382	390	_testfunc_bitfield_by_value2	_testfunc_bitfield_by_value2(Test8 in) {	todo		
+Modules/_ctypes/_ctypes_test.c	684	690	integrate	integrate(double a, double b, double (*f)(double), long nstep)	todo		
+Modules/_ctypes/_ctypes_test.c	696	705	_xxx_init	static void _xxx_init(void *(*Xalloc)(int), void (*Xfree)(void *))	todo		
+Modules/_ctypes/_ctypes_test.c	727	734	py_func_si	PyObject *py_func_si(PyObject *self, PyObject *args)	todo		
+Modules/_ctypes/_ctypes_test.c	740	743	py_func	PyObject *py_func(PyObject *self, PyObject *args)	todo		
+Modules/_ctypes/_ctypes_test.c	835	838	get_last_tf_arg_s	PyObject *get_last_tf_arg_s(PyObject *self, PyObject *noargs)	todo		
+Modules/_ctypes/_ctypes_test.c	840	843	get_last_tf_arg_u	PyObject *get_last_tf_arg_u(PyObject *self, PyObject *noargs)	todo		
+Modules/_ctypes/_ctypes_test.c	1273	1276	_testfunc_pylist_append	_testfunc_pylist_append(PyObject *list, PyObject *item)	todo		
+Modules/_ctypes/_ctypes_test.c	1297	1300	PyInit__ctypes_test	PyInit__ctypes_test(void)	todo		

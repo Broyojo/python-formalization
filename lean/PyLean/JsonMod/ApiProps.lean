@@ -565,7 +565,7 @@ theorem rep_snoc (t : PStr) (n : Nat) : rep t n ++ t = rep t (n + 1) := by
   | zero => simp [rep]
   | succ n ih => simp only [rep, List.append_assoc, ih]
 
-/-- The comment above `create_indent_cache`, :1275-1284, for levels up to `n`. -/
+/-- The comment above `create_indent_cache`, :1273-1282, for levels up to `n`. -/
 structure Cached (cfg : ECfg) (ind : PStr) (i : Nat) (c : IndentCache) (n : Nat) : Prop where
   len : c.length = 2 * n + 1
   nl : ∀ k, k ≤ n → c[2 * k]? = some (cNewlineIndent ind (k + i))

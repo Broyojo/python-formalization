@@ -1,4 +1,4 @@
 file	line	endline	name	signature	status	entry	note
 Python/_contextvars.c	16	20	_contextvars_copy_context_impl	_contextvars_copy_context_impl(PyObject *module) /*[clinic end generated code: output=1fcd5da7225c4fa9 input=89bb9ae485888440]*/	todo		
 Python/_contextvars.c	31	43	_contextvars_exec	_contextvars_exec(PyObject *m)	todo		
-Python/_contextvars.c	65	68	PyInit__contextvars	PyInit__contextvars(void)	todo		
+Python/_contextvars.c	66	69	PyInit__contextvars	PyInit__contextvars(void)	todo		

@@ -2,8 +2,8 @@ import PyLean.PyIO.Text
 
 /-!
 The C `io.StringIO` (`Modules/_io/stringio.c`), CPython 3.14.7, plus the
-inherited `_io._IOBase.readlines` (`Modules/_io/iobase.c:717-777`) and the
-line search `_PyIO_find_line_ending` (`Modules/_io/textio.c:2128-2211`).
+inherited `_io._IOBase.readlines` (`Modules/_io/iobase.c:718-778`) and the
+line search `_PyIO_find_line_ending` (`Modules/_io/textio.c:2204-2287`).
 
 The buffer is a list of code points (`Py_UCS4`). The accumulating
 (`_PyUnicodeWriter`) and realized states hold the same text and are not
@@ -62,7 +62,7 @@ def writeStr (s : SCState) (obj : List Nat) : SCState × Py Unit :=
   | .error e => (s, .error e)
   | .ok () => ({ s with buf := writeAt s.buf s.pos decoded, pos := s.pos + len }, .ok ())
 
-/-- `_io_StringIO___init___impl`, stringio.c:674-782. `newline` is `none`
+/-- `_io_StringIO___init___impl`, stringio.c:684-792. `newline` is `none`
 for `None`; the default is `'\n'`. `PyUnicode_AsUTF8` fails on a lone
 surrogate; the validity test then reads the UTF-8 bytes as a C string, i.e.
 only up to the first NUL. -/
@@ -97,7 +97,7 @@ def init (value : Option (List Nat)) (newline : Option (List Nat)) : Py SCState 
     | (s, .ok ()) => pure { s with pos := 0 }
   else pure s
 
-/-- `_PyIO_find_line_ending`, textio.c:2128-2211, on `buf[pos:pos+limit]`
+/-- `_PyIO_find_line_ending`, textio.c:2204-2287, on `buf[pos:pos+limit]`
 (the C code sets a NUL sentinel at the end, stringio.c:374-378): the length
 of the line including its ending, or `none`. -/
 def findLineEnding (s : SCState) (seg : List Nat) : Option Nat :=
@@ -130,7 +130,7 @@ def next (s : SCState) : SCState × Py Val :=
   let (s', l) := readlineRaw s (-1)
   if l = [] then (s', .error .stopIteration) else (s', .ok (.str l))
 
-/-- The loop of `_io__IOBase_readlines_impl`, iobase.c:745-768. -/
+/-- The loop of `_io__IOBase_readlines_impl`, iobase.c:746-769. -/
 def readlinesLoop (hint : Int) : SCState → Int → List Atom → Nat → SCState × Py Val
   | s, _, _, 0 => (s, .error .modelFuel)
   | s, length, acc, fuel + 1 =>
@@ -143,8 +143,8 @@ def readlinesLoop (hint : Int) : SCState → Int → List Atom → Nat → SCSta
       if hint > 0 ∧ (line.length : Int) > hint - length then (s', .ok (.list acc.reverse))
       else readlinesLoop hint s' (length + line.length) acc fuel
 
-/-- `_io__IOBase_readlines_impl`, iobase.c:717-777: the hint is converted
-first; `iter(self)` (`iobase_iter`, iobase.c:679-685) raises if closed; for
+/-- `_io__IOBase_readlines_impl`, iobase.c:718-778: the hint is converted
+first; `iter(self)` (`iobase_iter`, iobase.c:680-686) raises if closed; for
 `hint <= 0` the list is extended with every line. -/
 def readlines (s : SCState) (hint : Option Int) : SCState × Py Val :=
   match optSsize (-1) hint with
@@ -153,7 +153,7 @@ def readlines (s : SCState) (hint : Option Int) : SCState × Py Val :=
     if s.closed then (s, .error (.valueError "I/O operation on closed file.")) else
     readlinesLoop hint s 0 [] (s.buf.length - s.pos + 2)
 
-/-- `_io_StringIO_seek_impl`, stringio.c:501-536, after Argument Clinic
+/-- `_io_StringIO_seek_impl`, stringio.c:511-546, after Argument Clinic
 converted `pos` (`Py_ssize_t`) and `whence` (`int`). -/
 def seek (s : SCState) (pos whence : Int) : SCState × Py Val :=
   match argSsize pos with
@@ -190,7 +190,7 @@ def step (s : SCState) : SOp → SCState × Py Val
       (s', .ok (.str l))
   | .readlines h => readlines s h
   | .write obj =>
-    -- stringio.c:551-569
+    -- stringio.c:561-579
     if s.closed then (s, .error closedErr) else
     if obj.length > 0 then
       match writeStr s obj with
@@ -200,7 +200,7 @@ def step (s : SCState) : SOp → SCState × Py Val
   | .seek pos whence => seek s pos whence
   | .tell => if s.closed then (s, .error closedErr) else (s, .ok (.int s.pos))
   | .truncate size =>
-    -- stringio.c:461-481; `None` means the current position
+    -- stringio.c@3.14.7:461-481; `None` means the current position
     match optSsize s.pos size with
     | .error e => (s, .error e)
     | .ok size =>
@@ -213,7 +213,7 @@ def step (s : SCState) : SOp → SCState × Py Val
   | .next => next s
   | .closed => (s, .ok (.bool s.closed))
   | .newlines =>
-    -- stringio.c:1027-1036
+    -- stringio.c:1037-1046
     if s.closed then (s, .error closedErr) else
     if s.hasDecoder then (s, .ok (newlinesVal s.seennl)) else (s, .ok .none)
 

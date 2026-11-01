@@ -13,7 +13,7 @@ summary: |
 likelihood: |
   Low: init=False on an InitVar makes no sense, and a user finds out at the first call.
 maybe_intended: |
-  Partly. The comment at Lib/dataclasses.py:894-898 considers checking init on ClassVar and InitVar and leaves it. A
+  Partly. The comment at Lib/dataclasses.py:887-891 considers checking init on ClassVar and InitVar and leaves it. A
   maintainer may call this user error, and only the message is at fault.
 reproducer: |
   from dataclasses import dataclass, field, InitVar
@@ -37,8 +37,8 @@ observed: |
 promised_by: |
   Nothing explicit. Undisputed: generated code should not fail with a NameError.
 cause: |
-  Lib/dataclasses.py:704-707 lists every _FIELD_INITVAR in the call, and :713-719 only makes parameters of those with
-  init; :889-898 does not reject the combination.
+  Lib/dataclasses.py:697-700 lists every _FIELD_INITVAR in the call, and :706-712 only makes parameters of those with
+  init; :882-891 does not reject the combination.
 possible_fix: |
   Raise TypeError in _get_field, next to the check for a default factory.
 duplicates:

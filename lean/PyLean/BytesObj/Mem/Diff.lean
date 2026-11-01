@@ -363,7 +363,7 @@ def stepOp (d : DS) (op : Array Json) : Except String (Json × DS) := do
           return pyBufferIsContiguous b order))
         (plain fun b => Json.mkObj [("bool", toJson b)])
   | "restricted" =>
-      -- the view `__release_buffer__` receives, Objects/typeobject.c:10833
+      -- the view `__release_buffer__` receives, Objects/typeobject.c:11548
       let e := d.exps[(← (← argAt op 1).getNat?)]!
       let (r, st1) := restrictedView e d.st
       let .ok i := r | throw "restricted"

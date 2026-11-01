@@ -1,6 +1,6 @@
 file	line	endline	name	signature	status	entry	note
-Lib/_pyrepl/simple_interact.py	45	53	check	check()	todo		
-Lib/_pyrepl/simple_interact.py	56	64	_strip_final_indent	_strip_final_indent(text: str)	todo		
-Lib/_pyrepl/simple_interact.py	67	69	_clear_screen	_clear_screen()	todo		
-Lib/_pyrepl/simple_interact.py	82	98	_more_lines	_more_lines(console: code.InteractiveConsole, unicodetext: str)	todo		
-Lib/_pyrepl/simple_interact.py	101	181	run_multiline_interactive_console	run_multiline_interactive_console(console: code.InteractiveConsole, *, future_flags: int=0)	todo		
+Lib/_pyrepl/simple_interact.py	44	52	check	check()	todo		
+Lib/_pyrepl/simple_interact.py	55	63	_strip_final_indent	_strip_final_indent(text: str)	todo		
+Lib/_pyrepl/simple_interact.py	66	68	_clear_screen	_clear_screen()	todo		
+Lib/_pyrepl/simple_interact.py	81	97	_more_lines	_more_lines(console: code.InteractiveConsole, unicodetext: str)	todo		changed-in-3.15:
+Lib/_pyrepl/simple_interact.py	100	185	run_multiline_interactive_console	run_multiline_interactive_console(console: code.InteractiveConsole, *, future_flags: int=0)	todo		changed-in-3.15:

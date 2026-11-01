@@ -23,7 +23,7 @@ def fuelOut {α : Type} : M α := throw { type := TokKind.ERRORTOKEN.num, fuelOu
 @[inline] def emit {α : Type} (t a b : Nat) : M α := throw { type := t, pStart := a, pEnd := b }
 
 /-- `tok_underflow_string`, `Parser/tokenizer/string_tokenizer.c:8-27`, and the part of
-`tok_underflow_readline` (`readline_tokenizer.c:70-106`) that survives once all lines
+`tok_underflow_readline` (`readline_tokenizer.c:70-102`) that survives once all lines
 sit in one array. Returns `rc`. -/
 def underflow (s : TokState) : Bool × TokState :=
   -- `strchr(tok->inp, '\n')`, then `strchr(tok->inp, '\0')`
@@ -93,7 +93,7 @@ def nextcS (s : TokState) : Int × TokState :=
   modify fun s =>
     if c != EOF then { s with cur := s.cur - 1, colOffset := s.colOffset - 1 } else s
 
-/-- `set_ftstring_expr`, `Parser/lexer/lexer.c:114-224`. The comment-stripping second
+/-- `set_ftstring_expr`, `Parser/lexer/lexer.c:114-237`. The comment-stripping second
 half operates on the same buffer as the scan in the first. Fails with `MemoryError`
 on a negative size, which `PyUnicode_DecodeUTF8` turns into that exception. -/
 def setFtstringExpr : M Bool := do
@@ -145,7 +145,7 @@ def setFtstringExpr : M Bool := do
     modify fun s => { s with metadata := some (utf8Decode out) }
     return false
 
-/-- `_PyLexer_update_ftstring_expr`, `Parser/lexer/lexer.c:227-279`, without the case
+/-- `_PyLexer_update_ftstring_expr`, `Parser/lexer/lexer.c@3.14.7:227-279`, without the case
 `cur == 0`, which is in `underflow`. Allocation cannot fail in the model. -/
 def updateFtstringExpr (cur : Nat) : M Unit :=
   modify fun s =>
@@ -159,7 +159,7 @@ def updateFtstringExpr (cur : Nat) : M Unit :=
         if m.lastExprEnd == -1 then { m with lastExprEnd := s.strlen (s.start.getD 0) } else m
     else s
 
-/-- `lookahead`, `Parser/lexer/lexer.c:282-302`. -/
+/-- `lookahead`, `Parser/lexer/lexer.c:240-260`. -/
 def lookahead (test : List Nat) : M Bool := do
   let rec go : List Nat → List Nat → M Bool
     | rest, consumed => do
@@ -178,7 +178,7 @@ def lookahead (test : List Nat) : M Bool := do
           return false
   go test []
 
-/-- `verify_end_of_number`, `Parser/lexer/lexer.c:305-360`. -/
+/-- `verify_end_of_number`, `Parser/lexer/lexer.c:263-318`. -/
 def verifyEndOfNumber (c : Int) (kind : String) : M Bool := do
   if (← get).extraTokens then return true
   let r ←
@@ -203,7 +203,7 @@ def verifyEndOfNumber (c : Int) (kind : String) : M Bool := do
     return false
   return true
 
-/-- `verify_identifier`, `Parser/lexer/lexer.c:364-410`. `_PyUnicode_ScanIdentifier`
+/-- `verify_identifier`, `Parser/lexer/lexer.c:322-368`. `_PyUnicode_ScanIdentifier`
 over the decoded token. -/
 def verifyIdentifier : M Bool := do
   let s ← get
@@ -238,7 +238,7 @@ def skipWhile (p : Int → Bool) : Nat → M Int
     let c ← nextc
     if p c then skipWhile p f else return c
 
-/-- `tok_decimal_tail`, `Parser/lexer/lexer.c:413-432`. -/
+/-- `tok_decimal_tail`, `Parser/lexer/lexer.c:371-390`. -/
 def decimalTail : Nat → M Int
   | 0 => fuelOut
   | f + 1 => do
@@ -251,7 +251,7 @@ def decimalTail : Nat → M Int
       return 0
     decimalTail f
 
-/-- `tok_continuation_line`, `Parser/lexer/lexer.c:435-453`. -/
+/-- `tok_continuation_line`, `Parser/lexer/lexer.c:393-411`. -/
 def continuationLine : M Int := do
   let c ← nextc
   let c ← if c == ch! '\r' then nextc else pure c
@@ -265,7 +265,7 @@ def continuationLine : M Int := do
   backup c
   return c
 
-/-- `maybe_raise_syntax_error_for_string_prefixes`, `Parser/lexer/lexer.c:455-498`. -/
+/-- `maybe_raise_syntax_error_for_string_prefixes`, `Parser/lexer/lexer.c:413-456`. -/
 def prefixError (b r u f t : Bool) : M Bool := do
   let err (p q : String) : M Bool := do
     let s ← get
@@ -290,26 +290,26 @@ def errMsg {α : Type} (msg : String) : M α := do
   emit0 t
 
 /-- Common end of the number branch: `tok_backup`, then `MAKE_TOKEN(NUMBER)`,
-`Parser/lexer/lexer.c:1045-1048`. -/
+`Parser/lexer/lexer.c:1003-1006`. -/
 def endNumber {α : Type} (c : Int) : M α := do
   backup c
   let s ← get
   emit TokKind.NUMBER.num (s.start.getD 0) s.cur
 
-/-- The `imaginary:` label, `Parser/lexer/lexer.c:1034-1039`. -/
+/-- The `imaginary:` label, `Parser/lexer/lexer.c:992-997`. -/
 def imaginaryPart {α : Type} : M α := do
   let c ← nextc
   if !(← verifyEndOfNumber c "imaginary") then errTok
   endNumber c
 
-/-- `if (c == 'j' ...) ... else verify`, `Parser/lexer/lexer.c:1032-1042`. -/
+/-- `if (c == 'j' ...) ... else verify`, `Parser/lexer/lexer.c:990-1000`. -/
 def afterExponent {α : Type} (c : Int) : M α := do
   if c == ch! 'j' || c == ch! 'J' then imaginaryPart
   else
     if !(← verifyEndOfNumber c "decimal") then errTok
     endNumber c
 
-/-- The `exponent:` label, `Parser/lexer/lexer.c:1005-1031`. -/
+/-- The `exponent:` label, `Parser/lexer/lexer.c:963-989`. -/
 def exponentPart {α : Type} (fuel : Nat) (e : Int) : M α := do
   let c ← nextc
   if c == ch! '+' || c == ch! '-' then
@@ -327,7 +327,7 @@ def exponentPart {α : Type} (fuel : Nat) (e : Int) : M α := do
   if c == 0 then errTok
   afterExponent c
 
-/-- From the `fraction:` label to the exponent check, `Parser/lexer/lexer.c:996-1005`. -/
+/-- From the `fraction:` label to the exponent check, `Parser/lexer/lexer.c:954-963`. -/
 def fractionPart {α : Type} (fuel : Nat) (c : Int) : M α := do
   let c ←
     if isDigit c then do
@@ -359,7 +359,7 @@ where
       let c ← skipWhile isD fuel
       if c == ch! '_' then radixBody fuel isD kind reportDigit f c else return c
 
-/-- `Parser/lexer/lexer.c:857-1049`: the `Number` branch. Precondition: `c` is a digit. -/
+/-- `Parser/lexer/lexer.c:815-1007`: the `Number` branch. Precondition: `c` is a digit. -/
 def numberBranch {α : Type} (c : Int) (fuel : Nat) : M α := do
   if c == ch! '0' then
     let c ← nextc
@@ -427,7 +427,7 @@ def numberBranch {α : Type} (c : Int) (fuel : Nat) : M α := do
     else if c == ch! 'e' || c == ch! 'E' then exponentPart fuel c
     else afterExponent c
 
-/-- The string-body loop, `Parser/lexer/lexer.c:1162-1237`. -/
+/-- The string-body loop, `Parser/lexer/lexer.c:1119-1204`. -/
 def stringBody (quote quoteSize : Int) : Nat → Int → Bool → M Unit
   | 0, _, _ => fuelOut
   | f + 1, endQuoteSize, hasEscaped => do
@@ -473,7 +473,7 @@ def stringBody (quote quoteSize : Int) : Nat → Int → Bool → M Unit
     else stringBody quote quoteSize f 0 hasEscaped
 
 /-- The `letter_quote:` label through the end of the string branch,
-`Parser/lexer/lexer.c:1131-1242`. Precondition: `c` is a quote. -/
+`Parser/lexer/lexer.c:1088-1209`. Precondition: `c` is a quote. -/
 def letterQuote {α : Type} (c : Int) (fuel : Nat) : M α := do
   let quote := c
   modify fun s => { s with firstLineno := s.lineno, multiLineStart := s.lineStart }
@@ -517,7 +517,7 @@ def openBracket (c : Int) : M Unit := fun s =>
     .ok () (if s1.insideFString then s1.setMode fun m => { m with curlyDepth := m.curlyDepth + 1 }
             else s1)
 
-/-- The `f_string_quote:` branch, `Parser/lexer/lexer.c:1052-1128`. -/
+/-- The `f_string_quote:` branch, `Parser/lexer/lexer.c:1010-1085`. -/
 def fStringQuote {α : Type} (c : Int) : M α := do
   let quote := c
   modify fun s => { s with firstLineno := s.lineno, multiLineStart := s.lineStart }
@@ -636,14 +636,14 @@ def punctFinal {α : Type} (c : Int) : M α := do
   emit (oneChar c) (s.start.getD 0) s.cur
 
 /-- Everything after the string branches for a character that starts no token so far:
-`Parser/lexer/lexer.c:1253-1389`. -/
+`Parser/lexer/lexer.c:1220-1359`. -/
 def punctuation {α : Type} (c : Int) : M α := do
   punctFString c
   punctTwo c
   punctBracket c
   punctFinal c
 
-/-- `f_string_quote:` onward, `Parser/lexer/lexer.c:1051-1389`, for a `c` that the
+/-- `f_string_quote:` onward, `Parser/lexer/lexer.c:1009-1359`, for a `c` that the
 earlier branches left alone. The line continuation returns to `again:`. -/
 def fromFStringQuote (c : Int) (fuel : Nat) : M Unit := do
   let s ← get
@@ -663,13 +663,13 @@ inductive Jump where
   | nextline | again
   deriving Repr
 
-/-- Result of the prefix loop, `Parser/lexer/lexer.c:746-783`. -/
+/-- Result of the prefix loop, `Parser/lexer/lexer.c:704-741`. -/
 inductive Prefix where
   | fQuote (c : Int)
   | lQuote (c : Int)
   | ident (c : Int)
 
-/-- `Parser/lexer/lexer.c:746-783`. -/
+/-- `Parser/lexer/lexer.c:704-741`. -/
 def prefixLoop : Nat → Bool → Bool → Bool → Bool → Bool → Int → M Prefix
   | 0, _, _, _, _, _, _ => fuelOut
   | f + 1, b, r, u, ff, t, c => do
@@ -688,7 +688,7 @@ def prefixLoop : Nat → Bool → Bool → Bool → Bool → Bool → Int → M 
       return .lQuote c
     prefixLoop f b' r' u' ff' t' c
 
-/-- The body of a comment and type-comment handling, `Parser/lexer/lexer.c:652-727`.
+/-- The body of a comment and type-comment handling, `Parser/lexer/lexer.c:610-685`.
 Returns the character after the comment. -/
 def commentBranch (fuel : Nat) (blankline : Bool) (c : Int) : M Int := do
   let rec eat : Nat → Int → M Int
@@ -744,7 +744,7 @@ def commentBranch (fuel : Nat) (blankline : Bool) (c : Int) : M Int := do
     emit TokKind.COMMENT.num st s.cur
   return c
 
-/-- One pass from `again:`, `Parser/lexer/lexer.c:640-1389`. Every path either emits or
+/-- One pass from `again:`, `Parser/lexer/lexer.c:598-1359`. Every path either emits or
 jumps back. -/
 def againPass (fuel : Nat) (blankline : Bool) : M Jump := do
   modify fun s => { s with start := none }
@@ -852,14 +852,14 @@ def dedentTo (col altcol n : Nat) : M Unit := do
     errTok
   if altcol != s.altindstack.headD 0 then tabError
 
-/-- Comparing a line's indentation with the stack, `Parser/lexer/lexer.c:651-710`. -/
+/-- Comparing a line's indentation with the stack, `Parser/lexer/lexer.c:609-668`. -/
 def indentStack (col altcol : Nat) : M Unit := fun s =>
   if col == s.indstack.headD 0 then
     if altcol != s.altindstack.headD 0 then tabError s else .ok () s
   else if col > s.indstack.headD 0 then pushIndent col altcol s
   else dedentTo col altcol (s.indent + 1) s
 
-/-- The indentation block, `Parser/lexer/lexer.c:514-611`. Returns `blankline`. -/
+/-- The indentation block, `Parser/lexer/lexer.c:472-569`. Returns `blankline`. -/
 def indentation (fuel : Nat) : M Bool := do
   modify fun s => { s with atbol := false }
   let rec scan : Nat → Nat → Nat → Nat → M (Nat × Nat × Nat × Int)
@@ -891,7 +891,7 @@ def indentation (fuel : Nat) : M Bool := do
     indentStack (if contCol != 0 then contCol else col) (if contCol != 0 then contCol else altcol)
   return blankline
 
-/-- `tok_get_normal_mode`, `Parser/lexer/lexer.c:501-1390`. The `nextline:` and `again:`
+/-- `tok_get_normal_mode`, `Parser/lexer/lexer.c:459-1360`. The `nextline:` and `again:`
 labels are the two states of the loop. Never returns normally. -/
 def normalMode (fuel : Nat) : Nat → Option Bool → M Unit
   | 0, _ => fuelOut
@@ -928,7 +928,7 @@ def Mode.middle (m : Mode) : Nat :=
 def Mode.end_ (m : Mode) : Nat :=
   if m.tstring then TokKind.TSTRING_END.num else TokKind.FSTRING_END.num
 
-/-- The `f_string_middle:` loop, `Parser/lexer/lexer.c:1451-1603`. Returns when
+/-- The `f_string_middle:` loop, `Parser/lexer/lexer.c:1417-1567`. Returns when
 `end_quote_size == quote_size`. -/
 def fstringMiddle : Nat → Nat → Bool → M Unit
   | 0, _, _ => fuelOut
@@ -1007,7 +1007,7 @@ def fstringMiddle : Nat → Nat → Bool → M Unit
       else fstringMiddle f 0 unicodeEscape
     else fstringMiddle f 0 unicodeEscape
 
-/-- `tok_get_fstring_mode`, `Parser/lexer/lexer.c:1393-1613`. -/
+/-- `tok_get_fstring_mode`, `Parser/lexer/lexer.c:1363-1577`. -/
 def fstringMode (fuel : Nat) : M Unit := do
   modify fun s => { s with start := some s.cur, firstLineno := s.lineno,
                            startingColOffset := s.colOffset }
@@ -1046,7 +1046,7 @@ def fstringMode (fuel : Nat) : M Unit := do
   let s ← get
   emit cur.middle (s.start.getD 0) s.cur
 
-/-- `_PyTokenizer_Get` over `tok_get`, `Parser/lexer/lexer.c:1616-1624`:
+/-- `_PyTokenizer_Get` over `tok_get`, `Parser/lexer/lexer.c:1580-1588`:
 returns the state, the token type and the token. `metadata` is per-token. -/
 def tokenizerGet (s : TokState) : TokState × Nat × LexTok :=
   let s := { s with metadata := none }

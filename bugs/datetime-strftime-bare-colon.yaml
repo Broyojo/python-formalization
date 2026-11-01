@@ -33,7 +33,7 @@ promised_by: |
   Nothing explicit; _pydatetime is meant to be equivalent to _datetime (PEP 399).
 cause: |
   Lib/_pydatetime.py:248-263: `elif ch == ':'` takes the next character unconditionally and has
-  no else branch for `if i < n`. Modules/_datetimemodule.c:1930: the branch is
+  no else branch for `if i < n`. Modules/_datetimemodule.c:1940: the branch is
   `ch == ':' && i < flen && format[i] == 'z'`, anything else falls through and is copied with
   only the `%:` consumed.
 possible_fix: |

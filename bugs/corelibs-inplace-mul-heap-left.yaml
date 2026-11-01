@@ -59,7 +59,7 @@ promised_by: |
   Language reference, augmented assignment; data model at __imul__: "if x is an instance of a class with an
   __iadd__ ... Otherwise, x.__add__(y) and y.__radd__(x) are considered, as with the evaluation of x + y".
 cause: |
-  Objects/abstract.c:1327-1339, the `else if (mw != NULL)`.
+  Objects/abstract.c:1337-1349, the `else if (mw != NULL)`.
 possible_fix: |
   Make the second branch independent of the first, as in PyNumber_Multiply: after trying the left operand's
   slots, try `mw && mw->sq_repeat`.

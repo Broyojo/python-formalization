@@ -28,12 +28,12 @@ Modules/_io/iobase.c	499	505	iobase_enter	iobase_enter(PyObject *self, PyObject 
 Modules/_io/iobase.c	508	511	iobase_exit	iobase_exit(PyObject *self, PyObject *args)	todo		
 Modules/_io/iobase.c	528	533	_io__IOBase_fileno_impl	_io__IOBase_fileno_impl(PyObject *self, PyTypeObject *cls) /*[clinic end generated code: output=7caaa32a6f4ada3d input=1927c8bea5c85099]*/	modelled	pyio-base-unsupported-ops,pyio-stringio-unsupported	
 Modules/_io/iobase.c	544	550	_io__IOBase_isatty_impl	_io__IOBase_isatty_impl(PyObject *self) /*[clinic end generated code: output=60cab77cede41cdd input=9ef76530d368458b]*/	modelled	pyio-base-closed-protocol,pyio-stringio-inquiries	
-Modules/_io/iobase.c	569	676	_io__IOBase_readline_impl	_io__IOBase_readline_impl(PyObject *self, Py_ssize_t limit) /*[clinic end generated code: output=4479f79b58187840 input=d0c596794e877bff]*/	todo		
-Modules/_io/iobase.c	679	685	iobase_iter	iobase_iter(PyObject *self)	modelled	pyio-base-closed-protocol,pyio-stringio-c-readlines-hint-doc	
-Modules/_io/iobase.c	688	702	iobase_iternext	iobase_iternext(PyObject *self)	todo		
-Modules/_io/iobase.c	717	777	_io__IOBase_readlines_impl	_io__IOBase_readlines_impl(PyObject *self, Py_ssize_t hint) /*[clinic end generated code: output=2f50421677fa3dea input=9400c786ea9dc416]*/	modelled	pyio-stringio-c-readlines-hint-doc	
-Modules/_io/iobase.c	791	827	_io__IOBase_writelines	_io__IOBase_writelines(PyObject *self, PyObject *lines) /*[clinic end generated code: output=976eb0a9b60a6628 input=cac3fc8864183359]*/	todo		
-Modules/_io/iobase.c	922	960	_io__RawIOBase_read_impl	_io__RawIOBase_read_impl(PyObject *self, Py_ssize_t n) /*[clinic end generated code: output=6cdeb731e3c9f13c input=b6d0dcf6417d1374]*/	todo		
-Modules/_io/iobase.c	970	1021	_io__RawIOBase_readall_impl	_io__RawIOBase_readall_impl(PyObject *self) /*[clinic end generated code: output=1987b9ce929425a0 input=688874141213622a]*/	todo		
-Modules/_io/iobase.c	1024	1028	rawiobase_readinto	rawiobase_readinto(PyObject *self, PyObject *args)	todo		
-Modules/_io/iobase.c	1031	1035	rawiobase_write	rawiobase_write(PyObject *self, PyObject *args)	todo		
+Modules/_io/iobase.c	569	677	_io__IOBase_readline_impl	_io__IOBase_readline_impl(PyObject *self, Py_ssize_t limit) /*[clinic end generated code: output=4479f79b58187840 input=d0c596794e877bff]*/	todo		changed-in-3.15:
+Modules/_io/iobase.c	680	686	iobase_iter	iobase_iter(PyObject *self)	modelled	pyio-base-closed-protocol,pyio-stringio-c-readlines-hint-doc	
+Modules/_io/iobase.c	689	703	iobase_iternext	iobase_iternext(PyObject *self)	todo		
+Modules/_io/iobase.c	718	778	_io__IOBase_readlines_impl	_io__IOBase_readlines_impl(PyObject *self, Py_ssize_t hint) /*[clinic end generated code: output=2f50421677fa3dea input=9400c786ea9dc416]*/	modelled	pyio-stringio-c-readlines-hint-doc	
+Modules/_io/iobase.c	792	828	_io__IOBase_writelines	_io__IOBase_writelines(PyObject *self, PyObject *lines) /*[clinic end generated code: output=976eb0a9b60a6628 input=cac3fc8864183359]*/	todo		
+Modules/_io/iobase.c	923	961	_io__RawIOBase_read_impl	_io__RawIOBase_read_impl(PyObject *self, Py_ssize_t n) /*[clinic end generated code: output=6cdeb731e3c9f13c input=b6d0dcf6417d1374]*/	todo		changed-in-3.15:
+Modules/_io/iobase.c	971	1020	_io__RawIOBase_readall_impl	_io__RawIOBase_readall_impl(PyObject *self) /*[clinic end generated code: output=1987b9ce929425a0 input=688874141213622a]*/	todo		changed-in-3.15:
+Modules/_io/iobase.c	1023	1027	rawiobase_readinto	rawiobase_readinto(PyObject *self, PyObject *args)	todo		
+Modules/_io/iobase.c	1030	1034	rawiobase_write	rawiobase_write(PyObject *self, PyObject *args)	todo		

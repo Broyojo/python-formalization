@@ -1,0 +1,3 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testinternalcapi/interpreter.c	19	29	stop_tracing_and_jit	stop_tracing_and_jit(PyThreadState *tstate, _PyInterpreterFrame *frame)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/interpreter.c	40	161	Test_EvalFrame	Test_EvalFrame(PyThreadState *tstate, _PyInterpreterFrame *frame, int throwflag)	excluded		test-support: only for CPython's own tests

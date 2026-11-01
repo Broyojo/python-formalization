@@ -30,52 +30,52 @@ Lib/importlib/_bootstrap.py	483	491	_call_with_frames_removed	_call_with_frames_
 Lib/importlib/_bootstrap.py	494	499	_verbose_message	_verbose_message(message, *args, verbosity=1)	todo		
 Lib/importlib/_bootstrap.py	502	510	_requires_builtin	_requires_builtin(fxn)	todo		
 Lib/importlib/_bootstrap.py	513	521	_requires_frozen	_requires_frozen(fxn)	todo		
-Lib/importlib/_bootstrap.py	525	540	_load_module_shim	_load_module_shim(self, fullname)	todo		
-Lib/importlib/_bootstrap.py	544	562	_module_repr	_module_repr(module)	todo		
-Lib/importlib/_bootstrap.py	602	613	ModuleSpec.__init__	__init__(self, name, loader, *, origin=None, loader_state=None, is_package=None)	todo		
-Lib/importlib/_bootstrap.py	615	621	ModuleSpec.__repr__	__repr__(self)	todo		
-Lib/importlib/_bootstrap.py	623	633	ModuleSpec.__eq__	__eq__(self, other)	todo		
-Lib/importlib/_bootstrap.py	636	642	ModuleSpec.cached	cached(self)	todo		
-Lib/importlib/_bootstrap.py	645	646	ModuleSpec.cached	cached(self, cached)	todo		
-Lib/importlib/_bootstrap.py	649	654	ModuleSpec.parent	parent(self)	todo		
-Lib/importlib/_bootstrap.py	657	658	ModuleSpec.has_location	has_location(self)	todo		
-Lib/importlib/_bootstrap.py	661	662	ModuleSpec.has_location	has_location(self, value)	todo		
-Lib/importlib/_bootstrap.py	665	691	spec_from_loader	spec_from_loader(name, loader, *, origin=None, is_package=None)	todo		
-Lib/importlib/_bootstrap.py	694	733	_spec_from_module	_spec_from_module(module, loader=None, origin=None)	todo		
-Lib/importlib/_bootstrap.py	736	806	_init_module_attrs	_init_module_attrs(spec, module, *, override=False)	todo		
-Lib/importlib/_bootstrap.py	809	823	module_from_spec	module_from_spec(spec)	todo		
-Lib/importlib/_bootstrap.py	826	844	_module_repr_from_spec	_module_repr_from_spec(spec)	todo		
-Lib/importlib/_bootstrap.py	848	875	_exec	_exec(spec, module)	todo		
-Lib/importlib/_bootstrap.py	878	912	_load_backward_compatible	_load_backward_compatible(spec)	todo		
-Lib/importlib/_bootstrap.py	914	955	_load_unlocked	_load_unlocked(spec)	todo		
-Lib/importlib/_bootstrap.py	959	969	_load	_load(spec)	todo		
-Lib/importlib/_bootstrap.py	986	990	BuiltinImporter.find_spec	find_spec(cls, fullname, path=None, target=None)	todo		
-Lib/importlib/_bootstrap.py	993	998	BuiltinImporter.create_module	create_module(spec)	todo		
-Lib/importlib/_bootstrap.py	1001	1003	BuiltinImporter.exec_module	exec_module(module)	todo		
-Lib/importlib/_bootstrap.py	1007	1009	BuiltinImporter.get_code	get_code(cls, fullname)	todo		
-Lib/importlib/_bootstrap.py	1013	1015	BuiltinImporter.get_source	get_source(cls, fullname)	todo		
-Lib/importlib/_bootstrap.py	1019	1021	BuiltinImporter.is_package	is_package(cls, fullname)	todo		
-Lib/importlib/_bootstrap.py	1038	1104	FrozenImporter._fix_up_module	_fix_up_module(cls, module)	todo		
-Lib/importlib/_bootstrap.py	1107	1129	FrozenImporter._resolve_filename	_resolve_filename(cls, fullname, alias=None, ispkg=False)	todo		
-Lib/importlib/_bootstrap.py	1132	1159	FrozenImporter.find_spec	find_spec(cls, fullname, path=None, target=None)	todo		
-Lib/importlib/_bootstrap.py	1162	1172	FrozenImporter.create_module	create_module(spec)	todo		
-Lib/importlib/_bootstrap.py	1175	1179	FrozenImporter.exec_module	exec_module(module)	todo		
-Lib/importlib/_bootstrap.py	1182	1198	FrozenImporter.load_module	load_module(cls, fullname)	todo		
-Lib/importlib/_bootstrap.py	1202	1204	FrozenImporter.get_code	get_code(cls, fullname)	todo		
-Lib/importlib/_bootstrap.py	1208	1210	FrozenImporter.get_source	get_source(cls, fullname)	todo		
-Lib/importlib/_bootstrap.py	1214	1216	FrozenImporter.is_package	is_package(cls, fullname)	todo		
-Lib/importlib/_bootstrap.py	1225	1227	_ImportLockContext.__enter__	__enter__(self)	todo		
-Lib/importlib/_bootstrap.py	1229	1231	_ImportLockContext.__exit__	__exit__(self, exc_type, exc_value, exc_traceback)	todo		
-Lib/importlib/_bootstrap.py	1234	1240	_resolve_name	_resolve_name(name, package, level)	todo		
-Lib/importlib/_bootstrap.py	1243	1287	_find_spec	_find_spec(name, path, target=None)	todo		
-Lib/importlib/_bootstrap.py	1290	1303	_sanity_check	_sanity_check(name, package, level)	todo		
-Lib/importlib/_bootstrap.py	1308	1354	_find_and_load_unlocked	_find_and_load_unlocked(name, import_)	todo		
-Lib/importlib/_bootstrap.py	1360	1391	_find_and_load	_find_and_load(name, import_)	todo		
-Lib/importlib/_bootstrap.py	1394	1406	_gcd_import	_gcd_import(name, package=None, level=0)	todo		
-Lib/importlib/_bootstrap.py	1409	1443	_handle_fromlist	_handle_fromlist(module, fromlist, import_, *, recursive=False)	todo		
-Lib/importlib/_bootstrap.py	1446	1470	_calc___package__	_calc___package__(globals)	todo		
-Lib/importlib/_bootstrap.py	1473	1507	__import__	__import__(name, globals=None, locals=None, fromlist=(), level=0)	todo		
-Lib/importlib/_bootstrap.py	1510	1514	_builtin_from_name	_builtin_from_name(name)	todo		
-Lib/importlib/_bootstrap.py	1517	1554	_setup	_setup(sys_module, _imp_module)	todo		
-Lib/importlib/_bootstrap.py	1557	1562	_install	_install(sys_module, _imp_module)	todo		
-Lib/importlib/_bootstrap.py	1565	1570	_install_external_importers	_install_external_importers()	todo		
+Lib/importlib/_bootstrap.py	526	544	_module_repr	_module_repr(module)	todo		
+Lib/importlib/_bootstrap.py	583	594	ModuleSpec.__init__	__init__(self, name, loader, *, origin=None, loader_state=None, is_package=None)	todo		
+Lib/importlib/_bootstrap.py	596	602	ModuleSpec.__repr__	__repr__(self)	todo		
+Lib/importlib/_bootstrap.py	604	614	ModuleSpec.__eq__	__eq__(self, other)	todo		
+Lib/importlib/_bootstrap.py	617	623	ModuleSpec.cached	cached(self)	todo		
+Lib/importlib/_bootstrap.py	626	627	ModuleSpec.cached	cached(self, cached)	todo		
+Lib/importlib/_bootstrap.py	630	635	ModuleSpec.parent	parent(self)	todo		
+Lib/importlib/_bootstrap.py	638	639	ModuleSpec.has_location	has_location(self)	todo		
+Lib/importlib/_bootstrap.py	642	643	ModuleSpec.has_location	has_location(self, value)	todo		
+Lib/importlib/_bootstrap.py	646	672	spec_from_loader	spec_from_loader(name, loader, *, origin=None, is_package=None)	todo		
+Lib/importlib/_bootstrap.py	675	710	_spec_from_module	_spec_from_module(module, loader=None, origin=None)	todo		changed-in-3.15:
+Lib/importlib/_bootstrap.py	713	776	_init_module_attrs	_init_module_attrs(spec, module, *, override=False)	todo		changed-in-3.15:
+Lib/importlib/_bootstrap.py	779	793	module_from_spec	module_from_spec(spec)	todo		
+Lib/importlib/_bootstrap.py	796	814	_module_repr_from_spec	_module_repr_from_spec(spec)	todo		
+Lib/importlib/_bootstrap.py	818	839	_exec	_exec(spec, module)	todo		changed-in-3.15:
+Lib/importlib/_bootstrap.py	841	874	_load_unlocked	_load_unlocked(spec)	todo		changed-in-3.15:
+Lib/importlib/_bootstrap.py	877	887	_load	_load(spec)	todo		
+Lib/importlib/_bootstrap.py	904	908	BuiltinImporter.find_spec	find_spec(cls, fullname, path=None, target=None)	todo		
+Lib/importlib/_bootstrap.py	911	916	BuiltinImporter.create_module	create_module(spec)	todo		
+Lib/importlib/_bootstrap.py	919	921	BuiltinImporter.exec_module	exec_module(module)	todo		
+Lib/importlib/_bootstrap.py	925	927	BuiltinImporter.get_code	get_code(cls, fullname)	todo		
+Lib/importlib/_bootstrap.py	931	933	BuiltinImporter.get_source	get_source(cls, fullname)	todo		
+Lib/importlib/_bootstrap.py	937	939	BuiltinImporter.is_package	is_package(cls, fullname)	todo		
+Lib/importlib/_bootstrap.py	954	1020	FrozenImporter._fix_up_module	_fix_up_module(cls, module)	todo		
+Lib/importlib/_bootstrap.py	1023	1045	FrozenImporter._resolve_filename	_resolve_filename(cls, fullname, alias=None, ispkg=False)	todo		
+Lib/importlib/_bootstrap.py	1048	1075	FrozenImporter.find_spec	find_spec(cls, fullname, path=None, target=None)	todo		
+Lib/importlib/_bootstrap.py	1078	1088	FrozenImporter.create_module	create_module(spec)	todo		
+Lib/importlib/_bootstrap.py	1091	1095	FrozenImporter.exec_module	exec_module(module)	todo		
+Lib/importlib/_bootstrap.py	1099	1101	FrozenImporter.get_code	get_code(cls, fullname)	todo		
+Lib/importlib/_bootstrap.py	1105	1107	FrozenImporter.get_source	get_source(cls, fullname)	todo		
+Lib/importlib/_bootstrap.py	1111	1113	FrozenImporter.is_package	is_package(cls, fullname)	todo		
+Lib/importlib/_bootstrap.py	1122	1124	_ImportLockContext.__enter__	__enter__(self)	todo		
+Lib/importlib/_bootstrap.py	1126	1128	_ImportLockContext.__exit__	__exit__(self, exc_type, exc_value, exc_traceback)	todo		
+Lib/importlib/_bootstrap.py	1131	1137	_resolve_name	_resolve_name(name, package, level)	todo		
+Lib/importlib/_bootstrap.py	1140	1184	_find_spec	_find_spec(name, path, target=None)	todo		
+Lib/importlib/_bootstrap.py	1187	1200	_sanity_check	_sanity_check(name, package, level)	todo		
+Lib/importlib/_bootstrap.py	1205	1267	_find_and_load_unlocked	_find_and_load_unlocked(name, import_, *, lazy_submodule=False)	todo		changed-in-3.15:
+Lib/importlib/_bootstrap.py	1274	1275	_is_initializing	_is_initializing(module)	todo		changed-in-3.15: new function
+Lib/importlib/_bootstrap.py	1283	1299	_resolve_parents	_resolve_parents(name, import_)	todo		changed-in-3.15: new function
+Lib/importlib/_bootstrap.py	1302	1370	_find_and_load	_find_and_load(name, import_, *, lazy_submodule=False)	todo		changed-in-3.15:
+Lib/importlib/_bootstrap.py	1373	1374	_find_and_load_lazy_submodule	_find_and_load_lazy_submodule(name, import_)	todo		changed-in-3.15: new function
+Lib/importlib/_bootstrap.py	1377	1389	_gcd_import	_gcd_import(name, package=None, level=0)	todo		
+Lib/importlib/_bootstrap.py	1392	1426	_handle_fromlist	_handle_fromlist(module, fromlist, import_, *, recursive=False)	todo		
+Lib/importlib/_bootstrap.py	1429	1453	_calc___package__	_calc___package__(globals)	todo		
+Lib/importlib/_bootstrap.py	1456	1490	__import__	__import__(name, globals=None, locals=None, fromlist=(), level=0)	todo		
+Lib/importlib/_bootstrap.py	1493	1497	_builtin_from_name	_builtin_from_name(name)	todo		
+Lib/importlib/_bootstrap.py	1500	1537	_setup	_setup(sys_module, _imp_module)	todo		
+Lib/importlib/_bootstrap.py	1540	1545	_install	_install(sys_module, _imp_module)	todo		
+Lib/importlib/_bootstrap.py	1548	1553	_install_external_importers	_install_external_importers()	todo		

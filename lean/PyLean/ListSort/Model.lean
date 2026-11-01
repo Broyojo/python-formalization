@@ -5,13 +5,13 @@ Line numbers refer to `Objects/listobject.c` of CPython 3.14.7.
 
 Representation. The C code sorts an array in place and keeps a stack of
 pending runs `struct s_slice {base, len, power}` that point into it
-(`listobject.c:1700-1704`). The model keeps exactly that: the array is a
+(`listobject.c:1763-1767`). The model keeps exactly that: the array is a
 `List α`, a pending run is a `Slice` holding its start index, length and power,
 and the stack is a `List Slice` with the top (C's `pending[ms->n - 1]`) at the
 head. The merge routines receive the two adjacent runs as lists cut out of the
 array and return the merged run, which is written back in place.
 
-Comparisons. Every `ISLT(X, Y)` (`listobject.c:1664`) is one call of the
+Comparisons. Every `ISLT(X, Y)` (`listobject.c:1730`) is one call of the
 element comparison `lt X Y` and increments `MS.ncmp`, so the model reports the
 exact number of `__lt__` calls; the difftest compares that count with CPython.
 `lt` never raises in the model (exceptions raised by `__lt__` and mutation of
@@ -25,14 +25,14 @@ the permutation and stack theorems hold whether or not it does.
 
 namespace PyLean.ListSort
 
-/-- `MIN_GALLOP` (`listobject.c:1683`). -/
+/-- `MIN_GALLOP` (`listobject.c:1749`). -/
 def MIN_GALLOP : Nat := 7
-/-- `MAX_MINRUN` (`listobject.c:1692`). -/
+/-- `MAX_MINRUN` (`listobject.c:1755`). -/
 def MAX_MINRUN : Nat := 64
-/-- `MAX_MERGE_PENDING` = `SIZEOF_SIZE_T * 8` on a 64-bit build (`listobject.c:1678`). -/
+/-- `MAX_MERGE_PENDING` = `SIZEOF_SIZE_T * 8` on a 64-bit build (`listobject.c:1744`). -/
 def MAX_MERGE_PENDING : Nat := 64
 
-/-- The parts of `MergeState` (`listobject.c:1707-1752`) that influence the
+/-- The parts of `MergeState` (`listobject.c:1770-1820`) that influence the
 result: `min_gallop`, plus the model's comparison counter. -/
 structure MS where
   minGallop : Nat := MIN_GALLOP
@@ -45,7 +45,7 @@ variable {α : Type}
 @[inline] def islt (lt : α → α → Bool) (ms : MS) (x y : α) : Bool × MS :=
   (lt x y, { ms with ncmp := ms.ncmp + 1 })
 
-/-! ## binarysort (`listobject.c:1754-1885`) -/
+/-! ## binarysort (`listobject.c:1822-1953`) -/
 
 /-- The binary search loop of `binarysort`/`gallop_*`: `while (lo < hi)`, with
 `m = lo + ((hi - lo) >> 1)` (`binarysort` writes `(L + R) >> 1`, the same
@@ -60,7 +60,7 @@ def binLoop (test : Nat → MS → Bool × MS) : Nat → Nat → Nat → MS → 
       if c then binLoop test fuel (m + 1) hi ms else binLoop test fuel lo m ms
     else (lo, ms)
 
-/-- One pivot of `binarysort` (`listobject.c:1829-1873`): find `L` in the sorted
+/-- One pivot of `binarysort` (`listobject.c:1897-1941`): find `L` in the sorted
 `a[:ok]` with `IFLT(pivot, a[M]) R = M; else L = M + 1`, and insert the pivot at
 `L`, sliding `a[L:ok]` right. -/
 def bsInsert (lt : α → α → Bool) (sorted : List α) (pivot : α) (ms : MS) : List α × MS :=
@@ -78,13 +78,13 @@ def bsLoop (lt : α → α → Bool) : List α → List α → MS → List α ×
     bsLoop lt sorted ps ms
 
 /-- `binarysort(ms, ss, n, ok)`: sort `a[:n]` given that `a[:ok]` is sorted;
-`a[n:]` is untouched. (`if (! ok) ++ok;`, `listobject.c:1777-1778`.) -/
+`a[n:]` is untouched. (`if (! ok) ++ok;`, `listobject.c:1845-1846`.) -/
 def binarysort (lt : α → α → Bool) (a : List α) (n ok : Nat) (ms : MS) : List α × MS :=
   let ok := if ok = 0 then 1 else ok
   let (s, ms) := bsLoop lt (a.take ok) ((a.take n).drop ok) ms
   (s ++ a.drop n, ms)
 
-/-! ## count_run (`listobject.c:1895-1996`) -/
+/-! ## count_run (`listobject.c:1963-2064`) -/
 
 /-- An ascending loop `for (; n < nremaining; ++n) { IF_NEXT_SMALLER break; }`
 starting after `prev = lo[n-1]`: returns the items appended to the run and the
@@ -98,7 +98,7 @@ def ascTake (lt : α → α → Bool) : α → List α → MS → List α × Lis
       let (t, r, ms) := ascTake lt z rest ms
       (z :: t, r, ms)
 
-/-- The descending loop (`listobject.c:1962-1977`). The slice so far is `done`
+/-- The descending loop (`listobject.c:2030-2045`). The slice so far is `done`
 (all-equal groups already reversed in place by `REVERSE_LAST_NEQ`) followed by
 the current all-equal group `grp` (original order; `neq + 1` items) whose last
 item is `prev = lo[n-1]`. Returns the slice prefix after the final
@@ -140,7 +140,7 @@ def countRun (lt : α → α → Bool) (xs : List α) (ms : MS) : Nat × List α
           let (e, r3, ms) := ascTake lt ((w :: ws).getLast (by simp)) r2 ms
           (run.length + e.length, run ++ e ++ r3, ms)
 
-/-! ## gallop_left / gallop_right (`listobject.c:1998-2181`) -/
+/-! ## gallop_left / gallop_right (`listobject.c:2066-2249`) -/
 
 /-- Gallop rightwards from `hint` (`a[hint]` belongs left of the key): `while
 (ofs < maxofs) { IFLT-test(a[hint+ofs]) { lastofs = ofs; ofs = (ofs << 1) + 1; }
@@ -197,7 +197,7 @@ def gallopLeft (lt : α → α → Bool) (key : α) (get : Nat → α) (n hint :
 def gallopRight (lt : α → α → Bool) (key : α) (get : Nat → α) (n hint : Nat) (ms : MS) : Nat × MS :=
   gallopCore (fun i ms => let (c, ms) := islt lt ms key (get i); (!c, ms)) n hint ms
 
-/-! ## merge_lo (`listobject.c:2265-2395`) -/
+/-! ## merge_lo (`listobject.c:2341-2471`) -/
 
 /-- The `for (;;)` body of `merge_lo` after `dest` received the items `out`.
 `A` is the rest of run A (in the temp array), `B` the rest of run B, `mg` the
@@ -264,7 +264,7 @@ def mergeLo (lt : α → α → Bool) (A B : List α) (ms : MS) : List α × MS 
     else if A.length = 1 then ([b] ++ B' ++ A, ms)       -- na == 1: CopyB
     else loLoop lt (A.length + B.length + 1) false ms.minGallop 0 0 [b] A B' ms
 
-/-! ## merge_hi (`listobject.c:2397-2537`), the mirror image -/
+/-! ## merge_hi (`listobject.c:2473-2613`), the mirror image -/
 
 /-- The `for (;;)` body of `merge_hi`. The model keeps the unmerged parts of A
 and B reversed (`Ar`, `Br`; their heads are C's `*ssa.keys` and `*ssb.keys`) and
@@ -333,7 +333,7 @@ def mergeHi (lt : α → α → Bool) (A B : List α) (ms : MS) : List α × MS 
     else if B.length = 1 then (B ++ Ar'.reverse ++ [a], ms)  -- nb == 1: CopyA
     else hiLoop lt (A.length + B.length + 1) false ms.minGallop 0 0 [a] Ar' B.reverse ms
 
-/-! ## merge_at (`listobject.c:2539-2595`) -/
+/-! ## merge_at (`listobject.c:2615-2671`) -/
 
 /-- The data part of `merge_at(ms, i)`: merge the adjacent runs `A` and `B`. -/
 def mergeAt (lt : α → α → Bool) (A B : List α) (ms : MS) : List α × MS :=
@@ -366,7 +366,7 @@ def mergeAtArr (lt : α → α → Bool) (base na nb : Nat) (st : List α × MS)
 
 /-! ## The merge policy: powerloop, found_new_run, merge_force_collapse -/
 
-/-- A pending run `struct s_slice` (`listobject.c:1700-1704`): start index
+/-- A pending run `struct s_slice` (`listobject.c:1763-1767`): start index
 (`base.keys - ms->basekeys`), length and power. -/
 structure Slice where
   base : Nat
@@ -374,7 +374,7 @@ structure Slice where
   power : Nat
   deriving Repr, DecidableEq, Inhabited
 
-/-- The `for (;;)` loop of `powerloop` (`listobject.c:2618-2634`) after
+/-- The `for (;;)` loop of `powerloop` (`listobject.c:2694-2710`) after
 `++result`: `result` is the value after the increment. Also reports whether a
 value outside `Py_ssize_t` (`>= 2**63`) was ever produced. -/
 def powerIter (n : Nat) : Nat → Nat → Nat → Nat → Bool → Nat × Bool
@@ -388,7 +388,7 @@ def powerIter (n : Nat) : Nat → Nat → Nat → Nat → Bool → Nat × Bool
     else if b ≥ n then (result, ovf)
     else powerIter n fuel (result + 1) (2 * a) (2 * b) (ovf || 2 * b ≥ 2 ^ 63)
 
-/-- `powerloop(s1, n1, n2, n)` (`listobject.c:2602-2636`) with the overflow flag:
+/-- `powerloop(s1, n1, n2, n)` (`listobject.c:2678-2712`) with the overflow flag:
 `a = 2*s1 + n1; b = a + n1 + n2;` then the bit loop. The fuel `n + 1` is never
 exhausted (`powerloop_spec`). -/
 def powerloopOvf (s1 n1 n2 n : Nat) : Nat × Bool :=
@@ -398,7 +398,7 @@ def powerloopOvf (s1 n1 n2 n : Nat) : Nat × Bool :=
 
 def powerloop (s1 n1 n2 n : Nat) : Nat := (powerloopOvf s1 n1 n2 n).1
 
-/-- The `while` loop of `found_new_run` (`listobject.c:2659-2662`): merge the
+/-- The `while` loop of `found_new_run` (`listobject.c:2735-2738`): merge the
 two topmost runs (`merge_at(ms, ms->n - 2)`) while the second one's power
 exceeds `power`. `mergeFn base na nb` performs the data part of the merge. -/
 def mergeWhile {σ : Type} (mergeFn : Nat → Nat → Nat → σ → σ) (power : Nat) :
@@ -410,7 +410,7 @@ def mergeWhile {σ : Type} (mergeFn : Nat → Nat → Nat → σ → σ) (power 
   | stk, s => (stk, s)
 termination_by stk => stk.length
 
-/-- `found_new_run(ms, n2)` (`listobject.c:2638-2667`). -/
+/-- `found_new_run(ms, n2)` (`listobject.c:2714-2743`). -/
 def foundNewRun {σ : Type} (mergeFn : Nat → Nat → Nat → σ → σ) (listlen n2 : Nat)
     (stk : List Slice) (s : σ) : List Slice × σ :=
   match stk with
@@ -421,7 +421,7 @@ def foundNewRun {σ : Type} (mergeFn : Nat → Nat → Nat → σ → σ) (listl
     | (t :: rest', s') => ({ t with power := power } :: rest', s')
     | ([], s') => ([], s')
 
-/-- `merge_force_collapse(ms)` (`listobject.c:2669-2688`). -/
+/-- `merge_force_collapse(ms)` (`listobject.c:2745-2764`). -/
 def forceCollapse {σ : Type} (mergeFn : Nat → Nat → Nat → σ → σ) :
     List Slice → σ → List Slice × σ
   | t :: u :: v :: rest, s =>
@@ -433,14 +433,14 @@ def forceCollapse {σ : Type} (mergeFn : Nat → Nat → Nat → σ → σ) :
   | stk, s => (stk, s)
 termination_by stk => stk.length
 
-/-- `merge_compute_minrun(n)` (`listobject.c:2690-2711`). -/
+/-- `merge_compute_minrun(n)` (`listobject.c@3.14.7:2690-2711`). -/
 def minrunLoop : Nat → Nat → Nat → Nat
   | 0, n, r => n + r
   | fuel + 1, n, r => if n ≥ MAX_MINRUN then minrunLoop fuel (n / 2) (r ||| n % 2) else n + r
 
 def computeMinrun (n : Nat) : Nat := minrunLoop n n 0
 
-/-! ## The main loop of `list_sort_impl` (`listobject.c:3075-3119`) -/
+/-! ## The main loop of `list_sort_impl` (`listobject.c:3140-3184`) -/
 
 /-- Sorter state: the array, the merge state, the pending stack, and whether
 every `assert(ms.n < MAX_MERGE_PENDING)` before a push held. -/
@@ -451,7 +451,7 @@ structure Sorter (α : Type) where
   pushOk : Bool
 
 /-- One iteration of the `do { } while (nremaining)` loop at array position
-`pos` (`listobject.c:3079-3107`). -/
+`pos` (`listobject.c:3143-3172`). -/
 def sortStep (lt : α → α → Bool) (N minrun pos : Nat) (st : Sorter α) : Sorter α × Nat :=
   let nremaining := N - pos
   let (n, rest, ms) := countRun lt (st.arr.drop pos) st.ms
@@ -487,7 +487,7 @@ def sortCore (lt : α → α → Bool) (xs : List α) : Sorter α :=
 
 /-- `list.sort(reverse=reverse)` on items compared with `lt`: the sorted list
 and the number of `<` calls. The list is reversed before and after a stable
-forward sort (`listobject.c:3067-3073`, `:3136-3137`). -/
+forward sort (`listobject.c:3132-3138`, `:3201-3202`). -/
 def listSortCnt (lt : α → α → Bool) (xs : List α) (reverse : Bool) : List α × Nat :=
   if xs.length < 2 then (xs, 0)
   else
@@ -499,7 +499,7 @@ def listSort (lt : α → α → Bool) (xs : List α) (reverse : Bool := false) 
   (listSortCnt lt xs reverse).1
 
 /-- `list.sort(key=f, reverse=reverse)`: the keys are computed once
-(`listobject.c:2948-2959`) and sorted with the items moved in lockstep (the
+(`listobject.c:3013-3024`) and sorted with the items moved in lockstep (the
 `sortslice` `values` array). -/
 def listSortKeyCnt {κ : Type} (f : α → κ) (lt : κ → κ → Bool) (xs : List α) (reverse : Bool) :
     List α × Nat :=

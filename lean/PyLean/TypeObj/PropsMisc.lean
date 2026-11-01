@@ -10,7 +10,7 @@ namespace PyLean.TypeObj
 /-! ## repr, str, hash -/
 
 /-- `repr()` and `str()` enforce a string result, for every `__repr__`/`__str__`,
-`Objects/object.c:788`, `:831`. -/
+`Objects/object.c:791`, `:833`. -/
 def ReprMustReturnStr : Prop :=
   ∀ (rt : Rt) (v r : Val) (f : SlotFn) (w w1 : World),
     slotOf w (typeOf w v) .tp_repr = some f →
@@ -35,14 +35,14 @@ theorem strMustReturnStr_proven : StrMustReturnStr := by
   | str s => exact (h0 s rfl).elim
   | _ => simp [pyStr, h1, h2, h3]
 
-/-- `str(s)` of an exact `str` is `s`, `Objects/object.c:806`. -/
+/-- `str(s)` of an exact `str` is `s`, `Objects/object.c:808`. -/
 def StrExactShortcut : Prop := ∀ (rt : Rt) (s : String) (w : World), pyStr rt (.str s) w = .ok s w
 
 theorem strExactShortcut_proven : StrExactShortcut := by
   intro rt s w
   simp [pyStr]
 
-/-- A type with no `tp_hash` is unhashable, `Objects/object.c:1170`. -/
+/-- A type with no `tp_hash` is unhashable, `Objects/object.c:1176`. -/
 def HashNoSlot : Prop :=
   ∀ (rt : Rt) (v : Val) (w : World),
     slotOf w (typeOf w v) .tp_hash = none →
@@ -76,7 +76,7 @@ theorem attrContextOnlyAttributeError_proven : AttrContextOnlyAttributeError := 
   simp [setAttributeErrorContext, h]
 
 /-- A type without `tp_setattro` cannot be assigned to: the messages of
-`Objects/object.c:1472-1485`. -/
+`Objects/object.c:1550-1563`. -/
 def SetAttrNoSlot : Prop :=
   ∀ (rt : Rt) (v x : Val) (n : Name) (w : World),
     slotOf w (typeOf w v) .tp_setattro = none →
@@ -106,7 +106,7 @@ theorem getMethodDescriptor_proven : GetMethodDescriptor := by
   · intro h; simp [pyGetMethod, h1, h2, h3, h]
   · intro h; simp [pyGetMethod, h1, h2, h3, h]
 
-/-- `__dict__` must be set to a dict, `Objects/typeobject.c:3767`. -/
+/-- `__dict__` must be set to a dict, `Objects/typeobject.c:4062`. -/
 def SetDictRequiresDict : Prop :=
   ∀ (obj v : Val) (w : World),
     dictOf w v = none →
@@ -117,7 +117,7 @@ theorem setDictRequiresDict_proven : SetDictRequiresDict := by
   intro obj v w h
   simp [objectSetDict, h]
 
-/-- `__dict__` access on an object with no dict raises, `Objects/dictobject.c:7616`. -/
+/-- `__dict__` access on an object with no dict raises, `Objects/dictobject.c:8067`. -/
 def GetDictRequiresDictPtr : Prop :=
   ∀ (obj : Val) (w : World),
     hasDictPtr w obj = false →
@@ -182,7 +182,7 @@ theorem lengthHintNotImplemented_proven : LengthHintNotImplemented := by
   intro rt o hint dflt w w1 w2 h1 h2 h3
   simp [pyLengthHint, h1, h2, catchMatch, h3]
 
-/-- `o[k] = v` prefers `mp_ass_subscript`, `Objects/abstract.c:233-238`. -/
+/-- `o[k] = v` prefers `mp_ass_subscript`, `Objects/abstract.c:243-248`. -/
 def SetItemMappingFirst : Prop :=
   ∀ (rt : Rt) (o k : Val) (value : Option Val) (f : SlotFn) (w : World),
     slotIn w o .mp_ass_subscript = some f →
@@ -207,7 +207,7 @@ theorem sequenceSetItemNegative_proven : SequenceSetItemNegative := by
 
 /-- **`ternary_op`**: same-type operands use one slot; the third operand's slot is tried
 last, and a type error names two or three types according to `z is None`,
-`Objects/abstract.c:1075-1110`. -/
+`Objects/abstract.c:1085-1120`. -/
 def TernaryNoSlots : Prop :=
   ∀ (rt : Rt) (v u : Val) (name : String) (w : World),
     slotIn w v .nb_power = none → slotIn w u .nb_power = none →
@@ -220,7 +220,7 @@ theorem ternaryNoSlots_proven : TernaryNoSlots := by
   simp [ternaryOp, h1, h2, h3, Val.is]
 
 /-- `x += y` tries `__iadd__` first; a non-`NotImplemented` result is final and `+` never
-runs, `Objects/abstract.c:1224-1235`. -/
+runs, `Objects/abstract.c:1234-1245`. -/
 def InPlaceFirst : Prop :=
   ∀ (rt : Rt) (v u r : Val) (w w1 : World) (islot s : Slot),
     slotIn w v islot = some .generic →
@@ -331,7 +331,7 @@ theorem isinstanceEmptyTuple_proven : IsinstanceEmptyTuple := by
 /-! ## Wrappers -/
 
 /-- `wrap_next` raises `StopIteration` when the slot returns NULL with no exception,
-`Objects/typeobject.c:9696`. -/
+`Objects/typeobject.c:10388`. -/
 def WrapNextStops : Prop :=
   ∀ (rt : Rt) (p : SlotDef) (f : SlotFn) (self : Val) (w w1 : World),
     p.wrapper = some .next → callIterNext rt f self w = .ok none w1 →
@@ -341,7 +341,7 @@ theorem wrapNextStops_proven : WrapNextStops := by
   intro rt p f self w w1 h1 h2
   simp [wrapperApply, h1, checkNumArgs, h2]
 
-/-- `__get__(None, None)` is refused, `Objects/typeobject.c:9714`. -/
+/-- `__get__(None, None)` is refused, `Objects/typeobject.c:10406`. -/
 def WrapDescrGetNoneNone : Prop :=
   ∀ (rt : Rt) (p : SlotDef) (f : SlotFn) (self : Val) (w : World),
     p.wrapper = some .descrGet →
@@ -361,7 +361,7 @@ theorem hackcheckInstances_proven : HackcheckInstances := by
   intro self f what w h
   simp [hackcheck, h]
 
-/-- `getindex`: non-negative indices pass through, `Objects/typeobject.c:9404`. -/
+/-- `getindex`: non-negative indices pass through, `Objects/typeobject.c:10096`. -/
 def GetIndexNonNegative : Prop :=
   ∀ (rt : Rt) (self arg : Val) (i : Int) (w w1 : World),
     numberAsSsize rt arg (some B.OverflowError) w = .ok i w1 → 0 ≤ i →
@@ -390,7 +390,7 @@ theorem slotReprDefault_proven : SlotReprDefault := by
   simp [slotTpRepr, maybeCallSpecial, lookupMethodEx, h]
 
 /-- `__ipow__` is called with two arguments: `slot_nb_inplace_power` drops the third
-operand, `Objects/typeobject.c:10270-10274`. -/
+operand, `Objects/typeobject.c:10971-10975`. -/
 def InplacePowerTwoArgs : Prop :=
   ∀ (rt : Rt) (v u z r : Val) (w w1 : World),
     slotIn w v .nb_inplace_power = some .generic →
@@ -408,7 +408,7 @@ theorem inplacePowerTwoArgs_proven : InplacePowerTwoArgs := by
 /-! ## `super` -/
 
 /-- `supercheck`: a class that is a subclass of `type` gives itself; an instance gives its
-type, `Objects/typeobject.c:11973-11980`. -/
+type, `Objects/typeobject.c:12826-12833`. -/
 def SupercheckCases : Prop :=
   ∀ (rt : Rt) (ty oa : Addr) (obj : Val) (w : World),
     (asType w obj = some oa → isSubtype w oa ty = true → supercheck rt ty obj w = .ok oa w) ∧
@@ -422,7 +422,7 @@ theorem supercheckCases_proven : SupercheckCases := by
   · intro h1 h2; simp [supercheck, h1, h2]
 
 /-- An already bound `super` object ignores `__get__`; an unbound one binds,
-`Objects/typeobject.c:12038`. -/
+`Objects/typeobject.c:12891`. -/
 def SuperGetBound : Prop :=
   ∀ (rt : Rt) (self o v : Val) (ty ot : Option Addr) (w : World),
     payloadOf w self = some (.super ty (some o) ot) →
@@ -444,7 +444,7 @@ theorem compatibleReflexive_proven : CompatibleReflexive := by
   simp [compatibleForAssignment]
 
 /-- `check_set_special_type_attr`: the special attributes of an immutable type cannot be
-set, `Objects/typeobject.c:1421`. -/
+set, `Objects/typeobject.c@3.14.7:1421`. -/
 def TypeDocSet : Prop :=
   ∀ (t : Addr) (v : Option Val) (name : String) (w : World),
     (tdata w t).immutable = true →

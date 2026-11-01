@@ -362,8 +362,8 @@ theorem tailmatch_str_bytes (s sub : Seq) (st en : Int) (fwd : Bool) :
        subst h0; simp [matchAt_nil])
     | (congr 1; omega)
 
-/-- `str.startswith`/`endswith` (`tailmatch`, unicodeobject.c:9946-10007) and
-`bytes.startswith`/`endswith` (`tailmatch`, bytes_methods.c:640-686) are
+/-- `str.startswith`/`endswith` (`tailmatch`, unicodeobject.c:9711-9772) and
+`bytes.startswith`/`endswith` (`tailmatch`, bytes_methods.c:638-684) are
 written differently but agree for every receiver, prefix or tuple of
 prefixes, and `start`/`end`. -/
 def TailmatchStrBytes : Prop :=

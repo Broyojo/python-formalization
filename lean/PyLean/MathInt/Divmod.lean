@@ -28,7 +28,7 @@ theorem digitCount_zero : digitCount 0 = 0 := by decide
 theorem natAbs_cases (v : Int) : ∃ A : Nat, v = A ∨ v = -(A : Int) :=
   ⟨v.natAbs, Int.natAbs_eq v⟩
 
-/-- The single-digit fast path, longobject.c:4275-4315. -/
+/-- The single-digit fast path, longobject.c:4378-4418. -/
 theorem fastDivmod_floor (v w : Int) (hv : v ≠ 0) (hw : w ≠ 0) :
     IsFloorDivmod v w (fastDivmod v w).1 (fastDivmod v w).2 := by
   obtain ⟨A, hA | hA⟩ := natAbs_cases v <;> obtain ⟨B, hB | hB⟩ := natAbs_cases w <;>

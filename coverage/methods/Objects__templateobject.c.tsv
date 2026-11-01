@@ -8,10 +8,10 @@ Objects/templateobject.c	186	191	template_dealloc	template_dealloc(PyObject *op)
 Objects/templateobject.c	194	200	template_clear	template_clear(PyObject *op)	todo		
 Objects/templateobject.c	203	209	template_traverse	template_traverse(PyObject *op, visitproc visit, void *arg)	todo		
 Objects/templateobject.c	212	219	template_repr	template_repr(PyObject *op)	todo		
-Objects/templateobject.c	222	248	template_iter	template_iter(PyObject *op)	todo		
-Objects/templateobject.c	251	279	template_strings_concat	template_strings_concat(PyObject *left, PyObject *right)	todo		
-Objects/templateobject.c	282	299	template_concat_templates	template_concat_templates(templateobject *self, templateobject *other)	todo		
-Objects/templateobject.c	302	312	_PyTemplate_Concat	_PyTemplate_Concat(PyObject *self, PyObject *other)	todo		
-Objects/templateobject.c	315	331	template_values_get	template_values_get(PyObject *op, void *Py_UNUSED(data))	todo		
-Objects/templateobject.c	350	370	template_reduce	template_reduce(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
-Objects/templateobject.c	405	416	_PyTemplate_Build	_PyTemplate_Build(PyObject *strings, PyObject *interpolations)	todo		
+Objects/templateobject.c	222	250	template_iter	template_iter(PyObject *op)	todo		changed-in-3.15:
+Objects/templateobject.c	253	281	template_strings_concat	template_strings_concat(PyObject *left, PyObject *right)	todo		
+Objects/templateobject.c	284	301	template_concat_templates	template_concat_templates(templateobject *self, templateobject *other)	todo		
+Objects/templateobject.c	304	314	_PyTemplate_Concat	_PyTemplate_Concat(PyObject *self, PyObject *other)	todo		
+Objects/templateobject.c	317	333	template_values_get	template_values_get(PyObject *op, void *Py_UNUSED(data))	todo		
+Objects/templateobject.c	352	372	template_reduce	template_reduce(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
+Objects/templateobject.c	407	418	_PyTemplate_Build	_PyTemplate_Build(PyObject *strings, PyObject *interpolations)	todo		

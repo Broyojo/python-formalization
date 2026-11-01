@@ -9,4 +9,6 @@ Modules/_testcapi/abstract.c	133	140	pyiter_next	pyiter_next(PyObject *self, PyO
 Modules/_testcapi/abstract.c	143	157	pyiter_nextitem	pyiter_nextitem(PyObject *self, PyObject *iter)	excluded		test-support: only for CPython's own tests
 Modules/_testcapi/abstract.c	161	165	sequence_fast_get_size	sequence_fast_get_size(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
 Modules/_testcapi/abstract.c	169	178	sequence_fast_get_item	sequence_fast_get_item(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testcapi/abstract.c	198	205	_PyTestCapi_Init_Abstract	_PyTestCapi_Init_Abstract(PyObject *m)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/abstract.c	182	195	object_setattr_null_exc	object_setattr_null_exc(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/abstract.c	199	214	object_setattrstring_null_exc	object_setattrstring_null_exc(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/abstract.c	236	243	_PyTestCapi_Init_Abstract	_PyTestCapi_Init_Abstract(PyObject *m)	excluded		test-support: only for CPython's own tests

@@ -1,106 +1,106 @@
 file	line	endline	name	signature	status	entry	note
-Objects/typevarobject.c	72	75	NoDefault_repr	NoDefault_repr(PyObject *op)	todo		
-Objects/typevarobject.c	78	81	NoDefault_reduce	NoDefault_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
-Objects/typevarobject.c	89	96	nodefault_new	nodefault_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)	todo		
-Objects/typevarobject.c	99	106	nodefault_dealloc	nodefault_dealloc(PyObject *nodefault)	todo		
-Objects/typevarobject.c	134	145	constevaluator_dealloc	constevaluator_dealloc(PyObject *self)	todo		
-Objects/typevarobject.c	148	153	constevaluator_traverse	constevaluator_traverse(PyObject *self, visitproc visit, void *arg)	todo		
-Objects/typevarobject.c	156	161	constevaluator_clear	constevaluator_clear(PyObject *self)	todo		
-Objects/typevarobject.c	164	168	constevaluator_repr	constevaluator_repr(PyObject *self)	todo		
-Objects/typevarobject.c	171	219	constevaluator_call	constevaluator_call(PyObject *self, PyObject *args, PyObject *kwargs)	todo		
-Objects/typevarobject.c	222	234	constevaluator_alloc	constevaluator_alloc(PyObject *value)	todo		
-Objects/typevarobject.c	262	326	_Py_typing_type_repr	_Py_typing_type_repr(PyUnicodeWriter *writer, PyObject *p)	todo		
-Objects/typevarobject.c	330	345	call_typing_func_object	call_typing_func_object(const char *name, PyObject **args, size_t nargs)	todo		
-Objects/typevarobject.c	348	362	type_check	type_check(PyObject *arg, const char *msg)	todo		
-Objects/typevarobject.c	373	382	make_union	make_union(PyObject *self, PyObject *other)	todo		
-Objects/typevarobject.c	385	400	caller	caller(void)	todo		
-Objects/typevarobject.c	403	418	unpack	unpack(PyObject *self)	todo		
-Objects/typevarobject.c	421	432	contains_typevartuple	contains_typevartuple(PyTupleObject *params)	todo		
-Objects/typevarobject.c	435	465	unpack_typevartuples	unpack_typevartuples(PyObject *params)	todo		
-Objects/typevarobject.c	468	487	typevar_dealloc	typevar_dealloc(PyObject *self)	todo		
-Objects/typevarobject.c	490	502	typevar_traverse	typevar_traverse(PyObject *self, visitproc visit, void *arg)	todo		
-Objects/typevarobject.c	505	517	typevar_clear	typevar_clear(PyObject *op)	todo		
-Objects/typevarobject.c	520	530	typevar_repr	typevar_repr(PyObject *self)	todo		
-Objects/typevarobject.c	541	553	typevar_bound	typevar_bound(PyObject *op, void *Py_UNUSED(closure))	todo		
-Objects/typevarobject.c	556	568	typevar_default	typevar_default(PyObject *op, void *Py_UNUSED(closure))	todo		
-Objects/typevarobject.c	571	583	typevar_constraints	typevar_constraints(PyObject *op, void *Py_UNUSED(closure))	todo		
-Objects/typevarobject.c	586	596	typevar_evaluate_bound	typevar_evaluate_bound(PyObject *op, void *Py_UNUSED(closure))	todo		
-Objects/typevarobject.c	599	609	typevar_evaluate_constraints	typevar_evaluate_constraints(PyObject *op, void *Py_UNUSED(closure))	todo		
-Objects/typevarobject.c	612	622	typevar_evaluate_default	typevar_evaluate_default(PyObject *op, void *Py_UNUSED(closure))	todo		
-Objects/typevarobject.c	635	670	typevar_alloc	typevar_alloc(PyObject *name, PyObject *bound, PyObject *evaluate_bound, PyObject *constraints, PyObject *evaluate_constraints, PyObject *default_value, bool covariant, bool contravariant, bool infer_variance, PyObject *module)	todo		
-Objects/typevarobject.c	688	744	typevar_new_impl	typevar_new_impl(PyTypeObject *type, PyObject *name, PyObject *constraints, PyObject *bound, PyObject *default_value, int covariant, int contravariant, int infer_variance) /*[clinic end generated code: output=d2b248ff074eaab6 input=1b5b62e40c92c167]*/	todo		
-Objects/typevarobject.c	755	761	typevar_typing_subst_impl	typevar_typing_subst_impl(typevarobject *self, PyObject *arg) /*[clinic end generated code: output=c76ced134ed8f4e1 input=9e87b57f0fc59b92]*/	todo		
-Objects/typevarobject.c	773	821	typevar_typing_prepare_subst_impl	typevar_typing_prepare_subst_impl(typevarobject *self, PyObject *alias, PyObject *args) /*[clinic end generated code: output=82c3f4691e0ded22 input=201a750415d14ffb]*/	todo		
-Objects/typevarobject.c	829	833	typevar_reduce_impl	typevar_reduce_impl(typevarobject *self) /*[clinic end generated code: output=02e5c55d7cf8a08f input=de76bc95f04fb9ff]*/	todo		
-Objects/typevarobject.c	842	850	typevar_has_default_impl	typevar_has_default_impl(typevarobject *self) /*[clinic end generated code: output=76bf0b8dc98b97dd input=31024aa030761cf6]*/	todo		
-Objects/typevarobject.c	853	858	typevar_mro_entries	typevar_mro_entries(PyObject *self, PyObject *args)	todo		
-Objects/typevarobject.c	947	958	paramspecattr_dealloc	paramspecattr_dealloc(PyObject *self)	todo		
-Objects/typevarobject.c	961	966	paramspecattr_traverse	paramspecattr_traverse(PyObject *self, visitproc visit, void *arg)	todo		
-Objects/typevarobject.c	969	974	paramspecattr_clear	paramspecattr_clear(PyObject *op)	todo		
-Objects/typevarobject.c	977	988	paramspecattr_richcompare	paramspecattr_richcompare(PyObject *a, PyObject *b, int op)	todo		
-Objects/typevarobject.c	996	1005	paramspecattr_new	paramspecattr_new(PyTypeObject *tp, PyObject *origin)	todo		
-Objects/typevarobject.c	1008	1017	paramspecargs_repr	paramspecargs_repr(PyObject *self)	todo		
-Objects/typevarobject.c	1030	1034	paramspecargs_new_impl	paramspecargs_new_impl(PyTypeObject *type, PyObject *origin) /*[clinic end generated code: output=9a1463dc8942fe4e input=3596a0bb6183c208]*/	todo		
-Objects/typevarobject.c	1037	1042	paramspecargs_mro_entries	paramspecargs_mro_entries(PyObject *self, PyObject *args)	todo		
-Objects/typevarobject.c	1088	1098	paramspeckwargs_repr	paramspeckwargs_repr(PyObject *self)	todo		
-Objects/typevarobject.c	1110	1114	paramspeckwargs_new_impl	paramspeckwargs_new_impl(PyTypeObject *type, PyObject *origin) /*[clinic end generated code: output=277b11967ebaf4ab input=981bca9b0cf9e40a]*/	todo		
-Objects/typevarobject.c	1117	1122	paramspeckwargs_mro_entries	paramspeckwargs_mro_entries(PyObject *self, PyObject *args)	todo		
-Objects/typevarobject.c	1168	1184	paramspec_dealloc	paramspec_dealloc(PyObject *self)	todo		
-Objects/typevarobject.c	1187	1196	paramspec_traverse	paramspec_traverse(PyObject *self, visitproc visit, void *arg)	todo		
-Objects/typevarobject.c	1199	1208	paramspec_clear	paramspec_clear(PyObject *op)	todo		
-Objects/typevarobject.c	1211	1221	paramspec_repr	paramspec_repr(PyObject *self)	todo		
-Objects/typevarobject.c	1233	1237	paramspec_args	paramspec_args(PyObject *self, void *Py_UNUSED(closure))	todo		
-Objects/typevarobject.c	1240	1244	paramspec_kwargs	paramspec_kwargs(PyObject *self, void *Py_UNUSED(closure))	todo		
-Objects/typevarobject.c	1247	1259	paramspec_default	paramspec_default(PyObject *op, void *Py_UNUSED(closure))	todo		
-Objects/typevarobject.c	1262	1272	paramspec_evaluate_default	paramspec_evaluate_default(PyObject *op, void *Py_UNUSED(closure))	todo		
-Objects/typevarobject.c	1283	1306	paramspec_alloc	paramspec_alloc(PyObject *name, PyObject *bound, PyObject *default_value, bool covariant, bool contravariant, bool infer_variance, PyObject *module)	todo		
-Objects/typevarobject.c	1324	1353	paramspec_new_impl	paramspec_new_impl(PyTypeObject *type, PyObject *name, PyObject *bound, PyObject *default_value, int covariant, int contravariant, int infer_variance) /*[clinic end generated code: output=47ca9d63fa5a094d input=495e1565bc067ab9]*/	todo		
-Objects/typevarobject.c	1365	1371	paramspec_typing_subst_impl	paramspec_typing_subst_impl(paramspecobject *self, PyObject *arg) /*[clinic end generated code: output=803e1ade3f13b57d input=2d5b5e3d4a717189]*/	todo		
-Objects/typevarobject.c	1383	1391	paramspec_typing_prepare_subst_impl	paramspec_typing_prepare_subst_impl(paramspecobject *self, PyObject *alias, PyObject *args) /*[clinic end generated code: output=95449d630a2adb9a input=6df6f9fef3e150da]*/	todo		
-Objects/typevarobject.c	1399	1403	paramspec_reduce_impl	paramspec_reduce_impl(paramspecobject *self) /*[clinic end generated code: output=b83398674416db27 input=5bf349f0d5dd426c]*/	todo		
-Objects/typevarobject.c	1411	1419	paramspec_has_default_impl	paramspec_has_default_impl(paramspecobject *self) /*[clinic end generated code: output=daaae7467a6a4368 input=2112e97eeb76cd59]*/	todo		
-Objects/typevarobject.c	1422	1427	paramspec_mro_entries	paramspec_mro_entries(PyObject *self, PyObject *args)	todo		
-Objects/typevarobject.c	1518	1532	typevartuple_dealloc	typevartuple_dealloc(PyObject *self)	todo		
+Objects/typevarobject.c	78	81	NoDefault_repr	NoDefault_repr(PyObject *op)	todo		
+Objects/typevarobject.c	84	87	NoDefault_reduce	NoDefault_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
+Objects/typevarobject.c	95	102	nodefault_new	nodefault_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)	todo		
+Objects/typevarobject.c	105	112	nodefault_dealloc	nodefault_dealloc(PyObject *nodefault)	todo		
+Objects/typevarobject.c	140	151	constevaluator_dealloc	constevaluator_dealloc(PyObject *self)	todo		
+Objects/typevarobject.c	154	159	constevaluator_traverse	constevaluator_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/typevarobject.c	162	167	constevaluator_clear	constevaluator_clear(PyObject *self)	todo		
+Objects/typevarobject.c	170	174	constevaluator_repr	constevaluator_repr(PyObject *self)	todo		
+Objects/typevarobject.c	177	225	constevaluator_call	constevaluator_call(PyObject *self, PyObject *args, PyObject *kwargs)	todo		
+Objects/typevarobject.c	228	240	constevaluator_alloc	constevaluator_alloc(PyObject *value)	todo		
+Objects/typevarobject.c	268	332	_Py_typing_type_repr	_Py_typing_type_repr(PyUnicodeWriter *writer, PyObject *p)	todo		
+Objects/typevarobject.c	336	351	call_typing_func_object	call_typing_func_object(const char *name, PyObject **args, size_t nargs)	todo		
+Objects/typevarobject.c	354	368	type_check	type_check(PyObject *arg, const char *msg)	todo		
+Objects/typevarobject.c	379	388	make_union	make_union(PyObject *self, PyObject *other)	todo		changed-in-3.15:
+Objects/typevarobject.c	391	406	caller	caller(void)	todo		
+Objects/typevarobject.c	409	424	unpack	unpack(PyObject *self)	todo		
+Objects/typevarobject.c	427	438	contains_typevartuple	contains_typevartuple(PyTupleObject *params)	todo		
+Objects/typevarobject.c	441	471	unpack_typevartuples	unpack_typevartuples(PyObject *params)	todo		
+Objects/typevarobject.c	474	493	typevar_dealloc	typevar_dealloc(PyObject *self)	todo		
+Objects/typevarobject.c	496	508	typevar_traverse	typevar_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/typevarobject.c	511	523	typevar_clear	typevar_clear(PyObject *op)	todo		
+Objects/typevarobject.c	526	536	typevar_repr	typevar_repr(PyObject *self)	todo		
+Objects/typevarobject.c	547	559	typevar_bound	typevar_bound(PyObject *op, void *Py_UNUSED(closure))	todo		
+Objects/typevarobject.c	562	574	typevar_default	typevar_default(PyObject *op, void *Py_UNUSED(closure))	todo		
+Objects/typevarobject.c	577	589	typevar_constraints	typevar_constraints(PyObject *op, void *Py_UNUSED(closure))	todo		
+Objects/typevarobject.c	592	602	typevar_evaluate_bound	typevar_evaluate_bound(PyObject *op, void *Py_UNUSED(closure))	todo		
+Objects/typevarobject.c	605	615	typevar_evaluate_constraints	typevar_evaluate_constraints(PyObject *op, void *Py_UNUSED(closure))	todo		
+Objects/typevarobject.c	618	628	typevar_evaluate_default	typevar_evaluate_default(PyObject *op, void *Py_UNUSED(closure))	todo		
+Objects/typevarobject.c	641	676	typevar_alloc	typevar_alloc(PyObject *name, PyObject *bound, PyObject *evaluate_bound, PyObject *constraints, PyObject *evaluate_constraints, PyObject *default_value, bool covariant, bool contravariant, bool infer_variance, PyObject *module)	todo		
+Objects/typevarobject.c	694	750	typevar_new_impl	typevar_new_impl(PyTypeObject *type, PyObject *name, PyObject *constraints, PyObject *bound, PyObject *default_value, int covariant, int contravariant, int infer_variance) /*[clinic end generated code: output=d2b248ff074eaab6 input=1b5b62e40c92c167]*/	todo		
+Objects/typevarobject.c	761	767	typevar_typing_subst_impl	typevar_typing_subst_impl(typevarobject *self, PyObject *arg) /*[clinic end generated code: output=c76ced134ed8f4e1 input=9e87b57f0fc59b92]*/	todo		
+Objects/typevarobject.c	779	827	typevar_typing_prepare_subst_impl	typevar_typing_prepare_subst_impl(typevarobject *self, PyObject *alias, PyObject *args) /*[clinic end generated code: output=82c3f4691e0ded22 input=201a750415d14ffb]*/	todo		
+Objects/typevarobject.c	835	839	typevar_reduce_impl	typevar_reduce_impl(typevarobject *self) /*[clinic end generated code: output=02e5c55d7cf8a08f input=de76bc95f04fb9ff]*/	todo		
+Objects/typevarobject.c	848	856	typevar_has_default_impl	typevar_has_default_impl(typevarobject *self) /*[clinic end generated code: output=76bf0b8dc98b97dd input=31024aa030761cf6]*/	todo		
+Objects/typevarobject.c	859	864	typevar_mro_entries	typevar_mro_entries(PyObject *self, PyObject *args)	todo		
+Objects/typevarobject.c	953	965	paramspecattr_dealloc	paramspecattr_dealloc(PyObject *self)	todo		changed-in-3.15:
+Objects/typevarobject.c	968	973	paramspecattr_traverse	paramspecattr_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/typevarobject.c	976	981	paramspecattr_clear	paramspecattr_clear(PyObject *op)	todo		
+Objects/typevarobject.c	984	995	paramspecattr_richcompare	paramspecattr_richcompare(PyObject *a, PyObject *b, int op)	todo		
+Objects/typevarobject.c	1003	1012	paramspecattr_new	paramspecattr_new(PyTypeObject *tp, PyObject *origin)	todo		
+Objects/typevarobject.c	1015	1024	paramspecargs_repr	paramspecargs_repr(PyObject *self)	todo		
+Objects/typevarobject.c	1037	1041	paramspecargs_new_impl	paramspecargs_new_impl(PyTypeObject *type, PyObject *origin) /*[clinic end generated code: output=9a1463dc8942fe4e input=3596a0bb6183c208]*/	todo		
+Objects/typevarobject.c	1044	1049	paramspecargs_mro_entries	paramspecargs_mro_entries(PyObject *self, PyObject *args)	todo		
+Objects/typevarobject.c	1095	1105	paramspeckwargs_repr	paramspeckwargs_repr(PyObject *self)	todo		
+Objects/typevarobject.c	1117	1121	paramspeckwargs_new_impl	paramspeckwargs_new_impl(PyTypeObject *type, PyObject *origin) /*[clinic end generated code: output=277b11967ebaf4ab input=981bca9b0cf9e40a]*/	todo		
+Objects/typevarobject.c	1124	1129	paramspeckwargs_mro_entries	paramspeckwargs_mro_entries(PyObject *self, PyObject *args)	todo		
+Objects/typevarobject.c	1175	1191	paramspec_dealloc	paramspec_dealloc(PyObject *self)	todo		
+Objects/typevarobject.c	1194	1203	paramspec_traverse	paramspec_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/typevarobject.c	1206	1215	paramspec_clear	paramspec_clear(PyObject *op)	todo		
+Objects/typevarobject.c	1218	1228	paramspec_repr	paramspec_repr(PyObject *self)	todo		
+Objects/typevarobject.c	1240	1244	paramspec_args	paramspec_args(PyObject *self, void *Py_UNUSED(closure))	todo		
+Objects/typevarobject.c	1247	1251	paramspec_kwargs	paramspec_kwargs(PyObject *self, void *Py_UNUSED(closure))	todo		
+Objects/typevarobject.c	1254	1266	paramspec_default	paramspec_default(PyObject *op, void *Py_UNUSED(closure))	todo		
+Objects/typevarobject.c	1269	1279	paramspec_evaluate_default	paramspec_evaluate_default(PyObject *op, void *Py_UNUSED(closure))	todo		
+Objects/typevarobject.c	1290	1313	paramspec_alloc	paramspec_alloc(PyObject *name, PyObject *bound, PyObject *default_value, bool covariant, bool contravariant, bool infer_variance, PyObject *module)	todo		
+Objects/typevarobject.c	1331	1352	paramspec_new_impl	paramspec_new_impl(PyTypeObject *type, PyObject *name, PyObject *bound, PyObject *default_value, int covariant, int contravariant, int infer_variance) /*[clinic end generated code: output=47ca9d63fa5a094d input=495e1565bc067ab9]*/	todo		changed-in-3.15:
+Objects/typevarobject.c	1364	1370	paramspec_typing_subst_impl	paramspec_typing_subst_impl(paramspecobject *self, PyObject *arg) /*[clinic end generated code: output=803e1ade3f13b57d input=2d5b5e3d4a717189]*/	todo		
+Objects/typevarobject.c	1382	1390	paramspec_typing_prepare_subst_impl	paramspec_typing_prepare_subst_impl(paramspecobject *self, PyObject *alias, PyObject *args) /*[clinic end generated code: output=95449d630a2adb9a input=6df6f9fef3e150da]*/	todo		
+Objects/typevarobject.c	1398	1402	paramspec_reduce_impl	paramspec_reduce_impl(paramspecobject *self) /*[clinic end generated code: output=b83398674416db27 input=5bf349f0d5dd426c]*/	todo		
+Objects/typevarobject.c	1410	1418	paramspec_has_default_impl	paramspec_has_default_impl(paramspecobject *self) /*[clinic end generated code: output=daaae7467a6a4368 input=2112e97eeb76cd59]*/	todo		
+Objects/typevarobject.c	1421	1426	paramspec_mro_entries	paramspec_mro_entries(PyObject *self, PyObject *args)	todo		
+Objects/typevarobject.c	1517	1532	typevartuple_dealloc	typevartuple_dealloc(PyObject *self)	todo		changed-in-3.15:
 Objects/typevarobject.c	1535	1550	unpack_iter	unpack_iter(PyObject *self)	todo		
-Objects/typevarobject.c	1553	1557	typevartuple_repr	typevartuple_repr(PyObject *self)	todo		
-Objects/typevarobject.c	1565	1583	typevartuple_alloc	typevartuple_alloc(PyObject *name, PyObject *module, PyObject *default_value)	todo		
-Objects/typevarobject.c	1597	1608	typevartuple_impl	typevartuple_impl(PyTypeObject *type, PyObject *name, PyObject *default_value) /*[clinic end generated code: output=9d6b76dfe95aae51 input=e149739929a866d0]*/	todo		
-Objects/typevarobject.c	1619	1624	typevartuple_typing_subst_impl	typevartuple_typing_subst_impl(typevartupleobject *self, PyObject *arg) /*[clinic end generated code: output=814316519441cd76 input=3fcf2dfd9eee7945]*/	todo		
-Objects/typevarobject.c	1636	1644	typevartuple_typing_prepare_subst_impl	typevartuple_typing_prepare_subst_impl(typevartupleobject *self, PyObject *alias, PyObject *args) /*[clinic end generated code: output=ff999bc5b02036c1 input=685b149b0fc47556]*/	todo		
-Objects/typevarobject.c	1652	1656	typevartuple_reduce_impl	typevartuple_reduce_impl(typevartupleobject *self) /*[clinic end generated code: output=3215bc0477913d20 input=3018a4d66147e807]*/	todo		
-Objects/typevarobject.c	1665	1673	typevartuple_has_default_impl	typevartuple_has_default_impl(typevartupleobject *self) /*[clinic end generated code: output=4895f602f56a5e29 input=9ef3250ddb2c1851]*/	todo		
-Objects/typevarobject.c	1676	1681	typevartuple_mro_entries	typevartuple_mro_entries(PyObject *self, PyObject *args)	todo		
-Objects/typevarobject.c	1684	1692	typevartuple_traverse	typevartuple_traverse(PyObject *self, visitproc visit, void *arg)	todo		
-Objects/typevarobject.c	1695	1703	typevartuple_clear	typevartuple_clear(PyObject *self)	todo		
-Objects/typevarobject.c	1706	1718	typevartuple_default	typevartuple_default(PyObject *op, void *Py_UNUSED(closure))	todo		
-Objects/typevarobject.c	1721	1731	typevartuple_evaluate_default	typevartuple_evaluate_default(PyObject *op, void *Py_UNUSED(closure))	todo		
-Objects/typevarobject.c	1813	1817	_Py_make_typevar	_Py_make_typevar(PyObject *name, PyObject *evaluate_bound, PyObject *evaluate_constraints)	todo		
-Objects/typevarobject.c	1820	1824	_Py_make_paramspec	_Py_make_paramspec(PyThreadState *Py_UNUSED(ignored), PyObject *v)	todo		
-Objects/typevarobject.c	1827	1831	_Py_make_typevartuple	_Py_make_typevartuple(PyThreadState *Py_UNUSED(ignored), PyObject *v)	todo		
-Objects/typevarobject.c	1834	1849	get_type_param_default	get_type_param_default(PyThreadState *ts, PyObject *typeparam) {	todo		
-Objects/typevarobject.c	1852	1864	typealias_dealloc	typealias_dealloc(PyObject *self)	todo		
-Objects/typevarobject.c	1867	1878	typealias_get_value	typealias_get_value(typealiasobject *ta)	todo		
-Objects/typevarobject.c	1881	1885	typealias_repr	typealias_repr(PyObject *self)	todo		
-Objects/typevarobject.c	1893	1897	typealias_value	typealias_value(PyObject *self, void *Py_UNUSED(closure))	todo		
-Objects/typevarobject.c	1900	1908	typealias_evaluate_value	typealias_evaluate_value(PyObject *self, void *Py_UNUSED(closure))	todo		
-Objects/typevarobject.c	1911	1918	typealias_parameters	typealias_parameters(PyObject *self, void *Py_UNUSED(closure))	todo		
-Objects/typevarobject.c	1921	1928	typealias_type_params	typealias_type_params(PyObject *self, void *Py_UNUSED(closure))	todo		
-Objects/typevarobject.c	1931	1947	typealias_module	typealias_module(PyObject *self, void *Py_UNUSED(closure))	todo		
-Objects/typevarobject.c	1959	2000	typealias_check_type_params	typealias_check_type_params(PyObject *type_params, int *err) {	todo		
-Objects/typevarobject.c	2003	2015	typelias_convert_type_params	typelias_convert_type_params(PyObject *type_params)	todo		
-Objects/typevarobject.c	2018	2032	typealias_alloc	typealias_alloc(PyObject *name, PyObject *type_params, PyObject *compute_value, PyObject *value, PyObject *module)	todo		
-Objects/typevarobject.c	2035	2044	typealias_traverse	typealias_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Objects/typevarobject.c	2047	2056	typealias_clear	typealias_clear(PyObject *op)	todo		
-Objects/typevarobject.c	2064	2068	typealias_reduce_impl	typealias_reduce_impl(typealiasobject *self) /*[clinic end generated code: output=913724f92ad3b39b input=4f06fbd9472ec0f1]*/	todo		
-Objects/typevarobject.c	2071	2080	typealias_subscript	typealias_subscript(PyObject *op, PyObject *args)	todo		
-Objects/typevarobject.c	2101	2124	typealias_new_impl	typealias_new_impl(PyTypeObject *type, PyObject *name, PyObject *value, PyObject *type_params) /*[clinic end generated code: output=8920ce6bdff86f00 input=df163c34e17e1a35]*/	todo		
-Objects/typevarobject.c	2181	2191	_Py_make_typealias	_Py_make_typealias(PyThreadState* unused, PyObject *args)	todo		
-Objects/typevarobject.c	2230	2262	call_typing_args_kwargs	call_typing_args_kwargs(const char *name, PyTypeObject *cls, PyObject *args, PyObject *kwargs)	todo		
-Objects/typevarobject.c	2265	2269	generic_init_subclass	generic_init_subclass(PyObject *cls, PyObject *args, PyObject *kwargs)	todo		
-Objects/typevarobject.c	2272	2276	generic_class_getitem	generic_class_getitem(PyObject *cls, PyObject *args, PyObject *kwargs)	todo		
-Objects/typevarobject.c	2279	2292	_Py_subscript_generic	_Py_subscript_generic(PyThreadState* unused, PyObject *params)	todo		
-Objects/typevarobject.c	2305	2311	generic_dealloc	generic_dealloc(PyObject *self)	todo		
-Objects/typevarobject.c	2314	2318	generic_traverse	generic_traverse(PyObject *self, visitproc visit, void *arg)	todo		
-Objects/typevarobject.c	2337	2357	_Py_initialize_generic	int _Py_initialize_generic(PyInterpreterState *interp)	todo		
-Objects/typevarobject.c	2359	2368	_Py_clear_generic_types	void _Py_clear_generic_types(PyInterpreterState *interp)	todo		
-Objects/typevarobject.c	2371	2389	_Py_set_typeparam_default	_Py_set_typeparam_default(PyThreadState *ts, PyObject *typeparam, PyObject *evaluate_default)	todo		
+Objects/typevarobject.c	1553	1563	typevartuple_repr	typevartuple_repr(PyObject *self)	todo		changed-in-3.15:
+Objects/typevarobject.c	1575	1599	typevartuple_alloc	typevartuple_alloc(PyObject *name, PyObject *bound, PyObject *default_value, bool covariant, bool contravariant, bool infer_variance, PyObject *module)	todo		changed-in-3.15:
+Objects/typevarobject.c	1617	1638	typevartuple_impl	typevartuple_impl(PyTypeObject *type, PyObject *name, PyObject *bound, int covariant, int contravariant, int infer_variance, PyObject *default_value) /*[clinic end generated code: output=40bc9ca10f64e392 input=56e28c725a8da40b]*/	todo		changed-in-3.15:
+Objects/typevarobject.c	1649	1654	typevartuple_typing_subst_impl	typevartuple_typing_subst_impl(typevartupleobject *self, PyObject *arg) /*[clinic end generated code: output=814316519441cd76 input=3fcf2dfd9eee7945]*/	todo		
+Objects/typevarobject.c	1666	1674	typevartuple_typing_prepare_subst_impl	typevartuple_typing_prepare_subst_impl(typevartupleobject *self, PyObject *alias, PyObject *args) /*[clinic end generated code: output=ff999bc5b02036c1 input=685b149b0fc47556]*/	todo		
+Objects/typevarobject.c	1682	1686	typevartuple_reduce_impl	typevartuple_reduce_impl(typevartupleobject *self) /*[clinic end generated code: output=3215bc0477913d20 input=3018a4d66147e807]*/	todo		
+Objects/typevarobject.c	1695	1703	typevartuple_has_default_impl	typevartuple_has_default_impl(typevartupleobject *self) /*[clinic end generated code: output=4895f602f56a5e29 input=9ef3250ddb2c1851]*/	todo		
+Objects/typevarobject.c	1706	1711	typevartuple_mro_entries	typevartuple_mro_entries(PyObject *self, PyObject *args)	todo		
+Objects/typevarobject.c	1714	1723	typevartuple_traverse	typevartuple_traverse(PyObject *self, visitproc visit, void *arg)	todo		changed-in-3.15:
+Objects/typevarobject.c	1726	1735	typevartuple_clear	typevartuple_clear(PyObject *self)	todo		changed-in-3.15:
+Objects/typevarobject.c	1738	1750	typevartuple_default	typevartuple_default(PyObject *op, void *Py_UNUSED(closure))	todo		
+Objects/typevarobject.c	1753	1763	typevartuple_evaluate_default	typevartuple_evaluate_default(PyObject *op, void *Py_UNUSED(closure))	todo		
+Objects/typevarobject.c	1845	1849	_Py_make_typevar	_Py_make_typevar(PyObject *name, PyObject *evaluate_bound, PyObject *evaluate_constraints)	todo		
+Objects/typevarobject.c	1852	1856	_Py_make_paramspec	_Py_make_paramspec(PyThreadState *Py_UNUSED(ignored), PyObject *v)	todo		
+Objects/typevarobject.c	1859	1863	_Py_make_typevartuple	_Py_make_typevartuple(PyThreadState *Py_UNUSED(ignored), PyObject *v)	todo		changed-in-3.15:
+Objects/typevarobject.c	1866	1881	get_type_param_default	get_type_param_default(PyThreadState *ts, PyObject *typeparam) {	todo		
+Objects/typevarobject.c	1884	1897	typealias_dealloc	typealias_dealloc(PyObject *self)	todo		changed-in-3.15:
+Objects/typevarobject.c	1900	1920	typealias_get_value	typealias_get_value(typealiasobject *ta)	todo		changed-in-3.15:
+Objects/typevarobject.c	1923	1927	typealias_repr	typealias_repr(PyObject *self)	todo		changed-in-3.15:
+Objects/typevarobject.c	1936	1940	typealias_value	typealias_value(PyObject *self, void *Py_UNUSED(closure))	todo		
+Objects/typevarobject.c	1943	1951	typealias_evaluate_value	typealias_evaluate_value(PyObject *self, void *Py_UNUSED(closure))	todo		
+Objects/typevarobject.c	1954	1961	typealias_parameters	typealias_parameters(PyObject *self, void *Py_UNUSED(closure))	todo		
+Objects/typevarobject.c	1964	1971	typealias_type_params	typealias_type_params(PyObject *self, void *Py_UNUSED(closure))	todo		
+Objects/typevarobject.c	1974	1994	typealias_module	typealias_module(PyObject *self, void *Py_UNUSED(closure))	todo		changed-in-3.15:
+Objects/typevarobject.c	1997	2007	typealias_set_module	typealias_set_module(PyObject *self, PyObject *value, void *Py_UNUSED(closure))	todo		changed-in-3.15: new function
+Objects/typevarobject.c	2019	2060	typealias_check_type_params	typealias_check_type_params(PyObject *type_params, int *err) {	todo		
+Objects/typevarobject.c	2063	2075	typealias_convert_type_params	typealias_convert_type_params(PyObject *type_params)	todo		changed-in-3.15: new function
+Objects/typevarobject.c	2078	2093	typealias_alloc	typealias_alloc(PyObject *name, PyObject *qualname, PyObject *type_params, PyObject *compute_value, PyObject *value, PyObject *module)	todo		changed-in-3.15:
+Objects/typevarobject.c	2096	2106	typealias_traverse	typealias_traverse(PyObject *op, visitproc visit, void *arg)	todo		changed-in-3.15:
+Objects/typevarobject.c	2109	2119	typealias_clear	typealias_clear(PyObject *op)	todo		changed-in-3.15:
+Objects/typevarobject.c	2127	2131	typealias_reduce_impl	typealias_reduce_impl(typealiasobject *self) /*[clinic end generated code: output=913724f92ad3b39b input=4f06fbd9472ec0f1]*/	todo		
+Objects/typevarobject.c	2134	2143	typealias_subscript	typealias_subscript(PyObject *op, PyObject *args)	todo		
+Objects/typevarobject.c	2165	2199	typealias_new_impl	typealias_new_impl(PyTypeObject *type, PyObject *name, PyObject *value, PyObject *type_params, PyObject *qualname) /*[clinic end generated code: output=b7f6d9f1c577cd9c input=6516623275f87b5e]*/	todo		changed-in-3.15:
+Objects/typevarobject.c	2258	2275	_Py_make_typealias	_Py_make_typealias(PyThreadState* unused, PyObject *args)	todo		changed-in-3.15:
+Objects/typevarobject.c	2314	2346	call_typing_args_kwargs	call_typing_args_kwargs(const char *name, PyTypeObject *cls, PyObject *args, PyObject *kwargs)	todo		
+Objects/typevarobject.c	2349	2353	generic_init_subclass	generic_init_subclass(PyObject *cls, PyObject *args, PyObject *kwargs)	todo		
+Objects/typevarobject.c	2356	2360	generic_class_getitem	generic_class_getitem(PyObject *cls, PyObject *args, PyObject *kwargs)	todo		
+Objects/typevarobject.c	2363	2378	_Py_subscript_generic	_Py_subscript_generic(PyThreadState* unused, PyObject *params)	todo		changed-in-3.15:
+Objects/typevarobject.c	2391	2397	generic_dealloc	generic_dealloc(PyObject *self)	todo		
+Objects/typevarobject.c	2416	2436	_Py_initialize_generic	int _Py_initialize_generic(PyInterpreterState *interp)	todo		
+Objects/typevarobject.c	2438	2447	_Py_clear_generic_types	void _Py_clear_generic_types(PyInterpreterState *interp)	todo		
+Objects/typevarobject.c	2450	2468	_Py_set_typeparam_default	_Py_set_typeparam_default(PyThreadState *ts, PyObject *typeparam, PyObject *evaluate_default)	todo		

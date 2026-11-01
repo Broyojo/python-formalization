@@ -7,10 +7,10 @@ files: [Objects/descrobject.c]
 functions: ["property_copy", "property_init_impl"]
 summary: |
   `property_init_impl` stores the docstring in `prop_doc` only for exact `property`. For a
-  subclass it stores it in the instance `__dict__` instead (descrobject.c:1878-1909), so that
+  subclass it stores it in the instance `__dict__` instead (descrobject.c:1902-1933), so that
   it is not shadowed by `__doc__` in the class dict, and `prop_doc` stays NULL.
   `property_copy`, used by `.getter`, `.setter` and `.deleter`, still takes the doc from
-  `pold->prop_doc` (:1785), passes None, and the new object has no docstring:
+  `pold->prop_doc` (:1809), passes None, and the new object has no docstring:
 
       class P(property): pass
       p = P(None, None, None, "doc")
@@ -50,7 +50,7 @@ promised_by: |
   The twin behaviour of exact `property`; Doc/library/functions.rst, property: the returned
   property object "has an attribute ... a copy of the property with ..." the accessor changed.
 cause: |
-  Objects/descrobject.c:1785 reads `pold->prop_doc`; :1878-1909 leaves it NULL for
+  Objects/descrobject.c:1809 reads `pold->prop_doc`; :1902-1933 leaves it NULL for
   subclasses and writes `__doc__` through PyObject_SetAttr.
 possible_fix: |
   In property_copy, for a subclass read `__doc__` from the object with

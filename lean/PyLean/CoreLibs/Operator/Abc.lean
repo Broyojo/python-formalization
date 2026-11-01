@@ -54,7 +54,7 @@ def addNeg (s : AbcState) (c sub : Nat) : AbcState :=
   s.put c { d with neg := sub :: d.neg }
 
 mutual
-  /-- `_abc__abc_subclasscheck_impl`, Modules/_abc.c:705-842, after the class check of the argument. -/
+  /-- `_abc__abc_subclasscheck_impl`, Modules/_abc.c:717-854, after the class check of the argument. -/
   def subCheck (W : AbcWorld) : Nat → Nat → Nat → AbcState → Py Bool × AbcState
     | 0, _, _, s => (.error .modelFuel, s)
     | fuel + 1, cls, sub, s =>
@@ -86,7 +86,7 @@ mutual
       else afterNeg s
 
   /-- `PyObject_IsSubclass(sub, x)` over a list, stopping at the first true or the first failure: the loops of
-  `subclasscheck_check_registry`, :845-905, and step 6 of the check, :806-830. -/
+  `subclasscheck_check_registry`, :857-917, and step 6 of the check, :818-842. -/
   def anySub (W : AbcWorld) : Nat → Nat → List Nat → AbcState → Py Bool × AbcState
     | 0, _, _, s => (.error .modelFuel, s)
     | _ + 1, _, [], s => (.ok false, s)
@@ -110,7 +110,7 @@ def subclassCheck (W : AbcWorld) (fuel cls : Nat) (sub : Option Nat) (s : AbcSta
 def isSubclass (W : AbcWorld) (fuel a b : Nat) (s : AbcState) : Py Bool × AbcState :=
   if W.isAbc b then subCheck W fuel b a s else (.ok (decide (b ∈ W.mro a)), s)
 
-/-- `_abc__abc_register_impl`, Modules/_abc.c:556-606, and `ABCMeta.register`, Lib/abc.py:110-115. The result is
+/-- `_abc__abc_register_impl`, Modules/_abc.c:558-608, and `ABCMeta.register`, Lib/abc.py:110-115. The result is
 the subclass, as a class decorator wants. The `Py_TPFLAGS_SEQUENCE` copy at :590-598 only affects `match`. -/
 def register (W : AbcWorld) (fuel cls : Nat) (sub : Option Nat) (s : AbcState) : Py Nat × AbcState :=
   match sub with
@@ -127,7 +127,7 @@ def register (W : AbcWorld) (fuel cls : Nat) (sub : Option Nat) (s : AbcState) :
         let d := s.get cls
         (.ok c, { s.put cls { d with registry := c :: d.registry } with counter := s.counter + 1 })
 
-/-- `_abc__abc_instancecheck_impl`, Modules/_abc.c:619-692. `klass` is `instance.__class__`, which may raise, and
+/-- `_abc__abc_instancecheck_impl`, Modules/_abc.c:622-703. `klass` is `instance.__class__`, which may raise, and
 `subtype` is `type(instance)`. -/
 def instanceCheck (W : AbcWorld) (fuel cls : Nat) (klass : Py Nat) (subtype : Nat) (s : AbcState) :
     Py Bool × AbcState :=

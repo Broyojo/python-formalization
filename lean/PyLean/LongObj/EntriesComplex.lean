@@ -29,13 +29,13 @@ def entriesComplex : List Entry := [
   { id := "complex-ring-sum-diff", pyFile := complexFile
     pyFns := ["_Py_cr_sum", "_Py_rc_sum", "_Py_cr_diff", "_Py_rc_diff", "_Py_c_neg"]
     statement := "Over any commutative ring with the C operations being the ring's, _Py_cr_sum, _Py_rc_sum, _Py_cr_diff and _Py_rc_diff equal the complex operation with the real operand given a zero imaginary part; _Py_c_diff(a, b) is _Py_c_sum(a, _Py_c_neg(b)); _Py_c_sum is commutative."
-    source := "complexobject.c:665-678 (rules for mixed-mode arithmetic)"
+    source := "complexobject.c:681-694 (rules for mixed-mode arithmetic)"
     status := .proven, prop := ``RingSumDiff, thm := some ``ringSumDiff_proven
     notes := "Generic over `Lean.Grind.CommRing`. At binary64 the mixed forms differ from the coerced ones on signed zeros, on purpose: see complex-mixed-mode-direct." },
   { id := "complex-ring-prod", pyFile := complexFile
     pyFns := ["_Py_c_prod", "_Py_cr_prod", "_Py_rc_prod"]
     statement := "Over any commutative ring, _Py_c_prod is (ac-bd)+(ad+bc)j and commutative, and _Py_cr_prod and _Py_rc_prod equal it with the real operand given a zero imaginary part."
-    source := "invariant; complexobject.c:665-678"
+    source := "invariant; complexobject.c:681-694"
     status := .proven, prop := ``RingProd, thm := some ``ringProd_proven },
   { id := "complex-prod-branch-order", pyFile := complexFile
     pyFns := ["_Py_c_prod"]
@@ -97,7 +97,7 @@ def entriesComplex : List Entry := [
   { id := "complex-pow-zero-division-needs-zero-base", pyFile := complexFile
     pyFns := ["complex_pow", "c_powi", "c_powu", "_Py_c_quot"]
     statement := "At binary64, complex_pow raises 'zero to a negative or complex power' only for a zero base."
-    source := "the message; complexobject.c:746-749"
+    source := "the message; complexobject.c:762-765"
     status := .refuted, prop := ``PowZeroDivisionNeedsZeroBase
     thm := some ``powZeroDivisionNeedsZeroBase_refuted
     bug := some "longobj-complex-pow-underflow-zero-division"
@@ -124,12 +124,12 @@ def entriesComplex : List Entry := [
   { id := "complex-pow-modulo-order", pyFile := complexFile
     pyFns := ["complex_pow", "real_to_complex", "real_to_double"]
     statement := "complex_pow converts both operands first: NotImplemented and the int-overflow error come before 'complex modulo', which is raised for any non-None third argument once they convert."
-    source := "complexobject.c:728-734"
+    source := "complexobject.c:744-750"
     status := .proven, prop := ``PowModuloOrder, thm := some ``powModuloOrder_proven },
   { id := "complex-pow-fast-path-bound", pyFile := complexFile
     pyFns := ["complex_pow", "c_powi", "_Py_c_pow"]
     statement := "An integral exponent with |b.real| <= 100 and zero imaginary part makes no libm call, so the result is the same for every libm; any other exponent is exactly _Py_c_pow with its errno mapped to the two exceptions."
-    source := "complexobject.c:736-744"
+    source := "complexobject.c:752-760"
     status := .proven, prop := ``PowFastPathBound, thm := some ``powFastPathBound_proven },
   { id := "complex-pow-zero-is-one", pyFile := complexFile
     pyFns := ["complex_pow", "c_powi", "c_powu", "_Py_c_quot"]
@@ -183,12 +183,12 @@ def entriesComplex : List Entry := [
   { id := "complex-hash-composition", pyFile := complexFile
     pyFns := ["complex_hash"]
     statement := "For any real hash that is a Py_hash_t and never -1, complex_hash is never -1, and it equals the hash of the real part when the imaginary part hashes to 0."
-    source := "complexobject.c:625-630 (\"hash(x + 0*j) must equal hash(x)\")"
+    source := "complexobject.c:641-646 (\"hash(x + 0*j) must equal hash(x)\")"
     status := .proven, prop := ``HashComposition, thm := some ``hashComposition_proven },
   { id := "complex-repr-structure", pyFile := complexFile
     pyFns := ["complex_repr", "complex___format___impl"]
     statement := "repr leaves out a +0 real part, without parentheses, and otherwise prints the real part and a signed imaginary part in parentheses; format(z, '') is repr(z) and any other spec goes to the format engine."
-    source := "complexobject.c:576-606; Python/formatter_unicode.c:1698-1701"
+    source := "complexobject.c:592-622; Python/formatter_unicode.c@3.14.7:1698-1701"
     status := .proven, prop := ``ReprStructure, thm := some ``reprStructure_proven },
   { id := "complex-repr-round-trip", pyFile := complexFile
     pyFns := ["complex_repr", "complex_from_string_inner", "complex_subtype_from_string"]
@@ -199,28 +199,28 @@ def entriesComplex : List Entry := [
   { id := "complex-real-to-double", pyFile := complexFile
     pyFns := ["real_to_double", "real_to_complex"]
     statement := "real_to_double gives a float's value, an int's PyLong_AsDouble or OverflowError, and NotImplemented otherwise; real_to_complex and TO_COMPLEX add a zero imaginary part except on a complex."
-    source := "complexobject.c:638-663"
+    source := "complexobject.c:654-679"
     status := .proven, prop := ``RealToDouble, thm := some ``realToDouble_proven },
   { id := "complex-mixed-mode-direct", pyFile := complexFile
     pyFns := ["_Py_cr_sum", "_Py_rc_sum", "_Py_cr_diff", "_Py_rc_diff", "_Py_cr_prod", "_Py_rc_prod",
               "real_to_double"]
     statement := "For every CDouble instance, a float operand of +, - or * is combined directly with a complex: the part it does not touch is the complex operand's exactly, so a -0.0 or NaN there survives."
-    source := "complexobject.c:665-678"
+    source := "complexobject.c:681-694"
     status := .proven, prop := ``MixedModeDirect, thm := some ``mixedModeDirect_proven },
   { id := "complex-binop-not-implemented", pyFile := complexFile
     pyFns := ["real_to_double"]
     statement := "A binary slot given anything other than a float, int or complex instance returns NotImplemented."
-    source := "complexobject.c:680-716"
+    source := "complexobject.c:696-732"
     status := .proven, prop := ``BinopNotImplemented, thm := some ``binopNotImplemented_proven },
   { id := "complex-richcompare-shape", pyFile := complexFile
     pyFns := ["complex_richcompare"]
     statement := "Only == and != are implemented; != negates == on every right operand; an int compares through the exact float comparison only when the imaginary part is zero; a float or complex compares componentwise."
-    source := "complexobject.c:806-853"
+    source := "complexobject.c:825-872"
     status := .proven, prop := ``RichCompareShape, thm := some ``richCompareShape_proven },
   { id := "complex-richcompare-huge-int", pyFile := complexFile
     pyFns := ["complex_richcompare"]
     statement := "At binary64, complex(x) == n compares n exactly, without rounding it, however large n is."
-    source := "complexobject.c:813-826; Objects/floatobject.c:382-542"
+    source := "complexobject.c:832-845; Objects/floatobject.c:372-532"
     status := .proven, prop := ``RichCompareHugeInt, thm := some ``richCompareHugeInt_proven },
   { id := "complex-accessors-agree", pyFile := complexFile
     pyFns := ["PyComplex_RealAsDouble", "PyComplex_ImagAsDouble", "PyComplex_AsCComplex"]
@@ -230,23 +230,23 @@ def entriesComplex : List Entry := [
   { id := "complex-try-special-outcomes", pyFile := complexFile
     pyFns := ["try_complex_special_method"]
     statement := "try_complex_special_method does nothing when __complex__ is absent, propagates its exception, returns an exact complex's value, warns on a subclass instance, and raises TypeError on anything else."
-    source := "complexobject.c:488-519"
+    source := "complexobject.c:504-535"
     status := .proven, prop := ``TrySpecialOutcomes, thm := some ``trySpecialOutcomes_proven },
   { id := "complex-new-checks-real-first", pyFile := complexFile
     pyFns := ["complex_new_impl"]
     statement := "With no __complex__ on it, a real argument that is not a number raises its TypeError whatever imag is, before anything converts and with no Python code run."
-    source := "complexobject.c:1195-1206"
+    source := "complexobject.c:1215-1226"
     status := .proven, prop := ``NewChecksRealFirst, thm := some ``newChecksRealFirst_proven },
   { id := "complex-new-checks-imag-before-converting", pyFile := complexFile
     pyFns := ["complex_new_impl"]
     statement := "A valid real and an invalid imag raise the imag TypeError with no __float__ or __index__ run."
-    source := "complexobject.c:1207-1220"
+    source := "complexobject.c:1227-1240"
     status := .proven, prop := ``NewChecksImagBeforeConverting
     thm := some ``newChecksImagBeforeConverting_proven },
   { id := "complex-one-arg-matches-two-arg", pyFile := complexFile
     pyFns := ["actual_complex_new", "complex_new_impl"]
     statement := "complex(x) and complex(x, 0) take the same real part from a float instance."
-    source := "Doc/library/functions.rst:426-431 (\"complex(x) delegates to x.__complex__() ... falls back to __float__()\"); 3.13 behaviour"
+    source := "Doc/library/functions.rst@3.14.7:426-431 (\"complex(x) delegates to x.__complex__() ... falls back to __float__()\"); 3.13 behaviour"
     status := .refuted, prop := ``OneArgMatchesTwoArgOnFloats
     thm := some ``oneArgMatchesTwoArgOnFloats_refuted
     bug := some "longobj-complex-float-subclass-dunder-float"
@@ -259,25 +259,25 @@ def entriesComplex : List Entry := [
   { id := "complex-new-dispatch", pyFile := complexFile
     pyFns := ["actual_complex_new"]
     statement := "complex() is 0j; complex(z) is z itself for an exact complex and the exact type; a string goes to the parser before __complex__ is looked at."
-    source := "complexobject.c:1099-1118"
+    source := "complexobject.c:1119-1138"
     status := .proven, prop := ``NewDispatch, thm := some ``newDispatch_proven },
   { id := "complex-subtype-from-string", pyFile := complexFile
     pyFns := ["complex_subtype_from_string"]
     statement := "complex_subtype_from_string on a str is the parser's outcome in the requested type, and on anything else the TypeError of lines 1071-1073."
-    source := "complexobject.c:1060-1080"
+    source := "complexobject.c:1080-1100"
     status := .proven, prop := ``SubtypeFromString, thm := some ``subtypeFromString_proven
     notes := "The TypeError branch is dead code: the only caller has checked PyUnicode_Check." },
   { id := "complex-from-number-matches-constructor", pyFile := complexFile
     pyFns := ["complex_from_number_impl", "actual_complex_new", "PyComplex_AsCComplex"]
     statement := "complex.from_number(x) is x itself on an exact complex, and on an object that is neither a complex nor a string instance and has __complex__, __float__ or __index__, it computes the same value as complex(x)."
-    source := "Doc/library/stdtypes.rst:746-752"
+    source := "Doc/library/stdtypes.rst@3.14.7:746-752"
     status := .proven, prop := ``FromNumberMatchesConstructor
     thm := some ``fromNumberMatchesConstructor_proven
     notes := "A complex subclass overriding __complex__ is excluded: from_number reads its value, complex(x) calls the method." },
   { id := "complex-parse-rejects-nul", pyFile := complexFile
     pyFns := ["complex_from_string_inner", "complex_subtype_from_string"]
     statement := "Every string holding a NUL raises ValueError, on any strtod that stops at NUL, with or without underscores or non-ASCII characters."
-    source := "complexobject.c:1041-1043; Python/pystrtod.c:387-390"
+    source := "complexobject.c:1061-1063; Python/pystrtod.c:387-390"
     status := .proven, prop := ``ParseRejectsNul, thm := some ``parseRejectsNul_proven
     notes := "The hypothesis on strtod is `StrtodSpec`." },
   { id := "complex-parser-at-binary64", pyFile := complexFile
@@ -294,23 +294,23 @@ def entriesComplex : List Entry := [
   { id := "complex-parse-transform-ascii", pyFile := complexFile
     pyFns := ["complex_subtype_from_string"]
     statement := "The buffer the parser sees is ASCII, and ASCII input reaches it unchanged."
-    source := "complexobject.c:1065 (assert(PyUnicode_IS_ASCII(s_buffer)))"
+    source := "complexobject.c:1085 (assert(PyUnicode_IS_ASCII(s_buffer)))"
     status := .proven, prop := ``TransformAscii, thm := some ``transformAscii_proven },
   { id := "complex-parse-leading-whitespace", pyFile := complexFile
     pyFns := ["complex_from_string_inner"]
     statement := "Leading Py_ISSPACE whitespace does not change the parse, for every string and every strtod."
-    source := "complex docs (\"can optionally be surrounded by whitespaces\"); complexobject.c:938-941"
+    source := "complex docs (\"can optionally be surrounded by whitespaces\"); complexobject.c:958-961"
     status := .proven, prop := ``LeadingWhitespace, thm := some ``leadingWhitespace_proven },
   { id := "complex-parse-surroundings", pyFile := complexFile
     pyFns := ["complex_from_string_inner"]
     statement := "An accepted string with no parenthesis of its own keeps its value with trailing whitespace, and inside parentheses with whitespace after them, on any strtod satisfying StrtodSpec."
-    source := "complex docs (\"can optionally be surrounded by whitespaces and the round parentheses\"); complexobject.c:942-948 and 1028-1039"
+    source := "complex docs (\"can optionally be surrounded by whitespaces and the round parentheses\"); complexobject.c:962-968 and 1028-1039"
     status := .proven, prop := ``ParseSurroundings, thm := some ``parseSurroundings_proven
     notes := "Whitespace inside the parentheses is complex-parse-leading-whitespace and this entry applied first. A second pair of parentheses is rejected." },
   { id := "complex-parse-forms", pyFile := complexFile
     pyFns := ["complex_from_string_inner"]
     statement := "Each form the source comment lists, <float>, <float>j, <float><signed-float>j, <float><sign>j, <sign>j and j, parses to the real and imaginary parts it names."
-    source := "complexobject.c:950-969; Doc/library/functions.rst (complexvalue grammar)"
+    source := "complexobject.c:970-989; Doc/library/functions.rst (complexvalue grammar)"
     status := .proven, prop := ``ParseForms, thm := some ``parseForms_proven },
   { id := "complex-float-strings-are-complex-strings", pyFile := complexFile
     pyFns := ["complex_from_string_inner", "complex_subtype_from_string"]

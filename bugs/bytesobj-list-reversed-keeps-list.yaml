@@ -7,10 +7,10 @@ files: [Objects/listobject.c]
 functions: ["listreviter_next"]
 summary: |
   list iterators release their list when exhausted, and the field says so: `it_seq` is
-  "Set to NULL when iterator is exhausted" (listobject.c:4084). reversed(l) does not do this on
+  "Set to NULL when iterator is exhausted" (listobject.c:4154). reversed(l) does not do this on
   normal exhaustion. Yielding the item at index 0 stores it_index = -1, and the next call then
-  returns at the early `if (index < 0) return NULL;` (:4178), so the code that clears it_seq
-  (:4189-4193) never runs. That code is reached only when the list has shrunk below the index. An
+  returns at the early `if (index < 0) return NULL;` (:4248), so the code that clears it_seq
+  (:4259-4263) never runs. That code is reached only when the list has shrunk below the index. An
   exhausted reversed iterator therefore holds a strong reference to the list for as long as the
   iterator lives, however many more times next() is called. iter(l), iter(t) and the generic
   reversed(seq) all release theirs.
@@ -53,11 +53,11 @@ observed: |
   python3 3.14.7: reversed(l) keeps the list: True; iter(l): False. REPRODUCED.
   main (python.exe 3.16.0a1+dev, ef1fce0): identical. REPRODUCED.
 promised_by: |
-  Objects/listobject.c:4084 and Include/internal/pycore_list.h: the comment on it_seq, "Set to NULL
+  Objects/listobject.c:4154 and Include/internal/pycore_list.h: the comment on it_seq, "Set to NULL
   when iterator is exhausted". This is an internal contract; no user-facing document promises it.
 cause: |
-  Objects/listobject.c:4178-4180 (3.14.7): `if (index < 0) { return NULL; }` returns before
-  :4189-4193, which clear it_seq. The fetched tags show the history: v3.12.0's listreviter_next tests
+  Objects/listobject.c:4248-4250: `if (index < 0) { return NULL; }` returns before
+  :4259-4263, which clear it_seq. The fetched tags show the history: v3.12.0's listreviter_next tests
   `index >= 0 && index < size` and falls through to the clearing code; v3.13.0 and v3.14.0 have the
   early return. The same code is on main.
 possible_fix: |

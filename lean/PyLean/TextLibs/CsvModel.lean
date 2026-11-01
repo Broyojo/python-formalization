@@ -164,7 +164,7 @@ def Obj.dictKey : Obj → KeyProbe
   | .other _ _ k _ _ _ _ => k
   | _ => .noMatch
 
-/-- `dict_unhashable_type`, `Objects/dictobject.c:2352-2366`: a plain `TypeError` from `__hash__`
+/-- `dict_unhashable_type`, `Objects/dictobject.c:2441-2460`: a plain `TypeError` from `__hash__`
 is re-raised with the key's type in it. -/
 def dictHashErr (o : Obj) : PyExc → PyExc
   | .typeError m => .typeError s!"cannot use '{o.ty.full}' as a dict key ({m})"
@@ -389,7 +389,7 @@ def Obj.getattr (o : Obj) (n : String) : Py Obj :=
     | Option.none => .error (attrErr t n)
   | _ => .error (attrErr o.ty n)
 
-/-- `DIALECT_GETATTR`, `Modules/_csv.c:504-511`: any failure is cleared. -/
+/-- `DIALECT_GETATTR`, `Modules/_csv.c@3.14.7:504-511`: any failure is cleared. -/
 def getattrOr (o : Obj) (v : Option Obj) (n : String) : Option Obj :=
   match v with
   | some x => some x
@@ -465,7 +465,7 @@ def dialectKws : List String :=
   ["dialect", "delimiter", "doublequote", "escapechar", "lineterminator", "quotechar", "quoting",
    "skipinitialspace", "strict"]
 
-/-- `vgetargskeywords`, `Python/getargs.c:1575-1879`, for the format `|OOOOOOOOO`: the object for
+/-- `vgetargskeywords`, `Python/getargs.c@3.14.7:1575-1879`, for the format `|OOOOOOOOO`: the object for
 each entry of `dialect_kws`, positional arguments first. -/
 def parseDialectArgs (a : Args) : Py (List (Option Obj)) :=
   let len := dialectKws.length
@@ -529,7 +529,7 @@ def dialectNew (r : Registry) (ty : TyName) (args : Args) : Py DRes := do
     | some d => if noOverrides then return .same o d else dialectFresh ty (dialectAttrs o a)
     | Option.none => dialectFresh ty (dialectAttrs o a)
 
-/-- `tp_init` in `type_call`, `Objects/typeobject.c:2382-2384`. It runs on whatever `tp_new` returned.
+/-- `tp_init` in `type_call`, `Objects/typeobject.c:2522-2524`. It runs on whatever `tp_new` returned.
 A new `_csv.Dialect` has `object_init`, and so does a reused instance with nothing of Python's in it.
 A reused subclass instance runs its own `__init__`, with the arguments of this call. -/
 def tpInit (res : DRes) : Py DRes :=
@@ -561,7 +561,7 @@ def dialectPickle (o : Obj) (method : String) : Py Unit :=
     | Option.none => dialectReduce t
   | _ => dialectReduce o.ty
 
-/-- `Dialect._validate`, `Lib/csv.py:111-116`: `_Dialect(self)`, with `TypeError` re-raised as
+/-- `Dialect._validate`, `Lib/csv.py:109-114`: `_Dialect(self)`, with `TypeError` re-raised as
 `csv.Error`. -/
 def dialectValidate (r : Registry) (self : Obj) : Py Unit :=
   match dialectNew r dialectTy ⟨[self], []⟩ with
@@ -569,10 +569,10 @@ def dialectValidate (r : Registry) (self : Obj) : Py Unit :=
   | .error (.typeError m) => .error (csvErr m)
   | .error e => .error e
 
-/-- `Dialect.__init__`, `Lib/csv.py:106-109`. `_valid` is only stored. -/
+/-- `Dialect.__init__`, `Lib/csv.py:104-107`. `_valid` is only stored. -/
 def dialectInit (r : Registry) (self : Obj) : Py Unit := dialectValidate r self
 
-/-- The attributes of the `Lib/csv.py` dialect classes, `Lib/csv.py:118-141`. -/
+/-- The attributes of the `Lib/csv.py` dialect classes, `Lib/csv.py:116-139`. -/
 def dialectClass (name : String) (delimiter lineterminator : List Nat) (quoting : Int) : Obj :=
   .other ⟨name, name, name⟩ (.ok true) .noMatch
     [("delimiter", .ok (.str delimiter)), ("quotechar", .ok (.str [34])), ("escapechar", .ok .none),
@@ -652,7 +652,7 @@ def regDel : Registry → List Nat → Py (Option Registry)
       | .ok Option.none => .ok Option.none
 
 /-- `_csv_unregister_dialect_impl`, `Modules/_csv.c:1652-1666`. `PyDict_Pop` on an empty dict
-returns `0` without hashing, `Objects/dictobject.c:3171-3176`. -/
+returns `0` without hashing, `Objects/dictobject.c:3295-3300`. -/
 def csvUnregisterDialect (r : Registry) (name : Obj) : Py Registry :=
   if r.isEmpty then .error (csvErr "unknown dialect")
   else
@@ -713,7 +713,7 @@ structure RSt where
   deriving Repr, DecidableEq, Inhabited
 
 /-- `PyList_Append(self->fields, field)`, `Modules/_csv.c:688`. `PyList_Check(NULL)` reads through
-the pointer, `Objects/listobject.c:535`. -/
+the pointer, `Objects/listobject.c:562`. -/
 def appendField (s : RSt) (f : Field) : Py RSt :=
   if s.nullFields then .error CRASH else .ok { s with fields := s.fields ++ [f] }
 
@@ -1135,7 +1135,7 @@ def csvWriter (reg : Registry) (args : Args) : Py (Dialect × WCtx) := do
   let d ← callDialect reg dialect args.kw
   return (d.dialect, { calls })
 
-/-! ### `DictReader` and `DictWriter`, `Lib/csv.py:144-230` -/
+/-! ### `DictReader` and `DictWriter`, `Lib/csv.py:142-228` -/
 
 /-- A value of a `DictReader` row. -/
 inductive DVal where
@@ -1159,7 +1159,7 @@ def dictSet (d : List (Field × DVal)) (k : Field) (v : DVal) : List (Field × D
   if d.any (fun p => keyEq p.1 k) then d.map (fun p => if keyEq p.1 k then (p.1, v) else p)
   else d ++ [(k, v)]
 
-/-- The dict building of `DictReader.__next__`, `Lib/csv.py:185-192`. -/
+/-- The dict building of `DictReader.__next__`, `Lib/csv.py:183-190`. -/
 def dictRow (names row : List Field) (restkey : Field) : List (Field × DVal) :=
   let d0 := (names.zip row).foldl (fun d p => dictSet d p.1 (.field p.2)) []
   let lf := names.length
@@ -1176,7 +1176,7 @@ structure DR where
   c : RCtx
   deriving Inhabited
 
-/-- The `fieldnames` getter, `Lib/csv.py:159-167`. -/
+/-- The `fieldnames` getter, `Lib/csv.py:157-165`. -/
 def drFieldnames (d : Dialect) (fuel : Nat) (r : DR) : DR × Py Unit :=
   if r.names.isNone then
     match readerNext d fuel r.c with
@@ -1185,7 +1185,7 @@ def drFieldnames (d : Dialect) (fuel : Nat) (r : DR) : DR × Py Unit :=
     | (c, .ok Option.none) => ({ r with c, lineNum := c.lineNum }, .ok ())
   else ({ r with lineNum := r.c.lineNum }, .ok ())
 
-/-- The `while row == []` of `DictReader.__next__`, `Lib/csv.py:183-184`. -/
+/-- The `while row == []` of `DictReader.__next__`, `Lib/csv.py:181-182`. -/
 def drSkipBlank (d : Dialect) (fuel : Nat) : (blanks : Nat) → RCtx → List Field →
     RCtx × Py (Option (List Field))
   | 0, c, _ => (c, .error .modelFuel)
@@ -1197,7 +1197,7 @@ def drSkipBlank (d : Dialect) (fuel : Nat) : (blanks : Nat) → RCtx → List Fi
       | (c, .ok (some row)) => drSkipBlank d fuel n c row
     else (c, .ok (some row))
 
-/-- `DictReader.__next__`, `Lib/csv.py:173-193`: `none` is `StopIteration`. -/
+/-- `DictReader.__next__`, `Lib/csv.py:171-191`: `none` is `StopIteration`. -/
 def drNext (d : Dialect) (fuel blanks : Nat) (r0 : DR) : DR × Py (Option (List (Field × DVal))) :=
   let first := if r0.lineNum == 0 then drFieldnames d fuel r0 else (r0, .ok ())
   match first with
@@ -1231,14 +1231,14 @@ def drAll (d : Dialect) (fuel blanks : Nat) : (calls : Nat) → DR →
       let (xs, e, r) := drAll d fuel blanks calls r
       (x :: xs, e, r)
 
-/-- `DictReader.__init__`, `Lib/csv.py:145-154`, for a `fieldnames` already a list, with
+/-- `DictReader.__init__`, `Lib/csv.py:143-152`, for a `fieldnames` already a list, with
 `self.reader = reader(f, dialect, *args, **kwds)`. -/
 def drInit (reg : Registry) (limit : Int) (f : Obj) (names : Option (List Field)) (restkey : Field)
     (dialect : Obj) (kw : List (List Nat × Obj)) : Py (Dialect × DR) := do
   let (d, c) ← csvReader reg limit ⟨[f, dialect], kw⟩
   return (d, { names, restkey, c })
 
-/-- `DictWriter.__init__`'s check of `extrasaction`, `Lib/csv.py:205-208`: whether it is `'raise'`.
+/-- `DictWriter.__init__`'s check of `extrasaction`, `Lib/csv.py:203-206`: whether it is `'raise'`.
 `str.lower` has no non-ASCII source for the letters of either word, so `lowerAscii` decides the same
 two comparisons. -/
 def lowerAsciiS (s : List Nat) : List Nat := s.map fun c => if 65 ≤ c ∧ c ≤ 90 then c + 32 else c
@@ -1249,7 +1249,7 @@ def extrasactionCheck (s : List Nat) : Py Bool :=
   else if l == strToList "ignore" then .ok false
   else .error (.valueError "~extrasaction must be 'raise' or 'ignore'")
 
-/-- `DictWriter._dict_to_list`, `Lib/csv.py:216-222`: the generator's steps. The keys of `rowdict`
+/-- `DictWriter._dict_to_list`, `Lib/csv.py:214-220`: the generator's steps. The keys of `rowdict`
 are strings here. -/
 def dictToList (names : List (List Nat)) (restval : Obj) (raises : Bool)
     (rowdict : List (List Nat × Obj)) : Py (List Step) :=
@@ -1257,7 +1257,7 @@ def dictToList (names : List (List Nat)) (restval : Obj) (raises : Bool)
     .error (.valueError "~dict contains fields not in fieldnames")
   else .ok (names.map fun k => .ret ((rowdict.lookup k).getD restval))
 
-/-- `DictWriter.writerow`, `Lib/csv.py:224-225`. -/
+/-- `DictWriter.writerow`, `Lib/csv.py:222-223`. -/
 def dictWriterow (d : Dialect) (fuel : Nat) (names : List (List Nat)) (restval : Obj) (raises : Bool)
     (c : WCtx) (rowdict : List (List Nat × Obj)) : WCtx × Py Obj :=
   match dictToList names restval raises rowdict with
@@ -1273,12 +1273,12 @@ def mapSteps (names : List (List Nat)) (restval : Obj) (raises : Bool) :
     | .error e => [.raise e]
     | .ok steps => .ret (iterObj steps) :: mapSteps names restval raises rs
 
-/-- `DictWriter.writerows`, `Lib/csv.py:227-228`. -/
+/-- `DictWriter.writerows`, `Lib/csv.py:225-226`. -/
 def dictWriterows (d : Dialect) (fuel : Nat) (names : List (List Nat)) (restval : Obj) (raises : Bool)
     (c : WCtx) (rows : List (List (List Nat × Obj))) : WCtx × Py Obj :=
   writerowsM d fuel c (iterObj (mapSteps names restval raises rows))
 
-/-- `DictWriter.writeheader`, `Lib/csv.py:212-214`. -/
+/-- `DictWriter.writeheader`, `Lib/csv.py:210-212`. -/
 def writeheader (d : Dialect) (fuel : Nat) (c : WCtx) (names : List (List Nat)) : WCtx × Py Obj :=
   dictWriterow d fuel names (.str []) true c (names.map fun n => (n, Obj.str n))
 

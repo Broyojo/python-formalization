@@ -35,7 +35,7 @@ observed: |
 promised_by: |
   invariant: no signed overflow in C; Doc/library/stdtypes.rst, memoryview.strides.
 cause: |
-  Objects/memoryobject.c:2532: base->strides[dim] = base->strides[dim] * step.
+  Objects/memoryobject.c:2612: base->strides[dim] = base->strides[dim] * step.
 possible_fix: |
   When slicelength <= 1, set base->strides[dim] to base->strides[dim] (the step is irrelevant), so
   the multiplication only happens when it cannot overflow.

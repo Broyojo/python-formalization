@@ -17,7 +17,7 @@ def DtoaFixedKeepsIntegerPart : Prop :=
     0 ≤ ndigits → ndigits ≤ 2147483647 →
     ((_Py_dg_dtoa x 3 ndigits).map (·.decpt)).all (1 ≤ ·) = true
 
-/-- `format(123.456, '.2147483647f')`: `ndigits + k + 1` wraps at dtoa.c:2377. -/
+/-- `format(123.456, '.2147483647f')`: `ndigits + k + 1` wraps at dtoa.c:2389. -/
 theorem dtoaFixedKeepsIntegerPart_refuted : ¬ DtoaFixedKeepsIntegerPart := by
   intro h
   have := h (ofBits 0x405edd2f1a9fbe77) 2147483647 (by decide +kernel) (by decide +kernel)
@@ -39,7 +39,7 @@ def EFormatDigitCount : Prop :=
   ∀ (x : F64) (p : Nat), x.isFinite = true → p ≤ 2147483647 →
     (PyOS_double_to_string x 101 p {}).map (fun r => mantissaDigits r.1) = some (p + 1)
 
-/-- `format(1.5, '.2147483647e')` is `'2e+00'`: `precision++` wraps at pystrtod.c:1240. -/
+/-- `format(1.5, '.2147483647e')` is `'2e+00'`: `precision++` wraps at pystrtod.c:1263. -/
 theorem eFormatDigitCount_refuted : ¬ EFormatDigitCount := by
   intro h
   have := h (ofBits 0x3ff8000000000000) 2147483647 (by decide +kernel) (by decide)

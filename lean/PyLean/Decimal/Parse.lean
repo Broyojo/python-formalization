@@ -3,8 +3,8 @@ import PyLean.Decimal.Basic
 /-!
 `Decimal(str)` in both twins.
 
-**`_pydecimal`** (_pydecimal.py:486-532): `_parser(value.strip().replace("_", ""))`
-with the regex at :6100-6118, compiled with `re.VERBOSE | re.IGNORECASE`:
+**`_pydecimal`** (_pydecimal.py:578-624): `_parser(value.strip().replace("_", ""))`
+with the regex at :6200-6218, compiled with `re.VERBOSE | re.IGNORECASE`:
 
 ```
 (?P<sign>[-+])?
@@ -24,8 +24,8 @@ non-ASCII character matches a letter of this pattern (checked exhaustively
 against `re` on 3.14.7). The groups then go through `int()`, which applies
 the 4300-digit limit.
 
-**`_decimal`** (_decimal.c:2276-2293 → 2224-2250): `numeric_as_ascii(u, 1, 1)`
-(:2144-2195) strips Unicode whitespace, drops `_`, keeps ASCII, maps other
+**`_decimal`** (_decimal.c:2403-2420 → 2224-2250): `numeric_as_ascii(u, 1, 1)`
+(:2271-2322) strips Unicode whitespace, drops `_`, keeps ASCII, maps other
 whitespace to `' '` and `Nd` digits to ASCII, and rejects anything else; then
 `mpd_qset_string` (libmpdec/io.c:200-328) under `mpd_maxcontext`, and any
 Inexact/Rounded/Clamped becomes InvalidOperation (:2241-2244).
@@ -113,25 +113,25 @@ def pyMatch (t : List Char) : Option PyMatch :=
     | some r => if matchWord "inity".toList r = some [] then some (.inf neg) else none
     | none => matchNan neg s
 
-/-- The finite branch of `__new__`, _pydecimal.py:501-506. -/
+/-- The finite branch of `__new__`, _pydecimal.py:593-598. -/
 def pyNum (neg : Bool) (intpart frac : List Char) (ex : Option (Bool × List Char)) : Py Dec := do
-  -- exp = int(m.group('exp') or '0')   (:503)
+  -- exp = int(m.group('exp') or '0')   (:595)
   let e : Int ← match ex with
     | none => pure 0
     | some (eneg, ds) => do
       intLimit ds.length
       pure (if eneg then -(digitsValue ds : Int) else digitsValue ds)
-  -- self._int = str(int(intpart+fracpart))   (:504)
+  -- self._int = str(int(intpart+fracpart))   (:596)
   intLimit (intpart ++ frac).length
   return .fin neg (digitsValue (intpart ++ frac)) (e - frac.length)
 
-/-- The NaN branch of `__new__`, _pydecimal.py:508-516. -/
+/-- The NaN branch of `__new__`, _pydecimal.py:600-608. -/
 def pyNanVal (neg sig : Bool) (d : List Char) : Py Dec := do
-  -- self._int = str(int(diag or '0')).lstrip('0')   (:511)
+  -- self._int = str(int(diag or '0')).lstrip('0')   (:603)
   intLimit (if d = [] then 1 else d.length)
   return .nan neg sig (digitsValue d)
 
-/-- `_pydecimal.Decimal(value)` for a `str` value, _pydecimal.py:486-532,
+/-- `_pydecimal.Decimal(value)` for a `str` value, _pydecimal.py:578-624,
 with the default context (InvalidOperation trapped). -/
 def pyParse (s : List Char) : Py Dec :=
   match pyMatch ((strip s).filter (· ≠ '_')) with
@@ -142,7 +142,7 @@ def pyParse (s : List Char) : Py Dec :=
 
 /-! ## The C twin -/
 
-/-- `numeric_as_ascii(u, strip_ws=1, ignore_underscores=1)`, _decimal.c:2144-2196.
+/-- `numeric_as_ascii(u, strip_ws=1, ignore_underscores=1)`, _decimal.c:2271-2323.
 An invalid character makes the whole result the empty string. -/
 def numericAsAscii (s : List Char) : List Char :=
   let rec go (acc : List Char) : List Char → Option (List Char)
@@ -302,7 +302,7 @@ def mpdSetString (s0 : List Char) : MpdParse :=
   let (neg, s) := expSign s0
   mpdBody neg s
 
-/-- `PyDecType_FromUnicodeExactWS` (_decimal.c:2276-2290 and 2224-2250), with
+/-- `PyDecType_FromUnicodeExactWS` (_decimal.c:2403-2417 and 2224-2250), with
 the default context (InvalidOperation trapped). -/
 def cParse (s : List Char) : Py Dec :=
   match mpdSetString (numericAsAscii s) with

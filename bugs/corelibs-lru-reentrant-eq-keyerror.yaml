@@ -7,15 +7,15 @@ files: [Lib/functools.py, Modules/_functoolsmodule.c]
 functions: ["_lru_cache_wrapper", "bounded_lru_cache_update_lock_held"]
 summary: |
   When the __eq__ of a colliding key calls the cached function again with the same key during the store, the ring gets two
-  links for one dict entry. The comment at Modules/_functoolsmodule.c:1398-1402 describes this orphan, and the C wrapper has a
-  branch for it at :1446-1454. Python has none: the second eviction of that key reaches `del cache[oldkey]` at
-  Lib/functools.py:683 with the key already gone, so the KeyError escapes from a call to the cached function, for a key that
+  links for one dict entry. The comment at Modules/_functoolsmodule.c:1494-1498 describes this orphan, and the C wrapper has a
+  branch for it at :1542-1550. Python has none: the second eviction of that key reaches `del cache[oldkey]` at
+  Lib/functools.py:699 with the key already gone, so the KeyError escapes from a call to the cached function, for a key that
   has nothing to do with the collision. The ring stays out of step, and a later call raises KeyError again.
 likelihood: |
   Very low: it needs a colliding key whose __eq__ re-enters the cached function, and the pure Python twin, which CPython uses
   only when _functools is missing.
 maybe_intended: |
-  Probably tolerated. The Python comment at :684-686 shows the re-entrancy was considered for the last store, not for this
+  Probably tolerated. The Python comment at :701-703 shows the re-entrancy was considered for the last store, not for this
   path. A maintainer may well say that a re-entrant __eq__ gets what it gets; the C twin shows the intended behaviour.
 reproducer: |
   from test.support import import_helper
@@ -58,7 +58,7 @@ observed: |
 promised_by: |
   Nothing explicit. The two twins disagreeing, and the C comment that treats this state as one to survive.
 cause: |
-  Lib/functools.py:683: `del cache[oldkey]` assumes every link has a dict entry. The non-full path at :690-695 links first and
+  Lib/functools.py:699: `del cache[oldkey]` assumes every link has a dict entry. The non-full path at :708-714 links first and
   stores last, so a re-entrant store adds a second link for the key.
 possible_fix: |
   `cache.pop(oldkey, None)`, as the C wrapper's handling of a missing key amounts to.

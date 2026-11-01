@@ -11,7 +11,7 @@ branches as their twins in `Protocol.lean`.
 
 * `ExcData.members` holds the `PyObject *` members of the subclasses by Python attribute
   name. An absent name is a NULL field, which reads as `None` (`_Py_T_OBJECT`,
-  `Python/structmember.c:87`).
+  `Python/structmember.c:99`).
 * `start` and `end` of the Unicode errors are `Py_ssize_t` members, stored as `.int` under
   the same names; absent means the zero of `tp_alloc`.
 * `ExcData.traceback` uses `Val.none` for the NULL field. A traceback object is a heap
@@ -92,12 +92,12 @@ def egCheck (w : World) (v : Val) : Bool := isSubtype w (typeOf w v) B.BaseExcep
 /-- `PyTraceBack_Check`. -/
 def tracebackCheck (w : World) (v : Val) : Bool := typeOf w v == B.traceback
 
-/-- `_PyType_Name`, `Objects/typeobject.c:1443`: `tp_name` after the last dot. -/
+/-- `_PyType_Name`, `Objects/typeobject.c:1543`: `tp_name` after the last dot. -/
 def pyTypeName (w : World) (t : Addr) : String :=
   let n := tpName w t
   ((n.splitOn ".").getLast?).getD n
 
-/-- `PyObject_Str`, which renders a NULL pointer as `<NULL>`, `Objects/object.c:799`. -/
+/-- `PyObject_Str`, which renders a NULL pointer as `<NULL>`, `Objects/object.c:801`. -/
 def strOrNull (rt : Rt) : Option Val → M String
   | some v => rt.str v
   | none => pure "<NULL>"
@@ -108,14 +108,14 @@ def strOrNull (rt : Rt) : Option Val → M String
 def excSlotIn (w : World) (v : Val) (s : Slot) : Option SlotFn :=
   if hasGroup w (typeOf w v) s.group then slotOf w (typeOf w v) s else none
 
-/-- `PySequence_Check`, `Objects/abstract.c:1672`. -/
+/-- `PySequence_Check`, `Objects/abstract.c:1681`. -/
 def excSeqCheck (w : World) (s : Val) : Bool :=
   (dictOf w s).isNone && (excSlotIn w s .sq_item).isSome
 
-/-- `PyCallable_Check`, `Objects/object.c:2100`. -/
+/-- `PyCallable_Check`, `Objects/object.c:2179`. -/
 def excCallableCheck (w : World) (v : Val) : Bool := (slotOf w (typeOf w v) .tp_call).isSome
 
-/-- `PyNumber_Check`, `Objects/abstract.c:903`. -/
+/-- `PyNumber_Check`, `Objects/abstract.c:913`. -/
 def excNumberCheck (w : World) (o : Val) : Bool :=
   (excSlotIn w o .nb_index).isSome || (excSlotIn w o .nb_int).isSome ||
     (excSlotIn w o .nb_float).isSome
@@ -133,7 +133,7 @@ def excCollect (rt : Rt) (it : Val) : Nat → M (List Val)
 /-- Loop bound for iteration. A model limit, not a Python one. -/
 def excIterFuel : Nat := 100000
 
-/-- `PySequence_Tuple`, `Objects/abstract.c:1996`, items only. -/
+/-- `PySequence_Tuple`, `Objects/abstract.c:2005`, items only. -/
 def excSeqTuple (rt : Rt) (v : Val) : M (List Val) := do
   match v with
   | .tuple xs => pure xs
@@ -179,7 +179,7 @@ def excLengthHint (rt : Rt) (o : Val) (dflt : Int) : M Int := do
           else if i < 0 then valueErr "__length_hint__() should return >= 0"
           else pure i
 
-/-- `PySequence_List`, `Objects/abstract.c:2072`, items only. -/
+/-- `PySequence_List`, `Objects/abstract.c:2081`, items only. -/
 def excSeqList (rt : Rt) (v : Val) : M (List Val) := do
   let w ← getW
   match v with
@@ -193,7 +193,7 @@ def excSeqList (rt : Rt) (v : Val) : M (List Val) := do
       if n ≥ 2 ^ 48 then raiseC B.MemoryError ""
       excCollect rt it excIterFuel
 
-/-- `_PyNumber_Index`, `Objects/abstract.c:1400`, as the value of the resulting `int`. -/
+/-- `_PyNumber_Index`, `Objects/abstract.c:1410`, as the value of the resulting `int`. -/
 def excNumberIndex (rt : Rt) (item : Val) : M Int := do
   let w ← getW
   match intOf w item with
@@ -211,7 +211,7 @@ def excNumberIndex (rt : Rt) (item : Val) : M Int := do
       | none => typeErr s!"__index__ returned non-int (type {trunc 200 (typeName w r)})"
     | some _ => gap%
 
-/-- `PyNumber_AsSsize_t(item, PyExc_ValueError)`, `Objects/abstract.c:1458`. -/
+/-- `PyNumber_AsSsize_t(item, PyExc_ValueError)`, `Objects/abstract.c:1468`. -/
 def excAsSsizeValueError (rt : Rt) (item : Val) : M Int := do
   let i ← excNumberIndex rt item
   if inSsize i then pure i
@@ -219,13 +219,13 @@ def excAsSsizeValueError (rt : Rt) (item : Val) : M Int := do
     let w ← getW
     valueErr s!"cannot fit '{trunc 200 (typeName w item)}' into an index-sized integer"
 
-/-- `PyLong_AsSsize_t` overflow, `Objects/longobject.c:628`. -/
+/-- `PyLong_AsSsize_t` overflow, `Objects/longobject.c:708`. -/
 def excAsSsizeLong (i : Int) : M Int :=
   if inSsize i then pure i
   else overflowErr "Python int too large to convert to C ssize_t"
 
 /-- `PyObject_IsInstance(inst, PyExc_Exception)`. `PyExc_Exception` is an exact `type`, so
-this is `object_isinstance`, `Objects/abstract.c:2596`, with a concrete class. -/
+this is `object_isinstance`, `Objects/abstract.c:2603`, with a concrete class. -/
 def excIsInstanceOf (rt : Rt) (inst : Val) (ca : Addr) : M Bool := do
   let w ← getW
   if isSubtype w (typeOf w inst) ca then pure true
@@ -240,15 +240,15 @@ def excIsInstanceOf (rt : Rt) (inst : Val) (ca : Addr) : M Bool := do
 
 /-! ## Argument parsing: the cases of `Python/getargs.c` these constructors use -/
 
-/-- `Py_TYPE(arg)->tp_name` in `converterr`, `Python/getargs.c:632`. -/
+/-- `Py_TYPE(arg)->tp_name` in `converterr`, `Python/getargs.c:673`. -/
 def excArgName (w : World) (v : Val) : String :=
   if v.is .none then "None" else trunc 50 (typeName w v)
 
-/-- `_PyArg_NoKeywords(name, kw)`, `Python/getargs.c:2800`. -/
+/-- `_PyArg_NoKeywords(name, kw)`, `Python/getargs.c:2943`. -/
 def argNoKeywords (name : String) (kw : Kw) : M Unit :=
   unless kw.isEmpty do typeErr s!"{name}() takes no keyword arguments"
 
-/-- The arity error of `vgetargs1_impl`, `Python/getargs.c:215`. -/
+/-- The arity error of `vgetargs1_impl`, `Python/getargs.c:256`. -/
 def argCount (fname : Option String) (min max n : Nat) : M Unit := do
   if n < min || max < n then
     let f := match fname with
@@ -258,7 +258,7 @@ def argCount (fname : Option String) (min max n : Nat) : M Unit := do
     let m := if n < min then min else max
     typeErr s!"{f} takes {how} {m} argument{if m == 1 then "" else "s"} ({n} given)"
 
-/-- `seterror` around a `must be X, not Y` conversion failure, `Python/getargs.c:399`. -/
+/-- `seterror` around a `must be X, not Y` conversion failure, `Python/getargs.c:440`. -/
 def argPrefix (fname : Option String) (i : Nat) : String :=
   let p := match fname with
     | some s => s ++ "() "
@@ -276,7 +276,7 @@ def argN (rt : Rt) (v : Val) : M Int := do
   let i ← excNumberIndex rt v
   excAsSsizeLong i
 
-/-- `error_unexpected_keyword_arg`, `Python/getargs.c:1492`, without the "Did you mean"
+/-- `error_unexpected_keyword_arg`, `Python/getargs.c:1576`, without the "Did you mean"
 suggestion of `_Py_CalculateSuggestions` (`Python/suggestions.c`). -/
 def argUnexpectedKeyword (fname : String) (names : List Name) (kw : Kw) : M Unit :=
   match kw.find? (fun p => !names.contains p.1) with
@@ -284,7 +284,7 @@ def argUnexpectedKeyword (fname : String) (names : List Name) (kw : Kw) : M Unit
   | none => typeErr s!"invalid keyword argument for {fname}()"
 
 /-- `PyArg_ParseTupleAndKeywords(empty_tuple, kwds, "|$OO...:fname", names, ...)`:
-`vgetargskeywords`, `Python/getargs.c:1575`, for keyword-only objects. -/
+`vgetargskeywords`, `Python/getargs.c@3.14.7:1575`, for keyword-only objects. -/
 def argKeywordOnly (fname : String) (names : List Name) (kw : Kw) : M (Name → Option Val) := do
   if kw.length > names.length then
     let l := names.length
@@ -295,25 +295,25 @@ def argKeywordOnly (fname : String) (names : List Name) (kw : Kw) : M (Name → 
 
 /-! ## `BaseException` -/
 
-/-- `BaseException_new`, `Objects/exceptions.c:60`; `kwds` is ignored. -/
+/-- `BaseException_new`, `Objects/exceptions.c:52`; `kwds` is ignored. -/
 def baseExceptionNew (t : Addr) (args : List Val) : M Val :=
   alloc t (.exc { args := args })
 
-/-- `BaseException_init`, `Objects/exceptions.c:88`. -/
+/-- `BaseException_init`, `Objects/exceptions.c:80`. -/
 def baseExceptionInit (self : Val) (args : List Val) (kw : Kw) : M Unit := do
   let w ← getW
   argNoKeywords (typeName w self) kw
   excUpdate self fun d => { d with args := args }
 
-/-- `BaseException_vectorcall`, `Objects/exceptions.c:100`: `tp_vectorcall` of the exact
-classes that use `BaseException_new` and `BaseException_init` (`_PyExc_InitTypes`, `:4424`),
+/-- `BaseException_vectorcall`, `Objects/exceptions.c:92`: `tp_vectorcall` of the exact
+classes that use `BaseException_new` and `BaseException_init` (`_PyExc_InitTypes`, `:4502`),
 which is `type_call` with the two steps merged. -/
 def baseExceptionVectorcall (t : Addr) (args : List Val) (kw : Kw) : M Val := do
   let w ← getW
   argNoKeywords (tpName w t) kw
   alloc t (.exc { args := args })
 
-/-- `BaseException_str`, `Objects/exceptions.c:171`. -/
+/-- `BaseException_str`, `Objects/exceptions.c:163`. -/
 def baseExceptionStr (rt : Rt) (v : Val) : M Val := do
   let w ← getW
   match excArgs w v with
@@ -321,7 +321,7 @@ def baseExceptionStr (rt : Rt) (v : Val) : M Val := do
   | [x] => .str <$> rt.str x
   | xs => .str <$> rt.str (.tuple xs)
 
-/-- `BaseException_repr`, `Objects/exceptions.c:193`. -/
+/-- `BaseException_repr`, `Objects/exceptions.c:185`. -/
 def baseExceptionRepr (rt : Rt) (v : Val) : M Val := do
   let w ← getW
   let name := pyTypeName w (typeOf w v)
@@ -333,7 +333,7 @@ def baseExceptionRepr (rt : Rt) (v : Val) : M Val := do
     let r ← rt.repr (.tuple xs)
     pure (.str (name ++ r))
 
-/-- `BaseException___reduce___impl`, `Objects/exceptions.c:220`. -/
+/-- `BaseException___reduce___impl`, `Objects/exceptions.c:212`. -/
 def baseExceptionReduce (v : Val) : M Val := do
   let w ← getW
   let tv : Val := .obj (typeOf w v)
@@ -353,7 +353,7 @@ def setstateLoop (rt : Rt) (self : Val) : List (Val × Val) → M Unit
       rt.setAttr self n (some v)
       setstateLoop rt self rest
 
-/-- `BaseException___setstate___impl`, `Objects/exceptions.c:243`. -/
+/-- `BaseException___setstate___impl`, `Objects/exceptions.c:235`. -/
 def baseExceptionSetstate (rt : Rt) (self state : Val) : M Val := do
   if state.is .none then pure .none
   else
@@ -364,8 +364,8 @@ def baseExceptionSetstate (rt : Rt) (self state : Val) : M Val := do
       setstateLoop rt self es
       pure .none
 
-/-- `BaseException___traceback___set_impl`, `Objects/exceptions.c:398`, and
-`PyException_SetTraceback`, `:530`. -/
+/-- `BaseException___traceback___set_impl`, `Objects/exceptions.c:392`, and
+`PyException_SetTraceback`, `:526`. -/
 def baseExceptionTracebackSet (self : Val) (value : Option Val) : M Unit := do
   let w ← getW
   match value with
@@ -375,12 +375,12 @@ def baseExceptionTracebackSet (self : Val) (value : Option Val) : M Unit := do
     else if v.is .none then excUpdate self fun d => { d with traceback := .none }
     else typeErr "__traceback__ must be a traceback or None"
 
-/-- `BaseException_with_traceback_impl`, `Objects/exceptions.c:279`. -/
+/-- `BaseException_with_traceback_impl`, `Objects/exceptions.c:271`. -/
 def baseExceptionWithTraceback (self tb : Val) : M Val := do
   baseExceptionTracebackSet self (some tb)
   pure self
 
-/-- `BaseException_add_note_impl`, `Objects/exceptions.c:298`; the argument check is
+/-- `BaseException_add_note_impl`, `Objects/exceptions.c:290`; the argument check is
 the clinic wrapper, `Objects/clinic/exceptions.c.h`. -/
 def baseExceptionAddNote (rt : Rt) (self note : Val) : M Val := do
   let w ← getW
@@ -403,14 +403,14 @@ def baseExceptionAddNote (rt : Rt) (self note : Val) : M Val := do
     pure .none
   | _ => gap%
 
-/-- `_PyException_AddNote`, `Objects/exceptions.c:4574`. -/
+/-- `_PyException_AddNote`, `Objects/exceptions.c:4646`. -/
 def pyExceptionAddNote (rt : Rt) (exc note : Val) : M Unit := do
   let w ← getW
   unless excInstanceCheck w exc do
     typeErr s!"exc must be an exception, not '{typeName w exc}'"
   let _ ← baseExceptionAddNote rt exc note
 
-/-- `BaseException_args_set_impl`, `Objects/exceptions.c:359`. -/
+/-- `BaseException_args_set_impl`, `Objects/exceptions.c:352`. -/
 def baseExceptionArgsSet (rt : Rt) (self : Val) (value : Option Val) : M Unit := do
   match value with
   | none => typeErr "args may not be deleted"
@@ -418,15 +418,15 @@ def baseExceptionArgsSet (rt : Rt) (self : Val) (value : Option Val) : M Unit :=
     let seq ← excSeqTuple rt v
     excUpdate self fun d => { d with args := seq }
 
-/-- `PyException_SetContext`, `Objects/exceptions.c:572`. -/
+/-- `PyException_SetContext`, `Objects/exceptions.c:568`. -/
 def pyExceptionSetContext (self : Val) (context : Option Val) : M Unit :=
   excUpdate self fun d => { d with context := context }
 
-/-- `PyException_SetCause`, `Objects/exceptions.c:551`: it always sets `suppress_context`. -/
+/-- `PyException_SetCause`, `Objects/exceptions.c:547`: it always sets `suppress_context`. -/
 def pyExceptionSetCause (self : Val) (cause : Option Val) : M Unit :=
   excUpdate self fun d => { d with suppressContext := true, cause := cause }
 
-/-- `BaseException___context___set_impl`, `Objects/exceptions.c:443`. -/
+/-- `BaseException___context___set_impl`, `Objects/exceptions.c:438`. -/
 def baseExceptionContextSet (self : Val) (value : Option Val) : M Unit := do
   let w ← getW
   match value with
@@ -437,7 +437,7 @@ def baseExceptionContextSet (self : Val) (value : Option Val) : M Unit := do
       typeErr "exception context must be None or derive from BaseException"
     else pyExceptionSetContext self (some v)
 
-/-- `BaseException___cause___set_impl`, `Objects/exceptions.c:486`. -/
+/-- `BaseException___cause___set_impl`, `Objects/exceptions.c:482`. -/
 def baseExceptionCauseSet (self : Val) (value : Option Val) : M Unit := do
   let w ← getW
   match value with
@@ -448,14 +448,14 @@ def baseExceptionCauseSet (self : Val) (value : Option Val) : M Unit := do
       typeErr "exception cause must be None or derive from BaseException"
     else pyExceptionSetCause self (some v)
 
-/-- `Py_T_BOOL`, `Python/structmember.c:170`: the `__suppress_context__` member. -/
+/-- `Py_T_BOOL`, `Python/structmember.c:180`: the `__suppress_context__` member. -/
 def suppressContextSet (self : Val) (value : Option Val) : M Unit := do
   match value with
   | none => typeErr "can't delete numeric/char attribute"
   | some (.bool b) => excUpdate self fun d => { d with suppressContext := b }
   | some _ => typeErr "attribute value type must be bool"
 
-/-- `PyObject_GenericSetDict`, `Objects/object.c:2046`. -/
+/-- `PyObject_GenericSetDict`, `Objects/object.c:2125`. -/
 def excDictSet (obj : Val) (value : Option Val) : M Unit := do
   let w ← getW
   match value, obj with
@@ -467,38 +467,38 @@ def excDictSet (obj : Val) (value : Option Val) : M Unit := do
       typeErr s!"__dict__ must be set to a dictionary, not a '{trunc 200 (typeName w v)}'"
   | _, _ => gap%
 
-/-! ### The thin C API of `BaseException`, `Objects/exceptions.c:518-603` -/
+/-! ### The thin C API of `BaseException`, `Objects/exceptions.c:514-599` -/
 
-/-- `PyException_GetTraceback`, `Objects/exceptions.c:519`. -/
+/-- `PyException_GetTraceback`, `Objects/exceptions.c:515`. -/
 def pyExceptionGetTraceback (w : World) (self : Val) : Option Val :=
   match (excDataOf w self).traceback with
   | .none => none
   | t => some t
 
-/-- `PyException_GetCause`, `Objects/exceptions.c:540`. -/
+/-- `PyException_GetCause`, `Objects/exceptions.c:536`. -/
 def pyExceptionGetCause (w : World) (self : Val) : Option Val := (excDataOf w self).cause
 
-/-- `PyException_GetContext`, `Objects/exceptions.c:561`. -/
+/-- `PyException_GetContext`, `Objects/exceptions.c:557`. -/
 def pyExceptionGetContext (w : World) (self : Val) : Option Val := (excDataOf w self).context
 
-/-- `PyException_GetArgs`, `Objects/exceptions.c:580`. -/
+/-- `PyException_GetArgs`, `Objects/exceptions.c:576`. -/
 def pyExceptionGetArgs (w : World) (self : Val) : Val := .tuple (excArgs w self)
 
-/-- `PyException_SetArgs`, `Objects/exceptions.c:590`. -/
+/-- `PyException_SetArgs`, `Objects/exceptions.c:586`. -/
 def pyExceptionSetArgs (self : Val) (args : List Val) : M Unit :=
   excUpdate self fun d => { d with args := args }
 
-/-- `PyExceptionClass_Name`, `Objects/exceptions.c:599`. -/
+/-- `PyExceptionClass_Name`, `Objects/exceptions.c:595`. -/
 def pyExceptionClassName (w : World) (t : Addr) : String := tpName w t
 
 /-! ## `StopIteration`, `SystemExit`, `KeyError` -/
 
-/-- `StopIteration_init`, `Objects/exceptions.c:754`. -/
+/-- `StopIteration_init`, `Objects/exceptions.c:750`. -/
 def stopIterationInit (self : Val) (args : List Val) (kw : Kw) : M Unit := do
   baseExceptionInit self args kw
   excUpdate self (memSet "value" (some (args.headD .none)))
 
-/-- `SystemExit_init`, `Objects/exceptions.c:819`. -/
+/-- `SystemExit_init`, `Objects/exceptions.c:815`. -/
 def systemExitInit (self : Val) (args : List Val) (kw : Kw) : M Unit := do
   baseExceptionInit self args kw
   match args with
@@ -506,7 +506,7 @@ def systemExitInit (self : Val) (args : List Val) (kw : Kw) : M Unit := do
   | [x] => excUpdate self (memSet "code" (some x))
   | xs => excUpdate self (memSet "code" (some (.tuple xs)))
 
-/-- `KeyError_str`, `Objects/exceptions.c:2942`. -/
+/-- `KeyError_str`, `Objects/exceptions.c:3019`. -/
 def keyErrorStr (rt : Rt) (v : Val) : M Val := do
   let w ← getW
   match excArgs w v with
@@ -515,7 +515,7 @@ def keyErrorStr (rt : Rt) (v : Val) : M Val := do
 
 /-! ## `ImportError`, `NameError`, `AttributeError` -/
 
-/-- `ImportError_init`, `Objects/exceptions.c:1810`. -/
+/-- `ImportError_init`, `Objects/exceptions.c:1804`. -/
 def importErrorInit (self : Val) (args : List Val) (kw : Kw) : M Unit := do
   baseExceptionInit self args []
   let get ← argKeywordOnly "ImportError" ["name", "path", "name_from"] kw
@@ -527,7 +527,7 @@ def importErrorInit (self : Val) (args : List Val) (kw : Kw) : M Unit := do
     | _ => none
   excUpdate self (memSet "msg" msg)
 
-/-- `ImportError_str`, `Objects/exceptions.c:1876`. -/
+/-- `ImportError_str`, `Objects/exceptions.c:1870`. -/
 def importErrorStr (rt : Rt) (v : Val) : M Val := do
   let w ← getW
   match memGet (excDataOf w v) "msg" with
@@ -540,7 +540,7 @@ def instDictEntries (w : World) (v : Val) : List (Val × Val) :=
   | some d => (dictOf w (.obj d)).getD []
   | none => []
 
-/-- `ImportError_getstate`, `Objects/exceptions.c:1886`. -/
+/-- `ImportError_getstate`, `Objects/exceptions.c:1880`. -/
 def importErrorGetstate (v : Val) : M Val := do
   let w ← getW
   let d := excDataOf w v
@@ -557,7 +557,7 @@ def importErrorGetstate (v : Val) : M Val := do
     | some a => pure (.obj a)
     | none => pure .none
 
-/-- `ImportError_reduce`, `Objects/exceptions.c:1918`. -/
+/-- `ImportError_reduce`, `Objects/exceptions.c:1912`. -/
 def importErrorReduce (v : Val) : M Val := do
   let state ← importErrorGetstate v
   let w ← getW
@@ -565,20 +565,20 @@ def importErrorReduce (v : Val) : M Val := do
   if state.is .none then pure (.tuple [tv, .tuple (excArgs w v)])
   else pure (.tuple [tv, .tuple (excArgs w v), state])
 
-/-- `NameError_init`, `Objects/exceptions.c:2504`. -/
+/-- `NameError_init`, `Objects/exceptions.c:2581`. -/
 def nameErrorInit (self : Val) (args : List Val) (kw : Kw) : M Unit := do
   baseExceptionInit self args []
   let get ← argKeywordOnly "NameError" ["name"] kw
   excUpdate self (memSet "name" (get "name"))
 
-/-- `AttributeError_init`, `Objects/exceptions.c:2587`. -/
+/-- `AttributeError_init`, `Objects/exceptions.c:2664`. -/
 def attributeErrorInit (self : Val) (args : List Val) (kw : Kw) : M Unit := do
   baseExceptionInit self args []
   let get ← argKeywordOnly "AttributeError" ["name", "obj"] kw
   excUpdate self (memSet "name" (get "name"))
   excUpdate self (memSet "obj" (get "obj"))
 
-/-- `AttributeError_getstate`, `Objects/exceptions.c:2643`: `self->args` is never NULL on
+/-- `AttributeError_getstate`, `Objects/exceptions.c:2720`: `self->args` is never NULL on
 an initialised object, so the dictionary branch always runs. -/
 def attributeErrorGetstate (v : Val) : M Val := do
   let w ← getW
@@ -589,7 +589,7 @@ def attributeErrorGetstate (v : Val) : M Val := do
     | none => es
   alloc B.dict (.dict (dictSetEntry es (.str "args") (.tuple d.args)))
 
-/-- `AttributeError_reduce`, `Objects/exceptions.c:2672`. -/
+/-- `AttributeError_reduce`, `Objects/exceptions.c:2749`. -/
 def attributeErrorReduce (v : Val) : M Val := do
   let state ← attributeErrorGetstate v
   let w ← getW
@@ -597,7 +597,7 @@ def attributeErrorReduce (v : Val) : M Val := do
 
 /-! ## `MemoryError` -/
 
-/-- `MemoryError_new`, `Objects/exceptions.c:4066`, on the path every program with fewer
+/-- `MemoryError_new`, `Objects/exceptions.c:4143`, on the path every program with fewer
 than 16 live `MemoryError`s takes: `get_memory_error` hands out a freelist entry, whose
 `args` is the empty tuple whatever was passed. `ExcFreelist.lean` models the list itself. -/
 def memoryErrorNew (t : Addr) (args : List Val) : M Val :=

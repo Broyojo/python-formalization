@@ -33,12 +33,12 @@ def cUB (what : String) : PyExc := .named "CUndefinedBehaviour" what
 def memoryError : PyExc := .named "MemoryError" ""
 
 /-- `PyLong_AsSsize_t` on an exact int (Argument Clinic `Py_ssize_t`
-parameters), Objects/longobject.c:668-669. -/
+parameters), Objects/longobject.c:748-749. -/
 def asSsize (x : Int) : Py Int :=
   if ssizeMin ≤ x ∧ x ≤ ssizeMax then .ok x
   else .error (.overflowError "Python int too large to convert to C ssize_t")
 
-/-- `PyNumber_AsSsize_t(item, exc)` on an exact int, Objects/abstract.c:1458-1500:
+/-- `PyNumber_AsSsize_t(item, exc)` on an exact int, Objects/abstract.c:1468-1510:
 `exc` with "cannot fit 'int' into an index-sized integer". -/
 def asSsizeExc (mk : String → PyExc) (x : Int) : Py Int :=
   if ssizeMin ≤ x ∧ x ≤ ssizeMax then .ok x
@@ -48,7 +48,7 @@ def asSsizeExc (mk : String → PyExc) (x : Int) : Py Int :=
 for `sq_item`): `PyNumber_AsSsize_t(item, PyExc_IndexError)`. -/
 def subIndex (x : Int) : Py Int := asSsizeExc .indexError x
 
-/-- Repeat counts (`sequence_repeat`, Objects/abstract.c:1147-1162,
+/-- Repeat counts (`sequence_repeat`, Objects/abstract.c:1157-1172,
 used for both `*` and `*=`): `PyNumber_AsSsize_t(n, PyExc_OverflowError)`. -/
 def repeatCount (x : Int) : Py Int := asSsizeExc .overflowError x
 
@@ -66,7 +66,7 @@ inductive PyIterable (α : Type) where
   | iter (xs : List α) (e : Option PyExc)
   deriving Repr
 
-/-- `PyObject_GetIter` on a non-iterable (Objects/abstract.c:2806). -/
+/-- `PyObject_GetIter` on a non-iterable (Objects/abstract.c:2813). -/
 def notIterableErr (tname : String) : PyExc := .typeError s!"'{tname}' object is not iterable"
 
 /-- A rich comparison operator. -/

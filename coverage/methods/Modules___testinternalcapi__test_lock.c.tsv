@@ -7,14 +7,15 @@ Modules/_testinternalcapi/test_lock.c	118	129	counter_thread	counter_thread(void
 Modules/_testinternalcapi/test_lock.c	132	152	test_lock_counter	test_lock_counter(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
 Modules/_testinternalcapi/test_lock.c	157	171	slow_counter_thread	slow_counter_thread(void *arg)	excluded		test-support: only for CPython's own tests
 Modules/_testinternalcapi/test_lock.c	174	195	test_lock_counter_slow	test_lock_counter_slow(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi/test_lock.c	215	247	thread_benchmark_locks	thread_benchmark_locks(void *arg)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi/test_lock.c	261	340	_testinternalcapi_benchmark_locks_impl	_testinternalcapi_benchmark_locks_impl(PyObject *module, Py_ssize_t num_threads, int use_pymutex, int critical_section_length, int time_ms) /*[clinic end generated code: output=381df8d7e9a74f18 input=f3aeaf688738c121]*/	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi/test_lock.c	343	353	test_lock_benchmark	test_lock_benchmark(PyObject *module, PyObject *obj)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi/test_lock.c	356	366	init_maybe_fail	init_maybe_fail(void *arg)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi/test_lock.c	369	384	test_lock_once	test_lock_once(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi/test_lock.c	396	412	rdlock_thread	rdlock_thread(void *arg)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi/test_lock.c	414	426	wrlock_thread	wrlock_thread(void *arg)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi/test_lock.c	429	439	wait_until	wait_until(uintptr_t *ptr, uintptr_t value)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi/test_lock.c	442	482	test_lock_rwlock	test_lock_rwlock(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi/test_lock.c	485	505	test_lock_recursive	test_lock_recursive(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
-Modules/_testinternalcapi/test_lock.c	521	527	_PyTestInternalCapi_Init_Lock	_PyTestInternalCapi_Init_Lock(PyObject *mod)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/test_lock.c	223	229	splitmix64	splitmix64(uint64_t *state)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/test_lock.c	232	279	thread_benchmark_locks	thread_benchmark_locks(void *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/test_lock.c	297	385	_testinternalcapi_benchmark_locks_impl	_testinternalcapi_benchmark_locks_impl(PyObject *module, Py_ssize_t num_threads, int work_inside, int work_outside, int time_ms, int num_acquisitions, Py_ssize_t total_iters, Py_ssize_t num_locks, int random_locks) /*[clinic end generated code: output=6258dc9de8cb9af1 input=d622cf4e1c4d008b]*/	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/test_lock.c	388	398	test_lock_benchmark	test_lock_benchmark(PyObject *module, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/test_lock.c	401	411	init_maybe_fail	init_maybe_fail(void *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/test_lock.c	414	429	test_lock_once	test_lock_once(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/test_lock.c	441	457	rdlock_thread	rdlock_thread(void *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/test_lock.c	459	471	wrlock_thread	wrlock_thread(void *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/test_lock.c	474	484	wait_until	wait_until(uintptr_t *ptr, uintptr_t value)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/test_lock.c	487	527	test_lock_rwlock	test_lock_rwlock(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/test_lock.c	530	550	test_lock_recursive	test_lock_recursive(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/test_lock.c	566	572	_PyTestInternalCapi_Init_Lock	_PyTestInternalCapi_Init_Lock(PyObject *mod)	excluded		test-support: only for CPython's own tests

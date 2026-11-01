@@ -1,0 +1,9 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_remote_debugging/frames.c	15	21	cleanup_stack_chunks	cleanup_stack_chunks(StackChunkList *chunks)	todo		
+Modules/_remote_debugging/frames.c	83	139	copy_stack_chunks	copy_stack_chunks(RemoteUnwinderObject *unwinder, uintptr_t tstate_addr, StackChunkList *out_chunks)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/frames.c	142	160	find_frame_in_chunks	find_frame_in_chunks(StackChunkList *chunks, uintptr_t remote_ptr)	todo		
+Modules/_remote_debugging/frames.c	301	436	process_frame_chain	process_frame_chain( RemoteUnwinderObject *unwinder, FrameWalkContext *ctx)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/frames.c	439	446	set_last_profiled_frame	set_last_profiled_frame(RemoteUnwinderObject *unwinder, uintptr_t tstate_addr, uintptr_t frame_addr)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/frames.c	452	505	clear_last_profiled_frames	clear_last_profiled_frames(RemoteUnwinderObject *unwinder)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/frames.c	514	583	try_full_cache_hit	try_full_cache_hit( RemoteUnwinderObject *unwinder, const FrameWalkContext *ctx, uint64_t thread_id)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/frames.c	588	670	collect_frames_with_cache	collect_frames_with_cache( RemoteUnwinderObject *unwinder, FrameWalkContext *ctx, uint64_t thread_id)	todo		changed-in-3.15: new function

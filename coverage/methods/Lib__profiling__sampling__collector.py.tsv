@@ -1,0 +1,18 @@
+file	line	endline	name	signature	status	entry	note
+Lib/profiling/sampling/collector.py	19	33	normalize_location	normalize_location(location)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/collector.py	36	50	extract_lineno	extract_lineno(location)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/collector.py	52	61	_is_internal_frame	_is_internal_frame(frame)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/collector.py	64	68	filter_internal_frames	filter_internal_frames(frames)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/collector.py	71	91	_build_task_graph	_build_task_graph(awaited_info_list)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/collector.py	94	95	_find_leaf_tasks	_find_leaf_tasks(all_task_ids, all_parent_ids)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/collector.py	98	136	_build_linear_stacks	_build_linear_stacks(leaf_task_ids, task_map, child_to_parent)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/collector.py	139	142	iter_async_frames	iter_async_frames(awaited_info_list)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/collector.py	149	159	Collector.collect	collect(self, stack_frames, timestamps_us=None)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/collector.py	161	162	Collector.collect_failed_sample	collect_failed_sample(self)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/collector.py	165	170	Collector.export	export(self, filename)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/collector.py	173	174	Collector._filter_internal_frames	_filter_internal_frames(frames)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/collector.py	176	192	Collector._iter_all_frames	_iter_all_frames(self, stack_frames, skip_idle=False)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/collector.py	194	195	Collector._iter_async_frames	_iter_async_frames(self, awaited_info_list)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/collector.py	197	206	Collector._iter_stacks	_iter_stacks(self, stack_frames, skip_idle=False)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/collector.py	208	214	Collector._is_gc_frame	_is_gc_frame(self, frame)	todo		changed-in-3.15: new function
+Lib/profiling/sampling/collector.py	216	292	Collector._collect_thread_status_stats	_collect_thread_status_stats(self, stack_frames)	todo		changed-in-3.15: new function

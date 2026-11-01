@@ -16,7 +16,7 @@ summary: |
   dec_format does know about NUL: it special-cases a NUL fill character at position 0, but only
   there.
   A neighbouring, separate oddity: float and complex accept exactly one trailing NUL, because
-  Python/formatter_unicode.c:323 reads it as the type character and :341 treats '\0' as "no type".
+  Python/formatter_unicode.c@3.14.7:323 reads it as the type character and @3.14.7:341 treats '\0' as "no type".
   So format(1234.5, '10\x00') works there, while int, str, Fraction and _pydecimal raise
   ValueError. _decimal differs in discarding any tail after the NUL, of any length, so the specs in
   the reproducer are the ones every other numeric type rejects.
@@ -24,7 +24,7 @@ likelihood: |
   Low. Specs are usually literals. It matters where a spec comes from data, since validating it by
   a trial format() passes on _decimal, and a NUL can hide trailing text from the check.
 maybe_intended: |
-  Not intended: the NUL-fill special case at _decimal.c:3575-3584 shows NUL was considered, and the
+  Not intended: the NUL-fill special case at _decimal.c@3.14.7:3575-3584 shows NUL was considered, and the
   fallback path through _pydecimal already rejects these specs when libmpdec's parser fails first.
   Same class as other embedded-NUL fixes in CPython's C code.
 reproducer: |
@@ -50,9 +50,9 @@ promised_by: |
   Twin agreement, and the format specification mini-language, which has no place for a NUL
   outside the fill position.
 cause: |
-  Modules/_decimal/_decimal.c:3562 gets (fmt, size) from PyUnicode_AsUTF8AndSize; :3592 calls
+  Modules/_decimal/_decimal.c@3.14.7:3562 gets (fmt, size) from PyUnicode_AsUTF8AndSize; :3802 calls
   mpd_parse_fmt_str(&spec, fmt, ...), which walks to the first NUL (libmpdec/io.c:910 `if (*cp !=
-  '\0') return 0;` is its only end check). Same logic on main at _decimal.c:3830 and :3854. It
+  '\0') return 0;` is its only end check). Same logic on main at _decimal.c:4051 and :4076. It
   reproduces with bundled libmpdec 2.5.1 and with system libmpdec 4.0.1.
 possible_fix: |
   After the NUL-fill replacement, reject `memchr(fmt, '\0', size)` hits by taking the existing

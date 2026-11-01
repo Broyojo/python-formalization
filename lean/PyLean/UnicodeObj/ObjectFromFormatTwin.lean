@@ -3,7 +3,7 @@ import PyLean.UnicodeObj.FormatProps
 
 /-!
 `PyUnicode_FromFormat` against Python's `%` operator: two separate implementations of the layout of
-an integer, unicodeobject.c:2970-3009 and unicodeobject.c:14762-14884 with 15320-15469.
+an integer, unicodeobject.c:2878-2919 and unicodeobject.c@3.14.7:14762-14884 with 15320-15469.
 
 Both sides are brought to one form: spaces, sign, zeros, digits, spaces.
 -/

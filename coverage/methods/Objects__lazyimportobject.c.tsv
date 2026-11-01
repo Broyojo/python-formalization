@@ -1,0 +1,22 @@
+file	line	endline	name	signature	status	entry	note
+Objects/lazyimportobject.c	38	85	_PyLazyImport_New	_PyLazyImport_New(_PyInterpreterFrame *frame, PyObject *builtins, PyObject *name, PyObject *fromlist)	todo		changed-in-3.15: new function
+Objects/lazyimportobject.c	91	130	lazy_import_get_loaded_attr	lazy_import_get_loaded_attr(PyThreadState *tstate, PyObject *name, PyObject *attr_name)	todo		changed-in-3.15: new function
+Objects/lazyimportobject.c	133	150	_PyEval_LazyImportFrom	_PyEval_LazyImportFrom(PyThreadState *tstate, _PyInterpreterFrame *frame, PyObject *v, PyObject *name)	todo		changed-in-3.15: new function
+Objects/lazyimportobject.c	153	161	lazy_import_traverse	lazy_import_traverse(PyObject *op, visitproc visit, void *arg)	todo		changed-in-3.15: new function
+Objects/lazyimportobject.c	164	172	lazy_import_clear	lazy_import_clear(PyObject *op)	todo		changed-in-3.15: new function
+Objects/lazyimportobject.c	175	180	lazy_import_dealloc	lazy_import_dealloc(PyObject *op)	todo		changed-in-3.15: new function
+Objects/lazyimportobject.c	184	200	lazy_import_getattro	lazy_import_getattro(PyObject *op, PyObject *name)	todo		changed-in-3.15: new function
+Objects/lazyimportobject.c	204	234	lazy_import_path	lazy_import_path(PyLazyImportObject *m)	todo		changed-in-3.15: new function
+Objects/lazyimportobject.c	237	247	lazy_import_name	lazy_import_name(PyLazyImportObject *m)	todo		changed-in-3.15: new function
+Objects/lazyimportobject.c	250	260	lazy_import_repr	lazy_import_repr(PyObject *op)	todo		changed-in-3.15: new function
+Objects/lazyimportobject.c	265	273	lazy_import_resolve_result	lazy_import_resolve_result(PyThreadState *tstate, PyObject *obj)	todo		changed-in-3.15: new function
+Objects/lazyimportobject.c	278	296	lazy_import_replay_from	lazy_import_replay_from(PyThreadState *tstate, PyObject *mod, PyLazyImportObject *lz)	todo		changed-in-3.15: new function
+Objects/lazyimportobject.c	300	355	lazy_import_add_exception_cause	lazy_import_add_exception_cause(PyThreadState *tstate, PyLazyImportObject *lz)	todo		changed-in-3.15: new function
+Objects/lazyimportobject.c	358	365	_PyLazyImport_IsResolving	_PyLazyImport_IsResolving(PyThreadState *tstate, PyObject *op)	todo		changed-in-3.15: new function
+Objects/lazyimportobject.c	368	562	lazy_import_resolve_impl	lazy_import_resolve_impl(PyThreadState *tstate, PyObject *lazy_import, PyObject **imported_module)	todo		changed-in-3.15: new function
+Objects/lazyimportobject.c	565	568	_PyImport_LoadLazyImportTstate	_PyImport_LoadLazyImportTstate(PyThreadState *tstate, PyObject *lazy_import)	todo		changed-in-3.15: new function
+Objects/lazyimportobject.c	572	612	_PyLazyImport_LoadChild	_PyLazyImport_LoadChild(PyThreadState *tstate, PyObject *declaration, PyObject *name)	todo		changed-in-3.15: new function
+Objects/lazyimportobject.c	615	620	_PyLazyImport_IsActive	_PyLazyImport_IsActive(PyObject *declaration)	todo		changed-in-3.15: new function
+Objects/lazyimportobject.c	626	667	lazy_import_replace_child	lazy_import_replace_child(PyThreadState *tstate, PyObject *placeholder, PyObject *name, PyObject *namespace, PyObject *child, PyObject *value)	todo		changed-in-3.15: new function
+Objects/lazyimportobject.c	670	711	_PyLazyImport_Reify	_PyLazyImport_Reify(PyThreadState *tstate, PyObject *placeholder, PyObject *name, PyObject *namespace)	todo		changed-in-3.15: new function
+Objects/lazyimportobject.c	714	717	lazy_import_resolve	lazy_import_resolve(PyObject *self, PyObject *args)	todo		changed-in-3.15: new function

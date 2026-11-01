@@ -26,7 +26,7 @@ likelihood: |
   configuration). The results are silently wrong rather than an error.
 maybe_intended: |
   Unlikely to be intended: bpo-21529 decided that a negative idx is invalid and the C scanner
-  rejects it, and test_decode.py:143-145 (test_negative_index) asserts ValueError for both twins,
+  rejects it, and test_decode.py:168-170 (test_negative_index) asserts ValueError for both twins,
   but only with idx=-50000, which the pure-Python twin happens to turn into JSONDecodeError (a
   ValueError subclass) because string[-50000] raises IndexError.
 reproducer: |
@@ -68,14 +68,14 @@ promised_by: |
   C/Python twin agreement and the explicit check in Modules/_json.c (bpo-21529); the
   raw_decode docstring describes idx as an index into s where a document begins.
 cause: |
-  Lib/json/scanner.py:28-63 (_scan_once) indexes `string[idx]` and slices `string[idx:idx + 4]`
+  Lib/json/scanner.py:29-64 (_scan_once) indexes `string[idx]` and slices `string[idx:idx + 4]`
   without checking idx >= 0, and NUMBER_RE.match(string, idx) clamps a negative pos to 0;
-  JSONObject/JSONArray (Lib/json/decoder.py:137-259) continue from the negative index.
-  Modules/_json.c:1037-1040 (scan_once_unicode) raises ValueError("idx cannot be negative").
-  Modules/_json.c:398-401 (scanstring_unicode) checks end; Lib/json/decoder.py:70-127 (py_scanstring)
+  JSONObject/JSONArray (Lib/json/decoder.py:137-263) continue from the negative index.
+  Modules/_json.c:1117-1120 (scan_once_unicode) raises ValueError("idx cannot be negative").
+  Modules/_json.c:494-497 (scanstring_unicode) checks end; Lib/json/decoder.py:70-127 (py_scanstring)
   does not, and STRINGCHUNK.match(s, end) clamps it. Unchanged on main.
 possible_fix: |
-  In py_make_scanner's scan_once (Lib/json/scanner.py:65), or in JSONDecoder.raw_decode, add
+  In py_make_scanner's scan_once (Lib/json/scanner.py:66), or in JSONDecoder.raw_decode, add
   `if idx < 0: raise ValueError('idx cannot be negative')`, and extend test_negative_index to
   idx=-1. In py_scanstring, the matching `if not 0 <= end <= len(s): raise ValueError('end is out
   of bounds')`.

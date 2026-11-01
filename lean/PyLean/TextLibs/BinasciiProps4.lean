@@ -38,7 +38,7 @@ theorem words4_fuel : ∀ (f g : Nat) (l : List Nat), l.length ≤ f → l.lengt
         simp only [words4]
         rw [ih g _ (by simp at h1 ⊢; omega) (by simp at h2 ⊢; omega)]
 
-/-- The end of `_85encode`, `Lib/base64.py:316-321`. -/
+/-- The end of `_85encode`, `Lib/base64.py@3.14.7:316-321`. -/
 def finishChunks (padding : Nat) (pad : Bool) (chars : Nat → Nat) (chunks : List (List Nat)) : List Nat :=
   (if padding ≠ 0 ∧ (!pad) = true then
     let last := chunks.getLast?.getD []

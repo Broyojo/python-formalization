@@ -1,0 +1,12 @@
+file	line	endline	name	signature	status	entry	note
+Objects/sentinelobject.c	32	47	caller	caller(void)	todo		changed-in-3.15: new function
+Objects/sentinelobject.c	50	63	sentinel_new_with_module	sentinel_new_with_module(PyTypeObject *type, PyObject *name, PyObject *module, PyObject *repr)	todo		changed-in-3.15: new function
+Objects/sentinelobject.c	76	90	sentinel_new_impl	sentinel_new_impl(PyTypeObject *type, PyObject *name, PyObject *repr) /*[clinic end generated code: output=1eb7fab52e57d8c8 input=28cab6c468997b35]*/	todo		changed-in-3.15: new function
+Objects/sentinelobject.c	93	122	PySentinel_New	PySentinel_New(const char *name, const char *module_name, const char *repr)	todo		changed-in-3.15: new function
+Objects/sentinelobject.c	125	132	sentinel_clear	sentinel_clear(PyObject *op)	todo		changed-in-3.15: new function
+Objects/sentinelobject.c	135	140	sentinel_dealloc	sentinel_dealloc(PyObject *op)	todo		changed-in-3.15: new function
+Objects/sentinelobject.c	143	150	sentinel_traverse	sentinel_traverse(PyObject *op, visitproc visit, void *arg)	todo		changed-in-3.15: new function
+Objects/sentinelobject.c	153	160	sentinel_repr	sentinel_repr(PyObject *op)	todo		changed-in-3.15: new function
+Objects/sentinelobject.c	163	166	sentinel_copy	sentinel_copy(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		changed-in-3.15: new function
+Objects/sentinelobject.c	169	172	sentinel_deepcopy	sentinel_deepcopy(PyObject *self, PyObject *Py_UNUSED(memo))	todo		changed-in-3.15: new function
+Objects/sentinelobject.c	175	179	sentinel_reduce	sentinel_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		changed-in-3.15: new function

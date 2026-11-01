@@ -1,22 +1,22 @@
 file	line	endline	name	signature	status	entry	note
-Python/perf_trampoline.c	156	162	invalidate_icache	static void invalidate_icache(char* begin, char*end) {	todo		
-Python/perf_trampoline.c	214	221	perf_trampoline_clear_code_watcher	perf_trampoline_clear_code_watcher(void)	todo		
-Python/perf_trampoline.c	224	228	perf_trampoline_reset_state	perf_trampoline_reset_state(void)	todo		
-Python/perf_trampoline.c	231	249	perf_trampoline_code_watcher	perf_trampoline_code_watcher(PyCodeEvent event, PyCodeObject *co)	todo		
-Python/perf_trampoline.c	252	271	perf_map_write_entry	perf_map_write_entry(void *state, const void *code_addr, unsigned int code_size, PyCodeObject *co)	todo		
-Python/perf_trampoline.c	274	280	perf_map_init_state	perf_map_init_state(void)	todo		
-Python/perf_trampoline.c	283	287	perf_map_free_state	perf_map_free_state(void *state)	todo		
-Python/perf_trampoline.c	296	315	round_up	static size_t round_up(int64_t value, int64_t multiple) {	todo		
-Python/perf_trampoline.c	320	386	new_code_arena	new_code_arena(void)	todo		
-Python/perf_trampoline.c	389	400	free_code_arenas	free_code_arenas(void)	todo		
-Python/perf_trampoline.c	403	412	code_arena_new_code	code_arena_new_code(code_arena_t *code_arena)	todo		
-Python/perf_trampoline.c	415	426	compile_trampoline	compile_trampoline(void)	todo		
-Python/perf_trampoline.c	429	459	py_trampoline_evaluator	py_trampoline_evaluator(PyThreadState *ts, _PyInterpreterFrame *frame, int throw)	todo		
-Python/perf_trampoline.c	462	481	PyUnstable_PerfTrampoline_CompileCode	int PyUnstable_PerfTrampoline_CompileCode(PyCodeObject *co)	todo		
-Python/perf_trampoline.c	484	491	_PyIsPerfTrampolineActive	_PyIsPerfTrampolineActive(void)	todo		
-Python/perf_trampoline.c	494	505	_PyPerfTrampoline_GetCallbacks	_PyPerfTrampoline_GetCallbacks(_PyPerf_Callbacks *callbacks)	todo		
-Python/perf_trampoline.c	508	523	_PyPerfTrampoline_SetCallbacks	_PyPerfTrampoline_SetCallbacks(_PyPerf_Callbacks *callbacks)	todo		
-Python/perf_trampoline.c	526	568	_PyPerfTrampoline_Init	_PyPerfTrampoline_Init(int activate)	todo		
-Python/perf_trampoline.c	571	598	_PyPerfTrampoline_Fini	_PyPerfTrampoline_Fini(void)	todo		
-Python/perf_trampoline.c	601	607	PyUnstable_PerfTrampoline_SetPersistAfterFork	PyUnstable_PerfTrampoline_SetPersistAfterFork(int enable){	todo		
-Python/perf_trampoline.c	610	641	_PyPerfTrampoline_AfterFork_Child	_PyPerfTrampoline_AfterFork_Child(void)	todo		
+Python/perf_trampoline.c	157	163	invalidate_icache	static void invalidate_icache(char* begin, char*end) {	todo		
+Python/perf_trampoline.c	213	220	perf_trampoline_clear_code_watcher	perf_trampoline_clear_code_watcher(void)	todo		
+Python/perf_trampoline.c	223	227	perf_trampoline_reset_state	perf_trampoline_reset_state(void)	todo		
+Python/perf_trampoline.c	230	248	perf_trampoline_code_watcher	perf_trampoline_code_watcher(PyCodeEvent event, PyCodeObject *co)	todo		
+Python/perf_trampoline.c	251	278	perf_map_write_entry	perf_map_write_entry(void *state, const void *code_addr, size_t code_size, PyCodeObject *co)	todo		changed-in-3.15:
+Python/perf_trampoline.c	281	288	perf_map_init_state	perf_map_init_state(void)	todo		changed-in-3.15:
+Python/perf_trampoline.c	291	295	perf_map_free_state	perf_map_free_state(void *state)	todo		
+Python/perf_trampoline.c	304	323	round_up	static size_t round_up(int64_t value, int64_t multiple) {	todo		
+Python/perf_trampoline.c	328	395	new_code_arena	new_code_arena(void)	todo		changed-in-3.15:
+Python/perf_trampoline.c	398	409	free_code_arenas	free_code_arenas(void)	todo		
+Python/perf_trampoline.c	412	421	code_arena_new_code	code_arena_new_code(code_arena_t *code_arena)	todo		changed-in-3.15:
+Python/perf_trampoline.c	424	435	compile_trampoline	compile_trampoline(void)	todo		
+Python/perf_trampoline.c	438	471	py_trampoline_evaluator	py_trampoline_evaluator(PyThreadState *ts, _PyInterpreterFrame *frame, int throw)	todo		changed-in-3.15:
+Python/perf_trampoline.c	474	493	PyUnstable_PerfTrampoline_CompileCode	int PyUnstable_PerfTrampoline_CompileCode(PyCodeObject *co)	todo		
+Python/perf_trampoline.c	496	503	_PyIsPerfTrampolineActive	_PyIsPerfTrampolineActive(void)	todo		
+Python/perf_trampoline.c	506	517	_PyPerfTrampoline_GetCallbacks	_PyPerfTrampoline_GetCallbacks(_PyPerf_Callbacks *callbacks)	todo		
+Python/perf_trampoline.c	520	535	_PyPerfTrampoline_SetCallbacks	_PyPerfTrampoline_SetCallbacks(_PyPerf_Callbacks *callbacks)	todo		
+Python/perf_trampoline.c	538	574	_PyPerfTrampoline_Init	_PyPerfTrampoline_Init(int activate)	todo		changed-in-3.15:
+Python/perf_trampoline.c	577	604	_PyPerfTrampoline_Fini	_PyPerfTrampoline_Fini(void)	todo		
+Python/perf_trampoline.c	607	613	PyUnstable_PerfTrampoline_SetPersistAfterFork	PyUnstable_PerfTrampoline_SetPersistAfterFork(int enable){	todo		
+Python/perf_trampoline.c	616	647	_PyPerfTrampoline_AfterFork_Child	_PyPerfTrampoline_AfterFork_Child(void)	todo		

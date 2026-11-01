@@ -1,7 +1,7 @@
 import PyLean.JsonMod.Enc
 
 /-!
-`_make_iterencode` as the generator it is (Lib/json/encoder.py:265-461), for
+`_make_iterencode` as the generator it is (Lib/json/encoder.py@3.14.7:265-461), for
 `JSONEncoder.iterencode` and `json.dump`, which use the pure-Python generators
 even when `_json` is present (`c_make_encoder` is taken only with `_one_shot`,
 encoder.py:253).
@@ -39,7 +39,7 @@ def yRes : Yield → ER
   | (_, some e) => .error e
 
 /-- The text of a scalar, computed before anything is yielded: the
-`isinstance` chain of `_iterencode_list`, encoder.py:300-318 (`none`: anything
+`isinstance` chain of `_iterencode_list`, encoder.py:289-307 (`none`: anything
 else). -/
 def pyScalar (cfg : ECfg) : EVal → Option ER
   | .str s => some (.ok (pyStrEnc cfg s))
@@ -50,13 +50,13 @@ def pyScalar (cfg : ECfg) : EVal → Option ER
   | .flt b r => some (pyFloatStr cfg b r)
   | _ => none
 
-/-- `if newline_indent is not None: yield newline_indent`, encoder.py:385-386. -/
+/-- `if newline_indent is not None: yield newline_indent`, encoder.py:374-375. -/
 def nlChunks : Option PStr → List PStr
   | some n => [n]
   | none => []
 
 mutual
-/-- `_iterencode(o, _current_indent_level)`, encoder.py:426-460, inlining the
+/-- `_iterencode(o, _current_indent_level)`, encoder.py:415-449, inlining the
 opening of `_iterencode_list` and `_iterencode_dict`. -/
 def pyIter (cfg : ECfg) : Nat → Nat → List Nat → EVal → Yield
   | 0, _, _, _ => yRaise .modelFuel
@@ -75,7 +75,7 @@ def pyIter (cfg : ECfg) : Nat → Nat → List Nat → EVal → Yield
       | .ok t => yOne t
       | .error e => yRaise e
     | .list xs =>
-      -- `_iterencode_list`, encoder.py:280-337
+      -- `_iterencode_list`, encoder.py:269-326
       if xs = [] then yOne (cs "[]")
       else
         match cfg.indent with
@@ -85,7 +85,7 @@ def pyIter (cfg : ECfg) : Nat → Nat → List Nat → EVal → Yield
             ([[10] ++ rep ind lvl, [93]], none)
         | none => yThen (pyIterList cfg f lvl seen cfg.itemSep [91] 0 xs) ([[93]], none)
     | .dict kvs =>
-      -- `_iterencode_dict`, encoder.py:339-424: `{` is yielded before `sorted`.
+      -- `_iterencode_dict`, encoder.py:328-413: `{` is yielded before `sorted`.
       if kvs = [] then yOne (cs "{}")
       else
         yCons [123] <|
@@ -104,7 +104,7 @@ def pyIter (cfg : ECfg) : Nat → Nat → List Nat → EVal → Yield
           yThen y (close ++ [[125]], none)
     | .back _ => yRaise (if cfg.checkCircular then circularErr else recursionErr)
     | .other n t =>
-      -- encoder.py:446-460
+      -- encoder.py:435-449
       if n ∈ seen then yRaise (if cfg.checkCircular then circularErr else recursionErr)
       else
         match cfg.dflt n t with
@@ -112,7 +112,7 @@ def pyIter (cfg : ECfg) : Nat → Nat → List Nat → EVal → Yield
         | .ok v' => pyIter cfg f lvl (n :: seen) v'
 termination_by f _ _ v => (f, sizeOf v)
 
-/-- The `for i, value in enumerate(lst)` loop, encoder.py:297-332: a scalar is
+/-- The `for i, value in enumerate(lst)` loop, encoder.py:286-321: a scalar is
 yielded with `buf` in one chunk, a container after `yield buf`. -/
 def pyIterList (cfg : ECfg) : Nat → Nat → List Nat → PStr → PStr → Nat → List EVal → Yield
   | _, _, _, _, _, _, [] => ([], none)
@@ -128,7 +128,7 @@ def pyIterList (cfg : ECfg) : Nat → Nat → List Nat → PStr → PStr → Nat
     yThen item (pyIterList cfg f lvl seen sep buf (i + 1) xs)
 termination_by f _ _ _ _ _ xs => (f, sizeOf xs)
 
-/-- The `for key, value in items` loop, encoder.py:361-418; also returns `first`. -/
+/-- The `for key, value in items` loop, encoder.py:350-407; also returns `first`. -/
 def pyIterItems (cfg : ECfg) : Nat → Nat → List Nat → Option PStr → PStr → Bool → List (EKey × EVal) → Yield × Bool
   | _, _, _, _, _, first, [] => (([], none), first)
   | f, lvl, seen, nl, sep, first, (k, x) :: xs =>
@@ -146,7 +146,7 @@ end
 /-- `JSONEncoder.iterencode(o)` (`_one_shot=False`), encoder.py:207-263. -/
 def iterencode (cfg : ECfg) (v : EVal) : Yield := pyIter cfg (encFuel cfg v) 0 [] v
 
-/-- `for chunk in iterable: fp.write(chunk)`, Lib/json/__init__.py:181-182:
+/-- `for chunk in iterable: fp.write(chunk)`, Lib/json/__init__.py:180-181:
 `wr k c` is what the `k`-th write of `c` raises. Returns the chunks written. -/
 def writeAll (wr : Nat → PStr → Option PyExc) : Nat → List PStr → List PStr × Option PyExc
   | _, [] => ([], none)

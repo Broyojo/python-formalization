@@ -188,7 +188,7 @@ theorem convert_int_frac (q : Rat) (h : q.den ≠ 1) :
   cases ratToFlt q <;> rfl
 
 /-- `mean` of `int`s: an `int` when the exact mean is whole, otherwise the correctly rounded
-`float` (or `OverflowError`, the source's FIXME at statistics.py:1634). -/
+`float` (or `OverflowError`, the source's FIXME at statistics.py:1635). -/
 def MeanInts : Prop :=
   ∀ xs : List Int, xs ≠ [] →
     let m : Rat := sumQ (xs.map (fun (i : Int) => (i : Rat))) / (xs.length : Rat)

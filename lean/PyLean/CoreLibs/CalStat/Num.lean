@@ -358,7 +358,7 @@ def fsumV (xs : List Val) : Py Flt := do
   let st ← xs.foldlM (fun st v => do fsumStep st (← asDouble v)) ({} : FsumState)
   fsumEnd st
 
-/-! ## `math.sumprod`, Modules/mathmodule.c:2775-2970 -/
+/-! ## `math.sumprod`, Modules/mathmodule.c:2138-2333 -/
 
 structure SP where
   total : Val := .int 0

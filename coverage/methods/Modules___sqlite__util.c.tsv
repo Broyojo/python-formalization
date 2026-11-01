@@ -2,5 +2,5 @@ file	line	endline	name	signature	status	entry	note
 Modules/_sqlite/util.c	34	72	get_exception_class	get_exception_class(pysqlite_state *state, int errorcode)	todo		
 Modules/_sqlite/util.c	75	119	raise_exception	raise_exception(PyObject *type, int errcode, const char *errmsg)	todo		
 Modules/_sqlite/util.c	122	133	set_error_from_code	set_error_from_code(pysqlite_state *state, int code)	todo		
-Modules/_sqlite/util.c	139	153	set_error_from_db	set_error_from_db(pysqlite_state *state, sqlite3 *db)	todo		
-Modules/_sqlite/util.c	162	185	_pysqlite_long_as_int64	_pysqlite_long_as_int64(PyObject * py_val)	todo		
+Modules/_sqlite/util.c	139	154	set_error_from_db	set_error_from_db(pysqlite_state *state, sqlite3 *db)	todo		changed-in-3.15:
+Modules/_sqlite/util.c	163	186	_pysqlite_long_as_int64	_pysqlite_long_as_int64(PyObject * py_val)	todo		

@@ -31,7 +31,7 @@ structure Tz where
   kind : TzKind
   deriving Repr, DecidableEq, Inhabited
 
-/-- `timezone.utc`, _pydatetime.py:2521. -/
+/-- `timezone.utc`, _pydatetime.py:2576. -/
 def tzUTC : Tz := ⟨0, .timezone ⟨0, 0, 0⟩ none⟩
 
 /-- A `datetime` object. -/
@@ -118,7 +118,7 @@ def strRepr (s : String) : String :=
 
 /-! ### `timezone` -/
 
-/-- `timezone._name_from_offset`, _pydatetime.py:2502-2519. -/
+/-- `timezone._name_from_offset`, _pydatetime.py:2557-2574. -/
 def nameFromOffset (delta : Delta) : String :=
   let t := delta.toUs
   if t = 0 then "UTC"
@@ -136,13 +136,13 @@ def nameFromOffset (delta : Delta) : String :=
     else if seconds ≠ 0 then base ++ s!":{fmt0 2 seconds}"
     else base
 
-/-- `timezone.tzname`/`__str__`, _pydatetime.py:2466-2481. -/
+/-- `timezone.tzname`/`__str__`, _pydatetime.py:2521-2536. -/
 def timezoneStrPy (offset : Delta) (name : Option String) : String :=
   match name with
   | none => nameFromOffset offset
   | some n => n
 
-/-- `timezone_str`, _datetimemodule.c:4369-4413. `delta_negative` of an offset
+/-- `timezone_str`, _datetimemodule.c:4432-4476. `delta_negative` of an offset
 inside ±24h cannot fail, and `C divmod` is on non-negative seconds. -/
 def timezoneStrC (oid : Nat) (offset : Delta) (name : Option String) : String :=
   match name with
@@ -168,8 +168,8 @@ def timezoneStrC (oid : Nat) (offset : Delta) (name : Option String) : String :=
       else if seconds ≠ 0 then base ++ s!":{fmt0 2 seconds}"
       else base
 
-/-- `timezone.__repr__`, _pydatetime.py:2446-2464, and `timezone_repr`,
-_datetimemodule.c:4350-4366. -/
+/-- `timezone.__repr__`, _pydatetime.py:2501-2519, and `timezone_repr`,
+_datetimemodule.c:4413-4429. -/
 def timezoneRepr (oid : Nat) (offset : Delta) (name : Option String) : String :=
   if oid = 0 then "datetime.timezone.utc"
   else match name with
@@ -183,15 +183,15 @@ def Tz.repr (env : TzEnv) (tz : Tz) : String :=
   | .custom i => env.repr i
 
 /-- `tz.utcoffset(dt)` without the check on the result: `timezone.utcoffset`,
-_pydatetime.py:2469-2473 (C `timezone_utcoffset`, :4425-4432), or a subclass method.
+_pydatetime.py:2524-2528 (C `timezone_utcoffset`, :4480-4487), or a subclass method.
 The arguments here are always a `datetime` or `None`. -/
 def tzUtcoffsetRaw (env : TzEnv) (tz : Tz) (arg : Option DT) : Py OffRet :=
   match tz.kind with
   | .timezone offset _ => .ok (.delta offset)
   | .custom i => env.utcoffset i arg
 
-/-- `tz.dst(dt)`: `timezone.dst`, _pydatetime.py:2483-2487 (C `timezone_dst`,
-:4435-4441), or a subclass method. -/
+/-- `tz.dst(dt)`: `timezone.dst`, _pydatetime.py:2538-2542 (C `timezone_dst`,
+:4490-4496), or a subclass method. -/
 def tzDstRaw (env : TzEnv) (tz : Tz) (arg : Option DT) : Py OffRet :=
   match tz.kind with
   | .timezone _ _ => .ok .none
@@ -203,13 +203,13 @@ def tzTznameRawPy (env : TzEnv) (tz : Tz) (arg : Option DT) : Py NameRet :=
   | .timezone offset name => .ok (.str (timezoneStrPy offset name))
   | .custom i => env.tzname i arg
 
-/-- `tz.tzname(dt)` in C: `timezone_tzname`, :4416-4422. -/
+/-- `tz.tzname(dt)` in C: `timezone_tzname`, :4471-4477. -/
 def tzTznameRawC (env : TzEnv) (tz : Tz) (arg : Option DT) : Py NameRet :=
   match tz.kind with
   | .timezone offset name => .ok (.str (timezoneStrC tz.oid offset name))
   | .custom i => env.tzname i arg
 
-/-- `_check_utc_offset(name, offset)`, _pydatetime.py:547-557. -/
+/-- `_check_utc_offset(name, offset)`, _pydatetime.py:566-576. -/
 def checkUtcOffset (name : String) : OffRet → Py (Option Delta)
   | .none => .ok none
   | .other ty => .error (.typeError s!"tzinfo.{name}() must return None or timedelta, not '{ty}'")
@@ -218,7 +218,7 @@ def checkUtcOffset (name : String) : OffRet → Py (Option Delta)
       .error (.valueError "~offset must be a timedelta strictly between -timedelta(hours=24) and timedelta(hours=24)")
     else .ok (some o)
 
-/-- The result check of `call_tzinfo_method`, _datetimemodule.c:1517-1552. -/
+/-- The result check of `call_tzinfo_method`, _datetimemodule.c:1525-1560. -/
 def callTzinfoCheckC (name : String) : OffRet → Py (Option Delta)
   | .none => .ok none
   | .other ty => .error (.typeError s!"tzinfo.{name}() must return None or timedelta, not '{ty}'")
@@ -227,96 +227,96 @@ def callTzinfoCheckC (name : String) : OffRet → Py (Option Delta)
       .error (.valueError "~offset must be a timedelta strictly between -timedelta(hours=24) and timedelta(hours=24)")
     else .ok (some o)
 
-/-- `_check_tzname(name)`, _pydatetime.py:536-539. -/
+/-- `_check_tzname(name)`, _pydatetime.py:555-558. -/
 def checkTzname : NameRet → Py (Option String)
   | .none => .ok none
   | .str s => .ok (some s)
   | .other ty => .error (.typeError s!"tzinfo.tzname() must return None or string, not '{ty}'")
 
-/-- The result check of `call_tzname`, _datetimemodule.c:1589-1612. -/
+/-- The result check of `call_tzname`, _datetimemodule.c:1597-1620. -/
 def callTznameCheckC : NameRet → Py (Option String)
   | .none => .ok none
   | .str s => .ok (some s)
   | .other ty => .error (.typeError s!"tzinfo.tzname() must return None or a string, not '{ty}'")
 
-/-- `datetime.utcoffset()`, _pydatetime.py:2181-2188. -/
+/-- `datetime.utcoffset()`, _pydatetime.py:2234-2241. -/
 def DT.utcoffsetPy (env : TzEnv) (dt : DT) : Py (Option Delta) :=
   match dt.tz with
   | none => .ok none
   | some tz => do checkUtcOffset "utcoffset" (← tzUtcoffsetRaw env tz (some dt))
 
-/-- `call_utcoffset(tzinfo, dt)` (:1563-1566) for `datetime_utcoffset`, :6051-6054. -/
+/-- `call_utcoffset(tzinfo, dt)` (:1593-1596) for `datetime_utcoffset`, :6106-6109. -/
 def DT.utcoffsetC (env : TzEnv) (dt : DT) : Py (Option Delta) :=
   match dt.tz with
   | none => .ok none
   | some tz => do callTzinfoCheckC "utcoffset" (← tzUtcoffsetRaw env tz (some dt))
 
-/-- `datetime.dst()`, _pydatetime.py:2203-2216. -/
+/-- `datetime.dst()`, _pydatetime.py:2256-2269. -/
 def DT.dstPy (env : TzEnv) (dt : DT) : Py (Option Delta) :=
   match dt.tz with
   | none => .ok none
   | some tz => do checkUtcOffset "dst" (← tzDstRaw env tz (some dt))
 
-/-- `call_dst` (:1577-1580) for `datetime_dst`, :6057-6060. -/
+/-- `call_dst` (:1607-1610) for `datetime_dst`, :6112-6115. -/
 def DT.dstC (env : TzEnv) (dt : DT) : Py (Option Delta) :=
   match dt.tz with
   | none => .ok none
   | some tz => do callTzinfoCheckC "dst" (← tzDstRaw env tz (some dt))
 
-/-- `datetime.tzname()`, _pydatetime.py:2190-2201. -/
+/-- `datetime.tzname()`, _pydatetime.py:2243-2254. -/
 def DT.tznamePy (env : TzEnv) (dt : DT) : Py (Option String) :=
   match dt.tz with
   | none => .ok none
   | some tz => do checkTzname (← tzTznameRawPy env tz (some dt))
 
-/-- `call_tzname` for `datetime_tzname`, :6063-6066. -/
+/-- `call_tzname` for `datetime_tzname`, :6118-6121. -/
 def DT.tznameC (env : TzEnv) (dt : DT) : Py (Option String) :=
   match dt.tz with
   | none => .ok none
   | some tz => do callTznameCheckC (← tzTznameRawC env tz (some dt))
 
-/-- `time.utcoffset()`, _pydatetime.py:1650-1657 (the tzinfo gets `None`). -/
+/-- `time.utcoffset()`, _pydatetime.py:1695-1702 (the tzinfo gets `None`). -/
 def TM.utcoffsetPy (env : TzEnv) (t : TM) : Py (Option Delta) :=
   match t.tz with
   | none => .ok none
   | some tz => do checkUtcOffset "utcoffset" (← tzUtcoffsetRaw env tz none)
 
-/-- `time_utcoffset`, :4749-4752. -/
+/-- `time_utcoffset`, :4804-4807. -/
 def TM.utcoffsetC (env : TzEnv) (t : TM) : Py (Option Delta) :=
   match t.tz with
   | none => .ok none
   | some tz => do callTzinfoCheckC "utcoffset" (← tzUtcoffsetRaw env tz none)
 
-/-- `time.dst()`, _pydatetime.py:1672-1685. -/
+/-- `time.dst()`, _pydatetime.py:1717-1730. -/
 def TM.dstPy (env : TzEnv) (t : TM) : Py (Option Delta) :=
   match t.tz with
   | none => .ok none
   | some tz => do checkUtcOffset "dst" (← tzDstRaw env tz none)
 
-/-- `time_dst`, :4755-4758. -/
+/-- `time_dst`, :4810-4813. -/
 def TM.dstC (env : TzEnv) (t : TM) : Py (Option Delta) :=
   match t.tz with
   | none => .ok none
   | some tz => do callTzinfoCheckC "dst" (← tzDstRaw env tz none)
 
-/-- `time.tzname()`, _pydatetime.py:1659-1670. -/
+/-- `time.tzname()`, _pydatetime.py:1704-1715. -/
 def TM.tznamePy (env : TzEnv) (t : TM) : Py (Option String) :=
   match t.tz with
   | none => .ok none
   | some tz => do checkTzname (← tzTznameRawPy env tz none)
 
-/-- `time_tzname`, :4761-4764. -/
+/-- `time_tzname`, :4816-4819. -/
 def TM.tznameC (env : TzEnv) (t : TM) : Py (Option String) :=
   match t.tz with
   | none => .ok none
   | some tz => do callTznameCheckC (← tzTznameRawC env tz none)
 
 /-- `tzinfo.tzname`, `.utcoffset`, `.dst` of the abstract base class,
-_pydatetime.py:1300-1314: the exception. -/
+_pydatetime.py:1325-1339: the exception. -/
 def tzinfoBasePy (meth : String) : PyExc :=
   .named "NotImplementedError" s!"tzinfo subclass must override {meth}()"
 
-/-- `tzinfo_nogo`, _datetimemodule.c:4084-4090, for `tzinfo_tzname`,
+/-- `tzinfo_nogo`, _datetimemodule.c:4143-4149, for `tzinfo_tzname`,
 `tzinfo_utcoffset` and `tzinfo_dst`. -/
 def tzinfoNogoC (meth : String) : PyExc :=
   .named "NotImplementedError" s!"a tzinfo subclass must implement {meth}()"

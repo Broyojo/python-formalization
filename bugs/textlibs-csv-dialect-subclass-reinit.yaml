@@ -44,7 +44,7 @@ promised_by: |
   Nothing explicit, since the type is private. csv.reader's docs accept "an instance of a subclass of
   the Dialect class", which here is the public class.
 cause: |
-  Modules/_csv.c:647 calls PyObject_VectorcallDict on the type. Objects/typeobject.c:2382-2384 runs
+  Modules/_csv.c:647 calls PyObject_VectorcallDict on the type. Objects/typeobject.c:2522-2524 runs
   tp_init on whatever tp_new returned when it is an instance of the type, and Modules/_csv.c:475-485
   returns the argument itself.
 possible_fix: |

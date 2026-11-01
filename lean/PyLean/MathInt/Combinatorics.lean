@@ -113,7 +113,7 @@ theorem descFact_add (n j : Nat) : ∀ m, descFact n (j + m) = descFact n j * de
       show n - (j + m) = n - j - m by omega]
 
 /-- `C(n, j) * C(n-j, k-j) == C(n, k) * C(k, j)`, the identity behind the
-recursion of `perm_comb_small` / `perm_comb` (mathmodule.c:3639-3660). -/
+recursion of `perm_comb_small` / `perm_comb` (mathmodule.c@3.14.7:3639-3660). -/
 theorem choose_mul_choose (n k j : Nat) (hj : j ≤ k) (hk : k ≤ n) :
     choose n j * choose (n - j) (k - j) = choose n k * choose k j := by
   have hpos : 0 < fact j * fact (k - j) := Nat.mul_pos (fact_pos _) (fact_pos _)

@@ -36,13 +36,13 @@ def wrapArg {α : Type} (a : Py α) (f : α → BM Val) : BM Val :=
   | .error e => thr e
   | .ok v => f v
 
-/-- `buffered_iternext`, bufferedio.c:1486-1526 (exact types only). -/
+/-- `buffered_iternext`, bufferedio.c:1498-1538 (exact types only). -/
 def iternext : BM Val := do
   checkInit
   let l ← readlineRaw (-1)
   if l = [] then thr .stopIteration else pure (Val.bytes l)
 
-/-- The forwarding properties and methods, bufferedio.c:631-719, :532-537. -/
+/-- The forwarding properties and methods, bufferedio.c:640-728, :541-546. -/
 def stepOp (s : BufS) : BfOp → BufS × Py Val
   | .read n =>
     -- a writer inherits `_io__BufferedIOBase_read_impl`, bufferedio.c:166
@@ -71,7 +71,7 @@ def stepOp (s : BufS) : BfOp → BufS × Py Val
   | .close => close s
   | .detach => detach s
   | .closed => (do checkInit; let s ← SM.get; pure (Val.bool s.raw.closed)) s
-  -- bufferedio.c:644-661 forwards to the raw, but only the types that list the
+  -- bufferedio.c:653-670 forwards to the raw, but only the types that list the
   -- method do: a reader has no `writable` and a writer no `readable`, so those
   -- are `_IOBase`'s False. The fields hold the kind; init checked the raw.
   | .readable => (do checkInit; let s ← SM.get; pure (Val.bool s.readable)) s

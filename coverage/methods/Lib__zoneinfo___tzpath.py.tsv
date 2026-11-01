@@ -5,4 +5,4 @@ Lib/zoneinfo/_tzpath.py	43	63	_parse_python_tzpath	_parse_python_tzpath(env_var,
 Lib/zoneinfo/_tzpath.py	66	75	_get_invalid_paths_message	_get_invalid_paths_message(tzpaths)	todo		
 Lib/zoneinfo/_tzpath.py	78	86	find_tzfile	find_tzfile(key)	todo		
 Lib/zoneinfo/_tzpath.py	92	112	_validate_tzfile_path	_validate_tzfile_path(path, _base=_TEST_PATH)	todo		
-Lib/zoneinfo/_tzpath.py	118	181	available_timezones	available_timezones()	todo		
+Lib/zoneinfo/_tzpath.py	118	185	available_timezones	available_timezones()	todo		changed-in-3.15:

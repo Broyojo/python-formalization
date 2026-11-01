@@ -3,8 +3,8 @@ import PyLean.Pickle.DecPy
 import PyLean.Pickle.ToolsTable
 
 /-!
-`Lib/pickletools.py`: the argument readers (`:212-926`), `_genops` and `genops`
-(`:2268-2323`), `optimize` (`:2328-2390`) and `dis` (`:2395-2546`).
+`Lib/pickletools.py`: the argument readers (`:214-928`), `_genops` and `genops`
+(`:2296-2351`), `optimize` (`:2356-2418`) and `dis` (`:2423-2592`).
 
 A reader runs over a file: the data and a position. `read_floatnl` stops at
 `float()`, which needs the binary64 model, with the `Excluded` marker. `dis`
@@ -59,16 +59,16 @@ def readUintN (k : Nat) (name : String) : TM Nat := do
   if data.length = k then return leNat data
   else tThrow (.valueError s!"not enough data in stream to read {name}")
 
-/-- `read_uint1`, `:212-222`. -/
+/-- `read_uint1`, `:214-224`. -/
 def readUint1 : TM Nat := readUintN 1 "uint1"
-/-- `read_uint2`, `:231-243`. -/
+/-- `read_uint2`, `:233-245`. -/
 def readUint2 : TM Nat := readUintN 2 "uint2"
-/-- `read_uint4`, `:273-285`. -/
+/-- `read_uint4`, `:275-287`. -/
 def readUint4 : TM Nat := readUintN 4 "uint4"
-/-- `read_uint8`, `:294-306`. -/
+/-- `read_uint8`, `:296-308`. -/
 def readUint8 : TM Nat := readUintN 8 "uint8"
 
-/-- `read_int4`, `:252-264`. -/
+/-- `read_int4`, `:254-266`. -/
 def readInt4 : TM Int := do
   let data ← tRead 4
   if data.length = 4 then return leInt data
@@ -77,7 +77,7 @@ def readInt4 : TM Int := do
 /-- `bytes.decode('latin-1')`. -/
 def latin1 (b : Bytes) : List Nat := b.map (·.toNat)
 
-/-- The quote handling of `read_stringnl`, `:347-356`. `data[1:-1]` of a
+/-- The quote handling of `read_stringnl`, `:349-358`. `data[1:-1]` of a
 one-byte line is empty. -/
 def stripQuotes (data : Bytes) : Py Bytes :=
   if data.head? == some 0x22 then
@@ -88,20 +88,20 @@ def stripQuotes (data : Bytes) : Py Bytes :=
     else .error (.valueError "~string quote not found at both ends")
   else .error (.valueError "~no string quotes around")
 
-/-- `readline` and the newline check of `read_stringnl`, `:342-345`. -/
+/-- `readline` and the newline check of `read_stringnl`, `:344-347`. -/
 def readRawnl : TM Bytes := do
   let data ← tReadline
   if data.getLast? == some nl then return data.dropLast
   else tThrow (.valueError "no newline found when trying to read stringnl")
 
-/-- `read_stringnl(f)` with its defaults, `:315-360`. -/
+/-- `read_stringnl(f)` with its defaults, `:317-362`. -/
 def readStringnl : TM (List Nat) := do
   let raw ← readRawnl
   let data ← tLift (stripQuotes raw)
   let d ← tLift (escapeDecode 0 data)
   return latin1 d
 
-/-- `read_stringnl_noescape`, `:372-373`: `stripquotes=False, encoding='utf-8'`.
+/-- `read_stringnl_noescape`, `:374-375`: `stripquotes=False, encoding='utf-8'`.
 The escapes are still decoded. -/
 def readStringnlNoescape : TM (List Nat) := do
   let data ← readRawnl
@@ -110,7 +110,7 @@ def readStringnlNoescape : TM (List Nat) := do
   | some s => return s
   | none => tThrow unicodeDecodeError
 
-/-- `read_stringnl_noescape_pair`, `:386-393`. -/
+/-- `read_stringnl_noescape_pair`, `:388-395`. -/
 def readStringnlNoescapePair : TM (List Nat) := do
   let a ← readStringnlNoescape
   let b ← readStringnlNoescape
@@ -121,13 +121,13 @@ def needBytes (n : Nat) (name : String) (data : Bytes) : TM Bytes :=
   if data.length = n then pure data
   else tThrow (.valueError s!"expected {n} bytes in a {name}, but only {data.length} remain")
 
-/-- `read_string1`, `:409-424`. -/
+/-- `read_string1`, `:411-426`. -/
 def readString1 : TM (List Nat) := do
   let n ← readUint1
   let data ← tRead n
   return latin1 (← needBytes n "string1" data)
 
-/-- `read_string4`, `:438-458`. -/
+/-- `read_string4`, `:440-460`. -/
 def readString4 : TM (List Nat) := do
   let n ← readInt4
   if n < 0 then tThrow (.valueError s!"string4 byte count < 0: {n}")
@@ -135,80 +135,80 @@ def readString4 : TM (List Nat) := do
     let data ← tRead n.toNat
     return latin1 (← needBytes n.toNat "string4" data)
 
-/-- `read_bytes1`, `:472-487`. -/
+/-- `read_bytes1`, `:474-489`. -/
 def readBytes1 : TM Bytes := do
   let n ← readUint1
   let data ← tRead n
   needBytes n "bytes1" data
 
-/-- The bound checks of `:515-516` and `:550-551`. -/
+/-- The bound checks of `:517-518` and `:552-553`. -/
 def readCounted (n : Nat) (name : String) : TM Bytes :=
   if n > ssizeMaxN then tThrow (.valueError s!"{name} byte count > sys.maxsize: {n}")
   else do
     let data ← tRead n
     needBytes n name data
 
-/-- `read_bytes4`, `:500-521`. -/
+/-- `read_bytes4`, `:502-523`. -/
 def readBytes4 : TM Bytes := do readCounted (← readUint4) "bytes4"
-/-- `read_bytes8`, `:534-556`. -/
+/-- `read_bytes8`, `:536-558`. -/
 def readBytes8 : TM Bytes := do readCounted (← readUint8) "bytes8"
-/-- `read_bytearray8`, `:569-591`. -/
+/-- `read_bytearray8`, `:571-593`. -/
 def readBytearray8 : TM Bytes := do readCounted (← readUint8) "bytearray8"
 
-/-- `read_unicodestringnl`, `:603-615`. -/
+/-- `read_unicodestringnl`, `:605-617`. -/
 def readUnicodestringnl : TM (List Nat) := do
   let data ← tReadline
   if data.getLast? == some nl then tLift (decodeRUE data.dropLast)
   else tThrow (.valueError "no newline found when trying to read unicodestringnl")
 
-/-- `read_unicodestring1`, `:629-653`. -/
+/-- `read_unicodestring1`, `:631-655`. -/
 def readUnicodestring1 : TM (List Nat) := do
   let n ← readUint1
   let data ← tRead n
   tLift (decodeUtf8SP (← needBytes n "unicodestring1" data))
 
-/-- `read_unicodestring4`, `:668-694`. -/
+/-- `read_unicodestring4`, `:670-696`. -/
 def readUnicodestring4 : TM (List Nat) := do
   let d ← readCounted (← readUint4) "unicodestring4"
   tLift (decodeUtf8SP d)
 
-/-- `read_unicodestring8`, `:709-735`. -/
+/-- `read_unicodestring8`, `:711-737`. -/
 def readUnicodestring8 : TM (List Nat) := do
   let d ← readCounted (← readUint8) "unicodestring8"
   tLift (decodeUtf8SP d)
 
-/-- `read_decimalnl_short`, `:750-770`. -/
+/-- `read_decimalnl_short`, `:752-772`. -/
 def readDecimalnlShort : TM TV := do
   let s ← readRawnl
   if s = [0x30, 0x30] then return .bool false
   else if s = [0x30, 0x31] then return .bool true
   else return .int (← tLift (pyIntOfBytes s))
 
-/-- `read_decimalnl_long`, `:772-786`. -/
+/-- `read_decimalnl_long`, `:774-788`. -/
 def readDecimalnlLong : TM Int := do
   let s ← readRawnl
   let s := if s.getLast? == some 0x4c then s.dropLast else s
   tLift (pyIntOfBytes s)
 
-/-- `read_floatnl`, `:813-820`, up to `float(s)`. -/
+/-- `read_floatnl`, `:815-822`, up to `float(s)`. -/
 def readFloatnl : TM TV := do
   let _ ← readRawnl
   tThrow (excluded "float() of text")
 
-/-- `read_float8`, `:835-848`: `_unpack(">d", data)` keeps the eight bytes. -/
+/-- `read_float8`, `:837-850`: `_unpack(">d", data)` keeps the eight bytes. -/
 def readFloat8 : TM Bytes := do
   let data ← tRead 8
   if data.length = 8 then return data
   else tThrow (.valueError "not enough data in stream to read float8")
 
-/-- `read_long1`, `:873-892`. -/
+/-- `read_long1`, `:875-894`. -/
 def readLong1 : TM Int := do
   let n ← readUint1
   let data ← tRead n
   if data.length ≠ n then tThrow (.valueError "not enough data in stream to read long1")
   else return decodeLong data
 
-/-- `read_long4`, `:905-926`. -/
+/-- `read_long4`, `:907-928`. -/
 def readLong4 : TM Int := do
   let n ← readInt4
   if n < 0 then tThrow (.valueError s!"long4 byte count < 0: {n}")
@@ -261,14 +261,14 @@ structure GenOp where
   endPos : Option Nat
   deriving Repr, DecidableEq, Inhabited
 
-/-- `code2op.get(code.decode("latin-1"))`, `:2219-2222`. -/
+/-- `code2op.get(code.decode("latin-1"))`, `:2247-2250`. -/
 def findOp (c : UInt8) : Option OpInfo := opTable.find? (·.code == c)
 
-/-- `getpos()`, `:2272-2275`. -/
+/-- `getpos()`, `:2300-2303`. -/
 def getPos (hasTell : Bool) : TM (Option Nat) :=
   if hasTell then do return some (← tTell) else pure none
 
-/-- `"at position %s, opcode %r unknown"`, `:2285-2287`. -/
+/-- `"at position %s, opcode %r unknown"`, `:2313-2315`. -/
 def unknownOpMsg (pos : Option Nat) (c : UInt8) : String :=
   let p := match pos with
     | some n => toString n
@@ -281,7 +281,7 @@ def readArg (info : OpInfo) : TM (Option TV) :=
   | some r => do return some (← r)
   | none => pure none
 
-/-- One round of the loop of `_genops`, `:2277-2295`. -/
+/-- One round of the loop of `_genops`, `:2305-2323`. -/
 def genopStep (hasTell : Bool) : TM GenOp := do
   let pos ← getPos hasTell
   let code ← tRead 1
@@ -295,7 +295,7 @@ def genopStep (hasTell : Bool) : TM GenOp := do
       let e ← getPos hasTell
       return ⟨info, arg, pos, e⟩
 
-/-- The loop of `_genops`, up to `STOP`, `:2296-2298`. -/
+/-- The loop of `_genops`, up to `STOP`, `:2324-2326`. -/
 def genopsLoop (hasTell : Bool) : Nat → TM (List GenOp)
   | 0 => tThrow .modelFuel
   | fuel + 1 => do
@@ -303,7 +303,7 @@ def genopsLoop (hasTell : Bool) : Nat → TM (List GenOp)
     if op.info.code == oSTOP then return [op]
     else return op :: (← genopsLoop hasTell fuel)
 
-/-- `list(genops(data))`, `:2268-2323`. Every opcode consumes a byte, so
+/-- `list(genops(data))`, `:2296-2351`. Every opcode consumes a byte, so
 `len(data) + 1` rounds reach the end of the data. -/
 def genops (hasTell : Bool) (data : Bytes) : Py (List GenOp) :=
   match genopsLoop hasTell (data.length + 1) 0 data with
@@ -322,14 +322,14 @@ def memoKey : Option TV → Int
   | some (.bool b) => if b then 1 else 0
   | _ => 0
 
-/-- An item of `opcodes` in `optimize`, `:2334`. -/
+/-- An item of `opcodes` in `optimize`, `:2362`. -/
 inductive OptOp where
   | put (arg : Int)
   | get (arg : Int)
   | raw (pos endPos : Nat)
   deriving Repr, DecidableEq
 
-/-- The state of the first loop of `optimize`, `:2331-2359`. -/
+/-- The state of the first loop of `optimize`, `:2359-2387`. -/
 structure OptSt where
   oldids : List Int := []
   /-- `newids`, most recently written first. -/
@@ -347,7 +347,7 @@ nothing there, since no id has been assigned yet. -/
 def addNew (s : List (Int × Option Nat)) (a : Int) : List (Int × Option Nat) :=
   if (s.lookup a).isSome then s else (a, none) :: s
 
-/-- The body of the first loop of `optimize`, `:2337-2359`. -/
+/-- The body of the first loop of `optimize`, `:2365-2387`. -/
 def optStep (p : Bytes) (s : OptSt) (op : GenOp) : OptSt :=
   let name := op.info.name
   let pos := op.pos.getD 0
@@ -376,20 +376,20 @@ def optGet (proto : Nat) : Option Nat → Py Bytes
       .error (.typeError "'<' not supported between instances of 'NoneType' and 'int'")
     else .ok (oGET :: [0x4e, 0x6f, 0x6e, 0x65] ++ [nl])
 
-/-- The state of the second loop of `optimize`, `:2371-2388`. -/
+/-- The state of the second loop of `optimize`, `:2399-2416`. -/
 structure OptOut where
   newids : List (Int × Option Nat)
   idx : Nat := 0
   /-- Output-layer calls, most recent first. -/
   ev : List Event := []
 
-/-- The writes that end the second loop, `:2385-2388`: `commit_frame()` and
+/-- The writes that end the second loop, `:2413-2416`: `commit_frame()` and
 `write` are one `boundary` and one `w`, and `commit_frame(force=True)` followed
 by `file_write` is `_Framer.write_large_bytes` with an empty header. -/
 def optWrite (s : OptOut) (data : Bytes) : OptOut :=
   { s with ev := .w data :: .boundary :: s.ev }
 
-/-- The body of the second loop of `optimize`, `:2372-2388`. -/
+/-- The body of the second loop of `optimize`, `:2400-2416`. -/
 def optEmit (proto : Nat) (p : Bytes) (s : OptOut) : OptOp → Py OptOut
   | .put arg =>
     if (s.newids.lookup arg).isNone then .ok s
@@ -406,7 +406,7 @@ def optEmit (proto : Nat) (p : Bytes) (s : OptOut) : OptOp → Py OptOut
     if data.length > frameSizeTarget then .ok { s with ev := .large [] data :: s.ev }
     else .ok (optWrite s data)
 
-/-- `pickletools.optimize(p)`, `:2328-2390`. -/
+/-- `pickletools.optimize(p)`, `:2356-2418`. -/
 def optimize (p : Bytes) : Py Bytes := do
   let ops ← genops true p
   let s := ops.foldl (optStep p) {}
@@ -464,7 +464,7 @@ def bytearrayReprByte (c : UInt8) : String :=
   else if n < 0x20 || n ≥ 0x7f then "\\x" ++ hexN 2 n
   else charOf n
 
-/-- `repr(bytearray)`, `bytearray_repr_lock_held` in `Objects/bytearrayobject.c:1092-1178`:
+/-- `repr(bytearray)`, `bytearray_repr_lock_held` in `Objects/bytearrayobject.c:1185-1198`:
 `"` only when there is a `'` and no `"`. -/
 def bytearrayRepr (b : Bytes) : String :=
   let quote := if b.contains 0x27 && !b.contains 0x22 then "\"" else "'"
@@ -497,7 +497,7 @@ def pad4 (s : String) : String := s ++ spaces (4 - s.length)
 
 def markObj : String := "mark"
 
-/-- The stack and memo that `dis` emulates, `:2438-2445`. Stacks have their top
+/-- The stack and memo that `dis` emulates, `:2545-2552`. Stacks have their top
 first. -/
 structure DisSt where
   stack : List String := []
@@ -520,7 +520,7 @@ structure MarkRes where
   errormsg : Option String
 
 /-- `while stack[-1] is not markobject: stack.pop()` and the `stack.pop()` that
-follows, `:2475-2477`. `stack[-1]` raises on an empty stack. -/
+follows, `:2582-2584`. `stack[-1]` raises on an empty stack. -/
 def popToMark : List String → Py (List String)
   | [] => .error (.indexError "list index out of range")
   | x :: r => if x == markObj then .ok r else popToMark r
@@ -529,7 +529,7 @@ def markText : Option Nat → String
   | none => "(MARK at unknown opcode offset)"
   | some p => s!"(MARK at {p})"
 
-/-- `:2459-2485`. -/
+/-- `:2566-2592`. -/
 def markPhase (info : OpInfo) (stack : List String) (markstack : List (Option Nat)) : Py MarkRes :=
   let n := info.before.length
   if info.before.contains markObj || (info.name == "POP" && stack.head? == some markObj) then
@@ -554,7 +554,7 @@ structure MemoRes where
   markmsg : Option String
   errormsg : Option String
 
-/-- `:2487-2506`. -/
+/-- `:2594-2617`. -/
 def memoPhase (info : OpInfo) (arg : Option TV) (stack : List String) (memo : List (Int × String))
     (markmsg errormsg : Option String) : Py MemoRes :=
   let name := info.name
@@ -578,7 +578,7 @@ def memoPhase (info : OpInfo) (arg : Option TV) (stack : List String) (memo : Li
       | none => .ok ⟨memo, info.after, markmsg, errormsg⟩
   else .ok ⟨memo, info.after, markmsg, errormsg⟩
 
-/-- `:2508-2517`. -/
+/-- `:2619-2628`. -/
 def argText (info : OpInfo) (arg : Option TV) (markmsg : Option String) (line : String) : Py String :=
   if arg.isNone && markmsg.isNone then .ok line
   else do
@@ -594,7 +594,7 @@ def argText (info : OpInfo) (arg : Option TV) (markmsg : Option String) (line : 
     | some m => return l ++ " " ++ m
     | none => return l
 
-/-- `:2518-2524`: the line and the new `annocol`. -/
+/-- `:2629-2635`: the line and the new `annocol`. -/
 def annotateLine (info : OpInfo) (annotate annocol : Nat) (line : String) : String × Nat :=
   if annotate = 0 then (line, annocol)
   else
@@ -607,7 +607,7 @@ def dmLift {α : Type} (out : String) : Py α → DM α
   | .ok a => .ok a
   | .error e => .error (e, out)
 
-/-- The stack effects, `:2532-2542`. -/
+/-- The stack effects, `:2643-2653`. -/
 def stackPhase (out : String) (stack : List String) (markstack : List (Option Nat)) (numtopop : Nat)
     (after : List String) (pos : Option Nat) : DM (List String × List (Option Nat)) :=
   if stack.length < numtopop then
@@ -616,7 +616,7 @@ def stackPhase (out : String) (stack : List String) (markstack : List (Option Na
     let ms := if after.contains markObj then pos :: markstack else markstack
     .ok (after.reverse ++ stack.drop numtopop, ms)
 
-/-- The body of the loop of `dis`, `:2447-2542`. -/
+/-- The body of the loop of `dis`, `:2554-2653`. -/
 def disStep (indentlevel annotate : Nat) (s : DisSt) (op : GenOp) : DM DisSt := do
   let info := op.info
   let out := match op.pos with
@@ -635,7 +635,7 @@ def disStep (indentlevel annotate : Nat) (s : DisSt) (op : GenOp) : DM DisSt := 
     return { stack, memo := k.memo, maxproto := max s.maxproto info.proto, markstack := ms,
              annocol := col, out }
 
-/-- `:2544-2546`. -/
+/-- `:2655-2657`. -/
 def disEnd (s : DisSt) : String × Option PyExc :=
   let out := s.out ++ s!"highest protocol among opcodes = {s.maxproto}\n"
   if s.stack.isEmpty then (out, none)
@@ -658,7 +658,7 @@ def disLoop (hasTell : Bool) (indentlevel annotate : Nat) (data : Bytes) :
         if op.info.code == oSTOP then disEnd s'
         else disLoop hasTell indentlevel annotate data fuel pos' s'
 
-/-- `dis(data, out, memo, indentlevel, annotate)`, `:2395-2546`: the text it
+/-- `dis(data, out, memo, indentlevel, annotate)`, `:2502-2657`: the text it
 printed, and the exception it raised. -/
 def dis (hasTell : Bool) (data : Bytes) (memo : List (Int × String)) (indentlevel annotate : Nat) :
     String × Option PyExc :=

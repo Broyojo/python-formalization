@@ -1,0 +1,12 @@
+file	line	endline	name	signature	status	entry	note
+Python/slots.c	21	30	kind_name	kind_name(_PySlot_KIND kind)	todo		changed-in-3.15: new function
+Python/slots.c	33	49	init_with_kind	init_with_kind(_PySlotIterator *it, const void *slots, _PySlot_KIND result_kind, _PySlot_KIND slot_struct_kind)	todo		changed-in-3.15: new function
+Python/slots.c	52	56	_PySlotIterator_Init	_PySlotIterator_Init(_PySlotIterator *it, const PySlot *slots, _PySlot_KIND result_kind)	todo		changed-in-3.15: new function
+Python/slots.c	59	63	_PySlotIterator_InitLegacy	_PySlotIterator_InitLegacy(_PySlotIterator *it, const void *slots, _PySlot_KIND kind)	todo		changed-in-3.15: new function
+Python/slots.c	66	76	_PySlotIterator_Rewind	_PySlotIterator_Rewind(_PySlotIterator *it, const void *slots)	todo		changed-in-3.15: new function
+Python/slots.c	79	82	seen_index	seen_index(uint16_t id)	todo		changed-in-3.15: new function
+Python/slots.c	85	88	seen_mask	seen_mask(uint16_t id)	todo		changed-in-3.15: new function
+Python/slots.c	91	96	_PySlotIterator_SawSlot	_PySlotIterator_SawSlot(_PySlotIterator *it, int id)	todo		changed-in-3.15: new function
+Python/slots.c	100	110	advance	advance(_PySlotIterator *it)	todo		changed-in-3.15: new function
+Python/slots.c	115	307	_PySlotIterator_Next	_PySlotIterator_Next(_PySlotIterator *it)	todo		changed-in-3.15: new function
+Python/slots.c	311	404	handle_first_run	handle_first_run(_PySlotIterator *it)	todo		changed-in-3.15: new function

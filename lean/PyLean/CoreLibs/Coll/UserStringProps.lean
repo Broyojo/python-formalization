@@ -226,7 +226,7 @@ theorem userStringResultClass_proven : UserStringResultClass := by
 /-- `str.replace` has accepted `count` as a keyword since 3.13 (Doc/library/stdtypes.rst, "Changed in
 version 3.13: count is now supported as a keyword argument."), so a program written for `str`
 expects `u.replace(old, new, count=n)` to work on a `UserString`. The parameter there
-is named `maxsplit` (:1558), and the call raises `TypeError`. -/
+is named `maxsplit` (@3.14.7:1558), and the call raises `TypeError`. -/
 def UserStringReplaceCountKeyword : Prop :=
   ∀ (u : US) (o n : Seq) (c : Int),
     (usReplaceKw u (.str o) (.str n) "count" c).map (·.data) = strReplaceKw u.data (.str o) (.str n) "count" c
@@ -292,7 +292,7 @@ theorem seqCmp_swap (s t : Seq) : seqCmp t s = (seqCmp s t).swap := by
 
 /-- Rich comparison of a `UserString` with a `UserString` or a `str` is the total order of `str`:
 exactly one of `<`, `==`, `>` holds, `<=` and `>=` are the weak forms, and `==` is equality
-of contents, so equal objects have equal hashes (`__hash__`, :1388-1389, the invariant every hash
+of contents, so equal objects have equal hashes (`__hash__`, @3.14.7:1388-1389, the invariant every hash
 table relies on, across `UserString` and `str`). -/
 def UserStringOrderHash : Prop :=
   ∀ (ops : UniOps) (u : US) (t : Seq) (a : SArg), (a = .str t ∨ a = .user t) →
@@ -324,11 +324,11 @@ theorem userStringOrderHash_proven : UserStringOrderHash := by
 /-! ### Construction and arithmetic -/
 
 /-- `UserString(x)` holds `x`, `UserString(u)` holds the same text, anything else holds `str(x)`
-(`__init__`, :1365-1371); `__getnewargs__`, `__str__` return the data, so
+(`__init__`, @3.14.7:1365-1371); `__getnewargs__`, `__str__` return the data, so
 a pickle or `copy` round trip gives the same object; `int(u)`, `float(u)`, `complex(u)` are the
 conversions of the data. Concatenation adds lengths and keeps the class, and takes the same
-`str(other)` on both sides (:1430-1440). `__rmod__` formats `str(template)` with the object and keeps
-the class (:1450-1451), and `encode(None, None)` means the defaults (:1478-1481). -/
+`str(other)` on both sides (@3.14.7:1430-1440). `__rmod__` formats `str(template)` with the object and keeps
+the class (@3.14.7:1450-1451), and `encode(None, None)` means the defaults (@3.14.7:1478-1481). -/
 def UserStringConstructAdd : Prop :=
   ∀ (ops : UniOps) (u : US) (cls : String) (a : SArg) (t : Seq),
     usNew cls (.str u.data) = ⟨cls, u.data⟩ ∧

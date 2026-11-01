@@ -1,4 +1,5 @@
 file	line	endline	name	signature	status	entry	note
 Modules/_sysconfig.c	22	31	add_string_value	add_string_value(PyObject *dict, const char *key, const char *str_value)	todo		
-Modules/_sysconfig.c	41	81	_sysconfig_config_vars_impl	_sysconfig_config_vars_impl(PyObject *module) /*[clinic end generated code: output=9c41cdee63ea9487 input=391ff42f3af57d01]*/	todo		
-Modules/_sysconfig.c	106	109	PyInit__sysconfig	PyInit__sysconfig(void)	todo		
+Modules/_sysconfig.c	42	82	_sysconfig_config_vars_impl	_sysconfig_config_vars_impl(PyObject *module) /*[clinic end generated code: output=9c41cdee63ea9487 input=fdda9cab12ca19fe]*/	todo		
+Modules/_sysconfig.c	92	116	_sysconfig_get_platform_impl	_sysconfig_get_platform_impl(PyObject *module) /*[clinic end generated code: output=4ecbbe2b77633f3e input=c0b43abda44f9a01]*/	todo		changed-in-3.15: new function
+Modules/_sysconfig.c	145	148	PyInit__sysconfig	PyInit__sysconfig(void)	todo		

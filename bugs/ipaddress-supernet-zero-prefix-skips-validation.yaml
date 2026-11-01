@@ -33,9 +33,9 @@ reproducer: |
       print('REPRODUCED ipaddress-supernet-zero-prefix-skips-validation')
 expected: ValueError('current prefixlen is 0, cannot have a prefixlen_diff of 5'), as for /4.
 promised_by: |
-  supernet docstring, Lib/ipaddress.py:990-997 ("ValueError: If self.prefixlen -
+  supernet docstring, Lib/ipaddress.py:987-994 ("ValueError: If self.prefixlen -
   prefixlen_diff < 0 ... OR ... new_prefix is a larger number than the current prefix").
-cause: Lib/ipaddress.py:999-1000 returns before the checks at :1002-1012.
+cause: Lib/ipaddress.py:996-997 returns before the checks at :999-1009.
 possible_fix: Move the `if self._prefixlen == 0` early return below the validation.
 duplicates:
   issues:

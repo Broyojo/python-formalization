@@ -196,7 +196,7 @@ theorem P_write_end (s : BState) (b : List Nat) (hc : s.closed = false) (hp : s.
     have c : ¬ (buf.length + b.length ≥ memLimit) := by omega
     simp [hbn, hl, c, writeAt_end]
 
-/-- The `_pyio` translation of a written string (_pyio.py:2264-2266). -/
+/-- The `_pyio` translation of a written string (_pyio.py:2288-2290). -/
 def pyTrans (t : TState) (w : List Nat) : List Nat :=
   if (t.writetranslate && w.contains 10) && t.writetranslate && decide (t.writenl ≠ [10])
   then replaceLf t.writenl w else w

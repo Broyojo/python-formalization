@@ -122,7 +122,7 @@ structure DateTimeV where
   t : TimeV
   deriving Repr, DecidableEq, Inhabited
 
-/-- `timezone(offset)` with the name omitted, _pydatetime.py:2407-2420: a zero
+/-- `timezone(offset)` with the name omitted, _pydatetime.py:2462-2475: a zero
 offset is `timezone.utc`; otherwise `_minoffset <= offset <= _maxoffset`. -/
 def timezonePy (off : Delta) : Py Int :=
   if off.toUs = 0 then .ok 0
@@ -153,7 +153,7 @@ def findSepPy (s : List Char) : Py Nat :=
     else .ok 8
   else .ok 8
 
-/-- `_parse_isoformat_date`, _pydatetime.py:358-393. -/
+/-- `_parse_isoformat_date`, _pydatetime.py:366-404. -/
 def parseIsoDatePy (s : List Char) : Py (Int × Int × Int) := do
   let len := s.length
   if ¬(len = 7 ∨ len = 8 ∨ len = 10) then throw (.valueError "Invalid isoformat string")
@@ -181,15 +181,15 @@ def parseIsoDatePy (s : List Char) : Py (Int × Int × Int) := do
     return (year, month, day)
 
 /-- One `time_comps[comp] = int(tstr[pos:pos+2])` step of `_parse_hh_mm_ss_ff`,
-with its length check (:405-408). -/
+with its length check (@3.14.7:405-408). -/
 def timeCompPy (t : List Char) (pos : Nat) : Py Int :=
   if t.length < pos + 2 then .error (.valueError "Incomplete time component")
   else pyInt (slice t pos (pos + 2))
 
-/-- `_FRACTION_CORRECTION[i]`, _pydatetime.py:395. -/
+/-- `_FRACTION_CORRECTION[i]`, _pydatetime.py:406. -/
 def fractionCorrection (i : Nat) : Int := [100000, 10000, 1000, 100, 10].getD i 0
 
-/-- The fraction tail of `_parse_hh_mm_ss_ff`, _pydatetime.py:425-442. -/
+/-- The fraction tail of `_parse_hh_mm_ss_ff`, _pydatetime.py:433-450. -/
 def fractionPy (t : List Char) (pos : Nat) : Py Int := do
   if pos < t.length then
     if charAt t pos ≠ '.' ∧ charAt t pos ≠ ',' then
@@ -201,7 +201,7 @@ def fractionPy (t : List Char) (pos : Nat) : Py Int := do
     if toParse < 6 then return us * fractionCorrection (toParse - 1) else return us
   else return 0
 
-/-- `_parse_hh_mm_ss_ff`, _pydatetime.py:398-443: `HH[:?MM[:?SS[{.,}fff[fff]]]]`.
+/-- `_parse_hh_mm_ss_ff`, _pydatetime.py:409-451: `HH[:?MM[:?SS[{.,}fff[fff]]]]`.
 The `for comp in range(3)` loop is unrolled. -/
 def parseHHMMSSFFPy (t : List Char) : Py (Int × Int × Int × Int) := do
   let hh ← timeCompPy t 0
@@ -220,7 +220,7 @@ def parseHHMMSSFFPy (t : List Char) : Py (Int × Int × Int × Int) := do
   let us ← fractionPy t (pos + 2)
   return (hh, mm, ss, us)
 
-/-- `_parse_isoformat_time`, _pydatetime.py:445-500: the time, whether `24:00`
+/-- `_parse_isoformat_time`, _pydatetime.py@3.14.7:445-500: the time, whether `24:00`
 became midnight, and whether hour 24 came with non-zero other fields. -/
 def parseIsoTimePy (t : List Char) : Py (TimeV × Bool × Bool) := do
   let len := t.length
@@ -252,7 +252,7 @@ def parseIsoTimePy (t : List Char) : Py (TimeV × Bool × Bool) := do
 
 /-! ### `fromisoformat` -/
 
-/-- `date.fromisoformat`, _pydatetime.py:1040-1055. -/
+/-- `date.fromisoformat`, _pydatetime.py:1059-1074. -/
 def dateFromIsoPy (s : List Char) : Py (Int × Int × Int) :=
   if !s.all (fun c => c.toNat < 128) then .error (.valueError "Argument must be an ASCII str")
   else if ¬(s.length = 7 ∨ s.length = 8 ∨ s.length = 10) then
@@ -261,7 +261,7 @@ def dateFromIsoPy (s : List Char) : Py (Int × Int × Int) :=
     | .ok v => .ok v
     | .error _ => .error (.valueError "~Invalid isoformat string")
 
-/-- `time.fromisoformat`, _pydatetime.py:1614-1628. The `cls(...)` call checks
+/-- `time.fromisoformat`, _pydatetime.py@3.14.7:1614-1628. The `cls(...)` call checks
 the fields; every exception becomes `ValueError`. -/
 def timeFromIsoPy (s : List Char) : Py TimeV :=
   let s := match s with
@@ -274,7 +274,7 @@ def timeFromIsoPy (s : List Char) : Py TimeV :=
   | .ok v => .ok v
   | .error _ => .error (.valueError "~Invalid isoformat string")
 
-/-- The `24:00` rollover of `datetime.fromisoformat`, _pydatetime.py:1948-1960. -/
+/-- The `24:00` rollover of `datetime.fromisoformat`, _pydatetime.py:1998-2010. -/
 def rolloverPy (y m d : Int) : Int × Int × Int :=
   if 1 ≤ m ∧ m ≤ 12 ∧ d ≤ daysInMonth y m then
     let dim := daysInMonth y m
@@ -285,7 +285,7 @@ def rolloverPy (y m d : Int) : Int × Int × Int :=
     else (y, m, d)
   else (y, m, d)
 
-/-- `datetime.fromisoformat`, _pydatetime.py:1918-1962. -/
+/-- `datetime.fromisoformat`, _pydatetime.py:1963-2012. -/
 def datetimeFromIsoPy (s : List Char) : Py DateTimeV := do
   if s.length < 7 then throw (.valueError "~Invalid isoformat string")
   let parsed : Py (List Char × (Int × Int × Int)) := do

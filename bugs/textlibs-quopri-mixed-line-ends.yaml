@@ -29,8 +29,8 @@ observed: |
 promised_by: |
   Nothing explicit. Doc/library/binascii.rst says only that with istext newlines are not encoded.
 cause: |
-  Modules/binascii.c:1094-1096 sets crlf from the first newline, and the line-end branch at
-  :1192-1208 writes that kind of line end for every later line.
+  Modules/binascii.c:2504-2506 sets crlf from the first newline, and the line-end branch at
+  :2602-2618 writes that kind of line end for every later line.
 possible_fix: |
   Document it, as #64320 asks, or give quopri.encode a way to pass istext=False.
 duplicates: |

@@ -10,7 +10,7 @@ tokenizer of `Parser/tokenizer/readline_tokenizer.c`. Lines of a `str` source go
 namespace PyLean.PyGrammar.Lexer
 
 /-- `_PyTokenizer_FromReadline(readline, NULL, 1, 1)` over the whole text, with the fake
-newline of `tok_underflow_readline` (`Parser/tokenizer/readline_tokenizer.c:71-106`) added
+newline of `tok_underflow_readline` (`Parser/tokenizer/readline_tokenizer.c:71-102`) added
 in advance and its position remembered. -/
 def fromReadline (text : List Nat) (extraTokens : Bool) : TokState :=
   let bytes := utf8Encode text
@@ -21,7 +21,7 @@ def fromReadline (text : List Nat) (extraTokens : Bool) : TokState :=
   { src := src.toArray, readline := true, extraTokens,
     fakeNewlineAt := if needsNl then some bytes.length else none }
 
-/-- `tokenizeriterobject`, `Python/Python-tokenize.c:32-42`. -/
+/-- `tokenizeriterobject`, `Python/Python-tokenize.c:33-43`. -/
 structure IterState where
   tok : TokState
   done : Bool := false
@@ -51,7 +51,7 @@ inductive IterOut where
   | raise (e : PyError)
   deriving Repr, Inhabited
 
-/-- `_tokenizer_error`, `Python/Python-tokenize.c:88-181`. -/
+/-- `_tokenizer_error`, `Python/Python-tokenize.c:89-182`. -/
 def tokenizerErrorIter (s : TokState) : PyError :=
   let located (cls msg : String) : PyError :=
     let size := s.inp - s.buf
@@ -85,7 +85,7 @@ def charCountLine (data : Array Nat) : Nat → Int → Int → Int
       else if ch &&& 0xf0 == 0xe0 then 3 else 4
     1 + charCountLine data f (col + step) stop
 
-/-- `tokenizeriter_next`, `Python/Python-tokenize.c:242-349`. -/
+/-- `tokenizeriter_next`, `Python/Python-tokenize.c:243-350`. -/
 def iterNext (it : IterState) : IterState × IterOut :=
   let (s, type, t) := tokenizerGet it.tok
   let it := { it with tok := s }

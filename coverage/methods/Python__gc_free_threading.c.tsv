@@ -1,135 +1,135 @@
 file	line	endline	name	signature	status	entry	note
-Python/gc_free_threading.c	121	126	worklist_push	worklist_push(struct worklist *worklist, PyObject *op)	todo		
-Python/gc_free_threading.c	129	137	worklist_pop	worklist_pop(struct worklist *worklist)	todo		
-Python/gc_free_threading.c	140	147	worklist_iter_init	worklist_iter_init(struct worklist_iter *iter, uintptr_t *next)	todo		
-Python/gc_free_threading.c	150	156	worklist_remove	worklist_remove(struct worklist_iter *iter)	todo		
-Python/gc_free_threading.c	159	162	gc_has_bit	gc_has_bit(PyObject *op, uint8_t bit)	todo		
-Python/gc_free_threading.c	165	168	gc_set_bit	gc_set_bit(PyObject *op, uint8_t bit)	todo		
-Python/gc_free_threading.c	171	174	gc_clear_bit	gc_clear_bit(PyObject *op, uint8_t bit)	todo		
-Python/gc_free_threading.c	177	180	gc_is_frozen	gc_is_frozen(PyObject *op)	todo		
-Python/gc_free_threading.c	183	186	gc_is_unreachable	gc_is_unreachable(PyObject *op)	todo		
-Python/gc_free_threading.c	189	192	gc_set_unreachable	gc_set_unreachable(PyObject *op)	todo		
-Python/gc_free_threading.c	195	198	gc_clear_unreachable	gc_clear_unreachable(PyObject *op)	todo		
-Python/gc_free_threading.c	201	204	gc_is_alive	gc_is_alive(PyObject *op)	todo		
-Python/gc_free_threading.c	208	211	gc_set_alive	gc_set_alive(PyObject *op)	todo		
-Python/gc_free_threading.c	215	218	gc_clear_alive	gc_clear_alive(PyObject *op)	todo		
-Python/gc_free_threading.c	223	230	gc_maybe_init_refs	gc_maybe_init_refs(PyObject *op)	todo		
-Python/gc_free_threading.c	233	236	gc_get_refs	gc_get_refs(PyObject *op)	todo		
-Python/gc_free_threading.c	239	243	gc_add_refs	gc_add_refs(PyObject *op, Py_ssize_t refs)	todo		
-Python/gc_free_threading.c	246	249	gc_decref	gc_decref(PyObject *op)	todo		
-Python/gc_free_threading.c	252	268	merge_refcount	merge_refcount(PyObject *op, Py_ssize_t extra)	todo		
-Python/gc_free_threading.c	271	296	frame_disable_deferred_refcounting	frame_disable_deferred_refcounting(_PyInterpreterFrame *frame)	todo		
-Python/gc_free_threading.c	299	322	disable_deferred_refcounting	disable_deferred_refcounting(PyObject *op)	todo		
-Python/gc_free_threading.c	325	342	gc_restore_tid	gc_restore_tid(PyObject *op)	todo		
-Python/gc_free_threading.c	345	355	gc_restore_refs	gc_restore_refs(PyObject *op)	todo		
-Python/gc_free_threading.c	360	375	op_from_block	op_from_block(void *block, void *arg, bool include_frozen)	todo		
-Python/gc_free_threading.c	379	388	op_from_block_all_gc	op_from_block_all_gc(void *block, void *arg)	todo		
-Python/gc_free_threading.c	391	437	gc_visit_heaps_lock_held	gc_visit_heaps_lock_held(PyInterpreterState *interp, mi_block_visit_fun *visitor, struct visitor_args *arg)	todo		
-Python/gc_free_threading.c	443	455	gc_visit_heaps	gc_visit_heaps(PyInterpreterState *interp, mi_block_visit_fun *visitor, struct visitor_args *arg)	todo		
-Python/gc_free_threading.c	458	466	gc_visit_stackref	gc_visit_stackref(_PyStackRef stackref)	todo		
-Python/gc_free_threading.c	470	501	gc_visit_thread_stacks	gc_visit_thread_stacks(PyInterpreterState *interp, struct collection_state *state)	todo		
-Python/gc_free_threading.c	506	518	gc_maybe_untrack	gc_maybe_untrack(PyObject *op)	todo		
-Python/gc_free_threading.c	621	624	gc_mark_buffer_len	gc_mark_buffer_len(gc_mark_args_t *args)	todo		
-Python/gc_free_threading.c	629	632	gc_mark_buffer_avail	gc_mark_buffer_avail(gc_mark_args_t *args)	todo		
-Python/gc_free_threading.c	636	639	gc_mark_buffer_is_empty	gc_mark_buffer_is_empty(gc_mark_args_t *args)	todo		
-Python/gc_free_threading.c	642	645	gc_mark_buffer_is_full	gc_mark_buffer_is_full(gc_mark_args_t *args)	todo		
-Python/gc_free_threading.c	648	654	gc_mark_buffer_pop	gc_mark_buffer_pop(gc_mark_args_t *args)	todo		
-Python/gc_free_threading.c	659	665	gc_mark_buffer_push	gc_mark_buffer_push(PyObject *op, gc_mark_args_t *args)	todo		
-Python/gc_free_threading.c	670	676	gc_mark_stack_push	gc_mark_stack_push(_PyObjectStack *ms, PyObject *op)	todo		
-Python/gc_free_threading.c	679	702	gc_mark_span_push	gc_mark_span_push(gc_span_stack_t *ss, PyObject **start, PyObject **end)	todo		
-Python/gc_free_threading.c	705	727	gc_mark_enqueue_no_buffer	gc_mark_enqueue_no_buffer(PyObject *op, gc_mark_args_t *args)	todo		
-Python/gc_free_threading.c	730	733	gc_mark_enqueue_no_buffer_visitproc	gc_mark_enqueue_no_buffer_visitproc(PyObject *op, void *args)	todo		
-Python/gc_free_threading.c	736	746	gc_mark_enqueue_buffer	gc_mark_enqueue_buffer(PyObject *op, gc_mark_args_t *args)	todo		
-Python/gc_free_threading.c	749	752	gc_mark_enqueue_buffer_visitproc	gc_mark_enqueue_buffer_visitproc(PyObject *op, void *args)	todo		
-Python/gc_free_threading.c	757	765	gc_mark_enqueue	gc_mark_enqueue(PyObject *op, gc_mark_args_t *args)	todo		
-Python/gc_free_threading.c	774	795	gc_mark_enqueue_span	gc_mark_enqueue_span(PyObject **item, Py_ssize_t size, gc_mark_args_t *args)	todo		
-Python/gc_free_threading.c	798	809	gc_clear_alive_bits	gc_clear_alive_bits(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *args)	todo		
-Python/gc_free_threading.c	812	822	gc_mark_traverse_list	gc_mark_traverse_list(PyObject *self, void *args)	todo		
-Python/gc_free_threading.c	825	837	gc_mark_traverse_tuple	gc_mark_traverse_tuple(PyObject *self, void *args)	todo		
-Python/gc_free_threading.c	840	852	gc_abort_mark_alive	gc_abort_mark_alive(PyInterpreterState *interp, struct collection_state *state, gc_mark_args_t *args)	todo		
-Python/gc_free_threading.c	856	865	gc_visit_stackref_mark_alive	gc_visit_stackref_mark_alive(gc_mark_args_t *args, _PyStackRef stackref)	todo		
-Python/gc_free_threading.c	868	901	gc_visit_thread_stacks_mark_alive	gc_visit_thread_stacks_mark_alive(PyInterpreterState *interp, gc_mark_args_t *args)	todo		
-Python/gc_free_threading.c	906	924	queue_untracked_obj_decref	queue_untracked_obj_decref(PyObject *op, struct collection_state *state)	todo		
-Python/gc_free_threading.c	927	941	merge_queued_objects	merge_queued_objects(_PyThreadStateImpl *tstate, struct collection_state *state)	todo		
-Python/gc_free_threading.c	944	947	queue_freed_object	queue_freed_object(PyObject *obj, void *arg)	todo		
-Python/gc_free_threading.c	950	969	process_delayed_frees	process_delayed_frees(PyInterpreterState *interp, struct collection_state *state)	todo		
-Python/gc_free_threading.c	973	986	visit_decref	visit_decref(PyObject *op, void *arg)	todo		
-Python/gc_free_threading.c	992	1040	update_refs	update_refs(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *args)	todo		
-Python/gc_free_threading.c	1043	1051	visit_clear_unreachable	visit_clear_unreachable(PyObject *op, void *stack)	todo		
-Python/gc_free_threading.c	1055	1067	mark_reachable	mark_reachable(PyObject *op)	todo		
-Python/gc_free_threading.c	1071	1083	validate_alive_bits	validate_alive_bits(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *args)	todo		
-Python/gc_free_threading.c	1086	1107	validate_refcounts	validate_refcounts(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *args)	todo		
-Python/gc_free_threading.c	1110	1127	validate_gc_objects	validate_gc_objects(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *args)	todo		
-Python/gc_free_threading.c	1131	1168	mark_heap_visitor	mark_heap_visitor(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *args)	todo		
-Python/gc_free_threading.c	1171	1182	restore_refs	restore_refs(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *args)	todo		
-Python/gc_free_threading.c	1186	1189	has_legacy_finalizer	has_legacy_finalizer(PyObject *op)	todo		
-Python/gc_free_threading.c	1192	1243	scan_heap_visitor	scan_heap_visitor(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *args)	todo		
-Python/gc_free_threading.c	1251	1273	gc_prime_from_spans	gc_prime_from_spans(gc_mark_args_t *args)	todo		
-Python/gc_free_threading.c	1276	1297	gc_prime_buffer	gc_prime_buffer(gc_mark_args_t *args)	todo		
-Python/gc_free_threading.c	1300	1344	gc_propagate_alive_prefetch	gc_propagate_alive_prefetch(gc_mark_args_t *args)	todo		
-Python/gc_free_threading.c	1347	1367	gc_propagate_alive	gc_propagate_alive(gc_mark_args_t *args)	todo		
-Python/gc_free_threading.c	1386	1445	gc_mark_alive_from_roots	gc_mark_alive_from_roots(PyInterpreterState *interp, struct collection_state *state)	todo		
-Python/gc_free_threading.c	1450	1495	deduce_unreachable_heap	deduce_unreachable_heap(PyInterpreterState *interp, struct collection_state *state)	todo		
-Python/gc_free_threading.c	1498	1520	move_legacy_finalizer_reachable	move_legacy_finalizer_reachable(struct collection_state *state)	todo		
-Python/gc_free_threading.c	1525	1578	clear_weakrefs	clear_weakrefs(struct collection_state *state, bool enqueue_callbacks)	todo		
-Python/gc_free_threading.c	1581	1604	call_weakref_callbacks	call_weakref_callbacks(struct collection_state *state)	todo		
-Python/gc_free_threading.c	1608	1612	get_gc_state	get_gc_state(void)	todo		
-Python/gc_free_threading.c	1616	1620	_PyGC_InitState	_PyGC_InitState(GCState *gcstate)	todo		
-Python/gc_free_threading.c	1624	1639	_PyGC_Init	_PyGC_Init(PyInterpreterState *interp)	todo		
-Python/gc_free_threading.c	1642	1646	debug_cycle	debug_cycle(const char *msg, PyObject *op)	todo		
-Python/gc_free_threading.c	1653	1668	finalize_garbage	finalize_garbage(struct collection_state *state)	todo		
-Python/gc_free_threading.c	1672	1717	delete_garbage	delete_garbage(struct collection_state *state)	todo		
-Python/gc_free_threading.c	1720	1740	handle_legacy_finalizers	handle_legacy_finalizers(struct collection_state *state)	todo		
-Python/gc_free_threading.c	1744	1747	show_stats_each_generations	show_stats_each_generations(GCState *gcstate)	todo		
-Python/gc_free_threading.c	1751	1757	visit_decref_unreachable	visit_decref_unreachable(PyObject *op, void *data)	todo		
-Python/gc_free_threading.c	1760	1772	_PyGC_VisitStackRef	_PyGC_VisitStackRef(_PyStackRef *ref, visitproc visit, void *arg)	todo		
-Python/gc_free_threading.c	1775	1783	_PyGC_VisitFrameStack	_PyGC_VisitFrameStack(_PyInterpreterFrame *frame, visitproc visit, void *arg)	todo		
-Python/gc_free_threading.c	1787	1867	handle_resurrected_objects	handle_resurrected_objects(struct collection_state *state)	todo		
-Python/gc_free_threading.c	1874	1926	invoke_gc_callback	invoke_gc_callback(PyThreadState *tstate, const char *phase, int generation, Py_ssize_t collected, Py_ssize_t uncollectable)	todo		
-Python/gc_free_threading.c	1929	1936	cleanup_worklist	cleanup_worklist(struct worklist *worklist)	todo		
-Python/gc_free_threading.c	1941	2077	get_process_mem_usage	get_process_mem_usage(void)	todo		
-Python/gc_free_threading.c	2080	2115	gc_should_collect_mem_usage	gc_should_collect_mem_usage(GCState *gcstate)	todo		
-Python/gc_free_threading.c	2118	2137	gc_should_collect	gc_should_collect(GCState *gcstate)	todo		
-Python/gc_free_threading.c	2140	2159	record_allocation	record_allocation(PyThreadState *tstate)	todo		
-Python/gc_free_threading.c	2162	2184	record_deallocation	record_deallocation(PyThreadState *tstate)	todo		
-Python/gc_free_threading.c	2187	2305	gc_collect_internal	gc_collect_internal(PyInterpreterState *interp, struct collection_state *state, int generation)	todo		
-Python/gc_free_threading.c	2310	2419	gc_collect_main	gc_collect_main(PyThreadState *tstate, int generation, _PyGC_Reason reason)	todo		
-Python/gc_free_threading.c	2422	2441	list_from_object_stack	list_from_object_stack(_PyObjectStack *stack)	todo		
-Python/gc_free_threading.c	2450	2460	referrersvisit	referrersvisit(PyObject* obj, void *arg)	todo		
-Python/gc_free_threading.c	2463	2488	visit_get_referrers	visit_get_referrers(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *args)	todo		
-Python/gc_free_threading.c	2491	2507	_PyGC_GetReferrers	_PyGC_GetReferrers(PyInterpreterState *interp, PyObject *objs)	todo		
-Python/gc_free_threading.c	2515	2533	visit_get_objects	visit_get_objects(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *args)	todo		
-Python/gc_free_threading.c	2536	2552	_PyGC_GetObjects	_PyGC_GetObjects(PyInterpreterState *interp, int generation)	todo		
-Python/gc_free_threading.c	2555	2563	visit_freeze	visit_freeze(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *args)	todo		
-Python/gc_free_threading.c	2566	2574	_PyGC_Freeze	_PyGC_Freeze(PyInterpreterState *interp)	todo		
-Python/gc_free_threading.c	2577	2585	visit_unfreeze	visit_unfreeze(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *args)	todo		
-Python/gc_free_threading.c	2588	2596	_PyGC_Unfreeze	_PyGC_Unfreeze(PyInterpreterState *interp)	todo		
-Python/gc_free_threading.c	2604	2613	visit_count_frozen	visit_count_frozen(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *args)	todo		
-Python/gc_free_threading.c	2616	2623	_PyGC_GetFreezeCount	_PyGC_GetFreezeCount(PyInterpreterState *interp)	todo		
-Python/gc_free_threading.c	2627	2631	PyGC_Enable	PyGC_Enable(void)	todo		
-Python/gc_free_threading.c	2634	2638	PyGC_Disable	PyGC_Disable(void)	todo		
-Python/gc_free_threading.c	2641	2645	PyGC_IsEnabled	PyGC_IsEnabled(void)	todo		
-Python/gc_free_threading.c	2649	2664	PyGC_Collect	PyGC_Collect(void)	todo		
-Python/gc_free_threading.c	2667	2670	_PyGC_Collect	_PyGC_Collect(PyThreadState *tstate, int generation, _PyGC_Reason reason)	todo		
-Python/gc_free_threading.c	2673	2682	_PyGC_CollectNoFail	_PyGC_CollectNoFail(PyThreadState *tstate)	todo		
-Python/gc_free_threading.c	2685	2724	_PyGC_DumpShutdownStats	_PyGC_DumpShutdownStats(PyInterpreterState *interp)	todo		
-Python/gc_free_threading.c	2728	2737	_PyGC_Fini	_PyGC_Fini(PyInterpreterState *interp)	todo		
-Python/gc_free_threading.c	2743	2751	visit_validate	visit_validate(PyObject *op, void *parent_raw)	todo		
-Python/gc_free_threading.c	2759	2775	PyObject_GC_Track	PyObject_GC_Track(void *op_raw)	todo		
-Python/gc_free_threading.c	2778	2786	PyObject_GC_UnTrack	PyObject_GC_UnTrack(void *op_raw)	todo		
-Python/gc_free_threading.c	2789	2792	PyObject_IS_GC	PyObject_IS_GC(PyObject *obj)	todo		
-Python/gc_free_threading.c	2795	2801	_Py_ScheduleGC	_Py_ScheduleGC(PyThreadState *tstate)	todo		
-Python/gc_free_threading.c	2804	2807	_PyObject_GC_Link	_PyObject_GC_Link(PyObject *op)	todo		
-Python/gc_free_threading.c	2810	2816	_Py_RunGC	_Py_RunGC(PyThreadState *tstate)	todo		
-Python/gc_free_threading.c	2819	2837	gc_alloc	gc_alloc(PyTypeObject *tp, size_t basicsize, size_t presize)	todo		
-Python/gc_free_threading.c	2840	2856	_PyObject_GC_New	_PyObject_GC_New(PyTypeObject *tp)	todo		
-Python/gc_free_threading.c	2859	2875	_PyObject_GC_NewVar	_PyObject_GC_NewVar(PyTypeObject *tp, Py_ssize_t nitems)	todo		
-Python/gc_free_threading.c	2878	2889	PyUnstable_Object_GC_NewWithExtraData	PyUnstable_Object_GC_NewWithExtraData(PyTypeObject *tp, size_t extra_size)	todo		
-Python/gc_free_threading.c	2892	2908	_PyObject_GC_Resize	_PyObject_GC_Resize(PyVarObject *op, Py_ssize_t nitems)	todo		
-Python/gc_free_threading.c	2911	2932	PyObject_GC_Del	PyObject_GC_Del(void *op)	todo		
-Python/gc_free_threading.c	2935	2938	PyObject_GC_IsTracked	PyObject_GC_IsTracked(PyObject* obj)	todo		
-Python/gc_free_threading.c	2941	2944	PyObject_GC_IsFinalized	PyObject_GC_IsFinalized(PyObject *obj)	todo		
-Python/gc_free_threading.c	2953	2967	custom_visitor_wrapper	custom_visitor_wrapper(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *args)	todo		
-Python/gc_free_threading.c	2970	2978	_PyGC_VisitObjectsWorldStopped	_PyGC_VisitObjectsWorldStopped(PyInterpreterState *interp, gcvisitobjects_t callback, void *arg)	todo		
-Python/gc_free_threading.c	2981	2987	PyUnstable_GC_VisitObjects	PyUnstable_GC_VisitObjects(gcvisitobjects_t callback, void *arg)	todo		
-Python/gc_free_threading.c	2997	3004	_PyGC_ClearAllFreeLists	_PyGC_ClearAllFreeLists(PyInterpreterState *interp)	todo		
+Python/gc_free_threading.c	99	104	worklist_push	worklist_push(struct worklist *worklist, PyObject *op)	todo		
+Python/gc_free_threading.c	107	115	worklist_pop	worklist_pop(struct worklist *worklist)	todo		
+Python/gc_free_threading.c	118	125	worklist_iter_init	worklist_iter_init(struct worklist_iter *iter, uintptr_t *next)	todo		
+Python/gc_free_threading.c	128	134	worklist_remove	worklist_remove(struct worklist_iter *iter)	todo		
+Python/gc_free_threading.c	137	140	gc_has_bit	gc_has_bit(PyObject *op, uint8_t bit)	todo		
+Python/gc_free_threading.c	143	146	gc_set_bit	gc_set_bit(PyObject *op, uint8_t bit)	todo		
+Python/gc_free_threading.c	149	152	gc_clear_bit	gc_clear_bit(PyObject *op, uint8_t bit)	todo		
+Python/gc_free_threading.c	155	158	gc_is_frozen	gc_is_frozen(PyObject *op)	todo		
+Python/gc_free_threading.c	161	164	gc_is_unreachable	gc_is_unreachable(PyObject *op)	todo		
+Python/gc_free_threading.c	167	170	gc_set_unreachable	gc_set_unreachable(PyObject *op)	todo		
+Python/gc_free_threading.c	173	176	gc_clear_unreachable	gc_clear_unreachable(PyObject *op)	todo		
+Python/gc_free_threading.c	179	182	gc_is_alive	gc_is_alive(PyObject *op)	todo		
+Python/gc_free_threading.c	186	189	gc_set_alive	gc_set_alive(PyObject *op)	todo		
+Python/gc_free_threading.c	193	196	gc_clear_alive	gc_clear_alive(PyObject *op)	todo		
+Python/gc_free_threading.c	201	208	gc_maybe_init_refs	gc_maybe_init_refs(PyObject *op)	todo		
+Python/gc_free_threading.c	211	214	gc_get_refs	gc_get_refs(PyObject *op)	todo		
+Python/gc_free_threading.c	217	221	gc_add_refs	gc_add_refs(PyObject *op, Py_ssize_t refs)	todo		
+Python/gc_free_threading.c	224	227	gc_decref	gc_decref(PyObject *op)	todo		
+Python/gc_free_threading.c	230	246	merge_refcount	merge_refcount(PyObject *op, Py_ssize_t extra)	todo		
+Python/gc_free_threading.c	249	274	frame_disable_deferred_refcounting	frame_disable_deferred_refcounting(_PyInterpreterFrame *frame)	todo		changed-in-3.15:
+Python/gc_free_threading.c	277	300	disable_deferred_refcounting	disable_deferred_refcounting(PyObject *op)	todo		
+Python/gc_free_threading.c	303	320	gc_restore_tid	gc_restore_tid(PyObject *op)	todo		
+Python/gc_free_threading.c	323	333	gc_restore_refs	gc_restore_refs(PyObject *op)	todo		
+Python/gc_free_threading.c	338	353	op_from_block	op_from_block(void *block, void *arg, bool include_frozen)	todo		
+Python/gc_free_threading.c	357	366	op_from_block_all_gc	op_from_block_all_gc(void *block, void *arg)	todo		
+Python/gc_free_threading.c	369	416	gc_visit_heaps_lock_held	gc_visit_heaps_lock_held(PyInterpreterState *interp, mi_block_visit_fun *visitor, struct visitor_args *arg)	todo		changed-in-3.15:
+Python/gc_free_threading.c	422	434	gc_visit_heaps	gc_visit_heaps(PyInterpreterState *interp, mi_block_visit_fun *visitor, struct visitor_args *arg)	todo		
+Python/gc_free_threading.c	437	445	gc_visit_stackref	gc_visit_stackref(_PyStackRef stackref)	todo		changed-in-3.15:
+Python/gc_free_threading.c	449	480	gc_visit_thread_stacks	gc_visit_thread_stacks(PyInterpreterState *interp, struct collection_state *state)	todo		
+Python/gc_free_threading.c	485	501	gc_maybe_untrack	gc_maybe_untrack(PyObject *op)	todo		changed-in-3.15:
+Python/gc_free_threading.c	604	607	gc_mark_buffer_len	gc_mark_buffer_len(gc_mark_args_t *args)	todo		
+Python/gc_free_threading.c	612	615	gc_mark_buffer_avail	gc_mark_buffer_avail(gc_mark_args_t *args)	todo		
+Python/gc_free_threading.c	619	622	gc_mark_buffer_is_empty	gc_mark_buffer_is_empty(gc_mark_args_t *args)	todo		
+Python/gc_free_threading.c	625	628	gc_mark_buffer_is_full	gc_mark_buffer_is_full(gc_mark_args_t *args)	todo		
+Python/gc_free_threading.c	631	637	gc_mark_buffer_pop	gc_mark_buffer_pop(gc_mark_args_t *args)	todo		
+Python/gc_free_threading.c	642	648	gc_mark_buffer_push	gc_mark_buffer_push(PyObject *op, gc_mark_args_t *args)	todo		
+Python/gc_free_threading.c	653	659	gc_mark_stack_push	gc_mark_stack_push(_PyObjectStack *ms, PyObject *op)	todo		
+Python/gc_free_threading.c	662	685	gc_mark_span_push	gc_mark_span_push(gc_span_stack_t *ss, PyObject **start, PyObject **end)	todo		
+Python/gc_free_threading.c	688	710	gc_mark_enqueue_no_buffer	gc_mark_enqueue_no_buffer(PyObject *op, gc_mark_args_t *args)	todo		
+Python/gc_free_threading.c	713	716	gc_mark_enqueue_no_buffer_visitproc	gc_mark_enqueue_no_buffer_visitproc(PyObject *op, void *args)	todo		
+Python/gc_free_threading.c	719	729	gc_mark_enqueue_buffer	gc_mark_enqueue_buffer(PyObject *op, gc_mark_args_t *args)	todo		
+Python/gc_free_threading.c	732	735	gc_mark_enqueue_buffer_visitproc	gc_mark_enqueue_buffer_visitproc(PyObject *op, void *args)	todo		
+Python/gc_free_threading.c	740	748	gc_mark_enqueue	gc_mark_enqueue(PyObject *op, gc_mark_args_t *args)	todo		
+Python/gc_free_threading.c	757	778	gc_mark_enqueue_span	gc_mark_enqueue_span(PyObject **item, Py_ssize_t size, gc_mark_args_t *args)	todo		
+Python/gc_free_threading.c	781	792	gc_clear_alive_bits	gc_clear_alive_bits(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *args)	todo		
+Python/gc_free_threading.c	795	805	gc_mark_traverse_list	gc_mark_traverse_list(PyObject *self, void *args)	todo		
+Python/gc_free_threading.c	808	820	gc_mark_traverse_tuple	gc_mark_traverse_tuple(PyObject *self, void *args)	todo		
+Python/gc_free_threading.c	823	835	gc_abort_mark_alive	gc_abort_mark_alive(PyInterpreterState *interp, struct collection_state *state, gc_mark_args_t *args)	todo		
+Python/gc_free_threading.c	839	848	gc_visit_stackref_mark_alive	gc_visit_stackref_mark_alive(gc_mark_args_t *args, _PyStackRef stackref)	todo		
+Python/gc_free_threading.c	851	884	gc_visit_thread_stacks_mark_alive	gc_visit_thread_stacks_mark_alive(PyInterpreterState *interp, gc_mark_args_t *args)	todo		
+Python/gc_free_threading.c	889	907	queue_untracked_obj_decref	queue_untracked_obj_decref(PyObject *op, struct collection_state *state)	todo		
+Python/gc_free_threading.c	910	924	merge_queued_objects	merge_queued_objects(_PyThreadStateImpl *tstate, struct collection_state *state)	todo		
+Python/gc_free_threading.c	927	930	queue_freed_object	queue_freed_object(PyObject *obj, void *arg)	todo		
+Python/gc_free_threading.c	933	952	process_delayed_frees	process_delayed_frees(PyInterpreterState *interp, struct collection_state *state)	todo		
+Python/gc_free_threading.c	956	969	visit_decref	visit_decref(PyObject *op, void *arg)	todo		
+Python/gc_free_threading.c	975	1025	update_refs	update_refs(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *args)	todo		changed-in-3.15:
+Python/gc_free_threading.c	1028	1036	visit_clear_unreachable	visit_clear_unreachable(PyObject *op, void *stack)	todo		
+Python/gc_free_threading.c	1040	1052	mark_reachable	mark_reachable(PyObject *op)	todo		
+Python/gc_free_threading.c	1056	1068	validate_alive_bits	validate_alive_bits(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *args)	todo		
+Python/gc_free_threading.c	1071	1100	validate_refcounts	validate_refcounts(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *args)	todo		changed-in-3.15:
+Python/gc_free_threading.c	1103	1120	validate_gc_objects	validate_gc_objects(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *args)	todo		
+Python/gc_free_threading.c	1124	1161	mark_heap_visitor	mark_heap_visitor(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *args)	todo		
+Python/gc_free_threading.c	1164	1175	restore_refs	restore_refs(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *args)	todo		
+Python/gc_free_threading.c	1179	1182	has_legacy_finalizer	has_legacy_finalizer(PyObject *op)	todo		
+Python/gc_free_threading.c	1185	1236	scan_heap_visitor	scan_heap_visitor(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *args)	todo		
+Python/gc_free_threading.c	1244	1266	gc_prime_from_spans	gc_prime_from_spans(gc_mark_args_t *args)	todo		
+Python/gc_free_threading.c	1269	1290	gc_prime_buffer	gc_prime_buffer(gc_mark_args_t *args)	todo		
+Python/gc_free_threading.c	1293	1337	gc_propagate_alive_prefetch	gc_propagate_alive_prefetch(gc_mark_args_t *args)	todo		
+Python/gc_free_threading.c	1340	1360	gc_propagate_alive	gc_propagate_alive(gc_mark_args_t *args)	todo		
+Python/gc_free_threading.c	1379	1438	gc_mark_alive_from_roots	gc_mark_alive_from_roots(PyInterpreterState *interp, struct collection_state *state)	todo		
+Python/gc_free_threading.c	1443	1481	deduce_unreachable_heap	deduce_unreachable_heap(PyInterpreterState *interp, struct collection_state *state)	todo		changed-in-3.15:
+Python/gc_free_threading.c	1484	1506	move_legacy_finalizer_reachable	move_legacy_finalizer_reachable(struct collection_state *state)	todo		
+Python/gc_free_threading.c	1547	1596	find_weakref_callbacks	find_weakref_callbacks(struct collection_state *state)	todo		changed-in-3.15: new function
+Python/gc_free_threading.c	1601	1629	clear_weakrefs	clear_weakrefs(struct collection_state *state)	todo		changed-in-3.15:
+Python/gc_free_threading.c	1632	1655	call_weakref_callbacks	call_weakref_callbacks(struct collection_state *state)	todo		
+Python/gc_free_threading.c	1659	1663	get_gc_state	get_gc_state(void)	todo		
+Python/gc_free_threading.c	1667	1671	_PyGC_InitState	_PyGC_InitState(GCState *gcstate)	todo		
+Python/gc_free_threading.c	1675	1695	_PyGC_Init	_PyGC_Init(PyInterpreterState *interp)	todo		changed-in-3.15:
+Python/gc_free_threading.c	1698	1702	debug_cycle	debug_cycle(const char *msg, PyObject *op)	todo		
+Python/gc_free_threading.c	1709	1724	finalize_garbage	finalize_garbage(struct collection_state *state)	todo		
+Python/gc_free_threading.c	1728	1773	delete_garbage	delete_garbage(struct collection_state *state)	todo		
+Python/gc_free_threading.c	1776	1796	handle_legacy_finalizers	handle_legacy_finalizers(struct collection_state *state)	todo		
+Python/gc_free_threading.c	1800	1803	show_stats_each_generations	show_stats_each_generations(GCState *gcstate)	todo		
+Python/gc_free_threading.c	1807	1813	visit_decref_unreachable	visit_decref_unreachable(PyObject *op, void *data)	todo		
+Python/gc_free_threading.c	1816	1828	_PyGC_VisitStackRef	_PyGC_VisitStackRef(_PyStackRef *ref, visitproc visit, void *arg)	todo		changed-in-3.15:
+Python/gc_free_threading.c	1831	1839	_PyGC_VisitFrameStack	_PyGC_VisitFrameStack(_PyInterpreterFrame *frame, visitproc visit, void *arg)	todo		
+Python/gc_free_threading.c	1843	1923	handle_resurrected_objects	handle_resurrected_objects(struct collection_state *state)	todo		
+Python/gc_free_threading.c	1930	1988	invoke_gc_callback	invoke_gc_callback(PyThreadState *tstate, const char *phase, int generation, Py_ssize_t collected, Py_ssize_t uncollectable, Py_ssize_t candidates, double duration)	todo		changed-in-3.15:
+Python/gc_free_threading.c	1991	1998	cleanup_worklist	cleanup_worklist(struct worklist *worklist)	todo		
+Python/gc_free_threading.c	2001	2020	gc_should_collect	gc_should_collect(GCState *gcstate)	todo		changed-in-3.15:
+Python/gc_free_threading.c	2023	2042	record_allocation	record_allocation(PyThreadState *tstate)	todo		
+Python/gc_free_threading.c	2045	2067	record_deallocation	record_deallocation(PyThreadState *tstate)	todo		
+Python/gc_free_threading.c	2070	2189	gc_collect_internal	gc_collect_internal(PyInterpreterState *interp, struct collection_state *state, int generation)	todo		changed-in-3.15:
+Python/gc_free_threading.c	2192	2204	get_stats	get_stats(GCState *gcstate, int gen)	todo		changed-in-3.15: new function
+Python/gc_free_threading.c	2209	2334	gc_collect_main	gc_collect_main(PyThreadState *tstate, int generation, _PyGC_Reason reason)	todo		changed-in-3.15:
+Python/gc_free_threading.c	2337	2356	list_from_object_stack	list_from_object_stack(_PyObjectStack *stack)	todo		
+Python/gc_free_threading.c	2365	2375	referrersvisit	referrersvisit(PyObject* obj, void *arg)	todo		
+Python/gc_free_threading.c	2378	2404	visit_get_referrers	visit_get_referrers(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *args)	todo		changed-in-3.15:
+Python/gc_free_threading.c	2407	2423	_PyGC_GetReferrers	_PyGC_GetReferrers(PyInterpreterState *interp, PyObject *objs)	todo		
+Python/gc_free_threading.c	2431	2450	visit_get_objects	visit_get_objects(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *args)	todo		changed-in-3.15:
+Python/gc_free_threading.c	2453	2469	_PyGC_GetObjects	_PyGC_GetObjects(PyInterpreterState *interp, int generation)	todo		
+Python/gc_free_threading.c	2472	2480	visit_freeze	visit_freeze(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *args)	todo		
+Python/gc_free_threading.c	2483	2491	_PyGC_Freeze	_PyGC_Freeze(PyInterpreterState *interp)	todo		
+Python/gc_free_threading.c	2494	2502	visit_unfreeze	visit_unfreeze(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *args)	todo		
+Python/gc_free_threading.c	2505	2513	_PyGC_Unfreeze	_PyGC_Unfreeze(PyInterpreterState *interp)	todo		
+Python/gc_free_threading.c	2521	2530	visit_count_frozen	visit_count_frozen(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *args)	todo		
+Python/gc_free_threading.c	2533	2540	_PyGC_GetFreezeCount	_PyGC_GetFreezeCount(PyInterpreterState *interp)	todo		
+Python/gc_free_threading.c	2544	2548	PyGC_Enable	PyGC_Enable(void)	todo		
+Python/gc_free_threading.c	2551	2555	PyGC_Disable	PyGC_Disable(void)	todo		
+Python/gc_free_threading.c	2558	2562	PyGC_IsEnabled	PyGC_IsEnabled(void)	todo		
+Python/gc_free_threading.c	2566	2581	PyGC_Collect	PyGC_Collect(void)	todo		
+Python/gc_free_threading.c	2584	2587	_PyGC_Collect	_PyGC_Collect(PyThreadState *tstate, int generation, _PyGC_Reason reason)	todo		
+Python/gc_free_threading.c	2590	2599	_PyGC_CollectNoFail	_PyGC_CollectNoFail(PyThreadState *tstate)	todo		
+Python/gc_free_threading.c	2602	2641	_PyGC_DumpShutdownStats	_PyGC_DumpShutdownStats(PyInterpreterState *interp)	todo		
+Python/gc_free_threading.c	2645	2656	_PyGC_Fini	_PyGC_Fini(PyInterpreterState *interp)	todo		changed-in-3.15:
+Python/gc_free_threading.c	2662	2670	visit_validate	visit_validate(PyObject *op, void *parent_raw)	todo		
+Python/gc_free_threading.c	2678	2694	PyObject_GC_Track	PyObject_GC_Track(void *op_raw)	todo		
+Python/gc_free_threading.c	2697	2705	PyObject_GC_UnTrack	PyObject_GC_UnTrack(void *op_raw)	todo		
+Python/gc_free_threading.c	2708	2711	PyObject_IS_GC	PyObject_IS_GC(PyObject *obj)	todo		
+Python/gc_free_threading.c	2714	2720	_Py_ScheduleGC	_Py_ScheduleGC(PyThreadState *tstate)	todo		
+Python/gc_free_threading.c	2723	2726	_PyObject_GC_Link	_PyObject_GC_Link(PyObject *op)	todo		
+Python/gc_free_threading.c	2729	2735	_Py_RunGC	_Py_RunGC(PyThreadState *tstate)	todo		
+Python/gc_free_threading.c	2738	2756	gc_alloc	gc_alloc(PyTypeObject *tp, size_t basicsize, size_t presize)	todo		
+Python/gc_free_threading.c	2759	2775	_PyObject_GC_New	_PyObject_GC_New(PyTypeObject *tp)	todo		
+Python/gc_free_threading.c	2778	2794	_PyObject_GC_NewVar	_PyObject_GC_NewVar(PyTypeObject *tp, Py_ssize_t nitems)	todo		
+Python/gc_free_threading.c	2797	2808	PyUnstable_Object_GC_NewWithExtraData	PyUnstable_Object_GC_NewWithExtraData(PyTypeObject *tp, size_t extra_size)	todo		
+Python/gc_free_threading.c	2811	2827	_PyObject_GC_Resize	_PyObject_GC_Resize(PyVarObject *op, Py_ssize_t nitems)	todo		
+Python/gc_free_threading.c	2830	2851	PyObject_GC_Del	PyObject_GC_Del(void *op)	todo		
+Python/gc_free_threading.c	2854	2857	PyObject_GC_IsTracked	PyObject_GC_IsTracked(PyObject* obj)	todo		
+Python/gc_free_threading.c	2860	2863	PyObject_GC_IsFinalized	PyObject_GC_IsFinalized(PyObject *obj)	todo		
+Python/gc_free_threading.c	2872	2886	custom_visitor_wrapper	custom_visitor_wrapper(const mi_heap_t *heap, const mi_heap_area_t *area, void *block, size_t block_size, void *args)	todo		changed-in-3.15:
+Python/gc_free_threading.c	2889	2897	_PyGC_VisitObjectsWorldStopped	_PyGC_VisitObjectsWorldStopped(PyInterpreterState *interp, gcvisitobjects_t callback, void *arg)	todo		
+Python/gc_free_threading.c	2900	2906	PyUnstable_GC_VisitObjects	PyUnstable_GC_VisitObjects(gcvisitobjects_t callback, void *arg)	todo		
+Python/gc_free_threading.c	2916	2923	_PyGC_ClearAllFreeLists	_PyGC_ClearAllFreeLists(PyInterpreterState *interp)	todo		

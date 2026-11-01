@@ -43,8 +43,8 @@ tested: "REPRODUCED on python3 3.14.7 by scripts/check_bugs.py; same results on 
 promised_by: |
   Nothing explicit: only the general expectation that a fast path is an optimisation.
 cause: |
-  Objects/unicodeobject.c:9436-9483: ascii_table caches every answer for the rest of the string.
-  :9563-9573: the run scan discards each lookup, and the main loop asks again.
+  Objects/unicodeobject.c:9337-9384: ascii_table caches every answer for the rest of the string.
+  :9464-9474: the run scan discards each lookup, and the main loop asks again.
 possible_fix: |
   None needed.
 lean: |

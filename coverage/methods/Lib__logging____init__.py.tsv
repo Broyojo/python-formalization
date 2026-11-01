@@ -1,33 +1,34 @@
 file	line	endline	name	signature	status	entry	note
-Lib/logging/__init__.py	126	127	getLevelNamesMapping	getLevelNamesMapping()	todo		
-Lib/logging/__init__.py	129	154	getLevelName	getLevelName(level)	todo		
-Lib/logging/__init__.py	156	164	addLevelName	addLevelName(level, levelName)	todo		
-Lib/logging/__init__.py	169	174	currentframe	currentframe()	todo		
-Lib/logging/__init__.py	197	202	_is_internal_frame	_is_internal_frame(frame)	todo		
-Lib/logging/__init__.py	205	215	_checkLevel	_checkLevel(level)	todo		
-Lib/logging/__init__.py	231	243	_prepareFork	_prepareFork()	todo		
-Lib/logging/__init__.py	245	251	_afterFork	_afterFork()	todo		
-Lib/logging/__init__.py	257	258	_register_at_fork_reinit_lock	_register_at_fork_reinit_lock(instance)	todo		
-Lib/logging/__init__.py	265	267	_register_at_fork_reinit_lock	_register_at_fork_reinit_lock(instance)	todo		
-Lib/logging/__init__.py	269	275	_after_at_fork_child_reinit_locks	_after_at_fork_child_reinit_locks()	todo		
-Lib/logging/__init__.py	298	385	LogRecord.__init__	__init__(self, name, level, pathname, lineno, msg, args, exc_info, func=None, sinfo=None, **kwargs)	todo		
-Lib/logging/__init__.py	387	389	LogRecord.__repr__	__repr__(self)	todo		
-Lib/logging/__init__.py	391	401	LogRecord.getMessage	getMessage(self)	todo		
-Lib/logging/__init__.py	408	416	setLogRecordFactory	setLogRecordFactory(factory)	todo		
-Lib/logging/__init__.py	418	423	getLogRecordFactory	getLogRecordFactory()	todo		
-Lib/logging/__init__.py	425	434	makeLogRecord	makeLogRecord(dict)	todo		
-Lib/logging/__init__.py	451	453	PercentStyle.__init__	__init__(self, fmt, *, defaults=None)	todo		
-Lib/logging/__init__.py	455	456	PercentStyle.usesTime	usesTime(self)	todo		
-Lib/logging/__init__.py	458	461	PercentStyle.validate	validate(self)	todo		
-Lib/logging/__init__.py	463	468	PercentStyle._format	_format(self, record)	todo		
-Lib/logging/__init__.py	470	474	PercentStyle.format	format(self, record)	todo		candidates:calstat-calendar-formatstring-width
-Lib/logging/__init__.py	485	490	StrFormatStyle._format	_format(self, record)	todo		
-Lib/logging/__init__.py	492	508	StrFormatStyle.validate	validate(self)	todo		
-Lib/logging/__init__.py	516	518	StringTemplateStyle.__init__	__init__(self, *args, **kwargs)	todo		
-Lib/logging/__init__.py	520	522	StringTemplateStyle.usesTime	usesTime(self)	todo		
-Lib/logging/__init__.py	524	536	StringTemplateStyle.validate	validate(self)	todo		
-Lib/logging/__init__.py	538	543	StringTemplateStyle._format	_format(self, record)	todo		
-Lib/logging/__init__.py	601	626	Formatter.__init__	__init__(self, fmt=None, datefmt=None, style='%', validate=True, *, defaults=None)	todo		
+Lib/logging/__init__.py	123	124	getLevelNamesMapping	getLevelNamesMapping()	todo		
+Lib/logging/__init__.py	126	151	getLevelName	getLevelName(level)	todo		
+Lib/logging/__init__.py	153	161	addLevelName	addLevelName(level, levelName)	todo		
+Lib/logging/__init__.py	166	171	currentframe	currentframe()	todo		
+Lib/logging/__init__.py	194	199	_is_internal_frame	_is_internal_frame(frame)	todo		
+Lib/logging/__init__.py	202	212	_checkLevel	_checkLevel(level)	todo		
+Lib/logging/__init__.py	228	240	_prepareFork	_prepareFork()	todo		
+Lib/logging/__init__.py	242	248	_afterFork	_afterFork()	todo		
+Lib/logging/__init__.py	254	255	_register_at_fork_reinit_lock	_register_at_fork_reinit_lock(instance)	todo		
+Lib/logging/__init__.py	262	264	_register_at_fork_reinit_lock	_register_at_fork_reinit_lock(instance)	todo		
+Lib/logging/__init__.py	266	272	_after_at_fork_child_reinit_locks	_after_at_fork_child_reinit_locks()	todo		
+Lib/logging/__init__.py	295	382	LogRecord.__init__	__init__(self, name, level, pathname, lineno, msg, args, exc_info, func=None, sinfo=None, **kwargs)	todo		
+Lib/logging/__init__.py	384	386	LogRecord.__repr__	__repr__(self)	todo		
+Lib/logging/__init__.py	388	398	LogRecord.getMessage	getMessage(self)	todo		
+Lib/logging/__init__.py	405	413	setLogRecordFactory	setLogRecordFactory(factory)	todo		
+Lib/logging/__init__.py	415	420	getLogRecordFactory	getLogRecordFactory()	todo		
+Lib/logging/__init__.py	422	431	makeLogRecord	makeLogRecord(dict)	todo		
+Lib/logging/__init__.py	448	450	PercentStyle.__init__	__init__(self, fmt, *, defaults=None)	todo		
+Lib/logging/__init__.py	452	453	PercentStyle.usesTime	usesTime(self)	todo		
+Lib/logging/__init__.py	455	458	PercentStyle.validate	validate(self)	todo		
+Lib/logging/__init__.py	460	465	PercentStyle._format	_format(self, record)	todo		
+Lib/logging/__init__.py	467	471	PercentStyle.format	format(self, record)	todo		candidates:calstat-calendar-formatstring-width
+Lib/logging/__init__.py	482	487	StrFormatStyle._format	_format(self, record)	todo		
+Lib/logging/__init__.py	489	505	StrFormatStyle.validate	validate(self)	todo		
+Lib/logging/__init__.py	513	515	StringTemplateStyle.__init__	__init__(self, *args, **kwargs)	todo		
+Lib/logging/__init__.py	517	519	StringTemplateStyle.usesTime	usesTime(self)	todo		
+Lib/logging/__init__.py	521	533	StringTemplateStyle.validate	validate(self)	todo		
+Lib/logging/__init__.py	535	540	StringTemplateStyle._format	_format(self, record)	todo		
+Lib/logging/__init__.py	598	623	Formatter.__init__	__init__(self, fmt=None, datefmt=None, style='%', validate=True, *, defaults=None)	todo		
+Lib/logging/__init__.py	625	626	Formatter.__repr__	__repr__(self)	todo		changed-in-3.15: new function
 Lib/logging/__init__.py	631	656	Formatter.formatTime	formatTime(self, record, datefmt=None)	todo		
 Lib/logging/__init__.py	658	675	Formatter.formatException	formatException(self, ei)	todo		
 Lib/logging/__init__.py	677	681	Formatter.usesTime	usesTime(self)	todo		
@@ -39,118 +40,120 @@ Lib/logging/__init__.py	750	754	BufferingFormatter.formatHeader	formatHeader(sel
 Lib/logging/__init__.py	756	760	BufferingFormatter.formatFooter	formatFooter(self, records)	todo		
 Lib/logging/__init__.py	762	772	BufferingFormatter.format	format(self, records)	todo		candidates:calstat-calendar-formatstring-width
 Lib/logging/__init__.py	789	798	Filter.__init__	__init__(self, name='')	todo		
-Lib/logging/__init__.py	800	813	Filter.filter	filter(self, record)	todo		
-Lib/logging/__init__.py	820	824	Filterer.__init__	__init__(self)	todo		
-Lib/logging/__init__.py	826	831	Filterer.addFilter	addFilter(self, filter)	todo		
-Lib/logging/__init__.py	833	838	Filterer.removeFilter	removeFilter(self, filter)	todo		
-Lib/logging/__init__.py	840	874	Filterer.filter	filter(self, record)	todo		
-Lib/logging/__init__.py	883	897	_removeHandlerRef	_removeHandlerRef(wr)	todo		
-Lib/logging/__init__.py	899	904	_addHandlerRef	_addHandlerRef(handler)	todo		
-Lib/logging/__init__.py	907	912	getHandlerByName	getHandlerByName(name)	todo		
-Lib/logging/__init__.py	915	919	getHandlerNames	getHandlerNames()	todo		
-Lib/logging/__init__.py	931	943	Handler.__init__	__init__(self, level=NOTSET)	todo		
-Lib/logging/__init__.py	945	946	Handler.get_name	get_name(self)	todo		
-Lib/logging/__init__.py	948	954	Handler.set_name	set_name(self, name)	todo		
-Lib/logging/__init__.py	958	963	Handler.createLock	createLock(self)	todo		
-Lib/logging/__init__.py	965	966	Handler._at_fork_reinit	_at_fork_reinit(self)	todo		
-Lib/logging/__init__.py	968	973	Handler.acquire	acquire(self)	todo		
-Lib/logging/__init__.py	975	980	Handler.release	release(self)	todo		
-Lib/logging/__init__.py	982	986	Handler.setLevel	setLevel(self, level)	todo		
-Lib/logging/__init__.py	988	999	Handler.format	format(self, record)	todo		candidates:calstat-calendar-formatstring-width
-Lib/logging/__init__.py	1001	1009	Handler.emit	emit(self, record)	todo		
-Lib/logging/__init__.py	1011	1028	Handler.handle	handle(self, record)	todo		
-Lib/logging/__init__.py	1030	1034	Handler.setFormatter	setFormatter(self, fmt)	todo		
-Lib/logging/__init__.py	1036	1043	Handler.flush	flush(self)	todo		
-Lib/logging/__init__.py	1045	1058	Handler.close	close(self)	todo		
-Lib/logging/__init__.py	1060	1105	Handler.handleError	handleError(self, record)	todo		
-Lib/logging/__init__.py	1107	1109	Handler.__repr__	__repr__(self)	todo		
-Lib/logging/__init__.py	1120	1129	StreamHandler.__init__	__init__(self, stream=None)	todo		
-Lib/logging/__init__.py	1131	1137	StreamHandler.flush	flush(self)	todo		
-Lib/logging/__init__.py	1139	1159	StreamHandler.emit	emit(self, record)	todo		
-Lib/logging/__init__.py	1161	1176	StreamHandler.setStream	setStream(self, stream)	todo		
-Lib/logging/__init__.py	1178	1185	StreamHandler.__repr__	__repr__(self)	todo		
-Lib/logging/__init__.py	1194	1219	FileHandler.__init__	__init__(self, filename, mode='a', encoding=None, delay=False, errors=None)	todo		
-Lib/logging/__init__.py	1221	1240	FileHandler.close	close(self)	todo		
-Lib/logging/__init__.py	1242	1249	FileHandler._open	_open(self)	todo		
-Lib/logging/__init__.py	1251	1265	FileHandler.emit	emit(self, record)	todo		
-Lib/logging/__init__.py	1267	1269	FileHandler.__repr__	__repr__(self)	todo		
-Lib/logging/__init__.py	1278	1282	_StderrHandler.__init__	__init__(self, level=NOTSET)	todo		
-Lib/logging/__init__.py	1285	1286	_StderrHandler.stream	stream(self)	todo		
-Lib/logging/__init__.py	1302	1306	PlaceHolder.__init__	__init__(self, alogger)	todo		
-Lib/logging/__init__.py	1308	1313	PlaceHolder.append	append(self, alogger)	todo		
-Lib/logging/__init__.py	1319	1330	setLoggerClass	setLoggerClass(klass)	todo		
-Lib/logging/__init__.py	1332	1336	getLoggerClass	getLoggerClass()	todo		
-Lib/logging/__init__.py	1343	1352	Manager.__init__	__init__(self, rootnode)	todo		
-Lib/logging/__init__.py	1355	1356	Manager.disable	disable(self)	todo		
-Lib/logging/__init__.py	1359	1360	Manager.disable	disable(self, value)	todo		
-Lib/logging/__init__.py	1362	1391	Manager.getLogger	getLogger(self, name)	todo		
-Lib/logging/__init__.py	1393	1401	Manager.setLoggerClass	setLoggerClass(self, klass)	todo		
-Lib/logging/__init__.py	1403	1408	Manager.setLogRecordFactory	setLogRecordFactory(self, factory)	todo		
-Lib/logging/__init__.py	1410	1432	Manager._fixupParents	_fixupParents(self, alogger)	todo		
-Lib/logging/__init__.py	1434	1445	Manager._fixupChildren	_fixupChildren(self, ph, alogger)	todo		
-Lib/logging/__init__.py	1447	1457	Manager._clear_cache	_clear_cache(self)	todo		
-Lib/logging/__init__.py	1478	1489	Logger.__init__	__init__(self, name, level=NOTSET)	todo		
-Lib/logging/__init__.py	1491	1496	Logger.setLevel	setLevel(self, level)	todo		
-Lib/logging/__init__.py	1498	1508	Logger.debug	debug(self, msg, *args, **kwargs)	todo		
-Lib/logging/__init__.py	1510	1520	Logger.info	info(self, msg, *args, **kwargs)	todo		
-Lib/logging/__init__.py	1522	1532	Logger.warning	warning(self, msg, *args, **kwargs)	todo		
-Lib/logging/__init__.py	1534	1537	Logger.warn	warn(self, msg, *args, **kwargs)	todo		
-Lib/logging/__init__.py	1539	1549	Logger.error	error(self, msg, *args, **kwargs)	todo		
-Lib/logging/__init__.py	1551	1555	Logger.exception	exception(self, msg, *args, exc_info=True, **kwargs)	todo		
-Lib/logging/__init__.py	1557	1567	Logger.critical	critical(self, msg, *args, **kwargs)	todo		
-Lib/logging/__init__.py	1569	1573	Logger.fatal	fatal(self, msg, *args, **kwargs)	todo		
-Lib/logging/__init__.py	1575	1590	Logger.log	log(self, level, msg, *args, **kwargs)	todo		
-Lib/logging/__init__.py	1592	1624	Logger.findCaller	findCaller(self, stack_info=False, stacklevel=1)	todo		
-Lib/logging/__init__.py	1626	1639	Logger.makeRecord	makeRecord(self, name, level, fn, lno, msg, args, exc_info, func=None, extra=None, sinfo=None)	todo		
-Lib/logging/__init__.py	1641	1665	Logger._log	_log(self, level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=1)	todo		
-Lib/logging/__init__.py	1667	1681	Logger.handle	handle(self, record)	todo		
-Lib/logging/__init__.py	1683	1689	Logger.addHandler	addHandler(self, hdlr)	todo		
-Lib/logging/__init__.py	1691	1701	Logger.removeHandler	removeHandler(self, hdlr)	todo		
-Lib/logging/__init__.py	1703	1723	Logger.hasHandlers	hasHandlers(self)	todo		
-Lib/logging/__init__.py	1725	1753	Logger.callHandlers	callHandlers(self, record)	todo		
-Lib/logging/__init__.py	1755	1767	Logger.getEffectiveLevel	getEffectiveLevel(self)	todo		
-Lib/logging/__init__.py	1769	1786	Logger.isEnabledFor	isEnabledFor(self, level)	todo		
-Lib/logging/__init__.py	1788	1805	Logger.getChild	getChild(self, suffix)	todo		
-Lib/logging/__init__.py	1807	1821	Logger.getChildren	getChildren(self)	todo		
-Lib/logging/__init__.py	1823	1825	Logger.__repr__	__repr__(self)	todo		
-Lib/logging/__init__.py	1827	1831	Logger.__reduce__	__reduce__(self)	todo		
-Lib/logging/__init__.py	1840	1844	RootLogger.__init__	__init__(self, level)	todo		
-Lib/logging/__init__.py	1846	1847	RootLogger.__reduce__	__reduce__(self)	todo		
-Lib/logging/__init__.py	1857	1880	LoggerAdapter.__init__	__init__(self, logger, extra=None, merge_extra=False)	todo		
-Lib/logging/__init__.py	1882	1897	LoggerAdapter.process	process(self, msg, kwargs)	todo		
-Lib/logging/__init__.py	1902	1906	LoggerAdapter.debug	debug(self, msg, *args, **kwargs)	todo		
-Lib/logging/__init__.py	1908	1912	LoggerAdapter.info	info(self, msg, *args, **kwargs)	todo		
-Lib/logging/__init__.py	1914	1918	LoggerAdapter.warning	warning(self, msg, *args, **kwargs)	todo		
-Lib/logging/__init__.py	1920	1923	LoggerAdapter.warn	warn(self, msg, *args, **kwargs)	todo		
-Lib/logging/__init__.py	1925	1929	LoggerAdapter.error	error(self, msg, *args, **kwargs)	todo		
-Lib/logging/__init__.py	1931	1935	LoggerAdapter.exception	exception(self, msg, *args, exc_info=True, **kwargs)	todo		
-Lib/logging/__init__.py	1937	1941	LoggerAdapter.critical	critical(self, msg, *args, **kwargs)	todo		
-Lib/logging/__init__.py	1943	1950	LoggerAdapter.log	log(self, level, msg, *args, **kwargs)	todo		
-Lib/logging/__init__.py	1952	1956	LoggerAdapter.isEnabledFor	isEnabledFor(self, level)	todo		
-Lib/logging/__init__.py	1958	1962	LoggerAdapter.setLevel	setLevel(self, level)	todo		
-Lib/logging/__init__.py	1964	1968	LoggerAdapter.getEffectiveLevel	getEffectiveLevel(self)	todo		
-Lib/logging/__init__.py	1970	1974	LoggerAdapter.hasHandlers	hasHandlers(self)	todo		
-Lib/logging/__init__.py	1976	1980	LoggerAdapter._log	_log(self, level, msg, args, **kwargs)	todo		
-Lib/logging/__init__.py	1983	1984	LoggerAdapter.manager	manager(self)	todo		
-Lib/logging/__init__.py	1987	1988	LoggerAdapter.manager	manager(self, value)	todo		
-Lib/logging/__init__.py	1991	1992	LoggerAdapter.name	name(self)	todo		
-Lib/logging/__init__.py	1994	1997	LoggerAdapter.__repr__	__repr__(self)	todo		
-Lib/logging/__init__.py	2009	2127	basicConfig	basicConfig(**kwargs)	todo		
-Lib/logging/__init__.py	2134	2142	getLogger	getLogger(name=None)	todo		
-Lib/logging/__init__.py	2144	2152	critical	critical(msg, *args, **kwargs)	todo		
-Lib/logging/__init__.py	2154	2158	fatal	fatal(msg, *args, **kwargs)	todo		
-Lib/logging/__init__.py	2160	2168	error	error(msg, *args, **kwargs)	todo		
-Lib/logging/__init__.py	2170	2176	exception	exception(msg, *args, exc_info=True, **kwargs)	todo		
-Lib/logging/__init__.py	2178	2186	warning	warning(msg, *args, **kwargs)	todo		
-Lib/logging/__init__.py	2188	2191	warn	warn(msg, *args, **kwargs)	todo		
-Lib/logging/__init__.py	2193	2201	info	info(msg, *args, **kwargs)	todo		
-Lib/logging/__init__.py	2203	2211	debug	debug(msg, *args, **kwargs)	todo		
-Lib/logging/__init__.py	2213	2221	log	log(level, msg, *args, **kwargs)	todo		
-Lib/logging/__init__.py	2223	2228	disable	disable(level=CRITICAL)	todo		
-Lib/logging/__init__.py	2230	2261	shutdown	shutdown(handlerList=_handlerList)	todo		
-Lib/logging/__init__.py	2280	2281	NullHandler.handle	handle(self, record)	todo		
-Lib/logging/__init__.py	2283	2284	NullHandler.emit	emit(self, record)	todo		
-Lib/logging/__init__.py	2286	2287	NullHandler.createLock	createLock(self)	todo		
-Lib/logging/__init__.py	2289	2290	NullHandler._at_fork_reinit	_at_fork_reinit(self)	todo		
-Lib/logging/__init__.py	2296	2314	_showwarning	_showwarning(message, category, filename, lineno, file=None, line=None)	todo		
-Lib/logging/__init__.py	2316	2330	captureWarnings	captureWarnings(capture)	todo		
+Lib/logging/__init__.py	800	801	Filter.__repr__	__repr__(self)	todo		changed-in-3.15: new function
+Lib/logging/__init__.py	803	816	Filter.filter	filter(self, record)	todo		
+Lib/logging/__init__.py	823	827	Filterer.__init__	__init__(self)	todo		
+Lib/logging/__init__.py	829	834	Filterer.addFilter	addFilter(self, filter)	todo		
+Lib/logging/__init__.py	836	841	Filterer.removeFilter	removeFilter(self, filter)	todo		
+Lib/logging/__init__.py	843	877	Filterer.filter	filter(self, record)	todo		
+Lib/logging/__init__.py	886	900	_removeHandlerRef	_removeHandlerRef(wr)	todo		
+Lib/logging/__init__.py	902	907	_addHandlerRef	_addHandlerRef(handler)	todo		
+Lib/logging/__init__.py	910	915	getHandlerByName	getHandlerByName(name)	todo		
+Lib/logging/__init__.py	918	922	getHandlerNames	getHandlerNames()	todo		
+Lib/logging/__init__.py	934	946	Handler.__init__	__init__(self, level=NOTSET)	todo		
+Lib/logging/__init__.py	948	949	Handler.get_name	get_name(self)	todo		
+Lib/logging/__init__.py	951	957	Handler.set_name	set_name(self, name)	todo		
+Lib/logging/__init__.py	961	966	Handler.createLock	createLock(self)	todo		
+Lib/logging/__init__.py	968	969	Handler._at_fork_reinit	_at_fork_reinit(self)	todo		
+Lib/logging/__init__.py	971	976	Handler.acquire	acquire(self)	todo		
+Lib/logging/__init__.py	978	983	Handler.release	release(self)	todo		
+Lib/logging/__init__.py	985	989	Handler.setLevel	setLevel(self, level)	todo		
+Lib/logging/__init__.py	991	1002	Handler.format	format(self, record)	todo		candidates:calstat-calendar-formatstring-width
+Lib/logging/__init__.py	1004	1012	Handler.emit	emit(self, record)	todo		
+Lib/logging/__init__.py	1014	1031	Handler.handle	handle(self, record)	todo		
+Lib/logging/__init__.py	1033	1037	Handler.setFormatter	setFormatter(self, fmt)	todo		
+Lib/logging/__init__.py	1039	1046	Handler.flush	flush(self)	todo		
+Lib/logging/__init__.py	1048	1061	Handler.close	close(self)	todo		
+Lib/logging/__init__.py	1063	1108	Handler.handleError	handleError(self, record)	todo		
+Lib/logging/__init__.py	1110	1112	Handler.__repr__	__repr__(self)	todo		
+Lib/logging/__init__.py	1123	1132	StreamHandler.__init__	__init__(self, stream=None)	todo		
+Lib/logging/__init__.py	1134	1140	StreamHandler.flush	flush(self)	todo		
+Lib/logging/__init__.py	1142	1162	StreamHandler.emit	emit(self, record)	todo		
+Lib/logging/__init__.py	1164	1179	StreamHandler.setStream	setStream(self, stream)	todo		
+Lib/logging/__init__.py	1181	1188	StreamHandler.__repr__	__repr__(self)	todo		
+Lib/logging/__init__.py	1197	1222	FileHandler.__init__	__init__(self, filename, mode='a', encoding=None, delay=False, errors=None)	todo		
+Lib/logging/__init__.py	1224	1243	FileHandler.close	close(self)	todo		
+Lib/logging/__init__.py	1245	1252	FileHandler._open	_open(self)	todo		
+Lib/logging/__init__.py	1254	1273	FileHandler.emit	emit(self, record)	todo		changed-in-3.15:
+Lib/logging/__init__.py	1275	1277	FileHandler.__repr__	__repr__(self)	todo		
+Lib/logging/__init__.py	1286	1290	_StderrHandler.__init__	__init__(self, level=NOTSET)	todo		
+Lib/logging/__init__.py	1293	1294	_StderrHandler.stream	stream(self)	todo		
+Lib/logging/__init__.py	1310	1314	PlaceHolder.__init__	__init__(self, alogger)	todo		
+Lib/logging/__init__.py	1316	1321	PlaceHolder.append	append(self, alogger)	todo		
+Lib/logging/__init__.py	1327	1338	setLoggerClass	setLoggerClass(klass)	todo		
+Lib/logging/__init__.py	1340	1344	getLoggerClass	getLoggerClass()	todo		
+Lib/logging/__init__.py	1351	1360	Manager.__init__	__init__(self, rootnode)	todo		
+Lib/logging/__init__.py	1363	1364	Manager.disable	disable(self)	todo		
+Lib/logging/__init__.py	1367	1368	Manager.disable	disable(self, value)	todo		
+Lib/logging/__init__.py	1370	1399	Manager.getLogger	getLogger(self, name)	todo		
+Lib/logging/__init__.py	1401	1409	Manager.setLoggerClass	setLoggerClass(self, klass)	todo		
+Lib/logging/__init__.py	1411	1416	Manager.setLogRecordFactory	setLogRecordFactory(self, factory)	todo		
+Lib/logging/__init__.py	1418	1440	Manager._fixupParents	_fixupParents(self, alogger)	todo		
+Lib/logging/__init__.py	1442	1453	Manager._fixupChildren	_fixupChildren(self, ph, alogger)	todo		
+Lib/logging/__init__.py	1455	1465	Manager._clear_cache	_clear_cache(self)	todo		
+Lib/logging/__init__.py	1486	1497	Logger.__init__	__init__(self, name, level=NOTSET)	todo		
+Lib/logging/__init__.py	1499	1504	Logger.setLevel	setLevel(self, level)	todo		
+Lib/logging/__init__.py	1506	1516	Logger.debug	debug(self, msg, *args, **kwargs)	todo		
+Lib/logging/__init__.py	1518	1528	Logger.info	info(self, msg, *args, **kwargs)	todo		
+Lib/logging/__init__.py	1530	1540	Logger.warning	warning(self, msg, *args, **kwargs)	todo		
+Lib/logging/__init__.py	1542	1545	Logger.warn	warn(self, msg, *args, **kwargs)	todo		
+Lib/logging/__init__.py	1547	1557	Logger.error	error(self, msg, *args, **kwargs)	todo		
+Lib/logging/__init__.py	1559	1563	Logger.exception	exception(self, msg, *args, exc_info=True, **kwargs)	todo		
+Lib/logging/__init__.py	1565	1575	Logger.critical	critical(self, msg, *args, **kwargs)	todo		
+Lib/logging/__init__.py	1577	1581	Logger.fatal	fatal(self, msg, *args, **kwargs)	todo		
+Lib/logging/__init__.py	1583	1598	Logger.log	log(self, level, msg, *args, **kwargs)	todo		
+Lib/logging/__init__.py	1600	1632	Logger.findCaller	findCaller(self, stack_info=False, stacklevel=1)	todo		
+Lib/logging/__init__.py	1634	1647	Logger.makeRecord	makeRecord(self, name, level, fn, lno, msg, args, exc_info, func=None, extra=None, sinfo=None)	todo		
+Lib/logging/__init__.py	1649	1673	Logger._log	_log(self, level, msg, args, exc_info=None, extra=None, stack_info=False, stacklevel=1)	todo		
+Lib/logging/__init__.py	1675	1689	Logger.handle	handle(self, record)	todo		
+Lib/logging/__init__.py	1691	1697	Logger.addHandler	addHandler(self, hdlr)	todo		
+Lib/logging/__init__.py	1699	1709	Logger.removeHandler	removeHandler(self, hdlr)	todo		
+Lib/logging/__init__.py	1711	1731	Logger.hasHandlers	hasHandlers(self)	todo		
+Lib/logging/__init__.py	1733	1761	Logger.callHandlers	callHandlers(self, record)	todo		
+Lib/logging/__init__.py	1763	1775	Logger.getEffectiveLevel	getEffectiveLevel(self)	todo		
+Lib/logging/__init__.py	1777	1794	Logger.isEnabledFor	isEnabledFor(self, level)	todo		
+Lib/logging/__init__.py	1796	1813	Logger.getChild	getChild(self, suffix)	todo		
+Lib/logging/__init__.py	1815	1829	Logger.getChildren	getChildren(self)	todo		
+Lib/logging/__init__.py	1831	1833	Logger.__repr__	__repr__(self)	todo		
+Lib/logging/__init__.py	1835	1839	Logger.__reduce__	__reduce__(self)	todo		
+Lib/logging/__init__.py	1848	1852	RootLogger.__init__	__init__(self, level)	todo		
+Lib/logging/__init__.py	1854	1855	RootLogger.__reduce__	__reduce__(self)	todo		
+Lib/logging/__init__.py	1865	1888	LoggerAdapter.__init__	__init__(self, logger, extra=None, merge_extra=False)	todo		
+Lib/logging/__init__.py	1890	1905	LoggerAdapter.process	process(self, msg, kwargs)	todo		
+Lib/logging/__init__.py	1910	1914	LoggerAdapter.debug	debug(self, msg, *args, **kwargs)	todo		
+Lib/logging/__init__.py	1916	1920	LoggerAdapter.info	info(self, msg, *args, **kwargs)	todo		
+Lib/logging/__init__.py	1922	1926	LoggerAdapter.warning	warning(self, msg, *args, **kwargs)	todo		
+Lib/logging/__init__.py	1928	1931	LoggerAdapter.warn	warn(self, msg, *args, **kwargs)	todo		
+Lib/logging/__init__.py	1933	1937	LoggerAdapter.error	error(self, msg, *args, **kwargs)	todo		
+Lib/logging/__init__.py	1939	1943	LoggerAdapter.exception	exception(self, msg, *args, exc_info=True, **kwargs)	todo		
+Lib/logging/__init__.py	1945	1949	LoggerAdapter.critical	critical(self, msg, *args, **kwargs)	todo		
+Lib/logging/__init__.py	1951	1958	LoggerAdapter.log	log(self, level, msg, *args, **kwargs)	todo		
+Lib/logging/__init__.py	1960	1964	LoggerAdapter.isEnabledFor	isEnabledFor(self, level)	todo		
+Lib/logging/__init__.py	1966	1970	LoggerAdapter.setLevel	setLevel(self, level)	todo		
+Lib/logging/__init__.py	1972	1976	LoggerAdapter.getEffectiveLevel	getEffectiveLevel(self)	todo		
+Lib/logging/__init__.py	1978	1982	LoggerAdapter.hasHandlers	hasHandlers(self)	todo		
+Lib/logging/__init__.py	1984	1988	LoggerAdapter._log	_log(self, level, msg, args, **kwargs)	todo		
+Lib/logging/__init__.py	1991	1992	LoggerAdapter.manager	manager(self)	todo		
+Lib/logging/__init__.py	1995	1996	LoggerAdapter.manager	manager(self, value)	todo		
+Lib/logging/__init__.py	1999	2000	LoggerAdapter.name	name(self)	todo		
+Lib/logging/__init__.py	2002	2005	LoggerAdapter.__repr__	__repr__(self)	todo		
+Lib/logging/__init__.py	2017	2153	basicConfig	basicConfig(**kwargs)	todo		changed-in-3.15:
+Lib/logging/__init__.py	2160	2168	getLogger	getLogger(name=None)	todo		
+Lib/logging/__init__.py	2170	2178	critical	critical(msg, *args, **kwargs)	todo		
+Lib/logging/__init__.py	2180	2184	fatal	fatal(msg, *args, **kwargs)	todo		
+Lib/logging/__init__.py	2186	2194	error	error(msg, *args, **kwargs)	todo		
+Lib/logging/__init__.py	2196	2202	exception	exception(msg, *args, exc_info=True, **kwargs)	todo		
+Lib/logging/__init__.py	2204	2212	warning	warning(msg, *args, **kwargs)	todo		
+Lib/logging/__init__.py	2214	2217	warn	warn(msg, *args, **kwargs)	todo		
+Lib/logging/__init__.py	2219	2227	info	info(msg, *args, **kwargs)	todo		
+Lib/logging/__init__.py	2229	2237	debug	debug(msg, *args, **kwargs)	todo		
+Lib/logging/__init__.py	2239	2247	log	log(level, msg, *args, **kwargs)	todo		
+Lib/logging/__init__.py	2249	2254	disable	disable(level=CRITICAL)	todo		
+Lib/logging/__init__.py	2256	2287	shutdown	shutdown(handlerList=_handlerList)	todo		
+Lib/logging/__init__.py	2306	2307	NullHandler.handle	handle(self, record)	todo		
+Lib/logging/__init__.py	2309	2310	NullHandler.emit	emit(self, record)	todo		
+Lib/logging/__init__.py	2312	2313	NullHandler.createLock	createLock(self)	todo		
+Lib/logging/__init__.py	2315	2316	NullHandler._at_fork_reinit	_at_fork_reinit(self)	todo		
+Lib/logging/__init__.py	2322	2340	_showwarning	_showwarning(message, category, filename, lineno, file=None, line=None)	todo		
+Lib/logging/__init__.py	2342	2356	captureWarnings	captureWarnings(capture)	todo		
+Lib/logging/__init__.py	2359	2369	__getattr__	__getattr__(name)	todo		changed-in-3.15: new function

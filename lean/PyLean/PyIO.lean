@@ -89,24 +89,24 @@ def coreEntries : List Entry := [
     pyFns := ["_io_BytesIO_write_impl", "write_bytes_lock_held", "resize_buffer_lock_held",
       "unshare_buffer_lock_held", "resize_unshared_buffer_lock_held", "BytesIO.write"]
     statement := "Whenever write(b) succeeds (any state, any b) it returns len(b) and the position advances by exactly len(b), in both twins."
-    source := "Doc/library/io.rst:654-657 (BufferedIOBase.write: 'return the number of bytes written (always equal to the length of b in bytes ...)'); Lib/_pyio.py:745"
+    source := "Doc/library/io.rst:633-636 (BufferedIOBase.write: 'return the number of bytes written (always equal to the length of b in bytes ...)'); Lib/_pyio.py:745"
     status := .proven, prop := ``TellAfterWrite, thm := some ``tellAfterWrite_proven },
   { id := "pyio-bytesio-read-after-seek", pyFile := "Modules/_io/bytesio.c"
     pyFns := ["_io_BytesIO_seek_impl", "_io_BytesIO_read_impl", "read_bytes_lock_held", "BytesIO.seek",
       "BytesIO.read", "_io_StringIO_seek_impl", "_io_StringIO_read_impl"]
     statement := "On an open BytesIO (both twins) or C StringIO, seek(p) followed by read(n) returns buf[p:p+n] for every p, n >= 0 (C: in Py_ssize_t), including p beyond the end."
-    source := "Doc/library/io.rst:421 (IOBase.seek) and BufferedIOBase.read"
+    source := "Doc/library/io.rst:400 (IOBase.seek) and BufferedIOBase.read"
     status := .proven, prop := ``ReadAfterSeek, thm := some ``readAfterSeek_proven },
   { id := "pyio-truncate-keeps-position", pyFile := "Modules/_io/bytesio.c"
     pyFns := ["_io_BytesIO_truncate_impl", "BytesIO.truncate", "_io_StringIO_truncate_impl",
       "resize_buffer"]
     statement := "truncate(size) never moves the stream position, for every state and argument and whatever the outcome (C and Python BytesIO, C StringIO)."
-    source := "Doc/library/io.rst:452-455 (IOBase.truncate: 'The current stream position isn't changed')"
+    source := "Doc/library/io.rst:431-434 (IOBase.truncate: 'The current stream position isn't changed')"
     status := .proven, prop := ``TruncateKeepsPosition, thm := some ``truncateKeepsPosition_proven },
   { id := "pyio-bytesio-getvalue-zero-fill", pyFile := "Modules/_io/bytesio.c"
     pyFns := ["write_bytes_lock_held", "BytesIO.write", "_io_BytesIO_getvalue_impl", "BytesIO.getvalue"]
     statement := "After a successful non-empty write(b) on an open BytesIO, getvalue() is the old contents overwritten by b at the old position, with every byte between the old end and that position zero, and length max(old length, pos + len(b)); an empty write changes nothing (both twins)."
-    source := "Code comments, not docs: bytesio.c:271 'In case of overseek, pad with null bytes', _pyio.py:954 'Pad buffer to pos with null bytes'; Doc/library/io.rst:458 only says this of truncate extending a file"
+    source := "Code comments, not docs: bytesio.c:272 'In case of overseek, pad with null bytes', _pyio.py@3.14.7:954 'Pad buffer to pos with null bytes'; Doc/library/io.rst:437 only says this of truncate extending a file"
     status := .proven, prop := ``GetvalueZeroFill, thm := some ``getvalueZeroFill_proven },
   { id := "pyio-bytesio-writes-concat", pyFile := "Modules/_io/bytesio.c"
     pyFns := ["_io_BytesIO_write_impl", "write_bytes_lock_held", "BytesIO.write",
@@ -119,35 +119,35 @@ def coreEntries : List Entry := [
     pyFns := ["_io_BytesIO_readlines_impl", "scan_eol_lock_held", "IOBase.readlines", "IOBase.__iter__",
       "IOBase.__next__", "IOBase.readline"]
     statement := "For hint > 0, BytesIO.readlines(hint) returns whole lines until their total length exceeds hint, i.e. the documented prefix of readlines() (both twins)."
-    source := "Doc/library/io.rst:409-413 (IOBase.readlines: 'no more lines will be read if the total size (in bytes/characters) of all lines so far exceeds hint')"
+    source := "Doc/library/io.rst:388-392 (IOBase.readlines: 'no more lines will be read if the total size (in bytes/characters) of all lines so far exceeds hint')"
     status := .refuted, prop := ``BytesIOReadlinesHintDoc, thm := some ``bytesIOReadlinesHintDoc_refuted
     bug := some "pyio-readlines-hint-stops-early"
-    notes := "C BytesIO (bytesio.c:627) and _pyio IOBase (_pyio.py:579) stop when the total reaches hint; C _IOBase (iobase.c:765) stops when it exceeds hint." },
+    notes := "C BytesIO (bytesio.c:628) and _pyio IOBase (_pyio.py:579) stop when the total reaches hint; C _IOBase (iobase.c:766) stops when it exceeds hint." },
   { id := "pyio-stringio-c-readlines-hint-doc", pyFile := "Modules/_io/iobase.c"
     pyFns := ["_io__IOBase_readlines_impl", "iobase_iter", "stringio_iternext", "_stringio_readline",
       "_PyIO_find_line_ending", "find_control_char"]
     statement := "For every open C StringIO and hint > 0 (in Py_ssize_t), readlines(hint) returns the documented prefix of readlines(): whole lines until their total exceeds hint."
-    source := "Doc/library/io.rst:409-413"
+    source := "Doc/library/io.rst:388-392"
     status := .proven, prop := ``CStringIOReadlinesHintDoc, thm := some ``cStringIOReadlinesHintDoc_proven },
   -- StringIO: newline argument
   { id := "pyio-stringio-c-newline-legal", pyFile := "Modules/_io/stringio.c"
     pyFns := ["_io_StringIO___init___impl"]
     statement := "io.StringIO(newline=nl) succeeds exactly for nl in (None, '', '\\n', '\\r', '\\r\\n')."
-    source := "Doc/library/io.rst:1019 (TextIOWrapper: newline can be None, '', '\\n', '\\r' or '\\r\\n') and :1142 (StringIO: works like TextIOWrapper)"
+    source := "Doc/library/io.rst:1001 (TextIOWrapper: newline can be None, '', '\\n', '\\r' or '\\r\\n') and :1142 (StringIO: works like TextIOWrapper)"
     status := .refuted, prop := ``CStringIONewlineLegal, thm := some ``cStringIONewlineLegal_refuted
     bug := some "pyio-stringio-newline-embedded-nul"
     notes := "newline='\\x00' is accepted (as ''); '\\n\\x00' as '\\n', '\\r\\x00junk' as '\\r'." },
   { id := "pyio-stringio-c-newline-legal-no-nul", pyFile := "Modules/_io/stringio.c"
     pyFns := ["_io_StringIO___init___impl"]
     statement := "For every newline string without NUL characters (and None), io.StringIO(newline=nl) succeeds exactly for the five legal values."
-    source := "Doc/library/io.rst:1019, :1142"
+    source := "Doc/library/io.rst:1001, :1142"
     status := .proven, prop := ``CStringIONewlineLegalNoNul, thm := some ``cStringIONewlineLegalNoNul_proven
     notes := "The hypothesis is exactly the refuted case above; lone surrogates raise UnicodeEncodeError." },
   { id := "pyio-stringio-py-newline-legal", pyFile := "Lib/_pyio.py"
     pyFns := ["TextIOWrapper._check_newline", "TextIOWrapper._configure", "TextIOWrapper.__init__",
       "StringIO.__init__"]
     statement := "_pyio.StringIO(newline=nl) succeeds exactly for nl in (None, '', '\\n', '\\r', '\\r\\n')."
-    source := "Doc/library/io.rst:1019, :1142"
+    source := "Doc/library/io.rst:1001, :1142"
     status := .proven, prop := ``PyStringIONewlineLegal, thm := some ``pyStringIONewlineLegal_proven },
   -- StringIO: C vs Python
   { id := "pyio-stringio-writes-twins", pyFile := "Modules/_io/stringio.c"
@@ -173,7 +173,7 @@ def coreEntries : List Entry := [
     pyFns := ["StringIO.__init__", "TextIOWrapper.write", "TextIOWrapper.seek", "StringIO.getvalue",
       "_io_StringIO_getvalue_impl"]
     statement := "StringIO(value, newline) followed by write(s) gives the same results in both twins."
-    source := "invariant: C accelerator vs pure-Python twin; Doc/library/io.rst:1136-1138 ('ready ... for a write that would overwrite the initial value')"
+    source := "invariant: C accelerator vs pure-Python twin; Doc/library/io.rst:1118-1120 ('ready ... for a write that would overwrite the initial value')"
     status := .refuted, prop := ``StringIOInitWriteTwins, thm := some ``stringIOInitWriteTwins_refuted
     bug := some "pyio-stringio-pyio-byte-positions"
     notes := "StringIO('é').write('x'): C 'x', _pyio UnicodeDecodeError (byte positions in the UTF-8 buffer)." },
@@ -197,7 +197,7 @@ def coreEntries : List Entry := [
   { id := "pyio-stringio-newlines-attr", pyFile := "Lib/_pyio.py"
     pyFns := ["TextIOWrapper.newlines", "TextIOWrapper._get_decoder", "_io_StringIO_newlines_get_impl"]
     statement := "On an open StringIO with a legal newline, after any reads, the newlines attribute is None, a str or a tuple in both twins (it never raises)."
-    source := "Doc/library/io.rst:918-922 (TextIOBase.newlines: 'A string, a tuple of strings, or None ... this may not be available'); twin behaviour"
+    source := "Doc/library/io.rst:900-904 (TextIOBase.newlines: 'A string, a tuple of strings, or None ... this may not be available'); twin behaviour"
     status := .refuted, prop := ``StringIONewlinesAttr, thm := some ``stringIONewlinesAttr_refuted
     bug := some "pyio-stringio-pyio-newlines-attributeerror"
     notes := "_pyio with newline '\\n', '\\r' or '\\r\\n': AttributeError once a decoder exists." },
@@ -212,7 +212,7 @@ def coreEntries : List Entry := [
   { id := "pyio-bytesio-writelines", pyFile := "Modules/_io/bytesio.c"
     pyFns := ["_io_BytesIO_writelines_impl", "IOBase.writelines"]
     statement := "writelines(ls) on an open BytesIO equals calling write() for each element in turn, stopping at the first failure: it reaches the same state and returns None when every write succeeds (both twins)."
-    source := "Doc/library/io.rst (IOBase.writelines: 'equivalent to calling write() for each element'); bytesio.c:840-841"
+    source := "Doc/library/io.rst (IOBase.writelines: 'equivalent to calling write() for each element'); bytesio.c:846-847"
     status := .proven, prop := ``BytesIOWritelines, thm := some ``bytesIOWritelines_proven },
   { id := "pyio-bytesio-pickle-roundtrip", pyFile := "Modules/_io/bytesio.c"
     pyFns := ["bytesio_getstate", "bytesio_setstate", "bytesio_setstate_lock_held", "BytesIO.__getstate__"]

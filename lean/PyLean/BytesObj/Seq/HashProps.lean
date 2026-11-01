@@ -154,7 +154,7 @@ theorem toHash_ne_minus_one {x : Nat} (h : x < U64) (h' : x ≠ U64 - 1) : toHas
 /-! ## The properties -/
 
 /-- `hash(())` for every element type: the value of `_PyTuple_HASH_EMPTY`
-(pycore_tuple.h:70), `5740354900026072187`, the historical hash of the empty
+(pycore_tuple.h:76), `5740354900026072187`, the historical hash of the empty
 tuple that line 346 of tupleobject.c mangles the length to keep. -/
 def TupleHashEmpty : Prop :=
   ∀ (α : Type) (hashE : α → Py Int) (t : Tup α), t.items = [] → t.hash = -1 →
@@ -236,7 +236,7 @@ one position, with all `Py_uhash_t` values, the accumulators after the loop
 differ, whichever position it is and whatever the rest holds: tuples of the same
 length that differ in exactly one element's hash never collide in the loop.
 The last step keeps that, except for the single remap of `-1` to `1546275796`
-(tupleobject.c:348-350), which `hash` needs for the error marker: equal hashes
+(tupleobject.c:407-409), which `hash` needs for the error marker: equal hashes
 mean that one accumulator hit `-1` and the other `1546275796`. -/
 def TupleHashOneLane : Prop :=
   ∀ (pre post : List Nat) (x y acc n : Nat), x < U64 → y < U64 → acc < U64 → x ≠ y →

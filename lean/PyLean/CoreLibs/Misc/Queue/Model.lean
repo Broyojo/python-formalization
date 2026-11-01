@@ -190,14 +190,14 @@ def shutdown (I : Impl α ρ) (q : Q ρ) (immediate : Bool := false) : Q ρ × P
 
 /-! ### `threading.Semaphore.acquire` and `_PySimpleQueue` -/
 
-/-- The `while self._value == 0:` loop of `Semaphore.acquire`, Lib/threading.py:511-525, entered
+/-- The `while self._value == 0:` loop of `Semaphore.acquire`, Lib/threading.py:506-520, entered
 with `_value == 0` and a timeout. No other thread can raise the value, so the loop leaves through
 `break` on its second pass, when `endtime - _time()` has dropped to 0 because `wait(timeout)`
 consumed the timeout. The result is the clock after the loop. -/
 def semTimedWait (now timeout : Int) : Int :=
   if timeout > 0 then now + timeout else now
 
-/-- `Semaphore.acquire(blocking, timeout)`, Lib/threading.py:482-525: the new value, the clock and
+/-- `Semaphore.acquire(blocking, timeout)`, Lib/threading.py:477-520: the new value, the clock and
 the result. -/
 def semAcquire (value now : Int) (blocking : Bool) (timeout : Option Int) : Py (Int × Int × Bool) :=
   if !blocking ∧ timeout.isSome then
@@ -224,7 +224,7 @@ def PySQ.put (q : PySQ α) (item : α) (_block : Bool := true) (_timeout : Optio
     PySQ α :=
   { q with queue := q.queue ++ [item], count := q.count + 1 }
 
-/-- `_PySimpleQueue.get`, Lib/queue.py:338-353. -/
+/-- `_PySimpleQueue.get`, Lib/queue.py:338-355. -/
 def PySQ.get (q : PySQ α) (block : Bool := true) (timeout : Option Int := none) :
     PySQ α × Py α :=
   if timeout.isSome ∧ (timeout.getD 0) < 0 then (q, .error negTimeout)
@@ -239,25 +239,25 @@ def PySQ.get (q : PySQ α) (block : Bool := true) (timeout : Option Int := none)
         | [] => (q, .error (.indexError "pop from an empty deque"))
         | a :: rest => ({ q with queue := rest }, .ok a)
 
-/-- `_PySimpleQueue.put_nowait`, Lib/queue.py:355-361. -/
+/-- `_PySimpleQueue.put_nowait`, Lib/queue.py:357-363. -/
 def PySQ.putNowait (q : PySQ α) (item : α) : PySQ α := q.put item false
 
-/-- `_PySimpleQueue.get_nowait`, Lib/queue.py:363-369. -/
+/-- `_PySimpleQueue.get_nowait`, Lib/queue.py:365-371. -/
 def PySQ.getNowait (q : PySQ α) : PySQ α × Py α := q.get false
 
-/-- `_PySimpleQueue.empty`, Lib/queue.py:371-373. -/
+/-- `_PySimpleQueue.empty`, Lib/queue.py:373-375. -/
 def PySQ.isEmpty (q : PySQ α) : Bool := q.queue.length == 0
 
-/-- `_PySimpleQueue.qsize`, Lib/queue.py:375-377. -/
+/-- `_PySimpleQueue.qsize`, Lib/queue.py:377-379. -/
 def PySQ.qsize (q : PySQ α) : Nat := q.queue.length
 
 /-! ### `_queue.SimpleQueue`, the C twin -/
 
-/-- `_queue_SimpleQueue_put_impl`, Modules/_queuemodule.c:307-325. -/
+/-- `_queue_SimpleQueue_put_impl`, Modules/_queuemodule.c:302-318. -/
 def cPut (q : List α) (item : α) : List α := q ++ [item]
 
-/-- `_queue_SimpleQueue_get_impl`, Modules/_queuemodule.c:381-458: the timeout is looked at only
-when `block` is true (:389). -/
+/-- `_queue_SimpleQueue_get_impl`, Modules/_queuemodule.c:377-454: the timeout is looked at only
+when `block` is true (:385). -/
 def cGet (q : List α) (block : Bool := true) (timeout : Option Int := none) : List α × Py α :=
   let check : Py Unit :=
     if block ∧ timeout.isSome ∧ (timeout.getD 0) < 0 then .error negTimeout else .ok ()

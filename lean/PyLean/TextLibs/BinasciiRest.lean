@@ -12,7 +12,7 @@ open PyLean
 
 /-! ### uu -/
 
-/-- The `for` loop of `binascii_a2b_uu_impl`, `Modules/binascii.c:238-276`. An exhausted buffer
+/-- The `for` loop of `binascii_a2b_uu_impl`, `Modules/binascii.c:529-566`. An exhausted buffer
 reads as NUL bytes, so the loop runs on past the end; `fuel` bounds it. The result is the bytes
 and the unread input. -/
 def a2bUuLoop : (fuel : Nat) → (binLen left bits : Nat) → List Nat → Py (List Nat × List Nat)
@@ -40,10 +40,10 @@ def a2bUuLoop : (fuel : Nat) → (binLen left bits : Nat) → List Nat → Py (L
           | .ok (out, r) => .ok (byte :: out, r)
         else a2bUuLoop fuel binLen left' bits' (ascii.drop 1)
 
-/-- The trailing check, `Modules/binascii.c:281-294`. -/
+/-- The trailing check, `Modules/binascii.c:571-583`. -/
 def uuTrailingOk (r : List Nat) : Bool := r.all fun c => c = 32 || c = 96 || c = 10 || c = 13
 
-/-- `binascii_a2b_uu_impl`, `Modules/binascii.c:203-296`. -/
+/-- `binascii_a2b_uu_impl`, `Modules/binascii.c:494-589`. -/
 def a2bUuBytes : List Nat → Py (List Nat)
   | [] => .error (err "Missing length byte")
   | c :: rest =>
@@ -56,10 +56,10 @@ def a2bUuBytes : List Nat → Py (List Nat)
 
 def a2bUu (d : Data) : Py (List Nat) := do a2bUuBytes (← asciiBuffer d)
 
-/-- One encoded character, `Modules/binascii.c:359-362`. -/
+/-- One encoded character, `Modules/binascii.c:651-654`. -/
 def uuChar (backtick : Bool) (v : Nat) : Nat := if backtick && v == 0 then 96 else v + 32
 
-/-- The `while (leftbits >= 6)` of `binascii_b2a_uu_impl`, `Modules/binascii.c:356-363`. -/
+/-- The `while (leftbits >= 6)` of `binascii_b2a_uu_impl`, `Modules/binascii.c:648-655`. -/
 def uuDrain (backtick : Bool) (left : Nat) : (fuel bits : Nat) → List Nat × Nat
   | 0, bits => ([], bits)
   | fuel + 1, bits =>
@@ -69,7 +69,7 @@ def uuDrain (backtick : Bool) (left : Nat) : (fuel bits : Nat) → List Nat × N
       (c :: r, bits')
     else ([], bits)
 
-/-- The `for` loop of `binascii_b2a_uu_impl`, `Modules/binascii.c:347-364`; bytes past the end
+/-- The `for` loop of `binascii_b2a_uu_impl`, `Modules/binascii.c:639-656`; bytes past the end
 are the zero padding. `leftchar` is an `unsigned int`. -/
 def b2aUuLoop (backtick : Bool) : (fuel : Nat) → List Nat → (left bits : Nat) → List Nat
   | 0, _, _, _ => []
@@ -80,7 +80,7 @@ def b2aUuLoop (backtick : Bool) : (fuel : Nat) → List Nat → (left bits : Nat
       let (out, bits') := uuDrain backtick left' 3 (bits + 8)
       out ++ b2aUuLoop backtick fuel (data.drop 1) left' bits'
 
-/-- `binascii_b2a_uu_impl`, `Modules/binascii.c:309-368`. -/
+/-- `binascii_b2a_uu_impl`, `Modules/binascii.c:602-725`. -/
 def b2aUu (data : List Nat) (backtick : Bool) : Py (List Nat) :=
   if data.length > 45 then .error (err "At most 45 bytes at once")
   else
@@ -89,11 +89,11 @@ def b2aUu (data : List Nat) (backtick : Bool) : Py (List Nat) :=
 
 /-! ### crc_hqx -/
 
-/-- One step of the `while`, `Modules/binascii.c:618`. -/
+/-- One step of the `while`, `Modules/binascii.c:2010`. -/
 def crcStep (crc b : Nat) : Nat :=
   (crc * 256 % 65536) ^^^ crctabHqx.getD ((crc / 256) ^^^ b) 0
 
-/-- `binascii_crc_hqx_impl`, `Modules/binascii.c:606-622`; `crc` is the masked `unsigned int`. -/
+/-- `binascii_crc_hqx_impl`, `Modules/binascii.c:1998-2014`; `crc` is the masked `unsigned int`. -/
 def crcHqx (data : List Nat) (crc : Int) : Nat :=
   data.foldl crcStep ((crc % 2 ^ 32).toNat % 65536)
 
@@ -109,7 +109,7 @@ def qpSkipLine : List Nat → List Nat
   | 10 :: r => r
   | _ :: r => qpSkipLine r
 
-/-- The loop of `binascii_a2b_qp_impl`, `Modules/binascii.c:993-1036`, on the unread suffix. -/
+/-- The loop of `binascii_a2b_qp_impl`, `Modules/binascii.c:2403-2446`, on the unread suffix. -/
 def a2bQpLoop (header : Bool) : (fuel : Nat) → List Nat → List Nat
   | 0, _ => []
   | _ + 1, [] => []
@@ -128,12 +128,12 @@ def a2bQpLoop (header : Bool) : (fuel : Nat) → List Nat → List Nat
     else if header && c == 95 then 32 :: a2bQpLoop header fuel r
     else c :: a2bQpLoop header fuel r
 
-/-- `binascii_a2b_qp_impl`, `Modules/binascii.c:970-1040`. -/
+/-- `binascii_a2b_qp_impl`, `Modules/binascii.c:2380-2450`. -/
 def a2bQp (d : Data) (header : Bool) : Py (List Nat) := do
   let b ← asciiBuffer d
   return a2bQpLoop header (b.length + 1) b
 
-/-- `to_hex`, `Modules/binascii.c:1042-1051`: the two digits, in output order. -/
+/-- `to_hex`, `Modules/binascii.c:2452-2461`: the two digits, in output order. -/
 def toHex (ch : Nat) : List Nat :=
   let digit (v : Nat) := if v < 10 then 48 + v else 55 + v
   [digit (ch / 16 % 16), digit (ch % 16)]
@@ -147,7 +147,7 @@ structure QpOpts where
 
 def MAXLINESIZE : Nat := 76
 
-/-- The condition shared by both passes, `Modules/binascii.c:1102-1112` and `:1176-1186`.
+/-- The condition shared by both passes, `Modules/binascii.c:2512-2522` and `:2586-2596`.
 `b` is `databuf[in]`, `next` is `databuf[in+1]` when it exists. -/
 def qpMustEncode (o : QpOpts) (linelen : Nat) (b : Nat) (next : Option Nat) : Bool :=
   decide (b > 126) || b == 61 || (o.header && b == 95) ||
@@ -157,7 +157,7 @@ def qpMustEncode (o : QpOpts) (linelen : Nat) (b : Nat) (next : Option Nat) : Bo
   ((b == 9 || b == 32) && next == none) ||
   (decide (b < 33) && b != 13 && b != 10 && (o.quotetabs || (b != 9 && b != 32)))
 
-/-- `memchr` for `'\n'` and the look-behind, `Modules/binascii.c:1094-1096`. -/
+/-- `memchr` for `'\n'` and the look-behind, `Modules/binascii.c:2504-2506`. -/
 def qpCrlf (d : List Nat) : Bool :=
   match d.findIdx? (· == 10) with
   | some (i + 1) => d[i]? == some 13
@@ -169,12 +169,12 @@ def qpSoft (crlf : Bool) : List Nat := if crlf then [61, 13, 10] else [61, 10]
 /-- A hard line end. -/
 def qpEol (crlf : Bool) : List Nat := if crlf then [13, 10] else [10]
 
-/-- A trailing space or tab before a line end is encoded, `Modules/binascii.c:1192-1201`. -/
+/-- A trailing space or tab before a line end is encoded, `Modules/binascii.c:2602-2611`. -/
 def qpProtect : List Nat → List Nat
   | [] => []
   | ch :: t => if ch == 32 || ch == 9 then (toHex ch).reverse ++ [61] ++ t else ch :: t
 
-/-- The second pass of `binascii_b2a_qp_impl`, `Modules/binascii.c:1174-1241`. `out` is the
+/-- The second pass of `binascii_b2a_qp_impl`, `Modules/binascii.c:2584-2651`. `out` is the
 output so far, newest first, because the line-end branch rewrites `odata[out-1]`. -/
 def b2aQpLoop (o : QpOpts) (crlf : Bool) : (fuel : Nat) → List Nat → (linelen : Nat) → List Nat → List Nat
   | 0, _, _, out => out
@@ -196,12 +196,12 @@ def b2aQpLoop (o : QpOpts) (crlf : Bool) : (fuel : Nat) → List Nat → (linele
       let c := if o.header && b == 32 then 95 else b
       b2aQpLoop o crlf fuel r (linelen + 1) (c :: out)
 
-/-- `binascii_b2a_qp_impl`, `Modules/binascii.c:1072-1245`. The first pass only sizes the
+/-- `binascii_b2a_qp_impl`, `Modules/binascii.c:2482-2655`. The first pass only sizes the
 buffer; the bound `textlibs-binascii-qp-buffer-bound` compares the two. -/
 def b2aQp (d : List Nat) (o : QpOpts) : List Nat :=
   (b2aQpLoop o (qpCrlf d) (d.length + 1) d 0 []).reverse
 
-/-- The first pass, `Modules/binascii.c:1100-1164`: `odatalen`. -/
+/-- The first pass, `Modules/binascii.c:2510-2574`: `odatalen`. -/
 def b2aQpSize (o : QpOpts) (crlf : Bool) : (fuel : Nat) → (prev : Option Nat) → List Nat → (linelen : Nat) → Nat
   | 0, _, _, _ => 0
   | _ + 1, _, [], _ => 0
@@ -238,7 +238,7 @@ def words4 : (fuel : Nat) → List Nat → List Nat
   | fuel + 1, s =>
     (s.take 4).foldl (fun x b => x * 256 + b) 0 :: words4 fuel (s.drop 4)
 
-/-- `_85encode`, `Lib/base64.py:299-321`. -/
+/-- `_85encode`, `Lib/base64.py@3.14.7:299-321`. -/
 def enc85 (b : List Nat) (chars : Nat → Nat) (pad foldnuls foldspaces : Bool) : List Nat :=
   let padding := (4 - b.length % 4) % 4
   let b' := b ++ List.replicate padding 0
@@ -256,13 +256,13 @@ def enc85 (b : List Nat) (chars : Nat → Nat) (pad foldnuls foldspaces : Bool) 
 
 def a85char (i : Nat) : Nat := 33 + i
 
-/-- Split into `wrapcol` pieces, `Lib/base64.py:356-357`. -/
+/-- Split into `wrapcol` pieces, `Lib/base64.py@3.14.7:356-357`. -/
 def chunksOf (n : Nat) : (fuel : Nat) → List Nat → List (List Nat)
   | 0, _ => []
   | _ + 1, [] => []
   | fuel + 1, s => s.take n :: chunksOf n fuel (s.drop n)
 
-/-- `a85encode`, `Lib/base64.py:323-365`; `wrapcol` is any int. -/
+/-- `a85encode`, `Lib/base64.py@3.14.7:323-365`; `wrapcol` is any int. -/
 def a85encode (b : List Nat) (foldspaces : Bool) (wrapcol : Int) (pad adobe : Bool) : List Nat :=
   let result := enc85 b a85char pad true foldspaces
   let result := if adobe then [60, 126] ++ result else result
@@ -281,7 +281,7 @@ def a85encode (b : List Nat) (foldspaces : Bool) (wrapcol : Int) (pad adobe : Bo
 def packI (acc : Nat) : List Nat :=
   [acc / 2 ^ 24 % 256, acc / 2 ^ 16 % 256, acc / 2 ^ 8 % 256, acc % 256]
 
-/-- The `for x in b + b'u' * 4` loop, `Lib/base64.py:406-430`. `dec` is newest first. -/
+/-- The `for x in b + b'u' * 4` loop, `Lib/base64.py@3.14.7:406-430`. `dec` is newest first. -/
 def a85Loop (foldspaces : Bool) (ignore : List Nat) :
     List Nat → (curr dec : List Nat) → Py (List Nat × List Nat)
   | [], curr, dec => .ok (curr, dec)
@@ -304,7 +304,7 @@ def a85Loop (foldspaces : Bool) (ignore : List Nat) :
 
 def defaultIgnore : List Nat := [32, 9, 10, 13, 11]
 
-/-- `a85decode`, `Lib/base64.py:367-437`. -/
+/-- `a85decode`, `Lib/base64.py@3.14.7:367-437`. -/
 def a85decode (b0 : Data) (foldspaces adobe : Bool) (ignore : List Nat) : Py (List Nat) := do
   let b ← bytesFromDecodeData b0
   let b ←
@@ -324,7 +324,7 @@ def b85alphabet : List Nat :=
 
 def b85char (i : Nat) : Nat := b85alphabet.getD i 0
 
-/-- `b85encode`, `Lib/base64.py:447-461`. -/
+/-- `b85encode`, `Lib/base64.py@3.14.7:447-461`. -/
 def b85encode (b : List Nat) (pad : Bool) : List Nat := enc85 b b85char pad false false
 
 /-- `_b85dec[c]`. -/
@@ -338,7 +338,7 @@ def b85Chunk : List Nat → (j acc : Nat) → Sum Nat Nat
     | none => .inl j
     | some v => b85Chunk cs (j + 1) (acc * 85 + v)
 
-/-- The `for i in range(0, len(b), 5)` loop, `Lib/base64.py:484-500`. -/
+/-- The `for i in range(0, len(b), 5)` loop, `Lib/base64.py@3.14.7:484-500`. -/
 def b85Loop : (fuel : Nat) → List Nat → (i : Nat) → Py (List Nat)
   | 0, _, _ => .ok []
   | _ + 1, [], _ => .ok []
@@ -351,7 +351,7 @@ def b85Loop : (fuel : Nat) → List Nat → (i : Nat) → Py (List Nat)
       else do
         return packI acc ++ (← b85Loop fuel (b.drop 5) (i + 5))
 
-/-- `b85decode` after `_bytes_from_decode_data`, `Lib/base64.py:479-505`. -/
+/-- `b85decode` after `_bytes_from_decode_data`, `Lib/base64.py@3.14.7:479-505`. -/
 def b85decodeBytes (b : List Nat) : Py (List Nat) := do
   let padding := (5 - b.length % 5) % 5
   let b' := b ++ List.replicate padding 126
@@ -363,10 +363,10 @@ def b85decode (b : Data) : Py (List Nat) := do b85decodeBytes (← bytesFromDeco
 def z85alphabet : List Nat :=
   ("0123456789abcdefghijklmnopqrstuvwxyz" ++ "ABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#").toList.map Char.toNat
 
-/-- `z85encode`, `Lib/base64.py:518-520`. -/
+/-- `z85encode`, `Lib/base64.py@3.14.7:518-520`. -/
 def z85encode (s : List Nat) : List Nat := translate b85alphabet z85alphabet (b85encode s false)
 
-/-- `_z85_decode_translation`, `Lib/base64.py:512-515`. -/
+/-- `_z85_decode_translation`, `Lib/base64.py@3.14.7:512-515`. -/
 def z85DecodeMap (s : List Nat) : List Nat :=
   translate (z85alphabet ++ ";_`|~".toList.map Char.toNat) (b85alphabet ++ [0, 0, 0, 0, 0]) s
 
@@ -375,7 +375,7 @@ def z85Message : PyExc → PyExc
   | .valueError m => .valueError (m.replace "base85" "z85")
   | e => e
 
-/-- `z85decode`, `Lib/base64.py:522-532`. -/
+/-- `z85decode`, `Lib/base64.py@3.14.7:522-532`. -/
 def z85decode (s0 : Data) : Py (List Nat) := do
   let s ← bytesFromDecodeData s0
   match b85decode (.bytes (z85DecodeMap s)) with
@@ -423,7 +423,7 @@ def FileSim.write (f : FileSim) (line : List Nat) : FileSim × Py Unit :=
   | [] => (f, .ok ())
   | r :: rest => ({ f with writes := rest }, r)
 
-/-- The inner `while`, `Lib/base64.py:544-545`. -/
+/-- The inner `while`, `Lib/base64.py:418-419`. -/
 def fillChunk : (fuel : Nat) → FileSim → List Nat → FileSim × Py (List Nat)
   | 0, f, _ => (f, .error .modelFuel)
   | fuel + 1, f, s =>
@@ -433,7 +433,7 @@ def fillChunk : (fuel : Nat) → FileSim → List Nat → FileSim × Py (List Na
       | (f, .ok ns) => if ns.isEmpty then (f, .ok s) else fillChunk fuel f (s ++ ns)
     else (f, .ok s)
 
-/-- `encode`, `Lib/base64.py:541-547`. -/
+/-- `encode`, `Lib/base64.py:415-421`. -/
 def encodeFile : (fuel : Nat) → FileSim → FileSim × Py Unit
   | 0, f => (f, .error .modelFuel)
   | fuel + 1, f =>
@@ -449,10 +449,10 @@ def encodeFile : (fuel : Nat) → FileSim → FileSim × Py Unit
           | (f, .error e) => (f, .error e)
           | (f, .ok ()) => encodeFile fuel f
 
-/-- `encodebytes`, `Lib/base64.py:572-580`. -/
+/-- `encodebytes`, `Lib/base64.py@3.14.7:572-580`. -/
 def encodebytes (s : List Nat) : List Nat := encodeStream (s.length + 1) s
 
-/-- `decodebytes`, `Lib/base64.py:583-586`. -/
+/-- `decodebytes`, `Lib/base64.py:456-459`. -/
 def decodebytes (s : List Nat) : Py (List Nat) := a2bBase64 false (.bytes s)
 
 /-- Split after each `\n`, as `readline` does. -/
@@ -464,7 +464,7 @@ def splitLines : (fuel : Nat) → List Nat → List (List Nat)
     | some i => s.take (i + 1) :: splitLines fuel (s.drop (i + 1))
     | none => [s]
 
-/-- `decode`, `Lib/base64.py:550-554`: each line is decoded on its own. `lines` is what `readline`
+/-- `decode`, `Lib/base64.py:424-428`: each line is decoded on its own. `lines` is what `readline`
 returns or raises, and an empty line ends the loop. -/
 def decodeFile : List (Py (List Nat)) → FileSim → FileSim × Py Unit
   | [], f => (f, .ok ())
@@ -486,7 +486,7 @@ inductive TypeCheck where
   | view (format : String) (ndim : Nat) (cls : String)
   deriving Repr, DecidableEq, Inhabited
 
-/-- `_input_type_check`, `Lib/base64.py:556-569`. -/
+/-- `_input_type_check`, `Lib/base64.py:430-443`. -/
 def inputTypeCheck : TypeCheck → Py Unit
   | .notBuffer c => .error (.typeError s!"expected bytes-like object, not {c}")
   | .view f n c =>
@@ -495,10 +495,10 @@ def inputTypeCheck : TypeCheck → Py Unit
     else if n ≠ 1 then .error (.typeError s!"expected 1-D data, not {n}-D data from {c}")
     else .ok ()
 
-/-- `standard_b64encode`, `Lib/base64.py:88-93`. -/
+/-- `standard_b64encode`, `Lib/base64.py:135-140`. -/
 def standardB64encode (s : List Nat) : Py (List Nat) := b64encode s none
 
-/-- `standard_b64decode`, `Lib/base64.py:95-103`. -/
+/-- `standard_b64decode`, `Lib/base64.py:142-150`. -/
 def standardB64decode (s : Data) : Py (List Nat) := b64decode s none false
 
 /-- The argument of `_input_type_check`, from a `Data`. -/
@@ -519,8 +519,8 @@ def a2bBase64A (d : Data) (strict : Py Bool) : Py (List Nat) := do
   let b ← asciiBuffer d
   a2bBase64Bytes (← strict) b
 
-/-- `binascii_b2a_hex_impl`, `Modules/binascii.c:849-856`, and `binascii_hexlify_impl`,
-`Modules/binascii.c:867-874`, which is the same call. -/
+/-- `binascii_b2a_hex_impl`, `Modules/binascii.c:2241-2248`, and `binascii_hexlify_impl`,
+`Modules/binascii.c:2259-2266`, which is the same call. -/
 def b2aHexA (d : Data) (sep : SepArg) (group : Py Int) : Py (List Nat) := do
   let b ← bufData d
   let g ← group
@@ -568,7 +568,7 @@ def encodeAny (name : String) (d : Data) : Py (List Nat) :=
     inputTypeCheck (← typeCheckOf d)
     decodebytes (← bufData d)
 
-/-- `main`'s flag loop, `Lib/base64.py:604-609`: the last flag wins, `-h` returns at once. -/
+/-- `main`'s flag loop, `Lib/base64.py:477-482`: the last flag wins, `-h` returns at once. -/
 def mainSelect : List Char → Option Bool → Option Bool
   | [], f => f
   | 'h' :: _, _ => none

@@ -1,21 +1,21 @@
 file	line	endline	name	signature	status	entry	note
-Modules/_testlimitedcapi/import.c	13	17	pyimport_getmagicnumber	pyimport_getmagicnumber(PyObject *Py_UNUSED(module), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/import.c	22	26	pyimport_getmagictag	pyimport_getmagictag(PyObject *Py_UNUSED(module), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/import.c	31	34	pyimport_getmoduledict	pyimport_getmoduledict(PyObject *Py_UNUSED(module), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/import.c	39	48	pyimport_getmodule	pyimport_getmodule(PyObject *Py_UNUSED(module), PyObject *name)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/import.c	53	57	pyimport_addmoduleobject	pyimport_addmoduleobject(PyObject *Py_UNUSED(module), PyObject *name)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/import.c	62	71	pyimport_addmodule	pyimport_addmodule(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/import.c	76	85	pyimport_addmoduleref	pyimport_addmoduleref(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/import.c	90	94	pyimport_import	pyimport_import(PyObject *Py_UNUSED(module), PyObject *name)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/import.c	99	108	pyimport_importmodule	pyimport_importmodule(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/import.c	113	125	pyimport_importmodulenoblock	pyimport_importmodulenoblock(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/import.c	130	144	pyimport_importmoduleex	pyimport_importmoduleex(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/import.c	149	164	pyimport_importmodulelevel	pyimport_importmodulelevel(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/import.c	169	183	pyimport_importmodulelevelobject	pyimport_importmodulelevelobject(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/import.c	188	197	pyimport_importfrozenmodule	pyimport_importfrozenmodule(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/import.c	202	206	pyimport_importfrozenmoduleobject	pyimport_importfrozenmoduleobject(PyObject *Py_UNUSED(module), PyObject *name)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/import.c	211	222	pyimport_executecodemodule	pyimport_executecodemodule(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/import.c	227	239	pyimport_executecodemoduleex	pyimport_executecodemoduleex(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/import.c	244	258	pyimport_executecodemodulewithpathnames	pyimport_executecodemodulewithpathnames(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/import.c	263	275	pyimport_executecodemoduleobject	pyimport_executecodemoduleobject(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
-Modules/_testlimitedcapi/import.c	303	306	_PyTestLimitedCAPI_Init_Import	_PyTestLimitedCAPI_Init_Import(PyObject *module)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/import.c	15	19	pyimport_getmagicnumber	pyimport_getmagicnumber(PyObject *Py_UNUSED(module), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/import.c	24	28	pyimport_getmagictag	pyimport_getmagictag(PyObject *Py_UNUSED(module), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/import.c	33	36	pyimport_getmoduledict	pyimport_getmoduledict(PyObject *Py_UNUSED(module), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/import.c	41	50	pyimport_getmodule	pyimport_getmodule(PyObject *Py_UNUSED(module), PyObject *name)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/import.c	55	59	pyimport_addmoduleobject	pyimport_addmoduleobject(PyObject *Py_UNUSED(module), PyObject *name)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/import.c	64	73	pyimport_addmodule	pyimport_addmodule(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/import.c	78	87	pyimport_addmoduleref	pyimport_addmoduleref(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/import.c	92	96	pyimport_import	pyimport_import(PyObject *Py_UNUSED(module), PyObject *name)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/import.c	101	110	pyimport_importmodule	pyimport_importmodule(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/import.c	115	126	pyimport_importmodulenoblock	pyimport_importmodulenoblock(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/import.c	131	145	pyimport_importmoduleex	pyimport_importmoduleex(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/import.c	150	165	pyimport_importmodulelevel	pyimport_importmodulelevel(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/import.c	170	184	pyimport_importmodulelevelobject	pyimport_importmodulelevelobject(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/import.c	189	198	pyimport_importfrozenmodule	pyimport_importfrozenmodule(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/import.c	203	207	pyimport_importfrozenmoduleobject	pyimport_importfrozenmoduleobject(PyObject *Py_UNUSED(module), PyObject *name)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/import.c	212	223	pyimport_executecodemodule	pyimport_executecodemodule(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/import.c	228	240	pyimport_executecodemoduleex	pyimport_executecodemoduleex(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/import.c	245	259	pyimport_executecodemodulewithpathnames	pyimport_executecodemodulewithpathnames(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/import.c	264	276	pyimport_executecodemoduleobject	pyimport_executecodemoduleobject(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/import.c	304	307	_PyTestLimitedCAPI_Init_Import	_PyTestLimitedCAPI_Init_Import(PyObject *module)	excluded		test-support: only for CPython's own tests

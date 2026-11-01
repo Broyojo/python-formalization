@@ -44,17 +44,17 @@ Lib/weakref.py	385	395	WeakKeyDictionary.keyrefs	keyrefs(self)	modelled	misc-wkd
 Lib/weakref.py	397	402	WeakKeyDictionary.popitem	popitem(self)	modelled	misc-wkd-popitem	
 Lib/weakref.py	404	405	WeakKeyDictionary.pop	pop(self, key, *args)	modelled	misc-wkd-non-weak,misc-wkd-pop-setdefault	
 Lib/weakref.py	407	408	WeakKeyDictionary.setdefault	setdefault(self, key, default=None)	modelled	misc-wkd-non-weak,misc-wkd-pop-setdefault	
-Lib/weakref.py	410	418	WeakKeyDictionary.update	update(self, dict=None, /, **kwargs)	modelled	misc-wkd-init,misc-wkd-or	
-Lib/weakref.py	420	422	WeakKeyDictionary.__ior__	__ior__(self, other)	modelled	misc-wkd-or	
-Lib/weakref.py	424	429	WeakKeyDictionary.__or__	__or__(self, other)	modelled	misc-wkd-or	
-Lib/weakref.py	431	437	WeakKeyDictionary.__ror__	__ror__(self, other)	modelled	misc-wkd-or	
-Lib/weakref.py	468	483	finalize.__init__	__init__(self, obj, func, /, *args, **kwargs)	modelled	misc-finalize-init	
-Lib/weakref.py	485	490	finalize.__call__	__call__(self, _=None)	modelled	misc-finalize-once	
-Lib/weakref.py	492	498	finalize.detach	detach(self)	modelled	misc-finalize-once	
-Lib/weakref.py	500	506	finalize.peek	peek(self)	modelled	misc-finalize-once	
-Lib/weakref.py	509	511	finalize.alive	alive(self)	modelled	misc-finalize-once	
-Lib/weakref.py	514	517	finalize.atexit	atexit(self)	modelled	misc-finalize-once	
-Lib/weakref.py	520	523	finalize.atexit	atexit(self, value)	modelled	misc-finalize-once	
-Lib/weakref.py	525	532	finalize.__repr__	__repr__(self)	modelled	misc-finalize-init	
-Lib/weakref.py	535	539	finalize._select_for_exit	_select_for_exit(cls)	modelled	misc-finalize-select	
-Lib/weakref.py	542	574	finalize._exitfunc	_exitfunc(cls)	modelled	misc-finalize-exitfunc	
+Lib/weakref.py	410	420	WeakKeyDictionary.update	update(self, dict=None, /, **kwargs)	todo		changed-in-3.15: was misc-wkd-init,misc-wkd-or
+Lib/weakref.py	422	424	WeakKeyDictionary.__ior__	__ior__(self, other)	modelled	misc-wkd-or	
+Lib/weakref.py	426	431	WeakKeyDictionary.__or__	__or__(self, other)	modelled	misc-wkd-or	
+Lib/weakref.py	433	439	WeakKeyDictionary.__ror__	__ror__(self, other)	modelled	misc-wkd-or	
+Lib/weakref.py	470	485	finalize.__init__	__init__(self, obj, func, /, *args, **kwargs)	modelled	misc-finalize-init	
+Lib/weakref.py	487	492	finalize.__call__	__call__(self, _=None)	modelled	misc-finalize-once	
+Lib/weakref.py	494	500	finalize.detach	detach(self)	modelled	misc-finalize-once	
+Lib/weakref.py	502	508	finalize.peek	peek(self)	modelled	misc-finalize-once	
+Lib/weakref.py	511	513	finalize.alive	alive(self)	modelled	misc-finalize-once	
+Lib/weakref.py	516	519	finalize.atexit	atexit(self)	modelled	misc-finalize-once	
+Lib/weakref.py	522	525	finalize.atexit	atexit(self, value)	modelled	misc-finalize-once	
+Lib/weakref.py	527	534	finalize.__repr__	__repr__(self)	modelled	misc-finalize-init	
+Lib/weakref.py	537	541	finalize._select_for_exit	_select_for_exit(cls)	modelled	misc-finalize-select	
+Lib/weakref.py	544	576	finalize._exitfunc	_exitfunc(cls)	modelled	misc-finalize-exitfunc	

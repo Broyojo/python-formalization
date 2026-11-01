@@ -48,7 +48,7 @@ def reducePy {α : Type} (f : α → α → Py α) (seq : Source α) (initial : 
       | [], none => .error emptyReduce
       | x :: xs, e => reduceLoop f x xs e
 
-/-- The `for (;;)` loop of `_functools_reduce_impl`, Modules/_functoolsmodule.c:1013-1052, where
+/-- The `for (;;)` loop of `_functools_reduce_impl`, Modules/_functoolsmodule.c:1109-1148, where
 `result` starts `NULL` without an initial value. -/
 def reduceCLoop {α : Type} (f : α → α → Py α) : Option α → List α → Option PyExc → Py α
   | _, [], some e => .error e
@@ -57,8 +57,8 @@ def reduceCLoop {α : Type} (f : α → α → Py α) : Option α → List α �
   | none, x :: xs, e => reduceCLoop f (some x) xs e
   | some v, x :: xs, e => do reduceCLoop f (some (← f v x)) xs e
 
-/-- `_functools_reduce_impl`, Modules/_functoolsmodule.c:992-1059. `PyObject_GetIter` failing with any `TypeError`,
-Modules/_functoolsmodule.c:1000-1005, is replaced by a fixed message, so one from a user's `__iter__` is lost. -/
+/-- `_functools_reduce_impl`, Modules/_functoolsmodule.c:1088-1155. `PyObject_GetIter` failing with any `TypeError`,
+Modules/_functoolsmodule.c:1096-1101, is replaced by a fixed message, so one from a user's `__iter__` is lost. -/
 def reduceC {α : Type} (f : α → α → Py α) (seq : Source α) (initial : Option α) : Py α :=
   match seq with
   | .notIterable => .error (.typeError "reduce() arg 2 must support iteration")
@@ -66,7 +66,7 @@ def reduceC {α : Type} (f : α → α → Py α) (seq : Source α) (initial : O
   | .iter items err => reduceCLoop f initial items err
 
 
-/-- `keyobject_text_signature`, Modules/_functoolsmodule.c:854-857. -/
+/-- `keyobject_text_signature`, Modules/_functoolsmodule.c:949-952. -/
 def keyTextSignature : String := "(obj)"
 
 /-! ### `lru_cache` keys -/
@@ -90,7 +90,7 @@ structure MkKeyOps (α : Type) where
   fast : α → Bool
   typ : α → Nat
 
-/-- `_make_key`, Lib/functools.py:522-551. -/
+/-- `_make_key`, Lib/functools.py:522-553. -/
 def makeKeyPy {α : Type} (O : MkKeyOps α) (args : List α) (kwds : List (String × α)) (typed : Bool) :
     CacheKey α :=
   let key := args.map KeyItem.val
@@ -104,8 +104,8 @@ def makeKeyPy {α : Type} (O : MkKeyOps α) (args : List α) (kwds : List (Strin
     | [.val a] => if O.fast a then .scalar a else .tuple key
     | _ => .tuple key
 
-/-- `_make_key` with what the pure version leaves out. `if typed:` at Lib/functools.py:545 is a truth test on each call,
-which `truth` stands for; and `type(key[0]) in fasttypes` at :549 hashes the type, which runs the metaclass's `__hash__`,
+/-- `_make_key` with what the pure version leaves out. `if typed:` at Lib/functools.py:547 is a truth test on each call,
+which `truth` stands for; and `type(key[0]) in fasttypes` at :551 hashes the type, which runs the metaclass's `__hash__`,
 and which `typeHash` stands for. -/
 def makeKeyPyFull {α : Type} (O : MkKeyOps α) (typeHash : α → Py Unit) (truth : Py Bool) (args : List α)
     (kwds : List (String × α)) : Py (CacheKey α) :=
@@ -119,7 +119,7 @@ def makeKeyPyFull {α : Type} (O : MkKeyOps α) (typeHash : α → Py Unit) (tru
       | .ok () => .ok (makeKeyPy O args kwds false)
     | _, _, _ => .ok (makeKeyPy O args kwds typed)
 
-/-- `lru_cache_make_key`, Modules/_functoolsmodule.c:1140-1199. -/
+/-- `lru_cache_make_key`, Modules/_functoolsmodule.c:1236-1295. -/
 def makeKeyC {α : Type} (O : MkKeyOps α) (args : List α) (kwds : List (String × α)) (typed : Bool) :
     CacheKey α :=
   if !typed && kwds.isEmpty then

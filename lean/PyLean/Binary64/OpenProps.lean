@@ -86,7 +86,7 @@ def D2bSpec : Prop :=
 def B2dSpec : Prop :=
   ∀ a : Bigint, a.val ≠ 0 → (b2d a).1.bexp = 1023 ∧ (b2d a).2 = 32 - hi0bits a.top
 
-/-- `ratio(a, b)` is within 2.5 ulps of `a / b`, as the comment at dtoa.c:1082-1083 says. -/
+/-- `ratio(a, b)` is within 2.5 ulps of `a / b`, as the comment at dtoa.c:1084-1085 says. -/
 def RatioBound : Prop :=
   ∀ a b : Bigint, a.val ≠ 0 → b.val ≠ 0 →
     Rat.abs ((ratio a b).toRat - (a.val : Rat) / b.val) ≤

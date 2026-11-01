@@ -1,32 +1,40 @@
 file	line	endline	name	signature	status	entry	note
-Modules/_curses_panel.c	38	43	get_curses_panel_state	get_curses_panel_state(PyObject *module)	excluded		platform: binds an external library
-Modules/_curses_panel.c	46	62	get_curses_panel_state_by_panel	get_curses_panel_state_by_panel(PyCursesPanelObject *panel)	excluded		platform: binds an external library
-Modules/_curses_panel.c	65	71	_curses_panel_clear	_curses_panel_clear(PyObject *mod)	excluded		platform: binds an external library
-Modules/_curses_panel.c	74	81	_curses_panel_traverse	_curses_panel_traverse(PyObject *mod, visitproc visit, void *arg)	excluded		platform: binds an external library
-Modules/_curses_panel.c	84	87	_curses_panel_free	_curses_panel_free(void *mod)	excluded		platform: binds an external library
-Modules/_curses_panel.c	97	111	PyCursesCheckERR	PyCursesCheckERR(_curses_panel_state *state, int code, const char *fname)	excluded		platform: binds an external library
-Modules/_curses_panel.c	154	166	insert_lop	insert_lop(PyCursesPanelObject *po)	excluded		platform: binds an external library
-Modules/_curses_panel.c	170	192	remove_lop	remove_lop(PyCursesPanelObject *po)	excluded		platform: binds an external library
-Modules/_curses_panel.c	196	202	find_po	find_po(PANEL *pan)	excluded		platform: binds an external library
-Modules/_curses_panel.c	223	228	_curses_panel_panel_bottom_impl	_curses_panel_panel_bottom_impl(PyCursesPanelObject *self, PyTypeObject *cls) /*[clinic end generated code: output=8ec7fbbc08554021 input=6b7d2c0578b5a1c4]*/	excluded		platform: binds an external library
-Modules/_curses_panel.c	242	247	_curses_panel_panel_hide_impl	_curses_panel_panel_hide_impl(PyCursesPanelObject *self, PyTypeObject *cls) /*[clinic end generated code: output=cc6ab7203cdc1450 input=805065e45e6fc1cd]*/	excluded		platform: binds an external library
-Modules/_curses_panel.c	260	265	_curses_panel_panel_show_impl	_curses_panel_panel_show_impl(PyCursesPanelObject *self, PyTypeObject *cls) /*[clinic end generated code: output=dc3421de375f0409 input=59375ba57303320d]*/	excluded		platform: binds an external library
-Modules/_curses_panel.c	276	281	_curses_panel_panel_top_impl	_curses_panel_panel_top_impl(PyCursesPanelObject *self, PyTypeObject *cls) /*[clinic end generated code: output=10a072e511e873f7 input=1f372d597dda3379]*/	excluded		platform: binds an external library
-Modules/_curses_panel.c	286	306	PyCursesPanel_New	PyCursesPanel_New(_curses_panel_state *state, PANEL *pan, PyCursesWindowObject *wo)	excluded		platform: binds an external library
-Modules/_curses_panel.c	309	324	PyCursesPanel_Clear	PyCursesPanel_Clear(PyObject *op)	excluded		platform: binds an external library
-Modules/_curses_panel.c	327	347	PyCursesPanel_Dealloc	PyCursesPanel_Dealloc(PyObject *self)	excluded		platform: binds an external library
-Modules/_curses_panel.c	350	357	PyCursesPanel_Traverse	PyCursesPanel_Traverse(PyObject *op, visitproc visit, void *arg)	excluded		platform: binds an external library
-Modules/_curses_panel.c	368	387	_curses_panel_panel_above_impl	_curses_panel_panel_above_impl(PyCursesPanelObject *self) /*[clinic end generated code: output=70ac06d25fd3b4da input=c059994022976788]*/	excluded		platform: binds an external library
-Modules/_curses_panel.c	398	417	_curses_panel_panel_below_impl	_curses_panel_panel_below_impl(PyCursesPanelObject *self) /*[clinic end generated code: output=282861122e06e3de input=cc08f61936d297c6]*/	excluded		platform: binds an external library
-Modules/_curses_panel.c	426	433	_curses_panel_panel_hidden_impl	_curses_panel_panel_hidden_impl(PyCursesPanelObject *self) /*[clinic end generated code: output=66eebd1ab4501a71 input=453d4b4fce25e21a]*/	excluded		platform: binds an external library
-Modules/_curses_panel.c	447	453	_curses_panel_panel_move_impl	_curses_panel_panel_move_impl(PyCursesPanelObject *self, PyTypeObject *cls, int y, int x) /*[clinic end generated code: output=ce546c93e56867da input=60a0e7912ff99849]*/	excluded		platform: binds an external library
-Modules/_curses_panel.c	462	466	_curses_panel_panel_window_impl	_curses_panel_panel_window_impl(PyCursesPanelObject *self) /*[clinic end generated code: output=5f05940d4106b4cb input=6067353d2c307901]*/	excluded		platform: binds an external library
-Modules/_curses_panel.c	479	500	_curses_panel_panel_replace_impl	_curses_panel_panel_replace_impl(PyCursesPanelObject *self, PyTypeObject *cls, PyCursesWindowObject *win) /*[clinic end generated code: output=c71f95c212d58ae7 input=dbec7180ece41ff5]*/	excluded		platform: binds an external library
-Modules/_curses_panel.c	513	531	_curses_panel_panel_set_userptr_impl	_curses_panel_panel_set_userptr_impl(PyCursesPanelObject *self, PyTypeObject *cls, PyObject *obj) /*[clinic end generated code: output=db74f3db07b28080 input=e3fee2ff7b1b8e48]*/	excluded		platform: binds an external library
-Modules/_curses_panel.c	542	556	_curses_panel_panel_userptr_impl	_curses_panel_panel_userptr_impl(PyCursesPanelObject *self, PyTypeObject *cls) /*[clinic end generated code: output=eea6e6f39ffc0179 input=f22ca4f115e30a80]*/	excluded		platform: binds an external library
-Modules/_curses_panel.c	609	630	_curses_panel_bottom_panel_impl	_curses_panel_bottom_panel_impl(PyObject *module) /*[clinic end generated code: output=3aba9f985f4c2bd0 input=634c2a8078b3d7e4]*/	excluded		platform: binds an external library
-Modules/_curses_panel.c	644	655	_curses_panel_new_panel_impl	_curses_panel_new_panel_impl(PyObject *module, PyCursesWindowObject *win) /*[clinic end generated code: output=45e948e0176a9bd2 input=3b6fea647b808fd7]*/	excluded		platform: binds an external library
-Modules/_curses_panel.c	669	690	_curses_panel_top_panel_impl	_curses_panel_top_panel_impl(PyObject *module) /*[clinic end generated code: output=86704988bea8508e input=e62d6278dba39e79]*/	excluded		platform: binds an external library
-Modules/_curses_panel.c	702	708	_curses_panel_update_panels_impl	_curses_panel_update_panels_impl(PyObject *module) /*[clinic end generated code: output=2f3b4c2e03d90ded input=0d0db79f05ec3ef4]*/	excluded		platform: binds an external library
-Modules/_curses_panel.c	722	768	_curses_panel_exec	_curses_panel_exec(PyObject *mod)	excluded		platform: binds an external library
-Modules/_curses_panel.c	791	794	PyInit__curses_panel	PyInit__curses_panel(void)	excluded		platform: binds an external library
+Modules/_curses_panel.c	39	44	get_curses_panel_state	get_curses_panel_state(PyObject *module)	excluded		platform: binds an external library
+Modules/_curses_panel.c	47	63	get_curses_panel_state_by_panel	get_curses_panel_state_by_panel(PyCursesPanelObject *panel)	excluded		platform: binds an external library
+Modules/_curses_panel.c	66	72	_curses_panel_clear	_curses_panel_clear(PyObject *mod)	excluded		platform: binds an external library
+Modules/_curses_panel.c	75	82	_curses_panel_traverse	_curses_panel_traverse(PyObject *mod, visitproc visit, void *arg)	excluded		platform: binds an external library
+Modules/_curses_panel.c	85	88	_curses_panel_free	_curses_panel_free(void *mod)	excluded		platform: binds an external library
+Modules/_curses_panel.c	99	118	_curses_panel_format_error	_curses_panel_format_error(_curses_panel_state *state, const char *curses_funcname, const char *python_funcname, const char *return_value, const char *default_message)	excluded		platform: binds an external library
+Modules/_curses_panel.c	128	134	_curses_panel_set_error	_curses_panel_set_error(_curses_panel_state *state, const char *curses_funcname, const char *python_funcname)	excluded		platform: binds an external library
+Modules/_curses_panel.c	144	150	_curses_panel_set_null_error	_curses_panel_set_null_error(_curses_panel_state *state, const char *curses_funcname, const char *python_funcname)	excluded		platform: binds an external library
+Modules/_curses_panel.c	154	160	curses_panel_set_null_error	curses_panel_set_null_error(PyObject *module, const char *curses_funcname, const char *python_funcname)	excluded		platform: binds an external library
+Modules/_curses_panel.c	164	170	curses_panel_panel_set_error	curses_panel_panel_set_error(PyCursesPanelObject *panel, const char *curses_funcname, const char *python_funcname)	excluded		platform: binds an external library
+Modules/_curses_panel.c	174	180	curses_panel_panel_set_null_error	curses_panel_panel_set_null_error(PyCursesPanelObject *panel, const char *curses_funcname, const char *python_funcname)	excluded		platform: binds an external library
+Modules/_curses_panel.c	195	209	curses_panel_notfound_error	curses_panel_notfound_error(const char *called_funcname, const char *caller_funcname)	excluded		platform: binds an external library
+Modules/_curses_panel.c	224	233	curses_panel_panel_check_err	curses_panel_panel_check_err(PyCursesPanelObject *panel, int code, const char *curses_funcname, const char *python_funcname)	excluded		platform: binds an external library
+Modules/_curses_panel.c	276	288	insert_lop	insert_lop(PyCursesPanelObject *po)	excluded		platform: binds an external library
+Modules/_curses_panel.c	295	315	remove_lop	remove_lop(PyCursesPanelObject *po)	excluded		platform: binds an external library
+Modules/_curses_panel.c	319	325	find_po_impl	find_po_impl(PANEL *pan)	excluded		platform: binds an external library
+Modules/_curses_panel.c	329	336	find_po	find_po(PANEL *pan, const char *called_funcname, const char *caller_funcname)	excluded		platform: binds an external library
+Modules/_curses_panel.c	355	360	_curses_panel_panel_bottom_impl	_curses_panel_panel_bottom_impl(PyCursesPanelObject *self) /*[clinic end generated code: output=7aa7d14d7e1d1ce6 input=b6c920c071b61e2e]*/	excluded		platform: binds an external library
+Modules/_curses_panel.c	372	377	_curses_panel_panel_hide_impl	_curses_panel_panel_hide_impl(PyCursesPanelObject *self) /*[clinic end generated code: output=a7bbbd523e1eab49 input=9456aca9b264dde1]*/	excluded		platform: binds an external library
+Modules/_curses_panel.c	388	393	_curses_panel_panel_show_impl	_curses_panel_panel_show_impl(PyCursesPanelObject *self) /*[clinic end generated code: output=6b4553ab45c97769 input=9997cf364ca71422]*/	excluded		platform: binds an external library
+Modules/_curses_panel.c	402	407	_curses_panel_panel_top_impl	_curses_panel_panel_top_impl(PyCursesPanelObject *self) /*[clinic end generated code: output=0f5f2f8cdd2d1777 input=be33975ec3ca0e9a]*/	excluded		platform: binds an external library
+Modules/_curses_panel.c	412	432	PyCursesPanel_New	PyCursesPanel_New(_curses_panel_state *state, PANEL *pan, PyCursesWindowObject *wo)	excluded		platform: binds an external library
+Modules/_curses_panel.c	435	448	PyCursesPanel_Clear	PyCursesPanel_Clear(PyObject *op)	excluded		platform: binds an external library
+Modules/_curses_panel.c	451	474	PyCursesPanel_Dealloc	PyCursesPanel_Dealloc(PyObject *self)	excluded		platform: binds an external library
+Modules/_curses_panel.c	477	484	PyCursesPanel_Traverse	PyCursesPanel_Traverse(PyObject *op, visitproc visit, void *arg)	excluded		platform: binds an external library
+Modules/_curses_panel.c	495	507	_curses_panel_panel_above_impl	_curses_panel_panel_above_impl(PyCursesPanelObject *self) /*[clinic end generated code: output=70ac06d25fd3b4da input=c059994022976788]*/	excluded		platform: binds an external library
+Modules/_curses_panel.c	518	530	_curses_panel_panel_below_impl	_curses_panel_panel_below_impl(PyCursesPanelObject *self) /*[clinic end generated code: output=282861122e06e3de input=cc08f61936d297c6]*/	excluded		platform: binds an external library
+Modules/_curses_panel.c	539	546	_curses_panel_panel_hidden_impl	_curses_panel_panel_hidden_impl(PyCursesPanelObject *self) /*[clinic end generated code: output=66eebd1ab4501a71 input=453d4b4fce25e21a]*/	excluded		platform: binds an external library
+Modules/_curses_panel.c	559	564	_curses_panel_panel_move_impl	_curses_panel_panel_move_impl(PyCursesPanelObject *self, int y, int x) /*[clinic end generated code: output=d867535a89777415 input=e0b36b78acc03fba]*/	excluded		platform: binds an external library
+Modules/_curses_panel.c	573	577	_curses_panel_panel_window_impl	_curses_panel_panel_window_impl(PyCursesPanelObject *self) /*[clinic end generated code: output=5f05940d4106b4cb input=6067353d2c307901]*/	excluded		platform: binds an external library
+Modules/_curses_panel.c	589	605	_curses_panel_panel_replace_impl	_curses_panel_panel_replace_impl(PyCursesPanelObject *self, PyCursesWindowObject *win) /*[clinic end generated code: output=2253a95f7b287255 input=4b1c4283987d9dfa]*/	excluded		platform: binds an external library
+Modules/_curses_panel.c	617	633	_curses_panel_panel_set_userptr_impl	_curses_panel_panel_set_userptr_impl(PyCursesPanelObject *self, PyObject *obj) /*[clinic end generated code: output=7fa1fd23f69db71e input=d2c6a9dbefabbf39]*/	excluded		platform: binds an external library
+Modules/_curses_panel.c	642	653	_curses_panel_panel_userptr_impl	_curses_panel_panel_userptr_impl(PyCursesPanelObject *self) /*[clinic end generated code: output=e849c307b5dc9237 input=f78b7a47aef0fd50]*/	excluded		platform: binds an external library
+Modules/_curses_panel.c	713	727	_curses_panel_bottom_panel_impl	_curses_panel_bottom_panel_impl(PyObject *module) /*[clinic end generated code: output=3aba9f985f4c2bd0 input=634c2a8078b3d7e4]*/	excluded		platform: binds an external library
+Modules/_curses_panel.c	741	751	_curses_panel_new_panel_impl	_curses_panel_new_panel_impl(PyObject *module, PyCursesWindowObject *win) /*[clinic end generated code: output=45e948e0176a9bd2 input=3b6fea647b808fd7]*/	excluded		platform: binds an external library
+Modules/_curses_panel.c	765	779	_curses_panel_top_panel_impl	_curses_panel_top_panel_impl(PyObject *module) /*[clinic end generated code: output=86704988bea8508e input=e62d6278dba39e79]*/	excluded		platform: binds an external library
+Modules/_curses_panel.c	791	797	_curses_panel_update_panels_impl	_curses_panel_update_panels_impl(PyObject *module) /*[clinic end generated code: output=2f3b4c2e03d90ded input=0d0db79f05ec3ef4]*/	excluded		platform: binds an external library
+Modules/_curses_panel.c	811	859	_curses_panel_exec	_curses_panel_exec(PyObject *mod)	excluded		platform: binds an external library
+Modules/_curses_panel.c	883	886	PyInit__curses_panel	PyInit__curses_panel(void)	excluded		platform: binds an external library

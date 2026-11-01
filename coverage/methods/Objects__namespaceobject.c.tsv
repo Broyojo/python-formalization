@@ -5,7 +5,7 @@ Objects/namespaceobject.c	83	89	namespace_dealloc	namespace_dealloc(PyObject *op
 Objects/namespaceobject.c	93	174	namespace_repr	namespace_repr(PyObject *ns)	todo		
 Objects/namespaceobject.c	178	183	namespace_traverse	namespace_traverse(PyObject *op, visitproc visit, void *arg)	todo		
 Objects/namespaceobject.c	187	192	namespace_clear	namespace_clear(PyObject *op)	todo		
-Objects/namespaceobject.c	196	203	namespace_richcompare	namespace_richcompare(PyObject *self, PyObject *other, int op)	todo		
-Objects/namespaceobject.c	209	220	namespace_reduce	namespace_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
-Objects/namespaceobject.c	224	255	namespace_replace	namespace_replace(PyObject *self, PyObject *args, PyObject *kwargs)	todo		
-Objects/namespaceobject.c	318	332	_PyNamespace_New	_PyNamespace_New(PyObject *kwds)	todo		
+Objects/namespaceobject.c	196	207	namespace_richcompare	namespace_richcompare(PyObject *self, PyObject *other, int op)	todo		changed-in-3.15:
+Objects/namespaceobject.c	213	224	namespace_reduce	namespace_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
+Objects/namespaceobject.c	228	259	namespace_replace	namespace_replace(PyObject *self, PyObject *args, PyObject *kwargs)	todo		
+Objects/namespaceobject.c	322	336	_PyNamespace_New	_PyNamespace_New(PyObject *kwds)	todo		

@@ -14,7 +14,7 @@ Lib/asyncio/unix_events.py	198	218	_UnixSelectorEventLoop._make_subprocess_trans
 Lib/asyncio/unix_events.py	220	221	_UnixSelectorEventLoop._child_watcher_callback	_child_watcher_callback(self, pid, returncode, transp)	todo		
 Lib/asyncio/unix_events.py	223	271	_UnixSelectorEventLoop.create_unix_connection	create_unix_connection(self, protocol_factory, path=None, *, ssl=None, sock=None, server_hostname=None, ssl_handshake_timeout=None, ssl_shutdown_timeout=None)	todo		
 Lib/asyncio/unix_events.py	273	353	_UnixSelectorEventLoop.create_unix_server	create_unix_server(self, protocol_factory, path=None, *, sock=None, backlog=100, ssl=None, ssl_handshake_timeout=None, ssl_shutdown_timeout=None, start_serving=True, cleanup_socket=True)	todo		
-Lib/asyncio/unix_events.py	355	376	_UnixSelectorEventLoop._sock_sendfile_native	_sock_sendfile_native(self, sock, file, offset, count)	todo		
+Lib/asyncio/unix_events.py	355	376	_UnixSelectorEventLoop._sock_sendfile_native	_sock_sendfile_native(self, sock, file, offset, count)	todo		changed-in-3.15:
 Lib/asyncio/unix_events.py	378	449	_UnixSelectorEventLoop._sock_sendfile_native_impl	_sock_sendfile_native_impl(self, fut, registered_fd, sock, fileno, offset, count, blocksize, total_sent)	todo		
 Lib/asyncio/unix_events.py	451	453	_UnixSelectorEventLoop._sock_sendfile_update_filepos	_sock_sendfile_update_filepos(self, fileno, offset)	todo		
 Lib/asyncio/unix_events.py	455	461	_UnixSelectorEventLoop._sock_add_cancellation_callback	_sock_add_cancellation_callback(self, fut, sock)	todo		
@@ -53,11 +53,11 @@ Lib/asyncio/unix_events.py	829	835	_UnixWritePipeTransport._close	_close(self, e
 Lib/asyncio/unix_events.py	837	844	_UnixWritePipeTransport._call_connection_lost	_call_connection_lost(self, exc)	todo		
 Lib/asyncio/unix_events.py	849	868	_UnixSubprocessTransport._start	_start(self, args, shell, stdin, stdout, stderr, bufsize, **kwargs)	todo		
 Lib/asyncio/unix_events.py	883	886	_PidfdChildWatcher.add_child_handler	add_child_handler(self, pid, callback, *args)	todo		
-Lib/asyncio/unix_events.py	888	905	_PidfdChildWatcher._do_wait	_do_wait(self, pid, pidfd, callback, args)	todo		
+Lib/asyncio/unix_events.py	888	905	_PidfdChildWatcher._do_wait	_do_wait(self, pid, pidfd, callback, args)	todo		changed-in-3.15:
 Lib/asyncio/unix_events.py	920	922	_ThreadedChildWatcher.__init__	__init__(self)	todo		
 Lib/asyncio/unix_events.py	924	930	_ThreadedChildWatcher.__del__	__del__(self, _warn=warnings.warn)	todo		
 Lib/asyncio/unix_events.py	932	939	_ThreadedChildWatcher.add_child_handler	add_child_handler(self, pid, callback, *args)	todo		
-Lib/asyncio/unix_events.py	941	980	_ThreadedChildWatcher._do_waitpid	_do_waitpid(self, loop, expected_pid, callback, args)	todo		
-Lib/asyncio/unix_events.py	982	984	_ThreadedChildWatcher._reap_and_notify	_reap_and_notify(self, loop, expected_pid, callback, args)	todo		
-Lib/asyncio/unix_events.py	986	1002	_ThreadedChildWatcher._reap	_reap(self, loop, expected_pid)	todo		
-Lib/asyncio/unix_events.py	1004	1013	can_use_pidfd	can_use_pidfd()	todo		
+Lib/asyncio/unix_events.py	941	988	_ThreadedChildWatcher._do_waitpid	_do_waitpid(self, loop, expected_pid, callback, args)	todo		changed-in-3.15:
+Lib/asyncio/unix_events.py	990	992	_ThreadedChildWatcher._reap_and_notify	_reap_and_notify(self, loop, expected_pid, callback, args)	todo		
+Lib/asyncio/unix_events.py	994	1010	_ThreadedChildWatcher._reap	_reap(self, loop, expected_pid)	todo		
+Lib/asyncio/unix_events.py	1012	1021	can_use_pidfd	can_use_pidfd()	todo		

@@ -42,7 +42,7 @@ theorem cHeapify_small (lt : α → α → Bool) (x : List α) (hn : x.length �
 
 /-- C/Python agreement of `heapify` (and `heapify_max` via `maxLt`), for every
 element type, comparison and length, including the cache-friendly order that
-`_heapqmodule.c:374-375` uses above 2500 items. -/
+`_heapqmodule.c:375-376` uses above 2500 items. -/
 def HeapifyTwinsAgree : Prop :=
   ∀ (α : Type) [Inhabited α] (lt : α → α → Bool) (x : List α),
     cHeapify lt x = .ok (pyHeapify lt x)

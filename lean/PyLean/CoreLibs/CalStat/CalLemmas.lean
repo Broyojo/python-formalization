@@ -295,9 +295,9 @@ theorem ord_prev (y m : Int) (hm : 1 ≤ m ∧ m ≤ 12) :
 
 /-! ## Pure form of the month iterators -/
 
-/-- `days_before`, calendar.py:234. -/
+/-- `days_before`, calendar.py:253. -/
 def daysB (c : Calendar) (y m : Int) : Int := (wk y m 1 - c.firstweekday) % 7
-/-- `days_after`, calendar.py:237. -/
+/-- `days_after`, calendar.py:256. -/
 def daysA (c : Calendar) (y m : Int) : Int :=
   (c.firstweekday - wk y m 1 - daysInMonth y m) % 7
 

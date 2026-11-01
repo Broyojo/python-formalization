@@ -1,425 +1,560 @@
 file	line	endline	name	signature	status	entry	note
-Python/bytecodes.c	146	146	opcode:NOP	pure inst(NOP, (--)) {	todo		
-Python/bytecodes.c	153	153	opcode:NOT_TAKEN	macro(NOT_TAKEN) = NOP;	todo		
-Python/bytecodes.c	155	155	opcode:_CHECK_PERIODIC	op(_CHECK_PERIODIC, (--)) {	todo		
-Python/bytecodes.c	164	164	opcode:_CHECK_PERIODIC_IF_NOT_YIELD_FROM	op(_CHECK_PERIODIC_IF_NOT_YIELD_FROM, (--)) {	todo		
-Python/bytecodes.c	175	175	opcode:_QUICKEN_RESUME	op(_QUICKEN_RESUME, (--)) {	todo		
-Python/bytecodes.c	183	183	opcode:_MAYBE_INSTRUMENT	tier1 op(_MAYBE_INSTRUMENT, (--)) {	todo		
-Python/bytecodes.c	206	206	opcode:_LOAD_BYTECODE	op(_LOAD_BYTECODE, (--)) {	todo		
-Python/bytecodes.c	224	224	opcode:RESUME	macro(RESUME) =	todo		
-Python/bytecodes.c	230	230	opcode:RESUME_CHECK	inst(RESUME_CHECK, (--)) {	todo		
-Python/bytecodes.c	245	245	opcode:_MONITOR_RESUME	op(_MONITOR_RESUME, (--)) {	todo		
-Python/bytecodes.c	255	255	opcode:INSTRUMENTED_RESUME	macro(INSTRUMENTED_RESUME) =	todo		
-Python/bytecodes.c	265	265	opcode:LOAD_FAST_CHECK	inst(LOAD_FAST_CHECK, (-- value)) {	todo		
-Python/bytecodes.c	277	277	opcode:LOAD_FAST	replicate(8) pure inst(LOAD_FAST, (-- value)) {	todo		
-Python/bytecodes.c	287	287	opcode:LOAD_FAST_AND_CLEAR	inst(LOAD_FAST_AND_CLEAR, (-- value)) {	todo		
-Python/bytecodes.c	292	292	opcode:LOAD_FAST_LOAD_FAST	inst(LOAD_FAST_LOAD_FAST, ( -- value1, value2)) {	todo		
-Python/bytecodes.c	299	299	opcode:LOAD_FAST_BORROW_LOAD_FAST_BORROW	inst(LOAD_FAST_BORROW_LOAD_FAST_BORROW, ( -- value1, value2)) {	todo		
-Python/bytecodes.c	311	311	opcode:LOAD_CONST	inst(LOAD_CONST, (-- value)) {	todo		
-Python/bytecodes.c	333	333	opcode:LOAD_CONST_MORTAL	inst(LOAD_CONST_MORTAL, (-- value)) {	todo		
-Python/bytecodes.c	338	338	opcode:LOAD_CONST_IMMORTAL	inst(LOAD_CONST_IMMORTAL, (-- value)) {	todo		
-Python/bytecodes.c	344	344	opcode:LOAD_SMALL_INT	replicate(4) inst(LOAD_SMALL_INT, (-- value)) {	todo		
-Python/bytecodes.c	350	350	opcode:STORE_FAST	replicate(8) inst(STORE_FAST, (value --)) {	todo		
-Python/bytecodes.c	365	365	opcode:STORE_FAST_LOAD_FAST	inst(STORE_FAST_LOAD_FAST, (value1 -- value2)) {	todo		
-Python/bytecodes.c	379	379	opcode:STORE_FAST_STORE_FAST	inst(STORE_FAST_STORE_FAST, (value2, value1 --)) {	todo		
-Python/bytecodes.c	400	400	opcode:POP_TOP	pure inst(POP_TOP, (value --)) {	todo		
-Python/bytecodes.c	404	404	opcode:PUSH_NULL	pure inst(PUSH_NULL, (-- res)) {	todo		
-Python/bytecodes.c	408	408	opcode:END_FOR	no_save_ip inst(END_FOR, (value -- )) {	todo		
-Python/bytecodes.c	417	417	opcode:POP_ITER	macro(POP_ITER) = POP_TOP;	todo		
-Python/bytecodes.c	419	419	opcode:INSTRUMENTED_END_FOR	no_save_ip tier1 inst(INSTRUMENTED_END_FOR, (receiver, value -- receiver)) {	todo		
-Python/bytecodes.c	431	431	opcode:INSTRUMENTED_POP_ITER	tier1 inst(INSTRUMENTED_POP_ITER, (iter -- )) {	todo		
-Python/bytecodes.c	436	436	opcode:END_SEND	pure inst(END_SEND, (receiver, value -- val)) {	todo		
-Python/bytecodes.c	442	442	opcode:INSTRUMENTED_END_SEND	tier1 inst(INSTRUMENTED_END_SEND, (receiver, value -- val)) {	todo		
-Python/bytecodes.c	455	455	opcode:UNARY_NEGATIVE	inst(UNARY_NEGATIVE, (value -- res)) {	todo		
-Python/bytecodes.c	462	462	opcode:UNARY_NOT	pure inst(UNARY_NOT, (value -- res)) {	todo		
-Python/bytecodes.c	478	478	opcode:_SPECIALIZE_TO_BOOL	specializing op(_SPECIALIZE_TO_BOOL, (counter/1, value -- value)) {	todo		
-Python/bytecodes.c	490	490	opcode:_TO_BOOL	op(_TO_BOOL, (value -- res)) {	todo		
-Python/bytecodes.c	497	497	opcode:TO_BOOL	macro(TO_BOOL) = _SPECIALIZE_TO_BOOL + unused/2 + _TO_BOOL;	todo		
-Python/bytecodes.c	499	499	opcode:TO_BOOL_BOOL	inst(TO_BOOL_BOOL, (unused/1, unused/2, value -- value)) {	todo		
-Python/bytecodes.c	504	504	opcode:TO_BOOL_INT	inst(TO_BOOL_INT, (unused/1, unused/2, value -- res)) {	todo		
-Python/bytecodes.c	519	519	opcode:_GUARD_NOS_LIST	op(_GUARD_NOS_LIST, (nos, unused -- nos, unused)) {	todo		
-Python/bytecodes.c	524	524	opcode:_GUARD_TOS_LIST	op(_GUARD_TOS_LIST, (tos -- tos)) {	todo		
-Python/bytecodes.c	529	529	opcode:_GUARD_TOS_SLICE	op(_GUARD_TOS_SLICE, (tos -- tos)) {	todo		
-Python/bytecodes.c	534	534	opcode:TO_BOOL_LIST	macro(TO_BOOL_LIST) = _GUARD_TOS_LIST + unused/1 + unused/2 + _TO_BOOL_LIST;	todo		
-Python/bytecodes.c	536	536	opcode:_TO_BOOL_LIST	op(_TO_BOOL_LIST, (value -- res)) {	todo		
-Python/bytecodes.c	544	544	opcode:TO_BOOL_NONE	inst(TO_BOOL_NONE, (unused/1, unused/2, value -- res)) {	todo		
-Python/bytecodes.c	552	552	opcode:_GUARD_NOS_UNICODE	op(_GUARD_NOS_UNICODE, (nos, unused -- nos, unused)) {	modelled	bytecode-binary-op-add-unicode	
-Python/bytecodes.c	557	557	opcode:_GUARD_TOS_UNICODE	op(_GUARD_TOS_UNICODE, (value -- value)) {	modelled	bytecode-binary-op-add-unicode	
-Python/bytecodes.c	562	562	opcode:_TO_BOOL_STR	op(_TO_BOOL_STR, (value -- res)) {	todo		
-Python/bytecodes.c	577	577	opcode:TO_BOOL_STR	macro(TO_BOOL_STR) =	todo		
-Python/bytecodes.c	580	580	opcode:_REPLACE_WITH_TRUE	op(_REPLACE_WITH_TRUE, (value -- res)) {	todo		
-Python/bytecodes.c	585	585	opcode:TO_BOOL_ALWAYS_TRUE	macro(TO_BOOL_ALWAYS_TRUE) =	todo		
-Python/bytecodes.c	590	590	opcode:UNARY_INVERT	inst(UNARY_INVERT, (value -- res)) {	todo		
-Python/bytecodes.c	615	615	opcode:_GUARD_NOS_INT	op(_GUARD_NOS_INT, (left, unused -- left, unused)) {	modelled	bytecode-binary-op-add-int	
-Python/bytecodes.c	620	620	opcode:_GUARD_TOS_INT	op(_GUARD_TOS_INT, (value -- value)) {	modelled	bytecode-binary-op-add-int	
-Python/bytecodes.c	625	625	opcode:_BINARY_OP_MULTIPLY_INT	pure op(_BINARY_OP_MULTIPLY_INT, (left, right -- res)) {	modelled	bytecode-binary-op-mul-int	
-Python/bytecodes.c	640	640	opcode:_BINARY_OP_ADD_INT	pure op(_BINARY_OP_ADD_INT, (left, right -- res)) {	modelled	bytecode-binary-op-add-int	
-Python/bytecodes.c	655	655	opcode:_BINARY_OP_SUBTRACT_INT	pure op(_BINARY_OP_SUBTRACT_INT, (left, right -- res)) {	modelled	bytecode-binary-op-sub-int	
-Python/bytecodes.c	670	670	opcode:BINARY_OP_MULTIPLY_INT	macro(BINARY_OP_MULTIPLY_INT) =	modelled	bytecode-binary-op-mul-int	
-Python/bytecodes.c	672	672	opcode:BINARY_OP_ADD_INT	macro(BINARY_OP_ADD_INT) =	modelled	bytecode-binary-op-add-int	
-Python/bytecodes.c	674	674	opcode:BINARY_OP_SUBTRACT_INT	macro(BINARY_OP_SUBTRACT_INT) =	modelled	bytecode-binary-op-sub-int	
-Python/bytecodes.c	677	677	opcode:_GUARD_NOS_FLOAT	op(_GUARD_NOS_FLOAT, (left, unused -- left, unused)) {	modelled	bytecode-binary-op-add-float	
-Python/bytecodes.c	682	682	opcode:_GUARD_TOS_FLOAT	op(_GUARD_TOS_FLOAT, (value -- value)) {	modelled	bytecode-binary-op-add-float	
-Python/bytecodes.c	687	687	opcode:_BINARY_OP_MULTIPLY_FLOAT	pure op(_BINARY_OP_MULTIPLY_FLOAT, (left, right -- res)) {	modelled	bytecode-binary-op-mul-float	
-Python/bytecodes.c	702	702	opcode:_BINARY_OP_ADD_FLOAT	pure op(_BINARY_OP_ADD_FLOAT, (left, right -- res)) {	modelled	bytecode-binary-op-add-float	
-Python/bytecodes.c	717	717	opcode:_BINARY_OP_SUBTRACT_FLOAT	pure op(_BINARY_OP_SUBTRACT_FLOAT, (left, right -- res)) {	modelled	bytecode-binary-op-sub-float	
-Python/bytecodes.c	732	732	opcode:BINARY_OP_MULTIPLY_FLOAT	macro(BINARY_OP_MULTIPLY_FLOAT) =	modelled	bytecode-binary-op-mul-float	
-Python/bytecodes.c	734	734	opcode:BINARY_OP_ADD_FLOAT	macro(BINARY_OP_ADD_FLOAT) =	modelled	bytecode-binary-op-add-float	
-Python/bytecodes.c	736	736	opcode:BINARY_OP_SUBTRACT_FLOAT	macro(BINARY_OP_SUBTRACT_FLOAT) =	modelled	bytecode-binary-op-sub-float	
-Python/bytecodes.c	739	739	opcode:_BINARY_OP_ADD_UNICODE	pure op(_BINARY_OP_ADD_UNICODE, (left, right -- res)) {	modelled	bytecode-binary-op-add-unicode	
-Python/bytecodes.c	754	754	opcode:BINARY_OP_ADD_UNICODE	macro(BINARY_OP_ADD_UNICODE) =	modelled	bytecode-binary-op-add-unicode	
-Python/bytecodes.c	763	763	opcode:_BINARY_OP_INPLACE_ADD_UNICODE	op(_BINARY_OP_INPLACE_ADD_UNICODE, (left, right --)) {	todo		
-Python/bytecodes.c	810	810	opcode:_GUARD_BINARY_OP_EXTEND	op(_GUARD_BINARY_OP_EXTEND, (descr/4, left, right -- left, right)) {	todo		
-Python/bytecodes.c	820	820	opcode:_BINARY_OP_EXTEND	pure op(_BINARY_OP_EXTEND, (descr/4, left, right -- res)) {	todo		
-Python/bytecodes.c	834	834	opcode:BINARY_OP_EXTEND	macro(BINARY_OP_EXTEND) =	todo		
-Python/bytecodes.c	837	837	opcode:BINARY_OP_INPLACE_ADD_UNICODE	macro(BINARY_OP_INPLACE_ADD_UNICODE) =	todo		
-Python/bytecodes.c	840	840	opcode:_SPECIALIZE_BINARY_SLICE	specializing op(_SPECIALIZE_BINARY_SLICE, (container, start, stop -- container, start, stop)) {	todo		
-Python/bytecodes.c	847	847	opcode:_BINARY_SLICE	op(_BINARY_SLICE, (container, start, stop -- res)) {	todo		
-Python/bytecodes.c	865	865	opcode:BINARY_SLICE	macro(BINARY_SLICE) = _SPECIALIZE_BINARY_SLICE + _BINARY_SLICE;	todo		
-Python/bytecodes.c	867	867	opcode:_SPECIALIZE_STORE_SLICE	specializing op(_SPECIALIZE_STORE_SLICE, (v, container, start, stop -- v, container, start, stop)) {	todo		
-Python/bytecodes.c	874	874	opcode:_STORE_SLICE	op(_STORE_SLICE, (v, container, start, stop -- )) {	todo		
-Python/bytecodes.c	889	889	opcode:STORE_SLICE	macro(STORE_SLICE) = _SPECIALIZE_STORE_SLICE + _STORE_SLICE;	todo		
-Python/bytecodes.c	891	891	opcode:BINARY_OP_SUBSCR_LIST_INT	macro(BINARY_OP_SUBSCR_LIST_INT) =	modelled	bytecode-binary-op-subscr-list-int	
-Python/bytecodes.c	894	894	opcode:_BINARY_OP_SUBSCR_LIST_INT	op(_BINARY_OP_SUBSCR_LIST_INT, (list_st, sub_st -- res)) {	modelled	bytecode-binary-op-subscr-list-int	
-Python/bytecodes.c	920	920	opcode:BINARY_OP_SUBSCR_LIST_SLICE	macro(BINARY_OP_SUBSCR_LIST_SLICE) =	todo		
-Python/bytecodes.c	923	923	opcode:_BINARY_OP_SUBSCR_LIST_SLICE	op(_BINARY_OP_SUBSCR_LIST_SLICE, (list_st, sub_st -- res)) {	todo		
-Python/bytecodes.c	937	937	opcode:BINARY_OP_SUBSCR_STR_INT	macro(BINARY_OP_SUBSCR_STR_INT) =	todo		
-Python/bytecodes.c	940	940	opcode:_BINARY_OP_SUBSCR_STR_INT	op(_BINARY_OP_SUBSCR_STR_INT, (str_st, sub_st -- res)) {	todo		
-Python/bytecodes.c	960	960	opcode:_GUARD_NOS_TUPLE	op(_GUARD_NOS_TUPLE, (nos, unused -- nos, unused)) {	todo		
-Python/bytecodes.c	965	965	opcode:_GUARD_TOS_TUPLE	op(_GUARD_TOS_TUPLE, (tos -- tos)) {	todo		
-Python/bytecodes.c	970	970	opcode:BINARY_OP_SUBSCR_TUPLE_INT	macro(BINARY_OP_SUBSCR_TUPLE_INT) =	todo		
-Python/bytecodes.c	973	973	opcode:_BINARY_OP_SUBSCR_TUPLE_INT	op(_BINARY_OP_SUBSCR_TUPLE_INT, (tuple_st, sub_st -- res)) {	todo		
-Python/bytecodes.c	992	992	opcode:_GUARD_NOS_DICT	op(_GUARD_NOS_DICT, (nos, unused -- nos, unused)) {	todo		
-Python/bytecodes.c	997	997	opcode:_GUARD_TOS_DICT	op(_GUARD_TOS_DICT, (tos -- tos)) {	todo		
-Python/bytecodes.c	1002	1002	opcode:BINARY_OP_SUBSCR_DICT	macro(BINARY_OP_SUBSCR_DICT) =	todo		
-Python/bytecodes.c	1005	1005	opcode:_BINARY_OP_SUBSCR_DICT	op(_BINARY_OP_SUBSCR_DICT, (dict_st, sub_st -- res)) {	todo		
-Python/bytecodes.c	1021	1021	opcode:_BINARY_OP_SUBSCR_CHECK_FUNC	op(_BINARY_OP_SUBSCR_CHECK_FUNC, (container, unused -- container, unused, getitem)) {	todo		
-Python/bytecodes.c	1037	1037	opcode:_BINARY_OP_SUBSCR_INIT_CALL	op(_BINARY_OP_SUBSCR_INIT_CALL, (container, sub, getitem -- new_frame: _PyInterpreterFrame* )) {	todo		
-Python/bytecodes.c	1045	1045	opcode:BINARY_OP_SUBSCR_GETITEM	macro(BINARY_OP_SUBSCR_GETITEM) =	todo		
-Python/bytecodes.c	1052	1052	opcode:LIST_APPEND	inst(LIST_APPEND, (list, unused[oparg-1], v -- list, unused[oparg-1])) {	todo		
-Python/bytecodes.c	1058	1058	opcode:SET_ADD	inst(SET_ADD, (set, unused[oparg-1], v -- set, unused[oparg-1])) {	todo		
-Python/bytecodes.c	1069	1069	opcode:_SPECIALIZE_STORE_SUBSCR	specializing op(_SPECIALIZE_STORE_SUBSCR, (counter/1, container, sub -- container, sub)) {	todo		
-Python/bytecodes.c	1081	1081	opcode:_STORE_SUBSCR	op(_STORE_SUBSCR, (v, container, sub -- )) {	todo		
-Python/bytecodes.c	1088	1088	opcode:STORE_SUBSCR	macro(STORE_SUBSCR) = _SPECIALIZE_STORE_SUBSCR + _STORE_SUBSCR;	todo		
-Python/bytecodes.c	1090	1090	opcode:STORE_SUBSCR_LIST_INT	macro(STORE_SUBSCR_LIST_INT) =	todo		
-Python/bytecodes.c	1093	1093	opcode:_STORE_SUBSCR_LIST_INT	op(_STORE_SUBSCR_LIST_INT, (value, list_st, sub_st -- )) {	todo		
-Python/bytecodes.c	1122	1122	opcode:STORE_SUBSCR_DICT	macro(STORE_SUBSCR_DICT) =	todo		
-Python/bytecodes.c	1125	1125	opcode:_STORE_SUBSCR_DICT	op(_STORE_SUBSCR_DICT, (value, dict_st, sub -- )) {	todo		
-Python/bytecodes.c	1137	1137	opcode:DELETE_SUBSCR	inst(DELETE_SUBSCR, (container, sub --)) {	todo		
-Python/bytecodes.c	1145	1145	opcode:CALL_INTRINSIC_1	inst(CALL_INTRINSIC_1, (value -- res)) {	todo		
-Python/bytecodes.c	1153	1153	opcode:CALL_INTRINSIC_2	inst(CALL_INTRINSIC_2, (value2_st, value1_st -- res)) {	todo		
-Python/bytecodes.c	1164	1164	opcode:RAISE_VARARGS	tier1 inst(RAISE_VARARGS, (args[oparg] -- )) {	modelled	bytecode-unwind-to-handler	
-Python/bytecodes.c	1177	1177	opcode:INTERPRETER_EXIT	tier1 inst(INTERPRETER_EXIT, (retval --)) {	todo		
-Python/bytecodes.c	1202	1202	opcode:RETURN_VALUE	inst(RETURN_VALUE, (retval -- res)) {	modelled	bytecode-return-value	
-Python/bytecodes.c	1219	1219	opcode:_RETURN_VALUE_EVENT	tier1 op(_RETURN_VALUE_EVENT, (val -- val)) {	todo		
-Python/bytecodes.c	1226	1226	opcode:INSTRUMENTED_RETURN_VALUE	macro(INSTRUMENTED_RETURN_VALUE) =	todo		
-Python/bytecodes.c	1230	1230	opcode:GET_AITER	inst(GET_AITER, (obj -- iter)) {	todo		
-Python/bytecodes.c	1266	1266	opcode:GET_ANEXT	inst(GET_ANEXT, (aiter -- aiter, awaitable)) {	todo		
-Python/bytecodes.c	1274	1274	opcode:GET_AWAITABLE	inst(GET_AWAITABLE, (iterable -- iter)) {	todo		
-Python/bytecodes.c	1285	1285	opcode:_SPECIALIZE_SEND	specializing op(_SPECIALIZE_SEND, (counter/1, receiver, unused -- receiver, unused)) {	todo		
-Python/bytecodes.c	1297	1297	opcode:_SEND	op(_SEND, (receiver, v -- receiver, retval)) {	todo		
-Python/bytecodes.c	1346	1346	opcode:SEND	macro(SEND) = _SPECIALIZE_SEND + _SEND;	todo		
-Python/bytecodes.c	1348	1348	opcode:_SEND_GEN_FRAME	op(_SEND_GEN_FRAME, (receiver, v -- receiver, gen_frame: _PyInterpreterFrame *)) {	modelled	bytecode-send-gen-recursion	
-Python/bytecodes.c	1364	1364	opcode:SEND_GEN	macro(SEND_GEN) =	modelled	bytecode-send-gen-recursion	
-Python/bytecodes.c	1370	1370	opcode:YIELD_VALUE	inst(YIELD_VALUE, (retval -- value)) {	todo		
-Python/bytecodes.c	1404	1404	opcode:_YIELD_VALUE_EVENT	tier1 op(_YIELD_VALUE_EVENT, (val -- val)) {	todo		
-Python/bytecodes.c	1417	1417	opcode:INSTRUMENTED_YIELD_VALUE	macro(INSTRUMENTED_YIELD_VALUE) =	todo		
-Python/bytecodes.c	1421	1421	opcode:POP_EXCEPT	inst(POP_EXCEPT, (exc_value -- )) {	modelled	bytecode-exc-info-nests	
-Python/bytecodes.c	1428	1428	opcode:RERAISE	tier1 inst(RERAISE, (values[oparg], exc_st -- values[oparg])) {	todo		
-Python/bytecodes.c	1441	1441	opcode:_END_ASYNC_FOR	tier1 op(_END_ASYNC_FOR, (awaitable_st, exc_st -- )) {	todo		
-Python/bytecodes.c	1459	1459	opcode:_MONITOR_END_ASYNC_FOR	tier1 op(_MONITOR_END_ASYNC_FOR, ( -- )) {	todo		
-Python/bytecodes.c	1464	1464	opcode:INSTRUMENTED_END_ASYNC_FOR	macro(INSTRUMENTED_END_ASYNC_FOR) =	todo		
-Python/bytecodes.c	1468	1468	opcode:END_ASYNC_FOR	macro(END_ASYNC_FOR) = _END_ASYNC_FOR;	todo		
-Python/bytecodes.c	1470	1470	opcode:CLEANUP_THROW	tier1 inst(CLEANUP_THROW, (sub_iter, last_sent_val, exc_value_st -- none, value)) {	todo		
-Python/bytecodes.c	1490	1490	opcode:LOAD_COMMON_CONSTANT	inst(LOAD_COMMON_CONSTANT, ( -- value)) {	todo		
-Python/bytecodes.c	1496	1496	opcode:LOAD_BUILD_CLASS	inst(LOAD_BUILD_CLASS, ( -- bc)) {	todo		
-Python/bytecodes.c	1508	1508	opcode:STORE_NAME	inst(STORE_NAME, (v -- )) {	todo		
-Python/bytecodes.c	1528	1528	opcode:DELETE_NAME	inst(DELETE_NAME, (--)) {	todo		
-Python/bytecodes.c	1553	1553	opcode:_SPECIALIZE_UNPACK_SEQUENCE	specializing op(_SPECIALIZE_UNPACK_SEQUENCE, (counter/1, seq -- seq)) {	todo		
-Python/bytecodes.c	1567	1567	opcode:_UNPACK_SEQUENCE	op(_UNPACK_SEQUENCE, (seq -- unused[oparg], top[0])) {	todo		
-Python/bytecodes.c	1574	1574	opcode:UNPACK_SEQUENCE	macro(UNPACK_SEQUENCE) = _SPECIALIZE_UNPACK_SEQUENCE + _UNPACK_SEQUENCE;	todo		
-Python/bytecodes.c	1576	1576	opcode:UNPACK_SEQUENCE_TWO_TUPLE	macro(UNPACK_SEQUENCE_TWO_TUPLE) =	todo		
-Python/bytecodes.c	1579	1579	opcode:_UNPACK_SEQUENCE_TWO_TUPLE	op(_UNPACK_SEQUENCE_TWO_TUPLE, (seq -- val1, val0)) {	todo		
-Python/bytecodes.c	1590	1590	opcode:UNPACK_SEQUENCE_TUPLE	macro(UNPACK_SEQUENCE_TUPLE) =	todo		
-Python/bytecodes.c	1593	1593	opcode:_UNPACK_SEQUENCE_TUPLE	op(_UNPACK_SEQUENCE_TUPLE, (seq -- values[oparg])) {	todo		
-Python/bytecodes.c	1605	1605	opcode:UNPACK_SEQUENCE_LIST	macro(UNPACK_SEQUENCE_LIST) =	todo		
-Python/bytecodes.c	1608	1608	opcode:_UNPACK_SEQUENCE_LIST	op(_UNPACK_SEQUENCE_LIST, (seq -- values[oparg])) {	todo		
-Python/bytecodes.c	1625	1625	opcode:UNPACK_EX	inst(UNPACK_EX, (seq -- unused[oparg & 0xFF], unused, unused[oparg >> 8], top[0])) {	todo		
-Python/bytecodes.c	1638	1638	opcode:_SPECIALIZE_STORE_ATTR	specializing op(_SPECIALIZE_STORE_ATTR, (counter/1, owner -- owner)) {	todo		
-Python/bytecodes.c	1651	1651	opcode:_STORE_ATTR	op(_STORE_ATTR, (v, owner --)) {	todo		
-Python/bytecodes.c	1659	1659	opcode:STORE_ATTR	macro(STORE_ATTR) = _SPECIALIZE_STORE_ATTR + unused/3 + _STORE_ATTR;	todo		
-Python/bytecodes.c	1661	1661	opcode:DELETE_ATTR	inst(DELETE_ATTR, (owner --)) {	todo		
-Python/bytecodes.c	1668	1668	opcode:STORE_GLOBAL	inst(STORE_GLOBAL, (v --)) {	todo		
-Python/bytecodes.c	1675	1675	opcode:DELETE_GLOBAL	inst(DELETE_GLOBAL, (--)) {	todo		
-Python/bytecodes.c	1689	1689	opcode:LOAD_LOCALS	inst(LOAD_LOCALS, ( -- locals)) {	todo		
-Python/bytecodes.c	1699	1699	opcode:LOAD_FROM_DICT_OR_GLOBALS	inst(LOAD_FROM_DICT_OR_GLOBALS, (mod_or_class_dict -- v)) {	todo		
-Python/bytecodes.c	1743	1743	opcode:LOAD_NAME	inst(LOAD_NAME, (-- v)) {	todo		
-Python/bytecodes.c	1755	1755	opcode:_SPECIALIZE_LOAD_GLOBAL	specializing op(_SPECIALIZE_LOAD_GLOBAL, (counter/1 -- )) {	todo		
-Python/bytecodes.c	1769	1769	opcode:_LOAD_GLOBAL	op(_LOAD_GLOBAL, ( -- res[1])) {	todo		
-Python/bytecodes.c	1775	1775	opcode:_PUSH_NULL_CONDITIONAL	op(_PUSH_NULL_CONDITIONAL, ( -- null[oparg & 1])) {	todo		
-Python/bytecodes.c	1781	1781	opcode:LOAD_GLOBAL	macro(LOAD_GLOBAL) =	todo		
-Python/bytecodes.c	1789	1789	opcode:_GUARD_GLOBALS_VERSION	op(_GUARD_GLOBALS_VERSION, (version/1 --)) {	todo		
-Python/bytecodes.c	1797	1797	opcode:_LOAD_GLOBAL_MODULE	op(_LOAD_GLOBAL_MODULE, (version/1, unused/1, index/1 -- res))	todo		
-Python/bytecodes.c	1817	1817	opcode:_LOAD_GLOBAL_BUILTINS	op(_LOAD_GLOBAL_BUILTINS, (version/1, index/1 -- res))	todo		
-Python/bytecodes.c	1836	1836	opcode:LOAD_GLOBAL_MODULE	macro(LOAD_GLOBAL_MODULE) =	todo		
-Python/bytecodes.c	1842	1842	opcode:LOAD_GLOBAL_BUILTIN	macro(LOAD_GLOBAL_BUILTIN) =	todo		
-Python/bytecodes.c	1848	1848	opcode:DELETE_FAST	inst(DELETE_FAST, (--)) {	todo		
-Python/bytecodes.c	1862	1862	opcode:MAKE_CELL	inst(MAKE_CELL, (--)) {	todo		
-Python/bytecodes.c	1875	1875	opcode:DELETE_DEREF	inst(DELETE_DEREF, (--)) {	todo		
-Python/bytecodes.c	1887	1887	opcode:LOAD_FROM_DICT_OR_DEREF	inst(LOAD_FROM_DICT_OR_DEREF, (class_dict_st -- value)) {	todo		
-Python/bytecodes.c	1911	1911	opcode:LOAD_DEREF	inst(LOAD_DEREF, ( -- value)) {	todo		
-Python/bytecodes.c	1920	1920	opcode:STORE_DEREF	inst(STORE_DEREF, (v --)) {	todo		
-Python/bytecodes.c	1925	1925	opcode:COPY_FREE_VARS	inst(COPY_FREE_VARS, (--)) {	todo		
-Python/bytecodes.c	1939	1939	opcode:BUILD_STRING	inst(BUILD_STRING, (pieces[oparg] -- str)) {	todo		
-Python/bytecodes.c	1952	1952	opcode:BUILD_INTERPOLATION	inst(BUILD_INTERPOLATION, (value, str, format[oparg & 1] -- interpolation)) {	todo		
-Python/bytecodes.c	1976	1976	opcode:BUILD_TEMPLATE	inst(BUILD_TEMPLATE, (strings, interpolations -- template)) {	todo		
-Python/bytecodes.c	1986	1986	opcode:BUILD_TUPLE	inst(BUILD_TUPLE, (values[oparg] -- tup)) {	todo		
-Python/bytecodes.c	1995	1995	opcode:BUILD_LIST	inst(BUILD_LIST, (values[oparg] -- list)) {	todo		
-Python/bytecodes.c	2004	2004	opcode:LIST_EXTEND	inst(LIST_EXTEND, (list_st, unused[oparg-1], iterable_st -- list_st, unused[oparg-1])) {	todo		
-Python/bytecodes.c	2026	2026	opcode:SET_UPDATE	inst(SET_UPDATE, (set, unused[oparg-1], iterable -- set, unused[oparg-1])) {	todo		
-Python/bytecodes.c	2033	2033	opcode:BUILD_SET	inst(BUILD_SET, (values[oparg] -- set)) {	todo		
-Python/bytecodes.c	2061	2061	opcode:BUILD_MAP	inst(BUILD_MAP, (values[oparg*2] -- map)) {	todo		
-Python/bytecodes.c	2077	2077	opcode:SETUP_ANNOTATIONS	inst(SETUP_ANNOTATIONS, (--)) {	todo		
-Python/bytecodes.c	2104	2104	opcode:DICT_UPDATE	inst(DICT_UPDATE, (dict, unused[oparg - 1], update -- dict, unused[oparg - 1])) {	todo		
-Python/bytecodes.c	2122	2122	opcode:DICT_MERGE	inst(DICT_MERGE, (callable, unused, unused, dict, unused[oparg - 1], update -- callable, unused, unused, dict, unused[oparg - 1])) {	todo		
-Python/bytecodes.c	2136	2136	opcode:MAP_ADD	inst(MAP_ADD, (dict_st, unused[oparg - 1], key, value -- dict_st, unused[oparg - 1])) {	todo		
-Python/bytecodes.c	2149	2149	opcode:INSTRUMENTED_LOAD_SUPER_ATTR	macro(INSTRUMENTED_LOAD_SUPER_ATTR) =	todo		
-Python/bytecodes.c	2159	2159	opcode:_SPECIALIZE_LOAD_SUPER_ATTR	specializing op(_SPECIALIZE_LOAD_SUPER_ATTR, (counter/1, global_super_st, class_st, unused -- global_super_st, class_st, unused)) {	todo		
-Python/bytecodes.c	2172	2172	opcode:_LOAD_SUPER_ATTR	tier1 op(_LOAD_SUPER_ATTR, (global_super_st, class_st, self_st -- attr)) {	todo		
-Python/bytecodes.c	2216	2216	opcode:LOAD_SUPER_ATTR	macro(LOAD_SUPER_ATTR) =	todo		
-Python/bytecodes.c	2221	2221	opcode:LOAD_SUPER_ATTR_ATTR	inst(LOAD_SUPER_ATTR_ATTR, (unused/1, global_super_st, class_st, self_st -- attr_st)) {	todo		
-Python/bytecodes.c	2237	2237	opcode:LOAD_SUPER_ATTR_METHOD	inst(LOAD_SUPER_ATTR_METHOD, (unused/1, global_super_st, class_st, self_st -- attr, self_or_null)) {	todo		
-Python/bytecodes.c	2282	2282	opcode:_SPECIALIZE_LOAD_ATTR	specializing op(_SPECIALIZE_LOAD_ATTR, (counter/1, owner -- owner)) {	todo		
-Python/bytecodes.c	2295	2295	opcode:_LOAD_ATTR	op(_LOAD_ATTR, (owner -- attr, self_or_null[oparg&1])) {	todo		
-Python/bytecodes.c	2312	2312	opcode:LOAD_ATTR	macro(LOAD_ATTR) =	todo		
-Python/bytecodes.c	2317	2317	opcode:_GUARD_TYPE_VERSION	op(_GUARD_TYPE_VERSION, (type_version/2, owner -- owner)) {	todo		
-Python/bytecodes.c	2323	2323	opcode:_GUARD_TYPE_VERSION_AND_LOCK	op(_GUARD_TYPE_VERSION_AND_LOCK, (type_version/2, owner -- owner)) {	todo		
-Python/bytecodes.c	2334	2334	opcode:_CHECK_MANAGED_OBJECT_HAS_VALUES	op(_CHECK_MANAGED_OBJECT_HAS_VALUES, (owner -- owner)) {	todo		
-Python/bytecodes.c	2341	2341	opcode:_LOAD_ATTR_INSTANCE_VALUE	op(_LOAD_ATTR_INSTANCE_VALUE, (offset/1, owner -- attr)) {	todo		
-Python/bytecodes.c	2358	2358	opcode:LOAD_ATTR_INSTANCE_VALUE	macro(LOAD_ATTR_INSTANCE_VALUE) =	todo		
-Python/bytecodes.c	2366	2366	opcode:_LOAD_ATTR_MODULE	op(_LOAD_ATTR_MODULE, (dict_version/2, index/1, owner -- attr)) {	todo		
-Python/bytecodes.c	2390	2390	opcode:LOAD_ATTR_MODULE	macro(LOAD_ATTR_MODULE) =	todo		
-Python/bytecodes.c	2396	2396	opcode:_LOAD_ATTR_WITH_HINT	op(_LOAD_ATTR_WITH_HINT, (hint/1, owner -- attr)) {	todo		
-Python/bytecodes.c	2435	2435	opcode:LOAD_ATTR_WITH_HINT	macro(LOAD_ATTR_WITH_HINT) =	todo		
-Python/bytecodes.c	2442	2442	opcode:_LOAD_ATTR_SLOT	op(_LOAD_ATTR_SLOT, (index/1, owner -- attr)) {	todo		
-Python/bytecodes.c	2458	2458	opcode:LOAD_ATTR_SLOT	macro(LOAD_ATTR_SLOT) =	todo		
-Python/bytecodes.c	2465	2465	opcode:_CHECK_ATTR_CLASS	op(_CHECK_ATTR_CLASS, (type_version/2, owner -- owner)) {	todo		
-Python/bytecodes.c	2473	2473	opcode:_LOAD_ATTR_CLASS	op(_LOAD_ATTR_CLASS, (descr/4, owner -- attr)) {	todo		
-Python/bytecodes.c	2480	2480	opcode:LOAD_ATTR_CLASS	macro(LOAD_ATTR_CLASS) =	todo		
-Python/bytecodes.c	2487	2487	opcode:LOAD_ATTR_CLASS_WITH_METACLASS_CHECK	macro(LOAD_ATTR_CLASS_WITH_METACLASS_CHECK) =	todo		
-Python/bytecodes.c	2494	2494	opcode:_LOAD_ATTR_PROPERTY_FRAME	op(_LOAD_ATTR_PROPERTY_FRAME, (fget/4, owner -- new_frame: _PyInterpreterFrame *)) {	todo		
-Python/bytecodes.c	2509	2509	opcode:LOAD_ATTR_PROPERTY	macro(LOAD_ATTR_PROPERTY) =	todo		
-Python/bytecodes.c	2518	2518	opcode:LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN	inst(LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN, (unused/1, type_version/2, func_version/2, getattribute/4, owner -- unused)) {	todo		
-Python/bytecodes.c	2547	2547	opcode:_GUARD_DORV_NO_DICT	op(_GUARD_DORV_NO_DICT, (owner -- owner)) {	todo		
-Python/bytecodes.c	2559	2559	opcode:_STORE_ATTR_INSTANCE_VALUE	op(_STORE_ATTR_INSTANCE_VALUE, (offset/1, value, owner --)) {	todo		
-Python/bytecodes.c	2577	2577	opcode:STORE_ATTR_INSTANCE_VALUE	macro(STORE_ATTR_INSTANCE_VALUE) =	todo		
-Python/bytecodes.c	2583	2583	opcode:_STORE_ATTR_WITH_HINT	op(_STORE_ATTR_WITH_HINT, (hint/1, value, owner --)) {	todo		
-Python/bytecodes.c	2623	2623	opcode:STORE_ATTR_WITH_HINT	macro(STORE_ATTR_WITH_HINT) =	todo		
-Python/bytecodes.c	2628	2628	opcode:_STORE_ATTR_SLOT	op(_STORE_ATTR_SLOT, (index/1, value, owner --)) {	todo		
-Python/bytecodes.c	2641	2641	opcode:STORE_ATTR_SLOT	macro(STORE_ATTR_SLOT) =	todo		
-Python/bytecodes.c	2652	2652	opcode:_SPECIALIZE_COMPARE_OP	specializing op(_SPECIALIZE_COMPARE_OP, (counter/1, left, right -- left, right)) {	todo		
-Python/bytecodes.c	2664	2664	opcode:_COMPARE_OP	op(_COMPARE_OP, (left, right -- res)) {	todo		
-Python/bytecodes.c	2683	2683	opcode:COMPARE_OP	macro(COMPARE_OP) = _SPECIALIZE_COMPARE_OP + _COMPARE_OP;	todo		
-Python/bytecodes.c	2685	2685	opcode:COMPARE_OP_FLOAT	macro(COMPARE_OP_FLOAT) =	todo		
-Python/bytecodes.c	2688	2688	opcode:COMPARE_OP_INT	macro(COMPARE_OP_INT) =	todo		
-Python/bytecodes.c	2691	2691	opcode:COMPARE_OP_STR	macro(COMPARE_OP_STR) =	todo		
-Python/bytecodes.c	2694	2694	opcode:_COMPARE_OP_FLOAT	op(_COMPARE_OP_FLOAT, (left, right -- res)) {	todo		
-Python/bytecodes.c	2712	2712	opcode:_COMPARE_OP_INT	op(_COMPARE_OP_INT, (left, right -- res)) {	todo		
-Python/bytecodes.c	2734	2734	opcode:_COMPARE_OP_STR	op(_COMPARE_OP_STR, (left, right -- res)) {	todo		
-Python/bytecodes.c	2752	2752	opcode:IS_OP	inst(IS_OP, (left, right -- b)) {	todo		
-Python/bytecodes.c	2763	2763	opcode:_CONTAINS_OP	op(_CONTAINS_OP, (left, right -- b)) {	todo		
-Python/bytecodes.c	2773	2773	opcode:_SPECIALIZE_CONTAINS_OP	specializing op(_SPECIALIZE_CONTAINS_OP, (counter/1, left, right -- left, right)) {	todo		
-Python/bytecodes.c	2785	2785	opcode:CONTAINS_OP	macro(CONTAINS_OP) = _SPECIALIZE_CONTAINS_OP + _CONTAINS_OP;	todo		
-Python/bytecodes.c	2787	2787	opcode:_GUARD_TOS_ANY_SET	op(_GUARD_TOS_ANY_SET, (tos -- tos)) {	todo		
-Python/bytecodes.c	2792	2792	opcode:CONTAINS_OP_SET	macro(CONTAINS_OP_SET) = _GUARD_TOS_ANY_SET + unused/1 + _CONTAINS_OP_SET;	todo		
-Python/bytecodes.c	2794	2794	opcode:_CONTAINS_OP_SET	op(_CONTAINS_OP_SET, (left, right -- b)) {	todo		
-Python/bytecodes.c	2807	2807	opcode:CONTAINS_OP_DICT	macro(CONTAINS_OP_DICT) = _GUARD_TOS_DICT + unused/1 + _CONTAINS_OP_DICT;	todo		
-Python/bytecodes.c	2809	2809	opcode:_CONTAINS_OP_DICT	op(_CONTAINS_OP_DICT, (left, right -- b)) {	todo		
-Python/bytecodes.c	2821	2821	opcode:CHECK_EG_MATCH	inst(CHECK_EG_MATCH, (exc_value_st, match_type_st -- rest, match)) {	todo		
-Python/bytecodes.c	2847	2847	opcode:CHECK_EXC_MATCH	inst(CHECK_EXC_MATCH, (left, right -- left, b)) {	todo		
-Python/bytecodes.c	2862	2862	opcode:IMPORT_NAME	inst(IMPORT_NAME, (level, fromlist -- res)) {	todo		
-Python/bytecodes.c	2872	2872	opcode:IMPORT_FROM	inst(IMPORT_FROM, (from -- from, res)) {	todo		
-Python/bytecodes.c	2879	2879	opcode:JUMP_FORWARD	tier1 inst(JUMP_FORWARD, (--)) {	todo		
-Python/bytecodes.c	2888	2888	opcode:_SPECIALIZE_JUMP_BACKWARD	tier1 op(_SPECIALIZE_JUMP_BACKWARD, (--)) {	todo		
-Python/bytecodes.c	2899	2899	opcode:_JIT	tier1 op(_JIT, (--)) {	todo		
-Python/bytecodes.c	2927	2927	opcode:JUMP_BACKWARD	macro(JUMP_BACKWARD) =	todo		
-Python/bytecodes.c	2933	2933	opcode:JUMP_BACKWARD_NO_JIT	macro(JUMP_BACKWARD_NO_JIT) =	todo		
-Python/bytecodes.c	2938	2938	opcode:JUMP_BACKWARD_JIT	macro(JUMP_BACKWARD_JIT) =	todo		
-Python/bytecodes.c	2962	2962	opcode:ENTER_EXECUTOR	tier1 inst(ENTER_EXECUTOR, (--)) {	todo		
-Python/bytecodes.c	2988	2988	opcode:_POP_JUMP_IF_FALSE	replaced op(_POP_JUMP_IF_FALSE, (cond -- )) {	todo		
-Python/bytecodes.c	2996	2996	opcode:_POP_JUMP_IF_TRUE	replaced op(_POP_JUMP_IF_TRUE, (cond -- )) {	todo		
-Python/bytecodes.c	3004	3004	opcode:_IS_NONE	op(_IS_NONE, (value -- b)) {	todo		
-Python/bytecodes.c	3015	3015	opcode:POP_JUMP_IF_TRUE	macro(POP_JUMP_IF_TRUE) = unused/1 + _POP_JUMP_IF_TRUE;	todo		
-Python/bytecodes.c	3017	3017	opcode:POP_JUMP_IF_FALSE	macro(POP_JUMP_IF_FALSE) = unused/1 + _POP_JUMP_IF_FALSE;	todo		
-Python/bytecodes.c	3019	3019	opcode:POP_JUMP_IF_NONE	macro(POP_JUMP_IF_NONE) = unused/1 + _IS_NONE + _POP_JUMP_IF_TRUE;	todo		
-Python/bytecodes.c	3021	3021	opcode:POP_JUMP_IF_NOT_NONE	macro(POP_JUMP_IF_NOT_NONE) = unused/1 + _IS_NONE + _POP_JUMP_IF_FALSE;	todo		
-Python/bytecodes.c	3023	3023	opcode:JUMP_BACKWARD_NO_INTERRUPT	tier1 inst(JUMP_BACKWARD_NO_INTERRUPT, (--)) {	todo		
-Python/bytecodes.c	3033	3033	opcode:GET_LEN	inst(GET_LEN, (obj -- obj, len)) {	todo		
-Python/bytecodes.c	3042	3042	opcode:MATCH_CLASS	inst(MATCH_CLASS, (subject, type, names -- attrs)) {	todo		
-Python/bytecodes.c	3061	3061	opcode:MATCH_MAPPING	inst(MATCH_MAPPING, (subject -- subject, res)) {	todo		
-Python/bytecodes.c	3066	3066	opcode:MATCH_SEQUENCE	inst(MATCH_SEQUENCE, (subject -- subject, res)) {	todo		
-Python/bytecodes.c	3071	3071	opcode:MATCH_KEYS	inst(MATCH_KEYS, (subject, keys -- subject, keys, values_or_none)) {	todo		
-Python/bytecodes.c	3079	3079	opcode:GET_ITER	inst(GET_ITER, (iterable -- iter)) {	todo		
-Python/bytecodes.c	3090	3090	opcode:GET_YIELD_FROM_ITER	inst(GET_YIELD_FROM_ITER, (iterable -- iter)) {	todo		
-Python/bytecodes.c	3134	3134	opcode:_SPECIALIZE_FOR_ITER	specializing op(_SPECIALIZE_FOR_ITER, (counter/1, iter -- iter)) {	modelled	bytecode-for-iter-exhausted	
-Python/bytecodes.c	3146	3146	opcode:_FOR_ITER	replaced op(_FOR_ITER, (iter -- iter, next)) {	modelled	bytecode-for-iter-exhausted	
-Python/bytecodes.c	3177	3177	opcode:_FOR_ITER_TIER_TWO	op(_FOR_ITER_TIER_TWO, (iter -- iter, next)) {	todo		
-Python/bytecodes.c	3205	3205	opcode:FOR_ITER	macro(FOR_ITER) = _SPECIALIZE_FOR_ITER + _FOR_ITER;	modelled	bytecode-for-iter-exhausted,bytecode-for-iter-next	
-Python/bytecodes.c	3208	3208	opcode:INSTRUMENTED_FOR_ITER	inst(INSTRUMENTED_FOR_ITER, (unused/1, iter -- iter, next)) {	todo		
-Python/bytecodes.c	3241	3241	opcode:_ITER_CHECK_LIST	op(_ITER_CHECK_LIST, (iter -- iter)) {	todo		
-Python/bytecodes.c	3252	3252	opcode:_ITER_JUMP_LIST	replaced op(_ITER_JUMP_LIST, (iter -- iter)) {	todo		
-Python/bytecodes.c	3280	3280	opcode:_GUARD_NOT_EXHAUSTED_LIST	op(_GUARD_NOT_EXHAUSTED_LIST, (iter -- iter)) {	todo		
-Python/bytecodes.c	3294	3294	opcode:_ITER_NEXT_LIST	replaced op(_ITER_NEXT_LIST, (iter -- iter, next)) {	todo		
-Python/bytecodes.c	3323	3323	opcode:_ITER_NEXT_LIST_TIER_TWO	op(_ITER_NEXT_LIST_TIER_TWO, (iter -- iter, next)) {	todo		
-Python/bytecodes.c	3349	3349	opcode:FOR_ITER_LIST	macro(FOR_ITER_LIST) =	todo		
-Python/bytecodes.c	3355	3355	opcode:_ITER_CHECK_TUPLE	op(_ITER_CHECK_TUPLE, (iter -- iter)) {	todo		
-Python/bytecodes.c	3363	3363	opcode:_ITER_JUMP_TUPLE	replaced op(_ITER_JUMP_TUPLE, (iter -- iter)) {	todo		
-Python/bytecodes.c	3387	3387	opcode:_GUARD_NOT_EXHAUSTED_TUPLE	op(_GUARD_NOT_EXHAUSTED_TUPLE, (iter -- iter)) {	todo		
-Python/bytecodes.c	3399	3399	opcode:_ITER_NEXT_TUPLE	op(_ITER_NEXT_TUPLE, (iter -- iter, next)) {	todo		
-Python/bytecodes.c	3412	3412	opcode:FOR_ITER_TUPLE	macro(FOR_ITER_TUPLE) =	todo		
-Python/bytecodes.c	3418	3418	opcode:_ITER_CHECK_RANGE	op(_ITER_CHECK_RANGE, (iter -- iter)) {	todo		
-Python/bytecodes.c	3426	3426	opcode:_ITER_JUMP_RANGE	replaced op(_ITER_JUMP_RANGE, (iter -- iter)) {	todo		
-Python/bytecodes.c	3441	3441	opcode:_GUARD_NOT_EXHAUSTED_RANGE	op(_GUARD_NOT_EXHAUSTED_RANGE, (iter -- iter)) {	todo		
-Python/bytecodes.c	3447	3447	opcode:_ITER_NEXT_RANGE	op(_ITER_NEXT_RANGE, (iter -- iter, next)) {	todo		
-Python/bytecodes.c	3462	3462	opcode:FOR_ITER_RANGE	macro(FOR_ITER_RANGE) =	todo		
-Python/bytecodes.c	3468	3468	opcode:_FOR_ITER_GEN_FRAME	op(_FOR_ITER_GEN_FRAME, (iter -- iter, gen_frame: _PyInterpreterFrame*)) {	todo		
-Python/bytecodes.c	3490	3490	opcode:FOR_ITER_GEN	macro(FOR_ITER_GEN) =	todo		
-Python/bytecodes.c	3496	3496	opcode:_INSERT_NULL	op(_INSERT_NULL, (self -- method_and_self[2])) {	todo		
-Python/bytecodes.c	3502	3502	opcode:_LOAD_SPECIAL	op(_LOAD_SPECIAL, (method_and_self[2] -- method_and_self[2])) {	todo		
-Python/bytecodes.c	3519	3519	opcode:LOAD_SPECIAL	macro(LOAD_SPECIAL) =	todo		
-Python/bytecodes.c	3523	3523	opcode:WITH_EXCEPT_START	inst(WITH_EXCEPT_START, (exit_func, exit_self, lasti, unused, val -- exit_func, exit_self, lasti, unused, val, res)) {	todo		
-Python/bytecodes.c	3579	3579	opcode:PUSH_EXC_INFO	inst(PUSH_EXC_INFO, (exc -- prev_exc, new_exc)) {	modelled	bytecode-exc-info-nests	
-Python/bytecodes.c	3594	3594	opcode:_GUARD_DORV_VALUES_INST_ATTR_FROM_DICT	op(_GUARD_DORV_VALUES_INST_ATTR_FROM_DICT, (owner -- owner)) {	todo		
-Python/bytecodes.c	3601	3601	opcode:_GUARD_KEYS_VERSION	op(_GUARD_KEYS_VERSION, (keys_version/2, owner -- owner)) {	todo		
-Python/bytecodes.c	3608	3608	opcode:_LOAD_ATTR_METHOD_WITH_VALUES	op(_LOAD_ATTR_METHOD_WITH_VALUES, (descr/4, owner -- attr, self)) {	todo		
-Python/bytecodes.c	3619	3619	opcode:LOAD_ATTR_METHOD_WITH_VALUES	macro(LOAD_ATTR_METHOD_WITH_VALUES) =	todo		
-Python/bytecodes.c	3626	3626	opcode:_LOAD_ATTR_METHOD_NO_DICT	op(_LOAD_ATTR_METHOD_NO_DICT, (descr/4, owner -- attr, self)) {	todo		
-Python/bytecodes.c	3637	3637	opcode:LOAD_ATTR_METHOD_NO_DICT	macro(LOAD_ATTR_METHOD_NO_DICT) =	todo		
-Python/bytecodes.c	3643	3643	opcode:_LOAD_ATTR_NONDESCRIPTOR_WITH_VALUES	op(_LOAD_ATTR_NONDESCRIPTOR_WITH_VALUES, (descr/4, owner -- attr)) {	todo		
-Python/bytecodes.c	3651	3651	opcode:LOAD_ATTR_NONDESCRIPTOR_WITH_VALUES	macro(LOAD_ATTR_NONDESCRIPTOR_WITH_VALUES) =	todo		
-Python/bytecodes.c	3658	3658	opcode:_LOAD_ATTR_NONDESCRIPTOR_NO_DICT	op(_LOAD_ATTR_NONDESCRIPTOR_NO_DICT, (descr/4, owner -- attr)) {	todo		
-Python/bytecodes.c	3667	3667	opcode:LOAD_ATTR_NONDESCRIPTOR_NO_DICT	macro(LOAD_ATTR_NONDESCRIPTOR_NO_DICT) =	todo		
-Python/bytecodes.c	3673	3673	opcode:_CHECK_ATTR_METHOD_LAZY_DICT	op(_CHECK_ATTR_METHOD_LAZY_DICT, (dictoffset/1, owner -- owner)) {	todo		
-Python/bytecodes.c	3680	3680	opcode:_LOAD_ATTR_METHOD_LAZY_DICT	op(_LOAD_ATTR_METHOD_LAZY_DICT, (descr/4, owner -- attr, self)) {	todo		
-Python/bytecodes.c	3690	3690	opcode:LOAD_ATTR_METHOD_LAZY_DICT	macro(LOAD_ATTR_METHOD_LAZY_DICT) =	todo		
-Python/bytecodes.c	3722	3722	opcode:_SPECIALIZE_CALL	specializing op(_SPECIALIZE_CALL, (counter/1, callable, self_or_null, unused[oparg] -- callable, self_or_null, unused[oparg])) {	todo		
-Python/bytecodes.c	3734	3734	opcode:_MAYBE_EXPAND_METHOD	op(_MAYBE_EXPAND_METHOD, (callable, self_or_null, unused[oparg] -- callable, self_or_null, unused[oparg])) {	todo		
-Python/bytecodes.c	3747	3747	opcode:_DO_CALL	op(_DO_CALL, (callable, self_or_null, args[oparg] -- res)) {	todo		
-Python/bytecodes.c	3815	3815	opcode:_MONITOR_CALL	op(_MONITOR_CALL, (func, maybe_self, args[oparg] -- func, maybe_self, args[oparg])) {	todo		
-Python/bytecodes.c	3836	3836	opcode:CALL	macro(CALL) = _SPECIALIZE_CALL + unused/2 + _MAYBE_EXPAND_METHOD + _DO_CALL + _CHECK_PERIODIC;	todo		
-Python/bytecodes.c	3837	3837	opcode:INSTRUMENTED_CALL	macro(INSTRUMENTED_CALL) = unused/3 + _MAYBE_EXPAND_METHOD + _MONITOR_CALL + _DO_CALL + _CHECK_PERIODIC;	todo		
-Python/bytecodes.c	3839	3839	opcode:_PY_FRAME_GENERAL	op(_PY_FRAME_GENERAL, (callable, self_or_null, args[oparg] -- new_frame: _PyInterpreterFrame*)) {	todo		
-Python/bytecodes.c	3864	3864	opcode:_CHECK_FUNCTION_VERSION	op(_CHECK_FUNCTION_VERSION, (func_version/2, callable, unused, unused[oparg] -- callable, unused, unused[oparg])) {	todo		
-Python/bytecodes.c	3871	3871	opcode:_CHECK_FUNCTION_VERSION_INLINE	tier2 op(_CHECK_FUNCTION_VERSION_INLINE, (func_version/2, callable_o/4 --)) {	todo		
-Python/bytecodes.c	3877	3877	opcode:CALL_PY_GENERAL	macro(CALL_PY_GENERAL) =	todo		
-Python/bytecodes.c	3886	3886	opcode:_CHECK_METHOD_VERSION	op(_CHECK_METHOD_VERSION, (func_version/2, callable, null, unused[oparg] -- callable, null, unused[oparg])) {	todo		
-Python/bytecodes.c	3896	3896	opcode:_EXPAND_METHOD	op(_EXPAND_METHOD, (callable, self_or_null, unused[oparg] -- callable, self_or_null, unused[oparg])) {	todo		
-Python/bytecodes.c	3907	3907	opcode:CALL_BOUND_METHOD_GENERAL	macro(CALL_BOUND_METHOD_GENERAL) =	todo		
-Python/bytecodes.c	3918	3918	opcode:_CHECK_IS_NOT_PY_CALLABLE	op(_CHECK_IS_NOT_PY_CALLABLE, (callable, unused, unused[oparg] -- callable, unused, unused[oparg])) {	todo		
-Python/bytecodes.c	3924	3924	opcode:_CALL_NON_PY_GENERAL	op(_CALL_NON_PY_GENERAL, (callable, self_or_null, args[oparg] -- res)) {	todo		
-Python/bytecodes.c	3953	3953	opcode:CALL_NON_PY_GENERAL	macro(CALL_NON_PY_GENERAL) =	todo		
-Python/bytecodes.c	3960	3960	opcode:_CHECK_CALL_BOUND_METHOD_EXACT_ARGS	op(_CHECK_CALL_BOUND_METHOD_EXACT_ARGS, (callable, null, unused[oparg] -- callable, null, unused[oparg])) {	todo		
-Python/bytecodes.c	3965	3965	opcode:_INIT_CALL_BOUND_METHOD_EXACT_ARGS	op(_INIT_CALL_BOUND_METHOD_EXACT_ARGS, (callable, self_or_null, unused[oparg] -- callable, self_or_null, unused[oparg])) {	todo		
-Python/bytecodes.c	3975	3975	opcode:_CHECK_PEP_523	op(_CHECK_PEP_523, (--)) {	todo		
-Python/bytecodes.c	3979	3979	opcode:_CHECK_FUNCTION_EXACT_ARGS	op(_CHECK_FUNCTION_EXACT_ARGS, (callable, self_or_null, unused[oparg] -- callable, self_or_null, unused[oparg])) {	todo		
-Python/bytecodes.c	3987	3987	opcode:_CHECK_STACK_SPACE	op(_CHECK_STACK_SPACE, (callable, unused, unused[oparg] -- callable, unused, unused[oparg])) {	todo		
-Python/bytecodes.c	3994	3994	opcode:_CHECK_RECURSION_REMAINING	op(_CHECK_RECURSION_REMAINING, (--)) {	todo		
-Python/bytecodes.c	3998	3998	opcode:_INIT_CALL_PY_EXACT_ARGS	replicate(5) pure op(_INIT_CALL_PY_EXACT_ARGS, (callable, self_or_null, args[oparg] -- new_frame: _PyInterpreterFrame*)) {	todo		
-Python/bytecodes.c	4010	4010	opcode:_PUSH_FRAME	op(_PUSH_FRAME, (new_frame: _PyInterpreterFrame* -- )) {	modelled	bytecode-send-gen-recursion	
-Python/bytecodes.c	4027	4027	opcode:CALL_BOUND_METHOD_EXACT_ARGS	macro(CALL_BOUND_METHOD_EXACT_ARGS) =	todo		
-Python/bytecodes.c	4041	4041	opcode:CALL_PY_EXACT_ARGS	macro(CALL_PY_EXACT_ARGS) =	todo		
-Python/bytecodes.c	4052	4052	opcode:_GUARD_NOS_NULL	op(_GUARD_NOS_NULL, (null, unused -- null, unused)) {	todo		
-Python/bytecodes.c	4056	4056	opcode:_GUARD_CALLABLE_TYPE_1	op(_GUARD_CALLABLE_TYPE_1, (callable, unused, unused -- callable, unused, unused)) {	todo		
-Python/bytecodes.c	4061	4061	opcode:_CALL_TYPE_1	op(_CALL_TYPE_1, (callable, null, arg -- res)) {	todo		
-Python/bytecodes.c	4074	4074	opcode:CALL_TYPE_1	macro(CALL_TYPE_1) =	todo		
-Python/bytecodes.c	4081	4081	opcode:_GUARD_CALLABLE_STR_1	op(_GUARD_CALLABLE_STR_1, (callable, unused, unused -- callable, unused, unused)) {	todo		
-Python/bytecodes.c	4086	4086	opcode:_CALL_STR_1	op(_CALL_STR_1, (callable, null, arg -- res)) {	todo		
-Python/bytecodes.c	4101	4101	opcode:CALL_STR_1	macro(CALL_STR_1) =	todo		
-Python/bytecodes.c	4109	4109	opcode:_GUARD_CALLABLE_TUPLE_1	op(_GUARD_CALLABLE_TUPLE_1, (callable, unused, unused -- callable, unused, unused)) {	todo		
-Python/bytecodes.c	4114	4114	opcode:_CALL_TUPLE_1	op(_CALL_TUPLE_1, (callable, null, arg -- res)) {	todo		
-Python/bytecodes.c	4129	4129	opcode:CALL_TUPLE_1	macro(CALL_TUPLE_1) =	todo		
-Python/bytecodes.c	4137	4137	opcode:_CHECK_AND_ALLOCATE_OBJECT	op(_CHECK_AND_ALLOCATE_OBJECT, (type_version/2, callable, self_or_null, unused[oparg] -- callable, self_or_null, unused[oparg])) {	modelled	bytecode-call-alloc-abstract	
-Python/bytecodes.c	4161	4161	opcode:_CREATE_INIT_FRAME	op(_CREATE_INIT_FRAME, (init, self, args[oparg] -- init_frame: _PyInterpreterFrame *)) {	modelled	bytecode-call-alloc-abstract	
-Python/bytecodes.c	4186	4186	opcode:CALL_ALLOC_AND_ENTER_INIT	macro(CALL_ALLOC_AND_ENTER_INIT) =	modelled	bytecode-call-alloc-abstract	
-Python/bytecodes.c	4193	4193	opcode:EXIT_INIT_CHECK	inst(EXIT_INIT_CHECK, (should_be_none -- )) {	todo		
-Python/bytecodes.c	4203	4203	opcode:_CALL_BUILTIN_CLASS	op(_CALL_BUILTIN_CLASS, (callable, self_or_null, args[oparg] -- res)) {	todo		
-Python/bytecodes.c	4227	4227	opcode:CALL_BUILTIN_CLASS	macro(CALL_BUILTIN_CLASS) =	todo		
-Python/bytecodes.c	4233	4233	opcode:_CALL_BUILTIN_O	op(_CALL_BUILTIN_O, (callable, self_or_null, args[oparg] -- res)) {	todo		
-Python/bytecodes.c	4262	4262	opcode:CALL_BUILTIN_O	macro(CALL_BUILTIN_O) =	todo		
-Python/bytecodes.c	4268	4268	opcode:_CALL_BUILTIN_FAST	op(_CALL_BUILTIN_FAST, (callable, self_or_null, args[oparg] -- res)) {	todo		
-Python/bytecodes.c	4299	4299	opcode:CALL_BUILTIN_FAST	macro(CALL_BUILTIN_FAST) =	todo		
-Python/bytecodes.c	4305	4305	opcode:_CALL_BUILTIN_FAST_WITH_KEYWORDS	op(_CALL_BUILTIN_FAST_WITH_KEYWORDS, (callable, self_or_null, args[oparg] -- res)) {	todo		
-Python/bytecodes.c	4335	4335	opcode:CALL_BUILTIN_FAST_WITH_KEYWORDS	macro(CALL_BUILTIN_FAST_WITH_KEYWORDS) =	todo		
-Python/bytecodes.c	4341	4341	opcode:CALL_LEN	macro(CALL_LEN) =	todo		
-Python/bytecodes.c	4348	4348	opcode:_GUARD_CALLABLE_LEN	op(_GUARD_CALLABLE_LEN, (callable, unused, unused -- callable, unused, unused)){	todo		
-Python/bytecodes.c	4354	4354	opcode:_CALL_LEN	op(_CALL_LEN, (callable, null, arg -- res)) {	todo		
-Python/bytecodes.c	4374	4374	opcode:CALL_ISINSTANCE	inst(CALL_ISINSTANCE, (unused/1, unused/2, callable, self_or_null, args[oparg] -- res)) {	todo		
-Python/bytecodes.c	4400	4400	opcode:CALL_LIST_APPEND	inst(CALL_LIST_APPEND, (unused/1, unused/2, callable, self, arg -- )) {	todo		
-Python/bytecodes.c	4424	4424	opcode:_CALL_METHOD_DESCRIPTOR_O	op(_CALL_METHOD_DESCRIPTOR_O, (callable, self_or_null, args[oparg] -- res)) {	todo		
-Python/bytecodes.c	4457	4457	opcode:CALL_METHOD_DESCRIPTOR_O	macro(CALL_METHOD_DESCRIPTOR_O) =	todo		
-Python/bytecodes.c	4463	4463	opcode:_CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS	op(_CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS, (callable, self_or_null, args[oparg] -- res)) {	todo		
-Python/bytecodes.c	4499	4499	opcode:CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS	macro(CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS) =	todo		
-Python/bytecodes.c	4505	4505	opcode:_CALL_METHOD_DESCRIPTOR_NOARGS	op(_CALL_METHOD_DESCRIPTOR_NOARGS, (callable, self_or_null, args[oparg] -- res)) {	todo		
-Python/bytecodes.c	4537	4537	opcode:CALL_METHOD_DESCRIPTOR_NOARGS	macro(CALL_METHOD_DESCRIPTOR_NOARGS) =	todo		
-Python/bytecodes.c	4543	4543	opcode:_CALL_METHOD_DESCRIPTOR_FAST	op(_CALL_METHOD_DESCRIPTOR_FAST, (callable, self_or_null, args[oparg] -- res)) {	todo		
-Python/bytecodes.c	4578	4578	opcode:CALL_METHOD_DESCRIPTOR_FAST	macro(CALL_METHOD_DESCRIPTOR_FAST) =	todo		
-Python/bytecodes.c	4591	4591	opcode:_MONITOR_CALL_KW	op(_MONITOR_CALL_KW, (callable, self_or_null, args[oparg], unused -- callable, self_or_null, args[oparg], unused)) {	todo		
-Python/bytecodes.c	4610	4610	opcode:_MAYBE_EXPAND_METHOD_KW	op(_MAYBE_EXPAND_METHOD_KW, (callable, self_or_null, unused[oparg], unused -- callable, self_or_null, unused[oparg], unused)) {	todo		
-Python/bytecodes.c	4622	4622	opcode:_DO_CALL_KW	op(_DO_CALL_KW, (callable, self_or_null, args[oparg], kwnames -- res)) {	todo		
-Python/bytecodes.c	4693	4693	opcode:_PY_FRAME_KW	op(_PY_FRAME_KW, (callable, self_or_null, args[oparg], kwnames -- new_frame: _PyInterpreterFrame*)) {	todo		
-Python/bytecodes.c	4723	4723	opcode:_CHECK_FUNCTION_VERSION_KW	op(_CHECK_FUNCTION_VERSION_KW, (func_version/2, callable, unused, unused[oparg], unused -- callable, unused, unused[oparg], unused)) {	todo		
-Python/bytecodes.c	4730	4730	opcode:CALL_KW_PY	macro(CALL_KW_PY) =	todo		
-Python/bytecodes.c	4739	4739	opcode:_CHECK_METHOD_VERSION_KW	op(_CHECK_METHOD_VERSION_KW, (func_version/2, callable, null, unused[oparg], unused -- callable, null, unused[oparg], unused)) {	todo		
-Python/bytecodes.c	4749	4749	opcode:_EXPAND_METHOD_KW	op(_EXPAND_METHOD_KW, (callable, self_or_null, unused[oparg], unused -- callable, self_or_null, unused[oparg], unused)) {	todo		
-Python/bytecodes.c	4760	4760	opcode:CALL_KW_BOUND_METHOD	macro(CALL_KW_BOUND_METHOD) =	todo		
-Python/bytecodes.c	4770	4770	opcode:_SPECIALIZE_CALL_KW	specializing op(_SPECIALIZE_CALL_KW, (counter/1, callable, self_or_null, unused[oparg], unused -- callable, self_or_null, unused[oparg], unused)) {	todo		
-Python/bytecodes.c	4782	4782	opcode:CALL_KW	macro(CALL_KW) =	todo		
-Python/bytecodes.c	4788	4788	opcode:INSTRUMENTED_CALL_KW	macro(INSTRUMENTED_CALL_KW) =	todo		
-Python/bytecodes.c	4795	4795	opcode:_CHECK_IS_NOT_PY_CALLABLE_KW	op(_CHECK_IS_NOT_PY_CALLABLE_KW, (callable, unused, unused[oparg], unused -- callable, unused, unused[oparg], unused)) {	todo		
-Python/bytecodes.c	4802	4802	opcode:_CALL_KW_NON_PY	op(_CALL_KW_NON_PY, (callable, self_or_null, args[oparg], kwnames -- res)) {	todo		
-Python/bytecodes.c	4834	4834	opcode:CALL_KW_NON_PY	macro(CALL_KW_NON_PY) =	todo		
-Python/bytecodes.c	4841	4841	opcode:_MAKE_CALLARGS_A_TUPLE	op(_MAKE_CALLARGS_A_TUPLE, (func, unused, callargs, kwargs -- func, unused, callargs, kwargs)) {	todo		
-Python/bytecodes.c	4858	4858	opcode:_DO_CALL_FUNCTION_EX	op(_DO_CALL_FUNCTION_EX, (func_st, null, callargs_st, kwargs_st -- result)) {	todo		
-Python/bytecodes.c	4937	4937	opcode:CALL_FUNCTION_EX	macro(CALL_FUNCTION_EX) =	todo		
-Python/bytecodes.c	4942	4942	opcode:INSTRUMENTED_CALL_FUNCTION_EX	macro(INSTRUMENTED_CALL_FUNCTION_EX) =	todo		
-Python/bytecodes.c	4947	4947	opcode:MAKE_FUNCTION	inst(MAKE_FUNCTION, (codeobj_st -- func)) {	todo		
-Python/bytecodes.c	4961	4961	opcode:SET_FUNCTION_ATTRIBUTE	inst(SET_FUNCTION_ATTRIBUTE, (attr_st, func_in -- func_out)) {	todo		
-Python/bytecodes.c	4981	4981	opcode:RETURN_GENERATOR	inst(RETURN_GENERATOR, (-- res)) {	todo		
-Python/bytecodes.c	5004	5004	opcode:BUILD_SLICE	inst(BUILD_SLICE, (args[oparg] -- slice)) {	todo		
-Python/bytecodes.c	5014	5014	opcode:CONVERT_VALUE	inst(CONVERT_VALUE, (value -- result)) {	todo		
-Python/bytecodes.c	5024	5024	opcode:FORMAT_SIMPLE	inst(FORMAT_SIMPLE, (value -- res)) {	todo		
-Python/bytecodes.c	5040	5040	opcode:FORMAT_WITH_SPEC	inst(FORMAT_WITH_SPEC, (value, fmt_spec -- res)) {	todo		
-Python/bytecodes.c	5047	5047	opcode:COPY	pure inst(COPY, (bottom, unused[oparg-1] -- bottom, unused[oparg-1], top)) {	todo		
-Python/bytecodes.c	5052	5052	opcode:_SPECIALIZE_BINARY_OP	specializing op(_SPECIALIZE_BINARY_OP, (counter/1, lhs, rhs -- lhs, rhs)) {	modelled	bytecode-binary-op-add-int	
-Python/bytecodes.c	5066	5066	opcode:_BINARY_OP	op(_BINARY_OP, (lhs, rhs -- res)) {	modelled	bytecode-binary-op-add-int	
-Python/bytecodes.c	5079	5079	opcode:BINARY_OP	macro(BINARY_OP) = _SPECIALIZE_BINARY_OP + unused/4 + _BINARY_OP;	modelled	bytecode-binary-op-add-int	
-Python/bytecodes.c	5081	5081	opcode:SWAP	pure inst(SWAP, (bottom, unused[oparg-2], top --	todo		
-Python/bytecodes.c	5089	5089	opcode:INSTRUMENTED_LINE	inst(INSTRUMENTED_LINE, ( -- )) {	todo		
-Python/bytecodes.c	5119	5119	opcode:INSTRUMENTED_INSTRUCTION	inst(INSTRUMENTED_INSTRUCTION, ( -- )) {	todo		
-Python/bytecodes.c	5132	5132	opcode:INSTRUMENTED_JUMP_FORWARD	inst(INSTRUMENTED_JUMP_FORWARD, ( -- )) {	todo		
-Python/bytecodes.c	5136	5136	opcode:_MONITOR_JUMP_BACKWARD	op(_MONITOR_JUMP_BACKWARD, (-- )) {	todo		
-Python/bytecodes.c	5140	5140	opcode:INSTRUMENTED_NOT_TAKEN	inst(INSTRUMENTED_NOT_TAKEN, ( -- )) {	todo		
-Python/bytecodes.c	5145	5145	opcode:INSTRUMENTED_JUMP_BACKWARD	macro(INSTRUMENTED_JUMP_BACKWARD) =	todo		
-Python/bytecodes.c	5150	5150	opcode:INSTRUMENTED_POP_JUMP_IF_TRUE	inst(INSTRUMENTED_POP_JUMP_IF_TRUE, (unused/1, cond -- )) {	todo		
-Python/bytecodes.c	5160	5160	opcode:INSTRUMENTED_POP_JUMP_IF_FALSE	inst(INSTRUMENTED_POP_JUMP_IF_FALSE, (unused/1, cond -- )) {	todo		
-Python/bytecodes.c	5170	5170	opcode:INSTRUMENTED_POP_JUMP_IF_NONE	inst(INSTRUMENTED_POP_JUMP_IF_NONE, (unused/1, value -- )) {	todo		
-Python/bytecodes.c	5182	5182	opcode:INSTRUMENTED_POP_JUMP_IF_NOT_NONE	inst(INSTRUMENTED_POP_JUMP_IF_NOT_NONE, (unused/1, value -- )) {	todo		
-Python/bytecodes.c	5194	5194	opcode:EXTENDED_ARG	tier1 inst(EXTENDED_ARG, ( -- )) {	todo		
-Python/bytecodes.c	5202	5202	opcode:CACHE	tier1 inst(CACHE, (--)) {	todo		
-Python/bytecodes.c	5207	5207	opcode:RESERVED	tier1 inst(RESERVED, (--)) {	todo		
-Python/bytecodes.c	5245	5245	opcode:_JUMP_TO_TOP	op(_JUMP_TO_TOP, (--)) {	todo		
-Python/bytecodes.c	5249	5249	opcode:_SET_IP	tier2 op(_SET_IP, (instr_ptr/4 --)) {	todo		
-Python/bytecodes.c	5253	5253	opcode:_CHECK_STACK_SPACE_OPERAND	tier2 op(_CHECK_STACK_SPACE_OPERAND, (framesize/2 --)) {	todo		
-Python/bytecodes.c	5259	5259	opcode:_SAVE_RETURN_OFFSET	op(_SAVE_RETURN_OFFSET, (--)) {	todo		
-Python/bytecodes.c	5268	5268	opcode:_EXIT_TRACE	tier2 op(_EXIT_TRACE, (exit_p/4 --)) {	todo		
-Python/bytecodes.c	5312	5312	opcode:_CHECK_VALIDITY	tier2 op(_CHECK_VALIDITY, (--)) {	todo		
-Python/bytecodes.c	5316	5316	opcode:_LOAD_CONST_INLINE	tier2 pure op(_LOAD_CONST_INLINE, (ptr/4 -- value)) {	todo		
-Python/bytecodes.c	5325	5325	opcode:_LOAD_CONST_INLINE_BORROW	tier2 pure op(_LOAD_CONST_INLINE_BORROW, (ptr/4 -- value)) {	todo		
-Python/bytecodes.c	5334	5334	opcode:_POP_TWO_LOAD_CONST_INLINE_BORROW	tier2 pure op(_POP_TWO_LOAD_CONST_INLINE_BORROW, (ptr/4, pop1, pop2 -- value)) {	todo		
-Python/bytecodes.c	5340	5340	opcode:_CHECK_FUNCTION	tier2 op(_CHECK_FUNCTION, (func_version/2 -- )) {	todo		
-Python/bytecodes.c	5346	5346	opcode:_START_EXECUTOR	tier2 op(_START_EXECUTOR, (executor/4 --)) {	todo		
-Python/bytecodes.c	5353	5353	opcode:_MAKE_WARM	tier2 op(_MAKE_WARM, (--)) {	todo		
-Python/bytecodes.c	5361	5361	opcode:_FATAL_ERROR	tier2 op(_FATAL_ERROR, (--)) {	todo		
-Python/bytecodes.c	5366	5366	opcode:_DEOPT	tier2 op(_DEOPT, (--)) {	todo		
-Python/bytecodes.c	5370	5370	opcode:_ERROR_POP_N	tier2 op(_ERROR_POP_N, (target/2 --)) {	todo		
-Python/bytecodes.c	5379	5379	opcode:_TIER2_RESUME_CHECK	tier2 op(_TIER2_RESUME_CHECK, (--)) {	todo		
+Python/bytecodes.c	148	148	opcode:NOP	pure inst(NOP, (--)) {	todo		changed-in-3.15:
+Python/bytecodes.c	156	156	opcode:NOT_TAKEN	macro(NOT_TAKEN) = NOP;	todo		
+Python/bytecodes.c	158	158	opcode:_CHECK_PERIODIC	op(_CHECK_PERIODIC, (--)) {	todo		changed-in-3.15:
+Python/bytecodes.c	163	163	opcode:_CHECK_PERIODIC_AT_END	replaced op(_CHECK_PERIODIC_AT_END, (--)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	168	168	opcode:_CHECK_PERIODIC_IF_NOT_YIELD_FROM	op(_CHECK_PERIODIC_IF_NOT_YIELD_FROM, (--)) {	todo		changed-in-3.15:
+Python/bytecodes.c	175	175	opcode:_QUICKEN_RESUME	tier1 op(_QUICKEN_RESUME, (counter/1 --)) {	todo		changed-in-3.15:
+Python/bytecodes.c	179	179	opcode:_MAYBE_INSTRUMENT	tier1 op(_MAYBE_INSTRUMENT, (--)) {	todo		
+Python/bytecodes.c	202	202	opcode:_LOAD_BYTECODE	replaced op(_LOAD_BYTECODE, (--)) {	todo		changed-in-3.15:
+Python/bytecodes.c	220	220	opcode:RESUME	macro(RESUME) =	todo		
+Python/bytecodes.c	226	226	opcode:RESUME_CHECK	macro(RESUME_CHECK) =	todo		changed-in-3.15:
+Python/bytecodes.c	230	230	opcode:_RESUME_CHECK	op(_RESUME_CHECK, (--)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	245	245	opcode:RESUME_CHECK_JIT	macro(RESUME_CHECK_JIT) =	todo		changed-in-3.15: new function
+Python/bytecodes.c	250	250	opcode:_MONITOR_RESUME	op(_MONITOR_RESUME, (--)) {	todo		changed-in-3.15:
+Python/bytecodes.c	260	260	opcode:INSTRUMENTED_RESUME	macro(INSTRUMENTED_RESUME) =	todo		changed-in-3.15:
+Python/bytecodes.c	271	271	opcode:LOAD_FAST_CHECK	inst(LOAD_FAST_CHECK, (-- value)) {	todo		
+Python/bytecodes.c	283	283	opcode:LOAD_FAST	replicate(8) pure inst(LOAD_FAST, (-- value)) {	todo		
+Python/bytecodes.c	293	293	opcode:LOAD_FAST_AND_CLEAR	inst(LOAD_FAST_AND_CLEAR, (-- value)) {	todo		
+Python/bytecodes.c	298	298	opcode:LOAD_FAST_LOAD_FAST	inst(LOAD_FAST_LOAD_FAST, ( -- value1, value2)) {	todo		
+Python/bytecodes.c	305	305	opcode:LOAD_FAST_BORROW_LOAD_FAST_BORROW	inst(LOAD_FAST_BORROW_LOAD_FAST_BORROW, ( -- value1, value2)) {	todo		changed-in-3.15:
+Python/bytecodes.c	312	312	opcode:LOAD_CONST	inst(LOAD_CONST, (-- value)) {	todo		changed-in-3.15:
+Python/bytecodes.c	317	317	opcode:LOAD_SMALL_INT	replicate(4) inst(LOAD_SMALL_INT, (-- value)) {	todo		changed-in-3.15:
+Python/bytecodes.c	323	323	opcode:STORE_FAST	macro(STORE_FAST) = _SWAP_FAST + POP_TOP;	todo		changed-in-3.15:
+Python/bytecodes.c	325	325	opcode:_SWAP_FAST	replicate(8) op(_SWAP_FAST, (value -- trash)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	336	336	opcode:STORE_FAST_LOAD_FAST	inst(STORE_FAST_LOAD_FAST, (value1 -- value2)) {	todo		changed-in-3.15:
+Python/bytecodes.c	346	346	opcode:STORE_FAST_STORE_FAST	inst(STORE_FAST_STORE_FAST, (value2, value1 --)) {	todo		changed-in-3.15:
+Python/bytecodes.c	359	359	opcode:POP_TOP	pure inst(POP_TOP, (value --)) {	todo		changed-in-3.15:
+Python/bytecodes.c	363	363	opcode:_POP_TOP_NOP	op(_POP_TOP_NOP, (value --)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	369	369	opcode:_POP_TOP_INT	op(_POP_TOP_INT, (value --)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	374	374	opcode:_POP_TOP_FLOAT	op(_POP_TOP_FLOAT, (value --)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	379	379	opcode:_POP_TOP_UNICODE	op(_POP_TOP_UNICODE, (value --)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	384	384	opcode:_POP_TOP_OPARG	op(_POP_TOP_OPARG, (args[oparg] -- )) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	389	389	opcode:PUSH_NULL	pure inst(PUSH_NULL, (-- res)) {	todo		
+Python/bytecodes.c	393	393	opcode:END_FOR	no_save_ip inst(END_FOR, (value -- )) {	todo		
+Python/bytecodes.c	403	403	opcode:POP_ITER	inst(POP_ITER, (iter, index_or_null -- )) {	todo		changed-in-3.15:
+Python/bytecodes.c	409	409	opcode:INSTRUMENTED_END_FOR	no_save_ip tier1 inst(INSTRUMENTED_END_FOR, (receiver, index_or_null, value -- receiver, index_or_null)) {	todo		changed-in-3.15:
+Python/bytecodes.c	421	421	opcode:INSTRUMENTED_POP_ITER	tier1 inst(INSTRUMENTED_POP_ITER, (iter, index_or_null -- )) {	todo		changed-in-3.15:
+Python/bytecodes.c	428	428	opcode:END_SEND	pure inst(END_SEND, (receiver, index_or_null, value -- val)) {	todo		changed-in-3.15:
+Python/bytecodes.c	436	436	opcode:INSTRUMENTED_END_SEND	tier1 inst(INSTRUMENTED_END_SEND, (receiver, index_or_null, value -- val)) {	todo		changed-in-3.15:
+Python/bytecodes.c	451	451	opcode:UNARY_NEGATIVE	macro(UNARY_NEGATIVE) = _UNARY_NEGATIVE + POP_TOP;	todo		changed-in-3.15:
+Python/bytecodes.c	453	453	opcode:_UNARY_NEGATIVE	op(_UNARY_NEGATIVE, (value -- res, v)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	465	465	opcode:_UNARY_NEGATIVE_FLOAT_INPLACE	tier2 op(_UNARY_NEGATIVE_FLOAT_INPLACE, (value -- res, v)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	477	477	opcode:UNARY_NOT	inst(UNARY_NOT, (value -- res)) {	todo		changed-in-3.15:
+Python/bytecodes.c	493	493	opcode:_SPECIALIZE_TO_BOOL	specializing op(_SPECIALIZE_TO_BOOL, (counter/1, value -- value)) {	todo		changed-in-3.15:
+Python/bytecodes.c	505	505	opcode:_TO_BOOL	op(_TO_BOOL, (value -- res)) {	todo		
+Python/bytecodes.c	512	512	opcode:TO_BOOL	macro(TO_BOOL) = _SPECIALIZE_TO_BOOL + unused/2 + _TO_BOOL;	todo		
+Python/bytecodes.c	514	514	opcode:TO_BOOL_BOOL	inst(TO_BOOL_BOOL, (unused/1, unused/2, value -- value)) {	todo		
+Python/bytecodes.c	519	519	opcode:_TO_BOOL_INT	op(_TO_BOOL_INT, (value -- res, v)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	527	527	opcode:TO_BOOL_INT	macro(TO_BOOL_INT) =	todo		changed-in-3.15:
+Python/bytecodes.c	530	530	opcode:_GUARD_NOS_LIST	op(_GUARD_NOS_LIST, (nos, unused -- nos, unused)) {	todo		
+Python/bytecodes.c	535	535	opcode:_GUARD_TOS_LIST	op(_GUARD_TOS_LIST, (tos -- tos)) {	todo		
+Python/bytecodes.c	540	540	opcode:_GUARD_TOS_SLICE	op(_GUARD_TOS_SLICE, (tos -- tos)) {	todo		
+Python/bytecodes.c	545	545	opcode:TO_BOOL_LIST	macro(TO_BOOL_LIST) = _GUARD_TOS_LIST + unused/1 + unused/2 + _TO_BOOL_LIST + POP_TOP;	todo		changed-in-3.15:
+Python/bytecodes.c	547	547	opcode:_TO_BOOL_LIST	op(_TO_BOOL_LIST, (value -- res, v)) {	todo		changed-in-3.15:
+Python/bytecodes.c	556	556	opcode:TO_BOOL_NONE	inst(TO_BOOL_NONE, (unused/1, unused/2, value -- res)) {	todo		
+Python/bytecodes.c	564	564	opcode:_GUARD_NOS_COMPACT_ASCII	op(_GUARD_NOS_COMPACT_ASCII, (nos, unused -- nos, unused)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	570	570	opcode:_GUARD_NOS_UNICODE	op(_GUARD_NOS_UNICODE, (nos, unused -- nos, unused)) {	modelled	bytecode-binary-op-add-unicode	
+Python/bytecodes.c	575	575	opcode:_GUARD_TOS_UNICODE	op(_GUARD_TOS_UNICODE, (value -- value)) {	modelled	bytecode-binary-op-add-unicode	
+Python/bytecodes.c	580	580	opcode:_TO_BOOL_STR	op(_TO_BOOL_STR, (value -- res, v)) {	todo		changed-in-3.15:
+Python/bytecodes.c	588	588	opcode:TO_BOOL_STR	macro(TO_BOOL_STR) =	todo		changed-in-3.15:
+Python/bytecodes.c	591	591	opcode:_REPLACE_WITH_TRUE	op(_REPLACE_WITH_TRUE, (value -- res, v)) {	todo		changed-in-3.15:
+Python/bytecodes.c	597	597	opcode:TO_BOOL_ALWAYS_TRUE	macro(TO_BOOL_ALWAYS_TRUE) =	todo		changed-in-3.15:
+Python/bytecodes.c	604	604	opcode:UNARY_INVERT	macro(UNARY_INVERT) = _UNARY_INVERT + POP_TOP;	todo		changed-in-3.15:
+Python/bytecodes.c	606	606	opcode:_UNARY_INVERT	op(_UNARY_INVERT, (value -- res, v)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	635	635	opcode:_GUARD_NOS_INT	op(_GUARD_NOS_INT, (left, unused -- left, unused)) {	todo		changed-in-3.15: was bytecode-binary-op-add-int
+Python/bytecodes.c	640	640	opcode:_GUARD_TOS_INT	op(_GUARD_TOS_INT, (value -- value)) {	todo		changed-in-3.15: was bytecode-binary-op-add-int
+Python/bytecodes.c	645	645	opcode:_GUARD_NOS_OVERFLOWED	op(_GUARD_NOS_OVERFLOWED, (left, unused -- left, unused)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	651	651	opcode:_GUARD_TOS_OVERFLOWED	op(_GUARD_TOS_OVERFLOWED, (value -- value)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	657	657	opcode:_BINARY_OP_MULTIPLY_INT	pure op(_BINARY_OP_MULTIPLY_INT, (left, right -- res, l, r)) {	todo		changed-in-3.15: was bytecode-binary-op-mul-int
+Python/bytecodes.c	672	672	opcode:_BINARY_OP_ADD_INT	pure op(_BINARY_OP_ADD_INT, (left, right -- res, l, r)) {	todo		changed-in-3.15: was bytecode-binary-op-add-int
+Python/bytecodes.c	687	687	opcode:_BINARY_OP_SUBTRACT_INT	pure op(_BINARY_OP_SUBTRACT_INT, (left, right -- res, l, r)) {	todo		changed-in-3.15: was bytecode-binary-op-sub-int
+Python/bytecodes.c	702	702	opcode:BINARY_OP_MULTIPLY_INT	macro(BINARY_OP_MULTIPLY_INT) =	todo		changed-in-3.15: was bytecode-binary-op-mul-int
+Python/bytecodes.c	705	705	opcode:BINARY_OP_ADD_INT	macro(BINARY_OP_ADD_INT) =	todo		changed-in-3.15: was bytecode-binary-op-add-int
+Python/bytecodes.c	708	708	opcode:BINARY_OP_SUBTRACT_INT	macro(BINARY_OP_SUBTRACT_INT) =	todo		changed-in-3.15: was bytecode-binary-op-sub-int
+Python/bytecodes.c	714	714	opcode:_BINARY_OP_ADD_INT_INPLACE	tier2 op(_BINARY_OP_ADD_INT_INPLACE, (left, right -- res, l, r)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	723	723	opcode:_BINARY_OP_SUBTRACT_INT_INPLACE	tier2 op(_BINARY_OP_SUBTRACT_INT_INPLACE, (left, right -- res, l, r)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	732	732	opcode:_BINARY_OP_MULTIPLY_INT_INPLACE	tier2 op(_BINARY_OP_MULTIPLY_INT_INPLACE, (left, right -- res, l, r)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	741	741	opcode:_BINARY_OP_ADD_INT_INPLACE_RIGHT	tier2 op(_BINARY_OP_ADD_INT_INPLACE_RIGHT, (left, right -- res, l, r)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	750	750	opcode:_BINARY_OP_SUBTRACT_INT_INPLACE_RIGHT	tier2 op(_BINARY_OP_SUBTRACT_INT_INPLACE_RIGHT, (left, right -- res, l, r)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	759	759	opcode:_BINARY_OP_MULTIPLY_INT_INPLACE_RIGHT	tier2 op(_BINARY_OP_MULTIPLY_INT_INPLACE_RIGHT, (left, right -- res, l, r)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	768	768	opcode:_GUARD_NOS_FLOAT	op(_GUARD_NOS_FLOAT, (left, unused -- left, unused)) {	modelled	bytecode-binary-op-add-float	
+Python/bytecodes.c	773	773	opcode:_GUARD_TOS_FLOAT	op(_GUARD_TOS_FLOAT, (value -- value)) {	modelled	bytecode-binary-op-add-float	
+Python/bytecodes.c	778	778	opcode:_BINARY_OP_MULTIPLY_FLOAT	pure op(_BINARY_OP_MULTIPLY_FLOAT, (left, right -- res, l, r)) {	todo		changed-in-3.15: was bytecode-binary-op-mul-float
+Python/bytecodes.c	798	798	opcode:_BINARY_OP_ADD_FLOAT	pure op(_BINARY_OP_ADD_FLOAT, (left, right -- res, l, r)) {	todo		changed-in-3.15: was bytecode-binary-op-add-float
+Python/bytecodes.c	818	818	opcode:_BINARY_OP_SUBTRACT_FLOAT	pure op(_BINARY_OP_SUBTRACT_FLOAT, (left, right -- res, l, r)) {	todo		changed-in-3.15: was bytecode-binary-op-sub-float
+Python/bytecodes.c	838	838	opcode:BINARY_OP_MULTIPLY_FLOAT	macro(BINARY_OP_MULTIPLY_FLOAT) =	todo		changed-in-3.15: was bytecode-binary-op-mul-float
+Python/bytecodes.c	840	840	opcode:BINARY_OP_ADD_FLOAT	macro(BINARY_OP_ADD_FLOAT) =	todo		changed-in-3.15: was bytecode-binary-op-add-float
+Python/bytecodes.c	842	842	opcode:BINARY_OP_SUBTRACT_FLOAT	macro(BINARY_OP_SUBTRACT_FLOAT) =	todo		changed-in-3.15: was bytecode-binary-op-sub-float
+Python/bytecodes.c	849	849	opcode:_BINARY_OP_ADD_FLOAT_INPLACE	tier2 op(_BINARY_OP_ADD_FLOAT_INPLACE, (left, right -- res, l, r)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	857	857	opcode:_BINARY_OP_SUBTRACT_FLOAT_INPLACE	tier2 op(_BINARY_OP_SUBTRACT_FLOAT_INPLACE, (left, right -- res, l, r)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	865	865	opcode:_BINARY_OP_MULTIPLY_FLOAT_INPLACE	tier2 op(_BINARY_OP_MULTIPLY_FLOAT_INPLACE, (left, right -- res, l, r)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	874	874	opcode:_BINARY_OP_ADD_FLOAT_INPLACE_RIGHT	tier2 op(_BINARY_OP_ADD_FLOAT_INPLACE_RIGHT, (left, right -- res, l, r)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	882	882	opcode:_BINARY_OP_MULTIPLY_FLOAT_INPLACE_RIGHT	tier2 op(_BINARY_OP_MULTIPLY_FLOAT_INPLACE_RIGHT, (left, right -- res, l, r)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	890	890	opcode:_BINARY_OP_SUBTRACT_FLOAT_INPLACE_RIGHT	tier2 op(_BINARY_OP_SUBTRACT_FLOAT_INPLACE_RIGHT, (left, right -- res, l, r)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	900	900	opcode:_BINARY_OP_TRUEDIV_FLOAT	tier2 op(_BINARY_OP_TRUEDIV_FLOAT, (left, right -- res, l, r)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	923	923	opcode:_BINARY_OP_TRUEDIV_FLOAT_INPLACE	tier2 op(_BINARY_OP_TRUEDIV_FLOAT_INPLACE, (left, right -- res, l, r)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	934	934	opcode:_BINARY_OP_TRUEDIV_FLOAT_INPLACE_RIGHT	tier2 op(_BINARY_OP_TRUEDIV_FLOAT_INPLACE_RIGHT, (left, right -- res, l, r)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	945	945	opcode:_BINARY_OP_ADD_UNICODE	pure op(_BINARY_OP_ADD_UNICODE, (left, right -- res, l, r)) {	todo		changed-in-3.15: was bytecode-binary-op-add-unicode
+Python/bytecodes.c	962	962	opcode:BINARY_OP_ADD_UNICODE	macro(BINARY_OP_ADD_UNICODE) =	todo		changed-in-3.15: was bytecode-binary-op-add-unicode
+Python/bytecodes.c	968	968	opcode:_BINARY_OP_INPLACE_ADD_UNICODE	op(_BINARY_OP_INPLACE_ADD_UNICODE, (left, right -- res)) {	todo		changed-in-3.15:
+Python/bytecodes.c	1011	1011	opcode:_GUARD_BINARY_OP_EXTEND_LHS	tier2 op(_GUARD_BINARY_OP_EXTEND_LHS, (descr/4, left, right -- left, right)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	1019	1019	opcode:_GUARD_BINARY_OP_EXTEND_RHS	tier2 op(_GUARD_BINARY_OP_EXTEND_RHS, (descr/4, left, right -- left, right)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	1027	1027	opcode:_GUARD_BINARY_OP_EXTEND	op(_GUARD_BINARY_OP_EXTEND, (descr/4, left, right -- left, right)) {	todo		changed-in-3.15:
+Python/bytecodes.c	1039	1039	opcode:_BINARY_OP_EXTEND	op(_BINARY_OP_EXTEND, (descr/4, left, right -- res, l, r)) {	todo		changed-in-3.15:
+Python/bytecodes.c	1066	1066	opcode:BINARY_OP_EXTEND	macro(BINARY_OP_EXTEND) =	todo		changed-in-3.15:
+Python/bytecodes.c	1069	1069	opcode:BINARY_OP_INPLACE_ADD_UNICODE	macro(BINARY_OP_INPLACE_ADD_UNICODE) =	todo		
+Python/bytecodes.c	1072	1072	opcode:_SPECIALIZE_BINARY_SLICE	specializing op(_SPECIALIZE_BINARY_SLICE, (container, start, stop -- container, start, stop)) {	todo		
+Python/bytecodes.c	1079	1079	opcode:_BINARY_SLICE	op(_BINARY_SLICE, (container, start, stop -- res)) {	todo		changed-in-3.15:
+Python/bytecodes.c	1108	1108	opcode:BINARY_SLICE	macro(BINARY_SLICE) = _SPECIALIZE_BINARY_SLICE + _BINARY_SLICE;	todo		
+Python/bytecodes.c	1110	1110	opcode:_SPECIALIZE_STORE_SLICE	specializing op(_SPECIALIZE_STORE_SLICE, (v, container, start, stop -- v, container, start, stop)) {	todo		
+Python/bytecodes.c	1117	1117	opcode:_STORE_SLICE	op(_STORE_SLICE, (v, container, start, stop -- )) {	todo		
+Python/bytecodes.c	1132	1132	opcode:STORE_SLICE	macro(STORE_SLICE) = _SPECIALIZE_STORE_SLICE + _STORE_SLICE;	todo		
+Python/bytecodes.c	1134	1134	opcode:BINARY_OP_SUBSCR_LIST_INT	macro(BINARY_OP_SUBSCR_LIST_INT) =	todo		changed-in-3.15: was bytecode-binary-op-subscr-list-int
+Python/bytecodes.c	1137	1137	opcode:_BINARY_OP_SUBSCR_LIST_INT	op(_BINARY_OP_SUBSCR_LIST_INT, (list_st, sub_st -- res, ls, ss)) {	todo		changed-in-3.15: was bytecode-binary-op-subscr-list-int
+Python/bytecodes.c	1164	1164	opcode:BINARY_OP_SUBSCR_LIST_SLICE	macro(BINARY_OP_SUBSCR_LIST_SLICE) =	todo		changed-in-3.15:
+Python/bytecodes.c	1167	1167	opcode:_BINARY_OP_SUBSCR_LIST_SLICE	op(_BINARY_OP_SUBSCR_LIST_SLICE, (list_st, sub_st -- res, ls, ss)) {	todo		changed-in-3.15:
+Python/bytecodes.c	1185	1185	opcode:BINARY_OP_SUBSCR_STR_INT	macro(BINARY_OP_SUBSCR_STR_INT) =	todo		changed-in-3.15:
+Python/bytecodes.c	1188	1188	opcode:_BINARY_OP_SUBSCR_STR_INT	op(_BINARY_OP_SUBSCR_STR_INT, (str_st, sub_st -- res, s, i)) {	todo		changed-in-3.15:
+Python/bytecodes.c	1207	1207	opcode:BINARY_OP_SUBSCR_USTR_INT	macro(BINARY_OP_SUBSCR_USTR_INT) =	todo		changed-in-3.15: new function
+Python/bytecodes.c	1210	1210	opcode:_BINARY_OP_SUBSCR_USTR_INT	op(_BINARY_OP_SUBSCR_USTR_INT, (str_st, sub_st -- res, s, i)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	1230	1230	opcode:_GUARD_NOS_TUPLE	op(_GUARD_NOS_TUPLE, (nos, unused -- nos, unused)) {	todo		
+Python/bytecodes.c	1235	1235	opcode:_GUARD_TOS_TUPLE	op(_GUARD_TOS_TUPLE, (tos -- tos)) {	todo		
+Python/bytecodes.c	1240	1240	opcode:BINARY_OP_SUBSCR_TUPLE_INT	macro(BINARY_OP_SUBSCR_TUPLE_INT) =	todo		changed-in-3.15:
+Python/bytecodes.c	1250	1250	opcode:_GUARD_BINARY_OP_SUBSCR_TUPLE_INT_BOUNDS	op(_GUARD_BINARY_OP_SUBSCR_TUPLE_INT_BOUNDS, (tuple_st, sub_st -- tuple_st, sub_st)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	1263	1263	opcode:_BINARY_OP_SUBSCR_TUPLE_INT	op(_BINARY_OP_SUBSCR_TUPLE_INT, (tuple_st, sub_st -- res, ts, ss)) {	todo		changed-in-3.15:
+Python/bytecodes.c	1280	1280	opcode:_GUARD_NOS_DICT_SUBSCRIPT	op(_GUARD_NOS_DICT_SUBSCRIPT, (nos, unused -- nos, unused)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	1286	1286	opcode:_GUARD_NOS_DICT_STORE_SUBSCRIPT	op(_GUARD_NOS_DICT_STORE_SUBSCRIPT, (unused, nos, unused -- unused, nos, unused)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	1292	1292	opcode:_GUARD_TOS_ANY_DICT	op(_GUARD_TOS_ANY_DICT, (tos -- tos)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	1297	1297	opcode:_GUARD_TOS_DICT	op(_GUARD_TOS_DICT, (tos -- tos)) {	todo		
+Python/bytecodes.c	1302	1302	opcode:_GUARD_TOS_FROZENDICT	op(_GUARD_TOS_FROZENDICT, (tos -- tos)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	1307	1307	opcode:BINARY_OP_SUBSCR_DICT	macro(BINARY_OP_SUBSCR_DICT) =	todo		changed-in-3.15:
+Python/bytecodes.c	1311	1311	opcode:_BINARY_OP_SUBSCR_DICT_KNOWN_HASH	tier2 op(_BINARY_OP_SUBSCR_DICT_KNOWN_HASH, (dict_st, sub_st, hash/4 -- res, ds, ss)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	1326	1326	opcode:_BINARY_OP_SUBSCR_DICT	op(_BINARY_OP_SUBSCR_DICT, (dict_st, sub_st -- res, ds, ss)) {	todo		changed-in-3.15:
+Python/bytecodes.c	1341	1341	opcode:_BINARY_OP_SUBSCR_CHECK_FUNC	op(_BINARY_OP_SUBSCR_CHECK_FUNC, (container, unused -- container, unused, getitem)) {	todo		changed-in-3.15:
+Python/bytecodes.c	1356	1356	opcode:_BINARY_OP_SUBSCR_INIT_CALL	op(_BINARY_OP_SUBSCR_INIT_CALL, (container, sub, getitem -- new_frame)) {	todo		changed-in-3.15:
+Python/bytecodes.c	1366	1366	opcode:BINARY_OP_SUBSCR_GETITEM	macro(BINARY_OP_SUBSCR_GETITEM) =	todo		changed-in-3.15:
+Python/bytecodes.c	1374	1374	opcode:LIST_APPEND	inst(LIST_APPEND, (list, unused[oparg-1], v -- list, unused[oparg-1])) {	todo		
+Python/bytecodes.c	1380	1380	opcode:SET_ADD	inst(SET_ADD, (set, unused[oparg-1], v -- set, unused[oparg-1])) {	todo		changed-in-3.15:
+Python/bytecodes.c	1399	1399	opcode:_SPECIALIZE_STORE_SUBSCR	specializing op(_SPECIALIZE_STORE_SUBSCR, (counter/1, container, sub -- container, sub)) {	todo		changed-in-3.15:
+Python/bytecodes.c	1411	1411	opcode:_STORE_SUBSCR	op(_STORE_SUBSCR, (v, container, sub -- )) {	todo		
+Python/bytecodes.c	1418	1418	opcode:STORE_SUBSCR	macro(STORE_SUBSCR) = _SPECIALIZE_STORE_SUBSCR + _STORE_SUBSCR;	todo		
+Python/bytecodes.c	1420	1420	opcode:STORE_SUBSCR_LIST_INT	macro(STORE_SUBSCR_LIST_INT) =	todo		changed-in-3.15:
+Python/bytecodes.c	1423	1423	opcode:_STORE_SUBSCR_LIST_INT	op(_STORE_SUBSCR_LIST_INT, (value, list_st, sub_st -- ls, ss)) {	todo		changed-in-3.15:
+Python/bytecodes.c	1454	1454	opcode:STORE_SUBSCR_DICT	macro(STORE_SUBSCR_DICT) =	todo		changed-in-3.15:
+Python/bytecodes.c	1458	1458	opcode:_STORE_SUBSCR_DICT	op(_STORE_SUBSCR_DICT, (value, dict_st, sub -- st)) {	todo		changed-in-3.15:
+Python/bytecodes.c	1473	1473	opcode:_STORE_SUBSCR_DICT_KNOWN_HASH	tier2 op(_STORE_SUBSCR_DICT_KNOWN_HASH, (value, dict_st, sub, hash/4 -- st)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	1490	1490	opcode:DELETE_SUBSCR	inst(DELETE_SUBSCR, (container, sub --)) {	todo		
+Python/bytecodes.c	1498	1498	opcode:_CALL_INTRINSIC_1	op(_CALL_INTRINSIC_1, (value -- res, v)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	1509	1509	opcode:CALL_INTRINSIC_1	macro(CALL_INTRINSIC_1) = _CALL_INTRINSIC_1 + POP_TOP;	todo		changed-in-3.15:
+Python/bytecodes.c	1511	1511	opcode:_CALL_INTRINSIC_2	op(_CALL_INTRINSIC_2, (value2_st, value1_st -- res, vs1, vs2)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	1529	1529	opcode:CALL_INTRINSIC_2	macro(CALL_INTRINSIC_2) = _CALL_INTRINSIC_2 + POP_TOP + POP_TOP;	todo		changed-in-3.15:
+Python/bytecodes.c	1531	1531	opcode:RAISE_VARARGS	tier1 inst(RAISE_VARARGS, (args[oparg] -- )) {	modelled	bytecode-unwind-to-handler	
+Python/bytecodes.c	1544	1544	opcode:INTERPRETER_EXIT	tier1 inst(INTERPRETER_EXIT, (retval --)) {	todo		changed-in-3.15:
+Python/bytecodes.c	1566	1566	opcode:_MAKE_HEAP_SAFE	op(_MAKE_HEAP_SAFE, (value -- value)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	1573	1573	opcode:_RETURN_VALUE	op(_RETURN_VALUE, (retval -- res)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	1591	1591	opcode:RETURN_VALUE	macro(RETURN_VALUE) =	todo		changed-in-3.15: was bytecode-return-value
+Python/bytecodes.c	1595	1595	opcode:_RETURN_VALUE_EVENT	tier1 op(_RETURN_VALUE_EVENT, (val -- val)) {	todo		
+Python/bytecodes.c	1602	1602	opcode:INSTRUMENTED_RETURN_VALUE	macro(INSTRUMENTED_RETURN_VALUE) =	todo		changed-in-3.15:
+Python/bytecodes.c	1607	1607	opcode:GET_AITER	inst(GET_AITER, (obj -- iter)) {	todo		
+Python/bytecodes.c	1643	1643	opcode:GET_ANEXT	inst(GET_ANEXT, (aiter -- aiter, awaitable)) {	todo		
+Python/bytecodes.c	1651	1651	opcode:GET_AWAITABLE	inst(GET_AWAITABLE, (iterable -- iter)) {	todo		changed-in-3.15:
+Python/bytecodes.c	1664	1664	opcode:_SPECIALIZE_SEND	specializing op(_SPECIALIZE_SEND, (counter/1, receiver, unused, unused -- receiver, unused, unused)) {	todo		changed-in-3.15:
+Python/bytecodes.c	1676	1676	opcode:_SEND	tier1 op(_SEND, (receiver, null_or_index, v -- receiver, null_or_index, retval)) {	todo		changed-in-3.15:
+Python/bytecodes.c	1722	1722	opcode:SEND	macro(SEND) = _SPECIALIZE_SEND + _SEND;	todo		
+Python/bytecodes.c	1724	1724	opcode:_SEND_GEN_FRAME	op(_SEND_GEN_FRAME, (receiver, null, v -- receiver, null, gen_frame)) {	todo		changed-in-3.15: was bytecode-send-gen-recursion
+Python/bytecodes.c	1740	1740	opcode:SEND_GEN	macro(SEND_GEN) =	todo		changed-in-3.15: was bytecode-send-gen-recursion
+Python/bytecodes.c	1747	1747	opcode:_GUARD_TOS_IS_NONE	op(_GUARD_TOS_IS_NONE, (val -- val)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	1751	1751	opcode:FOR_ITER	macro(FOR_ITER) = _SPECIALIZE_FOR_ITER + _FOR_ITER;	modelled	bytecode-for-iter-exhausted,bytecode-for-iter-next	
+Python/bytecodes.c	1753	1753	opcode:_GUARD_NOS_NOT_NULL	op(_GUARD_NOS_NOT_NULL, (nos, unused -- nos, unused)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	1757	1757	opcode:_SEND_VIRTUAL	replaced op(_SEND_VIRTUAL, (iter, null_or_index, none -- iter, null_or_index, next)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	1777	1777	opcode:_SEND_VIRTUAL_TIER_TWO	op(_SEND_VIRTUAL_TIER_TWO, (iter, null_or_index, none -- iter, null_or_index, next)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	1795	1795	opcode:SEND_VIRTUAL	macro(SEND_VIRTUAL) =	todo		changed-in-3.15: new function
+Python/bytecodes.c	1801	1801	opcode:_GUARD_3OS_ASYNC_GEN_ASEND	op(_GUARD_3OS_ASYNC_GEN_ASEND, (iter, null_or_index, value -- iter, null_or_index, value)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	1806	1806	opcode:_SEND_ASYNC_GEN	replaced op(_SEND_ASYNC_GEN, (iter, null_in, v -- asend, null_out, retval)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	1827	1827	opcode:SEND_ASYNC_GEN	macro(SEND_ASYNC_GEN) =	todo		changed-in-3.15: new function
+Python/bytecodes.c	1832	1832	opcode:_SEND_ASYNC_GEN_TIER_TWO	tier2 op(_SEND_ASYNC_GEN_TIER_TWO, (iter, null_in, v -- asend, null_out, retval)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	1851	1851	opcode:_YIELD_VALUE	op(_YIELD_VALUE, (retval -- value)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	1889	1889	opcode:YIELD_VALUE	macro(YIELD_VALUE) =	todo		changed-in-3.15:
+Python/bytecodes.c	1893	1893	opcode:_YIELD_VALUE_EVENT	tier1 op(_YIELD_VALUE_EVENT, (val -- val)) {	todo		
+Python/bytecodes.c	1906	1906	opcode:INSTRUMENTED_YIELD_VALUE	macro(INSTRUMENTED_YIELD_VALUE) =	todo		changed-in-3.15:
+Python/bytecodes.c	1911	1911	opcode:POP_EXCEPT	inst(POP_EXCEPT, (exc_value -- )) {	modelled	bytecode-exc-info-nests	
+Python/bytecodes.c	1918	1918	opcode:RERAISE	tier1 inst(RERAISE, (values[oparg], exc_st -- values[oparg])) {	todo		
+Python/bytecodes.c	1931	1931	opcode:_END_ASYNC_FOR	tier1 op(_END_ASYNC_FOR, (awaitable_st, exc_st -- )) {	todo		
+Python/bytecodes.c	1949	1949	opcode:_MONITOR_END_ASYNC_FOR	tier1 op(_MONITOR_END_ASYNC_FOR, ( -- )) {	todo		
+Python/bytecodes.c	1954	1954	opcode:INSTRUMENTED_END_ASYNC_FOR	macro(INSTRUMENTED_END_ASYNC_FOR) =	todo		
+Python/bytecodes.c	1958	1958	opcode:END_ASYNC_FOR	macro(END_ASYNC_FOR) = _END_ASYNC_FOR;	todo		
+Python/bytecodes.c	1960	1960	opcode:CLEANUP_THROW	tier1 inst(CLEANUP_THROW, (sub_iter, null_in, last_sent_val, exc_value_st -- none, null_out, value)) {	todo		changed-in-3.15:
+Python/bytecodes.c	1980	1980	opcode:LOAD_COMMON_CONSTANT	inst(LOAD_COMMON_CONSTANT, ( -- value)) {	todo		
+Python/bytecodes.c	1986	1986	opcode:LOAD_BUILD_CLASS	inst(LOAD_BUILD_CLASS, ( -- bc)) {	todo		changed-in-3.15:
+Python/bytecodes.c	1998	1998	opcode:STORE_NAME	inst(STORE_NAME, (v -- )) {	todo		
+Python/bytecodes.c	2018	2018	opcode:DELETE_NAME	inst(DELETE_NAME, (--)) {	todo		
+Python/bytecodes.c	2043	2043	opcode:_SPECIALIZE_UNPACK_SEQUENCE	specializing op(_SPECIALIZE_UNPACK_SEQUENCE, (counter/1, seq -- seq)) {	todo		changed-in-3.15:
+Python/bytecodes.c	2057	2057	opcode:_UNPACK_SEQUENCE	op(_UNPACK_SEQUENCE, (seq -- unused[oparg], top[0])) {	todo		
+Python/bytecodes.c	2064	2064	opcode:UNPACK_SEQUENCE	macro(UNPACK_SEQUENCE) = _SPECIALIZE_UNPACK_SEQUENCE + _UNPACK_SEQUENCE;	todo		
+Python/bytecodes.c	2066	2066	opcode:UNPACK_SEQUENCE_TWO_TUPLE	macro(UNPACK_SEQUENCE_TWO_TUPLE) =	todo		
+Python/bytecodes.c	2069	2069	opcode:_UNPACK_SEQUENCE_TWO_TUPLE	op(_UNPACK_SEQUENCE_TWO_TUPLE, (seq -- val1, val0)) {	todo		changed-in-3.15:
+Python/bytecodes.c	2080	2080	opcode:_UNPACK_SEQUENCE_UNIQUE_TWO_TUPLE	op(_UNPACK_SEQUENCE_UNIQUE_TWO_TUPLE, (seq -- val1, val0)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	2089	2089	opcode:_UNPACK_SEQUENCE_UNIQUE_THREE_TUPLE	op(_UNPACK_SEQUENCE_UNIQUE_THREE_TUPLE, (seq -- val2, val1, val0)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	2099	2099	opcode:UNPACK_SEQUENCE_TUPLE	macro(UNPACK_SEQUENCE_TUPLE) =	todo		
+Python/bytecodes.c	2102	2102	opcode:_UNPACK_SEQUENCE_TUPLE	op(_UNPACK_SEQUENCE_TUPLE, (seq -- values[oparg])) {	todo		changed-in-3.15:
+Python/bytecodes.c	2114	2114	opcode:_UNPACK_SEQUENCE_UNIQUE_TUPLE	op(_UNPACK_SEQUENCE_UNIQUE_TUPLE, (seq -- values[oparg])) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	2128	2128	opcode:UNPACK_SEQUENCE_LIST	macro(UNPACK_SEQUENCE_LIST) =	todo		
+Python/bytecodes.c	2131	2131	opcode:_UNPACK_SEQUENCE_LIST	op(_UNPACK_SEQUENCE_LIST, (seq -- values[oparg])) {	todo		
+Python/bytecodes.c	2148	2148	opcode:UNPACK_EX	inst(UNPACK_EX, (seq -- unused[oparg & 0xFF], unused, unused[oparg >> 8], top[0])) {	todo		
+Python/bytecodes.c	2161	2161	opcode:_SPECIALIZE_STORE_ATTR	specializing op(_SPECIALIZE_STORE_ATTR, (counter/1, owner -- owner)) {	todo		changed-in-3.15:
+Python/bytecodes.c	2174	2174	opcode:_STORE_ATTR	op(_STORE_ATTR, (v, owner --)) {	todo		
+Python/bytecodes.c	2182	2182	opcode:STORE_ATTR	macro(STORE_ATTR) = _SPECIALIZE_STORE_ATTR + unused/3 + _STORE_ATTR;	todo		
+Python/bytecodes.c	2184	2184	opcode:DELETE_ATTR	inst(DELETE_ATTR, (owner --)) {	todo		
+Python/bytecodes.c	2191	2191	opcode:STORE_GLOBAL	inst(STORE_GLOBAL, (v --)) {	todo		
+Python/bytecodes.c	2198	2198	opcode:DELETE_GLOBAL	inst(DELETE_GLOBAL, (--)) {	todo		
+Python/bytecodes.c	2212	2212	opcode:LOAD_LOCALS	inst(LOAD_LOCALS, ( -- locals)) {	todo		
+Python/bytecodes.c	2222	2222	opcode:LOAD_FROM_DICT_OR_GLOBALS	inst(LOAD_FROM_DICT_OR_GLOBALS, (mod_or_class_dict -- v)) {	todo		changed-in-3.15:
+Python/bytecodes.c	2244	2244	opcode:LOAD_NAME	inst(LOAD_NAME, (-- v)) {	todo		
+Python/bytecodes.c	2256	2256	opcode:_SPECIALIZE_LOAD_GLOBAL	specializing op(_SPECIALIZE_LOAD_GLOBAL, (counter/1 -- )) {	todo		changed-in-3.15:
+Python/bytecodes.c	2270	2270	opcode:_LOAD_GLOBAL	op(_LOAD_GLOBAL, ( -- res[1])) {	todo		
+Python/bytecodes.c	2277	2277	opcode:_PUSH_NULL_CONDITIONAL	op(_PUSH_NULL_CONDITIONAL, ( -- null[oparg & 1])) {	todo		
+Python/bytecodes.c	2283	2283	opcode:LOAD_GLOBAL	macro(LOAD_GLOBAL) =	todo		
+Python/bytecodes.c	2291	2291	opcode:_GUARD_GLOBALS_VERSION	op(_GUARD_GLOBALS_VERSION, (version/1 --)) {	todo		changed-in-3.15:
+Python/bytecodes.c	2299	2299	opcode:_LOAD_GLOBAL_MODULE	op(_LOAD_GLOBAL_MODULE, (version/1, unused/1, index/1 -- res))	todo		changed-in-3.15:
+Python/bytecodes.c	2319	2319	opcode:_LOAD_GLOBAL_BUILTINS	op(_LOAD_GLOBAL_BUILTINS, (version/1, index/1 -- res))	todo		changed-in-3.15:
+Python/bytecodes.c	2338	2338	opcode:_GUARD_BUILTINS_IS_CANONICAL	tier2 op(_GUARD_BUILTINS_IS_CANONICAL, (--)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	2342	2342	opcode:LOAD_GLOBAL_MODULE	macro(LOAD_GLOBAL_MODULE) =	todo		
+Python/bytecodes.c	2348	2348	opcode:LOAD_GLOBAL_BUILTIN	macro(LOAD_GLOBAL_BUILTIN) =	todo		
+Python/bytecodes.c	2354	2354	opcode:DELETE_FAST	inst(DELETE_FAST, (--)) {	todo		
+Python/bytecodes.c	2368	2368	opcode:MAKE_CELL	inst(MAKE_CELL, (--)) {	todo		
+Python/bytecodes.c	2381	2381	opcode:DELETE_DEREF	inst(DELETE_DEREF, (--)) {	todo		
+Python/bytecodes.c	2393	2393	opcode:LOAD_FROM_DICT_OR_DEREF	inst(LOAD_FROM_DICT_OR_DEREF, (class_dict_st -- value)) {	todo		changed-in-3.15:
+Python/bytecodes.c	2424	2424	opcode:LOAD_DEREF	inst(LOAD_DEREF, ( -- value)) {	todo		
+Python/bytecodes.c	2433	2433	opcode:STORE_DEREF	inst(STORE_DEREF, (v --)) {	todo		
+Python/bytecodes.c	2438	2438	opcode:COPY_FREE_VARS	inst(COPY_FREE_VARS, (--)) {	todo		
+Python/bytecodes.c	2452	2452	opcode:BUILD_STRING	inst(BUILD_STRING, (pieces[oparg] -- str)) {	todo		changed-in-3.15:
+Python/bytecodes.c	2459	2459	opcode:BUILD_INTERPOLATION	inst(BUILD_INTERPOLATION, (value, str, format[oparg & 1] -- interpolation)) {	todo		
+Python/bytecodes.c	2483	2483	opcode:BUILD_TEMPLATE	inst(BUILD_TEMPLATE, (strings, interpolations -- template)) {	todo		
+Python/bytecodes.c	2493	2493	opcode:BUILD_TUPLE	inst(BUILD_TUPLE, (values[oparg] -- tup)) {	todo		
+Python/bytecodes.c	2502	2502	opcode:BUILD_LIST	inst(BUILD_LIST, (values[oparg] -- list)) {	todo		
+Python/bytecodes.c	2511	2511	opcode:_LIST_EXTEND	op(_LIST_EXTEND, (list_st, unused[oparg-1], iterable_st -- list_st, unused[oparg-1], i)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	2533	2533	opcode:LIST_EXTEND	macro(LIST_EXTEND) = _LIST_EXTEND + POP_TOP;	todo		changed-in-3.15:
+Python/bytecodes.c	2535	2535	opcode:_SET_UPDATE	op(_SET_UPDATE, (set, unused[oparg-1], iterable -- set, unused[oparg-1], i)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	2545	2545	opcode:SET_UPDATE	macro(SET_UPDATE) = _SET_UPDATE + POP_TOP;	todo		changed-in-3.15:
+Python/bytecodes.c	2547	2547	opcode:BUILD_SET	inst(BUILD_SET, (values[oparg] -- set)) {	todo		
+Python/bytecodes.c	2575	2575	opcode:BUILD_MAP	inst(BUILD_MAP, (values[oparg*2] -- map)) {	todo		changed-in-3.15:
+Python/bytecodes.c	2583	2583	opcode:SETUP_ANNOTATIONS	inst(SETUP_ANNOTATIONS, (--)) {	todo		changed-in-3.15:
+Python/bytecodes.c	2610	2610	opcode:_DICT_UPDATE	op(_DICT_UPDATE, (dict, unused[oparg - 1], update -- dict, unused[oparg - 1], upd)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	2636	2636	opcode:DICT_UPDATE	macro(DICT_UPDATE) = _DICT_UPDATE + POP_TOP;	todo		changed-in-3.15:
+Python/bytecodes.c	2638	2638	opcode:_DICT_MERGE	op(_DICT_MERGE, (callable, unused, unused, dict, unused[oparg - 1], update -- callable, unused, unused, dict, unused[oparg - 1], u)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	2654	2654	opcode:DICT_MERGE	macro(DICT_MERGE) = _DICT_MERGE + POP_TOP;	todo		changed-in-3.15:
+Python/bytecodes.c	2656	2656	opcode:MAP_ADD	inst(MAP_ADD, (dict_st, unused[oparg - 1], key, value -- dict_st, unused[oparg - 1])) {	todo		
+Python/bytecodes.c	2669	2669	opcode:INSTRUMENTED_LOAD_SUPER_ATTR	macro(INSTRUMENTED_LOAD_SUPER_ATTR) =	todo		
+Python/bytecodes.c	2679	2679	opcode:_SPECIALIZE_LOAD_SUPER_ATTR	specializing op(_SPECIALIZE_LOAD_SUPER_ATTR, (counter/1, global_super_st, class_st, unused -- global_super_st, class_st, unused)) {	todo		changed-in-3.15:
+Python/bytecodes.c	2692	2692	opcode:_LOAD_SUPER_ATTR	tier1 op(_LOAD_SUPER_ATTR, (global_super_st, class_st, self_st -- attr)) {	todo		changed-in-3.15:
+Python/bytecodes.c	2740	2740	opcode:LOAD_SUPER_ATTR	macro(LOAD_SUPER_ATTR) =	todo		
+Python/bytecodes.c	2745	2745	opcode:LOAD_SUPER_ATTR_ATTR	inst(LOAD_SUPER_ATTR_ATTR, (unused/1, global_super_st, class_st, self_st -- attr_st)) {	todo		changed-in-3.15:
+Python/bytecodes.c	2761	2761	opcode:LOAD_SUPER_ATTR_METHOD	macro(LOAD_SUPER_ATTR_METHOD) =	todo		changed-in-3.15:
+Python/bytecodes.c	2767	2767	opcode:_GUARD_NOS_TYPE_VERSION	op(_GUARD_NOS_TYPE_VERSION, (type_version/2, nos, unused -- nos, unused)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	2774	2774	opcode:_GUARD_LOAD_SUPER_ATTR_METHOD	op(_GUARD_LOAD_SUPER_ATTR_METHOD, (global_super_st, class_st, unused -- global_super_st, class_st, unused)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	2782	2782	opcode:_LOAD_SUPER_ATTR_METHOD	op(_LOAD_SUPER_ATTR_METHOD, (global_super_st, class_st, self_st -- attr, self_or_null)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	2828	2828	opcode:_SPECIALIZE_LOAD_ATTR	specializing op(_SPECIALIZE_LOAD_ATTR, (counter/1, owner -- owner)) {	todo		changed-in-3.15:
+Python/bytecodes.c	2841	2841	opcode:_LOAD_ATTR	op(_LOAD_ATTR, (owner -- attr, self_or_null[oparg&1])) {	todo		changed-in-3.15:
+Python/bytecodes.c	2857	2857	opcode:LOAD_ATTR	macro(LOAD_ATTR) =	todo		
+Python/bytecodes.c	2862	2862	opcode:_GUARD_TYPE_VERSION	op(_GUARD_TYPE_VERSION, (type_version/2, owner -- owner)) {	todo		
+Python/bytecodes.c	2868	2868	opcode:_GUARD_TYPE_VERSION_LOCKED	op(_GUARD_TYPE_VERSION_LOCKED, (type_version/2, owner -- owner)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	2878	2878	opcode:_GUARD_TYPE	op(_GUARD_TYPE, (type/4, owner -- owner)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	2883	2883	opcode:_CHECK_MANAGED_OBJECT_HAS_VALUES	op(_CHECK_MANAGED_OBJECT_HAS_VALUES, (owner -- owner)) {	todo		changed-in-3.15:
+Python/bytecodes.c	2890	2890	opcode:_LOAD_ATTR_INSTANCE_VALUE	op(_LOAD_ATTR_INSTANCE_VALUE, (offset/1, owner -- attr, o)) {	todo		changed-in-3.15:
+Python/bytecodes.c	2908	2908	opcode:LOAD_ATTR_INSTANCE_VALUE	macro(LOAD_ATTR_INSTANCE_VALUE) =	todo		changed-in-3.15:
+Python/bytecodes.c	2918	2918	opcode:_LOAD_ATTR_MODULE	op(_LOAD_ATTR_MODULE, (dict_version/2, index/1, owner -- attr, o)) {	todo		changed-in-3.15:
+Python/bytecodes.c	2943	2943	opcode:LOAD_ATTR_MODULE	macro(LOAD_ATTR_MODULE) =	todo		changed-in-3.15:
+Python/bytecodes.c	2950	2950	opcode:_LOAD_ATTR_WITH_HINT	op(_LOAD_ATTR_WITH_HINT, (hint/1, owner -- attr, o)) {	todo		changed-in-3.15:
+Python/bytecodes.c	2990	2990	opcode:LOAD_ATTR_WITH_HINT	macro(LOAD_ATTR_WITH_HINT) =	todo		changed-in-3.15:
+Python/bytecodes.c	2999	2999	opcode:_LOAD_ATTR_SLOT	op(_LOAD_ATTR_SLOT, (index/1, owner -- attr, o)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3016	3016	opcode:LOAD_ATTR_SLOT	macro(LOAD_ATTR_SLOT) =	todo		changed-in-3.15:
+Python/bytecodes.c	3025	3025	opcode:_CHECK_ATTR_CLASS	op(_CHECK_ATTR_CLASS, (type_version/2, owner -- owner)) {	todo		
+Python/bytecodes.c	3033	3033	opcode:_LOAD_ATTR_CLASS	op(_LOAD_ATTR_CLASS, (descr/4, owner -- attr)) {	todo		
+Python/bytecodes.c	3040	3040	opcode:LOAD_ATTR_CLASS	macro(LOAD_ATTR_CLASS) =	todo		changed-in-3.15:
+Python/bytecodes.c	3048	3048	opcode:LOAD_ATTR_CLASS_WITH_METACLASS_CHECK	macro(LOAD_ATTR_CLASS_WITH_METACLASS_CHECK) =	todo		changed-in-3.15:
+Python/bytecodes.c	3056	3056	opcode:_LOAD_ATTR_PROPERTY_FRAME	op(_LOAD_ATTR_PROPERTY_FRAME, (func_version/2, fget/4, owner -- new_frame)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3070	3070	opcode:LOAD_ATTR_PROPERTY	macro(LOAD_ATTR_PROPERTY) =	todo		changed-in-3.15:
+Python/bytecodes.c	3079	3079	opcode:_LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN_FRAME	op(_LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN_FRAME, (func_version/2, getattribute/4, owner -- new_frame)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	3098	3098	opcode:LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN	macro(LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN) =	todo		changed-in-3.15:
+Python/bytecodes.c	3107	3107	opcode:_GUARD_DORV_NO_DICT	op(_GUARD_DORV_NO_DICT, (owner -- owner)) {	todo		
+Python/bytecodes.c	3119	3119	opcode:_STORE_ATTR_INSTANCE_VALUE	op(_STORE_ATTR_INSTANCE_VALUE, (offset/1, value, owner -- o)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3138	3138	opcode:_LOCK_OBJECT	op(_LOCK_OBJECT, (value -- value)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	3142	3142	opcode:STORE_ATTR_INSTANCE_VALUE	macro(STORE_ATTR_INSTANCE_VALUE) =	todo		changed-in-3.15:
+Python/bytecodes.c	3151	3151	opcode:_STORE_ATTR_WITH_HINT	op(_STORE_ATTR_WITH_HINT, (hint/1, value, owner -- o)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3186	3186	opcode:STORE_ATTR_WITH_HINT	macro(STORE_ATTR_WITH_HINT) =	todo		changed-in-3.15:
+Python/bytecodes.c	3193	3193	opcode:_STORE_ATTR_SLOT	op(_STORE_ATTR_SLOT, (index/1, value, owner -- o)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3207	3207	opcode:STORE_ATTR_SLOT	macro(STORE_ATTR_SLOT) =	todo		changed-in-3.15:
+Python/bytecodes.c	3220	3220	opcode:_SPECIALIZE_COMPARE_OP	specializing op(_SPECIALIZE_COMPARE_OP, (counter/1, left, right -- left, right)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3232	3232	opcode:_COMPARE_OP	op(_COMPARE_OP, (left, right -- res)) {	todo		
+Python/bytecodes.c	3251	3251	opcode:COMPARE_OP	macro(COMPARE_OP) = _SPECIALIZE_COMPARE_OP + _COMPARE_OP;	todo		
+Python/bytecodes.c	3253	3253	opcode:COMPARE_OP_FLOAT	macro(COMPARE_OP_FLOAT) =	todo		changed-in-3.15:
+Python/bytecodes.c	3256	3256	opcode:COMPARE_OP_INT	macro(COMPARE_OP_INT) =	todo		changed-in-3.15:
+Python/bytecodes.c	3259	3259	opcode:COMPARE_OP_STR	macro(COMPARE_OP_STR) =	todo		changed-in-3.15:
+Python/bytecodes.c	3262	3262	opcode:_COMPARE_OP_FLOAT	op(_COMPARE_OP_FLOAT, (left, right -- res, l, r)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3280	3280	opcode:_COMPARE_OP_INT	op(_COMPARE_OP_INT, (left, right -- res, l, r)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3302	3302	opcode:_COMPARE_OP_STR	op(_COMPARE_OP_STR, (left, right -- res, l, r)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3320	3320	opcode:IS_OP	macro(IS_OP) = _IS_OP + POP_TOP + POP_TOP;	todo		changed-in-3.15:
+Python/bytecodes.c	3322	3322	opcode:_IS_OP	op(_IS_OP, (left, right -- b, l, r)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	3335	3335	opcode:_CONTAINS_OP	op(_CONTAINS_OP, (left, right -- b, l, r)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3349	3349	opcode:_SPECIALIZE_CONTAINS_OP	specializing op(_SPECIALIZE_CONTAINS_OP, (counter/1, left, right -- left, right)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3361	3361	opcode:CONTAINS_OP	macro(CONTAINS_OP) = _SPECIALIZE_CONTAINS_OP + _CONTAINS_OP + POP_TOP + POP_TOP;	todo		changed-in-3.15:
+Python/bytecodes.c	3363	3363	opcode:_GUARD_TOS_ANY_SET	op(_GUARD_TOS_ANY_SET, (tos -- tos)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3368	3368	opcode:_GUARD_TOS_SET	op(_GUARD_TOS_SET, (tos -- tos)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	3373	3373	opcode:_GUARD_TOS_FROZENSET	op(_GUARD_TOS_FROZENSET, (tos -- tos)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	3378	3378	opcode:CONTAINS_OP_SET	macro(CONTAINS_OP_SET) = _GUARD_TOS_ANY_SET + unused/1 + _CONTAINS_OP_SET + POP_TOP + POP_TOP;	todo		changed-in-3.15:
+Python/bytecodes.c	3380	3380	opcode:_CONTAINS_OP_SET	op(_CONTAINS_OP_SET, (left, right -- b, l, r)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3397	3397	opcode:CONTAINS_OP_DICT	macro(CONTAINS_OP_DICT) = _GUARD_TOS_ANY_DICT + unused/1 + _CONTAINS_OP_DICT + POP_TOP + POP_TOP;	todo		changed-in-3.15:
+Python/bytecodes.c	3399	3399	opcode:_CONTAINS_OP_DICT	op(_CONTAINS_OP_DICT, (left, right -- b, l, r)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3415	3415	opcode:CHECK_EG_MATCH	inst(CHECK_EG_MATCH, (exc_value_st, match_type_st -- rest, match)) {	todo		
+Python/bytecodes.c	3441	3441	opcode:CHECK_EXC_MATCH	inst(CHECK_EXC_MATCH, (left, right -- left, b)) {	todo		
+Python/bytecodes.c	3456	3456	opcode:IMPORT_NAME	inst(IMPORT_NAME, (level, fromlist -- res)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3478	3478	opcode:IMPORT_FROM	inst(IMPORT_FROM, (from -- from, res)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3494	3494	opcode:JUMP_FORWARD	tier1 inst(JUMP_FORWARD, (--)) {	todo		
+Python/bytecodes.c	3503	3503	opcode:_SPECIALIZE_JUMP_BACKWARD	specializing tier1 op(_SPECIALIZE_JUMP_BACKWARD, (--)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3515	3515	opcode:_JIT	tier1 op(_JIT, (--)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3544	3544	opcode:JUMP_BACKWARD	macro(JUMP_BACKWARD) =	todo		
+Python/bytecodes.c	3550	3550	opcode:JUMP_BACKWARD_NO_JIT	macro(JUMP_BACKWARD_NO_JIT) =	todo		
+Python/bytecodes.c	3555	3555	opcode:JUMP_BACKWARD_JIT	macro(JUMP_BACKWARD_JIT) =	todo		
+Python/bytecodes.c	3579	3579	opcode:ENTER_EXECUTOR	tier1 inst(ENTER_EXECUTOR, (--)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3621	3621	opcode:_POP_JUMP_IF_FALSE	replaced op(_POP_JUMP_IF_FALSE, (cond -- )) {	todo		
+Python/bytecodes.c	3629	3629	opcode:_POP_JUMP_IF_TRUE	replaced op(_POP_JUMP_IF_TRUE, (cond -- )) {	todo		
+Python/bytecodes.c	3637	3637	opcode:_IS_NONE	op(_IS_NONE, (value -- b)) {	todo		
+Python/bytecodes.c	3648	3648	opcode:POP_JUMP_IF_TRUE	macro(POP_JUMP_IF_TRUE) = unused/1 + _POP_JUMP_IF_TRUE;	todo		
+Python/bytecodes.c	3650	3650	opcode:POP_JUMP_IF_FALSE	macro(POP_JUMP_IF_FALSE) = unused/1 + _POP_JUMP_IF_FALSE;	todo		
+Python/bytecodes.c	3652	3652	opcode:POP_JUMP_IF_NONE	macro(POP_JUMP_IF_NONE) = unused/1 + _IS_NONE + _POP_JUMP_IF_TRUE;	todo		
+Python/bytecodes.c	3654	3654	opcode:POP_JUMP_IF_NOT_NONE	macro(POP_JUMP_IF_NOT_NONE) = unused/1 + _IS_NONE + _POP_JUMP_IF_FALSE;	todo		
+Python/bytecodes.c	3656	3656	opcode:JUMP_BACKWARD_NO_INTERRUPT	replaced inst(JUMP_BACKWARD_NO_INTERRUPT, (--)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3666	3666	opcode:GET_LEN	inst(GET_LEN, (obj -- obj, len)) {	todo		
+Python/bytecodes.c	3675	3675	opcode:_MATCH_CLASS	op(_MATCH_CLASS, (subject, type, names -- attrs, s, tp, n)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	3699	3699	opcode:MATCH_CLASS	macro(MATCH_CLASS) = _MATCH_CLASS + POP_TOP + POP_TOP + POP_TOP;	todo		changed-in-3.15:
+Python/bytecodes.c	3701	3701	opcode:MATCH_MAPPING	inst(MATCH_MAPPING, (subject -- subject, res)) {	todo		
+Python/bytecodes.c	3706	3706	opcode:MATCH_SEQUENCE	inst(MATCH_SEQUENCE, (subject -- subject, res)) {	todo		
+Python/bytecodes.c	3711	3711	opcode:MATCH_KEYS	inst(MATCH_KEYS, (subject, keys -- subject, keys, values_or_none)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3724	3724	opcode:_SPECIALIZE_GET_ITER	specializing op(_SPECIALIZE_GET_ITER, (counter/1, iterable -- iterable)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	3736	3736	opcode:_GET_ITER	op(_GET_ITER, (iterable -- iter, index_or_null)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	3743	3743	opcode:GET_ITER	macro(GET_ITER) =	todo		changed-in-3.15:
+Python/bytecodes.c	3748	3748	opcode:_GUARD_ITERATOR	op(_GUARD_ITERATOR, (iterable -- iterable)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	3754	3754	opcode:GET_ITER_SELF	macro(GET_ITER_SELF) =	todo		changed-in-3.15: new function
+Python/bytecodes.c	3760	3760	opcode:_GUARD_ITER_VIRTUAL	op(_GUARD_ITER_VIRTUAL, (iterable -- iterable)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	3766	3766	opcode:_PUSH_TAGGED_ZERO	op(_PUSH_TAGGED_ZERO, ( -- zero)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	3770	3770	opcode:GET_ITER_VIRTUAL	macro(GET_ITER_VIRTUAL) =	todo		changed-in-3.15: new function
+Python/bytecodes.c	3776	3776	opcode:_GET_ITER_TRAD	op(_GET_ITER_TRAD, (iterable -- iter, index_or_null)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	3798	3798	opcode:_SPECIALIZE_FOR_ITER	specializing op(_SPECIALIZE_FOR_ITER, (counter/1, iter, null_or_index -- iter, null_or_index)) {	todo		changed-in-3.15: was bytecode-for-iter-exhausted
+Python/bytecodes.c	3810	3810	opcode:_FOR_ITER	replaced op(_FOR_ITER, (iter, null_or_index -- iter, null_or_index, next)) {	todo		changed-in-3.15: was bytecode-for-iter-exhausted
+Python/bytecodes.c	3823	3823	opcode:FOR_ITER	macro(FOR_ITER) = _SPECIALIZE_FOR_ITER + _RECORD_NOS_TYPE + _FOR_ITER;	todo		changed-in-3.15: new function
+Python/bytecodes.c	3825	3825	opcode:_FOR_ITER_TIER_TWO	op(_FOR_ITER_TIER_TWO, (iter, null_or_index -- iter, null_or_index, next)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3838	3838	opcode:_GUARD_TYPE_ITER	tier2 op(_GUARD_TYPE_ITER, (expected_type/4, iter, null_or_index -- iter, null_or_index)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	3843	3843	opcode:_ITER_NEXT_INLINE	tier2 op(_ITER_NEXT_INLINE, (iternext_fn/4, iter, null_or_index -- iter, null_or_index, next)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	3863	3863	opcode:_GUARD_NOS_ITER_VIRTUAL	op(_GUARD_NOS_ITER_VIRTUAL, (iter, null_or_index -- iter, null_or_index)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	3868	3868	opcode:_GUARD_TOS_NOT_NULL	op(_GUARD_TOS_NOT_NULL, (null_or_index -- null_or_index)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	3872	3872	opcode:_FOR_ITER_VIRTUAL	replaced op(_FOR_ITER_VIRTUAL, (iter, null_or_index -- iter, null_or_index, next)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	3890	3890	opcode:FOR_ITER_VIRTUAL	macro(FOR_ITER_VIRTUAL) =	todo		changed-in-3.15: new function
+Python/bytecodes.c	3895	3895	opcode:_FOR_ITER_VIRTUAL_TIER_TWO	op(_FOR_ITER_VIRTUAL_TIER_TWO, (iter, null_or_index -- iter, null_or_index, next)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	3913	3913	opcode:INSTRUMENTED_FOR_ITER	inst(INSTRUMENTED_FOR_ITER, (unused/1, iter, null_or_index -- iter, null_or_index, next)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3927	3927	opcode:_ITER_CHECK_LIST	op(_ITER_CHECK_LIST, (iter, null_or_index -- iter, null_or_index)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3936	3936	opcode:_ITER_JUMP_LIST	replaced op(_ITER_JUMP_LIST, (iter, null_or_index -- iter, null_or_index)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3956	3956	opcode:_GUARD_NOT_EXHAUSTED_LIST	op(_GUARD_NOT_EXHAUSTED_LIST, (iter, null_or_index -- iter, null_or_index)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3964	3964	opcode:_ITER_NEXT_LIST	replaced op(_ITER_NEXT_LIST, (iter, null_or_index -- iter, null_or_index, next)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3988	3988	opcode:_ITER_NEXT_LIST_TIER_TWO	op(_ITER_NEXT_LIST_TIER_TWO, (iter, null_or_index -- iter, null_or_index, next)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4006	4006	opcode:FOR_ITER_LIST	macro(FOR_ITER_LIST) =	todo		
+Python/bytecodes.c	4012	4012	opcode:_ITER_CHECK_TUPLE	op(_ITER_CHECK_TUPLE, (iter, null_or_index -- iter, null_or_index)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4018	4018	opcode:_ITER_JUMP_TUPLE	replaced op(_ITER_JUMP_TUPLE, (iter, null_or_index -- iter, null_or_index)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4032	4032	opcode:_GUARD_NOT_EXHAUSTED_TUPLE	op(_GUARD_NOT_EXHAUSTED_TUPLE, (iter, null_or_index -- iter, null_or_index)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4038	4038	opcode:_ITER_NEXT_TUPLE	op(_ITER_NEXT_TUPLE, (iter, null_or_index -- iter, null_or_index, next)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4047	4047	opcode:FOR_ITER_TUPLE	macro(FOR_ITER_TUPLE) =	todo		
+Python/bytecodes.c	4053	4053	opcode:_ITER_CHECK_RANGE	op(_ITER_CHECK_RANGE, (iter, null_or_index -- iter, null_or_index)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4061	4061	opcode:_ITER_JUMP_RANGE	replaced op(_ITER_JUMP_RANGE, (iter, null_or_index -- iter, null_or_index)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4076	4076	opcode:_GUARD_NOT_EXHAUSTED_RANGE	op(_GUARD_NOT_EXHAUSTED_RANGE, (iter, null_or_index -- iter, null_or_index)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4082	4082	opcode:_ITER_NEXT_RANGE	op(_ITER_NEXT_RANGE, (iter, null_or_index -- iter, null_or_index, next)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4097	4097	opcode:FOR_ITER_RANGE	macro(FOR_ITER_RANGE) =	todo		
+Python/bytecodes.c	4103	4103	opcode:_FOR_ITER_GEN_FRAME	op(_FOR_ITER_GEN_FRAME, (iter, null -- iter, null, gen_frame)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4118	4118	opcode:FOR_ITER_GEN	macro(FOR_ITER_GEN) =	todo		changed-in-3.15:
+Python/bytecodes.c	4125	4125	opcode:_INSERT_NULL	op(_INSERT_NULL, (self -- method_and_self[2])) {	todo		
+Python/bytecodes.c	4131	4131	opcode:_LOAD_SPECIAL	op(_LOAD_SPECIAL, (method_and_self[2] -- method_and_self[2])) {	todo		
+Python/bytecodes.c	4148	4148	opcode:LOAD_SPECIAL	macro(LOAD_SPECIAL) =	todo		changed-in-3.15:
+Python/bytecodes.c	4153	4153	opcode:WITH_EXCEPT_START	inst(WITH_EXCEPT_START, (exit_func, exit_self, lasti, unused, val -- exit_func, exit_self, lasti, unused, val, res)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4213	4213	opcode:PUSH_EXC_INFO	inst(PUSH_EXC_INFO, (exc -- prev_exc, new_exc)) {	modelled	bytecode-exc-info-nests	
+Python/bytecodes.c	4228	4228	opcode:_GUARD_DORV_VALUES_INST_ATTR_FROM_DICT	op(_GUARD_DORV_VALUES_INST_ATTR_FROM_DICT, (owner -- owner)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4235	4235	opcode:_GUARD_KEYS_VERSION	op(_GUARD_KEYS_VERSION, (keys_version/2, owner -- owner)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4242	4242	opcode:_LOAD_ATTR_METHOD_WITH_VALUES	op(_LOAD_ATTR_METHOD_WITH_VALUES, (descr/4, owner -- attr, self)) {	todo		
+Python/bytecodes.c	4253	4253	opcode:LOAD_ATTR_METHOD_WITH_VALUES	macro(LOAD_ATTR_METHOD_WITH_VALUES) =	todo		changed-in-3.15:
+Python/bytecodes.c	4261	4261	opcode:_LOAD_ATTR_METHOD_NO_DICT	op(_LOAD_ATTR_METHOD_NO_DICT, (descr/4, owner -- attr, self)) {	todo		
+Python/bytecodes.c	4272	4272	opcode:LOAD_ATTR_METHOD_NO_DICT	macro(LOAD_ATTR_METHOD_NO_DICT) =	todo		changed-in-3.15:
+Python/bytecodes.c	4279	4279	opcode:_LOAD_ATTR_NONDESCRIPTOR_WITH_VALUES	op(_LOAD_ATTR_NONDESCRIPTOR_WITH_VALUES, (descr/4, owner -- attr)) {	todo		
+Python/bytecodes.c	4287	4287	opcode:LOAD_ATTR_NONDESCRIPTOR_WITH_VALUES	macro(LOAD_ATTR_NONDESCRIPTOR_WITH_VALUES) =	todo		changed-in-3.15:
+Python/bytecodes.c	4295	4295	opcode:_LOAD_ATTR_NONDESCRIPTOR_NO_DICT	op(_LOAD_ATTR_NONDESCRIPTOR_NO_DICT, (descr/4, owner -- attr)) {	todo		
+Python/bytecodes.c	4304	4304	opcode:LOAD_ATTR_NONDESCRIPTOR_NO_DICT	macro(LOAD_ATTR_NONDESCRIPTOR_NO_DICT) =	todo		changed-in-3.15:
+Python/bytecodes.c	4311	4311	opcode:_CHECK_ATTR_METHOD_LAZY_DICT	op(_CHECK_ATTR_METHOD_LAZY_DICT, (dictoffset/1, owner -- owner)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4318	4318	opcode:_LOAD_ATTR_METHOD_LAZY_DICT	op(_LOAD_ATTR_METHOD_LAZY_DICT, (descr/4, owner -- attr, self)) {	todo		
+Python/bytecodes.c	4328	4328	opcode:LOAD_ATTR_METHOD_LAZY_DICT	macro(LOAD_ATTR_METHOD_LAZY_DICT) =	todo		changed-in-3.15:
+Python/bytecodes.c	4361	4361	opcode:_SPECIALIZE_CALL	specializing op(_SPECIALIZE_CALL, (counter/1, callable, self_or_null, unused[oparg] -- callable, self_or_null, unused[oparg])) {	todo		changed-in-3.15:
+Python/bytecodes.c	4373	4373	opcode:_MAYBE_EXPAND_METHOD	op(_MAYBE_EXPAND_METHOD, (callable, self_or_null, unused[oparg] -- callable, self_or_null, unused[oparg])) {	todo		
+Python/bytecodes.c	4386	4386	opcode:_DO_CALL	op(_DO_CALL, (callable, self_or_null, args[oparg] -- res)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4436	4436	opcode:_MONITOR_CALL	op(_MONITOR_CALL, (func, maybe_self, args[oparg] -- func, maybe_self, args[oparg])) {	todo		
+Python/bytecodes.c	4457	4457	opcode:CALL	macro(CALL) = _SPECIALIZE_CALL + unused/2 + _MAYBE_EXPAND_METHOD + _DO_CALL + _CHECK_PERIODIC_AT_END;	todo		changed-in-3.15:
+Python/bytecodes.c	4458	4458	opcode:INSTRUMENTED_CALL	macro(INSTRUMENTED_CALL) = unused/3 + _MAYBE_EXPAND_METHOD + _MONITOR_CALL + _DO_CALL + _CHECK_PERIODIC_AT_END;	todo		changed-in-3.15:
+Python/bytecodes.c	4460	4460	opcode:_PY_FRAME_GENERAL	op(_PY_FRAME_GENERAL, (callable, self_or_null, args[oparg] -- new_frame)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4485	4485	opcode:_CHECK_FUNCTION_VERSION	op(_CHECK_FUNCTION_VERSION, (func_version/2, callable, unused, unused[oparg] -- callable, unused, unused[oparg])) {	todo		
+Python/bytecodes.c	4492	4492	opcode:_CHECK_FUNCTION_VERSION_INLINE	tier2 op(_CHECK_FUNCTION_VERSION_INLINE, (func_version/2, callable_o/4 --)) {	todo		
+Python/bytecodes.c	4498	4498	opcode:CALL_PY_GENERAL	macro(CALL_PY_GENERAL) =	todo		changed-in-3.15:
+Python/bytecodes.c	4508	4508	opcode:_CHECK_METHOD_VERSION	op(_CHECK_METHOD_VERSION, (func_version/2, callable, null, unused[oparg] -- callable, null, unused[oparg])) {	todo		
+Python/bytecodes.c	4518	4518	opcode:_EXPAND_METHOD	op(_EXPAND_METHOD, (callable, self_or_null, unused[oparg] -- callable, self_or_null, unused[oparg])) {	todo		
+Python/bytecodes.c	4529	4529	opcode:CALL_BOUND_METHOD_GENERAL	macro(CALL_BOUND_METHOD_GENERAL) =	todo		changed-in-3.15:
+Python/bytecodes.c	4541	4541	opcode:_CHECK_IS_NOT_PY_CALLABLE	op(_CHECK_IS_NOT_PY_CALLABLE, (callable, unused, unused[oparg] -- callable, unused, unused[oparg])) {	todo		
+Python/bytecodes.c	4547	4547	opcode:_CALL_NON_PY_GENERAL	op(_CALL_NON_PY_GENERAL, (callable, self_or_null, args[oparg] -- res)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4569	4569	opcode:CALL_NON_PY_GENERAL	macro(CALL_NON_PY_GENERAL) =	todo		changed-in-3.15:
+Python/bytecodes.c	4577	4577	opcode:_CHECK_CALL_BOUND_METHOD_EXACT_ARGS	op(_CHECK_CALL_BOUND_METHOD_EXACT_ARGS, (callable, null, unused[oparg] -- callable, null, unused[oparg])) {	todo		
+Python/bytecodes.c	4582	4582	opcode:_INIT_CALL_BOUND_METHOD_EXACT_ARGS	op(_INIT_CALL_BOUND_METHOD_EXACT_ARGS, (callable, self_or_null, unused[oparg] -- callable, self_or_null, unused[oparg])) {	todo		
+Python/bytecodes.c	4592	4592	opcode:_CHECK_PEP_523	op(_CHECK_PEP_523, (--)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4596	4596	opcode:_CHECK_FUNCTION_EXACT_ARGS	op(_CHECK_FUNCTION_EXACT_ARGS, (callable, self_or_null, unused[oparg] -- callable, self_or_null, unused[oparg])) {	todo		
+Python/bytecodes.c	4604	4604	opcode:_CHECK_STACK_SPACE	op(_CHECK_STACK_SPACE, (callable, unused, unused[oparg] -- callable, unused, unused[oparg])) {	todo		
+Python/bytecodes.c	4611	4611	opcode:_CHECK_RECURSION_REMAINING	op(_CHECK_RECURSION_REMAINING, (--)) {	todo		
+Python/bytecodes.c	4615	4615	opcode:_INIT_CALL_PY_EXACT_ARGS	replicate(5) pure op(_INIT_CALL_PY_EXACT_ARGS, (callable, self_or_null, args[oparg] -- new_frame)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4628	4628	opcode:_PUSH_FRAME	op(_PUSH_FRAME, (new_frame -- )) {	todo		changed-in-3.15: was bytecode-send-gen-recursion
+Python/bytecodes.c	4644	4644	opcode:CALL_BOUND_METHOD_EXACT_ARGS	macro(CALL_BOUND_METHOD_EXACT_ARGS) =	todo		changed-in-3.15:
+Python/bytecodes.c	4659	4659	opcode:CALL_PY_EXACT_ARGS	macro(CALL_PY_EXACT_ARGS) =	todo		changed-in-3.15:
+Python/bytecodes.c	4671	4671	opcode:_GUARD_NOS_NULL	op(_GUARD_NOS_NULL, (null, unused -- null, unused)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4675	4675	opcode:_GUARD_THIRD_NULL	op(_GUARD_THIRD_NULL, (null, unused, unused -- null, unused, unused)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	4679	4679	opcode:_GUARD_CALLABLE_TYPE_1	op(_GUARD_CALLABLE_TYPE_1, (callable, unused, unused -- callable, unused, unused)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4684	4684	opcode:_CALL_TYPE_1	op(_CALL_TYPE_1, (callable, null, arg -- res, a)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4694	4694	opcode:CALL_TYPE_1	macro(CALL_TYPE_1) =	todo		changed-in-3.15:
+Python/bytecodes.c	4702	4702	opcode:_GUARD_CALLABLE_STR_1	op(_GUARD_CALLABLE_STR_1, (callable, unused, unused -- callable, unused, unused)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4707	4707	opcode:_CALL_STR_1	op(_CALL_STR_1, (callable, null, arg -- res, a)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4721	4721	opcode:CALL_STR_1	macro(CALL_STR_1) =	todo		changed-in-3.15:
+Python/bytecodes.c	4730	4730	opcode:_GUARD_CALLABLE_TUPLE_1	op(_GUARD_CALLABLE_TUPLE_1, (callable, unused, unused -- callable, unused, unused)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4735	4735	opcode:_CALL_TUPLE_1	op(_CALL_TUPLE_1, (callable, null, arg -- res, a)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4749	4749	opcode:CALL_TUPLE_1	macro(CALL_TUPLE_1) =	todo		changed-in-3.15:
+Python/bytecodes.c	4758	4758	opcode:_CHECK_OBJECT	op(_CHECK_OBJECT, (type_version/2, callable, self_or_null, unused[oparg] -- callable, self_or_null, unused[oparg])) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	4766	4766	opcode:_ALLOCATE_OBJECT	op(_ALLOCATE_OBJECT, (callable, self_or_null, unused[oparg] -- callable, self_or_null, unused[oparg])) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	4790	4790	opcode:_CREATE_INIT_FRAME	op(_CREATE_INIT_FRAME, (init, self, args[oparg] -- init_frame)) {	todo		changed-in-3.15: was bytecode-call-alloc-abstract
+Python/bytecodes.c	4815	4815	opcode:CALL_ALLOC_AND_ENTER_INIT	macro(CALL_ALLOC_AND_ENTER_INIT) =	todo		changed-in-3.15: was bytecode-call-alloc-abstract
+Python/bytecodes.c	4825	4825	opcode:EXIT_INIT_CHECK	inst(EXIT_INIT_CHECK, (should_be_none -- )) {	todo		
+Python/bytecodes.c	4835	4835	opcode:_GUARD_CALLABLE_BUILTIN_CLASS	op(_GUARD_CALLABLE_BUILTIN_CLASS, (callable, unused, unused[oparg] -- callable, unused, unused[oparg])) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	4842	4842	opcode:_CALL_BUILTIN_CLASS	op(_CALL_BUILTIN_CLASS, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	todo		changed-in-3.15:
+Python/bytecodes.c	4862	4862	opcode:CALL_BUILTIN_CLASS	macro(CALL_BUILTIN_CLASS) =	todo		changed-in-3.15:
+Python/bytecodes.c	4872	4872	opcode:_GUARD_CALLABLE_BUILTIN_O	op(_GUARD_CALLABLE_BUILTIN_O, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	4883	4883	opcode:_CALL_BUILTIN_O	op(_CALL_BUILTIN_O, (callable, self_or_null, args[oparg] -- res, c, s)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4905	4905	opcode:CALL_BUILTIN_O	macro(CALL_BUILTIN_O) =	todo		changed-in-3.15:
+Python/bytecodes.c	4916	4916	opcode:_GUARD_CALLABLE_BUILTIN_FAST	op(_GUARD_CALLABLE_BUILTIN_FAST, (callable, unused, unused[oparg] -- callable, unused, unused[oparg])) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	4922	4922	opcode:_CALL_BUILTIN_FAST	op(_CALL_BUILTIN_FAST, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	todo		changed-in-3.15:
+Python/bytecodes.c	4944	4944	opcode:CALL_BUILTIN_FAST	macro(CALL_BUILTIN_FAST) =	todo		changed-in-3.15:
+Python/bytecodes.c	4954	4954	opcode:_GUARD_CALLABLE_BUILTIN_FAST_WITH_KEYWORDS	op(_GUARD_CALLABLE_BUILTIN_FAST_WITH_KEYWORDS, (callable, unused, unused[oparg] -- callable, unused, unused[oparg])) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	4960	4960	opcode:_CALL_BUILTIN_FAST_WITH_KEYWORDS	op(_CALL_BUILTIN_FAST_WITH_KEYWORDS, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	todo		changed-in-3.15:
+Python/bytecodes.c	4978	4978	opcode:CALL_BUILTIN_FAST_WITH_KEYWORDS	macro(CALL_BUILTIN_FAST_WITH_KEYWORDS) =	todo		changed-in-3.15:
+Python/bytecodes.c	4988	4988	opcode:CALL_LEN	macro(CALL_LEN) =	todo		changed-in-3.15:
+Python/bytecodes.c	4997	4997	opcode:_GUARD_CALLABLE_LEN	op(_GUARD_CALLABLE_LEN, (callable, unused, unused -- callable, unused, unused)){	todo		changed-in-3.15:
+Python/bytecodes.c	5003	5003	opcode:_CALL_LEN	op(_CALL_LEN, (callable, null, arg -- res, a, c)) {	todo		changed-in-3.15:
+Python/bytecodes.c	5022	5022	opcode:_GUARD_CALLABLE_ISINSTANCE	op(_GUARD_CALLABLE_ISINSTANCE, (callable, unused, unused, unused -- callable, unused, unused, unused)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	5028	5028	opcode:_CALL_ISINSTANCE	op(_CALL_ISINSTANCE, (callable, null, instance, cls -- res)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	5046	5046	opcode:CALL_ISINSTANCE	macro(CALL_ISINSTANCE) =	todo		changed-in-3.15:
+Python/bytecodes.c	5053	5053	opcode:CALL_LIST_APPEND	macro(CALL_LIST_APPEND) =	todo		changed-in-3.15:
+Python/bytecodes.c	5063	5063	opcode:_GUARD_CALLABLE_LIST_APPEND	op(_GUARD_CALLABLE_LIST_APPEND, (callable, unused, unused -- callable, unused, unused)){	todo		changed-in-3.15: new function
+Python/bytecodes.c	5069	5069	opcode:_CALL_LIST_APPEND	op(_CALL_LIST_APPEND, (callable, self, arg -- none, c, s)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	5090	5090	opcode:_GUARD_CALLABLE_METHOD_DESCRIPTOR_O	op(_GUARD_CALLABLE_METHOD_DESCRIPTOR_O, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	5105	5105	opcode:_CALL_METHOD_DESCRIPTOR_O	op(_CALL_METHOD_DESCRIPTOR_O, (callable, self_or_null, args[oparg] -- res, c, s, a)) {	todo		changed-in-3.15:
+Python/bytecodes.c	5130	5130	opcode:_CHECK_RECURSION_LIMIT	op(_CHECK_RECURSION_LIMIT, ( -- )) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	5134	5134	opcode:_CALL_METHOD_DESCRIPTOR_O_INLINE	tier2 op(_CALL_METHOD_DESCRIPTOR_O_INLINE, (callable, args[oparg], cfunc/4 -- res, c, s, a)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	5153	5153	opcode:CALL_METHOD_DESCRIPTOR_O	macro(CALL_METHOD_DESCRIPTOR_O) =	todo		changed-in-3.15:
+Python/bytecodes.c	5165	5165	opcode:_GUARD_CALLABLE_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS	op(_GUARD_CALLABLE_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	5181	5181	opcode:_CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS	op(_CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	todo		changed-in-3.15:
+Python/bytecodes.c	5210	5210	opcode:_CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS_INLINE	tier2 op(_CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS_INLINE, (callable, self_st, args[oparg], cfunc/4 -- callable, self_st, args[oparg])) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	5229	5229	opcode:CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS	macro(CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS) =	todo		changed-in-3.15:
+Python/bytecodes.c	5239	5239	opcode:_GUARD_CALLABLE_METHOD_DESCRIPTOR_NOARGS	op(_GUARD_CALLABLE_METHOD_DESCRIPTOR_NOARGS, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	5254	5254	opcode:_CALL_METHOD_DESCRIPTOR_NOARGS	op(_CALL_METHOD_DESCRIPTOR_NOARGS, (callable, self_or_null, args[oparg] -- res, c, s)) {	todo		changed-in-3.15:
+Python/bytecodes.c	5278	5278	opcode:_CALL_METHOD_DESCRIPTOR_NOARGS_INLINE	tier2 op(_CALL_METHOD_DESCRIPTOR_NOARGS_INLINE, (callable, args[oparg], cfunc/4 -- res, c, s)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	5296	5296	opcode:CALL_METHOD_DESCRIPTOR_NOARGS	macro(CALL_METHOD_DESCRIPTOR_NOARGS) =	todo		changed-in-3.15:
+Python/bytecodes.c	5307	5307	opcode:_GUARD_CALLABLE_METHOD_DESCRIPTOR_FAST	op(_GUARD_CALLABLE_METHOD_DESCRIPTOR_FAST, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	5323	5323	opcode:_CALL_METHOD_DESCRIPTOR_FAST	op(_CALL_METHOD_DESCRIPTOR_FAST, (callable, self_or_null, args[oparg] -- callable, self_or_null, args[oparg])) {	todo		changed-in-3.15:
+Python/bytecodes.c	5352	5352	opcode:_CALL_METHOD_DESCRIPTOR_FAST_INLINE	tier2 op(_CALL_METHOD_DESCRIPTOR_FAST_INLINE, (callable, self_st, args[oparg], cfunc/4 -- callable, self_st, args[oparg])) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	5372	5372	opcode:CALL_METHOD_DESCRIPTOR_FAST	macro(CALL_METHOD_DESCRIPTOR_FAST) =	todo		changed-in-3.15:
+Python/bytecodes.c	5388	5388	opcode:_MONITOR_CALL_KW	op(_MONITOR_CALL_KW, (callable, self_or_null, args[oparg], unused -- callable, self_or_null, args[oparg], unused)) {	todo		
+Python/bytecodes.c	5407	5407	opcode:_MAYBE_EXPAND_METHOD_KW	op(_MAYBE_EXPAND_METHOD_KW, (callable, self_or_null, unused[oparg], unused -- callable, self_or_null, unused[oparg], unused)) {	todo		
+Python/bytecodes.c	5419	5419	opcode:_DO_CALL_KW	op(_DO_CALL_KW, (callable, self_or_null, args[oparg], kwnames -- res)) {	todo		changed-in-3.15:
+Python/bytecodes.c	5474	5474	opcode:_PY_FRAME_KW	op(_PY_FRAME_KW, (callable, self_or_null, args[oparg], kwnames -- new_frame)) {	todo		changed-in-3.15:
+Python/bytecodes.c	5504	5504	opcode:_CHECK_FUNCTION_VERSION_KW	op(_CHECK_FUNCTION_VERSION_KW, (func_version/2, callable, unused, unused[oparg], unused -- callable, unused, unused[oparg], unused)) {	todo		
+Python/bytecodes.c	5511	5511	opcode:CALL_KW_PY	macro(CALL_KW_PY) =	todo		changed-in-3.15:
+Python/bytecodes.c	5521	5521	opcode:_CHECK_METHOD_VERSION_KW	op(_CHECK_METHOD_VERSION_KW, (func_version/2, callable, null, unused[oparg], unused -- callable, null, unused[oparg], unused)) {	todo		
+Python/bytecodes.c	5531	5531	opcode:_EXPAND_METHOD_KW	op(_EXPAND_METHOD_KW, (callable, self_or_null, unused[oparg], unused -- callable, self_or_null, unused[oparg], unused)) {	todo		
+Python/bytecodes.c	5542	5542	opcode:CALL_KW_BOUND_METHOD	macro(CALL_KW_BOUND_METHOD) =	todo		changed-in-3.15:
+Python/bytecodes.c	5553	5553	opcode:_SPECIALIZE_CALL_KW	specializing op(_SPECIALIZE_CALL_KW, (counter/1, callable, self_or_null, unused[oparg], unused -- callable, self_or_null, unused[oparg], unused)) {	todo		changed-in-3.15:
+Python/bytecodes.c	5565	5565	opcode:CALL_KW	macro(CALL_KW) =	todo		
+Python/bytecodes.c	5571	5571	opcode:INSTRUMENTED_CALL_KW	macro(INSTRUMENTED_CALL_KW) =	todo		
+Python/bytecodes.c	5578	5578	opcode:_CHECK_IS_NOT_PY_CALLABLE_KW	op(_CHECK_IS_NOT_PY_CALLABLE_KW, (callable, unused, unused[oparg], unused -- callable, unused, unused[oparg], unused)) {	todo		
+Python/bytecodes.c	5585	5585	opcode:_CALL_KW_NON_PY	op(_CALL_KW_NON_PY, (callable, self_or_null, args[oparg], kwnames -- res)) {	todo		changed-in-3.15:
+Python/bytecodes.c	5608	5608	opcode:CALL_KW_NON_PY	macro(CALL_KW_NON_PY) =	todo		changed-in-3.15:
+Python/bytecodes.c	5620	5620	opcode:_MAKE_CALLARGS_A_TUPLE	op(_MAKE_CALLARGS_A_TUPLE, (func, unused, callargs, kwargs -- func, unused, callargs, kwargs)) {	todo		
+Python/bytecodes.c	5637	5637	opcode:_DO_CALL_FUNCTION_EX	op(_DO_CALL_FUNCTION_EX, (func_st, null, callargs_st, kwargs_st -- result)) {	todo		changed-in-3.15:
+Python/bytecodes.c	5716	5716	opcode:_SPECIALIZE_CALL_FUNCTION_EX	specializing op(_SPECIALIZE_CALL_FUNCTION_EX, (counter/1, func, unused, unused, unused -- func, unused, unused, unused)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	5728	5728	opcode:CALL_FUNCTION_EX	macro(CALL_FUNCTION_EX) =	todo		changed-in-3.15:
+Python/bytecodes.c	5734	5734	opcode:_CHECK_IS_PY_CALLABLE_EX	op(_CHECK_IS_PY_CALLABLE_EX, (func_st, unused, unused, unused -- func_st, unused, unused, unused)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	5740	5740	opcode:_PY_FRAME_EX	op(_PY_FRAME_EX, (func_st, null, callargs_st, kwargs_st -- ex_frame)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	5763	5763	opcode:CALL_EX_PY	macro(CALL_EX_PY) =	todo		changed-in-3.15: new function
+Python/bytecodes.c	5773	5773	opcode:_CHECK_IS_NOT_PY_CALLABLE_EX	op(_CHECK_IS_NOT_PY_CALLABLE_EX, (func_st, unused, unused, unused -- func_st, unused, unused, unused)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	5778	5778	opcode:_CALL_FUNCTION_EX_NON_PY_GENERAL	op(_CALL_FUNCTION_EX_NON_PY_GENERAL, (func_st, null, callargs_st, kwargs_st -- result)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	5794	5794	opcode:CALL_EX_NON_PY_GENERAL	macro(CALL_EX_NON_PY_GENERAL) =	todo		changed-in-3.15: new function
+Python/bytecodes.c	5801	5801	opcode:INSTRUMENTED_CALL_FUNCTION_EX	macro(INSTRUMENTED_CALL_FUNCTION_EX) =	todo		changed-in-3.15:
+Python/bytecodes.c	5807	5807	opcode:_MAKE_FUNCTION	op(_MAKE_FUNCTION, (codeobj_st -- func, co)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	5824	5824	opcode:MAKE_FUNCTION	macro(MAKE_FUNCTION) = _MAKE_FUNCTION + POP_TOP;	todo		changed-in-3.15:
+Python/bytecodes.c	5826	5826	opcode:SET_FUNCTION_ATTRIBUTE	inst(SET_FUNCTION_ATTRIBUTE, (attr_st, func_in -- func_out)) {	todo		changed-in-3.15:
+Python/bytecodes.c	5839	5839	opcode:RETURN_GENERATOR	inst(RETURN_GENERATOR, (-- res)) {	todo		changed-in-3.15:
+Python/bytecodes.c	5863	5863	opcode:BUILD_SLICE	inst(BUILD_SLICE, (args[oparg] -- slice)) {	todo		
+Python/bytecodes.c	5873	5873	opcode:CONVERT_VALUE	inst(CONVERT_VALUE, (value -- result)) {	todo		
+Python/bytecodes.c	5883	5883	opcode:FORMAT_SIMPLE	inst(FORMAT_SIMPLE, (value -- res)) {	todo		
+Python/bytecodes.c	5899	5899	opcode:FORMAT_WITH_SPEC	inst(FORMAT_WITH_SPEC, (value, fmt_spec -- res)) {	todo		changed-in-3.15:
+Python/bytecodes.c	5910	5910	opcode:_SPECIALIZE_BINARY_OP	specializing op(_SPECIALIZE_BINARY_OP, (counter/1, lhs, rhs -- lhs, rhs)) {	todo		changed-in-3.15: was bytecode-binary-op-add-int
+Python/bytecodes.c	5924	5924	opcode:_BINARY_OP	op(_BINARY_OP, (lhs, rhs -- res, l, r)) {	todo		changed-in-3.15: was bytecode-binary-op-add-int
+Python/bytecodes.c	5940	5940	opcode:BINARY_OP	macro(BINARY_OP) = _SPECIALIZE_BINARY_OP + _RECORD_TOS_TYPE + _RECORD_NOS_TYPE + unused/4 + _BINARY_OP + POP_TOP + POP_TOP;	todo		changed-in-3.15: was bytecode-binary-op-add-int
+Python/bytecodes.c	5949	5949	opcode:INSTRUMENTED_LINE	inst(INSTRUMENTED_LINE, ( -- )) {	todo		
+Python/bytecodes.c	5979	5979	opcode:INSTRUMENTED_INSTRUCTION	inst(INSTRUMENTED_INSTRUCTION, ( -- )) {	todo		
+Python/bytecodes.c	5992	5992	opcode:INSTRUMENTED_JUMP_FORWARD	inst(INSTRUMENTED_JUMP_FORWARD, ( -- )) {	todo		
+Python/bytecodes.c	5996	5996	opcode:_MONITOR_JUMP_BACKWARD	op(_MONITOR_JUMP_BACKWARD, (-- )) {	todo		
+Python/bytecodes.c	6000	6000	opcode:INSTRUMENTED_NOT_TAKEN	inst(INSTRUMENTED_NOT_TAKEN, ( -- )) {	todo		
+Python/bytecodes.c	6005	6005	opcode:INSTRUMENTED_JUMP_BACKWARD	macro(INSTRUMENTED_JUMP_BACKWARD) =	todo		
+Python/bytecodes.c	6010	6010	opcode:INSTRUMENTED_POP_JUMP_IF_TRUE	inst(INSTRUMENTED_POP_JUMP_IF_TRUE, (unused/1, cond -- )) {	todo		
+Python/bytecodes.c	6020	6020	opcode:INSTRUMENTED_POP_JUMP_IF_FALSE	inst(INSTRUMENTED_POP_JUMP_IF_FALSE, (unused/1, cond -- )) {	todo		
+Python/bytecodes.c	6030	6030	opcode:INSTRUMENTED_POP_JUMP_IF_NONE	inst(INSTRUMENTED_POP_JUMP_IF_NONE, (unused/1, value -- )) {	todo		
+Python/bytecodes.c	6042	6042	opcode:INSTRUMENTED_POP_JUMP_IF_NOT_NONE	inst(INSTRUMENTED_POP_JUMP_IF_NOT_NONE, (unused/1, value -- )) {	todo		
+Python/bytecodes.c	6054	6054	opcode:EXTENDED_ARG	tier1 inst(EXTENDED_ARG, ( -- )) {	todo		
+Python/bytecodes.c	6062	6062	opcode:CACHE	tier1 inst(CACHE, (--)) {	todo		
+Python/bytecodes.c	6067	6067	opcode:RESERVED	tier1 inst(RESERVED, (--)) {	todo		changed-in-3.15:
+Python/bytecodes.c	6123	6123	opcode:_JUMP_TO_TOP	op(_JUMP_TO_TOP, (--)) {	todo		
+Python/bytecodes.c	6127	6127	opcode:_SET_IP	tier2 op(_SET_IP, (instr_ptr/4 --)) {	todo		
+Python/bytecodes.c	6131	6131	opcode:_CHECK_STACK_SPACE_OPERAND	tier2 op(_CHECK_STACK_SPACE_OPERAND, (framesize/2 --)) {	todo		changed-in-3.15:
+Python/bytecodes.c	6136	6136	opcode:_SAVE_RETURN_OFFSET	op(_SAVE_RETURN_OFFSET, (--)) {	todo		
+Python/bytecodes.c	6145	6145	opcode:_EXIT_TRACE	tier2 op(_EXIT_TRACE, (exit_p/4 --)) {	todo		changed-in-3.15:
+Python/bytecodes.c	6165	6165	opcode:_DYNAMIC_EXIT	tier2 op(_DYNAMIC_EXIT, (exit_p/4 --)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	6184	6184	opcode:_CHECK_VALIDITY	tier2 op(_CHECK_VALIDITY, (--)) {	todo		
+Python/bytecodes.c	6188	6188	opcode:_LOAD_CONST_INLINE	tier2 pure op(_LOAD_CONST_INLINE, (ptr/4 -- value)) {	todo		changed-in-3.15:
+Python/bytecodes.c	6192	6192	opcode:_LOAD_CONST_INLINE_BORROW	tier2 pure op(_LOAD_CONST_INLINE_BORROW, (ptr/4 -- value)) {	todo		changed-in-3.15:
+Python/bytecodes.c	6196	6196	opcode:_RROT_3	tier2 pure op(_RROT_3, (bottom, middle, top -- bottom, middle, top)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	6203	6203	opcode:_START_EXECUTOR	tier2 op(_START_EXECUTOR, (executor/4 --)) {	todo		changed-in-3.15:
+Python/bytecodes.c	6217	6217	opcode:_MAKE_WARM	tier2 op(_MAKE_WARM, (--)) {	todo		changed-in-3.15:
+Python/bytecodes.c	6221	6221	opcode:_FATAL_ERROR	tier2 op(_FATAL_ERROR, (--)) {	todo		
+Python/bytecodes.c	6226	6226	opcode:_DEOPT	tier2 op(_DEOPT, (--)) {	todo		changed-in-3.15:
+Python/bytecodes.c	6233	6233	opcode:_HANDLE_PENDING_AND_DEOPT	tier2 op(_HANDLE_PENDING_AND_DEOPT, (--)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	6240	6240	opcode:_ERROR_POP_N	tier2 op(_ERROR_POP_N, (target/2 --)) {	todo		changed-in-3.15:
+Python/bytecodes.c	6248	6248	opcode:_SPILL_OR_RELOAD	tier2 op(_SPILL_OR_RELOAD, (--)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	6253	6253	opcode:_TIER2_RESUME_CHECK	tier2 op(_TIER2_RESUME_CHECK, (--)) {	todo		changed-in-3.15:
+Python/bytecodes.c	6263	6263	opcode:_COLD_EXIT	tier2 op(_COLD_EXIT, ( -- )) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	6306	6306	opcode:_COLD_DYNAMIC_EXIT	tier2 op(_COLD_DYNAMIC_EXIT, ( -- )) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	6314	6314	opcode:_GUARD_CODE_VERSION__PUSH_FRAME	tier2 op(_GUARD_CODE_VERSION__PUSH_FRAME, (version/2 -- )) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	6322	6322	opcode:_GUARD_CODE_VERSION_YIELD_VALUE	tier2 op(_GUARD_CODE_VERSION_YIELD_VALUE, (version/2 -- )) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	6331	6331	opcode:_GUARD_CODE_VERSION_RETURN_VALUE	tier2 op(_GUARD_CODE_VERSION_RETURN_VALUE, (version/2 -- )) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	6340	6340	opcode:_GUARD_CODE_VERSION_RETURN_GENERATOR	tier2 op(_GUARD_CODE_VERSION_RETURN_GENERATOR, (version/2 -- )) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	6349	6349	opcode:_GUARD_IP__PUSH_FRAME	tier2 op(_GUARD_IP__PUSH_FRAME, (ip/4 --)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	6356	6356	opcode:_GUARD_IP_YIELD_VALUE	tier2 op(_GUARD_IP_YIELD_VALUE, (ip/4 --)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	6364	6364	opcode:_GUARD_IP_RETURN_VALUE	tier2 op(_GUARD_IP_RETURN_VALUE, (ip/4 --)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	6372	6372	opcode:_GUARD_IP_RETURN_GENERATOR	tier2 op(_GUARD_IP_RETURN_GENERATOR, (ip/4 --)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	6385	6385	opcode:_RECORD_TOS	tier2 op(_RECORD_TOS, (tos -- tos)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	6389	6389	opcode:_RECORD_TOS_TYPE	tier2 op(_RECORD_TOS_TYPE, (tos -- tos)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	6393	6393	opcode:_RECORD_NOS	tier2 op(_RECORD_NOS, (nos, tos -- nos, tos)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	6397	6397	opcode:_RECORD_NOS_TYPE	tier2 op(_RECORD_NOS_TYPE, (nos, tos -- nos, tos)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	6401	6401	opcode:_RECORD_NOS_GEN_FUNC	tier2 op(_RECORD_NOS_GEN_FUNC, (nos, tos -- nos, tos)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	6412	6412	opcode:_RECORD_3OS_GEN_FUNC	tier2 op(_RECORD_3OS_GEN_FUNC, (gen, nos, tos -- gen, nos, tos)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	6423	6423	opcode:_RECORD_4OS	tier2 op(_RECORD_4OS, (value, _3os, nos, tos -- value, _3os, nos, tos)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	6427	6427	opcode:_RECORD_CALLABLE	tier2 op(_RECORD_CALLABLE, (func, self, args[oparg] -- func, self, args[oparg])) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	6431	6431	opcode:_RECORD_CALLABLE_KW	tier2 op(_RECORD_CALLABLE_KW, (func, self, args[oparg], kwnames -- func, self, args[oparg], kwnames)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	6435	6435	opcode:_RECORD_BOUND_METHOD	tier2 op(_RECORD_BOUND_METHOD, (callable, self, args[oparg] -- callable, self, args[oparg])) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	6443	6443	opcode:_RECORD_CODE	tier2 op(_RECORD_CODE, ( -- )) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	6604	6604	opcode:TRACE_RECORD	inst(TRACE_RECORD, (--)) {	todo		changed-in-3.15: new function

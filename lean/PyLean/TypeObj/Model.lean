@@ -53,21 +53,21 @@ inductive CmpOp where
   | lt | le | eq | ne | gt | ge
   deriving DecidableEq, Repr, Inhabited
 
-/-- `_Py_SwappedOp`, `Objects/object.c:1039`. -/
+/-- `_Py_SwappedOp`, `Objects/object.c:1042`. -/
 def CmpOp.swapped : CmpOp → CmpOp
   | .lt => .gt | .le => .ge | .eq => .eq | .ne => .ne | .gt => .lt | .ge => .le
 
-/-- `opstrings`, `Objects/object.c:1041`. -/
+/-- `opstrings`, `Objects/object.c:1044`. -/
 def CmpOp.str : CmpOp → String
   | .lt => "<" | .le => "<=" | .eq => "==" | .ne => "!=" | .gt => ">" | .ge => ">="
 
-/-- `name_op`, `Objects/typeobject.c:10461`. -/
+/-- `name_op`, `Objects/typeobject.c:11162`. -/
 def CmpOp.dunder : CmpOp → Name
   | .lt => "__lt__" | .le => "__le__" | .eq => "__eq__"
   | .ne => "__ne__" | .gt => "__gt__" | .ge => "__ge__"
 
 /-- Every slot `slotdefs` knows about, in `slotdefs` offset order
-(`Objects/typeobject.c:10969`). -/
+(`Objects/typeobject.c:11684`). -/
 inductive Slot where
   | tp_repr | tp_hash | tp_call | tp_str | tp_getattro | tp_setattro | tp_richcompare
   | tp_iter | tp_iternext | tp_descr_get | tp_descr_set | tp_init | tp_new | tp_finalize
@@ -126,9 +126,9 @@ inductive SlotFn where
   /-- `slot_tp_repr`, `slot_nb_add`, ...: the dispatcher `slotdefs` names for this slot. -/
   | generic
   | c (f : CFn)
-  /-- `PyObject_HashNotImplemented`, `Objects/object.c:1145`. -/
+  /-- `PyObject_HashNotImplemented`, `Objects/object.c:1151`. -/
   | hashNotImpl
-  /-- `_PyObject_NextNotImplemented`, `Objects/object.c:1559`. -/
+  /-- `_PyObject_NextNotImplemented`, `Objects/object.c:1637`. -/
   | nextNotImpl
   deriving DecidableEq, Repr, Inhabited
 
@@ -405,7 +405,7 @@ structure World where
   trace : List String := []
   /-- `globals()['__name__']` of the running frame, read by `type_new_set_module`. -/
   curModule : Option Val := none
-  /-- The objects `Py_ReprEnter` holds, `Objects/object.c:3003`, most recent first. -/
+  /-- The objects `Py_ReprEnter` holds, `Objects/object.c:3108`, most recent first. -/
   reprStack : List Val := []
   deriving Inhabited
 
@@ -587,15 +587,15 @@ def tpName (w : World) (t : Addr) : String := (tdata w t).name
 /-- `Py_TYPE(v)->tp_name`. -/
 def typeName (w : World) (v : Val) : String := tpName w (typeOf w v)
 
-/-- `is_subtype_with_mro`, `Objects/typeobject.c:2804`, with the `tp_base` walk of
-`type_is_subtype_base_chain` (`:2792`) bounded by the heap size. -/
+/-- `is_subtype_with_mro`, `Objects/typeobject.c:2944`, with the `tp_base` walk of
+`type_is_subtype_base_chain` (`:2932`) bounded by the heap size. -/
 def baseChain (w : World) (fuel : Nat) (a b : Addr) : Bool :=
   if a == b then true else
   match fuel, (tdata w a).base with
   | fuel + 1, some p => baseChain w fuel p b
   | _, _ => b == B.object
 
-/-- `PyType_IsSubtype(a, b)`, `Objects/typeobject.c:2829`. -/
+/-- `PyType_IsSubtype(a, b)`, `Objects/typeobject.c:2969`. -/
 def isSubtype (w : World) (a b : Addr) : Bool :=
   match (tdata w a).mro with
   | some mro => mro.contains b
@@ -625,7 +625,7 @@ def hasGroup (w : World) (t : Addr) : SlotGroup → Bool
   | .mapping => (tdata w t).asMapping
   | .sequence => (tdata w t).asSequence
 
-/-- `find_name_in_mro` over an explicit MRO, `Objects/typeobject.c:5748`. -/
+/-- `find_name_in_mro` over an explicit MRO, `Objects/typeobject.c:6224`. -/
 def findInMroList (w : World) (mro : List Addr) (n : Name) : Option Val :=
   match mro with
   | [] => none
@@ -634,7 +634,7 @@ def findInMroList (w : World) (mro : List Addr) (n : Name) : Option Val :=
     | some v => some v
     | none => findInMroList w rest n
 
-/-- `_PyType_Lookup(t, n)`, `Objects/typeobject.c:5717`, ignoring the method cache
+/-- `_PyType_Lookup(t, n)`, `Objects/typeobject.c:6193`, ignoring the method cache
 (`_PyType_LookupStackRefAndVersion` is a transparent cache in front of this). -/
 def findInMro (w : World) (t : Addr) (n : Name) : Option Val :=
   findInMroList w ((tdata w t).mro.getD []) n

@@ -3,7 +3,7 @@ import PyLean.MathInt.Gcd
 import PyLean.MathInt.ToBytes
 
 /-!
-Correctness of `_PyLong_GCD` (longobject.c:5647-5851), including Lehmer's
+Correctness of `_PyLong_GCD` (longobject.c:5746-5950), including Lehmer's
 step: the inner loop never overflows `int64_t`, the cofactors it accepts are
 the true Euclidean cofactors of `(a, b)`, so the digit loop's results are two
 consecutive nonnegative remainders below `2^(30*size_a)`, and `b` strictly
@@ -293,7 +293,7 @@ theorem gcdGeneral_proven : GcdGeneral := by
       refine (gcdLoop_general (c :: rest) (Int.gcd a b)).trans ?_
       simp [List.foldl, Int.gcd]
 
-/-- `long_lcm(a, b)`, mathmodule.c:765-789, is `lcm(abs(a), abs(b))`. -/
+/-- `long_lcm(a, b)`, mathmodule.c@3.14.7:765-789, is `lcm(abs(a), abs(b))`. -/
 theorem longLcm_eq (a b : Int) : longLcm a b = .ok (Nat.lcm a.natAbs b.natAbs : Int) := by
   unfold longLcm
   by_cases h0 : a = 0

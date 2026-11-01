@@ -95,7 +95,7 @@ class Flt (F : Type) extends Inhabited F, OfScientific F, Add F, Sub F, Mul F, D
   fabs : F → F
   /-- `fmod`, always exact. -/
   fmod : F → F → F
-  /-- `math.lgamma` on finite arguments: `m_lgamma`, Modules/mathmodule.c:482-523. -/
+  /-- `math.lgamma` on finite arguments: `m_lgamma`, Modules/mathmodule.c:483-524. -/
   lgamma : F → F
   /-- `math.floor` of a finite float, exactly. -/
   floorInt : F → Int
@@ -135,7 +135,7 @@ def pyFloat (n : Int) : Py F :=
 def pyDiv (a b : F) : Py F :=
   if Flt.beq b 0.0 then .error (.zeroDivisionError "division by zero") else .ok (a / b)
 
-/-- `a % b` on floats: `float_rem`, Objects/floatobject.c:597-621. -/
+/-- `a % b` on floats: `float_rem`, Objects/floatobject.c:587-611. -/
 def pyMod (v w : F) : Py F :=
   if Flt.beq w 0.0 then .error (.zeroDivisionError "division by zero")
   else
@@ -144,8 +144,8 @@ def pyMod (v w : F) : Py F :=
       if Flt.lt w 0.0 != Flt.lt m 0.0 then .ok (m + w) else .ok m
     else .ok (zeroLike w)
 
-/-- `a ** b` on floats: `float_pow`, Objects/floatobject.c:697-813. The complex-result
-branch at :769 is not modelled: `Lib/random.py` cannot reach it, because every base
+/-- `a ** b` on floats: `float_pow`, Objects/floatobject.c:687-803. The complex-result
+branch at :759 is not modelled: `Lib/random.py` cannot reach it, because every base
 there is `>= 0`, so it gets a marker exception that the difftest would expose. -/
 def pyPow (iv iw : F) : Py F :=
   if Flt.beq iw 0.0 then .ok 1.0
@@ -177,14 +177,14 @@ def pyPow (iv iw : F) : Py F :=
           .error (.overflowError "(34, 'Numerical result out of range')")
         else .ok (if neg then -ix else ix)
 
-/-- `math_1` with `can_overflow = 1`, Modules/mathmodule.c:921-958. -/
+/-- `math_1` with `can_overflow = 1`, Modules/mathmodule.c:788-825. -/
 def math1Over (f : F → F) (x : F) : Py F :=
   let r := f x
   if isNan r && !isNan x then .error (.valueError "~math domain error")
   else if isInf r && isFinite x then .error (.overflowError "math range error")
   else .ok r
 
-/-- `math_1` with `can_overflow = 0` and an `err_msg`, Modules/mathmodule.c:921-958.
+/-- `math_1` with `can_overflow = 0` and an `err_msg`, Modules/mathmodule.c:788-825.
 Every such message embeds the argument. -/
 def math1Dom (f : F → F) (x : F) : Py F :=
   let r := f x

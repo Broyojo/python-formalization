@@ -58,7 +58,7 @@ def asLong (x : Int) : Option Int := if IsLong x then some x else none
 
 /-! ## Range objects -/
 
-/-- `rangeobject`, rangeobject.c:20-26. All four fields are PyLongs. -/
+/-- `rangeobject`, rangeobject.c:35-41. All four fields are PyLongs. -/
 structure Range where
   start : Int
   stop : Int
@@ -66,7 +66,7 @@ structure Range where
   length : Int
   deriving Repr, DecidableEq, Inhabited
 
-/-- `get_len_of_range`, rangeobject.c:953-975, in unsigned long arithmetic.
+/-- `get_len_of_range`, rangeobject.c:991-1013, in unsigned long arithmetic.
 `hi - 1UL - lo` converts `hi` and `lo` to unsigned long; `/ step` converts
 `step` to unsigned long. -/
 def getLenOfRange (lo hi step : Int) : Int :=
@@ -76,7 +76,7 @@ def getLenOfRange (lo hi step : Int) : Int :=
     uadd 1 (usub (usub (toU lo) 1) (toU hi) / usub 0 (toU step))
   else 0
 
-/-- `compute_range_length_long`, rangeobject.c:187-221. `none` is the
+/-- `compute_range_length_long`, rangeobject.c:202-236. `none` is the
 `-2` ("overflow") return; the `-1` error return cannot happen for ints. -/
 def computeRangeLengthLong (start stop step : Int) : Option Int := do
   let lstart ← asLong start
@@ -85,7 +85,7 @@ def computeRangeLengthLong (start stop step : Int) : Option Int := do
   let ulen := getLenOfRange lstart lstop lstep
   if ulen > longMax then none else some ulen
 
-/-- The PyLong part of `compute_range_length`, rangeobject.c:249-298:
+/-- The PyLong part of `compute_range_length`, rangeobject.c:264-313:
 `(lo, hi, step)` is `(start, stop, step)` for a positive step and
 `(stop, start, -step)` otherwise; then `0` if `lo >= hi`, else
 `(hi - lo - 1) // step + 1`. `PyNumber_FloorDivide` by the positive step is
@@ -95,45 +95,45 @@ def computeRangeLengthSlow (start stop step : Int) : Int :=
   if step > 0 then (if start ≥ stop then 0 else (stop - start - 1) / step + 1)
   else (if stop ≥ start then 0 else (start - stop - 1) / (-step) + 1)
 
-/-- `compute_range_length`, rangeobject.c:228-299: the `long` fast path,
+/-- `compute_range_length`, rangeobject.c:243-314: the `long` fast path,
 then the PyLong slow path. -/
 def computeRangeLength (start stop step : Int) : Int :=
   match computeRangeLengthLong start stop step with
   | some len => len
   | none => computeRangeLengthSlow start stop step
 
-/-- `make_range_object`, rangeobject.c:51-73. -/
+/-- `make_range_object`, rangeobject.c:66-88. -/
 def makeRangeObject (start stop step : Int) : Range :=
   ⟨start, stop, step, computeRangeLength start stop step⟩
 
-/-- `validate_step`, rangeobject.c:31-46. `none` is an omitted step. -/
+/-- `validate_step`, rangeobject.c:46-61. `none` is an omitted step. -/
 def validateStep : Option Int → Py Int
   | none => .ok 1
   | some s => if s = 0 then .error (.valueError "range() arg 3 must not be zero") else .ok s
 
 /-- `range(start, stop[, step])`, `range_from_array` cases 3 and 2,
-rangeobject.c:88-109 and :124. -/
+rangeobject.c:103-124 and :139. -/
 def rangeNew (start stop : Int) (step : Option Int) : Py Range := do
   let st ← validateStep step
   return makeRangeObject start stop st
 
-/-- `range(stop)`, `range_from_array` case 1, rangeobject.c:110-117. -/
+/-- `range(stop)`, `range_from_array` case 1, rangeobject.c:125-132. -/
 def range1 (stop : Int) : Range := makeRangeObject 0 stop 1
 
-/-- `PyLong_AsSsize_t` overflow message, Objects/longobject.c:668. -/
+/-- `PyLong_AsSsize_t` overflow message, Objects/longobject.c:748. -/
 def ssizeOverflow : PyExc := .overflowError "Python int too large to convert to C ssize_t"
 
-/-- `len(r)`: `range_length`, rangeobject.c:310-315 (`PyLong_AsSsize_t`). -/
+/-- `len(r)`: `range_length`, rangeobject.c:325-330 (`PyLong_AsSsize_t`). -/
 def rangeLength (r : Range) : Py Int :=
   if r.length ≤ ssizeMax then .ok r.length else .error ssizeOverflow
 
-/-- `compute_item`, rangeobject.c:317-336: `start + i * step` (the
+/-- `compute_item`, rangeobject.c:332-351: `start + i * step` (the
 `step == 1` branch skips the multiplication). -/
 def computeItem (r : Range) (i : Int) : Int :=
   if r.step = 1 then r.start + i else r.start + i * r.step
 
-/-- `compute_range_item`, rangeobject.c:338-389; `r[i]` for an int `i`
-(`range_subscript`, :714-724). -/
+/-- `compute_range_item`, rangeobject.c:353-404; `r[i]` for an int `i`
+(`range_subscript`, :729-739). -/
 def computeRangeItem (r : Range) (arg : Int) : Py Int :=
   let i := if arg < 0 then r.length + arg else arg
   if i < 0 ∨ i ≥ r.length then .error (.indexError "range object index out of range")
@@ -149,7 +149,7 @@ structure Slice where
   deriving Repr, DecidableEq, Inhabited
 
 /-- The start/stop clipping block of `_PySlice_GetLongIndices`,
-sliceobject.c:443-466 (start) and :468-491 (stop). -/
+sliceobject.c:444-467 (start) and :469-492 (stop). -/
 def clipLong (v : Option Int) (dflt lower upper length : Int) : Int :=
   match v with
   | none => dflt
@@ -159,7 +159,7 @@ def clipLong (v : Option Int) (dflt lower upper length : Int) : Int :=
       if y < lower then lower else y
     else if x > upper then upper else x
 
-/-- `_PySlice_GetLongIndices`, sliceobject.c:395-512, all PyLong. -/
+/-- `_PySlice_GetLongIndices`, sliceobject.c:396-513, all PyLong. -/
 def getLongIndices (s : Slice) (length : Int) : Py (Int × Int × Int) := do
   let (step, neg) ← match s.step with
     | none => pure (1, false)
@@ -170,22 +170,22 @@ def getLongIndices (s : Slice) (length : Int) : Py (Int × Int × Int) := do
   let stop := clipLong s.stop (if neg then lower else upper) lower upper length
   return (start, stop, step)
 
-/-- `slice.indices(length)`, `slice_indices`, sliceobject.c:526-551. -/
+/-- `slice.indices(length)`, `slice_indices`, sliceobject.c:527-552. -/
 def sliceIndices (s : Slice) (length : Int) : Py (Int × Int × Int) :=
   if length < 0 then .error (.valueError "length should not be negative")
   else getLongIndices s length
 
-/-- `r[s]`: `compute_slice`, rangeobject.c:403-440. -/
+/-- `r[s]`: `compute_slice`, rangeobject.c:418-455. -/
 def computeSlice (r : Range) (s : Slice) : Py Range := do
   let (start, stop, step) ← getLongIndices s r.length
   let substep := r.step * step
   return makeRangeObject (computeItem r start) (computeItem r stop) substep
 
 /-- `PyNumber_AsSsize_t(v, NULL)`: saturates instead of raising
-(Objects/abstract.c, used by `_PyEval_SliceIndex`, Python/ceval.c:3076). -/
+(Objects/abstract.c, used by `_PyEval_SliceIndex`, Python/ceval.c:2949). -/
 def clampSsize (x : Int) : Int := if x < ssizeMin then ssizeMin else if x > ssizeMax then ssizeMax else x
 
-/-- `PySlice_Unpack`, sliceobject.c:217-261. -/
+/-- `PySlice_Unpack`, sliceobject.c:218-262. -/
 def sliceUnpack (s : Slice) : Py (Int × Int × Int) := do
   let step ← match s.step with
     | none => pure 1
@@ -202,7 +202,7 @@ def sliceUnpack (s : Slice) : Py (Int × Int × Int) := do
   return (start, stop, step)
 
 /-- The start/stop adjustment block of `PySlice_AdjustIndices`,
-sliceobject.c:272-290. `x += length` cannot overflow there because
+sliceobject.c:273-291. `x += length` cannot overflow there because
 `x < 0 ≤ length`. -/
 def adjustOne (x length step : Int) : Int :=
   if x < 0 then
@@ -211,7 +211,7 @@ def adjustOne (x length step : Int) : Int :=
   else if x ≥ length then (if step < 0 then length - 1 else length)
   else x
 
-/-- `PySlice_AdjustIndices`, sliceobject.c:263-303: `(start, stop, slicelength)`.
+/-- `PySlice_AdjustIndices`, sliceobject.c:264-304: `(start, stop, slicelength)`.
 C division truncates (`Int.tdiv`). -/
 def adjustIndices (length start stop step : Int) : Int × Int × Int :=
   let start := adjustOne start length step
@@ -222,9 +222,9 @@ def adjustIndices (length start stop step : Int) : Int × Int × Int :=
   (start, stop, n)
 
 /-- The positions `list[s]` reads for a list of length `n`:
-`list_slice_subscript` and `list_slice_wrap`, Objects/listobject.c:3609-3638,
-with `list_slice_lock_held` (:690-711) for `step == 1` and
-`list_slice_step_lock_held` (:3589-3607) otherwise, whose cursor is a
+`list_slice_subscript` and `list_slice_wrap`, Objects/listobject.c:3674-3703,
+with `list_slice_lock_held` (:717-738) for `step == 1` and
+`list_slice_step_lock_held` (:3654-3672) otherwise, whose cursor is a
 `size_t` advanced by `(size_t)step`. -/
 def listSlicePositions (n : Int) (s : Slice) : Py (List Int) := do
   let (start, stop, step) ← sliceUnpack s
@@ -237,24 +237,24 @@ def listSlicePositions (n : Int) (s : Slice) : Py (List Int) := do
 
 /-! ## Membership, index, count, comparison, hash -/
 
-/-- `range_contains_long`, rangeobject.c:443-486. -/
+/-- `range_contains_long`, rangeobject.c:458-501. -/
 def rangeContainsLong (r : Range) (ob : Int) : Bool :=
   let (c2, c3) := if r.step > 0 then (decide (r.start ≤ ob), decide (ob < r.stop))
     else (decide (ob ≤ r.start), decide (r.stop < ob))
   if !c2 || !c3 then false
   else (ob - r.start) % r.step == 0
 
-/-- `r.count(x)` for an int `x`, `range_count`, rangeobject.c:615-631. -/
+/-- `r.count(x)` for an int `x`, `range_count`, rangeobject.c:630-646. -/
 def rangeCount (r : Range) (ob : Int) : Int := if rangeContainsLong r ob then 1 else 0
 
-/-- `r.index(x)` for an int `x`, `range_index`, rangeobject.c:633-670. -/
+/-- `r.index(x)` for an int `x`, `range_index`, rangeobject.c:648-685. -/
 def rangeIndex (r : Range) (ob : Int) : Py Int :=
   if rangeContainsLong r ob then
     let idx := ob - r.start
     if r.step = 1 then .ok idx else .ok (idx / r.step)
   else .error (.valueError "range.index(x): x not in range")
 
-/-- `range_equals`, rangeobject.c:514-540, for two distinct objects. -/
+/-- `range_equals`, rangeobject.c:529-555, for two distinct objects. -/
 def rangeEquals (r0 r1 : Range) : Bool :=
   if r0.length != r1.length then false
   else if r0.length == 0 then true
@@ -262,7 +262,7 @@ def rangeEquals (r0 r1 : Range) : Bool :=
   else if r0.length == 1 then true
   else r0.step == r1.step
 
-/-- The tuple `range_hash` hashes, rangeobject.c:578-613:
+/-- The tuple `range_hash` hashes, rangeobject.c:593-628:
 `(len, None, None)`, `(len, start, None)` or `(len, start, step)`. -/
 def rangeHashKey (r : Range) : Int × Option Int × Option Int :=
   if r.length == 0 then (r.length, none, none)
@@ -272,7 +272,7 @@ def rangeHashKey (r : Range) : Int × Option Int × Option Int :=
 /-! ## Iterators -/
 
 /-- `range_iterator` (`_PyRangeIterObject`, C longs, Include/internal/pycore_range.h)
-and `longrange_iterator` (`longrangeiterobject`, PyLongs, rangeobject.c:997-1002). -/
+and `longrange_iterator` (`longrangeiterobject`, PyLongs, rangeobject.c@3.14.7:997-1002). -/
 inductive RIter where
   | fast (start step len : Int)
   | long (start step len : Int)
@@ -283,8 +283,8 @@ def RIter.typeName : RIter → String
   | .fast .. => "range_iterator"
   | .long .. => "longrange_iterator"
 
-/-- `rangeiter_next` (rangeobject.c:830-841; same as `_ITER_NEXT_RANGE`,
-Python/bytecodes.c:3447-3459) and `longrangeiter_next` (:1104-1124).
+/-- `rangeiter_next` (rangeobject.c:845-859; same as `_ITER_NEXT_RANGE`,
+Python/bytecodes.c@3.14.7:3447-3459) and `longrangeiter_next` (:1433-1457).
 `result + r->step` is signed `long` arithmetic. -/
 def iterNext : RIter → Option (Int × RIter)
   | .fast start step len =>
@@ -301,12 +301,12 @@ def iterTake : Nat → RIter → List Int × RIter
     | none => ([], it)
     | some (x, it') => let (xs, it'') := iterTake n it'; (x :: xs, it'')
 
-/-- `it.__length_hint__()`, rangeobject.c:843-848 and :1005-1011. -/
+/-- `it.__length_hint__()`, rangeobject.c:869-874 and :1044-1050. -/
 def RIter.lengthHint : RIter → Int
   | .fast _ _ len | .long _ _ len => len
 
-/-- The range inside `it.__reduce__()`, rangeobject.c:853-882
-(`r->start + r->len * r->step` in signed `long`) and :1013-1040. -/
+/-- The range inside `it.__reduce__()`, rangeobject.c:884-913
+(`r->start + r->len * r->step` in signed `long`) and :1060-1087. -/
 def iterReduce : RIter → Range
   | .fast start step len => makeRangeObject start (wrap (start + wrap (len * step))) step
   | .long start step len => makeRangeObject start (start + len * step) step
@@ -315,8 +315,8 @@ def iterReduce : RIter → Range
 def longOverflow : PyExc := .overflowError "Python int too large to convert to C long"
 
 /-- `it.__setstate__(state)` for an exact int `state`: `rangeiter_setstate`
-(rangeobject.c:884-899, `PyLong_AsLong` then clip) and
-`longrangeiter_setstate` (:1042-1085, clip in PyLong). -/
+(rangeobject.c:925-940, `PyLong_AsLong` then clip) and
+`longrangeiter_setstate` (:1099-1142, clip in PyLong). -/
 def iterSetstate (it : RIter) (state : Int) : Py RIter :=
   match it with
   | .fast start step len =>
@@ -329,7 +329,7 @@ def iterSetstate (it : RIter) (state : Int) : Py RIter :=
     let st := if state < 0 then 0 else if len < state then len else state
     .ok (.long (start + st * step) step (len - st))
 
-/-- `iter(r)`: `range_iter`, rangeobject.c:1159-1212. -/
+/-- `iter(r)`: `range_iter`, rangeobject.c:1226-1279. -/
 def rangeIter (r : Range) : RIter :=
   let slow := RIter.long r.start r.step r.length
   match asLong r.start, asLong r.stop, asLong r.step with
@@ -341,7 +341,7 @@ def rangeIter (r : Range) : RIter :=
     else .fast lstart lstep ulen
   | _, _, _ => slow
 
-/-- `reversed(r)`: `range_reverse`, rangeobject.c:1214-1316. The slow path
+/-- `reversed(r)`: `range_reverse`, rangeobject.c:1281-1383. The slow path
 builds `longrange_iterator(start + (len - 1) * step, -step, len)`. -/
 def rangeReverse (r : Range) : RIter :=
   let slow := RIter.long (r.start + (r.length - 1) * r.step) (-r.step) r.length
@@ -375,7 +375,7 @@ def asSsizeC (v : Int) : Int × Option PyExc :=
   if ssizeMin ≤ v ∧ v ≤ ssizeMax then (v, none) else (-1, some ssizeOverflow)
 
 /-- `PySlice_GetIndices(slice, length, &start, &stop, &step)`,
-sliceobject.c:185-215, for int-or-None parts. A later exception replaces an
+sliceobject.c:186-216, for int-or-None parts. A later exception replaces an
 earlier one (`exc` is the one pending on return). -/
 def sliceGetIndices (s : Slice) (length : Int) : CIndices :=
   let (step, e1) := match s.step with

@@ -1,38 +1,39 @@
 file	line	endline	name	signature	status	entry	note
-Objects/rangeobject.c	32	46	validate_step	validate_step(PyObject *step)	modelled	rangeslice-new-length	
-Objects/rangeobject.c	52	73	make_range_object	make_range_object(PyTypeObject *type, PyObject *start, PyObject *stop, PyObject *step)	modelled	rangeslice-new-length	
-Objects/rangeobject.c	81	136	range_from_array	range_from_array(PyTypeObject *type, PyObject *const *args, Py_ssize_t num_args)	modelled	rangeslice-new-length	
-Objects/rangeobject.c	139	145	range_new	range_new(PyTypeObject *type, PyObject *args, PyObject *kw)	todo		
-Objects/rangeobject.c	149	157	range_vectorcall	range_vectorcall(PyObject *rangetype, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
-Objects/rangeobject.c	170	178	range_dealloc	range_dealloc(PyObject *op)	todo		
-Objects/rangeobject.c	228	308	compute_range_length	compute_range_length(PyObject *start, PyObject *stop, PyObject *step)	modelled	rangeslice-len-fast-slow	
-Objects/rangeobject.c	311	315	range_length	range_length(PyObject *op)	modelled	rangeslice-len-overflow	
-Objects/rangeobject.c	318	336	compute_item	compute_item(rangeobject *r, PyObject *i)	modelled	rangeslice-getitem	
-Objects/rangeobject.c	339	388	compute_range_item	compute_range_item(rangeobject *r, PyObject *arg)	modelled	rangeslice-getitem	
-Objects/rangeobject.c	391	401	range_item	range_item(PyObject *op, Py_ssize_t i)	todo		
-Objects/rangeobject.c	404	440	compute_slice	compute_slice(rangeobject *r, PyObject *_slice)	modelled	rangeslice-range-slice,rangeslice-slice-errors	
-Objects/rangeobject.c	444	486	range_contains_long	range_contains_long(rangeobject *r, PyObject *ob)	modelled	rangeslice-contains	
-Objects/rangeobject.c	489	497	range_contains	range_contains(PyObject *self, PyObject *ob)	modelled	rangeslice-contains	
-Objects/rangeobject.c	515	538	range_equals	range_equals(rangeobject *r0, rangeobject *r1)	modelled	rangeslice-eq-hash,rangeslice-eq-sequence	
-Objects/rangeobject.c	541	568	range_richcompare	range_richcompare(PyObject *self, PyObject *other, int op)	modelled	rangeslice-eq-sequence	
-Objects/rangeobject.c	579	613	range_hash	range_hash(PyObject *op)	modelled	rangeslice-eq-hash	
-Objects/rangeobject.c	616	631	range_count	range_count(PyObject *self, PyObject *ob)	modelled	rangeslice-index-count	
-Objects/rangeobject.c	634	670	range_index	range_index(PyObject *self, PyObject *ob)	modelled	rangeslice-index-count	
-Objects/rangeobject.c	684	702	range_repr	range_repr(PyObject *op)	todo		
-Objects/rangeobject.c	706	711	range_reduce	range_reduce(PyObject *op, PyObject *args)	todo		
-Objects/rangeobject.c	714	733	range_subscript	range_subscript(PyObject *op, PyObject *item)	modelled	rangeslice-getitem	
-Objects/rangeobject.c	743	747	range_bool	range_bool(PyObject *op)	todo		
-Objects/rangeobject.c	831	841	rangeiter_next	rangeiter_next(PyObject *op)	modelled	rangeslice-iter,rangeslice-reversed	
-Objects/rangeobject.c	844	848	rangeiter_len	rangeiter_len(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	rangeslice-iter-reduce	
-Objects/rangeobject.c	854	882	rangeiter_reduce	rangeiter_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	rangeslice-iter-reduce	
-Objects/rangeobject.c	885	899	rangeiter_setstate	rangeiter_setstate(PyObject *op, PyObject *state)	modelled	rangeslice-setstate-clips	
-Objects/rangeobject.c	902	905	rangeiter_dealloc	rangeiter_dealloc(PyObject *self)	todo		
-Objects/rangeobject.c	954	976	get_len_of_range	get_len_of_range(long lo, long hi, long step)	modelled	rangeslice-len-fast-slow	
-Objects/rangeobject.c	982	996	fast_range_iter	fast_range_iter(long start, long stop, long step, long len)	modelled	rangeslice-iter,rangeslice-reversed	
-Objects/rangeobject.c	1006	1011	longrangeiter_len	longrangeiter_len(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	rangeslice-iter-reduce	
-Objects/rangeobject.c	1014	1040	longrangeiter_reduce	longrangeiter_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	rangeslice-iter-reduce	
-Objects/rangeobject.c	1043	1085	longrangeiter_setstate	longrangeiter_setstate(PyObject *op, PyObject *state)	modelled	rangeslice-setstate-clips	
-Objects/rangeobject.c	1095	1102	longrangeiter_dealloc	longrangeiter_dealloc(PyObject *op)	todo		
-Objects/rangeobject.c	1105	1124	longrangeiter_next	longrangeiter_next(PyObject *op)	modelled	rangeslice-iter,rangeslice-reversed	
-Objects/rangeobject.c	1160	1212	range_iter	range_iter(PyObject *seq)	modelled	rangeslice-iter	
-Objects/rangeobject.c	1215	1317	range_reverse	range_reverse(PyObject *seq, PyObject *Py_UNUSED(ignored))	modelled	rangeslice-reversed	
+Objects/rangeobject.c	47	61	validate_step	validate_step(PyObject *step)	modelled	rangeslice-new-length	
+Objects/rangeobject.c	67	88	make_range_object	make_range_object(PyTypeObject *type, PyObject *start, PyObject *stop, PyObject *step)	modelled	rangeslice-new-length	
+Objects/rangeobject.c	96	151	range_from_array	range_from_array(PyTypeObject *type, PyObject *const *args, Py_ssize_t num_args)	modelled	rangeslice-new-length	
+Objects/rangeobject.c	154	160	range_new	range_new(PyTypeObject *type, PyObject *args, PyObject *kw)	todo		
+Objects/rangeobject.c	164	172	range_vectorcall	range_vectorcall(PyObject *rangetype, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
+Objects/rangeobject.c	185	193	range_dealloc	range_dealloc(PyObject *op)	todo		
+Objects/rangeobject.c	243	323	compute_range_length	compute_range_length(PyObject *start, PyObject *stop, PyObject *step)	modelled	rangeslice-len-fast-slow	
+Objects/rangeobject.c	326	330	range_length	range_length(PyObject *op)	modelled	rangeslice-len-overflow	
+Objects/rangeobject.c	333	351	compute_item	compute_item(rangeobject *r, PyObject *i)	modelled	rangeslice-getitem	
+Objects/rangeobject.c	354	403	compute_range_item	compute_range_item(rangeobject *r, PyObject *arg)	modelled	rangeslice-getitem	
+Objects/rangeobject.c	406	416	range_item	range_item(PyObject *op, Py_ssize_t i)	todo		
+Objects/rangeobject.c	419	455	compute_slice	compute_slice(rangeobject *r, PyObject *_slice)	modelled	rangeslice-range-slice,rangeslice-slice-errors	
+Objects/rangeobject.c	459	501	range_contains_long	range_contains_long(rangeobject *r, PyObject *ob)	modelled	rangeslice-contains	
+Objects/rangeobject.c	504	512	range_contains	range_contains(PyObject *self, PyObject *ob)	modelled	rangeslice-contains	
+Objects/rangeobject.c	530	553	range_equals	range_equals(rangeobject *r0, rangeobject *r1)	modelled	rangeslice-eq-hash,rangeslice-eq-sequence	
+Objects/rangeobject.c	556	583	range_richcompare	range_richcompare(PyObject *self, PyObject *other, int op)	modelled	rangeslice-eq-sequence	
+Objects/rangeobject.c	594	628	range_hash	range_hash(PyObject *op)	modelled	rangeslice-eq-hash	
+Objects/rangeobject.c	631	646	range_count	range_count(PyObject *self, PyObject *ob)	modelled	rangeslice-index-count	
+Objects/rangeobject.c	649	685	range_index	range_index(PyObject *self, PyObject *ob)	modelled	rangeslice-index-count	
+Objects/rangeobject.c	699	717	range_repr	range_repr(PyObject *op)	todo		
+Objects/rangeobject.c	721	726	range_reduce	range_reduce(PyObject *op, PyObject *args)	todo		
+Objects/rangeobject.c	729	748	range_subscript	range_subscript(PyObject *op, PyObject *item)	modelled	rangeslice-getitem	
+Objects/rangeobject.c	758	762	range_bool	range_bool(PyObject *op)	todo		
+Objects/rangeobject.c	846	859	rangeiter_next	rangeiter_next(PyObject *op)	todo		changed-in-3.15: was rangeslice-iter,rangeslice-reversed
+Objects/rangeobject.c	870	874	range_iterator___length_hint___impl	range_iterator___length_hint___impl(_PyRangeIterObject *r) /*[clinic end generated code: output=9ba6f22b1fc23dcc input=e3eb311e99d76e43]*/	todo		changed-in-3.15: new function
+Objects/rangeobject.c	885	913	range_iterator___reduce___impl	range_iterator___reduce___impl(_PyRangeIterObject *r) /*[clinic end generated code: output=c44d53750c388415 input=75a25b7076dc2c54]*/	todo		changed-in-3.15: new function
+Objects/rangeobject.c	926	940	range_iterator___setstate___impl	range_iterator___setstate___impl(_PyRangeIterObject *r, PyObject *state) /*[clinic end generated code: output=464b3cbafc2e3562 input=c8c84fab2519d200]*/	todo		changed-in-3.15: new function
+Objects/rangeobject.c	943	946	rangeiter_dealloc	rangeiter_dealloc(PyObject *self)	todo		
+Objects/rangeobject.c	992	1014	get_len_of_range	get_len_of_range(long lo, long hi, long step)	modelled	rangeslice-len-fast-slow	
+Objects/rangeobject.c	1020	1034	fast_range_iter	fast_range_iter(long start, long stop, long step, long len)	modelled	rangeslice-iter,rangeslice-reversed	
+Objects/rangeobject.c	1045	1050	longrange_iterator___length_hint___impl	longrange_iterator___length_hint___impl(longrangeiterobject *r) /*[clinic end generated code: output=e1bce24da7e8bfde input=ba94b050d940411e]*/	todo		changed-in-3.15: new function
+Objects/rangeobject.c	1061	1087	longrange_iterator___reduce___impl	longrange_iterator___reduce___impl(longrangeiterobject *r) /*[clinic end generated code: output=0077f94ae2a4e99a input=2e8930e897ace086]*/	todo		changed-in-3.15: new function
+Objects/rangeobject.c	1100	1142	longrange_iterator___setstate___impl	longrange_iterator___setstate___impl(longrangeiterobject *r, PyObject *state) /*[clinic end generated code: output=870787f0574f0da4 input=8b116de3018de824]*/	todo		changed-in-3.15: new function
+Objects/rangeobject.c	1152	1159	longrangeiter_dealloc	longrangeiter_dealloc(PyObject *op)	todo		
+Objects/rangeobject.c	1162	1181	longrangeiter_next_lock_held	longrangeiter_next_lock_held(PyObject *op)	todo		changed-in-3.15: new function
+Objects/rangeobject.c	1184	1191	longrangeiter_next	longrangeiter_next(PyObject *op)	todo		changed-in-3.15: was rangeslice-iter,rangeslice-reversed
+Objects/rangeobject.c	1227	1279	range_iter	range_iter(PyObject *seq)	modelled	rangeslice-iter	
+Objects/rangeobject.c	1282	1384	range_reverse	range_reverse(PyObject *seq, PyObject *Py_UNUSED(ignored))	modelled	rangeslice-reversed	

@@ -42,16 +42,16 @@ reproducer: |
   if p == ('100000000000000000000', False, '-300', False) and c == ('Infinity', True, '-300.000', True):
       print('REPRODUCED decimal-pydecimal-floordiv-no-finalize')
 expected: |
-  The same result and flags from both twins. Doc/library/decimal.rst:1737: Overflow "Indicates the
+  The same result and flags from both twins. Doc/library/decimal.rst:1738: Overflow "Indicates the
   exponent is larger than Context.Emax after rounding has occurred", which favours _decimal.
 promised_by: |
-  Twin agreement; Doc/library/decimal.rst:1737-1741 on Overflow.
+  Twin agreement; Doc/library/decimal.rst:1738-1742 on Overflow.
 cause: |
-  Lib/_pydecimal.py:1554 `return self._divide(other, context)[0]`, and :1408-1410 where __divmod__
-  applies _fix to the remainder only. In _divide (:1336-1367) the quotient is
+  Lib/_pydecimal.py:1653 `return self._divide(other, context)[0]`, and :1505-1507 where __divmod__
+  applies _fix to the remainder only. In _divide (:1428-1464) the quotient is
   `_dec_from_triple(sign, str(q), 0)`. libmpdec: Modules/_decimal/libmpdec/mpdecimal.c:4190
   `mpd_qfinalize(q, ctx, status);` in mpd_qdivint and :4146 in mpd_qdivmod. Same on main at
-  Lib/_pydecimal.py:1653.
+  Lib/_pydecimal.py:1752.
 possible_fix: |
   Apply _fix to the quotient in __floordiv__ and __divmod__, as to every other result.
 tested:
