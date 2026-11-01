@@ -63,6 +63,21 @@ def baFromStringAndSize (bytes : Option Seq) (size : Int) : Py BA :=
       | none => List.replicate size.toNat uninit
     .ok { data, alloc := size + 1 }
 
+/-- `bytearray_dealloc`, bytearrayobject.c:1257-1270: what it prints. It reports
+`ob_exports > 0`, which a real object cannot have here, because a view keeps its
+exporter alive. -/
+def baDealloc (exports : Int) : List String :=
+  if exports > 0 then ["SystemError: deallocated bytearray object has exported buffers"] else []
+
+/-- `PyByteArray_FromStringAndSize` with what it leaves on stderr.
+`garbage` is the uninitialised `ob_exports` of the memory `PyObject_New` returned:
+the field is set at :184, after the failing `PyMem_Malloc` at :172, and the
+`Py_DECREF(new)` at :174 runs `bytearray_dealloc`. -/
+def baFromSizeTrace (garbage : Int) (bytes : Option Seq) (size : Int) : Py BA × List String :=
+  if size ≥ 0 ∧ size ≠ ssizeMax ∧ size ≠ 0 ∧ mallocFails (size + 1) = true then
+    (.error memoryError, baDealloc garbage)
+  else (baFromStringAndSize bytes size, [])
+
 /-- The contents after a resize: the first `requested` bytes, then new bytes. -/
 def resizedData (data : List Int) (requested : Int) : List Int :=
   data.take requested.toNat ++ List.replicate (requested.toNat - data.length) uninit
@@ -193,6 +208,18 @@ raised, so a callback cannot resize `self`. -/
 def withBuffer {α : Type} (self : BA) (op : BA → Py α) : Py α × BA :=
   let inner := baGetBuffer self
   (op inner, baReleaseBuffer inner)
+
+/-! ## Read-only methods
+
+Each one runs the shared `bytes` code. Those that can call back into Python raise
+`ob_exports` around it (`_bytearray_with_buffer`, or by hand in `split`, `rsplit`,
+`join`, `hex`, `%` and `__contains__`). The rest take the critical section only. -/
+
+/-- `bytearray_find_impl`, :1317-1323, and `rfind`, `index`, `rindex`, `count`,
+`startswith`, `endswith`, `__contains__`: the operation on the contents, with
+`ob_exports` raised meanwhile. -/
+def baRead {α : Type} (self : BA) (op : Seq → Py α) : Py α × BA :=
+  withBuffer self (fun inner => op inner.seq)
 
 /-! ## Subscript -/
 

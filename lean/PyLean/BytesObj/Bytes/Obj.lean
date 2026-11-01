@@ -416,6 +416,9 @@ def numberLong (o : Obj) : Py Int :=
 
 /-! ## Encoders and decoders used by `bytes()`, `decode` -/
 
+/-- The text of a codec error (position only; the difftest compares the class). -/
+def codecErrMsg (name : String) (i : Nat) : String := s!"~{name} {i}"
+
 /-- `str.encode` for the two encodings whose result is a plain byte map:
 `latin-1` and `ascii`, strict error handling. -/
 def encodeStr (cs : Seq) (encoding : String) : Py Seq :=
@@ -423,7 +426,7 @@ def encodeStr (cs : Seq) (encoding : String) : Py Seq :=
   let limit := if name = "latin-1" then 256 else 128
   match cs.findIdx? (· ≥ limit) with
   | none => .ok cs
-  | some i => .error (.named "UnicodeEncodeError" s!"~{name} {i}")
+  | some i => .error (.named "UnicodeEncodeError" (codecErrMsg name i))
 
 /-- `bytes.decode` for `latin-1` and `ascii`, strict error handling. -/
 def decodeBytes (s : Seq) (encoding : String) : Py Seq :=
@@ -431,6 +434,6 @@ def decodeBytes (s : Seq) (encoding : String) : Py Seq :=
   let limit := if name = "latin-1" then 256 else 128
   match s.findIdx? (· ≥ limit) with
   | none => .ok s
-  | some i => .error (.named "UnicodeDecodeError" s!"~{name} {i}")
+  | some i => .error (.named "UnicodeDecodeError" (codecErrMsg name i))
 
 end PyLean.BytesObj.Bytes

@@ -419,7 +419,7 @@ def pyBytesConcat (pv : Option Seq) (w : Option Obj) (unique : Bool) : Option Se
     if unique then
       match w.buffer? with
       | none =>
-        (none, some (.typeError s!"can't concat {w.typeName} to bytes"))
+        (none, some (.typeError s!"can't concat {w.typeName} to {(Obj.bytes v).typeName}"))
       | some wb =>
         if (v.length : Int) > ssizeMax - wb.length then (none, some memoryError)
         else

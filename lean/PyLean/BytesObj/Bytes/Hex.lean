@@ -189,11 +189,6 @@ theorem fromHex_flat (s : Seq) (hs : ∀ c ∈ s, c < 256) (mem : Seq) (len : Na
       rw [ih (fun x hx => hs x (by simp [hx])) (i + 2) _ f mrest (by simp at hlen; omega) (by simp at hf; omega)]
       simp
 
-/-- `fromhex` inverts `hex`: for every byte string, `bytes.fromhex(b.hex()) == b`. -/
-def FromHexRoundTrip : Prop :=
-  ∀ s : Seq, (∀ c ∈ s, c < 256) →
-    ∃ text, bytesHex s none 1 = .ok text ∧ bytesFromHex (.str text) = .ok s
-
 /-- `_PyBytes_FromHex` does not depend on what follows the buffer: whatever is
 stored after a view, `fromhex` of the view is `fromhex` of the same bytes in a
 `bytes` object. This is the property a `memoryview` slice breaks. -/
