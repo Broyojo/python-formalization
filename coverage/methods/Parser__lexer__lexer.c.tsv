@@ -9,7 +9,7 @@ Parser/lexer/lexer.c	305	360	verify_end_of_number	verify_end_of_number(struct to
 Parser/lexer/lexer.c	364	410	verify_identifier	verify_identifier(struct tok_state *tok)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/lexer/lexer.c	413	432	tok_decimal_tail	tok_decimal_tail(struct tok_state *tok)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/lexer/lexer.c	435	453	tok_continuation_line	tok_continuation_line(struct tok_state *tok) {	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Parser/lexer/lexer.c	501	1390	tok_get_normal_mode	tok_get_normal_mode(struct tok_state *tok, tokenizer_mode* current_tok, struct token *token)	modelled	pygrammar-lex-accepts-valid	
-Parser/lexer/lexer.c	1393	1613	tok_get_fstring_mode	tok_get_fstring_mode(struct tok_state *tok, tokenizer_mode* current_tok, struct token *token)	modelled	pygrammar-lex-accepts-valid	
-Parser/lexer/lexer.c	1616	1624	tok_get	tok_get(struct tok_state *tok, struct token *token)	modelled	pygrammar-lex-accepts-valid	
-Parser/lexer/lexer.c	1627	1635	_PyTokenizer_Get	_PyTokenizer_Get(struct tok_state *tok, struct token *token)	modelled	pygrammar-lex-accepts-valid	
+Parser/lexer/lexer.c	501	1390	tok_get_normal_mode	tok_get_normal_mode(struct tok_state *tok, tokenizer_mode* current_tok, struct token *token)	modelled	pygrammar-lex-stacks	
+Parser/lexer/lexer.c	1393	1613	tok_get_fstring_mode	tok_get_fstring_mode(struct tok_state *tok, tokenizer_mode* current_tok, struct token *token)	modelled	pygrammar-lex-stacks	
+Parser/lexer/lexer.c	1616	1624	tok_get	tok_get(struct tok_state *tok, struct token *token)	modelled	pygrammar-lex-stacks	
+Parser/lexer/lexer.c	1627	1635	_PyTokenizer_Get	_PyTokenizer_Get(struct tok_state *tok, struct token *token)	modelled	pygrammar-lex-stacks	
