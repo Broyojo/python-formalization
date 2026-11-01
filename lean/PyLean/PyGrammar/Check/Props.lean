@@ -405,7 +405,9 @@ theorem syntaxOnlyIdentity_proven : SyntaxOnlyIdentity := by
               exact set_getD_self fs i
             rw [hset]
             exact hS rest fs _ h2
-          · exact hS rest fs st h
+          · obtain ⟨h1, h2⟩ := hF (fs.getD i .null) st h
+            rw [h1, set_getD_self]
+            exact hS rest fs _ h2
         | ann i =>
           dsimp only
           split

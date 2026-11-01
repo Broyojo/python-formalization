@@ -586,6 +586,11 @@ def run_python_lex(c):
 # ---- part check
 
 FOLD = ["__debug__", "if __debug__: pass", "x = __debug__", "__debug__ = 1", "def f():\n  '''d'''\n",
+        "def f[T: __debug__ = __debug__](): pass\n", "class C[*Ts = __debug__]: pass\n",
+        "def g[**P = __debug__](): pass\n", "type X[T: __debug__ = __debug__] = __debug__\n",
+        "match x:\n  case __debug__.y: pass\n", "match x:\n  case {__debug__.y: 1}: pass\n",
+        "match x:\n  case __debug__(a=1): pass\n", "match x:\n  case [__debug__.y, *z] if __debug__: pass\n",
+        "def f(a=__debug__, *, b=__debug__): pass\n", "lambda a=__debug__: __debug__\n",
         "def f():\n  '''d'''\n  x\n", "class C:\n  '''d'''\n", "'''d'''", "'''d'''\nx", "'a' '%s' % (x,)",
         "'%s' % (x,)\n", "def f():\n  '%s' % (x,)\n", "'%d' % (x,)", "'%s%s' % (x,y)", "'%%s %r' % (x,)",
         "'%a|%5s|%-5s|%.3s|%5.3s' % (a,b,c,d,e)", "'%s' % (x,y)", "'%s %s' % (x,)", "'a' % ()", "'%' % ()",
@@ -728,6 +733,12 @@ def gen_case_check(rng):
         return {"mod": "pygrammar", "fn": "check.validate", "tree": tree, "pytree": None,
                 "_t": t2, "_mode": mode}
     o = rng.choice([-1, 0, 1, 2])
+    if rng.random() < 0.1:
+        # `astfold_mod` on `Expression`
+        e = rng.choice(["__debug__", "(__debug__, x)", "'%s' % (__debug__,)", "[__debug__ for x in y]",
+                        "lambda a=__debug__: __debug__", "f'{__debug__}'", "x[__debug__:]", "'%s' % (x,)"])
+        return {"mod": "pygrammar", "fn": "check.preprocess", "tree": enc(ast.parse(e, mode="eval")),
+                "optimize": o, "syntax_only": False, "src": e, "pmode": "eval"}
     return {"mod": "pygrammar", "fn": "check.preprocess", "tree": enc(t), "optimize": o,
             "syntax_only": False, "src": s}
 
@@ -745,7 +756,7 @@ def run_python_check(c):
         except RecursionError:
             return {"ok": None}
     try:
-        t = compile(c["src"], "<unknown>", "exec", flags=ast.PyCF_OPTIMIZED_AST,
+        t = compile(c["src"], "<unknown>", c.get("pmode", "exec"), flags=ast.PyCF_OPTIMIZED_AST,
                     optimize=c["optimize"])
         return {"ok": enc(t)}
     except SyntaxError as e:
