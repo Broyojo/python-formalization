@@ -1,5 +1,6 @@
 import PyLean.Registry
 import PyLean.UnicodeObj.FormatProps
+import PyLean.UnicodeObj.FormatFloat
 import PyLean.UnicodeObj.FormatPercentProps
 
 /-! Registry entries of the formatting slice. -/
@@ -63,6 +64,34 @@ def formatEntries : List Entry := [
     status := .refuted, prop := ``StarWidthNegated, thm := some ``starWidthNegated_refuted
     bug := some "unicodeobj-format-percent-star-width"
     notes := "Known: python/cpython#151847 (open)." },
+  { id := "unicodeobj-format-parse-number", pyFile := "Python/formatter_unicode.c"
+    pyFns := ["parse_number"]
+    statement := "parse_number splits a number into digits, decimal point, fraction and remainder with nothing lost, for every string."
+    source := "invariant"
+    status := .proven, prop := ``ParseNumberSplit, thm := some ``parseNumberSplit_proven },
+  { id := "unicodeobj-format-empty-spec", pyFile := "Python/formatter_unicode.c"
+    pyFns := ["format_obj"]
+    statement := "format(v, '') is str(v) for an int and format(s, '') is s."
+    source := "format() docs: an empty spec is the same as str(value)"
+    status := .proven, prop := ``FormatEmptySpec, thm := some ``formatEmptySpec_proven },
+  { id := "unicodeobj-format-float-internal", pyFile := "Python/formatter_unicode.c"
+    pyFns := ["format_float_internal"]
+    statement := "format(x, spec) for a float gives the digits of PyOS_double_to_string laid out by the spec: width, fill, alignment, sign, grouping and the fraction group; and its shortcut for a plain spec agrees with the general path."
+    source := "format spec mini-language, Doc/library/string.rst"
+    status := .open, prop := ``PendingBinary64
+    notes := "Waits on lean/PyLean/Binary64/. Only the dispatch and the 'precision too big' check are modelled." },
+  { id := "unicodeobj-format-complex-internal", pyFile := "Python/formatter_unicode.c"
+    pyFns := ["format_complex_internal"]
+    statement := "format(z, spec) for a complex lays out the real and imaginary parts by the spec, with the parentheses of the empty type."
+    source := "format spec mini-language, Doc/library/string.rst"
+    status := .open, prop := ``PendingBinary64
+    notes := "Waits on lean/PyLean/Binary64/. Only the dispatch and the three early checks are modelled." },
+  { id := "unicodeobj-format-percent-float", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["formatfloat"]
+    statement := "'%e' % x, '%f' % x and '%g' % x agree with format(x, 'e'), format(x, 'f') and format(x, 'g'), flags included."
+    source := "invariant: % vs format"
+    status := .open, prop := ``PendingBinary64
+    notes := "Waits on lean/PyLean/Binary64/. The type errors for str and None are modelled." },
   { id := "unicodeobj-format-percent-no-directive", pyFile := "Objects/unicodeobject.c"
     pyFns := ["PyUnicode_Format", "unicode_mod"]
     statement := "A format with no % gives itself for an empty tuple, and raises 'not all arguments converted' for a non-empty one."
