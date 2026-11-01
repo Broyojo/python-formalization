@@ -227,34 +227,40 @@ def cmpVal : Dec → Dec → Ordering
 
 def adjustedD (co : Nat) (e : Int) : Int := e + numDigits co - 1
 
+/-- The tail of `quantize`, _pydecimal.py:2551-2559: Inexact and Rounded, then `_fix`. -/
+def quantizeFlags (c : Ctx) (ans : Dec) (ae : Int) (neg : Bool) (co : Nat) (e : Int) : DM Dec := do
+  if ae > e then
+    if cmpVal ans (.fin neg co e) ≠ .eq then raiseSig c .inexact
+    raiseSig c .rounded
+  fix c ans
+
+/-- The finite-operand part of `quantize` after the checks on rounding,
+_pydecimal.py:2523-2559: the operand is `±co·10^e`, the target exponent `qe`. -/
+def quantizeFin (c : Ctx) (m : Rounding) (neg : Bool) (co : Nat) (e qe : Int) : DM Dec := do
+  if ¬(c.etiny ≤ qe ∧ qe ≤ c.emax) then return (← invalid c)
+  if co = 0 then return (← fix c (.fin neg 0 qe))
+  let adj := adjustedD co e
+  if adj > c.emax then return (← invalid c)
+  if adj - qe + 1 > c.prec then return (← invalid c)
+  let ans ← liftPy (rescale (.fin neg co e) qe m)
+  match ans with
+  | .fin _ aco ae =>
+    if adjustedD aco ae > c.emax then return (← invalid c)
+    if numDigits aco > c.prec then return (← invalid c)
+    if aco ≠ 0 ∧ adjustedD aco ae < c.emin then raiseSig c .subnormal
+    quantizeFlags c ans ae neg co e
+  | _ => return ans
+
 /-- `Decimal.quantize(exp, rounding, context)`, _pydecimal.py:2500-2559. -/
 def quantize (c : Ctx) (a q : Dec) (rnd : Option Rounding := none) : DM Dec := do
   let m := rnd.getD c.rounding
   match a, q with
-  | .fin _ _ _, .fin _ _ _ => pure ()
+  | .fin neg co e, .fin _ _ qe => quantizeFin c m neg co e qe
   | _, _ =>
     if let some ans ← checkNans c a (some q) then return ans
-  match a, q with
-  | .inf _, .inf _ => return a
-  | .inf _, _ | _, .inf _ => invalid c
-  | .fin neg co e, .fin _ _ qe =>
-    if ¬(c.etiny ≤ qe ∧ qe ≤ c.emax) then return (← invalid c)
-    if co = 0 then return (← fix c (.fin neg 0 qe))
-    let adj := adjustedD co e
-    if adj > c.emax then return (← invalid c)
-    if adj - qe + 1 > c.prec then return (← invalid c)
-    let ans ← liftPy (rescale a qe m)
-    match ans with
-    | .fin _ aco ae =>
-      if adjustedD aco ae > c.emax then return (← invalid c)
-      if numDigits aco > c.prec then return (← invalid c)
-      if aco ≠ 0 ∧ adjustedD aco ae < c.emin then raiseSig c .subnormal
-      if ae > e then
-        if cmpVal ans a ≠ .eq then raiseSig c .inexact
-        raiseSig c .rounded
-      fix c ans
-    | _ => return ans
-  | _, _ => return a
+    match a, q with
+    | .inf _, .inf _ => return a
+    | _, _ => invalid c
 
 /-- `to_integral_value(rounding, context)`, _pydecimal.py:2662-2676. -/
 def toIntegralValue (c : Ctx) (a : Dec) (rnd : Option Rounding := none) : DM Dec := do

@@ -314,6 +314,10 @@ def gen_case1(rng):
         return {"mod": "decimal", "fn": rng.choice(["compare_total", "copy_sign"]),
                 "impl": rng.choice(["py", "c"]),
                 "a": gen_dec(rng, special=0.3), "b": gen_dec(rng, special=0.3)}
+    if k < 0.66:
+        # quantSpec, the specification the quantize property uses, against _decimal itself.
+        return {"mod": "decimal", "fn": "quantspec", "rounding": rng.choice(ROUNDINGS),
+                "neg": rng.random() < 0.5, "c": gen_coeff(rng), "e": gen_exp(rng), "qe": gen_exp(rng)}
     impl = rng.choice(["py", "c"])
     op = rng.choice(OPS)
     case = {"mod": "decimal", "fn": "op", "impl": impl, "op": op, "ctx": gen_ctx(rng),
@@ -408,6 +412,11 @@ def run_python(case):
                 return "UnicodeEncodeError"
             except ValueError:
                 return "ValueError"
+        if fn == "quantspec":
+            d = C.Decimal((int(case["neg"]), tuple(map(int, case["c"])), case["e"]))
+            big = C.Context(prec=5000, Emin=-(10 ** 6), Emax=10 ** 6, traps=[])
+            r = d.quantize(C.Decimal((0, (1,), case["qe"])), rounding=getattr(C, case["rounding"]), context=big)
+            return "".join(map(str, r.as_tuple().digits))
         if fn == "compare_total":
             M = MODS[case["impl"]]
             return int(build(M, case["a"]).compare_total(build(M, case["b"])))

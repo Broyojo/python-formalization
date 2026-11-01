@@ -3,6 +3,7 @@ import PyLean.Decimal.Diff
 import PyLean.Decimal.Refute
 import PyLean.Decimal.TupleProps
 import PyLean.Decimal.Props
+import PyLean.Decimal.Quantize
 
 /-!
 `Lib/_pydecimal.py` vs `Modules/_decimal/` (libmpdec), CPython 3.14.7.
@@ -108,6 +109,17 @@ def entries : List Entry := [
     statement := "For every context, rounding argument and finite value, to_integral_value returns the value unchanged if its exponent is >= 0, and otherwise the correctly rounded integer at exponent 0, without setting any flag (or the int-limit ValueError)."
     source := "to_integral_value docstring ('without raising inexact, rounded'), decimal docs"
     status := .proven, prop := ``ToIntegralValueCorrect, thm := some ``toIntegralValueCorrect_proven },
+  { id := "decimal-quantize-correct", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.quantize", "Decimal._rescale", "Decimal._fix", "Decimal.__round__"]
+    statement := "For every context with prec >= 1, rounding mode and finite operands, when quantize returns: if the correctly rounded (or zero-padded) coefficient q' at the target exponent fits (target in [Etiny, Emax], q' has at most prec digits, its adjusted exponent is at most Emax), the result is q' at that exponent (folded down to Etop under clamp, same value) and Inexact is set exactly when non-zero digits were dropped; otherwise the result is NaN with InvalidOperation set."
+    source := "decimal docs, quantize: 'Return a value equal to the first operand after rounding and having the exponent of the second operand'; 'if the length of the coefficient after the quantize operation would be greater than precision, then an InvalidOperation is signaled'"
+    status := .proven, prop := ``QuantizeCorrect, thm := some ``quantizeCorrect_proven
+    notes := "round(d, n) is quantize(Decimal((0, (1,), -n))) by definition (_pydecimal.py:1834-1835, _decimal.c PyDec_Round), so this covers it for |n| < 2**63. Beyond that _decimal raises OverflowError and _pydecimal does not: a discrepancy deccheck.py already lists (SkipHandler.__round__), not recorded as a bug here. Conditional on returning: a trapped signal or the int-limit ValueError raises instead. Under clamp=1 the result's exponent can be below the operand's (the fold-down keeps the value), so the docs' 'the quantized exponent is always equal to that of the right-hand operand' holds only for clamp=0, in both twins." },
+  { id := "decimal-to-integral-exact-correct", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.to_integral_exact"]
+    statement := "For every context, rounding argument and finite non-zero value with exponent < 0, when to_integral_exact returns, the result is the correctly rounded integer at exponent 0, Rounded is set, and Inexact is set exactly when non-zero digits were dropped."
+    source := "decimal docs: 'signaling Inexact or Rounded as appropriate if rounding occurs' (Doc/library/decimal.rst:929-930)"
+    status := .proven, prop := ``ToIntegralExactCorrect, thm := some ``toIntegralExactCorrect_proven },
   { id := "decimal-int-conversions-c", pyFile := "Modules/_decimal/_decimal.c"
     pyFns := ["dec_as_long", "PyDec_Round", "dec_floor", "dec_ceil", "dec_trunc"]
     statement := "For every finite decimal and rounding mode, _decimal's int()/math.floor/math.ceil/round() return the signed integer whose magnitude the mode prescribes (exact for exponents >= 0)."

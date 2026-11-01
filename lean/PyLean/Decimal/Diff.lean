@@ -3,6 +3,7 @@ import PyLean.Decimal.Parse
 import PyLean.Decimal.Arith
 import PyLean.Decimal.Tuple
 import PyLean.Decimal.Format
+import PyLean.Decimal.Quantize
 
 /-! Differential-testing handler for `decimal` cases (`"mod": "decimal"`).
 
@@ -176,6 +177,13 @@ def run (fn : String) (j : Json) : Except String Json := do
       | "fix" => fix c a
       | _ => throw (.named "harness" op)
     return encDM (m.run [])
+  | "quantspec" =>
+    let m ← roundingOf (← getStr j "rounding")
+    let neg ← getBool j "neg"
+    let co := natOfStr (← getStr j "c")
+    let e ← getInt j "e"
+    let qe ← getInt j "qe"
+    return Json.mkObj [("ok", toJson (String.ofList (Nat.toDigits 10 (quantSpec m neg co e qe))))]
   | "compare_total" => return Json.mkObj [("ok", toJson (compareTotal (← getDec j "a") (← getDec j "b")))]
   | "copy_sign" => return Json.mkObj [("ok", encDec (copySign (← getDec j "a") (← getDec j "b")))]
   | _ => throw s!"unknown fn {fn}"
