@@ -120,7 +120,7 @@ def entries : List Entry := [
     prop := ``InvUnderLyingEq, thm := some ``invUnderLyingEq_proven },
   { id := "dict-readers-faithful", pyFile := "Objects/dictobject.c",
     pyFns := ["PyDict_GetItemRef", "_PyDict_GetItemRef_KnownHash", "PyDict_GetItemWithError", "PyDict_Contains", "_PyDict_Contains_KnownHash", "dict_subscript", "dict_get_impl"]
-    statement := "For every key protocol, including a hash or __eq__ that raises or mutates the dict, each reader is faithful to _Py_dict_lookup: a raising hash or lookup propagates with the state the lookup left, and a slot with ix >= 0 but no value (a split key this dict lacks) reads as absent and is never dereferenced."
+    statement := "For every key protocol, including a hash or __eq__ that raises or mutates the dict, each reader is faithful to _Py_dict_lookup: a raising hash or lookup propagates with the state the lookup left, a slot with ix >= 0 but no value (a split key this dict lacks) reads as absent and is never dereferenced, and a slot with a value gives that value."
     source := "dictobject.c:2420-2509, 2537, 4835-4882, 3504-3538, 4386-4406; the ix>=0,value==NULL note at 1915-1922", status := .proven
     prop := ``ReadersFaithful, thm := some ``readersFaithful_proven },
   { id := "dict-contains", pyFile := "Objects/dictobject.c",
