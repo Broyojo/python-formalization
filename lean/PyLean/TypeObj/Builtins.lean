@@ -38,6 +38,7 @@ def familyOf (a : Addr) : CFn :=
   | 100 | 101 | 102 | 103 | 104 => .unmodelled
   | 105 => .listIter
   | 106 => .dictKeys
+  | 107 => .strIter
   | _ => .exception
 
 /-- Sequence types answer `__add__` and friends with `sq_*` slots. -/
@@ -83,12 +84,16 @@ def methodOf (tn n : String) : Builtin :=
   | "list", "__getitem__" | "dict", "__getitem__" => .dunderGetitem
   | "dict", "__contains__" => .dunderContains
   | "dict", "keys" => .dictKeysMethod
+  | "mappingproxy", "keys" | "mappingproxy", "values" | "mappingproxy", "items"
+  | "mappingproxy", "copy" | "mappingproxy", "get" | "mappingproxy", "__reversed__" =>
+    .proxyCall n
   | "int", "__getnewargs__" | "str", "__getnewargs__" | "tuple", "__getnewargs__" => .getnewargs
   -- `ellipsis_reduce` and `notimplemented_reduce`, `Objects/sliceobject.c`, `Objects/object.c`.
   | "ellipsis", "__reduce__" => .reduceName "Ellipsis"
   | "NotImplementedType", "__reduce__" => .reduceName "NotImplemented"
   | "iterator", "__length_hint__" | "list_iterator", "__length_hint__"
   | "tuple_iterator", "__length_hint__" | "str_ascii_iterator", "__length_hint__"
+  | "str_iterator", "__length_hint__"
   | "dict_keyiterator", "__length_hint__" => .iterLengthHint
   | "str", "__format__" => .strDunderFormat
   | "int", "__format__" | "float", "__format__" => .numDunderFormat
@@ -200,6 +205,10 @@ def bootstrap : M Unit := do
   for r in builtinTable do
     let t := r.addr
     fillRow r
+    -- `__hash__ = None` on a static type goes with `tp_hash = PyObject_HashNotImplemented`, which
+    -- subclasses inherit, so `type_ready_set_hash` leaves their dicts alone.
+    if r.entries.any (fun e => e.1 == "__hash__" && e.2 == .noneV) then
+      modType t fun d => { d with slots := setSlot d.slots .tp_hash (some .hashNotImpl) }
     modW fun w => ((tdata w t).mro.getD []).drop 1 |>.foldl (fun w b => inheritSlots w t b) w
     let w ← getW
     modType t fun d => { d with slots := setSlot d.slots .tp_new (resolveNew w r) }

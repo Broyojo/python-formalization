@@ -1,4 +1,5 @@
 import PyLean.TypeObj.Reduce
+import PyLean.LongObj.FromString
 
 /-!
 Calling: function argument binding (`initialize_locals`, `Python/ceval.c:1681`), `tp_new`
@@ -246,27 +247,43 @@ friends do; the exact type stays immediate. -/
 def boxValue (t exact : Addr) (v : Val) : M Val :=
   if t == exact then pure v else alloc t (.boxed v)
 
-/-- `long_new`, `Objects/longobject.c`: one positional argument. -/
+/-- `PyLong_FromUnicodeObject`, through the mirror in `LongObj.FromString`. The limit of 4300
+digits is the default; beyond 6000 digits C calls `_pylong`, which is not reached here. -/
+def longFromStr (s : String) (base : Int) : M Val :=
+  match PyLean.LongObj.pyLongFromUnicodeObject (fun _ => .error .modelFuel) 4300
+      (s.toList.map (·.toNat)) base with
+  | .ok v => pure (.int v.toInt)
+  | .error (.valueError m) => valueErr (if m.startsWith "~" then (m.drop 1).toString else m)
+  | .error _ => gap%
+
+/-- `long_new_impl`, `Objects/longobject.c:5876`, through the clinic parser: `x` is positional and
+`base` may be either. -/
 def longNew (rt : Rt) (t : Addr) (args : List Val) (kw : Kw) : M Val := do
   if args.length + kw.length > 2 then
     typeErr s!"int() takes at most 2 arguments ({args.length + kw.length} given)"
   for (k, _) in kw do
     if k != "base" then typeErr s!"int() got an unexpected keyword argument '{k}'"
-  if !kw.isEmpty then gap%
-  match args with
-  | [] => boxValue t B.int (.int 0)
-  | [x] =>
+  let x? := args.head?
+  let obase : Option Val := match args, kw with
+    | [_, b], _ => some b
+    | _, (_, b) :: _ => some b
+    | _, [] => none
+  match x?, obase with
+  | none, none => boxValue t B.int (.int 0)
+  | none, some _ => typeErr "int() missing string argument"
+  | some x, none =>
     let r ← pyNumberLong rt x
     boxValue t B.int r
-  | [x, b] =>
+  | some x, some b =>
     let base ← numberAsSsize rt b none
-    if base != 0 && (base < 2 || base > 36) then
+    if (base != 0 && base < 2) || base > 36 then
       valueErr "int() base must be >= 2 and <= 36, or 0"
     let w ← getW
     match strOf w x with
-    | some _ => gap%
+    | some s =>
+      let r ← longFromStr s base
+      boxValue t B.int r
     | none => typeErr "int() can't convert non-string with explicit base"
-  | _ => typeErr s!"int() takes at most 2 arguments ({args.length} given)"
 
 /-- `bool_new`, `Objects/boolobject.c`. -/
 def boolNew (rt : Rt) (args : List Val) (kw : Kw) : M Val := do
@@ -276,39 +293,53 @@ def boolNew (rt : Rt) (args : List Val) (kw : Kw) : M Val := do
   | [] => pure (.bool false)
   | x :: _ => .bool <$> rt.isTrue x
 
-/-- `unicode_new` with one or no argument. -/
+/-- `unicode_new`, `Objects/clinic/unicodeobject.c.h:1853`, and `unicode_new_impl`: `object`,
+`encoding` and `errors` by position or keyword. -/
 def strNew (rt : Rt) (t : Addr) (args : List Val) (kw : Kw) : M Val := do
   if args.length + kw.length > 3 then
     typeErr s!"str() takes at most 3 arguments ({args.length + kw.length} given)"
   for (k, _) in kw do
     if !["object", "encoding", "errors"].contains k then
       typeErr s!"str() got an unexpected keyword argument '{k}'"
-  if !kw.isEmpty then gap%
-  match args with
-  | [] => boxValue t B.str (.str "")
-  | [x] =>
-    let s ← rt.str x
+  let names := ["object", "encoding", "errors"]
+  for (k, i) in names.zipIdx do
+    if i < args.length && (kw.find? (·.1 == k)).isSome then
+      typeErr s!"argument for str() given by name ('{k}') and position ({i + 1})"
+  let arg (i : Nat) (k : String) : Option Val :=
+    match args[i]? with
+    | some v => some v
+    | none => (kw.find? (·.1 == k)).map (·.2)
+  let x := arg 0 "object"
+  let e := arg 1 "encoding"
+  let er := arg 2 "errors"
+  let w ← getW
+  match e with
+  | some v =>
+    if (strOf w v).isNone then
+      typeErr s!"str() argument 'encoding' must be str, not {argTypeName w v}"
+  | none => pure ()
+  match er with
+  | some v =>
+    if (strOf w v).isNone then
+      typeErr s!"str() argument 'errors' must be str, not {argTypeName w v}"
+  | none => pure ()
+  match x, e, er with
+  | none, _, _ => boxValue t B.str (.str "")
+  | some o, none, none =>
+    let s ← rt.str o
     boxValue t B.str (.str s)
-  | _ :: e :: _ =>
-    let w ← getW
-    match strOf w e with
-    | none => typeErr s!"str() argument 'encoding' must be str, not {argTypeName w e}"
-    | some _ =>
-      -- `Objects/clinic/unicodeobject.c.h:1900`: `errors` is checked before any decoding.
-      match args with
-      | _ :: _ :: er :: _ =>
-        if (strOf w er).isNone then
-          typeErr s!"str() argument 'errors' must be str, not {argTypeName w er}"
-      | _ => pure ()
-      match strOf w (args.headD .none) with
-      | some _ => typeErr "decoding str is not supported"
-      | none =>
-        typeErr s!"decoding to str: need a bytes-like object, {trunc 80 (typeName w (args.headD .none))} found"
+  | some o, _, _ =>
+    match strOf w o with
+    | some _ => typeErr "decoding str is not supported"
+    | none =>
+      typeErr s!"decoding to str: need a bytes-like object, {trunc 80 (typeName w o)} found"
 
 /-- `tuple_new`, `Objects/tupleobject.c`. -/
 def tupleNew (rt : Rt) (t : Addr) (args : List Val) (kw : Kw) : M Val := do
-  if t == B.tuple then noKeywords "tuple" kw
-  else if !kw.isEmpty then gap%
+  -- `tuple_new`, `Objects/clinic/tupleobject.c.h`: keywords are refused unless a subclass has
+  -- a `tp_init` of its own to take them.
+  let w ← getW
+  if t == B.tuple || slotOf w t .tp_init == slotOf w B.tuple .tp_init then noKeywords "tuple" kw
   unpackTuple "tuple" 0 1 args.length
   match args with
   | [] => boxValue t B.tuple (.tuple [])
@@ -974,30 +1005,33 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
     | _ => gap%
   | .strDunderFormat =>
     -- `unicode___format___impl` through `_PyUnicode_FormatAdvancedWriter`,
-    -- `Python/formatter_unicode.c`: an empty spec is `PyObject_Str`, spec `s` is the string
-    -- data as a new exact `str`. Other specs belong to `UnicodeObj`.
+    -- `Python/formatter_unicode.c`: an empty spec is `PyObject_Str`, and spec `s` takes the fast
+    -- path at `:913`, which hands back the object itself, subclass and all. Other specs belong
+    -- to `UnicodeObj`.
     match args with
     | [s] =>
       match strOf w s with
       | some "" => .str <$> rt.str selfV
       | some "s" =>
         match strOf w selfV with
-        | some v => pure (.str v)
+        | some _ => pure selfV
         | none => gap%
       | some _ => gap%
       | none => typeErr s!"__format__() argument must be str, not {argTypeName w s}"
     | _ => gap%
-  | .objectDir =>
-    let inst : List Val := match instDictAddr w selfV with
-      | some da => ((dictOf w (.obj da)).getD []).map (·.1)
-      | none => []
-    let keys := inst ++ (classDictKeys w (typeOf w selfV)).map Val.str
-    let names := keys.filterMap (strOf w)
-    alloc B.list (.list (names.eraseDups.map Val.str))
-  | .typeDir =>
-    match selfV with
-    | .obj t => alloc B.list (.list ((classDictKeys w t).eraseDups.map Val.str))
-    | _ => gap%
+  | .objectDir => objectDirImpl rt selfV
+  | .typeDir => typeDirImpl rt selfV
+  | .proxyCall n =>
+    -- `mappingproxy_keys` and the others, `Objects/descrobject.c:1112-1165`.
+    let m ← proxyMapping selfV
+    if n == "get" then
+      unless args.length == 1 || args.length == 2 do
+        typeErr s!"get expected {if args.isEmpty then "at least 1 argument" else "at most 2 arguments"}, got {args.length}"
+      let f ← rt.getAttr m "get"
+      rt.call f (if args.length == 1 then args ++ [.none] else args) []
+    else
+      let f ← rt.getAttr m n
+      rt.call f [] []
   | .typeMro => typeMroImpl rt selfV
   | .typeSubclasses =>
     match selfV with
@@ -1368,6 +1402,12 @@ def wrappedAttrSet (rt : Rt) (obj : Val) (n : Name) (value : Option Val) (tn : S
   | some v, .obj d => dictSetAt rt d (.str n) v
   | _, _ => gap%
 
+/-- `PyObject_GenericSetDict`, `Objects/object.c:2046`: unlike `subtype_setdict`, it refuses to
+delete. -/
+def genericSetDict (obj : Val) (value : Option Val) : M Unit := do
+  if value.isNone then typeErr "cannot delete __dict__"
+  objectSetDict obj value
+
 /-- Getter of the `PyGetSetDef`/`PyMemberDef` named `n` on static type `owner`. -/
 def getsetGetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) : M Val := do
   let w ← getW
@@ -1630,6 +1670,7 @@ def getsetSetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) (value : Optio
     if n == "__annotations__" || n == "__annotate__" then
       let tn := if owner == B.classmethod then "classmethod" else "staticmethod"
       return ← wrappedAttrSet rt obj n value tn
+    if n == "__dict__" then return ← genericSetDict obj value
     gap%
   if owner == B.function then
     match payloadOf w obj, obj with
@@ -1696,6 +1737,7 @@ def getsetSetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) (value : Optio
           if (tupleOf w x).isNone then typeErr "__type_params__ must be set to a tuple"
           return ← setF { f with typeParams := some x }
         | none => typeErr "__type_params__ must be set to a tuple"
+      if n == "__dict__" then return ← genericSetDict obj value
       gap%
     | _, _ => gap%
   if isSubtype w owner B.BaseException then return ← excGetsetSet rt owner n obj value
@@ -1736,7 +1778,7 @@ def callTpCall (rt : Rt) (s : SlotFn) (f : Val) (args : List Val) (kw : Kw) : M 
     match f with
     | .obj t =>
       -- `tp_vectorcall` is not inherited, so only exact `super` goes this way.
-      if t == B.super then superVectorcall rt args kw else typeCall rt t args kw
+      typeCall rt t args kw
     | _ => gap%
   | .c .function =>
     match payloadOf w f with
@@ -1764,7 +1806,10 @@ def callTpCall (rt : Rt) (s : SlotFn) (f : Val) (args : List Val) (kw : Kw) : M 
   | .c .methodDescr =>
     match payloadOf w f with
     | some (.methodDescr o n b) =>
-      methodCheckArgs o n args kw
+      -- A stub's calling convention is not known, so what it says of keywords is not either.
+      methodCheckArgs o n args (match b with
+        | .stub _ => []
+        | _ => kw)
       callBuiltin rt b (some (args.headD .none)) (args.drop 1) kw (some o)
     | _ => gap%
   | .c .classmethodDescr =>
@@ -1789,6 +1834,15 @@ def pyCall (rt : Rt) (f : Val) (args : List Val) (kw : Kw) : M Val := do
   let tp := typeOf w f
   match slotOf w tp .tp_call with
   | none => typeErr s!"'{trunc 200 (tpName w tp)}' object is not callable"
-  | some s => callTpCall rt s f args kw
+  | some s =>
+    -- `tp_vectorcall`: a direct call of `super` or `type`, not `type.__call__`, which is
+    -- `type_call`. It is not inherited, so a subclass goes through `tp_new` and `tp_init`.
+    match f with
+    | .obj t =>
+      if t == B.super then superVectorcall rt args kw
+      else if t == B.type && args.length == 1 && !kw.isEmpty then
+        typeErr "type() takes no keyword arguments"
+      else callTpCall rt s f args kw
+    | _ => callTpCall rt s f args kw
 
 end PyLean.TypeObj
