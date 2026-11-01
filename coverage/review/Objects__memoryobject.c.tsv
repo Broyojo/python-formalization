@@ -24,14 +24,12 @@ Objects/memoryobject.c	1635	type_error_int	FAITHFUL	yes	yes	yes
 Objects/memoryobject.c	1643	value_error_int	FAITHFUL	yes	yes	yes	
 Objects/memoryobject.c	2045	unpacker_new	FAITHFUL	yes	-	-	
 Objects/memoryobject.c	2063	unpacker_free	FAITHFUL	yes	-	-	Applies for the stock struct.Struct; the Py_XDECREFs at :2066-2067 could run a finalizer only if struct.Struct is replaced.
-Objects/memoryobject.c	2075	struct_get_unpacker	HOLLOW	no	no	yes	The import failure at :2082-2084 is dropped (State.lean:383-384), though fix_struct_error_int exists to preserve it, CmpBadFormat assumes the rejection as a hypothesis, and CmpFastStruct only parses one native character.
 Objects/memoryobject.c	2168	tolist_base	FAITHFUL	yes	yes	yes	
 Objects/memoryobject.c	2195	tolist_rec	FAITHFUL	yes	yes	yes	
 Objects/memoryobject.c	2376	memory_repr	FAITHFUL	yes	yes	yes	The proposition restates the body by rfl, accepted only because the body is one flag test; the %p address is not modelled.
 Objects/memoryobject.c	2391	lookup_dimension	FAITHFUL	yes	yes	yes	Passes on the union: index-item for negative and out-of-range indices, tuple-item for dim > 0 and suboffsets.
 Objects/memoryobject.c	2538	is_multislice	FAITHFUL	yes	yes	yes	
 Objects/memoryobject.c	2557	is_multiindex	FAITHFUL	yes	yes	yes	
-Objects/memoryobject.c	2917	fix_struct_error_int	HOLLOW	yes	no	yes	CmpBadFormat states the StructError arm only, with the error as a hypothesis, and the ImportError and MemoryError arm at :2921-2924 is dead because no model path raises them.
 Objects/memoryobject.c	2974	unpack_cmp	FAITHFUL	yes	yes	yes	
 Objects/memoryobject.c	3268	_IntTupleFromSsizet	FAITHFUL	yes	yes	yes	
 Objects/memoryobject.c	3292	memory_obj_get	FAITHFUL	yes	yes	yes	

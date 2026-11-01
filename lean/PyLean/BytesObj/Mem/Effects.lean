@@ -240,22 +240,31 @@ theorem fire_held (st : St) (i : Nat) (h : i < st.mvs.length) (h0 : 0 ≤ (st.mv
     omega
   rw [if_neg this]
 
+/-- What a `sep` with `__len__` ends in: pystrhex.c takes the length first, then the type. -/
+def sepError : Ret Int → PyExc
+  | .raises e => e
+  | .wrong t => lenWrong t
+  | .val n =>
+    if n < 0 then .valueError "__len__() should return >= 0"
+    else if n ≠ 1 then .valueError "sep must be length 1."
+    else .typeError "sep must be str or bytes."
+
 /-- `sep` with `__len__` is never a separator: every outcome is an error, after the callback. -/
 theorem strhexWithSepM_len (arg : M (List Nat)) (r : Ret Int) (rel : Option Nat) (bps : Int) (s s' : St)
     (hf : fire rel s = (.ok (), s')) :
-    ∃ e, strhexWithSepM arg (some (.lenLike r rel)) bps s = (.error e, s') := by
+    strhexWithSepM arg (some (.lenLike r rel)) bps s = (.error (sepError r), s') := by
   unfold strhexWithSepM
   simp only [M.bind_app, hf]
   cases r with
-  | raises e => exact ⟨e, rfl⟩
-  | wrong t => exact ⟨lenWrong t, rfl⟩
+  | raises e => rfl
+  | wrong t => rfl
   | val n =>
-    simp only [Ret.get_val]
+    simp only [Ret.get_val, sepError]
     by_cases h1 : n < 0
-    · exact ⟨.valueError "__len__() should return >= 0", by simp [h1, M.bind_app, M.throw_app]⟩
+    · simp [h1, M.bind_app, M.throw_app]
     · by_cases h2 : n = 1
-      · exact ⟨.typeError "sep must be str or bytes.", by simp [h1, h2, M.bind_app, M.throw_app, M.pure_app]⟩
-      · exact ⟨.valueError "sep must be length 1.", by simp [h1, h2, M.bind_app, M.throw_app, M.pure_app]⟩
+      · simp [h1, h2, M.bind_app, M.throw_app, M.pure_app]
+      · simp [h1, h2, M.bind_app, M.throw_app, M.pure_app]
 
 /-- `memoryview_hex_impl`, :2337-2373, with a `sep` whose `__len__` calls `self.release()`.
 `hex` raises in every case. A contiguous view hexes its own memory, so it holds an export over
@@ -268,25 +277,25 @@ def HexHoldsExport : Prop :=
     baseInaccessible st self = false → 0 ≤ (st.mv self).exports →
     let v := (st.mv self).view
     let out := memoryviewHex self (some (.lenLike r (some self))) bps st
-    ((st.mv self).flags.isC = true → (∃ e, out.1 = .error e) ∧ out.2.mv self = (st.mv self)) ∧
+    ((st.mv self).flags.isC = true → out.1 = .error (sepError r) ∧ out.2.mv self = (st.mv self)) ∧
     ((st.mv self).flags.isC = false → (st.mv self).exports = 0 →
       ∀ b, pyBufferToContiguous st.mem v v.len 'C' = .ok b →
-      (∃ e, out.1 = .error e) ∧ (out.2.mv self).flags.released = true)
+      out.1 = .error (sepError r) ∧ (out.2.mv self).flags.released = true)
 
 theorem hexHoldsExport_proven : HexHoldsExport := by
   intro st self r bps hv hl h0
   dsimp only
   refine ⟨fun hC => ?_, fun hC h00 b hb => ?_⟩
-  · obtain ⟨e, he⟩ := strhexWithSepM_len
+  · have he := strhexWithSepM_len
       (fun s => (.ok (rdBytes s.mem (st.mv self).view.buf (st.mv self).view.len.toNat), s)) r (some self) bps
       (st.setMv self { st.mv self with exports := (st.mv self).exports + 1 }) _
       (fire_held st self hv h0 _ rfl)
     have hw := withExport_same self _ st hv he
-    have hx : memoryviewHex self (some (.lenLike r (some self))) bps st = (.error e, st) := by
+    have hx : memoryviewHex self (some (.lenLike r (some self))) bps st = (.error (sepError r), st) := by
       simp only [memoryviewHex, M.bind_app, checkReleased_ok _ _ hl, M.get, hC, ↓reduceIte, M.pure_app]
       rw [hw]
     rw [hx]
-    exact ⟨⟨e, rfl⟩, rfl⟩
+    exact ⟨rfl, rfl⟩
   · obtain ⟨s, hs⟩ : ∃ s, fire (some self) st = (.ok (), s) := fire_ok _ _
     have hs' : s = (memoryRelease self st).2 := by
       have : fire (some self) st = memoryRelease self st := by
@@ -294,13 +303,13 @@ theorem hexHoldsExport_proven : HexHoldsExport := by
         rw [if_pos (show getExports st self = 0 from h00)]
       rw [this] at hs
       rw [hs]
-    obtain ⟨e, he⟩ := strhexWithSepM_len (pure b) r (some self) bps st s hs
-    have hx : memoryviewHex self (some (.lenLike r (some self))) bps st = (.error e, s) := by
+    have he := strhexWithSepM_len (pure b) r (some self) bps st s hs
+    have hx : memoryviewHex self (some (.lenLike r (some self))) bps st = (.error (sepError r), s) := by
       simp only [memoryviewHex, M.bind_app, checkReleased_ok _ _ hl, M.get, hC, Bool.false_eq_true,
         ↓reduceIte, M.lift, hb]
       exact he
     rw [hx, hs']
-    exact ⟨⟨e, rfl⟩, memoryRelease_released self st hv⟩
+    exact ⟨rfl, memoryRelease_released self st hv⟩
 
 /-- What `memory_hash` checks before it asks the exporter for a hash, :3217-3227. -/
 structure HashGuards (st : St) (i : Nat) : Prop where
@@ -517,7 +526,7 @@ def CompareReleases : Prop :=
   ∀ (st : St) (v t : Nat) (b : Buf), baseInaccessible st v = false → b.ndim ≤ 64 → b.hook = some t →
     t < st.mvs.length → (st.mv t).exports = 0 →
     let r := memoryRichEqual v (.exporter (.val b) none) st
-    r.1 = some <$> compareBufs st.mem (st.mv v).view b ∧ (r.2.mv t).flags.released = true
+    r.1 = some <$> compareBufs st.mem st.noStruct (st.mv v).view b ∧ (r.2.mv t).flags.released = true
 
 theorem compareReleases_proven : CompareReleases := by
   intro st v t b hl hn hh ht h0
@@ -532,14 +541,14 @@ theorem compareReleases_proven : CompareReleases := by
   have hrel := pyBufferRelease_hook b t st hh ht h0
   have hok := pyBufferRelease_ok b st
   have e : memoryRichEqual v (.exporter (.val b) none) st =
-      (some <$> compareBufs st.mem (st.mv v).view b, (pyBufferRelease b st).2) := by
+      (some <$> compareBufs st.mem st.noStruct (st.mv v).view b, (pyBufferRelease b st).2) := by
     simp only [memoryRichEqual, M.bind_app, M.get, hl, Bool.false_eq_true, ↓reduceIte, tc]
     rcases hr : pyBufferRelease b st with ⟨r0, s⟩
     rw [hr] at hok
     simp only at hok
     subst hok
     simp only [M.lift, M.pure_app]
-    cases compareBufs st.mem (st.mv v).view b <;> rfl
+    cases compareBufs st.mem st.noStruct (st.mv v).view b <;> rfl
   dsimp only
   rw [e]
   exact ⟨rfl, hrel⟩
