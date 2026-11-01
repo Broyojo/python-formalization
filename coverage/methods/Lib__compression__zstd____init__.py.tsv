@@ -5,7 +5,7 @@ Lib/compression/zstd/__init__.py	57	58	FrameInfo.__setattr__	__setattr__(self, n
 Lib/compression/zstd/__init__.py	61	76	get_frame_info	get_frame_info(frame_buffer)	todo		
 Lib/compression/zstd/__init__.py	79	97	train_dict	train_dict(samples, dict_size)	todo		
 Lib/compression/zstd/__init__.py	100	135	finalize_dict	finalize_dict(zstd_dict, /, samples, dict_size, level)	todo		
-Lib/compression/zstd/__init__.py	138	151	compress	compress(data, level=None, options=None, zstd_dict=None)	todo		
+Lib/compression/zstd/__init__.py	138	151	compress	compress(data, level=None, options=None, zstd_dict=None)	todo		candidates:itertools-simple-doc-agree
 Lib/compression/zstd/__init__.py	154	174	decompress	decompress(data, zstd_dict=None, options=None)	todo		
 Lib/compression/zstd/__init__.py	203	208	CompressionParameter.bounds	bounds(self)	todo		
 Lib/compression/zstd/__init__.py	216	221	DecompressionParameter.bounds	bounds(self)	todo		
