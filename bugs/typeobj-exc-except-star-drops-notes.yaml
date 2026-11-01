@@ -81,6 +81,8 @@ duplicates:
   queries: ["add_note except*", "__notes__ except*", "notes exception group reraise", "is_same_exception_metadata",
             "except* note lost", "PrepReraiseStar notes", "except* add_note reraise note lost",
             "bugforge-results/README.md: no exceptions.c entries"]
+  searched_again: "2026-11-01, as separate words; multi-word entries in `queries` above were exact phrases, so their empty results are weak evidence"
+  queries_as_words: ["except star notes lost", "add_note except reraise", "exception group notes reraise", "is_same_exception_metadata", "add_note", "__notes__ except", "__notes__ ExceptionGroup", "PrepReraiseStar"]
 lean:
   property: PyLean.TypeObj.SameMetadataComparesNotes
   theorem: PyLean.TypeObj.sameMetadataComparesNotes_refuted

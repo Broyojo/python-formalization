@@ -74,6 +74,10 @@ duplicates:
   queries: ["exception group split suppress_context", "suppress_context subgroup", "except* __context__ traceback",
             "ExceptionGroup __suppress_context__ split", "except* __suppress_context__",
             "bugforge-results/README.md: no exceptions.c entries"]
+  searched_again: "2026-11-01, as separate words; multi-word entries in `queries` above were exact phrases, so their empty results are weak evidence"
+  queries_as_words: ["exception group split suppress_context", "subgroup __suppress_context__", "except star traceback context hidden", "__suppress_context__ ExceptionGroup", "ExceptionGroup __context__ split", "suppress_context derive"]
+  related:
+    - {number: 99619, state: closed, relation: "related, not a duplicate: a doc fix saying derive does not copy __cause__ and friends; split uses exceptiongroup_subset instead"}
 lean:
   property: PyLean.TypeObj.SubsetCopiesSuppressContext
   theorem: PyLean.TypeObj.subsetCopiesSuppressContext_refuted

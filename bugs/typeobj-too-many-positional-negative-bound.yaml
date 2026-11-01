@@ -48,6 +48,8 @@ duplicates:
   issues: []
   queries: ["__defaults__ longer than positional arguments takes from"]
   bugforge: "no match"
+  searched_again: "2026-11-01, as separate words; multi-word entries in `queries` above were exact phrases, so their empty results are weak evidence"
+  queries_as_words: ["takes from positional arguments negative", "too_many_positional", "positional arguments keyword-only defaults error message wrong count"]
 lean:
   property: PyLean.TypeObj.TooManyPositionalBound
   theorem: PyLean.TypeObj.tooManyPositionalBound_refuted

@@ -60,6 +60,10 @@ duplicates:
   issues: []
   queries: ["property subclass doc setter", "property subclass __doc__ lost getter"]
   bugforge: "no match"
+  searched_again: "2026-11-01, as separate words; multi-word entries in `queries` above were exact phrases, so their empty results are weak evidence"
+  queries_as_words: ["property subclass doc setter", "property subclass __doc__ lost", "property getter setter docstring subclass", "property_copy doc"]
+  related:
+    - {number: 50140, state: closed, relation: "related, not a duplicate: 2009 fix for the auto __doc__ of property subclasses, the code path this finding sits on"}
 lean:
   property: PyLean.TypeObj.PropertyCopyKeepsDoc
   theorem: PyLean.TypeObj.propertyCopyKeepsDoc_refuted

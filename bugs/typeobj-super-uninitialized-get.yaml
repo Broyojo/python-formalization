@@ -60,6 +60,8 @@ duplicates:
     - {number: 155379, state: open, relation: "gh-155376: prevent supercheck NULL dereference"}
   queries: ["super __new__ segfault", "uninitialized super object crash", "supercheck NULL",
             "super_descr_get", "PR: supercheck", "bugforge-results/README.md: no match for super"]
+  searched_again: "2026-11-01, as separate words; multi-word entries in `queries` above were exact phrases, so their empty results are weak evidence"
+  queries_as_words: ["super uninitialized"]
 lean:
   property: PyLean.TypeObj.SuperBindHasType
   theorem: PyLean.TypeObj.superBindHasType_refuted

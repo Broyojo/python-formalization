@@ -60,6 +60,8 @@ duplicates:
   queries: ["MemoryError freelist suppress_context", "MemoryError suppress_context", "MemoryError __new__ args freelist",
             "get_memory_error", "MemoryError __suppress_context__", "MemoryError freelist",
             "bugforge-results/README.md: no exceptions.c entries"]
+  searched_again: "2026-11-01, as separate words; multi-word entries in `queries` above were exact phrases, so their empty results are weak evidence"
+  queries_as_words: ["MemoryError freelist suppress_context", "MemoryError __new__ args"]
 lean:
   property: PyLean.TypeObj.MemoryErrorFreelistFresh
   theorem: PyLean.TypeObj.memoryErrorFreelistFresh_refuted

@@ -81,6 +81,11 @@ duplicates:
   issues: []
   queries: ["in-place multiply sequence __imul__ fallback", "PyNumber_InPlaceMultiply"]
   bugforge: "no match for imul or InPlaceMultiply"
+  searched_again: "2026-11-01, as separate words; multi-word entries in `queries` above were exact phrases, so their empty results are weak evidence"
+  queries_as_words: ["imul sequence repeat", "inplace multiply sequence TypeError", "*= sequence __index__", "PyNumber_InPlaceMultiply", "sq_repeat inplace multiply subclass int"]
+  related:
+    - {number: 55686, state: open, relation: "possibly related by title (operand precedence for C sequences); thread not read"}
+    - {number: 36723, state: closed, relation: "not a duplicate: 2002 report of a user __imul__ with a float operand"}
 lean:
   property: PyLean.TypeObj.InPlaceMultiplyMatchesMultiply
   theorem: PyLean.TypeObj.inPlaceMultiplyMatchesMultiply_refuted
