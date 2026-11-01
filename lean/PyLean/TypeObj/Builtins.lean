@@ -83,6 +83,10 @@ def methodOf (tn n : String) : Builtin :=
   | "list", "__getitem__" | "dict", "__getitem__" => .dunderGetitem
   | "dict", "__contains__" => .dunderContains
   | "dict", "keys" => .dictKeysMethod
+  | "int", "__getnewargs__" | "str", "__getnewargs__" | "tuple", "__getnewargs__" => .getnewargs
+  -- `ellipsis_reduce` and `notimplemented_reduce`, `Objects/sliceobject.c`, `Objects/object.c`.
+  | "ellipsis", "__reduce__" => .reduceName "Ellipsis"
+  | "NotImplementedType", "__reduce__" => .reduceName "NotImplemented"
   | "iterator", "__length_hint__" | "list_iterator", "__length_hint__"
   | "tuple_iterator", "__length_hint__" | "str_ascii_iterator", "__length_hint__"
   | "dict_keyiterator", "__length_hint__" => .iterLengthHint
@@ -165,7 +169,7 @@ def fillRow (r : BuiltinRow) : M Unit := do
       | .stat =>
         let f ← alloc B.builtinFn (.builtin (methodOf r.name n) (some (.obj t)))
         alloc B.staticmethod (.staticmethod f)
-      | .doc => pure (.str "")
+      | .docStr s => pure (.str s)
       | .other => pure (.str "")
       | .g c => alloc B.getsetDescr (.getsetDescr t n c)
       | .mem ro => alloc B.memberDescr (.memberDescr t n ro)
@@ -216,6 +220,7 @@ def initialState : World × NameDict :=
       if r.name == "NoneType" || r.name == "ellipsis" then none else some (r.name, Val.obj r.addr)
     -- `INIT_ALIAS`, `Objects/exceptions.c:4545`.
     env := NameDict.set (NameDict.set env "EnvironmentError" (.obj B.OSError)) "IOError" (.obj B.OSError)
+    env := NameDict.set (NameDict.set env "NotImplemented" .notImpl) "Ellipsis" .ellipsis
     for (n, b) in builtinFunctions do
       let f ← alloc B.builtinFn (.builtin b none)
       env := NameDict.set env n f

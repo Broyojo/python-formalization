@@ -170,7 +170,7 @@ def entriesComplex : List Entry := [
     statement := "+z and z.__complex__() return z itself for an exact complex, and an exact complex with the same value for a subclass instance."
     source := "complex.__complex__ docstring (\"Convert this value to exact type complex.\")"
     status := .proven, prop := ``PosAndComplexIdentity, thm := some ``posAndComplexIdentity_proven },
-  { id := "complex-bool", pyFile := complexFile
+  { id := "longobj-complex-bool", pyFile := complexFile
     pyFns := []
     statement := "bool(z) is false exactly when both parts compare equal to zero, so a NaN part is truthy."
     source := "invariant"

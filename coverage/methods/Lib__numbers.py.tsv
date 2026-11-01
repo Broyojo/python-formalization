@@ -1,57 +1,57 @@
 file	line	endline	name	signature	status	entry	note
-Lib/numbers.py	71	72	Complex.__complex__	__complex__(self)	modelled	misc-numbers-abstract-stubs	
+Lib/numbers.py	71	72	Complex.__complex__	__complex__(self)	todo		withdrawn: constant NotImplementedError stubs
 Lib/numbers.py	74	76	Complex.__bool__	__bool__(self)	modelled	misc-numbers-bool	
-Lib/numbers.py	80	85	Complex.real	real(self)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	89	94	Complex.imag	imag(self)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	97	99	Complex.__add__	__add__(self, other)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	102	104	Complex.__radd__	__radd__(self, other)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	107	109	Complex.__neg__	__neg__(self)	modelled	misc-numbers-abstract-stubs,misc-numbers-mixin-over-stub	
-Lib/numbers.py	112	114	Complex.__pos__	__pos__(self)	modelled	misc-numbers-abstract-stubs	
+Lib/numbers.py	80	85	Complex.real	real(self)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	89	94	Complex.imag	imag(self)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	97	99	Complex.__add__	__add__(self, other)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	102	104	Complex.__radd__	__radd__(self, other)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	107	109	Complex.__neg__	__neg__(self)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	112	114	Complex.__pos__	__pos__(self)	todo		withdrawn: constant NotImplementedError stubs
 Lib/numbers.py	116	118	Complex.__sub__	__sub__(self, other)	modelled	misc-numbers-mixin-over-stub,misc-numbers-sub-neg-first,misc-numbers-sub-rsub	
 Lib/numbers.py	120	122	Complex.__rsub__	__rsub__(self, other)	modelled	misc-numbers-mixin-over-stub,misc-numbers-sub-neg-first,misc-numbers-sub-rsub	
-Lib/numbers.py	125	127	Complex.__mul__	__mul__(self, other)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	130	132	Complex.__rmul__	__rmul__(self, other)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	135	137	Complex.__truediv__	__truediv__(self, other)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	140	142	Complex.__rtruediv__	__rtruediv__(self, other)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	145	147	Complex.__pow__	__pow__(self, exponent)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	150	152	Complex.__rpow__	__rpow__(self, base)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	155	157	Complex.__abs__	__abs__(self)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	160	162	Complex.conjugate	conjugate(self)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	165	167	Complex.__eq__	__eq__(self, other)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	184	188	Real.__float__	__float__(self)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	191	201	Real.__trunc__	__trunc__(self)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	204	206	Real.__floor__	__floor__(self)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	209	211	Real.__ceil__	__ceil__(self)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	214	220	Real.__round__	__round__(self, ndigits=None)	modelled	misc-numbers-abstract-stubs	
+Lib/numbers.py	125	127	Complex.__mul__	__mul__(self, other)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	130	132	Complex.__rmul__	__rmul__(self, other)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	135	137	Complex.__truediv__	__truediv__(self, other)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	140	142	Complex.__rtruediv__	__rtruediv__(self, other)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	145	147	Complex.__pow__	__pow__(self, exponent)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	150	152	Complex.__rpow__	__rpow__(self, base)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	155	157	Complex.__abs__	__abs__(self)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	160	162	Complex.conjugate	conjugate(self)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	165	167	Complex.__eq__	__eq__(self, other)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	184	188	Real.__float__	__float__(self)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	191	201	Real.__trunc__	__trunc__(self)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	204	206	Real.__floor__	__floor__(self)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	209	211	Real.__ceil__	__ceil__(self)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	214	220	Real.__round__	__round__(self, ndigits=None)	todo		withdrawn: constant NotImplementedError stubs
 Lib/numbers.py	222	228	Real.__divmod__	__divmod__(self, other)	modelled	misc-numbers-divmod,misc-numbers-divmod-euclid	
 Lib/numbers.py	230	236	Real.__rdivmod__	__rdivmod__(self, other)	modelled	misc-numbers-divmod	
-Lib/numbers.py	239	241	Real.__floordiv__	__floordiv__(self, other)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	244	246	Real.__rfloordiv__	__rfloordiv__(self, other)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	249	251	Real.__mod__	__mod__(self, other)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	254	256	Real.__rmod__	__rmod__(self, other)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	259	263	Real.__lt__	__lt__(self, other)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	266	268	Real.__le__	__le__(self, other)	modelled	misc-numbers-abstract-stubs	
+Lib/numbers.py	239	241	Real.__floordiv__	__floordiv__(self, other)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	244	246	Real.__rfloordiv__	__rfloordiv__(self, other)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	249	251	Real.__mod__	__mod__(self, other)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	254	256	Real.__rmod__	__rmod__(self, other)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	259	263	Real.__lt__	__lt__(self, other)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	266	268	Real.__le__	__le__(self, other)	todo		withdrawn: constant NotImplementedError stubs
 Lib/numbers.py	271	273	Real.__complex__	__complex__(self)	modelled	misc-numbers-real-components	
 Lib/numbers.py	276	278	Real.real	real(self)	modelled	misc-numbers-real-components	
 Lib/numbers.py	281	283	Real.imag	imag(self)	modelled	misc-numbers-real-components	
 Lib/numbers.py	285	287	Real.conjugate	conjugate(self)	modelled	misc-numbers-real-components	
-Lib/numbers.py	303	305	Rational.numerator	numerator(self)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	309	314	Rational.denominator	denominator(self)	modelled	misc-numbers-abstract-stubs	
+Lib/numbers.py	303	305	Rational.numerator	numerator(self)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	309	314	Rational.denominator	denominator(self)	todo		withdrawn: constant NotImplementedError stubs
 Lib/numbers.py	317	325	Rational.__float__	__float__(self)	modelled	misc-numbers-integral-rational	
-Lib/numbers.py	338	340	Integral.__int__	__int__(self)	modelled	misc-numbers-abstract-stubs	
+Lib/numbers.py	338	340	Integral.__int__	__int__(self)	todo		withdrawn: constant NotImplementedError stubs
 Lib/numbers.py	342	344	Integral.__index__	__index__(self)	modelled	misc-numbers-integral-rational	
-Lib/numbers.py	347	355	Integral.__pow__	__pow__(self, exponent, modulus=None)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	358	360	Integral.__lshift__	__lshift__(self, other)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	363	365	Integral.__rlshift__	__rlshift__(self, other)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	368	370	Integral.__rshift__	__rshift__(self, other)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	373	375	Integral.__rrshift__	__rrshift__(self, other)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	378	380	Integral.__and__	__and__(self, other)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	383	385	Integral.__rand__	__rand__(self, other)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	388	390	Integral.__xor__	__xor__(self, other)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	393	395	Integral.__rxor__	__rxor__(self, other)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	398	400	Integral.__or__	__or__(self, other)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	403	405	Integral.__ror__	__ror__(self, other)	modelled	misc-numbers-abstract-stubs	
-Lib/numbers.py	408	410	Integral.__invert__	__invert__(self)	modelled	misc-numbers-abstract-stubs	
+Lib/numbers.py	347	355	Integral.__pow__	__pow__(self, exponent, modulus=None)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	358	360	Integral.__lshift__	__lshift__(self, other)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	363	365	Integral.__rlshift__	__rlshift__(self, other)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	368	370	Integral.__rshift__	__rshift__(self, other)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	373	375	Integral.__rrshift__	__rrshift__(self, other)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	378	380	Integral.__and__	__and__(self, other)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	383	385	Integral.__rand__	__rand__(self, other)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	388	390	Integral.__xor__	__xor__(self, other)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	393	395	Integral.__rxor__	__rxor__(self, other)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	398	400	Integral.__or__	__or__(self, other)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	403	405	Integral.__ror__	__ror__(self, other)	todo		withdrawn: constant NotImplementedError stubs
+Lib/numbers.py	408	410	Integral.__invert__	__invert__(self)	todo		withdrawn: constant NotImplementedError stubs
 Lib/numbers.py	413	415	Integral.__float__	__float__(self)	modelled	misc-numbers-integral-rational	
 Lib/numbers.py	418	420	Integral.numerator	numerator(self)	modelled	misc-numbers-integral-rational	
 Lib/numbers.py	423	425	Integral.denominator	denominator(self)	modelled	misc-numbers-integral-rational	

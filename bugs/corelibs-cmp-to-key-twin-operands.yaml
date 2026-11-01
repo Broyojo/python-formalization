@@ -1,0 +1,60 @@
+id: corelibs-cmp-to-key-twin-operands
+title: "cmp_to_key twins differ on a right operand with .obj, and on != when mycmp returns an object"
+priority: P4
+kind: twin-mismatch
+module: corelibs
+files: [Lib/functools.py, Modules/_functoolsmodule.c]
+functions: ["cmp_to_key", "keyobject_richcompare"]
+summary: |
+  The pure-Python K reads `other.obj` from whatever `other` is, so K(1) < Duck() works for any object with an
+  obj attribute. keyobject_richcompare tests the exact type first and raises TypeError "other argument must be
+  K instance". Separately, Python's K has no __ne__, so `!=` is object.__ne__, the negation of the truth of
+  __eq__, while C runs `res != 0` itself. With a mycmp returning an object whose __ne__ differs from the
+  negation of __eq__, the two give different values.
+likelihood: |
+  Very low. A key object is compared with key objects, from sorted and friends. mycmp returning a non-number
+  is off the documented contract, though "a negative number" admits Fraction and Decimal, which are lawful.
+maybe_intended: |
+  Practically yes for the first, which is the usual duck-typing gap between a pure and a C twin; a maintainer
+  would keep it. The second needs an unlawful result object. Recorded because they are real twin differences
+  and the review asked for them; not worth a report of its own.
+reproducer: |
+  import functools
+  from test.support import import_helper
+  py = import_helper.import_fresh_module('functools', blocked=['_functools'])
+  def cmp(a, b):
+      return a - b
+  class Duck:
+      obj = 5
+  def lt(m):
+      try:
+          return m.cmp_to_key(cmp)(1) < Duck()
+      except TypeError as e:
+          return 'TypeError'
+  class Res:
+      def __eq__(self, o):
+          return False
+      def __ne__(self, o):
+          return 'ne'
+  def ne(m):
+      K = m.cmp_to_key(lambda a, b: Res())
+      return K(1) != K(2)
+  print('C:', lt(functools), ne(functools), 'Python:', lt(py), ne(py))
+  if lt(functools) == 'TypeError' and lt(py) is True and ne(functools) == 'ne' and ne(py) is True:
+      print('REPRODUCED corelibs-cmp-to-key-twin-operands')
+expected: |
+  The same outcome in both twins.
+observed: |
+  python3 3.14.7: C: TypeError ne, Python: True True. REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+promised_by: |
+  Nothing explicit: the docs only say the key must compare with other keys.
+cause: |
+  Lib/functools.py:212-221 against Modules/_functoolsmodule.c:917-924 and :937.
+possible_fix: |
+  None needed.
+duplicates:
+  issues: []
+  queries: ["gh search issues cmp_to_key", "bugforge README: no match for cmp_to_key"]
+lean:
+  property: PyLean.CoreLibs.Functools.CmpToKeyTwinsOnDuck
+  theorem: PyLean.CoreLibs.Functools.cmpToKeyTwinsOnDuck_refuted

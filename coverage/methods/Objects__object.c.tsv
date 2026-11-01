@@ -45,47 +45,47 @@ Objects/object.c	696	698	_Py_BreakPoint	_Py_BreakPoint(void)	excluded		test-supp
 Objects/object.c	708	714	_PyObject_IsFreed	_PyObject_IsFreed(PyObject *op)	excluded		test-support: debug-build diagnostic, not reachable from Python
 Objects/object.c	719	754	_PyObject_Dump	_PyObject_Dump(PyObject* op)	excluded		test-support: debug-build diagnostic, not reachable from Python
 Objects/object.c	757	796	PyObject_Repr	PyObject_Repr(PyObject *v)	modelled	typeobj-repr-str-result	
-Objects/object.c	799	840	PyObject_Str	PyObject_Str(PyObject *v)	modelled	typeobj-str-exact,typeobj-str-result	
+Objects/object.c	799	840	PyObject_Str	PyObject_Str(PyObject *v)	modelled	typeobj-str-result	
 Objects/object.c	843	867	PyObject_ASCII	PyObject_ASCII(PyObject *v)	todo		
 Objects/object.c	870	899	PyObject_Bytes	PyObject_Bytes(PyObject *v)	todo		
 Objects/object.c	902	914	clear_freelist	clear_freelist(struct _Py_freelist *freelist, int is_finalization, freefunc dofree)	excluded		no-behaviour: object allocator or free list
 Objects/object.c	917	923	free_object	free_object(void *obj)	excluded		no-behaviour: object allocator or free list
 Objects/object.c	926	956	_PyObject_ClearFreeLists	_PyObject_ClearFreeLists(struct _Py_freelists *freelists, int is_finalization)	excluded		no-behaviour: object allocator or free list
 Objects/object.c	959	1006	_PyObject_FunctionStr	def _PyObject_FunctionStr(x): try: qualname = x.__qualname__ except AttributeError: return str(x) try: mod = x.__module__ if mod is not None and mod != 'builtins': return f\"{x.__module__}.{qualname}()\" except AttributeError: pass return qualname */ PyObject * _PyObject_FunctionStr(PyObject *x)	todo		
-Objects/object.c	1046	1091	do_richcompare	do_richcompare(PyThreadState *tstate, PyObject *v, PyObject *w, int op)	modelled	typeobj-richcompare-defaults,typeobj-richcompare-left-first,typeobj-richcompare-subclass-first,typeobj-swapped-op	
+Objects/object.c	1046	1091	do_richcompare	do_richcompare(PyThreadState *tstate, PyObject *v, PyObject *w, int op)	modelled	typeobj-richcompare-defaults,typeobj-richcompare-left-first,typeobj-richcompare-subclass-first	
 Objects/object.c	1097	1114	PyObject_RichCompare	PyObject_RichCompare(PyObject *v, PyObject *w, int op)	modelled	typeobj-richcompare-subclass-first	
 Objects/object.c	1119	1142	PyObject_RichCompareBool	PyObject_RichCompareBool(PyObject *v, PyObject *w, int op)	modelled	typeobj-richcomparebool-identity	
-Objects/object.c	1145	1150	PyObject_HashNotImplemented	PyObject_HashNotImplemented(PyObject *v)	modelled	typeobj-slot-hash-none	
-Objects/object.c	1153	1171	PyObject_Hash	PyObject_Hash(PyObject *v)	modelled	typeobj-hash-no-slot	
-Objects/object.c	1174	1186	PyObject_GetAttrString	PyObject_GetAttrString(PyObject *v, const char *name)	modelled	typeobj-attr-string-forms	
-Objects/object.c	1189	1195	PyObject_HasAttrStringWithError	PyObject_HasAttrStringWithError(PyObject *obj, const char *name)	modelled	typeobj-hasattr	
-Objects/object.c	1199	1210	PyObject_HasAttrString	PyObject_HasAttrString(PyObject *obj, const char *name)	modelled	typeobj-hasattr	
-Objects/object.c	1213	1226	PyObject_SetAttrString	PyObject_SetAttrString(PyObject *v, const char *name, PyObject *w)	modelled	typeobj-attr-string-forms	
-Objects/object.c	1229	1232	PyObject_DelAttrString	PyObject_DelAttrString(PyObject *v, const char *name)	modelled	typeobj-attr-string-forms	
+Objects/object.c	1145	1150	PyObject_HashNotImplemented	PyObject_HashNotImplemented(PyObject *v)	todo		
+Objects/object.c	1153	1171	PyObject_Hash	PyObject_Hash(PyObject *v)	todo		
+Objects/object.c	1174	1186	PyObject_GetAttrString	PyObject_GetAttrString(PyObject *v, const char *name)	todo		
+Objects/object.c	1189	1195	PyObject_HasAttrStringWithError	PyObject_HasAttrStringWithError(PyObject *obj, const char *name)	todo		
+Objects/object.c	1199	1210	PyObject_HasAttrString	PyObject_HasAttrString(PyObject *obj, const char *name)	todo		
+Objects/object.c	1213	1226	PyObject_SetAttrString	PyObject_SetAttrString(PyObject *v, const char *name, PyObject *w)	todo		
+Objects/object.c	1229	1232	PyObject_DelAttrString	PyObject_DelAttrString(PyObject *v, const char *name)	todo		
 Objects/object.c	1235	1249	_PyObject_IsAbstract	_PyObject_IsAbstract(PyObject *obj)	todo		
 Objects/object.c	1252	1260	_PyObject_GetAttrId	_PyObject_GetAttrId(PyObject *v, _Py_Identifier *name)	todo		
-Objects/object.c	1263	1287	_PyObject_SetAttributeErrorContext	_PyObject_SetAttributeErrorContext(PyObject* v, PyObject* name)	modelled	typeobj-attr-context	
+Objects/object.c	1263	1287	_PyObject_SetAttributeErrorContext	_PyObject_SetAttributeErrorContext(PyObject* v, PyObject* name)	todo		
 Objects/object.c	1290	1321	PyObject_GetAttr	PyObject_GetAttr(PyObject *v, PyObject *name)	modelled	typeobj-optional-attr-agrees	
-Objects/object.c	1324	1389	PyObject_GetOptionalAttr	PyObject_GetOptionalAttr(PyObject *v, PyObject *name, PyObject **result)	modelled	typeobj-class-getitem,typeobj-optional-attr-agrees	
-Objects/object.c	1392	1414	PyObject_GetOptionalAttrString	PyObject_GetOptionalAttrString(PyObject *obj, const char *name, PyObject **result)	modelled	typeobj-attr-string-forms	
-Objects/object.c	1417	1423	PyObject_HasAttrWithError	PyObject_HasAttrWithError(PyObject *obj, PyObject *name)	modelled	typeobj-hasattr	
-Objects/object.c	1426	1437	PyObject_HasAttr	PyObject_HasAttr(PyObject *obj, PyObject *name)	modelled	typeobj-hasattr	
-Objects/object.c	1440	1487	PyObject_SetAttr	PyObject_SetAttr(PyObject *v, PyObject *name, PyObject *value)	modelled	typeobj-setattr-no-slot	
-Objects/object.c	1490	1493	PyObject_DelAttr	PyObject_DelAttr(PyObject *v, PyObject *name)	modelled	typeobj-attr-string-forms	
+Objects/object.c	1324	1389	PyObject_GetOptionalAttr	PyObject_GetOptionalAttr(PyObject *v, PyObject *name, PyObject **result)	modelled	typeobj-optional-attr-agrees	
+Objects/object.c	1392	1414	PyObject_GetOptionalAttrString	PyObject_GetOptionalAttrString(PyObject *obj, const char *name, PyObject **result)	todo		
+Objects/object.c	1417	1423	PyObject_HasAttrWithError	PyObject_HasAttrWithError(PyObject *obj, PyObject *name)	todo		
+Objects/object.c	1426	1437	PyObject_HasAttr	PyObject_HasAttr(PyObject *obj, PyObject *name)	todo		
+Objects/object.c	1440	1487	PyObject_SetAttr	PyObject_SetAttr(PyObject *v, PyObject *name, PyObject *value)	todo		
+Objects/object.c	1490	1493	PyObject_DelAttr	PyObject_DelAttr(PyObject *v, PyObject *name)	todo		
 Objects/object.c	1496	1521	_PyObject_ComputedDictPointer	_PyObject_ComputedDictPointer(PyObject *obj)	todo		
 Objects/object.c	1531	1545	_PyObject_GetDictPtr	_PyObject_GetDictPtr(PyObject *obj)	modelled	typeobj-getattr-instance-dict	
 Objects/object.c	1548	1551	PyObject_SelfIter	PyObject_SelfIter(PyObject *obj)	todo		
-Objects/object.c	1559	1565	_PyObject_NextNotImplemented	_PyObject_NextNotImplemented(PyObject *self)	modelled	typeobj-iter-check	
+Objects/object.c	1559	1565	_PyObject_NextNotImplemented	_PyObject_NextNotImplemented(PyObject *self)	todo		
 Objects/object.c	1579	1668	_PyObject_GetMethod	_PyObject_GetMethod(PyObject *obj, PyObject *name, PyObject **method)	modelled	typeobj-get-method	
 Objects/object.c	1679	1804	_PyObject_GetMethodStackRef	_PyObject_GetMethodStackRef(PyThreadState *ts, _PyStackRef *self, PyObject *name, _PyStackRef *method)	modelled	typeobj-get-method	
 Objects/object.c	1809	1929	_PyObject_GenericGetAttrWithDict	_PyObject_GenericGetAttrWithDict(PyObject *obj, PyObject *name, PyObject *dict, int suppress)	modelled	typeobj-getattr-class-attr,typeobj-getattr-data-descr,typeobj-getattr-instance-dict,typeobj-getattr-nondata-descr,typeobj-getattr-suppress	
-Objects/object.c	1932	1935	PyObject_GenericGetAttr	PyObject_GenericGetAttr(PyObject *obj, PyObject *name)	modelled	typeobj-getattr-data-descr,typeobj-getattr-instance-dict	
-Objects/object.c	1938	2037	_PyObject_GenericSetAttrWithDict	_PyObject_GenericSetAttrWithDict(PyObject *obj, PyObject *name, PyObject *value, PyObject *dict)	modelled	typeobj-setattr-descr	
-Objects/object.c	2040	2043	PyObject_GenericSetAttr	PyObject_GenericSetAttr(PyObject *obj, PyObject *name, PyObject *value)	modelled	typeobj-setattr-descr	
-Objects/object.c	2046	2053	PyObject_GenericSetDict	PyObject_GenericSetDict(PyObject *obj, PyObject *value, void *context)	modelled	typeobj-setdict	
-Objects/object.c	2060	2082	PyObject_IsTrue	PyObject_IsTrue(PyObject *v)	modelled	typeobj-istrue-default,typeobj-istrue-len,typeobj-istrue-singletons	
-Objects/object.c	2088	2095	PyObject_Not	PyObject_Not(PyObject *v)	modelled	typeobj-istrue-singletons,typeobj-not	
-Objects/object.c	2100	2105	PyCallable_Check	PyCallable_Check(PyObject *x)	modelled	typeobj-callable	
+Objects/object.c	1932	1935	PyObject_GenericGetAttr	PyObject_GenericGetAttr(PyObject *obj, PyObject *name)	todo		
+Objects/object.c	1938	2037	_PyObject_GenericSetAttrWithDict	_PyObject_GenericSetAttrWithDict(PyObject *obj, PyObject *name, PyObject *value, PyObject *dict)	todo		
+Objects/object.c	2040	2043	PyObject_GenericSetAttr	PyObject_GenericSetAttr(PyObject *obj, PyObject *name, PyObject *value)	todo		
+Objects/object.c	2046	2053	PyObject_GenericSetDict	PyObject_GenericSetDict(PyObject *obj, PyObject *value, void *context)	todo		
+Objects/object.c	2060	2082	PyObject_IsTrue	PyObject_IsTrue(PyObject *v)	modelled	typeobj-istrue-default,typeobj-istrue-len	
+Objects/object.c	2088	2095	PyObject_Not	PyObject_Not(PyObject *v)	todo		
+Objects/object.c	2100	2105	PyCallable_Check	PyCallable_Check(PyObject *x)	todo		
 Objects/object.c	2110	2152	_dir_locals	_dir_locals(void)	todo		
 Objects/object.c	2156	2182	_dir_object	_dir_object(PyObject *obj)	todo		
 Objects/object.c	2189	2192	PyObject_Dir	PyObject_Dir(PyObject *obj)	todo		
@@ -131,10 +131,10 @@ Objects/object.c	3186	3242	_Py_Dealloc	_Py_Dealloc(PyObject *op)	excluded		no-be
 Objects/object.c	3246	3249	PyObject_GET_WEAKREFS_LISTPTR	PyObject_GET_WEAKREFS_LISTPTR(PyObject *op)	todo		
 Objects/object.c	3257	3260	Py_NewRef	Py_NewRef(PyObject *obj)	excluded		no-behaviour: reference count bookkeeping
 Objects/object.c	3263	3266	Py_XNewRef	Py_XNewRef(PyObject *obj)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	3275	3278	Py_Is	int Py_Is(PyObject *x, PyObject *y)	modelled	typeobj-py-is	
-Objects/object.c	3280	3283	Py_IsNone	int Py_IsNone(PyObject *x)	modelled	typeobj-py-is	
-Objects/object.c	3285	3288	Py_IsTrue	int Py_IsTrue(PyObject *x)	modelled	typeobj-py-is	
-Objects/object.c	3290	3293	Py_IsFalse	int Py_IsFalse(PyObject *x)	modelled	typeobj-py-is	
+Objects/object.c	3275	3278	Py_Is	int Py_Is(PyObject *x, PyObject *y)	todo		
+Objects/object.c	3280	3283	Py_IsNone	int Py_IsNone(PyObject *x)	todo		
+Objects/object.c	3285	3288	Py_IsTrue	int Py_IsTrue(PyObject *x)	todo		
+Objects/object.c	3290	3293	Py_IsFalse	int Py_IsFalse(PyObject *x)	todo		
 Objects/object.c	3298	3301	_Py_SetRefcnt	_Py_SetRefcnt(PyObject *ob, Py_ssize_t refcnt)	excluded		no-behaviour: reference count bookkeeping
 Objects/object.c	3303	3308	PyRefTracer_SetTracer	int PyRefTracer_SetTracer(PyRefTracer tracer, void *data) {	excluded		no-behaviour: reference count bookkeeping
 Objects/object.c	3310	3316	PyRefTracer_GetTracer	PyRefTracer PyRefTracer_GetTracer(void** data) {	excluded		no-behaviour: reference count bookkeeping

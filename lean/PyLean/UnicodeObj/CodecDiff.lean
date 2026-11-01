@@ -2,6 +2,7 @@ import PyLean.DiffCore
 import PyLean.StrSearch.Diff
 import PyLean.UnicodeObj.CodecProps
 import PyLean.UnicodeObj.CodecCharmap
+import PyLean.UnicodeObj.CodecCallback
 
 /-! Difftest handler for the codecs slice (`fn` names start with `codec_`). -/
 
@@ -20,6 +21,70 @@ def getHandler (j : Json) : Except String ErrHandler := do
   | "xmlcharrefreplace" => return .xmlcharrefreplace
   | "namereplace" => return .namereplace
   | e => throw s!"bad handler {e}"
+
+/-- One step of a scripted decode handler, given where the error ended. -/
+def getDecResp (j : Json) : Except String (Nat → DecResp) := do
+  match ← getStr j "t" with
+  | "raise" => return fun _ => .raises (.valueError "boom")
+  | "bad" => return fun _ => .bad
+  | "ret" =>
+    let oj ← field j "obj"
+    let obj : ObjEdit ← match ← getStr oj "k" with
+      | "keep" => pure .keep
+      | "set" => pure (.set (← getSeq oj "b"))
+      | "wrong" => pure .wrongType
+      | "del" => pure .deleted
+      | k => throw s!"bad obj {k}"
+    let rep ← getSeq j "rep"
+    let pos ← getInt j "pos"
+    if (← getBool j "rel") then return fun stop => .ret rep (stop + pos) obj
+    else return fun _ => .ret rep pos obj
+  | t => throw s!"bad step {t}"
+
+/-- One step of a scripted encode handler. -/
+def getEncResp (j : Json) : Except String (Nat → EncResp) := do
+  match ← getStr j "t" with
+  | "raise" => return fun _ => .raises (.valueError "boom")
+  | "bad" => return fun _ => .bad
+  | "badrep" =>
+    let pos ← getInt j "pos"
+    return fun _ => .badRep pos
+  | "str" | "bytes" =>
+    let w ← getSeq j "rep"
+    let rep : EncRep := if (← getStr j "t") == "str" then .str w else .bytes w
+    let pos ← getInt j "pos"
+    if (← getBool j "rel") then return fun stop => .ret rep (stop + pos)
+    else return fun _ => .ret rep pos
+  | t => throw s!"bad step {t}"
+
+/-- A handler from a finite script. Past the end it raises, as the Python side does, so a
+handler that keeps moving the position back cannot run for ever on either side. -/
+def scriptDec (items : List (Nat → DecResp)) : DecCB := fun hist =>
+  match items[hist.length - 1]? with
+  | some f => f ((hist.getLast?.map (·.stop)).getD 0)
+  | none => .raises (.named "RuntimeError" "done")
+
+def scriptEnc (items : List (Nat → EncResp)) : EncCB := fun hist =>
+  match items[hist.length - 1]? with
+  | some f => f ((hist.getLast?.map (·.stop)).getD 0)
+  | none => .raises (.named "RuntimeError" "done")
+
+def getDH (j : Json) : Except String DH := do
+  match j.getObjVal? "missing" with
+  | .ok _ => return .missing "uo_nonesuch"
+  | .error _ =>
+    let arr ← (← field j "script").getArr?
+    return .custom (scriptDec (← arr.toList.mapM getDecResp))
+
+def getEH (j : Json) : Except String EH := do
+  match j.getObjVal? "missing" with
+  | .ok _ => return .missing "uo_nonesuch"
+  | .error _ =>
+    let arr ← (← field j "script").getArr?
+    return .custom (scriptEnc (← arr.toList.mapM getEncResp))
+
+/-- Enough for scripts of a few steps, each of which can restart a short input. -/
+def cbFuel : Nat := 400
 
 /-- The name table of a case: `[[key, value], ...]` of lists and ints. -/
 def getNames (j : Json) : Except String (List (List Nat × Nat)) := do
@@ -99,6 +164,36 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "codec_ascii_decode" => return encPy toJson (asciiDecode (← getSeq j "b") (← getHandler j))
   | "codec_latin1_decode" =>
     return encPy toJson (.ok (latin1Decode (← getSeq j "b")) : Py Str)
+  | "codec_cb_decode" =>
+    let b ← getSeq j "b"
+    let H ← getDH j
+    let final ← getBool j "final"
+    -- with `final` the consumed count is the original size, not the position: text only
+    let enc := fun (r : Py (Str × Nat)) =>
+      if final then encPy toJson (r.map (·.1)) else encPy encPair r
+    match ← getStr j "codec" with
+    | "utf-8" => return enc (utf8DecodeX b H (!final) cbFuel)
+    | "utf-16" => return enc (utf16DecodeX b (← getInt j "bo") H final cbFuel)
+    | "utf-32" => return enc (utf32DecodeX b (← getInt j "bo") H final cbFuel)
+    | "unicode_escape" => return enc (unicodeEscapeDecodeX b H (fun _ => none) final cbFuel)
+    | "raw_unicode_escape" => return enc (rawEscapeDecodeX b H final cbFuel)
+    | "utf-7" => return enc (utf7DecodeX b H final cbFuel)
+    | "ascii" => return encPy toJson (asciiDecodeX b H cbFuel)
+    | "charmap" => return encPy toJson (charmapDecodeX b (.str (← getSeq j "table")) H cbFuel)
+    | c => throw s!"bad codec {c}"
+  | "codec_cb_encode" =>
+    let s ← getSeq j "s"
+    let H ← getEH j
+    let nameOf : Nat → Option Str := fun _ => none
+    match ← getStr j "codec" with
+    | "ascii" => return encPy toJson (ucs1EncodeLoopX s 128 H nameOf cbFuel [] 0 s [])
+    | "latin-1" => return encPy toJson (ucs1EncodeLoopX s 256 H nameOf cbFuel [] 0 s [])
+    | "utf-8" => return encPy toJson (utf8EncodeLoopX s H nameOf cbFuel [] 0 s [])
+    | "utf-16" => return encPy toJson (utf16EncodeX s (← getInt j "bo") H nameOf cbFuel)
+    | "utf-32" => return encPy toJson (utf32EncodeX s (← getInt j "bo") H nameOf cbFuel)
+    | "charmap" =>
+      return encPy toJson (charmapEncodeLoopX s (← getEncMap (← field j "map")) H nameOf cbFuel [] 0 s [])
+    | c => throw s!"bad codec {c}"
   | "codec_ue_decode" =>
     let names ← getNames j
     return encPy encPair (unicodeEscapeDecode (← getSeq j "b") (← getHandler j)

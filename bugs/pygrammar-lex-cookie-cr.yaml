@@ -1,0 +1,49 @@
+id: pygrammar-lex-cookie-cr
+title: "tokenize.detect_encoding and the compiler read different encodings from a source with bare CR line endings"
+priority: P4
+kind: twin-disagreement
+module: pygrammar
+files: [Lib/tokenize.py, Parser/tokenizer/string_tokenizer.c]
+functions: ["detect_encoding", "decode_str", "_PyTokenizer_check_coding_spec"]
+summary: |
+  PEP 263 limits the cookie to the first two lines. The C tokenizer runs translate_newlines first, so
+  a bare CR ends a line. detect_encoding splits with readline, which on bytes stops only at LF, so
+  all the CR-terminated lines count as one, and cookie_re's `.*?` runs across them. For
+  b'#\r#\r# coding: latin-1\n' the compiler sees the cookie on line 3 and ignores it, while
+  detect_encoding returns iso-8859-1. A file with non-UTF-8 bytes and this header compiles under one
+  and not the other.
+likelihood: |
+  Very low: bare CR line endings with a cookie past line 2 and non-ASCII content.
+maybe_intended: |
+  Likely accepted: bare CR files are an oddity. A maintainer may close this as not worth changing.
+reproducer: |
+  import io, tokenize
+  src = b'#\r#\r# coding: latin-1\nx = "\xe9"\n'
+  enc = tokenize.detect_encoding(io.BytesIO(src).readline)[0]
+  try:
+      compile(src, 'x', 'exec')
+      c = 'compiled'
+  except SyntaxError:
+      c = 'SyntaxError'
+  print(enc, c)
+  if enc == 'iso-8859-1' and c == 'SyntaxError':
+      print('REPRODUCED pygrammar-lex-cookie-cr')
+expected: |
+  The same encoding from both, as the detect_encoding docstring's PEP 263 reference implies.
+promised_by: |
+  The twin: Lib/tokenize.py detect_encoding against Parser/tokenizer/string_tokenizer.c decode_str.
+cause: |
+  Lib/tokenize.py:39 cookie_re `.*?` matches CR; readline splits at LF only.
+  Parser/tokenizer/string_tokenizer.c translates newlines before splitting the first two lines.
+possible_fix: |
+  In find_cookie, cut the line at the first CR before matching.
+tested:
+  python3 (3.14.7): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
+duplicates:
+  issues: []
+  queries: ["tokenize detect_encoding carriage return cookie", "detect_encoding differs from compiler coding cookie"]
+  bugforge: "none"
+lean:
+  property: PyLean.PyGrammar.Lexer.CookieTwin
+  theorem: PyLean.PyGrammar.Lexer.cookieTwin_refuted

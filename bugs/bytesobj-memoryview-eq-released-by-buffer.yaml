@@ -19,6 +19,10 @@ summary: |
   (:3113-3116).
   Lean: CmpReleasedIdentity is refuted on a 1-byte view; CmpSpecialCases (a view already
   released on entry compares by identity, for all states) is proven.
+  The difftest met this independently, without a crash: for a view from
+  PyMemoryView_GetContiguous, `v != E(v.release)` is True when the release frees the temporary
+  bytes and False, the model's answer, when the temporary is kept alive. So it can also give a
+  silently wrong result.
 likelihood: |
   Low: it needs a __buffer__ that releases the other operand. It is reachable from pure Python
   since PEP 688 (3.12), and gives an out-of-bounds read.

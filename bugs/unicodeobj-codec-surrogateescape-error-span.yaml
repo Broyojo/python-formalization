@@ -1,0 +1,62 @@
+id: unicodeobj-codec-surrogateescape-error-span
+title: "surrogateescape reports a different error span inline than through the callback path"
+priority: P5
+kind: twin-mismatch
+module: unicodeobject
+files: [Objects/unicodeobject.c, Objects/stringlib/codecs.h, Python/codecs.c]
+functions: ["unicode_encode_ucs1", "STRINGLIB(utf8_encoder)", "PyCodec_SurrogateEscapeErrors"]
+summary: |
+  The ASCII, Latin-1 and UTF-8 encoders handle surrogateescape inline. On a run of unencodable
+  characters they write the escapable prefix, then call the error handler for what is left, so the
+  exception starts at the first character that cannot be escaped. The same handler reached through
+  the generic path, for example by registering a wrapper around
+  codecs.lookup_error('surrogateescape'), gets the whole run and rejects all of it, so the exception
+  starts at the beginning of the run. The bytes produced on success never differ: in 900000 fuzzed
+  cases over 15 encodings and 8 handlers, this span was the only disagreement.
+likelihood: |
+  Very low. It needs a custom handler that delegates to surrogateescape, a run that mixes escapable
+  and non-escapable characters, and code that reads the exception's start attribute.
+maybe_intended: |
+  Not a designed difference, but likely to be accepted as it stands. The inline span is the more
+  precise of the two, and the exception is raised either way. On the closely related
+  python/cpython#72960 a core developer called a position difference in this function "not a bug
+  itself". Worth mentioning only alongside other findings, not on its own.
+reproducer: |
+  import codecs
+  fn = codecs.lookup_error('surrogateescape')
+  codecs.register_error('wrapped', lambda e: fn(e))
+  s = '\udcff\udfff'
+  spans = []
+  for name in ['surrogateescape', 'wrapped']:
+      try:
+          s.encode('ascii', name)
+      except UnicodeEncodeError as e:
+          spans.append((e.start, e.end))
+  print(spans)
+  if spans == [(1, 2), (0, 2)]:
+      print('REPRODUCED unicodeobj-codec-surrogateescape-error-span')
+expected: |
+  The same span from both paths.
+observed: |
+  (1, 2) inline and (0, 2) through the callback path, for ASCII, Latin-1 and UTF-8.
+tested: "REPRODUCED on python3 3.14.7 by scripts/check_bugs.py; same spans on main (3.16.0a1+dev) by hand"
+promised_by: |
+  Internal consistency only: no documentation fixes the span for this case.
+cause: |
+  Objects/unicodeobject.c:7468-7481: the inline case advances pos past the escapable prefix and sets
+  collstart = pos before falling through to the handler call. Python/codecs.c:1423
+  (_PyCodec_SurrogateEscapeUnicodeEncodeError) checks the whole [start, end) range and raises the
+  exception it was given. Objects/stringlib/codecs.h:369-382 is the same shape as the UCS1 case.
+possible_fix: |
+  None needed in practice. If wanted, the generic handler could narrow exc.start to the first
+  character it cannot escape.
+lean: |
+  Refuted by ucs1SurrogateEscapeMatchesCallback_refuted
+  (lean/PyLean/UnicodeObj/CodecCallbackProps.lean). Ucs1InlineMatchesCallback proves the other
+  four inline handlers match their callback path.
+duplicates:
+  issues:
+    - {number: 72960, state: closed, relation: related, reason: "same function and span logic, a different case: the span passed to the handler after a bad replacement"}
+  queries: ["surrogateescape encode start end", "surrogateescape UnicodeEncodeError position",
+            "unicode_encode_ucs1", "error handler fast path surrogateescape"]
+  bugforge: "no match in vendor/bugforge-results/README.md"

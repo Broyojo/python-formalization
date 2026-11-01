@@ -26,13 +26,13 @@ private def r (id : String) (fns : List String) (statement source : String)
 
 def excEntries : List Entry := [
   -- BaseException
-  p "typeobj-exc-str-args" ["BaseException_str"]
+  p "typeobj-exc-str-args" []
     "For every exception and every rt, str(e) is '' with no args, str(args[0]) with one, and str(args) otherwise."
     "exceptions.c:171-190" ``BaseExceptionStrArgs ``baseExceptionStrArgs_proven,
-  p "typeobj-exc-repr-args" ["BaseException_repr"]
+  p "typeobj-exc-repr-args" []
     "repr(e) is Name(repr(args[0])) with one argument and Name + repr(args) otherwise, where Name is the last dotted part of tp_name."
     "exceptions.c:193-210" ``BaseExceptionReprArgs ``baseExceptionReprArgs_proven,
-  p "typeobj-exc-keyerror-str" ["KeyError_str"]
+  p "typeobj-exc-keyerror-str" []
     "str(KeyError(x)) is repr(x) for one argument; any other argument count behaves as BaseException_str."
     "comment at exceptions.c:2944-2952" ``KeyErrorStrOneArg ``keyErrorStrOneArg_proven,
   p "typeobj-exc-vectorcall-twin" ["BaseException_new", "BaseException_init", "BaseException_vectorcall"]
@@ -64,10 +64,10 @@ def excEntries : List Entry := [
   p "typeobj-exc-add-note" ["BaseException_add_note_impl"]
     "add_note(x) raises TypeError for a non-str x before anything else; when __notes__ is a list, however it was found, the list gains x at the end."
     "exceptions.c:298-326" ``AddNoteAppends ``addNoteAppends_proven,
-  p "typeobj-exc-capi-roundtrip" ["PyException_GetTraceback", "PyException_SetTraceback", "PyException_GetCause", "PyException_SetCause", "PyException_GetContext", "PyException_SetContext", "PyException_GetArgs", "PyException_SetArgs"]
+  p "typeobj-exc-capi-roundtrip" []
     "PyException_SetCause, SetContext, SetArgs and SetTraceback are read back unchanged by the matching getters."
     "exceptions.c:518-596" ``PyExceptionApiRoundTrip ``pyExceptionApiRoundTrip_proven,
-  p "typeobj-exc-capi-misc" ["_PyException_AddNote", "PyExceptionClass_Name"]
+  p "typeobj-exc-capi-misc" []
     "_PyException_AddNote rejects a non-exception with TypeError before calling add_note; PyExceptionClass_Name is tp_name."
     "exceptions.c:599-603, :4574-4586" ``PyExceptionMiscApi ``pyExceptionMiscApi_proven,
   -- StopIteration, SystemExit
@@ -102,14 +102,14 @@ def excEntries : List Entry := [
   p "typeobj-exc-oserror-remap" ["OSError_new"]
     "OSError_new changes the class only when called on OSError itself, for every errno object and every __hash__ it has."
     "exceptions.c:2158-2167" ``OsErrorRemapOnlyExact ``osErrorRemapOnlyExact_proven,
-  p "typeobj-exc-oserror-errnomap" ["_PyExc_InitState"]
+  p "typeobj-exc-oserror-errnomap" []
     "errnomap has one entry per code on Linux x86-64 and no entry maps to OSError itself."
     "exceptions.c:4476-4503" ``ErrnoMapWellFormed ``errnoMapWellFormed_proven
     "The numbers come from <errno.h> on the difftest platform.",
   p "typeobj-exc-oserror-positions" ["OSError_init"]
     "With 2 to 5 arguments, errno, strerror, filename and filename2 are positions 0, 1, 2 and 4; otherwise none is parsed."
     "oserror_parse_args, exceptions.c:1997-2051" ``OsErrorParsePositions ``osErrorParsePositions_proven,
-  p "typeobj-exc-oserror-reduce" ["OSError_reduce"]
+  p "typeobj-exc-oserror-reduce" []
     "When args has two items and filename is set, parsing the reduced arguments recovers errno, strerror, filename and filename2."
     "comment at exceptions.c:2329-2330, :2342-2346" ``OsErrorReduceRoundTrip ``osErrorReduceRoundTrip_proven,
   p "typeobj-exc-oserror-str" ["OSError_str"]
@@ -128,7 +128,7 @@ def excEntries : List Entry := [
   p "typeobj-exc-syntaxerror-lineno" ["SyntaxError_str"]
     "The line number printed is the value when it fits in long and -1 otherwise, so __str__ cannot raise OverflowError."
     "comment at exceptions.c:2837-2839" ``SyntaxErrorLinenoInRange ``syntaxErrorLinenoInRange_proven,
-  p "typeobj-exc-syntaxerror-plain" ["SyntaxError_str"]
+  p "typeobj-exc-syntaxerror-plain" []
     "With filename and lineno unset, str(e) is str(msg), or 'None' when msg is unset."
     "exceptions.c:2854-2855" ``SyntaxErrorStrPlain ``syntaxErrorStrPlain_proven,
   -- Unicode errors
@@ -147,11 +147,11 @@ def excEntries : List Entry := [
   p "typeobj-exc-unicode-attr-check" ["check_unicode_error_attribute", "as_unicode_error_attribute"]
     "The attribute check raises TypeError for NULL and for the wrong type, and passes a str (or bytes with as_bytes)."
     "exceptions.c:2988-3021" ``UnicodeAttributeCheck ``unicodeAttributeCheck_proven,
-  p "typeobj-exc-unicode-capi" ["check_unicode_error_type", "unicode_error_set_start_impl", "unicode_error_set_end_impl", "unicode_error_get_start_impl", "unicode_error_get_end_impl", "PyUnicodeEncodeError_GetStart", "PyUnicodeDecodeError_GetStart", "PyUnicodeTranslateError_GetStart", "PyUnicodeEncodeError_SetStart", "PyUnicodeDecodeError_SetStart", "PyUnicodeTranslateError_SetStart", "PyUnicodeEncodeError_GetEnd", "PyUnicodeDecodeError_GetEnd", "PyUnicodeTranslateError_GetEnd", "PyUnicodeEncodeError_SetEnd", "PyUnicodeDecodeError_SetEnd", "PyUnicodeTranslateError_SetEnd"]
+  p "typeobj-exc-unicode-capi" ["check_unicode_error_type", "unicode_error_set_start_impl", "unicode_error_set_end_impl", "unicode_error_get_start_impl", "unicode_error_get_end_impl"]
     "SetStart and SetEnd store the raw value, GetParams returns it clipped, for every kind of error; a non-UnicodeError is a TypeError."
     "exceptions.c:3131-3152, :3411-3535" ``UnicodeCapiStartEnd ``unicodeCapiStartEnd_proven
     "All kinds share these helpers; UKind carries the name and as_bytes.",
-  p "typeobj-exc-unicode-capi-attrs" ["unicode_error_get_encoding_impl", "unicode_error_get_object_impl", "unicode_error_get_reason_impl", "unicode_error_set_reason_impl", "PyUnicodeEncodeError_GetEncoding", "PyUnicodeDecodeError_GetEncoding", "PyUnicodeEncodeError_GetObject", "PyUnicodeDecodeError_GetObject", "PyUnicodeTranslateError_GetObject", "PyUnicodeEncodeError_GetReason", "PyUnicodeDecodeError_GetReason", "PyUnicodeTranslateError_GetReason", "PyUnicodeEncodeError_SetReason", "PyUnicodeDecodeError_SetReason", "PyUnicodeTranslateError_SetReason"]
+  p "typeobj-exc-unicode-capi-attrs" ["unicode_error_get_encoding_impl", "unicode_error_get_object_impl", "unicode_error_get_reason_impl", "unicode_error_set_reason_impl"]
     "The getters reject a non-UnicodeError with TypeError, and SetReason stores the reason."
     "exceptions.c:3073-3122, :3360-3587" ``UnicodeCapiAttributes ``unicodeCapiAttributes_proven,
   p "typeobj-exc-unicode-init-encode" ["UnicodeEncodeError_init"]
@@ -207,7 +207,7 @@ def excEntries : List Entry := [
   p "typeobj-exc-eg-created-through-class" ["BaseExceptionGroup_derive_impl", "_PyExc_CreateExceptionGroup"]
     "derive and _PyExc_CreateExceptionGroup both call BaseExceptionGroup."
     "exceptions.c:1014-1028, :1140-1152" ``EgCreatedThroughClass ``egCreatedThroughClass_proven,
-  p "typeobj-exc-eg-bases" ["create_exception_group_class"]
+  p "typeobj-exc-eg-bases" []
     "ExceptionGroup has the bases (BaseExceptionGroup, Exception), both in its MRO."
     "exceptions.c:1774-1789" ``ExceptionGroupBases ``exceptionGroupBases_proven,
   p "typeobj-exc-subset-metadata" ["exceptiongroup_subset"]
@@ -254,7 +254,7 @@ def excEntries : List Entry := [
   p "typeobj-exc-prep-reraise-validates" ["PyUnstable_Exc_PrepReraiseStar"]
     "The public wrapper rejects a non-exception orig, a non-list excs and an orig without traceback before running."
     "exceptions.c:1713-1740" ``PrepReraiseStarValidates ``prepReraiseStarValidates_proven,
-  p "typeobj-exc-same-metadata-refl" ["is_same_exception_metadata"]
+  p "typeobj-exc-same-metadata-refl" []
     "An exception has the same metadata as itself."
     "exceptions.c:1587-1599" ``SameMetadataReflexive ``sameMetadataReflexive_proven,
   r "typeobj-exc-same-metadata-notes" ["is_same_exception_metadata", "_PyExc_PrepReraiseStar", "exception_group_projection"]

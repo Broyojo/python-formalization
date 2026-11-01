@@ -1,0 +1,67 @@
+id: pygrammar-unparse-format-spec-escapes
+title: "ast.unparse corrupts f-string format specs holding braces or control characters written as escapes: output is invalid or means something else"
+priority: P3
+kind: wrong-result
+module: pygrammar
+files: [Lib/_ast_unparse.py]
+functions: ["Unparser._write_ftstring_inner", "Unparser._write_interpolation", "Unparser._ftstring_helper"]
+summary: |
+  A literal part of a format spec is written by _write_ftstring_inner with only `\`, quotes and
+  newline escaped, after doubling `{` and `}`. Three things go wrong for valid source:
+
+    f"{x:\x7d}"  unparses to f'{x:}}}', which is valid but differs: the spec is empty and the
+                 `}` moves out to a literal after the field. No error, different program.
+    f"{x:\x7b}"  unparses to f'{x:{{}', a SyntaxError on re-parse.
+    f"{x:\x00}"  writes a raw NUL, f"{x:\r}" a raw CR (a newline after translate_newlines),
+                 f"{x:\ud800}" a raw surrogate: none of them survive ast.parse.
+
+  Doubling is the wrong escape in a spec: the tokenizer never collapses `{{` or `}}` there
+  (Parser/lexer/lexer.c:1529 `peek != '{' || in_format_spec` and :1559 `!in_format_spec`),
+  and the literal text of a spec is not routed through _str_literal_helper as the top level
+  of an f-string is.
+likelihood: |
+  Low in hand-written code: a brace in a format spec has to be spelled as an escape, typically
+  for a `datetime` or custom `__format__` mini-language. Tools that round-trip code through
+  ast.unparse are the ones affected, and the `}` case changes behaviour with no error.
+maybe_intended: |
+  Not intended: the Unparser docstring promises equivalence, and the code visibly tries to
+  escape the spec (four replace calls). The other control characters are the same omission.
+reproducer: |
+  import ast
+  def rt(src):
+      t = ast.parse(src)
+      u = ast.unparse(t)
+      try:
+          return ast.compare(t, ast.parse(u)), u
+      except (SyntaxError, ValueError) as e:
+          return False, u
+  a = rt(r'''f"{x:\x7d}"''')
+  b = rt(r'''f"{x:\x7b}"''')
+  c = rt(r'''f"{x:\x00}"''')
+  print(a, b, c)
+  if not a[0] and not b[0] and not c[0]:
+      print('REPRODUCED pygrammar-unparse-format-spec-escapes')
+expected: |
+  Output that re-parses to the same tree, e.g. f'{x:\x7d}' with the characters escaped.
+promised_by: |
+  Lib/_ast_unparse.py Unparser.visit docstring: "Outputs a source code string that, if converted
+  back to an ast (using ast.parse) will generate an AST equivalent to *node*". The `ast.unparse`
+  docs warn only that the code "may not be equal to the original" text.
+cause: |
+  Lib/_ast_unparse.py:556-563 (3.14.7): `value = node.value.replace("{", "{{").replace("}", "}}")`
+  applies to specs too, and the `if is_format_spec:` block covers only backslash, quotes, newline.
+possible_fix: |
+  In a format spec, escape instead of doubling: write `{`, `}` and every non-printable character
+  with `\x`/`\u` escapes (the literal is decoded by _PyPegen_decoded_constant_from_token), and skip
+  the `{{` replacement when is_format_spec is true. Raw f-strings do not occur in unparse output.
+tested:
+  python3 (3.14.7): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
+duplicates:
+  issues: []
+  queries: ["unparse f-string format_spec roundtrip", "ast.unparse format specifier escape",
+            "unparse curly brace format spec", "ast.unparse format spec"]
+  bugforge: "none"
+lean:
+  property: PyLean.PyGrammar.Peg.UnparseRoundTrip
+  theorem: PyLean.PyGrammar.Peg.unparseRoundTrip_refuted

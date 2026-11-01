@@ -51,7 +51,7 @@ theorem indexResultIsInt_proven : IndexResultIsInt := by
     | true =>
       simp only [hc, Bool.not_true, Bool.false_eq_true, ite_false] at h
       cases hs : slotOf w (typeOf w v) .nb_index with
-      | none => simp [hs, unmodelled] at h
+      | none => simp [hs, gapAt] at h
       | some f =>
         simp only [hs, M.bind_app] at h
         cases hu : callUnaryNb rt .nb_index "__index__" f v w with

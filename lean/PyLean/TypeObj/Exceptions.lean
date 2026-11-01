@@ -79,7 +79,7 @@ def excGetsetGet (_rt : Rt) (_owner : Addr) (n : Name) (obj : Val) : M Val := do
     if n == "characters_written" then return ← osErrorWrittenGet obj
     if n == "start" || n == "end" then return .int (ssizeMember e n)
     return (memGet e n).getD .none
-  | _ => unmodelled
+  | _ => gap%
 
 /-- Setter for a `PyGetSetDef` or `PyMemberDef` of an exception class. -/
 def excGetsetSet (rt : Rt) (_owner : Addr) (n : Name) (obj : Val) (value : Option Val) :
@@ -104,7 +104,7 @@ def excGetsetSet (rt : Rt) (_owner : Addr) (n : Name) (obj : Val) (value : Optio
           let i ← excAsSsizeLong i
           return ← excUpdate obj (memSet n (some (.int i)))
     excUpdate obj (memSet n value)
-  | _ => unmodelled
+  | _ => gap%
 
 /-- The arity check of a `METH_O` method descriptor, `method_vectorcall_O`, `Objects/descrobject.c:454`. -/
 def methO (name : String) (args : List Val) : M Val :=
@@ -136,7 +136,7 @@ def excTestcapiUnicode (rt : Rt) (name : Name) (args : List Val) : M Val := do
     let n ← argN rt v
     pyUnicodeErrorSetEnd k self n
     pure .none
-  | _, _ => unmodelled
+  | _, _ => gap%
 
 /-- `PyMethodDef`s of exception classes, by `Builtin.excMethod` name; `harness.` and `capi.`
 names are the functions a difftest scenario reaches through `_testcapi`. -/
@@ -172,13 +172,13 @@ def excMethod (rt : Rt) (name : Name) (self : Val) (args : List Val) (_kw : Kw) 
   | "capi.prep_reraise_star" =>
     match args with
     | [orig, excs] => pyUnstableExcPrepReraiseStar rt orig excs
-    | _ => unmodelled
+    | _ => gap%
   | "harness.bytes" | "harness.bytearray" =>
     let w ← getW
     let bs := args.map fun a => ((intOf w a).getD 0).toNat
     alloc (if name == "harness.bytes" then B.bytes else B.bytearray) (.bytes bs)
   | _ =>
     if name.startsWith "capi.unicode_" then excTestcapiUnicode rt (name.drop 5 |>.toString) args
-    else unmodelled
+    else gap%
 
 end PyLean.TypeObj

@@ -1,4 +1,5 @@
 import PyLean.Core
+import PyLean.TypeObj.Gap
 
 /-!
 # The Python object model (CPython 3.14.7)
@@ -209,6 +210,10 @@ structure FuncData where
   code : Nat := 0
   /-- `__class__` cell for zero-argument `super()`. -/
   classCell : Option Addr := none
+  /-- `func_annotate`, `func_annotations` and `func_typeparams`; `none` is NULL. -/
+  annotate : Option Val := none
+  annotations : Option Val := none
+  typeParams : Option Val := none
   deriving Repr, Inhabited
 
 /-- C-implemented callables: entries of `PyMethodDef` tables and of `builtins`. -/
@@ -231,6 +236,8 @@ inductive Builtin where
   | tupleCount | tupleIndex | listAppend | strFormat | dunderGetitem | dunderContains
   /-- `dict.keys`, and the `__length_hint__` of the C iterators. -/
   | dictKeysMethod | iterLengthHint
+  /-- `__getnewargs__` of `int`, `str`, `tuple`, and a `__reduce__` that gives a fixed name. -/
+  | getnewargs | reduceName (s : String)
   /-- `str.__format__`, and `int.__format__` with `float.__format__`.
   `object.__format__` is `objectFormat`. -/
   | strDunderFormat | numDunderFormat
@@ -316,6 +323,8 @@ inductive Payload where
   | seqIter (seq : Option Val) (index : Int)
   /-- `C.__dict__`: a `mappingproxy` over the `tp_dict` of `ty`. -/
   | typeDictProxy (ty : Addr)
+  /-- `mappingproxyobject`, `Objects/descrobject.c:1040`, over any mapping. -/
+  | proxy (mapping : Val)
   | mappingproxy (mapping : Val)
   | cell (v : Option Val)
   | exc (e : ExcData)
@@ -366,6 +375,10 @@ structure Obj where
   /-- `__slots__` member values; an absent name is an unset slot. -/
   slotVals : NameDict := []
   body : Payload := .plain
+  /-- `me_hash` of the keys of a dict, recorded when each is stored; the first match counts. A key
+  stored by a C path of the model (attribute dicts, keyword arguments) is an exact str and is not
+  listed: see `storedHash`. -/
+  keyHashes : List (Val × Int) := []
 
 /-- A heap cell: an ordinary object or a type object. -/
 inductive Cell where
@@ -382,6 +395,8 @@ structure World where
   trace : List String := []
   /-- `globals()['__name__']` of the running frame, read by `type_new_set_module`. -/
   curModule : Option Val := none
+  /-- The objects `Py_ReprEnter` holds, `Objects/object.c:3003`, most recent first. -/
+  reprStack : List Val := []
   deriving Inhabited
 
 /-- A raised exception. `val` is the exception object when one exists; a C-level
@@ -390,6 +405,8 @@ as an object, as `PyErr_Occurred` state does. `fuel` is not a Python outcome. -/
 inductive PyErr where
   | exc (cls : Addr) (msg : String) (val : Option Val)
   | fuel
+  /-- A branch the model leaves out, named by `gap%`. -/
+  | gap (site : String)
   deriving Repr, Inhabited
 
 /-- Result of a computation: the world survives a raise. -/
@@ -665,14 +682,15 @@ def systemErr {α : Type} (msg : String) : M α := raiseC B.SystemError msg
 def indexErr {α : Type} (msg : String) : M α := raiseC B.IndexError msg
 def keyErr {α : Type} (msg : String) : M α := raiseC B.KeyError msg
 def overflowErr {α : Type} (msg : String) : M α := raiseC B.OverflowError msg
-/-- A code path this model leaves out; not a Python outcome. -/
-def unmodelled {α : Type} : M α := raise .fuel
+/-- A code path this model leaves out, written `gap%` (`Gap.lean`), which names the site. Not
+a Python outcome. -/
+def gapAt {α : Type} (site : String) : M α := raise (.gap site)
 
 /-- `PyErr_ExceptionMatches(cls)` for a pending error. -/
 def excMatches (w : World) (e : PyErr) (cls : Addr) : Bool :=
   match e with
   | .exc c _ _ => isSubtype w c cls
-  | .fuel => false
+  | .fuel | .gap _ => false
 
 /-- `if (x == NULL && PyErr_ExceptionMatches(cls)) { PyErr_Clear(); h }`. -/
 def catchMatch {α : Type} (cls : Addr) (x : M α) (h : M α) : M α :=
@@ -715,6 +733,12 @@ structure Rt where
   listItems (v : Val) : M (List Val)
   /-- `PyObject_GetItem(o, k)`. -/
   getItem (o k : Val) : M Val
+  /-- `PyObject_Size(o)`. -/
+  size (o : Val) : M Int
+  /-- `PySequence_Contains(o, k)`. -/
+  contains (o k : Val) : M Bool
+  /-- `PyNumber_Or(a, b)`. -/
+  numberOr (a b : Val) : M Val
   /-- The getter of the `PyGetSetDef` (or C member) `n` of the static type `owner`. -/
   getsetGet (owner : Addr) (n : Name) (obj : Val) : M Val
   /-- The setter of the same; `none` deletes. -/
