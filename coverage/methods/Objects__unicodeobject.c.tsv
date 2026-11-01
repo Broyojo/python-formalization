@@ -207,7 +207,7 @@ Objects/unicodeobject.c	9487	9601	_PyUnicode_TranslateCharmap	_PyUnicode_Transla
 Objects/unicodeobject.c	9604	9611	PyUnicode_Translate	PyUnicode_Translate(PyObject *str, PyObject *mapping, const char *errors)	todo		
 Objects/unicodeobject.c	9614	9657	_PyUnicode_TransformDecimalAndSpaceToASCII	_PyUnicode_TransformDecimalAndSpaceToASCII(PyObject *unicode)	modelled	unicodeobj-text-transform-decimal	
 Objects/unicodeobject.c	9682	9762	any_find_slice	any_find_slice(PyObject* s1, PyObject* s2, Py_ssize_t start, Py_ssize_t end, int direction)	modelled	strsearch-find-str-bytes	
-Objects/unicodeobject.c	9791	9899	_PyUnicode_InsertThousandsGrouping	_PyUnicode_InsertThousandsGrouping( _PyUnicodeWriter *writer, Py_ssize_t n_buffer, PyObject *digits, Py_ssize_t d_pos, Py_ssize_t n_digits, Py_ssize_t min_width, const char *grouping, PyObject *thousands_sep, Py_UCS4 *maxchar, int forward)	modelled	unicodeobj-format-group-loop	
+Objects/unicodeobject.c	9791	9899	_PyUnicode_InsertThousandsGrouping	_PyUnicode_InsertThousandsGrouping( _PyUnicodeWriter *writer, Py_ssize_t n_buffer, PyObject *digits, Py_ssize_t d_pos, Py_ssize_t n_digits, Py_ssize_t min_width, const char *grouping, PyObject *thousands_sep, Py_UCS4 *maxchar, int forward)	modelled	unicodeobj-format-group-loop,unicodeobj-format-group-digits,unicodeobj-format-float-grouping	
 Objects/unicodeobject.c	9902	9911	PyUnicode_Count	PyUnicode_Count(PyObject *str, PyObject *substr, Py_ssize_t start, Py_ssize_t end)	todo		
 Objects/unicodeobject.c	9914	9924	PyUnicode_Find	PyUnicode_Find(PyObject *str, PyObject *substr, Py_ssize_t start, Py_ssize_t end, int direction)	todo		
 Objects/unicodeobject.c	9927	9944	PyUnicode_FindChar	PyUnicode_FindChar(PyObject *str, Py_UCS4 ch, Py_ssize_t start, Py_ssize_t end, int direction)	todo		
@@ -345,7 +345,7 @@ Objects/unicodeobject.c	14430	14500	_PyUnicode_Dedent	_PyUnicode_Dedent(PyObject
 Objects/unicodeobject.c	14557	14562	unicode_mod	unicode_mod(PyObject *v, PyObject *w)	todo		
 Objects/unicodeobject.c	14583	14650	unicode_subscript	unicode_subscript(PyObject* self, PyObject* item)	todo		
 Objects/unicodeobject.c	14684	14698	unicode_format_getnextarg	unicode_format_getnextarg(struct unicode_formatter_t *ctx)	todo		
-Objects/unicodeobject.c	14707	14741	formatfloat	formatfloat(PyObject *v, struct unicode_format_arg_t *arg, PyObject **p_output, _PyUnicodeWriter *writer)	todo		
+Objects/unicodeobject.c	14707	14741	formatfloat	formatfloat(PyObject *v, struct unicode_format_arg_t *arg, PyObject **p_output, _PyUnicodeWriter *writer)	modelled	unicodeobj-format-percent-float	
 Objects/unicodeobject.c	14762	14884	_PyUnicode_FormatLong	_PyUnicode_FormatLong(PyObject *val, int alt, int prec, int type)	todo		
 Objects/unicodeobject.c	14891	14982	mainformatlong	mainformatlong(PyObject *v, struct unicode_format_arg_t *arg, PyObject **p_output, _PyUnicodeWriter *writer)	todo		
 Objects/unicodeobject.c	14985	15020	formatchar	formatchar(PyObject *v)	todo		
