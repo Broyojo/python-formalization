@@ -1,4 +1,4 @@
-import PyLean.Pickle.Enc
+import PyLean.Pickle.BatchProps
 
 /-!
 `pickle.dumps` (C) vs `pickle._dumps` (Python): layered byte-equality claims.
@@ -14,17 +14,16 @@ picklers produce the same bytes (or raise the same exception). Source: twin
 agreement (`pickle.py` falls back to `_Pickler` when `_pickle` is missing). -/
 def DumpsTwinsAgree : Prop := ∀ (x : PV) (protocol : Int), cDumps x protocol = pyDumps x protocol
 
-def noneList (n : Nat) : PV := .list (.u 0) (List.replicate n .none)
-
-/- A list of 1001 items: the C pickler writes the last batch of one item as
+/-- A list of 1001 items: the C pickler writes the last batch of one item as
 `MARK item APPENDS`, the Python pickler as `item APPEND`
 (python/cpython#135573, fixed on main). -/
-set_option maxRecDepth 100000 in
 theorem dumpsTwinsAgree_refuted : ¬ DumpsTwinsAgree := by
   intro h
   have := h (noneList 1001) 2
-  revert this
-  decide +kernel
+  rw [cDumps_witness, pyDumps_witness] at this
+  have h2 := List.append_cancel_left (Except.ok.inj this)
+  revert h2
+  decide
 
 mutual
 /-- The batch shapes where the twins differ (see the refutation and
@@ -107,9 +106,9 @@ theorem pyDumps_big_bytes (b : Bytes) (hb : b.length = 2 ^ 32) :
 explanation; `pickle._dumps` raises `struct.error` from `pack("<I", n)`. -/
 theorem dumpsTwinsAgreeBatchOkLong_refuted : ¬ DumpsTwinsAgreeBatchOkLong := by
   intro h
-  have := h (.bytes (.u 0) (List.replicate (2 ^ 32) 0)) 3 (by decide) (by decide)
-    (by intro p _; simp [BatchOk])
-  rw [cDumps_big_bytes _ (by simp), pyDumps_big_bytes _ (by simp)] at this
+  obtain ⟨b, hb⟩ : ∃ b : Bytes, b.length = 2 ^ 32 := ⟨List.replicate _ 0, List.length_replicate⟩
+  have := h (.bytes (.u 0) b) 3 (by decide) (by decide) (by intro p _; simp [BatchOk])
+  rw [cDumps_big_bytes b hb, pyDumps_big_bytes b hb] at this
   simp [structError] at this
 
 end PyLean.Pickle

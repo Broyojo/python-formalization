@@ -1,0 +1,59 @@
+id: pickle-c-batch-encoding
+title: "pickle: C and Python picklers batch lists, dicts and sets differently (last batch of one, empty trailing batch)"
+priority: P4
+kind: twin-mismatch
+module: pickle
+files: [Modules/_pickle.c, Lib/pickle.py]
+functions: [batch_list_exact, batch_dict_exact_impl, save_set, _batch_appends, _batch_setitems]
+summary: |
+  For ordinary lists, dicts and sets the two picklers produce different bytes at batch boundaries.
+  A list or dict of n > 1 items with n % 1000 == 1 ends with `item APPEND` / `k v SETITEM` in Python
+  but `MARK item APPENDS` / `MARK k v SETITEMS` in C. A dict or (protocol 4+) set whose size is a
+  multiple of 1000 gets a trailing empty `MARK SETITEMS` / `MARK ADDITEMS` in C. Both forms decode
+  to the same object, so this is one or two wasted bytes and byte-level non-reproducibility between
+  the twins. Every other plain value at protocols 0-5 pickles to identical bytes (difftest).
+likelihood: |
+  Common in the sense that any 1000-item dict hits it, harmless in effect: 2 extra bytes. It only
+  matters to anyone comparing pickle bytes across the two implementations.
+maybe_intended: |
+  No. Upstream treated it as a small optimisation and already fixed it on main (gh-144162). It was
+  not backported, so it remains in 3.14.
+reproducer: |
+  import pickle
+  def differs(x, p=2): return pickle.dumps(x, p) != pickle._dumps(x, p)
+  lst = list(range(1001))
+  d1000 = {i: i for i in range(1000)}
+  d1001 = {i: i for i in range(1001)}
+  s1000 = set(range(1000))
+  print('list 1001:', differs(lst), 'dict 1000:', differs(d1000), 'dict 1001:', differs(d1001),
+        'set 1000 (protocol 4):', differs(s1000, 4))
+  print('list 1001 tail, C     :', pickle.dumps(lst, 2)[-6:])
+  print('list 1001 tail, Python:', pickle._dumps(lst, 2)[-6:])
+  print('dict 1000 tail, C     :', pickle.dumps(d1000, 2)[-6:])
+  print('dict 1000 tail, Python:', pickle._dumps(d1000, 2)[-6:])
+  if all([differs(lst), differs(d1000), differs(d1001), differs(s1000, 4)]):
+      print('REPRODUCED pickle-c-batch-encoding')
+expected: |
+  Identical bytes from both picklers: the Python pickler's batches, which are also the shorter ones.
+observed: |
+  python3 3.14.7: all four shapes differ; a 1001-item list ends `e.` in C and `a.` in Python, a 1000-item dict ends `u(u.` in C and `u.` in Python. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): NOT REPRODUCED: gh-144162 changed the C batch loops; the twins emit identical bytes.
+promised_by: |
+  No documentation promises identical bytes. Twin relation: pickle.py replaces `dumps` by the C one
+  when `_pickle` is available (Lib/pickle.py:1888-1900).
+cause: |
+  Modules/_pickle.c:3164-3230 (`batch_list_exact`) special-cases only `list_size == 1`, not a final
+  batch of one. Modules/_pickle.c:3454-3525 (`batch_dict_exact_impl`) and :3640-3676 (`save_set`)
+  loop `while (i == BATCHSIZE)`, so a full last batch starts one more, empty, batch.
+  Lib/pickle.py:1015-1049, :1062-1097 and :1108-1117 use `batched()`, which yields no empty batch.
+possible_fix: |
+  Backport gh-144162: loop on `total < size` and write the single-item opcode when one item remains.
+duplicates:
+  issues:
+    - {number: 135573, state: closed, relation: same root discussion, reason: "fixed on main by gh-144162 (2026-02-18), not in 3.14"}
+  queries: ["pickle batch dict 1000", "pickle C Python different output", "pickle empty SETITEMS", "pickle APPENDS",
+            "pickle batch", "pickle SETITEMS", "pickle ADDITEMS"]
+  bugforge: "no pickle entries in vendor/bugforge-results/README.md"
+lean:
+  property: PyLean.Pickle.DumpsTwinsAgree
+  theorem: PyLean.Pickle.dumpsTwinsAgree_refuted

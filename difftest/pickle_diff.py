@@ -23,6 +23,7 @@ Exits non-zero on any mismatch. See difftest/common.py.
 """
 
 import builtins
+import codecs
 import json
 import pickle
 import re
@@ -431,6 +432,11 @@ def gen_case(rng):
 
 class ImportBlocked(Exception):
     pass
+
+
+# Codec lookups import `encodings.*` on first use; do that before imports are blocked.
+for _enc in ("ascii", "latin-1", "utf-8", "raw-unicode-escape"):
+    codecs.lookup(_enc)
 
 
 def no_import(*a, **k):

@@ -728,30 +728,32 @@ def pyProtocol (protocol : Int) : Py Nat :=
   else if protocol ≤ 5 then .ok protocol.toNat
   else .error (.valueError "pickle protocol must be <= 5")
 
-/-- `pickle._dumps(obj, protocol)` (`Lib/pickle.py:1865-1871`, `dump` at
-:487-500). -/
+/-- `_Pickler.dump` (`Lib/pickle.py:487-500`). -/
+def pyBody (proto : Nat) (x : PV) : EncM Unit := do
+  if proto ≥ 2 then wr [oPROTO, proto.toUInt8]
+  if proto ≥ 4 then emit .start
+  pySave proto x
+  wr [oSTOP]
+  emit .finish
+
+/-- `pickle._dumps(obj, protocol)` (`Lib/pickle.py:1865-1871`). -/
 def pyDumps (x : PV) (protocol : Int) : Py Bytes := do
   let proto ← pyProtocol protocol
-  let body : EncM Unit := do
-    if proto ≥ 2 then wr [oPROTO, proto.toUInt8]
-    if proto ≥ 4 then emit .start
-    pySave proto x
-    wr [oSTOP]
-    emit .finish
-  let (_, st) ← body.run {}
+  let (_, st) ← (pyBody proto x).run {}
   return pyFrame st.ev.reverse
 
-/-- `pickle.dumps(obj, protocol)` (`_pickle_dumps_impl` and `dump`,
-`Modules/_pickle.c:4739-4801`). -/
+/-- `dump` (`Modules/_pickle.c:4739-4801`). -/
+def cBody (proto : Nat) (x : PV) : EncM Unit := do
+  if proto ≥ 2 then wr [oPROTO, proto.toUInt8]
+  if proto ≥ 4 then emit .start
+  cSave proto x
+  wr [oSTOP]
+  emit .finish
+
+/-- `pickle.dumps(obj, protocol)` (`_pickle_dumps_impl`, `Modules/_pickle.c:7992-8028`). -/
 def cDumps (x : PV) (protocol : Int) : Py Bytes := do
   let proto ← cProtocol protocol
-  let body : EncM Unit := do
-    if proto ≥ 2 then wr [oPROTO, proto.toUInt8]
-    if proto ≥ 4 then emit .start
-    cSave proto x
-    wr [oSTOP]
-    emit .finish
-  let (_, st) ← body.run {}
+  let (_, st) ← (cBody proto x).run {}
   return cFrame st.ev.reverse
 
 end PyLean.Pickle

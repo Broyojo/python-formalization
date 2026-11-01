@@ -182,10 +182,10 @@ def longMax : Int := 2 ^ 63 - 1
 
 /-- `strtol(s, &endptr, 10)` on a NUL-terminated string: the value (clamped),
 the number of bytes consumed (`endptr - s`, `0` when no digits), and whether
-`errno` is set: `ERANGE` on overflow, and `EINVAL` when no digits were
-converted. The `EINVAL` case is the behaviour of the Darwin (BSD) libc the
-differential test runs on; glibc leaves `errno` alone there, which only
-matters for a line that starts with a NUL byte. -/
+`errno` is set (`ERANGE`). This is glibc, where the differential test runs: no
+conversion leaves `errno` alone. Darwin's libc sets `EINVAL` there, which only
+matters for a line that starts with a NUL byte (`I\0\n` is `0` on Linux and a
+`ValueError` on macOS). -/
 def strtol (s : Bytes) : Int × Nat × Bool :=
   let cstr := s.takeWhile (· ≠ 0)
   let s1 := skipSpace cstr
@@ -194,7 +194,7 @@ def strtol (s : Bytes) : Int × Nat × Bool :=
     | 0x2d :: r => (true, r)
     | r => (false, r)
   let ds := s2.takeWhile isDigit
-  if ds = [] then (0, 0, true)
+  if ds = [] then (0, 0, false)
   else
     let v : Int := digitsVal (ds.map (fun c => c.toNat - 48))
     let v := if neg then -v else v
