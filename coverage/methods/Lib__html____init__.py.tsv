@@ -1,4 +1,4 @@
 file	line	endline	name	signature	status	entry	note
-Lib/html/__init__.py	12	25	escape	escape(s, quote=True)	todo		
-Lib/html/__init__.py	91	115	_replace_charref	_replace_charref(s)	todo		
-Lib/html/__init__.py	122	132	unescape	unescape(s)	todo		
+Lib/html/__init__.py	12	25	escape	escape(s, quote=True)	modelled	textlibs-html-round-trip,textlibs-html-escape-safe	
+Lib/html/__init__.py	91	115	_replace_charref	_replace_charref(s)	modelled	textlibs-html-round-trip,textlibs-html-total,textlibs-html-total-narrow,textlibs-html-numeric-twin,textlibs-html-numeric-twin-narrow,textlibs-html-numeric-valid,textlibs-html-named-longest	
+Lib/html/__init__.py	122	132	unescape	unescape(s)	modelled	textlibs-html-round-trip,textlibs-html-fast-path,textlibs-html-total,textlibs-html-total-narrow	

@@ -2599,6 +2599,244 @@ class TextwrapArea:
         return common.py_result(body)
 
 
+@area("quopri", 4)
+class QuopriArea:
+    A = [b" ", b"\t", b"\r", b"\n", b"=", b".", b"_", b"a", b"\x00", b"\xff", b"\r\n", b"=\n", b"=41", b"=4", b"=g", b"~", b"\x7f", b"=ab", b"=AB", b"= \n"]
+
+    @classmethod
+    def data(cls, r):
+        k = r.random()
+        if k < 0.25:
+            return b"a" * r.choice([1, 70, 73, 74, 75, 76, 77, 78, 150, 151, 152, 153]) + b"".join(r.choice(cls.A) for _ in range(r.randint(0, 3)))
+        if k < 0.4:
+            return bytes(r.randrange(256) for _ in range(r.randint(0, 100)))
+        return b"".join(r.choice(cls.A) for _ in range(r.randint(0, 12)))
+
+    @classmethod
+    def gen(cls, r):
+        fn = r.choice(["encodestring", "decodestring", "py_encodestring", "py_decodestring", "encode_c", "decode_c", "encode_py", "decode_py",
+                       "helpers"])
+        c = {"mod": "textlibs", "fn": "quopri." + fn, "q": r.random() < 0.5, "h": r.random() < 0.5}
+        d = cls.data(r)
+        boom = {"raise": ["ValueError", "boom"]}
+        if fn == "helpers":
+            c["c"] = r.randrange(256)
+        elif fn.endswith("string"):
+            c["d"] = list(d)
+        elif fn.endswith("_c"):
+            c["rd"] = boom if r.random() < 0.15 else list(d)
+            c["writes"] = [r.choice([None, None, {"raise": ["OSError", "boom"]}]) for _ in range(r.choice([0, 0, 1]))]
+        else:
+            lines = [list(x) for x in d.splitlines(True) if b"\r" not in x[:-1]] if r.random() < 0.5 else [list(x) for x in cls.nlsplit(d)]
+            if r.random() < 0.2:
+                lines.insert(r.randint(0, len(lines)), boom)
+            if r.random() < 0.1:
+                lines.insert(r.randint(0, len(lines)), [])
+            c["lines"] = lines
+            c["writes"] = [r.choice([None, None, {"raise": ["OSError", "boom"]}]) for _ in range(r.choice([0, 0, 1, 2, 3]))]
+        return c
+
+    @staticmethod
+    def nlsplit(d):
+        return [x for x in __import__("re").findall(b"[^\n]*\n|[^\n]+", d)]
+
+    @classmethod
+    def run(cls, c):
+        import quopri
+        fn = c["fn"].split(".")[1]
+
+        class F:
+            def __init__(self):
+                self.written, self.i, self.w = [], 0, list(c.get("writes", []))
+
+            def read(self):
+                if isinstance(c["rd"], dict):
+                    raise ValueError("boom")
+                return bytes(c["rd"])
+
+            def readline(self):
+                if self.i >= len(c["lines"]):
+                    return b""
+                x = c["lines"][self.i]
+                self.i += 1
+                if isinstance(x, dict):
+                    raise ValueError("boom")
+                return bytes(x)
+
+            def write(self, b):
+                self.written.append(list(b))
+                if self.w:
+                    if self.w.pop(0) is not None:
+                        raise OSError("boom")
+
+        def body():
+            saved = quopri.a2b_qp, quopri.b2a_qp
+            if fn.endswith("_py") or fn.startswith("py_"):
+                quopri.a2b_qp = quopri.b2a_qp = None
+            try:
+                if fn == "helpers":
+                    b = bytes([c["c"]])
+                    x = quopri.ishex(b)
+                    return [1 if quopri.needsquoting(b, c["q"], c["h"]) else 0, 1 if x else 0] + list(quopri.quote(b)) + \
+                        ([quopri.unhex(b + b)] if x else [])
+                if fn in ("encodestring", "py_encodestring"):
+                    return list(quopri.encodestring(bytes(c["d"]), c["q"], c["h"]))
+                if fn in ("decodestring", "py_decodestring"):
+                    return list(quopri.decodestring(bytes(c["d"]), c["h"]))
+                f = F()
+                try:
+                    if fn.startswith("encode"):
+                        quopri.encode(f, f, c["q"], c["h"])
+                    else:
+                        quopri.decode(f, f, c["h"])
+                    res = {"ok": None}
+                except Exception as e:
+                    res = {"exc": type(e).__name__, "msg": str(e)}
+                return {"written": f.written, "res": res}
+            finally:
+                quopri.a2b_qp, quopri.b2a_qp = saved
+        return common.py_result(body)
+
+
+@area("html", 4)
+class HtmlArea:
+    NAMES = ["amp", "amp;", "lt;", "gt", "quot;", "notin;", "notit;", "not", "no", "n", "nsubE;", "AElig", "AElig;", "AEligx", "CounterClockwiseContourIntegral;",
+             "CounterClockwiseContourIntegra", "xx", "x;", ";", "a" * 31, "a" * 32, "a" * 33, "a" * 32 + ";", "amp" + "b" * 29 + ";", "amp" + "b" * 30 + ";"]
+    NUMS = [0, 1, 8, 9, 10, 11, 12, 13, 14, 31, 32, 38, 60, 126, 127, 128, 129, 0x8d, 0x9b, 0x9f, 0xa0, 0xd7ff, 0xd800, 0xdfff, 0xe000, 0xfdcf, 0xfdd0, 0xfdef, 0xfdf0,
+            0xfffd, 0xfffe, 0xffff, 0x10000, 0x1fffe, 0x10fffd, 0x10fffe, 0x10ffff, 0x110000, 2**32, 2**64, 10**40]
+
+    @classmethod
+    def piece(cls, r):
+        k = r.random()
+        if k < 0.3:
+            return "&" + r.choice(cls.NAMES) + r.choice(["", "", ";", " ", "x", "&"])
+        if k < 0.55:
+            n = r.choice(cls.NUMS)
+            return "&#" + str(n) + r.choice(["", ";", ";;", "x"])
+        if k < 0.75:
+            n = r.choice(cls.NUMS)
+            return "&#" + r.choice("xX") + r.choice(["%x", "%X"]) % n + r.choice(["", ";", "g"])
+        if k < 0.8:
+            return "&#" + r.choice(["0", "1", "9"]) * r.choice([4299, 4300, 4301, 5000]) + r.choice(["", ";"])
+        if k < 0.83:
+            return "&#x" + r.choice(["0", "1", "f"]) * 5000
+        return r.choice(["&", "&&", "&#", "&#;", "&#x", "&#x;", "&#X;", "&#xg", "& ", "&;", "<", ">", '"', "\'", "a", " ", "\t", "\n", "\f", "\u0660", "&\u0660;",
+                         "\xe9", "&\xe9", "&#\u0661;", "\ud800", "#", ";"])
+
+    @classmethod
+    def gen(cls, r):
+        fn = r.choice(["escape", "unescape", "unescape", "unescape"])
+        c = {"mod": "textlibs", "fn": "html." + fn, "s": cps("".join(cls.piece(r) for _ in range(r.randint(0, 5))))}
+        if fn == "escape":
+            c["quote"] = r.random() < 0.5
+        return c
+
+    @classmethod
+    def run(cls, c):
+        import html
+
+        def body():
+            s = txt(c["s"])
+            if c["fn"] == "html.escape":
+                return cps(html.escape(s, c["quote"]))
+            return cps(html.unescape(s))
+        return common.py_result(body)
+
+
+@area("difflib", 5)
+class DifflibArea:
+    @staticmethod
+    def seq(r):
+        k = r.random()
+        if k < 0.1:
+            # long enough for the popular test
+            n = r.choice([199, 200, 201, 250, 300, 400])
+            return [r.choice([1, 1, 1, 2, 3, 4, 5, 6, 7, 8, 9, r.randrange(300)]) for _ in range(n)]
+        m = r.choice([2, 3, 4, 8])
+        return [r.randrange(m) for _ in range(r.randint(0, 14))]
+
+    @classmethod
+    def gen(cls, r):
+        a, b = cls.seq(r), cls.seq(r)
+        if r.random() < 0.3:
+            b = list(a)
+            for _ in range(r.randint(0, 3)):
+                if b:
+                    b[r.randrange(len(b))] = r.randrange(9)
+        ops = []
+        for _ in range(r.randint(1, 6)):
+            k = r.random()
+            if k < 0.2:
+                ops.append({"op": "opcodes"})
+            elif k < 0.35:
+                ops.append({"op": "blocks"})
+            elif k < 0.6:
+                ops.append({"op": "grouped", "n": r.choice([0, 1, 2, 3, 3, 5])})
+            elif k < 0.67:
+                ops.append({"op": r.choice(["ratio", "quick", "real"])})
+            elif k < 0.87:
+                la, lb = len(a), len(b)
+                x = sorted([r.randint(0, la), r.randint(0, la)])
+                y = sorted([r.randint(0, lb), r.randint(0, lb)])
+                if r.random() < 0.1:
+                    x[1] += r.choice([1, 5])
+                if r.random() < 0.1:
+                    y[1] += r.choice([1, 5])
+                ops.append({"op": "longest", "alo": x[0], "ahi": x[1], "blo": y[0], "bhi": y[1]})
+            elif k < 0.93:
+                ops.append({"op": "seqs", "x": cls.seq(r), "y": cls.seq(r), "same": r.random() < 0.3, "same2": r.random() < 0.3})
+            else:
+                w = r.choice(["seq1", "seq2"])
+                ops.append({"op": w, "x": cls.seq(r), "same": r.random() < 0.3})
+        return {"mod": "textlibs", "fn": "difflib.seq", "a": a, "b": b, "auto": r.random() < 0.6, "hasjunk": r.random() < 0.3,
+                "junk": [r.randrange(9) for _ in range(r.randint(0, 2))], "boom": [r.randrange(9)] if r.random() < 0.1 else [], "ops": ops}
+
+    @classmethod
+    def run(cls, c):
+        import difflib
+
+        def junk(x):
+            if x in c["boom"]:
+                raise ValueError("boom")
+            return x in c["junk"]
+
+        def op(s, o):
+            k = o["op"]
+            if k == "blocks":
+                return [list(t) for t in s.get_matching_blocks()]
+            if k == "opcodes":
+                return [list(t) for t in s.get_opcodes()]
+            if k == "grouped":
+                return [[list(t) for t in g] for g in s.get_grouped_opcodes(o["n"])]
+            if k in ("ratio", "quick", "real"):
+                f = {"ratio": s.ratio, "quick": s.quick_ratio, "real": s.real_quick_ratio}[k]()
+                length = len(s.a) + len(s.b)
+                if length == 0:
+                    return [0, 0] if f == 1.0 else ["bad", f]
+                m = round(f * length / 2)
+                return [m, length] if 2.0 * m / length == f else ["bad", f]
+            if k == "longest":
+                return list(s.find_longest_match(o["alo"], o["ahi"], o["blo"], o["bhi"]))
+            if k == "seqs":
+                s.set_seqs(s.a if o["same"] else list(o["x"]), s.b if o["same2"] else list(o["y"]))
+                return None
+            f = s.set_seq1 if k == "seq1" else s.set_seq2
+            cur = s.a if k == "seq1" else s.b
+            f(cur if o["same"] else list(o["x"]))
+            return None
+
+        def body():
+            s = difflib.SequenceMatcher(junk if c["hasjunk"] else None, list(c["a"]), list(c["b"]), c["auto"])
+            out = []
+            for o in c["ops"]:
+                try:
+                    out.append(op(s, o))
+                except Exception as e:
+                    out.append(["exc", {"exc": type(e).__name__, "msg": str(e)}])
+            return out
+        return common.py_result(body)
+
+
 only = os.environ.get("TEXTLIBS_ONLY")
 names = [n for n in AREAS if not only or n in only.split(",")]
 weights = [AREAS[n][1] for n in names]

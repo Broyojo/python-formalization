@@ -169,6 +169,11 @@ def qpSoft (crlf : Bool) : List Nat := if crlf then [61, 13, 10] else [61, 10]
 /-- A hard line end. -/
 def qpEol (crlf : Bool) : List Nat := if crlf then [13, 10] else [10]
 
+/-- A trailing space or tab before a line end is encoded, `Modules/binascii.c:1192-1201`. -/
+def qpProtect : List Nat → List Nat
+  | [] => []
+  | ch :: t => if ch == 32 || ch == 9 then (toHex ch).reverse ++ [61] ++ t else ch :: t
+
 /-- The second pass of `binascii_b2a_qp_impl`, `Modules/binascii.c:1174-1241`. `out` is the
 output so far, newest first, because the line-end branch rewrites `odata[out-1]`. -/
 def b2aQpLoop (o : QpOpts) (crlf : Bool) : (fuel : Nat) → List Nat → (linelen : Nat) → List Nat → List Nat
@@ -181,12 +186,8 @@ def b2aQpLoop (o : QpOpts) (crlf : Bool) : (fuel : Nat) → List Nat → (linele
         if linelen + 3 ≥ MAXLINESIZE then ((qpSoft crlf).reverse ++ out, 0) else (out, linelen)
       b2aQpLoop o crlf fuel r (linelen + 3) ((toHex b).reverse ++ [61] ++ out)
     else if o.istext && (b == 10 || (b == 13 && next == some 10)) then
-      let out :=
-        match out with
-        | ch :: t => if ch == 32 || ch == 9 then (toHex ch).reverse ++ [61] ++ t else out
-        | [] => out
       let r' := if b == 13 then r.drop 1 else r
-      b2aQpLoop o crlf fuel r' 0 ((qpEol crlf).reverse ++ out)
+      b2aQpLoop o crlf fuel r' 0 ((qpEol crlf).reverse ++ qpProtect out)
     else
       let (out, linelen) :=
         if next != none && next != some 10 && linelen + 1 ≥ MAXLINESIZE then

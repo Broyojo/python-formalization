@@ -8,6 +8,10 @@ import PyLean.TextLibs.ReMisc
 import PyLean.TextLibs.PathProps
 import PyLean.TextLibs.ShlexProps
 import PyLean.TextLibs.TextwrapProps
+import PyLean.TextLibs.QuopriProps
+import PyLean.TextLibs.HtmlProps
+import PyLean.TextLibs.DifflibQuick
+import PyLean.TextLibs.DifflibLongest
 import PyLean.TextLibs.CsvSniffProps
 
 /-!
@@ -34,6 +38,9 @@ open PyLean.TextLibs.Re
 open PyLean.TextLibs.Path
 open PyLean.TextLibs.Textwrap
 open PyLean.TextLibs.Shlex
+open PyLean.TextLibs.Quopri
+open PyLean.TextLibs.Html
+open PyLean.TextLibs.Difflib
 
 /-- The integer routines `IntCodesRoundTrip` drives through `runPack` and `runUnpack`. -/
 def structIntFns : List String :=
@@ -1124,7 +1131,120 @@ def entries : List Entry := [
     statement := "Text that fits in width passes, whatever the placeholder."
     source := "docs: shorten", status := .refuted
     prop := ``FittingTextPasses, thm := some ``fittingTextPasses_refuted
-    bug := some "textlibs-textwrap-placeholder-check-first" }
+    bug := some "textlibs-textwrap-placeholder-check-first" },
+  { id := "textlibs-binascii-qp-round-trip", pyFile := "Modules/binascii.c", pyFns := ["binascii_a2b_qp_impl", "binascii_b2a_qp_impl"]
+    statement := "a2b_qp(b2a_qp(d)) == d for all bytes and both of quotetabs and header, given istext=False or no CRLF in d."
+    source := "the implementation disagreeing with itself: round trip", status := .proven
+    prop := ``QpRoundTripNarrow, thm := some ``qpRoundTripNarrow_proven },
+  { id := "textlibs-binascii-qp-round-trip-broad", pyFile := "Modules/binascii.c", pyFns := ["binascii_a2b_qp_impl", "binascii_b2a_qp_impl"]
+    statement := "a2b_qp(b2a_qp(d)) == d for all bytes."
+    source := "the implementation disagreeing with itself: round trip", status := .refuted
+    prop := ``QpRoundTrip, thm := some ``qpRoundTrip_refuted
+    bug := some "textlibs-quopri-mixed-line-ends" },
+  { id := "textlibs-quopri-file-round-trip", pyFile := "Lib/quopri.py", pyFns := ["encode", "decode", "encodestring", "decodestring"]
+    statement := "encode then decode on files gives one write each and the data back, for all bytes and flags, with no CRLF in the data."
+    source := "the implementation disagreeing with itself: round trip", status := .proven
+    prop := ``FileRoundTrip, thm := some ``fileRoundTrip_proven },
+  { id := "textlibs-quopri-file-failures", pyFile := "Lib/quopri.py", pyFns := ["encode", "decode"]
+    statement := "A read that raises passes through with nothing written; a write that raises passes through after that write."
+    source := "invariant", status := .proven
+    prop := ``FileFailures, thm := some ``fileFailures_proven },
+  { id := "textlibs-quopri-quote-set-twin", pyFile := "Lib/quopri.py", pyFns := ["needsquoting"]
+    statement := "In the middle of a line, needsquoting and b2a_qp quote the same bytes."
+    source := "the implementation disagreeing with itself: C and Python twins", status := .proven
+    prop := ``QuoteSetTwin, thm := some ``quoteSetTwin_proven },
+  { id := "textlibs-quopri-quote-decodes", pyFile := "Lib/quopri.py", pyFns := ["quote", "ishex", "unhex"]
+    statement := "The pure-Python decoder undoes quote, for every byte."
+    source := "the implementation disagreeing with itself: round trip", status := .proven
+    prop := ``QuoteDecodes, thm := some ``quoteDecodes_proven },
+  { id := "textlibs-quopri-encode-twin", pyFile := "Lib/quopri.py", pyFns := ["encode", "encodestring", "needsquoting", "quote"]
+    statement := "The two bodies of encodestring agree."
+    source := "the implementation disagreeing with itself: C and Python twins", status := .refuted
+    prop := ``EncodeTwin, thm := some ``encodeTwin_refuted
+    bug := some "textlibs-quopri-twins-disagree" },
+  { id := "textlibs-quopri-decode-twin", pyFile := "Lib/quopri.py", pyFns := ["decode", "decodestring"]
+    statement := "The two bodies of decodestring agree."
+    source := "the implementation disagreeing with itself: C and Python twins", status := .refuted
+    prop := ``DecodeTwin, thm := some ``decodeTwin_refuted
+    bug := some "textlibs-quopri-twins-disagree" },
+  { id := "textlibs-quopri-py-round-trip", pyFile := "Lib/quopri.py", pyFns := ["encode", "decode", "quote"]
+    statement := "The pure-Python body round-trips."
+    source := "the implementation disagreeing with itself: round trip", status := .refuted
+    prop := ``PyRoundTrip, thm := some ``pyRoundTrip_refuted
+    bug := some "textlibs-quopri-py-soft-break-escape" },
+  { id := "textlibs-html-round-trip", pyFile := "Lib/html/__init__.py", pyFns := ["escape", "unescape", "_replace_charref"]
+    statement := "unescape(escape(s, quote)) == s for every string, on the real entity table."
+    source := "the implementation disagreeing with itself: round trip", status := .proven
+    prop := ``UnescapeEscape, thm := some ``unescapeEscape_proven },
+  { id := "textlibs-html-fast-path", pyFile := "Lib/html/__init__.py", pyFns := ["unescape"]
+    statement := "The test for '&' before the regex agrees with the regex."
+    source := "the implementation disagreeing with itself: fast and slow path", status := .proven
+    prop := ``UnescapeFastPath, thm := some ``unescapeFastPath_proven },
+  { id := "textlibs-html-escape-safe", pyFile := "Lib/html/__init__.py", pyFns := ["escape"]
+    statement := "The output of escape holds no < or >, and with quote no quotes."
+    source := "docstring of escape", status := .proven
+    prop := ``EscapeSafe, thm := some ``escapeSafe_proven },
+  { id := "textlibs-html-total", pyFile := "Lib/html/__init__.py", pyFns := ["unescape", "_replace_charref"]
+    statement := "unescape never raises on a str."
+    source := "invariant: no internal error leaking", status := .refuted
+    prop := ``UnescapeTotal, thm := some ``unescapeTotal_refuted
+    bug := some "textlibs-html-unescape-digit-limit" },
+  { id := "textlibs-html-total-narrow", pyFile := "Lib/html/__init__.py", pyFns := ["unescape", "_replace_charref"]
+    statement := "With no run of more than 4300 decimal digits, unescape does not raise."
+    source := "narrows textlibs-html-total", status := .proven
+    prop := ``UnescapeTotalNarrow, thm := some ``unescapeTotalNarrow_proven },
+  { id := "textlibs-html-numeric-twin", pyFile := "Lib/html/__init__.py", pyFns := ["_replace_charref"]
+    statement := "A decimal and a hexadecimal reference with the same value give the same result."
+    source := "the implementation disagreeing with itself", status := .refuted
+    prop := ``NumericTwin, thm := some ``numericTwin_refuted
+    bug := some "textlibs-html-unescape-digit-limit" },
+  { id := "textlibs-html-numeric-twin-narrow", pyFile := "Lib/html/__init__.py", pyFns := ["_replace_charref"]
+    statement := "With at most 4300 decimal digits, decimal and hexadecimal references of one value agree."
+    source := "narrows textlibs-html-numeric-twin", status := .proven
+    prop := ``NumericTwinNarrow, thm := some ``numericTwinNarrow_proven },
+  { id := "textlibs-html-numeric-valid", pyFile := "Lib/html/__init__.py", pyFns := ["_replace_charref"]
+    statement := "A numeric reference gives nothing or one scalar value, never a surrogate, for every number."
+    source := "docs: the HTML 5 rules", status := .proven
+    prop := ``NumericValid, thm := some ``numericValid_proven },
+  { id := "textlibs-html-named-longest", pyFile := "Lib/html/__init__.py", pyFns := ["_replace_charref"]
+    statement := "A named reference is the whole name, else the longest proper prefix of two or more characters in the table, else unchanged."
+    source := "comment at Lib/html/__init__.py:110", status := .proven
+    prop := ``NamedLongest, thm := some ``namedLongest_proven },
+  { id := "textlibs-difflib-find-longest", pyFile := "Lib/difflib.py", pyFns := ["SequenceMatcher.find_longest_match", "SequenceMatcher.__chain_b"]
+    statement := "With no junk and nothing popular, the result is a longest match in the box, the earliest in a of those, the earliest in b of those, for every box in range."
+    source := "docstring of find_longest_match", status := .proven
+    prop := ``FindLongestDoc, thm := some ``findLongestDoc_proven },
+  { id := "textlibs-difflib-blocks", pyFile := "Lib/difflib.py", pyFns := ["SequenceMatcher.get_matching_blocks", "SequenceMatcher.find_longest_match", "SequenceMatcher.__chain_b"]
+    statement := "The blocks are real matches, in order in both sequences, do not touch, and end with the sentinel, for any isjunk."
+    source := "docstring of get_matching_blocks", status := .proven
+    prop := ``BlocksLaw, thm := some ``blocksLaw_proven },
+  { id := "textlibs-difflib-opcodes", pyFile := "Lib/difflib.py", pyFns := ["SequenceMatcher.get_opcodes"]
+    statement := "The opcodes run from 0 to the ends of both sequences with no gap, and each tag means what it says, for any isjunk."
+    source := "docstring of get_opcodes", status := .proven
+    prop := ``OpcodesLaw, thm := some ``opcodesLaw_proven },
+  { id := "textlibs-difflib-grouped", pyFile := "Lib/difflib.py", pyFns := ["SequenceMatcher.get_grouped_opcodes"]
+    statement := "On a new matcher, every change is in a group, in order, and no equal in a group exceeds 2n."
+    source := "docstring of get_grouped_opcodes", status := .proven
+    prop := ``GroupedLaw, thm := some ``groupedLaw_proven },
+  { id := "textlibs-difflib-grouped-cache", pyFile := "Lib/difflib.py", pyFns := ["SequenceMatcher.get_grouped_opcodes", "SequenceMatcher.get_opcodes"]
+    statement := "get_grouped_opcodes does not change what get_opcodes returns."
+    source := "docstring of get_opcodes", status := .refuted
+    prop := ``GroupedKeepsOpcodes, thm := some ``groupedKeepsOpcodes_refuted
+    bug := some "textlibs-difflib-grouped-opcodes-mutates-cache" },
+  { id := "textlibs-difflib-ratio-bound", pyFile := "Lib/difflib.py", pyFns := ["SequenceMatcher.ratio", "SequenceMatcher.real_quick_ratio"]
+    statement := "The matches of ratio number at most the shorter length, which real_quick_ratio uses."
+    source := "docstring of real_quick_ratio", status := .proven
+    prop := ``RatioBound, thm := some ``ratioBound_proven
+    notes := "Counts of matches, not the float, which the difftest compares." },
+  { id := "textlibs-difflib-quick-bound", pyFile := "Lib/difflib.py", pyFns := ["SequenceMatcher.quick_ratio"]
+    statement := "The matches of quick_ratio are at least those of ratio."
+    source := "docstring of quick_ratio", status := .proven
+    prop := ``QuickBound, thm := some ``quickBound_proven
+    notes := "Counts of matches, not the float, which the difftest compares." },
+  { id := "textlibs-difflib-set-seqs", pyFile := "Lib/difflib.py", pyFns := ["SequenceMatcher.__init__", "SequenceMatcher.set_seqs", "SequenceMatcher.set_seq1", "SequenceMatcher.set_seq2"]
+    statement := "set_seqs with new objects leaves what __init__ would on those sequences, or raises what it would."
+    source := "the implementation disagreeing with itself", status := .proven
+    prop := ``SetSeqsFresh, thm := some ``setSeqsFresh_proven }
 ]
 
 end PyLean.TextLibs

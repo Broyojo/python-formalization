@@ -1,0 +1,42 @@
+id: textlibs-quopri-py-soft-break-escape
+title: "DUPLICATE of #158739 (closed, not planned): quopri's pure-Python encoder splits =XY at a soft break"
+priority: P4
+kind: wrong-result
+module: textlibs
+files: [Lib/quopri.py]
+functions: ["encode"]
+summary: |
+  The pure-Python encoder cuts a long line at 75 characters without looking at what is there, so the
+  line of 74 `a` and one `\\xff` becomes 74 `a`, `==`, newline, `FF`, which decodes to something else.
+  This body runs only if binascii cannot be imported.
+likelihood: |
+  Very low on CPython: the code is not reached.
+maybe_intended: |
+  No, but maintainers closed both reports as not planned, since the fallback is dead code.
+reproducer: |
+  import quopri
+  saved = quopri.a2b_qp, quopri.b2a_qp
+  quopri.a2b_qp = quopri.b2a_qp = None
+  s = b'a' * 74 + b'\xff'
+  e = quopri.encodestring(s)
+  d = quopri.decodestring(e)
+  quopri.a2b_qp, quopri.b2a_qp = saved
+  print(e, d)
+  if e == b'a' * 74 + b'==\nFF' and d != s:
+      print('REPRODUCED textlibs-quopri-py-soft-break-escape')
+expected: |
+  The data back.
+observed: |
+  python3 3.14.7: b'aaa...==\nFF', and it does not decode to the input. REPRODUCED.
+  main 3.16.0a1+dev: the same. REPRODUCED.
+promised_by: |
+  Lib/quopri.py:43: "apply quoted-printable encoding".
+cause: |
+  Lib/quopri.py:90-94 cuts at MAXLINESIZE-1 whatever the bytes are.
+possible_fix: |
+  None worth making: remove the fallback, as #133896 proposes.
+duplicates: |
+  DUPLICATE of #158739 and #158740, both closed as not planned, and of bugforge
+  quopri-20261003-042505-c1 and -c3. Do not file. Queries: gh search issues --repo python/cpython
+  quopri; "quoted-printable"; gh issue view 158739; gh issue view 158740.
+lean: lean/PyLean/TextLibs/QuopriProps.lean (PyRoundTrip)
