@@ -222,6 +222,12 @@ def usNew (cls : String) : SArg → US
   | .user s => ⟨cls, s⟩
   | .other _ text => ⟨cls, text⟩
 
+/-- `UserString.__str__`, :1373-1374. -/
+def usStr (u : US) : Seq := u.data
+
+/-- `UserString.__getnewargs__`, :1391-1392: `(self.data[:],)`. -/
+def usGetnewargs (u : US) : Seq := u.data
+
 /-- `UserString.__eq__`, ..., `__ge__`, :1394-1417. -/
 def usRich (op : SOp) (u : US) (a : SArg) : Py Bool := strRich op u.data (unwrap a)
 

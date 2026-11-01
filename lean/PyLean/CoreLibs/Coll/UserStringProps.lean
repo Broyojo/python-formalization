@@ -327,12 +327,16 @@ theorem userStringOrderHash_proven : UserStringOrderHash := by
 (`__init__`, :1365-1371); `__getnewargs__`, `__str__` return the data, so
 a pickle or `copy` round trip gives the same object; `int(u)`, `float(u)`, `complex(u)` are the
 conversions of the data. Concatenation adds lengths and keeps the class, and takes the same
-`str(other)` on both sides (:1430-1440). -/
+`str(other)` on both sides (:1430-1440). `__rmod__` formats `str(template)` with the object and keeps
+the class (:1450-1451), and `encode(None, None)` means the defaults (:1478-1481). -/
 def UserStringConstructAdd : Prop :=
-  ∀ (ops : UniOps) (u : US) (cls : String) (a : SArg),
+  ∀ (ops : UniOps) (u : US) (cls : String) (a : SArg) (t : Seq),
     usNew cls (.str u.data) = ⟨cls, u.data⟩ ∧
     usNew cls (.user u.data) = ⟨cls, u.data⟩ ∧
-    usNew u.cls (.str u.data) = u ∧
+    usNew u.cls (.str (usGetnewargs u)) = u ∧
+    usNew u.cls (.str (usStr u)) = u ∧
+    usRmod ops u t = (ops.modUser t u.data).map (fun d => ⟨u.cls, d⟩) ∧
+    usEncode ops u none none = ops.encode u.data "utf-8" "strict" ∧
     ((usAdd u a).data = u.data ++ (usNew cls a).data) ∧
     ((usRadd u a).data = (usNew cls a).data ++ u.data) ∧
     (usAdd u a).cls = u.cls ∧ (usRadd u a).cls = u.cls ∧
@@ -341,8 +345,8 @@ def UserStringConstructAdd : Prop :=
     usCall ops .toComplex u = URes.text <$> ops.toComplex u.data
 
 theorem userStringConstructAdd_proven : UserStringConstructAdd := by
-  intro ops u cls a
-  refine ⟨rfl, rfl, rfl, ?_, ?_, ?_, ?_, rfl, rfl, rfl⟩ <;> cases a <;> rfl
+  intro ops u cls a t
+  refine ⟨rfl, rfl, rfl, rfl, rfl, rfl, ?_, ?_, ?_, ?_, rfl, rfl, rfl⟩ <;> cases a <;> rfl
 
 theorem sum_rep (m k : Nat) : (List.replicate m k).sum = m * k := by
   induction m with

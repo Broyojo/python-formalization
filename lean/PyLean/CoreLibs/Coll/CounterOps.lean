@@ -576,7 +576,7 @@ theorem inplaceAgreesBinary_proven : InplaceAgreesBinary :=
   fun _ _ _ _ ha hb => ⟨iaddC_eq ha hb, isubC_eq ha hb, iorC_eq ha hb, iandC_eq ha⟩
 
 /-- `_keep_positive` (:930-935) removes exactly the non-positive counts and keeps the rest
-in place, and an in-place operator's `keepPositive` is idempotent. -/
+in place, which is unary `+` computed in place. -/
 def KeepPositiveFilters : Prop :=
   ∀ (κ : Type) [DecidableEq κ] (c : Ctr κ), WF c →
     keepPositive c = c.filter (fun p => decide (p.2 > 0)) ∧ keepPositive c = posC c

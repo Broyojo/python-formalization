@@ -157,7 +157,15 @@ def udItemsContains [DecidableEq ν] (rk : κ → String) (miss : Option (κ →
   | .error _ => false
   | .ok w => decide (w = v)
 
+/-- `list(reversed(u))`: `Mapping` sets `__reversed__ = None`, _collections_abc.py:824, and
+`UserDict` does not override it. -/
+def udReversed (u : UD κ ν) : Py (List κ) :=
+  .error (.typeError s!"'{u.cls}' object is not reversible")
+
 /-! ### The same methods on `dict` and on a `dict` subclass with `__missing__` -/
+
+/-- `list(reversed(d))`, since 3.8. -/
+def dictReversed (d : D κ ν) : Py (List κ) := .ok (D.keys d).reverse
 
 /-- `d[k]` on a `dict` subclass, `dict_subscript`: `__missing__` is only called by the
 subscript. -/

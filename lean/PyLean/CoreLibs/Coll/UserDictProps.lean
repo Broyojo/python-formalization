@@ -85,15 +85,52 @@ theorem userDictMatchesDict_proven : UserDictMatchesDict := by
 3.7). `UserDict.popitem` should simulate that. False on 3.14: it inherits
 `MutableMapping.popitem`, which takes the first key. -/
 def UserDictPopitemMatchesDict : Prop :=
-  ∀ (κ ν : Type) [DecidableEq κ] (rk : κ → String) (u : UD κ ν),
-    udPopitem rk none u = (dictPopitem u.data).map (fun r => (r.1, { u with data := r.2 })) ∧
-      (u.data = [] → True)
+  ∀ (κ ν : Type) [DecidableEq κ] (rk : κ → String) (u : UD κ ν), u.data ≠ [] →
+    udPopitem rk none u = (dictPopitem u.data).map (fun r => (r.1, { u with data := r.2 }))
 
 theorem userDictPopitemMatchesDict_refuted : ¬ UserDictPopitemMatchesDict := by
   intro h
-  have := (h Nat Nat (fun _ => "") ⟨"UserDict", [(1, 1), (2, 2)]⟩).1
+  have := h Nat Nat (fun _ => "") ⟨"UserDict", [(1, 1), (2, 2)]⟩ (by simp)
   simp [udPopitem, udIter, udGetitem, udDelitem, D.mem, D.get?, D.keys, D.del, dictPopitem, D.popitem?,
     Except.map, bind, Except.bind, pure, Except.pure] at this
+
+/-- `reversed(d)` works on a `dict` since 3.8 and `UserDict` "simulates a dictionary". False:
+`Mapping.__reversed__ = None` makes `reversed(UserDict(...))` a `TypeError`. -/
+def UserDictReversible : Prop :=
+  ∀ (κ ν : Type) [DecidableEq κ] (u : UD κ ν), udReversed u = dictReversed u.data
+
+theorem userDictReversible_refuted : ¬ UserDictReversible := by
+  intro h
+  have := h Nat Nat ⟨"UserDict", []⟩
+  simp [udReversed, dictReversed] at this
+
+/-- `d[k] = v` then `d[k]` gives `v`, and leaves a valid dict; `del d[k]` on a present key removes
+that key and no other; on an absent key it raises `KeyError(k)`, as `dict` does. -/
+def UserDictSetDel : Prop :=
+  ∀ (κ ν : Type) [DecidableEq κ] (rk : κ → String) (u : UD κ ν) (k x : κ) (v : ν), WF u.data →
+    udGetitem rk none (udSetitem u k v) k = .ok v ∧ WF (udSetitem u k v).data ∧
+    (D.mem u.data k = false → udDelitem rk u k = .error (.keyError (rk k))) ∧
+    (∀ u', udDelitem rk u k = .ok u' →
+      D.get? u'.data k = none ∧ (x ≠ k → D.get? u'.data x = D.get? u.data x))
+
+theorem userDictSetDel_proven : UserDictSetDel := by
+  intro κ ν _ rk u k x v hw
+  refine ⟨?_, WF_set hw k v, ?_, ?_⟩
+  · apply udGetitem_some
+    simp [udSetitem, get?_set]
+  · intro h
+    simp [udDelitem, h]
+  · intro u' h
+    unfold udDelitem at h
+    split at h
+    · simp only [Except.ok.injEq] at h
+      subst h
+      constructor
+      · simp [get?_del hw]
+      · intro hx
+        have : ¬ k = x := fun e => hx e.symm
+        simp [get?_del hw, this]
+    · simp at h
 
 /-- Both orders remove an existing item; they differ only in which one is picked. A
 one-item `UserDict` agrees with `dict`. -/

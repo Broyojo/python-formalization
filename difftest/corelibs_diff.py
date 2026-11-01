@@ -313,7 +313,8 @@ def coll_run_cm(case):
 def coll_gen_ud(rng):
     op = rng.choice(["new", "len", "getitem", "setitem", "delitem", "iter", "contains", "get",
                      "repr", "or", "ror", "ior", "copy", "copy_dunder", "fromkeys", "pop",
-                     "popitem", "setdefault", "clear", "items_contains", "dict_getitem",
+                     "popitem", "setdefault", "clear", "items_contains", "reversed",
+                     "dict_reversed", "dict_getitem",
                      "dict_pop", "dict_popitem", "dict_setdefault", "dict_items_contains"])
     case = {"fn": "coll.ud", "op": op, "a": coll_items(rng, small=True),
             "sub": rng.choice([0, 1, 2]), "k": rng.choice(coll_KEYS)}
@@ -406,6 +407,10 @@ def coll_run_ud(case):
             return coll_enc_ud(u)
         if op == "items_contains":
             return (k, 0 if d is None else d) in u.items()
+        if op == "reversed":
+            return list(reversed(u))
+        if op == "dict_reversed":
+            return list(reversed(plain))
         if op == "dict_getitem":
             return plain[k]
         if op == "dict_pop":

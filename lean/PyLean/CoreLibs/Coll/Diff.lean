@@ -238,6 +238,8 @@ def runUD (j : Json) : Except String Json := do
     return okJ (Json.arr #[toJson r.1, encUD r.2])
   | "clear" => return okJ (encUD (udClear rkStr miss u))
   | "items_contains" => return okJ (toJson (udItemsContains rkStr miss u k (dflt.getD 0)))
+  | "reversed" => return encPy encStrs (udReversed u)
+  | "dict_reversed" => return encPy encStrs (dictReversed u.data)
   | "dict_getitem" => return encPy toJson (dictGetitem rkStr miss u.data k)
   | "dict_pop" => return encPy (fun r => Json.arr #[toJson r.1, encItems r.2]) (dictPop rkStr u.data k dflt)
   | "dict_popitem" => return encPy (fun r => Json.arr #[encPair r.1, encItems r.2]) (dictPopitem u.data)
@@ -628,7 +630,8 @@ def runUS (j : Json) : Except String Json := do
   let u : US := ⟨cls, d⟩
   match op with
   | "new" => return okJ (encURes (.us (usNew cls (← getArg j "a"))))
-  | "str" | "getnewargs" => return okJ (encURes (.str u.data))
+  | "str" => return okJ (encURes (.str (usStr u)))
+  | "getnewargs" => return okJ (encURes (.str (usGetnewargs u)))
   | "add" => return okJ (encURes (.us (usAdd u (← getArg j "a"))))
   | "radd" => return okJ (encURes (.us (usRadd u (← getArg j "a"))))
   | "rmod" =>

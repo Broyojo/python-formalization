@@ -233,7 +233,7 @@ last map to the first. Doc/library/collections.rst: "Lookups search the underlyi
 mappings successively until a key is found", "Iterating over a ChainMap ... scanning
 the mappings last to first", and `__len__`, `__contains__`, `__bool__` and `get` agree. -/
 def ChainMapFlatView : Prop :=
-  ∀ (κ ν : Type) [DecidableEq κ] (maps : List (D κ ν)) (k : κ) (miss : κ → Py ν)
+  ∀ (κ ν : Type) [DecidableEq κ] (rk : κ → String) (maps : List (D κ ν)) (k : κ) (miss : κ → Py ν)
     (default : Option ν), (∀ m ∈ maps, WF m) →
     cmIter ⟨maps⟩ = keys (flat maps) ∧
     cmLen ⟨maps⟩ = (keys (flat maps)).length ∧
@@ -243,10 +243,11 @@ def ChainMapFlatView : Prop :=
       (match D.get? (flat maps) k with
        | some v => .ok v
        | none => miss k) ∧
-    cmGet miss ⟨maps⟩ k default = .ok ((D.get? (flat maps) k).or default)
+    cmGet miss ⟨maps⟩ k default = .ok ((D.get? (flat maps) k).or default) ∧
+    (D.get? (flat maps) k = none → cmGetitem (cmMissing rk) ⟨maps⟩ k = .error (.keyError (rk k)))
 
 theorem chainMapFlatView_proven : ChainMapFlatView := by
-  intro κ ν _ maps k miss default hw
+  intro κ ν _ rk maps k miss default hw
   have hc : cmContains ⟨maps⟩ k = D.mem (flat maps) k := by
     apply Bool.eq_iff_iff.mpr
     rw [contains_iff, D.mem_iff, mem_flat_iff hw]
@@ -255,7 +256,7 @@ theorem chainMapFlatView_proven : ChainMapFlatView := by
        | some v => .ok v
        | none => miss k) := by
     rw [cmGetitem, get?_flat hw]; rfl
-  refine ⟨iter_eq hw, len_eq hw, hc, ?_, hg, ?_⟩
+  refine ⟨iter_eq hw, len_eq hw, hc, ?_, hg, ?_, ?_⟩
   · apply Bool.eq_iff_iff.mpr
     simp only [cmBool, List.any_eq_true, Bool.not_eq_true', List.isEmpty_eq_false_iff]
     constructor
@@ -283,6 +284,9 @@ theorem chainMapFlatView_proven : ChainMapFlatView := by
       have hs : (D.get? (flat maps) k).isSome = false := hd
       have : D.get? (flat maps) k = none := by simpa using hs
       simp [this]
+  · intro h
+    have hl : cmLookup maps k = none := by rw [← get?_flat hw]; exact h
+    simp [cmGetitem, hl, cmMissing]
 
 /-- Doc/library/collections.rst, ChainMap: "writes, updates, and deletions only operate
 on the first mapping", with the `KeyError` of `__delitem__`/`pop` and `popitem` decided
