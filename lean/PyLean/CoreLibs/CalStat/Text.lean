@@ -61,7 +61,10 @@ def fmt2i (i : Int) : Str :=
 def pyIndex {α : Type} (xs : List α) (i : Int) : Py α :=
   let n : Int := xs.length
   let j := if i < 0 then i + n else i
-  if j < 0 ∨ j ≥ n then .error (.indexError "list index out of range")
+  if j < 0 ∨ j ≥ n then
+    -- `PyNumber_AsSsize_t(item, PyExc_IndexError)` comes first for an index beyond `Py_ssize_t`
+    if i ≥ 2 ^ 63 ∨ i < -(2 ^ 63) then .error (.indexError "cannot fit 'int' into an index-sized integer")
+    else .error (.indexError "list index out of range")
   else match xs[j.toNat]? with
     | some x => .ok x
     | none => .error (.indexError "list index out of range")

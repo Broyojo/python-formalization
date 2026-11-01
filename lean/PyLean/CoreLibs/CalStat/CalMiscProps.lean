@@ -577,6 +577,7 @@ def LocalizedTables : Prop :=
   (∀ (tbl : List Str) (i : Int), 0 ≤ i → i < tbl.length →
     localizedGet tbl (i - tbl.length) = localizedGet tbl i) ∧
   (∀ (tbl : List Str) (i : Int), (i ≥ tbl.length ∨ i < -(tbl.length : Int)) →
+    -(2 ^ 63) ≤ i → i < 2 ^ 63 →
     localizedGet tbl i = .error (.indexError "list index out of range")) ∧
   localizedSlice cNames.dayName none none 1 = .ok cNames.dayName ∧
   localizedSlice (localizedMonthList cNames.monthName) none none 1 =
@@ -590,8 +591,9 @@ theorem localizedTables_proven : LocalizedTables := by
     simp only
     rw [if_pos (by omega : i - tbl.length < 0), if_neg (by omega : ¬ i < 0)]
     rw [show i - (tbl.length : Int) + tbl.length = i by omega]
-  · intro tbl i h
-    exact pyIndex_err tbl i h
+    rw [if_neg (by omega), if_neg (by omega)]
+  · intro tbl i h h1 h2
+    exact pyIndex_err tbl i h ⟨h1, h2⟩
   · intro i h0 h1
     have hb : daysInMonth 2001 1 = 31 := by decide
     rw [weekday_ok 2001 1 (i + 1) (by decide) (by omega)]

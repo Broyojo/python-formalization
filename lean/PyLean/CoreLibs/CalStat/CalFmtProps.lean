@@ -50,13 +50,13 @@ theorem pyIndex_ok {α : Type} (xs : List α) (i : Int) (h0 : 0 ≤ i) (h1 : i <
 
 /-- `lst[i]` for an out-of-range index, on either side. -/
 theorem pyIndex_err {α : Type} (xs : List α) (i : Int)
-    (h : i ≥ xs.length ∨ i < -(xs.length : Int)) :
+    (h : i ≥ xs.length ∨ i < -(xs.length : Int)) (hs : -(2 ^ 63) ≤ i ∧ i < 2 ^ 63) :
     pyIndex xs i = .error (.indexError "list index out of range") := by
   unfold pyIndex
   simp only
   by_cases hn : i < 0
-  · rw [if_pos hn, if_pos (by omega)]
-  · rw [if_neg hn, if_pos (by omega)]
+  · rw [if_pos hn, if_pos (by omega), if_neg (by omega)]
+  · rw [if_neg hn, if_pos (by omega), if_neg (by omega)]
 
 theorem mapM_exists {α β : Type} (f : α → Py β) (l : List α) (P : β → Prop)
     (h : ∀ x ∈ l, ∃ y, f x = .ok y ∧ P y) :
