@@ -170,25 +170,61 @@ theorem cBody_witness : cBody 2 (noneList 1001) {} = .ok ((),
   rw [cBody_list _ (by rw [List.length_replicate]; decide), List.length_replicate, bind_run h2]
   rfl
 
-theorem pyDumps_witness : pyDumps (noneList 1001) 2 = .ok (conc midEv.reverse ++ [oNONE, oAPPEND, oSTOP]) := by
+theorem pyDumps_of_run {x : PV} {st : EncSt} (h : pyBody 2 x {} = .ok ((), st)) :
+    pyDumps x 2 = .ok (pyFrame st.ev.reverse) := by
   have hp : pyProtocol 2 = .ok 2 := rfl
-  have hfold : midEv.reverse.foldl PyFramer.step {} = ⟨conc midEv.reverse, none⟩ := by
-    simpa using pyFold_plain midEv.reverse (fun x hx => midEv_plain x (by simpa using hx)) []
   unfold pyDumps
-  simp only [hp, bind, Except.bind, StateT.run, pyBody_witness, pure, Except.pure, pyFrame,
-    List.reverse_append, List.foldl_append, List.reverse_cons, List.reverse_nil, List.nil_append, hfold]
-  generalize conc midEv.reverse = P
+  simp only [hp, bind, Except.bind, StateT.run, h, pure, Except.pure]
+
+theorem cDumps_of_run {x : PV} {st : EncSt} (h : cBody 2 x {} = .ok ((), st)) :
+    cDumps x 2 = .ok (cFrame st.ev.reverse) := by
+  have hp : cProtocol 2 = .ok 2 := rfl
+  unfold cDumps
+  simp only [hp, bind, Except.bind, StateT.run, h, pure, Except.pure]
+
+theorem pyFrame_tail (P : Bytes) (l : List Event) (hl : midEv.reverse.foldl PyFramer.step {} = ⟨P, none⟩) :
+    pyFrame (midEv.reverse ++ l) = (l.foldl PyFramer.step ⟨P, none⟩).out := by
+  unfold pyFrame
+  rw [List.foldl_append, hl]
+
+theorem cFrame_tail (P : Bytes) (l : List Event) (hl : midEv.reverse.foldl CFramer.step {} = ⟨P, none, false⟩) :
+    cFrame (midEv.reverse ++ l) = (l.foldl CFramer.step ⟨P, none, false⟩).buf := by
+  unfold cFrame
+  rw [List.foldl_append, hl]
+
+theorem pyTail_eval (P : Bytes) :
+    (([.boundary, .w [oNONE], .w [oAPPEND], .w [oSTOP], .finish] : List Event).foldl PyFramer.step ⟨P, none⟩).out =
+      P ++ [oNONE, oAPPEND, oSTOP] := by
   simp [PyFramer.step]
+
+theorem cTail_eval (P : Bytes) :
+    (([.w [oMARK], .boundary, .w [oNONE], .w [oAPPENDS], .w [oSTOP], .finish] : List Event).foldl
+      CFramer.step ⟨P, none, false⟩).buf = P ++ [oMARK, oNONE, oAPPENDS, oSTOP] := by
+  simp [CFramer.step, CFramer.write, CFramer.commit]
+
+theorem pyDumps_witness : pyDumps (noneList 1001) 2 = .ok (conc midEv.reverse ++ [oNONE, oAPPEND, oSTOP]) := by
+  have hfold : midEv.reverse.foldl PyFramer.step {} = ⟨conc midEv.reverse, none⟩ := by
+    have h := pyFold_plain midEv.reverse (fun x hx => midEv_plain x (List.mem_reverse.mp hx)) []
+    rw [List.nil_append] at h
+    exact h
+  rw [pyDumps_of_run pyBody_witness]
+  have hrev : (([.finish, .w [oSTOP], .w [oAPPEND], .w [oNONE], .boundary] : List Event) ++ midEv).reverse =
+      midEv.reverse ++ [.boundary, .w [oNONE], .w [oAPPEND], .w [oSTOP], .finish] := by
+    rw [List.reverse_append]; rfl
+  dsimp only
+  rw [hrev, pyFrame_tail _ _ hfold, pyTail_eval]
 
 theorem cDumps_witness : cDumps (noneList 1001) 2 =
     .ok (conc midEv.reverse ++ [oMARK, oNONE, oAPPENDS, oSTOP]) := by
-  have hp : cProtocol 2 = .ok 2 := rfl
   have hfold : midEv.reverse.foldl CFramer.step {} = ⟨conc midEv.reverse, none, false⟩ := by
-    simpa using cFold_plain midEv.reverse (fun x hx => midEv_plain x (by simpa using hx)) []
-  unfold cDumps
-  simp only [hp, bind, Except.bind, StateT.run, cBody_witness, pure, Except.pure, cFrame,
-    List.reverse_append, List.foldl_append, List.reverse_cons, List.reverse_nil, List.nil_append, hfold]
-  generalize conc midEv.reverse = P
-  simp [CFramer.step, CFramer.write, CFramer.commit]
+    have h := cFold_plain midEv.reverse (fun x hx => midEv_plain x (List.mem_reverse.mp hx)) []
+    rw [List.nil_append] at h
+    exact h
+  rw [cDumps_of_run cBody_witness]
+  have hrev : (([.finish, .w [oSTOP], .w [oAPPENDS], .w [oNONE], .boundary, .w [oMARK]] : List Event) ++ midEv).reverse =
+      midEv.reverse ++ [.w [oMARK], .boundary, .w [oNONE], .w [oAPPENDS], .w [oSTOP], .finish] := by
+    rw [List.reverse_append]; rfl
+  dsimp only
+  rw [hrev, cFrame_tail _ _ hfold, cTail_eval]
 
 end PyLean.Pickle

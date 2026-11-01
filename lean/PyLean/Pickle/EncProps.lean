@@ -86,21 +86,23 @@ theorem pySaveBytesData_big (b : Bytes) (hb : b.length = 2 ^ 32) :
 theorem cDumps_big_bytes (b : Bytes) (hb : b.length = 2 ^ 32) :
     cDumps (.bytes (.u 0) b) 3 = .error (.overflowError
       "serializing a bytes object larger than 4 GiB requires pickle protocol 4 or higher") := by
-  have hp : cProtocol 3 = .ok 3 := by decide
+  have hp : cProtocol 3 = .ok 3 := rfl
+  have hbody : cBody 3 (.bytes (.u 0) b) {} = .error (.overflowError
+      "serializing a bytes object larger than 4 GiB requires pickle protocol 4 or higher") := by
+    simp only [cBody, cSave, cSaveBytesObj, cSaveBytesData_big _ b hb]
+    rfl
   unfold cDumps
-  rw [hp]
-  simp only [bind, Except.bind]
-  simp only [cSave, cSaveBytesObj, cSaveBytesData_big _ b hb]
-  rfl
+  simp only [hp, bind, Except.bind, StateT.run, hbody]
 
 theorem pyDumps_big_bytes (b : Bytes) (hb : b.length = 2 ^ 32) :
     pyDumps (.bytes (.u 0) b) 3 = .error (structError "'I' format requires 0 <= number <= 4294967295") := by
-  have hp : pyProtocol 3 = .ok 3 := by decide
+  have hp : pyProtocol 3 = .ok 3 := rfl
+  have hbody : pyBody 3 (.bytes (.u 0) b) {} =
+      .error (structError "'I' format requires 0 <= number <= 4294967295") := by
+    simp only [pyBody, pySave, pySaveBytesObj, pySaveBytesData_big b hb]
+    rfl
   unfold pyDumps
-  rw [hp]
-  simp only [bind, Except.bind]
-  simp only [pySave, pySaveBytesObj, pySaveBytesData_big b hb]
-  rfl
+  simp only [hp, bind, Except.bind, StateT.run, hbody]
 
 /-- `pickle.dumps(bytes(2**32), 3)`: C raises `OverflowError` with an
 explanation; `pickle._dumps` raises `struct.error` from `pack("<I", n)`. -/
