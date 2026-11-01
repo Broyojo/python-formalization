@@ -2,6 +2,7 @@ import PyLean.Registry
 import PyLean.Pickle.Diff
 import PyLean.Pickle.SaveLongProps
 import PyLean.Pickle.LongLineProps
+import PyLean.Pickle.IntNarrow
 import PyLean.Pickle.EncProps
 import PyLean.Pickle.DecProps
 
@@ -57,6 +58,12 @@ def entries : List Entry := [
     prop := ``IntLineTwinsNoNul, thm := some ``intLineTwinsNoNul_refuted
     bug := some "pickle-c-int-digit-limit"
     notes := "5000 zeros and a 1 are 1 through strtol in C and over the digit limit in Python." },
+  { id := "pickle-int-line-twins-narrow", pyFile := "Modules/_pickle.c"
+    pyFns := ["load_int"]
+    statement := "For every complete INT line with no NUL byte, not a bool spelling and with at most 4300 digit bytes, the C strtol fast path, its PyLong_FromString fallback and Python's int() accept the same lines and return the same value, including the bools I00 and I01."
+    source := "invariant: C accelerator vs pure-Python twin", status := .proven
+    prop := ``IntLineTwinsNarrow, thm := some ``intLineTwinsNarrow_proven
+    notes := "The three hypotheses are the three refutations above. The digit bound is the documented sys.get_int_max_str_digits limit; it excludes some lines both twins reject. Exception classes can differ (an empty line is UnpicklingError in C, ValueError in Python)." },
   { id := "pickle-long-line-twins", pyFile := "Modules/_pickle.c"
     pyFns := ["load_long"]
     statement := "For every complete LONG line, the C and Python unpicklers accept the same lines and return the same value."

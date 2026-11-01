@@ -51,9 +51,12 @@ def BatchOkPairs (proto : Nat) : List (PV × PV) → Prop
   | (k, v) :: kvs => BatchOk proto k ∧ BatchOk proto v ∧ BatchOkPairs proto kvs
 end
 
+/-- The protocol a `protocol` argument selects: negative means the highest. -/
+def effProto (protocol : Int) : Nat := if protocol < 0 then 5 else protocol.toNat
+
 /-- `DumpsTwinsAgree` for values without those batch shapes. -/
 def DumpsTwinsAgreeBatchOk : Prop :=
-  ∀ (x : PV) (protocol : Int), (∀ p : Nat, (p : Int) = protocol → BatchOk p x) →
+  ∀ (x : PV) (protocol : Int), BatchOk (effProto protocol) x →
     cDumps x protocol = pyDumps x protocol
 
 /-- `protocol=-2**63-1`: `_Pickler_SetProtocol` calls `PyLong_AsLong` and
@@ -61,14 +64,14 @@ raises `OverflowError`; `_Pickler.__init__` maps every negative protocol to the
 highest one. -/
 theorem dumpsTwinsAgreeBatchOk_refuted : ¬ DumpsTwinsAgreeBatchOk := by
   intro h
-  have := h .none (-(2 ^ 63) - 1) (by intro p hp; omega)
+  have := h .none (-(2 ^ 63) - 1) (by simp [BatchOk])
   revert this
   decide +kernel
 
 /-- `DumpsTwinsAgreeBatchOk` for `protocol` within C `long`. -/
 def DumpsTwinsAgreeBatchOkLong : Prop :=
   ∀ (x : PV) (protocol : Int), longMin ≤ protocol → protocol ≤ longMax →
-    (∀ p : Nat, (p : Int) = protocol → BatchOk p x) → cDumps x protocol = pyDumps x protocol
+    BatchOk (effProto protocol) x → cDumps x protocol = pyDumps x protocol
 
 theorem cSaveBytesData_big (o : Oid) (b : Bytes) (hb : b.length = 2 ^ 32) :
     cSaveBytesData 3 o b = throw (.overflowError
@@ -109,7 +112,7 @@ explanation; `pickle._dumps` raises `struct.error` from `pack("<I", n)`. -/
 theorem dumpsTwinsAgreeBatchOkLong_refuted : ¬ DumpsTwinsAgreeBatchOkLong := by
   intro h
   obtain ⟨b, hb⟩ : ∃ b : Bytes, b.length = 2 ^ 32 := ⟨List.replicate _ 0, List.length_replicate⟩
-  have := h (.bytes (.u 0) b) 3 (by decide) (by decide) (by intro p _; simp [BatchOk])
+  have := h (.bytes (.u 0) b) 3 (by decide) (by decide) (by simp [BatchOk])
   rw [cDumps_big_bytes b hb, pyDumps_big_bytes b hb] at this
   simp [structError] at this
 

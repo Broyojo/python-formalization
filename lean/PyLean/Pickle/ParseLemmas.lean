@@ -111,13 +111,13 @@ theorem pyLongFromString_append_space (s : Bytes) {c : UInt8} (hc : isSpace c = 
       · subst h1; exact lfsBase_append_space false r hc
       · by_cases h2 : a = 0x2d
         · subst h2; exact lfsBase_append_space true r hc
-        · split <;> rename_i heq
-          · simp at heq; exact absurd heq.1 h1
-          · simp at heq; exact absurd heq.1 h2
-          · split <;> rename_i heq2
-            · simp at heq2; exact absurd heq2.1 h1
-            · simp at heq2; exact absurd heq2.1 h2
-            · have := lfsBase_append_space false (a :: r) hc
-              simpa using this
+        · have e1 : ∀ t : Bytes, signSplit (a :: t) = (false, a :: t) := by
+            intro t; unfold signSplit; split <;> rename_i heq
+            · simp at heq; exact absurd heq.1 h1
+            · simp at heq; exact absurd heq.1 h2
+            · rfl
+          simp only [e1]
+          have := lfsBase_append_space false (a :: r) hc
+          simpa using this
 
 end PyLean.Pickle

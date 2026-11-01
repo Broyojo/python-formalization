@@ -32,7 +32,7 @@ theorem longLineTwinsNoNul_proven : LongLineTwinsNoNul := by
   by_cases hnil : body = []
   · subst hnil
     simp [cLoadLongLine, pyLoadLongLine, pyIntOfBytes, pyLongFromString, lfsBase, scanDigits, skipSpace,
-      SameOutcome]
+      SameOutcome, signSplit]
   · obtain ⟨b, d, rfl⟩ : ∃ b d, body = b ++ [d] := ⟨_, _, (List.dropLast_concat_getLast hnil).symm⟩
     have hb : (0 : UInt8) ∉ b := fun m => hz (List.mem_append_left _ m)
     have hd : d ≠ 0 := fun e => hz (List.mem_append_right _ (by simp [e]))

@@ -124,6 +124,12 @@ def scanDigits : Bool → Bytes → List Nat × Bool × Bytes
 
 def digitsVal (ds : List Nat) : Nat := ds.foldl (fun a d => 10 * a + d) 0
 
+/-- The optional sign: is it negative, and the rest. -/
+def signSplit : Bytes → Bool × Bytes
+  | 0x2b :: r => (false, r)
+  | 0x2d :: r => (true, r)
+  | r => (false, r)
+
 /-- `long_from_string_base` (`Objects/longobject.c:2880-2970`) on the text
 after the sign, then the sign. -/
 def lfsBase (neg : Bool) (s2 : Bytes) : PLRes :=
@@ -143,10 +149,8 @@ def lfsBase (neg : Bool) (s2 : Bytes) : PLRes :=
 `s` is the C string (the bytes before the first NUL): leading whitespace, an
 optional sign, then `long_from_string_base`. -/
 def pyLongFromString (s : Bytes) : PLRes :=
-  match skipSpace s with
-  | 0x2b :: r => lfsBase false r
-  | 0x2d :: r => lfsBase true r
-  | r => lfsBase false r
+  let p := signSplit (skipSpace s)
+  lfsBase p.1 p.2
 
 def invalidLiteral (b : Bytes) : PyExc :=
   .valueError s!"invalid literal for int() with base 10: {(bytesRepr (b.take 200)).take 200}"
@@ -188,16 +192,13 @@ matters for a line that starts with a NUL byte (`I\0\n` is `0` on Linux and a
 `ValueError` on macOS). -/
 def strtol (s : Bytes) : Int × Nat × Bool :=
   let cstr := s.takeWhile (· ≠ 0)
-  let s1 := skipSpace cstr
-  let (neg, s2) := match s1 with
-    | 0x2b :: r => (false, r)
-    | 0x2d :: r => (true, r)
-    | r => (false, r)
+  let p := signSplit (skipSpace cstr)
+  let s2 := p.2
   let ds := s2.takeWhile isDigit
   if ds = [] then (0, 0, false)
   else
     let v : Int := digitsVal (ds.map (fun c => c.toNat - 48))
-    let v := if neg then -v else v
+    let v := if p.1 then -v else v
     let consumed := cstr.length - (s2.length - ds.length)
     if v < longMin then (longMin, consumed, true)
     else if v > longMax then (longMax, consumed, true)
