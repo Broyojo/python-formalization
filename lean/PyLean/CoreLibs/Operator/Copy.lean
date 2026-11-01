@@ -38,8 +38,10 @@ inductive Cell where
   | dict (items : List (Nat × Nat))
   | inst (attrs : List (String × Nat))
   | method (func self : Nat)
-  /-- A class, or an instance of a metaclass: `issubclass(cls, type)`. -/
+  /-- A class whose type is `type`, which `deepcopy` returns at Lib/copy.py:118, before reading `memo`. -/
   | cls (id : Nat)
+  /-- A class with another metaclass: `issubclass(cls, type)`, reached at Lib/copy.py:133 after the `memo` lookup. -/
+  | metaCls (id : Nat)
   | hooked (copier deepcopier : Option (Option PyExc)) (reduce : Option RvSpec)
   deriving Repr, DecidableEq, Inhabited
 
@@ -188,7 +190,7 @@ def uncopyable (deep : Bool) : PyExc :=
 /-- `copy(x)`, Lib/copy.py:62-100. `tuple` is atomic here and only here. -/
 def copyShallow (h : Heap) (x : Nat) : Py (Heap × Nat) :=
   match h.get x with
-  | .atom _ | .tuple _ | .cls _ => .ok (h, x)
+  | .atom _ | .tuple _ | .cls _ | .metaCls _ => .ok (h, x)
   | .list l => let (h1, y) := h.alloc (.list l); .ok (h1, y)
   | .dict l => let (h1, y) := h.alloc (.dict l); .ok (h1, y)
   | .inst a => let (h1, y) := h.alloc (.inst a); .ok (h1, y)
@@ -209,7 +211,7 @@ mutual
     | 0, _, _ => .error .modelFuel
     | fuel + 1, h, x =>
       match h.get x with
-      | .atom _ => .ok (h, x)
+      | .atom _ | .cls _ => .ok (h, x)
       | c =>
         match h.memo.lookup x with
         | some y => .ok (h, y)
@@ -244,7 +246,7 @@ mutual
             | .ok (h1, s') =>
               let (h2, y) := h1.alloc (.method f s')
               .ok (h2.remember x y, y)
-          | .cls _ => .ok (h, x)
+          | .cls _ | .metaCls _ => .ok (h, x)
           | .inst attrs =>
             -- `copyreg.__newobj__`, with the attributes as the state
             let (h1, y) := h.alloc (.inst [])
@@ -301,17 +303,18 @@ mutual
         | .error e => .error e
         | .ok (h2, ys) => .ok (h2, y :: ys)
 
-  /-- `y[deepcopy(key, memo)] = deepcopy(value, memo)`. The key is copied first. -/
+  /-- `y[deepcopy(key, memo)] = deepcopy(value, memo)`, Lib/copy.py:201. An assignment evaluates its right side
+  first, so the value is copied before the key. -/
   def deepPairs : Nat → Heap → List (Nat × Nat) → Py (Heap × List (Nat × Nat))
     | 0, _, _ => .error .modelFuel
     | _ + 1, h, [] => .ok (h, [])
     | fuel + 1, h, (k, v) :: rest =>
-      match deepcopy fuel h k with
+      match deepcopy fuel h v with
       | .error e => .error e
-      | .ok (h1, k') =>
-        match deepcopy fuel h1 v with
+      | .ok (h1, v') =>
+        match deepcopy fuel h1 k with
         | .error e => .error e
-        | .ok (h2, v') =>
+        | .ok (h2, k') =>
           match deepPairs fuel h2 rest with
           | .error e => .error e
           | .ok (h3, ys) => .ok (h3, (k', v') :: ys)
