@@ -1,0 +1,40 @@
+id: textlibs-path-ntpath-normpath-drive
+title: "DUPLICATE of #100162: ntpath.normpath turns the relative path .\\c:\\x into the absolute c:\\x"
+priority: P3
+kind: wrong-result
+module: textlibs
+files: [Lib/ntpath.py, Python/fileutils.c]
+functions: ["normpath", "_Py_normpath_and_size"]
+summary: |
+  `ntpath.normpath('.\\c:\\windows')` is `c:\windows`. `ntpath.isabs` is False for the input and True
+  for the result, so a check made before normalising is void. `pathlib.PureWindowsPath` keeps the `.\`
+  for this reason. The same holds for `.\c:foo` and for `x\..\c:\windows`.
+likelihood: |
+  Low in ordinary code, but it is a path-handling surprise that matters for sanitising.
+maybe_intended: |
+  No, per the open issue.
+reproducer: |
+  import ntpath, pathlib
+  p = '.\\c:\\windows'
+  n = ntpath.normpath(p)
+  q = str(pathlib.PureWindowsPath(p))
+  print(n, ntpath.isabs(p), ntpath.isabs(n), q)
+  if n == 'c:\\windows' and not ntpath.isabs(p) and ntpath.isabs(n) and q == p:
+      print('REPRODUCED textlibs-path-ntpath-normpath-drive')
+expected: |
+  A relative path stays relative.
+observed: |
+  python3 3.14.7: c:\windows, False, True, .\c:\windows. REPRODUCED.
+  main 3.16.0a1+dev: the same. REPRODUCED.
+  This ran the pure-Python fallback on Linux. Python/fileutils.c:2539-2550 skips `.\` the same way.
+promised_by: |
+  Doc/library/os.path.rst on normpath, which describes collapsing, not a change of what is referred to.
+cause: |
+  Lib/ntpath.py:491-511 splits the root once, on the input, and drops `.`, then joins the rest, whose
+  first component can read as a drive.
+possible_fix: |
+  See #100162. pathlib's `.\` prefix is a model for it.
+duplicates: |
+  DUPLICATE of #100162 (open). Do not file. Queries: gh search issues --repo python/cpython
+  "os.path.normpath"; "ntpath normpath"; "normpath drive colon"; "normpath relative absolute".
+lean: lean/PyLean/TextLibs/PathProps.lean (NtNormpathKeepsRelative)

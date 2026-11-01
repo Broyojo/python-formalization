@@ -10,7 +10,7 @@ Lib/re/__init__.py	280	285	finditer	finditer(pattern, string, flags=0)	todo
 Lib/re/__init__.py	287	289	compile	compile(pattern, flags=0)	todo		
 Lib/re/__init__.py	291	295	purge	purge()	todo		
 Lib/re/__init__.py	305	313	escape	escape(pattern)	todo		
-Lib/re/__init__.py	330	372	_compile	_compile(pattern, flags)	todo		
+Lib/re/__init__.py	330	372	_compile	_compile(pattern, flags)	modelled	textlibs-re-compile-law	
 Lib/re/__init__.py	375	377	_compile_template	_compile_template(pattern, repl)	todo		
 Lib/re/__init__.py	383	384	_pickle	_pickle(p)	todo		
 Lib/re/__init__.py	392	408	Scanner.__init__	__init__(self, lexicon, flags=0)	modelled	textlibs-re-scanner-agrees-compile	

@@ -1,0 +1,55 @@
+id: textlibs-csv-lineterminator-null
+title: "_csv.Dialect.lineterminator returns NULL with no exception on a half-built instance"
+priority: P4
+kind: invariant-violation
+module: textlibs
+files: [Modules/_csv.c]
+functions: ["Dialect_get_lineterminator"]
+summary: |
+  `Dialect_get_lineterminator` is `return Py_XNewRef(self->lineterminator)`. `dialect_new` allocates the
+  object, and a bad `delimiter` argument fails before `_set_str` fills that slot. A subclass `__del__`
+  runs while the object is released and can read the attribute, which then returns NULL with no
+  exception set. The interpreter reports `SystemError: error return without exception set`. On a
+  debug build the same return would be an assertion failure in the result check. No other getter
+  does this, because the rest read C fields.
+likelihood: |
+  Very low. It needs a subclass of the private `_csv.Dialect` with a `__del__` that reads the attribute,
+  and a construction that fails.
+maybe_intended: |
+  No, but it is harmless in practice: a SystemError inside a `__del__`. A maintainer may accept a
+  one-line fix or not care.
+reproducer: |
+  import _csv
+  seen = []
+
+  class D(_csv.Dialect):
+      def __del__(self):
+          try:
+              self.lineterminator
+          except SystemError as e:
+              seen.append(str(e))
+
+  try:
+      D(delimiter=5)
+  except TypeError:
+      pass
+  print(seen)
+  if seen == ['error return without exception set']:
+      print('REPRODUCED textlibs-csv-lineterminator-null')
+expected: |
+  An AttributeError, or a default value, as a C function must not return NULL without an exception.
+observed: |
+  python3 3.14.7: ['error return without exception set']. REPRODUCED.
+  main 3.16.0a1+dev: the same. REPRODUCED.
+promised_by: |
+  The C API rule that a function returning NULL sets an exception.
+cause: |
+  Modules/_csv.c:182-187 uses Py_XNewRef on a slot that Modules/_csv.c:493 sets to NULL and :530 fills;
+  an error at :527 leaves it NULL when Modules/_csv.c:564 releases self.
+possible_fix: |
+  Raise AttributeError when the slot is NULL, or set it to a default before the first failure can
+  happen.
+duplicates: |
+  None found. Queries: gh search issues --repo python/cpython "_csv.Dialect"; "csv lineterminator
+  NULL"; "Dialect subclass".
+lean: lean/PyLean/TextLibs/CsvProps.lean (LineterminatorNotNull)

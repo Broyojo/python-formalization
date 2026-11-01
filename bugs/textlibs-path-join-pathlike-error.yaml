@@ -1,0 +1,59 @@
+id: textlibs-path-join-pathlike-error
+title: "os.path.join calls an os.PathLike object not a path, and hides what __fspath__ raised"
+priority: P4
+kind: wrong-error
+module: textlibs
+files: [Lib/genericpath.py, Lib/posixpath.py, Lib/ntpath.py]
+functions: ["_check_arg_types", "join"]
+summary: |
+  `posixpath.join('a', PL(b'x'))`, where `PL.__fspath__` returns bytes, raises
+  `TypeError: join() argument must be str, bytes, or os.PathLike object, not 'PL'`, though `PL` is an
+  os.PathLike object. The real problem is the mix of str and bytes, which `join('a', b'x')` reports
+  as "Can't mix strings and bytes in path components". Also, a `TypeError` or `AttributeError` raised
+  inside `__fspath__` is replaced by the same message, so a bug in the user's method is reported as a
+  wrong argument type. ntpath.join does the same. `commonpath` and `relpath` report the mix correctly.
+likelihood: |
+  Low to moderate. It needs a bytes-returning PathLike mixed with str, or an error inside `__fspath__`.
+  The cost is a misleading message; the context chain still shows the original exception.
+maybe_intended: |
+  No. `_check_arg_types` once ran `os.fspath` on its arguments, and its message lists os.PathLike as
+  valid. A small fix.
+reproducer: |
+  import posixpath
+
+  class PL:
+      def __init__(self, v):
+          self.v = v
+      def __fspath__(self):
+          if isinstance(self.v, Exception):
+              raise self.v
+          return self.v
+
+  out = []
+  for arg in (PL(b'x'), PL(TypeError('mine'))):
+      try:
+          posixpath.join('a', arg)
+      except TypeError as e:
+          out.append(str(e))
+  print(out)
+  want = "join() argument must be str, bytes, or os.PathLike object, not 'PL'"
+  if out == [want, want]:
+      print('REPRODUCED textlibs-path-join-pathlike-error')
+expected: |
+  "Can't mix strings and bytes in path components" for the first, and "mine" for the second.
+observed: |
+  python3 3.14.7: the os.PathLike message, twice. REPRODUCED.
+  main 3.16.0a1+dev: the same. REPRODUCED.
+promised_by: |
+  The message itself, which names os.PathLike as acceptable.
+cause: |
+  Lib/genericpath.py:180-191 tests only str and bytes, so a PathLike in `*args` reaches the raise.
+  Lib/posixpath.py:84 and Lib/ntpath.py:138 call it from `except (TypeError, AttributeError, ...)`
+  around the whole loop, including os.fspath, with the original arguments.
+possible_fix: |
+  In _check_arg_types, accept os.PathLike and apply os.fspath before testing, or re-raise when every
+  argument is a valid path object.
+duplicates: |
+  None found. #82988 and #67968 (closed) improved the message for other cases. Queries: gh search
+  issues --repo python/cpython "PathLike join bytes"; "_check_arg_types".
+lean: lean/PyLean/TextLibs/PathProps.lean (JoinMixMessage, JoinKeepsFspathError)
