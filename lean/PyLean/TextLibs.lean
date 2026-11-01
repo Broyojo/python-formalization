@@ -4,7 +4,7 @@ import PyLean.TextLibs.StructFail
 import PyLean.TextLibs.BinasciiProps7
 import PyLean.TextLibs.CsvRoundTrip
 import PyLean.TextLibs.ReParseProps
-import PyLean.TextLibs.ReCompileProps
+import PyLean.TextLibs.ReCharset3
 
 /-!
 Text and binary formats, CPython 3.14.7. `Modules/_struct.c` is modelled in
@@ -503,6 +503,30 @@ def entries : List Entry := [
     statement := "A pattern _simple accepts has width exactly 1."
     source := "REPEAT_ONE steps back one character at a time", status := .proven
     prop := ``SimpleWidth, thm := some ``simpleWidth_proven },
+  { id := "textlibs-re-search-prefix-law", pyFile := "Modules/_sre/sre_lib.h", pyFns := []
+    statement := "The KMP scan of SRE(search) finds what trying each start finds: the same match in the same state, or nothing, for every prefix of two or more characters and every text."
+    source := "an optimization preserves the search it replaces", status := .proven
+    prop := ``SearchPrefixLaw, thm := some ``searchPrefixLaw_proven
+    notes := "Assumes the INFO block's shape (textlibs-re-compiled-prefix-block shows _compile_info writes it) and that SRE(match) never sets must_advance, which it only reads." },
+  { id := "textlibs-re-compiled-prefix-block", pyFile := "Lib/re/_compiler.py", pyFns := ["_compile_info"]
+    statement := "With a literal prefix of two or more characters, _compile_info writes the prefix and then its overlap table where SRE(search) reads them."
+    source := "the engine reads back what the compiler writes", status := .proven
+    prop := ``CompiledPrefixBlock, thm := some ``compiledPrefixBlock_proven },
+  { id := "textlibs-re-literal-prefix-sound", pyFile := "Lib/re/_compiler.py", pyFns := ["_get_literal_prefix", "_get_iscased"]
+    statement := "The declarative semantics matches only where the text starts with the literal prefix, through nested groups and flag changes."
+    source := "an optimization preserves the search it replaces", status := .proven
+    prop := ``LiteralPrefixSound, thm := some ``literalPrefixSound_proven
+    notes := "Excludes IGNORECASE|LOCALE, where _compile_info writes no prefix." },
+  { id := "textlibs-re-charset-preserved", pyFile := "Lib/re/_compiler.py", pyFns := ["_optimize_charset", "_compile_charset"]
+    statement := "SRE(charset) on the compiled set answers what the unoptimized set says, for every set and character, through the literal, range, bitmap and BIGCHARSET forms and the [\\s\\S] shortcuts."
+    source := "an optimization preserves the set it replaces", status := .proven
+    prop := ``CharsetPreserved, thm := some ``charsetPreserved_proven
+    notes := "Without IGNORECASE; textlibs-re-charset-preserved-ignorecase has the other case. NEGATE first is the parser's invariant." },
+  { id := "textlibs-re-charset-preserved-ignorecase", pyFile := "Lib/re/_compiler.py", pyFns := []
+    statement := "The same under IGNORECASE, with the character lower-cased when the set is cased."
+    source := "an optimization preserves the set it replaces", status := .open
+    prop := ``CharsetPreservedIgnorecase
+    notes := "Difftest agrees (re.sem), and categories in cased sets agree on all code points. Needs the fix-table steps of literalPass and rangeMark proved like the case-free ones." },
   { id := "textlibs-csv-round-trip", pyFile := "Modules/_csv.c"
     pyFns := ["join_reset", "join_append_data", "join_append", "join_append_lineterminator", "csv_writerow_lock_held",
       "csv_writerow", "parse_add_char", "parse_process_char"]

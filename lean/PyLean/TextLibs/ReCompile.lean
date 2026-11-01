@@ -182,10 +182,13 @@ def anyRange (p : Nat → Bool) : (n i : Nat) → Bool
   | n + 1, i => p i || anyRange p n (i + 1)
 
 /-- `charmap += b'\0' * 0xff00`. -/
-def widen (st : OSt) : OSt := { st with cm := st.cm ++ Array.replicate 0xff00 false }
+def widenBy : Nat := 0xff00
 
-/-- The `while True` for a literal, with its `except IndexError`, `:293-320`. -/
-def doLiteral (f : Option CaseFns) (st0 : OSt) (av0 : Nat) : OSt :=
+def widen (st : OSt) : OSt := { st with cm := st.cm ++ Array.replicate widenBy false }
+
+/-- The `while True` for a literal, with its `except IndexError`, `:293-320`. `wd` is `widen`: a
+parameter here, so that proofs need not build the padding. -/
+def doLiteralW (wd : OSt → OSt) (f : Option CaseFns) (st0 : OSt) (av0 : Nat) : OSt :=
   let (st, av, err) := literalPass f st0 av0
   if !err then st
   else
@@ -195,12 +198,14 @@ def doLiteral (f : Option CaseFns) (st0 : OSt) (av0 : Nat) : OSt :=
         | none => st.cased
       { st with cased, tail := st.tail ++ [.lit av] }
     if st.cm.size == 256 then
-      let (st, av, err) := literalPass f (widen st) av
+      let (st, av, err) := literalPass f (wd st) av
       if !err then st else finish st av
     else finish st av
 
+def doLiteral : Option CaseFns → OSt → Nat → OSt := doLiteralW widen
+
 /-- The same for a range. -/
-def doRange (f : Option CaseFns) (st0 : OSt) (lo hi : Nat) : OSt :=
+def doRangeW (wd : OSt → OSt) (f : Option CaseFns) (st0 : OSt) (lo hi : Nat) : OSt :=
   let n := hi + 1 - lo
   let attempt (st : OSt) : OSt × Bool :=
     let (cm, err) := rangeMark f n lo st.cm
@@ -218,9 +223,11 @@ def doRange (f : Option CaseFns) (st0 : OSt) (lo hi : Nat) : OSt :=
   let (st, err) := attempt st0
   if !err then st
   else if st.cm.size == 256 then
-    let (st, err) := attempt (widen st)
+    let (st, err) := attempt (wd st)
     if !err then st else finish st
   else finish st
+
+def doRange : Option CaseFns → OSt → Nat → Nat → OSt := doRangeW widen
 
 /-- `charmap.find(v, q)`, or `none` for `-1`. -/
 def cmFind (cm : Array Bool) (v : Bool) : (fuel q : Nat) → Option Nat
