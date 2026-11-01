@@ -428,7 +428,7 @@ theorem dictResize_spec (H : Honest P hf eqv) (mp : PyDict K V) (k : Keys K V)
     simp only [u'] at h1'
     rw [h1']
   · refine { toChain := hchain, hashes := ?_, uniq := ?_, strs := ?_, notSplit := ?_, load := ?_,
-             nent := ?_, usableNN := ?_ }
+             nent := ?_, usableNN := ?_, small := hlt }
     · intro ix e h
       obtain ⟨t, ht⟩ := (mem_live k e).mp (hmem ix e h)
       exact w.hashes t e ht
@@ -492,11 +492,16 @@ theorem growth_room (used : Nat) :
   simp only [growthRate] at h
   omega
 
-/-- `insertion_resize`: either `MemoryError` with nothing changed, or a table with room. -/
+/-- `insertion_resize` of a table with `used` items would need `2 ** 64` slots or more, which
+`dictresize` refuses (:2083-2086). This is the only way a store can fail. -/
+def TooBig (used : Nat) : Prop := 64 ≤ calculateLog2Keysize (growthRate used)
+
+/-- `insertion_resize`: `MemoryError` with nothing changed, only when the table would be too big,
+or a table with room. -/
 theorem insertionResize_spec (H : Honest P hf eqv) (mp : PyDict K V) (k : Keys K V)
     (hb : mp.body = .combined k) (w : WF hf eqv P.isStr k)
     (hused : mp.used = (liveEntries k).length) (unicode : Bool) :
-    insertionResize unicode mp = (.error memoryError, mp) ∨
+    (TooBig mp.used ∧ insertionResize unicode mp = (.error memoryError, mp)) ∨
     ∃ k' : Keys K V, insertionResize unicode mp =
         (.ok (), { mp with nextId := mp.nextId + 1, body := .combined k' }) ∧
       WF hf eqv P.isStr k' ∧ liveEntries k' = liveEntries k ∧ 0 < k'.usable ∧
@@ -511,6 +516,7 @@ theorem insertionResize_spec (H : Honest P hf eqv) (mp : PyDict K V) (k : Keys K
     rw [h5]
     omega
   · left
+    refine ⟨by simp only [TooBig]; omega, ?_⟩
     simp only [dictResize]
     rw [if_pos (by omega)]
 
@@ -581,7 +587,7 @@ theorem appendEntry_spec (H : Honest P hf eqv) (k : Keys K V) (w : WF hf eqv P.i
     simp only [hr]
     rfl
   · refine { toChain := hc', hashes := ?_, uniq := ?_, strs := ?_, notSplit := w.notSplit, load := ?_,
-             nent := ?_, usableNN := ?_ }
+             nent := ?_, usableNN := ?_, small := w.small }
     · intro ix e' h
       rcases hentry ix e' h with h1 | ⟨_, rfl⟩
       · exact w.hashes ix e' h1

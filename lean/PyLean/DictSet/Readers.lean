@@ -136,7 +136,7 @@ theorem subscript_wrap :
     · rfl
     · cases v with
       | none => rfl
-      | some w => by_cases he : ix == DKIX_EMPTY <;> simp [he, M.bind_run, M.throw_run, M.pure_run]
+      | some w => by_cases he : ix == DKIX_EMPTY <;> simp [he, subscriptMissing]
 
 /-- `dict.get` (`dict_get_impl`, :4386-4406): the value or the default; a NULL value is the
 default, and `ix == DKIX_EMPTY` is the default. -/

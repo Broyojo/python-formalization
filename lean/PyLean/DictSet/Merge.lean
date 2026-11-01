@@ -87,6 +87,112 @@ theorem mergeEmptyTarget_proven : MergeEmptyTarget := by
   intro K V _ P other mp ov h
   simp only [dictDictMerge, h, beq_self_eq_true, if_true]
 
+/-- `dict_dict_merge` as a whole, for every key protocol and override: the self and empty tests; on an
+empty receiver the clone when the source is clean, and otherwise the rest with `override` forced to
+1; and otherwise the rest. -/
+def DictDictMergeBody : Prop :=
+  ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (other mp : PyDict K V) (ov : Nat),
+    ((other.ident = mp.ident ∨ other.used = 0) → dictDictMerge P other ov mp = (.ok (), mp)) ∧
+    (other.ident ≠ mp.ident → other.used ≠ 0 →
+      (mp.used ≠ 0 → dictDictMerge P other ov mp = mergeRest P other ov mp) ∧
+      (mp.used = 0 → ∀ k okeys, mp.body = .combined k → other.body = .combined okeys →
+        ((other.used == okeys.nentries && (okeys.log2Size == PyDict_LOG_MINSIZE ||
+            decide (usableFraction (okeys.size / 2) < other.used))) = true →
+          dictDictMerge P other ov mp = (.ok (), { mp with
+            nextId := mp.nextId + 1
+            used := other.used
+            body := .combined (cloneCombinedDictKeys mp.nextId okeys) })) ∧
+        ((other.used == okeys.nentries && (okeys.log2Size == PyDict_LOG_MINSIZE ||
+            decide (usableFraction (okeys.size / 2) < other.used))) = false →
+          dictDictMerge P other ov mp = mergeRest P other 1 mp)) ∧
+      (mp.used = 0 → mp.body.isSplit = true → dictDictMerge P other ov mp = mergeRest P other 1 mp) ∧
+      (mp.used = 0 → other.body.isSplit = true → dictDictMerge P other ov mp = mergeRest P other 1 mp))
+theorem dictDictMergeBody_proven : DictDictMergeBody := by
+  intro K V _ P other mp ov
+  refine ⟨?_, ?_⟩
+  · rintro (h | h) <;> simp [dictDictMerge, h]
+  · intro h1 h2
+    have e1 : (other.ident == mp.ident) = false := by simpa using h1
+    have e2 : (other.used == 0) = false := by simpa using h2
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · intro h3
+      have e3 : (mp.used == 0) = false := by simpa using h3
+      simp [dictDictMerge, e1, e2, e3]
+    · intro h3 k okeys hb ho
+      have e3 : (mp.used == 0) = true := by simpa using h3
+      constructor
+      · intro hc
+        simp only [dictDictMerge, e1, e2, e3, Bool.false_or, Bool.false_eq_true, if_false, if_true,
+          hb, ho]
+        rw [if_pos hc]
+      · intro hc
+        simp only [dictDictMerge, e1, e2, e3, Bool.false_or, Bool.false_eq_true, if_false, if_true,
+          hb, ho]
+        rw [if_neg (by simp [hc])]
+    · intro h3 hs
+      have e3 : (mp.used == 0) = true := by simpa using h3
+      cases hb : mp.body with
+      | combined k => simp [hb, Body.isSplit] at hs
+      | split k v =>
+        simp only [dictDictMerge, e1, e2, e3, Bool.false_or, Bool.false_eq_true, if_false, if_true, hb]
+    · intro h3 hs
+      have e3 : (mp.used == 0) = true := by simpa using h3
+      cases ho : other.body with
+      | combined k => simp [ho, Body.isSplit] at hs
+      | split k v =>
+        simp only [dictDictMerge, e1, e2, e3, Bool.false_or, Bool.false_eq_true, if_false, if_true, ho]
+        cases mp.body <;> rfl
+
+/-- The one big resize at the top of the rest of `dict_dict_merge` (:3933-3946): it runs only when the
+source does not fit, a failure ends the merge, and the loop starts from what it left, with the source
+in hand and its count as `orig_size`. -/
+def MergeRestBody : Prop :=
+  ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (other mp s : PyDict K V) (ov : Nat)
+    (e : PyExc),
+    (usableFraction (2 ^ mp.body.log2Size) < other.used →
+      (dictResize (estimateLog2Keysize (mp.used + other.used)) other.body.isUnicode mp = (.error e, s) →
+        mergeRest P other ov mp = (.error e, s)) ∧
+      (dictResize (estimateLog2Keysize (mp.used + other.used)) other.body.isUnicode mp = (.ok (), s) →
+        mergeRest P other ov mp =
+          mergeLive P ov other.used (mergeFuel other) 0 { s with peer := some other.toPeer })) ∧
+    (¬ usableFraction (2 ^ mp.body.log2Size) < other.used →
+      mergeRest P other ov mp =
+        mergeLive P ov other.used (mergeFuel other) 0 { mp with peer := some other.toPeer })
+theorem mergeRestBody_proven : MergeRestBody := by
+  intro K V _ P other mp s ov e
+  refine ⟨fun h => ⟨fun h2 => ?_, fun h2 => ?_⟩, fun h => ?_⟩
+  · simp only [mergeRest]
+    rw [if_pos h, h2]
+  · simp only [mergeRest]
+    rw [if_pos h, h2]
+  · simp only [mergeRest]
+    rw [if_neg h]
+
+/-- The branches of the loop body of `dict_dict_merge` on `override` (:3956-3975). -/
+def MergeStepBody : Prop :=
+  ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (key : K) (hash : Int) (value : V)
+    (ov : Nat) (d s : PyDict K V) (e : PyExc),
+    mergeStep P 1 key hash value d = insertDict P key hash value d ∧
+    (ov ≠ 1 →
+      (dictContainsKnownHash P key hash d = (.error e, s) →
+        mergeStep P ov key hash value d = (.error e, s)) ∧
+      (dictContainsKnownHash P key hash d = (.ok false, s) →
+        mergeStep P ov key hash value d = insertDict P key hash value s) ∧
+      (dictContainsKnownHash P key hash d = (.ok true, s) →
+        (ov = 0 → mergeStep P ov key hash value d = (.ok (), s)) ∧
+        (ov ≠ 0 → mergeStep P ov key hash value d = (.error (keyErr P key), s))))
+theorem mergeStepBody_proven : MergeStepBody := by
+  intro K V _ P key hash value ov d s e
+  refine ⟨by simp [mergeStep], fun hov => ?_⟩
+  have e1 : (ov == 1) = false := by simpa using hov
+  refine ⟨fun h => ?_, fun h => ?_, fun h => ⟨fun h0 => ?_, fun h0 => ?_⟩⟩
+  · simp [mergeStep, e1, M.bind_run, h]
+  · simp [mergeStep, e1, M.bind_run, h]
+  · subst h0
+    simp [mergeStep, M.bind_run, h]
+  · have e2 : (ov != 0) = true := by simpa using h0
+    simp [mergeStep, e1, e2, M.bind_run, h]
+
 section Witness
 
 /-- Integer keys, all hashing to 0 up to `2`, so `1` and `2` are compared with each other. -/
@@ -188,9 +294,13 @@ end Generic
 raise and may change the receiver. -/
 def MergeGeneric : Prop :=
   ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (g : K → DM K V V) (keys : DM K V (List K))
-    (key : K) (rest : List K) (ov : Nat) (d s : PyDict K V) (b : Option (MergeArg K V)),
+    (key : K) (rest : List K) (ov : Nat) (d s : PyDict K V) (b : Option (MergeObj K V)),
     dictMergeChecked P false b ov d = (.error badInternalCall, d) ∧
     dictMergeChecked P true none ov d = (.error badInternalCall, d) ∧
+    (∀ o : MergeObj K V, (o.isDict && o.iterIsDict) = true →
+      dictMergeChecked P true (some o) ov d = dictDictMerge P o.asDict ov d) ∧
+    (∀ o : MergeObj K V, (o.isDict && o.iterIsDict) = false →
+      dictMergeChecked P true (some o) ov d = dictMerge P (.mapping o.keys o.getitem) ov d) ∧
     (∀ e, keys d = (.error e, s) → dictMerge P (.mapping keys g) ov d = (.error e, s)) ∧
     (∀ ks, keys d = (.ok ks, s) → dictMerge P (.mapping keys g) ov d = mergeGenericLoop P g ov ks s) ∧
     (pyDictContains P key d = (.ok true, s) →
@@ -205,8 +315,12 @@ def MergeGeneric : Prop :=
       (g key >>= fun v => dictSetItem P key v >>= fun _ => mergeGenericLoop P g 1 rest) d
 theorem mergeGeneric_proven : MergeGeneric := by
   intro K V _ P g keys key rest ov d s b
-  refine ⟨?_, rfl, ?_, ?_, ?_, ?_, ?_, generic_override1 P g key rest d⟩
+  refine ⟨?_, rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_, generic_override1 P g key rest d⟩
   · cases b <;> rfl
+  · intro o h
+    simp [dictMergeChecked, MergeObj.route, h, dictMerge]
+  · intro o h
+    simp [dictMergeChecked, MergeObj.route, h]
   · intro e h
     simp [dictMerge, M.bind_run, h]
   · intro ks h
@@ -219,22 +333,55 @@ theorem mergeGeneric_proven : MergeGeneric := by
     exact generic_absent P g key rest d s ov hov h
 
 /-- `merge_from_seq2_lock_held`, for an iterator that may raise or change the receiver at any step:
-each outcome of a step, and what follows it. The state after a failure is the one the step left, so
-what earlier elements did stays. -/
+`PyObject_GetIter` first, then each outcome of a step and what follows it, on both branches of
+`override`. The state after a failure is the one the step left, so what earlier elements did stays,
+and a `TypeError` from `PySequence_Fast` carries a note, as no other exception does. -/
 def Seq2Order : Prop :=
   ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (ov : Bool) (i : Nat)
     (step : DM K V (Option (Seq2Item K V))) (rest : List (DM K V (Option (Seq2Item K V))))
     (d s : PyDict K V),
+    (∀ (it : ReIter (PyDict K V) (Seq2Item K V)) (e : PyExc), it.getIter d = (.error e, s) →
+      mergeFromSeq2 P it ov d = (.error e, s)) ∧
+    (∀ (it : ReIter (PyDict K V) (Seq2Item K V)) (u : Unit), it.getIter d = (.ok u, s) →
+      mergeFromSeq2 P it ov d = seq2Loop P ov 0 it.steps s) ∧
+    (seq2Loop P ov i [] d = (.ok (), d)) ∧
     (∀ e, step d = (.error e, s) → seq2Loop P ov i (step :: rest) d = (.error e, s)) ∧
     (step d = (.ok none, s) → seq2Loop P ov i (step :: rest) d = (.ok (), s)) ∧
-    (∀ e, step d = (.ok (some (.notSeq e)), s) → seq2Loop P ov i (step :: rest) d = (.error e, s)) ∧
+    (∀ m, step d = (.ok (some (.notSeq (.typeError m))), s) →
+      seq2Loop P ov i (step :: rest) d =
+        (.error (.typeError m), { s with note := some (seq2Note i) })) ∧
+    (∀ e, (∀ m, e ≠ .typeError m) → step d = (.ok (some (.notSeq e)), s) →
+      seq2Loop P ov i (step :: rest) d = (.error e, s)) ∧
     (∀ n, step d = (.ok (some (.wrongLen n)), s) → seq2Loop P ov i (step :: rest) d =
       (.error (.valueError s!"dictionary update sequence element #{i} has length {n}; 2 is required"), s)) ∧
     (∀ k v, step d = (.ok (some (.pair k v)), s) →
       seq2Loop P true i (step :: rest) d =
-        (dictSetItem P k v >>= fun _ => seq2Loop P true (i + 1) rest) s)
+        (dictSetItem P k v >>= fun _ => seq2Loop P true (i + 1) rest) s) ∧
+    (∀ k v, step d = (.ok (some (.pair k v)), s) →
+      seq2Loop P false i (step :: rest) d =
+        (dictSetdefaultRef P k v false false >>= fun _ => seq2Loop P false (i + 1) rest) s)
 theorem seq2Order_proven : Seq2Order := by
   intro K V _ P ov i step rest d s
-  refine ⟨?_, ?_, ?_, ?_, ?_⟩ <;> intros <;> simp_all [seq2Loop, M.bind_run]
+  refine ⟨?_, ?_, rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro it e h
+    simp [mergeFromSeq2, M.bind_run, h]
+  · intro it u h
+    simp [mergeFromSeq2, M.bind_run, h]
+  · intro e h
+    simp [seq2Loop, M.bind_run, h]
+  · intro h
+    simp [seq2Loop, M.bind_run, h]
+  · intro m h
+    simp [seq2Loop, M.bind_run, h, M.modify_run]
+  · intro e he h
+    cases e with
+    | typeError m => exact absurd rfl (he m)
+    | _ => simp [seq2Loop, M.bind_run, h]
+  · intro n h
+    simp [seq2Loop, M.bind_run, h]
+  · intro k v h
+    simp [seq2Loop, M.bind_run, h]
+  · intro k v h
+    simp [seq2Loop, M.bind_run, h]
 
 end PyLean.DictSet

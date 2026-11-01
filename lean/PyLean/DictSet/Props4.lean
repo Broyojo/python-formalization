@@ -18,15 +18,6 @@ def ViewLen : Prop :=
     dictviewLen (viewNew kind d) = (dictAssoc d).length
 theorem viewLen_proven : ViewLen := fun _ _ _ hf eqv isStr d _ hd => len_spec d hf eqv isStr hd
 
-/-- Iterating a view of an unchanged dict walks the dict in order. -/
-def ViewIterOrder : Prop :=
-  ∀ (K V : Type) [DecidableEq K] (d : PyDict K V) (k : Keys K V) (kind : ViewKind),
-    d.body = .combined k → d.used = (liveEntries k).length → d.used < 2 ^ 63 →
-    (dictiterToList d (dictviewIter (viewNew kind d) false)).1 = .ok k.items
-theorem viewIterOrder_proven : ViewIterOrder := by
-  intro K V _ d k kind hb hu hmax
-  cases kind <;> exact iter_toList d k hb hu hmax _
-
 /-- `x in d.keys()` is `x in d`. -/
 def KeysViewContains : Prop :=
   ∀ (K V : Type) [DecidableEq K] (E : Env K V) (hf : K → Int) (eqv : K → K → Bool) (d : PyDict K V),

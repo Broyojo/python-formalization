@@ -15,6 +15,7 @@ Slots 0 and 1 keep their object; slot 2 receives results, so iterators stay vali
 
 import importlib.util
 import itertools
+import contextlib
 import json
 import os
 import resource
@@ -938,6 +939,23 @@ class Runner:
     def enc1(self, thunk):
         return common.py_result(thunk)
 
+    @contextlib.contextmanager
+    def noting(self):
+        """Keep the note on an exception, which `str(e)` does not show."""
+        try:
+            yield
+        except Exception as e:
+            notes = getattr(e, "__notes__", None)
+            self.note = notes[-1] if notes else None
+            raise
+
+    def run_op(self, op):
+        self.note = None
+        res = common.py_result(lambda: self.step(op))
+        if self.note is not None:
+            res["note"] = self.note
+        return res
+
     def digest(self):
         base = [[[self.Es(d.keys()), self.Es(d.values()), d.__sizeof__()] for d in self.ds],
                 [[self.Es(s), s.__sizeof__()] for s in self.ss]]
@@ -1218,11 +1236,13 @@ class Runner:
             return repr(ds[op[1]])
         if name == "upd":
             kw = {P[a]: P[b] for a, b in op[3]}
-            ds[op[1]].update(self.upd_arg(op[2], ds[op[1]]), **kw)
+            with self.noting():
+                ds[op[1]].update(self.upd_arg(op[2], ds[op[1]]), **kw)
             return None
         if name == "ior":
             d = ds[op[1]]
-            d |= self.upd_arg(op[2], d)
+            with self.noting():
+                d |= self.upd_arg(op[2], d)
             return None
         if name == "or":
             ds[2] = ds[op[1]] | ds[op[2]]
@@ -1247,7 +1267,8 @@ class Runner:
             ds[2] = eval("{" + ", ".join(parts) + "}", names)
             return None
         if name == "dict":
-            ds[2] = dict(self.upd_arg(op[2]))
+            with self.noting():
+                ds[2] = dict(self.upd_arg(op[2]))
             return None
         if name == "it_new":
             d = ds[op[2]]
@@ -1387,7 +1408,7 @@ def run_forked(case):
             with os.fdopen(wr, "w") as f:
                 r = Runner(case)
                 for op in case["ops"]:
-                    res = common.py_result(lambda: r.step(op))
+                    res = r.run_op(op)
                     f.write(json.dumps([res, r.digest()]) + "\n")
                     f.flush()
         except BaseException as e:
@@ -1412,7 +1433,7 @@ def run_python(case):
     every = case.get("every", 1)
     last = len(case["ops"]) - 1
     for i, op in enumerate(case["ops"]):
-        res = common.py_result(lambda: r.step(op))
+        res = r.run_op(op)
         out.append([res, r.digest() if i % every == 0 or i == last else None])
     return {"ok": out}
 
