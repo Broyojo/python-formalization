@@ -157,9 +157,11 @@ theorem tellAfterWrite_proven : TellAfterWrite := by
 buffer: on an open stream, `seek(p)` then `read(n)` returns `buf[p:p+n]` for
 all `p, n >= 0` (C: within `Py_ssize_t`) — for both BytesIO twins and the C
 StringIO. -/
-def ReadAfterSeek : Prop := ∀ (s : BState) (p n : Int), s.closed = false → 0 ≤ p → 0 ≤ n →
+def ReadAfterSeek : Prop :=
+  ∀ (s : BState) (t : SCState) (p n : Int), s.closed = false → t.closed = false → 0 ≤ p → 0 ≤ n →
   (InSsize p → InSsize n →
-    (C.read (C.seek s p 0).1 (some n)).2 = .ok (.bytes (slice s.buf p.toNat n.toNat))) ∧
+    (C.read (C.seek s p 0).1 (some n)).2 = .ok (.bytes (slice s.buf p.toNat n.toNat)) ∧
+    (SC.step (SC.seek t p 0).1 (.read (some n))).2 = .ok (.str (slice t.buf p.toNat n.toNat))) ∧
   (P.read (P.seek s p 0).1 (some n)).2 = .ok (.bytes (slice s.buf p.toNat n.toNat))
 
 theorem slice_readCount (buf : List Nat) (p : Nat) (n : Int) (hn : 0 ≤ n) :
@@ -175,17 +177,24 @@ theorem slice_readCount (buf : List Nat) (p : Nat) (n : Int) (hn : 0 ≤ n) :
         List.take_of_length_le (by simp; omega)]
 
 theorem readAfterSeek_proven : ReadAfterSeek := by
-  intro s p n hc hp hn
+  intro s t p n hc htc hp hn
   obtain ⟨buf, pos, cl, ex, sh⟩ := s
   simp only at hc; subst hc
   constructor
   · intro hP hN
     have h0 : InCInt 0 := by decide
-    have hs : C.seek ⟨buf, pos, false, ex, sh⟩ p 0 = (⟨buf, p.toNat, false, ex, sh⟩, .ok (.int p)) := by
-      have : ¬ p < 0 := by omega
-      simp [C.seek, argSsize, argCInt, hP, h0, this]
-    rw [hs, C_read_open _ _ rfl (by intro v hv; cases hv; exact hN)]
-    simp [slice_readCount _ _ _ hn]
+    have hneg : ¬ p < 0 := by omega
+    constructor
+    · have hs : C.seek ⟨buf, pos, false, ex, sh⟩ p 0 = (⟨buf, p.toNat, false, ex, sh⟩, .ok (.int p)) := by
+        simp [C.seek, argSsize, argCInt, hP, h0, hneg]
+      rw [hs, C_read_open _ _ rfl (by intro v hv; cases hv; exact hN)]
+      simp [slice_readCount _ _ _ hn]
+    · have hs : (SC.seek t p 0).1 = { t with pos := p.toNat } := by
+        simp [SC.seek, argSsize, argCInt, hP, h0, htc, hneg]
+      have hcnt := cnt_eq t.buf.length p.toNat n
+      rw [hs]
+      simp only [SC.step, optSsize, hN, ite_true, htc, Bool.false_eq_true, ite_false]
+      rw [hcnt, slice_readCount _ _ _ hn]
   · have : ¬ p < 0 := by omega
     have hs : P.seek ⟨buf, pos, false, ex, sh⟩ p 0 = (⟨buf, p.toNat, false, ex, sh⟩, .ok (.int p)) := by
       simp [P.seek, this]

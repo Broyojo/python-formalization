@@ -35,7 +35,7 @@ def CStringIONewlineLegal : Prop :=
   ∀ nl : Option (List Nat), (SC.init none nl).toBool = true ↔ LegalNewline nl
 
 /-- `io.StringIO(newline='\x00')` is accepted: the C check reads the UTF-8
-bytes of `newline` as a NUL-terminated string (stringio.c:668-675), so
+bytes of `newline` as a NUL-terminated string (stringio.c:698-705), so
 `'\x00'` looks like `''`. `_pyio` raises `ValueError`. -/
 theorem cStringIONewlineLegal_refuted : ¬CStringIONewlineLegal := by
   intro h
@@ -70,7 +70,7 @@ def StringIOWritesTwins : Prop :=
 
 /-- `newline=None`: `write('a\r')` then `write('\nb')`. The C StringIO
 translates every write on its own (`_PyIncrementalNewlineDecoder_decode(...,
-1 /* always final */)`, stringio.c:181-182), so the lone `\r` becomes `\n`
+1 /* always final */)`, stringio.c:199-200), so the lone `\r` becomes `\n`
 and `getvalue()` is `'a\n\nb'`; `_pyio` translates the stored text as a
 whole and returns `'a\nb'` (as a file written in two pieces would). -/
 theorem stringIOWritesTwins_refuted : ¬StringIOWritesTwins := by
@@ -126,7 +126,7 @@ def StringIOTellAfterReads : Prop :=
 
 /-- `_pyio.StringIO('a\nb\nc\n').readlines(1)` stops after the first line
 inside `for line in self`, which left `TextIOWrapper._telling` false
-(`__next__`, _pyio.py:2574-2580), so `tell()` raises
+(`__next__`, _pyio.py:2605-2612), so `tell()` raises
 `OSError('telling position disabled by next() call')`. -/
 theorem stringIOTellAfterReads_refuted : ¬StringIOTellAfterReads := by
   intro h
@@ -147,7 +147,7 @@ def StringIONewlinesAttr : Prop :=
 
 /-- `_pyio.StringIO('a\nb')` (default `newline='\n'`), `read()`, then
 `newlines`: the plain UTF-8 decoder has no `newlines` attribute and
-`TextIOWrapper.newlines` (_pyio.py:2674-2676) raises `AttributeError`. -/
+`TextIOWrapper.newlines` (_pyio.py:2707-2709) raises `AttributeError`. -/
 theorem stringIONewlinesAttr_refuted : ¬StringIONewlinesAttr := by
   intro h
   have h2 := (h [97, 10, 98] (some [10]) [.read none] (by decide) (by decide)).2

@@ -4,7 +4,7 @@ import PyLean.PyIO.Basic
 Text helpers shared by the two `StringIO` models: UTF-8 with the
 `surrogatepass` error handler (`Objects/unicodeobject.c`, `Python/codecs.c`),
 newline scanning and translation (the `IncrementalNewlineDecoder` of
-`Modules/_io/textio.c:327-519` and `Lib/_pyio.py:1948-2030`), and the
+`Modules/_io/textio.c:328-519` and `Lib/_pyio.py:1948-2030`), and the
 `repr()` of an ASCII `str` (for `illegal newline value: %r`).
 -/
 
@@ -121,8 +121,8 @@ def replaceLf (nl : List Nat) : List Nat → List Nat
   | [] => []
   | c :: r => if c = 10 then nl ++ replaceLf nl r else c :: replaceLf nl r
 
-/-- The `newlines` attribute for a set of seen kinds (textio.c:639-662,
-_pyio.py:2019-2030; both use the same order). -/
+/-- The `newlines` attribute for a set of seen kinds (textio.c:639-663,
+_pyio.py:2020-2031; both use the same order). -/
 def newlinesVal (k : NlKinds) : Val :=
   match k.cr, k.lf, k.crlf with
   | false, false, false => .none

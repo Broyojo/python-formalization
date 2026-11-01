@@ -61,7 +61,7 @@ instance (s : BState) (o : BOp) : Decidable (o.Small s) := by
   unfold BOp.Small; split <;> infer_instance
 
 /-- `readline(0)` is not called on a closed stream (`IOBase`: "calling any
-method (even inquiries) on a closed stream is undefined", _pyio.py:323-324). -/
+method (even inquiries) on a closed stream is undefined", _pyio.py:325-326). -/
 def BOp.NoReadline0Closed (s : BState) : BOp → Prop
   | .readline (some 0) => s.closed = false
   | _ => True
