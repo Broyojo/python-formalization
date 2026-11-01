@@ -2723,7 +2723,7 @@ class _Script:
         if name == "release":
             return py(lambda: m.release())
         if name == "enter":
-            return py(lambda: (m.__enter__(), None)[1])
+            return py(lambda: {"same": m.__enter__() is m})
         if name == "exit":
             return py(lambda: m.__exit__(None, None, None))
         if name == "cmp":

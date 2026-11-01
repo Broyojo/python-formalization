@@ -188,7 +188,9 @@ def memoryClear (i : Nat) : M Unit := fun st =>
   if getExports st i = 0 then memoryRelease i st else (.ok (), st)
 
 /-- `memory_enter`, :1182-1187. -/
-def memoryEnter (i : Nat) : M Unit := checkReleased i
+def memoryEnter (i : Nat) : M Nat := do
+  checkReleased i
+  return i
 
 /-- `memory_exit`, :1189-1193. -/
 def memoryExit (i : Nat) : M Unit := memoryviewRelease i
@@ -383,13 +385,17 @@ def memoryviewNew (v : Obj) : M Nat := memoryViewFromObject v
 /-- `memoryview__from_flags_impl`, :1031-1036. -/
 def memoryviewFromFlags (v : Obj) (flags : Nat) : M Nat := memoryViewFromObjectAndFlags v flags
 
-/-- `_PyMemoryView_FromBufferProc`, :831-848, with `memory_getbuf` as the buffer proc
-(`m.__buffer__(flags)`, `wrap_buffer`, Objects/typeobject.c:9754-9773). -/
-def memoryBufferProc (self : Nat) (flags : Nat) : M Nat := do
+/-- `_PyMemoryView_FromBufferProc`, :831-848, for any `bufferproc`. If it fails, `master.obj`
+is cleared and the `Py_DECREF(mbuf)` releases nothing. -/
+def bufferProc (proc : M Buf) : M Nat := do
   let k ← mbufAlloc
-  let master ← memoryGetbuf self flags
+  let master ← proc
   M.modify fun st => st.setMb k { st.mb k with master := master }
-  M.onError (mbufAddView k none) (mbufRelease k)
+  M.onError (mbufAddView k none) (mbufDealloc k)
+
+/-- `m.__buffer__(flags)`: `wrap_buffer`, Objects/typeobject.c:9754-9773, with `memory_getbuf`
+as the buffer proc. -/
+def memoryBufferProc (self : Nat) (flags : Nat) : M Nat := bufferProc (memoryGetbuf self flags)
 
 /-- `PyMemoryView_FromMemory`, :740-762, on `size` bytes at `mem`. `writable` is
 `flags == PyBUF_WRITE`. -/

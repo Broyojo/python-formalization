@@ -18,12 +18,14 @@ structure Mono (st st' : St) : Prop where
   mb : ∀ k, (st.mb k).released = true → (st'.mb k).released = true
   mem : st'.mem = st.mem
   iters : st'.iters = st.iters
+  view : ∀ j, (st'.mv j).view = (st.mv j).view
 
-theorem Mono.refl (st : St) : Mono st st := ⟨fun _ h => h, fun _ => rfl, fun _ h => h, rfl, rfl⟩
+theorem Mono.refl (st : St) : Mono st st := ⟨fun _ h => h, fun _ => rfl, fun _ h => h, rfl, rfl, fun _ => rfl⟩
 
 theorem Mono.trans {a b c : St} (h1 : Mono a b) (h2 : Mono b c) : Mono a c :=
   ⟨fun j h => h2.mv j (h1.mv j h), fun j => by rw [h2.mbuf, h1.mbuf],
-   fun k h => h2.mb k (h1.mb k h), by rw [h2.mem, h1.mem], by rw [h2.iters, h1.iters]⟩
+   fun k h => h2.mb k (h1.mb k h), by rw [h2.mem, h1.mem], by rw [h2.iters, h1.iters],
+   fun j => by rw [h2.view, h1.view]⟩
 
 theorem Mono.inaccessible {st st' : St} (h : Mono st st') (i : Nat)
     (hi : baseInaccessible st i = true) : baseInaccessible st' i = true := by
@@ -53,8 +55,9 @@ theorem mb_getD_set (l : List MBuf) (i j : Nat) (x : MBuf) :
   · simp [List.getD_eq_getElem?_getD, h]
 
 theorem Mono.setMv (st : St) (i : Nat) (x : MV) (h1 : (st.mv i).flags.released = true → x.flags.released = true)
-    (h2 : x.mbuf = (st.mv i).mbuf) : Mono st (st.setMv i x) := by
-  refine ⟨?_, ?_, fun _ h => h, rfl, rfl⟩
+    (h2 : x.mbuf = (st.mv i).mbuf)
+    (h3 : x.view = (st.mv i).view) : Mono st (st.setMv i x) := by
+  refine ⟨?_, ?_, fun _ h => h, rfl, rfl, ?_⟩
   · intro j hj
     simp only [St.mv, St.setMv, mv_getD_set] at *
     split
@@ -65,10 +68,15 @@ theorem Mono.setMv (st : St) (i : Nat) (x : MV) (h1 : (st.mv i).flags.released =
     split
     · rename_i hc; rw [h2, hc.1]
     · rfl
+  · intro j
+    simp only [St.mv, St.setMv, mv_getD_set]
+    split
+    · rename_i hc; rw [h3, hc.1]; rfl
+    · rfl
 
 theorem Mono.setMb (st : St) (k : Nat) (x : MBuf) (h1 : (st.mb k).released = true → x.released = true) :
     Mono st (st.setMb k x) := by
-  refine ⟨fun _ h => h, fun _ => rfl, ?_, rfl, rfl⟩
+  refine ⟨fun _ h => h, fun _ => rfl, ?_, rfl, rfl, fun _ => rfl⟩
   intro j hj
   simp only [St.mb, St.setMb, mb_getD_set] at *
   split
@@ -78,7 +86,7 @@ theorem Mono.setMb (st : St) (k : Nat) (x : MBuf) (h1 : (st.mb k).released = tru
 theorem pyBufferRelease0_mono (b : Buf) (st : St) : Mono st (pyBufferRelease0 b st).2 := by
   unfold pyBufferRelease0
   split
-  · exact Mono.setMv _ _ _ id rfl
+  · exact Mono.setMv _ _ _ id rfl rfl
   · exact Mono.refl _
 
 theorem mbufRelease0_mono (k : Nat) (st : St) : Mono st (mbufRelease0 k st).2 := by
@@ -94,7 +102,7 @@ theorem memoryRelease0_mono (i : Nat) (st : St) : Mono st (memoryRelease0 i st).
   split
   · exact Mono.refl _
   · have h1 := Mono.setMv st i { st.mv i with flags := { (st.mv i).flags with released := true } }
-      (fun _ => rfl) rfl
+      (fun _ => rfl) rfl rfl
     have h2 := Mono.setMb (st.setMv i { st.mv i with flags := { (st.mv i).flags with released := true } })
       (st.mv i).mbuf
       { (st.setMv i { st.mv i with flags := { (st.mv i).flags with released := true } }).mb (st.mv i).mbuf with
@@ -127,7 +135,7 @@ theorem memoryRelease_mono (i : Nat) (st : St) : Mono st (memoryRelease i st).2 
   split
   · exact Mono.refl _
   · have h1 := Mono.setMv st i { st.mv i with flags := { (st.mv i).flags with released := true } }
-      (fun _ => rfl) rfl
+      (fun _ => rfl) rfl rfl
     have h2 := Mono.setMb (st.setMv i { st.mv i with flags := { (st.mv i).flags with released := true } })
       (st.mv i).mbuf
       { (st.setMv i { st.mv i with flags := { (st.mv i).flags with released := true } }).mb (st.mv i).mbuf with
@@ -423,7 +431,7 @@ theorem releasedForbids_proven : ReleasedForbids := by
     | (simp only [memoryLength, b]; done)
     | (simp only [memoryIter, b]; done)
     | (simp only [memoryviewIndex, b]; done)
-    | (simp only [memoryEnter, e]; done)
+    | (simp only [memoryEnter, b]; done)
     | (simp only [memoryGetbuf, b]; done)
     | (simp only [memoryViewFromObjectAndFlags, b]; done)
     | (simp only [memoryviewCount, memoryIter, M.bind_app, e]; done)

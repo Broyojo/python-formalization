@@ -277,17 +277,28 @@ theorem isCContiguous_cStrides (v : Buf) (sh : List Int) (hs : v.shape = some sh
     simpa [cStrides] using this
 
 /-- A shape cast: if `cast_to_ND` succeeds on the 1-D view left by `cast_to_1D` (no
-suboffsets, by the assertion at :1387), then the view has `ndim == len(shape)`, the given
-shape, C strides, `product(shape) * itemsize == len`, positive dimensions, and reports
-`c_contiguous`. Hypothesis: `i` is a live view. -/
+suboffsets, by the assertion at :1387), then with `ndim == 0` the view has no shape or strides and
+one item, and otherwise it has `ndim == len(shape)`, the given shape, C strides,
+`product(shape) * itemsize == len` and positive dimensions; either way it reports `c_contiguous`.
+A shape of another byte size is refused, leaving the state alone (:1402-1406). Hypothesis: `i` is
+a live view. -/
 def CastNDSpec : Prop :=
   ∀ (st st' : St) (i ndim : Nat) (items : List Obj) (u : Unit),
-    i < st.mvs.length → (st.mv i).view.suboffsets = none → ndim = items.length → 0 < ndim →
-    castToND i items ndim st = (.ok u, st') →
-    ∃ sh, let v := (st'.mv i).view
-      v.shape = some sh ∧ v.ndim = ndim ∧ v.strides = some (cStrides v.itemsize sh) ∧
-      v.len = sh.foldl (· * ·) 1 * v.itemsize ∧ v.len = (st.mv i).view.len ∧
-      (∀ x ∈ sh, 0 < x) ∧ (st'.mv i).flags.isC = true
+    i < st.mvs.length → (st.mv i).view.suboffsets = none → ndim = items.length →
+    (castToND i items ndim st = (.ok u, st') →
+      (ndim = 0 → let v := (st'.mv i).view
+        v.ndim = 0 ∧ v.shape = none ∧ v.strides = none ∧ v.len = v.itemsize ∧
+        v.len = (st.mv i).view.len ∧ (st'.mv i).flags.isC = true) ∧
+      (0 < ndim → ∃ sh, let v := (st'.mv i).view
+        v.shape = some sh ∧ v.ndim = ndim ∧ v.strides = some (cStrides v.itemsize sh) ∧
+        v.len = sh.foldl (· * ·) 1 * v.itemsize ∧ v.len = (st.mv i).view.len ∧
+        (∀ x ∈ sh, 0 < x) ∧ (st'.mv i).flags.isC = true)) ∧
+    (ndim = 0 → (st.mv i).view.len ≠ (st.mv i).view.itemsize →
+      castToND i items ndim st =
+        (.error (.typeError "memoryview: product(shape) * itemsize != buffer size"), st)) ∧
+    (∀ l sh, 0 < ndim → copyShape items (st.mv i).view.itemsize = .ok (l, sh) → (st.mv i).view.len ≠ l →
+      castToND i items ndim st =
+        (.error (.typeError "memoryview: product(shape) * itemsize != buffer size"), st))
 
 theorem foldl_mul (l : List Int) (a b : Int) :
     l.foldl (· * ·) (a * b) = l.foldl (· * ·) a * b := by
@@ -315,8 +326,13 @@ theorem initFlags_isC_of (v : Buf) (sh : List Int) (hvs : v.suboffsets = none)
   | n + 2, _, hn =>
     simp [hvs, Flags.isC, pyBufferIsContiguous, hC]
 
-theorem castNDSpec_proven : CastNDSpec := by
-  intro st st' i ndim items u hi hsub hnd hpos h
+theorem castND_pos (st st' : St) (i ndim : Nat) (items : List Obj) (u : Unit)
+    (hi : i < st.mvs.length) (hsub : (st.mv i).view.suboffsets = none) (hnd : ndim = items.length)
+    (hpos : 0 < ndim) (h : castToND i items ndim st = (.ok u, st')) :
+    ∃ sh, let v := (st'.mv i).view
+      v.shape = some sh ∧ v.ndim = ndim ∧ v.strides = some (cStrides v.itemsize sh) ∧
+      v.len = sh.foldl (· * ·) 1 * v.itemsize ∧ v.len = (st.mv i).view.len ∧
+      (∀ x ∈ sh, 0 < x) ∧ (st'.mv i).flags.isC = true := by
   have hnz : ¬ ndim = 0 := by omega
   unfold castToND at h
   rcases hc : copyShape items (st.mv i).view.itemsize with e | ⟨l, sh⟩
@@ -332,5 +348,40 @@ theorem castNDSpec_proven : CastNDSpec := by
       · rw [h1]; exact foldl_mul_one _ _
       · exact initFlags_isC_of _ sh hsub rfl rfl (by simp only; omega) hpos
     · simp [M.bind_app, M.get, hnz, M.lift, hc, M.pure_app, hl, M.throw_app] at h
+
+theorem castNDSpec_proven : CastNDSpec := by
+  intro st st' i ndim items u hi hsub hnd
+  refine ⟨fun h => ⟨fun h0 => ?_, fun hpos => castND_pos st st' i ndim items u hi hsub hnd hpos h⟩,
+    fun h0 hne => ?_, fun l sh hpos hc hne => ?_⟩
+  · subst h0
+    unfold castToND at h
+    by_cases hl : (st.mv i).view.len = (st.mv i).view.itemsize
+    · simp only [M.bind_app, M.get, ↓reduceIte, M.pure_app, hl, ne_eq, not_true_eq_false, M.set,
+        Prod.mk.injEq] at h
+      obtain ⟨-, rfl⟩ := h
+      rw [St.mv_setMv _ _ _ hi]
+      dsimp only
+      refine ⟨rfl, rfl, rfl, hl.symm ▸ rfl, hl.symm, ?_⟩
+      simp [initFlags, hsub, Flags.isC]
+    · simp [M.bind_app, M.get, M.pure_app, hl, M.throw_app] at h
+  · subst h0
+    unfold castToND
+    simp [M.bind_app, M.get, M.pure_app, hne, M.throw_app]
+  · have hnz : ¬ ndim = 0 := by omega
+    unfold castToND
+    simp [M.bind_app, M.get, hnz, M.lift, hc, M.pure_app, hne, M.throw_app]
+
+/-- `cast_to_ND` when the shape fits. -/
+theorem castToND_ok (i : Nat) (items : List Obj) (ndim : Nat) (st : St) (l : Int) (sh : List Int)
+    (hz : ndim ≠ 0) (hc : copyShape items (st.mv i).view.itemsize = .ok (l, sh))
+    (hl : (st.mv i).view.len = l) :
+    castToND i items ndim st =
+      (.ok (), st.setMv i { st.mv i with
+        view := { (st.mv i).view with
+          ndim := ndim, shape := some sh, strides := some (cStrides (st.mv i).view.itemsize sh) },
+        flags := initFlags { (st.mv i).view with
+          ndim := ndim, shape := some sh, strides := some (cStrides (st.mv i).view.itemsize sh) } }) := by
+  unfold castToND
+  simp only [M.bind_app, M.get, hz, ↓reduceIte, M.lift, hc, M.pure_app, hl, ne_eq, not_true_eq_false, M.set]
 
 end PyLean.BytesObj.Mem

@@ -2,6 +2,8 @@ import PyLean.Registry
 import PyLean.BytesObj.Mem.Fallible
 import PyLean.BytesObj.Mem.Effects
 import PyLean.BytesObj.Mem.CmpTree
+import PyLean.BytesObj.Mem.NDim
+import PyLean.BytesObj.Mem.Fortran
 import PyLean.BytesObj.Mem.Contig
 
 /-! Registry entries for memoryview (Objects/memoryobject.c). -/
@@ -33,7 +35,7 @@ def entries : List Entry := [
     statement := "ptr_from_tuple rejects a tuple longer than ndim before any __index__ runs, and passes up a raising __index__."
     source := "memoryobject.c:2423-2448", status := .proven
     prop := ``TupleFailures, thm := some ``tupleFailures_proven },
-  { id := "bytesobj-memoryview-buffer-failures", pyFile := "Objects/memoryobject.c", pyFns := ["memoryview_impl", "PyMemoryView_FromObject", "PyMemoryView_FromObjectAndFlags", "memoryview__from_flags_impl"]
+  { id := "bytesobj-memoryview-buffer-failures", pyFile := "Objects/memoryobject.c", pyFns := ["memoryview_impl", "PyMemoryView_FromObject", "PyMemoryView_FromObjectAndFlags", "memoryview__from_flags_impl", "_PyManagedBuffer_FromObject"]
     statement := "A __buffer__ that raises or returns a non-memoryview makes memoryview(x), memoryview._from_flags(x, flags) and PyObject_GetBuffer raise that failure, after its callback ran, leaving the byte store alone."
     source := "memoryobject.c:801-825; Objects/typeobject.c:10718-10719", status := .proven
     prop := ``BufferFailures, thm := some ``bufferFailures_proven },
@@ -49,7 +51,7 @@ def entries : List Entry := [
     prop := ``CastWholeFormat, thm := some ``castWholeFormat_refuted
     bug := some "bytesobj-memoryview-cast-format-embedded-nul" },
   { id := "bytesobj-memoryview-cast-1d", pyFile := memFile
-    pyFns := ["memoryview_cast_impl", "cast_to_1D", "mbuf_add_incomplete_view", "memory_alloc", "init_shared_values"]
+    pyFns := ["memoryview_cast_impl", "cast_to_1D", "mbuf_add_incomplete_view", "memory_alloc", "init_shared_values", "zero_in_shape"]
     statement := "m.cast(format) on a live C-contiguous view, with a native format, when one side has byte size and the length divides, gives a new 1-D view registered with the same managed buffer, on the same memory, with shape * itemsize == len, and m unchanged."
     source := "memoryobject.c:1426-1437 ('All casts must result in views that will have the exact byte size of the original input'); Doc/library/stdtypes.rst memoryview.cast", status := .proven
     prop := ``Cast1DSpec, thm := some ``cast1DSpec_proven },
@@ -82,7 +84,7 @@ def entries : List Entry := [
     prop := ``ReleasedKeyNoWrite, thm := some ``releasedKeyNoWrite_refuted
     bug := some "bytesobj-memoryview-setitem-c-released" },
   { id := "bytesobj-memoryview-released-key-not-c", pyFile := memFile
-    pyFns := ["pack_single", "memory_ass_sub", "unpack_single"]
+    pyFns := ["pack_single", "memory_ass_sub"]
     statement := "For every format but c, every item and every conversion callback: if key.__index__ releases m, m[key] = v writes nothing."
     source := "gh-92888", status := .proven
     prop := ``ReleasedKeyNoWriteNotC, thm := some ``releasedKeyNoWriteNotC_proven },
@@ -115,7 +117,7 @@ def entries : List Entry := [
   { id := "bytesobj-memoryview-empty-step-not-contiguous", pyFile := memFile
     pyFns := ["init_flags"]
     statement := "For every 1-D view, m.c_contiguous is what PyBuffer_IsContiguous(view, 'C') says."
-    source := "Objects/abstract.c:458-459; the name of MV_CONTIGUOUS_NDIM1 ('Fast contiguity test')", status := .refuted
+    source := "Objects/abstract.c:498-499; the name of MV_CONTIGUOUS_NDIM1 ('Fast contiguity test')", status := .refuted
     prop := ``Ndim1ContigAgree, thm := some ``ndim1ContigAgree_refuted
     bug := some "bytesobj-memoryview-empty-step-not-contiguous" },
   { id := "bytesobj-memoryview-contig-nonempty", pyFile := memFile
@@ -137,7 +139,7 @@ def entries : List Entry := [
     bug := some "bytesobj-memoryview-slice-stride-overflow" },
   { id := "bytesobj-memoryview-slice-items", pyFile := memFile
     pyFns := ["memory_subscript", "init_slice", "init_len", "mbuf_add_view", "init_shape_strides", "init_suboffsets"]
-    statement := "For every slice with a non-zero step and every 1-D view, m[s] is a new view on the same memory whose k-th item is item range(*s.indices(n))[k] of m, whose length is that of the range, and nbytes is len * itemsize; every position is in [0, n)."
+    statement := "For every slice with a non-zero step and every view of any number of dimensions, m[s] slices dimension 0: a new view on the same memory whose k-th row is row range(*s.indices(n))[k] of m, whose length is that of the range, and nbytes is len * itemsize; every position is in [0, n)."
     source := "slice semantics; list agreement (RangeSlice.ListSliceIndices)", status := .proven
     prop := ``SliceItems, thm := some ``sliceItems_proven },
   { id := "bytesobj-memoryview-index-item", pyFile := memFile
@@ -244,7 +246,7 @@ def entries : List Entry := [
     prop := ``IndexIsSearch, thm := some ``indexIsSearch_proven },
   { id := "bytesobj-memoryview-hash", pyFile := memFile
     pyFns := ["memory_hash"]
-    statement := "hash(m) == hash(m.tobytes()) for every read-only 1-D view of a byte format and every stride, and the value is cached across release()."
+    statement := "hash(m) == hash(m.tobytes()) for every read-only view of a byte format, of any number of dimensions, strides and suboffsets, and the value is cached across release()."
     source := "Doc/library/stdtypes.rst memoryview.__hash__", status := .proven
     prop := ``HashIsTobytes, thm := some ``hashIsTobytes_proven },
   { id := "bytesobj-memoryview-hash-rejections", pyFile := memFile
@@ -260,7 +262,7 @@ def entries : List Entry := [
   { id := "bytesobj-memoryview-new-exporter", pyFile := memFile
     pyFns := ["mbuf_alloc", "_PyManagedBuffer_FromObject", "PyMemoryView_FromObjectAndFlags", "PyMemoryView_FromObject",
       "memoryview_impl", "mbuf_add_view"]
-    statement := "memoryview(x) of a 1-D exporter makes a new managed buffer with one registered view on x's buffer."
+    statement := "memoryview(x) of an exporter of any number of dimensions makes a new managed buffer with one registered view on x's buffer."
     source := "memoryobject.c:31-68", status := .proven
     prop := ``NewFromExporter, thm := some ``newFromExporter_proven },
   { id := "bytesobj-memoryview-from-memory", pyFile := memFile
@@ -275,7 +277,7 @@ def entries : List Entry := [
     prop := ``CmpBadFormat, thm := some ``cmpBadFormat_proven },
   { id := "bytesobj-memoryview-tuple-item", pyFile := memFile
     pyFns := ["ptr_from_tuple", "memory_item_multi", "memory_subscript", "is_multiindex", "lookup_dimension"]
-    statement := "m[i, j, ...] with one in-range index per dimension is m.tolist()[i][j]..., for every view of a native format, any number of dimensions, any strides and suboffsets."
+    statement := "m[i, j, ...] with one index per dimension, each -n <= i < n, is the item of m.tolist() at those positions, a negative index counting from the end, for every view of a native format, any number of dimensions, any strides and suboffsets."
     source := "memoryobject.c:2573-2578; Doc/library/stdtypes.rst memoryview", status := .proven
     prop := ``TupleItem, thm := some ``tupleItem_proven },
   { id := "bytesobj-memoryview-copy-single", pyFile := memFile
@@ -310,7 +312,7 @@ def entries : List Entry := [
     source := "memoryobject.c:1150-1161", status := .proven
     prop := ``DeallocRules, thm := some ``deallocRules_proven },
   { id := "bytesobj-memoryview-dealloc-on-fail", pyFile := memFile
-    pyFns := ["mbuf_dealloc", "PyMemoryView_FromObjectAndFlags"]
+    pyFns := ["mbuf_dealloc", "PyMemoryView_FromObjectAndFlags", "mbuf_add_view"]
     statement := "When mbuf_add_view refuses a buffer of more than 64 dimensions, memoryview(x) raises ValueError, and mbuf_dealloc releases the master that no view ever kept, running __release_buffer__."
     source := "memoryobject.c:120-128, :811-819", status := .proven
     prop := ``MbufDeallocOnFail, thm := some ``mbufDeallocOnFail_proven },
@@ -339,6 +341,101 @@ def entries : List Entry := [
     statement := "An exception from __eq__ passes out of count and index at once; an __eq__ that calls self.release() succeeds, and the next step raises the released error, except on a view of one item, where count returns."
     source := "memoryobject.c:2797-2816, :2872-2895", status := .proven
     prop := ``EqFailures, thm := some ``eqFailures_proven },
+  { id := "bytesobj-memoryview-slice-tolist", pyFile := memFile
+    pyFns := ["memory_subscript", "init_slice", "init_len"]
+    statement := "m[s].tolist() is m.tolist()[s] for a view of any number of dimensions, native format, strides and suboffsets, and every slice with a non-zero step."
+    source := "Doc/library/stdtypes.rst memoryview; memoryobject.c:2509-2530, :2614-2628", status := .proven
+    prop := ``SliceTolist, thm := some ``sliceTolist_proven },
+  { id := "bytesobj-memoryview-tuple-refusals", pyFile := memFile
+    pyFns := ["ptr_from_tuple", "memory_item_multi", "lookup_dimension"]
+    statement := "m[i, j, ...] with more indices than dimensions is a TypeError before any index is looked at; otherwise the first index out of bounds is an IndexError naming its dimension."
+    source := "memoryobject.c:2424-2448", status := .proven
+    prop := ``TupleRefusals, thm := some ``tupleRefusals_proven },
+  { id := "bytesobj-memoryview-zero-dim", pyFile := memFile
+    pyFns := ["memoryview_tolist_impl", "memory_subscript"]
+    statement := "On a 0-dim view m.tolist() is one item and not a list, and m[()] is that same item, the native item at buf."
+    source := "memoryobject.c:2248-2250, :2592-2596", status := .proven
+    prop := ``ZeroDimItem, thm := some ``zeroDimItem_proven },
+  { id := "bytesobj-memoryview-hash-view-exporter", pyFile := memFile
+    pyFns := ["memory_hash"]
+    statement := "When the exporter is another memoryview, hash runs memory_hash on it under the held export: a cached hash lets this view go on, and a view that cannot be hashed passes its ValueError up with no effect."
+    source := "memoryobject.c:3228-3237", status := .proven
+    prop := ``HashViewExporter, thm := some ``hashViewExporter_proven },
+  { id := "bytesobj-memoryview-cast-shape", pyFile := memFile
+    pyFns := ["memoryview_cast_impl", "cast_to_ND", "cast_to_1D"]
+    statement := "memoryview.cast(format, shape) gives a new view of the same buffer and byte size, with ndim == len(shape), the given shape, the new format and C strides, and m unchanged."
+    source := "memoryobject.c:1377-1411, :1447-1499", status := .proven
+    prop := ``CastShapeSpec, thm := some ``castShapeSpec_proven },
+  { id := "bytesobj-memoryview-context", pyFile := memFile
+    pyFns := ["memory_enter", "memory_exit"]
+    statement := "__enter__ returns the view itself and a released view refuses; __exit__ is release, so with no exports the view is released and a second __enter__ refuses."
+    source := "memoryobject.c:1182-1193", status := .proven
+    prop := ``ContextRules, thm := some ``contextRules_proven },
+  { id := "bytesobj-memoryview-get-contiguous-copy", pyFile := memFile
+    pyFns := ["PyMemoryView_GetContiguous", "memory_from_contiguous_copy"]
+    statement := "A read request in C order on a view that is not contiguous gives a new view over a new bytes object, with C strides and no suboffsets, holding the view's items in row-major order, and the temporary view is dropped."
+    source := "memoryobject.c:889-946, :998-1000", status := .proven
+    prop := ``GetContiguousCopy, thm := some ``getContiguousCopy_proven },
+  { id := "bytesobj-memoryview-ass-slice", pyFile := memFile
+    pyFns := ["memory_ass_sub", "copy_single", "init_slice"]
+    statement := "m[s] = x on a 1-D writable view puts item k of x at item range(*s.indices(n))[k] of m, for every slice with a non-zero step and every x of the same structure, also when they overlap, and gives x's buffer back."
+    source := "memoryobject.c:2694-2719", status := .proven
+    prop := ``AssSliceSpec, thm := some ``assSliceSpec_proven },
+  { id := "bytesobj-memoryview-init-arrays", pyFile := memFile
+    pyFns := ["init_shape_strides", "init_suboffsets"]
+    statement := "A view copies its arrays: none for 0 dimensions, a missing 1-D shape or stride rebuilt from len and itemsize, N-D arrays as given, and missing N-D strides filled in in C order, as the buffer protocol defines NULL strides."
+    source := "memoryobject.c:555-593", status := .proven
+    prop := ``InitArrays, thm := some ``initArrays_proven },
+  { id := "bytesobj-memoryview-from-buffer-full", pyFile := memFile
+    pyFns := ["PyMemoryView_FromBuffer", "mbuf_add_view"]
+    statement := "PyMemoryView_FromBuffer on a Py_buffer with all its arrays, of any number of dimensions, gives that buffer with no exporter, as the only view of a new managed buffer."
+    source := "memoryobject.c:769-794", status := .proven
+    prop := ``FromBufferFull, thm := some ``fromBufferFull_proven },
+  { id := "bytesobj-memoryview-from-flags-exporter", pyFile := memFile
+    pyFns := ["memoryview__from_flags_impl", "_PyManagedBuffer_FromObject"]
+    statement := "memoryview._from_flags gives flags to an exporter: a writable request on a read-only exporter is refused with no view made, and without PyBUF_FORMAT the master has no format and the view reads B."
+    source := "memoryobject.c:88-104, :550, :1031-1036", status := .proven
+    prop := ``FromFlagsExporter, thm := some ``fromFlagsExporter_proven },
+  { id := "bytesobj-memoryview-buffer-proc", pyFile := memFile
+    pyFns := ["_PyMemoryView_FromBufferProc"]
+    statement := "For every buffer proc: one that fails passes its exception up and releases nothing, one that succeeds gives a new view on a new managed buffer, and a buffer mbuf_add_view refuses is released."
+    source := "memoryobject.c:831-848", status := .proven
+    prop := ``BufferProcRules, thm := some ``bufferProcRules_proven },
+  { id := "bytesobj-memoryview-fortran-copy", pyFile := memFile
+    pyFns := ["buffer_to_contiguous", "copy_buffer", "copy_rec", "copy_base", "init_fortran_strides_from_shape"]
+    statement := "buffer_to_contiguous in order F, for every view of any number of dimensions, strides and suboffsets, leaves each item at its place in column-major order, the first index running fastest."
+    source := "Doc/library/stdtypes.rst memoryview.tobytes; memoryobject.c:374-401, :495-534", status := .proven
+    prop := ``FortranCopy, thm := some ``fortranCopy_proven },
+  { id := "bytesobj-memoryview-tobytes-orders", pyFile := memFile
+    pyFns := ["memoryview_tobytes_impl", "PyBuffer_ToContiguous"]
+    statement := "m.tobytes(order) for every live view of any shape: C and no order are row-major, F is column-major, A is the memory if it is contiguous in either order and row-major otherwise, and any other length is refused."
+    source := "memoryobject.c:1048-1087, :2278-2312", status := .proven
+    prop := ``TobytesOrders, thm := some ``tobytesOrders_proven },
+  { id := "bytesobj-memoryview-from-contig-copy-f", pyFile := memFile
+    pyFns := ["memory_from_contiguous_copy"]
+    statement := "memory_from_contiguous_copy in order F gives a new view over a new bytes object with the source's shape and format, Fortran strides and no suboffsets, each item at its place in column-major order."
+    source := "memoryobject.c:889-946", status := .proven
+    prop := ``FromContigCopyF, thm := some ``fromContigCopyF_proven },
+  { id := "bytesobj-memoryview-get-contiguous-copy-f", pyFile := memFile
+    pyFns := ["PyMemoryView_GetContiguous", "memory_from_contiguous_copy"]
+    statement := "A read request in Fortran order on a view that is not Fortran-contiguous gives a new view with Fortran strides holding the items in column-major order, and the temporary view is dropped."
+    source := "memoryobject.c:889-946, :998-1000", status := .proven
+    prop := ``GetContiguousCopyF, thm := some ``getContiguousCopyF_proven },
+  { id := "bytesobj-memoryview-cast-cleanup", pyFile := memFile
+    pyFns := ["memoryview_cast_impl"]
+    statement := "When a cast fails after the new view is made, its export of the managed buffer is given back."
+    source := "memoryobject.c:1496-1498", status := .proven
+    prop := ``CastCleanup, thm := some ``castCleanup_proven },
+  { id := "bytesobj-memoryview-copy-single-sub", pyFile := memFile
+    pyFns := ["copy_single", "copy_base", "last_dim_is_contiguous"]
+    statement := "m[s] = x on a view with suboffsets writes each item at the address its pointer gives, through the scratch buffer, because last_dim_is_contiguous is false there; the source may have suboffsets too."
+    source := "memoryobject.c:272-279, :345-371, :405-432", status := .proven
+    prop := ``CopySingleSub, thm := some ``copySingleSub_proven },
+  { id := "bytesobj-memoryview-pack-unpack-other", pyFile := memFile
+    pyFns := ["pack_single", "unpack_single"]
+    statement := "For the formats other than the integers, pack then unpack: ? gives the truth of the item, c the byte, P the pointer, d the double exactly, f and e the pattern they stored; a released view refuses to unpack."
+    source := "memoryobject.c:1776-1863, :1875-2026", status := .proven
+    prop := ``PackUnpackOther, thm := some ``packUnpackOther_proven },
   { id := "bytesobj-memoryview-rank-rules", pyFile := memFile
     pyFns := ["memory_length", "memory_iter", "memory_item", "memoryview_count_impl", "memoryview_index_impl"]
     statement := "len(m) is shape[0] on every view with dimensions. A 0-dim view has no length, iterator, items or lookup, and a view of two or more dimensions refuses iteration, count, index and m[i] as not implemented, each with the source's message."
@@ -399,9 +496,8 @@ def entries : List Entry := [
   { id := "bytesobj-memoryview-tobytes-contig-nd", pyFile := memFile
     pyFns := ["PyBuffer_ToContiguous"]
     statement := "For a C-contiguous view with no suboffsets and any number of dimensions, the memcpy branch of PyBuffer_ToContiguous gives the same bytes as the row-major walk."
-    source := "Fast path against general path", status := .open
-    prop := ``TobytesContigND
-    notes := "Proven for ndim == 1 (Tobytes1D). Needs cLoop, which walks from the last dimension, related to the first-dimension recursion of addrs." },
+    source := "Fast path against general path", status := .proven
+    prop := ``TobytesContigND, thm := some ``tobytesContigND_proven },
   { id := "bytesobj-memoryview-tobytes-fortran", pyFile := memFile
     pyFns := ["buffer_to_contiguous", "init_fortran_strides_from_shape"]
     statement := "tobytes('F') of a 2-D view lists the items column by column."

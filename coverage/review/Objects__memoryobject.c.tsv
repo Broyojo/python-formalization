@@ -1,73 +1,38 @@
 file	line	name	verdict	mirror	property	settled	reason
 Objects/memoryobject.c	72	mbuf_alloc	FAITHFUL	yes	yes	yes	The NULL return is out of memory, which no model here expresses; passes on the fresh MBuf fields NewFromExporter states.
-Objects/memoryobject.c	89	_PyManagedBuffer_FromObject	HOLLOW	no	no	yes	Obj.exporter cannot raise from __buffer__, so the PyObject_GetBuffer failure at :97-101 is not expressible for a Python exporter, and new-exporter states only the success of flags = PyBUF_FULL_RO on a 1-D buffer.
 Objects/memoryobject.c	131	mbuf_traverse	FAITHFUL	yes	-	-	
-Objects/memoryobject.c	272	last_dim_is_contiguous	HOLLOW	yes	no	yes	Every listed theorem has dest.suboffsets = none, so the conjunct !HAVE_SUBOFFSETS_IN_LAST_DIM(dest) at :275 is constantly true and could be deleted with all of them still holding.
-Objects/memoryobject.c	345	copy_base	HOLLOW	yes	no	yes	No theorem has destination suboffsets (CopySingleSpec assumes none on both sides, TobytesC has a plain destination), so the ADJUST_PTR of dptr at :365, reached by a slice assignment on a PIL view, is unstated.
-Objects/memoryobject.c	375	copy_rec	HOLLOW	yes	no	yes	Both listed theorems fix the destination to C strides, and the Fortran destination is what bytesobj-memoryview-tobytes-fortran leaves .open because copy_rec interleaves the writes.
-Objects/memoryobject.c	405	copy_single	HOLLOW	yes	no	yes	CopySingleSpec assumes no suboffsets on either side, non-overlapping destination items, a live view and equivStructure = .ok, so the CHECK_RELEASED_INT_AGAIN re-check at :407 and the failure at :412-413 are stated nowhere and the registry sentence overclaims.
-Objects/memoryobject.c	438	copy_buffer	HOLLOW	yes	no	yes	Both listed theorems fix the destination to C strides, and the Fortran destination is what bytesobj-memoryview-tobytes-fortran leaves .open.
 Objects/memoryobject.c	468	init_strides_from_shape	FAITHFUL	yes	yes	yes	Written as the Fortran loop on the reversed shape, which gives the same array; cLoop_cStrides and copyRec_spec depend on it.
 Objects/memoryobject.c	481	init_fortran_strides_from_shape	FAITHFUL	yes	yes	yes	
-Objects/memoryobject.c	496	buffer_to_contiguous	HOLLOW	yes	no	yes	TobytesC is order 'C' only, and the Fortran branch at :524-526 is the .open entry bytesobj-memoryview-tobytes-fortran, so the registry itself records this body as half settled.
 Objects/memoryobject.c	543	init_shared_values	FAITHFUL	yes	yes	yes	dest->internal at :551 is dropped, which nothing Python can see.
-Objects/memoryobject.c	556	init_shape_strides	HOLLOW	yes	no	yes	Every theorem goes through viewCopy_1d or the NULL-shape case, so the ndim == 0 exit at :560-564 and the N-D loop with its init_strides_from_shape fallback at :571-579 are in no proposition.
-Objects/memoryobject.c	583	init_suboffsets	HOLLOW	yes	no	yes	slice-items requires Live1D.subs, so only the NULL exit at :587-590 runs and the copy loop at :591-592 is in no proposition.
-Objects/memoryobject.c	597	init_len	HOLLOW	yes	no	yes	SliceItems is 1-D, so the product loop at :602-603 runs exactly once in the only theorem, and slicing an N-D view (reached at :2624) is unstated.
 Objects/memoryobject.c	611	init_flags	FAITHFUL	yes	yes	yes	Passes on the listed entries plus hex-tobytes, whose proof depends on the 0-dim and suboffsets branches; the PIL bit itself is stated nowhere, and the registry source of empty-step-not-contiguous cites abstract.c:458-459, the Fortran twin, where :498-499 is meant.
 Objects/memoryobject.c	644	memory_alloc	FAITHFUL	yes	yes	yes	Field initialisation is split with the caller; the mv == NULL return is out of memory.
-Objects/memoryobject.c	676	mbuf_add_view	HOLLOW	yes	no	yes	Every listed theorem goes through viewCopy_1d on a 1-D buffer with no suboffsets, so N-D views are outside all of them and the ndim > 64 ValueError at :684-689 is in no proposition.
 Objects/memoryobject.c	713	mbuf_add_incomplete_view	FAITHFUL	yes	yes	yes	
 Objects/memoryobject.c	741	PyMemoryView_FromMemory	FAITHFUL	yes	yes	yes	
-Objects/memoryobject.c	770	PyMemoryView_FromBuffer	HOLLOW	yes	no	yes	FromBufferReconstructs assumes ndim = 1 and NULL shape, strides, format and suboffsets, a case picked from the comment and not a precondition, so a full Py_buffer, which is what typeobject.c:10823 passes, is unstated.
-Objects/memoryobject.c	801	PyMemoryView_FromObjectAndFlags	HOLLOW	no	no	yes	Obj.exporter cannot raise from __buffer__ (:813-815), the exporter path is proven only for PyBUF_FULL_RO on 1-D buffers with no callback, and the memoryview path only for Live1D.
-Objects/memoryobject.c	832	_PyMemoryView_FromBufferProc	HOLLOW	no	yes	yes	memoryBufferProc fixes bufferproc to memory_getbuf, so the generic parameter (bytes.__buffer__ and every other type through wrap_buffer) is not modelled, and the failure at :839-843 is outside the only theorem, a counterexample on the success path.
-Objects/memoryobject.c	854	PyMemoryView_FromObject	HOLLOW	no	no	yes	Its body is only the call with PyBUF_FULL_RO, and memoryViewFromObject carries the gaps of that callee: no raising __buffer__, and 1-D only.
 Objects/memoryobject.c	861	mbuf_copy_format	FAITHFUL	yes	yes	yes	Inlined in contigBytes; passes on v.format = src.format in FromContigCopy, and the malloc failure is out of memory.
-Objects/memoryobject.c	889	memory_from_contiguous_copy	HOLLOW	yes	no	yes	FromContigCopy is order 'C' only, so the Fortran branch at :931-933, reached by a read request in order 'F', is unstated.
-Objects/memoryobject.c	966	PyMemoryView_GetContiguous	HOLLOW	yes	no	yes	GetContiguousRules is Live1D and states three exits: the read request on a non-contiguous view at :998-1000, the case the function exists for, is in no proposition.
-Objects/memoryobject.c	1014	memoryview_impl	HOLLOW	no	no	yes	Its body is only the call to PyMemoryView_FromObject, so it carries that row's gaps: a __buffer__ that raises is not expressible and every theorem is 1-D.
-Objects/memoryobject.c	1032	memoryview__from_flags_impl	HOLLOW	no	no	yes	The only statement is on a memoryview argument, where flags are ignored (:805-809), so the theorem would hold with flags dropped; the path that hands flags to an exporter is unstated.
-Objects/memoryobject.c	1049	PyBuffer_ToContiguous	HOLLOW	yes	no	yes	Tobytes1D is 1-D with no suboffsets and order 'C'; the general memcpy claim is the .open entry bytesobj-memoryview-tobytes-contig-nd, and orders F and A and the len mismatch at :1056-1060 are unstated.
 Objects/memoryobject.c	1090	get_exports	FAITHFUL	yes	yes	yes	
 Objects/memoryobject.c	1109	_memory_release	FAITHFUL	yes	yes	yes	Its own lines are mirrored in order; the gap in PyBuffer_Release is charged to mbuf_release.
 Objects/memoryobject.c	1129	memoryview_release_impl	FAITHFUL	yes	yes	yes	The SystemError arm at :1145-1147 is mirrored and unreachable under export counting.
 Objects/memoryobject.c	1164	memory_traverse	FAITHFUL	yes	-	-	
 Objects/memoryobject.c	1172	memory_clear	FAITHFUL	yes	yes	yes	Both arms are stated, though the proposition is close to the definition; Py_CLEAR(self->mbuf) at :1177 is dropped with no visible effect because BASE_INACCESSIBLE tests the released flag first.
-Objects/memoryobject.c	1183	memory_enter	HOLLOW	no	no	yes	memoryEnter returns Unit, so return Py_NewRef(self) at :1186 (with m as x binds m) is not modelled, and the only entry states the released arm.
-Objects/memoryobject.c	1190	memory_exit	HOLLOW	yes	no	yes	The only statement is the conjunct memoryExit i st = r inside the exports > 0 arm, an alias of memoryviewRelease, so a successful __exit__ is unstated.
 Objects/memoryobject.c	1203	get_native_fmtchar	FAITHFUL	yes	yes	yes	
 Objects/memoryobject.c	1232	get_native_fmtstr	FAITHFUL	yes	yes	yes	
 Objects/memoryobject.c	1276	cast_to_1D	FAITHFUL	yes	yes	yes	The error arms at :1295-1312 are mirrored verbatim and taken as hypotheses; no theorem states them.
 Objects/memoryobject.c	1339	copy_shape	FAITHFUL	yes	yes	yes	Soundness only (if the copy succeeds the result is the positive product); the error arms are mirrored verbatim and unstated.
-Objects/memoryobject.c	1378	cast_to_ND	HOLLOW	yes	no	yes	CastNDSpec assumes 0 < ndim, so the 0-dim branch at :1390-1394 (m.cast(f, [])) is excluded, and the length mismatch at :1402-1406 is unstated.
-Objects/memoryobject.c	1448	memoryview_cast_impl	HOLLOW	yes	no	yes	Cast1DSpec has shape = none and CastRejections stops at the second check, so the shape path at :1468-1482 and :1491 and the cleanup at :1496-1498 are not stated at this level; CastNDSpec is on castToND alone.
-Objects/memoryobject.c	1508	memoryview_toreadonly_impl	HOLLOW	yes	no	yes	ToReadonlySpec assumes Live1D, which is neither a type invariant nor a precondition of toreadonly, so N-D and suboffset views are unstated.
 Objects/memoryobject.c	1529	memory_getbuf	FAITHFUL	yes	yes	yes	GetbufRules covers all flags and views; each contiguity refusal is covered only by 'a failure changes nothing', and the CHECK_RESTRICTED_INT arm is mirrored and unstated.
 Objects/memoryobject.c	1609	memory_releasebuf	FAITHFUL	yes	yes	yes	
 Objects/memoryobject.c	1635	type_error_int	FAITHFUL	yes	yes	yes	
 Objects/memoryobject.c	1643	value_error_int	FAITHFUL	yes	yes	yes	
-Objects/memoryobject.c	1776	unpack_single	HOLLOW	yes	no	yes	PackUnpackInt covers the integer arms and TolistFlat takes g from unpackRaw itself, so arms ?, c, P, f, d, e have no stated value (the float round trips are .open), the re-check at :1788 fails in no proposition, and released-key-not-c lists this function but never runs it.
-Objects/memoryobject.c	1875	pack_single	HOLLOW	no	no	yes	Obj cannot raise from __index__, __float__ or __bool__, so those paths into err_occurred and :1988-1989 are not expressible, and arms ?, P, f, d, e have no value property (the float round trips are .open).
 Objects/memoryobject.c	2045	unpacker_new	FAITHFUL	yes	-	-	
 Objects/memoryobject.c	2063	unpacker_free	FAITHFUL	yes	-	-	Applies for the stock struct.Struct; the Py_XDECREFs at :2066-2067 could run a finalizer only if struct.Struct is replaced.
 Objects/memoryobject.c	2075	struct_get_unpacker	HOLLOW	no	no	yes	The import failure at :2082-2084 is dropped (State.lean:383-384), though fix_struct_error_int exists to preserve it, CmpBadFormat assumes the rejection as a hypothesis, and CmpFastStruct only parses one native character.
 Objects/memoryobject.c	2168	tolist_base	FAITHFUL	yes	yes	yes	
 Objects/memoryobject.c	2195	tolist_rec	FAITHFUL	yes	yes	yes	
-Objects/memoryobject.c	2237	memoryview_tolist_impl	HOLLOW	yes	no	yes	TolistFlat requires sh != [], so the 0-dim arm at :2248-2250 is excluded although the registry sentence says any dimension.
-Objects/memoryobject.c	2279	memoryview_tobytes_impl	HOLLOW	yes	no	yes	Results are proven only for 1-D, no suboffsets, order None or 'C': the 'F' and 'A' branches at :2289-2294 have no result in any proposition, and the two .open tobytes entries record the N-D cases.
 Objects/memoryobject.c	2376	memory_repr	FAITHFUL	yes	yes	yes	The proposition restates the body by rfl, accepted only because the body is one flag test; the %p address is not modelled.
 Objects/memoryobject.c	2391	lookup_dimension	FAITHFUL	yes	yes	yes	Passes on the union: index-item for negative and out-of-range indices, tuple-item for dim > 0 and suboffsets.
-Objects/memoryobject.c	2425	ptr_from_tuple	HOLLOW	no	no	yes	Obj.index cannot raise, so the failure at :2441-2442 from __index__ is not expressible, and TupleItem is in-range non-negative ints, leaving the too-long tuple TypeError at :2430-2435 and out-of-range indices unstated.
-Objects/memoryobject.c	2484	memory_item_multi	HOLLOW	yes	no	yes	TupleItem assumes every index is in bounds and non-negative, the hypothesis the playbook warns about, so negative indices and an IndexError through ptr_from_tuple are unstated.
-Objects/memoryobject.c	2509	init_slice	HOLLOW	no	no	yes	Slice holds only Option Int, so the PySlice_Unpack failures at :2513-2515 other than step 0 (TypeError for a non-index part, a raising __index__) are not expressible, and SliceItems is Live1D, leaving a slice of an N-D view unstated.
 Objects/memoryobject.c	2538	is_multislice	FAITHFUL	yes	yes	yes	
 Objects/memoryobject.c	2557	is_multiindex	FAITHFUL	yes	yes	yes	
-Objects/memoryobject.c	2580	memory_subscript	HOLLOW	no	no	yes	Obj.index cannot raise, so the failure at :2608-2609 and a raising __index__ in a slice are not expressible, and index-item and slice-items are Live1D with plain int keys, leaving a re-entrant key on the read path and a slice of an N-D view unstated.
-Objects/memoryobject.c	2643	memory_ass_sub	HOLLOW	no	no	yes	Obj cannot raise from __index__ (:2686-2687) or __buffer__ (:2700), PyBuffer_Release(&src) at :2717 cannot run __release_buffer__, and the slice path has no theorem at this level because copy-single states copySingle and never runs memoryAssSub.
 Objects/memoryobject.c	2917	fix_struct_error_int	HOLLOW	yes	no	yes	CmpBadFormat states the StructError arm only, with the error as a hypothesis, and the ImportError and MemoryError arm at :2921-2924 is dead because no model path raises them.
 Objects/memoryobject.c	2974	unpack_cmp	FAITHFUL	yes	yes	yes	
-Objects/memoryobject.c	3206	memory_hash	HOLLOW	no	no	yes	The export bump around PyObject_Hash at :3231-3233 (gh-142664) is dropped (Model.lean:1111-1112), so an exporter __hash__ that releases m is not expressible, and HashIsTobytes is Live1D, leaving N-D views and a memoryview exporter unstated.
 Objects/memoryobject.c	3268	_IntTupleFromSsizet	FAITHFUL	yes	yes	yes	
 Objects/memoryobject.c	3292	memory_obj_get	FAITHFUL	yes	yes	yes	
 Objects/memoryobject.c	3305	memory_nbytes_get	FAITHFUL	yes	yes	yes	

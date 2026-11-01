@@ -52,51 +52,10 @@ theorem memoryHash_strided (st : St) (i : Nat) (b : List Nat) (h : Hashable st i
     rw [withExport_same i (do fire none; pure ()) st h.valid rfl]
     rfl
 
-/-- `hash(m) == hash(m.tobytes())` for every read-only 1-D view of a byte format, for every
-stride (Doc/library/stdtypes.rst, `memoryview.__hash__`), and the value stays: a later `hash`
-gives the same even after `release()`. Hypotheses: the conditions of the function itself
-(read-only, byte format, an exporter whose `__hash__` succeeds and touches no view: the other
-cases are `HashHoldsExport`), and the type invariants of the view. -/
-def HashIsTobytes : Prop :=
-  ∀ (st : St) (self : Nat) (n d : Int) (f : List Char),
-    Live1D st self n d f → Hashable st self → 0 < (st.mv self).view.itemsize →
-    (st.mv self).view.len = n * (st.mv self).view.itemsize →
-    (st.mv self).flags.isC = (initFlags (st.mv self).view).isC →
-    (memoryHash self st).1 = (memoryviewTobytes self none st).1 ∧
-    (∀ s', (s'.mv self).hash = ((memoryHash self st).2.mv self).hash →
-      (memoryHash self s').1 = (memoryHash self st).1)
-
 theorem hash_cached (s : St) (self : Nat) (b : List Nat) (h : (s.mv self).hash = some b) :
     (memoryHash self s).1 = .ok b := by
   unfold memoryHash
   simp only [memoryHashF, M.bind_app, M.get, h, M.pure_app]
-
-theorem hashIsTobytes_proven : HashIsTobytes := by
-  intro st self n d f hL hH hit hlen hfl
-  have ht := tobytes1D_proven st self n d f hL hit hlen
-  rw [ht]
-  by_cases hC : (st.mv self).flags.isC = true
-  · rw [memoryHash_contig st self hH hC]
-    have hc := isC_contig _ (hfl ▸ hC) (isC_no_subs _ (hfl ▸ hC) (by rw [hL.ndim]; omega))
-    have hp : pyBufferToContiguous st.mem (st.mv self).view (st.mv self).view.len 'C' =
-        .ok (rdBytes st.mem (st.mv self).view.buf (st.mv self).view.len.toNat) := by
-      simp [pyBufferToContiguous, hc]
-    have ht2 : memoryviewTobytes self none st =
-        (.ok (rdBytes st.mem (st.mv self).view.buf (st.mv self).view.len.toNat), st) := by
-      simp only [memoryviewTobytes, M.bind_app, checkReleased_ok _ _ hL.live, M.pure_app, M.get, M.lift, hp,
-        parseOrder]
-    have heq := ht2.symm.trans ht
-    simp only [Prod.mk.injEq, Except.ok.injEq, and_true] at heq
-    refine ⟨by rw [heq], fun s' hs => ?_⟩
-    rw [St.mv_setMv _ _ _ hL.valid] at hs
-    exact hash_cached s' self _ hs
-  · have hCf : (st.mv self).flags.isC = false := by simpa using hC
-    have hb := tobytesC_proven st.mem (st.mv self).view [n] [d] hL.shape hL.strides (by simp)
-      (by simp [hL.ndim]) (by simpa using hL.nonneg) hit (by simp [prod, hlen])
-    rw [memoryHash_strided st self _ hH hCf hb]
-    refine ⟨rfl, fun s' hs => ?_⟩
-    rw [St.mv_setMv _ _ _ hL.valid] at hs
-    exact hash_cached s' self _ hs
 
 /-- Refusals of `hash`: a writable view, then a non-byte format (:3217-3227). -/
 def HashRejections : Prop :=
@@ -240,30 +199,27 @@ theorem getbufRules_proven : GetbufRules := by
 
 /-! ## Constructors -/
 
-/-- `memoryview(x)` of a 1-D exporter: a new managed buffer with one registered view, whose
-master is what the exporter gave, and whose view is the exporter's buffer
-(`mbuf_alloc`, `_PyManagedBuffer_FromObject`, `PyMemoryView_FromObjectAndFlags`,
-`PyMemoryView_FromObject`, `memoryview_impl`, :71-104, :800-857, :1013-1018). Hypotheses: the
-exporter's buffer has full information. -/
+/-- `memoryview(x)` of an exporter of any number of dimensions, with or without suboffsets: a new
+managed buffer with one registered view, whose master is what the exporter gave, and whose view
+is the exporter's buffer (`mbuf_alloc`, `_PyManagedBuffer_FromObject`,
+`PyMemoryView_FromObjectAndFlags`, `PyMemoryView_FromObject`, `memoryview_impl`, :71-104, :800-857,
+:1013-1018). A failing `__buffer__` is `BufferFailures`, too many dimensions `MbufDeallocOnFail`.
+Hypotheses: the exporter's buffer has full information, and at most 64 dimensions. -/
 def NewFromExporter : Prop :=
-  ∀ (st : St) (b : Buf) (n d : Int) (f : List Char),
-    b.ndim = 1 → b.shape = some [n] → b.strides = some [d] → b.suboffsets = none → b.format = some f →
+  ∀ (st : St) (b : Buf), Full b → b.ndim ≤ 64 →
     let r := memoryviewNew (.exporter (.val b) none) st
     let i := st.mvs.length
     let k := st.mbufs.length
     r.1 = .ok i ∧ (r.2.mv i).view = b ∧ (r.2.mv i).mbuf = k ∧ (r.2.mb k).exports = 1 ∧
       (r.2.mb k).released = false ∧ (r.2.mb k).master = b ∧ r.2.mem = st.mem
 
-theorem simpleGetbuffer_full (b : Buf) (f : List Char) (hf : b.format = some f) (hs : b.suboffsets = none) :
-    simpleGetbuffer b bufFullRO = .ok b ∨ b.readonly = true := by
+theorem simpleGetbuffer_full (b : Buf) : simpleGetbuffer b bufFullRO = .ok b := by
   have h1 : req bufFullRO bufWritable = false := by decide
   have h2 : req bufFullRO bufFormat = true := by decide
   have h3 : req bufFullRO bufND = true := by decide
   have h4 : req bufFullRO bufStrides = true := by decide
   have h5 : req bufFullRO bufIndirect = true := by decide
-  left
-  simp [simpleGetbuffer, h1, h2, h3, h4, h5]
-  try (cases b; simp_all)
+  simp only [simpleGetbuffer, h1, h2, h3, h4, h5, Bool.false_and, Bool.false_eq_true, ↓reduceIte]
 
 theorem mbufAddView_none (k : Nat) (st : St) :
     mbufAddView k none st = mbufAddView k (some (st.mb k).master) st := rfl
@@ -280,18 +236,9 @@ theorem fresh_mb (st : St) (b : Buf) :
   rw [this]
 
 theorem newFromExporter_proven : NewFromExporter := by
-  intro st b n d f h1 hsh hst hsb hf
-  have hg : simpleGetbuffer b bufFullRO = .ok b := by
-    rcases simpleGetbuffer_full b f hf hsb with h | h
-    · exact h
-    · have h1' : req bufFullRO bufWritable = false := by decide
-      have h2 : req bufFullRO bufFormat = true := by decide
-      have h3 : req bufFullRO bufND = true := by decide
-      have h4 : req bufFullRO bufStrides = true := by decide
-      have h5 : req bufFullRO bufIndirect = true := by decide
-      simp [simpleGetbuffer, h1', h2, h3, h4, h5, hsb]
-      try (cases b; simp_all)
-  have hview := viewCopy_1d b n d f h1 hsh hst (Or.inl hsb) hf
+  intro st b hfull hsmall
+  have hg := simpleGetbuffer_full b
+  have hview := viewCopy_full b hfull
   dsimp only
   obtain ⟨st2, hst2⟩ : ∃ s2, s2 = let st1 : St := { st with mbufs := st.mbufs ++ [{}] }
       st1.setMb st.mbufs.length { st1.mb st.mbufs.length with master := b } := ⟨_, rfl⟩
@@ -309,14 +256,14 @@ theorem newFromExporter_proven : NewFromExporter := by
       mbufAddView st.mbufs.length (some b) st2 from ?_]
     have hn : mbufAddView st.mbufs.length none st2 = mbufAddView st.mbufs.length (some b) st2 := by
       rw [mbufAddView_none, hmb]
-    have ⟨h2, _⟩ := mbufAddView_added st.mbufs.length b st2 (by omega)
+    have ⟨h2, _⟩ := mbufAddView_added st.mbufs.length b st2 hsmall
     simp only [M.onError, hn]
     rcases hrr : mbufAddView st.mbufs.length (some b) st2 with ⟨r, s⟩
     rw [hrr] at h2
     simp only at h2
     subst h2
     rfl
-  have ⟨h2, hA⟩ := mbufAddView_added st.mbufs.length b st2 (by omega)
+  have ⟨h2, hA⟩ := mbufAddView_added st.mbufs.length b st2 hsmall
   rw [hview] at hA
   rw [e]
   have hmv : st2.mvs.length = st.mvs.length := by rw [hst2]; rfl

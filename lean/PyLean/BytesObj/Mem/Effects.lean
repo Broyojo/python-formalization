@@ -60,6 +60,19 @@ theorem pyBufferRelease_hook (b : Buf) (t : Nat) (st : St) (hb : b.hook = some t
 
 /-! ## `memory_dealloc`, `mbuf_dealloc` -/
 
+theorem deallocMono (i : Nat) (st : St) : Mono st (memoryDealloc i st).2 := by
+  unfold memoryDealloc
+  dsimp only
+  have h := memoryRelease_mono i st
+  rcases hr : memoryRelease i st with ⟨r, s⟩
+  rw [hr] at h
+  dsimp only at h ⊢
+  split
+  · split
+    · exact h.trans (memoryRelease_mono _ _)
+    · exact h
+  · exact h
+
 /-- `memory_dealloc`, :1150-1161, on the last reference to a view: the release comes first
 (:1156), and only then `PyObject_ClearWeakRefs` (:1158-1159), so the callback of a weakref runs
 on a view that has given up its export and, if it was the last view, on a released exporter.
@@ -356,13 +369,13 @@ theorem hashTail_mono (st : St) (self : Nat) (s : St) : Mono s (hashTail st self
   unfold hashTail
   by_cases hC : (st.mv self).flags.isC = true
   · simp only [M.bind_app, hC, Bool.not_true, Bool.false_eq_true, ↓reduceIte, M.pure_app, M.modify]
-    exact Mono.setMv _ _ _ id rfl
+    exact Mono.setMv _ _ _ id rfl rfl
   · simp only [M.bind_app, hC, Bool.not_false, ↓reduceIte, M.lift, Bool.not_eq_true]
     cases hb : bufferToContiguous st.mem (st.mv self).view 'C' with
     | error x => exact Mono.refl _
     | ok b =>
       simp only [M.modify, M.pure_app]
-      exact Mono.setMv _ _ _ id rfl
+      exact Mono.setMv _ _ _ id rfl rfl
 
 theorem hashHoldsExport_proven : HashHoldsExport := by
   intro st self e h ho h0
@@ -427,7 +440,7 @@ theorem hashHoldsExport_proven : HashHoldsExport := by
       rw [← hf, hs1] at h1
       exact h1
     have hmono : Mono s1 (s1.setMv self { s1.mv self with exports := (s1.mv self).exports + -1 }) :=
-      Mono.setMv _ _ _ id rfl
+      Mono.setMv _ _ _ id rfl rfl
     rw [hsplit, M.bind_app]
     simp only [withExport, ← hs0, M.bind_app, hk, hs1]
     cases hu : st.unhashable.getD e Option.none with
@@ -437,6 +450,55 @@ theorem hashHoldsExport_proven : HashHoldsExport := by
     | some err =>
       simp only [M.throw_app]
       exact hmono.mv j hrel
+
+/-- `memory_hash` when the exporter is another memoryview: `PyObject_Hash(view->obj)` is
+`memory_hash` of that view, under the same held export. A cached hash there lets this view go on;
+a view that cannot be hashed passes its `ValueError` up, with this view left without a hash and its
+export given back. Hypotheses: the checks of the function, on two different views. -/
+def HashViewExporter : Prop :=
+  ∀ (st : St) (self i : Nat), HashGuards st self → (st.mv self).view.obj = some (.mv i) → i ≠ self →
+    (∀ h, (st.mv i).hash = some h → (memoryHash self st).1 = (hashTail st self st).1) ∧
+    ((st.mv i).hash = none → baseInaccessible st i = false → (st.mv i).view.readonly = false →
+      memoryHash self st = (.error (.valueError "cannot hash writable memoryview object"), st))
+
+theorem hashViewExporter_proven : HashViewExporter := by
+  intro st self i h ho hne
+  obtain ⟨c, size, hf, hb⟩ := h.format
+  have hc := checkReleased_ok st self h.live
+  have hv := h.valid
+  obtain ⟨s0, hs0⟩ : ∃ s0, s0 = st.setMv self { st.mv self with exports := (st.mv self).exports + 1 } :=
+    ⟨_, rfl⟩
+  have hmvi : s0.mv i = st.mv i := by
+    rw [hs0]
+    exact St.mv_setMv_ne _ _ _ _ (Ne.symm hne)
+  obtain ⟨k, hk⟩ : ∃ k, st.mvs.length = k + 1 := ⟨st.mvs.length - 1, by omega⟩
+  have hsplit : memoryHash self st =
+      (withExport self (memoryHashF st.mvs.length i) >>= fun _ => hashTail st self) st := by
+    unfold memoryHash hashTail
+    simp only [memoryHashF, M.bind_app, M.get, h.fresh, hc, h.readonly, Bool.not_true, Bool.false_eq_true,
+      ↓reduceIte, hf, hb, M.pure_app, ho]
+  constructor
+  · intro x hx
+    have hin : memoryHashF st.mvs.length i s0 = (.ok x, s0) := by
+      rw [hk]
+      simp only [memoryHashF, M.bind_app, M.get, hmvi, hx, M.pure_app]
+    have hw : withExport self (memoryHashF st.mvs.length i) st = (.ok x, st) :=
+      withExport_same _ _ _ hv (by rw [← hs0]; exact hin)
+    rw [hsplit, M.bind_app, hw]
+  · intro h1 h2 h3
+    have hl0 : baseInaccessible s0 i = false := by
+      have hmb : ∀ j, s0.mb j = st.mb j := fun j => by rw [hs0]; rfl
+      simp only [baseInaccessible, hmvi, hmb] at h2 ⊢
+      exact h2
+    have hin : memoryHashF st.mvs.length i s0 =
+        (.error (.valueError "cannot hash writable memoryview object"), s0) := by
+      rw [hk]
+      simp only [memoryHashF, M.bind_app, M.get, hmvi, h1, checkReleased_ok _ _ hl0, h3, Bool.not_false,
+        ↓reduceIte, M.throw_app]
+    have hw : withExport self (memoryHashF st.mvs.length i) st =
+        (.error (.valueError "cannot hash writable memoryview object"), st) :=
+      withExport_same _ _ _ hv (by rw [← hs0]; exact hin)
+    rw [hsplit, M.bind_app, hw]
 
 /-! ## `memory_richcompare` gives the buffer back -/
 

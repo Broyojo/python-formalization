@@ -54,13 +54,15 @@ theorem sliceUnpack_step (s : Slice) (a b c : Int) (h : sliceUnpack s = .ok (a, 
       rw [← hc]
       split <;> (unfold ssizeMax at *; omega)
 
-/-- What `init_slice` does to a 1-D view. -/
-theorem initSlice_spec (v : Buf) (s : Slice) (n d : Int) (hsh : v.shape = some [n])
-    (hst : v.strides = some [d]) (hn : 0 ≤ n) (hn' : n ≤ ssizeMax)
+/-- What `init_slice` does to dimension 0 of a view. -/
+theorem initSlice_spec (v : Buf) (s : Slice) (n d : Int) (rest rs : List Int)
+    (hsh : v.shape = some (n :: rest)) (hst : v.strides = some (d :: rs)) (hn : 0 ≤ n) (hn' : n ≤ ssizeMax)
     (hD : (d.natAbs : Int) * n ≤ ssizeMax) (h0 : s.step ≠ some 0) :
     ∃ a b c L w, sliceIndices s n = .ok (a, b, c) ∧ IsLen a b c L ∧ 0 ≤ L ∧
-      initSlice v s 0 = .ok w ∧ w.shape = some [L] ∧ w.ndim = v.ndim ∧ w.itemsize = v.itemsize ∧
+      initSlice v s 0 = .ok w ∧ w.shape = some (L :: rest) ∧ (∃ x, w.strides = some (x :: rs)) ∧
+      w.ndim = v.ndim ∧ w.itemsize = v.itemsize ∧
       w.format = v.format ∧ w.suboffsets = v.suboffsets ∧ w.readonly = v.readonly ∧
+      (∀ ds, (w.strides.getD []).getD 0 0 = ds → 1 < L → ds = d * c) ∧
       ∀ k, 0 ≤ k → k < L → (0 ≤ a + k * c ∧ a + k * c < n) ∧
         w.buf + k * (w.strides.getD []).getD 0 0 = v.buf + d * (a + k * c) := by
   obtain ⟨a, b, c, L, st, sp, c', h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11⟩ :=
@@ -68,11 +70,24 @@ theorem initSlice_spec (v : Buf) (s : Slice) (n d : Int) (hsh : v.shape = some [
   have hb := indices_in_bounds a b c n L h2 h3
   have hstep := sliceUnpack_step s _ _ _ h5
   have hinit : initSlice v s 0 = .ok { v with
-      buf := v.buf + wrap (d * a), shape := some [L], strides := some [wrap (d * c')] } := by
+      buf := v.buf + wrap (d * a), shape := some (L :: rest), strides := some (wrap (d * c') :: rs) } := by
     simp only [initSlice, bind, Except.bind, h5, pure, Except.pure, hsh, hst, Option.getD_some,
       List.getD_cons_zero, h6]
     cases hsb : v.suboffsets <;> rfl
-  refine ⟨a, b, c, L, _, h1, h2, h2.1, hinit, rfl, rfl, rfl, rfl, rfl, rfl, ?_⟩
+  refine ⟨a, b, c, L, _, h1, h2, h2.1, hinit, rfl, ⟨_, rfl⟩, rfl, rfl, rfl, rfl, rfl, ?_, ?_⟩
+  · intro ds hds hL
+    have h0a := hb 0 (by omega) (by omega)
+    have h1b := hb 1 (by omega) (by omega)
+    have hu := h11 1 (by omega) (by omega)
+    simp only [Int.one_mul] at h1b hu
+    have hcc : c' = c := by
+      unfold toU two64 at hu
+      unfold ssizeMax at hstep hn'
+      omega
+    subst hcc
+    have hw : wrap (d * c') = d * c' := wrap_mul d c' n (by simp at h0a; omega) hD
+    rw [← hds]
+    simp only [Option.getD_some, List.getD_cons_zero, hw]
   intro k hk hkL
   have hbk := hb k hk hkL
   refine ⟨hbk, ?_⟩
@@ -98,6 +113,60 @@ def viewCopy (src : Buf) : Buf :=
   let (sh, stridesOut) := initShapeStrides src
   { initSharedValues { ndim := src.ndim } src with
     shape := sh, strides := stridesOut, suboffsets := initSuboffsets src }
+
+/-- A buffer with the arrays `mbuf_add_view` leaves in a view: a format; no shape or strides for
+0 dimensions, `ndim` entries each otherwise; `ndim` suboffsets if any. Every view a memoryview
+holds is one, so this is a type invariant. -/
+structure Full (v : Buf) : Prop where
+  format : v.format.isSome = true
+  arrays : (v.ndim = 0 ∧ v.shape = none ∧ v.strides = none) ∨
+    ∃ sh strs, sh ≠ [] ∧ sh.length = v.ndim ∧ strs.length = v.ndim ∧
+      v.shape = some sh ∧ v.strides = some strs
+  subs : ∀ s, v.suboffsets = some s → s.length = v.ndim
+
+/-- `mbuf_add_view` copies a view with all its arrays to itself, for every number of dimensions
+(`init_shared_values`, `init_shape_strides`, `init_suboffsets`, :543-593). -/
+theorem viewCopy_full (v : Buf) (h : Full v) : viewCopy v = v := by
+  have hf : some (v.format.getD ['B']) = v.format := by
+    have := h.format
+    cases hv : v.format with
+    | none => rw [hv] at this; cases this
+    | some x => rfl
+  have hs : initSuboffsets v = v.suboffsets := by
+    unfold initSuboffsets
+    cases hv : v.suboffsets with
+    | none => rfl
+    | some l =>
+      have := h.subs l hv
+      simp [List.take_of_length_le (show l.length ≤ v.ndim by omega)]
+  have hi : initShapeStrides v = (v.shape, v.strides) := by
+    unfold initShapeStrides
+    rcases h.arrays with ⟨h0, h1, h2⟩ | ⟨sh, strs, hne, h1, h2, h3, h4⟩
+    · simp [h0, h1, h2]
+    · have h0 : v.ndim ≠ 0 := by
+        rw [← h1]
+        intro e
+        exact hne (List.length_eq_zero_iff.1 e)
+      by_cases hn : v.ndim = 1
+      · have l1 : sh.length = 1 := by omega
+        have l2 : strs.length = 1 := by omega
+        obtain ⟨n, rfl⟩ := List.length_eq_one_iff.1 l1
+        obtain ⟨d, rfl⟩ := List.length_eq_one_iff.1 l2
+        simp [hn, h3, h4]
+      · simp only [h0, hn, ↓reduceIte, h3, h4, Option.getD_some]
+        rw [← h1, List.take_length, h1, ← h2, List.take_length]
+  unfold viewCopy
+  rw [hi]
+  simp only [initSharedValues, hs, hf]
+
+/-- A live view of any shape. -/
+structure LiveView (st : St) (i : Nat) : Prop where
+  valid : i < st.mvs.length
+  mbuf : (st.mv i).mbuf < st.mbufs.length
+  live : baseInaccessible st i = false
+  unres : (st.mv i).flags.restricted = false
+  full : Full (st.mv i).view
+  small : (st.mv i).view.ndim ≤ 64
 
 theorem mbufAddView_added (k : Nat) (src : Buf) (st : St) (h : src.ndim ≤ 64) :
     (mbufAddView k (some src) st).1 = .ok st.mvs.length ∧
@@ -136,39 +205,68 @@ structure Live1D (st : St) (i : Nat) (n d : Int) (f : List Char) : Prop where
   bound : n ≤ ssizeMax
   span : (d.natAbs : Int) * n ≤ ssizeMax
 
-/-- `m[s]` of a 1-D view is a new view on the same memory whose `k`-th item is item
-`range(*s.indices(n))[k]` of `m`, for every slice with a non-zero step: `len` is the length
-of that range, every position is in `[0, n)`, and `nbytes` is `len * itemsize`. The bound
+/-- A live view of `n` rows along dimension 0, of any number of dimensions. -/
+structure LiveN (st : St) (i : Nat) (n d : Int) (rest rs : List Int) (f : List Char) : Prop where
+  base : LiveView st i
+  shape : (st.mv i).view.shape = some (n :: rest)
+  strides : (st.mv i).view.strides = some (d :: rs)
+  format : (st.mv i).view.format = some f
+  nonneg : 0 ≤ n
+  bound : n ≤ ssizeMax
+  span : (d.natAbs : Int) * n ≤ ssizeMax
+
+/-- `m[s]` slices dimension 0 of a view of any number of dimensions, with or without suboffsets:
+a new view on the same memory whose row `k` is row `range(*s.indices(n))[k]` of `m`, for every
+slice with a non-zero step. Dimension 0 has the length of that range, the others are unchanged, every
+position is in `[0, n)`, and `nbytes` is the product of the new shape times `itemsize`
+(`init_slice`, `init_len`, :2509-2530, :597-606). `SliceTolist` says the same of `tolist`. The bound
 `|stride| * n <= sys.maxsize` is a type invariant of a buffer in the address space. -/
 def SliceItems : Prop :=
-  ∀ (st : St) (self : Nat) (s : Slice) (n d : Int) (f : List Char),
-    Live1D st self n d f → s.step ≠ some 0 →
+  ∀ (st : St) (self : Nat) (s : Slice) (n d : Int) (rest rs : List Int) (f : List Char),
+    LiveN st self n d rest rs f → s.step ≠ some 0 →
     ∃ a b c L, sliceIndices s n = .ok (a, b, c) ∧ IsLen a b c L ∧
       let r := memorySubscript self (.one (.slice s none)) st
       let w := (r.2.mv st.mvs.length).view
-      r.1 = .ok (.view st.mvs.length) ∧ r.2.mem = st.mem ∧ w.shape = some [L] ∧ w.ndim = 1 ∧
-      w.len = L * (st.mv self).view.itemsize ∧ w.format = some f ∧
+      r.1 = .ok (.view st.mvs.length) ∧ r.2.mem = st.mem ∧ w.shape = some (L :: rest) ∧
+      (w.strides.getD []).drop 1 = rs ∧ w.strides.isSome = true ∧
+      w.ndim = (st.mv self).view.ndim ∧
+      w.len = initLen (L :: rest) (st.mv self).view.itemsize ∧ w.format = some f ∧
       w.suboffsets = (st.mv self).view.suboffsets ∧
+      (r.2.mv st.mvs.length).mbuf = (st.mv self).mbuf ∧
+      (r.2.mv st.mvs.length).flags = initFlags w ∧
+      (∀ j, j < st.mvs.length → r.2.mv j = st.mv j) ∧
+      (r.2.mb (st.mv self).mbuf).released = (st.mb (st.mv self).mbuf).released ∧
       ∀ k, 0 ≤ k → k < L → (0 ≤ a + k * c ∧ a + k * c < n) ∧
         w.buf + k * (w.strides.getD []).getD 0 0 = (st.mv self).view.buf + d * (a + k * c)
 
 theorem sliceItems_proven : SliceItems := by
-  intro st self s n d f hL h0
-  have hview : viewCopy (st.mv self).view = (st.mv self).view :=
-    viewCopy_1d _ n d f hL.ndim hL.shape hL.strides hL.subs hL.format
-  obtain ⟨a, b, c, L, w, h1, h2, h3, hi, hws, hwn, hwi, hwf, hwsub, hwro, hk⟩ :=
-    initSlice_spec (st.mv self).view s n d hL.shape hL.strides hL.nonneg hL.bound hL.span h0
+  intro st self s n d rest rs f hL h0
+  have hB := hL.base
+  have hview : viewCopy (st.mv self).view = (st.mv self).view := viewCopy_full _ hB.full
+  obtain ⟨a, b, c, L, w, h1, h2, h3, hi, hws, ⟨wx, hwx⟩, hwn, hwi, hwf, hwsub, hwro, -, hk⟩ :=
+    initSlice_spec (st.mv self).view s n d rest rs hL.shape hL.strides hL.nonneg hL.bound hL.span h0
+  have hwt : (w.strides.getD []).drop 1 = rs := by rw [hwx]; rfl
+  have hwsome : w.strides.isSome = true := by rw [hwx]; rfl
   refine ⟨a, b, c, L, h1, h2, ?_⟩
-  have hnd : ¬ (st.mv self).view.ndim = 0 := by rw [hL.ndim]; omega
-  have ⟨hr1, hA⟩ := mbufAddView_added (st.mv self).mbuf (st.mv self).view st (by rw [hL.ndim]; omega)
+  have hnd : ¬ (st.mv self).view.ndim = 0 := by
+    intro e
+    rcases hB.full.arrays with ⟨-, h4, -⟩ | ⟨sh, strs, hne, h4, -, h5, -⟩
+    · rw [hL.shape] at h4
+      cases h4
+    · rw [hL.shape] at h5
+      simp only [Option.some.injEq] at h5
+      subst h5
+      simp at h4
+      omega
+  have ⟨hr1, hA⟩ := mbufAddView_added (st.mv self).mbuf (st.mv self).view st hB.small
   rw [hview] at hA
   have hmemsub : memorySubscript self (.one (.slice s none)) st =
       ((.ok (.view st.mvs.length)), St.setMv (mbufAddView (st.mv self).mbuf (some (st.mv self).view) st).2
         st.mvs.length
         { mbuf := (st.mv self).mbuf, view := { w with len := initLen (w.shape.getD []) w.itemsize },
           flags := initFlags { w with len := initLen (w.shape.getD []) w.itemsize } }) := by
-    simp only [memorySubscript, M.bind_app, checkReleased_ok _ _ hL.live, M.get, hnd, ↓reduceIte,
-      checkRestricted_ok _ _ hL.unres]
+    simp only [memorySubscript, M.bind_app, checkReleased_ok _ _ hB.live, M.get, hnd, ↓reduceIte,
+      checkRestricted_ok _ _ hB.unres]
     rcases hrr : mbufAddView (st.mv self).mbuf (some (st.mv self).view) st with ⟨r1, st1⟩
     rw [hrr] at hr1 hA
     simp only at hr1 hA
@@ -180,9 +278,13 @@ theorem sliceItems_proven : SliceItems := by
   dsimp only
   rw [St.mv_setMv _ _ _ hn1]
   dsimp only
-  refine ⟨rfl, hA.mem, hws, by rw [hwn, hL.ndim], ?_, by rw [hwf, hL.format], hwsub, hk⟩
-  rw [hws, hwi]
-  simp [initLen]
+  refine ⟨rfl, hA.mem, hws, hwt, hwsome, hwn, ?_, by rw [hwf, hL.format], hwsub, rfl, rfl, ?_, ?_, hk⟩
+  · rw [hws, hwi]
+    rfl
+  · intro j hj
+    rw [St.mv_setMv_ne _ _ _ _ (by omega), hA.old _ hj]
+  · rw [St.mb_setMv]
+    exact hA.released hB.mbuf
 
 /-- The position `lookup_dimension` computes for an in-range index. -/
 def pos (i n : Int) : Int := if i < 0 then i + n else i

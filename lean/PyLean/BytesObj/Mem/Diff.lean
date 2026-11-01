@@ -282,7 +282,7 @@ def stepOp (d : DS) (op : Array Json) : Except String (Json × DS) := do
       return runM d (memoryviewCast i (← jChars (← argAt op 2)) sh) viewRes
   | "toreadonly" => withH fun i => return runM d (memoryviewToreadonly i) viewRes
   | "release" => withH fun i => return runM d (memoryviewRelease i) (plain fun _ => .null)
-  | "enter" => withH fun i => return runM d (memoryEnter i) (plain fun _ => .null)
+  | "enter" => withH fun i => return runM d (memoryEnter i) (plain fun j => Json.mkObj [("same", toJson (j == i))])
   | "exit" => withH fun i => return runM d (memoryExit i) (plain fun _ => .null)
   | "cmp" => withH fun i => do
       withO (← argAt op 2) fun w => do
