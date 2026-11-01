@@ -531,6 +531,17 @@ def correlation (x y : List PyN) (method : String) : Py Val := do
   | .error (.zeroDivisionError _) => .error (statErr "at least one of the inputs is constant")
   | r => r
 
+/-- The tail of `linear_regression`, statistics.py:795-804. -/
+def lrCore (x' y' : List PyN) (proportional : Bool) (xbar ybar : Flt) : Py (Val × Val) := do
+  let sxy ← vadd (← sumprod x' y') (.flt Flt.pz)
+  let sxx ← sumprod x' x'
+  let slope ← match vdiv sxy sxx with
+    | .error (.zeroDivisionError _) => .error (statErr "x is constant")
+    | r => r
+  let intercept ← if proportional then pure (Val.flt Flt.pz)
+    else do vsub (.flt ybar) (← vmul slope (.flt xbar))
+  return (slope, intercept)
+
 /-- `linear_regression`, statistics.py:744-804. -/
 def linearRegression (x y : List PyN) (proportional : Bool) : Py (Val × Val) := do
   let n := x.length
@@ -542,14 +553,7 @@ def linearRegression (x y : List PyN) (proportional : Bool) : Py (Val × Val) :=
       let ybar ← fbar y
       pure (← centered x xbar, ← centered y ybar, xbar, ybar)
     else pure (x, y, Flt.pz, Flt.pz)
-  let sxy ← vadd (← sumprod x' y') (.flt Flt.pz)
-  let sxx ← sumprod x' x'
-  let slope ← match vdiv sxy sxx with
-    | .error (.zeroDivisionError _) => .error (statErr "x is constant")
-    | r => r
-  let intercept ← if proportional then pure (Val.flt Flt.pz)
-    else do vsub (.flt ybar) (← vmul slope (.flt xbar))
-  return (slope, intercept)
+  lrCore x' y' proportional xbar ybar
 
 /-! ## Harmonic and geometric mean -/
 

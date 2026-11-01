@@ -147,6 +147,8 @@ def fma (x y z : Flt) : Flt :=
 def eq : Flt → Flt → Bool
   | .inf a, .inf b => a == b
   | .zero _, .zero _ => true
+  | .zero _, .fin b => decide (0 = b)
+  | .fin a, .zero _ => decide (a = 0)
   | .fin a, .fin b => decide (a = b)
   | _, _ => false
 

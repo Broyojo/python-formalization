@@ -724,7 +724,7 @@ def calstat_const(rng):
 
 
 def calstat_gen_stat(rng):
-    fns = ["s._exact_ratio", "s._coerce", "s._sum", "s._ss", "s._ss", "s._convert", "s._fail_neg", "s._rank", "s._rank",
+    fns = ["s._exact_ratio", "s._isfinite", "s._coerce", "s._sum", "s._ss", "s._ss", "s._convert", "s._fail_neg", "s._rank", "s._rank",
            "s._integer_sqrt_of_frac_rto", "s._float_sqrt_of_frac", "s._float_sqrt_of_frac",
            "s._decimal_sqrt_of_frac", "s._mean_stdev", "s._sqrtprod",
            "s.mean", "s.mean", "s.fmean", "s.fmean", "s.geometric_mean", "s.harmonic_mean", "s.harmonic_mean", "s.median", "s.median_low",
@@ -737,7 +737,9 @@ def calstat_gen_stat(rng):
            "s.nd.repr", "s.nd.state"]
     fn = rng.choice(fns)
     c = {}
-    if fn == "s._exact_ratio":
+    if fn == "s._isfinite":
+        c["x"] = calstat_value_spec(rng, rng.choice(["int", "float", "frac", "dec", "bool", "specialf", "speciald", "str", "none"]))
+    elif fn == "s._exact_ratio":
         kind = rng.choice(["smallint", "float", "frac", "dec", "bool", "specialf", "speciald", "str", "none"])
         c["x"] = calstat_value_spec(rng, kind)
         if rng.random() < 0.1:
@@ -949,6 +951,8 @@ def calstat_stat_call(c, fn):
     if fn == "_exact_ratio":
         r = st._exact_ratio(calstat_obj(c["x"]))
         return [r[0], r[1]] if r[1] is not None else [calstat_res(r[0]), None]
+    if fn == "_isfinite":
+        return bool(st._isfinite(calstat_obj(c["x"])))
     if fn == "_coerce":
         return st._coerce(calstat_cls(c["T"]), calstat_cls(c["S"])).__name__
     if fn == "_sum":
