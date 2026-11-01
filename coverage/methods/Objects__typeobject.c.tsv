@@ -250,12 +250,12 @@ Objects/typeobject.c	7067	7120	compatible_for_assignment	compatible_for_assignme
 Objects/typeobject.c	7125	7222	object_set_class_world_stopped	object_set_class_world_stopped(PyObject *self, PyTypeObject *newto)	modelled	typeobj-set-class-immutable	
 Objects/typeobject.c	7225	7269	object_set_class	object_set_class(PyObject *self, PyObject *value, void *closure)	modelled	typeobj-set-class-checks	
 Objects/typeobject.c	7286	7301	import_copyreg	import_copyreg(void)	todo		
-Objects/typeobject.c	7304	7350	_PyType_GetSlotNames	_PyType_GetSlotNames(PyTypeObject *cls)	todo		
-Objects/typeobject.c	7353	7475	object_getstate_default	object_getstate_default(PyObject *obj, int required)	todo		
+Objects/typeobject.c	7304	7350	_PyType_GetSlotNames	_PyType_GetSlotNames(PyTypeObject *cls)	modelled	typeobj-slotnames-typed	
+Objects/typeobject.c	7353	7475	object_getstate_default	object_getstate_default(PyObject *obj, int required)	modelled	typeobj-getstate-guard	
 Objects/typeobject.c	7478	7498	object_getstate	object_getstate(PyObject *obj, int required)	todo		
 Objects/typeobject.c	7501	7504	_PyObject_GetState	_PyObject_GetState(PyObject *obj)	todo		
 Objects/typeobject.c	7513	7517	object___getstate___impl	object___getstate___impl(PyObject *self) /*[clinic end generated code: output=5a2500dcb6217e9e input=692314d8fbe194ee]*/	todo		
-Objects/typeobject.c	7520	7609	_PyObject_GetNewArguments	_PyObject_GetNewArguments(PyObject *obj, PyObject **args, PyObject **kwargs)	todo		
+Objects/typeobject.c	7520	7609	_PyObject_GetNewArguments	_PyObject_GetNewArguments(PyObject *obj, PyObject **args, PyObject **kwargs)	modelled	typeobj-reduce-newargs-validated	
 Objects/typeobject.c	7612	7649	_PyObject_GetItemsIter	_PyObject_GetItemsIter(PyObject *obj, PyObject **listitems, PyObject **dictitems)	todo		
 Objects/typeobject.c	7652	7746	reduce_newobj	reduce_newobj(PyObject *obj)	todo		
 Objects/typeobject.c	7764	7779	_common_reduce	_common_reduce(PyObject *self, int proto)	todo		

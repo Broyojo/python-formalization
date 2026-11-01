@@ -4,7 +4,7 @@ Lib/csv.py	111	116	Dialect._validate	_validate(self)	modelled	textlibs-csv-diale
 Lib/csv.py	145	154	DictReader.__init__	__init__(self, f, fieldnames=None, restkey=None, restval=None, dialect='excel', *args, **kwds)	modelled	textlibs-csv-dictreader-init	
 Lib/csv.py	156	157	DictReader.__iter__	__iter__(self)	todo		
 Lib/csv.py	160	167	DictReader.fieldnames	fieldnames(self)	modelled	textlibs-csv-dictreader-header	
-Lib/csv.py	170	171	DictReader.fieldnames	fieldnames(self, value)	todo		the setter has no mirror: DR.names is only set by the getter and __init__
+Lib/csv.py	170	171	DictReader.fieldnames	fieldnames(self, value)	todo		the setter has no mirror: DR.names is only set by the getter and __init__; candidates:textlibs-csv-dictreader-header
 Lib/csv.py	173	193	DictReader.__next__	__next__(self)	modelled	textlibs-csv-dictreader-blank,textlibs-csv-dictreader-header,textlibs-csv-dictrow	
 Lib/csv.py	199	210	DictWriter.__init__	__init__(self, f, fieldnames, restval='', extrasaction='raise', dialect='excel', *args, **kwds)	modelled	textlibs-csv-extrasaction	
 Lib/csv.py	212	214	DictWriter.writeheader	writeheader(self)	modelled	textlibs-csv-writeheader	

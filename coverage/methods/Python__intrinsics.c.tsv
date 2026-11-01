@@ -3,7 +3,7 @@ Python/intrinsics.c	21	25	no_intrinsic1	no_intrinsic1(PyThreadState* tstate, PyO
 Python/intrinsics.c	28	37	print_expr	print_expr(PyThreadState* Py_UNUSED(ignored), PyObject *value)	todo		
 Python/intrinsics.c	40	121	import_all_from	import_all_from(PyThreadState *tstate, PyObject *locals, PyObject *v)	todo		
 Python/intrinsics.c	124	140	import_star	import_star(PyThreadState* tstate, PyObject *from)	todo		
-Python/intrinsics.c	143	184	stopiteration_error	stopiteration_error(PyThreadState* tstate, PyObject *exc)	todo		
+Python/intrinsics.c	143	184	stopiteration_error	stopiteration_error(PyThreadState* tstate, PyObject *exc)	modelled	gen-pep479-conversion	
 Python/intrinsics.c	187	190	unary_pos	unary_pos(PyThreadState* unused, PyObject *value)	todo		
 Python/intrinsics.c	193	197	list_to_tuple	list_to_tuple(PyThreadState* unused, PyObject *v)	todo		
 Python/intrinsics.c	200	204	make_typevar	make_typevar(PyThreadState* Py_UNUSED(ignored), PyObject *v)	todo		

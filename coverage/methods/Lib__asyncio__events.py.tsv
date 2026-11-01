@@ -79,7 +79,7 @@ Lib/asyncio/events.py	631	632	AbstractEventLoop.add_signal_handler	add_signal_ha
 Lib/asyncio/events.py	634	635	AbstractEventLoop.remove_signal_handler	remove_signal_handler(self, sig)	todo		
 Lib/asyncio/events.py	639	640	AbstractEventLoop.set_task_factory	set_task_factory(self, factory)	todo		
 Lib/asyncio/events.py	642	643	AbstractEventLoop.get_task_factory	get_task_factory(self)	todo		
-Lib/asyncio/events.py	647	648	AbstractEventLoop.get_exception_handler	get_exception_handler(self)	todo		
+Lib/asyncio/events.py	647	648	AbstractEventLoop.get_exception_handler	get_exception_handler(self)	todo		candidates:bytecode-unwind-to-handler
 Lib/asyncio/events.py	650	651	AbstractEventLoop.set_exception_handler	set_exception_handler(self, handler)	todo		
 Lib/asyncio/events.py	653	654	AbstractEventLoop.default_exception_handler	default_exception_handler(self, context)	todo		
 Lib/asyncio/events.py	656	657	AbstractEventLoop.call_exception_handler	call_exception_handler(self, context)	todo		

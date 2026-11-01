@@ -26,4 +26,4 @@ Lib/base64.py	550	554	decode	decode(input, output)	todo
 Lib/base64.py	556	569	_input_type_check	_input_type_check(s)	modelled	textlibs-base64-input-check	
 Lib/base64.py	572	580	encodebytes	encodebytes(s)	todo		
 Lib/base64.py	583	586	decodebytes	decodebytes(s)	todo		
-Lib/base64.py	590	621	main	main()	todo		only the flag loop is modelled: the getopt errors and the file handling are not
+Lib/base64.py	590	621	main	main()	todo		only the flag loop is modelled: the getopt errors and the file handling are not; candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output
