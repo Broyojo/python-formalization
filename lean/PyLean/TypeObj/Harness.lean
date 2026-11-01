@@ -99,9 +99,9 @@ def canon (w : World) : Nat → Val → String
     | .tuple xs => "(" ++ ", ".intercalate (xs.map (canon w fuel)) ++ ")"
     | .obj a =>
       match asType w v with
-      | some t => s!"<class {tpName w t}>"
+      | some t => s!"<class {((tpName w t).splitOn ".").getLast?.getD ""}>"
       | none =>
-        let tn := typeName w v
+        let tn := ((typeName w v).splitOn ".").getLast?.getD ""
         match payloadOf w v with
         | some (.list xs) =>
           if typeOf w v == B.list then "[" ++ ", ".intercalate (xs.map (canon w fuel)) ++ "]"

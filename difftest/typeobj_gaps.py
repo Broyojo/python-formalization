@@ -28,6 +28,7 @@ import typeobj_diff as td
 from typeobj_diff import G, NONE, attr, call, lit, name
 
 GIB = 1 << 30
+FIRST = re.compile(r"'__firstlineno__': \d+, ")
 ARGS = [[], [NONE], [lit(1)], [lit("s")], [name("int")], [name("o")], [lit(1), lit(2)]]
 
 
@@ -37,7 +38,14 @@ def prelude(g):
         g.method("m", "A.m", ["s"], [["log", "A.m"], ["ret", lit(1)]]),
         ["assign", "x", lit(1)]])])
     g.main.append(["assign", "a", call(name("A"))])
+    for sub, base in SUBCLASSES:
+        g.main.append(["class", sub, [name(base)], [], False, g.code([["assign", "zz", lit(1)]])])
 
+
+# A subclass of each builtin that takes one: instances run the same slots with a heap type.
+SUBCLASSES = [("SI", "int"), ("SS", "str"), ("ST", "tuple"), ("SL", "list"), ("SD", "dict"),
+              ("SP", "property"), ("SC", "classmethod"), ("SM", "staticmethod"), ("SU", "super"),
+              ("SE", "Exception"), ("SK", "KeyError"), ("SY", "type"), ("SG", "ExceptionGroup")]
 
 VALUES = [
     NONE, name("NotImplemented"), name("Ellipsis"), lit(True), lit(0), lit(1),
@@ -57,6 +65,57 @@ VALUES = [
     call(name("iter"), ["dict", [[lit(1), lit(2)]]]),
     call(attr(["dict", [[lit(1), lit(2)]]], "keys")),
     call(name("ValueError"), lit("x")), name("ValueError"),
+    # Instances of subclasses, and the subclasses themselves.
+    call(name("SI"), lit(3)), call(name("SS"), lit("t")), call(name("ST"), ["tuple", [lit(1)]]),
+    call(name("SL"), ["list", [lit(1)]]), call(name("SD"), ["dict", [[lit(1), lit(2)]]]),
+    call(name("SP"), attr(name("A"), "m")), call(name("SC"), attr(name("A"), "m")),
+    call(name("SM"), attr(name("A"), "m")), call(name("SU"), name("A"), name("a")),
+    call(name("SE"), lit("x")), call(name("SK"), lit("x")), name("SI"), name("SD"), name("SY"),
+    call(name("SG"), lit("g"), ["list", [call(name("ValueError"), lit(1))]]),
+    call(name("SY"), lit("Z"), ["tuple", []], ["dict", []]),
+    # Objects whose __init__ never ran: every field a C function may find NULL.
+    call(attr(name("object"), "__new__"), name("object")),
+    call(attr(name("property"), "__new__"), name("property")),
+    call(attr(name("SP"), "__new__"), name("SP")),
+    call(attr(name("classmethod"), "__new__"), name("classmethod")),
+    call(attr(name("SC"), "__new__"), name("SC")),
+    call(attr(name("staticmethod"), "__new__"), name("staticmethod")),
+    call(attr(name("SM"), "__new__"), name("SM")),
+    call(attr(name("super"), "__new__"), name("super")),
+    call(attr(name("SU"), "__new__"), name("SU")),
+    call(attr(name("list"), "__new__"), name("SL")), call(attr(name("dict"), "__new__"), name("SD")),
+    call(attr(name("BaseException"), "__new__"), name("BaseException")),
+    call(attr(name("KeyError"), "__new__"), name("KeyError")),
+    call(attr(name("OSError"), "__new__"), name("OSError")),
+    call(attr(name("ImportError"), "__new__"), name("ImportError")),
+    call(attr(name("NameError"), "__new__"), name("NameError")),
+    call(attr(name("AttributeError"), "__new__"), name("AttributeError")),
+    call(attr(name("SyntaxError"), "__new__"), name("SyntaxError")),
+    call(attr(name("StopIteration"), "__new__"), name("StopIteration")),
+    call(attr(name("SystemExit"), "__new__"), name("SystemExit")),
+    call(attr(name("UnicodeEncodeError"), "__new__"), name("UnicodeEncodeError")),
+    call(attr(name("UnicodeDecodeError"), "__new__"), name("UnicodeDecodeError")),
+    call(attr(name("UnicodeTranslateError"), "__new__"), name("UnicodeTranslateError")),
+]
+
+# Keyword forms of the constructors, and of calls in general.
+KW = [
+    ("int", [], [("x", lit(1))]), ("int", [lit("10")], [("base", lit(2))]), ("int", [lit(1)], [("base", lit(2))]),
+    ("int", [], [("base", lit(2))]), ("int", [lit("10")], [("base", lit("s"))]), ("int", [], [("zz", lit(1))]),
+    ("str", [], [("object", lit(1))]), ("str", [], [("encoding", lit("utf-8"))]),
+    ("str", [lit(1)], [("errors", lit("x"))]), ("str", [], [("zz", lit(1))]),
+    ("tuple", [], [("zz", lit(1))]), ("ST", [], [("zz", lit(1))]), ("ST", [["tuple", []]], [("zz", lit(1))]),
+    ("list", [], [("zz", lit(1))]), ("SL", [], [("zz", lit(1))]), ("dict", [], [("zz", lit(1))]),
+    ("SD", [], [("zz", lit(1))]), ("bool", [], [("zz", lit(1))]), ("float", [], [("zz", lit(1))]),
+    ("object", [], [("zz", lit(1))]), ("A", [], [("zz", lit(1))]), ("type", [lit(1)], [("zz", lit(1))]),
+    ("property", [], [("zz", lit(1))]), ("property", [], [("doc", lit("d"))]),
+    ("classmethod", [], [("zz", lit(1))]), ("staticmethod", [], [("zz", lit(1))]),
+    ("super", [], [("zz", lit(1))]), ("SU", [name("A")], [("zz", lit(1))]),
+    ("Exception", [], [("zz", lit(1))]), ("OSError", [], [("zz", lit(1))]),
+    ("ImportError", [], [("name", lit("n"))]), ("ImportError", [], [("zz", lit(1))]),
+    ("NameError", [], [("name", lit("n"))]), ("AttributeError", [], [("obj", lit(1))]),
+    ("SyntaxError", [], [("zz", lit(1))]), ("StopIteration", [], [("zz", lit(1))]),
+    ("len", [lit("s")], [("zz", lit(1))]), ("isinstance", [], [("zz", lit(1))]),
 ]
 
 
@@ -104,18 +163,33 @@ def names_of(v):
 
 def build_cases():
     out = []
+    for fn, args, kw in KW:
+        out.append(case_for(["call", name(fn), list(args), [[k, v] for k, v in kw]]))
     for v in VALUES:
         for e in protocols(v):
             out.append(case_for(e))
         setup = [["assign", "o", v]]
         for n in names_of(v):
             # Addresses and sizes differ from run to run or by platform.
-            if n in ("__class_getitem__", "__hash__", "__sizeof__"):
+            if n in ("__class_getitem__", "__hash__", "__sizeof__", "__firstlineno__"):
                 continue
             out.append(case_for(attr(v, n)))
             for a in ARGS:
                 out.append(case_for(call(attr(name("o"), n), *a), setup))
+            out.append(case_for(["call", attr(name("o"), n), [], [["zz", lit(1)]]], setup))
+            # Assignment and deletion reach the setters.
+            for st in (["setattr", name("o"), n, lit(1)], ["delattr", name("o"), n]):
+                out.append(stmt_case(st, setup))
     return out
+
+
+def stmt_case(st, setup):
+    g = G(random.Random(0))
+    prelude(g)
+    g.main.extend(setup)
+    g.probes(st)
+    g.probe(name("o"))
+    return {"mod": "typeobj", "fn": "scenario", "codes": g.codes, "main": g.main}
 
 
 def run_forked(case, seconds=8):
@@ -194,7 +268,8 @@ def main():
             cats["harness"] += 1
             bad.append(("harness", source(c).split("\n")[-1], str(lo)[:160], py[-1:]))
             continue
-        if lean == py:
+        # __firstlineno__ is a line of the generated source, which the model does not have.
+        if [FIRST.sub("", x) for x in lean] == [FIRST.sub("", x) for x in py]:
             cats["agree"] += 1
             continue
         hit = [x for x in lean if "MODEL-GAP" in x or "MODEL-FUEL" in x]
