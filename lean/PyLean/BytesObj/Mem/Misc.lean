@@ -101,15 +101,17 @@ theorem fortranStrides_proven : FortranStrides := by
 
 /-- `PyBuffer_ToContiguous` normalises a view with full information to itself. -/
 theorem fb_1d (v : Buf) (n d : Int) (f : List Char) (h1 : v.ndim = 1) (hsh : v.shape = some [n])
-    (hst : v.strides = some [d]) (hsub : v.suboffsets = none) (hf : v.format = some f) :
+    (hst : v.strides = some [d]) (hsub : v.suboffsets = none ∨ ∃ o, v.suboffsets = some [o])
+    (hf : v.format = some f) :
     { initSharedValues v v with
       shape := (initShapeStrides v).1, strides := (initShapeStrides v).2,
       suboffsets := initSuboffsets v } = v := by
   cases v
-  simp_all [initShapeStrides, initSharedValues, initSuboffsets]
+  rcases hsub with hsub | ⟨o, hsub⟩ <;> simp_all [initShapeStrides, initSharedValues, initSuboffsets]
 
-/-- `m.tobytes()` of a 1-D view, for every stride: the items in order, by `memcpy` when the
-view is contiguous and through `buffer_to_contiguous` when it is not. The two branches of
+/-- `m.tobytes()` of a 1-D view, for every stride, with or without a suboffset: the items in
+order, by `memcpy` when the view is contiguous and through `buffer_to_contiguous` when it is not.
+The two branches of
 `PyBuffer_ToContiguous` (:1062-1065, :1084) give the same bytes. Hypotheses: a live view with
 `len == n * itemsize`, `itemsize > 0`. -/
 def Tobytes1D : Prop :=
@@ -117,12 +119,14 @@ def Tobytes1D : Prop :=
     Live1D st self n d f → 0 < (st.mv self).view.itemsize →
     (st.mv self).view.len = n * (st.mv self).view.itemsize →
     memoryviewTobytes self none st =
-      (.ok (flatBytes st.mem (st.mv self).view.itemsize [n] [d] none (st.mv self).view.buf), st)
+      (.ok (flatBytes st.mem (st.mv self).view.itemsize [n] [d] (st.mv self).view.suboffsets
+        (st.mv self).view.buf), st)
 
 theorem tobytes1D_proven : Tobytes1D := by
   intro st self n d f hL hit hlen
   have hmain : pyBufferToContiguous st.mem (st.mv self).view (st.mv self).view.len 'C' =
-      .ok (flatBytes st.mem (st.mv self).view.itemsize [n] [d] none (st.mv self).view.buf) := by
+      .ok (flatBytes st.mem (st.mv self).view.itemsize [n] [d] (st.mv self).view.suboffsets
+        (st.mv self).view.buf) := by
     have hsb := hL.subs
     have hsh := hL.shape
     have hst := hL.strides
@@ -131,7 +135,12 @@ theorem tobytes1D_proven : Tobytes1D := by
     have hnn := hL.nonneg
     generalize hv : (st.mv self).view = v at *
     by_cases hc : pyBufferIsContiguous v 'C' = true
-    · simp only [pyBufferToContiguous, ne_eq, not_true_eq_false, ↓reduceIte, hc]
+    · have hsb : v.suboffsets = none := by
+        cases hs : v.suboffsets with
+        | none => rfl
+        | some l =>
+          simp [pyBufferIsContiguous, hs] at hc
+      simp only [pyBufferToContiguous, ne_eq, not_true_eq_false, ↓reduceIte, hc, hsb]
       congr 1
       by_cases hn0 : n = 0
       · subst hn0
@@ -163,7 +172,6 @@ theorem tobytes1D_proven : Tobytes1D := by
       have hfb := fb_1d v n d f hnd hsh hst hsb hfm
       have ht := tobytesC_proven st.mem v [n] [d] hsh hst (by simp) (by simp [hnd])
         (by simpa using hnn) hit (by simp [prod, hlen])
-      rw [hsb] at ht
       simp only [initShapeStrides, hfb] at *
       rw [← ht]
       congr 1

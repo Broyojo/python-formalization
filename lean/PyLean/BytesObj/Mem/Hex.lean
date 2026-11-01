@@ -81,6 +81,19 @@ theorem hexGroups_proven : HexGroups := by
          | exact filter_hexLeft c hc _ _ _ hb
          | (rw [filter_hexRight c hc _ _ _ (by simpa using hb), List.reverse_reverse]))
 
+/-- A view with suboffsets is not C-contiguous by its flags, unless it has no dimensions. -/
+theorem isC_no_subs (v : Buf) (h : (initFlags v).isC = true) (h0 : v.ndim ≠ 0) : v.suboffsets = none := by
+  cases hsb : v.suboffsets with
+  | none => rfl
+  | some s =>
+    exfalso
+    simp only [initFlags, hsb, Option.isSome_some, ↓reduceIte, Flags.isC, Bool.or_false] at h
+    split at h
+    · rename_i hn
+      exact h0 hn
+    · split at h <;> simp at h
+    · simp at h
+
 /-- A true flag means contiguous: whenever `init_flags` reports C-contiguity, so does
 `PyBuffer_IsContiguous`. -/
 theorem isC_contig (v : Buf) (h : (initFlags v).isC = true) (hs : v.suboffsets = none) :

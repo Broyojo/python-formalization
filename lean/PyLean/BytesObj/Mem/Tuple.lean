@@ -110,32 +110,6 @@ theorem tupleLoop_ints (st : St) (v : Buf) (sh strs : List Int) (hsh : v.shape =
       congr 2
       simp [List.drop_drop, Nat.add_comm]
 
-theorem memoryviewTolist_eq (st : St) (self : Nat) (c : Char) (sh strs : List Int) (g : Int → Item)
-    (hl : baseInaccessible st self = false) (hf : adjustFmt (st.mv self).view = .ok [c])
-    (hg : ∀ p, unpackRaw st.mem p [c] = .ok (g p)) (hsh : (st.mv self).view.shape = some sh)
-    (hst : (st.mv self).view.strides = some strs) (hne : sh ≠ []) (hn : sh.length = (st.mv self).view.ndim) :
-    memoryviewTolist self st =
-      (.ok (treeOf st.mem g sh strs (st.mv self).view.suboffsets (st.mv self).view.buf), st) := by
-  have hfn : (fun p => (unpackSingle self p [c] st).1) = fun p => Except.ok (g p) := by
-    funext p
-    rw [unpackSingle_live _ _ _ _ hl, hg]
-  have hnd : ¬ (st.mv self).view.ndim = 0 := by
-    rw [← hn]
-    intro h
-    exact hne (List.length_eq_zero_iff.1 h)
-  by_cases h1 : (st.mv self).view.ndim = 1
-  · have hn' := hn
-    rw [h1] at hn'
-    obtain ⟨n, rfl⟩ := List.length_eq_one_iff.1 hn'
-    simp only [memoryviewTolist, M.bind_app, checkReleased_ok _ _ hl, M.get, M.lift, hf, hnd, ↓reduceIte,
-      h1, hsh, hst, Option.getD_some, List.getD_cons_zero]
-    simp only [hfn, tolistBase_ok, treeOf, Nat.one_ne_zero, ↓reduceIte, M.bind_app, M.lift, M.pure_app,
-      List.map_map]
-    rfl
-  · simp only [memoryviewTolist, M.bind_app, checkReleased_ok _ _ hl, M.get, M.lift, hf, hnd, ↓reduceIte,
-      h1, hsh, hst, Option.getD_some]
-    simp only [hfn, tolistRec_ok, M.pure_app]
-
 /-- `m[i, j, ...]` with one in-range index per dimension is `m.tolist()[i][j]...`, for every
 view of a native format, any number of dimensions, any strides and suboffsets
 (`ptr_from_tuple`, `memory_item_multi`, `is_multiindex`, :2423-2448, :2483-2506). Hypotheses:

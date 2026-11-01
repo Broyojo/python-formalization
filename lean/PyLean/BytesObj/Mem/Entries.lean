@@ -229,12 +229,12 @@ def entries : List Entry := [
     prop := ``NewViewRules, thm := some ``newViewRules_proven },
   { id := "bytesobj-memoryview-iter", pyFile := memFile
     pyFns := ["memory_iter", "memoryiter_next", "memory_length"]
-    statement := "list(m) is m.tolist() for every 1-D view of a native format and every stride."
+    statement := "list(m) is m.tolist() for every 1-D view of a native format, every stride, with or without a suboffset."
     source := "Doc/library/stdtypes.rst memoryview", status := .proven
     prop := ``IterYields, thm := some ``iterYields_proven },
   { id := "bytesobj-memoryview-count", pyFile := memFile
     pyFns := ["memoryview_count_impl", "memoryiter_next", "memory_iter"]
-    statement := "m.count(x) is m.tolist().count(x) for every 1-D view of a native format, every built-in x and every stride."
+    statement := "m.count(x) is m.tolist().count(x) for every 1-D view of a native format, every x with no Python __eq__ and every stride, with or without a suboffset."
     source := "Doc/library/stdtypes.rst memoryview.count", status := .proven
     prop := ``CountIsList, thm := some ``countIsList_proven },
   { id := "bytesobj-memoryview-index", pyFile := memFile
@@ -312,12 +312,12 @@ def entries : List Entry := [
   { id := "bytesobj-memoryview-dealloc-on-fail", pyFile := memFile
     pyFns := ["mbuf_dealloc", "PyMemoryView_FromObjectAndFlags"]
     statement := "When mbuf_add_view refuses a buffer of more than 64 dimensions, memoryview(x) raises ValueError, and mbuf_dealloc releases the master that no view ever kept, running __release_buffer__."
-    source := "memoryobject.c:119-128, :811-819", status := .proven
+    source := "memoryobject.c:120-128, :811-819", status := .proven
     prop := ``MbufDeallocOnFail, thm := some ``mbufDeallocOnFail_proven },
   { id := "bytesobj-memoryview-mbuf-release", pyFile := memFile
     pyFns := ["mbuf_release", "mbuf_clear"]
     statement := "The first release of a managed buffer marks it and gives back the master, running __release_buffer__ or taking back an export of the view it came from; later releases do nothing."
-    source := "memoryobject.c:106-117, :137-144", status := .proven
+    source := "memoryobject.c:107-117, :139-145", status := .proven
     prop := ``MbufReleaseRules, thm := some ``mbufReleaseRules_proven },
   { id := "bytesobj-memoryview-hex-holds-export", pyFile := memFile
     pyFns := ["memoryview_hex_impl"]
@@ -332,17 +332,22 @@ def entries : List Entry := [
   { id := "bytesobj-memoryview-compare-releases", pyFile := memFile
     pyFns := ["memory_richcompare"]
     statement := "v == w releases w's buffer after the result is known: the result is the comparison of the buffers even when __release_buffer__ releases v, and that release has happened when == returns."
-    source := "memoryobject.c:3190-3199", status := .proven
+    source := "memoryobject.c:3192-3199", status := .proven
     prop := ``CompareReleases, thm := some ``compareReleases_proven },
   { id := "bytesobj-memoryview-eq-failures", pyFile := memFile
     pyFns := ["memoryview_count_impl", "memoryview_index_impl"]
     statement := "An exception from __eq__ passes out of count and index at once; an __eq__ that calls self.release() succeeds, and the next step raises the released error, except on a view of one item, where count returns."
     source := "memoryobject.c:2797-2816, :2872-2895", status := .proven
     prop := ``EqFailures, thm := some ``eqFailures_proven },
+  { id := "bytesobj-memoryview-rank-rules", pyFile := memFile
+    pyFns := ["memory_length", "memory_iter", "memory_item", "memoryview_count_impl", "memoryview_index_impl"]
+    statement := "len(m) is shape[0] on every view with dimensions. A 0-dim view has no length, iterator, items or lookup, and a view of two or more dimensions refuses iteration, count, index and m[i] as not implemented, each with the source's message."
+    source := "memoryobject.c:2466-2478, :2746-2756, :2847-2850, :2900-2903, :3529-3537", status := .proven
+    prop := ``RankRules, thm := some ``rankRules_proven },
   { id := "bytesobj-memoryview-iter-null", pyFile := memFile
     pyFns := ["memoryiter_next"]
     statement := "An item at NULL ends the iteration with no exception, though the iterator has not reached its length and keeps its view, stepped past that item."
-    source := "memoryobject.c:3506-3509", status := .proven
+    source := "memoryobject.c:3508-3510", status := .proven
     prop := ``IterNull, thm := some ``iterNull_proven },
   { id := "bytesobj-memoryview-slice-failures", pyFile := memFile
     pyFns := ["init_slice"]
@@ -352,7 +357,7 @@ def entries : List Entry := [
   { id := "bytesobj-memoryview-slice-cleanup", pyFile := memFile
     pyFns := ["memory_subscript", "memory_ass_sub"]
     statement := "When a slice key fails, m[s] raises and gives back the export the sliced view took on the managed buffer, and m[s] = x raises and gives back x's buffer, running __release_buffer__."
-    source := "memoryobject.c:2589-2600, :2681-2711", status := .proven
+    source := "memoryobject.c:2616-2623, :2699-2718", status := .proven
     prop := ``SliceCleanup, thm := some ``sliceCleanup_proven },
   { id := "bytesobj-memoryview-cmp-is-tolist", pyFile := memFile
     pyFns := ["memory_richcompare", "cmp_base", "cmp_rec", "unpack_cmp", "struct_unpack_cmp", "struct_unpack_single"]

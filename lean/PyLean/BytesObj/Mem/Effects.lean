@@ -107,7 +107,7 @@ theorem deallocRules_proven : DeallocRules := by
     simp only [if_pos h2]
     exact ⟨trivial, memoryRelease_released t _ h3⟩
 
-/-- `mbuf_dealloc`, :119-128, is reached once with a live master: when `mbuf_add_view` refuses
+/-- `mbuf_dealloc`, :120-128, is reached once with a live master: when `mbuf_add_view` refuses
 the buffer, :811-819, the `Py_DECREF(mbuf)` releases it. `memoryview(x)` raises `ValueError`,
 the managed buffer ends released, and the exporter's `__release_buffer__` has run: the request
 that failed does not leak its buffer. Hypothesis: `__buffer__` gave a buffer of more than 64
@@ -171,7 +171,7 @@ theorem mbufDeallocOnFail_proven : MbufDeallocOnFail := by
       rw [hmvs]
       exact h0
 
-/-- `mbuf_release`, :106-117, and `mbuf_clear`, :137-144: the first release of a managed buffer
+/-- `mbuf_release`, :107-117, and `mbuf_clear`, :139-145: the first release of a managed buffer
 marks it and gives its master back, which runs the exporter's `__release_buffer__` or takes back
 an export of the view it came from; any later release does nothing. Hypothesis: `k` exists. -/
 def MbufReleaseRules : Prop :=
@@ -446,7 +446,7 @@ theorem getBufferFull_val (b : Buf) (st : St) (hn : b.ndim ≤ 64) :
   rw [if_neg (by omega)]
   rfl
 
-/-- `memory_richcompare`, :3190-3199: the right side's buffer is released after the result is
+/-- `memory_richcompare`, :3192-3199: the right side's buffer is released after the result is
 known, and that release is Python code when the right side has `__release_buffer__`. `v == w`
 gives what the two buffers compare to, even when that callback releases `v` itself, and the
 callback's release has happened by the time `==` returns. Hypotheses: a live `v`; `__buffer__`
@@ -517,7 +517,7 @@ with no export left to refuse the release; `NoNull`, a type invariant. -/
 def EqFailures : Prop :=
   ∀ (st : St) (self : Nat) (n d : Int) (f : List Char) (c : Char),
     Live1D st self n d f → adjustFmt (st.mv self).view = .ok [c] → nativeChar c = true →
-    NoNull (st.mv self).view.buf d n → 0 < n →
+    NoNull st self d n → 0 < n →
     (∀ e rel, (memoryviewCount self (.eqLike (.raises e) rel) st).1 = .error e) ∧
     (∀ e rel, (memoryviewIndex self (.eqLike (.raises e) rel) 0 n st).1 = .error e) ∧
     (getExports st self = 0 →
@@ -539,11 +539,12 @@ theorem index_start (st : St) (self : Nat) (n : Int) (value : Obj) (d : Int) (f 
 /-- The first item of `indexLoop`. -/
 theorem index_first (st : St) (self : Nat) (n d : Int) (f fmt : List Char) (g : Int → Item)
     (hL : Live1D st self n d f) (hf : adjustFmt (st.mv self).view = .ok fmt)
-    (hg : ∀ p, unpackRaw st.mem p fmt = .ok (g p)) (hn : 0 < n) :
+    (hg : ItemAt st self fmt g) (hn : 0 < n) :
     memoryItem self 0 st = (.ok (g (st.mv self).view.buf), st) := by
   have hm := memoryItem_eq st self 0 n d f fmt hL hf
-  rw [lookup_in _ _ _ 0 n d hL.shape hL.strides hL.subs (by omega)] at hm
-  simp only [pos, show ¬ (0 : Int) < 0 by omega, ↓reduceIte, Int.mul_zero, Int.add_zero, hg] at hm
+  rw [lookup_in _ _ _ 0 n d hL.shape hL.strides (by omega)] at hm
+  have hg' : ∀ p, unpackRaw st.mem (adjustPtr st.mem p (st.mv self).view.suboffsets 0) fmt = .ok (g p) := hg
+  simp only [pos, show ¬ (0 : Int) < 0 by omega, ↓reduceIte, Int.mul_zero, Int.add_zero, hg'] at hm
   exact hm
 
 theorem memoryItem_released (st : St) (self : Nat) (i : Int) (h : baseInaccessible st self = true) :
@@ -552,12 +553,14 @@ theorem memoryItem_released (st : St) (self : Nat) (i : Int) (h : baseInaccessib
 
 theorem eqFailures_proven : EqFailures := by
   intro st self n d f c hL hf hc hnn hpos
-  obtain ⟨g, hg⟩ := native_total st.mem c hc
+  obtain ⟨g0, hg0⟩ := native_total st.mem c hc
+  have hg : ItemAt st self [c] (fun p => g0 (adjustPtr st.mem p (st.mv self).view.suboffsets 0)) :=
+    fun p => hg0 _
   have hL' : Live1D (newIter st self n [c]) self n d f := live_iters st self n d f _ hL
   have hI := iterAt_new st self n [c]
-  have hnn' : NoNull ((newIter st self n [c]).mv self).view.buf d n := hnn
+  have hnn' : NoNull (newIter st self n [c]) self d n := hnn
   have e0 := iter_step (newIter st self n [c]) st.iters.length self 0 n d f [c] hL' hI hpos (Int.le_refl 0)
-    hnn' g hg
+    hnn' _ hg
   have hk : n.toNat + 2 = (n.toNat + 1) + 1 := rfl
   obtain ⟨s1, hs1⟩ : ∃ s1, s1 = stepIter (newIter st self n [c]) st.iters.length self 0 n [c] := ⟨_, rfl⟩
   have hI1 : IterAt s1 st.iters.length self (0 + 1) n [c] := hs1 ▸ iterAt_step _ _ _ _ _ _ hI
@@ -579,7 +582,7 @@ theorem eqFailures_proven : EqFailures := by
     simp only [countLoop, M.bind_app, e0, itemEqM, hs, Ret.get, M.throw_app]
   · obtain ⟨s, hs⟩ := fire_ok rel st
     rw [index_start st self n _ d f hL hpos, hn1, indexLoop]
-    simp only [hpos, ↓reduceIte, M.bind_app, index_first st self n d f [c] g hL hf hg hpos, itemEqM, hs,
+    simp only [hpos, ↓reduceIte, M.bind_app, index_first st self n d f [c] _ hL hf hg hpos, itemEqM, hs,
       Ret.get, M.throw_app]
   · obtain ⟨s2, hs2, hmono, hr⟩ := after s1 (by rw [hs1]; exact hL.valid) (by rw [hs1]; exact h0)
     have hI2 : IterAt s2 st.iters.length self (0 + 1) n [c] :=
@@ -594,7 +597,7 @@ theorem eqFailures_proven : EqFailures := by
       rw [hk', indexLoop, if_pos (by omega)]
       simp only [M.bind_app, memoryItem_released _ _ _ hr]
     rw [index_start st self n _ d f hL hpos, hn1, indexLoop]
-    simp only [hpos, ↓reduceIte, M.bind_app, index_first st self n d f [c] g hL hf hg hpos, itemEqM, hs2,
+    simp only [hpos, ↓reduceIte, M.bind_app, index_first st self n d f [c] _ hL hf hg hpos, itemEqM, hs2,
       Ret.get, M.pure_app, Bool.false_eq_true]
     rw [hloop]
   · obtain ⟨s2, hs2, hmono, -⟩ := after s1 (by rw [hs1]; exact hL.valid) (by rw [hs1]; exact h0)
@@ -605,16 +608,62 @@ theorem eqFailures_proven : EqFailures := by
     simp only [countLoop, M.bind_app, e0, itemEqM, hs2, Ret.get, M.pure_app, hstop]
     cases b <;> rfl
 
+/-! ## Views that are not 1-D -/
+
+/-- What iteration, `len`, `count`, `index` and `m[i]` do on views that are not 1-D. `len` is
+`shape[0]` on every view with dimensions (:2746-2756), and a 0-dim view has none. A 0-dim view
+has no iterator, no items and no lookup (:3529-3532, :2466-2469, :2847-2850); a view of two or more
+dimensions refuses them as not implemented (:3533-3537, :2476-2478, :2900-2903), and so does
+`count`, which iterates. Hypotheses: a live view, and for `m[i]` a format `adjust_fmt` accepts. -/
+def RankRules : Prop :=
+  ∀ (st : St) (self : Nat) (v : Obj) (a b i : Int) (fmt : List Char),
+    baseInaccessible st self = false → adjustFmt (st.mv self).view = .ok fmt →
+    let x := (st.mv self).view
+    (x.ndim ≠ 0 → memoryLength self st = (.ok ((x.shape.getD []).getD 0 0), st)) ∧
+    (x.ndim = 0 →
+      memoryLength self st = (.error (.typeError "0-dim memory has no length"), st) ∧
+      memoryIter self st = (.error (.typeError "invalid indexing of 0-dim memory"), st) ∧
+      memoryviewCount self v st = (.error (.typeError "invalid indexing of 0-dim memory"), st) ∧
+      memoryviewIndex self v a b st = (.error (.typeError "invalid lookup on 0-dim memory"), st) ∧
+      memoryItem self i st = (.error (.typeError "invalid indexing of 0-dim memory"), st)) ∧
+    (2 ≤ x.ndim →
+      memoryIter self st = (.error (notImplError "multi-dimensional sub-views are not implemented"), st) ∧
+      memoryviewCount self v st =
+        (.error (notImplError "multi-dimensional sub-views are not implemented"), st) ∧
+      memoryviewIndex self v a b st = (.error (notImplError "multi-dimensional lookup is not implemented"), st) ∧
+      memoryItem self i st = (.error (notImplError "multi-dimensional sub-views are not implemented"), st))
+
+theorem rankRules_proven : RankRules := by
+  intro st self v a b i fmt hl hf
+  have hc := checkReleased_ok st self hl
+  dsimp only
+  refine ⟨fun h => ?_, fun h => ⟨?_, ?_, ?_, ?_, ?_⟩, fun h => ?_⟩
+  · simp only [memoryLength, M.bind_app, hc, M.get, h, ↓reduceIte, M.pure_app]
+  · simp only [memoryLength, M.bind_app, hc, M.get, h, ↓reduceIte, M.throw_app]
+  · simp only [memoryIter, M.bind_app, hc, M.get, h, ↓reduceIte, M.throw_app]
+  · simp only [memoryviewCount, memoryIter, M.bind_app, hc, M.get, h, ↓reduceIte, M.throw_app]
+  · simp only [memoryviewIndex, M.bind_app, hc, M.get, h, ↓reduceIte, M.throw_app]
+  · simp only [memoryItem, M.bind_app, hc, M.get, M.lift, hf, h, ↓reduceIte, M.throw_app]
+  · have h0 : ¬ (st.mv self).view.ndim = 0 := by omega
+    have h1 : ¬ (st.mv self).view.ndim = 1 := by omega
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · simp only [memoryIter, M.bind_app, hc, M.get, h0, h1, ↓reduceIte, ne_eq, not_false_eq_true,
+        M.throw_app]
+    · simp only [memoryviewCount, memoryIter, M.bind_app, hc, M.get, h0, h1, ↓reduceIte, ne_eq,
+        not_false_eq_true, M.throw_app]
+    · simp only [memoryviewIndex, M.bind_app, hc, M.get, h0, h1, ↓reduceIte, M.throw_app]
+    · simp only [memoryItem, M.bind_app, hc, M.get, M.lift, hf, h0, h1, ↓reduceIte, M.throw_app]
+
 /-! ## `ptr == NULL` in `memoryiter_next` -/
 
-/-- `memoryiter_next`, :3506-3509: an item at `NULL` returns NULL with no exception set, which
+/-- `memoryiter_next`, :3508-3510: an item at `NULL` returns NULL with no exception set, which
 is `StopIteration`, though the iterator has not reached `it_length` and keeps its view: it has
 stepped past the item, so the next `next` goes on from the item after. Hypotheses: a live view,
 the iterator inside it, and the case itself, the item's address being `NULL`. -/
 def IterNull : Prop :=
   ∀ (st : St) (it self : Nat) (index n d : Int) (f fmt : List Char),
     Live1D st self n d f → IterAt st it self index n fmt → index < n →
-    (st.mv self).view.buf + d * index = nullPtr →
+    adjustPtr st.mem ((st.mv self).view.buf + d * index) (st.mv self).view.suboffsets 0 = nullPtr →
     memoryiterNext it st = (.ok none, stepIter st it self index n fmt) ∧
       IterAt (stepIter st it self index n fmt) it self (index + 1) n fmt
 
@@ -622,7 +671,7 @@ theorem iterNull_proven : IterNull := by
   intro st it self index n d f fmt hL hI h hp
   refine ⟨?_, iterAt_step st it self index n fmt hI⟩
   simp only [memoryiterNext, M.bind_app, M.get, hI.state, h, ↓reduceIte, checkReleased_ok _ _ hL.live,
-    hL.strides, hL.subs, Option.getD_some, List.getD_cons_zero, adjustPtr_none, M.modify, M.pure_app, hp]
+    hL.strides, Option.getD_some, List.getD_cons_zero, M.modify, M.pure_app, hp]
   rfl
 
 /-! ## Slices whose parts run Python code -/
@@ -694,7 +743,7 @@ theorem sliceFailures_proven : SliceFailures := by
   · obtain ⟨s', he, -⟩ := sliceEvents_fail s rel f e st hfail (Or.inr h0)
     rw [he]
 
-/-- `memory_subscript`, :2589-2600, and `memory_ass_sub`, :2681-2711, when `PySlice_Unpack`
+/-- `memory_subscript`, :2616-2623, and `memory_ass_sub`, :2699-2718, when `PySlice_Unpack`
 fails. `m[s]` has already made the sliced view with `mbuf_add_view`, and the `Py_DECREF(sliced)`
 gives its export of the managed buffer back; `m[s] = x` has already asked `x` for its buffer,
 and gives that back, running its `__release_buffer__`. Hypotheses: a live 1-D view, the failing

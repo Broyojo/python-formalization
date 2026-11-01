@@ -77,7 +77,7 @@ theorem hashIsTobytes_proven : HashIsTobytes := by
   rw [ht]
   by_cases hC : (st.mv self).flags.isC = true
   · rw [memoryHash_contig st self hH hC]
-    have hc := isC_contig _ (hfl ▸ hC) hL.subs
+    have hc := isC_contig _ (hfl ▸ hC) (isC_no_subs _ (hfl ▸ hC) (by rw [hL.ndim]; omega))
     have hp : pyBufferToContiguous st.mem (st.mv self).view (st.mv self).view.len 'C' =
         .ok (rdBytes st.mem (st.mv self).view.buf (st.mv self).view.len.toNat) := by
       simp [pyBufferToContiguous, hc]
@@ -93,7 +93,6 @@ theorem hashIsTobytes_proven : HashIsTobytes := by
   · have hCf : (st.mv self).flags.isC = false := by simpa using hC
     have hb := tobytesC_proven st.mem (st.mv self).view [n] [d] hL.shape hL.strides (by simp)
       (by simp [hL.ndim]) (by simpa using hL.nonneg) hit (by simp [prod, hlen])
-    rw [hL.subs] at hb
     rw [memoryHash_strided st self _ hH hCf hb]
     refine ⟨rfl, fun s' hs => ?_⟩
     rw [St.mv_setMv _ _ _ hL.valid] at hs
@@ -292,7 +291,7 @@ theorem newFromExporter_proven : NewFromExporter := by
       have h5 : req bufFullRO bufIndirect = true := by decide
       simp [simpleGetbuffer, h1', h2, h3, h4, h5, hsb]
       try (cases b; simp_all)
-  have hview := viewCopy_1d b n d f h1 hsh hst hsb hf
+  have hview := viewCopy_1d b n d f h1 hsh hst (Or.inl hsb) hf
   dsimp only
   obtain ⟨st2, hst2⟩ : ∃ s2, s2 = let st1 : St := { st with mbufs := st.mbufs ++ [{}] }
       st1.setMb st.mbufs.length { st1.mb st.mbufs.length with master := b } := ⟨_, rfl⟩
@@ -353,7 +352,7 @@ theorem fromMemorySpec_proven : FromMemorySpec := by
       { buf := mem, len := size, itemsize := 1, readonly := !w, ndim := 1,
         format := some ['B'], shape := some [size], strides := some [1] } := ⟨_, rfl⟩
   have hview : viewCopy b = b := viewCopy_1d b size 1 ['B'] (by rw [hb]) (by rw [hb]) (by rw [hb])
-    (by rw [hb]) (by rw [hb])
+    (Or.inl (by rw [hb])) (by rw [hb])
   obtain ⟨st2, hst2⟩ : ∃ s2, s2 = let st1 : St := { st with mbufs := st.mbufs ++ [{}] }
       st1.setMb st.mbufs.length { st1.mb st.mbufs.length with master := b } := ⟨_, rfl⟩
   have hmb : st2.mb st.mbufs.length = { master := b } := by
