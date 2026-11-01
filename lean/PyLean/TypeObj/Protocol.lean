@@ -697,6 +697,74 @@ def intXor (a b : Int) : Int :=
   let r : Int := ((ua ^^^ ub : Nat) : Int)
   if (a < 0) != (b < 0) then -r - 1 else r
 
+/-- Hash a dict key with `dict_unhashable_type`, `Objects/dictobject.c`: an unhashable
+key's `TypeError` is replaced. -/
+def dictHashKey (rt : Rt) (key : Val) : M Unit := do
+  let _ ← tryM (rt.hash key) fun e => do
+    let w ← getW
+    match e with
+    | .exc c m v =>
+      if c == B.TypeError then
+        let t ← match v with
+          | some x => rt.str x
+          | none => pure m
+        typeErr s!"cannot use '{typeFQN w (typeOf w key)}' as a dict key ({t})"
+      else raise e
+    | _ => raise e
+
+/-- `PyDict_MergeFromSeq2`, `Objects/dictobject.c`: each item must be a pair. -/
+def mergeSeq2 (rt : Rt) : Nat → List (Val × Val) → List Val → M (List (Val × Val))
+  | _, es, [] => pure es
+  | i, es, x :: xs => do
+    let w ← getW
+    let items ← tryM (rt.listItems x) fun e => do
+      let w ← getW
+      if excMatches w e B.TypeError then
+        typeErr "object is not iterable"
+      else raise e
+    match items with
+    | [k, v] =>
+      let _ := w
+      dictHashKey rt k
+      mergeSeq2 rt (i + 1) (dictSetEntry es k v) xs
+    | _ =>
+      valueErr s!"dictionary update sequence element #{i} has length {items.length}; 2 is required"
+
+/-- The generic path of `dict_merge`, `Objects/dictobject.c`: `PyMapping_Keys(b)`, then
+`b[key]` for each key. -/
+def dictMergeKeys (rt : Rt) (b : Val) : List (Val × Val) → List Val → M (List (Val × Val))
+  | es, [] => pure es
+  | es, k :: ks => do
+    let v ← rt.getItem b k
+    dictHashKey rt k
+    dictMergeKeys rt b (dictSetEntry es k v) ks
+
+/-- `dict_update_arg`, `Objects/dictobject.c`: an exact dict is merged; otherwise `keys`
+decides between a mapping merge and a sequence of pairs. A dict subclass keeping `dict_iter`
+merges directly. -/
+def dictUpdateArg (rt : Rt) (es : List (Val × Val)) (x : Val) : M (List (Val × Val)) := do
+  let w ← getW
+  if typeOf w x == B.dict then
+    pure (((dictOf w x).getD []).foldl (fun d (k, v) => dictSetEntry d k v) es)
+  else
+    match ← rt.getOptionalAttr x "keys" with
+    | some _ =>
+      let w ← getW
+      if (dictOf w x).isSome && slotOf w (typeOf w x) .tp_iter == some (.c .dict) then
+        pure (((dictOf w x).getD []).foldl (fun d (k, v) => dictSetEntry d k v) es)
+      else
+        let f ← rt.getAttr x "keys"
+        let out ← rt.call f [] []
+        let keys ← tryM (rt.listItems out) fun e => do
+          let w ← getW
+          if excMatches w e B.TypeError then
+            typeErr s!"{trunc 200 (typeName w x)}.keys() returned a non-iterable (type {trunc 200 (typeName w out)})"
+          else raise e
+        dictMergeKeys rt x es keys
+    | none =>
+      let items ← rt.listItems x
+      mergeSeq2 rt 0 es items
+
 /-- `long_add`, `long_sub`, ... on values that passed `CHECK_BINOP`. -/
 def longBinary (s : Slot) (a b : Int) : M Val :=
   match s with
@@ -776,8 +844,13 @@ def callNbBinary (rt : Rt) (s : Slot) (f : SlotFn) (a b : Val) : M Val := do
         | some [] => pure (.str fmt)
         | _ => typeErr "not all arguments converted during string formatting"
   | .c .dict =>
-    -- `dict_or`, `Objects/dictobject.c`.
-    if (dictOf w a).isSome && (dictOf w b).isSome then unmodelled else pure .notImpl
+    -- `dict_or`, `Objects/dictobject.c`, through `dict_update_arg`: a non-exact dict is first
+    -- asked for `keys`, then merged directly if it has `dict_iter`.
+    match dictOf w a, dictOf w b with
+    | some x, some _ =>
+      let merged ← dictUpdateArg rt x b
+      alloc B.dict (.dict merged)
+    | _, _ => pure .notImpl
   | _ => unmodelled
 
 /-- `binary_op1`, `Objects/abstract.c:930`. -/
@@ -876,12 +949,43 @@ def callSqRepeat (f : SlotFn) (a : Val) (n : Int) : M Val := do
   | .c .list => alloc B.list (.list (listRepeat ((listOf w a).getD []) k))
   | _ => unmodelled
 
+/-- `sq_inplace_concat` of `list`: `list_inplace_concat` extends with any iterable and
+returns the list; the other sequences have only `sq_concat`. -/
+def callSqInplaceConcat (rt : Rt) (f : SlotFn) (a b : Val) : M Val := do
+  match f, a with
+  | .c .list, .obj addr =>
+    let items ← rt.listItems b
+    modObj addr fun o =>
+      match o.body with
+      | .list xs => { o with body := .list (xs ++ items) }
+      | body => { o with body := body }
+    pure a
+  | _, _ => callSqConcat rt f a b
+
+/-- `sq_inplace_repeat` of `list`: `list_inplace_repeat`. -/
+def callSqInplaceRepeat (f : SlotFn) (a : Val) (n : Int) : M Val := do
+  match f, a with
+  | .c .list, .obj addr =>
+    let r ← callSqRepeat f a n
+    let w ← getW
+    modObj addr fun o => { o with body := .list ((listOf w r).getD []) }
+    pure a
+  | _, _ => callSqRepeat f a n
+
 /-- `sequence_repeat`, `Objects/abstract.c:1147`. -/
 def sequenceRepeat (rt : Rt) (f : SlotFn) (seq n : Val) : M Val := do
   let w ← getW
   if indexCheck w n then
     let count ← numberAsSsize rt n (some B.OverflowError)
     callSqRepeat f seq count
+  else typeErr s!"can't multiply sequence by non-int of type '{trunc 200 (typeName w n)}'"
+
+/-- `sequence_repeat` with the `sq_inplace_repeat` function. -/
+def sequenceRepeatInplace (rt : Rt) (f : SlotFn) (seq n : Val) : M Val := do
+  let w ← getW
+  if indexCheck w n then
+    let count ← numberAsSsize rt n (some B.OverflowError)
+    callSqInplaceRepeat f seq count
   else typeErr s!"can't multiply sequence by non-int of type '{trunc 200 (typeName w n)}'"
 
 /-- `PyNumber_Add`, `Objects/abstract.c:1128`. -/
@@ -925,10 +1029,16 @@ where
     | .nb_inplace_and => nbAnd | .nb_inplace_or => nbOr | .nb_inplace_xor => nbXor
     | _ => nbAdd
   /-- `SLOT1(slot_nb_inplace_*, __i*__)`, `Objects/typeobject.c:10263`. -/
-  callInplace (rt : Rt) (f : SlotFn) (idunder : Name) (a b : Val) : M Val :=
-    match f with
-    | .generic => vectorcallMethod rt idunder [a, b]
-    | _ => unmodelled
+  callInplace (rt : Rt) (f : SlotFn) (idunder : Name) (a b : Val) : M Val := do
+    match f, a with
+    | .generic, _ => vectorcallMethod rt idunder [a, b]
+    | .c .dict, .obj addr =>
+      -- `dict_ior`, `Objects/dictobject.c`.
+      let w ← getW
+      let merged ← dictUpdateArg rt ((dictOf w a).getD []) b
+      modObj addr fun o => { o with body := .dict merged }
+      pure a
+    | _, _ => unmodelled
 
 /-- `binary_iop`, `Objects/abstract.c:1250`. -/
 def binaryIop (rt : Rt) (v w' : Val) (islot s : Slot) (name : String) : M Val := do
@@ -942,12 +1052,10 @@ def pyNumberInPlaceAdd (rt : Rt) (v w' : Val) : M Val := do
   | .notImpl =>
     let w ← getW
     if hasGroup w (typeOf w v) .sequence then
-      let func := match slotIn w v .sq_inplace_concat with
-        | some f => some f
-        | none => slotIn w v .sq_concat
-      match func with
-      | some f => callSqConcat rt f v w'
-      | none => binopTypeError v w' "+="
+      match slotIn w v .sq_inplace_concat, slotIn w v .sq_concat with
+      | some f, _ => callSqInplaceConcat rt f v w'
+      | none, some f => callSqConcat rt f v w'
+      | none, none => binopTypeError v w' "+="
     else binopTypeError v w' "+="
   | r => pure r
 
@@ -959,12 +1067,10 @@ def pyNumberInPlaceMultiply (rt : Rt) (v w' : Val) : M Val := do
   | .notImpl =>
     let w ← getW
     if hasGroup w (typeOf w v) .sequence then
-      let f := match slotIn w v .sq_inplace_repeat with
-        | some f => some f
-        | none => slotIn w v .sq_repeat
-      match f with
-      | some f => sequenceRepeat rt f v w'
-      | none => binopTypeError v w' "*="
+      match slotIn w v .sq_inplace_repeat, slotIn w v .sq_repeat with
+      | some f, _ => sequenceRepeatInplace rt f v w'
+      | none, some f => sequenceRepeat rt f v w'
+      | none, none => binopTypeError v w' "*="
     else if hasGroup w (typeOf w w') .sequence then
       match slotIn w w' .sq_repeat with
       | some f => sequenceRepeat rt f w' v
@@ -1188,21 +1294,6 @@ def callSqItem (rt : Rt) (f : SlotFn) (s : Val) (i : Int) : M Val := do
     at' (((strOf w s).getD "").toList.map fun c => Val.str c.toString) "string index out of range"
   | _ => unmodelled
 
-/-- Hash a dict key with `dict_unhashable_type`, `Objects/dictobject.c`: an unhashable
-key's `TypeError` is replaced. -/
-def dictHashKey (rt : Rt) (key : Val) : M Unit := do
-  let _ ← tryM (rt.hash key) fun e => do
-    let w ← getW
-    match e with
-    | .exc c m v =>
-      if c == B.TypeError then
-        let t ← match v with
-          | some x => rt.str x
-          | none => pure m
-        typeErr s!"cannot use '{typeFQN w (typeOf w key)}' as a dict key ({t})"
-      else raise e
-    | _ => raise e
-
 /-- Call `mp_subscript`. Builtin sequences take integer indices; slices belong to the
 `RangeSlice` and `Sequences` modules. -/
 def callMpSubscript (rt : Rt) (f : SlotFn) (o key : Val) : M Val := do
@@ -1387,7 +1478,7 @@ def callIter (rt : Rt) (f : SlotFn) (o : Val) : M Val := do
   | .c .dict =>
     let w ← getW
     let keys ← alloc B.list (.list (((dictOf w o).getD []).map (·.1)))
-    alloc B.listIter (.seqIter (some keys) 0)
+    alloc B.dictKeyIter (.seqIter (some keys) 0)
   | .c .tuple => alloc B.tupleIter (.seqIter (some o) 0)
   | .c .str => alloc B.strIter (.seqIter (some o) 0)
   | .c .seqIter | .c .listIter | .c .tupleIter | .c .strIter => pure o

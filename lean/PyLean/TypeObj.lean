@@ -3,6 +3,7 @@ import PyLean.TypeObj.Diff
 import PyLean.TypeObj.PropsTypeNew
 import PyLean.TypeObj.PropsBuffer
 import PyLean.TypeObj.PropsType2
+import PyLean.TypeObj.ExcProps
 
 /-!
 The data model: `Objects/typeobject.c`, `Objects/object.c`, `Objects/abstract.c`,
@@ -819,6 +820,6 @@ def entries : List Entry := [
   p "typeobj-super-skips" ty ["_super_lookup_descr", "do_super_lookup", "super_getattro"]
     "super looks strictly after __thisclass__ in the MRO of the object's type."
     "docs: super"
-    ``SuperSkipsThisClass ``superSkipsThisClass_proven ]
+    ``SuperSkipsThisClass ``superSkipsThisClass_proven ] ++ excEntries
 
 end PyLean.TypeObj

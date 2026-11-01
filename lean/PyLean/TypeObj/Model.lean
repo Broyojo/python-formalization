@@ -484,6 +484,7 @@ def unionType : Addr := 101
 def bytes : Addr := 102
 def bytearray : Addr := 103
 def traceback : Addr := 104
+def dictKeyIter : Addr := 105
 -- Exception classes used by C code.
 def BaseException : Addr := 31
 def Exception : Addr := 32
@@ -704,6 +705,10 @@ structure Rt where
   getIter (v : Val) : M Val
   /-- `PyIter_Next(it)`: `none` on exhaustion. -/
   iterNext (it : Val) : M (Option Val)
+  /-- `PySequence_List(v)`: the items of an iterable. -/
+  listItems (v : Val) : M (List Val)
+  /-- `PyObject_GetItem(o, k)`. -/
+  getItem (o k : Val) : M Val
   /-- The getter of the `PyGetSetDef` (or C member) `n` of the static type `owner`. -/
   getsetGet (owner : Addr) (n : Name) (obj : Val) : M Val
   /-- The setter of the same; `none` deletes. -/

@@ -106,20 +106,20 @@ def excGetsetSet (rt : Rt) (_owner : Addr) (n : Name) (obj : Val) (value : Optio
     excUpdate obj (memSet n value)
   | _ => unmodelled
 
-/-- The arity check of a `METH_O` method descriptor, `Objects/descrobject.c:476`. -/
+/-- The arity check of a `METH_O` method descriptor, `method_vectorcall_O`, `Objects/descrobject.c:454`. -/
 def methO (name : String) (args : List Val) : M Val :=
   match args with
   | [a] => pure a
   | _ => typeErr s!"{name}() takes exactly one argument ({args.length} given)"
 
-/-- The arity check of a `METH_NOARGS` method descriptor, `Objects/descrobject.c:455`. -/
+/-- The arity check of a `METH_NOARGS` method descriptor, `method_vectorcall_NOARGS`, `Objects/descrobject.c:427`. -/
 def methNoArgs (name : String) (args : List Val) : M Unit :=
   match args with
   | [] => pure ()
   | _ => typeErr s!"{name}() takes no arguments ({args.length} given)"
 
 /-- `_testcapi` wrappers of the Unicode error getters and setters,
-`Modules/_testcapi/exceptions.c:363-540`: `name` is `unicode_<kind>_<get|set>_<start|end>`. -/
+`Modules/_testcapi/exceptions.c:363-520`: `name` is `unicode_<kind>_<get|set>_<start|end>`. -/
 def excTestcapiUnicode (rt : Rt) (name : Name) (args : List Val) : M Val := do
   let (k, rest) : UKind × String :=
     if name.startsWith "unicode_encode_" then (.encode, name.drop 15 |>.toString)

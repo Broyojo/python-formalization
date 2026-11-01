@@ -236,6 +236,11 @@ def unpackTuple (name : String) (lo hi : Nat) (n : Nat) : M Unit := do
       typeErr s!"{name} expected {hi} argument{if hi == 1 then "" else "s"}, got {n}"
     else typeErr s!"{name} expected at most {hi} argument{if hi == 1 then "" else "s"}, got {n}"
 
+/-- The type name in a `PyArg_Parse` conversion error: `None` is written `None`
+(`_PyArg_BadArgument`, `Python/getargs.c`). -/
+def argTypeName (w : World) (v : Val) : String :=
+  if v.is .none then "None" else typeName w v
+
 /-- Allocate a subclass instance holding builtin value `v`, as `long_subtype_new` and
 friends do; the exact type stays immediate. -/
 def boxValue (t exact : Addr) (v : Val) : M Val :=
@@ -243,14 +248,25 @@ def boxValue (t exact : Addr) (v : Val) : M Val :=
 
 /-- `long_new`, `Objects/longobject.c`: one positional argument. -/
 def longNew (rt : Rt) (t : Addr) (args : List Val) (kw : Kw) : M Val := do
+  if args.length + kw.length > 2 then
+    typeErr s!"int() takes at most 2 arguments ({args.length + kw.length} given)"
+  for (k, _) in kw do
+    if k != "base" then typeErr s!"int() got an unexpected keyword argument '{k}'"
   if !kw.isEmpty then unmodelled
   match args with
   | [] => boxValue t B.int (.int 0)
   | [x] =>
     let r ← pyNumberLong rt x
     boxValue t B.int r
-  | [_, _] => typeErr "int() can't convert non-string with explicit base"
-  | _ => typeErr s!"int expected at most 2 arguments, got {args.length}"
+  | [x, b] =>
+    let base ← numberAsSsize rt b none
+    if base != 0 && (base < 2 || base > 36) then
+      valueErr "int() base must be >= 2 and <= 36, or 0"
+    let w ← getW
+    match strOf w x with
+    | some _ => unmodelled
+    | none => typeErr "int() can't convert non-string with explicit base"
+  | _ => typeErr s!"int() takes at most 2 arguments ({args.length} given)"
 
 /-- `bool_new`, `Objects/boolobject.c`. -/
 def boolNew (rt : Rt) (args : List Val) (kw : Kw) : M Val := do
@@ -262,13 +278,26 @@ def boolNew (rt : Rt) (args : List Val) (kw : Kw) : M Val := do
 
 /-- `unicode_new` with one or no argument. -/
 def strNew (rt : Rt) (t : Addr) (args : List Val) (kw : Kw) : M Val := do
+  if args.length + kw.length > 3 then
+    typeErr s!"str() takes at most 3 arguments ({args.length + kw.length} given)"
+  for (k, _) in kw do
+    if !["object", "encoding", "errors"].contains k then
+      typeErr s!"str() got an unexpected keyword argument '{k}'"
   if !kw.isEmpty then unmodelled
   match args with
   | [] => boxValue t B.str (.str "")
   | [x] =>
     let s ← rt.str x
     boxValue t B.str (.str s)
-  | _ => unmodelled
+  | _ :: e :: _ =>
+    let w ← getW
+    match strOf w e with
+    | none => typeErr s!"str() argument 'encoding' must be str, not {argTypeName w e}"
+    | some _ =>
+      match strOf w (args.headD .none) with
+      | some _ => typeErr "decoding str is not supported"
+      | none =>
+        typeErr s!"decoding to str: need a bytes-like object, {trunc 80 (typeName w (args.headD .none))} found"
 
 /-- `tuple_new`, `Objects/tupleobject.c`. -/
 def tupleNew (rt : Rt) (t : Addr) (args : List Val) (kw : Kw) : M Val := do
@@ -292,16 +321,15 @@ def listInit (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Unit := do
     modObj a fun o => { o with body := .list xs }
   | _, _ => unmodelled
 
-/-- `dict_init` with no argument or a dict argument, and string keywords. -/
-def dictInit (self : Val) (args : List Val) (kw : Kw) : M Unit := do
+/-- `dict_init` through `dict_update_arg`, `Objects/dictobject.c`: a dict is merged, an
+object with `keys` is merged by key, anything else is a sequence of pairs. Keywords are
+then added. -/
+def dictInit (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Unit := do
   let w ← getW
   unpackTuple "dict" 0 1 args.length
-  let base ← match args with
+  let base : List (Val × Val) ← match args with
     | [] => pure []
-    | x :: _ =>
-      match dictOf w x with
-      | some es => pure es
-      | none => unmodelled
+    | x :: _ => dictUpdateArg rt [] x
   let all := kw.foldl (fun es (k, v) => dictSetEntry es (.str k) v) base
   match self with
   | .obj a => modObj a fun o => { o with body := .dict all }
@@ -412,6 +440,14 @@ def callTpNew (rt : Rt) (f : SlotFn) (t : Addr) (args : List Val) (kw : Kw) : M 
   | .c .type => typeNew rt t args kw
   | .c .int => longNew rt t args kw
   | .c .bool => boolNew rt args kw
+  | .c .float =>
+    noKeywords "float" kw
+    unpackTuple "float" 0 1 args.length
+    match args with
+    | [] => boxValue t B.float (.float 0)
+    | x :: _ =>
+      let r ← pyNumberFloat rt x
+      boxValue t B.float r
   | .c .str => strNew rt t args kw
   | .c .tuple => tupleNew rt t args kw
   | .c .list | .c .dict | .c .property | .c .classmethod | .c .staticmethod | .c .super =>
@@ -444,7 +480,7 @@ def callTpInit (rt : Rt) (f : SlotFn) (self : Val) (args : List Val) (kw : Kw) :
   | .c .object => objectInit self args kw
   | .c .type => typeInit args kw
   | .c .list => listInit rt self args kw
-  | .c .dict => dictInit self args kw
+  | .c .dict => dictInit rt self args kw
   | .c .property => propertyInit rt self args kw
   | .c .classmethod => descrWrapInit rt "classmethod" self args kw .classmethod
   | .c .staticmethod => descrWrapInit rt "staticmethod" self args kw .staticmethod
@@ -613,7 +649,7 @@ def wrapperApply (rt : Rt) (p : SlotDef) (f : SlotFn) (self : Val) (args : List 
         callGetattro rt f self n
       | .mp_subscript => callMpSubscript rt f self other
       | .sq_concat => callSqConcat rt f self other
-      | .sq_inplace_concat => unmodelled
+      | .sq_inplace_concat => callSqInplaceConcat rt f self other
       | s =>
         if s.group == .number then
           match f, wr with
@@ -663,19 +699,37 @@ def wrapperApply (rt : Rt) (p : SlotDef) (f : SlotFn) (self : Val) (args : List 
     | .setattr =>
       unpackTuple "__setattr__" 2 2 args.length
       hackcheck self f "__setattr__"
+      let w ← getW
+      -- `type_setattro` tests immutability before the name, `Objects/typeobject.c:6242`.
+      if f == .c .type && (match self with
+          | .obj t => (tdata w t).immutable
+          | _ => false) then
+        let r ← rt.repr (args.headD .none)
+        typeErr s!"cannot set {r} attribute of immutable type '{(match self with
+          | .obj t => tpName w t
+          | _ => "")}'"
       let n ← attrName (args.headD .none)
       callSetattro rt f self n (some (args.getD 1 .none))
       pure .none
     | .delattr =>
       checkNumArgs args 1
       hackcheck self f "__delattr__"
+      let w ← getW
+      if f == .c .type && (match self with
+          | .obj t => (tdata w t).immutable
+          | _ => false) then
+        let r ← rt.repr (args.headD .none)
+        typeErr s!"cannot set {r} attribute of immutable type '{(match self with
+          | .obj t => tpName w t
+          | _ => "")}'"
       let n ← attrName (args.headD .none)
       callSetattro rt f self n none
       pure .none
     | .indexArg =>
       checkNumArgs args 1
       let i ← numberAsSsize rt (args.headD .none) (some B.OverflowError)
-      callSqRepeat f self i
+      if p.slot == .sq_inplace_repeat then callSqInplaceRepeat f self i
+      else callSqRepeat f self i
     | .sqItem =>
       checkNumArgs args 1
       let i ← getIndex rt self (args.headD .none)
@@ -859,10 +913,13 @@ def builtinFuncStr (w : World) (name : String) (self : Option Val) : String :=
 
 /-- `cfunction_check_kwargs` and the argument counts of `cfunction_vectorcall_NOARGS` and
 `_O`, `Objects/methodobject.c:407`, `:487`, `:515`. -/
-def checkBuiltinArgs (b : Builtin) (self : Option Val) (args : List Val) (kw : Kw) : M Unit := do
+def checkBuiltinArgs (b : Builtin) (self : Option Val) (args : List Val) (kw : Kw)
+    (owner : Option Addr) : M Unit := do
   let w ← getW
   let (n, conv) := builtinConv b
-  let fs := builtinFuncStr w n self
+  let fs := match owner with
+    | some o => s!"{typeQualname w o}.{n}()"
+    | none => builtinFuncStr w n self
   match conv with
   | .keywords => pure ()
   | .fast => unless kw.isEmpty do typeErr s!"{fs} takes no keyword arguments"
@@ -875,9 +932,9 @@ def checkBuiltinArgs (b : Builtin) (self : Option Val) (args : List Val) (kw : K
       typeErr s!"{fs} takes exactly one argument ({args.length} given)"
 
 /-- Call a `Builtin`. `self` is `m_self`; methods receive their instance there. -/
-def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (kw : Kw) :
-    M Val := do
-  checkBuiltinArgs b self args kw
+def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (kw : Kw)
+    (owner : Option Addr := none) : M Val := do
+  checkBuiltinArgs b self args kw owner
   let w ← getW
   let selfV := self.getD .none
   match b with
@@ -891,8 +948,10 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
     match args with
     | [s] =>
       match strOf w s with
-      | some sp => objectFormat rt selfV sp
-      | none => typeErr s!"__format__() argument must be str, not {typeName w s}"
+      | some sp =>
+        -- `unicode__format__` accepts type `s`; other specs belong to `UnicodeObj`.
+        if (strOf w selfV).isSome && sp == "s" then pure selfV else objectFormat rt selfV sp
+      | none => typeErr s!"__format__() argument must be str, not {argTypeName w s}"
     | _ => unmodelled
   | .objectDir =>
     let inst : List Val := match instDictAddr w selfV with
@@ -911,6 +970,10 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
     | .obj t => alloc B.list (.list ((tdata w t).subclasses.map Val.obj))
     | _ => unmodelled
   | .typePrepare => alloc B.dict (.dict [])
+  | .objectSizeof =>
+    -- `object___sizeof___impl`, `Objects/typeobject.c:7896`, for fixed-size objects.
+    let d := tdata w (typeOf w selfV)
+    if d.itemsize != 0 then unmodelled else pure (.int d.basicsize)
   | .typeInstancecheck =>
     match args with
     | [i] => .bool <$> objectIsinstance rt i selfV
@@ -1213,17 +1276,21 @@ def getsetGetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) : M Val := do
     if n == "imag" then return .int 0
     if n == "denominator" then return .int 1
     unmodelled
-  if owner == B.wrapperDescr || owner == B.methodDescr then
-    match payloadOf w obj with
-    | some (.wrapperDescr o p _) =>
-      if n == "__objclass__" then return .obj o
-      if n == "__name__" then return .str p.name
-      unmodelled
-    | some (.methodDescr o nm _) =>
+  if owner == B.wrapperDescr || owner == B.methodDescr || owner == B.memberDescr ||
+      owner == B.getsetDescr || owner == B.classmethodDescr then
+    -- `d_type`, `d_name`, and `calculate_qualname`, `Objects/descrobject.c:593`.
+    let info : Option (Addr × Name) := match payloadOf w obj with
+      | some (.wrapperDescr o p _) => some (o, p.name)
+      | some (.methodDescr o nm _) | some (.classmethodDescr o nm _) => some (o, nm)
+      | some (.memberDescr o nm _) | some (.getsetDescr o nm _) => some (o, nm)
+      | _ => none
+    match info with
+    | some (o, nm) =>
       if n == "__objclass__" then return .obj o
       if n == "__name__" then return .str nm
+      if n == "__qualname__" then return .str s!"{typeQualname w o}.{nm}"
       unmodelled
-    | _ => unmodelled
+    | none => unmodelled
   unmodelled
 where
   /-- `_PyObject_IsAbstract`, `Objects/object.c:1235`. -/
@@ -1395,7 +1462,7 @@ def callTpCall (rt : Rt) (s : SlotFn) (f : Val) (args : List Val) (kw : Kw) : M 
     match payloadOf w f with
     | some (.methodDescr o n b) =>
       methodCheckArgs o n args kw
-      callBuiltin rt b (some (args.headD .none)) (args.drop 1) kw
+      callBuiltin rt b (some (args.headD .none)) (args.drop 1) kw (some o)
     | _ => unmodelled
   | .c .classmethodDescr =>
     match payloadOf w f with

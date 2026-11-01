@@ -460,8 +460,11 @@ class X(T.G):
 
     def leaf(self):
         r = self.rng
-        c = r.choice(["ValueError", "ValueError", "TypeError", "KeyError", "OSError", "RuntimeError",
-                      "UnicodeError", "SystemExit", "KeyboardInterrupt", "Exception"])
+        pool = ["ValueError", "ValueError", "TypeError", "KeyError", "OSError", "RuntimeError",
+                "UnicodeError", "Exception"]
+        if self.allow_base or r.random() < 0.04:
+            pool += ["SystemExit", "KeyboardInterrupt"]
+        c = r.choice(pool)
         if self.klasses and r.random() < 0.3:
             c = r.choice(self.klasses)
         v = self.fresh("x")
@@ -487,11 +490,13 @@ class X(T.G):
     def group_classes(self):
         r = self.rng
         self.klasses = []
-        self.groups = ["ExceptionGroup", "ExceptionGroup", "BaseExceptionGroup"]
+        self.allow_base = r.random() < 0.3
+        self.groups = (["BaseExceptionGroup"] if self.allow_base
+                       else ["ExceptionGroup", "ExceptionGroup", "BaseExceptionGroup"])
         if r.random() < 0.4:
             self.cls("MyErr", ["ValueError"], [])
             self.klasses.append("MyErr")
-        if r.random() < 0.15:
+        if self.allow_base and r.random() < 0.4:
             self.cls("MyBase", ["BaseException"], [])
             self.klasses.append("MyBase")
         if r.random() < 0.08:
@@ -501,7 +506,7 @@ class X(T.G):
             self.klasses.append("Sneaky")
         k = r.random()
         if k < 0.45:
-            b = r.choice(["ExceptionGroup", "BaseExceptionGroup"])
+            b = "BaseExceptionGroup" if self.allow_base else r.choice(["ExceptionGroup", "BaseExceptionGroup"])
             body = []
             d = r.randrange(7)
             q = "MyGroup.derive"
@@ -708,6 +713,88 @@ class X(T.G):
             self.probe(call(name("repr"), call(name("MemoryError"))))
             self.probe(call(name("str"), call(name("MemoryError"), lit("a"), lit("b"))))
 
+    def user_classes(self):
+        """Objects that log when the C code calls back into Python."""
+        r = self.rng
+        def logged(q, ret):
+            return [["log", q], ["ret", ret]]
+        self.cls("Ix", [], [self.method("__index__", "Ix.__index__", ["self"],
+                                        logged("Ix.__index__", r.choice([lit(2), lit(-1), lit(0), big(2 ** 63), lit("s"), lit(True)])))])
+        self.cls("Tx", [], [self.method("__str__", "Tx.__str__", ["self"], logged("Tx.__str__", r.choice([lit("T"), lit("T"), lit(1)]))),
+                            self.method("__repr__", "Tx.__repr__", ["self"], logged("Tx.__repr__", r.choice([lit("R"), lit("R"), lit(1)])))])
+        self.cls("Ss", ["str"], [])
+        self.cls("Ii", ["int"], [])
+        self.cls("Hh", ["int"], [self.method("__hash__", "Hh.__hash__", ["self"], logged("Hh.__hash__", lit(2))),
+                                 self.method("__eq__", "Hh.__eq__", ["self", "o"], logged("Hh.__eq__", r.choice([lit(True), lit(False)])))])
+        self.cls("It", [], [self.method("__iter__", "It.__iter__", ["self"],
+                                        logged("It.__iter__", call(name("iter"), LIST(lit(1), lit("b")))))])
+        self.cls("Sq", [], [self.method("__len__", "Sq.__len__", ["self"], logged("Sq.__len__", lit(2))),
+                            self.method("__getitem__", "Sq.__getitem__", ["self", "i"],
+                                        [["log", "Sq.__getitem__"],
+                                         ["if", ["cmp", ">=", name("i"), lit(2)], [["raise", name("IndexError")]], [["ret", lit("note")]]]])])
+
+    def block_userobj(self):
+        r = self.rng
+        self.user_classes()
+        v = self.fresh("e")
+        k = r.randrange(9)
+        tx, ix, ss = call(name("Tx")), call(name("Ix")), call(name("Ss"), lit("a/b"))
+        if k == 0:
+            self.assign(v, call(name(r.choice(["OSError", "PermissionError"])), r.choice([tx, lit(5)]), tx, tx, NONE, tx))
+            self.probe(call(name("str"), name(v)))
+            self.probe(call(name("repr"), name(v)))
+        elif k == 1:
+            self.assign(v, call(name("BlockingIOError"), lit(1), lit("x"), ix))
+            self.probe(attr(name(v), "characters_written"))
+            self.probe(attr(name(v), "filename"))
+        elif k == 2:
+            self.assign(v, call(name("OSError"), lit(0), lit("x")))
+            self.probes(["setattr", name(v), "characters_written", ix])
+            self.probe(attr(name(v), "characters_written"))
+        elif k == 3:
+            n = r.choice(ERRNOS)
+            self.assign(v, call(name("OSError"), call(name(r.choice(["Ii", "Hh"])), lit(n)), lit("x")))
+            self.probe(call(name("type"), name(v)))
+            self.probe(attr(name(v), "errno"))
+        elif k == 4:
+            cn = r.choice(["UnicodeEncodeError", "UnicodeTranslateError"])
+            a = [ss, ix, ix, lit("r")] if cn == "UnicodeTranslateError" else [ss, ss, ix, ix, ss]
+            self.assign(v, call(name(cn), *a))
+            self.probe(call(name("str"), name(v)))
+            self.probe(attr(name(v), "start"))
+            self.probes(["setattr", name(v), "reason", tx])
+            self.probe(call(name("str"), name(v)))
+        elif k == 5:
+            self.assign(v, call(name("SyntaxError"), r.choice([tx, ss]),
+                                TUPLE(ss, call(name("Ii"), lit(3)), lit(1), r.choice([tx, lit("t")]))))
+            self.probe(call(name("str"), name(v)))
+            self.probe(attr(name(v), "filename"))
+            self.assign(v + "b", call(name("SyntaxError"), lit("m"), call(name("It"))))
+            self.assign(v + "c", call(name("SyntaxError"), lit("m"), call(name("Sq"))))
+        elif k == 6:
+            self.assign(v, call(name("ValueError"), tx))
+            self.probes(["setattr", name(v), "args", r.choice([call(name("It")), call(name("Sq")), lit(1)])])
+            self.probe(attr(name(v), "args"))
+            self.probe(call(name("str"), name(v)))
+            self.probe(call(attr(name(v), "add_note"), ss))
+            self.probe(attr(name(v), "__notes__"))
+        elif k == 7:
+            self.assign(v, call(name("ExceptionGroup"), r.choice([ss, lit("m")]), LIST(call(name("ValueError"), lit(1)), call(name("KeyError"), lit(2)))))
+            self.probe(call(name("str"), name(v)))
+            self.probe(call(name("repr"), name(v)))
+            self.probes(["setattr", name(v), "__notes__", r.choice([call(name("Sq")), call(name("It")), lit("ab"), TUPLE(lit("a"))])])
+            s_ = self.fresh("s")
+            self.assign(s_, call(attr(name(v), "split"), name("ValueError")))
+            self.probe(attr(["sub", name(s_), lit(0)], "__notes__"))
+            self.probe(attr(["sub", name(s_), lit(1)], "__notes__"))
+            self.probe(attr(["sub", name(s_), lit(0)], "__suppress_context__"))
+        else:
+            self.assign(v, call(name("ImportError"), r.choice([ss, tx, lit("m")])))
+            self.probe(call(name("str"), name(v)))
+            self.assign(v + "b", call(name("KeyError"), tx))
+            self.probe(call(name("str"), name(v + "b")))
+            self.probe(call(name("repr"), name(v + "b")))
+
     def block_iter(self):
         r = self.rng
         v = self.fresh("e")
@@ -725,7 +812,8 @@ class X(T.G):
 BLOCKS = ["block_generic", "block_generic", "block_subclass", "block_chain", "block_oserror",
           "block_oserror", "block_kwargs", "block_syntax", "block_syntax", "block_unicode",
           "block_unicode", "block_unicode_reentrant", "block_group", "block_group", "block_group",
-          "block_group_ctor", "block_prep", "block_memory", "block_iter"]
+          "block_group_ctor", "block_prep", "block_memory", "block_iter", "block_userobj",
+          "block_userobj"]
 
 
 def gen_case(rng):

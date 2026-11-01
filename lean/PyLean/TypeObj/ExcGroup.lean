@@ -110,7 +110,7 @@ def baseExceptionGroupDerive (rt : Rt) (self excs : Val) : M Val := do
   let w ← getW
   rt.call (.obj B.BaseExceptionGroup) [(excDataOf w self).egMessage.getD .none, excs] []
 
-/-- `PyObject_CallMethod(obj, name, "(O)", arg)`, `Objects/call.c`. -/
+/-- `PyObject_CallMethod(obj, name, "(O)", arg)`, `Objects/call.c:630`. -/
 def callMethodO (rt : Rt) (obj : Val) (name : Name) (arg : Val) : M Val := do
   let f ← rt.getAttr obj name
   let w ← getW
@@ -168,7 +168,7 @@ def getMatcherType (value : Val) : M MatcherType := do
   | _ => pure ()
   typeErr "expected an exception type, a tuple of exception types, or a callable (other than a class)"
 
-/-- `PyErr_GivenExceptionMatches`, `Python/errors.c`, for one class `exc`. -/
+/-- `PyErr_GivenExceptionMatches`, `Python/errors.c:332`, for one class `exc`. -/
 def givenMatchesClass (w : World) (err exc : Val) : Bool :=
   let e : Val := if excInstanceCheck w err then .obj (typeOf w err) else err
   match asType w e, asType w exc with

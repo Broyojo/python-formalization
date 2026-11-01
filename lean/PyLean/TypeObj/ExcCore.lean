@@ -92,12 +92,12 @@ def egCheck (w : World) (v : Val) : Bool := isSubtype w (typeOf w v) B.BaseExcep
 /-- `PyTraceBack_Check`. -/
 def tracebackCheck (w : World) (v : Val) : Bool := typeOf w v == B.traceback
 
-/-- `_PyType_Name`, `Objects/typeobject.c`: `tp_name` after the last dot. -/
+/-- `_PyType_Name`, `Objects/typeobject.c:1443`: `tp_name` after the last dot. -/
 def pyTypeName (w : World) (t : Addr) : String :=
   let n := tpName w t
   ((n.splitOn ".").getLast?).getD n
 
-/-- `PyObject_Str`, which renders a NULL pointer as `<NULL>`, `Objects/object.c`. -/
+/-- `PyObject_Str`, which renders a NULL pointer as `<NULL>`, `Objects/object.c:799`. -/
 def strOrNull (rt : Rt) : Option Val → M String
   | some v => rt.str v
   | none => pure "<NULL>"
@@ -112,7 +112,7 @@ def excSlotIn (w : World) (v : Val) (s : Slot) : Option SlotFn :=
 def excSeqCheck (w : World) (s : Val) : Bool :=
   (dictOf w s).isNone && (excSlotIn w s .sq_item).isSome
 
-/-- `PyCallable_Check`, `Objects/object.c`. -/
+/-- `PyCallable_Check`, `Objects/object.c:2100`. -/
 def excCallableCheck (w : World) (v : Val) : Bool := (slotOf w (typeOf w v) .tp_call).isSome
 
 /-- `PyNumber_Check`, `Objects/abstract.c:903`. -/
@@ -219,7 +219,7 @@ def excAsSsizeValueError (rt : Rt) (item : Val) : M Int := do
     let w ← getW
     valueErr s!"cannot fit '{trunc 200 (typeName w item)}' into an index-sized integer"
 
-/-- `PyLong_AsSsize_t` overflow, `Objects/longobject.c`. -/
+/-- `PyLong_AsSsize_t` overflow, `Objects/longobject.c:628`. -/
 def excAsSsizeLong (i : Int) : M Int :=
   if inSsize i then pure i
   else overflowErr "Python int too large to convert to C ssize_t"
@@ -240,15 +240,15 @@ def excIsInstanceOf (rt : Rt) (inst : Val) (ca : Addr) : M Bool := do
 
 /-! ## Argument parsing: the cases of `Python/getargs.c` these constructors use -/
 
-/-- `Py_TYPE(arg)->tp_name` in `converterr`, `Python/getargs.c:638`. -/
+/-- `Py_TYPE(arg)->tp_name` in `converterr`, `Python/getargs.c:632`. -/
 def excArgName (w : World) (v : Val) : String :=
   if v.is .none then "None" else trunc 50 (typeName w v)
 
-/-- `_PyArg_NoKeywords(name, kw)`, `Python/getargs.c`. -/
+/-- `_PyArg_NoKeywords(name, kw)`, `Python/getargs.c:2800`. -/
 def argNoKeywords (name : String) (kw : Kw) : M Unit :=
   unless kw.isEmpty do typeErr s!"{name}() takes no keyword arguments"
 
-/-- The arity error of `vgetargs1_impl`, `Python/getargs.c:331`. -/
+/-- The arity error of `vgetargs1_impl`, `Python/getargs.c:215`. -/
 def argCount (fname : Option String) (min max n : Nat) : M Unit := do
   if n < min || max < n then
     let f := match fname with
@@ -258,7 +258,7 @@ def argCount (fname : Option String) (min max n : Nat) : M Unit := do
     let m := if n < min then min else max
     typeErr s!"{f} takes {how} {m} argument{if m == 1 then "" else "s"} ({n} given)"
 
-/-- `seterror` around a `must be X, not Y` conversion failure, `Python/getargs.c:390`. -/
+/-- `seterror` around a `must be X, not Y` conversion failure, `Python/getargs.c:399`. -/
 def argPrefix (fname : Option String) (i : Nat) : String :=
   let p := match fname with
     | some s => s ++ "() "
@@ -271,12 +271,12 @@ def argU (fname : Option String) (i : Nat) (v : Val) : M Unit := do
   if (strOf w v).isNone then
     typeErr s!"{argPrefix fname i} must be str, not {excArgName w v}"
 
-/-- Format `n`: `_PyNumber_Index`, then `PyLong_AsSsize_t`, `Python/getargs.c`. -/
+/-- Format `n`: `_PyNumber_Index`, then `PyLong_AsSsize_t`, in `convertsimple`, `Python/getargs.c`. -/
 def argN (rt : Rt) (v : Val) : M Int := do
   let i ← excNumberIndex rt v
   excAsSsizeLong i
 
-/-- `error_unexpected_keyword`, `Python/getargs.c:1495`, without the "Did you mean"
+/-- `error_unexpected_keyword_arg`, `Python/getargs.c:1492`, without the "Did you mean"
 suggestion of `_Py_CalculateSuggestions` (`Python/suggestions.c`). -/
 def argUnexpectedKeyword (fname : String) (names : List Name) (kw : Kw) : M Unit :=
   match kw.find? (fun p => !names.contains p.1) with
@@ -284,7 +284,7 @@ def argUnexpectedKeyword (fname : String) (names : List Name) (kw : Kw) : M Unit
   | none => typeErr s!"invalid keyword argument for {fname}()"
 
 /-- `PyArg_ParseTupleAndKeywords(empty_tuple, kwds, "|$OO...:fname", names, ...)`:
-`vgetargskeywords`, `Python/getargs.c:1690`, for keyword-only objects. -/
+`vgetargskeywords`, `Python/getargs.c:1575`, for keyword-only objects. -/
 def argKeywordOnly (fname : String) (names : List Name) (kw : Kw) : M (Name → Option Val) := do
   if kw.length > names.length then
     let l := names.length
@@ -455,7 +455,7 @@ def suppressContextSet (self : Val) (value : Option Val) : M Unit := do
   | some (.bool b) => excUpdate self fun d => { d with suppressContext := b }
   | some _ => typeErr "attribute value type must be bool"
 
-/-- `PyObject_GenericSetDict`, `Objects/dictobject.c`. -/
+/-- `PyObject_GenericSetDict`, `Objects/object.c:2046`. -/
 def excDictSet (obj : Val) (value : Option Val) : M Unit := do
   let w ← getW
   match value, obj with

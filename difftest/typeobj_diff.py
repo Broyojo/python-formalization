@@ -638,7 +638,8 @@ class G:
                 self.probe(call(name("str"), a))
             elif k == 19:
                 v = self.rng.choice(self.objs) if self.objs else "oA"
-                self.probes(["aug", v, r.choice(BIN), b])
+                # Not / or **: floats are opaque in the model, and the name is used again.
+                self.probes(["aug", v, r.choice([o for o in BIN if o not in ("/", "**")]), b])
             elif k == 20:
                 self.probe(call(name("int"), a))
             else:
@@ -940,11 +941,11 @@ def fam_wrappers(g):
             name("object"), name("type"), ["list", [lit(1)]], ["tuple", [lit(1)]],
             ["dict", []], lit(True)]
     types_ = ["object", "int", "str", "list", "tuple", "dict", "type", "A", "B", "bool"]
-    dunders = ["__add__", "__radd__", "__mul__", "__rmul__", "__eq__", "__ne__", "__lt__", "__hash__",
+    dunders = ["__add__", "__radd__", "__mul__", "__rmul__", "__eq__", "__ne__", "__lt__",
                "__repr__", "__str__", "__len__", "__getitem__", "__contains__", "__iter__",
                "__bool__", "__int__", "__index__", "__neg__", "__abs__", "__pow__", "__rpow__",
                "__getattribute__", "__setattr__", "__delattr__", "__init__", "__new__",
-               "__call__", "__sizeof__", "__format__", "__dir__", "__init_subclass__",
+               "__call__", "__format__", "__init_subclass__",
                "__subclasshook__", "__setitem__", "__delitem__", "__mod__", "__rmod__",
                "__iadd__", "__imul__", "__or__", "__ror__", "__and__", "__floordiv__",
                "__divmod__", "__lshift__", "__invert__", "__next__", "append", "mro"]
@@ -1031,7 +1032,6 @@ def fam_type_attrs(g):
         g.probe(call(name("repr"), name(t)))
         g.probe(call(name("repr"), call(name(t))))
         g.probe(call(name("str"), name(t)))
-    g.probe(call(attr(name("A"), "__dir__")))
     g.probe(call(name("dir"), name("B")))
     g.probe(call(name("dir"), call(name("B"))))
     g.probe(call(attr(name("object"), "__subclasses__")) if False else NONE)

@@ -1,0 +1,65 @@
+id: typeobj-exc-memoryerror-freelist-state
+title: "MemoryError freelist keeps __suppress_context__ from the previous object and drops __new__ arguments"
+priority: P4
+kind: state-leak
+module: typeobj
+files: [Objects/exceptions.c]
+functions: ["get_memory_error", "MemoryError_new", "MemoryError_dealloc", "BaseException_clear"]
+summary: |
+  `MemoryError` objects are recycled through a freelist of 16. `MemoryError_dealloc` runs
+  `BaseException_clear`, which clears the references but not the flag `suppress_context`, and
+  `get_memory_error` sets `dict` and `args` on the way out and nothing else. So the flag of a
+  dead `MemoryError` shows up on the next one:
+
+      e = MemoryError()
+      e.__cause__ = None        # or: raise MemoryError from None
+      del e
+      MemoryError().__suppress_context__      # True
+
+  A separate effect of the same path: `get_memory_error` ignores `args` when it takes an entry
+  from the freelist, so `MemoryError.__new__(MemoryError, 'x').args` is `()`, while
+  `BaseException.__new__(BaseException, 'x').args` and the same call on a subclass of
+  `MemoryError` give `('x',)`. It depends on the state of the freelist: with 16 live
+  `MemoryError` objects the same call keeps the argument. `MemoryError('x')` is not affected
+  because `__init__` sets `args` again.
+likelihood: |
+  Low. It takes `raise MemoryError from None` or a set `__cause__` on an exact `MemoryError`,
+  and the consequence is a hidden `__context__` in the traceback of a later `MemoryError`.
+maybe_intended: |
+  No. The freelist is meant to be invisible. The `__new__` part is harmless in practice.
+reproducer: |
+  e = MemoryError()
+  e.__cause__ = None
+  del e
+  f = MemoryError()
+  flag = f.__suppress_context__
+  args = MemoryError.__new__(MemoryError, 'x').args
+  class M(MemoryError): pass
+  sub = M.__new__(M, 'x').args
+  print(flag, args, sub, BaseException.__new__(BaseException, 'x').args)
+  if flag is True and args == () and sub == ('x',):
+      print('REPRODUCED typeobj-exc-memoryerror-freelist-state')
+expected: "False, ('x',), ('x',), ('x',)"
+promised_by: |
+  Undisputed invariant: an object from a freelist is indistinguishable from a new one. For
+  `args`, the implementation disagrees with itself: the freelist and allocation paths of
+  `get_memory_error`.
+cause: |
+  Objects/exceptions.c:4043-4049 restores `dict` and `args` only; :133 `BaseException_clear`
+  does not reset `suppress_context`, and :4047 sets `args` to the empty tuple without looking
+  at the argument passed at :4073.
+possible_fix: |
+  Set `self->suppress_context = 0` in `get_memory_error`, and use `args` there when it is
+  not NULL.
+reproduces:
+  python3 (3.14.7): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues:
+    - {number: 129668, state: closed, relation: unrelated (free-threaded race in the same freelist), reason: completed}
+  queries: ["MemoryError freelist suppress_context", "MemoryError suppress_context", "MemoryError __new__ args freelist",
+            "get_memory_error", "MemoryError __suppress_context__", "MemoryError freelist",
+            "bugforge-results/README.md: no exceptions.c entries"]
+lean:
+  property: PyLean.TypeObj.MemoryErrorFreelistFresh
+  theorem: PyLean.TypeObj.memoryErrorFreelistFresh_refuted

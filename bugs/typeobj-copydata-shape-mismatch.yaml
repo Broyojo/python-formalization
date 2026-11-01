@@ -1,0 +1,97 @@
+id: typeobj-copydata-shape-mismatch
+title: "PyObject_CopyData compares only total byte lengths, then walks the source's indices over the destination: wrong data, and writes outside the destination view, when the shapes differ"
+priority: P3
+kind: memory-safety
+module: typeobj
+files: [Objects/abstract.c]
+functions: ["PyObject_CopyData", "PyBuffer_GetPointer"]
+summary: |
+  The only size check in `PyObject_CopyData` is `view_dest.len < view_src.len`
+  (abstract.c:690). If both views are contiguous in one order it does a memcpy, which is
+  fine. Otherwise it walks an index vector over `view_src.shape` and hands the same vector to
+  `PyBuffer_GetPointer` for the destination (abstract.c:727-732). Nothing checks that the two
+  views have the same ndim or shape, so:
+
+    - same ndim, different shape: a 3x2 Fortran-ordered destination (6 bytes, strides 1, 3)
+      and a 2x3 C-ordered source (6 bytes) pass the length check, and the index (0, 2) is
+      valid for the source but lands at destination offset 6, past the last byte of the view.
+      The reproducer shows bytes 6 and 7 written, and bytes 2 and 5 of the view never written.
+    - destination has fewer dimensions: only the leading indices are used, so items overwrite
+      each other and the data is wrong.
+    - destination has more dimensions: `PyBuffer_GetPointer` reads `indices[k]` for every
+      destination dimension, past the end of the `view_src.ndim`-sized allocation.
+
+  The Lean model refutes `CopyDataInBounds` with the first case: every length check passes
+  and an element lands outside the destination.
+likelihood: |
+  Low. The function is reachable only from C (or ctypes), it needs a non-contiguous view on
+  one side, and callers normally copy between views of the same shape. When it does happen
+  the function reports success, and the write goes wherever the strides point: with an exactly
+  sized exporter that is out-of-bounds memory. The reproducer keeps the write inside a
+  32-byte block on purpose.
+maybe_intended: |
+  Partly. The docs say only "Copy data from src to dest buffer. Can convert between C-style
+  and or Fortran-style buffers" (Doc/c-api/buffer.rst:528), which suggests same-shaped views,
+  so a shape check is arguably the caller's job, as with memcpy. Writing outside a view after
+  reporting success is still not something a caller can diagnose, and the function already
+  takes responsibility for the size check. The memcpy path does give different shapes a
+  meaning (the same flattened bytes), which the strided path silently does not.
+reproducer: |
+  import ctypes
+  import _testbuffer as tb
+  api = ctypes.pythonapi
+  api.PyObject_CopyData.argtypes = [ctypes.py_object, ctypes.py_object]
+  api.PyObject_CopyData.restype = ctypes.c_int
+  class Py_buffer(ctypes.Structure):
+      _fields_ = [("buf", ctypes.c_void_p), ("obj", ctypes.c_void_p),
+                  ("len", ctypes.c_ssize_t), ("itemsize", ctypes.c_ssize_t),
+                  ("readonly", ctypes.c_int), ("ndim", ctypes.c_int),
+                  ("format", ctypes.c_char_p), ("shape", ctypes.c_void_p),
+                  ("strides", ctypes.c_void_p), ("suboffsets", ctypes.c_void_p),
+                  ("internal", ctypes.c_void_p)]
+  api.PyObject_GetBuffer.argtypes = [ctypes.py_object, ctypes.POINTER(Py_buffer), ctypes.c_int]
+  api.PyObject_GetBuffer.restype = ctypes.c_int
+  api.PyBuffer_Release.argtypes = [ctypes.POINTER(Py_buffer)]
+  api.PyBuffer_Release.restype = None
+  # A 3x2 Fortran-ordered view of a 32-byte block, so offsets past the view are still ours.
+  dest = tb.ndarray([0] * 32, shape=[3, 2], strides=[1, 3], format='B', flags=tb.ND_WRITABLE)
+  src = tb.ndarray(list(b'abcdef'), shape=[2, 3], format='B')
+  view = Py_buffer()
+  assert api.PyObject_GetBuffer(dest, ctypes.byref(view), 0x11d) == 0
+  in_view = {i + 3 * j for i in range(3) for j in range(2)}
+  rc = api.PyObject_CopyData(dest, src)
+  after = ctypes.string_at(view.buf, 32)
+  api.PyBuffer_Release(ctypes.byref(view))
+  written = {i for i in range(32) if after[i]}
+  print('dest', dest.nbytes, 'bytes, src', src.nbytes, 'bytes, rc', rc)
+  print('view offsets', sorted(in_view), 'written', sorted(written))
+  if rc == 0 and dest.nbytes == src.nbytes == 6 and written - in_view == {6, 7}:
+      print('REPRODUCED typeobj-copydata-shape-mismatch')
+expected: |
+  Either a BufferError, or every item ends up at an offset inside the destination view.
+observed: |
+  python3 3.14.7: returns 0; writes offsets 0, 1, 3, 4, 6, 7, where the view is offsets 0-5.
+  main: see check_bugs results below.
+promised_by: |
+  Undisputed invariant: a copy into a buffer stays inside that buffer's view. The check at
+  abstract.c:690 raises "destination is too small to receive data from source", so the
+  function does claim to guard this.
+cause: |
+  Objects/abstract.c:690 compares `len` only. Objects/abstract.c:712-719 sizes and zeroes
+  `indices` from `view_src`, and :727-732 applies that vector to both views through
+  `PyBuffer_GetPointer` (abstract.c:534), which trusts `view->ndim` and does not bounds-check.
+possible_fix: |
+  Outside the memcpy path, either raise BufferError unless ndim and shape match, or walk
+  separate index vectors over each view in C order, which also gives the strided path the
+  flattened-bytes meaning of the memcpy path. Issue #161081 asks upstream which they prefer.
+duplicates:
+  issues:
+    - {number: 161081, state: open, relation: "duplicate: same defect, filed 2026-11-01 by another reporter while this record was being written"}
+    - {number: 160701, state: "open PR", relation: "tests for this function; its body mentions different shapes giving wrong results"}
+    - {number: 153689, state: open, relation: "same function, integer overflows, a different defect"}
+    - {number: 143737, state: closed, relation: "copy order within a single shape, closed as not a bug, a different question"}
+  queries: ["PyObject_CopyData", "PyObject_CopyData shape", "PyObject_CopyData different shapes", "PyObject_CopyData shape mismatch out of bounds"]
+  bugforge: "no match for CopyData"
+lean:
+  property: PyLean.TypeObj.CopyDataInBounds
+  theorem: PyLean.TypeObj.copyDataInBounds_refuted

@@ -1,0 +1,58 @@
+id: typeobj-exc-eg-repr-args-oob
+title: "repr() of an exception group reads args[1] out of bounds after args is replaced (segfault)"
+priority: P1
+kind: crash
+module: typeobj
+files: [Objects/exceptions.c]
+functions: ["BaseExceptionGroup_repr"]
+summary: |
+  `BaseExceptionGroup_repr` tests `PyList_Check(PyTuple_GET_ITEM(self->args, 1))` to decide
+  whether to show the exceptions as a list, without checking the size of `self->args`.
+  `args` is writable (`e.args = ...`) and `__init__` replaces it, so `args` can be shorter
+  than 2. On 3.14.7 pure Python segfaults:
+
+      e = ExceptionGroup("x", [ValueError(1)])
+      e.args = ()
+      repr(e)
+
+  The same happens with `e.args = (1,)`, and with a subclass whose `__init__` calls
+  `super().__init__()` with no arguments. It is known and already fixed: gh-146096, fixed by
+  gh-146141 on main and by gh-156904 on the 3.14 branch after 3.14.7 was cut. Recorded here
+  because the model of 3.14.7 reaches the read.
+likelihood: |
+  Low in ordinary code, since few programs assign `args` on a group. Subclasses that call
+  `super().__init__()` with other arguments are the realistic way in, and then any logging of
+  the exception crashes the process.
+maybe_intended: |
+  No. It is a memory-safety bug.
+reproducer: |
+  import subprocess, sys
+  src = 'e = ExceptionGroup("x", [ValueError(1)]); e.args = (); print(repr(e))'
+  p = subprocess.run([sys.executable, "-c", src], capture_output=True)
+  print("return code", p.returncode, p.stdout, p.stderr[-200:])
+  if p.returncode < 0:
+      print('REPRODUCED typeobj-exc-eg-repr-args-oob')
+expected: "A repr, as on main: ExceptionGroup('x', (ValueError(1),))."
+promised_by: |
+  Undisputed invariant: pure Python must not crash the interpreter.
+cause: |
+  Objects/exceptions.c:1103 (3.14.7) reads `PyTuple_GET_ITEM(self->args, 1)` with no size
+  check; `BaseException_args_set_impl` (:359) and `BaseExceptionGroup_init` (:1031) can make
+  `args` shorter. `BaseExceptionGroup_new` checks only the original arguments.
+possible_fix: |
+  Already applied upstream: test `PyTuple_GET_SIZE(self->args) == 2` first
+  (vendor/cpython-main/Objects/exceptions.c:1077).
+reproduces:
+  python3 (3.14.7): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): does not reproduce (fixed)
+duplicates:
+  issues:
+    - {number: 146096, state: closed, relation: same defect, reason: completed}
+  prs:
+    - {number: 146141, state: merged, relation: the fix on main}
+    - {number: 156904, state: merged, relation: the backport to 3.14, after 3.14.7}
+  queries: ["ExceptionGroup repr args segfault", "BaseExceptionGroup_repr", "PR: ExceptionGroup repr", "PR: 146096",
+            "bugforge-results/README.md: no exceptions.c entries"]
+lean:
+  property: PyLean.TypeObj.EgReprInBoundsAfterArgsSet
+  theorem: PyLean.TypeObj.egReprInBoundsAfterArgsSet_refuted
