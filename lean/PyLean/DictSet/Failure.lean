@@ -163,6 +163,39 @@ theorem compareGenericFailure_proven : CompareGenericFailure := fun _ _ _ P mp m
   ⟨fun e hq => compareGeneric_raises P mp mp' ix key epKey hash e he hne hq,
    fun b hq hch => compareGeneric_changed P mp mp' ix key epKey hash b he hne hq hch⟩
 
+theorem compareUnicodeGeneric_raises (P : Proto K (PyDict K V)) (mp mp' : PyDict K V) (ix : Nat)
+    (key epKey : K) (hash : Int) (e : PyExc) (he : mp.body.entryKH ix = some (epKey, hash))
+    (hq : P.eq epKey key mp = (.error e, mp')) :
+    compareUnicodeGeneric P ix key hash mp = (.error e, mp') := by
+  simp [compareUnicodeGeneric, he, hq]
+
+theorem compareUnicodeGeneric_changed (P : Proto K (PyDict K V)) (mp mp' : PyDict K V) (ix : Nat)
+    (key epKey : K) (hash : Int) (b : Bool) (he : mp.body.entryKH ix = some (epKey, hash))
+    (hq : P.eq epKey key mp = (.ok b, mp'))
+    (hch : stillThere mp' mp.body.ident ix epKey = false) :
+    compareUnicodeGeneric P ix key hash mp = (.ok DKIX_KEY_CHANGED, mp') := by
+  simp [compareUnicodeGeneric, he, hq, hch]
+
+/-- `compare_unicode_generic`, the paths `Honest` rules out. -/
+def CompareUnicodeFailure : Prop :=
+  ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (mp mp' : PyDict K V) (ix : Nat) (key epKey : K)
+    (hash : Int), mp.body.entryKH ix = some (epKey, hash) →
+    (∀ e, P.eq epKey key mp = (.error e, mp') → compareUnicodeGeneric P ix key hash mp = (.error e, mp')) ∧
+    (∀ b, P.eq epKey key mp = (.ok b, mp') → stillThere mp' mp.body.ident ix epKey = false →
+      compareUnicodeGeneric P ix key hash mp = (.ok DKIX_KEY_CHANGED, mp'))
+theorem compareUnicodeFailure_proven : CompareUnicodeFailure := fun _ _ _ P mp mp' ix key epKey hash he =>
+  ⟨fun e hq => compareUnicodeGeneric_raises P mp mp' ix key epKey hash e he hq,
+   fun b hq hch => compareUnicodeGeneric_changed P mp mp' ix key epKey hash b he hq hch⟩
+
+/-- The probe loop stops at a check that raises. -/
+def DoLookupRaises : Prop :=
+  ∀ (σ : Type) (getIx : σ → Nat → Int) (check : Nat → M σ Int) (mask u : Nat) (s s' : σ) (e : PyExc)
+    (fuel : Nat), getIx s (u &&& mask) ≥ 0 →
+    check (getIx s (u &&& mask)).toNat s = (.error e, s') →
+    doLookup getIx check (fuel + 1) mask (u &&& mask) u s = (.error e, s')
+theorem doLookupRaises_proven : DoLookupRaises := fun _ getIx check mask u s s' e fuel hix hck =>
+  doLookup_raises getIx check mask u s s' e fuel hix hck
+
 /-- `_Py_dict_lookup`'s `goto start`. -/
 def LookupRestarts : Prop :=
   ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (key : K) (hash : Int) (n : Nat)

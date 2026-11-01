@@ -55,25 +55,42 @@ class KRaise(K):
 
 
 TARGET = [None]
+POOL = [None]
+
+
+def evil_act(t, n):
+    """1 clears, 2 pops an item, 10 + i pops an item and stores its value under pool object i,
+    which keeps the number of items, so `orig_size` in dict_dict_merge cannot see it."""
+    if n == 0:
+        return
+    if n == 1:
+        t.clear()
+    elif n == 2:
+        try:
+            t.popitem() if isinstance(t, dict) else t.pop()
+        except KeyError:
+            pass
+    else:
+        try:
+            v = t.popitem()[1]
+        except KeyError:
+            return
+        t[POOL[0][n - 10]] = v
 
 
 class KEvil(K):
-    __slots__ = ("act",)
+    __slots__ = ("act", "rs")
     __hash__ = K.__hash__
 
-    def __init__(self, c, h, u, act):
+    def __init__(self, c, h, u, act, rs=False):
         super().__init__(c, h, u)
         self.act = act
+        self.rs = rs
 
     def __eq__(self, o):
-        t = TARGET[0]
-        if self.act == 1:
-            t.clear()
-        else:
-            try:
-                t.popitem() if isinstance(t, dict) else t.pop()
-            except KeyError:
-                pass
+        evil_act(TARGET[0], self.act)
+        if self.rs:
+            raise ValueError("eq")
         return False
 
 
@@ -102,6 +119,31 @@ class Mapping:
             if a is k:
                 return b
         raise KeyError(k)
+
+
+class HookMapping(Mapping):
+    """`__getitem__` of `hook` does `act` to the receiver; `keys()` may raise."""
+
+    def __init__(self, ks, pairs, hook, act, recv, kr):
+        super().__init__(ks, pairs)
+        self.hook, self.act, self.recv, self.kr = hook, act, recv, kr
+
+    def keys(self):
+        if self.kr:
+            raise ValueError("keys")
+        return super().keys()
+
+    def __getitem__(self, k):
+        if k is self.hook:
+            evil_act(self.recv, self.act)
+        return super().__getitem__(k)
+
+
+class AttrRaises:
+    """`hasattr(self, 'keys')` raises something other than AttributeError."""
+
+    def __getattr__(self, name):
+        raise ValueError("hasattr")
 
 
 class DictSub(dict):
@@ -166,7 +208,7 @@ def build(spec):
     if kind == "Kr":
         return KRaise(p[0], p[1], u)
     if kind == "Kev":
-        return KEvil(p[0], p[1], u, p[2])
+        return KEvil(p[0], p[1], u, p[2], len(p) > 3 and p[3])
     if kind == "list":
         return [u]
     if kind == "hraise":
@@ -304,7 +346,14 @@ def upd_arg(rng, n):
     if o < 0.95:
         ks = [k() for _ in range(rng.randint(0, 6))]
         pairs = [[x, k()] for x in ks if rng.random() < 0.9]
+        if rng.random() < 0.3 and ks:
+            return ["mr", ks, pairs, rng.choice(ks), rng.choice([0, 1, 2]), rng.random() < 0.15]
         return ["m", ks, pairs]
+    if o < 0.97:
+        items = [["p", k(), k()] for _ in range(rng.randint(0, 6))]
+        return ["pr", items, rng.randint(0, 6), rng.choice([1, 2]), rng.random() < 0.2]
+    if o < 0.98:
+        return ["hr"]
     return ["n"]
 
 
@@ -581,6 +630,40 @@ def gen_evil(rng):
     return pool, ops, target
 
 
+def gen_merge(rng):
+    """`dict_dict_merge` with a key whose `__eq__` changes the source or the receiver: a pool of
+    keys sharing a hash, so that inserting one into the receiver compares it with another."""
+    pool = Pool()
+    h = rng.choice([0, 1, 8, 16])
+    for i in range(rng.randint(2, 7)):
+        pool.add("K", [i, h if rng.random() < 0.8 else i], ("K", i))
+    fresh = pool.add("K", [50, 1000 + rng.randrange(1000)], ("K", 50))
+    target = rng.choice(["d0", "d1", "d1", "d1"])
+    act = rng.choice([1, 2, 2, 10 + fresh]) if target == "d1" else rng.choice([1, 2, 10 + fresh])
+    rs = rng.random() < 0.2
+    for i in range(rng.randint(1, 3)):
+        pool.add("Kev", [100 + i, h, act, rs], ("Kev", i), a=act, r=rs)
+    int_pool(pool, rng, 3, 8)
+    n = len(pool.specs)
+    ops = []
+    for _ in range(rng.randint(2, 12)):
+        ops.append(["set", rng.randrange(2), rng.randrange(n), rng.randrange(n)])
+    for _ in range(rng.randint(1, 6)):
+        r = rng.random()
+        k = rng.randrange(n)
+        if r < 0.5:
+            ops.append(["upd", 0, ["d", 1], []])
+        elif r < 0.65:
+            ops.append(["ior", 0, ["d", 1]])
+        elif r < 0.85:
+            ops.append(["set", rng.randrange(2), k, k])
+        elif r < 0.95:
+            ops.append(["del", rng.randrange(2), k])
+        else:
+            ops.append(["popitem", rng.randrange(2)])
+    return pool, ops, target
+
+
 def pair_item(rng, n):
     r = rng.random()
     if r < 0.9:
@@ -793,8 +876,10 @@ def gen_case(rng):
         pool, ops = gen_views(rng)
     elif r < 0.63:
         pool, ops = gen_iters(rng)
-    elif r < 0.69:
+    elif r < 0.66:
         pool, ops, target = gen_evil(rng)
+    elif r < 0.72:
+        pool, ops, target = gen_merge(rng)
     elif r < 0.81:
         pool, ops = gen_odict(rng)
         case = {"fn": "odict", "fork": True}
@@ -826,9 +911,12 @@ class Runner:
         self.C = type("C", (), {})
         self.objs = [None] * 3 if self.fn == "instances" else []
         self.touched = [False] * 3
+        POOL[0] = self.pool
         t = case.get("target")
-        if t == "d":
+        if t in ("d", "d0"):
             TARGET[0] = self.ds[0]
+        elif t == "d1":
+            TARGET[0] = self.ds[1]
         elif t == "s":
             TARGET[0] = self.ss[0]
 
@@ -1034,7 +1122,7 @@ class Runner:
             return 7
         return [self.pool[0]] * it[1]
 
-    def upd_arg(self, a):
+    def upd_arg(self, a, recv=None):
         t = a[0]
         if t == "d":
             return self.ds[a[1]]
@@ -1050,6 +1138,22 @@ class Runner:
             return items
         if t == "m":
             return Mapping([self.O(x) for x in a[1]], [(self.O(p[0]), self.O(p[1])) for p in a[2]])
+        if t == "mr":
+            return HookMapping([self.O(x) for x in a[1]], [(self.O(p[0]), self.O(p[1])) for p in a[2]],
+                               self.O(a[3]), a[4], recv, a[5])
+        if t == "pr":
+            items = [self.seq2(x) for x in a[1]]
+
+            def hooked():
+                for i, x in enumerate(items):
+                    if i == a[2]:
+                        evil_act(recv, a[3])
+                    yield x
+                if a[4]:
+                    raise ValueError("stop")
+            return hooked()
+        if t == "hr":
+            return AttrRaises()
         return 5
 
     def sub(self, slot):
@@ -1112,11 +1216,11 @@ class Runner:
             return repr(ds[op[1]])
         if name == "upd":
             kw = {P[a]: P[b] for a, b in op[3]}
-            ds[op[1]].update(self.upd_arg(op[2]), **kw)
+            ds[op[1]].update(self.upd_arg(op[2], ds[op[1]]), **kw)
             return None
         if name == "ior":
             d = ds[op[1]]
-            d |= self.upd_arg(op[2])
+            d |= self.upd_arg(op[2], d)
             return None
         if name == "or":
             ds[2] = ds[op[1]] | ds[op[2]]
