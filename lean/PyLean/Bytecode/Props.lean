@@ -126,6 +126,12 @@ theorem abstractNeverAllocates_refuted : ¬AbstractNeverAllocates := by
     rfl rfl (by decide)
   exact absurd this (by decide)
 
+/-- The laws the specialization theorems assume hold of the object model the difftest
+runs. Not proven, so those theorems are conditional on it. It may need restating:
+`binaryOpImpl` calls the `getItem` of the next fuel level down, so the law `subscr`
+compares two fuel depths, and they can differ at the fuel limit. -/
+def LawfulBuiltin : Prop := ∀ P : Program, Lawful (Proto.builtinOM P)
+
 /-! ## Named gaps
 
 Each is an `.open` entry and a named exclusion of `difftest/bytecode_diff.py`. -/
@@ -134,16 +140,16 @@ Each is an `.open` entry and a named exclusion of `difftest/bytecode_diff.py`. -
 template with a `%` in it does. -/
 def FormatRuns : Prop :=
   ∀ (om : ObjModel) (ctx : Ctx) (a : String) (b : List UInt8) (rt rt' : Rt) (m : String),
-    seqBinary om ctx 6 (.str a) .none rt ≠ .error (.fault m) rt' ∧
-    seqBinary om ctx 6 (.bytes b) .none rt ≠ .error (.fault m) rt'
+    Proto.seqBinary om ctx 6 (.str a) .none rt ≠ .error (.fault m) rt' ∧
+    Proto.seqBinary om ctx 6 (.bytes b) .none rt ≠ .error (.fault m) rt'
 
 /-- `float ** float` does not reach the model's `fault`. False today: a complex result does. -/
 def FloatPowRuns : Prop :=
-  ∀ (a b : UInt64) (rt rt' : Rt) (m : String), floatBinary 8 a b rt ≠ .error (.fault m) rt'
+  ∀ (a b : UInt64) (rt rt' : Rt) (m : String), Proto.floatBinary 8 a b rt ≠ .error (.fault m) rt'
 
 /-- `int << int` does not reach the model's `fault`. False today: a huge shift does. -/
 def HugeShiftRuns : Prop :=
-  ∀ (a b : Int) (rt rt' : Rt) (m : String), intBinary 3 a b rt ≠ .error (.fault m) rt'
+  ∀ (a b : Int) (rt rt' : Rt) (m : String), Proto.intBinary 3 a b rt ≠ .error (.fault m) rt'
 
 /-- An `.open` entry whose property cannot be written until the model has what the
 entry's notes name. No theorem claims it. -/

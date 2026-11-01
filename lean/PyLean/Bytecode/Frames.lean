@@ -15,7 +15,7 @@ open Uop
 
 /-- `RETURN_VALUE` removes the frame, resumes the caller at its return offset and
 leaves the value on top of the caller's stack, whatever the caller's stack is.
-The frame is not a generator's (a generator is `ReturnGen` below). -/
+The frame is not a generator's: `owner = .thread`. -/
 def ReturnValue : Prop :=
   ∀ (regs : Regs) (retval : Val) (rest : List Val) (caller : Frame) (prev : List Frame),
     regs.prev = caller :: prev → regs.frame.owner = .thread →

@@ -225,6 +225,12 @@ def entries : List Entry := GenObj.entries ++ [
     source := "push_value/pop_value/top_of_stack, Objects/frameobject.c:1199-1222"
     status := .open, prop := ``FrameObj.PushPop
     notes := "Proof did not survive: needs the shift arithmetic of push_value below the overflow threshold in core Lean." },
+  { id := "bytecode-lawful-builtin", pyFile := "Python/bytecodes.c"
+    pyFns := []
+    statement := "The concrete object model satisfies Lawful, the laws every bytecode specialization theorem assumes."
+    source := "the hypothesis of bytecode-binary-op-* and bytecode-binary-op-subscr-list-int"
+    status := .open, prop := ``LawfulBuiltin
+    notes := "Not discharged: those eight theorems are conditional on it, and nothing here shows Lawful is satisfiable. The law subscr compares two fuel levels in the fuel-indexed model, so it may need restating. The difftest's quick mode tests specialized forms against CPython, which is evidence and not a proof." },
   { id := "bytecode-gap-str-percent", pyFile := "Objects/unicodeobject.c"
     pyFns := []
     statement := "str % args and bytes % args with a conversion in the template format their arguments."
