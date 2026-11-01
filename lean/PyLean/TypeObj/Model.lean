@@ -231,8 +231,9 @@ inductive Builtin where
   | tupleCount | tupleIndex | listAppend | strFormat | dunderGetitem | dunderContains
   /-- `dict.keys`, and the `__length_hint__` of the C iterators. -/
   | dictKeysMethod | iterLengthHint
-  /-- `str.__format__`. `object.__format__` is `objectFormat`. -/
-  | strDunderFormat
+  /-- `str.__format__`, and `int.__format__` with `float.__format__`.
+  `object.__format__` is `objectFormat`. -/
+  | strDunderFormat | numDunderFormat
   /-- A `PyMethodDef` of an exception class, by name (`Exceptions.lean`). -/
   | excMethod (name : String)
   /-- Harness: `hash(x)` as the difftest can compare it. -/

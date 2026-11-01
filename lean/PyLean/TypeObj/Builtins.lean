@@ -87,7 +87,7 @@ def methodOf (tn n : String) : Builtin :=
   | "tuple_iterator", "__length_hint__" | "str_ascii_iterator", "__length_hint__"
   | "dict_keyiterator", "__length_hint__" => .iterLengthHint
   | "str", "__format__" => .strDunderFormat
-  | "int", "__format__" | "float", "__format__" => .objectFormat
+  | "int", "__format__" | "float", "__format__" => .numDunderFormat
   | _, "__class_getitem__" => .classGetitem
   | "BaseException", _ | "BaseExceptionGroup", _ | "ImportError", _ | "OSError", _
   | "AttributeError", _ => .excMethod (tn ++ "." ++ n)

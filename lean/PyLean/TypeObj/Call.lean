@@ -873,6 +873,7 @@ def builtinConv : Builtin → String × MethConv
   | .objectSubclasshook => ("__subclasshook__", .o)
   | .objectFormat => ("__format__", .o)
   | .strDunderFormat => ("__format__", .o)
+  | .numDunderFormat => ("__format__", .o)
   | .objectDir => ("__dir__", .noargs)
   | .objectSizeof => ("__sizeof__", .noargs)
   | .objectGetstate => ("__getstate__", .noargs)
@@ -961,6 +962,20 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
       match strOf w s with
       | some sp =>
         objectFormat rt selfV sp
+      | none => typeErr s!"__format__() argument must be str, not {argTypeName w s}"
+    | _ => unmodelled
+  | .numDunderFormat =>
+    -- `int.__format__` and `float.__format__`, `_PyLong_FormatAdvancedWriter` and
+    -- `_PyFloat_FormatAdvancedWriter`, `Python/formatter_unicode.c:1590`, `:1652`: an empty
+    -- spec is the `str` of the number, and type `s` is `unknown_presentation_type` (:1584,
+    -- :1642). Other specs belong to `LongObj` and `Binary64`.
+    match args with
+    | [s] =>
+      match strOf w s with
+      | some "" => .str <$> rt.str selfV
+      | some "s" =>
+        valueErr s!"Unknown format code 's' for object of type '{trunc 200 (typeName w selfV)}'"
+      | some _ => unmodelled
       | none => typeErr s!"__format__() argument must be str, not {argTypeName w s}"
     | _ => unmodelled
   | .strDunderFormat =>
