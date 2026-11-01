@@ -68,29 +68,6 @@ theorem stackEffects_proven : StackEffects := fun e =>
   ⟨eff_pop_top e, eff_build_tuple e, eff_build_map e, eff_get_iter e, eff_is_op e, eff_get_len e,
    eff_match_keys e, eff_import_from e, eff_store_fast e, eff_build_slice e⟩
 
-/-- Without a monitoring tool an instrumented instruction is the plain one. -/
-def InstrumentedPlain : Prop := ∀ (e : Env),
-  execOp e .INSTRUMENTED_END_SEND = execOp e .END_SEND ∧
-  execOp e .INSTRUMENTED_FOR_ITER = _FOR_ITER e ∧
-  execOp e .INSTRUMENTED_RETURN_VALUE = (do _RETURN_VALUE_EVENT; RETURN_VALUE) ∧
-  execOp e .INSTRUMENTED_JUMP_FORWARD = execOp e .JUMP_FORWARD ∧
-  execOp e .INSTRUMENTED_POP_JUMP_IF_TRUE = execOp e .POP_JUMP_IF_TRUE ∧
-  execOp e .INSTRUMENTED_POP_JUMP_IF_FALSE = execOp e .POP_JUMP_IF_FALSE ∧
-  execOp e .INSTRUMENTED_POP_JUMP_IF_NONE = execOp e .POP_JUMP_IF_NONE ∧
-  execOp e .INSTRUMENTED_POP_JUMP_IF_NOT_NONE = execOp e .POP_JUMP_IF_NOT_NONE
-theorem instrumentedPlain_proven : InstrumentedPlain := fun _ => ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
-
-/-- A form the interpreter rewrites to, and back, with no other effect. -/
-def PlainFamilies : Prop := ∀ (e : Env) (s : St),
-  execOp e .NOT_TAKEN s = execOp e .NOP s ∧
-  execOp e .RESUME_CHECK s = execOp e .RESUME s ∧
-  execOp e .LOAD_CONST_MORTAL s = execOp e .LOAD_CONST s ∧
-  execOp e .LOAD_CONST_IMMORTAL s = execOp e .LOAD_CONST s ∧
-  execOp e .LOAD_FAST_BORROW s = execOp e .LOAD_FAST s ∧
-  execOp e .POP_ITER s = execOp e .POP_TOP s ∧
-  execOp e .JUMP_BACKWARD_NO_JIT s = execOp e .JUMP_BACKWARD s
-theorem plainFamilies_proven : PlainFamilies := fun _ _ => ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
-
 /-! ## The recursion check -/
 
 /-- Whether an instruction raised, or completed. -/

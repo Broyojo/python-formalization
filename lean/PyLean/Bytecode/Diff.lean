@@ -2,6 +2,7 @@ import PyLean.DiffCore
 import PyLean.Bytecode.Specialize
 import PyLean.Bytecode.FrameObj
 import PyLean.Bytecode.IterObj
+import PyLean.Bytecode.GenObj.Diff
 
 /-!
 Differential-testing handler for `bytecode` cases (`"mod": "bytecode"`).
@@ -382,7 +383,10 @@ def run (fn : String) (j : Json) : Except String Json :=
     | some op => pure (Json.mkObj [("ok", Json.arr #[toJson (numPopped op a), toJson (numPushed op a),
         toJson (Op.deopt op).toNat, toJson (Uop.instrSize op)])])
     | none => throw "unknown opcode"
-  | _ => throw s!"unknown fn {fn}"
+  | _ =>
+    match GenObj.run? fn j with
+    | some r => r
+    | none => throw s!"unknown fn {fn}"
 
 def handler : Handler := fun fn j => some (run fn j)
 

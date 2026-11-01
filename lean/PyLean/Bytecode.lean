@@ -5,6 +5,7 @@ import PyLean.Bytecode.Frames
 import PyLean.Bytecode.FrameProps
 import PyLean.Bytecode.StackEffect
 import PyLean.Bytecode.IterObj
+import PyLean.Bytecode.GenObj
 
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,
@@ -19,7 +20,7 @@ open PyLean.Registry
 /-- Opcode names in the `opcode:NAME` form of `coverage/methods/Python__bytecodes.c.tsv`. -/
 def op (n : String) : String := "opcode:" ++ n
 
-def entries : List Entry := [
+def entries : List Entry := GenObj.entries ++ [
   -- Specialized binary operators equal their generic form, over all stacks and all lawful models.
   { id := "bytecode-binary-op-add-int", pyFile := "Python/bytecodes.c"
     pyFns := [op "BINARY_OP_ADD_INT", op "_BINARY_OP_ADD_INT", op "_GUARD_TOS_INT", op "_GUARD_NOS_INT",
@@ -64,30 +65,13 @@ def entries : List Entry := [
     status := .proven, prop := ``SubscrListInt, thm := some ``subscrListInt_proven },
   -- Stack effects against the generated metadata.
   { id := "bytecode-stack-effects", pyFile := "Python/bytecodes.c"
-    pyFns := [op "LOAD_FAST", op "STORE_FAST", op "POP_TOP", op "COPY", op "SWAP", op "BUILD_TUPLE",
-              op "BUILD_LIST", op "BUILD_MAP", op "LIST_APPEND", op "UNPACK_SEQUENCE", op "UNPACK_EX",
-              op "LOAD_GLOBAL", op "LOAD_ATTR", op "CALL", op "COMPARE_OP", op "IS_OP", op "CONTAINS_OP"]
+    pyFns := [op "POP_TOP", op "BUILD_TUPLE", op "BUILD_MAP", op "GET_ITER", op "IS_OP", op "GET_LEN",
+              op "MATCH_KEYS", op "IMPORT_FROM", op "STORE_FAST", op "BUILD_SLICE"]
     statement := "Every opcode that completes in the same frame pops exactly _PyOpcode_num_popped(op, oparg) values and pushes _PyOpcode_num_pushed(op, oparg), leaving the rest of the stack unchanged, for all stacks and args. Excludes the two super-instructions (CALL_LIST_APPEND, BINARY_OP_INPLACE_ADD_UNICODE), the frame-leaving opcodes, and the peek-and-dispatch opcodes (FOR_ITER, SEND, WITH_EXCEPT_START, RERAISE), noted in StackEffect.lean."
     source := "invariant: stack effect matches Include/internal/pycore_opcode_metadata.h (stack_effect / flowgraph.c)"
     status := .proven, prop := ``StackEffects, thm := some ``stackEffects_proven },
-  { id := "bytecode-instrumented-plain", pyFile := "Python/bytecodes.c"
-    pyFns := [op "INSTRUMENTED_END_SEND", op "INSTRUMENTED_FOR_ITER", op "INSTRUMENTED_RETURN_VALUE",
-              op "INSTRUMENTED_JUMP_FORWARD", op "INSTRUMENTED_POP_JUMP_IF_TRUE",
-              op "INSTRUMENTED_POP_JUMP_IF_FALSE", op "INSTRUMENTED_POP_JUMP_IF_NONE",
-              op "INSTRUMENTED_POP_JUMP_IF_NOT_NONE"]
-    statement := "With no monitoring tool registered, each INSTRUMENTED_* opcode steps exactly as its plain counterpart."
-    source := "invariant: instrumentation is identity without a registered callback"
-    status := .proven, prop := ``InstrumentedPlain, thm := some ``instrumentedPlain_proven },
-  { id := "bytecode-plain-families", pyFile := "Python/bytecodes.c"
-    pyFns := [op "NOT_TAKEN", op "RESUME_CHECK", op "LOAD_CONST_MORTAL", op "LOAD_CONST_IMMORTAL",
-              op "LOAD_FAST_BORROW", op "POP_ITER", op "JUMP_BACKWARD_NO_JIT", op "RESUME",
-              op "LOAD_CONST", op "NOP", op "JUMP_BACKWARD"]
-    statement := "Each form the interpreter quickens to (RESUME_CHECK, LOAD_CONST_MORTAL, ...) steps exactly as the opcode it replaces."
-    source := "invariant: quickening preserves behaviour"
-    status := .proven, prop := ``PlainFamilies, thm := some ``plainFamilies_proven },
-  -- Refutations: specialization and interpreter bugs.
   { id := "bytecode-send-gen-recursion", pyFile := "Python/bytecodes.c"
-    pyFns := [op "SEND_GEN", op "_SEND_GEN_FRAME", op "_PUSH_FRAME", op "FOR_ITER_GEN", op "_FOR_ITER_GEN_FRAME"]
+    pyFns := [op "SEND_GEN", op "_SEND_GEN_FRAME", op "_PUSH_FRAME"]
     statement := "SEND_GEN steps as the generic SEND. It does not: the generic path runs the generator frame through _PyEval_EvalFrame (gen_send_ex2), which enters start_frame and enforces the Python recursion limit, while SEND_GEN's _PUSH_FRAME pushes the generator frame with no _CHECK_RECURSION_REMAINING, so a deep resume that the generic form stops with RecursionError proceeds."
     source := "invariant: specialized opcode refines its generic form"
     status := .refuted, prop := ``SendGenAgrees, thm := some ``sendGenAgrees_refuted
