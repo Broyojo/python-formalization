@@ -204,6 +204,283 @@ def run_codec_wide_encode(c):
     return list(s_of(c["s"]).encode(WIDE_NAMES[c["width"]] + suffix, c["errors"]))
 
 
+NAME_LOOKUPS = ["LATIN SMALL LETTER A", "latin small letter a", "SNOWMAN", "BULLET", "NOPE", "",
+                "GRINNING FACE", "CJK UNIFIED IDEOGRAPH-4E00", "LF", "HANGUL SYLLABLE GA", "}"]
+UCS1_ALPH = [0, 65, 92, 127, 128, 233, 255, 256, 0x2603, 0xd800, 0xdc80, 0xdcff, 0xdd00, 0x1f600,
+             0x10ffff]
+ESC_BYTES = [65, 92, 92, 92, 39, 34, 98, 102, 116, 110, 114, 118, 97, 10, 48, 52, 55, 56, 120, 117,
+             85, 78, 123, 125, 53, 97, 70, 0x80, 0xff, 0]
+
+
+def esc_bytes(rng):
+    r = rng.random()
+    if r < 0.4:
+        return [rng.choice(ESC_BYTES) for _ in range(rng.randint(0, 10))]
+    pieces = [b"\\x41", b"\\u0041", b"\\U00000041", b"\\U0010ffff", b"\\U00110000", b"\\xZ", b"\\u12",
+              b"\\U1", b"\\777", b"\\101", b"\\8", b"\\q", b"\\\n", b"\\", b"a", b"\\N", b"\\N{",
+              b"\\N{}", b"\\Nx", b"\xff", b"\\\\", b"\\ud800"]
+    pieces += [b"\\N{" + n.encode() + b"}" for n in NAME_LOOKUPS]
+    return list(b"".join(rng.choice(pieces) for _ in range(rng.randint(0, 4))))
+
+
+def name_table(b):
+    """The names in the case's bytes that CPython's \\N accepts."""
+    out = []
+    i = 0
+    data = bytes(b)
+    while True:
+        i = data.find(b"\\N{", i)
+        if i < 0:
+            return out
+        j = data.find(b"}", i)
+        if j < 0:
+            return out
+        name = data[i + 3:j]
+        try:
+            ch = (b"\\N{" + name + b"}").decode("unicode_escape")
+            if len(ch) == 1 and name:
+                out.append([list(name), ord(ch)])
+        except UnicodeDecodeError:
+            pass
+        i += 3
+
+
+def char_names(s):
+    out = []
+    for c in sorted(set(s)):
+        n = unicodedata.name(chr(c), None)
+        if n:
+            out.append([cps_of(n), c])
+    return out
+
+
+@gen("codec", 3)
+def gen_codec_ucs1(rng):
+    s = [rng.choice(UCS1_ALPH) for _ in range(rng.randint(0, 6))]
+    return {"mod": "unicodeobj", "fn": "codec_ucs1_encode", "s": s, "limit": rng.choice([128, 256]),
+            "errors": rng.choice(ALL_HANDLERS), "names": char_names(s)}
+
+
+@gen("codec", 3)
+def gen_codec_ascii(rng):
+    b = [rng.choice([0, 65, 127, 128, 200, 255]) for _ in range(rng.randint(0, 12))]
+    return {"mod": "unicodeobj", "fn": rng.choice(["codec_ascii_decode", "codec_latin1_decode"]), "b": b,
+            "errors": rng.choice(ALL_HANDLERS)}
+
+
+@gen("codec", 4)
+def gen_codec_ue(rng):
+    b = esc_bytes(rng)
+    fn = rng.choice(["codec_ue_decode", "codec_raw_decode"])
+    c = {"mod": "unicodeobj", "fn": fn, "b": b, "errors": rng.choice(ALL_HANDLERS),
+         "final": rng.random() < 0.7}
+    if fn == "codec_ue_decode":
+        c["names"] = name_table(b)
+    return c
+
+
+@gen("codec", 2)
+def gen_codec_esc_encode(rng):
+    s = [rng.choice(UCS1_ALPH + [9, 10, 13, 31, 32, 126]) for _ in range(rng.randint(0, 6))]
+    return {"mod": "unicodeobj", "fn": rng.choice(["codec_ue_encode", "codec_raw_encode",
+                                                   "codec_utf7_encode"]), "s": s}
+
+
+U7_PIECES = [b"+", b"-", b"+-", b"a", b" ", b"~", b"\\", b"\xff", b"!", b"\x00", b"+AGE-", b"+AGE", b"+2AA",
+             b"+2AA-", b"+2ADcAA-", b"+3AA-", b"+2AAA", b"+A", b"+AA", b"+AAA", b"+AAB", b"+//8-", b"+AGE.",
+             b"+2AAAYQ-", b"/", b"+2D3eAA-", b"+AAA+"]
+
+
+@gen("codec", 4)
+def gen_codec_utf7(rng):
+    if rng.random() < 0.3:
+        s = "".join(chr(rng.choice([65, 43, 45, 32, 0, 126, 233, 0x20ac, 0x1f600, 0xd800, 0xdc00]))
+                    for _ in range(rng.randint(0, 5)))
+        b = list(s.encode("utf-7"))
+    else:
+        b = list(b"".join(rng.choice(U7_PIECES) for _ in range(rng.randint(0, 4))))
+    return {"mod": "unicodeobj", "fn": "codec_utf7_decode", "b": b, "errors": rng.choice(ALL_HANDLERS),
+            "final": rng.random() < 0.7}
+
+
+@run("codec_ucs1_encode")
+def run_codec_ucs1(c):
+    return list(s_of(c["s"]).encode("latin-1" if c["limit"] == 256 else "ascii", c["errors"]))
+
+
+@run("codec_ascii_decode")
+def run_codec_ascii(c):
+    return cps_of(bytes(c["b"]).decode("ascii", c["errors"]))
+
+
+@run("codec_latin1_decode")
+def run_codec_latin1(c):
+    return cps_of(bytes(c["b"]).decode("latin-1", c["errors"]))
+
+
+@run("codec_ue_decode")
+def run_codec_ue_decode(c):
+    import codecs
+    import warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        s, n = codecs.unicode_escape_decode(bytes(c["b"]), c["errors"], c["final"])
+    return [cps_of(s), n]
+
+
+@run("codec_raw_decode")
+def run_codec_raw_decode(c):
+    import codecs
+    s, n = codecs.raw_unicode_escape_decode(bytes(c["b"]), c["errors"], c["final"])
+    return [cps_of(s), n]
+
+
+@run("codec_ue_encode")
+def run_codec_ue_encode(c):
+    return list(s_of(c["s"]).encode("unicode_escape"))
+
+
+@run("codec_raw_encode")
+def run_codec_raw_encode(c):
+    return list(s_of(c["s"]).encode("raw_unicode_escape"))
+
+
+@run("codec_utf7_decode")
+def run_codec_utf7_decode(c):
+    import codecs
+    s, n = codecs.utf_7_decode(bytes(c["b"]), c["errors"], c["final"])
+    return [cps_of(s), n]
+
+
+@run("codec_utf7_encode")
+def run_codec_utf7_encode(c):
+    return list(s_of(c["s"]).encode("utf-7"))
+
+
+CM_CHARS = [0, 65, 97, 63, 38, 35, 59, 48, 49, 233, 255, 256, 0x20ac, 0xfffe, 0xffff, 0x10000]
+
+
+def cm_table(rng):
+    r = rng.random()
+    if r < 0.3:
+        n = rng.choice([1, 2, 5, 70, 255, 256, 257])
+        return [rng.choice(CM_CHARS) for _ in range(n)]
+    base = list(range(256))
+    if r < 0.6:
+        for _ in range(rng.randint(0, 5)):
+            base[rng.randrange(256)] = rng.choice(CM_CHARS)
+    elif r < 0.8:
+        for _ in range(rng.randint(0, 5)):
+            base[rng.randrange(256)] = 0xfffe
+    return base
+
+
+def cm_dec_item(rng):
+    r = rng.random()
+    if r < 0.5:
+        return {"t": "int", "v": rng.choice([65, 233, 0xfffe, 0x20ac, 0x10ffff, 0x110000, -1, 2 ** 70])}
+    if r < 0.8:
+        return {"t": "str", "s": rng.choice([[], [65], [0xfffe], [0x20ac], [65, 66], [0x1f600]])}
+    return {"t": rng.choice(["none", "none", "wrong", "raise"])}
+
+
+def cm_enc_item(rng):
+    r = rng.random()
+    if r < 0.6:
+        return {"t": "int", "v": rng.choice([0, 63, 65, 255, 256, -1, 2 ** 70])}
+    if r < 0.85:
+        return {"t": "bytes", "s": rng.choice([[], [65], [65, 66]])}
+    return {"t": rng.choice(["none", "wrong", "raise"])}
+
+
+@gen("codec", 3)
+def gen_codec_charmap_decode(rng):
+    b = [rng.choice([0, 1, 2, 65, 97, 200, 255]) for _ in range(rng.randint(0, 6))]
+    if rng.random() < 0.5:
+        m = {"k": "str", "table": cm_table(rng)}
+    else:
+        m = {"k": "map", "table": [[k, cm_dec_item(rng)] for k in sorted(set(b)) if rng.random() < 0.8]}
+    return {"mod": "unicodeobj", "fn": "codec_charmap_decode", "b": b, "map": m,
+            "errors": rng.choice(ALL_HANDLERS)}
+
+
+@gen("codec", 3)
+def gen_codec_charmap_encode(rng):
+    s = [rng.choice(CM_CHARS + [0xdc80, 0xd800]) for _ in range(rng.randint(0, 5))]
+    if rng.random() < 0.5:
+        m = {"k": "build", "table": cm_table(rng)}
+    else:
+        keys = set(s) | {63, 38, 35, 59, 48, 49}
+        m = {"k": "map", "table": [[k, cm_enc_item(rng)] for k in sorted(keys) if rng.random() < 0.7]}
+    return {"mod": "unicodeobj", "fn": "codec_charmap_encode", "s": s, "map": m,
+            "errors": rng.choice(ALL_HANDLERS), "names": char_names(s)}
+
+
+@gen("codec", 1)
+def gen_codec_charmap_build(rng):
+    return {"mod": "unicodeobj", "fn": "codec_charmap_build", "table": cm_table(rng)}
+
+
+class CmMapping:
+    def __init__(self, items, conv):
+        self.d = {k: conv(v) for k, v in items}
+
+    def __getitem__(self, k):
+        v = self.d[k]
+        if v is RAISE:
+            raise ValueError("boom")
+        return v
+
+
+def cm_dec_conv(v):
+    return {"none": None, "int": v.get("v"), "str": s_of(v.get("s", [])), "raise": RAISE, "wrong": 1.5}[v["t"]]
+
+
+def cm_enc_conv(v):
+    return {"none": None, "int": v.get("v"), "bytes": bytes(v.get("s", [])), "raise": RAISE,
+            "wrong": 1.5}[v["t"]]
+
+
+@run("codec_charmap_decode")
+def run_codec_charmap_decode(c):
+    import codecs
+    m = c["map"]
+    table = s_of(m["table"]) if m["k"] == "str" else CmMapping(m["table"], cm_dec_conv)
+    return cps_of(codecs.charmap_decode(bytes(c["b"]), c["errors"], table)[0])
+
+
+@run("codec_charmap_encode")
+def run_codec_charmap_encode(c):
+    import codecs
+    m = c["map"]
+    table = (codecs.charmap_build(s_of(m["table"])) if m["k"] == "build"
+             else CmMapping(m["table"], cm_enc_conv))
+    return list(codecs.charmap_encode(s_of(c["s"]), c["errors"], table)[0])
+
+
+@run("codec_charmap_build")
+def run_codec_charmap_build(c):
+    import codecs
+    m = codecs.charmap_build(s_of(c["table"]))
+    return [[k, v] for k, v in m.items()] if isinstance(m, dict) else m.size()
+
+
+SHORTCUT_NAMES = ["utf8", "utf_8", "utf-8", "UTF8", "UTF-8", "utf16", "utf-16", "UTF_16", "utf32", "utf-32",
+                  "ascii", "ASCII", "us-ascii", "US_ASCII", "latin1", "latin-1", "LATIN_1", "iso-8859-1",
+                  "ISO8859-1", "iso_8859_1", "utf$8", "-utf8", "utf  8", "us ascii", "iso8859 1"]
+
+
+@gen("codec", 2)
+def gen_codec_dispatch(rng):
+    b = [rng.choice([0, 65, 0xc3, 0xa9, 0xff, 0xfe]) for _ in range(rng.randint(1, 4))]
+    return {"mod": "unicodeobj", "fn": "codec_dispatch", "name": cps_of(rng.choice(SHORTCUT_NAMES)), "b": b}
+
+
+@run("codec_dispatch")
+def run_codec_dispatch(c):
+    return cps_of(bytes(c["b"]).decode(s_of(c["name"])))
+
+
 @run("codec_utf8_decode")
 def run_codec_decode(c):
     return cps_of(bytes(c["b"]).decode("utf-8", c["errors"]))
