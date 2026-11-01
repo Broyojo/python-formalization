@@ -1,0 +1,71 @@
+id: corelibs-random-unseeded-subclass
+title: "A random.Random subclass whose __init__ does not call super().__init__() silently returns 0.0 forever"
+priority: P3
+kind: regression
+module: corelibs
+files: [Modules/_randommodule.c, Lib/random.py]
+functions: ["random_init_impl", "genrand_uint32", "Random.__init__"]
+summary: |
+  Since Python 3.11 _random.Random seeds in tp_init, and tp_new is PyType_GenericNew, which leaves
+  index = 0 and all 624 words zero. All-zero is the fixed point of the Mersenne Twister recurrence.
+  random.Random.__init__ seeds, so a plain Random() is fine, but a subclass that defines __init__
+  and does not chain up never seeds. No error is raised: random() returns 0.0 every time,
+  randrange(100) returns 0, and shuffle and sample become one fixed permutation. Before 3.11 the
+  same class worked, because tp_new seeded (bpo-44260 moved it). random.Random.__new__(random.Random)
+  and _random.Random.__new__(_random.Random, 5) behave the same way; the seed argument of the
+  second one is ignored.
+likelihood: |
+  Moderate for the kind of code affected, low overall. Subclassing Random is documented, and a
+  subclass with its own __init__ that forgets super().__init__() is an ordinary slip that worked
+  for two decades. gauss() does raise AttributeError (gauss_next is set only by Random.__init__),
+  so code using it notices; code using random(), randrange, shuffle or choice does not. The
+  failure is silent and a program can look correct, which is why it may be worth a report.
+maybe_intended: |
+  The move itself was intended, and Raymond Hettinger proposed it in bpo-44260 to avoid seeding
+  twice. Nothing in that issue discusses subclasses that skip __init__, so the all-zero stream
+  looks like an unexamined side effect. A maintainer can fairly answer that a subclass must call
+  super().__init__(). The reference MT19937 code guards against exactly this state: mti = N+1
+  means "not initialized", and genrand seeds with a default.
+reproducer: |
+  import random, _random
+  class Sub(random.Random):
+      def __init__(self, label):
+          self.label = label
+  s = Sub('x')
+  floats = {s.random() for _ in range(2000)}
+  ints = {s.randrange(100) for _ in range(2000)}
+  print(floats, ints)
+  raw = _random.Random.__new__(_random.Random, 5)
+  print(raw.random())
+  plain = {random.Random().random() for _ in range(5)}
+  if floats == {0.0} and ints == {0} and raw.random() == 0.0 and len(plain) > 1:
+      print('REPRODUCED corelibs-random-unseeded-subclass')
+expected: |
+  A generator that was seeded from the OS, as on Python 3.10, or an exception.
+observed: |
+  python3 3.14.7: random() is {0.0} over 2000 calls, randrange(100) is {0}, and
+  _random.Random.__new__(_random.Random, 5).random() is 0.0. REPRODUCED.
+  main (python.exe 3.16.0a1+dev, ef1fce0): identical. REPRODUCED.
+  3.10 was not run; that it seeded in tp_new comes from bpo-44260's description of the old code.
+promised_by: |
+  Lib/random.py:103-115 and Doc/library/random.rst describe subclassing Random, and neither says
+  that __init__ must be called. The promise is the behaviour of every version up to 3.10.
+cause: |
+  Modules/_randommodule.c:584 `{Py_tp_new, PyType_GenericNew}` with seeding only in random_init_impl
+  (:561-566). genrand_uint32 (:143) cannot tell an unseeded object from a seeded one, and
+  regenerating all-zero words gives all-zero words.
+possible_fix: |
+  Give tp_new a small function that sets index = N + 1 (the reference code's "uninitialized"
+  marker) and have genrand_uint32 seed on first use, or seed in tp_new only when tp_init was
+  overridden without chaining. Either keeps bpo-44260's saving in the normal path.
+duplicates:
+  issues:
+    - {number: 88426, state: closed, relation: "the change that introduced this (bpo-44260)", reason: "does not discuss subclasses that skip __init__"}
+    - {number: 84526, state: closed, relation: "subclassing Random", reason: "not a duplicate"}
+  queries: ["random subclass __init__ seed", "Random __new__ seeded", "_random.Random tp_init", "bpo-44260",
+            "Do not read system entropy without need in Random", "random subclass without calling __init__",
+            "Random subclass not seeded", "random() returns 0.0", "random tp_init random_new",
+            "bugforge README: no entry for this"]
+lean:
+  property: PyLean.CoreLibs.Rand.NewInstanceProducesRandomness
+  theorem: PyLean.CoreLibs.Rand.newInstanceProducesRandomness_refuted
