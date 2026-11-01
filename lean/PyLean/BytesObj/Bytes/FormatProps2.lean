@@ -211,7 +211,7 @@ theorem formatLongTypes_proven : FormatLongTypes := by
     by_cases h : t = 111 ∨ t = 120 ∨ t = 88 <;>
       simp [formatLong, Obj.longValue?, Obj.isNumber, Obj.index?, h, numberLong]
   · intro f fl prec t h
-    simp [formatLong, Obj.longValue?, Obj.isNumber, Obj.index?, h, notInteger, PyExc.className]
+    simp [formatLong, Obj.longValue?, Obj.isNumber, Obj.index?, h, notInteger, PyExc.className, isTypeError, excMatches]
   · intro s fl prec t
     simp [formatLong, Obj.longValue?, Obj.isNumber]
   · intro st h1 h2

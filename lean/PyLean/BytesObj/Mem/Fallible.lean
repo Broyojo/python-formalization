@@ -96,21 +96,66 @@ theorem pylongFailures_proven : PylongFailures := by
      · rfl
      · rfl)
 
-/-- `fix_error_int`, on each class of exception a raising `__index__` can now deliver:
-`TypeError` and the `ValueError` and `OverflowError` pair are replaced by the
-`memoryview:` messages naming the format, and anything else passes through unchanged
-(:1658-1664). -/
+/-- `fix_error_int` by class, subclasses included (`PyErr_ExceptionMatches`): a `TypeError` becomes
+the `TypeError` naming the format, an `OverflowError` or `ValueError` the `ValueError` naming it, so
+a `UnicodeDecodeError` from `__index__` does too; any other class passes through unchanged. The two
+messages are stated literally, for every format. -/
 def FixErrorInt : Prop :=
-  ∀ (fmt : List Char) (m cls : String),
-    fixErrorInt fmt (.typeError m) = typeErrorInt fmt ∧
-    fixErrorInt fmt (.valueError m) = valueErrorInt fmt ∧
-    fixErrorInt fmt (.overflowError m) = valueErrorInt fmt ∧
-    fixErrorInt fmt (.named cls m) = .named cls m ∧
+  ∀ (fmt : List Char) (m : String),
+    let tmsg := "memoryview: invalid type for format '" ++ fmtText fmt ++ "'"
+    let vmsg := "memoryview: invalid value for format '" ++ fmtText fmt ++ "'"
+    fixErrorInt fmt (.typeError m) = .typeError tmsg ∧
+    fixErrorInt fmt (.named "TSub" m) = .typeError tmsg ∧
+    fixErrorInt fmt (.valueError m) = .valueError vmsg ∧
+    fixErrorInt fmt (.overflowError m) = .valueError vmsg ∧
+    fixErrorInt fmt (.named "OSub" m) = .valueError vmsg ∧
+    fixErrorInt fmt (.named "UnicodeDecodeError" m) = .valueError vmsg ∧
+    fixErrorInt fmt (.named "UnicodeError" m) = .valueError vmsg ∧
+    fixErrorInt fmt (.named "VSub" m) = .valueError vmsg ∧
+    (∀ e : PyExc, excMatches e "TypeError" = false → excMatches e "OverflowError" = false →
+      excMatches e "ValueError" = false → fixErrorInt fmt e = e) ∧
+    fixErrorInt fmt (.named "Boom" m) = .named "Boom" m ∧
     fixErrorInt fmt (.indexError m) = .indexError m
 
+/-- A class test on a literal class name. -/
+macro "exc" : tactic => `(tactic| simp [excMatches, PyExc.className, excBases])
+
+theorem str_append_three (a b c : String) : s!"{a}{b}{c}" = a ++ b ++ c := by
+  simp [toString]
+
 theorem fixErrorInt_proven : FixErrorInt := by
-  intro fmt m cls
-  exact ⟨rfl, rfl, rfl, rfl, rfl⟩
+  intro fmt m
+  dsimp only
+  have e1 : typeErrorInt fmt = .typeError ("memoryview: invalid type for format '" ++ fmtText fmt ++ "'") := by
+    simp [typeErrorInt, toString]
+  have e2 : valueErrorInt fmt = .valueError ("memoryview: invalid value for format '" ++ fmtText fmt ++ "'") := by
+    simp [valueErrorInt, toString]
+  have h3 : ∀ e : PyExc, excMatches e "TypeError" = false → excMatches e "OverflowError" = false →
+      excMatches e "ValueError" = false → fixErrorInt fmt e = e := by
+    intro e a b c
+    simp [fixErrorInt, a, b, c]
+  have h1 : ∀ e : PyExc, excMatches e "TypeError" = true → fixErrorInt fmt e = typeErrorInt fmt := by
+    intro e a
+    simp [fixErrorInt, a]
+  have h2 : ∀ e : PyExc, excMatches e "TypeError" = false → excMatches e "ValueError" = true →
+      fixErrorInt fmt e = valueErrorInt fmt := by
+    intro e a b
+    simp [fixErrorInt, a, b]
+  have h4 : ∀ e : PyExc, excMatches e "TypeError" = false → excMatches e "OverflowError" = true →
+      fixErrorInt fmt e = valueErrorInt fmt := by
+    intro e a b
+    simp [fixErrorInt, a, b]
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, h3, ?_, ?_⟩
+  · rw [h1 _ (by exc), e1]
+  · rw [h1 _ (by exc), e1]
+  · rw [h2 _ (by exc) (by exc), e2]
+  · rw [h4 _ (by exc) (by exc), e2]
+  · rw [h4 _ (by exc) (by exc), e2]
+  · rw [h2 _ (by exc) (by exc), e2]
+  · rw [h2 _ (by exc) (by exc), e2]
+  · rw [h2 _ (by exc) (by exc), e2]
+  · exact h3 _ (by exc) (by exc) (by exc)
+  · exact h3 _ (by exc) (by exc) (by exc)
 
 theorem mapErr_err {α : Type} (f : PyExc → PyExc) (x : M α) (st st' : St) (e : PyExc)
     (h : x st = (.error e, st')) : M.mapErr f x st = (.error (f e), st') := by
@@ -164,13 +209,13 @@ theorem packFailures_proven : PackFailures := by
       (constructor <;>
         simp only [packSingle, cc, List.getD_cons_zero, M.bind_app, M.mapErr, pylongAsLd, pylongAsLu,
           pylongAsLld, pylongAsLlu, pylongAsZd, pylongAsZu, numberIndex_raises e r st st' h,
-          numberIndex_wrong t r st st' h, indexWrong, fixErrorInt])
+          numberIndex_wrong t r st st' h, indexWrong, fixErrorInt_type, fixErrorInt_value, fixErrorInt_overflow])
   · intro c hc
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hc
     rcases hc with rfl | rfl | rfl <;>
       (constructor <;>
         simp only [packSingle, cc, List.getD_cons_zero, M.bind_app, M.mapErr,
-          floatAsDouble_raises e r st st' h, floatAsDouble_wrong t r st st' h, floatWrong, fixErrorInt])
+          floatAsDouble_raises e r st st' h, floatAsDouble_wrong t r st st' h, floatWrong, fixErrorInt_type, fixErrorInt_value, fixErrorInt_overflow])
   · simp only [packSingle, cc, List.getD_cons_zero, M.bind_app, isTrue_raises e r st st' h]
   · simp only [packSingle, cc, List.getD_cons_zero, M.bind_app, isTrue_wrong t r st st' h]
 

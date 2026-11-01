@@ -107,28 +107,42 @@ def pyBufferRelease0 (b : Buf) : M Unit := fun st =>
     (.ok (), st.setMv i { x with exports := x.exports - 1 })
   | _ => (.ok (), st)
 
-/-- `mbuf_release` as a `__release_buffer__` callback sees it, below. -/
-def mbufRelease0 (k : Nat) : M Unit := fun st =>
-  let x := st.mb k
-  if x.released then (.ok (), st)
-  else pyBufferRelease0 x.master (st.setMb k { x with released := true })
-
-/-- `_memory_release` as a `__release_buffer__` callback sees it. -/
-def memoryRelease0 (i : Nat) : M Unit := fun st =>
-  let x := st.mv i
-  if x.flags.released then (.ok (), st)
-  else
-    let st := st.setMv i { x with flags := { x.flags with released := true } }
-    let b := st.mb x.mbuf
-    let e := b.exports - 1
-    let st := st.setMb x.mbuf { b with exports := e }
-    if e = 0 then mbufRelease0 x.mbuf st else (.ok (), st)
-
 /-- `PyBuffer_Release(view)`, Objects/abstract.c: `bf_releasebuffer`, which for a Python
 exporter is `__release_buffer__` (typeobject.c:10800-10850), whose exceptions are not
 raised (`PyErr_FormatUnraisable`), then the drop of `view->obj`. The callback here does
-`m.release()`, ignoring `BufferError`. It is one level deep: an exporter it releases does
-not run a `__release_buffer__` of its own. The difftest gives a case one hook at most. -/
+`m.release()`, ignoring `BufferError`; `rel` is that release. -/
+def hookRelease (rel : Nat → M Unit) (b : Buf) : M Unit := fun st =>
+  match b.hook with
+  | some t =>
+    let st := if (st.mv t).exports = 0 then (rel t st).2 else st
+    pyBufferRelease0 b st
+  | none => pyBufferRelease0 b st
+
+/-- `mbuf_release` with the callback's release `rel`. -/
+def mbufReleaseWith (rel : Nat → M Unit) (k : Nat) : M Unit := fun st =>
+  let x := st.mb k
+  if x.released then (.ok (), st)
+  else hookRelease rel x.master (st.setMb k { x with released := true })
+
+/-- `_memory_release` as a callback sees it, to any depth: a callback's release can release a
+buffer whose own callback runs, and so on. Each level has marked a view released before it goes
+deeper, and a view marked already stops at once, so a chain is no longer than the number of views. -/
+def memoryReleaseAt : Nat → Nat → M Unit
+  | 0, _ => fun st => (.ok (), st)
+  | f + 1, i => fun st =>
+    let x := st.mv i
+    if x.flags.released then (.ok (), st)
+    else
+      let st := st.setMv i { x with flags := { x.flags with released := true } }
+      let b := st.mb x.mbuf
+      let e := b.exports - 1
+      let st := st.setMb x.mbuf { b with exports := e }
+      if e = 0 then mbufReleaseWith (memoryReleaseAt f) x.mbuf st else (.ok (), st)
+
+/-- `_memory_release` as a `__release_buffer__` callback sees it. -/
+def memoryRelease0 (i : Nat) : M Unit := fun st => memoryReleaseAt st.mvs.length i st
+
+/-- `PyBuffer_Release(view)`, with the callback's release to any depth. -/
 def pyBufferRelease (b : Buf) : M Unit := fun st =>
   match b.hook with
   | some t =>
@@ -414,6 +428,15 @@ def memoryViewFromBuffer (info : Buf) (isNull : Bool) : M Nat := do
   M.modify fun st => st.setMb k { st.mb k with master := { info with obj := none } }
   mbufAddView k none
 
+/-- `releasebuffer_call_python`, Objects/typeobject.c:10820-10833, for an exporter with no Python
+`__buffer__`: `__release_buffer__` receives a new view of the buffer, restricted. -/
+def restrictedView (b : Buf) : M Nat := do
+  let i ← memoryViewFromBuffer b false
+  M.modify fun st =>
+    let x := st.mv i
+    st.setMv i { x with flags := { x.flags with restricted := true } }
+  return i
+
 /-- The first part of `memory_from_contiguous_copy`, :900-912: a new bytes object at the
 end of the store, its managed buffer, and `mbuf_copy_format` (:860-874). -/
 def contigBytes (src : Buf) : M Nat := do
@@ -593,11 +616,23 @@ def typeErrorInt (fmt : List Char) : PyExc :=
 def valueErrorInt (fmt : List Char) : PyExc :=
   .valueError s!"memoryview: invalid value for format '{fmtText fmt}'"
 
-/-- `fix_error_int`, :1650-1665. -/
-def fixErrorInt (fmt : List Char) : PyExc → PyExc
-  | .typeError _ => typeErrorInt fmt
-  | .overflowError _ | .valueError _ => valueErrorInt fmt
-  | e => e
+/-- `fix_error_int`, :1650-1665: `PyErr_ExceptionMatches`, so a subclass counts. -/
+def fixErrorInt (fmt : List Char) (e : PyExc) : PyExc :=
+  if excMatches e "TypeError" then typeErrorInt fmt
+  else if excMatches e "OverflowError" || excMatches e "ValueError" then valueErrorInt fmt
+  else e
+
+@[simp] theorem fixErrorInt_type (fmt : List Char) (m : String) :
+    fixErrorInt fmt (.typeError m) = typeErrorInt fmt := by
+  simp [fixErrorInt, excMatches, PyExc.className]
+
+@[simp] theorem fixErrorInt_value (fmt : List Char) (m : String) :
+    fixErrorInt fmt (.valueError m) = valueErrorInt fmt := by
+  simp [fixErrorInt, excMatches, PyExc.className, excBases]
+
+@[simp] theorem fixErrorInt_overflow (fmt : List Char) (m : String) :
+    fixErrorInt fmt (.overflowError m) = valueErrorInt fmt := by
+  simp [fixErrorInt, excMatches, PyExc.className, excBases]
 
 /-- `__index__` returned a non-int, Objects/abstract.c:1423-1425. -/
 def indexWrong (t : String) : PyExc := .typeError s!"__index__ returned non-int (type {t})"
@@ -648,7 +683,11 @@ def floatAsDouble : Obj → M Nat
 /-- `__bool__` returned a non-bool, Objects/typeobject.c:10235-10238. -/
 def boolWrong (t : String) : PyExc := .typeError s!"__bool__ should return bool, returned {t}"
 
-/-- `PyObject_IsTrue`. -/
+/-- `__len__` returned a non-int: `PyNumber_AsSsize_t` of its result in `slot_sq_length`. -/
+def lenWrong (t : String) : PyExc := .typeError s!"'{t}' object cannot be interpreted as an integer"
+
+/-- `PyObject_IsTrue`, Objects/object.c: `True`, `False`, `None`, then `nb_bool`, `mp_length`,
+`sq_length`, then true. An `Idx`, `Flt`, `Eql` or `Exporter` has none of the three. -/
 def isTrue : Obj → M Bool
   | .int n => pure (n != 0)
   | .bool b => pure b
@@ -658,6 +697,12 @@ def isTrue : Obj → M Bool
   | .none => pure false
   | .list n => pure (n != 0)
   | .boolLike r rel => do fire rel; r.get boolWrong
+  | .lenLike r rel => do
+    -- no `__bool__`: `slot_sq_length`, Objects/typeobject.c
+    fire rel
+    let n ← r.get lenWrong
+    if n < 0 then throw (.valueError "__len__() should return >= 0")
+    return n != 0
   | .view i => do
     -- `memory_length` via `sq_length`/`mp_length`
     let st ← M.get
@@ -826,9 +871,6 @@ def strhexSep (sep : Option Obj) (group : Int) : Py (Char × Int) :=
 def strhexWithSep (arg : List Nat) (sep : Option Obj) (bps : Int) : Py (List Char) := do
   let (c, group) ← strhexSep sep bps
   strhexBody arg c group
-
-/-- `__len__` returned a non-int: `PyNumber_AsSsize_t` of its result in `slot_sq_length`. -/
-def lenWrong (t : String) : PyExc := .typeError s!"'{t}' object cannot be interpreted as an integer"
 
 /-- `_Py_strhex_with_sep`'s handling of `sep`, Python/pystrhex.c:13-31, for a `sep` whose
 `__len__` is Python code, then the formatting. -/
@@ -1122,9 +1164,9 @@ def memoryIter (self : Nat) : M Nat := do
   let len ← memoryLength self
   iterAlloc { fmt := fmt, length := len, index := 0, seq := some self }
 
-/-- A NULL pointer out of `ADJUST_PTR`. Addresses in the model are offsets into the store,
-so NULL has to be outside them. -/
-def nullPtr : Int := -1
+/-- A NULL pointer out of `ADJUST_PTR`: a stored pointer of 0 with a suboffset of 0, which
+`adjust_ptr` reads as any other address. The store is laid out so that nothing lives at 0. -/
+def nullPtr : Int := 0
 
 /-- `memoryiter_next`, :3491-3517: `none` is exhaustion (a NULL return with no error). -/
 def memoryiterNext (it : Nat) : M (Option Item) := do
@@ -1143,71 +1185,11 @@ def memoryiterNext (it : Nat) : M (Option Item) := do
   M.modify fun st => { st with iters := st.iters.set it { x with seq := Option.none } }
   return Option.none
 
-/-- `PyObject_RichCompareBool(item, value, Py_EQ)` for a built-in `value`: an item never
-equals an object of a type other than `int`, `bool`, `float`, `bytes`. -/
-def itemEqObj (x : Item) : Obj → Bool
-  | .int n => itemEq x (.int n)
-  | .bool b => itemEq x (.bool b)
-  | .float d => itemEq x (.float d)
-  | .bytes b => itemEq x (.bytes b)
-  | _ => false
-
-/-- `PyObject_RichCompareBool(item, value, Py_EQ)`: a Python `__eq__` of `value` runs
-through the reflected operation, and may raise or release views. -/
-def itemEqM (x : Item) : Obj → M Bool
-  | .eqLike r rel => do fire rel; r.get (fun t => .typeError s!"__eq__ returned {t}")
-  | o => pure (itemEqObj x o)
-
-/-- The loop of `memoryview_count_impl`, :2797-2816. -/
-def countLoop (it : Nat) (value : Obj) : Nat → Int → M Int
-  | 0, _ => throw .modelFuel
-  | fuel + 1, count => do
-    match ← memoryiterNext it with
-    | Option.none => return count
-    | some item =>
-      let contained ← itemEqM item value
-      countLoop it value fuel (if contained then count + 1 else count)
-
-/-- `memoryview_count_impl`, :2786-2819. -/
-def memoryviewCount (self : Nat) (value : Obj) : M Int := do
-  let it ← memoryIter self
-  let st ← M.get
-  countLoop it value ((st.iters.getD it default).length.toNat + 2) 0
-
-/-- The search loop of `memoryview_index_impl`, :2872-2895. -/
-def indexLoop (self : Nat) (value : Obj) : Nat → Int → Int → M Int
-  | 0, _, _ => throw .modelFuel
-  | fuel + 1, index, stop =>
-    if index < stop then do
-      let item ← memoryItem self index
-      if ← itemEqM item value then return index
-      indexLoop self value fuel (index + 1) stop
-    else throw (.valueError "memoryview.index(x): x not found")
-
-/-- `memoryview_index_impl`, :2839-2905. `start` and `stop` are `slice_index` arguments,
-already saturated to `Py_ssize_t`. -/
-def memoryviewIndex (self : Nat) (value : Obj) (start stop : Int) : M Int := do
-  checkReleased self
-  let st ← M.get
-  let view := (st.mv self).view
-  if view.ndim = 0 then throw (.typeError "invalid lookup on 0-dim memory")
-  if view.ndim = 1 then
-    let n := (view.shape.getD []).getD 0 0
-    let start := if start < 0 then max (start + n) 0 else start
-    let stop := if stop < 0 then max (stop + n) 0 else stop
-    let stop := min stop n
-    let start := min start stop
-    return ← indexLoop self value (stop - start + 1).toNat start stop
-  throw (notImplError "multi-dimensional lookup is not implemented")
-
 /-! ## Comparison (:2908-3199) -/
 
 /-- `fix_struct_error_int`, :2916-2928: `struct.error` means "not equal". -/
-def fixStructError : PyExc → Py Bool
-  | .named "ImportError" m => .error (.named "ImportError" m)
-  | .named "ModuleNotFoundError" m => .error (.named "ModuleNotFoundError" m)
-  | .named "MemoryError" m => .error (.named "MemoryError" m)
-  | _ => .ok false
+def fixStructError (e : PyExc) : Py Bool :=
+  if excMatches e "ImportError" || excMatches e "MemoryError" then .error e else .ok false
 
 /-- What `import struct` raises with `sys.modules['struct'] = None`. -/
 def importStruct : PyExc := .named "ModuleNotFoundError" "import of struct halted; None in sys.modules"
@@ -1276,6 +1258,82 @@ def memoryRichcompare (v : Nat) (w : Obj) (op : CmpOp) : M (Option Bool) := do
   if op = .other then return Option.none
   let e ← memoryRichEqual v w
   return e.map fun equal => if op = .eq then equal else !equal
+
+/-- `PyObject_RichCompareBool(item, value, Py_EQ)` where neither side runs Python code or looks
+at a buffer: an item never equals an object of a type other than `int`, `bool`, `float`, `bytes`,
+except that a `bytes` item compares with a memoryview through `memory_richcompare`, in `itemEqM`. -/
+def itemEqObj (x : Item) : Obj → Bool
+  | .int n => itemEq x (.int n)
+  | .bool b => itemEq x (.bool b)
+  | .float d => itemEq x (.float d)
+  | .bytes b => itemEq x (.bytes b)
+  | _ => false
+
+/-- The truth of what `__eq__` returned in place of a bool, for the objects the difftest returns:
+`"x"`, `None` and `[]`. -/
+def wrongTruth : String → Bool
+  | "str" => true
+  | _ => false
+
+/-- `PyObject_RichCompareBool(item, value, Py_EQ)`. A Python `__eq__` of `value` runs through the
+reflected operation, may raise or release views, and can return any object, whose truth is the
+result. `bytes_richcompare` gives `NotImplemented` for a memoryview, so for a `bytes` item (format
+`c`) the reflected `memory_richcompare(value, item)` decides, and it can raise; an `int` or `float`
+item has nothing to compare with it, and neither has the memoryview. -/
+def itemEqM (x : Item) : Obj → M Bool
+  | .eqLike r rel => do
+    fire rel
+    match r with
+    | .val b => pure b
+    | .raises e => throw e
+    | .wrong t => pure (wrongTruth t)
+  | .view j =>
+    match x with
+    | .bytes b => do return (← memoryRichEqual j (.bytes b)).getD false
+    | _ => pure false
+  | o => pure (itemEqObj x o)
+
+/-- The loop of `memoryview_count_impl`, :2797-2816. -/
+def countLoop (it : Nat) (value : Obj) : Nat → Int → M Int
+  | 0, _ => throw .modelFuel
+  | fuel + 1, count => do
+    match ← memoryiterNext it with
+    | Option.none => return count
+    | some item =>
+      let contained ← itemEqM item value
+      countLoop it value fuel (if contained then count + 1 else count)
+
+/-- `memoryview_count_impl`, :2786-2819. -/
+def memoryviewCount (self : Nat) (value : Obj) : M Int := do
+  let it ← memoryIter self
+  let st ← M.get
+  countLoop it value ((st.iters.getD it default).length.toNat + 2) 0
+
+/-- The search loop of `memoryview_index_impl`, :2872-2895. -/
+def indexLoop (self : Nat) (value : Obj) : Nat → Int → Int → M Int
+  | 0, _, _ => throw .modelFuel
+  | fuel + 1, index, stop =>
+    if index < stop then do
+      let item ← memoryItem self index
+      if ← itemEqM item value then return index
+      indexLoop self value fuel (index + 1) stop
+    else throw (.valueError "memoryview.index(x): x not found")
+
+/-- `memoryview_index_impl`, :2839-2905. `start` and `stop` are `slice_index` arguments,
+already saturated to `Py_ssize_t`. -/
+def memoryviewIndex (self : Nat) (value : Obj) (start stop : Int) : M Int := do
+  checkReleased self
+  let st ← M.get
+  let view := (st.mv self).view
+  if view.ndim = 0 then throw (.typeError "invalid lookup on 0-dim memory")
+  if view.ndim = 1 then
+    let n := (view.shape.getD []).getD 0 0
+    let start := if start < 0 then max (start + n) 0 else start
+    let stop := if stop < 0 then max (stop + n) 0 else stop
+    let stop := min stop n
+    let start := min start stop
+    return ← indexLoop self value (stop - start + 1).toNat start stop
+  throw (notImplError "multi-dimensional lookup is not implemented")
 
 /-! ## Hash (:3205-3260) -/
 

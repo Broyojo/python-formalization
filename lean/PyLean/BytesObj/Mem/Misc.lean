@@ -74,7 +74,7 @@ theorem packTypeErrors_proven : PackTypeErrors := by
   unfold intRange at hc
   split at hc <;> simp only [Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at hc
   all_goals simp only [packSingle, cc, List.getD_cons_zero, M.bind_app, M.mapErr, pylongAsLd, pylongAsLu,
-    pylongAsLld, pylongAsLlu, pylongAsZd, pylongAsZu, numberIndex, M.throw_app, fixErrorInt]
+    pylongAsLld, pylongAsLlu, pylongAsZd, pylongAsZu, numberIndex, M.throw_app, fixErrorInt_type, fixErrorInt_value, fixErrorInt_overflow]
 
 /-- A view in a reference cycle (`memory_clear`, :1171-1180) is released like any other if
 it has no exports, and left alone if it has. -/

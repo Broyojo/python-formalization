@@ -568,7 +568,7 @@ def baExtend (self : BA) (o : Obj) : Py BA := do
     let _ ← baFromStringAndSize none bufSize
     let isStr : Bool := match o with | .str _ => true | _ => false
     let vals ← (items.mapM getByteValue).mapError fun e =>
-      if isStr = true ∧ e.className = "TypeError" then .typeError "expected iterable of integers; got: 'str'"
+      if isStr = true ∧ isTypeError e = true then .typeError "expected iterable of integers; got: 'str'"
       else e
     iterFinish o
     let r := baSetsliceLinear self self.size self.size (seqData vals)

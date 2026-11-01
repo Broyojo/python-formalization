@@ -1,4 +1,4 @@
-import PyLean.Core
+import PyLean.BytesObj.Exc
 import PyLean.RangeSlice.Model
 
 /-!

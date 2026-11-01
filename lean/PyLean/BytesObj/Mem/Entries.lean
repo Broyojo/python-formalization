@@ -5,6 +5,7 @@ import PyLean.BytesObj.Mem.CmpTree
 import PyLean.BytesObj.Mem.NDim
 import PyLean.BytesObj.Mem.Fortran
 import PyLean.BytesObj.Mem.Contig
+import PyLean.BytesObj.Mem.Refuse
 
 /-! Registry entries for memoryview (Objects/memoryobject.c). -/
 
@@ -15,6 +16,121 @@ open PyLean.Registry
 def memFile : String := "Objects/memoryobject.c"
 
 def entries : List Entry := [
+  { id := "bytesobj-memoryview-struct-no-memory", pyFile := memFile
+    pyFns := ["struct_get_unpacker", "fix_struct_error_int"]
+    statement := "An item too large to allocate is MemoryError after the format is accepted, and fix_struct_error_int lets it out of ==."
+    source := "memoryobject.c:2100-2104, :2917-2928", status := .proven
+    prop := ``StructNoMemory, thm := some ``structNoMemory_proven },
+  { id := "bytesobj-memoryview-item-eq-view", pyFile := memFile
+    pyFns := ["memoryview_count_impl", "memoryview_index_impl"]
+    statement := "An int, float or bool item never equals a memoryview and nothing equals a released one; a bytes item of format c compares through the reflected memory_richcompare, so against a view of format B it equals a view holding exactly that byte."
+    source := "bytes_richcompare gives NotImplemented; do_richcompare tries the reflected memory_richcompare", status := .proven
+    prop := ``ItemEqView, thm := some ``itemEqView_proven },
+  { id := "bytesobj-memoryview-eq-truth", pyFile := memFile
+    pyFns := ["memoryview_count_impl", "memoryview_index_impl"]
+    statement := "What __eq__ returns is tested for truth, whatever it is: a str counts, None and [] do not."
+    source := "PyObject_RichCompareBool, Objects/object.c:1119-1142", status := .proven
+    prop := ``EqTruth, thm := some ``eqTruth_proven },
+  { id := "bytesobj-memoryview-pack-bool-len", pyFile := memFile
+    pyFns := ["pack_single"]
+    statement := "Storing through ? an object with __len__ runs it: 0 stores 0, a positive length stores 1, a negative one and an exception raise, write nothing and keep their class."
+    source := "PyObject_IsTrue, Objects/object.c; memoryobject.c:1988-1989", status := .proven
+    prop := ``PackBoolLen, thm := some ``packBoolLen_proven },
+  { id := "bytesobj-memoryview-pack-messages", pyFile := memFile
+    pyFns := ["pack_single", "type_error_int", "value_error_int"]
+    statement := "pack_single reports an item of the wrong type and a value out of range with the literal messages naming the format."
+    source := "memoryobject.c:1634-1648", status := .proven
+    prop := ``PackMessages, thm := some ``packMessages_proven },
+  { id := "bytesobj-memoryview-getbuf-order", pyFile := memFile
+    pyFns := ["memory_getbuf"]
+    statement := "Each refusal of memory_getbuf with its message, in order, for every flag set, and the copy with the requested fields when none applies."
+    source := "memoryobject.c:1538-1599", status := .proven
+    prop := ``GetbufOrder, thm := some ``getbufOrder_proven },
+  { id := "bytesobj-memoryview-getbuf-lift", pyFile := memFile
+    pyFns := ["memory_getbuf"]
+    statement := "A refusal changes nothing; a success counts one export and hands out the view as obj."
+    source := "memoryobject.c:1601-1605", status := .proven
+    prop := ``GetbufLift, thm := some ``getbufLift_proven },
+  { id := "bytesobj-memoryview-copy-shape-rules", pyFile := memFile
+    pyFns := ["copy_shape"]
+    statement := "An element that is no int, does not fit Py_ssize_t, is not positive, or takes the product past SSIZE_MAX is refused with its own message, in that order; a good shape gives its product."
+    source := "memoryobject.c:1338-1372", status := .proven
+    prop := ``CopyShapeRules, thm := some ``copyShapeRules_proven },
+  { id := "bytesobj-memoryview-multislice-spec", pyFile := memFile
+    pyFns := ["is_multislice"]
+    statement := "is_multislice is exactly a non-empty tuple of slices, and it decides between NotImplementedError and TypeError for a tuple key that is no index tuple."
+    source := "memoryobject.c:2538-2553", status := .proven
+    prop := ``MultisliceSpec, thm := some ``multisliceSpec_proven },
+  { id := "bytesobj-memoryview-cast1d-refusals", pyFile := memFile
+    pyFns := ["cast_to_1D"]
+    statement := "cast_to_1D refuses a non-ASCII format, one that is no native single character, two non-byte formats and a length that is no multiple of the item size, in that order, leaving the state alone."
+    source := "memoryobject.c:1275-1335", status := .proven
+    prop := ``Cast1DRefusals, thm := some ``cast1DRefusals_proven },
+  { id := "bytesobj-memoryview-ass-sub-rules", pyFile := memFile
+    pyFns := ["memory_ass_sub"]
+    statement := "m[key] = value refuses a bad format, read-only memory and deletion first, then stores through ... and () on a 0-dim view and through a full index tuple elsewhere, and refuses every other key."
+    source := "memoryobject.c:2642-2743", status := .proven
+    prop := ``AssSubRules, thm := some ``assSubRules_proven },
+  { id := "bytesobj-memoryview-restricted-refuses", pyFile := memFile
+    pyFns := ["PyMemoryView_FromObjectAndFlags", "memoryview_cast_impl", "memoryview_toreadonly_impl", "memory_getbuf", "memory_subscript"]
+    statement := "A restricted view makes no new reference to the buffer: memoryview(m), cast, toreadonly, m[a:b] and __buffer__ raise ValueError and change nothing, while len(m) works."
+    source := "memoryobject.c:198-210, :808, :1456, :1512, :1536, :2613", status := .proven
+    prop := ``RestrictedRefuses, thm := some ``restrictedRefuses_proven },
+  { id := "bytesobj-memoryview-restricted-made", pyFile := memFile
+    pyFns := ["PyMemoryView_FromObjectAndFlags"]
+    statement := "The view __release_buffer__ receives from a C exporter is live and restricted."
+    source := "Objects/typeobject.c:10820-10833", status := .proven
+    prop := ``RestrictedMade, thm := some ``restrictedMade_proven },
+  { id := "bytesobj-memoryview-init-flags-bits", pyFile := memFile
+    pyFns := ["init_flags"]
+    statement := "A view with suboffsets is PIL and neither C nor Fortran; otherwise from two dimensions up the C and Fortran bits are the tests of PyBuffer_IsContiguous, and nothing starts released or restricted."
+    source := "memoryobject.c:610-639", status := .proven
+    prop := ``InitFlagsBits, thm := some ``initFlagsBits_proven },
+  { id := "bytesobj-memoryview-fortran-bit", pyFile := memFile
+    pyFns := ["init_flags"]
+    statement := "A view with no suboffsets whose strides are the Fortran strides of its shape has the Fortran bit."
+    source := "memoryobject.c:626-629; Objects/abstract.c:450-487", status := .proven
+    prop := ``FortranBit, thm := some ``fortranBit_proven },
+  { id := "bytesobj-memoryview-contig-getters", pyFile := memFile
+    pyFns := ["memory_c_contiguous", "memory_f_contiguous", "memory_contiguous"]
+    statement := "With the flags init_flags set, c_contiguous, f_contiguous and contiguous report the tests of PyBuffer_IsContiguous."
+    source := "Doc/library/stdtypes.rst memoryview.c_contiguous", status := .proven
+    prop := ``ContigGetters, thm := some ``contigGetters_proven },
+  { id := "bytesobj-memoryview-getter-refusal", pyFile := memFile
+    pyFns := ["memory_obj_get", "memory_nbytes_get", "memory_readonly_get", "memory_itemsize_get", "memory_format_get", "memory_ndim_get", "memory_shape_get", "memory_strides_get", "memory_suboffsets_get", "memory_c_contiguous", "memory_f_contiguous", "memory_contiguous"]
+    statement := "Every getter of a released view raises ValueError and changes nothing."
+    source := "CHECK_RELEASED, memoryobject.c:3291-3390", status := .proven
+    prop := ``GetterRefusal, thm := some ``getterRefusal_proven },
+  { id := "bytesobj-memoryview-int-tuple", pyFile := memFile
+    pyFns := ["_IntTupleFromSsizet"]
+    statement := "NULL is the empty tuple whatever the length; otherwise the first len values in order."
+    source := "memoryobject.c:3268-3289", status := .proven
+    prop := ``IntTupleSpec, thm := some ``intTupleSpec_proven },
+  { id := "bytesobj-memoryview-clear-effect", pyFile := memFile
+    pyFns := ["memory_clear"]
+    statement := "With no exports memory_clear is the release and every later operation is refused; with exports it does nothing."
+    source := "memoryobject.c:1171-1180", status := .proven
+    prop := ``ClearEffect, thm := some ``clearEffect_proven },
+  { id := "bytesobj-memoryview-repr-states", pyFile := memFile
+    pyFns := ["memory_repr"]
+    statement := "repr has two texts and the view own flag picks: released after release, the other before it."
+    source := "memoryobject.c:2376-2383", status := .proven
+    prop := ``ReprStates, thm := some ``reprStates_proven },
+  { id := "bytesobj-memoryview-struct-too-long", pyFile := memFile
+    pyFns := ["struct_get_unpacker", "fix_struct_error_int"]
+    statement := "A repeat count past PY_SSIZE_T_MAX, or one whose item size takes the struct past it, is struct.error, which == reads as not equal."
+    source := "Modules/_struct.c:1655-1660, :1703-1705, :1769-1772", status := .proven
+    prop := ``StructSizeTooLong, thm := some ``structSizeTooLong_proven },
+  { id := "bytesobj-memoryview-reentrant-release", pyFile := memFile
+    pyFns := ["mbuf_release", "_memory_release", "memory_releasebuf"]
+    statement := "When the hook of the last view of a buffer releases that view or a released one, nothing happens; when it releases the view the buffer gives an export back to, BufferError is swallowed and the export goes back."
+    source := "memoryobject.c:106-117, :1108-1120; Objects/typeobject.c:10800-10850", status := .proven
+    prop := ``ReentrantRelease, thm := some ``reentrantRelease_proven },
+  { id := "bytesobj-memoryview-null-reachable", pyFile := memFile
+    pyFns := ["memoryiter_next"]
+    statement := "A stored pointer of 0 with suboffset 0 is NULL, which IterNull is about, and a positive suboffset never is."
+    source := "memoryobject.c:3508-3510", status := .proven
+    prop := ``NullReachable, thm := some ``nullReachable_proven },
   { id := "bytesobj-memoryview-pylong-failures", pyFile := "Objects/memoryobject.c", pyFns := ["pylong_as_ld", "pylong_as_lu", "pylong_as_lld", "pylong_as_llu", "pylong_as_zd", "pylong_as_zu"]
     statement := "Each pylong_as_* uses its own C conversion on the result of _PyNumber_Index, and for every __index__ that raises or returns a non-int it passes that failure up after the callback ran; an object with no __index__ raises TypeError without any callback."
     source := "memoryobject.c:1672-1760; Objects/abstract.c:1402-1440", status := .proven

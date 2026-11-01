@@ -89,29 +89,45 @@ theorem pyBufferRelease0_mono (b : Buf) (st : St) : Mono st (pyBufferRelease0 b 
   · exact Mono.setMv _ _ _ id rfl rfl
   · exact Mono.refl _
 
-theorem mbufRelease0_mono (k : Nat) (st : St) : Mono st (mbufRelease0 k st).2 := by
-  unfold mbufRelease0
-  dsimp only
+theorem hookRelease_mono (rel : Nat → M Unit) (hr : ∀ t s, Mono s (rel t s).2) (b : Buf) (st : St) :
+    Mono st (hookRelease rel b st).2 := by
+  unfold hookRelease
   split
-  · exact Mono.refl _
-  · exact (Mono.setMb _ _ _ (fun _ => rfl)).trans (pyBufferRelease0_mono _ _)
-
-theorem memoryRelease0_mono (i : Nat) (st : St) : Mono st (memoryRelease0 i st).2 := by
-  unfold memoryRelease0
-  dsimp only
-  split
-  · exact Mono.refl _
-  · have h1 := Mono.setMv st i { st.mv i with flags := { (st.mv i).flags with released := true } }
-      (fun _ => rfl) rfl rfl
-    have h2 := Mono.setMb (st.setMv i { st.mv i with flags := { (st.mv i).flags with released := true } })
-      (st.mv i).mbuf
-      { (st.setMv i { st.mv i with flags := { (st.mv i).flags with released := true } }).mb (st.mv i).mbuf with
-        exports := ((st.setMv i { st.mv i with flags := { (st.mv i).flags with released := true } }).mb
-          (st.mv i).mbuf).exports - 1 } id
-    have h3 := h1.trans h2
+  · dsimp only
     split
-    · exact h3.trans (mbufRelease0_mono _ _)
-    · exact h3
+    · exact (hr _ _).trans (pyBufferRelease0_mono _ _)
+    · exact pyBufferRelease0_mono _ _
+  · exact pyBufferRelease0_mono _ _
+
+theorem mbufReleaseWith_mono (rel : Nat → M Unit) (hr : ∀ t s, Mono s (rel t s).2) (k : Nat) (st : St) :
+    Mono st (mbufReleaseWith rel k st).2 := by
+  unfold mbufReleaseWith
+  dsimp only
+  split
+  · exact Mono.refl _
+  · exact (Mono.setMb _ _ _ (fun _ => rfl)).trans (hookRelease_mono rel hr _ _)
+
+theorem memoryReleaseAt_mono : ∀ (f i : Nat) (st : St), Mono st (memoryReleaseAt f i st).2
+  | 0, _, _ => Mono.refl _
+  | f + 1, i, st => by
+    unfold memoryReleaseAt
+    dsimp only
+    split
+    · exact Mono.refl _
+    · have h1 := Mono.setMv st i { st.mv i with flags := { (st.mv i).flags with released := true } }
+        (fun _ => rfl) rfl rfl
+      have h2 := Mono.setMb (st.setMv i { st.mv i with flags := { (st.mv i).flags with released := true } })
+        (st.mv i).mbuf
+        { (st.setMv i { st.mv i with flags := { (st.mv i).flags with released := true } }).mb (st.mv i).mbuf with
+          exports := ((st.setMv i { st.mv i with flags := { (st.mv i).flags with released := true } }).mb
+            (st.mv i).mbuf).exports - 1 } id
+      have h3 := h1.trans h2
+      split
+      · exact h3.trans (mbufReleaseWith_mono _ (fun t s => memoryReleaseAt_mono f t s) _ _)
+      · exact h3
+
+theorem memoryRelease0_mono (i : Nat) (st : St) : Mono st (memoryRelease0 i st).2 :=
+  memoryReleaseAt_mono _ _ _
 
 theorem pyBufferRelease_mono (b : Buf) (st : St) : Mono st (pyBufferRelease b st).2 := by
   unfold pyBufferRelease
@@ -157,117 +173,28 @@ theorem fire_mono (r : Option Nat) (st : St) : Mono st (fire r st).2 := by
 
 /-! ## Export counting -/
 
-/-- The `__release_buffer__` of view `i`'s managed buffer, if it has one, reaches neither
-`i` nor that buffer: its target is released already, or is another view of another
-buffer whose master is not `i`. -/
-def HookClear (st : St) (i : Nat) : Prop :=
-  match (st.mb (st.mv i).mbuf).master.hook with
-  | Option.none => True
-  | some t =>
-    (st.mv t).flags.released = true ∨
-      (t ≠ i ∧ (st.mv t).mbuf ≠ (st.mv i).mbuf ∧
-        (st.mb (st.mv t).mbuf).master.obj ≠ some (.mv i))
-
-/-- `_memory_release` of a callback's target leaves another view and buffer alone. -/
-theorem memoryRelease0_frame (t i k : Nat) (s : St) (h1 : t ≠ i) (h2 : (s.mv t).mbuf ≠ k)
-    (h3 : (s.mb (s.mv t).mbuf).master.obj ≠ some (.mv i)) :
-    (memoryRelease0 t s).2.mv i = s.mv i ∧ (memoryRelease0 t s).2.mb k = s.mb k := by
-  unfold memoryRelease0
-  dsimp only
-  split
-  · exact ⟨rfl, rfl⟩
-  · rename_i hf
-    generalize hx : s.mv t = x at *
-    generalize hs1 : s.setMv t { x with flags := { x.flags with released := true } } = s1
-    have hmv1 : s1.mv i = s.mv i := by rw [← hs1]; exact St.mv_setMv_ne _ _ _ _ h1
-    have hmb1 : ∀ j, s1.mb j = s.mb j := fun j => by rw [← hs1]; rfl
-    generalize hb : s1.mb x.mbuf = b
-    generalize hs2 : s1.setMb x.mbuf { b with exports := b.exports - 1 } = s2
-    have hmv2 : s2.mv i = s.mv i := by rw [← hs2, St.mv_setMb]; exact hmv1
-    have hmb2 : s2.mb k = s.mb k := by
-      rw [← hs2, St.mb_setMb_ne _ _ _ _ h2, hmb1]
-    split
-    · unfold mbufRelease0
-      dsimp only
-      split
-      · exact ⟨hmv2, hmb2⟩
-      · generalize hs3 : s2.setMb x.mbuf { s2.mb x.mbuf with released := true } = s3
-        have hmv3 : s3.mv i = s.mv i := by rw [← hs3, St.mv_setMb]; exact hmv2
-        have hmb3 : s3.mb k = s.mb k := by rw [← hs3, St.mb_setMb_ne _ _ _ _ h2]; exact hmb2
-        have hmaster : (s2.mb x.mbuf).master = (s.mb x.mbuf).master := by
-          by_cases hl : x.mbuf < s1.mbufs.length
-          · rw [← hs2, St.mb_setMb _ _ _ hl, ← hb, hmb1]
-          · have : (s1.setMb x.mbuf { b with exports := b.exports - 1 }).mb x.mbuf = s1.mb x.mbuf := by
-              simp [St.mb, St.setMb, List.getD_eq_getElem?_getD, List.getElem?_set, hl]
-            rw [← hs2, this, hmb1]
-        unfold pyBufferRelease0
-        split
-        · rename_i j hj
-          have hne : j ≠ i := by
-            rintro rfl
-            exact h3 (by rw [← hmaster]; exact hj)
-          exact ⟨by simp only; rw [St.mv_setMv_ne _ _ _ _ hne]; exact hmv3,
-            by simp only [St.mb_setMv]; exact hmb3⟩
-        · exact ⟨hmv3, hmb3⟩
-    · exact ⟨hmv2, hmb2⟩
-
-/-- A release's callback leaves the view being released and its buffer as they were. -/
-theorem hook_frame (b : Buf) (s : St) (i k : Nat) (hobj : b.obj ≠ some (.mv i))
-    (h : match b.hook with
-      | Option.none => True
-      | some t => (s.mv t).flags.released = true ∨
-          (t ≠ i ∧ (s.mv t).mbuf ≠ k ∧ (s.mb (s.mv t).mbuf).master.obj ≠ some (.mv i))) :
-    (pyBufferRelease b s).2.mv i = s.mv i ∧ (pyBufferRelease b s).2.mb k = s.mb k := by
-  have zero : ∀ s' : St, (pyBufferRelease0 b s').2.mv i = s'.mv i ∧
-      (pyBufferRelease0 b s').2.mb k = s'.mb k := by
-    intro s'
-    unfold pyBufferRelease0
-    split
-    · rename_i j hj
-      have hne : j ≠ i := by
-        rintro rfl
-        exact hobj hj
-      exact ⟨by simp only; exact St.mv_setMv_ne _ _ _ _ hne, rfl⟩
-    · exact ⟨rfl, rfl⟩
-  unfold pyBufferRelease
-  split
-  · rename_i t ht
-    rw [ht] at h
-    simp only at h
-    dsimp only
-    split
-    · rcases h with hr | ⟨h1, h2, h3⟩
-      · have e : memoryRelease0 t s = (.ok (), s) := by simp [memoryRelease0, hr]
-        rw [e]
-        exact zero s
-      · obtain ⟨z1, z2⟩ := zero (memoryRelease0 t s).2
-        obtain ⟨f1, f2⟩ := memoryRelease0_frame t i k s h1 h2 h3
-        exact ⟨z1.trans f1, z2.trans f2⟩
-    · exact zero s
-  · exact zero s
-
-/-- The release rules of `memoryview.release()` and `__exit__`
-(Doc/library/stdtypes.rst, `release`; memoryobject.c:1104-1148). With exported buffers it
-raises `BufferError("memoryview has N exported buffer(s)")` and changes nothing. With none
-it marks the view released, takes it off the managed buffer's count, and the managed
-buffer is released exactly when the count reaches zero; a second call changes nothing.
-Hypotheses: `i` and its managed buffer are live objects, and a view is not the exporter of
-its own managed buffer (type invariants), and `HookClear`, also a type invariant: when the
-count reaches zero every view of the buffer is already released, and a view that is the
-exporter of another buffer has exports, so it cannot be the one being released. -/
+/-- `m.release()` (Doc/library/stdtypes.rst, `release`; memoryobject.c:1104-1148), for every state.
+With exported buffers it raises `BufferError("memoryview has N exported buffer(s)")` and changes
+nothing; a negative count is `SystemError`. With none it marks the view released, whatever a
+`__release_buffer__` then does, and a released view is left alone. The managed buffer loses one view:
+while others remain nothing else happens, and when the last one goes it is released, which runs the
+exporter's hook. What the hook does is `ReentrantRelease`. Hypotheses: `i` and its managed buffer are
+live objects. -/
 def ReleaseRules : Prop :=
   ∀ (st : St) (i : Nat), i < st.mvs.length → (st.mv i).mbuf < st.mbufs.length →
-    (st.mb (st.mv i).mbuf).master.obj ≠ some (.mv i) → HookClear st i →
     let k := (st.mv i).mbuf
     let r := memoryviewRelease i st
     ((st.mv i).exports > 0 →
       r.1 = .error (bufferError s!"memoryview has {(st.mv i).exports} exported buffer{if (st.mv i).exports = 1 then "" else "s"}") ∧
       r.2 = st ∧ memoryExit i st = r) ∧
+    ((st.mv i).exports < 0 → r.1 = .error (systemError "memoryview: negative export count") ∧ r.2 = st) ∧
     ((st.mv i).exports = 0 → r.1 = .ok () ∧ baseInaccessible r.2 i = true ∧
-      memoryviewRelease i r.2 = (.ok (), r.2) ∧
+      ((r.2.mv i).exports = 0 → memoryviewRelease i r.2 = (.ok (), r.2)) ∧
+      ((st.mv i).flags.released = true → r.2 = st) ∧
       ((st.mv i).flags.released = false →
-        (r.2.mb k).exports = (st.mb k).exports - 1 ∧
-        ((r.2.mb k).released = ((st.mb k).released || (st.mb k).exports == 1))))
+        ((st.mb k).exports ≠ 1 → (r.2.mb k).exports = (st.mb k).exports - 1 ∧
+          (r.2.mb k).released = (st.mb k).released) ∧
+        ((st.mb k).exports = 1 → (r.2.mb k).released = true)))
 
 theorem exports_setMv_self (st : St) (i : Nat) (x : MV) (hi : i < st.mvs.length) :
     (st.setMv i x).mv i = x := St.mv_setMv st i x hi
@@ -279,32 +206,50 @@ theorem second_release (s : St) (i : Nat) (h1 : (s.mv i).flags.released = true)
   · simp [memoryviewRelease, getExports, h2, memoryRelease, h1]
   · simp [baseInaccessible, h1]
 
-theorem releaseRules_proven : ReleaseRules := by
-  intro st i hi hk hself hclear
+theorem mbufRelease_res (k : Nat) (st : St) : (mbufRelease k st).1 = .ok () := by
+  unfold mbufRelease
   dsimp only
-  have hclear' := hclear
-  unfold HookClear at hclear'
+  split
+  · rfl
+  · exact pyBufferRelease_ok _ _
+
+theorem mbufRelease_marks (k : Nat) (st : St) (hk : k < st.mbufs.length) :
+    ((mbufRelease k st).2.mb k).released = true := by
+  unfold mbufRelease
+  dsimp only
+  split
+  · assumption
+  · refine (pyBufferRelease_mono _ _).mb k ?_
+    rw [St.mb_setMb _ _ _ hk]
+
+theorem releaseRules_proven : ReleaseRules := by
+  intro st i hi hk
+  dsimp only
   generalize hx : st.mv i = x at *
   have hmr : ∀ h0 : x.exports = 0, memoryviewRelease i st = memoryRelease i st := by
     intro h0
     unfold memoryviewRelease getExports
     simp [hx, h0]
-  constructor
-  · intro hpos
-    have h1 : ¬ x.exports = 0 := by omega
+  refine ⟨fun hpos => ?_, fun hneg => ?_, fun h0 => ?_⟩
+  · have h1 : ¬ x.exports = 0 := by omega
     have : memoryviewRelease i st = (.error (bufferError s!"memoryview has {x.exports} exported buffer{if x.exports = 1 then "" else "s"}"), st) := by
       unfold memoryviewRelease getExports
       simp [hx, h1, hpos]
     rw [this]
     exact ⟨rfl, rfl, by rw [← this]; rfl⟩
-  · intro h0
-    rw [hmr h0]
+  · have h1 : ¬ x.exports = 0 := by omega
+    have h2 : ¬ x.exports > 0 := by omega
+    have : memoryviewRelease i st = (.error (systemError "memoryview: negative export count"), st) := by
+      unfold memoryviewRelease getExports
+      simp [hx, h1, h2]
+    rw [this]
+    exact ⟨rfl, rfl⟩
+  · rw [hmr h0]
     by_cases hrel : x.flags.released = true
     · have e : memoryRelease i st = (.ok (), st) := by simp [memoryRelease, hx, hrel]
       rw [e]
       have := second_release st i (by rw [hx]; exact hrel) (by rw [hx]; exact h0)
-      refine ⟨rfl, this.2, this.1, ?_⟩
-      intro h; rw [hrel] at h; cases h
+      exact ⟨rfl, this.2, fun _ => this.1, fun _ => rfl, fun h => by rw [hrel] at h; cases h⟩
     · have hf : x.flags.released = false := by simpa using hrel
       generalize hy : ({ x with flags := { x.flags with released := true } } : MV) = y
       generalize hst1 : st.setMv i y = st1
@@ -312,12 +257,12 @@ theorem releaseRules_proven : ReleaseRules := by
       generalize hbb : st.mb x.mbuf = b at *
       generalize hst2 : st1.setMb x.mbuf { b with exports := b.exports - 1 } = st2
       have hk1 : x.mbuf < st1.mbufs.length := by rw [← hst1]; exact hk
+      have hk2 : x.mbuf < st2.mbufs.length := by rw [← hst2]; simpa [St.setMb] using hk1
       have hmv1 : st1.mv i = y := by rw [← hst1]; exact St.mv_setMv _ _ _ hi
       have hmv2 : st2.mv i = y := by rw [← hst2, St.mv_setMb]; exact hmv1
       have hmb2 : st2.mb x.mbuf = { b with exports := b.exports - 1 } := by
         rw [← hst2]; exact St.mb_setMb _ _ _ hk1
       have hyrel : y.flags.released = true := by rw [← hy]
-      have hyexp : y.exports = 0 := by rw [← hy]; exact h0
       have hm : memoryRelease i st =
           (if b.exports - 1 = 0 then mbufRelease x.mbuf st2 else (.ok (), st2)) := by
         simp only [memoryRelease, hx, hf, Bool.false_eq_true, ↓reduceIte, hy, hst1, hb]
@@ -325,69 +270,108 @@ theorem releaseRules_proven : ReleaseRules := by
       rw [hm]
       by_cases he : b.exports - 1 = 0
       · rw [if_pos he]
-        by_cases hc : b.released = true
-        · have e2 : mbufRelease x.mbuf st2 = (.ok (), st2) := by
-            simp [mbufRelease, hmb2, hc]
-          rw [e2]
-          have := second_release st2 i (by rw [hmv2]; exact hyrel) (by rw [hmv2]; exact hyexp)
-          refine ⟨rfl, this.2, this.1, fun _ => ?_⟩
-          rw [hmb2]
-          simp [hc]
-        · have hcf : b.released = false := by simpa using hc
-          have hk2 : x.mbuf < st2.mbufs.length := by
-            rw [← hst2]; simpa [St.setMb] using hk1
-          have e2 : mbufRelease x.mbuf st2 =
-              pyBufferRelease b.master (st2.setMb x.mbuf { b with exports := b.exports - 1, released := true }) := by
-            simp [mbufRelease, hmb2, hcf]
-          rw [e2]
-          generalize hs3 : st2.setMb x.mbuf { b with exports := b.exports - 1, released := true } = s3
-          have hmv3 : s3.mv i = y := by rw [← hs3, St.mv_setMb]; exact hmv2
-          have hmb3 : s3.mb x.mbuf = { b with exports := b.exports - 1, released := true } := by
-            rw [← hs3]; exact St.mb_setMb _ _ _ hk2
-          have hself' : b.master.obj ≠ some (.mv i) := by
-            rw [← hbb] at *
-            exact hself
-          have hmvs : ∀ t, t ≠ i → s3.mv t = st.mv t := by
-            intro t ht
-            rw [← hs3, St.mv_setMb, ← hst2, St.mv_setMb, ← hst1]
-            exact St.mv_setMv_ne _ _ _ _ (Ne.symm ht)
-          have hmbs : ∀ m, m ≠ x.mbuf → s3.mb m = st.mb m := by
-            intro m hm
-            rw [← hs3, St.mb_setMb_ne _ _ _ _ (Ne.symm hm), ← hst2, St.mb_setMb_ne _ _ _ _ (Ne.symm hm), ← hst1]
-            rfl
-          have hhook : (match b.master.hook with
-              | Option.none => True
-              | some t => (s3.mv t).flags.released = true ∨
-                  (t ≠ i ∧ (s3.mv t).mbuf ≠ x.mbuf ∧
-                    (s3.mb (s3.mv t).mbuf).master.obj ≠ some (.mv i))) := by
-            split
-            · exact trivial
-            · rename_i t ht
-              rw [ht] at hclear'
-              simp only at hclear'
-              by_cases hti : t = i
-              · subst hti
-                exact Or.inl (by rw [hmv3]; exact hyrel)
-              · rcases hclear' with hr | ⟨h1, h2, h3⟩
-                · exact Or.inl (by rw [hmvs t hti]; exact hr)
-                · refine Or.inr ⟨h1, ?_, ?_⟩
-                  · rw [hmvs t hti]; exact h2
-                  · rw [hmvs t hti, hmbs _ h2]; exact h3
-          obtain ⟨hmv4', hmb4⟩ := hook_frame b.master s3 i x.mbuf hself' hhook
-          have hmv4 : (pyBufferRelease b.master s3).2.mv i = y := hmv4'.trans hmv3
-          have := second_release (pyBufferRelease b.master s3).2 i
-            (by rw [hmv4]; exact hyrel) (by rw [hmv4]; exact hyexp)
-          have hres : (pyBufferRelease b.master s3).1 = .ok () := pyBufferRelease_ok _ _
-          refine ⟨hres, this.2, this.1, fun _ => ?_⟩
-          rw [hmb4, hmb3]
-          have : b.exports = 1 := by omega
-          simp [this]
+        have hmono := mbufRelease_mono x.mbuf st2
+        have hmv3 : ((mbufRelease x.mbuf st2).2.mv i).flags.released = true :=
+          hmono.mv i (by rw [hmv2]; exact hyrel)
+        refine ⟨mbufRelease_res x.mbuf st2, ?_, fun h3 => (second_release _ i hmv3 h3).1,
+          (fun h => by rw [hf] at h; cases h), fun _ => ⟨fun h => by omega, fun _ => ?_⟩⟩
+        · simp [baseInaccessible, hmv3]
+        · exact mbufRelease_marks _ _ hk2
       · rw [if_neg he]
-        have := second_release st2 i (by rw [hmv2]; exact hyrel) (by rw [hmv2]; exact hyexp)
-        refine ⟨rfl, this.2, this.1, fun _ => ?_⟩
+        have := second_release st2 i (by rw [hmv2]; exact hyrel) (by
+          rw [hmv2, ← hy]; exact h0)
+        refine ⟨rfl, this.2, fun _ => this.1, (fun h => by rw [hf] at h; cases h),
+          fun _ => ⟨fun _ => ?_, fun h => by omega⟩⟩
         rw [hmb2]
-        have : ¬ b.exports = 1 := by omega
-        simp [this]
+        exact ⟨rfl, rfl⟩
+
+/-- `__release_buffer__` in the states a release can reach, when view `i` is the last of its buffer.
+The view being released, or any view released already, which is every other view of this buffer: the
+`m.release()` in the hook does nothing. The view this release gives an export back to: it still holds
+that export, so `m.release()` raises `BufferError`, which the hook swallows, and the export then goes
+back with the view unreleased. Hypotheses: live objects, and the cases named. -/
+def ReentrantRelease : Prop :=
+  ∀ (st : St) (i t : Nat), i < st.mvs.length → (st.mv i).mbuf < st.mbufs.length →
+    (st.mv i).flags.released = false →
+    let k := (st.mv i).mbuf
+    let b := st.mb k
+    b.exports = 1 → b.released = false → b.master.hook = some t →
+    let s1 := st.setMv i { st.mv i with flags := { (st.mv i).flags with released := true } }
+    let s3 := (s1.setMb k { b with exports := 0 }).setMb k { b with exports := 0, released := true }
+    ((t = i ∨ (st.mv t).flags.released = true) → memoryRelease i st = pyBufferRelease0 b.master s3) ∧
+    (t ≠ i → (st.mv t).exports > 0 → memoryRelease i st = pyBufferRelease0 b.master s3 ∧
+      (b.master.obj = some (.mv t) → t < st.mvs.length →
+        ((memoryRelease i st).2.mv t).exports = (st.mv t).exports - 1 ∧
+        ((memoryRelease i st).2.mv t).flags = (st.mv t).flags))
+
+theorem memoryReleaseAt_done (f t : Nat) (s : St) (h : (s.mv t).flags.released = true) :
+    memoryReleaseAt f t s = (.ok (), s) := by
+  cases f with
+  | zero => rfl
+  | succ f => simp [memoryReleaseAt, h]
+
+theorem reentrantRelease_proven : ReentrantRelease := by
+  intro st i t hi hk hrel
+  dsimp only
+  intro he hr hh
+  generalize hb : st.mb (st.mv i).mbuf = b at *
+  generalize hy : ({ st.mv i with flags := { (st.mv i).flags with released := true } } : MV) = y
+  generalize hs1 : st.setMv i y = s1
+  have hbm : s1.mb (st.mv i).mbuf = b := by rw [← hs1]; exact hb
+  have hk1 : (st.mv i).mbuf < s1.mbufs.length := by rw [← hs1]; exact hk
+  generalize hs2 : s1.setMb (st.mv i).mbuf { b with exports := 0 } = s2
+  have hk2 : (st.mv i).mbuf < s2.mbufs.length := by rw [← hs2]; simpa [St.setMb] using hk1
+  have hmb2 : s2.mb (st.mv i).mbuf = { b with exports := 0 } := by rw [← hs2]; exact St.mb_setMb _ _ _ hk1
+  generalize hs3 : s2.setMb (st.mv i).mbuf { b with exports := 0, released := true } = s3
+  have hmv3 : ∀ j, s3.mv j = s1.mv j := fun j => by rw [← hs3, St.mv_setMb, ← hs2, St.mv_setMb]
+  have hstep : memoryRelease i st = pyBufferRelease b.master s3 := by
+    have e0 : b.exports - 1 = 0 := by omega
+    have h1 : memoryRelease i st =
+        (if b.exports - 1 = 0 then mbufRelease (st.mv i).mbuf (s1.setMb (st.mv i).mbuf { b with exports := b.exports - 1 })
+         else (.ok (), s1.setMb (st.mv i).mbuf { b with exports := b.exports - 1 })) := by
+      simp only [memoryRelease, hrel, Bool.false_eq_true, ↓reduceIte, hy, hs1, hbm]
+    rw [h1, if_pos e0, e0, hs2]
+    have h2 : mbufRelease (st.mv i).mbuf s2 =
+        pyBufferRelease (s2.mb (st.mv i).mbuf).master
+          (s2.setMb (st.mv i).mbuf { s2.mb (st.mv i).mbuf with released := true }) := by
+      unfold mbufRelease
+      dsimp only
+      rw [if_neg (by rw [hmb2]; simpa using hr)]
+    rw [h2, hmb2, ← hs3]
+  have hzero : ∀ s (hs : (s.mv t).flags.released = true), memoryRelease0 t s = (.ok (), s) :=
+    fun s hs => memoryReleaseAt_done _ _ _ hs
+  have hst : ∀ j, j ≠ i → s3.mv j = st.mv j := by
+    intro j hj
+    rw [hmv3, ← hs1]
+    exact St.mv_setMv_ne _ _ _ _ (Ne.symm hj)
+  constructor
+  · intro hc
+    have hs : (s3.mv t).flags.released = true := by
+      rw [hmv3, ← hs1]
+      rcases hc with rfl | hc
+      · rw [St.mv_setMv _ _ _ hi, ← hy]
+      · by_cases hti : t = i
+        · subst hti
+          rw [St.mv_setMv _ _ _ hi, ← hy]
+        · rw [St.mv_setMv_ne _ _ _ _ (Ne.symm hti)]
+          exact hc
+    rw [hstep]
+    simp only [pyBufferRelease, hh, hzero _ hs, ite_self]
+  · intro hne hpos
+    have hx : ¬ (s3.mv t).exports = 0 := by
+      rw [hst t hne]
+      omega
+    have e : memoryRelease i st = pyBufferRelease0 b.master s3 := by
+      rw [hstep]
+      simp only [pyBufferRelease, hh, hx, ↓reduceIte]
+    refine ⟨e, fun hobj ht => ?_⟩
+    rw [e]
+    simp only [pyBufferRelease0, hobj]
+    have hlen : t < s3.mvs.length := by
+      rw [← hs3, ← hs2, ← hs1]
+      simpa [St.setMb, St.setMv] using ht
+    rw [St.mv_setMv _ _ _ hlen, hst t hne]
+    exact ⟨rfl, rfl⟩
 
 /-- What a released view refuses: once `BASE_INACCESSIBLE` holds, every operation of the
 object raises `ValueError("operation forbidden on released memoryview object")` before

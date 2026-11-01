@@ -510,15 +510,21 @@ theorem cmpNonNative_proven : CmpNonNative := by
 /-! ## `import struct` fails -/
 
 /-- `fix_struct_error_int`, :2917-2928: anything from `struct` itself means "not equal" and is
-cleared; a failed import and `MemoryError` are real errors and pass through. -/
+cleared; `ImportError`, `MemoryError` and their subclasses are real errors and pass through. -/
 def FixStructRules : Prop :=
   ∀ (msg : String),
     fixStructError (structError msg) = .ok false ∧
+    fixStructError (.valueError msg) = .ok false ∧
     fixStructError importStruct = .error importStruct ∧
     fixStructError (.named "ImportError" msg) = .error (.named "ImportError" msg) ∧
-    fixStructError (.named "MemoryError" msg) = .error (.named "MemoryError" msg)
+    fixStructError (.named "ModuleNotFoundError" msg) = .error (.named "ModuleNotFoundError" msg) ∧
+    fixStructError (.named "ISub" msg) = .error (.named "ISub" msg) ∧
+    fixStructError (.named "MemoryError" msg) = .error (.named "MemoryError" msg) ∧
+    fixStructError (.named "MSub" msg) = .error (.named "MSub" msg)
 
-theorem fixStructRules_proven : FixStructRules := fun _ => ⟨rfl, rfl, rfl, rfl⟩
+theorem fixStructRules_proven : FixStructRules := by
+  intro msg
+  simp [fixStructError, structError, importStruct, excMatches, PyExc.className, excBases]
 
 /-- `memory_richcompare` with `sys.modules['struct'] = None`, :3144-3158: two views of the same native
 format take the `switch` and never import `struct`, so `==` is unchanged; when the formats differ or
@@ -538,9 +544,9 @@ theorem cmpImportFails_proven : CmpImportFails := by
   intro m vv ww hs
   refine ⟨fun h => ?_, fun c c' s s' h1 h2 => ⟨fun hc => ?_, fun hc hn => ?_⟩⟩
   · rcases h with h | h
-    · simp [compareBufs, hs, h, unpackerOf, fixStructError, importStruct]
-    · simp [compareBufs, hs, h, unpackerOf, fixStructError, importStruct]
-  · simp [compareBufs, hs, h1, h2, hc, unpackerOf, fixStructError, importStruct]
+    · simp [compareBufs, hs, h, unpackerOf, fixStructError, importStruct, excMatches, PyExc.className, excBases]
+    · simp [compareBufs, hs, h, unpackerOf, fixStructError, importStruct, excMatches, PyExc.className, excBases]
+  · simp [compareBufs, hs, h1, h2, hc, unpackerOf, fixStructError, importStruct, excMatches, PyExc.className, excBases]
   · subst hc
     have h_ : c ≠ '_' := by
       intro e

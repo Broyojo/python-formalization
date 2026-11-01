@@ -447,7 +447,7 @@ def entries : List Entry := [
   { id := "bytesobj-bytes-index-raises", pyFile := "Objects/bytes_methods.c"
     pyFns := ["parse_args_finds_byte", "_Py_bytes_contains", "_getbytevalue", "byte_converter", "formatlong", "bytes_new_impl",
       "bytearray___init___impl"]
-    statement := "An exception from __index__ passes through find, index, count, the item conversions and the integer conversions of %; bytes(x) and bytearray(x) fall through on TypeError only; %c and %d replace a TypeError by their own message; in loses it."
+    statement := "An exception from __index__ passes through find, index, count, the item conversions and the conversions of %; bytes(x) and bytearray(x) fall through on TypeError only; %c passes it on as well, and %d and its kin replace a TypeError by the format's message; in loses it."
     source := "the error paths at bytes_methods.c:420-423, :606-612, bytesobject.c:2819-2826, bytearrayobject.c:969-974", status := .proven
     prop := ``IndexRaisesRules, thm := some ``indexRaisesRules_proven },
   { id := "bytesobj-bytearray-index-raises", pyFile := "Objects/bytearrayobject.c"

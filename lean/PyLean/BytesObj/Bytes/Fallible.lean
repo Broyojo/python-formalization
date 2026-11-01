@@ -38,8 +38,8 @@ theorem containsKeepsIndexError_refuted : ¬ ContainsKeepsIndexError := by
 
 /-- What each caller does with an exception from `__index__`: `find`, `index`, `count`, the item
 conversions and the `o x X` conversions pass it on, unchanged. `in` loses it (the refutation above);
-`bytes(x)` and `bytearray(x)` fall through to the next protocol on `TypeError` only; `%c` replaces a
-`TypeError` by its own message; `%d` replaces one by the format's. -/
+`bytes(x)` and `bytearray(x)` fall through to the next protocol on `TypeError` only; `%c` passes it on
+too, and only `%d` and its kin replace a `TypeError`, by the format's message. -/
 def IndexRaisesRules : Prop :=
   ∀ (s : Seq) (e : PyExc) (st en : Option Int) (fwd : Bool) (fl : Fl) (prec : Int) (t : Nat),
     let x := Obj.indexRaises e
@@ -51,15 +51,14 @@ def IndexRaisesRules : Prop :=
       .error (if isTypeError e then .typeError "cannot convert 'BIdxRaises' object to bytes" else e) ∧
     (baInit {} (some x) none none).2 =
       some (if isTypeError e then .typeError "cannot convert 'BIdxRaises' object to bytearray" else e) ∧
-    byteConverter x = .error (if isTypeError e then
-      .typeError "%c requires an integer in range(256) or a single byte, not BIdxRaises" else e) ∧
+    byteConverter x = .error e ∧
     (isTypeError e = false → formatLong x fl prec t = .error e)
 
 theorem indexRaisesRules_proven : IndexRaisesRules := by
   intro s e st en fwd fl prec t
   dsimp only
   have hz : ({} : BA).size = 0 := rfl
-  refine ⟨rfl, rfl, rfl, rfl, rfl, rfl, ?_, ?_, ?_, fun h => ?_⟩
+  refine ⟨rfl, rfl, rfl, rfl, rfl, rfl, ?_, ?_, rfl, fun h => ?_⟩
   · cases h : isTypeError e
     · simp [bytesNew, Obj.index?, h]
     · simp [bytesNew, Obj.index?, h, bytesFromObject, Obj.buffer?, getIterOr, iterItems?, Obj.typeName,
@@ -69,16 +68,10 @@ theorem indexRaisesRules_proven : IndexRaisesRules := by
     · simp [baInit, hz, Obj.index?, h]
     · simp [baInit, hz, Obj.index?, h, Obj.buffer?, getIterOr, iterItems?, Obj.typeName]
       rfl
-  · cases h : isTypeError e
-    · simp [byteConverter, Obj.index?, h]
-    · simp [byteConverter, Obj.index?, h, Obj.typeName]
-      rfl
-  · have h2 : (e.className = "TypeError") = False := by
-      simpa [isTypeError] using h
-    simp only [formatLong, Obj.longValue?, Obj.isNumber]
+  · simp only [formatLong, Obj.longValue?, Obj.isNumber]
     by_cases hc : t = 111 ∨ t = 120 ∨ t = 88
-    · simp [hc, Obj.index?, h2]
-    · simp [hc, numberLong, Obj.index?, h2]
+    · simp [hc, Obj.index?, h]
+    · simp [hc, numberLong, Obj.index?, h]
 
 /-- The value of `__index__` is read before anything else in the mutating methods, and its exception
 leaves the object as it was (the methods return an error, no new object). -/

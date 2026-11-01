@@ -79,6 +79,17 @@ theorem floatAsDouble_mono (o : Obj) (st : St) : Mono st (floatAsDouble o st).2 
 theorem isTrue_mono (o : Obj) (st : St) : Mono st (isTrue o st).2 := by
   cases o
   case boolLike b rel => exact fire_bind_mono rel _ st fun s => get_mono _ _ s
+  case lenLike r rel =>
+    refine fire_bind_mono rel _ st fun s => ?_
+    cases r with
+    | val n =>
+      by_cases h : n < 0
+      · simp only [Ret.get, M.bind_app, M.pure_app, h, ↓reduceIte, M.throw_app]
+        exact Mono.refl _
+      · simp only [Ret.get, M.bind_app, M.pure_app, h, ↓reduceIte]
+        exact Mono.refl _
+    | raises e => exact Mono.refl _
+    | wrong t => exact Mono.refl _
   case view i =>
     simp only [isTrue, M.bind_app, M.get]
     cases h : baseInaccessible st i

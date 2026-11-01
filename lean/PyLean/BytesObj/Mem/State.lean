@@ -388,10 +388,15 @@ structure Unpacker where
   itemsize : Int
   deriving Repr, DecidableEq, Inhabited
 
-/-- `struct_get_unpacker`, :2074-2124. The `Struct` call raises `struct.error` on a bad
-format; a failed import is outside the model. -/
+/-- `MemoryError()`. -/
+def noMemory : PyExc := .named "MemoryError" ""
+
+/-- `struct_get_unpacker`, :2074-2124. The `Struct` call raises `struct.error` on a bad format, and
+`PyMem_Malloc(itemsize)` fails for a size no allocation can have, taken as at least `2^47`, past the
+address space of an LP64 system. The import is `unpackerOf`. -/
 def structGetUnpacker (fmt : List Char) (itemsize : Int) : Py Unpacker := do
   let sf ← structParse fmt
+  if itemsize ≥ 2 ^ 47 then throw noMemory
   return ⟨sf, itemsize⟩
 
 /-- `struct_unpack_single`, :2127-2144: copy `itemsize` bytes, then `unpack_from`. -/
