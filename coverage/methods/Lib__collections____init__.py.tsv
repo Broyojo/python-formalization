@@ -26,47 +26,47 @@ Lib/collections/__init__.py	326	328	OrderedDict.__ior__	__ior__(self, other)	tod
 Lib/collections/__init__.py	330	335	OrderedDict.__or__	__or__(self, other)	todo		
 Lib/collections/__init__.py	337	342	OrderedDict.__ror__	__ror__(self, other)	todo		
 Lib/collections/__init__.py	361	533	namedtuple	namedtuple(typename, field_names, *, rename=False, defaults=None, module=None)	modelled	coll-namedtuple-asdict-narrow,coll-namedtuple-asdict-roundtrip,coll-namedtuple-defaults,coll-namedtuple-instance-methods,coll-namedtuple-rename-narrow,coll-namedtuple-rename-total,coll-namedtuple-source-attribute,coll-namedtuple-validation	
-Lib/collections/__init__.py	540	544	_count_elements	_count_elements(mapping, iterable)	modelled	coll-count-elements-twins,coll-counter-first-seen-order,coll-counter-update-adds	
-Lib/collections/__init__.py	605	617	Counter.__init__	__init__(self, iterable=None, /, **kwds)	modelled	coll-counter-first-seen-order,coll-counter-update-adds	
-Lib/collections/__init__.py	619	622	Counter.__missing__	__missing__(self, key)	modelled	coll-counter-update-adds	
-Lib/collections/__init__.py	624	626	Counter.total	total(self)	modelled	coll-counter-total	
-Lib/collections/__init__.py	628	645	Counter.most_common	most_common(self, n=None)	modelled	coll-counter-most-common-prefix,coll-counter-most-common-sorted	
-Lib/collections/__init__.py	647	666	Counter.elements	elements(self)	modelled	coll-counter-elements	
+Lib/collections/__init__.py	540	544	_count_elements	_count_elements(mapping, iterable)	todo		withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
+Lib/collections/__init__.py	605	617	Counter.__init__	__init__(self, iterable=None, /, **kwds)	todo		withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
+Lib/collections/__init__.py	619	622	Counter.__missing__	__missing__(self, key)	todo		withdrawn: a hard-coded constant
+Lib/collections/__init__.py	624	626	Counter.total	total(self)	todo		withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
+Lib/collections/__init__.py	628	645	Counter.most_common	most_common(self, n=None)	todo		withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
+Lib/collections/__init__.py	647	666	Counter.elements	elements(self)	todo		withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
 Lib/collections/__init__.py	671	680	Counter.fromkeys	fromkeys(cls, iterable, v=None)	todo		withdrawn: constant raise, rfl
-Lib/collections/__init__.py	682	714	Counter.update	update(self, iterable=None, /, **kwds)	modelled	coll-counter-subtract,coll-counter-update-adds,coll-counter-update-fast-slow	
-Lib/collections/__init__.py	716	741	Counter.subtract	subtract(self, iterable=None, /, **kwds)	modelled	coll-counter-subtract	
-Lib/collections/__init__.py	743	745	Counter.copy	copy(self)	modelled	coll-counter-copy-reduce	
+Lib/collections/__init__.py	682	714	Counter.update	update(self, iterable=None, /, **kwds)	todo		withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
+Lib/collections/__init__.py	716	741	Counter.subtract	subtract(self, iterable=None, /, **kwds)	todo		withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
+Lib/collections/__init__.py	743	745	Counter.copy	copy(self)	todo		withdrawn: = on a value structure: a copy returning self passes
 Lib/collections/__init__.py	747	748	Counter.__reduce__	__reduce__(self)	modelled	coll-counter-copy-reduce	
 Lib/collections/__init__.py	750	753	Counter.__delitem__	__delitem__(self, elem)	modelled	coll-counter-delitem	
-Lib/collections/__init__.py	755	764	Counter.__repr__	__repr__(self)	modelled	coll-counter-repr	
-Lib/collections/__init__.py	800	804	Counter.__eq__	__eq__(self, other)	modelled	coll-counter-compare-order,coll-counter-compare-pointwise,coll-counter-set-correspondence	
-Lib/collections/__init__.py	806	810	Counter.__ne__	__ne__(self, other)	modelled	coll-counter-compare-pointwise,coll-counter-set-correspondence	
-Lib/collections/__init__.py	812	816	Counter.__le__	__le__(self, other)	modelled	coll-counter-compare-order,coll-counter-compare-pointwise,coll-counter-set-correspondence	
-Lib/collections/__init__.py	818	822	Counter.__lt__	__lt__(self, other)	modelled	coll-counter-compare-order,coll-counter-compare-pointwise,coll-counter-set-correspondence	
-Lib/collections/__init__.py	824	828	Counter.__ge__	__ge__(self, other)	modelled	coll-counter-compare-order,coll-counter-compare-pointwise,coll-counter-set-correspondence	
-Lib/collections/__init__.py	830	834	Counter.__gt__	__gt__(self, other)	modelled	coll-counter-compare-order,coll-counter-compare-pointwise,coll-counter-set-correspondence	
-Lib/collections/__init__.py	836	853	Counter.__add__	__add__(self, other)	modelled	coll-counter-ops-contract,coll-counter-ops-pointwise,coll-counter-set-correspondence	
-Lib/collections/__init__.py	855	872	Counter.__sub__	__sub__(self, other)	modelled	coll-counter-ops-contract,coll-counter-ops-pointwise,coll-counter-set-correspondence	
-Lib/collections/__init__.py	874	892	Counter.__or__	__or__(self, other)	modelled	coll-counter-ops-contract,coll-counter-ops-pointwise,coll-counter-set-correspondence	
-Lib/collections/__init__.py	894	909	Counter.__and__	__and__(self, other)	modelled	coll-counter-ops-contract,coll-counter-ops-pointwise,coll-counter-set-correspondence	
-Lib/collections/__init__.py	911	917	Counter.__pos__	__pos__(self)	modelled	coll-counter-ops-contract,coll-counter-ops-pointwise,coll-counter-unary-binary	
-Lib/collections/__init__.py	919	928	Counter.__neg__	__neg__(self)	modelled	coll-counter-ops-contract,coll-counter-ops-pointwise,coll-counter-unary-binary	
-Lib/collections/__init__.py	930	935	Counter._keep_positive	_keep_positive(self)	modelled	coll-counter-inplace,coll-counter-keep-positive	
-Lib/collections/__init__.py	937	948	Counter.__iadd__	__iadd__(self, other)	modelled	coll-counter-inplace	
-Lib/collections/__init__.py	950	961	Counter.__isub__	__isub__(self, other)	modelled	coll-counter-inplace	
-Lib/collections/__init__.py	963	976	Counter.__ior__	__ior__(self, other)	modelled	coll-counter-inplace	
-Lib/collections/__init__.py	978	991	Counter.__iand__	__iand__(self, other)	modelled	coll-counter-inplace	
+Lib/collections/__init__.py	755	764	Counter.__repr__	__repr__(self)	todo		withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
+Lib/collections/__init__.py	800	804	Counter.__eq__	__eq__(self, other)	todo		withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
+Lib/collections/__init__.py	806	810	Counter.__ne__	__ne__(self, other)	todo		withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
+Lib/collections/__init__.py	812	816	Counter.__le__	__le__(self, other)	todo		withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
+Lib/collections/__init__.py	818	822	Counter.__lt__	__lt__(self, other)	todo		withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
+Lib/collections/__init__.py	824	828	Counter.__ge__	__ge__(self, other)	todo		withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
+Lib/collections/__init__.py	830	834	Counter.__gt__	__gt__(self, other)	todo		withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
+Lib/collections/__init__.py	836	853	Counter.__add__	__add__(self, other)	todo		withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
+Lib/collections/__init__.py	855	872	Counter.__sub__	__sub__(self, other)	todo		withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
+Lib/collections/__init__.py	874	892	Counter.__or__	__or__(self, other)	todo		withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
+Lib/collections/__init__.py	894	909	Counter.__and__	__and__(self, other)	todo		withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
+Lib/collections/__init__.py	911	917	Counter.__pos__	__pos__(self)	todo		withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
+Lib/collections/__init__.py	919	928	Counter.__neg__	__neg__(self)	todo		withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
+Lib/collections/__init__.py	930	935	Counter._keep_positive	_keep_positive(self)	todo		withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
+Lib/collections/__init__.py	937	948	Counter.__iadd__	__iadd__(self, other)	todo		withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
+Lib/collections/__init__.py	950	961	Counter.__isub__	__isub__(self, other)	todo		withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
+Lib/collections/__init__.py	963	976	Counter.__ior__	__ior__(self, other)	todo		withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
+Lib/collections/__init__.py	978	991	Counter.__iand__	__iand__(self, other)	todo		withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
 Lib/collections/__init__.py	1012	1017	ChainMap.__init__	__init__(self, *maps)	modelled	coll-chainmap-child-parents	
 Lib/collections/__init__.py	1019	1020	ChainMap.__missing__	__missing__(self, key)	modelled	coll-chainmap-flat-view	
-Lib/collections/__init__.py	1022	1028	ChainMap.__getitem__	__getitem__(self, key)	modelled	coll-chainmap-flat-view	
+Lib/collections/__init__.py	1022	1028	ChainMap.__getitem__	__getitem__(self, key)	todo		withdrawn: the __missing__ path and non-KeyError exceptions have no theorem
 Lib/collections/__init__.py	1030	1031	ChainMap.get	get(self, key, default=None)	modelled	coll-chainmap-flat-view	
 Lib/collections/__init__.py	1033	1034	ChainMap.__len__	__len__(self)	modelled	coll-chainmap-flat-view	
 Lib/collections/__init__.py	1036	1040	ChainMap.__iter__	__iter__(self)	modelled	coll-chainmap-flat-view	
 Lib/collections/__init__.py	1042	1046	ChainMap.__contains__	__contains__(self, key)	modelled	coll-chainmap-flat-view	
 Lib/collections/__init__.py	1048	1049	ChainMap.__bool__	__bool__(self)	modelled	coll-chainmap-flat-view	
-Lib/collections/__init__.py	1052	1053	ChainMap.__repr__	__repr__(self)	modelled	coll-chainmap-repr	
+Lib/collections/__init__.py	1052	1053	ChainMap.__repr__	__repr__(self)	todo		withdrawn: the recursive_repr guard is not modelled
 Lib/collections/__init__.py	1056	1058	ChainMap.fromkeys	fromkeys(cls, iterable, value=None, /)	modelled	coll-chainmap-child-parents	
-Lib/collections/__init__.py	1060	1062	ChainMap.copy	copy(self)	modelled	coll-chainmap-union-flat	
+Lib/collections/__init__.py	1060	1062	ChainMap.copy	copy(self)	todo		withdrawn: = on a value structure: a copy returning self passes
 Lib/collections/__init__.py	1066	1075	ChainMap.new_child	new_child(self, m=None, **kwargs)	modelled	coll-chainmap-child-parents	
 Lib/collections/__init__.py	1078	1080	ChainMap.parents	parents(self)	modelled	coll-chainmap-child-parents	
 Lib/collections/__init__.py	1082	1083	ChainMap.__setitem__	__setitem__(self, key, value)	modelled	coll-chainmap-writes-first	
@@ -79,7 +79,7 @@ Lib/collections/__init__.py	1113	1118	ChainMap.__or__	__or__(self, other)	modell
 Lib/collections/__init__.py	1120	1126	ChainMap.__ror__	__ror__(self, other)	modelled	coll-chainmap-union-flat	
 Lib/collections/__init__.py	1136	1141	UserDict.__init__	__init__(self, dict=None, /, **kwargs)	modelled	coll-userdict-constructors-union	
 Lib/collections/__init__.py	1143	1144	UserDict.__len__	__len__(self)	modelled	coll-userdict-matches-dict	
-Lib/collections/__init__.py	1146	1151	UserDict.__getitem__	__getitem__(self, key)	modelled	coll-userdict-matches-dict,coll-userdict-missing-like-dict	
+Lib/collections/__init__.py	1146	1151	UserDict.__getitem__	__getitem__(self, key)	todo		withdrawn: the __missing__ path and non-KeyError exceptions have no theorem
 Lib/collections/__init__.py	1153	1154	UserDict.__setitem__	__setitem__(self, key, item)	modelled	coll-userdict-set-del	
 Lib/collections/__init__.py	1156	1157	UserDict.__delitem__	__delitem__(self, key)	modelled	coll-userdict-set-del	
 Lib/collections/__init__.py	1159	1160	UserDict.__iter__	__iter__(self)	modelled	coll-userdict-matches-dict	
@@ -89,8 +89,8 @@ Lib/collections/__init__.py	1174	1175	UserDict.__repr__	__repr__(self)	modelled	
 Lib/collections/__init__.py	1177	1182	UserDict.__or__	__or__(self, other)	modelled	coll-userdict-constructors-union	
 Lib/collections/__init__.py	1184	1189	UserDict.__ror__	__ror__(self, other)	modelled	coll-userdict-constructors-union	
 Lib/collections/__init__.py	1191	1196	UserDict.__ior__	__ior__(self, other)	modelled	coll-userdict-constructors-union	
-Lib/collections/__init__.py	1198	1203	UserDict.__copy__	__copy__(self)	modelled	coll-userdict-constructors-union	
-Lib/collections/__init__.py	1205	1216	UserDict.copy	copy(self)	modelled	coll-userdict-constructors-union	
+Lib/collections/__init__.py	1198	1203	UserDict.__copy__	__copy__(self)	todo		withdrawn: = on a value structure: a copy returning self passes
+Lib/collections/__init__.py	1205	1216	UserDict.copy	copy(self)	todo		withdrawn: = on a value structure: a copy returning self passes
 Lib/collections/__init__.py	1219	1223	UserDict.fromkeys	fromkeys(cls, iterable, value=None)	modelled	coll-userdict-constructors-union	
 Lib/collections/__init__.py	1233	1242	UserList.__init__	__init__(self, initlist=None)	modelled	coll-userlist-operands	
 Lib/collections/__init__.py	1244	1245	UserList.__repr__	__repr__(self)	modelled	coll-userlist-observers	
@@ -110,13 +110,13 @@ Lib/collections/__init__.py	1290	1295	UserList.__radd__	__radd__(self, other)	mo
 Lib/collections/__init__.py	1297	1304	UserList.__iadd__	__iadd__(self, other)	modelled	coll-userlist-operands,coll-userlist-simulates	
 Lib/collections/__init__.py	1306	1307	UserList.__mul__	__mul__(self, n)	modelled	coll-userlist-observers	
 Lib/collections/__init__.py	1311	1313	UserList.__imul__	__imul__(self, n)	modelled	coll-userlist-simulates	
-Lib/collections/__init__.py	1315	1320	UserList.__copy__	__copy__(self)	modelled	coll-userlist-copies	
+Lib/collections/__init__.py	1315	1320	UserList.__copy__	__copy__(self)	todo		withdrawn: = on a value structure: a copy returning self passes
 Lib/collections/__init__.py	1322	1323	UserList.append	append(self, item)	modelled	coll-userlist-simulates	
 Lib/collections/__init__.py	1325	1326	UserList.insert	insert(self, i, item)	modelled	coll-userlist-simulates	
 Lib/collections/__init__.py	1328	1329	UserList.pop	pop(self, i=-1)	modelled	coll-userlist-simulates	
 Lib/collections/__init__.py	1331	1332	UserList.remove	remove(self, item)	modelled	coll-userlist-simulates	
 Lib/collections/__init__.py	1334	1335	UserList.clear	clear(self)	modelled	coll-userlist-simulates	
-Lib/collections/__init__.py	1337	1338	UserList.copy	copy(self)	modelled	coll-userlist-copies	
+Lib/collections/__init__.py	1337	1338	UserList.copy	copy(self)	todo		withdrawn: = on a value structure: a copy returning self passes
 Lib/collections/__init__.py	1340	1341	UserList.count	count(self, item)	modelled	coll-userlist-observers	candidates:strsearch-count-repeated-find,strsearch-find-slice-literal,strsearch-find-str-bytes
 Lib/collections/__init__.py	1343	1344	UserList.index	index(self, item, *args)	modelled	coll-userlist-observers	candidates:strsearch-find-str-bytes
 Lib/collections/__init__.py	1346	1347	UserList.reverse	reverse(self)	modelled	coll-userlist-int-instance,coll-userlist-simulates	
