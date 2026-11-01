@@ -6,6 +6,8 @@ import PyLean.PyIO.BytesDocs
 import PyLean.PyIO.Readlines
 import PyLean.PyIO.StringTwins
 import PyLean.PyIO.StringProps
+import PyLean.PyIO.BytesExtra
+import PyLean.PyIO.StringExtra
 import PyLean.PyIO.RegText
 import PyLean.PyIO.RegBuffered
 import PyLean.PyIO.RegFile
@@ -198,7 +200,51 @@ def coreEntries : List Entry := [
     source := "Doc/library/io.rst:918-922 (TextIOBase.newlines: 'A string, a tuple of strings, or None ... this may not be available'); twin behaviour"
     status := .refuted, prop := ``StringIONewlinesAttr, thm := some ``stringIONewlinesAttr_refuted
     bug := some "pyio-stringio-pyio-newlines-attributeerror"
-    notes := "_pyio with newline '\\n', '\\r' or '\\r\\n': AttributeError once a decoder exists." }
+    notes := "_pyio with newline '\\n', '\\r' or '\\r\\n': AttributeError once a decoder exists." },
+  -- BytesIO: remaining methods (inquiries, writelines, pickle, getbuffer release)
+  { id := "pyio-bytesio-inquiries", pyFile := "Modules/_io/bytesio.c"
+    pyFns := ["_io_BytesIO_readable_impl", "_io_BytesIO_writable_impl", "_io_BytesIO_seekable_impl",
+      "_io_BytesIO_flush_impl", "_io_BytesIO_isatty_impl", "BytesIO.readable", "BytesIO.writable",
+      "BytesIO.seekable", "IOBase.flush", "IOBase.isatty", "IOBase._checkClosed"]
+    statement := "On an open BytesIO readable(), writable(), seekable() return True, flush() returns None and isatty() False, none of them changing the object; on a closed BytesIO each raises ValueError('I/O operation on closed file.') (both twins, every state)."
+    source := "Doc/library/io.rst (IOBase.readable/writable/seekable/isatty/flush); invariant: no state change, both twins agree"
+    status := .proven, prop := ``BytesIOInquiries, thm := some ``bytesIOInquiries_proven },
+  { id := "pyio-bytesio-writelines", pyFile := "Modules/_io/bytesio.c"
+    pyFns := ["_io_BytesIO_writelines_impl", "IOBase.writelines"]
+    statement := "writelines(ls) on an open BytesIO equals calling write() for each element in turn, stopping at the first failure: it reaches the same state and returns None when every write succeeds (both twins)."
+    source := "Doc/library/io.rst (IOBase.writelines: 'equivalent to calling write() for each element'); bytesio.c:840-841"
+    status := .proven, prop := ``BytesIOWritelines, thm := some ``bytesIOWritelines_proven },
+  { id := "pyio-bytesio-pickle-roundtrip", pyFile := "Modules/_io/bytesio.c"
+    pyFns := ["bytesio_getstate", "bytesio_setstate", "bytesio_setstate_lock_held", "BytesIO.__getstate__"]
+    statement := "For a C BytesIO, __setstate__(__getstate__()) restores contents and position verbatim: with the position in Py_ssize_t and contents below the allocation bound, setstate into any open export-free BytesIO reproduces buf and pos."
+    source := "invariant: pickle round trip (__reduce__/__setstate__)"
+    status := .proven, prop := ``BytesIOPickleRoundTrip, thm := some ``bytesIOPickleRoundTrip_proven
+    notes := "Hypotheses are C type invariants: pos fits Py_ssize_t, buffer below the allocation bound. _pyio BytesIO has no __setstate__, so this is the C object only." },
+  { id := "pyio-bytesio-release-exports", pyFile := "Modules/_io/bytesio.c"
+    pyFns := ["bytesiobuf_getbuffer", "bytesiobuf_getbuffer_lock_held", "bytesiobuf_releasebuffer"]
+    statement := "getbuffer() raises the export count above zero (blocking resizes); releasing the view restores the previous count and leaves contents and position unchanged, so resizing is possible again (C object; _pyio memoryview over the bytearray)."
+    source := "Doc/library/io.rst (BytesIO.getbuffer note); invariant: export count round trip"
+    status := .proven, prop := ``BytesIOReleaseExports, thm := some ``bytesIOReleaseExports_proven },
+  -- StringIO: remaining methods (inquiries, unsupported ops, pickle)
+  { id := "pyio-stringio-inquiries", pyFile := "Modules/_io/stringio.c"
+    pyFns := ["_io_StringIO_readable_impl", "_io_StringIO_writable_impl", "_io_StringIO_seekable_impl",
+      "_io__IOBase_isatty_impl", "TextIOWrapper.readable", "TextIOWrapper.writable",
+      "TextIOWrapper.seekable", "TextIOWrapper.isatty"]
+    statement := "On an open StringIO readable(), writable(), seekable() return True and isatty() False; on a closed StringIO each raises ValueError (both twins, every state)."
+    source := "Doc/library/io.rst (IOBase.readable/writable/seekable/isatty); invariant: both twins agree"
+    status := .proven, prop := ``StringIOInquiries, thm := some ``stringIOInquiries_proven },
+  { id := "pyio-stringio-unsupported", pyFile := "Modules/_io/textio.c"
+    pyFns := ["_io__TextIOBase_detach_impl", "_io__TextIOBase_encoding_get_impl",
+      "_io__TextIOBase_errors_get_impl", "_io__IOBase_fileno_impl", "TextIOWrapper.detach",
+      "TextIOWrapper.fileno", "StringIO.encoding", "StringIO.errors", "StringIO.detach"]
+    statement := "On a StringIO (both twins), detach() and fileno() raise io.UnsupportedOperation, while the encoding and errors attributes are None (an in-memory text buffer has no underlying binary buffer, encoding or error handler)."
+    source := "Doc/library/io.rst (TextIOBase.detach/fileno/encoding/errors: 'not supported by an in-memory text buffer')"
+    status := .proven, prop := ``StringIOUnsupported, thm := some ``stringIOUnsupported_proven },
+  { id := "pyio-stringio-pickle-roundtrip", pyFile := "Modules/_io/stringio.c"
+    pyFns := ["_io_StringIO___getstate___impl", "_io_StringIO___setstate___impl", "_io_StringIO___init___impl"]
+    statement := "For a C StringIO, whenever __init__ accepts the saved value and newline, __setstate__(__getstate__()) restores contents and position verbatim, applying no newline translation a second time (position in Py_ssize_t)."
+    source := "invariant: pickle round trip"
+    status := .proven, prop := ``StringIOPickleRoundTrip, thm := some ``stringIOPickleRoundTrip_proven }
 ]
 
 def entries : List Entry := coreEntries ++ textEntries ++ bufferedEntries ++ fileEntries
