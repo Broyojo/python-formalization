@@ -1,6 +1,6 @@
 import PyLean.Registry
 import PyLean.DictSet.Diff
-import PyLean.DictSet.Props3
+import PyLean.DictSet.Props4
 import PyLean.DictSet.SetProps
 import PyLean.DictSet.Findings
 
@@ -116,7 +116,7 @@ def entries : List Entry := [
     source := "Doc/c-api/dict.rst", status := .proven
     prop := ``ReadFamily, thm := some ``readFamily_proven },
   { id := "dict-contains", pyFile := "Objects/dictobject.c",
-    pyFns := ["PyDict_Contains", "_PyDict_Contains_KnownHash"]
+    pyFns := ["PyDict_Contains", "_PyDict_Contains_KnownHash", "dict___contains___impl"]
     statement := "key in d is true exactly when the association list holds the key; the dict is unchanged."
     source := "Doc/library/stdtypes.rst", status := .proven
     prop := ``ContainsSpec, thm := some ``containsSpec_proven },
@@ -204,6 +204,43 @@ def entries : List Entry := [
     source := "odictobject.c:3-4: necessarily explicitly equivalent to the pure Python class", status := .open
     prop := ``OdictTwinsAgree
     notes := "Not proved. Needs an invariant tying od_fast_nodes to dk_entries across the deferred _odict_resize, and one for the link heap." },
+  { id := "dict-view-len", pyFile := "Objects/dictobject.c",
+    pyFns := ["dictview_len", "_PyDictView_New", "dict_keys_impl", "dict_items_impl", "dict_values_impl"]
+    statement := "The length of any view of a well-formed dict is the length of the association list."
+    source := "Doc/library/stdtypes.rst: dictionary view objects", status := .proven
+    prop := ``ViewLen, thm := some ``viewLen_proven },
+  { id := "dict-view-iter-order", pyFile := "Objects/dictobject.c",
+    pyFns := ["dictkeys_iter", "dictitems_iter", "dictvalues_iter"]
+    statement := "Iterating a view of an unchanged dict yields the association list in order."
+    source := "Doc/library/stdtypes.rst: views iterate in insertion order", status := .proven
+    prop := ``ViewIterOrder, thm := some ``viewIterOrder_proven },
+  { id := "dict-keys-view-contains", pyFile := "Objects/dictobject.c", pyFns := ["dictkeys_contains"]
+    statement := "x in d.keys() is x in d."
+    source := "Doc/library/stdtypes.rst", status := .proven
+    prop := ``KeysViewContains, thm := some ``keysViewContains_proven },
+  { id := "odict-list-ends", pyFile := "Objects/odictobject.c", pyFns := ["_odict_add_head", "_odict_add_tail"]
+    statement := "Adding a node at either end changes the list as named and increments od_state."
+    source := "odictobject.c:500: incremented whenever the LL changes", status := .proven
+    prop := ``OdictListEnds, thm := some ``odictListEnds_proven },
+  { id := "odict-remove-node", pyFile := "Objects/odictobject.c", pyFns := ["_odict_remove_node"]
+    statement := "Removing a node drops exactly that node and increments od_state."
+    source := "odictobject.c:500", status := .proven
+    prop := ``OdictRemoveNode, thm := some ``odictRemoveNode_proven },
+  { id := "odict-clear-nodes", pyFile := "Objects/odictobject.c", pyFns := ["_odict_clear_nodes"]
+    statement := "Clearing the nodes empties the list and od_fast_nodes, resets the sentinel and increments od_state."
+    source := "odictobject.c:795-814", status := .proven
+    prop := ``OdictClearNodes, thm := some ``odictClearNodes_proven },
+  { id := "odict-iter-start", pyFile := "Objects/odictobject.c",
+    pyFns := ["odictiter_new", "odict_iter", "odict_reversed", "odictkeys_iter", "odictkeys_reversed",
+      "odictitems_iter", "odictitems_reversed", "odictvalues_iter", "odictvalues_reversed"]
+    statement := "An OrderedDict iterator starts at the first or last node as asked, recording the current size and state."
+    source := "odictobject.c:1942-1973", status := .proven
+    prop := ``OdictIterStart, thm := some ``odictIterStart_proven
+    notes := "Says where iteration starts, not how it proceeds; see odict-iter-bounded." },
+  { id := "odict-new-empty", pyFile := "Objects/odictobject.c", pyFns := ["PyODict_New"]
+    statement := "A new OrderedDict has no nodes and an empty dict."
+    source := "invariant", status := .proven
+    prop := ``OdictNewEmpty, thm := some ``odictNewEmpty_proven },
   { id := "dict-setdefault-no-crash", pyFile := "Objects/dictobject.c",
     pyFns := ["dict_setdefault_ref_lock_held", "dict_setdefault_impl", "PyDict_SetDefaultRef"]
     statement := "For every key type keeping the hash/eq contract, dict.setdefault on a fresh instance __dict__ never dereferences NULL."
@@ -224,7 +261,7 @@ def entries : List Entry := [
     prop := ``OdictIterBounded, thm := some ``odictIterBounded_refuted
     bug := some "dictset-odict-stale-fast-nodes" },
   { id := "dict-reviter-len", pyFile := "Objects/dictobject.c",
-    pyFns := ["dictreviter_iter_lock_held", "dictiter_len", "dict___reversed___impl", "dictiter_new"]
+    pyFns := ["dictreviter_iter_lock_held", "dictreviter_iternext", "dictiter_len", "dict___reversed___impl", "dictiter_new"]
     statement := "After any program of sets, deletes and next() on a reverse dict iterator, __length_hint__ fits Py_ssize_t."
     source := "invariant; forward iterator check at dictobject.c:5279", status := .refuted
     prop := ``RevIterLenNonneg, thm := some ``revIterLenNonneg_refuted
@@ -246,7 +283,7 @@ def entries : List Entry := [
     prop := ``SetNewSizeMinimal, thm := some ``setNewSizeMinimal_proven
     notes := "Hypothesis: minused is a Py_ssize_t; line 315 notes the largest size is PY_SSIZE_T_MAX + 1." },
   { id := "set-clear-empties", pyFile := "Objects/setobject.c",
-    pyFns := ["set_clear_internal", "set_empty_to_minsize"]
+    pyFns := ["set_clear_internal", "set_empty_to_minsize", "set_clear_impl", "_PySet_ClearInternal", "PySet_Clear"]
     statement := "After clearing, the table holds no entries, and used is 0 unless the set was already empty."
     source := "set.clear docstring", status := .proven
     prop := ``SetClearEmpties, thm := some ``setClearEmpties_proven },
