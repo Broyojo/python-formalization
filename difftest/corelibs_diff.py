@@ -2041,12 +2041,13 @@ def functools_setstate_case(rng, twin):
     ph_raw = sum(1 for a in raw[:-1] if a == "PH")
     ph_it = sum(1 for a in state["iter"] if a == "PH")
     pyok = sum(1 for a in state["iter"] if a == "PH") == 0 or argkind != "sub"
-    # a call of a C partial whose count is below the slots of its tuple reads out of bounds: the finding
-    # corelibs-partial-setstate-phcount, reproduced in its own process. A trailing placeholder in the stored
-    # tuple needs care too, and the tuple must not hold one element, where the fast path takes over.
-    safe = argkind != "sub" or (twin == "c" and ph_it <= ph_raw and len(state["iter"]) >= 2) or \
-        (twin == "py" and pyok)
+    # a call of a C partial whose count differs from the slots of its tuple can read or write out of bounds:
+    # the finding corelibs-partial-setstate-phcount, reproduced in its own process, not in this one. The
+    # tuple must not hold one element either, where the fast path takes over.
     more = [rng.randrange(0, 9) for _ in range(rng.randrange(0, 4))]
+    safe = argkind != "sub" or (twin == "py" and pyok) or \
+        (twin == "c" and len(state["iter"]) >= 2 and
+         (ph_it == ph_raw or (ph_it < ph_raw and len(more) <= ph_raw)))
     return {"fn": "functools.setstate", "twin": twin, "state": state, "more": more, "call": safe}
 
 

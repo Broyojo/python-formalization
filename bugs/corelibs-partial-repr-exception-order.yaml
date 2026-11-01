@@ -40,7 +40,7 @@ observed: |
 promised_by: |
   Nothing.
 cause: |
-  Lib/functools.py:363 against Modules/_functoolsmodule.c:672.
+  Lib/functools.py:363 against Modules/_functoolsmodule.c:677.
 possible_fix: |
   None needed.
 duplicates:
