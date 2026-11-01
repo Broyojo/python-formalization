@@ -2,15 +2,15 @@ file	line	endline	name	signature	status	entry	note
 Objects/abstract.c	24	28	type_error	type_error(const char *msg, PyObject *obj)	todo		
 Objects/abstract.c	31	39	null_error	null_error(void)	todo		
 Objects/abstract.c	44	54	PyObject_Type	PyObject_Type(PyObject *o)	todo		
-Objects/abstract.c	57	72	PyObject_Size	PyObject_Size(PyObject *o)	todo		
-Objects/abstract.c	76	79	PyObject_Length	PyObject_Length(PyObject *o)	todo		
-Objects/abstract.c	83	86	_PyObject_HasLen	_PyObject_HasLen(PyObject *o) {	todo		
-Objects/abstract.c	95	150	PyObject_LengthHint	PyObject_LengthHint(PyObject *o, Py_ssize_t defaultvalue)	todo		
-Objects/abstract.c	153	204	PyObject_GetItem	PyObject_GetItem(PyObject *o, PyObject *key)	todo		
-Objects/abstract.c	207	223	PyMapping_GetOptionalItem	PyMapping_GetOptionalItem(PyObject *obj, PyObject *key, PyObject **result)	todo		
-Objects/abstract.c	226	257	PyObject_SetItem	PyObject_SetItem(PyObject *o, PyObject *key, PyObject *value)	todo		
-Objects/abstract.c	260	291	PyObject_DelItem	PyObject_DelItem(PyObject *o, PyObject *key)	todo		
-Objects/abstract.c	294	309	PyObject_DelItemString	PyObject_DelItemString(PyObject *o, const char *key)	todo		
+Objects/abstract.c	57	72	PyObject_Size	PyObject_Size(PyObject *o)	modelled	typeobj-size-order	
+Objects/abstract.c	76	79	PyObject_Length	PyObject_Length(PyObject *o)	excluded		no-behaviour: same function as its PyObject_Size or PySequence_Size target, an ABI alias
+Objects/abstract.c	83	86	_PyObject_HasLen	_PyObject_HasLen(PyObject *o) {	modelled	typeobj-length-hint-default	
+Objects/abstract.c	95	150	PyObject_LengthHint	PyObject_LengthHint(PyObject *o, Py_ssize_t defaultvalue)	modelled	typeobj-length-hint-default,typeobj-length-hint-notimpl	
+Objects/abstract.c	153	204	PyObject_GetItem	PyObject_GetItem(PyObject *o, PyObject *key)	modelled	typeobj-class-getitem,typeobj-getitem-mapping-first	
+Objects/abstract.c	207	223	PyMapping_GetOptionalItem	PyMapping_GetOptionalItem(PyObject *obj, PyObject *key, PyObject **result)	modelled	typeobj-mapping-optional	
+Objects/abstract.c	226	257	PyObject_SetItem	PyObject_SetItem(PyObject *o, PyObject *key, PyObject *value)	modelled	typeobj-setitem-mapping	
+Objects/abstract.c	260	291	PyObject_DelItem	PyObject_DelItem(PyObject *o, PyObject *key)	modelled	typeobj-setitem-mapping	
+Objects/abstract.c	294	309	PyObject_DelItemString	PyObject_DelItemString(PyObject *o, const char *key)	modelled	typeobj-setitem-mapping	
 Objects/abstract.c	314	318	PyObject_CheckBuffer	PyObject_CheckBuffer(PyObject *obj)	todo		
 Objects/abstract.c	330	345	PyAPI_FUNC	PyAPI_FUNC(int) /* abi_only */ PyObject_CheckReadBuffer(PyObject *obj)	todo		
 Objects/abstract.c	348	363	as_read_buffer	as_read_buffer(PyObject *obj, const void **buffer, Py_ssize_t *buffer_len)	todo		
@@ -18,95 +18,95 @@ Objects/abstract.c	371	377	PyAPI_FUNC	PyAPI_FUNC(int) /* abi_only */ PyObject_As
 Objects/abstract.c	385	391	PyAPI_FUNC	PyAPI_FUNC(int) /* abi_only */ PyObject_AsReadBuffer(PyObject *obj, const void **buffer, Py_ssize_t *buffer_len)	todo		
 Objects/abstract.c	399	424	PyAPI_FUNC	PyAPI_FUNC(int) /* abi_only */ PyObject_AsWriteBuffer(PyObject *obj, void **buffer, Py_ssize_t *buffer_len)	todo		
 Objects/abstract.c	429	448	PyObject_GetBuffer	PyObject_GetBuffer(PyObject *obj, Py_buffer *view, int flags)	todo		
-Objects/abstract.c	451	488	_IsFortranContiguous	_IsFortranContiguous(const Py_buffer *view)	todo		
-Objects/abstract.c	491	515	_IsCContiguous	_IsCContiguous(const Py_buffer *view)	todo		
-Objects/abstract.c	518	530	PyBuffer_IsContiguous	PyBuffer_IsContiguous(const Py_buffer *view, char order)	todo		
-Objects/abstract.c	534	546	PyBuffer_GetPointer	PyBuffer_GetPointer(const Py_buffer *view, const Py_ssize_t *indices)	todo		
-Objects/abstract.c	550	563	_Py_add_one_to_index_F	_Py_add_one_to_index_F(int nd, Py_ssize_t *index, const Py_ssize_t *shape)	todo		
-Objects/abstract.c	566	579	_Py_add_one_to_index_C	_Py_add_one_to_index_C(int nd, Py_ssize_t *index, const Py_ssize_t *shape)	todo		
+Objects/abstract.c	451	488	_IsFortranContiguous	_IsFortranContiguous(const Py_buffer *view)	modelled	typeobj-buffer-fill-strides	
+Objects/abstract.c	491	515	_IsCContiguous	_IsCContiguous(const Py_buffer *view)	modelled	typeobj-buffer-fill-strides	
+Objects/abstract.c	518	530	PyBuffer_IsContiguous	PyBuffer_IsContiguous(const Py_buffer *view, char order)	modelled	typeobj-buffer-is-contiguous	
+Objects/abstract.c	534	546	PyBuffer_GetPointer	PyBuffer_GetPointer(const Py_buffer *view, const Py_ssize_t *indices)	modelled	typeobj-copydata-bounds	
+Objects/abstract.c	550	563	_Py_add_one_to_index_F	_Py_add_one_to_index_F(int nd, Py_ssize_t *index, const Py_ssize_t *shape)	modelled	typeobj-buffer-odometer-range,typeobj-buffer-odometer-wrap	
+Objects/abstract.c	566	579	_Py_add_one_to_index_C	_Py_add_one_to_index_C(int nd, Py_ssize_t *index, const Py_ssize_t *shape)	modelled	typeobj-buffer-odometer-range	
 Objects/abstract.c	582	614	PyBuffer_SizeFromFormat	PyBuffer_SizeFromFormat(const char *format)	todo		
 Objects/abstract.c	617	667	PyBuffer_FromContiguous	PyBuffer_FromContiguous(const Py_buffer *view, const void *buf, Py_ssize_t len, char fort)	todo		
-Objects/abstract.c	669	737	PyObject_CopyData	int PyObject_CopyData(PyObject *dest, PyObject *src)	todo		
-Objects/abstract.c	740	761	PyBuffer_FillContiguousStrides	PyBuffer_FillContiguousStrides(int nd, Py_ssize_t *shape, Py_ssize_t *strides, int itemsize, char fort)	todo		
+Objects/abstract.c	669	737	PyObject_CopyData	int PyObject_CopyData(PyObject *dest, PyObject *src)	modelled	typeobj-copydata-bounds	
+Objects/abstract.c	740	761	PyBuffer_FillContiguousStrides	PyBuffer_FillContiguousStrides(int nd, Py_ssize_t *shape, Py_ssize_t *strides, int itemsize, char fort)	modelled	typeobj-buffer-fill-strides	
 Objects/abstract.c	764	804	PyBuffer_FillInfo	PyBuffer_FillInfo(Py_buffer *view, PyObject *obj, void *buf, Py_ssize_t len, int readonly, int flags)	todo		
 Objects/abstract.c	807	819	PyBuffer_Release	PyBuffer_Release(Py_buffer *view)	todo		
-Objects/abstract.c	822	826	_buffer_release_call	_buffer_release_call(void *arg)	todo		
-Objects/abstract.c	829	833	_PyBuffer_ReleaseInInterpreter	_PyBuffer_ReleaseInInterpreter(PyInterpreterState *interp, Py_buffer *view)	todo		
-Objects/abstract.c	836	840	_PyBuffer_ReleaseInInterpreterAndRawFree	_PyBuffer_ReleaseInInterpreterAndRawFree(PyInterpreterState *interp, Py_buffer *view)	todo		
+Objects/abstract.c	822	826	_buffer_release_call	_buffer_release_call(void *arg)	excluded		no-behaviour: thin interpreter-state wrapper around PyBuffer_Release
+Objects/abstract.c	829	833	_PyBuffer_ReleaseInInterpreter	_PyBuffer_ReleaseInInterpreter(PyInterpreterState *interp, Py_buffer *view)	excluded		no-behaviour: thin interpreter-state wrapper around PyBuffer_Release
+Objects/abstract.c	836	840	_PyBuffer_ReleaseInInterpreterAndRawFree	_PyBuffer_ReleaseInInterpreterAndRawFree(PyInterpreterState *interp, Py_buffer *view)	excluded		no-behaviour: thin interpreter-state wrapper around PyBuffer_Release
 Objects/abstract.c	843	899	PyObject_Format	PyObject_Format(PyObject *obj, PyObject *format_spec)	todo		
-Objects/abstract.c	903	909	PyNumber_Check	PyNumber_Check(PyObject *o)	todo		
-Objects/abstract.c	989	998	binop_type_error	binop_type_error(PyObject *v, PyObject *w, const char *op_name)	todo		
-Objects/abstract.c	1001	1009	binary_op	binary_op(PyObject *v, PyObject *w, const int op_slot, const char *op_name)	todo		
-Objects/abstract.c	1020	1111	ternary_op	ternary_op(PyObject *v, PyObject *w, PyObject *z, const int op_slot, const char *op_name )	todo		
-Objects/abstract.c	1128	1144	PyNumber_Add	PyNumber_Add(PyObject *v, PyObject *w)	todo		
-Objects/abstract.c	1147	1163	sequence_repeat	sequence_repeat(ssizeargfunc repeatfunc, PyObject *seq, PyObject *n)	todo		
-Objects/abstract.c	1166	1182	PyNumber_Multiply	PyNumber_Multiply(PyObject *v, PyObject *w)	todo		
-Objects/abstract.c	1190	1193	PyNumber_Power	PyNumber_Power(PyObject *v, PyObject *w, PyObject *z)	todo		
-Objects/abstract.c	1196	1199	_PyNumber_PowerNoMod	_PyNumber_PowerNoMod(PyObject *lhs, PyObject *rhs)	todo		
-Objects/abstract.c	1250	1259	binary_iop	binary_iop(PyObject *v, PyObject *w, const int iop_slot, const int op_slot, const char *op_name)	todo		
-Objects/abstract.c	1262	1277	ternary_iop	ternary_iop(PyObject *v, PyObject *w, PyObject *z, const int iop_slot, const int op_slot, const char *op_name)	todo		
-Objects/abstract.c	1297	1317	PyNumber_InPlaceAdd	PyNumber_InPlaceAdd(PyObject *v, PyObject *w)	todo		
-Objects/abstract.c	1320	1346	PyNumber_InPlaceMultiply	PyNumber_InPlaceMultiply(PyObject *v, PyObject *w)	todo		
-Objects/abstract.c	1349	1353	PyNumber_InPlacePower	PyNumber_InPlacePower(PyObject *v, PyObject *w, PyObject *z)	todo		
-Objects/abstract.c	1356	1359	_PyNumber_InPlacePowerNoMod	_PyNumber_InPlacePowerNoMod(PyObject *lhs, PyObject *rhs)	todo		
-Objects/abstract.c	1388	1391	PyIndex_Check	PyIndex_Check(PyObject *obj)	todo		
-Objects/abstract.c	1400	1439	_PyNumber_Index	_PyNumber_Index(PyObject *item)	todo		
+Objects/abstract.c	903	909	PyNumber_Check	PyNumber_Check(PyObject *o)	modelled	typeobj-number-check	
+Objects/abstract.c	989	998	binop_type_error	binop_type_error(PyObject *v, PyObject *w, const char *op_name)	modelled	typeobj-binop-no-notimpl	
+Objects/abstract.c	1001	1009	binary_op	binary_op(PyObject *v, PyObject *w, const int op_slot, const char *op_name)	modelled	typeobj-binop-no-notimpl	
+Objects/abstract.c	1020	1111	ternary_op	ternary_op(PyObject *v, PyObject *w, PyObject *z, const int op_slot, const char *op_name )	modelled	typeobj-ternary-no-slots	
+Objects/abstract.c	1128	1144	PyNumber_Add	PyNumber_Add(PyObject *v, PyObject *w)	modelled	typeobj-add-concat,typeobj-binop-same-type	
+Objects/abstract.c	1147	1163	sequence_repeat	sequence_repeat(ssizeargfunc repeatfunc, PyObject *seq, PyObject *n)	modelled	typeobj-seq-repeat-index	
+Objects/abstract.c	1166	1182	PyNumber_Multiply	PyNumber_Multiply(PyObject *v, PyObject *w)	modelled	typeobj-binop-same-type,typeobj-multiply-both-sides	
+Objects/abstract.c	1190	1193	PyNumber_Power	PyNumber_Power(PyObject *v, PyObject *w, PyObject *z)	modelled	typeobj-ternary-no-slots	
+Objects/abstract.c	1196	1199	_PyNumber_PowerNoMod	_PyNumber_PowerNoMod(PyObject *lhs, PyObject *rhs)	modelled	typeobj-ternary-no-slots	
+Objects/abstract.c	1250	1259	binary_iop	binary_iop(PyObject *v, PyObject *w, const int iop_slot, const int op_slot, const char *op_name)	modelled	typeobj-inplace-first	
+Objects/abstract.c	1262	1277	ternary_iop	ternary_iop(PyObject *v, PyObject *w, PyObject *z, const int iop_slot, const int op_slot, const char *op_name)	modelled	typeobj-inplace-pow	
+Objects/abstract.c	1297	1317	PyNumber_InPlaceAdd	PyNumber_InPlaceAdd(PyObject *v, PyObject *w)	modelled	typeobj-inplace-first	
+Objects/abstract.c	1320	1346	PyNumber_InPlaceMultiply	PyNumber_InPlaceMultiply(PyObject *v, PyObject *w)	modelled	typeobj-imul-matches-mul	
+Objects/abstract.c	1349	1353	PyNumber_InPlacePower	PyNumber_InPlacePower(PyObject *v, PyObject *w, PyObject *z)	modelled	typeobj-inplace-pow	
+Objects/abstract.c	1356	1359	_PyNumber_InPlacePowerNoMod	_PyNumber_InPlacePowerNoMod(PyObject *lhs, PyObject *rhs)	modelled	typeobj-inplace-pow	
+Objects/abstract.c	1388	1391	PyIndex_Check	PyIndex_Check(PyObject *obj)	modelled	typeobj-index-identity	
+Objects/abstract.c	1400	1439	_PyNumber_Index	_PyNumber_Index(PyObject *item)	modelled	typeobj-index-identity,typeobj-index-required,typeobj-index-result-int	
 Objects/abstract.c	1446	1453	PyNumber_Index	PyNumber_Index(PyObject *item)	todo		
-Objects/abstract.c	1458	1505	PyNumber_AsSsize_t	PyNumber_AsSsize_t(PyObject *item, PyObject *err)	todo		
-Objects/abstract.c	1509	1589	PyNumber_Long	PyNumber_Long(PyObject *o)	todo		
+Objects/abstract.c	1458	1505	PyNumber_AsSsize_t	PyNumber_AsSsize_t(PyObject *item, PyObject *err)	modelled	typeobj-as-ssize-clips	
+Objects/abstract.c	1509	1589	PyNumber_Long	PyNumber_Long(PyObject *o)	modelled	typeobj-number-long	
 Objects/abstract.c	1592	1649	PyNumber_Float	PyNumber_Float(PyObject *o)	todo		
 Objects/abstract.c	1653	1666	PyNumber_ToBase	PyNumber_ToBase(PyObject *n, int base)	todo		
-Objects/abstract.c	1672	1678	PySequence_Check	PySequence_Check(PyObject *s)	todo		
-Objects/abstract.c	1681	1701	PySequence_Size	PySequence_Size(PyObject *s)	todo		
-Objects/abstract.c	1705	1708	PySequence_Length	PySequence_Length(PyObject *s)	todo		
-Objects/abstract.c	1712	1735	PySequence_Concat	PySequence_Concat(PyObject *s, PyObject *o)	todo		
-Objects/abstract.c	1738	1766	PySequence_Repeat	PySequence_Repeat(PyObject *o, Py_ssize_t count)	todo		
-Objects/abstract.c	1769	1795	PySequence_InPlaceConcat	PySequence_InPlaceConcat(PyObject *s, PyObject *o)	todo		
+Objects/abstract.c	1672	1678	PySequence_Check	PySequence_Check(PyObject *s)	modelled	typeobj-iter-seq-fallback	
+Objects/abstract.c	1681	1701	PySequence_Size	PySequence_Size(PyObject *s)	modelled	typeobj-size-protocols	
+Objects/abstract.c	1705	1708	PySequence_Length	PySequence_Length(PyObject *s)	excluded		no-behaviour: same function as its PyObject_Size or PySequence_Size target, an ABI alias
+Objects/abstract.c	1712	1735	PySequence_Concat	PySequence_Concat(PyObject *s, PyObject *o)	modelled	typeobj-seq-concat	
+Objects/abstract.c	1738	1766	PySequence_Repeat	PySequence_Repeat(PyObject *o, Py_ssize_t count)	modelled	typeobj-seq-repeat	
+Objects/abstract.c	1769	1795	PySequence_InPlaceConcat	PySequence_InPlaceConcat(PyObject *s, PyObject *o)	modelled	typeobj-seq-iconcat	
 Objects/abstract.c	1798	1829	PySequence_InPlaceRepeat	PySequence_InPlaceRepeat(PyObject *o, Py_ssize_t count)	todo		
-Objects/abstract.c	1832	1859	PySequence_GetItem	PySequence_GetItem(PyObject *s, Py_ssize_t i)	todo		
+Objects/abstract.c	1832	1859	PySequence_GetItem	PySequence_GetItem(PyObject *s, Py_ssize_t i)	modelled	typeobj-seq-getitem-negative	
 Objects/abstract.c	1862	1881	PySequence_GetSlice	PySequence_GetSlice(PyObject *s, Py_ssize_t i1, Py_ssize_t i2)	todo		
-Objects/abstract.c	1884	1914	PySequence_SetItem	PySequence_SetItem(PyObject *s, Py_ssize_t i, PyObject *o)	todo		
-Objects/abstract.c	1917	1947	PySequence_DelItem	PySequence_DelItem(PyObject *s, Py_ssize_t i)	todo		
+Objects/abstract.c	1884	1914	PySequence_SetItem	PySequence_SetItem(PyObject *s, Py_ssize_t i, PyObject *o)	modelled	typeobj-seq-setitem-negative	
+Objects/abstract.c	1917	1947	PySequence_DelItem	PySequence_DelItem(PyObject *s, Py_ssize_t i)	modelled	typeobj-seq-setitem-negative	
 Objects/abstract.c	1950	1970	PySequence_SetSlice	PySequence_SetSlice(PyObject *s, Py_ssize_t i1, Py_ssize_t i2, PyObject *o)	todo		
 Objects/abstract.c	1973	1993	PySequence_DelSlice	PySequence_DelSlice(PyObject *s, Py_ssize_t i1, Py_ssize_t i2)	todo		
-Objects/abstract.c	1996	2069	PySequence_Tuple	PySequence_Tuple(PyObject *v)	todo		
+Objects/abstract.c	1996	2069	PySequence_Tuple	PySequence_Tuple(PyObject *v)	modelled	typeobj-tuple-of-tuple	
 Objects/abstract.c	2072	2092	PySequence_List	PySequence_List(PyObject *v)	todo		
 Objects/abstract.c	2095	2120	PySequence_Fast	PySequence_Fast(PyObject *v, const char *m)	todo		
-Objects/abstract.c	2129	2218	_PySequence_IterSearch	_PySequence_IterSearch(PyObject *seq, PyObject *obj, int operation)	todo		
+Objects/abstract.c	2129	2218	_PySequence_IterSearch	_PySequence_IterSearch(PyObject *seq, PyObject *obj, int operation)	modelled	typeobj-itersearch-identity	
 Objects/abstract.c	2222	2225	PySequence_Count	PySequence_Count(PyObject *s, PyObject *o)	todo		
-Objects/abstract.c	2231	2241	PySequence_Contains	PySequence_Contains(PyObject *seq, PyObject *ob)	todo		
-Objects/abstract.c	2246	2249	PySequence_In	PySequence_In(PyObject *w, PyObject *v)	todo		
+Objects/abstract.c	2231	2241	PySequence_Contains	PySequence_Contains(PyObject *seq, PyObject *ob)	modelled	typeobj-contains-identity,typeobj-contains-slot	
+Objects/abstract.c	2246	2249	PySequence_In	PySequence_In(PyObject *w, PyObject *v)	modelled	typeobj-contains-slot	
 Objects/abstract.c	2252	2255	PySequence_Index	PySequence_Index(PyObject *s, PyObject *o)	todo		
 Objects/abstract.c	2260	2264	PyMapping_Check	PyMapping_Check(PyObject *o)	todo		
-Objects/abstract.c	2267	2288	PyMapping_Size	PyMapping_Size(PyObject *o)	todo		
-Objects/abstract.c	2292	2295	PyMapping_Length	PyMapping_Length(PyObject *o)	todo		
-Objects/abstract.c	2299	2313	PyMapping_GetItemString	PyMapping_GetItemString(PyObject *o, const char *key)	todo		
-Objects/abstract.c	2316	2331	PyMapping_GetOptionalItemString	PyMapping_GetOptionalItemString(PyObject *obj, const char *key, PyObject **result)	todo		
-Objects/abstract.c	2334	2350	PyMapping_SetItemString	PyMapping_SetItemString(PyObject *o, const char *key, PyObject *value)	todo		
-Objects/abstract.c	2353	2359	PyMapping_HasKeyStringWithError	PyMapping_HasKeyStringWithError(PyObject *obj, const char *key)	todo		
-Objects/abstract.c	2362	2368	PyMapping_HasKeyWithError	PyMapping_HasKeyWithError(PyObject *obj, PyObject *key)	todo		
-Objects/abstract.c	2371	2393	PyMapping_HasKeyString	PyMapping_HasKeyString(PyObject *obj, const char *key)	todo		
-Objects/abstract.c	2396	2418	PyMapping_HasKey	PyMapping_HasKey(PyObject *obj, PyObject *key)	todo		
+Objects/abstract.c	2267	2288	PyMapping_Size	PyMapping_Size(PyObject *o)	modelled	typeobj-size-order,typeobj-size-protocols	
+Objects/abstract.c	2292	2295	PyMapping_Length	PyMapping_Length(PyObject *o)	excluded		no-behaviour: same function as its PyObject_Size or PySequence_Size target, an ABI alias
+Objects/abstract.c	2299	2313	PyMapping_GetItemString	PyMapping_GetItemString(PyObject *o, const char *key)	modelled	typeobj-setitem-mapping	
+Objects/abstract.c	2316	2331	PyMapping_GetOptionalItemString	PyMapping_GetOptionalItemString(PyObject *obj, const char *key, PyObject **result)	modelled	typeobj-mapping-optional	
+Objects/abstract.c	2334	2350	PyMapping_SetItemString	PyMapping_SetItemString(PyObject *o, const char *key, PyObject *value)	modelled	typeobj-setitem-mapping	
+Objects/abstract.c	2353	2359	PyMapping_HasKeyStringWithError	PyMapping_HasKeyStringWithError(PyObject *obj, const char *key)	modelled	typeobj-mapping-optional	
+Objects/abstract.c	2362	2368	PyMapping_HasKeyWithError	PyMapping_HasKeyWithError(PyObject *obj, PyObject *key)	modelled	typeobj-mapping-optional	
+Objects/abstract.c	2371	2393	PyMapping_HasKeyString	PyMapping_HasKeyString(PyObject *obj, const char *key)	modelled	typeobj-mapping-optional	
+Objects/abstract.c	2396	2418	PyMapping_HasKey	PyMapping_HasKey(PyObject *obj, PyObject *key)	modelled	typeobj-mapping-optional	
 Objects/abstract.c	2424	2450	method_output_as_list	method_output_as_list(PyObject *o, PyObject *meth)	todo		
 Objects/abstract.c	2453	2462	PyMapping_Keys	PyMapping_Keys(PyObject *o)	todo		
 Objects/abstract.c	2465	2474	PyMapping_Items	PyMapping_Items(PyObject *o)	todo		
 Objects/abstract.c	2477	2486	PyMapping_Values	PyMapping_Values(PyObject *o)	todo		
-Objects/abstract.c	2515	2525	abstract_get_bases	abstract_get_bases(PyObject *cls)	todo		
-Objects/abstract.c	2529	2577	abstract_issubclass	abstract_issubclass(PyObject *derived, PyObject *cls)	todo		
+Objects/abstract.c	2515	2525	abstract_get_bases	abstract_get_bases(PyObject *cls)	modelled	typeobj-abstract-issubclass	
+Objects/abstract.c	2529	2577	abstract_issubclass	abstract_issubclass(PyObject *derived, PyObject *cls)	modelled	typeobj-abstract-issubclass	
 Objects/abstract.c	2580	2593	check_class	check_class(PyObject *cls, const char *error)	todo		
-Objects/abstract.c	2596	2629	object_isinstance	object_isinstance(PyObject *inst, PyObject *cls)	todo		
-Objects/abstract.c	2632	2693	object_recursive_isinstance	object_recursive_isinstance(PyThreadState *tstate, PyObject *inst, PyObject *cls)	todo		
-Objects/abstract.c	2697	2701	PyObject_IsInstance	PyObject_IsInstance(PyObject *inst, PyObject *cls)	todo		
-Objects/abstract.c	2705	2722	recursive_issubclass	recursive_issubclass(PyObject *derived, PyObject *cls)	todo		
+Objects/abstract.c	2596	2629	object_isinstance	object_isinstance(PyObject *inst, PyObject *cls)	modelled	typeobj-object-isinstance	
+Objects/abstract.c	2632	2693	object_recursive_isinstance	object_recursive_isinstance(PyThreadState *tstate, PyObject *inst, PyObject *cls)	modelled	typeobj-isinstance-checker,typeobj-isinstance-empty-tuple,typeobj-isinstance-exact	
+Objects/abstract.c	2697	2701	PyObject_IsInstance	PyObject_IsInstance(PyObject *inst, PyObject *cls)	modelled	typeobj-isinstance-exact	
+Objects/abstract.c	2705	2722	recursive_issubclass	recursive_issubclass(PyObject *derived, PyObject *cls)	modelled	typeobj-issubclass-mro	
 Objects/abstract.c	2725	2781	object_issubclass	object_issubclass(PyThreadState *tstate, PyObject *derived, PyObject *cls)	todo		
 Objects/abstract.c	2785	2789	PyObject_IsSubclass	PyObject_IsSubclass(PyObject *derived, PyObject *cls)	todo		
-Objects/abstract.c	2793	2796	_PyObject_RealIsInstance	_PyObject_RealIsInstance(PyObject *inst, PyObject *cls)	todo		
-Objects/abstract.c	2799	2802	_PyObject_RealIsSubclass	_PyObject_RealIsSubclass(PyObject *derived, PyObject *cls)	todo		
-Objects/abstract.c	2806	2828	PyObject_GetIter	PyObject_GetIter(PyObject *o)	todo		
+Objects/abstract.c	2793	2796	_PyObject_RealIsInstance	_PyObject_RealIsInstance(PyObject *inst, PyObject *cls)	modelled	typeobj-object-isinstance	
+Objects/abstract.c	2799	2802	_PyObject_RealIsSubclass	_PyObject_RealIsSubclass(PyObject *derived, PyObject *cls)	modelled	typeobj-issubclass-mro	
+Objects/abstract.c	2806	2828	PyObject_GetIter	PyObject_GetIter(PyObject *o)	modelled	typeobj-iter-checks,typeobj-iter-seq-fallback	
 Objects/abstract.c	2831	2847	PyObject_GetAIter	PyObject_GetAIter(PyObject *o) {	todo		
-Objects/abstract.c	2850	2855	PyIter_Check	PyIter_Check(PyObject *obj)	todo		
+Objects/abstract.c	2850	2855	PyIter_Check	PyIter_Check(PyObject *obj)	modelled	typeobj-iter-check,typeobj-iter-checks	
 Objects/abstract.c	2858	2864	PyAIter_Check	PyAIter_Check(PyObject *obj)	todo		
-Objects/abstract.c	2867	2887	iternext	iternext(PyObject *iter, PyObject **item)	todo		
+Objects/abstract.c	2867	2887	iternext	iternext(PyObject *iter, PyObject **item)	modelled	typeobj-iter-next-stop	
 Objects/abstract.c	2894	2906	PyIter_NextItem	PyIter_NextItem(PyObject *iter, PyObject **item)	todo		
-Objects/abstract.c	2917	2922	PyIter_Next	PyIter_Next(PyObject *iter)	todo		
+Objects/abstract.c	2917	2922	PyIter_Next	PyIter_Next(PyObject *iter)	modelled	typeobj-iter-next-stop	
 Objects/abstract.c	2925	2947	PyIter_Send	PyIter_Send(PyObject *iter, PyObject *arg, PyObject **result)	todo		

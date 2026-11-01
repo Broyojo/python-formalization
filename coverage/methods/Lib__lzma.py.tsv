@@ -3,7 +3,7 @@ Lib/lzma.py	49	132	LZMAFile.__init__	__init__(self, filename=None, mode='r', *, 
 Lib/lzma.py	134	155	LZMAFile.close	close(self)	todo		
 Lib/lzma.py	158	160	LZMAFile.closed	closed(self)	todo		
 Lib/lzma.py	163	165	LZMAFile.name	name(self)	todo		
-Lib/lzma.py	168	169	LZMAFile.mode	mode(self)	todo		
+Lib/lzma.py	168	169	LZMAFile.mode	mode(self)	todo		candidates:calstat-statistics-mode-spec
 Lib/lzma.py	171	174	LZMAFile.fileno	fileno(self)	todo		
 Lib/lzma.py	176	178	LZMAFile.seekable	seekable(self)	todo		
 Lib/lzma.py	180	183	LZMAFile.readable	readable(self)	todo		

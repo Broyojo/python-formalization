@@ -1,3 +1,3 @@
 file	line	endline	name	signature	status	entry	note
-Lib/json/tool.py	34	41	_colorize_json	_colorize_json(json_str, theme)	todo		
-Lib/json/tool.py	44	115	main	main()	todo		
+Lib/json/tool.py	34	41	_colorize_json	_colorize_json(json_str, theme)	modelled	json-tool-colorize	
+Lib/json/tool.py	44	115	main	main()	modelled	json-tool-invalid,json-tool-lines	

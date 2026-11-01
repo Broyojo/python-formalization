@@ -1,0 +1,62 @@
+id: bytesobj-memoryview-empty-step-not-contiguous
+title: "An empty memoryview slice with a step is reported non-contiguous, so cast, join and hashlib reject it"
+priority: P3
+kind: inconsistency
+module: bytesobj
+files: [Objects/memoryobject.c]
+functions: ["init_flags"]
+summary: |
+  init_flags uses a fast test for 1-D views, MV_CONTIGUOUS_NDIM1: shape[0] == 1 or strides[0] ==
+  itemsize. For an empty view with a step it says no, while PyBuffer_IsContiguous, which tests
+  "len == 0" first, says yes:
+      m = memoryview(b'abc')
+      m[1:1].contiguous, m[1:1:2].contiguous            # True, False
+      _testbuffer.is_contiguous(m[1:1:2], 'C')          # True
+      m[1:1].cast('B')                                  # works
+      m[1:1:2].cast('B')                                # TypeError
+      b''.join([m[1:1:2]])                              # TypeError
+      hashlib.sha256(m[1:1:2])                          # BufferError
+  Two-dimensional empty views go through PyBuffer_IsContiguous and are contiguous, so the same
+  question has two answers depending on ndim.
+  Lean: Ndim1ContigAgree is refuted; Ndim1ContigNonempty (the fast test agrees with the general
+  one for every non-empty 1-D view, in C and Fortran order) is proven.
+likelihood: |
+  Low to moderate. A computed slice such as data[start:stop:step] can come out empty, and then
+  downstream APIs raise only for that input.
+maybe_intended: |
+  Unlikely. The comment on MV_CONTIGUOUS_NDIM1 calls it a "fast contiguity test", not a different
+  definition, and the comment in _IsCContiguous says len == 0 is contiguous. A maintainer may
+  still call the case too rare to matter; the fix is one comparison.
+reproducer: |
+  m = memoryview(b'abc')
+  def attempt(f):
+      try:
+          return repr(f())
+      except Exception as e:
+          return type(e).__name__
+  print('contiguous', m[1:1].contiguous, m[1:1:2].contiguous)
+  print('cast', attempt(lambda: m[1:1].cast('B').nbytes), attempt(lambda: m[1:1:2].cast('B').nbytes))
+  print('join', attempt(lambda: b''.join([m[1:1]])), attempt(lambda: b''.join([m[1:1:2]])))
+  if m[1:1].contiguous and not m[1:1:2].contiguous and attempt(lambda: m[1:1:2].cast('B').nbytes) == 'TypeError':
+      print('REPRODUCED bytesobj-memoryview-empty-step-not-contiguous')
+expected: |
+  An empty view is contiguous whatever its stride: m[1:1:2].contiguous is True and the three
+  calls behave as for m[1:1].
+observed: |
+  python3 3.14.7: contiguous True False; cast '0' vs TypeError; join b'' vs TypeError. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): identical. REPRODUCED.
+promised_by: |
+  Objects/abstract.c:458-459 and :498-499 ("len = 0 <==> exists i: shape[i] = 0", then "if
+  (view->len == 0) return 1"); Doc/glossary.rst:348, "contiguous".
+cause: |
+  Objects/memoryobject.c:240-241 (MV_CONTIGUOUS_NDIM1) and :621-624 (init_flags, case 1) have no
+  test for shape[0] == 0; the default case at :625-630 calls PyBuffer_IsContiguous.
+possible_fix: |
+  Define MV_CONTIGUOUS_NDIM1(view) as shape[0] <= 1 || strides[0] == itemsize.
+duplicates:
+  issues: []
+  queries: ["memoryview contiguous empty slice step", "memoryview c_contiguous empty",
+            "memoryview contiguous zero length strides", "bugforge README: no memoryview entries"]
+lean:
+  property: PyLean.BytesObj.Mem.Ndim1ContigAgree
+  theorem: PyLean.BytesObj.Mem.ndim1ContigAgree_refuted

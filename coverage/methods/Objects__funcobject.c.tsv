@@ -6,12 +6,12 @@ Objects/funcobject.c	73	86	PyFunction_AddWatcher	PyFunction_AddWatcher(PyFunctio
 Objects/funcobject.c	89	105	PyFunction_ClearWatcher	PyFunction_ClearWatcher(int watcher_id)	todo		
 Objects/funcobject.c	107	145	_PyFunction_FromConstructor	_PyFunction_FromConstructor(PyFrameConstructor *constr)	todo		
 Objects/funcobject.c	148	240	PyFunction_NewWithQualName	PyFunction_NewWithQualName(PyObject *code, PyObject *globals, PyObject *qualname)	todo		
-Objects/funcobject.c	302	306	get_cache_item	get_cache_item(PyInterpreterState *interp, uint32_t version)	todo		
-Objects/funcobject.c	310	323	_PyFunction_SetVersion	_PyFunction_SetVersion(PyFunctionObject *func, uint32_t version)	todo		
-Objects/funcobject.c	326	341	func_clear_version	func_clear_version(PyInterpreterState *interp, PyFunctionObject *func)	todo		
-Objects/funcobject.c	344	358	_PyFunction_ClearCodeByVersion	_PyFunction_ClearCodeByVersion(uint32_t version)	todo		
-Objects/funcobject.c	361	384	_PyFunction_LookupByVersion	_PyFunction_LookupByVersion(uint32_t version, PyObject **p_code)	todo		
-Objects/funcobject.c	387	390	_PyFunction_GetVersionForCurrentState	_PyFunction_GetVersionForCurrentState(PyFunctionObject *func)	todo		
+Objects/funcobject.c	302	306	get_cache_item	get_cache_item(PyInterpreterState *interp, uint32_t version)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
+Objects/funcobject.c	310	323	_PyFunction_SetVersion	_PyFunction_SetVersion(PyFunctionObject *func, uint32_t version)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
+Objects/funcobject.c	326	341	func_clear_version	func_clear_version(PyInterpreterState *interp, PyFunctionObject *func)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
+Objects/funcobject.c	344	358	_PyFunction_ClearCodeByVersion	_PyFunction_ClearCodeByVersion(uint32_t version)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
+Objects/funcobject.c	361	384	_PyFunction_LookupByVersion	_PyFunction_LookupByVersion(uint32_t version, PyObject **p_code)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
+Objects/funcobject.c	387	390	_PyFunction_GetVersionForCurrentState	_PyFunction_GetVersionForCurrentState(PyFunctionObject *func)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
 Objects/funcobject.c	393	396	PyFunction_New	PyFunction_New(PyObject *code, PyObject *globals)	todo		
 Objects/funcobject.c	399	406	PyFunction_GetCode	PyFunction_GetCode(PyObject *op)	todo		
 Objects/funcobject.c	409	416	PyFunction_GetGlobals	PyFunction_GetGlobals(PyObject *op)	todo		
@@ -48,20 +48,20 @@ Objects/funcobject.c	1029	1038	function___type_params___get_impl	function___type
 Objects/funcobject.c	1047	1059	function___type_params___set_impl	function___type_params___set_impl(PyFunctionObject *self, PyObject *value) /*[clinic end generated code: output=038b4cda220e56fb input=3862fbd4db2b70e8]*/	todo		
 Objects/funcobject.c	1062	1070	_Py_set_function_type_params	_Py_set_function_type_params(PyThreadState *Py_UNUSED(ignored), PyObject *func, PyObject *type_params)	todo		
 Objects/funcobject.c	1117	1193	func_new_impl	func_new_impl(PyTypeObject *type, PyCodeObject *code, PyObject *globals, PyObject *name, PyObject *defaults, PyObject *closure, PyObject *kwdefaults) /*[clinic end generated code: output=de72f4c22ac57144 input=20c9c9f04ad2d3f2]*/	todo		
-Objects/funcobject.c	1196	1227	func_clear	func_clear(PyObject *self)	todo		
-Objects/funcobject.c	1230	1246	func_dealloc	func_dealloc(PyObject *self)	todo		
+Objects/funcobject.c	1196	1227	func_clear	func_clear(PyObject *self)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
+Objects/funcobject.c	1230	1246	func_dealloc	func_dealloc(PyObject *self)	excluded		no-behaviour: deallocation and reference counting
 Objects/funcobject.c	1249	1254	func_repr	func_repr(PyObject *self)	todo		
-Objects/funcobject.c	1257	1275	func_traverse	func_traverse(PyObject *self, visitproc visit, void *arg)	todo		
-Objects/funcobject.c	1279	1285	func_descr_get	func_descr_get(PyObject *func, PyObject *obj, PyObject *type)	todo		
+Objects/funcobject.c	1257	1275	func_traverse	func_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
+Objects/funcobject.c	1279	1285	func_descr_get	func_descr_get(PyObject *func, PyObject *obj, PyObject *type)	modelled	typeobj-function-binding	
 Objects/funcobject.c	1332	1386	_PyFunction_VerifyStateless	_PyFunction_VerifyStateless(PyThreadState *tstate, PyObject *func)	todo		
 Objects/funcobject.c	1390	1399	functools_copy_attr	functools_copy_attr(PyObject *wrapper, PyObject *wrapped, PyObject *name)	todo		
 Objects/funcobject.c	1403	1419	functools_wraps	functools_wraps(PyObject *wrapper, PyObject *wrapped)	todo		
 Objects/funcobject.c	1424	1451	descriptor_get_wrapped_attribute	descriptor_get_wrapped_attribute(PyObject *wrapped, PyObject *obj, PyObject *name)	todo		
 Objects/funcobject.c	1454	1483	descriptor_set_wrapped_attribute	descriptor_set_wrapped_attribute(PyObject *oobj, PyObject *name, PyObject *value, char *type_name)	todo		
-Objects/funcobject.c	1517	1524	cm_dealloc	cm_dealloc(PyObject *self)	todo		
-Objects/funcobject.c	1527	1533	cm_traverse	cm_traverse(PyObject *self, visitproc visit, void *arg)	todo		
-Objects/funcobject.c	1536	1542	cm_clear	cm_clear(PyObject *self)	todo		
-Objects/funcobject.c	1546	1558	cm_descr_get	cm_descr_get(PyObject *self, PyObject *obj, PyObject *type)	todo		
+Objects/funcobject.c	1517	1524	cm_dealloc	cm_dealloc(PyObject *self)	excluded		no-behaviour: deallocation and reference counting
+Objects/funcobject.c	1527	1533	cm_traverse	cm_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
+Objects/funcobject.c	1536	1542	cm_clear	cm_clear(PyObject *self)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
+Objects/funcobject.c	1546	1558	cm_descr_get	cm_descr_get(PyObject *self, PyObject *obj, PyObject *type)	modelled	typeobj-classmethod-staticmethod	
 Objects/funcobject.c	1561	1571	cm_new	cm_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
 Objects/funcobject.c	1574	1589	cm_init	cm_init(PyObject *self, PyObject *args, PyObject *kwds)	todo		
 Objects/funcobject.c	1598	1609	cm_get___isabstractmethod__	cm_get___isabstractmethod__(PyObject *self, void *closure)	todo		
@@ -71,10 +71,10 @@ Objects/funcobject.c	1625	1629	cm_get___annotate__	cm_get___annotate__(PyObject 
 Objects/funcobject.c	1632	1635	cm_set___annotate__	cm_set___annotate__(PyObject *self, PyObject *value, void *closure)	todo		
 Objects/funcobject.c	1652	1656	cm_repr	cm_repr(PyObject *self)	todo		
 Objects/funcobject.c	1724	1732	PyClassMethod_New	PyClassMethod_New(PyObject *callable)	todo		
-Objects/funcobject.c	1764	1771	sm_dealloc	sm_dealloc(PyObject *self)	todo		
-Objects/funcobject.c	1774	1780	sm_traverse	sm_traverse(PyObject *self, visitproc visit, void *arg)	todo		
-Objects/funcobject.c	1783	1789	sm_clear	sm_clear(PyObject *self)	todo		
-Objects/funcobject.c	1792	1802	sm_descr_get	sm_descr_get(PyObject *self, PyObject *obj, PyObject *type)	todo		
+Objects/funcobject.c	1764	1771	sm_dealloc	sm_dealloc(PyObject *self)	excluded		no-behaviour: deallocation and reference counting
+Objects/funcobject.c	1774	1780	sm_traverse	sm_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
+Objects/funcobject.c	1783	1789	sm_clear	sm_clear(PyObject *self)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
+Objects/funcobject.c	1792	1802	sm_descr_get	sm_descr_get(PyObject *self, PyObject *obj, PyObject *type)	modelled	typeobj-classmethod-staticmethod	
 Objects/funcobject.c	1805	1815	sm_new	sm_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
 Objects/funcobject.c	1818	1833	sm_init	sm_init(PyObject *self, PyObject *args, PyObject *kwds)	todo		
 Objects/funcobject.c	1836	1840	sm_call	sm_call(PyObject *callable, PyObject *args, PyObject *kwargs)	todo		

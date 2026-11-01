@@ -1,0 +1,64 @@
+id: sequences-array-w-tounicode-bom
+title: "array('w').tounicode() and repr() drop a leading U+FEFF and raise UnicodeDecodeError on surrogates, because they decode UTF-32 with byteorder 0"
+priority: P3
+kind: round-trip
+module: sequences
+files: [Modules/arraymodule.c]
+functions: ["array_array_tounicode_impl", "array_repr"]
+summary: |
+  array('w', s).tounicode() should give s back, and the docs say it does. It calls
+  PyUnicode_DecodeUTF32 with byteorder = 0, which is the "detect a byte order mark" mode, not
+  native order. So array('w', '\ufeffabc').tounicode() is 'abc', and repr shows
+  array('w', 'abc'), which is a different array. Storing a mark in the other byte order with
+  frombytes reinterprets everything after it. Surrogates, which str allows and 'w' stores,
+  raise UnicodeDecodeError, from repr too, so such an array cannot be printed. The deprecated
+  'u' typecode has none of these problems, as it uses PyUnicode_FromWideChar.
+  Lean: ArrayToUnicodeW is refuted by [U+FEFF, 'a']; ArrayToUnicodeChecked (no surrogates, no
+  leading U+FEFF, and every str for 'u') is proven.
+likelihood: |
+  Moderate for the mark: U+FEFF at the start of decoded text is common when a file with a BOM
+  was read as UTF-8. The data is lost silently. Surrogates are rarer, and need surrogateescape
+  or lone surrogates in the input.
+maybe_intended: |
+  The comment says `// native byteorder`, and PyUnicode_DecodeUTF32's convention is that
+  *byteorder == 0 means detect, native being the fallback. The caller's intent was a plain
+  native decoding, so the mark is not intended. Refusing surrogates could be defended as
+  strictness, but it makes repr fail, and 'u' accepts them.
+reproducer: |
+  import array
+  s = '\ufeffabc'
+  a = array.array('w', s)
+  t = a.tounicode()
+  print(ascii(t), repr(a), list(map(hex, map(ord, a))))
+  try:
+      repr(array.array('w', '\ud800'))
+      err = None
+  except UnicodeDecodeError as e:
+      err = type(e).__name__
+  if t == 'abc' and len(a) == 4 and err == 'UnicodeDecodeError':
+      print('REPRODUCED sequences-array-w-tounicode-bom')
+expected: |
+  '\ufeffabc', and repr(array('w', '\ufeffabc')) evaluating to an equal array.
+observed: |
+  python3 3.14.7: 'abc'; array('w', 'abc'); UnicodeDecodeError from tounicode and repr on
+  '\ud800'. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Doc/library/array.rst:262 tounicode; invariant
+  round-trip with array('w', s) and fromunicode.
+cause: |
+  Modules/arraymodule.c:1942-1944 (3.14.7) `int byteorder = 0; // native byteorder`
+  and `PyUnicode_DecodeUTF32(ob_item, Py_SIZE(self) * 4, NULL, &byteorder)`. main has it at
+  :2016-2018.
+possible_fix: |
+  PyUnicode_FromKindAndData(PyUnicode_4BYTE_KIND, ob_item, Py_SIZE(self)) keeps every code
+  point; it raises ValueError only above U+10FFFF. Or use `byteorder = -1 / 1` per endianness
+  and an error handler that keeps surrogates.
+duplicates:
+  issues: []
+  queries: ["array tounicode", "array tounicode BOM", "array BOM", "array surrogate",
+            "array typecode w surrogate tounicode", "array 'w' typecode", "array wchar_t typecode w",
+            "bugforge README: no array entries"]
+lean:
+  property: PyLean.Sequences.ArrayToUnicodeW
+  theorem: PyLean.Sequences.arrayToUnicodeW_refuted

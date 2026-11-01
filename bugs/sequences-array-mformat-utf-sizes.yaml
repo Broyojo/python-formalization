@@ -1,0 +1,54 @@
+id: sequences-array-mformat-utf-sizes
+title: "array._array_reconstructor rejects odd-length unicode arrays in the other byte order: mformat_descriptors has UTF sizes 4 and 8"
+priority: P3
+kind: wrong-constant
+module: sequences
+files: [Modules/arraymodule.c]
+functions: ["array__array_reconstructor_impl"]
+summary: |
+  mformat_descriptors lists the UTF-16 machine formats with size 4 and the UTF-32 ones with
+  size 8, while the units are 2 and 4 bytes. The reconstructor's slow path checks
+  `Py_SIZE(items) % mf_descr.size`, so a pickle of a 'w' array with an odd number of
+  characters from a machine of the other byte order fails with
+  ValueError: string length not a multiple of item size. Even lengths work, and so does the
+  native format, which takes the fast path. The same holds for UTF-16 with 'u' pickles.
+  Lean: ArrayReconstructUTF is refuted by the one-character string.
+likelihood: |
+  Low to moderate: it needs a pickle crossing byte orders, of an odd-length unicode array.
+  The result is an exception, not wrong data.
+maybe_intended: |
+  No. Issue #155850 reports the same table error and is open.
+reproducer: |
+  import array
+  odd = 'abc'.encode('utf-32-be')
+  even = 'ab'.encode('utf-32-be')
+  try:
+      array._array_reconstructor(array.array, 'w', 21, odd)
+      err = None
+  except ValueError as e:
+      err = str(e)
+  ok = array._array_reconstructor(array.array, 'w', 21, even)
+  print(err, ok)
+  if err == 'string length not a multiple of item size' and ok.tounicode() == 'ab':
+      print('REPRODUCED sequences-array-mformat-utf-sizes')
+expected: |
+  array('w', 'abc').
+observed: |
+  python3 3.14.7: ValueError for 1 and 3 characters, UTF-16 and UTF-32, either order except the
+  native UTF-32-LE fast path. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Invariant: a pickle of an array loads on any machine; the table's comment says UTF-32 and
+  the other rows give the unit size.
+cause: |
+  Modules/arraymodule.c:1989-1992 (3.14.7) `{4, 0, 0}, {4, 0, 1}, {8, 0, 0}, {8, 0, 1}`,
+  used by the check in array__array_reconstructor_impl.
+possible_fix: |
+  Sizes {2, 0, 0}, {2, 0, 1}, {4, 0, 0}, {4, 0, 1}.
+duplicates:
+  issues:
+    - {number: 155850, state: open, relation: "duplicate: same table, same reproducer"}
+  queries: ["_array_reconstructor", "array reconstructor UTF-32 mformat", "bugforge README: no array entries"]
+lean:
+  property: PyLean.Sequences.ArrayReconstructUTF
+  theorem: PyLean.Sequences.arrayReconstructUTF_refuted

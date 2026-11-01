@@ -1,0 +1,55 @@
+id: corelibs-statistics-correlation-constant-undetected
+title: "statistics.correlation and linear_regression miss constant input when the rounded mean differs from it"
+priority: P4
+kind: wrong-result
+module: corelibs
+files: [Lib/statistics.py]
+functions: ["correlation", "linear_regression"]
+summary: |
+  Both functions detect constant input through a zero sum of squares after subtracting
+  `fsum(x) / n`. For `x = [0.1, 0.1, 0.1]` that rounded mean is 0.10000000000000002, so the deviations
+  are a small non-zero number. `correlation` then returns 0.0 and `linear_regression` returns
+  slope 0.0, intercept 2.0, instead of the documented StatisticsError. The same call with
+  `[0.5, 0.5, 0.5]` raises. `method='ranked'` raises for both.
+likelihood: |
+  Low to moderate. A constant float column is a common data problem and the check exists to catch it;
+  whether it fires depends on the value and on n.
+maybe_intended: |
+  Possibly regarded as float rounding. Still, the input is exactly constant, no rounding is in the data,
+  and the outcome is a plausible-looking 0.0 rather than an error.
+reproducer: |
+  import statistics
+  x, y = [0.1, 0.1, 0.1], [1, 2, 3]
+  r = statistics.correlation(x, y)
+  s = statistics.linear_regression(x, y).slope
+  print(r, s)
+  try:
+      statistics.correlation([0.5, 0.5, 0.5], y)
+  except statistics.StatisticsError as e:
+      print('0.5 raises:', e)
+      if r == 0.0 and s == 0.0:
+          print('REPRODUCED corelibs-statistics-correlation-constant-undetected')
+expected: |
+  StatisticsError in all calls: "at least one of the inputs is constant", "x is constant".
+observed: |
+  python3 3.14.7: 0.0 0.0, and StatisticsError for 0.5. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same. REPRODUCED.
+promised_by: |
+  Doc/library/statistics.rst:760 for correlation: "Both inputs must be of the same length (no less
+  than two), and need not to be constant, otherwise StatisticsError is raised." Doc:809 for
+  linear_regression: "the independent variable x cannot be constant".
+cause: |
+  Lib/statistics.py:726-729 and :790-792: `xbar = fsum(x) / n` is rounded twice, so `xi - xbar` need
+  not be 0 for equal xi. The ZeroDivisionError at :737 and :800 is then not raised.
+possible_fix: |
+  Test for constant input directly (`min(x) == max(x)`, or `all(xi == x[0] for xi in x)`) before
+  centring.
+duplicates:
+  issues:
+    - {number: 158752, state: closed, relation: "opposite direction: tiny non-constant input reported as constant", reason: "different bug"}
+    - {number: 158751, state: closed, relation: "opposite direction, linear_regression", reason: "different bug"}
+  queries: ["correlation constant input rounding", "correlation constant", "statistics correlation constant input not detected",
+            "bugforge README: statistics.correlation and linear_regression entries, all non-constant input reported as constant"]
+lean:
+  property: PyLean.CoreLibs.CalStat.ConstantInputDetected
+  theorem: PyLean.CoreLibs.CalStat.constantInputDetected_refuted

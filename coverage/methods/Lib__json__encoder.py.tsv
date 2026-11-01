@@ -1,8 +1,8 @@
 file	line	endline	name	signature	status	entry	note
 Lib/json/encoder.py	37	43	py_encode_basestring	py_encode_basestring(s)	modelled	json-dumps-twins	
 Lib/json/encoder.py	49	68	py_encode_basestring_ascii	py_encode_basestring_ascii(s)	modelled	json-dumps-twins,json-ensure-ascii-output,json-roundtrip-str	
-Lib/json/encoder.py	105	161	JSONEncoder.__init__	__init__(self, *, skipkeys=False, ensure_ascii=True, check_circular=True, allow_nan=True, sort_keys=False, indent=None, separators=None, default=None)	todo		
-Lib/json/encoder.py	163	183	JSONEncoder.default	default(self, o)	todo		
-Lib/json/encoder.py	185	205	JSONEncoder.encode	encode(self, o)	todo		
-Lib/json/encoder.py	207	263	JSONEncoder.iterencode	iterencode(self, o, _one_shot=False)	todo		
+Lib/json/encoder.py	105	161	JSONEncoder.__init__	__init__(self, *, skipkeys=False, ensure_ascii=True, check_circular=True, allow_nan=True, sort_keys=False, indent=None, separators=None, default=None)	modelled	json-default-separators,json-dumps-fast-path	
+Lib/json/encoder.py	163	183	JSONEncoder.default	default(self, o)	modelled	json-default-typeerror	
+Lib/json/encoder.py	185	205	JSONEncoder.encode	encode(self, o)	modelled	json-dumps-accepted,json-dumps-twins,json-ensure-ascii-output,json-roundtrip	
+Lib/json/encoder.py	207	263	JSONEncoder.iterencode	iterencode(self, o, _one_shot=False)	modelled	json-allow-nan,json-dump-is-dumps,json-dumps-twins,json-iterencode-join	
 Lib/json/encoder.py	265	461	_make_iterencode	_make_iterencode(markers, _default, _encoder, _indent, _floatstr, _key_separator, _item_separator, _sort_keys, _skipkeys, _one_shot, ValueError=ValueError, dict=dict, float=float, id=id, int=int, isinstance=isinstance, list=list, str=str, tuple=tuple, _intstr=int.__repr__)	modelled	json-dumps-twins,json-roundtrip	

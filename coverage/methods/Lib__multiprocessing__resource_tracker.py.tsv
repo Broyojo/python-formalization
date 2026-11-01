@@ -13,9 +13,9 @@ Lib/multiprocessing/resource_tracker.py	236	274	ResourceTracker._launch	_launch(
 Lib/multiprocessing/resource_tracker.py	276	287	ResourceTracker._make_probe_message	_make_probe_message(self)	todo		
 Lib/multiprocessing/resource_tracker.py	289	320	ResourceTracker._ensure_running_and_write	_ensure_running_and_write(self, msg=None)	todo		
 Lib/multiprocessing/resource_tracker.py	322	331	ResourceTracker._check_alive	_check_alive(self)	todo		
-Lib/multiprocessing/resource_tracker.py	333	335	ResourceTracker.register	register(self, name, rtype)	todo		
+Lib/multiprocessing/resource_tracker.py	333	335	ResourceTracker.register	register(self, name, rtype)	todo		candidates:calstat-statistics-kernels-centred
 Lib/multiprocessing/resource_tracker.py	337	339	ResourceTracker.unregister	unregister(self, name, rtype)	todo		
 Lib/multiprocessing/resource_tracker.py	341	343	ResourceTracker._write	_write(self, msg)	todo		
 Lib/multiprocessing/resource_tracker.py	345	376	ResourceTracker._send	_send(self, cmd, name, rtype)	todo		
 Lib/multiprocessing/resource_tracker.py	397	418	_decode_message	_decode_message(line)	todo		
-Lib/multiprocessing/resource_tracker.py	421	495	main	main(fd)	todo		
+Lib/multiprocessing/resource_tracker.py	421	495	main	main(fd)	todo		candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output

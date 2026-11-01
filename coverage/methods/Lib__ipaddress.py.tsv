@@ -33,7 +33,7 @@ Lib/ipaddress.py	604	605	_BaseAddress.__str__	__str__(self)	todo
 Lib/ipaddress.py	607	608	_BaseAddress.__hash__	__hash__(self)	todo		
 Lib/ipaddress.py	610	611	_BaseAddress._get_address_key	_get_address_key(self)	todo		
 Lib/ipaddress.py	613	614	_BaseAddress.__reduce__	__reduce__(self)	todo		
-Lib/ipaddress.py	616	663	_BaseAddress.__format__	__format__(self, fmt)	todo		
+Lib/ipaddress.py	616	663	_BaseAddress.__format__	__format__(self, fmt)	todo		candidates:coll-userstring-format-spec
 Lib/ipaddress.py	674	675	_BaseNetwork.__repr__	__repr__(self)	todo		
 Lib/ipaddress.py	677	678	_BaseNetwork.__str__	__str__(self)	todo		
 Lib/ipaddress.py	680	690	_BaseNetwork.hosts	hosts(self)	todo		

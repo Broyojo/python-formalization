@@ -1,14 +1,17 @@
 import PyLean.DiffCore
+import PyLean.BytesObj.Seq.Diff
+import PyLean.BytesObj.Bytes.Diff
+import PyLean.BytesObj.Mem.Diff
 
-/-! Differential-testing handler for `bytesobj` cases (`"mod": "bytesobj"`). -/
+/-! Differential-testing handler for `bytesobj` cases (`"mod": "bytesobj"`).
+Each family has its own sub-handler; a handler returns `none` for a `fn` it does
+not know. -/
 
 namespace PyLean.BytesObj
 
 open Lean PyLean PyLean.Diff
 
-def run (fn : String) (_j : Json) : Except String Json :=
-  throw s!"unknown fn {fn}"
-
-def handler : Handler := fun fn j => some (run fn j)
+def handler : Handler := fun fn j =>
+  (Seq.handler fn j) <|> (Bytes.handler fn j) <|> (Mem.handler fn j)
 
 end PyLean.BytesObj

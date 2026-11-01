@@ -126,6 +126,35 @@ theorem mulNoValueErrorPy_refuted : ¬MulNoValueErrorPy := by
     set_option maxRecDepth 100000 in decide
   exact h {} _ _ [] _ hv
 
+/-- `+` under any context never raises `ValueError`. -/
+def AddNoValueErrorPy : Prop :=
+  ∀ (c : Ctx) (a b : Dec) (fl : List Signal) (msg : String),
+    (add c a b).run fl ≠ .error (.valueError msg)
+
+/-- `Decimal('9'*4300) + Decimal('9'*4300)` under the default context: each
+operand is under the limit, but `Decimal(result)` formats the exact 4301-digit
+sum with `str()` before rounding it. -/
+theorem addNoValueErrorPy_refuted : ¬AddNoValueErrorPy := by
+  intro h
+  let x : Nat := digitsValue (List.replicate 4300 '9')
+  have hv : (add {} (.fin false x 0) (.fin false x 0)).run [] = .error (.valueError limitToStrMsg) := by
+    set_option maxRecDepth 100000 in decide
+  exact h {} _ _ [] _ hv
+
+/-- `-` under any context never raises `ValueError`. -/
+def SubNoValueErrorPy : Prop :=
+  ∀ (c : Ctx) (a b : Dec) (fl : List Signal) (msg : String),
+    (sub c a b).run fl ≠ .error (.valueError msg)
+
+/-- `Decimal('9'*4300) - Decimal('-' + '9'*4300)`: `__sub__` negates the operand
+and calls `__add__`. -/
+theorem subNoValueErrorPy_refuted : ¬SubNoValueErrorPy := by
+  intro h
+  let x : Nat := digitsValue (List.replicate 4300 '9')
+  have hv : (sub {} (.fin false x 0) (.fin true x 0)).run [] = .error (.valueError limitToStrMsg) := by
+    set_option maxRecDepth 100000 in decide
+  exact h {} _ _ [] _ hv
+
 /-! ## The tuple constructor -/
 
 /-- For every tuple `(sign, digits, exp)` with an exponent of at most 10^17

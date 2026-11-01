@@ -1,9 +1,8 @@
 import PyLean.Sequences.DequeOps
-import PyLean.Sequences.ArrayModel
 
 /-!
-`insert(i, x)` across `list`, `array.array` and `collections.deque`, and
-against the documented equivalent `s[i:i] = [x]`.
+`insert(i, x)` across `list` and `collections.deque`, and against the
+documented equivalent `s[i:i] = [x]`.
 -/
 
 namespace PyLean.Sequences
@@ -11,18 +10,22 @@ namespace PyLean.Sequences
 open PyLean
 open PyLean.RangeSlice (Slice)
 
+set_option linter.unusedSectionVars false
+
+variable {α : Type} [Inhabited α]
+
 theorem ins1Pos_bounds (n w : Int) (hn : 0 ≤ n) : 0 ≤ ins1Pos n w ∧ ins1Pos n w ≤ n := by
   unfold ins1Pos; dsimp only; split <;> (try split) <;> (try split) <;> omega
 
 /-- `list.insert`: `OverflowError` outside `Py_ssize_t`, else insert at the
 clipped position. -/
-theorem listInsert_eq (l : List Int) (i x : Int) :
+theorem listInsert_eq (l : List α) (i : Int) (x : α) :
     listInsert l i x = if ssizeMin ≤ i ∧ i ≤ ssizeMax then .ok (insAt l (ins1Pos l.length i).toNat x)
       else .error (.overflowError "Python int too large to convert to C ssize_t") := by
   unfold listInsert asSsize
   split <;> rfl
 
-theorem rotLi_insert_pos (l : List Int) (k : Nat) (x : Int) (hk : k < l.length) :
+theorem rotLi_insert_pos (l : List α) (k : Nat) (x : α) (hk : k < l.length) :
     rotLi (-(k : Int)) (x :: rotLi k l) = insAt l k x := by
   rw [rotLi_nat _ _ hk]
   unfold rotLi rotL insAt
@@ -37,7 +40,7 @@ theorem rotLi_insert_pos (l : List Int) (k : Nat) (x : Int) (hk : k < l.length) 
   rw [this, ← List.cons_append]
   exact Deque.rotL_append _ _
 
-theorem rotLi_insert_neg (l : List Int) (k : Nat) (x : Int) (hk0 : 0 < k) (hk : k < l.length) :
+theorem rotLi_insert_neg (l : List α) (k : Nat) (x : α) (hk0 : 0 < k) (hk : k < l.length) :
     rotLi (k : Int) (rotLi (-(k : Int)) l ++ [x]) = insAt l (l.length - k) x := by
   have e : rotLi (-(k : Int)) l = rotL (l.length - k) l := by
     rw [show (-(k : Int)) = ((l.length - k : Nat) : Int) + (l.length : Int) * (-1) by omega,
@@ -52,34 +55,21 @@ theorem rotLi_insert_neg (l : List Int) (k : Nat) (x : Int) (hk0 : 0 < k) (hk : 
   generalize l.take (l.length - k) = B
   rw [List.append_assoc, ← hA, Deque.rotL_append, List.append_assoc, List.singleton_append]
 
-/-- `insert(i, x)` agrees across the three types: for every list of ints `l`,
-every int `i` and `x`, `array.insert` (any typecode whose range holds `x`
-and the items) gives the same result as `list.insert`, and `deque.insert` on
-any deque with items `l` (type invariant `WF`) does too unless the deque is
-full (`maxlen == len(d)`), where it raises `IndexError("deque already at its
+/-- `insert(i, x)` agrees across `list` and `deque`: for every element type,
+list `l`, int `i` and `x`, `deque.insert` on any deque with items `l` (type
+invariant `WF`) gives `list.insert`'s result unless the deque is full
+(`maxlen == len(d)`), where it raises `IndexError("deque already at its
 maximum size")` as documented (Doc/library/collections.rst:539-544); the
 resulting deque keeps the invariant and `maxlen`. -/
 def InsertAgree : Prop :=
-  ∀ (l : List Int) (i x : Int),
-    (∀ tc : TC, tc.lo ≤ x → x ≤ tc.hi → (arrInsert ⟨tc, l⟩ i x).map (·.items) = listInsert l i x) ∧
-    (∀ d : Deque, d.WF → d.items = l →
+  ∀ (α : Type) [Inhabited α] (l : List α) (i : Int) (x : α),
+    (∀ d : Deque α, d.WF → d.items = l →
       (d.maxlen ≠ l.length → (d.insert i x).map (·.items) = listInsert l i x ∧
         ∀ d', d.insert i x = .ok d' → d'.WF ∧ d'.maxlen = d.maxlen) ∧
       (d.maxlen = l.length → ssizeMin ≤ i → i ≤ ssizeMax →
         d.insert i x = .error (.indexError "deque already at its maximum size")))
 
-theorem tcSetitem_ok (tc : TC) (x : Int) (h0 : tc.lo ≤ x) (h1 : x ≤ tc.hi) : tcSetitem tc true x = .ok x := by
-  have hl : asLong x = .ok x := by
-    unfold asLong; cases tc <;> simp only [TC.lo, TC.hi] at h0 h1 <;> rw [iteT ⟨by omega, by omega⟩]
-  cases tc <;> simp only [TC.lo, TC.hi] at h0 h1 <;> simp only [tcSetitem, hl, bind, Except.bind, pure, Except.pure]
-  · rw [iteF (by omega), iteF (by omega)]; simp only [Bool.not_true, Bool.false_eq_true, ite_false]
-    rw [iteF (by omega), iteF (by omega)]
-  · rw [iteF (by omega), iteF (by omega)]; simp only [Bool.not_true, Bool.false_eq_true, ite_false]
-  · rw [iteF (by omega), iteF (by omega)]; simp only [Bool.not_true, Bool.false_eq_true, ite_false]
-  · rw [iteF (by omega), iteF (by omega)]; simp only [Bool.not_true, Bool.false_eq_true, ite_false]
-  · rw [iteF (by omega)]; simp only [Bool.not_true, Bool.false_eq_true, ite_false]
-
-theorem dequeInsert_spec (d : Deque) (h : d.WF) (i x : Int) (hi : ssizeMin ≤ i ∧ i ≤ ssizeMax)
+theorem dequeInsert_spec (d : Deque α) (h : d.WF) (i : Int) (x : α) (hi : ssizeMin ≤ i ∧ i ≤ ssizeMax)
     (hm : d.maxlen ≠ d.items.length) :
     ∃ d', d.insert i x = .ok d' ∧ d'.items = insAt d.items (ins1Pos d.items.length i).toNat x ∧
       d'.WF ∧ d'.maxlen = d.maxlen := by
@@ -148,13 +138,8 @@ theorem dequeInsert_spec (d : Deque) (h : d.WF) (i x : Int) (hi : ssizeMin ≤ i
     rw [hp]
 
 theorem insertAgree_proven : InsertAgree := by
-  intro l i x
-  refine ⟨fun tc h0 h1 => ?_, fun d hd hl => ⟨fun hm => ?_, fun hm hi0 hi1 => ?_⟩⟩
-  · rw [listInsert_eq]
-    unfold arrInsert asSsize
-    split
-    · simp only [bind, Except.bind, arrIns1, tcSetitem_ok tc x h0 h1, pure, Except.pure, Except.map]
-    · rfl
+  intro α _ l i x d hd hl
+  refine ⟨fun hm => ?_, fun hm hi0 hi1 => ?_⟩
   · rw [listInsert_eq]
     subst hl
     by_cases hi : ssizeMin ≤ i ∧ i ≤ ssizeMax
@@ -177,22 +162,23 @@ theorem insertAgree_proven : InsertAgree := by
 /-- `list.insert(i, x)` "is equivalent to writing `sequence[index:index] =
 [value]`" (Doc/library/stdtypes.rst:1336-1343), for every int `i`. -/
 def InsertIsSliceAssign : Prop :=
-  ∀ (l : List Int) (i x : Int), (l.length : Int) ≤ ssizeMax →
+  ∀ (α : Type) [Inhabited α] (l : List α) (i : Int) (x : α), (l.length : Int) ≤ ssizeMax →
     listInsert l i x = listAssSubscript l ⟨some i, some i, none⟩ (some [x])
 
 /-- The same, for `i` inside `Py_ssize_t`. -/
 def InsertIsSliceAssignSsize : Prop :=
-  ∀ (l : List Int) (i x : Int), (l.length : Int) ≤ ssizeMax → ssizeMin ≤ i → i ≤ ssizeMax →
+  ∀ (α : Type) [Inhabited α] (l : List α) (i : Int) (x : α), (l.length : Int) ≤ ssizeMax →
+    ssizeMin ≤ i → i ≤ ssizeMax →
     listInsert l i x = listAssSubscript l ⟨some i, some i, none⟩ (some [x])
 
 theorem insertIsSliceAssign_refuted : ¬ InsertIsSliceAssign := by
   intro h
-  have := h [] (2 ^ 63) 0 (by decide)
+  have := h Int [] (2 ^ 63) 0 (by decide)
   revert this
   decide
 
 theorem insertIsSliceAssignSsize_proven : InsertIsSliceAssignSsize := by
-  intro l i x hlen hi0 hi1
+  intro α _ l i x hlen hi0 hi1
   rw [listInsert_eq, iteT ⟨hi0, hi1⟩]
   have hc : RangeSlice.clampSsize i = i := by
     unfold RangeSlice.clampSsize; rw [iteF (by omega), iteF (by omega)]

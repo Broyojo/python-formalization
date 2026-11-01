@@ -1,6 +1,7 @@
 import PyLean.DiffCore
 import PyLean.Datetime.IsoC
 import PyLean.Datetime.Format
+import PyLean.Datetime.DiffObj
 
 /-!
 Differential-testing handler for `datetime` cases (`"mod": "datetime"`).
@@ -116,8 +117,14 @@ def run (fn : String) (j : Json) : Except String Json := do
     let v : DateTimeV := ⟨a.getD 0 0, a.getD 1 0, a.getD 2 0,
       ⟨a.getD 3 0, a.getD 4 0, a.getD 5 0, a.getD 6 0, ← getOptTz j⟩⟩
     return encPy toJson (.ok (String.ofList (datetimeIsoformat v (Char.ofNat sep.toNat) (← getSpec j))) : Py String)
-  | other => throw s!"unknown fn {other}"
+  | other => runObj other j
 
-def handler : Handler := fun fn j => some (run fn j)
+/-- Results of `runObj` that are not already `{"ok": ...}` or `{"exc": ...}`. -/
+def wrapOk (r : Json) : Json :=
+  match r.getObjVal? "ok", r.getObjVal? "exc" with
+  | .error _, .error _ => Json.mkObj [("ok", r)]
+  | _, _ => r
+
+def handler : Handler := fun fn j => some (wrapOk <$> run fn j)
 
 end PyLean.Datetime

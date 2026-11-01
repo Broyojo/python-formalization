@@ -13,9 +13,9 @@ Modules/_io/stringio.c	461	481	_io_StringIO_truncate_impl	_io_StringIO_truncate_
 Modules/_io/stringio.c	501	536	_io_StringIO_seek_impl	_io_StringIO_seek_impl(stringio *self, Py_ssize_t pos, int whence) /*[clinic end generated code: output=e9e0ac9a8ae71c25 input=ffef24668fd71a5d]*/	modelled	pyio-bytesio-read-after-seek	
 Modules/_io/stringio.c	551	569	_io_StringIO_write_impl	_io_StringIO_write_impl(stringio *self, PyObject *obj) /*[clinic end generated code: output=d53b1d841d7db288 input=1561272c0da4651f]*/	todo		
 Modules/_io/stringio.c	584	597	_io_StringIO_close_impl	_io_StringIO_close_impl(stringio *self) /*[clinic end generated code: output=04399355cbe518f1 input=305d19aa29cc40b9]*/	todo		
-Modules/_io/stringio.c	600	609	stringio_traverse	stringio_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/_io/stringio.c	612	620	stringio_clear	stringio_clear(PyObject *op)	todo		
-Modules/_io/stringio.c	623	638	stringio_dealloc	stringio_dealloc(PyObject *op)	todo		
+Modules/_io/stringio.c	600	609	stringio_traverse	stringio_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal/clear of object references, no Python-visible result
+Modules/_io/stringio.c	612	620	stringio_clear	stringio_clear(PyObject *op)	excluded		no-behaviour: GC traversal/clear of object references, no Python-visible result
+Modules/_io/stringio.c	623	638	stringio_dealloc	stringio_dealloc(PyObject *op)	excluded		no-behaviour: frees memory and drops references only; no finalizer, no output
 Modules/_io/stringio.c	641	660	stringio_new	stringio_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
 Modules/_io/stringio.c	674	782	_io_StringIO___init___impl	_io_StringIO___init___impl(stringio *self, PyObject *value, PyObject *newline_obj) /*[clinic end generated code: output=a421ea023b22ef4e input=cee2d9181b2577a3]*/	modelled	pyio-stringio-c-newline-legal,pyio-stringio-c-newline-legal-no-nul	
 Modules/_io/stringio.c	794	800	_io_StringIO_readable_impl	_io_StringIO_readable_impl(stringio *self) /*[clinic end generated code: output=b19d44dd8b1ceb99 input=6cd2ffd65a8e8763]*/	todo		

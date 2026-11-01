@@ -8,10 +8,12 @@ Shared vocabulary for the `json` models (CPython 3.14.7).
 * Positions are `Nat` in the C model (after `scanner_call` has rejected negative
   and out-of-range indices) and `Int` in the pure-Python model, whose indexing
   and slicing follow Python's rules for negative and out-of-range indices.
-* Decoded numbers: `parse_float` and `parse_constant` are modelled as hooks that
-  receive the matched text (`JVal.hook`); floats themselves are out of scope.
-  `parse_int` is either the default `int` (exact, with the 4300-digit limit) or a
-  hook.
+* The decoder's callbacks are abstract functions (`DCfg`): `object_hook`,
+  `object_pairs_hook`, `parse_float`, `parse_int` and `parse_constant` may return
+  any value or raise. The default `parse_int` is `int`, exact with the 4300-digit
+  limit. The default `parse_float`, `float`, is abstract too: it records the text
+  it receives (`JVal.hook`), until the binary64 model exists; the default
+  `parse_constant` likewise.
 -/
 
 namespace PyLean.JsonMod
@@ -192,14 +194,19 @@ instance {α : Type} [DecidableEq α] : DecidableEq (DR α)
 
 def fuelOut {α : Type} : DR α := .error (.exc .modelFuel)
 
-/-- Decoder options. `parse_float` and `parse_constant` are always hooks. -/
+/-- Decoder options, after `JSONDecoder.__init__`. -/
 structure DCfg where
   strict : Bool := true
-  /-- `object_pairs_hook=list`: objects keep every pair in order. -/
-  pairsHook : Bool := false
-  /-- `parse_int` is a hook receiving the text (otherwise `int`). -/
-  intHook : Bool := false
-  deriving DecidableEq, Repr, Inhabited
+  /-- `object_hook`, called with the `dict`. -/
+  objectHook : Option (List (PStr × JVal) → DR JVal) := none
+  /-- `object_pairs_hook`, called with the list of pairs; it takes priority. -/
+  pairsHook : Option (List (PStr × JVal) → DR JVal) := none
+  /-- `parse_float`: `float` unless given. -/
+  parseFloat : PStr → DR JVal := fun t => .ok (.hook .float t)
+  /-- `parse_int`: `int` when `none`. -/
+  parseIntFn : Option (PStr → DR JVal) := none
+  /-- `parse_constant`: `_CONSTANTS.__getitem__` unless given. -/
+  parseConstant : PStr → DR JVal := fun t => .ok (.hook .const t)
 
 /-- `sys.get_int_max_str_digits()` default. -/
 def maxStrDigits : Nat := 4300
@@ -219,8 +226,10 @@ def pyIntOfText (t : PStr) : Except PyExc Int :=
 
 /-- `parse_int(text)`. -/
 def parseInt (cfg : DCfg) (t : PStr) : DR JVal :=
-  if cfg.intHook then .ok (.hook .int t)
-  else match pyIntOfText t with
+  match cfg.parseIntFn with
+  | some h => h t
+  | none =>
+    match pyIntOfText t with
     | .ok n => .ok (.int n)
     | .error e => .error (.exc e)
 

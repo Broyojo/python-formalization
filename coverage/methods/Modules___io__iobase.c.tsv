@@ -15,8 +15,8 @@ Modules/_io/iobase.c	250	255	_PyIOBase_cannot_pickle	_PyIOBase_cannot_pickle(PyO
 Modules/_io/iobase.c	270	291	_io__IOBase_close_impl	_io__IOBase_close_impl(PyObject *self) /*[clinic end generated code: output=63c6a6f57d783d6d input=f4494d5c31dbc6b7]*/	todo		
 Modules/_io/iobase.c	296	333	iobase_finalize	iobase_finalize(PyObject *self)	todo		
 Modules/_io/iobase.c	336	349	_PyIOBase_finalize	_PyIOBase_finalize(PyObject *self)	todo		
-Modules/_io/iobase.c	352	358	iobase_traverse	iobase_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/_io/iobase.c	361	366	iobase_clear	iobase_clear(PyObject *op)	todo		
+Modules/_io/iobase.c	352	358	iobase_traverse	iobase_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal/clear of object references, no Python-visible result
+Modules/_io/iobase.c	361	366	iobase_clear	iobase_clear(PyObject *op)	excluded		no-behaviour: GC traversal/clear of object references, no Python-visible result
 Modules/_io/iobase.c	371	393	iobase_dealloc	iobase_dealloc(PyObject *op)	todo		
 Modules/_io/iobase.c	407	411	_io__IOBase_seekable_impl	_io__IOBase_seekable_impl(PyObject *self) /*[clinic end generated code: output=4c24c67f5f32a43d input=b976622f7fdf3063]*/	todo		
 Modules/_io/iobase.c	414	428	_PyIOBase_check_seekable	_PyIOBase_check_seekable(_PyIO_State *state, PyObject *self, PyObject *args)	todo		
