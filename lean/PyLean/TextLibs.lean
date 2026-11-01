@@ -1,7 +1,7 @@
 import PyLean.Registry
 import PyLean.TextLibs.Diff
 import PyLean.TextLibs.StructFail
-import PyLean.TextLibs.BinasciiProps2
+import PyLean.TextLibs.BinasciiProps5
 import PyLean.TextLibs.CsvRoundTrip
 import PyLean.TextLibs.ReParseProps
 
@@ -13,7 +13,7 @@ with floats as exact bit patterns (`TextLibs/Bits.lean`). `lu_short`, `lu_longlo
 so only the proofs reach them, not the difftest.
 
 `Modules/binascii.c` and `Lib/base64.py` are in `TextLibs/BinasciiModel.lean` and
-`TextLibs/BinasciiRest.lean`; `hexlify`'s `sep` argument is not modelled. `Modules/_csv.c` and
+`TextLibs/BinasciiRest.lean`. `Modules/_csv.c` and
 `Lib/csv.py` are in `TextLibs/CsvModel.lean`, over fallible and re-entrant objects; `Sniffer` is not
 modelled.
 `Lib/re/_parser.py` is in `TextLibs/ReParse.lean`, without `\\N{...}` and non-ASCII group names.
@@ -194,6 +194,19 @@ def entries : List Entry := [
     statement := "A __float__ that raises does not get through: every failure of PyFloat_AsDouble becomes struct.error."
     source := "Modules/_struct.c:280-285", status := .proven
     prop := ``FloatFailureReplaced, thm := some ``floatFailureReplaced_proven },
+  { id := "textlibs-struct-float-order", pyFile := "Modules/_struct.c", pyFns := ["pack_halffloat", "np_float", "np_double"]
+    statement := "__float__ wins over __index__, and without __float__ the value of __index__ is used."
+    source := "PyFloat_AsDouble, Objects/floatobject.c", status := .proven
+    prop := ``FloatOrder, thm := some ``floatOrder_proven },
+  { id := "textlibs-struct-complex-order", pyFile := "Modules/_struct.c"
+    pyFns := ["np_float_complex", "np_double_complex", "bp_float_complex", "bp_double_complex", "lp_float_complex", "lp_double_complex"]
+    statement := "__complex__ wins and its failure becomes struct.error; without it the object is real, with imaginary part zero."
+    source := "PyComplex_AsCComplex, Objects/complexobject.c", status := .proven
+    prop := ``ComplexOrder, thm := some ``complexOrder_proven },
+  { id := "textlibs-struct-buffers", pyFile := "Modules/_struct.c", pyFns := ["s_pack_into", "Struct_unpack_impl"]
+    statement := "y* lets a failing __buffer__ through; the w* of pack_into replaces it with TypeError and refuses bytes."
+    source := "Modules/_struct.c:2335", status := .proven
+    prop := ``BufferLaws, thm := some ``bufferLaws_proven },
   { id := "textlibs-struct-pack-into-order", pyFile := "Modules/_struct.c", pyFns := ["s_pack_into"]
     statement := "s_pack_into checks the item count, then the buffer, then the offset."
     source := "Modules/_struct.c:2316-2344", status := .proven
@@ -321,11 +334,70 @@ def entries : List Entry := [
     statement := "_input_type_check accepts exactly one-dimensional views of single-byte formats."
     source := "the checks' messages", status := .proven
     prop := ``InputTypeCheck, thm := some ``inputTypeCheck_proven },
-  { id := "textlibs-base64-main-flags", pyFile := "Lib/base64.py", pyFns := ["main"]
+  { id := "textlibs-base64-main-flags", pyFile := "Lib/base64.py", pyFns := []
     statement := "main runs the function of the last -e, -d or -u flag, unless -h came first."
     source := "the usage text", status := .proven
     prop := ``MainLastFlagWins, thm := some ``mainLastFlagWins_proven
-    notes := "Only the flag loop: file handling is not modelled, and the difftest stubs out encode and decode." },
+    notes := "Only the flag loop. This does not cover the row for main, whose getopt errors and file handling are not modelled." },
+  { id := "textlibs-binascii-hex-sep", pyFile := "Modules/binascii.c", pyFns := ["binascii_b2a_hex_impl", "binascii_hexlify_impl"]
+    statement := "hexlify with a separator: taking the separators out gives plain hexadecimal, (n-1)/|group| are inserted, and the sign of group picks the end the groups count from."
+    source := "docs: hexlify, sep and bytes_per_sep", status := .proven
+    prop := ``HexSepLaw, thm := some ``hexSepLaw_proven },
+  { id := "textlibs-binascii-hex-no-sep", pyFile := "Modules/binascii.c", pyFns := ["binascii_b2a_hex_impl", "binascii_hexlify_impl"]
+    statement := "No separator goes in without sep, for bytes_per_sep 0, or for a group at least as long as the data."
+    source := "Python/pystrhex.c:41-59", status := .proven
+    prop := ``HexNoSep, thm := some ``hexNoSep_proven },
+  { id := "textlibs-binascii-hex-sep-checks", pyFile := "Modules/binascii.c", pyFns := ["binascii_b2a_hex_impl", "binascii_hexlify_impl"]
+    statement := "What sep may be, in check order: length first, which may raise, then type; a non-ASCII bytes or Latin-1 str sep passes when the result is bytes."
+    source := "Python/pystrhex.c:14-40", status := .proven
+    prop := ``HexSepChecks, thm := some ``hexSepChecks_proven },
+  { id := "textlibs-binascii-uu-round-trip", pyFile := "Modules/binascii.c", pyFns := ["binascii_a2b_uu_impl", "binascii_b2a_uu_impl"]
+    statement := "a2b_uu(b2a_uu(d, backtick=b)) == d for all the data b2a_uu accepts."
+    source := "docs: a2b_uu, b2a_uu", status := .proven
+    prop := ``UuRoundTrip, thm := some ``uuRoundTrip_proven },
+  { id := "textlibs-binascii-uu-limit", pyFile := "Modules/binascii.c", pyFns := ["binascii_b2a_uu_impl"]
+    statement := "b2a_uu refuses more than 45 bytes."
+    source := "docs: b2a_uu", status := .proven
+    prop := ``UuLimit, thm := some ``uuLimit_proven },
+  { id := "textlibs-binascii-buffers", pyFile := "Modules/binascii.c", pyFns := ["ascii_buffer_converter"]
+    statement := "ascii_buffer_converter replaces a failing buffer with TypeError, where y* lets it through."
+    source := "Modules/binascii.c:183-188", status := .proven
+    prop := ``BufferConversions, thm := some ``bufferConversions_proven },
+  { id := "textlibs-binascii-flag-order", pyFile := "Modules/binascii.c"
+    pyFns := ["binascii_b2a_base64_impl", "binascii_a2b_base64_impl", "binascii_b2a_uu_impl"]
+    statement := "A raising __bool__ on a keyword passes through, after the data has been converted."
+    source := "the clinic conversions of binascii", status := .proven
+    prop := ``FlagOrder, thm := some ``flagOrder_proven },
+  { id := "textlibs-base64-decode-data", pyFile := "Lib/base64.py", pyFns := ["_bytes_from_decode_data"]
+    statement := "_bytes_from_decode_data replaces only a TypeError from memoryview."
+    source := "Lib/base64.py:40-43", status := .proven
+    prop := ``DecodeDataFails, thm := some ``decodeDataFails_proven },
+  { id := "textlibs-base64-b16-round-trip", pyFile := "Lib/base64.py", pyFns := ["b16encode", "b16decode"]
+    statement := "b16decode(b16encode(d)) == d, with only upper case digits, so casefold=False accepts it."
+    source := "docs: b16encode, b16decode", status := .proven
+    prop := ``B16RoundTrip, thm := some ``b16RoundTrip_proven },
+  { id := "textlibs-base64-urlsafe-round-trip", pyFile := "Lib/base64.py", pyFns := ["urlsafe_b64encode", "urlsafe_b64decode"]
+    statement := "urlsafe_b64decode(urlsafe_b64encode(d)) == d."
+    source := "docs: urlsafe_b64encode", status := .proven
+    prop := ``UrlsafeRoundTrip, thm := some ``urlsafeRoundTrip_proven },
+  { id := "textlibs-base64-b85-round-trip", pyFile := "Lib/base64.py", pyFns := ["_85encode", "b85encode", "b85decode"]
+    statement := "b85decode(b85encode(d)) == d, including a cut last group."
+    source := "docs: b85encode, b85decode", status := .proven
+    prop := ``B85RoundTrip, thm := some ``b85RoundTrip_proven },
+  { id := "textlibs-base64-z85-round-trip", pyFile := "Lib/base64.py", pyFns := ["z85encode", "z85decode"]
+    statement := "z85decode(z85encode(d)) == d."
+    source := "docs: z85encode, z85decode", status := .proven
+    prop := ``Z85RoundTrip, thm := some ``z85RoundTrip_proven },
+  { id := "textlibs-base64-a85-round-trip", pyFile := "Lib/base64.py", pyFns := ["_85encode", "a85encode", "a85decode"]
+    statement := "a85decode(a85encode(d, foldspaces=f), foldspaces=f) == d, through the z and y folds and a cut last group."
+    source := "docs: a85encode, a85decode", status := .proven
+    prop := ``A85RoundTrip, thm := some ``a85RoundTrip_proven
+    notes := "No wrapcol, no adobe: those are textlibs-base64-a85-wrap-round-trip." },
+  { id := "textlibs-base64-a85-wrap-round-trip", pyFile := "Lib/base64.py", pyFns := []
+    statement := "The Ascii85 round trip holds with wrapcol and adobe."
+    source := "docs: a85encode, a85decode", status := .open
+    prop := ``A85WrapRoundTrip
+    notes := "Needs a85Loop shown to skip the newlines, and the framing shown to survive chunksOf." },
   { id := "textlibs-csv-round-trip", pyFile := "Modules/_csv.c"
     pyFns := ["join_reset", "join_append_data", "join_append", "join_append_lineterminator", "csv_writerow_lock_held",
       "csv_writerow", "parse_add_char", "parse_process_char"]

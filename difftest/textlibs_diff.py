@@ -45,7 +45,7 @@ def float_bits(x):
 
 
 STRUCT_EXCS = {"ValueError": ValueError, "TypeError": TypeError, "OverflowError": OverflowError,
-               "ZeroDivisionError": ZeroDivisionError}
+               "ZeroDivisionError": ZeroDivisionError, "OSError": OSError}
 
 
 def s_res(r, conv=lambda x: x):
@@ -485,7 +485,78 @@ def data_dec(d):
     """{"b": [...]} is bytes, {"s": [...]} is a str by code points."""
     if d is None:
         return None
+    if "nb" in d:
+        return {"int": 1, "list": [], "NoneType": None, "float": 1.5}[d["nb"]]
+    if "rz" in d:
+        return RaisingBuffer(d["rz"])
     return bytes(d["b"]) if "b" in d else "".join(map(chr, d["s"]))
+
+
+def flag_dec(f):
+    if isinstance(f, bool):
+        return f
+    return type("O", (), {"__bool__": s_res(f)})()
+
+
+def int_dec(f):
+    if isinstance(f, int):
+        return f
+    return type("O", (), {"__index__": s_res(f)})()
+
+
+def bad_data(r):
+    return r.choice([{"nb": "int"}, {"nb": "list"}, {"nb": "NoneType"}, {"rz": ["ValueError", "boom"]}, {"rz": ["TypeError", "boom"]},
+                     {"s": [97, 98]}, {"s": [233]}, {"b": [97, 98, 99, 100]}])
+
+
+def file_read(c):
+    class F:
+        def __init__(self):
+            self.d, self.pos, self.i = bytes(c.get("d", [])), 0, 0
+            self.lines = list(c.get("lines", []))
+            self.written, self.w = [], 0
+
+        def read(self, n):
+            st = c["reads"][self.i] if self.i < len(c["reads"]) else None
+            self.i += 1
+            if st is not None and "raise" in st:
+                raise STRUCT_EXCS[st["raise"][0]](st["raise"][1])
+            m = n if st is None else min(st["give"], n)
+            out = self.d[self.pos:self.pos + m]
+            self.pos += len(out)
+            return out
+
+        def readline(self):
+            if not self.lines:
+                return b""
+            l = self.lines.pop(0)
+            if isinstance(l, dict):
+                raise STRUCT_EXCS[l["raise"][0]](l["raise"][1])
+            return bytes(l)
+
+        def write(self, b):
+            self.written.append(list(b))
+            if self.w < len(c["writes"]):
+                x = c["writes"][self.w]
+                self.w += 1
+                if x is not None:
+                    raise STRUCT_EXCS[x["raise"][0]](x["raise"][1])
+
+    return F()
+
+
+def r_hex(c):
+    g = int_dec(c["group"])
+    sep = c.get("sep")
+    if sep is None:
+        return lambda x: binascii.hexlify(x, bytes_per_sep=g)
+    if "len" in sep:
+        o = [0] * sep["len"]
+    elif "raise" in sep:
+        o = type("O", (), {"__len__": s_res(sep)})()
+    else:
+        o = data_dec(sep)
+    return lambda x: binascii.b2a_hex(x, o, g)
 
 
 class Codec:
@@ -536,8 +607,24 @@ class BinasciiArea(Codec):
         d = cls.raw(r)
         fn = r.choice(["a2b_base64", "a2b_base64", "a2b_base64", "b2a_base64", "a2b_hex", "b2a_hex",
                        "a2b_uu", "a2b_uu", "a2b_uu", "b2a_uu", "crc_hqx", "a2b_qp", "a2b_qp", "b2a_qp",
-                       "b2a_qp", "b2a_qp", "qp_bound", "qp_bound"])
+                       "b2a_qp", "b2a_qp", "qp_bound", "qp_bound", "api", "flag", "hex", "hex"])
         c = {"mod": "textlibs", "fn": "binascii." + fn}
+        if fn == "api":
+            c["op"] = r.choice(["b2a_base64", "a2b_base64", "a2b_hex", "a2b_uu", "b2a_uu", "crc_hqx", "a2b_qp", "b2a_qp"])
+            c["d"] = bad_data(r)
+            return c
+        if fn == "flag":
+            c["op"] = r.choice(["b2a_base64", "a2b_base64", "b2a_uu", "a2b_qp", "b2a_qp1", "b2a_qp2", "b2a_qp3"])
+            c["d"] = {"b": [97, 98, 99, 100]} if r.random() < 0.8 else bad_data(r)
+            c["f"] = r.choice([True, False, {"raise": ["ValueError", "boom"]}, {"raise": ["TypeError", "boom"]}])
+            return c
+        if fn == "hex":
+            c["d"] = {"b": d} if r.random() < 0.9 else bad_data(r)
+            c["sep"] = r.choice([None, {"s": [58]}, {"b": [58]}, {"s": [97]}, {"s": [233]}, {"s": [0x20ac]}, {"b": [200]}, {"s": []}, {"b": []},
+                                 {"s": [58, 59]}, {"b": [58, 59]}, {"len": 1}, {"len": 2}, {"len": 0}, {"raise": ["ValueError", "boom"]}])
+            c["group"] = r.choice([0, 1, 2, 3, 4, 5, -1, -2, -3, -4, 7, 100, -100, 2**31 - 1, -2**31, 2**31, -2**31 - 1, 2**70,
+                                   {"raise": ["ValueError", "boom"]}])
+            return c
         if fn in ("b2a_qp", "qp_bound"):
             c.update(cls.qp_input(r))
             return c
@@ -600,6 +687,30 @@ class BinasciiArea(Codec):
         fn = c["fn"].split(".")[1]
 
         def body():
+            if fn == "api":
+                x = data_dec(c["d"])
+                op = c["op"]
+                if op == "crc_hqx":
+                    return [binascii.crc_hqx(x, 0)]
+                if op == "b2a_qp":
+                    return list(binascii.b2a_qp(x))
+                return list(getattr(binascii, op)(x))
+            if fn == "flag":
+                x, f, op = data_dec(c["d"]), flag_dec(c["f"]), c["op"]
+                if op == "b2a_base64":
+                    return list(binascii.b2a_base64(x, newline=f))
+                if op == "a2b_base64":
+                    return list(binascii.a2b_base64(x, strict_mode=f))
+                if op == "b2a_uu":
+                    return list(binascii.b2a_uu(x, backtick=f))
+                if op == "a2b_qp":
+                    return list(binascii.a2b_qp(x, header=f))
+                k = {"b2a_qp1": "quotetabs", "b2a_qp2": "istext", "b2a_qp3": "header"}[op]
+                return list(binascii.b2a_qp(x, **{k: f}))
+            if fn == "hex":
+                x = data_dec(c["d"])
+                f = r_hex(c)
+                return list(f(x))
             if fn == "qp_bound":
                 return True
             if fn == "a2b_uu":
@@ -633,8 +744,8 @@ class Base64Area(Codec):
                        "b32hexencode", "b32decode", "b32decode", "b32decode", "b32hexdecode",
                        "b32hexdecode", "b16encode", "b16decode", "b16decode", "a85encode", "a85decode",
                        "a85decode", "b85encode", "b85decode", "b85decode", "z85encode", "z85decode", "z85decode",
-                       "encodebytes", "decodebytes", "encode", "decode", "standard_b64encode",
-                       "standard_b64decode", "input_check", "main_select"])
+                       "encodebytes", "decodebytes", "encode_file", "encode_file", "decode_file", "decode_file",
+                       "standard_b64encode", "standard_b64decode", "input_check", "main_select", "any", "any"])
         c = {"mod": "textlibs", "fn": "base64." + fn}
         raw = bytes(d)
         if r.random() < 0.3:
@@ -668,10 +779,35 @@ class Base64Area(Codec):
             b = list(base64.z85encode(raw))
             c["d"] = cls.wrap(r, b if r.random() < 0.4 else cls.corrupt(r, b, b";_`|~#%0 "))
             return c
-        if fn in ("encodebytes", "encode"):
+        if fn == "any":
+            c["name"] = r.choice(["b64encode", "standard_b64encode", "urlsafe_b64encode", "b32encode", "b32hexencode", "b16encode",
+                                  "a85encode", "b85encode", "z85encode", "encodebytes", "decodebytes"])
+            c["d"] = bad_data(r)
+            return c
+        if fn == "encode_file":
+            c["d"] = [r.randrange(256) for _ in range(r.choice([0, 1, 10, 56, 57, 58, 113, 114, 115, 200]))]
+            c["reads"] = []
+            for _ in range(r.choice([0, 0, 1, 2, 4, 8])):
+                c["reads"].append(r.choice([{"give": r.choice([0, 1, 2, 10, 56, 57, 100])}, {"give": 3}, {"give": 20},
+                                            {"raise": ["ValueError", "boom"]}]))
+            c["writes"] = [r.choice([None, None, None, {"raise": ["OSError", "boom"]}]) for _ in range(r.choice([0, 0, 1, 2]))]
+            return c
+        if fn == "decode_file":
+            t = base64.encodebytes(bytes(r.randrange(256) for _ in range(r.choice([0, 3, 57, 60, 120]))))
+            lines = [list(x) for x in t.splitlines(True)]
+            if r.random() < 0.3 and lines:
+                lines[r.randrange(len(lines))] = [33, 61]
+            if r.random() < 0.2:
+                lines.insert(r.randint(0, len(lines)), {"raise": ["ValueError", "boom"]})
+            if r.random() < 0.15:
+                lines.insert(r.randint(0, len(lines)), [])
+            c["lines"] = lines
+            c["writes"] = [r.choice([None, None, {"raise": ["OSError", "boom"]}]) for _ in range(r.choice([0, 0, 1, 2]))]
+            return c
+        if fn == "encodebytes":
             c["d"] = [r.randrange(256) for _ in range(r.choice([0, 1, 56, 57, 58, 113, 114, 115, 200]))]
             return c
-        if fn in ("decodebytes", "decode"):
+        if fn == "decodebytes":
             t = base64.encodebytes(bytes(r.randrange(256) for _ in range(r.choice([0, 3, 57, 60, 120]))))
             c["d"] = list(t) if r.random() < 0.5 else cls.corrupt(r, t, cls.B64 + b"\n")
             c["d"] = [x if x < 256 else 0 for x in c["d"]]
@@ -734,6 +870,16 @@ class Base64Area(Codec):
                 return _type_check_probe(c)
             if fn == "main_select":
                 return _main_probe(c["flags"])
+            if fn == "any":
+                return list(getattr(base64, c["name"])(data_dec(c["d"])))
+            if fn in ("encode_file", "decode_file"):
+                f = file_read(c)
+                try:
+                    (base64.encode if fn == "encode_file" else base64.decode)(f, f)
+                    res = {"ok": None}
+                except Exception as e:
+                    res = {"exc": type(e).__name__, "msg": str(e)}
+                return {"written": f.written, "res": res}
             f = getattr(base64, fn)
             if fn == "a85encode":
                 return list(f(bytes(c["d"]), foldspaces=c["foldspaces"], wrapcol=c["wrapcol"], pad=c["pad"],
@@ -747,10 +893,6 @@ class Base64Area(Codec):
                 return list(f(data_dec(c["d"])))
             if fn == "decodebytes":
                 return list(f(bytes(c["d"])))
-            if fn in ("encode", "decode"):
-                out = io.BytesIO()
-                f(io.BytesIO(bytes(c["d"])), out)
-                return list(out.getvalue())
             if fn == "b64decode":
                 return list(f(data_dec(c["d"]), altchars=data_dec(c.get("alt")), validate=c["validate"]))
             if fn == "urlsafe_b64decode":
