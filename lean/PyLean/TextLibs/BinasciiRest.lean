@@ -113,21 +113,19 @@ def qpSkipLine : List Nat → List Nat
 def a2bQpLoop (header : Bool) : (fuel : Nat) → List Nat → List Nat
   | 0, _ => []
   | _ + 1, [] => []
-  | fuel + 1, 61 :: r =>
-    match r with
-    | [] => []
-    | 10 :: t | 13 :: t =>
-      -- a `\r` skips to the next `\n`; a `\n` is consumed directly
-      if r.head? = some 10 then a2bQpLoop header fuel t
-      else a2bQpLoop header fuel (qpSkipLine t)
-    | 61 :: t => 61 :: a2bQpLoop header fuel t
-    | a :: b :: t =>
-      if isHexChar a && isHexChar b then
-        (digitValue a * 16 + digitValue b) % 256 :: a2bQpLoop header fuel t
-      else 61 :: a2bQpLoop header fuel r
-    | _ => 61 :: a2bQpLoop header fuel r
   | fuel + 1, c :: r =>
-    if header && c == 95 then 32 :: a2bQpLoop header fuel r
+    if c = 61 then
+      match r with
+      | [] => []
+      | 10 :: t => a2bQpLoop header fuel t
+      | 13 :: t => a2bQpLoop header fuel (qpSkipLine t)
+      | 61 :: t => 61 :: a2bQpLoop header fuel t
+      | a :: b :: t =>
+        if isHexChar a && isHexChar b then
+          (digitValue a * 16 + digitValue b) % 256 :: a2bQpLoop header fuel t
+        else 61 :: a2bQpLoop header fuel r
+      | _ => 61 :: a2bQpLoop header fuel r
+    else if header && c == 95 then 32 :: a2bQpLoop header fuel r
     else c :: a2bQpLoop header fuel r
 
 /-- `binascii_a2b_qp_impl`, `Modules/binascii.c:970-1040`. -/

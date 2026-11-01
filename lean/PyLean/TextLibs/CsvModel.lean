@@ -145,8 +145,9 @@ def dialectBuild (a : DArgs) : Py Dialect := do
   let strict := setBool a.strict false
   checkQuoting quoting
   let quoting := if a.quotechar = some .none ∧ a.quoting = Option.none then QUOTE_NONE else quoting
-  if quoting ≠ QUOTE_NONE ∧ quotechar = NOT_SET then
-    throw (.typeError "quotechar must be set if quoting enabled")
+  let _ ← (if quoting ≠ QUOTE_NONE ∧ quotechar = NOT_SET then
+      (Except.error (.typeError "quotechar must be set if quoting enabled") : Py Unit)
+    else .ok ())
   checkChar "delimiter" delimiter lineterminator true
   checkChar "escapechar" escapechar lineterminator (!skipinitialspace)
   checkChar "quotechar" quotechar lineterminator (!skipinitialspace)
@@ -199,6 +200,17 @@ def dialectNew (r : Registry) (src : DSrc) (a : DArgs) : Py Dialect := do
     dialectBuild (dialectAttrs d a)
 
 def strToList (s : String) : List Nat := s.toList.map Char.toNat
+
+/-- `Dialect_reduce`, `Modules/_csv.c:582-587`. -/
+def dialectReduce : Py Unit := .error (.typeError "cannot pickle 'Dialect' instances")
+
+/-- `Dialect._validate`, `Lib/csv.py:111-116`: `_Dialect(self)`, with `TypeError` re-raised as
+`csv.Error`. `csv.Dialect.__init__`, `Lib/csv.py:106-109`, only calls this. -/
+def dialectValidate (a : DArgs) : Py Unit :=
+  match dialectBuild a with
+  | .ok _ => .ok ()
+  | .error (.typeError m) => .error (csvErr m)
+  | .error e => .error e
 
 /-- `excel`, `excel_tab` and `unix_dialect`, `Lib/csv.py:118-141`. -/
 def excel : Dialect := ⟨true, false, false, QUOTE_MINIMAL, 44, 34, NOT_SET, [13, 10]⟩
@@ -643,6 +655,18 @@ def extrasactionCheck (s : List Nat) : Py Bool :=
 def dictWriterow (d : Dialect) (names : List (List Nat)) (restval : WField) (raises : Bool)
     (rowdict : List (List Nat × WField)) : Py (List Nat) := do
   writerow d (← dictToList names restval raises rowdict)
+
+/-- `DictWriter.writerows`, `Lib/csv.py:227-228`, without its `map` being consumed lazily: a row
+that fails stops the writing, as in `writerows`. -/
+def dictWriterows (d : Dialect) (names : List (List Nat)) (restval : WField) (raises : Bool) :
+    List (List (List Nat × WField)) → List Nat × Option PyExc
+  | [] => ([], Option.none)
+  | r :: rs =>
+    match dictWriterow d names restval raises r with
+    | .error e => ([], some e)
+    | .ok t =>
+      let (out, e) := dictWriterows d names restval raises rs
+      (t ++ out, e)
 
 /-- `DictWriter.writeheader`, `Lib/csv.py:212-214`. -/
 def writeheader (d : Dialect) (names : List (List Nat)) : Py (List Nat) :=
