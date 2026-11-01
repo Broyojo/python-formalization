@@ -18,8 +18,9 @@ exact number of `__lt__` calls; the difftest compares that count with CPython.
 the list during the sort are out of scope).
 
 Loops are structural recursion on a fuel argument, given enough fuel to
-finish (each iteration consumes an element); the proofs show the fuel never
-runs out.
+finish (each iteration consumes an element). The proofs show the fuel never
+runs out for a consistent comparison; for an inconsistent one the results of
+the permutation and stack theorems hold whether or not it does.
 -/
 
 namespace PyLean.ListSort

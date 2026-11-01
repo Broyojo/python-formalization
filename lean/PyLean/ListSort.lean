@@ -11,7 +11,8 @@ The model (`ListSort/Model.lean`) mirrors `count_run`, `binarysort`,
 loop of `list_sort_impl`, counting every `<` call; the difftest checks results
 and exact `<`-call counts against CPython. Items are compared by an
 integer-valued key (`kf`), which covers Python ints with `<` (`kf = id`),
-`(value, index)` pairs and `key=` functions returning ints. Exceptions raised
+`(value, index)` pairs and `key=` functions returning ints; the permutation and
+stack properties hold for every comparison function. Exceptions raised
 by `__lt__`/`key` and mutation of the list during the sort are out of scope.
 -/
 
@@ -96,7 +97,12 @@ def entries : List Entry := [
   { id := "listsort-key", pyFile := "Objects/listobject.c", pyFns := ["list.sort"]
     statement := "list.sort(key=f, reverse=r) with integer keys computed once per item sorts the items stably by f (by descending f when r), the items moving in lockstep with their keys."
     source := "list.sort docstring, listobject.c:2893-2894; :2948-2959", status := .proven
-    prop := ``KeySortStable, thm := some ``keySortStable_proven }
+    prop := ``KeySortStable, thm := some ``keySortStable_proven },
+  { id := "listsort-long-compare", pyFile := "Objects/listobject.c", pyFns := ["unsafe_long_compare", "unsafe_object_compare", "long_compare", "long_richcompare"]
+    statement := "For all-int keys of every size, the compare chosen by the pre-sort check (unsafe_long_compare when all keys are compact, long_richcompare otherwise) agrees with < on every pair of keys; an int is compact exactly when |x| < 2**30 and _PyLong_CompactValue(x) is then x; long_compare's sign, digit-count and digit-loop logic is correct for all ints."
+    source := "assert at listobject.c:2814 (res == PyObject_RichCompareBool(v, w, Py_LT)); the pre-sort check at :2964-3059", status := .proven
+    prop := ``LongCompareAgrees, thm := some ``longCompareAgrees_proven
+    notes := "Ints are modelled as a sign and little-endian 30-bit digits (Include/cpython/longintrepr.h); the 15-bit-digit build is not covered. The whole sort with this compare is difftested (fn \"plain\"), not proven equal to the sort with Int <." }
 ]
 
 end PyLean.ListSort

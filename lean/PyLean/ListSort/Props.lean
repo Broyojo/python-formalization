@@ -1,5 +1,6 @@
 import PyLean.ListSort.Sort
 import PyLean.ListSort.Minrun
+import PyLean.ListSort.Compare
 
 /-!
 # Properties of `list.sort` (registry statements and proofs)
@@ -410,5 +411,23 @@ theorem keySortStable_proven : KeySortStable := by
     rw [listSort_rev_eq, List.map_reverse, hpairs _ (fun p hp => hP p (by simpa using hp)),
       List.map_reverse, hsnd, stableSort_reverse]
     rfl
+
+/-! ## Goal 3: the type-specialised compare for int keys -/
+
+/-- For all-int keys of every size, the compare the pre-sort check selects
+(`unsafe_long_compare` when all keys are compact, `long_richcompare` through
+`unsafe_object_compare` otherwise) agrees with `<` on every pair of keys. An
+int is compact exactly when `|x| < 2**30`, and then `_PyLong_CompactValue` is
+`x`. The hypotheses `x, y ∈ keys` are needed: `unsafe_long_compare` is only sound
+for compact values, which the check guarantees for the list's own keys. -/
+def LongCompareAgrees : Prop :=
+  (∀ x : Int, (PyLong.ofInt x).isCompact = decide (x.natAbs < digitBase)) ∧
+  (∀ x : Int, (PyLong.ofInt x).isCompact = true → (PyLong.ofInt x).compactValue = x) ∧
+  (∀ x y : Int, longCompare (.ofInt x) (.ofInt y) < 0 ↔ x < y) ∧
+  (∀ (keys : List Int) (x y : Int), x ∈ keys → y ∈ keys →
+    selectCompare (allCompact keys) x y = decide (x < y))
+
+theorem longCompareAgrees_proven : LongCompareAgrees :=
+  ⟨isCompact_iff, compactValue_eq, longCompare_lt, selectCompare_eq⟩
 
 end PyLean.ListSort

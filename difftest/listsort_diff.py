@@ -8,6 +8,9 @@ fn "sort":  the sorted list and the exact number of `<` calls. The items (or,
             galloping are all checked call for call against the model.
 fn "plain": the sorted list for bare ints (CPython then uses the type-specialised
             unsafe_long_compare, or unsafe_object_compare for big ints).
+fn "evil":  the same for an inconsistent `__lt__`, which reaches the merge branches a
+            consistent comparison cannot and backs the "every comparison function"
+            properties.
 fn "minrun", "powerloop": the C helpers, checked against line-by-line Python
             transcriptions (they are not observable from Python on their own;
             the comparison counts above exercise them indirectly).
@@ -32,6 +35,23 @@ class W:
     def __lt__(self, other):
         COUNT[0] += 1
         return self.v < other.v
+
+
+# Must match evilLt in lean/PyLean/ListSort/Diff.lean.
+EVIL = {"noisy": lambda x, y, m: (x < y) != ((x * y + x + 3 * y) % m == 0),
+        "hash": lambda x, y, m: ((7 * x + 13 * y + x * y) % m) * 2 < m}
+
+
+class E:
+    __slots__ = ("v", "lt")
+
+    def __init__(self, v, lt):
+        self.v = v
+        self.lt = lt
+
+    def __lt__(self, other):
+        COUNT[0] += 1
+        return self.lt(self.v, other.v)
 
 
 BIG = [2**30 - 1, 2**30, -2**30, 2**63 - 1, 2**63, -2**63, 2**64, -2**64 - 1, 2**100, -2**100]
@@ -117,7 +137,12 @@ def gen_case(rng):
         n1 = rng.randrange(1, n - s1)
         n2 = rng.randrange(1, n - s1 - n1 + 1)
         return {"mod": "listsort", "fn": "powerloop", "s1": s1, "n1": n1, "n2": n2, "n": n}
-    fn = "sort" if r < 0.8 else "plain"
+    if r < 0.26:
+        mode = rng.choice(["noisy", "noisy", "hash"])
+        m = rng.choice([5, 11, 37, 101, 1009, 10007] if mode == "noisy" else [3, 5, 8, 16, 101])
+        return {"mod": "listsort", "fn": "evil", "a": gen_list(rng), "mode": mode, "m": m,
+                "reverse": rng.random() < 0.3}
+    fn = "sort" if r < 0.85 else "plain"
     return {"mod": "listsort", "fn": fn, "a": gen_list(rng),
             "key": rng.choice(["none", "none", "none", "neg", "div3", "mod7", "abs"]),
             "reverse": rng.random() < 0.3}
@@ -153,6 +178,13 @@ def run_python(c):
         return {"ok": py_minrun(c["n"])}
     if fn == "powerloop":
         return {"ok": py_powerloop(c["s1"], c["n1"], c["n2"], c["n"])}
+    if fn == "evil":
+        lt = EVIL[c["mode"]]
+        m = c["m"]
+        COUNT[0] = 0
+        es = [E(x, lambda a, b: lt(a, b, m)) for x in c["a"]]
+        es.sort(reverse=c["reverse"])
+        return {"ok": [[e.v for e in es], COUNT[0]]}
     f = KEYS[c["key"]]
     if fn == "plain":
         return common.py_result(lambda: sorted(c["a"], key=f, reverse=c["reverse"]))
