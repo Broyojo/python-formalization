@@ -588,4 +588,286 @@ theorem formatterParserReads_proven : FormatterParserReads := by
     simp only [formatterParserObj, hj, formatterParser, markup_plain s hne hs, bind, Except.bind, hnil]
     rfl
 
+/-! ## Nested fields -/
+
+theorem digit49 : toDecimalDigit 49 = 1 := by decide +kernel
+
+theorem fi48 : fieldInteger [48] = .ok (some 0) := by
+  simp [fieldInteger, fieldIntegerLoop, digit48]
+  unfold ssizeMax
+  decide
+
+theorem fi49 : fieldInteger [49] = .ok (some 1) := by
+  simp [fieldInteger, fieldIntegerLoop, digit49]
+  unfold ssizeMax
+  decide
+
+theorem sp48 : fieldNameSplit [48] {} = .ok ([48], some 0, [], { an := .manual }) := by
+  simp [fieldNameSplit, fi48, isFieldStop, bind, Except.bind, autonumberStateError, pure, Except.pure]
+
+theorem sp49 : fieldNameSplit [49] { an := .manual } = .ok ([49], some 1, [], { an := .manual }) := by
+  simp [fieldNameSplit, fi49, isFieldStop, bind, Except.bind, autonumberStateError, pure, Except.pure]
+
+/-- `output_markup` for a field with no conversion, once the object is found. -/
+theorem output_plain (expand : Str → FSt → Py (Str × FSt)) (args : Option (List GObj)) (kw : Option KwMap)
+    (f : MField) (st st' : FSt) (o : GObj) (hc : f.conv = 0)
+    (hg : getFieldObject f.name args kw st = .ok (o, st')) :
+    outputMarkup expand args kw f st =
+      ((if f.expand = true then expand (f.spec.getD []) st' else .ok (f.spec.getD [], st')) >>= fun p =>
+        renderField o p.1 >>= fun t => .ok (t, p.2)) := by
+  have e : (f.conv != 0) = false := by simp [hc]
+  simp only [outputMarkup, hg, e, bind, Except.bind, Bool.false_eq_true, if_false, pure, Except.pure]
+  split
+  · generalize expand _ _ = r
+    cases r with
+    | error x => rfl
+    | ok p =>
+      obtain ⟨a, b⟩ := p
+      simp only
+  · simp only
+
+/-- The text a nested field expands to is used as the spec and is not parsed again, so it can hold
+any character, braces included: `'{0:{1}}'.format(x, spec)` is `format(x, spec)`, for every object
+and every string. -/
+def NestedSpecExpands : Prop :=
+  ∀ (x : GObj) (spec : Str),
+    doStringFormat [123, 48, 58, 123, 49, 125, 125] [x, .str spec] Option.none = pyObjectFormat x spec
+
+theorem nestedSpecExpands_proven : NestedSpecExpands := by
+  intro x spec
+  rw [← renderFieldIsFormat_proven x spec]
+  let args : Option (List GObj) := some [x, .str spec]
+  have hg0 : getFieldObject [48] args Option.none {} = .ok (x, { an := .manual }) := by
+    simp [getFieldObject, sp48, walkField, fieldNameNext, bind, Except.bind, pure, Except.pure, args]
+  have hg1 : getFieldObject [49] args Option.none { an := .manual } = .ok (.str spec, { an := .manual }) := by
+    simp [getFieldObject, sp49, walkField, fieldNameNext, bind, Except.bind, pure, Except.pure, args]
+  have hm0 : markupNext [123, 48, 58, 123, 49, 125, 125] =
+      .ok (some ([], some { name := [48], spec := some [123, 49, 125], conv := 0, expand := true }, [])) := rfl
+  have hm1 : markupNext [123, 49, 125] =
+      .ok (some ([], some { name := [49], spec := Option.none, conv := 0, expand := false }, [])) := rfl
+  have hin : buildString args Option.none 1 [123, 49, 125] { an := .manual } =
+      .ok (spec, { an := .manual }) := by
+    have hb : buildString args Option.none 1 [123, 49, 125] { an := .manual } =
+        doMarkup (buildString args Option.none 0) args Option.none (2 + 2) [123, 49, 125]
+          { an := .manual } [] := rfl
+    rw [hb]
+    have ho := output_plain (buildString args Option.none 0) args Option.none
+      { name := [49], spec := Option.none, conv := 0, expand := false } { an := .manual } { an := .manual }
+      (.str spec) rfl hg1
+    have ho' : outputMarkup (buildString args Option.none 0) args Option.none
+        { name := [49], spec := Option.none, conv := 0, expand := false } { an := .manual } =
+        ((.ok spec : Py Str) >>= fun t => .ok (t, { an := .manual })) := by
+      rw [ho]
+      rfl
+    rw [doMarkup_one _ _ _ _ _ _ _ 2 _ hm1 ho']
+    rfl
+  have ho : outputMarkup (buildString args Option.none 1) args Option.none
+      { name := [48], spec := some [123, 49, 125], conv := 0, expand := true } {} =
+      (renderField x spec >>= fun t => .ok (t, { an := .manual })) := by
+    rw [output_plain _ _ _ _ _ _ x rfl hg0]
+    simp only [if_true, Option.getD_some, hin, bind, Except.bind]
+  have hb : buildString args Option.none 2 [123, 48, 58, 123, 49, 125, 125] {} =
+      doMarkup (buildString args Option.none 1) args Option.none (6 + 2)
+        [123, 48, 58, 123, 49, 125, 125] {} [] := rfl
+  rw [doStringFormat, hb, doMarkup_one _ _ _ _ _ _ _ 6 _ hm0 ho]
+  cases renderField x spec <;> rfl
+
+/-- A nested field shares the outer field's numbering, and the outer field numbers first:
+`'{:{}}'.format(x, spec)` is `format(x, spec)`. -/
+def NestedAutoNumbering : Prop :=
+  ∀ (x : GObj) (spec : Str),
+    doStringFormat [123, 58, 123, 125, 125] [x, .str spec] Option.none = pyObjectFormat x spec
+
+theorem nestedAutoNumbering_proven : NestedAutoNumbering := by
+  intro x spec
+  rw [← renderFieldIsFormat_proven x spec]
+  let args : Option (List GObj) := some [x, .str spec]
+  have hs0 : fieldNameSplit [] ({} : FSt) = .ok ([], some 0, [], { an := .auto, n := 1 }) := rfl
+  have hs1 : fieldNameSplit [] ({ an := .auto, n := 1 } : FSt) = .ok ([], some 1, [], { an := .auto, n := 2 }) := rfl
+  have hg0 : getFieldObject [] args Option.none {} = .ok (x, { an := .auto, n := 1 }) := by
+    simp [getFieldObject, hs0, walkField, fieldNameNext, bind, Except.bind, pure, Except.pure, args]
+  have hg1 : getFieldObject [] args Option.none { an := .auto, n := 1 } =
+      .ok (.str spec, { an := .auto, n := 2 }) := by
+    simp [getFieldObject, hs1, walkField, fieldNameNext, bind, Except.bind, pure, Except.pure, args]
+  have hm0 : markupNext [123, 58, 123, 125, 125] =
+      .ok (some ([], some { name := [], spec := some [123, 125], conv := 0, expand := true }, [])) := rfl
+  have hm1 : markupNext [123, 125] =
+      .ok (some ([], some { name := [], spec := Option.none, conv := 0, expand := false }, [])) := rfl
+  have hin : buildString args Option.none 1 [123, 125] { an := .auto, n := 1 } =
+      .ok (spec, { an := .auto, n := 2 }) := by
+    have hb : buildString args Option.none 1 [123, 125] { an := .auto, n := 1 } =
+        doMarkup (buildString args Option.none 0) args Option.none (1 + 2) [123, 125]
+          { an := .auto, n := 1 } [] := rfl
+    rw [hb]
+    have ho' : outputMarkup (buildString args Option.none 0) args Option.none
+        { name := [], spec := Option.none, conv := 0, expand := false } { an := .auto, n := 1 } =
+        ((.ok spec : Py Str) >>= fun t => .ok (t, { an := .auto, n := 2 })) := by
+      rw [output_plain _ _ _ _ _ _ (.str spec) rfl hg1]
+      rfl
+    rw [doMarkup_one _ _ _ _ _ _ _ 1 _ hm1 ho']
+    rfl
+  have ho : outputMarkup (buildString args Option.none 1) args Option.none
+      { name := [], spec := some [123, 125], conv := 0, expand := true } {} =
+      (renderField x spec >>= fun t => .ok (t, { an := .auto, n := 2 })) := by
+    rw [output_plain _ _ _ _ _ _ x rfl hg0]
+    simp only [if_true, Option.getD_some, hin, bind, Except.bind]
+  have hb : buildString args Option.none 2 [123, 58, 123, 125, 125] {} =
+      doMarkup (buildString args Option.none 1) args Option.none (4 + 2) [123, 58, 123, 125, 125] {} [] := rfl
+  rw [doStringFormat, hb, doMarkup_one _ _ _ _ _ _ _ 4 _ hm0 ho]
+  cases renderField x spec <;> rfl
+
+/-- A field that fails ends the string. -/
+theorem doMarkup_err (expand : Str → FSt → Py (Str × FSt)) (args : Option (List GObj)) (kw : Option KwMap)
+    (s rest : List Nat) (f : MField) (st : FSt) (j : Nat) (e : PyExc)
+    (hm : markupNext s = .ok (some ([], some f, rest)))
+    (ho : outputMarkup expand args kw f st = .error e) :
+    doMarkup expand args kw (j + 1) s st [] = .error e := by
+  simp only [doMarkup, hm, bind, Except.bind]
+  rw [ho]
+
+/-- PEP 3101 allows one level of nesting. `'{0:{1:{2}}}'` is refused, for every object, before
+anything is rendered: the recursion check of `build_string` is reached by the third level. -/
+def RecursionLimit : Prop :=
+  ∀ (x y : GObj) (rest : List GObj),
+    doStringFormat [123, 48, 58, 123, 49, 58, 123, 50, 125, 125, 125] (x :: y :: rest) Option.none =
+      .error (.valueError "Max string recursion exceeded")
+
+theorem recursionLimit_proven : RecursionLimit := by
+  intro x y rest
+  let args : Option (List GObj) := some (x :: y :: rest)
+  let spec1 : Str := [123, 49, 58, 123, 50, 125, 125]
+  let spec2 : Str := [123, 50, 125]
+  have hg0 : getFieldObject [48] args Option.none {} = .ok (x, { an := .manual }) := by
+    simp [getFieldObject, sp48, walkField, fieldNameNext, bind, Except.bind, pure, Except.pure, args]
+  have hg1 : getFieldObject [49] args Option.none { an := .manual } = .ok (y, { an := .manual }) := by
+    simp [getFieldObject, sp49, walkField, fieldNameNext, bind, Except.bind, pure, Except.pure, args]
+  have hm0 : markupNext [123, 48, 58, 123, 49, 58, 123, 50, 125, 125, 125] =
+      .ok (some ([], some { name := [48], spec := some spec1, conv := 0, expand := true }, [])) := rfl
+  have hm1 : markupNext spec1 =
+      .ok (some ([], some { name := [49], spec := some spec2, conv := 0, expand := true }, [])) := rfl
+  have hin : buildString args Option.none 1 spec1 { an := .manual } =
+      .error (.valueError "Max string recursion exceeded") := by
+    have hb : buildString args Option.none 1 spec1 { an := .manual } =
+        doMarkup (buildString args Option.none 0) args Option.none (6 + 2) spec1 { an := .manual } [] := rfl
+    rw [hb]
+    refine doMarkup_err _ _ _ _ _ _ _ _ _ hm1 ?_
+    rw [output_plain _ _ _ _ _ _ y rfl hg1]
+    rfl
+  have hb : buildString args Option.none 2 [123, 48, 58, 123, 49, 58, 123, 50, 125, 125, 125] {} =
+      doMarkup (buildString args Option.none 1) args Option.none (10 + 2)
+        [123, 48, 58, 123, 49, 58, 123, 50, 125, 125, 125] {} [] := rfl
+  have ho : outputMarkup (buildString args Option.none 1) args Option.none
+      { name := [48], spec := some spec1, conv := 0, expand := true } {} =
+      .error (.valueError "Max string recursion exceeded") := by
+    rw [output_plain _ _ _ _ _ _ x rfl hg0]
+    simp only [if_true, Option.getD_some, hin, bind, Except.bind]
+  rw [doStringFormat, hb, doMarkup_err _ _ _ _ _ _ _ _ _ hm0 ho]
+  rfl
+
+/-! ## Many fields -/
+
+/-- `{}` repeated. -/
+def fieldRun : Nat → Str
+  | 0 => []
+  | n + 1 => 123 :: 125 :: fieldRun n
+
+/-- Every field of `'{}{}...'` is its object formatted with an empty spec, in order: the text is
+the concatenation, and if a `__format__` or `__str__` fails, the first failure is the exception,
+with no later object touched. For every list of objects. -/
+def AutoFieldsConcat : Prop :=
+  ∀ xs : List GObj,
+    doStringFormat (fieldRun xs.length) xs Option.none =
+      (xs.mapM (fun x => pyObjectFormat x [])).map List.flatten
+
+theorem markup_auto (r : List Nat) :
+    markupNext (123 :: 125 :: r) =
+      .ok (some ([], some { name := [], spec := Option.none, conv := 0, expand := false }, r)) := rfl
+
+theorem auto_loop (expand : Str → FSt → Py (Str × FSt)) (all : List GObj) :
+    ∀ (rem : List GObj) (fuel k : Nat) (an : ANState) (out : Str), all.drop k = rem → an ≠ .manual →
+      rem.length < fuel →
+      (doMarkup expand (some all) Option.none fuel (fieldRun rem.length) { an, n := k } out).map (·.1) =
+        (rem.mapM (fun x => pyObjectFormat x [])).map (fun ts => out ++ ts.flatten) := by
+  intro rem
+  induction rem with
+  | nil =>
+    intro fuel k an out _ _ hf
+    obtain ⟨j, rfl⟩ : ∃ j, fuel = j + 1 := ⟨fuel - 1, by simp at hf; omega⟩
+    have hnil : markupNext [] = .ok Option.none := rfl
+    simp [fieldRun, doMarkup, hnil, bind, Except.bind, Except.map, pure, Except.pure]
+  | cons x t ih =>
+    intro fuel k an out hd han hf
+    obtain ⟨j, rfl⟩ : ∃ j, fuel = j + 1 := ⟨fuel - 1, by simp at hf; omega⟩
+    have hk : all[k]? = some x := by
+      have : (all.drop k)[0]? = some x := by simp [hd]
+      simpa [List.getElem?_drop] using this
+    have hsplit : fieldNameSplit [] ({ an, n := k } : FSt) = .ok ([], some k, [], { an := .auto, n := k + 1 }) := by
+      cases an
+      · rfl
+      · rfl
+      · exact absurd rfl han
+    have hg : getFieldObject [] (some all) Option.none { an, n := k } = .ok (x, { an := .auto, n := k + 1 }) := by
+      simp [getFieldObject, hsplit, hk, walkField, fieldNameNext, bind, Except.bind, pure, Except.pure]
+    have ho := output_plain expand (some all) Option.none
+      { name := [], spec := Option.none, conv := 0, expand := false } { an, n := k }
+      { an := .auto, n := k + 1 } x rfl hg
+    simp only [List.length_cons, fieldRun, doMarkup, markup_auto, bind, Except.bind]
+    rw [ho]
+    have hdrop : all.drop (k + 1) = t := by
+      have := congrArg List.tail hd
+      simpa [List.tail_drop] using this
+    have hrec := ih j (k + 1) .auto
+    simp only [Bool.false_eq_true, if_false, Option.getD_none, List.mapM_cons, bind, Except.bind]
+    rw [renderFieldIsFormat_proven]
+    cases hp : pyObjectFormat x [] with
+    | error e => rfl
+    | ok a =>
+      have h2 := hrec (out ++ [] ++ a) hdrop (by simp) (by simp at hf; omega)
+      simp only
+      rw [h2]
+      cases hm : List.mapM (fun x => pyObjectFormat x []) t with
+      | error e => rfl
+      | ok ts => simp [Except.map, pure, Except.pure, List.append_assoc]
+
+theorem fieldRun_len (n : Nat) : (fieldRun n).length = 2 * n := by
+  induction n with
+  | zero => rfl
+  | succ n ih =>
+    simp only [fieldRun, List.length_cons, ih]
+    omega
+
+theorem autoFieldsConcat_proven : AutoFieldsConcat := by
+  intro xs
+  have h := auto_loop (buildString (some xs) Option.none 1) xs xs ((fieldRun xs.length).length + 1) 0
+    .init [] (by simp) (by simp) (by rw [fieldRun_len]; omega)
+  have hb : buildString (some xs) Option.none 2 (fieldRun xs.length) {} =
+      doMarkup (buildString (some xs) Option.none 1) (some xs) Option.none
+        ((fieldRun xs.length).length + 1) (fieldRun xs.length) { an := .init, n := 0 } [] := rfl
+  rw [doStringFormat, hb]
+  cases hd : doMarkup (buildString (some xs) Option.none 1) (some xs) Option.none
+      ((fieldRun xs.length).length + 1) (fieldRun xs.length) { an := .init, n := 0 } [] with
+  | error e =>
+    rw [hd] at h
+    cases hm : List.mapM (fun x => pyObjectFormat x []) xs with
+    | error e2 =>
+      rw [hm] at h
+      simp only [Except.map, Except.error.injEq] at h
+      subst h
+      rfl
+    | ok ts =>
+      rw [hm] at h
+      simp [Except.map] at h
+  | ok v =>
+    obtain ⟨r, st⟩ := v
+    rw [hd] at h
+    cases hm : List.mapM (fun x => pyObjectFormat x []) xs with
+    | error e2 =>
+      rw [hm] at h
+      simp [Except.map] at h
+    | ok ts =>
+      rw [hm] at h
+      simp only [Except.map, Except.ok.injEq] at h
+      simp only [bind, Except.bind, Except.map, h]
+      simp
+
 end PyLean.UnicodeObj

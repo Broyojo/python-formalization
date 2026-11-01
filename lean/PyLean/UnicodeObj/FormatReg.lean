@@ -166,6 +166,26 @@ def formatEntries : List Entry := [
     statement := "formatter_field_name_split reads back every chain of attributes and non-numeric items."
     source := "invariant: round trip"
     status := .proven, prop := ``FieldNameRoundTrip, thm := some ``fieldNameRoundTrip_proven },
+  { id := "unicodeobj-format-str-nested-spec", pyFile := "Objects/stringlib/unicode_format.h"
+    pyFns := ["output_markup", "build_string"]
+    statement := "A nested field's text is the spec and is not parsed again: '{0:{1}}'.format(x, spec) is format(x, spec), for every object and every string."
+    source := "Doc/library/string.rst: nested replacement fields"
+    status := .proven, prop := ``NestedSpecExpands, thm := some ``nestedSpecExpands_proven },
+  { id := "unicodeobj-format-str-nested-auto", pyFile := "Objects/stringlib/unicode_format.h"
+    pyFns := ["output_markup", "field_name_split"]
+    statement := "A nested field shares the outer numbering, and the outer field numbers first: '{:{}}'.format(x, spec) is format(x, spec)."
+    source := "Doc/library/string.rst: auto-numbering"
+    status := .proven, prop := ``NestedAutoNumbering, thm := some ``nestedAutoNumbering_proven },
+  { id := "unicodeobj-format-str-recursion-limit", pyFile := "Objects/stringlib/unicode_format.h"
+    pyFns := ["build_string", "output_markup"]
+    statement := "'{0:{1:{2}}}' raises 'Max string recursion exceeded', for every object, before anything is rendered."
+    source := "PEP 3101; do_string_format comment"
+    status := .proven, prop := ``RecursionLimit, thm := some ``recursionLimit_proven },
+  { id := "unicodeobj-format-str-many-fields", pyFile := "Objects/stringlib/unicode_format.h"
+    pyFns := ["do_markup", "MarkupIterator_next", "field_name_split"]
+    statement := "'{}{}...' is the concatenation of each object formatted with an empty spec, in order, and the first failure is the exception, for every list of objects."
+    source := "Doc/library/string.rst: auto-numbering"
+    status := .proven, prop := ``AutoFieldsConcat, thm := some ``autoFieldsConcat_proven },
   { id := "unicodeobj-format-percent-no-directive", pyFile := "Objects/unicodeobject.c"
     pyFns := []
     statement := "A format with no % gives itself for an empty tuple, and raises 'not all arguments converted' for a non-empty one."
