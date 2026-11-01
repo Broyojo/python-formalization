@@ -135,6 +135,20 @@ pyio-stringio-init-write-twins	refuted	Lib/_pyio.py	StringIO.__init__,TextIOWrap
 pyio-stringio-read-write-twins	refuted	Lib/_pyio.py	TextIOWrapper.read,TextIOWrapper.write
 pyio-stringio-tell-after-reads	refuted	Lib/_pyio.py	TextIOWrapper.__next__,IOBase.readlines,TextIOWrapper.tell
 pyio-stringio-newlines-attr	refuted	Lib/_pyio.py	TextIOWrapper.newlines
+json-loads-twins	refuted	Lib/json/decoder.py	json.loads,py_scanstring,JSONObject,JSONArray,py_make_scanner,C scan_once_unicode
+json-loads-twins-pos	refuted	Lib/json/decoder.py	json.loads,py_scanstring,C scanstring_unicode
+json-loads-twins-scan	proven	Lib/json/decoder.py	json.loads,py_scanstring,JSONObject,JSONArray,NUMBER_RE,C scanstring_unicode,C _parse_object_unicode,C _parse_array_unicode,C _match_number_unicode
+json-raw-decode-twins	refuted	Lib/json/scanner.py	JSONDecoder.raw_decode,py_make_scanner,C scanner_call
+json-raw-decode-twins-in-range	proven	Lib/json/scanner.py	JSONDecoder.raw_decode,py_make_scanner,JSONObject,JSONArray,C scan_once_unicode
+json-dumps-twins	proven	Lib/json/encoder.py	json.dumps,_make_iterencode,py_encode_basestring,py_encode_basestring_ascii,C c_make_encoder,C ascii_escape_unicode,C escape_unicode
+json-roundtrip-str	refuted	Lib/json/encoder.py	json.dumps,json.loads,py_encode_basestring_ascii,py_scanstring
+json-roundtrip	proven	Lib/json/encoder.py	json.dumps,json.loads,_make_iterencode,C c_make_encoder,py_scanstring,C scanstring_unicode
+json-dumps-accepted	proven	Lib/json/encoder.py	json.dumps,json.loads
+json-decode-terminates	proven	Lib/json/decoder.py	JSONDecoder.raw_decode,py_make_scanner,C scan_once_unicode
+json-strict-only-control	proven	Lib/json/decoder.py	JSONDecoder,py_scanstring,C scanstring_unicode
+json-strict-literal	proven	Lib/json/decoder.py	JSONDecoder,py_scanstring,C scanstring_unicode
+json-ensure-ascii-output	proven	Lib/json/encoder.py	json.dumps,py_encode_basestring_ascii,C ascii_escape_unicode
+json-int-literal	proven	Lib/json/scanner.py	json.loads,NUMBER_RE,C _match_number_unicode,int
 itertools-islice-doc-agree	refuted	Modules/itertoolsmodule.c	islice_new,islice_next
 itertools-islice-doc-agree-ssize	refuted	Modules/itertoolsmodule.c	islice_new,islice_next
 itertools-islice-doc-agree-nowrap	proven	Modules/itertoolsmodule.c	islice_new,islice_next

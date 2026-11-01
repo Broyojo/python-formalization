@@ -59,6 +59,6 @@ Lib/plistlib.py	753	767	_BinaryPlistWriter._write_size	_write_size(self, token, 
 Lib/plistlib.py	769	868	_BinaryPlistWriter._write_object	_write_object(self, value)	todo		
 Lib/plistlib.py	871	872	_is_fmt_binary	_is_fmt_binary(header)	todo		
 Lib/plistlib.py	893	912	load	load(fp, *, fmt=None, dict_type=dict, aware_datetime=False)	todo		
-Lib/plistlib.py	915	925	loads	loads(value, *, fmt=None, dict_type=dict, aware_datetime=False)	todo		
+Lib/plistlib.py	915	925	loads	loads(value, *, fmt=None, dict_type=dict, aware_datetime=False)	todo		candidates:json-dumps-accepted,json-int-literal,json-loads-twins,json-loads-twins-pos,json-loads-twins-scan,json-roundtrip,json-roundtrip-str
 Lib/plistlib.py	928	938	dump	dump(value, fp, *, fmt=FMT_XML, sort_keys=True, skipkeys=False, aware_datetime=False)	todo		
-Lib/plistlib.py	941	948	dumps	dumps(value, *, fmt=FMT_XML, skipkeys=False, sort_keys=True, aware_datetime=False)	todo		
+Lib/plistlib.py	941	948	dumps	dumps(value, *, fmt=FMT_XML, skipkeys=False, sort_keys=True, aware_datetime=False)	todo		candidates:json-dumps-accepted,json-dumps-twins,json-ensure-ascii-output,json-roundtrip,json-roundtrip-str
