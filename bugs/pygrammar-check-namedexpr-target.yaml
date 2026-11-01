@@ -1,0 +1,55 @@
+id: pygrammar-check-namedexpr-target
+title: "_PyAST_Validate does not validate NamedExpr.target: Name('None') passes and reaches an assert in codegen_nameop; the Load and Del contexts pass too"
+priority: P3
+kind: missing-validation
+module: pygrammar
+files: [Python/ast.c, Python/codegen.c]
+functions: ["validate_expr"]
+summary: |
+  The NamedExpr case of validate_expr checks only that the target is a Name, then validates the
+  value. It never calls validate_expr on the target, so validate_name and the context check are
+  skipped for it. compile(Expression(NamedExpr(Name('None', Store()), Constant(1)))) succeeds, where
+  Name('None', Load()) anywhere else raises ValueError. The code object then stores to a global
+  called None, and codegen_nameop asserts the name is not None, True or False, so a debug build
+  aborts. NamedExpr(Name('x', Load()), ...) passes as well and compiles into a load where a store
+  belongs: `(x := 1)` then raises NameError.
+likelihood: |
+  Low: only hand-built trees, since the parser's named_expression rule requires a NAME and
+  sets Store.
+maybe_intended: |
+  No: every other Name goes through the same checks, and the assertion in codegen_nameop shows the
+  compiler relies on this.
+reproducer: |
+  import ast
+  L = dict(lineno=1, col_offset=0, end_lineno=1, end_col_offset=1)
+  plain = ast.Expression(ast.Name('None', ast.Load(), **L))
+  walrus = ast.Expression(ast.NamedExpr(ast.Name('None', ast.Store(), **L), ast.Constant(1, **L), **L))
+  try:
+      compile(plain, 'x', 'eval')
+      a = 'accepted'
+  except ValueError as e:
+      a = str(e)
+  b = eval(compile(walrus, 'x', 'eval'), {})
+  print(a, b)
+  if a.startswith('identifier field') and b == 1:
+      print('REPRODUCED pygrammar-check-namedexpr-target')
+expected: |
+  ValueError "identifier field can't represent 'None' constant", as for any other Name.
+promised_by: |
+  Python/ast.c validates hand-built trees before compilation; `assert` in Python/codegen.c:3189
+  (codegen_nameop) states the invariant that validation must establish.
+cause: |
+  Python/ast.c, validate_expr, NamedExpr_kind: `ret = validate_expr(exp->v.NamedExpr.value, Load);`
+  with no call for `target`.
+possible_fix: |
+  `ret = validate_expr(exp->v.NamedExpr.target, Store) && validate_expr(exp->v.NamedExpr.value, Load);`
+tested:
+  python3 (3.14.7): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
+duplicates:
+  issues: []
+  queries: ["NamedExpr None target validate"]
+  bugforge: "none"
+lean:
+  property: PyLean.PyGrammar.Check.NamesAlwaysChecked
+  theorem: PyLean.PyGrammar.Check.namesAlwaysChecked_refuted
