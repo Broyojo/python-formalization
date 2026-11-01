@@ -278,12 +278,22 @@ def resetForErrorPass : PM Unit :=
     { p with lastStmt := (0, 0), memo := p.memo.map (fun _ => []), mark := 0,
              callInvalidRules := true }
 
-/-- `_PyPegen_run_parser`, `Parser/pegen.c:948-1000`. -/
+/-- `_is_end_of_source`, `Parser/pegen.c:896-899`. -/
+def isEndOfSource (p : PS) : Bool :=
+  let err := p.tok.done
+  err == E_EOF || err == E_EOFS || err == E_EOLS
+
+/-- `_PyPegen_run_parser`, `Parser/pegen.c:948-1000`. `_PyPegen_set_syntax_error_metadata` fills
+`SyntaxError._metadata`, which is outside `PyError`. -/
 def runParser (fuel : Nat) : PM Ast := do
   let res ← parseStart fuel
   let p ← get
   if nonNull res && p.errOccurred then return .null
   if !nonNull res then
+    if p.flagIncomplete && isEndOfSource p then
+      set { p with tok := { p.tok with err := none } }
+      raiseError "_IncompleteInputError" false "incomplete input"
+      return .null
     if p.errOccurred && !((p.tok.err.map (·.cls)).map isSyntaxErrorClass).getD false then
       return .null
     let last := p.tokenAt (p.fill - 1)
@@ -307,6 +317,21 @@ def parseResult (p : PS) (r : Ast) : Except PyError Ast :=
     | .null => .error { cls := "SystemError", msg := "parser returned NULL without error" }
     | t => .ok t
 
+/-- `compute_parser_flags`, `Parser/pegen.c:780-803`: `PyCF_*` and `CO_FUTURE_BARRY_AS_BDFL` bits
+to `PyPARSE_*` bits. -/
+def computeParserFlags (cf : Nat) : Nat :=
+  (if cf &&& 0x200 != 0 then 0x0002 else 0)
+    ||| (if cf &&& 0x800 != 0 then 0x0010 else 0)
+    ||| (if cf &&& 0x400000 != 0 then 0x0020 else 0)
+    ||| (if cf &&& 0x1000 != 0 then 0x0040 else 0)
+    ||| (if cf &&& 0x4000 != 0 then 0x0100 else 0)
+
+/-- `_PyPegen_Parser_New`, `Parser/pegen.c:806-865`, with `PyPARSE_*` flags. -/
+def parserNew (tok : TokState) (start : StartRule) (flags featureVersion : Nat) (cfg : Cfg) : PS :=
+  { tok := { tok with typeComments := flags &&& 0x0040 != 0 }, startRule := start, cfg,
+    flagBarry := flags &&& 0x0020 != 0, flagDontImplyDedent := flags &&& 0x0002 != 0,
+    flagIncomplete := flags &&& 0x0100 != 0, featureVersion }
+
 /-- `_PyTokenizer_FromUTF8`, `Parser/tokenizer/utf8_tokenizer.c:31-55`. -/
 def fromUtf8 (src : List Nat) (execInput preserveCrlf : Bool) : TokState :=
   let t := (translateNewlines src execInput preserveCrlf).toArray
@@ -316,12 +341,13 @@ def fromUtf8 (src : List Nat) (execInput preserveCrlf : Bool) : TokState :=
 def defaultFuel (n : Nat) : Nat := 20000 + 64 * n
 
 /-- `_PyPegen_run_parser_from_string` with `PyCF_IGNORE_COOKIE`, `Parser/pegen.c:1054-1096`:
-what `compile(str, ...)` and `ast.parse(str)` do. Options are the compile flags. -/
+what `compile(str, ...)` and `ast.parse(str)` do. `cfFlags` are the other compile flags. -/
 def parseStr (cfg : Cfg) (src : List Nat) (start : StartRule) (typeComments := false)
-    (featureVersion := 14) (fuel := defaultFuel src.length) : Except PyError Ast :=
+    (featureVersion := 14) (cfFlags : Nat := 0) (fuel := defaultFuel src.length) :
+    Except PyError Ast :=
   let tok := fromUtf8 src (start == .file) false
-  let p : PS := { tok := { tok with typeComments := typeComments }, startRule := start, cfg,
-                  featureVersion }
+  let flags := computeParserFlags (cfFlags ||| 0x800 ||| (if typeComments then 0x1000 else 0))
+  let p := parserNew tok start flags featureVersion cfg
   let (r, p) := (runParser fuel).run p
   parseResult p r
 

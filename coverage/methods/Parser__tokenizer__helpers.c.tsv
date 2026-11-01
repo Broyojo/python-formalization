@@ -1,18 +1,18 @@
 file	line	endline	name	signature	status	entry	note
-Parser/tokenizer/helpers.c	12	64	_syntaxerror_range	_syntaxerror_range(struct tok_state *tok, const char *format, int col_offset, int end_col_offset, va_list vargs)	modelled	pygrammar-lex-accepts-valid	
-Parser/tokenizer/helpers.c	67	75	_PyTokenizer_syntaxerror	_PyTokenizer_syntaxerror(struct tok_state *tok, const char *format, ...)	modelled	pygrammar-lex-accepts-valid	
-Parser/tokenizer/helpers.c	78	87	_PyTokenizer_syntaxerror_known_range	_PyTokenizer_syntaxerror_known_range(struct tok_state *tok, int col_offset, int end_col_offset, const char *format, ...)	modelled	pygrammar-lex-accepts-valid	
-Parser/tokenizer/helpers.c	90	95	_PyTokenizer_indenterror	_PyTokenizer_indenterror(struct tok_state *tok)	modelled	pygrammar-lex-accepts-valid	
+Parser/tokenizer/helpers.c	12	64	_syntaxerror_range	_syntaxerror_range(struct tok_state *tok, const char *format, int col_offset, int end_col_offset, va_list vargs)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/tokenizer/helpers.c	67	75	_PyTokenizer_syntaxerror	_PyTokenizer_syntaxerror(struct tok_state *tok, const char *format, ...)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/tokenizer/helpers.c	78	87	_PyTokenizer_syntaxerror_known_range	_PyTokenizer_syntaxerror_known_range(struct tok_state *tok, int col_offset, int end_col_offset, const char *format, ...)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/tokenizer/helpers.c	90	95	_PyTokenizer_indenterror	_PyTokenizer_indenterror(struct tok_state *tok)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/tokenizer/helpers.c	98	109	_PyTokenizer_error_ret	_PyTokenizer_error_ret(struct tok_state *tok) /* XXX */	todo		
-Parser/tokenizer/helpers.c	112	151	_PyTokenizer_warn_invalid_escape_sequence	_PyTokenizer_warn_invalid_escape_sequence(struct tok_state *tok, int first_invalid_escape_char)	modelled	pygrammar-lex-accepts-valid	
+Parser/tokenizer/helpers.c	112	151	_PyTokenizer_warn_invalid_escape_sequence	_PyTokenizer_warn_invalid_escape_sequence(struct tok_state *tok, int first_invalid_escape_char)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/tokenizer/helpers.c	154	198	_PyTokenizer_raise_init_error	_PyTokenizer_raise_init_error(PyObject *filename)	todo		
-Parser/tokenizer/helpers.c	201	233	_PyTokenizer_parser_warn	_PyTokenizer_parser_warn(struct tok_state *tok, PyObject *category, const char *format, ...)	modelled	pygrammar-lex-accepts-valid	
+Parser/tokenizer/helpers.c	201	233	_PyTokenizer_parser_warn	_PyTokenizer_parser_warn(struct tok_state *tok, PyObject *category, const char *format, ...)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/tokenizer/helpers.c	239	250	_PyTokenizer_new_string	_PyTokenizer_new_string(const char *s, Py_ssize_t len, struct tok_state *tok)	excluded		no-behaviour: strdup with an allocation check
 Parser/tokenizer/helpers.c	253	261	_PyTokenizer_translate_into_utf8	_PyTokenizer_translate_into_utf8(const char* str, const char* enc) {	todo		
 Parser/tokenizer/helpers.c	318	353	_PyTokenizer_check_bom	_PyTokenizer_check_bom(int get_char(struct tok_state *), void unget_char(int, struct tok_state *), int set_readline(struct tok_state *, const char *), struct tok_state *tok)	todo		
-Parser/tokenizer/helpers.c	356	382	get_normal_name	get_normal_name(const char *s) /* for utf-8 and latin-1 */	modelled	pygrammar-lex-normal-name-twin	
-Parser/tokenizer/helpers.c	386	432	get_coding_spec	get_coding_spec(const char *s, char **spec, Py_ssize_t size, struct tok_state *tok)	modelled	pygrammar-lex-cookie-twin	
-Parser/tokenizer/helpers.c	439	489	_PyTokenizer_check_coding_spec	_PyTokenizer_check_coding_spec(const char* line, Py_ssize_t size, struct tok_state *tok, int set_readline(struct tok_state *, const char *))	modelled	pygrammar-lex-cookie-twin	
+Parser/tokenizer/helpers.c	356	382	get_normal_name	get_normal_name(const char *s) /* for utf-8 and latin-1 */	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/tokenizer/helpers.c	386	432	get_coding_spec	get_coding_spec(const char *s, char **spec, Py_ssize_t size, struct tok_state *tok)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/tokenizer/helpers.c	439	489	_PyTokenizer_check_coding_spec	_PyTokenizer_check_coding_spec(const char* line, Py_ssize_t size, struct tok_state *tok, int set_readline(struct tok_state *, const char *))	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/tokenizer/helpers.c	497	553	valid_utf8	valid_utf8(const unsigned char* s)	todo		
 Parser/tokenizer/helpers.c	556	591	_PyTokenizer_ensure_utf8	_PyTokenizer_ensure_utf8(const char *line, struct tok_state *tok, int lineno)	todo		
 Parser/tokenizer/helpers.c	598	622	_PyTokenizer_print_escape	_PyTokenizer_print_escape(FILE *f, const char *s, Py_ssize_t size)	excluded		test-support: Py_DEBUG tracing only

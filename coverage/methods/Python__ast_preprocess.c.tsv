@@ -1,18 +1,18 @@
 file	line	endline	name	signature	status	entry	note
-Python/ast_preprocess.c	36	40	get_cf_finally_top	get_cf_finally_top(_PyASTPreprocessState *state)	modelled	pygrammar-check-syntax-only-identity	
-Python/ast_preprocess.c	43	56	push_cf_context	push_cf_context(_PyASTPreprocessState *state, stmt_ty node, bool finally, bool funcdef, bool loop)	modelled	pygrammar-check-syntax-only-identity	
-Python/ast_preprocess.c	59	63	pop_cf_context	pop_cf_context(_PyASTPreprocessState *state)	modelled	pygrammar-check-syntax-only-identity	
-Python/ast_preprocess.c	66	77	control_flow_in_finally_warning	control_flow_in_finally_warning(const char *kw, stmt_ty n, _PyASTPreprocessState *state)	modelled	pygrammar-check-syntax-only-identity	
-Python/ast_preprocess.c	80	91	before_return	before_return(_PyASTPreprocessState *state, stmt_ty node_)	modelled	pygrammar-check-syntax-only-identity	
-Python/ast_preprocess.c	94	105	before_loop_exit	before_loop_exit(_PyASTPreprocessState *state, stmt_ty node_, const char *kw)	modelled	pygrammar-check-syntax-only-identity	
+Python/ast_preprocess.c	36	40	get_cf_finally_top	get_cf_finally_top(_PyASTPreprocessState *state)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_preprocess.c	43	56	push_cf_context	push_cf_context(_PyASTPreprocessState *state, stmt_ty node, bool finally, bool funcdef, bool loop)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_preprocess.c	59	63	pop_cf_context	pop_cf_context(_PyASTPreprocessState *state)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_preprocess.c	66	77	control_flow_in_finally_warning	control_flow_in_finally_warning(const char *kw, stmt_ty n, _PyASTPreprocessState *state)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_preprocess.c	80	91	before_return	before_return(_PyASTPreprocessState *state, stmt_ty node_)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_preprocess.c	94	105	before_loop_exit	before_loop_exit(_PyASTPreprocessState *state, stmt_ty node_, const char *kw)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Python/ast_preprocess.c	132	151	make_const	make_const(expr_ty node, PyObject *val, PyArena *arena)	modelled	pygrammar-check-fold-value	
-Python/ast_preprocess.c	156	166	has_starred	has_starred(asdl_expr_seq *elts)	modelled	pygrammar-check-format-args	
-Python/ast_preprocess.c	169	209	parse_literal	parse_literal(PyObject *fmt, Py_ssize_t *ppos, PyArena *arena)	modelled	pygrammar-check-format-args	
-Python/ast_preprocess.c	214	226	simple_format_arg_parse	simple_format_arg_parse(PyObject *fmt, Py_ssize_t *ppos, int *spec, int *flags, int *width, int *prec)	modelled	pygrammar-check-format-args	
+Python/ast_preprocess.c	156	166	has_starred	has_starred(asdl_expr_seq *elts)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_preprocess.c	169	209	parse_literal	parse_literal(PyObject *fmt, Py_ssize_t *ppos, PyArena *arena)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_preprocess.c	214	226	simple_format_arg_parse	simple_format_arg_parse(PyObject *fmt, Py_ssize_t *ppos, int *spec, int *flags, int *width, int *prec)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Python/ast_preprocess.c	274	314	parse_format	parse_format(PyObject *fmt, Py_ssize_t *ppos, expr_ty arg, PyArena *arena)	modelled	pygrammar-check-format-args	
 Python/ast_preprocess.c	317	366	optimize_format	optimize_format(expr_ty node, PyObject *fmt, asdl_expr_seq *elts, PyArena *arena)	modelled	pygrammar-check-format-args	
-Python/ast_preprocess.c	369	391	fold_binop	fold_binop(expr_ty node, PyArena *arena, _PyASTPreprocessState *state)	modelled	pygrammar-check-format-args	
-Python/ast_preprocess.c	426	437	stmt_seq_remove_item	stmt_seq_remove_item(asdl_stmt_seq *stmts, Py_ssize_t idx)	modelled	pygrammar-check-docstring-body	
+Python/ast_preprocess.c	369	391	fold_binop	fold_binop(expr_ty node, PyArena *arena, _PyASTPreprocessState *state)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast_preprocess.c	426	437	stmt_seq_remove_item	stmt_seq_remove_item(asdl_stmt_seq *stmts, Py_ssize_t idx)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Python/ast_preprocess.c	440	462	remove_docstring	remove_docstring(asdl_stmt_seq *stmts, Py_ssize_t idx, PyArena *ctx_)	modelled	pygrammar-check-docstring-body	
 Python/ast_preprocess.c	465	492	astfold_body	astfold_body(asdl_stmt_seq *stmts, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-syntax-only-identity	
 Python/ast_preprocess.c	495	514	astfold_mod	astfold_mod(mod_ty node_, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-syntax-only-identity	

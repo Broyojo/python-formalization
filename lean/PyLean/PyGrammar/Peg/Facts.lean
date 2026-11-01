@@ -37,16 +37,6 @@ theorem firstErrorWins_proven : FirstErrorWins := by
 /-- `_Pypegen_tokenizer_error` returns `-1` from every branch of its switch. -/
 def TokenizerErrorIsFailure : Prop := ∀ p : PS, (tokenizerError p).1 = -1
 
-/-! ### Memo -/
-
-/-- The memo is a cache: what `_PyPegen_update_memo` stored at the current token is what
-`_PyPegen_is_memoized` finds, with the mark restored. Hypothesis: the token at `p.mark` is
-already filled, as `_PyPegen_is_memoized` guarantees before any memo is written there. -/
-def MemoReturnsStored : Prop :=
-  ∀ (p : PS) (ty : Nat) (node : Ast), p.mark < p.memo.size → p.mark < p.fill →
-    let (_, q) := updateMemo p.mark ty node p
-    (isMemoized ty q).1 = some node ∧ (isMemoized ty q).2.mark = p.mark
-
 /-! ### `arguments` -/
 
 theorem seqOf_getNames (s : Ast) : (seqOf (getNames s)).length = (seqOf s).length := by
@@ -153,5 +143,45 @@ def DecimalValue : Prop :=
     match parseNumber ds with
     | .ok (.int v) => v = (ds.foldl (fun a d => a * 10 + (d - 48)) 0 : Nat)
     | _ => False
+
+/-! ### Other action helpers -/
+
+/-- `_strip_interpolation_expr`: what remains does not end in whitespace or `=`. -/
+def StripInterpolation : Prop := ∀ s : List Nat,
+  match (stripInterpolationExpr s).getLast? with
+  | some c => !(isUnicodeSpace c || c == 61)
+  | none => True
+
+theorem stripInterpolation_proven : StripInterpolation := by
+  intro s
+  unfold stripInterpolationExpr
+  generalize hd : s.reverse.dropWhile (fun c => isUnicodeSpace c || c == 61) = t
+  cases t with
+  | nil => simp
+  | cons x xs =>
+    have := List.head_dropWhile_not (l := s.reverse) (fun c => isUnicodeSpace c || c == 61)
+      (by rw [hd]; simp)
+    simp only [hd, List.head_cons] at this
+    simp only [List.getLast?_reverse, List.head?_cons]
+    simpa using this
+
+/-- `_PyPegen_register_stmts`: nothing in the first pass; in the second it records the last
+statement unless a later one is already recorded. -/
+def RegisterStmts : Prop := ∀ (a : Ast) (xs : List Ast) (c : Ctor) (fs : List Ast) (loc : Loc) (p : PS),
+  (p.callInvalidRules = false → registerStmts a p = (a, p)) ∧
+  (p.callInvalidRules = true → p.lastStmt.1 ≤ loc.lineno →
+    (registerStmts (.seq (xs ++ [.node c fs (some loc)])) p).2.lastStmt
+      = (loc.lineno, loc.colOffset))
+
+theorem registerStmts_proven : RegisterStmts := by
+  intro a xs c fs loc p
+  constructor
+  · intro h
+    simp [registerStmts, h, bind, StateT.bind, get, getThe, MonadStateOf.get, StateT.get,
+      pure, StateT.pure]
+  · intro h1 h2
+    have : ¬ p.lastStmt.1 > loc.lineno := by omega
+    simp [registerStmts, h1, this, bind, StateT.bind, get, getThe, MonadStateOf.get, StateT.get,
+      pure, StateT.pure, set, MonadStateOf.set, StateT.set, seqOf, locOf]
 
 end PyLean.PyGrammar.Peg

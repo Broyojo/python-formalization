@@ -58,6 +58,7 @@ def validatePositions : Option Loc → V
 /-- `validate_name`, `Python/ast.c:52-69`. -/
 def validateName (name : Ast) : V :=
   match name with
+  | .null => nullDeref
   | .ident [78, 111, 110, 101] => verr "identifier field can't represent 'None' constant"
   | .ident [84, 114, 117, 101] => verr "identifier field can't represent 'True' constant"
   | .ident [70, 97, 108, 115, 101] => verr "identifier field can't represent 'False' constant"
@@ -320,6 +321,7 @@ mutual
   def validateMappingKeys : Nat → List Ast → V
     | 0, _ => .error .modelFuel
     | _ + 1, [] => ok1
+    | _ + 1, .null :: _ => nullDeref
     | f + 1, key :: rest =>
       match key with
       | .node .Constant (.const .none :: _) _ | .node .Constant (.const .true_ :: _) _

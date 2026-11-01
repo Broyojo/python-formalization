@@ -1,10 +1,10 @@
 file	line	endline	name	signature	status	entry	note
 Python/Python-tokenize.c	16	18	get_tokenize_state	get_tokenize_state(PyObject *module) {	excluded		no-behaviour: module state accessor
-Python/Python-tokenize.c	56	85	tokenizeriter_new_impl	tokenizeriter_new_impl(PyTypeObject *type, PyObject *readline, int extra_tokens, const char *encoding) /*[clinic end generated code: output=7501a1211683ce16 input=f7dddf8a613ae8bd]*/	modelled	pygrammar-lex-accepts-valid	
-Python/Python-tokenize.c	88	181	_tokenizer_error	_tokenizer_error(tokenizeriterobject *it)	modelled	pygrammar-lex-accepts-valid	
-Python/Python-tokenize.c	184	202	_get_current_line	_get_current_line(tokenizeriterobject *it, const char *line_start, Py_ssize_t size, int *line_changed)	modelled	pygrammar-lex-accepts-valid	
-Python/Python-tokenize.c	205	239	_get_col_offsets	_get_col_offsets(tokenizeriterobject *it, struct token token, const char *line_start, PyObject *line, int line_changed, Py_ssize_t lineno, Py_ssize_t end_lineno, Py_ssize_t *col_offset, Py_ssize_t *end_col_offset)	modelled	pygrammar-lex-accepts-valid	
-Python/Python-tokenize.c	242	349	tokenizeriter_next	tokenizeriter_next(PyObject *op)	modelled	pygrammar-lex-accepts-valid	
+Python/Python-tokenize.c	56	85	tokenizeriter_new_impl	tokenizeriter_new_impl(PyTypeObject *type, PyObject *readline, int extra_tokens, const char *encoding) /*[clinic end generated code: output=7501a1211683ce16 input=f7dddf8a613ae8bd]*/	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/Python-tokenize.c	88	181	_tokenizer_error	_tokenizer_error(tokenizeriterobject *it)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/Python-tokenize.c	184	202	_get_current_line	_get_current_line(tokenizeriterobject *it, const char *line_start, Py_ssize_t size, int *line_changed)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/Python-tokenize.c	205	239	_get_col_offsets	_get_col_offsets(tokenizeriterobject *it, struct token token, const char *line_start, PyObject *line, int line_changed, Py_ssize_t lineno, Py_ssize_t end_lineno, Py_ssize_t *col_offset, Py_ssize_t *end_col_offset)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/Python-tokenize.c	242	349	tokenizeriter_next	tokenizeriter_next(PyObject *op)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Python/Python-tokenize.c	352	360	tokenizeriter_dealloc	tokenizeriter_dealloc(PyObject *op)	excluded		no-behaviour: frees the iterator
 Python/Python-tokenize.c	379	395	tokenizemodule_exec	tokenizemodule_exec(PyObject *m)	excluded		internal-bootstrap: module init
 Python/Python-tokenize.c	409	414	tokenizemodule_traverse	tokenizemodule_traverse(PyObject *m, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal

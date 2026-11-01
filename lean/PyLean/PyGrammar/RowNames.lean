@@ -3,191 +3,121 @@
 namespace PyLean.PyGrammar.Rows
 
 def ast_docstring_twins : List String := [
-  "get_docstring"]
-
-def ast_increment_lineno : List String := [
-  "increment_lineno"]
-
-def ast_literal_eval : List String := [
-  "literal_eval"]
+  "_PyAST_GetDocString"]
 
 def ast_pad_whitespace : List String := [
   "_pad_whitespace"]
 
-def ast_splitlines : List String := [
-  "_splitlines_no_ff"]
-
 def check_docstring_body : List String := [
-  "stmt_seq_remove_item", "remove_docstring"]
+  "remove_docstring"]
 
 def check_fold_value : List String := [
   "make_const", "fold_const_match_patterns"]
 
 def check_format_args : List String := [
-  "has_starred", "parse_literal", "simple_format_arg_parse", "parse_format", "optimize_format", "fold_binop"]
+  "parse_format", "optimize_format"]
 
 def check_names_always : List String := [
-  "expr_context_name", "validate_expr"]
+  "validate_expr"]
+
+def check_no_null_deref : List String := [
+  "validate_pattern", "validate_patterns"]
 
 def check_nonempty : List String := [
-  "_validate_nonempty_seq"]
+  ]
 
 def check_syntax_only_identity : List String := [
-  "get_cf_finally_top", "push_cf_context", "pop_cf_context", "control_flow_in_finally_warning", "before_return", "before_loop_exit",
   "astfold_body", "astfold_mod", "astfold_expr", "astfold_keyword", "astfold_comprehension", "astfold_arguments",
   "astfold_arg", "astfold_stmt", "astfold_excepthandler", "astfold_withitem", "astfold_pattern", "astfold_match_case",
   "astfold_type_param", "_PyAST_Preprocess"]
 
 def check_try_twin : List String := [
-  "validate_comprehension", "validate_keywords", "validate_args", "validate_arguments", "validate_constant", "ensure_literal_number",
-  "ensure_literal_negative", "ensure_literal_complex", "validate_pattern_match_value", "validate_pattern", "validate_assignlist", "validate_body",
-  "validate_stmt", "validate_stmts", "validate_exprs", "validate_patterns", "validate_typeparam", "validate_type_params",
-  "_PyAST_Validate", "_PyAST_GetDocString"]
+  "validate_stmt"]
 
 def check_validate_name : List String := [
-  "validate_name", "validate_capture"]
+  "validate_name"]
 
 def grammar_left_recursion : List String := [
-  "rule:file", "rule:interactive", "rule:eval", "rule:func_type", "rule:statements", "rule:statement",
-  "rule:single_compound_stmt", "rule:statement_newline", "rule:simple_stmts", "rule:simple_stmt", "rule:compound_stmt", "rule:assignment",
-  "rule:annotated_rhs", "rule:augassign", "rule:return_stmt", "rule:raise_stmt", "rule:pass_stmt", "rule:break_stmt",
-  "rule:continue_stmt", "rule:global_stmt", "rule:nonlocal_stmt", "rule:del_stmt", "rule:yield_stmt", "rule:assert_stmt",
-  "rule:import_stmt", "rule:import_name", "rule:import_from", "rule:import_from_targets", "rule:import_from_as_names", "rule:import_from_as_name",
-  "rule:dotted_as_names", "rule:dotted_as_name", "rule:dotted_name", "rule:block", "rule:decorators", "rule:class_def",
-  "rule:class_def_raw", "rule:function_def", "rule:function_def_raw", "rule:params", "rule:parameters", "rule:slash_no_default",
-  "rule:slash_with_default", "rule:star_etc", "rule:kwds", "rule:param_no_default", "rule:param_no_default_star_annotation", "rule:param_with_default",
-  "rule:param_maybe_default", "rule:param", "rule:param_star_annotation", "rule:annotation", "rule:star_annotation", "rule:default",
-  "rule:if_stmt", "rule:elif_stmt", "rule:else_block", "rule:while_stmt", "rule:for_stmt", "rule:with_stmt",
-  "rule:with_item", "rule:try_stmt", "rule:except_block", "rule:except_star_block", "rule:finally_block", "rule:match_stmt",
-  "rule:subject_expr", "rule:case_block", "rule:guard", "rule:patterns", "rule:pattern", "rule:as_pattern",
-  "rule:or_pattern", "rule:closed_pattern", "rule:literal_pattern", "rule:literal_expr", "rule:complex_number", "rule:signed_number",
-  "rule:signed_real_number", "rule:real_number", "rule:imaginary_number", "rule:capture_pattern", "rule:pattern_capture_target", "rule:wildcard_pattern",
-  "rule:value_pattern", "rule:attr", "rule:name_or_attr", "rule:group_pattern", "rule:sequence_pattern", "rule:open_sequence_pattern",
-  "rule:maybe_sequence_pattern", "rule:maybe_star_pattern", "rule:star_pattern", "rule:mapping_pattern", "rule:items_pattern", "rule:key_value_pattern",
-  "rule:double_star_pattern", "rule:class_pattern", "rule:positional_patterns", "rule:keyword_patterns", "rule:keyword_pattern", "rule:type_alias",
-  "rule:type_params", "rule:type_param_seq", "rule:type_param", "rule:type_param_bound", "rule:type_param_default", "rule:type_param_starred_default",
-  "rule:expressions", "rule:expression", "rule:yield_expr", "rule:star_expressions", "rule:star_expression", "rule:star_named_expressions",
-  "rule:star_named_expression", "rule:assignment_expression", "rule:named_expression", "rule:disjunction", "rule:conjunction", "rule:inversion",
-  "rule:comparison", "rule:compare_op_bitwise_or_pair", "rule:eq_bitwise_or", "rule:noteq_bitwise_or", "rule:lte_bitwise_or", "rule:lt_bitwise_or",
-  "rule:gte_bitwise_or", "rule:gt_bitwise_or", "rule:notin_bitwise_or", "rule:in_bitwise_or", "rule:isnot_bitwise_or", "rule:is_bitwise_or",
-  "rule:bitwise_or", "rule:bitwise_xor", "rule:bitwise_and", "rule:shift_expr", "rule:sum", "rule:term",
-  "rule:factor", "rule:power", "rule:await_primary", "rule:primary", "rule:slices", "rule:slice",
-  "rule:atom", "rule:group", "rule:lambdef", "rule:lambda_params", "rule:lambda_parameters", "rule:lambda_slash_no_default",
-  "rule:lambda_slash_with_default", "rule:lambda_star_etc", "rule:lambda_kwds", "rule:lambda_param_no_default", "rule:lambda_param_with_default", "rule:lambda_param_maybe_default",
-  "rule:lambda_param", "rule:fstring_middle", "rule:fstring_replacement_field", "rule:fstring_conversion", "rule:fstring_full_format_spec", "rule:fstring_format_spec",
-  "rule:fstring", "rule:tstring_format_spec_replacement_field", "rule:tstring_format_spec", "rule:tstring_full_format_spec", "rule:tstring_replacement_field", "rule:tstring_middle",
-  "rule:tstring", "rule:string", "rule:strings", "rule:list", "rule:tuple", "rule:set",
-  "rule:dict", "rule:double_starred_kvpairs", "rule:double_starred_kvpair", "rule:kvpair", "rule:for_if_clauses", "rule:for_if_clause",
-  "rule:listcomp", "rule:setcomp", "rule:genexp", "rule:dictcomp", "rule:arguments", "rule:args",
-  "rule:kwargs", "rule:starred_expression", "rule:kwarg_or_starred", "rule:kwarg_or_double_starred", "rule:star_targets", "rule:star_targets_list_seq",
-  "rule:star_targets_tuple_seq", "rule:star_target", "rule:target_with_star_atom", "rule:star_atom", "rule:single_target", "rule:single_subscript_attribute_target",
-  "rule:t_primary", "rule:t_lookahead", "rule:del_targets", "rule:del_target", "rule:del_t_atom", "rule:type_expressions",
-  "rule:func_type_comment", "rule:invalid_arguments", "rule:invalid_kwarg", "rule:expression_without_invalid", "rule:invalid_legacy_expression", "rule:invalid_type_param",
-  "rule:invalid_expression", "rule:invalid_assignment", "rule:invalid_ann_assign_target", "rule:invalid_del_stmt", "rule:invalid_block", "rule:invalid_comprehension",
-  "rule:invalid_dict_comprehension", "rule:invalid_parameters", "rule:invalid_default", "rule:invalid_star_etc", "rule:invalid_kwds", "rule:invalid_parameters_helper",
-  "rule:invalid_lambda_parameters", "rule:invalid_lambda_parameters_helper", "rule:invalid_lambda_star_etc", "rule:invalid_lambda_kwds", "rule:invalid_double_type_comments", "rule:invalid_with_item",
-  "rule:invalid_for_if_clause", "rule:invalid_for_target", "rule:invalid_group", "rule:invalid_import", "rule:invalid_dotted_as_name", "rule:invalid_import_from_as_name",
-  "rule:invalid_import_from_targets", "rule:invalid_with_stmt", "rule:invalid_with_stmt_indent", "rule:invalid_try_stmt", "rule:invalid_except_stmt", "rule:invalid_except_star_stmt",
-  "rule:invalid_finally_stmt", "rule:invalid_except_stmt_indent", "rule:invalid_except_star_stmt_indent", "rule:invalid_match_stmt", "rule:invalid_case_block", "rule:invalid_as_pattern",
-  "rule:invalid_class_pattern", "rule:invalid_class_argument_pattern", "rule:invalid_if_stmt", "rule:invalid_elif_stmt", "rule:invalid_else_stmt", "rule:invalid_while_stmt",
-  "rule:invalid_for_stmt", "rule:invalid_def_raw", "rule:invalid_class_def_raw", "rule:invalid_double_starred_kvpairs", "rule:invalid_kvpair", "rule:invalid_starred_expression_unpacking",
-  "rule:invalid_starred_expression", "rule:invalid_fstring_replacement_field", "rule:invalid_fstring_conversion_character", "rule:invalid_tstring_replacement_field", "rule:invalid_tstring_conversion_character", "rule:invalid_string_tstring_concat",
-  "rule:invalid_arithmetic", "rule:invalid_factor", "rule:invalid_type_params"]
+  ]
 
 def lex_accepts_valid : List String := [
-  "tok_backup", "_PyLexer_update_ftstring_expr", "lookahead", "verify_end_of_number", "verify_identifier", "tok_decimal_tail",
-  "tok_continuation_line", "tok_get_normal_mode", "tok_get_fstring_mode", "tok_get", "_PyTokenizer_Get", "_PyTokenizer_tok_new",
-  "_PyToken_Init", "_PyLexer_type_comment_token_setup", "_PyLexer_token_setup", "_syntaxerror_range", "_PyTokenizer_syntaxerror", "_PyTokenizer_syntaxerror_known_range",
-  "_PyTokenizer_indenterror", "_PyTokenizer_warn_invalid_escape_sequence", "_PyTokenizer_parser_warn", "tok_readline_string", "tok_underflow_readline", "_PyTokenizer_FromReadline",
-  "tokenizeriter_new_impl", "_tokenizer_error", "_get_current_line", "_get_col_offsets", "tokenizeriter_next", "generate_tokens",
-  "_generate_tokens_from_c_tokenizer"]
-
-def lex_cookie_twin : List String := [
-  "get_coding_spec", "_PyTokenizer_check_coding_spec", "detect_encoding"]
+  "_PyLexer_update_ftstring_expr", "tok_get_normal_mode", "tok_get_fstring_mode", "tok_get", "_PyTokenizer_Get"]
 
 def lex_debug_text : List String := [
   "set_ftstring_expr"]
 
 def lex_exact_tokens : List String := [
-  "_PyToken_OneChar", "_PyToken_TwoChars", "_PyToken_ThreeChars"]
-
-def lex_exact_type : List String := [
-  "TokenInfo.exact_type"]
+  ]
 
 def lex_nextc_in_buffer : List String := [
-  "contains_null_bytes", "tok_nextc", "tok_underflow_string"]
-
-def lex_normal_name_twin : List String := [
-  "get_normal_name", "_get_normal_name"]
-
-def lex_token_predicates : List String := [
-  "ISTERMINAL", "ISNONTERMINAL", "ISEOF"]
+  "tok_nextc", "tok_underflow_string"]
 
 def lex_untokenize_lossless : List String := [
-  "Untokenizer.__init__", "Untokenizer.add_whitespace", "Untokenizer.add_backslash_continuation", "Untokenizer.escape_brackets", "Untokenizer.untokenize", "untokenize"]
+  "Untokenizer.add_whitespace", "Untokenizer.add_backslash_continuation"]
 
 def peg_concat : List String := [
-  "_build_concatenated_str", "_build_concatenated_joined_str", "_PyPegen_concatenate_tstrings", "_PyPegen_concatenate_strings"]
+  "_build_concatenated_str"]
+
+def peg_decode_error : List String := [
+  "_Pypegen_raise_decode_error"]
+
+def peg_expect_token : List String := [
+  "_PyPegen_expect_token"]
+
+def peg_fill_token : List String := [
+  "_PyPegen_fill_token"]
 
 def peg_first_error : List String := [
-  "raise_unclosed_parentheses_error", "_PyPegen_tokenize_full_source_to_check_for_errors", "_PyPegen_raise_error", "get_error_line_from_tokenizer_buffers", "_PyPegen_raise_error_known_location", "_Pypegen_set_syntax_error",
-  "_Pypegen_stack_overflow"]
+  ]
+
+def peg_last_token : List String := [
+  "_PyPegen_get_last_nonnwhitespace_token"]
 
 def peg_make_arguments : List String := [
   "_get_names", "_get_defaults", "_PyPegen_make_arguments"]
 
-def peg_roundtrip_actions : List String := [
-  "_PyPegen_dummy_name", "_PyPegen_singleton_seq", "_PyPegen_seq_insert_in_front", "_PyPegen_seq_append_to_end", "_get_flattened_seq_size", "_PyPegen_seq_flatten",
-  "_PyPegen_seq_last_item", "_PyPegen_seq_first_item", "_PyPegen_join_names_with_dot", "_PyPegen_seq_count_dots", "_PyPegen_map_names_to_ids", "_PyPegen_cmpop_expr_pair",
-  "_PyPegen_get_cmpops", "_PyPegen_get_exprs", "_set_seq_context", "_set_name_context", "_set_tuple_context", "_set_list_context",
-  "_set_subscript_context", "_set_attribute_context", "_set_starred_context", "_PyPegen_set_expr_context", "_PyPegen_key_value_pair", "_PyPegen_get_keys",
-  "_PyPegen_get_values", "_PyPegen_key_pattern_pair", "_PyPegen_get_pattern_keys", "_PyPegen_get_patterns", "_PyPegen_name_default_pair", "_PyPegen_slash_with_default",
-  "_PyPegen_star_etc", "_PyPegen_join_sequences", "_PyPegen_empty_arguments", "_PyPegen_augoperator", "_PyPegen_function_def_decorators", "_PyPegen_class_def_decorators",
-  "_PyPegen_keyword_or_starred", "_seq_number_of_starred_exprs", "_PyPegen_seq_extract_starred_exprs", "_PyPegen_seq_delete_starred_exprs", "_PyPegen_ensure_imaginary", "_PyPegen_ensure_real",
-  "_PyPegen_make_module", "_PyPegen_new_type_comment", "_PyPegen_add_type_comment_to_arg", "_PyPegen_check_barry_as_flufl", "_PyPegen_check_legacy_stmt", "result_token_with_metadata",
-  "_PyPegen_check_fstring_conversion", "_PyPegen_setup_full_format_spec", "_PyPegen_get_expr_name", "_PyPegen_get_last_comprehension_item", "_PyPegen_get_invalid_target", "_PyPegen_arguments_parsing_error",
-  "_PyPegen_nonparen_genexp_in_call", "_PyPegen_decode_fstring_part", "_get_resized_exprs", "_PyPegen_template_str", "_PyPegen_joined_str", "_PyPegen_decoded_constant_from_token",
-  "_PyPegen_constant_from_token", "_PyPegen_constant_from_string", "_get_interpolation_conversion", "_strip_interpolation_expr", "_build_concatenated_bytes", "_build_concatenated_unicode",
+def peg_memo_cache : List String := [
+  "_PyPegen_insert_memo", "_PyPegen_update_memo", "_PyPegen_is_memoized"]
+
+def peg_never_silent : List String := [
+  "_PyPegen_run_parser"]
+
+def peg_raise_error : List String := [
+  "_PyPegen_raise_error"]
+
+def peg_raise_known_location : List String := [
+  "_PyPegen_raise_error_known_location"]
+
+def peg_raise_unclosed : List String := [
+  "raise_unclosed_parentheses_error"]
+
+def peg_register_stmts : List String := [
   "_PyPegen_register_stmts"]
 
+def peg_roundtrip_actions : List String := [
+  ]
+
 def peg_roundtrip_parser : List String := [
-  "_PyTokenizer_FromUTF8", "_PyPegen_interactive_exit", "_PyPegen_byte_offset_to_character_offset_line", "_PyPegen_byte_offset_to_character_offset_raw", "_PyPegen_byte_offset_to_character_offset", "_PyPegen_insert_memo",
-  "_PyPegen_update_memo", "_get_keyword_or_name_type", "initialize_token", "_PyPegen_fill_token", "_PyPegen_is_memoized", "_PyPegen_expect_token",
-  "_PyPegen_expect_forced_result", "_PyPegen_expect_forced_token", "_PyPegen_expect_soft_keyword", "_PyPegen_get_last_nonnwhitespace_token", "_PyPegen_new_identifier", "_PyPegen_name_from_token",
-  "_PyPegen_name_token", "_PyPegen_string_token", "_PyPegen_soft_keyword_token", "parsenumber_raw", "parsenumber", "_PyPegen_number_token",
-  "bad_single_statement", "compute_parser_flags", "_PyPegen_Parser_New", "reset_parser_state_for_error_pass", "_is_end_of_source", "_PyPegen_run_parser",
-  "_PyPegen_run_parser_from_string", "_Pypegen_tokenizer_error", "_Pypegen_raise_decode_error", "warn_invalid_escape_sequence", "decode_utf8", "decode_unicode_with_escapes",
-  "decode_bytes_with_escapes", "_PyPegen_decode_string", "_PyPegen_parse_string", "_PyParser_ASTFromString"]
+  ]
+
+def peg_set_syntax_error : List String := [
+  "_Pypegen_set_syntax_error"]
+
+def peg_strip_interpolation : List String := [
+  "_strip_interpolation_expr"]
+
+def peg_tokenize_full_source : List String := [
+  "_PyPegen_tokenize_full_source_to_check_for_errors"]
+
+def peg_tokenizer_error : List String := [
+  "_Pypegen_tokenizer_error"]
 
 def unparse_c_roundtrip : List String := [
-  "append_char", "append_charp", "append_repr", "append_ast_boolop", "append_ast_binop", "append_ast_unaryop",
-  "append_ast_arg", "append_ast_args", "append_ast_lambda", "append_ast_ifexp", "append_ast_dict", "append_ast_set",
-  "append_ast_list", "append_ast_tuple", "append_ast_comprehension", "append_ast_comprehensions", "append_ast_genexp", "append_ast_listcomp",
-  "append_ast_setcomp", "append_ast_dictcomp", "append_ast_compare", "append_ast_keyword", "append_ast_call", "escape_braces",
-  "append_fstring_unicode", "append_fstring_element", "build_ftstring_body", "append_templatestr", "append_joinedstr", "append_interpolation_str",
-  "append_interpolation_value", "append_interpolation_conversion", "append_interpolation_format_spec", "append_interpolation", "append_formattedvalue", "append_ast_constant",
-  "append_ast_attribute", "append_ast_slice", "append_ast_subscript", "append_ast_starred", "append_ast_yield", "append_ast_yield_from",
-  "append_ast_await", "append_named_expr", "append_ast_expr", "expr_as_unicode", "_PyAST_ExprAsUnicode"]
+  "append_fstring_element", "build_ftstring_body", "append_joinedstr", "append_formattedvalue", "append_ast_expr", "expr_as_unicode",
+  "_PyAST_ExprAsUnicode"]
 
 def unparse_roundtrip : List String := [
-  "_Precedence.next", "Unparser.__init__", "Unparser.interleave", "Unparser.items_view", "Unparser.maybe_newline", "Unparser.maybe_semicolon",
-  "Unparser.fill", "Unparser.write", "Unparser.buffered", "Unparser.block", "Unparser.delimit", "Unparser.delimit_if",
-  "Unparser.require_parens", "Unparser.get_precedence", "Unparser.set_precedence", "Unparser.get_raw_docstring", "Unparser.get_type_comment", "Unparser.traverse",
-  "Unparser.visit", "Unparser._write_docstring_and_traverse_body", "Unparser.visit_Module", "Unparser.visit_Interactive", "Unparser.visit_FunctionType", "Unparser.visit_Expr",
-  "Unparser.visit_NamedExpr", "Unparser.visit_Import", "Unparser.visit_ImportFrom", "Unparser.visit_Assign", "Unparser.visit_AugAssign", "Unparser.visit_AnnAssign",
-  "Unparser.visit_Return", "Unparser.visit_Pass", "Unparser.visit_Break", "Unparser.visit_Continue", "Unparser.visit_Delete", "Unparser.visit_Assert",
-  "Unparser.visit_Global", "Unparser.visit_Nonlocal", "Unparser.visit_Await", "Unparser.visit_Yield", "Unparser.visit_YieldFrom", "Unparser.visit_Raise",
-  "Unparser.do_visit_try", "Unparser.visit_Try", "Unparser.visit_TryStar", "Unparser.visit_ExceptHandler", "Unparser.visit_ClassDef", "Unparser.visit_FunctionDef",
-  "Unparser.visit_AsyncFunctionDef", "Unparser._function_helper", "Unparser._type_params_helper", "Unparser.visit_TypeVar", "Unparser.visit_TypeVarTuple", "Unparser.visit_ParamSpec",
-  "Unparser.visit_TypeAlias", "Unparser.visit_For", "Unparser.visit_AsyncFor", "Unparser._for_helper", "Unparser.visit_If", "Unparser.visit_While",
-  "Unparser.visit_With", "Unparser.visit_AsyncWith", "Unparser._str_literal_helper", "Unparser._write_str_avoiding_backslashes", "Unparser._ftstring_helper", "Unparser._write_ftstring",
-  "Unparser.visit_JoinedStr", "Unparser.visit_TemplateStr", "Unparser._write_ftstring_inner", "Unparser._unparse_interpolation_value", "Unparser._write_interpolation", "Unparser.visit_FormattedValue",
-  "Unparser.visit_Interpolation", "Unparser.visit_Name", "Unparser._write_docstring", "Unparser._write_constant", "Unparser.visit_Constant", "Unparser.visit_List",
-  "Unparser.visit_ListComp", "Unparser.visit_GeneratorExp", "Unparser.visit_SetComp", "Unparser.visit_DictComp", "Unparser.visit_comprehension", "Unparser.visit_IfExp",
-  "Unparser.visit_Set", "Unparser.visit_Dict", "Unparser.visit_Tuple", "Unparser.visit_UnaryOp", "Unparser.visit_BinOp", "Unparser.visit_Compare",
-  "Unparser.visit_BoolOp", "Unparser.visit_Attribute", "Unparser.visit_Call", "Unparser.visit_Subscript", "Unparser.visit_Starred", "Unparser.visit_Ellipsis",
-  "Unparser.visit_Slice", "Unparser.visit_Match", "Unparser.visit_arg", "Unparser.visit_arguments", "Unparser.visit_keyword", "Unparser.visit_Lambda",
-  "Unparser.visit_alias", "Unparser.visit_withitem", "Unparser.visit_match_case", "Unparser.visit_MatchValue", "Unparser.visit_MatchSingleton", "Unparser.visit_MatchSequence",
-  "Unparser.visit_MatchStar", "Unparser.visit_MatchMapping", "Unparser.visit_MatchClass", "Unparser.visit_MatchAs", "Unparser.visit_MatchOr", "unparse"]
+  "Unparser._ftstring_helper", "Unparser._write_ftstring", "Unparser.visit_JoinedStr", "Unparser._write_ftstring_inner", "Unparser._unparse_interpolation_value", "Unparser._write_interpolation",
+  "Unparser.visit_FormattedValue", "unparse"]
 
 end PyLean.PyGrammar.Rows

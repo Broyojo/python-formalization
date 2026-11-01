@@ -225,19 +225,21 @@ inductive StrVal where
   | bytes (bs : List Nat)
   | fail
 
-/-- `_PyPegen_parse_string`, `Parser/string_parser.c:254-339`. -/
-def parseString (t : Token) : PM StrVal := do
-  -- prefix letters
-  let rec pfx : Nat → List Nat → Bool → Bool → List Nat × Bool × Bool
-    | 0, s, b, r => (s, b, r)
-    | f + 1, s, b, r =>
-      if b && r then (s, b, r) else
-      match s with
-      | 98 :: x | 66 :: x => pfx f x true r
-      | 117 :: x | 85 :: x => pfx f x b r
-      | 114 :: x | 82 :: x => pfx f x b true
-      | _ => (s, b, r)
-  let (s, bytesmode, rawmode) := pfx 4 t.bytes false false
+/-- The prefix letters of a string token: `b`, `u`, `r` in either case. -/
+def stringPfx : Nat → List Nat → Bool → Bool → List Nat × Bool × Bool
+  | 0, s, b, r => (s, b, r)
+  | f + 1, s, b, r =>
+    if b && r then (s, b, r) else
+    match s with
+    | 98 :: x | 66 :: x => stringPfx f x true r
+    | 117 :: x | 85 :: x => stringPfx f x b r
+    | 114 :: x | 82 :: x => stringPfx f x b true
+    | _ => (s, b, r)
+
+/-- The checks and quote stripping of `_PyPegen_parse_string`: the text between the quotes, the
+text to the end of the token (the C string `s` walks), `bytesmode` and `rawmode`. -/
+def stringParts (tok : List Nat) : List Nat × List Nat × Bool × Bool :=
+  let (s, bytesmode, rawmode) := stringPfx 4 tok false false
   let quote := s.headD 0
   let body := s.drop 1
   let len := body.length - 1
@@ -245,9 +247,12 @@ def parseString (t : Token) : PM StrVal := do
     if len ≥ 4 && body.getD 0 0 == quote && body.getD 1 0 == quote then
       (body.drop 2, len - 4)
     else (body, len)
-  let content := body.take len
   -- `strchr(s, '\\')` scans to the end of the token, quotes included.
-  let rawmode := rawmode || !body.contains 92
+  (body.take len, body, bytesmode, rawmode || !body.contains 92)
+
+/-- `_PyPegen_parse_string`, `Parser/string_parser.c:245-338`. -/
+def parseString (t : Token) : PM StrVal := do
+  let (content, body, bytesmode, rawmode) := stringParts t.bytes
   if bytesmode then
     -- `for (ch = s; *ch; ch++)` also scans the closing quotes
     if body.any (· ≥ 0x80) then

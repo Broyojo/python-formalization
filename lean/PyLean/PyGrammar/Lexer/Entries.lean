@@ -56,7 +56,7 @@ def entries : List Entry := [
     thm := some ``translateRemovesCr_proven },
   { id := "pygrammar-lex-token-predicates"
     pyFile := "Lib/token.py"
-    pyFns := ["ISTERMINAL", "ISNONTERMINAL", "ISEOF"]
+    pyFns := []
     statement := "ISTERMINAL and ISNONTERMINAL partition the numbers; all kinds are terminal; " ++
       "only ENDMARKER is EOF."
     source := "invariant"
@@ -65,7 +65,7 @@ def entries : List Entry := [
     thm := some ``tokenPredicates_proven },
   { id := "pygrammar-lex-exact-type"
     pyFile := "Lib/tokenize.py"
-    pyFns := ["TokenInfo.exact_type"]
+    pyFns := []
     statement := "An OP token with an exact spelling has that spelling's token as exact_type."
     source := "Lib/tokenize.py TokenInfo.exact_type"
     status := .proven
@@ -73,7 +73,7 @@ def entries : List Entry := [
     thm := some ``exactTypeResolves_proven },
   { id := "pygrammar-lex-normal-name-twin"
     pyFile := "Lib/tokenize.py"
-    pyFns := ["_get_normal_name", "get_normal_name"]
+    pyFns := []
     statement := "_get_normal_name and C get_normal_name agree on every name without a NUL."
     source := "Lib/tokenize.py docstring: 'Imitates get_normal_name'"
     status := .proven
@@ -81,7 +81,7 @@ def entries : List Entry := [
     thm := some ``normalNameTwin_proven },
   { id := "pygrammar-lex-cookie-twin"
     pyFile := "Lib/tokenize.py"
-    pyFns := ["detect_encoding", "get_coding_spec", "_PyTokenizer_check_coding_spec"]
+    pyFns := []
     statement := "detect_encoding and the compiler read the same coding cookie from any bytes."
     source := "the implementation against itself; PEP 263"
     status := .refuted
@@ -90,9 +90,7 @@ def entries : List Entry := [
     bug := some "pygrammar-lex-cookie-cr" },
   { id := "pygrammar-lex-untokenize-lossless"
     pyFile := "Lib/tokenize.py"
-    pyFns := ["Untokenizer.__init__", "Untokenizer.add_whitespace",
-      "Untokenizer.add_backslash_continuation", "Untokenizer.escape_brackets",
-      "Untokenizer.untokenize", "untokenize"]
+    pyFns := ["Untokenizer.add_whitespace", "Untokenizer.add_backslash_continuation"]
     statement := "untokenize of the tokens of a valid source tokenizes back to the same types " ++
       "and strings."
     source := "Lib/tokenize.py untokenize docstring"

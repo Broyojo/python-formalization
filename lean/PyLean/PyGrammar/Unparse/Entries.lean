@@ -11,7 +11,7 @@ open PyLean.Registry
 def entries : List Entry := [
   { id := "pygrammar-ast-increment-lineno"
     pyFile := "Lib/ast.py"
-    pyFns := ["increment_lineno"]
+    pyFns := []
     statement := "increment_lineno by -n undoes increment_lineno by n, for every tree."
     source := "Lib/ast.py increment_lineno docstring: 'move code'"
     status := .proven
@@ -19,7 +19,7 @@ def entries : List Entry := [
     thm := some ``incrementLinenoReversible_proven },
   { id := "pygrammar-ast-splitlines"
     pyFile := "Lib/ast.py"
-    pyFns := ["_splitlines_no_ff"]
+    pyFns := []
     statement := "Joining the lines of _splitlines_no_ff gives the source back."
     source := "invariant"
     status := .proven
@@ -35,7 +35,7 @@ def entries : List Entry := [
     thm := some ``padKeepsColumns_proven },
   { id := "pygrammar-ast-docstring-twins"
     pyFile := "Lib/ast.py"
-    pyFns := ["get_docstring"]
+    pyFns := ["_PyAST_GetDocString"]
     statement := "get_docstring(clean=False), Unparser.get_raw_docstring and C " ++
       "_PyAST_GetDocString find the same docstring in every body."
     source := "Lib/_ast_unparse.py: 'Logic mirrored from _PyAST_GetDocString'"
@@ -44,7 +44,7 @@ def entries : List Entry := [
     thm := some ``docstringTwins_proven },
   { id := "pygrammar-ast-literal-eval"
     pyFile := "Lib/ast.py"
-    pyFns := ["literal_eval"]
+    pyFns := []
     statement := "literal_eval refuses every call with arguments."
     source := "Lib/ast.py literal_eval docstring"
     status := .proven

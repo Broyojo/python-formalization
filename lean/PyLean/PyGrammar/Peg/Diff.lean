@@ -56,10 +56,13 @@ def parseCase (j : Json) : Except String Json := do
   let fv ← match j.getObjVal? "feature_version" with
     | .ok v => v.getNat?
     | .error _ => pure 14
+  let flags ← match j.getObjVal? "flags" with
+    | .ok v => v.getNat?
+    | .error _ => pure 0
   let cfg ← getCfg j
   if src.contains 0 then
     return encErr { cls := "SyntaxError", msg := "source code cannot contain null bytes" }
-  match parseStr cfg src start tc fv with
+  match parseStr cfg src start tc fv flags with
   | .ok t =>
     -- `Py_CompileStringObject` then runs `_PyCompile_AstPreprocess` in syntax-check mode.
     match Check.futureParse t with

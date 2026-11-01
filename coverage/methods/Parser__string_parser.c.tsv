@@ -1,7 +1,7 @@
 file	line	endline	name	signature	status	entry	note
-Parser/string_parser.c	14	119	warn_invalid_escape_sequence	warn_invalid_escape_sequence(Parser *p, const char* buffer, const char *first_invalid_escape, Token *t)	modelled	pygrammar-peg-roundtrip-parser	
-Parser/string_parser.c	122	132	decode_utf8	decode_utf8(const char **sPtr, const char *end)	modelled	pygrammar-peg-roundtrip-parser	
-Parser/string_parser.c	135	218	decode_unicode_with_escapes	decode_unicode_with_escapes(Parser *parser, const char *s, size_t len, Token *t)	modelled	pygrammar-peg-roundtrip-parser	
-Parser/string_parser.c	221	239	decode_bytes_with_escapes	decode_bytes_with_escapes(Parser *p, const char *s, Py_ssize_t len, Token *t)	modelled	pygrammar-peg-roundtrip-parser	
-Parser/string_parser.c	242	248	_PyPegen_decode_string	_PyPegen_decode_string(Parser *p, int raw, const char *s, size_t len, Token *t)	modelled	pygrammar-peg-roundtrip-parser	
-Parser/string_parser.c	254	339	_PyPegen_parse_string	_PyPegen_parse_string(Parser *p, Token *t)	modelled	pygrammar-peg-roundtrip-parser	
+Parser/string_parser.c	14	119	warn_invalid_escape_sequence	warn_invalid_escape_sequence(Parser *p, const char* buffer, const char *first_invalid_escape, Token *t)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/string_parser.c	122	132	decode_utf8	decode_utf8(const char **sPtr, const char *end)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/string_parser.c	135	218	decode_unicode_with_escapes	decode_unicode_with_escapes(Parser *parser, const char *s, size_t len, Token *t)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/string_parser.c	221	239	decode_bytes_with_escapes	decode_bytes_with_escapes(Parser *p, const char *s, Py_ssize_t len, Token *t)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/string_parser.c	242	248	_PyPegen_decode_string	_PyPegen_decode_string(Parser *p, int raw, const char *s, size_t len, Token *t)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/string_parser.c	254	339	_PyPegen_parse_string	_PyPegen_parse_string(Parser *p, Token *t)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body

@@ -163,54 +163,53 @@ def raiseError0 (cls msg : String) : PM Unit := do
     return
   raiseAtToken cls ((p.knownErrToken).getD (p.tokenAt (p.fill - 1))) msg
 
-/-- `_Pypegen_tokenizer_error`, `Parser/pegen_errors.c:23-80`. Always returns -1. -/
-def tokenizerError : PM Int := do
-  if (← get).errOccurred then return -1
-  modify fun p => { p with errorIndicator := true }
-  let s := (← get).tok
-  let known (cls msg : String) (col : Int) : PM Int := do
+/-- The `switch (p->tok->done)` of `_Pypegen_tokenizer_error`, `Parser/pegen_errors.c:30-79`. -/
+def tokenizerErrorSwitch (s : TokState) : PM Unit :=
+  let known (cls msg : String) (col : Int) : PM Unit :=
     raiseErrorKnownLocation cls s.lineno (if col ≥ 0 then col else 0) s.lineno (-1) msg
-    return -1
   if s.done == E_TOKEN then known "SyntaxError" "invalid token" (-1)
   else if s.done == E_EOF then
     if s.level != 0 then raiseUnclosed else raiseError0 "SyntaxError" "unexpected EOF while parsing"
-    return -1
   else if s.done == E_DEDENT then
     raiseError0 "IndentationError" "unindent does not match any outer indentation level"
-    return -1
-  else if s.done == E_INTR then
-    setErr { cls := "KeyboardInterrupt", msg := "" }
-    return -1
-  else if s.done == E_NOMEM then
-    setErr { cls := "MemoryError", msg := "" }
-    return -1
+  else if s.done == E_INTR then setErr { cls := "KeyboardInterrupt", msg := "" }
+  else if s.done == E_NOMEM then setErr { cls := "MemoryError", msg := "" }
   else if s.done == E_TABSPACE then
     known "TabError" "inconsistent use of tabs and spaces in indentation" (-1)
-  else if s.done == E_TOODEEP then
-    known "IndentationError" "too many levels of indentation" (-1)
+  else if s.done == E_TOODEEP then known "IndentationError" "too many levels of indentation" (-1)
   else if s.done == E_LINECONT then
     known "SyntaxError" "unexpected character after line continuation character"
       ((s.cur : Int) - s.buf - 1)
   else if s.done == E_COLUMNOVERFLOW then
-    setErr { cls := "OverflowError",
-             msg := "Parser column offset overflow - source line is too big" }
-    return -1
+    setErr { cls := "OverflowError", msg := "Parser column offset overflow - source line is too big" }
   else known "SyntaxError" "unknown parsing error" (-1)
 
-/-- `_Pypegen_raise_decode_error`, `Parser/pegen_errors.c:83-114`. -/
-def raiseDecodeError : PM Int := do
-  let p ← get
-  match p.tok.err with
+/-- `_Pypegen_tokenizer_error`, `Parser/pegen_errors.c:23-80`. Always returns -1. -/
+def tokenizerError : PM Int := do
+  if (← get).errOccurred then return -1
+  modify fun p => { p with errorIndicator := true }
+  tokenizerErrorSwitch (← get).tok
+  return -1
+
+/-- The prefix `_Pypegen_raise_decode_error` gives an exception class, if it rewrites it. -/
+def decodeErrType (c : String) : Option String :=
+  if c == "UnicodeDecodeError" || c == "UnicodeError" then some "unicode error"
+  else if c == "ValueError" then some "value error"
+  else none
+
+/-- The body of `_Pypegen_raise_decode_error` on the current exception. -/
+def raiseDecodeBody : Option PyError → PM Unit
   | some e =>
-    let errtype :=
-      if e.cls == "UnicodeDecodeError" || e.cls == "UnicodeError" then some "unicode error"
-      else if e.cls == "ValueError" then some "value error" else none
-    match errtype with
-    | some t =>
-      set { p with tok := { p.tok with err := none } }
+    match decodeErrType e.cls with
+    | some t => do
+      modify fun p => { p with tok := { p.tok with err := none } }
       raiseError0 "SyntaxError" s!"({t}) {e.msg}"
     | none => pure ()
   | none => pure ()
+
+/-- `_Pypegen_raise_decode_error`, `Parser/pegen_errors.c:83-114`. -/
+def raiseDecodeError : PM Int := do
+  raiseDecodeBody (← get).tok.err
   return -1
 
 /-- Read tokens, recording and skipping `# type: ignore` comments. -/
@@ -224,9 +223,9 @@ def getTokSkippingIgnores : Nat → TokState → List (Int × List Nat) →
       getTokSkippingIgnores f s (ig ++ [(s.lineno, ((tokBytes s t).take len))])
     else (s, ty, t, ig)
 
-/-- `_PyPegen_fill_token` with `initialize_token`, `Parser/pegen.c:182-220`. -/
-def fillToken : PM Int := do
-  let p ← get
+/-- `_PyPegen_fill_token` up to the end of `initialize_token`, `Parser/pegen.c:182-220`: the state
+with the new token and its memo slot, and the type the tokenizer returned. -/
+def pushToken (p : PS) : PS × Nat :=
   let (s, ty, t, ig) := getTokSkippingIgnores (p.tok.src.size + 2) p.tok p.typeIgnores
   let p := { p with tok := s, typeIgnores := ig }
   -- At the end in single input mode insert a newline and reset the parsing
@@ -244,10 +243,15 @@ def fillToken : PM Int := do
     { type := if ty == TokKind.NAME.num then keywordOrName bytes else ty
       bytes, metadata := t.metadata, level := t.level, lineno := t.lineno,
       colOffset := t.colOffset, endLineno := t.endLineno, endColOffset := t.endColOffset }
-  set { p with tokens := p.tokens.push token, memo := p.memo.push [] }
-  if ty == TokKind.ERRORTOKEN.num && p.tok.done == E_DECODE then return ← raiseDecodeError
-  if ty == TokKind.ERRORTOKEN.num then return ← tokenizerError
-  return 0
+  ({ p with tokens := p.tokens.push token, memo := p.memo.push [] }, ty)
+
+/-- `_PyPegen_fill_token`, `Parser/pegen.c:182-220`. -/
+def fillToken : PM Int := do
+  let r := pushToken (← get)
+  set r.1
+  if r.2 == TokKind.ERRORTOKEN.num then
+    if r.1.tok.done == E_DECODE then raiseDecodeError else tokenizerError
+  else return 0
 
 /-- `_PyPegen_raise_error`, `Parser/pegen_errors.c:181-224`, any `use_mark`. -/
 def raiseError (cls : String) (useMark : Bool) (msg : String) : PM Unit := do
@@ -295,6 +299,20 @@ def tokenizeFullSource : PM Unit := do
 def isSyntaxErrorClass (c : String) : Bool :=
   c == "SyntaxError" || c == "IndentationError" || c == "TabError"
 
+/-- `_Pypegen_set_syntax_error` past its first checks, `Parser/pegen_errors.c:380-406`. `p` is
+the state on entry. -/
+def setSyntaxErrorTail (p : PS) (lastToken : Token) : PM Unit :=
+  if lastToken.type == TokKind.ERRORTOKEN.num && p.tok.done == E_EOF then
+    if p.tok.level != 0 then raiseUnclosed
+    else raiseError0 "SyntaxError" "unexpected EOF while parsing"
+  else if lastToken.type == TokKind.INDENT.num || lastToken.type == TokKind.DEDENT.num then
+    raiseError0 "IndentationError"
+      (if lastToken.type == TokKind.INDENT.num then "unexpected indent" else "unexpected unindent")
+  else do
+    raiseErrorKnownLocation "SyntaxError" lastToken.lineno lastToken.colOffset
+      lastToken.endLineno lastToken.endColOffset "invalid syntax"
+    tokenizeFullSource
+
 /-- `_Pypegen_set_syntax_error`, `Parser/pegen_errors.c:367-407`. -/
 def setSyntaxError (lastToken : Token) : PM Unit := do
   let p ← get
@@ -304,32 +322,27 @@ def setSyntaxError (lastToken : Token) : PM Unit := do
       tokenizeFullSource
     return
   if p.fill == 0 then raiseError0 "SyntaxError" "error at start before reading any input"
-  if lastToken.type == TokKind.ERRORTOKEN.num && p.tok.done == E_EOF then
-    if p.tok.level != 0 then raiseUnclosed
-    else raiseError0 "SyntaxError" "unexpected EOF while parsing"
-    return
-  if lastToken.type == TokKind.INDENT.num || lastToken.type == TokKind.DEDENT.num then
-    raiseError0 "IndentationError"
-      (if lastToken.type == TokKind.INDENT.num then "unexpected indent" else "unexpected unindent")
-    return
-  raiseErrorKnownLocation "SyntaxError" lastToken.lineno lastToken.colOffset
-    lastToken.endLineno lastToken.endColOffset "invalid syntax"
-  tokenizeFullSource
+  setSyntaxErrorTail p lastToken
+
+/-- `if (p->mark == p->fill) { if (_PyPegen_fill_token(p) < 0) { p->error_indicator = 1; return
+NULL; } }`, the head of every token-reading function. `false` is the error return. -/
+def ensureToken : PM Bool := fun p =>
+  if p.mark == p.fill then
+    let r := fillToken p
+    if r.1 < 0 then (false, { r.2 with errorIndicator := true }) else (true, r.2)
+  else (true, p)
+
+/-- The lookup of `_PyPegen_is_memoized`, `Parser/pegen.c:362-378`. -/
+def memoLookup (ty : Nat) : PM (Option Ast) := fun p =>
+  match (p.memo.getD p.mark []).find? (fun m => m.1 == ty) with
+  | some (_, node, mark) => (some node, { p with mark := mark })
+  | none => (none, p)
 
 /-- `_PyPegen_is_memoized`, `Parser/pegen.c:350-381`. `some r` when the C function
 returns nonzero. -/
 def isMemoized (ty : Nat) : PM (Option Ast) := do
-  let p ← get
-  if p.mark == p.fill then
-    if (← fillToken) < 0 then
-      modify fun p => { p with errorIndicator := true }
-      return some .null
-  let p ← get
-  match (p.memo.getD p.mark []).find? (fun m => m.1 == ty) with
-  | some (_, node, mark) =>
-    set { p with mark := mark }
-    return some node
-  | none => return none
+  if !(← ensureToken) then return some .null
+  memoLookup ty
 
 /-- `_PyPegen_insert_memo`, `Parser/pegen.c:81-94`. -/
 def insertMemo (mark ty : Nat) (node : Ast) : PM Unit :=
@@ -344,18 +357,15 @@ def updateMemo (mark ty : Nat) (node : Ast) : PM Unit :=
           l.map fun m => if m.1 == ty then (ty, node, p.mark) else m
         else (ty, node, p.mark) :: l }
 
+/-- The tail of `_PyPegen_expect_token`, with the token read. -/
+def takeToken (ty : Nat) : PM Ast := fun p =>
+  let t := p.tokenAt p.mark
+  if t.type != ty then (.null, p) else (.tok t, { p with mark := p.mark + 1 })
+
 /-- `_PyPegen_expect_token`, `Parser/pegen.c:413-427`. -/
 def expectToken (ty : Nat) : PM Ast := do
-  let p ← get
-  if p.mark == p.fill then
-    if (← fillToken) < 0 then
-      modify fun p => { p with errorIndicator := true }
-      return .null
-  let p ← get
-  let t := p.tokenAt p.mark
-  if t.type != ty then return .null
-  set { p with mark := p.mark + 1 }
-  return .tok t
+  if !(← ensureToken) then return .null
+  takeToken ty
 
 /-- `_PyPegen_new_identifier`, `Parser/pegen.c:503-570`. -/
 def newIdentifier (bytes : List Nat) : PM Ast := do

@@ -1,4 +1,4 @@
 file	line	endline	name	signature	status	entry	note
-Parser/peg_api.c	6	15	_PyParser_ASTFromString	_PyParser_ASTFromString(const char *str, PyObject* filename, int mode, PyCompilerFlags *flags, PyArena *arena)	modelled	pygrammar-peg-roundtrip-parser	
+Parser/peg_api.c	6	15	_PyParser_ASTFromString	_PyParser_ASTFromString(const char *str, PyObject* filename, int mode, PyCompilerFlags *flags, PyArena *arena)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/peg_api.c	18	27	_PyParser_ASTFromFile	_PyParser_ASTFromFile(FILE *fp, PyObject *filename_ob, const char *enc, int mode, const char *ps1, const char* ps2, PyCompilerFlags *flags, int *errcode, PyArena *arena)	todo		
 Parser/peg_api.c	30	40	_PyParser_InteractiveASTFromFile	_PyParser_InteractiveASTFromFile(FILE *fp, PyObject *filename_ob, const char *enc, int mode, const char *ps1, const char* ps2, PyCompilerFlags *flags, int *errcode, PyObject **interactive_src, PyArena *arena)	todo		

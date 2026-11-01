@@ -479,6 +479,110 @@ def lastComprehensionItem (c : Ast) : Ast :=
 /-- `TOK_GET_STRING_PREFIX` -/
 def tokPrefix (p : PS) : Nat := if p.tok.mode.tstring then ch! 't' else ch! 'f'
 
+/-- What a token adds in `_PyPegen_seq_count_dots`: 3 for `ELLIPSIS`, 1 for `DOT`. -/
+def dotWeight (t : Ast) : Int :=
+  match t with
+  | .tok t => if t.type == TokKind.ELLIPSIS.num then 3 else 1
+  | _ => 0
+
+/-- `KeywordOrStarred.is_keyword` -/
+def isKeywordRec (k : Ast) : Bool :=
+  match recField k 1 with
+  | .int 0 => false
+  | _ => true
+
+/-- `_PyPegen_ensure_imaginary`, `Parser/action_helpers.c`. -/
+def ensureImaginary (e : Ast) : PM Ast := do
+  if !(isConstant e && isComplexConst e) then
+    let l := locOf e
+    raiseErrorKnownLocation "SyntaxError" l.lineno l.colOffset l.endLineno l.endColOffset
+      "imaginary number required in complex literal"
+    return .null
+  return e
+
+/-- `_PyPegen_ensure_real`, `Parser/action_helpers.c`. -/
+def ensureReal (e : Ast) : PM Ast := do
+  if !isConstant e || isComplexConst e then
+    let l := locOf e
+    raiseErrorKnownLocation "SyntaxError" l.lineno l.colOffset l.endLineno l.endColOffset
+      "real number required in complex literal"
+    return .null
+  return e
+
+/-- `_PyPegen_check_barry_as_flufl`, `Parser/action_helpers.c`. -/
+def checkBarry (t : Ast) : PM Ast := do
+  let p ← get
+  let s := match t with
+    | .tok t => t.bytes
+    | _ => []
+  if p.flagBarry && s != [60, 62] then
+    raiseError0 "SyntaxError" "with Barry as BDFL, use '<>' instead of '!='"
+    return .int (-1)
+  if !p.flagBarry then return .int (if s == [33, 61] then 0 else 1)
+  return .int 0
+
+/-- The conversion name does not start where the `!` ends. -/
+def notAdjacent (a0 a1 : Ast) : Bool :=
+  (locOf a0).lineno != (locOf a1).lineno || (locOf a0).endColOffset != (locOf a1).colOffset
+
+/-- `_PyPegen_check_fstring_conversion`, `Parser/action_helpers.c`. -/
+def checkFstringConversion (a0 a1 : Ast) : PM Ast := do
+  let lt := locOf a0
+  let lc := locOf a1
+  let pfx := tokPrefix (← get)
+  if notAdjacent a0 a1 then
+    let pc := chStr pfx
+    raiseRange "SyntaxError" a0 a1
+      s!"{pc}-string: conversion type must come right after the exclamation mark"
+    return .null
+  let id := match fieldOf a1 "id" with
+    | .ident s => s
+    | _ => []
+  let first := id.headD 0
+  if id.length > 1 || !(first == ch! 's' || first == ch! 'r' || first == ch! 'a') then
+    raiseErrorKnownLocation "SyntaxError" lc.lineno lc.colOffset lc.endLineno lc.endColOffset
+      s!"{chStr pfx}-string: invalid conversion character '{cpsStr id}': expected 's', 'r', or 'a'"
+    return .null
+  let m := match a0 with
+    | .tok t => (t.metadata.map Ast.str).getD .null
+    | _ => .null
+  return rec_ .PResultTokenWithMetadata [a1, m]
+
+/-- The message of `_PyPegen_arguments_parsing_error`. -/
+def argumentErrorMessage (kwargUnpacking : Bool) : String :=
+  if kwargUnpacking then "positional argument follows keyword argument unpacking"
+  else "positional argument follows keyword argument"
+
+/-- `_PyPegen_arguments_parsing_error`, `Parser/action_helpers.c`. -/
+def argumentsParsingError (e : Ast) : PM Ast := do
+  let kw := (seqOf (fieldOf e "keywords")).any fun k =>
+    match fieldOf k "arg" with
+    | .null => true
+    | _ => false
+  raiseError0 "SyntaxError" (argumentErrorMessage kw)
+  return .null
+
+/-- `_PyPegen_nonparen_genexp_in_call`, `Parser/action_helpers.c`. -/
+def nonparenGenexp (a0 a1 : Ast) : PM Ast := do
+  let cargs := seqOf (fieldOf a0 "args")
+  if cargs.length ≤ 1 then return .null
+  let last := (seqOf a1).getLastD .null
+  raiseRange "SyntaxError" (cargs.getLastD .null) (lastComprehensionItem last)
+    "Generator expression must be parenthesized"
+  return .null
+
+/-- `_PyPegen_register_stmts`, `Parser/action_helpers.c`. -/
+def registerStmts (a0 : Ast) : PM Ast := do
+  let p ← get
+  if !p.callInvalidRules then return a0
+  match (seqOf a0).getLast? with
+  | none => return a0
+  | some last =>
+    let l := locOf last
+    if p.lastStmt.1 > l.lineno then return a0
+    set { p with lastStmt := (l.lineno, l.colOffset) }
+    return a0
+
 /-- Call a helper of `Parser/action_helpers.c`, or a macro of `Parser/pegen.h`. -/
 def callHelper (h : Helper) (args : List Ast) : PM Ast := do
   let a0 := args.getD 0 .null
@@ -504,11 +608,7 @@ def callHelper (h : Helper) (args : List Ast) : PM Ast := do
     return mkAt .Name [.ident (id a0 ++ [46] ++ id a1), rec_ .Load []]
       ⟨la.lineno, la.colOffset, lb.endLineno, lb.endColOffset⟩
   | .seq_count_dots =>
-    let n := (seqOf a0).foldl (fun acc t =>
-      match t with
-      | .tok t => if t.type == TokKind.ELLIPSIS.num then acc + 3 else acc + 1
-      | _ => acc) (0 : Int)
-    return .int n
+    return .int ((seqOf a0).foldl (fun acc t => acc + dotWeight t) 0)
   | .alias_for_star =>
     return mkAst .alias_ ([.ident [42], .null] ++ args)
   | .map_names_to_ids => return .seq ((seqOf a0).map (fieldOf · "id"))
@@ -540,71 +640,26 @@ def callHelper (h : Helper) (args : List Ast) : PM Ast := do
     | x => return x
   | .keyword_or_starred => return rec_ .PKeywordOrStarred [a0, a1]
   | .seq_extract_starred_exprs =>
-    let xs := (seqOf a0).filter (fun k => match recField k 1 with
-      | .int 0 => true
-      | _ => false)
+    let xs := (seqOf a0).filter (fun k => !isKeywordRec k)
     return if xs.isEmpty then .null else .seq (xs.map (recField · 0))
   | .seq_delete_starred_exprs =>
-    let xs := (seqOf a0).filter (fun k => match recField k 1 with
-      | .int 0 => false
-      | _ => true)
+    let xs := (seqOf a0).filter isKeywordRec
     return if xs.isEmpty then .null else .seq (xs.map (recField · 0))
-  | .ensure_imaginary =>
-    if !(isConstant a0 && isComplexConst a0) then
-      let l := locOf a0
-      raiseErrorKnownLocation "SyntaxError" l.lineno l.colOffset l.endLineno l.endColOffset
-        "imaginary number required in complex literal"
-      return .null
-    return a0
-  | .ensure_real =>
-    if !isConstant a0 || isComplexConst a0 then
-      let l := locOf a0
-      raiseErrorKnownLocation "SyntaxError" l.lineno l.colOffset l.endLineno l.endColOffset
-        "real number required in complex literal"
-      return .null
-    return a0
+  | .ensure_imaginary => ensureImaginary a0
+  | .ensure_real => ensureReal a0
   | .make_module =>
     let ti := (← get).typeIgnores.map fun (line, tag) =>
       mkAst .TypeIgnore [.int line, .str (utf8Decode tag)]
     return mkAst .Module [a0, .seq ti]
   | .add_type_comment_to_arg => return addTypeComment a0 a1
   | .NEW_TYPE_COMMENT => return typeCommentOf a0
-  | .check_barry_as_flufl =>
-    let p ← get
-    let s := match a0 with
-      | .tok t => t.bytes
-      | _ => []
-    if p.flagBarry && s != [60, 62] then
-      raiseError0 "SyntaxError" "with Barry as BDFL, use '<>' instead of '!='"
-      return .int (-1)
-    if !p.flagBarry then return .int (if s == [33, 61] then 0 else 1)
-    return .int 0
+  | .check_barry_as_flufl => checkBarry a0
   | .check_legacy_stmt =>
     match a0 with
     | .node .Name (.ident id :: _) _ =>
       return .int (if id == [112, 114, 105, 110, 116] || id == [101, 120, 101, 99] then 1 else 0)
     | _ => return .int 0
-  | .check_fstring_conversion =>
-    let lt := locOf a0
-    let lc := locOf a1
-    let pfx := tokPrefix (← get)
-    if lt.lineno != lc.lineno || lt.endColOffset != lc.colOffset then
-      let pc := chStr pfx
-      raiseRange "SyntaxError" a0 a1
-        s!"{pc}-string: conversion type must come right after the exclamation mark"
-      return .null
-    let id := match fieldOf a1 "id" with
-      | .ident s => s
-      | _ => []
-    let first := id.headD 0
-    if id.length > 1 || !(first == ch! 's' || first == ch! 'r' || first == ch! 'a') then
-      raiseErrorKnownLocation "SyntaxError" lc.lineno lc.colOffset lc.endLineno lc.endColOffset
-        s!"{chStr pfx}-string: invalid conversion character '{cpsStr id}': expected 's', 'r', or 'a'"
-      return .null
-    let m := match a0 with
-      | .tok t => (t.metadata.map Ast.str).getD .null
-      | _ => .null
-    return rec_ .PResultTokenWithMetadata [a1, m]
+  | .check_fstring_conversion => checkFstringConversion a0 a1
   | .setup_full_format_spec => setupFullFormatSpec a0 a1 (int 2) (int 3) (int 4) (int 5)
   | .get_expr_name =>
     match exprName a0 with
@@ -614,22 +669,8 @@ def callHelper (h : Helper) (args : List Ast) : PM Ast := do
       return .null
   | .get_last_comprehension_item => return lastComprehensionItem a0
   | .collect_call_seqs => return collectCallSeqs a0 a1 (int 2) (int 3) (int 4) (int 5)
-  | .arguments_parsing_error =>
-    let kw := (seqOf (fieldOf a0 "keywords")).any fun k =>
-      match fieldOf k "arg" with
-      | .null => true
-      | _ => false
-    raiseError0 "SyntaxError"
-      (if kw then "positional argument follows keyword argument unpacking"
-       else "positional argument follows keyword argument")
-    return .null
-  | .nonparen_genexp_in_call =>
-    let cargs := seqOf (fieldOf a0 "args")
-    if cargs.length ≤ 1 then return .null
-    let last := (seqOf a1).getLastD .null
-    raiseRange "SyntaxError" (cargs.getLastD .null) (lastComprehensionItem last)
-      "Generator expression must be parenthesized"
-    return .null
+  | .arguments_parsing_error => argumentsParsingError a0
+  | .nonparen_genexp_in_call => nonparenGenexp a0 a1
   | .template_str =>
     match ← getResizedExprs a0 a1 a2 true with
     | none => return .null
@@ -693,16 +734,7 @@ def callHelper (h : Helper) (args : List Ast) : PM Ast := do
           modify fun p => { p with flagBarry := true }
     | _ => pure ()
     return mkAst .ImportFrom args
-  | .register_stmts =>
-    let p ← get
-    if !p.callInvalidRules then return a0
-    match (seqOf a0).getLast? with
-    | none => return a0
-    | some last =>
-      let l := locOf last
-      if p.lastStmt.1 > l.lineno then return a0
-      set { p with lastStmt := (l.lineno, l.colOffset) }
-      return a0
+  | .register_stmts => registerStmts a0
   | .interactive_exit => return .null
   | .PyErr_Occurred => return .int (if (← get).errOccurred then 1 else 0)
   | .asdl_seq_LEN => return .int ((seqOf a0).length : Int)

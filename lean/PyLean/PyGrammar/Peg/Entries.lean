@@ -1,7 +1,7 @@
 import PyLean.Registry
 import PyLean.PyGrammar.RowNames
 import PyLean.PyGrammar.Peg.Props
-import PyLean.PyGrammar.Peg.Facts
+import PyLean.PyGrammar.Peg.TokenProps
 
 /-! Registry entries for the `Peg` part of `PyGrammar`. -/
 
@@ -65,7 +65,7 @@ def entries : List Entry := [
     thm := some ``ruleNamesDistinct_proven },
   { id := "pygrammar-grammar-start-rules"
     pyFile := "Grammar/python.gram"
-    pyFns := ["rule:file", "rule:interactive", "rule:eval", "rule:func_type", "_PyPegen_parse"]
+    pyFns := []
     statement := "The four start rules dispatched by the trailer are the rules of those names."
     source := "invariant"
     status := .proven
@@ -156,26 +156,132 @@ def entries : List Entry := [
     prop := ``CUnparseRoundTrip
     thm := some ``cUnparseRoundTrip_refuted
     bug := some "pygrammar-unparse-c-fstring-repr" },
-  { id := "pygrammar-peg-tokenizer-error-fails"
+  { id := "pygrammar-peg-never-silent"
+    pyFile := "Parser/pegen.c"
+    pyFns := Rows.peg_never_silent
+    statement := "_PyPegen_run_parser never returns NULL without an exception set, from any state."
+    source := "invariant: SystemError 'parser returned NULL without error' is an internal error"
+    status := .proven
+    prop := ``ParserNeverSilent
+    thm := some ``parserNeverSilent_proven },
+  { id := "pygrammar-peg-tokenizer-error"
     pyFile := "Parser/pegen_errors.c"
-    pyFns := ["_Pypegen_tokenizer_error"]
-    statement := "_Pypegen_tokenizer_error returns -1 from every branch of its switch."
+    pyFns := Rows.peg_tokenizer_error
+    statement := "Every arm of _Pypegen_tokenizer_error returns -1 with an exception set, and " ++
+      "leaves mark, tokens and memo alone."
     source := "invariant"
-    status := .open
-    prop := ``TokenizerErrorIsFailure
-    notes := "Stated; the case split over the monadic body is not done." },
+    status := .proven
+    prop := ``TokenizerErrorSets
+    thm := some ``tokenizerErrorSets_proven },
+  { id := "pygrammar-peg-set-syntax-error"
+    pyFile := "Parser/pegen_errors.c"
+    pyFns := Rows.peg_set_syntax_error
+    statement := "_Pypegen_set_syntax_error always leaves an exception set, and an INDENT or " ++
+      "DEDENT last token gives the matching IndentationError."
+    source := "invariant"
+    status := .proven
+    prop := ``SetSyntaxError
+    thm := some ``setSyntaxError_proven },
+  { id := "pygrammar-peg-tokenize-full-source"
+    pyFile := "Parser/pegen_errors.c"
+    pyFns := Rows.peg_tokenize_full_source
+    statement := "Interactive input is left alone; otherwise a tokenizer error in regular mode " ++
+      "replaces the current exception, and any other outcome restores it."
+    source := "Parser/pegen_errors.c 'We don't want to tokenize to the end for interactive input'"
+    status := .proven
+    prop := ``TokenizeFullSource
+    thm := some ``tokenizeFullSource_proven },
+  { id := "pygrammar-peg-raise-known-location"
+    pyFile := "Parser/pegen_errors.c"
+    pyFns := Rows.peg_raise_known_location
+    statement := "With no exception yet, the raise sets class, message and line and resolves " ++
+      "CURRENT_POS; it never moves the parser."
+    source := "invariant"
+    status := .proven
+    prop := ``RaiseKnownLocation
+    thm := some ``raiseKnownLocation_proven },
+  { id := "pygrammar-peg-raise-error"
+    pyFile := "Parser/pegen_errors.c"
+    pyFns := Rows.peg_raise_error
+    statement := "RAISE_ERROR sets its class and message at the known error token, or line 0 " ++
+      "with no token read."
+    source := "invariant"
+    status := .proven
+    prop := ``RaiseErrorContract
+    thm := some ``raiseErrorContract_proven },
+  { id := "pygrammar-peg-raise-unclosed"
+    pyFile := "Parser/pegen_errors.c"
+    pyFns := Rows.peg_raise_unclosed
+    statement := "The unclosed-bracket error names the innermost open bracket, at its line."
+    source := "invariant"
+    status := .proven
+    prop := ``RaiseUnclosed
+    thm := some ``raiseUnclosed_proven },
+  { id := "pygrammar-peg-decode-error"
+    pyFile := "Parser/pegen_errors.c"
+    pyFns := Rows.peg_decode_error
+    statement := "_Pypegen_raise_decode_error returns -1; a decoding error becomes a SyntaxError " ++
+      "naming its kind, and any other exception is untouched."
+    source := "invariant"
+    status := .proven
+    prop := ``RaiseDecodeError
+    thm := some ``raiseDecodeError_proven },
+  { id := "pygrammar-peg-fill-token"
+    pyFile := "Parser/pegen.c"
+    pyFns := Rows.peg_fill_token
+    statement := "On success and on both failure paths, _PyPegen_fill_token appends one token " ++
+      "and one empty memo slot and leaves earlier tokens and the mark alone."
+    source := "invariant"
+    status := .proven
+    prop := ``FillToken
+    thm := some ``fillToken_proven },
+  { id := "pygrammar-peg-expect-token"
+    pyFile := "Parser/pegen.c"
+    pyFns := Rows.peg_expect_token
+    statement := "_PyPegen_expect_token takes a token exactly when its type matches, reads one " ++
+      "first at the end of the tokens, and on a read failure returns NULL with the mark unmoved."
+    source := "invariant"
+    status := .proven
+    prop := ``ExpectToken
+    thm := some ``expectToken_proven },
   { id := "pygrammar-peg-memo-cache"
     pyFile := "Parser/pegen.c"
-    pyFns := ["_PyPegen_update_memo", "_PyPegen_is_memoized"]
-    statement := "What _PyPegen_update_memo stores at the current token is what " ++
-      "_PyPegen_is_memoized finds there."
+    pyFns := Rows.peg_memo_cache
+    statement := "What _PyPegen_insert_memo or _PyPegen_update_memo stores at a read token is " ++
+      "what _PyPegen_is_memoized finds there, with the parser resuming at the stored mark."
     source := "invariant"
-    status := .open
+    status := .proven
     prop := ``MemoReturnsStored
-    notes := "Stated; needs Array.modify lemmas through the state monad." },
+    thm := some ``memoReturnsStored_proven },
+  { id := "pygrammar-peg-last-token"
+    pyFile := "Parser/pegen.c"
+    pyFns := Rows.peg_last_token
+    statement := "With a token behind the mark, the result is the last token behind it that is " ++
+      "not NEWLINE, INDENT, DEDENT or ENDMARKER, or the very first token."
+    source := "invariant"
+    status := .proven
+    prop := ``LastNonWhitespace
+    thm := some ``lastNonWhitespace_proven },
+  { id := "pygrammar-peg-strip-interpolation"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_strip_interpolation
+    statement := "What _strip_interpolation_expr returns does not end in whitespace or '='."
+    source := "invariant"
+    status := .proven
+    prop := ``StripInterpolation
+    thm := some ``stripInterpolation_proven },
+  { id := "pygrammar-peg-register-stmts"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_register_stmts
+    statement := "_PyPegen_register_stmts does nothing in the first pass; in the second it " ++
+      "records the last statement unless a later one is recorded."
+    source := "invariant"
+    status := .proven
+    prop := ``RegisterStmts
+    thm := some ``registerStmts_proven },
   { id := "pygrammar-peg-identifier-not-constant"
     pyFile := "Parser/pegen.c"
-    pyFns := ["_PyPegen_new_identifier"]
+    pyFns := []
     statement := "No identifier from _PyPegen_new_identifier is None, True or False, after NFKC."
     source := "invariant"
     status := .open
@@ -183,7 +289,7 @@ def entries : List Entry := [
     notes := "Stated; needs List.find? reasoning over the forbidden table." },
   { id := "pygrammar-peg-decimal-value"
     pyFile := "Parser/pegen.c"
-    pyFns := ["parsenumber_raw", "parsenumber"]
+    pyFns := []
     statement := "A decimal literal of up to 19 digits, not starting with 0, reads as its value."
     source := "invariant"
     status := .open
@@ -191,7 +297,7 @@ def entries : List Entry := [
     notes := "Stated. roundToBits, the exact float conversion, has no correctness proof either." },
   { id := "pygrammar-peg-terminates"
     pyFile := "Parser/pegen.c"
-    pyFns := ["_PyPegen_run_parser"]
+    pyFns := []
     statement := "For every source, runParser with default fuel does not exhaust its fuel."
     source := "invariant"
     status := .open
@@ -201,7 +307,7 @@ def entries : List Entry := [
       "mark. Nothing short of that is proved." },
   { id := "pygrammar-peg-parser-output-validates"
     pyFile := "Python/ast.c"
-    pyFns := ["_PyAST_Validate"]
+    pyFns := []
     statement := "Every tree parseStr returns passes validate."
     source := "invariant: the assert behind Py_DEBUG in _PyPegen_run_parser"
     status := .open

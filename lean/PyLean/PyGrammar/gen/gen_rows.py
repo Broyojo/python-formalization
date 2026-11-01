@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Generate lean/PyLean/PyGrammar/RowNames.lean and settle the coverage rows of this module.
 
-`ROWS` says, for each inventory file, which registry entry settles a row. A name maps to its
-entry through `OVERRIDE`, then through the file's default. Rows named in `EXCLUDE` become
-`excluded` with the given reason, and rows in `LEFT` stay `todo`. Lean gets the names as lists,
-so `pyFns` in the registry can never disagree with the tsv.
+A row is `modelled` only if `CREDIT` names it, and `CREDIT` is written by hand, row by row: the
+entry's theorem must depend on that function's body. For a refutation that means the function is
+on the path the bug takes, not merely run by the counterexample. Everything else is `todo`, even
+where the model and the difftest exist. Rows in `EXCLUDE` become `excluded` with the given reason.
+Lean gets the names as lists, so `pyFns` in the registry can never disagree with the tsv.
 """
 
 import csv
@@ -19,116 +20,99 @@ OUT = Path(__file__).resolve().parent.parent / "RowNames.lean"
 GENERATED = ("generated: emitted by pegen from Grammar/python.gram; Peg/GrammarData.lean holds the "
              "same rules, checked byte for byte against this file by gen/gen_grammar.py --check")
 
-# file stem -> (lean name, default entry or None)
-ROWS = {
-    "Grammar__python.gram": ("grammar", "pygrammar-grammar-left-recursion"),
-    "Parser__lexer__lexer.c": ("lexer", "pygrammar-lex-accepts-valid"),
-    "Parser__lexer__state.c": ("state", "pygrammar-lex-accepts-valid"),
-    "Parser__lexer__buffer.c": ("buffer", None),
-    "Parser__token.c": ("token", "pygrammar-lex-exact-tokens"),
-    "Parser__tokenizer__helpers.c": ("helpers", "pygrammar-lex-accepts-valid"),
-    "Parser__tokenizer__readline_tokenizer.c": ("readlineTok", "pygrammar-lex-accepts-valid"),
-    "Parser__tokenizer__string_tokenizer.c": ("stringTok", "pygrammar-peg-roundtrip-parser"),
-    "Parser__tokenizer__utf8_tokenizer.c": ("utf8Tok", "pygrammar-peg-roundtrip-parser"),
-    "Parser__tokenizer__file_tokenizer.c": ("fileTok", None),
-    "Parser__myreadline.c": ("myreadline", None),
-    "Python__Python-tokenize.c": ("pyTokenize", "pygrammar-lex-accepts-valid"),
-    "Parser__action_helpers.c": ("actions", "pygrammar-peg-roundtrip-actions"),
-    "Parser__pegen.c": ("pegen", "pygrammar-peg-roundtrip-parser"),
-    "Parser__pegen_errors.c": ("pegenErrors", "pygrammar-peg-first-error"),
-    "Parser__string_parser.c": ("stringParser", "pygrammar-peg-roundtrip-parser"),
-    "Parser__peg_api.c": ("pegApi", "pygrammar-peg-roundtrip-parser"),
-    "Parser__parser.c": ("parserC", None),
-    "Lib___ast_unparse.py": ("astUnparse", "pygrammar-unparse-roundtrip"),
-    "Python__ast_unparse.c": ("astUnparseC", "pygrammar-unparse-c-roundtrip"),
-    "Lib__tokenize.py": ("tokenizePy", None),
-    "Lib__ast.py": ("astPy", None),
-    "Lib__token.py": ("tokenPy", None),
-    "Python__ast.c": ("astC", "pygrammar-check-try-twin"),
-    "Python__ast_preprocess.c": ("preprocess", "pygrammar-check-syntax-only-identity"),
+STEMS = [
+    "Grammar__python.gram", "Parser__lexer__lexer.c", "Parser__lexer__state.c",
+    "Parser__lexer__buffer.c", "Parser__token.c", "Parser__tokenizer__helpers.c",
+    "Parser__tokenizer__readline_tokenizer.c", "Parser__tokenizer__string_tokenizer.c",
+    "Parser__tokenizer__utf8_tokenizer.c", "Parser__tokenizer__file_tokenizer.c",
+    "Parser__myreadline.c", "Python__Python-tokenize.c", "Parser__action_helpers.c",
+    "Parser__pegen.c", "Parser__pegen_errors.c", "Parser__string_parser.c", "Parser__peg_api.c",
+    "Parser__parser.c", "Lib___ast_unparse.py", "Python__ast_unparse.c", "Lib__tokenize.py",
+    "Lib__ast.py", "Lib__token.py", "Python__ast.c", "Python__ast_preprocess.c",
+]
+
+# entry -> {file stem: [row names]}
+CREDIT = {
+    "pygrammar-lex-nextc-in-buffer": {
+        "Parser__lexer__lexer.c": ["tok_nextc"],
+        "Parser__tokenizer__string_tokenizer.c": ["tok_underflow_string"],
+        "Parser__tokenizer__utf8_tokenizer.c": ["tok_underflow_string"],
+    },
+    "pygrammar-lex-debug-text": {"Parser__lexer__lexer.c": ["set_ftstring_expr"]},
+    "pygrammar-lex-accepts-valid": {
+        "Parser__lexer__lexer.c": ["_PyLexer_update_ftstring_expr", "tok_get_normal_mode",
+                                   "tok_get_fstring_mode", "tok_get", "_PyTokenizer_Get"]},
+    "pygrammar-lex-untokenize-lossless": {
+        "Lib__tokenize.py": ["Untokenizer.add_whitespace",
+                             "Untokenizer.add_backslash_continuation"]},
+    "pygrammar-ast-pad-whitespace": {"Lib__ast.py": ["_pad_whitespace"]},
+    "pygrammar-ast-docstring-twins": {"Python__ast.c": ["_PyAST_GetDocString"]},
+    "pygrammar-unparse-roundtrip": {
+        "Lib__ast.py": ["unparse"],
+        "Lib___ast_unparse.py": [
+            "Unparser._write_ftstring_inner", "Unparser._write_ftstring", "Unparser.visit_JoinedStr",
+            "Unparser.visit_FormattedValue", "Unparser._write_interpolation",
+            "Unparser._ftstring_helper", "Unparser._unparse_interpolation_value"],
+    },
+    "pygrammar-unparse-c-roundtrip": {
+        "Python__ast_unparse.c": ["append_joinedstr", "build_ftstring_body",
+                                  "append_fstring_element", "append_formattedvalue",
+                                  "append_ast_expr", "expr_as_unicode", "_PyAST_ExprAsUnicode"]},
+    "pygrammar-check-validate-name": {"Python__ast.c": ["validate_name"]},
+    "pygrammar-check-try-twin": {"Python__ast.c": ["validate_stmt"]},
+    "pygrammar-check-no-null-deref": {"Python__ast.c": ["validate_pattern", "validate_patterns"]},
+    "pygrammar-check-names-always": {"Python__ast.c": ["validate_expr"]},
+    "pygrammar-check-syntax-only-identity": {
+        "Python__ast_preprocess.c": [
+            "astfold_body", "astfold_mod", "astfold_expr", "astfold_keyword",
+            "astfold_comprehension", "astfold_arguments", "astfold_arg", "astfold_stmt",
+            "astfold_excepthandler", "astfold_withitem", "astfold_pattern", "astfold_match_case",
+            "astfold_type_param", "_PyAST_Preprocess"]},
+    "pygrammar-check-fold-value": {
+        "Python__ast_preprocess.c": ["fold_const_match_patterns", "make_const"]},
+    "pygrammar-check-format-args": {
+        "Python__ast_preprocess.c": ["parse_format", "optimize_format"]},
+    "pygrammar-check-docstring-body": {"Python__ast_preprocess.c": ["remove_docstring"]},
+    "pygrammar-peg-make-arguments": {
+        "Parser__action_helpers.c": ["_PyPegen_make_arguments", "_get_names", "_get_defaults"]},
+    "pygrammar-peg-concat": {"Parser__action_helpers.c": ["_build_concatenated_str"]},
+    "pygrammar-peg-strip-interpolation": {"Parser__action_helpers.c": ["_strip_interpolation_expr"]},
+    "pygrammar-peg-register-stmts": {"Parser__action_helpers.c": ["_PyPegen_register_stmts"]},
+    "pygrammar-peg-never-silent": {"Parser__pegen.c": ["_PyPegen_run_parser"]},
+    "pygrammar-peg-fill-token": {"Parser__pegen.c": ["_PyPegen_fill_token"]},
+    "pygrammar-peg-expect-token": {"Parser__pegen.c": ["_PyPegen_expect_token"]},
+    "pygrammar-peg-memo-cache": {
+        "Parser__pegen.c": ["_PyPegen_insert_memo", "_PyPegen_update_memo", "_PyPegen_is_memoized"]},
+    "pygrammar-peg-last-token": {"Parser__pegen.c": ["_PyPegen_get_last_nonnwhitespace_token"]},
+    "pygrammar-peg-raise-unclosed": {"Parser__pegen_errors.c": ["raise_unclosed_parentheses_error"]},
+    "pygrammar-peg-tokenizer-error": {"Parser__pegen_errors.c": ["_Pypegen_tokenizer_error"]},
+    "pygrammar-peg-decode-error": {"Parser__pegen_errors.c": ["_Pypegen_raise_decode_error"]},
+    "pygrammar-peg-tokenize-full-source": {
+        "Parser__pegen_errors.c": ["_PyPegen_tokenize_full_source_to_check_for_errors"]},
+    "pygrammar-peg-raise-error": {"Parser__pegen_errors.c": ["_PyPegen_raise_error"]},
+    "pygrammar-peg-raise-known-location": {
+        "Parser__pegen_errors.c": ["_PyPegen_raise_error_known_location"]},
+    "pygrammar-peg-set-syntax-error": {"Parser__pegen_errors.c": ["_Pypegen_set_syntax_error"]},
 }
 
-OVERRIDE = {
-    ("Lib__ast.py", "increment_lineno"): "pygrammar-ast-increment-lineno",
-    ("Lib__ast.py", "_splitlines_no_ff"): "pygrammar-ast-splitlines",
-    ("Lib__ast.py", "_pad_whitespace"): "pygrammar-ast-pad-whitespace",
-    ("Lib__ast.py", "get_docstring"): "pygrammar-ast-docstring-twins",
-    ("Lib__ast.py", "literal_eval"): "pygrammar-ast-literal-eval",
-    ("Lib__ast.py", "unparse"): "pygrammar-unparse-roundtrip",
-    ("Lib__tokenize.py", "_get_normal_name"): "pygrammar-lex-normal-name-twin",
-    ("Lib__tokenize.py", "detect_encoding"): "pygrammar-lex-cookie-twin",
-    ("Lib__tokenize.py", "Untokenizer.__init__"): "pygrammar-lex-untokenize-lossless",
-    ("Lib__tokenize.py", "Untokenizer.add_whitespace"): "pygrammar-lex-untokenize-lossless",
-    ("Lib__tokenize.py", "Untokenizer.add_backslash_continuation"): "pygrammar-lex-untokenize-lossless",
-    ("Lib__tokenize.py", "Untokenizer.escape_brackets"): "pygrammar-lex-untokenize-lossless",
-    ("Lib__tokenize.py", "Untokenizer.untokenize"): "pygrammar-lex-untokenize-lossless",
-    ("Lib__tokenize.py", "untokenize"): "pygrammar-lex-untokenize-lossless",
-    ("Lib__tokenize.py", "generate_tokens"): "pygrammar-lex-accepts-valid",
-    ("Lib__tokenize.py", "_generate_tokens_from_c_tokenizer"): "pygrammar-lex-accepts-valid",
-    ("Lib__tokenize.py", "TokenInfo.exact_type"): "pygrammar-lex-exact-type",
-    ("Lib__token.py", "ISTERMINAL"): "pygrammar-lex-token-predicates",
-    ("Lib__token.py", "ISNONTERMINAL"): "pygrammar-lex-token-predicates",
-    ("Lib__token.py", "ISEOF"): "pygrammar-lex-token-predicates",
-    ("Parser__lexer__lexer.c", "tok_nextc"): "pygrammar-lex-nextc-in-buffer",
-    ("Parser__lexer__lexer.c", "contains_null_bytes"): "pygrammar-lex-nextc-in-buffer",
-    ("Parser__lexer__lexer.c", "set_ftstring_expr"): "pygrammar-lex-debug-text",
-    ("Parser__tokenizer__helpers.c", "_PyTokenizer_translate_newlines"): "pygrammar-lex-translate-newlines",
-    ("Parser__tokenizer__helpers.c", "get_normal_name"): "pygrammar-lex-normal-name-twin",
-    ("Parser__tokenizer__helpers.c", "get_coding_spec"): "pygrammar-lex-cookie-twin",
-    ("Parser__tokenizer__helpers.c", "_PyTokenizer_check_coding_spec"): "pygrammar-lex-cookie-twin",
-    ("Parser__tokenizer__string_tokenizer.c", "tok_underflow_string"): "pygrammar-lex-nextc-in-buffer",
-    ("Parser__tokenizer__utf8_tokenizer.c", "tok_underflow_string"): "pygrammar-lex-nextc-in-buffer",
-    ("Python__ast.c", "validate_name"): "pygrammar-check-validate-name",
-    ("Python__ast.c", "validate_capture"): "pygrammar-check-validate-name",
-    ("Python__ast.c", "_validate_nonempty_seq"): "pygrammar-check-nonempty",
-    ("Python__ast.c", "validate_expr"): "pygrammar-check-names-always",
-    ("Python__ast.c", "expr_context_name"): "pygrammar-check-names-always",
-    ("Python__ast_preprocess.c", "remove_docstring"): "pygrammar-check-docstring-body",
-    ("Python__ast_preprocess.c", "stmt_seq_remove_item"): "pygrammar-check-docstring-body",
-    ("Python__ast_preprocess.c", "fold_const_match_patterns"): "pygrammar-check-fold-value",
-    ("Python__ast_preprocess.c", "make_const"): "pygrammar-check-fold-value",
-    ("Python__ast_preprocess.c", "parse_literal"): "pygrammar-check-format-args",
-    ("Python__ast_preprocess.c", "simple_format_arg_parse"): "pygrammar-check-format-args",
-    ("Python__ast_preprocess.c", "parse_format"): "pygrammar-check-format-args",
-    ("Python__ast_preprocess.c", "optimize_format"): "pygrammar-check-format-args",
-    ("Python__ast_preprocess.c", "fold_binop"): "pygrammar-check-format-args",
-    ("Python__ast_preprocess.c", "has_starred"): "pygrammar-check-format-args",
-    ("Parser__action_helpers.c", "_PyPegen_make_arguments"): "pygrammar-peg-make-arguments",
-    ("Parser__action_helpers.c", "_make_posonlyargs"): "pygrammar-peg-make-arguments",
-    ("Parser__action_helpers.c", "_make_posargs"): "pygrammar-peg-make-arguments",
-    ("Parser__action_helpers.c", "_make_posdefaults"): "pygrammar-peg-make-arguments",
-    ("Parser__action_helpers.c", "_make_kwargs"): "pygrammar-peg-make-arguments",
-    ("Parser__action_helpers.c", "_get_names"): "pygrammar-peg-make-arguments",
-    ("Parser__action_helpers.c", "_get_defaults"): "pygrammar-peg-make-arguments",
-    ("Parser__action_helpers.c", "_build_concatenated_str"): "pygrammar-peg-concat",
-    ("Parser__action_helpers.c", "_build_concatenated_joined_str"): "pygrammar-peg-concat",
-    ("Parser__action_helpers.c", "_PyPegen_concatenate_strings"): "pygrammar-peg-concat",
-    ("Parser__action_helpers.c", "_PyPegen_concatenate_tstrings"): "pygrammar-peg-concat",
-    ("Parser__pegen_errors.c", "_Pypegen_tokenizer_error"): "pygrammar-peg-roundtrip-parser",
-    ("Parser__pegen_errors.c", "_Pypegen_raise_decode_error"): "pygrammar-peg-roundtrip-parser",
-}
+# Entries that hold as properties but credit no row: `Rows.<id>` is empty for them.
+NO_ROWS = ["grammar-left-recursion", "peg-first-error", "peg-roundtrip-parser",
+           "peg-roundtrip-actions", "lex-exact-tokens", "check-nonempty"]
 
-# Rows with behaviour that no model reaches yet: they stay `todo`.
-LEFT = {
-    ("Parser__tokenizer__helpers.c", "_PyTokenizer_error_ret"),
-    ("Parser__tokenizer__helpers.c", "_PyTokenizer_raise_init_error"),
-    ("Parser__tokenizer__helpers.c", "_PyTokenizer_translate_into_utf8"),
-    ("Parser__tokenizer__helpers.c", "_PyTokenizer_check_bom"),
-    ("Parser__tokenizer__helpers.c", "valid_utf8"),
-    ("Parser__tokenizer__helpers.c", "_PyTokenizer_ensure_utf8"),
-    ("Parser__tokenizer__string_tokenizer.c", "buf_getc"),
-    ("Parser__tokenizer__string_tokenizer.c", "buf_ungetc"),
-    ("Parser__tokenizer__string_tokenizer.c", "buf_setreadl"),
-    ("Parser__tokenizer__string_tokenizer.c", "decode_str"),
-    ("Parser__tokenizer__string_tokenizer.c", "_PyTokenizer_FromString"),
-    ("Parser__pegen.c", "_PyPegen_set_syntax_error_metadata"),
-    ("Parser__pegen.c", "_PyPegen_run_parser_from_file_pointer"),
-    ("Parser__peg_api.c", "_PyParser_ASTFromFile"),
-    ("Parser__peg_api.c", "_PyParser_InteractiveASTFromFile"),
-}
+CREDITED = {(stem, name): entry for entry, files in CREDIT.items()
+            for stem, names in files.items() for name in names}
+
+WITHDRAWN = ("withdrawn: the model and difftest exist, but no theorem yet depends on this body")
 
 NOBEH = "no-behaviour: "
+TOKEN_GEN = "generated: emitted by Tools/build/generate_token.py from Grammar/Tokens"
 EXCLUDE = {
+    ("Parser__token.c", "_PyToken_OneChar"): TOKEN_GEN,
+    ("Parser__token.c", "_PyToken_TwoChars"): TOKEN_GEN,
+    ("Parser__token.c", "_PyToken_ThreeChars"): TOKEN_GEN,
+    ("Lib__token.py", "ISTERMINAL"): TOKEN_GEN,
+    ("Lib__token.py", "ISNONTERMINAL"): TOKEN_GEN,
+    ("Lib__token.py", "ISEOF"): TOKEN_GEN,
     ("Parser__lexer__state.c", "free_fstring_expressions"): NOBEH + "frees f-string buffers at teardown",
     ("Parser__lexer__state.c", "_PyTokenizer_Free"): NOBEH + "frees the tokenizer state",
     ("Parser__lexer__state.c", "_PyToken_Free"): NOBEH + "drops a metadata reference",
@@ -179,26 +163,28 @@ def write(stem, rows):
 def main():
     lean = ["/-! GENERATED by `gen/gen_rows.py` from `coverage/methods/`. Do not edit. -/", "",
             "namespace PyLean.PyGrammar.Rows", ""]
-    per_entry = {}
-    for stem, (lname, default) in ROWS.items():
+    per_entry = {e: [] for e in CREDIT}
+    per_entry.update({"pygrammar-" + e: [] for e in NO_ROWS})
+    withdrawn = {}
+    missing = [k for k, _ in CREDITED.items() if k[1] not in {r["name"] for r in read(k[0])}]
+    if missing:
+        sys.exit(f"credited rows missing from the inventory: {missing}")
+    for stem in STEMS:
         rows = read(stem)
-        names = []
         for r in rows:
             key = (stem, r["name"])
+            was = r["status"]
             if stem == "Parser__parser.c":
                 r.update(status="excluded", entry="", note=GENERATED)
-                continue
-            if key in LEFT:
-                continue
-            if key in EXCLUDE:
+            elif key in EXCLUDE:
                 r.update(status="excluded", entry="", note=EXCLUDE[key])
-                continue
-            entry = OVERRIDE.get(key, default)
-            if entry is None:
-                continue
-            r.update(status="modelled", entry=entry, note="")
-            per_entry.setdefault(entry, []).append(r["name"])
-            names.append(r["name"])
+            elif key in CREDITED:
+                r.update(status="modelled", entry=CREDITED[key], note="")
+                per_entry[CREDITED[key]].append(r["name"])
+            elif r["entry"].startswith("pygrammar-") or r["note"].startswith("withdrawn:"):
+                r.update(status="todo", entry="", note=WITHDRAWN)
+            if was == "modelled" and r["status"] != "modelled":
+                withdrawn[stem] = withdrawn.get(stem, 0) + 1
         if "--write" in sys.argv:
             write(stem, rows)
     for entry, names in sorted(per_entry.items()):
@@ -209,7 +195,8 @@ def main():
         lean += [f"def {lid} : List String := [\n  {body}]", ""]
     lean.append("end PyLean.PyGrammar.Rows")
     OUT.write_text("\n".join(lean) + "\n")
-    print({k: len(v) for k, v in per_entry.items()})
+    print("withdrawn or reclassified:", withdrawn, sum(withdrawn.values()))
+    print("credited:", {k: len(v) for k, v in per_entry.items() if v})
 
 
 if __name__ == "__main__":

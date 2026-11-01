@@ -1,41 +1,41 @@
 file	line	endline	name	signature	status	entry	note
-Parser/pegen.c	18	24	_PyPegen_interactive_exit	_PyPegen_interactive_exit(Parser *p)	modelled	pygrammar-peg-roundtrip-parser	
-Parser/pegen.c	27	49	_PyPegen_byte_offset_to_character_offset_line	_PyPegen_byte_offset_to_character_offset_line(PyObject *line, Py_ssize_t col_offset, Py_ssize_t end_col_offset)	modelled	pygrammar-peg-roundtrip-parser	
-Parser/pegen.c	52	66	_PyPegen_byte_offset_to_character_offset_raw	_PyPegen_byte_offset_to_character_offset_raw(const char* str, Py_ssize_t col_offset)	modelled	pygrammar-peg-roundtrip-parser	
-Parser/pegen.c	69	76	_PyPegen_byte_offset_to_character_offset	_PyPegen_byte_offset_to_character_offset(PyObject *line, Py_ssize_t col_offset)	modelled	pygrammar-peg-roundtrip-parser	
-Parser/pegen.c	81	94	_PyPegen_insert_memo	_PyPegen_insert_memo(Parser *p, int mark, int type, void *node)	modelled	pygrammar-peg-roundtrip-parser	
-Parser/pegen.c	98	110	_PyPegen_update_memo	_PyPegen_update_memo(Parser *p, int mark, int type, void *node)	modelled	pygrammar-peg-roundtrip-parser	
+Parser/pegen.c	18	24	_PyPegen_interactive_exit	_PyPegen_interactive_exit(Parser *p)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/pegen.c	27	49	_PyPegen_byte_offset_to_character_offset_line	_PyPegen_byte_offset_to_character_offset_line(PyObject *line, Py_ssize_t col_offset, Py_ssize_t end_col_offset)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/pegen.c	52	66	_PyPegen_byte_offset_to_character_offset_raw	_PyPegen_byte_offset_to_character_offset_raw(const char* str, Py_ssize_t col_offset)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/pegen.c	69	76	_PyPegen_byte_offset_to_character_offset	_PyPegen_byte_offset_to_character_offset(PyObject *line, Py_ssize_t col_offset)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/pegen.c	81	94	_PyPegen_insert_memo	_PyPegen_insert_memo(Parser *p, int mark, int type, void *node)	modelled	pygrammar-peg-memo-cache	
+Parser/pegen.c	98	110	_PyPegen_update_memo	_PyPegen_update_memo(Parser *p, int mark, int type, void *node)	modelled	pygrammar-peg-memo-cache	
 Parser/pegen.c	113	124	init_normalization	init_normalization(Parser *p)	excluded		no-behaviour: imports unicodedata.normalize once; Cfg.nfkc stands for its result
 Parser/pegen.c	127	134	growable_comment_array_init	growable_comment_array_init(growable_comment_array *arr, size_t initial_size) {	excluded		no-behaviour: allocation; the model keeps a list
 Parser/pegen.c	137	152	growable_comment_array_add	growable_comment_array_add(growable_comment_array *arr, int lineno, char *comment) {	excluded		no-behaviour: allocation; the model keeps a list
 Parser/pegen.c	155	160	growable_comment_array_deallocate	growable_comment_array_deallocate(growable_comment_array *arr) {	excluded		no-behaviour: frees comments
-Parser/pegen.c	163	179	_get_keyword_or_name_type	_get_keyword_or_name_type(Parser *p, struct token *new_token)	modelled	pygrammar-peg-roundtrip-parser	
-Parser/pegen.c	182	220	initialize_token	initialize_token(Parser *p, Token *parser_token, struct token *new_token, int token_type) {	modelled	pygrammar-peg-roundtrip-parser	
+Parser/pegen.c	163	179	_get_keyword_or_name_type	_get_keyword_or_name_type(Parser *p, struct token *new_token)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/pegen.c	182	220	initialize_token	initialize_token(Parser *p, Token *parser_token, struct token *new_token, int token_type) {	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/pegen.c	223	242	_resize_tokens_array	_resize_tokens_array(Parser *p) {	excluded		no-behaviour: grows the token array; only allocation failure is observable
-Parser/pegen.c	245	293	_PyPegen_fill_token	_PyPegen_fill_token(Parser *p)	modelled	pygrammar-peg-roundtrip-parser	
+Parser/pegen.c	245	293	_PyPegen_fill_token	_PyPegen_fill_token(Parser *p)	modelled	pygrammar-peg-fill-token	
 Parser/pegen.c	312	319	_PyPegen_clear_memo_statistics	_PyPegen_clear_memo_statistics(void)	excluded		test-support: Py_DEBUG statistics
 Parser/pegen.c	322	346	_PyPegen_get_memo_statistics	_PyPegen_get_memo_statistics(void)	excluded		test-support: Py_DEBUG statistics
-Parser/pegen.c	350	381	_PyPegen_is_memoized	_PyPegen_is_memoized(Parser *p, int type, void *pres)	modelled	pygrammar-peg-roundtrip-parser	
-Parser/pegen.c	413	427	_PyPegen_expect_token	_PyPegen_expect_token(Parser *p, int type)	modelled	pygrammar-peg-roundtrip-parser	
-Parser/pegen.c	430	440	_PyPegen_expect_forced_result	_PyPegen_expect_forced_result(Parser *p, void* result, const char* expected) {	modelled	pygrammar-peg-roundtrip-parser	
-Parser/pegen.c	443	462	_PyPegen_expect_forced_token	_PyPegen_expect_forced_token(Parser *p, int type, const char* expected) {	modelled	pygrammar-peg-roundtrip-parser	
-Parser/pegen.c	465	486	_PyPegen_expect_soft_keyword	_PyPegen_expect_soft_keyword(Parser *p, const char *keyword)	modelled	pygrammar-peg-roundtrip-parser	
-Parser/pegen.c	489	500	_PyPegen_get_last_nonnwhitespace_token	_PyPegen_get_last_nonnwhitespace_token(Parser *p)	modelled	pygrammar-peg-roundtrip-parser	
-Parser/pegen.c	503	570	_PyPegen_new_identifier	_PyPegen_new_identifier(Parser *p, const char *n)	modelled	pygrammar-peg-roundtrip-parser	
-Parser/pegen.c	573	590	_PyPegen_name_from_token	_PyPegen_name_from_token(Parser *p, Token* t)	modelled	pygrammar-peg-roundtrip-parser	
-Parser/pegen.c	593	597	_PyPegen_name_token	_PyPegen_name_token(Parser *p)	modelled	pygrammar-peg-roundtrip-parser	
-Parser/pegen.c	600	603	_PyPegen_string_token	_PyPegen_string_token(Parser *p)	modelled	pygrammar-peg-roundtrip-parser	
-Parser/pegen.c	605	620	_PyPegen_soft_keyword_token	expr_ty _PyPegen_soft_keyword_token(Parser *p) {	modelled	pygrammar-peg-roundtrip-parser	
-Parser/pegen.c	623	664	parsenumber_raw	parsenumber_raw(const char *s)	modelled	pygrammar-peg-roundtrip-parser	
-Parser/pegen.c	667	693	parsenumber	parsenumber(const char *s)	modelled	pygrammar-peg-roundtrip-parser	
-Parser/pegen.c	696	749	_PyPegen_number_token	_PyPegen_number_token(Parser *p)	modelled	pygrammar-peg-roundtrip-parser	
-Parser/pegen.c	755	778	bad_single_statement	bad_single_statement(Parser *p)	modelled	pygrammar-peg-roundtrip-parser	
-Parser/pegen.c	781	803	compute_parser_flags	compute_parser_flags(PyCompilerFlags *flags)	modelled	pygrammar-peg-roundtrip-parser	
-Parser/pegen.c	808	865	_PyPegen_Parser_New	_PyPegen_Parser_New(struct tok_state *tok, int start_rule, int flags, int feature_version, int *errcode, const char* source, PyArena *arena)	modelled	pygrammar-peg-roundtrip-parser	
+Parser/pegen.c	350	381	_PyPegen_is_memoized	_PyPegen_is_memoized(Parser *p, int type, void *pres)	modelled	pygrammar-peg-memo-cache	
+Parser/pegen.c	413	427	_PyPegen_expect_token	_PyPegen_expect_token(Parser *p, int type)	modelled	pygrammar-peg-expect-token	
+Parser/pegen.c	430	440	_PyPegen_expect_forced_result	_PyPegen_expect_forced_result(Parser *p, void* result, const char* expected) {	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/pegen.c	443	462	_PyPegen_expect_forced_token	_PyPegen_expect_forced_token(Parser *p, int type, const char* expected) {	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/pegen.c	465	486	_PyPegen_expect_soft_keyword	_PyPegen_expect_soft_keyword(Parser *p, const char *keyword)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/pegen.c	489	500	_PyPegen_get_last_nonnwhitespace_token	_PyPegen_get_last_nonnwhitespace_token(Parser *p)	modelled	pygrammar-peg-last-token	
+Parser/pegen.c	503	570	_PyPegen_new_identifier	_PyPegen_new_identifier(Parser *p, const char *n)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/pegen.c	573	590	_PyPegen_name_from_token	_PyPegen_name_from_token(Parser *p, Token* t)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/pegen.c	593	597	_PyPegen_name_token	_PyPegen_name_token(Parser *p)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/pegen.c	600	603	_PyPegen_string_token	_PyPegen_string_token(Parser *p)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/pegen.c	605	620	_PyPegen_soft_keyword_token	expr_ty _PyPegen_soft_keyword_token(Parser *p) {	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/pegen.c	623	664	parsenumber_raw	parsenumber_raw(const char *s)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/pegen.c	667	693	parsenumber	parsenumber(const char *s)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/pegen.c	696	749	_PyPegen_number_token	_PyPegen_number_token(Parser *p)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/pegen.c	755	778	bad_single_statement	bad_single_statement(Parser *p)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/pegen.c	781	803	compute_parser_flags	compute_parser_flags(PyCompilerFlags *flags)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/pegen.c	808	865	_PyPegen_Parser_New	_PyPegen_Parser_New(struct tok_state *tok, int start_rule, int flags, int feature_version, int *errcode, const char* source, PyArena *arena)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/pegen.c	868	877	_PyPegen_Parser_Free	_PyPegen_Parser_Free(Parser *p)	excluded		no-behaviour: frees the parser
-Parser/pegen.c	880	894	reset_parser_state_for_error_pass	reset_parser_state_for_error_pass(Parser *p)	modelled	pygrammar-peg-roundtrip-parser	
-Parser/pegen.c	897	900	_is_end_of_source	_is_end_of_source(Parser *p) {	modelled	pygrammar-peg-roundtrip-parser	
+Parser/pegen.c	880	894	reset_parser_state_for_error_pass	reset_parser_state_for_error_pass(Parser *p)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/pegen.c	897	900	_is_end_of_source	_is_end_of_source(Parser *p) {	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/pegen.c	903	945	_PyPegen_set_syntax_error_metadata	_PyPegen_set_syntax_error_metadata(Parser *p) {	todo		
-Parser/pegen.c	948	1000	_PyPegen_run_parser	_PyPegen_run_parser(Parser *p)	modelled	pygrammar-peg-roundtrip-parser	
+Parser/pegen.c	948	1000	_PyPegen_run_parser	_PyPegen_run_parser(Parser *p)	modelled	pygrammar-peg-never-silent	
 Parser/pegen.c	1003	1051	_PyPegen_run_parser_from_file_pointer	_PyPegen_run_parser_from_file_pointer(FILE *fp, int start_rule, PyObject *filename_ob, const char *enc, const char *ps1, const char *ps2, PyCompilerFlags *flags, int *errcode, PyObject **interactive_src, PyArena *arena)	todo		
-Parser/pegen.c	1054	1096	_PyPegen_run_parser_from_string	_PyPegen_run_parser_from_string(const char *str, int start_rule, PyObject *filename_ob, PyCompilerFlags *flags, PyArena *arena)	modelled	pygrammar-peg-roundtrip-parser	
+Parser/pegen.c	1054	1096	_PyPegen_run_parser_from_string	_PyPegen_run_parser_from_string(const char *str, int start_rule, PyObject *filename_ob, PyCompilerFlags *flags, PyArena *arena)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body

@@ -428,6 +428,9 @@ def make_case(src, rng):
         c["type_comments"] = True
     if rng.random() < 0.05:
         c["feature_version"] = rng.choice([4, 5, 6, 7, 8, 9, 10, 12, 13])
+    if rng.random() < 0.15:
+        # PyCF_DONT_IMPLY_DEDENT, PyCF_ALLOW_INCOMPLETE_INPUT, CO_FUTURE_BARRY_AS_BDFL
+        c["flags"] = rng.choice([0x200, 0x4000, 0x4200, 0x400000, 0x404200])
     return c
 
 
@@ -454,12 +457,12 @@ def gen_case_peg(rng):
 
 def run_python_peg(c):
     src = bytes(c["src"]).decode("utf-8")
-    flags = ast.PyCF_ONLY_AST
+    flags = ast.PyCF_ONLY_AST | c.get("flags", 0)
     if c.get("type_comments"):
         flags |= ast.PyCF_TYPE_COMMENTS
     fv = c.get("feature_version", -1)
     try:
-        t = compile(src, "<unknown>", c["mode"], flags=flags, _feature_version=fv)
+        t = compile(src, "<unknown>", c["mode"], flags=flags, _feature_version=fv, dont_inherit=True)
         return {"ok": enc(t)}
     except SyntaxError as e:
         text = None if e.text is None else [ord(x) for x in e.text]
@@ -605,7 +608,7 @@ def src_case(rng):
         s = rng.choice(FOLD)
     elif r < 0.65:
         s = gen_source(rng)
-    elif r < 0.9:
+    elif r < 0.99:
         s = rng.choice(CORPUS)
     else:
         path = rng.choice(LIBFILES)
