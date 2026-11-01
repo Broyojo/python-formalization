@@ -955,61 +955,107 @@ def dictHashKey (rt : Rt) (key : Val) : M Unit := do
       else raise e
     | _ => raise e
 
-/-- `PyDict_MergeFromSeq2`, `Objects/dictobject.c`: each item must be a pair. -/
-def mergeSeq2 (rt : Rt) : Nat → List (Val × Val) → List Val → M (List (Val × Val))
-  | _, es, [] => pure es
-  | i, es, x :: xs => do
-    let w ← getW
-    let items ← tryM (rt.listItems x) fun e => do
-      let w ← getW
-      if excMatches w e B.TypeError then
-        typeErr "object is not iterable"
-      else raise e
-    match items with
-    | [k, v] =>
-      let _ := w
-      dictHashKey rt k
-      mergeSeq2 rt (i + 1) (dictSetEntry es k v) xs
-    | _ =>
-      valueErr s!"dictionary update sequence element #{i} has length {items.length}; 2 is required"
+/-- `_PyErr_FormatNote`, `Python/errors.c:1262`: `_PyException_AddNote` on the raised exception,
+which is raised again. If adding the note fails, that error is what propagates; C chains the first
+exception to it (`:1283`), which the model does not. -/
+def raiseWithNote {α : Type} (rt : Rt) (e : PyErr) (note : String) : M α := do
+  let x ← excObject e
+  pyExceptionAddNote rt x (.str note)
+  raise (match e with
+    | .exc c m _ => .exc c m (some x)
+    | e => e)
 
-/-- The generic path of `dict_merge`, `Objects/dictobject.c`: `PyMapping_Keys(b)`, then
-`b[key]` for each key. -/
-def dictMergeKeys (rt : Rt) (b : Val) : List (Val × Val) → List Val → M (List (Val × Val))
-  | es, [] => pure es
-  | es, k :: ks => do
-    let v ← rt.getItem b k
-    dictHashKey rt k
-    dictMergeKeys rt b (dictSetEntry es k v) ks
+/-- `setitem_lock_held` on the dict at `addr`: hash the key, then store. -/
+def dictSetAt (rt : Rt) (addr : Addr) (k v : Val) : M Unit := do
+  dictHashKey rt k
+  modObj addr fun o =>
+    match o.body with
+    | .dict es => { o with body := .dict (dictSetEntry es k v) }
+    | body => { o with body := body }
 
-/-- `dict_update_arg`, `Objects/dictobject.c`: an exact dict is merged; otherwise `keys`
-decides between a mapping merge and a sequence of pairs. A dict subclass keeping `dict_iter`
-merges directly. -/
-def dictUpdateArg (rt : Rt) (es : List (Val × Val)) (x : Val) : M (List (Val × Val)) := do
+/-- `dict_dict_merge`: the entries of a dict with `dict_iter`, which runs no Python code. -/
+def dictMergeEntries (addr : Addr) (es : List (Val × Val)) : M Unit :=
+  modObj addr fun o =>
+    match o.body with
+    | .dict d => { o with body := .dict (es.foldl (fun d (k, v) => dictSetEntry d k v) d) }
+    | body => { o with body := body }
+
+/-- `PySequence_Fast(v, "object is not iterable")`, `Objects/abstract.c`: an exact list or tuple
+is used as it is, and only a `TypeError` from `PyObject_GetIter` is replaced. -/
+def seqFastItems (rt : Rt) (v : Val) : M (List Val) := do
   let w ← getW
-  if typeOf w x == B.dict then
-    pure (((dictOf w x).getD []).foldl (fun d (k, v) => dictSetEntry d k v) es)
+  match v with
+  | .tuple xs => pure xs
+  | _ =>
+    if typeOf w v == B.list then pure ((listOf w v).getD []) else
+    let it ← tryM (rt.getIter v) fun e => do
+      let w ← getW
+      if excMatches w e B.TypeError then typeErr "object is not iterable" else raise e
+    rt.listItems it
+
+/-- The loop of `PyDict_MergeFromSeq2`, `Objects/dictobject.c:3810-3866`: each pair is stored as
+it arrives, so the pairs before a failure stay in the dict. -/
+def mergeSeq2Loop (rt : Rt) (addr : Addr) (it : Val) : Nat → Nat → M Unit
+  | 0, _ => raise .fuel
+  | fuel + 1, i => do
+    match ← rt.iterNext it with
+    | none => pure ()
+    | some item =>
+      let items ← tryM (seqFastItems rt item) fun e => do
+        let w ← getW
+        if excMatches w e B.TypeError then
+          raiseWithNote rt e s!"Cannot convert dictionary update sequence element #{i} to a sequence"
+        else raise e
+      match items with
+      | [k, v] =>
+        dictSetAt rt addr k v
+        mergeSeq2Loop rt addr it fuel (i + 1)
+      | _ =>
+        valueErr s!"dictionary update sequence element #{i} has length {items.length}; 2 is required"
+
+/-- The generic loop of `dict_merge`, `Objects/dictobject.c:4042-4075`: `b[key]`, then the store,
+key by key. -/
+def dictMergeLoop (rt : Rt) (addr : Addr) (b it : Val) : Nat → M Unit
+  | 0 => raise .fuel
+  | fuel + 1 => do
+    match ← rt.iterNext it with
+    | none => pure ()
+    | some k =>
+      let v ← rt.getItem b k
+      dictSetAt rt addr k v
+      dictMergeLoop rt addr b it fuel
+
+/-- `dict_update_arg`, `Objects/dictobject.c:3735`, into the dict at `addr`, which `dict_or`,
+`dict_ior` and `dict_update_common` each supply. -/
+def dictUpdateArg (rt : Rt) (addr : Addr) (x : Val) : M Unit := do
+  let w ← getW
+  if typeOf w x == B.dict then dictMergeEntries addr ((dictOf w x).getD [])
   else
     match ← rt.getOptionalAttr x "keys" with
     | some _ =>
       let w ← getW
+      -- `dict_merge`, `:4008`.
       if (dictOf w x).isSome && slotOf w (typeOf w x) .tp_iter == some (.c .dict) then
-        pure (((dictOf w x).getD []).foldl (fun d (k, v) => dictSetEntry d k v) es)
+        dictMergeEntries addr ((dictOf w x).getD [])
       else
+        -- `PyMapping_Keys`, then `method_output_as_list`, `Objects/abstract.c:2424`: an exact
+        -- list is returned as it is, so the loop below sees later changes to it.
         let f ← rt.getAttr x "keys"
         let out ← rt.call f [] []
-        -- `method_output_as_list`, `Objects/abstract.c:2433-2447`: only `PyObject_GetIter` has
-        -- its TypeError replaced, not an error raised by the iteration itself.
-        let it ← tryM (rt.getIter out) fun e => do
-          let w ← getW
-          if excMatches w e B.TypeError then
-            typeErr s!"{trunc 200 (typeName w x)}.keys() returned a non-iterable (type {trunc 200 (typeName w out)})"
-          else raise e
-        let keys ← rt.listItems it
-        dictMergeKeys rt x es keys
+        let w ← getW
+        let keys ← if typeOf w out == B.list then pure out else do
+          let it ← tryM (rt.getIter out) fun e => do
+            let w ← getW
+            if excMatches w e B.TypeError then
+              typeErr s!"{trunc 200 (typeName w x)}.keys() returned a non-iterable (type {trunc 200 (typeName w out)})"
+            else raise e
+          let xs ← rt.listItems it
+          alloc B.list (.list xs)
+        let it ← rt.getIter keys
+        dictMergeLoop rt addr x it iterFuel
     | none =>
-      let items ← rt.listItems x
-      mergeSeq2 rt 0 es items
+      let it ← rt.getIter x
+      mergeSeq2Loop rt addr it iterFuel 0
 
 /-- `long_add`, `long_sub`, ... on values that passed `CHECK_BINOP`. -/
 def longBinary (s : Slot) (a b : Int) : M Val :=
@@ -1101,8 +1147,13 @@ def callNbBinary (rt : Rt) (s : Slot) (f : SlotFn) (a b : Val) : M Val := do
     -- asked for `keys`, then merged directly if it has `dict_iter`.
     match dictOf w a, dictOf w b with
     | some x, some _ =>
-      let merged ← dictUpdateArg rt x b
-      alloc B.dict (.dict merged)
+      -- A failed update drops the copy, so its partial state cannot be seen.
+      let new ← alloc B.dict (.dict x)
+      match new with
+      | .obj addr =>
+        dictUpdateArg rt addr b
+        pure new
+      | _ => gap%
     | _, _ => pure .notImpl
   | _ => gap%
 
@@ -1338,10 +1389,8 @@ where
     match f, a with
     | .generic, _ => vectorcallMethod rt idunder [a, b]
     | .c .dict, .obj addr =>
-      -- `dict_ior`, `Objects/dictobject.c`.
-      let w ← getW
-      let merged ← dictUpdateArg rt ((dictOf w a).getD []) b
-      modObj addr fun o => { o with body := .dict merged }
+      -- `dict_ior`, `Objects/dictobject.c:4793`.
+      dictUpdateArg rt addr b
       pure a
     | .c .mappingproxy, _ =>
       -- `mappingproxy_ior`, `Objects/descrobject.c:1077`.

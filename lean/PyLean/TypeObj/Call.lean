@@ -328,18 +328,16 @@ def listInit (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Unit := do
     listExtend rt self a x
   | _, _ => gap%
 
-/-- `dict_init` through `dict_update_arg`, `Objects/dictobject.c`: a dict is merged, an
-object with `keys` is merged by key, anything else is a sequence of pairs. Keywords are
-then added. -/
+/-- `dict_init` through `dict_update_common`, `Objects/dictobject.c:3751`: the argument, then the
+keywords, are merged into `self`, which keeps what it held. -/
 def dictInit (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Unit := do
-  let w ← getW
   unpackTuple "dict" 0 1 args.length
-  let base : List (Val × Val) ← match args with
-    | [] => pure []
-    | x :: _ => dictUpdateArg rt [] x
-  let all := kw.foldl (fun es (k, v) => dictSetEntry es (.str k) v) base
   match self with
-  | .obj a => modObj a fun o => { o with body := .dict all }
+  | .obj a =>
+    match args with
+    | [] => pure ()
+    | x :: _ => dictUpdateArg rt a x
+    dictMergeEntries a (kw.map fun (k, v) => (Val.str k, v))
   | _ => gap%
 
 /-- `property_init_impl`, `Objects/descrobject.c:1837`, with the clinic argument

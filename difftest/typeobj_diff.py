@@ -1443,6 +1443,15 @@ def fam_descr_proto(g):
               call(name("repr"), call(name("staticmethod"), attr(name("a"), "m"))),
               ["sub", name("type"), lit(1)]]:
         g.probe(e)
+    # A __set_name__ that raises: the note goes on as a __notes__ attribute.
+    cls(g, "SN", (), [g.method("__set_name__", "SN.__set_name__", ["s", "o", "n"],
+                               [["raise", call(name(r.choice(["ValueError", "TypeError"])), lit("sn"))]])])
+    g.main.append(["assign", "nn", NONE])
+    g.main.append(["try", [["assign", "T", call(name("type"), lit("T"), ["tuple", []],
+                                                ["dict", [[lit("x"), call(name("SN"))]]])]],
+                   name("BaseException"), "t",
+                   [["assign", "nn", call(name("getattr"), name("t"), lit("__notes__"), NONE)]]])
+    g.probe(name("nn"))
     # The two parsers of super: exact super is super_vectorcall, the rest super_init.
     cls(g, "S", ["super"], None)
     for f in ["super", "S"]:
@@ -1457,9 +1466,84 @@ def fam_descr_proto(g):
     g.probe(call(attr(["dict", []], "__or__"), lit(1)))
 
 
+def fam_dict_update(g):
+    """dict update paths, which all store as they go: the pairs before a failure stay, an update
+    merges into what the dict holds, and the iterators and keys() are live."""
+    r = g.rng
+    k = r.choice([0, 1, 2, 3])
+    exc = r.choice(["ValueError", "TypeError", "KeyError", "StopIteration"])
+    item = r.choice([["tuple", [attr(name("s"), "n"), lit(1)]],
+                     ["list", [attr(name("s"), "n"), lit(1)]],
+                     ["tuple", [lit(1), lit(2), lit(3)]], ["tuple", [lit(1)]], lit(5), NONE,
+                     ["tuple", [["list", []], lit(1)]], lit("ab"), lit("abc")])
+    step = [["log", "P.__next__"],
+            ["setattr", name("s"), "n", ["bin", "+", attr(name("s"), "n"), lit(1)]],
+            ["if", ["cmp", ">", attr(name("s"), "n"), lit(k)],
+             [["raise", call(name(exc), lit("e"))]], []],
+            ["ret", ["tuple", [attr(name("s"), "n"), lit(1)]] if r.random() < 0.6 else item]]
+    p = [g.method("__iter__", "P.__iter__", ["s"], [["log", "P.__iter__"], ["ret", name("s")]]),
+         g.method("__next__", "P.__next__", ["s"], step),
+         simple_method(g, "__len__", "P.__len__", ["s"], lit(3))]
+    cls(g, "P", (), p)
+    getit = [["log", "K.__getitem__"]]
+    if r.random() < 0.4:
+        getit.append(["expr", call(attr(attr(name("s"), "ks"), "append"), lit(9))])
+    getit.append(["if", ["cmp", ">", name("x"), lit(k)],
+                  [["raise", call(name(exc), lit("e"))]], []])
+    getit.append(["ret", name("x")])
+    keys_ret = r.choice([attr(name("s"), "ks"), call(name("tuple"), attr(name("s"), "ks")),
+                         lit(5), NONE])
+    cls(g, "K", (), [g.method("keys", "K.keys", ["s"], [["log", "K.keys"], ["ret", keys_ret]]),
+                     g.method("__getitem__", "K.__getitem__", ["s", "x"], getit)])
+    cls(g, "DS", ["dict"], [g.method("__iter__", "DS.__iter__", ["s"],
+                                     [["log", "DS.__iter__"], ["ret", lit(3)]])])
+
+    def src(kind):
+        if kind == "pairs":
+            g.main.append(["assign", "x", call(name("P"))])
+            g.main.append(["setattr", name("x"), "n", lit(0)])
+        else:
+            g.main.append(["assign", "x", call(name("K"))])
+            g.main.append(["setattr", name("x"), "ks", ["list", [lit(0), lit(1), lit(2), lit(3)]]])
+
+    for kind in ("pairs", "keys"):
+        for tgt in (["dict", [[lit(9), lit(9)]]], call(name("DS"), ["dict", [[lit(9), lit(9)]]])):
+            src(kind)
+            g.main.append(["assign", "d", tgt])
+            g.main.append(["assign", "nn", NONE])
+            # The note on a TypeError from an item that is not a sequence.
+            g.main.append(["try", [["aug", "d", "|", name("x")]], name("BaseException"), "t",
+                           [["assign", "nn", call(name("getattr"), name("t"), lit("__notes__"), NONE)]]])
+            g.probe(name("nn"))
+            g.probe(name("d"))
+            src(kind)
+            g.main.append(["assign", "d", tgt])
+            g.probe(call(attr(name("d"), "__init__"), name("x")))
+            g.probe(name("d"))
+            src(kind)
+            g.main.append(["assign", "d", tgt])
+            g.probe(["bin", "|", name("d"), name("x")])
+            g.probe(name("d"))
+        src(kind)
+        g.probe(call(name("dict"), name("x")))
+    g.main.append(["assign", "d", ["dict", [[lit(9), lit(9)]]]])
+    g.probe(call(attr(name("d"), "__init__")))
+    g.probe(name("d"))
+    g.probe(call(attr(name("d"), "__init__"), ["dict", [[lit(1), lit(2)]]]))
+    g.probe(name("d"))
+    g.probe(call(attr(name("d"), "__init__"), ["list", [["tuple", [lit(3), lit(4)]]]]))
+    g.probe(name("d"))
+    g.main.append(["assign", "e", call(name("DS"), ["dict", [[lit(5), lit(6)]]])])
+    g.probe(call(name("dict"), name("e")))
+    g.probe(["bin", "|", ["dict", []], name("e")])
+    g.probe(call(attr(name("d"), "__init__"), name("e")))
+    g.probe(name("d"))
+
+
 FAMILIES = [fam_calls, fam_property, fam_super, fam_mro, fam_class_stmt, fam_class_assign,
             fam_wrappers, fam_abstract, fam_type_attrs, fam_slot_updates, fam_descriptors,
-            fam_iter_seq, fam_numbers, fam_list_extend, fam_repr, fam_descr_proto]
+            fam_iter_seq, fam_numbers, fam_list_extend, fam_repr, fam_descr_proto,
+            fam_dict_update]
 
 
 def gen_case(rng):
