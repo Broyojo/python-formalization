@@ -1,0 +1,70 @@
+id: decimal-pydecimal-floordiv-no-finalize
+title: "_pydecimal's // and divmod return the quotient without _fix, so it can exceed Emax with no Overflow, unlike _decimal"
+priority: P4
+kind: twin-disagreement
+module: decimal
+files: [Lib/_pydecimal.py]
+functions: ["Decimal.__floordiv__", "Decimal.__divmod__", "Decimal._divide"]
+summary: |
+  __floordiv__ and __divmod__ return the quotient of _divide directly. Every other arithmetic result
+  in the module goes through _fix, and libmpdec finalizes this one too, so in a context whose Emax is
+  below prec - 1 the twins differ:
+    c = Context(prec=28, Emax=10, Emin=-10)
+    c.divide_int(Decimal(10)**20, Decimal(1))
+        _pydecimal -> Decimal('100000000000000000000'), adjusted exponent 20 > Emax, no flags
+        _decimal   -> raises Overflow (untrapped: Infinity with Overflow, Inexact, Rounded)
+    c = Context(prec=9, Emax=5, clamp=1, traps=[])
+    c.divide_int(Decimal('3E+3'), Decimal(-10))
+        _pydecimal -> Decimal('-300')       no flags
+        _decimal   -> Decimal('-300.000')   Clamped
+  The same value appears as the first item of divmod(). The remainder is finalized by both twins.
+likelihood: |
+  Very low. It takes both _pydecimal and a context with Emax < prec - 1, and the default Emax is
+  999999. For Emax >= prec - 1 the quotient, an integer below 10**prec, is always in range; the Lean
+  statement that the twins then agree is registered and still open, with fix_int as its main lemma.
+maybe_intended: |
+  Possibly. The code may assume that a quotient at exponent 0 never needs finalizing, which holds for
+  every context in the test data, and the spec does not obviously address integer division in a
+  context this narrow, so a maintainer could call either twin correct. Recorded because the twins
+  differ and a value outside the context's range comes back with no signal.
+reproducer: |
+  import _pydecimal as P, _decimal as C
+  def probe(M):
+      c = M.Context(prec=28, Emax=10, Emin=-10, traps=[])
+      q = c.divide_int(M.Decimal(10) ** 20, M.Decimal(1))
+      over = bool(c.flags[M.Overflow])
+      d = M.Context(prec=9, Emax=5, Emin=-30, clamp=1, traps=[])
+      r = d.divide_int(M.Decimal('3E+3'), M.Decimal(-10))
+      return str(q), over, str(r), bool(d.flags[M.Clamped])
+  p, c = probe(P), probe(C)
+  print('_pydecimal', p)
+  print('_decimal  ', c)
+  if p == ('100000000000000000000', False, '-300', False) and c == ('Infinity', True, '-300.000', True):
+      print('REPRODUCED decimal-pydecimal-floordiv-no-finalize')
+expected: |
+  The same result and flags from both twins. Doc/library/decimal.rst:1737: Overflow "Indicates the
+  exponent is larger than Context.Emax after rounding has occurred", which favours _decimal.
+promised_by: |
+  Twin agreement; Doc/library/decimal.rst:1737-1741 on Overflow.
+cause: |
+  Lib/_pydecimal.py:1554 `return self._divide(other, context)[0]`, and :1408-1410 where __divmod__
+  applies _fix to the remainder only. In _divide (:1336-1367) the quotient is
+  `_dec_from_triple(sign, str(q), 0)`. libmpdec: Modules/_decimal/libmpdec/mpdecimal.c:4190
+  `mpd_qfinalize(q, ctx, status);` in mpd_qdivint and :4146 in mpd_qdivmod. Same on main at
+  Lib/_pydecimal.py:1653.
+possible_fix: |
+  Apply _fix to the quotient in __floordiv__ and __divmod__, as to every other result.
+tested:
+  python3 (3.14.7, Linux, bundled libmpdec 2.5.1): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev, bundled libmpdec 2.5.1): REPRODUCED
+duplicates:
+  issues: []
+  related: [140036]
+  queries: ["decimal floordiv Overflow Emax", "decimal divide_int Emax", "decimal divmod quotient clamp",
+            "_pydecimal __floordiv__ _fix", "_pydecimal divide_int overflow",
+            "decimal integer division context Emax"]
+  bugforge: "no decimal entries in vendor/bugforge-results/README.md"
+lean:
+  property: PyLean.Decimal.FloordivTwinsAgree
+  theorem: PyLean.Decimal.floordivTwinsAgree_refuted
+  narrowed: PyLean.Decimal.FloordivTwinsAgreeInRange

@@ -24,11 +24,18 @@ def RaiseErrorCorrect : Prop :=
         .ok (handle c cnd, if cnd.signal ∈ fl then fl else fl ++ [cnd.signal])) ∧
     (cnd.signal ∉ ignored → cnd.signal ∈ c.traps →
       (raiseError c ignored cnd).run fl = .error (.named cnd.signal.name "~")) ∧
-    (raiseError c [] cnd).run fl = (do raiseSig c cnd.signal; pure (handle c cnd)).run fl
+    (raiseError c [] cnd).run fl = (do raiseSig c cnd.signal; pure (handle c cnd)).run fl ∧
+    (∀ s, handle c (.divisionByZero s) = some (.inf s)) ∧
+    (∀ s, handle c (.overflow s) = some (overflowResult c s)) ∧
+    (∀ a, handle c (.invalidOperation (some a)) = some (quietOf c a)) ∧
+    handle c (.invalidOperation none) = some nanD ∧
+    handle c .conversionSyntax = some nanD ∧ handle c .divisionImpossible = some nanD ∧
+    handle c .divisionUndefined = some nanD ∧ handle c .invalidContext = some nanD ∧
+    (∀ s, handle c (.plain s) = none)
 
 theorem raiseErrorCorrect_proven : RaiseErrorCorrect := by
   intro c ignored cnd fl
-  refine ⟨?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, fun _ => rfl, fun _ => rfl, fun _ => rfl, rfl, rfl, rfl, rfl, rfl, fun _ => rfl⟩
   · intro h
     simp [raiseError, h, StateT.run, pure, StateT.pure, Except.pure, bind, StateT.bind, Except.bind]
   · intro h1 h2
@@ -207,7 +214,10 @@ def ContextMethodsMatchDecimal : Prop :=
   (∀ d, contextCanonical (.dec d) = .ok d ∧ contextIsCanonical (.dec d) = .ok true) ∧
   (∀ n, contextCanonical (.int n) = .error (.typeError "canonical requires a Decimal as an argument.") ∧
     contextIsCanonical (.int n) = .error (.typeError "is_canonical requires a Decimal as an argument.")) ∧
-  contextRadix = .fin false 10 0
+  contextRadix = .fin false 10 0 ∧
+  (∀ (c : Ctx) (a b t : Arg) (x y z : Dec) (fl : List Signal),
+    convertRaise a = .ok x → convertRaise b = .ok y → convertRaise t = .ok z →
+    (contextFma c a b t).run fl = (fma c x y z).run fl)
 
 theorem contextMethodsMatchDecimal_proven : ContextMethodsMatchDecimal := by
   refine ⟨ctxOp_equiv _, ctxOp_equiv _, ctxOp_equiv _, ctxOp_equiv _, ctxOp_equiv _, ctxOp_equiv _,
@@ -218,9 +228,11 @@ theorem contextMethodsMatchDecimal_proven : ContextMethodsMatchDecimal := by
     ctxUn_equiv _, ctxUn_equiv _, ctxUn_equiv _, ctxUn_equiv _, ctxUn_equiv _, ctxUn_equiv _,
     ctxUn_equiv _, ctxUn_equiv _, ctxUn_equiv _, ctxUn_equiv _, ctxUn_equiv _, ctxUn_equiv _,
     ctxUn_equiv _, ctxUn_equiv _, ctxUn_equiv _, ctxUn_equiv _, ctxUn_equiv _, ctxUn_equiv _,
-    ctxUn_equiv _, ctxUn_equiv _, ctxUn_equiv _, ?_, ?_, rfl⟩
+    ctxUn_equiv _, ctxUn_equiv _, ctxUn_equiv _, ?_, ?_, rfl, ?_⟩
   · intro d; exact ⟨rfl, rfl⟩
   · intro n; exact ⟨rfl, rfl⟩
+  · intro c a b t x y z fl ha hb ht
+    exact contextFma_equiv c a b t x y z fl ha hb ht
 
 /-- `a.__rop__(b)`: for a Decimal or int `b`, the operator with the operands
 swapped; for anything else `NotImplemented`. Without this, `3 - Decimal(1)` would not
