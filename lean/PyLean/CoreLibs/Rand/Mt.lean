@@ -154,8 +154,8 @@ def byArrayMix : Nat → Nat → Array UInt32 → Array UInt32
 /-- `init_by_array`, _randommodule.c:219-244. -/
 def initByArray (self : State) (key : Array UInt32) : State :=
   let self := initGenrand self 19650218
-  let (i, mt) := byArrayKey key (if N > key.size then N else key.size) 1 0 self.mt
-  let mt := byArrayMix (N - 1) i mt
+  let r := byArrayKey key (if N > key.size then N else key.size) 1 0 self.mt
+  let mt := byArrayMix (N - 1) r.1 r.2
   { self with mt := wr mt 0 0x80000000 }
 
 /-- The state of a new instance: `tp_new` is `PyType_GenericNew`
@@ -239,6 +239,13 @@ def randomSeed (self : State) (arg : CArg) (ent : Entropy) : Py State :=
     let bits := bitLength n
     let keyused := keyUsed bits
     return initByArray self (keyWords n keyused)
+
+/-- `random_init_impl`, _randommodule.c:561-566, the `tp_init` of `_random.Random`
+(which `Random.__init__` shadows): `tp_new` then `random_seed`. -/
+def cInit (arg : CArg) (ent : Entropy) : Py State := randomSeed genericNew arg ent
+
+/-- `_random_Random_seed_impl`, _randommodule.c:395-403. -/
+def cSeedMethod (self : State) (n : CArg) (ent : Entropy) : Py State := randomSeed self n ent
 
 /-! ### `getstate`, `setstate`, _randommodule.c:414-493 -/
 
@@ -360,7 +367,7 @@ def getrandbitsImpl (mallocOk : Nat → Bool) (k : Nat) (self : State) : Py Nat 
     let words := (k - 1) / 32 + 1
     if !mallocOk (words * 4) then (.error (.named "MemoryError" ""), self)
     else
-      let (wordarray, s) := fillWords words k self
-      (.ok (wordsToNat wordarray), s)
+      let r := fillWords words k self
+      (.ok (wordsToNat r.1), r.2)
 
 end PyLean.CoreLibs.Rand

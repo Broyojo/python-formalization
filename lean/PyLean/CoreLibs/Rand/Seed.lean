@@ -51,12 +51,15 @@ inductive SeedArg where
 /-- One step of the version 1 loop, Lib/random.py:150. -/
 def seedV1Step (x c : Nat) : Nat := ((1000003 * x) ^^^ c) &&& 0xFFFFFFFFFFFFFFFF
 
+/-- `x = ord(a[0]) << 7 if a else 0`, Lib/random.py:148. -/
+def seedV1Init : List Nat → Nat
+  | [] => 0
+  | c :: _ => c <<< 7
+
 /-- The version 1 string hash, Lib/random.py:148-152. `x` stays non-negative, so
 the `-2 if x == -1` of :152 (kept from the signed C hash of Python 2) cannot fire. -/
 def seedV1 (cps : List Nat) : Int :=
-  let x := match cps with
-    | [] => 0
-    | c :: _ => c <<< 7
+  let x := seedV1Init cps
   let x := cps.foldl seedV1Step x
   let x := x ^^^ cps.length
   if (x : Int) = -1 then -2 else (x : Int)
@@ -119,13 +122,6 @@ def pyInit (ent : Entropy) (x : SeedArg) : Py (Obj F) :=
   match pySeed ent x 2 ({ core := genericNew, gaussNext := none } : Obj F) with
   | (.error e, _) => .error e
   | (.ok (), o) => .ok { o with gaussNext := none }
-
-/-- `random_init_impl`, _randommodule.c:561-566, the `tp_init` of `_random.Random`
-(shadowed by `Random.__init__`). -/
-def cInit (arg : CArg) (ent : Entropy) : Py State := randomSeed genericNew arg ent
-
-/-- `_random_Random_seed_impl`, _randommodule.c:395-403. -/
-def cSeedMethod (self : State) (n : CArg) (ent : Entropy) : Py State := randomSeed self n ent
 
 /-- The tuple `Random.getstate` returns, Lib/random.py:176-178. `VERSION = 3`, :117. -/
 structure PyState (F : Type) where

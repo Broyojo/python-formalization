@@ -73,17 +73,19 @@ def schedule (w0 : Array UInt64) : Array UInt64 :=
     w.push (smallS1 (w.getD (t - 2) 0) + w.getD (t - 7) 0 + smallS0 (w.getD (t - 15) 0)
       + w.getD (t - 16) 0)) w0
 
+/-- One round, FIPS 180-4 §6.4.2 step 3. -/
+def round (w : Array UInt64) (st : List UInt64) (t : Nat) : List UInt64 :=
+  match st with
+  | [a, b, c, d, e, f, g, hh] =>
+    let t1 := hh + bigS1 e + Ch e f g + K.getD t 0 + w.getD t 0
+    let t2 := bigS0 a + Maj a b c
+    [t1 + t2, a, b, c, d + t1, e, f, g]
+  | st => st
+
 /-- The 80 rounds and the feed-forward, FIPS 180-4 §6.4.2 steps 2-4. -/
 def compress (h : List UInt64) (block : List Nat) : List UInt64 :=
   let w := schedule (blockWords block)
-  let step (st : List UInt64) (t : Nat) : List UInt64 :=
-    match st with
-    | [a, b, c, d, e, f, g, hh] =>
-      let t1 := hh + bigS1 e + Ch e f g + K.getD t 0 + w.getD t 0
-      let t2 := bigS0 a + Maj a b c
-      [t1 + t2, a, b, c, d + t1, e, f, g]
-    | st => st
-  let final := (List.range 80).foldl step h
+  let final := (List.range 80).foldl (round w) h
   List.zipWith (· + ·) h final
 
 /-- Process the padded message block by block. -/
