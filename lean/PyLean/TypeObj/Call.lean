@@ -204,7 +204,7 @@ def abstractNames (rt : Rt) (t : Addr) : M (List String) := do
       match items.findIdx? (fun x => (strOf w x).isNone) with
       | some i =>
         typeErr s!"sequence item {i}: expected str instance, {trunc 80 (typeName w (items.getD i .none))} found"
-      | none => unmodelled
+      | none => gap%
     pure (names.mergeSort fun a b => decide (strCompare a.toList b.toList ≤ 0))
 
 /-- `object_new`, `Objects/typeobject.c:6852`. -/
@@ -252,7 +252,7 @@ def longNew (rt : Rt) (t : Addr) (args : List Val) (kw : Kw) : M Val := do
     typeErr s!"int() takes at most 2 arguments ({args.length + kw.length} given)"
   for (k, _) in kw do
     if k != "base" then typeErr s!"int() got an unexpected keyword argument '{k}'"
-  if !kw.isEmpty then unmodelled
+  if !kw.isEmpty then gap%
   match args with
   | [] => boxValue t B.int (.int 0)
   | [x] =>
@@ -264,7 +264,7 @@ def longNew (rt : Rt) (t : Addr) (args : List Val) (kw : Kw) : M Val := do
       valueErr "int() base must be >= 2 and <= 36, or 0"
     let w ← getW
     match strOf w x with
-    | some _ => unmodelled
+    | some _ => gap%
     | none => typeErr "int() can't convert non-string with explicit base"
   | _ => typeErr s!"int() takes at most 2 arguments ({args.length} given)"
 
@@ -283,7 +283,7 @@ def strNew (rt : Rt) (t : Addr) (args : List Val) (kw : Kw) : M Val := do
   for (k, _) in kw do
     if !["object", "encoding", "errors"].contains k then
       typeErr s!"str() got an unexpected keyword argument '{k}'"
-  if !kw.isEmpty then unmodelled
+  if !kw.isEmpty then gap%
   match args with
   | [] => boxValue t B.str (.str "")
   | [x] =>
@@ -308,7 +308,7 @@ def strNew (rt : Rt) (t : Addr) (args : List Val) (kw : Kw) : M Val := do
 /-- `tuple_new`, `Objects/tupleobject.c`. -/
 def tupleNew (rt : Rt) (t : Addr) (args : List Val) (kw : Kw) : M Val := do
   if t == B.tuple then noKeywords "tuple" kw
-  else if !kw.isEmpty then unmodelled
+  else if !kw.isEmpty then gap%
   unpackTuple "tuple" 0 1 args.length
   match args with
   | [] => boxValue t B.tuple (.tuple [])
@@ -326,7 +326,7 @@ def listInit (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Unit := do
     -- `list___init___impl`, `Objects/listobject.c:3491-3497`: clear, then `_list_extend`.
     modObj a fun o => { o with body := .list [] }
     listExtend rt self a x
-  | _, _ => unmodelled
+  | _, _ => gap%
 
 /-- `dict_init` through `dict_update_arg`, `Objects/dictobject.c`: a dict is merged, an
 object with `keys` is merged by key, anything else is a sequence of pairs. Keywords are
@@ -340,7 +340,7 @@ def dictInit (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Unit := do
   let all := kw.foldl (fun es (k, v) => dictSetEntry es (.str k) v) base
   match self with
   | .obj a => modObj a fun o => { o with body := .dict all }
-  | _ => unmodelled
+  | _ => gap%
 
 /-- `property_init_impl`, `Objects/descrobject.c:1837`, with the clinic argument
 parsing. -/
@@ -388,7 +388,7 @@ def propertyInit (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Unit := 
       let set := rt.setAttr self "__doc__" (some (propDoc.getD .none))
       if getterDoc then set
       else catchMatch B.AttributeError set (pure ())
-  | _ => unmodelled
+  | _ => gap%
 
 /-- `functools_wraps`, `Objects/funcobject.c:1403`: copy `__module__`, `__name__`,
 `__qualname__`, `__doc__` onto the wrapper, then its `__dict__` gets `__wrapped__`... in
@@ -408,7 +408,7 @@ def descrWrapInit (rt : Rt) (name : String) (self : Val) (args : List Val) (kw :
   | [c], .obj a =>
     modObj a fun o => { o with body := mk c }
     functoolsWraps rt self c
-  | _, _ => unmodelled
+  | _, _ => gap%
 
 /-- `super_init`/`super_init_impl`, `Objects/typeobject.c:12150`, `:12166`, with two
 explicit arguments. Zero-argument `super()` needs the caller's frame: see `superZero`. -/
@@ -430,7 +430,7 @@ def superInit (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Unit := do
         | none => pure none
       match self with
       | .obj a => modObj a fun o => { o with body := .super (some ty) obj objType }
-      | _ => unmodelled
+      | _ => gap%
   | n => typeErr s!"super() expected at most 2 arguments, got {n}"
 
 /-- `slot_tp_new`, `Objects/typeobject.c:10587`. -/
@@ -463,8 +463,8 @@ def callTpNew (rt : Rt) (f : SlotFn) (t : Addr) (args : List Val) (kw : Kw) : M 
     if excessArgs args kw then typeErr "NoneType takes no arguments" else pure .none
   | .c .notImpl =>
     if excessArgs args kw then typeErr "NotImplementedType takes no arguments" else pure .notImpl
-  | .c e => if isExcFamily e then excTpNew rt e t args kw else unmodelled
-  | _ => unmodelled
+  | .c e => if isExcFamily e then excTpNew rt e t args kw else gap%
+  | _ => gap%
 
 /-- `type_init`, `Objects/typeobject.c:3883`. -/
 def typeInit (args : List Val) (kw : Kw) : M Unit := do
@@ -492,8 +492,8 @@ def callTpInit (rt : Rt) (f : SlotFn) (self : Val) (args : List Val) (kw : Kw) :
   | .c .classmethod => descrWrapInit rt "classmethod" self args kw .classmethod
   | .c .staticmethod => descrWrapInit rt "staticmethod" self args kw .staticmethod
   | .c .super => superInit rt self args kw
-  | .c e => if isExcFamily e then excTpInit rt e self args kw else unmodelled
-  | _ => unmodelled
+  | .c e => if isExcFamily e then excTpInit rt e self args kw else gap%
+  | _ => gap%
 
 /-- `type_call`, `Objects/typeobject.c:2331`. -/
 def typeCall (rt : Rt) (t : Addr) (args : List Val) (kw : Kw) : M Val := do
@@ -546,7 +546,7 @@ def tpNewWrapper (rt : Rt) (ty : Addr) (args : List Val) (kw : Kw) : M Val := do
       | none => pure ()
       match slotOf w ty .tp_new with
       | some f => callTpNew rt f sub rest kw
-      | none => unmodelled
+      | none => gap%
 
 /-! ## Slot wrappers -/
 
@@ -616,16 +616,16 @@ def wrapUnary (rt : Rt) (p : SlotDef) (f : SlotFn) (self : Val) : M Val := do
   | .nb_float =>
     match f with
     | .generic => vectorcallMethod rt "__float__" [self]
-    | _ => unmodelled
-  | .am_await | .am_aiter | .am_anext => unmodelled
-  | _ => unmodelled
+    | _ => gap%
+  | .am_await | .am_aiter | .am_anext => gap%
+  | _ => gap%
 
 /-- `wrapperdescr_raw_call`'s dispatch on the wrapper function,
 `Objects/typeobject.c:9264-9818`. -/
 def wrapperApply (rt : Rt) (p : SlotDef) (f : SlotFn) (self : Val) (args : List Val)
     (kw : Kw) : M Val := do
   match p.wrapper with
-  | none => unmodelled
+  | none => gap%
   | some .call => rt.tpCall f self args kw
   | some .init =>
     callTpInit rt f self args kw
@@ -662,7 +662,7 @@ def wrapperApply (rt : Rt) (p : SlotDef) (f : SlotFn) (self : Val) (args : List 
           match f, wr with
           | .generic, .binary => vectorcallMethod rt p.name [self, other]
           | _, _ => callNbBinary rt s f self other
-        else unmodelled
+        else gap%
     | .binaryR =>
       checkNumArgs args 1
       callNbBinary rt p.slot f (args.headD .none) self
@@ -674,7 +674,7 @@ def wrapperApply (rt : Rt) (p : SlotDef) (f : SlotFn) (self : Val) (args : List 
       | .nb_inplace_power =>
         match f with
         | .generic => vectorcallMethod rt "__ipow__" [self, other]
-        | _ => unmodelled
+        | _ => gap%
       | _ => callNbPower rt f self other third
     | .ternaryR =>
       checkPowArgs args
@@ -762,7 +762,7 @@ def wrapperApply (rt : Rt) (p : SlotDef) (f : SlotFn) (self : Val) (args : List 
       checkNumArgs args 1
       callAssSubscript rt f self (args.headD .none) none
       pure .none
-    | _ => unmodelled
+    | _ => gap%
 
 /-- `wrapperdescr_call`, `Objects/descrobject.c:536`. -/
 def wrapperdescrCall (rt : Rt) (owner : Addr) (p : SlotDef) (f : SlotFn) (args : List Val)
@@ -822,7 +822,7 @@ def pyDir (rt : Rt) (obj : Val) : M Val := do
     let items ← pySequenceList rt r
     let w' ← getW
     let names := items.filterMap (strOf w')
-    if names.length != items.length then unmodelled
+    if names.length != items.length then gap%
     let sorted := names.mergeSort fun a b => decide (strCompare a.toList b.toList ≤ 0)
     let _ := w
     alloc B.list (.list (sorted.map Val.str))
@@ -835,7 +835,7 @@ def copyDocArg (getterDoc : Bool) (g doc : Val) : Val :=
 def propertyCopy (rt : Rt) (old : Val) (get set del : Option Val) : M Val := do
   let w ← getW
   match propertyFields w old with
-  | none => unmodelled
+  | none => gap%
   | some (g, s, d, doc, name, getterDoc) =>
     let pick (x : Option Val) (dflt : Val) : Val :=
       match x with
@@ -859,7 +859,7 @@ def typeMroImpl (rt : Rt) (self : Val) : M Val := do
   | .obj t =>
     let m ← mroImplementation rt t
     alloc B.list (.list (m.map Val.obj))
-  | _ => unmodelled
+  | _ => gap%
 
 /-- The calling convention of a builtin: `METH_NOARGS`, `METH_O`, `METH_FASTCALL` without
 keywords, or keywords accepted. -/
@@ -949,7 +949,7 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
   let w ← getW
   let selfV := self.getD .none
   match b with
-  | .stub _ => unmodelled
+  | .stub n => gapAt s!"stub:{n}"
   | .excMethod n => excMethod rt n selfV args kw
   | .tpNewWrapper ty => tpNewWrapper rt ty args kw
   | .objectInitSubclass => pure .none
@@ -962,7 +962,7 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
       | some sp =>
         objectFormat rt selfV sp
       | none => typeErr s!"__format__() argument must be str, not {argTypeName w s}"
-    | _ => unmodelled
+    | _ => gap%
   | .numDunderFormat =>
     -- `int.__format__` and `float.__format__`, `_PyLong_FormatAdvancedWriter` and
     -- `_PyFloat_FormatAdvancedWriter`, `Python/formatter_unicode.c:1590`, `:1652`: an empty
@@ -974,9 +974,9 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
       | some "" => .str <$> rt.str selfV
       | some "s" =>
         valueErr s!"Unknown format code 's' for object of type '{trunc 200 (typeName w selfV)}'"
-      | some _ => unmodelled
+      | some _ => gap%
       | none => typeErr s!"__format__() argument must be str, not {argTypeName w s}"
-    | _ => unmodelled
+    | _ => gap%
   | .strDunderFormat =>
     -- `unicode___format___impl` through `_PyUnicode_FormatAdvancedWriter`,
     -- `Python/formatter_unicode.c`: an empty spec is `PyObject_Str`, spec `s` is the string
@@ -988,10 +988,10 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
       | some "s" =>
         match strOf w selfV with
         | some v => pure (.str v)
-        | none => unmodelled
-      | some _ => unmodelled
+        | none => gap%
+      | some _ => gap%
       | none => typeErr s!"__format__() argument must be str, not {argTypeName w s}"
-    | _ => unmodelled
+    | _ => gap%
   | .objectDir =>
     let inst : List Val := match instDictAddr w selfV with
       | some da => ((dictOf w (.obj da)).getD []).map (·.1)
@@ -1002,17 +1002,17 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
   | .typeDir =>
     match selfV with
     | .obj t => alloc B.list (.list ((classDictKeys w t).eraseDups.map Val.str))
-    | _ => unmodelled
+    | _ => gap%
   | .typeMro => typeMroImpl rt selfV
   | .typeSubclasses =>
     match selfV with
     | .obj t => alloc B.list (.list ((tdata w t).subclasses.map Val.obj))
-    | _ => unmodelled
+    | _ => gap%
   | .typePrepare => alloc B.dict (.dict [])
   | .objectSizeof =>
     -- `object___sizeof___impl`, `Objects/typeobject.c:7896`, for fixed-size objects.
     let d := tdata w (typeOf w selfV)
-    if d.itemsize != 0 then unmodelled else pure (.int d.basicsize)
+    if d.itemsize != 0 then gap% else pure (.int d.basicsize)
   | .typeInstancecheck =>
     match args with
     | [i] => .bool <$> objectIsinstance rt i selfV
@@ -1065,7 +1065,7 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
   | .iter =>
     match args with
     | [o] => rt.getIter o
-    | _ => unmodelled
+    | _ => gap%
   | .next =>
     match args with
     | [it] =>
@@ -1095,7 +1095,7 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
       if slotOf w (typeOf w o) .tp_hash == some .generic || (intOf w o).isSome then
         pure (.int h)
       else pure (.str "<h>")
-    | _ => unmodelled
+    | _ => gap%
   | .callable =>
     match args with
     | [o] => pure (.bool (slotOf w (typeOf w o) .tp_call).isSome)
@@ -1103,7 +1103,7 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
   | .dir =>
     match args with
     | [o] => pyDir rt o
-    | _ => unmodelled
+    | _ => gap%
   | .abs =>
     match args with
     | [o] => pyNumberAbsolute rt o
@@ -1116,12 +1116,12 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
     match args with
     | [a, c] => pyNumberPower rt a c .none
     | [a, c, m] => pyNumberPower rt a c m
-    | _ => unmodelled
+    | _ => gap%
   | .format =>
     match args with
     | [o] => pyFormat rt o none
     | [o, s] => pyFormat rt o (some s)
-    | _ => unmodelled
+    | _ => gap%
   | .propertyGetter =>
     match args with
     | [g] => propertyCopy rt selfV (some g) none none
@@ -1150,7 +1150,7 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
       match slotIn w selfV .mp_subscript with
       | some _ =>
         callMpSubscript rt (if (dictOf w selfV).isSome then .c .dict else .c .list) selfV k
-      | none => unmodelled
+      | none => gap%
     | _ => typeErr s!"__getitem__() takes exactly one argument ({args.length} given)"
   | .dunderContains =>
     match args with
@@ -1181,8 +1181,8 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
             | _, _, some s => s.length
             | _, _, _ => 0
           pure (.int (if n - i ≥ 0 then n - i else 0))
-      | _ => unmodelled
-    | _ => unmodelled
+      | _ => gap%
+    | _ => gap%
   | .listAppend =>
     match args, selfV with
     | [x], .obj a =>
@@ -1191,8 +1191,8 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
         | .list xs => { o with body := .list (xs ++ [x]) }
         | _ => o
       pure .none
-    | _, _ => unmodelled
-  | _ => unmodelled
+    | _, _ => gap%
+  | _ => gap%
 
 /-! ## Getsets and static members -/
 
@@ -1225,7 +1225,7 @@ def objectSetDict (obj : Val) (value : Option Val) : M Unit := do
   | none =>
     match obj with
     | .obj a => modObj a fun o => { o with dict := none }
-    | _ => unmodelled
+    | _ => gap%
   | some v =>
     match dictOf w v, v, obj with
     | some _, .obj d, .obj a => modObj a fun o => { o with dict := some d }
@@ -1245,7 +1245,7 @@ def getsetGetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) : M Val := do
       if (tdata w (typeOf w obj)).weaklistoffset == 0 then
         attrErr "This object has no __weakref__"
       return .none
-    unmodelled
+    gap%
   if owner == B.type then
     let d := tdata w tA
     if n == "__name__" then return .str (if d.heap then d.name else typeShortName w tA)
@@ -1276,7 +1276,7 @@ def getsetGetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) : M Val := do
     if n == "__itemsize__" then return .int d.itemsize
     if n == "__dictoffset__" then return .int d.dictoffset
     if n == "__weakrefoffset__" then return .int d.weaklistoffset
-    unmodelled
+    gap%
   if owner == B.function then
     match payloadOf w obj with
     | some (.func f) =>
@@ -1291,16 +1291,16 @@ def getsetGetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) : M Val := do
             alloc B.dict (.dict (f.kwdefaults.map fun (k, v) => (Val.str k, v)))
           else pure .none
       if n == "__dict__" then return ← genericGetDict obj
-      unmodelled
-    | _ => unmodelled
+      gap%
+    | _ => gap%
   if owner == B.method then
     match payloadOf w obj with
     | some (.bound f s) =>
       if n == "__func__" then return f
       if n == "__self__" then return s
       if n == "__doc__" then return ← rt.getAttr f "__doc__"
-      unmodelled
-    | _ => unmodelled
+      gap%
+    | _ => gap%
   if owner == B.classmethod || owner == B.staticmethod then
     let inner := match payloadOf w obj with
       | some (.classmethod f) | some (.staticmethod f) => f
@@ -1309,7 +1309,7 @@ def getsetGetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) : M Val := do
     if n == "__isabstractmethod__" then
       return .bool (← isAbstract rt inner)
     if n == "__dict__" then return ← genericGetDict obj
-    unmodelled
+    gap%
   if owner == B.property then
     match propertyFields w obj with
     | some (g, s, d, doc, name, _) =>
@@ -1325,23 +1325,23 @@ def getsetGetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) : M Val := do
         if ← isAbstract rt g then return .bool true
         if ← isAbstract rt s then return .bool true
         return .bool (← isAbstract rt d)
-      unmodelled
-    | none => unmodelled
+      gap%
+    | none => gap%
   if owner == B.super then
     match payloadOf w obj with
     | some (.super ty o ot) =>
       if n == "__thisclass__" then return (ty.map Val.obj).getD .none
       if n == "__self__" then return o.getD .none
       if n == "__self_class__" then return (ot.map Val.obj).getD .none
-      unmodelled
-    | _ => unmodelled
+      gap%
+    | _ => gap%
   if isSubtype w owner B.BaseException then return ← excGetsetGet rt owner n obj
   if owner == B.int then
     let i := (intOf w obj).getD 0
     if n == "real" || n == "numerator" then return .int i
     if n == "imag" then return .int 0
     if n == "denominator" then return .int 1
-    unmodelled
+    gap%
   if owner == B.wrapperDescr || owner == B.methodDescr || owner == B.memberDescr ||
       owner == B.getsetDescr || owner == B.classmethodDescr then
     -- `d_type`, `d_name`, and `calculate_qualname`, `Objects/descrobject.c:593`.
@@ -1355,9 +1355,9 @@ def getsetGetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) : M Val := do
       if n == "__objclass__" then return .obj o
       if n == "__name__" then return .str nm
       if n == "__qualname__" then return .str s!"{typeQualname w o}.{nm}"
-      unmodelled
-    | none => unmodelled
-  unmodelled
+      gap%
+    | none => gap%
+  gap%
 where
   /-- `_PyObject_IsAbstract`, `Objects/object.c:1235`. -/
   isAbstract (rt : Rt) (o : Val) : M Bool := do
@@ -1378,7 +1378,7 @@ def getsetSetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) (value : Optio
   if owner == B.object && n == "__class__" then return ← objectSetClass obj value
   if (tdata w owner).heap then
     if n == "__dict__" then return ← objectSetDict obj value
-    unmodelled
+    gap%
   if owner == B.type then
     if n == "__name__" then
       checkSetSpecial tA value "__name__"
@@ -1391,7 +1391,7 @@ def getsetSetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) (value : Optio
           if s.contains (Char.ofNat 0) then
             valueErr "type name must not contain null characters"
           return ← modType tA fun d => { d with name := s }
-      | none => unmodelled
+      | none => gap%
     if n == "__qualname__" then
       checkSetSpecial tA value "__qualname__"
       match value with
@@ -1400,7 +1400,7 @@ def getsetSetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) (value : Optio
         | none =>
           typeErr s!"can only assign string to {tpName w tA}.__qualname__, not '{typeName w v}'"
         | some s => return ← modType tA fun d => { d with qualname := s }
-      | none => unmodelled
+      | none => gap%
     if n == "__module__" then
       checkSetSpecial tA value "__module__"
       return ← modType tA fun d =>
@@ -1421,7 +1421,7 @@ def getsetSetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) (value : Optio
           attrErr "__abstractmethods__"
         return ← modType tA fun d =>
           { d with dict := NameDict.erase d.dict "__abstractmethods__", isAbstract := false }
-    unmodelled
+    gap%
   if owner == B.function then
     match payloadOf w obj, obj with
     | some (.func f), .obj a =>
@@ -1461,8 +1461,8 @@ def getsetSetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) (value : Optio
               | _ => none
             return ← setF { f with kwdefaults := d, kwdefaultsSet := true }
           | none => typeErr "__kwdefaults__ must be set to a dict object"
-      unmodelled
-    | _, _ => unmodelled
+      gap%
+    | _, _ => gap%
   if isSubtype w owner B.BaseException then return ← excGetsetSet rt owner n obj value
   if owner == B.property then
     match payloadOf w obj, obj with
@@ -1472,9 +1472,9 @@ def getsetSetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) (value : Optio
           { o with body := .property g s d (value.getD .none) name gd }
       if n == "__name__" then
         return ← modObj a fun o => { o with body := .property g s d doc value gd }
-      unmodelled
-    | _, _ => unmodelled
-  unmodelled
+      gap%
+    | _, _ => gap%
+  gap%
 
 /-! ## `PyObject_Call` -/
 
@@ -1500,36 +1500,36 @@ def callTpCall (rt : Rt) (s : SlotFn) (f : Val) (args : List Val) (kw : Kw) : M 
   | .c .type =>
     match f with
     | .obj t => typeCall rt t args kw
-    | _ => unmodelled
+    | _ => gap%
   | .c .function =>
     match payloadOf w f with
     | some (.func fd) => functionCall rt f fd args kw
-    | _ => unmodelled
+    | _ => gap%
   | .c .method =>
     match payloadOf w f with
     | some (.bound func self) => rt.call func (self :: args) kw
-    | _ => unmodelled
+    | _ => gap%
   | .c .builtinFn =>
     match payloadOf w f with
     | some (.builtin b self) => callBuiltin rt b self args kw
-    | _ => unmodelled
+    | _ => gap%
   | .c .wrapperDescr =>
     match payloadOf w f with
     | some (.wrapperDescr o p g) => wrapperdescrCall rt o p g args kw
-    | _ => unmodelled
+    | _ => gap%
   | .c .methodWrapper =>
     match payloadOf w f with
     | some (.methodWrapper d self) =>
       match payloadOf w d with
       | some (.wrapperDescr _ p g) => wrapperApply rt p g self args kw
-      | _ => unmodelled
-    | _ => unmodelled
+      | _ => gap%
+    | _ => gap%
   | .c .methodDescr =>
     match payloadOf w f with
     | some (.methodDescr o n b) =>
       methodCheckArgs o n args kw
       callBuiltin rt b (some (args.headD .none)) (args.drop 1) kw (some o)
-    | _ => unmodelled
+    | _ => gap%
   | .c .classmethodDescr =>
     match payloadOf w f with
     | some (.classmethodDescr o n b) =>
@@ -1538,12 +1538,12 @@ def callTpCall (rt : Rt) (s : SlotFn) (f : Val) (args : List Val) (kw : Kw) : M 
       | self :: rest =>
         let bound ← classmethodGet o n b none (some self)
         rt.call bound rest kw
-    | _ => unmodelled
+    | _ => gap%
   | .c .staticmethod =>
     match payloadOf w f with
     | some (.staticmethod g) => rt.call g args kw
-    | _ => unmodelled
-  | _ => unmodelled
+    | _ => gap%
+  | _ => gap%
 
 /-- `_PyObject_Call`, `Objects/call.c:333`, on the `tp_call` slot; the vectorcall entry
 points of functions and methods behave the same. -/

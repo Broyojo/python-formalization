@@ -227,7 +227,8 @@ abbrev Flow := Frame × Option Val
 /-- Text of an exception for probes: `type(e).__name__` and `str(e)`. -/
 def errText (rt : Rt) (e : PyErr) : M String := do
   match e with
-  | .fuel => pure "!MODEL-GAP"
+  | .fuel => pure "!MODEL-FUEL"
+  | .gap site => pure s!"!MODEL-GAP@{site}"
   | .exc cls msg val =>
     let w ← getW
     match val with
@@ -523,7 +524,7 @@ mutual
       if isclass then
         match meta0 with
         | .obj m => .obj <$> calculateMetaclass m basesV
-        | _ => unmodelled
+        | _ => gap%
       else pure meta0
     let prep ← rt.getOptionalAttr metaV "__prepare__"
     let ns ← match prep with
@@ -605,7 +606,8 @@ def runScenario (codes : Array (List Stmt)) (main : List Stmt) : List String :=
   | .ok _ w => w.trace.reverse
   | .err e w =>
     let tail := match e with
-      | .fuel => "MODEL-GAP"
+      | .fuel => "MODEL-FUEL"
+      | .gap site => s!"MODEL-GAP@{site}"
       | .exc c m _ => s!"UNCAUGHT {tpName w c}: {m}"
     (tail :: w.trace).reverse
 

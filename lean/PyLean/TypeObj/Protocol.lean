@@ -146,7 +146,7 @@ def callRichcompareEq (rt : Rt) (f : SlotFn) (a b : Val) (op : CmpOp) : M Val :=
     | _, _ => pure .notImpl
   | .c .float =>
     match a, b with
-    | .float _, .float _ => unmodelled
+    | .float _, .float _ => gap%
     | _, _ => pure .notImpl
   | .c .builtinFn =>
     -- `meth_richcompare`, `Objects/methodobject.c:318`.
@@ -167,7 +167,7 @@ def callRichcompareEq (rt : Rt) (f : SlotFn) (a b : Val) (op : CmpOp) : M Val :=
       let same := d1.is d2 && s1.is s2
       pure (.bool (if op == .eq then same else !same))
     | _, _, _ => pure .notImpl
-  | _ => unmodelled
+  | _ => gap%
 
 /-- Call the `tp_richcompare` function `f`. `object_richcompare` with `Py_NE` calls
 `Py_TYPE(self)->tp_richcompare(self, other, Py_EQ)`. -/
@@ -269,7 +269,7 @@ def callHash (rt : Rt) (f : SlotFn) (v : Val) : M Int := do
     for x in ((tupleOf w v).getD []) do
       let _ ← rt.hash x
     pure 0
-  | _ => unmodelled
+  | _ => gap%
 
 /-- `PyObject_Hash`, `Objects/object.c:1153`. -/
 def pyHash (rt : Rt) (v : Val) : M Int := do
@@ -406,7 +406,7 @@ def callRepr (rt : Rt) (f : SlotFn) (v : Val) : M Val := do
   | .c .type =>
     match v with
     | .obj a => pure (.str (typeRepr w a))
-    | _ => unmodelled
+    | _ => gap%
   | .c .tuple =>
     -- `tuple_repr`, `Objects/tupleobject.c:240`: the empty check comes before the guard.
     let xs := (tupleOf w v).getD []
@@ -426,8 +426,8 @@ def callRepr (rt : Rt) (f : SlotFn) (v : Val) : M Val := do
     withRepr v "{...}" do
       let rs ← dictReprLoop rt v iterFuel 0 []
       pure (.str ("{" ++ ", ".intercalate rs ++ "}"))
-  | .c e => if isExcFamily e then excCallRepr rt e v else unmodelled
-  | _ => unmodelled
+  | .c e => if isExcFamily e then excCallRepr rt e v else gap%
+  | _ => gap%
 
 /-- `PyObject_Repr`, `Objects/object.c:757`. -/
 def pyRepr (rt : Rt) (v : Val) : M String := do
@@ -453,8 +453,8 @@ def callStr (rt : Rt) (f : SlotFn) (v : Val) : M Val := do
       | some r => callRepr rt r v
       | none => pure (.str (objectRepr w v))
     | .str => pure (.str ((strOf w v).getD ""))
-    | _ => unmodelled
-  | _ => unmodelled
+    | _ => gap%
+  | _ => gap%
 
 /-- `PyObject_Str`, `Objects/object.c:799`. -/
 def pyStr (rt : Rt) (v : Val) : M String := do
@@ -488,7 +488,7 @@ def callUnaryNb (rt : Rt) (s : Slot) (dunder : Name) (f : SlotFn) (v : Val) : M 
   | .c .int, .nb_negative => pure (.int (-((intOf w v).getD 0)))
   | .c .int, .nb_invert | .c .bool, .nb_invert => pure (.int (-((intOf w v).getD 0) - 1))
   | .c .int, .nb_absolute => pure (.int ((((intOf w v).getD 0).natAbs : Nat) : Int))
-  | _, _ => unmodelled
+  | _, _ => gap%
 
 /-- `_PyNumber_Index`, `Objects/abstract.c:1400`. The `DeprecationWarning` for a strict
 `int` subclass does not change the result. -/
@@ -501,7 +501,7 @@ def numberIndex (rt : Rt) (item : Val) : M Val := do
       typeErr s!"'{trunc 200 (typeName w item)}' object cannot be interpreted as an integer"
     else
       match slotOf w (typeOf w item) .nb_index with
-      | none => unmodelled
+      | none => gap%
       | some f =>
         let result ← callUnaryNb rt .nb_index "__index__" f item
         let w ← getW
@@ -547,8 +547,8 @@ def callLen (rt : Rt) (f : SlotFn) (v : Val) : M Int := do
   | .c .mappingproxy =>
     match payloadOf w v with
     | some (.typeDictProxy t) => pure ((tdata w t).dict.length : Nat)
-    | _ => unmodelled
-  | _ => unmodelled
+    | _ => gap%
+  | _ => gap%
 
 /-- The filled slot `s` of the type of `v`, honouring NULL `tp_as_*` structs. -/
 def slotIn (w : World) (v : Val) (s : Slot) : Option SlotFn :=
@@ -641,7 +641,7 @@ def pyIsTrue (rt : Rt) (v : Val) : M Bool := do
       | .c .int | .c .bool => pure (((intOf w v).getD 0) != 0)
       | .c .notImpl => typeErr "NotImplemented should not be used in a boolean context"
       | .c .none => pure false
-      | _ => unmodelled
+      | _ => gap%
     | none =>
       match slotIn w v .mp_length with
       | some f =>
@@ -846,13 +846,13 @@ def longBinary (s : Slot) (a b : Int) : M Val :=
   | .nb_xor => pure (.int (intXor a b))
   | .nb_lshift =>
     if b < 0 then valueErr "negative shift count"
-    else if b > 100000 then unmodelled
+    else if b > 100000 then gap%
     else pure (.int (a * 2 ^ b.toNat))
   | .nb_rshift =>
     if b < 0 then valueErr "negative shift count"
     else if b > 100000 then pure (.int (if a < 0 then -1 else 0))
     else pure (.int (Int.fdiv a (2 ^ b.toNat)))
-  | _ => unmodelled
+  | _ => gap%
 
 /-- Call a binary number slot function `f`. -/
 def callNbBinary (rt : Rt) (s : Slot) (f : SlotFn) (a b : Val) : M Val := do
@@ -872,14 +872,14 @@ def callNbBinary (rt : Rt) (s : Slot) (f : SlotFn) (a b : Val) : M Val := do
       | .nb_and => pure (.bool (x && y))
       | .nb_or => pure (.bool (x || y))
       | .nb_xor => pure (.bool (xor x y))
-      | _ => unmodelled
+      | _ => gap%
     | _, _ =>
       match intOf w a, intOf w b with
       | some x, some y => longBinary s x y
       | _, _ => pure .notImpl
   | .c .float =>
     match intOf w a, intOf w b, a, b with
-    | none, _, .float _, _ | _, none, _, .float _ => unmodelled
+    | none, _, .float _, _ | _, none, _, .float _ => gap%
     | _, _, _, _ => pure .notImpl
   | .c .type =>
     -- `_Py_union_type_or`: only classes and `None` are unionable.
@@ -893,7 +893,7 @@ def callNbBinary (rt : Rt) (s : Slot) (f : SlotFn) (a b : Val) : M Val := do
     match strOf w a with
     | none => pure .notImpl
     | some fmt =>
-      if fmt.contains '%' then unmodelled
+      if fmt.contains '%' then gap%
       else if (slotIn w b .mp_subscript).isSome && (tupleOf w b).isNone && (strOf w b).isNone then
         pure (.str fmt)
       else
@@ -908,7 +908,7 @@ def callNbBinary (rt : Rt) (s : Slot) (f : SlotFn) (a b : Val) : M Val := do
       let merged ← dictUpdateArg rt x b
       alloc B.dict (.dict merged)
     | _, _ => pure .notImpl
-  | _ => unmodelled
+  | _ => gap%
 
 /-- `binary_op1`, `Objects/abstract.c:930`. -/
 def binaryOp1 (rt : Rt) (v w' : Val) (s : Slot) : M Val := do
@@ -982,7 +982,7 @@ def callSqConcat (rt : Rt) (f : SlotFn) (a b : Val) : M Val := do
     | _, _ => typeErr s!"can only concatenate list (not \"{trunc 200 (typeName w b)}\") to list"
   | _ =>
     let _ := rt
-    unmodelled
+    gap%
 
 /-- `sq_repeat` of the builtin sequences. -/
 def callSqRepeat (f : SlotFn) (a : Val) (n : Int) : M Val := do
@@ -998,13 +998,13 @@ def callSqRepeat (f : SlotFn) (a : Val) (n : Int) : M Val := do
     if (k * size : Int) > PyLean.ssizeMax && f == .c .str then
       overflowErr "repeated string is too long"
     raiseC B.MemoryError ""
-  if size != 0 && k * size > 1000000 then unmodelled else
+  if size != 0 && k * size > 1000000 then gap% else
   let k := if size == 0 then 0 else k
   match f with
   | .c .str => pure (.str (strRepeat ((strOf w a).getD "") k))
   | .c .tuple => pure (.tuple (listRepeat ((tupleOf w a).getD []) k))
   | .c .list => alloc B.list (.list (listRepeat ((listOf w a).getD []) k))
-  | _ => unmodelled
+  | _ => gap%
 
 /-- Append `items` to the list at `addr`. -/
 def listAppendAll (addr : Addr) (items : List Val) : M Unit :=
@@ -1059,7 +1059,7 @@ def listExtend (rt : Rt) (self : Val) (addr : Addr) (b : Val) : M Unit := do
       else if typeOf w b == B.dictKeys then
         match payloadOf w b with
         | some (.seqIter (some d) _) => listAppendAll addr (dictKeyList w d)
-        | _ => unmodelled
+        | _ => gap%
       else listExtendIter rt addr b
 
 /-- `sq_inplace_concat` of `list`: `list_inplace_concat` extends with any iterable and
@@ -1150,8 +1150,8 @@ where
     | .c .list, .obj _ =>
       -- `update_one_slot` puts `list_inplace_concat` in `nb_inplace_add` of a list subclass:
       -- `__iadd__` has the same wrapper for `nb_inplace_add` and `sq_inplace_concat`.
-      if idunder == "__iadd__" then callSqInplaceConcat rt f a b else unmodelled
-    | _, _ => unmodelled
+      if idunder == "__iadd__" then callSqInplaceConcat rt f a b else gap%
+    | _, _ => gap%
 
 /-- `binary_iop`, `Objects/abstract.c:1250`. -/
 def binaryIop (rt : Rt) (v w' : Val) (islot s : Slot) (name : String) : M Val := do
@@ -1205,13 +1205,13 @@ def longPow (w : World) (a b z : Val) : M Val :=
       -- `long_pow` hands negative exponents to `float_pow`.
       if x == 0 then raiseC B.ZeroDivisionError "zero to a negative power"
       else pure (.float 0)
-    else if y > 10000 then unmodelled else pure (.int (x ^ y.toNat))
+    else if y > 10000 then gap% else pure (.int (x ^ y.toNat))
   | some x, some y, z' =>
     match intOf w z' with
     | none => pure .notImpl
     | some m =>
       if m == 0 then valueErr "pow() 3rd argument cannot be 0"
-      else if y < 0 || y > 10000 then unmodelled
+      else if y < 0 || y > 10000 then gap%
       else pure (.int (Int.fmod (x ^ y.toNat) m))
   | _, _, _ => pure .notImpl
 
@@ -1221,7 +1221,7 @@ def callNbPower (rt : Rt) (f : SlotFn) (a b c : Val) : M Val := do
   match f with
   | .generic => slotNbPower rt a b c
   | .c .int => longPow w a b c
-  | _ => unmodelled
+  | _ => gap%
 
 /-- `ternary_op`, `Objects/abstract.c:1020`. -/
 def ternaryOp (rt : Rt) (v w' z : Val) (name : String) : M Val := do
@@ -1286,7 +1286,7 @@ def ternaryIop (rt : Rt) (v w' z : Val) : M Val := do
   let w ← getW
   let x ← match slotIn w v .nb_inplace_power with
     | some .generic => vectorcallMethod rt "__ipow__" [v, w']
-    | some _ => unmodelled
+    | some _ => gap%
     | none => pure Val.notImpl
   match x with
   | .notImpl => ternaryOp rt v w' z "**="
@@ -1361,7 +1361,7 @@ def pyNumberFloat (rt : Rt) (o : Val) : M Val := do
     | some f =>
       let res ← match f with
         | .generic => vectorcallMethod rt "__float__" [o]
-        | _ => unmodelled
+        | _ => gap%
       let w ← getW
       match res with
       | .float _ => pure res
@@ -1374,7 +1374,7 @@ def pyNumberFloat (rt : Rt) (o : Val) : M Val := do
       match slotIn w o .nb_index with
       | some _ =>
         let _ ← numberIndex rt o
-        unmodelled
+        gap%
       | none =>
         match payloadOf w o with
         | some (.boxed (.float b)) => pure (.float b)
@@ -1405,7 +1405,7 @@ def callSqItem (rt : Rt) (f : SlotFn) (s : Val) (i : Int) : M Val := do
   | .c .list => at' ((listOf w s).getD []) "list index out of range"
   | .c .str =>
     at' (((strOf w s).getD "").toList.map fun c => Val.str c.toString) "string index out of range"
-  | _ => unmodelled
+  | _ => gap%
 
 /-- Call `mp_subscript`. Builtin sequences take integer indices; slices belong to the
 `RangeSlice` and `Sequences` modules. -/
@@ -1440,8 +1440,8 @@ def callMpSubscript (rt : Rt) (f : SlotFn) (o key : Val) : M Val := do
       | none =>
         let x ← alloc B.KeyError (.exc { args := [key] })
         raise (.exc B.KeyError "" (some x))
-    | _, _ => unmodelled
-  | _ => unmodelled
+    | _, _ => gap%
+  | _ => gap%
 
 /-- `PySequence_GetItem`, `Objects/abstract.c:1832`. -/
 def pySequenceGetItem (rt : Rt) (s : Val) (i : Int) : M Val := do
@@ -1478,7 +1478,7 @@ def pyGetItem (rt : Rt) (o key : Val) : M Val := do
     | none =>
       match asType w o with
       | some oa =>
-        if oa == B.type then unmodelled else
+        if oa == B.type then gap% else
         let meth ← rt.getOptionalAttr o "__class_getitem__"
         match meth with
         | some m =>
@@ -1509,7 +1509,7 @@ def callAssSubscript (rt : Rt) (f : SlotFn) (o key : Val) (value : Option Val) :
         | none =>
           let x ← alloc B.KeyError (.exc { args := [key] })
           raise (.exc B.KeyError "" (some x))
-    | _ => unmodelled
+    | _ => gap%
   | .c .list =>
     let xs := (listOf w o).getD []
     if indexCheck w key then
@@ -1519,9 +1519,9 @@ def callAssSubscript (rt : Rt) (f : SlotFn) (o key : Val) (value : Option Val) :
       match o, value with
       | .obj a, some v => modObj a fun ob => { ob with body := .list (xs.set i.toNat v) }
       | .obj a, none => modObj a fun ob => { ob with body := .list (xs.eraseIdx i.toNat) }
-      | _, _ => unmodelled
+      | _, _ => gap%
     else typeErr s!"list indices must be integers or slices, not {trunc 200 (typeName w key)}"
-  | _ => unmodelled
+  | _ => gap%
 
 /-- `PySequence_SetItem`/`PySequence_DelItem`, `Objects/abstract.c:1884`, `:1917`. -/
 def pySequenceSetItem (rt : Rt) (s : Val) (i : Int) (value : Option Val) : M Unit := do
@@ -1601,12 +1601,12 @@ def callIter (rt : Rt) (f : SlotFn) (o : Val) : M Val := do
       | .val { body := .seqIter (some d) _, .. } =>
         let keys ← alloc B.list (.list (((dictOf w d).getD []).map (·.1)))
         alloc B.dictKeyIter (.seqIter (some keys) 0)
-      | _ => unmodelled
-    | _ => unmodelled
+      | _ => gap%
+    | _ => gap%
   | .c .tuple => alloc B.tupleIter (.seqIter (some o) 0)
   | .c .str => alloc B.strIter (.seqIter (some o) 0)
   | .c .seqIter | .c .listIter | .c .tupleIter | .c .strIter => pure o
-  | _ => unmodelled
+  | _ => gap%
 
 /-- `PyIter_Check`, `Objects/abstract.c:2850`. -/
 def pyIterCheck (w : World) (o : Val) : Bool :=
@@ -1645,7 +1645,7 @@ def seqIterNext (rt : Rt) (a : Addr) : M (Option Val) := do
         let w ← getW
         if excMatches w e B.IndexError || excMatches w e B.StopIteration then clear
         else raise e
-  | _ => unmodelled
+  | _ => gap%
 
 /-- `listiter_next`/`tupleiter_next`/`unicodeiter_next`: stop at the end of the sequence
 and drop the reference, `Objects/listobject.c:4019`. -/
@@ -1666,7 +1666,7 @@ def builtinIterNext (rt : Rt) (f : SlotFn) (a : Addr) : M (Option Val) := do
     else
       modObj a fun o => { o with body := .seqIter none i }
       pure none
-  | _ => unmodelled
+  | _ => gap%
 
 /-- Call `tp_iternext`; `none` is NULL with no exception set. -/
 def callIterNext (rt : Rt) (f : SlotFn) (it : Val) : M (Option Val) := do
@@ -1677,14 +1677,14 @@ def callIterNext (rt : Rt) (f : SlotFn) (it : Val) : M (Option Val) := do
   | .c .seqIter, .obj a => seqIterNext rt a
   | .c .listIter, .obj a | .c .tupleIter, .obj a | .c .strIter, .obj a =>
     builtinIterNext rt f a
-  | _, _ => unmodelled
+  | _, _ => gap%
 
 /-- `iternext` and `PyIter_Next`, `Objects/abstract.c:2867`, `:2917`. -/
 def pyIterNext (rt : Rt) (it : Val) : M (Option Val) := do
   let w ← getW
   match slotOf w (typeOf w it) .tp_iternext with
   | some f => catchMatch B.StopIteration (callIterNext rt f it) (pure none)
-  | none => unmodelled
+  | none => gap%
 
 /-- `PySequence_List` by iteration; `fuel` bounds the loop. -/
 def collectIter (rt : Rt) (it : Val) : Nat → M (List Val)
@@ -1819,7 +1819,7 @@ def callContains (rt : Rt) (f : SlotFn) (seq ob : Val) : M Bool := do
     | some t => pure (strContains ((strOf w seq).getD "").toList t.toList)
     | none =>
       typeErr s!"'in <string>' requires string as left operand, not {trunc 200 (typeName w ob)}"
-  | _ => unmodelled
+  | _ => gap%
 
 /-- `PySequence_Contains`, `Objects/abstract.c:2231`. -/
 def pySequenceContains (rt : Rt) (seq ob : Val) : M Bool := do

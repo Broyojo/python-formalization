@@ -39,7 +39,7 @@ def asUnicodeErrorAttribute (attr : Option Val) (name : String) (asBytes : Bool)
   checkUnicodeErrorAttribute attr name asBytes
   match attr with
   | some a => pure a
-  | none => unmodelled
+  | none => gap%
 
 /-- `check_unicode_error_type`, `Objects/exceptions.c:3051`. -/
 def checkUnicodeErrorType (self : Val) (expectType : String) : M Unit := do

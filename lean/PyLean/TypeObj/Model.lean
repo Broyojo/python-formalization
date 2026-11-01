@@ -1,4 +1,5 @@
 import PyLean.Core
+import PyLean.TypeObj.Gap
 
 /-!
 # The Python object model (CPython 3.14.7)
@@ -392,6 +393,8 @@ as an object, as `PyErr_Occurred` state does. `fuel` is not a Python outcome. -/
 inductive PyErr where
   | exc (cls : Addr) (msg : String) (val : Option Val)
   | fuel
+  /-- A branch the model leaves out, named by `gap%`. -/
+  | gap (site : String)
   deriving Repr, Inhabited
 
 /-- Result of a computation: the world survives a raise. -/
@@ -667,14 +670,15 @@ def systemErr {α : Type} (msg : String) : M α := raiseC B.SystemError msg
 def indexErr {α : Type} (msg : String) : M α := raiseC B.IndexError msg
 def keyErr {α : Type} (msg : String) : M α := raiseC B.KeyError msg
 def overflowErr {α : Type} (msg : String) : M α := raiseC B.OverflowError msg
-/-- A code path this model leaves out; not a Python outcome. -/
-def unmodelled {α : Type} : M α := raise .fuel
+/-- A code path this model leaves out, written `gap%` (`Gap.lean`), which names the site. Not
+a Python outcome. -/
+def gapAt {α : Type} (site : String) : M α := raise (.gap site)
 
 /-- `PyErr_ExceptionMatches(cls)` for a pending error. -/
 def excMatches (w : World) (e : PyErr) (cls : Addr) : Bool :=
   match e with
   | .exc c _ _ => isSubtype w c cls
-  | .fuel => false
+  | .fuel | .gap _ => false
 
 /-- `if (x == NULL && PyErr_ExceptionMatches(cls)) { PyErr_Clear(); h }`. -/
 def catchMatch {α : Type} (cls : Addr) (x : M α) (h : M α) : M α :=
