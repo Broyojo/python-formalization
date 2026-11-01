@@ -306,7 +306,7 @@ private def decOf (q : Nat) (k : Int) : Dbl :=
 `x` among those: David Gay's mode 0. Returns the digits and `decpt`. -/
 def shortest (x : Dbl) : List Nat × Int :=
   let m := x.mag
-  let target := x.bits
+  let target := (fabs x).bits
   let attempt (p : Nat) : Option (Nat × Int) :=
     let cand : List (Nat × Int) :=
       [sigDigits m p 0, sigDigits m p (-1), sigDigits m p 1]
