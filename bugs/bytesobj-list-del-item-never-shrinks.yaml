@@ -1,0 +1,59 @@
+id: bytesobj-list-del-item-never-shrinks
+title: "DUPLICATE of gh-158592: del l[i] never shrinks the list's array on 3.14.7"
+priority: P4
+kind: duplicate
+module: bytesobj
+files: [Objects/listobject.c]
+functions: ["list_ass_item_lock_held"]
+summary: |
+  This is NOT a new report. It is on record because the model mirrors 3.14.7, a refuted registry
+  entry needs a bug record, and nobody should re-file it.
+  On 3.14.7, list_ass_item_lock_held deletes by moving the tail down and calling Py_SET_SIZE, without
+  list_resize, so `del l[i]` never releases memory. A list of 100000 items keeps its 800040-byte size
+  after `del l[-1]` empties it completely, where l.pop() takes it down to 72 bytes.
+  Lean: ListDelLikePop (del and pop leave the same allocation) is refuted; ListAssItemKeepsAllocation
+  states what 3.14.7 does and is proven. Mutating the model to resize in del makes the difftest fail,
+  so the difftest does observe this behaviour.
+likelihood: |
+  Moderate for long-lived lists shrunk through del, which is why upstream already fixed it.
+maybe_intended: |
+  No. gh-158592 is labelled type-bug and performance, and it is closed.
+reproducer: |
+  N = 100000
+  a = list(range(N))
+  full = a.__sizeof__()
+  for _ in range(N - 1):
+      del a[-1]
+  b = list(range(N))
+  for _ in range(N - 1):
+      b.pop()
+  print('full', full, ' after del:', a.__sizeof__(), ' after pop:', b.__sizeof__())
+  if a.__sizeof__() == full and b.__sizeof__() < full // 100:
+      print('REPRODUCED bytesobj-list-del-item-never-shrinks')
+expected: |
+  The same shrinking as l.pop(i), as `del l[i:i+1]` does.
+observed: |
+  python3 3.14.7: full 800040, after del: 800040, after pop: 72. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): after del: 232, after pop: 232. NOT REPRODUCED: fixed on main.
+  So scripts/check_bugs.py reports this one as NOT REPRODUCED on main, which is the expected result.
+promised_by: |
+  Objects/listobject.c:113-116 ("If the newsize falls lower than half the allocated size, then proceed
+  with the realloc() to shrink the list"). gh-158592 is the authority here, not this record.
+cause: |
+  Objects/listobject.c:1091-1097 (3.14.7). The fetched tags show the history: v3.12.0 went through
+  list_ass_slice, which resizes; v3.13.0 and v3.14.0 have the loop without list_resize. Main's
+  list_ass_item_impl calls list_resize (vendor/cpython-main Objects/listobject.c:1216).
+possible_fix: |
+  Already fixed upstream. gh-158592 carries the 3.14 label but 3.14.7 still has the old code, so a
+  human might check whether a 3.14 backport is planned.
+duplicates:
+  issues:
+    - {number: 158592, state: closed, relation: "the same bug: `del list[index]` never reallocates the array; closed 2026-10-10"}
+  queries: ["list_ass_item", "list del shrink memory", "list_resize del item (PRs)",
+            "gh issue view 158592", "bugforge README: grep for list with del/shrink/sizeof/length_hint/resize: no match"]
+  note: |
+    The duplicate was found from the gh-158592 comment in main's list_resize, not from a search: the
+    multi-word searches returned nothing, and "list_ass_item" did not list it either.
+lean:
+  property: PyLean.BytesObj.Seq.ListDelLikePop
+  theorem: PyLean.BytesObj.Seq.listDelLikePop_refuted

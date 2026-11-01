@@ -2,6 +2,7 @@ import PyLean.DiffCore
 import PyLean.ListSort.Model
 import PyLean.BytesObj.Seq.Repr
 import PyLean.BytesObj.Seq.SortAux
+import PyLean.BytesObj.Seq.Release
 
 /-! Differential-testing handler for tuple and list: `fn` names start with `tuple.` or `list.`.
 
@@ -262,6 +263,7 @@ def stepList (o : St) (op : Array Json) : Except String (Json × St) := do
   | "add" => return (encPy stateJ (listConcatAny o.items (.inl (← jEls (← argAt op 1)))), o)
   | "add_bad" => return (encPy stateJ (listConcatAny o.items (.inr (← (← argAt op 1).getStr?))), o)
   | "extend" => return resJ o (listExtend o (← jExt (← argAt op 1)))
+  | "iadd" => return resJ o (listIConcat o (← jExt (← argAt op 1)))
   | "init" =>
     match (op[1]? : Option Json) with
     | some Json.null => return resJ o (listInit o none)
@@ -317,6 +319,7 @@ def stepIter (forward : Bool) (it : ListIter) (l : List DEl) (op : Array Json) :
     match r with
     | .ok it' => return (okJ unitJ, it', l)
     | .error e => return (errJ e, it, l)
+  | "refs" => return (okJ (toJson (listIterTraverse it l).length), it, l)
   | "pop" => return (okJ unitJ, it, l.dropLast)
   | "add" => return (okJ unitJ, it, l ++ [.int 0])
   | "clear" => return (okJ unitJ, it, [])
@@ -348,6 +351,7 @@ def runTupleIter (j : Json) : Except String Json := do
       it := it'
       out := out.push (okJ (match v with | some x => enEl x | none => toJson "stop"))
     | "hint" => out := out.push (okJ (toJson (tupleIterLen it)))
+    | "refs" => out := out.push (okJ (toJson (tupleIterTraverse it).length))
     | "reduce" =>
       let (a, st) := tupleIterReduce it
       out := out.push (okJ (Json.arr #[enEls a, match st with | some i => toJson i | none => Json.null]))
@@ -398,6 +402,14 @@ def cntHash (call : Nat) : DEl → Py Int
   | .obj "cnt" i => .ok (100 * call + i)
   | .obj "flaky" _ => if call = 1 then .error (.valueError "flaky") else .ok 5
   | x => dHash x
+
+def enOpt : Option DEl → Json
+  | some x => enEl x
+  | none => Json.null
+
+def enOptNat : Option Nat → Json
+  | some x => toJson x
+  | none => Json.null
 
 def runTuple (fn : String) (j : Json) : Except String Json := do
   match fn with
@@ -453,6 +465,11 @@ def runTuple (fn : String) (j : Json) : Except String Json := do
     let t ← jTup (← field j "t")
     return encPy (enTRes t noTup) (tupleGetnewargs mayTrack t)
   | "tuple.iter" => runTupleIter j
+  | "tuple.referents" =>
+    return okJ (Json.arr ((tupleTraverse (← jEls (← field j "items"))).map enOpt).toArray)
+  | "tuple.release" =>
+    let n ← getNat j "n"
+    return okJ (Json.arr ((tupleDeallocOrder (List.range n)).map enOptNat).toArray)
   | "tuple.c_size" =>
     let op := (jEls (← field j "items")).toOption
     return encPy toJson (pyTupleSize op)
@@ -520,6 +537,12 @@ def runList (fn : String) (j : Json) : Except String Json := do
     let nkw ← getNat j "nkw"
     let args := List.replicate nargs (ExtArg.fast ([] : List DEl))
     return encPy (fun _ => Json.null) (listVectorcall args nkw)
+  | "list.referents" =>
+    return okJ (Json.arr ((listTraverse (← jEls (← field j "items"))).map enOpt).toArray)
+  | "list.release" =>
+    let n ← getNat j "n"
+    let o := LObj.prealloc (List.range n)
+    return okJ (Json.arr ((listDeallocOrder o).map enOptNat).toArray)
   | "list.sort_sizeof" => return okJ (toJson (listSizeof (listDuringSort : St)))
   | "list.latin_lt" =>
     let v ← elIntPair (← field j "v")

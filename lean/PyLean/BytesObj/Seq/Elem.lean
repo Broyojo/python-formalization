@@ -1,4 +1,5 @@
 import PyLean.Core
+import PyLean.RangeSlice.Model
 import PyLean.Sequences.Common
 
 /-!
@@ -71,14 +72,15 @@ def slot (l : List α) (i : Int) : Option α := if 0 ≤ i then l[i.toNat]? else
 `(size_t) i < (size_t) limit`, for `0 <= limit`. -/
 def validIndex (i limit : Int) : Bool := decide (i % (2 ^ 64 : Int) < limit % (2 ^ 64 : Int))
 
-/-- The C cursor of a slice copy, `cur += (size_t)step`, reads `n` items. Every
-read goes through `slot`, so a read outside the object is `cUB`, not a value. -/
-def sliceLoop (l : List α) (step : Int) : Nat → Int → Py (List α)
+/-- The C cursor of a slice copy, a `size_t` advanced by `(size_t)step` (`ustep`),
+reads `n` items. Every read goes through `slot`, so a read outside the object is
+`cUB`, not a value. -/
+def sliceLoop (l : List α) (ustep : Int) : Nat → Int → Py (List α)
   | 0, _ => .ok []
   | n + 1, cur =>
     match slot l cur with
     | some v =>
-      match sliceLoop l step n (cur + step) with
+      match sliceLoop l ustep n (PyLean.RangeSlice.toU (cur + ustep)) with
       | .ok r => .ok (v :: r)
       | .error e => .error e
     | none => .error (cUB "read outside the items array")

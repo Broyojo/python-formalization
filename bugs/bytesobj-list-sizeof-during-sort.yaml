@@ -1,0 +1,62 @@
+id: bytesobj-list-sizeof-during-sort
+title: "list.__sizeof__() returns 32, less than an empty list, while the list is being sorted"
+priority: P4
+kind: wrong-result
+module: bytesobj
+files: [Objects/listobject.c]
+functions: ["list___sizeof___impl", "list_sort_impl"]
+summary: |
+  While list.sort runs, list_sort_impl sets self->allocated to -1 (listobject.c:2929).
+  list___sizeof___impl then computes `(size_t)self->allocated * sizeof(PyObject *)` with no check
+  for that sentinel, which wraps: 40 + (2**64 - 1) * 8 modulo 2**64 is 32. So l.__sizeof__(), called
+  from a key function or a comparison during l.sort(), reports 32 bytes, which is less than the
+  40 bytes of an empty list and less than the object header. sys.getsizeof(l) is affected the same
+  way, since it adds to this value. The value is a wrong answer, not a crash, and the list itself
+  is unharmed.
+  Lean: ListSizeofBase (40 <= __sizeof__ in every state) is refuted at the sort state;
+  ListSizeofExact (outside sort, __sizeof__ is exactly 40 + 8 * allocated, with no wraparound) is
+  proven for every list satisfying the invariant.
+likelihood: |
+  Very low. It needs code that measures a list from inside that list's own sort, such as a
+  memory profiler walking live objects from a key function or another thread's sampler. The result
+  is a harmless under-report of 8 bytes against an empty list, for the duration of the sort.
+maybe_intended: |
+  Not intended, but a maintainer could reasonably close it as not worth a branch: allocated == -1 is
+  a documented private sentinel ("any operation will reset it to >= 0"), the list really is empty
+  during the sort, and the whole array is held elsewhere for that time. It is reported because it is
+  a silent size_t wraparound on a public method. I would not expect it to be prioritised.
+reproducer: |
+  import sys
+  seen = []
+  l = [3, 2, 1]
+  l.sort(key=lambda x: (seen.append(l.__sizeof__()), x)[1])
+  empty = [].__sizeof__()
+  print('during sort:', seen[0], ' empty list:', empty)
+  if seen[0] < empty:
+      print('REPRODUCED bytesobj-list-sizeof-during-sort')
+expected: |
+  At least the size of an empty list (40 bytes on 64-bit), as the method gives in every other state.
+observed: |
+  python3 3.14.7: during sort: 32, empty list: 40. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): during sort: 32, empty list: 40. REPRODUCED.
+promised_by: |
+  Doc/library/sys.rst:899-900 ("Return the size of an object in bytes ... All built-in objects will
+  return correct results"), via sys.getsizeof, which calls __sizeof__.
+cause: |
+  Objects/listobject.c:3547 (3.14.7): `res += (size_t)self->allocated * sizeof(PyObject *);` with
+  self->allocated == -1, set at :2929 for the duration of list_sort_impl.
+possible_fix: |
+  Treat a negative allocated as zero in list___sizeof___impl, for example
+  `if (self->allocated > 0) res += ...`.
+duplicates:
+  issues:
+    - {number: 145036, state: closed, relation: "data race in list.__sizeof__() on free-threading; different bug"}
+  queries: ["list __sizeof__ during sort", "list.__sizeof__ allocated -1", "list __sizeof__", "getsizeof sort",
+            "bugforge README: grep for list with del/shrink/sizeof/length_hint/resize: no match"]
+  note: |
+    Multi-word GitHub searches require every term and can miss a real duplicate: "list del shrink
+    memory" returned nothing although gh-158592 is exactly that report. Treat "none found" here as
+    weak evidence; a human should search again before filing.
+lean:
+  property: PyLean.BytesObj.Seq.ListSizeofBase
+  theorem: PyLean.BytesObj.Seq.listSizeofBase_refuted

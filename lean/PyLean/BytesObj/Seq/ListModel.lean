@@ -116,12 +116,15 @@ def listAppend (self : LObj α) (v : α) : Py (LObj α) :=
     .ok { self with items := self.items ++ [v] }
   else resizeTo self (self.items ++ [v])
 
+/-- `list_length(a)`, listobject.c:643-647: `PyList_GET_SIZE`. -/
+def listLength (l : List α) : Int := l.length
+
 /-- `list_item(aa, i)`, listobject.c:668-687. -/
 def listItem (l : List α) (i : Int) : Py α :=
   if !validIndex i l.length then .error (.indexError "list index out of range")
   else match slot l i with
     | some v => .ok v
-    | none => .error (cUB "list_item")
+    | none => .error (cUB "read outside the items array")
 
 /-- `l[i]`, `list_subscript`, listobject.c:3646-3658. -/
 def listGetItem (l : List α) (i : Int) : Py α := do
@@ -142,7 +145,7 @@ def listSliceWrap (a : List α) (start stop step : Int) : Py (LObj α) :=
   if len ≤ 0 then .ok LObj.empty
   else if step = 1 then .ok (listSliceLH a start stop)
   else
-    match sliceLoop a step len.toNat start with
+    match sliceLoop a (toU step) len.toNat (toU start) with
     | .ok r => .ok (LObj.prealloc r)
     | .error e => .error e
 
@@ -332,6 +335,10 @@ def listExtend (self : LObj α) : ExtArg α → LRes α
   | .iter src => listExtendIter self src
   | .notIterable name => (self, some (.typeError s!"'{name}' object is not iterable"))
 
+/-- `l += iterable`, `list_inplace_concat`, listobject.c:1508-1516, which is
+`_list_extend` and returns `self`. -/
+def listIConcat (self : LObj α) (arg : ExtArg α) : LRes α := listExtend self arg
+
 /-- `l.__init__(iterable)`, `list___init___impl`, listobject.c:3480-3502: the old
 contents are dropped before the iterable is looked at. -/
 def listInit (self : LObj α) (iterable : Option (ExtArg α)) : LRes α :=
@@ -423,29 +430,37 @@ def containsLoop (cmp : Cmp α) (el : α) : Nat → Int → LObj α → Py Bool 
 def listContains (cmp : Cmp α) (fuel : Nat) (o : LObj α) (el : α) : Py Bool × LObj α :=
   containsLoop cmp el fuel 0 o
 
-/-- The loop of `list_index_impl`, listobject.c:3297-3309. -/
-def indexLoop (cmp : Cmp α) (value : α) (stop : Int) : Nat → Int → LObj α → Py Int × LObj α
+/-- The loop of `list_index_impl`, listobject.c:3297-3309: `none` is falling out
+of the loop, which is what raises `ValueError`. -/
+def indexLoop (cmp : Cmp α) (value : α) (stop : Int) : Nat → Int → LObj α → Py (Option Int) × LObj α
   | 0, _, o => (.error .modelFuel, o)
   | fuel + 1, i, o =>
     if i < stop then
       match listGetItemRef o.items i with
-      | none => (.error (.valueError "list.index(x): x not in list"), o)
+      | none => (.ok none, o)
       | some item =>
         match cmp o item value with
-        | (.ok true, o') => (.ok i, o')
+        | (.ok true, o') => (.ok (some i), o')
         | (.ok false, o') => indexLoop cmp value stop fuel (i + 1) o'
         | (.error e, o') => (.error e, o')
-    else (.error (.valueError "list.index(x): x not in list"), o)
+    else (.ok none, o)
 
-/-- `l.index(value, start, stop)`, `list_index_impl`, listobject.c:3282-3312. -/
-def listIndex (cmp : Cmp α) (fuel : Nat) (o : LObj α) (value : α) (start stop : Option Int) :
-    Py Int × LObj α :=
-  let n : Int := o.items.length
+/-- `start` and `stop` of `list_index_impl`, listobject.c:3287-3296. -/
+def listIndexBounds (n : Int) (start stop : Option Int) : Int × Int :=
   let start := PyLean.Sequences.sliceIndex (start.getD 0)
   let stop := PyLean.Sequences.sliceIndex (stop.getD ssizeMax)
   let start := if start < 0 then (if start + n < 0 then 0 else start + n) else start
   let stop := if stop < 0 then (if stop + n < 0 then 0 else stop + n) else stop
-  indexLoop cmp value stop fuel start o
+  (start, stop)
+
+/-- `l.index(value, start, stop)`, `list_index_impl`, listobject.c:3282-3312. -/
+def listIndex (cmp : Cmp α) (fuel : Nat) (o : LObj α) (value : α) (start stop : Option Int) :
+    Py Int × LObj α :=
+  let (start, stop) := listIndexBounds o.items.length start stop
+  match indexLoop cmp value stop fuel start o with
+  | (.ok (some i), o') => (.ok i, o')
+  | (.ok none, o') => (.error (.valueError "list.index(x): x not in list"), o')
+  | (.error e, o') => (.error e, o')
 
 /-- `list_count_impl`, listobject.c:3323-3347: the `obj == value` shortcut, then
 the comparison. -/
@@ -718,7 +733,7 @@ def pyListGetItem (op : Option (List α)) (i : Int) : Py α :=
     if !validIndex i l.length then .error (.indexError "list index out of range")
     else match slot l i with
       | some v => .ok v
-      | none => .error (cUB "PyList_GetItem")
+      | none => .error (cUB "read outside the items array")
 
 /-- `PyList_GetItemRef(op, i)`, listobject.c:399-413. -/
 def pyListGetItemRef (op : Option (List α)) (i : Int) : Py α :=

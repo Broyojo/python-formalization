@@ -1,0 +1,85 @@
+id: bytesobj-list-length-hint-overestimate
+title: "list(x) raises MemoryError for an over-estimating __length_hint__, and overflows Py_ssize_t at sys.maxsize"
+priority: P4
+kind: inconsistency
+module: bytesobj
+files: [Objects/listobject.c]
+functions: ["list_extend_iter_lock_held", "list_preallocate_exact"]
+summary: |
+  list_extend_iter_lock_held allocates from PyObject_LengthHint before it iterates, and an allocation
+  failure ends the call. So an iterable that yields one item but reports a huge hint fails:
+  list(x) and [].extend(x) raise MemoryError for a hint of 2**60, sys.maxsize - 1 or sys.maxsize.
+  The outcome also depends on the list being extended, through the overflow test at :1241: with
+  hint sys.maxsize, [0].extend(x) succeeds where [].extend(x) raises, and with sys.maxsize - 1,
+  [0, 0].extend(x) succeeds where [0].extend(x) raises. Separately, at hint sys.maxsize
+  list_preallocate_exact computes `size + 1` on a Py_ssize_t (:203), which is signed overflow,
+  reachable from pure Python. The wrapped value then fails PyMem_New's size test, so the visible
+  result is the same MemoryError.
+  Lean: ListHintInert (any legal hint leaves extend succeeding) is refuted; ListExtendIterContents
+  (for a hint with len + hint + items <= sys.maxsize / 16 the contents are exact) and
+  ListHintIgnoredWhenOverflowing are proven.
+likelihood: |
+  Low. It needs a __length_hint__ that is wrong by many orders of magnitude. A wrapper that returns
+  sys.maxsize to mean "unknown" would hit it.
+maybe_intended: |
+  Probably intended for the common case, and a maintainer may well decline this. Failing fast on a
+  huge length is relied on: Lib/test/test_list.py:41 asserts MemoryError from
+  list(range(sys.maxsize // 2)), where the length is accurate, and iterating first would fill
+  memory instead. The comment at :1242-1244 does consider a lying hint, though only for the overflow
+  branch. The strongest part of this report is the narrow one: the signed overflow at :203 is
+  undefined behaviour however the MemoryError question is settled, and `size / 2`-style rounding or a
+  range check would remove it.
+reproducer: |
+  import sys
+  class X:
+      def __init__(self, h):
+          self.h = h
+      def __iter__(self):
+          return iter([1])
+      def __length_hint__(self):
+          return self.h
+  def outcome(f):
+      try:
+          f()
+          return 'ok'
+      except MemoryError:
+          return 'MemoryError'
+  a = outcome(lambda: list(X(sys.maxsize)))
+  b = outcome(lambda: [].extend(X(sys.maxsize)))
+  c = outcome(lambda: [0].extend(X(sys.maxsize)))
+  print('list(x):', a, ' [].extend(x):', b, ' [0].extend(x):', c)
+  if a == 'MemoryError' and b == 'MemoryError' and c == 'ok':
+      print('REPRODUCED bytesobj-list-length-hint-overestimate')
+expected: |
+  [1] from list(x), and the same outcome from [].extend(x) and [0].extend(x): the hint is documented
+  as an estimate that is never required for correctness.
+observed: |
+  python3 3.14.7: list(x): MemoryError, [].extend(x): MemoryError, [0].extend(x): ok. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): identical. REPRODUCED.
+  The signed overflow at :203 comes from reading the source. It has not been observed under UBSan:
+  no sanitizer build was run.
+promised_by: |
+  Doc/reference/datamodel.rst:3235-3240: "Should return an estimated length for the object (which may
+  be greater or less than the actual length) ... This method is purely an optimization and is never
+  required for correctness."
+cause: |
+  Objects/listobject.c:1234 takes the hint; :1241 skips allocation only when m + n would overflow;
+  :1247-1249 and :1253-1255 treat a failed allocation as an error. :203 is
+  `size = (size + 1) & ~(size_t)1;` on a Py_ssize_t.
+possible_fix: |
+  At :203, round without overflowing, for instance through size_t. For the MemoryError itself, either
+  document that an absurd hint may raise, or treat a failed preallocation as "no hint" and carry on
+  iterating, which gives up the fast failure that test_list.py:41 relies on unless __len__ and
+  __length_hint__ are told apart.
+duplicates:
+  issues:
+    - {number: 61540, state: closed, relation: "length_hint parameter for constructors; different request"}
+  queries: ["__length_hint__ MemoryError", "length_hint list preallocate overestimate", "length_hint",
+            "bugforge README: grep for list with del/shrink/sizeof/length_hint/resize: no match"]
+  note: |
+    Multi-word GitHub searches require every term and can miss a real duplicate: "list del shrink
+    memory" returned nothing although gh-158592 is exactly that report. Treat "none found" here as
+    weak evidence; a human should search again before filing.
+lean:
+  property: PyLean.BytesObj.Seq.ListHintInert
+  theorem: PyLean.BytesObj.Seq.listHintInert_refuted

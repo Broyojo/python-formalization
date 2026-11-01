@@ -15,7 +15,7 @@ Python code cannot observe, and they are not modelled.
 namespace PyLean.BytesObj.Seq
 
 open PyLean
-open PyLean.RangeSlice (Slice sliceUnpack adjustIndices)
+open PyLean.RangeSlice (Slice sliceUnpack adjustIndices toU)
 
 variable {α ρ : Type}
 
@@ -113,6 +113,9 @@ def tupleHash (hashE : α → Py Int) (t : Tup α) : Py (Int × Tup α) :=
 
 /-! ## Item access -/
 
+/-- `tuple_length(self)`, tupleobject.c:357-362: `Py_SIZE`. -/
+def tupleLength (a : List α) : Int := a.length
+
 /-- `tuple_contains(self, el)`, tupleobject.c:364-373: `item == el`, item on the left. -/
 def tupleContains (E : ElemOps α ρ) (el : α) : List α → Py Bool
   | [] => .ok false
@@ -126,7 +129,7 @@ def tupleItem (a : List α) (i : Int) : Py α :=
   if i < 0 ∨ i ≥ a.length then .error (.indexError "tuple index out of range")
   else match slot a i with
     | some v => .ok v
-    | none => .error (cUB "tuple_item")
+    | none => .error (cUB "read outside the items array")
 
 /-- `_PyTuple_FromArray(src, n)`, tupleobject.c:386-410: untracked unless an item
 may be tracked (`maybe_tracked`, :165-169). -/
@@ -231,14 +234,18 @@ def tupleIndexLoop (E : ElemOps α ρ) (value : α) (stop : Int) : List α → I
       | .error e => .error e
     else .ok none
 
-/-- `t.index(value, start, stop)`: `slice_index(accept={int})` arguments
-(saturating), `tuple_index_impl`, tupleobject.c:594-621. -/
-def tupleIndex (E : ElemOps α ρ) (t : List α) (value : α) (start stop : Option Int) : Py Int :=
-  let n : Int := t.length
+/-- `start` and `stop` of `tuple_index_impl`, tupleobject.c:601-611, after the
+`slice_index(accept={int})` conversions (saturating). -/
+def tupleIndexBounds (n : Int) (start stop : Option Int) : Int × Int :=
   let start := PyLean.Sequences.sliceIndex (start.getD 0)
   let stop := PyLean.Sequences.sliceIndex (stop.getD ssizeMax)
   let start := if start < 0 then (if start + n < 0 then 0 else start + n) else start
   let stop := if stop < 0 then stop + n else if stop > n then n else stop
+  (start, stop)
+
+/-- `t.index(value, start, stop)`, `tuple_index_impl`, tupleobject.c:594-621. -/
+def tupleIndex (E : ElemOps α ρ) (t : List α) (value : α) (start stop : Option Int) : Py Int :=
+  let (start, stop) := tupleIndexBounds t.length start stop
   match tupleIndexLoop E value stop (t.drop start.toNat) start with
   | .ok (some i) => .ok i
   | .ok none => .error (.valueError "tuple.index(x): x not in tuple")
@@ -342,7 +349,7 @@ def tupleGetSlice (a : Tup α) (s : Slice) : Py (TRes α) := do
   else
     match tupleAlloc slicelength with
     | .ok () =>
-      match sliceLoop a.items step slicelength.toNat start with
+      match sliceLoop a.items (toU step) slicelength.toNat (toU start) with
       | .ok r => .ok (.fresh { items := r, tracked := true })
       | .error e => .error e
     | .error e => .error e
@@ -371,7 +378,7 @@ def pyTupleGetItem (op : Option (List α)) (i : Int) : Py α :=
     if i < 0 ∨ i ≥ a.length then .error (.indexError "tuple index out of range")
     else match slot a i with
       | some v => .ok v
-      | none => .error (cUB "PyTuple_GetItem")
+      | none => .error (cUB "read outside the items array")
 
 /-- `PyTuple_SetItem(op, i, newitem)`, tupleobject.c:117-135; `unique` is
 `_PyObject_IsUniquelyReferenced(op)`. The cached hash is not reset. -/

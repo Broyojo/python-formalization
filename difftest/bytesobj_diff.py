@@ -252,6 +252,9 @@ def list_op(l, op, reg):
         return enc_state(operator.add(l, ()))
     if name == "extend":
         return l.extend(build_ext(op[1], reg, l))
+    if name == "iadd":
+        operator.iadd(l, build_ext(op[1], reg, l))
+        return None
     if name == "init":
         return l.__init__() if op[1] is None else l.__init__(build_ext(op[1], reg, l))
     raise ValueError(name)
@@ -284,6 +287,8 @@ def iter_op(it, op, l):
         return "stop" if x is STOP else enc(x)
     if name == "hint":
         return it.__length_hint__()
+    if name == "refs":
+        return len(gc.get_referents(it))
     if name == "reduce":
         r = it.__reduce__()
         return [encs(r[1][0]), r[2] if len(r) > 2 else None]
@@ -484,6 +489,10 @@ def tuple_case(c):
         return common.py_result(lambda: out_tuple(t.__getnewargs__()[0], t))
     if fn == "tuple.iter":
         return run_tuple_iter(c)
+    if fn == "tuple.referents":
+        return {"ok": encs(gc.get_referents(tuple(items())))}
+    if fn == "tuple.release":
+        return {"ok": release_order(tuple, c["n"])}
     if fn == "tuple.c_size":
         o = 5 if c["items"] == "x" else tuple(items())
         return common.py_result(lambda: T_SIZE(o))
@@ -522,6 +531,22 @@ def heap_build(cells):
     return objs
 
 
+class Finalized:
+    def __init__(self, i, log):
+        self.i, self.log = i, log
+
+    def __del__(self):
+        self.log.append(self.i)
+
+
+def release_order(make, n):
+    """The order finalizers run in when a container of `n` items dies."""
+    log = []
+    o = make([Finalized(i, log) for i in range(n)])
+    del o
+    return log
+
+
 def sizes_in_sort():
     seen = []
     l = [3, 2, 1]
@@ -551,6 +576,10 @@ def list_case(c):
         args = [()] * c["nargs"]
         kw = {f"k{i}": 1 for i in range(c["nkw"])}
         return common.py_result(lambda: (list(*args, **kw), None)[1])
+    if fn == "list.referents":
+        return {"ok": encs(gc.get_referents(items()))}
+    if fn == "list.release":
+        return {"ok": release_order(list, c["n"])}
     if fn == "list.sort_sizeof":
         return {"ok": sizes_in_sort()}
     if fn == "list.latin_lt":
@@ -718,7 +747,7 @@ def gen_list_op(rng, n):
     if k == 22:
         return ["add", seq_items(rng, 6)] if rng.random() < 0.8 else ["add_bad", "tuple"]
     if k <= 24:
-        return ["extend", gen_ext(rng)]
+        return [rng.choice(["extend", "iadd"]), gen_ext(rng)]
     return ["init", None if rng.random() < 0.3 else gen_ext(rng)]
 
 
@@ -744,7 +773,7 @@ def gen_iter(rng):
     n = len(items)
 
     def op():
-        k = rng.choice(["next", "next", "next", "hint", "reduce", "setstate", "pop", "add", "clear"])
+        k = rng.choice(["next", "next", "next", "hint", "refs", "reduce", "setstate", "pop", "add", "clear"])
         return [k, rng.choice([0, 1, -1, -2, n, n + 1, n - 1, M, -M - 1, M + 1, 2 ** 64])] if k == "setstate" else [k]
     return {"mod": "bytesobj", "fn": "list.iter", "items": items, "forward": rng.random() < 0.5,
             "ops": [op() for _ in range(rng.randint(1, 12))]}
@@ -755,7 +784,7 @@ def gen_tuple_iter(rng):
     n = len(items)
 
     def op():
-        k = rng.choice(["next", "next", "next", "hint", "reduce", "setstate"])
+        k = rng.choice(["next", "next", "next", "hint", "refs", "reduce", "setstate"])
         return [k, rng.choice([0, 1, -1, n, n + 1, n - 1, M, -M - 1, M + 1])] if k == "setstate" else [k]
     return {"mod": "bytesobj", "fn": "tuple.iter", "items": items,
             "ops": [op() for _ in range(rng.randint(1, 10))]}
@@ -837,7 +866,7 @@ def gen_capi_list(rng):
 
 
 def gen_seq(rng):
-    k = rng.randrange(44)
+    k = rng.randrange(50)
     case = {"mod": "bytesobj"}
     if k < 16:
         return gen_ops(rng)
@@ -908,6 +937,10 @@ def gen_seq(rng):
     if k == 40:
         items = [rng.randint(0, 3) if rng.random() < 0.9 else {"k": "nan", "id": 0} for _ in range(rng.randint(1, 5))]
         return {**case, "fn": "tuple.untrack", "items": items}
+    if k == 41:
+        return {**case, "fn": rng.choice(["tuple.referents", "list.referents"]), "items": seq_items(rng)}
+    if k == 42:
+        return {**case, "fn": rng.choice(["tuple.release", "list.release"]), "n": rng.randint(0, 6)}
     return gen_capi_list(rng)
 
 
