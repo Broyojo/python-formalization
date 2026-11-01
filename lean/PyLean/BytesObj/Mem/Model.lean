@@ -176,6 +176,41 @@ def bufFullRO : Nat := bufIndirect ||| bufFormat
 
 def req (flags x : Nat) : Bool := (flags &&& x) == x
 
+/-- `view->format = NULL` without `PyBUF_FORMAT`, :1547-1554. -/
+def viewFormat (flags : Nat) (v : Buf) : Buf :=
+  if (flags &&& bufFormat) == 0 then { v with format := none } else v
+
+/-- `view->strides = NULL` without `PyBUF_STRIDES`, :1576-1583. -/
+def viewStrides (flags : Nat) (v : Buf) : Buf :=
+  if !req flags bufStrides then { v with strides := none } else v
+
+/-- `view->ndim = 1; view->shape = NULL` without `PyBUF_ND`, :1584-1599. -/
+def viewShape (flags : Nat) (v : Buf) : Buf :=
+  if !req flags bufND then { v with ndim := 1, shape := none } else v
+
+/-- The checks of `memory_getbuf`, :1538-1599, on `*view = *base`, in order. -/
+def getbufView (base : Buf) (baseflags : Flags) (flags : Nat) : Py Buf :=
+  if (flags &&& bufWritable) != 0 && base.readonly then
+    .error (bufferError "memoryview: underlying buffer is not writable")
+  else
+  let view := viewFormat flags { base with obj := none }
+  if req flags bufCContiguous && !baseflags.isC then
+    .error (bufferError "memoryview: underlying buffer is not C-contiguous")
+  else if req flags bufFContiguous && !baseflags.isF then
+    .error (bufferError "memoryview: underlying buffer is not Fortran contiguous")
+  else if req flags bufAnyContiguous && !baseflags.isAny then
+    .error (bufferError "memoryview: underlying buffer is not contiguous")
+  else if !req flags bufIndirect && baseflags.pil then
+    .error (bufferError "memoryview: underlying buffer requires suboffsets")
+  else if !req flags bufStrides && !baseflags.isC then
+    .error (bufferError "memoryview: underlying buffer is not C-contiguous")
+  else
+  let view := viewStrides flags view
+  if !req flags bufND && view.format.isSome then
+    .error (bufferError "memoryview: cannot cast to unsigned bytes if the format flag is present")
+  else
+  .ok (viewShape flags view)
+
 /-- `memory_getbuf`, :1528-1606. `*view = *base` is a copy; the export is counted only
 on success. The memoryview itself becomes `view->obj`. -/
 def memoryGetbuf (self : Nat) (flags : Nat) : M Buf := do
@@ -183,29 +218,7 @@ def memoryGetbuf (self : Nat) (flags : Nat) : M Buf := do
   checkRestricted self
   let st ← M.get
   let x := st.mv self
-  let base := x.view
-  let baseflags := x.flags
-  let mut view := { base with obj := none }
-  if (flags &&& bufWritable) != 0 && base.readonly then
-    throw (bufferError "memoryview: underlying buffer is not writable")
-  if (flags &&& bufFormat) == 0 then
-    view := { view with format := none }
-  if req flags bufCContiguous && !baseflags.isC then
-    throw (bufferError "memoryview: underlying buffer is not C-contiguous")
-  if req flags bufFContiguous && !baseflags.isF then
-    throw (bufferError "memoryview: underlying buffer is not Fortran contiguous")
-  if req flags bufAnyContiguous && !baseflags.isAny then
-    throw (bufferError "memoryview: underlying buffer is not contiguous")
-  if !req flags bufIndirect && baseflags.pil then
-    throw (bufferError "memoryview: underlying buffer requires suboffsets")
-  if !req flags bufStrides then
-    if !baseflags.isC then
-      throw (bufferError "memoryview: underlying buffer is not C-contiguous")
-    view := { view with strides := none }
-  if !req flags bufND then
-    if view.format.isSome then
-      throw (bufferError "memoryview: cannot cast to unsigned bytes if the format flag is present")
-    view := { view with ndim := 1, shape := none }
+  let view ← M.lift (getbufView x.view x.flags flags)
   M.modify fun st =>
     let y := st.mv self
     st.setMv self { y with exports := y.exports + 1 }
@@ -935,6 +948,10 @@ def memoryLength (self : Nat) : M Int := do
 
 /-! ## Iteration (:3460-3555) -/
 
+/-- `PyObject_GC_New(memoryiterobject, ...)`: a new iterator, by number. -/
+def iterAlloc (x : MIter) : M Nat := fun st =>
+  (.ok st.iters.length, { st with iters := st.iters ++ [x] })
+
 /-- `memory_iter`, :3519-3555: the iterator's number. -/
 def memoryIter (self : Nat) : M Nat := do
   checkReleased self
@@ -944,9 +961,7 @@ def memoryIter (self : Nat) : M Nat := do
   if view.ndim ≠ 1 then throw (notImplError "multi-dimensional sub-views are not implemented")
   let fmt ← M.lift (adjustFmt view)
   let len ← memoryLength self
-  fun st =>
-    (.ok st.iters.length,
-     { st with iters := st.iters ++ [{ fmt := fmt, length := len, index := 0, seq := some self }] })
+  iterAlloc { fmt := fmt, length := len, index := 0, seq := some self }
 
 /-- `memoryiter_next`, :3491-3517: `none` is exhaustion (a NULL return with no error). -/
 def memoryiterNext (it : Nat) : M (Option Item) := do

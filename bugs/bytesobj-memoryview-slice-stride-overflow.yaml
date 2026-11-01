@@ -1,0 +1,47 @@
+id: bytesobj-memoryview-slice-stride-overflow
+title: "m[::k] with a huge step overflows Py_ssize_t in init_slice; m.strides reports a wrapped value"
+priority: P4
+kind: undefined-behaviour
+module: bytesobj
+files: [Objects/memoryobject.c]
+functions: ["init_slice"]
+summary: |
+  init_slice computes base->strides[dim] * step with no range check. For a step past
+  sys.maxsize / itemsize that is signed overflow: on a 64-bit build
+      memoryview(bytes(16)).cast('q')[::sys.maxsize].strides    # (-8,)
+  where the product is 8 * (2**63 - 1). Such a slice has at most one item, so the wrong stride is
+  never used to reach memory, but it is visible in .strides, and it is undefined behaviour in C that
+  a -fsanitize=undefined build reports.
+  Lean: SliceStrideExact is refuted; SliceItems (every item of m[s] is at the address of item
+  range(*s.indices(n))[k] of m, for every slice) is proven with the same wrapping multiplication, so
+  the overflow cannot misdirect a read.
+likelihood: |
+  Very low: it takes a step near sys.maxsize.
+maybe_intended: |
+  No, but harmless on the usual builds (CPython compiles with -fno-strict-overflow). A maintainer
+  could reasonably decline; the value matters to nobody but a sanitizer.
+reproducer: |
+  import sys
+  m = memoryview(bytes(16)).cast('q')
+  s = m[::sys.maxsize]
+  print(s.shape, s.strides, s.tolist())
+  if s.strides == (-8,) and 8 * sys.maxsize != -8:
+      print('REPRODUCED bytesobj-memoryview-slice-stride-overflow')
+expected: |
+  A stride that is the product, or a defined clamp (a one-item view can have any stride).
+observed: |
+  python3 3.14.7: (1,) (-8,) [0]. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): identical. REPRODUCED.
+promised_by: |
+  invariant: no signed overflow in C; Doc/library/stdtypes.rst, memoryview.strides.
+cause: |
+  Objects/memoryobject.c:2532: base->strides[dim] = base->strides[dim] * step.
+possible_fix: |
+  When slicelength <= 1, set base->strides[dim] to base->strides[dim] (the step is irrelevant), so
+  the multiplication only happens when it cannot overflow.
+duplicates:
+  issues: []
+  queries: ["memoryview strides overflow slice", "bugforge README: no memoryview entries"]
+lean:
+  property: PyLean.BytesObj.Mem.SliceStrideExact
+  theorem: PyLean.BytesObj.Mem.sliceStrideExact_refuted
