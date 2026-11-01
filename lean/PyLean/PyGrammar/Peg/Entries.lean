@@ -178,6 +178,16 @@ def entries : List Entry := [
     status := .proven
     prop := ``AllRulesStart
     thm := some ``allRulesStart_proven },
+  { id := "pygrammar-peg-progress"
+    pyFile := "Parser/parser.c"
+    pyFns := []
+    statement := "Every iteration of a loop rule moves p->mark forward, and at MAXSTACK a rule " ++
+      "sets error_indicator and returns NULL at once."
+    source := "invariant: no hang"
+    status := .proven
+    prop := ``ParserProgress
+    thm := some ``parserProgress_proven
+    notes := "What ParserTerminates would be built on. Rows of Parser/parser.c stay generated." },
   { id := "pygrammar-peg-actions-frame"
     pyFile := "Parser/action_helpers.c"
     pyFns := []
@@ -343,9 +353,12 @@ def entries : List Entry := [
     source := "invariant"
     status := .open
     prop := ``ParserTerminates
-    notes := "Needs a measure over the whole mutual recursion: position, then rank in the " ++
-      "acyclic left-call graph of LeftRecursionGuarded, then the seed loop's strictly growing " ++
-      "mark. Nothing short of that is proved." },
+    notes := "Not refuted: a stress test to 10000 nested levels of 17 shapes never ran out. " ++
+      "ParserProgress gives the loops and the depth. Missing: a bound on the token count from " ++
+      "the lexer, and a fuel bound across nested left recursion, where the seed rounds on one " ++
+      "path are only bounded by using the memo (a leader grows once per position). " ++
+      "Estimated over 1000 lines; a measure on depth alone gives depth times tokens, which the " ++
+      "default fuel does not cover." },
   { id := "pygrammar-peg-parser-output-validates"
     pyFile := "Python/ast.c"
     pyFns := []
@@ -353,7 +366,10 @@ def entries : List Entry := [
     source := "invariant: the assert behind Py_DEBUG in _PyPegen_run_parser"
     status := .open
     prop := ``ParserOutputValidates
-    notes := "Numerically true on the difftest corpus. Open: needs induction over all actions." }
+    notes := "True on every difftest case. Not reachable as stated: it needs, for each of the " ++
+      "action expressions in the grammar, that the node built meets validate_expr and " ++
+      "validate_stmt, plus VALIDATE_POSITIONS, which needs lexer facts that token positions " ++
+      "increase. CallRuleSound says nothing about what actions compute, so it does not help." }
 ]
 
 end PyLean.PyGrammar.Peg
