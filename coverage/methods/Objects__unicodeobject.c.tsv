@@ -283,7 +283,7 @@ Objects/unicodeobject.c	12578	12584	unicode_lower_impl	unicode_lower_impl(PyObje
 Objects/unicodeobject.c	12597	12641	_PyUnicode_XStrip	_PyUnicode_XStrip(PyObject *self, int striptype, PyObject *sepobj)	todo		
 Objects/unicodeobject.c	12644	12675	PyUnicode_Substring	PyUnicode_Substring(PyObject *self, Py_ssize_t start, Py_ssize_t end)	todo		
 Objects/unicodeobject.c	12678	12737	do_strip	do_strip(PyObject *self, int striptype)	todo		
-Objects/unicodeobject.c	12741	12755	do_argstrip	do_argstrip(PyObject *self, int striptype, PyObject *sep)	modelled	bytesobj-bytes-strip-twins	
+Objects/unicodeobject.c	12741	12755	do_argstrip	do_argstrip(PyObject *self, int striptype, PyObject *sep)	todo		
 Objects/unicodeobject.c	12770	12774	unicode_strip_impl	unicode_strip_impl(PyObject *self, PyObject *chars) /*[clinic end generated code: output=ca19018454345d57 input=385289c6f423b954]*/	todo		
 Objects/unicodeobject.c	12789	12793	unicode_lstrip_impl	unicode_lstrip_impl(PyObject *self, PyObject *chars) /*[clinic end generated code: output=3b43683251f79ca7 input=529f9f3834448671]*/	todo		
 Objects/unicodeobject.c	12808	12812	unicode_rstrip_impl	unicode_rstrip_impl(PyObject *self, PyObject *chars) /*[clinic end generated code: output=4a59230017cc3b7a input=62566c627916557f]*/	todo		
