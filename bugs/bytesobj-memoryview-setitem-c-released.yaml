@@ -1,0 +1,95 @@
+id: bytesobj-memoryview-setitem-c-released
+title: "m[key] = b'x' with format 'c' writes through a view released by key.__index__ (use after free)"
+priority: P1
+kind: memory-safety
+module: bytesobj
+files: [Objects/memoryobject.c]
+functions: ["pack_single", "memory_ass_sub"]
+summary: |
+  gh-92888 added CHECK_RELEASED_INT_AGAIN after every conversion in pack_single, because a
+  conversion can run Python code that releases the view and frees the buffer. The arm for the
+  format 'c' converts nothing, so it got no check. But memory_ass_sub also runs Python code
+  before it calls pack_single: PyNumber_AsSsize_t(key, ...) calls key.__index__. So
+      ba = bytearray(N); m = memoryview(ba).cast('c')
+      class K:
+          def __index__(self):
+              m.release(); ba.clear(); return 0
+      m[K()] = b'x'
+  stores into freed memory. With a large buffer the process dies with SIGSEGV; with a small one
+  the freed block is silently corrupted. Every other format raises ValueError "operation
+  forbidden on released memoryview object" here, and reading (m[K()]) is safe because
+  unpack_single starts with the check.
+  Lean: ReleasedKeyNoWrite is refuted on a 2-byte 'c' view; ReleasedKeyNoWriteNotC (the same for
+  every format but 'c', every item, every callback) is proven, and pack_released_nowrite shows
+  that the 'c' arm is the only write in pack_single not behind the check.
+likelihood: |
+  Low in real programs: it needs an __index__ that releases the view being assigned to. The
+  reproducer is short, needs no extension module, and gives a write through a freed pointer. It
+  is the same class of bug as gh-92888, gh-142664 and gh-143195, which were all fixed.
+maybe_intended: |
+  No. The check is plainly missing: test_use_released_memory covers m[MyIndex()] = 42 only with
+  format 'B', and the loops over formats there put the callback on the value, never on the key.
+reproducer: |
+  import subprocess, sys
+  crash = '''
+  N = 1 << 27
+  ba = bytearray(b"a" * N)
+  m = memoryview(ba).cast("c")
+  class K:
+      def __index__(self):
+          m.release()
+          ba.clear()
+          return N // 2
+  m[K()] = b"x"
+  print("survived")
+  '''
+  r = subprocess.run([sys.executable, "-I", "-c", crash], capture_output=True, text=True)
+  print("freed buffer: exit status", r.returncode, r.stdout.strip())
+  def attempt(fmt, value):
+      ba = bytearray(b"abcdefgh")
+      m = memoryview(ba).cast(fmt)
+      class K:
+          def __index__(self):
+              m.release()
+              return 4
+      try:
+          m[K()] = value
+          return "no exception", bytes(ba)
+      except ValueError as e:
+          return str(e), bytes(ba)
+  c = attempt("c", b"x")
+  b = attempt("B", 120)
+  print("format c:", c)
+  print("format B:", b)
+  if c[0] == "no exception" and c[1] == b"abcdxfgh" and "released" in b[0]:
+      print("REPRODUCED bytesobj-memoryview-setitem-c-released")
+expected: |
+  ValueError("operation forbidden on released memoryview object"), as for every other format,
+  and no write.
+observed: |
+  python3 3.14.7: format c: no exception, b'abcdxfgh'; format B: ValueError; with a 128 MB buffer
+  freed in __index__ the process exits with SIGSEGV (status -11). REPRODUCED.
+  main (python.exe 3.16.0a1+dev): identical, SIGSEGV included. REPRODUCED.
+promised_by: |
+  Doc/library/stdtypes.rst, memoryview.release: "any further operation on the view raises a
+  ValueError". Lib/test/test_memoryview.py:683 test_use_released_memory (gh-92888).
+cause: |
+  Objects/memoryobject.c:2678-2692 (3.14.7): memory_ass_sub calls PyNumber_AsSsize_t(key) at
+  :2685, then ptr_from_index, then pack_single, with no check in between. pack_single's arm
+  for 'c' at :1995-2001 writes *ptr with no CHECK_RELEASED_INT_AGAIN. The multi-index path at
+  :2720-2730 has the same shape: ptr_from_tuple runs __index__ at :2439. main has the same arm
+  at Objects/memoryobject.c:2106-2113.
+possible_fix: |
+  Add CHECK_RELEASED_INT_AGAIN(self) to the 'c' arm of pack_single, or at the top of pack_single
+  as unpack_single has it (the per-arm checks are still needed after the conversions), and add
+  m[MyIndex()] = b'x' with format 'c' to test_use_released_memory.
+duplicates:
+  issues:
+    - {number: 92888, state: closed, relation: "same class; its fix left this arm out"}
+    - {number: 142664, state: closed, relation: "same class, memoryview.__hash__; different function"}
+    - {number: 143195, state: closed, relation: "same class, hex; different function"}
+  queries: ["memoryview released __index__", "memoryview use after free", "memoryview crash segfault release",
+            "memoryview pack_single", "gh search prs: memoryview released", "bugforge README: no memoryview entries"]
+lean:
+  property: PyLean.BytesObj.Mem.ReleasedKeyNoWrite
+  theorem: PyLean.BytesObj.Mem.releasedKeyNoWrite_refuted
