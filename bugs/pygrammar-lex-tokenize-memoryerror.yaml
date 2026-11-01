@@ -1,0 +1,52 @@
+id: pygrammar-lex-tokenize-memoryerror
+title: "tokenize raises MemoryError on valid source: stale last_expr_size in the readline tokenizer gives a negative decode size"
+priority: P3
+kind: crash-on-valid-input
+module: pygrammar
+files: [Parser/lexer/lexer.c, Parser/tokenizer/readline_tokenizer.c]
+functions: ["set_ftstring_expr", "_PyLexer_update_ftstring_expr", "tok_underflow_readline", "tokenizeriter_next"]
+summary: |
+  `compile` accepts f"""{x=!r\n}aaa"""\n, but tokenize.generate_tokens raises MemoryError on it.
+  In a debug or t-string replacement field, `!` sets last_expr_end (lexer.c:263-266). The next
+  line read by tok_underflow_readline calls _PyLexer_update_ftstring_expr(tok, 0), which returns
+  early because last_expr_end >= 0 (lexer.c:236), so last_expr_size is not extended. When `}`
+  comes, last_expr_end is recomputed as strlen(tok->start) over the new line; last_expr_size -
+  last_expr_end is then negative, and set_ftstring_expr passes it to PyUnicode_DecodeUTF8
+  (lexer.c:212-216). The string tokenizer is unaffected, since its buffer is the whole file.
+likelihood: |
+  Low to medium: needs a debug or t-string field whose `!` conversion is followed by a newline
+  before the closing brace, with a longer tail on the next line. Formatters and linters built on
+  tokenize would crash on code that runs.
+maybe_intended: |
+  No. A MemoryError from a size computation on valid input is not a designed outcome.
+reproducer: |
+  import io, tokenize
+  src = 'f"""{x=!r\n}' + 'a' * 100 + '"""\n'
+  compile(src, 'x', 'exec')
+  try:
+      n = len(list(tokenize.generate_tokens(io.StringIO(src).readline)))
+      print('tokens', n)
+  except MemoryError:
+      print('REPRODUCED pygrammar-lex-tokenize-memoryerror')
+expected: |
+  The token stream, as for any other valid source.
+promised_by: |
+  Undisputed invariant: tokenize handles valid Python source, and allocation failure is not a
+  result of a small input.
+cause: |
+  Parser/lexer/lexer.c:236 returns before appending to the buffer when last_expr_end >= 0, while
+  :263-266 goes on recomputing last_expr_end from the current buffer. (3.14.7 line numbers.)
+possible_fix: |
+  Keep the size consistent: append in the `case 0:` path regardless of last_expr_end, or compute
+  last_expr_end only once, or clamp and skip the decode. main no longer reproduces this input.
+tested:
+  python3 (3.14.7): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): NOT REPRODUCED (12 tokens)
+duplicates:
+  issues:
+    - {number: 149183, state: open, relation: same root cause (set_ftstring_expr, MemoryError), reason: "reported there on invalid input; this input is valid"}
+  queries: ["tokenize MemoryError f-string", "set_ftstring_expr"]
+  bugforge: "none"
+lean:
+  property: PyLean.PyGrammar.Lexer.TokenizeAcceptsValid
+  theorem: PyLean.PyGrammar.Lexer.tokenizeAcceptsValid_refuted

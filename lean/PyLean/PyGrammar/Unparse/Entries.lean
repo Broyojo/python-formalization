@@ -1,6 +1,7 @@
 import PyLean.Registry
 
-/-! Registry entries for the `Unparse` part of `PyGrammar`. -/
+/-! Registry entries for the `Unparse` part of `PyGrammar`. The round trip needs the parser, so
+it sits in `Peg/Entries.lean`, which imports both. -/
 
 namespace PyLean.PyGrammar.Unparse
 

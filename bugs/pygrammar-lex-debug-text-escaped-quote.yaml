@@ -1,0 +1,48 @@
+id: pygrammar-lex-debug-text-escaped-quote
+title: "f'{expr=}' prints the wrong text, and Interpolation.str is wrong, when a string in expr has an escaped quote and a '#' and the field has a comment"
+priority: P4
+kind: wrong-result
+module: pygrammar
+files: [Parser/lexer/lexer.c]
+functions: ["set_ftstring_expr"]
+summary: |
+  set_ftstring_expr scans for a `#` outside strings with a loop that skips escapes
+  (lexer.c:133-136), then strips comments with a second loop that does not (lexer.c:177-206). For
+  f'''{"\"#x"=#c\n}''' the second loop sees the string end at the escaped quote and treats the
+  `#x"=` that follows as a comment. The printed text is `"\"` and a newline instead of `"\"#x"=`.
+  For t-strings the same text becomes Interpolation.str, which ast.unparse then writes out, so
+  the output does not parse.
+likelihood: |
+  Very low: needs a debug or t-string field holding a comment and, in the same field, a string
+  with an escaped quote followed by `#`.
+maybe_intended: |
+  No.
+reproducer: |
+  import ast
+  t = ast.parse("f'''{\"\\\"#x\"=#c\n}'''")
+  text = t.body[0].value.values[0].value
+  print(repr(text))
+  if '=' not in text:
+      print('REPRODUCED pygrammar-lex-debug-text-escaped-quote')
+expected: |
+  Debug text `"\"#x"=` followed by the value.
+promised_by: |
+  Language reference, f-strings: with `=`, the output has "the expression text, the equal sign and
+  the evaluated value".
+cause: |
+  Parser/lexer/lexer.c:177-206: the comment-stripping loop lacks the `if (ch == '\\') { i++; continue; }`
+  of the scanning loop at :133-136. (3.14.7 line numbers.)
+possible_fix: |
+  Copy the escape handling into the second loop, copying both characters. main no longer
+  reproduces this input.
+tested:
+  python3 (3.14.7): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): NOT REPRODUCED
+duplicates:
+  issues:
+    - {number: 141271, state: open, relation: duplicate (same function, same class of defect)}
+  queries: ["set_ftstring_expr", "f-string debug comment hash"]
+  bugforge: "none"
+lean:
+  property: PyLean.PyGrammar.Lexer.DebugTextKeepsEquals
+  theorem: PyLean.PyGrammar.Lexer.debugTextKeepsEquals_refuted

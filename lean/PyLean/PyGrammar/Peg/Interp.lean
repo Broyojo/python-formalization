@@ -53,7 +53,7 @@ def startLocation (mark : Nat) : PM (Option (Int × Int)) := do
   let t := (← get).tokenAt mark
   return some (t.lineno, t.colOffset)
 
-/-- `_PyPegen_expect_forced_result`, `Parser/pegen.c:445-456`. -/
+/-- `_PyPegen_expect_forced_result`, `Parser/pegen.c:430-440`. -/
 def forcedResult (res : Ast) (expected : String) : PM Ast := do
   if (← get).errorIndicator then return .null
   match res with
@@ -62,7 +62,7 @@ def forcedResult (res : Ast) (expected : String) : PM Ast := do
     return .null
   | r => return r
 
-/-- `_PyPegen_expect_forced_token`, `Parser/pegen.c:458-466`. -/
+/-- `_PyPegen_expect_forced_token`, `Parser/pegen.c:443-462`. -/
 def forcedToken (ty : Nat) (expected : String) : PM Ast := do
   if (← get).errorIndicator then return .null
   let p ← get
@@ -261,7 +261,7 @@ def parseStart (fuel : Nat) : PM Ast := do
   | .eval => callRule fuel rule_eval
   | .funcType => callRule fuel rule_func_type
 
-/-- `bad_single_statement`, `Parser/pegen.c:751-775`, over the bytes after `tok->cur`. -/
+/-- `bad_single_statement`, `Parser/pegen.c:755-778`, over the bytes after `tok->cur`. -/
 def badSingleStatement : Nat → List Nat → Bool
   | 0, _ => false
   | f + 1, s =>
@@ -272,13 +272,13 @@ def badSingleStatement : Nat → List Nat → Bool
     | 35 :: r => badSingleStatement f (r.dropWhile (· != 10))
     | _ => true
 
-/-- `reset_parser_state_for_error_pass`, `Parser/pegen.c:881-894`. -/
+/-- `reset_parser_state_for_error_pass`, `Parser/pegen.c:880-894`. -/
 def resetForErrorPass : PM Unit :=
   modify fun p =>
     { p with lastStmt := (0, 0), memo := p.memo.map (fun _ => []), mark := 0,
              callInvalidRules := true }
 
-/-- `_PyPegen_run_parser`, `Parser/pegen.c:952-1002`. -/
+/-- `_PyPegen_run_parser`, `Parser/pegen.c:948-1000`. -/
 def runParser (fuel : Nat) : PM Ast := do
   let res ← parseStart fuel
   let p ← get
@@ -307,7 +307,7 @@ def parseResult (p : PS) (r : Ast) : Except PyError Ast :=
     | .null => .error { cls := "SystemError", msg := "parser returned NULL without error" }
     | t => .ok t
 
-/-- `_PyTokenizer_FromUTF8`, `Parser/tokenizer/utf8_tokenizer.c:28-55`. -/
+/-- `_PyTokenizer_FromUTF8`, `Parser/tokenizer/utf8_tokenizer.c:31-55`. -/
 def fromUtf8 (src : List Nat) (execInput preserveCrlf : Bool) : TokState :=
   let t := (translateNewlines src execInput preserveCrlf).toArray
   { src := t, encoding := some "utf-8" }

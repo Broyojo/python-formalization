@@ -110,7 +110,7 @@ def hex8 (c : Nat) : List Nat :=
   let ds := Nat.toDigits 16 c
   (List.replicate (8 - ds.length) '0' ++ ds).map Char.toNat
 
-/-- The rewriting loop of `decode_unicode_with_escapes`, `Parser/string_parser.c:145-190`:
+/-- The rewriting loop of `decode_unicode_with_escapes`, `Parser/string_parser.c:135-218`:
 non-ASCII runs become `\UXXXXXXXX`, and a backslash before one, or at the end, `\u005c`. -/
 def escapeNonAscii : Nat → List Nat → List Nat
   | 0, _ | _, [] => []
@@ -132,7 +132,7 @@ def escapeNonAscii : Nat → List Nat → List Nat
         out ++ cps.flatMap (fun x => 92 :: 85 :: hex8 x) ++ escapeNonAscii f (s.drop run.length)
       else out ++ c :: escapeNonAscii f r
 
-/-- `warn_invalid_escape_sequence`, `Parser/string_parser.c:12-112`, with warnings not
+/-- `warn_invalid_escape_sequence`, `Parser/string_parser.c:14-119`, with warnings not
 turned into errors. The message is what `PyErr_WarnExplicitObject` receives. -/
 def warnInvalidEscapeSeq (buf : Array Nat) (ptr : Nat) (t : Token) : PM Unit := do
   let p ← get
@@ -154,7 +154,7 @@ def warnInvalidEscapeSeq (buf : Array Nat) (ptr : Nat) (t : Token) : PM Unit := 
   let lineno := t.lineno + (((buf.extract 0 ptr).toList.filter (· == 10)).length : Int)
   set { p with tok := { p.tok with warnings := (category, msg, lineno) :: p.tok.warnings } }
 
-/-- `decode_unicode_with_escapes`, `Parser/string_parser.c:128-214`. -/
+/-- `decode_unicode_with_escapes`, `Parser/string_parser.c:135-218`. -/
 def decodeUnicodeWithEscapes (s : List Nat) (t : Option Token) : PM (Option (List Nat)) := do
   let buf := (escapeNonAscii (s.length + 1) s).toArray
   let ucn := (← get).cfg.ucn
@@ -216,7 +216,7 @@ def decodeBytesEscape (buf : Array Nat) : Nat → Nat → List Nat → Option Na
       let inv' := if inv.isNone then some (s - 1) else inv
       decodeBytesEscape buf f s (c :: 92 :: acc) inv'
 
-/-- `_PyPegen_decode_string`, `Parser/string_parser.c:232-239`. -/
+/-- `_PyPegen_decode_string`, `Parser/string_parser.c:242-248`. -/
 def decodeString (raw : Bool) (s : List Nat) (t : Option Token) : PM (Option (List Nat)) :=
   if raw then return some (utf8Decode s) else decodeUnicodeWithEscapes s t
 
@@ -226,7 +226,7 @@ inductive StrVal where
   | bytes (bs : List Nat)
   | fail
 
-/-- `_PyPegen_parse_string`, `Parser/string_parser.c:245-338`. -/
+/-- `_PyPegen_parse_string`, `Parser/string_parser.c:254-339`. -/
 def parseString (t : Token) : PM StrVal := do
   -- prefix letters
   let rec pfx : Nat → List Nat → Bool → Bool → List Nat × Bool × Bool

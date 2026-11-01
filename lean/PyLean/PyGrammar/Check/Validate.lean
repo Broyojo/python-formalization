@@ -38,7 +38,7 @@ def seqL : Ast → List Ast
 /-- `seq->size` -/
 def seqLen (a : Ast) : Nat := (seqL a).length
 
-/-- `VALIDATE_POSITIONS`, `Python/ast.c:41-58`. A node with no attributes passes. -/
+/-- `VALIDATE_POSITIONS`, `Python/ast.c:30-49`. A node with no attributes passes. -/
 def validatePositions : Option Loc → V
   | none => ok1
   | some l =>
@@ -52,7 +52,7 @@ def validatePositions : Option Loc → V
       verr s!"line {l.lineno}, column {l.colOffset}-{l.endColOffset} is not a valid range"
     else ok1
 
-/-- `validate_name`, `Python/ast.c:60-76`. -/
+/-- `validate_name`, `Python/ast.c:52-69`. -/
 def validateName (name : Ast) : V :=
   match name with
   | .ident [78, 111, 110, 101] => verr "identifier field can't represent 'None' constant"
@@ -66,7 +66,7 @@ def ctxName : Ctor → String
   | .Store => "Store"
   | _ => "Del"
 
-/-- `validate_constant`, `Python/ast.c:167-205`. Every `PyConst` is of an allowed type, so
+/-- `validate_constant`, `Python/ast.c:157-207`. Every `PyConst` is of an allowed type, so
 only tuples and frozensets recurse, and they cannot fail. -/
 def validateConstant (_ : PyConst) : V := ok1
 
@@ -127,7 +127,7 @@ def validateNonemptySeq (s : Ast) (what owner : String) : V :=
   | _ => false
 
 mutual
-  /-- `validate_comprehension`, `Python/ast.c:78-92`. -/
+  /-- `validate_comprehension`, `Python/ast.c:72-87`. -/
   def validateComprehension : Nat → Ast → V
     | 0, _ => .error .modelFuel
     | f + 1, gens =>
@@ -169,7 +169,7 @@ mutual
       if isNull annotation then ok1 else validateExpr f annotation .Load
     | _ + 1, _ => ok1
 
-  /-- `validate_arguments`, `Python/ast.c:127-165`. -/
+  /-- `validate_arguments`, `Python/ast.c:128-154`. -/
   def validateArguments : Nat → Ast → V
     | 0, _ => .error .modelFuel
     | f + 1, .node _ [posonly, args, vararg, kwonly, kwDefaults, kwarg, defaults] _ =>
@@ -187,7 +187,7 @@ mutual
         validateExprs f (seqL kwDefaults) .Load true
     | _ + 1, _ => ok1
 
-  /-- `validate_expr`, `Python/ast.c:207-435`. -/
+  /-- `validate_expr`, `Python/ast.c:210-410`. -/
   def validateExpr : Nat → Ast → Ctor → V
     | 0, _, _ => .error .modelFuel
     | f + 1, exp, ctx =>
@@ -296,7 +296,7 @@ mutual
         else verr "None disallowed in expression list"
       else (validateExpr f e ctx).and fun _ => validateExprs f rest ctx nullOk
 
-  /-- `validate_pattern_match_value`, `Python/ast.c:497-544`. -/
+  /-- `validate_pattern_match_value`, `Python/ast.c:484-536`. -/
   def validateMatchValue : Nat → Ast → V
     | 0, _ => .error .modelFuel
     | f + 1, exp =>
@@ -323,7 +323,7 @@ mutual
       | .node .Constant (.const .false_ :: _) _ => validateMappingKeys f rest
       | _ => (validateMatchValue f key).and fun _ => validateMappingKeys f rest
 
-  /-- `validate_pattern`, `Python/ast.c:556-682`. -/
+  /-- `validate_pattern`, `Python/ast.c:550-699`. -/
   def validatePattern : Nat → Ast → Bool → V
     | 0, _, _ => .error .modelFuel
     | f + 1, p, starOk =>
@@ -469,7 +469,7 @@ mutual
       (if isNull tp then ok1 else validateTypeParam f tp).and fun _ =>
       validateTypeParams f rest
 
-  /-- `validate_stmt`, `Python/ast.c:707-918`. -/
+  /-- `validate_stmt`, `Python/ast.c:727-951`. -/
   def validateStmt : Nat → Ast → V
     | 0, _ => .error .modelFuel
     | f + 1, stmt =>
@@ -576,7 +576,7 @@ where
     | [] => 0
     | x :: xs => astSize x + sizeList xs
 
-/-- `_PyAST_Validate`, `Python/ast.c:1050-1075`. -/
+/-- `_PyAST_Validate`, `Python/ast.c:1047-1074`. -/
 def validate (m : Ast) : V :=
   let f := 8 * astSize m + 64
   match m with

@@ -1,0 +1,52 @@
+id: pygrammar-unparse-c-fstring-repr
+title: "Stringified annotations misquote f-strings: Python/ast_unparse.c applies repr() to a body holding source text, so nested strings and quotes change or do not parse"
+priority: P4
+kind: wrong-result
+module: pygrammar
+files: [Python/ast_unparse.c]
+functions: ["append_joinedstr", "append_templatestr", "append_repr", "build_ftstring_body"]
+summary: |
+  Under `from __future__ import annotations`, _PyAST_ExprAsUnicode writes an f-string by building its
+  body as text, replacement fields included, and then taking repr() of the whole body. repr escapes
+  what it sees, so the source text of the expressions inside is escaped a second time. For
+  x: f"{'\n'}" the stored annotation is f"{'\\n'}", where the nested string is a backslash and an n,
+  not a newline. When the body holds both kinds of quote, repr writes \' inside a replacement field,
+  which is not valid source. ast.unparse has no such problem, since _ftstring_helper keeps the
+  expression parts out of the escaping.
+likelihood: |
+  Low: an f-string in an annotation is unusual, and this needs a string with an escape inside its
+  replacement field. typing.get_type_hints would evaluate the wrong text.
+maybe_intended: |
+  Not intended, though ast_unparse.c describes itself as a "limited unparser", and annotations
+  holding f-strings are rare enough that a maintainer may not rush.
+reproducer: |
+  import ast
+  src = "from __future__ import annotations\nx: f\"{'\\n'}\"\n"
+  ns = {}
+  exec(compile(src, 'x', 'exec'), ns)
+  s = ns['__annotations__']['x']
+  a = ast.parse(src).body[1].annotation
+  b = ast.parse(s, mode='eval').body
+  print(repr(s), ast.dump(b))
+  if not ast.compare(a, b):
+      print('REPRODUCED pygrammar-unparse-c-fstring-repr')
+expected: |
+  A string whose parse is the annotation's expression, as ast.unparse would give.
+promised_by: |
+  PEP 563: annotations are stored in string form, "preserving ... the source", which
+  typing.get_type_hints evaluates.
+cause: |
+  Python/ast_unparse.c append_joinedstr: `append_repr(writer, body)` on the output of
+  build_ftstring_body, which already contains unparsed expressions.
+possible_fix: |
+  Escape only the literal parts, and choose the quotes as Unparser._ftstring_helper does.
+tested:
+  python3 (3.14.7): to be recorded
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): to be recorded
+duplicates:
+  issues: []
+  queries: ["annotations future f-string unparse backslash"]
+  bugforge: "none"
+lean:
+  property: PyLean.PyGrammar.Peg.CUnparseRoundTrip
+  theorem: PyLean.PyGrammar.Peg.cUnparseRoundTrip_refuted

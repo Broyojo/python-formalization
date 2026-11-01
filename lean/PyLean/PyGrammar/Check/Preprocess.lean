@@ -44,7 +44,7 @@ inductive Step where
   /-- `POP_CONTEXT` -/
   | pop
 
-/-- The visits of each `case`, `Python/ast_preprocess.c:486-945`. -/
+/-- The visits of each `case`, `Python/ast_preprocess.c:519-948`. -/
 def visits : Ctor → List Step
   -- astfold_expr
   | .BoolOp => [.fld 1]
@@ -103,7 +103,7 @@ def visits : Ctor → List Step
   | .MatchOr => [.fld 0]
   | _ => []
 
-/-- `_PyAST_GetDocString`, `Python/ast.c:1079-1091`. -/
+/-- `_PyAST_GetDocString`, `Python/ast.c:1077-1091`. -/
 def getDocString : List Ast → Option (List Nat)
   | .node .Expr [.node .Constant (.const (.str s) :: _) _] _ :: _ => some s
   | _ => none
@@ -115,22 +115,18 @@ def cfWarn (kw : String) (l : Loc) : FM Unit :=
       :: s.warnings }
 
 /-- `before_return` -/
-def beforeReturn (l : Loc) : FM Unit := do
-  let s ← get
-  if s.enableWarnings then
-    match s.cf with
-    | (fin, func, _) :: _ => if fin && !func then cfWarn "return" l
-    | [] => pure ()
+def beforeReturn (l : Loc) : FM Unit := fun s =>
+  match s.enableWarnings, s.cf with
+  | true, (fin, func, _) :: _ => if fin && !func then cfWarn "return" l s else ((), s)
+  | _, _ => ((), s)
 
 /-- `before_loop_exit` -/
-def beforeLoopExit (l : Loc) (kw : String) : FM Unit := do
-  let s ← get
-  if s.enableWarnings then
-    match s.cf with
-    | (fin, _, loop) :: _ => if fin && !loop then cfWarn kw l
-    | [] => pure ()
+def beforeLoopExit (l : Loc) (kw : String) : FM Unit := fun s =>
+  match s.enableWarnings, s.cf with
+  | true, (fin, _, loop) :: _ => if fin && !loop then cfWarn kw l s else ((), s)
+  | _, _ => ((), s)
 
-/-- `parse_literal`, `Python/ast_preprocess.c:175-212`, on the rest of the format: the
+/-- `parse_literal`, `Python/ast_preprocess.c:169-209`, on the rest of the format: the
 literal text with `%%` collapsed, and what follows. -/
 def parseLiteral : List Nat → List Nat × List Nat
   | [] => ([], [])
@@ -167,7 +163,7 @@ def flagsLoop : List Nat → Bool → Option (Bool × Nat × List Nat)
     else if c == 43 || c == 32 || c == 35 || c == 48 then flagsLoop r lj
     else some (lj, c, r)
 
-/-- `simple_format_arg_parse`, `Python/ast_preprocess.c:217-266`. Returns
+/-- `simple_format_arg_parse`, `Python/ast_preprocess.c:214-226`. Returns
 `(spec, ljust, width, prec, rest)`, width and prec `-1` when absent. -/
 def simpleFormatArgParse (s : List Nat) : Option (Nat × Bool × Int × Int × List Nat) := do
   let (lj, ch, rest) ← flagsLoop s false
@@ -192,7 +188,7 @@ def simpleFormatArgParse (s : List Nat) : Option (Nat × Bool × Int × Int × L
 def constAtM1 (s : List Nat) : Ast :=
   .node .Constant [.const (.str s), .null] (some ⟨-1, -1, -1, -1⟩)
 
-/-- `parse_format`, `Python/ast_preprocess.c:268-309`. -/
+/-- `parse_format`, `Python/ast_preprocess.c:274-314`. -/
 def parseFormat (s : List Nat) (arg : Ast) : Option (Ast × List Nat) := do
   let (spec, lj, width, prec, rest) ← simpleFormatArgParse s
   if spec == 115 || spec == 114 || spec == 97 then
@@ -206,7 +202,7 @@ def parseFormat (s : List Nat) (arg : Ast) : Option (Ast × List Nat) := do
     some (.node .FormattedValue [arg, .int spec, fs] (some l), rest)
   else none
 
-/-- The loop of `optimize_format`, `Python/ast_preprocess.c:311-352`: `none` leaves the
+/-- The loop of `optimize_format`, `Python/ast_preprocess.c:317-366`: `none` leaves the
 node as it is. -/
 def formatLoop : Nat → List Nat → List Ast → List Ast → Option (List Ast)
   | 0, _, _, _ => none
@@ -223,7 +219,7 @@ def formatLoop : Nat → List Nat → List Ast → List Ast → Option (List Ast
         | some (x, r) => formatLoop f r es (x :: acc)
         | none => none
 
-/-- `fold_binop`, `Python/ast_preprocess.c:354-376`. -/
+/-- `fold_binop`, `Python/ast_preprocess.c:369-391`. -/
 def foldBinop (st : PState) (node : Ast) : Ast :=
   if st.syntaxCheckOnly then node else
   match node with
@@ -283,7 +279,7 @@ def complexArith (add : Bool) (l r : PyConst) : Option PyConst :=
     | none => none
   | _ => none
 
-/-- `fold_const_match_patterns`, `Python/ast_preprocess.c:878-912`. -/
+/-- `fold_const_match_patterns`, `Python/ast_preprocess.c:857-895`. -/
 def foldMatchValue (st : PState) : Nat → Ast → Ast
   | 0, e => e
   | f + 1, e =>
@@ -310,102 +306,108 @@ def foldMatchValue (st : PState) : Nat → Ast → Ast
       | _, _ => e
     | _ => e
 
-/-- `remove_docstring`, `Python/ast_preprocess.c:432-456`, at index 0. -/
+/-- `remove_docstring`, `Python/ast_preprocess.c:440-462`, at index 0. -/
 def removeDocstring : List Ast → List Ast
   | [.node _ _ (some l)] =>
     [.node .Pass [] (some ⟨l.lineno, l.colOffset, l.lineno, l.colOffset + 4⟩)]
   | _ :: rest => rest
   | [] => []
 
+/-- `BEFORE_RETURN` and `BEFORE_LOOP_EXIT`, the checks made ahead of a node's children. -/
+def preVisit (c : Ctor) (l : Option Loc) : FM Unit :=
+  match c, l with
+  | .Return, some loc => beforeReturn loc
+  | .Break, some loc => beforeLoopExit loc "break"
+  | .Continue, some loc => beforeLoopExit loc "continue"
+  | _, _ => pure ()
+
+/-- The keys of `MatchMapping`, `CALL_SEQ(fold_const_match_patterns, ...)`. -/
+def mappingKeys (st : PState) (f : Nat) (c : Ctor) (fs : List Ast) : List Ast :=
+  match c, fs with
+  | .MatchMapping, [.seq keys, ps, rest] =>
+    [.seq (keys.map (foldMatchValue st (f + 1))), ps, rest]
+  | _, _ => fs
+
+/-- What a node's own `case` does after its children: `fold_binop`, and the `Name_kind` case. -/
+def postFold (st : PState) (c : Ctor) (fs : List Ast) (l : Option Loc) : Ast :=
+  match c with
+  | .BinOp => foldBinop st (.node c fs l)
+  | .Name =>
+    if st.syntaxCheckOnly then .node c fs l else
+    match fs with
+    | [.ident id, .node .Load _ _] =>
+      if id == "__debug__".toList.map Char.toNat then
+        .node .Constant [.const (if st.optimize == 0 then .true_ else .false_), .null] l
+      else .node c fs l
+    | _ => .node c fs l
+  | _ => .node c fs l
+
 mutual
   /-- `astfold_expr`, `astfold_stmt` and the rest: the node's `visits`, then its own rule. -/
   def fold : Nat → Ast → FM Ast
-    | 0, e => do
-      modify fun s => { s with fuelOut := true }
-      return e
+    | 0, e => fun s => (e, { s with fuelOut := true })
     | f + 1, e =>
       match e with
-      | .node .MatchValue [v] l => do
-        return .node .MatchValue [foldMatchValue (← get) (f + 1) v] l
-      | .node c fs l => do
-        -- before the children
-        match c, l with
-        | .Return, some loc => beforeReturn loc
-        | .Break, some loc => beforeLoopExit loc "break"
-        | .Continue, some loc => beforeLoopExit loc "continue"
-        | _, _ => pure ()
-        let fs ← runSteps f (visits c) fs
-        let fs ← match c, fs with
-          | .MatchMapping, [keys, ps, rest] => do
-            let st ← get
-            pure [.seq ((seqL keys).map (foldMatchValue st (f + 1))), ps, rest]
-          | _, _ => pure fs
-        let st ← get
-        match c with
-        | .BinOp => return foldBinop st (.node c fs l)
-        | .Name =>
-          if st.syntaxCheckOnly then return .node c fs l
-          match fs with
-          | [.ident id, .node .Load _ _] =>
-            if id == "__debug__".toList.map Char.toNat then
-              return .node .Constant
-                [.const (if st.optimize == 0 then .true_ else .false_), .null] l
-            return .node c fs l
-          | _ => return .node c fs l
-        | _ => return .node c fs l
-      | .seq xs => do return .seq (← foldList f xs)
-      | a => return a
+      | .node .MatchValue [v] l => fun s =>
+        (.node .MatchValue [foldMatchValue s (f + 1) v] l, s)
+      | .node c fs l => fun s =>
+        let (_, s1) := preVisit c l s
+        let (fs', s2) := runSteps f (visits c) fs s1
+        (postFold s2 c (mappingKeys s2 f c fs') l, s2)
+      | .seq xs => fun s =>
+        let (ys, s1) := foldList f xs s
+        (.seq ys, s1)
+      | a => fun s => (a, s)
 
   /-- `CALL_SEQ`: elements in order, `NULL` skipped. -/
   def foldList : Nat → List Ast → FM (List Ast)
-    | 0, xs => return xs
-    | _ + 1, [] => return []
-    | f + 1, x :: xs => do
-      let x' ← fold f x
-      return x' :: (← foldList f xs)
+    | 0, xs => fun s => (xs, s)
+    | _ + 1, [] => fun s => ([], s)
+    | f + 1, x :: xs => fun s =>
+      let (x', s1) := fold f x s
+      let (xs', s2) := foldList f xs s1
+      (x' :: xs', s2)
 
-  /-- `astfold_body`, `Python/ast_preprocess.c:458-484`. -/
+  /-- `astfold_body`, `Python/ast_preprocess.c:465-492`. -/
   def foldBody : Nat → List Ast → FM (List Ast)
-    | 0, xs => return xs
-    | f + 1, stmts => do
+    | 0, xs => fun s => (xs, s)
+    | f + 1, stmts => fun st =>
       let doc := (getDocString stmts).isSome
-      let st ← get
       let (stmts, doc) :=
-        if doc && st.optimize ≥ 2 then (removeDocstring stmts, false) else (stmts, doc)
-      let stmts ← foldList f stmts
+        if doc && decide (st.optimize ≥ 2) then (removeDocstring stmts, false) else (stmts, doc)
+      let (stmts, s1) := foldList f stmts st
       if !doc && (getDocString stmts).isSome then
         match stmts with
         | .node .Expr [v] l :: rest =>
-          return .node .Expr [.node .JoinedStr [.seq [v]] l] l :: rest
-        | _ => return stmts
-      return stmts
+          (.node .Expr [.node .JoinedStr [.seq [v]] l] l :: rest, s1)
+        | _ => (stmts, s1)
+      else (stmts, s1)
 
   /-- Run a `visits` row over the fields. -/
   def runSteps : Nat → List Step → List Ast → FM (List Ast)
-    | 0, _, fs => return fs
-    | _ + 1, [], fs => return fs
-    | f + 1, s :: rest, fs =>
+    | 0, _, fs => fun s => (fs, s)
+    | _ + 1, [], fs => fun s => (fs, s)
+    | f + 1, s :: rest, fs => fun st =>
       match s with
-      | .fld i => do
-        let v ← fold f (fs.getD i .null)
-        runSteps f rest (fs.set i v)
-      | .body i => do
-        let b ← foldBody f (seqL (fs.getD i .null))
-        runSteps f rest (fs.set i (.seq b))
-      | .ann i => do
-        if (← get).futureAnnotations then runSteps f rest fs
+      | .fld i =>
+        let (v, s1) := fold f (fs.getD i .null) st
+        runSteps f rest (fs.set i v) s1
+      | .body i =>
+        match fs.getD i .null with
+        | .seq xs =>
+          let (b, s1) := foldBody f xs st
+          runSteps f rest (fs.set i (.seq b)) s1
+        | _ => runSteps f rest fs st
+      | .ann i =>
+        if st.futureAnnotations then runSteps f rest fs st
         else
-          let v ← fold f (fs.getD i .null)
-          runSteps f rest (fs.set i v)
-      | .push a b c => do
-        modify fun s => { s with cf := (a, b, c) :: s.cf }
-        runSteps f rest fs
-      | .pop => do
-        modify fun s => { s with cf := s.cf.drop 1 }
-        runSteps f rest fs
+          let (v, s1) := fold f (fs.getD i .null) st
+          runSteps f rest (fs.set i v) s1
+      | .push a b c => runSteps f rest fs { st with cf := (a, b, c) :: st.cf }
+      | .pop => runSteps f rest fs { st with cf := st.cf.drop 1 }
 end
 
-/-- `astfold_mod`, `Python/ast_preprocess.c:486-508`. -/
+/-- `astfold_mod`, `Python/ast_preprocess.c:495-514`. -/
 def foldMod (fuel : Nat) (m : Ast) : FM Ast :=
   match m with
   | .node .Module (b :: rest) l => do
@@ -428,7 +430,7 @@ structure FutureError where
   loc : Loc
   deriving Repr, Inhabited
 
-/-- `future_check_features`, `Python/future.c:8-61`. Returns whether `annotations` was seen. -/
+/-- `future_check_features`, `Python/future.c:9-62`. Returns whether `annotations` was seen. -/
 def futureCheckFeatures (names : List Ast) : Except FutureError Bool :=
   names.foldlM (init := false) fun acc a =>
     match a with
@@ -453,7 +455,7 @@ def futureLoop : List Ast → Bool → Except FutureError Bool
     else .ok acc
   | _ :: _, acc => .ok acc
 
-/-- `future_parse`, `Python/future.c:63-104`. -/
+/-- `future_parse`, `Python/future.c:65-106`. -/
 def futureParse (m : Ast) : Except FutureError Bool :=
   match m with
   | .node .Module (b :: _) _ | .node .Interactive (b :: _) _ =>
@@ -461,7 +463,7 @@ def futureParse (m : Ast) : Except FutureError Bool :=
     futureLoop (if (getDocString body).isSome then body.drop 1 else body) false
   | _ => .ok false
 
-/-- `_PyCompile_AstPreprocess`, `Python/compile.c:1497-1513`, when the tree is kept:
+/-- `_PyCompile_AstPreprocess`, `Python/compile.c:1498-1513`, when the tree is kept:
 `optimize` as given (`-1` means `0` here), `no_const_folding` as stated. -/
 def astPreprocess (m : Ast) (optimize : Int) (syntaxOnly : Bool) :
     Except FutureError Ast := do

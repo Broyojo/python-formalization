@@ -22,7 +22,7 @@ def fuelOut {α : Type} : M α := throw { type := TokKind.ERRORTOKEN.num, fuelOu
 /-- `MAKE_TOKEN(t)` with `p_start`, `p_end`. -/
 @[inline] def emit {α : Type} (t a b : Nat) : M α := throw { type := t, pStart := a, pEnd := b }
 
-/-- `tok_underflow_string`, `Parser/tokenizer/string_tokenizer.c:7-26`, and the part of
+/-- `tok_underflow_string`, `Parser/tokenizer/string_tokenizer.c:8-27`, and the part of
 `tok_underflow_readline` (`readline_tokenizer.c:70-106`) that survives once all lines
 sit in one array. Returns `rc`. -/
 def underflow (s : TokState) : Bool × TokState :=
@@ -63,12 +63,12 @@ def underflow (s : TokState) : Bool × TokState :=
       (true, { s1 with lineStart := s1.cur, lineno := s1.lineno + 1, colOffset := 0, inp := e })
 
 /-- The fast path of `tok_nextc`. -/
-@[inline] private def nextcFast (s : TokState) : Int × TokState :=
+@[inline] def nextcFast (s : TokState) : Int × TokState :=
   if s.colOffset.toNat ≥ 2147483647 then (EOF, { s with done := E_COLUMNOVERFLOW })
   else
     ((s.at s.cur : Int), { s with colOffset := s.colOffset + 1, cur := s.cur + 1 })
 
-/-- `tok_nextc`, `Parser/lexer/lexer.c:59-96`. After a successful `underflow`
+/-- `tok_nextc`, `Parser/lexer/lexer.c:60-96`. After a successful `underflow`
 `cur != inp`, so the C `for (;;)` runs at most twice. -/
 def nextcS (s : TokState) : Int × TokState :=
   if s.cur != s.inp then nextcFast s
@@ -88,12 +88,12 @@ def nextcS (s : TokState) : Int × TokState :=
   let (c, s) := nextcS s
   .ok c s
 
-/-- `tok_backup`, `Parser/lexer/lexer.c:99-111`. -/
+/-- `tok_backup`, `Parser/lexer/lexer.c:100-111`. -/
 @[inline] def backup (c : Int) : M Unit :=
   modify fun s =>
     if c != EOF then { s with cur := s.cur - 1, colOffset := s.colOffset - 1 } else s
 
-/-- `set_ftstring_expr`, `Parser/lexer/lexer.c:113-224`. The comment-stripping second
+/-- `set_ftstring_expr`, `Parser/lexer/lexer.c:114-224`. The comment-stripping second
 half operates on the same buffer as the scan in the first. Fails with `MemoryError`
 on a negative size, which `PyUnicode_DecodeUTF8` turns into that exception. -/
 def setFtstringExpr : M Bool := do
@@ -139,7 +139,7 @@ def setFtstringExpr : M Bool := do
   set { s with metadata := some (utf8Decode out) }
   return false
 
-/-- `_PyLexer_update_ftstring_expr`, `Parser/lexer/lexer.c:226-279`, without the case
+/-- `_PyLexer_update_ftstring_expr`, `Parser/lexer/lexer.c:227-279`, without the case
 `cur == 0`, which is in `underflow`. Allocation cannot fail in the model. -/
 def updateFtstringExpr (cur : Nat) : M Unit :=
   modify fun s =>
@@ -153,7 +153,7 @@ def updateFtstringExpr (cur : Nat) : M Unit :=
         if m.lastExprEnd == -1 then { m with lastExprEnd := s.strlen (s.start.getD 0) } else m
     else s
 
-/-- `lookahead`, `Parser/lexer/lexer.c:281-302`. -/
+/-- `lookahead`, `Parser/lexer/lexer.c:282-302`. -/
 def lookahead (test : List Nat) : M Bool := do
   let rec go : List Nat → List Nat → M Bool
     | rest, consumed => do
@@ -172,7 +172,7 @@ def lookahead (test : List Nat) : M Bool := do
           return false
   go test []
 
-/-- `verify_end_of_number`, `Parser/lexer/lexer.c:304-360`. -/
+/-- `verify_end_of_number`, `Parser/lexer/lexer.c:305-360`. -/
 def verifyEndOfNumber (c : Int) (kind : String) : M Bool := do
   if (← get).extraTokens then return true
   let r ←
@@ -197,7 +197,7 @@ def verifyEndOfNumber (c : Int) (kind : String) : M Bool := do
     return false
   return true
 
-/-- `verify_identifier`, `Parser/lexer/lexer.c:363-410`. `_PyUnicode_ScanIdentifier`
+/-- `verify_identifier`, `Parser/lexer/lexer.c:364-410`. `_PyUnicode_ScanIdentifier`
 over the decoded token. -/
 def verifyIdentifier : M Bool := do
   let s ← get
@@ -232,7 +232,7 @@ def skipWhile (p : Int → Bool) : Nat → M Int
     let c ← nextc
     if p c then skipWhile p f else return c
 
-/-- `tok_decimal_tail`, `Parser/lexer/lexer.c:412-432`. -/
+/-- `tok_decimal_tail`, `Parser/lexer/lexer.c:413-432`. -/
 def decimalTail : Nat → M Int
   | 0 => fuelOut
   | f + 1 => do
@@ -245,7 +245,7 @@ def decimalTail : Nat → M Int
       return 0
     decimalTail f
 
-/-- `tok_continuation_line`, `Parser/lexer/lexer.c:434-453`. -/
+/-- `tok_continuation_line`, `Parser/lexer/lexer.c:435-453`. -/
 def continuationLine : M Int := do
   let c ← nextc
   let c ← if c == ch! '\r' then nextc else pure c
@@ -835,7 +835,7 @@ def indentation (fuel : Nat) : M Bool := do
         emit0 t
   return blankline
 
-/-- `tok_get_normal_mode`, `Parser/lexer/lexer.c:500-1390`. The `nextline:` and `again:`
+/-- `tok_get_normal_mode`, `Parser/lexer/lexer.c:501-1390`. The `nextline:` and `again:`
 labels are the two states of the loop. Never returns normally. -/
 def normalMode (fuel : Nat) : Nat → Option Bool → M Unit
   | 0, _ => fuelOut
@@ -951,7 +951,7 @@ def fstringMiddle : Nat → Nat → Bool → M Unit
       else fstringMiddle f 0 unicodeEscape
     else fstringMiddle f 0 unicodeEscape
 
-/-- `tok_get_fstring_mode`, `Parser/lexer/lexer.c:1392-1613`. -/
+/-- `tok_get_fstring_mode`, `Parser/lexer/lexer.c:1393-1613`. -/
 def fstringMode (fuel : Nat) : M Unit := do
   modify fun s => { s with start := some s.cur, firstLineno := s.lineno,
                            startingColOffset := s.colOffset }
@@ -990,7 +990,7 @@ def fstringMode (fuel : Nat) : M Unit := do
   let s ← get
   emit cur.middle (s.start.getD 0) s.cur
 
-/-- `_PyTokenizer_Get` over `tok_get`, `Parser/lexer/lexer.c:1615-1635`:
+/-- `_PyTokenizer_Get` over `tok_get`, `Parser/lexer/lexer.c:1616-1624`:
 returns the state, the token type and the token. `metadata` is per-token. -/
 def tokenizerGet (s : TokState) : TokState × Nat × LexTok :=
   let s := { s with metadata := none }

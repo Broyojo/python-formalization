@@ -15,7 +15,7 @@ namespace PyLean.PyGrammar.Unparse
 
 open PyLean Lexer
 
-/-- `_Precedence`, `Lib/_ast_unparse.py:14-37`. -/
+/-- `_Precedence`, `Lib/_ast_unparse.py:14-36`. -/
 def pNamedExpr : Nat := 1
 def pTuple : Nat := 2
 def pYield : Nat := 3
@@ -60,7 +60,7 @@ abbrev UM (α : Type) := EStateM PyExc US α
 /-- `self._source` joined. -/
 def joined (parts : List (List Nat)) : List Nat := parts.reverse.flatten
 
-/-- `interleave`, `Lib/_ast_unparse.py:63-73`. -/
+/-- `interleave`, `Lib/_ast_unparse.py:62-72`. -/
 def interleave {α : Type} (inter : UM Unit) (f : α → UM Unit) : List α → UM Unit
   | [] => pure ()
   | x :: xs => do
@@ -89,7 +89,7 @@ def maybeNewline : UM Unit := do
 def maybeSemicolon : UM Unit := do
   if !(← get).source.isEmpty then wr "; "
 
-/-- `fill`, `Lib/_ast_unparse.py:92-101`. -/
+/-- `fill`, `Lib/_ast_unparse.py:94-102`. -/
 def fill (text : String := "") (allowSemicolon : Bool := true) : UM Unit := do
   let s ← get
   if s.inInteractive && s.indent == 0 && allowSemicolon then
@@ -134,7 +134,7 @@ def contains (hay needle : List Nat) : Bool :=
     | h@(_ :: t) => needle.isPrefixOf h || go t
   go hay
 
-/-- `_str_literal_helper`, `Lib/_ast_unparse.py:468-503`. -/
+/-- `_str_literal_helper`, `Lib/_ast_unparse.py:532-568`. -/
 def strLiteralHelper (string : List Nat) (quoteTypes : List (List Nat)) (escapeSpecial : Bool) :
     List Nat × List (List Nat) :=
   let escapeChar (c : Nat) : List Nat :=
@@ -167,7 +167,7 @@ def writeStrAvoidingBackslashes (string : List Nat) (quoteTypes : List (List Nat
   let q := qs.headD []
   write (q ++ s ++ q)
 
-/-- `_write_constant`, `Lib/_ast_unparse.py:611-621`. -/
+/-- `_write_constant`, `Lib/_ast_unparse.py:693-703`. -/
 def constRepr : PyConst → Except PyExc (List Nat)
   | .none => .ok (cp "None")
   | .true_ => .ok (cp "True")
@@ -224,7 +224,7 @@ def ftstringLoop : List (List Nat × Bool) → List (List Nat) → List (List Na
         let filtered := qs'.filter (fun q => !contains value q)
         ftstringLoop rest (if filtered.isEmpty then qs' else filtered) (value :: acc)
 
-/-- `_ftstring_helper`, `Lib/_ast_unparse.py:509-546`. -/
+/-- `_ftstring_helper`, `Lib/_ast_unparse.py:576-616`. -/
 def ftstringHelper (parts : List (List Nat × Bool)) : UM Unit := do
   match ftstringLoop parts allQuotes [] with
   | .error e => throw e
@@ -331,7 +331,7 @@ mutual
       | none => visitList f body
   termination_by structural f _ _ => f
 
-  /-- `_write_ftstring_inner`, `Lib/_ast_unparse.py:551-569`. -/
+  /-- `_write_ftstring_inner`, `Lib/_ast_unparse.py:635-654`. -/
   def ftInner : Nat → Ast → Bool → UM Unit
     | 0, _, _ => throw .modelFuel
     | f + 1, node, isSpec =>
@@ -363,7 +363,7 @@ mutual
       ftInnerList f xs isSpec
   termination_by structural f _ _ => f
 
-  /-- `_write_interpolation`, `Lib/_ast_unparse.py:574-588`, with
+  /-- `_write_interpolation`, `Lib/_ast_unparse.py:661-675`, with
   `_unparse_interpolation_value`: a fresh `Unparser` at `TEST.next()`. -/
   def writeInterpolation : Nat → Ast → Option (List Nat) → Ast → Ast → UM Unit
     | 0, _, _, _, _ => throw .modelFuel
@@ -418,7 +418,7 @@ mutual
         block none (visitList f (seqU finalbody))
   termination_by structural f _ _ _ _ => f
 
-  /-- The `while` of `visit_If`, `Lib/_ast_unparse.py:422-438`. -/
+  /-- The `while` of `visit_If`, `Lib/_ast_unparse.py:492-508`. -/
   def ifChain : Nat → Ast → UM Unit
     | 0, _ => throw .modelFuel
     | f + 1, orelse =>
@@ -434,7 +434,7 @@ mutual
           block none (visitList f (seqU orelse))
   termination_by structural f _ => f
 
-  /-- `visit_arguments`, `Lib/_ast_unparse.py:867-913`. -/
+  /-- `visit_arguments`, `Lib/_ast_unparse.py:994-1043`. -/
   def visitArguments : Nat → List Ast → UM Unit
     | 0, _ => throw .modelFuel
     | f + 1, [posonly, args, vararg, kwonly, kwDefaults, kwarg, defaults] => do
@@ -493,7 +493,7 @@ mutual
       kwArgs f rest
   termination_by structural f _ => f
 
-  /-- `_function_helper`, `Lib/_ast_unparse.py:362-377`. -/
+  /-- `_function_helper`, `Lib/_ast_unparse.py:423-438`. -/
   def functionHelper : Nat → String → List Ast → Option Loc → UM Unit
     | 0, _, _, _ => throw .modelFuel
     | f + 1, suffix, [name, args, body, decs, returns, tc, tps], l => do

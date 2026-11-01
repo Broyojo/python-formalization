@@ -37,13 +37,13 @@ def E_LINECONT : Nat := 25
 def E_INTERACT_STOP : Nat := 28
 def E_COLUMNOVERFLOW : Nat := 29
 
-/-- `Parser/lexer/state.h:7-9,47` -/
+/-- `Parser/lexer/state.h:6-8,46` -/
 def MAXINDENT : Nat := 100
 def MAXLEVEL : Nat := 200
 def MAXFSTRINGLEVEL : Nat := 150
 def MAX_EXPR_NESTING : Int := 3
 
-/-- An exception as `_syntaxerror_range` (`Parser/tokenizer/helpers.c:11-65`) builds it,
+/-- An exception as `_syntaxerror_range` (`Parser/tokenizer/helpers.c:12-64`) builds it,
 or as the parser does later. `text` is the source line in code points. -/
 structure PyError where
   cls : String
@@ -55,7 +55,7 @@ structure PyError where
   text : Option (List Nat) := none
   deriving Repr, Inhabited, BEq
 
-/-- `tokenizer_mode`, `Parser/lexer/state.h:50-72`. -/
+/-- `tokenizer_mode`, `Parser/lexer/state.h:48-71`. -/
 structure Mode where
   /-- `kind == TOK_FSTRING_MODE` -/
   fstringMode : Bool := false
@@ -77,7 +77,7 @@ structure Mode where
   tstring : Bool := false
   deriving Repr, Inhabited
 
-/-- `struct tok_state`, `Parser/lexer/state.h:75-140`, the fields with behaviour.
+/-- `struct tok_state`, `Parser/lexer/state.h:74-138`, the fields with behaviour.
 `tok_mode_stack` is `modes`, innermost first. -/
 structure TokState where
   src : Array Nat := #[]
@@ -287,7 +287,7 @@ def hex4 (c : Nat) : String :=
 /-- `%c` of a code point. -/
 def chStr (c : Nat) : String := String.singleton (Char.ofNat c)
 
-/-- `_syntaxerror_range`, `Parser/tokenizer/helpers.c:11-65`. -/
+/-- `_syntaxerror_range`, `Parser/tokenizer/helpers.c:12-64`. -/
 def syntaxErrorRange (msg : String) (colOffset endColOffset : Int) (s : TokState) : TokState :=
   if s.done == E_ERROR then s else
   let errtext := utf8Decode (s.slice s.lineStart s.cur)
@@ -329,7 +329,7 @@ def warnInvalidEscape (c : Nat) : M Unit :=
     ("\"\\" ++ chStr c ++ "\" is an invalid escape sequence. Such sequences will not work in "
       ++ "the future. Did you mean \"\\\\" ++ chStr c ++ "\"? A raw string is also an option.")
 
-/-- `_PyTokenizer_translate_newlines`, `Parser/tokenizer/helpers.c:265-310`. `s` stops
+/-- `_PyTokenizer_translate_newlines`, `Parser/tokenizer/helpers.c:263-307`. `s` stops
 at the first NUL, as a C string does. -/
 def translateNewlines (s : List Nat) (execInput preserveCrlf : Bool) : List Nat :=
   let rec go : List Nat → Bool → Nat → List Nat → List Nat × Nat
@@ -348,11 +348,11 @@ def translateNewlines (s : List Nat) (execInput preserveCrlf : Bool) : List Nat 
   let acc := if execInput && c != 10 && c != 0 then 10 :: acc else acc
   acc.reverse
 
-/-- `_PyLexer_token_setup`, `Parser/lexer/state.c:133-153` needs `ISSTRINGLIT`. -/
+/-- `_PyLexer_token_setup`, `Parser/lexer/state.c:134-154` needs `ISSTRINGLIT`. -/
 def isStringLit (t : Nat) : Bool :=
   t == TokKind.STRING.num || t == TokKind.FSTRING_MIDDLE.num || t == TokKind.TSTRING_MIDDLE.num
 
-/-- `struct token`, `Parser/lexer/state.h:32-36`. -/
+/-- `struct token`, `Parser/lexer/state.h:29-33`. -/
 structure LexTok where
   level : Nat := 0
   lineno : Int := 0

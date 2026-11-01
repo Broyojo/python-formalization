@@ -1,7 +1,7 @@
 import PyLean.PyGrammar.Lexer.State
 
 /-!
-`parsenumber`, `Parser/pegen.c:621-690`, with exact decimal-to-binary64 conversion.
+`parsenumber`, `Parser/pegen.c:667-693`, with exact decimal-to-binary64 conversion.
 Everything is over `Nat`: a binary64 is its 64-bit pattern, and
 `PyOS_string_to_double` is correctly rounded (ties to even), which `roundToBits`
 computes from the exact rational value.

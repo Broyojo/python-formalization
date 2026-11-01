@@ -1,0 +1,54 @@
+id: pygrammar-grammar-invalid-first-pass
+title: "Grammar comment says invalid_ rules are not used in the first pass, but dict calls invalid_double_starred_kvpairs unguarded"
+priority: P4
+kind: doc-mismatch
+module: pygrammar
+files: [Grammar/python.gram, Tools/peg_generator/pegen/c_generator.py]
+functions: ["rule:dict", "rule:invalid_double_starred_kvpairs"]
+summary: |
+  The comment at the top of Grammar/python.gram says rules starting with invalid_ "are NOT used in
+  the first pass of the parser". c_generator.py guards an alternative with
+  `if (p->call_invalid_rules)` only when it consists of a single invalid_ item (visit_Alt). The
+  second alternative of dict, `'{' invalid_double_starred_kvpairs '}'`, has three items, so it runs
+  in the first pass. Of all 268 rules this is the only such alternative. An error it raises sets
+  error_indicator, and reset_parser_state_for_error_pass does not clear that, so the second pass
+  returns at once and SyntaxError._metadata stays (0, 0): the "did you mean" keyword suggestion in
+  tracebacks sees no statement location.
+likelihood: |
+  The behaviour difference is small: it needs a malformed dict display, and only the metadata differs.
+  It also costs a reparse of the display on every set or comprehension in the first pass.
+maybe_intended: |
+  Probably not intended, but a maintainer may well call this a comment nit and leave the code. It
+  does no harm to valid programs: the alternative's invalid paths cannot match valid code.
+reproducer: |
+  def meta(src):
+      try:
+          compile(src, 'x', 'exec')
+      except SyntaxError as e:
+          return e._metadata[:2]
+  first = meta("x = 1\n{1: *a}\n")
+  second = meta("x = 1\nprint 1\n")
+  print(first, second)
+  if first == (0, 0) and second[0] > 0:
+      print('REPRODUCED pygrammar-grammar-invalid-first-pass')
+expected: |
+  Either the rule runs in the second pass only, as the comment says, or the comment names the exception.
+promised_by: |
+  Grammar/python.gram:36 (comment).
+cause: |
+  Grammar/python.gram, rule dict; Tools/peg_generator/pegen/c_generator.py visit_Alt guards only
+  one-item alternatives.
+possible_fix: |
+  Write the alternative as `&'{' invalid_dict` with a rule that consumes the braces, so that a single
+  invalid_ item is what the generator sees; or have visit_Alt guard any alternative holding an
+  invalid_ item.
+tested:
+  python3 (3.14.7): to be recorded
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): to be recorded
+duplicates:
+  issues: []
+  queries: ["invalid_double_starred_kvpairs"]
+  bugforge: "none"
+lean:
+  property: PyLean.PyGrammar.Peg.InvalidRulesGuarded
+  theorem: PyLean.PyGrammar.Peg.invalidRulesGuarded_refuted
