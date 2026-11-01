@@ -73,6 +73,7 @@ theorem setCharOrNoneLaw_proven : SetCharOrNoneLaw := by
     | int n => simp [setCharOrNone, Obj.asStr]
     | bool b => simp [setCharOrNone, Obj.asStr]
     | dialect t d => simp [setCharOrNone, Obj.asStr]
+    | dialectX t d l a i => simp [setCharOrNone, Obj.asStr]
     | other t a b c d e f => simp [setCharOrNone, Obj.asStr]
     | func c => simp [setCharOrNone, Obj.asStr]
 
@@ -137,6 +138,7 @@ theorem setIntLaw_proven : SetIntLaw := by
       | strSub t s k => simp [setInt]
       | bool b => simp [setInt]
       | dialect t d => simp [setInt]
+      | dialectX t d l a i => simp [setInt]
       | other t a b c d e f => simp [setInt]
       | func c => simp [setInt]
   · intro n h
@@ -417,57 +419,76 @@ theorem parse_one (o : Obj) : parseDialectArgs ⟨[o], []⟩ =
 /-- `dialect_new` on an object that is neither a string nor a `Dialect`: always a new dialect, from
 its attributes. -/
 theorem new_other (r : Registry) (ty : TyName) (o : Obj) (h1 : o.asStr = Option.none)
-    (h2 : ∀ t d, o ≠ .dialect t d) :
-    dialectNew r ty ⟨[o], []⟩ =
-      Except.bind (dialectBuild (dialectAttrs o { dialect := some o })) fun d => .ok (.fresh ty d) := by
+    (h2 : o.asDialect = Option.none) :
+    dialectNew r ty ⟨[o], []⟩ = dialectFresh ty (dialectAttrs o { dialect := some o }) := by
   cases o with
   | str s => cases h1
   | strSub t s k => cases h1
-  | dialect t d => exact absurd rfl (h2 t d)
+  | dialect t d => cases h2
+  | dialectX t d l a i => cases h2
   | none => rfl
   | int n => rfl
   | bool b => rfl
   | other t a b c d e f => rfl
   | func c => rfl
 
+/-- A dialect is not a string. -/
+theorem asStr_of_dialect {o : Obj} {d : Dialect} (h : o.asDialect = some d) : o.asStr = Option.none := by
+  cases o <;> first | rfl | cases h
+
+/-- `dialect_new` with one positional object, whatever the keywords, once they parse. -/
+theorem new_pos (r : Registry) (ty : TyName) (o : Obj) (kw : List (List Nat × Obj)) (vals : List (Option Obj))
+    (hs : o.asStr = Option.none) (hp : parseDialectArgs ⟨[o], kw⟩ = .ok vals)
+    (hd : (argsOf vals).dialect = some o) :
+    dialectNew r ty ⟨[o], kw⟩ =
+      let a := argsOf vals
+      let noOverrides := a.delimiter.isNone && a.doublequote.isNone && a.escapechar.isNone &&
+        a.lineterminator.isNone && a.quotechar.isNone && a.quoting.isNone &&
+        a.skipinitialspace.isNone && a.strict.isNone
+      match o.asDialect with
+      | some d => if noOverrides then .ok (.same o d) else dialectFresh ty (dialectAttrs o a)
+      | Option.none => dialectFresh ty (dialectAttrs o a) := by
+  simp only [dialectNew, hp, bind, Except.bind, hd, hs, pure, Except.pure]
+  rfl
+
 /-- A `Dialect` passed with no overrides is the same object back, by value or through the registry
-under its name, which is the "Can we reuse this instance?" branch and what `_call_dialect` hands to
-`csv.reader` and `csv.writer`. An object that is not a `Dialect` is never reused, even with no
-overrides: `PyObject_TypeCheck` is the first test. -/
+under its name, whichever class it is: that is the "Can we reuse this instance?" branch. An object
+that is not a `Dialect` is never reused, even with no overrides: `PyObject_TypeCheck` is the first
+test. What `type_call` then does to a reused instance is `CallDialectLaw`. -/
 def DialectReuse : Prop :=
-  (∀ (r : Registry) (ty t : TyName) (d : Dialect),
-    dialectNew r ty ⟨[.dialect t d], []⟩ = .ok (.same t d)) ∧
-  (∀ (r : Registry) (ty t : TyName) (d : Dialect) (k : List Nat),
-    r.lookup k = some (.dialect t d) → dialectNew r ty ⟨[.str k], []⟩ = .ok (.same t d)) ∧
-  (∀ (r : Registry) (t : TyName) (d : Dialect),
-    callDialect r (some (.dialect t d)) [] = .ok (.same t d)) ∧
+  (∀ (r : Registry) (ty : TyName) (o : Obj) (d : Dialect),
+    o.asDialect = some d → dialectNew r ty ⟨[o], []⟩ = .ok (.same o d)) ∧
+  (∀ (r : Registry) (ty : TyName) (k : List Nat) (key o : Obj) (d : Dialect),
+    regFind r k = .ok (some (key, o)) → o.asDialect = some d →
+    dialectNew r ty ⟨[.str k], []⟩ = .ok (.same o d)) ∧
   (∀ (r : Registry) (ty : TyName) (o : Obj) (res : DRes),
-    o.asStr = Option.none → (∀ t d, o ≠ .dialect t d) → dialectNew r ty ⟨[o], []⟩ = .ok res →
-    ∃ t d, res = .fresh t d)
+    o.asStr = Option.none → o.asDialect = Option.none → dialectNew r ty ⟨[o], []⟩ = .ok res →
+    ∃ t d l, res = .fresh t d l)
 
 theorem dialectReuse_proven : DialectReuse := by
-  refine ⟨fun r ty t d => ?_, fun r ty t d k h => ?_, fun r t d => ?_, fun r ty o res h1 h2 h3 => ?_⟩
-  · simp [dialectNew, parse_one, argsOf, Obj.asStr, bind, Except.bind, pure, Except.pure]
-  · simp [dialectNew, parse_one, argsOf, Obj.asStr, getDialectFromRegistry, Obj.dictFind, Obj.dictKey,
-      h, bind, Except.bind, pure, Except.pure, Functor.map, Except.map]
-  · simp [callDialect, dialectNew, parse_one, argsOf, Obj.asStr, bind, Except.bind, pure, Except.pure]
+  refine ⟨fun r ty o d h => ?_, fun r ty k key o d h h2 => ?_, fun r ty o res h1 h2 h3 => ?_⟩
+  · rw [new_pos r ty o [] _ (asStr_of_dialect h) (parse_one o) rfl]
+    simp only [h]
+    rfl
+  · have hg : getDialectFromRegistry r (.str k) = .ok o := by
+      simp only [getDialectFromRegistry, regLookup, Obj.dictKey, h]
+    simp [dialectNew, parse_one, argsOf, Obj.asStr, hg, h2, bind, Except.bind, pure, Except.pure,
+      Functor.map, Except.map]
   · rw [new_other r ty o h1 h2] at h3
     cases hb : dialectBuild (dialectAttrs o { dialect := some o }) with
     | error e =>
-      rw [hb] at h3
-      cases h3
+      simp [dialectFresh, hb, bind, Except.bind] at h3
     | ok d =>
-      rw [hb] at h3
-      cases h3
-      exact ⟨_, _, rfl⟩
+      simp [dialectFresh, hb, bind, Except.bind, pure, Except.pure] at h3
+      exact ⟨_, _, _, h3.symm⟩
 
 /-- `DIALECT_GETATTR` clears every failure, not only `AttributeError`, so an object whose attributes
 all raise gives the default dialect, and a fresh one. -/
 def GetattrCleared : Prop :=
   ∀ (r : Registry) (ty : TyName) (o : Obj),
-    o.asStr = Option.none → (∀ t d, o ≠ .dialect t d) → (∀ n, ∃ e, o.getattr n = .error e) →
+    o.asStr = Option.none → o.asDialect = Option.none → (∀ n, ∃ e, o.getattr n = .error e) →
     dialectNew r ty ⟨[o], []⟩ =
-      .ok (.fresh ty ⟨true, false, false, QUOTE_MINIMAL, 44, 34, NOT_SET, [13, 10]⟩)
+      .ok (.fresh ty ⟨true, false, false, QUOTE_MINIMAL, 44, 34, NOT_SET, [13, 10]⟩ (.str [13, 10]))
 
 theorem getattrCleared_proven : GetattrCleared := by
   intro r ty o h1 h2 h3
@@ -479,142 +500,538 @@ theorem getattrCleared_proven : GetattrCleared := by
       .ok ⟨true, false, false, QUOTE_MINIMAL, 44, 34, NOT_SET, [13, 10]⟩ := rfl
   have ha : dialectAttrs o ({ dialect := some o } : DArgs) = { dialect := some o } := by
     simp only [dialectAttrs, hg]
-  rw [new_other r ty o h1 h2, ha, hb]
-  rfl
+  rw [new_other r ty o h1 h2, ha]
+  simp [dialectFresh, hb, ltObj, bind, Except.bind, pure, Except.pure]
+
+/-- A keyword beats the attribute, `Modules/_csv.c:504-511`: `DIALECT_GETATTR` only fills what is
+still `NULL`. With a keyword present an object is not reused, even a `Dialect`, and the new object
+is built from the keywords and the attributes of the old one. -/
+def DialectKeywords : Prop :=
+  (∀ (o x : Obj) (n : String), getattrOr o (some x) n = some x) ∧
+  ∀ (r : Registry) (ty : TyName) (o : Obj) (kw : List (List Nat × Obj)) (vals : List (Option Obj)),
+    o.asStr = Option.none → parseDialectArgs ⟨[o], kw⟩ = .ok vals → (argsOf vals).dialect = some o →
+    ((argsOf vals).delimiter.isSome ∨ (argsOf vals).doublequote.isSome ∨ (argsOf vals).escapechar.isSome ∨
+      (argsOf vals).lineterminator.isSome ∨ (argsOf vals).quotechar.isSome ∨ (argsOf vals).quoting.isSome ∨
+      (argsOf vals).skipinitialspace.isSome ∨ (argsOf vals).strict.isSome) →
+    dialectNew r ty ⟨[o], kw⟩ = dialectFresh ty (dialectAttrs o (argsOf vals))
+
+theorem none_of_some {x : Option Obj} (h : x.isSome = true) : x.isNone = false := by
+  cases x <;> simp_all
+
+theorem dialectKeywords_proven : DialectKeywords := by
+  refine ⟨fun o x n => rfl, fun r ty o kw vals hs hp hd hk => ?_⟩
+  rw [new_pos r ty o kw vals hs hp hd]
+  have hn : ((argsOf vals).delimiter.isNone && (argsOf vals).doublequote.isNone &&
+      (argsOf vals).escapechar.isNone && (argsOf vals).lineterminator.isNone &&
+      (argsOf vals).quotechar.isNone && (argsOf vals).quoting.isNone &&
+      (argsOf vals).skipinitialspace.isNone && (argsOf vals).strict.isNone) = false := by
+    rcases hk with h | h | h | h | h | h | h | h <;> simp [none_of_some h]
+  simp only [hn]
+  cases o.asDialect <;> rfl
+
+/-- `PyArg_ParseTupleAndKeywords` fails first: nothing is looked up or built. Ten arguments are one
+too many, and a keyword that names no parameter is `TypeError`. -/
+def DialectArgErrors : Prop :=
+  (∀ (r : Registry) (ty : TyName) (a : Args) (e : PyExc), parseDialectArgs a = .error e →
+    dialectNew r ty a = .error e) ∧
+  (∀ a : Args, a.pos.length + a.kw.length > dialectKws.length →
+    parseDialectArgs a = .error (.typeError
+      s!"function takes at most {dialectKws.length} {if a.pos.length == 0 then "keyword " else ""}arguments ({a.pos.length + a.kw.length} given)")) ∧
+  (∀ (k : List Nat) (v : Obj), (∀ n ∈ dialectKws, strToList n ≠ k) →
+    parseDialectArgs ⟨[], [(k, v)]⟩ = .error (.typeError "~this function got an unexpected keyword argument"))
+
+theorem dialectArgErrors_proven : DialectArgErrors := by
+  refine ⟨fun r ty a e h => ?_, fun a h => ?_, fun k v h => ?_⟩
+  · simp [dialectNew, h, bind, Except.bind]
+  · unfold parseDialectArgs
+    rw [if_pos h]
+  · have hk : ∀ n ∈ dialectKws, ([(k, v)] : List (List Nat × Obj)).lookup (strToList n) = Option.none := by
+      intro n hn
+      have hne : (strToList n == k) = false := by simpa using h n hn
+      simp [List.lookup, hne]
+    have hc : (dialectKws.drop 0).countP (fun n => (([(k, v)] : List (List Nat × Obj)).lookup (strToList n)).isSome) = 0 := by
+      apply List.countP_eq_zero.2
+      intro n hn
+      simpa [hk n (by simpa using hn)]
+    unfold parseDialectArgs
+    simp only [List.length_nil, List.length_cons]
+    rw [if_neg (by decide)]
+    simp only [hc]
+    rfl
+
+/-- A name that is not registered is `csv.Error`, whatever keywords come with it. -/
+def DialectUnknownName : Prop :=
+  ∀ (r : Registry) (ty : TyName) (name : Obj) (s : List Nat) (kw : List (List Nat × Obj))
+    (vals : List (Option Obj)),
+    name.asStr = some s → parseDialectArgs ⟨[name], kw⟩ = .ok vals → (argsOf vals).dialect = some name →
+    regLookup r name = .ok Option.none → dialectNew r ty ⟨[name], kw⟩ = .error (csvErr "unknown dialect")
+
+theorem dialectUnknownName_proven : DialectUnknownName := by
+  intro r ty name s kw vals h1 h2 h3 h4
+  have hg : getDialectFromRegistry r name = .error (csvErr "unknown dialect") := by
+    simp only [getDialectFromRegistry, h4]
+  simp [dialectNew, h2, h3, h1, hg, bind, Except.bind, Functor.map, Except.map]
+
+/-- What `dialect_new` builds satisfies `DialectValid`, by any route: keywords, attributes, or both.
+Only a reused instance skips the checks, because it passed them when it was made. -/
+def DialectNewValid : Prop :=
+  ∀ (r : Registry) (ty t : TyName) (a : Args) (d : Dialect) (l : Obj),
+    dialectNew r ty a = .ok (.fresh t d l) → t = ty ∧ ∃ b, dialectBuild b = .ok d ∧ l = ltObj b
+
+theorem fresh_inv {ty t : TyName} {b : DArgs} {d : Dialect} {l : Obj}
+    (h : dialectFresh ty b = .ok (.fresh t d l)) : t = ty ∧ ∃ b', dialectBuild b' = .ok d ∧ l = ltObj b' := by
+  unfold dialectFresh at h
+  cases hb : dialectBuild b with
+  | error e => simp [hb, bind, Except.bind] at h
+  | ok x =>
+    simp [hb, bind, Except.bind, pure, Except.pure] at h
+    obtain ⟨h1, h2, h3⟩ := h
+    subst h1 h2 h3
+    exact ⟨rfl, b, hb, rfl⟩
+
+theorem dialectNewValid_proven : DialectNewValid := by
+  intro r ty t a d l h
+  unfold dialectNew at h
+  simp only [bind, Except.bind, pure, Except.pure] at h
+  cases hp : parseDialectArgs a with
+  | error e =>
+    rw [hp] at h
+    cases h
+  | ok vals =>
+    rw [hp] at h
+    simp only at h
+    generalize (argsOf vals).dialect = dd at h
+    cases dd with
+    | none => exact fresh_inv h
+    | some o =>
+      simp only at h
+      cases hs : o.asStr with
+      | some x =>
+        simp only [hs, Functor.map, Except.map] at h
+        cases hg : getDialectFromRegistry r o with
+        | error e =>
+          rw [hg] at h
+          cases h
+        | ok q =>
+          rw [hg] at h
+          simp only at h
+          cases hd : q.asDialect with
+          | none =>
+            rw [hd] at h
+            exact fresh_inv h
+          | some z =>
+            rw [hd] at h
+            simp only at h
+            split at h
+            · cases h
+            · exact fresh_inv h
+      | none =>
+        simp only [hs] at h
+        cases hd : o.asDialect with
+        | none =>
+          rw [hd] at h
+          exact fresh_inv h
+        | some z =>
+          rw [hd] at h
+          simp only at h
+          split at h
+          · cases h
+          · exact fresh_inv h
+
+/-- An attribute of a subclass shadows the C field, `Modules/_csv.c:507`: `DIALECT_GETATTR` reads what
+the instance's class says, and clears it if it raises. Without one it reads the getter. -/
+def SubclassAttrs : Prop :=
+  ∀ (t : TyName) (d : Dialect) (l : Option Obj) (at_ : List (String × Except PyExc Obj))
+    (i : Except PyExc Unit) (n : String),
+    (∀ x, at_.lookup n = some (.ok x) → getattrOr (.dialectX t d l at_ i) Option.none n = some x) ∧
+    (∀ e, at_.lookup n = some (.error e) → getattrOr (.dialectX t d l at_ i) Option.none n = Option.none) ∧
+    (at_.lookup n = Option.none → (.dialectX t d l at_ i : Obj).getattr n = dialectGetattr d l t n)
+
+theorem subclassAttrs_proven : SubclassAttrs := by
+  intro t d l a i n
+  refine ⟨fun x h => ?_, fun e h => ?_, fun h => ?_⟩ <;> simp [getattrOr, Obj.getattr, h]
+
+/-- `Dialect_get_lineterminator` returns the object in the slot, not a copy of its text: a `str`
+subclass stays one, and a keyword's object is what is stored. A slot `_set_str` has not filled gives
+`NULL`. -/
+def LineterminatorStored : Prop :=
+  (∀ o : Obj, dialectGetLineterminator (some o) = .stored o) ∧
+  dialectGetLineterminator Option.none = .null ∧
+  (∀ (a : DArgs) (o : Obj), a.lineterminator = some o → ltObj a = o) ∧
+  ∀ (t : TyName) (d : Dialect) (o : Obj) (i : Except PyExc Unit),
+    (.dialectX t d (some o) [] i : Obj).getattr "lineterminator" = .ok o
+
+theorem lineterminatorStored_proven : LineterminatorStored := by
+  refine ⟨fun o => rfl, rfl, fun a o h => ?_, fun t d o i => rfl⟩
+  simp [ltObj, h]
+
+/-- The getter never returns `NULL` without an exception: that is the rule for a C function called
+from Python. -/
+def LineterminatorNotNull : Prop :=
+  ∀ (t : TyName) (d : Dialect) (l : Option Obj) (i : Except PyExc Unit),
+    (.dialectX t d l [] i : Obj).getattr "lineterminator" ≠ .error nullReturn
+
+theorem lineterminatorNotNull_refuted : ¬LineterminatorNotNull := by
+  intro h
+  exact h dialectTy excel Option.none (.ok ()) rfl
+
+/-- `_call_dialect`: `type_call` runs `tp_init` on what `dialect_new` returned, and for a reused
+subclass instance that is its own `__init__`, which can raise. A new instance has `object_init`, so
+keywords skip that `__init__`. With no instance and no keywords the result is the default dialect. -/
+def CallDialectLaw : Prop :=
+  (∀ (r : Registry) (t : TyName) (d : Dialect) (l : Option Obj) (a : List (String × Except PyExc Obj))
+    (e : PyExc), callDialect r (some (.dialectX t d l a (.error e))) [] = .error e) ∧
+  (∀ (r : Registry) (t : TyName) (d : Dialect) (l : Option Obj) (a : List (String × Except PyExc Obj))
+    (u : Unit), ∃ res, callDialect r (some (.dialectX t d l a (.ok u))) [] = .ok res ∧
+      res.dialect = d ∧ (∃ o, res = .same o d)) ∧
+  (∀ (r : Registry) (t : TyName) (d : Dialect), ∃ res,
+    callDialect r (some (.dialect t d)) [] = .ok res ∧ res.dialect = d) ∧
+  (∀ (r : Registry) (o : Obj) (kw : List (List Nat × Obj)) (vals : List (Option Obj)),
+    o.asStr = Option.none → parseDialectArgs ⟨[o], kw⟩ = .ok vals → (argsOf vals).dialect = some o →
+    (argsOf vals).delimiter.isSome = true →
+    callDialect r (some o) kw = dialectFresh dialectTy (dialectAttrs o (argsOf vals))) ∧
+  (∀ (r : Registry) (kw : List (List Nat × Obj)) (x : Dialect) (l : Obj),
+    dialectNew r dialectTy ⟨[], kw⟩ = .ok (.fresh dialectTy x l) →
+    callDialect r Option.none kw = .ok (.fresh dialectTy x l)) ∧
+  (∃ res, callDialect [] Option.none [] = .ok res ∧ res.dialect = excel)
+
+/-- `_call_dialect` on a reusable instance hands it back: nothing there can fail. It can, because
+`type_call` runs a subclass's `__init__` on it, with the instance as an argument. -/
+def ReuseNeverFails : Prop :=
+  ∀ (r : Registry) (o : Obj) (d : Dialect), o.asDialect = some d →
+    ∃ res, callDialect r (some o) [] = .ok res
+
+theorem dialectFresh_tp (ty : TyName) (a : DArgs) : (do tpInit (← dialectFresh ty a)) = dialectFresh ty a := by
+  unfold dialectFresh
+  cases dialectBuild a <;> rfl
+
+theorem callDialectLaw_proven : CallDialectLaw := by
+  have hr : ∀ (r : Registry) (o : Obj) (d : Dialect), o.asDialect = some d →
+      callDialect r (some o) [] = tpInit (.same o d) := by
+    intro r o d h
+    simp [callDialect, typeCall, dialectReuse_proven.1 r dialectTy o d h, bind, Except.bind]
+  refine ⟨fun r t d l a e => ?_, fun r t d l a u => ?_, fun r t d => ?_, fun r o kw vals h1 h2 h3 h4 => ?_,
+    fun r kw x l h => ?_, ?_⟩
+  · rw [hr r _ d rfl]
+    rfl
+  · exact ⟨.same (.dialectX t d l a (.ok u)) d, by rw [hr r _ d rfl]; rfl, rfl, _, rfl⟩
+  · exact ⟨.same (.dialect t d) d, by rw [hr r _ d rfl]; rfl, rfl⟩
+  · have hn := dialectKeywords_proven.2 r dialectTy o kw vals h1 h2 h3 (.inl h4)
+    simp only [callDialect, typeCall, hn]
+    exact dialectFresh_tp _ _
+  · simp [callDialect, typeCall, h, bind, Except.bind, tpInit]
+  · exact ⟨_, rfl, rfl⟩
+
+theorem reuseNeverFails_refuted : ¬ReuseNeverFails := by
+  intro h
+  obtain ⟨res, hr⟩ := h [] (.dialectX dialectTy excel Option.none [] (.error .modelFuel)) excel rfl
+  rw [callDialectLaw_proven.1] at hr
+  cases hr
+
+/-- `Dialect_reduce`: a dialect cannot be pickled or copied through `__reduce__` or `__reduce_ex__`,
+with the name of its own class in the message, unless that class defines the method. -/
+def DialectNoPickle : Prop :=
+  (∀ (t : TyName) (d : Dialect) (m : String),
+    dialectPickle (.dialect t d) m = .error (.typeError s!"cannot pickle '{t.short}' instances")) ∧
+  (∀ (t : TyName) (d : Dialect) (l : Option Obj) (a : List (String × Except PyExc Obj))
+    (i : Except PyExc Unit) (m : String), a.lookup m = Option.none →
+    dialectPickle (.dialectX t d l a i) m = .error (.typeError s!"cannot pickle '{t.short}' instances")) ∧
+  (∀ (t : TyName) (d : Dialect) (l : Option Obj) (a : List (String × Except PyExc Obj))
+    (i : Except PyExc Unit) (m : String) (x : Obj), a.lookup m = some (.ok x) →
+    dialectPickle (.dialectX t d l a i) m = .ok ())
+
+theorem dialectNoPickle_proven : DialectNoPickle := by
+  refine ⟨fun t d m => rfl, fun t d l a i m h => ?_, fun t d l a i m x h => ?_⟩ <;>
+    simp [dialectPickle, h, dialectReduce]
 
 /-! ### The registry -/
-
-/-- A registered dialect can be read back by name, and it is the object `_call_dialect` made. -/
-def RegistryLaw : Prop :=
-  ∀ (r r2 : Registry) (name : List Nat) (inst : Option Obj) (kw : List (List Nat × Obj)) (d : DRes),
-    callDialect r inst kw = .ok d →
-    csvRegisterDialect r ⟨.str name :: inst.toList, kw⟩ = .ok r2 →
-    csvGetDialect r2 (.str name) = .ok d.obj
 
 theorem lookup_ne {α : Type} (name k : List Nat) (v : α) (l : List (List Nat × α)) (h : name ≠ k) :
     ((k, v) :: l).lookup name = l.lookup name := by
   have hb : (name == k) = false := by simpa using h
   simp [List.lookup, hb]
 
-theorem lookup_replace (name : List Nat) (d : Obj) : ∀ l : Registry, (l.lookup name).isSome = true →
-    (l.map (fun p => if p.1 = name then (name, d) else p)).lookup name = some d := by
+/-- An exact `str` answers to its own text and nothing else. -/
+theorem answers_str (s k : List Nat) : keyAnswers (.str s) k = .ok (s == k) := rfl
+
+theorem regPut_find (name d : Obj) (k : List Nat) (hn : keyAnswers name k = .ok true) :
+    ∀ (l l2 : Registry), regPut name d l k = .ok l2 → ∃ x, regFind l2 k = .ok (some (x, d)) := by
   intro l
   induction l with
-  | nil => intro h; cases h
+  | nil =>
+    intro l2 h
+    cases h
+    exact ⟨name, by simp [regFind, hn]⟩
   | cons p ps ih =>
-    intro h
-    obtain ⟨k, v⟩ := p
-    by_cases he : k = name
-    · subst he
-      simp [List.lookup]
-    · rw [lookup_ne _ _ _ _ (Ne.symm he)] at h
-      simp only [List.map_cons, he, if_false]
-      rw [lookup_ne _ _ _ _ (Ne.symm he)]
-      exact ih h
+    intro l2 h
+    obtain ⟨key, v⟩ := p
+    simp only [regPut] at h
+    cases hk : keyAnswers key k with
+    | error e =>
+      rw [hk] at h
+      cases h
+    | ok b =>
+      rw [hk] at h
+      cases b with
+      | true =>
+        cases h
+        exact ⟨key, by simp [regFind, hk]⟩
+      | false =>
+        simp only [bind, Except.bind, pure, Except.pure] at h
+        cases hp : regPut name d ps k with
+        | error e =>
+          rw [hp] at h
+          cases h
+        | ok l3 =>
+          rw [hp] at h
+          cases h
+          obtain ⟨x, hx⟩ := ih l3 hp
+          exact ⟨x, by simp [regFind, hk, hx]⟩
 
-theorem lookup_snoc (name : List Nat) (d : Obj) : ∀ l : Registry, (l.lookup name).isSome = false →
-    (l ++ [(name, d)]).lookup name = some d := by
-  intro l
-  induction l with
-  | nil => intro _; simp [List.lookup]
-  | cons p ps ih =>
-    intro h
-    obtain ⟨k, v⟩ := p
-    by_cases he : name = k
-    · subst he
-      simp [List.lookup] at h
-    · rw [lookup_ne _ _ _ _ he] at h
-      rw [List.cons_append, lookup_ne _ _ _ _ he]
-      exact ih h
-
-theorem registrySet_get (r : Registry) (k : List Nat) (d : Obj) :
-    (registrySet r k d).lookup k = some d := by
-  unfold registrySet
-  by_cases h : (r.lookup k).isSome = true
-  · rw [if_pos h]
-    exact lookup_replace k d r h
-  · rw [if_neg h]
-    exact lookup_snoc k d r (Bool.eq_false_iff.2 h)
+/-- A registered dialect can be read back by name, and it is the object `_call_dialect` made, in
+whatever state callbacks left the registry between `:1632` and `:1635`, and whatever keys it holds. -/
+def RegistryLaw : Prop :=
+  ∀ (r r2 : Registry) (during : Registry → Registry) (name : List Nat) (inst : Option Obj)
+    (kw : List (List Nat × Obj)) (d : DRes),
+    callDialect r inst kw = .ok d →
+    csvRegisterDialect r during ⟨.str name :: inst.toList, kw⟩ = (r2, .ok ()) →
+    csvGetDialect r2 (.str name) = .ok d.obj
 
 theorem registryLaw_proven : RegistryLaw := by
-  intro r r2 name inst kw d h1 h2
+  intro r r2 during name inst kw d h1 h2
   have hu : unpack12 "register_dialect" (.str name :: inst.toList) = .ok (.str name, inst) := by
     cases inst <;> rfl
-  simp only [csvRegisterDialect, hu, Obj.asStr, h1, bind, Except.bind, pure, Except.pure, Obj.dictFind,
-    Obj.dictKey] at h2
-  by_cases hp : (r.lookup name).isSome = true
-  · simp only [hp, if_true] at h2
-    cases h2
-    simp [csvGetDialect, getDialectFromRegistry, Obj.dictFind, Obj.dictKey, registrySet_get]
-  · simp only [hp, if_false] at h2
-    cases h2
-    have hf := Bool.eq_false_iff.2 hp
-    simp [csvGetDialect, getDialectFromRegistry, Obj.dictFind, Obj.dictKey, lookup_snoc name _ r hf]
+  simp only [csvRegisterDialect, hu, Obj.asStr, h1] at h2
+  have hs : regSet (during r) (.str name) d.obj = regPut (.str name) d.obj (during r) name := rfl
+  rw [hs] at h2
+  cases hp : regPut (.str name) d.obj (during r) name with
+  | error e =>
+    rw [hp] at h2
+    simp at h2
+  | ok l =>
+    rw [hp] at h2
+    simp only [Prod.mk.injEq] at h2
+    obtain ⟨h3, _⟩ := h2
+    subst h3
+    obtain ⟨x, hx⟩ := regPut_find _ _ name (by simp [answers_str]) _ _ hp
+    simp [csvGetDialect, getDialectFromRegistry, regLookup, Obj.dictKey, hx]
+
+/-- `PyDict_SetItem` at `:1635` works on the registry as the callbacks left it, not as it was at
+`:1632`: a failed `_call_dialect` keeps their effects and adds nothing, and a key they removed or
+added is seen. -/
+def RegisterSeesCallbacks : Prop :=
+  ∀ (r : Registry) (during : Registry → Registry) (name : Obj) (s : List Nat)
+    (kw : List (List Nat × Obj)),
+    name.asStr = some s →
+    (∀ e, callDialect r Option.none kw = .error e →
+      csvRegisterDialect r during ⟨[name], kw⟩ = (during r, .error e)) ∧
+    (∀ d r2, callDialect r Option.none kw = .ok d → regSet (during r) name d.obj = .ok r2 →
+      csvRegisterDialect r during ⟨[name], kw⟩ = (r2, .ok ())) ∧
+    (∀ d e, callDialect r Option.none kw = .ok d → regSet (during r) name d.obj = .error e →
+      csvRegisterDialect r during ⟨[name], kw⟩ = (during r, .error e))
+
+theorem registerSeesCallbacks_proven : RegisterSeesCallbacks := by
+  intro r during name s kw hs
+  refine ⟨fun e h => ?_, fun d r2 h h2 => ?_, fun d e h h2 => ?_⟩ <;>
+    simp [csvRegisterDialect, unpack12, hs, h, *]
+
+/-- A `str` subclass stays the key, with its own `__hash__` and `__eq__`: `list_dialects` returns the
+object, and a key that compares unequal to everything is listed and cannot be found by its text. -/
+def SubclassKeyKept : Prop :=
+  ∀ (t : TyName) (s : List Nat) (r : Registry) (d : Obj),
+    regSet r (.strSub t s .noMatch) d = .ok (r ++ [(.strSub t s .noMatch, d)]) ∧
+    (∀ e, regSet r (.strSub t s (.hashRaises e)) d = .error (dictHashErr (.strSub t s (.hashRaises e)) e)) ∧
+    csvListDialects [(.strSub t s .noMatch, d)] = [.strSub t s .noMatch] ∧
+    csvGetDialect [(.strSub t s .noMatch, d)] (.str s) = .error (csvErr "unknown dialect")
+
+theorem subclassKeyKept_proven : SubclassKeyKept := by
+  intro t s r d
+  refine ⟨rfl, fun e => rfl, rfl, ?_⟩
+  simp [csvGetDialect, getDialectFromRegistry, regLookup, Obj.dictKey, regFind, keyAnswers]
 
 /-- `register_dialect` checks the name's type before anything about the dialect: a name that is not
 a string raises `TypeError` even if the keyword arguments are invalid. A subclass of `str` whose
 `__hash__` raises fails at `PyDict_SetItem`, and the dialect it built is not registered. -/
 def RegisterNameChecks : Prop :=
-  (∀ (r : Registry) (o : Obj) (kw : List (List Nat × Obj)), o.asStr = Option.none →
-    csvRegisterDialect r ⟨[o], kw⟩ = .error (.typeError "dialect name must be a string")) ∧
-  ∀ (r : Registry) (t : TyName) (s : List Nat) (e : PyExc) (kw : List (List Nat × Obj)) (d : DRes),
+  (∀ (r : Registry) (during : Registry → Registry) (o : Obj) (kw : List (List Nat × Obj)),
+    o.asStr = Option.none →
+    csvRegisterDialect r during ⟨[o], kw⟩ = (r, .error (.typeError "dialect name must be a string"))) ∧
+  ∀ (r : Registry) (during : Registry → Registry) (t : TyName) (s : List Nat) (e : PyExc)
+    (kw : List (List Nat × Obj)) (d : DRes),
     callDialect r Option.none kw = .ok d →
-    csvRegisterDialect r ⟨[.strSub t s (.hashRaises e)], kw⟩ =
-      .error (dictHashErr (.strSub t s (.hashRaises e)) e)
+    csvRegisterDialect r during ⟨[.strSub t s (.hashRaises e)], kw⟩ =
+      (during r, .error (dictHashErr (.strSub t s (.hashRaises e)) e))
 
 theorem registerNameChecks_proven : RegisterNameChecks := by
   constructor
-  · intro r o kw h
-    simp [csvRegisterDialect, unpack12, h, bind, Except.bind]
-    rfl
-  · intro r t s e kw d h
-    simp [csvRegisterDialect, unpack12, h, Obj.asStr, Obj.dictFind, Obj.dictKey, bind, Except.bind]
-    rfl
+  · intro r during o kw h
+    simp [csvRegisterDialect, unpack12, h]
+  · intro r during t s e kw d h
+    simp [csvRegisterDialect, unpack12, h, Obj.asStr, regSet, Obj.dictKey]
 
 /-- `get_dialect` on every kind of name: a `TypeError` from `__hash__` gains the key's type, any
 other failure of `__hash__` or `__eq__` passes through, a key that matches nothing is `csv.Error`,
-and an equal key finds the dialect whatever object it is. -/
+and an equal key finds the dialect whatever object it is, unless a stored key's `__eq__` raises. -/
 def GetDialectLaw : Prop :=
   ∀ (r : Registry) (name : Obj),
     (∀ m, name.dictKey = .hashRaises (.typeError m) → csvGetDialect r name =
       .error (.typeError s!"cannot use '{name.ty.full}' as a dict key ({m})")) ∧
     (∀ e, name.dictKey = .eqRaises e → csvGetDialect r name = .error e) ∧
     (name.dictKey = .noMatch → csvGetDialect r name = .error (csvErr "unknown dialect")) ∧
-    (∀ k d, name.dictKey = .equals k → r.lookup k = some d → csvGetDialect r name = .ok d) ∧
-    (∀ k, name.dictKey = .equals k → r.lookup k = Option.none →
-      csvGetDialect r name = .error (csvErr "unknown dialect"))
+    (∀ k key d, name.dictKey = .equals k → regFind r k = .ok (some (key, d)) → csvGetDialect r name = .ok d) ∧
+    (∀ k, name.dictKey = .equals k → regFind r k = .ok Option.none →
+      csvGetDialect r name = .error (csvErr "unknown dialect")) ∧
+    (∀ k e, name.dictKey = .equals k → regFind r k = .error e → csvGetDialect r name = .error e)
 
 theorem getDialectLaw_proven : GetDialectLaw := by
   intro r name
-  refine ⟨fun m h => ?_, fun e h => ?_, fun h => ?_, fun k d h h2 => ?_, fun k h h2 => ?_⟩ <;>
-    simp [csvGetDialect, getDialectFromRegistry, Obj.dictFind, h, dictHashErr, *]
+  refine ⟨fun m h => ?_, fun e h => ?_, fun h => ?_, fun k key d h h2 => ?_, fun k h h2 => ?_,
+    fun k e h h2 => ?_⟩ <;>
+    simp [csvGetDialect, getDialectFromRegistry, regLookup, h, dictHashErr, *]
 
 /-- `unregister_dialect`: on an empty registry `PyDict_Pop` does not hash, so even an unhashable name
-is `csv.Error`. On a non-empty one a raising `__hash__` raises, a name that is there leaves
-`list_dialects`, and one that is not is `csv.Error`. -/
+is `csv.Error`. On a non-empty one a raising `__hash__` raises, a name that is there leaves the
+registry, and one that is not is `csv.Error`. -/
 def UnregisterLaw : Prop :=
   (∀ name : Obj, csvUnregisterDialect [] name = .error (csvErr "unknown dialect")) ∧
   ∀ (r r2 : Registry) (name : Obj), r ≠ [] →
     (∀ e, name.dictKey = .hashRaises e → csvUnregisterDialect r name = .error (dictHashErr name e)) ∧
-    (∀ k, name.dictKey = .equals k → (r.lookup k).isSome = false →
+    (∀ k, name.dictKey = .equals k → regDel r k = .ok Option.none →
       csvUnregisterDialect r name = .error (csvErr "unknown dialect")) ∧
-    (∀ k, name.dictKey = .equals k → csvUnregisterDialect r name = .ok r2 →
-      k ∉ csvListDialects r2)
+    (∀ k, name.dictKey = .equals k → regDel r k = .ok (some r2) → csvUnregisterDialect r name = .ok r2)
 
 theorem unregisterLaw_proven : UnregisterLaw := by
   refine ⟨fun name => rfl, fun r r2 name hr => ⟨fun e h => ?_, fun k h h2 => ?_, fun k h h2 => ?_⟩⟩
   · have : r.isEmpty = false := by cases r <;> simp_all
-    simp [csvUnregisterDialect, this, Obj.dictFind, h]
+    simp [csvUnregisterDialect, this, h]
   · have : r.isEmpty = false := by cases r <;> simp_all
-    simp [csvUnregisterDialect, this, Obj.dictFind, h, h2]
-  · have hne : r.isEmpty = false := by cases r <;> simp_all
-    simp only [csvUnregisterDialect, hne, Bool.false_eq_true, if_false, Obj.dictFind, h] at h2
-    by_cases hk : (r.lookup k).isSome = true
-    · simp only [hk, if_true] at h2
-      cases h2
-      simp [csvListDialects]
-    · simp only [hk, if_false] at h2
-      cases h2
+    simp [csvUnregisterDialect, this, h, h2]
+  · have : r.isEmpty = false := by cases r <;> simp_all
+    simp [csvUnregisterDialect, this, h, h2]
+
+/-- A name that is removed from a list of distinct exact strings is no longer listed. -/
+theorem regDel_not_listed (k : List Nat) : ∀ (l l2 : Registry),
+    (∀ p ∈ l, ∃ s, p.1 = .str s) → (l.map (·.1)).Nodup → regDel l k = .ok (some l2) →
+    .str k ∉ csvListDialects l2 := by
+  intro l
+  induction l with
+  | nil => intro l2 _ _ h; cases h
+  | cons p ps ih =>
+    intro l2 hs hn h
+    obtain ⟨key, v⟩ := p
+    obtain ⟨s, hk⟩ := hs (key, v) (by simp)
+    simp only at hk
+    subst hk
+    simp only [regDel, answers_str] at h
+    by_cases he : s = k
+    · subst he
+      simp only [beq_self_eq_true] at h
+      cases h
+      simp only [List.map_cons, List.nodup_cons] at hn
+      exact hn.1
+    · have hb : (s == k) = false := by simpa using he
+      simp only [hb] at h
+      cases hd : regDel ps k with
+      | error e =>
+        rw [hd] at h
+        cases h
+      | ok x =>
+        rw [hd] at h
+        cases x with
+        | none => cases h
+        | some r2 =>
+          cases h
+          simp only [List.map_cons, List.nodup_cons] at hn
+          have h3 := ih r2 (fun q hq => hs q (by simp [hq])) hn.2 hd
+          simp only [csvListDialects, List.map_cons, List.mem_cons, not_or]
+          refine ⟨?_, h3⟩
+          intro h4
+          cases h4
+          exact he rfl
+
+/-- `list_dialects` is the keys in dict order: a new name comes last, a name set again keeps its
+place, and a name that is removed is gone. -/
+def ListDialectsLaw : Prop :=
+  (∀ (r : Registry) (t : TyName) (s : List Nat) (d : Obj) (r2 : Registry),
+    regSet r (.strSub t s .noMatch) d = .ok r2 → csvListDialects r2 = csvListDialects r ++ [.strSub t s .noMatch]) ∧
+  (∀ (k : List Nat) (d : Obj), ∀ (l l2 : Registry), regPut (.str k) d l k = .ok l2 →
+    (∃ e ∈ l, keyAnswers e.1 k = .ok true) → csvListDialects l2 = csvListDialects l) ∧
+  (∀ (k : List Nat) (d : Obj), ∀ (l l2 : Registry), regPut (.str k) d l k = .ok l2 →
+    (∀ e ∈ l, keyAnswers e.1 k = .ok false) → csvListDialects l2 = csvListDialects l ++ [.str k]) ∧
+  (∀ (k : List Nat) (l l2 : Registry), (∀ p ∈ l, ∃ s, p.1 = .str s) → (l.map (·.1)).Nodup →
+    regDel l k = .ok (some l2) → .str k ∉ csvListDialects l2)
+
+theorem put_new (k : List Nat) (d : Obj) : ∀ (l l2 : Registry), regPut (.str k) d l k = .ok l2 →
+    (∀ e ∈ l, keyAnswers e.1 k = .ok false) → csvListDialects l2 = csvListDialects l ++ [.str k] := by
+  intro l
+  induction l with
+  | nil =>
+    intro l2 h _
+    cases h
+    rfl
+  | cons p ps ih =>
+    intro l2 h hn
+    obtain ⟨key, v⟩ := p
+    have hk : keyAnswers key k = .ok false := hn (key, v) (by simp)
+    simp only [regPut, hk, bind, Except.bind, pure, Except.pure] at h
+    cases hp : regPut (.str k) d ps k with
+    | error e =>
+      rw [hp] at h
+      cases h
+    | ok l3 =>
+      rw [hp] at h
+      cases h
+      have := ih l3 hp fun e he => hn e (by simp [he])
+      simp only [csvListDialects, List.map_cons, List.cons_append] at this ⊢
+      rw [this]
+
+theorem put_old (k : List Nat) (d : Obj) : ∀ (l l2 : Registry), regPut (.str k) d l k = .ok l2 →
+    (∃ e ∈ l, keyAnswers e.1 k = .ok true) → csvListDialects l2 = csvListDialects l := by
+  intro l
+  induction l with
+  | nil =>
+    intro l2 _ h
+    obtain ⟨e, h1, _⟩ := h
+    simp at h1
+  | cons p ps ih =>
+    intro l2 h hn
+    obtain ⟨key, v⟩ := p
+    obtain ⟨e, h1, h2⟩ := hn
+    simp only [regPut] at h
+    cases hk : keyAnswers key k with
+    | error x =>
+      rw [hk] at h
+      cases h
+    | ok b =>
+      rw [hk] at h
+      cases b with
+      | true =>
+        cases h
+        rfl
+      | false =>
+        simp only [bind, Except.bind, pure, Except.pure] at h
+        cases hp : regPut (.str k) d ps k with
+        | error x =>
+          rw [hp] at h
+          cases h
+        | ok l3 =>
+          rw [hp] at h
+          cases h
+          simp only [List.mem_cons] at h1
+          rcases h1 with rfl | h1
+          · simp only at h2
+            rw [hk] at h2
+            cases h2
+          · have := ih l3 hp ⟨e, h1, h2⟩
+            simp only [csvListDialects, List.map_cons] at this ⊢
+            rw [this]
+
+theorem listDialectsLaw_proven : ListDialectsLaw := by
+  refine ⟨fun r t s d r2 h => ?_, fun k d l l2 h h2 => put_old k d l l2 h h2,
+    fun k d l l2 h h2 => put_new k d l l2 h h2, fun k l l2 h1 h2 h3 => regDel_not_listed k l l2 h1 h2 h3⟩
+  simp only [regSet, Obj.dictKey] at h
+  cases h
+  simp only [csvListDialects, List.map_append, List.map_cons, List.map_nil]
 
 /-! ### The field limit -/
 

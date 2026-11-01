@@ -1125,6 +1125,8 @@ def csv_obj(j, ctx=None):
         return j["b"]
     if "sub" in j:
         return Sub(txt(j["sub"]), j["key"])
+    if "dsub" in j:
+        return mk_dsub(j["dsub"], ctx)
     if "d" in j:
         return csv.get_dialect(txt(j["d"]))
     if "cls" in j:
@@ -1185,11 +1187,59 @@ def csv_src(c, ctx=None):
     return (txt(v),) if isinstance(v, list) else (csv_obj(v, ctx),)
 
 
+def mk_dsub(spec, ctx):
+    """An instance of a `_csv.Dialect` subclass: its class attributes, and what `__init__` does when
+    `type_call` runs it again."""
+    ns = {"__module__": "m"}
+
+    def raiser(exc):
+        def f(self, *a):
+            raise mk_exc(exc)
+        return f
+    for name, res in spec["attrs"]:
+        if name.startswith("__reduce"):
+            ns[name] = raiser(res["raise"]) if "raise" in res else (lambda self, *a: None)
+        elif "raise" in res:
+            ns[name] = property(raiser(res["raise"]))
+        else:
+            ns[name] = csv_obj(res["ok"], ctx)
+    init = spec["init"]
+
+    def __init__(self, *a, **k):
+        if getattr(self, "_ready", False) and "raise" in init:
+            raise mk_exc(init["raise"])
+    ns["__init__"] = __init__
+    inst = type("DSub", (_csv.Dialect,), ns)(**{k: csv_obj(v, ctx) for k, v in spec["base"]})
+    inst._ready = True
+    return inst
+
+
+class Hook:
+    """An object whose `__bool__` changes the registry, inside `_call_dialect`."""
+
+    def __init__(self, ops, ctx):
+        self.ops, self.ctx = ops, ctx
+
+    def __bool__(self):
+        for d in self.ops:
+            try:
+                n = csv_obj(d["name"], self.ctx)
+                if d["op"] == "reg":
+                    csv.register_dialect(n, delimiter=";")
+                else:
+                    csv.unregister_dialect(n)
+            except Exception:
+                pass
+        return True
+
+
 def enc_dialect(d):
+    """The C fields, through `_csv.Dialect`'s own descriptors, whatever a subclass shadows."""
     ch = lambda x: None if x is None else cps(x)
-    return {"delimiter": ch(d.delimiter), "doublequote": bool(d.doublequote), "escapechar": ch(d.escapechar),
-            "lineterminator": cps(d.lineterminator), "quotechar": ch(d.quotechar), "quoting": int(d.quoting),
-            "skipinitialspace": bool(d.skipinitialspace), "strict": bool(d.strict)}
+    g = lambda n: getattr(_csv.Dialect, n).__get__(d)
+    return {"delimiter": ch(g("delimiter")), "doublequote": bool(g("doublequote")), "escapechar": ch(g("escapechar")),
+            "lineterminator": cps(g("lineterminator")), "quotechar": ch(g("quotechar")), "quoting": int(g("quoting")),
+            "skipinitialspace": bool(g("skipinitialspace")), "strict": bool(g("strict"))}
 
 
 def enc_field(x):
@@ -1282,7 +1332,7 @@ class CsvArea:
         if numeric and r.random() < 0.6:
             return r.choice(["1", "2.5", "-3", "1e5", "0", " 4", "5 ", ".5", "5.", "1_000", "inf", "-Infinity", "nan",
                              "1e400", "1e-400", "0.1", "abc", "", "1__0", "_1", "1_", "+7", "e5", ".", "1e", "1e+2",
-                             "9007199254740993", "123456789012345678901234567890"])
+                             "9007199254740993", "123456789012345678901234567890", "\U00010d40", "\U000116da", "\U00010d41\U00010d42"])
         pool = cls.TEXT if numeric else cls.TEXT + "\xe9€"
         return "".join(r.choice(pool) for _ in range(r.choice([0, 0, 1, 1, 2, 3, 5, 8])))
 
@@ -1302,9 +1352,53 @@ class CsvArea:
                 "delims": r.choice([None, None, None, cps(",;"), cps(","), cps("\t"), cps("abc"), cps(":|"), cps('"'), []])}
 
     @classmethod
+    def dsub(cls, r):
+        exc = r.choice([["ValueError", "boom"], ["TypeError", "DSub.__init__() takes 1 positional argument but 2 were given"]])
+        base = r.choice([[], [], [["delimiter", {"s": cps(";")}]], [["lineterminator", {"s": cps("\n")}]],
+                         [["lineterminator", {"sub": cps("\r"), "key": None}]], [["quotechar", None]], [["quoting", {"i": 1}]]])
+        pool = [["delimiter", {"ok": {"s": cps("|")}}], ["delimiter", {"raise": ["ValueError", "boom"]}], ["quotechar", {"ok": None}],
+                ["strict", {"ok": {"b": True}}], ["quoting", {"ok": {"i": 3}}], ["lineterminator", {"ok": {"s": cps("\n")}}],
+                ["doublequote", {"raise": ["TypeError", "boom"]}], ["delimiter", {"ok": {"i": 1}}], ["__reduce__", {"ok": None}],
+                ["__reduce_ex__", {"raise": ["ValueError", "boom"]}]]
+        attrs = {}
+        for x in r.sample(pool, r.choice([0, 0, 1, 2, 3])):
+            attrs[x[0]] = x[1]
+        return {"dsub": {"base": base, "attrs": [[k, v] for k, v in attrs.items()],
+                         "init": r.choice([{"ok": None}, {"ok": None}, {"raise": exc}])}}
+
+    @classmethod
+    def gen_dobj(cls, r):
+        names = [{"s": cps("mine")}, {"s": cps("excel")}, {"s": cps("zz")}, {"sub": cps("mine"), "key": None},
+                 {"sub": cps("mine"), "key": {"k": cps("mine")}}, {"sub": cps("q"), "key": {"k": cps("excel")}},
+                 {"sub": cps("e"), "key": {"eq": ["ValueError", "boom"]}}, {"sub": cps("h"), "key": {"hash": ["ValueError", "boom"]}},
+                 {"sub": cps("t"), "key": {"hash": ["TypeError", "boom"]}}]
+        k = r.choice(["regseq", "regseq", "pickle", "ltget", "readerd", "writerd", "dialect"])
+        c = {"mod": "textlibs", "fn": "csv." + k}
+        if k == "regseq":
+            ops = []
+            for _ in range(r.randint(1, 5)):
+                op = r.choice(["register", "register", "get", "unregister"])
+                o = {"op": op, "name": r.choice(names)}
+                if op == "register":
+                    o["during"] = [{"op": r.choice(["reg", "unreg"]), "name": r.choice(names)} for _ in range(r.choice([0, 0, 1, 2]))]
+                ops.append(o)
+            c["ops"] = ops
+        elif k == "pickle":
+            c["obj"] = r.choice([cls.dsub(r), cls.dsub(r), {"d": cps("excel")}])
+            c["method"] = r.choice(["__reduce__", "__reduce_ex__"])
+        elif k == "ltget":
+            c["obj"] = cls.dsub(r)
+        else:
+            c["src"] = r.choice([cls.dsub(r), cls.dsub(r), {"d": cps("excel")}, cps("unix"), None])
+            c["args"] = r.choice([{}, {}, cls.args(r, True), {"delimiter": {"s": cps(";")}}])
+        return c
+
+    @classmethod
     def gen(cls, r):
         if os.environ.get("CSV_SNIFF") == "1" or r.random() < 0.1:
             return cls.gen_sniff(r)
+        if os.environ.get("CSV_DOBJ") == "1" or r.random() < 0.15:
+            return cls.gen_dobj(r)
         fn = r.choice(["dialect", "dialect", "reader", "reader", "reader", "reader", "script", "script", "script", "writer",
                        "writer", "writer", "roundtrip", "roundtrip", "field_size_limit", "registry", "get_dialect", "unpack",
                        "dictreader", "dictwriter", "dictwriterows", "writeheader", "extrasaction", "classvalidate"])
@@ -1507,9 +1601,21 @@ class CsvArea:
                 return {"d": cps(d.delimiter), "q": cps(d.quotechar), "dq": bool(d.doublequote),
                         "skip": bool(d.skipinitialspace)}
             return common.py_result(sniff_body)
+        if fn == "regseq":
+            return cls.run_regseq(c)
 
         def body():
             ctx = CsvCtx()
+            if fn == "pickle":
+                getattr(csv_obj(c["obj"], ctx), c["method"])(*([2] if c["method"] == "__reduce_ex__" else []))
+                return None
+            if fn == "ltget":
+                x = csv_obj(c["obj"], ctx).lineterminator
+                return [cps(x), isinstance(x, Sub)]
+            if fn == "readerd":
+                return enc_dialect(csv.reader([], *csv_src(c, ctx), **csv_kw(c, ctx)).dialect)
+            if fn == "writerd":
+                return enc_dialect(csv.writer(io.StringIO(), *csv_src(c, ctx), **csv_kw(c, ctx)).dialect)
             if fn == "dialect":
                 src = csv_src(c, ctx)
                 d = _csv.Dialect(*src, **csv_kw(c, ctx))
@@ -1606,6 +1712,34 @@ class CsvArea:
         if "exc" in res:
             res["msg"] = norm_msg(res["msg"])
         return res
+
+    @classmethod
+    def run_regseq(cls, c):
+        ctx = CsvCtx()
+        saved = {n: csv.get_dialect(n) for n in csv.list_dialects()}
+
+        def one(o):
+            name = csv_obj(o["name"], ctx)
+            if o["op"] == "register":
+                kw = {"delimiter": ";"}
+                if o["during"]:
+                    kw["doublequote"] = Hook(o["during"], ctx)
+                csv.register_dialect(name, **kw)
+                return None
+            if o["op"] == "get":
+                return cps(csv.get_dialect(name).delimiter)
+            csv.unregister_dialect(name)
+            return None
+        try:
+            out = [common.py_result(lambda o=o: one(o)) for o in c["ops"]]
+            keys = csv.list_dialects()
+            res = {"out": out, "keys": [cps(n) for n in keys], "sub": [isinstance(n, Sub) for n in keys]}
+        finally:
+            for n in list(csv.list_dialects()):
+                csv.unregister_dialect(n)
+            for n, d in saved.items():
+                csv.register_dialect(n, d)
+        return {"ok": res}
 
     @classmethod
     def run_io(cls, c, fn):

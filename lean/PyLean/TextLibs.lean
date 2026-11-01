@@ -664,6 +664,67 @@ def entries : List Entry := [
     statement := "Every failure of a dialect attribute is cleared, so an object whose attributes all raise gives the default dialect."
     source := "Modules/_csv.c:504-511", status := .proven
     prop := ``GetattrCleared, thm := some ``getattrCleared_proven },
+  { id := "textlibs-csv-dialect-keywords", pyFile := "Modules/_csv.c", pyFns := ["dialect_new"]
+    statement := "A keyword beats the attribute, and with one present an object is not reused, even a Dialect: the new one is built from the keywords and the old object's attributes."
+    source := "Modules/_csv.c:504-511 and the reuse test at :475", status := .proven
+    prop := ``DialectKeywords, thm := some ``dialectKeywords_proven },
+  { id := "textlibs-csv-dialect-arg-errors", pyFile := "Modules/_csv.c", pyFns := ["dialect_new"]
+    statement := "PyArg_ParseTupleAndKeywords fails first, for too many arguments and for a keyword that names no parameter."
+    source := "Modules/_csv.c:449-460", status := .proven
+    prop := ``DialectArgErrors, thm := some ``dialectArgErrors_proven },
+  { id := "textlibs-csv-dialect-unknown-name", pyFile := "Modules/_csv.c", pyFns := ["dialect_new", "get_dialect_from_registry"]
+    statement := "A name that is not registered is csv.Error, whatever keywords come with it."
+    source := "docs: csv.Error", status := .proven
+    prop := ``DialectUnknownName, thm := some ``dialectUnknownName_proven },
+  { id := "textlibs-csv-dialect-new-valid", pyFile := "Modules/_csv.c", pyFns := ["dialect_new"]
+    statement := "What dialect_new builds, by any route, came through dialectBuild, so textlibs-csv-dialect-valid applies to it; the stored line terminator is that of the arguments."
+    source := "Modules/_csv.c:527-560", status := .proven
+    prop := ``DialectNewValid, thm := some ``dialectNewValid_proven },
+  { id := "textlibs-csv-subclass-attrs", pyFile := "Modules/_csv.c", pyFns := ["dialect_new"]
+    statement := "An attribute of a Dialect subclass shadows the C field for DIALECT_GETATTR; one that raises is cleared."
+    source := "Modules/_csv.c:507", status := .proven
+    prop := ``SubclassAttrs, thm := some ``subclassAttrs_proven },
+  { id := "textlibs-csv-lineterminator-stored", pyFile := "Modules/_csv.c", pyFns := ["Dialect_get_lineterminator"]
+    statement := "The getter returns the object in the slot, which is the argument itself, so a str subclass stays one; an empty slot gives NULL."
+    source := "Modules/_csv.c:182-187", status := .proven
+    prop := ``LineterminatorStored, thm := some ``lineterminatorStored_proven
+    notes := "Identity is the constructor LtRes.stored, not equality of contents." },
+  { id := "textlibs-csv-lineterminator-not-null", pyFile := "Modules/_csv.c", pyFns := ["Dialect_get_lineterminator"]
+    statement := "The lineterminator getter never returns NULL with no exception set."
+    source := "invariant: the C API result rule", status := .refuted
+    prop := ``LineterminatorNotNull, thm := some ``lineterminatorNotNull_refuted
+    bug := some "textlibs-csv-lineterminator-null"
+    notes := "A half-built instance, reached from a subclass __del__ when dialect_new fails." },
+  { id := "textlibs-csv-call-dialect", pyFile := "Modules/_csv.c", pyFns := ["_call_dialect"]
+    statement := "type_call runs tp_init on what dialect_new returned: a reused subclass instance runs its own __init__, which can raise; keywords make a new instance, which skips it; no instance and no keywords give the default."
+    source := "Objects/typeobject.c:2382-2384", status := .proven
+    prop := ``CallDialectLaw, thm := some ``callDialectLaw_proven
+    notes := "The first clause is the behaviour of bugs/textlibs-csv-dialect-subclass-reinit.yaml, stated rather than refuted." },
+  { id := "textlibs-csv-reuse-never-fails", pyFile := "Modules/_csv.c", pyFns := ["_call_dialect"]
+    statement := "_call_dialect on a reusable instance hands it back and cannot fail."
+    source := "the \"Can we reuse this instance?\" branch of dialect_new", status := .refuted
+    prop := ``ReuseNeverFails, thm := some ``reuseNeverFails_refuted
+    bug := some "textlibs-csv-dialect-subclass-reinit" },
+  { id := "textlibs-csv-no-pickle", pyFile := "Modules/_csv.c", pyFns := ["Dialect_reduce"]
+    statement := "__reduce__ and __reduce_ex__ raise TypeError with the short name of the instance's own class, unless that class defines the method."
+    source := "docs: dialect_reduce_doc", status := .proven
+    prop := ``DialectNoPickle, thm := some ``dialectNoPickle_proven },
+  { id := "textlibs-csv-register-sees-callbacks", pyFile := "Modules/_csv.c", pyFns := ["csv_register_dialect"]
+    statement := "PyDict_SetItem at :1635 works on the registry as callbacks left it, not as it was at :1632, for any callbacks; a failed _call_dialect keeps their effects and adds nothing."
+    source := "Modules/_csv.c:1632-1635", status := .proven
+    prop := ``RegisterSeesCallbacks, thm := some ``registerSeesCallbacks_proven },
+  { id := "textlibs-csv-subclass-key", pyFile := "Modules/_csv.c", pyFns := ["csv_register_dialect", "_csv_list_dialects_impl"]
+    statement := "A str subclass stays the key with its own __hash__ and __eq__: list_dialects returns the object, and a key that compares unequal is listed and not found by its text."
+    source := "PyDict_SetItem", status := .proven
+    prop := ``SubclassKeyKept, thm := some ``subclassKeyKept_proven },
+  { id := "textlibs-csv-list-dialects", pyFile := "Modules/_csv.c", pyFns := ["_csv_list_dialects_impl"]
+    statement := "list_dialects is the keys in dict order: a new name comes last, a name set again keeps its place, and a removed name is gone."
+    source := "docs: list_dialects", status := .proven
+    prop := ``ListDialectsLaw, thm := some ``listDialectsLaw_proven },
+  { id := "textlibs-csv-reader-resets", pyFile := "Modules/_csv.c", pyFns := ["parse_reset"]
+    statement := "parse_reset clears fields, the NULL of the re-entrancy crash, the state, the field and unquoted_field, so the next __next__ cannot depend on what the last one left."
+    source := "Modules/_csv.c:913-923", status := .proven
+    prop := ``ReaderResets, thm := some ``readerResets_proven },
   { id := "textlibs-csv-registry", pyFile := "Modules/_csv.c", pyFns := ["csv_register_dialect"]
     statement := "A registered dialect can be read back by name, and it is the object _call_dialect made."
     source := "docs: register_dialect, get_dialect", status := .proven

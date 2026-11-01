@@ -334,25 +334,30 @@ theorem csvReaderOrder_proven : CsvReaderOrder := by
 
 /-- `csv.writer` needs a callable `write` attribute. `AttributeError` and a value that is not callable
 are the same `TypeError`; any other exception from the attribute passes through; and all of these
-come before the dialect is looked at. -/
+come before the dialect is looked at. Then `_call_dialect` runs on the dialect argument, and its
+failure is the writer's. -/
 def CsvWriterOrder : Prop :=
-  ∀ (reg : Registry) (f : Obj) (kw : List (List Nat × Obj)),
+  ∀ (reg : Registry) (f : Obj) (dialect : Option Obj) (kw : List (List Nat × Obj)),
     (∀ m, f.getattr "write" = .error (.named "AttributeError" m) →
-      csvWriter reg ⟨[f], kw⟩ = .error (.typeError "argument 1 must have a \"write\" method")) ∧
+      csvWriter reg ⟨f :: dialect.toList, kw⟩ = .error (.typeError "argument 1 must have a \"write\" method")) ∧
     (∀ o, f.getattr "write" = .ok o → (∀ c, o ≠ .func c) →
-      csvWriter reg ⟨[f], kw⟩ = .error (.typeError "argument 1 must have a \"write\" method")) ∧
+      csvWriter reg ⟨f :: dialect.toList, kw⟩ = .error (.typeError "argument 1 must have a \"write\" method")) ∧
     (∀ e, (∀ m, e ≠ .named "AttributeError" m) → f.getattr "write" = .error e →
-      csvWriter reg ⟨[f], kw⟩ = .error e) ∧
-    (∀ calls r, f.getattr "write" = .ok (.func calls) → callDialect reg Option.none kw = .ok r →
-      csvWriter reg ⟨[f], kw⟩ = .ok (r.dialect, { calls := calls }))
+      csvWriter reg ⟨f :: dialect.toList, kw⟩ = .error e) ∧
+    (∀ calls e, f.getattr "write" = .ok (.func calls) → callDialect reg dialect kw = .error e →
+      csvWriter reg ⟨f :: dialect.toList, kw⟩ = .error e) ∧
+    (∀ calls r, f.getattr "write" = .ok (.func calls) → callDialect reg dialect kw = .ok r →
+      csvWriter reg ⟨f :: dialect.toList, kw⟩ = .ok (r.dialect, { calls := calls }))
 
 theorem csvWriterOrder_proven : CsvWriterOrder := by
-  intro reg f kw
-  refine ⟨fun m h => ?_, fun o h h2 => ?_, fun e h h2 => ?_, fun calls r h h2 => ?_⟩
-  · simp [csvWriter, unpack12, optionalWrite, h, bind, Except.bind, pure, Except.pure]
+  intro reg f dialect kw
+  have hu : unpack12 "writer" (f :: dialect.toList) = .ok (f, dialect) := by
+    cases dialect <;> rfl
+  refine ⟨fun m h => ?_, fun o h h2 => ?_, fun e h h2 => ?_, fun calls e h h2 => ?_, fun calls r h h2 => ?_⟩
+  · simp [csvWriter, hu, optionalWrite, h, bind, Except.bind, pure, Except.pure]
     rfl
   · have ho : optionalWrite f = .ok (some o) := by simp [optionalWrite, h]
-    simp only [csvWriter, unpack12, ho, bind, Except.bind, pure, Except.pure]
+    simp only [csvWriter, hu, ho, bind, Except.bind, pure, Except.pure]
     cases o with
     | func c => exact absurd rfl (h2 c)
     | _ => rfl
@@ -366,8 +371,10 @@ theorem csvWriterOrder_proven : CsvWriterOrder := by
           exact absurd rfl (h m)
         · simp [hc]
       | _ => rfl
-    simp [csvWriter, unpack12, ho, bind, Except.bind]
+    simp [csvWriter, hu, ho, bind, Except.bind]
   · have ho : optionalWrite f = .ok (some (.func calls)) := by simp [optionalWrite, h]
-    simp [csvWriter, unpack12, ho, h2, bind, Except.bind, pure, Except.pure]
+    simp [csvWriter, hu, ho, h2, bind, Except.bind, pure, Except.pure]
+  · have ho : optionalWrite f = .ok (some (.func calls)) := by simp [optionalWrite, h]
+    simp [csvWriter, hu, ho, h2, bind, Except.bind, pure, Except.pure]
 
 end PyLean.TextLibs.Csv
