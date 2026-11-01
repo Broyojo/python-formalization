@@ -1,0 +1,132 @@
+import PyLean.Registry
+import PyLean.LongObj.Props
+
+/-! Registry entries for the arithmetic kernels of `Objects/longobject.c`. -/
+
+namespace PyLean.LongObj
+
+open PyLean.Registry
+
+def entriesArith : List Entry := [
+  { id := "longobj-alloc-limit", pyFile := "Objects/longobject.c"
+    pyFns := ["long_alloc", "_PyLong_New"]
+    statement := "long_alloc(n) succeeds exactly for n <= MAX_LONG_DIGITS and raises OverflowError('too many digits in integer') otherwise."
+    source := "longobject.c:161-165", status := .proven
+    prop := ``LongAllocLimit, thm := some ``longAllocLimit_proven
+    notes := "MemoryError from PyObject_Malloc is not modelled." },
+  { id := "longobj-normalize", pyFile := "Objects/longobject.c", pyFns := ["long_normalize"]
+    statement := "long_normalize keeps the value, leaves a non-zero top digit and never lengthens the vector."
+    source := "invariant: comment at longobject.c:119-121", status := .proven
+    prop := ``NormalizeSpec, thm := some ``normalizeSpec_proven },
+  { id := "longobj-from-stwodigits", pyFile := "Objects/longobject.c"
+    pyFns := ["_PyLong_FromSTwoDigits", "_PyLong_FromMedium", "_PyLong_FromLarge", "is_medium_int", "get_small_int"]
+    statement := "For every int64_t x, _PyLong_FromSTwoDigits(x) builds the canonical object of x; is_medium_int is |x| <= MASK despite its unsigned wraparound."
+    source := "invariant", status := .proven
+    prop := ``FromSTwoDigitsCanonical, thm := some ``fromSTwoDigitsCanonical_proven },
+  { id := "longobj-x-add", pyFile := "Objects/longobject.c", pyFns := ["x_add"]
+    statement := "x_add is exact on all digit vectors, normalized, and its digit carry never wraps."
+    source := "comment at longobject.c:3647", status := .proven
+    prop := ``XAddExact, thm := some ``xAddExact_proven },
+  { id := "longobj-x-sub", pyFile := "Objects/longobject.c", pyFns := ["x_sub"]
+    statement := "On normalized magnitudes x_sub returns the canonical object of val(a) - val(b), through the wrapping uint32_t borrow."
+    source := "comment at longobject.c:3681", status := .proven
+    prop := ``XSubExact, thm := some ``xSubExact_proven },
+  { id := "longobj-add-sub", pyFile := "Objects/longobject.c"
+    pyFns := ["long_add", "_PyLong_Add", "long_add_method", "long_sub", "_PyLong_Subtract", "long_sub_method"]
+    statement := "a + b and a - b return the canonical object for all ints with room for one more digit, on the compact path and the digit path."
+    source := "invariant: exact integer arithmetic", status := .proven
+    prop := ``LongAddSubExact, thm := some ``longAddSubExact_proven
+    notes := "CHECK_BINOP's NotImplemented path for non-int operands is not modelled." },
+  { id := "longobj-vector-add-sub", pyFile := "Objects/longobject.c", pyFns := ["v_iadd", "v_isub"]
+    statement := "v_iadd and v_isub are exact modulo the width of x, returning a carry or borrow of 0 or 1."
+    source := "comments at longobject.c:1774-1777, :1800-1803", status := .proven
+    prop := ``VectorAddSub, thm := some ``vectorAddSub_proven },
+  { id := "longobj-x-mul", pyFile := "Objects/longobject.c", pyFns := ["x_mul"]
+    statement := "x_mul is exact on all digit vectors, on the gradeschool path and the HAC 14.16 squaring path, with no twodigits overflow and no store outside z."
+    source := "comment at longobject.c:3827-3829", status := .proven
+    prop := ``XMulExact, thm := some ``xMulExact_proven
+    notes := "Includes the asserts of the squaring path: the digit at the highest carry position is at most 1 and the one above it is 0." },
+  { id := "longobj-k-mul", pyFile := "Objects/longobject.c"
+    pyFns := ["k_mul", "k_lopsided_mul", "kmul_split"]
+    statement := "k_mul is exact on all digit vectors, including the non-normalized slices of k_lopsided_mul, and every memcpy and v_iadd stays inside ret."
+    source := "comment at longobject.c:3965-3968 and the (*) comment at :4134-4177", status := .proven
+    prop := ``KMulExact, thm := some ``kMulExact_proven },
+  { id := "longobj-mul", pyFile := "Objects/longobject.c"
+    pyFns := ["long_mul", "_PyLong_Multiply", "long_mul_method", "_PyLong_Negate"]
+    statement := "a * b returns the canonical object on the compact path and through k_mul, for x * y and for x * x on one object."
+    source := "invariant: exact integer arithmetic", status := .proven
+    prop := ``LongMulExact, thm := some ``longMulExact_proven },
+  { id := "longobj-vector-shifts", pyFile := "Objects/longobject.c", pyFns := ["v_lshift", "v_rshift"]
+    statement := "v_lshift and v_rshift by d < PyLong_SHIFT are exact and return the bits shifted out."
+    source := "comments at longobject.c:1826-1828, :1844-1846", status := .proven
+    prop := ``VectorShifts, thm := some ``vectorShifts_proven },
+  { id := "longobj-divrem-one-digit", pyFile := "Objects/longobject.c"
+    pyFns := ["inplace_divrem1", "divrem1", "inplace_rem1"]
+    statement := "Division of a digit vector by a non-zero digit gives the exact quotient and remainder; inplace_rem1 agrees with inplace_divrem1."
+    source := "comments at longobject.c:1863-1867, :1920-1921", status := .proven
+    prop := ``DivremOneDigit, thm := some ``divremOneDigit_proven },
+  { id := "longobj-knuth-digit", pyFile := "Objects/longobject.c", pyFns := ["x_divrem"]
+    statement := "One digit of Algorithm D: with wm1 >= BASE/2 and V < BASE*W the estimate, its corrections and the add-back give the true digit and remainder, with q <= BASE after the loop and no overflow."
+    source := "comment at longobject.c:3252-3256 and the asserts at :3314, :3332, :3347, :3359", status := .proven
+    prop := ``KnuthDigit, thm := some ``knuthDigit_proven },
+  { id := "longobj-x-divrem", pyFile := "Objects/longobject.c", pyFns := ["x_divrem", "bit_length_digit"]
+    statement := "For a normalized w and 2 <= size(w) <= size(v), x_divrem returns v // w and v % w."
+    source := "comment at longobject.c:3238-3239", status := .proven
+    prop := ``XDivremExact, thm := some ``xDivremExact_proven },
+  { id := "longobj-divrem", pyFile := "Objects/longobject.c"
+    pyFns := ["long_divrem", "long_rem", "rem1", "maybe_small_long"]
+    statement := "long_divrem and long_rem give the canonical truncated quotient and remainder, and raise ZeroDivisionError for b == 0."
+    source := "comment at longobject.c:4357-4370", status := .proven
+    prop := ``LongDivremExact, thm := some ``longDivremExact_proven
+    notes := "The |a| < |b| test is only sufficient: equal top digits fall through to the general path, which handles them." },
+  { id := "longobj-l-divmod-refines", pyFile := "Objects/longobject.c"
+    pyFns := ["l_divmod", "pylong_int_divmod", "fast_mod", "fast_floor_div"]
+    statement := "The digit-level l_divmod returns the canonical objects of MathInt.divmod, discharging mathint-divmod-floor's assumption that long_divrem is exact."
+    source := "invariant", status := .proven
+    prop := ``LDivmodRefines, thm := some ``lDivmodRefines_proven
+    notes := "The _pylong branch still uses MathInt.pylongIntDivmod, which takes _divmod_pos as exact." },
+  { id := "longobj-division-floor", pyFile := "Objects/longobject.c"
+    pyFns := ["long_divmod", "long_div", "long_mod", "l_mod"]
+    statement := "divmod, // and % satisfy q*w + r == v with r taking the sign of w and abs(r) < abs(w), on the digit model."
+    source := "language reference, binary arithmetic operations", status := .proven
+    prop := ``DivisionFloor, thm := some ``divisionFloor_proven },
+  { id := "longobj-rshift", pyFile := "Objects/longobject.c"
+    pyFns := ["long_rshift", "long_rshift1", "_PyLong_Rshift"]
+    statement := "a >> b is the floor of a / 2**b for all b >= 0, including b >= 2**63, and raises ValueError for b < 0."
+    source := "stdtypes: bitwise operations on integer types", status := .proven
+    prop := ``RshiftExact, thm := some ``rshiftExact_proven },
+  { id := "longobj-lshift", pyFile := "Objects/longobject.c"
+    pyFns := ["long_lshift_method", "long_lshift1", "long_lshift_int64", "_PyLong_Lshift"]
+    statement := "a << b raises ValueError for b < 0, is 0 for a == 0, raises OverflowError for a != 0 when b does not fit int64_t, and is a * 2**b whenever the result can be allocated."
+    source := "stdtypes: bitwise operations on integer types", status := .proven
+    prop := ``LshiftExact, thm := some ``lshiftExact_proven },
+  { id := "longobj-v-complement", pyFile := "Objects/longobject.c", pyFns := ["v_complement"]
+    statement := "On a non-zero vector, v_complement computes 2**(30*m) - val(a) with no carry out."
+    source := "comment at longobject.c:5459-5461", status := .proven
+    prop := ``VComplementExact, thm := some ``vComplementExact_proven },
+  { id := "longobj-bitwise", pyFile := "Objects/longobject.c"
+    pyFns := ["long_bitwise", "long_and", "long_or", "long_xor"]
+    statement := "&, | and ^ act bit by bit on the infinite two's complement expansions for all ints, on the compact path and on long_bitwise, and the result is canonical."
+    source := "stdtypes: bitwise operations on integer types", status := .proven
+    prop := ``BitwiseBits, thm := some ``bitwiseBits_proven },
+  { id := "longobj-unary", pyFile := "Objects/longobject.c"
+    pyFns := ["long_invert", "long_neg", "long_neg_method", "long_abs", "long_abs_method", "long_bool"]
+    statement := "~a == -a - 1, -a, abs(a) and bool(a) return the canonical results for all ints."
+    source := "stdtypes: numeric types", status := .proven
+    prop := ``UnaryExact, thm := some ``unaryExact_proven },
+  { id := "longobj-pow", pyFile := "Objects/longobject.c", pyFns := ["long_pow"]
+    statement := "a ** e for e >= 0 is the exact power on the small-exponent, binary and sliding-window paths."
+    source := "built-in pow() docs", status := .proven
+    prop := ``PowExact, thm := some ``powExact_proven
+    notes := "MULT is modelled on values because long_mul and l_mod are proven exact. A negative exponent with no modulus leaves for float_pow and is outside this entry." },
+  { id := "longobj-pow-mod-refines", pyFile := "Objects/longobject.c", pyFns := ["long_pow"]
+    statement := "For all v, w, x the mirrored exponentiation loops give the result of MathInt.powMod, discharging mathint-pow-neg-exp-inverse's assumption that they compute a**e % c."
+    source := "invariant", status := .proven
+    prop := ``PowModRefines, thm := some ``powModRefines_proven },
+  { id := "longobj-pow-mod-floor", pyFile := "Objects/longobject.c", pyFns := ["long_pow"]
+    statement := "pow(v, w, x) for w >= 0 and x != 0 is the Python remainder of v**w by x, with the sign of x."
+    source := "built-in pow() docs", status := .proven
+    prop := ``PowModFloor, thm := some ``powModFloor_proven }
+]
+
+end PyLean.LongObj
