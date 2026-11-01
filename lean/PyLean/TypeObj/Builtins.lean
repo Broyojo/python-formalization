@@ -7,7 +7,7 @@ and `type_ready` produce for static types. Each `tp_dict` key of the table becom
 descriptor object; slots come from the wrapper keys, then `inherit_slots` runs over each
 MRO.
 
-Exception rows use the `CFn.exception` family until their own slots are modelled.
+Each exception row names its C family in `familyOf`; `Exceptions.lean` dispatches on it.
 -/
 
 namespace PyLean.TypeObj
@@ -22,8 +22,21 @@ def familyOf (a : Addr) : CFn :=
   | 21 => .property | 22 => .classmethod | 23 => .staticmethod | 24 => .super
   | 25 => .mappingproxy | 26 => .seqIter | 27 => .listIter | 28 => .tupleIter | 29 => .strIter
   | 30 => .cell
+  | 34 => .attributeError
   | 37 => .keyError
-  | 102 | 103 => .unmodelled
+  | 39 => .stopIteration
+  | 43 => .nameError
+  | 49 => .exceptionGroup
+  | 53 => .memoryError
+  | 57 => .osError
+  | 69 => .importError
+  | 80 => .syntaxError
+  | 82 => .systemExit
+  | 86 => .unicodeDecodeError
+  | 87 => .unicodeEncodeError
+  | 88 => .unicodeTranslateError
+  | 100 | 101 | 102 | 103 | 104 => .unmodelled
+  | 105 => .listIter
   | _ => .exception
 
 /-- Sequence types answer `__add__` and friends with `sq_*` slots. -/
@@ -70,7 +83,8 @@ def methodOf (tn n : String) : Builtin :=
   | "dict", "__contains__" => .dunderContains
   | "int", "__format__" | "str", "__format__" | "float", "__format__" => .objectFormat
   | _, "__class_getitem__" => .classGetitem
-  | "BaseException", _ | "BaseExceptionGroup", _ => .excMethod (tn ++ "." ++ n)
+  | "BaseException", _ | "BaseExceptionGroup", _ | "ImportError", _ | "OSError", _
+  | "AttributeError", _ => .excMethod (tn ++ "." ++ n)
   | _, _ => .stub (tn ++ "." ++ n)
 
 /-- The `__bases__` of a builtin. `ExceptionGroup` is the one multiple-inheritance
@@ -194,6 +208,8 @@ def initialState : World × NameDict :=
     bootstrap
     let mut env : NameDict := builtinTable.filterMap fun r =>
       if r.name == "NoneType" || r.name == "ellipsis" then none else some (r.name, Val.obj r.addr)
+    -- `INIT_ALIAS`, `Objects/exceptions.c:4545`.
+    env := NameDict.set (NameDict.set env "EnvironmentError" (.obj B.OSError)) "IOError" (.obj B.OSError)
     for (n, b) in builtinFunctions do
       let f ← alloc B.builtinFn (.builtin b none)
       env := NameDict.set env n f
