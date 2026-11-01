@@ -44,6 +44,10 @@ FIXED = {(4, False): ("PyLong_AsInt32", ctypes.c_int32), (8, False): ("PyLong_As
 for (_n, _u), (_name, _ct) in FIXED.items():
     getattr(API, _name).restype = ctypes.c_int
     getattr(API, _name).argtypes = [ctypes.py_object, ctypes.POINTER(_ct)]
+API.PyLong_FromNativeBytes.restype = ctypes.py_object
+API.PyLong_FromNativeBytes.argtypes = [ctypes.c_char_p, ctypes.c_size_t, ctypes.c_int]
+API.PyLong_FromUnsignedNativeBytes.restype = ctypes.py_object
+API.PyLong_FromUnsignedNativeBytes.argtypes = [ctypes.c_char_p, ctypes.c_size_t, ctypes.c_int]
 API.PyLong_GetSign.restype = ctypes.c_int
 API.PyLong_GetSign.argtypes = [ctypes.py_object, ctypes.POINTER(ctypes.c_int)]
 
@@ -108,7 +112,7 @@ def gen_case(rng):
                      "rshift", "lshift", "and", "or", "xor", "invert", "neg", "abs", "bool",
                      "pow", "powmod", "lopsided", "balanced", "balanced", "bigsquare", "knuth", "bigdiv",
                      "as_long_overflow", "as_long", "sizeof", "ratio", "int_info", "as_longlong",
-                     "as_ulonglong", "void_ptr", "native", "native", "fixed",
+                     "as_ulonglong", "void_ptr", "native", "native", "fixed", "int_new", "from_native",
                      "as_int", "as_ssize", "as_ulong", "as_size_t", "as_mask", "from_c", "get_sign",
                      "bit_length", "bit_count", "hash", "bool_repr", "bool_invert", "bool_op"])
     c = {"mod": "longobj", "fn": fn}
@@ -117,6 +121,20 @@ def gen_case(rng):
     elif fn in ("square", "invert", "neg", "abs", "bool", "get_sign", "bit_length", "bit_count",
                 "hash", "sizeof", "ratio"):
         c["a"] = edge_int(rng)
+    elif fn == "int_new":
+        # the paths that stop before a parser: the parsers have their own cases
+        kind = rng.choice(["none", "str", "other"])
+        c["kind"] = kind
+        c["base"] = rng.choice([None, -(1 << 70), -1, 1, 37, 38, 1 << 70, 0, 2, 10, 36])
+        if kind == "str" and c["base"] in (None, 0, 2, 10, 36):
+            c["base"] = 1
+        if kind == "other":
+            c["x"] = edge_int(rng)
+    elif fn == "from_native":
+        n = rng.randrange(1, 12)
+        c["bs"] = [rng.choice([0, 1, 127, 128, 255, rng.randrange(256)]) for _ in range(n)]
+        c["flags"] = rng.choice([-1, 0, 1, 2, 3, 4, 5, 6, 7])
+        c["unsigned"] = rng.random() < 0.5
     elif fn == "native":
         n = rng.choice([1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16, 17])
         c["n"], c["ub"] = n, rng.random() < 0.5
@@ -250,6 +268,14 @@ def run_python(c):
             x, y = API.PyLong_AsUnsignedLongMask(a), API.PyLong_AsUnsignedLongLongMask(a)
             assert x == y
             return x
+        if fn == "int_new":
+            kind, base = c["kind"], c["base"]
+            kw = {} if base is None else {"base": max(min(base, sys.maxsize), -sys.maxsize - 1)}
+            return int(**kw) if kind == "none" else int("0" if kind == "str" else c["x"], **kw)
+        if fn == "from_native":
+            raw = bytes(c["bs"])
+            call = API.PyLong_FromUnsignedNativeBytes if c["unsigned"] else API.PyLong_FromNativeBytes
+            return call(raw, len(raw), c["flags"])
         if fn == "as_longlong":
             return API.PyLong_AsLongLong(a)
         if fn == "as_ulonglong":

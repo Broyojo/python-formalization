@@ -1,5 +1,5 @@
 import PyLean.DiffCore
-import PyLean.LongObj.Conv2
+import PyLean.LongObj.IntNew
 
 /-! Differential-testing handler for `longobj` cases (`"mod": "longobj"`). -/
 
@@ -71,6 +71,25 @@ def run (fn : String) (j : Json) : Except String Json := do
     let ub ← getBool j "ub"
     let name := if ub then s!"C uint{8 * n}_t" else s!"C int{8 * n}_t"
     encResult (fun _ => toJson a) (toFixed (Long.ofInt a) n ub name)
+  | "int_new" =>
+    let ops : IntOps Int := {
+      numberLong := fun
+        | .str s | .bytes s | .other s => .ok s
+      asSsize := fun b => .ok b
+      fromUnicode := fun _ _ => .error (.named "Unreached" "~")
+      fromBytes := fun _ _ => .error (.named "Unreached" "~") }
+    let kind ← getStr j "kind"
+    let x : Option (IntArg Int) ← match kind with
+      | "none" => pure none
+      | "str" => pure (some (.str 0))
+      | "other" => pure (some (.other (← getInt j "x")))
+      | _ => throw "bad kind"
+    encResult toJson (longNew ops x (← getOptInt j "base"))
+  | "from_native" =>
+    let bs ← (← (← field j "bs").getArr?).toList.mapM (fun v => v.getNat?)
+    let flags ← getInt j "flags"
+    if ← getBool j "unsigned" then encResult toJson (fromUnsignedNativeBytes bs flags)
+    else encResult toJson (fromNativeBytes bs flags)
   | "from_c" =>
     let a ← getInt j "a"
     return encPy encLong (.ok (if 0 ≤ a then fromCUInt a.toNat else fromCInt a))
