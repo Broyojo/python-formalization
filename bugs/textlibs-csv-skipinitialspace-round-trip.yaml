@@ -10,7 +10,7 @@ summary: |
   same dialect reads 'a'. A field ' ' reads back as ''. The data changes silently: no error is
   raised, and the dialect is the same on both sides. In a sweep of 300000 random dialects and rows,
   every round trip failure had skipinitialspace=True; with it off, none failed (the Lean refutation
-  is CsvRoundTrip; the narrowed CsvRoundTripNoSkip stays open).
+  is CsvRoundTrip).
 likelihood: |
   Moderate where skipinitialspace=True is used for writing as well as reading, and values can start
   with a space. Many users set it only for reading, where the data was not written by this module.
@@ -49,4 +49,4 @@ duplicates: |
   #138005 (documentation of that case). Not in the bugforge list.
   Queries: gh api search/issues q='repo:python/cpython csv writer skipinitialspace leading space quote';
   q='repo:python/cpython csv skipinitialspace'; q='repo:python/cpython csv skipinitialspace empty field space delimiter'
-lean: lean/PyLean/TextLibs/CsvProps.lean (CsvRoundTrip, csvRoundTrip_refuted)
+lean: lean/PyLean/TextLibs/CsvRoundTrip.lean (CsvRoundTrip, csvRoundTrip_refuted)

@@ -1,0 +1,71 @@
+id: textlibs-csv-reader-reentrant-null-fields
+title: "csv.reader segfaults when its input iterator re-enters the reader and the input ends inside a quoted field"
+priority: P2
+kind: crash
+module: textlibs
+files: [Modules/_csv.c]
+functions: ["Reader_iternext_lock_held", "parse_save_field"]
+summary: |
+  A plain Python iterator class crashes the interpreter with SIGSEGV. The iterator's __next__ calls
+  next() on the reader that is reading it. The inner call reads an unterminated quoted field, hits
+  the end of input and returns the row, which sets self->fields to NULL but leaves
+  state == IN_QUOTED_FIELD. When the outer call's PyIter_Next then also reports the end of input, the
+  test at Modules/_csv.c:948 passes on the state, and parse_save_field appends to the NULL list. The
+  guard added for the same situation, "iterator has already advanced the reader", is only on the path
+  where the iterator returns a line. The Lean model reached this by itself: difftest scripts with a
+  re-entrant step predicted every segfault CPython then produced.
+likelihood: |
+  Low in ordinary code: it needs an iterator that drives its own reader. Any Python code can do that,
+  though, so this is a crash from pure Python with no unusual modules.
+maybe_intended: |
+  No. A guard already exists for the sibling path, and an open report agrees.
+reproducer: |
+  import subprocess, sys
+  code = """
+  import csv
+  class It:
+      def __init__(self):
+          self.n = 0
+          self.reader = None
+      def __iter__(self):
+          return self
+      def __next__(self):
+          self.n += 1
+          if self.n == 1:
+              next(self.reader)
+              raise StopIteration
+          if self.n == 2:
+              return '"abc'
+          raise StopIteration
+  it = It()
+  r = csv.reader(it)
+  it.reader = r
+  next(r)
+  """
+  p = subprocess.run([sys.executable, '-c', code], capture_output=True)
+  print('exit status', p.returncode)
+  if p.returncode < 0:
+      print('REPRODUCED textlibs-csv-reader-reentrant-null-fields')
+expected: |
+  A csv.Error, such as "iterator has already advanced the reader", or StopIteration. No crash.
+observed: |
+  python3 3.14.7: exit status -11 (SIGSEGV). REPRODUCED.
+  main 3.16.0a1+dev: exit status -11 (SIGSEGV). REPRODUCED.
+promised_by: |
+  The undisputed invariant that Python code does not crash the interpreter, and the existing guard
+  at Modules/_csv.c:968-973.
+cause: |
+  Modules/_csv.c:948-953: the end-of-input branch calls parse_save_field without checking
+  self->fields, which is NULL after an inner call returned a row (:992-993). parse_save_field reaches
+  PyList_Append(NULL, ...) at :688, and PyList_Check reads through the pointer
+  (Objects/listobject.c:535).
+possible_fix: |
+  Check self->fields == NULL in the end-of-input branch too, and raise the same csv.Error, as
+  python/cpython#157379 proposes.
+duplicates: |
+  Duplicate of python/cpython#157379 (open, filed 2026-09-12), which is the second path of gh-145105.
+  Nothing new needs filing. Not in the bugforge list.
+  Queries: gh search issues --repo python/cpython "csv reader segfault iterator";
+  "iterator has already advanced the reader"; "csv reader crash"; "csv reader reentrant"; "_csv segfault";
+  gh issue view 157379.
+lean: lean/PyLean/TextLibs/CsvIoProps.lean (ReaderNoCrash, readerNoCrash_refuted)

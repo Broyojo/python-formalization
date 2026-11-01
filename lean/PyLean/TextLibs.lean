@@ -2,7 +2,7 @@ import PyLean.Registry
 import PyLean.TextLibs.Diff
 import PyLean.TextLibs.StructClose
 import PyLean.TextLibs.BinasciiProps2
-import PyLean.TextLibs.CsvProps
+import PyLean.TextLibs.CsvRoundTrip
 import PyLean.TextLibs.ReParseProps
 
 /-!
@@ -14,7 +14,8 @@ so only the proofs reach them, not the difftest.
 
 `Modules/binascii.c` and `Lib/base64.py` are in `TextLibs/BinasciiModel.lean` and
 `TextLibs/BinasciiRest.lean`; `hexlify`'s `sep` argument is not modelled. `Modules/_csv.c` and
-`Lib/csv.py` are in `TextLibs/CsvModel.lean`, whose `float()` covers ASCII text only.
+`Lib/csv.py` are in `TextLibs/CsvModel.lean`, over fallible and re-entrant objects; `Sniffer` is not
+modelled.
 `Lib/re/_parser.py` is in `TextLibs/ReParse.lean`, without `\\N{...}` and non-ASCII group names.
 -/
 
@@ -250,6 +251,213 @@ def entries : List Entry := [
     source := "the usage text", status := .proven
     prop := ``MainLastFlagWins, thm := some ``mainLastFlagWins_proven
     notes := "Only the flag loop: file handling is not modelled, and the difftest stubs out encode and decode." },
+  { id := "textlibs-csv-round-trip", pyFile := "Modules/_csv.c"
+    pyFns := ["join_reset", "join_append_data", "join_append", "join_append_lineterminator", "csv_writerow_lock_held",
+      "csv_writerow", "parse_add_char", "parse_process_char"]
+    statement := "For every accepted dialect with QUOTE_MINIMAL or QUOTE_ALL, reading back the text writerow wrote gives the row."
+    source := "the module's purpose: reader reads what writer wrote", status := .refuted
+    prop := ``CsvRoundTrip, thm := some ``csvRoundTrip_refuted
+    bug := some "textlibs-csv-skipinitialspace-round-trip"
+    notes := "skipinitialspace=True, field ' a'. The counterexample runs the plain-character path of join_append_data and the START_FIELD, IN_FIELD and EAT_CRNL states of parse_process_char." },
+  { id := "textlibs-csv-set-char", pyFile := "Modules/_csv.c", pyFns := ["_set_char"]
+    statement := "_set_char accepts exactly a missing argument, as the default, or a str or str subclass of length one."
+    source := "the checks' messages", status := .proven
+    prop := ``SetCharLaw, thm := some ``setCharLaw_proven },
+  { id := "textlibs-csv-set-char-or-none", pyFile := "Modules/_csv.c", pyFns := ["_set_char_or_none"]
+    statement := "_set_char_or_none accepts exactly what _set_char does, and None as NOT_SET."
+    source := "the checks' messages", status := .proven
+    prop := ``SetCharOrNoneLaw, thm := some ``setCharOrNoneLaw_proven },
+  { id := "textlibs-csv-set-str", pyFile := "Modules/_csv.c", pyFns := ["_set_str"]
+    statement := "_set_str accepts exactly a missing argument, as the default, or a str or str subclass."
+    source := "the checks' messages", status := .proven
+    prop := ``SetStrLaw, thm := some ``setStrLaw_proven },
+  { id := "textlibs-csv-set-int", pyFile := "Modules/_csv.c", pyFns := ["_set_int"]
+    statement := "_set_int accepts exactly a missing argument, as the default, or an exact int that fits a C int; a bool is refused, and an int out of range is OverflowError."
+    source := "the checks' messages", status := .proven
+    prop := ``SetIntLaw, thm := some ``setIntLaw_proven },
+  { id := "textlibs-csv-dialect-valid", pyFile := "Modules/_csv.c"
+    pyFns := ["dialect_check_quoting", "dialect_check_char", "dialect_check_chars"]
+    statement := "Every accepted dialect has a known quoting style, a quote character unless quoting is off, no newline or line terminator character as a special character, no space as escape or quote character under skipinitialspace, and pairwise different special characters."
+    source := "docs: dialect parameters; the checks' messages", status := .proven
+    prop := ``DialectValid, thm := some ``dialectValid_proven },
+  { id := "textlibs-csv-dialect-stores", pyFile := "Modules/_csv.c", pyFns := ["_set_bool"]
+    statement := "An accepted dialect stores each converted argument, or the default for a missing one; boolean attributes are the argument's truth value."
+    source := "docs: dialect parameters", status := .proven
+    prop := ``DialectStores, thm := some ``dialectStores_proven },
+  { id := "textlibs-csv-dialect-bool-raises", pyFile := "Modules/_csv.c", pyFns := ["_set_bool"]
+    statement := "A raising __bool__ on a boolean parameter raises out of the dialect, in conversion order."
+    source := "Modules/_csv.c:223-225", status := .proven
+    prop := ``DialectBoolRaises, thm := some ``dialectBoolRaises_proven },
+  { id := "textlibs-csv-dialect-rebuild", pyFile := "Modules/_csv.c"
+    pyFns := ["get_char_or_None", "Dialect_get_lineterminator", "Dialect_get_delimiter", "Dialect_get_escapechar",
+      "Dialect_get_quotechar", "Dialect_get_quoting"]
+    statement := "Rebuilding a dialect from the attributes its getters return gives the same settings."
+    source := "docs: Dialect attributes; DIALECT_GETATTR", status := .proven
+    prop := ``DialectRebuild, thm := some ``dialectRebuild_proven },
+  { id := "textlibs-csv-dialect-reuse", pyFile := "Modules/_csv.c", pyFns := ["dialect_new", "_call_dialect"]
+    statement := "A Dialect passed with no overrides, by value or by registered name, is the same object back; any other object gives a new dialect."
+    source := "comment at Modules/_csv.c:475", status := .proven
+    prop := ``DialectReuse, thm := some ``dialectReuse_proven
+    notes := "Identity is a constructor of DRes, not equality of contents." },
+  { id := "textlibs-csv-getattr-cleared", pyFile := "Modules/_csv.c", pyFns := ["dialect_new"]
+    statement := "Every failure of a dialect attribute is cleared, so an object whose attributes all raise gives the default dialect."
+    source := "Modules/_csv.c:504-511", status := .proven
+    prop := ``GetattrCleared, thm := some ``getattrCleared_proven },
+  { id := "textlibs-csv-registry", pyFile := "Modules/_csv.c", pyFns := ["csv_register_dialect"]
+    statement := "A registered dialect can be read back by name, and it is the object _call_dialect made."
+    source := "docs: register_dialect, get_dialect", status := .proven
+    prop := ``RegistryLaw, thm := some ``registryLaw_proven },
+  { id := "textlibs-csv-register-checks", pyFile := "Modules/_csv.c", pyFns := ["csv_register_dialect"]
+    statement := "register_dialect refuses a non-string name before looking at the dialect, and a failing __hash__ leaves the dialect unregistered."
+    source := "Modules/_csv.c:1627-1638", status := .proven
+    prop := ``RegisterNameChecks, thm := some ``registerNameChecks_proven },
+  { id := "textlibs-csv-get-dialect", pyFile := "Modules/_csv.c"
+    pyFns := ["get_dialect_from_registry", "_csv_get_dialect_impl"]
+    statement := "get_dialect for every name object: failures of __hash__ and __eq__, no match, and an equal key."
+    source := "docs: get_dialect; Modules/_csv.c:166-168", status := .proven
+    prop := ``GetDialectLaw, thm := some ``getDialectLaw_proven },
+  { id := "textlibs-csv-unregister", pyFile := "Modules/_csv.c", pyFns := ["_csv_unregister_dialect_impl", "_csv_list_dialects_impl"]
+    statement := "unregister_dialect does not hash on an empty registry; otherwise a raising __hash__ raises, an unknown name is csv.Error, and a removed name leaves list_dialects."
+    source := "docs: unregister_dialect", status := .proven
+    prop := ``UnregisterLaw, thm := some ``unregisterLaw_proven },
+  { id := "textlibs-csv-field-limit", pyFile := "Modules/_csv.c", pyFns := ["_csv_field_size_limit_impl"]
+    statement := "field_size_limit for every argument: the old limit for no argument or an int that fits, OverflowError for one that does not, TypeError for anything else, bool included."
+    source := "docs: field_size_limit", status := .proven
+    prop := ``FieldLimit, thm := some ``fieldLimit_proven },
+  { id := "textlibs-csv-add-char-limit", pyFile := "Modules/_csv.c", pyFns := ["parse_add_char"]
+    statement := "parse_add_char raises exactly at the field limit, and otherwise appends one character."
+    source := "docs: field_size_limit", status := .proven
+    prop := ``AddCharLimit, thm := some ``addCharLimit_proven },
+  { id := "textlibs-csv-save-field", pyFile := "Modules/_csv.c", pyFns := ["parse_save_field"]
+    statement := "What parse_save_field appends for every quoting style, with float() through PyFloat_FromString."
+    source := "docs: QUOTE_NONNUMERIC, QUOTE_NOTNULL, QUOTE_STRINGS", status := .proven
+    prop := ``SaveFieldLaw, thm := some ``saveFieldLaw_proven },
+  { id := "textlibs-csv-eat-crnl", pyFile := "Modules/_csv.c", pyFns := ["parse_process_char"]
+    statement := "After a newline ends a record, a further newline is ignored, the end of the line finishes the record, and any other character raises csv.Error."
+    source := "the error message at Modules/_csv.c:901-903", status := .proven
+    prop := ``EatCrnl, thm := some ``eatCrnl_proven },
+  { id := "textlibs-csv-iter-raises", pyFile := "Modules/_csv.c"
+    pyFns := ["Reader_iternext_lock_held", "Reader_iternext", "parse_reset"]
+    statement := "An exception from the input iterator passes through, and the next __next__ starts a fresh record from the next line."
+    source := "Modules/_csv.c:942-957", status := .proven
+    prop := ``IterRaisePasses, thm := some ``iterRaisePasses_proven },
+  { id := "textlibs-csv-eof", pyFile := "Modules/_csv.c", pyFns := ["Reader_iternext_lock_held"]
+    statement := "End of input: StopIteration with nothing open, csv.Error in strict mode with a field or quote open, and the open field as a row otherwise."
+    source := "docs: strict", status := .proven
+    prop := ``EofLaw, thm := some ``eofLaw_proven },
+  { id := "textlibs-csv-not-str-line", pyFile := "Modules/_csv.c", pyFns := ["Reader_iternext_lock_held"]
+    statement := "An item that is not a string raises csv.Error naming its type, without counting a line."
+    source := "the error message at Modules/_csv.c:959-963", status := .proven
+    prop := ``NotStrLine, thm := some ``notStrLine_proven },
+  { id := "textlibs-csv-parse-failure", pyFile := "Modules/_csv.c", pyFns := ["Reader_iternext_lock_held"]
+    statement := "A parse failure raises and keeps the state C left, with the line counted."
+    source := "Modules/_csv.c:974-984", status := .proven
+    prop := ``ParseFailureKeeps, thm := some ``parseFailureKeeps_proven },
+  { id := "textlibs-csv-already-advanced", pyFile := "Modules/_csv.c", pyFns := ["Reader_iternext_lock_held"]
+    statement := "If the input iterator advances the reader through a whole row and then returns a line, the outer call raises csv.Error."
+    source := "the guard at Modules/_csv.c:968-973", status := .proven
+    prop := ``AlreadyAdvanced, thm := some ``alreadyAdvanced_proven },
+  { id := "textlibs-csv-reader-no-crash", pyFile := "Modules/_csv.c"
+    pyFns := ["Reader_iternext_lock_held", "Reader_iternext", "parse_reset", "parse_save_field"]
+    statement := "No input iterator crashes the reader."
+    source := "undisputed: Python code must not crash the interpreter", status := .refuted
+    prop := ``ReaderNoCrash, thm := some ``readerNoCrash_refuted
+    bug := some "textlibs-csv-reader-reentrant-null-fields"
+    notes := "The iterator re-enters the reader, which ends the input with a quoted field open, and then ends the outer call too. Duplicate of python/cpython#157379." },
+  { id := "textlibs-csv-crash-needs-quote", pyFile := "Modules/_csv.c", pyFns := ["Reader_iternext_lock_held"]
+    statement := "With fields NULL, the end of input is safe unless a quoted field is open."
+    source := "narrowing of textlibs-csv-reader-no-crash", status := .proven
+    prop := ``CrashNeedsOpenQuote, thm := some ``crashNeedsOpenQuote_proven },
+  { id := "textlibs-csv-limit-live", pyFile := "Modules/_csv.c", pyFns := ["_csv_field_size_limit_impl", "parse_add_char"]
+    statement := "field_size_limit called from the input iterator applies to the line it returns."
+    source := "Modules/_csv.c:716", status := .proven
+    prop := ``LimitIsLive, thm := some ``limitIsLive_proven },
+  { id := "textlibs-csv-writer-iter-fails", pyFile := "Modules/_csv.c", pyFns := ["csv_writerow_lock_held", "csv_writerow", "csv_writerows"]
+    statement := "writerow turns a TypeError from iter() into csv.Error and passes other exceptions; writerows passes all of them; the writer is untouched."
+    source := "Modules/_csv.c:1334-1342, 1459-1462", status := .proven
+    prop := ``WriterIterFails, thm := some ``writerIterFails_proven },
+  { id := "textlibs-csv-write-result", pyFile := "Modules/_csv.c", pyFns := ["csv_writerow_lock_held", "csv_writerow", "join_append_lineterminator"]
+    statement := "write is called once with the record and its terminator, and writerow returns what it returned or raises what it raised."
+    source := "docs: writerow returns the return value of the call to write", status := .proven
+    prop := ``WriteResult, thm := some ``writeResult_proven },
+  { id := "textlibs-csv-field-raises", pyFile := "Modules/_csv.c", pyFns := ["csv_writerow_lock_held"]
+    statement := "A row iterator that raises ends writerow with that exception, with no call to write."
+    source := "Modules/_csv.c:1395-1397", status := .proven
+    prop := ``FieldRaises, thm := some ``fieldRaises_proven },
+  { id := "textlibs-csv-str-raises", pyFile := "Modules/_csv.c", pyFns := ["csv_writerow_lock_held"]
+    statement := "A field whose str() raises ends writerow with that exception."
+    source := "Modules/_csv.c:1381-1386", status := .proven
+    prop := ``StrRaises, thm := some ``strRaises_proven },
+  { id := "textlibs-csv-writerows-stop", pyFile := "Modules/_csv.c", pyFns := ["csv_writerows"]
+    statement := "writerows stops at the first row that fails, with that exception."
+    source := "Modules/_csv.c:1464-1469", status := .proven
+    prop := ``WritesStopAtFailure, thm := some ``writesStopAtFailure_proven },
+  { id := "textlibs-csv-writerows-result", pyFile := "Modules/_csv.c", pyFns := ["csv_writerows"]
+    statement := "writerows returns None, whatever write returned."
+    source := "Modules/_csv.c:1476", status := .proven
+    prop := ``WriterowsResult, thm := some ``writerowsResult_proven },
+  { id := "textlibs-csv-num-fields", pyFile := "Modules/_csv.c", pyFns := ["join_append"]
+    statement := "Once a field has been appended, the field count stays positive, so every later field gets its delimiter."
+    source := "undisputed: a row's fields are separated by delimiters", status := .refuted
+    prop := ``NumFieldsPositive, thm := some ``numFieldsPositive_refuted
+    bug := some "textlibs-csv-num-fields-int-overflow"
+    notes := "num_fields is a C int. At INT_MAX the next field wraps it, and no delimiter is written for the next 2^31 fields." },
+  { id := "textlibs-csv-join-delimiter", pyFile := "Modules/_csv.c", pyFns := ["join_append"]
+    statement := "Below INT_MAX the field count is exact, and a field after the first starts with one delimiter."
+    source := "narrowing of textlibs-csv-num-fields", status := .proven
+    prop := ``JoinDelimiter, thm := some ``joinDelimiter_proven },
+  { id := "textlibs-csv-reader-order", pyFile := "Modules/_csv.c", pyFns := ["csv_reader", "_call_dialect"]
+    statement := "csv.reader fails in order: iter() of the input, then the dialect; a new reader starts on the input's iterator."
+    source := "docs: csv.reader", status := .proven
+    prop := ``CsvReaderOrder, thm := some ``csvReaderOrder_proven },
+  { id := "textlibs-csv-writer-order", pyFile := "Modules/_csv.c", pyFns := ["csv_writer"]
+    statement := "csv.writer needs a callable write attribute; AttributeError and a non-callable are the same TypeError, other exceptions pass through, and both come before the dialect."
+    source := "docs: csv.writer", status := .proven
+    prop := ``CsvWriterOrder, thm := some ``csvWriterOrder_proven },
+  { id := "textlibs-csv-dialect-validate", pyFile := "Lib/csv.py", pyFns := ["Dialect.__init__", "Dialect._validate"]
+    statement := "csv.Dialect accepts what _csv.Dialect accepts, reporting TypeError as csv.Error and passing other exceptions."
+    source := "Lib/csv.py:111-116", status := .proven
+    prop := ``DialectValidate, thm := some ``dialectValidate_proven },
+  { id := "textlibs-csv-dictwriter-order", pyFile := "Lib/csv.py", pyFns := ["DictWriter._dict_to_list"]
+    statement := "DictWriter yields the fields in fieldnames order, with restval for missing keys."
+    source := "docs: DictWriter", status := .proven
+    prop := ``DictToListOrder, thm := some ``dictToListOrder_proven },
+  { id := "textlibs-csv-dictwriter-extra", pyFile := "Lib/csv.py", pyFns := ["DictWriter._dict_to_list", "DictWriter.writerow"]
+    statement := "With extrasaction='raise', a key outside fieldnames raises ValueError and nothing reaches the writer."
+    source := "docs: DictWriter", status := .proven
+    prop := ``DictExtraRaises, thm := some ``dictExtraRaises_proven },
+  { id := "textlibs-csv-dictwriter-row", pyFile := "Lib/csv.py", pyFns := ["DictWriter._dict_to_list", "DictWriter.writerow"]
+    statement := "A dict that passes the check is written as the row of its values."
+    source := "docs: DictWriter", status := .proven
+    prop := ``DictWriterowIsRow, thm := some ``dictWriterowIsRow_proven },
+  { id := "textlibs-csv-dictwriter-writerows", pyFile := "Lib/csv.py", pyFns := ["DictWriter.writerows"]
+    statement := "DictWriter.writerows raises at the first dict with an extra key, in its place: the dicts before it are written and later ones are not looked at."
+    source := "Lib/csv.py:227-228: map is lazy", status := .proven
+    prop := ``MapStepsStop, thm := some ``mapStepsStop_proven },
+  { id := "textlibs-csv-writeheader", pyFile := "Lib/csv.py", pyFns := ["DictWriter.writeheader"]
+    statement := "writeheader writes the field names as one row, repeated names included."
+    source := "docs: writeheader", status := .proven
+    prop := ``WriteheaderLaw, thm := some ``writeheaderLaw_proven },
+  { id := "textlibs-csv-extrasaction", pyFile := "Lib/csv.py", pyFns := ["DictWriter.__init__"]
+    statement := "extrasaction is case-insensitive, and only raise and ignore are accepted."
+    source := "Lib/csv.py:205-208", status := .proven
+    prop := ``ExtrasactionLaw, thm := some ``extrasactionLaw_proven },
+  { id := "textlibs-csv-dictrow", pyFile := "Lib/csv.py", pyFns := ["DictReader.__next__"]
+    statement := "With distinct names, a row of the same length is their dict, and a longer one keeps the extras under restkey."
+    source := "docs: DictReader", status := .proven
+    prop := ``DictRowLaw, thm := some ``dictRowLaw_proven },
+  { id := "textlibs-csv-dictreader-header", pyFile := "Lib/csv.py", pyFns := ["DictReader.fieldnames", "DictReader.__next__"]
+    statement := "With no field names given, the first row becomes the names and the dict of the second comes out."
+    source := "docs: DictReader", status := .proven
+    prop := ``DictReaderHeader, thm := some ``dictReaderHeader_proven },
+  { id := "textlibs-csv-dictreader-blank", pyFile := "Lib/csv.py", pyFns := ["DictReader.__next__"]
+    statement := "Blank rows do not reach the caller, and a failure while skipping them passes through."
+    source := "Lib/csv.py:180-184", status := .proven
+    prop := ``DictReaderSkipsBlank, thm := some ``dictReaderSkipsBlank_proven },
+  { id := "textlibs-csv-dictreader-init", pyFile := "Lib/csv.py", pyFns := ["DictReader.__init__"]
+    statement := "DictReader passes its dialect and keywords to csv.reader, and every failure of csv.reader comes out of the constructor."
+    source := "Lib/csv.py:152", status := .proven
+    prop := ``DictReaderInit, thm := some ``dictReaderInit_proven },
   { id := "textlibs-re-digit-limit-parse", pyFile := "Lib/re/_parser.py"
     pyFns := ["_parse", "parse"]
     statement := "For every allowed sys.set_int_max_str_digits value, a str pattern parsed with no flags reports a bad pattern as PatternError or OverflowError, and never leaks ValueError."
