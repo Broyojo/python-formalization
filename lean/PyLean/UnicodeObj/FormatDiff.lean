@@ -4,6 +4,7 @@ import PyLean.UnicodeObj.FormatSpec
 import PyLean.UnicodeObj.FormatNumber
 import PyLean.UnicodeObj.FormatPercent
 import PyLean.UnicodeObj.FormatStr
+import PyLean.UnicodeObj.ObjectWriter
 
 /-! Difftest handler for the formatting slice (`fn` names start with `fmt_`). -/
 
@@ -86,6 +87,40 @@ mutual
     | _ => return .ok (← getG (← field j "v"))
 end
 
+def getWHandler : String → Except String ErrHandler
+  | "strict" => .ok .strict
+  | "ignore" => .ok .ignore
+  | "replace" => .ok .replace
+  | "surrogateescape" => .ok .surrogateescape
+  | "backslashreplace" => .ok .backslashreplace
+  | "surrogatepass" => .ok .surrogatepass
+  | "xmlcharrefreplace" => .ok .xmlcharrefreplace
+  | "namereplace" => .ok .namereplace
+  | o => .error s!"bad handler {o}"
+
+/-- One operation of a writer script. -/
+def getWOp (j : Json) : Except String WOp := do
+  match ← getStr j "op" with
+  | "char" => return .char (← getNat j "c")
+  | "str" => return .str (← getG (← field j "o"))
+  | "repr" => return .repr (some (← getG (← field j "o")))
+  | "reprnull" => return .repr none
+  | "ascii" => return .ascii (← getSeq j "s") (← getInt j "n")
+  | "ucs4" => return .ucs4 (← getSeq j "s") (← getInt j "n")
+  | "wide" => return .wide (← getSeq j "s") (← getInt j "n")
+  | "sub" => return .sub (← getG (← field j "o")) (← getInt j "a") (← getInt j "b")
+  | "utf8" => return .utf8 (← getSeq j "s") (← getInt j "n")
+  | "decode" =>
+    return .decode (← getSeq j "s") (← getInt j "n") (← getWHandler (← getStr j "h"))
+      (← (← field j "consumed").getBool?)
+  | o => throw s!"bad op {o}"
+
+def kindJson : Kind → Json
+  | .ascii => Json.arr #[toJson (1 : Nat), toJson true]
+  | .ucs1 => Json.arr #[toJson (1 : Nat), toJson false]
+  | .ucs2 => Json.arr #[toJson (2 : Nat), toJson false]
+  | .ucs4 => Json.arr #[toJson (4 : Nat), toJson false]
+
 def encOptStr : Option Str → Json
   | some s => toJson s
   | none => Json.null
@@ -136,6 +171,15 @@ def run (fn : String) (j : Json) : Except String Json := do
     return encPy (fun (r : (Nat ⊕ Str) × List (Bool × (Nat ⊕ Str))) =>
       Json.arr #[encIdxStr r.1, Json.arr (r.2.map fun (b, v) => Json.arr #[toJson b, encIdxStr v]).toArray])
       (formatterFieldNameSplitObj (if (← getBool j "bad") then .int 1 else .str s))
+  | "fmt_writer" =>
+    let ops ← (← (← field j "ops").getArr?).toList.mapM getWOp
+    return encPy (fun (w0 : UWriter) =>
+      let (w, trace) := runOps w0 ops
+      let (text, kind) := w.finish
+      let step (r : Py Nat) : Json := Json.arr #[encPy (fun (_ : Nat) => Json.null) r,
+        toJson (match r with | .ok n => n | .error _ => 0)]
+      Json.arr #[Json.arr (trace.map step).toArray, toJson text, kindJson kind])
+      (writerCreate (← getInt j "n"))
   | "fmt_percent" =>
     return encPy toJson (pyUnicodeFormat (← getSeq j "fmt") (← getArgs (← field j "args")))
   | "fmt_float" =>

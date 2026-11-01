@@ -486,6 +486,133 @@ def run_fmt_fieldsplit(c):
     first, rest = _string.formatter_field_name_split(1 if c["bad"] else s_of(c["s"]))
     return [idx_str(first), [[b, idx_str(v)] for b, v in rest]]
 
+
+# ==== PyUnicodeWriter (fn name fmt_writer) ====
+
+WR_BYTES = [b"", b"a", b"abc", b"\xc3\xa9", b"\xe2\x82\xac", b"\xf0\x9f\x98\x80", b"\xff", b"a\xff",
+            b"\xe2\x82\xac\xff", b"\xc3\xa9\xff", b"\xf0\x9f\x98\x80\xc0", b"\xe2\x82", b"\xed\xa0\x80",
+            b"a\x00\xc3\xa9", b"\xc3\xa9\xe2\x82", b"\xed\xa0\x80\xff", b"\xe2\x82\xac\xf0\x9f"]
+WR_STRS = ["", "a", "abc", "\xe9", "€", "\U0001f600", "a\xe9", "a€", "\xe9€\U0001f600",
+           "\ud800", "a\x00b"]
+WR_HANDLERS = ["strict", "strict", "ignore", "replace", "surrogateescape", "backslashreplace",
+               "surrogatepass", "xmlcharrefreplace", "namereplace"]
+
+
+def wr_size(rng, n):
+    return rng.choice([-1, n, n, rng.randint(0, n)])
+
+
+def wop_bytes(rng, key):
+    b = rng.choice(WR_BYTES)
+    return {"op": key, "s": list(b), "n": wr_size(rng, len(b))}
+
+
+def gen_wop(rng):
+    r = rng.random()
+    if r < 0.14:
+        return {"op": "char", "c": rng.choice([0, 97, 127, 128, 255, 256, 0x20ac, 0xffff, 0x10000, 0x10ffff,
+                                               0x110000, 0xffffffff])}
+    if r < 0.26:
+        o = {"t": "str", "s": cps_of(rng.choice(WR_STRS))} if rng.random() < 0.6 else sf_obj(rng, 1)
+        return {"op": "str", "o": o}
+    if r < 0.34:
+        return {"op": "repr", "o": sf_obj(rng, 1)} if rng.random() < 0.9 else {"op": "reprnull"}
+    if r < 0.4:
+        s = rng.choice(["", "x", "ascii", "a\x00b"])
+        return {"op": "ascii", "s": cps_of(s), "n": wr_size(rng, len(s))}
+    if r < 0.47:
+        s = rng.choice(WR_STRS)
+        return {"op": "ucs4", "s": cps_of(s), "n": rng.choice([-1, len(s), rng.randint(0, len(s))])}
+    if r < 0.54:
+        s = cps_of(rng.choice(WR_STRS)) + rng.choice([[], [], [0x110000], [0xffffffff], [65, 0x110000]])
+        return {"op": "wide", "s": s, "n": wr_size(rng, len(s))}
+    if r < 0.68:
+        s = rng.choice(WR_STRS)
+        o = {"t": "str", "s": cps_of(s)} if rng.random() < 0.9 else rng.choice([
+            {"t": "int", "v": hex_of(1)}, {"t": "none"}])
+        if rng.random() < 0.7:
+            a = rng.randint(0, len(s))
+            return {"op": "sub", "o": o, "a": a, "b": rng.randint(a, len(s))}
+        return {"op": "sub", "o": o, "a": rng.randint(-1, len(s) + 1), "b": rng.randint(-1, len(s) + 1)}
+    if r < 0.84:
+        return wop_bytes(rng, "utf8")
+    op = wop_bytes(rng, "decode")
+    op["h"] = rng.choice(WR_HANDLERS)
+    op["consumed"] = rng.random() < 0.5
+    return op
+
+
+@gen("format", 6)
+def gen_fmt_writer(rng):
+    n = rng.choice([0, 0, 0, 1, 16, -1])
+    ops = [gen_wop(rng) for _ in range(rng.randint(0, 5))]
+    if rng.random() < 0.3:
+        # The shape of a rollback: something short, a decode failing after wide characters, and
+        # at times more text, so that the kind of the result is decided by the failure.
+        first = rng.choice([[], [{"op": "char", "c": 97}], [{"op": "ascii", "s": cps_of("ab"), "n": 2}]])
+        fail = {"op": "utf8", "s": list(rng.choice([b"\xc3\xa9\xff", b"\xe2\x82\xac\xff",
+                                                    b"\xf0\x9f\x98\x80\xff"])), "n": -1}
+        rest = rng.choice([[], [{"op": "char", "c": 98}], [{"op": "ascii", "s": cps_of("cd"), "n": -1}]])
+        ops = first + [fail] + rest
+    return {"mod": "unicodeobj", "fn": "fmt_writer", "n": n, "ops": ops}
+
+
+def writer_api():
+    import ctypes
+    api = ctypes.pythonapi
+    P, O, N = ctypes.c_void_p, ctypes.py_object, ctypes.c_ssize_t
+    for name, args in [("WriteChar", [P, ctypes.c_uint32]), ("WriteStr", [P, O]), ("WriteRepr", [P, O]),
+                       ("WriteASCII", [P, ctypes.c_char_p, N]), ("WriteSubstring", [P, O, N, N]),
+                       ("WriteUTF8", [P, ctypes.c_char_p, N]), ("WriteUCS4", [P, P, N]),
+                       ("WriteWideChar", [P, P, N]),
+                       ("DecodeUTF8Stateful", [P, ctypes.c_char_p, N, ctypes.c_char_p, P])]:
+        f = getattr(api, "PyUnicodeWriter_" + name)
+        f.restype, f.argtypes = ctypes.c_int, args
+    api.PyUnicodeWriter_Create.restype, api.PyUnicodeWriter_Create.argtypes = P, [N]
+    api.PyUnicodeWriter_Finish.restype, api.PyUnicodeWriter_Finish.argtypes = O, [P]
+    null = ctypes.PYFUNCTYPE(ctypes.c_int, P, P)(("PyUnicodeWriter_WriteRepr", api))
+    return api, null
+
+
+def writer_step(api, null, w, op, consumed):
+    import ctypes
+    k = op["op"]
+    if k == "char":
+        api.PyUnicodeWriter_WriteChar(w, op["c"])
+    elif k == "str":
+        api.PyUnicodeWriter_WriteStr(w, sf_dec(op["o"]))
+    elif k == "repr":
+        api.PyUnicodeWriter_WriteRepr(w, sf_dec(op["o"]))
+    elif k == "reprnull":
+        null(w, None)
+    elif k == "ascii":
+        api.PyUnicodeWriter_WriteASCII(w, bytes(op["s"]), op["n"])
+    elif k in ("ucs4", "wide"):
+        a = (ctypes.c_uint32 * (len(op["s"]) + 1))(*op["s"], 0)
+        f = api.PyUnicodeWriter_WriteUCS4 if k == "ucs4" else api.PyUnicodeWriter_WriteWideChar
+        f(w, a, op["n"])
+    elif k == "sub":
+        api.PyUnicodeWriter_WriteSubstring(w, sf_dec(op["o"]), op["a"], op["b"])
+    elif k == "utf8":
+        api.PyUnicodeWriter_WriteUTF8(w, bytes(op["s"]), op["n"])
+    else:
+        ref = ctypes.byref(consumed) if op["consumed"] else None
+        api.PyUnicodeWriter_DecodeUTF8Stateful(w, bytes(op["s"]), op["n"], op["h"].encode(), ref)
+
+
+@run("fmt_writer")
+def run_fmt_writer(c):
+    import ctypes
+    api, null = writer_api()
+    w = api.PyUnicodeWriter_Create(c["n"])
+    trace = []
+    for op in c["ops"]:
+        consumed = ctypes.c_ssize_t(77 if op.get("consumed") else 0)
+        t = common.py_result(lambda: writer_step(api, null, w, op, consumed))
+        trace.append([{"ok": None} if "ok" in t else t, consumed.value])
+    r = api.PyUnicodeWriter_Finish(w)
+    return [trace, cps_of(r), kind_of(r)]
+
 # ==== end str.format ====
 
 
