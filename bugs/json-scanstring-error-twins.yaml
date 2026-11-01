@@ -1,0 +1,91 @@
+id: json-scanstring-error-twins
+title: "json: C and pure-Python decoders report invalid escapes at different positions (and both string errors with different messages)"
+priority: P3
+kind: twin-mismatch
+module: json
+files: [Modules/_json.c, Lib/json/decoder.py]
+functions: ["C scanstring_unicode", "py_scanstring", "json.loads", "JSONDecoder.raw_decode"]
+summary: |
+  For an invalid backslash escape the C scanner raises JSONDecodeError('Invalid \\escape') at the
+  index of the backslash, while the pure-Python py_scanstring raises
+  JSONDecodeError("Invalid \\escape: 'x'") at the index of the character after it. So `pos`,
+  `colno` and the message all differ: json.loads('"\\x"') gives pos=1, colno=2 with _json and
+  pos=2, colno=3 without it. For a raw control character inside a string (strict=True) the
+  position agrees but the message does not: C says 'Invalid control character at', Python
+  "Invalid control character '\\x01' at".
+  The Lean model proves these are the only differences: for every document and every
+  strict / object_pairs_hook / parse_int setting, json.loads agrees between the twins (value,
+  or exception class, msg, pos, lineno, colno) except for exactly these two errors
+  (json-loads-twins-scan), and the same holds for raw_decode(s, idx) with
+  0 <= idx <= sys.maxsize (json-raw-decode-twins-in-range).
+likelihood: |
+  Every invalid escape or control character in a JSON string hits it (common in hand-written or
+  truncated JSON). It is visible to code and tests that report or check e.pos/e.colno or the
+  message, and to anyone comparing results with and without the accelerator.
+maybe_intended: |
+  The position difference is not: the sibling case was reported as a bug and fixed in 2026.
+  gh-154936 (pure-Python decoder reported one character past an invalid control character, C at
+  the character) was merged as gh-154941 by Serhiy Storchaka and backported, and gh-152052 fixed
+  another scanstring divergence. Invalid escapes were not touched by either; which of the two
+  positions is right is a small judgement call. The message difference has existed since the C
+  scanner was added and gh-154941 left it alone (it tests pos, lineno and colno, not the message;
+  test_decode.py:118-121 only looks for 'escape'), so it is probably tolerated.
+reproducer: |
+  import json
+  from test.support.import_helper import import_fresh_module
+  pyjson = import_fresh_module('json', blocked=['_json'])
+  assert pyjson.decoder.scanstring is pyjson.decoder.py_scanstring
+  def err(mod, s):
+      try:
+          mod.loads(s)
+          return None
+      except ValueError as e:
+          return (e.msg, e.pos, e.lineno, e.colno)
+  rows = [(s, err(json, s), err(pyjson, s)) for s in ['"\\x"', '["ab\\y"]', '"a\x01b"', '{"k":\n "\t"}']]
+  for s, c, p in rows:
+      print(repr(s))
+      print('   C     :', c)
+      print('   Python:', p)
+  esc_c, esc_p = rows[0][1], rows[0][2]
+  ctl_c, ctl_p = rows[2][1], rows[2][2]
+  if esc_c[1] == 1 and esc_p[1] == 2 and ctl_c[0] != ctl_p[0] and ctl_c[1] == ctl_p[1]:
+      print('REPRODUCED json-scanstring-error-twins')
+expected: |
+  The same JSONDecodeError (msg, pos, lineno, colno) from both twins, e.g. pos=1 for '"\\x"' in
+  both (or pos=2 in both).
+observed: |
+  '"\\x"': C ('Invalid \\escape', pos 1, line 1, col 2); Python ("Invalid \\escape: 'x'", pos 2,
+  line 1, col 3). '"a\x01b"': C ('Invalid control character at', 2, 1, 3); Python
+  ("Invalid control character '\\x01' at", 2, 1, 3).
+promised_by: |
+  C/Python twin agreement: Lib/test/test_json runs every test against both (PyTest/CTest), and
+  test_fail.py asserts identical msg/pos/lineno/colno for all other decode errors. The
+  JSONDecodeError docs define pos as "the start index of doc where parsing failed".
+cause: |
+  Modules/_json.c:452-471 (scanstring_unicode, 3.14.7): `end = next + 1; ... default: c = 0;`
+  then `raise_errmsg("Invalid \\escape", pystr, end - 2)`, i.e. the backslash's index.
+  Lib/json/decoder.py:110-115: `esc = s[end]` (the character after the backslash),
+  `raise JSONDecodeError("Invalid \\escape: {0!r}".format(esc), s, end)`.
+  Control characters: Modules/_json.c:413-415 `raise_errmsg("Invalid control character at",
+  pystr, next)` vs Lib/json/decoder.py:97-100 `"Invalid control character {0!r} at"`.
+  Unchanged on main.
+possible_fix: |
+  Pick one position for invalid escapes (e.g. change decoder.py:115 to `s, end - 1`, matching C
+  and pointing at the start of the bad escape) and, if desired, have C format the same message
+  (PyUnicode_FromFormat("Invalid \\escape: %R", ...)) or drop the repr from the Python message.
+  Add both cases to test_fail.py's position tests, which already run against both twins.
+reproduces:
+  python3 (3.14.7): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues:
+    - {number: 154936, state: closed, relation: "related, the same defect for control characters (position only), fixed by PR 154941; does not cover invalid escapes", reason: completed}
+    - {number: 152052, state: closed, relation: "related (another C/Python scanstring error divergence, Invalid uXXXX escape vs Unterminated string), fixed by PR 152053", reason: completed}
+    - {number: 125660, state: closed, relation: "related (pure-Python decoder accepted invalid unicode escapes); a different defect", reason: completed}
+    - {number: 121479, state: open, relation: "unrelated (feature request for verbose JSONDecodeError messages)", reason: open}
+  queries: ["json invalid escape position", "json Invalid escape", "json control character message", "json decoder error message C Python", "JSONDecodeError pos", "JSONDecodeError colno", "scanstring error", "json parity pure python accelerator", "raw_decode negative", "raw_decode idx", "json negative index", "py_make_scanner", "json idx cannot be negative", "json surrogate pair roundtrip", "json lone surrogates", "json dumps loads surrogate", "json ensure_ascii surrogate",
+            "gh issue view 154936", "gh pr view 154941", "gh issue view 152052", "gh issue view 125660",
+            "bugforge-results/README.md: json entries (4: 158729-158732, none related)"]
+lean:
+  property: PyLean.JsonMod.LoadsTwinsPos
+  theorem: PyLean.JsonMod.loadsTwinsPos_refuted

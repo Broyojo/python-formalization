@@ -1,16 +1,16 @@
 file	line	endline	name	signature	status	entry	note
-Lib/csv.py	106	109	Dialect.__init__	__init__(self)	todo		
-Lib/csv.py	111	116	Dialect._validate	_validate(self)	todo		
-Lib/csv.py	145	154	DictReader.__init__	__init__(self, f, fieldnames=None, restkey=None, restval=None, dialect='excel', *args, **kwds)	todo		
-Lib/csv.py	156	157	DictReader.__iter__	__iter__(self)	todo		
-Lib/csv.py	160	167	DictReader.fieldnames	fieldnames(self)	todo		
-Lib/csv.py	170	171	DictReader.fieldnames	fieldnames(self, value)	todo		
-Lib/csv.py	173	193	DictReader.__next__	__next__(self)	todo		
-Lib/csv.py	199	210	DictWriter.__init__	__init__(self, f, fieldnames, restval='', extrasaction='raise', dialect='excel', *args, **kwds)	todo		
-Lib/csv.py	212	214	DictWriter.writeheader	writeheader(self)	todo		
-Lib/csv.py	216	222	DictWriter._dict_to_list	_dict_to_list(self, rowdict)	todo		
-Lib/csv.py	224	225	DictWriter.writerow	writerow(self, rowdict)	todo		
-Lib/csv.py	227	228	DictWriter.writerows	writerows(self, rowdicts)	todo		
+Lib/csv.py	106	109	Dialect.__init__	__init__(self)	modelled	textlibs-csv-dialect-validate	
+Lib/csv.py	111	116	Dialect._validate	_validate(self)	modelled	textlibs-csv-dialect-validate	
+Lib/csv.py	145	154	DictReader.__init__	__init__(self, f, fieldnames=None, restkey=None, restval=None, dialect='excel', *args, **kwds)	modelled	textlibs-csv-dictreader-count	
+Lib/csv.py	156	157	DictReader.__iter__	__iter__(self)	modelled	textlibs-csv-dictreader-count	
+Lib/csv.py	160	167	DictReader.fieldnames	fieldnames(self)	todo		candidates:textlibs-csv-dictreader-count
+Lib/csv.py	170	171	DictReader.fieldnames	fieldnames(self, value)	todo		candidates:textlibs-csv-dictreader-count
+Lib/csv.py	173	193	DictReader.__next__	__next__(self)	modelled	textlibs-csv-dictreader-count	
+Lib/csv.py	199	210	DictWriter.__init__	__init__(self, f, fieldnames, restval='', extrasaction='raise', dialect='excel', *args, **kwds)	modelled	textlibs-csv-extrasaction	
+Lib/csv.py	212	214	DictWriter.writeheader	writeheader(self)	modelled	textlibs-csv-writeheader	
+Lib/csv.py	216	222	DictWriter._dict_to_list	_dict_to_list(self, rowdict)	modelled	textlibs-csv-dictwriter-extra,textlibs-csv-dictwriter-order	
+Lib/csv.py	224	225	DictWriter.writerow	writerow(self, rowdict)	modelled	textlibs-csv-dictwriter-extra	
+Lib/csv.py	227	228	DictWriter.writerows	writerows(self, rowdicts)	modelled	textlibs-csv-dictwriter-writerows	
 Lib/csv.py	238	240	Sniffer.__init__	__init__(self)	todo		
 Lib/csv.py	243	275	Sniffer.sniff	sniff(self, sample, delimiters=None)	todo		
 Lib/csv.py	278	360	Sniffer._guess_quote_and_delimiter	_guess_quote_and_delimiter(self, data, delimiters)	todo		

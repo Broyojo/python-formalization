@@ -1,7 +1,7 @@
 file	line	endline	name	signature	status	entry	note
 Lib/tomllib/_parser.py	82	129	TOMLDecodeError.__init__	__init__(self, msg: str=DEPRECATED_DEFAULT, doc: str=DEPRECATED_DEFAULT, pos: Pos=DEPRECATED_DEFAULT, *args: Any)	todo		
 Lib/tomllib/_parser.py	132	141	load	load(fp: IO[bytes], /, *, parse_float: ParseFloat=float)	todo		
-Lib/tomllib/_parser.py	144	212	loads	loads(s: str, /, *, parse_float: ParseFloat=float)	todo		
+Lib/tomllib/_parser.py	144	212	loads	loads(s: str, /, *, parse_float: ParseFloat=float)	todo		candidates:json-dumps-accepted,json-int-literal,json-loads-twins,json-loads-twins-pos,json-loads-twins-scan,json-roundtrip,json-roundtrip-str,pickle-loads-twins-accept,pickle-loads-twins-exact
 Lib/tomllib/_parser.py	224	226	Flags.__init__	__init__(self)	todo		
 Lib/tomllib/_parser.py	228	229	Flags.add_pending	add_pending(self, key: Key, flag: int)	todo		
 Lib/tomllib/_parser.py	231	234	Flags.finalize_pending	finalize_pending(self)	todo		

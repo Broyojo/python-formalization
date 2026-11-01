@@ -1,0 +1,55 @@
+id: textlibs-re-int-digit-limit
+title: "re: a number past the int/str digit limit raises a bare ValueError instead of the error a smaller number gets"
+priority: P4
+kind: wrong-exception
+module: textlibs
+files: [Lib/re/_parser.py]
+functions: ["_parse", "parse_template"]
+summary: |
+  `re.compile('a{' + '9' * 5000 + '}')` raises ValueError "Exceeds the limit (4300 digits) for integer
+  string conversion", while 50 digits raise OverflowError "the repetition number is too large". The
+  same happens in a conditional group, where 50 digits give PatternError "invalid group reference"
+  and 5000 digits give ValueError, and in a replacement template's `\g<...>`. The parser calls
+  `int()` on the digit string before it can apply its own range checks.
+likelihood: |
+  Very low in normal use, since nobody writes such a count. It matters to programs that accept
+  patterns from users and catch re.error or OverflowError around re.compile: a crafted pattern
+  raises an exception type they do not expect. It is still an exception, not a crash or a hang.
+maybe_intended: |
+  Not designed, but a maintainer may reasonably call it harmless. The limit is a global interpreter
+  setting and the result is still a rejection, only with an unusual class and message. The docs
+  promise re.PatternError for invalid patterns. Bugforge's html.unescape report is the same pattern
+  (#158719), and that one was closed in the anti-flooding batch, not on its merits.
+reproducer: |
+  import re
+  seen = []
+  for pat in ('a{' + '9' * 50 + '}', 'a{' + '9' * 5000 + '}',
+              '(a)(?(' + '9' * 50 + ')b)', '(a)(?(' + '9' * 5000 + ')b)'):
+      try:
+          re.compile(pat)
+          seen.append('no error')
+      except Exception as e:
+          seen.append(type(e).__name__)
+  print(seen)
+  if seen == ['OverflowError', 'ValueError', 'PatternError', 'ValueError']:
+      print('REPRODUCED textlibs-re-int-digit-limit')
+expected: |
+  The same exception for 5000 digits as for 50.
+observed: |
+  python3 3.14.7: OverflowError, ValueError, PatternError, ValueError. REPRODUCED.
+  main 3.16.0a1+dev (ef1fce0): the same. REPRODUCED.
+promised_by: |
+  docs: re.compile raises re.PatternError for an invalid pattern; the OverflowError at
+  Lib/re/_parser.py:671 and :675 is the module's own answer for too large a repeat count.
+cause: |
+  Lib/re/_parser.py:669 and :673 (`int(lo)`, `int(hi)` for `{m,n}`), :800 (`int(condname)`), and
+  :1030 (`int(name)` in parse_template) run before the range checks that follow them.
+possible_fix: |
+  Test the digit count first: more digits than MAXREPEAT or MAXGROUPS can have is already out of
+  range, so the existing error can be raised without calling int().
+duplicates: |
+  No report found. Same class as bugforge html-20261003-020338-c2 (python/cpython#158719), which is
+  a different function. Queries: gh api search/issues
+  q='repo:python/cpython re compile ValueError int_max_str_digits repetition limit 4300';
+  q='repo:python/cpython re "Exceeds the limit" pattern repeat ValueError'
+lean: lean/PyLean/TextLibs/ReProps.lean (ParseNoValueError, parseNoValueError_refuted, TemplateNoValueError, templateNoValueError_refuted)

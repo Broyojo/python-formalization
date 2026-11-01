@@ -1,0 +1,49 @@
+id: textlibs-struct-le-complex-float-overflow
+title: "struct: 'F' overflows silently to inf in native and little-endian order, but raises OverflowError big-endian"
+priority: P3
+kind: internal-inconsistency
+module: textlibs
+files: [Modules/_struct.c]
+functions: ["np_float_complex", "bp_float_complex", "lp_float_complex", "init_endian_tables"]
+summary: |
+  `struct.pack('>F', 1e300)` raises OverflowError, as do `f`, `<f` and `>f`, while
+  `struct.pack('<F', 1e300)` and `struct.pack('F', 1e300)` return infinity bytes. Byte order
+  changes whether a value can be packed. `init_endian_tables` swaps the native routines into
+  `lilendian_table` for every entry of matching size except `f`, `d` and `?`, so `<F` and `=F`
+  run `np_float_complex`, which casts with `(float)c.real` and never overflows.
+likelihood: |
+  Low to moderate. Needs a complex value above FLT_MAX packed with `F`, and the silent result
+  is inf rather than an error.
+maybe_intended: |
+  No. Upstream fixed this as a bug: python/cpython#156865 (type-bug, closed completed
+  2026-09-24) via PR #156868, which makes the code check for overflow.
+reproducer: |
+  import struct
+  le = struct.pack('<F', 1e300)
+  try:
+      struct.pack('>F', 1e300)
+      raised = False
+  except OverflowError:
+      raised = True
+  print(le.hex(), raised)
+  if le == bytes.fromhex('0000807f00000000') and raised:
+      print('REPRODUCED textlibs-struct-le-complex-float-overflow')
+expected: |
+  Both byte orders raise OverflowError, matching `f`.
+observed: |
+  python3 3.14.7: `<F` gives 0000807f00000000, `>F` raises. REPRODUCED.
+  main 3.16.0a1+dev (ef1fce0): both raise. NOT reproduced (fixed).
+promised_by: |
+  invariant: byte order changes the bytes, not whether a value is representable; `f` raises.
+cause: |
+  Modules/_struct.c:791-799 (np_float_complex casts) against :1128-1141 (bp_float_complex uses
+  PyFloat_Pack4, which detects overflow at Objects/floatobject.c:2184); the swap is at
+  Modules/_struct.c:1537-1545, which skips only `f`, `d` and `?`.
+possible_fix: |
+  Use PyFloat_Pack4 in np_float_complex, as main does (Modules/_struct.c:800 on main).
+duplicates: |
+  Duplicate of python/cpython#156865, fixed on main by PR #156868. The 3.14.7 build still has
+  the bug, so at most this is a backport question for the 3.14 branch.
+  Not in the bugforge list.
+  Queries: gh api search/issues q='repo:python/cpython struct complex format overflow "F"'
+lean: lean/PyLean/TextLibs/StructProps.lean (StdComplexOrderAgree, stdComplexOrderAgree_refuted)
