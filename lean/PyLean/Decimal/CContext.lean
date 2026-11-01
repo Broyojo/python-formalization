@@ -108,11 +108,11 @@ def lookupKey (d : List (SigKey × Bool)) (k : SigKey) : Option Bool :=
 /-- `dict_as_flags`, _decimal.c:538-578. -/
 def dictAsFlags : CtxArg → Py Status
   | .dict d =>
-    if d.length ≠ 9 then .error (.keyError "invalid signal dict")
+    if d.length ≠ 9 then .error (.keyError "'invalid signal dict'")
     else
       signalMap.foldlM (fun (flags : Status) cm =>
         match lookupKey d (.sig cm) with
-        | none => .error (.keyError "invalid signal dict")
+        | none => .error (.keyError "'invalid signal dict'")
         | some true => .ok (orBits flags cm.flagBits)
         | some false => .ok flags) []
   | _ => .error (.typeError "argument must be a signal dict")
@@ -443,5 +443,109 @@ def ctxmanagerSetLocal (localCopy : CContext) : CThread × CContext :=
 
 /-- `ctxmanager_restore_global`, _decimal.c:2032-2043. -/
 def ctxmanagerRestoreGlobal (global : CContext) : CThread := setCurrentContextC global false
+
+/-! ## `Context.canonical` -/
+
+/-- `ctx_canonical`, _decimal.c:5569-5580: `Decimal` only, like `_pydecimal`, with
+another message. -/
+def ctxCanonicalC : Arg → Py Dec
+  | .dec d => .ok (canonicalD d)
+  | _ => .error (.typeError "argument must be a Decimal")
+
+/-- `ctx_iscanonical`, _decimal.c:5543-5553. -/
+def ctxIsCanonicalC : Arg → Py Bool
+  | .dec d => .ok (isCanonical d)
+  | _ => .error (.typeError "argument must be a Decimal")
+
+/-! ## libmpdec's integer division
+
+`_pydecimal` returns the quotient of `_divide` as it is; libmpdec finalizes it. -/
+
+/-- A context whose signals do not raise: libmpdec records status and
+`dec_addstatus` decides afterwards. -/
+def noTraps (c : Ctx) : Ctx := { c with traps := [] }
+
+/-- An operation as `_decimal` runs it: all of its status is collected, merged into the
+context's flags, and then the first trapped signal in `signal_map` order raises
+(`dec_addstatus`, _decimal.c:600-628). -/
+def cOp {α : Type} (c : Ctx) (body : DM α) : DM α := fun fl => do
+  let (r, st) ← body.run []
+  let fl' := st.foldl (fun acc s => if s ∈ acc then acc else acc ++ [s]) fl
+  match signalMap.find? (fun s => st.contains s && c.traps.contains s) with
+  | some s => .error (.named s.name "~")
+  | none => .ok (r, fl')
+
+/-- `_mpd_qdivmod`, libmpdec/mpdecimal.c:3955-4094, for finite operands and `b ≠ 0`.
+`none` is `MPD_Division_impossible`. -/
+def mpdDivmodFin (c : Ctx) (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) (cb : Nat) (eb : Int) :
+    Option (Dec × Dec) :=
+  let idealExp := min ea eb
+  let sab := sa != sb
+  if ca = 0 then some (.fin sab 0 0, .fin sa 0 idealExp)
+  else
+    let expdiff := adjustedD ca ea - adjustedD cb eb
+    if expdiff < 0 then
+      some (.fin sab 0 0, if ea > eb then .fin sa (ca * 10 ^ (ea - eb).toNat) idealExp else .fin sa ca ea)
+    else if expdiff > c.prec then none
+    else
+      let p := scaled ca ea cb eb
+      let q := p.1 / p.2
+      if numDigits q > c.prec then none
+      else some (.fin sab q 0, .fin sa (p.1 % p.2) idealExp)
+
+/-- `mpd_qdivint`, libmpdec/mpdecimal.c:4151-4191: the quotient goes through
+`mpd_qfinalize` (:4190), which is `_fix`. -/
+def mpdDivint (c : Ctx) (a b : Dec) : DM Dec := do
+  let sign := a.neg != b.neg
+  if isSpecial a || isSpecial b then
+    if let some ans ← checkNans c a (some b) then return ans
+    if isinfinity a ≠ 0 ∧ isinfinity b ≠ 0 then return ← invalid c
+    if isinfinity a ≠ 0 then return .inf sign
+    if isinfinity b ≠ 0 then return .fin sign 0 0
+  if isZero b then
+    if isZero a then return ← invalid c
+    return ← divByZero c sign
+  match a, b with
+  | .fin sa ca ea, .fin sb cb eb =>
+    match mpdDivmodFin c sa ca ea sb cb eb with
+    | some p => fix c p.1
+    | none => invalid c
+  | _, _ => return a
+
+/-- `mpd_qdivmod`, libmpdec/mpdecimal.c:4098-4148: both results go through `mpd_qfinalize`
+(:4146-4147). -/
+def mpdDivmod (c : Ctx) (a b : Dec) : DM (Dec × Dec) := do
+  let sign := a.neg != b.neg
+  if isSpecial a || isSpecial b then
+    if let some ans ← checkNans c a (some b) then return (ans, ans)
+    if isinfinity a ≠ 0 then
+      let q : Dec := if isinfinity b ≠ 0 then nanD else .inf sign
+      raiseSig c .invalidOperation
+      return (q, nanD)
+    if isinfinity b ≠ 0 then
+      let r ← fix c a
+      return (.fin sign 0 0, r)
+  if isZero b then
+    if isZero a then
+      raiseSig c .invalidOperation
+      return (nanD, nanD)
+    raiseSig c .divisionByZero
+    raiseSig c .invalidOperation
+    return (.inf sign, nanD)
+  match a, b with
+  | .fin sa ca ea, .fin sb cb eb =>
+    match mpdDivmodFin c sa ca ea sb cb eb with
+    | some p =>
+      let q ← fix c p.1
+      let r ← fix c p.2
+      return (q, r)
+    | none =>
+      raiseSig c .invalidOperation
+      return (nanD, nanD)
+  | _, _ => return (a, a)
+
+/-- `a // b` and `divmod(a, b)` in `_decimal`. -/
+def floordivC (c : Ctx) (a b : Dec) : DM Dec := cOp c (mpdDivint (noTraps c) a b)
+def divmodC (c : Ctx) (a b : Dec) : DM (Dec × Dec) := cOp c (mpdDivmod (noTraps c) a b)
 
 end PyLean.Decimal

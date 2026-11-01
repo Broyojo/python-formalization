@@ -7,6 +7,7 @@ import PyLean.Decimal.RoundTrip
 import PyLean.Decimal.MulProps
 import PyLean.Decimal.Ops
 import PyLean.Decimal.Quantize
+import PyLean.Decimal.ContextDiff
 
 /-! Differential-testing handler for `decimal` cases (`"mod": "decimal"`).
 
@@ -133,7 +134,7 @@ def jB (m : DM Bool) : DM Json := jDec m toJson
 def pureJ (v : Json) : DM Json := pure v
 
 /-- The methods checked generically: `Decimal` methods under a context. -/
-def evalM (c : Ctx) (name : String) (a b t : Dec) : Option (DM Json) :=
+def evalM (c : Ctx) (name : String) (a b t : Dec) (isC : Bool := false) : Option (DM Json) :=
   match name with
   | "neg" => some (jD (dunderNeg c a))
   | "pos" => some (jD (dunderPos c a))
@@ -183,8 +184,97 @@ def evalM (c : Ctx) (name : String) (a b t : Dec) : Option (DM Json) :=
   | "next_plus" => some (jD (nextPlus c a))
   | "next_toward" => some (jD (nextToward c a b))
   | "fma" => some (jD (fma c a b t))
+  | "truediv" => some (jD (truediv c a b))
+  | "floordiv" => some (jD ((if isC then floordivC else floordivD) c a b))
+  | "mod" => some (jD (modD c a b))
+  | "divmod" => some (jDec ((if isC then divmodC else divmodD) c a b) (fun p => Json.arr #[encDec p.1, encDec p.2]))
+  | "remainder_near" => some (jD (remainderNear c a b))
   | "to_eng_string" => some (pureJ (encStr (toEng a c.capitals)))
   | "repr" => some (pureJ (encStr (reprD a)))
+  | _ => none
+
+def argOf (j : Json) : Except String Arg := do
+  let a ← j.getArr?
+  match ← (a[0]!).getStr? with
+  | "dec" => return .dec (← decDec a[1]!)
+  | "int" => return .int ((← (a[1]!).getStr?).toInt?.getD 0)
+  | _ => return .other
+
+def jOptD (m : DM (Option Dec)) : DM Json :=
+  jDec m (fun o => match o with
+    | some d => encDec d
+    | none => Json.null)
+
+/-- `Context` methods, by name. `evalC c name a b t` runs `c.name(a, b, t)`. -/
+def evalC (c : Ctx) (name : String) (a b t : Arg) (isC : Bool) : Option (DM Json) :=
+  match name with
+  | "add" => some (jD (contextAdd c a b))
+  | "subtract" => some (jD (contextSubtract c a b))
+  | "multiply" => some (jD (contextMultiply c a b))
+  | "divide" => some (jD (contextDivide c a b))
+  | "divide_int" => some (jD (if isC then ctxOp floordivC c a b else contextDivideInt c a b))
+  | "divmod" => some (jDec (if isC then ctxOp divmodC c a b else contextDivmod c a b)
+      (fun p => Json.arr #[encDec p.1, encDec p.2]))
+  | "remainder" => some (jD (contextRemainder c a b))
+  | "compare" => some (jD (contextCompare c a b))
+  | "compare_signal" => some (jD (contextCompareSignal c a b))
+  | "max" => some (jD (contextMax c a b))
+  | "max_mag" => some (jD (contextMaxMag c a b))
+  | "min" => some (jD (contextMin c a b))
+  | "min_mag" => some (jD (contextMinMag c a b))
+  | "logical_and" => some (jD (contextLogicalAnd c a b))
+  | "logical_or" => some (jD (contextLogicalOr c a b))
+  | "logical_xor" => some (jD (contextLogicalXor c a b))
+  | "next_toward" => some (jD (contextNextToward c a b))
+  | "quantize" => some (jD (contextQuantize c a b))
+  | "remainder_near" => some (jD (contextRemainderNear c a b))
+  | "rotate" => some (jD (contextRotate c a b))
+  | "scaleb" => some (jD (contextScaleb c a b))
+  | "shift" => some (jD (contextShift c a b))
+  | "compare_total" => some (jD (contextCompareTotal c a b))
+  | "compare_total_mag" => some (jD (contextCompareTotalMag c a b))
+  | "copy_sign" => some (jD (contextCopySign c a b))
+  | "same_quantum" => some (jB (contextSameQuantum c a b))
+  | "fma" => some (jD (contextFma c a b t))
+  | "abs" => some (jD (contextAbs c a))
+  | "logb" => some (jD (contextLogb c a))
+  | "logical_invert" => some (jD (contextLogicalInvert c a))
+  | "minus" => some (jD (contextMinus c a))
+  | "plus" => some (jD (contextPlus c a))
+  | "next_minus" => some (jD (contextNextMinus c a))
+  | "next_plus" => some (jD (contextNextPlus c a))
+  | "normalize" => some (jD (contextNormalize c a))
+  | "to_integral_exact" => some (jD (contextToIntegralExact c a))
+  | "to_integral_value" => some (jD (contextToIntegralValue c a))
+  | "number_class" => some (jDec (contextNumberClass c a) (fun (s : String) => toJson s))
+  | "is_normal" => some (jB (contextIsNormal c a))
+  | "is_subnormal" => some (jB (contextIsSubnormal c a))
+  | "to_eng_string" => some (jDec (contextToEngString c a) encStr)
+  | "to_sci_string" => some (jDec (contextToSciString c a) encStr)
+  | "copy_abs" => some (jD (contextCopyAbs c a))
+  | "copy_negate" => some (jD (contextCopyNegate c a))
+  | "copy_decimal" => some (jD (contextCopyDecimal c a))
+  | "is_finite" => some (jB (contextIsFinite c a))
+  | "is_infinite" => some (jB (contextIsInfinite c a))
+  | "is_nan" => some (jB (contextIsNan c a))
+  | "is_qnan" => some (jB (contextIsQnan c a))
+  | "is_signed" => some (jB (contextIsSigned c a))
+  | "is_snan" => some (jB (contextIsSnan c a))
+  | "is_zero" => some (jB (contextIsZero c a))
+  | "canonical" => some (jD (liftPy (if isC then ctxCanonicalC a else contextCanonical a)))
+  | "is_canonical" => some (jB (liftPy (if isC then ctxIsCanonicalC a else contextIsCanonical a)))
+  | "radix" => some (pureJ (encDec contextRadix))
+  | _ => none
+
+def evalR (c : Ctx) (name : String) (a : Dec) (b : Arg) (isC : Bool) : Option (DM Json) :=
+  match name with
+  | "__rsub__" => some (jOptD (rsub c a b))
+  | "__rtruediv__" => some (jOptD (rtruediv c a b))
+  | "__rmod__" => some (jOptD (rmod c a b))
+  | "__rfloordiv__" => some (jOptD (if isC then ropArg floordivC c a b else rfloordiv c a b))
+  | "__rdivmod__" => some (jDec (if isC then ropArg divmodC c a b else rdivmod c a b) (fun o => match o with
+      | some p => Json.arr #[encDec p.1, encDec p.2]
+      | none => Json.null))
   | _ => none
 
 def run (fn : String) (j : Json) : Except String Json := do
@@ -262,8 +352,93 @@ def run (fn : String) (j : Json) : Except String Json := do
     let b ← getDec j "b"
     let t ← getDec j "t"
     let name ← getStr j "m"
-    let some r := evalM c name a b t | throw s!"unknown method {name}"
+    let isC := (j.getObjValAs? String "impl").toOption == some "c"
+    let some r := evalM c name a b t isC | throw s!"unknown method {name}"
     return encPy (fun (p : Json × List Signal) => Json.arr #[p.1, flagNames p.2]) (r.run [])
+  | "cm" =>
+    let c ← getCtx j
+    let a ← argOf (← field j "a")
+    let b ← argOf (← field j "b")
+    let t ← argOf (← field j "t")
+    let name ← getStr j "m"
+    let isC := (← getStr j "impl") == "c"
+    let some r := evalC c name a b t isC | throw s!"unknown context method {name}"
+    return encPy (fun (p : Json × List Signal) => Json.arr #[p.1, flagNames p.2]) (r.run [])
+  | "rop" =>
+    let c ← getCtx j
+    let a ← getDec j "a"
+    let b ← argOf (← field j "b")
+    let name ← getStr j "m"
+    let isC := (← getStr j "impl") == "c"
+    let some r := evalR c name a b isC | throw s!"unknown reflected operator {name}"
+    return encPy (fun (p : Json × List Signal) => Json.arr #[p.1, flagNames p.2]) (r.run [])
+  | "ctxnew" =>
+    let (py, cc) ← templateOf (← field j "tmpl")
+    let init ← ctxInitOf (← field j "init")
+    if (← getStr j "impl") == "py" then return encPy encPyContext (pyContextNew py init)
+    else return encPy encCContext (cContextCall cc init)
+  | "ctxset" =>
+    let (py, cc) ← templateOf (← field j "tmpl")
+    let name ← getStr j "name"
+    let v ← ctxArgOf (← field j "val")
+    if (← getStr j "impl") == "py" then return encPy encPyContext (pySetattr py name v)
+    else return encPy encCContext (cSetattr cc name v)
+  | "ctxdel" =>
+    let name ← getStr j "name"
+    if (← getStr j "impl") == "py" then return encPy (fun (_ : Unit) => Json.null) (pyDelattr name)
+    else return encPy (fun (_ : Unit) => Json.null) (.error (.named "AttributeError" "context attributes cannot be deleted"))
+  | "ctxrepr" =>
+    let acts ← (← (← field j "acts").getArr?).toList.mapM (·.getStr?)
+    if (← getStr j "impl") == "py" then return Json.mkObj [("ok", toJson (pyContextRepr (flagsAfterPy acts)))]
+    else return Json.mkObj [("ok", toJson (contextReprC (noTrapsC (statusOfActs acts))))]
+  | "sd" =>
+    let acts ← (← (← field j "acts").getArr?).toList.mapM (·.getStr?)
+    let bind_ ← (← field j "bound").getBool?
+    let sd : SigObj := if bind_ then some (statusOfActs acts) else none
+    let key ← sigKeyOf (← field j "key")
+    let w : SdOperand ←
+      match ← getStr j "w" with
+      | "copy" => pure (.dict (keyed (flagsAsDict (statusOfActs acts))))
+      | "self" => pure (.sd sd)
+      | "unbound" => pure (.sd none)
+      | "other_ctx" =>
+        let acts2 ← (← (← field j "acts2").getArr?).toList.mapM (·.getStr?)
+        pure (.sd (some (statusOfActs acts2)))
+      | "bad_dict" => pure (.dict [(.other, true)])
+      | _ => pure .other
+    return runSd (← getStr j "op") sd key w
+  | "ieee" =>
+    let (py, cc) ← templateOf (← field j "tmpl")
+    let v ← ctxArgOf (← field j "bits")
+    if (← getStr j "impl") == "py" then
+      match v with
+      | .int n => return encPy encPyContext (ieeeContext py n)
+      | _ => throw "ieee py needs an int"
+    else return encPy encCContext (ieeeContextC cc v)
+  | "local" =>
+    let (py, cc) ← templateOf (← field j "tmpl")
+    let kw ← (← (← field j "kw").getArr?).toList.mapM (fun p => do
+      let q ← p.getArr?
+      return ((← (q[0]!).getStr?), (← ctxArgOf q[1]!)))
+    if (← getStr j "impl") == "py" then
+      return encPy (fun (r : PyContext × Bool) => Json.arr #[encPyContext r.1, toJson r.2]) (do
+        let base ← pyContextNew py {}
+        let t : ThreadCtx := { current := some base }
+        let (m, t1) ← localContext py t none kw
+        let (m', t2, nc) ← managerEnter py m t1
+        let t3 ← managerExit py m'
+        let _ := t2
+        return (nc, t3 == t))
+    else
+      return encPy (fun (r : CContext × Bool) => Json.arr #[encCContext r.1, toJson r.2]) (do
+        let base ← cContextCall cc {}
+        let t : CThread := { current := some base }
+        let init ← cInitOfKwargs kw
+        let (localCopy, global, t1) ← ctxmanagerNew cc t .none init
+        let (_, nc) := ctxmanagerSetLocal localCopy
+        let t3 := ctxmanagerRestoreGlobal global
+        let _ := t1
+        return (nc, t3 == t))
   | "compare_total" => return Json.mkObj [("ok", toJson (compareTotal (← getDec j "a") (← getDec j "b")))]
   | "copy_sign" => return Json.mkObj [("ok", encDec (copySign (← getDec j "a") (← getDec j "b")))]
   | _ => throw s!"unknown fn {fn}"
