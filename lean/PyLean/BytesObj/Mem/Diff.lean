@@ -82,6 +82,20 @@ def jRel (d : DS) (j : Json) : Except String (Option Nat) :=
   | .ok .null | .error _ => .ok none
   | .ok v => do return d.pick (← v.getInt?)
 
+/-- The exceptions the Python twins of the callbacks raise (`_RAISES`), all with `boom`. -/
+def excOf (cls : String) : PyExc :=
+  match cls with
+  | "ValueError" => .valueError "boom"
+  | "TypeError" => .typeError "boom"
+  | "OverflowError" => .overflowError "boom"
+  | c => .named c "boom"
+
+/-- How a callback ends: `{"raise": cls}`, `{"wrong": type}`, or its value. -/
+def jRet {α : Type} (value : Except String α) (v : Json) : Except String (Ret α) := do
+  if let .ok c := v.getObjVal? "raise" then return .raises (excOf (← c.getStr?))
+  if let .ok w := v.getObjVal? "wrong" then return .wrong (← w.getStr?)
+  return .val (← value)
+
 /-- An argument object; `none` when it names a dead handle. -/
 def jObj (d : DS) (j : Json) : Except String (Option Obj) := do
   match j with
@@ -97,10 +111,16 @@ def jObj (d : DS) (j : Json) : Except String (Option Obj) := do
       return (d.pick (← v.getInt?)).map .view
     if let .ok v := j.getObjVal? "exp" then
       let k ← v.getNat?
-      return some (.exporter d.exps[k]! (← jRel d j))
-    if let .ok v := j.getObjVal? "idx" then return some (.index (← v.getInt?) (← jRel d j))
-    if let .ok v := j.getObjVal? "flt" then return some (.floatLike (← v.getNat?) (← jRel d j))
-    if let .ok v := j.getObjVal? "bln" then return some (.boolLike (← v.getBool?) (← jRel d j))
+      let r ← match j.getObjVal? "end" with
+        | .ok e => jRet (.ok d.exps[k]!) e
+        | .error _ => pure (.val d.exps[k]!)
+      return some (.exporter r (← jRel d j))
+    if let .ok v := j.getObjVal? "idx" then
+      return some (.index (← jRet v.getInt? v) (← jRel d j))
+    if let .ok v := j.getObjVal? "flt" then
+      return some (.floatLike (← jRet v.getNat? v) (← jRel d j))
+    if let .ok v := j.getObjVal? "bln" then
+      return some (.boolLike (← jRet v.getBool? v) (← jRel d j))
     throw "bad object"
   | _ => throw "bad object"
 
