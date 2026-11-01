@@ -733,6 +733,7 @@ def isTrueImpl (v : Val) : RM Bool := do
   match v with
   | .bool b => pure b
   | .none => pure false
+  | .notImpl => typeError "NotImplemented should not be used in a boolean context"
   | .int i => pure (i != 0)
   | .float b => pure !((Num.toRat b).1 == 0 && Num.isFinite b)
   | .str s => pure (s != "")

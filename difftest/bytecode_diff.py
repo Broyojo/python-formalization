@@ -256,6 +256,10 @@ def p_gen(r):
                      "g.throw(GeneratorExit)", "g.throw(1)", "list(g)", "g.gi_running", "g.gi_suspended", "g.gi_yieldfrom is None", "g.__name__"],
                     k=r.randint(2, 7))
     out = [sub, f"def f():\n{indented}", "g = f()"]
+    # `throw(1)` on a delegating generator drops the subiterator, and what its
+    # finalizer prints depends on reference counts, which the model does not have.
+    if "sub()" in body:
+        ops = [o for o in ops if o != "g.throw(1)"]
     for o in ops:
         out.append(guarded(f"print({o})"))
     out.append(r.choice(["", "def h():\n    next(me)\n    yield\nme = h()\n" + guarded("next(me)"),
