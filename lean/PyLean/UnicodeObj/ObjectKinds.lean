@@ -140,7 +140,7 @@ def kindMaxcharLimit : Kind → Nat
   | .ucs2 => 0x100
   | .ucs4 => 0x10000
 
-/-- The `max_char` loop of `unicode_subscript`, unicodeobject.c:14625-14632, with its
+/-- The `max_char` loop of `unicode_subscript`, unicodeobject.c:14621-14630, with its
 early `break`. -/
 def sliceMaxLoop (limit : Nat) : List Nat → Nat → Nat
   | [], m => m
@@ -148,7 +148,7 @@ def sliceMaxLoop (limit : Nat) : List Nat → Nat → Nat
     if c > m then (if c ≥ limit then c else sliceMaxLoop limit cs c)
     else sliceMaxLoop limit cs m
 
-/-- `max_char` of the general case of `unicode_subscript`, unicodeobject.c:14620-14636. -/
+/-- `max_char` of the general case of `unicode_subscript`, unicodeobject.c:14619-14633. -/
 def sliceMaxChar (src sub : Str) : Nat :=
   if isAscii src then 127 else sliceMaxLoop (kindMaxcharLimit (canonicalKind src)) sub 0
 
@@ -160,17 +160,17 @@ theorem sliceMaxLoop_spec (limit : Nat) (sub : Str) (m : Nat) :
   | cons c cs ih =>
     simp only [sliceMaxLoop, List.foldl_cons]
     by_cases h : c > m
-    · simp only [h, if_true]
+    · rw [if_pos h]
       by_cases hl : c ≥ limit
-      · simp only [hl, if_true]
+      · rw [if_pos hl]
         exact Or.inr ⟨hl, List.mem_cons_self⟩
-      · simp only [hl, if_false]
+      · rw [if_neg hl]
         have e : max m c = c := by omega
         rw [e]
         rcases ih c with h1 | ⟨h1, h2⟩
         · exact Or.inl h1
         · exact Or.inr ⟨h1, List.mem_cons_of_mem _ h2⟩
-    · simp only [h, if_false]
+    · rw [if_neg h]
       have e : max m c = m := by omega
       rw [e]
       rcases ih m with h1 | ⟨h1, h2⟩
@@ -233,14 +233,23 @@ def RepeatLength : Prop :=
     (unicodeRepeat s n = .error (.overflowError "repeated string is too long") ∧
       n * s.length > ssizeMax)
 
+theorem flatten_replicate_length (s : Str) (k : Nat) :
+    ((List.replicate k s).flatten).length = k * s.length := by
+  induction k with
+  | zero => simp
+  | succ k ih =>
+    simp only [List.replicate_succ, List.flatten_cons, List.length_append, ih]
+    rw [Nat.succ_mul]
+    omega
+
 theorem repeatLength_proven : RepeatLength := by
   intro s n h1 h2
   unfold unicodeRepeat
   have hn : ¬ n < 1 := by omega
   have hn1 : ¬ n = 1 := by omega
-  simp only [hn, hn1, if_false]
+  rw [if_neg hn, if_neg hn1]
+  have hpos : 0 < n := by omega
   have hdiv : ((s.length : Int) > ssizeMax / n) ↔ n * s.length > ssizeMax := by
-    have hpos : 0 < n := by omega
     constructor
     · intro h
       have := Int.lt_mul_of_ediv_lt hpos h
@@ -249,15 +258,13 @@ theorem repeatLength_proven : RepeatLength := by
       exact Int.ediv_lt_of_lt_mul hpos (by simpa [Int.mul_comm] using h)
   by_cases h : (s.length : Int) > ssizeMax / n
   · right
-    simp only [h, if_true]
+    rw [if_pos h]
     exact ⟨rfl, hdiv.1 h⟩
   · left
-    simp only [h, if_false]
+    rw [if_neg h]
     have hle : ¬ n * s.length > ssizeMax := fun e => h (hdiv.2 e)
     have hlen : (((List.replicate n.toNat s).flatten).length : Int) = n * s.length := by
-      simp only [List.length_flatten, List.map_replicate, List.sum_replicate]
-      have : ((n.toNat : Int)) = n := by omega
-      simp [Nat.cast_mul, this]
+      rw [flatten_replicate_length, Int.natCast_mul, Int.toNat_of_nonneg (by omega)]
     exact ⟨_, rfl, hlen, by omega⟩
 
 /-- `unicode_compare`, unicodeobject.c:11194-11307: -1, 0 or 1 by code points. The

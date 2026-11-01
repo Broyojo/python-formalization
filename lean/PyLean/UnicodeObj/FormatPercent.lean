@@ -141,7 +141,7 @@ def starInt (v : Int) : Py Int :=
 def FObj.asLong : FObj → Option Int
   | .int v => some v
   | .bool b => some (if b then 1 else 0)
-  | _ => none
+  | _ => Option.none
 
 /-- `-arg->width` in `Py_ssize_t`, unicodeobject.c:15113. Negating `PY_SSIZE_T_MIN`
 is undefined in C; builds use `-fno-strict-overflow`, and it wraps to itself. -/

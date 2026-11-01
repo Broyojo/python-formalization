@@ -13,16 +13,17 @@ theorem percentIntFastSlow_proven : PercentIntFastSlow := by
   intro v alt t base hb
   obtain ⟨hd, hm⟩ := digitsOf_spec base v.natAbs
   have hneg : ∀ n : Nat, ¬ ((-1 : Int) > n) := by intro n; omega
-  simp only [formatLongStr, longFormat, bind, Except.bind]
+  have hbase : (if t == 111 then 8 else if t == 120 || t == 88 then 16 else 10) = base := by
+    rcases hb with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> rfl
+  simp only [formatLongStr, hbase, longFormat, bind, Except.bind]
   generalize digitsOf base v.natAbs = ds at *
-  by_cases hlim : (base == 10 && decide (ds.length > 4300)) = true
-  · rcases hb with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> simp_all
   obtain ⟨d, r, rfl⟩ : ∃ d r, ds = d :: r := by
     cases ds with
     | nil => exact absurd rfl hd
     | cons d r => exact ⟨d, r, rfl⟩
   have hd45 : (d == 45) = false := by simpa using hm d List.mem_cons_self
-  rcases hb with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;>
+  by_cases hlim : 4300 < r.length + 1 <;>
+    rcases hb with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;>
     by_cases hv : v < 0 <;> cases alt <;> simp [hv, hd45, hneg, hlim]
 
 theorem formatLoop_plain (fmtlen fuel : Nat) (s : Str) (ctx : FCtx) (out : Str)
@@ -55,7 +56,7 @@ theorem percentNoDirective_proven : PercentNoDirective := by
   cases items with
   | nil => simp
   | cons x xs =>
-    have : (0 : Int) < ((x :: xs).length : Int) := by simp; omega
+    have : (0 : Int) < ((x :: xs).length : Int) := by simp
     simp [this]
 
 end PyLean.UnicodeObj

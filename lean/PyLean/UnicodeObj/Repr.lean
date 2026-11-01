@@ -17,7 +17,7 @@ structure ReprScan where
   dquote : Nat := 0
   deriving Repr, DecidableEq
 
-/-- One iteration of the first loop, unicodeobject.c:12974-12999. -/
+/-- One iteration of the first loop, unicodeobject.c:12974-13004. -/
 def reprScanStep (a : ReprScan) (ch : Nat) : ReprScan :=
   if ch = 39 then { a with squote := a.squote + 1, osize := a.osize + 1 }
   else if ch = 34 then { a with dquote := a.dquote + 1, osize := a.osize + 1 }
@@ -31,7 +31,7 @@ def reprScanStep (a : ReprScan) (ch : Nat) : ReprScan :=
 
 def reprScan (s : Str) : ReprScan := s.foldl reprScanStep {}
 
-/-- The quote chosen at unicodeobject.c:13008-13018. -/
+/-- The quote chosen at unicodeobject.c:13006-13016. -/
 def reprQuote (squote dquote : Nat) : Nat :=
   if squote ≠ 0 ∧ dquote = 0 then 34 else 39
 

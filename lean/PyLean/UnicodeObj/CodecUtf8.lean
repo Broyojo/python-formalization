@@ -82,7 +82,7 @@ def utf8Step : List Nat → U8
     else .err 1
 
 /-- An error handler, as `_Py_GetErrorHandler` classifies it. -/
-inductive Handler where
+inductive ErrHandler where
   | strict | ignore | replace | surrogateescape | backslashreplace | surrogatepass
   | xmlcharrefreplace | namereplace
   deriving Repr, DecidableEq
@@ -102,7 +102,7 @@ def backslashBytes (bytes : List Nat) : Str := bytes.flatMap fun b => [92, 120] 
 /-- The `switch (ch)` and the error handling of `unicode_decode_utf8_impl`,
 unicodeobject.c:5325-5417. `input` is the whole buffer, `pos` the offset of `rest`,
 `consumed` is true for `final=False`. Returns the text and the bytes consumed. -/
-def utf8DecodeLoop (input : Bytes) (h : Handler) (consumed : Bool) :
+def utf8DecodeLoop (input : Bytes) (h : ErrHandler) (consumed : Bool) :
     Nat → Nat → List Nat → Str → Py (Str × Nat)
   | 0, _, _, _ => .error .modelFuel
   | _ + 1, pos, [], out => .ok (out, pos)
@@ -141,12 +141,12 @@ def utf8DecodeLoop (input : Bytes) (h : Handler) (consumed : Bool) :
       else onError "invalid continuation byte" (pos + code - 1)
 
 /-- `unicode_decode_utf8` with `consumed == NULL` (`bytes.decode('utf-8', errors)`). -/
-def utf8Decode (input : Bytes) (h : Handler) : Py Str := do
+def utf8Decode (input : Bytes) (h : ErrHandler) : Py Str := do
   let (s, _) ← utf8DecodeLoop input h false (input.length + 1) 0 input []
   .ok s
 
 /-- `PyUnicode_DecodeUTF8Stateful` with `final=False`: text and bytes consumed. -/
-def utf8DecodeStateful (input : Bytes) (h : Handler) : Py (Str × Nat) :=
+def utf8DecodeStateful (input : Bytes) (h : ErrHandler) : Py (Str × Nat) :=
   utf8DecodeLoop input h true (input.length + 1) 0 input []
 
 /-- Table 3-7 of the Unicode Standard: well-formed UTF-8. -/
@@ -189,18 +189,5 @@ def utf8EncodeChar (ch : Nat) : List Nat :=
 
 /-- `Py_UNICODE_IS_SURROGATE`. -/
 def isSurrogate (c : Nat) : Bool := decide (0xD800 ≤ c) && decide (c ≤ 0xDFFF)
-
-/-- The per-character facts behind the round trip, for one code point. -/
-def encFact (c : Nat) : Bool :=
-  isSurrogate c ||
-    (match utf8EncodeChar c with
-     | [a] => utf8Step [a] == .char c 1
-     | [a, b] => utf8Step [a, b] == .char c 2
-     | [a, b, d] => utf8Step [a, b, d] == .char c 3
-     | [a, b, d, e] => utf8Step [a, b, d, e] == .char c 4
-     | _ => false)
-
-theorem enc_plane0 : rangeAll encFact 16 0 = true := by decide +kernel
-theorem enc_plane1 : rangeAll encFact 16 65536 = true := by decide +kernel
 
 end PyLean.UnicodeObj

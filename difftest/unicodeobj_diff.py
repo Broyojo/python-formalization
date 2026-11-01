@@ -125,6 +125,52 @@ def run_obj_compare(c):
 
 # ==== codec slice (fn names codec_*) ====
 
+U8_BYTES = [0, 0x41, 0x7f, 0x80, 0x8f, 0x90, 0x9f, 0xa0, 0xbf, 0xc0, 0xc1, 0xc2, 0xdf, 0xe0, 0xe1, 0xec,
+            0xed, 0xee, 0xef, 0xf0, 0xf1, 0xf3, 0xf4, 0xf5, 0xff]
+DEC_HANDLERS = ["strict", "ignore", "replace", "surrogateescape", "backslashreplace", "surrogatepass"]
+ENC_HANDLERS = DEC_HANDLERS + ["xmlcharrefreplace"]
+ENC_ALPH = [0, 65, 0x7f, 0x80, 0x7ff, 0x800, 0xd7ff, 0xd800, 0xdbff, 0xdc00, 0xdc7f, 0xdc80, 0xdcff,
+            0xdd00, 0xdfff, 0xe000, 0xffff, 0x10000, 0x10ffff]
+
+
+def u8_bytes(rng):
+    b = []
+    for _ in range(rng.randint(0, 5)):
+        if rng.random() < 0.3:
+            b += list(chr(rng.choice([65, 0xe9, 0x20ac, 0xd7ff, 0xe000, 0x1f600, 0x10ffff])).encode())
+        else:
+            b.append(rng.choice(U8_BYTES))
+    return b
+
+
+@gen("codec", 5)
+def gen_codec_decode(rng):
+    fn = rng.choice(["codec_utf8_decode", "codec_utf8_stateful"])
+    return {"mod": "unicodeobj", "fn": fn, "b": u8_bytes(rng), "errors": rng.choice(DEC_HANDLERS)}
+
+
+@gen("codec", 3)
+def gen_codec_encode(rng):
+    s = [rng.choice(ENC_ALPH) for _ in range(rng.randint(0, 5))]
+    return {"mod": "unicodeobj", "fn": "codec_utf8_encode", "s": s, "errors": rng.choice(ENC_HANDLERS)}
+
+
+@run("codec_utf8_decode")
+def run_codec_decode(c):
+    return cps_of(bytes(c["b"]).decode("utf-8", c["errors"]))
+
+
+@run("codec_utf8_stateful")
+def run_codec_stateful(c):
+    import codecs
+    s, n = codecs.utf_8_decode(bytes(c["b"]), c["errors"], False)
+    return [cps_of(s), n]
+
+
+@run("codec_utf8_encode")
+def run_codec_encode(c):
+    return list(s_of(c["s"]).encode("utf-8", c["errors"]))
+
 # ==== end codec slice ====
 
 
