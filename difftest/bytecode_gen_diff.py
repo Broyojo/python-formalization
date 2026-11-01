@@ -129,9 +129,9 @@ REOPS = [["next"], ["send", 1], ["close"], ["throw", "ValueError"], ["flags"],
          ["anext"], ["aclose"], ["athrow", "ValueError"]]
 
 
-def attr_raises(exc):
+def attr_raises(exc, msg):
     def get(self):
-        raise exc
+        raise exc(msg)
     return property(get)
 
 
@@ -181,15 +181,15 @@ def make_it_class(has_send, throw_b, close_b):
     if throw_b in (1, 2, 3, 4):
         d["throw"] = throw
     elif throw_b == 5:
-        d["throw"] = attr_raises(ValueError("attr"))
+        d["throw"] = attr_raises(ValueError, "attr")
     elif throw_b == 6:
-        d["throw"] = attr_raises(AttributeError("no"))
+        d["throw"] = attr_raises(AttributeError, "no")
     if close_b in (1, 2, 3):
         d["close"] = close
     elif close_b == 4:
-        d["close"] = attr_raises(ValueError("attr"))
+        d["close"] = attr_raises(ValueError, "attr")
     elif close_b == 5:
-        d["close"] = attr_raises(AttributeError("no"))
+        d["close"] = attr_raises(AttributeError, "no")
     return type("It", (), d)
 
 
