@@ -51,6 +51,19 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "struct.info" =>
     return encPy (fun s => Json.mkObj [("size", toJson s.sSize), ("len", toJson s.sLen),
         ("sizeof", toJson (sSizeof s)), ("repr", toJson (sRepr s))]) (structInit (← decFmt j))
+  | "struct.uninit" =>
+    return Json.mkObj [("ok", Json.mkObj [("size", toJson (sGetSize sNew)),
+      ("pack", encPy toJson (do structPack (← ensureReady sNew) [])),
+      ("unpack", encPy (fun _ => Json.null) (do structUnpack (← ensureReady sNew) [])),
+      ("format", encPy toJson (do return sGetFormat (← ensureReady sNew)))])]
+  | "struct.iter_hint" =>
+    let b ← natList (← field j "buf")
+    let k ← getNat j "k"
+    let f ← decFmt j
+    return encPy toJson (do
+      let s ← cacheStruct f
+      let _ ← structIterUnpack s b
+      return unpackiterLen s b (k * s.sSize))
   | "struct.pack" => return encPy toJson (modPack (← decFmt j) (← getArgs j))
   | "struct.Struct.pack" =>
     let f ← decFmt j
