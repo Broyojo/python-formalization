@@ -892,6 +892,10 @@ def entries : List Entry := [
     "The state superBindsNullType describes runs super_descr_get into the branch where C dereferences NULL."
     "typeobject.c:12049"
     ``SuperBindNullIsTheBranch ``superBindNullIsTheBranch_proven,
+  p "typeobj-nan-never-equal" "Objects/floatobject.c" ["float_richcompare"]
+    "A NaN compares unequal to every float object through do_richcompare, itself included."
+    "floatobject.c:416; with PyObject_RichCompareBool's identity test, the rule for containers"
+    ``NanNeverEqual ``nanNeverEqual_proven,
   p "typeobj-super-skips" ty ["_super_lookup_descr", "do_super_lookup", "super_getattro"]
     "super looks strictly after __thisclass__ in the MRO of the object's type."
     "docs: super"

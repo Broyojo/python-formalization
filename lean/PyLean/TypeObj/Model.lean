@@ -238,6 +238,8 @@ inductive Builtin where
   | dictKeysMethod | iterLengthHint
   /-- `__getnewargs__` of `int`, `str`, `tuple`, and a `__reduce__` that gives a fixed name. -/
   | getnewargs | reduceName (s : String)
+  /-- A method of `float`, by name. -/
+  | floatMethod (name : String)
   /-- `mappingproxy_keys` and its like: the method of that name on the mapping. -/
   | proxyCall (name : String)
   /-- `str.__format__`, and `int.__format__` with `float.__format__`.

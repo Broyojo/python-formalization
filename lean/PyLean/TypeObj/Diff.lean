@@ -27,6 +27,10 @@ def parseLit : Json → Except String Val
       match s.toInt? with
       | some i => pure (.int i)
       | none => throw "bad bigint"
+    | [.str "float", .str s] =>
+      match s.toNat? with
+      | some b => pure (.float b)
+      | none => throw "bad float"
     | _ => throw "bad literal"
   | _ => throw "bad literal"
 
