@@ -20,39 +20,34 @@ def codecEntries : List Entry := [
     status := .open, prop := ``Utf8StrictIffWellFormed
     notes := "Needs an induction over utf8DecodeLoop and utf8Wf together." },
   { id := "unicodeobj-codec-utf8-round-trip", pyFile := "Objects/stringlib/codecs.h"
-    pyFns := ["unicode_encode_utf8", "unicode_decode_utf8", "unicode_decode_utf8_impl",
-      "PyUnicode_DecodeUTF8", "PyUnicode_DecodeUTF8Stateful", "PyUnicode_AsUTF8String",
-      "_PyUnicode_AsUTF8String"]
+    pyFns := ["unicode_decode_utf8_impl", "PyUnicode_DecodeUTF8", "PyUnicode_DecodeUTF8Stateful", "PyUnicode_AsUTF8String", "_PyUnicode_AsUTF8String"]
     statement := "The strict UTF-8 encoder succeeds on every string of scalar values, and decoding its output gives the string back."
     source := "invariant: round trip; The Unicode Standard, Table 3-7"
     status := .proven, prop := ``Utf8RoundTrip, thm := some ``utf8RoundTrip_proven },
   { id := "unicodeobj-codec-utf16-round-trip", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["PyUnicode_DecodeUTF16Stateful", "PyUnicode_DecodeUTF16", "_PyUnicode_EncodeUTF16",
-      "PyUnicode_AsUTF16String"]
+    pyFns := ["PyUnicode_DecodeUTF16Stateful", "PyUnicode_DecodeUTF16", "_PyUnicode_EncodeUTF16", "PyUnicode_AsUTF16String"]
     statement := "Encoding to UTF-16 and decoding with the same byteorder gives every string of scalar values back, surrogate pairs included, for little-endian, big-endian and BOM."
     source := "invariant: round trip"
     status := .proven, prop := ``Utf16RoundTrip, thm := some ``utf16RoundTrip_proven
     notes := "The model is a little-endian build. The aligned long reads and unrolled loops are modelled by the scalar path; the difftest checks them." },
   { id := "unicodeobj-codec-utf32-round-trip", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["PyUnicode_DecodeUTF32Stateful", "PyUnicode_DecodeUTF32", "_PyUnicode_EncodeUTF32",
-      "PyUnicode_AsUTF32String"]
+    pyFns := ["PyUnicode_DecodeUTF32Stateful", "PyUnicode_DecodeUTF32", "_PyUnicode_EncodeUTF32", "PyUnicode_AsUTF32String"]
     statement := "Encoding to UTF-32 and decoding with the same byteorder gives every string of scalar values back, for little-endian, big-endian and BOM."
     source := "invariant: round trip"
     status := .proven, prop := ``Utf32RoundTrip, thm := some ``utf32RoundTrip_proven },
   { id := "unicodeobj-codec-decode-handler-advances", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["unicode_decode_call_errorhandler_writer", "make_decode_exception"]
+    pyFns := []
     statement := "Every standard error handler returns a position past start on a decode error, so no decoder loop can repeat forever."
     source := "invariant: no hang"
     status := .proven, prop := ``DecodeHandlerAdvances, thm := some ``decodeHandlerAdvances_proven
     notes := "User-registered handlers can return any position; they are not modelled." },
   { id := "unicodeobj-codec-encode-handler-advances", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["unicode_encode_call_errorhandler", "make_encode_exception", "raise_encode_exception"]
+    pyFns := []
     statement := "Every standard error handler returns a position past start on an encode error."
     source := "invariant: no hang"
     status := .proven, prop := ``EncodeHandlerAdvances, thm := some ``encodeHandlerAdvances_proven },
   { id := "unicodeobj-codec-unicode-escape-round-trip", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["PyUnicode_AsUnicodeEscapeString", "_PyUnicode_DecodeUnicodeEscapeInternal2",
-      "_PyUnicode_DecodeUnicodeEscapeStateful", "PyUnicode_DecodeUnicodeEscape"]
+    pyFns := ["PyUnicode_AsUnicodeEscapeString", "_PyUnicode_DecodeUnicodeEscapeInternal2", "_PyUnicode_DecodeUnicodeEscapeStateful", "PyUnicode_DecodeUnicodeEscape"]
     statement := "s.encode('unicode_escape') decodes back to s for every string, lone surrogates included, one-shot or stateful, and all of it is consumed."
     source := "invariant: round trip"
     status := .proven, prop := ``UnicodeEscapeRoundTrip, thm := some ``unicodeEscapeRoundTrip_proven
@@ -64,8 +59,7 @@ def codecEntries : List Entry := [
     status := .refuted, prop := ``UnicodeEscapeChunks, thm := some ``unicodeEscapeChunks_refuted
     bug := some "unicodeobj-codec-unicode-escape-octal-chunks" },
   { id := "unicodeobj-codec-raw-escape-round-trip", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["PyUnicode_AsRawUnicodeEscapeString", "_PyUnicode_DecodeRawUnicodeEscapeStateful",
-      "PyUnicode_DecodeRawUnicodeEscape"]
+    pyFns := ["PyUnicode_AsRawUnicodeEscapeString", "_PyUnicode_DecodeRawUnicodeEscapeStateful", "PyUnicode_DecodeRawUnicodeEscape"]
     statement := "s.encode('raw_unicode_escape') decodes back to s for every string with no backslash."
     source := "Doc/library/codecs.rst: existing backslashes are not escaped"
     status := .proven, prop := ``RawEscapeRoundTrip, thm := some ``rawEscapeRoundTrip_proven },
@@ -85,12 +79,12 @@ def codecEntries : List Entry := [
     source := "invariant: exact error positions"
     status := .proven, prop := ``AsciiStrict, thm := some ``asciiStrict_proven },
   { id := "unicodeobj-codec-utf7-direct", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["_PyUnicode_EncodeUTF7", "PyUnicode_DecodeUTF7Stateful", "PyUnicode_DecodeUTF7"]
+    pyFns := []
     statement := "A string of the characters the encoder leaves direct passes through UTF-7 unchanged in both directions."
     source := "RFC 2152"
     status := .proven, prop := ``Utf7Direct, thm := some ``utf7Direct_proven },
   { id := "unicodeobj-codec-utf7-round-trip", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["_PyUnicode_EncodeUTF7", "PyUnicode_DecodeUTF7Stateful"]
+    pyFns := []
     statement := "Encoding to UTF-7 and decoding gives back every string of scalar values."
     source := "invariant: round trip"
     status := .open, prop := ``Utf7RoundTrip
@@ -101,18 +95,17 @@ def codecEntries : List Entry := [
     source := "invariant"
     status := .proven, prop := ``CharmapDecodeString, thm := some ``charmapDecodeString_proven },
   { id := "unicodeobj-codec-charmap-decode-mapping", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["charmap_decode_mapping", "PyUnicode_DecodeCharmap"]
+    pyFns := ["PyUnicode_DecodeCharmap"]
     statement := "Charmap decoding by a mapping that gives each byte an int in range maps each byte through it."
     source := "invariant"
     status := .proven, prop := ``CharmapDecodeMapping, thm := some ``charmapDecodeMapping_proven },
   { id := "unicodeobj-codec-charmap-encode-mapping", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["charmapencode_lookup", "charmapencode_output", "_PyUnicode_EncodeCharmap",
-      "PyUnicode_AsCharmapString"]
+    pyFns := ["charmapencode_output", "_PyUnicode_EncodeCharmap", "PyUnicode_AsCharmapString"]
     statement := "Charmap encoding by a mapping that gives each character a byte maps each character through it."
     source := "invariant"
     status := .proven, prop := ``CharmapEncodeMapping, thm := some ``charmapEncodeMapping_proven },
   { id := "unicodeobj-codec-charmap-build-fffe", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["PyUnicode_BuildEncodingMap", "encoding_map_lookup", "EncodingMap_size_impl"]
+    pyFns := ["PyUnicode_BuildEncodingMap"]
     statement := "PyUnicode_BuildEncodingMap never gives U+FFFE a byte, in either of its two results."
     source := "the decoder and the trie branch both treat U+FFFE as undefined"
     status := .refuted, prop := ``BuildMapsNoFFFE, thm := some ``buildMapsNoFFFE_refuted
@@ -129,7 +122,7 @@ def codecEntries : List Entry := [
     source := "invariant"
     status := .proven, prop := ``ErrorHandlerNames, thm := some ``errorHandlerNames_proven },
   { id := "unicodeobj-codec-normalize-case", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["_Py_normalize_encoding", "PyUnicode_Decode", "PyUnicode_AsEncodedString"]
+    pyFns := ["_Py_normalize_encoding"]
     statement := "Encoding names are case-insensitive for the fast dispatch of PyUnicode_Decode and PyUnicode_AsEncodedString, for every name of bytes."
     source := "Doc/library/codecs.rst"
     status := .proven, prop := ``NormalizeCase, thm := some ``normalizeCase_proven }

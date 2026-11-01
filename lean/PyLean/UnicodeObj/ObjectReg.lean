@@ -14,12 +14,12 @@ def objectEntries : List Entry := [
     source := "invariant: PEP 393 canonical kind"
     status := .proven, prop := ``IsAsciiKind, thm := some ``isAsciiKind_proven },
   { id := "unicodeobj-object-concat-kind", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["PyUnicode_Concat"]
+    pyFns := []
     statement := "str + str allocates the canonical kind of the result, from the operands' kinds alone."
     source := "invariant: PEP 393 canonical kind (_PyUnicode_CheckConsistency)"
     status := .proven, prop := ``ConcatKind, thm := some ``concatKind_proven },
   { id := "unicodeobj-object-slice-kind", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["unicode_subscript", "kind_maxchar_limit"]
+    pyFns := ["kind_maxchar_limit"]
     statement := "An extended slice allocates the canonical kind of its result, despite the early break of its max_char loop."
     source := "invariant: PEP 393 canonical kind (_PyUnicode_CheckConsistency)"
     status := .proven, prop := ``SliceKind, thm := some ``sliceKind_proven },
@@ -29,7 +29,7 @@ def objectEntries : List Entry := [
     source := "invariant: no silent wraparound"
     status := .proven, prop := ``RepeatLength, thm := some ``repeatLength_proven },
   { id := "unicodeobj-object-compare-order", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["unicode_compare"]
+    pyFns := []
     statement := "unicode_compare is antisymmetric and is 0 exactly on equal strings."
     source := "invariant: total order on code points"
     status := .proven, prop := ``CompareOrder, thm := some ``compareOrder_proven

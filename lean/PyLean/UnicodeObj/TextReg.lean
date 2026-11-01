@@ -9,15 +9,12 @@ open PyLean.Registry
 
 def textEntries : List Entry := [
   { id := "unicodeobj-text-case-ascii-fast-path", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["ascii_upper_or_lower", "do_upper", "do_lower", "do_upper_or_lower", "do_casefold",
-      "unicode_upper_impl", "unicode_lower_impl", "unicode_casefold_impl"]
+    pyFns := ["ascii_upper_or_lower", "do_upper", "do_lower", "do_upper_or_lower", "do_casefold"]
     statement := "For every ASCII string, ascii_upper_or_lower gives what the general do_upper, do_lower and do_casefold give."
     source := "invariant: fast path vs general path"
     status := .proven, prop := ``CaseAsciiFastPath, thm := some ``caseAsciiFastPath_proven },
   { id := "unicodeobj-text-case-output-bound", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["do_capitalize", "do_swapcase", "do_title", "do_upper", "do_lower", "do_casefold",
-      "case_operation", "lower_ucs4", "unicode_title_impl", "unicode_capitalize_impl",
-      "unicode_swapcase_impl", "unicode_upper_impl", "unicode_lower_impl", "unicode_casefold_impl"]
+    pyFns := ["do_capitalize", "do_swapcase", "do_title", "do_upper", "do_lower", "do_casefold", "lower_ucs4", "unicode_title_impl", "unicode_capitalize_impl", "unicode_swapcase_impl"]
     statement := "For every valid string, every do_* writes at most 3*len code points, all valid, and reports their maximum in maxchar, so case_operation's buffer cannot overflow and PyUnicode_New picks the canonical kind."
     source := "invariant: no buffer overflow (Py_UCS4 tmp[3*length], mapped[3]); canonical kind"
     status := .proven, prop := ``CaseOutputBound, thm := some ``caseOutputBound_proven },
@@ -29,27 +26,22 @@ def textEntries : List Entry := [
     bug := some "unicodeobj-text-final-sigma-cased-ignorable"
     notes := "Differs only for characters that are both Cased and Case_Ignorable (267 code points, e.g. U+02B0)." },
   { id := "unicodeobj-text-final-sigma-no-overlap", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["handle_capital_sigma", "lower_ucs4", "_PyUnicode_IsCased", "_PyUnicode_IsCaseIgnorable"]
+    pyFns := ["handle_capital_sigma", "lower_ucs4", "_PyUnicode_IsCased"]
     statement := "With no character around the sigma that is both cased and case-ignorable, handle_capital_sigma implements the Final_Sigma context exactly."
     source := "narrowing of unicodeobj-text-final-sigma-regex"
     status := .proven, prop := ``FinalSigmaNoOverlap, thm := some ``finalSigmaNoOverlap_proven },
   { id := "unicodeobj-text-is-predicates", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["unicode_isspace_impl", "unicode_isalpha_impl", "unicode_isalnum_impl",
-      "unicode_isdecimal_impl", "unicode_isdigit_impl", "unicode_isnumeric_impl",
-      "_PyUnicode_IsAlpha", "_PyUnicode_ToDecimalDigit", "_PyUnicode_IsDecimalDigit",
-      "_PyUnicode_ToDigit", "_PyUnicode_IsDigit", "_PyUnicode_IsNumeric"]
+    pyFns := ["unicode_isspace_impl", "unicode_isalpha_impl", "unicode_isalnum_impl", "unicode_isdecimal_impl", "unicode_isdigit_impl", "unicode_isnumeric_impl", "_PyUnicode_IsAlpha", "_PyUnicode_ToDecimalDigit", "_PyUnicode_IsDecimalDigit", "_PyUnicode_ToDigit", "_PyUnicode_IsDigit", "_PyUnicode_IsNumeric"]
     statement := "isspace, isalpha, isalnum, isdecimal, isdigit and isnumeric hold exactly for non-empty strings of such characters (shortcut and loop agree); isalnum is the documented disjunction; decimal strings are digit strings and digit strings numeric."
     source := "docstrings; invariant: shortcut vs loop; stdtypes.rst"
     status := .proven, prop := ``IsPredicates, thm := some ``isPredicates_proven },
   { id := "unicodeobj-text-is-case-doc", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["unicode_islower_impl", "unicode_isupper_impl", "unicode_istitle_impl",
-      "_PyUnicode_IsLowercase", "_PyUnicode_IsUppercase", "_PyUnicode_IsTitlecase"]
+    pyFns := ["unicode_islower_impl", "unicode_isupper_impl", "unicode_istitle_impl", "_PyUnicode_IsLowercase", "_PyUnicode_IsUppercase", "_PyUnicode_IsTitlecase"]
     statement := "islower and isupper match their docstrings for every string, which also makes their one-character shortcuts agree with their loops; istitle's shortcut agrees with its loop."
     source := "docstrings of str.islower, str.isupper, str.istitle"
     status := .proven, prop := ``IsCaseDoc, thm := some ``isCaseDoc_proven },
   { id := "unicodeobj-text-isidentifier", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["_PyUnicode_ScanIdentifier", "PyUnicode_IsIdentifier", "unicode_isidentifier_impl",
-      "_PyUnicode_IsXidStart", "_PyUnicode_IsXidContinue"]
+    pyFns := ["_PyUnicode_ScanIdentifier", "PyUnicode_IsIdentifier", "unicode_isidentifier_impl", "_PyUnicode_IsXidStart", "_PyUnicode_IsXidContinue"]
     statement := "s.isidentifier() holds exactly for a string starting with an XID_Start character or '_' and continuing with XID_Continue characters."
     source := "PEP 3131, comment at unicodeobject.c:12442-12449"
     status := .proven, prop := ``IsIdentifierSpec, thm := some ``isIdentifierSpec_proven },
@@ -65,8 +57,7 @@ def textEntries : List Entry := [
     source := "docstring: 'A character is printable if repr() may use it in its output.'"
     status := .proven, prop := ``IsPrintableRepr, thm := some ``isPrintableRepr_proven },
   { id := "unicodeobj-text-translate-fast-slow", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["charmaptranslate_lookup", "charmaptranslate_output", "unicode_fast_translate_lookup",
-      "unicode_fast_translate", "_PyUnicode_TranslateCharmap", "unicode_translate"]
+    pyFns := ["charmaptranslate_output", "unicode_fast_translate_lookup", "unicode_fast_translate", "_PyUnicode_TranslateCharmap", "unicode_translate"]
     statement := "For every pure table and every string, str.translate equals the per-character reading, whichever of the ASCII fast path, the handover from it, or the general loop runs."
     source := "invariant: fast path vs general path; str.translate docstring"
     status := .proven, prop := ``TranslateFastSlow, thm := some ``translateFastSlow_proven
@@ -88,9 +79,7 @@ def textEntries : List Entry := [
     status := .proven, prop := ``MaketransDict, thm := some ``maketransDict_proven
     notes := "The two messages lack a space in the source ('translatetable', 'mustbe'), still so on main." },
   { id := "unicodeobj-text-bytes-str-twin", pyFile := "Objects/stringlib/ctype.h"
-    pyFns := ["stringlib_isspace", "stringlib_isalpha", "stringlib_isalnum", "stringlib_isdigit",
-      "stringlib_islower", "stringlib_isupper", "stringlib_istitle", "stringlib_lower",
-      "stringlib_upper", "stringlib_title", "stringlib_capitalize", "stringlib_swapcase"]
+    pyFns := ["stringlib_isspace", "stringlib_isalpha", "stringlib_isalnum", "stringlib_isdigit", "stringlib_islower", "stringlib_isupper", "stringlib_istitle", "stringlib_lower", "stringlib_upper", "stringlib_title", "stringlib_capitalize", "stringlib_swapcase"]
     statement := "On ASCII data, bytes and str agree on lower, upper, swapcase, title, capitalize, islower, isupper, istitle, isalpha, isdigit, isalnum, and on isspace away from \\x1c-\\x1f."
     source := "invariant: str vs bytes"
     status := .proven, prop := ``BytesStrTwin, thm := some ``bytesStrTwin_proven
@@ -118,9 +107,7 @@ def textEntries : List Entry := [
     status := .refuted, prop := ``DedentMatchesTextwrap, thm := some ``dedentMatchesTextwrap_refuted
     bug := some "unicodeobj-text-dedent-isspace-blank-lines" },
   { id := "unicodeobj-text-case-tables", pyFile := "Objects/unicodectype.c"
-    pyFns := ["gettyperecord", "_PyUnicode_ToTitlecase", "_PyUnicode_ToUppercase",
-      "_PyUnicode_ToLowercase", "_PyUnicode_ToLowerFull", "_PyUnicode_ToTitleFull",
-      "_PyUnicode_ToUpperFull", "_PyUnicode_ToFoldedFull"]
+    pyFns := ["gettyperecord", "_PyUnicode_ToTitlecase", "_PyUnicode_ToUppercase", "_PyUnicode_ToLowercase", "_PyUnicode_ToLowerFull", "_PyUnicode_ToTitleFull", "_PyUnicode_ToUpperFull", "_PyUnicode_ToFoldedFull"]
     statement := "For all 0x110000 code points, the full mappings have 1 to 3 valid code points, the simple mappings are their first element, and the flags relate as documented."
     source := "invariant: mapped[3] in the callers; kernel evaluation of the two-stage tables"
     status := .proven, prop := ``CaseTables, thm := some ``caseTables_proven }

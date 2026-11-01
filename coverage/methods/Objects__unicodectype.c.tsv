@@ -19,5 +19,5 @@ Objects/unicodectype.c	217	231	_PyUnicode_ToTitleFull	int _PyUnicode_ToTitleFull
 Objects/unicodectype.c	233	247	_PyUnicode_ToUpperFull	int _PyUnicode_ToUpperFull(Py_UCS4 ch, Py_UCS4 *res)	modelled	unicodeobj-text-case-tables	
 Objects/unicodectype.c	249	262	_PyUnicode_ToFoldedFull	int _PyUnicode_ToFoldedFull(Py_UCS4 ch, Py_UCS4 *res)	modelled	unicodeobj-text-case-tables	
 Objects/unicodectype.c	264	269	_PyUnicode_IsCased	int _PyUnicode_IsCased(Py_UCS4 ch)	modelled	unicodeobj-text-final-sigma-no-overlap	
-Objects/unicodectype.c	271	276	_PyUnicode_IsCaseIgnorable	int _PyUnicode_IsCaseIgnorable(Py_UCS4 ch)	modelled	unicodeobj-text-final-sigma-no-overlap	
+Objects/unicodectype.c	271	276	_PyUnicode_IsCaseIgnorable	int _PyUnicode_IsCaseIgnorable(Py_UCS4 ch)	todo		
 Objects/unicodectype.c	281	286	_PyUnicode_IsAlpha	int _PyUnicode_IsAlpha(Py_UCS4 ch)	modelled	unicodeobj-text-is-predicates	
