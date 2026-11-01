@@ -1,0 +1,51 @@
+id: corelibs-singledispatch-register-annotation
+title: "@f.register registers the first annotation found, which can be the return type or a later parameter"
+priority: P3
+kind: wrong-result
+module: corelibs
+files: [Lib/functools.py]
+functions: ["singledispatch.register"]
+summary: |
+  With a bare @f.register, register takes `next(iter(get_type_hints(func).items()))`: the first entry of the
+  hints, whatever its name. `def g(x) -> int` therefore registers the implementation for int, on the return
+  annotation, and `def g(x, y: str)` registers it for str, on the second parameter. Neither raises, and calling
+  f(1) then silently runs g. The docs say that the decorator infers the type of the first argument.
+likelihood: |
+  Moderate for the return-annotation form: annotating only the return of an implementation is a natural way
+  to write it, and the effect is a silent wrong dispatch.
+maybe_intended: |
+  No, but it is known: #84644 has been open since 2020 and #110373 is related. A duplicate; recorded with the
+  model and the exact reproducer.
+reproducer: |
+  import functools
+  @functools.singledispatch
+  def f(x):
+      return 'default'
+  @f.register
+  def g(x) -> int:
+      return 'g'
+  @f.register
+  def h(x, y: str):
+      return 'h'
+  print(f(1), sorted(k.__name__ for k in f.registry))
+  if f(1) == 'g' and int in f.registry and str in f.registry:
+      print('REPRODUCED corelibs-singledispatch-register-annotation')
+expected: |
+  A TypeError, or dispatch on the first parameter's annotation only.
+observed: |
+  python3 3.14.7: g ['int', 'object', 'str']. REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+promised_by: |
+  Doc/library/functools.rst:513-514: "the decorator will infer the type of the first argument automatically".
+cause: |
+  Lib/functools.py:950.
+possible_fix: |
+  Use the signature to find the first parameter, and look its name up in the hints.
+duplicates:
+  issues: ["#84644"]
+  related: ["#110373 Make singledispatch only evaluate annotation for dispatched arg"]
+  queries: ["gh search issues singledispatch register annotation return",
+            "gh search issues singledispatch register annotation first argument",
+            "bugforge README: no match for singledispatch"]
+lean:
+  property: PyLean.CoreLibs.Functools.RegisterAnnotationIsFirstParam
+  theorem: PyLean.CoreLibs.Functools.registerAnnotationIsFirstParam_refuted
