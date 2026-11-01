@@ -82,6 +82,18 @@ def yearRowHead (N : Names) (theyear : Int) (months : List Int) (header : Str)
   return nl l ++ rstrip (formatstring names colwidth c) ++ nl l ++
     rstrip (formatstring (months.map (fun _ => header)) colwidth c) ++ nl l
 
+/-- `months = range(m*i+1, min(m*(i+1)+1, 13))`, calendar.py:422. -/
+def textMonthRow (m i : Int) : List Int := rangeI (m * i + 1) (min (m * (i + 1) + 1) 13)
+
+/-- One iteration of the row loop of `formatyear`, calendar.py:420-442; `p` is
+`(row, i)` from `enumerate`. -/
+def yearRow (N : Names) (theyear m : Int) (header : Str) (colwidth c l : Int)
+    (fw : List Int → Nat → List (Int × Int) → Str)
+    (p : List (List (List (Int × Int))) × Nat) : Py Str := do
+  let months := textMonthRow m (p.2 : Int)
+  let head ← yearRowHead N theyear months header colwidth c l
+  return head ++ yearWeekLines p.1 colwidth c l (fw months)
+
 /-- `TextCalendar.formatyear`, calendar.py:407-443, with the week formatter as a
 parameter `fw w months k week`, so that `_CLIDemoCalendar.formatyear` (same text except for
 that call) can share it. -/
@@ -95,12 +107,7 @@ def tFormatyearWith (N : Names) (cal : Calendar) (theyear w l c m : Int)
   let v := rstrip (center yr (colwidth * m + c * (m - 1))) ++ nl l
   let header ← tFormatweekheader N cal w
   let rows ← cal.yeardays2calendar theyear m
-  let body ← rows.zipIdx.mapM (fun p => do
-    let i : Int := p.2
-    let row := p.1
-    let months := rangeI (m * i + 1) (min (m * (i + 1) + 1) 13)
-    let head ← yearRowHead N theyear months header colwidth c l
-    return head ++ yearWeekLines row colwidth c l (fw w months))
+  let body ← rows.zipIdx.mapM (yearRow N theyear m header colwidth c l (fw w))
   return v ++ body.flatten
 
 def tFormatyear (N : Names) (cal : Calendar) (theyear w l c m : Int) : Py Str :=
@@ -167,6 +174,10 @@ def rangeStep (a b step : Int) : List Int :=
   let n := if a < b then ((b - a - 1) / step + 1).toNat else 0
   (List.range n).map (fun (i : Nat) => a + (i : Int) * step)
 
+/-- The rows of month numbers of `HTMLCalendar.formatyear`, calendar.py:551-553. -/
+def htmlMonthRows (width : Int) : List (List Int) :=
+  (rangeStep 1 13 width).map (fun i => rangeI i (min (i + width) 13))
+
 /-- `HTMLCalendar.formatyear`, calendar.py:539-561. -/
 def hFormatyear (N : Names) (c : Calendar) (theyear width : Int) : Py Str := do
   let width := max width 1
@@ -174,8 +185,7 @@ def hFormatyear (N : Names) (c : Calendar) (theyear width : Int) : Py Str := do
   let y ← reprInt theyear
   let head := htmlTable "year" ++ ['\n'] ++ lit "<tr><th colspan=\"" ++ w ++
     lit "\" class=\"year\">" ++ y ++ lit "</th></tr>"
-  let rows ← (rangeStep 1 13 width).mapM (fun i => do
-    let months := rangeI i (min (i + width) 13)
+  let rows ← (htmlMonthRows width).mapM (fun months => do
     let cells ← months.mapM (fun m => do
       let t ← hFormatmonth N c theyear m false
       return lit "<td>" ++ t ++ lit "</td>")
@@ -209,7 +219,7 @@ def encodeChar (k : Codec) (c : Char) : List Nat :=
     match k with
     | .utf8 => utf8Bytes c
     | _ => [c.toNat]
-  else (s!"&#{c.toNat};").toList.map Char.toNat
+  else (lit "&#" ++ Nat.toDigits 10 c.toNat ++ [';']).map Char.toNat
 
 def encodeXml (k : Codec) (s : Str) : List Nat := s.flatMap (encodeChar k)
 
@@ -321,12 +331,16 @@ def dFormatweek (A : Ansi) (theweek : List (Int × Int)) (width : Int)
     if some p.1 = highlightDay then highlight ++ tFormatday p.1 p.2 width ++ reset
     else tFormatday p.1 p.2 width))
 
+/-- The `highlight_day` choice at calendar.py:682-689. -/
+def monthHighlight (hl : Highlight) (theyear themonth : Int) : Option Int :=
+  match hl with
+  | some (y, m, d) => if y = theyear ∧ m = themonth then some d else none
+  | none => none
+
 /-- `_CLIDemoCalendar.formatmonth`, calendar.py:678-700. -/
 def dFormatmonth (A : Ansi) (N : Names) (c : Calendar) (hl : Highlight) (theyear themonth w l : Int) :
     Py Str := do
-  let highlightDay : Option Int := match hl with
-    | some (y, m, d) => if y = theyear ∧ m = themonth then some d else none
-    | none => none
+  let highlightDay := monthHighlight hl theyear themonth
   let w := max 2 w
   let l := max 1 l
   let s ← tFormatmonthname N theyear themonth (7 * (w + 1) - 1) true

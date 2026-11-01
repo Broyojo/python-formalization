@@ -54,7 +54,7 @@ def reprInt (i : Int) : Py Str := Fractions.strInt i
 
 /-- `'%2i' % i`. -/
 def fmt2i (i : Int) : Str :=
-  let s := (toString i).toList
+  let s := (if i < 0 then ['-'] else []) ++ Nat.toDigits 10 i.natAbs
   spaces (2 - s.length) ++ s
 
 /-- `lst[i]`, Objects/listobject.c `list_subscript`. -/
