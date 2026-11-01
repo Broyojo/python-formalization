@@ -9,6 +9,8 @@ namespace PyLean.Itertools
 
 open PyLean
 
+variable {α : Type} [Inhabited α]
+
 /-- Non-decreasing `r`-tuples from the `s` positions starting at `k`, in
 lexicographic order: first the tuples starting with `k`, then the others. -/
 def cw : Nat → Nat → Nat → List (List Nat)
@@ -180,7 +182,7 @@ theorem cwr_run : ∀ (s r k : Nat), RunTo (cwrStep (k + (s + 1)) r) (List.repli
     exact hw.append_run ih2
 termination_by s r => s + r
 
-theorem cwrDrain (pool : List Int) (r : Nat) {idx : List Nat} {L : List (List Nat)}
+theorem cwrDrain (pool : List α) (r : Nat) {idx : List Nat} {L : List (List Nat)}
     (h : RunTo (cwrStep pool.length r) idx L) : ∀ fuel, L.length ≤ fuel →
     drain cCwrNext fuel
         { pool := pool, indices := idx, r := r, started := true, stopped := false } =
@@ -220,9 +222,9 @@ def cwrCount (n r : Nat) : Nat :=
 positions in a list `L` of `cwrCount n r` non-decreasing `r`-tuples of
 positions `< n`, strictly increasing in lexicographic order (so no repeats). -/
 def CwrSpec : Prop :=
-  ∀ (pool : List Int) (r : Int) (fuel : Nat), tupleNewOk pool.length = true → 0 ≤ r →
+  ∀ (α : Type) [Inhabited α] (pool : List α) (r : Int) (fuel : Nat), tupleNewOk pool.length = true → 0 ≤ r →
     memNewOk r = true → tupleNewOk r = true → cwrCount pool.length r.toNat < fuel →
-    ∃ L : List (List Nat), cCwrF fuel pool r = Run.ok (L.map (pick pool)) ∧
+    ∃ L : List (List Nat), cCwrF fuel (.iter pool none) r = Run.ok (L.map (pick pool)) ∧
       L.length = cwrCount pool.length r.toNat ∧ L.Pairwise LexLt ∧
       ∀ x ∈ L, NondecIn 0 pool.length r.toNat x
 
@@ -235,13 +237,13 @@ theorem cw_count (n r k : Nat) : (cw n r k).length = cwrCount n r := by
     rw [show n + 1 + r - 1 = n + r by omega]
 
 theorem cwrSpec_proven : CwrSpec := by
-  intro pool r fuel _ h0 hm ht hf
+  intro α _ pool r fuel _ h0 hm ht hf
   have hle := memNewOk_le hm
   have hmin : ssizeMin ≤ r := by rw [ssizeMin_eq]; omega
   have hrn : ((r.toNat : Nat) : Int) = r := Int.toNat_of_nonneg h0
   refine ⟨cw pool.length r.toNat 0, ?_, cw_count _ _ _, cw_sorted _ _ _, fun x hx => cw_valid _ _ _ x hx⟩
   obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-  simp only [cCwrF, cCwrNew, asSsize_ok hmin hle]
+  simp only [cCwrF, cCwrNew, asSsize_ok hmin hle, tupleOf]
   simp only [bind, Except.bind, show ¬ r < 0 by omega, ↓reduceIte, hm, Bool.not_true,
     Bool.false_eq_true, pure, Except.pure]
   by_cases hzr : pool.length = 0 ∧ r ≠ 0

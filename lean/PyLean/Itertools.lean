@@ -11,6 +11,8 @@ import PyLean.Itertools.CwrSpec
 import PyLean.Itertools.ProductSpec
 import PyLean.Itertools.PermSpec
 import PyLean.Itertools.Counts
+import PyLean.Itertools.Sizeof
+import PyLean.Itertools.GroupbyRaising
 
 /-!
 `Modules/itertoolsmodule.c` vs the equivalents in `Doc/library/itertools.rst`, CPython 3.14.7.
@@ -23,27 +25,27 @@ open PyLean.Registry
 def entries : List Entry := [
   { id := "itertools-islice-doc-agree", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["islice_new", "islice_next"]
-    statement := "For every int (or None) start/stop/step, C islice yields the same items as the doc equivalent, consumes the same number of input items, and raises in the same cases."
+    statement := "For every element type, every input object (not iterable, or raising after its items) and every int (or None) start/stop/step, C islice yields the same items as the doc equivalent, consumes the same number of input items, and raises the same exception class."
     source := "Doc/library/itertools.rst:476-496 (Roughly equivalent to)", status := .refuted
     prop := ``IsliceDocAgree, thm := some ``isliceDocAgree_refuted
     bug := some "itertools-ssize-arguments"
     notes := "islice(it, 2**63): C raises ValueError ('0 <= x <= sys.maxsize'), the doc code slices. Intended (gh-50554 closed as won't fix)." },
   { id := "itertools-islice-doc-agree-ssize", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["islice_new", "islice_next"]
-    statement := "For Py_ssize_t (or None) arguments, C islice yields the same items as the doc equivalent, consumes the same input, and raises in the same cases."
+    statement := "The same for Py_ssize_t (or None) arguments."
     source := "Doc/library/itertools.rst:476-496 (Roughly equivalent to)", status := .refuted
     prop := ``IsliceDocAgreeSsize, thm := some ``isliceDocAgreeSsize_refuted
     bug := some "itertools-islice-step-overflow"
     notes := "islice(range(10), 1, None, sys.maxsize) yields [1, 2]: lz->next += step wraps, and with stop=None the overflow branch sets next = stop = -1." },
   { id := "itertools-islice-doc-agree-nowrap", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["islice_new", "islice_next"]
-    statement := "For Py_ssize_t arguments, and len + step <= sys.maxsize + 1 when stop is None, C islice agrees with the doc equivalent on items, consumption and when it raises."
+    statement := "For every element type and input object, with Py_ssize_t arguments, and len + step <= sys.maxsize + 1 when stop is None, C islice agrees with the doc equivalent on items, consumption and exception class."
     source := "Doc/library/itertools.rst:476-496 (Roughly equivalent to)", status := .proven
     prop := ``IsliceDocAgreeNoWrap, thm := some ``isliceDocAgreeNoWrap_proven
     notes := "With an int stop the wrap is harmless (next is clamped to stop either way); the extra hypothesis only excludes the refuted case above." },
   { id := "itertools-islice-consumes-max-start-stop", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["islice_next"]
-    statement := "With an int stop, fully consuming C islice consumes min(len, max(start, stop)) input items, for every step."
+    statement := "For every element type and input iterator (ending or raising after its items), with Py_ssize_t start and stop and a valid step, fully consuming C islice takes min(len, max(start, stop)) input items, whatever the step."
     source := "Doc/library/itertools.rst:498-500", status := .proven
     prop := ``IsliceConsumesMaxStartStop, thm := some ``isliceConsumesMaxStartStop_proven },
   { id := "itertools-islice-step-message", pyFile := "Modules/itertoolsmodule.c"
@@ -53,47 +55,63 @@ def entries : List Entry := [
     prop := ``IsliceStepMessageAccurate, thm := some ``isliceStepMessageAccurate_refuted
     bug := some "itertools-islice-step-message" },
   { id := "itertools-combinatorics-doc-agree", pyFile := "Modules/itertoolsmodule.c"
-    pyFns := ["combinations", "combinations_with_replacement", "permutations"]
-    statement := "For every int r (and r=None for permutations) the C combinations, combinations_with_replacement and permutations yield the same tuples as their doc equivalents and raise in the same cases."
+    pyFns := ["itertools_combinations_impl", "combinations_next", "combinations_next_lock_held", "itertools_combinations_with_replacement_impl", "cwr_next", "cwr_next_lock_held", "itertools_permutations_impl", "permutations_next", "permutations_next_lock_held"]
+    statement := "For every element type, every input object and every int r (and r=None for permutations) the C combinations, combinations_with_replacement and permutations yield the same tuples as their doc equivalents and raise in the same cases."
     source := "Doc/library/itertools.rst:232-254, :275-294, :548-576 (Roughly equivalent to)", status := .refuted
     prop := ``CombDocAgree, thm := some ``combDocAgree_refuted
     bug := some "itertools-doc-combinatorics-negative-r"
     notes := "r = -1: C raises ValueError, the doc code yields [()] (and [('a', 'b')] for permutations)." },
   { id := "itertools-combinatorics-doc-agree-nonneg", pyFile := "Modules/itertoolsmodule.c"
-    pyFns := ["combinations", "combinations_with_replacement", "permutations"]
+    pyFns := ["itertools_combinations_impl", "combinations_next", "combinations_next_lock_held", "itertools_combinations_with_replacement_impl", "cwr_next", "cwr_next_lock_held", "itertools_permutations_impl", "permutations_next", "permutations_next_lock_held"]
     statement := "The same for every r >= 0."
     source := "Doc/library/itertools.rst (Roughly equivalent to)", status := .refuted
     prop := ``CombDocAgreeNonneg, thm := some ``combDocAgreeNonneg_refuted
     bug := some "itertools-ssize-arguments"
     notes := "r = 2**63: C OverflowError (Py_ssize_t converter), the doc code returns an empty iterator. Intended." },
   { id := "itertools-combinatorics-doc-agree-ssize", pyFile := "Modules/itertoolsmodule.c"
-    pyFns := ["itertools_combinations_impl", "itertools_permutations_impl", "itertools_combinations_with_replacement_impl"]
+    pyFns := ["itertools_combinations_impl", "combinations_next", "combinations_next_lock_held", "itertools_combinations_with_replacement_impl", "cwr_next", "cwr_next_lock_held", "itertools_permutations_impl", "permutations_next", "permutations_next_lock_held"]
     statement := "The same for every 0 <= r <= sys.maxsize."
     source := "Doc/library/itertools.rst:219-223, :536-539 (zero when r > n)", status := .refuted
     prop := ``CombDocAgreeSsize, thm := some ``combDocAgreeSsize_refuted
     bug := some "itertools-combinatorics-r-prealloc"
     notes := "r = sys.maxsize: C allocates r indices before noticing r > n and raises MemoryError; the documented result is empty." },
   { id := "itertools-combinatorics-doc-agree-alloc", pyFile := "Modules/itertoolsmodule.c"
-    pyFns := ["combinations_next", "cwr_next", "permutations_next"]
+    pyFns := ["itertools_combinations_impl", "combinations_next", "combinations_next_lock_held", "itertools_combinations_with_replacement_impl", "cwr_next", "cwr_next_lock_held", "itertools_permutations_impl", "permutations_next", "permutations_next_lock_held"]
     statement := "For every r >= 0 whose r-entry index array and r-tuple can be allocated, the C index machines (right-to-left scans, refill loops, the permutations cycles array and its C rotation loop) run in lockstep with the doc generators: same tuples, same end, for every iteration bound."
     source := "Doc/library/itertools.rst (Roughly equivalent to)", status := .proven
     prop := ``CombDocAgreeAlloc, thm := some ``combDocAgreeAlloc_proven
     notes := "Hypotheses: the pool tuple is in memory (type invariant) and memNewOk r ∧ tupleNewOk r (excludes exactly the MemoryError case above; r <= n always satisfies them)." },
   { id := "itertools-simple-doc-agree", pyFile := "Modules/itertoolsmodule.c"
-    pyFns := ["accumulate", "chain", "chain.from_iterable", "compress", "cycle", "dropwhile", "takewhile", "filterfalse", "pairwise", "starmap", "zip_longest"]
-    statement := "For all int inputs and pure callbacks, each of these C iterators drains to exactly the doc equivalent's output (cycle: the first k items, for every k), including initial= for accumulate, None for filterfalse and fillvalue for zip_longest."
+    pyFns := ["accumulate_next", "accumulate_next_lock_held", "chain_next", "chain_next_lock_held", "compress_next", "cycle_next", "dropwhile_next", "takewhile_next", "filterfalse_next", "pairwise_next", "starmap_next", "zip_longest_next", "zip_longest_next_lock_held"]
+    statement := "For every element type, every input object (not iterable, or raising after its items) and every callback (which may raise), each of these C iterators, from its constructor on, drains to exactly the doc equivalent's items and exception (cycle: the first k items, for every k; starmap: exception class, since the doc's f(*args) words a non-iterable differently), including initial= for accumulate, None for filterfalse, chain.from_iterable, and fillvalue for zip_longest."
     source := "Doc/library/itertools.rst (Roughly equivalent to)", status := .proven
     prop := ``SimpleDocAgree, thm := some ``simpleDocAgree_proven },
+  { id := "itertools-constructor-errors", pyFile := "Modules/itertoolsmodule.c"
+    pyFns := ["pairwise_new_impl", "itertools_cycle_impl", "itertools_dropwhile_impl", "itertools_takewhile_impl", "itertools_filterfalse_impl", "itertools_starmap_impl", "itertools_accumulate_impl", "itertools_compress_impl", "batched_new_impl", "chain_new", "chain_new_internal", "itertools_chain_from_iterable_impl", "zip_longest_new"]
+    statement := "Each constructor that calls iter() on an argument fails with iter()'s own TypeError for a non-iterable, the first such argument winning (compress: data, then selectors); chain() accepts any arguments unchecked until iterated and rejects keywords; zip_longest rejects any single keyword but fillvalue."
+    source := "invariant: argument checks run at construction, in source order", status := .proven
+    prop := ``CtorErrors, thm := some ``ctorErrors_proven },
+  { id := "itertools-arg-checks", pyFile := "Modules/itertoolsmodule.c"
+    pyFns := ["islice_new", "itertools_count_impl", "itertools_permutations_impl"]
+    statement := "islice accepts exactly 2 to 4 positional arguments and no keywords; count accepts exactly numbers; a non-int r to permutations is rejected only after the iterable was read, so the iterable's error wins."
+    source := "invariant: argument checks in source order", status := .proven
+    prop := ``ArgChecks, thm := some ``argChecks_proven },
+  { id := "itertools-sizeof", pyFile := "Modules/itertoolsmodule.c"
+    pyFns := ["product_sizeof", "combinations_sizeof", "cwr_sizeof", "permutations_sizeof"]
+    statement := "For every object a constructor accepts, __sizeof__ is the basic size plus 8 bytes per entry of the index arrays the constructor allocated (indices, and cycles for permutations)."
+    source := "invariant: __sizeof__ reports the allocation", status := .proven
+    prop := ``SizeofReportsArrays, thm := some ``sizeofReportsArrays_proven
+    notes := "basic is a parameter: it is tp_basicsize, a platform constant, which the difftest passes in." },
   { id := "itertools-batched-doc-agree", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["batched_new_impl", "batched_next"]
-    statement := "For every int n and strict, C batched yields the doc equivalent's batches and raises in the same cases."
+    statement := "For every element type, input object, int n and strict, C batched yields the doc equivalent's batches and raises in the same cases."
     source := "Doc/library/itertools.rst:153-183", status := .refuted
     prop := ``BatchedDocAgree, thm := some ``batchedDocAgree_refuted
     bug := some "itertools-batched-n-prealloc"
     notes := "n = sys.maxsize: PyTuple_New(n) raises MemoryError; the doc code (tuple(islice(it, n))) returns the input as one batch. For n > sys.maxsize both raise." },
   { id := "itertools-batched-doc-agree-alloc", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["batched_new_impl", "batched_next"]
-    statement := "For every n whose n-tuple can be allocated (any n < 1 included), C batched and the doc equivalent (using the C islice) yield the same batches and raise in the same cases, strict or not."
+    statement := "For every element type, input object and n whose n-tuple can be allocated (any n < 1 included), C batched and the doc equivalent (using the C islice) yield the same batches and raise in the same cases, strict or not."
     source := "Doc/library/itertools.rst:153-183", status := .proven
     prop := ``BatchedDocAgreeAlloc, thm := some ``batchedDocAgreeAlloc_proven },
   { id := "itertools-count-fast-slow", pyFile := "Modules/itertoolsmodule.c"
@@ -108,7 +126,7 @@ def entries : List Entry := [
     prop := ``CountDocAgree, thm := some ``countDocAgree_proven },
   { id := "itertools-repeat-consistent", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["repeat_new", "repeat_next", "repeat_len", "repeat_repr"]
-    statement := "For times omitted or a Py_ssize_t, after any sequence of next()/repr()/__length_hint__() calls, __length_hint__ is exactly the number of items left (TypeError when endless), repr is repeat(x, left) or repeat(x), and next stops exactly when none are left."
+    statement := "For every element type, with times omitted or a Py_ssize_t, after any sequence of next()/repr()/__length_hint__() calls, __length_hint__ is exactly the number of items left (TypeError when endless), repr is repeat(x, left) or repeat(x), and next stops exactly when none are left."
     source := "invariant: length hint and repr track the iterator; length_hint_doc", status := .proven
     prop := ``RepeatConsistent, thm := some ``repeatConsistent_proven },
   { id := "itertools-repeat-doc-agree", pyFile := "Modules/itertoolsmodule.c"
@@ -124,49 +142,77 @@ def entries : List Entry := [
     source := "Doc/library/itertools.rst:619-633", status := .proven
     prop := ``RepeatDocAgreeSsize, thm := some ``repeatDocAgreeSsize_proven },
   { id := "itertools-combinations-spec", pyFile := "Modules/itertoolsmodule.c"
-    pyFns := ["combinations_next"]
-    statement := "For every r >= 0 that can be allocated, combinations(pool, r) yields the items at exactly the positions in a list of math.comb(n, r) strictly increasing r-tuples of positions < n (zero when r > n), and that list is strictly increasing lexicographically, so nothing repeats."
+    pyFns := ["itertools_combinations_impl", "combinations_next", "combinations_next_lock_held"]
+    statement := "For every element type and every r >= 0 that can be allocated, combinations(pool, r) yields the items at exactly the positions in a list of math.comb(n, r) strictly increasing r-tuples of positions < n (zero when r > n), and that list is strictly increasing lexicographically, so nothing repeats."
     source := "Doc/library/itertools.rst:215-230", status := .proven
     prop := ``CombinationsSpec, thm := some ``combinationsSpec_proven
     notes := "choose is Pascal's rule, i.e. math.comb. Statements are over positions ('treated as unique based on their position'), so they hold for every pool." },
   { id := "itertools-cwr-spec", pyFile := "Modules/itertoolsmodule.c"
-    pyFns := ["cwr_next"]
-    statement := "For every r >= 0 that can be allocated, combinations_with_replacement(pool, r) yields the items at exactly the positions in a list of comb(n + r - 1, r) non-decreasing r-tuples (for n = 0: one empty tuple if r = 0, else none), strictly increasing lexicographically."
+    pyFns := ["itertools_combinations_with_replacement_impl", "cwr_next", "cwr_next_lock_held"]
+    statement := "For every element type and every r >= 0 that can be allocated, combinations_with_replacement(pool, r) yields the items at exactly the positions in a list of comb(n + r - 1, r) non-decreasing r-tuples (for n = 0: one empty tuple if r = 0, else none), strictly increasing lexicographically."
     source := "Doc/library/itertools.rst:257-273", status := .proven
     prop := ``CwrSpec, thm := some ``cwrSpec_proven },
   { id := "itertools-product-spec", pyFile := "Modules/itertoolsmodule.c"
-    pyFns := ["product_new", "product_next"]
-    statement := "For repeat in Py_ssize_t range whose pools fit in memory, product(*args, repeat=repeat) yields the items at exactly the positions in a list of prod(len(p) for p in args)**repeat tuples, one in-range position per pool, strictly increasing lexicographically (the rightmost position advances fastest)."
+    pyFns := ["product_new", "product_next", "product_next_lock_held"]
+    statement := "For every element type, and repeat in Py_ssize_t range whose pools fit in memory, product(*args, repeat=repeat) yields the items at exactly the positions in a list of prod(len(p) for p in args)**repeat tuples, one in-range position per pool, strictly increasing lexicographically (the rightmost position advances fastest)."
     source := "Doc/library/itertools.rst:579-595", status := .proven
     prop := ``ProductSpec, thm := some ``productSpec_proven },
   { id := "itertools-product-doc-agree", pyFile := "Modules/itertoolsmodule.c"
-    pyFns := ["product_new", "product_next"]
-    statement := "For every int repeat (raising in both for negative and above sys.maxsize) whose pools fit in memory, the C odometer and the doc's list comprehension give the same tuples in the same order."
+    pyFns := ["product_new", "product_next", "product_next_lock_held"]
+    statement := "For every element type, every input object and every int repeat whose pools fit in memory, the C odometer and the doc's list comprehension give the same tuples in the same order and raise in the same cases."
+    source := "Doc/library/itertools.rst:596-612 (roughly equivalent to)", status := .refuted
+    prop := ``ProductObjAgree, thm := some ``productObjAgree_refuted
+    bug := some "itertools-product-repeat-zero-skips-iterables"
+    notes := "product(5, repeat=0): C yields one empty tuple without touching the arguments, the doc code raises TypeError from tuple(5)." },
+  { id := "itertools-product-doc-agree-iterable", pyFile := "Modules/itertoolsmodule.c"
+    pyFns := ["product_new", "product_next", "product_next_lock_held"]
+    statement := "The same, when repeat=0 is not combined with arguments that raise when read."
     source := "Doc/library/itertools.rst:596-612 (roughly equivalent to)", status := .proven
     prop := ``ProductDocAgree, thm := some ``productDocAgree_proven
-    notes := "Hypothesis tupleNewOk(len(args) * repeat): both sides keep the pools in memory. With repeat above that, C says OverflowError or MemoryError and the doc code MemoryError; model only compares raising, and the hypothesis keeps the model's malloc limit out of the statement." },
+    notes := "Hypotheses: tupleNewOk(len(args) * repeat), both sides keep the pools in memory; and at repeat = 0 the arguments read without error, which excludes exactly the refuted case above. With repeat above the limit, C says OverflowError or MemoryError and the doc code MemoryError; the model compares only that both raise." },
   { id := "itertools-permutations-spec", pyFile := "Modules/itertoolsmodule.c"
-    pyFns := ["permutations_next"]
-    statement := "For r (or None) that can be allocated, permutations(pool, r) yields the items at exactly the positions in a list of math.perm(n, r) tuples of r distinct positions < n (zero when r > n), strictly increasing lexicographically, so nothing repeats."
+    pyFns := ["itertools_permutations_impl", "permutations_next", "permutations_next_lock_held"]
+    statement := "For every element type and r (or None) that can be allocated, permutations(pool, r) yields the items at exactly the positions in a list of math.perm(n, r) tuples of r distinct positions < n (zero when r > n), strictly increasing lexicographically, so nothing repeats."
     source := "Doc/library/itertools.rst:526-546", status := .proven
     prop := ``PermutationsSpec, thm := some ``permutationsSpec_proven
     notes := "Proved by reading the cycles array recursively: a full run of the machine on a suffix of indices visits it in order and restores it, which is why the rotation at cycles[i] == 0 is correct." },
   { id := "itertools-count-formulas", pyFile := "Doc/library/itertools.rst"
-    pyFns := ["combinations", "combinations_with_replacement", "permutations"]
+    pyFns := []
     statement := "The counts in the three specs above are the documented factorial formulas: n!/(n-r)!, n!/r!/(n-r)! for r <= n, and (n+r-1)!/r!/(n-1)! for n > 0, written without division."
     source := "Doc/library/itertools.rst:219-223, :263-265, :536-539", status := .proven
     prop := ``CountFormulas, thm := some ``countFormulas_proven },
   { id := "itertools-groupby-doc-agree", pyFile := "Modules/itertoolsmodule.c"
-    pyFns := ["groupby_next", "groupby_step", "_grouper_next"]
-    statement := "For every key function, input and interleaving of next() on the groupby object and on any group it returned (including old groups), the C object returns exactly what the doc's generators return."
+    pyFns := ["itertools_groupby_impl", "groupby_next", "Py_LOCAL_INLINE", "_grouper_next", "_grouper_create"]
+    statement := "For every element type, key type with decidable equality, key function and input object that do not raise, and interleaving of next() on the groupby object and on any group it returned (including old groups), the C object returns exactly what the doc's generators return."
     source := "Doc/library/itertools.rst:424-456 (roughly equivalent to)", status := .proven
-    prop := ``GroupbyDocAgree, thm := some ``groupbyDocAgree_proven },
+    prop := ``GroupbyDocAgreeR, thm := some ``groupbyDocAgreeR_proven
+    notes := "The hypotheses are preconditions, not the interesting case hidden: the doc generators die at their first exception and the C object does not, so there is nothing to compare past one. The failing paths are covered by itertools-groupby-failed-step and the difftest. Not modelled: a raising key __eq__ (rcmp == -1), excluded by decidable equality on the key type." },
+  { id := "itertools-groupby-failed-step", pyFile := "Modules/itertoolsmodule.c"
+    pyFns := ["Py_LOCAL_INLINE"]
+    statement := "For every key function and state, a failed groupby_step leaves currkey, currvalue, tgtkey, currgrouper and the groupers as they were, loses at most the one item it took, and reports no exception exactly when the input ended cleanly."
+    source := "invariant: currvalue and currkey are assigned only after both calls succeeded (:526-529)", status := .proven
+    prop := ``GroupbyFailedStepKeepsState, thm := some ``groupbyFailedStepKeepsState_proven },
+  { id := "itertools-grouper-direct", pyFile := "Modules/itertoolsmodule.c"
+    pyFns := ["itertools__grouper_impl", "_grouper_create", "_grouper_next"]
+    statement := "Creating a _grouper directly on a groupby replaces the current grouper, so every grouper made earlier stops at once and leaves the state alone, for every key function and input."
+    source := "invariant: only the current grouper reads the shared input (:637, :673-674)", status := .proven
+    prop := ``GrouperDirectInvalidates, thm := some ``grouperDirectInvalidates_proven },
+  { id := "itertools-groupby-ctor-error", pyFile := "Modules/itertoolsmodule.c"
+    pyFns := ["itertools_groupby_impl"]
+    statement := "groupby on a non-iterable fails in the constructor with iter()'s TypeError."
+    source := "invariant: argument checks run at construction", status := .proven
+    prop := ``GroupbyCtorError, thm := some ``groupbyCtorError_proven },
   { id := "itertools-tee-doc-agree", pyFile := "Modules/itertoolsmodule.c"
-    pyFns := ["itertools_tee_impl", "tee_next", "teedataobject_jumplink", "teedataobject_getitem_lock_held", "tee_copy_impl"]
-    statement := "For every n whose result tuple fits in memory and every interleaving of next(), tee() and __copy__() on the iterators, the C chain of LINKCELLS-sized blocks returns the same results as the doc's linked list and pulls the same number of input items; for n < 0 both raise."
+    pyFns := ["itertools_tee_impl", "itertools__tee_impl", "tee_next", "teedataobject_newinternal", "teedataobject_jumplink", "teedataobject_getitem", "teedataobject_getitem_lock_held", "tee_fromiterable", "tee_copy", "tee_copy_impl"]
+    statement := "For every element type, every input object (not iterable, or raising after its items), every n whose result tuple fits in memory and every interleaving of next(), tee(), _tee() and __copy__() on the iterators, the C chain of LINKCELLS-sized blocks returns the same results as the doc's linked list and pulls the same number of input items; for n < 0 both raise."
     source := "Doc/library/itertools.rst:681-724 (Roughly equivalent to, flattening)", status := .proven
     prop := ``TeeDocAgree, thm := some ``teeDocAgree_proven
-    notes := "The doc side uses _tee(t) for __copy__, which the doc text defines as the same flattening. Hypothesis tupleNewOk n: both sides need n objects in memory." }
+    notes := "The doc side uses _tee(t) for __copy__, which the doc text defines as the same flattening. Hypothesis tupleNewOk n: both sides need n objects in memory." },
+  { id := "itertools-teedataobject-args", pyFile := "Modules/itertoolsmodule.c"
+    pyFns := ["itertools_teedataobject_impl"]
+    statement := "_tee_dataobject(it, values, next) succeeds exactly when values has at most LINKCELLS items and next is None, or values has exactly LINKCELLS items and next is another dataobject; otherwise ValueError('Invalid arguments')."
+    source := "invariant: a block is linked onward only when full (:889-930)", status := .proven
+    prop := ``TeeDataObjectArgs, thm := some ``teeDataObjectArgs_proven }
 ]
 
 end PyLean.Itertools

@@ -12,16 +12,18 @@ namespace PyLean.Itertools
 
 open PyLean
 
+variable {α : Type} [Inhabited α]
+
 /-! ## Blocks -/
 
 /-- Every block but the last is full. -/
-def FullBlocks (bl : List (List Int)) : Prop :=
+def FullBlocks (bl : List (List α)) : Prop :=
   ∀ j, j + 1 < bl.length → (bl.getD j []).length = LINKCELLS
 
 theorem LINKCELLS_eq : LINKCELLS = 57 := rfl
 
-theorem flat_getD : ∀ (bl : List (List Int)) (b i : Nat), FullBlocks bl → b < bl.length →
-    i < (bl.getD b []).length → bl.flatten.getD (LINKCELLS * b + i) 0 = (bl.getD b []).getD i 0
+theorem flat_getD : ∀ (bl : List (List α)) (b i : Nat), FullBlocks bl → b < bl.length →
+    i < (bl.getD b []).length → bl.flatten.getD (LINKCELLS * b + i) default = (bl.getD b []).getD i default
   | [], _, _, _, h, _ => by simp at h
   | B :: rest, 0, i, _, _, hi => by
     simp only [List.getD_cons_zero] at hi
@@ -36,7 +38,7 @@ theorem flat_getD : ∀ (bl : List (List Int)) (b i : Nat), FullBlocks bl → b 
       show LINKCELLS * (b + 1) + i - LINKCELLS = LINKCELLS * b + i by simp [LINKCELLS]; omega,
       ← List.getD_eq_getElem?_getD, ih]
 
-theorem flat_length : ∀ (bl : List (List Int)), bl ≠ [] → FullBlocks bl →
+theorem flat_length : ∀ (bl : List (List α)), bl ≠ [] → FullBlocks bl →
     bl.flatten.length = LINKCELLS * (bl.length - 1) + (bl.getD (bl.length - 1) []).length
   | [], h, _ => by simp at h
   | [B], _, _ => by simp
@@ -50,7 +52,7 @@ theorem flat_length : ∀ (bl : List (List Int)), bl ≠ [] → FullBlocks bl �
     simp only [Nat.add_sub_cancel, List.getD_cons_succ]
     simp [LINKCELLS]; omega
 
-theorem flat_set_last : ∀ (bl : List (List Int)) (v : Int), bl ≠ [] →
+theorem flat_set_last : ∀ (bl : List (List α)) (v : α), bl ≠ [] →
     (bl.set (bl.length - 1) (bl.getD (bl.length - 1) [] ++ [v])).flatten = bl.flatten ++ [v]
   | [], _, h => by simp at h
   | [B], v, _ => by simp
@@ -60,7 +62,7 @@ theorem flat_set_last : ∀ (bl : List (List Int)) (v : Int), bl ≠ [] →
     simp only [List.set_cons_succ, List.flatten_cons, List.getD_cons_succ]
     rw [ih]; simp
 
-theorem flat_len_ge (bl : List (List Int)) (hne : bl ≠ []) (hf : FullBlocks bl) (b : Nat)
+theorem flat_len_ge (bl : List (List α)) (hne : bl ≠ []) (hf : FullBlocks bl) (b : Nat)
     (hb : b < bl.length) : LINKCELLS * b + (bl.getD b []).length ≤ bl.flatten.length := by
   rw [flat_length bl hne hf]
   by_cases hl : b + 1 < bl.length
@@ -76,10 +78,10 @@ theorem flat_len_ge (bl : List (List Int)) (hne : bl ≠ []) (hf : FullBlocks bl
 /-! ## The simulation relation -/
 
 /-- C tee `(block, index)` is at doc link number `p`. -/
-def TeeAt (bl : List (List Int)) (bi : Nat × Nat) (p : Nat) : Prop :=
+def TeeAt (bl : List (List α)) (bi : Nat × Nat) (p : Nat) : Prop :=
   bi.1 < bl.length ∧ bi.2 ≤ LINKCELLS ∧ bi.2 ≤ (bl.getD bi.1 []).length ∧ p = LINKCELLS * bi.1 + bi.2
 
-structure TeeRel (c : CTee) (d : DocTee) : Prop where
+structure TeeRel (c : CTee α) (d : DocTee α) : Prop where
   hit : c.it = d.it
   hvals : d.values = c.blocks.flatten
   hne : c.blocks ≠ []
@@ -88,28 +90,28 @@ structure TeeRel (c : CTee) (d : DocTee) : Prop where
   hlen : c.tees.length = d.tees.length
   htees : ∀ k, k < c.tees.length → TeeAt c.blocks (c.tees.getD k (0, 0)) (d.tees.getD k 0)
 
-theorem blk_le (c : CTee) (d : DocTee) (h : TeeRel c d) (b : Nat) (hb : b < c.blocks.length) :
+theorem blk_le (c : CTee α) (d : DocTee α) (h : TeeRel c d) (b : Nat) (hb : b < c.blocks.length) :
     (c.blocks.getD b []).length ≤ LINKCELLS := by
   by_cases hl : b + 1 < c.blocks.length
   · rw [h.hfull b hl]; exact Nat.le_refl _
   · have := h.hlast; rw [show c.blocks.length - 1 = b by omega] at this; exact this
 
 /-- `getD` on a list after `set`. -/
-theorem getD_set_eq {α : Type} (l : List α) (k : Nat) (v d : α) (hk : k < l.length) :
+theorem getD_set_eq {σ : Type} (l : List σ) (k : Nat) (v d : σ) (hk : k < l.length) :
     (l.set k v).getD k d = v := by
   simp [List.getD_eq_getElem?_getD, List.getElem?_set, hk]
 
-theorem getD_set_ne {α : Type} (l : List α) (k j : Nat) (v d : α) (h : k ≠ j) :
+theorem getD_set_ne {σ : Type} (l : List σ) (k j : Nat) (v d : σ) (h : k ≠ j) :
     (l.set k v).getD j d = l.getD j d := by
   simp [List.getD_eq_getElem?_getD, List.getElem?_set, h]
 
-theorem getD_append_lt {α : Type} (l m : List α) (j : Nat) (d : α) (h : j < l.length) :
+theorem getD_append_lt {σ : Type} (l m : List σ) (j : Nat) (d : σ) (h : j < l.length) :
     (l ++ m).getD j d = l.getD j d := by
   simp [List.getD_eq_getElem?_getD, List.getElem?_append_left h]
 
 /-- After the jump, the C tee points into the chain at the same link, with
 `index < LINKCELLS`. -/
-theorem teeJump_rel (c : CTee) (d : DocTee) (h : TeeRel c d) (k b i : Nat) (hk : k < c.tees.length)
+theorem teeJump_rel (c : CTee α) (d : DocTee α) (h : TeeRel c d) (k b i : Nat) (hk : k < c.tees.length)
     (hbi : c.tees.getD k (0, 0) = (b, i)) :
     TeeRel { (teeJump c b i).1 with
       tees := (teeJump c b i).1.tees.set k ((teeJump c b i).2.1, (teeJump c b i).2.2) } d ∧
@@ -166,7 +168,7 @@ theorem teeJump_rel (c : CTee) (d : DocTee) (h : TeeRel c d) (k b i : Nat) (hk :
       exact ⟨hb, hi, hil, hp⟩
     · rw [getD_set_ne _ _ _ _ _ hjk]; exact h.htees j hj'
 
-theorem teeGetitem_rel (c : CTee) (d : DocTee) (h : TeeRel c d) (k b i : Nat) (hk : k < c.tees.length)
+theorem teeGetitem_rel (c : CTee α) (d : DocTee α) (h : TeeRel c d) (k b i : Nat) (hk : k < c.tees.length)
     (hbi : c.tees.getD k (0, 0) = (b, i)) (hi : i < LINKCELLS) :
     (teeGetitem c k b i).1 = (docTeeNext d k).1 ∧ TeeRel (teeGetitem c k b i).2 (docTeeNext d k).2 := by
   have hat := h.htees k hk
@@ -198,13 +200,13 @@ theorem teeGetitem_rel (c : CTee) (d : DocTee) (h : TeeRel c d) (k b i : Nat) (h
     have hlen := flat_length c.blocks h.hne h.hfull
     have hpv : ¬ d.tees.getD k 0 < d.values.length := by rw [h.hvals, hp, hlen, ← hlastb]; omega
     simp only [hlt, ↓reduceIte, hpv, ← h.hit]
-    cases hit : c.it with
-    | nil => exact ⟨rfl, h⟩
-    | cons v rest =>
+    cases hit : c.it.next with
+    | done => exact ⟨rfl, h⟩
+    | fail e rest => exact ⟨rfl, ⟨rfl, h.hvals, h.hne, h.hfull, h.hlast, h.hlen, h.htees⟩⟩
+    | item v rest =>
       simp only
       have hpl : d.tees.getD k 0 = d.values.length := by rw [h.hvals, hp, hlen, ← hlastb]; omega
-      refine ⟨?_, ⟨by simp, ?_, ?_, ?_, ?_, by simp [h.hlen], ?_⟩⟩
-      · rw [hpl]; simp [List.getD_eq_getElem?_getD]
+      refine ⟨trivial, ⟨rfl, ?_, ?_, ?_, ?_, by simp [h.hlen], ?_⟩⟩
       · rw [h.hvals, hlastb, flat_set_last c.blocks v h.hne]
       · simp [h.hne]
       · intro j hj
@@ -234,7 +236,7 @@ theorem teeGetitem_rel (c : CTee) (d : DocTee) (h : TeeRel c d) (k b i : Nat) (h
             simp only [List.length_append, List.length_cons, List.length_nil]; omega
           · rw [getD_set_ne _ _ _ _ _ hb']; exact h3
 
-theorem teeNext_rel (c : CTee) (d : DocTee) (h : TeeRel c d) (k : Nat) (hk : k < c.tees.length) :
+theorem teeNext_rel (c : CTee α) (d : DocTee α) (h : TeeRel c d) (k : Nat) (hk : k < c.tees.length) :
     (cTeeNext c k).1 = (docTeeNext d k).1 ∧ TeeRel (cTeeNext c k).2 (docTeeNext d k).2 := by
   cases hbi : c.tees.getD k (0, 0) with
   | mk b i =>
@@ -254,7 +256,7 @@ theorem teeNext_rel (c : CTee) (d : DocTee) (h : TeeRel c d) (k : Nat) (hk : k <
           (getD_set_eq _ _ _ _ hk1) hi1
 
 /-- `tee(t_k, m)` / `t_k.__copy__()`: `m` more iterators at the same position. -/
-theorem teeRel_extend (c : CTee) (d : DocTee) (h : TeeRel c d) (k m : Nat) (hk : k < c.tees.length) :
+theorem teeRel_extend (c : CTee α) (d : DocTee α) (h : TeeRel c d) (k m : Nat) (hk : k < c.tees.length) :
     TeeRel { c with tees := c.tees ++ List.replicate m (c.tees.getD k (0, 0)) }
       { d with tees := d.tees ++ List.replicate m (d.tees.getD k 0) } := by
   refine ⟨h.hit, h.hvals, h.hne, h.hfull, h.hlast, by simp [h.hlen], ?_⟩
@@ -273,7 +275,7 @@ theorem teeRel_extend (c : CTee) (d : DocTee) (h : TeeRel c d) (k m : Nat) (hk :
     rw [h1, h2]
     exact h.htees k hk
 
-theorem teeOps_rel : ∀ (ops : List TeeOp) (c : CTee) (d : DocTee), TeeRel c d →
+theorem teeOps_rel : ∀ (ops : List TeeOp) (c : CTee α) (d : DocTee α), TeeRel c d →
     (cTeeOps c ops).1 = (docTeeOps d ops).1 ∧ TeeRel (cTeeOps c ops).2 (docTeeOps d ops).2
   | [], _, _, h => ⟨rfl, h⟩
   | .next k :: ops, c, d, h => by
@@ -299,6 +301,13 @@ theorem teeOps_rel : ∀ (ops : List TeeOp) (c : CTee) (d : DocTee), TeeRel c d 
       exact teeOps_rel ops _ _ (teeRel_extend c d h k 1 hk)
     · simp only [hk, ↓reduceIte]
       exact teeOps_rel ops c d h
+  | .ctor k :: ops, c, d, h => by
+    simp only [cTeeOps, docTeeOps, ← h.hlen]
+    by_cases hk : k < c.tees.length
+    · simp only [hk, ↓reduceIte]
+      exact teeOps_rel ops _ _ (teeRel_extend c d h k 1 hk)
+    · simp only [hk, ↓reduceIte]
+      exact teeOps_rel ops c d h
 
 /-- Both give the same value, or both raise (the doc's `ValueError` is bare). -/
 def pyAgree {β : Type} : Py β → Py β → Prop
@@ -306,28 +315,27 @@ def pyAgree {β : Type} : Py β → Py β → Prop
   | .error _, .error _ => True
   | _, _ => False
 
-/-- For every int `n` whose `n`-tuple of iterators fits in memory, and every
-interleaving of `next()`, `tee()` and `__copy__()` on the iterators, the C
-block chain (including the jump at `LINKCELLS` items and exhausted iterators
-that are retried) gives the doc's linked-list results and pulls the same
-number of input items; for `n < 0` both raise. -/
+/-- For every int `n` whose `n`-tuple of iterators fits in memory, every input
+object (not iterable, or raising after its items) and every interleaving of
+`next()`, `tee()`, `_tee()` and `__copy__()`, the C block chain (including the
+jump at `LINKCELLS` items and exhausted iterators that are retried) gives the
+doc's linked-list results and pulls the same number of input items; for
+`n < 0` both raise. Over any element type. -/
 def TeeDocAgree : Prop :=
-  ∀ (l : List Int) (n : Int) (ops : List TeeOp), (0 ≤ n → tupleNewOk n = true) →
-    pyAgree (cTee l n ops) (docTee l n ops)
+  ∀ (α : Type) [Inhabited α] (o : Obj α) (n : Int) (ops : List TeeOp), (0 ≤ n → tupleNewOk n = true) →
+    pyAgree (cTee o n ops) (docTee o n ops)
 
 theorem teeDocAgree_proven : TeeDocAgree := by
-  intro l n ops ht
+  intro α _ o n ops ht
   by_cases hn : n < 0
-  · have hd : docTee l n ops = .error (.valueError "") := by simp [docTee, hn, throw, throwThe,
-      MonadExceptOf.throw, bind, Except.bind]
-    have hc : ∃ e, cTee l n ops = .error e := by
+  · have hd : docTee o n ops = .error (.valueError "") := by simp [docTee, hn]
+    have hc : ∃ e, cTee o n ops = .error e := by
       cases ha : asSsize n with
-      | error e => exact ⟨e, by simp [cTee, ha, bind, Except.bind]⟩
+      | error e => exact ⟨e, by simp [cTee, ha]⟩
       | ok v =>
         have hv : v = n := by simp only [asSsize] at ha; split at ha <;> simp_all
         subst hv
-        exact ⟨.valueError "n must be >= 0",
-          by simp [cTee, ha, hn, bind, Except.bind, throw, throwThe, MonadExceptOf.throw]⟩
+        exact ⟨.valueError "n must be >= 0", by simp [cTee, ha, hn]⟩
     obtain ⟨e, he⟩ := hc
     rw [hd, he]
     trivial
@@ -337,23 +345,51 @@ theorem teeDocAgree_proven : TeeDocAgree := by
       simp only [tupleNewOk, ssizeMax_eq, mallocLimit_eq, Bool.or_eq_true, beq_iff_eq, Bool.and_eq_true,
         decide_eq_true_eq] at htn ⊢
       omega
-    have hrel : TeeRel { it := l, blocks := [[]], tees := List.replicate n.toNat (0, 0) }
-        { it := l, values := [], tees := List.replicate n.toNat 0 } := by
-      refine ⟨rfl, by simp, by simp, ?_, by simp [LINKCELLS], by simp, ?_⟩
-      · intro j hj; simp at hj
-      · intro j hj
-        simp only [List.length_replicate] at hj
-        have h1 : (List.replicate n.toNat ((0 : Nat), (0 : Nat))).getD j (0, 0) = (0, 0) := by
-          simp only [List.getD_eq_getElem?_getD, List.getElem?_replicate, hj, ↓reduceIte,
-            Option.getD_some]
-        have h2 : (List.replicate n.toNat (0 : Nat)).getD j 0 = 0 := by
-          simp only [List.getD_eq_getElem?_getD, List.getElem?_replicate, hj, ↓reduceIte,
-            Option.getD_some]
-        rw [h1, h2]
-        simp [TeeAt, LINKCELLS]
-    have hops := teeOps_rel ops _ _ hrel
-    simp only [cTee, docTee, asSsize_ok (by rw [ssizeMin_eq]; omega) hle, hn, htn, ↓reduceIte,
-      Bool.not_true, Bool.false_eq_true, bind, Except.bind, pure, Except.pure, pyAgree]
-    rw [hops.1, hops.2.hit]
+    by_cases hz : n = 0
+    · subst hz
+      have ha : asSsize (0 : Int) = .ok 0 := asSsize_ok (by decide) (by decide)
+      have hc : cTee o 0 ops = .ok ([], 0) := by simp [cTee, ha, tupleNewOk]
+      have hd : docTee o 0 ops = .ok ([], 0) := by simp [docTee]
+      rw [hc, hd]
+      rfl
+    · cases hit : getIter o with
+      | error e =>
+        have hc : cTee o n ops = .error e := by
+          simp [cTee, asSsize_ok (by rw [ssizeMin_eq]; omega) hle, hn, htn, hz, hit]
+        have hd : docTee o n ops = .error e := by simp [docTee, hn, hz, hit]
+        rw [hc, hd]
+        trivial
+      | ok it =>
+        have hrel : TeeRel { it := it, blocks := [[]], tees := List.replicate n.toNat (0, 0) }
+            { it := it, values := [], tees := List.replicate n.toNat 0 } := by
+          refine ⟨rfl, by simp, by simp, ?_, by simp [LINKCELLS], by simp, ?_⟩
+          · intro j hj; simp at hj
+          · intro j hj
+            simp only [List.length_replicate] at hj
+            have h1 : (List.replicate n.toNat ((0 : Nat), (0 : Nat))).getD j (0, 0) = (0, 0) := by
+              simp only [List.getD_eq_getElem?_getD, List.getElem?_replicate, hj, ↓reduceIte,
+                Option.getD_some]
+            have h2 : (List.replicate n.toNat (0 : Nat)).getD j 0 = 0 := by
+              simp only [List.getD_eq_getElem?_getD, List.getElem?_replicate, hj, ↓reduceIte,
+                Option.getD_some]
+            rw [h1, h2]
+            simp [TeeAt, LINKCELLS]
+        have hops := teeOps_rel ops _ _ hrel
+        simp only [cTee, docTee, asSsize_ok (by rw [ssizeMin_eq]; omega) hle, hn, htn, hz, hit, ↓reduceIte,
+          Bool.not_true, Bool.false_eq_true, pyAgree]
+        rw [hops.1, hops.2.hit]
+
+/-- `_tee_dataobject(it, values, next)` accepts at most `LINKCELLS` values and
+a `next` block only when `values` is full. -/
+def TeeDataObjectArgs : Prop :=
+  ∀ (α : Type) (values : List α) (next : TeeNextArg),
+    (∃ r, cTeeDataNew values next = .ok r) ↔
+      (values.length ≤ LINKCELLS ∧
+        (next = .none ∨ (next = .dataobject ∧ values.length = LINKCELLS)))
+
+theorem teeDataObjectArgs_proven : TeeDataObjectArgs := by
+  intro α values next
+  cases next <;> simp only [cTeeDataNew] <;> split <;> (try split) <;>
+    simp_all <;> omega
 
 end PyLean.Itertools

@@ -21,14 +21,20 @@ inductive Op where
   deriving Repr, DecidableEq
 
 /-- Result of one operation: an int, a string, `StopIteration` or an exception. -/
-inductive OpRes where
-  | int (v : Int)
+inductive OpRes (α : Type) where
+  | val (v : α)
   | str (s : String)
   | stop
   | exc (e : PyExc)
-  deriving Repr, DecidableEq
 
 /-! ## count -/
+
+/-- The `PyNumber_Check` of `itertools_count_impl` (:3537-3541): non-numbers
+are rejected. (Numbers that are not ints take the slow path with their own
+`+`; they are out of scope here.) -/
+def cCountCheck (startIsNum stepIsNum : Bool) : Py Unit :=
+  if !startIsNum || !stepIsNum then .error (.typeError "a number is required") else .ok ()
+
 
 /-- `countobject` (:3487-3492): `longCnt = none` is `long_cnt == NULL`. -/
 structure CountState where
@@ -73,13 +79,13 @@ def cCountRepr (s : CountState) : String :=
     if asLongOrMinus1 s.longStep = 1 then s!"count({lc})"
     else s!"count({lc}, {s.longStep})"
 
-def cCountOps (s : CountState) : List Op → List OpRes
+def cCountOps (s : CountState) : List Op → List (OpRes Int)
   | [] => []
-  | .next :: ops => let (v, s) := cCountNext s; .int v :: cCountOps s ops
+  | .next :: ops => let (v, s) := cCountNext s; .val v :: cCountOps s ops
   | .repr :: ops => .str (cCountRepr s) :: cCountOps s ops
   | .hint :: ops => .exc (.typeError "~no __length_hint__") :: cCountOps s ops
 
-def cCount (start step : Option Int) (ops : List Op) : List OpRes :=
+def cCount (start step : Option Int) (ops : List Op) : List (OpRes Int) :=
   cCountOps (cCountNew start step) ops
 
 /-- The doc's `count(start=0, step=1)` (rst:320-326): the `k`-th value. -/
@@ -91,50 +97,54 @@ def docCountValues (start step : Option Int) (k : Nat) : List Int :=
 /-! ## repeat -/
 
 /-- `repeatobject` (:3731-3735): `cnt = -1` is "endless". -/
-structure RepeatState where
-  elem : Int
+structure RepeatState (α : Type) where
+  elem : α
   cnt : Int
-  deriving Repr, DecidableEq
+
+variable {α : Type}
 
 /-- `repeat_new` (:3740-3763): `times` parsed with format `n`; a supplied
 negative `times` becomes 0. -/
-def cRepeatNew (elem : Int) (times : Option Int) : Py RepeatState := do
+def cRepeatNew (elem : α) (times : Option Int) : Py (RepeatState α) :=
   match times with
-  | none => return { elem := elem, cnt := -1 }
+  | none => .ok { elem := elem, cnt := -1 }
   | some t =>
-    let c ← asSsize t
-    return { elem := elem, cnt := if c < 0 then 0 else c }
+    match asSsize t with
+    | .error e => .error e
+    | .ok c => .ok { elem := elem, cnt := if c < 0 then 0 else c }
 
 /-- `repeat_next` (:3786-3798). -/
-def cRepeatNext (s : RepeatState) : Option Int × RepeatState :=
+def cRepeatNext (s : RepeatState α) : Option α × RepeatState α :=
   if s.cnt = 0 then (none, s)
   else if s.cnt > 0 then (some s.elem, { s with cnt := s.cnt - 1 })
   else (some s.elem, s)
 
-/-- `repeat_repr` (:3801-3811). -/
-def cRepeatRepr (s : RepeatState) : String :=
-  if s.cnt = -1 then s!"repeat({s.elem})" else s!"repeat({s.elem}, {s.cnt})"
+/-- `repeat_repr` (:3801-3811); `rp` is `repr` of the element. -/
+def cRepeatRepr (rp : α → String) (s : RepeatState α) : String :=
+  if s.cnt = -1 then s!"repeat({rp s.elem})" else s!"repeat({rp s.elem}, {s.cnt})"
 
 /-- `repeat_len` (:3814-3822), i.e. `__length_hint__`. -/
-def cRepeatHint (s : RepeatState) : OpRes :=
-  if s.cnt = -1 then .exc (.typeError "len() of unsized object") else .int s.cnt
+def cRepeatHint (s : RepeatState α) : OpRes Int :=
+  if s.cnt = -1 then .exc (.typeError "len() of unsized object") else .val s.cnt
 
-def cRepeatOps (s : RepeatState) : List Op → List OpRes
+/-- One entry of the ops' results: an item, or a hint/repr answer. -/
+def cRepeatOps (rp : α → String) (s : RepeatState α) : List Op → List (OpRes α ⊕ OpRes Int)
   | [] => []
   | .next :: ops =>
     let (v, s) := cRepeatNext s
-    (match v with | some x => OpRes.int x | none => .stop) :: cRepeatOps s ops
-  | .repr :: ops => .str (cRepeatRepr s) :: cRepeatOps s ops
-  | .hint :: ops => cRepeatHint s :: cRepeatOps s ops
+    .inl (match v with | some x => OpRes.val x | none => .stop) :: cRepeatOps rp s ops
+  | .repr :: ops => .inr (.str (cRepeatRepr rp s)) :: cRepeatOps rp s ops
+  | .hint :: ops => .inr (cRepeatHint s) :: cRepeatOps rp s ops
 
-def cRepeat (elem : Int) (times : Option Int) (ops : List Op) : List OpRes :=
+def cRepeat (rp : α → String) (elem : α) (times : Option Int) (ops : List Op) :
+    List (OpRes α ⊕ OpRes Int) :=
   match cRepeatNew elem times with
-  | .error e => [.exc e]
-  | .ok s => cRepeatOps s ops
+  | .error e => [.inr (.exc e)]
+  | .ok s => cRepeatOps rp s ops
 
 /-- The doc's `repeat(object, times=None)` (rst:626-633): the first `k`
 values. `range(times)` accepts every int. -/
-def docRepeatValues (elem : Int) (times : Option Int) (k : Nat) : List Int :=
+def docRepeatValues (elem : α) (times : Option Int) (k : Nat) : List α :=
   match times with
   | none => List.replicate k elem
   | some t => List.replicate (min k t.toNat) elem

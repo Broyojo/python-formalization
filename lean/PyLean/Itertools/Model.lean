@@ -89,6 +89,72 @@ def Run.ok {α : Type} (l : List α) : Run α := (l, none)
 /-- Prepend one item (a generator that yields `a` and then continues as `r`). -/
 def Run.cons {α : Type} (a : α) (r : Run α) : Run α := (a :: r.1, r.2)
 
+/-- Prepend several items. -/
+def Run.prepend {α : Type} (l : List α) (r : Run α) : Run α := (l ++ r.1, r.2)
+
+/-! ## Input objects -/
+
+/-- A Python object passed where an iterable is expected: something iterable,
+yielding `items` and then ending (`err = none`) or raising `err`; or an object
+of a non-iterable type. -/
+inductive Obj (α : Type) where
+  | iter (items : List α) (err : Option PyExc)
+  | notIterable (tyName : String)
+
+/-- An iterator: the items left and how it ends. After raising, a generator
+is finished, so `fail` leaves an exhausted source. -/
+structure Src (α : Type) where
+  items : List α
+  err : Option PyExc
+
+/-- `PyObject_GetIter`, Objects/abstract.c. -/
+def getIter {α : Type} : Obj α → Py (Src α)
+  | .iter l e => .ok ⟨l, e⟩
+  | .notIterable ty => .error (.typeError s!"'{ty}' object is not iterable")
+
+/-- Result of `tp_iternext` on an input iterator. -/
+inductive Pull (α : Type) where
+  | item (x : α) (rest : Src α)
+  | done
+  | fail (e : PyExc) (rest : Src α)
+
+/-- `(*Py_TYPE(it)->tp_iternext)(it)` / `PyIter_Next(it)`. -/
+def Src.next {α : Type} : Src α → Pull α
+  | ⟨x :: xs, e⟩ => .item x ⟨xs, e⟩
+  | ⟨[], none⟩ => .done
+  | ⟨[], some e⟩ => .fail e ⟨[], none⟩
+
+/-- `PySequence_Tuple(obj)`: drains the iterable, or raises. -/
+def tupleOf {α : Type} : Obj α → Py (List α)
+  | .iter l none => .ok l
+  | .iter _ (some e) => .error e
+  | .notIterable ty => .error (.typeError s!"'{ty}' object is not iterable")
+
+/-- `mapM` in `Except` keeps the length. -/
+theorem mapM_length {α β ε : Type} (f : α → Except ε β) (os : List α) (its : List β)
+    (h : os.mapM f = .ok its) : its.length = os.length := by
+  induction os generalizing its with
+  | nil =>
+    simp only [List.mapM_nil, pure, Except.pure, Except.ok.injEq] at h
+    subst h; rfl
+  | cons o os ih =>
+    simp only [List.mapM_cons, bind, Except.bind] at h
+    cases h1 : f o with
+    | error e => simp [h1] at h
+    | ok s =>
+      simp only [h1] at h
+      cases h2 : os.mapM f with
+      | error e => simp [h2] at h
+      | ok t =>
+        simp only [h2, pure, Except.pure, Except.ok.injEq] at h
+        subst h
+        simp [ih t h2]
+
+/-- Number of items an input object provides. -/
+def Obj.len {α : Type} : Obj α → Nat
+  | .iter l _ => l.length
+  | .notIterable _ => 0
+
 /-! ## C integer conversions -/
 
 /-- `PyLong_AsSsize_t` overflow message, Objects/longobject.c:668. -/

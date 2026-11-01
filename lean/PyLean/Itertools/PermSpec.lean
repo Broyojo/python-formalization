@@ -12,6 +12,8 @@ namespace PyLean.Itertools
 
 open PyLean
 
+variable {α : Type} [Inhabited α]
+
 /-! ## The suffix machine -/
 
 inductive SufRes where
@@ -368,7 +370,7 @@ theorem pySliceTo_nat (l : List Nat) (r : Nat) : pySliceTo l (r : Int) = l.take 
   simp [pySliceTo]
 
 /-- From a started state, the doc's `while n:` loop gives the tuples of the run. -/
-theorem outer_run (pool : List Int) (r : Nat) (hn : pool.length ≠ 0) {t cs L tf cf}
+theorem outer_run (pool : List α) (r : Nat) (hn : pool.length ≠ 0) {t cs L tf cf}
     (h : CarryRun pool.length r t cs L tf cf) (hcs : cs.length = r) : ∀ fuel, L.length ≤ fuel →
     docPermOuter pool (r : Int) fuel t cs = Run.ok (L.tail.map (pick pool)) := by
   induction h with
@@ -395,17 +397,17 @@ theorem outer_run (pool : List Int) (r : Nat) (hn : pool.length ≠ 0) {t cs L t
     rfl
 
 /-- `docPermutationsF` for `0 <= r <= n` and enough fuel. -/
-theorem docPerm_spec (pool : List Int) (robj : Option Int) (r : Nat)
+theorem docPerm_spec (pool : List α) (robj : Option Int) (r : Nat)
     (hrobj : robj.getD pool.length = (r : Int)) (hr : r ≤ pool.length) (fuel : Nat)
     (hf : perm pool.length r ≤ fuel) :
-    docPermutationsF fuel pool robj = Run.ok ((pe (List.range pool.length) r).map (pick pool)) := by
+    docPermutationsF fuel (.iter pool none) robj = Run.ok ((pe (List.range pool.length) r).map (pick pool)) := by
   have hrun := perm_run r (List.range pool.length) (by simpa using hr)
   simp only [List.length_range] at hrun
   have hlen : (pe (List.range pool.length) r).length = perm pool.length r := by
     rw [pe_length, List.length_range]
   obtain ⟨rest, hL⟩ := hrun.head
   have hcyc : (List.range r).map (fun (i : Nat) => (pool.length : Int) - (i : Int)) = cyc0 pool.length r := rfl
-  simp only [docPermutationsF, hrobj, show ¬ ((r : Int) > pool.length) by omega, ↓reduceIte,
+  simp only [docPermutationsF, tupleOf, hrobj, show ¬ ((r : Int) > pool.length) by omega, ↓reduceIte,
     Int.toNat_natCast, hcyc, pySliceTo_nat]
   rw [hL]
   by_cases hn : pool.length = 0
@@ -428,14 +430,14 @@ theorem docPerm_spec (pool : List Int) (robj : Option Int) (r : Nat)
     rfl
 
 /-- `cPermutationsF` runs the doc code in lockstep. -/
-theorem cPerm_eq (pool : List Int) (robj : Option Int) (r : Nat)
+theorem cPerm_eq (pool : List α) (robj : Option Int) (r : Nat)
     (hrobj : robj.getD pool.length = (r : Int)) (hp : tupleNewOk pool.length = true)
     (hm : memNewOk r = true) (ht : tupleNewOk r = true) (fuel : Nat) :
-    cPermutationsF (fuel + 1) pool robj = docPermutationsF fuel pool robj := by
+    cPermutationsF (fuel + 1) (.iter pool none) robj = docPermutationsF fuel (.iter pool none) robj := by
   have hpn : memNewOk (pool.length : Int) = true := memNewOk_of_tuple hp (by omega)
   have hle := memNewOk_le hm
   have hmin : ssizeMin ≤ (r : Int) := by rw [ssizeMin_eq]; omega
-  have hnew : cPermutationsNew pool robj =
+  have hnew : cPermutationsNew (.iter pool none) robj =
       .ok { pool := pool, indices := List.range pool.length, r := r,
             cycles := cyc0 pool.length r, started := false,
             stopped := decide ((r : Int) > pool.length) } := by
@@ -444,44 +446,44 @@ theorem cPerm_eq (pool : List Int) (robj : Option Int) (r : Nat)
       simp only [Option.getD_none] at hrobj
       have hrl : r = pool.length := by omega
       subst hrl
-      simp only [cPermutationsNew, bind, Except.bind, show ¬ ((pool.length : Int) < 0) by omega,
+      simp only [cPermutationsNew, tupleOf, bind, Except.bind, show ¬ ((pool.length : Int) < 0) by omega,
         ↓reduceIte, hpn, Bool.not_true, Bool.or_false, Bool.false_eq_true, pure, Except.pure,
         Int.toNat_natCast]
       rfl
     | some v =>
       simp only [Option.getD_some] at hrobj
       subst hrobj
-      simp only [cPermutationsNew, asSsize_ok hmin hle, bind, Except.bind,
+      simp only [cPermutationsNew, tupleOf, asSsize_ok hmin hle, bind, Except.bind,
         show ¬ ((r : Int) < 0) by omega, ↓reduceIte, hpn, hm, Bool.not_true, Bool.or_false,
         Bool.false_eq_true, pure, Except.pure, Int.toNat_natCast]
       rfl
   simp only [cPermutationsF, hnew]
   rw [drain_succ]
   by_cases hrn : (r : Int) > pool.length
-  · simp [hrn, cPermutationsNext, docPermutationsF, hrobj, Run.ok]
+  · simp [hrn, cPermutationsNext, docPermutationsF, tupleOf, hrobj, Run.ok]
   · simp only [hrn, decide_false, cPermutationsNext, Bool.false_eq_true, ↓reduceIte, Bool.not_false,
       ht, Bool.not_true]
     have := permOuter_eq pool r (by omega) fuel (List.range pool.length) (cyc0 pool.length r)
       (by simp) (cyc0_length _ _)
     rw [this]
     have hcyc : (List.range r).map (fun (i : Nat) => (pool.length : Int) - (i : Int)) = cyc0 pool.length r := rfl
-    simp only [docPermutationsF, hrobj, hrn, ↓reduceIte, Int.toNat_natCast, hcyc, pySliceTo_nat, Run.cons]
+    simp only [docPermutationsF, tupleOf, hrobj, hrn, ↓reduceIte, Int.toNat_natCast, hcyc, pySliceTo_nat, Run.cons]
 
 /-- For `r` (or `r=None`, meaning `n`) that can be allocated and enough fuel,
 `permutations(pool, r)` yields the tuples at exactly the positions in a list
 `L` of `math.perm(n, r)` tuples (`n!/(n-r)!`, zero when `r > n`) of `r` distinct
 positions `< n`, strictly increasing in lexicographic order, so no repeats. -/
 def PermutationsSpec : Prop :=
-  ∀ (pool : List Int) (robj : Option Int) (fuel : Nat), tupleNewOk pool.length = true →
+  ∀ (α : Type) [Inhabited α] (pool : List α) (robj : Option Int) (fuel : Nat), tupleNewOk pool.length = true →
     0 ≤ robj.getD pool.length → memNewOk (robj.getD pool.length) = true →
     tupleNewOk (robj.getD pool.length) = true →
     perm pool.length (robj.getD pool.length).toNat < fuel →
-    ∃ L : List (List Nat), cPermutationsF fuel pool robj = Run.ok (L.map (pick pool)) ∧
+    ∃ L : List (List Nat), cPermutationsF fuel (.iter pool none) robj = Run.ok (L.map (pick pool)) ∧
       L.length = perm pool.length (robj.getD pool.length).toNat ∧ L.Pairwise LexLt ∧
       ∀ x ∈ L, x.length = (robj.getD pool.length).toNat ∧ x.Nodup ∧ ∀ v ∈ x, v < pool.length
 
 theorem permutationsSpec_proven : PermutationsSpec := by
-  intro pool robj fuel hp h0 hm ht hf
+  intro α _ pool robj fuel hp h0 hm ht hf
   obtain ⟨r, hr⟩ : ∃ r : Nat, robj.getD pool.length = (r : Int) :=
     ⟨(robj.getD pool.length).toNat, by omega⟩
   rw [hr] at hm ht hf ⊢
@@ -498,7 +500,7 @@ theorem permutationsSpec_proven : PermutationsSpec := by
         rw [pe_length, List.length_range]
         exact perm_gt _ _ (by omega)
       rw [hzero]
-      simp [docPermutationsF, hr, show (r : Int) > pool.length by omega, Run.ok]
+      simp [docPermutationsF, tupleOf, hr, show (r : Int) > pool.length by omega, Run.ok]
   · intro x hx
     obtain ⟨h1, h2, h3⟩ := pe_valid r _ x hsorted hx
     exact ⟨h1, h2, fun v hv => by simpa using h3 v hv⟩
