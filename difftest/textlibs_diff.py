@@ -2380,6 +2380,95 @@ class ReArea:
 
 # ---- driver ----------------------------------------------------------------
 
+@area("path", 8)
+class PathArea:
+    PARTS = ["a", "b", ".", "..", "/", "//", "///", "\\", "\\\\", "C:", "c:", ":", "\\\\?\\", "\\\\?\\UNC\\", "\\\\h\\s", "//h/s", "UNC",
+             "x.y", ".z", "..w", "...", " ", "\xe9", "\x00", ""]
+
+    @classmethod
+    def val(cls, r):
+        t = "".join(r.choice(cls.PARTS) for _ in range(r.choice([0, 1, 1, 2, 3, 3, 4, 5, 6, 8])))
+        return {"b": list(t.encode("latin-1"))} if r.random() < 0.2 else {"s": cps(t)}
+
+    @classmethod
+    def arg(cls, r):
+        x = r.random()
+        if x < 0.82:
+            return cls.val(r)
+        if x < 0.92:
+            return {"pl": cls.val(r)}
+        if x < 0.95:
+            return {"pl": {"raise": r.choice([["ValueError", "boom"], ["TypeError", "boom"], ["AttributeError", "boom"]])}}
+        if x < 0.97:
+            return {"pl": {"bad": "int"}}
+        return {"o": r.choice(["int", "NoneType"])}
+
+    @classmethod
+    def gen(cls, r):
+        f = r.choice(["pisabs", "psplit", "psplitext", "pbasename", "pdirname", "pjoin", "pjoin", "psplitroot", "pnormpath", "pnormpath",
+                      "nisabs", "nsplit", "nsplitext", "nsplitroot", "njoin", "njoin", "njoin", "nnormpath", "nnormpath"])
+        c = {"mod": "textlibs", "fn": "path." + f}
+        if f in ("pjoin", "njoin"):
+            k = r.choice([1, 2, 2, 2, 3, 4])
+            if r.random() < 0.8:
+                c["args"] = [cls.val(r) if r.random() < 0.9 else cls.arg(r) for _ in range(k)]
+                if r.random() < 0.9:
+                    b = "b" in c["args"][0]
+                    c["args"] = [({"b": a.get("b", a.get("s"))} if b else {"s": a.get("b", a.get("s"))}) if ("b" in a or "s" in a) else a for a in c["args"]]
+            else:
+                c["args"] = [cls.arg(r) for _ in range(k)]
+        elif f in ("pnormpath", "psplitroot"):
+            c["args"] = [cls.val(r)]
+        else:
+            c["args"] = [cls.arg(r)]
+        return c
+
+    @staticmethod
+    def obj(j):
+        class PL:
+            def __init__(self, v):
+                self.v = v
+
+            def __fspath__(self):
+                v = self.v
+                if "raise" in v:
+                    raise mk_exc(v["raise"])
+                if "bad" in v:
+                    return 5
+                return bytes(v["b"]) if "b" in v else txt(v["s"])
+        PL.__qualname__ = "PL"
+        if "pl" in j:
+            return PL(j["pl"])
+        if "o" in j:
+            return {"int": 1, "NoneType": None}[j["o"]]
+        return bytes(j["b"]) if "b" in j else txt(j["s"])
+
+    @staticmethod
+    def enc(x):
+        if isinstance(x, tuple):
+            return [PathArea.enc(y) for y in x]
+        if isinstance(x, bool):
+            return x
+        return [isinstance(x, bytes), list(x) if isinstance(x, bytes) else cps(x)]
+
+    @classmethod
+    def run(cls, c):
+        import ntpath
+        import posixpath
+        f = c["fn"].split(".")[1]
+        mod = posixpath if f[0] == "p" else ntpath
+        args = [cls.obj(j) for j in c["args"]]
+
+        def body():
+            if warnings:
+                warnings.simplefilter("ignore")
+            r = getattr(mod, f[1:])(*args)
+            if f == "pnormpath":
+                return [cls.enc(r), cls.enc(r)]
+            return cls.enc(r)
+        return common.py_result(body)
+
+
 only = os.environ.get("TEXTLIBS_ONLY")
 names = [n for n in AREAS if not only or n in only.split(",")]
 weights = [AREAS[n][1] for n in names]

@@ -5,6 +5,7 @@ import PyLean.TextLibs.BinasciiProps7
 import PyLean.TextLibs.CsvRoundTrip
 import PyLean.TextLibs.ReParseProps
 import PyLean.TextLibs.ReMisc
+import PyLean.TextLibs.PathProps
 import PyLean.TextLibs.CsvSniffProps
 
 /-!
@@ -28,6 +29,7 @@ open PyLean.TextLibs.Struct
 open PyLean.TextLibs.Binascii
 open PyLean.TextLibs.Csv
 open PyLean.TextLibs.Re
+open PyLean.TextLibs.Path
 
 /-- The integer routines `IntCodesRoundTrip` drives through `runPack` and `runUnpack`. -/
 def structIntFns : List String :=
@@ -605,6 +607,61 @@ def entries : List Entry := [
     source := "docs: re.escape", status := .open
     prop := ``EscapeRoundTrip
     notes := "100000 random strings and every code point below U+0300 agree on CPython. Needs parseSub walked over the escape branch of the tokenizer." },
+  { id := "textlibs-path-p-splitext", pyFile := "Lib/posixpath.py", pyFns := ["splitext"]
+    statement := "root + ext == p, an extension starts with a dot, and it holds no separator."
+    source := "docs: os.path.splitext", status := .proven
+    prop := ``SplitextLaw, thm := some ``splitextLaw_proven
+    notes := "Stated on genericpath._splitext, which both splitext functions call." },
+  { id := "textlibs-path-n-splitext", pyFile := "Lib/ntpath.py", pyFns := ["splitext"]
+    statement := "The same for ntpath, with both separators."
+    source := "docs: os.path.splitext", status := .proven
+    prop := ``SplitextLaw, thm := some ``splitextLaw_proven },
+  { id := "textlibs-path-p-split", pyFile := "Lib/posixpath.py", pyFns := ["split"]
+    statement := "The tail of split has no slash, and the path is the head, some slashes, and the tail."
+    source := "docs: os.path.split", status := .proven
+    prop := ``PosixSplitLaw, thm := some ``posixSplitLaw_proven },
+  { id := "textlibs-path-p-join", pyFile := "Lib/posixpath.py", pyFns := ["join"]
+    statement := "join of two values of a kind: an absolute second part replaces the first, and otherwise one slash goes between them unless the first ends in one."
+    source := "docs: os.path.join", status := .proven
+    prop := ``JoinLaw, thm := some ``joinLaw_proven },
+  { id := "textlibs-path-p-join-mix", pyFile := "Lib/posixpath.py", pyFns := ["join"]
+    statement := "Mixing str and bytes through an os.PathLike gives the same error as without one."
+    source := "twin: join with and without PathLike", status := .refuted
+    prop := ``JoinMixMessage, thm := some ``joinMixMessage_refuted
+    bug := some "textlibs-path-join-pathlike-error" },
+  { id := "textlibs-path-p-join-fspath-error", pyFile := "Lib/posixpath.py", pyFns := ["join"]
+    statement := "An exception from __fspath__ reaches the caller of join."
+    source := "invariant: exceptions are not rewritten", status := .refuted
+    prop := ``JoinKeepsFspathError, thm := some ``joinKeepsFspathError_refuted
+    bug := some "textlibs-path-join-pathlike-error" },
+  { id := "textlibs-path-p-join-other-errors", pyFile := "Lib/posixpath.py", pyFns := ["join"]
+    statement := "Exceptions from __fspath__ other than TypeError and AttributeError reach the caller, and later arguments are not read."
+    source := "Lib/posixpath.py:84", status := .proven
+    prop := ``JoinPassesOtherErrors, thm := some ``joinPassesOtherErrors_proven },
+  { id := "textlibs-path-p-normpath-twin", pyFile := "Lib/posixpath.py", pyFns := []
+    statement := "C _Py_normpath_and_size and the Python fallback of posixpath.normpath agree on every path."
+    source := "twin: C and Python", status := .open
+    prop := ``PosixNormpathTwin
+    notes := "Both are modelled and agree with CPython on every difftest case. Needs an invariant relating the C output buffer to the fallback's component list." },
+  { id := "textlibs-path-p-normpath-idempotent", pyFile := "Lib/posixpath.py", pyFns := []
+    statement := "posixpath.normpath is idempotent."
+    source := "invariant", status := .open
+    prop := ``PosixNormpathIdempotent
+    notes := "Needs splitOn and intercalate shown inverse on the normal form." },
+  { id := "textlibs-path-n-splitroot", pyFile := "Lib/ntpath.py", pyFns := ["splitdrive"]
+    statement := "The three parts of splitroot are the path, the root is at most one separator, and a drive letter, a lone separator and neither are told apart."
+    source := "docs: os.path.splitroot", status := .proven
+    prop := ``NtSplitrootLaw, thm := some ``ntSplitrootLaw_proven },
+  { id := "textlibs-path-n-join-absolute", pyFile := "Lib/ntpath.py", pyFns := ["join"]
+    statement := "ntpath.join with a second part that has a drive and a root gives that part, whatever came first."
+    source := "docs: os.path.join", status := .proven
+    prop := ``NtJoinAbsolute, thm := some ``ntJoinAbsolute_proven },
+  { id := "textlibs-path-n-normpath-relative", pyFile := "Lib/ntpath.py", pyFns := []
+    statement := "ntpath.normpath keeps a path with no drive and no root that way."
+    source := "docs: os.path.normpath", status := .refuted
+    prop := ``NtNormpathKeepsRelative, thm := some ``ntNormpathKeepsRelative_refuted
+    bug := some "textlibs-path-ntpath-normpath-drive"
+    notes := "Duplicate of #100162 (open). normpath is in a try/except row the fallback sits in; no row credited." },
   { id := "textlibs-csv-round-trip", pyFile := "Modules/_csv.c"
     pyFns := ["join_reset", "join_append_data", "join_append", "join_append_lineterminator", "csv_writerow_lock_held",
       "csv_writerow", "parse_add_char", "parse_process_char"]
