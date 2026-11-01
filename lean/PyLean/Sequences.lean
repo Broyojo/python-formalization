@@ -6,17 +6,21 @@ import PyLean.Sequences.Index
 import PyLean.Sequences.Insert
 import PyLean.Sequences.PopRemove
 import PyLean.Sequences.SliceAssign
-import PyLean.Sequences.ArraySlice
-import PyLean.Sequences.ArrayRange
 import PyLean.Sequences.DequeRepeat
 import PyLean.Sequences.Reverse
+import PyLean.Sequences.ArrayItems
+import PyLean.Sequences.ArraySlice
+import PyLean.Sequences.ArrayBytes
 
 /-!
-`collections.deque` (`Modules/_collectionsmodule.c`), `list` (`Objects/listobject.c`) and
-`array.array` (`Modules/arraymodule.c`, typecodes `b B h i q`) mutable-sequence methods,
-CPython 3.14.7, on int elements. The deque model keeps the C struct's `leftindex`,
-`rightindex` and `maxlen` and does the block arithmetic of every walk; its layout invariant
-(`Deque.WF`) is a hypothesis of the deque properties and is shown to be preserved.
+`collections.deque`, `collections.defaultdict`, `_count_elements`, `_tuplegetter`
+(`Modules/_collectionsmodule.c`), `list` (`Objects/listobject.c`, the methods shared with
+deque and array; the rest of that file belongs to `BytesObj`) and `array.array`
+(`Modules/arraymodule.c`, all typecodes), CPython 3.14.7. `deque` and `list` are generic in
+the element type, with comparison as an explicit function; the deque model keeps the C
+struct's `leftindex`, `rightindex` and `maxlen`, does the block arithmetic of every walk,
+and its layout invariant (`Deque.WF`) is a hypothesis of the deque properties and is shown
+to be preserved. `array` items are the stored C values.
 -/
 
 namespace PyLean.Sequences
@@ -97,9 +101,10 @@ def entries : List Entry := [
     source := "Doc/library/array.rst (arrays behave like lists)", status := .proven
     prop := ``ArraySliceAssignAgreeNonempty, thm := some ``arraySliceAssignAgreeNonempty_proven },
   { id := "sequences-array-range-check", pyFile := "Modules/arraymodule.c"
-    pyFns := ["b_setitem", "BB_setitem", "h_setitem", "i_setitem", "q_setitem", "ins1", "ins",
-      "array_array_append_impl", "array_new"]
-    statement := "For typecodes b, B, h, i, q and every int v: append, insert (index in Py_ssize_t), a[j] = v (valid j) and array(tc, xs) store exactly v when it fits the C type's range and raise OverflowError (array unchanged) otherwise."
+    pyFns := ["b_setitem", "BB_setitem", "h_setitem", "HH_setitem", "i_setitem", "II_setitem",
+      "l_setitem", "LL_setitem", "q_setitem", "QQ_setitem", "ins1", "ins", "array_resize",
+      "array_array_append_impl", "array_array_insert_impl", "array_new"]
+    statement := "For every integer typecode (b B h H i I l L q Q), every array and every object with __index__ value v: append, insert (index in Py_ssize_t), a[j] = v (valid j) and array(tc, xs) store exactly v when it fits the C type's range and raise OverflowError (array unchanged) otherwise."
     source := "Doc/library/array.rst (value ranges of the typecodes); invariant: no silent truncation", status := .proven
     prop := ``ArrayRangeCheck, thm := some ``arrayRangeCheck_proven
     notes := "'b' rejects 128..32767 with 'signed char is greater than maximum' but larger values with the 'signed short integer' message of PyArg_Parse('h'); class is OverflowError throughout." },
@@ -122,10 +127,17 @@ def entries : List Entry := [
     source := "Doc/library/stdtypes.rst:1263-1275 note (2)", status := .proven
     prop := ``ListRepeat, thm := some ``listRepeat_proven },
   { id := "sequences-deque-copy-concat", pyFile := "Modules/_collectionsmodule.c"
-    pyFns := ["deque_copy_impl", "deque_concat_lock_held", "deque_concat"]
-    statement := "For every deque d and deque other: d.copy() has the same items and maxlen; d + other holds the last d.maxlen items of list(d) + list(other) with d's maxlen; results keep the invariant."
+    pyFns := ["deque_copy_impl", "deque___copy___impl", "deque_concat_lock_held", "deque_concat"]
+    statement := "For every deque d, of any subclass and maxlen, and deque other: d.copy() has the same items and maxlen; d + other holds the last d.maxlen items of list(d) + list(other) with d's maxlen."
+    source := "Doc/library/collections.rst:503-507, 599-600", status := .refuted
+    prop := ``DequeCopyConcat, thm := some ``dequeCopyConcat_refuted
+    bug := some "sequences-deque-subclass-copy-maxlen-truncated"
+    notes := "A subclass goes through PyObject_CallFunction(type, \"Oi\", deque, maxlen): maxlen is read as an int." },
+  { id := "sequences-deque-copy-concat-checked", pyFile := "Modules/_collectionsmodule.c"
+    pyFns := ["deque_copy_impl", "deque___copy___impl", "deque_concat_lock_held", "deque_concat"]
+    statement := "For every deque d and deque other, with d an exact deque or its maxlen inside a C int (or unbounded): d.copy() has the same items and maxlen; d + other holds the last d.maxlen items of list(d) + list(other) with d's maxlen; results keep the invariant."
     source := "Doc/library/collections.rst:503-507, 599-600", status := .proven
-    prop := ``DequeCopyConcat, thm := some ``dequeCopyConcat_proven },
+    prop := ``DequeCopyConcatChecked, thm := some ``dequeCopyConcatChecked_proven },
   { id := "sequences-deque-reverse", pyFile := "Modules/_collectionsmodule.c"
     pyFns := ["deque_reverse_impl"]
     statement := "For every deque with the layout invariant, reverse() swaps through the left and right block cursors len // 2 times, touching only used slots, and leaves exactly the reversed items with the layout and maxlen unchanged."

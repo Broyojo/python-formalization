@@ -12,8 +12,12 @@ open PyLean
 open PyLean.RangeSlice (Slice sliceIndices sliceUnpack adjustIndices IsLen listSlicePositions
   listSliceIndices_proven toU)
 
+set_option linter.unusedSectionVars false
+
+variable {α : Type} [Inhabited α]
+
 /-- Replace position `ps[i]` by `t[i]`, for `i = 0, 1, ...` in order. -/
-def assignAt (l ps t : List Int) : List Int :=
+def assignAt (l : List α) (ps : List Int) (t : List α) : List α :=
   (List.range t.length).foldl (fun m (i : Nat) => m.set (ix ps i).toNat (ix t i)) l
 
 /-- `s[i:j:k] = t` as the language reference and the mutable-sequence table
@@ -22,7 +26,7 @@ Doc/library/stdtypes.rst:1244-1269 with note (1)): with
 `(a, b, c) = slice.indices(len(s))` and `L = len(range(a, b, c))`, a step of 1
 replaces `s[a:max(a, b)]` by `t` (changing the length), any other step needs
 `len(t) == L` (else `ValueError`) and replaces `s[a + k*c]` by `t[k]`. -/
-def sliceAssignSpec (l t : List Int) (s : Slice) : Py (List Int) :=
+def sliceAssignSpec (l t : List α) (s : Slice) : Py (List α) :=
   match sliceIndices s l.length with
   | .error e => .error e
   | .ok (a, b, c) =>
@@ -32,15 +36,15 @@ def sliceAssignSpec (l t : List Int) (s : Slice) : Py (List Int) :=
       .error (.valueError s!"attempt to assign sequence of size {t.length} to extended slice of size {L}")
     else .ok (assignAt l ((List.range L.toNat).map (fun (k : Nat) => a + k * c)) t)
 
-/-- `l[s] = t` for every list of ints `l` (`len(l) <= sys.maxsize`, a type
+/-- `l[s] = t` for every list `l` (`len(l) <= sys.maxsize`, a type
 invariant), every iterable's items `t` and every slice with int/None parts —
 including steps and bounds far outside `Py_ssize_t` — is `sliceAssignSpec`. -/
 def ListSliceAssign : Prop :=
-  ∀ (l t : List Int) (s : Slice), (l.length : Int) ≤ ssizeMax →
+  ∀ (α : Type) [Inhabited α] (l t : List α) (s : Slice), (l.length : Int) ≤ ssizeMax →
     listAssSubscript l s (some t) = sliceAssignSpec l t s
 
-theorem foldl_range_congr (n : Nat) (f g : List Int → Nat → List Int)
-    (h : ∀ m i, i < n → f m i = g m i) (m : List Int) :
+theorem foldl_range_congr (n : Nat) (f g : List α → Nat → List α)
+    (h : ∀ m i, i < n → f m i = g m i) (m : List α) :
     (List.range n).foldl f m = (List.range n).foldl g m := by
   induction n generalizing m with
   | zero => rfl
@@ -121,14 +125,14 @@ theorem adjust_spec (s : Slice) (n : Int) (hn : 0 ≤ n) (hn' : n ≤ ssizeMax) 
     unfold ssizeMax at hn'
     omega
 
-theorem ix_map_range (L : Nat) (f : Nat → Int) (i : Nat) (hi : i < L) :
+theorem ix_map_range (L : Nat) (f : Nat → α) (i : Nat) (hi : i < L) :
     ix ((List.range L).map f) i = f i := by
   unfold ix
   rw [List.getD_eq_getElem?_getD, show ((i : Int)).toNat = i by omega, List.getElem?_map,
     List.getElem?_range hi]
   rfl
 
-theorem zero_step_errors (l t : List Int) (s : Slice) (h0 : s.step = some 0) :
+theorem zero_step_errors (l t : List α) (s : Slice) (h0 : s.step = some 0) :
     listAssSubscript l s (some t) = .error (.valueError "slice step cannot be zero") ∧
     sliceIndices s l.length = .error (.valueError "slice step cannot be zero") := by
   obtain ⟨st, sp, ss⟩ := s
@@ -139,7 +143,7 @@ theorem zero_step_errors (l t : List Int) (s : Slice) (h0 : s.step = some 0) :
   · simp [sliceIndices, RangeSlice.getLongIndices, bind, Except.bind]; rfl
 
 theorem listSliceAssign_proven : ListSliceAssign := by
-  intro l t s hlen
+  intro α _ l t s hlen
   have hn : 0 ≤ (l.length : Int) := by omega
   by_cases h0 : s.step = some 0
   · obtain ⟨e1, e2⟩ := zero_step_errors l t s h0
