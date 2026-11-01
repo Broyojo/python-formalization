@@ -86,22 +86,22 @@ def assignDict (r : String → Option α) (assigned : List String) (d : Attrs α
     | none => acc) d
 
 theorem assignLoop_ok (wrapped : Wrapped α) (r : String → Option α) (h : ∀ a, wrapped.read a = .ok (r a)) :
-    ∀ (assigned : List String) (w : Wrapper α), w.hasDict = true → w.setFail = (fun _ => none) →
+    ∀ (assigned : List String) (w : Wrapper α), w.hasDict = true → w.setFail = (fun _ => none) → w.descr = [] →
     assignLoop wrapped assigned w = .ok { w with dict := assignDict r assigned w.dict }
-  | [], w, _, _ => rfl
-  | a :: rest, w, hd, hs => by
+  | [], w, _, _, _ => rfl
+  | a :: rest, w, hd, hs, hq => by
     have hf : assignDict r (a :: rest) w.dict = assignDict r rest (match r a with
         | some v => setAttr w.dict a v
         | none => w.dict) := rfl
     rw [hf]
     simp only [assignLoop, h]
     cases hr : r a with
-    | none => exact assignLoop_ok wrapped r h rest w hd hs
+    | none => exact assignLoop_ok wrapped r h rest w hd hs hq
     | some v =>
       have hw : wrapperSet w a v = .ok { w with dict := setAttr w.dict a v } := by
-        simp [wrapperSet, hs, hd]
+        simp [wrapperSet, hs, hd, hq]
       simp only [hw]
-      exact assignLoop_ok wrapped r h rest { w with dict := setAttr w.dict a v } hd hs
+      exact assignLoop_ok wrapped r h rest { w with dict := setAttr w.dict a v } hd hs hq
 
 theorem assign_lookup (r : String → Option α) (k : String) (v : α) (hv : r k = some v) :
     ∀ (assigned : List String) (d : Attrs α), (k ∈ assigned ∨ d.lookup k = some v) →
@@ -183,8 +183,8 @@ theorem update_last (e : Attrs α) (k : String) (v : α) (he : (e.reverse).looku
 
 end
 
-/-- `update_wrapper(wrapper, wrapped)` with the default `updated`, when every read and write succeeds:
-`__wrapped__` is the wrapped object even if `__dict__` copied a `__wrapped__` from it, which is why the
+/-- `update_wrapper(wrapper, wrapped)` with the default `updated`, on a wrapper that keeps its attributes in `__dict__`,
+which is the case `hasDict` with no `descr`, when every read and write succeeds: `__wrapped__` is the wrapped object even if `__dict__` copied a `__wrapped__` from it, which is why the
 assignment comes last (issue 17482, Lib/functools.py:59); an entry of `wrapped.__dict__` wins, in the order of
 the dict, over an assigned attribute of the same name, because the update comes second; an assigned attribute
 not in that dict is copied; an attribute `wrapped` lacks is skipped; everything else on the wrapper stays. A
@@ -193,7 +193,7 @@ def UpdateWrapperOrder : Prop :=
   ∀ (α : Type) (w : Wrapper α) (wrapped : Wrapped α) (r : String → Option α) (D : Attrs α) (self v : α)
     (assigned : List String) (k : String),
     (∀ a, wrapped.read a = .ok (r a)) → wrapped.dictOf "__dict__" = .ok (some D) → w.hasDict = true →
-    w.setFail = (fun _ => none) → k ≠ "__wrapped__" →
+    w.setFail = (fun _ => none) → w.descr = [] → w.readFail = (fun _ => none) → k ≠ "__wrapped__" →
     ∃ w', updateWrapper w wrapped self assigned ["__dict__"] = .ok w' ∧
       w'.dict.lookup "__wrapped__" = some self ∧
       (D.reverse.lookup k = some v → w'.dict.lookup k = some v) ∧
@@ -202,17 +202,17 @@ def UpdateWrapperOrder : Prop :=
       (D.lookup k = none → r k = none → w'.dict.lookup k = w.dict.lookup k ∨ k ∈ assigned)
 
 theorem updateWrapperOrder_proven : UpdateWrapperOrder := by
-  intro α w wrapped r D self v assigned k hr hd hhas hset hk
-  have h1 := assignLoop_ok wrapped r hr assigned w hhas hset
+  intro α w wrapped r D self v assigned k hr hd hhas hset hq hrf hk
+  have h1 := assignLoop_ok wrapped r hr assigned w hhas hset hq
   let w1 : Wrapper α := { w with dict := assignDict r assigned w.dict }
   have hu : updateLoop wrapped ["__dict__"] w1 = .ok { w1 with dict := dictUpdate w1.dict D } := by
-    simp [updateLoop, hd, w1, hhas]
+    simp [updateLoop, hd, w1, hhas, hrf]
   let w2 : Wrapper α := { w1 with dict := dictUpdate w1.dict D }
   refine ⟨{ w2 with dict := setAttr w2.dict "__wrapped__" self }, ?_, setAttr_same _ _ _, ?_, ?_, ?_, ?_⟩
   · have hu' : updateLoop wrapped ["__dict__"] { w with dict := assignDict r assigned w.dict } =
         .ok w2 := hu
     simp only [updateWrapper, h1, hu']
-    simp [wrapperSet, w2, w1, hset, hhas]
+    simp [wrapperSet, w2, w1, hset, hhas, hq]
   · intro h
     simp only [setAttr_other _ _ _ _ hk]
     exact update_last D k v h _
@@ -239,21 +239,25 @@ def UpdateWrapperFailures : Prop :=
       updateWrapper w wrapped self (a :: rest) updated = .error e) ∧
     (wrapped.read a = .ok (some v) → w.setFail a = some e →
       updateWrapper w wrapped self (a :: rest) updated = .error e) ∧
-    (w.hasDict = false → (updateLoop wrapped ("__dict__" :: rest) w).raises "AttributeError") ∧
-    (w.hasDict = true → wrapped.dictOf "__dict__" = .error e →
+    (w.readFail a = some e → updateLoop wrapped (a :: rest) w = .error e) ∧
+    (w.readFail "__dict__" = none → w.hasDict = false →
+      (updateLoop wrapped ("__dict__" :: rest) w).raises "AttributeError") ∧
+    (w.readFail "__dict__" = none → w.hasDict = true → wrapped.dictOf "__dict__" = .error e →
       updateLoop wrapped ("__dict__" :: rest) w = .error e)
 
 theorem updateWrapperFailures_proven : UpdateWrapperFailures := by
   intro α w wrapped self v a e rest updated
-  refine ⟨?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
   · intro h
     simp [updateWrapper, assignLoop, h]
   · intro h1 h2
     simp [updateWrapper, assignLoop, h1, wrapperSet, h2]
   · intro h
-    exact ⟨_, by simp [updateLoop, h]; rfl, rfl⟩
+    simp [updateLoop, h]
   · intro h1 h2
-    simp [updateLoop, h1, h2]
+    exact ⟨.named "AttributeError" "~object has no attribute", by simp [updateLoop, h1, h2], rfl⟩
+  · intro h0 h1 h2
+    simp [updateLoop, h0, h1, h2]
 
 /-- `wraps(wrapped, assigned, updated)` builds the `partial` and applying it to a wrapper is `update_wrapper`
 with those arguments: the docstring's "a decorator factory", through the real `partial`. -/
@@ -265,6 +269,122 @@ theorem wrapsIsPartial_proven : WrapsIsPartial := by
   intro α wrapped self a u w
   refine ⟨_, rfl, ?_⟩
   rfl
+
+/-- `update_wrapper` on a function: the six names of `WRAPPER_ASSIGNMENTS` are data descriptors of the type, outside
+`__dict__`, so what an entry of `wrapped.__dict__` does to the table does not reach them, and `wrapper.__name__` keeps the
+assigned value, where on an object that stores its attributes in `__dict__` the entry wins (`UpdateWrapperOrder`). The
+entry is still in the wrapper's `__dict__`. -/
+def UpdateWrapperFunction : Prop :=
+  ∀ (α : Type) (w : Wrapper α) (wrapped : Wrapped α) (self v d : α) (k : String) (D : Attrs α),
+    w.hasDict = true → w.descr = [k] → w.setFail = (fun _ => none) → w.readFail = (fun _ => none) →
+    wrapped.read k = .ok (some v) → wrapped.dictOf "__dict__" = .ok (some D) → D.reverse.lookup k = some d →
+    k ≠ "__wrapped__" →
+    ∃ w', updateWrapper w wrapped self [k] ["__dict__"] = .ok w' ∧ w'.get k = some v ∧ w'.dict.lookup k = some d ∧
+      w'.get "__wrapped__" = some self
+
+theorem updateWrapperFunction_proven : UpdateWrapperFunction := by
+  intro α w wrapped self v d k D hh hq hs hr hrd hd hdl hk
+  have hne : ("__wrapped__" : String) ≠ k := fun e => hk e.symm
+  have hc : (w.descr.contains "__wrapped__") = false := by
+    rw [hq]
+    simp [hne]
+  have hmem : k ∈ w.descr := by rw [hq]; simp
+  let w1 : Wrapper α := { w with slots := setAttr w.slots k v }
+  let w2 : Wrapper α := { w1 with dict := dictUpdate w1.dict D }
+  have h1 : assignLoop wrapped [k] w = .ok w1 := by
+    simp [assignLoop, hrd, wrapperSet, hs, hh, hmem, w1]
+  have h2 : updateLoop wrapped ["__dict__"] w1 = .ok w2 := by
+    simp [updateLoop, w1, w2, hd, hh, hr]
+  have h3 : wrapperSet w2 "__wrapped__" self = .ok { w2 with dict := setAttr w2.dict "__wrapped__" self } := by
+    simp only [wrapperSet, w2, w1, hs, hh, hc, Bool.not_false, Bool.and_self, ↓reduceIte]
+  refine ⟨{ w2 with dict := setAttr w2.dict "__wrapped__" self }, ?_, ?_, ?_, ?_⟩
+  · simp only [updateWrapper, h1, h2, h3]
+  · have hc2 : w.descr.contains k = true := by simpa using hmem
+    simp only [Wrapper.get, w2, w1, hc2, Bool.true_or, ↓reduceIte]
+    exact setAttr_same _ _ _
+  · simp only [setAttr_other _ _ _ _ hk, w2, w1]
+    exact update_last D k d hdl _
+  · simp only [Wrapper.get, w2, w1, hc, hh, Bool.not_true, Bool.false_or, Bool.false_eq_true, ↓reduceIte]
+    exact setAttr_same _ _ _
+
+/-- `wraps` takes any object, as `update_wrapper` does. False: `wraps` makes a `partial` with keywords, and `partial` refuses
+`Placeholder` as a keyword, so `wraps(Placeholder)` raises `TypeError` while `update_wrapper(f, Placeholder)` works. -/
+def WrapsAcceptsAnything : Prop :=
+  ∀ (α : Type) (x y z : PArg (WArg α)), ∃ p, wrapsP x y z = .ok p
+
+theorem wrapsAcceptsAnything_refuted : ¬WrapsAcceptsAnything := by
+  intro h
+  obtain ⟨p, hp⟩ := h Nat .ph (.val (.names [])) (.val (.names []))
+  have e : wrapsP (α := Nat) .ph (.val (.names [])) (.val (.names [])) =
+      .error (.typeError "Placeholder cannot be passed as a keyword argument") := rfl
+  rw [e] at hp
+  cases hp
+
+/-- A cached function reports its own `cache_parameters()`: "a function `cache_parameters()` ... for introspection". False
+when the wrapped object is a cached function itself: `update_wrapper` at Lib/functools.py:596 runs after `cache_parameters`
+is set at :595 and copies the `__dict__` of the inner cache over it, so the outer cache reports the inner's `maxsize` and
+`typed`. On the Python wrapper `cache_info` and `cache_clear` are overwritten too. -/
+def LruOwnParams : Prop :=
+  ∀ (τ : Type) (py : Bool) (id : Nat) (mode : Option Int → Py LruMode) (arg : MaxsizeArg) (t : τ) (m : Option Int)
+    (user : Wrapped (LruAttr τ)) (self : LruAttr τ) (w : LruMode) (W : Wrapper (LruAttr τ)), lruCacheArg arg = .ok m →
+    lruBuild py id mode arg t user self = .ok (w, W) → W.dict.lookup "cache_parameters" = some (.params m t)
+
+theorem lruOwnParams_refuted : ¬LruOwnParams := by
+  intro h
+  let user : Wrapped (LruAttr Bool) :=
+    ⟨fun _ => .ok none, fun _ => .ok (some [("cache_parameters", .params (some 7) false)])⟩
+  have e : (match lruBuild false 2 wrapperPyMode (.int 5) true user (.other 0) with
+      | .ok (_, W) => W.dict.lookup "cache_parameters"
+      | .error _ => none) = some (.params (some 7) false) := by decide +kernel
+  cases hb : lruBuild false 2 wrapperPyMode (.int 5) true user (.other 0) with
+  | error x =>
+    rw [hb] at e
+    cases e
+  | ok r =>
+    obtain ⟨w, W⟩ := r
+    have h1 := h Bool false 2 wrapperPyMode (.int 5) true (some 5) user (.other 0) w W rfl hb
+    rw [hb] at e
+    simp only at e
+    rw [h1] at e
+    simp at e
+
+/-- The narrowed statement: on a user function whose `__dict__` has no `cache_parameters`, the wrapper keeps its own, and
+`typed` comes back as the object it was given, not as a truth value. -/
+def LruParamsFresh : Prop :=
+  ∀ (τ : Type) (py : Bool) (id : Nat) (mode : Option Int → Py LruMode) (arg : MaxsizeArg) (t : τ) (m : Option Int)
+    (D : Attrs (LruAttr τ)) (self : LruAttr τ) (w : LruMode) (W : Wrapper (LruAttr τ)), lruCacheArg arg = .ok m →
+    D.lookup "cache_parameters" = none →
+    lruBuild py id mode arg t ⟨fun _ => .ok none, fun _ => .ok (some D)⟩ self = .ok (w, W) →
+    W.dict.lookup "cache_parameters" = some (.params m t)
+
+theorem lruParamsFresh_proven : LruParamsFresh := by
+  intro τ py id mode arg t m D self w W ha hD h
+  simp only [lruBuild, ha] at h
+  split at h
+  · simp at h
+  rename_i w' hw
+  split at h
+  · simp at h
+  rename_i r hr
+  simp only [Except.ok.injEq, Prod.mk.injEq] at h
+  obtain ⟨_, rfl⟩ := h
+  have hne : ("cache_parameters" : String) ≠ "__wrapped__" := by decide
+  simp only [updateWrapper, wrapperAssignments, assignLoop, wrapperUpdates, updateLoop] at hr
+  simp only [dictUpdate] at hr
+  simp [wrapperSet] at hr
+  rw [← hr]
+  have key : ∀ (d : Attrs (LruAttr τ)), d.lookup "cache_parameters" = some (.params m t) →
+      (setAttr (dictUpdate d D) "__wrapped__" self).lookup "cache_parameters" = some (.params m t) := by
+    intro d hd
+    rw [setAttr_other _ _ _ _ hne, update_keeps D _ hD, hd]
+  have hl : (lruDict py id m t).lookup "cache_parameters" = some (.params m t) := by
+    cases py with
+    | false => simp [lruDict]
+    | true =>
+      have h1 : ("cache_parameters" == "cache_info") = false := by decide
+      have h2 : ("cache_parameters" == "cache_clear") = false := by decide
+      simp only [lruDict, ↓reduceIte, List.cons_append, List.nil_append, List.lookup_cons, h1, h2, beq_self_eq_true]
+  exact key _ hl
 
 /-- `lru_cache` as a decorator, in both twins: `cache` is the unbounded wrapper with `maxsize=None` and
 `typed=False`, connecting `cache` to the mode; a negative `maxsize` is `0`, which is uncached, and
@@ -309,37 +429,42 @@ theorem reduceWarnWrapper_proven : ReduceWarnWrapper := by
       simpa using h
     simp [reduceWarnWrapper, h', h]
 
-/-- `cached_property`: on the class it gives itself. The first read runs the function, and stores what it
-returns under the name in the instance dict as the function left it, overriding anything it stored there itself;
-a later read returns that value without running any function. A raising function stores nothing. Without
-`__set_name__`, or without an instance `__dict__`, a read raises `TypeError`, and so does a `__dict__` that
-refuses the store, after running the function. `__set_name__` accepts the same name twice and rejects a second
-name. Docs of `cached_property`. -/
+/-- `cached_property`: on the class it gives itself. The first read runs the function, and stores what it returns under
+the name in the instance dict as the function left it, overriding anything it stored there itself; a later read returns
+that value without running any function. Without `__set_name__`, or without an instance `__dict__`, a read raises
+`TypeError`; another exception from `instance.__dict__` or from `cache.get` propagates, before the function runs. A
+function that raises stores nothing under the name, and what it did to the dict stays. A store that raises `TypeError`
+is a `TypeError` of its own message, after running the function, and any other exception from the store propagates.
+`__set_name__` accepts the same name twice and rejects a second name. Docs of `cached_property`. -/
 def CachedPropertyOnce : Prop :=
-  ∀ (α : Type) (func bad : Attrs α → Py (α × Attrs α)) (name : String) (doc mod v : α)
-    (d d' : Attrs α) (e : PyExc),
-    d.lookup name = none → func d = .ok (v, d') →
-    let c (f : Attrs α → Py (α × Attrs α)) (n : Option String) : CachedProp α := ⟨f, n, doc, mod⟩
-    (∃ d2, cachedGet (c func (some name)) (some (.dict d false)) = .ok (.val v d2) ∧
+  ∀ (α : Type) (func bad : Attrs α → Py α × Attrs α) (name : String) (doc mod v : α) (d d' : Attrs α) (e : PyExc),
+    d.lookup name = none → func d = (.ok v, d') →
+    let c (f : Attrs α → Py α × Attrs α) (n : Option String) : CachedProp α := ⟨f, n, doc, mod⟩
+    (∃ d2, cachedGet (c func (some name)) (some (.dict d none none)) = (.ok (.val v), some d2) ∧
       d2.lookup name = some v ∧
-      cachedGet (c bad (some name)) (some (.dict d2 false)) = .ok (.val v d2)) ∧
-    (∃ x, cachedGet (c func none) none = .ok x) ∧
-    (cachedGet (c func none) (some (.dict d false))).raises "TypeError" ∧
-    (cachedGet (c func (some name)) (some .none)).raises "TypeError" ∧
-    (cachedGet (c func (some name)) (some (.dict d true))).raises "TypeError" ∧
-    ((∀ x, bad x = .error e) → cachedGet (c bad (some name)) (some (.dict d false)) = .error e) ∧
+      cachedGet (c bad (some name)) (some (.dict d2 none none)) = (.ok (.val v), some d2)) ∧
+    (cachedGet (c func none) none).1 = .ok .self ∧
+    (cachedGet (c func none) (some (.dict d none none))).1.raises "TypeError" ∧
+    (cachedGet (c func (some name)) (some .none)).1.raises "TypeError" ∧
+    (cachedGet (c bad (some name)) (some (.raises e))).1 = .error e ∧
+    cachedGet (c bad (some name)) (some (.dict d (some e) none)) = (.error e, some d) ∧
+    (bad d = (.error e, d') → cachedGet (c bad (some name)) (some (.dict d none none)) = (.error e, some d')) ∧
+    (cachedGet (c func (some name)) (some (.dict d none (some (e, true))))).1.raises "TypeError" ∧
+    (cachedGet (c func (some name)) (some (.dict d none (some (e, false))))) = (.error e, some d') ∧
     setName none name = .ok (some name) ∧ setName (some name) name = .ok (some name) ∧
     (∀ other, other ≠ name → (setName (some other) name).raises "TypeError")
 
 theorem cachedPropertyOnce_proven : CachedPropertyOnce := by
   intro α func bad name doc mod v d d' e hd hf c
-  refine ⟨⟨setAttr d' name v, ?_, setAttr_same _ _ _, ?_⟩, ⟨_, rfl⟩, ⟨_, rfl, rfl⟩, ⟨_, rfl, rfl⟩, ?_, ?_,
+  refine ⟨⟨setAttr d' name v, ?_, setAttr_same _ _ _, ?_⟩, rfl, ⟨_, rfl, rfl⟩, ⟨_, rfl, rfl⟩, rfl, rfl, ?_, ?_, ?_,
     rfl, ?_, ?_⟩
   · simp [cachedGet, c, hd, hf]
   · simp [cachedGet, c, setAttr_same]
-  · exact ⟨_, by simp [cachedGet, c, hd, hf]; rfl, rfl⟩
   · intro h
     simp [cachedGet, c, hd, h]
+  · exact ⟨.typeError "~The '__dict__' attribute does not support item assignment", by
+      simp [cachedGet, c, hd, hf], rfl⟩
+  · simp [cachedGet, c, hd, hf]
   · simp [setName]
   · intro other h
     exact ⟨_, by simp [setName, h.symm]; rfl, rfl⟩
@@ -347,7 +472,7 @@ theorem cachedPropertyOnce_proven : CachedPropertyOnce := by
 /-- `cached_property(func)` reads `__doc__` and `__module__` in that order, and either read failing, with
 `AttributeError` too, stops the construction; a built one has no name yet. -/
 def CachedPropertyInit : Prop :=
-  ∀ (α : Type) (f : Attrs α → Py (α × Attrs α)) (read : String → Py (Option α)) (x y : α) (e : PyExc),
+  ∀ (α : Type) (f : Attrs α → Py α × Attrs α) (read : String → Py (Option α)) (x y : α) (e : PyExc),
     (read "__doc__" = .error e → cachedNew f read = .error e) ∧
     (read "__doc__" = .ok (some x) → read "__module__" = .error e → cachedNew f read = .error e) ∧
     (read "__doc__" = .ok none → (cachedNew f read).raises "AttributeError") ∧

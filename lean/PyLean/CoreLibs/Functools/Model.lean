@@ -19,10 +19,11 @@ def mapPy {α β : Type} (f : α → Py β) : List α → Py (List β)
 
 /-! ### `reduce` -/
 
-/-- The second argument of `reduce`: not iterable, or an iterator yielding `items` and then
-stopping, or raising `err`. -/
+/-- The second argument of `reduce`: not iterable, or one whose `iter()` raises `e`, where `isType` says that `e` is a
+`TypeError` or a subclass, or an iterator yielding `items` and then stopping, or raising `err`. -/
 inductive Source (α : Type) where
   | notIterable
+  | iterRaises (e : PyExc) (isType : Bool)
   | iter (items : List α) (err : Option PyExc)
 
 def emptyReduce : PyExc := .typeError "reduce() of empty iterable with no initial value"
@@ -37,6 +38,7 @@ def reduceLoop {α : Type} (f : α → α → Py α) : α → List α → Option
 def reducePy {α : Type} (f : α → α → Py α) (seq : Source α) (initial : Option α) : Py α :=
   match seq with
   | .notIterable => .error (.typeError "~object is not iterable")
+  | .iterRaises e _ => .error e
   | .iter items err =>
     match initial with
     | some v => reduceLoop f v items err
@@ -55,10 +57,12 @@ def reduceCLoop {α : Type} (f : α → α → Py α) : Option α → List α �
   | none, x :: xs, e => reduceCLoop f (some x) xs e
   | some v, x :: xs, e => do reduceCLoop f (some (← f v x)) xs e
 
-/-- `_functools_reduce_impl`, Modules/_functoolsmodule.c:992-1059. -/
+/-- `_functools_reduce_impl`, Modules/_functoolsmodule.c:992-1059. `PyObject_GetIter` failing with any `TypeError`,
+Modules/_functoolsmodule.c:1000-1005, is replaced by a fixed message, so one from a user's `__iter__` is lost. -/
 def reduceC {α : Type} (f : α → α → Py α) (seq : Source α) (initial : Option α) : Py α :=
   match seq with
   | .notIterable => .error (.typeError "reduce() arg 2 must support iteration")
+  | .iterRaises e isType => .error (if isType then .typeError "reduce() arg 2 must support iteration" else e)
   | .iter items err => reduceCLoop f initial items err
 
 
@@ -99,6 +103,21 @@ def makeKeyPy {α : Type} (O : MkKeyOps α) (args : List α) (kwds : List (Strin
     match key with
     | [.val a] => if O.fast a then .scalar a else .tuple key
     | _ => .tuple key
+
+/-- `_make_key` with what the pure version leaves out. `if typed:` at Lib/functools.py:545 is a truth test on each call,
+which `truth` stands for; and `type(key[0]) in fasttypes` at :549 hashes the type, which runs the metaclass's `__hash__`,
+and which `typeHash` stands for. -/
+def makeKeyPyFull {α : Type} (O : MkKeyOps α) (typeHash : α → Py Unit) (truth : Py Bool) (args : List α)
+    (kwds : List (String × α)) : Py (CacheKey α) :=
+  match truth with
+  | .error e => .error e
+  | .ok typed =>
+    match typed, args, kwds with
+    | false, [a], [] =>
+      match typeHash a with
+      | .error e => .error e
+      | .ok () => .ok (makeKeyPy O args kwds false)
+    | _, _, _ => .ok (makeKeyPy O args kwds typed)
 
 /-- `lru_cache_make_key`, Modules/_functoolsmodule.c:1140-1199. -/
 def makeKeyC {α : Type} (O : MkKeyOps α) (args : List α) (kwds : List (String × α)) (typed : Bool) :
