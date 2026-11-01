@@ -448,18 +448,25 @@ def MSeq.remove {σ α : Type} (M : MSeq σ α) (E : EqOps α) (s : σ) (value :
 
 /-! ### Set -/
 
-/-- The primitives of a `Set` subclass. Iteration is one finite pass; an `iter` that
-raises models a failing `__iter__` or `__next__`. -/
+/-- The primitives of a `Set` subclass. Iteration is one finite pass: an `iter` that raises is a failing `__iter__`, and
+`tail` is the exception of a `__next__` that raises after the items, which a loop that stops early never sees. -/
 structure SetV (α : Type) where
   len : Py Nat
   iter : Py (List α)
   contains : α → Py Bool
+  tail : Option PyExc := none
 
 /-- The other operand of a set operator, as `isinstance` sees it. -/
 inductive Operand (α : Type) where
   | set (s : SetV α)
-  | iterable (xs : Py (List α))
+  | iterable (xs : Py (List α)) (tail : Option PyExc := none)
   | other
+
+/-- The end of a loop: `StopIteration`, or the exception of the iterator. -/
+def raiseTail {β : Type} (tail : Option PyExc) (v : β) : Py β :=
+  match tail with
+  | none => .ok v
+  | some e => .error e
 
 /-- `for elem in xs: if elem not in other: return False`, then `return True`. -/
 def allIn {α : Type} (contains : α → Py Bool) : List α → Py Bool
@@ -467,12 +474,23 @@ def allIn {α : Type} (contains : α → Py Bool) : List α → Py Bool
   | x :: xs => do
     if ← contains x then allIn contains xs else return false
 
+/-- The same loop over an iterator that may raise after its items: a `False` before that returns first. -/
+def allInT {α : Type} (contains : α → Py Bool) (tail : Option PyExc) : List α → Py Bool
+  | [] => raiseTail tail true
+  | x :: xs => do
+    if ← contains x then allInT contains tail xs else return false
+
+@[simp] theorem allInT_none {α : Type} (contains : α → Py Bool) : ∀ xs : List α,
+    allInT contains none xs = allIn contains xs
+  | [] => rfl
+  | x :: xs => by simp only [allInT, allIn, allInT_none contains xs]
+
 /-- `Set.__le__`, Lib/_collections_abc.py:562-570. -/
 def SetV.le {α : Type} (self : SetV α) : Operand α → Py (Ret Bool)
   | .set o => do
     if (← self.len) > (← o.len) then return .val false
     let xs ← self.iter
-    return .val (← allIn o.contains xs)
+    return .val (← allInT o.contains self.tail xs)
   | _ => .ok .notImplemented
 
 /-- `Set.__ge__`, Lib/_collections_abc.py:582-590. -/
@@ -480,7 +498,7 @@ def SetV.ge {α : Type} (self : SetV α) : Operand α → Py (Ret Bool)
   | .set o => do
     if (← self.len) < (← o.len) then return .val false
     let xs ← o.iter
-    return .val (← allIn self.contains xs)
+    return .val (← allInT self.contains o.tail xs)
   | _ => .ok .notImplemented
 
 /-- `Set.__lt__`, Lib/_collections_abc.py:572-575. -/
@@ -509,10 +527,29 @@ def filterPy {α : Type} (keep : α → Py Bool) : List α → Py (List α)
     let rest ← filterPy keep xs
     pure (if k then x :: rest else rest)
 
+/-- `filterPy` over an iterator that may raise after its items. -/
+def filterT {α : Type} (keep : α → Py Bool) (tail : Option PyExc) : List α → Py (List α)
+  | [] => raiseTail tail []
+  | x :: xs => do
+    let k ← keep x
+    let rest ← filterT keep tail xs
+    pure (if k then x :: rest else rest)
+
+@[simp] theorem filterT_none {α : Type} (keep : α → Py Bool) : ∀ xs : List α,
+    filterT keep none xs = filterPy keep xs
+  | [] => rfl
+  | x :: xs => by simp only [filterT, filterPy, filterT_none keep xs]
+
 /-- The elements of an operand when `isinstance(other, Iterable)`. -/
 def Operand.items? {α : Type} : Operand α → Option (Py (List α))
   | .set s => some s.iter
-  | .iterable xs => some xs
+  | .iterable xs _ => some xs
+  | .other => none
+
+/-- What the operand's iterator raises after its elements. -/
+def Operand.tail {α : Type} : Operand α → Option PyExc
+  | .set s => s.tail
+  | .iterable _ t => t
   | .other => none
 
 /-- `Set.__and__` and `__rand__`, Lib/_collections_abc.py:606-611. `fromIter` is
@@ -523,7 +560,7 @@ def SetV.and {α β : Type} (self : SetV α) (fromIter : List α → β) (other 
   | none => .ok .notImplemented
   | some xs => do
     let xs ← xs
-    let kept ← filterPy self.contains xs
+    let kept ← filterT self.contains other.tail xs
     pure (.val (fromIter kept))
 
 /-- `Set.isdisjoint`, Lib/_collections_abc.py:613-618. -/
@@ -533,7 +570,7 @@ def SetV.isdisjoint {α : Type} (self : SetV α) (other : Operand α) : Py Bool 
   | some xs => do
     let xs ← xs
     let rec go : List α → Py Bool
-      | [] => .ok true
+      | [] => raiseTail other.tail true
       | x :: rest => do
         if ← self.contains x then return false else go rest
     go xs
@@ -545,19 +582,30 @@ def SetV.or {α β : Type} (self : SetV α) (fromIter : List α → β) (other :
   | none => .ok .notImplemented
   | some xs => do
     let ys ← self.iter
+    let _ ← raiseTail self.tail ()
     let xs ← xs
+    let _ ← raiseTail other.tail ()
     pure (.val (fromIter (ys ++ xs)))
 
 /-- `isinstance(other, Set)`, else `other = self._from_iterable(other)`, shared by
 `__sub__`, `__rsub__` and `__xor__`. -/
 def Operand.asSet? {α : Type} (fromIter : List α → SetV α) : Operand α → Option (Py (SetV α))
   | .set s => some (.ok s)
-  | .iterable xs => some (do pure (fromIter (← xs)))
+  | .iterable xs t => some (do
+      let l ← xs
+      raiseTail t (fromIter l))
   | .other => none
 
 /-- `value for value in xs if value not in s`. -/
 def notIn {α : Type} (s : SetV α) (xs : List α) : Py (List α) :=
   filterPy (fun x => do pure (!(← s.contains x))) xs
+
+/-- The same over an iterator that may raise after its items. -/
+def notInT {α : Type} (s : SetV α) (tail : Option PyExc) (xs : List α) : Py (List α) :=
+  filterT (fun x => do pure (!(← s.contains x))) tail xs
+
+@[simp] theorem notInT_none {α : Type} (s : SetV α) (xs : List α) : notInT s none xs = notIn s xs := by
+  simp [notInT, notIn]
 
 /-- `Set.__sub__`, Lib/_collections_abc.py:628-634. -/
 def SetV.sub {α : Type} (self : SetV α) (fromIter : List α → SetV α) (other : Operand α) :
@@ -567,7 +615,7 @@ def SetV.sub {α : Type} (self : SetV α) (fromIter : List α → SetV α) (othe
   | some o => do
     let o ← o
     let xs ← self.iter
-    pure (.val (fromIter (← notIn o xs)))
+    pure (.val (fromIter (← notInT o self.tail xs)))
 
 /-- `Set.__rsub__`, Lib/_collections_abc.py:636-642. -/
 def SetV.rsub {α : Type} (self : SetV α) (fromIter : List α → SetV α) (other : Operand α) :
@@ -577,7 +625,7 @@ def SetV.rsub {α : Type} (self : SetV α) (fromIter : List α → SetV α) (oth
   | some o => do
     let o ← o
     let xs ← o.iter
-    pure (.val (fromIter (← notIn self xs)))
+    pure (.val (fromIter (← notInT self o.tail xs)))
 
 /-- `Set.__xor__` and `__rxor__`, Lib/_collections_abc.py:644-651:
 `(self - other) | (other - self)`. -/
@@ -588,9 +636,9 @@ def SetV.xor {α : Type} (self : SetV α) (fromIter : List α → SetV α) (othe
   | some o => do
     let o ← o
     let xs ← self.iter
-    let a ← notIn o xs
+    let a ← notInT o self.tail xs
     let ys ← o.iter
-    let b ← notIn self ys
+    let b ← notInT self o.tail ys
     let aSet := fromIter a
     let bSet := fromIter b
     let aItems ← aSet.iter
@@ -679,7 +727,11 @@ def MSet.remove {σ α : Type} (M : MSet σ α) (s : σ) (value : α) : Py σ :=
 /-- `MutableSet.pop`, Lib/_collections_abc.py:720-728. -/
 def MSet.pop {σ α : Type} (M : MSet σ α) (s : σ) : Py (α × σ) := do
   match ← (M.view s).iter with
-  | [] => throw bareKeyError
+  | [] =>
+    -- `next(it)`, whose `StopIteration` becomes `KeyError`; another exception goes through
+    match (M.view s).tail with
+    | none => throw bareKeyError
+    | some e => throw e
   | v :: _ =>
     let s' ← M.discard s v
     pure (v, s')
@@ -698,18 +750,34 @@ def forAdd {σ α : Type} (f : σ → α → Py σ) (s : σ) : List α → Py σ
     let s' ← f s x
     forAdd f s' xs
 
+/-- The same over an iterator that may raise after its items. -/
+def forAddT {σ α : Type} (f : σ → α → Py σ) (tail : Option PyExc) (s : σ) : List α → Py σ
+  | [] => raiseTail tail s
+  | x :: xs => do
+    let s' ← f s x
+    forAddT f tail s' xs
+
+@[simp] theorem forAddT_none {σ α : Type} (f : σ → α → Py σ) : ∀ (xs : List α) (s : σ),
+    forAddT f none s xs = forAdd f s xs
+  | [], _ => rfl
+  | x :: xs, s => by
+    simp only [forAddT, forAdd]
+    cases f s x with
+    | error e => rfl
+    | ok t => exact forAddT_none f xs t
+
 /-- `MutableSet.__ior__`, Lib/_collections_abc.py:738-741. -/
 def MSet.ior {σ α : Type} (M : MSet σ α) (s : σ) (it : Operand α) : Py σ :=
   match it.items? with
   | none => .error (.typeError "~object is not iterable")
-  | some xs => do forAdd M.add s (← xs)
+  | some xs => do forAddT M.add it.tail s (← xs)
 
 /-- `MutableSet.__iand__`, Lib/_collections_abc.py:743-746: `for value in (self - it)`. A
 non-iterable `it` makes `self - it` raise the operator's `TypeError`. -/
 def MSet.iand {σ α : Type} (M : MSet σ α) (s : σ) (it : Operand α) : Py σ := do
   match ← (M.view s).sub M.fromIter it with
   | .notImplemented => throw (.typeError "~unsupported operand type(s) for -")
-  | .val d => forAdd M.discard s (← d.iter)
+  | .val d => forAddT M.discard d.tail s (← d.iter)
 
 /-- One step of the `__ixor__` loop. -/
 def MSet.toggle {σ α : Type} (M : MSet σ α) (s : σ) (value : α) : Py σ := do
@@ -720,8 +788,11 @@ def MSet.ixor {σ α : Type} (M : MSet σ α) (s : σ) (it : Option (Operand α)
     Py σ :=
   match it with
   | none => M.clear fuel s
-  | some (.set o) => do forAdd M.toggle s (← o.iter)
-  | some (.iterable xs) => do forAdd M.toggle s (← (M.fromIter (← xs)).iter)
+  | some (.set o) => do forAddT M.toggle o.tail s (← o.iter)
+  | some (.iterable xs t) => do
+    let l ← xs
+    let _ ← raiseTail t ()
+    forAdd M.toggle s (← (M.fromIter l).iter)
   | some .other => .error (.typeError "~object is not iterable")
 
 /-- `MutableSet.__isub__`, Lib/_collections_abc.py:761-767. `none` is `it is self`. -/
@@ -732,7 +803,7 @@ def MSet.isub {σ α : Type} (M : MSet σ α) (s : σ) (it : Option (Operand α)
   | some it =>
     match it.items? with
     | none => .error (.typeError "~object is not iterable")
-    | some xs => do forAdd M.discard s (← xs)
+    | some xs => do forAddT M.discard it.tail s (← xs)
 
 /-! ### Mapping and the views -/
 
@@ -741,6 +812,8 @@ structure MapV (K V : Type) where
   getitem : K → Py V
   iter : Py (List K)
   len : Py Nat
+  /-- The exception of a `__next__` that raises after the keys. -/
+  tail : Option PyExc := none
 
 /-- `Mapping.get`, Lib/_collections_abc.py:792-797. -/
 def MapV.get {K V : Type} (m : MapV K V) (key : K) (default : V) : Py V :=
@@ -758,7 +831,7 @@ def MapV.contains {K V : Type} (m : MapV K V) (key : K) : Py Bool :=
 /-- `for key in self._mapping: yield (key, self._mapping[key])`, ItemsView.__iter__,
 Lib/_collections_abc.py:881-883, drained. -/
 def MapV.itemsOf {K V : Type} (m : MapV K V) : List K → Py (List (K × V))
-  | [] => .ok []
+  | [] => raiseTail m.tail []
   | k :: ks => do
     let v ← m.getitem k
     let rest ← m.itemsOf ks
@@ -775,7 +848,7 @@ def MapV.values {K V : Type} (m : MapV K V) : Py (List V) := do
 /-- `ValuesView.__contains__`, Lib/_collections_abc.py:893-898. -/
 def MapV.valuesContain {K V : Type} (m : MapV K V) (E : EqOps V) (value : V) : Py Bool := do
   let rec go : List K → Py Bool
-    | [] => .ok false
+    | [] => raiseTail m.tail false
     | k :: ks => do
       let v ← m.getitem k
       if ← E.same v value then return true
@@ -817,7 +890,7 @@ def dictItemsContain {K V : Type} (m : MapV K V) (E : EqOps V) : ItemArg K V →
 def viewRepr (cls mappingRepr : String) : String := s!"{cls}({mappingRepr})"
 
 /-- The `Set`-mixin primitives of `KeysView(m)`, Lib/_collections_abc.py:846-858. -/
-def MapV.keysView {K V : Type} (m : MapV K V) : SetV K := ⟨m.len, m.iter, m.contains⟩
+def MapV.keysView {K V : Type} (m : MapV K V) : SetV K := ⟨m.len, m.iter, m.contains, m.tail⟩
 
 /-! ### MutableMapping -/
 
@@ -845,7 +918,10 @@ def MMap.pop {σ K V : Type} (M : MMap σ K V) (s : σ) (key : K) (default : Opt
 /-- `MutableMapping.popitem`, Lib/_collections_abc.py:944-954. -/
 def MMap.popitem {σ K V : Type} (M : MMap σ K V) (s : σ) : Py ((K × V) × σ) := do
   match ← (M.view s).iter with
-  | [] => throw bareKeyError
+  | [] =>
+    match (M.view s).tail with
+    | none => throw bareKeyError
+    | some e => throw e
   | key :: _ =>
     let value ← (M.view s).getitem key
     let s' ← M.delitem s key
@@ -869,7 +945,7 @@ inductive UpdateArg (K V : Type) where
 /-- `for key in other: self[key] = other[key]`. -/
 def MMap.updateKeys {σ K V : Type} (M : MMap σ K V) (other : MapV K V) (s : σ) :
     List K → Py σ
-  | [] => .ok s
+  | [] => raiseTail other.tail s
   | k :: ks => do
     let v ← other.getitem k
     let s' ← M.setitem s k v

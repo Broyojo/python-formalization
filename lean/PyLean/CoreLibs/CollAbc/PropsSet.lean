@@ -106,11 +106,14 @@ theorem asSet_spec {o : Operand α} {ys : List α} (h : IsOperandOf o ys) :
   rcases h with ⟨rfl, hn⟩ | rfl
   · exact ⟨ys, rfl, hn, fun _ => Iff.rfl⟩
   · refine ⟨dedup [] ys, ?_, dedup_nodup ys [] (by simp), ?_⟩
-    · simp [Operand.asSet?, mkSet, bind, Except.bind, pure, Except.pure]
+    · simp [Operand.asSet?, mkSet, raiseTail, bind, Except.bind, pure, Except.pure]
     · intro z; simp [dedup_mem]
 
 theorem items_spec {o : Operand α} {ys : List α} (h : IsOperandOf o ys) :
     o.items? = some (.ok ys) := by
+  rcases h with ⟨rfl, _⟩ | rfl <;> rfl
+
+theorem tail_spec {o : Operand α} {ys : List α} (h : IsOperandOf o ys) : o.tail = none := by
   rcases h with ⟨rfl, _⟩ | rfl <;> rfl
 
 end
@@ -144,7 +147,7 @@ theorem le_listSet {α : Type} [DecidableEq α] (xs ys : List α) (hx : xs.Nodup
     omega
   · refine ⟨decide (∀ x, x ∈ xs → x ∈ ys), ?_, by simp⟩
     have := allIn_list ys xs
-    simp only [SetV.le, listSet, bind, Except.bind, hl, pure, Except.pure, ite_false, this]
+    simp only [SetV.le, listSet, bind, Except.bind, hl, pure, Except.pure, ite_false, allInT_none, this]
 
 theorem ge_listSet {α : Type} [DecidableEq α] (xs ys : List α) (hy : ys.Nodup) :
     ∃ b, (listSet xs).ge (.set (listSet ys)) = .ok (.val b) ∧ (b = true ↔ ∀ y ∈ ys, y ∈ xs) := by
@@ -156,7 +159,7 @@ theorem ge_listSet {α : Type} [DecidableEq α] (xs ys : List α) (hy : ys.Nodup
     omega
   · refine ⟨decide (∀ x, x ∈ ys → x ∈ xs), ?_, by simp⟩
     have := allIn_list xs ys
-    simp only [SetV.ge, listSet, bind, Except.bind, hl, pure, Except.pure, ite_false, this]
+    simp only [SetV.ge, listSet, bind, Except.bind, hl, pure, Except.pure, ite_false, allInT_none, this]
 
 theorem setCmpMatchBuiltin_proven : SetCmpMatchBuiltin := by
   intro α _ xs ys hx hy a o sub sup
@@ -244,6 +247,10 @@ theorem mkSet_spec {α : Type} [DecidableEq α] (l : List α) (P : α → Prop)
   simp [dedup_mem, h]
 
 theorem listSet_iter {α : Type} [DecidableEq α] (l : List α) : (listSet l).iter = .ok l := rfl
+
+theorem listSet_tail {α : Type} [DecidableEq α] (l : List α) : (listSet l).tail = none := rfl
+
+theorem mkSet_tail {α : Type} [DecidableEq α] (l : List α) : (mkSet l).tail = none := rfl
 theorem listSet_len {α : Type} [DecidableEq α] (l : List α) :
     (listSet l).len = .ok l.length := rfl
 
@@ -251,42 +258,45 @@ theorem setAlgebraMatchesBuiltin_proven : SetAlgebraMatchesBuiltin := by
   intro α _ xs ys o hx ho a spec
   obtain ⟨zs, hzs, _, hmem⟩ := asSet_spec ho
   have hit := items_spec ho
+  have ht := tail_spec ho
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
   · have hf := filterPy_ok (fun x => decide (x ∈ xs)) ys
     have : a.and mkSet o = .ok (.val (mkSet (ys.filter (fun x => decide (x ∈ xs))))) := by
-      simp only [a, SetV.and, hit, listSet, bind, Except.bind, pure, Except.pure]
+      simp only [a, SetV.and, hit, ht, filterT_none, listSet, bind, Except.bind, pure, Except.pure]
       rw [hf]
     rw [this]
     refine mkSet_spec _ _ ?_
     intro z; simp [and_comm]
   · have : a.or mkSet o = .ok (.val (mkSet (xs ++ ys))) := by
-      simp only [a, SetV.or, hit, listSet, bind, Except.bind, pure, Except.pure]
+      simp only [a, SetV.or, hit, ht, raiseTail, listSet, bind, Except.bind, pure, Except.pure]
     rw [this]
     refine mkSet_spec _ _ ?_
     intro z; simp
   · have : a.sub mkSet o = .ok (.val (mkSet (xs.filter (fun x => !decide (x ∈ zs))))) := by
-      simp only [a, SetV.sub, hzs, listSet_iter, notIn_list, bind, Except.bind, pure, Except.pure]
+      simp only [a, SetV.sub, hzs, listSet_iter, listSet_tail, notInT_none, notIn_list, bind, Except.bind, pure,
+        Except.pure]
     rw [this]
     refine mkSet_spec _ _ ?_
     intro z; simp [hmem]
   · have : a.rsub mkSet o = .ok (.val (mkSet (zs.filter (fun x => !decide (x ∈ xs))))) := by
-      simp only [a, SetV.rsub, hzs, listSet_iter, notIn_list, bind, Except.bind, pure, Except.pure]
+      simp only [a, SetV.rsub, hzs, listSet_iter, listSet_tail, notInT_none, notIn_list, bind, Except.bind, pure,
+        Except.pure]
     rw [this]
     refine mkSet_spec _ _ ?_
     intro z; simp [hmem]
   · have : a.xor mkSet o = .ok (.val (mkSet
         (dedup [] (xs.filter (fun x => !decide (x ∈ zs))) ++
          dedup [] (zs.filter (fun x => !decide (x ∈ xs)))))) := by
-      simp only [a, SetV.xor, hzs, listSet_iter, notIn_list, mkSet_iter, bind, Except.bind, pure,
-        Except.pure]
+      simp only [a, SetV.xor, hzs, listSet_iter, listSet_tail, notInT_none, notIn_list, mkSet_iter, bind,
+        Except.bind, pure, Except.pure]
     rw [this]
     refine mkSet_spec _ _ ?_
     intro z; simp [dedup_mem, hmem]
   · simp [a, SetV.and, SetV.or, SetV.sub, SetV.rsub, SetV.xor, Operand.items?, Operand.asSet?]
 
-theorem isdisjoint_go {α : Type} [DecidableEq α] (xs : List α) : ∀ ys : List α,
-    ∃ b, SetV.isdisjoint.go (listSet xs) ys = .ok b ∧ (b = true ↔ ∀ z ∈ ys, z ∉ xs)
-  | [] => ⟨true, rfl, by simp⟩
+theorem isdisjoint_go {α : Type} [DecidableEq α] (xs : List α) (o : Operand α) (ht : o.tail = none) :
+    ∀ ys : List α, ∃ b, SetV.isdisjoint.go (listSet xs) o ys = .ok b ∧ (b = true ↔ ∀ z ∈ ys, z ∉ xs)
+  | [] => ⟨true, by simp [SetV.isdisjoint.go, ht, raiseTail], by simp⟩
   | y :: ys => by
     by_cases h : y ∈ xs
     · refine ⟨false, ?_, ?_⟩
@@ -294,7 +304,7 @@ theorem isdisjoint_go {α : Type} [DecidableEq α] (xs : List α) : ∀ ys : Lis
       · simp only [Bool.false_eq_true, false_iff]
         intro hall
         exact hall y (by simp) h
-    · obtain ⟨b, h1, h2⟩ := isdisjoint_go xs ys
+    · obtain ⟨b, h1, h2⟩ := isdisjoint_go xs o ht ys
       refine ⟨b, ?_, ?_⟩
       · simpa [SetV.isdisjoint.go, listSet, h, bind, Except.bind] using h1
       · rw [h2]
@@ -310,7 +320,7 @@ def SetIsdisjointSpec : Prop :=
 theorem setIsdisjointSpec_proven : SetIsdisjointSpec := by
   intro α _ xs ys o ho
   refine ⟨?_, ⟨_, rfl, rfl⟩⟩
-  obtain ⟨b, h1, h2⟩ := isdisjoint_go xs ys
+  obtain ⟨b, h1, h2⟩ := isdisjoint_go xs o (tail_spec ho) ys
   refine ⟨b, ?_, h2⟩
   simp only [SetV.isdisjoint, items_spec ho, bind, Except.bind]
   exact h1
@@ -458,35 +468,36 @@ theorem clear_set {α : Type} [DecidableEq α] : ∀ (fuel : Nat) (s : List α),
 theorem mSetMatchesBuiltin_proven : MSetMatchesBuiltin := by
   intro α _ s ys o v fuel hs ho hf M spec
   have hit := items_spec ho
+  have ht := tail_spec ho
   obtain ⟨zs, hzs, hzn, hmem⟩ := asSet_spec ho
   have hclr : M.clear fuel s = .ok [] := clear_set fuel s hf
   refine ⟨?_, ?_, ?_, ?_, hclr, hclr, hclr, ?_, ?_, ?_, ?_⟩
   · obtain ⟨r, h1, h2, h3⟩ := forAdd_add ys s hs
     refine ⟨r, ?_, h2, h3⟩
-    simp only [M, MSet.ior, hit, bind, Except.bind]
+    simp only [M, MSet.ior, hit, ht, forAddT_none, bind, Except.bind]
     exact h1
   · obtain ⟨r, h1, h2, h3⟩ := forAdd_discard (dedup [] (s.filter (fun x => !decide (x ∈ zs)))) s hs
     refine ⟨r, ?_, h2, ?_⟩
     · have hsub : (M.view s).sub M.fromIter o =
           .ok (.val (mkSet (s.filter (fun x => !decide (x ∈ zs))))) := by
         simp only [M, show (listMSet (α := α)).view s = listSet s from rfl,
-          show (listMSet (α := α)).fromIter = mkSet from rfl, SetV.sub, hzs, listSet_iter,
-          notIn_list, bind, Except.bind, pure, Except.pure]
-      simp only [MSet.iand, hsub, mkSet_iter, bind, Except.bind]
+          show (listMSet (α := α)).fromIter = mkSet from rfl, SetV.sub, hzs, listSet_iter, listSet_tail,
+          notInT_none, notIn_list, bind, Except.bind, pure, Except.pure]
+      simp only [MSet.iand, hsub, mkSet_iter, mkSet_tail, forAddT_none, bind, Except.bind]
       exact h1
     · intro z
       rw [h3]
       by_cases a : z ∈ s <;> by_cases b : z ∈ ys <;> simp [dedup_mem, hmem, a, b]
   · obtain ⟨r, h1, h2, h3⟩ := forAdd_discard ys s hs
     refine ⟨r, ?_, h2, h3⟩
-    simp only [M, MSet.isub, hit, bind, Except.bind]
+    simp only [M, MSet.isub, hit, ht, forAddT_none, bind, Except.bind]
     exact h1
   · rcases ho with ⟨rfl, hyn⟩ | rfl
     · obtain ⟨r, h1, h2, h3⟩ := forAdd_toggle ys s hs hyn
-      exact ⟨r, by simpa [M, MSet.ixor, listSet_iter, bind, Except.bind] using h1, h2, h3⟩
+      exact ⟨r, by simpa [M, MSet.ixor, listSet_iter, listSet_tail, bind, Except.bind] using h1, h2, h3⟩
     · obtain ⟨r, h1, h2, h3⟩ := forAdd_toggle (dedup [] ys) s hs (dedup_nodup ys [] (by simp))
       refine ⟨r, ?_, h2, ?_⟩
-      · simpa [M, MSet.ixor, show (listMSet (α := α)).fromIter = mkSet from rfl, mkSet_iter, bind,
+      · simpa [M, MSet.ixor, show (listMSet (α := α)).fromIter = mkSet from rfl, mkSet_iter, raiseTail, bind,
           Except.bind, pure, Except.pure] using h1
       · intro z; rw [h3]; simp [dedup_mem]
   · intro h

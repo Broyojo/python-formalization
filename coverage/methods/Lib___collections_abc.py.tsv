@@ -9,7 +9,7 @@ Lib/_collections_abc.py	129	132	Hashable.__subclasshook__	__subclasshook__(cls, 
 Lib/_collections_abc.py	140	141	Awaitable.__await__	__await__(self)	todo		withdrawn: constant, rfl or parameter, no theorem unfolds the body
 Lib/_collections_abc.py	144	147	Awaitable.__subclasshook__	__subclasshook__(cls, C)	modelled	corelibs-collabc-subclasshooks	
 Lib/_collections_abc.py	157	161	Coroutine.send	send(self, value)	todo		withdrawn: constant, rfl or parameter, no theorem unfolds the body
-Lib/_collections_abc.py	164	174	Coroutine.throw	throw(self, typ, val=None, tb=None)	modelled	corelibs-collabc-throw	withdrawn: ok-implies: an always-failing throw passes
+Lib/_collections_abc.py	164	174	Coroutine.throw	throw(self, typ, val=None, tb=None)	modelled	corelibs-collabc-throw-paths	
 Lib/_collections_abc.py	176	184	Coroutine.close	close(self)	modelled	corelibs-collabc-close-up-to-value	
 Lib/_collections_abc.py	187	190	Coroutine.__subclasshook__	__subclasshook__(cls, C)	modelled	corelibs-collabc-subclasshooks	
 Lib/_collections_abc.py	201	202	AsyncIterable.__aiter__	__aiter__(self)	todo		withdrawn: constant, rfl or parameter, no theorem unfolds the body
@@ -19,7 +19,7 @@ Lib/_collections_abc.py	222	223	AsyncIterator.__aiter__	__aiter__(self)	todo		wi
 Lib/_collections_abc.py	226	229	AsyncIterator.__subclasshook__	__subclasshook__(cls, C)	modelled	corelibs-collabc-subclasshooks	
 Lib/_collections_abc.py	236	240	AsyncGenerator.__anext__	__anext__(self)	todo		withdrawn: constant, rfl or parameter, no theorem unfolds the body
 Lib/_collections_abc.py	243	247	AsyncGenerator.asend	asend(self, value)	todo		withdrawn: constant, rfl or parameter, no theorem unfolds the body
-Lib/_collections_abc.py	250	260	AsyncGenerator.athrow	athrow(self, typ, val=None, tb=None)	modelled	corelibs-collabc-throw	withdrawn: ok-implies: an always-failing throw passes
+Lib/_collections_abc.py	250	260	AsyncGenerator.athrow	athrow(self, typ, val=None, tb=None)	modelled	corelibs-collabc-throw-paths	
 Lib/_collections_abc.py	262	270	AsyncGenerator.aclose	aclose(self)	modelled	corelibs-collabc-close-up-to-value	
 Lib/_collections_abc.py	273	277	AsyncGenerator.__subclasshook__	__subclasshook__(cls, C)	modelled	corelibs-collabc-subclasshooks	
 Lib/_collections_abc.py	288	290	Iterable.__iter__	__iter__(self)	todo		withdrawn: constant, rfl or parameter, no theorem unfolds the body
@@ -31,7 +31,7 @@ Lib/_collections_abc.py	341	343	Reversible.__reversed__	__reversed__(self)	todo	
 Lib/_collections_abc.py	346	349	Reversible.__subclasshook__	__subclasshook__(cls, C)	modelled	corelibs-collabc-subclasshooks	
 Lib/_collections_abc.py	356	360	Generator.__next__	__next__(self)	todo		withdrawn: constant, rfl or parameter, no theorem unfolds the body
 Lib/_collections_abc.py	363	367	Generator.send	send(self, value)	todo		withdrawn: constant, rfl or parameter, no theorem unfolds the body
-Lib/_collections_abc.py	370	380	Generator.throw	throw(self, typ, val=None, tb=None)	modelled	corelibs-collabc-throw	withdrawn: ok-implies: an always-failing throw passes
+Lib/_collections_abc.py	370	380	Generator.throw	throw(self, typ, val=None, tb=None)	modelled	corelibs-collabc-throw-paths	
 Lib/_collections_abc.py	382	390	Generator.close	close(self)	modelled	corelibs-collabc-close-up-to-value,corelibs-collabc-close-value	
 Lib/_collections_abc.py	393	397	Generator.__subclasshook__	__subclasshook__(cls, C)	modelled	corelibs-collabc-subclasshooks	
 Lib/_collections_abc.py	408	409	Sized.__len__	__len__(self)	todo		withdrawn: constant, rfl or parameter, no theorem unfolds the body
@@ -48,31 +48,31 @@ Lib/_collections_abc.py	499	514	_CallableGenericAlias.__getitem__	__getitem__(se
 Lib/_collections_abc.py	516	526	_is_param_expr	_is_param_expr(obj)	modelled	corelibs-collabc-callable-alias	
 Lib/_collections_abc.py	534	535	Callable.__call__	__call__(self, *args, **kwds)	todo		withdrawn: constant, rfl or parameter, no theorem unfolds the body
 Lib/_collections_abc.py	538	541	Callable.__subclasshook__	__subclasshook__(cls, C)	todo		withdrawn: constant, rfl or parameter, no theorem unfolds the body
-Lib/_collections_abc.py	562	570	Set.__le__	__le__(self, other)	modelled	corelibs-collabc-set-compare	withdrawn: theorem only on listSet and iterables that succeed: failing iteration and __contains__ have no theorem
-Lib/_collections_abc.py	572	575	Set.__lt__	__lt__(self, other)	modelled	corelibs-collabc-set-compare	withdrawn: theorem only on listSet and iterables that succeed: failing iteration and __contains__ have no theorem
-Lib/_collections_abc.py	577	580	Set.__gt__	__gt__(self, other)	modelled	corelibs-collabc-set-compare	withdrawn: theorem only on listSet and iterables that succeed: failing iteration and __contains__ have no theorem
-Lib/_collections_abc.py	582	590	Set.__ge__	__ge__(self, other)	modelled	corelibs-collabc-set-compare	withdrawn: theorem only on listSet and iterables that succeed: failing iteration and __contains__ have no theorem
-Lib/_collections_abc.py	592	595	Set.__eq__	__eq__(self, other)	modelled	corelibs-collabc-set-compare	withdrawn: theorem only on listSet and iterables that succeed: failing iteration and __contains__ have no theorem
+Lib/_collections_abc.py	562	570	Set.__le__	__le__(self, other)	modelled	corelibs-collabc-set-cmp-paths	
+Lib/_collections_abc.py	572	575	Set.__lt__	__lt__(self, other)	modelled	corelibs-collabc-set-cmp-paths	
+Lib/_collections_abc.py	577	580	Set.__gt__	__gt__(self, other)	modelled	corelibs-collabc-set-cmp-paths	
+Lib/_collections_abc.py	582	590	Set.__ge__	__ge__(self, other)	modelled	corelibs-collabc-set-cmp-paths	
+Lib/_collections_abc.py	592	595	Set.__eq__	__eq__(self, other)	modelled	corelibs-collabc-set-cmp-paths	
 Lib/_collections_abc.py	598	604	Set._from_iterable	_from_iterable(cls, it)	todo		withdrawn: constant, rfl or parameter, no theorem unfolds the body
-Lib/_collections_abc.py	606	609	Set.__and__	__and__(self, other)	modelled	corelibs-collabc-set-algebra	withdrawn: theorem only on listSet and iterables that succeed: failing iteration and __contains__ have no theorem
-Lib/_collections_abc.py	613	618	Set.isdisjoint	isdisjoint(self, other)	modelled	corelibs-collabc-set-isdisjoint	withdrawn: theorem only on listSet and iterables that succeed: failing iteration and __contains__ have no theorem
-Lib/_collections_abc.py	620	624	Set.__or__	__or__(self, other)	modelled	corelibs-collabc-set-algebra	withdrawn: theorem only on listSet and iterables that succeed: failing iteration and __contains__ have no theorem
-Lib/_collections_abc.py	628	634	Set.__sub__	__sub__(self, other)	modelled	corelibs-collabc-set-algebra	withdrawn: theorem only on listSet and iterables that succeed: failing iteration and __contains__ have no theorem
-Lib/_collections_abc.py	636	642	Set.__rsub__	__rsub__(self, other)	modelled	corelibs-collabc-set-algebra	withdrawn: theorem only on listSet and iterables that succeed: failing iteration and __contains__ have no theorem
-Lib/_collections_abc.py	644	649	Set.__xor__	__xor__(self, other)	modelled	corelibs-collabc-set-algebra	withdrawn: theorem only on listSet and iterables that succeed: failing iteration and __contains__ have no theorem
+Lib/_collections_abc.py	606	609	Set.__and__	__and__(self, other)	modelled	corelibs-collabc-set-alg-paths	
+Lib/_collections_abc.py	613	618	Set.isdisjoint	isdisjoint(self, other)	modelled	corelibs-collabc-set-alg-paths	
+Lib/_collections_abc.py	620	624	Set.__or__	__or__(self, other)	modelled	corelibs-collabc-set-alg-paths	
+Lib/_collections_abc.py	628	634	Set.__sub__	__sub__(self, other)	modelled	corelibs-collabc-set-sub-paths	
+Lib/_collections_abc.py	636	642	Set.__rsub__	__rsub__(self, other)	modelled	corelibs-collabc-set-sub-paths	
+Lib/_collections_abc.py	644	649	Set.__xor__	__xor__(self, other)	modelled	corelibs-collabc-set-sub-paths	
 Lib/_collections_abc.py	653	684	Set._hash	_hash(self)	modelled	corelibs-collabc-set-hash	
 Lib/_collections_abc.py	705	707	MutableSet.add	add(self, value)	todo		withdrawn: constant, rfl or parameter, no theorem unfolds the body
 Lib/_collections_abc.py	710	712	MutableSet.discard	discard(self, value)	todo		withdrawn: constant, rfl or parameter, no theorem unfolds the body
-Lib/_collections_abc.py	714	718	MutableSet.remove	remove(self, value)	modelled	corelibs-collabc-mutableset	withdrawn: theorem only on listSet and iterables that succeed: failing iteration and __contains__ have no theorem
-Lib/_collections_abc.py	720	728	MutableSet.pop	pop(self)	modelled	corelibs-collabc-mutableset	withdrawn: theorem only on listSet and iterables that succeed: failing iteration and __contains__ have no theorem
-Lib/_collections_abc.py	730	736	MutableSet.clear	clear(self)	modelled	corelibs-collabc-mutableset	withdrawn: theorem only on listSet and iterables that succeed: failing iteration and __contains__ have no theorem
-Lib/_collections_abc.py	738	741	MutableSet.__ior__	__ior__(self, it)	modelled	corelibs-collabc-mutableset	withdrawn: theorem only on listSet and iterables that succeed: failing iteration and __contains__ have no theorem
-Lib/_collections_abc.py	743	746	MutableSet.__iand__	__iand__(self, it)	modelled	corelibs-collabc-mutableset	withdrawn: theorem only on listSet and iterables that succeed: failing iteration and __contains__ have no theorem
-Lib/_collections_abc.py	748	759	MutableSet.__ixor__	__ixor__(self, it)	modelled	corelibs-collabc-mutableset	withdrawn: theorem only on listSet and iterables that succeed: failing iteration and __contains__ have no theorem
-Lib/_collections_abc.py	761	767	MutableSet.__isub__	__isub__(self, it)	modelled	corelibs-collabc-mutableset	withdrawn: theorem only on listSet and iterables that succeed: failing iteration and __contains__ have no theorem
+Lib/_collections_abc.py	714	718	MutableSet.remove	remove(self, value)	modelled	corelibs-collabc-mset-paths	
+Lib/_collections_abc.py	720	728	MutableSet.pop	pop(self)	modelled	corelibs-collabc-mset-paths	
+Lib/_collections_abc.py	730	736	MutableSet.clear	clear(self)	modelled	corelibs-collabc-mset-paths	
+Lib/_collections_abc.py	738	741	MutableSet.__ior__	__ior__(self, it)	modelled	corelibs-collabc-mset-paths	
+Lib/_collections_abc.py	743	746	MutableSet.__iand__	__iand__(self, it)	modelled	corelibs-collabc-mset-paths	
+Lib/_collections_abc.py	748	759	MutableSet.__ixor__	__ixor__(self, it)	modelled	corelibs-collabc-mset-paths	
+Lib/_collections_abc.py	761	767	MutableSet.__isub__	__isub__(self, it)	modelled	corelibs-collabc-mset-paths	
 Lib/_collections_abc.py	789	790	Mapping.__getitem__	__getitem__(self, key)	todo		withdrawn: constant, rfl or parameter, no theorem unfolds the body
-Lib/_collections_abc.py	792	797	Mapping.get	get(self, key, default=None)	modelled	corelibs-collabc-mapping	withdrawn: theorem only on dict backing: catching every exception instead of KeyError passes
-Lib/_collections_abc.py	799	805	Mapping.__contains__	__contains__(self, key)	modelled	corelibs-collabc-mapping	withdrawn: theorem only on dict backing: catching every exception instead of KeyError passes
+Lib/_collections_abc.py	792	797	Mapping.get	get(self, key, default=None)	modelled	corelibs-collabc-mapping-paths	
+Lib/_collections_abc.py	799	805	Mapping.__contains__	__contains__(self, key)	modelled	corelibs-collabc-mapping-paths	
 Lib/_collections_abc.py	807	809	Mapping.keys	keys(self)	modelled	corelibs-collabc-mapping	
 Lib/_collections_abc.py	811	813	Mapping.items	items(self)	modelled	corelibs-collabc-mapping	
 Lib/_collections_abc.py	815	817	Mapping.values	values(self)	modelled	corelibs-collabc-mapping	
@@ -84,22 +84,22 @@ Lib/_collections_abc.py	851	852	KeysView._from_iterable	_from_iterable(cls, it)	
 Lib/_collections_abc.py	854	855	KeysView.__contains__	__contains__(self, key)	modelled	corelibs-collabc-mapping	
 Lib/_collections_abc.py	857	858	KeysView.__iter__	__iter__(self)	modelled	corelibs-collabc-mapping	
 Lib/_collections_abc.py	869	870	ItemsView._from_iterable	_from_iterable(cls, it)	todo		withdrawn: constant, rfl or parameter, no theorem unfolds the body
-Lib/_collections_abc.py	872	879	ItemsView.__contains__	__contains__(self, item)	modelled	corelibs-collabc-itemsview-contains,corelibs-collabc-itemsview-tuples	withdrawn: theorem only on dict backing: catching every exception instead of KeyError passes
+Lib/_collections_abc.py	872	879	ItemsView.__contains__	__contains__(self, item)	modelled	corelibs-collabc-mapping-paths	
 Lib/_collections_abc.py	881	883	ItemsView.__iter__	__iter__(self)	modelled	corelibs-collabc-mapping	
-Lib/_collections_abc.py	893	898	ValuesView.__contains__	__contains__(self, value)	modelled	corelibs-collabc-mapping	
+Lib/_collections_abc.py	893	898	ValuesView.__contains__	__contains__(self, value)	modelled	corelibs-collabc-mapping,corelibs-collabc-values-tail	
 Lib/_collections_abc.py	900	902	ValuesView.__iter__	__iter__(self)	modelled	corelibs-collabc-mapping	
 Lib/_collections_abc.py	920	921	MutableMapping.__setitem__	__setitem__(self, key, value)	todo		withdrawn: constant, rfl or parameter, no theorem unfolds the body
 Lib/_collections_abc.py	924	925	MutableMapping.__delitem__	__delitem__(self, key)	todo		withdrawn: constant, rfl or parameter, no theorem unfolds the body
-Lib/_collections_abc.py	929	942	MutableMapping.pop	pop(self, key, default=__marker)	modelled	corelibs-collabc-mutablemapping	withdrawn: theorem only on dict backing: catching every exception instead of KeyError passes
-Lib/_collections_abc.py	944	954	MutableMapping.popitem	popitem(self)	modelled	corelibs-collabc-mutablemapping	withdrawn: theorem only on dict backing: catching every exception instead of KeyError passes
-Lib/_collections_abc.py	956	962	MutableMapping.clear	clear(self)	modelled	corelibs-collabc-mutablemapping	withdrawn: theorem only on dict backing: catching every exception instead of KeyError passes
-Lib/_collections_abc.py	964	983	MutableMapping.update	update(self, other=(), /, **kwds)	modelled	corelibs-collabc-mutablemapping	withdrawn: theorem only on dict backing: catching every exception instead of KeyError passes
-Lib/_collections_abc.py	985	991	MutableMapping.setdefault	setdefault(self, key, default=None)	modelled	corelibs-collabc-mutablemapping	withdrawn: theorem only on dict backing: catching every exception instead of KeyError passes
+Lib/_collections_abc.py	929	942	MutableMapping.pop	pop(self, key, default=__marker)	modelled	corelibs-collabc-mmap-paths	
+Lib/_collections_abc.py	944	954	MutableMapping.popitem	popitem(self)	modelled	corelibs-collabc-mmap-paths	
+Lib/_collections_abc.py	956	962	MutableMapping.clear	clear(self)	modelled	corelibs-collabc-mmap-clear	
+Lib/_collections_abc.py	964	983	MutableMapping.update	update(self, other=(), /, **kwds)	modelled	corelibs-collabc-mmap-paths	
+Lib/_collections_abc.py	985	991	MutableMapping.setdefault	setdefault(self, key, default=None)	modelled	corelibs-collabc-mmap-paths	
 Lib/_collections_abc.py	1012	1013	Sequence.__getitem__	__getitem__(self, index)	todo		withdrawn: constant, rfl or parameter, no theorem unfolds the body
-Lib/_collections_abc.py	1015	1023	Sequence.__iter__	__iter__(self)	modelled	corelibs-collabc-sequence	withdrawn: theorem only on list backing: catching every exception instead of IndexError passes
-Lib/_collections_abc.py	1025	1029	Sequence.__contains__	__contains__(self, value)	modelled	corelibs-collabc-sequence	withdrawn: theorem only on list backing: catching every exception instead of IndexError passes
+Lib/_collections_abc.py	1015	1023	Sequence.__iter__	__iter__(self)	modelled	corelibs-collabc-seq-paths	
+Lib/_collections_abc.py	1025	1029	Sequence.__contains__	__contains__(self, value)	modelled	corelibs-collabc-seq-paths	
 Lib/_collections_abc.py	1031	1033	Sequence.__reversed__	__reversed__(self)	modelled	corelibs-collabc-sequence	
-Lib/_collections_abc.py	1035	1056	Sequence.index	index(self, value, start=0, stop=None)	modelled	corelibs-collabc-sequence-index	withdrawn: theorem only on list backing: catching every exception instead of IndexError passes
+Lib/_collections_abc.py	1035	1056	Sequence.index	index(self, value, start=0, stop=None)	modelled	corelibs-collabc-seq-paths	
 Lib/_collections_abc.py	1058	1060	Sequence.count	count(self, value)	modelled	corelibs-collabc-sequence	candidates:strsearch-count-repeated-find,strsearch-find-slice-literal,strsearch-find-str-bytes
 Lib/_collections_abc.py	1069	1077	_DeprecateByteStringMeta.__new__	__new__(cls, name, bases, namespace, **kwargs)	todo		withdrawn: constant, rfl or parameter, no theorem unfolds the body
 Lib/_collections_abc.py	1079	1086	_DeprecateByteStringMeta.__instancecheck__	__instancecheck__(cls, instance)	todo		withdrawn: constant, rfl or parameter, no theorem unfolds the body
@@ -107,9 +107,9 @@ Lib/_collections_abc.py	1114	1115	MutableSequence.__setitem__	__setitem__(self, 
 Lib/_collections_abc.py	1118	1119	MutableSequence.__delitem__	__delitem__(self, index)	todo		withdrawn: constant, rfl or parameter, no theorem unfolds the body
 Lib/_collections_abc.py	1122	1124	MutableSequence.insert	insert(self, index, value)	todo		withdrawn: constant, rfl or parameter, no theorem unfolds the body
 Lib/_collections_abc.py	1126	1128	MutableSequence.append	append(self, value)	modelled	corelibs-collabc-mseq-grow	
-Lib/_collections_abc.py	1130	1136	MutableSequence.clear	clear(self)	modelled	corelibs-collabc-mseq-grow	withdrawn: theorem only on list backing: catching every exception instead of IndexError passes
+Lib/_collections_abc.py	1130	1136	MutableSequence.clear	clear(self)	modelled	corelibs-collabc-mseq-paths	
 Lib/_collections_abc.py	1138	1142	MutableSequence.reverse	reverse(self)	modelled	corelibs-collabc-mseq-reverse	
-Lib/_collections_abc.py	1144	1150	MutableSequence.extend	extend(self, values)	modelled	corelibs-collabc-mseq-grow	withdrawn: theorem only on list backing: catching every exception instead of IndexError passes
+Lib/_collections_abc.py	1144	1150	MutableSequence.extend	extend(self, values)	modelled	corelibs-collabc-mseq-paths	
 Lib/_collections_abc.py	1152	1158	MutableSequence.pop	pop(self, index=-1)	modelled	corelibs-collabc-mseq-pop	
-Lib/_collections_abc.py	1160	1164	MutableSequence.remove	remove(self, value)	modelled	corelibs-collabc-mseq-remove	withdrawn: theorem only on list backing: catching every exception instead of IndexError passes
+Lib/_collections_abc.py	1160	1164	MutableSequence.remove	remove(self, value)	modelled	corelibs-collabc-mseq-paths	
 Lib/_collections_abc.py	1166	1168	MutableSequence.__iadd__	__iadd__(self, values)	modelled	corelibs-collabc-mseq-grow	

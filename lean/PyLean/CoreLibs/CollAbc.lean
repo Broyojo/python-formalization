@@ -5,6 +5,7 @@ import PyLean.CoreLibs.CollAbc.PropsSeq
 import PyLean.CoreLibs.CollAbc.PropsSet
 import PyLean.CoreLibs.CollAbc.PropsMap
 import PyLean.CoreLibs.CollAbc.PropsHash
+import PyLean.CoreLibs.CollAbc.PropsFail
 
 /-! Registry for the `CollAbc` area of CoreLibs: Lib/_collections_abc.py, Lib/collections/abc.py, CPython 3.14.7. -/
 
@@ -221,7 +222,95 @@ def entries : List Entry := [
     source := "deprecation in Doc/whatsnew/3.14"
     status := .proven
     prop := ``ByteStringMeta
-    thm := some ``byteStringMeta_proven }
+    thm := some ``byteStringMeta_proven },
+  { id := "corelibs-collabc-throw-paths"
+    pyFile := file
+    pyFns := ["Coroutine.throw", "Generator.throw", "AsyncGenerator.athrow"]
+    statement := "Every path of throw: each kind of typ and val, with and without a traceback."
+    source := "Lib/_collections_abc.py:374-380"
+    status := .proven
+    prop := ``ThrowPaths
+    thm := some ``throwPaths_proven },
+  { id := "corelibs-collabc-mapping-paths"
+    pyFile := file
+    pyFns := ["Mapping.get", "Mapping.__contains__", "ItemsView.__contains__"]
+    statement := "get, __contains__ and ItemsView.__contains__ catch KeyError and nothing else, for any __getitem__, and the unpack is outside the try."
+    source := "Lib/_collections_abc.py:792-805, 872-879"
+    status := .proven
+    prop := ``MappingPaths
+    thm := some ``mappingPaths_proven },
+  { id := "corelibs-collabc-mmap-paths"
+    pyFile := file
+    pyFns := ["MutableMapping.pop", "MutableMapping.popitem", "MutableMapping.setdefault", "MutableMapping.update"]
+    statement := "pop, popitem, setdefault and update, every path, for any primitives: which exception is swallowed, failing writes, and the order of the steps."
+    source := "Lib/_collections_abc.py:929-991"
+    status := .proven
+    prop := ``MMapPaths
+    thm := some ``mMapPaths_proven },
+  { id := "corelibs-collabc-mmap-clear"
+    pyFile := file
+    pyFns := ["MutableMapping.clear"]
+    statement := "clear is popitem until KeyError, in the state it reached, and anything else propagates."
+    source := "Lib/_collections_abc.py:956-962"
+    status := .proven
+    prop := ``MMapClear
+    thm := some ``mMapClear_proven },
+  { id := "corelibs-collabc-seq-paths"
+    pyFile := file
+    pyFns := ["Sequence.__iter__", "Sequence.__contains__", "Sequence.index"]
+    statement := "__iter__, __contains__ and index treat IndexError as the end and only that, for any __getitem__, and the first match ends the search."
+    source := "Lib/_collections_abc.py:1015-1056"
+    status := .proven
+    prop := ``SeqPaths
+    thm := some ``seqPaths_proven },
+  { id := "corelibs-collabc-mseq-paths"
+    pyFile := file
+    pyFns := ["MutableSequence.clear", "MutableSequence.extend", "MutableSequence.remove"]
+    statement := "clear is pop until IndexError; extend(self) reads the items first; a failing append stops extend; a failing index deletes nothing."
+    source := "Lib/_collections_abc.py:1130-1164"
+    status := .proven
+    prop := ``MSeqPaths
+    thm := some ``mSeqPaths_proven },
+  { id := "corelibs-collabc-set-cmp-paths"
+    pyFile := file
+    pyFns := ["Set.__le__", "Set.__lt__", "Set.__gt__", "Set.__ge__", "Set.__eq__"]
+    statement := "The comparisons of Set for any primitives: the lengths decide first, a missing element returns False before a later iterator failure, and failing primitives are the outcome."
+    source := "Lib/_collections_abc.py:562-595"
+    status := .proven
+    prop := ``SetCmpPaths
+    thm := some ``setCmpPaths_proven },
+  { id := "corelibs-collabc-set-alg-paths"
+    pyFile := file
+    pyFns := ["Set.__and__", "Set.isdisjoint", "Set.__or__"]
+    statement := "& keeps what __contains__ accepts, a raising __contains__ comes before a later iterator failure, isdisjoint stops at the first common element, and | reads self first."
+    source := "Lib/_collections_abc.py:606-626"
+    status := .proven
+    prop := ``SetAlgPaths
+    thm := some ``setAlgPaths_proven },
+  { id := "corelibs-collabc-set-sub-paths"
+    pyFile := file
+    pyFns := ["Set.__sub__", "Set.__rsub__", "Set.__xor__"]
+    statement := "-, the reflected - and ^: a plain iterable is consumed whole first, so its failure comes before anything else."
+    source := "Lib/_collections_abc.py:628-651"
+    status := .proven
+    prop := ``SetSubPaths
+    thm := some ``setSubPaths_proven },
+  { id := "corelibs-collabc-mset-paths"
+    pyFile := file
+    pyFns := ["MutableSet.remove", "MutableSet.pop", "MutableSet.clear", "MutableSet.__ior__", "MutableSet.__iand__", "MutableSet.__ixor__", "MutableSet.__isub__"]
+    statement := "remove, pop, clear, |= and -=, every path: KeyError only for an absent element, pop passes other exceptions through, clear stops at KeyError only."
+    source := "Lib/_collections_abc.py:714-767"
+    status := .proven
+    prop := ``MSetPaths
+    thm := some ``mSetPaths_proven },
+  { id := "corelibs-collabc-values-tail"
+    pyFile := file
+    pyFns := ["ValuesView.__contains__"]
+    statement := "ValuesView.__contains__ stops at the first match, before an iterator failure further on."
+    source := "Lib/_collections_abc.py:893-898"
+    status := .proven
+    prop := ``ValuesTail
+    thm := some ``valuesTail_proven }
 ]
 
 end PyLean.CoreLibs.CollAbc

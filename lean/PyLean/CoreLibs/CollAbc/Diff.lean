@@ -51,20 +51,23 @@ def faultSeq (xs : List Int) (fail : Option Int) : Seq Int :=
 def faultMSeq (fail : Option Int) : MSeq (List Int) Int :=
   { listMSeq with getitem := fun s i => if some i = fail then .error failExc else listGet s i }
 
-def faultSet (bad : Option Int) (xs : List Int) : SetV Int :=
-  ⟨.ok xs.length, .ok xs, fun x => if some x = bad then .error badExc else .ok (decide (x ∈ xs))⟩
+/-- The exception of an iterator that raises after its items. -/
+def tailOf (b : Bool) : Option PyExc := if b then some (.valueError "itail") else none
 
-def faultMake (bad : Option Int) (xs : List Int) : SetV Int := faultSet bad (dedup [] xs)
+def faultSet (bad : Option Int) (t : Bool) (xs : List Int) : SetV Int :=
+  ⟨.ok xs.length, .ok xs, fun x => if some x = bad then .error badExc else .ok (decide (x ∈ xs)), tailOf t⟩
 
-def faultMSet (bad : Option Int) : MSet (List Int) Int :=
-  { listMSet with view := faultSet bad, fromIter := faultMake bad }
+def faultMake (bad : Option Int) (xs : List Int) : SetV Int := faultSet bad false (dedup [] xs)
 
-def faultMap (fail : Option Int) (d : List (Int × Int)) : MapV Int Int :=
+def faultMSet (bad : Option Int) (t : Bool) : MSet (List Int) Int :=
+  { listMSet with view := faultSet bad t, fromIter := faultMake bad }
+
+def faultMap (fail : Option Int) (t : Bool) (d : List (Int × Int)) : MapV Int Int :=
   ⟨fun k => if some k = fail then .error failExc else dictGet d k, .ok (d.map Prod.fst),
-    .ok d.length⟩
+    .ok d.length, tailOf t⟩
 
-def faultMMap (fail : Option Int) : MMap (List (Int × Int)) Int Int :=
-  { dictMMap with view := faultMap fail }
+def faultMMap (fail : Option Int) (t : Bool) : MMap (List (Int × Int)) Int Int :=
+  { dictMMap with view := faultMap fail t }
 
 def getPairs (j : Json) (key : String) : Except String (List (Int × Int)) := do
   let a ← (← field j key).getArr?
@@ -76,8 +79,8 @@ def encPairs (xs : List (Int × Int)) : Json :=
 
 def getOperand (bad : Option Int) (j : Json) : Except String (Operand Int) := do
   match ← getStr j "okind" with
-  | "set" => pure (.set (faultSet bad (← getIntList j "other")))
-  | "iter" => pure (.iterable (.ok (← getIntList j "other")))
+  | "set" => pure (.set (faultSet bad (← getBool j "otail") (← getIntList j "other")))
+  | "iter" => pure (.iterable (.ok (← getIntList j "other")) (tailOf (← getBool j "otail")))
   | _ => pure .other
 
 def encSet : Ret (SetV Int) → Except String Json
@@ -251,7 +254,7 @@ def run (fn : String) (j : Json) : Except String Json := do
     pure (Json.mkObj [("ok", toJson (viewRepr (← getStr j "cls") (← getStr j "r")))])
   | "set_cmp" =>
     let bad ← getOptInt j "bad"
-    let s := faultSet bad (← getIntList j "xs")
+    let s := faultSet bad (← getBool j "selftail") (← getIntList j "xs")
     let o ← getOperand bad j
     let r := match (← getStr j "op") with
       | "le" => s.le o
@@ -262,7 +265,7 @@ def run (fn : String) (j : Json) : Except String Json := do
     pure (encPy (encRet toJson) r)
   | "set_op" =>
     let bad ← getOptInt j "bad"
-    let s := faultSet bad (← getIntList j "xs")
+    let s := faultSet bad (← getBool j "selftail") (← getIntList j "xs")
     let o ← getOperand bad j
     let f := faultMake bad
     encPyList (match (← getStr j "op") with
@@ -273,7 +276,7 @@ def run (fn : String) (j : Json) : Except String Json := do
       | _ => s.xor f o)
   | "set_isdisjoint" =>
     let bad ← getOptInt j "bad"
-    let s := faultSet bad (← getIntList j "xs")
+    let s := faultSet bad (← getBool j "selftail") (← getIntList j "xs")
     pure (encPy toJson (s.isdisjoint (← getOperand bad j)))
   | "set_hash" =>
     let hs ← getIntList j "hashes"
@@ -285,7 +288,7 @@ def run (fn : String) (j : Json) : Except String Json := do
     pure (Json.mkObj [("ok", toJson (frozensetHash table))])
   | "mset_op" =>
     let bad ← getOptInt j "bad"
-    let M := faultMSet bad
+    let M := faultMSet bad (← getBool j "selftail")
     let xs ← getIntList j "xs"
     let o ← getOperand bad j
     let selfIt ← getBool j "selfit"
@@ -303,7 +306,7 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "map_op" =>
     let fail ← getOptInt j "fail"
     let d ← getPairs j "d"
-    let m := faultMap fail d
+    let m := faultMap fail (← getBool j "selftail") d
     let k ← getInt j "k"
     let E := intEq (← getOptInt j "bad")
     match (← getStr j "op") with
@@ -326,7 +329,7 @@ def run (fn : String) (j : Json) : Except String Json := do
     | _ => throw "map op"
   | "mmap_op" =>
     let fail ← getOptInt j "fail"
-    let M := faultMMap fail
+    let M := faultMMap fail (← getBool j "selftail")
     let d ← getPairs j "d"
     let k ← getInt j "k"
     let enc := fun (p : Int × List (Int × Int)) => toJson [toJson p.1, encPairs p.2]

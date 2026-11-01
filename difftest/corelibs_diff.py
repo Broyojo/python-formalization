@@ -981,8 +981,15 @@ class collabc_MSeq(collabc_A.MutableSequence):
         self.xs.insert(i, v)
 
 
+def collabc_tail(xs):
+    """An iterator that raises after its items."""
+    yield from xs
+    raise ValueError("itail")
+
+
 class collabc_Set(collabc_A.MutableSet):
     bad = None
+    itail = False
 
     def __init__(self, it=()):
         self.xs = []
@@ -996,7 +1003,7 @@ class collabc_Set(collabc_A.MutableSet):
         return x in self.xs
 
     def __iter__(self):
-        return iter(list(self.xs))
+        return collabc_tail(list(self.xs)) if self.itail else iter(list(self.xs))
 
     def __len__(self):
         return len(self.xs)
@@ -1013,6 +1020,8 @@ class collabc_Set(collabc_A.MutableSet):
 
 
 class collabc_Map(collabc_A.MutableMapping):
+    itail = False
+
     def __init__(self, items, fail):
         self.d, self.fail = dict(items), fail
 
@@ -1028,7 +1037,7 @@ class collabc_Map(collabc_A.MutableMapping):
         del self.d[k]
 
     def __iter__(self):
-        return iter(list(self.d))
+        return collabc_tail(list(self.d)) if self.itail else iter(list(self.d))
 
     def __len__(self):
         return len(self.d)
@@ -1263,12 +1272,13 @@ def collabc_gen(rng):
         b = collabc_uniq(b)
     if r == 17:
         return {"fn": "collabc.set_cmp", "op": rng.choice(["le", "lt", "ge", "gt", "eq"]), "xs": a,
-                "other": b, "okind": kind, "bad": bad}
+                "other": b, "okind": kind, "bad": bad, **collabc_tails(rng)}
     if r == 18:
         return {"fn": "collabc.set_op", "op": rng.choice(["and", "or", "sub", "rsub", "xor"]),
-                "xs": a, "other": b, "okind": kind, "bad": bad}
+                "xs": a, "other": b, "okind": kind, "bad": bad, **collabc_tails(rng)}
     if r == 19:
-        return {"fn": "collabc.set_isdisjoint", "xs": a, "other": b, "okind": kind, "bad": bad}
+        return {"fn": "collabc.set_isdisjoint", "xs": a, "other": b, "okind": kind, "bad": bad,
+                **collabc_tails(rng)}
     if r == 20:
         hs = rng.sample([0, 1, -2, 2**61 - 1, -2**63, 2**63 - 1, 5, 2**32, 123456789, -77,
                          rng.randrange(-2**63, 2**63)], rng.randrange(0, 8))
@@ -1278,7 +1288,7 @@ def collabc_gen(rng):
         return {"fn": "collabc.mset_op", "op": rng.choice(["ior", "iand", "ixor", "isub", "clear",
                                                            "remove", "pop"]),
                 "xs": a, "other": b, "okind": kind, "bad": bad, "v": v,
-                "selfit": rng.random() < .2}
+                "selfit": rng.random() < .2, **collabc_tails(rng)}
     d = [[k, rng.randrange(-2, 4)] for k in collabc_uniq(xs)]
     k = rng.choice(xs) if xs and rng.random() < .6 else rng.randrange(-3, 6)
     failk = None if rng.random() < .75 else rng.randrange(-3, 6)
@@ -1288,21 +1298,31 @@ def collabc_gen(rng):
                                                           "itemcontains"]),
                 "d": d, "k": k, "default": 99, "fail": failk, "bad": bad, "v": rng.randrange(-2, 4),
                 "ikind": rng.choice(["tuple", "list", "short", "long", "none"]),
-                "who": rng.choice(["abc", "dict"])}
+                "who": rng.choice(["abc", "dict"]), **collabc_tails(rng)}
     other = [[rng.randrange(-3, 6), rng.randrange(-2, 4)] for _ in range(rng.randrange(0, 4))]
     op = rng.choice(["pop", "popd", "popitem", "clear", "setdefault", "update_map", "update_pairs"])
     if op == "update_map":
         other = [[k2, v2] for k2, v2 in dict(map(tuple, other)).items()]
     return {"fn": "collabc.mmap_op", "op": op, "d": d, "k": k, "default": 99, "fail": failk,
-            "kw": [], "other": other}
+            "kw": [], "other": other, **collabc_tails(rng)}
+
+
+def collabc_tails(rng):
+    return {"selftail": rng.random() < .2, "otail": rng.random() < .2}
+
+
+def collabc_self(cls, *args, tail):
+    s = cls(*args)
+    s.itail = tail
+    return s
 
 
 def collabc_operand(case):
     k = case["okind"]
     if k == "set":
-        return collabc_Set(case["other"])
+        return collabc_self(collabc_Set, case["other"], tail=case["otail"])
     if k == "iter":
-        return iter(case["other"])
+        return collabc_tail(case["other"]) if case["otail"] else iter(case["other"])
     return 5
 
 
@@ -1429,18 +1449,18 @@ def collabc_run(case):
         cls = getattr(collabc_A, case["cls"])
         return {"ok": repr(cls({1: 2}))}
     if fn == "set_cmp":
-        s = collabc_Set(raw)
+        s = collabc_self(collabc_Set, raw, tail=case["selftail"])
         o = collabc_operand(case)
         m = {"le": s.__le__, "lt": s.__lt__, "ge": s.__ge__, "gt": s.__gt__, "eq": s.__eq__}
         return py_result(lambda: collabc_ret(m[case["op"]](o)))
     if fn == "set_op":
-        s = collabc_Set(raw)
+        s = collabc_self(collabc_Set, raw, tail=case["selftail"])
         o = collabc_operand(case)
         m = {"and": s.__and__, "or": s.__or__, "sub": s.__sub__, "rsub": s.__rsub__,
              "xor": s.__xor__}
         return py_result(lambda: collabc_setret(m[case["op"]](o)))
     if fn == "set_isdisjoint":
-        s = collabc_Set(raw)
+        s = collabc_self(collabc_Set, raw, tail=case["selftail"])
         o = collabc_operand(case)
         return py_result(lambda: s.isdisjoint(o))
     if fn == "set_hash":
@@ -1572,7 +1592,7 @@ def collabc_getitem(case):
 
 
 def collabc_mset(case, raw):
-    s = collabc_Set(raw)
+    s = collabc_self(collabc_Set, raw, tail=case["selftail"])
     o = s if case["selfit"] else collabc_operand(case)
     op = case["op"]
 
@@ -1596,7 +1616,7 @@ def collabc_mset(case, raw):
 
 
 def collabc_map(case):
-    m = collabc_Map(case["d"], case["fail"])
+    m = collabc_self(collabc_Map, case["d"], case["fail"], tail=case["selftail"])
     op, k = case["op"], case["k"]
     E = collabc_E
     if op == "get":
@@ -1608,7 +1628,7 @@ def collabc_map(case):
     if op == "values":
         return py_result(lambda: list(m.values()))
     if op == "valuecontains":
-        m2 = collabc_Map([(a, E(b)) for a, b in case["d"]], case["fail"])
+        m2 = collabc_self(collabc_Map, [(a, E(b)) for a, b in case["d"]], case["fail"], tail=case["selftail"])
         return py_result(lambda: E(k) in m2.values())
     if op == "keyscontain":
         return py_result(lambda: k in m.keys())
@@ -1620,7 +1640,7 @@ def collabc_map(case):
 
 
 def collabc_mmap(case):
-    m = collabc_Map(case["d"], case["fail"])
+    m = collabc_self(collabc_Map, case["d"], case["fail"], tail=case["selftail"])
     op, k = case["op"], case["k"]
     items = lambda: [list(p) for p in m.d.items()]  # noqa: E731
     if op == "pop":
@@ -1646,6 +1666,7 @@ import operator as functools_operator  # noqa: E402
 import warnings as functools_warnings  # noqa: E402
 from test.support import import_helper as functools_ih  # noqa: E402
 
+import gc as functools_gc  # noqa: E402
 functools_C = functools_ih.import_fresh_module("functools", fresh=["_functools"])
 functools_P = functools_ih.import_fresh_module("functools", blocked=["_functools"])
 
@@ -1886,6 +1907,8 @@ functools_SOURCES = [
 
 
 def functools_gen(rng):
+    if rng.random() < .12:
+        return functools_lru_ptr(rng, rng.choice(["c", "py"]))
     r = rng.randrange(0, 27)
     twin = rng.choice(["c", "py"])
     if r == 0:
@@ -1999,6 +2022,8 @@ def functools_gen(rng):
         return functools_register_case(rng)
     k = rng.randrange(0, 19)
     if k == 13:
+        if rng.random() < .7:
+            return functools_lru_ptr(rng, twin_pick(rng))
         if rng.random() < .5:
             return {"fn": "functools.lru_evict", "twin": twin_pick(rng), "arm": rng.random() < .7}
         return {"fn": "functools.key_hash", "twin": twin_pick(rng)}
@@ -2107,6 +2132,29 @@ def functools_setstate_case(rng, twin):
         (twin == "c" and len(state["iter"]) >= 2 and
          (ph_it == ph_raw or (ph_it < ph_raw and len(more) <= ph_raw)))
     return {"fn": "functools.setstate", "twin": twin, "state": state, "more": more, "call": safe}
+
+
+def functools_lru_ptr(rng, twin):
+    """Two keys collide, so a dict operation on one of them with the other in the dict runs one `__eq__`, and the
+    countdown set by `arm` picks which. The hook may call the wrapper, clear it, or raise."""
+    n = rng.randrange(3, 8)
+    pair = rng.sample(range(n), 2)
+    ops = []
+    for _ in range(rng.randrange(2, 16)):
+        x = rng.random()
+        if x < .05:
+            ops.append("clear")
+        elif x < .22:
+            ops.append(["arm", rng.randrange(1, 6)])
+        else:
+            ops.append(rng.choice(pair) if rng.random() < .5 else rng.randrange(n))
+    hook = [(["clear"] if rng.random() < .15 else ["call", rng.choice(pair) if rng.random() < .6 else rng.randrange(n)])
+            for _ in range(rng.randrange(0, 3))]
+    hook.append(rng.choice([["ret", 0], ["ret", 0], ["ret", 0], ["raise"]]))
+    return {"fn": "functools.lru_ptr", "twin": twin, "maxsize": rng.randrange(1, 5), "ops": ops, "pair": pair,
+            "hook": hook, "script": [[st for st in steps if st[0] != "call" or st[1] > k]
+                                     for k, steps in enumerate(functools_script(rng, n, 1))],
+            "hashes": [hash((1000 if k in pair else k,)) & (2 ** 64 - 1) for k in range(n)]}
 
 
 def functools_lru_case(rng, twin):
@@ -2239,6 +2287,8 @@ def functools_run(case):
         it = functools_iter(case)
         args = (f, it) if case["initial"] is None else (f, it, case["initial"])
         return py_result(lambda: m.reduce(*args))
+    if fn == "lru_ptr":
+        return functools_lru_ptr_run(case, m)
     if fn == "lru_evict":
         armed = [False]
 
@@ -2931,6 +2981,69 @@ class functools_key:
                     k.count = None
                     raise ValueError("eq")
         return self.n == other.n
+
+
+def functools_lru_ptr_run(case, m):
+    box = {"left": None}
+
+    def run(steps):
+        for s in steps:
+            if s[0] == "ret":
+                return s[1]
+            if s[0] == "raise":
+                raise ValueError("f")
+            if s[0] == "clear":
+                box["w"].cache_clear()
+            if s[0] == "call":
+                try:
+                    box["w"](keys[s[1]])
+                except Exception:
+                    pass
+        return 0
+
+    class Key:
+        def __init__(self, n):
+            self.n = n
+
+        def __hash__(self):
+            return 1000 if self.n in case["pair"] else self.n
+
+        def __eq__(self, other):
+            if box["left"] is not None:
+                box["left"] -= 1
+                if box["left"] == 0:
+                    box["left"] = None
+                    run(case["hook"])
+            return self.n == other.n
+
+    n = len(case["script"])
+    keys = [Key(i) for i in range(n)]
+
+    def user(key):
+        return run(case["script"][key.n])
+    box["w"] = w = m.lru_cache(maxsize=case["maxsize"])(user)
+    out = []
+    # bugs/corelibs-lru-evicted-hit-gc-hang.yaml: a case can leave the list with a cycle, and then the collector hangs on
+    # this wrapper, so it stays off until `cache_clear` has cut the list
+    gc_was_on = functools_gc.isenabled()
+    functools_gc.disable()
+    try:
+        for op in case["ops"]:
+            if op == "clear":
+                w.cache_clear()
+                continue
+            if isinstance(op, list):
+                box["left"] = op[1]
+                continue
+            r = py_result(lambda: w(keys[op]))
+            i = w.cache_info()
+            out.append([r.get("ok") if "ok" in r else r["exc"], i.hits, i.misses, i.currsize])
+    finally:
+        box["left"] = None
+        w.cache_clear()
+        if gc_was_on:
+            functools_gc.enable()
+    return {"ok": out}
 
 
 def functools_lru(case, m):

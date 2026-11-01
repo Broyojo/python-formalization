@@ -115,7 +115,7 @@ def listMSeq {α : Type} : MSeq (List α) α where
 
 /-- A `set`, as the list of its distinct elements in iteration order. -/
 def listSet {α : Type} [DecidableEq α] (xs : List α) : SetV α :=
-  ⟨.ok xs.length, .ok xs, fun x => .ok (decide (x ∈ xs))⟩
+  ⟨.ok xs.length, .ok xs, fun x => .ok (decide (x ∈ xs)), none⟩
 
 /-- The set of the elements of a list: what the constructor `cls(it)` does. -/
 def dedup {α : Type} [DecidableEq α] : List α → List α → List α
@@ -139,7 +139,7 @@ def dictGet {K V : Type} [DecidableEq K] (d : List (K × V)) (k : K) : Py V :=
 
 /-- A `dict` as a `Mapping`. -/
 def dictMap {K V : Type} [DecidableEq K] (d : List (K × V)) : MapV K V :=
-  ⟨dictGet d, .ok (d.map Prod.fst), .ok d.length⟩
+  ⟨dictGet d, .ok (d.map Prod.fst), .ok d.length, none⟩
 
 /-- `d[k] = v`: an existing key keeps its position. -/
 def dictSet {K V : Type} [DecidableEq K] (d : List (K × V)) (k : K) (v : V) : List (K × V) :=
