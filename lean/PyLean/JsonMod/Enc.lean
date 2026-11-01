@@ -127,7 +127,7 @@ def pyAsciiReplace (c : Nat) : PStr :=
 def pyEncodeBasestringAscii (s : PStr) : PStr :=
   [34] ++ s.flatMap (fun c => if c = 92 ∨ c = 34 ∨ ¬(32 ≤ c ∧ c ≤ 126) then pyAsciiReplace c else [c]) ++ [34]
 
-/-- `S_CHAR`, Modules/_json.c:31. -/
+/-- `S_CHAR`, Modules/_json.c:110. -/
 def sChar (c : Nat) : Bool := 32 ≤ c && c ≤ 126 && c != 92 && c != 34
 
 /-- `\uXXXX` as written by `ascii_escape_unichar` (`Py_hexdigits`, lower case). -/
@@ -188,7 +188,7 @@ def insertItem (p : EKey × EVal) : List (EKey × EVal) → List (EKey × EVal)
   | [] => [p]
   | q :: t => if p.1.lt q.1 then p :: q :: t else q :: insertItem p t
 
-/-- `sorted(dct.items())` (encoder.py:358) and `PyList_Sort(items)` (_json.c:1714):
+/-- `sorted(dct.items())` (encoder.py:358) and `PyList_Sort(items)` (_json.c:1700):
 the keys of a dict are distinct, so tuples compare by key alone. When keys of
 two classes are present some comparison between them raises; which one depends
 on the sort, so the message is not modelled. -/
@@ -308,13 +308,13 @@ def pyEncItems (cfg : ECfg) : Nat → Nat → Option PStr → PStr → Bool → 
         | .ok (rest, fst) => .ok (pre ++ pyStrEnc cfg ks ++ cfg.keySep ++ t ++ rest, fst)
 end
 
-/-! ### C encoder: `encoder_listencode_obj` and friends, Modules/_json.c:1478-1886 -/
+/-! ### C encoder: `encoder_listencode_obj` and friends, Modules/_json.c:1478-1860 -/
 
 /-- `encoder_encode_string` with `fast_encode` (:1449-1467). -/
 def cStrEnc (cfg : ECfg) (s : PStr) : PStr :=
   if cfg.ensureAscii then cAsciiEscape s else cEscape s
 
-/-- The key conversion of `encoder_encode_key_value`, :1583-1607. -/
+/-- The key conversion of `encoder_encode_key_value`, :1590-1613. -/
 def cKeyStr (cfg : ECfg) : EKey → Except PyExc (Option PStr)
   | .str s => .ok (some s)
   | .bool b => .ok (some (if b then cs "true" else cs "false"))
@@ -322,13 +322,13 @@ def cKeyStr (cfg : ECfg) : EKey → Except PyExc (Option PStr)
   | .int n => (intRepr n).map some
   | .tup _ => if cfg.skipKeys then .ok none else .error badKeyErr
 
-/-- The indent cache entries (:1275-1349): `'\n' + indent * k` and
+/-- The indent cache entries (:1274-1349): `'\n' + indent * k` and
 `item_separator + '\n' + indent * k`. -/
 def cNewlineIndent (ind : PStr) (k : Nat) : PStr := [10] ++ rep ind k
 def cSepIndent (cfg : ECfg) (ind : PStr) (k : Nat) : PStr := cfg.itemSep ++ cNewlineIndent ind k
 
 mutual
-/-- `encoder_listencode_obj`, :1478-1573. -/
+/-- `encoder_listencode_obj`, :1478-1581. -/
 def cEnc (cfg : ECfg) : Nat → Nat → EVal → ER
   | 0, _, _ => .error .modelFuel
   | f + 1, lvl, v =>
@@ -338,7 +338,7 @@ def cEnc (cfg : ECfg) : Nat → Nat → EVal → ER
     | .str s => .ok (cStrEnc cfg s)
     | .int n => intRepr n
     | .list xs =>
-      -- `encoder_listencode_list`, :1790-1868
+      -- `encoder_listencode_list`, :1769-1860
       if xs.length = 0 then .ok (cs "[]")
       else
         let (lvl, pre, sep) : Nat × PStr × PStr :=
@@ -353,7 +353,7 @@ def cEnc (cfg : ECfg) : Nat → Nat → EVal → ER
             | none => []
           .ok ([91] ++ pre ++ body ++ post ++ [93])
     | .dict kvs =>
-      -- `encoder_listencode_dict`, :1672-1788
+      -- `encoder_listencode_dict`, :1654-1767
       if kvs.length = 0 then .ok (cs "{}")
       else
         let (lvl, sep) : Nat × PStr :=
@@ -374,7 +374,7 @@ def cEnc (cfg : ECfg) : Nat → Nat → EVal → ER
     | .back _ => .error (if cfg.checkCircular then circularErr else recursionErr)
     | .other => .error defaultErr
 
-/-- The item loop of `encoder_listencode_list`, :1841-1855. -/
+/-- The item loop of `encoder_listencode_list`, :1817-1832. -/
 def cEncList (cfg : ECfg) : Nat → Nat → PStr → Nat → List EVal → ER
   | _, _, _, _, [] => .ok []
   | f, lvl, sep, i, x :: xs =>
@@ -387,7 +387,7 @@ def cEncList (cfg : ECfg) : Nat → Nat → PStr → Nat → List EVal → ER
       | .ok rest => .ok (pre ++ t ++ rest)
 
 /-- The item loop of `encoder_listencode_dict` with `encoder_encode_key_value`
-(:1575-1670); also returns `first`. -/
+(:1582-1652); also returns `first`. -/
 def cEncItems (cfg : ECfg) : Nat → Nat → PStr → Bool → List (EKey × EVal) → Except PyExc (PStr × Bool)
   | _, _, _, first, [] => .ok ([], first)
   | f, lvl, sep, first, (k, x) :: xs =>

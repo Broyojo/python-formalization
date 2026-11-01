@@ -340,10 +340,11 @@ theorem nofuel (cfg : DCfg) (s : PStr) : ∀ n : Nat,
 theorem docFuel_good (cfg : DCfg) (s : PStr) (idx : Nat) : Good idx (cScanOnce cfg s (docFuel s) idx) :=
   (nofuel cfg s (docFuel s)).1 idx (by simp only [docFuel]; omega)
 
-/-- `raw_decode(s, idx)`, for `0 <= idx <= sys.maxsize`, and `json.loads(s)`
-(`len(s) <= sys.maxsize`) always end with a value or a Python exception in both
-twins: the models never run out of fuel, and in particular neither Python
-function hangs. (`RecursionError` on deep nesting is out of scope.) -/
+/-- `raw_decode(s, idx)`, the step `json.loads` runs, for
+`0 <= idx <= sys.maxsize`, always ends with a value or a Python exception in both
+twins: the models never run out of fuel, so the twin theorems are about real
+outcomes and the decoder does not hang. (`RecursionError` on deep nesting is out
+of scope.) -/
 def DecodeTerminates : Prop :=
   ∀ (cfg : DCfg) (s : PStr) (idx : Int), 0 ≤ idx → idx ≤ ssizeMax →
     rawDecodePy cfg s idx ≠ fuelOut ∧ rawDecodeC cfg s idx ≠ fuelOut

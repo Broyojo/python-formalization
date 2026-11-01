@@ -7,9 +7,8 @@ Round trip of strings: `json.loads(json.dumps(t)) == t`.
 With `ensure_ascii=True` a `str` holding a high surrogate followed by a low
 surrogate (two code points) is written as `"𝄞"`, which `loads`
 reads as the single code point U+1D11E: refuted. Without such a pair, and for
-every string with `ensure_ascii=False`, the round trip holds (proven for the
-pure-Python decoder by following `py_scanstring` through the escaped text, and
-transferred to the C decoder with `loadsTwinsScan_proven`).
+every string with `ensure_ascii=False`, the round trip holds (`json-roundtrip`,
+`RoundTripTop.lean`). This file has the steps of `py_scanstring` on escaped text.
 -/
 
 namespace PyLean.JsonMod

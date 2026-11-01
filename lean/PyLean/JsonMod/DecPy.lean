@@ -314,7 +314,8 @@ def decodeWith (raw : PStr → Int → DR (JVal × Int)) (s : PStr) : DR JVal :=
     let e := wsEndPy s e
     if e ≠ s.length then .error (.jde "Extra data" e) else .ok v
 
-/-- `json.loads(s)` in the pure-Python implementation. -/
+/-- `json.loads(s)` for a `str` in the pure-Python implementation: `JSONDecoder.decode`.
+(`json.loads` first rejects a leading BOM, Lib/json/__init__.py, in code shared by the twins.) -/
 def loadsPy (cfg : DCfg) (s : PStr) : DR JVal := decodeWith (rawDecodePy cfg) s
 
 end PyLean.JsonMod

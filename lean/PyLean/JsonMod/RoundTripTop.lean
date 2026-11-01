@@ -14,33 +14,17 @@ theorem dumpsC_eq (cfg : ECfg) (v : EVal) : dumpsC cfg v = cEnc cfg (v.depth + 1
   | str x => simp [dumpsC, cEnc, cStrEnc]
   | _ => rfl
 
-/-- `loads` on the text written by `dumps`, in both decoders. -/
-theorem loads_enc (cfg : ECfg) (dcfg : DCfg) (v : EVal) (d : PStr) (hL : Layout cfg) (hok : v.ok = true)
-    (he : dumpsC cfg v = .ok d) (hlen : (d.length : Int) ≤ ssizeMax) :
-    loadsC dcfg d = .ok (decV cfg dcfg (v.depth + 1) v) ∧
-    loadsPy dcfg d = .ok (decV cfg dcfg (v.depth + 1) v) := by
-  rw [dumpsC_eq] at he
-  have hs : d.drop 0 = d ++ [] := by simp
-  have hD := (dec_enc cfg dcfg d hL (docFuel d)).1 _ 0 v d 0 [] hok he hs (Or.inl rfl)
-  have hg := docFuel_good dcfg d 0
-  have hscan : cScanOnce dcfg d (docFuel d) 0 = .ok (decV cfg dcfg (v.depth + 1) v, d.length) := by
-    rcases hD with h | h
-    · exact absurd h hg.1
-    · simpa using h
-  obtain ⟨c, r, hdc, hc⟩ := cEnc_head he
-  have hw0 : wsEnd d 0 = 0 := by
-    have hc1 := hc.not.1
-    rw [hdc]
-    simp [wsEnd, wsLen, hc1]
-  have hraw : rawDecodeC dcfg d ((0 : Nat) : Int) =
-      .ok (decV cfg dcfg (v.depth + 1) v, (d.length : Int)) := by
+/-- `loads` from the result of the C scanner at index 0 (no white space first). -/
+theorem loads_of_scan (dcfg : DCfg) (d : PStr) (j : JVal)
+    (hscan : cScanOnce dcfg d (docFuel d) 0 = .ok (j, d.length)) (hw0 : wsEnd d 0 = 0) :
+    loadsC dcfg d = .ok j ∧ loadsPy dcfg d = .ok j := by
+  have hraw : rawDecodeC dcfg d ((0 : Nat) : Int) = .ok (j, (d.length : Int)) := by
     have hr : ¬ (((0 : Nat) : Int) < ssizeMin ∨ ((0 : Nat) : Int) > ssizeMax) := by
       simp only [ssizeMin, ssizeMax]; omega
     have hn : ¬ (((0 : Nat) : Int) < 0) := by omega
     simp only [rawDecodeC, hr, hn, ↓reduceIte, Int.toNat_natCast, hscan]
     rfl
-  have hpy : rawDecodePy dcfg d ((0 : Nat) : Int) =
-      .ok (decV cfg dcfg (v.depth + 1) v, (d.length : Int)) := by
+  have hpy : rawDecodePy dcfg d ((0 : Nat) : Int) = .ok (j, (d.length : Int)) := by
     have h0 : ((0 : Nat) : Int) ≤ ssizeMax := by simp only [ssizeMax]; omega
     rcases raw_nat_twin dcfg d 0 h0 with h | ⟨_, _, _, _, h, _⟩ | ⟨_, _, _, _, h, _⟩
     · rw [h, hraw]
@@ -56,6 +40,26 @@ theorem loads_enc (cfg : ECfg) (dcfg : DCfg) (v : EVal) (d : PStr) (hL : Layout 
     rw [hw0, hpy]
     simp [hend]
 
+/-- `loads` on the text written by `dumps`, in both decoders. -/
+theorem loads_enc (cfg : ECfg) (dcfg : DCfg) (v : EVal) (d : PStr) (hL : Layout cfg) (hok : v.ok = true)
+    (he : dumpsC cfg v = .ok d) :
+    loadsC dcfg d = .ok (decV cfg dcfg (v.depth + 1) v) ∧
+    loadsPy dcfg d = .ok (decV cfg dcfg (v.depth + 1) v) := by
+  rw [dumpsC_eq] at he
+  have hs : d.drop 0 = d ++ [] := by simp
+  have hD := (dec_enc cfg dcfg d hL (docFuel d)).1 _ 0 v d 0 [] hok he hs (Or.inl rfl)
+  have hg := docFuel_good dcfg d 0
+  have hscan : cScanOnce dcfg d (docFuel d) 0 = .ok (decV cfg dcfg (v.depth + 1) v, d.length) := by
+    rcases hD with h | h
+    · exact absurd h hg.1
+    · simpa using h
+  obtain ⟨c, r, hdc, hc⟩ := cEnc_head he
+  have hw0 : wsEnd d 0 = 0 := by
+    have hc1 := hc.not.1
+    rw [hdc]
+    simp [wsEnd, wsLen, hc1]
+  exact loads_of_scan dcfg d _ hscan hw0
+
 /-- `json.dumps` output is accepted by `json.loads`: for every value and every
 `ensure_ascii`, `sort_keys`, `skipkeys`, `check_circular`, every white-space
 `indent` and separators made of `,`/`:` with white space, if either encoder
@@ -63,16 +67,16 @@ writes a text, both decoders return a value for it, whatever
 `strict`, `object_pairs_hook` and `parse_int`. -/
 def DumpsAccepted : Prop :=
   ∀ (cfg : ECfg) (dcfg : DCfg) (v : EVal) (d : PStr), Layout cfg → v.ok = true →
-    (dumpsPy cfg v = .ok d ∨ dumpsC cfg v = .ok d) → (d.length : Int) ≤ ssizeMax →
+    (dumpsPy cfg v = .ok d ∨ dumpsC cfg v = .ok d) →
     ∃ j, loadsPy dcfg d = .ok j ∧ loadsC dcfg d = .ok j
 
 theorem dumpsAccepted_proven : DumpsAccepted := by
-  intro cfg dcfg v d hL hok he hlen
+  intro cfg dcfg v d hL hok he
   have he' : dumpsC cfg v = .ok d := by
     rcases he with h | h
     · rw [← dumpsTwins_proven cfg v hok]; exact h
     · exact h
-  obtain ⟨h1, h2⟩ := loads_enc cfg dcfg v d hL hok he' hlen
+  obtain ⟨h1, h2⟩ := loads_enc cfg dcfg v d hL hok he'
   exact ⟨_, h2, h1⟩
 
 /-! ### JSON-representable values -/
@@ -358,16 +362,16 @@ which is stronger than `dict` equality. -/
 def RoundTrip : Prop :=
   ∀ (cfg : ECfg) (dcfg : DCfg) (v : EVal) (j : JVal) (d : PStr), Layout cfg → cfg.sortKeys = false →
     dcfg.intHook = false → v.ok = true → EVal.toJ v = some j → EVal.clean cfg.ensureAscii v = true →
-    (dumpsPy cfg v = .ok d ∨ dumpsC cfg v = .ok d) → (d.length : Int) ≤ ssizeMax →
+    (dumpsPy cfg v = .ok d ∨ dumpsC cfg v = .ok d) →
     loadsPy dcfg d = .ok j ∧ loadsC dcfg d = .ok j
 
 theorem roundTrip_proven : RoundTrip := by
-  intro cfg dcfg v j d hL hs hi hok hj hc he hlen
+  intro cfg dcfg v j d hL hs hi hok hj hc he
   have he' : dumpsC cfg v = .ok d := by
     rcases he with h | h
     · rw [← dumpsTwins_proven cfg v hok]; exact h
     · exact h
-  obtain ⟨h1, h2⟩ := loads_enc cfg dcfg v d hL hok he' hlen
+  obtain ⟨h1, h2⟩ := loads_enc cfg dcfg v d hL hok he'
   rw [dumpsC_eq] at he'
   rw [decV_toJ cfg dcfg hL hs hi _ 0 v d j he' hj hc] at h1 h2
   exact ⟨h2, h1⟩

@@ -25,7 +25,7 @@ abbrev PStr := List Nat
 def cs (s : String) : PStr := s.toList.map Char.toNat
 
 /-- `' \t\n\r'`: `WHITESPACE_STR`, Lib/json/decoder.py:134, and `IS_WHITESPACE`,
-Modules/_json.c:32. -/
+Modules/_json.c:111. -/
 def isWs (c : Nat) : Bool := c == 32 || c == 9 || c == 10 || c == 13
 
 /-- Number of leading JSON whitespace code points. -/
@@ -225,7 +225,7 @@ def parseInt (cfg : DCfg) (t : PStr) : DR JVal :=
     | .error e => .error (.exc e)
 
 /-- `BACKSLASH`, decoder.py:55-58; the same table as the `switch` in
-`scanstring_unicode`, Modules/_json.c:467-479. -/
+`scanstring_unicode`, Modules/_json.c:457-471. -/
 def backslash (c : Nat) : Option Nat :=
   if c = 34 then some 34 else if c = 92 then some 92 else if c = 47 then some 47
   else if c = 98 then some 8 else if c = 102 then some 12 else if c = 110 then some 10
@@ -239,7 +239,7 @@ def hexVal (c : Nat) : Option Nat :=
 
 /-- Four hex digits at `p`: `HEXDIGITS.match(s, p)` + `int(_, 16)` in
 `_decode_uXXXX` (decoder.py:60-68), and the digit loops of
-`scanstring_unicode` (Modules/_json.c:489-506). -/
+`scanstring_unicode` (Modules/_json.c:481-497, 506-521). -/
 def hex4 (s : PStr) (p : Nat) : Option Nat :=
   match (s.drop p).take 4 with
   | [a, b, c, d] =>

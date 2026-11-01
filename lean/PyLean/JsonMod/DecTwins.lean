@@ -18,8 +18,6 @@ theorem reSign_len (t : PStr) : (reSign t).1.length + (reSign t).2.length = t.le
   | nil => rfl
   | cons c r => rw [reSign_cons]; split <;> simp <;> omega
 
-theorem min_le_right' (a b : Nat) : min a b ≤ b := Nat.min_le_right a b
-
 theorem reInt_len {t ip : PStr} (h : reInt t = some ip) : ip.length ≤ t.length := by
   cases t with
   | nil => simp [reInt] at h

@@ -1,8 +1,11 @@
 import PyLean.Registry
 import PyLean.JsonMod.Diff
 import PyLean.JsonMod.DecProps
+import PyLean.JsonMod.DecFuel
 import PyLean.JsonMod.EncTwins
-import PyLean.JsonMod.RoundTripStr
+import PyLean.JsonMod.RoundTripTop
+import PyLean.JsonMod.Strict
+import PyLean.JsonMod.DocProps
 
 /-!
 `Lib/json/` pure-Python scanner/encoder vs `Modules/_json.c`, CPython 3.14.7.
@@ -72,7 +75,45 @@ def entries : List Entry := [
     source := "round trip (json docs: dumps/loads)", status := .refuted
     prop := ``RoundTripStr, thm := some ``roundTripStr_refuted
     bug := some "json-roundtrip-surrogate-pair"
-    notes := "'\\ud834\\udd1e' (two code points) comes back as '\\U0001d11e' with ensure_ascii=True. Known: gh-94527 (open)." }
+    notes := "'\\ud834\\udd1e' (two code points) comes back as '\\U0001d11e' with ensure_ascii=True. Known: gh-94527 (open)." },
+  { id := "json-roundtrip", pyFile := "Lib/json/encoder.py"
+    pyFns := ["json.dumps", "json.loads", "_make_iterencode", "C c_make_encoder", "py_scanstring", "C scanstring_unicode"]
+    statement := "loads(dumps(v)) == v for every JSON-representable v (None, bool, int, str, list, dict with str keys), both encoders and decoders, every strict and object_pairs_hook, every white-space indent and every separators built from ',' and ':' with white space, provided that with ensure_ascii=True no string holds a high surrogate immediately followed by a low surrogate."
+    source := "round trip (json docs); the proviso is exactly json-roundtrip-str", status := .proven
+    prop := ``RoundTrip, thm := some ``roundTrip_proven
+    notes := "Hypotheses: Layout (the output is JSON at all), sort_keys=False (with it dict items come back reordered, which dict equality ignores; objects are compared as item lists here), default parse_int, Python value invariants (str code points, distinct dict keys). Ints of more than 4300 digits: dumps raises, so the statement is about values dumps accepts." },
+  { id := "json-dumps-accepted", pyFile := "Lib/json/encoder.py"
+    pyFns := ["json.dumps", "json.loads"]
+    statement := "If dumps(v) returns a text, for any value, ensure_ascii, sort_keys, skipkeys and check_circular, a white-space indent and separators built from ',' and ':', then loads accepts that text, in both decoders, for every strict, object_pairs_hook and parse_int setting."
+    source := "json docs: dumps serializes to a JSON formatted str; invariant", status := .proven
+    prop := ``DumpsAccepted, thm := some ``dumpsAccepted_proven
+    notes := "Includes non-str keys (int, bool, None), skipped keys, lone surrogates and surrogate pairs." },
+  { id := "json-decode-terminates", pyFile := "Lib/json/decoder.py"
+    pyFns := ["JSONDecoder.raw_decode", "py_make_scanner", "C scan_once_unicode"]
+    statement := "For every str s, every decoder setting and 0 <= idx <= sys.maxsize, raw_decode(s, idx) ends with a value or a Python exception in both twins (the models never exhaust their fuel, so the twin theorems are about real outcomes)."
+    source := "invariant: no hang", status := .proven
+    prop := ``DecodeTerminates, thm := some ``decodeTerminates_proven
+    notes := "RecursionError on deep nesting is out of scope." },
+  { id := "json-strict-only-control", pyFile := "Lib/json/decoder.py"
+    pyFns := ["JSONDecoder", "py_scanstring", "C scanstring_unicode"]
+    statement := "For every document, loads with strict=True gives the same result as with strict=False, or an 'Invalid control character' error at a character of code 0-31, in both twins."
+    source := "JSONDecoder.__init__ docstring, Lib/json/decoder.py:322-325", status := .proven
+    prop := ``StrictOnlyControl, thm := some ``strictOnlyControl_proven },
+  { id := "json-strict-literal", pyFile := "Lib/json/decoder.py"
+    pyFns := ["JSONDecoder", "py_scanstring", "C scanstring_unicode"]
+    statement := "A string literal without quotes or backslashes is accepted with strict=False and gives its characters back; with strict=True it is accepted exactly when it has no character of code 0-31; in both twins."
+    source := "JSONDecoder.__init__ docstring, Lib/json/decoder.py:322-325", status := .proven
+    prop := ``StrictLiteral, thm := some ``strictLiteral_proven },
+  { id := "json-ensure-ascii-output", pyFile := "Lib/json/encoder.py"
+    pyFns := ["json.dumps", "py_encode_basestring_ascii", "C ascii_escape_unicode"]
+    statement := "With ensure_ascii=True, every code point of the output of either encoder is ASCII, for every value, unless indent or a separator is itself non-ASCII."
+    source := "JSONEncoder.__init__ docstring, Lib/json/encoder.py:114-115", status := .proven
+    prop := ``EnsureAsciiOutput, thm := some ``ensureAsciiOutput_proven },
+  { id := "json-int-literal", pyFile := "Lib/json/scanner.py"
+    pyFns := ["json.loads", "NUMBER_RE", "C _match_number_unicode", "int"]
+    statement := "A JSON int literal (optional '-', no leading zeros) under the default parse_int is decoded to its value when it has at most 4300 digits, and raises the ValueError of int() naming its digit count otherwise, in both twins."
+    source := "int/str conversion length limit docs; JSONDecoder docstring (parse_int equivalent to int(num_str))", status := .proven
+    prop := ``IntLiteral, thm := some ``intLiteral_proven }
 ]
 
 end PyLean.JsonMod

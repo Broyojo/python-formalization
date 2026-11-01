@@ -12,8 +12,8 @@ summary: |
   json.loads(json.dumps('𝄞')) == '\U0001d11e'. Both encoders and both decoders behave
   the same. The Lean model proves that this is the only way a str fails to round-trip:
   loads(dumps(t)) == t for every str t with ensure_ascii=False, and with ensure_ascii=True
-  whenever t has no high surrogate immediately followed by a low surrogate
-  (json-roundtrip-str-no-surrogate-pairs).
+  whenever t has no high surrogate immediately followed by a low surrogate, for strings alone
+  and inside any JSON-representable value (json-roundtrip).
 likelihood: |
   Very low: needs a str holding a surrogate pair as two code points (from surrogatepass /
   surrogateescape decoding or explicit escapes).
