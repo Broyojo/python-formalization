@@ -6,7 +6,7 @@ Modules/_json.c	307	325	raise_errmsg	raise_errmsg(const char *msg, PyObject *s, 
 Modules/_json.c	328	335	raise_stop_iteration	raise_stop_iteration(Py_ssize_t idx)	modelled	json-loads-twins-scan,json-scanner-call-raw	
 Modules/_json.c	338	362	_build_rval_index_tuple	_build_rval_index_tuple(PyObject *rval, Py_ssize_t idx) {	modelled	json-c-scanstring,json-raw-decode-twins-in-range,json-scanner-call-raw	
 Modules/_json.c	365	369	_PyUnicodeWriter_IsEmpty	_PyUnicodeWriter_IsEmpty(PyUnicodeWriter *writer_pub)	modelled	json-loads-twins-scan	
-Modules/_json.c	372	544	scanstring_unicode	scanstring_unicode(PyObject *pystr, Py_ssize_t end, int strict, Py_ssize_t *next_end_ptr)	modelled	json-loads-twins-pos,json-loads-twins-scan,json-roundtrip,json-strict-literal,json-strict-only-control	
+Modules/_json.c	372	544	scanstring_unicode	scanstring_unicode(PyObject *pystr, Py_ssize_t end, int strict, Py_ssize_t *next_end_ptr)	modelled	json-loads-twins-pos,json-loads-twins-scan,json-strict-literal,json-strict-only-control	
 Modules/_json.c	560	580	py_scanstring	py_scanstring(PyObject* Py_UNUSED(self), PyObject *args)	modelled	json-c-scanstring	candidates:json-roundtrip,json-roundtrip-str
 Modules/_json.c	589	604	py_encode_basestring_ascii	py_encode_basestring_ascii(PyObject* Py_UNUSED(self), PyObject *pystr)	modelled	json-c-encode-basestring	
 Modules/_json.c	614	629	py_encode_basestring	py_encode_basestring(PyObject* Py_UNUSED(self), PyObject *pystr)	modelled	json-c-encode-basestring	

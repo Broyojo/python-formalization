@@ -5,6 +5,7 @@ import PyLean.UnicodeObj.FormatNumber
 import PyLean.UnicodeObj.FormatPercent
 import PyLean.UnicodeObj.FormatStr
 import PyLean.UnicodeObj.ObjectWriter
+import PyLean.UnicodeObj.ObjectFromFormat
 
 /-! Difftest handler for the formatting slice (`fn` names start with `fmt_`). -/
 
@@ -115,6 +116,28 @@ def getWOp (j : Json) : Except String WOp := do
       (← (← field j "consumed").getBool?)
   | o => throw s!"bad op {o}"
 
+def getTName (j : Json) : Except String TName := do
+  match ← getStr j "k" with
+  | "static" => return .static (← getSeq j "s")
+  | "heap" =>
+    let m ← field j "m"
+    let q ← getSeq j "q"
+    if m == Json.null then return .heap none q
+    else return .heap (some (← getSeq j "m")) q
+  | o => throw s!"bad type {o}"
+
+def getVArg (j : Json) : Except String VArg := do
+  match ← getStr j "t" with
+  | "int" => return .int (← getInt j "v")
+  | "obj" => return .obj (← getG (← field j "o"))
+  | "null" => return .nullObj
+  | "cstr" => return .cstr (← getSeq j "s")
+  | "wstr" => return .wstr (← getSeq j "s")
+  | "ptr" => return .ptr (← getNat j "v")
+  | "type" => return .type (← getTName (← field j "n"))
+  | "inst" => return .inst (← getTName (← field j "n"))
+  | o => throw s!"bad arg {o}"
+
 def kindJson : Kind → Json
   | .ascii => Json.arr #[toJson (1 : Nat), toJson true]
   | .ucs1 => Json.arr #[toJson (1 : Nat), toJson false]
@@ -180,6 +203,20 @@ def run (fn : String) (j : Json) : Except String Json := do
         toJson (consumedOut r)]
       Json.arr #[Json.arr (trace.map step).toArray, toJson text, kindJson kind])
       (writerCreate (← getInt j "n"))
+  | "fmt_fromformat" =>
+    let args ← (← (← field j "args").getArr?).toList.mapM getVArg
+    return encPy (fun (r : Str × Kind) => Json.arr #[toJson r.1, kindJson r.2])
+      (pyUnicodeFromFormat (← getSeq j "fmt") args)
+  | "fmt_writerformat" =>
+    let args ← (← (← field j "args").getArr?).toList.mapM getVArg
+    let pre ← (← (← field j "pre").getArr?).toList.mapM getWOp
+    let post ← (← (← field j "post").getArr?).toList.mapM getWOp
+    let (w1, _) := runOps {} pre
+    let (w2, r) := writerFormat w1 (← getSeq j "fmt") args
+    let (w3, _) := runOps w2 post
+    let (text, kind) := w3.finish
+    return encPy (fun (x : Json) => x)
+      (.ok (Json.arr #[encPy (fun (_ : Unit) => Json.null) r, toJson text, kindJson kind]))
   | "fmt_percent" =>
     return encPy toJson (pyUnicodeFormat (← getSeq j "fmt") (← getArgs (← field j "args")))
   | "fmt_float" =>

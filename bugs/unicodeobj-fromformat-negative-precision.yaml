@@ -1,0 +1,95 @@
+id: unicodeobj-fromformat-negative-precision
+title: "PyUnicode_FromFormat with a negative '.*' precision copies a negative count and corrupts memory, for every object conversion"
+priority: P3
+kind: crash
+module: unicodeobject
+files: [Objects/unicodeobject.c]
+functions: ["unicode_fromformat_arg", "unicode_fromformat_write_str", "unicode_fromformat_write_utf8"]
+summary: |
+  `%.*U` with a negative precision makes unicode_fromformat_arg store the sentinel -2, and
+  unicode_fromformat_write_str treats it as a length: `length = Py_MIN(precision, length)` gives -2.
+  _PyUnicode_FastCopyCharacters is then called with a count of -2, which is memcpy of a huge size_t,
+  and `writer->pos += length` moves the writer backwards. The same happens for every conversion that
+  goes through that function: %U, %V with an object, %S, %R, %A, %T and %N, so also for PyErr_Format
+  and PyUnicodeWriter_Format. Results are nondeterministic: SIGSEGV, or a string of the wrong length
+  holding uninitialized memory, including characters above 0x10FFFF, followed by a crash later.
+  The other conversions disagree with each other about the same input. %d reads a negative precision
+  as omitted, as C does. %s and %V with NULL read it as zero and write nothing. So the three groups
+  of conversions behave in three different ways for one documented argument.
+likelihood: |
+  Needs C code passing a computed precision that goes negative, to a conversion taking an object,
+  for example `PyErr_Format(exc, "%.*U", n - skip, name)`. No call in Objects, Python, Modules or
+  Parser of 3.14 uses `.*` with these conversions, so the standard library does not reach it, and
+  nothing in pure Python does. The effect when it happens is memory corruption, not an exception.
+  Present since `*` was added in 3.12 by gh-98836 (PR gh-98838).
+maybe_intended: |
+  The crash is not. The sentinel is deliberate, since line 2853 treats a negative value on purpose,
+  and it is harmless for %d, but no caller of the sentinel handles it in the string path, and
+  neither the documentation nor gh-98836 says a negative precision is an error. The empty result of
+  %.*s could be a choice; it differs from C, where a negative precision is as if omitted, and the
+  documentation describes these conversions by reference to printf. A maintainer could reasonably
+  answer either that a negative precision is a caller error, or that it means omitted, but either
+  way the answer should not be memory corruption, and a SystemError or the printf meaning would
+  both close this.
+reproducer: |
+  import subprocess, sys
+  CHILD = r'''
+  from ctypes import c_char_p, c_int, py_object, pythonapi as api
+  f = api.PyUnicode_FromFormat
+  f.restype = py_object
+  f.argtypes = [c_char_p]
+  print(ascii(f(b"[%.*d]", c_int(-1), c_int(7))))
+  print(ascii(f(b"[%.*s]", c_int(-1), c_char_p(b"abc"))))
+  r = f(b"[%.*U]", c_int(-1), py_object("abc"))
+  print("U", ascii(r), len(r), flush=True)
+  '''
+  p = subprocess.run([sys.executable, '-c', CHILD], capture_output=True, text=True, timeout=60)
+  print('exit', p.returncode)
+  print(p.stdout[:200])
+  if p.returncode != 0 or "U '[abc]'" not in p.stdout:
+      print('REPRODUCED unicodeobj-fromformat-negative-precision')
+expected: |
+  '[abc]', as for %.*d and as C's printf does with a negative precision. Or, if a negative precision
+  is to be an error, an exception. Not a crash.
+observed: |
+  python3 3.14.7 on Linux: the process dies with SIGSEGV. Before it does, the call often returns,
+  and what it returns matches the arithmetic of the cause. For "[%.*U]" the writer writes '[' (pos 1),
+  fills `width - length` = -1 + 2 = 1 space (pos 2), then `pos += -2` gives 0, so ']' lands at index 0
+  and the result is ']', of length 1. With width 5 the fill is 7 and the length is 7. Other runs gave
+  '獹' for an empty string and '\U616d0000', above the Unicode range. "%.*s" gives '[]' and
+  "%.*d" gives '[7]', with no crash.
+tested: "REPRODUCED on python3 3.14.7 (SIGSEGV on Linux). REPRODUCED on main (3.16.0a1+dev) (SIGBUS on macOS arm64); the same lines are there, Objects/unicodeobject.c:2598 on main."
+promised_by: |
+  Invariant: no crash, and no copy with a negative count. Objects/unicodeobject.c:1485 asserts
+  `0 <= how_many`, so a debug build aborts there. Doc/c-api/unicode.rst:446-449 documents `*` as an
+  `int` with no restriction on its sign. C11 7.21.6.1: "A negative precision argument is taken as if
+  the precision were omitted."
+cause: |
+  Objects/unicodeobject.c:2852-2854 turns a negative `*` into -2. Line 2678 tests only for -1, so -2
+  is not "no precision"; line 2683 then gives `length = Py_MIN(precision, length)` = -2; line 2694
+  computes the fill from it; line 2701 passes it to _PyUnicode_FastCopyCharacters, whose only check
+  is `how_many == 0` at line 1493; line 2703 adds it to `writer->pos`. In
+  unicode_fromformat_write_utf8 and _wcstr, lines 2724-2729 and 2763-2768, the loop never starts for
+  a negative precision, which is why %s writes nothing instead of crashing.
+possible_fix: |
+  Treat a negative `*` precision as omitted at line 2853: `precision = -1`. That is what C does and
+  what %d does already, it makes %s agree, and it needs no change in the write functions. The check
+  of %c and %p at line 2902 looks at `precision >= 0`, so it is unaffected. A test with
+  `check_format('abc', b'%.*U', c_int(-1), 'abc')` beside lines 735-745 of
+  Lib/test/test_capi/test_unicode.py would cover it, and the same for %s and %V.
+lean: |
+  Refuted by fromFormatNoNegativeCopy_refuted and fromFormatNegativeStarOmitted_refuted
+  (lean/PyLean/UnicodeObj/ObjectFromFormatProps.lean). writeStrNegativeCopy_proven shows the copy
+  happens exactly when the precision is below -1, parserPrecisionRange_proven that only a negative
+  `*` produces that, and fromFormatIntStarOmitted_proven that the integer conversions are safe.
+duplicates:
+  issues:
+    - {number: 140471, state: closed, relation: different, reason: "%U given None by ast; a different cause in the same function"}
+    - {number: 98836, state: closed, relation: origin, reason: "added variable width and precision; does not discuss a negative precision"}
+    - {number: 51579, state: closed, relation: origin, reason: "added width and precision for %s, %S, %R, %V, %U, %A"}
+  queries: ["PyUnicode_FromFormat negative precision", "PyUnicode_FromFormat precision crash",
+            "unicode_fromformat_write_str", "PyErr_Format precision negative",
+            "gh search prs PyUnicode_FromFormat precision", "FromFormat variable width precision asterisk",
+            "FromFormat precision", "FromFormat crash", "FromFormat negative", "gh search prs FromFormat",
+            "gh search prs 98836", "gh issue view 98836", "gh issue view 140471"]
+  bugforge: "no match in vendor/bugforge-results/README.md"

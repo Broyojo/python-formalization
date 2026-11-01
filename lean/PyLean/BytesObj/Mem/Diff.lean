@@ -404,7 +404,10 @@ def script (j : Json) : Except String Json := do
     | .ok v => (some <$> v.getNat?)
     | .error _ => (pure none : Except String (Option Nat))
   let mut d : DS := { st := { mem := mem, unhashable := unh }, exps := exps.toArray }
-  d := { d with st := { d.st with hashHook := hooks } }
+  let noStruct := match j.getObjVal? "nostruct" with
+    | .ok (.bool b) => b
+    | _ => false
+  d := { d with st := { d.st with hashHook := hooks, noStruct := noStruct } }
   let mut out : Array Json := #[]
   for op in ops do
     let (r, d') ← stepOp d (← op.getArr?)

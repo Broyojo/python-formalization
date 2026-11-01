@@ -1,0 +1,64 @@
+id: corelibs-singledispatch-compose-repeat
+title: "_compose_mro can list an ABC twice, and singledispatch then raises RuntimeError: Inconsistent hierarchy"
+priority: P4
+kind: logic-error
+module: corelibs
+files: [Lib/functools.py]
+functions: ["_compose_mro", "_c3_mro", "_c3_merge"]
+summary: |
+  In the loop of _compose_mro, a type with no useful subclass is appended at :839 without the test `if subcls not in
+  mro` that :845 has for the other branch. A type can already be there, added through a subclass of an earlier
+  type. The list then has a repeat, _c3_mro keeps both in abstract_bases, and _c3_merge finds the type in the tail of
+  that one list, so every head is rejected and dispatch raises RuntimeError on a hierarchy that is consistent.
+likelihood: |
+  Low. It needs a subclass hook that says yes for a class and no for one of that class's bases, as below: `K` is a
+  virtual subclass of Sub, and Mid, between Sub and B, disowns it. Registering K on A and B directly does not do it.
+maybe_intended: |
+  No: the two branches should use the same test. A maintainer may say that such a hook breaks issubclass, which is
+  true, and that the error is then fair, though the message points elsewhere.
+reproducer: |
+  import abc
+  from functools import singledispatch
+  def hook(answer):
+      def h(cls, c):
+          return answer if c.__name__ == 'K' else NotImplemented
+      return classmethod(h)
+  class B(abc.ABC):
+      __subclasshook__ = hook(True)
+  class A(abc.ABC):
+      __subclasshook__ = hook(True)
+  class Mid(B):
+      __subclasshook__ = hook(False)
+  class Sub(A, Mid):
+      __subclasshook__ = hook(True)
+  class K:
+      pass
+  @singledispatch
+  def f(x):
+      return 'default'
+  f.register(A, lambda x: 'A')
+  f.register(B, lambda x: 'B')
+  try:
+      r = f(K())
+  except RuntimeError as e:
+      r = str(e)
+  print(r)
+  if r == 'Inconsistent hierarchy':
+      print('REPRODUCED corelibs-singledispatch-compose-repeat')
+expected: |
+  A dispatch result, or the "Ambiguous dispatch" RuntimeError, which describes the situation.
+observed: |
+  python3 3.14.7: Inconsistent hierarchy. REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+promised_by: |
+  Nothing explicit; the docstring of _compose_mro.
+cause: |
+  Lib/functools.py:838-839 appends typ with no membership test, unlike :845-846.
+possible_fix: |
+  Test `if typ not in mro` at :839.
+duplicates:
+  issues: []
+  queries: ["gh search issues singledispatch Inconsistent hierarchy", "gh search issues _compose_mro",
+            "bugforge README: no match for singledispatch"]
+lean:
+  property: PyLean.CoreLibs.Functools.ComposeNoRepeat
+  theorem: PyLean.CoreLibs.Functools.composeNoRepeat_refuted

@@ -28,7 +28,7 @@ def formatEntries : List Entry := [
     source := "assert (format->align <= 127) and assert (format->sign <= 127), formatter_unicode.c:369-370, in sharp form"
     status := .proven, prop := ``ParseAsserts, thm := some ``parseAsserts_proven },
   { id := "unicodeobj-format-str-shape", pyFile := "Python/formatter_unicode.c"
-    pyFns := ["format_string_internal", "calc_padding", "fill_padding"]
+    pyFns := []
     statement := "format(s, spec) is s cut to the precision and padded to the width, left, right or centred, with the extra fill going to the right."
     source := "format spec mini-language, Doc/library/string.rst"
     status := .proven, prop := ``StrFormatShape, thm := some ``strFormatShape_proven },
@@ -61,7 +61,7 @@ def formatEntries : List Entry := [
     bug := some "unicodeobj-format-percent-star-width"
     notes := "Known: python/cpython#151847 (open)." },
   { id := "unicodeobj-format-parse-number", pyFile := "Python/formatter_unicode.c"
-    pyFns := ["parse_number"]
+    pyFns := []
     statement := "parse_number splits a number into digits, decimal point, fraction and remainder with nothing lost, for every string."
     source := "invariant"
     status := .proven, prop := ``ParseNumberSplit, thm := some ``parseNumberSplit_proven },
@@ -81,7 +81,7 @@ def formatEntries : List Entry := [
     source := "format spec docs: width is the minimum total field width"
     status := .proven, prop := ``FloatWidthIsMinimum, thm := some ``floatWidthIsMinimum_proven },
   { id := "unicodeobj-format-int-width", pyFile := "Python/formatter_unicode.c"
-    pyFns := ["format_long_internal", "calc_number_widths", "fill_number"]
+    pyFns := ["calc_number_widths", "fill_number"]
     statement := "format(n, spec) is at least width characters long, for every int and every spec, on the prefix path of '#x' and for the 'c' type."
     source := "format spec docs: width is the minimum total field width"
     status := .proven, prop := ``IntWidthIsMinimum, thm := some ``intWidthIsMinimum_proven },
@@ -121,7 +121,7 @@ def formatEntries : List Entry := [
     source := "invariant: fast path vs generic path"
     status := .proven, prop := ``RenderFieldIsFormat, thm := some ``renderFieldIsFormat_proven },
   { id := "unicodeobj-format-str-autonumber", pyFile := "Objects/stringlib/unicode_format.h"
-    pyFns := ["field_name_split", "autonumber_state_error"]
+    pyFns := ["field_name_split"]
     statement := "The numbering rule holds for every field name and state: an empty name takes the next number and is refused after manual numbering, a numeric name is refused after automatic numbering, and any other name leaves the state alone."
     source := "Doc/library/string.rst: auto-numbering"
     status := .proven, prop := ``AutoNumberingRule, thm := some ``autoNumberingRule_proven },
@@ -131,7 +131,7 @@ def formatEntries : List Entry := [
     source := "invariant: no silent wraparound"
     status := .proven, prop := ``GetIntegerNoWrap, thm := some ``getIntegerNoWrap_proven },
   { id := "unicodeobj-format-str-conversion-rejected", pyFile := "Objects/stringlib/unicode_format.h"
-    pyFns := ["do_conversion"]
+    pyFns := []
     statement := "Every conversion character but r, s, a and NUL is refused with its exact error, for every object."
     source := "Doc/library/string.rst: conversion"
     status := .proven, prop := ``ConversionRejected, thm := some ``conversionRejected_proven },
@@ -147,17 +147,17 @@ def formatEntries : List Entry := [
     source := "Doc/library/string.rst: {{ and }}"
     status := .proven, prop := ``BraceEscapeRoundTrip, thm := some ``braceEscapeRoundTrip_proven },
   { id := "unicodeobj-format-str-format-map", pyFile := "Objects/stringlib/unicode_format.h"
-    pyFns := ["do_string_format_map", "get_field_object"]
+    pyFns := ["get_field_object"]
     statement := "format_map refuses a positional field, for every field name, mapping and state, before the mapping is touched."
     source := "str.format_map docs; invariant: no positional arguments"
     status := .proven, prop := ``FormatMapNoPositional, thm := some ``formatMapNoPositional_proven },
   { id := "unicodeobj-format-str-parser-accepts", pyFile := "Objects/stringlib/unicode_format.h"
-    pyFns := ["MarkupIterator_next", "formatter_parser"]
+    pyFns := ["MarkupIterator_next"]
     statement := "Whatever str.format accepts, _string.formatter_parser accepts."
     source := "invariant: string.Formatter vs str.format"
     status := .proven, prop := ``FormatterParserAccepts, thm := some ``formatterParserAccepts_proven },
   { id := "unicodeobj-format-str-parser-reads", pyFile := "Objects/stringlib/unicode_format.h"
-    pyFns := ["formatter_parser", "formatteriter_next"]
+    pyFns := []
     statement := "formatter_parser reports a field's name and spec, gives None in all three places for plain text, and refuses anything but a str."
     source := "string.Formatter.parse docs"
     status := .proven, prop := ``FormatterParserReads, thm := some ``formatterParserReads_proven },

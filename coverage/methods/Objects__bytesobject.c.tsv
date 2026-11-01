@@ -7,7 +7,7 @@ Objects/bytesobject.c	138	163	PyBytes_FromStringAndSize	PyBytes_FromStringAndSiz
 Objects/bytesobject.c	166	197	PyBytes_FromString	PyBytes_FromString(const char *str)	modelled	bytesobj-bytes-capi	
 Objects/bytesobject.c	200	388	PyBytes_FromFormatV	PyBytes_FromFormatV(const char *format, va_list vargs)	modelled	bytesobj-bytes-capi	
 Objects/bytesobject.c	391	400	PyBytes_FromFormat	PyBytes_FromFormat(const char *format, ...)	modelled	bytesobj-bytes-capi	
-Objects/bytesobject.c	404	418	Py_LOCAL_INLINE	Py_LOCAL_INLINE(PyObject *) getnextarg(PyObject *args, Py_ssize_t arglen, Py_ssize_t *p_argidx)	modelled	bytesobj-bytes-format-long-types	
+Objects/bytesobject.c	404	418	getnextarg	Py_LOCAL_INLINE(PyObject *) getnextarg(PyObject *args, Py_ssize_t arglen, Py_ssize_t *p_argidx)	modelled	bytesobj-bytes-format-long-types	
 Objects/bytesobject.c	423	467	formatfloat	formatfloat(PyObject *v, int flags, int prec, int type, PyObject **p_result, _PyBytesWriter *writer, char *str)	modelled	bytesobj-bytes-format-float-error,bytesobj-bytes-format-float-type	
 Objects/bytesobject.c	470	496	formatlong	formatlong(PyObject *v, int flags, int prec, int type)	modelled	bytesobj-bytes-format-fast-slow,bytesobj-bytes-format-long-types	
 Objects/bytesobject.c	499	542	byte_converter	byte_converter(PyObject *arg, char *p)	modelled	bytesobj-bytes-format-converters	
@@ -44,9 +44,9 @@ Objects/bytesobject.c	1934	1940	bytes_find_impl	bytes_find_impl(PyBytesObject *s
 Objects/bytesobject.c	1951	1957	bytes_index_impl	bytes_index_impl(PyBytesObject *self, PyObject *sub, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=0da25cc74683ba42 input=aa34ad71ba0bafe3]*/	modelled	strsearch-find-str-bytes	
 Objects/bytesobject.c	1968	1974	bytes_rfind_impl	bytes_rfind_impl(PyBytesObject *self, PyObject *sub, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=51b60fa4ad011c09 input=864c3e7f3010b33c]*/	modelled	strsearch-find-str-bytes	
 Objects/bytesobject.c	1985	1991	bytes_rindex_impl	bytes_rindex_impl(PyBytesObject *self, PyObject *sub, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=42bf674e0a0aabf6 input=21051fc5cfeacf2c]*/	modelled	strsearch-find-str-bytes	
-Objects/bytesobject.c	1994	2031	Py_LOCAL_INLINE	Py_LOCAL_INLINE(PyObject *) do_xstrip(PyBytesObject *self, int striptype, PyObject *sepobj)	modelled	bytesobj-bytes-strip-twins	
-Objects/bytesobject.c	2034	2060	Py_LOCAL_INLINE	Py_LOCAL_INLINE(PyObject *) do_strip(PyBytesObject *self, int striptype)	modelled	bytesobj-bytes-strip-twins	
-Objects/bytesobject.c	2063	2070	Py_LOCAL_INLINE	Py_LOCAL_INLINE(PyObject *) do_argstrip(PyBytesObject *self, int striptype, PyObject *bytes)	modelled	bytesobj-bytes-strip-twins	
+Objects/bytesobject.c	1994	2031	do_xstrip	Py_LOCAL_INLINE(PyObject *) do_xstrip(PyBytesObject *self, int striptype, PyObject *sepobj)	modelled	bytesobj-bytes-strip-twins	
+Objects/bytesobject.c	2034	2060	do_strip	Py_LOCAL_INLINE(PyObject *) do_strip(PyBytesObject *self, int striptype)	modelled	bytesobj-bytes-strip-twins	
+Objects/bytesobject.c	2063	2070	do_argstrip	Py_LOCAL_INLINE(PyObject *) do_argstrip(PyBytesObject *self, int striptype, PyObject *bytes)	modelled	bytesobj-bytes-strip-twins	
 Objects/bytesobject.c	2085	2089	bytes_strip_impl	bytes_strip_impl(PyBytesObject *self, PyObject *bytes) /*[clinic end generated code: output=c7c228d3bd104a1b input=9ffea5f752032bd0]*/	modelled	strsearch-strip-paths	
 Objects/bytesobject.c	2103	2107	bytes_lstrip_impl	bytes_lstrip_impl(PyBytesObject *self, PyObject *bytes) /*[clinic end generated code: output=28602e586f524e82 input=9baff4398c3f6857]*/	modelled	bytesobj-bytes-strip-twins	
 Objects/bytesobject.c	2121	2125	bytes_rstrip_impl	bytes_rstrip_impl(PyBytesObject *self, PyObject *bytes) /*[clinic end generated code: output=547e3815c95447da input=b78af445c727e32b]*/	modelled	bytesobj-bytes-strip-twins	
@@ -85,9 +85,9 @@ Objects/bytesobject.c	3363	3377	striter_setstate	striter_setstate(PyObject *op, 
 Objects/bytesobject.c	3422	3437	bytes_iter	bytes_iter(PyObject *seq)	modelled	bytesobj-bytes-iter	
 Objects/bytesobject.c	3451	3459	_PyBytesWriter_Init	_PyBytesWriter_Init(_PyBytesWriter *writer)	modelled	bytesobj-bytes-writer	
 Objects/bytesobject.c	3462	3465	_PyBytesWriter_Dealloc	_PyBytesWriter_Dealloc(_PyBytesWriter *writer)	excluded		no-behaviour: drops the temporary buffer on an error path; the exception is already set and the buffer is never visible
-Objects/bytesobject.c	3467	3482	Py_LOCAL_INLINE	Py_LOCAL_INLINE(char*) _PyBytesWriter_AsString(_PyBytesWriter *writer)	modelled	bytesobj-bytes-writer	
-Objects/bytesobject.c	3484	3492	Py_LOCAL_INLINE	Py_LOCAL_INLINE(Py_ssize_t) _PyBytesWriter_GetSize(_PyBytesWriter *writer, char *str)	modelled	bytesobj-bytes-writer	
-Objects/bytesobject.c	3495	3528	Py_LOCAL_INLINE	Py_LOCAL_INLINE(int) _PyBytesWriter_CheckConsistency(_PyBytesWriter *writer, char *str)	excluded		no-behaviour: debug-build assertion helper, compiled out with NDEBUG; its invariant is proven in bytesobj-bytes-writer
+Objects/bytesobject.c	3467	3482	_PyBytesWriter_AsString	Py_LOCAL_INLINE(char*) _PyBytesWriter_AsString(_PyBytesWriter *writer)	modelled	bytesobj-bytes-writer	
+Objects/bytesobject.c	3484	3492	_PyBytesWriter_GetSize	Py_LOCAL_INLINE(Py_ssize_t) _PyBytesWriter_GetSize(_PyBytesWriter *writer, char *str)	modelled	bytesobj-bytes-writer	
+Objects/bytesobject.c	3495	3528	_PyBytesWriter_CheckConsistency	Py_LOCAL_INLINE(int) _PyBytesWriter_CheckConsistency(_PyBytesWriter *writer, char *str)	excluded		no-behaviour: debug-build assertion helper, compiled out with NDEBUG; its invariant is proven in bytesobj-bytes-writer
 Objects/bytesobject.c	3532	3599	_PyBytesWriter_Resize	_PyBytesWriter_Resize(_PyBytesWriter *writer, void *str, Py_ssize_t size)	modelled	bytesobj-bytes-writer	
 Objects/bytesobject.c	3602	3626	_PyBytesWriter_Prepare	_PyBytesWriter_Prepare(_PyBytesWriter *writer, void *str, Py_ssize_t size)	modelled	bytesobj-bytes-writer	
 Objects/bytesobject.c	3632	3659	_PyBytesWriter_Alloc	_PyBytesWriter_Alloc(_PyBytesWriter *writer, Py_ssize_t size)	modelled	bytesobj-bytes-writer	

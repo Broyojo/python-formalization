@@ -781,7 +781,8 @@ def CastCleanup : Prop :=
     (∀ ch ∈ format, ch.toNat < 128) → getNativeFmtchar format = none →
     (st.mb (st.mv self).mbuf).exports ≠ 0 →
     let r := memoryviewCast self format none st
-    (∃ e, r.1 = .error e) ∧ (r.2.mb (st.mv self).mbuf).exports = (st.mb (st.mv self).mbuf).exports
+    r.1 = .error (.valueError "memoryview: destination format must be a native single character format prefixed with an optional '@'") ∧
+    (r.2.mb (st.mv self).mbuf).exports = (st.mb (st.mv self).mbuf).exports
 
 theorem castCleanup_proven : CastCleanup := by
   intro st self format hself hmb hrel hres hC hz hasc hf hne
@@ -815,7 +816,7 @@ theorem castCleanup_proven : CastCleanup := by
   have hx := memoryRelease_exports st1 st.mvs.length (by rw [hnew])
     (by rw [hmbuf, hA.exports hmb]; omega) (by rw [hmbuf, hA.mbufs]; exact hmb)
   rw [hmbuf, hA.exports hmb] at hx
-  refine ⟨⟨_, rfl⟩, ?_⟩
+  refine ⟨trivial, ?_⟩
   rw [hdeal, hx]
   omega
 

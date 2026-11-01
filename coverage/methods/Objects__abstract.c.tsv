@@ -12,11 +12,11 @@ Objects/abstract.c	226	257	PyObject_SetItem	PyObject_SetItem(PyObject *o, PyObje
 Objects/abstract.c	260	291	PyObject_DelItem	PyObject_DelItem(PyObject *o, PyObject *key)	todo		
 Objects/abstract.c	294	309	PyObject_DelItemString	PyObject_DelItemString(PyObject *o, const char *key)	todo		
 Objects/abstract.c	314	318	PyObject_CheckBuffer	PyObject_CheckBuffer(PyObject *obj)	todo		
-Objects/abstract.c	330	345	PyAPI_FUNC	PyAPI_FUNC(int) /* abi_only */ PyObject_CheckReadBuffer(PyObject *obj)	todo		
+Objects/abstract.c	331	345	PyObject_CheckReadBuffer	PyObject_CheckReadBuffer(PyObject *obj)	todo		
 Objects/abstract.c	348	363	as_read_buffer	as_read_buffer(PyObject *obj, const void **buffer, Py_ssize_t *buffer_len)	todo		
-Objects/abstract.c	371	377	PyAPI_FUNC	PyAPI_FUNC(int) /* abi_only */ PyObject_AsCharBuffer(PyObject *obj, const char **buffer, Py_ssize_t *buffer_len)	todo		
-Objects/abstract.c	385	391	PyAPI_FUNC	PyAPI_FUNC(int) /* abi_only */ PyObject_AsReadBuffer(PyObject *obj, const void **buffer, Py_ssize_t *buffer_len)	todo		
-Objects/abstract.c	399	424	PyAPI_FUNC	PyAPI_FUNC(int) /* abi_only */ PyObject_AsWriteBuffer(PyObject *obj, void **buffer, Py_ssize_t *buffer_len)	todo		
+Objects/abstract.c	372	377	PyObject_AsCharBuffer	PyObject_AsCharBuffer(PyObject *obj, const char **buffer, Py_ssize_t *buffer_len)	todo		
+Objects/abstract.c	386	391	PyObject_AsReadBuffer	PyObject_AsReadBuffer(PyObject *obj, const void **buffer, Py_ssize_t *buffer_len)	todo		
+Objects/abstract.c	400	424	PyObject_AsWriteBuffer	PyObject_AsWriteBuffer(PyObject *obj, void **buffer, Py_ssize_t *buffer_len)	todo		
 Objects/abstract.c	429	448	PyObject_GetBuffer	PyObject_GetBuffer(PyObject *obj, Py_buffer *view, int flags)	todo		
 Objects/abstract.c	451	488	_IsFortranContiguous	_IsFortranContiguous(const Py_buffer *view)	modelled	typeobj-buffer-fill-strides	
 Objects/abstract.c	491	515	_IsCContiguous	_IsCContiguous(const Py_buffer *view)	modelled	typeobj-buffer-fill-strides	

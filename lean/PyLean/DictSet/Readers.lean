@@ -192,11 +192,19 @@ def ReadersFaithful : Prop :=
       pyDictGetItemWithError P true key mp = (.ok none, s) ∧
       pyDictContains P key mp = (.ok false, s) ∧
       dictSubscript P none key mp = (.error (keyErr P key), s) ∧
-      ∀ dflt, dictGet P key dflt mp = (.ok dflt, s))
+      ∀ dflt, dictGet P key dflt mp = (.ok dflt, s)) ∧
+    -- a slot with a value: every reader returns that value, in the state the lookup left
+    (∀ h ix v s, P.hash key = .ok h → dictLookup P key h mp = (.ok (ix, some v), s) →
+      ix ≠ DKIX_EMPTY →
+      pyDictGetItemRef P true key mp = (.ok (some v), s) ∧
+      pyDictGetItemWithError P true key mp = (.ok (some v), s) ∧
+      pyDictContains P key mp = (.ok true, s) ∧
+      dictSubscript P none key mp = (.ok v, s) ∧
+      ∀ dflt, dictGet P key dflt mp = (.ok v, s))
 
 theorem readersFaithful_proven : ReadersFaithful := by
   intro K V _ P key mp
-  refine ⟨rfl, rfl, ?_, ?_, ?_⟩
+  refine ⟨rfl, rfl, ?_, ?_, ?_, ?_⟩
   · intro e he
     refine ⟨?_, ?_, ?_, ?_, fun dflt => ?_⟩ <;>
       simp only [getItemRef_wrap, getItemWithError_wrap, contains_wrap, subscript_wrap,
@@ -209,5 +217,11 @@ theorem readersFaithful_proven : ReadersFaithful := by
     refine ⟨?_, ?_, ?_, ?_, fun dflt => ?_⟩ <;>
       simp only [getItemRef_wrap, getItemWithError_wrap, contains_wrap, subscript_wrap,
         get_wrap, refKnownHash_wrap, hh, hl, hv, Option.isSome_none, Bool.and_false]
+  · intro h ix v s hh hl hne
+    have he : (ix == DKIX_EMPTY) = false := by simpa using hne
+    have he' : (ix != DKIX_EMPTY) = true := by simpa using hne
+    refine ⟨?_, ?_, ?_, ?_, fun dflt => ?_⟩ <;>
+      simp [getItemRef_wrap, getItemWithError_wrap, contains_wrap, subscript_wrap,
+        get_wrap, refKnownHash_wrap, hh, hl, he, he']
 
 end PyLean.DictSet

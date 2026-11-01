@@ -118,7 +118,7 @@ def codecEntries : List Entry := [
     source := "invariant: the ASCII encoder writes them to its output unchecked"
     status := .proven, prop := ``ReplacementsAscii, thm := some ``replacementsAscii_proven },
   { id := "unicodeobj-codec-normalize-case", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["_Py_normalize_encoding"]
+    pyFns := []
     statement := "Encoding names are case-insensitive for the fast dispatch of PyUnicode_Decode and PyUnicode_AsEncodedString, for every name of bytes."
     source := "Doc/library/codecs.rst"
     status := .proven, prop := ``NormalizeCase, thm := some ``normalizeCase_proven }

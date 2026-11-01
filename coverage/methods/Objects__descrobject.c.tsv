@@ -25,7 +25,7 @@ Objects/descrobject.c	408	424	method_vectorcall_FASTCALL_KEYWORDS	method_vectorc
 Objects/descrobject.c	427	451	method_vectorcall_NOARGS	method_vectorcall_NOARGS( PyObject *func, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
 Objects/descrobject.c	454	479	method_vectorcall_O	method_vectorcall_O( PyObject *func, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
 Objects/descrobject.c	491	513	classmethoddescr_call	classmethoddescr_call(PyObject *_descr, PyObject *args, PyObject *kwds)	todo		
-Objects/descrobject.c	515	533	Py_LOCAL_INLINE	Py_LOCAL_INLINE(PyObject *) wrapperdescr_raw_call(PyWrapperDescrObject *descr, PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Objects/descrobject.c	515	533	wrapperdescr_raw_call	Py_LOCAL_INLINE(PyObject *) wrapperdescr_raw_call(PyWrapperDescrObject *descr, PyObject *self, PyObject *args, PyObject *kwds)	todo		
 Objects/descrobject.c	536	573	wrapperdescr_call	wrapperdescr_call(PyObject *_descr, PyObject *args, PyObject *kwds)	todo		
 Objects/descrobject.c	577	581	method_get_doc	method_get_doc(PyObject *_descr, void *closure)	todo		
 Objects/descrobject.c	584	590	method_get_text_signature	method_get_text_signature(PyObject *_descr, void *closure)	todo		

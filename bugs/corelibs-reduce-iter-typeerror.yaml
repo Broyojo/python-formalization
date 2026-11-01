@@ -1,0 +1,51 @@
+id: corelibs-reduce-iter-typeerror
+title: "functools.reduce in C replaces a TypeError raised by a user's __iter__ with its own message"
+priority: P4
+kind: twin-mismatch
+module: corelibs
+files: [Modules/_functoolsmodule.c, Lib/functools.py]
+functions: ["reduce", "_functools_reduce_impl"]
+summary: |
+  When PyObject_GetIter fails with any TypeError, reduce replaces it by "reduce() arg 2 must support iteration". That is
+  right for an object that is not iterable, and wrong for an __iter__ that ran and raised a TypeError, whose message
+  and traceback are lost, and for a subclass of TypeError, whose class is lost. The pure Python twin passes on what
+  __iter__ raised.
+likelihood: |
+  Low to moderate: a TypeError inside __iter__ is an ordinary bug in user code, and the message then blames the
+  argument. map and list do not do this.
+maybe_intended: |
+  The rewrite is on purpose for the non-iterable case. A check of tp_iter or of the sequence protocol before the call would
+  keep that, and leave a user's error alone.
+reproducer: |
+  from functools import reduce
+  from test.support import import_helper
+  py = import_helper.import_fresh_module('functools', blocked=['_functools'])
+  class It:
+      def __iter__(self):
+          raise TypeError('mine')
+  def attempt(f):
+      try:
+          f(lambda a, b: a, It(), 0)
+      except TypeError as e:
+          return str(e)
+  c, p = attempt(reduce), attempt(py.reduce)
+  print(c, '|', p)
+  if c == 'reduce() arg 2 must support iteration' and p == 'mine':
+      print('REPRODUCED corelibs-reduce-iter-typeerror')
+expected: |
+  TypeError: mine, from both twins.
+observed: |
+  python3 3.14.7: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+promised_by: |
+  Nothing explicit: the Python twin, and the behaviour of iter(), list and map.
+cause: |
+  Modules/_functoolsmodule.c:1000-1005 replaces any TypeError after PyObject_GetIter.
+possible_fix: |
+  Drop the replacement, as the error of iter() now names the type, or test PyIter_Check/tp_iter first.
+duplicates:
+  issues:
+    - {number: 37755, state: closed, relation: "search hit, 'reduce() masks exception'", reason: "closed as completed in 2010; a human should read whether its fix left this case"}
+  queries: ["gh search issues reduce iter TypeError must support iteration", "bugforge README: no match for reduce"]
+lean:
+  property: PyLean.CoreLibs.Functools.ReduceCKeepsIterError
+  theorem: PyLean.CoreLibs.Functools.reduceCKeepsIterError_refuted
