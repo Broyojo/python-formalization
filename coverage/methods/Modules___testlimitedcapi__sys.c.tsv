@@ -1,0 +1,5 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testlimitedcapi/sys.c	6	18	sys_getobject	sys_getobject(PyObject *Py_UNUSED(module), PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/sys.c	21	31	sys_setobject	sys_setobject(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/sys.c	34	38	sys_getxoptions	sys_getxoptions(PyObject *Py_UNUSED(module), PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/sys.c	49	56	_PyTestLimitedCAPI_Init_Sys	_PyTestLimitedCAPI_Init_Sys(PyObject *m)	excluded		test-support: only for CPython's own tests

@@ -1,0 +1,15 @@
+file	line	endline	name	signature	status	entry	note
+Modules/atexitmodule.c	19	23	get_atexit_state	get_atexit_state(void)	todo		
+Modules/atexitmodule.c	27	55	PyUnstable_AtExit	PyUnstable_AtExit(PyInterpreterState *interp, atexit_datacallbackfunc func, void *data)	todo		
+Modules/atexitmodule.c	60	63	atexit_cleanup	atexit_cleanup(struct atexit_state *state)	todo		
+Modules/atexitmodule.c	67	78	_PyAtExit_Init	_PyAtExit_Init(PyInterpreterState *interp)	todo		
+Modules/atexitmodule.c	81	100	_PyAtExit_Fini	_PyAtExit_Fini(PyInterpreterState *interp)	todo		
+Modules/atexitmodule.c	103	144	atexit_callfuncs	atexit_callfuncs(struct atexit_state *state)	todo		
+Modules/atexitmodule.c	148	152	_PyAtExit_Call	_PyAtExit_Call(PyInterpreterState *interp)	todo		
+Modules/atexitmodule.c	172	213	atexit_register	atexit_register(PyObject *module, PyObject *args, PyObject *kwargs)	todo		
+Modules/atexitmodule.c	224	229	atexit_run_exitfuncs	atexit_run_exitfuncs(PyObject *module, PyObject *Py_UNUSED(dummy))	todo		
+Modules/atexitmodule.c	238	242	atexit_clear	atexit_clear(PyObject *module, PyObject *Py_UNUSED(dummy))	todo		
+Modules/atexitmodule.c	251	257	atexit_ncallbacks	atexit_ncallbacks(PyObject *module, PyObject *Py_UNUSED(dummy))	todo		
+Modules/atexitmodule.c	260	296	atexit_unregister_locked	atexit_unregister_locked(PyObject *callbacks, PyObject *func)	todo		
+Modules/atexitmodule.c	308	316	atexit_unregister	atexit_unregister(PyObject *module, PyObject *func)	todo		
+Modules/atexitmodule.c	358	361	PyInit_atexit	PyInit_atexit(void)	todo		

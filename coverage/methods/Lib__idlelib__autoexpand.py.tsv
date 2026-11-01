@@ -1,0 +1,5 @@
+file	line	endline	name	signature	status	entry	note
+Lib/idlelib/autoexpand.py	22	25	AutoExpand.__init__	__init__(self, editwin)	excluded		platform: GUI toolkit
+Lib/idlelib/autoexpand.py	27	52	AutoExpand.expand_word_event	expand_word_event(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/autoexpand.py	54	83	AutoExpand.getwords	getwords(self)	excluded		platform: GUI toolkit
+Lib/idlelib/autoexpand.py	85	91	AutoExpand.getprevword	getprevword(self)	excluded		platform: GUI toolkit

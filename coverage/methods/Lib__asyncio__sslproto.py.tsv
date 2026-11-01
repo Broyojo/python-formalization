@@ -1,0 +1,67 @@
+file	line	endline	name	signature	status	entry	note
+Lib/asyncio/sslproto.py	47	58	_create_transport_context	_create_transport_context(server_side, server_hostname)	todo		
+Lib/asyncio/sslproto.py	61	79	add_flowcontrol_defaults	add_flowcontrol_defaults(high, low, kb)	todo		
+Lib/asyncio/sslproto.py	88	91	_SSLProtocolTransport.__init__	__init__(self, loop, ssl_protocol)	todo		
+Lib/asyncio/sslproto.py	93	95	_SSLProtocolTransport.get_extra_info	get_extra_info(self, name, default=None)	todo		
+Lib/asyncio/sslproto.py	97	98	_SSLProtocolTransport.set_protocol	set_protocol(self, protocol)	todo		
+Lib/asyncio/sslproto.py	100	101	_SSLProtocolTransport.get_protocol	get_protocol(self)	todo		
+Lib/asyncio/sslproto.py	103	104	_SSLProtocolTransport.is_closing	is_closing(self)	todo		
+Lib/asyncio/sslproto.py	106	118	_SSLProtocolTransport.close	close(self)	todo		
+Lib/asyncio/sslproto.py	120	125	_SSLProtocolTransport.__del__	__del__(self, _warnings=warnings)	todo		
+Lib/asyncio/sslproto.py	127	128	_SSLProtocolTransport.is_reading	is_reading(self)	todo		
+Lib/asyncio/sslproto.py	130	136	_SSLProtocolTransport.pause_reading	pause_reading(self)	todo		
+Lib/asyncio/sslproto.py	138	144	_SSLProtocolTransport.resume_reading	resume_reading(self)	todo		
+Lib/asyncio/sslproto.py	146	166	_SSLProtocolTransport.set_write_buffer_limits	set_write_buffer_limits(self, high=None, low=None)	todo		
+Lib/asyncio/sslproto.py	168	170	_SSLProtocolTransport.get_write_buffer_limits	get_write_buffer_limits(self)	todo		
+Lib/asyncio/sslproto.py	172	174	_SSLProtocolTransport.get_write_buffer_size	get_write_buffer_size(self)	todo		
+Lib/asyncio/sslproto.py	176	196	_SSLProtocolTransport.set_read_buffer_limits	set_read_buffer_limits(self, high=None, low=None)	todo		
+Lib/asyncio/sslproto.py	198	200	_SSLProtocolTransport.get_read_buffer_limits	get_read_buffer_limits(self)	todo		
+Lib/asyncio/sslproto.py	202	204	_SSLProtocolTransport.get_read_buffer_size	get_read_buffer_size(self)	todo		
+Lib/asyncio/sslproto.py	207	209	_SSLProtocolTransport._protocol_paused	_protocol_paused(self)	todo		
+Lib/asyncio/sslproto.py	211	222	_SSLProtocolTransport.write	write(self, data)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/asyncio/sslproto.py	224	230	_SSLProtocolTransport.writelines	writelines(self, list_of_data)	todo		
+Lib/asyncio/sslproto.py	232	237	_SSLProtocolTransport.write_eof	write_eof(self)	todo		
+Lib/asyncio/sslproto.py	239	241	_SSLProtocolTransport.can_write_eof	can_write_eof(self)	todo		
+Lib/asyncio/sslproto.py	243	250	_SSLProtocolTransport.abort	abort(self)	todo		
+Lib/asyncio/sslproto.py	252	255	_SSLProtocolTransport._force_close	_force_close(self, exc)	todo		
+Lib/asyncio/sslproto.py	257	260	_SSLProtocolTransport._test__append_write_backlog	_test__append_write_backlog(self, data)	todo		
+Lib/asyncio/sslproto.py	270	351	SSLProtocol.__init__	__init__(self, loop, app_protocol, sslcontext, waiter, server_side=False, server_hostname=None, call_connection_made=True, ssl_handshake_timeout=None, ssl_shutdown_timeout=None)	todo		
+Lib/asyncio/sslproto.py	353	362	SSLProtocol._set_app_protocol	_set_app_protocol(self, app_protocol)	todo		
+Lib/asyncio/sslproto.py	364	372	SSLProtocol._wakeup_waiter	_wakeup_waiter(self, exc=None)	todo		
+Lib/asyncio/sslproto.py	374	380	SSLProtocol._get_app_transport	_get_app_transport(self)	todo		
+Lib/asyncio/sslproto.py	382	383	SSLProtocol._is_transport_closing	_is_transport_closing(self)	todo		
+Lib/asyncio/sslproto.py	385	391	SSLProtocol.connection_made	connection_made(self, transport)	todo		
+Lib/asyncio/sslproto.py	393	427	SSLProtocol.connection_lost	connection_lost(self, exc)	todo		
+Lib/asyncio/sslproto.py	429	436	SSLProtocol.get_buffer	get_buffer(self, n)	todo		
+Lib/asyncio/sslproto.py	438	451	SSLProtocol.buffer_updated	buffer_updated(self, nbytes)	todo		
+Lib/asyncio/sslproto.py	453	486	SSLProtocol.eof_received	eof_received(self)	todo		
+Lib/asyncio/sslproto.py	488	494	SSLProtocol._get_extra_info	_get_extra_info(self, name, default=None)	todo		
+Lib/asyncio/sslproto.py	496	532	SSLProtocol._set_state	_set_state(self, new_state)	todo		
+Lib/asyncio/sslproto.py	536	550	SSLProtocol._start_handshake	_start_handshake(self)	todo		
+Lib/asyncio/sslproto.py	552	559	SSLProtocol._check_handshake_timeout	_check_handshake_timeout(self)	todo		
+Lib/asyncio/sslproto.py	561	569	SSLProtocol._do_handshake	_do_handshake(self)	todo		
+Lib/asyncio/sslproto.py	571	608	SSLProtocol._on_handshake_complete	_on_handshake_complete(self, handshake_exc)	todo		
+Lib/asyncio/sslproto.py	612	631	SSLProtocol._start_shutdown	_start_shutdown(self)	todo		
+Lib/asyncio/sslproto.py	633	641	SSLProtocol._check_shutdown_timeout	_check_shutdown_timeout(self)	todo		
+Lib/asyncio/sslproto.py	643	646	SSLProtocol._do_flush	_do_flush(self)	todo		
+Lib/asyncio/sslproto.py	648	659	SSLProtocol._do_shutdown	_do_shutdown(self)	todo		
+Lib/asyncio/sslproto.py	661	669	SSLProtocol._on_shutdown_complete	_on_shutdown_complete(self, shutdown_exc)	todo		
+Lib/asyncio/sslproto.py	671	674	SSLProtocol._abort	_abort(self, exc)	todo		
+Lib/asyncio/sslproto.py	678	700	SSLProtocol._write_appdata	_write_appdata(self, list_of_data)	todo		
+Lib/asyncio/sslproto.py	702	716	SSLProtocol._do_write	_do_write(self)	todo		
+Lib/asyncio/sslproto.py	718	723	SSLProtocol._process_outgoing	_process_outgoing(self)	todo		
+Lib/asyncio/sslproto.py	727	747	SSLProtocol._do_read	_do_read(self)	todo		
+Lib/asyncio/sslproto.py	749	776	SSLProtocol._do_read__buffered	_do_read__buffered(self)	todo		
+Lib/asyncio/sslproto.py	778	806	SSLProtocol._do_read__copied	_do_read__copied(self)	todo		
+Lib/asyncio/sslproto.py	808	819	SSLProtocol._call_eof_received	_call_eof_received(self)	todo		
+Lib/asyncio/sslproto.py	823	850	SSLProtocol._control_app_writing	_control_app_writing(self)	todo		
+Lib/asyncio/sslproto.py	852	853	SSLProtocol._get_write_buffer_size	_get_write_buffer_size(self)	todo		
+Lib/asyncio/sslproto.py	855	859	SSLProtocol._set_write_buffer_limits	_set_write_buffer_limits(self, high=None, low=None)	todo		
+Lib/asyncio/sslproto.py	863	864	SSLProtocol._pause_reading	_pause_reading(self)	todo		
+Lib/asyncio/sslproto.py	866	877	SSLProtocol._resume_reading	_resume_reading(self)	todo		
+Lib/asyncio/sslproto.py	881	888	SSLProtocol._control_ssl_reading	_control_ssl_reading(self)	todo		
+Lib/asyncio/sslproto.py	890	894	SSLProtocol._set_read_buffer_limits	_set_read_buffer_limits(self, high=None, low=None)	todo		
+Lib/asyncio/sslproto.py	896	897	SSLProtocol._get_read_buffer_size	_get_read_buffer_size(self)	todo		
+Lib/asyncio/sslproto.py	901	906	SSLProtocol.pause_writing	pause_writing(self)	todo		
+Lib/asyncio/sslproto.py	908	914	SSLProtocol.resume_writing	resume_writing(self)	todo		
+Lib/asyncio/sslproto.py	916	929	SSLProtocol._fatal_error	_fatal_error(self, exc, message='Fatal error on transport')	todo		

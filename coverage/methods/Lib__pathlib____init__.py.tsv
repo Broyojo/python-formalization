@@ -1,0 +1,115 @@
+file	line	endline	name	signature	status	entry	note
+Lib/pathlib/__init__.py	54	58	_PathParents.__init__	__init__(self, path)	todo		
+Lib/pathlib/__init__.py	60	61	_PathParents.__len__	__len__(self)	todo		
+Lib/pathlib/__init__.py	63	72	_PathParents.__getitem__	__getitem__(self, idx)	todo		
+Lib/pathlib/__init__.py	74	75	_PathParents.__repr__	__repr__(self)	todo		
+Lib/pathlib/__init__.py	125	133	PurePath.__new__	__new__(cls, *args, **kwargs)	todo		
+Lib/pathlib/__init__.py	135	155	PurePath.__init__	__init__(self, *args)	todo		
+Lib/pathlib/__init__.py	157	162	PurePath.with_segments	with_segments(self, *pathsegments)	todo		
+Lib/pathlib/__init__.py	164	170	PurePath.joinpath	joinpath(self, *pathsegments)	todo		
+Lib/pathlib/__init__.py	172	176	PurePath.__truediv__	__truediv__(self, key)	todo		
+Lib/pathlib/__init__.py	178	182	PurePath.__rtruediv__	__rtruediv__(self, key)	todo		
+Lib/pathlib/__init__.py	184	185	PurePath.__reduce__	__reduce__(self)	todo		
+Lib/pathlib/__init__.py	187	188	PurePath.__repr__	__repr__(self)	todo		
+Lib/pathlib/__init__.py	190	191	PurePath.__fspath__	__fspath__(self)	todo		
+Lib/pathlib/__init__.py	193	196	PurePath.__bytes__	__bytes__(self)	todo		
+Lib/pathlib/__init__.py	199	208	PurePath._str_normcase	_str_normcase(self)	todo		
+Lib/pathlib/__init__.py	210	215	PurePath.__hash__	__hash__(self)	todo		
+Lib/pathlib/__init__.py	217	220	PurePath.__eq__	__eq__(self, other)	todo		
+Lib/pathlib/__init__.py	223	229	PurePath._parts_normcase	_parts_normcase(self)	todo		
+Lib/pathlib/__init__.py	231	234	PurePath.__lt__	__lt__(self, other)	todo		
+Lib/pathlib/__init__.py	236	239	PurePath.__le__	__le__(self, other)	todo		
+Lib/pathlib/__init__.py	241	244	PurePath.__gt__	__gt__(self, other)	todo		
+Lib/pathlib/__init__.py	246	249	PurePath.__ge__	__ge__(self, other)	todo		
+Lib/pathlib/__init__.py	251	259	PurePath.__str__	__str__(self)	todo		
+Lib/pathlib/__init__.py	262	267	PurePath._format_parsed_parts	_format_parsed_parts(cls, drv, root, tail)	todo		
+Lib/pathlib/__init__.py	269	274	PurePath._from_parsed_parts	_from_parsed_parts(self, drv, root, tail)	todo		
+Lib/pathlib/__init__.py	276	279	PurePath._from_parsed_string	_from_parsed_string(self, path_str)	todo		
+Lib/pathlib/__init__.py	282	298	PurePath._parse_path	_parse_path(cls, path)	todo		
+Lib/pathlib/__init__.py	301	323	PurePath._parse_pattern	_parse_pattern(cls, pattern)	todo		
+Lib/pathlib/__init__.py	325	328	PurePath.as_posix	as_posix(self)	todo		
+Lib/pathlib/__init__.py	331	339	PurePath._raw_path	_raw_path(self)	todo		
+Lib/pathlib/__init__.py	342	348	PurePath.drive	drive(self)	todo		
+Lib/pathlib/__init__.py	351	357	PurePath.root	root(self)	todo		
+Lib/pathlib/__init__.py	360	365	PurePath._tail	_tail(self)	todo		
+Lib/pathlib/__init__.py	368	370	PurePath.anchor	anchor(self)	todo		
+Lib/pathlib/__init__.py	373	379	PurePath.parts	parts(self)	todo		
+Lib/pathlib/__init__.py	382	389	PurePath.parent	parent(self)	todo		
+Lib/pathlib/__init__.py	392	396	PurePath.parents	parents(self)	todo		
+Lib/pathlib/__init__.py	399	404	PurePath.name	name(self)	todo		
+Lib/pathlib/__init__.py	406	415	PurePath.with_name	with_name(self, name)	todo		
+Lib/pathlib/__init__.py	417	426	PurePath.with_stem	with_stem(self, stem)	todo		
+Lib/pathlib/__init__.py	428	440	PurePath.with_suffix	with_suffix(self, suffix)	todo		
+Lib/pathlib/__init__.py	443	452	PurePath.stem	stem(self)	todo		
+Lib/pathlib/__init__.py	455	465	PurePath.suffix	suffix(self)	todo		
+Lib/pathlib/__init__.py	468	474	PurePath.suffixes	suffixes(self)	todo		
+Lib/pathlib/__init__.py	476	496	PurePath.relative_to	relative_to(self, other, *, walk_up=False)	todo		
+Lib/pathlib/__init__.py	498	503	PurePath.is_relative_to	is_relative_to(self, other)	todo		
+Lib/pathlib/__init__.py	505	514	PurePath.is_absolute	is_absolute(self)	todo		
+Lib/pathlib/__init__.py	516	526	PurePath.is_reserved	is_reserved(self)	todo		
+Lib/pathlib/__init__.py	528	551	PurePath.as_uri	as_uri(self)	todo		
+Lib/pathlib/__init__.py	553	568	PurePath.full_match	full_match(self, pattern, *, case_sensitive=None)	todo		
+Lib/pathlib/__init__.py	570	594	PurePath.match	match(self, path_pattern, *, case_sensitive=None)	todo		
+Lib/pathlib/__init__.py	632	635	Path.__new__	__new__(cls, *args, **kwargs)	todo		
+Lib/pathlib/__init__.py	638	647	Path.info	info(self)	todo		
+Lib/pathlib/__init__.py	649	654	Path.stat	stat(self, *, follow_symlinks=True)	todo		
+Lib/pathlib/__init__.py	656	661	Path.lstat	lstat(self)	todo		
+Lib/pathlib/__init__.py	663	672	Path.exists	exists(self, *, follow_symlinks=True)	todo		
+Lib/pathlib/__init__.py	674	683	Path.is_dir	is_dir(self, *, follow_symlinks=True)	todo		
+Lib/pathlib/__init__.py	685	695	Path.is_file	is_file(self, *, follow_symlinks=True)	todo		
+Lib/pathlib/__init__.py	697	701	Path.is_mount	is_mount(self)	todo		
+Lib/pathlib/__init__.py	703	707	Path.is_symlink	is_symlink(self)	todo		
+Lib/pathlib/__init__.py	709	713	Path.is_junction	is_junction(self)	todo		
+Lib/pathlib/__init__.py	715	722	Path.is_block_device	is_block_device(self)	todo		
+Lib/pathlib/__init__.py	724	731	Path.is_char_device	is_char_device(self)	todo		
+Lib/pathlib/__init__.py	733	740	Path.is_fifo	is_fifo(self)	todo		
+Lib/pathlib/__init__.py	742	749	Path.is_socket	is_socket(self)	todo		
+Lib/pathlib/__init__.py	751	761	Path.samefile	samefile(self, other_path)	todo		
+Lib/pathlib/__init__.py	763	771	Path.open	open(self, mode='r', buffering=-1, encoding=None, errors=None, newline=None)	todo		
+Lib/pathlib/__init__.py	773	778	Path.read_bytes	read_bytes(self)	todo		
+Lib/pathlib/__init__.py	780	788	Path.read_text	read_text(self, encoding=None, errors=None, newline=None)	todo		
+Lib/pathlib/__init__.py	790	797	Path.write_bytes	write_bytes(self, data)	todo		
+Lib/pathlib/__init__.py	799	810	Path.write_text	write_text(self, data, encoding=None, errors=None, newline=None)	todo		
+Lib/pathlib/__init__.py	815	821	Path._filter_trailing_slash	_filter_trailing_slash(self, paths)	todo		
+Lib/pathlib/__init__.py	823	827	Path._from_dir_entry	_from_dir_entry(self, dir_entry, path_str)	todo		
+Lib/pathlib/__init__.py	829	841	Path.iterdir	iterdir(self)	todo		
+Lib/pathlib/__init__.py	843	871	Path.glob	glob(self, pattern, *, case_sensitive=None, recurse_symlinks=False)	todo		
+Lib/pathlib/__init__.py	873	880	Path.rglob	rglob(self, pattern, *, case_sensitive=None, recurse_symlinks=False)	todo		
+Lib/pathlib/__init__.py	882	892	Path.walk	walk(self, top_down=True, on_error=None, follow_symlinks=False)	todo		
+Lib/pathlib/__init__.py	894	922	Path.absolute	absolute(self)	todo		
+Lib/pathlib/__init__.py	925	930	Path.cwd	cwd(cls)	todo		
+Lib/pathlib/__init__.py	932	938	Path.resolve	resolve(self, strict=False)	todo		
+Lib/pathlib/__init__.py	941	946	Path.owner	owner(self, *, follow_symlinks=True)	todo		
+Lib/pathlib/__init__.py	948	953	Path.owner	owner(self, *, follow_symlinks=True)	todo		
+Lib/pathlib/__init__.py	956	961	Path.group	group(self, *, follow_symlinks=True)	todo		
+Lib/pathlib/__init__.py	963	968	Path.group	group(self, *, follow_symlinks=True)	todo		
+Lib/pathlib/__init__.py	971	975	Path.readlink	readlink(self)	todo		
+Lib/pathlib/__init__.py	977	982	Path.readlink	readlink(self)	todo		
+Lib/pathlib/__init__.py	984	1004	Path.touch	touch(self, mode=438, exist_ok=True)	todo		
+Lib/pathlib/__init__.py	1006	1021	Path.mkdir	mkdir(self, mode=511, parents=False, exist_ok=False)	todo		
+Lib/pathlib/__init__.py	1023	1027	Path.chmod	chmod(self, mode, *, follow_symlinks=True)	todo		
+Lib/pathlib/__init__.py	1029	1034	Path.lchmod	lchmod(self, mode)	todo		
+Lib/pathlib/__init__.py	1036	1045	Path.unlink	unlink(self, missing_ok=False)	todo		
+Lib/pathlib/__init__.py	1047	1051	Path.rmdir	rmdir(self)	todo		
+Lib/pathlib/__init__.py	1053	1064	Path._delete	_delete(self)	todo		
+Lib/pathlib/__init__.py	1066	1079	Path.rename	rename(self, target)	todo		
+Lib/pathlib/__init__.py	1081	1094	Path.replace	replace(self, target)	todo		candidates:strsearch-replace-str-bytes
+Lib/pathlib/__init__.py	1096	1104	Path.copy	copy(self, target, **kwargs)	todo		
+Lib/pathlib/__init__.py	1106	1117	Path.copy_into	copy_into(self, target_dir, **kwargs)	todo		
+Lib/pathlib/__init__.py	1119	1134	Path._copy_from	_copy_from(self, source, follow_symlinks=True, preserve_metadata=False)	todo		
+Lib/pathlib/__init__.py	1136	1142	Path._copy_from_file	_copy_from_file(self, source, preserve_metadata=False)	todo		
+Lib/pathlib/__init__.py	1147	1155	Path._copy_from_file	_copy_from_file(self, source, preserve_metadata=False)	todo		
+Lib/pathlib/__init__.py	1161	1164	Path._copy_from_symlink	_copy_from_symlink(self, source, preserve_metadata=False)	todo		
+Lib/pathlib/__init__.py	1166	1169	Path._copy_from_symlink	_copy_from_symlink(self, source, preserve_metadata=False)	todo		
+Lib/pathlib/__init__.py	1171	1192	Path.move	move(self, target)	todo		
+Lib/pathlib/__init__.py	1194	1205	Path.move_into	move_into(self, target_dir)	todo		
+Lib/pathlib/__init__.py	1208	1213	Path.symlink_to	symlink_to(self, target, target_is_directory=False)	todo		
+Lib/pathlib/__init__.py	1215	1221	Path.symlink_to	symlink_to(self, target, target_is_directory=False)	todo		
+Lib/pathlib/__init__.py	1224	1230	Path.hardlink_to	hardlink_to(self, target)	todo		
+Lib/pathlib/__init__.py	1232	1239	Path.hardlink_to	hardlink_to(self, target)	todo		
+Lib/pathlib/__init__.py	1241	1253	Path.expanduser	expanduser(self)	todo		
+Lib/pathlib/__init__.py	1256	1262	Path.home	home(cls)	todo		
+Lib/pathlib/__init__.py	1264	1269	Path.as_uri	as_uri(self)	todo		
+Lib/pathlib/__init__.py	1272	1282	Path.from_uri	from_uri(cls, uri)	todo		
+Lib/pathlib/__init__.py	1293	1295	PosixPath.__new__	__new__(cls, *args, **kwargs)	todo		
+Lib/pathlib/__init__.py	1305	1307	WindowsPath.__new__	__new__(cls, *args, **kwargs)	todo		

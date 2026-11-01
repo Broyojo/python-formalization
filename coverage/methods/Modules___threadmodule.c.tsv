@@ -1,0 +1,91 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_threadmodule.c	44	49	get_thread_state	get_thread_state(PyObject *module)	todo		
+Modules/_threadmodule.c	127	133	get_thread_handle_state	get_thread_handle_state(ThreadHandle *handle)	todo		
+Modules/_threadmodule.c	136	141	set_thread_handle_state	set_thread_handle_state(ThreadHandle *handle, ThreadHandleState state)	todo		
+Modules/_threadmodule.c	144	150	ThreadHandle_ident	ThreadHandle_ident(ThreadHandle *handle)	todo		
+Modules/_threadmodule.c	153	162	ThreadHandle_get_os_handle	ThreadHandle_get_os_handle(ThreadHandle *handle, PyThread_handle_t *os_handle)	todo		
+Modules/_threadmodule.c	165	170	add_to_shutdown_handles	add_to_shutdown_handles(thread_module_state *state, ThreadHandle *handle)	todo		
+Modules/_threadmodule.c	173	181	clear_shutdown_handles	clear_shutdown_handles(thread_module_state *state)	todo		
+Modules/_threadmodule.c	184	191	remove_from_shutdown_handles	remove_from_shutdown_handles(ThreadHandle *handle)	todo		
+Modules/_threadmodule.c	194	216	ThreadHandle_new	ThreadHandle_new(void)	todo		
+Modules/_threadmodule.c	219	222	ThreadHandle_incref	ThreadHandle_incref(ThreadHandle *self)	todo		
+Modules/_threadmodule.c	225	236	detach_thread	detach_thread(ThreadHandle *self)	todo		
+Modules/_threadmodule.c	242	266	ThreadHandle_decref	ThreadHandle_decref(ThreadHandle *self)	todo		
+Modules/_threadmodule.c	269	300	_PyThread_AfterFork	_PyThread_AfterFork(struct _pythread_runtime_state *state)	todo		
+Modules/_threadmodule.c	315	324	thread_bootstate_free	thread_bootstate_free(struct bootstate *boot, int decref)	todo		
+Modules/_threadmodule.c	327	390	thread_run	thread_run(void *boot_raw)	todo		
+Modules/_threadmodule.c	393	400	force_done	force_done(void *arg)	todo		
+Modules/_threadmodule.c	403	470	ThreadHandle_start	ThreadHandle_start(ThreadHandle *self, PyObject *func, PyObject *args, PyObject *kwargs)	todo		
+Modules/_threadmodule.c	473	490	join_thread	join_thread(void *arg)	todo		
+Modules/_threadmodule.c	493	501	check_started	check_started(ThreadHandle *self)	todo		
+Modules/_threadmodule.c	504	564	ThreadHandle_join	ThreadHandle_join(ThreadHandle *self, PyTime_t timeout_ns)	todo		
+Modules/_threadmodule.c	567	578	set_done	set_done(void *arg)	todo		
+Modules/_threadmodule.c	581	593	ThreadHandle_set_done	ThreadHandle_set_done(ThreadHandle *self)	todo		
+Modules/_threadmodule.c	605	622	PyThreadHandleObject_new	PyThreadHandleObject_new(PyTypeObject *type)	todo		
+Modules/_threadmodule.c	625	628	PyThreadHandleObject_tp_new	PyThreadHandleObject_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Modules/_threadmodule.c	631	635	PyThreadHandleObject_traverse	PyThreadHandleObject_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Modules/_threadmodule.c	638	646	PyThreadHandleObject_dealloc	PyThreadHandleObject_dealloc(PyObject *op)	todo		
+Modules/_threadmodule.c	649	655	PyThreadHandleObject_repr	PyThreadHandleObject_repr(PyObject *op)	todo		
+Modules/_threadmodule.c	658	662	PyThreadHandleObject_get_ident	PyThreadHandleObject_get_ident(PyObject *op, void *Py_UNUSED(closure))	todo		
+Modules/_threadmodule.c	665	686	PyThreadHandleObject_join	PyThreadHandleObject_join(PyObject *op, PyObject *args)	todo		
+Modules/_threadmodule.c	689	701	PyThreadHandleObject_is_done	PyThreadHandleObject_is_done(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
+Modules/_threadmodule.c	704	711	PyThreadHandleObject_set_done	PyThreadHandleObject_set_done(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
+Modules/_threadmodule.c	753	757	lock_traverse	lock_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Modules/_threadmodule.c	760	767	lock_dealloc	lock_dealloc(PyObject *self)	todo		
+Modules/_threadmodule.c	771	814	lock_acquire_parse_args	lock_acquire_parse_args(PyObject *args, PyObject *kwds, PyTime_t *timeout)	todo		
+Modules/_threadmodule.c	817	833	lock_PyThread_acquire_lock	lock_PyThread_acquire_lock(PyObject *op, PyObject *args, PyObject *kwds)	todo		
+Modules/_threadmodule.c	859	869	lock_PyThread_release_lock	lock_PyThread_release_lock(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
+Modules/_threadmodule.c	892	896	lock_locked_lock	lock_locked_lock(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
+Modules/_threadmodule.c	911	916	lock_repr	lock_repr(PyObject *op)	todo		
+Modules/_threadmodule.c	920	925	lock__at_fork_reinit	lock__at_fork_reinit(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
+Modules/_threadmodule.c	931	947	lock_new	lock_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)	todo		
+Modules/_threadmodule.c	1017	1021	rlock_traverse	rlock_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Modules/_threadmodule.c	1024	1027	rlock_locked_impl	rlock_locked_impl(rlockobject *self)	todo		
+Modules/_threadmodule.c	1030	1037	rlock_dealloc	rlock_dealloc(PyObject *self)	todo		
+Modules/_threadmodule.c	1041	1057	rlock_acquire	rlock_acquire(PyObject *op, PyObject *args, PyObject *kwds)	todo		
+Modules/_threadmodule.c	1083	1092	rlock_release	rlock_release(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
+Modules/_threadmodule.c	1114	1119	rlock_locked	rlock_locked(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
+Modules/_threadmodule.c	1127	1141	rlock_acquire_restore	rlock_acquire_restore(PyObject *op, PyObject *args)	todo		
+Modules/_threadmodule.c	1150	1165	rlock_release_save	rlock_release_save(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
+Modules/_threadmodule.c	1174	1181	rlock_recursion_count	rlock_recursion_count(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
+Modules/_threadmodule.c	1190	1195	rlock_is_owned	rlock_is_owned(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
+Modules/_threadmodule.c	1204	1212	rlock_new	rlock_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Modules/_threadmodule.c	1215	1232	rlock_repr	rlock_repr(PyObject *op)	todo		
+Modules/_threadmodule.c	1237	1242	rlock__at_fork_reinit	rlock__at_fork_reinit(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
+Modules/_threadmodule.c	1292	1303	newlockobject	newlockobject(PyObject *module)	todo		
+Modules/_threadmodule.c	1366	1373	localdummy_dealloc	localdummy_dealloc(PyObject *op)	todo		
+Modules/_threadmodule.c	1416	1449	create_sentinel_wr	create_sentinel_wr(localobject *self)	todo		
+Modules/_threadmodule.c	1452	1508	local_new	local_new(PyTypeObject *type, PyObject *args, PyObject *kw)	todo		
+Modules/_threadmodule.c	1511	1520	local_traverse	local_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_threadmodule.c	1523	1531	local_clear	local_clear(PyObject *op)	todo		
+Modules/_threadmodule.c	1534	1547	local_dealloc	local_dealloc(PyObject *op)	todo		
+Modules/_threadmodule.c	1551	1572	create_localdummies	create_localdummies(thread_module_state *state)	todo		
+Modules/_threadmodule.c	1578	1634	create_localsdict	create_localsdict(localobject *self, thread_module_state *state, PyObject **localsdict, PyObject **sentinel_wr)	todo		
+Modules/_threadmodule.c	1640	1689	_ldict	_ldict(localobject *self, thread_module_state *state)	todo		
+Modules/_threadmodule.c	1692	1722	local_setattro	local_setattro(PyObject *op, PyObject *name, PyObject *v)	todo		
+Modules/_threadmodule.c	1752	1791	local_getattro	local_getattro(PyObject *op, PyObject *name)	todo		
+Modules/_threadmodule.c	1796	1822	clear_locals	clear_locals(PyObject *locals_and_key, PyObject *dummyweakref)	todo		
+Modules/_threadmodule.c	1827	1836	thread_daemon_threads_allowed	thread_daemon_threads_allowed(PyObject *module, PyObject *Py_UNUSED(ignored))	todo		
+Modules/_threadmodule.c	1846	1876	do_start_new_thread	do_start_new_thread(thread_module_state *state, PyObject *func, PyObject *args, PyObject *kwargs, ThreadHandle *handle, int daemon)	todo		
+Modules/_threadmodule.c	1879	1922	thread_PyThread_start_new_thread	thread_PyThread_start_new_thread(PyObject *module, PyObject *fargs)	todo		
+Modules/_threadmodule.c	1944	1999	thread_PyThread_start_joinable_thread	thread_PyThread_start_joinable_thread(PyObject *module, PyObject *fargs, PyObject *fkwargs)	todo		
+Modules/_threadmodule.c	2016	2020	thread_PyThread_exit_thread	thread_PyThread_exit_thread(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Modules/_threadmodule.c	2036	2048	thread_PyThread_interrupt_main	thread_PyThread_interrupt_main(PyObject *self, PyObject *args)	todo		
+Modules/_threadmodule.c	2063	2066	thread_PyThread_allocate_lock	thread_PyThread_allocate_lock(PyObject *module, PyObject *Py_UNUSED(ignored))	todo		
+Modules/_threadmodule.c	2082	2090	thread_get_ident	thread_get_ident(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Modules/_threadmodule.c	2106	2110	thread_get_native_id	thread_get_native_id(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Modules/_threadmodule.c	2122	2126	thread__count	thread__count(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Modules/_threadmodule.c	2141	2173	thread_stack_size	thread_stack_size(PyObject *self, PyObject *args)	todo		
+Modules/_threadmodule.c	2197	2250	thread_excepthook_file	thread_excepthook_file(PyObject *file, PyObject *exc_type, PyObject *exc_value, PyObject *exc_traceback, PyObject *thread)	todo		
+Modules/_threadmodule.c	2275	2329	thread_excepthook	thread_excepthook(PyObject *module, PyObject *args)	todo		
+Modules/_threadmodule.c	2338	2342	thread__is_main_interpreter	thread__is_main_interpreter(PyObject *module, PyObject *Py_UNUSED(ignored))	todo		
+Modules/_threadmodule.c	2351	2390	thread_shutdown	thread_shutdown(PyObject *self, PyObject *args)	todo		
+Modules/_threadmodule.c	2399	2420	thread__make_thread_handle	thread__make_thread_handle(PyObject *module, PyObject *identobj)	todo		
+Modules/_threadmodule.c	2430	2433	thread__get_main_thread_ident	thread__get_main_thread_ident(PyObject *module, PyObject *Py_UNUSED(ignored))	todo		
+Modules/_threadmodule.c	2459	2499	_thread__get_name_impl	_thread__get_name_impl(PyObject *module) /*[clinic end generated code: output=20026e7ee3da3dd7 input=35cec676833d04c8]*/	todo		
+Modules/_threadmodule.c	2513	2596	_thread_set_name_impl	_thread_set_name_impl(PyObject *module, PyObject *name_obj) /*[clinic end generated code: output=402b0c68e0c0daed input=7e7acd98261be82f]*/	todo		
+Modules/_threadmodule.c	2648	2765	thread_module_exec	thread_module_exec(PyObject *module)	todo		
+Modules/_threadmodule.c	2769	2778	thread_module_traverse	thread_module_traverse(PyObject *module, visitproc visit, void *arg)	todo		
+Modules/_threadmodule.c	2781	2794	thread_module_clear	thread_module_clear(PyObject *module)	todo		
+Modules/_threadmodule.c	2797	2800	thread_module_free	thread_module_free(void *module)	todo		
+Modules/_threadmodule.c	2828	2831	PyInit__thread	PyInit__thread(void)	todo		

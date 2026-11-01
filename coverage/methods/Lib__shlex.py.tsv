@@ -1,0 +1,16 @@
+file	line	endline	name	signature	status	entry	note
+Lib/shlex.py	17	64	shlex.__init__	__init__(self, instream=None, infile=None, posix=False, punctuation_chars=False)	todo		
+Lib/shlex.py	67	68	shlex.punctuation_chars	punctuation_chars(self)	todo		
+Lib/shlex.py	70	74	shlex.push_token	push_token(self, tok)	todo		
+Lib/shlex.py	76	88	shlex.push_source	push_source(self, newstream, newfile=None)	todo		
+Lib/shlex.py	90	97	shlex.pop_source	pop_source(self)	todo		
+Lib/shlex.py	99	129	shlex.get_token	get_token(self)	todo		
+Lib/shlex.py	131	275	shlex.read_token	read_token(self)	todo		
+Lib/shlex.py	277	285	shlex.sourcehook	sourcehook(self, newfile)	todo		
+Lib/shlex.py	287	293	shlex.error_leader	error_leader(self, infile=None, lineno=None)	todo		
+Lib/shlex.py	295	296	shlex.__iter__	__iter__(self)	todo		
+Lib/shlex.py	298	302	shlex.__next__	__next__(self)	todo		
+Lib/shlex.py	304	312	split	split(s, comments=False, posix=True)	todo		candidates:strsearch-split-char-fast-path,strsearch-split-rsplit-agree
+Lib/shlex.py	315	317	join	join(split_command)	todo		
+Lib/shlex.py	320	338	quote	quote(s)	todo		
+Lib/shlex.py	341	343	_print_tokens	_print_tokens(lexer)	todo		

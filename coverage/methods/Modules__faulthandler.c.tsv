@@ -1,0 +1,45 @@
+file	line	endline	name	signature	status	entry	note
+Modules/faulthandler.c	93	161	faulthandler_get_fileno	faulthandler_get_fileno(PyObject **file_ptr)	todo		
+Modules/faulthandler.c	166	176	get_thread_state	get_thread_state(void)	todo		
+Modules/faulthandler.c	179	211	faulthandler_dump_traceback	faulthandler_dump_traceback(int fd, int all_threads, PyInterpreterState *interp)	todo		
+Modules/faulthandler.c	214	230	faulthandler_dump_c_stack	faulthandler_dump_c_stack(int fd)	todo		
+Modules/faulthandler.c	233	280	faulthandler_dump_traceback_py	faulthandler_dump_traceback_py(PyObject *self, PyObject *args, PyObject *kwargs)	todo		
+Modules/faulthandler.c	283	308	faulthandler_dump_c_stack_py	faulthandler_dump_c_stack_py(PyObject *self, PyObject *args, PyObject *kwargs)	todo		
+Modules/faulthandler.c	311	321	faulthandler_disable_fatal_handler	faulthandler_disable_fatal_handler(fault_handler_t *handler)	todo		
+Modules/faulthandler.c	324	343	deduce_all_threads	deduce_all_threads(void)	todo		
+Modules/faulthandler.c	359	415	faulthandler_fatal_error	faulthandler_fatal_error(int signum)	todo		
+Modules/faulthandler.c	419	433	faulthandler_ignore_exception	faulthandler_ignore_exception(DWORD code)	todo		
+Modules/faulthandler.c	436	480	faulthandler_exc_handler	faulthandler_exc_handler(struct _EXCEPTION_POINTERS *exc_info)	todo		
+Modules/faulthandler.c	486	508	faulthandler_allocate_stack	faulthandler_allocate_stack(void)	todo		
+Modules/faulthandler.c	515	571	faulthandler_enable	faulthandler_enable(void)	todo		
+Modules/faulthandler.c	574	608	faulthandler_py_enable	faulthandler_py_enable(PyObject *self, PyObject *args, PyObject *kwargs)	todo		
+Modules/faulthandler.c	611	628	faulthandler_disable	faulthandler_disable(void)	todo		
+Modules/faulthandler.c	631	638	faulthandler_disable_py	faulthandler_disable_py(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Modules/faulthandler.c	641	644	faulthandler_is_enabled	faulthandler_is_enabled(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Modules/faulthandler.c	647	681	faulthandler_thread	faulthandler_thread(void *unused)	todo		
+Modules/faulthandler.c	684	706	cancel_dump_traceback_later	cancel_dump_traceback_later(void)	todo		
+Modules/faulthandler.c	711	736	format_timeout	format_timeout(PyTime_t us)	todo		
+Modules/faulthandler.c	739	838	faulthandler_dump_traceback_later	faulthandler_dump_traceback_later(PyObject *self, PyObject *args, PyObject *kwargs)	todo		
+Modules/faulthandler.c	841	846	faulthandler_cancel_dump_traceback_later_py	faulthandler_cancel_dump_traceback_later_py(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Modules/faulthandler.c	851	881	faulthandler_register	faulthandler_register(int signum, int chain, _Py_sighandler_t *previous_p)	todo		
+Modules/faulthandler.c	891	921	faulthandler_user	faulthandler_user(int signum)	todo		
+Modules/faulthandler.c	924	940	check_signum	check_signum(int signum)	todo		
+Modules/faulthandler.c	943	1008	faulthandler_register_py	faulthandler_register_py(PyObject *self, PyObject *args, PyObject *kwargs)	todo		
+Modules/faulthandler.c	1011	1024	faulthandler_unregister	faulthandler_unregister(user_signal_t *user, int signum)	todo		
+Modules/faulthandler.c	1027	1045	faulthandler_unregister_py	faulthandler_unregister_py(PyObject *self, PyObject *args)	todo		
+Modules/faulthandler.c	1050	1075	faulthandler_suppress_crash_report	faulthandler_suppress_crash_report(void)	todo		
+Modules/faulthandler.c	1078	1088	faulthandler_read_null	faulthandler_read_null(PyObject *self, PyObject *args)	todo		
+Modules/faulthandler.c	1091	1111	faulthandler_raise_sigsegv	faulthandler_raise_sigsegv(void)	todo		
+Modules/faulthandler.c	1114	1128	faulthandler_sigsegv	faulthandler_sigsegv(PyObject *self, PyObject *args)	todo		
+Modules/faulthandler.c	1131	1134	faulthandler_fatal_error_thread	faulthandler_fatal_error_thread(void *plock)	todo		
+Modules/faulthandler.c	1137	1164	faulthandler_fatal_error_c_thread	faulthandler_fatal_error_c_thread(PyObject *self, PyObject *args)	todo		
+Modules/faulthandler.c	1167	1183	faulthandler_sigfpe	faulthandler_sigfpe(PyObject *self, PyObject *Py_UNUSED(dummy))	todo		
+Modules/faulthandler.c	1186	1191	faulthandler_sigabrt	faulthandler_sigabrt(PyObject *self, PyObject *args)	todo		
+Modules/faulthandler.c	1197	1211	stack_overflow	stack_overflow(uintptr_t min_sp, uintptr_t max_sp, size_t *depth)	todo		
+Modules/faulthandler.c	1214	1247	faulthandler_stack_overflow	faulthandler_stack_overflow(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Modules/faulthandler.c	1253	1261	faulthandler_raise_exception	faulthandler_raise_exception(PyObject *self, PyObject *args)	todo		
+Modules/faulthandler.c	1340	1368	PyExec_faulthandler	PyExec_faulthandler(PyObject *module) {	todo		
+Modules/faulthandler.c	1387	1390	PyInit_faulthandler	PyInit_faulthandler(void)	todo		
+Modules/faulthandler.c	1393	1408	faulthandler_init_enable	faulthandler_init_enable(void)	todo		
+Modules/faulthandler.c	1411	1440	_PyFaulthandler_Init	_PyFaulthandler_Init(int enable)	todo		
+Modules/faulthandler.c	1442	1491	_PyFaulthandler_Fini	void _PyFaulthandler_Fini(void)	todo		

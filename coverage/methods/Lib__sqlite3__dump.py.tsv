@@ -1,0 +1,5 @@
+file	line	endline	name	signature	status	entry	note
+Lib/sqlite3/dump.py	10	11	_quote_name	_quote_name(name)	todo		
+Lib/sqlite3/dump.py	14	15	_escape_single_quotes	_escape_single_quotes(value)	todo		
+Lib/sqlite3/dump.py	18	19	_quote_value	_quote_value(value)	todo		
+Lib/sqlite3/dump.py	22	118	_iterdump	_iterdump(connection, *, filter=None)	todo		

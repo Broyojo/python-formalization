@@ -1,0 +1,8 @@
+file	line	endline	name	signature	status	entry	note
+Python/pyarena.c	74	87	block_new	block_new(size_t size)	todo		
+Python/pyarena.c	90	96	block_free	block_free(block *b) {	todo		
+Python/pyarena.c	99	122	block_alloc	block_alloc(block *b, size_t size)	todo		
+Python/pyarena.c	125	151	_PyArena_New	_PyArena_New(void)	todo		
+Python/pyarena.c	154	174	_PyArena_Free	_PyArena_Free(PyArena *arena)	todo		
+Python/pyarena.c	177	197	_PyArena_Malloc	_PyArena_Malloc(PyArena *arena, size_t size)	todo		
+Python/pyarena.c	200	207	_PyArena_AddPyObject	_PyArena_AddPyObject(PyArena *arena, PyObject *obj)	todo		

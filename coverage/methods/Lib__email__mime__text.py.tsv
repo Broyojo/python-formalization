@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Lib/email/mime/text.py	15	40	MIMEText.__init__	__init__(self, _text, _subtype='plain', _charset=None, *, policy=None)	todo		

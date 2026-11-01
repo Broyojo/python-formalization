@@ -1,0 +1,42 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_pyrepl/commands.py	46	55	Command.__init__	__init__(self, reader: HistoricalReader, event_name: str, event: list[str])	todo		
+Lib/_pyrepl/commands.py	57	58	Command.do	do(self)	todo		
+Lib/_pyrepl/commands.py	62	77	KillCommand.kill_range	kill_range(self, start: int, end: int)	todo		
+Lib/_pyrepl/commands.py	97	98	is_kill	is_kill(command: type[Command] | None)	todo		
+Lib/_pyrepl/commands.py	101	102	is_yank	is_yank(command: type[Command] | None)	todo		
+Lib/_pyrepl/commands.py	111	128	digit_arg.do	do(self)	todo		
+Lib/_pyrepl/commands.py	132	135	clear_screen.do	do(self)	todo		
+Lib/_pyrepl/commands.py	139	140	refresh.do	do(self)	todo		
+Lib/_pyrepl/commands.py	144	146	repaint.do	do(self)	todo		
+Lib/_pyrepl/commands.py	150	159	kill_line.do	do(self)	todo		
+Lib/_pyrepl/commands.py	163	165	unix_line_discard.do	do(self)	todo		
+Lib/_pyrepl/commands.py	169	172	unix_word_rubout.do	do(self)	todo		
+Lib/_pyrepl/commands.py	176	179	kill_word.do	do(self)	todo		
+Lib/_pyrepl/commands.py	183	186	backward_kill_word.do	do(self)	todo		
+Lib/_pyrepl/commands.py	190	195	yank.do	do(self)	todo		
+Lib/_pyrepl/commands.py	199	213	yank_pop.do	do(self)	todo		
+Lib/_pyrepl/commands.py	217	222	interrupt.do	do(self)	todo		
+Lib/_pyrepl/commands.py	226	229	ctrl_c.do	do(self)	todo		
+Lib/_pyrepl/commands.py	233	246	suspend.do	do(self)	todo		
+Lib/_pyrepl/commands.py	250	276	up.do	do(self)	todo		
+Lib/_pyrepl/commands.py	280	308	down.do	do(self)	todo		
+Lib/_pyrepl/commands.py	312	319	left.do	do(self)	todo		
+Lib/_pyrepl/commands.py	323	331	right.do	do(self)	todo		
+Lib/_pyrepl/commands.py	335	336	beginning_of_line.do	do(self)	todo		
+Lib/_pyrepl/commands.py	340	341	end_of_line.do	do(self)	todo		
+Lib/_pyrepl/commands.py	345	346	home.do	do(self)	todo		
+Lib/_pyrepl/commands.py	350	351	end.do	do(self)	todo		
+Lib/_pyrepl/commands.py	355	358	forward_word.do	do(self)	todo		
+Lib/_pyrepl/commands.py	362	365	backward_word.do	do(self)	todo		
+Lib/_pyrepl/commands.py	369	379	self_insert.do	do(self)	todo		
+Lib/_pyrepl/commands.py	383	385	insert_nl.do	do(self)	todo		
+Lib/_pyrepl/commands.py	389	403	transpose_characters.do	do(self)	todo		
+Lib/_pyrepl/commands.py	407	416	backspace.do	do(self)	todo		
+Lib/_pyrepl/commands.py	420	439	delete.do	do(self)	todo		
+Lib/_pyrepl/commands.py	443	444	accept.do	do(self)	todo		
+Lib/_pyrepl/commands.py	448	452	help.do	do(self)	todo		
+Lib/_pyrepl/commands.py	456	459	invalid_key.do	do(self)	todo		
+Lib/_pyrepl/commands.py	463	465	invalid_command.do	do(self)	todo		
+Lib/_pyrepl/commands.py	469	482	show_history.do	do(self)	todo		
+Lib/_pyrepl/commands.py	486	488	paste_mode.do	do(self)	todo		
+Lib/_pyrepl/commands.py	492	505	perform_bracketed_paste.do	do(self)	todo		

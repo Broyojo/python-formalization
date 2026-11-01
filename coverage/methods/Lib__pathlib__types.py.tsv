@@ -1,0 +1,43 @@
+file	line	endline	name	signature	status	entry	note
+Lib/pathlib/types.py	21	33	_explode_path	_explode_path(path, split)	todo		
+Lib/pathlib/types.py	47	47	_PathParser.split	split(self, path: str)	todo		candidates:strsearch-split-char-fast-path,strsearch-split-rsplit-agree
+Lib/pathlib/types.py	48	48	_PathParser.splitext	splitext(self, path: str)	todo		
+Lib/pathlib/types.py	49	49	_PathParser.normcase	normcase(self, path: str)	todo		
+Lib/pathlib/types.py	57	57	PathInfo.exists	exists(self, *, follow_symlinks: bool=True)	todo		
+Lib/pathlib/types.py	58	58	PathInfo.is_dir	is_dir(self, *, follow_symlinks: bool=True)	todo		
+Lib/pathlib/types.py	59	59	PathInfo.is_file	is_file(self, *, follow_symlinks: bool=True)	todo		
+Lib/pathlib/types.py	60	60	PathInfo.is_symlink	is_symlink(self)	todo		
+Lib/pathlib/types.py	74	78	_JoinablePath.parser	parser(self)	todo		
+Lib/pathlib/types.py	81	86	_JoinablePath.with_segments	with_segments(self, *pathsegments)	todo		
+Lib/pathlib/types.py	89	92	_JoinablePath.__str__	__str__(self)	todo		
+Lib/pathlib/types.py	95	97	_JoinablePath.anchor	anchor(self)	todo		
+Lib/pathlib/types.py	100	102	_JoinablePath.name	name(self)	todo		
+Lib/pathlib/types.py	105	111	_JoinablePath.suffix	suffix(self)	todo		
+Lib/pathlib/types.py	114	126	_JoinablePath.suffixes	suffixes(self)	todo		
+Lib/pathlib/types.py	129	131	_JoinablePath.stem	stem(self)	todo		
+Lib/pathlib/types.py	133	140	_JoinablePath.with_name	with_name(self, name)	todo		
+Lib/pathlib/types.py	142	151	_JoinablePath.with_stem	with_stem(self, stem)	todo		
+Lib/pathlib/types.py	153	165	_JoinablePath.with_suffix	with_suffix(self, suffix)	todo		
+Lib/pathlib/types.py	168	174	_JoinablePath.parts	parts(self)	todo		
+Lib/pathlib/types.py	176	182	_JoinablePath.joinpath	joinpath(self, *pathsegments)	todo		
+Lib/pathlib/types.py	184	188	_JoinablePath.__truediv__	__truediv__(self, key)	todo		
+Lib/pathlib/types.py	190	194	_JoinablePath.__rtruediv__	__rtruediv__(self, key)	todo		
+Lib/pathlib/types.py	197	203	_JoinablePath.parent	parent(self)	todo		
+Lib/pathlib/types.py	206	216	_JoinablePath.parents	parents(self)	todo		
+Lib/pathlib/types.py	218	226	_JoinablePath.full_match	full_match(self, pattern)	todo		
+Lib/pathlib/types.py	240	245	_ReadablePath.info	info(self)	todo		
+Lib/pathlib/types.py	248	253	_ReadablePath.__open_rb__	__open_rb__(self, buffering=-1)	todo		
+Lib/pathlib/types.py	255	260	_ReadablePath.read_bytes	read_bytes(self)	todo		
+Lib/pathlib/types.py	262	270	_ReadablePath.read_text	read_text(self, encoding=None, errors=None, newline=None)	todo		
+Lib/pathlib/types.py	273	279	_ReadablePath.iterdir	iterdir(self)	todo		
+Lib/pathlib/types.py	281	295	_ReadablePath.glob	glob(self, pattern, *, recurse_symlinks=True)	todo		
+Lib/pathlib/types.py	297	326	_ReadablePath.walk	walk(self, top_down=True, on_error=None, follow_symlinks=False)	todo		
+Lib/pathlib/types.py	329	333	_ReadablePath.readlink	readlink(self)	todo		
+Lib/pathlib/types.py	335	341	_ReadablePath.copy	copy(self, target, **kwargs)	todo		
+Lib/pathlib/types.py	343	350	_ReadablePath.copy_into	copy_into(self, target_dir, **kwargs)	todo		
+Lib/pathlib/types.py	363	368	_WritablePath.symlink_to	symlink_to(self, target, target_is_directory=False)	todo		
+Lib/pathlib/types.py	371	375	_WritablePath.mkdir	mkdir(self)	todo		
+Lib/pathlib/types.py	378	383	_WritablePath.__open_wb__	__open_wb__(self, buffering=-1)	todo		
+Lib/pathlib/types.py	385	392	_WritablePath.write_bytes	write_bytes(self, data)	todo		
+Lib/pathlib/types.py	394	405	_WritablePath.write_text	write_text(self, data, encoding=None, errors=None, newline=None)	todo		
+Lib/pathlib/types.py	407	425	_WritablePath._copy_from	_copy_from(self, source, follow_symlinks=True)	todo		

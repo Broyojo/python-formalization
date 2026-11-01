@@ -1,0 +1,21 @@
+file	line	endline	name	signature	status	entry	note
+Python/hashtable.c	67	70	_Py_slist_init	_Py_slist_init(_Py_slist_t *list)	todo		
+Python/hashtable.c	74	78	_Py_slist_prepend	_Py_slist_prepend(_Py_slist_t *list, _Py_slist_item_t *item)	todo		
+Python/hashtable.c	82	89	_Py_slist_remove	_Py_slist_remove(_Py_slist_t *list, _Py_slist_item_t *previous, _Py_slist_item_t *item)	todo		
+Python/hashtable.c	93	96	_Py_hashtable_hash_ptr	_Py_hashtable_hash_ptr(const void *key)	todo		
+Python/hashtable.c	100	103	_Py_hashtable_compare_direct	_Py_hashtable_compare_direct(const void *key1, const void *key2)	todo		
+Python/hashtable.c	108	117	round_size	round_size(size_t s)	todo		
+Python/hashtable.c	121	129	_Py_hashtable_size	_Py_hashtable_size(const _Py_hashtable_t *ht)	todo		
+Python/hashtable.c	133	136	_Py_hashtable_len	_Py_hashtable_len(const _Py_hashtable_t *ht)	todo		
+Python/hashtable.c	140	155	_Py_hashtable_get_entry_generic	_Py_hashtable_get_entry_generic(_Py_hashtable_t *ht, const void *key)	todo		
+Python/hashtable.c	162	178	_Py_hashtable_get_entry_ptr	_Py_hashtable_get_entry_ptr(_Py_hashtable_t *ht, const void *key)	todo		
+Python/hashtable.c	182	213	_Py_hashtable_steal	_Py_hashtable_steal(_Py_hashtable_t *ht, const void *key)	todo		
+Python/hashtable.c	217	251	_Py_hashtable_set	_Py_hashtable_set(_Py_hashtable_t *ht, const void *key, void *value)	todo		
+Python/hashtable.c	255	264	_Py_hashtable_get	_Py_hashtable_get(_Py_hashtable_t *ht, const void *key)	todo		
+Python/hashtable.c	268	283	_Py_hashtable_foreach	_Py_hashtable_foreach(_Py_hashtable_t *ht, _Py_hashtable_foreach_func func, void *user_data)	todo		
+Python/hashtable.c	287	319	hashtable_rehash	hashtable_rehash(_Py_hashtable_t *ht)	todo		
+Python/hashtable.c	323	366	_Py_hashtable_new_full	_Py_hashtable_new_full(_Py_hashtable_hash_func hash_func, _Py_hashtable_compare_func compare_func, _Py_hashtable_destroy_func key_destroy_func, _Py_hashtable_destroy_func value_destroy_func, _Py_hashtable_allocator_t *allocator)	todo		
+Python/hashtable.c	370	375	_Py_hashtable_new	_Py_hashtable_new(_Py_hashtable_hash_func hash_func, _Py_hashtable_compare_func compare_func)	todo		
+Python/hashtable.c	379	388	_Py_hashtable_destroy_entry	_Py_hashtable_destroy_entry(_Py_hashtable_t *ht, _Py_hashtable_entry_t *entry)	todo		
+Python/hashtable.c	392	407	_Py_hashtable_clear	_Py_hashtable_clear(_Py_hashtable_t *ht)	todo		
+Python/hashtable.c	411	424	_Py_hashtable_destroy	_Py_hashtable_destroy(_Py_hashtable_t *ht)	todo		

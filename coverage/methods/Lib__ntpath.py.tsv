@@ -1,0 +1,22 @@
+file	line	endline	name	signature	status	entry	note
+Lib/ntpath.py	34	38	_get_bothseps	_get_bothseps(path)	todo		
+Lib/ntpath.py	50	67	normcase	normcase(s)	todo		
+Lib/ntpath.py	80	95	isabs	isabs(s)	todo		
+Lib/ntpath.py	99	140	join	join(path, *paths)	todo		
+Lib/ntpath.py	146	168	splitdrive	splitdrive(p)	todo		
+Lib/ntpath.py	224	237	split	split(p)	todo		candidates:strsearch-split-char-fast-path,strsearch-split-rsplit-agree
+Lib/ntpath.py	245	250	splitext	splitext(p)	todo		
+Lib/ntpath.py	256	258	basename	basename(p)	todo		
+Lib/ntpath.py	263	265	dirname	dirname(p)	todo		
+Lib/ntpath.py	282	299	ismount	ismount(path)	todo		
+Lib/ntpath.py	313	318	isreserved	isreserved(path)	todo		
+Lib/ntpath.py	320	333	_isreservedname	_isreservedname(name)	todo		
+Lib/ntpath.py	345	389	expanduser	expanduser(path)	todo		
+Lib/ntpath.py	409	467	expandvars	expandvars(path)	todo		
+Lib/ntpath.py	531	556	abspath	abspath(path)	todo		
+Lib/ntpath.py	565	605	_readlink_deep	_readlink_deep(path, ignored_error=OSError)	todo		
+Lib/ntpath.py	607	661	_getfinalpathname_nonstrict	_getfinalpathname_nonstrict(path, ignored_error=OSError)	todo		
+Lib/ntpath.py	663	733	realpath	realpath(path, *, strict=False)	todo		
+Lib/ntpath.py	739	783	relpath	relpath(path, start=None)	todo		
+Lib/ntpath.py	796	844	commonpath	commonpath(paths)	todo		
+Lib/ntpath.py	864	869	isdevdrive	isdevdrive(path)	todo		

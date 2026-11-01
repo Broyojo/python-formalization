@@ -1,0 +1,12 @@
+file	line	endline	name	signature	status	entry	note
+Lib/xml/sax/_exceptions.py	15	20	SAXException.__init__	__init__(self, msg, exception=None)	todo		
+Lib/xml/sax/_exceptions.py	22	24	SAXException.getMessage	getMessage(self)	todo		
+Lib/xml/sax/_exceptions.py	26	28	SAXException.getException	getException(self)	todo		
+Lib/xml/sax/_exceptions.py	30	32	SAXException.__str__	__str__(self)	todo		
+Lib/xml/sax/_exceptions.py	34	37	SAXException.__getitem__	__getitem__(self, ix)	todo		
+Lib/xml/sax/_exceptions.py	55	66	SAXParseException.__init__	__init__(self, msg, exception, locator)	todo		
+Lib/xml/sax/_exceptions.py	68	71	SAXParseException.getColumnNumber	getColumnNumber(self)	todo		
+Lib/xml/sax/_exceptions.py	73	75	SAXParseException.getLineNumber	getLineNumber(self)	todo		
+Lib/xml/sax/_exceptions.py	77	79	SAXParseException.getPublicId	getPublicId(self)	todo		
+Lib/xml/sax/_exceptions.py	81	83	SAXParseException.getSystemId	getSystemId(self)	todo		
+Lib/xml/sax/_exceptions.py	85	96	SAXParseException.__str__	__str__(self)	todo		

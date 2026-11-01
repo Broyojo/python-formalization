@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Python/dup2.c	21	37	dup2	dup2(int fd1, int fd2)	todo		

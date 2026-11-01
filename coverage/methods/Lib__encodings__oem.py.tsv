@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Lib/encodings/oem.py	14	15	decode	decode(input, errors='strict')	excluded		platform: Windows only
+Lib/encodings/oem.py	18	19	IncrementalEncoder.encode	encode(self, input, final=False)	excluded		platform: Windows only
+Lib/encodings/oem.py	32	41	getregentry	getregentry()	excluded		platform: Windows only

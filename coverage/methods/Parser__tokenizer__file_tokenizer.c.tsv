@@ -1,0 +1,14 @@
+file	line	endline	name	signature	status	entry	note
+Parser/tokenizer/file_tokenizer.c	19	55	tok_concatenate_interactive_new_line	tok_concatenate_interactive_new_line(struct tok_state *tok, const char *line) {	todo		
+Parser/tokenizer/file_tokenizer.c	58	80	tok_readline_raw	tok_readline_raw(struct tok_state *tok)	todo		
+Parser/tokenizer/file_tokenizer.c	83	122	tok_readline_recode	tok_readline_recode(struct tok_state *tok) {	todo		
+Parser/tokenizer/file_tokenizer.c	125	127	fp_getc	static int fp_getc(struct tok_state *tok) {	todo		
+Parser/tokenizer/file_tokenizer.c	130	132	fp_ungetc	static void fp_ungetc(int c, struct tok_state *tok) {	todo		
+Parser/tokenizer/file_tokenizer.c	144	190	fp_setreadl	fp_setreadl(struct tok_state *tok, const char* enc)	todo		
+Parser/tokenizer/file_tokenizer.c	193	282	tok_underflow_interactive	tok_underflow_interactive(struct tok_state *tok) {	todo		
+Parser/tokenizer/file_tokenizer.c	285	369	tok_underflow_file	tok_underflow_file(struct tok_state *tok)	todo		
+Parser/tokenizer/file_tokenizer.c	373	405	_PyTokenizer_FromFile	_PyTokenizer_FromFile(FILE *fp, const char* enc, const char *ps1, const char *ps2)	todo		
+Parser/tokenizer/file_tokenizer.c	416	420	borrow_read	borrow_read(void *cookie, char *buf, size_t size)	todo		
+Parser/tokenizer/file_tokenizer.c	423	428	fdopen_borrow	fdopen_borrow(int fd) {	todo		
+Parser/tokenizer/file_tokenizer.c	431	437	fdopen_borrow	fdopen_borrow(int fd) {	todo		
+Parser/tokenizer/file_tokenizer.c	450	494	_PyTokenizer_FindEncodingFilename	_PyTokenizer_FindEncodingFilename(int fd, PyObject *filename)	todo		

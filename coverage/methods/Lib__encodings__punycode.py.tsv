@@ -1,0 +1,18 @@
+file	line	endline	name	signature	status	entry	note
+Lib/encodings/punycode.py	10	20	segregate	segregate(str)	todo		
+Lib/encodings/punycode.py	22	28	selective_len	selective_len(str, max)	todo		
+Lib/encodings/punycode.py	30	46	selective_find	selective_find(str, char, index, pos)	todo		
+Lib/encodings/punycode.py	48	68	insertion_unsort	insertion_unsort(str, extended)	todo		
+Lib/encodings/punycode.py	70	75	T	T(j, bias)	todo		
+Lib/encodings/punycode.py	78	89	generate_generalized_integer	generate_generalized_integer(N, bias)	todo		
+Lib/encodings/punycode.py	91	103	adapt	adapt(delta, first, numchars)	todo		
+Lib/encodings/punycode.py	106	115	generate_integers	generate_integers(baselen, deltas)	todo		
+Lib/encodings/punycode.py	117	123	punycode_encode	punycode_encode(text)	todo		
+Lib/encodings/punycode.py	127	155	decode_generalized_number	decode_generalized_number(extended, extpos, bias, errors)	todo		
+Lib/encodings/punycode.py	158	186	insertion_sort	insertion_sort(base, extended, errors)	todo		
+Lib/encodings/punycode.py	188	210	punycode_decode	punycode_decode(text, errors)	todo		
+Lib/encodings/punycode.py	216	218	Codec.encode	encode(self, input, errors='strict')	todo		
+Lib/encodings/punycode.py	220	224	Codec.decode	decode(self, input, errors='strict')	todo		
+Lib/encodings/punycode.py	227	228	IncrementalEncoder.encode	encode(self, input, final=False)	todo		
+Lib/encodings/punycode.py	231	234	IncrementalDecoder.decode	decode(self, input, final=False)	todo		
+Lib/encodings/punycode.py	244	253	getregentry	getregentry()	todo		

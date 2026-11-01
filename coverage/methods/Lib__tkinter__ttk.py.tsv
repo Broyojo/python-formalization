@@ -1,0 +1,118 @@
+file	line	endline	name	signature	status	entry	note
+Lib/tkinter/ttk.py	32	40	_format_optvalue	_format_optvalue(value, script=False)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	42	56	_format_optdict	_format_optdict(optdict, script=False, ignore=None)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	58	77	_mapdict_values	_mapdict_values(items)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	79	94	_format_mapdict	_format_mapdict(mapdict, script=False)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	96	137	_format_elemcreate	_format_elemcreate(etype, script=False, *args, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	140	187	_format_layoutlist	_format_layoutlist(layout, indent=0, indent_size=2)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	189	229	_script_from_settings	_script_from_settings(settings)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	231	249	_list_from_statespec	_list_from_statespec(stuple)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	251	277	_list_from_layouttuple	_list_from_layouttuple(tk, ltuple)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	279	293	_val_or_dict	_val_or_dict(tk, options, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	295	303	_convert_stringval	_convert_stringval(value)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	305	311	_to_number	_to_number(x)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	313	326	_tclobj_to_py	_tclobj_to_py(val)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	328	334	tclobjs_to_py	tclobjs_to_py(adict)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	336	345	setup_master	setup_master(master=None)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	353	356	Style.__init__	__init__(self, master=None)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	359	369	Style.configure	configure(self, style, query_opt=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	372	386	Style.map	map(self, style, query_opt=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	389	398	Style.lookup	lookup(self, style, option, state=None, default=None)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	401	441	Style.layout	layout(self, style, layoutspec=None)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	444	448	Style.element_create	element_create(self, elementname, etype, *args, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	451	454	Style.element_names	element_names(self)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	457	460	Style.element_options	element_options(self, elementname)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	463	477	Style.theme_create	theme_create(self, themename, parent=None, settings=None)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	480	489	Style.theme_settings	theme_settings(self, themename, settings)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	492	494	Style.theme_names	theme_names(self)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	497	509	Style.theme_use	theme_use(self, themename=None)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	515	536	Widget.__init__	__init__(self, master, widgetname, kw=None)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	539	544	Widget.identify	identify(self, x, y)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	547	559	Widget.instate	instate(self, statespec, callback=None, *args, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	562	572	Widget.state	state(self, statespec=None)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	579	591	Button.__init__	__init__(self, master=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	594	596	Button.invoke	invoke(self)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	602	614	Checkbutton.__init__	__init__(self, master=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	617	625	Checkbutton.invoke	invoke(self)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	632	650	Entry.__init__	__init__(self, master=None, widget=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	653	656	Entry.bbox	bbox(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	659	662	Entry.identify	identify(self, x, y)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	665	669	Entry.validate	validate(self)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	676	690	Combobox.__init__	__init__(self, master=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	693	703	Combobox.current	current(self, newindex=None)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	706	708	Combobox.set	set(self, value)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	715	726	Frame.__init__	__init__(self, master=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	732	745	Label.__init__	__init__(self, master=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	753	765	Labelframe.__init__	__init__(self, master=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	774	786	Menubutton.__init__	__init__(self, master=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	794	823	Notebook.__init__	__init__(self, master=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	826	831	Notebook.add	add(self, child, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	834	837	Notebook.forget	forget(self, tab_id)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	840	846	Notebook.hide	hide(self, tab_id)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	849	852	Notebook.identify	identify(self, x, y)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	855	858	Notebook.index	index(self, tab_id)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	861	867	Notebook.insert	insert(self, pos, child, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	870	877	Notebook.select	select(self, tab_id=None)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	880	888	Notebook.tab	tab(self, tab_id, option=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	891	893	Notebook.tabs	tabs(self)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	896	919	Notebook.enable_traversal	enable_traversal(self)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	926	941	Panedwindow.__init__	__init__(self, master=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	947	953	Panedwindow.insert	insert(self, pos, child, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	956	965	Panedwindow.pane	pane(self, pane, option=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	968	976	Panedwindow.sashpos	sashpos(self, index, newpos=None)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	988	1001	Progressbar.__init__	__init__(self, master=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1004	1009	Progressbar.start	start(self, interval=None)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1012	1016	Progressbar.step	step(self, amount=None)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1019	1022	Progressbar.stop	stop(self)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1029	1041	Radiobutton.__init__	__init__(self, master=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1044	1050	Radiobutton.invoke	invoke(self)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1057	1068	Scale.__init__	__init__(self, master=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1071	1081	Scale.configure	configure(self, cnf=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1084	1090	Scale.get	get(self, x=None, y=None)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1096	1107	Scrollbar.__init__	__init__(self, master=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1114	1125	Separator.__init__	__init__(self, master=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1132	1139	Sizegrip.__init__	__init__(self, master=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1149	1164	Spinbox.__init__	__init__(self, master=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1167	1169	Spinbox.set	set(self, value)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1179	1202	Treeview.__init__	__init__(self, master=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1205	1212	Treeview.bbox	bbox(self, item, column=None)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1215	1220	Treeview.get_children	get_children(self, item=None)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1223	1229	Treeview.set_children	set_children(self, item, *newchildren)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1232	1240	Treeview.column	column(self, column, option=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1243	1246	Treeview.delete	delete(self, *items)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1249	1255	Treeview.detach	detach(self, *items)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1258	1261	Treeview.exists	exists(self, item)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1264	1267	Treeview.focus	focus(self, item=None)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1270	1299	Treeview.heading	heading(self, column, option=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1302	1306	Treeview.identify	identify(self, component, x, y)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1309	1311	Treeview.identify_row	identify_row(self, y)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1314	1318	Treeview.identify_column	identify_column(self, x)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1321	1330	Treeview.identify_region	identify_region(self, x, y)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1333	1337	Treeview.identify_element	identify_element(self, x, y)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1340	1343	Treeview.index	index(self, item)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1346	1366	Treeview.insert	insert(self, parent, index, iid=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1369	1378	Treeview.item	item(self, item, option=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1381	1388	Treeview.move	move(self, item, parent, index)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1393	1396	Treeview.next	next(self, item)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1399	1402	Treeview.parent	parent(self, item)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1405	1408	Treeview.prev	prev(self, item)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1411	1417	Treeview.see	see(self, item)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1420	1422	Treeview.selection	selection(self)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1425	1429	Treeview._selection	_selection(self, selop, items)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1432	1434	Treeview.selection_set	selection_set(self, *items)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1437	1439	Treeview.selection_add	selection_add(self, *items)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1442	1444	Treeview.selection_remove	selection_remove(self, *items)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1447	1449	Treeview.selection_toggle	selection_toggle(self, *items)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1452	1464	Treeview.set	set(self, item, column=None, value=None)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1467	1471	Treeview.tag_bind	tag_bind(self, tagname, sequence=None, callback=None)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1474	1484	Treeview.tag_configure	tag_configure(self, tagname, option=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1487	1498	Treeview.tag_has	tag_has(self, tagname, item=None)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1510	1545	LabeledScale.__init__	__init__(self, master=None, variable=None, from_=0, to=10, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1548	1558	LabeledScale.destroy	destroy(self)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1561	1586	LabeledScale._adjust	_adjust(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1589	1591	LabeledScale.value	value(self)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1594	1596	LabeledScale.value	value(self, val)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1603	1630	OptionMenu.__init__	__init__(self, master, variable, default=None, *values, **kwargs)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1633	1637	OptionMenu.__getitem__	__getitem__(self, item)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1640	1654	OptionMenu.set_menu	set_menu(self, default=None, *values)	excluded		platform: GUI toolkit
+Lib/tkinter/ttk.py	1657	1663	OptionMenu.destroy	destroy(self)	excluded		platform: GUI toolkit

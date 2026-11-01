@@ -1,0 +1,9 @@
+file	line	endline	name	signature	status	entry	note
+Lib/turtledemo/chaos.py	9	10	f	f(x)	excluded		platform: GUI toolkit
+Lib/turtledemo/chaos.py	12	13	g	g(x)	excluded		platform: GUI toolkit
+Lib/turtledemo/chaos.py	15	16	h	h(x)	excluded		platform: GUI toolkit
+Lib/turtledemo/chaos.py	18	19	jumpto	jumpto(x, y)	excluded		platform: GUI toolkit
+Lib/turtledemo/chaos.py	21	24	line	line(x1, y1, x2, y2)	excluded		platform: GUI toolkit
+Lib/turtledemo/chaos.py	26	28	coosys	coosys()	excluded		platform: GUI toolkit
+Lib/turtledemo/chaos.py	30	39	plot	plot(fun, start, color)	excluded		platform: GUI toolkit
+Lib/turtledemo/chaos.py	41	53	main	main()	excluded		platform: GUI toolkit

@@ -1,0 +1,9 @@
+file	line	endline	name	signature	status	entry	note
+Lib/multiprocessing/popen_spawn_win32.py	24	25	_path_eq	_path_eq(p1, p2)	excluded		platform: Windows only
+Lib/multiprocessing/popen_spawn_win32.py	30	32	_close_handles	_close_handles(*handles)	excluded		platform: Windows only
+Lib/multiprocessing/popen_spawn_win32.py	46	99	Popen.__init__	__init__(self, process_obj)	excluded		platform: Windows only
+Lib/multiprocessing/popen_spawn_win32.py	101	103	Popen.duplicate_for_child	duplicate_for_child(self, handle)	excluded		platform: Windows only
+Lib/multiprocessing/popen_spawn_win32.py	105	121	Popen.wait	wait(self, timeout=None)	excluded		platform: Windows only
+Lib/multiprocessing/popen_spawn_win32.py	123	124	Popen.poll	poll(self)	excluded		platform: Windows only
+Lib/multiprocessing/popen_spawn_win32.py	126	137	Popen.terminate	terminate(self)	excluded		platform: Windows only
+Lib/multiprocessing/popen_spawn_win32.py	146	147	Popen.close	close(self)	excluded		platform: Windows only

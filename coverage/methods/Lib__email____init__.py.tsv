@@ -1,0 +1,5 @@
+file	line	endline	name	signature	status	entry	note
+Lib/email/__init__.py	31	37	message_from_string	message_from_string(s, *args, **kws)	todo		
+Lib/email/__init__.py	39	45	message_from_bytes	message_from_bytes(s, *args, **kws)	todo		
+Lib/email/__init__.py	47	53	message_from_file	message_from_file(fp, *args, **kws)	todo		
+Lib/email/__init__.py	55	61	message_from_binary_file	message_from_binary_file(fp, *args, **kws)	todo		

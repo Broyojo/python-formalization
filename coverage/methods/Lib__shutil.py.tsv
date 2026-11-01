@@ -1,0 +1,55 @@
+file	line	endline	name	signature	status	entry	note
+Lib/shutil.py	98	116	_fastcopy_fcopyfile	_fastcopy_fcopyfile(fsrc, fdst, flags)	todo		
+Lib/shutil.py	118	135	_determine_linux_fastcopy_blocksize	_determine_linux_fastcopy_blocksize(infd)	todo		
+Lib/shutil.py	137	176	_fastcopy_copy_file_range	_fastcopy_copy_file_range(fsrc, fdst)	todo		
+Lib/shutil.py	178	227	_fastcopy_sendfile	_fastcopy_sendfile(fsrc, fdst)	todo		
+Lib/shutil.py	229	247	_copyfileobj_readinto	_copyfileobj_readinto(fsrc, fdst, length=COPY_BUFSIZE)	todo		
+Lib/shutil.py	249	257	copyfileobj	copyfileobj(fsrc, fdst, length=0)	todo		
+Lib/shutil.py	259	275	_samefile	_samefile(src, dst)	todo		
+Lib/shutil.py	277	278	_stat	_stat(fn)	todo		
+Lib/shutil.py	280	281	_islink	_islink(fn)	todo		
+Lib/shutil.py	283	353	copyfile	copyfile(src, dst, *, follow_symlinks=True)	todo		
+Lib/shutil.py	355	379	copymode	copymode(src, dst, *, follow_symlinks=True)	todo		
+Lib/shutil.py	382	404	_copyxattr	_copyxattr(src, dst, *, follow_symlinks=True)	todo		
+Lib/shutil.py	406	407	_copyxattr	_copyxattr(*args, **kwargs)	todo		
+Lib/shutil.py	409	473	copystat	copystat(src, dst, *, follow_symlinks=True)	todo		
+Lib/shutil.py	475	491	copy	copy(src, dst, *, follow_symlinks=True)	todo		
+Lib/shutil.py	493	531	copy2	copy2(src, dst, *, follow_symlinks=True)	todo		
+Lib/shutil.py	533	543	ignore_patterns	ignore_patterns(*patterns)	todo		
+Lib/shutil.py	545	609	_copytree	_copytree(entries, src, dst, symlinks, ignore, copy_function, ignore_dangling_symlinks, dirs_exist_ok=False)	todo		
+Lib/shutil.py	611	657	copytree	copytree(src, dst, symlinks=False, ignore=None, copy_function=copy2, ignore_dangling_symlinks=False, dirs_exist_ok=False)	todo		
+Lib/shutil.py	660	663	_rmtree_islink	_rmtree_islink(st)	todo		
+Lib/shutil.py	665	666	_rmtree_islink	_rmtree_islink(st)	todo		
+Lib/shutil.py	669	711	_rmtree_unsafe	_rmtree_unsafe(path, dir_fd, onexc)	todo		
+Lib/shutil.py	714	731	_rmtree_safe_fd	_rmtree_safe_fd(path, dir_fd, onexc)	todo		
+Lib/shutil.py	733	802	_rmtree_safe_fd_step	_rmtree_safe_fd_step(stack, onexc)	todo		
+Lib/shutil.py	810	852	rmtree	rmtree(path, ignore_errors=False, onerror=None, *, onexc=None, dir_fd=None)	todo		
+Lib/shutil.py	858	874	_basename	_basename(path)	todo		
+Lib/shutil.py	876	944	move	move(src, dst, copy_function=copy2)	todo		
+Lib/shutil.py	946	953	_destinsrc	_destinsrc(src, dst)	todo		
+Lib/shutil.py	955	958	_is_immutable	_is_immutable(src)	todo		
+Lib/shutil.py	960	976	_get_gid	_get_gid(name)	todo		
+Lib/shutil.py	978	994	_get_uid	_get_uid(name)	todo		
+Lib/shutil.py	996	1066	_make_tarball	_make_tarball(base_name, base_dir, compress='gzip', verbose=0, dry_run=0, owner=None, group=None, logger=None, root_dir=None)	todo		
+Lib/shutil.py	1068	1123	_make_zipfile	_make_zipfile(base_name, base_dir, verbose=0, dry_run=0, logger=None, owner=None, group=None, root_dir=None)	todo		
+Lib/shutil.py	1154	1162	get_archive_formats	get_archive_formats()	todo		
+Lib/shutil.py	1164	1183	register_archive_format	register_archive_format(name, function, extra_args=None, description='')	todo		
+Lib/shutil.py	1185	1186	unregister_archive_format	unregister_archive_format(name)	todo		
+Lib/shutil.py	1188	1249	make_archive	make_archive(base_name, format, root_dir=None, base_dir=None, verbose=0, dry_run=0, owner=None, group=None, logger=None)	todo		
+Lib/shutil.py	1252	1261	get_unpack_formats	get_unpack_formats()	todo		
+Lib/shutil.py	1263	1278	_check_unpack_options	_check_unpack_options(extensions, function, extra_args)	todo		
+Lib/shutil.py	1281	1301	register_unpack_format	register_unpack_format(name, extensions, function, extra_args=None, description='')	todo		
+Lib/shutil.py	1303	1305	unregister_unpack_format	unregister_unpack_format(name)	todo		
+Lib/shutil.py	1307	1311	_ensure_directory	_ensure_directory(path)	todo		
+Lib/shutil.py	1313	1323	_unpack_zipfile	_unpack_zipfile(filename, extract_dir)	todo		
+Lib/shutil.py	1325	1337	_unpack_tarfile	_unpack_tarfile(filename, extract_dir, *, filter=None)	todo		
+Lib/shutil.py	1365	1370	_find_unpack_format	_find_unpack_format(filename)	todo		
+Lib/shutil.py	1372	1418	unpack_archive	unpack_archive(filename, extract_dir=None, format=None, *, filter=None)	todo		
+Lib/shutil.py	1429	1439	disk_usage	disk_usage(path)	todo		
+Lib/shutil.py	1446	1454	disk_usage	disk_usage(path)	todo		
+Lib/shutil.py	1457	1495	chown	chown(path, user=None, group=None, *, dir_fd=None, follow_symlinks=True)	todo		
+Lib/shutil.py	1497	1540	get_terminal_size	get_terminal_size(fallback=(80, 24))	todo		
+Lib/shutil.py	1546	1548	_access_check	_access_check(fn, mode)	todo		
+Lib/shutil.py	1551	1558	_win_path_needs_curdir	_win_path_needs_curdir(cmd, mode)	todo		
+Lib/shutil.py	1561	1641	which	which(cmd, mode=os.F_OK | os.X_OK, path=None)	todo		
+Lib/shutil.py	1643	1653	__getattr__	__getattr__(name)	todo		

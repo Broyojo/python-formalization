@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Lib/encodings/ascii.py	21	22	IncrementalEncoder.encode	encode(self, input, final=False)	todo		
+Lib/encodings/ascii.py	25	26	IncrementalDecoder.decode	decode(self, input, final=False)	todo		
+Lib/encodings/ascii.py	41	50	getregentry	getregentry()	todo		

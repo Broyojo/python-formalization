@@ -1,0 +1,35 @@
+file	line	endline	name	signature	status	entry	note
+Lib/multiprocessing/queues.py	35	53	Queue.__init__	__init__(self, maxsize=0, *, ctx)	todo		
+Lib/multiprocessing/queues.py	55	58	Queue.__getstate__	__getstate__(self)	todo		
+Lib/multiprocessing/queues.py	60	63	Queue.__setstate__	__setstate__(self, state)	todo		
+Lib/multiprocessing/queues.py	65	67	Queue._after_fork	_after_fork(self)	todo		
+Lib/multiprocessing/queues.py	69	82	Queue._reset	_reset(self, after_fork=False)	todo		
+Lib/multiprocessing/queues.py	84	94	Queue.put	put(self, obj, block=True, timeout=None)	todo		
+Lib/multiprocessing/queues.py	96	120	Queue.get	get(self, block=True, timeout=None)	todo		
+Lib/multiprocessing/queues.py	122	124	Queue.qsize	qsize(self)	todo		
+Lib/multiprocessing/queues.py	126	127	Queue.empty	empty(self)	todo		
+Lib/multiprocessing/queues.py	129	130	Queue.full	full(self)	todo		
+Lib/multiprocessing/queues.py	132	133	Queue.get_nowait	get_nowait(self)	todo		
+Lib/multiprocessing/queues.py	135	136	Queue.put_nowait	put_nowait(self, obj)	todo		
+Lib/multiprocessing/queues.py	138	143	Queue.close	close(self)	todo		
+Lib/multiprocessing/queues.py	145	149	Queue.join_thread	join_thread(self)	todo		
+Lib/multiprocessing/queues.py	151	157	Queue.cancel_join_thread	cancel_join_thread(self)	todo		
+Lib/multiprocessing/queues.py	159	171	Queue._terminate_broken	_terminate_broken(self)	todo		
+Lib/multiprocessing/queues.py	173	210	Queue._start_thread	_start_thread(self)	todo		
+Lib/multiprocessing/queues.py	213	220	Queue._finalize_join	_finalize_join(twr)	todo		
+Lib/multiprocessing/queues.py	223	227	Queue._finalize_close	_finalize_close(buffer, notempty)	todo		
+Lib/multiprocessing/queues.py	230	290	Queue._feed	_feed(buffer, notempty, send_bytes, writelock, reader_close, writer_close, ignore_epipe, onerror, queue_sem)	todo		
+Lib/multiprocessing/queues.py	293	299	Queue._on_queue_feeder_error	_on_queue_feeder_error(e, obj)	todo		
+Lib/multiprocessing/queues.py	316	319	JoinableQueue.__init__	__init__(self, maxsize=0, *, ctx)	todo		
+Lib/multiprocessing/queues.py	321	322	JoinableQueue.__getstate__	__getstate__(self)	todo		
+Lib/multiprocessing/queues.py	324	326	JoinableQueue.__setstate__	__setstate__(self, state)	todo		
+Lib/multiprocessing/queues.py	328	339	JoinableQueue.put	put(self, obj, block=True, timeout=None)	todo		
+Lib/multiprocessing/queues.py	341	346	JoinableQueue.task_done	task_done(self)	todo		
+Lib/multiprocessing/queues.py	348	351	JoinableQueue.join	join(self)	todo		
+Lib/multiprocessing/queues.py	359	366	SimpleQueue.__init__	__init__(self, *, ctx)	todo		
+Lib/multiprocessing/queues.py	368	370	SimpleQueue.close	close(self)	todo		
+Lib/multiprocessing/queues.py	372	373	SimpleQueue.empty	empty(self)	todo		
+Lib/multiprocessing/queues.py	375	377	SimpleQueue.__getstate__	__getstate__(self)	todo		
+Lib/multiprocessing/queues.py	379	381	SimpleQueue.__setstate__	__setstate__(self, state)	todo		
+Lib/multiprocessing/queues.py	383	387	SimpleQueue.get	get(self)	todo		
+Lib/multiprocessing/queues.py	389	397	SimpleQueue.put	put(self, obj)	todo		

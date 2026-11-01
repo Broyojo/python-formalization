@@ -1,0 +1,7 @@
+file	line	endline	name	signature	status	entry	note
+Lib/idlelib/idle_test/mock_idle.py	22	27	Func.__init__	__init__(self, result=None, return_self=False)	excluded		platform: GUI toolkit
+Lib/idlelib/idle_test/mock_idle.py	28	37	Func.__call__	__call__(self, *args, **kwds)	excluded		platform: GUI toolkit
+Lib/idlelib/idle_test/mock_idle.py	43	46	Editor.__init__	__init__(self, flist=None, filename=None, key=None, root=None, text=None)	excluded		platform: GUI toolkit
+Lib/idlelib/idle_test/mock_idle.py	48	51	Editor.get_selection_indices	get_selection_indices(self)	excluded		platform: GUI toolkit
+Lib/idlelib/idle_test/mock_idle.py	58	59	UndoDelegator.undo_block_start	undo_block_start(*args)	excluded		platform: GUI toolkit
+Lib/idlelib/idle_test/mock_idle.py	60	61	UndoDelegator.undo_block_stop	undo_block_stop(*args)	excluded		platform: GUI toolkit

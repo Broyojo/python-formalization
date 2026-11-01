@@ -1,0 +1,8 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/buffer.c	17	31	testbuf_new	testbuf_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/buffer.c	34	39	testbuf_traverse	testbuf_traverse(PyObject *op, visitproc visit, void *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/buffer.c	42	47	testbuf_clear	testbuf_clear(PyObject *op)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/buffer.c	50	56	testbuf_dealloc	testbuf_dealloc(PyObject *op)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/buffer.c	59	68	testbuf_getbuf	testbuf_getbuf(PyObject *op, Py_buffer *view, int flags)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/buffer.c	71	76	testbuf_releasebuf	testbuf_releasebuf(PyObject *op, Py_buffer *Py_UNUSED(view))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/buffer.c	102	111	_PyTestCapi_Init_Buffer	_PyTestCapi_Init_Buffer(PyObject *m) {	excluded		test-support: only for CPython's own tests

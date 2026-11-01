@@ -1,0 +1,8 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_pyrepl/_threading_handler.py	15	15	ExceptHookArgs.exc_type	exc_type(self)	todo		
+Lib/_pyrepl/_threading_handler.py	17	17	ExceptHookArgs.exc_value	exc_value(self)	todo		
+Lib/_pyrepl/_threading_handler.py	19	19	ExceptHookArgs.exc_traceback	exc_traceback(self)	todo		
+Lib/_pyrepl/_threading_handler.py	21	21	ExceptHookArgs.thread	thread(self)	todo		
+Lib/_pyrepl/_threading_handler.py	24	24	ShowExceptions.__call__	__call__(self)	todo		
+Lib/_pyrepl/_threading_handler.py	25	25	ShowExceptions.add	add(self, s: str)	todo		
+Lib/_pyrepl/_threading_handler.py	30	74	install_threading_hook	install_threading_hook(reader: Reader)	todo		

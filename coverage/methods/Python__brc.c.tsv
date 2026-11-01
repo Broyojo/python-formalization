@@ -1,0 +1,10 @@
+file	line	endline	name	signature	status	entry	note
+Python/brc.c	30	33	get_bucket	get_bucket(PyInterpreterState *interp, uintptr_t tid)	todo		
+Python/brc.c	37	49	find_thread_state	find_thread_state(struct _brc_bucket *bucket, uintptr_t thread_id)	todo		
+Python/brc.c	54	100	_Py_brc_queue_object	_Py_brc_queue_object(PyObject *ob)	todo		
+Python/brc.c	103	113	merge_queued_objects	merge_queued_objects(_PyObjectStack *to_merge)	todo		
+Python/brc.c	117	132	_Py_brc_merge_refcounts	_Py_brc_merge_refcounts(PyThreadState *tstate)	todo		
+Python/brc.c	135	141	_Py_brc_init_state	_Py_brc_init_state(PyInterpreterState *interp)	todo		
+Python/brc.c	144	155	_Py_brc_init_thread	_Py_brc_init_thread(PyThreadState *tstate)	todo		
+Python/brc.c	158	193	_Py_brc_remove_thread	_Py_brc_remove_thread(PyThreadState *tstate)	todo		
+Python/brc.c	196	206	_Py_brc_after_fork	_Py_brc_after_fork(PyInterpreterState *interp)	todo		

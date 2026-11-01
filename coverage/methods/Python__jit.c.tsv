@@ -1,0 +1,23 @@
+file	line	endline	name	signature	status	entry	note
+Python/jit.c	38	47	get_page_size	get_page_size(void)	todo		
+Python/jit.c	50	58	jit_error	jit_error(const char *message)	todo		
+Python/jit.c	61	80	jit_alloc	jit_alloc(size_t size)	todo		
+Python/jit.c	83	98	jit_free	jit_free(unsigned char *memory, size_t size)	todo		
+Python/jit.c	101	125	mark_executable	mark_executable(unsigned char *memory, size_t size)	todo		
+Python/jit.c	148	152	get_bits	get_bits(uint64_t value, uint8_t value_start, uint8_t width)	todo		
+Python/jit.c	156	166	set_bits	set_bits(uint32_t *loc, uint8_t loc_start, uint64_t value, uint8_t value_start, uint8_t width)	todo		
+Python/jit.c	203	209	patch_32	patch_32(unsigned char *location, uint64_t value)	todo		
+Python/jit.c	213	221	patch_32r	patch_32r(unsigned char *location, uint64_t value)	todo		
+Python/jit.c	225	229	patch_64	patch_64(unsigned char *location, uint64_t value)	todo		
+Python/jit.c	234	249	patch_aarch64_12	patch_aarch64_12(unsigned char *location, uint64_t value)	todo		
+Python/jit.c	253	260	patch_aarch64_16a	patch_aarch64_16a(unsigned char *location, uint64_t value)	todo		
+Python/jit.c	264	271	patch_aarch64_16b	patch_aarch64_16b(unsigned char *location, uint64_t value)	todo		
+Python/jit.c	275	282	patch_aarch64_16c	patch_aarch64_16c(unsigned char *location, uint64_t value)	todo		
+Python/jit.c	286	293	patch_aarch64_16d	patch_aarch64_16d(unsigned char *location, uint64_t value)	todo		
+Python/jit.c	298	309	patch_aarch64_21r	patch_aarch64_21r(unsigned char *location, uint64_t value)	todo		
+Python/jit.c	313	324	patch_aarch64_26r	patch_aarch64_26r(unsigned char *location, uint64_t value)	todo		
+Python/jit.c	328	355	patch_x86_64_32rx	patch_x86_64_32rx(unsigned char *location, uint64_t value)	todo		
+Python/jit.c	370	411	patch_aarch64_trampoline	patch_aarch64_trampoline(unsigned char *location, int ordinal, jit_state *state)	todo		
+Python/jit.c	414	420	combine_symbol_mask	combine_symbol_mask(const symbol_mask src, symbol_mask dest)	todo		
+Python/jit.c	424	505	_PyJIT_Compile	_PyJIT_Compile(_PyExecutorObject *executor, const _PyUOpInstruction trace[], size_t length)	todo		
+Python/jit.c	508	521	_PyJIT_Free	_PyJIT_Free(_PyExecutorObject *executor)	todo		

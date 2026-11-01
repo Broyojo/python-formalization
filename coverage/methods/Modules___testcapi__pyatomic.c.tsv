@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/pyatomic.c	124	131	test_atomic_fences	test_atomic_fences(PyObject *self, PyObject *obj) {	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/pyatomic.c	134	142	test_atomic_release_acquire	test_atomic_release_acquire(PyObject *self, PyObject *obj) {	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/pyatomic.c	186	192	_PyTestCapi_Init_PyAtomic	_PyTestCapi_Init_PyAtomic(PyObject *mod)	excluded		test-support: only for CPython's own tests

@@ -1,0 +1,9 @@
+file	line	endline	name	signature	status	entry	note
+Lib/concurrent/interpreters/_crossinterp.py	15	18	classonly.__init__	__init__(self, value)	todo		
+Lib/concurrent/interpreters/_crossinterp.py	20	23	classonly.__set_name__	__set_name__(self, cls, name)	todo		
+Lib/concurrent/interpreters/_crossinterp.py	25	29	classonly.__get__	__get__(self, obj, cls)	todo		
+Lib/concurrent/interpreters/_crossinterp.py	42	59	UnboundItem.singleton	singleton(cls, kind, module, name='UNBOUND')	todo		
+Lib/concurrent/interpreters/_crossinterp.py	64	65	UnboundItem.__new__	__new__(cls)	todo		
+Lib/concurrent/interpreters/_crossinterp.py	67	68	UnboundItem.__repr__	__repr__(self)	todo		
+Lib/concurrent/interpreters/_crossinterp.py	85	91	serialize_unbound	serialize_unbound(unbound)	todo		
+Lib/concurrent/interpreters/_crossinterp.py	94	107	resolve_unbound	resolve_unbound(flag, exctype_destroyed)	todo		

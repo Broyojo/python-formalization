@@ -1,0 +1,17 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_zstd/_zstdmodule.c	23	56	_Py_parse_zstd_dict	_Py_parse_zstd_dict(const _zstd_state *state, PyObject *dict, int *ptype)	todo		
+Modules/_zstd/_zstdmodule.c	60	109	set_zstd_error	set_zstd_error(const _zstd_state *state, error_type type, size_t zstd_ret)	todo		
+Modules/_zstd/_zstdmodule.c	146	199	set_parameter_error	set_parameter_error(int is_compress, int key_v, int value_v)	todo		
+Modules/_zstd/_zstdmodule.c	202	207	get_zstd_state	get_zstd_state(PyObject *module)	todo		
+Modules/_zstd/_zstdmodule.c	210	255	calculate_samples_stats	calculate_samples_stats(PyBytesObject *samples_bytes, PyObject *samples_sizes, size_t **chunk_sizes)	todo		
+Modules/_zstd/_zstdmodule.c	273	331	_zstd_train_dict_impl	_zstd_train_dict_impl(PyObject *module, PyBytesObject *samples_bytes, PyObject *samples_sizes, Py_ssize_t dict_size) /*[clinic end generated code: output=8e87fe43935e8f77 input=d20dedb21c72cb62]*/	todo		
+Modules/_zstd/_zstdmodule.c	352	423	_zstd_finalize_dict_impl	_zstd_finalize_dict_impl(PyObject *module, PyBytesObject *custom_dict_bytes, PyBytesObject *samples_bytes, PyObject *samples_sizes, Py_ssize_t dict_size, int compression_level) /*[clinic end generated code: output=f91821ba5ae85bda input=3c7e2480aa08fb56]*/	todo		
+Modules/_zstd/_zstdmodule.c	438	460	_zstd_get_param_bounds_impl	_zstd_get_param_bounds_impl(PyObject *module, int parameter, int is_compress) /*[clinic end generated code: output=4acf5a876f0620ca input=45742ef0a3531b65]*/	todo		
+Modules/_zstd/_zstdmodule.c	473	492	_zstd_get_frame_size_impl	_zstd_get_frame_size_impl(PyObject *module, Py_buffer *frame_buffer) /*[clinic end generated code: output=a7384c2f8780f442 input=3b9f73f8c8129d38]*/	todo		
+Modules/_zstd/_zstdmodule.c	504	534	_zstd_get_frame_info_impl	_zstd_get_frame_info_impl(PyObject *module, Py_buffer *frame_buffer) /*[clinic end generated code: output=56e033cf48001929 input=94b240583ae22ca5]*/	todo		
+Modules/_zstd/_zstdmodule.c	548	560	_zstd_set_parameter_types_impl	_zstd_set_parameter_types_impl(PyObject *module, PyObject *c_parameter_type, PyObject *d_parameter_type) /*[clinic end generated code: output=f3313b1294f19502 input=75d7a953580fae5f]*/	todo		
+Modules/_zstd/_zstdmodule.c	573	584	_zstd_exec	_zstd_exec(PyObject *m)	todo		
+Modules/_zstd/_zstdmodule.c	705	719	_zstd_traverse	_zstd_traverse(PyObject *module, visitproc visit, void *arg)	todo		
+Modules/_zstd/_zstdmodule.c	722	736	_zstd_clear	_zstd_clear(PyObject *module)	todo		
+Modules/_zstd/_zstdmodule.c	739	742	_zstd_free	_zstd_free(void *module)	todo		
+Modules/_zstd/_zstdmodule.c	764	767	PyInit__zstd	PyInit__zstd(void)	todo		

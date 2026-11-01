@@ -1,0 +1,12 @@
+file	line	endline	name	signature	status	entry	note
+Modules/xxsubtype.c	32	39	spamlist_getstate	spamlist_getstate(PyObject *op, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/xxsubtype.c	42	51	spamlist_setstate	spamlist_setstate(PyObject *op, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/xxsubtype.c	54	68	spamlist_specialmeth	spamlist_specialmeth(PyObject *self, PyObject *args, PyObject *kw)	excluded		test-support: only for CPython's own tests
+Modules/xxsubtype.c	87	95	spamlist_init	spamlist_init(PyObject *op, PyObject *args, PyObject *kwds)	excluded		test-support: only for CPython's own tests
+Modules/xxsubtype.c	98	102	spamlist_state_get	spamlist_state_get(PyObject *op, void *Py_UNUSED(closure))	excluded		test-support: only for CPython's own tests
+Modules/xxsubtype.c	161	168	spamdict_getstate	spamdict_getstate(PyObject *op, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/xxsubtype.c	171	181	spamdict_setstate	spamdict_setstate(PyObject *op, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/xxsubtype.c	192	200	spamdict_init	spamdict_init(PyObject *op, PyObject *args, PyObject *kwds)	excluded		test-support: only for CPython's own tests
+Modules/xxsubtype.c	250	269	spam_bench	spam_bench(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/xxsubtype.c	277	302	xxsubtype_exec	xxsubtype_exec(PyObject* m)	excluded		test-support: only for CPython's own tests
+Modules/xxsubtype.c	325	328	PyInit_xxsubtype	PyInit_xxsubtype(void)	excluded		test-support: only for CPython's own tests

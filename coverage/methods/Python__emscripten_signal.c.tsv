@@ -1,0 +1,3 @@
+file	line	endline	name	signature	status	entry	note
+Python/emscripten_signal.c	30	39	_Py_CheckEmscriptenSignals	_Py_CheckEmscriptenSignals(void)	todo		
+Python/emscripten_signal.c	45	54	_Py_CheckEmscriptenSignalsPeriodically	_Py_CheckEmscriptenSignalsPeriodically(void)	todo		

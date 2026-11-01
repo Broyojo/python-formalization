@@ -1,0 +1,71 @@
+file	line	endline	name	signature	status	entry	note
+Lib/multiprocessing/pool.py	47	48	mapstar	mapstar(args)	todo		
+Lib/multiprocessing/pool.py	50	51	starmapstar	starmapstar(args)	todo		
+Lib/multiprocessing/pool.py	58	59	RemoteTraceback.__init__	__init__(self, tb)	todo		
+Lib/multiprocessing/pool.py	60	61	RemoteTraceback.__str__	__str__(self)	todo		
+Lib/multiprocessing/pool.py	64	68	ExceptionWithTraceback.__init__	__init__(self, exc, tb)	todo		
+Lib/multiprocessing/pool.py	69	70	ExceptionWithTraceback.__reduce__	__reduce__(self)	todo		
+Lib/multiprocessing/pool.py	72	74	rebuild_exc	rebuild_exc(exc, tb)	todo		
+Lib/multiprocessing/pool.py	84	87	MaybeEncodingError.__init__	__init__(self, exc, value)	todo		
+Lib/multiprocessing/pool.py	89	91	MaybeEncodingError.__str__	__str__(self)	todo		
+Lib/multiprocessing/pool.py	93	94	MaybeEncodingError.__repr__	__repr__(self)	todo		
+Lib/multiprocessing/pool.py	97	140	worker	worker(inqueue, outqueue, initializer=None, initargs=(), maxtasks=None, wrap_exception=False)	todo		
+Lib/multiprocessing/pool.py	142	144	_helper_reraises_exception	_helper_reraises_exception(ex)	todo		
+Lib/multiprocessing/pool.py	157	159	_PoolCache.__init__	__init__(self, /, *args, notifier=None, **kwds)	todo		
+Lib/multiprocessing/pool.py	161	171	_PoolCache.__delitem__	__delitem__(self, item)	todo		
+Lib/multiprocessing/pool.py	180	181	Pool.Process	Process(ctx, *args, **kwds)	todo		
+Lib/multiprocessing/pool.py	183	262	Pool.__init__	__init__(self, processes=None, initializer=None, initargs=(), maxtasksperchild=None, context=None)	todo		
+Lib/multiprocessing/pool.py	266	271	Pool.__del__	__del__(self, _warn=warnings.warn, RUN=RUN)	todo		
+Lib/multiprocessing/pool.py	273	277	Pool.__repr__	__repr__(self)	todo		
+Lib/multiprocessing/pool.py	279	282	Pool._get_sentinels	_get_sentinels(self)	todo		
+Lib/multiprocessing/pool.py	285	287	Pool._get_worker_sentinels	_get_worker_sentinels(workers)	todo		
+Lib/multiprocessing/pool.py	290	303	Pool._join_exited_workers	_join_exited_workers(pool)	todo		
+Lib/multiprocessing/pool.py	305	312	Pool._repopulate_pool	_repopulate_pool(self)	todo		
+Lib/multiprocessing/pool.py	315	331	Pool._repopulate_pool_static	_repopulate_pool_static(ctx, Process, processes, pool, inqueue, outqueue, initializer, initargs, maxtasksperchild, wrap_exception)	todo		
+Lib/multiprocessing/pool.py	334	343	Pool._maintain_pool	_maintain_pool(ctx, Process, processes, pool, inqueue, outqueue, initializer, initargs, maxtasksperchild, wrap_exception)	todo		
+Lib/multiprocessing/pool.py	345	349	Pool._setup_queues	_setup_queues(self)	todo		
+Lib/multiprocessing/pool.py	351	353	Pool._check_running	_check_running(self)	todo		
+Lib/multiprocessing/pool.py	355	360	Pool.apply	apply(self, func, args=(), kwds={})	todo		
+Lib/multiprocessing/pool.py	362	367	Pool.map	map(self, func, iterable, chunksize=None)	todo		
+Lib/multiprocessing/pool.py	369	375	Pool.starmap	starmap(self, func, iterable, chunksize=None)	todo		
+Lib/multiprocessing/pool.py	377	383	Pool.starmap_async	starmap_async(self, func, iterable, chunksize=None, callback=None, error_callback=None)	todo		
+Lib/multiprocessing/pool.py	385	394	Pool._guarded_task_generation	_guarded_task_generation(self, result_job, func, iterable)	todo		
+Lib/multiprocessing/pool.py	396	423	Pool.imap	imap(self, func, iterable, chunksize=1)	todo		
+Lib/multiprocessing/pool.py	425	451	Pool.imap_unordered	imap_unordered(self, func, iterable, chunksize=1)	todo		
+Lib/multiprocessing/pool.py	453	461	Pool.apply_async	apply_async(self, func, args=(), kwds={}, callback=None, error_callback=None)	todo		
+Lib/multiprocessing/pool.py	463	469	Pool.map_async	map_async(self, func, iterable, chunksize=None, callback=None, error_callback=None)	todo		
+Lib/multiprocessing/pool.py	471	498	Pool._map_async	_map_async(self, func, iterable, mapper, chunksize=None, callback=None, error_callback=None)	todo		
+Lib/multiprocessing/pool.py	501	504	Pool._wait_for_updates	_wait_for_updates(sentinels, change_notifier, timeout=None)	todo		
+Lib/multiprocessing/pool.py	507	525	Pool._handle_workers	_handle_workers(cls, cache, taskqueue, ctx, Process, processes, pool, inqueue, outqueue, initializer, initargs, maxtasksperchild, wrap_exception, sentinels, change_notifier)	todo		
+Lib/multiprocessing/pool.py	528	571	Pool._handle_tasks	_handle_tasks(taskqueue, put, outqueue, pool, cache)	todo		
+Lib/multiprocessing/pool.py	574	631	Pool._handle_results	_handle_results(outqueue, get, cache)	todo		
+Lib/multiprocessing/pool.py	634	640	Pool._get_tasks	_get_tasks(func, it, size)	todo		
+Lib/multiprocessing/pool.py	642	645	Pool.__reduce__	__reduce__(self)	todo		
+Lib/multiprocessing/pool.py	647	652	Pool.close	close(self)	todo		
+Lib/multiprocessing/pool.py	654	657	Pool.terminate	terminate(self)	todo		
+Lib/multiprocessing/pool.py	659	669	Pool.join	join(self)	todo		
+Lib/multiprocessing/pool.py	672	678	Pool._help_stuff_finish	_help_stuff_finish(inqueue, task_handler, size)	todo		
+Lib/multiprocessing/pool.py	681	732	Pool._terminate_pool	_terminate_pool(cls, taskqueue, inqueue, outqueue, pool, change_notifier, worker_handler, task_handler, result_handler, cache)	todo		
+Lib/multiprocessing/pool.py	734	736	Pool.__enter__	__enter__(self)	todo		
+Lib/multiprocessing/pool.py	738	739	Pool.__exit__	__exit__(self, exc_type, exc_val, exc_tb)	todo		
+Lib/multiprocessing/pool.py	747	754	ApplyResult.__init__	__init__(self, pool, callback, error_callback)	todo		
+Lib/multiprocessing/pool.py	756	757	ApplyResult.ready	ready(self)	todo		
+Lib/multiprocessing/pool.py	759	762	ApplyResult.successful	successful(self)	todo		
+Lib/multiprocessing/pool.py	764	765	ApplyResult.wait	wait(self, timeout=None)	todo		
+Lib/multiprocessing/pool.py	767	774	ApplyResult.get	get(self, timeout=None)	todo		
+Lib/multiprocessing/pool.py	776	784	ApplyResult._set	_set(self, i, obj)	todo		
+Lib/multiprocessing/pool.py	796	807	MapResult.__init__	__init__(self, pool, chunksize, length, callback, error_callback)	todo		
+Lib/multiprocessing/pool.py	809	831	MapResult._set	_set(self, i, success_result)	todo		
+Lib/multiprocessing/pool.py	839	848	IMapIterator.__init__	__init__(self, pool)	todo		
+Lib/multiprocessing/pool.py	850	851	IMapIterator.__iter__	__iter__(self)	todo		
+Lib/multiprocessing/pool.py	853	873	IMapIterator.next	next(self, timeout=None)	todo		
+Lib/multiprocessing/pool.py	877	892	IMapIterator._set	_set(self, i, obj)	todo		
+Lib/multiprocessing/pool.py	894	900	IMapIterator._set_length	_set_length(self, length)	todo		
+Lib/multiprocessing/pool.py	908	915	IMapUnorderedIterator._set	_set(self, i, obj)	todo		
+Lib/multiprocessing/pool.py	925	927	ThreadPool.Process	Process(ctx, *args, **kwds)	todo		
+Lib/multiprocessing/pool.py	929	930	ThreadPool.__init__	__init__(self, processes=None, initializer=None, initargs=())	todo		
+Lib/multiprocessing/pool.py	932	936	ThreadPool._setup_queues	_setup_queues(self)	todo		
+Lib/multiprocessing/pool.py	938	939	ThreadPool._get_sentinels	_get_sentinels(self)	todo		
+Lib/multiprocessing/pool.py	942	943	ThreadPool._get_worker_sentinels	_get_worker_sentinels(workers)	todo		
+Lib/multiprocessing/pool.py	946	954	ThreadPool._help_stuff_finish	_help_stuff_finish(inqueue, task_handler, size)	todo		
+Lib/multiprocessing/pool.py	956	957	ThreadPool._wait_for_updates	_wait_for_updates(self, sentinels, change_notifier, timeout)	todo		

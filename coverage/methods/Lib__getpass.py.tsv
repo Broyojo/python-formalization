@@ -1,0 +1,8 @@
+file	line	endline	name	signature	status	entry	note
+Lib/getpass.py	29	102	unix_getpass	unix_getpass(prompt='Password: ', stream=None, *, echo_char=None)	todo		
+Lib/getpass.py	105	132	win_getpass	win_getpass(prompt='Password: ', stream=None, *, echo_char=None)	todo		
+Lib/getpass.py	135	143	fallback_getpass	fallback_getpass(prompt='Password: ', stream=None, *, echo_char=None)	todo		
+Lib/getpass.py	146	159	_check_echo_char	_check_echo_char(echo_char)	todo		
+Lib/getpass.py	162	186	_raw_input	_raw_input(prompt='', stream=None, input=None, echo_char=None)	todo		
+Lib/getpass.py	189	215	_readline_with_echo_char	_readline_with_echo_char(stream, input, echo_char)	todo		
+Lib/getpass.py	218	239	getuser	getuser()	todo		

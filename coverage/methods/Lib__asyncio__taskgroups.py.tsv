@@ -1,0 +1,10 @@
+file	line	endline	name	signature	status	entry	note
+Lib/asyncio/taskgroups.py	29	39	TaskGroup.__init__	__init__(self)	todo		
+Lib/asyncio/taskgroups.py	41	53	TaskGroup.__repr__	__repr__(self)	todo		
+Lib/asyncio/taskgroups.py	55	67	TaskGroup.__aenter__	__aenter__(self)	todo		
+Lib/asyncio/taskgroups.py	69	81	TaskGroup.__aexit__	__aexit__(self, et, exc, tb)	todo		
+Lib/asyncio/taskgroups.py	83	179	TaskGroup._aexit	_aexit(self, et, exc)	todo		
+Lib/asyncio/taskgroups.py	182	211	TaskGroup.create_task	create_task(self, coro, **kwargs)	todo		
+Lib/asyncio/taskgroups.py	217	219	TaskGroup._is_base_error	_is_base_error(self, exc: BaseException)	todo		
+Lib/asyncio/taskgroups.py	221	226	TaskGroup._abort	_abort(self)	todo		
+Lib/asyncio/taskgroups.py	228	280	TaskGroup._on_task_done	_on_task_done(self, task)	todo		

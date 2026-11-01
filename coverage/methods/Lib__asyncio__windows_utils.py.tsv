@@ -1,0 +1,11 @@
+file	line	endline	name	signature	status	entry	note
+Lib/asyncio/windows_utils.py	32	82	pipe	pipe(*, duplex=False, overlapped=(True, True), bufsize=BUFSIZE)	excluded		platform: Windows only
+Lib/asyncio/windows_utils.py	93	94	PipeHandle.__init__	__init__(self, handle)	excluded		platform: Windows only
+Lib/asyncio/windows_utils.py	96	101	PipeHandle.__repr__	__repr__(self)	excluded		platform: Windows only
+Lib/asyncio/windows_utils.py	104	105	PipeHandle.handle	handle(self)	excluded		platform: Windows only
+Lib/asyncio/windows_utils.py	107	110	PipeHandle.fileno	fileno(self)	excluded		platform: Windows only
+Lib/asyncio/windows_utils.py	112	116	PipeHandle.close	close(self, *, CloseHandle=_winapi.CloseHandle)	excluded		platform: Windows only
+Lib/asyncio/windows_utils.py	118	121	PipeHandle.__del__	__del__(self, _warn=warnings.warn)	excluded		platform: Windows only
+Lib/asyncio/windows_utils.py	123	124	PipeHandle.__enter__	__enter__(self)	excluded		platform: Windows only
+Lib/asyncio/windows_utils.py	126	127	PipeHandle.__exit__	__exit__(self, t, v, tb)	excluded		platform: Windows only
+Lib/asyncio/windows_utils.py	138	181	Popen.__init__	__init__(self, args, stdin=None, stdout=None, stderr=None, **kwds)	excluded		platform: Windows only

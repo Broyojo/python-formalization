@@ -1,0 +1,32 @@
+file	line	endline	name	signature	status	entry	note
+Lib/profile.py	48	49	_Utils.__init__	__init__(self, profiler)	todo		
+Lib/profile.py	51	58	_Utils.run	run(self, statement, filename, sort)	todo		
+Lib/profile.py	60	67	_Utils.runctx	runctx(self, statement, globals, locals, filename, sort)	todo		
+Lib/profile.py	69	73	_Utils._show	_show(self, prof, filename, sort)	todo		
+Lib/profile.py	81	92	run	run(statement, filename=None, sort=-1)	todo		
+Lib/profile.py	94	100	runctx	runctx(statement, globals, locals, filename=None, sort=-1)	todo		
+Lib/profile.py	144	179	Profile.__init__	__init__(self, timer=None, bias=None)	todo		
+Lib/profile.py	183	196	Profile.trace_dispatch	trace_dispatch(self, frame, event, arg)	todo		
+Lib/profile.py	201	211	Profile.trace_dispatch_i	trace_dispatch_i(self, frame, event, arg)	todo		
+Lib/profile.py	216	226	Profile.trace_dispatch_mac	trace_dispatch_mac(self, frame, event, arg)	todo		
+Lib/profile.py	230	240	Profile.trace_dispatch_l	trace_dispatch_l(self, frame, event, arg)	todo		
+Lib/profile.py	249	254	Profile.trace_dispatch_exception	trace_dispatch_exception(self, frame, t)	todo		
+Lib/profile.py	257	277	Profile.trace_dispatch_call	trace_dispatch_call(self, frame, t)	todo		
+Lib/profile.py	279	288	Profile.trace_dispatch_c_call	trace_dispatch_c_call(self, frame, t)	todo		
+Lib/profile.py	290	325	Profile.trace_dispatch_return	trace_dispatch_return(self, frame, t)	todo		
+Lib/profile.py	344	347	Profile.set_cmd	set_cmd(self, cmd)	todo		
+Lib/profile.py	350	354	Profile.fake_code.__init__	__init__(self, filename, line, name)	todo		
+Lib/profile.py	356	357	Profile.fake_code.__repr__	__repr__(self)	todo		
+Lib/profile.py	360	362	Profile.fake_frame.__init__	__init__(self, code, prior)	todo		
+Lib/profile.py	364	371	Profile.simulate_call	simulate_call(self, name)	todo		
+Lib/profile.py	376	384	Profile.simulate_cmd_complete	simulate_cmd_complete(self)	todo		
+Lib/profile.py	387	391	Profile.print_stats	print_stats(self, sort=-1)	todo		
+Lib/profile.py	393	396	Profile.dump_stats	dump_stats(self, file)	todo		
+Lib/profile.py	398	400	Profile.create_stats	create_stats(self)	todo		
+Lib/profile.py	402	409	Profile.snapshot_stats	snapshot_stats(self)	todo		
+Lib/profile.py	415	418	Profile.run	run(self, cmd)	todo		
+Lib/profile.py	420	427	Profile.runctx	runctx(self, cmd, globals, locals)	todo		
+Lib/profile.py	430	436	Profile.runcall	runcall(self, func, /, *args, **kw)	todo		
+Lib/profile.py	479	488	Profile.calibrate	calibrate(self, m, verbose=0)	todo		
+Lib/profile.py	490	550	Profile._calibrate_inner	_calibrate_inner(self, m, verbose)	todo		
+Lib/profile.py	554	611	main	main()	todo		

@@ -1,0 +1,13 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_hacl/Hacl_HMAC.c	49	150	Hacl_HMAC_compute_md5	Hacl_HMAC_compute_md5( uint8_t *dst, uint8_t *key, uint32_t key_len, uint8_t *data, uint32_t data_len )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_HMAC.c	159	260	Hacl_HMAC_compute_sha1	Hacl_HMAC_compute_sha1( uint8_t *dst, uint8_t *key, uint32_t key_len, uint8_t *data, uint32_t data_len )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_HMAC.c	269	384	Hacl_HMAC_compute_sha2_224	Hacl_HMAC_compute_sha2_224( uint8_t *dst, uint8_t *key, uint32_t key_len, uint8_t *data, uint32_t data_len )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_HMAC.c	393	508	Hacl_HMAC_compute_sha2_256	Hacl_HMAC_compute_sha2_256( uint8_t *dst, uint8_t *key, uint32_t key_len, uint8_t *data, uint32_t data_len )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_HMAC.c	517	640	Hacl_HMAC_compute_sha2_384	Hacl_HMAC_compute_sha2_384( uint8_t *dst, uint8_t *key, uint32_t key_len, uint8_t *data, uint32_t data_len )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_HMAC.c	649	772	Hacl_HMAC_compute_sha2_512	Hacl_HMAC_compute_sha2_512( uint8_t *dst, uint8_t *key, uint32_t key_len, uint8_t *data, uint32_t data_len )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_HMAC.c	781	898	Hacl_HMAC_compute_sha3_224	Hacl_HMAC_compute_sha3_224( uint8_t *dst, uint8_t *key, uint32_t key_len, uint8_t *data, uint32_t data_len )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_HMAC.c	907	1024	Hacl_HMAC_compute_sha3_256	Hacl_HMAC_compute_sha3_256( uint8_t *dst, uint8_t *key, uint32_t key_len, uint8_t *data, uint32_t data_len )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_HMAC.c	1033	1150	Hacl_HMAC_compute_sha3_384	Hacl_HMAC_compute_sha3_384( uint8_t *dst, uint8_t *key, uint32_t key_len, uint8_t *data, uint32_t data_len )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_HMAC.c	1159	1276	Hacl_HMAC_compute_sha3_512	Hacl_HMAC_compute_sha3_512( uint8_t *dst, uint8_t *key, uint32_t key_len, uint8_t *data, uint32_t data_len )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_HMAC.c	1285	1417	Hacl_HMAC_compute_blake2s_32	Hacl_HMAC_compute_blake2s_32( uint8_t *dst, uint8_t *key, uint32_t key_len, uint8_t *data, uint32_t data_len )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_HMAC.c	1426	1566	Hacl_HMAC_compute_blake2b_32	Hacl_HMAC_compute_blake2b_32( uint8_t *dst, uint8_t *key, uint32_t key_len, uint8_t *data, uint32_t data_len )	excluded		vendored: third-party code

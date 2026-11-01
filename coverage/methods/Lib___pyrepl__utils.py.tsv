@@ -1,0 +1,13 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_pyrepl/utils.py	27	29	THEME	THEME(**kwargs)	todo		
+Lib/_pyrepl/utils.py	39	41	Span.from_re	from_re(cls, m: Match[str], group: int | str)	todo		
+Lib/_pyrepl/utils.py	44	54	Span.from_token	from_token(cls, token: TI, line_len: list[int])	todo		
+Lib/_pyrepl/utils.py	63	75	str_width	str_width(c: str)	todo		
+Lib/_pyrepl/utils.py	78	85	wlen	wlen(s: str)	todo		
+Lib/_pyrepl/utils.py	88	96	unbracket	unbracket(s: str, including_content: bool=False)	todo		
+Lib/_pyrepl/utils.py	99	123	gen_colors	gen_colors(buffer: str)	todo		
+Lib/_pyrepl/utils.py	126	164	recover_unterminated_string	recover_unterminated_string(exc: tokenize.TokenError, line_lengths: list[int], last_emitted: ColorSpan | None, buffer: str)	todo		
+Lib/_pyrepl/utils.py	167	226	gen_colors_from_token_stream	gen_colors_from_token_stream(token_generator: Iterator[TI], line_lengths: list[int])	todo		
+Lib/_pyrepl/utils.py	233	280	is_soft_keyword_used	is_soft_keyword_used(*tokens: TI | None)	todo		
+Lib/_pyrepl/utils.py	283	366	disp_str	disp_str(buffer: str, colors: list[ColorSpan] | None=None, start_index: int=0, force_color: bool=False)	todo		
+Lib/_pyrepl/utils.py	369	391	prev_next_window	prev_next_window(iterable: Iterable[T])	todo		

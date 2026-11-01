@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Modules/tkappinit.c	22	92	Tcl_AppInit	Tcl_AppInit(Tcl_Interp *interp)	excluded		platform: binds an external library

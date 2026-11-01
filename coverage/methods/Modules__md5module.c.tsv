@@ -1,0 +1,19 @@
+file	line	endline	name	signature	status	entry	note
+Modules/md5module.c	58	63	md5_get_state	md5_get_state(PyObject *module)	todo		
+Modules/md5module.c	66	76	newMD5object	newMD5object(MD5State * st)	todo		
+Modules/md5module.c	80	84	MD5_traverse	MD5_traverse(PyObject *ptr, visitproc visit, void *arg)	todo		
+Modules/md5module.c	87	98	MD5_dealloc	MD5_dealloc(PyObject *op)	todo		
+Modules/md5module.c	112	130	MD5Type_copy_impl	MD5Type_copy_impl(MD5object *self, PyTypeObject *cls) /*[clinic end generated code: output=bf055e08244bf5ee input=d89087dcfb2a8620]*/	todo		
+Modules/md5module.c	139	147	MD5Type_digest_impl	MD5Type_digest_impl(MD5object *self) /*[clinic end generated code: output=eb691dc4190a07ec input=bc0c4397c2994be6]*/	todo		
+Modules/md5module.c	156	173	MD5Type_hexdigest_impl	MD5Type_hexdigest_impl(MD5object *self) /*[clinic end generated code: output=17badced1f3ac932 input=b60b19de644798dd]*/	todo		
+Modules/md5module.c	176	192	update	update(Hacl_Hash_MD5_state_t *state, uint8_t *buf, Py_ssize_t len)	todo		
+Modules/md5module.c	204	226	MD5Type_update_impl	MD5Type_update_impl(MD5object *self, PyObject *obj) /*[clinic end generated code: output=b0fed9a7ce7ad253 input=6e1efcd9ecf17032]*/	todo		
+Modules/md5module.c	237	240	MD5_get_block_size	MD5_get_block_size(PyObject *Py_UNUSED(self), void *Py_UNUSED(closure))	todo		
+Modules/md5module.c	243	246	MD5_get_name	MD5_get_name(PyObject *Py_UNUSED(self), void *Py_UNUSED(closure))	todo		
+Modules/md5module.c	249	252	md5_get_digest_size	md5_get_digest_size(PyObject *Py_UNUSED(self), void *Py_UNUSED(closure))	todo		
+Modules/md5module.c	291	339	_md5_md5_impl	_md5_md5_impl(PyObject *module, PyObject *data, int usedforsecurity, PyObject *string_obj) /*[clinic end generated code: output=d45e187d3d16f3a8 input=7ea5c5366dbb44bf]*/	todo		
+Modules/md5module.c	350	355	_md5_traverse	_md5_traverse(PyObject *module, visitproc visit, void *arg)	todo		
+Modules/md5module.c	358	363	_md5_clear	_md5_clear(PyObject *module)	todo		
+Modules/md5module.c	366	369	_md5_free	_md5_free(void *module)	todo		
+Modules/md5module.c	373	388	md5_exec	md5_exec(PyObject *m)	todo		
+Modules/md5module.c	410	413	PyInit__md5	PyInit__md5(void)	todo		

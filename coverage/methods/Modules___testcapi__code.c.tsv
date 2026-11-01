@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/code.c	5	44	get_code_extra_index	get_code_extra_index(PyInterpreterState* interp) {	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/code.c	47	103	test_code_extra	test_code_extra(PyObject* self, PyObject *Py_UNUSED(callable))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/code.c	111	117	_PyTestCapi_Init_Code	_PyTestCapi_Init_Code(PyObject *m) {	excluded		test-support: only for CPython's own tests

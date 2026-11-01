@@ -1,0 +1,142 @@
+file	line	endline	name	signature	status	entry	note
+Lib/tarfile.py	157	163	stn	stn(s, length, encoding, errors)	todo		
+Lib/tarfile.py	165	171	nts	nts(s, encoding, errors)	todo		
+Lib/tarfile.py	173	191	nti	nti(s)	todo		
+Lib/tarfile.py	193	221	itn	itn(n, digits=8, format=DEFAULT_FORMAT)	todo		
+Lib/tarfile.py	223	234	calc_chksums	calc_chksums(buf)	todo		
+Lib/tarfile.py	236	259	copyfileobj	copyfileobj(src, dst, length=None, exception=OSError, bufsize=None)	todo		
+Lib/tarfile.py	269	285	_safe_read	_safe_read(fileobj, size)	todo		
+Lib/tarfile.py	287	291	_safe_print	_safe_print(s)	todo		
+Lib/tarfile.py	337	344	_LowLevelFile.__init__	__init__(self, name, mode)	todo		
+Lib/tarfile.py	346	347	_LowLevelFile.close	close(self)	todo		
+Lib/tarfile.py	349	350	_LowLevelFile.read	read(self, size)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/tarfile.py	352	353	_LowLevelFile.write	write(self, s)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/tarfile.py	367	446	_Stream.__init__	__init__(self, name, mode, comptype, fileobj, bufsize, compresslevel, preset)	todo		
+Lib/tarfile.py	448	450	_Stream.__del__	__del__(self)	todo		
+Lib/tarfile.py	452	467	_Stream._init_write_gz	_init_write_gz(self, compresslevel)	todo		
+Lib/tarfile.py	469	477	_Stream.write	write(self, s)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/tarfile.py	479	486	_Stream.__write	__write(self, s)	todo		
+Lib/tarfile.py	488	508	_Stream.close	close(self)	todo		
+Lib/tarfile.py	510	539	_Stream._init_read_gz	_init_read_gz(self)	todo		
+Lib/tarfile.py	541	544	_Stream.tell	tell(self)	todo		
+Lib/tarfile.py	546	559	_Stream.seek	seek(self, pos=0)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
+Lib/tarfile.py	561	566	_Stream.read	read(self, size)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/tarfile.py	568	593	_Stream._read	_read(self, size)	todo		
+Lib/tarfile.py	595	609	_Stream.__read	__read(self, size)	todo		
+Lib/tarfile.py	617	619	_StreamProxy.__init__	__init__(self, fileobj)	todo		
+Lib/tarfile.py	621	623	_StreamProxy.read	read(self, size)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/tarfile.py	625	635	_StreamProxy.getcomptype	getcomptype(self)	todo		
+Lib/tarfile.py	637	638	_StreamProxy.close	close(self)	todo		
+Lib/tarfile.py	650	673	_FileInFile.__init__	__init__(self, fileobj, offset, size, name, blockinfo=None)	todo		
+Lib/tarfile.py	675	676	_FileInFile.flush	flush(self)	todo		
+Lib/tarfile.py	679	680	_FileInFile.mode	mode(self)	todo		
+Lib/tarfile.py	682	683	_FileInFile.readable	readable(self)	todo		
+Lib/tarfile.py	685	686	_FileInFile.writable	writable(self)	todo		
+Lib/tarfile.py	688	689	_FileInFile.seekable	seekable(self)	todo		
+Lib/tarfile.py	691	694	_FileInFile.tell	tell(self)	todo		
+Lib/tarfile.py	696	710	_FileInFile.seek	seek(self, position, whence=io.SEEK_SET)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
+Lib/tarfile.py	712	741	_FileInFile.read	read(self, size=None)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/tarfile.py	743	746	_FileInFile.readinto	readinto(self, b)	todo		
+Lib/tarfile.py	748	749	_FileInFile.close	close(self)	todo		
+Lib/tarfile.py	754	757	ExFileObject.__init__	__init__(self, tarfile, tarinfo)	todo		
+Lib/tarfile.py	769	771	AbsolutePathError.__init__	__init__(self, tarinfo)	todo		
+Lib/tarfile.py	774	778	OutsideDestinationError.__init__	__init__(self, tarinfo, path)	todo		
+Lib/tarfile.py	781	783	SpecialFileError.__init__	__init__(self, tarinfo)	todo		
+Lib/tarfile.py	786	788	AbsoluteLinkError.__init__	__init__(self, tarinfo)	todo		
+Lib/tarfile.py	791	795	LinkOutsideDestinationError.__init__	__init__(self, tarinfo, path)	todo		
+Lib/tarfile.py	798	802	LinkFallbackError.__init__	__init__(self, tarinfo, path)	todo		
+Lib/tarfile.py	809	881	_get_filtered_attrs	_get_filtered_attrs(member, dest_path, for_data=True)	todo		
+Lib/tarfile.py	883	884	fully_trusted_filter	fully_trusted_filter(member, dest_path)	todo		
+Lib/tarfile.py	886	890	tar_filter	tar_filter(member, dest_path)	todo		
+Lib/tarfile.py	892	896	data_filter	data_filter(member, dest_path)	todo		
+Lib/tarfile.py	953	975	TarInfo.__init__	__init__(self, name='')	todo		
+Lib/tarfile.py	978	984	TarInfo.tarfile	tarfile(self)	todo		
+Lib/tarfile.py	987	993	TarInfo.tarfile	tarfile(self, tarfile)	todo		
+Lib/tarfile.py	996	998	TarInfo.path	path(self)	todo		
+Lib/tarfile.py	1001	1002	TarInfo.path	path(self, name)	todo		
+Lib/tarfile.py	1005	1007	TarInfo.linkpath	linkpath(self)	todo		
+Lib/tarfile.py	1010	1011	TarInfo.linkpath	linkpath(self, linkname)	todo		
+Lib/tarfile.py	1013	1014	TarInfo.__repr__	__repr__(self)	todo		
+Lib/tarfile.py	1016	1042	TarInfo.replace	replace(self, *, name=_KEEP, mtime=_KEEP, mode=_KEEP, linkname=_KEEP, uid=_KEEP, gid=_KEEP, uname=_KEEP, gname=_KEEP, deep=True, _KEEP=_KEEP)	todo		candidates:strsearch-replace-str-bytes
+Lib/tarfile.py	1044	1070	TarInfo.get_info	get_info(self)	todo		
+Lib/tarfile.py	1072	1087	TarInfo.tobuf	tobuf(self, format=DEFAULT_FORMAT, encoding=ENCODING, errors='surrogateescape')	todo		
+Lib/tarfile.py	1089	1100	TarInfo.create_ustar_header	create_ustar_header(self, info, encoding, errors)	todo		
+Lib/tarfile.py	1102	1114	TarInfo.create_gnu_header	create_gnu_header(self, info, encoding, errors)	todo		
+Lib/tarfile.py	1116	1172	TarInfo.create_pax_header	create_pax_header(self, info, encoding)	todo		
+Lib/tarfile.py	1175	1178	TarInfo.create_pax_global_header	create_pax_global_header(cls, pax_headers)	todo		
+Lib/tarfile.py	1180	1194	TarInfo._posix_split_name	_posix_split_name(self, name, encoding, errors)	todo		
+Lib/tarfile.py	1197	1236	TarInfo._create_header	_create_header(info, format, encoding, errors)	todo		
+Lib/tarfile.py	1239	1246	TarInfo._create_payload	_create_payload(payload)	todo		
+Lib/tarfile.py	1249	1263	TarInfo._create_gnu_long_header	_create_gnu_long_header(cls, name, type, encoding, errors)	todo		
+Lib/tarfile.py	1266	1314	TarInfo._create_pax_generic_header	_create_pax_generic_header(cls, pax_headers, type, encoding)	todo		
+Lib/tarfile.py	1317	1323	TarInfo.frombuf	frombuf(cls, buf, encoding, errors)	todo		
+Lib/tarfile.py	1326	1391	TarInfo._frombuf	_frombuf(cls, buf, encoding, errors, *, dircheck=True)	todo		
+Lib/tarfile.py	1394	1398	TarInfo.fromtarfile	fromtarfile(cls, tarfile)	todo		
+Lib/tarfile.py	1401	1408	TarInfo._fromtarfile	_fromtarfile(cls, tarfile, *, dircheck=True)	todo		
+Lib/tarfile.py	1421	1432	TarInfo._proc_member	_proc_member(self, tarfile)	todo		
+Lib/tarfile.py	1434	1454	TarInfo._proc_builtin	_proc_builtin(self, tarfile)	todo		
+Lib/tarfile.py	1456	1481	TarInfo._proc_gnulong	_proc_gnulong(self, tarfile)	todo		
+Lib/tarfile.py	1483	1509	TarInfo._proc_sparse	_proc_sparse(self, tarfile)	todo		
+Lib/tarfile.py	1511	1630	TarInfo._proc_pax	_proc_pax(self, tarfile)	todo		
+Lib/tarfile.py	1632	1650	TarInfo._proc_gnusparse_00	_proc_gnusparse_00(self, next, raw_headers)	todo		
+Lib/tarfile.py	1652	1656	TarInfo._proc_gnusparse_01	_proc_gnusparse_01(self, next, pax_headers)	todo		
+Lib/tarfile.py	1658	1672	TarInfo._proc_gnusparse_10	_proc_gnusparse_10(self, next, pax_headers, tarfile)	todo		
+Lib/tarfile.py	1674	1695	TarInfo._apply_pax_info	_apply_pax_info(self, pax_headers, encoding, errors)	todo		
+Lib/tarfile.py	1697	1703	TarInfo._decode_pax_field	_decode_pax_field(self, value, encoding, fallback_encoding, fallback_errors)	todo		
+Lib/tarfile.py	1705	1715	TarInfo._block	_block(self, count)	todo		
+Lib/tarfile.py	1717	1719	TarInfo.isreg	isreg(self)	todo		
+Lib/tarfile.py	1721	1723	TarInfo.isfile	isfile(self)	todo		
+Lib/tarfile.py	1725	1727	TarInfo.isdir	isdir(self)	todo		
+Lib/tarfile.py	1729	1731	TarInfo.issym	issym(self)	todo		
+Lib/tarfile.py	1733	1735	TarInfo.islnk	islnk(self)	todo		
+Lib/tarfile.py	1737	1739	TarInfo.ischr	ischr(self)	todo		
+Lib/tarfile.py	1741	1743	TarInfo.isblk	isblk(self)	todo		
+Lib/tarfile.py	1745	1747	TarInfo.isfifo	isfifo(self)	todo		
+Lib/tarfile.py	1749	1750	TarInfo.issparse	issparse(self)	todo		
+Lib/tarfile.py	1752	1754	TarInfo.isdev	isdev(self)	todo		
+Lib/tarfile.py	1785	1887	TarFile.__init__	__init__(self, name=None, mode='r', fileobj=None, format=None, tarinfo=None, dereference=None, ignore_zeros=None, encoding=None, errors='surrogateescape', pax_headers=None, debug=None, errorlevel=None, copybufsize=None, stream=False)	todo		
+Lib/tarfile.py	1901	2007	TarFile.open	open(cls, name=None, mode='r', fileobj=None, bufsize=RECORDSIZE, **kwargs)	todo		
+Lib/tarfile.py	2010	2015	TarFile.taropen	taropen(cls, name, mode='r', fileobj=None, **kwargs)	todo		
+Lib/tarfile.py	2018	2048	TarFile.gzopen	gzopen(cls, name, mode='r', fileobj=None, compresslevel=9, **kwargs)	todo		
+Lib/tarfile.py	2051	2076	TarFile.bz2open	bz2open(cls, name, mode='r', fileobj=None, compresslevel=9, **kwargs)	todo		
+Lib/tarfile.py	2079	2104	TarFile.xzopen	xzopen(cls, name, mode='r', fileobj=None, preset=None, **kwargs)	todo		
+Lib/tarfile.py	2107	2139	TarFile.zstopen	zstopen(cls, name, mode='r', fileobj=None, level=None, options=None, zstd_dict=None, **kwargs)	todo		
+Lib/tarfile.py	2153	2172	TarFile.close	close(self)	todo		
+Lib/tarfile.py	2174	2183	TarFile.getmember	getmember(self, name)	todo		
+Lib/tarfile.py	2185	2193	TarFile.getmembers	getmembers(self)	todo		
+Lib/tarfile.py	2195	2199	TarFile.getnames	getnames(self)	todo		
+Lib/tarfile.py	2201	2305	TarFile.gettarinfo	gettarinfo(self, name=None, arcname=None, fileobj=None)	todo		
+Lib/tarfile.py	2307	2349	TarFile.list	list(self, verbose=True, *, members=None)	todo		
+Lib/tarfile.py	2351	2400	TarFile.add	add(self, name, arcname=None, recursive=True, *, filter=None)	todo		
+Lib/tarfile.py	2402	2430	TarFile.addfile	addfile(self, tarinfo, fileobj=None)	todo		
+Lib/tarfile.py	2432	2448	TarFile._get_filter_function	_get_filter_function(self, filter)	todo		
+Lib/tarfile.py	2450	2517	TarFile.extractall	extractall(self, path='.', members=None, *, numeric_owner=False, filter=None)	todo		
+Lib/tarfile.py	2519	2521	TarFile._log_no_directory_fixup	_log_no_directory_fixup(self, member, reason)	todo		
+Lib/tarfile.py	2523	2542	TarFile.extract	extract(self, member, path='', set_attrs=True, *, numeric_owner=False, filter=None)	todo		
+Lib/tarfile.py	2544	2572	TarFile._get_extract_tarinfo	_get_extract_tarinfo(self, member, filter_function, path)	todo		
+Lib/tarfile.py	2574	2592	TarFile._extract_one	_extract_one(self, tarinfo, path, set_attrs, numeric_owner, filter_function=None)	todo		
+Lib/tarfile.py	2594	2599	TarFile._handle_nonfatal_error	_handle_nonfatal_error(self, e)	todo		
+Lib/tarfile.py	2601	2611	TarFile._handle_fatal_error	_handle_fatal_error(self, e)	todo		
+Lib/tarfile.py	2613	2643	TarFile.extractfile	extractfile(self, member)	todo		
+Lib/tarfile.py	2645	2694	TarFile._extract_member	_extract_member(self, tarinfo, targetpath, set_attrs=True, numeric_owner=False, *, filter_function=None, extraction_root=None)	todo		
+Lib/tarfile.py	2701	2714	TarFile.makedir	makedir(self, tarinfo, targetpath)	todo		
+Lib/tarfile.py	2716	2730	TarFile.makefile	makefile(self, tarinfo, targetpath)	todo		
+Lib/tarfile.py	2732	2738	TarFile.makeunknown	makeunknown(self, tarinfo, targetpath)	todo		
+Lib/tarfile.py	2740	2746	TarFile.makefifo	makefifo(self, tarinfo, targetpath)	todo		
+Lib/tarfile.py	2748	2764	TarFile.makedev	makedev(self, tarinfo, targetpath)	todo		
+Lib/tarfile.py	2766	2767	TarFile.makelink	makelink(self, tarinfo, targetpath)	todo		
+Lib/tarfile.py	2769	2823	TarFile.makelink_with_filter	makelink_with_filter(self, tarinfo, targetpath, filter_function, extraction_root)	todo		
+Lib/tarfile.py	2825	2857	TarFile.chown	chown(self, tarinfo, targetpath, numeric_owner)	todo		
+Lib/tarfile.py	2859	2867	TarFile.chmod	chmod(self, tarinfo, targetpath)	todo		
+Lib/tarfile.py	2869	2880	TarFile.utime	utime(self, tarinfo, targetpath)	todo		
+Lib/tarfile.py	2883	2945	TarFile.next	next(self)	todo		
+Lib/tarfile.py	2950	2988	TarFile._getmember	_getmember(self, name, tarinfo=None, normalize=False)	todo		
+Lib/tarfile.py	2990	2997	TarFile._load	_load(self)	todo		
+Lib/tarfile.py	2999	3006	TarFile._check	_check(self, mode=None)	todo		
+Lib/tarfile.py	3008	3025	TarFile._find_link_target	_find_link_target(self, tarinfo)	todo		
+Lib/tarfile.py	3027	3056	TarFile.__iter__	__iter__(self)	todo		
+Lib/tarfile.py	3058	3062	TarFile._dbg	_dbg(self, level, msg)	todo		
+Lib/tarfile.py	3064	3066	TarFile.__enter__	__enter__(self)	todo		
+Lib/tarfile.py	3068	3076	TarFile.__exit__	__exit__(self, type, value, traceback)	todo		
+Lib/tarfile.py	3082	3098	is_tarfile	is_tarfile(name)	todo		
+Lib/tarfile.py	3103	3199	main	main()	todo		

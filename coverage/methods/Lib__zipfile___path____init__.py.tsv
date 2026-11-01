@@ -1,0 +1,44 @@
+file	line	endline	name	signature	status	entry	note
+Lib/zipfile/_path/__init__.py	25	41	_parents	_parents(path)	todo		
+Lib/zipfile/_path/__init__.py	44	68	_ancestry	_ancestry(path)	todo		
+Lib/zipfile/_path/__init__.py	75	80	_difference	_difference(minuend, subtrahend)	todo		
+Lib/zipfile/_path/__init__.py	88	91	InitializedState.__init__	__init__(self, *args, **kwargs)	todo		
+Lib/zipfile/_path/__init__.py	93	94	InitializedState.__getstate__	__getstate__(self)	todo		
+Lib/zipfile/_path/__init__.py	96	98	InitializedState.__setstate__	__setstate__(self, state)	todo		
+Lib/zipfile/_path/__init__.py	113	116	CompleteDirs._implied_dirs	_implied_dirs(names)	todo		
+Lib/zipfile/_path/__init__.py	118	120	CompleteDirs.namelist	namelist(self)	todo		
+Lib/zipfile/_path/__init__.py	122	123	CompleteDirs._name_set	_name_set(self)	todo		
+Lib/zipfile/_path/__init__.py	125	133	CompleteDirs.resolve_dir	resolve_dir(self, name)	todo		
+Lib/zipfile/_path/__init__.py	135	144	CompleteDirs.getinfo	getinfo(self, name)	todo		
+Lib/zipfile/_path/__init__.py	147	163	CompleteDirs.make	make(cls, source)	todo		
+Lib/zipfile/_path/__init__.py	166	173	CompleteDirs.inject	inject(cls, zf: zipfile.ZipFile)	todo		
+Lib/zipfile/_path/__init__.py	182	186	FastLookup.namelist	namelist(self)	todo		
+Lib/zipfile/_path/__init__.py	188	192	FastLookup._name_set	_name_set(self)	todo		
+Lib/zipfile/_path/__init__.py	194	201	_extract_text_encoding	_extract_text_encoding(encoding=None, *args, **kwargs)	todo		
+Lib/zipfile/_path/__init__.py	309	320	Path.__init__	__init__(self, root, at='')	todo		
+Lib/zipfile/_path/__init__.py	322	329	Path.__eq__	__eq__(self, other)	todo		
+Lib/zipfile/_path/__init__.py	331	332	Path.__hash__	__hash__(self)	todo		
+Lib/zipfile/_path/__init__.py	334	352	Path.open	open(self, mode='r', *args, pwd=None, **kwargs)	todo		
+Lib/zipfile/_path/__init__.py	354	355	Path._base	_base(self)	todo		
+Lib/zipfile/_path/__init__.py	358	359	Path.name	name(self)	todo		
+Lib/zipfile/_path/__init__.py	362	363	Path.suffix	suffix(self)	todo		
+Lib/zipfile/_path/__init__.py	366	367	Path.suffixes	suffixes(self)	todo		
+Lib/zipfile/_path/__init__.py	370	371	Path.stem	stem(self)	todo		
+Lib/zipfile/_path/__init__.py	374	375	Path.filename	filename(self)	todo		
+Lib/zipfile/_path/__init__.py	377	380	Path.read_text	read_text(self, *args, **kwargs)	todo		
+Lib/zipfile/_path/__init__.py	382	384	Path.read_bytes	read_bytes(self)	todo		
+Lib/zipfile/_path/__init__.py	386	387	Path._is_child	_is_child(self, path)	todo		
+Lib/zipfile/_path/__init__.py	389	390	Path._next	_next(self, at)	todo		
+Lib/zipfile/_path/__init__.py	392	393	Path.is_dir	is_dir(self)	todo		
+Lib/zipfile/_path/__init__.py	395	396	Path.is_file	is_file(self)	todo		
+Lib/zipfile/_path/__init__.py	398	399	Path.exists	exists(self)	todo		
+Lib/zipfile/_path/__init__.py	401	405	Path.iterdir	iterdir(self)	todo		
+Lib/zipfile/_path/__init__.py	407	408	Path.match	match(self, path_pattern)	todo		
+Lib/zipfile/_path/__init__.py	410	416	Path.is_symlink	is_symlink(self)	todo		
+Lib/zipfile/_path/__init__.py	418	425	Path.glob	glob(self, pattern)	todo		
+Lib/zipfile/_path/__init__.py	427	428	Path.rglob	rglob(self, pattern)	todo		
+Lib/zipfile/_path/__init__.py	430	431	Path.relative_to	relative_to(self, other, *extra)	todo		
+Lib/zipfile/_path/__init__.py	433	434	Path.__str__	__str__(self)	todo		
+Lib/zipfile/_path/__init__.py	436	437	Path.__repr__	__repr__(self)	todo		
+Lib/zipfile/_path/__init__.py	439	441	Path.joinpath	joinpath(self, *other)	todo		
+Lib/zipfile/_path/__init__.py	446	452	Path.parent	parent(self)	todo		

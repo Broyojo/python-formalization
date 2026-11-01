@@ -1,0 +1,18 @@
+file	line	endline	name	signature	status	entry	note
+Lib/encodings/utf_16.py	15	16	decode	decode(input, errors='strict')	todo		
+Lib/encodings/utf_16.py	19	21	IncrementalEncoder.__init__	__init__(self, errors='strict')	todo		
+Lib/encodings/utf_16.py	23	31	IncrementalEncoder.encode	encode(self, input, final=False)	todo		
+Lib/encodings/utf_16.py	33	35	IncrementalEncoder.reset	reset(self)	todo		
+Lib/encodings/utf_16.py	37	42	IncrementalEncoder.getstate	getstate(self)	todo		
+Lib/encodings/utf_16.py	44	51	IncrementalEncoder.setstate	setstate(self, state)	todo		
+Lib/encodings/utf_16.py	54	56	IncrementalDecoder.__init__	__init__(self, errors='strict')	todo		
+Lib/encodings/utf_16.py	58	69	IncrementalDecoder._buffer_decode	_buffer_decode(self, input, errors, final)	todo		
+Lib/encodings/utf_16.py	71	73	IncrementalDecoder.reset	reset(self)	todo		
+Lib/encodings/utf_16.py	75	87	IncrementalDecoder.getstate	getstate(self)	todo		
+Lib/encodings/utf_16.py	89	102	IncrementalDecoder.setstate	setstate(self, state)	todo		
+Lib/encodings/utf_16.py	105	107	StreamWriter.__init__	__init__(self, stream, errors='strict')	todo		
+Lib/encodings/utf_16.py	109	111	StreamWriter.reset	reset(self)	todo		
+Lib/encodings/utf_16.py	113	122	StreamWriter.encode	encode(self, input, errors='strict')	todo		
+Lib/encodings/utf_16.py	126	131	StreamReader.reset	reset(self)	todo		
+Lib/encodings/utf_16.py	133	142	StreamReader.decode	decode(self, input, errors='strict')	todo		
+Lib/encodings/utf_16.py	146	155	getregentry	getregentry()	todo		

@@ -1,0 +1,5 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/float.c	26	60	_testcapi_float_pack_impl	_testcapi_float_pack_impl(PyObject *module, int size, double d, int le) /*[clinic end generated code: output=7899bd98f8b6cb04 input=52c9115121999c98]*/	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/float.c	74	100	_testcapi_float_unpack_impl	_testcapi_float_unpack_impl(PyObject *module, const char *data, Py_ssize_t data_length, int le) /*[clinic end generated code: output=617059f889ddbfe4 input=c095e4bb75a696cd]*/	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/float.c	105	157	test_string_to_double	test_string_to_double(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/float.c	168	179	_PyTestCapi_Init_Float	_PyTestCapi_Init_Float(PyObject *mod)	excluded		test-support: only for CPython's own tests

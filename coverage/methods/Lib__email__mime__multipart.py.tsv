@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Lib/email/mime/multipart.py	15	47	MIMEMultipart.__init__	__init__(self, _subtype='mixed', boundary=None, _subparts=None, *, policy=None, **_params)	todo		

@@ -1,0 +1,21 @@
+file	line	endline	name	signature	status	entry	note
+Objects/structseq.c	28	38	get_type_attr_as_size	get_type_attr_as_size(PyTypeObject *tp, PyObject *name)	todo		
+Objects/structseq.c	52	58	get_real_size	get_real_size(PyObject *op)	todo		
+Objects/structseq.c	61	84	PyStructSequence_New	PyStructSequence_New(PyTypeObject *type)	todo		
+Objects/structseq.c	87	97	PyStructSequence_SetItem	PyStructSequence_SetItem(PyObject *op, Py_ssize_t index, PyObject *value)	todo		
+Objects/structseq.c	100	109	PyStructSequence_GetItem	PyStructSequence_GetItem(PyObject *op, Py_ssize_t index)	todo		
+Objects/structseq.c	113	125	structseq_traverse	structseq_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Objects/structseq.c	128	146	structseq_dealloc	structseq_dealloc(PyObject *op)	todo		
+Objects/structseq.c	163	266	structseq_new_impl	structseq_new_impl(PyTypeObject *type, PyObject *arg, PyObject *dict) /*[clinic end generated code: output=baa082e788b171da input=90532511101aa3fb]*/	todo		
+Objects/structseq.c	270	335	structseq_repr	structseq_repr(PyObject *op)	todo		
+Objects/structseq.c	339	381	structseq_reduce	structseq_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
+Objects/structseq.c	385	454	structseq_replace	structseq_replace(PyObject *op, PyObject *args, PyObject *kwargs)	todo		
+Objects/structseq.c	465	475	count_members	count_members(PyStructSequence_Desc *desc, Py_ssize_t *n_unnamed_members) {	todo		
+Objects/structseq.c	535	565	initialize_members	initialize_members(PyStructSequence_Desc *desc, Py_ssize_t n_members, Py_ssize_t n_unnamed_members)	todo		
+Objects/structseq.c	569	588	initialize_static_fields	initialize_static_fields(PyTypeObject *type, PyStructSequence_Desc *desc, PyMemberDef *tp_members, Py_ssize_t n_members, unsigned long tp_flags)	todo		
+Objects/structseq.c	609	665	_PyStructSequence_InitBuiltinWithFlags	_PyStructSequence_InitBuiltinWithFlags(PyInterpreterState *interp, PyTypeObject *type, PyStructSequence_Desc *desc, unsigned long tp_flags)	todo		
+Objects/structseq.c	668	699	PyStructSequence_InitType2	PyStructSequence_InitType2(PyTypeObject *type, PyStructSequence_Desc *desc)	todo		
+Objects/structseq.c	702	705	PyStructSequence_InitType	PyStructSequence_InitType(PyTypeObject *type, PyStructSequence_Desc *desc)	todo		
+Objects/structseq.c	713	736	_PyStructSequence_FiniBuiltin	_PyStructSequence_FiniBuiltin(PyInterpreterState *interp, PyTypeObject *type)	todo		
+Objects/structseq.c	740	788	_PyStructSequence_NewType	_PyStructSequence_NewType(PyStructSequence_Desc *desc, unsigned long tp_flags)	todo		
+Objects/structseq.c	792	795	PyStructSequence_NewType	PyStructSequence_NewType(PyStructSequence_Desc *desc)	todo		

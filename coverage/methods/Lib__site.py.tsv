@@ -1,0 +1,29 @@
+file	line	endline	name	signature	status	entry	note
+Lib/site.py	93	95	_trace	_trace(message)	todo		
+Lib/site.py	98	101	_warn	_warn(*args, **kwargs)	todo		
+Lib/site.py	104	110	makepath	makepath(*paths)	todo		
+Lib/site.py	113	133	abs_paths	abs_paths()	todo		
+Lib/site.py	136	152	removeduppaths	removeduppaths()	todo		
+Lib/site.py	155	165	_init_pathinfo	_init_pathinfo()	todo		
+Lib/site.py	168	231	addpackage	addpackage(sitedir, name, known_paths)	todo		
+Lib/site.py	234	257	addsitedir	addsitedir(sitedir, known_paths=None)	todo		
+Lib/site.py	260	282	check_enableusersite	check_enableusersite()	todo		
+Lib/site.py	292	293	_get_implementation	_get_implementation()	todo		
+Lib/site.py	296	316	_getuserbase	_getuserbase()	todo		
+Lib/site.py	320	336	_get_path	_get_path(userbase)	todo		
+Lib/site.py	339	349	getuserbase	getuserbase()	todo		
+Lib/site.py	352	367	getusersitepackages	getusersitepackages()	todo		
+Lib/site.py	369	382	addusersitepackages	addusersitepackages(known_paths)	todo		
+Lib/site.py	384	421	getsitepackages	getsitepackages(prefixes=None)	todo		
+Lib/site.py	423	430	addsitepackages	addsitepackages(known_paths, prefixes=None)	todo		
+Lib/site.py	432	445	setquit	setquit()	todo		
+Lib/site.py	448	467	setcopyright	setcopyright()	todo		
+Lib/site.py	470	471	sethelper	sethelper()	todo		
+Lib/site.py	474	484	gethistoryfile	gethistoryfile()	todo		
+Lib/site.py	487	491	enablerlcompleter	enablerlcompleter()	todo		
+Lib/site.py	494	592	register_readline	register_readline()	todo		
+Lib/site.py	595	647	venv	venv(known_paths)	todo		
+Lib/site.py	650	667	execsitecustomize	execsitecustomize()	todo		
+Lib/site.py	670	687	execusercustomize	execusercustomize()	todo		
+Lib/site.py	690	717	main	main()	todo		
+Lib/site.py	724	776	_script	_script()	todo		

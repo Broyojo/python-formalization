@@ -1,0 +1,20 @@
+file	line	endline	name	signature	status	entry	note
+Lib/filecmp.py	26	28	clear_cache	clear_cache()	todo		
+Lib/filecmp.py	30	68	cmp	cmp(f1, f2, shallow=True)	todo		
+Lib/filecmp.py	70	73	_sig	_sig(st)	todo		
+Lib/filecmp.py	75	84	_do_cmp	_do_cmp(f1, f2)	todo		
+Lib/filecmp.py	127	138	dircmp.__init__	__init__(self, a, b, ignore=None, hide=None, *, shallow=True)	todo		
+Lib/filecmp.py	140	146	dircmp.phase0	phase0(self)	todo		
+Lib/filecmp.py	148	153	dircmp.phase1	phase1(self)	todo		
+Lib/filecmp.py	155	190	dircmp.phase2	phase2(self)	todo		
+Lib/filecmp.py	192	194	dircmp.phase3	phase3(self)	todo		
+Lib/filecmp.py	196	206	dircmp.phase4	phase4(self)	todo		
+Lib/filecmp.py	208	211	dircmp.phase4_closure	phase4_closure(self)	todo		
+Lib/filecmp.py	213	236	dircmp.report	report(self)	todo		
+Lib/filecmp.py	238	242	dircmp.report_partial_closure	report_partial_closure(self)	todo		
+Lib/filecmp.py	244	248	dircmp.report_full_closure	report_full_closure(self)	todo		
+Lib/filecmp.py	256	260	dircmp.__getattr__	__getattr__(self, attr)	todo		
+Lib/filecmp.py	265	283	cmpfiles	cmpfiles(a, b, common, shallow=True)	todo		
+Lib/filecmp.py	292	296	_cmp	_cmp(a, b, sh, abs=abs, cmp=cmp)	todo		
+Lib/filecmp.py	301	302	_filter	_filter(flist, skip)	todo		
+Lib/filecmp.py	307	317	demo	demo()	todo		

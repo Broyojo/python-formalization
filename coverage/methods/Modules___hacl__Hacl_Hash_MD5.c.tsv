@@ -1,0 +1,15 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_hacl/Hacl_Hash_MD5.c	48	51	Hacl_Hash_MD5_init	void Hacl_Hash_MD5_init(uint32_t *s)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_MD5.c	53	962	update	static void update(uint32_t *abcd, uint8_t *x)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_MD5.c	964	975	pad	static void pad(uint64_t len, uint8_t *dst)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_MD5.c	977	980	Hacl_Hash_MD5_finish	void Hacl_Hash_MD5_finish(uint32_t *s, uint8_t *dst)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_MD5.c	982	990	Hacl_Hash_MD5_update_multi	void Hacl_Hash_MD5_update_multi(uint32_t *s, uint8_t *blocks, uint32_t n_blocks)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_MD5.c	993	1011	Hacl_Hash_MD5_update_last	Hacl_Hash_MD5_update_last(uint32_t *s, uint64_t prev_len, uint8_t *input, uint32_t input_len)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_MD5.c	1013	1038	Hacl_Hash_MD5_hash_oneshot	void Hacl_Hash_MD5_hash_oneshot(uint8_t *output, uint8_t *input, uint32_t input_len)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_MD5.c	1040	1104	Hacl_Hash_MD5_malloc	Hacl_Streaming_MD_state_32 *Hacl_Hash_MD5_malloc(void)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_MD5.c	1106	1115	Hacl_Hash_MD5_reset	void Hacl_Hash_MD5_reset(Hacl_Streaming_MD_state_32 *state)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_MD5.c	1121	1284	Hacl_Hash_MD5_update	Hacl_Hash_MD5_update(Hacl_Streaming_MD_state_32 *state, uint8_t *chunk, uint32_t chunk_len)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_MD5.c	1286	1319	Hacl_Hash_MD5_digest	void Hacl_Hash_MD5_digest(Hacl_Streaming_MD_state_32 *state, uint8_t *output)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_MD5.c	1321	1329	Hacl_Hash_MD5_free	void Hacl_Hash_MD5_free(Hacl_Streaming_MD_state_32 *state)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_MD5.c	1331	1399	Hacl_Hash_MD5_copy	Hacl_Streaming_MD_state_32 *Hacl_Hash_MD5_copy(Hacl_Streaming_MD_state_32 *state)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_MD5.c	1401	1404	Hacl_Hash_MD5_hash	void Hacl_Hash_MD5_hash(uint8_t *output, uint8_t *input, uint32_t input_len)	excluded		vendored: third-party code

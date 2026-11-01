@@ -1,0 +1,5 @@
+file	line	endline	name	signature	status	entry	note
+Lib/email/errors.py	40	43	MessageDefect.__init__	__init__(self, line=None)	todo		
+Lib/email/errors.py	88	89	HeaderDefect.__init__	__init__(self, *args, **kw)	todo		
+Lib/email/errors.py	100	102	NonPrintableDefect.__init__	__init__(self, non_printables)	todo		
+Lib/email/errors.py	104	106	NonPrintableDefect.__str__	__str__(self)	todo		

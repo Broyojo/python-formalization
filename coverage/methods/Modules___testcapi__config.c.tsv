@@ -1,0 +1,6 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/config.c	5	13	_testcapi_config_get	_testcapi_config_get(PyObject *module, PyObject *name_obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/config.c	17	29	_testcapi_config_getint	_testcapi_config_getint(PyObject *module, PyObject *name_obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/config.c	33	36	_testcapi_config_names	_testcapi_config_names(PyObject *module, PyObject* Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/config.c	40	53	_testcapi_config_set	_testcapi_config_set(PyObject *module, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/config.c	65	68	_PyTestCapi_Init_Config	_PyTestCapi_Init_Config(PyObject *mod)	excluded		test-support: only for CPython's own tests

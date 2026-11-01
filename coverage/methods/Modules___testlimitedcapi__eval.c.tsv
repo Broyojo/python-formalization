@@ -1,0 +1,13 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testlimitedcapi/eval.c	5	8	eval_get_func_name	eval_get_func_name(PyObject *self, PyObject *func)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/eval.c	11	14	eval_get_func_desc	eval_get_func_desc(PyObject *self, PyObject *func)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/eval.c	17	20	eval_getlocals	eval_getlocals(PyObject *module, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/eval.c	23	26	eval_getglobals	eval_getglobals(PyObject *module, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/eval.c	29	32	eval_getbuiltins	eval_getbuiltins(PyObject *module, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/eval.c	35	38	eval_getframe	eval_getframe(PyObject *module, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/eval.c	41	44	eval_getframe_builtins	eval_getframe_builtins(PyObject *module, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/eval.c	47	50	eval_getframe_globals	eval_getframe_globals(PyObject *module, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/eval.c	53	56	eval_getframe_locals	eval_getframe_locals(PyObject *module, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/eval.c	59	63	eval_get_recursion_limit	eval_get_recursion_limit(PyObject *module, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/eval.c	66	74	eval_set_recursion_limit	eval_set_recursion_limit(PyObject *module, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/eval.c	92	95	_PyTestLimitedCAPI_Init_Eval	_PyTestLimitedCAPI_Init_Eval(PyObject *m)	excluded		test-support: only for CPython's own tests

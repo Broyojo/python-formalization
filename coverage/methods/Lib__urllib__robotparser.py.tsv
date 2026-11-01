@@ -1,0 +1,26 @@
+file	line	endline	name	signature	status	entry	note
+Lib/urllib/robotparser.py	30	38	RobotFileParser.__init__	__init__(self, url='')	todo		
+Lib/urllib/robotparser.py	40	47	RobotFileParser.mtime	mtime(self)	todo		
+Lib/urllib/robotparser.py	49	55	RobotFileParser.modified	modified(self)	todo		
+Lib/urllib/robotparser.py	57	60	RobotFileParser.set_url	set_url(self, url)	todo		
+Lib/urllib/robotparser.py	62	82	RobotFileParser.read	read(self)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/urllib/robotparser.py	84	91	RobotFileParser._add_entry	_add_entry(self, entry)	todo		
+Lib/urllib/robotparser.py	93	164	RobotFileParser.parse	parse(self, lines)	todo		
+Lib/urllib/robotparser.py	166	173	RobotFileParser._find_entry	_find_entry(self, useragent)	todo		
+Lib/urllib/robotparser.py	175	200	RobotFileParser.can_fetch	can_fetch(self, useragent, url)	todo		
+Lib/urllib/robotparser.py	202	208	RobotFileParser.crawl_delay	crawl_delay(self, useragent)	todo		
+Lib/urllib/robotparser.py	210	216	RobotFileParser.request_rate	request_rate(self, useragent)	todo		
+Lib/urllib/robotparser.py	218	221	RobotFileParser.site_maps	site_maps(self)	todo		
+Lib/urllib/robotparser.py	223	227	RobotFileParser.__str__	__str__(self)	todo		
+Lib/urllib/robotparser.py	232	251	RuleLine.__init__	__init__(self, path, allowance)	todo		
+Lib/urllib/robotparser.py	253	267	RuleLine.applies_to	applies_to(self, filename)	todo		
+Lib/urllib/robotparser.py	269	271	RuleLine.__str__	__str__(self)	todo		
+Lib/urllib/robotparser.py	276	280	Entry.__init__	__init__(self)	todo		
+Lib/urllib/robotparser.py	282	297	Entry.__str__	__str__(self)	todo		
+Lib/urllib/robotparser.py	299	310	Entry.applies_to	applies_to(self, useragent)	todo		
+Lib/urllib/robotparser.py	312	327	Entry.allowance	allowance(self, filename)	todo		
+Lib/urllib/robotparser.py	330	332	normalize	normalize(path)	todo		
+Lib/urllib/robotparser.py	334	340	normalize_uri	normalize_uri(path)	todo		
+Lib/urllib/robotparser.py	342	348	normalize_pattern	normalize_pattern(path)	todo		
+Lib/urllib/robotparser.py	350	355	translate_pattern	translate_pattern(path)	todo		
+Lib/urllib/robotparser.py	357	363	merge_entries	merge_entries(e1, e2)	todo		

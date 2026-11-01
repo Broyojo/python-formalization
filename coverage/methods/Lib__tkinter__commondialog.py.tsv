@@ -1,0 +1,6 @@
+file	line	endline	name	signature	status	entry	note
+Lib/tkinter/commondialog.py	22	26	Dialog.__init__	__init__(self, master=None, **options)	excluded		platform: GUI toolkit
+Lib/tkinter/commondialog.py	28	29	Dialog._fixoptions	_fixoptions(self)	excluded		platform: GUI toolkit
+Lib/tkinter/commondialog.py	31	32	Dialog._fixresult	_fixresult(self, widget, result)	excluded		platform: GUI toolkit
+Lib/tkinter/commondialog.py	34	52	Dialog.show	show(self, **options)	excluded		platform: GUI toolkit
+Lib/tkinter/commondialog.py	54	55	Dialog._test_callback	_test_callback(self, master)	excluded		platform: GUI toolkit

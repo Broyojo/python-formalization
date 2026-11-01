@@ -1,0 +1,14 @@
+file	line	endline	name	signature	status	entry	note
+Python/stackrefs.c	25	38	make_table_entry	make_table_entry(PyObject *obj, const char *filename, int linenumber)	todo		
+Python/stackrefs.c	41	56	_Py_stackref_get_object	_Py_stackref_get_object(_PyStackRef ref)	todo		
+Python/stackrefs.c	59	62	PyStackRef_Is	PyStackRef_Is(_PyStackRef a, _PyStackRef b)	todo		
+Python/stackrefs.c	65	107	_Py_stackref_close	_Py_stackref_close(_PyStackRef ref, const char *filename, int linenumber)	todo		
+Python/stackrefs.c	110	126	_Py_stackref_create	_Py_stackref_create(PyObject *obj, const char *filename, int linenumber)	todo		
+Python/stackrefs.c	129	149	_Py_stackref_record_borrow	_Py_stackref_record_borrow(_PyStackRef ref, const char *filename, int linenumber)	todo		
+Python/stackrefs.c	153	163	_Py_stackref_associate	_Py_stackref_associate(PyInterpreterState *interp, PyObject *obj, _PyStackRef ref)	todo		
+Python/stackrefs.c	167	180	report_leak	report_leak(_Py_hashtable_t *ht, const void *key, const void *value, void *leak)	todo		
+Python/stackrefs.c	183	191	_Py_stackref_report_leaks	_Py_stackref_report_leaks(PyInterpreterState *interp)	todo		
+Python/stackrefs.c	194	198	_PyStackRef_CLOSE_SPECIALIZED	_PyStackRef_CLOSE_SPECIALIZED(_PyStackRef ref, destructor destruct, const char *filename, int linenumber)	todo		
+Python/stackrefs.c	200	203	PyStackRef_TagInt	_PyStackRef PyStackRef_TagInt(intptr_t i)	todo		
+Python/stackrefs.c	206	211	PyStackRef_UntagInt	PyStackRef_UntagInt(_PyStackRef i)	todo		
+Python/stackrefs.c	214	217	PyStackRef_IsNullOrInt	PyStackRef_IsNullOrInt(_PyStackRef ref)	todo		

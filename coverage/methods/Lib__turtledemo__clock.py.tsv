@@ -1,0 +1,11 @@
+file	line	endline	name	signature	status	entry	note
+Lib/turtledemo/clock.py	12	17	jump	jump(distanz, winkel=0)	excluded		platform: GUI toolkit
+Lib/turtledemo/clock.py	19	28	hand	hand(laenge, spitze)	excluded		platform: GUI toolkit
+Lib/turtledemo/clock.py	30	37	make_hand_shape	make_hand_shape(name, laenge, spitze)	excluded		platform: GUI toolkit
+Lib/turtledemo/clock.py	39	50	clockface	clockface(radius)	excluded		platform: GUI toolkit
+Lib/turtledemo/clock.py	52	62	display_date_time	display_date_time()	excluded		platform: GUI toolkit
+Lib/turtledemo/clock.py	64	89	setup	setup()	excluded		platform: GUI toolkit
+Lib/turtledemo/clock.py	91	94	wochentag	wochentag(t)	excluded		platform: GUI toolkit
+Lib/turtledemo/clock.py	96	102	datum	datum(z)	excluded		platform: GUI toolkit
+Lib/turtledemo/clock.py	104	119	tick	tick()	excluded		platform: GUI toolkit
+Lib/turtledemo/clock.py	121	126	main	main()	excluded		platform: GUI toolkit

@@ -1,0 +1,158 @@
+file	line	endline	name	signature	status	entry	note
+Python/import.c	45	50	is_interpreter_isolated	is_interpreter_isolated(PyInterpreterState *interp)	todo		
+Python/import.c	126	129	_PyImport_AcquireLock	_PyImport_AcquireLock(PyInterpreterState *interp)	todo		
+Python/import.c	132	135	_PyImport_ReleaseLock	_PyImport_ReleaseLock(PyInterpreterState *interp)	todo		
+Python/import.c	138	142	_PyImport_ReInitLock	_PyImport_ReInitLock(PyInterpreterState *interp)	todo		
+Python/import.c	150	158	_PyImport_InitModules	_PyImport_InitModules(PyInterpreterState *interp)	todo		
+Python/import.c	161	164	_PyImport_GetModules	_PyImport_GetModules(PyInterpreterState *interp)	todo		
+Python/import.c	167	178	_PyImport_GetModulesRef	_PyImport_GetModulesRef(PyInterpreterState *interp)	todo		
+Python/import.c	181	184	_PyImport_ClearModules	_PyImport_ClearModules(PyInterpreterState *interp)	todo		
+Python/import.c	187	204	get_modules_dict	get_modules_dict(PyThreadState *tstate, bool fatal)	todo		
+Python/import.c	207	211	PyImport_GetModuleDict	PyImport_GetModuleDict(void)	todo		
+Python/import.c	214	219	_PyImport_SetModule	_PyImport_SetModule(PyObject *name, PyObject *m)	todo		
+Python/import.c	222	227	_PyImport_SetModuleString	_PyImport_SetModuleString(const char *name, PyObject *m)	todo		
+Python/import.c	230	242	import_get_module	import_get_module(PyThreadState *tstate, PyObject *name)	todo		
+Python/import.c	245	287	import_ensure_initialized	import_ensure_initialized(PyInterpreterState *interp, PyObject *mod, PyObject *name)	todo		
+Python/import.c	292	326	PyImport_GetModule	PyImport_GetModule(PyObject *name)	todo		
+Python/import.c	333	352	import_add_module_lock_held	import_add_module_lock_held(PyObject *modules, PyObject *name)	todo		
+Python/import.c	355	367	import_add_module	import_add_module(PyThreadState *tstate, PyObject *name)	todo		
+Python/import.c	370	380	PyImport_AddModuleRef	PyImport_AddModuleRef(const char *name)	todo		
+Python/import.c	384	417	PyImport_AddModuleObject	PyImport_AddModuleObject(PyObject *name)	todo		
+Python/import.c	421	430	PyImport_AddModule	PyImport_AddModule(const char *name)	todo		
+Python/import.c	439	455	remove_module	remove_module(PyThreadState *tstate, PyObject *name)	todo		
+Python/import.c	463	466	_PyImport_GetNextModuleIndex	_PyImport_GetNextModuleIndex(void)	todo		
+Python/import.c	475	483	_get_module_index_from_def	_get_module_index_from_def(PyModuleDef *def)	todo		
+Python/import.c	486	504	_set_module_index	_set_module_index(PyModuleDef *def, Py_ssize_t index)	todo		
+Python/import.c	507	519	_modules_by_index_check	_modules_by_index_check(PyInterpreterState *interp, Py_ssize_t index)	todo		
+Python/import.c	522	529	_modules_by_index_get	_modules_by_index_get(PyInterpreterState *interp, Py_ssize_t index)	todo		
+Python/import.c	532	551	_modules_by_index_set	_modules_by_index_set(PyInterpreterState *interp, Py_ssize_t index, PyObject *module)	todo		
+Python/import.c	554	562	_modules_by_index_clear_one	_modules_by_index_clear_one(PyInterpreterState *interp, Py_ssize_t index)	todo		
+Python/import.c	566	574	PyState_FindModule	PyState_FindModule(PyModuleDef* module)	todo		
+Python/import.c	581	596	_PyState_AddModule	_PyState_AddModule(PyThreadState *tstate, PyObject* module, PyModuleDef* def)	todo		
+Python/import.c	599	626	PyState_AddModule	PyState_AddModule(PyObject* module, PyModuleDef* def)	todo		
+Python/import.c	629	640	PyState_RemoveModule	PyState_RemoveModule(PyModuleDef* def)	todo		
+Python/import.c	645	673	_PyImport_ClearModulesByIndex	_PyImport_ClearModulesByIndex(PyInterpreterState *interp)	todo		
+Python/import.c	823	839	_PyImport_ResolveNameWithPackageContext	_PyImport_ResolveNameWithPackageContext(const char *name)	todo		
+Python/import.c	842	853	_PyImport_SwapPackageContext	_PyImport_SwapPackageContext(const char *newcontext)	todo		
+Python/import.c	857	860	_PyImport_GetDLOpenFlags	_PyImport_GetDLOpenFlags(PyInterpreterState *interp)	todo		
+Python/import.c	863	866	_PyImport_SetDLOpenFlags	_PyImport_SetDLOpenFlags(PyInterpreterState *interp, int new_val)	todo		
+Python/import.c	872	892	exec_builtin_or_dynamic	exec_builtin_or_dynamic(PyObject *mod) {	todo		
+Python/import.c	903	916	_PyImport_ClearExtension	_PyImport_ClearExtension(PyObject *name, PyObject *filename)	todo		
+Python/import.c	989	992	extensions_lock_acquire	extensions_lock_acquire(void)	todo		
+Python/import.c	995	998	extensions_lock_release	extensions_lock_release(void)	todo		
+Python/import.c	1056	1066	alloc_extensions_cache_value	alloc_extensions_cache_value(void)	todo		
+Python/import.c	1069	1072	free_extensions_cache_value	free_extensions_cache_value(struct extensions_cache_value *value)	todo		
+Python/import.c	1075	1079	_get_cached_module_index	_get_cached_module_index(struct extensions_cache_value *cached)	todo		
+Python/import.c	1082	1115	fixup_cached_def	fixup_cached_def(struct extensions_cache_value *value)	todo		
+Python/import.c	1118	1121	restore_old_cached_def	restore_old_cached_def(PyModuleDef *def, PyModuleDef_Base *oldbase)	todo		
+Python/import.c	1124	1127	cleanup_old_cached_def	cleanup_old_cached_def(PyModuleDef_Base *oldbase)	todo		
+Python/import.c	1130	1140	del_cached_def	del_cached_def(struct extensions_cache_value *value)	todo		
+Python/import.c	1143	1185	init_cached_m_dict	init_cached_m_dict(struct extensions_cache_value *value, PyObject *m_dict)	todo		
+Python/import.c	1188	1198	del_cached_m_dict	del_cached_m_dict(struct extensions_cache_value *value)	todo		
+Python/import.c	1204	1219	get_cached_m_dict	get_cached_m_dict(struct extensions_cache_value *value, PyObject *name, PyObject *path)	todo		
+Python/import.c	1222	1230	del_extensions_cache_value	del_extensions_cache_value(void *raw)	todo		
+Python/import.c	1233	1260	hashtable_key_from_2_strings	hashtable_key_from_2_strings(PyObject *str1, PyObject *str2, const char sep)	todo		
+Python/import.c	1263	1266	hashtable_hash_str	hashtable_hash_str(const void *key)	todo		
+Python/import.c	1269	1272	hashtable_compare_str	hashtable_compare_str(const void *key1, const void *key2)	todo		
+Python/import.c	1275	1278	hashtable_destroy_str	hashtable_destroy_str(void *ptr)	todo		
+Python/import.c	1287	1303	hashtable_next_match_def	hashtable_next_match_def(_Py_hashtable_t *ht, const void *key, const void *value, void *user_data)	todo		
+Python/import.c	1306	1312	_find_cached_def	_find_cached_def(PyModuleDef *def)	todo		
+Python/import.c	1318	1333	_extensions_cache_init	_extensions_cache_init(void)	todo		
+Python/import.c	1336	1355	_extensions_cache_find_unlocked	_extensions_cache_find_unlocked(PyObject *path, PyObject *name, void **p_key)	todo		
+Python/import.c	1359	1375	_extensions_cache_get	_extensions_cache_get(PyObject *path, PyObject *name)	todo		
+Python/import.c	1379	1494	_extensions_cache_set	_extensions_cache_set(PyObject *path, PyObject *name, PyModuleDef *def, PyModInitFunction m_init, Py_ssize_t m_index, PyObject *m_dict, _Py_ext_module_origin origin, void *md_gil)	todo		
+Python/import.c	1497	1523	_extensions_cache_delete	_extensions_cache_delete(PyObject *path, PyObject *name)	todo		
+Python/import.c	1526	1532	_extensions_cache_clear_all	_extensions_cache_clear_all(void)	todo		
+Python/import.c	1538	1552	check_multi_interp_extensions	check_multi_interp_extensions(PyInterpreterState *interp)	todo		
+Python/import.c	1555	1566	_PyImport_CheckSubinterpIncompatibleExtensionAllowed	_PyImport_CheckSubinterpIncompatibleExtensionAllowed(const char *name)	todo		
+Python/import.c	1570	1606	_PyImport_CheckGILForModule	_PyImport_CheckGILForModule(PyObject* module, PyObject *module_name)	todo		
+Python/import.c	1610	1627	switch_to_main_interpreter	switch_to_main_interpreter(PyThreadState *tstate)	todo		
+Python/import.c	1630	1656	switch_back_from_main_interpreter	switch_back_from_main_interpreter(PyThreadState *tstate, PyThreadState *main_tstate, PyObject *tempobj)	todo		
+Python/import.c	1659	1675	get_core_module_dict	get_core_module_dict(PyInterpreterState *interp, PyObject *name, PyObject *path)	todo		
+Python/import.c	1679	1692	is_core_module	is_core_module(PyInterpreterState *interp, PyObject *name, PyObject *path)	todo		
+Python/import.c	1696	1719	_get_extension_kind	_get_extension_kind(PyModuleDef *def, bool check_size)	todo		
+Python/import.c	1761	1825	update_global_state_for_extension	update_global_state_for_extension(PyThreadState *tstate, PyObject *path, PyObject *name, PyModuleDef *def, struct singlephase_global_update *singlephase)	todo		
+Python/import.c	1830	1849	finish_singlephase_extension	finish_singlephase_extension(PyThreadState *tstate, PyObject *mod, struct extensions_cache_value *cached, PyObject *name, PyObject *modules)	todo		
+Python/import.c	1853	1961	reload_singlephase_extension	reload_singlephase_extension(PyThreadState *tstate, struct extensions_cache_value *cached, struct _Py_ext_module_loader_info *info)	todo		
+Python/import.c	1964	1999	import_find_extension	import_find_extension(PyThreadState *tstate, struct _Py_ext_module_loader_info *info, struct extensions_cache_value **p_cached)	todo		
+Python/import.c	2002	2236	import_run_extension	import_run_extension(PyThreadState *tstate, PyModInitFunction p0, struct _Py_ext_module_loader_info *info, PyObject *spec, PyObject *modules)	todo		
+Python/import.c	2241	2282	clear_singlephase_extension	clear_singlephase_extension(PyInterpreterState *interp, PyObject *name, PyObject *path)	todo		
+Python/import.c	2290	2351	_PyImport_FixupBuiltin	_PyImport_FixupBuiltin(PyThreadState *tstate, PyObject *mod, const char *name, PyObject *modules)	todo		
+Python/import.c	2356	2369	is_builtin	is_builtin(PyObject *name)	todo		
+Python/import.c	2372	2444	create_builtin	create_builtin(PyThreadState *tstate, PyObject *name, PyObject *spec)	todo		
+Python/import.c	2459	2499	PyImport_ExtendInittab	PyImport_ExtendInittab(struct _inittab *newtab)	todo		
+Python/import.c	2504	2518	PyImport_AppendInittab	PyImport_AppendInittab(const char *name, PyObject* (*initfunc)(void))	todo		
+Python/import.c	2524	2539	init_builtin_modules_table	init_builtin_modules_table(void)	todo		
+Python/import.c	2542	2547	fini_builtin_modules_table	fini_builtin_modules_table(void)	todo		
+Python/import.c	2550	2571	_PyImport_GetBuiltinModuleNames	_PyImport_GetBuiltinModuleNames(void)	todo		
+Python/import.c	2581	2584	PyImport_GetMagicNumber	PyImport_GetMagicNumber(void)	todo		
+Python/import.c	2589	2592	PyImport_GetMagicTag	PyImport_GetMagicTag(void)	todo		
+Python/import.c	2610	2614	PyImport_ExecCodeModule	PyImport_ExecCodeModule(const char *name, PyObject *co)	todo		
+Python/import.c	2617	2621	PyImport_ExecCodeModuleEx	PyImport_ExecCodeModuleEx(const char *name, PyObject *co, const char *pathname)	todo		
+Python/import.c	2624	2674	PyImport_ExecCodeModuleWithPathnames	PyImport_ExecCodeModuleWithPathnames(const char *name, PyObject *co, const char *pathname, const char *cpathname)	todo		
+Python/import.c	2677	2700	module_dict_for_exec	module_dict_for_exec(PyThreadState *tstate, PyObject *name)	todo		
+Python/import.c	2703	2723	exec_code_in_module	exec_code_in_module(PyThreadState *tstate, PyObject *name, PyObject *module_dict, PyObject *code_object)	todo		
+Python/import.c	2726	2755	PyImport_ExecCodeModuleObject	PyImport_ExecCodeModuleObject(PyObject *name, PyObject *co, PyObject *pathname, PyObject *cpathname)	todo		
+Python/import.c	2759	2777	update_code_filenames	update_code_filenames(PyCodeObject *co, PyObject *oldname, PyObject *newname)	todo		
+Python/import.c	2780	2791	update_compiled_module	update_compiled_module(PyCodeObject *co, PyObject *newname)	todo		
+Python/import.c	2802	2818	resolve_module_alias	resolve_module_alias(const char *name, const struct _module_alias *aliases, const char **alias)	todo		
+Python/import.c	2821	2834	use_frozen	use_frozen(void)	todo		
+Python/import.c	2837	2914	list_frozen_module_names	list_frozen_module_names(void)	todo		
+Python/import.c	2928	2959	set_frozen_error	set_frozen_error(frozen_status status, PyObject *modname)	todo		
+Python/import.c	2962	3007	look_up_frozen	look_up_frozen(const char *name)	todo		
+Python/import.c	3019	3065	find_frozen	find_frozen(PyObject *nameobj, struct frozen_info *info)	todo		
+Python/import.c	3068	3086	unmarshal_frozen_code	unmarshal_frozen_code(PyInterpreterState *interp, struct frozen_info *info)	todo		
+Python/import.c	3095	3168	PyImport_ImportFrozenModuleObject	PyImport_ImportFrozenModuleObject(PyObject *name)	todo		
+Python/import.c	3171	3181	PyImport_ImportFrozenModule	PyImport_ImportFrozenModule(const char *name)	todo		
+Python/import.c	3193	3233	bootstrap_imp	bootstrap_imp(PyThreadState *tstate)	todo		
+Python/import.c	3247	3292	init_importlib	init_importlib(PyThreadState *tstate, PyObject *sysmod)	todo		
+Python/import.c	3296	3306	init_importlib_external	init_importlib_external(PyInterpreterState *interp)	todo		
+Python/import.c	3309	3313	_PyImport_GetImportlibLoader	_PyImport_GetImportlibLoader(PyInterpreterState *interp, const char *loader_name)	todo		
+Python/import.c	3316	3328	_PyImport_GetImportlibExternalLoader	_PyImport_GetImportlibExternalLoader(PyInterpreterState *interp, const char *loader_name)	todo		
+Python/import.c	3331	3343	_PyImport_BlessMyLoader	_PyImport_BlessMyLoader(PyInterpreterState *interp, PyObject *module_globals)	todo		
+Python/import.c	3346	3349	_PyImport_ImportlibModuleRepr	_PyImport_ImportlibModuleRepr(PyInterpreterState *interp, PyObject *m)	todo		
+Python/import.c	3363	3412	get_path_importer	get_path_importer(PyThreadState *tstate, PyObject *path_importer_cache, PyObject *path_hooks, PyObject *p)	todo		
+Python/import.c	3415	3431	PyImport_GetImporter	PyImport_GetImporter(PyObject *path)	todo		
+Python/import.c	3439	3448	_PyImport_InitDefaultImportFunc	_PyImport_InitDefaultImportFunc(PyInterpreterState *interp)	todo		
+Python/import.c	3451	3454	_PyImport_IsDefaultImportFunc	_PyImport_IsDefaultImportFunc(PyInterpreterState *interp, PyObject *func)	todo		
+Python/import.c	3461	3472	PyImport_ImportModule	PyImport_ImportModule(const char *name)	todo		
+Python/import.c	3485	3494	PyImport_ImportModuleNoBlock	PyImport_ImportModuleNoBlock(const char *name)	todo		
+Python/import.c	3500	3563	remove_importlib_frames	remove_importlib_frames(PyThreadState *tstate)	todo		
+Python/import.c	3567	3715	resolve_name	resolve_name(PyThreadState *tstate, PyObject *name, PyObject *globals, int level)	todo		
+Python/import.c	3718	3796	import_find_and_load	import_find_and_load(PyThreadState *tstate, PyObject *abs_name)	todo		
+Python/import.c	3799	3962	PyImport_ImportModuleLevelObject	PyImport_ImportModuleLevelObject(PyObject *name, PyObject *globals, PyObject *locals, PyObject *fromlist, int level)	todo		
+Python/import.c	3965	3976	PyImport_ImportModuleLevel	PyImport_ImportModuleLevel(const char *name, PyObject *globals, PyObject *locals, PyObject *fromlist, int level)	todo		
+Python/import.c	3983	4001	PyImport_ReloadModule	PyImport_ReloadModule(PyObject *m)	todo		
+Python/import.c	4014	4085	PyImport_Import	PyImport_Import(PyObject *module_name)	todo		
+Python/import.c	4093	4102	_PyImport_Init	_PyImport_Init(void)	todo		
+Python/import.c	4105	4114	_PyImport_Fini	_PyImport_Fini(void)	todo		
+Python/import.c	4117	4125	_PyImport_Fini2	_PyImport_Fini2(void)	todo		
+Python/import.c	4133	4146	_PyImport_InitCore	_PyImport_InitCore(PyThreadState *tstate, PyObject *sysmod, int importlib)	todo		
+Python/import.c	4153	4158	_PyImport_IsInitialized	_PyImport_IsInitialized(PyInterpreterState *interp)	todo		
+Python/import.c	4162	4170	_PyImport_ClearCore	_PyImport_ClearCore(PyInterpreterState *interp)	todo		
+Python/import.c	4173	4190	_PyImport_FiniCore	_PyImport_FiniCore(PyInterpreterState *interp)	todo		
+Python/import.c	4198	4231	init_zipimport	init_zipimport(PyThreadState *tstate, int verbose)	todo		
+Python/import.c	4234	4251	_PyImport_InitExternal	_PyImport_InitExternal(PyThreadState *tstate)	todo		
+Python/import.c	4254	4268	_PyImport_FiniExternal	_PyImport_FiniExternal(PyInterpreterState *interp)	todo		
+Python/import.c	4276	4285	PyImport_ImportModuleAttr	PyImport_ImportModuleAttr(PyObject *modname, PyObject *attrname)	todo		
+Python/import.c	4288	4303	PyImport_ImportModuleAttrString	PyImport_ImportModuleAttrString(const char *modname, const char *attrname)	todo		
+Python/import.c	4319	4324	_imp_lock_held_impl	_imp_lock_held_impl(PyObject *module) /*[clinic end generated code: output=8b89384b5e1963fc input=9b088f9b217d9bdf]*/	todo		
+Python/import.c	4337	4343	_imp_acquire_lock_impl	_imp_acquire_lock_impl(PyObject *module) /*[clinic end generated code: output=1aff58cb0ee1b026 input=60e9c1b4ab471ead]*/	todo		
+Python/import.c	4354	4365	_imp_release_lock_impl	_imp_release_lock_impl(PyObject *module) /*[clinic end generated code: output=7faab6d0be178b0a input=934fb11516dd778b]*/	todo		
+Python/import.c	4403	4424	_imp_create_builtin	_imp_create_builtin(PyObject *module, PyObject *spec) /*[clinic end generated code: output=ace7ff22271e6f39 input=37f966f890384e47]*/	todo		
+Python/import.c	4434	4462	_imp_extension_suffixes_impl	_imp_extension_suffixes_impl(PyObject *module) /*[clinic end generated code: output=0bf346e25a8f0cd3 input=ecdeeecfcb6f839e]*/	todo		
+Python/import.c	4474	4487	_imp_init_frozen_impl	_imp_init_frozen_impl(PyObject *module, PyObject *name) /*[clinic end generated code: output=fc0511ed869fd69c input=13019adfc04f3fb3]*/	todo		
+Python/import.c	4509	4548	_imp_find_frozen_impl	_imp_find_frozen_impl(PyObject *module, PyObject *name, int withdata) /*[clinic end generated code: output=8c1c3c7f925397a5 input=22a8847c201542fd]*/	todo		
+Python/import.c	4561	4601	_imp_get_frozen_object_impl	_imp_get_frozen_object_impl(PyObject *module, PyObject *name, PyObject *dataobj) /*[clinic end generated code: output=54368a673a35e745 input=034bdb88f6460b7b]*/	todo		
+Python/import.c	4613	4623	_imp_is_frozen_package_impl	_imp_is_frozen_package_impl(PyObject *module, PyObject *name) /*[clinic end generated code: output=e70cbdb45784a1c9 input=81b6cdecd080fbb8]*/	todo		
+Python/import.c	4635	4639	_imp_is_builtin_impl	_imp_is_builtin_impl(PyObject *module, PyObject *name) /*[clinic end generated code: output=3bfd1162e2d3be82 input=86befdac021dd1c7]*/	todo		
+Python/import.c	4651	4660	_imp_is_frozen_impl	_imp_is_frozen_impl(PyObject *module, PyObject *name) /*[clinic end generated code: output=01f408f5ec0f2577 input=7301dbca1897d66b]*/	todo		
+Python/import.c	4669	4673	_imp__frozen_module_names_impl	_imp__frozen_module_names_impl(PyObject *module) /*[clinic end generated code: output=80609ef6256310a8 input=76237fbfa94460d2]*/	todo		
+Python/import.c	4688	4694	_imp__override_frozen_modules_for_tests_impl	_imp__override_frozen_modules_for_tests_impl(PyObject *module, int override) /*[clinic end generated code: output=36d5cb1594160811 input=8f1f95a3ef21aec3]*/	todo		
+Python/import.c	4708	4729	_imp__override_multi_interp_extensions_check_impl	_imp__override_multi_interp_extensions_check_impl(PyObject *module, int override) /*[clinic end generated code: output=3ff043af52bbf280 input=e086a2ea181f92ae]*/	todo		
+Python/import.c	4744	4825	_imp_create_dynamic_impl	_imp_create_dynamic_impl(PyObject *module, PyObject *spec, PyObject *file) /*[clinic end generated code: output=83249b827a4fde77 input=c31b954f4cf4e09d]*/	todo		
+Python/import.c	4837	4841	_imp_exec_dynamic_impl	_imp_exec_dynamic_impl(PyObject *module, PyObject *mod) /*[clinic end generated code: output=f5720ac7b465877d input=9fdbfcb250280d3a]*/	todo		
+Python/import.c	4856	4860	_imp_exec_builtin_impl	_imp_exec_builtin_impl(PyObject *module, PyObject *mod) /*[clinic end generated code: output=0262447b240c038e input=7beed5a2f12a60ca]*/	todo		
+Python/import.c	4870	4888	_imp_source_hash_impl	_imp_source_hash_impl(PyObject *module, long key, Py_buffer *source) /*[clinic end generated code: output=edb292448cf399ea input=9aaad1e590089789]*/	todo		
+Python/import.c	4919	4934	imp_module_exec	imp_module_exec(PyObject *module)	todo		
+Python/import.c	4954	4957	PyInit__imp	PyInit__imp(void)	todo		

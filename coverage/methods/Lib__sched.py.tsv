@@ -1,0 +1,8 @@
+file	line	endline	name	signature	status	entry	note
+Lib/sched.py	53	60	scheduler.__init__	__init__(self, timefunc=_time, delayfunc=time.sleep)	todo		
+Lib/sched.py	62	76	scheduler.enterabs	enterabs(self, time, priority, action, argument=(), kwargs=_sentinel)	todo		
+Lib/sched.py	78	85	scheduler.enter	enter(self, delay, priority, action, argument=(), kwargs=_sentinel)	todo		
+Lib/sched.py	87	96	scheduler.cancel	cancel(self, event)	todo		
+Lib/sched.py	98	101	scheduler.empty	empty(self)	todo		
+Lib/sched.py	103	152	scheduler.run	run(self, blocking=True)	todo		
+Lib/sched.py	155	167	scheduler.queue	queue(self)	todo		

@@ -1,0 +1,5 @@
+file	line	endline	name	signature	status	entry	note
+Python/object_stack.c	12	27	_PyObjectStackChunk_New	_PyObjectStackChunk_New(void)	todo		
+Python/object_stack.c	30	34	_PyObjectStackChunk_Free	_PyObjectStackChunk_Free(_PyObjectStackChunk *buf)	todo		
+Python/object_stack.c	37	45	_PyObjectStack_Clear	_PyObjectStack_Clear(_PyObjectStack *queue)	todo		
+Python/object_stack.c	48	66	_PyObjectStack_Merge	_PyObjectStack_Merge(_PyObjectStack *dst, _PyObjectStack *src)	todo		

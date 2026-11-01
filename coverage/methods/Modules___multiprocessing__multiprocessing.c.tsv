@@ -1,0 +1,8 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_multiprocessing/multiprocessing.c	41	73	_PyMp_SetError	_PyMp_SetError(PyObject *Type, int num)	todo		
+Modules/_multiprocessing/multiprocessing.c	85	97	_multiprocessing_closesocket_impl	_multiprocessing_closesocket_impl(PyObject *module, HANDLE handle) /*[clinic end generated code: output=214f359f900966f4 input=8a20706dd386c6cc]*/	todo		
+Modules/_multiprocessing/multiprocessing.c	109	129	_multiprocessing_recv_impl	_multiprocessing_recv_impl(PyObject *module, HANDLE handle, int size) /*[clinic end generated code: output=92322781ba9ff598 input=6a5b0834372cee5b]*/	todo		
+Modules/_multiprocessing/multiprocessing.c	141	155	_multiprocessing_send_impl	_multiprocessing_send_impl(PyObject *module, HANDLE handle, Py_buffer *buf) /*[clinic end generated code: output=52d7df0519c596cb input=41dce742f98d2210]*/	todo		
+Modules/_multiprocessing/multiprocessing.c	168	172	_multiprocessing_sem_unlink_impl	_multiprocessing_sem_unlink_impl(PyObject *module, const char *name) /*[clinic end generated code: output=fcbfeb1ed255e647 input=bf939aff9564f1d5]*/	todo		
+Modules/_multiprocessing/multiprocessing.c	196	275	multiprocessing_exec	multiprocessing_exec(PyObject *module)	todo		
+Modules/_multiprocessing/multiprocessing.c	293	296	PyInit__multiprocessing	PyInit__multiprocessing(void)	todo		

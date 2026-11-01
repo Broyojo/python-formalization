@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Lib/encodings/iso2022_jp_ext.py	30	39	getregentry	getregentry()	todo		

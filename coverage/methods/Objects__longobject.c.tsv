@@ -1,0 +1,168 @@
+file	line	endline	name	signature	status	entry	note
+Objects/longobject.c	44	48	_Py_DECREF_INT	_Py_DECREF_INT(PyLongObject *op)	todo		
+Objects/longobject.c	51	56	is_medium_int	is_medium_int(stwodigits x)	todo		
+Objects/longobject.c	59	63	get_small_int	get_small_int(sdigit ival)	todo		
+Objects/longobject.c	66	76	maybe_small_long	maybe_small_long(PyLongObject *v)	todo		
+Objects/longobject.c	124	140	long_normalize	long_normalize(PyLongObject *v)	todo		
+Objects/longobject.c	157	192	long_alloc	long_alloc(Py_ssize_t size)	todo		
+Objects/longobject.c	195	198	_PyLong_New	_PyLong_New(Py_ssize_t size)	todo		
+Objects/longobject.c	201	214	_PyLong_FromDigits	_PyLong_FromDigits(int negative, Py_ssize_t digit_count, digit *digits)	todo		
+Objects/longobject.c	217	243	_PyLong_Copy	_PyLong_Copy(PyLongObject *src)	todo		
+Objects/longobject.c	246	264	_PyLong_FromMedium	_PyLong_FromMedium(sdigit x)	todo		
+Objects/longobject.c	267	303	_PyLong_FromLarge	_PyLong_FromLarge(stwodigits ival)	todo		
+Objects/longobject.c	307	317	_PyLong_FromSTwoDigits	_PyLong_FromSTwoDigits(stwodigits x)	todo		
+Objects/longobject.c	321	334	Py_LOCAL_INLINE	Py_LOCAL_INLINE(void) _PyLong_Negate(PyLongObject **x_p)	todo		
+Objects/longobject.c	373	376	PyLong_FromLong	PyLong_FromLong(long ival)	todo		
+Objects/longobject.c	411	414	PyLong_FromUnsignedLong	PyLong_FromUnsignedLong(unsigned long ival)	todo		
+Objects/longobject.c	419	422	PyLong_FromUnsignedLongLong	PyLong_FromUnsignedLongLong(unsigned long long ival)	todo		
+Objects/longobject.c	427	430	PyLong_FromSize_t	PyLong_FromSize_t(size_t ival)	todo		
+Objects/longobject.c	435	487	PyLong_FromDouble	PyLong_FromDouble(double dval)	todo		
+Objects/longobject.c	512	587	PyLong_AsLongAndOverflow	PyLong_AsLongAndOverflow(PyObject *vv, int *overflow)	todo		
+Objects/longobject.c	593	604	PyLong_AsLong	PyLong_AsLong(PyObject *obj)	todo		
+Objects/longobject.c	610	622	PyLong_AsInt	PyLong_AsInt(PyObject *obj)	todo		
+Objects/longobject.c	628	671	PyLong_AsSsize_t	PyLong_AsSsize_t(PyObject *vv) {	todo		
+Objects/longobject.c	677	725	PyLong_AsUnsignedLong	PyLong_AsUnsignedLong(PyObject *vv)	todo		
+Objects/longobject.c	731	767	PyLong_AsSize_t	PyLong_AsSize_t(PyObject *vv)	todo		
+Objects/longobject.c	773	798	_PyLong_AsUnsignedLongMask	_PyLong_AsUnsignedLongMask(PyObject *vv)	todo		
+Objects/longobject.c	801	822	PyLong_AsUnsignedLongMask	PyLong_AsUnsignedLongMask(PyObject *op)	todo		
+Objects/longobject.c	825	833	PyLong_IsPositive	PyLong_IsPositive(PyObject *obj)	todo		
+Objects/longobject.c	836	844	PyLong_IsNegative	PyLong_IsNegative(PyObject *obj)	todo		
+Objects/longobject.c	847	855	PyLong_IsZero	PyLong_IsZero(PyObject *obj)	todo		
+Objects/longobject.c	858	868	long_sign	long_sign(PyObject *vv)	todo		
+Objects/longobject.c	871	874	_PyLong_Sign	_PyLong_Sign(PyObject *vv)	todo		
+Objects/longobject.c	877	886	PyLong_GetSign	PyLong_GetSign(PyObject *vv, int *sign)	todo		
+Objects/longobject.c	889	896	bit_length_digit	bit_length_digit(digit x)	todo		
+Objects/longobject.c	899	920	_PyLong_NumBits	_PyLong_NumBits(PyObject *vv)	todo		
+Objects/longobject.c	923	1028	_PyLong_FromByteArray	_PyLong_FromByteArray(const unsigned char* bytes, size_t n, int little_endian, int is_signed)	modelled	mathint-from-bytes-value	
+Objects/longobject.c	1031	1176	_PyLong_AsByteArray	_PyLong_AsByteArray(PyLongObject* v, unsigned char* bytes, size_t n, int little_endian, int is_signed, int with_exceptions)	modelled	mathint-to-bytes-exact	
+Objects/longobject.c	1180	1189	_fits_in_n_bits	_fits_in_n_bits(Py_ssize_t v, Py_ssize_t n)	todo		
+Objects/longobject.c	1192	1201	_resolve_endianness	_resolve_endianness(int *endianness)	todo		
+Objects/longobject.c	1204	1385	PyLong_AsNativeBytes	PyLong_AsNativeBytes(PyObject* vv, void* buffer, Py_ssize_t n, int flags)	todo		
+Objects/longobject.c	1389	1407	PyLong_FromNativeBytes	PyLong_FromNativeBytes(const void* buffer, size_t n, int flags)	todo		
+Objects/longobject.c	1411	1424	PyLong_FromUnsignedNativeBytes	PyLong_FromUnsignedNativeBytes(const void* buffer, size_t n, int flags)	todo		
+Objects/longobject.c	1430	1442	PyLong_FromVoidPtr	PyLong_FromVoidPtr(void *p)	todo		
+Objects/longobject.c	1447	1477	PyLong_AsVoidPtr	PyLong_AsVoidPtr(PyObject *vv)	todo		
+Objects/longobject.c	1488	1491	PyLong_FromLongLong	PyLong_FromLongLong(long long ival)	todo		
+Objects/longobject.c	1496	1499	PyLong_FromSsize_t	PyLong_FromSsize_t(Py_ssize_t ival)	todo		
+Objects/longobject.c	1505	1544	PyLong_AsLongLong	PyLong_AsLongLong(PyObject *vv)	todo		
+Objects/longobject.c	1550	1591	PyLong_AsUnsignedLongLong	PyLong_AsUnsignedLongLong(PyObject *vv)	todo		
+Objects/longobject.c	1597	1623	_PyLong_AsUnsignedLongLongMask	_PyLong_AsUnsignedLongLongMask(PyObject *vv)	todo		
+Objects/longobject.c	1626	1647	PyLong_AsUnsignedLongLongMask	PyLong_AsUnsignedLongLongMask(PyObject *op)	todo		
+Objects/longobject.c	1660	1735	PyLong_AsLongLongAndOverflow	PyLong_AsLongLongAndOverflow(PyObject *vv, int *overflow)	todo		
+Objects/longobject.c	1779	1798	v_iadd	v_iadd(digit *x, Py_ssize_t m, digit *y, Py_ssize_t n)	todo		
+Objects/longobject.c	1805	1824	v_isub	v_isub(digit *x, Py_ssize_t m, digit *y, Py_ssize_t n)	todo		
+Objects/longobject.c	1830	1842	v_lshift	v_lshift(digit *z, digit *a, Py_ssize_t m, int d)	todo		
+Objects/longobject.c	1848	1861	v_rshift	v_rshift(digit *z, digit *a, Py_ssize_t m, int d)	todo		
+Objects/longobject.c	1885	1899	inplace_divrem1	inplace_divrem1(digit *pout, digit *pin, Py_ssize_t size, digit n)	todo		
+Objects/longobject.c	1907	1918	divrem1	divrem1(PyLongObject *a, digit n, digit *prem)	todo		
+Objects/longobject.c	1924	1932	inplace_rem1	inplace_rem1(digit *pin, Py_ssize_t size, digit n)	todo		
+Objects/longobject.c	1939	1947	rem1	rem1(PyLongObject *a, digit n)	todo		
+Objects/longobject.c	1952	2012	pylong_int_to_decimal_string	pylong_int_to_decimal_string(PyObject *aa, PyObject **p_output, _PyUnicodeWriter *writer, _PyBytesWriter *bytes_writer, char **bytes_str)	todo		
+Objects/longobject.c	2020	2240	long_to_decimal_string_internal	long_to_decimal_string_internal(PyObject *aa, PyObject **p_output, _PyUnicodeWriter *writer, _PyBytesWriter *bytes_writer, char **bytes_str)	todo		
+Objects/longobject.c	2243	2249	long_to_decimal_string	long_to_decimal_string(PyObject *aa)	todo		
+Objects/longobject.c	2257	2419	long_format_binary	long_format_binary(PyObject *aa, int base, int alternate, PyObject **p_output, _PyUnicodeWriter *writer, _PyBytesWriter *bytes_writer, char **bytes_str)	todo		
+Objects/longobject.c	2422	2433	_PyLong_Format	_PyLong_Format(PyObject *obj, int base)	todo		
+Objects/longobject.c	2436	2446	_PyLong_FormatWriter	_PyLong_FormatWriter(_PyUnicodeWriter *writer, PyObject *obj, int base, int alternate)	todo		
+Objects/longobject.c	2449	2466	_PyLong_FormatBytesWriter	_PyLong_FormatBytesWriter(_PyBytesWriter *writer, char *str, PyObject *obj, int base, int alternate)	todo		
+Objects/longobject.c	2508	2571	long_from_binary_base	long_from_binary_base(const char *start, const char *end, Py_ssize_t digits, int base, PyLongObject **res)	todo		
+Objects/longobject.c	2576	2604	pylong_int_from_string	pylong_int_from_string(const char *start, const char *end, PyLongObject **res)	todo		
+Objects/longobject.c	2748	2858	long_from_non_binary_base	long_from_non_binary_base(const char *start, const char *end, Py_ssize_t digits, int base, PyLongObject **res)	todo		
+Objects/longobject.c	2880	2962	long_from_string_base	long_from_string_base(const char **str, int base, PyLongObject **res)	todo		
+Objects/longobject.c	2973	3076	PyLong_FromString	PyLong_FromString(const char *str, char **pend, int base)	todo		
+Objects/longobject.c	3084	3101	_PyLong_FromBytes	_PyLong_FromBytes(const char *s, Py_ssize_t len, int base)	todo		
+Objects/longobject.c	3104	3130	PyLong_FromUnicodeObject	PyLong_FromUnicodeObject(PyObject *u, int base)	todo		
+Objects/longobject.c	3135	3194	long_divrem	long_divrem(PyLongObject *a, PyLongObject *b, PyLongObject **pdiv, PyLongObject **prem)	todo		
+Objects/longobject.c	3199	3236	long_rem	long_rem(PyLongObject *a, PyLongObject *b, PyLongObject **prem)	todo		
+Objects/longobject.c	3242	3370	x_divrem	x_divrem(PyLongObject *v1, PyLongObject *w1, PyLongObject **prem)	todo		
+Objects/longobject.c	3385	3478	_PyLong_Frexp	_PyLong_Frexp(PyLongObject *a, int64_t *e)	todo		
+Objects/longobject.c	3484	3513	PyLong_AsDouble	PyLong_AsDouble(PyObject *v)	todo		
+Objects/longobject.c	3522	3540	long_compare	long_compare(PyLongObject *a, PyLongObject *b)	modelled	listsort-long-compare	
+Objects/longobject.c	3543	3552	long_richcompare	long_richcompare(PyObject *self, PyObject *other, int op)	modelled	listsort-long-compare	
+Objects/longobject.c	3555	3568	_PyLong_ExactDealloc	_PyLong_ExactDealloc(PyObject *self)	todo		
+Objects/longobject.c	3571	3588	long_dealloc	long_dealloc(PyObject *self)	todo		
+Objects/longobject.c	3591	3644	long_hash	long_hash(PyObject *obj)	todo		
+Objects/longobject.c	3650	3679	x_add	x_add(PyLongObject *a, PyLongObject *b)	todo		
+Objects/longobject.c	3684	3735	x_sub	x_sub(PyLongObject *a, PyLongObject *b)	todo		
+Objects/longobject.c	3738	3768	long_add	long_add(PyLongObject *a, PyLongObject *b)	todo		
+Objects/longobject.c	3771	3774	_PyLong_Add	_PyLong_Add(PyLongObject *a, PyLongObject *b)	todo		
+Objects/longobject.c	3777	3781	long_add_method	long_add_method(PyObject *a, PyObject *b)	todo		
+Objects/longobject.c	3785	3811	long_sub	long_sub(PyLongObject *a, PyLongObject *b)	todo		
+Objects/longobject.c	3814	3817	_PyLong_Subtract	_PyLong_Subtract(PyLongObject *a, PyLongObject *b)	todo		
+Objects/longobject.c	3820	3824	long_sub_method	long_sub_method(PyObject *a, PyObject *b)	todo		
+Objects/longobject.c	3831	3926	x_mul	x_mul(PyLongObject *a, PyLongObject *b)	todo		
+Objects/longobject.c	3936	3961	kmul_split	kmul_split(PyLongObject *n, Py_ssize_t size, PyLongObject **high, PyLongObject **low)	todo		
+Objects/longobject.c	3970	4132	k_mul	k_mul(PyLongObject *a, PyLongObject *b)	todo		
+Objects/longobject.c	4188	4240	k_lopsided_mul	k_lopsided_mul(PyLongObject *a, PyLongObject *b)	todo		
+Objects/longobject.c	4244	4258	long_mul	long_mul(PyLongObject *a, PyLongObject *b)	todo		
+Objects/longobject.c	4261	4264	_PyLong_Multiply	_PyLong_Multiply(PyLongObject *a, PyLongObject *b)	todo		
+Objects/longobject.c	4267	4271	long_mul_method	long_mul_method(PyObject *a, PyObject *b)	todo		
+Objects/longobject.c	4275	4293	fast_mod	fast_mod(PyLongObject *a, PyLongObject *b)	modelled	mathint-divmod-floor	
+Objects/longobject.c	4297	4315	fast_floor_div	fast_floor_div(PyLongObject *a, PyLongObject *b)	modelled	mathint-divmod-floor	
+Objects/longobject.c	4320	4354	pylong_int_divmod	pylong_int_divmod(PyLongObject *v, PyLongObject *w, PyLongObject **pdiv, PyLongObject **pmod)	todo		
+Objects/longobject.c	4379	4450	l_divmod	l_divmod(PyLongObject *v, PyLongObject *w, PyLongObject **pdiv, PyLongObject **pmod)	modelled	mathint-divmod-floor	
+Objects/longobject.c	4457	4480	l_mod	l_mod(PyLongObject *v, PyLongObject *w, PyLongObject **pmod)	todo		
+Objects/longobject.c	4483	4496	long_div	long_div(PyObject *a, PyObject *b)	todo		
+Objects/longobject.c	4504	4758	long_true_divide	long_true_divide(PyObject *v, PyObject *w)	todo		
+Objects/longobject.c	4761	4770	long_mod	long_mod(PyObject *a, PyObject *b)	todo		
+Objects/longobject.c	4773	4793	long_divmod	long_divmod(PyObject *a, PyObject *b)	todo		
+Objects/longobject.c	4817	4873	long_invmod	long_invmod(PyLongObject *a, PyLongObject *n)	modelled	mathint-pow-neg-exp-inverse	
+Objects/longobject.c	4878	5156	long_pow	long_pow(PyObject *v, PyObject *w, PyObject *x)	modelled	mathint-pow-neg-exp-inverse	
+Objects/longobject.c	5159	5174	long_invert	long_invert(PyObject *self)	todo		
+Objects/longobject.c	5177	5188	long_neg	long_neg(PyLongObject *v)	todo		
+Objects/longobject.c	5191	5194	long_neg_method	long_neg_method(PyObject *v)	todo		
+Objects/longobject.c	5197	5203	long_abs	long_abs(PyLongObject *v)	todo		
+Objects/longobject.c	5206	5209	long_abs_method	long_abs_method(PyObject *v)	todo		
+Objects/longobject.c	5212	5215	long_bool	long_bool(PyObject *v)	todo		
+Objects/longobject.c	5222	5305	long_rshift1	long_rshift1(PyLongObject *a, Py_ssize_t wordshift, digit remshift)	todo		
+Objects/longobject.c	5308	5334	long_rshift	long_rshift(PyObject *a, PyObject *b)	todo		
+Objects/longobject.c	5338	5361	_PyLong_Rshift	_PyLong_Rshift(PyObject *a, int64_t shiftby)	todo		
+Objects/longobject.c	5364	5402	long_lshift1	long_lshift1(PyLongObject *a, Py_ssize_t wordshift, digit remshift)	todo		
+Objects/longobject.c	5406	5429	long_lshift_method	long_lshift_method(PyObject *aa, PyObject *bb)	todo		
+Objects/longobject.c	5433	5450	long_lshift_int64	long_lshift_int64(PyLongObject *a, int64_t shiftby)	todo		
+Objects/longobject.c	5453	5456	_PyLong_Lshift	_PyLong_Lshift(PyObject *a, int64_t shiftby)	todo		
+Objects/longobject.c	5464	5474	v_complement	v_complement(digit *z, digit *a, Py_ssize_t m)	todo		
+Objects/longobject.c	5479	5597	long_bitwise	long_bitwise(PyLongObject *a, char op, /* '&', '|', '^' */ PyLongObject *b)	todo		
+Objects/longobject.c	5600	5609	long_and	long_and(PyObject *a, PyObject *b)	todo		
+Objects/longobject.c	5612	5621	long_xor	long_xor(PyObject *a, PyObject *b)	todo		
+Objects/longobject.c	5624	5633	long_or	long_or(PyObject *a, PyObject *b)	todo		
+Objects/longobject.c	5636	5644	long_long	long_long(PyObject *v)	todo		
+Objects/longobject.c	5647	5852	_PyLong_GCD	_PyLong_GCD(PyObject *aarg, PyObject *barg)	modelled	mathint-gcd-general,mathint-gcd-small	
+Objects/longobject.c	5855	5862	long_float	long_float(PyObject *v)	todo		
+Objects/longobject.c	5876	5919	long_new_impl	long_new_impl(PyTypeObject *type, PyObject *x, PyObject *obase) /*[clinic end generated code: output=e47cfe777ab0f24c input=81c98f418af9eb6f]*/	todo		
+Objects/longobject.c	5927	5955	long_subtype_new	long_subtype_new(PyTypeObject *type, PyObject *x, PyObject *obase)	todo		
+Objects/longobject.c	5962	5966	int___getnewargs___impl	int___getnewargs___impl(PyObject *self) /*[clinic end generated code: output=839a49de3f00b61b input=5904770ab1fb8c75]*/	todo		
+Objects/longobject.c	5969	5972	long_get0	long_get0(PyObject *Py_UNUSED(self), void *Py_UNUSED(context))	todo		
+Objects/longobject.c	5975	5978	long_get1	long_get1(PyObject *Py_UNUSED(self), void *Py_UNUSED(ignored))	todo		
+Objects/longobject.c	5990	6006	int___format___impl	int___format___impl(PyObject *self, PyObject *format_spec) /*[clinic end generated code: output=b4929dee9ae18689 input=d5e1254a47e8d1dc]*/	todo		
+Objects/longobject.c	6014	6096	_PyLong_DivmodNear	_PyLong_DivmodNear(PyObject *a, PyObject *b)	modelled	mathint-round-half-even	
+Objects/longobject.c	6110	6168	int___round___impl	int___round___impl(PyObject *self, PyObject *o_ndigits) /*[clinic end generated code: output=954fda6b18875998 input=30c2aec788263144]*/	modelled	mathint-round-half-even	
+Objects/longobject.c	6177	6184	int___sizeof___impl	int___sizeof___impl(PyObject *self) /*[clinic end generated code: output=3303f008eaa6a0a5 input=9b51620c76fc4507]*/	todo		
+Objects/longobject.c	6198	6205	int_bit_length_impl	int_bit_length_impl(PyObject *self) /*[clinic end generated code: output=fc1977c9353d6a59 input=e4eb7a587e849a32]*/	todo		
+Objects/longobject.c	6208	6214	popcount_digit	popcount_digit(digit d)	todo		
+Objects/longobject.c	6230	6245	int_bit_count_impl	int_bit_count_impl(PyObject *self) /*[clinic end generated code: output=2e571970daf1e5c3 input=7e0adef8e8ccdf2e]*/	todo		
+Objects/longobject.c	6263	6274	int_as_integer_ratio_impl	int_as_integer_ratio_impl(PyObject *self) /*[clinic end generated code: output=e60803ae1cc8621a input=384ff1766634bec2]*/	todo		
+Objects/longobject.c	6300	6337	int_to_bytes_impl	int_to_bytes_impl(PyObject *self, Py_ssize_t length, PyObject *byteorder, int is_signed) /*[clinic end generated code: output=89c801df114050a3 input=661d7e615a4f132d]*/	modelled	mathint-bytes-arg-errors,mathint-bytes-roundtrip,mathint-to-bytes-exact	
+Objects/longobject.c	6364	6397	int_from_bytes_impl	int_from_bytes_impl(PyTypeObject *type, PyObject *bytes_obj, PyObject *byteorder, int is_signed) /*[clinic end generated code: output=efc5d68e31f9314f input=95801e50b942e164]*/	modelled	mathint-bytes-arg-errors,mathint-bytes-roundtrip,mathint-from-bytes-value	
+Objects/longobject.c	6400	6403	long_long_meth	long_long_meth(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/longobject.c	6406	6409	long_long_getter	long_long_getter(PyObject *self, void *Py_UNUSED(ignored))	todo		
+Objects/longobject.c	6418	6422	int_is_integer_impl	int_is_integer_impl(PyObject *self) /*[clinic end generated code: output=90f8e794ce5430ef input=7e41c4d4416e05f2]*/	todo		
+Objects/longobject.c	6425	6445	long_vectorcall	long_vectorcall(PyObject *type, PyObject * const*args, size_t nargsf, PyObject *kwnames)	todo		
+Objects/longobject.c	6613	6640	PyLong_GetInfo	PyLong_GetInfo(void)	todo		
+Objects/longobject.c	6646	6656	_PyLong_InitTypes	_PyLong_InitTypes(PyInterpreterState *interp)	todo		
+Objects/longobject.c	6660	6663	_PyLong_FiniTypes	_PyLong_FiniTypes(PyInterpreterState *interp)	todo		
+Objects/longobject.c	6668	6670	PyUnstable_Long_IsCompact	PyUnstable_Long_IsCompact(const PyLongObject* op) {	todo		
+Objects/longobject.c	6675	6677	PyUnstable_Long_CompactValue	PyUnstable_Long_CompactValue(const PyLongObject* op) {	todo		
+Objects/longobject.c	6680	6683	PyLong_FromInt32	PyObject* PyLong_FromInt32(int32_t value)	todo		
+Objects/longobject.c	6685	6688	PyLong_FromUInt32	PyObject* PyLong_FromUInt32(uint32_t value)	todo		
+Objects/longobject.c	6690	6693	PyLong_FromInt64	PyObject* PyLong_FromInt64(int64_t value)	todo		
+Objects/longobject.c	6695	6698	PyLong_FromUInt64	PyObject* PyLong_FromUInt64(uint64_t value)	todo		
+Objects/longobject.c	6716	6719	PyLong_AsInt32	int PyLong_AsInt32(PyObject *obj, int32_t *value)	todo		
+Objects/longobject.c	6721	6724	PyLong_AsInt64	int PyLong_AsInt64(PyObject *obj, int64_t *value)	todo		
+Objects/longobject.c	6744	6747	PyLong_AsUInt32	int PyLong_AsUInt32(PyObject *obj, uint32_t *value)	todo		
+Objects/longobject.c	6749	6752	PyLong_AsUInt64	int PyLong_AsUInt64(PyObject *obj, uint64_t *value)	todo		
+Objects/longobject.c	6764	6767	PyLong_GetNativeLayout	PyLong_GetNativeLayout(void)	todo		
+Objects/longobject.c	6771	6810	PyLong_Export	PyLong_Export(PyObject *obj, PyLongExport *export_long)	todo		
+Objects/longobject.c	6814	6821	PyLong_FreeExport	PyLong_FreeExport(PyLongExport *export_long)	todo		
+Objects/longobject.c	6827	6849	PyLongWriter_Create	PyLongWriter_Create(int negative, Py_ssize_t ndigits, void **digits)	todo		
+Objects/longobject.c	6853	6862	PyLongWriter_Discard	PyLongWriter_Discard(PyLongWriter *writer)	todo		
+Objects/longobject.c	6866	6875	PyLongWriter_Finish	PyLongWriter_Finish(PyLongWriter *writer)	todo		

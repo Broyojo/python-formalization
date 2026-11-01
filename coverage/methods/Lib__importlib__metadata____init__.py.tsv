@@ -1,0 +1,91 @@
+file	line	endline	name	signature	status	entry	note
+Lib/importlib/metadata/__init__.py	52	53	PackageNotFoundError.__str__	__str__(self)	todo		
+Lib/importlib/metadata/__init__.py	56	58	PackageNotFoundError.name	name(self)	todo		
+Lib/importlib/metadata/__init__.py	103	108	Sectioned.section_pairs	section_pairs(cls, text)	todo		
+Lib/importlib/metadata/__init__.py	111	119	Sectioned.read	read(text, filter_=None)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/importlib/metadata/__init__.py	122	123	Sectioned.valid	valid(line: str)	todo		
+Lib/importlib/metadata/__init__.py	170	171	EntryPoint.__init__	__init__(self, name: str, value: str, group: str)	todo		
+Lib/importlib/metadata/__init__.py	173	181	EntryPoint.load	load(self)	todo		
+Lib/importlib/metadata/__init__.py	184	187	EntryPoint.module	module(self)	todo		
+Lib/importlib/metadata/__init__.py	190	193	EntryPoint.attr	attr(self)	todo		
+Lib/importlib/metadata/__init__.py	196	199	EntryPoint.extras	extras(self)	todo		
+Lib/importlib/metadata/__init__.py	201	203	EntryPoint._for	_for(self, dist)	todo		
+Lib/importlib/metadata/__init__.py	205	226	EntryPoint.matches	matches(self, **params)	todo		
+Lib/importlib/metadata/__init__.py	228	229	EntryPoint._key	_key(self)	todo		
+Lib/importlib/metadata/__init__.py	231	232	EntryPoint.__lt__	__lt__(self, other)	todo		
+Lib/importlib/metadata/__init__.py	234	235	EntryPoint.__eq__	__eq__(self, other)	todo		
+Lib/importlib/metadata/__init__.py	237	238	EntryPoint.__setattr__	__setattr__(self, name, value)	todo		
+Lib/importlib/metadata/__init__.py	240	244	EntryPoint.__repr__	__repr__(self)	todo		
+Lib/importlib/metadata/__init__.py	246	247	EntryPoint.__hash__	__hash__(self)	todo		
+Lib/importlib/metadata/__init__.py	257	264	EntryPoints.__getitem__	__getitem__(self, name: str)	todo		
+Lib/importlib/metadata/__init__.py	266	271	EntryPoints.__repr__	__repr__(self)	todo		
+Lib/importlib/metadata/__init__.py	273	278	EntryPoints.select	select(self, **params)	todo		
+Lib/importlib/metadata/__init__.py	281	285	EntryPoints.names	names(self)	todo		
+Lib/importlib/metadata/__init__.py	288	292	EntryPoints.groups	groups(self)	todo		
+Lib/importlib/metadata/__init__.py	295	296	EntryPoints._from_text_for	_from_text_for(cls, text, dist)	todo		
+Lib/importlib/metadata/__init__.py	299	303	EntryPoints._from_text	_from_text(text)	todo		
+Lib/importlib/metadata/__init__.py	313	314	PackagePath.read_text	read_text(self, encoding: str='utf-8')	todo		
+Lib/importlib/metadata/__init__.py	316	317	PackagePath.read_binary	read_binary(self)	todo		
+Lib/importlib/metadata/__init__.py	319	321	PackagePath.locate	locate(self)	todo		
+Lib/importlib/metadata/__init__.py	325	326	FileHash.__init__	__init__(self, spec: str)	todo		
+Lib/importlib/metadata/__init__.py	328	329	FileHash.__repr__	__repr__(self)	todo		
+Lib/importlib/metadata/__init__.py	334	349	DeprecatedNonAbstract.__new__	__new__(cls, *args, **kwargs)	todo		
+Lib/importlib/metadata/__init__.py	364	384	Distribution.read_text	read_text(self, filename)	todo		
+Lib/importlib/metadata/__init__.py	387	391	Distribution.locate_file	locate_file(self, path: str | os.PathLike[str])	todo		
+Lib/importlib/metadata/__init__.py	394	409	Distribution.from_name	from_name(cls, name: str)	todo		
+Lib/importlib/metadata/__init__.py	412	429	Distribution.discover	discover(cls, *, context: Optional[DistributionFinder.Context]=None, **kwargs)	todo		
+Lib/importlib/metadata/__init__.py	432	438	Distribution.at	at(path: str | os.PathLike[str])	todo		
+Lib/importlib/metadata/__init__.py	441	446	Distribution._discover_resolvers	_discover_resolvers()	todo		
+Lib/importlib/metadata/__init__.py	449	471	Distribution.metadata	metadata(self)	todo		
+Lib/importlib/metadata/__init__.py	474	476	Distribution.name	name(self)	todo		
+Lib/importlib/metadata/__init__.py	479	481	Distribution._normalized_name	_normalized_name(self)	todo		
+Lib/importlib/metadata/__init__.py	484	486	Distribution.version	version(self)	todo		
+Lib/importlib/metadata/__init__.py	489	496	Distribution.entry_points	entry_points(self)	todo		
+Lib/importlib/metadata/__init__.py	499	539	Distribution.files	files(self)	todo		
+Lib/importlib/metadata/__init__.py	541	546	Distribution._read_files_distinfo	_read_files_distinfo(self)	todo		
+Lib/importlib/metadata/__init__.py	548	574	Distribution._read_files_egginfo_installed	_read_files_egginfo_installed(self)	todo		
+Lib/importlib/metadata/__init__.py	576	589	Distribution._read_files_egginfo_sources	_read_files_egginfo_sources(self)	todo		
+Lib/importlib/metadata/__init__.py	592	595	Distribution.requires	requires(self)	todo		
+Lib/importlib/metadata/__init__.py	597	598	Distribution._read_dist_info_reqs	_read_dist_info_reqs(self)	todo		
+Lib/importlib/metadata/__init__.py	600	602	Distribution._read_egg_info_reqs	_read_egg_info_reqs(self)	todo		
+Lib/importlib/metadata/__init__.py	605	606	Distribution._deps_from_requires_text	_deps_from_requires_text(cls, source)	todo		
+Lib/importlib/metadata/__init__.py	609	641	Distribution._convert_egg_info_reqs_to_simple_reqs	_convert_egg_info_reqs_to_simple_reqs(sections)	todo		
+Lib/importlib/metadata/__init__.py	644	645	Distribution.origin	origin(self)	todo		
+Lib/importlib/metadata/__init__.py	647	651	Distribution._load_json	_load_json(self, filename)	todo		
+Lib/importlib/metadata/__init__.py	691	692	DistributionFinder.Context.__init__	__init__(self, **kwargs)	todo		
+Lib/importlib/metadata/__init__.py	695	703	DistributionFinder.Context.path	path(self)	todo		
+Lib/importlib/metadata/__init__.py	706	713	DistributionFinder.find_distributions	find_distributions(self, context=Context())	todo		
+Lib/importlib/metadata/__init__.py	733	734	FastPath.__new__	__new__(cls, root)	todo		
+Lib/importlib/metadata/__init__.py	736	737	FastPath.__init__	__init__(self, root)	todo		
+Lib/importlib/metadata/__init__.py	739	740	FastPath.joinpath	joinpath(self, child)	todo		
+Lib/importlib/metadata/__init__.py	742	747	FastPath.children	children(self)	todo		
+Lib/importlib/metadata/__init__.py	749	754	FastPath.zip_children	zip_children(self)	todo		
+Lib/importlib/metadata/__init__.py	756	757	FastPath.search	search(self, name)	todo		
+Lib/importlib/metadata/__init__.py	760	763	FastPath.mtime	mtime(self)	todo		
+Lib/importlib/metadata/__init__.py	766	767	FastPath.lookup	lookup(self, mtime)	todo		
+Lib/importlib/metadata/__init__.py	775	802	Lookup.__init__	__init__(self, path: FastPath)	todo		
+Lib/importlib/metadata/__init__.py	804	818	Lookup.search	search(self, prepared: Prepared)	todo		
+Lib/importlib/metadata/__init__.py	844	849	Prepared.__init__	__init__(self, name: Optional[str])	todo		
+Lib/importlib/metadata/__init__.py	852	856	Prepared.normalize	normalize(name)	todo		
+Lib/importlib/metadata/__init__.py	859	864	Prepared.legacy_normalize	legacy_normalize(name)	todo		
+Lib/importlib/metadata/__init__.py	866	867	Prepared.__bool__	__bool__(self)	todo		
+Lib/importlib/metadata/__init__.py	872	884	MetadataPathFinder.find_distributions	find_distributions(cls, context=DistributionFinder.Context())	todo		
+Lib/importlib/metadata/__init__.py	887	892	MetadataPathFinder._search_paths	_search_paths(cls, name, paths)	todo		
+Lib/importlib/metadata/__init__.py	895	896	MetadataPathFinder.invalidate_caches	invalidate_caches(cls)	todo		
+Lib/importlib/metadata/__init__.py	900	905	PathDistribution.__init__	__init__(self, path: SimplePath)	todo		
+Lib/importlib/metadata/__init__.py	907	917	PathDistribution.read_text	read_text(self, filename: str | os.PathLike[str])	todo		
+Lib/importlib/metadata/__init__.py	921	922	PathDistribution.locate_file	locate_file(self, path: str | os.PathLike[str])	todo		
+Lib/importlib/metadata/__init__.py	925	934	PathDistribution._normalized_name	_normalized_name(self)	todo		
+Lib/importlib/metadata/__init__.py	937	951	PathDistribution._name_from_stem	_name_from_stem(stem)	todo		
+Lib/importlib/metadata/__init__.py	954	960	distribution	distribution(distribution_name: str)	todo		
+Lib/importlib/metadata/__init__.py	963	968	distributions	distributions(**kwargs)	todo		
+Lib/importlib/metadata/__init__.py	971	977	metadata	metadata(distribution_name: str)	todo		
+Lib/importlib/metadata/__init__.py	980	987	version	version(distribution_name: str)	todo		
+Lib/importlib/metadata/__init__.py	999	1011	entry_points	entry_points(**params)	todo		
+Lib/importlib/metadata/__init__.py	1014	1020	files	files(distribution_name: str)	todo		
+Lib/importlib/metadata/__init__.py	1023	1030	requires	requires(distribution_name: str)	todo		
+Lib/importlib/metadata/__init__.py	1033	1047	packages_distributions	packages_distributions()	todo		
+Lib/importlib/metadata/__init__.py	1050	1051	_top_level_declared	_top_level_declared(dist)	todo		
+Lib/importlib/metadata/__init__.py	1054	1059	_topmost	_topmost(name: PackagePath)	todo		
+Lib/importlib/metadata/__init__.py	1062	1084	_get_toplevel_name	_get_toplevel_name(name: PackagePath)	todo		
+Lib/importlib/metadata/__init__.py	1087	1093	_top_level_inferred	_top_level_inferred(dist)	todo		

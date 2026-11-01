@@ -1,0 +1,64 @@
+file	line	endline	name	signature	status	entry	note
+Lib/asyncio/windows_events.py	55	59	_OverlappedFuture.__init__	__init__(self, ov, *, loop=None)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	61	66	_OverlappedFuture._repr_info	_repr_info(self)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	68	82	_OverlappedFuture._cancel_overlapped	_cancel_overlapped(self)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	84	86	_OverlappedFuture.cancel	cancel(self, msg=None)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	88	90	_OverlappedFuture.set_exception	set_exception(self, exception)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	92	94	_OverlappedFuture.set_result	set_result(self, result)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	100	112	_BaseWaitHandleFuture.__init__	__init__(self, ov, handle, wait_handle, *, loop=None)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	114	117	_BaseWaitHandleFuture._poll	_poll(self)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	119	127	_BaseWaitHandleFuture._repr_info	_repr_info(self)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	129	132	_BaseWaitHandleFuture._unregister_wait_cb	_unregister_wait_cb(self, fut)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	134	156	_BaseWaitHandleFuture._unregister_wait	_unregister_wait(self)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	158	160	_BaseWaitHandleFuture.cancel	cancel(self, msg=None)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	162	164	_BaseWaitHandleFuture.set_exception	set_exception(self, exception)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	166	168	_BaseWaitHandleFuture.set_result	set_result(self, result)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	176	179	_WaitCancelFuture.__init__	__init__(self, ov, event, wait_handle, *, loop=None)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	181	182	_WaitCancelFuture.cancel	cancel(self)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	184	187	_WaitCancelFuture.set_result	set_result(self, result)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	189	192	_WaitCancelFuture.set_exception	set_exception(self, exception)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	196	201	_WaitHandleFuture.__init__	__init__(self, ov, handle, wait_handle, proactor, *, loop=None)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	203	219	_WaitHandleFuture._unregister_wait_cb	_unregister_wait_cb(self, fut)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	221	244	_WaitHandleFuture._unregister_wait	_unregister_wait(self)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	252	260	PipeServer.__init__	__init__(self, address)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	262	268	PipeServer._get_unconnected_pipe	_get_unconnected_pipe(self)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	270	286	PipeServer._server_pipe_handle	_server_pipe_handle(self, first)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	288	289	PipeServer.closed	closed(self)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	291	301	PipeServer.close	close(self)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	313	316	ProactorEventLoop.__init__	__init__(self, proactor=None)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	318	321	ProactorEventLoop._run_forever_setup	_run_forever_setup(self)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	323	336	ProactorEventLoop._run_forever_cleanup	_run_forever_cleanup(self)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	338	344	ProactorEventLoop.create_pipe_connection	create_pipe_connection(self, protocol_factory, address)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	346	395	ProactorEventLoop.start_serving_pipe	start_serving_pipe(self, protocol_factory, address)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	397	414	ProactorEventLoop._make_subprocess_transport	_make_subprocess_transport(self, protocol, args, shell, stdin, stdout, stderr, bufsize, extra=None, **kwargs)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	420	428	IocpProactor.__init__	__init__(self, concurrency=INFINITE)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	430	432	IocpProactor._check_closed	_check_closed(self)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	434	439	IocpProactor.__repr__	__repr__(self)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	441	442	IocpProactor.set_loop	set_loop(self, loop)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	444	453	IocpProactor.select	select(self, timeout=None)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	455	458	IocpProactor._result	_result(self, value)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	461	469	IocpProactor.finish_socket_func	finish_socket_func(trans, key, ov)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	472	481	IocpProactor._finish_recvfrom	_finish_recvfrom(cls, trans, key, ov, *, empty_result)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	483	494	IocpProactor.recv	recv(self, conn, nbytes, flags=0)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	496	507	IocpProactor.recv_into	recv_into(self, conn, buf, flags=0)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	509	518	IocpProactor.recvfrom	recvfrom(self, conn, nbytes, flags=0)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	520	529	IocpProactor.recvfrom_into	recvfrom_into(self, conn, buf, flags=0)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	531	537	IocpProactor.sendto	sendto(self, conn, buf, flags=0, addr=None)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	539	547	IocpProactor.send	send(self, conn, buf, flags=0)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	549	575	IocpProactor.accept	accept(self, listener)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	577	606	IocpProactor.connect	connect(self, conn, address)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	608	621	IocpProactor.sendfile	sendfile(self, sock, file, offset, count)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	623	638	IocpProactor.accept_pipe	accept_pipe(self, pipe)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	640	657	IocpProactor.connect_pipe	connect_pipe(self, address)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	659	665	IocpProactor.wait_for_handle	wait_for_handle(self, handle, timeout=None)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	667	672	IocpProactor._wait_cancel	_wait_cancel(self, event, done_callback)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	674	706	IocpProactor._wait_for_handle	_wait_for_handle(self, handle, timeout, _is_cancel)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	708	713	IocpProactor._register_with_iocp	_register_with_iocp(self, obj)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	718	748	IocpProactor._register	_register(self, ov, obj, callback)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	750	758	IocpProactor._unregister	_unregister(self, ov)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	760	763	IocpProactor._get_accept_socket	_get_accept_socket(self, family)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	765	820	IocpProactor._poll	_poll(self, timeout=None)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	822	826	IocpProactor._stop_serving	_stop_serving(self, obj)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	828	873	IocpProactor.close	close(self)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	875	876	IocpProactor.__del__	__del__(self)	excluded		platform: Windows only
+Lib/asyncio/windows_events.py	881	891	_WindowsSubprocessTransport._start	_start(self, args, shell, stdin, stdout, stderr, bufsize, **kwargs)	excluded		platform: Windows only

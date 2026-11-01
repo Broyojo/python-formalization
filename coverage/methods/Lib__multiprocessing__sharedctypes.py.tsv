@@ -1,0 +1,23 @@
+file	line	endline	name	signature	status	entry	note
+Lib/multiprocessing/sharedctypes.py	39	42	_new_value	_new_value(type_)	todo		
+Lib/multiprocessing/sharedctypes.py	44	52	RawValue	RawValue(typecode_or_type, *args)	todo		
+Lib/multiprocessing/sharedctypes.py	54	68	RawArray	RawArray(typecode_or_type, size_or_initializer)	todo		
+Lib/multiprocessing/sharedctypes.py	70	82	Value	Value(typecode_or_type, *args, lock=True, ctx=None)	todo		
+Lib/multiprocessing/sharedctypes.py	84	96	Array	Array(typecode_or_type, size_or_initializer, *, lock=True, ctx=None)	todo		
+Lib/multiprocessing/sharedctypes.py	98	101	copy	copy(obj)	todo		
+Lib/multiprocessing/sharedctypes.py	103	122	synchronized	synchronized(obj, lock=None, ctx=None)	todo		
+Lib/multiprocessing/sharedctypes.py	128	133	reduce_ctype	reduce_ctype(obj)	todo		
+Lib/multiprocessing/sharedctypes.py	135	142	rebuild_ctype	rebuild_ctype(type_, wrapper, length)	todo		
+Lib/multiprocessing/sharedctypes.py	148	155	make_property	make_property(name)	todo		
+Lib/multiprocessing/sharedctypes.py	182	190	SynchronizedBase.__init__	__init__(self, obj, lock=None, ctx=None)	todo		
+Lib/multiprocessing/sharedctypes.py	192	193	SynchronizedBase.__enter__	__enter__(self)	todo		
+Lib/multiprocessing/sharedctypes.py	195	196	SynchronizedBase.__exit__	__exit__(self, *args)	todo		
+Lib/multiprocessing/sharedctypes.py	198	200	SynchronizedBase.__reduce__	__reduce__(self)	todo		
+Lib/multiprocessing/sharedctypes.py	202	203	SynchronizedBase.get_obj	get_obj(self)	todo		
+Lib/multiprocessing/sharedctypes.py	205	206	SynchronizedBase.get_lock	get_lock(self)	todo		
+Lib/multiprocessing/sharedctypes.py	208	209	SynchronizedBase.__repr__	__repr__(self)	todo		
+Lib/multiprocessing/sharedctypes.py	218	219	SynchronizedArray.__len__	__len__(self)	todo		
+Lib/multiprocessing/sharedctypes.py	221	223	SynchronizedArray.__getitem__	__getitem__(self, i)	todo		
+Lib/multiprocessing/sharedctypes.py	225	227	SynchronizedArray.__setitem__	__setitem__(self, i, value)	todo		
+Lib/multiprocessing/sharedctypes.py	229	231	SynchronizedArray.__getslice__	__getslice__(self, start, stop)	todo		
+Lib/multiprocessing/sharedctypes.py	233	235	SynchronizedArray.__setslice__	__setslice__(self, start, stop, values)	todo		

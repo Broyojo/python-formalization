@@ -1,0 +1,5 @@
+file	line	endline	name	signature	status	entry	note
+Modules/rotatingtree.c	17	29	randombits	randombits(int bits)	todo		
+Modules/rotatingtree.c	35	46	RotatingTree_Add	RotatingTree_Add(rotating_node_t **root, rotating_node_t *node)	todo		
+Modules/rotatingtree.c	52	105	RotatingTree_Get	RotatingTree_Get(rotating_node_t **root, void *key)	todo		
+Modules/rotatingtree.c	111	125	RotatingTree_Enum	RotatingTree_Enum(rotating_node_t *root, rotating_tree_enum_fn enumfn, void *arg)	todo		

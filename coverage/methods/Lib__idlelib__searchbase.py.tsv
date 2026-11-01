@@ -1,0 +1,14 @@
+file	line	endline	name	signature	status	entry	note
+Lib/idlelib/searchbase.py	33	49	SearchDialogBase.__init__	__init__(self, root, engine)	excluded		platform: GUI toolkit
+Lib/idlelib/searchbase.py	51	66	SearchDialogBase.open	open(self, text, searchphrase=None)	excluded		platform: GUI toolkit
+Lib/idlelib/searchbase.py	68	73	SearchDialogBase.close	close(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/searchbase.py	75	101	SearchDialogBase.create_widgets	create_widgets(self)	excluded		platform: GUI toolkit
+Lib/idlelib/searchbase.py	103	114	SearchDialogBase.make_entry	make_entry(self, label_text, var)	excluded		platform: GUI toolkit
+Lib/idlelib/searchbase.py	116	118	SearchDialogBase.create_entries	create_entries(self)	excluded		platform: GUI toolkit
+Lib/idlelib/searchbase.py	120	134	SearchDialogBase.make_frame	make_frame(self, labeltext=None)	excluded		platform: GUI toolkit
+Lib/idlelib/searchbase.py	136	153	SearchDialogBase.create_option_buttons	create_option_buttons(self)	excluded		platform: GUI toolkit
+Lib/idlelib/searchbase.py	155	167	SearchDialogBase.create_other_buttons	create_other_buttons(self)	excluded		platform: GUI toolkit
+Lib/idlelib/searchbase.py	169	177	SearchDialogBase.make_button	make_button(self, label, command, isdef=0)	excluded		platform: GUI toolkit
+Lib/idlelib/searchbase.py	179	185	SearchDialogBase.create_command_buttons	create_command_buttons(self)	excluded		platform: GUI toolkit
+Lib/idlelib/searchbase.py	191	200	_searchbase.__init__	__init__(self, parent)	excluded		platform: GUI toolkit
+Lib/idlelib/searchbase.py	202	202	_searchbase.default_command	default_command(self, dummy)	excluded		platform: GUI toolkit

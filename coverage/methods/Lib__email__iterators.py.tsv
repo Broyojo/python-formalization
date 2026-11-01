@@ -1,0 +1,5 @@
+file	line	endline	name	signature	status	entry	note
+Lib/email/iterators.py	19	28	walk	walk(self)	todo		
+Lib/email/iterators.py	32	40	body_line_iterator	body_line_iterator(msg, decode=False)	todo		
+Lib/email/iterators.py	43	53	typed_subpart_iterator	typed_subpart_iterator(msg, maintype='text', subtype=None)	todo		
+Lib/email/iterators.py	56	68	_structure	_structure(msg, fp=None, level=0, include_default=False)	todo		

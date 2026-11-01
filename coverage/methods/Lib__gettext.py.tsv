@@ -1,0 +1,37 @@
+file	line	endline	name	signature	status	entry	note
+Lib/gettext.py	71	96	_tokenize	_tokenize(plural)	todo		
+Lib/gettext.py	99	103	_error	_error(value)	todo		
+Lib/gettext.py	118	165	_parse	_parse(tokens, priority=-1)	todo		
+Lib/gettext.py	168	174	_as_int	_as_int(n)	todo		
+Lib/gettext.py	176	192	_as_int2	_as_int2(n)	todo		
+Lib/gettext.py	195	228	c2py	c2py(plural)	todo		
+Lib/gettext.py	231	270	_expand_lang	_expand_lang(loc)	todo		
+Lib/gettext.py	274	279	NullTranslations.__init__	__init__(self, fp=None)	todo		
+Lib/gettext.py	281	282	NullTranslations._parse	_parse(self, fp)	todo		
+Lib/gettext.py	284	288	NullTranslations.add_fallback	add_fallback(self, fallback)	todo		
+Lib/gettext.py	290	293	NullTranslations.gettext	gettext(self, message)	todo		
+Lib/gettext.py	295	302	NullTranslations.ngettext	ngettext(self, msgid1, msgid2, n)	todo		
+Lib/gettext.py	304	307	NullTranslations.pgettext	pgettext(self, context, message)	todo		
+Lib/gettext.py	309	316	NullTranslations.npgettext	npgettext(self, context, msgid1, msgid2, n)	todo		
+Lib/gettext.py	318	319	NullTranslations.info	info(self)	todo		
+Lib/gettext.py	321	322	NullTranslations.charset	charset(self)	todo		
+Lib/gettext.py	324	330	NullTranslations.install	install(self, names=None)	todo		
+Lib/gettext.py	345	347	GNUTranslations._get_versions	_get_versions(self, version)	todo		
+Lib/gettext.py	349	436	GNUTranslations._parse	_parse(self, fp)	todo		
+Lib/gettext.py	438	447	GNUTranslations.gettext	gettext(self, message)	todo		
+Lib/gettext.py	449	459	GNUTranslations.ngettext	ngettext(self, msgid1, msgid2, n)	todo		
+Lib/gettext.py	461	471	GNUTranslations.pgettext	pgettext(self, context, message)	todo		
+Lib/gettext.py	473	484	GNUTranslations.npgettext	npgettext(self, context, msgid1, msgid2, n)	todo		
+Lib/gettext.py	488	521	find	find(domain, localedir=None, languages=None, all=False)	todo		candidates:strsearch-count-repeated-find,strsearch-find-extreme,strsearch-find-slice-literal,strsearch-find-str-bytes,strsearch-rfind-reverse
+Lib/gettext.py	528	559	translation	translation(domain, localedir=None, languages=None, class_=None, fallback=False)	todo		
+Lib/gettext.py	562	564	install	install(domain, localedir=None, *, names=None)	todo		
+Lib/gettext.py	573	577	textdomain	textdomain(domain=None)	todo		
+Lib/gettext.py	580	584	bindtextdomain	bindtextdomain(domain, localedir=None)	todo		
+Lib/gettext.py	587	592	dgettext	dgettext(domain, message)	todo		
+Lib/gettext.py	595	604	dngettext	dngettext(domain, msgid1, msgid2, n)	todo		
+Lib/gettext.py	607	612	dpgettext	dpgettext(domain, context, message)	todo		
+Lib/gettext.py	615	624	dnpgettext	dnpgettext(domain, context, msgid1, msgid2, n)	todo		
+Lib/gettext.py	627	628	gettext	gettext(message)	todo		
+Lib/gettext.py	631	632	ngettext	ngettext(msgid1, msgid2, n)	todo		
+Lib/gettext.py	635	636	pgettext	pgettext(context, message)	todo		
+Lib/gettext.py	639	640	npgettext	npgettext(context, msgid1, msgid2, n)	todo		

@@ -1,0 +1,116 @@
+file	line	endline	name	signature	status	entry	note
+Modules/expat/xmlparse.c	669	675	poolAppendChar	poolAppendChar(STRING_POOL *pool, XML_Char c) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	678	690	poolAppendChars	poolAppendChars(STRING_POOL *pool, const XML_Char *s, size_t len) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	889	936	expat_malloc	expat_malloc(XML_Parser parser, size_t size, int sourceLine) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	943	972	expat_free	expat_free(XML_Parser parser, void *ptr, int sourceLine) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	979	1049	expat_realloc	expat_realloc(XML_Parser parser, void *ptr, size_t size, int sourceLine) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	1053	1055	XML_ParserCreate	XML_ParserCreate(const XML_Char *encodingName) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	1058	1061	XML_ParserCreateNS	XML_ParserCreateNS(const XML_Char *encodingName, XML_Char nsSep) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	1078	1098	gather_time_entropy	gather_time_entropy(void) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	1115	1164	generate_hash_secret_salt	generate_hash_secret_salt(void) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	1167	1170	beforeHandler	beforeHandler(XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	1173	1176	afterHandler	afterHandler(XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	1179	1181	isCalledFromInsideHandler	isCalledFromInsideHandler(XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	1249	1262	startParsing	startParsing(XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	1466	1556	parserInit	parserInit(XML_Parser parser, const XML_Char *encodingName) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	1560	1567	moveToFreeBindingList	moveToFreeBindingList(XML_Parser parser, BINDING *bindings) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	1571	1578	moveEntityList	moveEntityList(OPEN_INTERNAL_ENTITY **dst, OPEN_INTERNAL_ENTITY **src) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	1581	1618	XML_ParserReset	XML_ParserReset(XML_Parser parser, const XML_Char *encodingName) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	1621	1631	parserBusy	parserBusy(XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	1634	1657	XML_SetEncoding	XML_SetEncoding(XML_Parser parser, const XML_Char *encodingName) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	1833	1842	destroyBindings	destroyBindings(BINDING *bindings, XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	1845	1923	XML_ParserFree	XML_ParserFree(XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	1926	1929	XML_UseParserAsHandlerArg	XML_UseParserAsHandlerArg(XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	1932	1945	XML_UseForeignDTD	XML_UseForeignDTD(XML_Parser parser, XML_Bool useDTD) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	1948	1955	XML_SetReturnNSTriplet	XML_SetReturnNSTriplet(XML_Parser parser, int do_nst) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	1958	1965	XML_SetUserData	XML_SetUserData(XML_Parser parser, void *p) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	1968	1979	XML_SetBase	XML_SetBase(XML_Parser parser, const XML_Char *p) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	1982	1986	XML_GetBase	XML_GetBase(XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	1989	1993	XML_GetSpecifiedAttributeCount	XML_GetSpecifiedAttributeCount(XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	1996	2000	XML_GetIdAttributeIndex	XML_GetIdAttributeIndex(XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2004	2008	XML_GetAttributeInfo	XML_GetAttributeInfo(XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2021	2024	XML_SetStartElementHandler	XML_SetStartElementHandler(XML_Parser parser, XML_StartElementHandler start) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2027	2030	XML_SetEndElementHandler	XML_SetEndElementHandler(XML_Parser parser, XML_EndElementHandler end) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2047	2050	XML_SetCommentHandler	XML_SetCommentHandler(XML_Parser parser, XML_CommentHandler handler) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2077	2082	XML_SetDefaultHandler	XML_SetDefaultHandler(XML_Parser parser, XML_DefaultHandler handler) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2085	2090	XML_SetDefaultHandlerExpand	XML_SetDefaultHandlerExpand(XML_Parser parser, XML_DefaultHandler handler) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2109	2112	XML_SetEndDoctypeDeclHandler	XML_SetEndDoctypeDeclHandler(XML_Parser parser, XML_EndDoctypeDeclHandler end) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2122	2125	XML_SetNotationDeclHandler	XML_SetNotationDeclHandler(XML_Parser parser, XML_NotationDeclHandler handler) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2166	2173	XML_SetExternalEntityRefHandlerArg	XML_SetExternalEntityRefHandlerArg(XML_Parser parser, void *arg) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2192	2195	XML_SetElementDeclHandler	XML_SetElementDeclHandler(XML_Parser parser, XML_ElementDeclHandler eldecl) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2198	2201	XML_SetAttlistDeclHandler	XML_SetAttlistDeclHandler(XML_Parser parser, XML_AttlistDeclHandler attdecl) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2204	2207	XML_SetEntityDeclHandler	XML_SetEntityDeclHandler(XML_Parser parser, XML_EntityDeclHandler handler) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2210	2213	XML_SetXmlDeclHandler	XML_SetXmlDeclHandler(XML_Parser parser, XML_XmlDeclHandler handler) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2233	2257	XML_SetHashSalt	XML_SetHashSalt(XML_Parser parser, unsigned long hash_salt) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2260	2281	XML_SetHashSalt16Bytes	XML_SetHashSalt16Bytes(XML_Parser parser, const uint8_t entropy[16]) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2284	2394	XML_Parse	XML_Parse(XML_Parser parser, const char *s, int len, int isFinal) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2397	2474	XML_ParseBuffer	XML_ParseBuffer(XML_Parser parser, int len, int isFinal) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2478	2497	setParserBuffer	setParserBuffer(XML_Parser parser, char *newBuf, int newBufSize, int keep) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2500	2592	XML_GetBuffer	XML_GetBuffer(XML_Parser parser, int len) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2595	2597	triggerReenter	triggerReenter(XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2600	2633	XML_StopParser	XML_StopParser(XML_Parser parser, XML_Bool resumable) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2636	2674	XML_ResumeParser	XML_ResumeParser(XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2677	2682	XML_GetParsingStatus	XML_GetParsingStatus(XML_Parser parser, XML_ParsingStatus *status) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2685	2689	XML_GetErrorCode	XML_GetErrorCode(XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2692	2699	XML_GetCurrentByteIndex	XML_GetCurrentByteIndex(XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2702	2708	XML_GetCurrentByteCount	XML_GetCurrentByteCount(XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2711	2728	XML_GetInputContext	XML_GetInputContext(XML_Parser parser, int *offset, int *size) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2731	2740	XML_GetCurrentLineNumber	XML_GetCurrentLineNumber(XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2743	2752	XML_GetCurrentColumnNumber	XML_GetCurrentColumnNumber(XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2755	2762	XML_FreeContentModel	XML_FreeContentModel(XML_Parser parser, XML_Content *model) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2765	2772	XML_MemMalloc	XML_MemMalloc(XML_Parser parser, size_t size) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2775	2782	XML_MemRealloc	XML_MemRealloc(XML_Parser parser, void *ptr, size_t size) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2785	2793	XML_MemFree	XML_MemFree(XML_Parser parser, void *ptr) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2796	2808	XML_DefaultCurrent	XML_DefaultCurrent(XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2811	2916	XML_ErrorString	XML_ErrorString(enum XML_Error code) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2919	2935	XML_ExpatVersion	XML_ExpatVersion(void) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2938	2946	XML_ExpatVersionInfo	XML_ExpatVersionInfo(void) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	2949	3003	XML_GetFeatureList	XML_GetFeatureList(void) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	3053	3059	XML_SetReparseDeferralEnabled	XML_SetReparseDeferralEnabled(XML_Parser parser, XML_Bool enabled) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	3067	3113	storeRawNames	storeRawNames(XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	3775	3793	freeBindings	freeBindings(XML_Parser parser, BINDING *bindings) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	4251	4359	is_rfc3986_uri_char	is_rfc3986_uri_char(XML_Char candidate) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	4791	4818	initializeEncoding	initializeEncoding(XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	4915	4949	handleUnknownEncoding	handleUnknownEncoding(XML_Parser parser, const XML_Char *encodingName) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	7060	7084	storeSelfEntityValue	storeSelfEntityValue(XML_Parser parser, ENTITY *entity) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	7089	7107	normalizeLines	normalizeLines(XML_Char *s) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	7266	7292	setElementTypePrefix	setElementTypePrefix(XML_Parser parser, ELEMENT_TYPE *elementType) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	7359	7442	getContext	getContext(XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	7445	7514	setContext	setContext(XML_Parser parser, const XML_Char *context) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	7517	7535	normalizePublicId	normalizePublicId(XML_Char *publicId) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	7538	7568	dtdCreate	dtdCreate(XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	7571	7610	dtdReset	dtdReset(DTD *p, XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	7613	7637	dtdDestroy	dtdDestroy(DTD *p, XML_Bool isDocEntity, XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	7849	7862	keyeq	keyeq(KEY s1, KEY s2) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	7865	7867	keylen	keylen(KEY s) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	7870	7875	copy_salt_to_sipkey	copy_salt_to_sipkey(XML_Parser parser, struct sipkey *key) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	7878	7886	hash	hash(XML_Parser parser, KEY s) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	7889	7975	lookup	lookup(XML_Parser parser, HASH_TABLE *table, KEY name, size_t createSize) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	7978	7985	hashTableClear	hashTableClear(HASH_TABLE *table) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	7988	7993	hashTableDestroy	hashTableDestroy(HASH_TABLE *table) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	7996	8002	hashTableInit	hashTableInit(HASH_TABLE *p, XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	8005	8008	hashTableIterInit	hashTableIterInit(HASH_TABLE_ITER *iter, const HASH_TABLE *table) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	8011	8018	hashTableIterNext	hashTableIterNext(HASH_TABLE_ITER *iter) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	8021	8028	poolInit	poolInit(STRING_POOL *pool, XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	8031	8047	poolClear	poolClear(STRING_POOL *pool) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	8050	8063	poolDestroy	poolDestroy(STRING_POOL *pool) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	8083	8089	poolCopyString	poolCopyString(STRING_POOL *pool, const XML_Char *s) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	8094	8106	poolCopyStringNoFinish	poolCopyStringNoFinish(STRING_POOL *pool, const XML_Char *s) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	8109	8129	poolCopyStringN	poolCopyStringN(STRING_POOL *pool, const XML_Char *s, int n) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	8132	8136	poolAppendString	poolAppendString(STRING_POOL *pool, const XML_Char *s) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	8149	8174	poolBytesToAllocateFor	poolBytesToAllocateFor(int blockSize) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	8177	8277	poolGrow	poolGrow(STRING_POOL *pool) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	8280	8290	poolGrowUntil	poolGrowUntil(STRING_POOL *pool, size_t needed) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	8293	8360	nextScaffoldPart	nextScaffoldPart(XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	8363	8499	build_model	build_model(XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	8527	8547	copyString	copyString(const XML_Char *s, XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	8552	8567	accountingGetCurrentAmplification	accountingGetCurrentAmplification(XML_Parser rootParser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	8570	8586	accountingReportStats	accountingReportStats(XML_Parser originParser, const char *epilog) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	8589	8591	accountingOnAbort	accountingOnAbort(XML_Parser originParser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	8686	8690	testingAccountingGetCountBytesDirect	testingAccountingGetCountBytesDirect(XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	8693	8697	testingAccountingGetCountBytesIndirect	testingAccountingGetCountBytesIndirect(XML_Parser parser) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	8734	8746	entityTrackingOnOpen	entityTrackingOnOpen(XML_Parser originParser, ENTITY *entity, int sourceLine) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	8749	8755	entityTrackingOnClose	entityTrackingOnClose(XML_Parser originParser, ENTITY *entity, int sourceLine) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	8760	8772	getRootParserOf	getRootParserOf(XML_Parser parser, unsigned int *outLevelDiff) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	8777	9298	unsignedCharToPrintable	unsignedCharToPrintable(unsigned char c) {	excluded		vendored: third-party code
+Modules/expat/xmlparse.c	9303	9319	getDebugLevel	getDebugLevel(const char *variableName, unsigned long defaultDebugLevel) {	excluded		vendored: third-party code

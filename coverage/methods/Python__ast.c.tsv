@@ -1,0 +1,26 @@
+file	line	endline	name	signature	status	entry	note
+Python/ast.c	52	69	validate_name	validate_name(PyObject *name)	todo		
+Python/ast.c	72	87	validate_comprehension	validate_comprehension(asdl_comprehension_seq *gens)	todo		
+Python/ast.c	90	97	validate_keywords	validate_keywords(asdl_keyword_seq *keywords)	todo		
+Python/ast.c	100	110	validate_args	validate_args(asdl_arg_seq *args)	todo		
+Python/ast.c	113	125	expr_context_name	expr_context_name(expr_context_ty ctx)	todo		
+Python/ast.c	128	154	validate_arguments	validate_arguments(arguments_ty args)	todo		
+Python/ast.c	157	207	validate_constant	validate_constant(PyObject *value)	todo		
+Python/ast.c	210	410	validate_expr	validate_expr(expr_ty exp, expr_context_ty ctx)	todo		
+Python/ast.c	417	424	ensure_literal_number	ensure_literal_number(expr_ty exp, bool allow_real, bool allow_imaginary)	todo		
+Python/ast.c	427	441	ensure_literal_negative	ensure_literal_negative(expr_ty exp, bool allow_real, bool allow_imaginary)	todo		
+Python/ast.c	444	481	ensure_literal_complex	ensure_literal_complex(expr_ty exp)	todo		
+Python/ast.c	484	536	validate_pattern_match_value	validate_pattern_match_value(expr_ty exp)	todo		
+Python/ast.c	539	547	validate_capture	validate_capture(PyObject *name)	todo		
+Python/ast.c	550	699	validate_pattern	validate_pattern(pattern_ty p, int star_ok)	todo		
+Python/ast.c	702	708	_validate_nonempty_seq	_validate_nonempty_seq(asdl_seq *seq, const char *what, const char *owner)	todo		
+Python/ast.c	712	717	validate_assignlist	validate_assignlist(asdl_expr_seq *targets, expr_context_ty ctx)	todo		
+Python/ast.c	720	724	validate_body	validate_body(asdl_stmt_seq *body, const char *owner)	todo		
+Python/ast.c	727	951	validate_stmt	validate_stmt(stmt_ty stmt)	todo		
+Python/ast.c	954	970	validate_stmts	validate_stmts(asdl_stmt_seq *seq)	todo		
+Python/ast.c	973	990	validate_exprs	validate_exprs(asdl_expr_seq *exprs, expr_context_ty ctx, int null_ok)	todo		
+Python/ast.c	993	1003	validate_patterns	validate_patterns(asdl_pattern_seq *patterns, int star_ok)	todo		
+Python/ast.c	1006	1030	validate_typeparam	validate_typeparam(type_param_ty tp)	todo		
+Python/ast.c	1033	1044	validate_type_params	validate_type_params(asdl_type_param_seq *tps)	todo		
+Python/ast.c	1047	1074	_PyAST_Validate	_PyAST_Validate(mod_ty mod)	todo		
+Python/ast.c	1077	1091	_PyAST_GetDocString	_PyAST_GetDocString(asdl_stmt_seq *body)	todo		

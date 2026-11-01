@@ -1,0 +1,11 @@
+file	line	endline	name	signature	status	entry	note
+Python/thread.c	47	54	PyThread_init_thread	PyThread_init_thread(void)	todo		
+Python/thread.c	76	79	PyThread_get_stacksize	PyThread_get_stacksize(void)	todo		
+Python/thread.c	87	94	PyThread_set_stacksize	PyThread_set_stacksize(size_t size)	todo		
+Python/thread.c	98	129	PyThread_ParseTimeoutArg	PyThread_ParseTimeoutArg(PyObject *arg, int blocking, PY_TIMEOUT_T *timeout_p)	todo		
+Python/thread.c	132	177	PyThread_acquire_lock_timed_with_retries	PyThread_acquire_lock_timed_with_retries(PyThread_type_lock lock, PY_TIMEOUT_T timeout)	todo		
+Python/thread.c	186	194	PyThread_tss_alloc	PyThread_tss_alloc(void)	todo		
+Python/thread.c	197	203	PyThread_tss_free	PyThread_tss_free(Py_tss_t *key)	todo		
+Python/thread.c	206	210	PyThread_tss_is_created	PyThread_tss_is_created(Py_tss_t *key)	todo		
+Python/thread.c	235	294	PyThread_GetInfo	PyThread_GetInfo(void)	todo		
+Python/thread.c	298	301	_PyThread_FiniType	_PyThread_FiniType(PyInterpreterState *interp)	todo		

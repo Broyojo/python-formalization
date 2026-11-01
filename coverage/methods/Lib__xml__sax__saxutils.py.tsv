@@ -1,0 +1,49 @@
+file	line	endline	name	signature	status	entry	note
+Lib/xml/sax/saxutils.py	12	16	__dict_replace	__dict_replace(s, d)	todo		
+Lib/xml/sax/saxutils.py	18	32	escape	escape(data, entities={})	todo		
+Lib/xml/sax/saxutils.py	34	46	unescape	unescape(data, entities={})	todo		
+Lib/xml/sax/saxutils.py	48	68	quoteattr	quoteattr(data, entities={})	todo		
+Lib/xml/sax/saxutils.py	71	110	_gettextwriter	_gettextwriter(out, encoding)	todo		
+Lib/xml/sax/saxutils.py	114	124	XMLGenerator.__init__	__init__(self, out=None, encoding='iso-8859-1', short_empty_elements=False)	todo		
+Lib/xml/sax/saxutils.py	126	141	XMLGenerator._qname	_qname(self, name)	todo		
+Lib/xml/sax/saxutils.py	143	146	XMLGenerator._finish_pending_start_element	_finish_pending_start_element(self, endElement=False)	todo		
+Lib/xml/sax/saxutils.py	150	152	XMLGenerator.startDocument	startDocument(self)	todo		
+Lib/xml/sax/saxutils.py	154	155	XMLGenerator.endDocument	endDocument(self)	todo		
+Lib/xml/sax/saxutils.py	157	160	XMLGenerator.startPrefixMapping	startPrefixMapping(self, prefix, uri)	todo		
+Lib/xml/sax/saxutils.py	162	164	XMLGenerator.endPrefixMapping	endPrefixMapping(self, prefix)	todo		
+Lib/xml/sax/saxutils.py	166	174	XMLGenerator.startElement	startElement(self, name, attrs)	todo		
+Lib/xml/sax/saxutils.py	176	181	XMLGenerator.endElement	endElement(self, name)	todo		
+Lib/xml/sax/saxutils.py	183	199	XMLGenerator.startElementNS	startElementNS(self, name, qname, attrs)	todo		
+Lib/xml/sax/saxutils.py	201	206	XMLGenerator.endElementNS	endElementNS(self, name, qname)	todo		
+Lib/xml/sax/saxutils.py	208	213	XMLGenerator.characters	characters(self, content)	todo		
+Lib/xml/sax/saxutils.py	215	220	XMLGenerator.ignorableWhitespace	ignorableWhitespace(self, content)	todo		
+Lib/xml/sax/saxutils.py	222	224	XMLGenerator.processingInstruction	processingInstruction(self, target, data)	todo		
+Lib/xml/sax/saxutils.py	235	237	XMLFilterBase.__init__	__init__(self, parent=None)	todo		
+Lib/xml/sax/saxutils.py	241	242	XMLFilterBase.error	error(self, exception)	todo		
+Lib/xml/sax/saxutils.py	244	245	XMLFilterBase.fatalError	fatalError(self, exception)	todo		
+Lib/xml/sax/saxutils.py	247	248	XMLFilterBase.warning	warning(self, exception)	todo		
+Lib/xml/sax/saxutils.py	252	253	XMLFilterBase.setDocumentLocator	setDocumentLocator(self, locator)	todo		
+Lib/xml/sax/saxutils.py	255	256	XMLFilterBase.startDocument	startDocument(self)	todo		
+Lib/xml/sax/saxutils.py	258	259	XMLFilterBase.endDocument	endDocument(self)	todo		
+Lib/xml/sax/saxutils.py	261	262	XMLFilterBase.startPrefixMapping	startPrefixMapping(self, prefix, uri)	todo		
+Lib/xml/sax/saxutils.py	264	265	XMLFilterBase.endPrefixMapping	endPrefixMapping(self, prefix)	todo		
+Lib/xml/sax/saxutils.py	267	268	XMLFilterBase.startElement	startElement(self, name, attrs)	todo		
+Lib/xml/sax/saxutils.py	270	271	XMLFilterBase.endElement	endElement(self, name)	todo		
+Lib/xml/sax/saxutils.py	273	274	XMLFilterBase.startElementNS	startElementNS(self, name, qname, attrs)	todo		
+Lib/xml/sax/saxutils.py	276	277	XMLFilterBase.endElementNS	endElementNS(self, name, qname)	todo		
+Lib/xml/sax/saxutils.py	279	280	XMLFilterBase.characters	characters(self, content)	todo		
+Lib/xml/sax/saxutils.py	282	283	XMLFilterBase.ignorableWhitespace	ignorableWhitespace(self, chars)	todo		
+Lib/xml/sax/saxutils.py	285	286	XMLFilterBase.processingInstruction	processingInstruction(self, target, data)	todo		
+Lib/xml/sax/saxutils.py	288	289	XMLFilterBase.skippedEntity	skippedEntity(self, name)	todo		
+Lib/xml/sax/saxutils.py	293	294	XMLFilterBase.notationDecl	notationDecl(self, name, publicId, systemId)	todo		
+Lib/xml/sax/saxutils.py	296	297	XMLFilterBase.unparsedEntityDecl	unparsedEntityDecl(self, name, publicId, systemId, ndata)	todo		
+Lib/xml/sax/saxutils.py	301	302	XMLFilterBase.resolveEntity	resolveEntity(self, publicId, systemId)	todo		
+Lib/xml/sax/saxutils.py	306	311	XMLFilterBase.parse	parse(self, source)	todo		
+Lib/xml/sax/saxutils.py	313	314	XMLFilterBase.setLocale	setLocale(self, locale)	todo		
+Lib/xml/sax/saxutils.py	316	317	XMLFilterBase.getFeature	getFeature(self, name)	todo		
+Lib/xml/sax/saxutils.py	319	320	XMLFilterBase.setFeature	setFeature(self, name, state)	todo		
+Lib/xml/sax/saxutils.py	322	323	XMLFilterBase.getProperty	getProperty(self, name)	todo		
+Lib/xml/sax/saxutils.py	325	326	XMLFilterBase.setProperty	setProperty(self, name, value)	todo		
+Lib/xml/sax/saxutils.py	330	331	XMLFilterBase.getParent	getParent(self)	todo		
+Lib/xml/sax/saxutils.py	333	334	XMLFilterBase.setParent	setParent(self, parent)	todo		
+Lib/xml/sax/saxutils.py	338	369	prepare_input_source	prepare_input_source(source, base='')	todo		

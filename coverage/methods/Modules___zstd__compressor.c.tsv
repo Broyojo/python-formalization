@@ -1,0 +1,18 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_zstd/compressor.c	59	92	zstd_contentsize_converter	zstd_contentsize_converter(PyObject *size, unsigned long long *p)	todo		
+Modules/_zstd/compressor.c	97	123	_zstd_set_c_level	_zstd_set_c_level(ZstdCompressor *self, int level)	todo		
+Modules/_zstd/compressor.c	126	194	_zstd_set_c_parameters	_zstd_set_c_parameters(ZstdCompressor *self, PyObject *options)	todo		
+Modules/_zstd/compressor.c	197	201	capsule_free_cdict	capsule_free_cdict(PyObject *capsule)	todo		
+Modules/_zstd/compressor.c	204	266	_get_CDict	_get_CDict(ZstdDict *self, int compressionLevel)	todo		
+Modules/_zstd/compressor.c	269	304	_zstd_load_impl	_zstd_load_impl(ZstdCompressor *self, ZstdDict *zd, _zstd_state *mod_state, int type)	todo		
+Modules/_zstd/compressor.c	307	321	_zstd_load_c_dict	_zstd_load_c_dict(ZstdCompressor *self, PyObject *dict)	todo		
+Modules/_zstd/compressor.c	340	419	_zstd_ZstdCompressor_new_impl	_zstd_ZstdCompressor_new_impl(PyTypeObject *type, PyObject *level, PyObject *options, PyObject *zstd_dict) /*[clinic end generated code: output=cdef61eafecac3d7 input=bbfeeaa06fd3bd4d]*/	todo		
+Modules/_zstd/compressor.c	422	441	ZstdCompressor_dealloc	ZstdCompressor_dealloc(PyObject *ob)	todo		
+Modules/_zstd/compressor.c	444	515	compress_lock_held	compress_lock_held(ZstdCompressor *self, Py_buffer *data, ZSTD_EndDirective end_directive)	todo		
+Modules/_zstd/compressor.c	519	522	mt_continue_should_break	mt_continue_should_break(ZSTD_inBuffer *in, ZSTD_outBuffer *out)	todo		
+Modules/_zstd/compressor.c	526	584	compress_mt_continue_lock_held	compress_mt_continue_lock_held(ZstdCompressor *self, Py_buffer *data)	todo		
+Modules/_zstd/compressor.c	602	643	_zstd_ZstdCompressor_compress_impl	_zstd_ZstdCompressor_compress_impl(ZstdCompressor *self, Py_buffer *data, int mode) /*[clinic end generated code: output=ed7982d1cf7b4f98 input=11726dff64d7b2f9]*/	todo		
+Modules/_zstd/compressor.c	660	691	_zstd_ZstdCompressor_flush_impl	_zstd_ZstdCompressor_flush_impl(ZstdCompressor *self, int mode) /*[clinic end generated code: output=b7cf2c8d64dcf2e3 input=130e0b1eddf0f498]*/	todo		
+Modules/_zstd/compressor.c	714	743	_zstd_ZstdCompressor_set_pledged_input_size_impl	_zstd_ZstdCompressor_set_pledged_input_size_impl(ZstdCompressor *self, unsigned long long size) /*[clinic end generated code: output=3a09e55cc0e3b4f9 input=d6d1669171af3da4]*/	todo		
+Modules/_zstd/compressor.c	765	770	ZstdCompressor_traverse	ZstdCompressor_traverse(PyObject *ob, visitproc visit, void *arg)	todo		
+Modules/_zstd/compressor.c	773	778	ZstdCompressor_clear	ZstdCompressor_clear(PyObject *ob)	todo		

@@ -1,0 +1,22 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_xxtestfuzz/fuzzer.c	22	33	fuzz_builtin_float	static int fuzz_builtin_float(const char* data, size_t size) {	excluded		test-support: only for CPython's own tests
+Modules/_xxtestfuzz/fuzzer.c	38	74	fuzz_builtin_int	static int fuzz_builtin_int(const char* data, size_t size) {	excluded		test-support: only for CPython's own tests
+Modules/_xxtestfuzz/fuzzer.c	77	84	fuzz_builtin_unicode	static int fuzz_builtin_unicode(const char* data, size_t size) {	excluded		test-support: only for CPython's own tests
+Modules/_xxtestfuzz/fuzzer.c	90	102	init_struct_unpack	static int init_struct_unpack(void) {	excluded		test-support: only for CPython's own tests
+Modules/_xxtestfuzz/fuzzer.c	104	146	fuzz_struct_unpack	static int fuzz_struct_unpack(const char* data, size_t size) {	excluded		test-support: only for CPython's own tests
+Modules/_xxtestfuzz/fuzzer.c	153	161	init_json_loads	static int init_json_loads(void) {	excluded		test-support: only for CPython's own tests
+Modules/_xxtestfuzz/fuzzer.c	163	191	fuzz_json_loads	static int fuzz_json_loads(const char* data, size_t size) {	excluded		test-support: only for CPython's own tests
+Modules/_xxtestfuzz/fuzzer.c	199	220	init_sre_compile	static int init_sre_compile(void) {	excluded		test-support: only for CPython's own tests
+Modules/_xxtestfuzz/fuzzer.c	222	273	fuzz_sre_compile	static int fuzz_sre_compile(const char* data, size_t size) {	excluded		test-support: only for CPython's own tests
+Modules/_xxtestfuzz/fuzzer.c	287	310	init_sre_match	static int init_sre_match(void) {	excluded		test-support: only for CPython's own tests
+Modules/_xxtestfuzz/fuzzer.c	312	336	fuzz_sre_match	static int fuzz_sre_match(const char* data, size_t size) {	excluded		test-support: only for CPython's own tests
+Modules/_xxtestfuzz/fuzzer.c	342	350	init_csv_reader	static int init_csv_reader(void) {	excluded		test-support: only for CPython's own tests
+Modules/_xxtestfuzz/fuzzer.c	352	394	fuzz_csv_reader	static int fuzz_csv_reader(const char* data, size_t size) {	excluded		test-support: only for CPython's own tests
+Modules/_xxtestfuzz/fuzzer.c	399	406	init_ast_literal_eval	static int init_ast_literal_eval(void) {	excluded		test-support: only for CPython's own tests
+Modules/_xxtestfuzz/fuzzer.c	408	439	fuzz_ast_literal_eval	static int fuzz_ast_literal_eval(const char* data, size_t size) {	excluded		test-support: only for CPython's own tests
+Modules/_xxtestfuzz/fuzzer.c	445	468	init_elementtree_parsewhole	static int init_elementtree_parsewhole(void) {	excluded		test-support: only for CPython's own tests
+Modules/_xxtestfuzz/fuzzer.c	470	501	fuzz_elementtree_parsewhole	static int fuzz_elementtree_parsewhole(const char* data, size_t size) {	excluded		test-support: only for CPython's own tests
+Modules/_xxtestfuzz/fuzzer.c	513	565	fuzz_pycompile	static int fuzz_pycompile(const char* data, size_t size) {	excluded		test-support: only for CPython's own tests
+Modules/_xxtestfuzz/fuzzer.c	568	578	_run_fuzz	static int _run_fuzz(const uint8_t *data, size_t size, int(*fuzzer)(const char* , size_t)) {	excluded		test-support: only for CPython's own tests
+Modules/_xxtestfuzz/fuzzer.c	584	608	LLVMFuzzerInitialize	int LLVMFuzzerInitialize(int *argc, char ***argv) {	excluded		test-support: only for CPython's own tests
+Modules/_xxtestfuzz/fuzzer.c	617	713	LLVMFuzzerTestOneInput	int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {	excluded		test-support: only for CPython's own tests

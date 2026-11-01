@@ -1,0 +1,14 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_zstd/decompressor.c	58	81	_get_DDict	_get_DDict(ZstdDict *self)	todo		
+Modules/_zstd/decompressor.c	84	134	_zstd_set_d_parameters	_zstd_set_d_parameters(ZstdDecompressor *self, PyObject *options)	todo		
+Modules/_zstd/decompressor.c	137	170	_zstd_load_impl	_zstd_load_impl(ZstdDecompressor *self, ZstdDict *zd, _zstd_state *mod_state, int type)	todo		
+Modules/_zstd/decompressor.c	174	188	_zstd_load_d_dict	_zstd_load_d_dict(ZstdDecompressor *self, PyObject *dict)	todo		
+Modules/_zstd/decompressor.c	215	281	decompress_lock_held	decompress_lock_held(ZstdDecompressor *self, ZSTD_inBuffer *in, Py_ssize_t max_length)	todo		
+Modules/_zstd/decompressor.c	284	300	decompressor_reset_session_lock_held	decompressor_reset_session_lock_held(ZstdDecompressor *self)	todo		
+Modules/_zstd/decompressor.c	303	468	stream_decompress_lock_held	stream_decompress_lock_held(ZstdDecompressor *self, Py_buffer *data, Py_ssize_t max_length)	todo		
+Modules/_zstd/decompressor.c	486	542	_zstd_ZstdDecompressor_new_impl	_zstd_ZstdDecompressor_new_impl(PyTypeObject *type, PyObject *zstd_dict, PyObject *options) /*[clinic end generated code: output=590ca65c1102ff4a input=73879de69bf89f59]*/	todo		
+Modules/_zstd/decompressor.c	545	570	ZstdDecompressor_dealloc	ZstdDecompressor_dealloc(PyObject *ob)	todo		
+Modules/_zstd/decompressor.c	584	616	_zstd_ZstdDecompressor_unused_data_get_impl	_zstd_ZstdDecompressor_unused_data_get_impl(ZstdDecompressor *self) /*[clinic end generated code: output=f3a20940f11b6b09 input=0462065c5e60ba01]*/	todo		
+Modules/_zstd/decompressor.c	646	657	_zstd_ZstdDecompressor_decompress_impl	_zstd_ZstdDecompressor_decompress_impl(ZstdDecompressor *self, Py_buffer *data, Py_ssize_t max_length) /*[clinic end generated code: output=a4302b3c940dbec6 input=b55991a007f4c558]*/	todo		
+Modules/_zstd/decompressor.c	688	693	ZstdDecompressor_traverse	ZstdDecompressor_traverse(PyObject *ob, visitproc visit, void *arg)	todo		
+Modules/_zstd/decompressor.c	696	702	ZstdDecompressor_clear	ZstdDecompressor_clear(PyObject *ob)	todo		

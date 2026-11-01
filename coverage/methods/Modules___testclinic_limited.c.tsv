@@ -1,0 +1,8 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testclinic_limited.c	34	38	test_empty_function_impl	test_empty_function_impl(PyObject *module) /*[clinic end generated code: output=0f8aeb3ddced55cb input=0dd7048651ad4ae4]*/	excluded		test-support: only for CPython's own tests
+Modules/_testclinic_limited.c	50	54	my_int_func_impl	my_int_func_impl(PyObject *module, int arg) /*[clinic end generated code: output=761cd54582f10e4f input=16eb8bba71d82740]*/	excluded		test-support: only for CPython's own tests
+Modules/_testclinic_limited.c	67	71	my_int_sum_impl	my_int_sum_impl(PyObject *module, int x, int y) /*[clinic end generated code: output=3e52db9ab5f37e2f input=0edb6796813bf2d3]*/	excluded		test-support: only for CPython's own tests
+Modules/_testclinic_limited.c	84	88	my_float_sum_impl	my_float_sum_impl(PyObject *module, float x, float y) /*[clinic end generated code: output=634f59a5a419cad7 input=d4b5313bdf4dc377]*/	excluded		test-support: only for CPython's own tests
+Modules/_testclinic_limited.c	101	105	my_double_sum_impl	my_double_sum_impl(PyObject *module, double x, double y) /*[clinic end generated code: output=a75576d9e4d8557f input=16b11c8aba172801]*/	excluded		test-support: only for CPython's own tests
+Modules/_testclinic_limited.c	118	122	get_file_descriptor_impl	get_file_descriptor_impl(PyObject *module, int fd) /*[clinic end generated code: output=80051ebad54db8a8 input=82e2a1418848cd5b]*/	excluded		test-support: only for CPython's own tests
+Modules/_testclinic_limited.c	143	153	PyInit__testclinic_limited	PyInit__testclinic_limited(void)	excluded		test-support: only for CPython's own tests

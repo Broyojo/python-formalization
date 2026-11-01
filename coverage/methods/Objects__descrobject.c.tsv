@@ -1,0 +1,95 @@
+file	line	endline	name	signature	status	entry	note
+Objects/descrobject.c	23	31	descr_dealloc	descr_dealloc(PyObject *self)	todo		
+Objects/descrobject.c	34	39	descr_name	descr_name(PyDescrObject *descr)	todo		
+Objects/descrobject.c	42	49	descr_repr	descr_repr(PyDescrObject *descr, const char *format)	todo		
+Objects/descrobject.c	52	56	method_repr	method_repr(PyObject *descr)	todo		
+Objects/descrobject.c	59	63	member_repr	member_repr(PyObject *descr)	todo		
+Objects/descrobject.c	66	70	getset_repr	getset_repr(PyObject *descr)	todo		
+Objects/descrobject.c	73	77	wrapperdescr_repr	wrapperdescr_repr(PyObject *descr)	todo		
+Objects/descrobject.c	80	92	descr_check	descr_check(PyDescrObject *descr, PyObject *obj)	todo		
+Objects/descrobject.c	95	135	classmethod_get	classmethod_get(PyObject *self, PyObject *obj, PyObject *type)	todo		
+Objects/descrobject.c	138	160	method_get	method_get(PyObject *self, PyObject *obj, PyObject *type)	todo		
+Objects/descrobject.c	163	181	member_get	member_get(PyObject *self, PyObject *obj, PyObject *type)	todo		
+Objects/descrobject.c	184	201	getset_get	getset_get(PyObject *self, PyObject *obj, PyObject *type)	todo		
+Objects/descrobject.c	204	214	wrapperdescr_get	wrapperdescr_get(PyObject *self, PyObject *obj, PyObject *type)	todo		
+Objects/descrobject.c	217	230	descr_setcheck	descr_setcheck(PyDescrObject *descr, PyObject *obj, PyObject *value)	todo		
+Objects/descrobject.c	233	240	member_set	member_set(PyObject *self, PyObject *obj, PyObject *value)	todo		
+Objects/descrobject.c	243	259	getset_set	getset_set(PyObject *self, PyObject *obj, PyObject *value)	todo		
+Objects/descrobject.c	267	293	method_check_args	method_check_args(PyObject *func, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)	todo		
+Objects/descrobject.c	298	304	method_enter_call	method_enter_call(PyThreadState *tstate, PyObject *func)	todo		
+Objects/descrobject.c	308	330	method_vectorcall_VARARGS	method_vectorcall_VARARGS( PyObject *func, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
+Objects/descrobject.c	333	366	method_vectorcall_VARARGS_KEYWORDS	method_vectorcall_VARARGS_KEYWORDS( PyObject *func, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
+Objects/descrobject.c	369	386	method_vectorcall_FASTCALL_KEYWORDS_METHOD	method_vectorcall_FASTCALL_KEYWORDS_METHOD( PyObject *func, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
+Objects/descrobject.c	389	405	method_vectorcall_FASTCALL	method_vectorcall_FASTCALL( PyObject *func, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
+Objects/descrobject.c	408	424	method_vectorcall_FASTCALL_KEYWORDS	method_vectorcall_FASTCALL_KEYWORDS( PyObject *func, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
+Objects/descrobject.c	427	451	method_vectorcall_NOARGS	method_vectorcall_NOARGS( PyObject *func, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
+Objects/descrobject.c	454	479	method_vectorcall_O	method_vectorcall_O( PyObject *func, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
+Objects/descrobject.c	491	513	classmethoddescr_call	classmethoddescr_call(PyObject *_descr, PyObject *args, PyObject *kwds)	todo		
+Objects/descrobject.c	515	533	Py_LOCAL_INLINE	Py_LOCAL_INLINE(PyObject *) wrapperdescr_raw_call(PyWrapperDescrObject *descr, PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Objects/descrobject.c	536	573	wrapperdescr_call	wrapperdescr_call(PyObject *_descr, PyObject *args, PyObject *kwds)	todo		
+Objects/descrobject.c	577	581	method_get_doc	method_get_doc(PyObject *_descr, void *closure)	todo		
+Objects/descrobject.c	584	590	method_get_text_signature	method_get_text_signature(PyObject *_descr, void *closure)	todo		
+Objects/descrobject.c	593	618	calculate_qualname	calculate_qualname(PyDescrObject *descr)	todo		
+Objects/descrobject.c	621	627	descr_get_qualname	descr_get_qualname(PyObject *self, void *Py_UNUSED(ignored))	todo		
+Objects/descrobject.c	630	635	descr_reduce	descr_reduce(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/descrobject.c	656	663	member_get_doc	member_get_doc(PyObject *_descr, void *closure)	todo		
+Objects/descrobject.c	672	679	getset_get_doc	getset_get_doc(PyObject *self, void *closure)	todo		
+Objects/descrobject.c	688	692	wrapperdescr_get_doc	wrapperdescr_get_doc(PyObject *self, void *closure)	todo		
+Objects/descrobject.c	695	700	wrapperdescr_get_text_signature	wrapperdescr_get_text_signature(PyObject *self, void *closure)	todo		
+Objects/descrobject.c	710	715	descr_traverse	descr_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/descrobject.c	907	924	descr_new	descr_new(PyTypeObject *descrtype, PyTypeObject *type, const char *name)	todo		
+Objects/descrobject.c	927	970	PyDescr_NewMethod	PyDescr_NewMethod(PyTypeObject *type, PyMethodDef *method)	todo		
+Objects/descrobject.c	973	982	PyDescr_NewClassMethod	PyDescr_NewClassMethod(PyTypeObject *type, PyMethodDef *method)	todo		
+Objects/descrobject.c	985	1000	PyDescr_NewMember	PyDescr_NewMember(PyTypeObject *type, PyMemberDef *member)	todo		
+Objects/descrobject.c	1003	1012	PyDescr_NewGetSet	PyDescr_NewGetSet(PyTypeObject *type, PyGetSetDef *getset)	todo		
+Objects/descrobject.c	1015	1026	PyDescr_NewWrapper	PyDescr_NewWrapper(PyTypeObject *type, struct wrapperbase *base, void *wrapped)	todo		
+Objects/descrobject.c	1029	1032	PyDescr_IsData	PyDescr_IsData(PyObject *ob)	todo		
+Objects/descrobject.c	1045	1049	mappingproxy_len	mappingproxy_len(PyObject *self)	todo		
+Objects/descrobject.c	1052	1056	mappingproxy_getitem	mappingproxy_getitem(PyObject *self, PyObject *key)	todo		
+Objects/descrobject.c	1065	1074	mappingproxy_or	mappingproxy_or(PyObject *left, PyObject *right)	todo		
+Objects/descrobject.c	1077	1081	mappingproxy_ior	mappingproxy_ior(PyObject *self, PyObject *Py_UNUSED(other))	todo		
+Objects/descrobject.c	1089	1096	mappingproxy_contains	mappingproxy_contains(PyObject *self, PyObject *key)	todo		
+Objects/descrobject.c	1112	1128	mappingproxy_get	mappingproxy_get(PyObject *self, PyObject *const *args, Py_ssize_t nargs)	todo		
+Objects/descrobject.c	1131	1135	mappingproxy_keys	mappingproxy_keys(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/descrobject.c	1138	1142	mappingproxy_values	mappingproxy_values(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/descrobject.c	1145	1149	mappingproxy_items	mappingproxy_items(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/descrobject.c	1152	1156	mappingproxy_copy	mappingproxy_copy(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/descrobject.c	1159	1163	mappingproxy_reversed	mappingproxy_reversed(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/descrobject.c	1188	1194	mappingproxy_dealloc	mappingproxy_dealloc(PyObject *self)	todo		
+Objects/descrobject.c	1197	1201	mappingproxy_getiter	mappingproxy_getiter(PyObject *self)	todo		
+Objects/descrobject.c	1204	1208	mappingproxy_hash	mappingproxy_hash(PyObject *self)	todo		
+Objects/descrobject.c	1211	1215	mappingproxy_str	mappingproxy_str(PyObject *self)	todo		
+Objects/descrobject.c	1218	1222	mappingproxy_repr	mappingproxy_repr(PyObject *self)	todo		
+Objects/descrobject.c	1225	1230	mappingproxy_traverse	mappingproxy_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/descrobject.c	1233	1237	mappingproxy_richcompare	mappingproxy_richcompare(PyObject *self, PyObject *w, int op)	todo		
+Objects/descrobject.c	1240	1251	mappingproxy_check_mapping	mappingproxy_check_mapping(PyObject *mapping)	todo		
+Objects/descrobject.c	1263	1277	mappingproxy_new_impl	mappingproxy_new_impl(PyTypeObject *type, PyObject *mapping) /*[clinic end generated code: output=65f27f02d5b68fa7 input=c156df096ef7590c]*/	todo		
+Objects/descrobject.c	1280	1293	PyDictProxy_New	PyDictProxy_New(PyObject *mapping)	todo		
+Objects/descrobject.c	1310	1317	wrapper_dealloc	wrapper_dealloc(PyObject *self)	todo		
+Objects/descrobject.c	1320	1343	wrapper_richcompare	wrapper_richcompare(PyObject *a, PyObject *b, int op)	todo		
+Objects/descrobject.c	1346	1356	wrapper_hash	wrapper_hash(PyObject *self)	todo		
+Objects/descrobject.c	1359	1366	wrapper_repr	wrapper_repr(PyObject *self)	todo		
+Objects/descrobject.c	1369	1374	wrapper_reduce	wrapper_reduce(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/descrobject.c	1387	1392	wrapper_objclass	wrapper_objclass(PyObject *wp, void *Py_UNUSED(ignored))	todo		
+Objects/descrobject.c	1395	1400	wrapper_name	wrapper_name(PyObject *wp, void *Py_UNUSED(ignored))	todo		
+Objects/descrobject.c	1403	1407	wrapper_doc	wrapper_doc(PyObject *self, void *Py_UNUSED(ignored))	todo		
+Objects/descrobject.c	1410	1415	wrapper_text_signature	wrapper_text_signature(PyObject *self, void *Py_UNUSED(ignored))	todo		
+Objects/descrobject.c	1418	1422	wrapper_qualname	wrapper_qualname(PyObject *self, void *Py_UNUSED(ignored))	todo		
+Objects/descrobject.c	1434	1438	wrapper_call	wrapper_call(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Objects/descrobject.c	1441	1447	wrapper_traverse	wrapper_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/descrobject.c	1488	1505	PyWrapper_New	PyWrapper_New(PyObject *d, PyObject *self)	todo		
+Objects/descrobject.c	1573	1576	property_getter	property_getter(PyObject *self, PyObject *getter)	todo		
+Objects/descrobject.c	1583	1586	property_setter	property_setter(PyObject *self, PyObject *setter)	todo		
+Objects/descrobject.c	1593	1596	property_deleter	property_deleter(PyObject *self, PyObject *deleter)	todo		
+Objects/descrobject.c	1606	1621	property_set_name	property_set_name(PyObject *self, PyObject *args) {	todo		
+Objects/descrobject.c	1633	1644	property_dealloc	property_dealloc(PyObject *self)	todo		
+Objects/descrobject.c	1647	1658	property_name	property_name(propertyobject *prop, PyObject **name)	todo		
+Objects/descrobject.c	1661	1694	property_descr_get	property_descr_get(PyObject *self, PyObject *obj, PyObject *type)	todo		
+Objects/descrobject.c	1697	1759	property_descr_set	property_descr_set(PyObject *self, PyObject *obj, PyObject *value)	todo		
+Objects/descrobject.c	1762	1797	property_copy	property_copy(PyObject *old, PyObject *get, PyObject *set, PyObject *del)	todo		
+Objects/descrobject.c	1837	1912	property_init_impl	property_init_impl(propertyobject *self, PyObject *fget, PyObject *fset, PyObject *fdel, PyObject *doc) /*[clinic end generated code: output=01a960742b692b57 input=dfb5dbbffc6932d5]*/	todo		
+Objects/descrobject.c	1915	1927	property_get__name__	property_get__name__(PyObject *op, void *Py_UNUSED(ignored))	todo		
+Objects/descrobject.c	1930	1935	property_set__name__	property_set__name__(PyObject *op, PyObject *value, void *Py_UNUSED(ignored))	todo		
+Objects/descrobject.c	1938	1965	property_get___isabstractmethod__	property_get___isabstractmethod__(PyObject *op, void *closure)	todo		
+Objects/descrobject.c	1976	1985	property_traverse	property_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/descrobject.c	1988	1993	property_clear	property_clear(PyObject *self)	todo		

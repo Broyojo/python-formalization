@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Python/dynload_shlib.c	55	113	_PyImport_FindSharedFuncptr	_PyImport_FindSharedFuncptr(const char *prefix, const char *shortname, const char *pathname, FILE *fp)	todo		

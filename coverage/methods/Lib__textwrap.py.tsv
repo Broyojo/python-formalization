@@ -1,0 +1,15 @@
+file	line	endline	name	signature	status	entry	note
+Lib/textwrap.py	112	137	TextWrapper.__init__	__init__(self, width=70, initial_indent='', subsequent_indent='', expand_tabs=True, replace_whitespace=True, fix_sentence_endings=False, break_long_words=True, drop_whitespace=True, break_on_hyphens=True, tabsize=8, *, max_lines=None, placeholder=' [...]')	todo		
+Lib/textwrap.py	143	154	TextWrapper._munge_whitespace	_munge_whitespace(self, text)	todo		
+Lib/textwrap.py	157	177	TextWrapper._split	_split(self, text)	todo		
+Lib/textwrap.py	179	195	TextWrapper._fix_sentence_endings	_fix_sentence_endings(self, chunks)	todo		
+Lib/textwrap.py	197	230	TextWrapper._handle_long_word	_handle_long_word(self, reversed_chunks, cur_line, cur_len, width)	todo		
+Lib/textwrap.py	238	339	TextWrapper._wrap_chunks	_wrap_chunks(self, chunks)	todo		
+Lib/textwrap.py	341	343	TextWrapper._split_chunks	_split_chunks(self, text)	todo		
+Lib/textwrap.py	347	359	TextWrapper.wrap	wrap(self, text)	todo		
+Lib/textwrap.py	361	368	TextWrapper.fill	fill(self, text)	todo		
+Lib/textwrap.py	373	384	wrap	wrap(text, width=70, **kwargs)	todo		
+Lib/textwrap.py	386	396	fill	fill(text, width=70, **kwargs)	todo		
+Lib/textwrap.py	398	411	shorten	shorten(text, width, **kwargs)	todo		
+Lib/textwrap.py	416	444	dedent	dedent(text)	todo		
+Lib/textwrap.py	447	469	indent	indent(text, prefix, predicate=None)	todo		

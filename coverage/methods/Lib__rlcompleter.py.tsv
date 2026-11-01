@@ -1,0 +1,7 @@
+file	line	endline	name	signature	status	entry	note
+Lib/rlcompleter.py	44	69	Completer.__init__	__init__(self, namespace=None)	todo		
+Lib/rlcompleter.py	71	101	Completer.complete	complete(self, text, state)	todo		
+Lib/rlcompleter.py	103	112	Completer._callable_postfix	_callable_postfix(self, val, word)	todo		
+Lib/rlcompleter.py	114	139	Completer.global_matches	global_matches(self, text)	todo		
+Lib/rlcompleter.py	141	203	Completer.attr_matches	attr_matches(self, text)	todo		
+Lib/rlcompleter.py	205	210	get_class_members	get_class_members(klass)	todo		

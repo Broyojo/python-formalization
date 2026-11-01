@@ -1,0 +1,49 @@
+file	line	endline	name	signature	status	entry	note
+Lib/idlelib/tree.py	37	57	listicons	listicons(icondir=ICONDIR)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	59	81	wheel_event	wheel_event(event, widget=None)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	88	96	TreeNode.__init__	__init__(self, canvas, parent, item)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	98	102	TreeNode.destroy	destroy(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	104	114	TreeNode.geticonimage	geticonimage(self, name)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	116	123	TreeNode.select	select(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	125	131	TreeNode.deselect	deselect(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	133	137	TreeNode.deselectall	deselectall(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	139	143	TreeNode.deselecttree	deselecttree(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	145	151	TreeNode.flip	flip(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	153	159	TreeNode.expand	expand(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	161	164	TreeNode.collapse	collapse(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	166	181	TreeNode.view	view(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	183	187	TreeNode.lastvisiblechild	lastvisiblechild(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	189	200	TreeNode.update	update(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	202	241	TreeNode.draw	draw(self, x, y)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	243	254	TreeNode.drawicon	drawicon(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	256	297	TreeNode.drawtext	drawtext(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	299	303	TreeNode.select_or_edit	select_or_edit(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	305	312	TreeNode.edit	edit(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	314	327	TreeNode.edit_finish	edit_finish(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	329	337	TreeNode.edit_cancel	edit_cancel(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	349	350	TreeItem.__init__	__init__(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	352	353	TreeItem.GetText	GetText(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	355	356	TreeItem.GetLabelText	GetLabelText(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	360	364	TreeItem._IsExpandable	_IsExpandable(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	366	368	TreeItem.IsExpandable	IsExpandable(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	370	377	TreeItem._GetSubList	_GetSubList(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	379	380	TreeItem.IsEditable	IsEditable(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	382	383	TreeItem.SetText	SetText(self, text)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	385	386	TreeItem.GetIconName	GetIconName(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	388	389	TreeItem.GetSelectedIconName	GetSelectedIconName(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	391	392	TreeItem.GetSubList	GetSubList(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	394	395	TreeItem.OnDoubleClick	OnDoubleClick(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	404	405	FileTreeItem.__init__	__init__(self, path)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	407	408	FileTreeItem.GetText	GetText(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	410	411	FileTreeItem.IsEditable	IsEditable(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	413	422	FileTreeItem.SetText	SetText(self, text)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	424	426	FileTreeItem.GetIconName	GetIconName(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	428	429	FileTreeItem.IsExpandable	IsExpandable(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	431	441	FileTreeItem.GetSubList	GetSubList(self)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	448	475	ScrolledCanvas.__init__	__init__(self, master, **opts)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	476	478	ScrolledCanvas.page_up	page_up(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	479	481	ScrolledCanvas.page_down	page_down(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	482	484	ScrolledCanvas.unit_up	unit_up(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	485	487	ScrolledCanvas.unit_down	unit_down(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	488	490	ScrolledCanvas.zoom_height	zoom_height(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/tree.py	493	501	_tree_widget	_tree_widget(parent)	excluded		platform: GUI toolkit

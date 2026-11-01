@@ -1,0 +1,27 @@
+file	line	endline	name	signature	status	entry	note
+Lib/trace.py	68	72	_Ignore.__init__	__init__(self, modules=None, dirs=None)	todo		
+Lib/trace.py	74	115	_Ignore.names	names(self, filename, modulename)	todo		
+Lib/trace.py	117	122	_modname	_modname(path)	todo		
+Lib/trace.py	124	150	_fullmodname	_fullmodname(path)	todo		
+Lib/trace.py	153	177	CoverageResults.__init__	__init__(self, counts=None, calledfuncs=None, infile=None, callers=None, outfile=None)	todo		
+Lib/trace.py	179	183	CoverageResults.is_ignored_filename	is_ignored_filename(self, filename)	todo		
+Lib/trace.py	185	201	CoverageResults.update	update(self, other)	todo		
+Lib/trace.py	203	297	CoverageResults.write_results	write_results(self, show_missing=True, summary=False, coverdir=None, *, ignore_missing_files=False)	todo		
+Lib/trace.py	299	329	CoverageResults.write_results_file	write_results_file(self, path, lines, lnotab, lines_hit, encoding=None)	todo		
+Lib/trace.py	331	339	_find_lines_from_code	_find_lines_from_code(code, strs)	todo		
+Lib/trace.py	341	351	_find_lines	_find_lines(code, strs)	todo		
+Lib/trace.py	353	374	_find_strings	_find_strings(filename, encoding=None)	todo		
+Lib/trace.py	376	388	_find_executable_linenos	_find_executable_linenos(filename)	todo		
+Lib/trace.py	391	439	Trace.__init__	__init__(self, count=1, trace=1, countfuncs=0, countcallers=0, ignoremods=(), ignoredirs=(), infile=None, outfile=None, timing=False)	todo		
+Lib/trace.py	441	444	Trace.run	run(self, cmd)	todo		
+Lib/trace.py	446	457	Trace.runctx	runctx(self, cmd, globals=None, locals=None)	todo		
+Lib/trace.py	459	468	Trace.runfunc	runfunc(self, func, /, *args, **kw)	todo		
+Lib/trace.py	470	509	Trace.file_module_function_of	file_module_function_of(self, frame)	todo		
+Lib/trace.py	511	520	Trace.globaltrace_trackcallers	globaltrace_trackcallers(self, frame, why, arg)	todo		
+Lib/trace.py	522	529	Trace.globaltrace_countfuncs	globaltrace_countfuncs(self, frame, why, arg)	todo		
+Lib/trace.py	531	552	Trace.globaltrace_lt	globaltrace_lt(self, frame, why, arg)	todo		
+Lib/trace.py	554	571	Trace.localtrace_trace_and_count	localtrace_trace_and_count(self, frame, why, arg)	todo		
+Lib/trace.py	573	588	Trace.localtrace_trace	localtrace_trace(self, frame, why, arg)	todo		
+Lib/trace.py	590	596	Trace.localtrace_count	localtrace_count(self, frame, why, arg)	todo		
+Lib/trace.py	598	602	Trace.results	results(self)	todo		
+Lib/trace.py	604	748	main	main()	todo		

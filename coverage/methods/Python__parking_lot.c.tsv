@@ -1,0 +1,14 @@
+file	line	endline	name	signature	status	entry	note
+Python/parking_lot.c	54	81	_PySemaphore_Init	_PySemaphore_Init(_PySemaphore *sema)	todo		
+Python/parking_lot.c	84	94	_PySemaphore_Destroy	_PySemaphore_Destroy(_PySemaphore *sema)	todo		
+Python/parking_lot.c	97	228	_PySemaphore_PlatformWait	_PySemaphore_PlatformWait(_PySemaphore *sema, PyTime_t timeout)	todo		
+Python/parking_lot.c	231	249	_PySemaphore_Wait	_PySemaphore_Wait(_PySemaphore *sema, PyTime_t timeout, int detach)	todo		
+Python/parking_lot.c	252	271	_PySemaphore_Wakeup	_PySemaphore_Wakeup(_PySemaphore *sema)	todo		
+Python/parking_lot.c	274	278	enqueue	enqueue(Bucket *bucket, const void *address, struct wait_entry *wait)	todo		
+Python/parking_lot.c	281	296	dequeue	dequeue(Bucket *bucket, const void *address)	todo		
+Python/parking_lot.c	299	313	dequeue_all	dequeue_all(Bucket *bucket, const void *address, struct llist_node *dst)	todo		
+Python/parking_lot.c	317	326	atomic_memcmp	atomic_memcmp(const void *addr, const void *expected, size_t addr_size)	todo		
+Python/parking_lot.c	329	390	_PyParkingLot_Park	_PyParkingLot_Park(const void *addr, const void *expected, size_t size, PyTime_t timeout_ns, void *park_arg, int detach)	todo		
+Python/parking_lot.c	393	413	_PyParkingLot_Unpark	_PyParkingLot_Unpark(const void *addr, _Py_unpark_fn_t *fn, void *arg)	todo		
+Python/parking_lot.c	416	431	_PyParkingLot_UnparkAll	_PyParkingLot_UnparkAll(const void *addr)	todo		
+Python/parking_lot.c	434	442	_PyParkingLot_AfterFork	_PyParkingLot_AfterFork(void)	todo		

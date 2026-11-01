@@ -1,0 +1,25 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testsinglephase.c	236	240	clear_global_state	clear_global_state(void)	excluded		test-support: only for CPython's own tests
+Modules/_testsinglephase.c	244	258	get_module_state	get_module_state(PyObject *module)	excluded		test-support: only for CPython's own tests
+Modules/_testsinglephase.c	261	267	clear_state	clear_state(module_state *state)	excluded		test-support: only for CPython's own tests
+Modules/_testsinglephase.c	270	287	_set_initialized	_set_initialized(PyTime_t *initialized)	excluded		test-support: only for CPython's own tests
+Modules/_testsinglephase.c	290	323	init_state	init_state(module_state *state)	excluded		test-support: only for CPython's own tests
+Modules/_testsinglephase.c	327	345	init_module	init_module(PyObject *module, module_state *state)	excluded		test-support: only for CPython's own tests
+Modules/_testsinglephase.c	354	362	common_state_initialized	common_state_initialized(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testsinglephase.c	375	383	common_look_up_self	common_look_up_self(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testsinglephase.c	397	405	common_sum	common_sum(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testsinglephase.c	417	421	basic_initialized_count	basic_initialized_count(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testsinglephase.c	434	439	basic__clear_globals	basic__clear_globals(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testsinglephase.c	451	458	basic__clear_module_state	basic__clear_module_state(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testsinglephase.c	499	530	init__testsinglephase_basic	init__testsinglephase_basic(PyModuleDef *def)	excluded		test-support: only for CPython's own tests
+Modules/_testsinglephase.c	533	536	PyInit__testsinglephase	PyInit__testsinglephase(void)	excluded		test-support: only for CPython's own tests
+Modules/_testsinglephase.c	540	543	PyInit__testsinglephase_basic_wrapper	PyInit__testsinglephase_basic_wrapper(void)	excluded		test-support: only for CPython's own tests
+Modules/_testsinglephase.c	547	557	PyInit__testsinglephase_basic_copy	PyInit__testsinglephase_basic_copy(void)	excluded		test-support: only for CPython's own tests
+Modules/_testsinglephase.c	595	624	PyInit__testsinglephase_with_reinit	PyInit__testsinglephase_with_reinit(void)	excluded		test-support: only for CPython's own tests
+Modules/_testsinglephase.c	660	687	PyInit__testsinglephase_with_state	PyInit__testsinglephase_with_state(void)	excluded		test-support: only for CPython's own tests
+Modules/_testsinglephase.c	705	713	PyInit__testsinglephase_check_cache_first	PyInit__testsinglephase_check_cache_first(void)	excluded		test-support: only for CPython's own tests
+Modules/_testsinglephase.c	724	732	PyInit__testsinglephase_with_reinit_check_cache_first	PyInit__testsinglephase_with_reinit_check_cache_first(void)	excluded		test-support: only for CPython's own tests
+Modules/_testsinglephase.c	743	751	PyInit__testsinglephase_with_state_check_cache_first	PyInit__testsinglephase_with_state_check_cache_first(void)	excluded		test-support: only for CPython's own tests
+Modules/_testsinglephase.c	761	766	circularmod_clear_static_var	circularmod_clear_static_var(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testsinglephase.c	780	801	PyInit__testsinglephase_circular	PyInit__testsinglephase_circular(void)	excluded		test-support: only for CPython's own tests
+Modules/_testsinglephase.c	805	809	PyInit__testsinglephase_raise_exception	PyInit__testsinglephase_raise_exception(void)	excluded		test-support: only for CPython's own tests

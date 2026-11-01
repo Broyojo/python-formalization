@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Python/structmember.c	12	21	member_get_object	member_get_object(const char *addr, const char *obj_addr, PyMemberDef *l)	todo		
+Python/structmember.c	24	135	PyMember_GetOne	PyMember_GetOne(const char *obj_addr, PyMemberDef *l)	todo		
+Python/structmember.c	144	382	PyMember_SetOne	PyMember_SetOne(char *addr, PyMemberDef *l, PyObject *v)	todo		

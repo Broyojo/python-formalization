@@ -1,0 +1,21 @@
+file	line	endline	name	signature	status	entry	note
+Lib/email/feedparser.py	54	63	BufferedSubFile.__init__	__init__(self)	todo		
+Lib/email/feedparser.py	65	66	BufferedSubFile.push_eof_matcher	push_eof_matcher(self, pred)	todo		
+Lib/email/feedparser.py	68	69	BufferedSubFile.pop_eof_matcher	pop_eof_matcher(self)	todo		
+Lib/email/feedparser.py	71	77	BufferedSubFile.close	close(self)	todo		
+Lib/email/feedparser.py	79	95	BufferedSubFile.readline	readline(self)	todo		
+Lib/email/feedparser.py	97	100	BufferedSubFile.unreadline	unreadline(self, line)	todo		
+Lib/email/feedparser.py	102	121	BufferedSubFile.push	push(self, data)	todo		
+Lib/email/feedparser.py	123	124	BufferedSubFile.pushlines	pushlines(self, lines)	todo		
+Lib/email/feedparser.py	126	127	BufferedSubFile.__iter__	__iter__(self)	todo		
+Lib/email/feedparser.py	129	133	BufferedSubFile.__next__	__next__(self)	todo		
+Lib/email/feedparser.py	139	167	FeedParser.__init__	__init__(self, _factory=None, *, policy=compat32)	todo		
+Lib/email/feedparser.py	170	171	FeedParser._set_headersonly	_set_headersonly(self)	todo		
+Lib/email/feedparser.py	173	176	FeedParser.feed	feed(self, data)	todo		
+Lib/email/feedparser.py	178	182	FeedParser._call_parse	_call_parse(self)	todo		
+Lib/email/feedparser.py	184	195	FeedParser.close	close(self)	todo		
+Lib/email/feedparser.py	197	208	FeedParser._new_message	_new_message(self)	todo		
+Lib/email/feedparser.py	210	216	FeedParser._pop_message	_pop_message(self)	todo		
+Lib/email/feedparser.py	218	470	FeedParser._parsegen	_parsegen(self)	todo		
+Lib/email/feedparser.py	472	529	FeedParser._parse_headers	_parse_headers(self, lines)	todo		
+Lib/email/feedparser.py	535	536	BytesFeedParser.feed	feed(self, data)	todo		

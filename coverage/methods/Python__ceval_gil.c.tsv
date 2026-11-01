@@ -1,0 +1,57 @@
+file	line	endline	name	signature	status	entry	note
+Python/ceval_gil.c	55	68	copy_eval_breaker_bits	copy_eval_breaker_bits(uintptr_t *from, uintptr_t *to, uintptr_t mask)	todo		
+Python/ceval_gil.c	73	99	update_eval_breaker_for_thread	update_eval_breaker_for_thread(PyInterpreterState *interp, PyThreadState *tstate)	todo		
+Python/ceval_gil.c	149	153	_gil_initialize	static void _gil_initialize(struct _gil_runtime_state *gil)	todo		
+Python/ceval_gil.c	155	161	gil_created	static int gil_created(struct _gil_runtime_state *gil)	todo		
+Python/ceval_gil.c	163	176	create_gil	static void create_gil(struct _gil_runtime_state *gil)	todo		
+Python/ceval_gil.c	178	191	destroy_gil	static void destroy_gil(struct _gil_runtime_state *gil)	todo		
+Python/ceval_gil.c	194	199	recreate_gil	static void recreate_gil(struct _gil_runtime_state *gil)	todo		
+Python/ceval_gil.c	203	213	drop_gil_impl	drop_gil_impl(PyThreadState *tstate, struct _gil_runtime_state *gil)	todo		
+Python/ceval_gil.c	216	275	drop_gil	drop_gil(PyInterpreterState *interp, PyThreadState *tstate, int final_release)	todo		
+Python/ceval_gil.c	285	418	take_gil	take_gil(PyThreadState *tstate)	todo		
+Python/ceval_gil.c	420	426	_PyEval_SetSwitchInterval	void _PyEval_SetSwitchInterval(unsigned long microseconds)	todo		
+Python/ceval_gil.c	428	434	_PyEval_GetSwitchInterval	unsigned long _PyEval_GetSwitchInterval(void)	todo		
+Python/ceval_gil.c	438	449	_PyEval_ThreadsInitialized	_PyEval_ThreadsInitialized(void)	todo		
+Python/ceval_gil.c	452	456	PyAPI_FUNC	PyAPI_FUNC(int) PyEval_ThreadsInitialized(void)	todo		
+Python/ceval_gil.c	460	473	current_thread_holds_gil	current_thread_holds_gil(struct _gil_runtime_state *gil, PyThreadState *tstate)	todo		
+Python/ceval_gil.c	477	482	init_shared_gil	init_shared_gil(PyInterpreterState *interp, struct _gil_runtime_state *gil)	todo		
+Python/ceval_gil.c	485	496	init_own_gil	init_own_gil(PyInterpreterState *interp, struct _gil_runtime_state *gil)	todo		
+Python/ceval_gil.c	499	517	_PyEval_InitGIL	_PyEval_InitGIL(PyThreadState *tstate, int own_gil)	todo		
+Python/ceval_gil.c	520	547	_PyEval_FiniGIL	_PyEval_FiniGIL(PyInterpreterState *interp)	todo		
+Python/ceval_gil.c	550	553	PyEval_InitThreads	PyEval_InitThreads(void)	todo		
+Python/ceval_gil.c	556	561	_PyEval_Fini	_PyEval_Fini(void)	todo		
+Python/ceval_gil.c	564	571	PyAPI_FUNC	PyAPI_FUNC(void) PyEval_AcquireLock(void)	todo		
+Python/ceval_gil.c	574	582	PyAPI_FUNC	PyAPI_FUNC(void) PyEval_ReleaseLock(void)	todo		
+Python/ceval_gil.c	585	589	_PyEval_AcquireLock	_PyEval_AcquireLock(PyThreadState *tstate)	todo		
+Python/ceval_gil.c	592	599	_PyEval_ReleaseLock	_PyEval_ReleaseLock(PyInterpreterState *interp, PyThreadState *tstate, int final_release)	todo		
+Python/ceval_gil.c	602	606	PyEval_AcquireThread	PyEval_AcquireThread(PyThreadState *tstate)	todo		
+Python/ceval_gil.c	609	613	PyEval_ReleaseThread	PyEval_ReleaseThread(PyThreadState *tstate)	todo		
+Python/ceval_gil.c	619	635	_PyEval_ReInitThreads	_PyEval_ReInitThreads(PyThreadState *tstate)	todo		
+Python/ceval_gil.c	639	644	PyEval_SaveThread	PyEval_SaveThread(void)	todo		
+Python/ceval_gil.c	647	659	PyEval_RestoreThread	PyEval_RestoreThread(PyThreadState *tstate)	todo		
+Python/ceval_gil.c	663	666	_PyEval_SignalReceived	_PyEval_SignalReceived(void)	todo		
+Python/ceval_gil.c	671	686	signal_active_thread	signal_active_thread(PyInterpreterState *interp, uintptr_t bit)	todo		
+Python/ceval_gil.c	714	737	_push_pending_call	_push_pending_call(struct _pending_calls *pending, _Py_pending_call_func func, void *arg, int flags)	todo		
+Python/ceval_gil.c	740	754	_next_pending_call	_next_pending_call(struct _pending_calls *pending, int (**func)(void *), void **arg, int *flags)	todo		
+Python/ceval_gil.c	758	768	_pop_pending_call	_pop_pending_call(struct _pending_calls *pending, int (**func)(void *), void **arg, int *flags)	todo		
+Python/ceval_gil.c	776	804	_PyEval_AddPendingCall	_PyEval_AddPendingCall(PyInterpreterState *interp, _Py_pending_call_func func, void *arg, int flags)	todo		
+Python/ceval_gil.c	807	821	Py_AddPendingCall	Py_AddPendingCall(_Py_pending_call_func func, void *arg)	todo		
+Python/ceval_gil.c	824	837	handle_signals	handle_signals(PyThreadState *tstate)	todo		
+Python/ceval_gil.c	840	885	_make_pending_calls	_make_pending_calls(struct _pending_calls *pending, int32_t *p_npending)	todo		
+Python/ceval_gil.c	888	895	signal_pending_calls	signal_pending_calls(PyThreadState *tstate, PyInterpreterState *interp)	todo		
+Python/ceval_gil.c	898	905	unsignal_pending_calls	unsignal_pending_calls(PyThreadState *tstate, PyInterpreterState *interp)	todo		
+Python/ceval_gil.c	908	917	clear_pending_handling_thread	clear_pending_handling_thread(struct _pending_calls *pending)	todo		
+Python/ceval_gil.c	920	976	make_pending_calls	make_pending_calls(PyThreadState *tstate)	todo		
+Python/ceval_gil.c	980	986	_Py_set_eval_breaker_bit_all	_Py_set_eval_breaker_bit_all(PyInterpreterState *interp, uintptr_t bit)	todo		
+Python/ceval_gil.c	989	995	_Py_unset_eval_breaker_bit_all	_Py_unset_eval_breaker_bit_all(PyInterpreterState *interp, uintptr_t bit)	todo		
+Python/ceval_gil.c	998	1031	_Py_FinishPendingCalls	_Py_FinishPendingCalls(PyThreadState *tstate)	todo		
+Python/ceval_gil.c	1034	1054	_PyEval_MakePendingCalls	_PyEval_MakePendingCalls(PyThreadState *tstate)	todo		
+Python/ceval_gil.c	1059	1071	Py_MakePendingCalls	Py_MakePendingCalls(void)	todo		
+Python/ceval_gil.c	1074	1077	_PyEval_InitState	_PyEval_InitState(PyInterpreterState *interp)	todo		
+Python/ceval_gil.c	1081	1130	_PyEval_EnableGILTransient	_PyEval_EnableGILTransient(PyThreadState *tstate)	todo		
+Python/ceval_gil.c	1133	1150	_PyEval_EnableGILPermanent	_PyEval_EnableGILPermanent(PyThreadState *tstate)	todo		
+Python/ceval_gil.c	1153	1192	_PyEval_DisableGIL	_PyEval_DisableGIL(PyThreadState *tstate)	todo		
+Python/ceval_gil.c	1198	1217	run_remote_debugger_source	static inline int run_remote_debugger_source(PyObject *source)	todo		
+Python/ceval_gil.c	1221	1256	run_remote_debugger_script	static inline void run_remote_debugger_script(PyObject *path)	todo		
+Python/ceval_gil.c	1258	1294	_PyRunRemoteDebugger	int _PyRunRemoteDebugger(PyThreadState *tstate)	todo		
+Python/ceval_gil.c	1357	1434	_Py_HandlePending	_Py_HandlePending(PyThreadState *tstate)	todo		

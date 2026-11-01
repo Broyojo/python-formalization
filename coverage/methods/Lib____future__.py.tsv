@@ -1,0 +1,5 @@
+file	line	endline	name	signature	status	entry	note
+Lib/__future__.py	83	86	_Feature.__init__	__init__(self, optionalRelease, mandatoryRelease, compiler_flag)	todo		
+Lib/__future__.py	88	93	_Feature.getOptionalRelease	getOptionalRelease(self)	todo		
+Lib/__future__.py	95	101	_Feature.getMandatoryRelease	getMandatoryRelease(self)	todo		
+Lib/__future__.py	103	106	_Feature.__repr__	__repr__(self)	todo		

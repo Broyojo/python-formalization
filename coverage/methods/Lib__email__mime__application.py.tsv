@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Lib/email/mime/application.py	16	37	MIMEApplication.__init__	__init__(self, _data, _subtype='octet-stream', _encoder=encoders.encode_base64, *, policy=None, **_params)	todo		

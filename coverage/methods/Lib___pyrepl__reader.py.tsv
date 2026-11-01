@@ -1,0 +1,41 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_pyrepl/reader.py	44	52	make_default_syntax_table	make_default_syntax_table()	todo		
+Lib/_pyrepl/reader.py	55	61	make_default_commands	make_default_commands()	todo		
+Lib/_pyrepl/reader.py	229	239	Reader.RefreshCache.update_cache	update_cache(self, reader: Reader, screen: list[str], screeninfo: list[tuple[int, list[int]]])	todo		
+Lib/_pyrepl/reader.py	241	246	Reader.RefreshCache.valid	valid(self, reader: Reader)	todo		
+Lib/_pyrepl/reader.py	248	261	Reader.RefreshCache.get_cached_location	get_cached_location(self, reader: Reader)	todo		
+Lib/_pyrepl/reader.py	265	281	Reader.__post_init__	__post_init__(self)	todo		
+Lib/_pyrepl/reader.py	283	284	Reader.collect_keymap	collect_keymap(self)	todo		
+Lib/_pyrepl/reader.py	286	389	Reader.calc_screen	calc_screen(self)	todo		
+Lib/_pyrepl/reader.py	392	401	Reader.process_prompt	process_prompt(prompt: str)	todo		
+Lib/_pyrepl/reader.py	403	418	Reader.bow	bow(self, p: int | None=None)	todo		
+Lib/_pyrepl/reader.py	420	434	Reader.eow	eow(self, p: int | None=None)	todo		
+Lib/_pyrepl/reader.py	436	447	Reader.bol	bol(self, p: int | None=None)	todo		
+Lib/_pyrepl/reader.py	449	459	Reader.eol	eol(self, p: int | None=None)	todo		
+Lib/_pyrepl/reader.py	461	463	Reader.max_column	max_column(self, y: int)	todo		
+Lib/_pyrepl/reader.py	465	466	Reader.max_row	max_row(self)	todo		
+Lib/_pyrepl/reader.py	468	474	Reader.get_arg	get_arg(self, default: int=1)	todo		
+Lib/_pyrepl/reader.py	476	496	Reader.get_prompt	get_prompt(self, lineno: int, cursor_on_line: bool)	todo		
+Lib/_pyrepl/reader.py	498	500	Reader.push_input_trans	push_input_trans(self, itrans: input.KeymapTranslator)	todo		
+Lib/_pyrepl/reader.py	502	503	Reader.pop_input_trans	pop_input_trans(self)	todo		
+Lib/_pyrepl/reader.py	505	529	Reader.setpos_from_xy	setpos_from_xy(self, x: int, y: int)	todo		
+Lib/_pyrepl/reader.py	531	559	Reader.pos2xy	pos2xy(self)	todo		
+Lib/_pyrepl/reader.py	561	565	Reader.insert	insert(self, text: str | list[str])	todo		
+Lib/_pyrepl/reader.py	567	571	Reader.update_cursor	update_cursor(self)	todo		
+Lib/_pyrepl/reader.py	573	578	Reader.after_command	after_command(self, cmd: Command)	todo		
+Lib/_pyrepl/reader.py	580	599	Reader.prepare	prepare(self)	todo		
+Lib/_pyrepl/reader.py	601	604	Reader.last_command_is	last_command_is(self, cls: type)	todo		
+Lib/_pyrepl/reader.py	606	608	Reader.restore	restore(self)	todo		
+Lib/_pyrepl/reader.py	611	620	Reader.suspend	suspend(self)	todo		
+Lib/_pyrepl/reader.py	623	629	Reader.suspend_colorization	suspend_colorization(self)	todo		
+Lib/_pyrepl/reader.py	632	634	Reader.finish	finish(self)	todo		
+Lib/_pyrepl/reader.py	636	639	Reader.error	error(self, msg: str='none')	todo		
+Lib/_pyrepl/reader.py	641	643	Reader.update_screen	update_screen(self)	todo		
+Lib/_pyrepl/reader.py	645	651	Reader.refresh	refresh(self)	todo		
+Lib/_pyrepl/reader.py	653	682	Reader.do_cmd	do_cmd(self, cmd: tuple[str, list[str]])	todo		
+Lib/_pyrepl/reader.py	684	700	Reader.run_hooks	run_hooks(self)	todo		
+Lib/_pyrepl/reader.py	702	743	Reader.handle1	handle1(self, block: bool=True)	todo		
+Lib/_pyrepl/reader.py	745	747	Reader.push_char	push_char(self, char: int | bytes)	todo		
+Lib/_pyrepl/reader.py	749	763	Reader.readline	readline(self, startup_hook: Callback | None=None)	todo		
+Lib/_pyrepl/reader.py	765	769	Reader.bind	bind(self, spec: KeySpec, command: CommandName)	todo		
+Lib/_pyrepl/reader.py	771	773	Reader.get_unicode	get_unicode(self)	todo		

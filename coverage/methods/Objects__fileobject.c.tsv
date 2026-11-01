@@ -1,0 +1,22 @@
+file	line	endline	name	signature	status	entry	note
+Objects/fileobject.c	33	51	PyFile_FromFd	PyFile_FromFd(int fd, const char *name, const char *mode, int buffering, const char *encoding, const char *errors, const char *newline, int closefd)	todo		
+Objects/fileobject.c	54	102	PyFile_GetLine	PyFile_GetLine(PyObject *f, int n)	todo		
+Objects/fileobject.c	107	134	PyFile_WriteObject	PyFile_WriteObject(PyObject *v, PyObject *f, int flags)	todo		
+Objects/fileobject.c	137	157	PyFile_WriteString	PyFile_WriteString(const char *s, PyObject *f)	todo		
+Objects/fileobject.c	167	217	PyObject_AsFileDescriptor	PyObject_AsFileDescriptor(PyObject *o)	todo		
+Objects/fileobject.c	220	228	_PyLong_FileDescriptor_Converter	_PyLong_FileDescriptor_Converter(PyObject *o, void *ptr)	todo		
+Objects/fileobject.c	231	262	_Py_UniversalNewlineFgetsWithSize	_Py_UniversalNewlineFgetsWithSize(char *buf, int n, FILE *stream, PyObject *fobj, size_t* size)	todo		
+Objects/fileobject.c	274	277	Py_UniversalNewlineFgets	Py_UniversalNewlineFgets(char *buf, int n, FILE *stream, PyObject *fobj) {	todo		
+Objects/fileobject.c	290	305	PyFile_NewStdPrinter	PyFile_NewStdPrinter(int fd)	todo		
+Objects/fileobject.c	308	358	stdprinter_write	stdprinter_write(PyObject *op, PyObject *args)	todo		
+Objects/fileobject.c	361	365	stdprinter_fileno	stdprinter_fileno(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
+Objects/fileobject.c	368	373	stdprinter_repr	stdprinter_repr(PyObject *op)	todo		
+Objects/fileobject.c	376	379	stdprinter_noop	stdprinter_noop(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/fileobject.c	382	395	stdprinter_isatty	stdprinter_isatty(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
+Objects/fileobject.c	407	410	get_closed	get_closed(PyObject *self, void *Py_UNUSED(closure))	todo		
+Objects/fileobject.c	413	416	get_mode	get_mode(PyObject *self, void *Py_UNUSED(closure))	todo		
+Objects/fileobject.c	419	422	get_encoding	get_encoding(PyObject *self, void *Py_UNUSED(closure))	todo		
+Objects/fileobject.c	481	498	PyFile_SetOpenCodeHook	PyFile_SetOpenCodeHook(Py_OpenCodeHookFunction hook, void *userData) {	todo		
+Objects/fileobject.c	501	523	PyFile_OpenCodeObject	PyFile_OpenCodeObject(PyObject *path)	todo		
+Objects/fileobject.c	526	536	PyFile_OpenCode	PyFile_OpenCode(const char *utf8path)	todo		
+Objects/fileobject.c	540	548	_PyFile_Flush	_PyFile_Flush(PyObject *file)	todo		

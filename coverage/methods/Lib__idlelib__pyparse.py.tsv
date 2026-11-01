@@ -1,0 +1,16 @@
+file	line	endline	name	signature	status	entry	note
+Lib/idlelib/pyparse.py	114	115	ParseMap.__missing__	__missing__(self, key)	excluded		platform: GUI toolkit
+Lib/idlelib/pyparse.py	127	129	Parser.__init__	__init__(self, indentwidth, tabwidth)	excluded		platform: GUI toolkit
+Lib/idlelib/pyparse.py	131	134	Parser.set_code	set_code(self, s)	excluded		platform: GUI toolkit
+Lib/idlelib/pyparse.py	136	186	Parser.find_good_parse_start	find_good_parse_start(self, is_char_in_string)	excluded		platform: GUI toolkit
+Lib/idlelib/pyparse.py	188	195	Parser.set_lo	set_lo(self, lo)	excluded		platform: GUI toolkit
+Lib/idlelib/pyparse.py	197	329	Parser._study1	_study1(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyparse.py	331	333	Parser.get_continuation_type	get_continuation_type(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyparse.py	335	456	Parser._study2	_study2(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyparse.py	458	487	Parser.compute_bracket_indent	compute_bracket_indent(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyparse.py	489	497	Parser.get_num_lines_in_stmt	get_num_lines_in_stmt(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyparse.py	499	554	Parser.compute_backslash_indent	compute_backslash_indent(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyparse.py	556	566	Parser.get_base_indent_string	get_base_indent_string(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyparse.py	568	571	Parser.is_block_opener	is_block_opener(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyparse.py	573	576	Parser.is_block_closer	is_block_closer(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyparse.py	578	584	Parser.get_last_stmt_bracketing	get_last_stmt_bracketing(self)	excluded		platform: GUI toolkit

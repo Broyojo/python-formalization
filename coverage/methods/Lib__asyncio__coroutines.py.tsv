@@ -1,0 +1,6 @@
+file	line	endline	name	signature	status	entry	note
+Lib/asyncio/coroutines.py	10	13	_is_debug_mode	_is_debug_mode()	todo		
+Lib/asyncio/coroutines.py	20	27	iscoroutinefunction	iscoroutinefunction(func)	todo		
+Lib/asyncio/coroutines.py	30	32	_iscoroutinefunction	_iscoroutinefunction(func)	todo		
+Lib/asyncio/coroutines.py	41	54	iscoroutine	iscoroutine(obj)	todo		
+Lib/asyncio/coroutines.py	57	118	_format_coroutine	_format_coroutine(coro)	todo		

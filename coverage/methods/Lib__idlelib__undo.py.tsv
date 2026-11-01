@@ -1,0 +1,43 @@
+file	line	endline	name	signature	status	entry	note
+Lib/idlelib/undo.py	25	27	UndoDelegator.__init__	__init__(self)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	29	38	UndoDelegator.setdelegate	setdelegate(self, delegate)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	40	48	UndoDelegator.dump_event	dump_event(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	50	55	UndoDelegator.reset_undo	reset_undo(self)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	57	63	UndoDelegator.set_saved	set_saved(self, flag)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	65	66	UndoDelegator.get_saved	get_saved(self)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	70	71	UndoDelegator.set_saved_change_hook	set_saved_change_hook(self, hook)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	75	80	UndoDelegator.check_saved	check_saved(self)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	82	83	UndoDelegator.insert	insert(self, index, chars, tags=None)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	85	86	UndoDelegator.delete	delete(self, index1, index2=None)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	99	102	UndoDelegator.undo_block_start	undo_block_start(self)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	104	114	UndoDelegator.undo_block_stop	undo_block_stop(self)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	116	137	UndoDelegator.addcmd	addcmd(self, cmd, execute=True)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	139	148	UndoDelegator.undo_event	undo_event(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	150	159	UndoDelegator.redo_event	redo_event(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	167	174	Command.__init__	__init__(self, index1, index2, chars, tags=None)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	176	181	Command.__repr__	__repr__(self)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	183	184	Command.do	do(self, text)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	186	187	Command.redo	redo(self, text)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	189	190	Command.undo	undo(self, text)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	192	193	Command.merge	merge(self, cmd)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	195	200	Command.save_marks	save_marks(self, text)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	202	204	Command.set_marks	set_marks(self, text, marks)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	210	211	InsertCommand.__init__	__init__(self, index1, chars, tags=None)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	213	221	InsertCommand.do	do(self, text)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	224	228	InsertCommand.redo	redo(self, text)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	231	235	InsertCommand.undo	undo(self, text)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	238	252	InsertCommand.merge	merge(self, cmd)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	256	261	InsertCommand.classify	classify(self, c)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	267	268	DeleteCommand.__init__	__init__(self, index1, index2=None)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	270	282	DeleteCommand.do	do(self, text)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	285	289	DeleteCommand.redo	redo(self, text)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	292	296	DeleteCommand.undo	undo(self, text)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	304	306	CommandSequence.__init__	__init__(self)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	308	313	CommandSequence.__repr__	__repr__(self)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	315	316	CommandSequence.__len__	__len__(self)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	318	319	CommandSequence.append	append(self, cmd)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	321	322	CommandSequence.getcmd	getcmd(self, i)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	324	326	CommandSequence.redo	redo(self, text)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	328	332	CommandSequence.undo	undo(self, text)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	334	336	CommandSequence.bump_depth	bump_depth(self, incr=1)	excluded		platform: GUI toolkit
+Lib/idlelib/undo.py	339	359	_undo_delegator	_undo_delegator(parent)	excluded		platform: GUI toolkit

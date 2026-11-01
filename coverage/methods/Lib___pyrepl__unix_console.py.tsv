@@ -1,0 +1,45 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_pyrepl/unix_console.py	61	62	InvalidTerminal.__init__	__init__(self, message: str)	todo		
+Lib/_pyrepl/unix_console.py	78	81	add_baudrate_if_supported	add_baudrate_if_supported(dictionary: dict[int, int], rate: int)	todo		
+Lib/_pyrepl/unix_console.py	144	224	UnixConsole.__init__	__init__(self, f_in: IO[bytes] | int=0, f_out: IO[bytes] | int=1, term: str='', encoding: str='')	todo		
+Lib/_pyrepl/unix_console.py	226	228	UnixConsole._sigcont_handler	_sigcont_handler(self, signum, frame)	todo		
+Lib/_pyrepl/unix_console.py	230	231	UnixConsole.__read	__read(self, n: int)	todo		
+Lib/_pyrepl/unix_console.py	233	240	UnixConsole.change_encoding	change_encoding(self, encoding: str)	todo		
+Lib/_pyrepl/unix_console.py	242	324	UnixConsole.refresh	refresh(self, screen, c_xy)	todo		
+Lib/_pyrepl/unix_console.py	326	339	UnixConsole.move_cursor	move_cursor(self, x, y)	todo		
+Lib/_pyrepl/unix_console.py	341	379	UnixConsole.prepare	prepare(self)	todo		
+Lib/_pyrepl/unix_console.py	381	400	UnixConsole.restore	restore(self)	todo		
+Lib/_pyrepl/unix_console.py	402	407	UnixConsole.push_char	push_char(self, char: int | bytes)	todo		
+Lib/_pyrepl/unix_console.py	409	438	UnixConsole.get_event	get_event(self, block: bool=True)	todo		
+Lib/_pyrepl/unix_console.py	440	447	UnixConsole.wait	wait(self, timeout: float | None=None)	todo		
+Lib/_pyrepl/unix_console.py	449	459	UnixConsole.set_cursor_vis	set_cursor_vis(self, visible)	todo		
+Lib/_pyrepl/unix_console.py	463	480	UnixConsole.getheightwidth	getheightwidth(self)	todo		
+Lib/_pyrepl/unix_console.py	484	494	UnixConsole.getheightwidth	getheightwidth(self)	todo		
+Lib/_pyrepl/unix_console.py	496	500	UnixConsole.forgetinput	forgetinput(self)	todo		
+Lib/_pyrepl/unix_console.py	502	511	UnixConsole.flushoutput	flushoutput(self)	todo		
+Lib/_pyrepl/unix_console.py	513	522	UnixConsole.finish	finish(self)	todo		
+Lib/_pyrepl/unix_console.py	524	529	UnixConsole.beep	beep(self)	todo		
+Lib/_pyrepl/unix_console.py	533	553	UnixConsole.getpending	getpending(self)	todo		
+Lib/_pyrepl/unix_console.py	557	576	UnixConsole.getpending	getpending(self)	todo		
+Lib/_pyrepl/unix_console.py	578	586	UnixConsole.clear	clear(self)	todo		
+Lib/_pyrepl/unix_console.py	589	593	UnixConsole.input_hook	input_hook(self)	todo		
+Lib/_pyrepl/unix_console.py	595	596	UnixConsole.__enable_bracketed_paste	__enable_bracketed_paste(self)	todo		
+Lib/_pyrepl/unix_console.py	598	599	UnixConsole.__disable_bracketed_paste	__disable_bracketed_paste(self)	todo		
+Lib/_pyrepl/unix_console.py	601	635	UnixConsole.__setup_movement	__setup_movement(self)	todo		
+Lib/_pyrepl/unix_console.py	637	722	UnixConsole.__write_changed_line	__write_changed_line(self, y, oldline, newline, px_coord)	todo		
+Lib/_pyrepl/unix_console.py	724	725	UnixConsole.__write	__write(self, text)	todo		
+Lib/_pyrepl/unix_console.py	727	728	UnixConsole.__write_code	__write_code(self, fmt, *args)	todo		
+Lib/_pyrepl/unix_console.py	730	732	UnixConsole.__maybe_write_code	__maybe_write_code(self, fmt, *args)	todo		
+Lib/_pyrepl/unix_console.py	734	741	UnixConsole.__move_y_cuu1_cud1	__move_y_cuu1_cud1(self, y)	todo		
+Lib/_pyrepl/unix_console.py	743	748	UnixConsole.__move_y_cuu_cud	__move_y_cuu_cud(self, y)	todo		
+Lib/_pyrepl/unix_console.py	750	752	UnixConsole.__move_x_hpa	__move_x_hpa(self, x: int)	todo		
+Lib/_pyrepl/unix_console.py	754	761	UnixConsole.__move_x_cub1_cuf1	__move_x_cub1_cuf1(self, x: int)	todo		
+Lib/_pyrepl/unix_console.py	763	768	UnixConsole.__move_x_cub_cuf	__move_x_cub_cuf(self, x: int)	todo		
+Lib/_pyrepl/unix_console.py	770	772	UnixConsole.__move_short	__move_short(self, x, y)	todo		
+Lib/_pyrepl/unix_console.py	774	776	UnixConsole.__move_tall	__move_tall(self, x, y)	todo		
+Lib/_pyrepl/unix_console.py	778	779	UnixConsole.__sigwinch	__sigwinch(self, signum, frame)	todo		
+Lib/_pyrepl/unix_console.py	781	784	UnixConsole.__hide_cursor	__hide_cursor(self)	todo		
+Lib/_pyrepl/unix_console.py	786	789	UnixConsole.__show_cursor	__show_cursor(self)	todo		
+Lib/_pyrepl/unix_console.py	791	801	UnixConsole.repaint	repaint(self)	todo		
+Lib/_pyrepl/unix_console.py	803	828	UnixConsole.__tputs	__tputs(self, fmt, prog=delayprog)	todo		
+Lib/_pyrepl/unix_console.py	830	842	UnixConsole.__input_fd_set	__input_fd_set(self, state: TermState, ignore: AbstractSet[int]=_error_codes_to_ignore)	todo		

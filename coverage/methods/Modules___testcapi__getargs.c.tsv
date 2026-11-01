@@ -1,0 +1,47 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/getargs.c	9	104	parse_tuple_and_keywords	parse_tuple_and_keywords(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	107	113	get_args	get_args(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	116	122	get_kwargs	get_kwargs(PyObject *self, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	125	142	getargs_w_star	getargs_w_star(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	145	165	getargs_w_star_opt	getargs_w_star_opt(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	169	258	test_w_code_invalid	test_w_code_invalid(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	261	280	getargs_empty	getargs_empty(PyObject *self, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	284	291	getargs_tuple	getargs_tuple(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	295	310	getargs_keywords	getargs_keywords(PyObject *self, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	314	327	getargs_keyword_only	getargs_keyword_only(PyObject *self, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	331	345	getargs_positional_only_and_keywords	getargs_positional_only_and_keywords(PyObject *self, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	351	358	getargs_b	getargs_b(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	361	368	getargs_B	getargs_B(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	371	378	getargs_h	getargs_h(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	381	388	getargs_H	getargs_H(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	391	398	getargs_I	getargs_I(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	401	408	getargs_k	getargs_k(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	411	418	getargs_i	getargs_i(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	421	428	getargs_l	getargs_l(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	431	438	getargs_n	getargs_n(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	441	448	getargs_p	getargs_p(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	451	458	getargs_L	getargs_L(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	461	468	getargs_K	getargs_K(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	471	478	getargs_f	getargs_f(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	481	488	getargs_d	getargs_d(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	491	498	getargs_D	getargs_D(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	501	508	getargs_S	getargs_S(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	511	518	getargs_Y	getargs_Y(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	521	528	getargs_U	getargs_U(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	531	538	getargs_c	getargs_c(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	541	548	getargs_C	getargs_C(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	551	558	getargs_s	getargs_s(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	561	571	getargs_s_star	getargs_s_star(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	574	582	getargs_s_hash	getargs_s_hash(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	585	595	getargs_z	getargs_z(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	598	613	getargs_z_star	getargs_z_star(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	616	627	getargs_z_hash	getargs_z_hash(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	630	637	getargs_y	getargs_y(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	640	649	getargs_y_star	getargs_y_star(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	652	660	getargs_y_hash	getargs_y_hash(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	663	678	getargs_es	getargs_es(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	681	696	getargs_et	getargs_et(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	699	722	getargs_es_hash	getargs_es_hash(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	725	748	getargs_et_hash	getargs_et_hash(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	751	766	gh_99240_clear_args	gh_99240_clear_args(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/getargs.c	818	825	_PyTestCapi_Init_GetArgs	_PyTestCapi_Init_GetArgs(PyObject *mod)	excluded		test-support: only for CPython's own tests

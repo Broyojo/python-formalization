@@ -1,0 +1,11 @@
+file	line	endline	name	signature	status	entry	note
+Lib/multiprocessing/popen_fork.py	16	20	Popen.__init__	__init__(self, process_obj)	todo		
+Lib/multiprocessing/popen_fork.py	22	23	Popen.duplicate_for_child	duplicate_for_child(self, fd)	todo		
+Lib/multiprocessing/popen_fork.py	25	35	Popen.poll	poll(self, flag=os.WNOHANG)	todo		
+Lib/multiprocessing/popen_fork.py	37	45	Popen.wait	wait(self, timeout=None)	todo		
+Lib/multiprocessing/popen_fork.py	47	55	Popen._send_signal	_send_signal(self, sig)	todo		
+Lib/multiprocessing/popen_fork.py	57	58	Popen.interrupt	interrupt(self)	todo		
+Lib/multiprocessing/popen_fork.py	60	61	Popen.terminate	terminate(self)	todo		
+Lib/multiprocessing/popen_fork.py	63	64	Popen.kill	kill(self)	todo		
+Lib/multiprocessing/popen_fork.py	66	96	Popen._launch	_launch(self, process_obj)	todo		
+Lib/multiprocessing/popen_fork.py	98	100	Popen.close	close(self)	todo		

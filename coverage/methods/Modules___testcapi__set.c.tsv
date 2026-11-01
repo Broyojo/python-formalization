@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/set.c	5	9	set_get_size	set_get_size(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/set.c	13	31	test_set_type_size	test_set_type_size(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/set.c	41	44	_PyTestCapi_Init_Set	_PyTestCapi_Init_Set(PyObject *m)	excluded		test-support: only for CPython's own tests

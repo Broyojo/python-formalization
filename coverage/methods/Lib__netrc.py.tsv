@@ -1,0 +1,14 @@
+file	line	endline	name	signature	status	entry	note
+Lib/netrc.py	10	12	_can_security_check	_can_security_check()	todo		
+Lib/netrc.py	15	20	_getpwuid	_getpwuid(uid)	todo		
+Lib/netrc.py	25	29	NetrcParseError.__init__	__init__(self, msg, filename=None, lineno=None)	todo		
+Lib/netrc.py	31	32	NetrcParseError.__str__	__str__(self)	todo		
+Lib/netrc.py	36	40	_netrclex.__init__	__init__(self, fp)	todo		
+Lib/netrc.py	42	46	_netrclex._read_char	_read_char(self)	todo		
+Lib/netrc.py	48	73	_netrclex.get_token	get_token(self)	todo		
+Lib/netrc.py	75	76	_netrclex.push_token	push_token(self, token)	todo		
+Lib/netrc.py	80	91	netrc.__init__	__init__(self, file=None)	todo		
+Lib/netrc.py	93	155	netrc._parse	_parse(self, file, fp, default_netrc)	todo		
+Lib/netrc.py	157	171	netrc._security_check	_security_check(self, fp, default_netrc, login)	todo		
+Lib/netrc.py	173	180	netrc.authenticators	authenticators(self, host)	todo		
+Lib/netrc.py	182	196	netrc.__repr__	__repr__(self)	todo		

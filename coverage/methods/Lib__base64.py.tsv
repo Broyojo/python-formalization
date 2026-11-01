@@ -1,0 +1,29 @@
+file	line	endline	name	signature	status	entry	note
+Lib/base64.py	31	43	_bytes_from_decode_data	_bytes_from_decode_data(s)	todo		
+Lib/base64.py	48	59	b64encode	b64encode(s, altchars=None)	todo		
+Lib/base64.py	62	85	b64decode	b64decode(s, altchars=None, validate=False)	todo		
+Lib/base64.py	88	93	standard_b64encode	standard_b64encode(s)	todo		
+Lib/base64.py	95	103	standard_b64decode	standard_b64decode(s)	todo		
+Lib/base64.py	109	116	urlsafe_b64encode	urlsafe_b64encode(s)	todo		
+Lib/base64.py	118	131	urlsafe_b64decode	urlsafe_b64decode(s)	todo		
+Lib/base64.py	163	196	_b32encode	_b32encode(alphabet, s)	todo		
+Lib/base64.py	198	241	_b32decode	_b32decode(alphabet, s, casefold=False, map01=None)	todo		
+Lib/base64.py	244	245	b32encode	b32encode(s)	todo		
+Lib/base64.py	248	249	b32decode	b32decode(s, casefold=False, map01=None)	todo		
+Lib/base64.py	253	254	b32hexencode	b32hexencode(s)	todo		
+Lib/base64.py	257	259	b32hexdecode	b32hexdecode(s, casefold=False)	todo		
+Lib/base64.py	267	270	b16encode	b16encode(s)	todo		
+Lib/base64.py	273	288	b16decode	b16decode(s, casefold=False)	todo		
+Lib/base64.py	299	321	_85encode	_85encode(b, chars, chars2, pad=False, foldnuls=False, foldspaces=False)	todo		
+Lib/base64.py	323	365	a85encode	a85encode(b, *, foldspaces=False, wrapcol=0, pad=False, adobe=False)	todo		
+Lib/base64.py	367	437	a85decode	a85decode(b, *, foldspaces=False, adobe=False, ignorechars=b' \\t\\n\\r\\x0b')	todo		
+Lib/base64.py	447	461	b85encode	b85encode(b, pad=False)	todo		
+Lib/base64.py	463	505	b85decode	b85decode(b)	todo		
+Lib/base64.py	518	520	z85encode	z85encode(s)	todo		
+Lib/base64.py	522	532	z85decode	z85decode(s)	todo		
+Lib/base64.py	541	547	encode	encode(input, output)	todo		
+Lib/base64.py	550	554	decode	decode(input, output)	todo		
+Lib/base64.py	556	569	_input_type_check	_input_type_check(s)	todo		
+Lib/base64.py	572	580	encodebytes	encodebytes(s)	todo		
+Lib/base64.py	583	586	decodebytes	decodebytes(s)	todo		
+Lib/base64.py	590	621	main	main()	todo		

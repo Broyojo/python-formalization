@@ -1,0 +1,109 @@
+file	line	endline	name	signature	status	entry	note
+Lib/ssl.py	280	326	_dnsname_match	_dnsname_match(dn, hostname)	todo		
+Lib/ssl.py	329	361	_inet_paton	_inet_paton(ipname)	todo		
+Lib/ssl.py	364	373	_ipaddress_match	_ipaddress_match(cert_ipaddress, host_ip)	todo		
+Lib/ssl.py	380	391	get_default_verify_paths	get_default_verify_paths()	todo		
+Lib/ssl.py	399	400	_ASN1Object.__new__	__new__(cls, oid)	todo		
+Lib/ssl.py	403	406	_ASN1Object.fromnid	fromnid(cls, nid)	todo		
+Lib/ssl.py	409	412	_ASN1Object.fromname	fromname(cls, name)	todo		
+Lib/ssl.py	430	439	SSLContext.__new__	__new__(cls, protocol=None, *args, **kwargs)	todo		
+Lib/ssl.py	441	447	SSLContext._encode_hostname	_encode_hostname(self, hostname)	todo		
+Lib/ssl.py	449	463	SSLContext.wrap_socket	wrap_socket(self, sock, server_side=False, do_handshake_on_connect=True, suppress_ragged_eofs=True, server_hostname=None, session=None)	todo		
+Lib/ssl.py	465	473	SSLContext.wrap_bio	wrap_bio(self, incoming, outgoing, server_side=False, server_hostname=None, session=None)	todo		
+Lib/ssl.py	475	489	SSLContext.set_npn_protocols	set_npn_protocols(self, npn_protocols)	todo		
+Lib/ssl.py	491	502	SSLContext.set_servername_callback	set_servername_callback(self, server_name_callback)	todo		
+Lib/ssl.py	504	513	SSLContext.set_alpn_protocols	set_alpn_protocols(self, alpn_protocols)	todo		
+Lib/ssl.py	515	526	SSLContext._load_windows_store_certs	_load_windows_store_certs(self, storename, purpose)	todo		
+Lib/ssl.py	528	534	SSLContext.load_default_certs	load_default_certs(self, purpose=Purpose.SERVER_AUTH)	todo		
+Lib/ssl.py	538	539	SSLContext.minimum_version	minimum_version(self)	todo		
+Lib/ssl.py	542	545	SSLContext.minimum_version	minimum_version(self, value)	todo		
+Lib/ssl.py	548	549	SSLContext.maximum_version	maximum_version(self)	todo		
+Lib/ssl.py	552	553	SSLContext.maximum_version	maximum_version(self, value)	todo		
+Lib/ssl.py	556	557	SSLContext.options	options(self)	todo		
+Lib/ssl.py	560	561	SSLContext.options	options(self, value)	todo		
+Lib/ssl.py	565	567	SSLContext.hostname_checks_common_name	hostname_checks_common_name(self)	todo		
+Lib/ssl.py	570	574	SSLContext.hostname_checks_common_name	hostname_checks_common_name(self, value)	todo		
+Lib/ssl.py	577	578	SSLContext.hostname_checks_common_name	hostname_checks_common_name(self)	todo		
+Lib/ssl.py	581	617	SSLContext._msg_callback	_msg_callback(self)	todo		
+Lib/ssl.py	620	655	SSLContext._msg_callback	_msg_callback(self, callback)	todo		
+Lib/ssl.py	658	659	SSLContext.protocol	protocol(self)	todo		
+Lib/ssl.py	662	663	SSLContext.verify_flags	verify_flags(self)	todo		
+Lib/ssl.py	666	667	SSLContext.verify_flags	verify_flags(self, value)	todo		
+Lib/ssl.py	670	675	SSLContext.verify_mode	verify_mode(self)	todo		
+Lib/ssl.py	678	679	SSLContext.verify_mode	verify_mode(self, value)	todo		
+Lib/ssl.py	682	728	create_default_context	create_default_context(purpose=Purpose.SERVER_AUTH, *, cafile=None, capath=None, cadata=None)	todo		
+Lib/ssl.py	730	782	_create_unverified_context	_create_unverified_context(protocol=None, *, cert_reqs=CERT_NONE, check_hostname=False, purpose=Purpose.SERVER_AUTH, certfile=None, keyfile=None, cafile=None, capath=None, cadata=None)	todo		
+Lib/ssl.py	807	811	SSLObject.__init__	__init__(self, *args, **kwargs)	todo		
+Lib/ssl.py	814	823	SSLObject._create	_create(cls, incoming, outgoing, server_side=False, server_hostname=None, session=None, context=None)	todo		
+Lib/ssl.py	826	828	SSLObject.context	context(self)	todo		
+Lib/ssl.py	831	832	SSLObject.context	context(self, ctx)	todo		
+Lib/ssl.py	835	837	SSLObject.session	session(self)	todo		
+Lib/ssl.py	840	841	SSLObject.session	session(self, session)	todo		
+Lib/ssl.py	844	846	SSLObject.session_reused	session_reused(self)	todo		
+Lib/ssl.py	849	851	SSLObject.server_side	server_side(self)	todo		
+Lib/ssl.py	854	857	SSLObject.server_hostname	server_hostname(self)	todo		
+Lib/ssl.py	859	869	SSLObject.read	read(self, len=1024, buffer=None)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/ssl.py	871	877	SSLObject.write	write(self, data)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/ssl.py	879	886	SSLObject.getpeercert	getpeercert(self, binary_form=False)	todo		
+Lib/ssl.py	888	900	SSLObject.get_verified_chain	get_verified_chain(self)	todo		
+Lib/ssl.py	902	911	SSLObject.get_unverified_chain	get_unverified_chain(self)	todo		
+Lib/ssl.py	913	921	SSLObject.selected_npn_protocol	selected_npn_protocol(self)	todo		
+Lib/ssl.py	923	927	SSLObject.selected_alpn_protocol	selected_alpn_protocol(self)	todo		
+Lib/ssl.py	929	932	SSLObject.cipher	cipher(self)	todo		
+Lib/ssl.py	934	938	SSLObject.shared_ciphers	shared_ciphers(self)	todo		
+Lib/ssl.py	940	943	SSLObject.compression	compression(self)	todo		
+Lib/ssl.py	945	947	SSLObject.pending	pending(self)	todo		
+Lib/ssl.py	949	951	SSLObject.do_handshake	do_handshake(self)	todo		
+Lib/ssl.py	953	955	SSLObject.unwrap	unwrap(self)	todo		
+Lib/ssl.py	957	961	SSLObject.get_channel_binding	get_channel_binding(self, cb_type='tls-unique')	todo		
+Lib/ssl.py	963	966	SSLObject.version	version(self)	todo		
+Lib/ssl.py	968	969	SSLObject.verify_client_post_handshake	verify_client_post_handshake(self)	todo		
+Lib/ssl.py	972	975	_sslcopydoc	_sslcopydoc(func)	todo		
+Lib/ssl.py	983	988	SSLSocket.__init__	__init__(self, *args, **kwargs)	todo		
+Lib/ssl.py	991	1083	SSLSocket._create	_create(cls, sock, server_side=False, do_handshake_on_connect=True, suppress_ragged_eofs=True, server_hostname=None, context=None, session=None)	todo		
+Lib/ssl.py	1087	1088	SSLSocket.context	context(self)	todo		
+Lib/ssl.py	1091	1093	SSLSocket.context	context(self, ctx)	todo		
+Lib/ssl.py	1097	1099	SSLSocket.session	session(self)	todo		
+Lib/ssl.py	1102	1105	SSLSocket.session	session(self, session)	todo		
+Lib/ssl.py	1109	1111	SSLSocket.session_reused	session_reused(self)	todo		
+Lib/ssl.py	1113	1115	SSLSocket.dup	dup(self)	todo		
+Lib/ssl.py	1117	1119	SSLSocket._checkClosed	_checkClosed(self, msg=None)	todo		
+Lib/ssl.py	1121	1127	SSLSocket._check_connected	_check_connected(self)	todo		
+Lib/ssl.py	1129	1148	SSLSocket.read	read(self, len=1024, buffer=None)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/ssl.py	1150	1157	SSLSocket.write	write(self, data)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/ssl.py	1160	1163	SSLSocket.getpeercert	getpeercert(self, binary_form=False)	todo		
+Lib/ssl.py	1166	1172	SSLSocket.get_verified_chain	get_verified_chain(self)	todo		
+Lib/ssl.py	1175	1181	SSLSocket.get_unverified_chain	get_unverified_chain(self)	todo		
+Lib/ssl.py	1184	1191	SSLSocket.selected_npn_protocol	selected_npn_protocol(self)	todo		
+Lib/ssl.py	1194	1199	SSLSocket.selected_alpn_protocol	selected_alpn_protocol(self)	todo		
+Lib/ssl.py	1202	1207	SSLSocket.cipher	cipher(self)	todo		
+Lib/ssl.py	1210	1215	SSLSocket.shared_ciphers	shared_ciphers(self)	todo		
+Lib/ssl.py	1218	1223	SSLSocket.compression	compression(self)	todo		
+Lib/ssl.py	1225	1234	SSLSocket.send	send(self, data, flags=0)	todo		
+Lib/ssl.py	1236	1244	SSLSocket.sendto	sendto(self, data, flags_or_addr, addr=None)	todo		
+Lib/ssl.py	1246	1250	SSLSocket.sendmsg	sendmsg(self, *args, **kwargs)	todo		
+Lib/ssl.py	1252	1266	SSLSocket.sendall	sendall(self, data, flags=0)	todo		
+Lib/ssl.py	1268	1276	SSLSocket.sendfile	sendfile(self, file, offset=0, count=None)	todo		
+Lib/ssl.py	1278	1287	SSLSocket.recv	recv(self, buflen=1024, flags=0)	todo		
+Lib/ssl.py	1289	1306	SSLSocket.recv_into	recv_into(self, buffer, nbytes=None, flags=0)	todo		
+Lib/ssl.py	1308	1314	SSLSocket.recvfrom	recvfrom(self, buflen=1024, flags=0)	todo		
+Lib/ssl.py	1316	1322	SSLSocket.recvfrom_into	recvfrom_into(self, buffer, nbytes=None, flags=0)	todo		
+Lib/ssl.py	1324	1326	SSLSocket.recvmsg	recvmsg(self, *args, **kwargs)	todo		
+Lib/ssl.py	1328	1330	SSLSocket.recvmsg_into	recvmsg_into(self, *args, **kwargs)	todo		
+Lib/ssl.py	1333	1338	SSLSocket.pending	pending(self)	todo		
+Lib/ssl.py	1340	1343	SSLSocket.shutdown	shutdown(self, how)	todo		
+Lib/ssl.py	1346	1352	SSLSocket.unwrap	unwrap(self)	todo		
+Lib/ssl.py	1355	1359	SSLSocket.verify_client_post_handshake	verify_client_post_handshake(self)	todo		
+Lib/ssl.py	1361	1363	SSLSocket._real_close	_real_close(self)	todo		
+Lib/ssl.py	1366	1374	SSLSocket.do_handshake	do_handshake(self, block=False)	todo		
+Lib/ssl.py	1376	1400	SSLSocket._real_connect	_real_connect(self, addr, connect_ex)	todo		
+Lib/ssl.py	1402	1405	SSLSocket.connect	connect(self, addr)	todo		
+Lib/ssl.py	1407	1410	SSLSocket.connect_ex	connect_ex(self, addr)	todo		
+Lib/ssl.py	1412	1422	SSLSocket.accept	accept(self)	todo		
+Lib/ssl.py	1425	1433	SSLSocket.get_channel_binding	get_channel_binding(self, cb_type='tls-unique')	todo		
+Lib/ssl.py	1436	1440	SSLSocket.version	version(self)	todo		
+Lib/ssl.py	1450	1478	cert_time_to_seconds	cert_time_to_seconds(cert_time)	todo		
+Lib/ssl.py	1483	1491	DER_cert_to_PEM_cert	DER_cert_to_PEM_cert(der_cert_bytes)	todo		
+Lib/ssl.py	1493	1504	PEM_cert_to_DER_cert	PEM_cert_to_DER_cert(pem_cert_string)	todo		
+Lib/ssl.py	1506	1526	get_server_certificate	get_server_certificate(addr, ssl_version=PROTOCOL_TLS_CLIENT, ca_certs=None, timeout=_GLOBAL_DEFAULT_TIMEOUT)	todo		
+Lib/ssl.py	1528	1529	get_protocol_name	get_protocol_name(protocol_code)	todo		

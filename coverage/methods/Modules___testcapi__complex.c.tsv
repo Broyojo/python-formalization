@@ -1,0 +1,6 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/complex.c	6	15	complex_fromccomplex	complex_fromccomplex(PyObject *Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/complex.c	18	30	complex_asccomplex	complex_asccomplex(PyObject *Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/complex.c	33	43	_py_c_neg	_py_c_neg(PyObject *Py_UNUSED(module), PyObject *num)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/complex.c	67	82	_py_c_abs	_py_c_abs(PyObject *Py_UNUSED(module), PyObject* obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/complex.c	99	106	_PyTestCapi_Init_Complex	_PyTestCapi_Init_Complex(PyObject *mod)	excluded		test-support: only for CPython's own tests

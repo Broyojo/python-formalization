@@ -1,0 +1,135 @@
+file	line	endline	name	signature	status	entry	note
+Python/initconfig.c	45	48	config_sys_flag_long	config_sys_flag_long(int value)	todo		
+Python/initconfig.c	51	55	config_sys_flag_not	config_sys_flag_not(int value)	todo		
+Python/initconfig.c	514	585	_Py_GetGlobalVariablesAsDict	_Py_GetGlobalVariablesAsDict(void)	todo		
+Python/initconfig.c	588	597	Py_GETENV	Py_GETENV(const char *name)	todo		
+Python/initconfig.c	604	609	PyStatus_Error	PyStatus PyStatus_Error(const char *err_msg)	todo		
+Python/initconfig.c	628	655	_PyErr_SetFromPyStatus	_PyErr_SetFromPyStatus(PyStatus status)	todo		
+Python/initconfig.c	662	672	_PyWideStringList_CheckConsistency	_PyWideStringList_CheckConsistency(const PyWideStringList *list)	todo		
+Python/initconfig.c	677	697	_PyWideStringList_ClearEx	_PyWideStringList_ClearEx(PyWideStringList *list, bool use_default_allocator)	todo		
+Python/initconfig.c	700	703	_PyWideStringList_Clear	_PyWideStringList_Clear(PyWideStringList *list)	todo		
+Python/initconfig.c	706	750	_PyWideStringList_CopyEx	_PyWideStringList_CopyEx(PyWideStringList *list, const PyWideStringList *list2, bool use_default_allocator)	todo		
+Python/initconfig.c	753	756	_PyWideStringList_Copy	_PyWideStringList_Copy(PyWideStringList *list, const PyWideStringList *list2)	todo		
+Python/initconfig.c	759	796	PyWideStringList_Insert	PyWideStringList_Insert(PyWideStringList *list, Py_ssize_t index, const wchar_t *item)	todo		
+Python/initconfig.c	800	803	PyWideStringList_Append	PyWideStringList_Append(PyWideStringList *list, const wchar_t *item)	todo		
+Python/initconfig.c	807	816	_PyWideStringList_Extend	_PyWideStringList_Extend(PyWideStringList *list, const PyWideStringList *list2)	todo		
+Python/initconfig.c	820	828	_PyWideStringList_Find	_PyWideStringList_Find(PyWideStringList *list, const wchar_t *item)	todo		
+Python/initconfig.c	832	850	_PyWideStringList_AsList	_PyWideStringList_AsList(const PyWideStringList *list)	todo		
+Python/initconfig.c	854	872	_PyWideStringList_AsTuple	_PyWideStringList_AsTuple(const PyWideStringList *list)	todo		
+Python/initconfig.c	878	881	_Py_ClearArgcArgv	_Py_ClearArgcArgv(void)	todo		
+Python/initconfig.c	885	892	_Py_SetArgcArgv	_Py_SetArgcArgv(Py_ssize_t argc, wchar_t * const *argv)	todo		
+Python/initconfig.c	897	901	Py_GetArgcArgv	Py_GetArgcArgv(int *argc, wchar_t ***argv)	todo		
+Python/initconfig.c	911	977	config_check_consistency	config_check_consistency(const PyConfig *config)	todo		
+Python/initconfig.c	983	1026	PyConfig_Clear	PyConfig_Clear(PyConfig *config)	todo		
+Python/initconfig.c	1030	1091	_PyConfig_InitCompatConfig	_PyConfig_InitCompatConfig(PyConfig *config)	todo		
+Python/initconfig.c	1095	1126	config_init_defaults	config_init_defaults(PyConfig *config)	todo		
+Python/initconfig.c	1130	1137	PyConfig_InitPythonConfig	PyConfig_InitPythonConfig(PyConfig *config)	todo		
+Python/initconfig.c	1141	1168	PyConfig_InitIsolatedConfig	PyConfig_InitIsolatedConfig(PyConfig *config)	todo		
+Python/initconfig.c	1173	1193	PyConfig_SetString	PyConfig_SetString(PyConfig *config, wchar_t **config_str, const wchar_t *str)	todo		
+Python/initconfig.c	1197	1224	config_set_bytes_string	config_set_bytes_string(PyConfig *config, wchar_t **config_str, const char *str, const char *decode_err_msg)	todo		
+Python/initconfig.c	1235	1239	PyConfig_SetBytesString	PyConfig_SetBytesString(PyConfig *config, wchar_t **config_str, const char *str)	todo		
+Python/initconfig.c	1243	1246	config_get_spec_member	config_get_spec_member(const PyConfig *config, const PyConfigSpec *spec)	todo		
+Python/initconfig.c	1250	1253	preconfig_get_spec_member	preconfig_get_spec_member(const PyPreConfig *preconfig, const PyConfigSpec *spec)	todo		
+Python/initconfig.c	1257	1302	_PyConfig_Copy	_PyConfig_Copy(PyConfig *config, const PyConfig *config2)	todo		
+Python/initconfig.c	1306	1329	_PyConfig_AsDict	_PyConfig_AsDict(const PyConfig *config)	todo		
+Python/initconfig.c	1333	1336	config_dict_invalid_value	config_dict_invalid_value(const char *name)	todo		
+Python/initconfig.c	1340	1359	config_dict_get_int	config_dict_get_int(PyObject *dict, const char *name, int *result)	todo		
+Python/initconfig.c	1363	1382	config_dict_get_ulong	config_dict_get_ulong(PyObject *dict, const char *name, unsigned long *result)	todo		
+Python/initconfig.c	1386	1420	config_dict_get_wstr	config_dict_get_wstr(PyObject *dict, const char *name, PyConfig *config, wchar_t **result)	todo		
+Python/initconfig.c	1424	1476	config_dict_get_wstrlist	config_dict_get_wstrlist(PyObject *dict, const char *name, PyConfig *config, PyWideStringList *result)	todo		
+Python/initconfig.c	1480	1536	config_dict_get_xoptions	config_dict_get_xoptions(PyObject *dict, const char *name, PyConfig *config, PyWideStringList *result)	todo		
+Python/initconfig.c	1540	1632	_PyConfig_FromDict	_PyConfig_FromDict(PyConfig *config, PyObject *dict)	todo		
+Python/initconfig.c	1636	1639	config_get_env	config_get_env(const PyConfig *config, const char *name)	todo		
+Python/initconfig.c	1646	1676	config_get_env_dup	config_get_env_dup(PyConfig *config, wchar_t **dest, wchar_t *wname, char *name, const char *decode_err_msg)	todo		
+Python/initconfig.c	1684	1724	config_get_global_vars	config_get_global_vars(PyConfig *config)	todo		
+Python/initconfig.c	1729	1768	config_set_global_vars	config_set_global_vars(const PyConfig *config)	todo		
+Python/initconfig.c	1772	1775	config_get_xoption	config_get_xoption(const PyConfig *config, wchar_t *name)	todo		
+Python/initconfig.c	1778	1786	config_get_xoption_value	config_get_xoption_value(const PyConfig *config, wchar_t *name)	todo		
+Python/initconfig.c	1790	1820	config_init_hash_seed	config_init_hash_seed(PyConfig *config)	todo		
+Python/initconfig.c	1824	1838	config_wstr_to_int	config_wstr_to_int(const wchar_t *wstr, int *result)	todo		
+Python/initconfig.c	1841	1861	config_read_gil	config_read_gil(PyConfig *config, size_t len, wchar_t first_char)	todo		
+Python/initconfig.c	1864	1952	config_read_env_vars	config_read_env_vars(PyConfig *config)	todo		
+Python/initconfig.c	1955	1991	config_init_cpu_count	config_init_cpu_count(PyConfig *config)	todo		
+Python/initconfig.c	1994	2017	config_init_thread_inherit_context	config_init_thread_inherit_context(PyConfig *config)	todo		
+Python/initconfig.c	2020	2043	config_init_context_aware_warnings	config_init_context_aware_warnings(PyConfig *config)	todo		
+Python/initconfig.c	2046	2073	config_init_tlbc	config_init_tlbc(PyConfig *config)	todo		
+Python/initconfig.c	2076	2108	config_init_perf_profiling	config_init_perf_profiling(PyConfig *config)	todo		
+Python/initconfig.c	2111	2130	config_init_remote_debug	config_init_remote_debug(PyConfig *config)	todo		
+Python/initconfig.c	2133	2174	config_init_tracemalloc	config_init_tracemalloc(PyConfig *config)	todo		
+Python/initconfig.c	2177	2221	config_init_int_max_str_digits	config_init_int_max_str_digits(PyConfig *config)	todo		
+Python/initconfig.c	2224	2248	config_init_pycache_prefix	config_init_pycache_prefix(PyConfig *config)	todo		
+Python/initconfig.c	2253	2277	config_init_run_presite	config_init_run_presite(PyConfig *config)	todo		
+Python/initconfig.c	2281	2311	config_init_import_time	config_init_import_time(PyConfig *config)	todo		
+Python/initconfig.c	2314	2403	config_read_complex_options	config_read_complex_options(PyConfig *config)	todo		
+Python/initconfig.c	2407	2435	config_get_stdio_errors	config_get_stdio_errors(const PyPreConfig *preconfig)	todo		
+Python/initconfig.c	2440	2456	config_get_locale_encoding	config_get_locale_encoding(PyConfig *config, const PyPreConfig *preconfig, wchar_t **locale_encoding)	todo		
+Python/initconfig.c	2460	2540	config_init_stdio_encoding	config_init_stdio_encoding(PyConfig *config, const PyPreConfig *preconfig)	todo		
+Python/initconfig.c	2545	2572	config_get_fs_encoding	config_get_fs_encoding(PyConfig *config, const PyPreConfig *preconfig, wchar_t **fs_encoding)	todo		
+Python/initconfig.c	2576	2606	config_init_fs_encoding	config_init_fs_encoding(PyConfig *config, const PyPreConfig *preconfig)	todo		
+Python/initconfig.c	2610	2653	config_init_import	config_init_import(PyConfig *config, int compute_path_config)	todo		
+Python/initconfig.c	2656	2659	_PyConfig_InitImportConfig	_PyConfig_InitImportConfig(PyConfig *config)	todo		
+Python/initconfig.c	2663	2774	config_read	config_read(PyConfig *config, int compute_path_config)	todo		
+Python/initconfig.c	2778	2811	config_init_stdio	config_init_stdio(const PyConfig *config)	todo		
+Python/initconfig.c	2819	2846	_PyConfig_Write	_PyConfig_Write(const PyConfig *config, _PyRuntimeState *runtime)	todo		
+Python/initconfig.c	2852	2862	config_usage	config_usage(int error, const wchar_t* program)	todo		
+Python/initconfig.c	2865	2868	config_envvars_usage	config_envvars_usage(void)	todo		
+Python/initconfig.c	2871	2874	config_xoptions_usage	config_xoptions_usage(void)	todo		
+Python/initconfig.c	2877	2884	config_complete_usage	config_complete_usage(const wchar_t* program)	todo		
+Python/initconfig.c	2889	3088	config_parse_cmdline	config_parse_cmdline(PyConfig *config, PyWideStringList *warnoptions, Py_ssize_t *opt_index)	todo		
+Python/initconfig.c	3099	3129	config_init_env_warnoptions	config_init_env_warnoptions(PyConfig *config, PyWideStringList *warnoptions)	todo		
+Python/initconfig.c	3133	3149	warnoptions_append	warnoptions_append(PyConfig *config, PyWideStringList *options, const wchar_t *option)	todo		
+Python/initconfig.c	3153	3166	warnoptions_extend	warnoptions_extend(PyConfig *config, PyWideStringList *options, const PyWideStringList *options2)	todo		
+Python/initconfig.c	3170	3248	config_init_warnoptions	config_init_warnoptions(PyConfig *config, const PyWideStringList *cmdline_warnoptions, const PyWideStringList *env_warnoptions, const PyWideStringList *sys_warnoptions)	todo		
+Python/initconfig.c	3252	3299	config_update_argv	config_update_argv(PyConfig *config, Py_ssize_t opt_index)	todo		
+Python/initconfig.c	3303	3332	core_read_precmdline	core_read_precmdline(PyConfig *config, _PyPreCmdline *precmdline)	todo		
+Python/initconfig.c	3337	3363	config_run_filename_abspath	config_run_filename_abspath(PyConfig *config)	todo		
+Python/initconfig.c	3367	3430	config_read_cmdline	config_read_cmdline(PyConfig *config)	todo		
+Python/initconfig.c	3434	3442	_PyConfig_SetPyArgv	_PyConfig_SetPyArgv(PyConfig *config, const _PyArgv *args)	todo		
+Python/initconfig.c	3448	3456	PyConfig_SetBytesArgv	PyConfig_SetBytesArgv(PyConfig *config, Py_ssize_t argc, char * const *argv)	todo		
+Python/initconfig.c	3460	3468	PyConfig_SetArgv	PyConfig_SetArgv(PyConfig *config, Py_ssize_t argc, wchar_t * const *argv)	todo		
+Python/initconfig.c	3472	3485	PyConfig_SetWideStringList	PyConfig_SetWideStringList(PyConfig *config, PyWideStringList *list, Py_ssize_t length, wchar_t **items)	todo		
+Python/initconfig.c	3496	3552	_PyConfig_Read	_PyConfig_Read(PyConfig *config, int compute_path_config)	todo		
+Python/initconfig.c	3556	3559	PyConfig_Read	PyConfig_Read(PyConfig *config)	todo		
+Python/initconfig.c	3563	3612	_Py_GetConfigsAsDict	_Py_GetConfigsAsDict(void)	todo		
+Python/initconfig.c	3616	3644	init_dump_ascii_wstr	init_dump_ascii_wstr(const wchar_t *str)	todo		
+Python/initconfig.c	3649	3716	_Py_DumpPathConfig	_Py_DumpPathConfig(PyThreadState *tstate)	todo		
+Python/initconfig.c	3731	3734	initconfig_alloc	initconfig_alloc(void)	todo		
+Python/initconfig.c	3738	3748	PyInitConfig_Create	PyInitConfig_Create(void)	todo		
+Python/initconfig.c	3752	3762	PyInitConfig_Free	PyInitConfig_Free(PyInitConfig *config)	todo		
+Python/initconfig.c	3766	3793	PyInitConfig_GetError	PyInitConfig_GetError(PyInitConfig* config, const char **perr_msg)	todo		
+Python/initconfig.c	3797	3806	PyInitConfig_GetExitCode	PyInitConfig_GetExitCode(PyInitConfig* config, int *exitcode)	todo		
+Python/initconfig.c	3810	3813	initconfig_set_error	initconfig_set_error(PyInitConfig *config, const char *err_msg)	todo		
+Python/initconfig.c	3817	3825	initconfig_find_spec	initconfig_find_spec(const PyConfigSpec *spec, const char *name)	todo		
+Python/initconfig.c	3829	3836	PyInitConfig_HasOption	PyInitConfig_HasOption(PyInitConfig *config, const char *name)	todo		
+Python/initconfig.c	3840	3856	initconfig_prepare	initconfig_prepare(PyInitConfig *config, const char *name, void **raw_member)	todo		
+Python/initconfig.c	3860	3897	PyInitConfig_GetInt	PyInitConfig_GetInt(PyInitConfig *config, const char *name, int64_t *value)	todo		
+Python/initconfig.c	3901	3926	wstr_to_utf8	wstr_to_utf8(PyInitConfig *config, wchar_t *wstr)	todo		
+Python/initconfig.c	3930	3956	PyInitConfig_GetStr	PyInitConfig_GetStr(PyInitConfig *config, const char *name, char **value)	todo		
+Python/initconfig.c	3960	3990	PyInitConfig_GetStrList	PyInitConfig_GetStrList(PyInitConfig *config, const char *name, size_t *length, char ***items)	todo		
+Python/initconfig.c	3994	4000	PyInitConfig_FreeStrList	PyInitConfig_FreeStrList(size_t length, char **items)	todo		
+Python/initconfig.c	4004	4066	PyInitConfig_SetInt	PyInitConfig_SetInt(PyInitConfig *config, const char *name, int64_t value)	todo		
+Python/initconfig.c	4070	4096	utf8_to_wstr	utf8_to_wstr(PyInitConfig *config, const char *str)	todo		
+Python/initconfig.c	4100	4125	PyInitConfig_SetStr	PyInitConfig_SetStr(PyInitConfig *config, const char *name, const char* value)	todo		
+Python/initconfig.c	4129	4134	initconfig_free_wstr	initconfig_free_wstr(wchar_t *member)	todo		
+Python/initconfig.c	4138	4144	initconfig_free_wstr_list	initconfig_free_wstr_list(PyWideStringList *list)	todo		
+Python/initconfig.c	4148	4163	initconfig_free_config	initconfig_free_config(const PyConfig *config)	todo		
+Python/initconfig.c	4167	4191	initconfig_set_str_list	initconfig_set_str_list(PyInitConfig *config, PyWideStringList *list, Py_ssize_t length, char * const *items)	todo		
+Python/initconfig.c	4195	4217	PyInitConfig_SetStrList	PyInitConfig_SetStrList(PyInitConfig *config, const char *name, size_t length, char * const *items)	todo		
+Python/initconfig.c	4221	4243	PyInitConfig_AddModule	PyInitConfig_AddModule(PyInitConfig *config, const char *name, PyObject* (*initfunc)(void))	todo		
+Python/initconfig.c	4247	4272	Py_InitializeFromInitConfig	Py_InitializeFromInitConfig(PyInitConfig *config)	todo		
+Python/initconfig.c	4278	4289	config_generic_find_spec	config_generic_find_spec(const PyConfigSpec *spec, const char *name)	todo		
+Python/initconfig.c	4293	4296	config_find_spec	config_find_spec(const char *name)	todo		
+Python/initconfig.c	4300	4303	preconfig_find_spec	preconfig_find_spec(const char *name)	todo		
+Python/initconfig.c	4307	4340	config_add_xoption	config_add_xoption(PyObject *dict, const wchar_t *str)	todo		
+Python/initconfig.c	4344	4361	_PyConfig_CreateXOptionsDict	_PyConfig_CreateXOptionsDict(const PyConfig *config)	todo		
+Python/initconfig.c	4365	4379	config_get_sys_write_bytecode	config_get_sys_write_bytecode(const PyConfig *config, int *value)	todo		
+Python/initconfig.c	4383	4453	config_get	config_get(const PyConfig *config, const PyConfigSpec *spec, int use_sys)	todo		
+Python/initconfig.c	4457	4472	preconfig_get	preconfig_get(const PyPreConfig *preconfig, const PyConfigSpec *spec)	todo		
+Python/initconfig.c	4476	4479	config_unknown_name_error	config_unknown_name_error(const char *name)	todo		
+Python/initconfig.c	4483	4499	PyConfig_Get	PyConfig_Get(const char *name)	todo		
+Python/initconfig.c	4503	4528	PyConfig_GetInt	PyConfig_GetInt(const char *name, int *value)	todo		
+Python/initconfig.c	4532	4549	config_names_add	config_names_add(PyObject *names, const PyConfigSpec *spec)	todo		
+Python/initconfig.c	4553	4574	PyConfig_Names	PyConfig_Names(void)	todo		
+Python/initconfig.c	4580	4629	config_set_sys_flag	config_set_sys_flag(const PyConfigSpec *spec, int int_value)	todo		
+Python/initconfig.c	4634	4641	config_set_int_attr	config_set_int_attr(const PyConfigSpec *spec, int value)	todo		
+Python/initconfig.c	4645	4786	PyConfig_Set	PyConfig_Set(const char *name, PyObject *value)	todo		

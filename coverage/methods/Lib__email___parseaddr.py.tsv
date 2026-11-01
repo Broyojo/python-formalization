@@ -1,0 +1,26 @@
+file	line	endline	name	signature	status	entry	note
+Lib/email/_parseaddr.py	45	55	parsedate_tz	parsedate_tz(data)	todo		
+Lib/email/_parseaddr.py	57	180	_parsedate_tz	_parsedate_tz(data)	todo		
+Lib/email/_parseaddr.py	183	189	parsedate	parsedate(data)	todo		
+Lib/email/_parseaddr.py	192	202	mktime_tz	mktime_tz(data)	todo		
+Lib/email/_parseaddr.py	205	212	quote	quote(str)	todo		
+Lib/email/_parseaddr.py	225	244	AddrlistClass.__init__	__init__(self, field)	todo		
+Lib/email/_parseaddr.py	246	258	AddrlistClass.gotonext	gotonext(self)	todo		
+Lib/email/_parseaddr.py	260	272	AddrlistClass.getaddrlist	getaddrlist(self)	todo		
+Lib/email/_parseaddr.py	274	331	AddrlistClass.getaddress	getaddress(self)	todo		
+Lib/email/_parseaddr.py	333	363	AddrlistClass.getrouteaddr	getrouteaddr(self)	todo		
+Lib/email/_parseaddr.py	365	401	AddrlistClass.getaddrspec	getaddrspec(self)	todo		
+Lib/email/_parseaddr.py	403	424	AddrlistClass.getdomain	getdomain(self)	todo		
+Lib/email/_parseaddr.py	426	461	AddrlistClass.getdelimited	getdelimited(self, beginchar, endchars, allowcomments=True)	todo		
+Lib/email/_parseaddr.py	463	465	AddrlistClass.getquote	getquote(self)	todo		
+Lib/email/_parseaddr.py	467	469	AddrlistClass.getcomment	getcomment(self)	todo		
+Lib/email/_parseaddr.py	471	473	AddrlistClass.getdomainliteral	getdomainliteral(self)	todo		
+Lib/email/_parseaddr.py	475	493	AddrlistClass.getatom	getatom(self, atomends=None)	todo		
+Lib/email/_parseaddr.py	495	516	AddrlistClass.getphraselist	getphraselist(self)	todo		
+Lib/email/_parseaddr.py	520	525	AddressList.__init__	__init__(self, field)	todo		
+Lib/email/_parseaddr.py	527	528	AddressList.__len__	__len__(self)	todo		
+Lib/email/_parseaddr.py	530	537	AddressList.__add__	__add__(self, other)	todo		
+Lib/email/_parseaddr.py	539	544	AddressList.__iadd__	__iadd__(self, other)	todo		
+Lib/email/_parseaddr.py	546	552	AddressList.__sub__	__sub__(self, other)	todo		
+Lib/email/_parseaddr.py	554	559	AddressList.__isub__	__isub__(self, other)	todo		
+Lib/email/_parseaddr.py	561	563	AddressList.__getitem__	__getitem__(self, index)	todo		

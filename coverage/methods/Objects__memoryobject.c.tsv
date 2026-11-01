@@ -1,0 +1,114 @@
+file	line	endline	name	signature	status	entry	note
+Objects/memoryobject.c	72	86	mbuf_alloc	mbuf_alloc(void)	todo		
+Objects/memoryobject.c	89	104	_PyManagedBuffer_FromObject	_PyManagedBuffer_FromObject(PyObject *base, int flags)	todo		
+Objects/memoryobject.c	107	117	mbuf_release	mbuf_release(_PyManagedBufferObject *self)	todo		
+Objects/memoryobject.c	120	128	mbuf_dealloc	mbuf_dealloc(PyObject *_self)	todo		
+Objects/memoryobject.c	131	136	mbuf_traverse	mbuf_traverse(PyObject *_self, visitproc visit, void *arg)	todo		
+Objects/memoryobject.c	139	145	mbuf_clear	mbuf_clear(PyObject *_self)	todo		
+Objects/memoryobject.c	272	279	last_dim_is_contiguous	last_dim_is_contiguous(const Py_buffer *dest, const Py_buffer *src)	todo		
+Objects/memoryobject.c	288	302	equiv_format	equiv_format(const Py_buffer *dest, const Py_buffer *src)	todo		
+Objects/memoryobject.c	308	323	equiv_shape	equiv_shape(const Py_buffer *dest, const Py_buffer *src)	todo		
+Objects/memoryobject.c	328	339	equiv_structure	equiv_structure(const Py_buffer *dest, const Py_buffer *src)	todo		
+Objects/memoryobject.c	345	370	copy_base	copy_base(const Py_ssize_t *shape, Py_ssize_t itemsize, char *dptr, const Py_ssize_t *dstrides, const Py_ssize_t *dsuboffsets, char *sptr, const Py_ssize_t *sstrides, const Py_ssize_t *ssuboffsets, char *mem)	todo		
+Objects/memoryobject.c	375	401	copy_rec	copy_rec(const Py_ssize_t *shape, Py_ssize_t ndim, Py_ssize_t itemsize, char *dptr, const Py_ssize_t *dstrides, const Py_ssize_t *dsuboffsets, char *sptr, const Py_ssize_t *sstrides, const Py_ssize_t *ssuboffsets, char *mem)	todo		
+Objects/memoryobject.c	405	432	copy_single	copy_single(PyMemoryViewObject *self, const Py_buffer *dest, const Py_buffer *src)	todo		
+Objects/memoryobject.c	438	464	copy_buffer	copy_buffer(const Py_buffer *dest, const Py_buffer *src)	todo		
+Objects/memoryobject.c	468	477	init_strides_from_shape	init_strides_from_shape(Py_buffer *view)	todo		
+Objects/memoryobject.c	481	490	init_fortran_strides_from_shape	init_fortran_strides_from_shape(Py_buffer *view)	todo		
+Objects/memoryobject.c	496	534	buffer_to_contiguous	buffer_to_contiguous(char *mem, const Py_buffer *src, char order)	todo		
+Objects/memoryobject.c	543	552	init_shared_values	init_shared_values(Py_buffer *dest, const Py_buffer *src)	todo		
+Objects/memoryobject.c	556	580	init_shape_strides	init_shape_strides(Py_buffer *dest, const Py_buffer *src)	todo		
+Objects/memoryobject.c	583	593	init_suboffsets	init_suboffsets(Py_buffer *dest, const Py_buffer *src)	todo		
+Objects/memoryobject.c	597	607	init_len	init_len(Py_buffer *view)	todo		
+Objects/memoryobject.c	611	639	init_flags	init_flags(PyMemoryViewObject *mv)	todo		
+Objects/memoryobject.c	644	665	memory_alloc	memory_alloc(int ndim)	todo		
+Objects/memoryobject.c	676	705	mbuf_add_view	mbuf_add_view(_PyManagedBufferObject *mbuf, const Py_buffer *src)	todo		
+Objects/memoryobject.c	713	735	mbuf_add_incomplete_view	mbuf_add_incomplete_view(_PyManagedBufferObject *mbuf, const Py_buffer *src, int ndim)	todo		
+Objects/memoryobject.c	741	762	PyMemoryView_FromMemory	PyMemoryView_FromMemory(char *mem, Py_ssize_t size, int flags)	todo		
+Objects/memoryobject.c	770	794	PyMemoryView_FromBuffer	PyMemoryView_FromBuffer(const Py_buffer *info)	todo		
+Objects/memoryobject.c	801	825	PyMemoryView_FromObjectAndFlags	PyMemoryView_FromObjectAndFlags(PyObject *v, int flags)	todo		
+Objects/memoryobject.c	832	848	_PyMemoryView_FromBufferProc	_PyMemoryView_FromBufferProc(PyObject *v, int flags, getbufferproc bufferproc)	todo		
+Objects/memoryobject.c	854	857	PyMemoryView_FromObject	PyMemoryView_FromObject(PyObject *v)	todo		
+Objects/memoryobject.c	861	874	mbuf_copy_format	mbuf_copy_format(_PyManagedBufferObject *mbuf, const char *fmt)	todo		
+Objects/memoryobject.c	889	946	memory_from_contiguous_copy	memory_from_contiguous_copy(const Py_buffer *src, char order)	todo		
+Objects/memoryobject.c	966	1001	PyMemoryView_GetContiguous	PyMemoryView_GetContiguous(PyObject *obj, int buffertype, char order)	todo		
+Objects/memoryobject.c	1014	1018	memoryview_impl	memoryview_impl(PyTypeObject *type, PyObject *object) /*[clinic end generated code: output=7de78e184ed66db8 input=f04429eb0bdf8c6e]*/	todo		
+Objects/memoryobject.c	1032	1036	memoryview__from_flags_impl	memoryview__from_flags_impl(PyTypeObject *type, PyObject *object, int flags) /*[clinic end generated code: output=bf71f9906c266ee2 input=f5f82fd0e744356b]*/	todo		
+Objects/memoryobject.c	1049	1087	PyBuffer_ToContiguous	PyBuffer_ToContiguous(void *buf, const Py_buffer *src, Py_ssize_t len, char order)	todo		
+Objects/memoryobject.c	1090	1097	get_exports	get_exports(PyMemoryViewObject *buf)	todo		
+Objects/memoryobject.c	1109	1120	_memory_release	_memory_release(PyMemoryViewObject *self)	todo		
+Objects/memoryobject.c	1129	1148	memoryview_release_impl	memoryview_release_impl(PyMemoryViewObject *self) /*[clinic end generated code: output=d0b7e3ba95b7fcb9 input=bc71d1d51f4a52f0]*/	todo		
+Objects/memoryobject.c	1151	1161	memory_dealloc	memory_dealloc(PyObject *_self)	todo		
+Objects/memoryobject.c	1164	1169	memory_traverse	memory_traverse(PyObject *_self, visitproc visit, void *arg)	todo		
+Objects/memoryobject.c	1172	1180	memory_clear	memory_clear(PyObject *_self)	todo		
+Objects/memoryobject.c	1183	1187	memory_enter	memory_enter(PyObject *self, PyObject *args)	todo		
+Objects/memoryobject.c	1190	1193	memory_exit	memory_exit(PyObject *self, PyObject *args)	todo		
+Objects/memoryobject.c	1203	1229	get_native_fmtchar	get_native_fmtchar(char *result, const char *fmt)	todo		
+Objects/memoryobject.c	1232	1268	get_native_fmtstr	get_native_fmtstr(const char *fmt)	todo		
+Objects/memoryobject.c	1276	1335	cast_to_1D	cast_to_1D(PyMemoryViewObject *mv, PyObject *format)	todo		
+Objects/memoryobject.c	1339	1372	copy_shape	copy_shape(Py_ssize_t *shape, const PyObject *seq, Py_ssize_t ndim, Py_ssize_t itemsize)	todo		
+Objects/memoryobject.c	1378	1411	cast_to_ND	cast_to_ND(PyMemoryViewObject *mv, const PyObject *shape, int ndim)	todo		
+Objects/memoryobject.c	1414	1424	zero_in_shape	zero_in_shape(PyMemoryViewObject *mv)	todo		
+Objects/memoryobject.c	1448	1499	memoryview_cast_impl	memoryview_cast_impl(PyMemoryViewObject *self, PyObject *format, PyObject *shape) /*[clinic end generated code: output=bae520b3a389cbab input=138936cc9041b1a3]*/	todo		
+Objects/memoryobject.c	1508	1521	memoryview_toreadonly_impl	memoryview_toreadonly_impl(PyMemoryViewObject *self) /*[clinic end generated code: output=2c7e056f04c99e62 input=dc06d20f19ba236f]*/	todo		
+Objects/memoryobject.c	1529	1606	memory_getbuf	memory_getbuf(PyObject *_self, Py_buffer *view, int flags)	todo		
+Objects/memoryobject.c	1609	1615	memory_releasebuf	memory_releasebuf(PyObject *_self, Py_buffer *view)	todo		
+Objects/memoryobject.c	1635	1640	type_error_int	type_error_int(const char *fmt)	todo		
+Objects/memoryobject.c	1643	1648	value_error_int	value_error_int(const char *fmt)	todo		
+Objects/memoryobject.c	1651	1665	fix_error_int	fix_error_int(const char *fmt)	todo		
+Objects/memoryobject.c	1673	1685	pylong_as_ld	pylong_as_ld(PyObject *item)	todo		
+Objects/memoryobject.c	1688	1700	pylong_as_lu	pylong_as_lu(PyObject *item)	todo		
+Objects/memoryobject.c	1703	1715	pylong_as_lld	pylong_as_lld(PyObject *item)	todo		
+Objects/memoryobject.c	1718	1730	pylong_as_llu	pylong_as_llu(PyObject *item)	todo		
+Objects/memoryobject.c	1733	1745	pylong_as_zd	pylong_as_zd(PyObject *item)	todo		
+Objects/memoryobject.c	1748	1760	pylong_as_zu	pylong_as_zu(PyObject *item)	todo		
+Objects/memoryobject.c	1776	1863	unpack_single	unpack_single(PyMemoryViewObject *self, const char *ptr, const char *fmt)	todo		
+Objects/memoryobject.c	1875	2026	pack_single	pack_single(PyMemoryViewObject *self, char *ptr, PyObject *item, const char *fmt)	todo		
+Objects/memoryobject.c	2045	2060	unpacker_new	unpacker_new(void)	todo		
+Objects/memoryobject.c	2063	2071	unpacker_free	unpacker_free(struct unpacker *x)	todo		
+Objects/memoryobject.c	2075	2124	struct_get_unpacker	struct_get_unpacker(const char *fmt, Py_ssize_t itemsize)	todo		
+Objects/memoryobject.c	2128	2144	struct_unpack_single	struct_unpack_single(const char *ptr, struct unpacker *x)	todo		
+Objects/memoryobject.c	2153	2164	adjust_fmt	adjust_fmt(const Py_buffer *view)	todo		
+Objects/memoryobject.c	2168	2190	tolist_base	tolist_base(PyMemoryViewObject *self, const char *ptr, const Py_ssize_t *shape, const Py_ssize_t *strides, const Py_ssize_t *suboffsets, const char *fmt)	todo		
+Objects/memoryobject.c	2195	2226	tolist_rec	tolist_rec(PyMemoryViewObject *self, const char *ptr, Py_ssize_t ndim, const Py_ssize_t *shape, const Py_ssize_t *strides, const Py_ssize_t *suboffsets, const char *fmt)	todo		
+Objects/memoryobject.c	2237	2261	memoryview_tolist_impl	memoryview_tolist_impl(PyMemoryViewObject *self) /*[clinic end generated code: output=a6cda89214fd5a1b input=21e7d0c1860b211a]*/	todo		
+Objects/memoryobject.c	2279	2312	memoryview_tobytes_impl	memoryview_tobytes_impl(PyMemoryViewObject *self, const char *order) /*[clinic end generated code: output=1288b62560a32a23 input=119c70aa91791dc8]*/	todo		
+Objects/memoryobject.c	2338	2373	memoryview_hex_impl	memoryview_hex_impl(PyMemoryViewObject *self, PyObject *sep, int bytes_per_sep) /*[clinic end generated code: output=430ca760f94f3ca7 input=94c2495f886c786b]*/	todo		
+Objects/memoryobject.c	2376	2383	memory_repr	memory_repr(PyObject *_self)	todo		
+Objects/memoryobject.c	2391	2413	lookup_dimension	lookup_dimension(const Py_buffer *view, char *ptr, int dim, Py_ssize_t index)	todo		
+Objects/memoryobject.c	2417	2421	ptr_from_index	ptr_from_index(const Py_buffer *view, Py_ssize_t index)	todo		
+Objects/memoryobject.c	2425	2448	ptr_from_tuple	ptr_from_tuple(const Py_buffer *view, PyObject *tup)	todo		
+Objects/memoryobject.c	2454	2480	memory_item	memory_item(PyObject *_self, Py_ssize_t index)	todo		
+Objects/memoryobject.c	2484	2506	memory_item_multi	memory_item_multi(PyMemoryViewObject *self, PyObject *tup)	todo		
+Objects/memoryobject.c	2509	2535	init_slice	init_slice(Py_buffer *base, PyObject *key, int dim)	todo		
+Objects/memoryobject.c	2538	2554	is_multislice	is_multislice(PyObject *key)	todo		
+Objects/memoryobject.c	2557	2571	is_multiindex	is_multiindex(PyObject *key)	todo		
+Objects/memoryobject.c	2580	2640	memory_subscript	memory_subscript(PyObject *_self, PyObject *key)	todo		
+Objects/memoryobject.c	2643	2743	memory_ass_sub	memory_ass_sub(PyObject *_self, PyObject *key, PyObject *value)	todo		
+Objects/memoryobject.c	2746	2755	memory_length	memory_length(PyObject *_self)	todo		
+Objects/memoryobject.c	2787	2819	memoryview_count_impl	memoryview_count_impl(PyMemoryViewObject *self, PyObject *value) /*[clinic end generated code: output=a15cb19311985063 input=e3036ce1ed7d1823]*/	todo		
+Objects/memoryobject.c	2840	2905	memoryview_index_impl	memoryview_index_impl(PyMemoryViewObject *self, PyObject *value, Py_ssize_t start, Py_ssize_t stop) /*[clinic end generated code: output=e0185e3819e549df input=0697a0165bf90b5a]*/	todo		
+Objects/memoryobject.c	2917	2928	fix_struct_error_int	fix_struct_error_int(void)	todo		
+Objects/memoryobject.c	2932	2956	struct_unpack_cmp	struct_unpack_cmp(const char *p, const char *q, struct unpacker *unpack_p, struct unpacker *unpack_q)	todo		
+Objects/memoryobject.c	2974	3037	unpack_cmp	unpack_cmp(const char *p, const char *q, char fmt, struct unpacker *unpack_p, struct unpacker *unpack_q)	todo		
+Objects/memoryobject.c	3041	3058	cmp_base	cmp_base(const char *p, const char *q, const Py_ssize_t *shape, const Py_ssize_t *pstrides, const Py_ssize_t *psuboffsets, const Py_ssize_t *qstrides, const Py_ssize_t *qsuboffsets, char fmt, struct unpacker *unpack_p, struct unpacker *unpack_q)	todo		
+Objects/memoryobject.c	3063	3096	cmp_rec	cmp_rec(const char *p, const char *q, Py_ssize_t ndim, const Py_ssize_t *shape, const Py_ssize_t *pstrides, const Py_ssize_t *psuboffsets, const Py_ssize_t *qstrides, const Py_ssize_t *qsuboffsets, char fmt, struct unpacker *unpack_p, struct unpacker *unpack_q)	todo		
+Objects/memoryobject.c	3099	3199	memory_richcompare	memory_richcompare(PyObject *v, PyObject *w, int op)	todo		
+Objects/memoryobject.c	3206	3260	memory_hash	memory_hash(PyObject *_self)	todo		
+Objects/memoryobject.c	3268	3289	_IntTupleFromSsizet	_IntTupleFromSsizet(int len, Py_ssize_t *vals)	todo		
+Objects/memoryobject.c	3292	3302	memory_obj_get	memory_obj_get(PyObject *_self, void *Py_UNUSED(ignored))	todo		
+Objects/memoryobject.c	3305	3310	memory_nbytes_get	memory_nbytes_get(PyObject *_self, void *Py_UNUSED(ignored))	todo		
+Objects/memoryobject.c	3313	3318	memory_format_get	memory_format_get(PyObject *_self, void *Py_UNUSED(ignored))	todo		
+Objects/memoryobject.c	3321	3326	memory_itemsize_get	memory_itemsize_get(PyObject *_self, void *Py_UNUSED(ignored))	todo		
+Objects/memoryobject.c	3329	3334	memory_shape_get	memory_shape_get(PyObject *_self, void *Py_UNUSED(ignored))	todo		
+Objects/memoryobject.c	3337	3342	memory_strides_get	memory_strides_get(PyObject *_self, void *Py_UNUSED(ignored))	todo		
+Objects/memoryobject.c	3345	3350	memory_suboffsets_get	memory_suboffsets_get(PyObject *_self, void *Py_UNUSED(ignored))	todo		
+Objects/memoryobject.c	3353	3358	memory_readonly_get	memory_readonly_get(PyObject *_self, void *Py_UNUSED(ignored))	todo		
+Objects/memoryobject.c	3361	3366	memory_ndim_get	memory_ndim_get(PyObject *_self, void *Py_UNUSED(ignored))	todo		
+Objects/memoryobject.c	3369	3374	memory_c_contiguous	memory_c_contiguous(PyObject *_self, void *Py_UNUSED(ignored))	todo		
+Objects/memoryobject.c	3377	3382	memory_f_contiguous	memory_f_contiguous(PyObject *_self, void *Py_UNUSED(ignored))	todo		
+Objects/memoryobject.c	3385	3390	memory_contiguous	memory_contiguous(PyObject *_self, void *Py_UNUSED(ignored))	todo		
+Objects/memoryobject.c	3475	3481	memoryiter_dealloc	memoryiter_dealloc(PyObject *self)	todo		
+Objects/memoryobject.c	3484	3489	memoryiter_traverse	memoryiter_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/memoryobject.c	3492	3517	memoryiter_next	memoryiter_next(PyObject *self)	todo		
+Objects/memoryobject.c	3520	3555	memory_iter	memory_iter(PyObject *seq)	todo		

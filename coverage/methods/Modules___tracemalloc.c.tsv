@@ -1,0 +1,12 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_tracemalloc.c	20	24	_tracemalloc_is_tracing_impl	_tracemalloc_is_tracing_impl(PyObject *module) /*[clinic end generated code: output=2d763b42601cd3ef input=af104b0a00192f63]*/	todo		
+Modules/_tracemalloc.c	34	39	_tracemalloc_clear_traces_impl	_tracemalloc_clear_traces_impl(PyObject *module) /*[clinic end generated code: output=a86080ee41b84197 input=0dab5b6c785183a5]*/	todo		
+Modules/_tracemalloc.c	54	58	_tracemalloc__get_traces_impl	_tracemalloc__get_traces_impl(PyObject *module) /*[clinic end generated code: output=e9929876ced4b5cc input=6c7d2230b24255aa]*/	todo		
+Modules/_tracemalloc.c	76	80	_tracemalloc__get_object_traceback	_tracemalloc__get_object_traceback(PyObject *module, PyObject *obj) /*[clinic end generated code: output=41ee0553a658b0aa input=29495f1b21c53212]*/	todo		
+Modules/_tracemalloc.c	96	103	_tracemalloc_start_impl	_tracemalloc_start_impl(PyObject *module, int nframe) /*[clinic end generated code: output=caae05c23c159d3c input=40d849b5b29d1933]*/	todo		
+Modules/_tracemalloc.c	115	120	_tracemalloc_stop_impl	_tracemalloc_stop_impl(PyObject *module) /*[clinic end generated code: output=c3c42ae03e3955cd input=7478f075e51dae18]*/	todo		
+Modules/_tracemalloc.c	133	137	_tracemalloc_get_traceback_limit_impl	_tracemalloc_get_traceback_limit_impl(PyObject *module) /*[clinic end generated code: output=d556d9306ba95567 input=da3cd977fc68ae3b]*/	todo		
+Modules/_tracemalloc.c	148	152	_tracemalloc_get_tracemalloc_memory_impl	_tracemalloc_get_tracemalloc_memory_impl(PyObject *module) /*[clinic end generated code: output=e3f14e280a55f5aa input=5d919c0f4d5132ad]*/	todo		
+Modules/_tracemalloc.c	164	168	_tracemalloc_get_traced_memory_impl	_tracemalloc_get_traced_memory_impl(PyObject *module) /*[clinic end generated code: output=5b167189adb9e782 input=61ddb5478400ff66]*/	todo		
+Modules/_tracemalloc.c	180	185	_tracemalloc_reset_peak_impl	_tracemalloc_reset_peak_impl(PyObject *module) /*[clinic end generated code: output=140c2870f691dbb2 input=18afd0635066e9ce]*/	todo		
+Modules/_tracemalloc.c	216	228	PyInit__tracemalloc	PyInit__tracemalloc(void)	todo		

@@ -1,0 +1,132 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_interpchannelsmodule.c	109	137	_release_xid_data	_release_xid_data(_PyXIData_t *data, int flags)	todo		
+Modules/_interpchannelsmodule.c	141	146	_get_current_interp	_get_current_interp(void)	todo		
+Modules/_interpchannelsmodule.c	149	162	_get_current_module	_get_current_module(void)	todo		
+Modules/_interpchannelsmodule.c	165	171	get_module_from_owned_type	get_module_from_owned_type(PyTypeObject *cls)	todo		
+Modules/_interpchannelsmodule.c	176	182	get_module_from_type	get_module_from_type(PyTypeObject *cls)	todo		
+Modules/_interpchannelsmodule.c	185	198	add_new_exception	add_new_exception(PyObject *mod, const char *name, PyObject *base)	todo		
+Modules/_interpchannelsmodule.c	204	221	wait_for_lock	wait_for_lock(PyThread_type_lock mutex, PY_TIMEOUT_T timeout)	todo		
+Modules/_interpchannelsmodule.c	224	237	ensure_highlevel_module_loaded	ensure_highlevel_module_loaded(void)	todo		
+Modules/_interpchannelsmodule.c	260	266	get_module_state	get_module_state(PyObject *mod)	todo		
+Modules/_interpchannelsmodule.c	269	281	_get_current_module_state	_get_current_module_state(void)	todo		
+Modules/_interpchannelsmodule.c	284	302	traverse_module_state	traverse_module_state(module_state *state, visitproc visit, void *arg)	todo		
+Modules/_interpchannelsmodule.c	305	322	clear_xid_types	clear_xid_types(module_state *state)	todo		
+Modules/_interpchannelsmodule.c	325	340	clear_module_state	clear_module_state(module_state *state)	todo		
+Modules/_interpchannelsmodule.c	363	392	exceptions_init	exceptions_init(PyObject *mod)	todo		
+Modules/_interpchannelsmodule.c	395	442	handle_channel_error	handle_channel_error(int err, PyObject *mod, int64_t cid)	todo		
+Modules/_interpchannelsmodule.c	462	475	_waiting_init	_waiting_init(_waiting_t *waiting)	todo		
+Modules/_interpchannelsmodule.c	478	486	_waiting_clear	_waiting_clear(_waiting_t *waiting)	todo		
+Modules/_interpchannelsmodule.c	489	492	_waiting_get_itemid	_waiting_get_itemid(_waiting_t *waiting)	todo		
+Modules/_interpchannelsmodule.c	495	500	_waiting_acquire	_waiting_acquire(_waiting_t *waiting)	todo		
+Modules/_interpchannelsmodule.c	503	516	_waiting_release	_waiting_release(_waiting_t *waiting, int received)	todo		
+Modules/_interpchannelsmodule.c	519	528	_waiting_finish_releasing	_waiting_finish_releasing(_waiting_t *waiting)	todo		
+Modules/_interpchannelsmodule.c	545	548	_channelitem_ID	_channelitem_ID(_channelitem *item)	todo		
+Modules/_interpchannelsmodule.c	551	572	_channelitem_init	_channelitem_init(_channelitem *item, int64_t interpid, _PyXIData_t *data, _waiting_t *waiting, unboundop_t unboundop)	todo		
+Modules/_interpchannelsmodule.c	575	589	_channelitem_clear_data	_channelitem_clear_data(_channelitem *item, int removed)	todo		
+Modules/_interpchannelsmodule.c	592	596	_channelitem_clear	_channelitem_clear(_channelitem *item)	todo		
+Modules/_interpchannelsmodule.c	599	609	_channelitem_new	_channelitem_new(int64_t interpid, _PyXIData_t *data, _waiting_t *waiting, unboundop_t unboundop)	todo		
+Modules/_interpchannelsmodule.c	612	616	_channelitem_free	_channelitem_free(_channelitem *item)	todo		
+Modules/_interpchannelsmodule.c	619	626	_channelitem_free_all	_channelitem_free_all(_channelitem *item)	todo		
+Modules/_interpchannelsmodule.c	629	641	_channelitem_popped	_channelitem_popped(_channelitem *item, _PyXIData_t **p_data, _waiting_t **p_waiting, int *p_unboundop)	todo		
+Modules/_interpchannelsmodule.c	644	669	_channelitem_clear_interpreter	_channelitem_clear_interpreter(_channelitem *item)	todo		
+Modules/_interpchannelsmodule.c	679	690	_channelqueue_new	_channelqueue_new(void)	todo		
+Modules/_interpchannelsmodule.c	693	699	_channelqueue_clear	_channelqueue_clear(_channelqueue *queue)	todo		
+Modules/_interpchannelsmodule.c	702	706	_channelqueue_free	_channelqueue_free(_channelqueue *queue)	todo		
+Modules/_interpchannelsmodule.c	709	732	_channelqueue_put	_channelqueue_put(_channelqueue *queue, int64_t interpid, _PyXIData_t *data, _waiting_t *waiting, unboundop_t unboundop)	todo		
+Modules/_interpchannelsmodule.c	735	751	_channelqueue_get	_channelqueue_get(_channelqueue *queue, _PyXIData_t **p_data, _waiting_t **p_waiting, int *p_unboundop)	todo		
+Modules/_interpchannelsmodule.c	754	784	_channelqueue_find	_channelqueue_find(_channelqueue *queue, _channelitem_id_t itemid, _channelitem **p_item, _channelitem **p_prev)	todo		
+Modules/_interpchannelsmodule.c	787	817	_channelqueue_remove	_channelqueue_remove(_channelqueue *queue, _channelitem_id_t itemid, _PyXIData_t **p_data, _waiting_t **p_waiting)	todo		
+Modules/_interpchannelsmodule.c	820	844	_channelqueue_clear_interpreter	_channelqueue_clear_interpreter(_channelqueue *queue, int64_t interpid)	todo		
+Modules/_interpchannelsmodule.c	858	869	_channelend_new	_channelend_new(int64_t interpid)	todo		
+Modules/_interpchannelsmodule.c	872	875	_channelend_free	_channelend_free(_channelend *end)	todo		
+Modules/_interpchannelsmodule.c	878	885	_channelend_free_all	_channelend_free_all(_channelend *end)	todo		
+Modules/_interpchannelsmodule.c	888	903	_channelend_find	_channelend_find(_channelend *first, int64_t interpid, _channelend **pprev)	todo		
+Modules/_interpchannelsmodule.c	917	929	_channelends_new	_channelends_new(void)	todo		
+Modules/_interpchannelsmodule.c	932	941	_channelends_clear	_channelends_clear(_channelends *ends)	todo		
+Modules/_interpchannelsmodule.c	944	948	_channelends_free	_channelends_free(_channelends *ends)	todo		
+Modules/_interpchannelsmodule.c	951	977	_channelends_add	_channelends_add(_channelends *ends, _channelend *prev, int64_t interpid, int send)	todo		
+Modules/_interpchannelsmodule.c	980	996	_channelends_associate	_channelends_associate(_channelends *ends, int64_t interpid, int send)	todo		
+Modules/_interpchannelsmodule.c	999	1012	_channelends_is_open	_channelends_is_open(_channelends *ends)	todo		
+Modules/_interpchannelsmodule.c	1015	1024	_channelends_release_end	_channelends_release_end(_channelends *ends, _channelend *end, int send)	todo		
+Modules/_interpchannelsmodule.c	1027	1054	_channelends_release_interpreter	_channelends_release_interpreter(_channelends *ends, int64_t interpid, int which)	todo		
+Modules/_interpchannelsmodule.c	1057	1072	_channelends_release_all	_channelends_release_all(_channelends *ends, int which, int force)	todo		
+Modules/_interpchannelsmodule.c	1075	1087	_channelends_clear_interpreter	_channelends_clear_interpreter(_channelends *ends, int64_t interpid)	todo		
+Modules/_interpchannelsmodule.c	1110	1134	_channel_new	_channel_new(PyThread_type_lock mutex, struct _channeldefaults defaults)	todo		
+Modules/_interpchannelsmodule.c	1137	1147	_channel_free	_channel_free(_channel_state *chan)	todo		
+Modules/_interpchannelsmodule.c	1150	1174	_channel_add	_channel_add(_channel_state *chan, int64_t interpid, _PyXIData_t *data, _waiting_t *waiting, unboundop_t unboundop)	todo		
+Modules/_interpchannelsmodule.c	1177	1209	_channel_next	_channel_next(_channel_state *chan, int64_t interpid, _PyXIData_t **p_data, _waiting_t **p_waiting, int *p_unboundop)	todo		
+Modules/_interpchannelsmodule.c	1212	1229	_channel_remove	_channel_remove(_channel_state *chan, _channelitem_id_t itemid)	todo		
+Modules/_interpchannelsmodule.c	1232	1253	_channel_release_interpreter	_channel_release_interpreter(_channel_state *chan, int64_t interpid, int end)	todo		
+Modules/_interpchannelsmodule.c	1256	1282	_channel_release_all	_channel_release_all(_channel_state *chan, int end, int force)	todo		
+Modules/_interpchannelsmodule.c	1285	1294	_channel_clear_interpreter	_channel_clear_interpreter(_channel_state *chan, int64_t interpid)	todo		
+Modules/_interpchannelsmodule.c	1310	1322	_channelref_new	_channelref_new(int64_t cid, _channel_state *chan)	todo		
+Modules/_interpchannelsmodule.c	1334	1341	_channelref_free	_channelref_free(_channelref *ref)	todo		
+Modules/_interpchannelsmodule.c	1344	1359	_channelref_find	_channelref_find(_channelref *first, int64_t cid, _channelref **pprev)	todo		
+Modules/_interpchannelsmodule.c	1370	1380	_channels_init	_channels_init(_channels *channels, PyThread_type_lock mutex)	todo		
+Modules/_interpchannelsmodule.c	1383	1395	_channels_fini	_channels_fini(_channels *channels, PyThread_type_lock *p_mutex)	todo		
+Modules/_interpchannelsmodule.c	1398	1407	_channels_next_id	_channels_next_id(_channels *channels) // needs lock	todo		
+Modules/_interpchannelsmodule.c	1410	1444	_channels_lookup	_channels_lookup(_channels *channels, int64_t cid, PyThread_type_lock *pmutex, _channel_state **res)	todo		
+Modules/_interpchannelsmodule.c	1447	1473	_channels_add	_channels_add(_channels *channels, _channel_state *chan)	todo		
+Modules/_interpchannelsmodule.c	1479	1541	_channels_close	_channels_close(_channels *channels, int64_t cid, _channel_state **pchan, int end, int force)	todo		
+Modules/_interpchannelsmodule.c	1544	1559	_channels_remove_ref	_channels_remove_ref(_channels *channels, _channelref *ref, _channelref *prev, _channel_state **pchan)	todo		
+Modules/_interpchannelsmodule.c	1562	1584	_channels_remove	_channels_remove(_channels *channels, int64_t cid, _channel_state **pchan)	todo		
+Modules/_interpchannelsmodule.c	1587	1603	_channels_add_id_object	_channels_add_id_object(_channels *channels, int64_t cid)	todo		
+Modules/_interpchannelsmodule.c	1606	1629	_channels_release_cid_object	_channels_release_cid_object(_channels *channels, int64_t cid)	todo		
+Modules/_interpchannelsmodule.c	1637	1661	_channels_list_all	_channels_list_all(_channels *channels, int64_t *count)	todo		
+Modules/_interpchannelsmodule.c	1664	1676	_channels_clear_interpreter	_channels_clear_interpreter(_channels *channels, int64_t interpid)	todo		
+Modules/_interpchannelsmodule.c	1686	1709	_channel_set_closing	_channel_set_closing(_channelref *ref, PyThread_type_lock mutex) {	todo		
+Modules/_interpchannelsmodule.c	1712	1719	_channel_clear_closing	_channel_clear_closing(_channel_state *chan) {	todo		
+Modules/_interpchannelsmodule.c	1722	1732	_channel_finish_closing	_channel_finish_closing(_channel_state *chan) {	todo		
+Modules/_interpchannelsmodule.c	1739	1756	channel_create	channel_create(_channels *channels, struct _channeldefaults defaults)	todo		
+Modules/_interpchannelsmodule.c	1760	1771	channel_destroy	channel_destroy(_channels *channels, int64_t cid)	todo		
+Modules/_interpchannelsmodule.c	1777	1822	channel_send	channel_send(_channels *channels, int64_t cid, PyObject *obj, _waiting_t *waiting, unboundop_t unboundop, xidata_fallback_t fallback)	todo		
+Modules/_interpchannelsmodule.c	1826	1844	channel_clear_sent	channel_clear_sent(_channels *channels, int64_t cid, _waiting_t *waiting)	todo		
+Modules/_interpchannelsmodule.c	1848	1897	channel_send_wait	channel_send_wait(_channels *channels, int64_t cid, PyObject *obj, unboundop_t unboundop, PY_TIMEOUT_T timeout, xidata_fallback_t fallback)	todo		
+Modules/_interpchannelsmodule.c	1903	1973	channel_recv	channel_recv(_channels *channels, int64_t cid, PyObject **res, int *p_unboundop)	todo		
+Modules/_interpchannelsmodule.c	1979	2000	channel_release	channel_release(_channels *channels, int64_t cid, int send, int recv)	todo		
+Modules/_interpchannelsmodule.c	2006	2009	channel_close	channel_close(_channels *channels, int64_t cid, int end, int force)	todo		
+Modules/_interpchannelsmodule.c	2014	2030	channel_is_associated	channel_is_associated(_channels *channels, int64_t cid, int64_t interpid, int send)	todo		
+Modules/_interpchannelsmodule.c	2033	2044	channel_get_defaults	channel_get_defaults(_channels *channels, int64_t cid, struct _channeldefaults *defaults)	todo		
+Modules/_interpchannelsmodule.c	2047	2061	_channel_get_count	_channel_get_count(_channels *channels, int64_t cid, Py_ssize_t *p_count)	todo		
+Modules/_interpchannelsmodule.c	2090	2201	_channel_get_info	_channel_get_info(_channels *channels, int64_t cid, struct channel_info *info)	todo		
+Modules/_interpchannelsmodule.c	2245	2291	new_channel_info	new_channel_info(PyObject *mod, struct channel_info *info)	todo		
+Modules/_interpchannelsmodule.c	2313	2344	channel_id_converter	channel_id_converter(PyObject *arg, void *ptr)	todo		
+Modules/_interpchannelsmodule.c	2347	2374	newchannelid	newchannelid(PyTypeObject *cls, int64_t cid, int end, _channels *channels, int force, int resolve, channelid **res)	todo		
+Modules/_interpchannelsmodule.c	2379	2431	_channelid_new	_channelid_new(PyObject *mod, PyTypeObject *cls, PyObject *args, PyObject *kwds)	todo		
+Modules/_interpchannelsmodule.c	2434	2451	channelid_dealloc	channelid_dealloc(PyObject *op)	todo		
+Modules/_interpchannelsmodule.c	2454	2471	channelid_repr	channelid_repr(PyObject *self)	todo		
+Modules/_interpchannelsmodule.c	2474	2478	channelid_str	channelid_str(PyObject *self)	todo		
+Modules/_interpchannelsmodule.c	2481	2485	channelid_int	channelid_int(PyObject *self)	todo		
+Modules/_interpchannelsmodule.c	2488	2498	channelid_hash	channelid_hash(PyObject *self)	todo		
+Modules/_interpchannelsmodule.c	2501	2561	channelid_richcompare	channelid_richcompare(PyObject *self, PyObject *other, int op)	todo		
+Modules/_interpchannelsmodule.c	2566	2578	_channelobj_from_cidobj	_channelobj_from_cidobj(PyObject *cidobj, int end)	todo		
+Modules/_interpchannelsmodule.c	2587	2632	_channelid_from_xid	_channelid_from_xid(_PyXIData_t *data)	todo		
+Modules/_interpchannelsmodule.c	2635	2650	_channelid_shared	_channelid_shared(PyThreadState *tstate, PyObject *obj, _PyXIData_t *data)	todo		
+Modules/_interpchannelsmodule.c	2653	2683	channelid_end	channelid_end(PyObject *self, void *end)	todo		
+Modules/_interpchannelsmodule.c	2724	2740	add_channelid_type	add_channelid_type(PyObject *mod)	todo		
+Modules/_interpchannelsmodule.c	2748	2776	_get_current_channelend_type	_get_current_channelend_type(int end)	todo		
+Modules/_interpchannelsmodule.c	2779	2793	_channelend_from_xid	_channelend_from_xid(_PyXIData_t *data)	todo		
+Modules/_interpchannelsmodule.c	2796	2809	_channelend_shared	_channelend_shared(PyThreadState *tstate, PyObject *obj, _PyXIData_t *data)	todo		
+Modules/_interpchannelsmodule.c	2812	2845	set_channelend_types	set_channelend_types(PyObject *mod, PyTypeObject *send, PyTypeObject *recv)	todo		
+Modules/_interpchannelsmodule.c	2860	2877	_globals_init	_globals_init(void)	todo		
+Modules/_interpchannelsmodule.c	2880	2892	_globals_fini	_globals_fini(void)	todo		
+Modules/_interpchannelsmodule.c	2895	2897	_global_channels	_global_channels(void) {	todo		
+Modules/_interpchannelsmodule.c	2901	2910	clear_interpreter	clear_interpreter(void *data)	todo		
+Modules/_interpchannelsmodule.c	2914	2959	channelsmod_create	channelsmod_create(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_interpchannelsmodule.c	2967	2985	channelsmod_destroy	channelsmod_destroy(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_interpchannelsmodule.c	2994	3042	channelsmod_list_all	channelsmod_list_all(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Modules/_interpchannelsmodule.c	3050	3104	channelsmod_list_interpreters	channelsmod_list_interpreters(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_interpchannelsmodule.c	3116	3172	channelsmod_send	channelsmod_send(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_interpchannelsmodule.c	3181	3243	channelsmod_send_buffer	channelsmod_send_buffer(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_interpchannelsmodule.c	3252	3285	channelsmod_recv	channelsmod_recv(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_interpchannelsmodule.c	3296	3319	channelsmod_close	channelsmod_close(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_interpchannelsmodule.c	3349	3380	channelsmod_release	channelsmod_release(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_interpchannelsmodule.c	3390	3410	channelsmod_get_count	channelsmod_get_count(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_interpchannelsmodule.c	3418	3437	channelsmod_get_info	channelsmod_get_info(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_interpchannelsmodule.c	3445	3466	channelsmod_get_channel_defaults	channelsmod_get_channel_defaults(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_interpchannelsmodule.c	3474	3487	channelsmod__channel_id	channelsmod__channel_id(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_interpchannelsmodule.c	3490	3516	channelsmod__register_end_types	channelsmod__register_end_types(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_interpchannelsmodule.c	3559	3605	module_exec	module_exec(PyObject *mod)	todo		
+Modules/_interpchannelsmodule.c	3615	3620	module_traverse	module_traverse(PyObject *mod, visitproc visit, void *arg)	todo		
+Modules/_interpchannelsmodule.c	3623	3630	module_clear	module_clear(PyObject *mod)	todo		
+Modules/_interpchannelsmodule.c	3633	3642	module_free	module_free(void *mod)	todo		

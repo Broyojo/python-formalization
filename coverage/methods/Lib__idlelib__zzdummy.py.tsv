@@ -1,0 +1,6 @@
+file	line	endline	name	signature	status	entry	note
+Lib/idlelib/zzdummy.py	11	23	format_selection	format_selection(format_line)	excluded		platform: GUI toolkit
+Lib/idlelib/zzdummy.py	37	41	ZzDummy.__init__	__init__(self, editwin)	excluded		platform: GUI toolkit
+Lib/idlelib/zzdummy.py	44	46	ZzDummy.reload	reload(cls)	excluded		platform: GUI toolkit
+Lib/idlelib/zzdummy.py	49	55	ZzDummy.z_in_event	z_in_event(self, line)	excluded		platform: GUI toolkit
+Lib/idlelib/zzdummy.py	58	65	ZzDummy.z_out_event	z_out_event(self, line)	excluded		platform: GUI toolkit

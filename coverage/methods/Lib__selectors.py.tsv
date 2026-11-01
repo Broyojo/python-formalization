@@ -1,0 +1,45 @@
+file	line	endline	name	signature	status	entry	note
+Lib/selectors.py	21	43	_fileobj_to_fd	_fileobj_to_fd(fileobj)	todo		
+Lib/selectors.py	63	64	_SelectorMapping.__init__	__init__(self, selector)	todo		
+Lib/selectors.py	66	67	_SelectorMapping.__len__	__len__(self)	todo		
+Lib/selectors.py	69	71	_SelectorMapping.get	get(self, fileobj, default=None)	todo		
+Lib/selectors.py	73	78	_SelectorMapping.__getitem__	__getitem__(self, fileobj)	todo		
+Lib/selectors.py	80	81	_SelectorMapping.__iter__	__iter__(self)	todo		
+Lib/selectors.py	100	120	BaseSelector.register	register(self, fileobj, events, data=None)	todo		
+Lib/selectors.py	123	139	BaseSelector.unregister	unregister(self, fileobj)	todo		
+Lib/selectors.py	141	156	BaseSelector.modify	modify(self, fileobj, events, data=None)	todo		
+Lib/selectors.py	159	175	BaseSelector.select	select(self, timeout=None)	todo		
+Lib/selectors.py	177	182	BaseSelector.close	close(self)	todo		
+Lib/selectors.py	184	196	BaseSelector.get_key	get_key(self, fileobj)	todo		
+Lib/selectors.py	199	201	BaseSelector.get_map	get_map(self)	todo		
+Lib/selectors.py	203	204	BaseSelector.__enter__	__enter__(self)	todo		
+Lib/selectors.py	206	207	BaseSelector.__exit__	__exit__(self, *args)	todo		
+Lib/selectors.py	213	217	_BaseSelectorImpl.__init__	__init__(self)	todo		
+Lib/selectors.py	219	236	_BaseSelectorImpl._fileobj_lookup	_fileobj_lookup(self, fileobj)	todo		
+Lib/selectors.py	238	249	_BaseSelectorImpl.register	register(self, fileobj, events, data=None)	todo		
+Lib/selectors.py	251	256	_BaseSelectorImpl.unregister	unregister(self, fileobj)	todo		
+Lib/selectors.py	258	270	_BaseSelectorImpl.modify	modify(self, fileobj, events, data=None)	todo		
+Lib/selectors.py	272	274	_BaseSelectorImpl.close	close(self)	todo		
+Lib/selectors.py	276	277	_BaseSelectorImpl.get_map	get_map(self)	todo		
+Lib/selectors.py	284	287	SelectSelector.__init__	__init__(self)	todo		
+Lib/selectors.py	289	295	SelectSelector.register	register(self, fileobj, events, data=None)	todo		
+Lib/selectors.py	297	301	SelectSelector.unregister	unregister(self, fileobj)	todo		
+Lib/selectors.py	304	306	SelectSelector._select	_select(self, r, w, _, timeout=None)	todo		
+Lib/selectors.py	310	327	SelectSelector.select	select(self, timeout=None)	todo		
+Lib/selectors.py	336	338	_PollLikeSelector.__init__	__init__(self)	todo		
+Lib/selectors.py	340	349	_PollLikeSelector.register	register(self, fileobj, events, data=None)	todo		
+Lib/selectors.py	351	359	_PollLikeSelector.unregister	unregister(self, fileobj)	todo		
+Lib/selectors.py	361	383	_PollLikeSelector.modify	modify(self, fileobj, events, data=None)	todo		
+Lib/selectors.py	385	409	_PollLikeSelector.select	select(self, timeout=None)	todo		
+Lib/selectors.py	432	433	EpollSelector.fileno	fileno(self)	todo		
+Lib/selectors.py	435	463	EpollSelector.select	select(self, timeout=None)	todo		
+Lib/selectors.py	465	467	EpollSelector.close	close(self)	todo		
+Lib/selectors.py	478	479	DevpollSelector.fileno	fileno(self)	todo		
+Lib/selectors.py	481	483	DevpollSelector.close	close(self)	todo		
+Lib/selectors.py	491	494	KqueueSelector.__init__	__init__(self)	todo		
+Lib/selectors.py	496	497	KqueueSelector.fileno	fileno(self)	todo		
+Lib/selectors.py	499	515	KqueueSelector.register	register(self, fileobj, events, data=None)	todo		
+Lib/selectors.py	517	538	KqueueSelector.unregister	unregister(self, fileobj)	todo		
+Lib/selectors.py	540	561	KqueueSelector.select	select(self, timeout=None)	todo		
+Lib/selectors.py	563	565	KqueueSelector.close	close(self)	todo		
+Lib/selectors.py	568	588	_can_use	_can_use(method)	todo		

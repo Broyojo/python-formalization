@@ -1,0 +1,16 @@
+file	line	endline	name	signature	status	entry	note
+Lib/idlelib/replace.py	14	29	replace	replace(text, insert_tags=None)	excluded		platform: GUI toolkit
+Lib/idlelib/replace.py	38	53	ReplaceDialog.__init__	__init__(self, root, engine)	excluded		platform: GUI toolkit
+Lib/idlelib/replace.py	55	67	ReplaceDialog.open	open(self, text, searchphrase=None, *, insert_tags=None)	excluded		platform: GUI toolkit
+Lib/idlelib/replace.py	69	72	ReplaceDialog.create_entries	create_entries(self)	excluded		platform: GUI toolkit
+Lib/idlelib/replace.py	74	84	ReplaceDialog.create_command_buttons	create_command_buttons(self)	excluded		platform: GUI toolkit
+Lib/idlelib/replace.py	86	88	ReplaceDialog.find_it	find_it(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/replace.py	90	96	ReplaceDialog.replace_it	replace_it(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/replace.py	98	107	ReplaceDialog.default_command	default_command(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/replace.py	109	120	ReplaceDialog._replace_expand	_replace_expand(self, m, repl)	excluded		platform: GUI toolkit
+Lib/idlelib/replace.py	122	189	ReplaceDialog.replace_all	replace_all(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/replace.py	191	209	ReplaceDialog.do_find	do_find(self, ok=False)	excluded		platform: GUI toolkit
+Lib/idlelib/replace.py	211	241	ReplaceDialog.do_replace	do_replace(self)	excluded		platform: GUI toolkit
+Lib/idlelib/replace.py	243	264	ReplaceDialog.show_hit	show_hit(self, first, last)	excluded		platform: GUI toolkit
+Lib/idlelib/replace.py	266	270	ReplaceDialog.close	close(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/replace.py	273	304	_replace_dialog	_replace_dialog(parent)	excluded		platform: GUI toolkit

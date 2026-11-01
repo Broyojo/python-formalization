@@ -1,0 +1,15 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_hacl/Hacl_Hash_SHA1.c	33	36	Hacl_Hash_SHA1_init	void Hacl_Hash_SHA1_init(uint32_t *s)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA1.c	38	124	update	static void update(uint32_t *h, uint8_t *l)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA1.c	126	137	pad	static void pad(uint64_t len, uint8_t *dst)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA1.c	139	142	Hacl_Hash_SHA1_finish	void Hacl_Hash_SHA1_finish(uint32_t *s, uint8_t *dst)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA1.c	144	152	Hacl_Hash_SHA1_update_multi	void Hacl_Hash_SHA1_update_multi(uint32_t *s, uint8_t *blocks, uint32_t n_blocks)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA1.c	155	173	Hacl_Hash_SHA1_update_last	Hacl_Hash_SHA1_update_last(uint32_t *s, uint64_t prev_len, uint8_t *input, uint32_t input_len)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA1.c	175	200	Hacl_Hash_SHA1_hash_oneshot	void Hacl_Hash_SHA1_hash_oneshot(uint8_t *output, uint8_t *input, uint32_t input_len)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA1.c	202	266	Hacl_Hash_SHA1_malloc	Hacl_Streaming_MD_state_32 *Hacl_Hash_SHA1_malloc(void)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA1.c	268	277	Hacl_Hash_SHA1_reset	void Hacl_Hash_SHA1_reset(Hacl_Streaming_MD_state_32 *state)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA1.c	283	446	Hacl_Hash_SHA1_update	Hacl_Hash_SHA1_update(Hacl_Streaming_MD_state_32 *state, uint8_t *chunk, uint32_t chunk_len)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA1.c	448	481	Hacl_Hash_SHA1_digest	void Hacl_Hash_SHA1_digest(Hacl_Streaming_MD_state_32 *state, uint8_t *output)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA1.c	483	491	Hacl_Hash_SHA1_free	void Hacl_Hash_SHA1_free(Hacl_Streaming_MD_state_32 *state)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA1.c	493	561	Hacl_Hash_SHA1_copy	Hacl_Streaming_MD_state_32 *Hacl_Hash_SHA1_copy(Hacl_Streaming_MD_state_32 *state)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA1.c	563	566	Hacl_Hash_SHA1_hash	void Hacl_Hash_SHA1_hash(uint8_t *output, uint8_t *input, uint32_t input_len)	excluded		vendored: third-party code

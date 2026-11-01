@@ -1,0 +1,31 @@
+file	line	endline	name	signature	status	entry	note
+Lib/unittest/suite.py	11	13	_call_if_exists	_call_if_exists(parent, attr)	todo		
+Lib/unittest/suite.py	21	24	BaseTestSuite.__init__	__init__(self, tests=())	todo		
+Lib/unittest/suite.py	26	27	BaseTestSuite.__repr__	__repr__(self)	todo		
+Lib/unittest/suite.py	29	32	BaseTestSuite.__eq__	__eq__(self, other)	todo		
+Lib/unittest/suite.py	34	35	BaseTestSuite.__iter__	__iter__(self)	todo		
+Lib/unittest/suite.py	37	42	BaseTestSuite.countTestCases	countTestCases(self)	todo		
+Lib/unittest/suite.py	44	52	BaseTestSuite.addTest	addTest(self, test)	todo		
+Lib/unittest/suite.py	54	58	BaseTestSuite.addTests	addTests(self, tests)	todo		
+Lib/unittest/suite.py	60	67	BaseTestSuite.run	run(self, result)	todo		
+Lib/unittest/suite.py	69	81	BaseTestSuite._removeTestAtIndex	_removeTestAtIndex(self, index)	todo		
+Lib/unittest/suite.py	83	84	BaseTestSuite.__call__	__call__(self, *args, **kwds)	todo		
+Lib/unittest/suite.py	86	89	BaseTestSuite.debug	debug(self)	todo		
+Lib/unittest/suite.py	102	133	TestSuite.run	run(self, result, debug=False)	todo		
+Lib/unittest/suite.py	135	138	TestSuite.debug	debug(self)	todo		
+Lib/unittest/suite.py	142	186	TestSuite._handleClassSetUp	_handleClassSetUp(self, test, result)	todo		
+Lib/unittest/suite.py	188	193	TestSuite._get_previous_module	_get_previous_module(self, result)	todo		
+Lib/unittest/suite.py	196	231	TestSuite._handleModuleFixture	_handleModuleFixture(self, test, result)	todo		
+Lib/unittest/suite.py	233	236	TestSuite._createClassOrModuleLevelException	_createClassOrModuleLevelException(self, result, exc, method_name, parent, info=None)	todo		
+Lib/unittest/suite.py	238	248	TestSuite._addClassOrModuleLevelException	_addClassOrModuleLevelException(self, result, exception, errorName, info=None)	todo		
+Lib/unittest/suite.py	250	283	TestSuite._handleModuleTearDown	_handleModuleTearDown(self, result)	todo		
+Lib/unittest/suite.py	285	325	TestSuite._tearDownPreviousClass	_tearDownPreviousClass(self, test, result)	todo		
+Lib/unittest/suite.py	340	341	_ErrorHolder.__init__	__init__(self, description)	todo		
+Lib/unittest/suite.py	343	344	_ErrorHolder.id	id(self)	todo		
+Lib/unittest/suite.py	346	347	_ErrorHolder.shortDescription	shortDescription(self)	todo		
+Lib/unittest/suite.py	349	350	_ErrorHolder.__repr__	__repr__(self)	todo		
+Lib/unittest/suite.py	352	353	_ErrorHolder.__str__	__str__(self)	todo		
+Lib/unittest/suite.py	355	358	_ErrorHolder.run	run(self, result)	todo		
+Lib/unittest/suite.py	360	361	_ErrorHolder.__call__	__call__(self, result)	todo		
+Lib/unittest/suite.py	363	364	_ErrorHolder.countTestCases	countTestCases(self)	todo		
+Lib/unittest/suite.py	366	372	_isnotsuite	_isnotsuite(test)	todo		

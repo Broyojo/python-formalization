@@ -1,0 +1,3 @@
+file	line	endline	name	signature	status	entry	note
+Lib/ctypes/_endian.py	6	21	_other_endian	_other_endian(typ)	todo		
+Lib/ctypes/_endian.py	24	33	_swapped_meta.__setattr__	__setattr__(self, attrname, value)	todo		

@@ -1,0 +1,63 @@
+file	line	endline	name	signature	status	entry	note
+Lib/asyncio/unix_events.py	39	41	_sighandler_noop	_sighandler_noop(signum, frame)	todo		
+Lib/asyncio/unix_events.py	44	51	waitstatus_to_exitcode	waitstatus_to_exitcode(status)	todo		
+Lib/asyncio/unix_events.py	61	68	_UnixSelectorEventLoop.__init__	__init__(self, selector=None)	todo		
+Lib/asyncio/unix_events.py	70	82	_UnixSelectorEventLoop.close	close(self)	todo		
+Lib/asyncio/unix_events.py	84	89	_UnixSelectorEventLoop._process_self_data	_process_self_data(self, data)	todo		
+Lib/asyncio/unix_events.py	91	134	_UnixSelectorEventLoop.add_signal_handler	add_signal_handler(self, sig, callback, *args)	todo		
+Lib/asyncio/unix_events.py	136	144	_UnixSelectorEventLoop._handle_signal	_handle_signal(self, sig)	todo		
+Lib/asyncio/unix_events.py	146	176	_UnixSelectorEventLoop.remove_signal_handler	remove_signal_handler(self, sig)	todo		
+Lib/asyncio/unix_events.py	178	188	_UnixSelectorEventLoop._check_signal	_check_signal(self, sig)	todo		
+Lib/asyncio/unix_events.py	190	192	_UnixSelectorEventLoop._make_read_pipe_transport	_make_read_pipe_transport(self, pipe, protocol, waiter=None, extra=None)	todo		
+Lib/asyncio/unix_events.py	194	196	_UnixSelectorEventLoop._make_write_pipe_transport	_make_write_pipe_transport(self, pipe, protocol, waiter=None, extra=None)	todo		
+Lib/asyncio/unix_events.py	198	218	_UnixSelectorEventLoop._make_subprocess_transport	_make_subprocess_transport(self, protocol, args, shell, stdin, stdout, stderr, bufsize, extra=None, **kwargs)	todo		
+Lib/asyncio/unix_events.py	220	221	_UnixSelectorEventLoop._child_watcher_callback	_child_watcher_callback(self, pid, returncode, transp)	todo		
+Lib/asyncio/unix_events.py	223	271	_UnixSelectorEventLoop.create_unix_connection	create_unix_connection(self, protocol_factory, path=None, *, ssl=None, sock=None, server_hostname=None, ssl_handshake_timeout=None, ssl_shutdown_timeout=None)	todo		
+Lib/asyncio/unix_events.py	273	353	_UnixSelectorEventLoop.create_unix_server	create_unix_server(self, protocol_factory, path=None, *, sock=None, backlog=100, ssl=None, ssl_handshake_timeout=None, ssl_shutdown_timeout=None, start_serving=True, cleanup_socket=True)	todo		
+Lib/asyncio/unix_events.py	355	376	_UnixSelectorEventLoop._sock_sendfile_native	_sock_sendfile_native(self, sock, file, offset, count)	todo		
+Lib/asyncio/unix_events.py	378	449	_UnixSelectorEventLoop._sock_sendfile_native_impl	_sock_sendfile_native_impl(self, fut, registered_fd, sock, fileno, offset, count, blocksize, total_sent)	todo		
+Lib/asyncio/unix_events.py	451	453	_UnixSelectorEventLoop._sock_sendfile_update_filepos	_sock_sendfile_update_filepos(self, fileno, offset)	todo		
+Lib/asyncio/unix_events.py	455	461	_UnixSelectorEventLoop._sock_add_cancellation_callback	_sock_add_cancellation_callback(self, fut, sock)	todo		
+Lib/asyncio/unix_events.py	463	482	_UnixSelectorEventLoop._stop_serving	_stop_serving(self, sock)	todo		
+Lib/asyncio/unix_events.py	489	517	_UnixReadPipeTransport.__init__	__init__(self, loop, pipe, protocol, waiter=None, extra=None)	todo		
+Lib/asyncio/unix_events.py	519	522	_UnixReadPipeTransport._add_reader	_add_reader(self, fd, callback)	todo		
+Lib/asyncio/unix_events.py	524	525	_UnixReadPipeTransport.is_reading	is_reading(self)	todo		
+Lib/asyncio/unix_events.py	527	546	_UnixReadPipeTransport.__repr__	__repr__(self)	todo		
+Lib/asyncio/unix_events.py	548	564	_UnixReadPipeTransport._read_ready	_read_ready(self)	todo		
+Lib/asyncio/unix_events.py	566	572	_UnixReadPipeTransport.pause_reading	pause_reading(self)	todo		
+Lib/asyncio/unix_events.py	574	580	_UnixReadPipeTransport.resume_reading	resume_reading(self)	todo		
+Lib/asyncio/unix_events.py	582	583	_UnixReadPipeTransport.set_protocol	set_protocol(self, protocol)	todo		
+Lib/asyncio/unix_events.py	585	586	_UnixReadPipeTransport.get_protocol	get_protocol(self)	todo		
+Lib/asyncio/unix_events.py	588	589	_UnixReadPipeTransport.is_closing	is_closing(self)	todo		
+Lib/asyncio/unix_events.py	591	593	_UnixReadPipeTransport.close	close(self)	todo		
+Lib/asyncio/unix_events.py	595	598	_UnixReadPipeTransport.__del__	__del__(self, _warn=warnings.warn)	todo		
+Lib/asyncio/unix_events.py	600	612	_UnixReadPipeTransport._fatal_error	_fatal_error(self, exc, message='Fatal error on pipe transport')	todo		
+Lib/asyncio/unix_events.py	614	617	_UnixReadPipeTransport._close	_close(self, exc)	todo		
+Lib/asyncio/unix_events.py	619	626	_UnixReadPipeTransport._call_connection_lost	_call_connection_lost(self, exc)	todo		
+Lib/asyncio/unix_events.py	632	680	_UnixWritePipeTransport.__init__	__init__(self, loop, pipe, protocol, waiter=None, extra=None)	todo		
+Lib/asyncio/unix_events.py	682	704	_UnixWritePipeTransport.__repr__	__repr__(self)	todo		
+Lib/asyncio/unix_events.py	706	707	_UnixWritePipeTransport.get_write_buffer_size	get_write_buffer_size(self)	todo		
+Lib/asyncio/unix_events.py	709	716	_UnixWritePipeTransport._read_ready	_read_ready(self)	todo		
+Lib/asyncio/unix_events.py	718	751	_UnixWritePipeTransport.write	write(self, data)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/asyncio/unix_events.py	753	779	_UnixWritePipeTransport._write_ready	_write_ready(self)	todo		
+Lib/asyncio/unix_events.py	781	782	_UnixWritePipeTransport.can_write_eof	can_write_eof(self)	todo		
+Lib/asyncio/unix_events.py	784	791	_UnixWritePipeTransport.write_eof	write_eof(self)	todo		
+Lib/asyncio/unix_events.py	793	794	_UnixWritePipeTransport.set_protocol	set_protocol(self, protocol)	todo		
+Lib/asyncio/unix_events.py	796	797	_UnixWritePipeTransport.get_protocol	get_protocol(self)	todo		
+Lib/asyncio/unix_events.py	799	800	_UnixWritePipeTransport.is_closing	is_closing(self)	todo		
+Lib/asyncio/unix_events.py	802	805	_UnixWritePipeTransport.close	close(self)	todo		
+Lib/asyncio/unix_events.py	807	810	_UnixWritePipeTransport.__del__	__del__(self, _warn=warnings.warn)	todo		
+Lib/asyncio/unix_events.py	812	813	_UnixWritePipeTransport.abort	abort(self)	todo		
+Lib/asyncio/unix_events.py	815	827	_UnixWritePipeTransport._fatal_error	_fatal_error(self, exc, message='Fatal error on pipe transport')	todo		
+Lib/asyncio/unix_events.py	829	835	_UnixWritePipeTransport._close	_close(self, exc=None)	todo		
+Lib/asyncio/unix_events.py	837	844	_UnixWritePipeTransport._call_connection_lost	_call_connection_lost(self, exc)	todo		
+Lib/asyncio/unix_events.py	849	868	_UnixSubprocessTransport._start	_start(self, args, shell, stdin, stdout, stderr, bufsize, **kwargs)	todo		
+Lib/asyncio/unix_events.py	883	886	_PidfdChildWatcher.add_child_handler	add_child_handler(self, pid, callback, *args)	todo		
+Lib/asyncio/unix_events.py	888	905	_PidfdChildWatcher._do_wait	_do_wait(self, pid, pidfd, callback, args)	todo		
+Lib/asyncio/unix_events.py	920	922	_ThreadedChildWatcher.__init__	__init__(self)	todo		
+Lib/asyncio/unix_events.py	924	930	_ThreadedChildWatcher.__del__	__del__(self, _warn=warnings.warn)	todo		
+Lib/asyncio/unix_events.py	932	939	_ThreadedChildWatcher.add_child_handler	add_child_handler(self, pid, callback, *args)	todo		
+Lib/asyncio/unix_events.py	941	980	_ThreadedChildWatcher._do_waitpid	_do_waitpid(self, loop, expected_pid, callback, args)	todo		
+Lib/asyncio/unix_events.py	982	984	_ThreadedChildWatcher._reap_and_notify	_reap_and_notify(self, loop, expected_pid, callback, args)	todo		
+Lib/asyncio/unix_events.py	986	1002	_ThreadedChildWatcher._reap	_reap(self, loop, expected_pid)	todo		
+Lib/asyncio/unix_events.py	1004	1013	can_use_pidfd	can_use_pidfd()	todo		

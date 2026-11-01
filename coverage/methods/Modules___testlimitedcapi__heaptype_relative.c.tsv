@@ -1,0 +1,17 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testlimitedcapi/heaptype_relative.c	18	75	make_sized_heaptypes	make_sized_heaptypes(PyObject *module, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/heaptype_relative.c	78	92	var_heaptype_set_data_to_3s	var_heaptype_set_data_to_3s( PyObject *self, PyTypeObject *defining_class, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/heaptype_relative.c	95	107	var_heaptype_get_data	var_heaptype_get_data(PyObject *self, PyTypeObject *defining_class, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/heaptype_relative.c	118	147	subclass_var_heaptype	subclass_var_heaptype(PyObject *module, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/heaptype_relative.c	150	178	subclass_heaptype	subclass_heaptype(PyObject *module, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/heaptype_relative.c	181	207	heaptype_with_member_extract_and_check_memb	heaptype_with_member_extract_and_check_memb(PyObject *self)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/heaptype_relative.c	210	214	heaptype_with_member_get_memb	heaptype_with_member_get_memb(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/heaptype_relative.c	217	225	heaptype_with_member_set_memb	heaptype_with_member_set_memb(PyObject *self, PyObject *value)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/heaptype_relative.c	228	232	get_memb_offset	get_memb_offset(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/heaptype_relative.c	235	239	heaptype_with_member_get_memb_relative	heaptype_with_member_get_memb_relative(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/heaptype_relative.c	242	250	heaptype_with_member_set_memb_relative	heaptype_with_member_set_memb_relative(PyObject *self, PyObject *value)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/heaptype_relative.c	258	265	heapctypewithrelativedict_dealloc	heapctypewithrelativedict_dealloc(PyObject* self)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/heaptype_relative.c	296	306	heapctypewithrelativeweakref_dealloc	heapctypewithrelativeweakref_dealloc(PyObject* self)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/heaptype_relative.c	351	394	make_heaptype_with_member_impl	make_heaptype_with_member_impl(PyObject *module, int extra_base_size, int basicsize, int member_offset, int add_relative_flag, const char *member_name, int member_flags, int member_type) /*[clinic end generated code: output=7005db9a07396997 input=007e29cdbe1d3390]*/	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/heaptype_relative.c	398	412	test_alignof_max_align_t	test_alignof_max_align_t(PyObject *module, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/heaptype_relative.c	424	472	_PyTestLimitedCAPI_Init_HeaptypeRelative	_PyTestLimitedCAPI_Init_HeaptypeRelative(PyObject *m)	excluded		test-support: only for CPython's own tests

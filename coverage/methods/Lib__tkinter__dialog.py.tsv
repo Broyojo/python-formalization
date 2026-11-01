@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Lib/tkinter/dialog.py	15	26	Dialog.__init__	__init__(self, master=None, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/dialog.py	28	29	Dialog.destroy	destroy(self)	excluded		platform: GUI toolkit
+Lib/tkinter/dialog.py	32	44	_test	_test()	excluded		platform: GUI toolkit

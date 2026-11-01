@@ -1,0 +1,112 @@
+file	line	endline	name	signature	status	entry	note
+Lib/imaplib.py	142	145	_paren_depth	_paren_depth(data, depth=0)	todo		
+Lib/imaplib.py	202	228	IMAP4.__init__	__init__(self, host='', port=IMAP4_PORT, timeout=None)	todo		
+Lib/imaplib.py	230	234	IMAP4._mode_ascii	_mode_ascii(self)	todo		
+Lib/imaplib.py	237	241	IMAP4._mode_utf8	_mode_utf8(self)	todo		
+Lib/imaplib.py	244	287	IMAP4._connect	_connect(self)	todo		
+Lib/imaplib.py	290	294	IMAP4.__getattr__	__getattr__(self, attr)	todo		
+Lib/imaplib.py	296	297	IMAP4.__enter__	__enter__(self)	todo		
+Lib/imaplib.py	299	306	IMAP4.__exit__	__exit__(self, *args)	todo		
+Lib/imaplib.py	312	323	IMAP4._create_socket	_create_socket(self, timeout)	todo		
+Lib/imaplib.py	325	334	IMAP4.open	open(self, host='', port=IMAP4_PORT, timeout=None)	todo		
+Lib/imaplib.py	338	351	IMAP4.file	file(self)	todo		
+Lib/imaplib.py	354	391	IMAP4.read	read(self, size)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/imaplib.py	394	427	IMAP4.readline	readline(self)	todo		
+Lib/imaplib.py	430	433	IMAP4.send	send(self, data)	todo		
+Lib/imaplib.py	436	449	IMAP4.shutdown	shutdown(self)	todo		
+Lib/imaplib.py	452	457	IMAP4.socket	socket(self)	todo		
+Lib/imaplib.py	464	478	IMAP4.recent	recent(self)	todo		
+Lib/imaplib.py	481	488	IMAP4.response	response(self, code)	todo		
+Lib/imaplib.py	495	515	IMAP4.append	append(self, mailbox, flags, date_time, message)	todo		
+Lib/imaplib.py	518	545	IMAP4.authenticate	authenticate(self, mechanism, authobject)	todo		
+Lib/imaplib.py	548	554	IMAP4.capability	capability(self)	todo		
+Lib/imaplib.py	557	562	IMAP4.check	check(self)	todo		
+Lib/imaplib.py	565	577	IMAP4.close	close(self)	todo		
+Lib/imaplib.py	580	586	IMAP4.copy	copy(self, message_set, new_mailbox)	todo		
+Lib/imaplib.py	589	594	IMAP4.create	create(self, mailbox)	todo		
+Lib/imaplib.py	597	602	IMAP4.delete	delete(self, mailbox)	todo		
+Lib/imaplib.py	604	610	IMAP4.deleteacl	deleteacl(self, mailbox, who)	todo		
+Lib/imaplib.py	612	622	IMAP4.enable	enable(self, capability)	todo		
+Lib/imaplib.py	624	635	IMAP4.expunge	expunge(self)	todo		
+Lib/imaplib.py	638	651	IMAP4.fetch	fetch(self, message_set, message_parts)	todo		
+Lib/imaplib.py	654	660	IMAP4.getacl	getacl(self, mailbox)	todo		
+Lib/imaplib.py	663	669	IMAP4.getannotation	getannotation(self, mailbox, entry, attribute)	todo		
+Lib/imaplib.py	672	680	IMAP4.getquota	getquota(self, root)	todo		
+Lib/imaplib.py	683	691	IMAP4.getquotaroot	getquotaroot(self, mailbox)	todo		
+Lib/imaplib.py	694	704	IMAP4.idle	idle(self, duration=None)	todo		
+Lib/imaplib.py	707	717	IMAP4.list	list(self, directory='', pattern='*')	todo		
+Lib/imaplib.py	720	733	IMAP4.login	login(self, user, password)	todo		
+Lib/imaplib.py	736	742	IMAP4.login_cram_md5	login_cram_md5(self, user, password)	todo		
+Lib/imaplib.py	745	758	IMAP4._CRAM_MD5_AUTH	_CRAM_MD5_AUTH(self, challenge)	todo		
+Lib/imaplib.py	761	771	IMAP4.logout	logout(self)	todo		
+Lib/imaplib.py	774	784	IMAP4.lsub	lsub(self, directory='', pattern='*')	todo		
+Lib/imaplib.py	786	792	IMAP4.myrights	myrights(self, mailbox)	todo		
+Lib/imaplib.py	794	801	IMAP4.namespace	namespace(self)	todo		
+Lib/imaplib.py	804	812	IMAP4.noop	noop(self)	todo		
+Lib/imaplib.py	815	824	IMAP4.partial	partial(self, message_num, message_part, start, length)	todo		
+Lib/imaplib.py	827	837	IMAP4.proxyauth	proxyauth(self, user)	todo		
+Lib/imaplib.py	840	846	IMAP4.rename	rename(self, oldmailbox, newmailbox)	todo		
+Lib/imaplib.py	849	865	IMAP4.search	search(self, charset, *criteria)	todo		
+Lib/imaplib.py	868	897	IMAP4.select	select(self, mailbox='INBOX', readonly=False)	todo		
+Lib/imaplib.py	900	906	IMAP4.setacl	setacl(self, mailbox, who, what)	todo		
+Lib/imaplib.py	909	914	IMAP4.setannotation	setannotation(self, mailbox, *args)	todo		
+Lib/imaplib.py	917	924	IMAP4.setquota	setquota(self, root, limits)	todo		
+Lib/imaplib.py	927	939	IMAP4.sort	sort(self, sort_criteria, charset, *search_criteria)	todo		
+Lib/imaplib.py	942	962	IMAP4.starttls	starttls(self, ssl_context=None)	todo		
+Lib/imaplib.py	965	975	IMAP4.status	status(self, mailbox, names)	todo		
+Lib/imaplib.py	978	986	IMAP4.store	store(self, message_set, command, flags)	todo		
+Lib/imaplib.py	989	994	IMAP4.subscribe	subscribe(self, mailbox)	todo		
+Lib/imaplib.py	997	1007	IMAP4.thread	thread(self, threading_algorithm, charset, *search_criteria)	todo		
+Lib/imaplib.py	1010	1056	IMAP4.uid	uid(self, command, *args)	todo		
+Lib/imaplib.py	1059	1064	IMAP4.unsubscribe	unsubscribe(self, mailbox)	todo		
+Lib/imaplib.py	1067	1080	IMAP4.unselect	unselect(self)	todo		
+Lib/imaplib.py	1083	1098	IMAP4.xatom	xatom(self, name, *args)	todo		
+Lib/imaplib.py	1105	1134	IMAP4._append_untagged	_append_untagged(self, typ, dat)	todo		
+Lib/imaplib.py	1137	1140	IMAP4._check_bye	_check_bye(self)	todo		
+Lib/imaplib.py	1143	1223	IMAP4._command	_command(self, name, *args)	todo		
+Lib/imaplib.py	1226	1241	IMAP4._command_complete	_command_complete(self, name, tag)	todo		
+Lib/imaplib.py	1244	1250	IMAP4._get_capabilities	_get_capabilities(self)	todo		
+Lib/imaplib.py	1253	1259	IMAP4._refresh_capabilities	_refresh_capabilities(self)	todo		
+Lib/imaplib.py	1262	1366	IMAP4._get_response	_get_response(self, start_timeout=False)	todo		
+Lib/imaplib.py	1369	1399	IMAP4._get_tagged_response	_get_tagged_response(self, tag, expect_bye=False)	todo		
+Lib/imaplib.py	1402	1418	IMAP4._get_line	_get_line(self)	todo		
+Lib/imaplib.py	1421	1430	IMAP4._match	_match(self, cre, s)	todo		
+Lib/imaplib.py	1433	1438	IMAP4._new_tag	_new_tag(self)	todo		
+Lib/imaplib.py	1441	1442	IMAP4._atom	_atom(self, arg)	todo		
+Lib/imaplib.py	1444	1445	IMAP4._sequence_set	_sequence_set(self, arg)	todo		
+Lib/imaplib.py	1447	1450	IMAP4._set_quote	_set_quote(self, arg)	todo		
+Lib/imaplib.py	1452	1457	IMAP4._fetch_parts	_fetch_parts(self, arg)	todo		
+Lib/imaplib.py	1459	1464	IMAP4._quote	_quote(self, arg)	todo		
+Lib/imaplib.py	1471	1478	IMAP4._astring	_astring(self, arg)	todo		
+Lib/imaplib.py	1480	1487	IMAP4._list_mailbox	_list_mailbox(self, arg)	todo		
+Lib/imaplib.py	1489	1491	IMAP4._simple_command	_simple_command(self, name, *args)	todo		
+Lib/imaplib.py	1494	1503	IMAP4._untagged_response	_untagged_response(self, typ, dat, name)	todo		
+Lib/imaplib.py	1508	1513	IMAP4._mesg	_mesg(self, s, secs=None)	todo		
+Lib/imaplib.py	1515	1520	IMAP4._dump_ur	_dump_ur(self, untagged_resp_dict)	todo		
+Lib/imaplib.py	1522	1527	IMAP4._log	_log(self, line)	todo		
+Lib/imaplib.py	1529	1540	IMAP4.print_log	print_log(self)	todo		
+Lib/imaplib.py	1551	1561	Idler.__init__	__init__(self, imap, duration=None)	todo		
+Lib/imaplib.py	1563	1604	Idler.__enter__	__enter__(self)	todo		
+Lib/imaplib.py	1606	1642	Idler.__exit__	__exit__(self, exc_type, exc_val, exc_tb)	todo		
+Lib/imaplib.py	1644	1645	Idler.__iter__	__iter__(self)	todo		
+Lib/imaplib.py	1647	1695	Idler._pop	_pop(self, timeout, default=('', None))	todo		
+Lib/imaplib.py	1697	1711	Idler.__next__	__next__(self)	todo		
+Lib/imaplib.py	1713	1733	Idler.burst	burst(self, interval=0.1)	todo		
+Lib/imaplib.py	1755	1760	IMAP4_SSL.__init__	__init__(self, host='', port=IMAP4_SSL_PORT, *, ssl_context=None, timeout=None)	todo		
+Lib/imaplib.py	1762	1765	IMAP4_SSL._create_socket	_create_socket(self, timeout)	todo		
+Lib/imaplib.py	1767	1773	IMAP4_SSL.open	open(self, host='', port=IMAP4_SSL_PORT, timeout=None)	todo		
+Lib/imaplib.py	1790	1792	IMAP4_stream.__init__	__init__(self, command)	todo		
+Lib/imaplib.py	1795	1809	IMAP4_stream.open	open(self, host=None, port=None, timeout=None)	todo		
+Lib/imaplib.py	1811	1813	IMAP4_stream.read	read(self, size)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/imaplib.py	1816	1818	IMAP4_stream.readline	readline(self)	todo		
+Lib/imaplib.py	1821	1824	IMAP4_stream.send	send(self, data)	todo		
+Lib/imaplib.py	1827	1831	IMAP4_stream.shutdown	shutdown(self)	todo		
+Lib/imaplib.py	1841	1842	_Authenticator.__init__	__init__(self, mechinst)	todo		
+Lib/imaplib.py	1844	1848	_Authenticator.process	process(self, data)	todo		
+Lib/imaplib.py	1850	1872	_Authenticator.encode	encode(self, inp)	todo		
+Lib/imaplib.py	1874	1877	_Authenticator.decode	decode(self, inp)	todo		
+Lib/imaplib.py	1882	1913	Internaldate2tuple	Internaldate2tuple(resp)	todo		
+Lib/imaplib.py	1917	1926	Int2AP	Int2AP(num)	todo		
+Lib/imaplib.py	1930	1938	ParseFlags	ParseFlags(resp)	todo		
+Lib/imaplib.py	1941	1977	Time2Internaldate	Time2Internaldate(date_time)	todo		
+Lib/imaplib.py	2037	2042	run	run(cmd, args)	todo		

@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testimportmultiple.c	32	35	PyInit__testimportmultiple	PyMODINIT_FUNC PyInit__testimportmultiple(void)	excluded		test-support: only for CPython's own tests
+Modules/_testimportmultiple.c	49	52	PyInit__testimportmultiple_foo	PyMODINIT_FUNC PyInit__testimportmultiple_foo(void)	excluded		test-support: only for CPython's own tests
+Modules/_testimportmultiple.c	66	68	PyInit__testimportmultiple_bar	PyMODINIT_FUNC PyInit__testimportmultiple_bar(void){	excluded		test-support: only for CPython's own tests

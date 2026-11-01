@@ -1,0 +1,7 @@
+file	line	endline	name	signature	status	entry	note
+Lib/email/mime/audio.py	16	45	MIMEAudio.__init__	__init__(self, _audiodata, _subtype=None, _encoder=encoders.encode_base64, *, policy=None, **_params)	todo		
+Lib/email/mime/audio.py	55	65	_what	_what(data)	todo		
+Lib/email/mime/audio.py	68	70	rule	rule(rulefunc)	todo		
+Lib/email/mime/audio.py	74	80	_aiff	_aiff(h)	todo		
+Lib/email/mime/audio.py	84	88	_au	_au(h)	todo		
+Lib/email/mime/audio.py	92	97	_wav	_wav(h)	todo		

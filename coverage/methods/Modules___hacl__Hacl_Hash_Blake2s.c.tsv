@@ -1,0 +1,25 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_hacl/Hacl_Hash_Blake2s.c	36	492	update_block	update_block( uint32_t *wv, uint32_t *hash, bool flag, bool last_node, uint64_t totlen, uint8_t *d )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_Blake2s.c	494	577	Hacl_Hash_Blake2s_init	void Hacl_Hash_Blake2s_init(uint32_t *hash, uint32_t kk, uint32_t nn)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_Blake2s.c	579	593	update_key	static void update_key(uint32_t *wv, uint32_t *hash, uint32_t kk, uint8_t *k, uint32_t ll)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_Blake2s.c	596	612	Hacl_Hash_Blake2s_update_multi	Hacl_Hash_Blake2s_update_multi( uint32_t len, uint32_t *wv, uint32_t *hash, uint64_t prev, uint8_t *blocks, uint32_t nb )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_Blake2s.c	615	631	Hacl_Hash_Blake2s_update_last	Hacl_Hash_Blake2s_update_last( uint32_t len, uint32_t *wv, uint32_t *hash, bool last_node, uint64_t prev, uint32_t rem, uint8_t *d )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_Blake2s.c	634	658	update_blocks	update_blocks(uint32_t len, uint32_t *wv, uint32_t *hash, uint64_t prev, uint8_t *blocks)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_Blake2s.c	661	675	update	update(uint32_t *wv, uint32_t *hash, uint32_t kk, uint8_t *k, uint32_t ll, uint8_t *d)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_Blake2s.c	677	689	Hacl_Hash_Blake2s_finish	void Hacl_Hash_Blake2s_finish(uint32_t nn, uint8_t *output, uint32_t *hash)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_Blake2s.c	699	895	malloc_raw	*malloc_raw(Hacl_Hash_Blake2b_index kk, Hacl_Hash_Blake2b_params_and_key key)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_Blake2s.c	913	923	Hacl_Hash_Blake2s_malloc_with_params_and_key	*Hacl_Hash_Blake2s_malloc_with_params_and_key( Hacl_Hash_Blake2b_blake2_params *p, bool last_node, uint8_t *k )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_Blake2s.c	936	952	Hacl_Hash_Blake2s_malloc_with_key	Hacl_Hash_Blake2s_state_t *Hacl_Hash_Blake2s_malloc_with_key(uint8_t *k, uint8_t kk)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_Blake2s.c	959	962	Hacl_Hash_Blake2s_malloc	Hacl_Hash_Blake2s_state_t *Hacl_Hash_Blake2s_malloc(void)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_Blake2s.c	964	972	index_of_state	static Hacl_Hash_Blake2b_index index_of_state(Hacl_Hash_Blake2s_state_t *s)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_Blake2s.c	974	1087	reset_raw	static void reset_raw(Hacl_Hash_Blake2s_state_t *state, Hacl_Hash_Blake2b_params_and_key key)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_Blake2s.c	1097	1106	Hacl_Hash_Blake2s_reset_with_key_and_params	Hacl_Hash_Blake2s_reset_with_key_and_params( Hacl_Hash_Blake2s_state_t *s, Hacl_Hash_Blake2b_blake2_params *p, uint8_t *k )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_Blake2s.c	1115	1129	Hacl_Hash_Blake2s_reset_with_key	void Hacl_Hash_Blake2s_reset_with_key(Hacl_Hash_Blake2s_state_t *s, uint8_t *k)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_Blake2s.c	1135	1142	function	respective default values via your choice of malloc function (always true if you used `malloc`). All other parameters are reset to their default values. The behavior is unspecified if you violate this precondition. */ void Hacl_Hash_Blake2s_reset(Hacl_Hash_Blake2s_state_t *s)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_Blake2s.c	1148	1329	Hacl_Hash_Blake2s_update	Hacl_Hash_Blake2s_update(Hacl_Hash_Blake2s_state_t *state, uint8_t *chunk, uint32_t chunk_len)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_Blake2s.c	1342	1408	Hacl_Hash_Blake2s_digest	uint8_t Hacl_Hash_Blake2s_digest(Hacl_Hash_Blake2s_state_t *s, uint8_t *dst)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_Blake2s.c	1410	1418	Hacl_Hash_Blake2s_info	Hacl_Hash_Blake2b_index Hacl_Hash_Blake2s_info(Hacl_Hash_Blake2s_state_t *s)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_Blake2s.c	1423	1434	Hacl_Hash_Blake2s_free	void Hacl_Hash_Blake2s_free(Hacl_Hash_Blake2s_state_t *state)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_Blake2s.c	1439	1546	Hacl_Hash_Blake2s_copy	Hacl_Hash_Blake2s_state_t *Hacl_Hash_Blake2s_copy(Hacl_Hash_Blake2s_state_t *state)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_Blake2s.c	1559	1575	Hacl_Hash_Blake2s_hash_with_key	Hacl_Hash_Blake2s_hash_with_key( uint8_t *output, uint32_t output_len, uint8_t *input, uint32_t input_len, uint8_t *key, uint32_t key_len )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_Blake2s.c	1584	1672	Hacl_Hash_Blake2s_hash_with_key_and_params	Hacl_Hash_Blake2s_hash_with_key_and_params( uint8_t *output, uint8_t *input, uint32_t input_len, Hacl_Hash_Blake2b_blake2_params params, uint8_t *key )	excluded		vendored: third-party code

@@ -1,0 +1,20 @@
+file	line	endline	name	signature	status	entry	note
+Lib/stringprep.py	12	16	in_table_a1	in_table_a1(code)	todo		
+Lib/stringprep.py	20	21	in_table_b1	in_table_b1(code)	todo		
+Lib/stringprep.py	189	192	map_table_b3	map_table_b3(code)	todo		
+Lib/stringprep.py	195	203	map_table_b2	map_table_b2(a)	todo		
+Lib/stringprep.py	206	207	in_table_c11	in_table_c11(code)	todo		
+Lib/stringprep.py	210	211	in_table_c12	in_table_c12(code)	todo		
+Lib/stringprep.py	213	214	in_table_c11_c12	in_table_c11_c12(code)	todo		
+Lib/stringprep.py	217	218	in_table_c21	in_table_c21(code)	todo		
+Lib/stringprep.py	221	225	in_table_c22	in_table_c22(code)	todo		
+Lib/stringprep.py	227	229	in_table_c21_c22	in_table_c21_c22(code)	todo		
+Lib/stringprep.py	232	233	in_table_c3	in_table_c3(code)	todo		
+Lib/stringprep.py	236	240	in_table_c4	in_table_c4(code)	todo		
+Lib/stringprep.py	243	244	in_table_c5	in_table_c5(code)	todo		
+Lib/stringprep.py	248	249	in_table_c6	in_table_c6(code)	todo		
+Lib/stringprep.py	253	254	in_table_c7	in_table_c7(code)	todo		
+Lib/stringprep.py	258	259	in_table_c8	in_table_c8(code)	todo		
+Lib/stringprep.py	263	264	in_table_c9	in_table_c9(code)	todo		
+Lib/stringprep.py	267	268	in_table_d1	in_table_d1(code)	todo		
+Lib/stringprep.py	271	272	in_table_d2	in_table_d2(code)	todo		

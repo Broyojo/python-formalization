@@ -1,0 +1,22 @@
+file	line	endline	name	signature	status	entry	note
+Lib/email/utils.py	47	56	_has_surrogates	_has_surrogates(s)	todo		
+Lib/email/utils.py	60	66	_sanitize	_sanitize(string)	todo		
+Lib/email/utils.py	72	104	formataddr	formataddr(pair, charset='utf-8')	todo		
+Lib/email/utils.py	107	119	_iter_escaped_chars	_iter_escaped_chars(addr)	todo		
+Lib/email/utils.py	122	144	_strip_quoted_realnames	_strip_quoted_realnames(addr)	todo		
+Lib/email/utils.py	149	190	getaddresses	getaddresses(fieldvalues, *, strict=True)	todo		
+Lib/email/utils.py	193	205	_check_parenthesis	_check_parenthesis(addr)	todo		
+Lib/email/utils.py	208	215	_pre_parse_validation	_pre_parse_validation(email_header_fields)	todo		
+Lib/email/utils.py	218	227	_post_parse_validation	_post_parse_validation(parsed_email_header_tuples)	todo		
+Lib/email/utils.py	230	237	_format_timetuple_and_zone	_format_timetuple_and_zone(timetuple, zone)	todo		
+Lib/email/utils.py	239	266	formatdate	formatdate(timeval=None, localtime=False, usegmt=False)	todo		
+Lib/email/utils.py	268	284	format_datetime	format_datetime(dt, usegmt=False)	todo		
+Lib/email/utils.py	287	312	make_msgid	make_msgid(idstring=None, domain=None)	todo		
+Lib/email/utils.py	315	326	parsedate_to_datetime	parsedate_to_datetime(data)	todo		
+Lib/email/utils.py	329	356	parseaddr	parseaddr(addr, *, strict=True)	todo		
+Lib/email/utils.py	360	367	unquote	unquote(str)	todo		
+Lib/email/utils.py	372	377	decode_rfc2231	decode_rfc2231(s)	todo		
+Lib/email/utils.py	380	392	encode_rfc2231	encode_rfc2231(s, charset=None, language=None)	todo		
+Lib/email/utils.py	398	450	decode_params	decode_params(params)	todo		
+Lib/email/utils.py	452	469	collapse_rfc2231_value	collapse_rfc2231_value(value, errors='replace', fallback_charset='us-ascii')	todo		
+Lib/email/utils.py	478	489	localtime	localtime(dt=None)	todo		

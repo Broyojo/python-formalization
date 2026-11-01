@@ -1,0 +1,17 @@
+file	line	endline	name	signature	status	entry	note
+Lib/posixpath.py	42	46	_get_sep	_get_sep(path)	todo		
+Lib/posixpath.py	53	55	normcase	normcase(s)	todo		
+Lib/posixpath.py	61	65	isabs	isabs(s)	todo		
+Lib/posixpath.py	72	92	join	join(a, *p)	todo		
+Lib/posixpath.py	100	109	split	split(p)	todo		candidates:strsearch-split-char-fast-path,strsearch-split-rsplit-agree
+Lib/posixpath.py	117	125	splitext	splitext(p)	todo		
+Lib/posixpath.py	131	135	splitdrive	splitdrive(p)	todo		
+Lib/posixpath.py	166	171	basename	basename(p)	todo		
+Lib/posixpath.py	176	184	dirname	dirname(p)	todo		
+Lib/posixpath.py	190	217	ismount	ismount(path)	todo		
+Lib/posixpath.py	229	280	expanduser	expanduser(path)	todo		
+Lib/posixpath.py	291	333	expandvars	expandvars(path)	todo		
+Lib/posixpath.py	373	382	abspath	abspath(path)	todo		
+Lib/posixpath.py	388	508	realpath	realpath(filename, *, strict=False)	todo		
+Lib/posixpath.py	513	548	relpath	relpath(path, start=None)	todo		
+Lib/posixpath.py	556	592	commonpath	commonpath(paths)	todo		

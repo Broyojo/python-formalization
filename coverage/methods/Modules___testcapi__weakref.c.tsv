@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/weakref.c	6	22	pyweakref_getref	pyweakref_getref(PyObject *module, PyObject *ref)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/weakref.c	25	33	pyweakref_isdead	pyweakref_isdead(PyObject *module, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/weakref.c	43	46	_PyTestCapi_Init_Weakref	_PyTestCapi_Init_Weakref(PyObject *m)	excluded		test-support: only for CPython's own tests

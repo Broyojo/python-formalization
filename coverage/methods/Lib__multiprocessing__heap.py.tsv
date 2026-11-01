@@ -1,0 +1,21 @@
+file	line	endline	name	signature	status	entry	note
+Lib/multiprocessing/heap.py	38	51	Arena.__init__	__init__(self, size)	todo		
+Lib/multiprocessing/heap.py	53	55	Arena.__getstate__	__getstate__(self)	todo		
+Lib/multiprocessing/heap.py	57	60	Arena.__setstate__	__setstate__(self, state)	todo		
+Lib/multiprocessing/heap.py	77	89	Arena.__init__	__init__(self, size, fd=-1)	todo		
+Lib/multiprocessing/heap.py	91	98	Arena._choose_dir	_choose_dir(self, size)	todo		
+Lib/multiprocessing/heap.py	100	104	reduce_arena	reduce_arena(a)	todo		
+Lib/multiprocessing/heap.py	106	107	rebuild_arena	rebuild_arena(size, dupfd)	todo		
+Lib/multiprocessing/heap.py	123	150	Heap.__init__	__init__(self, size=mmap.PAGESIZE)	todo		
+Lib/multiprocessing/heap.py	153	156	Heap._roundup	_roundup(n, alignment)	todo		
+Lib/multiprocessing/heap.py	158	168	Heap._new_arena	_new_arena(self, size)	todo		
+Lib/multiprocessing/heap.py	170	186	Heap._discard_arena	_discard_arena(self, arena)	todo		
+Lib/multiprocessing/heap.py	188	203	Heap._malloc	_malloc(self, size)	todo		
+Lib/multiprocessing/heap.py	205	233	Heap._add_free_block	_add_free_block(self, block)	todo		
+Lib/multiprocessing/heap.py	235	248	Heap._absorb	_absorb(self, block)	todo		
+Lib/multiprocessing/heap.py	250	256	Heap._remove_allocated_block	_remove_allocated_block(self, block)	todo		
+Lib/multiprocessing/heap.py	258	266	Heap._free_pending_blocks	_free_pending_blocks(self)	todo		
+Lib/multiprocessing/heap.py	268	294	Heap.free	free(self, block)	todo		
+Lib/multiprocessing/heap.py	296	316	Heap.malloc	malloc(self, size)	todo		
+Lib/multiprocessing/heap.py	326	333	BufferWrapper.__init__	__init__(self, size)	todo		
+Lib/multiprocessing/heap.py	335	337	BufferWrapper.create_memoryview	create_memoryview(self)	todo		

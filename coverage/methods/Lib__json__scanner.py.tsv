@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Lib/json/scanner.py	15	71	py_make_scanner	py_make_scanner(context)	todo		

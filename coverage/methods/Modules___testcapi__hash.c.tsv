@@ -1,0 +1,7 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/hash.c	5	45	hash_getfuncdef	hash_getfuncdef(PyObject *Py_UNUSED(module), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/hash.c	49	53	long_from_hash	long_from_hash(Py_hash_t hash)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/hash.c	57	66	hash_pointer	hash_pointer(PyObject *Py_UNUSED(module), PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/hash.c	70	80	hash_buffer	hash_buffer(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/hash.c	84	89	object_generichash	object_generichash(PyObject *Py_UNUSED(module), PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/hash.c	101	104	_PyTestCapi_Init_Hash	_PyTestCapi_Init_Hash(PyObject *m)	excluded		test-support: only for CPython's own tests

@@ -1,0 +1,28 @@
+file	line	endline	name	signature	status	entry	note
+Lib/email/header.py	59	156	decode_header	decode_header(header)	todo		
+Lib/email/header.py	159	181	make_header	make_header(decoded_seq, maxlinelen=None, header_name=None, continuation_ws=' ')	todo		
+Lib/email/header.py	185	230	Header.__init__	__init__(self, s=None, charset=None, maxlinelen=None, header_name=None, continuation_ws=' ', errors='strict')	todo		
+Lib/email/header.py	232	260	Header.__str__	__str__(self)	todo		
+Lib/email/header.py	264	268	Header.__eq__	__eq__(self, other)	todo		
+Lib/email/header.py	270	311	Header.append	append(self, s, charset=None, errors='strict')	todo		
+Lib/email/header.py	313	316	Header._nonctext	_nonctext(self, s)	todo		
+Lib/email/header.py	318	396	Header.encode	encode(self, splitchars=';, \\t', maxlinelen=None, linesep='\\n')	todo		
+Lib/email/header.py	398	414	Header._normalize	_normalize(self)	todo		
+Lib/email/header.py	418	424	_ValueFormatter.__init__	__init__(self, headerlen, maxlen, continuation_ws, splitchars)	todo		
+Lib/email/header.py	426	428	_ValueFormatter._str	_str(self, linesep)	todo		
+Lib/email/header.py	430	431	_ValueFormatter.__str__	__str__(self)	todo		
+Lib/email/header.py	433	442	_ValueFormatter.newline	newline(self)	todo		
+Lib/email/header.py	444	445	_ValueFormatter.add_transition	add_transition(self)	todo		
+Lib/email/header.py	447	482	_ValueFormatter.feed	feed(self, fws, string, charset)	todo		
+Lib/email/header.py	484	488	_ValueFormatter._maxlengths	_maxlengths(self)	todo		
+Lib/email/header.py	490	510	_ValueFormatter._ascii_split	_ascii_split(self, fws, string, splitchars)	todo		
+Lib/email/header.py	512	542	_ValueFormatter._append_chunk	_append_chunk(self, fws, string)	todo		
+Lib/email/header.py	547	549	_Accumulator.__init__	__init__(self, initial_size=0)	todo		
+Lib/email/header.py	551	552	_Accumulator.push	push(self, fws, string)	todo		
+Lib/email/header.py	554	557	_Accumulator.pop_from	pop_from(self, i=0)	todo		
+Lib/email/header.py	559	562	_Accumulator.pop	pop(self)	todo		
+Lib/email/header.py	564	566	_Accumulator.__len__	__len__(self)	todo		
+Lib/email/header.py	568	570	_Accumulator.__str__	__str__(self)	todo		
+Lib/email/header.py	572	576	_Accumulator.reset	reset(self, startval=None)	todo		
+Lib/email/header.py	578	579	_Accumulator.is_onlyws	is_onlyws(self)	todo		
+Lib/email/header.py	581	582	_Accumulator.part_count	part_count(self)	todo		

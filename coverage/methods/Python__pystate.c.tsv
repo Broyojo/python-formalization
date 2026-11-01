@@ -1,0 +1,147 @@
+file	line	endline	name	signature	status	entry	note
+Python/pystate.c	75	83	current_fast_get	current_fast_get(void)	todo		
+Python/pystate.c	86	95	current_fast_set	current_fast_set(_PyRuntimeState *Py_UNUSED(runtime), PyThreadState *tstate)	todo		
+Python/pystate.c	98	106	current_fast_clear	current_fast_clear(_PyRuntimeState *Py_UNUSED(runtime))	todo		
+Python/pystate.c	114	117	_PyThreadState_GetCurrent	_PyThreadState_GetCurrent(void)	todo		
+Python/pystate.c	125	128	tstate_tss_initialized	tstate_tss_initialized(Py_tss_t *key)	todo		
+Python/pystate.c	131	135	tstate_tss_init	tstate_tss_init(Py_tss_t *key)	todo		
+Python/pystate.c	138	142	tstate_tss_fini	tstate_tss_fini(Py_tss_t *key)	todo		
+Python/pystate.c	145	149	tstate_tss_get	tstate_tss_get(Py_tss_t *key)	todo		
+Python/pystate.c	152	157	tstate_tss_set	tstate_tss_set(Py_tss_t *key, PyThreadState *tstate)	todo		
+Python/pystate.c	160	164	tstate_tss_clear	tstate_tss_clear(Py_tss_t *key)	todo		
+Python/pystate.c	172	190	tstate_tss_reinit	tstate_tss_reinit(Py_tss_t *key)	todo		
+Python/pystate.c	216	222	gilstate_tss_set	gilstate_tss_set(_PyRuntimeState *runtime, PyThreadState *tstate)	todo		
+Python/pystate.c	225	230	gilstate_tss_clear	gilstate_tss_clear(_PyRuntimeState *runtime)	todo		
+Python/pystate.c	237	240	tstate_is_bound	tstate_is_bound(PyThreadState *tstate)	todo		
+Python/pystate.c	249	278	bind_tstate	bind_tstate(PyThreadState *tstate)	todo		
+Python/pystate.c	281	300	unbind_tstate	unbind_tstate(PyThreadState *tstate)	todo		
+Python/pystate.c	322	339	bind_gilstate_tstate	bind_gilstate_tstate(PyThreadState *tstate)	todo		
+Python/pystate.c	342	353	unbind_gilstate_tstate	unbind_gilstate_tstate(PyThreadState *tstate)	todo		
+Python/pystate.c	369	377	holds_gil	holds_gil(PyThreadState *tstate)	todo		
+Python/pystate.c	415	437	init_runtime	init_runtime(_PyRuntimeState *runtime, void *open_code_hook, void *open_code_userdata, _Py_AuditHookEntry *audit_hook_head, Py_ssize_t unicode_next_index)	todo		
+Python/pystate.c	440	480	_PyRuntimeState_Init	_PyRuntimeState_Init(_PyRuntimeState *runtime)	todo		
+Python/pystate.c	483	497	_PyRuntimeState_Fini	_PyRuntimeState_Fini(_PyRuntimeState *runtime)	todo		
+Python/pystate.c	503	544	_PyRuntimeState_ReInitThreads	_PyRuntimeState_ReInitThreads(_PyRuntimeState *runtime)	todo		
+Python/pystate.c	559	564	_PyInterpreterState_Enable	_PyInterpreterState_Enable(_PyRuntimeState *runtime)	todo		
+Python/pystate.c	567	582	alloc_interpreter	alloc_interpreter(void)	todo		
+Python/pystate.c	585	598	free_interpreter	free_interpreter(PyInterpreterState *interp)	todo		
+Python/pystate.c	624	719	init_interpreter	init_interpreter(PyInterpreterState *interp, _PyRuntimeState *runtime, int64_t id, PyInterpreterState *next, long whence)	todo		
+Python/pystate.c	723	803	_PyInterpreterState_New	_PyInterpreterState_New(PyThreadState *tstate, PyInterpreterState **pinterp)	todo		
+Python/pystate.c	807	819	PyInterpreterState_New	PyInterpreterState_New(void)	todo		
+Python/pystate.c	827	982	interpreter_clear	interpreter_clear(PyInterpreterState *interp, PyThreadState *tstate)	todo		
+Python/pystate.c	986	994	PyInterpreterState_Clear	PyInterpreterState_Clear(PyInterpreterState *interp)	todo		
+Python/pystate.c	998	1002	_PyInterpreterState_Clear	_PyInterpreterState_Clear(PyThreadState *tstate)	todo		
+Python/pystate.c	1010	1062	PyInterpreterState_Delete	PyInterpreterState_Delete(PyInterpreterState *interp)	todo		
+Python/pystate.c	1071	1106	_PyInterpreterState_DeleteExceptMain	_PyInterpreterState_DeleteExceptMain(_PyRuntimeState *runtime)	todo		
+Python/pystate.c	1110	1113	set_main_thread	set_main_thread(PyInterpreterState *interp, PyThreadState *tstate)	todo		
+Python/pystate.c	1116	1119	get_main_thread	get_main_thread(PyInterpreterState *interp)	todo		
+Python/pystate.c	1122	1125	_PyErr_SetInterpreterAlreadyRunning	_PyErr_SetInterpreterAlreadyRunning(void)	todo		
+Python/pystate.c	1128	1144	_PyInterpreterState_SetRunningMain	_PyInterpreterState_SetRunningMain(PyInterpreterState *interp)	todo		
+Python/pystate.c	1147	1151	_PyInterpreterState_SetNotRunningMain	_PyInterpreterState_SetNotRunningMain(PyInterpreterState *interp)	todo		
+Python/pystate.c	1154	1166	_PyInterpreterState_IsRunningMain	_PyInterpreterState_IsRunningMain(PyInterpreterState *interp)	todo		
+Python/pystate.c	1169	1175	_PyThreadState_IsRunningMain	_PyThreadState_IsRunningMain(PyThreadState *tstate)	todo		
+Python/pystate.c	1178	1184	_PyInterpreterState_ReinitRunningMain	_PyInterpreterState_ReinitRunningMain(PyThreadState *tstate)	todo		
+Python/pystate.c	1192	1195	_PyInterpreterState_IsReady	_PyInterpreterState_IsReady(PyInterpreterState *interp)	todo		
+Python/pystate.c	1199	1208	check_interpreter_whence	check_interpreter_whence(long whence)	todo		
+Python/pystate.c	1212	1216	_PyInterpreterState_GetWhence	_PyInterpreterState_GetWhence(PyInterpreterState *interp)	todo		
+Python/pystate.c	1219	1224	_PyInterpreterState_SetWhence	_PyInterpreterState_SetWhence(PyInterpreterState *interp, long whence)	todo		
+Python/pystate.c	1228	1242	_Py_GetMainModule	_Py_GetMainModule(PyThreadState *tstate)	todo		
+Python/pystate.c	1245	1263	_Py_CheckMainModule	_Py_CheckMainModule(PyObject *module)	todo		
+Python/pystate.c	1267	1277	PyInterpreterState_GetDict	PyInterpreterState_GetDict(PyInterpreterState *interp)	todo		
+Python/pystate.c	1285	1316	_PyInterpreterState_ObjectToID	_PyInterpreterState_ObjectToID(PyObject *idobj)	todo		
+Python/pystate.c	1319	1326	PyInterpreterState_GetID	PyInterpreterState_GetID(PyInterpreterState *interp)	todo		
+Python/pystate.c	1329	1337	_PyInterpreterState_GetIDObject	_PyInterpreterState_GetIDObject(PyInterpreterState *interp)	todo		
+Python/pystate.c	1342	1345	_PyInterpreterState_IDIncref	_PyInterpreterState_IDIncref(PyInterpreterState *interp)	todo		
+Python/pystate.c	1349	1364	_PyInterpreterState_IDDecref	_PyInterpreterState_IDDecref(PyInterpreterState *interp)	todo		
+Python/pystate.c	1367	1370	_PyInterpreterState_RequiresIDRef	_PyInterpreterState_RequiresIDRef(PyInterpreterState *interp)	todo		
+Python/pystate.c	1373	1376	_PyInterpreterState_RequireIDRef	_PyInterpreterState_RequireIDRef(PyInterpreterState *interp, int required)	todo		
+Python/pystate.c	1389	1398	PyInterpreterState_Get	PyInterpreterState_Get(void)	todo		
+Python/pystate.c	1402	1416	interp_look_up_id	interp_look_up_id(_PyRuntimeState *runtime, int64_t requested_id)	todo		
+Python/pystate.c	1423	1437	_PyInterpreterState_LookUpID	_PyInterpreterState_LookUpID(int64_t requested_id)	todo		
+Python/pystate.c	1440	1447	_PyInterpreterState_LookUpIDObject	_PyInterpreterState_LookUpIDObject(PyObject *requested_id)	todo		
+Python/pystate.c	1456	1462	tstate_is_alive	tstate_is_alive(PyThreadState *tstate)	todo		
+Python/pystate.c	1471	1482	allocate_chunk	allocate_chunk(int size_in_bytes, _PyStackChunk* previous)	todo		
+Python/pystate.c	1485	1491	reset_threadstate	reset_threadstate(_PyThreadStateImpl *tstate)	todo		
+Python/pystate.c	1494	1510	alloc_threadstate	alloc_threadstate(PyInterpreterState *interp)	todo		
+Python/pystate.c	1513	1527	free_threadstate	free_threadstate(_PyThreadStateImpl *tstate)	todo		
+Python/pystate.c	1530	1536	decref_threadstate	decref_threadstate(_PyThreadStateImpl *tstate)	todo		
+Python/pystate.c	1547	1610	init_threadstate	init_threadstate(_PyThreadStateImpl *_tstate, PyInterpreterState *interp, uint64_t id, int whence)	todo		
+Python/pystate.c	1613	1624	add_threadstate	add_threadstate(PyInterpreterState *interp, PyThreadState *tstate, PyThreadState *next)	todo		
+Python/pystate.c	1627	1669	new_threadstate	new_threadstate(PyInterpreterState *interp, int whence)	todo		
+Python/pystate.c	1672	1675	PyThreadState_New	PyThreadState_New(PyInterpreterState *interp)	todo		
+Python/pystate.c	1678	1690	_PyThreadState_NewBound	_PyThreadState_NewBound(PyInterpreterState *interp, int whence)	todo		
+Python/pystate.c	1694	1697	_PyThreadState_New	_PyThreadState_New(PyInterpreterState *interp, int whence)	todo		
+Python/pystate.c	1700	1704	PyAPI_FUNC	PyAPI_FUNC(PyThreadState*) _PyThreadState_Prealloc(PyInterpreterState *interp)	todo		
+Python/pystate.c	1708	1712	PyAPI_FUNC	PyAPI_FUNC(void) _PyThreadState_Init(PyThreadState *tstate)	todo		
+Python/pystate.c	1716	1730	clear_datastack	clear_datastack(PyThreadState *tstate)	todo		
+Python/pystate.c	1733	1859	PyThreadState_Clear	PyThreadState_Clear(PyThreadState *tstate)	todo		
+Python/pystate.c	1866	1930	tstate_delete_common	tstate_delete_common(PyThreadState *tstate, int release_gil)	todo		
+Python/pystate.c	1933	1947	zapthreads	zapthreads(PyInterpreterState *interp)	todo		
+Python/pystate.c	1951	1957	PyThreadState_Delete	PyThreadState_Delete(PyThreadState *tstate)	todo		
+Python/pystate.c	1961	1970	_PyThreadState_DeleteCurrent	_PyThreadState_DeleteCurrent(PyThreadState *tstate)	todo		
+Python/pystate.c	1973	1977	PyThreadState_DeleteCurrent	PyThreadState_DeleteCurrent(void)	todo		
+Python/pystate.c	1990	2018	_PyThreadState_RemoveExcept	_PyThreadState_RemoveExcept(PyThreadState *tstate)	todo		
+Python/pystate.c	2028	2045	_PyThreadState_DeleteList	_PyThreadState_DeleteList(PyThreadState *list, int is_after_fork)	todo		
+Python/pystate.c	2059	2069	_PyThreadState_GetDict	_PyThreadState_GetDict(PyThreadState *tstate)	todo		
+Python/pystate.c	2073	2080	PyThreadState_GetDict	PyThreadState_GetDict(void)	todo		
+Python/pystate.c	2084	2088	PyThreadState_GetInterpreter	PyThreadState_GetInterpreter(PyThreadState *tstate)	todo		
+Python/pystate.c	2092	2104	PyThreadState_GetFrame	PyThreadState_GetFrame(PyThreadState *tstate)	todo		
+Python/pystate.c	2108	2112	PyThreadState_GetID	PyThreadState_GetID(PyThreadState *tstate)	todo		
+Python/pystate.c	2116	2130	tstate_activate	tstate_activate(PyThreadState *tstate)	todo		
+Python/pystate.c	2133	2144	tstate_deactivate	tstate_deactivate(PyThreadState *tstate)	todo		
+Python/pystate.c	2147	2159	tstate_try_attach	tstate_try_attach(PyThreadState *tstate)	todo		
+Python/pystate.c	2162	2170	tstate_set_detached	tstate_set_detached(PyThreadState *tstate, int detached_state)	todo		
+Python/pystate.c	2173	2191	tstate_wait_attach	tstate_wait_attach(PyThreadState *tstate)	todo		
+Python/pystate.c	2194	2246	_PyThreadState_Attach	_PyThreadState_Attach(PyThreadState *tstate)	todo		
+Python/pystate.c	2249	2264	detach_thread	detach_thread(PyThreadState *tstate, int detached_state)	todo		
+Python/pystate.c	2267	2270	_PyThreadState_Detach	_PyThreadState_Detach(PyThreadState *tstate)	todo		
+Python/pystate.c	2273	2303	_PyThreadState_Suspend	_PyThreadState_Suspend(PyThreadState *tstate)	todo		
+Python/pystate.c	2306	2312	_PyThreadState_SetShuttingDown	_PyThreadState_SetShuttingDown(PyThreadState *tstate)	todo		
+Python/pystate.c	2317	2323	decrement_stoptheworld_countdown	decrement_stoptheworld_countdown(struct _stoptheworld_state *stw)	todo		
+Python/pystate.c	2331	2336	interp_for_stop_the_world	interp_for_stop_the_world(struct _stoptheworld_state *stw)	todo		
+Python/pystate.c	2349	2370	park_detached_threads	park_detached_threads(struct _stoptheworld_state *stw)	todo		
+Python/pystate.c	2373	2427	stop_the_world	stop_the_world(struct _stoptheworld_state *stw)	todo		
+Python/pystate.c	2430	2458	start_the_world	start_the_world(struct _stoptheworld_state *stw)	todo		
+Python/pystate.c	2462	2467	_PyEval_StopTheWorldAll	_PyEval_StopTheWorldAll(_PyRuntimeState *runtime)	todo		
+Python/pystate.c	2470	2475	_PyEval_StartTheWorldAll	_PyEval_StartTheWorldAll(_PyRuntimeState *runtime)	todo		
+Python/pystate.c	2478	2483	_PyEval_StopTheWorld	_PyEval_StopTheWorld(PyInterpreterState *interp)	todo		
+Python/pystate.c	2486	2491	_PyEval_StartTheWorld	_PyEval_StartTheWorld(PyInterpreterState *interp)	todo		
+Python/pystate.c	2508	2543	PyThreadState_SetAsyncExc	PyThreadState_SetAsyncExc(unsigned long id, PyObject *exc)	todo		
+Python/pystate.c	2550	2553	PyThreadState_GetUnchecked	PyThreadState_GetUnchecked(void)	todo		
+Python/pystate.c	2557	2562	PyThreadState_Get	PyThreadState_Get(void)	todo		
+Python/pystate.c	2565	2575	_PyThreadState_Swap	_PyThreadState_Swap(_PyRuntimeState *runtime, PyThreadState *newts)	todo		
+Python/pystate.c	2578	2581	PyThreadState_Swap	PyThreadState_Swap(PyThreadState *newts)	todo		
+Python/pystate.c	2585	2597	_PyThreadState_Bind	_PyThreadState_Bind(PyThreadState *tstate)	todo		
+Python/pystate.c	2601	2611	_Py_GetThreadLocal_Addr	_Py_GetThreadLocal_Addr(void)	todo		
+Python/pystate.c	2622	2625	PyInterpreterState_Head	PyInterpreterState_Head(void)	todo		
+Python/pystate.c	2628	2631	PyInterpreterState_Main	PyInterpreterState_Main(void)	todo		
+Python/pystate.c	2634	2636	PyInterpreterState_Next	PyInterpreterState_Next(PyInterpreterState *interp) {	todo		
+Python/pystate.c	2639	2641	PyInterpreterState_ThreadHead	PyInterpreterState_ThreadHead(PyInterpreterState *interp) {	todo		
+Python/pystate.c	2644	2646	PyThreadState_Next	PyThreadState_Next(PyThreadState *tstate) {	todo		
+Python/pystate.c	2659	2713	_PyThread_CurrentFrames	_PyThread_CurrentFrames(void)	todo		
+Python/pystate.c	2721	2777	_PyThread_CurrentExceptions	_PyThread_CurrentExceptions(void)	todo		
+Python/pystate.c	2788	2800	_PyGILState_Init	_PyGILState_Init(PyInterpreterState *interp)	todo		
+Python/pystate.c	2803	2811	_PyGILState_Fini	_PyGILState_Fini(PyInterpreterState *interp)	todo		
+Python/pystate.c	2816	2835	_PyGILState_SetTstate	_PyGILState_SetTstate(PyThreadState *tstate)	todo		
+Python/pystate.c	2838	2841	_PyGILState_GetInterpreterStateUnsafe	_PyGILState_GetInterpreterStateUnsafe(void)	todo		
+Python/pystate.c	2846	2853	PyGILState_GetThisThreadState	PyGILState_GetThisThreadState(void)	todo		
+Python/pystate.c	2856	2874	PyGILState_Check	PyGILState_Check(void)	todo		
+Python/pystate.c	2877	2927	PyGILState_Ensure	PyGILState_Ensure(void)	todo		
+Python/pystate.c	2930	2974	PyGILState_Release	PyGILState_Release(PyGILState_STATE oldstate)	todo		
+Python/pystate.c	2982	2988	_PyInterpreterState_GetEvalFrameFunc	_PyInterpreterState_GetEvalFrameFunc(PyInterpreterState *interp)	todo		
+Python/pystate.c	2992	3010	_PyInterpreterState_SetEvalFrameFunc	_PyInterpreterState_SetEvalFrameFunc(PyInterpreterState *interp, _PyFrameEvalFunction eval_frame)	todo		
+Python/pystate.c	3014	3017	_PyInterpreterState_GetConfig	_PyInterpreterState_GetConfig(PyInterpreterState *interp)	todo		
+Python/pystate.c	3021	3026	_Py_GetConfig	_Py_GetConfig(void)	todo		
+Python/pystate.c	3030	3033	_PyInterpreterState_HasFeature	_PyInterpreterState_HasFeature(PyInterpreterState *interp, unsigned long feature)	todo		
+Python/pystate.c	3039	3072	push_chunk	push_chunk(PyThreadState *tstate, int size)	todo		
+Python/pystate.c	3075	3084	_PyThreadState_PushFrame	_PyThreadState_PushFrame(PyThreadState *tstate, size_t size)	todo		
+Python/pystate.c	3087	3111	_PyThreadState_PopFrame	_PyThreadState_PopFrame(PyThreadState *tstate, _PyInterpreterFrame * frame)	todo		
+Python/pystate.c	3123	3128	_PyThreadState_CheckConsistency	_PyThreadState_CheckConsistency(PyThreadState *tstate)	todo		
+Python/pystate.c	3141	3145	_PyThreadState_MustExit	_PyThreadState_MustExit(PyThreadState *tstate)	todo		
+Python/pystate.c	3148	3153	_PyThreadState_HangThread	_PyThreadState_HangThread(PyThreadState *tstate)	todo		
+Python/pystate.c	3160	3210	tstate_mimalloc_bind	tstate_mimalloc_bind(PyThreadState *tstate)	todo		
+Python/pystate.c	3213	3230	_PyThreadState_ClearMimallocHeaps	_PyThreadState_ClearMimallocHeaps(PyThreadState *tstate)	todo		
+Python/pystate.c	3234	3238	_Py_IsMainThread	_Py_IsMainThread(void)	todo		
+Python/pystate.c	3242	3245	_PyInterpreterState_Main	_PyInterpreterState_Main(void)	todo		
+Python/pystate.c	3249	3257	_Py_IsMainInterpreterFinalizing	_Py_IsMainInterpreterFinalizing(PyInterpreterState *interp)	todo		
+Python/pystate.c	3261	3268	_Py_GetMainConfig	_Py_GetMainConfig(void)	todo		

@@ -1,0 +1,9 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_threading_local.py	28	34	_localimpl.__init__	__init__(self)	todo		
+Lib/_threading_local.py	36	40	_localimpl.get_dict	get_dict(self)	todo		
+Lib/_threading_local.py	42	65	_localimpl.create_dict	create_dict(self)	todo		
+Lib/_threading_local.py	69	79	_patch	_patch(self)	todo		
+Lib/_threading_local.py	85	97	local.__new__	__new__(cls, /, *args, **kw)	todo		
+Lib/_threading_local.py	99	101	local.__getattribute__	__getattribute__(self, name)	todo		
+Lib/_threading_local.py	103	109	local.__setattr__	__setattr__(self, name, value)	todo		
+Lib/_threading_local.py	111	117	local.__delattr__	__delattr__(self, name)	todo		

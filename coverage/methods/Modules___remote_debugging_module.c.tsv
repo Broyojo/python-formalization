@@ -1,0 +1,41 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_remote_debugging_module.c	121	131	validate_section_size	validate_section_size(const char *section_name, uint64_t size)	todo		
+Modules/_remote_debugging_module.c	134	149	validate_read_size	validate_read_size(const char *section_name, uint64_t size, size_t buffer_size)	todo		
+Modules/_remote_debugging_module.c	152	172	validate_span	validate_span( const char *field_name, uint64_t offset, size_t width, uint64_t limit, const char *limit_name)	todo		
+Modules/_remote_debugging_module.c	175	190	validate_alignment	validate_alignment( const char *field_name, uint64_t offset, size_t alignment)	todo		
+Modules/_remote_debugging_module.c	193	208	validate_field	validate_field( const char *field_name, uint64_t offset, uint64_t reported_size, size_t width, size_t alignment, size_t buffer_size)	todo		
+Modules/_remote_debugging_module.c	211	222	validate_fixed_field	validate_fixed_field( const char *field_name, uint64_t offset, size_t width, size_t alignment, size_t buffer_size)	todo		
+Modules/_remote_debugging_module.c	264	514	validate_debug_offsets_layout	validate_debug_offsets_layout(struct _Py_DebugOffsets *debug_offsets)	todo		
+Modules/_remote_debugging_module.c	517	586	validate_async_debug_offsets_layout	validate_async_debug_offsets_layout(struct _Py_AsyncioModuleDebugOffsets *debug_offsets)	todo		
+Modules/_remote_debugging_module.c	817	824	cached_code_metadata_destroy	cached_code_metadata_destroy(void *ptr)	todo		
+Modules/_remote_debugging_module.c	827	832	RemoteDebugging_GetState	RemoteDebugging_GetState(PyObject *module)	todo		
+Modules/_remote_debugging_module.c	835	840	RemoteDebugging_GetStateFromType	RemoteDebugging_GetStateFromType(PyTypeObject *type)	todo		
+Modules/_remote_debugging_module.c	843	850	RemoteDebugging_GetStateFromObject	RemoteDebugging_GetStateFromObject(PyObject *obj)	todo		
+Modules/_remote_debugging_module.c	853	856	RemoteDebugging_InitState	RemoteDebugging_InitState(RemoteDebuggingState *st)	todo		
+Modules/_remote_debugging_module.c	859	862	is_prerelease_version	is_prerelease_version(uint64_t version)	todo		
+Modules/_remote_debugging_module.c	865	922	validate_debug_offsets	validate_debug_offsets(struct _Py_DebugOffsets *debug_offsets)	todo		
+Modules/_remote_debugging_module.c	1075	1083	read_py_ptr	read_py_ptr(RemoteUnwinderObject *unwinder, uintptr_t address, uintptr_t *ptr_addr)	todo		
+Modules/_remote_debugging_module.c	1214	1310	read_py_long	read_py_long( RemoteUnwinderObject *unwinder, uintptr_t address )	todo		
+Modules/_remote_debugging_module.c	1318	1361	_Py_RemoteDebug_GetAsyncioDebugAddress	_Py_RemoteDebug_GetAsyncioDebugAddress(proc_handle_t* handle)	todo		
+Modules/_remote_debugging_module.c	2021	2054	get_task_code_object	get_task_code_object(RemoteUnwinderObject *unwinder, uintptr_t task_addr, uintptr_t *code_obj_addr) {	todo		
+Modules/_remote_debugging_module.c	2069	2076	tlbc_cache_entry_destroy	tlbc_cache_entry_destroy(void *ptr)	todo		
+Modules/_remote_debugging_module.c	2079	2091	get_tlbc_cache_entry	get_tlbc_cache_entry(RemoteUnwinderObject *self, uintptr_t code_addr, uint32_t current_generation)	todo		
+Modules/_remote_debugging_module.c	2094	2149	cache_tlbc_array	cache_tlbc_array(RemoteUnwinderObject *unwinder, uintptr_t code_addr, uintptr_t tlbc_array_addr, uint32_t generation)	todo		
+Modules/_remote_debugging_module.c	2160	2173	scan_varint	scan_varint(const uint8_t **ptr)	todo		
+Modules/_remote_debugging_module.c	2176	2185	scan_signed_varint	scan_signed_varint(const uint8_t **ptr)	todo		
+Modules/_remote_debugging_module.c	2188	2245	parse_linetable	parse_linetable(const uintptr_t addrq, const char* linetable, int firstlineno, LocationInfo* info)	todo		
+Modules/_remote_debugging_module.c	2252	2427	parse_code_object	parse_code_object(RemoteUnwinderObject *unwinder, PyObject **result, uintptr_t address, uintptr_t instruction_pointer, uintptr_t *previous_frame, int32_t tlbc_index)	todo		
+Modules/_remote_debugging_module.c	2434	2440	cleanup_stack_chunks	cleanup_stack_chunks(StackChunkList *chunks)	todo		
+Modules/_remote_debugging_module.c	2500	2555	copy_stack_chunks	copy_stack_chunks(RemoteUnwinderObject *unwinder, uintptr_t tstate_addr, StackChunkList *out_chunks)	todo		
+Modules/_remote_debugging_module.c	2558	2574	find_frame_in_chunks	find_frame_in_chunks(StackChunkList *chunks, uintptr_t remote_ptr)	todo		
+Modules/_remote_debugging_module.c	2870	2914	append_awaited_by	append_awaited_by( RemoteUnwinderObject *unwinder, unsigned long tid, uintptr_t head_addr, PyObject *result)	todo		
+Modules/_remote_debugging_module.c	3085	3188	_remote_debugging_RemoteUnwinder___init___impl	_remote_debugging_RemoteUnwinder___init___impl(RemoteUnwinderObject *self, int pid, int all_threads, int only_active_thread, int debug) /*[clinic end generated code: output=13ba77598ecdcbe1 input=8f8f12504e17da04]*/	todo		
+Modules/_remote_debugging_module.c	3228	3343	_remote_debugging_RemoteUnwinder_get_stack_trace_impl	_remote_debugging_RemoteUnwinder_get_stack_trace_impl(RemoteUnwinderObject *self) /*[clinic end generated code: output=666192b90c69d567 input=f756f341206f9116]*/	todo		
+Modules/_remote_debugging_module.c	3390	3431	_remote_debugging_RemoteUnwinder_get_all_awaited_by_impl	_remote_debugging_RemoteUnwinder_get_all_awaited_by_impl(RemoteUnwinderObject *self) /*[clinic end generated code: output=6a49cd345e8aec53 input=a452c652bb00701a]*/	todo		
+Modules/_remote_debugging_module.c	3479	3505	_remote_debugging_RemoteUnwinder_get_async_stack_trace_impl	_remote_debugging_RemoteUnwinder_get_async_stack_trace_impl(RemoteUnwinderObject *self) /*[clinic end generated code: output=6433d52b55e87bbe input=8744b47c9ec2220a]*/	todo		
+Modules/_remote_debugging_module.c	3515	3533	RemoteUnwinder_dealloc	RemoteUnwinder_dealloc(PyObject *op)	todo		
+Modules/_remote_debugging_module.c	3555	3623	_remote_debugging_exec	_remote_debugging_exec(PyObject *m)	todo		
+Modules/_remote_debugging_module.c	3626	3636	remote_debugging_traverse	remote_debugging_traverse(PyObject *mod, visitproc visit, void *arg)	todo		
+Modules/_remote_debugging_module.c	3639	3649	remote_debugging_clear	remote_debugging_clear(PyObject *mod)	todo		
+Modules/_remote_debugging_module.c	3652	3655	remote_debugging_free	remote_debugging_free(void *mod)	todo		
+Modules/_remote_debugging_module.c	3680	3683	PyInit__remote_debugging	PyInit__remote_debugging(void)	todo		

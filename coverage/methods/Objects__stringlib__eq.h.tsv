@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Objects/stringlib/eq.h	6	22	Py_LOCAL_INLINE	Py_LOCAL_INLINE(int) unicode_eq(PyObject *str1, PyObject *str2)	todo		

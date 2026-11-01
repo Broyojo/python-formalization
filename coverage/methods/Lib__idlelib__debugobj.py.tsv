@@ -1,0 +1,18 @@
+file	line	endline	name	signature	status	entry	note
+Lib/idlelib/debugobj.py	22	25	ObjectTreeItem.__init__	__init__(self, labeltext, object_, setfunction=None)	excluded		platform: GUI toolkit
+Lib/idlelib/debugobj.py	26	27	ObjectTreeItem.GetLabelText	GetLabelText(self)	excluded		platform: GUI toolkit
+Lib/idlelib/debugobj.py	28	29	ObjectTreeItem.GetText	GetText(self)	excluded		platform: GUI toolkit
+Lib/idlelib/debugobj.py	30	32	ObjectTreeItem.GetIconName	GetIconName(self)	excluded		platform: GUI toolkit
+Lib/idlelib/debugobj.py	33	34	ObjectTreeItem.IsEditable	IsEditable(self)	excluded		platform: GUI toolkit
+Lib/idlelib/debugobj.py	35	42	ObjectTreeItem.SetText	SetText(self, text)	excluded		platform: GUI toolkit
+Lib/idlelib/debugobj.py	43	44	ObjectTreeItem.IsExpandable	IsExpandable(self)	excluded		platform: GUI toolkit
+Lib/idlelib/debugobj.py	45	59	ObjectTreeItem.GetSubList	GetSubList(self)	excluded		platform: GUI toolkit
+Lib/idlelib/debugobj.py	62	63	ClassTreeItem.IsExpandable	IsExpandable(self)	excluded		platform: GUI toolkit
+Lib/idlelib/debugobj.py	64	72	ClassTreeItem.GetSubList	GetSubList(self)	excluded		platform: GUI toolkit
+Lib/idlelib/debugobj.py	75	76	AtomicObjectTreeItem.IsExpandable	IsExpandable(self)	excluded		platform: GUI toolkit
+Lib/idlelib/debugobj.py	79	80	SequenceTreeItem.IsExpandable	IsExpandable(self)	excluded		platform: GUI toolkit
+Lib/idlelib/debugobj.py	81	82	SequenceTreeItem.keys	keys(self)	excluded		platform: GUI toolkit
+Lib/idlelib/debugobj.py	83	94	SequenceTreeItem.GetSubList	GetSubList(self)	excluded		platform: GUI toolkit
+Lib/idlelib/debugobj.py	97	104	DictTreeItem.keys	keys(self)	excluded		platform: GUI toolkit
+Lib/idlelib/debugobj.py	116	122	make_objecttreeitem	make_objecttreeitem(labeltext, object_, setfunction=None)	excluded		platform: GUI toolkit
+Lib/idlelib/debugobj.py	125	138	_debug_object_browser	_debug_object_browser(parent)	excluded		platform: GUI toolkit

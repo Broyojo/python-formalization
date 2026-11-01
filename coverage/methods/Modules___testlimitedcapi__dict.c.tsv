@@ -1,0 +1,24 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testlimitedcapi/dict.c	6	10	dict_check	dict_check(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/dict.c	13	17	dict_checkexact	dict_checkexact(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/dict.c	20	23	dict_new	dict_new(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/dict.c	26	30	dictproxy_new	dictproxy_new(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/dict.c	33	37	dict_clear	dict_clear(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/dict.c	40	44	dict_copy	dict_copy(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/dict.c	47	56	dict_contains	dict_contains(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/dict.c	59	63	dict_size	dict_size(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/dict.c	66	82	dict_getitem	dict_getitem(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/dict.c	85	102	dict_getitemstring	dict_getitemstring(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/dict.c	105	121	dict_getitemwitherror	dict_getitemwitherror(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/dict.c	125	135	dict_setitem	dict_setitem(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/dict.c	138	149	dict_setitemstring	dict_setitemstring(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/dict.c	152	161	dict_delitem	dict_delitem(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/dict.c	164	174	dict_delitemstring	dict_delitemstring(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/dict.c	177	181	dict_keys	dict_keys(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/dict.c	184	188	dict_values	dict_values(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/dict.c	191	195	dict_items	dict_items(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/dict.c	198	216	dict_next	dict_next(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/dict.c	219	229	dict_merge	dict_merge(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/dict.c	232	241	dict_update	dict_update(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/dict.c	244	254	dict_mergefromseq2	dict_mergefromseq2(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/dict.c	284	291	_PyTestLimitedCAPI_Init_Dict	_PyTestLimitedCAPI_Init_Dict(PyObject *m)	excluded		test-support: only for CPython's own tests

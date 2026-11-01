@@ -1,0 +1,19 @@
+file	line	endline	name	signature	status	entry	note
+Lib/idlelib/config_key.py	24	41	translate_key	translate_key(key, modifiers)	excluded		platform: GUI toolkit
+Lib/idlelib/config_key.py	49	74	GetKeysFrame.__init__	__init__(self, parent, action, current_key_sequences)	excluded		platform: GUI toolkit
+Lib/idlelib/config_key.py	76	78	GetKeysFrame.showerror	showerror(self, *args, **kwargs)	excluded		platform: GUI toolkit
+Lib/idlelib/config_key.py	80	167	GetKeysFrame.create_widgets	create_widgets(self)	excluded		platform: GUI toolkit
+Lib/idlelib/config_key.py	169	181	GetKeysFrame.set_modifiers_for_platform	set_modifiers_for_platform(self)	excluded		platform: GUI toolkit
+Lib/idlelib/config_key.py	183	197	GetKeysFrame.toggle_level	toggle_level(self)	excluded		platform: GUI toolkit
+Lib/idlelib/config_key.py	199	201	GetKeysFrame.final_key_selected	final_key_selected(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/config_key.py	203	210	GetKeysFrame.build_key_string	build_key_string(self)	excluded		platform: GUI toolkit
+Lib/idlelib/config_key.py	212	215	GetKeysFrame.get_modifiers	get_modifiers(self)	excluded		platform: GUI toolkit
+Lib/idlelib/config_key.py	217	223	GetKeysFrame.clear_key_seq	clear_key_seq(self)	excluded		platform: GUI toolkit
+Lib/idlelib/config_key.py	225	234	GetKeysFrame.ok	ok(self)	excluded		platform: GUI toolkit
+Lib/idlelib/config_key.py	236	265	GetKeysFrame.keys_ok	keys_ok(self, keys)	excluded		platform: GUI toolkit
+Lib/idlelib/config_key.py	267	279	GetKeysFrame.bind_ok	bind_ok(self, keys)	excluded		platform: GUI toolkit
+Lib/idlelib/config_key.py	284	328	GetKeysWindow.__init__	__init__(self, parent, title, action, current_key_sequences, *, _htest=False, _utest=False)	excluded		platform: GUI toolkit
+Lib/idlelib/config_key.py	331	332	GetKeysWindow.result	result(self)	excluded		platform: GUI toolkit
+Lib/idlelib/config_key.py	335	336	GetKeysWindow.result	result(self, value)	excluded		platform: GUI toolkit
+Lib/idlelib/config_key.py	338	341	GetKeysWindow.ok	ok(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/config_key.py	343	346	GetKeysWindow.cancel	cancel(self, event=None)	excluded		platform: GUI toolkit

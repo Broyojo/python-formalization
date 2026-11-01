@@ -1,0 +1,32 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_hacl/Hacl_Hash_SHA3.c	59	174	absorb_inner_32	static void absorb_inner_32(uint8_t *b, uint64_t *s)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	176	210	block_len	static uint32_t block_len(Spec_Hash_Definitions_hash_alg a)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	212	238	hash_len	static uint32_t hash_len(Spec_Hash_Definitions_hash_alg a)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	240	244	Hacl_Hash_SHA3_init_	void Hacl_Hash_SHA3_init_(Spec_Hash_Definitions_hash_alg a, uint64_t *s)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	247	267	Hacl_Hash_SHA3_update_multi_sha3	Hacl_Hash_SHA3_update_multi_sha3( Spec_Hash_Definitions_hash_alg a, uint64_t *s, uint8_t *blocks, uint32_t n_blocks )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	270	555	Hacl_Hash_SHA3_update_last_sha3	Hacl_Hash_SHA3_update_last_sha3( Spec_Hash_Definitions_hash_alg a, uint64_t *s, uint8_t *input, uint32_t input_len )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	557	623	squeeze	static void squeeze(uint64_t *s, uint32_t rateInBytes, uint32_t outputByteLen, uint8_t *b)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	632	636	Hacl_Hash_SHA3_get_alg	Spec_Hash_Definitions_hash_alg Hacl_Hash_SHA3_get_alg(Hacl_Hash_SHA3_state_t *s)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	645	720	Hacl_Hash_SHA3_malloc	Hacl_Hash_SHA3_state_t *Hacl_Hash_SHA3_malloc(Spec_Hash_Definitions_hash_alg a)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	722	731	Hacl_Hash_SHA3_free	void Hacl_Hash_SHA3_free(Hacl_Hash_SHA3_state_t *state)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	733	814	Hacl_Hash_SHA3_copy	Hacl_Hash_SHA3_state_t *Hacl_Hash_SHA3_copy(Hacl_Hash_SHA3_state_t *state)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	816	829	Hacl_Hash_SHA3_reset	void Hacl_Hash_SHA3_reset(Hacl_Hash_SHA3_state_t *state)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	832	1002	Hacl_Hash_SHA3_update	Hacl_Hash_SHA3_update(Hacl_Hash_SHA3_state_t *state, uint8_t *chunk, uint32_t chunk_len)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	1005	1075	digest_	digest_( Spec_Hash_Definitions_hash_alg a, Hacl_Hash_SHA3_state_t *state, uint8_t *output, uint32_t l )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	1078	1087	Hacl_Hash_SHA3_digest	Hacl_Hash_SHA3_digest(Hacl_Hash_SHA3_state_t *state, uint8_t *output)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	1090	1103	Hacl_Hash_SHA3_squeeze	Hacl_Hash_SHA3_squeeze(Hacl_Hash_SHA3_state_t *s, uint8_t *dst, uint32_t l)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	1105	1109	Hacl_Hash_SHA3_block_len	uint32_t Hacl_Hash_SHA3_block_len(Hacl_Hash_SHA3_state_t *s)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	1111	1115	Hacl_Hash_SHA3_hash_len	uint32_t Hacl_Hash_SHA3_hash_len(Hacl_Hash_SHA3_state_t *s)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	1117	1121	Hacl_Hash_SHA3_is_shake	bool Hacl_Hash_SHA3_is_shake(Hacl_Hash_SHA3_state_t *s)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	1123	1239	Hacl_Hash_SHA3_absorb_inner_32	void Hacl_Hash_SHA3_absorb_inner_32(uint32_t rateInBytes, uint8_t *b, uint64_t *s)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	1242	1409	Hacl_Hash_SHA3_shake128	Hacl_Hash_SHA3_shake128( uint8_t *output, uint32_t outputByteLen, uint8_t *input, uint32_t inputByteLen )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	1412	1579	Hacl_Hash_SHA3_shake256	Hacl_Hash_SHA3_shake256( uint8_t *output, uint32_t outputByteLen, uint8_t *input, uint32_t inputByteLen )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	1581	1743	Hacl_Hash_SHA3_sha3_224	void Hacl_Hash_SHA3_sha3_224(uint8_t *output, uint8_t *input, uint32_t inputByteLen)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	1745	1907	Hacl_Hash_SHA3_sha3_256	void Hacl_Hash_SHA3_sha3_256(uint8_t *output, uint8_t *input, uint32_t inputByteLen)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	1909	2071	Hacl_Hash_SHA3_sha3_384	void Hacl_Hash_SHA3_sha3_384(uint8_t *output, uint8_t *input, uint32_t inputByteLen)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	2073	2235	Hacl_Hash_SHA3_sha3_512	void Hacl_Hash_SHA3_sha3_512(uint8_t *output, uint8_t *input, uint32_t inputByteLen)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	2240	2244	Hacl_Hash_SHA3_state_malloc	uint64_t *Hacl_Hash_SHA3_state_malloc(void)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	2249	2252	Hacl_Hash_SHA3_state_free	void Hacl_Hash_SHA3_state_free(uint64_t *s)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	2266	2277	Hacl_Hash_SHA3_shake128_absorb_nblocks	Hacl_Hash_SHA3_shake128_absorb_nblocks(uint64_t *state, uint8_t *input, uint32_t inputByteLen)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	2295	2380	Hacl_Hash_SHA3_shake128_absorb_final	Hacl_Hash_SHA3_shake128_absorb_final(uint64_t *state, uint8_t *input, uint32_t inputByteLen)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA3.c	2394	2456	Hacl_Hash_SHA3_shake128_squeeze_nblocks	Hacl_Hash_SHA3_shake128_squeeze_nblocks( uint64_t *state, uint8_t *output, uint32_t outputByteLen )	excluded		vendored: third-party code

@@ -1,0 +1,9 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_apple_support.py	5	10	init_streams	init_streams(log_write, stdout_level, stderr_level)	todo		
+Lib/_apple_support.py	14	17	SystemLog.__init__	__init__(self, log_write, level, **kwargs)	todo		
+Lib/_apple_support.py	19	20	SystemLog.__repr__	__repr__(self)	todo		
+Lib/_apple_support.py	22	36	SystemLog.write	write(self, s)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/_apple_support.py	40	42	LogStream.__init__	__init__(self, log_write, level)	todo		
+Lib/_apple_support.py	44	45	LogStream.__repr__	__repr__(self)	todo		
+Lib/_apple_support.py	47	48	LogStream.writable	writable(self)	todo		
+Lib/_apple_support.py	50	66	LogStream.write	write(self, b)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none

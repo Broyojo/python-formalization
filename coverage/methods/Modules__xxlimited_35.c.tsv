@@ -1,0 +1,14 @@
+file	line	endline	name	signature	status	entry	note
+Modules/xxlimited_35.c	31	39	newXxoObject	newXxoObject(PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_35.c	44	50	Xxo_traverse	Xxo_traverse(PyObject *op, visitproc visit, void *arg)	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_35.c	53	58	Xxo_clear	Xxo_clear(PyObject *op)	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_35.c	61	65	Xxo_finalize	Xxo_finalize(PyObject *op)	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_35.c	68	79	Xxo_demo	Xxo_demo(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_35.c	87	100	Xxo_getattro	Xxo_getattro(PyObject *op, PyObject *name)	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_35.c	103	121	Xxo_setattr	Xxo_setattr(PyObject *op, char *name, PyObject *v)	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_35.c	152	160	xx_foo	xx_foo(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_35.c	166	176	xx_new	xx_new(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_35.c	181	188	xx_roj	xx_roj(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_35.c	209	212	null_richcompare	null_richcompare(PyObject *self, PyObject *other, int op)	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_35.c	247	302	xx_modexec	xx_modexec(PyObject *m)	excluded		test-support: only for CPython's own tests
+Modules/xxlimited_35.c	329	332	PyInit_xxlimited_35	PyInit_xxlimited_35(void)	excluded		test-support: only for CPython's own tests

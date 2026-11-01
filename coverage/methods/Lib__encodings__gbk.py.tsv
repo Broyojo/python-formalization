@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Lib/encodings/gbk.py	30	39	getregentry	getregentry()	todo		

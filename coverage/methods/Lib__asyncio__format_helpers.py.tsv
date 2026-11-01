@@ -1,0 +1,6 @@
+file	line	endline	name	signature	status	entry	note
+Lib/asyncio/format_helpers.py	10	19	_get_function_source	_get_function_source(func)	todo		
+Lib/asyncio/format_helpers.py	22	27	_format_callback_source	_format_callback_source(func, args, *, debug=False)	todo		
+Lib/asyncio/format_helpers.py	30	48	_format_args_and_kwargs	_format_args_and_kwargs(args, kwargs, *, debug=False)	todo		
+Lib/asyncio/format_helpers.py	51	67	_format_callback	_format_callback(func, args, kwargs, *, debug=False, suffix='')	todo		
+Lib/asyncio/format_helpers.py	70	84	extract_stack	extract_stack(f=None, limit=None)	todo		

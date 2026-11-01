@@ -1,0 +1,7 @@
+file	line	endline	name	signature	status	entry	note
+Lib/encodings/rot_13.py	14	15	Codec.encode	encode(self, input, errors='strict')	todo		
+Lib/encodings/rot_13.py	17	18	Codec.decode	decode(self, input, errors='strict')	todo		
+Lib/encodings/rot_13.py	21	22	IncrementalEncoder.encode	encode(self, input, final=False)	todo		
+Lib/encodings/rot_13.py	25	26	IncrementalDecoder.decode	decode(self, input, final=False)	todo		
+Lib/encodings/rot_13.py	36	46	getregentry	getregentry()	todo		
+Lib/encodings/rot_13.py	108	109	rot13	rot13(infile, outfile)	todo		

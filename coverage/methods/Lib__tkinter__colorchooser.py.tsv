@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Lib/tkinter/colorchooser.py	37	48	Chooser._fixoptions	_fixoptions(self)	excluded		platform: GUI toolkit
+Lib/tkinter/colorchooser.py	50	64	Chooser._fixresult	_fixresult(self, widget, result)	excluded		platform: GUI toolkit
+Lib/tkinter/colorchooser.py	70	81	askcolor	askcolor(color=None, **options)	excluded		platform: GUI toolkit

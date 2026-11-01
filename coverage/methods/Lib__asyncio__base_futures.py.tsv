@@ -1,0 +1,5 @@
+file	line	endline	name	signature	status	entry	note
+Lib/asyncio/base_futures.py	13	21	isfuture	isfuture(obj)	todo		
+Lib/asyncio/base_futures.py	24	41	_format_callbacks	_format_callbacks(cb)	todo		
+Lib/asyncio/base_futures.py	44	61	_future_repr_info	_future_repr_info(future)	todo		
+Lib/asyncio/base_futures.py	65	67	_future_repr	_future_repr(future)	todo		

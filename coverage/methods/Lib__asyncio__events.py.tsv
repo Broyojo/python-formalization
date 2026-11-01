@@ -1,0 +1,106 @@
+file	line	endline	name	signature	status	entry	note
+Lib/asyncio/events.py	41	54	Handle.__init__	__init__(self, callback, args, loop, context=None)	todo		
+Lib/asyncio/events.py	56	67	Handle._repr_info	_repr_info(self)	todo		
+Lib/asyncio/events.py	69	73	Handle.__repr__	__repr__(self)	todo		
+Lib/asyncio/events.py	75	76	Handle.get_context	get_context(self)	todo		
+Lib/asyncio/events.py	78	87	Handle.cancel	cancel(self)	todo		
+Lib/asyncio/events.py	89	90	Handle.cancelled	cancelled(self)	todo		
+Lib/asyncio/events.py	92	110	Handle._run	_run(self)	todo		
+Lib/asyncio/events.py	118	120	_ThreadSafeHandle.__init__	__init__(self, callback, args, loop, context=None)	todo		
+Lib/asyncio/events.py	122	124	_ThreadSafeHandle.cancel	cancel(self)	todo		
+Lib/asyncio/events.py	126	128	_ThreadSafeHandle.cancelled	cancelled(self)	todo		
+Lib/asyncio/events.py	130	138	_ThreadSafeHandle._run	_run(self)	todo		
+Lib/asyncio/events.py	146	151	TimerHandle.__init__	__init__(self, when, callback, args, loop, context=None)	todo		
+Lib/asyncio/events.py	153	157	TimerHandle._repr_info	_repr_info(self)	todo		
+Lib/asyncio/events.py	159	160	TimerHandle.__hash__	__hash__(self)	todo		
+Lib/asyncio/events.py	162	165	TimerHandle.__lt__	__lt__(self, other)	todo		
+Lib/asyncio/events.py	167	170	TimerHandle.__le__	__le__(self, other)	todo		
+Lib/asyncio/events.py	172	175	TimerHandle.__gt__	__gt__(self, other)	todo		
+Lib/asyncio/events.py	177	180	TimerHandle.__ge__	__ge__(self, other)	todo		
+Lib/asyncio/events.py	182	188	TimerHandle.__eq__	__eq__(self, other)	todo		
+Lib/asyncio/events.py	190	193	TimerHandle.cancel	cancel(self)	todo		
+Lib/asyncio/events.py	195	201	TimerHandle.when	when(self)	todo		
+Lib/asyncio/events.py	207	209	AbstractServer.close	close(self)	todo		
+Lib/asyncio/events.py	211	213	AbstractServer.close_clients	close_clients(self)	todo		
+Lib/asyncio/events.py	215	217	AbstractServer.abort_clients	abort_clients(self)	todo		
+Lib/asyncio/events.py	219	221	AbstractServer.get_loop	get_loop(self)	todo		
+Lib/asyncio/events.py	223	225	AbstractServer.is_serving	is_serving(self)	todo		
+Lib/asyncio/events.py	227	233	AbstractServer.start_serving	start_serving(self)	todo		
+Lib/asyncio/events.py	235	240	AbstractServer.serve_forever	serve_forever(self)	todo		
+Lib/asyncio/events.py	242	244	AbstractServer.wait_closed	wait_closed(self)	todo		
+Lib/asyncio/events.py	246	247	AbstractServer.__aenter__	__aenter__(self)	todo		
+Lib/asyncio/events.py	249	251	AbstractServer.__aexit__	__aexit__(self, *exc)	todo		
+Lib/asyncio/events.py	259	261	AbstractEventLoop.run_forever	run_forever(self)	todo		
+Lib/asyncio/events.py	263	268	AbstractEventLoop.run_until_complete	run_until_complete(self, future)	todo		
+Lib/asyncio/events.py	270	276	AbstractEventLoop.stop	stop(self)	todo		
+Lib/asyncio/events.py	278	280	AbstractEventLoop.is_running	is_running(self)	todo		
+Lib/asyncio/events.py	282	284	AbstractEventLoop.is_closed	is_closed(self)	todo		
+Lib/asyncio/events.py	286	295	AbstractEventLoop.close	close(self)	todo		
+Lib/asyncio/events.py	297	299	AbstractEventLoop.shutdown_asyncgens	shutdown_asyncgens(self)	todo		
+Lib/asyncio/events.py	301	303	AbstractEventLoop.shutdown_default_executor	shutdown_default_executor(self)	todo		
+Lib/asyncio/events.py	307	309	AbstractEventLoop._timer_handle_cancelled	_timer_handle_cancelled(self, handle)	todo		
+Lib/asyncio/events.py	311	312	AbstractEventLoop.call_soon	call_soon(self, callback, *args, context=None)	todo		
+Lib/asyncio/events.py	314	315	AbstractEventLoop.call_later	call_later(self, delay, callback, *args, context=None)	todo		
+Lib/asyncio/events.py	317	318	AbstractEventLoop.call_at	call_at(self, when, callback, *args, context=None)	todo		
+Lib/asyncio/events.py	320	321	AbstractEventLoop.time	time(self)	todo		
+Lib/asyncio/events.py	323	324	AbstractEventLoop.create_future	create_future(self)	todo		
+Lib/asyncio/events.py	328	329	AbstractEventLoop.create_task	create_task(self, coro, **kwargs)	todo		
+Lib/asyncio/events.py	333	334	AbstractEventLoop.call_soon_threadsafe	call_soon_threadsafe(self, callback, *args, context=None)	todo		
+Lib/asyncio/events.py	336	337	AbstractEventLoop.run_in_executor	run_in_executor(self, executor, func, *args)	todo		
+Lib/asyncio/events.py	339	340	AbstractEventLoop.set_default_executor	set_default_executor(self, executor)	todo		
+Lib/asyncio/events.py	344	346	AbstractEventLoop.getaddrinfo	getaddrinfo(self, host, port, *, family=0, type=0, proto=0, flags=0)	todo		
+Lib/asyncio/events.py	348	349	AbstractEventLoop.getnameinfo	getnameinfo(self, sockaddr, flags=0)	todo		
+Lib/asyncio/events.py	351	359	AbstractEventLoop.create_connection	create_connection(self, protocol_factory, host=None, port=None, *, ssl=None, family=0, proto=0, flags=0, sock=None, local_addr=None, server_hostname=None, ssl_handshake_timeout=None, ssl_shutdown_timeout=None, happy_eyeballs_delay=None, interleave=None)	todo		
+Lib/asyncio/events.py	361	422	AbstractEventLoop.create_server	create_server(self, protocol_factory, host=None, port=None, *, family=socket.AF_UNSPEC, flags=socket.AI_PASSIVE, sock=None, backlog=100, ssl=None, reuse_address=None, reuse_port=None, keep_alive=None, ssl_handshake_timeout=None, ssl_shutdown_timeout=None, start_serving=True)	todo		
+Lib/asyncio/events.py	424	430	AbstractEventLoop.sendfile	sendfile(self, transport, file, offset=0, count=None, *, fallback=True)	todo		
+Lib/asyncio/events.py	432	442	AbstractEventLoop.start_tls	start_tls(self, transport, protocol, sslcontext, *, server_side=False, server_hostname=None, ssl_handshake_timeout=None, ssl_shutdown_timeout=None)	todo		
+Lib/asyncio/events.py	444	450	AbstractEventLoop.create_unix_connection	create_unix_connection(self, protocol_factory, path=None, *, ssl=None, sock=None, server_hostname=None, ssl_handshake_timeout=None, ssl_shutdown_timeout=None)	todo		
+Lib/asyncio/events.py	452	487	AbstractEventLoop.create_unix_server	create_unix_server(self, protocol_factory, path=None, *, sock=None, backlog=100, ssl=None, ssl_handshake_timeout=None, ssl_shutdown_timeout=None, start_serving=True)	todo		
+Lib/asyncio/events.py	489	502	AbstractEventLoop.connect_accepted_socket	connect_accepted_socket(self, protocol_factory, sock, *, ssl=None, ssl_handshake_timeout=None, ssl_shutdown_timeout=None)	todo		
+Lib/asyncio/events.py	504	537	AbstractEventLoop.create_datagram_endpoint	create_datagram_endpoint(self, protocol_factory, local_addr=None, remote_addr=None, *, family=0, proto=0, flags=0, reuse_address=None, reuse_port=None, allow_broadcast=None, sock=None)	todo		
+Lib/asyncio/events.py	541	552	AbstractEventLoop.connect_read_pipe	connect_read_pipe(self, protocol_factory, pipe)	todo		
+Lib/asyncio/events.py	554	566	AbstractEventLoop.connect_write_pipe	connect_write_pipe(self, protocol_factory, pipe)	todo		
+Lib/asyncio/events.py	568	573	AbstractEventLoop.subprocess_shell	subprocess_shell(self, protocol_factory, cmd, *, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)	todo		
+Lib/asyncio/events.py	575	580	AbstractEventLoop.subprocess_exec	subprocess_exec(self, protocol_factory, *args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)	todo		
+Lib/asyncio/events.py	587	588	AbstractEventLoop.add_reader	add_reader(self, fd, callback, *args)	todo		
+Lib/asyncio/events.py	590	591	AbstractEventLoop.remove_reader	remove_reader(self, fd)	todo		
+Lib/asyncio/events.py	593	594	AbstractEventLoop.add_writer	add_writer(self, fd, callback, *args)	todo		
+Lib/asyncio/events.py	596	597	AbstractEventLoop.remove_writer	remove_writer(self, fd)	todo		
+Lib/asyncio/events.py	601	602	AbstractEventLoop.sock_recv	sock_recv(self, sock, nbytes)	todo		
+Lib/asyncio/events.py	604	605	AbstractEventLoop.sock_recv_into	sock_recv_into(self, sock, buf)	todo		
+Lib/asyncio/events.py	607	608	AbstractEventLoop.sock_recvfrom	sock_recvfrom(self, sock, bufsize)	todo		
+Lib/asyncio/events.py	610	611	AbstractEventLoop.sock_recvfrom_into	sock_recvfrom_into(self, sock, buf, nbytes=0)	todo		
+Lib/asyncio/events.py	613	614	AbstractEventLoop.sock_sendall	sock_sendall(self, sock, data)	todo		
+Lib/asyncio/events.py	616	617	AbstractEventLoop.sock_sendto	sock_sendto(self, sock, data, address)	todo		
+Lib/asyncio/events.py	619	620	AbstractEventLoop.sock_connect	sock_connect(self, sock, address)	todo		
+Lib/asyncio/events.py	622	623	AbstractEventLoop.sock_accept	sock_accept(self, sock)	todo		
+Lib/asyncio/events.py	625	627	AbstractEventLoop.sock_sendfile	sock_sendfile(self, sock, file, offset=0, count=None, *, fallback=None)	todo		
+Lib/asyncio/events.py	631	632	AbstractEventLoop.add_signal_handler	add_signal_handler(self, sig, callback, *args)	todo		
+Lib/asyncio/events.py	634	635	AbstractEventLoop.remove_signal_handler	remove_signal_handler(self, sig)	todo		
+Lib/asyncio/events.py	639	640	AbstractEventLoop.set_task_factory	set_task_factory(self, factory)	todo		
+Lib/asyncio/events.py	642	643	AbstractEventLoop.get_task_factory	get_task_factory(self)	todo		
+Lib/asyncio/events.py	647	648	AbstractEventLoop.get_exception_handler	get_exception_handler(self)	todo		
+Lib/asyncio/events.py	650	651	AbstractEventLoop.set_exception_handler	set_exception_handler(self, handler)	todo		
+Lib/asyncio/events.py	653	654	AbstractEventLoop.default_exception_handler	default_exception_handler(self, context)	todo		
+Lib/asyncio/events.py	656	657	AbstractEventLoop.call_exception_handler	call_exception_handler(self, context)	todo		
+Lib/asyncio/events.py	661	662	AbstractEventLoop.get_debug	get_debug(self)	todo		
+Lib/asyncio/events.py	664	665	AbstractEventLoop.set_debug	set_debug(self, enabled)	todo		
+Lib/asyncio/events.py	671	679	_AbstractEventLoopPolicy.get_event_loop	get_event_loop(self)	todo		
+Lib/asyncio/events.py	681	683	_AbstractEventLoopPolicy.set_event_loop	set_event_loop(self, loop)	todo		
+Lib/asyncio/events.py	685	689	_AbstractEventLoopPolicy.new_event_loop	new_event_loop(self)	todo		
+Lib/asyncio/events.py	709	710	_BaseDefaultEventLoopPolicy.__init__	__init__(self)	todo		
+Lib/asyncio/events.py	712	721	_BaseDefaultEventLoopPolicy.get_event_loop	get_event_loop(self)	todo		
+Lib/asyncio/events.py	723	727	_BaseDefaultEventLoopPolicy.set_event_loop	set_event_loop(self, loop)	todo		
+Lib/asyncio/events.py	729	735	_BaseDefaultEventLoopPolicy.new_event_loop	new_event_loop(self)	todo		
+Lib/asyncio/events.py	756	765	get_running_loop	get_running_loop()	todo		
+Lib/asyncio/events.py	768	777	_get_running_loop	_get_running_loop()	todo		
+Lib/asyncio/events.py	780	787	_set_running_loop	_set_running_loop(loop)	todo		
+Lib/asyncio/events.py	790	798	_init_event_loop_policy	_init_event_loop_policy()	todo		
+Lib/asyncio/events.py	801	805	_get_event_loop_policy	_get_event_loop_policy()	todo		
+Lib/asyncio/events.py	807	809	get_event_loop_policy	get_event_loop_policy()	todo		
+Lib/asyncio/events.py	811	818	_set_event_loop_policy	_set_event_loop_policy(policy)	todo		
+Lib/asyncio/events.py	820	822	set_event_loop_policy	set_event_loop_policy(policy)	todo		
+Lib/asyncio/events.py	824	837	get_event_loop	get_event_loop()	todo		
+Lib/asyncio/events.py	840	842	set_event_loop	set_event_loop(loop)	todo		
+Lib/asyncio/events.py	845	847	new_event_loop	new_event_loop()	todo		
+Lib/asyncio/events.py	874	879	on_fork	on_fork()	todo		

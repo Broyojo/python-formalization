@@ -1,0 +1,5 @@
+file	line	endline	name	signature	status	entry	note
+Lib/asyncio/graph.py	40	80	_build_graph_for_future	_build_graph_for_future(future: futures.Future, *, limit: int | None=None)	todo		
+Lib/asyncio/graph.py	83	182	capture_call_graph	capture_call_graph(future: futures.Future | None=None, /, *, depth: int=1, limit: int | None=None)	todo		
+Lib/asyncio/graph.py	185	265	format_call_graph	format_call_graph(future: futures.Future | None=None, /, *, depth: int=1, limit: int | None=None)	todo		
+Lib/asyncio/graph.py	267	276	print_call_graph	print_call_graph(future: futures.Future | None=None, /, *, file: io.Writer[str] | None=None, depth: int=1, limit: int | None=None)	todo		

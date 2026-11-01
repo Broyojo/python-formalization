@@ -1,0 +1,104 @@
+file	line	endline	name	signature	status	entry	note
+Lib/importlib/_bootstrap_external.py	60	74	_make_relax_case	_make_relax_case()	todo		
+Lib/importlib/_bootstrap_external.py	79	81	_pack_uint32	_pack_uint32(x)	todo		
+Lib/importlib/_bootstrap_external.py	84	87	_unpack_uint64	_unpack_uint64(data)	todo		
+Lib/importlib/_bootstrap_external.py	89	92	_unpack_uint32	_unpack_uint32(data)	todo		
+Lib/importlib/_bootstrap_external.py	94	97	_unpack_uint16	_unpack_uint16(data)	todo		
+Lib/importlib/_bootstrap_external.py	101	128	_path_join	_path_join(*path_parts)	todo		
+Lib/importlib/_bootstrap_external.py	131	134	_path_join	_path_join(*path_parts)	todo		
+Lib/importlib/_bootstrap_external.py	137	142	_path_split	_path_split(path)	todo		
+Lib/importlib/_bootstrap_external.py	145	152	_path_stat	_path_stat(path)	todo		
+Lib/importlib/_bootstrap_external.py	155	161	_path_is_mode_type	_path_is_mode_type(path, mode)	todo		
+Lib/importlib/_bootstrap_external.py	164	166	_path_isfile	_path_isfile(path)	todo		
+Lib/importlib/_bootstrap_external.py	169	173	_path_isdir	_path_isdir(path)	todo		
+Lib/importlib/_bootstrap_external.py	177	182	_path_isabs	_path_isabs(path)	todo		
+Lib/importlib/_bootstrap_external.py	185	187	_path_isabs	_path_isabs(path)	todo		
+Lib/importlib/_bootstrap_external.py	190	197	_path_abspath	_path_abspath(path)	todo		
+Lib/importlib/_bootstrap_external.py	200	219	_write_atomic	_write_atomic(path, data, mode=438)	todo		
+Lib/importlib/_bootstrap_external.py	239	307	cache_from_source	cache_from_source(path, debug_override=None, *, optimization=None)	todo		
+Lib/importlib/_bootstrap_external.py	310	347	source_from_cache	source_from_cache(path)	todo		
+Lib/importlib/_bootstrap_external.py	350	366	_get_sourcefile	_get_sourcefile(bytecode_path)	todo		
+Lib/importlib/_bootstrap_external.py	369	378	_get_cached	_get_cached(filename)	todo		
+Lib/importlib/_bootstrap_external.py	381	390	_calc_mode	_calc_mode(path)	todo		
+Lib/importlib/_bootstrap_external.py	393	421	_check_name	_check_name(method)	todo		
+Lib/importlib/_bootstrap_external.py	424	454	_classify_pyc	_classify_pyc(data, name, exc_details)	todo		
+Lib/importlib/_bootstrap_external.py	457	482	_validate_timestamp_pyc	_validate_timestamp_pyc(data, source_mtime, source_size, name, exc_details)	todo		
+Lib/importlib/_bootstrap_external.py	485	506	_validate_hash_pyc	_validate_hash_pyc(data, source_hash, name, exc_details)	todo		
+Lib/importlib/_bootstrap_external.py	509	519	_compile_bytecode	_compile_bytecode(data, name=None, bytecode_path=None, source_path=None)	todo		
+Lib/importlib/_bootstrap_external.py	522	529	_code_to_timestamp_pyc	_code_to_timestamp_pyc(code, mtime=0, source_size=0)	todo		
+Lib/importlib/_bootstrap_external.py	532	540	_code_to_hash_pyc	_code_to_hash_pyc(code, source_hash, checked=True)	todo		
+Lib/importlib/_bootstrap_external.py	543	552	decode_source	decode_source(source_bytes)	todo		
+Lib/importlib/_bootstrap_external.py	560	627	spec_from_file_location	spec_from_file_location(name, location=None, *, loader=None, submodule_search_locations=_POPULATE)	todo		
+Lib/importlib/_bootstrap_external.py	630	675	_bless_my_loader	_bless_my_loader(module_globals)	todo		
+Lib/importlib/_bootstrap_external.py	693	697	WindowsRegistryFinder._open_registry	_open_registry(key)	todo		
+Lib/importlib/_bootstrap_external.py	700	712	WindowsRegistryFinder._search_registry	_search_registry(cls, fullname)	todo		
+Lib/importlib/_bootstrap_external.py	715	734	WindowsRegistryFinder.find_spec	find_spec(cls, fullname, path=None, target=None)	todo		
+Lib/importlib/_bootstrap_external.py	742	748	_LoaderBasics.is_package	is_package(self, fullname)	todo		
+Lib/importlib/_bootstrap_external.py	750	751	_LoaderBasics.create_module	create_module(self, spec)	todo		
+Lib/importlib/_bootstrap_external.py	753	759	_LoaderBasics.exec_module	exec_module(self, module)	todo		
+Lib/importlib/_bootstrap_external.py	761	764	_LoaderBasics.load_module	load_module(self, fullname)	todo		
+Lib/importlib/_bootstrap_external.py	769	775	SourceLoader.path_mtime	path_mtime(self, path)	todo		
+Lib/importlib/_bootstrap_external.py	777	789	SourceLoader.path_stats	path_stats(self, path)	todo		
+Lib/importlib/_bootstrap_external.py	791	799	SourceLoader._cache_bytecode	_cache_bytecode(self, source_path, cache_path, data)	todo		
+Lib/importlib/_bootstrap_external.py	801	805	SourceLoader.set_data	set_data(self, path, data)	todo		
+Lib/importlib/_bootstrap_external.py	808	816	SourceLoader.get_source	get_source(self, fullname)	todo		
+Lib/importlib/_bootstrap_external.py	818	824	SourceLoader.source_to_code	source_to_code(self, data, path, *, _optimize=-1)	todo		
+Lib/importlib/_bootstrap_external.py	826	909	SourceLoader.get_code	get_code(self, fullname)	todo		
+Lib/importlib/_bootstrap_external.py	917	921	FileLoader.__init__	__init__(self, fullname, path)	todo		
+Lib/importlib/_bootstrap_external.py	923	925	FileLoader.__eq__	__eq__(self, other)	todo		
+Lib/importlib/_bootstrap_external.py	927	928	FileLoader.__hash__	__hash__(self)	todo		
+Lib/importlib/_bootstrap_external.py	931	940	FileLoader.load_module	load_module(self, fullname)	todo		
+Lib/importlib/_bootstrap_external.py	943	945	FileLoader.get_filename	get_filename(self, fullname)	todo		
+Lib/importlib/_bootstrap_external.py	947	954	FileLoader.get_data	get_data(self, path)	todo		
+Lib/importlib/_bootstrap_external.py	957	959	FileLoader.get_resource_reader	get_resource_reader(self, module)	todo		
+Lib/importlib/_bootstrap_external.py	966	969	SourceFileLoader.path_stats	path_stats(self, path)	todo		
+Lib/importlib/_bootstrap_external.py	971	974	SourceFileLoader._cache_bytecode	_cache_bytecode(self, source_path, bytecode_path, data)	todo		
+Lib/importlib/_bootstrap_external.py	976	1004	SourceFileLoader.set_data	set_data(self, path, data, *, _mode=438)	todo		
+Lib/importlib/_bootstrap_external.py	1011	1025	SourcelessFileLoader.get_code	get_code(self, fullname)	todo		
+Lib/importlib/_bootstrap_external.py	1027	1029	SourcelessFileLoader.get_source	get_source(self, fullname)	todo		
+Lib/importlib/_bootstrap_external.py	1040	1042	ExtensionFileLoader.__init__	__init__(self, name, path)	todo		
+Lib/importlib/_bootstrap_external.py	1044	1046	ExtensionFileLoader.__eq__	__eq__(self, other)	todo		
+Lib/importlib/_bootstrap_external.py	1048	1049	ExtensionFileLoader.__hash__	__hash__(self)	todo		
+Lib/importlib/_bootstrap_external.py	1051	1057	ExtensionFileLoader.create_module	create_module(self, spec)	todo		
+Lib/importlib/_bootstrap_external.py	1059	1063	ExtensionFileLoader.exec_module	exec_module(self, module)	todo		
+Lib/importlib/_bootstrap_external.py	1065	1069	ExtensionFileLoader.is_package	is_package(self, fullname)	todo		
+Lib/importlib/_bootstrap_external.py	1071	1073	ExtensionFileLoader.get_code	get_code(self, fullname)	todo		
+Lib/importlib/_bootstrap_external.py	1075	1077	ExtensionFileLoader.get_source	get_source(self, fullname)	todo		
+Lib/importlib/_bootstrap_external.py	1080	1082	ExtensionFileLoader.get_filename	get_filename(self, fullname)	todo		
+Lib/importlib/_bootstrap_external.py	1096	1101	_NamespacePath.__init__	__init__(self, name, path, path_finder)	todo		
+Lib/importlib/_bootstrap_external.py	1103	1111	_NamespacePath._find_parent_path_names	_find_parent_path_names(self)	todo		
+Lib/importlib/_bootstrap_external.py	1113	1115	_NamespacePath._get_parent_path	_get_parent_path(self)	todo		
+Lib/importlib/_bootstrap_external.py	1117	1129	_NamespacePath._recalculate	_recalculate(self)	todo		
+Lib/importlib/_bootstrap_external.py	1131	1132	_NamespacePath.__iter__	__iter__(self)	todo		
+Lib/importlib/_bootstrap_external.py	1134	1135	_NamespacePath.__getitem__	__getitem__(self, index)	todo		
+Lib/importlib/_bootstrap_external.py	1137	1138	_NamespacePath.__setitem__	__setitem__(self, index, path)	todo		
+Lib/importlib/_bootstrap_external.py	1140	1141	_NamespacePath.__len__	__len__(self)	todo		
+Lib/importlib/_bootstrap_external.py	1143	1144	_NamespacePath.__repr__	__repr__(self)	todo		
+Lib/importlib/_bootstrap_external.py	1146	1147	_NamespacePath.__contains__	__contains__(self, item)	todo		
+Lib/importlib/_bootstrap_external.py	1149	1150	_NamespacePath.append	append(self, item)	todo		
+Lib/importlib/_bootstrap_external.py	1157	1158	NamespaceLoader.__init__	__init__(self, name, path, path_finder)	todo		
+Lib/importlib/_bootstrap_external.py	1160	1161	NamespaceLoader.is_package	is_package(self, fullname)	todo		
+Lib/importlib/_bootstrap_external.py	1163	1164	NamespaceLoader.get_source	get_source(self, fullname)	todo		
+Lib/importlib/_bootstrap_external.py	1166	1167	NamespaceLoader.get_code	get_code(self, fullname)	todo		
+Lib/importlib/_bootstrap_external.py	1169	1170	NamespaceLoader.create_module	create_module(self, spec)	todo		
+Lib/importlib/_bootstrap_external.py	1172	1173	NamespaceLoader.exec_module	exec_module(self, module)	todo		
+Lib/importlib/_bootstrap_external.py	1175	1185	NamespaceLoader.load_module	load_module(self, fullname)	todo		
+Lib/importlib/_bootstrap_external.py	1187	1189	NamespaceLoader.get_resource_reader	get_resource_reader(self, module)	todo		
+Lib/importlib/_bootstrap_external.py	1203	1218	PathFinder.invalidate_caches	invalidate_caches()	todo		
+Lib/importlib/_bootstrap_external.py	1221	1231	PathFinder._path_hooks	_path_hooks(path)	todo		
+Lib/importlib/_bootstrap_external.py	1234	1253	PathFinder._path_importer_cache	_path_importer_cache(cls, path)	todo		
+Lib/importlib/_bootstrap_external.py	1256	1282	PathFinder._get_spec	_get_spec(cls, fullname, path, target=None)	todo		
+Lib/importlib/_bootstrap_external.py	1285	1306	PathFinder.find_spec	find_spec(cls, fullname, path=None, target=None)	todo		
+Lib/importlib/_bootstrap_external.py	1309	1319	PathFinder.find_distributions	find_distributions(*args, **kwargs)	todo		
+Lib/importlib/_bootstrap_external.py	1331	1346	FileFinder.__init__	__init__(self, path, *loader_details)	todo		
+Lib/importlib/_bootstrap_external.py	1348	1350	FileFinder.invalidate_caches	invalidate_caches(self)	todo		
+Lib/importlib/_bootstrap_external.py	1352	1355	FileFinder._get_spec	_get_spec(self, loader_class, fullname, path, smsl, target)	todo		
+Lib/importlib/_bootstrap_external.py	1357	1406	FileFinder.find_spec	find_spec(self, fullname, target=None)	todo		
+Lib/importlib/_bootstrap_external.py	1408	1437	FileFinder._fill_cache	_fill_cache(self)	todo		
+Lib/importlib/_bootstrap_external.py	1440	1455	FileFinder.path_hook	path_hook(cls, *loader_details)	todo		
+Lib/importlib/_bootstrap_external.py	1457	1458	FileFinder.__repr__	__repr__(self)	todo		
+Lib/importlib/_bootstrap_external.py	1465	1505	AppleFrameworkLoader.create_module	create_module(self, spec)	todo		
+Lib/importlib/_bootstrap_external.py	1509	1531	_fix_up_module	_fix_up_module(ns, name, pathname, cpathname=None)	todo		
+Lib/importlib/_bootstrap_external.py	1534	1549	_get_supported_file_loaders	_get_supported_file_loaders()	todo		
+Lib/importlib/_bootstrap_external.py	1552	1554	_set_bootstrap_module	_set_bootstrap_module(_bootstrap_module)	todo		
+Lib/importlib/_bootstrap_external.py	1557	1562	_install	_install(_bootstrap_module)	todo		

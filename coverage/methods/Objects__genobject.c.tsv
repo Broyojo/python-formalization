@@ -1,0 +1,86 @@
+file	line	endline	name	signature	status	entry	note
+Objects/genobject.c	48	50	_PyGen_GetCode	_PyGen_GetCode(PyGenObject *gen) {	todo		
+Objects/genobject.c	53	58	PyGen_GetCode	PyGen_GetCode(PyGenObject *gen) {	todo		
+Objects/genobject.c	61	84	gen_traverse	gen_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/genobject.c	87	143	_PyGen_Finalize	_PyGen_Finalize(PyObject *self)	todo		
+Objects/genobject.c	146	156	gen_clear_frame	gen_clear_frame(PyGenObject *gen)	todo		
+Objects/genobject.c	159	189	gen_dealloc	gen_dealloc(PyObject *self)	todo		
+Objects/genobject.c	192	288	gen_send_ex2	gen_send_ex2(PyGenObject *gen, PyObject *arg, PyObject **presult, int exc, int closing)	todo		
+Objects/genobject.c	291	295	PyGen_am_send	PyGen_am_send(PyObject *self, PyObject *arg, PyObject **result)	todo		
+Objects/genobject.c	298	315	gen_send_ex	gen_send_ex(PyGenObject *gen, PyObject *arg, int exc, int closing)	todo		
+Objects/genobject.c	322	325	gen_send	gen_send(PyObject *gen, PyObject *arg)	todo		
+Objects/genobject.c	336	360	gen_close_iter	gen_close_iter(PyObject *yf)	todo		
+Objects/genobject.c	363	371	is_resume	is_resume(_Py_CODEUNIT *instr)	todo		
+Objects/genobject.c	374	384	_PyGen_yf	_PyGen_yf(PyGenObject *gen)	todo		
+Objects/genobject.c	387	453	gen_close	gen_close(PyObject *self, PyObject *args)	todo		
+Objects/genobject.c	466	595	_gen_throw	_gen_throw(PyGenObject *gen, int close_on_genexit, PyObject *typ, PyObject *val, PyObject *tb)	todo		
+Objects/genobject.c	599	626	gen_throw	gen_throw(PyObject *op, PyObject *const *args, Py_ssize_t nargs)	todo		
+Objects/genobject.c	630	643	gen_iternext	gen_iternext(PyObject *self)	todo		
+Objects/genobject.c	652	668	_PyGen_SetStopIterationValue	_PyGen_SetStopIterationValue(PyObject *value)	todo		
+Objects/genobject.c	680	695	_PyGen_FetchStopIterationValue	_PyGen_FetchStopIterationValue(PyObject **pvalue)	todo		
+Objects/genobject.c	698	703	gen_repr	gen_repr(PyObject *self)	todo		
+Objects/genobject.c	706	710	gen_get_name	gen_get_name(PyObject *self, void *Py_UNUSED(ignored))	todo		
+Objects/genobject.c	713	725	gen_set_name	gen_set_name(PyObject *self, PyObject *value, void *Py_UNUSED(ignored))	todo		
+Objects/genobject.c	728	732	gen_get_qualname	gen_get_qualname(PyObject *self, void *Py_UNUSED(ignored))	todo		
+Objects/genobject.c	735	747	gen_set_qualname	gen_set_qualname(PyObject *self, PyObject *value, void *Py_UNUSED(ignored))	todo		
+Objects/genobject.c	750	757	gen_getyieldfrom	gen_getyieldfrom(PyObject *gen, void *Py_UNUSED(ignored))	todo		
+Objects/genobject.c	761	768	gen_getrunning	gen_getrunning(PyObject *self, void *Py_UNUSED(ignored))	todo		
+Objects/genobject.c	771	775	gen_getsuspended	gen_getsuspended(PyObject *self, void *Py_UNUSED(ignored))	todo		
+Objects/genobject.c	778	787	_gen_getframe	_gen_getframe(PyGenObject *gen, const char *const name)	todo		
+Objects/genobject.c	790	794	gen_getframe	gen_getframe(PyObject *self, void *Py_UNUSED(ignored))	todo		
+Objects/genobject.c	797	803	_gen_getcode	_gen_getcode(PyGenObject *gen, const char *const name)	todo		
+Objects/genobject.c	806	810	gen_getcode	gen_getcode(PyObject *self, void *Py_UNUSED(ignored))	todo		
+Objects/genobject.c	831	839	gen_sizeof	gen_sizeof(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
+Objects/genobject.c	916	935	make_gen	make_gen(PyTypeObject *type, PyFunctionObject *func)	todo		
+Objects/genobject.c	941	985	_Py_MakeCoro	_Py_MakeCoro(PyFunctionObject *func)	todo		
+Objects/genobject.c	988	1022	gen_new_with_qualname	gen_new_with_qualname(PyTypeObject *type, PyFrameObject *f, PyObject *name, PyObject *qualname)	todo		
+Objects/genobject.c	1025	1028	PyGen_NewWithQualName	PyGen_NewWithQualName(PyFrameObject *f, PyObject *name, PyObject *qualname)	todo		
+Objects/genobject.c	1031	1034	PyGen_New	PyGen_New(PyFrameObject *f)	todo		
+Objects/genobject.c	1049	1058	gen_is_coroutine	gen_is_coroutine(PyObject *o)	todo		
+Objects/genobject.c	1069	1107	_PyCoro_GetAwaitableIter	_PyCoro_GetAwaitableIter(PyObject *o)	todo		
+Objects/genobject.c	1110	1115	coro_repr	coro_repr(PyObject *self)	todo		
+Objects/genobject.c	1118	1127	coro_await	coro_await(PyObject *coro)	todo		
+Objects/genobject.c	1130	1136	coro_get_cr_await	coro_get_cr_await(PyObject *coro, void *Py_UNUSED(ignored))	todo		
+Objects/genobject.c	1139	1146	cr_getsuspended	cr_getsuspended(PyObject *self, void *Py_UNUSED(ignored))	todo		
+Objects/genobject.c	1149	1156	cr_getrunning	cr_getrunning(PyObject *self, void *Py_UNUSED(ignored))	todo		
+Objects/genobject.c	1159	1162	cr_getframe	cr_getframe(PyObject *coro, void *Py_UNUSED(ignored))	todo		
+Objects/genobject.c	1165	1168	cr_getcode	cr_getcode(PyObject *coro, void *Py_UNUSED(ignored))	todo		
+Objects/genobject.c	1276	1282	coro_wrapper_dealloc	coro_wrapper_dealloc(PyObject *self)	todo		
+Objects/genobject.c	1285	1289	coro_wrapper_iternext	coro_wrapper_iternext(PyObject *self)	todo		
+Objects/genobject.c	1292	1296	coro_wrapper_send	coro_wrapper_send(PyObject *self, PyObject *arg)	todo		
+Objects/genobject.c	1299	1303	coro_wrapper_throw	coro_wrapper_throw(PyObject *self, PyObject *const *args, Py_ssize_t nargs)	todo		
+Objects/genobject.c	1306	1310	coro_wrapper_close	coro_wrapper_close(PyObject *self, PyObject *args)	todo		
+Objects/genobject.c	1313	1318	coro_wrapper_traverse	coro_wrapper_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/genobject.c	1371	1400	compute_cr_origin	compute_cr_origin(int origin_depth, _PyInterpreterFrame *current_frame)	todo		
+Objects/genobject.c	1403	1425	PyCoro_New	PyCoro_New(PyFrameObject *f, PyObject *name, PyObject *qualname)	todo		
+Objects/genobject.c	1479	1484	async_gen_traverse	async_gen_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/genobject.c	1488	1493	async_gen_repr	async_gen_repr(PyObject *self)	todo		
+Objects/genobject.c	1497	1530	async_gen_init_hooks	async_gen_init_hooks(PyAsyncGenObject *o)	todo		
+Objects/genobject.c	1534	1541	async_gen_anext	async_gen_anext(PyObject *self)	todo		
+Objects/genobject.c	1545	1552	async_gen_asend	async_gen_asend(PyObject *op, PyObject *arg)	todo		
+Objects/genobject.c	1556	1563	async_gen_aclose	async_gen_aclose(PyObject *op, PyObject *arg)	todo		
+Objects/genobject.c	1566	1581	async_gen_athrow	async_gen_athrow(PyObject *op, PyObject *args)	todo		
+Objects/genobject.c	1584	1587	ag_getframe	ag_getframe(PyObject *ag, void *Py_UNUSED(ignored))	todo		
+Objects/genobject.c	1590	1593	ag_getcode	ag_getcode(PyObject *gen, void *Py_UNUSED(ignored))	todo		
+Objects/genobject.c	1596	1603	ag_getsuspended	ag_getsuspended(PyObject *self, void *Py_UNUSED(ignored))	todo		
+Objects/genobject.c	1711	1725	PyAsyncGen_New	PyAsyncGen_New(PyFrameObject *f, PyObject *name, PyObject *qualname)	todo		
+Objects/genobject.c	1728	1754	async_gen_unwrap_value	async_gen_unwrap_value(PyAsyncGenObject *gen, PyObject *result)	todo		
+Objects/genobject.c	1761	1777	async_gen_asend_dealloc	async_gen_asend_dealloc(PyObject *self)	todo		
+Objects/genobject.c	1780	1786	async_gen_asend_traverse	async_gen_asend_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/genobject.c	1790	1824	async_gen_asend_send	async_gen_asend_send(PyObject *self, PyObject *arg)	todo		
+Objects/genobject.c	1828	1831	async_gen_asend_iternext	async_gen_asend_iternext(PyObject *ags)	todo		
+Objects/genobject.c	1835	1868	async_gen_asend_throw	async_gen_asend_throw(PyObject *self, PyObject *const *args, Py_ssize_t nargs)	todo		
+Objects/genobject.c	1872	1894	async_gen_asend_close	async_gen_asend_close(PyObject *self, PyObject *args)	todo		
+Objects/genobject.c	1897	1903	async_gen_asend_finalize	async_gen_asend_finalize(PyObject *self)	todo		
+Objects/genobject.c	1966	1982	async_gen_asend_new	async_gen_asend_new(PyAsyncGenObject *gen, PyObject *sendval)	todo		
+Objects/genobject.c	1989	1995	async_gen_wrapped_val_dealloc	async_gen_wrapped_val_dealloc(PyObject *self)	todo		
+Objects/genobject.c	1999	2004	async_gen_wrapped_val_traverse	async_gen_wrapped_val_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/genobject.c	2051	2067	_PyAsyncGenValueWrapperNew	_PyAsyncGenValueWrapperNew(PyThreadState *tstate, PyObject *val)	todo		
+Objects/genobject.c	2077	2088	async_gen_athrow_dealloc	async_gen_athrow_dealloc(PyObject *self)	todo		
+Objects/genobject.c	2092	2098	async_gen_athrow_traverse	async_gen_athrow_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/genobject.c	2102	2231	async_gen_athrow_send	async_gen_athrow_send(PyObject *self, PyObject *arg)	todo		
+Objects/genobject.c	2235	2301	async_gen_athrow_throw	async_gen_athrow_throw(PyObject *self, PyObject *const *args, Py_ssize_t nargs)	todo		
+Objects/genobject.c	2305	2308	async_gen_athrow_iternext	async_gen_athrow_iternext(PyObject *agt)	todo		
+Objects/genobject.c	2312	2334	async_gen_athrow_close	async_gen_athrow_close(PyObject *self, PyObject *args)	todo		
+Objects/genobject.c	2338	2345	async_gen_athrow_finalize	async_gen_athrow_finalize(PyObject *op)	todo		
+Objects/genobject.c	2409	2421	async_gen_athrow_new	async_gen_athrow_new(PyAsyncGenObject *gen, PyObject *args)	todo		

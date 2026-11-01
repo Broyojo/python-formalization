@@ -1,0 +1,36 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_hacl/Hacl_Streaming_HMAC.c	47	113	alg_of_impl	static Spec_Hash_Definitions_hash_alg alg_of_impl(Hacl_Agile_Hash_impl i)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	115	178	impl_of_state_s	static Hacl_Agile_Hash_impl impl_of_state_s(Hacl_Agile_Hash_state_s s)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	180	183	impl_of_state	static Hacl_Agile_Hash_impl impl_of_state(Hacl_Agile_Hash_state_s *s)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	185	580	malloc_	static Hacl_Agile_Hash_state_s *malloc_(Hacl_Agile_Hash_impl a)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	582	684	init	static void init(Hacl_Agile_Hash_state_s *s)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	687	813	update_multi	update_multi(Hacl_Agile_Hash_state_s *s, uint64_t prevlen, uint8_t *blocks, uint32_t len)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	816	937	update_last	update_last(Hacl_Agile_Hash_state_s *s, uint64_t prev_len, uint8_t *last, uint32_t last_len)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	939	1073	finish	static void finish(Hacl_Agile_Hash_state_s *s, uint8_t *dst)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	1075	1157	free_	static void free_(Hacl_Agile_Hash_state_s *s)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	1159	1405	copy	static void copy(Hacl_Agile_Hash_state_s *s_src, Hacl_Agile_Hash_state_s *s_dst)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	1407	1491	hash	static void hash(Hacl_Agile_Hash_impl i, uint8_t *dst, uint8_t *input, uint32_t input_len)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	1493	1551	hash_len	static uint32_t hash_len(Spec_Hash_Definitions_hash_alg a)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	1553	1619	block_len	static uint32_t block_len(Spec_Hash_Definitions_hash_alg a)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	1621	1687	max_input_len64	static uint64_t max_input_len64(Spec_Hash_Definitions_hash_alg a)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	1689	1713	wrap_key	static void wrap_key(Hacl_Agile_Hash_impl impl, uint8_t *output, uint8_t *key, uint32_t len)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	1715	1746	init0	static void init0(uint8_t *k, uint8_t *buf, Hacl_Streaming_HMAC_Definitions_two_state s)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	1748	1757	finish0	static void finish0(Hacl_Streaming_HMAC_Definitions_two_state s, uint8_t *dst)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	1760	1767	Hacl_Streaming_HMAC_s1	*Hacl_Streaming_HMAC_s1( Hacl_Streaming_HMAC_Definitions_index i, Hacl_Streaming_HMAC_Definitions_two_state s )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	1770	1777	Hacl_Streaming_HMAC_s2	*Hacl_Streaming_HMAC_s2( Hacl_Streaming_HMAC_Definitions_index i, Hacl_Streaming_HMAC_Definitions_two_state s )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	1780	1786	Hacl_Streaming_HMAC_index_of_state	Hacl_Streaming_HMAC_index_of_state(Hacl_Streaming_HMAC_Definitions_two_state s)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	1789	1794	__proj__Mkdtuple2__item___1__Hacl_Agile_Hash_impl_uint32_t	__proj__Mkdtuple2__item___1__Hacl_Agile_Hash_impl_uint32_t( Hacl_Streaming_HMAC_Definitions_index pair )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	1797	1800	dfst__Hacl_Agile_Hash_impl_uint32_t	dfst__Hacl_Agile_Hash_impl_uint32_t(Hacl_Streaming_HMAC_Definitions_index t)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	1803	1808	__proj__Mkdtuple2__item___2__Hacl_Agile_Hash_impl_uint32_t	__proj__Mkdtuple2__item___2__Hacl_Agile_Hash_impl_uint32_t( Hacl_Streaming_HMAC_Definitions_index pair )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	1810	1813	dsnd__Hacl_Agile_Hash_impl_uint32_t	static uint32_t dsnd__Hacl_Agile_Hash_impl_uint32_t(Hacl_Streaming_HMAC_Definitions_index t)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	1823	1928	malloc_internal	*malloc_internal(Hacl_Streaming_HMAC_Definitions_index i, uint8_t *key)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	1930	1943	is_blake2b_256	KRML_MAYBE_UNUSED static bool is_blake2b_256(Hacl_Agile_Hash_impl uu___)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	1945	1958	is_blake2s_128	KRML_MAYBE_UNUSED static bool is_blake2s_128(Hacl_Agile_Hash_impl uu___)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	1961	1993	Hacl_Streaming_HMAC_malloc_	Hacl_Streaming_HMAC_malloc_( Hacl_Agile_Hash_impl impl, uint8_t *key, uint32_t key_length, Hacl_Streaming_HMAC_agile_state **dst )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	1996	2000	Hacl_Streaming_HMAC_get_impl	Hacl_Streaming_HMAC_get_impl(Hacl_Streaming_HMAC_agile_state *s)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	2002	2018	reset_internal	static void reset_internal(Hacl_Streaming_HMAC_agile_state *state, uint8_t *key)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	2021	2034	Hacl_Streaming_HMAC_reset	Hacl_Streaming_HMAC_reset( Hacl_Streaming_HMAC_agile_state *state, uint8_t *key, uint32_t key_length )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	2037	2273	Hacl_Streaming_HMAC_update	Hacl_Streaming_HMAC_update( Hacl_Streaming_HMAC_agile_state *state, uint8_t *chunk, uint32_t chunk_len )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	2284	2392	Hacl_Streaming_HMAC_digest	Hacl_Streaming_HMAC_digest( Hacl_Streaming_HMAC_agile_state *state, uint8_t *output, uint32_t digest_length )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	2394	2408	Hacl_Streaming_HMAC_free	void Hacl_Streaming_HMAC_free(Hacl_Streaming_HMAC_agile_state *state)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Streaming_HMAC.c	2411	2525	Hacl_Streaming_HMAC_copy	*Hacl_Streaming_HMAC_copy(Hacl_Streaming_HMAC_agile_state *state)	excluded		vendored: third-party code

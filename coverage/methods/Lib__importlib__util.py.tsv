@@ -1,0 +1,16 @@
+file	line	endline	name	signature	status	entry	note
+Lib/importlib/util.py	18	20	source_hash	source_hash(source_bytes)	todo		
+Lib/importlib/util.py	23	35	resolve_name	resolve_name(name, package)	todo		
+Lib/importlib/util.py	38	66	_find_spec_from_path	_find_spec_from_path(name, path=None)	todo		
+Lib/importlib/util.py	69	111	find_spec	find_spec(name, package=None)	todo		
+Lib/importlib/util.py	150	151	_incompatible_extension_module_restrictions.__init__	__init__(self, *, disable_check)	todo		
+Lib/importlib/util.py	153	155	_incompatible_extension_module_restrictions.__enter__	__enter__(self)	todo		
+Lib/importlib/util.py	157	160	_incompatible_extension_module_restrictions.__exit__	__exit__(self, *args)	todo		
+Lib/importlib/util.py	163	164	_incompatible_extension_module_restrictions.override	override(self)	todo		
+Lib/importlib/util.py	171	224	_LazyModule.__getattribute__	__getattribute__(self, attr)	todo		
+Lib/importlib/util.py	226	231	_LazyModule.__delattr__	__delattr__(self, attr)	todo		
+Lib/importlib/util.py	239	241	LazyLoader.__check_eager_loader	__check_eager_loader(loader)	todo		
+Lib/importlib/util.py	244	247	LazyLoader.factory	factory(cls, loader)	todo		
+Lib/importlib/util.py	249	251	LazyLoader.__init__	__init__(self, loader)	todo		
+Lib/importlib/util.py	253	254	LazyLoader.create_module	create_module(self, spec)	todo		
+Lib/importlib/util.py	256	273	LazyLoader.exec_module	exec_module(self, module)	todo		

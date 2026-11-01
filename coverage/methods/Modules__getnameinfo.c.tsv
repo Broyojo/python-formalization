@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Modules/getnameinfo.c	88	206	getnameinfo	getnameinfo(const struct sockaddr *sa, size_t salen, char *host, size_t hostlen, char *serv, size_t servlen, int flags)	todo		

@@ -1,0 +1,77 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testbuffer.c	108	160	ndbuf_new	ndbuf_new(Py_ssize_t nitems, Py_ssize_t itemsize, Py_ssize_t offset, int flags)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	163	174	ndbuf_free	ndbuf_free(ndbuf_t *ndbuf)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	177	183	ndbuf_push	ndbuf_push(NDArrayObject *nd, ndbuf_t *elt)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	186	197	ndbuf_delete	ndbuf_delete(NDArrayObject *nd, ndbuf_t *elt)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	200	203	ndbuf_pop	ndbuf_pop(NDArrayObject *nd)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	207	218	ndarray_new	ndarray_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	221	240	ndarray_dealloc	ndarray_dealloc(PyObject *op)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	243	262	ndarray_init_staticbuf	ndarray_init_staticbuf(PyObject *exporter, NDArrayObject *nd, int flags)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	265	275	init_flags	init_flags(ndbuf_t *ndbuf)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	292	295	get_nmemb	get_nmemb(PyObject *s)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	301	391	pack_from_list	pack_from_list(PyObject *obj, PyObject *items, PyObject *format, Py_ssize_t itemsize)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	395	470	pack_single	pack_single(char *ptr, PyObject *item, const char *fmt, Py_ssize_t itemsize)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	473	511	copy_rec	copy_rec(const Py_ssize_t *shape, Py_ssize_t ndim, Py_ssize_t itemsize, char *dptr, const Py_ssize_t *dstrides, const Py_ssize_t *dsuboffsets, char *sptr, const Py_ssize_t *sstrides, const Py_ssize_t *ssuboffsets, char *mem)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	514	531	cmp_structure	cmp_structure(Py_buffer *dest, Py_buffer *src)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	537	567	copy_buffer	copy_buffer(Py_buffer *dest, Py_buffer *src)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	572	605	unpack_single	unpack_single(char *ptr, const char *fmt, Py_ssize_t itemsize)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	610	654	unpack_rec	unpack_rec(PyObject *unpack_from, char *ptr, PyObject *mview, char *item, const Py_ssize_t *shape, const Py_ssize_t *strides, const Py_ssize_t *suboffsets, Py_ssize_t ndim, Py_ssize_t itemsize)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	658	731	ndarray_as_list	ndarray_as_list(NDArrayObject *nd)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	786	798	get_itemsize	get_itemsize(PyObject *format)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	801	819	get_format	get_format(PyObject *format)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	822	845	init_simple	init_simple(ndbuf_t *ndbuf, PyObject *items, PyObject *format, Py_ssize_t itemsize)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	848	884	seq_as_ssize_array	seq_as_ssize_array(PyObject *seq, Py_ssize_t len, int is_shape)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	887	910	strides_from_shape	strides_from_shape(const ndbuf_t *ndbuf, int flags)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	929	969	verify_structure	verify_structure(Py_ssize_t len, Py_ssize_t itemsize, Py_ssize_t offset, const Py_ssize_t *shape, const Py_ssize_t *strides, Py_ssize_t ndim)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	1030	1106	init_suboffsets	init_suboffsets(ndbuf_t *ndbuf)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	1109	1117	init_len	init_len(Py_buffer *base)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	1120	1174	init_structure	init_structure(ndbuf_t *ndbuf, PyObject *shape, PyObject *strides, Py_ssize_t ndim)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	1177	1260	init_ndbuf	init_ndbuf(PyObject *items, PyObject *shape, PyObject *strides, Py_ssize_t offset, PyObject *format, int flags)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	1264	1276	ndarray_push_base	ndarray_push_base(NDArrayObject *nd, PyObject *items, PyObject *shape, PyObject *strides, Py_ssize_t offset, PyObject *format, int flags)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	1280	1342	ndarray_init	ndarray_init(PyObject *self, PyObject *args, PyObject *kwds)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	1346	1384	ndarray_push	ndarray_push(PyObject *self, PyObject *args, PyObject *kwds)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	1388	1410	ndarray_pop	ndarray_pop(PyObject *self, PyObject *dummy)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	1417	1532	ndarray_getbuf	ndarray_getbuf(PyObject *op, Py_buffer *view, int flags)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	1535	1543	ndarray_releasebuf	ndarray_releasebuf(PyObject *op, Py_buffer *view)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	1556	1586	ptr_from_index	ptr_from_index(Py_buffer *base, Py_ssize_t index)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	1589	1635	ndarray_item	ndarray_item(PyObject *op, Py_ssize_t index)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	1714	1740	init_slice	init_slice(Py_buffer *base, PyObject *key, int dim)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	1743	1779	copy_structure	copy_structure(Py_buffer *base)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	1782	1863	ndarray_subscript	ndarray_subscript(PyObject *op, PyObject *key)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	1867	1922	ndarray_ass_subscript	ndarray_ass_subscript(PyObject *op, PyObject *key, PyObject *value)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	1925	1960	slice_indices	slice_indices(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	1982	2004	ssize_array_as_tuple	ssize_array_as_tuple(Py_ssize_t *array, Py_ssize_t len)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2007	2011	ndarray_get_flags	ndarray_get_flags(PyObject *op, void *closure)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2014	2019	ndarray_get_offset	ndarray_get_offset(PyObject *op, void *closure)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2022	2031	ndarray_get_obj	ndarray_get_obj(PyObject *op, void *closure)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2034	2039	ndarray_get_nbytes	ndarray_get_nbytes(PyObject *op, void *closure)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2042	2047	ndarray_get_readonly	ndarray_get_readonly(PyObject *op, void *closure)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2050	2055	ndarray_get_itemsize	ndarray_get_itemsize(PyObject *op, void *closure)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2058	2064	ndarray_get_format	ndarray_get_format(PyObject *op, void *closure)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2067	2072	ndarray_get_ndim	ndarray_get_ndim(PyObject *op, void *closure)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2075	2080	ndarray_get_shape	ndarray_get_shape(PyObject *op, void *closure)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2083	2088	ndarray_get_strides	ndarray_get_strides(PyObject *op, void *closure)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2091	2096	ndarray_get_suboffsets	ndarray_get_suboffsets(PyObject *op, void *closure)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2099	2110	ndarray_c_contig	ndarray_c_contig(PyObject *self, void *dummy)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2113	2124	ndarray_fortran_contig	ndarray_fortran_contig(PyObject *self, void *dummy)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2127	2138	ndarray_contig	ndarray_contig(PyObject *self, void *dummy)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2163	2166	ndarray_tolist	ndarray_tolist(PyObject *self, PyObject *dummy)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2169	2205	ndarray_tobytes	ndarray_tobytes(PyObject *self, PyObject *dummy)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2209	2238	ndarray_add_suboffsets	ndarray_add_suboffsets(PyObject *self, PyObject *dummy)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2245	2313	ndarray_memoryview_from_buffer	ndarray_memoryview_from_buffer(PyObject *self, PyObject *dummy)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2319	2365	get_pointer	get_pointer(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2368	2371	get_sizeof_void_p	get_sizeof_void_p(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2374	2400	get_ascii_order	get_ascii_order(PyObject *order)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2404	2437	get_contiguous	get_contiguous(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2441	2480	py_buffer_to_contiguous	py_buffer_to_contiguous(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2483	2492	fmtcmp	fmtcmp(const char *fmt1, const char *fmt2)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2495	2512	arraycmp	arraycmp(const Py_ssize_t *a1, const Py_ssize_t *a2, const Py_ssize_t *shape, Py_ssize_t ndim)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2516	2576	cmp_contig	cmp_contig(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2579	2613	is_contiguous	is_contiguous(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2616	2640	ndarray_hash	ndarray_hash(PyObject *self)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2724	2727	staticarray_new	staticarray_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2730	2743	staticarray_init	staticarray_init(PyObject *self, PyObject *args, PyObject *kwds)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2746	2749	staticarray_dealloc	staticarray_dealloc(PyObject *self)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2754	2767	staticarray_getbuf	staticarray_getbuf(PyObject *op, Py_buffer *view, int flags)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2840	2915	_testbuffer_exec	_testbuffer_exec(PyObject *mod)	excluded		test-support: only for CPython's own tests
+Modules/_testbuffer.c	2918	2932	PyInit__testbuffer	PyInit__testbuffer(void)	excluded		test-support: only for CPython's own tests

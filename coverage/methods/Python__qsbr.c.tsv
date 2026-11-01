@@ -1,0 +1,15 @@
+file	line	endline	name	signature	status	entry	note
+Python/qsbr.c	46	57	qsbr_allocate	qsbr_allocate(struct _qsbr_shared *shared)	todo		
+Python/qsbr.c	61	76	initialize_new_array	initialize_new_array(struct _qsbr_shared *shared)	todo		
+Python/qsbr.c	80	111	grow_thread_array	grow_thread_array(struct _qsbr_shared *shared)	todo		
+Python/qsbr.c	114	120	_Py_qsbr_advance	_Py_qsbr_advance(struct _qsbr_shared *shared)	todo		
+Python/qsbr.c	123	126	_Py_qsbr_shared_next	_Py_qsbr_shared_next(struct _qsbr_shared *shared)	todo		
+Python/qsbr.c	129	157	qsbr_poll_scan	qsbr_poll_scan(struct _qsbr_shared *shared)	todo		
+Python/qsbr.c	160	171	_Py_qsbr_poll	_Py_qsbr_poll(struct _qsbr_thread_state *qsbr, uint64_t goal)	todo		
+Python/qsbr.c	174	180	_Py_qsbr_attach	_Py_qsbr_attach(struct _qsbr_thread_state *qsbr)	todo		
+Python/qsbr.c	183	188	_Py_qsbr_detach	_Py_qsbr_detach(struct _qsbr_thread_state *qsbr)	todo		
+Python/qsbr.c	191	217	_Py_qsbr_reserve	_Py_qsbr_reserve(PyInterpreterState *interp)	todo		
+Python/qsbr.c	220	232	_Py_qsbr_register	_Py_qsbr_register(_PyThreadStateImpl *tstate, PyInterpreterState *interp, Py_ssize_t index)	todo		
+Python/qsbr.c	235	260	_Py_qsbr_unregister	_Py_qsbr_unregister(PyThreadState *tstate)	todo		
+Python/qsbr.c	263	271	_Py_qsbr_fini	_Py_qsbr_fini(PyInterpreterState *interp)	todo		
+Python/qsbr.c	274	290	_Py_qsbr_after_fork	_Py_qsbr_after_fork(_PyThreadStateImpl *tstate)	todo		

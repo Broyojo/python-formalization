@@ -1,0 +1,90 @@
+file	line	endline	name	signature	status	entry	note
+Lib/codecs.py	94	107	CodecInfo.__new__	__new__(cls, encode, decode, streamreader=None, streamwriter=None, incrementalencoder=None, incrementaldecoder=None, name=None, *, _is_text_encoding=None)	todo		
+Lib/codecs.py	109	112	CodecInfo.__repr__	__repr__(self)	todo		
+Lib/codecs.py	114	115	CodecInfo.__getnewargs__	__getnewargs__(self)	todo		
+Lib/codecs.py	141	158	Codec.encode	encode(self, input, errors='strict')	todo		
+Lib/codecs.py	160	181	Codec.decode	decode(self, input, errors='strict')	todo		
+Lib/codecs.py	189	198	IncrementalEncoder.__init__	__init__(self, errors='strict')	todo		
+Lib/codecs.py	200	204	IncrementalEncoder.encode	encode(self, input, final=False)	todo		
+Lib/codecs.py	206	209	IncrementalEncoder.reset	reset(self)	todo		
+Lib/codecs.py	211	215	IncrementalEncoder.getstate	getstate(self)	todo		
+Lib/codecs.py	217	221	IncrementalEncoder.setstate	setstate(self, state)	todo		
+Lib/codecs.py	229	232	BufferedIncrementalEncoder.__init__	__init__(self, errors='strict')	todo		
+Lib/codecs.py	234	237	BufferedIncrementalEncoder._buffer_encode	_buffer_encode(self, input, errors, final)	todo		
+Lib/codecs.py	239	245	BufferedIncrementalEncoder.encode	encode(self, input, final=False)	todo		
+Lib/codecs.py	247	249	BufferedIncrementalEncoder.reset	reset(self)	todo		
+Lib/codecs.py	251	252	BufferedIncrementalEncoder.getstate	getstate(self)	todo		
+Lib/codecs.py	254	255	BufferedIncrementalEncoder.setstate	setstate(self, state)	todo		
+Lib/codecs.py	263	271	IncrementalDecoder.__init__	__init__(self, errors='strict')	todo		
+Lib/codecs.py	273	277	IncrementalDecoder.decode	decode(self, input, final=False)	todo		
+Lib/codecs.py	279	282	IncrementalDecoder.reset	reset(self)	todo		
+Lib/codecs.py	284	296	IncrementalDecoder.getstate	getstate(self)	todo		
+Lib/codecs.py	298	304	IncrementalDecoder.setstate	setstate(self, state)	todo		
+Lib/codecs.py	312	315	BufferedIncrementalDecoder.__init__	__init__(self, errors='strict')	todo		
+Lib/codecs.py	317	320	BufferedIncrementalDecoder._buffer_decode	_buffer_decode(self, input, errors, final)	todo		
+Lib/codecs.py	322	328	BufferedIncrementalDecoder.decode	decode(self, input, final=False)	todo		
+Lib/codecs.py	330	332	BufferedIncrementalDecoder.reset	reset(self)	todo		
+Lib/codecs.py	334	336	BufferedIncrementalDecoder.getstate	getstate(self)	todo		
+Lib/codecs.py	338	340	BufferedIncrementalDecoder.setstate	setstate(self, state)	todo		
+Lib/codecs.py	351	374	StreamWriter.__init__	__init__(self, stream, errors='strict')	todo		
+Lib/codecs.py	376	381	StreamWriter.write	write(self, object)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/codecs.py	383	388	StreamWriter.writelines	writelines(self, list)	todo		
+Lib/codecs.py	390	400	StreamWriter.reset	reset(self)	todo		
+Lib/codecs.py	402	405	StreamWriter.seek	seek(self, offset, whence=0)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
+Lib/codecs.py	407	412	StreamWriter.__getattr__	__getattr__(self, name, getattr=getattr)	todo		
+Lib/codecs.py	414	415	StreamWriter.__enter__	__enter__(self)	todo		
+Lib/codecs.py	417	418	StreamWriter.__exit__	__exit__(self, type, value, tb)	todo		
+Lib/codecs.py	420	421	StreamWriter.__reduce_ex__	__reduce_ex__(self, proto)	todo		
+Lib/codecs.py	429	452	StreamReader.__init__	__init__(self, stream, errors='strict')	todo		
+Lib/codecs.py	454	455	StreamReader.decode	decode(self, input, errors='strict')	todo		
+Lib/codecs.py	457	535	StreamReader.read	read(self, size=-1, chars=-1, firstline=False)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/codecs.py	537	610	StreamReader.readline	readline(self, size=None, keepends=True)	todo		
+Lib/codecs.py	612	625	StreamReader.readlines	readlines(self, sizehint=None, keepends=True)	todo		candidates:pyio-bytesio-readlines-hint-doc
+Lib/codecs.py	627	638	StreamReader.reset	reset(self)	todo		
+Lib/codecs.py	640	646	StreamReader.seek	seek(self, offset, whence=0)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
+Lib/codecs.py	648	654	StreamReader.__next__	__next__(self)	todo		
+Lib/codecs.py	656	657	StreamReader.__iter__	__iter__(self)	todo		
+Lib/codecs.py	659	664	StreamReader.__getattr__	__getattr__(self, name, getattr=getattr)	todo		
+Lib/codecs.py	666	667	StreamReader.__enter__	__enter__(self)	todo		
+Lib/codecs.py	669	670	StreamReader.__exit__	__exit__(self, type, value, tb)	todo		
+Lib/codecs.py	672	673	StreamReader.__reduce_ex__	__reduce_ex__(self, proto)	todo		
+Lib/codecs.py	690	706	StreamReaderWriter.__init__	__init__(self, stream, Reader, Writer, errors='strict')	todo		
+Lib/codecs.py	708	710	StreamReaderWriter.read	read(self, size=-1)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/codecs.py	712	714	StreamReaderWriter.readline	readline(self, size=None, keepends=True)	todo		
+Lib/codecs.py	716	718	StreamReaderWriter.readlines	readlines(self, sizehint=None, keepends=True)	todo		candidates:pyio-bytesio-readlines-hint-doc
+Lib/codecs.py	720	723	StreamReaderWriter.__next__	__next__(self)	todo		
+Lib/codecs.py	725	726	StreamReaderWriter.__iter__	__iter__(self)	todo		
+Lib/codecs.py	728	730	StreamReaderWriter.write	write(self, data)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/codecs.py	732	734	StreamReaderWriter.writelines	writelines(self, list)	todo		
+Lib/codecs.py	736	739	StreamReaderWriter.reset	reset(self)	todo		
+Lib/codecs.py	741	745	StreamReaderWriter.seek	seek(self, offset, whence=0)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
+Lib/codecs.py	747	752	StreamReaderWriter.__getattr__	__getattr__(self, name, getattr=getattr)	todo		
+Lib/codecs.py	756	757	StreamReaderWriter.__enter__	__enter__(self)	todo		
+Lib/codecs.py	759	760	StreamReaderWriter.__exit__	__exit__(self, type, value, tb)	todo		
+Lib/codecs.py	762	763	StreamReaderWriter.__reduce_ex__	__reduce_ex__(self, proto)	todo		
+Lib/codecs.py	787	813	StreamRecoder.__init__	__init__(self, stream, encode, decode, Reader, Writer, errors='strict')	todo		
+Lib/codecs.py	815	819	StreamRecoder.read	read(self, size=-1)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/codecs.py	821	828	StreamRecoder.readline	readline(self, size=None)	todo		
+Lib/codecs.py	830	834	StreamRecoder.readlines	readlines(self, sizehint=None)	todo		candidates:pyio-bytesio-readlines-hint-doc
+Lib/codecs.py	836	841	StreamRecoder.__next__	__next__(self)	todo		
+Lib/codecs.py	843	844	StreamRecoder.__iter__	__iter__(self)	todo		
+Lib/codecs.py	846	849	StreamRecoder.write	write(self, data)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/codecs.py	851	855	StreamRecoder.writelines	writelines(self, list)	todo		
+Lib/codecs.py	857	860	StreamRecoder.reset	reset(self)	todo		
+Lib/codecs.py	862	866	StreamRecoder.seek	seek(self, offset, whence=0)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
+Lib/codecs.py	868	873	StreamRecoder.__getattr__	__getattr__(self, name, getattr=getattr)	todo		
+Lib/codecs.py	875	876	StreamRecoder.__enter__	__enter__(self)	todo		
+Lib/codecs.py	878	879	StreamRecoder.__exit__	__exit__(self, type, value, tb)	todo		
+Lib/codecs.py	881	882	StreamRecoder.__reduce_ex__	__reduce_ex__(self, proto)	todo		
+Lib/codecs.py	886	935	open	open(filename, mode='r', encoding=None, errors='strict', buffering=-1)	todo		
+Lib/codecs.py	937	971	EncodedFile	EncodedFile(file, data_encoding, file_encoding=None, errors='strict')	todo		
+Lib/codecs.py	975	983	getencoder	getencoder(encoding)	todo		
+Lib/codecs.py	985	993	getdecoder	getdecoder(encoding)	todo		
+Lib/codecs.py	995	1007	getincrementalencoder	getincrementalencoder(encoding)	todo		
+Lib/codecs.py	1009	1021	getincrementaldecoder	getincrementaldecoder(encoding)	todo		
+Lib/codecs.py	1023	1031	getreader	getreader(encoding)	todo		
+Lib/codecs.py	1033	1041	getwriter	getwriter(encoding)	todo		
+Lib/codecs.py	1043	1059	iterencode	iterencode(iterator, encoding, errors='strict', **kwargs)	todo		
+Lib/codecs.py	1061	1077	iterdecode	iterdecode(iterator, encoding, errors='strict', **kwargs)	todo		
+Lib/codecs.py	1081	1089	make_identity_dict	make_identity_dict(rng)	todo		
+Lib/codecs.py	1091	1110	make_encoding_map	make_encoding_map(decoding_map)	todo		

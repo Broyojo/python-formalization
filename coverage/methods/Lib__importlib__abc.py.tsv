@@ -1,0 +1,14 @@
+file	line	endline	name	signature	status	entry	note
+Lib/importlib/abc.py	25	33	_register	_register(abstract_cls, *classes)	todo		
+Lib/importlib/abc.py	43	46	MetaPathFinder.invalidate_caches	invalidate_caches(self)	todo		
+Lib/importlib/abc.py	56	59	PathEntryFinder.invalidate_caches	invalidate_caches(self)	todo		
+Lib/importlib/abc.py	77	80	ResourceLoader.get_data	get_data(self, path)	todo		
+Lib/importlib/abc.py	92	98	InspectLoader.is_package	is_package(self, fullname)	todo		
+Lib/importlib/abc.py	100	111	InspectLoader.get_code	get_code(self, fullname)	todo		
+Lib/importlib/abc.py	114	120	InspectLoader.get_source	get_source(self, fullname)	todo		
+Lib/importlib/abc.py	123	128	InspectLoader.source_to_code	source_to_code(data, path='<string>')	todo		
+Lib/importlib/abc.py	146	152	ExecutionLoader.get_filename	get_filename(self, fullname)	todo		
+Lib/importlib/abc.py	154	168	ExecutionLoader.get_code	get_code(self, fullname)	todo		
+Lib/importlib/abc.py	203	211	SourceLoader.path_mtime	path_mtime(self, path)	todo		
+Lib/importlib/abc.py	213	222	SourceLoader.path_stats	path_stats(self, path)	todo		
+Lib/importlib/abc.py	224	232	SourceLoader.set_data	set_data(self, path, data)	todo		

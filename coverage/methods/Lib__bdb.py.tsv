@@ -1,0 +1,89 @@
+file	line	endline	name	signature	status	entry	note
+Lib/bdb.py	40	46	_MonitoringTracer.__init__	__init__(self)	todo		
+Lib/bdb.py	48	67	_MonitoringTracer.start_trace	start_trace(self, tracefunc)	todo		
+Lib/bdb.py	69	76	_MonitoringTracer.stop_trace	stop_trace(self)	todo		
+Lib/bdb.py	78	79	_MonitoringTracer.disable_current_event	disable_current_event(self)	todo		
+Lib/bdb.py	81	83	_MonitoringTracer.restart_events	restart_events(self)	todo		
+Lib/bdb.py	85	111	_MonitoringTracer.callback_wrapper	callback_wrapper(self, func, event)	todo		
+Lib/bdb.py	113	118	_MonitoringTracer.call_callback	call_callback(self, frame, code, *args)	todo		
+Lib/bdb.py	120	122	_MonitoringTracer.return_callback	return_callback(self, frame, code, offset, retval)	todo		
+Lib/bdb.py	124	126	_MonitoringTracer.unwind_callback	unwind_callback(self, frame, code, *args)	todo		
+Lib/bdb.py	128	130	_MonitoringTracer.line_callback	line_callback(self, frame, code, *args)	todo		
+Lib/bdb.py	132	140	_MonitoringTracer.jump_callback	jump_callback(self, frame, code, inst_offset, dest_offset)	todo		
+Lib/bdb.py	142	150	_MonitoringTracer.exception_callback	exception_callback(self, frame, code, offset, exc)	todo		
+Lib/bdb.py	152	154	_MonitoringTracer.opcode_callback	opcode_callback(self, frame, code, offset)	todo		
+Lib/bdb.py	156	168	_MonitoringTracer.update_local_events	update_local_events(self, frame=None)	todo		
+Lib/bdb.py	170	177	_MonitoringTracer._get_lineno	_get_lineno(self, code, offset)	todo		
+Lib/bdb.py	194	213	Bdb.__init__	__init__(self, skip=None, backend='settrace')	todo		
+Lib/bdb.py	215	230	Bdb.canonic	canonic(self, filename)	todo		
+Lib/bdb.py	232	236	Bdb.start_trace	start_trace(self)	todo		
+Lib/bdb.py	238	242	Bdb.stop_trace	stop_trace(self)	todo		
+Lib/bdb.py	244	249	Bdb.reset	reset(self)	todo		
+Lib/bdb.py	252	255	Bdb.set_enterframe	set_enterframe(self, frame)	todo		
+Lib/bdb.py	257	302	Bdb.trace_dispatch	trace_dispatch(self, frame, event, arg)	todo		
+Lib/bdb.py	304	322	Bdb.dispatch_line	dispatch_line(self, frame)	todo		
+Lib/bdb.py	324	350	Bdb.dispatch_call	dispatch_call(self, frame, arg)	todo		
+Lib/bdb.py	352	381	Bdb.dispatch_return	dispatch_return(self, frame, arg)	todo		
+Lib/bdb.py	383	410	Bdb.dispatch_exception	dispatch_exception(self, frame, arg)	todo		
+Lib/bdb.py	412	425	Bdb.dispatch_opcode	dispatch_opcode(self, frame, arg)	todo		
+Lib/bdb.py	431	438	Bdb.is_skipped_module	is_skipped_module(self, module_name)	todo		
+Lib/bdb.py	440	453	Bdb.stop_here	stop_here(self, frame)	todo		
+Lib/bdb.py	455	480	Bdb.break_here	break_here(self, frame)	todo		
+Lib/bdb.py	482	487	Bdb.do_clear	do_clear(self, arg)	todo		
+Lib/bdb.py	489	498	Bdb.break_anywhere	break_anywhere(self, frame)	todo		
+Lib/bdb.py	500	508	Bdb._lineno_in_frame	_lineno_in_frame(self, lineno, frame)	todo		
+Lib/bdb.py	513	515	Bdb.user_call	user_call(self, frame, argument_list)	todo		
+Lib/bdb.py	517	519	Bdb.user_line	user_line(self, frame)	todo		
+Lib/bdb.py	521	523	Bdb.user_return	user_return(self, frame, return_value)	todo		
+Lib/bdb.py	525	527	Bdb.user_exception	user_exception(self, frame, exc_info)	todo		
+Lib/bdb.py	529	531	Bdb.user_opcode	user_opcode(self, frame)	todo		
+Lib/bdb.py	533	543	Bdb._set_trace_opcodes	_set_trace_opcodes(self, trace_opcodes)	todo		
+Lib/bdb.py	545	563	Bdb._set_stopinfo	_set_stopinfo(self, stopframe, returnframe, stoplineno=0, opcode=False, cmdframe=None, cmdlineno=None)	todo		
+Lib/bdb.py	565	573	Bdb._set_caller_tracefunc	_set_caller_tracefunc(self, current_frame)	todo		
+Lib/bdb.py	578	584	Bdb.set_until	set_until(self, frame, lineno=None)	todo		
+Lib/bdb.py	586	590	Bdb.set_step	set_step(self)	todo		
+Lib/bdb.py	592	594	Bdb.set_stepinstr	set_stepinstr(self)	todo		
+Lib/bdb.py	596	598	Bdb.set_next	set_next(self, frame)	todo		
+Lib/bdb.py	600	605	Bdb.set_return	set_return(self, frame)	todo		
+Lib/bdb.py	607	626	Bdb.set_trace	set_trace(self, frame=None)	todo		
+Lib/bdb.py	628	646	Bdb.set_continue	set_continue(self)	todo		
+Lib/bdb.py	648	656	Bdb.set_quit	set_quit(self)	todo		
+Lib/bdb.py	665	669	Bdb._add_to_breaks	_add_to_breaks(self, filename, lineno)	todo		
+Lib/bdb.py	671	693	Bdb.set_break	set_break(self, filename, lineno, temporary=False, cond=None, funcname=None)	todo		
+Lib/bdb.py	695	704	Bdb._load_breaks	_load_breaks(self)	todo		
+Lib/bdb.py	706	717	Bdb._prune_breaks	_prune_breaks(self, filename, lineno)	todo		
+Lib/bdb.py	719	734	Bdb.clear_break	clear_break(self, filename, lineno)	todo		
+Lib/bdb.py	736	747	Bdb.clear_bpbynumber	clear_bpbynumber(self, arg)	todo		
+Lib/bdb.py	749	762	Bdb.clear_all_file_breaks	clear_all_file_breaks(self, filename)	todo		
+Lib/bdb.py	764	775	Bdb.clear_all_breaks	clear_all_breaks(self)	todo		
+Lib/bdb.py	777	795	Bdb.get_bpbynumber	get_bpbynumber(self, arg)	todo		
+Lib/bdb.py	797	801	Bdb.get_break	get_break(self, filename, lineno)	todo		
+Lib/bdb.py	803	811	Bdb.get_breaks	get_breaks(self, filename, lineno)	todo		
+Lib/bdb.py	813	822	Bdb.get_file_breaks	get_file_breaks(self, filename)	todo		
+Lib/bdb.py	824	826	Bdb.get_all_breaks	get_all_breaks(self)	todo		
+Lib/bdb.py	831	852	Bdb.get_stack	get_stack(self, f, t)	todo		
+Lib/bdb.py	854	882	Bdb.format_stack_entry	format_stack_entry(self, frame_lineno, lprefix=': ')	todo		
+Lib/bdb.py	884	887	Bdb.disable_current_event	disable_current_event(self)	todo		
+Lib/bdb.py	889	892	Bdb.restart_events	restart_events(self)	todo		
+Lib/bdb.py	898	918	Bdb.run	run(self, cmd, globals=None, locals=None)	todo		
+Lib/bdb.py	920	938	Bdb.runeval	runeval(self, expr, globals=None, locals=None)	todo		
+Lib/bdb.py	940	943	Bdb.runctx	runctx(self, cmd, globals, locals)	todo		
+Lib/bdb.py	947	962	Bdb.runcall	runcall(self, func, /, *args, **kwds)	todo		
+Lib/bdb.py	965	967	set_trace	set_trace()	todo		
+Lib/bdb.py	997	1015	Breakpoint.__init__	__init__(self, file, line, temporary=False, cond=None, funcname=None)	todo		
+Lib/bdb.py	1018	1021	Breakpoint.clearBreakpoints	clearBreakpoints()	todo		
+Lib/bdb.py	1023	1035	Breakpoint.deleteMe	deleteMe(self)	todo		
+Lib/bdb.py	1037	1039	Breakpoint.enable	enable(self)	todo		
+Lib/bdb.py	1041	1043	Breakpoint.disable	disable(self)	todo		
+Lib/bdb.py	1045	1053	Breakpoint.bpprint	bpprint(self, out=None)	todo		
+Lib/bdb.py	1055	1083	Breakpoint.bpformat	bpformat(self)	todo		
+Lib/bdb.py	1085	1087	Breakpoint.__str__	__str__(self)	todo		
+Lib/bdb.py	1092	1121	checkfuncname	checkfuncname(b, frame)	todo		
+Lib/bdb.py	1124	1172	effective	effective(file, line, frame)	todo		
+Lib/bdb.py	1178	1181	Tdb.user_call	user_call(self, frame, args)	todo		
+Lib/bdb.py	1182	1188	Tdb.user_line	user_line(self, frame)	todo		
+Lib/bdb.py	1189	1190	Tdb.user_return	user_return(self, frame, retval)	todo		
+Lib/bdb.py	1191	1193	Tdb.user_exception	user_exception(self, frame, exc_stuff)	todo		
+Lib/bdb.py	1195	1198	foo	foo(n)	todo		
+Lib/bdb.py	1200	1202	bar	bar(a)	todo		
+Lib/bdb.py	1204	1206	test	test()	todo		

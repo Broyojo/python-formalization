@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Python/future.c	9	62	future_check_features	future_check_features(_PyFutureFeatures *ff, stmt_ty s, PyObject *filename)	todo		
+Python/future.c	65	106	future_parse	future_parse(_PyFutureFeatures *ff, mod_ty mod, PyObject *filename)	todo		
+Python/future.c	110	119	_PyFuture_FromAST	_PyFuture_FromAST(mod_ty mod, PyObject *filename, _PyFutureFeatures *ff)	todo		

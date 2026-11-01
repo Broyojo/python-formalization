@@ -1,0 +1,61 @@
+file	line	endline	name	signature	status	entry	note
+Lib/xml/sax/xmlreader.py	24	28	XMLReader.__init__	__init__(self)	todo		
+Lib/xml/sax/xmlreader.py	30	32	XMLReader.parse	parse(self, source)	todo		
+Lib/xml/sax/xmlreader.py	34	36	XMLReader.getContentHandler	getContentHandler(self)	todo		
+Lib/xml/sax/xmlreader.py	38	40	XMLReader.setContentHandler	setContentHandler(self, handler)	todo		
+Lib/xml/sax/xmlreader.py	42	44	XMLReader.getDTDHandler	getDTDHandler(self)	todo		
+Lib/xml/sax/xmlreader.py	46	48	XMLReader.setDTDHandler	setDTDHandler(self, handler)	todo		
+Lib/xml/sax/xmlreader.py	50	52	XMLReader.getEntityResolver	getEntityResolver(self)	todo		
+Lib/xml/sax/xmlreader.py	54	56	XMLReader.setEntityResolver	setEntityResolver(self, resolver)	todo		
+Lib/xml/sax/xmlreader.py	58	60	XMLReader.getErrorHandler	getErrorHandler(self)	todo		
+Lib/xml/sax/xmlreader.py	62	64	XMLReader.setErrorHandler	setErrorHandler(self, handler)	todo		
+Lib/xml/sax/xmlreader.py	66	73	XMLReader.setLocale	setLocale(self, locale)	todo		
+Lib/xml/sax/xmlreader.py	75	77	XMLReader.getFeature	getFeature(self, name)	todo		
+Lib/xml/sax/xmlreader.py	79	81	XMLReader.setFeature	setFeature(self, name, state)	todo		
+Lib/xml/sax/xmlreader.py	83	85	XMLReader.getProperty	getProperty(self, name)	todo		
+Lib/xml/sax/xmlreader.py	87	89	XMLReader.setProperty	setProperty(self, name, value)	todo		
+Lib/xml/sax/xmlreader.py	111	113	IncrementalParser.__init__	__init__(self, bufsize=2 ** 16)	todo		
+Lib/xml/sax/xmlreader.py	115	125	IncrementalParser.parse	parse(self, source)	todo		
+Lib/xml/sax/xmlreader.py	127	134	IncrementalParser.feed	feed(self, data)	todo		
+Lib/xml/sax/xmlreader.py	136	139	IncrementalParser.prepareParser	prepareParser(self, source)	todo		
+Lib/xml/sax/xmlreader.py	141	152	IncrementalParser.close	close(self)	todo		
+Lib/xml/sax/xmlreader.py	154	159	IncrementalParser.reset	reset(self)	todo		
+Lib/xml/sax/xmlreader.py	169	171	Locator.getColumnNumber	getColumnNumber(self)	todo		
+Lib/xml/sax/xmlreader.py	173	175	Locator.getLineNumber	getLineNumber(self)	todo		
+Lib/xml/sax/xmlreader.py	177	179	Locator.getPublicId	getPublicId(self)	todo		
+Lib/xml/sax/xmlreader.py	181	183	Locator.getSystemId	getSystemId(self)	todo		
+Lib/xml/sax/xmlreader.py	203	208	InputSource.__init__	__init__(self, system_id=None)	todo		
+Lib/xml/sax/xmlreader.py	210	212	InputSource.setPublicId	setPublicId(self, public_id)	todo		
+Lib/xml/sax/xmlreader.py	214	216	InputSource.getPublicId	getPublicId(self)	todo		
+Lib/xml/sax/xmlreader.py	218	220	InputSource.setSystemId	setSystemId(self, system_id)	todo		
+Lib/xml/sax/xmlreader.py	222	224	InputSource.getSystemId	getSystemId(self)	todo		
+Lib/xml/sax/xmlreader.py	226	234	InputSource.setEncoding	setEncoding(self, encoding)	todo		
+Lib/xml/sax/xmlreader.py	236	238	InputSource.getEncoding	getEncoding(self)	todo		
+Lib/xml/sax/xmlreader.py	240	251	InputSource.setByteStream	setByteStream(self, bytefile)	todo		
+Lib/xml/sax/xmlreader.py	253	258	InputSource.getByteStream	getByteStream(self)	todo		
+Lib/xml/sax/xmlreader.py	260	268	InputSource.setCharacterStream	setCharacterStream(self, charfile)	todo		
+Lib/xml/sax/xmlreader.py	270	272	InputSource.getCharacterStream	getCharacterStream(self)	todo		
+Lib/xml/sax/xmlreader.py	278	282	AttributesImpl.__init__	__init__(self, attrs)	todo		
+Lib/xml/sax/xmlreader.py	284	285	AttributesImpl.getLength	getLength(self)	todo		
+Lib/xml/sax/xmlreader.py	287	288	AttributesImpl.getType	getType(self, name)	todo		
+Lib/xml/sax/xmlreader.py	290	291	AttributesImpl.getValue	getValue(self, name)	todo		
+Lib/xml/sax/xmlreader.py	293	294	AttributesImpl.getValueByQName	getValueByQName(self, name)	todo		
+Lib/xml/sax/xmlreader.py	296	299	AttributesImpl.getNameByQName	getNameByQName(self, name)	todo		
+Lib/xml/sax/xmlreader.py	301	304	AttributesImpl.getQNameByName	getQNameByName(self, name)	todo		
+Lib/xml/sax/xmlreader.py	306	307	AttributesImpl.getNames	getNames(self)	todo		
+Lib/xml/sax/xmlreader.py	309	310	AttributesImpl.getQNames	getQNames(self)	todo		
+Lib/xml/sax/xmlreader.py	312	313	AttributesImpl.__len__	__len__(self)	todo		
+Lib/xml/sax/xmlreader.py	315	316	AttributesImpl.__getitem__	__getitem__(self, name)	todo		
+Lib/xml/sax/xmlreader.py	318	319	AttributesImpl.keys	keys(self)	todo		
+Lib/xml/sax/xmlreader.py	321	322	AttributesImpl.__contains__	__contains__(self, name)	todo		
+Lib/xml/sax/xmlreader.py	324	325	AttributesImpl.get	get(self, name, alternative=None)	todo		
+Lib/xml/sax/xmlreader.py	327	328	AttributesImpl.copy	copy(self)	todo		
+Lib/xml/sax/xmlreader.py	330	331	AttributesImpl.items	items(self)	todo		
+Lib/xml/sax/xmlreader.py	333	334	AttributesImpl.values	values(self)	todo		
+Lib/xml/sax/xmlreader.py	340	346	AttributesNSImpl.__init__	__init__(self, attrs, qnames)	todo		
+Lib/xml/sax/xmlreader.py	348	353	AttributesNSImpl.getValueByQName	getValueByQName(self, name)	todo		
+Lib/xml/sax/xmlreader.py	355	360	AttributesNSImpl.getNameByQName	getNameByQName(self, name)	todo		
+Lib/xml/sax/xmlreader.py	362	363	AttributesNSImpl.getQNameByName	getQNameByName(self, name)	todo		
+Lib/xml/sax/xmlreader.py	365	366	AttributesNSImpl.getQNames	getQNames(self)	todo		
+Lib/xml/sax/xmlreader.py	368	369	AttributesNSImpl.copy	copy(self)	todo		
+Lib/xml/sax/xmlreader.py	372	375	_test	_test()	todo		

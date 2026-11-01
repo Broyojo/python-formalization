@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/bytes.c	7	37	bytes_resize	bytes_resize(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/bytes.c	42	51	bytes_join	bytes_join(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/bytes.c	61	68	_PyTestCapi_Init_Bytes	_PyTestCapi_Init_Bytes(PyObject *m)	excluded		test-support: only for CPython's own tests

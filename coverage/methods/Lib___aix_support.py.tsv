@@ -1,0 +1,8 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_aix_support.py	8	23	_read_cmd_output	_read_cmd_output(commandstring, capture_stderr=False)	excluded		platform: single-OS support
+Lib/_aix_support.py	26	32	_aix_tag	_aix_tag(vrtl, bd)	excluded		platform: single-OS support
+Lib/_aix_support.py	36	39	_aix_vrtl	_aix_vrtl(vrmf)	excluded		platform: single-OS support
+Lib/_aix_support.py	42	60	_aix_bos_rte	_aix_bos_rte()	excluded		platform: single-OS support
+Lib/_aix_support.py	63	83	aix_platform	aix_platform()	excluded		platform: single-OS support
+Lib/_aix_support.py	87	92	_aix_bgt	_aix_bgt()	excluded		platform: single-OS support
+Lib/_aix_support.py	95	108	aix_buildtag	aix_buildtag()	excluded		platform: single-OS support

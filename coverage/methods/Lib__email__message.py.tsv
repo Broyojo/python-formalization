@@ -1,0 +1,72 @@
+file	line	endline	name	signature	status	entry	note
+Lib/email/message.py	29	37	_splitparam	_splitparam(param)	todo		
+Lib/email/message.py	39	71	_formatparam	_formatparam(param, value=None, quote=True)	todo		
+Lib/email/message.py	73	96	_parseparam	_parseparam(s)	todo		
+Lib/email/message.py	99	107	_unquotevalue	_unquotevalue(value)	todo		
+Lib/email/message.py	110	138	_decode_uu	_decode_uu(encoded)	todo		
+Lib/email/message.py	156	166	Message.__init__	__init__(self, policy=compat32)	todo		
+Lib/email/message.py	168	171	Message.__str__	__str__(self)	todo		
+Lib/email/message.py	173	195	Message.as_string	as_string(self, unixfrom=False, maxheaderlen=0, policy=None)	todo		
+Lib/email/message.py	197	200	Message.__bytes__	__bytes__(self)	todo		
+Lib/email/message.py	202	215	Message.as_bytes	as_bytes(self, unixfrom=False, policy=None)	todo		
+Lib/email/message.py	217	219	Message.is_multipart	is_multipart(self)	todo		
+Lib/email/message.py	224	225	Message.set_unixfrom	set_unixfrom(self, unixfrom)	todo		
+Lib/email/message.py	227	228	Message.get_unixfrom	get_unixfrom(self)	todo		
+Lib/email/message.py	233	247	Message.attach	attach(self, payload)	todo		
+Lib/email/message.py	249	341	Message.get_payload	get_payload(self, i=None, decode=False)	todo		
+Lib/email/message.py	343	361	Message.set_payload	set_payload(self, payload, charset=None)	todo		
+Lib/email/message.py	363	408	Message.set_charset	set_charset(self, charset)	todo		
+Lib/email/message.py	410	413	Message.get_charset	get_charset(self)	todo		
+Lib/email/message.py	418	420	Message.__len__	__len__(self)	todo		
+Lib/email/message.py	422	431	Message.__getitem__	__getitem__(self, name)	todo		
+Lib/email/message.py	433	449	Message.__setitem__	__setitem__(self, name, val)	todo		
+Lib/email/message.py	451	461	Message.__delitem__	__delitem__(self, name)	todo		
+Lib/email/message.py	463	468	Message.__contains__	__contains__(self, name)	todo		
+Lib/email/message.py	470	472	Message.__iter__	__iter__(self)	todo		
+Lib/email/message.py	474	482	Message.keys	keys(self)	todo		
+Lib/email/message.py	484	493	Message.values	values(self)	todo		
+Lib/email/message.py	495	504	Message.items	items(self)	todo		
+Lib/email/message.py	506	516	Message.get	get(self, name, failobj=None)	todo		
+Lib/email/message.py	523	528	Message.set_raw	set_raw(self, name, value)	todo		
+Lib/email/message.py	530	535	Message.raw_items	raw_items(self)	todo		
+Lib/email/message.py	541	557	Message.get_all	get_all(self, name, failobj=None)	todo		
+Lib/email/message.py	559	587	Message.add_header	add_header(self, _name, _value, **_params)	todo		
+Lib/email/message.py	589	602	Message.replace_header	replace_header(self, _name, _value)	todo		
+Lib/email/message.py	608	630	Message.get_content_type	get_content_type(self)	todo		
+Lib/email/message.py	632	639	Message.get_content_maintype	get_content_maintype(self)	todo		
+Lib/email/message.py	641	648	Message.get_content_subtype	get_content_subtype(self)	todo		
+Lib/email/message.py	650	657	Message.get_default_type	get_default_type(self)	todo		
+Lib/email/message.py	659	666	Message.set_default_type	set_default_type(self, ctype)	todo		
+Lib/email/message.py	668	687	Message._get_params_preserve	_get_params_preserve(self, failobj, header)	todo		
+Lib/email/message.py	689	709	Message.get_params	get_params(self, failobj=None, header='content-type', unquote=True)	todo		
+Lib/email/message.py	711	743	Message.get_param	get_param(self, param, failobj=None, header='content-type', unquote=True)	todo		
+Lib/email/message.py	745	794	Message.set_param	set_param(self, param, value, header='Content-Type', requote=True, charset=None, language='', replace=False)	todo		
+Lib/email/message.py	796	816	Message.del_param	del_param(self, param, header='content-type', requote=True)	todo		
+Lib/email/message.py	818	848	Message.set_type	set_type(self, type, header='Content-Type', requote=True)	todo		
+Lib/email/message.py	850	864	Message.get_filename	get_filename(self, failobj=None)	todo		
+Lib/email/message.py	866	877	Message.get_boundary	get_boundary(self, failobj=None)	todo		
+Lib/email/message.py	879	923	Message.set_boundary	set_boundary(self, boundary)	todo		
+Lib/email/message.py	925	953	Message.get_content_charset	get_content_charset(self, failobj=None)	todo		
+Lib/email/message.py	955	971	Message.get_charsets	get_charsets(self, failobj=None)	todo		
+Lib/email/message.py	973	983	Message.get_content_disposition	get_content_disposition(self)	todo		
+Lib/email/message.py	991	995	MIMEPart.__init__	__init__(self, policy=None)	todo		
+Lib/email/message.py	998	1012	MIMEPart.as_string	as_string(self, unixfrom=False, maxheaderlen=None, policy=None)	todo		
+Lib/email/message.py	1014	1015	MIMEPart.__str__	__str__(self)	todo		
+Lib/email/message.py	1017	1019	MIMEPart.is_attachment	is_attachment(self)	todo		
+Lib/email/message.py	1021	1048	MIMEPart._find_body	_find_body(self, part, preferencelist)	todo		
+Lib/email/message.py	1050	1068	MIMEPart.get_body	get_body(self, preferencelist=('related', 'html', 'plain'))	todo		
+Lib/email/message.py	1074	1127	MIMEPart.iter_attachments	iter_attachments(self)	todo		
+Lib/email/message.py	1129	1135	MIMEPart.iter_parts	iter_parts(self)	todo		
+Lib/email/message.py	1137	1140	MIMEPart.get_content	get_content(self, *args, content_manager=None, **kw)	todo		
+Lib/email/message.py	1142	1145	MIMEPart.set_content	set_content(self, *args, content_manager=None, **kw)	todo		
+Lib/email/message.py	1147	1172	MIMEPart._make_multipart	_make_multipart(self, subtype, disallowed_subtypes, boundary)	todo		
+Lib/email/message.py	1174	1175	MIMEPart.make_related	make_related(self, boundary=None)	todo		
+Lib/email/message.py	1177	1178	MIMEPart.make_alternative	make_alternative(self, boundary=None)	todo		
+Lib/email/message.py	1180	1181	MIMEPart.make_mixed	make_mixed(self, boundary=None)	todo		
+Lib/email/message.py	1183	1191	MIMEPart._add_multipart	_add_multipart(self, _subtype, *args, _disp=None, **kw)	todo		
+Lib/email/message.py	1193	1194	MIMEPart.add_related	add_related(self, *args, **kw)	todo		
+Lib/email/message.py	1196	1197	MIMEPart.add_alternative	add_alternative(self, *args, **kw)	todo		
+Lib/email/message.py	1199	1200	MIMEPart.add_attachment	add_attachment(self, *args, **kw)	todo		
+Lib/email/message.py	1202	1204	MIMEPart.clear	clear(self)	todo		
+Lib/email/message.py	1206	1209	MIMEPart.clear_content	clear_content(self)	todo		
+Lib/email/message.py	1214	1217	EmailMessage.set_content	set_content(self, *args, **kw)	todo		

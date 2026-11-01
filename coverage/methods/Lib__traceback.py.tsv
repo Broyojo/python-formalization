@@ -1,0 +1,63 @@
+file	line	endline	name	signature	status	entry	note
+Lib/traceback.py	29	35	print_list	print_list(extracted_list, file=None)	todo		
+Lib/traceback.py	37	49	format_list	format_list(extracted_list)	todo		
+Lib/traceback.py	55	63	print_tb	print_tb(tb, limit=None, file=None)	todo		
+Lib/traceback.py	65	67	format_tb	format_tb(tb, limit=None)	todo		
+Lib/traceback.py	69	83	extract_tb	extract_tb(tb, limit=None)	todo		
+Lib/traceback.py	99	100	_Sentinel.__repr__	__repr__(self)	todo		
+Lib/traceback.py	104	116	_parse_value_tb	_parse_value_tb(exc, value, tb)	todo		
+Lib/traceback.py	119	134	print_exception	print_exception(exc, /, value=_sentinel, tb=_sentinel, limit=None, file=None, chain=True, **kwargs)	todo		
+Lib/traceback.py	140	143	_print_exception_bltin	_print_exception_bltin(exc, /)	todo		
+Lib/traceback.py	146	159	format_exception	format_exception(exc, /, value=_sentinel, tb=_sentinel, limit=None, chain=True, **kwargs)	todo		
+Lib/traceback.py	162	181	format_exception_only	format_exception_only(exc, /, value=_sentinel, *, show_group=False, **kwargs)	todo		
+Lib/traceback.py	186	197	_format_final_exc_line	_format_final_exc_line(etype, value, *, insert_final_newline=True, colorize=False)	todo		
+Lib/traceback.py	200	204	_safe_string	_safe_string(value, what, func=str)	todo		
+Lib/traceback.py	208	210	print_exc	print_exc(limit=None, file=None, chain=True)	todo		
+Lib/traceback.py	212	214	format_exc	format_exc(limit=None, chain=True)	todo		
+Lib/traceback.py	216	225	print_last	print_last(limit=None, file=None, chain=True)	todo		
+Lib/traceback.py	232	241	print_stack	print_stack(f=None, limit=None, file=None)	todo		
+Lib/traceback.py	244	248	format_stack	format_stack(f=None, limit=None)	todo		
+Lib/traceback.py	251	263	extract_stack	extract_stack(f=None, limit=None)	todo		
+Lib/traceback.py	266	274	clear_frames	clear_frames(tb)	todo		
+Lib/traceback.py	294	318	FrameSummary.__init__	__init__(self, filename, lineno, name, *, lookup_line=True, locals=None, line=None, end_lineno=None, colno=None, end_colno=None, **kwargs)	todo		
+Lib/traceback.py	320	328	FrameSummary.__eq__	__eq__(self, other)	todo		
+Lib/traceback.py	330	331	FrameSummary.__getitem__	__getitem__(self, pos)	todo		
+Lib/traceback.py	333	334	FrameSummary.__iter__	__iter__(self)	todo		
+Lib/traceback.py	336	338	FrameSummary.__repr__	__repr__(self)	todo		
+Lib/traceback.py	340	341	FrameSummary.__len__	__len__(self)	todo		
+Lib/traceback.py	343	356	FrameSummary._set_lines	_set_lines(self)	todo		
+Lib/traceback.py	359	362	FrameSummary._original_lines	_original_lines(self)	todo		
+Lib/traceback.py	365	370	FrameSummary._dedented_lines	_dedented_lines(self)	todo		
+Lib/traceback.py	373	378	FrameSummary.line	line(self)	todo		
+Lib/traceback.py	381	395	walk_stack	walk_stack(f)	todo		
+Lib/traceback.py	398	406	walk_tb	walk_tb(tb)	todo		
+Lib/traceback.py	409	420	_walk_tb_with_full_positions	_walk_tb_with_full_positions(tb)	todo		
+Lib/traceback.py	423	427	_get_code_position	_get_code_position(code, instruction_index)	todo		
+Lib/traceback.py	437	456	StackSummary.extract	extract(klass, frame_gen, *, limit=None, lookup_lines=True, capture_locals=False)	todo		
+Lib/traceback.py	459	506	StackSummary._extract_from_extended_frame_gen	_extract_from_extended_frame_gen(klass, frame_gen, *, limit=None, lookup_lines=True, capture_locals=False)	todo		
+Lib/traceback.py	509	525	StackSummary.from_list	from_list(klass, a_list)	todo		
+Lib/traceback.py	527	709	StackSummary.format_frame_summary	format_frame_summary(self, frame_summary, **kwargs)	todo		
+Lib/traceback.py	711	742	StackSummary._should_show_carets	_should_show_carets(self, start_offset, end_offset, all_lines, anchors)	todo		
+Lib/traceback.py	744	790	StackSummary.format	format(self, **kwargs)	todo		
+Lib/traceback.py	793	795	_byte_offset_to_character_offset	_byte_offset_to_character_offset(str, offset)	todo		
+Lib/traceback.py	811	955	_extract_caret_anchors_from_line_segment	_extract_caret_anchors_from_line_segment(segment)	todo		
+Lib/traceback.py	959	976	_display_width	_display_width(line, offset=None)	todo		
+Lib/traceback.py	981	984	_ExceptionPrintContext.__init__	__init__(self)	todo		
+Lib/traceback.py	986	987	_ExceptionPrintContext.indent	indent(self)	todo		
+Lib/traceback.py	989	1000	_ExceptionPrintContext.emit	emit(self, text_gen, margin_char=None)	todo		
+Lib/traceback.py	1043	1187	TracebackException.__init__	__init__(self, exc_type, exc_value, exc_traceback, *, limit=None, lookup_lines=True, capture_locals=False, compact=False, max_group_width=15, max_group_depth=10, save_exc_type=True, _seen=None)	todo		
+Lib/traceback.py	1190	1192	TracebackException.from_exception	from_exception(cls, exc, *args, **kwargs)	todo		
+Lib/traceback.py	1195	1198	TracebackException.exc_type	exc_type(self)	todo		
+Lib/traceback.py	1201	1210	TracebackException.exc_type_str	exc_type_str(self)	todo		
+Lib/traceback.py	1212	1215	TracebackException._load_lines	_load_lines(self)	todo		
+Lib/traceback.py	1217	1220	TracebackException.__eq__	__eq__(self, other)	todo		
+Lib/traceback.py	1222	1223	TracebackException.__str__	__str__(self)	todo		
+Lib/traceback.py	1225	1277	TracebackException.format_exception_only	format_exception_only(self, *, show_group=False, _depth=0, **kwargs)	todo		
+Lib/traceback.py	1279	1372	TracebackException._find_keyword_typos	_find_keyword_typos(self)	todo		
+Lib/traceback.py	1375	1465	TracebackException._format_syntax_error	_format_syntax_error(self, stype, **kwargs)	todo		
+Lib/traceback.py	1467	1565	TracebackException.format	format(self, *, chain=True, _ctx=None, **kwargs)	todo		
+Lib/traceback.py	1568	1574	TracebackException.print	print(self, *, file=None, chain=True, **kwargs)	todo		
+Lib/traceback.py	1583	1588	_substitution_cost	_substitution_cost(ch_a, ch_b)	todo		
+Lib/traceback.py	1591	1598	_get_safe___dir__	_get_safe___dir__(obj)	todo		
+Lib/traceback.py	1601	1683	_compute_suggestion_error	_compute_suggestion_error(exc_value, tb, wrong_name)	todo		
+Lib/traceback.py	1686	1744	_levenshtein_distance	_levenshtein_distance(a, b, max_cost)	todo		

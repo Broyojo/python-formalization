@@ -1,0 +1,24 @@
+file	line	endline	name	signature	status	entry	note
+Python/modsupport.c	14	34	_Py_convert_optional_to_ssize_t	_Py_convert_optional_to_ssize_t(PyObject *obj, void *result)	todo		
+Python/modsupport.c	40	79	countformat	countformat(const char *format, char endchar)	todo		
+Python/modsupport.c	92	108	check_end	check_end(const char **p_format, char endchar)	todo		
+Python/modsupport.c	111	132	do_ignore	do_ignore(const char **p_format, va_list *p_va, char endchar, Py_ssize_t n)	todo		
+Python/modsupport.c	135	178	do_mkdict	do_mkdict(const char **p_format, va_list *p_va, char endchar, Py_ssize_t n)	todo		
+Python/modsupport.c	181	208	do_mklist	do_mklist(const char **p_format, va_list *p_va, char endchar, Py_ssize_t n)	todo		
+Python/modsupport.c	211	240	do_mkstack	do_mkstack(PyObject **stack, const char **p_format, va_list *p_va, char endchar, Py_ssize_t n)	todo		
+Python/modsupport.c	243	269	do_mktuple	do_mktuple(const char **p_format, va_list *p_va, char endchar, Py_ssize_t n)	todo		
+Python/modsupport.c	272	478	do_mkvalue	do_mkvalue(const char **p_format, va_list *p_va)	todo		
+Python/modsupport.c	482	490	Py_BuildValue	Py_BuildValue(const char *format, ...)	todo		
+Python/modsupport.c	492	501	PyAPI_FUNC	PyAPI_FUNC(PyObject *) /* abi only */ _Py_BuildValue_SizeT(const char *format, ...)	todo		
+Python/modsupport.c	504	507	Py_VaBuildValue	Py_VaBuildValue(const char *format, va_list va)	todo		
+Python/modsupport.c	509	513	PyAPI_FUNC	PyAPI_FUNC(PyObject *) /* abi only */ _Py_VaBuildValue_SizeT(const char *format, va_list va)	todo		
+Python/modsupport.c	516	536	va_build_value	va_build_value(const char *format, va_list va)	todo		
+Python/modsupport.c	539	584	_Py_VaBuildStack	_Py_VaBuildStack(PyObject **small_stack, Py_ssize_t small_stack_len, const char *format, va_list va, Py_ssize_t *p_nargs)	todo		
+Python/modsupport.c	588	613	PyModule_AddObjectRef	PyModule_AddObjectRef(PyObject *mod, const char *name, PyObject *value)	todo		
+Python/modsupport.c	616	621	PyModule_Add	PyModule_Add(PyObject *mod, const char *name, PyObject *value)	todo		
+Python/modsupport.c	624	631	PyModule_AddObject	PyModule_AddObject(PyObject *mod, const char *name, PyObject *value)	todo		
+Python/modsupport.c	634	637	PyModule_AddIntConstant	PyModule_AddIntConstant(PyObject *m, const char *name, long value)	todo		
+Python/modsupport.c	640	643	PyModule_AddStringConstant	PyModule_AddStringConstant(PyObject *m, const char *name, const char *value)	todo		
+Python/modsupport.c	646	656	PyModule_AddType	PyModule_AddType(PyObject *module, PyTypeObject *type)	todo		
+Python/modsupport.c	663	666	Py_PACK_FULL_VERSION	Py_PACK_FULL_VERSION(int x, int y, int z, int level, int serial)	todo		
+Python/modsupport.c	670	673	Py_PACK_VERSION	Py_PACK_VERSION(int x, int y)	todo		

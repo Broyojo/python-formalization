@@ -1,0 +1,58 @@
+file	line	endline	name	signature	status	entry	note
+Lib/functools.py	35	63	update_wrapper	update_wrapper(wrapper, wrapped, assigned=WRAPPER_ASSIGNMENTS, updated=WRAPPER_UPDATES)	todo		
+Lib/functools.py	65	77	wraps	wraps(wrapped, assigned=WRAPPER_ASSIGNMENTS, updated=WRAPPER_UPDATES)	todo		
+Lib/functools.py	89	94	_gt_from_lt	_gt_from_lt(self, other)	todo		
+Lib/functools.py	96	101	_le_from_lt	_le_from_lt(self, other)	todo		
+Lib/functools.py	103	108	_ge_from_lt	_ge_from_lt(self, other)	todo		
+Lib/functools.py	110	115	_ge_from_le	_ge_from_le(self, other)	todo		
+Lib/functools.py	117	122	_lt_from_le	_lt_from_le(self, other)	todo		
+Lib/functools.py	124	129	_gt_from_le	_gt_from_le(self, other)	todo		
+Lib/functools.py	131	136	_lt_from_gt	_lt_from_gt(self, other)	todo		
+Lib/functools.py	138	143	_ge_from_gt	_ge_from_gt(self, other)	todo		
+Lib/functools.py	145	150	_le_from_gt	_le_from_gt(self, other)	todo		
+Lib/functools.py	152	157	_le_from_ge	_le_from_ge(self, other)	todo		
+Lib/functools.py	159	164	_gt_from_ge	_gt_from_ge(self, other)	todo		
+Lib/functools.py	166	171	_lt_from_ge	_lt_from_ge(self, other)	todo		
+Lib/functools.py	188	199	total_ordering	total_ordering(cls)	todo		
+Lib/functools.py	206	223	cmp_to_key	cmp_to_key(mycmp)	todo		
+Lib/functools.py	237	265	reduce	reduce(function, sequence, initial=_initial_missing)	todo		
+Lib/functools.py	281	282	_PlaceholderType.__init_subclass__	__init_subclass__(cls, *args, **kwargs)	todo		
+Lib/functools.py	284	287	_PlaceholderType.__new__	__new__(cls)	todo		
+Lib/functools.py	289	290	_PlaceholderType.__repr__	__repr__(self)	todo		
+Lib/functools.py	292	293	_PlaceholderType.__reduce__	__reduce__(self)	todo		
+Lib/functools.py	297	311	_partial_prepare_merger	_partial_prepare_merger(args)	todo		
+Lib/functools.py	313	357	_partial_new	_partial_new(cls, func, /, *args, **keywords)	todo		
+Lib/functools.py	359	366	_partial_repr	_partial_repr(self)	todo		
+Lib/functools.py	380	393	partial.__call__	__call__(self, /, *args, **keywords)	todo		
+Lib/functools.py	395	398	partial.__get__	__get__(self, obj, objtype=None)	todo		
+Lib/functools.py	400	402	partial.__reduce__	__reduce__(self)	todo		
+Lib/functools.py	404	432	partial.__setstate__	__setstate__(self, state)	todo		
+Lib/functools.py	453	470	partialmethod._make_unbound_method	_make_unbound_method(self)	todo		
+Lib/functools.py	472	489	partialmethod.__get__	__get__(self, obj, cls=None)	todo		
+Lib/functools.py	492	493	partialmethod.__isabstractmethod__	__isabstractmethod__(self)	todo		
+Lib/functools.py	500	503	_unwrap_partial	_unwrap_partial(func)	todo		
+Lib/functools.py	505	514	_unwrap_partialmethod	_unwrap_partialmethod(func)	todo		
+Lib/functools.py	522	551	_make_key	_make_key(args, kwds, typed, kwd_mark=(object(),), fasttypes={int, str}, tuple=tuple, type=type, len=len)	todo		
+Lib/functools.py	553	598	lru_cache	lru_cache(maxsize=128, typed=False)	todo		
+Lib/functools.py	600	714	_lru_cache_wrapper	_lru_cache_wrapper(user_function, maxsize, typed, _CacheInfo)	todo		
+Lib/functools.py	726	728	cache	cache(user_function, /)	todo		
+Lib/functools.py	735	760	_c3_merge	_c3_merge(sequences)	todo		
+Lib/functools.py	762	805	_c3_mro	_c3_mro(cls, abcs=None)	todo		
+Lib/functools.py	807	847	_compose_mro	_compose_mro(cls, types)	todo		
+Lib/functools.py	849	873	_find_impl	_find_impl(cls, registry)	todo		
+Lib/functools.py	875	991	singledispatch	singledispatch(func)	todo		
+Lib/functools.py	1001	1006	singledispatchmethod.__init__	__init__(self, func)	todo		
+Lib/functools.py	1008	1013	singledispatchmethod.register	register(self, cls, method=None)	todo		
+Lib/functools.py	1015	1016	singledispatchmethod.__get__	__get__(self, obj, cls=None)	todo		
+Lib/functools.py	1019	1020	singledispatchmethod.__isabstractmethod__	__isabstractmethod__(self)	todo		
+Lib/functools.py	1022	1030	singledispatchmethod.__repr__	__repr__(self)	todo		
+Lib/functools.py	1033	1048	_singledispatchmethod_get.__init__	__init__(self, unbound, obj, cls)	todo		
+Lib/functools.py	1050	1061	_singledispatchmethod_get.__repr__	__repr__(self)	todo		
+Lib/functools.py	1063	1069	_singledispatchmethod_get.__call__	__call__(self, /, *args, **kwargs)	todo		
+Lib/functools.py	1071	1077	_singledispatchmethod_get.__getattr__	__getattr__(self, name)	todo		
+Lib/functools.py	1080	1081	_singledispatchmethod_get.__wrapped__	__wrapped__(self)	todo		
+Lib/functools.py	1084	1085	_singledispatchmethod_get.register	register(self)	todo		
+Lib/functools.py	1095	1099	cached_property.__init__	__init__(self, func)	todo		
+Lib/functools.py	1101	1108	cached_property.__set_name__	__set_name__(self, owner, name)	todo		
+Lib/functools.py	1110	1135	cached_property.__get__	__get__(self, instance, owner=None)	todo		
+Lib/functools.py	1139	1153	_warn_python_reduce_kwargs	_warn_python_reduce_kwargs(py_reduce)	todo		

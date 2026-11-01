@@ -1,0 +1,103 @@
+file	line	endline	name	signature	status	entry	note
+Objects/setobject.c	79	130	set_lookkey	set_lookkey(PySetObject *so, PyObject *key, Py_hash_t hash)	todo		
+Objects/setobject.c	135	217	set_add_entry_takeref	set_add_entry_takeref(PySetObject *so, PyObject *key, Py_hash_t hash)	todo		
+Objects/setobject.c	220	225	set_add_entry	set_add_entry(PySetObject *so, PyObject *key, Py_hash_t hash)	todo		
+Objects/setobject.c	228	241	set_unhashable_type	set_unhashable_type(PyObject *key)	todo		
+Objects/setobject.c	244	255	_PySet_AddTakeRef	_PySet_AddTakeRef(PySetObject *so, PyObject *key)	todo		
+Objects/setobject.c	258	290	set_table_resize	Internal routine used by set_table_resize() to insert an item which is known to be absent from the set. Besides the performance benefit, there is also safety benefit since using set_add_entry() risks making a callback in the middle of a set_table_resize(), see issue 1456209. The caller is responsible for updating the key's reference count and the setobject's fill and used fields. */ static void set_insert_clean(setentry *table, size_t mask, PyObject *key, Py_hash_t hash)	todo		
+Objects/setobject.c	301	377	set_table_resize	set_table_resize(PySetObject *so, Py_ssize_t minused)	todo		
+Objects/setobject.c	380	388	set_contains_entry	set_contains_entry(PySetObject *so, PyObject *key, Py_hash_t hash)	todo		
+Objects/setobject.c	394	410	set_discard_entry	set_discard_entry(PySetObject *so, PyObject *key, Py_hash_t hash)	todo		
+Objects/setobject.c	413	421	set_add_key	set_add_key(PySetObject *so, PyObject *key)	todo		
+Objects/setobject.c	424	432	set_contains_key	set_contains_key(PySetObject *so, PyObject *key)	todo		
+Objects/setobject.c	435	443	set_discard_key	set_discard_key(PySetObject *so, PyObject *key)	todo		
+Objects/setobject.c	446	454	set_empty_to_minsize	set_empty_to_minsize(PySetObject *so)	todo		
+Objects/setobject.c	457	504	set_clear_internal	set_clear_internal(PyObject *self)	todo		
+Objects/setobject.c	520	541	set_next	set_next(PySetObject *so, Py_ssize_t *pos_ptr, setentry **entry_ptr)	todo		
+Objects/setobject.c	544	563	set_dealloc	set_dealloc(PyObject *self)	todo		
+Objects/setobject.c	566	617	set_repr_lock_held	set_repr_lock_held(PySetObject *so)	todo		
+Objects/setobject.c	620	628	set_repr	set_repr(PyObject *self)	todo		
+Objects/setobject.c	631	635	set_len	set_len(PyObject *self)	todo		
+Objects/setobject.c	638	707	set_merge_lock_held	set_merge_lock_held(PySetObject *so, PyObject *otherset)	todo		
+Objects/setobject.c	720	743	set_pop_impl	set_pop_impl(PySetObject *so) /*[clinic end generated code: output=4d65180f1271871b input=9296c84921125060]*/	todo		
+Objects/setobject.c	746	755	set_traverse	set_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/setobject.c	763	766	_shuffle_bits	_shuffle_bits(Py_uhash_t h)	todo		
+Objects/setobject.c	779	818	frozenset_hash_impl	frozenset_hash_impl(PyObject *self)	todo		
+Objects/setobject.c	821	833	frozenset_hash	frozenset_hash(PyObject *self)	todo		
+Objects/setobject.c	846	853	setiter_dealloc	setiter_dealloc(PyObject *self)	todo		
+Objects/setobject.c	856	861	setiter_traverse	setiter_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/setobject.c	864	871	setiter_len	setiter_len(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
+Objects/setobject.c	876	891	setiter_reduce	setiter_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
+Objects/setobject.c	901	942	setiter_iternext	static PyObject *setiter_iternext(PyObject *self)	todo		
+Objects/setobject.c	978	990	set_iter	set_iter(PyObject *so)	todo		
+Objects/setobject.c	993	1021	set_update_dict_lock_held	set_update_dict_lock_held(PySetObject *so, PyObject *other)	todo		
+Objects/setobject.c	1024	1046	set_update_iterable_lock_held	set_update_iterable_lock_held(PySetObject *so, PyObject *other)	todo		
+Objects/setobject.c	1049	1058	set_update_lock_held	set_update_lock_held(PySetObject *so, PyObject *other)	todo		
+Objects/setobject.c	1062	1080	set_update_local	set_update_local(PySetObject *so, PyObject *other)	todo		
+Objects/setobject.c	1083	1109	set_update_internal	set_update_internal(PySetObject *so, PyObject *other)	todo		
+Objects/setobject.c	1120	1132	set_update_impl	set_update_impl(PySetObject *so, PyObject * const *others, Py_ssize_t others_length) /*[clinic end generated code: output=017c781c992d5c23 input=ed5d78885b076636]*/	todo		
+Objects/setobject.c	1143	1168	make_new_set_untracked	make_new_set_untracked(PyTypeObject *type, PyObject *iterable)	todo		
+Objects/setobject.c	1171	1178	make_new_set	make_new_set(PyTypeObject *type, PyObject *iterable)	todo		
+Objects/setobject.c	1181	1190	make_new_set_basetype_untracked	make_new_set_basetype_untracked(PyTypeObject *type, PyObject *iterable)	todo		
+Objects/setobject.c	1193	1200	make_new_set_basetype	make_new_set_basetype(PyTypeObject *type, PyObject *iterable)	todo		
+Objects/setobject.c	1203	1214	make_new_frozenset	make_new_frozenset(PyTypeObject *type, PyObject *iterable)	todo		
+Objects/setobject.c	1217	1232	frozenset_new	frozenset_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Objects/setobject.c	1235	1249	frozenset_vectorcall	frozenset_vectorcall(PyObject *type, PyObject * const*args, size_t nargsf, PyObject *kwnames)	todo		
+Objects/setobject.c	1252	1255	set_new	set_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Objects/setobject.c	1269	1305	set_swap_bodies	set_swap_bodies(PySetObject *a, PySetObject *b)	todo		
+Objects/setobject.c	1308	1320	set_copy_untracked_lock_held	set_copy_untracked_lock_held(PySetObject *so)	todo		
+Objects/setobject.c	1331	1339	set_copy_impl	set_copy_impl(PySetObject *so) /*[clinic end generated code: output=c9223a1e1cc6b041 input=c169a4fbb8209257]*/	todo		
+Objects/setobject.c	1350	1357	frozenset_copy_impl	frozenset_copy_impl(PySetObject *so) /*[clinic end generated code: output=b356263526af9e70 input=fbf5bef131268dd7]*/	todo		
+Objects/setobject.c	1368	1373	set_clear_impl	set_clear_impl(PySetObject *so) /*[clinic end generated code: output=4e71d5a83904161a input=c6f831b366111950]*/	todo		
+Objects/setobject.c	1384	1408	set_union_impl	set_union_impl(PySetObject *so, PyObject * const *others, Py_ssize_t others_length) /*[clinic end generated code: output=b1bfa3d74065f27e input=55a2e81db6347a4f]*/	todo		
+Objects/setobject.c	1411	1430	set_or	set_or(PyObject *self, PyObject *other)	todo		
+Objects/setobject.c	1433	1443	set_ior	set_ior(PyObject *self, PyObject *other)	todo		
+Objects/setobject.c	1446	1528	set_intersection	set_intersection(PySetObject *so, PyObject *other)	todo		
+Objects/setobject.c	1539	1563	set_intersection_multi_impl	set_intersection_multi_impl(PySetObject *so, PyObject * const *others, Py_ssize_t others_length) /*[clinic end generated code: output=db9ff9f875132b6b input=36c7b615694cadae]*/	todo		
+Objects/setobject.c	1566	1576	set_intersection_update	set_intersection_update(PySetObject *so, PyObject *other)	todo		
+Objects/setobject.c	1587	1601	set_intersection_update_multi_impl	set_intersection_update_multi_impl(PySetObject *so, PyObject * const *others, Py_ssize_t others_length) /*[clinic end generated code: output=d768b5584675b48d input=782e422fc370e4fc]*/	todo		
+Objects/setobject.c	1604	1616	set_and	set_and(PyObject *self, PyObject *other)	todo		
+Objects/setobject.c	1619	1635	set_iand	set_iand(PyObject *self, PyObject *other)	todo		
+Objects/setobject.c	1648	1705	set_isdisjoint_impl	set_isdisjoint_impl(PySetObject *so, PyObject *other) /*[clinic end generated code: output=273493f2d57c565e input=32f8dcab5e0fc7d6]*/	todo		
+Objects/setobject.c	1708	1766	set_difference_update_internal	set_difference_update_internal(PySetObject *so, PyObject *other)	todo		
+Objects/setobject.c	1777	1794	set_difference_update_impl	set_difference_update_impl(PySetObject *so, PyObject * const *others, Py_ssize_t others_length) /*[clinic end generated code: output=04a22179b322cfe6 input=93ac28ba5b233696]*/	todo		
+Objects/setobject.c	1797	1808	set_copy_and_difference_untracked	set_copy_and_difference_untracked(PySetObject *so, PyObject *other)	todo		
+Objects/setobject.c	1811	1884	set_difference_untracked	set_difference_untracked(PySetObject *so, PyObject *other)	todo		
+Objects/setobject.c	1895	1926	set_difference_multi_impl	set_difference_multi_impl(PySetObject *so, PyObject * const *others, Py_ssize_t others_length) /*[clinic end generated code: output=b0d33fb05d5477a7 input=c1eb448d483416ad]*/	todo		
+Objects/setobject.c	1929	1943	set_sub	set_sub(PyObject *self, PyObject *other)	todo		
+Objects/setobject.c	1946	1960	set_isub	set_isub(PyObject *self, PyObject *other)	todo		
+Objects/setobject.c	1963	1987	set_symmetric_difference_update_dict	set_symmetric_difference_update_dict(PySetObject *so, PyObject *other)	todo		
+Objects/setobject.c	1990	2014	set_symmetric_difference_update_set	set_symmetric_difference_update_set(PySetObject *so, PySetObject *other)	todo		
+Objects/setobject.c	2026	2060	set_symmetric_difference_update_impl	set_symmetric_difference_update_impl(PySetObject *so, PyObject *other) /*[clinic end generated code: output=79f80b4ee5da66c1 input=a50acf0365e1f0a5]*/	todo		
+Objects/setobject.c	2073	2091	set_symmetric_difference_impl	set_symmetric_difference_impl(PySetObject *so, PyObject *other) /*[clinic end generated code: output=270ee0b5d42b0797 input=624f6e7bbdf70db1]*/	todo		
+Objects/setobject.c	2094	2100	set_xor	set_xor(PyObject *self, PyObject *other)	todo		
+Objects/setobject.c	2103	2116	set_ixor	set_ixor(PyObject *self, PyObject *other)	todo		
+Objects/setobject.c	2129	2161	set_issubset_impl	set_issubset_impl(PySetObject *so, PyObject *other) /*[clinic end generated code: output=b2b59d5f314555ce input=f2a4fd0f2537758b]*/	todo		
+Objects/setobject.c	2174	2202	set_issuperset_impl	set_issuperset_impl(PySetObject *so, PyObject *other) /*[clinic end generated code: output=ecf00ce552c09461 input=5f2e1f262e6e4ccc]*/	todo		
+Objects/setobject.c	2205	2246	set_richcompare	set_richcompare(PyObject *self, PyObject *w, int op)	todo		
+Objects/setobject.c	2261	2267	set_add_impl	set_add_impl(PySetObject *so, PyObject *key) /*[clinic end generated code: output=4cc4a937f1425c96 input=03baf62cb0e66514]*/	todo		
+Objects/setobject.c	2270	2286	set_contains_lock_held	set_contains_lock_held(PySetObject *so, PyObject *key)	todo		
+Objects/setobject.c	2289	2302	_PySet_Contains	_PySet_Contains(PySetObject *so, PyObject *key)	todo		
+Objects/setobject.c	2305	2309	set_contains	set_contains(PyObject *self, PyObject *key)	todo		
+Objects/setobject.c	2323	2332	set___contains___impl	set___contains___impl(PySetObject *so, PyObject *key) /*[clinic end generated code: output=b44863d034b3c70e input=4a7d568459617f24]*/	todo		
+Objects/setobject.c	2345	2354	frozenset___contains___impl	frozenset___contains___impl(PySetObject *so, PyObject *key) /*[clinic end generated code: output=2301ed91bc3a6dd5 input=2f04922a98d8bab7]*/	todo		
+Objects/setobject.c	2369	2393	set_remove_impl	set_remove_impl(PySetObject *so, PyObject *key) /*[clinic end generated code: output=0b9134a2a2200363 input=893e1cb1df98227a]*/	todo		
+Objects/setobject.c	2409	2428	set_discard_impl	set_discard_impl(PySetObject *so, PyObject *key) /*[clinic end generated code: output=eec3b687bf32759e input=861cb7fb69b4def0]*/	todo		
+Objects/setobject.c	2439	2459	set___reduce___impl	set___reduce___impl(PySetObject *so) /*[clinic end generated code: output=9af7d0e029df87ee input=59405a4249e82f71]*/	todo		
+Objects/setobject.c	2470	2478	set___sizeof___impl	set___sizeof___impl(PySetObject *so) /*[clinic end generated code: output=4bfa3df7bd38ed88 input=09e1a09f168eaa23]*/	todo		
+Objects/setobject.c	2481	2507	set_init	set_init(PyObject *so, PyObject *args, PyObject *kwds)	todo		
+Objects/setobject.c	2510	2529	set_vectorcall	set_vectorcall(PyObject *type, PyObject * const*args, size_t nargsf, PyObject *kwnames)	todo		
+Objects/setobject.c	2751	2754	PySet_New	PySet_New(PyObject *iterable)	todo		
+Objects/setobject.c	2757	2760	PyFrozenSet_New	PyFrozenSet_New(PyObject *iterable)	todo		
+Objects/setobject.c	2763	2770	PySet_Size	PySet_Size(PyObject *anyset)	todo		
+Objects/setobject.c	2773	2781	PySet_Clear	PySet_Clear(PyObject *set)	todo		
+Objects/setobject.c	2784	2787	_PySet_ClearInternal	_PySet_ClearInternal(PySetObject *so)	todo		
+Objects/setobject.c	2790	2804	PySet_Contains	PySet_Contains(PyObject *anyset, PyObject *key)	todo		
+Objects/setobject.c	2807	2819	PySet_Discard	PySet_Discard(PyObject *set, PyObject *key)	todo		
+Objects/setobject.c	2822	2835	PySet_Add	PySet_Add(PyObject *anyset, PyObject *key)	todo		
+Objects/setobject.c	2838	2851	_PySet_NextEntry	_PySet_NextEntry(PyObject *set, Py_ssize_t *pos, PyObject **key, Py_hash_t *hash)	todo		
+Objects/setobject.c	2854	2868	_PySet_NextEntryRef	_PySet_NextEntryRef(PyObject *set, Py_ssize_t *pos, PyObject **key, Py_hash_t *hash)	todo		
+Objects/setobject.c	2871	2878	PySet_Pop	PySet_Pop(PyObject *set)	todo		
+Objects/setobject.c	2881	2888	_PySet_Update	_PySet_Update(PyObject *set, PyObject *iterable)	todo		
+Objects/setobject.c	2896	2899	dummy_repr	dummy_repr(PyObject *op)	todo		
+Objects/setobject.c	2902	2905	dummy_dealloc	dummy_dealloc(PyObject* ignore)	todo		

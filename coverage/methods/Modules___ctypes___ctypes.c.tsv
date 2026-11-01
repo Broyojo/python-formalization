@@ -1,0 +1,159 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_ctypes/_ctypes.c	155	162	_DictRemover_traverse	_DictRemover_traverse(PyObject *myself, visitproc visit, void *arg)	todo		
+Modules/_ctypes/_ctypes.c	165	171	_DictRemover_clear	_DictRemover_clear(PyObject *myself)	todo		
+Modules/_ctypes/_ctypes.c	174	181	_DictRemover_dealloc	_DictRemover_dealloc(PyObject *myself)	todo		
+Modules/_ctypes/_ctypes.c	184	196	_DictRemover_call	_DictRemover_call(PyObject *myself, PyObject *args, PyObject *kw)	todo		
+Modules/_ctypes/_ctypes.c	218	243	PyDict_SetItemProxy	PyDict_SetItemProxy(ctypes_state *st, PyObject *dict, PyObject *key, PyObject *item)	todo		
+Modules/_ctypes/_ctypes.c	246	255	_PyDict_GetItemProxy	_PyDict_GetItemProxy(PyObject *dict, PyObject *key, PyObject **presult)	todo		
+Modules/_ctypes/_ctypes.c	269	323	_ctypes_alloc_format_string_for_type	_ctypes_alloc_format_string_for_type(char code, int big_endian)	todo		
+Modules/_ctypes/_ctypes.c	332	355	_ctypes_alloc_format_string	_ctypes_alloc_format_string(const char *prefix, const char *suffix)	todo		
+Modules/_ctypes/_ctypes.c	364	399	_ctypes_alloc_format_string_with_shape	_ctypes_alloc_format_string_with_shape(int ndim, const Py_ssize_t *shape, const char *prefix, const char *suffix)	todo		
+Modules/_ctypes/_ctypes.c	415	421	StructParam_traverse	StructParam_traverse(PyObject *myself, visitproc visit, void *arg)	todo		
+Modules/_ctypes/_ctypes.c	424	429	StructParam_clear	StructParam_clear(PyObject *myself)	todo		
+Modules/_ctypes/_ctypes.c	432	441	StructParam_dealloc	StructParam_dealloc(PyObject *myself)	todo		
+Modules/_ctypes/_ctypes.c	468	486	CType_Type_traverse	CType_Type_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Modules/_ctypes/_ctypes.c	489	499	ctype_clear_stginfo	ctype_clear_stginfo(StgInfo *info)	todo		
+Modules/_ctypes/_ctypes.c	502	513	ctype_free_stginfo_members	ctype_free_stginfo_members(StgInfo *info)	todo		
+Modules/_ctypes/_ctypes.c	516	527	CType_Type_clear	CType_Type_clear(PyObject *self)	todo		
+Modules/_ctypes/_ctypes.c	530	544	CType_Type_dealloc	CType_Type_dealloc(PyObject *self)	todo		
+Modules/_ctypes/_ctypes.c	555	577	_ctypes_CType_Type___sizeof___impl	_ctypes_CType_Type___sizeof___impl(PyObject *self, PyTypeObject *cls) /*[clinic end generated code: output=c68c235be84d03f3 input=d064433b6110d1ce]*/	todo		
+Modules/_ctypes/_ctypes.c	580	600	ctype_get_pointer_type	ctype_get_pointer_type(PyObject *self, void *Py_UNUSED(ignored))	todo		
+Modules/_ctypes/_ctypes.c	603	617	ctype_set_pointer_type	ctype_set_pointer_type(PyObject *self, PyObject *tp, void *Py_UNUSED(ignored))	todo		
+Modules/_ctypes/_ctypes.c	662	713	StructUnionType_paramfunc	StructUnionType_paramfunc(ctypes_state *st, CDataObject *self)	todo		
+Modules/_ctypes/_ctypes.c	717	785	StructUnionType_init	StructUnionType_init(PyObject *self, PyObject *args, PyObject *kwds, int isStruct)	todo		
+Modules/_ctypes/_ctypes.c	788	791	PyCStructType_init	PyCStructType_init(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_ctypes/_ctypes.c	794	797	UnionType_init	UnionType_init(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_ctypes/_ctypes.c	819	834	CDataType_from_address_impl	CDataType_from_address_impl(PyObject *type, PyTypeObject *cls, PyObject *value) /*[clinic end generated code: output=5be4a7c0d9aa6c74 input=827a22cefe380c01]*/	todo		
+Modules/_ctypes/_ctypes.c	854	926	CDataType_from_buffer_impl	CDataType_from_buffer_impl(PyObject *type, PyTypeObject *cls, PyObject *obj, Py_ssize_t offset) /*[clinic end generated code: output=57604e99635abd31 input=0f36cedd105ca28d]*/	todo		
+Modules/_ctypes/_ctypes.c	950	990	CDataType_from_buffer_copy_impl	CDataType_from_buffer_copy_impl(PyObject *type, PyTypeObject *cls, Py_buffer *buffer, Py_ssize_t offset) /*[clinic end generated code: output=c8fc62b03e5cc6fa input=2a81e11b765a6253]*/	todo		
+Modules/_ctypes/_ctypes.c	1007	1071	CDataType_in_dll_impl	CDataType_in_dll_impl(PyObject *type, PyTypeObject *cls, PyObject *dll, const char *name) /*[clinic end generated code: output=d0e5c43b66bfa21f input=f85bf281477042b4]*/	todo		
+Modules/_ctypes/_ctypes.c	1085	1139	CDataType_from_param_impl	CDataType_from_param_impl(PyObject *type, PyTypeObject *cls, PyObject *value) /*[clinic end generated code: output=8da9e34263309f9e input=275a52c4899ddff0]*/	todo		
+Modules/_ctypes/_ctypes.c	1151	1159	CType_Type_repeat	CType_Type_repeat(PyObject *self, Py_ssize_t length)	todo		
+Modules/_ctypes/_ctypes.c	1162	1174	_structunion_setattro	_structunion_setattro(PyObject *self, PyObject *key, PyObject *value, int is_struct)	todo		
+Modules/_ctypes/_ctypes.c	1177	1180	PyCStructType_setattro	PyCStructType_setattro(PyObject *self, PyObject *key, PyObject *value)	todo		
+Modules/_ctypes/_ctypes.c	1183	1186	UnionType_setattro	UnionType_setattro(PyObject *self, PyObject *key, PyObject *value)	todo		
+Modules/_ctypes/_ctypes.c	1241	1261	PyCPointerType_SetProto	PyCPointerType_SetProto(ctypes_state *st, PyObject *self, StgInfo *stginfo, PyObject *proto)	todo		
+Modules/_ctypes/_ctypes.c	1264	1278	PyCPointerType_paramfunc	PyCPointerType_paramfunc(ctypes_state *st, CDataObject *self)	todo		
+Modules/_ctypes/_ctypes.c	1281	1343	PyCPointerType_init	PyCPointerType_init(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_ctypes/_ctypes.c	1355	1377	PyCPointerType_set_type_impl	PyCPointerType_set_type_impl(PyTypeObject *self, PyTypeObject *cls, PyObject *type) /*[clinic end generated code: output=51459d8f429a70ac input=67e1e8df921f123e]*/	todo		
+Modules/_ctypes/_ctypes.c	1393	1451	PyCPointerType_from_param_impl	PyCPointerType_from_param_impl(PyObject *type, PyTypeObject *cls, PyObject *value) /*[clinic end generated code: output=a4b32d929aabaf64 input=6c231276e3997884]*/	todo		
+Modules/_ctypes/_ctypes.c	1498	1526	_ctypes_PyCArrayType_Type_raw_set_impl	_ctypes_PyCArrayType_Type_raw_set_impl(CDataObject *self, PyObject *value) /*[clinic end generated code: output=cf9b2a9fd92e9ecb input=a3717561efc45efd]*/	todo		
+Modules/_ctypes/_ctypes.c	1535	1539	_ctypes_PyCArrayType_Type_raw_get_impl	_ctypes_PyCArrayType_Type_raw_get_impl(CDataObject *self) /*[clinic end generated code: output=3a90be6f43764e31 input=4c49bbb715235ba7]*/	todo		
+Modules/_ctypes/_ctypes.c	1548	1559	_ctypes_PyCArrayType_Type_value_get_impl	_ctypes_PyCArrayType_Type_value_get_impl(CDataObject *self) /*[clinic end generated code: output=fb0636f4d8875483 input=2432a2aeb1ed78d1]*/	todo		
+Modules/_ctypes/_ctypes.c	1568	1602	_ctypes_PyCArrayType_Type_value_set_impl	_ctypes_PyCArrayType_Type_value_set_impl(CDataObject *self, PyObject *value) /*[clinic end generated code: output=39ad655636a28dd5 input=e2e6385fc6ab1a29]*/	todo		
+Modules/_ctypes/_ctypes.c	1611	1623	WCharArray_get_value_lock_held	WCharArray_get_value_lock_held(PyObject *op)	todo		
+Modules/_ctypes/_ctypes.c	1626	1633	WCharArray_get_value	WCharArray_get_value(PyObject *op, void *Py_UNUSED(ignored))	todo		
+Modules/_ctypes/_ctypes.c	1636	1668	WCharArray_set_value_lock_held	WCharArray_set_value_lock_held(PyObject *op, PyObject *value)	todo		
+Modules/_ctypes/_ctypes.c	1671	1678	WCharArray_set_value	WCharArray_set_value(PyObject *op, PyObject *value, void *Py_UNUSED(ignored))	todo		
+Modules/_ctypes/_ctypes.c	1694	1709	add_getset	add_getset(PyTypeObject *type, PyGetSetDef *gsp)	todo		
+Modules/_ctypes/_ctypes.c	1712	1723	PyCArrayType_paramfunc	PyCArrayType_paramfunc(ctypes_state *st, CDataObject *self)	todo		
+Modules/_ctypes/_ctypes.c	1726	1849	PyCArrayType_init	PyCArrayType_init(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_ctypes/_ctypes.c	1907	1984	c_wchar_p_from_param_impl	c_wchar_p_from_param_impl(PyObject *type, PyTypeObject *cls, PyObject *value) /*[clinic end generated code: output=e453949a2f725a4c input=d322c7237a319607]*/	todo		
+Modules/_ctypes/_ctypes.c	1996	2073	c_char_p_from_param_impl	c_char_p_from_param_impl(PyObject *type, PyTypeObject *cls, PyObject *value) /*[clinic end generated code: output=219652ab7c174aa1 input=6cf0d1b6bb4ede11]*/	todo		
+Modules/_ctypes/_ctypes.c	2085	2233	c_void_p_from_param_impl	c_void_p_from_param_impl(PyObject *type, PyTypeObject *cls, PyObject *value) /*[clinic end generated code: output=984d0075b6038cc7 input=0e8b343fc19c77d4]*/	todo		
+Modules/_ctypes/_ctypes.c	2236	2263	set_stginfo_ffi_type_pointer	set_stginfo_ffi_type_pointer(StgInfo *stginfo, struct fielddesc *fmt)	todo		
+Modules/_ctypes/_ctypes.c	2269	2322	CreateSwappedType	static PyObject *CreateSwappedType(ctypes_state *st, PyTypeObject *type, PyObject *args, PyObject *kwds, PyObject *proto, struct fielddesc *fmt)	todo		
+Modules/_ctypes/_ctypes.c	2325	2352	PyCSimpleType_paramfunc	PyCSimpleType_paramfunc(ctypes_state *st, CDataObject *self)	todo		
+Modules/_ctypes/_ctypes.c	2356	2524	PyCSimpleType_init	PyCSimpleType_init(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_ctypes/_ctypes.c	2543	2615	PyCSimpleType_from_param_impl	PyCSimpleType_from_param_impl(PyObject *type, PyTypeObject *cls, PyObject *value) /*[clinic end generated code: output=8a8453d9663e3a2e input=61cc48ce3a87a570]*/	todo		
+Modules/_ctypes/_ctypes.c	2646	2748	converters_from_argtypes	converters_from_argtypes(ctypes_state *st, PyObject *ob)	todo		
+Modules/_ctypes/_ctypes.c	2751	2826	make_funcptrtype_dict	make_funcptrtype_dict(ctypes_state *st, PyObject *attrdict, StgInfo *stginfo)	todo		
+Modules/_ctypes/_ctypes.c	2829	2843	PyCFuncPtrType_paramfunc	PyCFuncPtrType_paramfunc(ctypes_state *st, CDataObject *self)	todo		
+Modules/_ctypes/_ctypes.c	2846	2882	PyCFuncPtrType_init	PyCFuncPtrType_init(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_ctypes/_ctypes.c	2904	2927	PyCData_GetContainer	PyCData_GetContainer(CDataObject *self)	todo		
+Modules/_ctypes/_ctypes.c	2930	2937	GetKeepedObjects	GetKeepedObjects(CDataObject *target)	todo		
+Modules/_ctypes/_ctypes.c	2940	2960	unique_key	unique_key(CDataObject *target, Py_ssize_t index)	todo		
+Modules/_ctypes/_ctypes.c	2963	2993	KeepRef_lock_held	KeepRef_lock_held(CDataObject *target, Py_ssize_t index, PyObject *keep)	todo		
+Modules/_ctypes/_ctypes.c	3014	3021	KeepRef	KeepRef(CDataObject *target, Py_ssize_t index, PyObject *keep)	todo		
+Modules/_ctypes/_ctypes.c	3035	3043	PyCData_traverse	PyCData_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_ctypes/_ctypes.c	3046	3056	PyCData_clear	PyCData_clear(PyObject *op)	todo		
+Modules/_ctypes/_ctypes.c	3059	3066	PyCData_dealloc	PyCData_dealloc(PyObject *self)	todo		
+Modules/_ctypes/_ctypes.c	3083	3101	PyCData_item_type	PyCData_item_type(ctypes_state *st, PyObject *type)	todo		
+Modules/_ctypes/_ctypes.c	3104	3141	PyCData_NewGetBuffer	PyCData_NewGetBuffer(PyObject *myself, Py_buffer *view, int flags)	todo		
+Modules/_ctypes/_ctypes.c	3147	3151	PyCData_nohash	PyCData_nohash(PyObject *self)	todo		
+Modules/_ctypes/_ctypes.c	3163	3188	_ctypes_PyCData___reduce___impl	_ctypes_PyCData___reduce___impl(PyObject *myself, PyTypeObject *cls) /*[clinic end generated code: output=eaad97e111599294 input=6a464e1a1e2bbdbd]*/	todo		
+Modules/_ctypes/_ctypes.c	3201	3227	_ctypes_PyCData___setstate___impl	_ctypes_PyCData___setstate___impl(PyObject *myself, PyObject *dict, const char *data, Py_ssize_t data_length) /*[clinic end generated code: output=8bd4c0a5b4f254bd input=124f5070258254c6]*/	todo		
+Modules/_ctypes/_ctypes.c	3236	3240	_ctypes_PyCData___ctypes_from_outparam___impl	_ctypes_PyCData___ctypes_from_outparam___impl(PyObject *self) /*[clinic end generated code: output=a7facc849097b549 input=910c5fec33e268c9]*/	todo		
+Modules/_ctypes/_ctypes.c	3270	3303	PyCData_MallocBuffer	PyCData_MallocBuffer(CDataObject *obj, StgInfo *info)	todo		
+Modules/_ctypes/_ctypes.c	3306	3346	PyCData_FromBaseObj	PyCData_FromBaseObj(ctypes_state *st, PyObject *type, PyObject *base, Py_ssize_t index, char *adr)	todo		
+Modules/_ctypes/_ctypes.c	3352	3383	PyCData_AtAddress	PyCData_AtAddress(ctypes_state *st, PyObject *type, void *buf)	todo		
+Modules/_ctypes/_ctypes.c	3390	3398	_ctypes_simple_instance	int _ctypes_simple_instance(ctypes_state *st, PyObject *obj)	todo		
+Modules/_ctypes/_ctypes.c	3401	3424	PyCData_get	PyCData_get(ctypes_state *st, PyObject *type, GETFUNC getfunc, PyObject *src, Py_ssize_t index, Py_ssize_t size, char *adr)	todo		
+Modules/_ctypes/_ctypes.c	3430	3542	_PyCData_set	_PyCData_set(ctypes_state *st, CDataObject *dst, PyObject *type, SETFUNC setfunc, PyObject *value, Py_ssize_t size, char *ptr)	todo		
+Modules/_ctypes/_ctypes.c	3549	3573	PyCData_set	PyCData_set(ctypes_state *st, PyObject *dst, PyObject *type, SETFUNC setfunc, PyObject *value, Py_ssize_t index, Py_ssize_t size, char *ptr)	todo		
+Modules/_ctypes/_ctypes.c	3578	3582	GenericPyCData_new	GenericPyCData_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Modules/_ctypes/_ctypes.c	3585	3616	generic_pycdata_new	generic_pycdata_new(ctypes_state *st, PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Modules/_ctypes/_ctypes.c	3623	3632	atomic_xsetref	atomic_xsetref(PyObject **field, PyObject *value)	todo		
+Modules/_ctypes/_ctypes.c	3640	3657	atomic_xgetref	atomic_xgetref(PyObject *obj, PyObject **field)	todo		
+Modules/_ctypes/_ctypes.c	3671	3682	_ctypes_CFuncPtr_errcheck_set_impl	_ctypes_CFuncPtr_errcheck_set_impl(PyCFuncPtrObject *self, PyObject *value) /*[clinic end generated code: output=6580cf1ffdf3b9fb input=84930bb16c490b33]*/	todo		
+Modules/_ctypes/_ctypes.c	3693	3700	_ctypes_CFuncPtr_errcheck_get_impl	_ctypes_CFuncPtr_errcheck_get_impl(PyCFuncPtrObject *self) /*[clinic end generated code: output=dfa6fb5c6f90fd14 input=4672135fef37819f]*/	todo		
+Modules/_ctypes/_ctypes.c	3709	3735	_ctypes_CFuncPtr_restype_set_impl	_ctypes_CFuncPtr_restype_set_impl(PyCFuncPtrObject *self, PyObject *value) /*[clinic end generated code: output=0be0a086abbabf18 input=683c3bef4562ccc6]*/	todo		
+Modules/_ctypes/_ctypes.c	3746	3763	_ctypes_CFuncPtr_restype_get_impl	_ctypes_CFuncPtr_restype_get_impl(PyCFuncPtrObject *self) /*[clinic end generated code: output=c8f44cd16f1dee5e input=5e3ed95116204fd2]*/	todo		
+Modules/_ctypes/_ctypes.c	3772	3796	_ctypes_CFuncPtr_argtypes_set_impl	_ctypes_CFuncPtr_argtypes_set_impl(PyCFuncPtrObject *self, PyObject *value) /*[clinic end generated code: output=596a36e2ae89d7d1 input=c4627573e980aa8b]*/	todo		
+Modules/_ctypes/_ctypes.c	3807	3824	_ctypes_CFuncPtr_argtypes_get_impl	_ctypes_CFuncPtr_argtypes_get_impl(PyCFuncPtrObject *self) /*[clinic end generated code: output=c46b05a1b0f99172 input=37a8a545a56f8ae2]*/	todo		
+Modules/_ctypes/_ctypes.c	3834	3884	FindAddress	static PPROC FindAddress(void *handle, const char *name, PyObject *type)	todo		
+Modules/_ctypes/_ctypes.c	3889	3916	_check_outarg_type	_check_outarg_type(ctypes_state *st, PyObject *arg, Py_ssize_t index)	todo		
+Modules/_ctypes/_ctypes.c	3920	3986	_validate_paramflags	_validate_paramflags(ctypes_state *st, PyTypeObject *type, PyObject *paramflags, PyObject *argtypes)	todo		
+Modules/_ctypes/_ctypes.c	3989	4012	_get_name	_get_name(PyObject *obj, void *arg)	todo		
+Modules/_ctypes/_ctypes.c	4016	4149	PyCFuncPtr_FromDll	PyCFuncPtr_FromDll(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Modules/_ctypes/_ctypes.c	4153	4177	PyCFuncPtr_FromVtblIndex	PyCFuncPtr_FromVtblIndex(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Modules/_ctypes/_ctypes.c	4194	4286	PyCFuncPtr_new	PyCFuncPtr_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Modules/_ctypes/_ctypes.c	4293	4314	_byref	_byref(ctypes_state *st, PyObject *obj)	todo		
+Modules/_ctypes/_ctypes.c	4317	4346	_get_arg	_get_arg(int *pindex, PyObject *name, PyObject *defval, PyObject *inargs, PyObject *kwds)	todo		
+Modules/_ctypes/_ctypes.c	4367	4529	_build_callargs	_build_callargs(ctypes_state *st, PyCFuncPtrObject *self, PyObject *argtypes, PyObject *inargs, PyObject *kwds, int *poutmask, int *pinoutmask, unsigned int *pnumretvals)	todo		
+Modules/_ctypes/_ctypes.c	4540	4595	_build_result	_build_result(PyObject *result, PyObject *callargs, int outmask, int inoutmask, unsigned int numretvals)	todo		
+Modules/_ctypes/_ctypes.c	4598	4748	PyCFuncPtr_call	PyCFuncPtr_call(PyObject *op, PyObject *inargs, PyObject *kwds)	todo		
+Modules/_ctypes/_ctypes.c	4751	4763	PyCFuncPtr_traverse	PyCFuncPtr_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_ctypes/_ctypes.c	4766	4778	PyCFuncPtr_clear	PyCFuncPtr_clear(PyObject *op)	todo		
+Modules/_ctypes/_ctypes.c	4781	4788	PyCFuncPtr_dealloc	PyCFuncPtr_dealloc(PyObject *self)	todo		
+Modules/_ctypes/_ctypes.c	4791	4804	PyCFuncPtr_repr	PyCFuncPtr_repr(PyObject *op)	todo		
+Modules/_ctypes/_ctypes.c	4807	4815	PyCFuncPtr_bool	PyCFuncPtr_bool(PyObject *op)	todo		
+Modules/_ctypes/_ctypes.c	4852	4925	_init_pos_args	_init_pos_args(PyObject *self, PyTypeObject *type, PyObject *args, PyObject *kwds, Py_ssize_t index)	todo		
+Modules/_ctypes/_ctypes.c	4928	4959	Struct_init	Struct_init(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_ctypes/_ctypes.c	4997	5015	Array_init	Array_init(PyObject *self, PyObject *args, PyObject *kw)	todo		
+Modules/_ctypes/_ctypes.c	5018	5045	Array_item_lock_held	Array_item_lock_held(PyObject *myself, Py_ssize_t index)	todo		
+Modules/_ctypes/_ctypes.c	5048	5055	Array_item	Array_item(PyObject *myself, Py_ssize_t index)	todo		
+Modules/_ctypes/_ctypes.c	5058	5173	Array_subscript_lock_held	Array_subscript_lock_held(PyObject *myself, PyObject *item)	todo		
+Modules/_ctypes/_ctypes.c	5177	5184	Array_subscript	Array_subscript(PyObject *myself, PyObject *item)	todo		
+Modules/_ctypes/_ctypes.c	5187	5219	Array_ass_item_lock_held	Array_ass_item_lock_held(PyObject *myself, Py_ssize_t index, PyObject *value)	todo		
+Modules/_ctypes/_ctypes.c	5222	5229	Array_ass_item	Array_ass_item(PyObject *myself, Py_ssize_t index, PyObject *value)	todo		
+Modules/_ctypes/_ctypes.c	5233	5287	Array_ass_subscript_lock_held	Array_ass_subscript_lock_held(PyObject *myself, PyObject *item, PyObject *value)	todo		
+Modules/_ctypes/_ctypes.c	5290	5297	Array_ass_subscript	Array_ass_subscript(PyObject *myself, PyObject *item, PyObject *value)	todo		
+Modules/_ctypes/_ctypes.c	5301	5305	Array_length	Array_length(PyObject *myself)	todo		
+Modules/_ctypes/_ctypes.c	5346	5401	PyCArrayType_from_ctype	PyCArrayType_from_ctype(ctypes_state *st, PyObject *itemtype, Py_ssize_t length)	todo		
+Modules/_ctypes/_ctypes.c	5421	5446	_ctypes_Simple_value_set_impl	_ctypes_Simple_value_set_impl(CDataObject *self, PyObject *value) /*[clinic end generated code: output=f267186118939863 input=977af9dc9e71e857]*/	todo		
+Modules/_ctypes/_ctypes.c	5450	5458	Simple_init	Simple_init(PyObject *self, PyObject *args, PyObject *kw)	todo		
+Modules/_ctypes/_ctypes.c	5468	5481	_ctypes_Simple_value_get_impl	_ctypes_Simple_value_get_impl(CDataObject *self) /*[clinic end generated code: output=ce5a26570830a243 input=3ed3f735cec89282]*/	todo		
+Modules/_ctypes/_ctypes.c	5497	5506	Simple_from_outparm_impl	Simple_from_outparm_impl(PyObject *self, PyTypeObject *cls) /*[clinic end generated code: output=6c61d90da8aa9b4f input=0f362803fb4629d5]*/	todo		
+Modules/_ctypes/_ctypes.c	5514	5522	Simple_bool	Simple_bool(PyObject *op)	todo		
+Modules/_ctypes/_ctypes.c	5526	5544	Simple_repr	Simple_repr(PyObject *self)	todo		
+Modules/_ctypes/_ctypes.c	5571	5608	Pointer_item_lock_held	Pointer_item_lock_held(PyObject *myself, Py_ssize_t index)	todo		
+Modules/_ctypes/_ctypes.c	5611	5618	Pointer_item	Pointer_item(PyObject *self, Py_ssize_t index)	todo		
+Modules/_ctypes/_ctypes.c	5621	5664	Pointer_ass_item_lock_held	Pointer_ass_item_lock_held(PyObject *myself, Py_ssize_t index, PyObject *value)	todo		
+Modules/_ctypes/_ctypes.c	5667	5674	Pointer_ass_item	Pointer_ass_item(PyObject *self, Py_ssize_t index, PyObject *value)	todo		
+Modules/_ctypes/_ctypes.c	5677	5695	Pointer_get_contents_lock_held	Pointer_get_contents_lock_held(PyObject *self, void *closure)	todo		
+Modules/_ctypes/_ctypes.c	5698	5705	Pointer_get_contents	Pointer_get_contents(PyObject *self, void *closure)	todo		
+Modules/_ctypes/_ctypes.c	5708	5758	Pointer_set_contents_lock_held	Pointer_set_contents_lock_held(PyObject *op, PyObject *value, void *closure)	todo		
+Modules/_ctypes/_ctypes.c	5761	5768	Pointer_set_contents	Pointer_set_contents(PyObject *op, PyObject *value, void *closure)	todo		
+Modules/_ctypes/_ctypes.c	5777	5785	Pointer_init	Pointer_init(PyObject *self, PyObject *args, PyObject *kw)	todo		
+Modules/_ctypes/_ctypes.c	5788	5801	Pointer_new	Pointer_new(PyTypeObject *type, PyObject *args, PyObject *kw)	todo		
+Modules/_ctypes/_ctypes.c	5804	5819	copy_pointer_to_list_lock_held	copy_pointer_to_list_lock_held(PyObject *myself, PyObject *np, Py_ssize_t len, Py_ssize_t start, Py_ssize_t step)	todo		
+Modules/_ctypes/_ctypes.c	5822	5976	Pointer_subscript	Pointer_subscript(PyObject *myself, PyObject *item)	todo		
+Modules/_ctypes/_ctypes.c	5979	5986	Pointer_bool	Pointer_bool(PyObject *self)	todo		
+Modules/_ctypes/_ctypes.c	6021	6054	comerror_init	comerror_init(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_ctypes/_ctypes.c	6057	6060	comerror_clear	comerror_clear(PyObject *self)	todo		
+Modules/_ctypes/_ctypes.c	6063	6067	comerror_traverse	comerror_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Modules/_ctypes/_ctypes.c	6070	6077	comerror_dealloc	comerror_dealloc(PyObject *self)	todo		
+Modules/_ctypes/_ctypes.c	6099	6107	string_at	string_at(const char *ptr, int size)	todo		
+Modules/_ctypes/_ctypes.c	6110	6135	cast_check_pointertype	cast_check_pointertype(ctypes_state *st, PyObject *arg)	todo		
+Modules/_ctypes/_ctypes.c	6138	6200	cast_lock_held	cast_lock_held(void *ptr, PyObject *src, PyObject *ctype)	todo		
+Modules/_ctypes/_ctypes.c	6203	6210	cast	cast(void *ptr, PyObject *src, PyObject *ctype)	todo		
+Modules/_ctypes/_ctypes.c	6213	6222	wstring_at	wstring_at(const wchar_t *ptr, int size)	todo		
+Modules/_ctypes/_ctypes.c	6225	6239	memoryview_at	memoryview_at(void *ptr, Py_ssize_t size, int readonly)	todo		
+Modules/_ctypes/_ctypes.c	6242	6255	_ctypes_add_types	_ctypes_add_types(PyObject *mod)	todo		
+Modules/_ctypes/_ctypes.c	6340	6386	_ctypes_add_objects	_ctypes_add_objects(PyObject *mod)	todo		
+Modules/_ctypes/_ctypes.c	6390	6444	_ctypes_mod_exec	_ctypes_mod_exec(PyObject *mod)	todo		
+Modules/_ctypes/_ctypes.c	6448	6479	module_traverse	module_traverse(PyObject *module, visitproc visit, void *arg) {	todo		
+Modules/_ctypes/_ctypes.c	6482	6513	module_clear	module_clear(PyObject *module) {	todo		
+Modules/_ctypes/_ctypes.c	6516	6519	module_free	module_free(void *module)	todo		
+Modules/_ctypes/_ctypes.c	6541	6544	PyInit__ctypes	PyInit__ctypes(void)	todo		

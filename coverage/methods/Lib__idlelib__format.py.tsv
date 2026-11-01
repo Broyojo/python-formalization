@@ -1,0 +1,27 @@
+file	line	endline	name	signature	status	entry	note
+Lib/idlelib/format.py	31	32	FormatParagraph.__init__	__init__(self, editwin)	excluded		platform: GUI toolkit
+Lib/idlelib/format.py	35	37	FormatParagraph.reload	reload(cls)	excluded		platform: GUI toolkit
+Lib/idlelib/format.py	39	40	FormatParagraph.close	close(self)	excluded		platform: GUI toolkit
+Lib/idlelib/format.py	42	78	FormatParagraph.format_paragraph_event	format_paragraph_event(self, event, limit=None)	excluded		platform: GUI toolkit
+Lib/idlelib/format.py	83	117	find_paragraph	find_paragraph(text, mark)	excluded		platform: GUI toolkit
+Lib/idlelib/format.py	120	154	reformat_paragraph	reformat_paragraph(data, limit)	excluded		platform: GUI toolkit
+Lib/idlelib/format.py	156	176	reformat_comment	reformat_comment(data, limit, comment_header)	excluded		platform: GUI toolkit
+Lib/idlelib/format.py	178	181	is_all_white	is_all_white(line)	excluded		platform: GUI toolkit
+Lib/idlelib/format.py	183	185	get_indent	get_indent(line)	excluded		platform: GUI toolkit
+Lib/idlelib/format.py	187	196	get_comment_header	get_comment_header(line)	excluded		platform: GUI toolkit
+Lib/idlelib/format.py	202	209	get_line_indent	get_line_indent(line, tabwidth)	excluded		platform: GUI toolkit
+Lib/idlelib/format.py	215	216	FormatRegion.__init__	__init__(self, editwin)	excluded		platform: GUI toolkit
+Lib/idlelib/format.py	218	238	FormatRegion.get_region	get_region(self)	excluded		platform: GUI toolkit
+Lib/idlelib/format.py	240	262	FormatRegion.set_region	set_region(self, head, tail, chars, lines)	excluded		platform: GUI toolkit
+Lib/idlelib/format.py	264	274	FormatRegion.indent_region_event	indent_region_event(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/format.py	276	286	FormatRegion.dedent_region_event	dedent_region_event(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/format.py	288	298	FormatRegion.comment_region_event	comment_region_event(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/format.py	300	317	FormatRegion.uncomment_region_event	uncomment_region_event(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/format.py	319	332	FormatRegion.tabify_region_event	tabify_region_event(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/format.py	334	343	FormatRegion.untabify_region_event	untabify_region_event(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/format.py	345	353	FormatRegion._asktabwidth	_asktabwidth(self)	excluded		platform: GUI toolkit
+Lib/idlelib/format.py	359	360	Indents.__init__	__init__(self, editwin)	excluded		platform: GUI toolkit
+Lib/idlelib/format.py	362	376	Indents.toggle_tabs_event	toggle_tabs_event(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/format.py	378	389	Indents.change_indentwidth_event	change_indentwidth_event(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/format.py	393	394	Rstrip.__init__	__init__(self, editwin)	excluded		platform: GUI toolkit
+Lib/idlelib/format.py	396	421	Rstrip.do_rstrip	do_rstrip(self, event=None)	excluded		platform: GUI toolkit

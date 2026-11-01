@@ -1,0 +1,3 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_typesmodule.c	10	51	_types_exec	_types_exec(PyObject *m)	todo		
+Modules/_typesmodule.c	69	72	PyInit__types	PyInit__types(void)	todo		

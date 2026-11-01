@@ -1,0 +1,26 @@
+file	line	endline	name	signature	status	entry	note
+Lib/multiprocessing/reduction.py	38	41	ForkingPickler.__init__	__init__(self, *args)	todo		
+Lib/multiprocessing/reduction.py	44	46	ForkingPickler.register	register(cls, type, reduce)	todo		
+Lib/multiprocessing/reduction.py	49	52	ForkingPickler.dumps	dumps(cls, obj, protocol=None)	todo		
+Lib/multiprocessing/reduction.py	58	60	dump	dump(obj, file, protocol=None)	todo		
+Lib/multiprocessing/reduction.py	71	81	duplicate	duplicate(handle, target_process=None, inheritable=False, *, source_process=None)	todo		
+Lib/multiprocessing/reduction.py	83	93	steal_handle	steal_handle(source_pid, handle)	todo		
+Lib/multiprocessing/reduction.py	95	98	send_handle	send_handle(conn, handle, destination_pid)	todo		
+Lib/multiprocessing/reduction.py	100	102	recv_handle	recv_handle(conn)	todo		
+Lib/multiprocessing/reduction.py	106	119	DupHandle.__init__	__init__(self, handle, access, pid=None)	todo		
+Lib/multiprocessing/reduction.py	121	135	DupHandle.detach	detach(self)	todo		
+Lib/multiprocessing/reduction.py	142	148	sendfds	sendfds(sock, fds)	todo		
+Lib/multiprocessing/reduction.py	150	179	recvfds	recvfds(sock, size)	todo		
+Lib/multiprocessing/reduction.py	181	184	send_handle	send_handle(conn, handle, destination_pid)	todo		
+Lib/multiprocessing/reduction.py	186	189	recv_handle	recv_handle(conn)	todo		
+Lib/multiprocessing/reduction.py	191	200	DupFd	DupFd(fd)	todo		
+Lib/multiprocessing/reduction.py	206	210	_reduce_method	_reduce_method(m)	todo		
+Lib/multiprocessing/reduction.py	212	213	_C.f	f(self)	todo		
+Lib/multiprocessing/reduction.py	217	218	_reduce_method_descriptor	_reduce_method_descriptor(m)	todo		
+Lib/multiprocessing/reduction.py	223	224	_reduce_partial	_reduce_partial(p)	todo		
+Lib/multiprocessing/reduction.py	225	226	_rebuild_partial	_rebuild_partial(func, args, keywords)	todo		
+Lib/multiprocessing/reduction.py	234	236	_reduce_socket	_reduce_socket(s)	todo		
+Lib/multiprocessing/reduction.py	237	238	_rebuild_socket	_rebuild_socket(ds)	todo		
+Lib/multiprocessing/reduction.py	242	244	_reduce_socket	_reduce_socket(s)	todo		
+Lib/multiprocessing/reduction.py	245	247	_rebuild_socket	_rebuild_socket(df, family, type, proto)	todo		
+Lib/multiprocessing/reduction.py	276	281	AbstractReducer.__init__	__init__(self, *args)	todo		

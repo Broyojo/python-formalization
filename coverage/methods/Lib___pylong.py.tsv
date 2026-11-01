@@ -1,0 +1,15 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_pylong.py	57	131	compute_powers	compute_powers(w, base, more_than, *, need_hi=False, show=False)	todo		
+Lib/_pylong.py	139	176	int_to_decimal	int_to_decimal(n)	todo		
+Lib/_pylong.py	178	221	int_to_decimal_string	int_to_decimal_string(n)	todo		
+Lib/_pylong.py	223	247	_str_to_int_inner	_str_to_int_inner(s)	todo		
+Lib/_pylong.py	271	387	_dec_str_to_int_inner	_dec_str_to_int_inner(s, *, GUARD=8)	todo		
+Lib/_pylong.py	389	400	int_from_string	int_from_string(s)	todo		
+Lib/_pylong.py	402	411	str_to_int	str_to_int(s)	todo		
+Lib/_pylong.py	422	449	_div2n1n	_div2n1n(a, b, n)	todo		
+Lib/_pylong.py	452	462	_div3n2n	_div3n2n(a12, a3, b, b1, b2, n)	todo		
+Lib/_pylong.py	465	493	_int2digits	_int2digits(a, n)	todo		
+Lib/_pylong.py	496	508	_digits2int	_digits2int(digits, n)	todo		
+Lib/_pylong.py	511	525	_divmod_pos	_divmod_pos(a, b)	todo		
+Lib/_pylong.py	528	541	int_divmod	int_divmod(a, b)	modelled	mathint-divmod-floor	
+Lib/_pylong.py	706	722	consumer	consumer(w, limit, need_hi)	todo		

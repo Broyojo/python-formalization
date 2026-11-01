@@ -1,0 +1,97 @@
+file	line	endline	name	signature	status	entry	note
+Lib/idlelib/pyshell.py	67	82	idle_showwarning	idle_showwarning(message, category, filename, lineno, file=None, line=None)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	86	97	capture_warnings	capture_warnings(capture)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	101	118	extended_linecache_checkcache	extended_linecache_checkcache(filename=None, orig_checkcache=linecache.checkcache)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	127	145	PyShellEditorWindow.__init__	__init__(self, *args)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	156	166	PyShellEditorWindow.color_breakpoint_text	color_breakpoint_text(self, color=True)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	168	180	PyShellEditorWindow.set_breakpoint	set_breakpoint(self, lineno)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	182	189	PyShellEditorWindow.set_breakpoint_event	set_breakpoint_event(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	191	208	PyShellEditorWindow.clear_breakpoint_event	clear_breakpoint_event(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	210	223	PyShellEditorWindow.clear_file_breaks	clear_file_breaks(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	225	266	PyShellEditorWindow.store_file_breaks	store_file_breaks(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	268	284	PyShellEditorWindow.restore_file_breaks	restore_file_breaks(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	286	291	PyShellEditorWindow.update_breakpoints	update_breakpoints(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	293	301	PyShellEditorWindow.ranges_to_linenumbers	ranges_to_linenumbers(self, ranges)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	310	313	PyShellEditorWindow._close	_close(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	325	333	PyShellFileList.open_shell	open_shell(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	338	341	ModifiedColorDelegator.recolorize_main	recolorize_main(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	343	346	ModifiedColorDelegator.removecolors	removecolors(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	351	358	ModifiedUndoDelegator.insert	insert(self, index, chars, tags=None)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	360	367	ModifiedUndoDelegator.delete	delete(self, index1, index2=None)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	369	380	ModifiedUndoDelegator.undo_event	undo_event(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	385	388	UserInputTaggingDelegator.insert	insert(self, index, chars, tags=None)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	393	395	MyRPCClient.handle_EOF	handle_EOF(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	397	408	restart_line	restart_line(width, filename)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	411	419	fix_user_path	fix_user_path(path)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	424	431	ModifiedInterpreter.__init__	__init__(self, tkconsole)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	437	442	ModifiedInterpreter.spawn_subprocess	spawn_subprocess(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	444	454	ModifiedInterpreter.build_subprocess_arglist	build_subprocess_arglist(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	456	497	ModifiedInterpreter.start_subprocess	start_subprocess(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	499	540	ModifiedInterpreter.restart_subprocess	restart_subprocess(self, with_cwd=False, filename='')	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	542	543	ModifiedInterpreter.__request_interrupt	__request_interrupt(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	545	546	ModifiedInterpreter.interrupt_subprocess	interrupt_subprocess(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	548	561	ModifiedInterpreter.kill_subprocess	kill_subprocess(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	563	574	ModifiedInterpreter.terminate_subprocess	terminate_subprocess(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	576	588	ModifiedInterpreter.transfer_path	transfer_path(self, with_cwd=False)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	592	628	ModifiedInterpreter.poll_subprocess	poll_subprocess(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	632	633	ModifiedInterpreter.setdebugger	setdebugger(self, debugger)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	635	636	ModifiedInterpreter.getdebugger	getdebugger(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	638	649	ModifiedInterpreter.open_remote_stack_viewer	open_remote_stack_viewer(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	651	665	ModifiedInterpreter.remote_stack_viewer	remote_stack_viewer(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	670	673	ModifiedInterpreter.execsource	execsource(self, source)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	675	693	ModifiedInterpreter.execfile	execfile(self, filename, source=None)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	695	702	ModifiedInterpreter.runsource	runsource(self, source)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	704	710	ModifiedInterpreter.stuffsource	stuffsource(self, source)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	712	722	ModifiedInterpreter.prepend_syspath	prepend_syspath(self, filename)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	724	748	ModifiedInterpreter.showsyntaxerror	showsyntaxerror(self, filename=None, **kwargs)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	750	756	ModifiedInterpreter.showtraceback	showtraceback(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	758	763	ModifiedInterpreter.checklinecache	checklinecache(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	765	775	ModifiedInterpreter.runcommand	runcommand(self, code)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	777	821	ModifiedInterpreter.runcode	runcode(self, code)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	823	825	ModifiedInterpreter.write	write(self, s)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	827	836	ModifiedInterpreter.display_port_binding_error	display_port_binding_error(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	838	844	ModifiedInterpreter.display_no_subprocess_error	display_no_subprocess_error(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	846	851	ModifiedInterpreter.display_executing_dialog	display_executing_dialog(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	892	972	PyShell.__init__	__init__(self, flist=None)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	974	978	PyShell.ResetFont	ResetFont(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	980	994	PyShell.ResetColorizer	ResetColorizer(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	996	998	PyShell.replace_event	replace_event(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1000	1001	PyShell.get_standard_extension_names	get_standard_extension_names(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1003	1017	PyShell.get_prompt_text	get_prompt_text(self, first, last)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1020	1038	PyShell.copy_with_prompts_callback	copy_with_prompts_callback(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1047	1049	PyShell.set_warning_stream	set_warning_stream(self, stream)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1051	1052	PyShell.get_warning_stream	get_warning_stream(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1054	1066	PyShell.toggle_debugger	toggle_debugger(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1068	1070	PyShell.set_debugger_indicator	set_debugger_indicator(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1072	1073	PyShell.toggle_jit_stack_viewer	toggle_jit_stack_viewer(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1075	1086	PyShell.close_debugger	close_debugger(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1088	1098	PyShell.open_debugger	open_debugger(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1100	1102	PyShell.debug_menu_postcommand	debug_menu_postcommand(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1104	1107	PyShell.beginexecuting	beginexecuting(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1109	1113	PyShell.endexecuting	endexecuting(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1115	1128	PyShell.close	close(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1130	1144	PyShell._close	_close(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1146	1148	PyShell.ispythonsource	ispythonsource(self, filename)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1150	1151	PyShell.short_title	short_title(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1155	1179	PyShell.begin	begin(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1181	1185	PyShell.stop_readline	stop_readline(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1187	1208	PyShell.readline	readline(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1210	1211	PyShell.isatty	isatty(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1213	1233	PyShell.cancel_callback	cancel_callback(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1235	1248	PyShell.eof_callback	eof_callback(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1250	1257	PyShell.linefeed_callback	linefeed_callback(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1259	1336	PyShell.enter_callback	enter_callback(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1338	1364	PyShell.recall	recall(self, s, event)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1367	1377	PyShell.runit	runit(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1379	1391	PyShell.open_stack_viewer	open_stack_viewer(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1393	1395	PyShell.view_restart_mark	view_restart_mark(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1397	1399	PyShell.restart_shell	restart_shell(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1401	1413	PyShell.showprompt	showprompt(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1415	1421	PyShell.show_warning	show_warning(self, msg)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1423	1431	PyShell.resetoutput	resetoutput(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1433	1445	PyShell.write	write(self, s, tags=())	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1447	1453	PyShell.rmenu_check_cut	rmenu_check_cut(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1455	1458	PyShell.rmenu_check_paste	rmenu_check_paste(self)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1460	1462	PyShell.squeeze_current_text_event	squeeze_current_text_event(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1464	1465	PyShell.on_squeezed_expand	on_squeezed_expand(self, index, text, tags)	excluded		platform: GUI toolkit
+Lib/idlelib/pyshell.py	1522	1696	main	main()	excluded		platform: GUI toolkit

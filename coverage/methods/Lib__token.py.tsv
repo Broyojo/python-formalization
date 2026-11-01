@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Lib/token.py	137	138	ISTERMINAL	ISTERMINAL(x: int)	todo		
+Lib/token.py	140	141	ISNONTERMINAL	ISNONTERMINAL(x: int)	todo		
+Lib/token.py	143	144	ISEOF	ISEOF(x: int)	todo		

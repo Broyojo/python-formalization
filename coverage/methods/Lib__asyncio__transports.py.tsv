@@ -1,0 +1,33 @@
+file	line	endline	name	signature	status	entry	note
+Lib/asyncio/transports.py	14	17	BaseTransport.__init__	__init__(self, extra=None)	todo		
+Lib/asyncio/transports.py	19	21	BaseTransport.get_extra_info	get_extra_info(self, name, default=None)	todo		
+Lib/asyncio/transports.py	23	25	BaseTransport.is_closing	is_closing(self)	todo		
+Lib/asyncio/transports.py	27	35	BaseTransport.close	close(self)	todo		
+Lib/asyncio/transports.py	37	39	BaseTransport.set_protocol	set_protocol(self, protocol)	todo		
+Lib/asyncio/transports.py	41	43	BaseTransport.get_protocol	get_protocol(self)	todo		
+Lib/asyncio/transports.py	51	53	ReadTransport.is_reading	is_reading(self)	todo		
+Lib/asyncio/transports.py	55	61	ReadTransport.pause_reading	pause_reading(self)	todo		
+Lib/asyncio/transports.py	63	69	ReadTransport.resume_reading	resume_reading(self)	todo		
+Lib/asyncio/transports.py	77	96	WriteTransport.set_write_buffer_limits	set_write_buffer_limits(self, high=None, low=None)	todo		
+Lib/asyncio/transports.py	98	100	WriteTransport.get_write_buffer_size	get_write_buffer_size(self)	todo		
+Lib/asyncio/transports.py	102	106	WriteTransport.get_write_buffer_limits	get_write_buffer_limits(self)	todo		
+Lib/asyncio/transports.py	108	114	WriteTransport.write	write(self, data)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/asyncio/transports.py	116	123	WriteTransport.writelines	writelines(self, list_of_data)	todo		
+Lib/asyncio/transports.py	125	132	WriteTransport.write_eof	write_eof(self)	todo		
+Lib/asyncio/transports.py	134	136	WriteTransport.can_write_eof	can_write_eof(self)	todo		
+Lib/asyncio/transports.py	138	145	WriteTransport.abort	abort(self)	todo		
+Lib/asyncio/transports.py	177	187	DatagramTransport.sendto	sendto(self, data, addr=None)	todo		
+Lib/asyncio/transports.py	189	196	DatagramTransport.abort	abort(self)	todo		
+Lib/asyncio/transports.py	203	205	SubprocessTransport.get_pid	get_pid(self)	todo		
+Lib/asyncio/transports.py	207	213	SubprocessTransport.get_returncode	get_returncode(self)	todo		
+Lib/asyncio/transports.py	215	217	SubprocessTransport.get_pipe_transport	get_pipe_transport(self, fd)	todo		
+Lib/asyncio/transports.py	219	225	SubprocessTransport.send_signal	send_signal(self, signal)	todo		
+Lib/asyncio/transports.py	227	239	SubprocessTransport.terminate	terminate(self)	todo		
+Lib/asyncio/transports.py	241	250	SubprocessTransport.kill	kill(self)	todo		
+Lib/asyncio/transports.py	272	277	_FlowControlMixin.__init__	__init__(self, extra=None, loop=None)	todo		
+Lib/asyncio/transports.py	279	295	_FlowControlMixin._maybe_pause_protocol	_maybe_pause_protocol(self)	todo		
+Lib/asyncio/transports.py	297	311	_FlowControlMixin._maybe_resume_protocol	_maybe_resume_protocol(self)	todo		
+Lib/asyncio/transports.py	313	314	_FlowControlMixin.get_write_buffer_limits	get_write_buffer_limits(self)	todo		
+Lib/asyncio/transports.py	316	330	_FlowControlMixin._set_write_buffer_limits	_set_write_buffer_limits(self, high=None, low=None)	todo		
+Lib/asyncio/transports.py	332	334	_FlowControlMixin.set_write_buffer_limits	set_write_buffer_limits(self, high=None, low=None)	todo		
+Lib/asyncio/transports.py	336	337	_FlowControlMixin.get_write_buffer_size	get_write_buffer_size(self)	todo		

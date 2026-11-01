@@ -1,0 +1,13 @@
+file	line	endline	name	signature	status	entry	note
+Objects/cellobject.c	11	22	PyCell_New	PyCell_New(PyObject *obj)	todo		
+Objects/cellobject.c	37	53	cell_new	cell_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)	todo		
+Objects/cellobject.c	56	63	PyCell_Get	PyCell_Get(PyObject *op)	todo		
+Objects/cellobject.c	66	74	PyCell_Set	PyCell_Set(PyObject *op, PyObject *value)	todo		
+Objects/cellobject.c	77	83	cell_dealloc	cell_dealloc(PyObject *self)	todo		
+Objects/cellobject.c	86	94	cell_compare_impl	cell_compare_impl(PyObject *a, PyObject *b, int op)	todo		
+Objects/cellobject.c	97	115	cell_richcompare	cell_richcompare(PyObject *a, PyObject *b, int op)	todo		
+Objects/cellobject.c	118	128	cell_repr	cell_repr(PyObject *self)	todo		
+Objects/cellobject.c	131	136	cell_traverse	cell_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/cellobject.c	139	144	cell_clear	cell_clear(PyObject *self)	todo		
+Objects/cellobject.c	147	156	cell_get_contents	cell_get_contents(PyObject *self, void *closure)	todo		
+Objects/cellobject.c	159	165	cell_set_contents	cell_set_contents(PyObject *self, PyObject *obj, void *Py_UNUSED(ignored))	todo		

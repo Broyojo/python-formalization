@@ -1,0 +1,5 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testlimitedcapi/capsule.c	4	8	capsule_destructor	capsule_destructor(PyObject *op)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/capsule.c	11	32	capsule_new	capsule_new(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/capsule.c	35	51	pycapsule_import	pycapsule_import(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/capsule.c	60	63	_PyTestLimitedCAPI_Init_Capsule	_PyTestLimitedCAPI_Init_Capsule(PyObject *m)	excluded		test-support: only for CPython's own tests

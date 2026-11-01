@@ -1,0 +1,14 @@
+file	line	endline	name	signature	status	entry	note
+Lib/copyreg.py	12	20	pickle	pickle(ob_type, pickle_function, constructor_ob=None)	todo		
+Lib/copyreg.py	22	24	constructor	constructor(object)	todo		
+Lib/copyreg.py	28	29	pickle_complex	pickle_complex(c)	todo		
+Lib/copyreg.py	33	35	pickle_union	pickle_union(obj)	todo		
+Lib/copyreg.py	39	40	pickle_super	pickle_super(obj)	todo		
+Lib/copyreg.py	46	53	_reconstructor	_reconstructor(cls, base, state)	todo		
+Lib/copyreg.py	60	99	_reduce_ex	_reduce_ex(self, proto)	todo		
+Lib/copyreg.py	103	104	__newobj__	__newobj__(cls, *args)	todo		
+Lib/copyreg.py	106	110	__newobj_ex__	__newobj_ex__(cls, args, kwargs)	todo		
+Lib/copyreg.py	112	161	_slotnames	_slotnames(cls)	todo		
+Lib/copyreg.py	178	194	add_extension	add_extension(module, name, code)	todo		
+Lib/copyreg.py	196	206	remove_extension	remove_extension(module, name, code)	todo		
+Lib/copyreg.py	208	209	clear_extension_cache	clear_extension_cache()	todo		

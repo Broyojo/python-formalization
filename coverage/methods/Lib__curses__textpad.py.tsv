@@ -1,0 +1,15 @@
+file	line	endline	name	signature	status	entry	note
+Lib/curses/textpad.py	6	17	rectangle	rectangle(win, uly, ulx, lry, lrx)	todo		
+Lib/curses/textpad.py	46	52	Textbox.__init__	__init__(self, win, insert_mode=False)	todo		
+Lib/curses/textpad.py	54	57	Textbox._update_max_yx	_update_max_yx(self)	todo		
+Lib/curses/textpad.py	59	62	Textbox._decode	_decode(self, ch)	todo		
+Lib/curses/textpad.py	64	68	Textbox._char_at	_char_at(self, *yx)	todo		
+Lib/curses/textpad.py	70	75	Textbox._cell_at	_cell_at(self, *yx)	todo		
+Lib/curses/textpad.py	77	80	Textbox._isprint	_isprint(self, cell)	todo		
+Lib/curses/textpad.py	82	86	Textbox._printable_key	_printable_key(self, ch)	todo		
+Lib/curses/textpad.py	88	100	Textbox._end_of_line	_end_of_line(self, y)	todo		
+Lib/curses/textpad.py	102	126	Textbox._insert_printable_char	_insert_printable_char(self, ch)	todo		
+Lib/curses/textpad.py	128	193	Textbox.do_command	do_command(self, ch)	todo		
+Lib/curses/textpad.py	195	210	Textbox.gather	gather(self)	todo		
+Lib/curses/textpad.py	212	223	Textbox.edit	edit(self, validate=None)	todo		
+Lib/curses/textpad.py	226	233	test_editbox	test_editbox(stdscr)	todo		

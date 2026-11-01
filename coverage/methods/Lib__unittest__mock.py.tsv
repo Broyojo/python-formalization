@@ -1,0 +1,158 @@
+file	line	endline	name	signature	status	entry	note
+Lib/unittest/mock.py	57	62	_is_async_obj	_is_async_obj(obj)	todo		
+Lib/unittest/mock.py	65	69	_is_async_func	_is_async_func(func)	todo		
+Lib/unittest/mock.py	72	75	_is_instance_mock	_is_instance_mock(obj)	todo		
+Lib/unittest/mock.py	78	82	_is_exception	_is_exception(obj)	todo		
+Lib/unittest/mock.py	85	91	_extract_mock	_extract_mock(obj)	todo		
+Lib/unittest/mock.py	94	126	_get_signature_object	_get_signature_object(func, as_instance, eat_self)	todo		
+Lib/unittest/mock.py	129	138	_check_signature	_check_signature(func, mock, skipfirst, instance=False)	todo		
+Lib/unittest/mock.py	141	151	_copy_func_details	_copy_func_details(func, funcopy)	todo		
+Lib/unittest/mock.py	154	161	_callable	_callable(obj)	todo		
+Lib/unittest/mock.py	164	167	_is_list	_is_list(obj)	todo		
+Lib/unittest/mock.py	170	182	_instance_callable	_instance_callable(obj)	todo		
+Lib/unittest/mock.py	185	209	_set_signature	_set_signature(mock, original, instance=False)	todo		
+Lib/unittest/mock.py	211	231	_set_async_signature	_set_async_signature(mock, original, instance=False, is_async_mock=False)	todo		
+Lib/unittest/mock.py	234	280	_setup_func	_setup_func(funcopy, mock, sig)	todo		
+Lib/unittest/mock.py	283	307	_setup_async_mock	_setup_async_mock(mock)	todo		
+Lib/unittest/mock.py	310	311	_is_magic	_is_magic(name)	todo		
+Lib/unittest/mock.py	316	317	_SentinelObject.__init__	__init__(self, name)	todo		
+Lib/unittest/mock.py	319	320	_SentinelObject.__repr__	__repr__(self)	todo		
+Lib/unittest/mock.py	322	323	_SentinelObject.__reduce__	__reduce__(self)	todo		
+Lib/unittest/mock.py	328	329	_Sentinel.__init__	__init__(self)	todo		
+Lib/unittest/mock.py	331	335	_Sentinel.__getattr__	__getattr__(self, name)	todo		
+Lib/unittest/mock.py	337	338	_Sentinel.__reduce__	__reduce__(self)	todo		
+Lib/unittest/mock.py	355	370	_delegating_property	_delegating_property(name)	todo		
+Lib/unittest/mock.py	376	388	_CallList.__contains__	__contains__(self, value)	todo		
+Lib/unittest/mock.py	390	391	_CallList.__repr__	__repr__(self)	todo		
+Lib/unittest/mock.py	394	418	_check_and_set_parent	_check_and_set_parent(parent, value, name, new_name)	todo		
+Lib/unittest/mock.py	422	423	_MockIter.__init__	__init__(self, obj)	todo		
+Lib/unittest/mock.py	424	425	_MockIter.__next__	__next__(self)	todo		
+Lib/unittest/mock.py	430	431	Base.__init__	__init__(self, /, *args, **kwargs)	todo		
+Lib/unittest/mock.py	446	462	NonCallableMock.__new__	__new__(cls, spec=None, wraps=None, name=None, spec_set=None, parent=None, _spec_state=None, _new_name='', _new_parent=None, _spec_as_instance=False, _eat_self=None, unsafe=False, **kwargs)	todo		
+Lib/unittest/mock.py	465	507	NonCallableMock.__init__	__init__(self, spec=None, wraps=None, name=None, spec_set=None, parent=None, _spec_state=None, _new_name='', _new_parent=None, _spec_as_instance=False, _eat_self=None, unsafe=False, **kwargs)	todo		
+Lib/unittest/mock.py	510	522	NonCallableMock.attach_mock	attach_mock(self, mock, attribute)	todo		
+Lib/unittest/mock.py	525	531	NonCallableMock.mock_add_spec	mock_add_spec(self, spec, spec_set=False)	todo		
+Lib/unittest/mock.py	534	571	NonCallableMock._mock_add_spec	_mock_add_spec(self, spec, spec_set, _spec_as_instance=False, _eat_self=False)	todo		
+Lib/unittest/mock.py	573	576	NonCallableMock._mock_extend_spec_methods	_mock_extend_spec_methods(self, spec_methods)	todo		
+Lib/unittest/mock.py	578	588	NonCallableMock.__get_return_value	__get_return_value(self)	todo		
+Lib/unittest/mock.py	591	596	NonCallableMock.__set_return_value	__set_return_value(self, value)	todo		
+Lib/unittest/mock.py	604	607	NonCallableMock.__class__	__class__(self)	todo		
+Lib/unittest/mock.py	616	625	NonCallableMock.__get_side_effect	__get_side_effect(self)	todo		
+Lib/unittest/mock.py	627	633	NonCallableMock.__set_side_effect	__set_side_effect(self, value)	todo		
+Lib/unittest/mock.py	638	667	NonCallableMock.reset_mock	reset_mock(self, visited=None, *, return_value: bool=False, side_effect: bool=False)	todo		
+Lib/unittest/mock.py	670	689	NonCallableMock.configure_mock	configure_mock(self, /, **kwargs)	todo		
+Lib/unittest/mock.py	692	737	NonCallableMock.__getattr__	__getattr__(self, name)	todo		
+Lib/unittest/mock.py	740	765	NonCallableMock._extract_mock_name	_extract_mock_name(self)	todo		
+Lib/unittest/mock.py	767	785	NonCallableMock.__repr__	__repr__(self)	todo		
+Lib/unittest/mock.py	788	803	NonCallableMock.__dir__	__dir__(self)	todo		
+Lib/unittest/mock.py	806	845	NonCallableMock.__setattr__	__setattr__(self, name, value)	todo		
+Lib/unittest/mock.py	848	863	NonCallableMock.__delattr__	__delattr__(self, name)	todo		
+Lib/unittest/mock.py	866	868	NonCallableMock._format_mock_call_signature	_format_mock_call_signature(self, args, kwargs)	todo		
+Lib/unittest/mock.py	871	876	NonCallableMock._format_mock_failure_message	_format_mock_failure_message(self, args, kwargs, action='call')	todo		
+Lib/unittest/mock.py	879	909	NonCallableMock._get_call_signature_from_name	_get_call_signature_from_name(self, name)	todo		
+Lib/unittest/mock.py	912	937	NonCallableMock._call_matcher	_call_matcher(self, _call)	todo		
+Lib/unittest/mock.py	939	947	NonCallableMock.assert_not_called	assert_not_called(self)	todo		
+Lib/unittest/mock.py	949	955	NonCallableMock.assert_called	assert_called(self)	todo		
+Lib/unittest/mock.py	957	965	NonCallableMock.assert_called_once	assert_called_once(self)	todo		
+Lib/unittest/mock.py	967	986	NonCallableMock.assert_called_with	assert_called_with(self, /, *args, **kwargs)	todo		
+Lib/unittest/mock.py	989	998	NonCallableMock.assert_called_once_with	assert_called_once_with(self, /, *args, **kwargs)	todo		
+Lib/unittest/mock.py	1001	1043	NonCallableMock.assert_has_calls	assert_has_calls(self, calls, any_order=False)	todo		
+Lib/unittest/mock.py	1046	1059	NonCallableMock.assert_any_call	assert_any_call(self, /, *args, **kwargs)	todo		
+Lib/unittest/mock.py	1062	1097	NonCallableMock._get_child_mock	_get_child_mock(self, /, **kw)	todo		
+Lib/unittest/mock.py	1100	1110	NonCallableMock._calls_repr	_calls_repr(self)	todo		
+Lib/unittest/mock.py	1126	1134	_AnyComparer.__contains__	__contains__(self, item)	todo		
+Lib/unittest/mock.py	1137	1149	_try_iter	_try_iter(obj)	todo		
+Lib/unittest/mock.py	1154	1163	CallableMixin.__init__	__init__(self, spec=None, side_effect=None, return_value=DEFAULT, wraps=None, name=None, spec_set=None, parent=None, _spec_state=None, _new_name='', _new_parent=None, **kwargs)	todo		
+Lib/unittest/mock.py	1166	1168	CallableMixin._mock_check_sig	_mock_check_sig(self, /, *args, **kwargs)	todo		
+Lib/unittest/mock.py	1171	1176	CallableMixin.__call__	__call__(self, /, *args, **kwargs)	todo		
+Lib/unittest/mock.py	1179	1180	CallableMixin._mock_call	_mock_call(self, /, *args, **kwargs)	todo		
+Lib/unittest/mock.py	1182	1232	CallableMixin._increment_mock_call	_increment_mock_call(self, /, *args, **kwargs)	todo		
+Lib/unittest/mock.py	1234	1261	CallableMixin._execute_mock_call	_execute_mock_call(self, /, *args, **kwargs)	todo		
+Lib/unittest/mock.py	1326	1332	_check_spec_arg_typos	_check_spec_arg_typos(kwargs_to_check)	todo		
+Lib/unittest/mock.py	1340	1375	_patch.__init__	__init__(self, getter, attribute, new, spec, create, spec_set, autospec, new_callable, kwargs, *, unsafe=False)	todo		
+Lib/unittest/mock.py	1378	1388	_patch.copy	copy(self)	todo		
+Lib/unittest/mock.py	1391	1396	_patch.__call__	__call__(self, func)	todo		
+Lib/unittest/mock.py	1399	1410	_patch.decorate_class	decorate_class(self, klass)	todo		
+Lib/unittest/mock.py	1414	1425	_patch.decoration_helper	decoration_helper(self, patched, args, keywargs)	todo		
+Lib/unittest/mock.py	1428	1442	_patch.decorate_callable	decorate_callable(self, func)	todo		
+Lib/unittest/mock.py	1445	1459	_patch.decorate_async_callable	decorate_async_callable(self, func)	todo		
+Lib/unittest/mock.py	1462	1483	_patch.get_original	get_original(self)	todo		
+Lib/unittest/mock.py	1486	1638	_patch.__enter__	__enter__(self)	todo		
+Lib/unittest/mock.py	1640	1662	_patch.__exit__	__exit__(self, *exc_info)	todo		
+Lib/unittest/mock.py	1665	1669	_patch.start	start(self)	todo		
+Lib/unittest/mock.py	1672	1680	_patch.stop	stop(self)	todo		
+Lib/unittest/mock.py	1684	1690	_get_target	_get_target(target)	todo		
+Lib/unittest/mock.py	1693	1719	_patch_object	_patch_object(target, attribute, new=DEFAULT, spec=None, create=False, spec_set=None, autospec=None, new_callable=None, *, unsafe=False, **kwargs)	todo		
+Lib/unittest/mock.py	1722	1768	_patch_multiple	_patch_multiple(target, spec=None, create=False, spec_set=None, autospec=None, new_callable=None, **kwargs)	todo		
+Lib/unittest/mock.py	1771	1850	patch	patch(target, new=DEFAULT, spec=None, create=False, spec_set=None, autospec=None, new_callable=None, *, unsafe=False, **kwargs)	todo		
+Lib/unittest/mock.py	1883	1889	_patch_dict.__init__	__init__(self, in_dict, values=(), clear=False, **kwargs)	todo		
+Lib/unittest/mock.py	1892	1897	_patch_dict.__call__	__call__(self, f)	todo		
+Lib/unittest/mock.py	1900	1909	_patch_dict.decorate_callable	decorate_callable(self, f)	todo		
+Lib/unittest/mock.py	1912	1921	_patch_dict.decorate_async_callable	decorate_async_callable(self, f)	todo		
+Lib/unittest/mock.py	1924	1932	_patch_dict.decorate_class	decorate_class(self, klass)	todo		
+Lib/unittest/mock.py	1935	1938	_patch_dict.__enter__	__enter__(self)	todo		
+Lib/unittest/mock.py	1941	1966	_patch_dict._patch_dict	_patch_dict(self)	todo		
+Lib/unittest/mock.py	1969	1979	_patch_dict._unpatch_dict	_unpatch_dict(self)	todo		
+Lib/unittest/mock.py	1982	1986	_patch_dict.__exit__	__exit__(self, *args)	todo		
+Lib/unittest/mock.py	1989	1993	_patch_dict.start	start(self)	todo		
+Lib/unittest/mock.py	1996	2004	_patch_dict.stop	stop(self)	todo		
+Lib/unittest/mock.py	2007	2013	_clear_dict	_clear_dict(in_dict)	todo		
+Lib/unittest/mock.py	2016	2019	_patch_stopall	_patch_stopall()	todo		
+Lib/unittest/mock.py	2063	2068	_get_method	_get_method(name, func)	todo		
+Lib/unittest/mock.py	2116	2124	_get_eq	_get_eq(self)	todo		
+Lib/unittest/mock.py	2126	2133	_get_ne	_get_ne(self)	todo		
+Lib/unittest/mock.py	2135	2143	_get_iter	_get_iter(self)	todo		
+Lib/unittest/mock.py	2145	2151	_get_async_iter	_get_async_iter(self)	todo		
+Lib/unittest/mock.py	2162	2176	_set_return_value	_set_return_value(mock, method, name)	todo		
+Lib/unittest/mock.py	2181	2184	MagicMixin.__init__	__init__(self, /, *args, **kw)	todo		
+Lib/unittest/mock.py	2187	2205	MagicMixin._mock_set_magics	_mock_set_magics(self)	todo		
+Lib/unittest/mock.py	2211	2218	NonCallableMagicMock.mock_add_spec	mock_add_spec(self, spec, spec_set=False)	todo		
+Lib/unittest/mock.py	2236	2243	MagicMock.mock_add_spec	mock_add_spec(self, spec, spec_set=False)	todo		
+Lib/unittest/mock.py	2245	2255	MagicMock.reset_mock	reset_mock(self, /, *args, return_value: bool=False, **kwargs)	todo		
+Lib/unittest/mock.py	2259	2261	MagicProxy.__init__	__init__(self, name, parent)	todo		
+Lib/unittest/mock.py	2263	2270	MagicProxy.create_mock	create_mock(self)	todo		
+Lib/unittest/mock.py	2272	2273	MagicProxy.__get__	__get__(self, obj, _type=None)	todo		
+Lib/unittest/mock.py	2288	2319	AsyncMockMixin.__init__	__init__(self, /, *args, **kwargs)	todo		
+Lib/unittest/mock.py	2321	2359	AsyncMockMixin._execute_mock_call	_execute_mock_call(self, /, *args, **kwargs)	todo		
+Lib/unittest/mock.py	2361	2367	AsyncMockMixin.assert_awaited	assert_awaited(self)	todo		
+Lib/unittest/mock.py	2369	2376	AsyncMockMixin.assert_awaited_once	assert_awaited_once(self)	todo		
+Lib/unittest/mock.py	2378	2394	AsyncMockMixin.assert_awaited_with	assert_awaited_with(self, /, *args, **kwargs)	todo		
+Lib/unittest/mock.py	2396	2405	AsyncMockMixin.assert_awaited_once_with	assert_awaited_once_with(self, /, *args, **kwargs)	todo		
+Lib/unittest/mock.py	2407	2418	AsyncMockMixin.assert_any_await	assert_any_await(self, /, *args, **kwargs)	todo		
+Lib/unittest/mock.py	2420	2462	AsyncMockMixin.assert_has_awaits	assert_has_awaits(self, calls, any_order=False)	todo		
+Lib/unittest/mock.py	2464	2471	AsyncMockMixin.assert_not_awaited	assert_not_awaited(self)	todo		
+Lib/unittest/mock.py	2473	2480	AsyncMockMixin.reset_mock	reset_mock(self, /, *args, **kwargs)	todo		
+Lib/unittest/mock.py	2529	2530	_ANY.__eq__	__eq__(self, other)	todo		
+Lib/unittest/mock.py	2532	2533	_ANY.__ne__	__ne__(self, other)	todo		
+Lib/unittest/mock.py	2535	2536	_ANY.__repr__	__repr__(self)	todo		
+Lib/unittest/mock.py	2542	2556	_format_call_signature	_format_call_signature(name, args, kwargs)	todo		
+Lib/unittest/mock.py	2579	2608	_Call.__new__	__new__(cls, value=(), name='', parent=None, two=False, from_kall=True)	todo		
+Lib/unittest/mock.py	2611	2615	_Call.__init__	__init__(self, value=(), name=None, parent=None, two=False, from_kall=True)	todo		
+Lib/unittest/mock.py	2618	2668	_Call.__eq__	__eq__(self, other)	todo		
+Lib/unittest/mock.py	2674	2679	_Call.__call__	__call__(self, /, *args, **kwargs)	todo		
+Lib/unittest/mock.py	2682	2686	_Call.__getattr__	__getattr__(self, attr)	todo		
+Lib/unittest/mock.py	2689	2692	_Call.__getattribute__	__getattribute__(self, attr)	todo		
+Lib/unittest/mock.py	2695	2701	_Call._get_call_arguments	_get_call_arguments(self)	todo		
+Lib/unittest/mock.py	2704	2705	_Call.args	args(self)	todo		
+Lib/unittest/mock.py	2708	2709	_Call.kwargs	kwargs(self)	todo		
+Lib/unittest/mock.py	2711	2729	_Call.__repr__	__repr__(self)	todo		
+Lib/unittest/mock.py	2732	2742	_Call.call_list	call_list(self)	todo		
+Lib/unittest/mock.py	2748	2909	create_autospec	create_autospec(spec, spec_set=False, instance=False, _parent=None, _name=None, *, unsafe=False, **kwargs)	todo		
+Lib/unittest/mock.py	2912	2937	_must_skip	_must_skip(spec, entry, is_type)	todo		
+Lib/unittest/mock.py	2942	2949	_SpecState.__init__	__init__(self, spec, spec_set=False, parent=None, name=None, ids=None, instance=False)	todo		
+Lib/unittest/mock.py	2964	2968	_to_stream	_to_stream(read_data)	todo		
+Lib/unittest/mock.py	2971	3054	mock_open	mock_open(mock=None, read_data='')	todo		
+Lib/unittest/mock.py	3066	3067	PropertyMock._get_child_mock	_get_child_mock(self, /, **kwargs)	todo		
+Lib/unittest/mock.py	3069	3070	PropertyMock.__get__	__get__(self, obj, obj_type=None)	todo		
+Lib/unittest/mock.py	3071	3072	PropertyMock.__set__	__set__(self, obj, val)	todo		
+Lib/unittest/mock.py	3081	3086	ThreadingMixin._get_child_mock	_get_child_mock(self, /, **kw)	todo		
+Lib/unittest/mock.py	3088	3095	ThreadingMixin.__init__	__init__(self, *args, timeout=_timeout_unset, **kwargs)	todo		
+Lib/unittest/mock.py	3097	3103	ThreadingMixin.reset_mock	reset_mock(self, /, *args, **kwargs)	todo		
+Lib/unittest/mock.py	3105	3112	ThreadingMixin.__get_event	__get_event(self, expected_args, expected_kwargs)	todo		
+Lib/unittest/mock.py	3114	3122	ThreadingMixin._mock_call	_mock_call(self, *args, **kwargs)	todo		
+Lib/unittest/mock.py	3124	3126	ThreadingMixin._increment_mock_call	_increment_mock_call(self, /, *args, **kwargs)	todo		
+Lib/unittest/mock.py	3128	3140	ThreadingMixin.wait_until_called	wait_until_called(self, *, timeout=_timeout_unset)	todo		
+Lib/unittest/mock.py	3142	3150	ThreadingMixin.wait_until_any_call_with	wait_until_any_call_with(self, *args, **kwargs)	todo		
+Lib/unittest/mock.py	3169	3190	seal	seal(mock)	todo		
+Lib/unittest/mock.py	3197	3201	_AsyncIterator.__init__	__init__(self, iterator)	todo		
+Lib/unittest/mock.py	3203	3208	_AsyncIterator.__anext__	__anext__(self)	todo		

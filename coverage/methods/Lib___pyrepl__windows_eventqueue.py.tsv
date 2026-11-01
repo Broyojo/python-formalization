@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_pyrepl/windows_eventqueue.py	41	42	EventQueue.__init__	__init__(self, encoding: str)	excluded		platform: Windows only

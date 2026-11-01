@@ -1,0 +1,29 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_localemodule.c	41	46	get_locale_state	get_locale_state(PyObject *m)	todo		
+Modules/_localemodule.c	59	88	copy_grouping	copy_grouping(const char* s)	todo		
+Modules/_localemodule.c	97	105	check_locale_name	check_locale_name(const char *locale, const char *end)	todo		
+Modules/_localemodule.c	108	122	check_locale_name_all	check_locale_name_all(const char *locale)	todo		
+Modules/_localemodule.c	136	186	_locale_setlocale_impl	_locale_setlocale_impl(PyObject *module, int category, const char *locale) /*[clinic end generated code: output=a0e777ae5d2ff117 input=dbe18f1d66c57a6a]*/	todo		
+Modules/_localemodule.c	189	192	locale_is_ascii	locale_is_ascii(const char *str)	todo		
+Modules/_localemodule.c	195	203	is_all_ascii	is_all_ascii(const char *str)	todo		
+Modules/_localemodule.c	206	283	locale_decode_monetary	locale_decode_monetary(PyObject *dict, struct lconv *lc)	todo		
+Modules/_localemodule.c	292	391	_locale_localeconv_impl	_locale_localeconv_impl(PyObject *module) /*[clinic end generated code: output=43a54515e0a2aef5 input=f1132d15accf4444]*/	todo		
+Modules/_localemodule.c	406	426	_locale_strcoll_impl	_locale_strcoll_impl(PyObject *module, PyObject *os1, PyObject *os2) /*[clinic end generated code: output=82ddc6d62c76d618 input=693cd02bcbf38dd8]*/	todo		
+Modules/_localemodule.c	441	540	_locale_strxfrm_impl	_locale_strxfrm_impl(PyObject *module, PyObject *str) /*[clinic end generated code: output=3081866ebffc01af input=1378bbe6a88b4780]*/	todo		
+Modules/_localemodule.c	551	583	_locale__getdefaultlocale_impl	_locale__getdefaultlocale_impl(PyObject *module) /*[clinic end generated code: output=e6254088579534c2 input=003ea41acd17f7c7]*/	todo		
+Modules/_localemodule.c	698	722	change_locale	change_locale(int category, char **oldloc)	todo		
+Modules/_localemodule.c	726	732	restore_locale	restore_locale(char *oldloc)	todo		
+Modules/_localemodule.c	737	761	decode_strings	decode_strings(const char *result, size_t max_count)	todo		
+Modules/_localemodule.c	775	832	_locale_nl_langinfo_impl	_locale_nl_langinfo_impl(PyObject *module, int item) /*[clinic end generated code: output=6aea457b47e077a3 input=00798143eecfeddc]*/	todo		
+Modules/_localemodule.c	849	853	_locale_gettext_impl	_locale_gettext_impl(PyObject *module, const char *in) /*[clinic end generated code: output=493bb4b38a4704fe input=949fc8efc2bb3bc3]*/	todo		
+Modules/_localemodule.c	868	872	_locale_dgettext_impl	_locale_dgettext_impl(PyObject *module, const char *domain, const char *in) /*[clinic end generated code: output=3c0cd5287b972c8f input=a277388a635109d8]*/	todo		
+Modules/_localemodule.c	886	891	_locale_dcgettext_impl	_locale_dcgettext_impl(PyObject *module, const char *domain, const char *msgid, int category) /*[clinic end generated code: output=0f4cc4fce0aa283f input=ec5f8fed4336de67]*/	todo		
+Modules/_localemodule.c	903	912	_locale_textdomain_impl	_locale_textdomain_impl(PyObject *module, const char *domain) /*[clinic end generated code: output=7992df06aadec313 input=66359716f5eb1d38]*/	todo		
+Modules/_localemodule.c	925	954	_locale_bindtextdomain_impl	_locale_bindtextdomain_impl(PyObject *module, const char *domain, PyObject *dirname_obj) /*[clinic end generated code: output=6d6f3c7b345d785c input=c0dff085acfe272b]*/	todo		
+Modules/_localemodule.c	969	978	_locale_bind_textdomain_codeset_impl	_locale_bind_textdomain_codeset_impl(PyObject *module, const char *domain, const char *codeset) /*[clinic end generated code: output=fa452f9c8b1b9e89 input=23fbe3540400f259]*/	todo		
+Modules/_localemodule.c	991	995	_locale_getencoding_impl	_locale_getencoding_impl(PyObject *module) /*[clinic end generated code: output=86b326b971872e46 input=6503d11e5958b360]*/	todo		
+Modules/_localemodule.c	1028	1075	_locale_exec	_locale_exec(PyObject *module)	todo		
+Modules/_localemodule.c	1085	1090	locale_traverse	locale_traverse(PyObject *module, visitproc visit, void *arg)	todo		
+Modules/_localemodule.c	1093	1098	locale_clear	locale_clear(PyObject *module)	todo		
+Modules/_localemodule.c	1101	1104	locale_free	locale_free(void *module)	todo		
+Modules/_localemodule.c	1119	1122	PyInit__locale	PyInit__locale(void)	todo		

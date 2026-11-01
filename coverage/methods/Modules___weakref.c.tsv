@@ -1,0 +1,8 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_weakref.c	26	30	_weakref_getweakrefcount_impl	_weakref_getweakrefcount_impl(PyObject *module, PyObject *object) /*[clinic end generated code: output=301806d59558ff3e input=7d4d04fcaccf64d5]*/	todo		
+Modules/_weakref.c	34	41	is_dead_weakref	is_dead_weakref(PyObject *value, void *unused)	todo		
+Modules/_weakref.c	55	63	_weakref__remove_dead_weakref_impl	_weakref__remove_dead_weakref_impl(PyObject *module, PyObject *dct, PyObject *key) /*[clinic end generated code: output=d9ff53061fcb875c input=19fc91f257f96a1d]*/	todo		
+Modules/_weakref.c	75	109	_weakref_getweakrefs	_weakref_getweakrefs(PyObject *module, PyObject *object) /*[clinic end generated code: output=25c7731d8e011824 input=00c6d0e5d3206693]*/	todo		
+Modules/_weakref.c	126	130	_weakref_proxy_impl	_weakref_proxy_impl(PyObject *module, PyObject *object, PyObject *callback) /*[clinic end generated code: output=d68fa4ad9ea40519 input=4808adf22fd137e7]*/	todo		
+Modules/_weakref.c	143	162	weakref_exec	weakref_exec(PyObject *module)	todo		
+Modules/_weakref.c	184	187	PyInit__weakref	PyInit__weakref(void)	todo		

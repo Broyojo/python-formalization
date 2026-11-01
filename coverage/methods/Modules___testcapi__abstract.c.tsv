@@ -1,0 +1,12 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/abstract.c	6	28	object_getoptionalattr	object_getoptionalattr(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/abstract.c	31	54	object_getoptionalattrstring	object_getoptionalattrstring(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/abstract.c	57	66	object_hasattrwitherror	object_hasattrwitherror(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/abstract.c	69	79	object_hasattrstringwitherror	object_hasattrstringwitherror(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/abstract.c	82	105	mapping_getoptionalitemstring	mapping_getoptionalitemstring(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/abstract.c	108	130	mapping_getoptionalitem	mapping_getoptionalitem(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/abstract.c	133	140	pyiter_next	pyiter_next(PyObject *self, PyObject *iter)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/abstract.c	143	157	pyiter_nextitem	pyiter_nextitem(PyObject *self, PyObject *iter)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/abstract.c	161	165	sequence_fast_get_size	sequence_fast_get_size(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/abstract.c	169	178	sequence_fast_get_item	sequence_fast_get_item(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/abstract.c	198	205	_PyTestCapi_Init_Abstract	_PyTestCapi_Init_Abstract(PyObject *m)	excluded		test-support: only for CPython's own tests

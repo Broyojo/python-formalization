@@ -1,0 +1,8 @@
+file	line	endline	name	signature	status	entry	note
+Lib/encodings/quopri_codec.py	10	15	quopri_encode	quopri_encode(input, errors='strict')	todo		
+Lib/encodings/quopri_codec.py	17	22	quopri_decode	quopri_decode(input, errors='strict')	todo		
+Lib/encodings/quopri_codec.py	25	26	Codec.encode	encode(self, input, errors='strict')	todo		
+Lib/encodings/quopri_codec.py	27	28	Codec.decode	decode(self, input, errors='strict')	todo		
+Lib/encodings/quopri_codec.py	31	32	IncrementalEncoder.encode	encode(self, input, final=False)	todo		
+Lib/encodings/quopri_codec.py	35	36	IncrementalDecoder.decode	decode(self, input, final=False)	todo		
+Lib/encodings/quopri_codec.py	46	56	getregentry	getregentry()	todo		

@@ -1,0 +1,11 @@
+file	line	endline	name	signature	status	entry	note
+Lib/xml/dom/minicompat.py	53	55	NodeList.item	item(self, index)	todo		
+Lib/xml/dom/minicompat.py	57	58	NodeList._get_length	_get_length(self)	todo		
+Lib/xml/dom/minicompat.py	60	62	NodeList._set_length	_set_length(self, value)	todo		
+Lib/xml/dom/minicompat.py	68	71	NodeList.__setstate__	__setstate__(self, state)	todo		
+Lib/xml/dom/minicompat.py	77	80	EmptyNodeList.__add__	__add__(self, other)	todo		
+Lib/xml/dom/minicompat.py	82	85	EmptyNodeList.__radd__	__radd__(self, other)	todo		
+Lib/xml/dom/minicompat.py	87	88	EmptyNodeList.item	item(self, index)	todo		
+Lib/xml/dom/minicompat.py	90	91	EmptyNodeList._get_length	_get_length(self)	todo		
+Lib/xml/dom/minicompat.py	93	95	EmptyNodeList._set_length	_set_length(self, value)	todo		
+Lib/xml/dom/minicompat.py	101	109	defproperty	defproperty(klass, name, doc)	todo		

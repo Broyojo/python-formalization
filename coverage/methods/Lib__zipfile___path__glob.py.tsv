@@ -1,0 +1,10 @@
+file	line	endline	name	signature	status	entry	note
+Lib/zipfile/_path/glob.py	22	24	Translator.__init__	__init__(self, seps: str=_default_seps)	todo		
+Lib/zipfile/_path/glob.py	26	30	Translator.translate	translate(self, pattern)	todo		
+Lib/zipfile/_path/glob.py	32	41	Translator.extend	extend(self, pattern)	todo		
+Lib/zipfile/_path/glob.py	43	49	Translator.match_dirs	match_dirs(self, pattern)	todo		
+Lib/zipfile/_path/glob.py	51	64	Translator.translate_core	translate_core(self, pattern)	todo		
+Lib/zipfile/_path/glob.py	66	75	Translator.replace	replace(self, match)	todo		candidates:strsearch-replace-str-bytes
+Lib/zipfile/_path/glob.py	77	89	Translator.restrict_rglob	restrict_rglob(self, pattern)	todo		
+Lib/zipfile/_path/glob.py	91	101	Translator.star_not_empty	star_not_empty(self, pattern)	todo		
+Lib/zipfile/_path/glob.py	104	113	separate	separate(pattern)	todo		

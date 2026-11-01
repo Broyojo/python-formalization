@@ -1,0 +1,28 @@
+file	line	endline	name	signature	status	entry	note
+Lib/locale.py	32	36	_strcoll	_strcoll(a, b)	todo		
+Lib/locale.py	38	42	_strxfrm	_strxfrm(s)	todo		
+Lib/locale.py	108	112	localeconv	localeconv()	todo		
+Lib/locale.py	121	134	_grouping_intervals	_grouping_intervals(grouping)	todo		
+Lib/locale.py	137	165	_group	_group(s, monetary=False)	todo		
+Lib/locale.py	168	177	_strip_padding	_strip_padding(s, amount)	todo		
+Lib/locale.py	181	188	_format	_format(percent, value, grouping=False, monetary=False, *additional)	todo		
+Lib/locale.py	191	209	_localize	_localize(formatted, grouping=False, monetary=False)	todo		
+Lib/locale.py	211	253	format_string	format_string(f, val, grouping=False, monetary=False)	todo		
+Lib/locale.py	255	300	currency	currency(val, symbol=True, grouping=False, international=False)	todo		
+Lib/locale.py	302	304	str	str(val)	todo		
+Lib/locale.py	306	320	delocalize	delocalize(string)	todo		
+Lib/locale.py	322	324	localize	localize(string, grouping=False, monetary=False)	todo		
+Lib/locale.py	326	328	atof	atof(string, func=float)	todo		
+Lib/locale.py	330	332	atoi	atoi(string)	todo		
+Lib/locale.py	334	341	_test	_test()	todo		
+Lib/locale.py	352	373	_replace_encoding	_replace_encoding(code, encoding)	todo		
+Lib/locale.py	375	384	_append_modifier	_append_modifier(code, modifier)	todo		
+Lib/locale.py	386	467	normalize	normalize(localename)	todo		
+Lib/locale.py	469	501	_parse_localename	_parse_localename(localename)	todo		
+Lib/locale.py	503	522	_build_localename	_build_localename(localetuple)	todo		
+Lib/locale.py	524	548	getdefaultlocale	getdefaultlocale(envvars=('LC_ALL', 'LC_CTYPE', 'LANG', 'LANGUAGE'))	todo		
+Lib/locale.py	551	578	_getdefaultlocale	_getdefaultlocale(envvars=('LC_ALL', 'LC_CTYPE', 'LANG', 'LANGUAGE'))	todo		
+Lib/locale.py	581	597	getlocale	getlocale(category=LC_CTYPE)	todo		
+Lib/locale.py	599	614	setlocale	setlocale(category, locale=None)	todo		
+Lib/locale.py	641	664	getpreferredencoding	getpreferredencoding(do_setlocale=True)	todo		
+Lib/locale.py	1931	1974	_print_locale	_print_locale()	todo		

@@ -1,0 +1,16 @@
+file	line	endline	name	signature	status	entry	note
+Lib/asyncio/protocols.py	21	27	BaseProtocol.connection_made	connection_made(self, transport)	todo		
+Lib/asyncio/protocols.py	29	35	BaseProtocol.connection_lost	connection_lost(self, exc)	todo		
+Lib/asyncio/protocols.py	37	57	BaseProtocol.pause_writing	pause_writing(self)	todo		
+Lib/asyncio/protocols.py	59	63	BaseProtocol.resume_writing	resume_writing(self)	todo		
+Lib/asyncio/protocols.py	94	98	Protocol.data_received	data_received(self, data)	todo		
+Lib/asyncio/protocols.py	100	106	Protocol.eof_received	eof_received(self)	todo		
+Lib/asyncio/protocols.py	135	144	BufferedProtocol.get_buffer	get_buffer(self, sizehint)	todo		
+Lib/asyncio/protocols.py	146	151	BufferedProtocol.buffer_updated	buffer_updated(self, nbytes)	todo		
+Lib/asyncio/protocols.py	153	159	BufferedProtocol.eof_received	eof_received(self)	todo		
+Lib/asyncio/protocols.py	167	168	DatagramProtocol.datagram_received	datagram_received(self, data, addr)	todo		
+Lib/asyncio/protocols.py	170	174	DatagramProtocol.error_received	error_received(self, exc)	todo		
+Lib/asyncio/protocols.py	182	187	SubprocessProtocol.pipe_data_received	pipe_data_received(self, fd, data)	todo		
+Lib/asyncio/protocols.py	189	194	SubprocessProtocol.pipe_connection_lost	pipe_connection_lost(self, fd, exc)	todo		
+Lib/asyncio/protocols.py	196	197	SubprocessProtocol.process_exited	process_exited(self)	todo		
+Lib/asyncio/protocols.py	200	216	_feed_data_to_buffered_proto	_feed_data_to_buffered_proto(proto, data)	todo		

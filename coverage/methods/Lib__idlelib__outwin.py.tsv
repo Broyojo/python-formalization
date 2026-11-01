@@ -1,0 +1,15 @@
+file	line	endline	name	signature	status	entry	note
+Lib/idlelib/outwin.py	23	27	compile_progs	compile_progs()	excluded		platform: GUI toolkit
+Lib/idlelib/outwin.py	30	55	file_line_helper	file_line_helper(line)	excluded		platform: GUI toolkit
+Lib/idlelib/outwin.py	78	84	OutputWindow.__init__	__init__(self, *args)	excluded		platform: GUI toolkit
+Lib/idlelib/outwin.py	87	89	OutputWindow.ispythonsource	ispythonsource(self, filename)	excluded		platform: GUI toolkit
+Lib/idlelib/outwin.py	91	93	OutputWindow.short_title	short_title(self)	excluded		platform: GUI toolkit
+Lib/idlelib/outwin.py	95	97	OutputWindow.maybesave	maybesave(self)	excluded		platform: GUI toolkit
+Lib/idlelib/outwin.py	100	120	OutputWindow.write	write(self, s, tags=(), mark='insert')	excluded		platform: GUI toolkit
+Lib/idlelib/outwin.py	122	125	OutputWindow.writelines	writelines(self, lines)	excluded		platform: GUI toolkit
+Lib/idlelib/outwin.py	127	129	OutputWindow.flush	flush(self)	excluded		platform: GUI toolkit
+Lib/idlelib/outwin.py	131	132	OutputWindow.showerror	showerror(self, *args, **kwargs)	excluded		platform: GUI toolkit
+Lib/idlelib/outwin.py	134	159	OutputWindow.goto_file_line	goto_file_line(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/outwin.py	171	173	OnDemandOutputWindow.__init__	__init__(self, flist)	excluded		platform: GUI toolkit
+Lib/idlelib/outwin.py	175	178	OnDemandOutputWindow.write	write(self, s, tags, mark)	excluded		platform: GUI toolkit
+Lib/idlelib/outwin.py	180	187	OnDemandOutputWindow.setup	setup(self)	excluded		platform: GUI toolkit

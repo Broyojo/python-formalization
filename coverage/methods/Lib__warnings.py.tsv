@@ -1,0 +1,3 @@
+file	line	endline	name	signature	status	entry	note
+Lib/warnings.py	80	82	_Lock.__enter__	__enter__(self)	todo		
+Lib/warnings.py	84	85	_Lock.__exit__	__exit__(self, *args)	todo		

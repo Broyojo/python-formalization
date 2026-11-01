@@ -1,0 +1,11 @@
+file	line	endline	name	signature	status	entry	note
+Lib/ensurepip/__init__.py	26	39	_find_wheel_pkg_dir_pip	_find_wheel_pkg_dir_pip()	excluded		platform: installs pip and creates environments
+Lib/ensurepip/__init__.py	42	51	_get_pip_whl_path_ctx	_get_pip_whl_path_ctx()	excluded		platform: installs pip and creates environments
+Lib/ensurepip/__init__.py	54	62	_get_pip_version	_get_pip_version()	excluded		platform: installs pip and creates environments
+Lib/ensurepip/__init__.py	65	88	_run_pip	_run_pip(args, additional_paths=None)	excluded		platform: installs pip and creates environments
+Lib/ensurepip/__init__.py	91	95	version	version()	excluded		platform: installs pip and creates environments
+Lib/ensurepip/__init__.py	98	107	_disable_pip_configuration_settings	_disable_pip_configuration_settings()	excluded		platform: installs pip and creates environments
+Lib/ensurepip/__init__.py	110	122	bootstrap	bootstrap(*, root=None, upgrade=False, user=False, altinstall=False, default_pip=False, verbosity=0)	excluded		platform: installs pip and creates environments
+Lib/ensurepip/__init__.py	125	173	_bootstrap	_bootstrap(*, root=None, upgrade=False, user=False, altinstall=False, default_pip=False, verbosity=0)	excluded		platform: installs pip and creates environments
+Lib/ensurepip/__init__.py	176	204	_uninstall_helper	_uninstall_helper(*, verbosity=0)	excluded		platform: installs pip and creates environments
+Lib/ensurepip/__init__.py	207	265	_main	_main(argv=None)	excluded		platform: installs pip and creates environments

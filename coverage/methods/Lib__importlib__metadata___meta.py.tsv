@@ -1,0 +1,16 @@
+file	line	endline	name	signature	status	entry	note
+Lib/importlib/metadata/_meta.py	12	12	PackageMetadata.__len__	__len__(self)	todo		
+Lib/importlib/metadata/_meta.py	14	14	PackageMetadata.__contains__	__contains__(self, item: str)	todo		
+Lib/importlib/metadata/_meta.py	16	16	PackageMetadata.__getitem__	__getitem__(self, key: str)	todo		
+Lib/importlib/metadata/_meta.py	18	18	PackageMetadata.__iter__	__iter__(self)	todo		
+Lib/importlib/metadata/_meta.py	21	23	PackageMetadata.get	get(self, name: str, failobj: None=None)	todo		
+Lib/importlib/metadata/_meta.py	26	26	PackageMetadata.get	get(self, name: str, failobj: _T)	todo		
+Lib/importlib/metadata/_meta.py	30	32	PackageMetadata.get_all	get_all(self, name: str, failobj: None=None)	todo		
+Lib/importlib/metadata/_meta.py	35	38	PackageMetadata.get_all	get_all(self, name: str, failobj: _T)	todo		
+Lib/importlib/metadata/_meta.py	41	44	PackageMetadata.json	json(self)	todo		
+Lib/importlib/metadata/_meta.py	52	54	SimplePath.joinpath	joinpath(self, other: Union[str, os.PathLike[str]])	todo		
+Lib/importlib/metadata/_meta.py	56	58	SimplePath.__truediv__	__truediv__(self, other: Union[str, os.PathLike[str]])	todo		
+Lib/importlib/metadata/_meta.py	61	61	SimplePath.parent	parent(self)	todo		
+Lib/importlib/metadata/_meta.py	63	63	SimplePath.read_text	read_text(self, encoding=None)	todo		
+Lib/importlib/metadata/_meta.py	65	65	SimplePath.read_bytes	read_bytes(self)	todo		
+Lib/importlib/metadata/_meta.py	67	67	SimplePath.exists	exists(self)	todo		

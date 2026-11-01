@@ -1,0 +1,25 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/datetime.c	9	36	test_datetime_capi	test_datetime_capi(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/datetime.c	54	57	datetime_check_date	datetime_check_date(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/datetime.c	60	63	datetime_check_time	datetime_check_time(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/datetime.c	66	69	datetime_check_datetime	datetime_check_datetime(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/datetime.c	72	75	datetime_check_delta	datetime_check_delta(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/datetime.c	78	81	datetime_check_tzinfo	datetime_check_tzinfo(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/datetime.c	91	126	make_timezones_capi	make_timezones_capi(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/datetime.c	129	167	get_timezones_offset_zero	get_timezones_offset_zero(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/datetime.c	170	180	get_timezone_utc_capi	get_timezone_utc_capi(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/datetime.c	183	202	get_date_fromdate	get_date_fromdate(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/datetime.c	205	232	get_datetime_fromdateandtime	get_datetime_fromdateandtime(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/datetime.c	235	265	get_datetime_fromdateandtimeandfold	get_datetime_fromdateandtimeandfold(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/datetime.c	268	291	get_time_fromtime	get_time_fromtime(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/datetime.c	294	318	get_time_fromtimeandfold	get_time_fromtimeandfold(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/datetime.c	321	343	get_delta_fromdsu	get_delta_fromdsu(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/datetime.c	346	372	get_date_fromtimestamp	get_date_fromtimestamp(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/datetime.c	375	408	get_datetime_fromtimestamp	get_datetime_fromtimestamp(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/datetime.c	411	420	test_PyDateTime_GET	test_PyDateTime_GET(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/datetime.c	423	432	test_PyDateTime_DATE_GET	test_PyDateTime_DATE_GET(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/datetime.c	435	444	test_PyDateTime_TIME_GET	test_PyDateTime_TIME_GET(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/datetime.c	447	454	test_PyDateTime_DELTA_GET	test_PyDateTime_DELTA_GET(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/datetime.c	482	488	_PyTestCapi_Init_DateTime	_PyTestCapi_Init_DateTime(PyObject *mod)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/datetime.c	496	502	_testcapi_datetime_exec	_testcapi_datetime_exec(PyObject *mod)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/datetime.c	520	523	PyInit__testcapi_datetime	PyInit__testcapi_datetime(void)	excluded		test-support: only for CPython's own tests

@@ -1,0 +1,9 @@
+file	line	endline	name	signature	status	entry	note
+Lib/http/__init__.py	26	31	HTTPStatus.__new__	__new__(cls, value, phrase, description='')	todo		
+Lib/http/__init__.py	34	35	HTTPStatus.is_informational	is_informational(self)	todo		
+Lib/http/__init__.py	38	39	HTTPStatus.is_success	is_success(self)	todo		
+Lib/http/__init__.py	42	43	HTTPStatus.is_redirection	is_redirection(self)	todo		
+Lib/http/__init__.py	46	47	HTTPStatus.is_client_error	is_client_error(self)	todo		
+Lib/http/__init__.py	50	51	HTTPStatus.is_server_error	is_server_error(self)	todo		
+Lib/http/__init__.py	196	200	HTTPMethod.__new__	__new__(cls, value, description)	todo		
+Lib/http/__init__.py	202	203	HTTPMethod.__repr__	__repr__(self)	todo		

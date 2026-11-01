@@ -1,0 +1,59 @@
+file	line	endline	name	signature	status	entry	note
+Lib/wave.py	96	103	_byteswap	_byteswap(data, width)	todo		
+Lib/wave.py	107	130	_Chunk.__init__	__init__(self, file, align=True, bigendian=True, inclheader=False)	todo		
+Lib/wave.py	132	134	_Chunk.getname	getname(self)	todo		
+Lib/wave.py	136	141	_Chunk.close	close(self)	todo		
+Lib/wave.py	143	160	_Chunk.seek	seek(self, pos, whence=0)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
+Lib/wave.py	162	165	_Chunk.tell	tell(self)	todo		
+Lib/wave.py	167	188	_Chunk.read	read(self, size=-1)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/wave.py	190	214	_Chunk.skip	skip(self)	todo		
+Lib/wave.py	248	277	Wave_read.initfp	initfp(self, file)	todo		
+Lib/wave.py	279	290	Wave_read.__init__	__init__(self, f)	todo		
+Lib/wave.py	292	293	Wave_read.__del__	__del__(self)	todo		
+Lib/wave.py	295	296	Wave_read.__enter__	__enter__(self)	todo		
+Lib/wave.py	298	299	Wave_read.__exit__	__exit__(self, *args)	todo		
+Lib/wave.py	304	305	Wave_read.getfp	getfp(self)	todo		
+Lib/wave.py	307	309	Wave_read.rewind	rewind(self)	todo		
+Lib/wave.py	311	316	Wave_read.close	close(self)	todo		
+Lib/wave.py	318	319	Wave_read.tell	tell(self)	todo		
+Lib/wave.py	321	322	Wave_read.getnchannels	getnchannels(self)	todo		
+Lib/wave.py	324	325	Wave_read.getnframes	getnframes(self)	todo		
+Lib/wave.py	327	328	Wave_read.getsampwidth	getsampwidth(self)	todo		
+Lib/wave.py	330	331	Wave_read.getframerate	getframerate(self)	todo		
+Lib/wave.py	333	334	Wave_read.getcomptype	getcomptype(self)	todo		
+Lib/wave.py	336	337	Wave_read.getcompname	getcompname(self)	todo		
+Lib/wave.py	339	342	Wave_read.getparams	getparams(self)	todo		
+Lib/wave.py	344	347	Wave_read.getmarkers	getmarkers(self)	todo		
+Lib/wave.py	349	352	Wave_read.getmark	getmark(self, id)	todo		
+Lib/wave.py	354	358	Wave_read.setpos	setpos(self, pos)	todo		
+Lib/wave.py	360	375	Wave_read.readframes	readframes(self, nframes)	todo		
+Lib/wave.py	381	415	Wave_read._read_fmt_chunk	_read_fmt_chunk(self, chunk)	todo		
+Lib/wave.py	446	456	Wave_write.__init__	__init__(self, f)	todo		
+Lib/wave.py	458	468	Wave_write.initfp	initfp(self, file)	todo		
+Lib/wave.py	470	471	Wave_write.__del__	__del__(self)	todo		
+Lib/wave.py	473	474	Wave_write.__enter__	__enter__(self)	todo		
+Lib/wave.py	476	477	Wave_write.__exit__	__exit__(self, *args)	todo		
+Lib/wave.py	482	487	Wave_write.setnchannels	setnchannels(self, nchannels)	todo		
+Lib/wave.py	489	492	Wave_write.getnchannels	getnchannels(self)	todo		
+Lib/wave.py	494	499	Wave_write.setsampwidth	setsampwidth(self, sampwidth)	todo		
+Lib/wave.py	501	504	Wave_write.getsampwidth	getsampwidth(self)	todo		
+Lib/wave.py	506	511	Wave_write.setframerate	setframerate(self, framerate)	todo		
+Lib/wave.py	513	516	Wave_write.getframerate	getframerate(self)	todo		
+Lib/wave.py	518	521	Wave_write.setnframes	setnframes(self, nframes)	todo		
+Lib/wave.py	523	524	Wave_write.getnframes	getnframes(self)	todo		
+Lib/wave.py	526	532	Wave_write.setcomptype	setcomptype(self, comptype, compname)	todo		
+Lib/wave.py	534	535	Wave_write.getcomptype	getcomptype(self)	todo		
+Lib/wave.py	537	538	Wave_write.getcompname	getcompname(self)	todo		
+Lib/wave.py	540	548	Wave_write.setparams	setparams(self, params)	todo		
+Lib/wave.py	550	554	Wave_write.getparams	getparams(self)	todo		
+Lib/wave.py	556	559	Wave_write.setmark	setmark(self, id, pos, name)	todo		
+Lib/wave.py	561	564	Wave_write.getmark	getmark(self, id)	todo		
+Lib/wave.py	566	569	Wave_write.getmarkers	getmarkers(self)	todo		
+Lib/wave.py	571	572	Wave_write.tell	tell(self)	todo		
+Lib/wave.py	574	585	Wave_write.writeframesraw	writeframesraw(self, data)	todo		
+Lib/wave.py	587	590	Wave_write.writeframes	writeframes(self, data)	todo		
+Lib/wave.py	592	604	Wave_write.close	close(self)	todo		
+Lib/wave.py	610	618	Wave_write._ensure_header_written	_ensure_header_written(self, datasize)	todo		
+Lib/wave.py	620	639	Wave_write._write_header	_write_header(self, initlength)	todo		
+Lib/wave.py	641	651	Wave_write._patchheader	_patchheader(self)	todo		
+Lib/wave.py	654	665	open	open(f, mode=None)	todo		

@@ -1,0 +1,7 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testlimitedcapi/complex.c	6	10	complex_check	complex_check(PyObject *Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/complex.c	13	17	complex_checkexact	complex_checkexact(PyObject *Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/complex.c	20	29	complex_fromdoubles	complex_fromdoubles(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/complex.c	32	44	complex_realasdouble	complex_realasdouble(PyObject *Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/complex.c	47	59	complex_imagasdouble	complex_imagasdouble(PyObject *Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/complex.c	72	79	_PyTestLimitedCAPI_Init_Complex	_PyTestLimitedCAPI_Init_Complex(PyObject *mod)	excluded		test-support: only for CPython's own tests

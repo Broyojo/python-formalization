@@ -1,0 +1,6 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_uuidmodule.c	28	51	py_uuid_generate_time_safe	py_uuid_generate_time_safe(PyObject *Py_UNUSED(context), PyObject *Py_UNUSED(ignored))	todo		
+Modules/_uuidmodule.c	56	79	py_UuidCreate	py_UuidCreate(PyObject *Py_UNUSED(context), PyObject *Py_UNUSED(ignored))	todo		
+Modules/_uuidmodule.c	82	90	py_windows_has_stable_node	py_windows_has_stable_node(void)	todo		
+Modules/_uuidmodule.c	95	123	uuid_exec	uuid_exec(PyObject *module)	todo		
+Modules/_uuidmodule.c	151	154	PyInit__uuid	PyInit__uuid(void)	todo		

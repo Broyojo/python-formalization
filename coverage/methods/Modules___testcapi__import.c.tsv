@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/import.c	6	16	pyimport_importmoduleattr	pyimport_importmoduleattr(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/import.c	21	30	pyimport_importmoduleattrstring	pyimport_importmoduleattrstring(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/import.c	40	43	_PyTestCapi_Init_Import	_PyTestCapi_Init_Import(PyObject *m)	excluded		test-support: only for CPython's own tests

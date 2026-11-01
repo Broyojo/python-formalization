@@ -1,0 +1,3 @@
+file	line	endline	name	signature	status	entry	note
+Lib/importlib/metadata/_itertools.py	4	19	unique_everseen	unique_everseen(iterable, key=None)	todo		
+Lib/importlib/metadata/_itertools.py	23	73	always_iterable	always_iterable(obj, base_type=(str, bytes))	todo		

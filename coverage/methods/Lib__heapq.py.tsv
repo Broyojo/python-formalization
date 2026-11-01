@@ -1,0 +1,18 @@
+file	line	endline	name	signature	status	entry	note
+Lib/heapq.py	133	136	heappush	heappush(heap, item)	modelled	accel-heap-ops-invariant,accel-heap-twins-agree	
+Lib/heapq.py	138	146	heappop	heappop(heap)	modelled	accel-heap-ops-invariant,accel-heap-twins-agree,accel-heap-twins-agree-exact	
+Lib/heapq.py	148	162	heapreplace	heapreplace(heap, item)	modelled	accel-heap-ops-invariant,accel-heap-twins-agree,accel-heap-twins-agree-exact	
+Lib/heapq.py	164	169	heappushpop	heappushpop(heap, item)	modelled	accel-heap-ops-invariant,accel-heap-twins-agree	
+Lib/heapq.py	171	180	heapify	heapify(x)	modelled	accel-heapify-makes-heap,accel-heapify-twins-agree	
+Lib/heapq.py	182	190	heappop_max	heappop_max(heap)	modelled	accel-heap-ops-invariant,accel-heap-twins-agree,accel-heap-twins-agree-exact	
+Lib/heapq.py	192	197	heapreplace_max	heapreplace_max(heap, item)	modelled	accel-heap-ops-invariant,accel-heap-twins-agree,accel-heap-twins-agree-exact	
+Lib/heapq.py	199	202	heappush_max	heappush_max(heap, item)	modelled	accel-heap-ops-invariant,accel-heap-twins-agree	
+Lib/heapq.py	204	209	heappushpop_max	heappushpop_max(heap, item)	modelled	accel-heap-ops-invariant,accel-heap-twins-agree	
+Lib/heapq.py	211	215	heapify_max	heapify_max(x)	modelled	accel-heapify-makes-heap,accel-heapify-twins-agree	
+Lib/heapq.py	221	233	_siftdown	_siftdown(heap, startpos, pos)	todo		
+Lib/heapq.py	274	292	_siftup	_siftup(heap, pos)	todo		
+Lib/heapq.py	294	307	_siftdown_max	_siftdown_max(heap, startpos, pos)	todo		
+Lib/heapq.py	309	328	_siftup_max	_siftup_max(heap, pos)	todo		
+Lib/heapq.py	330	408	merge	merge(*iterables, key=None, reverse=False)	modelled	accel-merge-sorted	
+Lib/heapq.py	477	535	nsmallest	nsmallest(n, iterable, key=None)	modelled	accel-nsmallest-sorted-prefix	
+Lib/heapq.py	537	593	nlargest	nlargest(n, iterable, key=None)	modelled	accel-nlargest-sorted-prefix	

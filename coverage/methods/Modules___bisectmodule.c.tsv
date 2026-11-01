@@ -1,0 +1,13 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_bisectmodule.c	25	30	get_bisect_state	get_bisect_state(PyObject *module)	todo		
+Modules/_bisectmodule.c	33	50	get_sq_item	get_sq_item(PyObject *s)	todo		
+Modules/_bisectmodule.c	53	149	internal_bisect_right	internal_bisect_right(PyObject *list, PyObject *item, Py_ssize_t lo, Py_ssize_t hi, PyObject* key)	todo		
+Modules/_bisectmodule.c	174	179	_bisect_bisect_right_impl	_bisect_bisect_right_impl(PyObject *module, PyObject *a, PyObject *x, Py_ssize_t lo, Py_ssize_t hi, PyObject *key) /*[clinic end generated code: output=3a4bc09cc7c8a73d input=b8951a7bb11516e1]*/	todo		
+Modules/_bisectmodule.c	202	234	_bisect_insort_right_impl	_bisect_insort_right_impl(PyObject *module, PyObject *a, PyObject *x, Py_ssize_t lo, Py_ssize_t hi, PyObject *key) /*[clinic end generated code: output=ac3bf26d07aedda2 input=f60777d2b6ddb239]*/	todo		
+Modules/_bisectmodule.c	237	333	internal_bisect_left	internal_bisect_left(PyObject *list, PyObject *item, Py_ssize_t lo, Py_ssize_t hi, PyObject *key)	todo		
+Modules/_bisectmodule.c	359	364	_bisect_bisect_left_impl	_bisect_bisect_left_impl(PyObject *module, PyObject *a, PyObject *x, Py_ssize_t lo, Py_ssize_t hi, PyObject *key) /*[clinic end generated code: output=70749d6e5cae9284 input=d24dc2b6439000f7]*/	todo		
+Modules/_bisectmodule.c	388	419	_bisect_insort_left_impl	_bisect_insort_left_impl(PyObject *module, PyObject *a, PyObject *x, Py_ssize_t lo, Py_ssize_t hi, PyObject *key) /*[clinic end generated code: output=b1d33e5e7ffff11e input=0a700a82edbd472c]*/	todo		
+Modules/_bisectmodule.c	438	443	bisect_clear	bisect_clear(PyObject *module)	todo		
+Modules/_bisectmodule.c	446	449	bisect_free	bisect_free(void *module)	todo		
+Modules/_bisectmodule.c	452	460	bisect_modexec	bisect_modexec(PyObject *m)	todo		
+Modules/_bisectmodule.c	481	484	PyInit__bisect	PyInit__bisect(void)	todo		

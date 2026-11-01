@@ -1,0 +1,44 @@
+file	line	endline	name	signature	status	entry	note
+Lib/http/server.py	146	151	HTTPServer.server_bind	server_bind(self)	todo		
+Lib/http/server.py	159	179	HTTPSServer.__init__	__init__(self, server_address, RequestHandlerClass, bind_and_activate=True, *, certfile, keyfile=None, password=None, alpn_protocols=None)	todo		
+Lib/http/server.py	181	185	HTTPSServer.server_activate	server_activate(self)	todo		
+Lib/http/server.py	187	192	HTTPSServer._create_context	_create_context(self)	todo		
+Lib/http/server.py	320	439	BaseHTTPRequestHandler.parse_request	parse_request(self)	todo		
+Lib/http/server.py	441	457	BaseHTTPRequestHandler.handle_expect_100	handle_expect_100(self)	todo		
+Lib/http/server.py	459	494	BaseHTTPRequestHandler.handle_one_request	handle_one_request(self)	todo		
+Lib/http/server.py	496	502	BaseHTTPRequestHandler.handle	handle(self)	todo		
+Lib/http/server.py	504	555	BaseHTTPRequestHandler.send_error	send_error(self, code, message=None, explain=None)	todo		
+Lib/http/server.py	557	568	BaseHTTPRequestHandler.send_response	send_response(self, code, message=None)	todo		
+Lib/http/server.py	570	582	BaseHTTPRequestHandler.send_response_only	send_response_only(self, code, message=None)	todo		
+Lib/http/server.py	584	596	BaseHTTPRequestHandler.send_header	send_header(self, keyword, value)	todo		
+Lib/http/server.py	598	602	BaseHTTPRequestHandler.end_headers	end_headers(self)	todo		
+Lib/http/server.py	604	607	BaseHTTPRequestHandler.flush_headers	flush_headers(self)	todo		
+Lib/http/server.py	609	618	BaseHTTPRequestHandler.log_request	log_request(self, code='-', size='-')	todo		
+Lib/http/server.py	620	632	BaseHTTPRequestHandler.log_error	log_error(self, format, *args)	todo		
+Lib/http/server.py	639	663	BaseHTTPRequestHandler.log_message	log_message(self, format, *args)	todo		
+Lib/http/server.py	665	667	BaseHTTPRequestHandler.version_string	version_string(self)	todo		
+Lib/http/server.py	669	673	BaseHTTPRequestHandler.date_time_string	date_time_string(self, timestamp=None)	todo		
+Lib/http/server.py	675	681	BaseHTTPRequestHandler.log_date_time_string	log_date_time_string(self)	todo		
+Lib/http/server.py	689	692	BaseHTTPRequestHandler.address_string	address_string(self)	todo		
+Lib/http/server.py	732	736	SimpleHTTPRequestHandler.__init__	__init__(self, *args, directory=None, **kwargs)	todo		
+Lib/http/server.py	738	745	SimpleHTTPRequestHandler.do_GET	do_GET(self)	todo		
+Lib/http/server.py	747	751	SimpleHTTPRequestHandler.do_HEAD	do_HEAD(self)	todo		
+Lib/http/server.py	753	839	SimpleHTTPRequestHandler.send_head	send_head(self)	todo		
+Lib/http/server.py	841	900	SimpleHTTPRequestHandler.list_directory	list_directory(self, path)	todo		
+Lib/http/server.py	902	930	SimpleHTTPRequestHandler.translate_path	translate_path(self, path)	todo		
+Lib/http/server.py	932	946	SimpleHTTPRequestHandler.copyfile	copyfile(self, source, outputfile)	todo		
+Lib/http/server.py	948	971	SimpleHTTPRequestHandler.guess_type	guess_type(self, path)	todo		
+Lib/http/server.py	976	1020	_url_collapse_path	_url_collapse_path(path)	todo		
+Lib/http/server.py	1026	1039	nobody_uid	nobody_uid()	todo		
+Lib/http/server.py	1042	1044	executable	executable(path)	todo		
+Lib/http/server.py	1057	1061	CGIHTTPRequestHandler.__init__	__init__(self, *args, **kwargs)	todo		
+Lib/http/server.py	1070	1082	CGIHTTPRequestHandler.do_POST	do_POST(self)	todo		
+Lib/http/server.py	1084	1089	CGIHTTPRequestHandler.send_head	send_head(self)	todo		
+Lib/http/server.py	1091	1114	CGIHTTPRequestHandler.is_cgi	is_cgi(self)	todo		
+Lib/http/server.py	1119	1121	CGIHTTPRequestHandler.is_executable	is_executable(self, path)	todo		
+Lib/http/server.py	1123	1126	CGIHTTPRequestHandler.is_python	is_python(self, path)	todo		
+Lib/http/server.py	1128	1323	CGIHTTPRequestHandler.run_cgi	run_cgi(self)	todo		
+Lib/http/server.py	1326	1333	_get_best_family	_get_best_family(*address)	todo		
+Lib/http/server.py	1336	1366	test	test(HandlerClass=BaseHTTPRequestHandler, ServerClass=ThreadingHTTPServer, protocol='HTTP/1.0', port=8000, bind=None, tls_cert=None, tls_key=None, tls_password=None)	todo		
+Lib/http/server.py	1418	1423	DualStackServerMixin.server_bind	server_bind(self)	todo		
+Lib/http/server.py	1425	1427	DualStackServerMixin.finish_request	finish_request(self, request, client_address)	todo		

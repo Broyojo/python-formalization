@@ -1,0 +1,10 @@
+file	line	endline	name	signature	status	entry	note
+Lib/encodings/charmap.py	25	27	IncrementalEncoder.__init__	__init__(self, errors='strict', mapping=None)	todo		
+Lib/encodings/charmap.py	29	30	IncrementalEncoder.encode	encode(self, input, final=False)	todo		
+Lib/encodings/charmap.py	33	35	IncrementalDecoder.__init__	__init__(self, errors='strict', mapping=None)	todo		
+Lib/encodings/charmap.py	37	38	IncrementalDecoder.decode	decode(self, input, final=False)	todo		
+Lib/encodings/charmap.py	42	44	StreamWriter.__init__	__init__(self, stream, errors='strict', mapping=None)	todo		
+Lib/encodings/charmap.py	46	47	StreamWriter.encode	encode(self, input, errors='strict')	todo		
+Lib/encodings/charmap.py	51	53	StreamReader.__init__	__init__(self, stream, errors='strict', mapping=None)	todo		
+Lib/encodings/charmap.py	55	56	StreamReader.decode	decode(self, input, errors='strict')	todo		
+Lib/encodings/charmap.py	60	69	getregentry	getregentry()	todo		

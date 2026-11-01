@@ -1,0 +1,21 @@
+file	line	endline	name	signature	status	entry	note
+Python/instruction_sequence.c	37	55	instr_sequence_next_inst	instr_sequence_next_inst(instr_sequence *seq) {	todo		
+Python/instruction_sequence.c	58	62	_PyInstructionSequence_NewLabel	_PyInstructionSequence_NewLabel(instr_sequence *seq)	todo		
+Python/instruction_sequence.c	65	84	_PyInstructionSequence_UseLabel	_PyInstructionSequence_UseLabel(instr_sequence *seq, int lbl)	todo		
+Python/instruction_sequence.c	87	111	_PyInstructionSequence_ApplyLabelMap	_PyInstructionSequence_ApplyLabelMap(instr_sequence *instrs)	todo		
+Python/instruction_sequence.c	116	131	_PyInstructionSequence_Addop	_PyInstructionSequence_Addop(instr_sequence *seq, int opcode, int oparg, location loc)	todo		
+Python/instruction_sequence.c	134	155	_PyInstructionSequence_InsertInstruction	_PyInstructionSequence_InsertInstruction(instr_sequence *seq, int pos, int opcode, int oparg, location loc)	todo		
+Python/instruction_sequence.c	158	164	_PyInstructionSequence_SetAnnotationsCode	_PyInstructionSequence_SetAnnotationsCode(instr_sequence *seq, instr_sequence *annotations)	todo		
+Python/instruction_sequence.c	167	179	_PyInstructionSequence_AddNested	_PyInstructionSequence_AddNested(instr_sequence *seq, instr_sequence *nested)	todo		
+Python/instruction_sequence.c	182	196	PyInstructionSequence_Fini	PyInstructionSequence_Fini(instr_sequence *seq) {	todo		
+Python/instruction_sequence.c	204	222	inst_seq_create	inst_seq_create(void)	todo		
+Python/instruction_sequence.c	225	232	_PyInstructionSequence_New	_PyInstructionSequence_New(void)	todo		
+Python/instruction_sequence.c	242	246	inst_seq_new_impl	inst_seq_new_impl(PyTypeObject *type) /*[clinic end generated code: output=98881de92c8876f6 input=b393150146849c74]*/	todo		
+Python/instruction_sequence.c	282	292	InstructionSequenceType_addop_impl	InstructionSequenceType_addop_impl(_PyInstructionSequence *self, int opcode, int oparg, int lineno, int col_offset, int end_lineno, int end_col_offset) /*[clinic end generated code: output=af0cc22c048dfbf3 input=012762ac88198713]*/	todo		
+Python/instruction_sequence.c	301	306	InstructionSequenceType_new_label_impl	InstructionSequenceType_new_label_impl(_PyInstructionSequence *self) /*[clinic end generated code: output=dcb0589e4f5bf4bd input=c66040b9897bc327]*/	todo		
+Python/instruction_sequence.c	317	331	InstructionSequenceType_add_nested_impl	InstructionSequenceType_add_nested_impl(_PyInstructionSequence *self, PyObject *nested) /*[clinic end generated code: output=14540fad459f7971 input=f2c482568b3b3c0f]*/	todo		
+Python/instruction_sequence.c	340	347	InstructionSequenceType_get_nested_impl	InstructionSequenceType_get_nested_impl(_PyInstructionSequence *self) /*[clinic end generated code: output=f415112c292630cb input=e429e474c57b95b4]*/	todo		
+Python/instruction_sequence.c	356	397	InstructionSequenceType_get_instructions_impl	InstructionSequenceType_get_instructions_impl(_PyInstructionSequence *self) /*[clinic end generated code: output=23f4f3f894c301b3 input=fbadb5dadb611291]*/	todo		
+Python/instruction_sequence.c	418	424	inst_seq_dealloc	inst_seq_dealloc(PyObject *op)	todo		
+Python/instruction_sequence.c	427	433	inst_seq_traverse	inst_seq_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Python/instruction_sequence.c	436	442	inst_seq_clear	inst_seq_clear(PyObject *op)	todo		

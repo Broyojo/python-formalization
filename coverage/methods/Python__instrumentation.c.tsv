@@ -1,0 +1,120 @@
+file	line	endline	name	signature	status	entry	note
+Python/instrumentation.c	180	186	opcode_has_event	opcode_has_event(int opcode)	todo		
+Python/instrumentation.c	189	194	is_instrumented	is_instrumented(int opcode)	todo		
+Python/instrumentation.c	198	206	monitors_equals	monitors_equals(_Py_LocalMonitors a, _Py_LocalMonitors b)	todo		
+Python/instrumentation.c	210	217	monitors_sub	monitors_sub(_Py_LocalMonitors a, _Py_LocalMonitors b)	todo		
+Python/instrumentation.c	221	228	monitors_and	monitors_and(_Py_LocalMonitors a, _Py_LocalMonitors b)	todo		
+Python/instrumentation.c	237	244	local_union	local_union(_Py_GlobalMonitors a, _Py_LocalMonitors b)	todo		
+Python/instrumentation.c	247	255	monitors_are_empty	monitors_are_empty(_Py_LocalMonitors m)	todo		
+Python/instrumentation.c	258	266	multiple_tools	multiple_tools(_Py_LocalMonitors *m)	todo		
+Python/instrumentation.c	269	278	get_local_events	get_local_events(_Py_LocalMonitors *m, int tool_id)	todo		
+Python/instrumentation.c	281	290	get_events	get_events(_Py_GlobalMonitors *m, int tool_id)	todo		
+Python/instrumentation.c	303	312	compute_line_delta	compute_line_delta(PyCodeObject *code, int line)	todo		
+Python/instrumentation.c	315	322	compute_line	compute_line(PyCodeObject *code, int line_delta)	todo		
+Python/instrumentation.c	325	331	_PyInstruction_GetLength	_PyInstruction_GetLength(PyCodeObject *code, int offset)	todo		
+Python/instrumentation.c	334	337	get_original_opcode	get_original_opcode(_PyCoLineInstrumentationData *line_data, int index)	todo		
+Python/instrumentation.c	340	343	get_original_opcode_ptr	get_original_opcode_ptr(_PyCoLineInstrumentationData *line_data, int index)	todo		
+Python/instrumentation.c	346	349	set_original_opcode	set_original_opcode(_PyCoLineInstrumentationData *line_data, int index, uint8_t opcode)	todo		
+Python/instrumentation.c	352	365	get_line_delta	get_line_delta(_PyCoLineInstrumentationData *line_data, int index)	todo		
+Python/instrumentation.c	368	382	set_line_delta	set_line_delta(_PyCoLineInstrumentationData *line_data, int index, int line_delta)	todo		
+Python/instrumentation.c	387	395	dump_instrumentation_data_tools	dump_instrumentation_data_tools(PyCodeObject *code, uint8_t *tools, int i, FILE*out)	todo		
+Python/instrumentation.c	398	413	dump_instrumentation_data_lines	dump_instrumentation_data_lines(PyCodeObject *code, _PyCoLineInstrumentationData *lines, int i, FILE*out)	todo		
+Python/instrumentation.c	416	424	dump_instrumentation_data_line_tools	dump_instrumentation_data_line_tools(PyCodeObject *code, uint8_t *line_tools, int i, FILE*out)	todo		
+Python/instrumentation.c	427	441	dump_instrumentation_data_per_instruction	dump_instrumentation_data_per_instruction(PyCodeObject *code, _PyCoMonitoringData *data, int i, FILE*out)	todo		
+Python/instrumentation.c	444	450	dump_global_monitors	dump_global_monitors(const char *prefix, _Py_GlobalMonitors monitors, FILE*out)	todo		
+Python/instrumentation.c	453	459	dump_local_monitors	dump_local_monitors(const char *prefix, _Py_LocalMonitors monitors, FILE*out)	todo		
+Python/instrumentation.c	469	510	dump_instrumentation_data	dump_instrumentation_data(PyCodeObject *code, int star, FILE*out)	todo		
+Python/instrumentation.c	520	533	valid_opcode	valid_opcode(int opcode)	todo		
+Python/instrumentation.c	536	628	sanity_check_instrumentation	sanity_check_instrumentation(PyCodeObject *code)	todo		
+Python/instrumentation.c	637	673	_Py_GetBaseCodeUnit	_Py_GetBaseCodeUnit(PyCodeObject *code, int i)	todo		
+Python/instrumentation.c	676	704	de_instrument	de_instrument(PyCodeObject *code, _Py_CODEUNIT *bytecode, _PyCoMonitoringData *monitoring, int i, int event)	todo		
+Python/instrumentation.c	707	728	de_instrument_line	de_instrument_line(PyCodeObject *code, _Py_CODEUNIT *bytecode, _PyCoMonitoringData *monitoring, int i)	todo		
+Python/instrumentation.c	731	754	de_instrument_per_instruction	de_instrument_per_instruction(PyCodeObject *code, _Py_CODEUNIT *bytecode, _PyCoMonitoringData *monitoring, int i)	todo		
+Python/instrumentation.c	757	783	instrument	instrument(PyCodeObject *code, _Py_CODEUNIT *bytecode, _PyCoMonitoringData *monitoring, int i)	todo		
+Python/instrumentation.c	786	796	instrument_line	instrument_line(PyCodeObject *code, _Py_CODEUNIT *bytecode, _PyCoMonitoringData *monitoring, int i)	todo		
+Python/instrumentation.c	799	825	instrument_per_instruction	instrument_per_instruction(PyCodeObject *code, _Py_CODEUNIT *bytecode, _PyCoMonitoringData *monitoring, int i)	todo		
+Python/instrumentation.c	828	851	remove_tools	remove_tools(PyCodeObject * code, int offset, int event, int tools)	todo		
+Python/instrumentation.c	855	860	tools_is_subset_for_event	tools_is_subset_for_event(PyCodeObject * code, int event, int tools)	todo		
+Python/instrumentation.c	864	886	remove_line_tools	remove_line_tools(PyCodeObject * code, int offset, int tools)	todo		
+Python/instrumentation.c	889	907	add_tools	add_tools(PyCodeObject * code, int offset, int event, int tools)	todo		
+Python/instrumentation.c	910	924	add_line_tools	add_line_tools(PyCodeObject * code, int offset, int tools)	todo		
+Python/instrumentation.c	928	942	add_per_instruction_tools	add_per_instruction_tools(PyCodeObject * code, int offset, int tools)	todo		
+Python/instrumentation.c	946	967	remove_per_instruction_tools	remove_per_instruction_tools(PyCodeObject * code, int offset, int tools)	todo		
+Python/instrumentation.c	972	993	call_one_instrument	call_one_instrument( PyInterpreterState *interp, PyThreadState *tstate, PyObject **args, size_t nargsf, int8_t tool, int event)	todo		
+Python/instrumentation.c	1005	1011	most_significant_bit	static inline int most_significant_bit(uint8_t bits) {	todo		
+Python/instrumentation.c	1014	1026	global_version	global_version(PyInterpreterState *interp)	todo		
+Python/instrumentation.c	1031	1038	set_version_raw	set_version_raw(uintptr_t *ptr, uint32_t version)	todo		
+Python/instrumentation.c	1041	1060	set_global_version	set_global_version(PyThreadState *tstate, uint32_t version)	todo		
+Python/instrumentation.c	1063	1067	is_version_up_to_date	is_version_up_to_date(PyCodeObject *code, PyInterpreterState *interp)	todo		
+Python/instrumentation.c	1071	1078	instrumentation_cross_checks	instrumentation_cross_checks(PyInterpreterState *interp, PyCodeObject *code)	todo		
+Python/instrumentation.c	1081	1089	debug_check_sanity	debug_check_sanity(PyInterpreterState *interp, PyCodeObject *code)	todo		
+Python/instrumentation.c	1094	1117	get_tools_for_instruction	get_tools_for_instruction(PyCodeObject *code, PyInterpreterState *interp, int i, int event)	todo		
+Python/instrumentation.c	1142	1204	call_instrumentation_vector	call_instrumentation_vector( _Py_CODEUNIT *instr, PyThreadState *tstate, int event, _PyInterpreterFrame *frame, _Py_CODEUNIT *arg2, Py_ssize_t nargs, PyObject *args[])	todo		
+Python/instrumentation.c	1207	1213	_Py_call_instrumentation	_Py_call_instrumentation( PyThreadState *tstate, int event, _PyInterpreterFrame *frame, _Py_CODEUNIT *instr)	todo		
+Python/instrumentation.c	1216	1222	_Py_call_instrumentation_arg	_Py_call_instrumentation_arg( PyThreadState *tstate, int event, _PyInterpreterFrame *frame, _Py_CODEUNIT *instr, PyObject *arg)	todo		
+Python/instrumentation.c	1225	1231	_Py_call_instrumentation_2args	_Py_call_instrumentation_2args( PyThreadState *tstate, int event, _PyInterpreterFrame *frame, _Py_CODEUNIT *instr, PyObject *arg0, PyObject *arg1)	todo		
+Python/instrumentation.c	1234	1258	_Py_call_instrumentation_jump	_Py_call_instrumentation_jump( _Py_CODEUNIT *instr, PyThreadState *tstate, int event, _PyInterpreterFrame *frame, _Py_CODEUNIT *src, _Py_CODEUNIT *dest)	todo		
+Python/instrumentation.c	1261	1275	call_instrumentation_vector_protected	call_instrumentation_vector_protected( PyThreadState *tstate, int event, _PyInterpreterFrame *frame, _Py_CODEUNIT *instr, Py_ssize_t nargs, PyObject *args[])	todo		
+Python/instrumentation.c	1278	1285	_Py_call_instrumentation_exc2	_Py_call_instrumentation_exc2( PyThreadState *tstate, int event, _PyInterpreterFrame *frame, _Py_CODEUNIT *instr, PyObject *arg0, PyObject *arg1)	todo		
+Python/instrumentation.c	1288	1295	_Py_Instrumentation_GetLine	_Py_Instrumentation_GetLine(PyCodeObject *code, _PyCoLineInstrumentationData *line_data, int index)	todo		
+Python/instrumentation.c	1298	1398	_Py_call_instrumentation_line	_Py_call_instrumentation_line(PyThreadState *tstate, _PyInterpreterFrame* frame, _Py_CODEUNIT *instr, _Py_CODEUNIT *prev)	todo		
+Python/instrumentation.c	1401	1451	_Py_call_instrumentation_instruction	_Py_call_instrumentation_instruction(PyThreadState *tstate, _PyInterpreterFrame* frame, _Py_CODEUNIT *instr)	todo		
+Python/instrumentation.c	1454	1507	initialize_tools	initialize_tools(PyCodeObject *code)	todo		
+Python/instrumentation.c	1510	1632	initialize_lines	initialize_lines(_PyCoLineInstrumentationData *line_data, PyCodeObject *code, int bytes_per_entry)	todo		
+Python/instrumentation.c	1635	1645	initialize_line_tools	initialize_line_tools(PyCodeObject *code, _Py_LocalMonitors *all_events)	todo		
+Python/instrumentation.c	1648	1668	allocate_instrumentation_data	allocate_instrumentation_data(PyCodeObject *code)	todo		
+Python/instrumentation.c	1671	1773	update_instrumentation_data	update_instrumentation_data(PyCodeObject *code, PyInterpreterState *interp)	todo		
+Python/instrumentation.c	1776	1904	force_instrument_lock_held	force_instrument_lock_held(PyCodeObject *code, PyInterpreterState *interp)	todo		
+Python/instrumentation.c	1907	1920	instrument_lock_held	instrument_lock_held(PyCodeObject *code, PyInterpreterState *interp)	todo		
+Python/instrumentation.c	1923	1930	_Py_Instrument	_Py_Instrument(PyCodeObject *code, PyInterpreterState *interp)	todo		
+Python/instrumentation.c	1941	1961	instrument_all_executing_code_objects	instrument_all_executing_code_objects(PyInterpreterState *interp)	todo		
+Python/instrumentation.c	1964	1973	set_events	set_events(_Py_GlobalMonitors *m, int tool_id, _PyMonitoringEventSet events)	todo		
+Python/instrumentation.c	1976	1985	set_local_events	set_local_events(_Py_LocalMonitors *m, int tool_id, _PyMonitoringEventSet events)	todo		
+Python/instrumentation.c	1988	1997	check_tool	check_tool(PyInterpreterState *interp, int tool_id)	todo		
+Python/instrumentation.c	2004	2030	_PyMonitoring_SetEvents	_PyMonitoring_SetEvents(int tool_id, _PyMonitoringEventSet events)	todo		
+Python/instrumentation.c	2033	2062	_PyMonitoring_SetLocalEvents	_PyMonitoring_SetLocalEvents(PyCodeObject *code, int tool_id, _PyMonitoringEventSet events)	todo		
+Python/instrumentation.c	2065	2079	_PyMonitoring_GetLocalEvents	_PyMonitoring_GetLocalEvents(PyCodeObject *code, int tool_id, _PyMonitoringEventSet *events)	todo		
+Python/instrumentation.c	2081	2117	_PyMonitoring_ClearToolId	int _PyMonitoring_ClearToolId(int tool_id)	todo		
+Python/instrumentation.c	2128	2135	check_valid_tool	check_valid_tool(int tool_id)	todo		
+Python/instrumentation.c	2147	2164	monitoring_use_tool_id_impl	monitoring_use_tool_id_impl(PyObject *module, int tool_id, PyObject *name) /*[clinic end generated code: output=30d76dc92b7cd653 input=ebc453761c621be1]*/	todo		
+Python/instrumentation.c	2175	2191	monitoring_clear_tool_id_impl	monitoring_clear_tool_id_impl(PyObject *module, int tool_id) /*[clinic end generated code: output=04defc23470b1be7 input=af643d6648a66163]*/	todo		
+Python/instrumentation.c	2202	2218	monitoring_free_tool_id_impl	monitoring_free_tool_id_impl(PyObject *module, int tool_id) /*[clinic end generated code: output=86c2d2a1219a8591 input=a23fb6be3a8618e9]*/	todo		
+Python/instrumentation.c	2257	2284	monitoring_register_callback_impl	monitoring_register_callback_impl(PyObject *module, int tool_id, int event, PyObject *func) /*[clinic end generated code: output=e64daa363004030c input=df6d70ea4cf81007]*/	todo		
+Python/instrumentation.c	2295	2304	monitoring_get_events_impl	monitoring_get_events_impl(PyObject *module, int tool_id) /*[clinic end generated code: output=4450cc13f826c8c0 input=a64b238f76c4b2f7]*/	todo		
+Python/instrumentation.c	2316	2343	monitoring_set_events_impl	monitoring_set_events_impl(PyObject *module, int tool_id, int event_set) /*[clinic end generated code: output=1916c1e49cfb5bdb input=a77ba729a242142b]*/	todo		
+Python/instrumentation.c	2355	2379	monitoring_get_local_events_impl	monitoring_get_local_events_impl(PyObject *module, int tool_id, PyObject *code) /*[clinic end generated code: output=d3e92c1c9c1de8f9 input=bb0f927530386a94]*/	todo		
+Python/instrumentation.c	2392	2428	monitoring_set_local_events_impl	monitoring_set_local_events_impl(PyObject *module, int tool_id, PyObject *code, int event_set) /*[clinic end generated code: output=68cc755a65dfea99 input=5655ecd78d937a29]*/	todo		
+Python/instrumentation.c	2436	2463	monitoring_restart_events_impl	monitoring_restart_events_impl(PyObject *module) /*[clinic end generated code: output=e025dd5ba33314c4 input=add8a855063c8008]*/	todo		
+Python/instrumentation.c	2466	2475	add_power2_constant	add_power2_constant(PyObject *obj, const char *name, int i)	todo		
+Python/instrumentation.c	2482	2505	monitoring__all_events_impl	monitoring__all_events_impl(PyObject *module) /*[clinic end generated code: output=6b7581e2dbb690f6 input=62ee9672c17b7f0e]*/	todo		
+Python/instrumentation.c	2529	2581	_Py_CreateMonitoringObject	PyObject *_Py_CreateMonitoringObject(void)	todo		
+Python/instrumentation.c	2585	2641	capi_call_instrumentation	capi_call_instrumentation(PyMonitoringState *state, PyObject *codelike, int32_t offset, PyObject **args, Py_ssize_t nargs, int event)	todo		
+Python/instrumentation.c	2644	2659	PyMonitoring_EnterScope	PyMonitoring_EnterScope(PyMonitoringState *state_array, uint64_t *version, const uint8_t *event_types, Py_ssize_t length)	todo		
+Python/instrumentation.c	2662	2665	PyMonitoring_ExitScope	PyMonitoring_ExitScope(void)	todo		
+Python/instrumentation.c	2668	2674	_PyMonitoring_FirePyStartEvent	_PyMonitoring_FirePyStartEvent(PyMonitoringState *state, PyObject *codelike, int32_t offset)	todo		
+Python/instrumentation.c	2677	2683	_PyMonitoring_FirePyResumeEvent	_PyMonitoring_FirePyResumeEvent(PyMonitoringState *state, PyObject *codelike, int32_t offset)	todo		
+Python/instrumentation.c	2688	2695	_PyMonitoring_FirePyReturnEvent	_PyMonitoring_FirePyReturnEvent(PyMonitoringState *state, PyObject *codelike, int32_t offset, PyObject* retval)	todo		
+Python/instrumentation.c	2698	2705	_PyMonitoring_FirePyYieldEvent	_PyMonitoring_FirePyYieldEvent(PyMonitoringState *state, PyObject *codelike, int32_t offset, PyObject* retval)	todo		
+Python/instrumentation.c	2708	2715	_PyMonitoring_FireCallEvent	_PyMonitoring_FireCallEvent(PyMonitoringState *state, PyObject *codelike, int32_t offset, PyObject* callable, PyObject *arg0)	todo		
+Python/instrumentation.c	2718	2731	_PyMonitoring_FireLineEvent	_PyMonitoring_FireLineEvent(PyMonitoringState *state, PyObject *codelike, int32_t offset, int lineno)	todo		
+Python/instrumentation.c	2734	2741	_PyMonitoring_FireJumpEvent	_PyMonitoring_FireJumpEvent(PyMonitoringState *state, PyObject *codelike, int32_t offset, PyObject *target_offset)	todo		
+Python/instrumentation.c	2744	2751	_PyMonitoring_FireBranchEvent	_PyMonitoring_FireBranchEvent(PyMonitoringState *state, PyObject *codelike, int32_t offset, PyObject *target_offset)	todo		
+Python/instrumentation.c	2754	2761	_PyMonitoring_FireBranchRightEvent	_PyMonitoring_FireBranchRightEvent(PyMonitoringState *state, PyObject *codelike, int32_t offset, PyObject *target_offset)	todo		
+Python/instrumentation.c	2764	2771	_PyMonitoring_FireBranchLeftEvent	_PyMonitoring_FireBranchLeftEvent(PyMonitoringState *state, PyObject *codelike, int32_t offset, PyObject *target_offset)	todo		
+Python/instrumentation.c	2774	2781	_PyMonitoring_FireCReturnEvent	_PyMonitoring_FireCReturnEvent(PyMonitoringState *state, PyObject *codelike, int32_t offset, PyObject *retval)	todo		
+Python/instrumentation.c	2784	2793	exception_event_setup	exception_event_setup(PyObject **exc, int event) {	todo		
+Python/instrumentation.c	2797	2806	exception_event_teardown	exception_event_teardown(int err, PyObject *exc) {	todo		
+Python/instrumentation.c	2809	2820	_PyMonitoring_FirePyThrowEvent	_PyMonitoring_FirePyThrowEvent(PyMonitoringState *state, PyObject *codelike, int32_t offset)	todo		
+Python/instrumentation.c	2823	2834	_PyMonitoring_FireRaiseEvent	_PyMonitoring_FireRaiseEvent(PyMonitoringState *state, PyObject *codelike, int32_t offset)	todo		
+Python/instrumentation.c	2837	2848	_PyMonitoring_FireCRaiseEvent	_PyMonitoring_FireCRaiseEvent(PyMonitoringState *state, PyObject *codelike, int32_t offset)	todo		
+Python/instrumentation.c	2851	2862	_PyMonitoring_FireReraiseEvent	_PyMonitoring_FireReraiseEvent(PyMonitoringState *state, PyObject *codelike, int32_t offset)	todo		
+Python/instrumentation.c	2865	2876	_PyMonitoring_FireExceptionHandledEvent	_PyMonitoring_FireExceptionHandledEvent(PyMonitoringState *state, PyObject *codelike, int32_t offset)	todo		
+Python/instrumentation.c	2879	2890	_PyMonitoring_FirePyUnwindEvent	_PyMonitoring_FirePyUnwindEvent(PyMonitoringState *state, PyObject *codelike, int32_t offset)	todo		
+Python/instrumentation.c	2893	2907	_PyMonitoring_FireStopIterationEvent	_PyMonitoring_FireStopIterationEvent(PyMonitoringState *state, PyObject *codelike, int32_t offset, PyObject *value)	todo		
+Python/instrumentation.c	2924	2929	dealloc_branch_handler	dealloc_branch_handler(PyObject *op)	todo		
+Python/instrumentation.c	3003	3015	make_branch_handler	static PyObject *make_branch_handler(int tool_id, PyObject *handler, bool right)	todo		
+Python/instrumentation.c	3018	3062	_PyMonitoring_RegisterCallback	_PyMonitoring_RegisterCallback(int tool_id, int event_id, PyObject *obj)	todo		
+Python/instrumentation.c	3075	3097	int_triple	int_triple(int a, int b, int c) {	todo		
+Python/instrumentation.c	3100	3140	branchesiter_next	branchesiter_next(PyObject *op)	todo		
+Python/instrumentation.c	3143	3148	branchesiter_dealloc	branchesiter_dealloc(PyObject *op)	todo		
+Python/instrumentation.c	3164	3174	_PyInstrumentation_BranchesIterator	_PyInstrumentation_BranchesIterator(PyCodeObject *code)	todo		

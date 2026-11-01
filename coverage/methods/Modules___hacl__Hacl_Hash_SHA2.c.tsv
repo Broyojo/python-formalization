@@ -1,0 +1,47 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_hacl/Hacl_Hash_SHA2.c	33	42	Hacl_Hash_SHA2_sha256_init	void Hacl_Hash_SHA2_sha256_init(uint32_t *hash)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	44	148	sha256_update	static inline void sha256_update(uint8_t *b, uint32_t *hash)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	150	159	Hacl_Hash_SHA2_sha256_update_nblocks	void Hacl_Hash_SHA2_sha256_update_nblocks(uint32_t len, uint8_t *b, uint32_t *st)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	162	196	Hacl_Hash_SHA2_sha256_update_last	Hacl_Hash_SHA2_sha256_update_last(uint64_t totlen, uint32_t len, uint8_t *b, uint32_t *hash)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	198	203	Hacl_Hash_SHA2_sha256_finish	void Hacl_Hash_SHA2_sha256_finish(uint32_t *st, uint8_t *h)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	205	214	Hacl_Hash_SHA2_sha224_init	void Hacl_Hash_SHA2_sha224_init(uint32_t *hash)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	216	219	Hacl_Hash_SHA2_sha224_update_nblocks	void Hacl_Hash_SHA2_sha224_update_nblocks(uint32_t len, uint8_t *b, uint32_t *st)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	221	224	Hacl_Hash_SHA2_sha224_update_last	void Hacl_Hash_SHA2_sha224_update_last(uint64_t totlen, uint32_t len, uint8_t *b, uint32_t *st)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	226	231	Hacl_Hash_SHA2_sha224_finish	void Hacl_Hash_SHA2_sha224_finish(uint32_t *st, uint8_t *h)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	233	242	Hacl_Hash_SHA2_sha512_init	void Hacl_Hash_SHA2_sha512_init(uint64_t *hash)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	244	348	sha512_update	static inline void sha512_update(uint8_t *b, uint64_t *hash)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	350	359	Hacl_Hash_SHA2_sha512_update_nblocks	void Hacl_Hash_SHA2_sha512_update_nblocks(uint32_t len, uint8_t *b, uint64_t *st)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	362	401	Hacl_Hash_SHA2_sha512_update_last	Hacl_Hash_SHA2_sha512_update_last( FStar_UInt128_uint128 totlen, uint32_t len, uint8_t *b, uint64_t *hash )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	403	408	Hacl_Hash_SHA2_sha512_finish	void Hacl_Hash_SHA2_sha512_finish(uint64_t *st, uint8_t *h)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	410	419	Hacl_Hash_SHA2_sha384_init	void Hacl_Hash_SHA2_sha384_init(uint64_t *hash)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	421	424	Hacl_Hash_SHA2_sha384_update_nblocks	void Hacl_Hash_SHA2_sha384_update_nblocks(uint32_t len, uint8_t *b, uint64_t *st)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	427	435	Hacl_Hash_SHA2_sha384_update_last	Hacl_Hash_SHA2_sha384_update_last( FStar_UInt128_uint128 totlen, uint32_t len, uint8_t *b, uint64_t *st )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	437	442	Hacl_Hash_SHA2_sha384_finish	void Hacl_Hash_SHA2_sha384_finish(uint64_t *st, uint8_t *h)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	448	512	Hacl_Hash_SHA2_malloc_256	Hacl_Streaming_MD_state_32 *Hacl_Hash_SHA2_malloc_256(void)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	515	588	state	Copies the state passed as argument into a newly allocated state (deep copy). The state is to be freed by calling `free_256`. Cloning the state this way is useful, for instance, if your control-flow diverges and you need to feed more (different) data into the hash in each branch. */ Hacl_Streaming_MD_state_32 *Hacl_Hash_SHA2_copy_256(Hacl_Streaming_MD_state_32 *state)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	593	602	Hacl_Hash_SHA2_reset_256	void Hacl_Hash_SHA2_reset_256(Hacl_Streaming_MD_state_32 *state)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	605	768	update_224_256	update_224_256(Hacl_Streaming_MD_state_32 *state, uint8_t *chunk, uint32_t chunk_len)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	778	785	Hacl_Hash_SHA2_update_256	Hacl_Hash_SHA2_update_256( Hacl_Streaming_MD_state_32 *state, uint8_t *input, uint32_t input_len )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	793	826	Hacl_Hash_SHA2_digest_256	void Hacl_Hash_SHA2_digest_256(Hacl_Streaming_MD_state_32 *state, uint8_t *output)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	833	841	Hacl_Hash_SHA2_free_256	void Hacl_Hash_SHA2_free_256(Hacl_Streaming_MD_state_32 *state)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	846	860	Hacl_Hash_SHA2_hash_256	void Hacl_Hash_SHA2_hash_256(uint8_t *output, uint8_t *input, uint32_t input_len)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	862	926	Hacl_Hash_SHA2_malloc_224	Hacl_Streaming_MD_state_32 *Hacl_Hash_SHA2_malloc_224(void)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	928	937	Hacl_Hash_SHA2_reset_224	void Hacl_Hash_SHA2_reset_224(Hacl_Streaming_MD_state_32 *state)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	940	947	Hacl_Hash_SHA2_update_224	Hacl_Hash_SHA2_update_224( Hacl_Streaming_MD_state_32 *state, uint8_t *input, uint32_t input_len )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	954	987	Hacl_Hash_SHA2_digest_224	void Hacl_Hash_SHA2_digest_224(Hacl_Streaming_MD_state_32 *state, uint8_t *output)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	989	992	Hacl_Hash_SHA2_free_224	void Hacl_Hash_SHA2_free_224(Hacl_Streaming_MD_state_32 *state)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	997	1011	Hacl_Hash_SHA2_hash_224	void Hacl_Hash_SHA2_hash_224(uint8_t *output, uint8_t *input, uint32_t input_len)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	1013	1077	Hacl_Hash_SHA2_malloc_512	Hacl_Streaming_MD_state_64 *Hacl_Hash_SHA2_malloc_512(void)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	1080	1153	state	Copies the state passed as argument into a newly allocated state (deep copy). The state is to be freed by calling `free_512`. Cloning the state this way is useful, for instance, if your control-flow diverges and you need to feed more (different) data into the hash in each branch. */ Hacl_Streaming_MD_state_64 *Hacl_Hash_SHA2_copy_512(Hacl_Streaming_MD_state_64 *state)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	1155	1164	Hacl_Hash_SHA2_reset_512	void Hacl_Hash_SHA2_reset_512(Hacl_Streaming_MD_state_64 *state)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	1167	1330	update_384_512	update_384_512(Hacl_Streaming_MD_state_64 *state, uint8_t *chunk, uint32_t chunk_len)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	1340	1347	Hacl_Hash_SHA2_update_512	Hacl_Hash_SHA2_update_512( Hacl_Streaming_MD_state_64 *state, uint8_t *input, uint32_t input_len )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	1355	1392	Hacl_Hash_SHA2_digest_512	void Hacl_Hash_SHA2_digest_512(Hacl_Streaming_MD_state_64 *state, uint8_t *output)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	1399	1407	Hacl_Hash_SHA2_free_512	void Hacl_Hash_SHA2_free_512(Hacl_Streaming_MD_state_64 *state)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	1412	1426	Hacl_Hash_SHA2_hash_512	void Hacl_Hash_SHA2_hash_512(uint8_t *output, uint8_t *input, uint32_t input_len)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	1428	1492	Hacl_Hash_SHA2_malloc_384	Hacl_Streaming_MD_state_64 *Hacl_Hash_SHA2_malloc_384(void)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	1494	1503	Hacl_Hash_SHA2_reset_384	void Hacl_Hash_SHA2_reset_384(Hacl_Streaming_MD_state_64 *state)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	1506	1513	Hacl_Hash_SHA2_update_384	Hacl_Hash_SHA2_update_384( Hacl_Streaming_MD_state_64 *state, uint8_t *input, uint32_t input_len )	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	1520	1557	Hacl_Hash_SHA2_digest_384	void Hacl_Hash_SHA2_digest_384(Hacl_Streaming_MD_state_64 *state, uint8_t *output)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	1559	1562	Hacl_Hash_SHA2_free_384	void Hacl_Hash_SHA2_free_384(Hacl_Streaming_MD_state_64 *state)	excluded		vendored: third-party code
+Modules/_hacl/Hacl_Hash_SHA2.c	1567	1581	Hacl_Hash_SHA2_hash_384	void Hacl_Hash_SHA2_hash_384(uint8_t *output, uint8_t *input, uint32_t input_len)	excluded		vendored: third-party code

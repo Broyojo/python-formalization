@@ -1,0 +1,9 @@
+file	line	endline	name	signature	status	entry	note
+Lib/email/policy.py	99	104	EmailPolicy.__init__	__init__(self, **kw)	todo		
+Lib/email/policy.py	106	112	EmailPolicy.header_max_count	header_max_count(self, name)	todo		
+Lib/email/policy.py	124	135	EmailPolicy.header_source_parse	header_source_parse(self, sourcelines)	todo		
+Lib/email/policy.py	137	155	EmailPolicy.header_store_parse	header_store_parse(self, name, value)	todo		
+Lib/email/policy.py	157	170	EmailPolicy.header_fetch_parse	header_fetch_parse(self, name, value)	todo		
+Lib/email/policy.py	172	191	EmailPolicy.fold	fold(self, name, value)	todo		
+Lib/email/policy.py	193	209	EmailPolicy.fold_binary	fold_binary(self, name, value)	todo		
+Lib/email/policy.py	211	230	EmailPolicy._fold	_fold(self, name, value, refold_binary=False)	todo		

@@ -1,0 +1,17 @@
+file	line	endline	name	signature	status	entry	note
+Lib/importlib/resources/simple.py	21	24	SimpleReader.package	package(self)	todo		
+Lib/importlib/resources/simple.py	27	31	SimpleReader.children	children(self)	todo		
+Lib/importlib/resources/simple.py	34	37	SimpleReader.resources	resources(self)	todo		
+Lib/importlib/resources/simple.py	40	43	SimpleReader.open_binary	open_binary(self, resource: str)	todo		
+Lib/importlib/resources/simple.py	46	47	SimpleReader.name	name(self)	todo		
+Lib/importlib/resources/simple.py	55	56	ResourceContainer.__init__	__init__(self, reader: SimpleReader)	todo		
+Lib/importlib/resources/simple.py	58	59	ResourceContainer.is_dir	is_dir(self)	todo		
+Lib/importlib/resources/simple.py	61	62	ResourceContainer.is_file	is_file(self)	todo		
+Lib/importlib/resources/simple.py	64	67	ResourceContainer.iterdir	iterdir(self)	todo		
+Lib/importlib/resources/simple.py	69	70	ResourceContainer.open	open(self, *args, **kwargs)	todo		
+Lib/importlib/resources/simple.py	78	80	ResourceHandle.__init__	__init__(self, parent: ResourceContainer, name: str)	todo		
+Lib/importlib/resources/simple.py	82	83	ResourceHandle.is_file	is_file(self)	todo		
+Lib/importlib/resources/simple.py	85	86	ResourceHandle.is_dir	is_dir(self)	todo		
+Lib/importlib/resources/simple.py	88	92	ResourceHandle.open	open(self, mode='r', *args, **kwargs)	todo		
+Lib/importlib/resources/simple.py	94	95	ResourceHandle.joinpath	joinpath(self, name)	todo		
+Lib/importlib/resources/simple.py	105	106	TraversableReader.files	files(self)	todo		

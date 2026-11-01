@@ -1,0 +1,14 @@
+file	line	endline	name	signature	status	entry	note
+Objects/stringlib/ctype.h	8	11	stringlib_isspace	stringlib_isspace(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/stringlib/ctype.h	14	17	stringlib_isalpha	stringlib_isalpha(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/stringlib/ctype.h	20	23	stringlib_isalnum	stringlib_isalnum(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/stringlib/ctype.h	26	29	stringlib_isascii	stringlib_isascii(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/stringlib/ctype.h	32	35	stringlib_isdigit	stringlib_isdigit(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/stringlib/ctype.h	38	41	stringlib_islower	stringlib_islower(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/stringlib/ctype.h	44	47	stringlib_isupper	stringlib_isupper(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/stringlib/ctype.h	50	53	stringlib_istitle	stringlib_istitle(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/stringlib/ctype.h	59	68	stringlib_lower	stringlib_lower(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/stringlib/ctype.h	71	80	stringlib_upper	stringlib_upper(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/stringlib/ctype.h	83	92	stringlib_title	stringlib_title(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/stringlib/ctype.h	95	104	stringlib_capitalize	stringlib_capitalize(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/stringlib/ctype.h	107	116	stringlib_swapcase	stringlib_swapcase(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		

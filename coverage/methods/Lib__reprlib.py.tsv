@@ -1,0 +1,18 @@
+file	line	endline	name	signature	status	entry	note
+Lib/reprlib.py	9	36	recursive_repr	recursive_repr(fillvalue='...')	todo		
+Lib/reprlib.py	51	68	Repr.__init__	__init__(self, *, maxlevel=6, maxtuple=6, maxlist=6, maxarray=5, maxdict=4, maxset=6, maxfrozenset=6, maxdeque=6, maxstring=30, maxlong=40, maxother=30, fillvalue='...', indent=None)	todo		
+Lib/reprlib.py	70	71	Repr.repr	repr(self, x)	todo		
+Lib/reprlib.py	73	91	Repr.repr1	repr1(self, x, level)	todo		
+Lib/reprlib.py	93	111	Repr._join	_join(self, pieces, level)	todo		
+Lib/reprlib.py	113	126	Repr._repr_iterable	_repr_iterable(self, x, level, left, right, maxiter, trail='')	todo		
+Lib/reprlib.py	128	129	Repr.repr_tuple	repr_tuple(self, x, level)	todo		
+Lib/reprlib.py	131	132	Repr.repr_list	repr_list(self, x, level)	todo		
+Lib/reprlib.py	134	138	Repr.repr_array	repr_array(self, x, level)	todo		
+Lib/reprlib.py	140	144	Repr.repr_set	repr_set(self, x, level)	todo		
+Lib/reprlib.py	146	151	Repr.repr_frozenset	repr_frozenset(self, x, level)	todo		
+Lib/reprlib.py	153	154	Repr.repr_deque	repr_deque(self, x, level)	todo		
+Lib/reprlib.py	156	172	Repr.repr_dict	repr_dict(self, x, level)	todo		
+Lib/reprlib.py	174	181	Repr.repr_str	repr_str(self, x, level)	todo		
+Lib/reprlib.py	183	204	Repr.repr_int	repr_int(self, x, level)	todo		
+Lib/reprlib.py	206	217	Repr.repr_instance	repr_instance(self, x, level)	todo		
+Lib/reprlib.py	220	227	_possibly_sorted	_possibly_sorted(x)	todo		

@@ -1,0 +1,27 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_queuemodule.c	21	26	simplequeue_get_state	simplequeue_get_state(PyObject *module)	todo		
+Modules/_queuemodule.c	50	62	RingBuf_Init	RingBuf_Init(RingBuf *buf)	todo		
+Modules/_queuemodule.c	65	69	RingBuf_At	RingBuf_At(RingBuf *buf, Py_ssize_t idx)	todo		
+Modules/_queuemodule.c	72	87	RingBuf_Fini	RingBuf_Fini(RingBuf *buf)	todo		
+Modules/_queuemodule.c	94	131	resize_ringbuf	resize_ringbuf(RingBuf *buf, Py_ssize_t capacity)	todo		
+Modules/_queuemodule.c	135	154	RingBuf_Get	RingBuf_Get(RingBuf *buf)	todo		
+Modules/_queuemodule.c	160	176	RingBuf_Put	RingBuf_Put(RingBuf *buf, PyObject *item)	todo		
+Modules/_queuemodule.c	179	182	RingBuf_Len	RingBuf_Len(RingBuf *buf)	todo		
+Modules/_queuemodule.c	185	188	RingBuf_IsEmpty	RingBuf_IsEmpty(RingBuf *buf)	todo		
+Modules/_queuemodule.c	211	216	simplequeue_clear	simplequeue_clear(PyObject *op)	todo		
+Modules/_queuemodule.c	219	229	simplequeue_dealloc	simplequeue_dealloc(PyObject *op)	todo		
+Modules/_queuemodule.c	232	241	simplequeue_traverse	simplequeue_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_queuemodule.c	251	266	simplequeue_new_impl	simplequeue_new_impl(PyTypeObject *type) /*[clinic end generated code: output=ba97740608ba31cd input=a0674a1643e3e2fb]*/	todo		
+Modules/_queuemodule.c	275	289	maybe_handoff_item	maybe_handoff_item(void *arg, void *park_arg, int has_more_waiters)	todo		
+Modules/_queuemodule.c	307	327	_queue_SimpleQueue_put_impl	_queue_SimpleQueue_put_impl(simplequeueobject *self, PyObject *item, int block, PyObject *timeout) /*[clinic end generated code: output=4333136e88f90d8b input=9f9ff270a74670c3]*/	todo		
+Modules/_queuemodule.c	342	346	_queue_SimpleQueue_put_nowait_impl	_queue_SimpleQueue_put_nowait_impl(simplequeueobject *self, PyObject *item) /*[clinic end generated code: output=0990536715efb1f1 input=ce949cc2cd8a4119]*/	todo		
+Modules/_queuemodule.c	349	356	empty_error	empty_error(PyTypeObject *cls)	todo		
+Modules/_queuemodule.c	381	455	_queue_SimpleQueue_get_impl	_queue_SimpleQueue_get_impl(simplequeueobject *self, PyTypeObject *cls, int block, PyObject *timeout_obj) /*[clinic end generated code: output=5c2cca914cd1e55b input=afa0889bbc6b4761]*/	todo		
+Modules/_queuemodule.c	471	476	_queue_SimpleQueue_get_nowait_impl	_queue_SimpleQueue_get_nowait_impl(simplequeueobject *self, PyTypeObject *cls) /*[clinic end generated code: output=620c58e2750f8b8a input=d48be63633fefae9]*/	todo		
+Modules/_queuemodule.c	486	490	_queue_SimpleQueue_empty_impl	_queue_SimpleQueue_empty_impl(simplequeueobject *self) /*[clinic end generated code: output=1a02a1b87c0ef838 input=96cb22df5a67d831]*/	todo		
+Modules/_queuemodule.c	500	504	_queue_SimpleQueue_qsize_impl	_queue_SimpleQueue_qsize_impl(simplequeueobject *self) /*[clinic end generated code: output=f9dcd9d0a90e121e input=e218623cb8c16a79]*/	todo		
+Modules/_queuemodule.c	507	513	queue_traverse	queue_traverse(PyObject *m, visitproc visit, void *arg)	todo		
+Modules/_queuemodule.c	516	522	queue_clear	queue_clear(PyObject *m)	todo		
+Modules/_queuemodule.c	525	528	queue_free	queue_free(void *m)	todo		
+Modules/_queuemodule.c	577	602	queuemodule_exec	queuemodule_exec(PyObject *module)	todo		
+Modules/_queuemodule.c	625	628	PyInit__queue	PyInit__queue(void)	todo		

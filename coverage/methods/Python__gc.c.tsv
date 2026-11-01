@@ -1,0 +1,78 @@
+file	line	endline	name	signature	status	entry	note
+Python/gc.c	59	62	gc_is_collecting	gc_is_collecting(PyGC_Head *g)	todo		
+Python/gc.c	65	68	gc_clear_collecting	gc_clear_collecting(PyGC_Head *g)	todo		
+Python/gc.c	71	74	gc_get_refs	gc_get_refs(PyGC_Head *g)	todo		
+Python/gc.c	77	81	gc_set_refs	gc_set_refs(PyGC_Head *g, Py_ssize_t refs)	todo		
+Python/gc.c	84	89	gc_reset_refs	gc_reset_refs(PyGC_Head *g, Py_ssize_t refs)	todo		
+Python/gc.c	92	98	gc_decref	gc_decref(PyGC_Head *g)	todo		
+Python/gc.c	105	109	get_gc_state	get_gc_state(void)	todo		
+Python/gc.c	113	129	_PyGC_InitState	_PyGC_InitState(GCState *gcstate)	todo		
+Python/gc.c	133	148	_PyGC_Init	_PyGC_Init(PyInterpreterState *interp)	todo		
+Python/gc.c	205	211	gc_list_init	gc_list_init(PyGC_Head *list)	todo		
+Python/gc.c	214	217	gc_list_is_empty	gc_list_is_empty(PyGC_Head *list)	todo		
+Python/gc.c	221	232	gc_list_append	gc_list_append(PyGC_Head *node, PyGC_Head *list)	todo		
+Python/gc.c	236	245	gc_list_remove	gc_list_remove(PyGC_Head *node)	todo		
+Python/gc.c	252	267	gc_list_move	gc_list_move(PyGC_Head *node, PyGC_Head *list)	todo		
+Python/gc.c	271	288	gc_list_merge	gc_list_merge(PyGC_Head *from, PyGC_Head *to)	todo		
+Python/gc.c	291	299	gc_list_size	gc_list_size(PyGC_Head *list)	todo		
+Python/gc.c	303	309	gc_list_clear_collecting	gc_list_clear_collecting(PyGC_Head *collectable)	todo		
+Python/gc.c	315	327	append_objects	append_objects(PyObject *py_list, PyGC_Head *gc_list)	todo		
+Python/gc.c	346	380	validate_list	validate_list(PyGC_Head *head, enum flagstates flags)	todo		
+Python/gc.c	392	428	update_refs	update_refs(PyGC_Head *containers)	todo		
+Python/gc.c	432	448	visit_decref	visit_decref(PyObject *op, void *parent)	todo		
+Python/gc.c	451	462	_PyGC_VisitStackRef	_PyGC_VisitStackRef(_PyStackRef *ref, visitproc visit, void *arg)	todo		
+Python/gc.c	465	475	_PyGC_VisitFrameStack	_PyGC_VisitFrameStack(_PyInterpreterFrame *frame, visitproc visit, void *arg)	todo		
+Python/gc.c	482	493	subtract_refs	subtract_refs(PyGC_Head *containers)	todo		
+Python/gc.c	497	556	visit_reachable	visit_reachable(PyObject *op, void *arg)	todo		
+Python/gc.c	571	642	move_unreachable	move_unreachable(PyGC_Head *young, PyGC_Head *unreachable)	todo		
+Python/gc.c	657	668	untrack_tuples	untrack_tuples(PyGC_Head *head)	todo		
+Python/gc.c	672	675	has_legacy_finalizer	has_legacy_finalizer(PyObject *op)	todo		
+Python/gc.c	683	705	move_legacy_finalizers	move_legacy_finalizers(PyGC_Head *unreachable, PyGC_Head *finalizers)	todo		
+Python/gc.c	708	725	clear_unreachable_mask	clear_unreachable_mask(PyGC_Head *unreachable)	todo		
+Python/gc.c	729	741	visit_move	visit_move(PyObject *op, void *arg)	todo		
+Python/gc.c	747	758	move_legacy_finalizer_reachable	move_legacy_finalizer_reachable(PyGC_Head *finalizers)	todo		
+Python/gc.c	772	946	handle_weakrefs	handle_weakrefs(PyGC_Head *unreachable, PyGC_Head *old, bool allow_callbacks)	todo		
+Python/gc.c	949	953	debug_cycle	debug_cycle(const char *msg, PyObject *op)	todo		
+Python/gc.c	963	983	handle_legacy_finalizers	handle_legacy_finalizers(PyThreadState *tstate, GCState *gcstate, PyGC_Head *finalizers, PyGC_Head *old)	todo		
+Python/gc.c	990	1020	finalize_garbage	finalize_garbage(PyThreadState *tstate, PyGC_Head *collectable)	todo		
+Python/gc.c	1027	1063	delete_garbage	delete_garbage(PyThreadState *tstate, GCState *gcstate, PyGC_Head *collectable, PyGC_Head *old)	todo		
+Python/gc.c	1068	1083	show_stats_each_generations	show_stats_each_generations(GCState *gcstate)	todo		
+Python/gc.c	1113	1162	deduce_unreachable	deduce_unreachable(PyGC_Head *base, PyGC_Head *unreachable) {	todo		
+Python/gc.c	1178	1194	handle_resurrected_objects	handle_resurrected_objects(PyGC_Head *unreachable, PyGC_Head* still_unreachable, PyGC_Head *old_generation)	todo		
+Python/gc.c	1201	1251	invoke_gc_callback	invoke_gc_callback(PyThreadState *tstate, const char *phase, int generation, Py_ssize_t collected, Py_ssize_t uncollectable)	todo		
+Python/gc.c	1258	1307	gc_select_generation	gc_select_generation(GCState *gcstate)	todo		
+Python/gc.c	1313	1533	gc_collect_main	gc_collect_main(PyThreadState *tstate, int generation, _PyGC_Reason reason)	todo		
+Python/gc.c	1536	1546	referrersvisit	referrersvisit(PyObject* obj, void *arg)	todo		
+Python/gc.c	1549	1567	gc_referrers_for	gc_referrers_for(PyObject *objs, PyGC_Head *list, PyObject *resultlist)	todo		
+Python/gc.c	1570	1585	_PyGC_GetReferrers	_PyGC_GetReferrers(PyInterpreterState *interp, PyObject *objs)	todo		
+Python/gc.c	1588	1616	_PyGC_GetObjects	_PyGC_GetObjects(PyInterpreterState *interp, int generation)	todo		
+Python/gc.c	1619	1626	_PyGC_Freeze	_PyGC_Freeze(PyInterpreterState *interp)	todo		
+Python/gc.c	1629	1634	_PyGC_Unfreeze	_PyGC_Unfreeze(PyInterpreterState *interp)	todo		
+Python/gc.c	1637	1641	_PyGC_GetFreezeCount	_PyGC_GetFreezeCount(PyInterpreterState *interp)	todo		
+Python/gc.c	1645	1651	PyGC_Enable	PyGC_Enable(void)	todo		
+Python/gc.c	1654	1660	PyGC_Disable	PyGC_Disable(void)	todo		
+Python/gc.c	1663	1667	PyGC_IsEnabled	PyGC_IsEnabled(void)	todo		
+Python/gc.c	1671	1686	PyGC_Collect	PyGC_Collect(void)	todo		
+Python/gc.c	1689	1692	_PyGC_Collect	_PyGC_Collect(PyThreadState *tstate, int generation, _PyGC_Reason reason)	todo		
+Python/gc.c	1695	1704	_PyGC_CollectNoFail	_PyGC_CollectNoFail(PyThreadState *tstate)	todo		
+Python/gc.c	1707	1746	_PyGC_DumpShutdownStats	_PyGC_DumpShutdownStats(PyInterpreterState *interp)	todo		
+Python/gc.c	1749	1754	finalize_unlink_gc_head	finalize_unlink_gc_head(PyGC_Head *gc) {	todo		
+Python/gc.c	1757	1782	_PyGC_Fini	_PyGC_Fini(PyInterpreterState *interp)	todo		
+Python/gc.c	1786	1789	_PyGC_Dump	_PyGC_Dump(PyGC_Head *g)	todo		
+Python/gc.c	1794	1802	visit_validate	visit_validate(PyObject *op, void *parent_raw)	todo		
+Python/gc.c	1810	1826	PyObject_GC_Track	PyObject_GC_Track(void *op_raw)	todo		
+Python/gc.c	1829	1837	PyObject_GC_UnTrack	PyObject_GC_UnTrack(void *op_raw)	todo		
+Python/gc.c	1840	1843	PyObject_IS_GC	PyObject_IS_GC(PyObject *obj)	todo		
+Python/gc.c	1846	1852	_Py_ScheduleGC	_Py_ScheduleGC(PyThreadState *tstate)	todo		
+Python/gc.c	1855	1874	_PyObject_GC_Link	_PyObject_GC_Link(PyObject *op)	todo		
+Python/gc.c	1877	1884	_Py_RunGC	_Py_RunGC(PyThreadState *tstate)	todo		
+Python/gc.c	1887	1903	gc_alloc	gc_alloc(PyTypeObject *tp, size_t basicsize, size_t presize)	todo		
+Python/gc.c	1907	1923	_PyObject_GC_New	_PyObject_GC_New(PyTypeObject *tp)	todo		
+Python/gc.c	1926	1942	_PyObject_GC_NewVar	_PyObject_GC_NewVar(PyTypeObject *tp, Py_ssize_t nitems)	todo		
+Python/gc.c	1945	1956	PyUnstable_Object_GC_NewWithExtraData	PyUnstable_Object_GC_NewWithExtraData(PyTypeObject *tp, size_t extra_size)	todo		
+Python/gc.c	1959	1975	_PyObject_GC_Resize	_PyObject_GC_Resize(PyVarObject *op, Py_ssize_t nitems)	todo		
+Python/gc.c	1978	2004	PyObject_GC_Del	PyObject_GC_Del(void *op)	todo		
+Python/gc.c	2007	2013	PyObject_GC_IsTracked	PyObject_GC_IsTracked(PyObject* obj)	todo		
+Python/gc.c	2016	2022	PyObject_GC_IsFinalized	PyObject_GC_IsFinalized(PyObject *obj)	todo		
+Python/gc.c	2025	2039	visit_generation	visit_generation(gcvisitobjects_t callback, void *arg, struct gc_generation *gen)	todo		
+Python/gc.c	2042	2055	PyUnstable_GC_VisitObjects	PyUnstable_GC_VisitObjects(gcvisitobjects_t callback, void *arg)	todo		

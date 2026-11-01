@@ -1,0 +1,49 @@
+file	line	endline	name	signature	status	entry	note
+Lib/multiprocessing/context.py	41	47	BaseContext.cpu_count	cpu_count(self)	todo		
+Lib/multiprocessing/context.py	49	58	BaseContext.Manager	Manager(self)	todo		
+Lib/multiprocessing/context.py	60	63	BaseContext.Pipe	Pipe(self, duplex=True)	todo		
+Lib/multiprocessing/context.py	65	68	BaseContext.Lock	Lock(self)	todo		
+Lib/multiprocessing/context.py	70	73	BaseContext.RLock	RLock(self)	todo		
+Lib/multiprocessing/context.py	75	78	BaseContext.Condition	Condition(self, lock=None)	todo		
+Lib/multiprocessing/context.py	80	83	BaseContext.Semaphore	Semaphore(self, value=1)	todo		
+Lib/multiprocessing/context.py	85	88	BaseContext.BoundedSemaphore	BoundedSemaphore(self, value=1)	todo		
+Lib/multiprocessing/context.py	90	93	BaseContext.Event	Event(self)	todo		
+Lib/multiprocessing/context.py	95	98	BaseContext.Barrier	Barrier(self, parties, action=None, timeout=None)	todo		
+Lib/multiprocessing/context.py	100	103	BaseContext.Queue	Queue(self, maxsize=0)	todo		
+Lib/multiprocessing/context.py	105	108	BaseContext.JoinableQueue	JoinableQueue(self, maxsize=0)	todo		
+Lib/multiprocessing/context.py	110	113	BaseContext.SimpleQueue	SimpleQueue(self)	todo		
+Lib/multiprocessing/context.py	115	120	BaseContext.Pool	Pool(self, processes=None, initializer=None, initargs=(), maxtasksperchild=None)	todo		
+Lib/multiprocessing/context.py	122	125	BaseContext.RawValue	RawValue(self, typecode_or_type, *args)	todo		
+Lib/multiprocessing/context.py	127	130	BaseContext.RawArray	RawArray(self, typecode_or_type, size_or_initializer)	todo		
+Lib/multiprocessing/context.py	132	136	BaseContext.Value	Value(self, typecode_or_type, *args, lock=True)	todo		
+Lib/multiprocessing/context.py	138	142	BaseContext.Array	Array(self, typecode_or_type, size_or_initializer, *, lock=True)	todo		
+Lib/multiprocessing/context.py	144	156	BaseContext.freeze_support	freeze_support(self)	todo		
+Lib/multiprocessing/context.py	158	163	BaseContext.get_logger	get_logger(self)	todo		
+Lib/multiprocessing/context.py	165	168	BaseContext.log_to_stderr	log_to_stderr(self, level=None)	todo		
+Lib/multiprocessing/context.py	170	176	BaseContext.allow_connection_pickling	allow_connection_pickling(self)	todo		
+Lib/multiprocessing/context.py	178	184	BaseContext.set_executable	set_executable(self, executable)	todo		
+Lib/multiprocessing/context.py	186	191	BaseContext.set_forkserver_preload	set_forkserver_preload(self, module_names)	todo		
+Lib/multiprocessing/context.py	193	201	BaseContext.get_context	get_context(self, method=None)	todo		
+Lib/multiprocessing/context.py	203	204	BaseContext.get_start_method	get_start_method(self, allow_none=False)	todo		
+Lib/multiprocessing/context.py	206	207	BaseContext.set_start_method	set_start_method(self, method, force=False)	todo		
+Lib/multiprocessing/context.py	210	213	BaseContext.reducer	reducer(self)	todo		
+Lib/multiprocessing/context.py	216	217	BaseContext.reducer	reducer(self, reduction)	todo		
+Lib/multiprocessing/context.py	219	220	BaseContext._check_available	_check_available(self)	todo		
+Lib/multiprocessing/context.py	229	230	Process._Popen	_Popen(process_obj)	todo		
+Lib/multiprocessing/context.py	233	234	Process._after_fork	_after_fork()	todo		
+Lib/multiprocessing/context.py	239	241	DefaultContext.__init__	__init__(self, context)	todo		
+Lib/multiprocessing/context.py	243	249	DefaultContext.get_context	get_context(self, method=None)	todo		
+Lib/multiprocessing/context.py	251	257	DefaultContext.set_start_method	set_start_method(self, method, force=False)	todo		
+Lib/multiprocessing/context.py	259	264	DefaultContext.get_start_method	get_start_method(self, allow_none=False)	todo		
+Lib/multiprocessing/context.py	266	273	DefaultContext.get_all_start_methods	get_all_start_methods(self)	todo		
+Lib/multiprocessing/context.py	285	287	ForkProcess._Popen	_Popen(process_obj)	todo		
+Lib/multiprocessing/context.py	292	294	SpawnProcess._Popen	_Popen(process_obj)	todo		
+Lib/multiprocessing/context.py	297	299	SpawnProcess._after_fork	_after_fork()	todo		
+Lib/multiprocessing/context.py	304	306	ForkServerProcess._Popen	_Popen(process_obj)	todo		
+Lib/multiprocessing/context.py	319	321	ForkServerContext._check_available	_check_available(self)	todo		
+Lib/multiprocessing/context.py	341	343	SpawnProcess._Popen	_Popen(process_obj)	todo		
+Lib/multiprocessing/context.py	346	348	SpawnProcess._after_fork	_after_fork()	todo		
+Lib/multiprocessing/context.py	363	364	_force_start_method	_force_start_method(method)	todo		
+Lib/multiprocessing/context.py	372	373	get_spawning_popen	get_spawning_popen()	todo		
+Lib/multiprocessing/context.py	375	376	set_spawning_popen	set_spawning_popen(popen)	todo		
+Lib/multiprocessing/context.py	378	383	assert_spawning	assert_spawning(obj)	todo		

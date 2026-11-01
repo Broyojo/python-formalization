@@ -1,0 +1,27 @@
+file	line	endline	name	signature	status	entry	note
+Objects/methodobject.c	35	38	PyCFunction_New	PyCFunction_New(PyMethodDef *ml, PyObject *self)	todo		
+Objects/methodobject.c	41	44	PyCFunction_NewEx	PyCFunction_NewEx(PyMethodDef *ml, PyObject *self, PyObject *module)	todo		
+Objects/methodobject.c	47	122	PyCMethod_New	PyCMethod_New(PyMethodDef *ml, PyObject *self, PyObject *module, PyTypeObject *cls)	todo		
+Objects/methodobject.c	125	132	PyCFunction_GetFunction	PyCFunction_GetFunction(PyObject *op)	todo		
+Objects/methodobject.c	135	142	PyCFunction_GetSelf	PyCFunction_GetSelf(PyObject *op)	todo		
+Objects/methodobject.c	145	152	PyCFunction_GetFlags	PyCFunction_GetFlags(PyObject *op)	todo		
+Objects/methodobject.c	155	162	PyCMethod_GetClass	PyCMethod_GetClass(PyObject *op)	todo		
+Objects/methodobject.c	167	189	meth_dealloc	meth_dealloc(PyObject *self)	todo		
+Objects/methodobject.c	192	200	meth_reduce	meth_reduce(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/methodobject.c	208	214	meth_get__text_signature__	meth_get__text_signature__(PyObject *self, void *closure)	todo		
+Objects/methodobject.c	217	221	meth_get__doc__	meth_get__doc__(PyObject *self, void *closure)	todo		
+Objects/methodobject.c	224	228	meth_get__name__	meth_get__name__(PyObject *self, void *closure)	todo		
+Objects/methodobject.c	231	263	meth_get__qualname__	meth_get__qualname__(PyObject *self, void *closure)	todo		
+Objects/methodobject.c	266	273	meth_traverse	meth_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/methodobject.c	276	284	meth_get__self__	meth_get__self__(PyObject *meth, void *closure)	todo		
+Objects/methodobject.c	303	315	meth_repr	meth_repr(PyObject *self)	todo		
+Objects/methodobject.c	318	340	meth_richcompare	meth_richcompare(PyObject *self, PyObject *other, int op)	todo		
+Objects/methodobject.c	343	353	meth_hash	meth_hash(PyObject *self)	todo		
+Objects/methodobject.c	407	421	cfunction_check_kwargs	cfunction_check_kwargs(PyThreadState *tstate, PyObject *func, PyObject *kwnames)	todo		
+Objects/methodobject.c	426	432	cfunction_enter_call	cfunction_enter_call(PyThreadState *tstate, PyObject *func)	todo		
+Objects/methodobject.c	436	452	cfunction_vectorcall_FASTCALL	cfunction_vectorcall_FASTCALL( PyObject *func, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
+Objects/methodobject.c	455	468	cfunction_vectorcall_FASTCALL_KEYWORDS	cfunction_vectorcall_FASTCALL_KEYWORDS( PyObject *func, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
+Objects/methodobject.c	471	484	cfunction_vectorcall_FASTCALL_KEYWORDS_METHOD	cfunction_vectorcall_FASTCALL_KEYWORDS_METHOD( PyObject *func, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
+Objects/methodobject.c	487	512	cfunction_vectorcall_NOARGS	cfunction_vectorcall_NOARGS( PyObject *func, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
+Objects/methodobject.c	515	540	cfunction_vectorcall_O	cfunction_vectorcall_O( PyObject *func, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
+Objects/methodobject.c	544	578	cfunction_call	cfunction_call(PyObject *func, PyObject *args, PyObject *kwargs)	todo		

@@ -1,0 +1,39 @@
+file	line	endline	name	signature	status	entry	note
+Lib/logging/config.py	54	92	fileConfig	fileConfig(fname, defaults=None, disable_existing_loggers=True, encoding=None)	todo		
+Lib/logging/config.py	95	107	_resolve	_resolve(name)	todo		
+Lib/logging/config.py	109	110	_strip_spaces	_strip_spaces(alist)	todo		
+Lib/logging/config.py	112	138	_create_formatters	_create_formatters(cp)	todo		
+Lib/logging/config.py	141	177	_install_handlers	_install_handlers(cp, formatters)	todo		
+Lib/logging/config.py	179	199	_handle_existing_loggers	_handle_existing_loggers(existing, child_loggers, disable_existing)	todo		
+Lib/logging/config.py	201	285	_install_loggers	_install_loggers(cp, handlers, disable_existing)	todo		
+Lib/logging/config.py	288	292	_clearExistingHandlers	_clearExistingHandlers()	todo		
+Lib/logging/config.py	298	302	valid_ident	valid_ident(s)	todo		
+Lib/logging/config.py	308	318	ConvertingMixin.convert_with_key	convert_with_key(self, key, value, replace=True)	todo		
+Lib/logging/config.py	320	326	ConvertingMixin.convert	convert(self, value)	todo		
+Lib/logging/config.py	341	343	ConvertingDict.__getitem__	__getitem__(self, key)	todo		
+Lib/logging/config.py	345	347	ConvertingDict.get	get(self, key, default=None)	todo		
+Lib/logging/config.py	349	351	ConvertingDict.pop	pop(self, key, default=None)	todo		
+Lib/logging/config.py	355	357	ConvertingList.__getitem__	__getitem__(self, key)	todo		
+Lib/logging/config.py	359	361	ConvertingList.pop	pop(self, idx=-1)	todo		
+Lib/logging/config.py	365	368	ConvertingTuple.__getitem__	__getitem__(self, key)	todo		
+Lib/logging/config.py	390	392	BaseConfigurator.__init__	__init__(self, config)	todo		
+Lib/logging/config.py	394	413	BaseConfigurator.resolve	resolve(self, s)	todo		
+Lib/logging/config.py	415	417	BaseConfigurator.ext_convert	ext_convert(self, value)	todo		
+Lib/logging/config.py	419	451	BaseConfigurator.cfg_convert	cfg_convert(self, value)	todo		
+Lib/logging/config.py	453	479	BaseConfigurator.convert	convert(self, value)	todo		
+Lib/logging/config.py	481	493	BaseConfigurator.configure_custom	configure_custom(self, config)	todo		
+Lib/logging/config.py	495	499	BaseConfigurator.as_tuple	as_tuple(self, value)	todo		
+Lib/logging/config.py	501	526	_is_queue_like_object	_is_queue_like_object(obj)	todo		
+Lib/logging/config.py	534	687	DictConfigurator.configure	configure(self)	todo		
+Lib/logging/config.py	689	731	DictConfigurator.configure_formatter	configure_formatter(self, config)	todo		
+Lib/logging/config.py	733	740	DictConfigurator.configure_filter	configure_filter(self, config)	todo		
+Lib/logging/config.py	742	752	DictConfigurator.add_filters	add_filters(self, filterer, filters)	todo		
+Lib/logging/config.py	754	767	DictConfigurator._configure_queue_handler	_configure_queue_handler(self, klass, **kwargs)	todo		
+Lib/logging/config.py	769	901	DictConfigurator.configure_handler	configure_handler(self, config)	todo		
+Lib/logging/config.py	903	909	DictConfigurator.add_handlers	add_handlers(self, logger, handlers)	todo		
+Lib/logging/config.py	911	927	DictConfigurator.common_logger_config	common_logger_config(self, logger, config, incremental=False)	todo		
+Lib/logging/config.py	929	936	DictConfigurator.configure_logger	configure_logger(self, name, config, incremental=False)	todo		
+Lib/logging/config.py	938	941	DictConfigurator.configure_root	configure_root(self, config, incremental=False)	todo		
+Lib/logging/config.py	945	947	dictConfig	dictConfig(config)	todo		
+Lib/logging/config.py	950	1082	listen	listen(port=DEFAULT_LOGGING_CONFIG_PORT, verify=None)	todo		
+Lib/logging/config.py	1084	1092	stopListening	stopListening()	todo		

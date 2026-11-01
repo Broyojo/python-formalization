@@ -1,0 +1,15 @@
+file	line	endline	name	signature	status	entry	note
+Python/perf_jit_trampoline.c	124	139	GetElfMachineArchitecture	static uint64_t GetElfMachineArchitecture(void) {	todo		
+Python/perf_jit_trampoline.c	262	274	get_current_monotonic_ticks	static int64_t get_current_monotonic_ticks(void) {	todo		
+Python/perf_jit_trampoline.c	285	292	get_current_time_microseconds	static int64_t get_current_time_microseconds(void) {	todo		
+Python/perf_jit_trampoline.c	311	326	round_up	static size_t round_up(int64_t value, int64_t multiple) {	todo		
+Python/perf_jit_trampoline.c	343	356	perf_map_jit_write_fully	static void perf_map_jit_write_fully(const void* buffer, size_t size) {	todo		
+Python/perf_jit_trampoline.c	368	382	perf_map_jit_write_header	static void perf_map_jit_write_header(int pid, FILE* out_file) {	todo		
+Python/perf_jit_trampoline.c	562	573	elfctx_append_string	static uint32_t elfctx_append_string(ELFObjectContext* ctx, const char* str) {	todo		
+Python/perf_jit_trampoline.c	585	595	elfctx_append_sleb128	static void elfctx_append_sleb128(ELFObjectContext* ctx, int32_t v) {	todo		
+Python/perf_jit_trampoline.c	606	616	elfctx_append_uleb128	static void elfctx_append_uleb128(ELFObjectContext* ctx, uint32_t v) {	todo		
+Python/perf_jit_trampoline.c	668	683	calculate_eh_frame_size	static size_t calculate_eh_frame_size(void) {	todo		
+Python/perf_jit_trampoline.c	685	1012	elf_init_ehframe	static void elf_init_ehframe(ELFObjectContext* ctx) {	todo		
+Python/perf_jit_trampoline.c	1032	1119	perf_map_jit_init	static void* perf_map_jit_init(void) {	todo		
+Python/perf_jit_trampoline.c	1148	1296	perf_map_jit_write_entry	static void perf_map_jit_write_entry(void *state, const void *code_addr, unsigned int code_size, PyCodeObject *co)	todo		
+Python/perf_jit_trampoline.c	1317	1351	perf_map_jit_fini	static int perf_map_jit_fini(void* state) {	todo		

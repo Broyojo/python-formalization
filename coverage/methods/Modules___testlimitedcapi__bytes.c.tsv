@@ -1,0 +1,15 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testlimitedcapi/bytes.c	7	11	bytes_check	bytes_check(PyObject *Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/bytes.c	15	19	bytes_checkexact	bytes_checkexact(PyObject *Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/bytes.c	23	37	bytes_fromstringandsize	bytes_fromstringandsize(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/bytes.c	41	50	bytes_fromstring	bytes_fromstring(PyObject *Py_UNUSED(module), PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/bytes.c	54	58	bytes_fromobject	bytes_fromobject(PyObject *Py_UNUSED(module), PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/bytes.c	62	66	bytes_size	bytes_size(PyObject *Py_UNUSED(module), PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/bytes.c	70	85	bytes_asstring	bytes_asstring(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/bytes.c	89	110	bytes_asstringandsize	bytes_asstringandsize(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/bytes.c	113	133	bytes_asstringandsize_null	bytes_asstringandsize_null(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/bytes.c	137	146	bytes_repr	bytes_repr(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/bytes.c	150	177	bytes_concat	bytes_concat(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/bytes.c	181	209	bytes_concatanddel	bytes_concatanddel(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/bytes.c	213	227	bytes_decodeescape	bytes_decodeescape(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/bytes.c	248	255	_PyTestLimitedCAPI_Init_Bytes	_PyTestLimitedCAPI_Init_Bytes(PyObject *m)	excluded		test-support: only for CPython's own tests

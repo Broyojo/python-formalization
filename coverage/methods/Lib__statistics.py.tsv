@@ -1,0 +1,74 @@
+file	line	endline	name	signature	status	entry	note
+Lib/statistics.py	158	178	mean	mean(data)	todo		
+Lib/statistics.py	181	221	fmean	fmean(data, weights=None)	todo		
+Lib/statistics.py	224	261	geometric_mean	geometric_mean(data)	todo		
+Lib/statistics.py	264	324	harmonic_mean	harmonic_mean(data, weights=None)	todo		
+Lib/statistics.py	327	348	median	median(data)	todo		
+Lib/statistics.py	351	373	median_low	median_low(data)	todo		
+Lib/statistics.py	376	392	median_high	median_high(data)	todo		
+Lib/statistics.py	395	464	median_grouped	median_grouped(data, interval=1.0)	todo		
+Lib/statistics.py	467	494	mode	mode(data)	todo		
+Lib/statistics.py	497	515	multimode	multimode(data)	todo		
+Lib/statistics.py	520	563	variance	variance(data, xbar=None)	todo		
+Lib/statistics.py	566	606	pvariance	pvariance(data, mu=None)	todo		
+Lib/statistics.py	609	629	stdev	stdev(data, xbar=None)	todo		
+Lib/statistics.py	632	652	pstdev	pstdev(data, mu=None)	todo		
+Lib/statistics.py	657	683	covariance	covariance(x, y, /)	todo		
+Lib/statistics.py	686	738	correlation	correlation(x, y, /, *, method='linear')	todo		
+Lib/statistics.py	744	804	linear_regression	linear_regression(x, y, /, *, proportional=False)	todo		
+Lib/statistics.py	811	818	register	register(*kernels)	todo		
+Lib/statistics.py	821	828	normal_kernel	normal_kernel()	todo		
+Lib/statistics.py	831	837	logistic_kernel	logistic_kernel()	todo		
+Lib/statistics.py	840	849	sigmoid_kernel	sigmoid_kernel()	todo		
+Lib/statistics.py	852	857	rectangular_kernel	rectangular_kernel()	todo		
+Lib/statistics.py	860	865	triangular_kernel	triangular_kernel()	todo		
+Lib/statistics.py	868	873	parabolic_kernel	parabolic_kernel()	todo		
+Lib/statistics.py	875	882	_newton_raphson	_newton_raphson(f_inv_estimate, f, f_prime, tolerance=1e-12)	todo		
+Lib/statistics.py	884	892	_quartic_invcdf_estimate	_quartic_invcdf_estimate(p)	todo		
+Lib/statistics.py	895	901	quartic_kernel	quartic_kernel()	todo		
+Lib/statistics.py	903	909	_triweight_invcdf_estimate	_triweight_invcdf_estimate(p)	todo		
+Lib/statistics.py	912	918	triweight_kernel	triweight_kernel()	todo		
+Lib/statistics.py	921	928	cosine_kernel	cosine_kernel()	todo		
+Lib/statistics.py	935	1091	kde	kde(data, h, kernel='normal', *, cumulative=False)	todo		
+Lib/statistics.py	1094	1136	kde_random	kde_random(data, h, kernel='normal', *, seed=None)	todo		
+Lib/statistics.py	1175	1223	quantiles	quantiles(data, *, n=4, method='exclusive')	todo		
+Lib/statistics.py	1238	1243	NormalDist.__init__	__init__(self, mu=0.0, sigma=1.0)	todo		
+Lib/statistics.py	1246	1248	NormalDist.from_samples	from_samples(cls, data)	todo		
+Lib/statistics.py	1250	1256	NormalDist.samples	samples(self, n, *, seed=None)	todo		
+Lib/statistics.py	1258	1264	NormalDist.pdf	pdf(self, x)	todo		
+Lib/statistics.py	1266	1270	NormalDist.cdf	cdf(self, x)	todo		
+Lib/statistics.py	1272	1284	NormalDist.inv_cdf	inv_cdf(self, p)	todo		
+Lib/statistics.py	1286	1295	NormalDist.quantiles	quantiles(self, n=4)	todo		
+Lib/statistics.py	1297	1329	NormalDist.overlap	overlap(self, other)	todo		
+Lib/statistics.py	1331	1340	NormalDist.zscore	zscore(self, x)	todo		
+Lib/statistics.py	1343	1345	NormalDist.mean	mean(self)	todo		
+Lib/statistics.py	1348	1350	NormalDist.median	median(self)	todo		
+Lib/statistics.py	1353	1359	NormalDist.mode	mode(self)	todo		
+Lib/statistics.py	1362	1364	NormalDist.stdev	stdev(self)	todo		
+Lib/statistics.py	1367	1369	NormalDist.variance	variance(self)	todo		
+Lib/statistics.py	1371	1383	NormalDist.__add__	__add__(x1, x2)	todo		
+Lib/statistics.py	1385	1397	NormalDist.__sub__	__sub__(x1, x2)	todo		
+Lib/statistics.py	1399	1405	NormalDist.__mul__	__mul__(x1, x2)	todo		
+Lib/statistics.py	1407	1413	NormalDist.__truediv__	__truediv__(x1, x2)	todo		
+Lib/statistics.py	1415	1417	NormalDist.__pos__	__pos__(x1)	todo		
+Lib/statistics.py	1419	1421	NormalDist.__neg__	__neg__(x1)	todo		
+Lib/statistics.py	1425	1427	NormalDist.__rsub__	__rsub__(x1, x2)	todo		
+Lib/statistics.py	1431	1435	NormalDist.__eq__	__eq__(x1, x2)	todo		
+Lib/statistics.py	1437	1439	NormalDist.__hash__	__hash__(self)	todo		
+Lib/statistics.py	1441	1442	NormalDist.__repr__	__repr__(self)	todo		
+Lib/statistics.py	1444	1445	NormalDist.__getstate__	__getstate__(self)	todo		
+Lib/statistics.py	1447	1448	NormalDist.__setstate__	__setstate__(self, state)	todo		
+Lib/statistics.py	1453	1508	_sum	_sum(data)	todo		
+Lib/statistics.py	1511	1555	_ss	_ss(data, c=None)	todo		
+Lib/statistics.py	1558	1562	_isfinite	_isfinite(x)	todo		
+Lib/statistics.py	1565	1594	_coerce	_coerce(T, S)	todo		
+Lib/statistics.py	1597	1620	_exact_ratio	_exact_ratio(x)	todo		
+Lib/statistics.py	1623	1640	_convert	_convert(value, T)	todo		
+Lib/statistics.py	1643	1648	_fail_neg	_fail_neg(values, errmsg='negative value')	todo		
+Lib/statistics.py	1651	1702	_rank	_rank(data, /, *, key=None, reverse=False, ties='average', start=1)	todo		
+Lib/statistics.py	1705	1709	_integer_sqrt_of_frac_rto	_integer_sqrt_of_frac_rto(n: int, m: int)	todo		
+Lib/statistics.py	1717	1727	_float_sqrt_of_frac	_float_sqrt_of_frac(n: int, m: int)	todo		
+Lib/statistics.py	1730	1755	_decimal_sqrt_of_frac	_decimal_sqrt_of_frac(n: int, m: int)	todo		
+Lib/statistics.py	1758	1768	_mean_stdev	_mean_stdev(data)	todo		
+Lib/statistics.py	1771	1794	_sqrtprod	_sqrtprod(x: float, y: float)	todo		
+Lib/statistics.py	1797	1872	_normal_dist_inv_cdf	_normal_dist_inv_cdf(p, mu, sigma)	todo		

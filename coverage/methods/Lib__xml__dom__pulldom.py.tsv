@@ -1,0 +1,37 @@
+file	line	endline	name	signature	status	entry	note
+Lib/xml/dom/pulldom.py	17	31	PullDOM.__init__	__init__(self, documentFactory=None)	todo		
+Lib/xml/dom/pulldom.py	33	36	PullDOM.pop	pop(self)	todo		
+Lib/xml/dom/pulldom.py	38	39	PullDOM.setDocumentLocator	setDocumentLocator(self, locator)	todo		
+Lib/xml/dom/pulldom.py	41	46	PullDOM.startPrefixMapping	startPrefixMapping(self, prefix, uri)	todo		
+Lib/xml/dom/pulldom.py	48	49	PullDOM.endPrefixMapping	endPrefixMapping(self, prefix)	todo		
+Lib/xml/dom/pulldom.py	51	106	PullDOM.startElementNS	startElementNS(self, name, tagName, attrs)	todo		
+Lib/xml/dom/pulldom.py	108	110	PullDOM.endElementNS	endElementNS(self, name, tagName)	todo		
+Lib/xml/dom/pulldom.py	112	125	PullDOM.startElement	startElement(self, name, attrs)	todo		
+Lib/xml/dom/pulldom.py	127	129	PullDOM.endElement	endElement(self, name)	todo		
+Lib/xml/dom/pulldom.py	131	138	PullDOM.comment	comment(self, s)	todo		
+Lib/xml/dom/pulldom.py	140	147	PullDOM.processingInstruction	processingInstruction(self, target, data)	todo		
+Lib/xml/dom/pulldom.py	149	152	PullDOM.ignorableWhitespace	ignorableWhitespace(self, chars)	todo		
+Lib/xml/dom/pulldom.py	154	157	PullDOM.characters	characters(self, chars)	todo		
+Lib/xml/dom/pulldom.py	159	162	PullDOM.startDocument	startDocument(self)	todo		
+Lib/xml/dom/pulldom.py	164	186	PullDOM.buildDocument	buildDocument(self, uri, tagname)	todo		
+Lib/xml/dom/pulldom.py	188	190	PullDOM.endDocument	endDocument(self)	todo		
+Lib/xml/dom/pulldom.py	192	194	PullDOM.clear	clear(self)	todo		
+Lib/xml/dom/pulldom.py	197	198	ErrorHandler.warning	warning(self, exception)	todo		
+Lib/xml/dom/pulldom.py	199	200	ErrorHandler.error	error(self, exception)	todo		
+Lib/xml/dom/pulldom.py	201	202	ErrorHandler.fatalError	fatalError(self, exception)	todo		
+Lib/xml/dom/pulldom.py	205	211	DOMEventStream.__init__	__init__(self, stream, parser, bufsize)	todo		
+Lib/xml/dom/pulldom.py	213	217	DOMEventStream.reset	reset(self)	todo		
+Lib/xml/dom/pulldom.py	219	223	DOMEventStream.__next__	__next__(self)	todo		
+Lib/xml/dom/pulldom.py	225	226	DOMEventStream.__iter__	__iter__(self)	todo		
+Lib/xml/dom/pulldom.py	228	241	DOMEventStream.expandNode	expandNode(self, node)	todo		
+Lib/xml/dom/pulldom.py	243	256	DOMEventStream.getEvent	getEvent(self)	todo		
+Lib/xml/dom/pulldom.py	258	266	DOMEventStream._slurp	_slurp(self)	todo		
+Lib/xml/dom/pulldom.py	268	274	DOMEventStream._emit	_emit(self)	todo		
+Lib/xml/dom/pulldom.py	276	281	DOMEventStream.clear	clear(self)	todo		
+Lib/xml/dom/pulldom.py	285	289	SAX2DOM.startElementNS	startElementNS(self, name, tagName, attrs)	todo		
+Lib/xml/dom/pulldom.py	291	295	SAX2DOM.startElement	startElement(self, name, attrs)	todo		
+Lib/xml/dom/pulldom.py	297	301	SAX2DOM.processingInstruction	processingInstruction(self, target, data)	todo		
+Lib/xml/dom/pulldom.py	303	307	SAX2DOM.ignorableWhitespace	ignorableWhitespace(self, chars)	todo		
+Lib/xml/dom/pulldom.py	309	313	SAX2DOM.characters	characters(self, chars)	todo		
+Lib/xml/dom/pulldom.py	318	327	parse	parse(stream_or_string, parser=None, bufsize=None)	todo		
+Lib/xml/dom/pulldom.py	329	336	parseString	parseString(string, parser=None)	todo		

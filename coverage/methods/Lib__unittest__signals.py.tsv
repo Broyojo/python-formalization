@@ -1,0 +1,7 @@
+file	line	endline	name	signature	status	entry	note
+Lib/unittest/signals.py	10	26	_InterruptHandler.__init__	__init__(self, default_handler)	todo		
+Lib/unittest/signals.py	28	39	_InterruptHandler.__call__	__call__(self, signum, frame)	todo		
+Lib/unittest/signals.py	42	43	registerResult	registerResult(result)	todo		
+Lib/unittest/signals.py	45	46	removeResult	removeResult(result)	todo		
+Lib/unittest/signals.py	49	54	installHandler	installHandler()	todo		
+Lib/unittest/signals.py	57	71	removeHandler	removeHandler(method=None)	todo		

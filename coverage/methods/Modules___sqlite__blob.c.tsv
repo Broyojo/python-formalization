@@ -1,0 +1,28 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_sqlite/blob.c	22	32	close_blob	close_blob(pysqlite_Blob *self)	todo		
+Modules/_sqlite/blob.c	35	41	blob_traverse	blob_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_sqlite/blob.c	44	49	blob_clear	blob_clear(PyObject *op)	todo		
+Modules/_sqlite/blob.c	52	64	blob_dealloc	blob_dealloc(PyObject *op)	todo		
+Modules/_sqlite/blob.c	68	81	check_blob	check_blob(pysqlite_Blob *self)	todo		
+Modules/_sqlite/blob.c	91	101	blob_close_impl	blob_close_impl(pysqlite_Blob *self) /*[clinic end generated code: output=848accc20a138d1b input=7bc178a402a40bd8]*/	todo		
+Modules/_sqlite/blob.c	104	115	pysqlite_close_all_blobs	pysqlite_close_all_blobs(pysqlite_Connection *self)	todo		
+Modules/_sqlite/blob.c	118	122	blob_seterror	blob_seterror(pysqlite_Blob *self, int rc)	todo		
+Modules/_sqlite/blob.c	125	138	read_single	read_single(pysqlite_Blob *self, Py_ssize_t offset)	todo		
+Modules/_sqlite/blob.c	141	163	read_multiple	read_multiple(pysqlite_Blob *self, Py_ssize_t length, Py_ssize_t offset)	todo		
+Modules/_sqlite/blob.c	181	207	blob_read_impl	blob_read_impl(pysqlite_Blob *self, int length) /*[clinic end generated code: output=1fc99b2541360dde input=6b745ad37720e556]*/	todo		
+Modules/_sqlite/blob.c	210	231	inner_write	inner_write(pysqlite_Blob *self, const void *buf, Py_ssize_t len, Py_ssize_t offset)	todo		
+Modules/_sqlite/blob.c	247	260	blob_write_impl	blob_write_impl(pysqlite_Blob *self, Py_buffer *data) /*[clinic end generated code: output=b34cf22601b570b2 input=0d372cb0240a5d49]*/	todo		
+Modules/_sqlite/blob.c	279	320	blob_seek_impl	blob_seek_impl(pysqlite_Blob *self, int offset, int origin) /*[clinic end generated code: output=854c5a0e208547a5 input=84aea1b6b48607dd]*/	todo		
+Modules/_sqlite/blob.c	330	337	blob_tell_impl	blob_tell_impl(pysqlite_Blob *self) /*[clinic end generated code: output=3d3ba484a90b3a99 input=7e34057aa303612c]*/	todo		
+Modules/_sqlite/blob.c	347	354	blob_enter_impl	blob_enter_impl(pysqlite_Blob *self) /*[clinic end generated code: output=4fd32484b071a6cd input=fe4842c3c582d5a7]*/	todo		
+Modules/_sqlite/blob.c	369	378	blob_exit_impl	blob_exit_impl(pysqlite_Blob *self, PyObject *type, PyObject *val, PyObject *tb) /*[clinic end generated code: output=fc86ceeb2b68c7b2 input=575d9ecea205f35f]*/	todo		
+Modules/_sqlite/blob.c	381	388	blob_length	blob_length(PyObject *op)	todo		
+Modules/_sqlite/blob.c	391	406	get_subscript_index	get_subscript_index(pysqlite_Blob *self, PyObject *item)	todo		
+Modules/_sqlite/blob.c	409	416	subscript_index	subscript_index(pysqlite_Blob *self, PyObject *item)	todo		
+Modules/_sqlite/blob.c	419	428	get_slice_info	get_slice_info(pysqlite_Blob *self, PyObject *item, Py_ssize_t *start, Py_ssize_t *stop, Py_ssize_t *step, Py_ssize_t *slicelen)	todo		
+Modules/_sqlite/blob.c	431	459	subscript_slice	subscript_slice(pysqlite_Blob *self, PyObject *item)	todo		
+Modules/_sqlite/blob.c	462	478	blob_subscript	blob_subscript(PyObject *op, PyObject *item)	todo		
+Modules/_sqlite/blob.c	481	511	ass_subscript_index	ass_subscript_index(pysqlite_Blob *self, PyObject *item, PyObject *value)	todo		
+Modules/_sqlite/blob.c	514	561	ass_subscript_slice	ass_subscript_slice(pysqlite_Blob *self, PyObject *item, PyObject *value)	todo		
+Modules/_sqlite/blob.c	564	580	blob_ass_subscript	blob_ass_subscript(PyObject *op, PyObject *item, PyObject *value)	todo		
+Modules/_sqlite/blob.c	622	631	pysqlite_blob_setup_types	pysqlite_blob_setup_types(PyObject *mod)	todo		

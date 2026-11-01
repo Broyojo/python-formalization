@@ -1,0 +1,13 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/dict.c	5	15	dict_containsstring	dict_containsstring(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/dict.c	18	40	dict_getitemref	dict_getitemref(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/dict.c	43	66	dict_getitemstringref	dict_getitemstringref(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/dict.c	69	79	dict_setdefault	dict_setdefault(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/dict.c	82	104	dict_setdefaultref	dict_setdefaultref(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/dict.c	107	130	dict_pop	dict_pop(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/dict.c	133	143	dict_pop_null	dict_pop_null(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/dict.c	146	169	dict_popstring	dict_popstring(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/dict.c	172	182	dict_popstring_null	dict_popstring_null(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/dict.c	186	243	test_dict_inner	test_dict_inner(PyObject *self, int count)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/dict.c	247	258	test_dict_iteration	test_dict_iteration(PyObject* self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/dict.c	276	283	_PyTestCapi_Init_Dict	_PyTestCapi_Init_Dict(PyObject *m)	excluded		test-support: only for CPython's own tests

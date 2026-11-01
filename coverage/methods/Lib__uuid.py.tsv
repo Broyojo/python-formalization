@@ -1,0 +1,53 @@
+file	line	endline	name	signature	status	entry	note
+Lib/uuid.py	178	265	UUID.__init__	__init__(self, hex=None, bytes=None, bytes_le=None, fields=None, int=None, version=None, *, is_safe=SafeUUID.unknown)	todo		
+Lib/uuid.py	268	274	UUID._from_int	_from_int(cls, value)	todo		
+Lib/uuid.py	276	282	UUID.__getstate__	__getstate__(self)	todo		
+Lib/uuid.py	284	289	UUID.__setstate__	__setstate__(self, state)	todo		
+Lib/uuid.py	291	294	UUID.__eq__	__eq__(self, other)	todo		
+Lib/uuid.py	299	302	UUID.__lt__	__lt__(self, other)	todo		
+Lib/uuid.py	304	307	UUID.__gt__	__gt__(self, other)	todo		
+Lib/uuid.py	309	312	UUID.__le__	__le__(self, other)	todo		
+Lib/uuid.py	314	317	UUID.__ge__	__ge__(self, other)	todo		
+Lib/uuid.py	319	320	UUID.__hash__	__hash__(self)	todo		
+Lib/uuid.py	322	323	UUID.__int__	__int__(self)	todo		
+Lib/uuid.py	325	326	UUID.__repr__	__repr__(self)	todo		
+Lib/uuid.py	328	329	UUID.__setattr__	__setattr__(self, name, value)	todo		
+Lib/uuid.py	331	333	UUID.__str__	__str__(self)	todo		
+Lib/uuid.py	336	337	UUID.bytes	bytes(self)	todo		
+Lib/uuid.py	340	343	UUID.bytes_le	bytes_le(self)	todo		
+Lib/uuid.py	346	348	UUID.fields	fields(self)	todo		
+Lib/uuid.py	351	352	UUID.time_low	time_low(self)	todo		
+Lib/uuid.py	355	356	UUID.time_mid	time_mid(self)	todo		
+Lib/uuid.py	359	360	UUID.time_hi_version	time_hi_version(self)	todo		
+Lib/uuid.py	363	364	UUID.clock_seq_hi_variant	clock_seq_hi_variant(self)	todo		
+Lib/uuid.py	367	368	UUID.clock_seq_low	clock_seq_low(self)	todo		
+Lib/uuid.py	371	387	UUID.time	time(self)	todo		
+Lib/uuid.py	390	392	UUID.clock_seq	clock_seq(self)	todo		
+Lib/uuid.py	395	396	UUID.node	node(self)	todo		
+Lib/uuid.py	399	400	UUID.hex	hex(self)	todo		
+Lib/uuid.py	403	404	UUID.urn	urn(self)	todo		
+Lib/uuid.py	407	415	UUID.variant	variant(self)	todo		
+Lib/uuid.py	418	421	UUID.version	version(self)	todo		
+Lib/uuid.py	424	452	_get_command_stdout	_get_command_stdout(command, *args)	todo		
+Lib/uuid.py	470	471	_is_universal	_is_universal(mac)	todo		
+Lib/uuid.py	474	506	_find_mac_near_keyword	_find_mac_near_keyword(command, args, keywords, get_word_index)	todo		
+Lib/uuid.py	509	534	_parse_mac	_parse_mac(word)	todo		
+Lib/uuid.py	537	570	_find_mac_under_heading	_find_mac_under_heading(command, args, heading)	todo		
+Lib/uuid.py	575	583	_ifconfig_getnode	_ifconfig_getnode()	todo		
+Lib/uuid.py	585	591	_ip_getnode	_ip_getnode()	todo		
+Lib/uuid.py	593	619	_arp_getnode	_arp_getnode()	todo		
+Lib/uuid.py	621	624	_lanscan_getnode	_lanscan_getnode()	todo		
+Lib/uuid.py	626	629	_netstat_getnode	_netstat_getnode()	todo		
+Lib/uuid.py	645	649	_unix_getnode	_unix_getnode()	todo		
+Lib/uuid.py	651	655	_windll_getnode	_windll_getnode()	todo		
+Lib/uuid.py	657	672	_random_getnode	_random_getnode()	todo		
+Lib/uuid.py	702	721	getnode	getnode()	todo		
+Lib/uuid.py	726	761	uuid1	uuid1(node=None, clock_seq=None)	todo		
+Lib/uuid.py	763	772	uuid3	uuid3(namespace, name)	todo		
+Lib/uuid.py	774	779	uuid4	uuid4()	todo		
+Lib/uuid.py	781	790	uuid5	uuid5(namespace, name)	todo		
+Lib/uuid.py	795	829	uuid6	uuid6(node=None, clock_seq=None)	todo		
+Lib/uuid.py	835	841	_uuid7_get_counter_and_tail	_uuid7_get_counter_and_tail()	todo		
+Lib/uuid.py	844	905	uuid7	uuid7()	todo		
+Lib/uuid.py	908	931	uuid8	uuid8(a=None, b=None, c=None)	todo		
+Lib/uuid.py	934	997	main	main()	todo		

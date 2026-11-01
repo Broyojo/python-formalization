@@ -24,7 +24,17 @@ def handlers : List (String × Handler) := [
   ("pickle", PyLean.Pickle.handler),
   ("itertools", PyLean.Itertools.handler),
   ("sequences", PyLean.Sequences.handler),
-  ("listsort", PyLean.ListSort.handler)
+  ("listsort", PyLean.ListSort.handler),
+  ("binary64", PyLean.Binary64.handler),
+  ("dictset", PyLean.DictSet.handler),
+  ("longobj", PyLean.LongObj.handler),
+  ("bytesobj", PyLean.BytesObj.handler),
+  ("unicodeobj", PyLean.UnicodeObj.handler),
+  ("typeobj", PyLean.TypeObj.handler),
+  ("bytecode", PyLean.Bytecode.handler),
+  ("pygrammar", PyLean.PyGrammar.handler),
+  ("textlibs", PyLean.TextLibs.handler),
+  ("corelibs", PyLean.CoreLibs.handler)
 ]
 
 def runCase (j : Json) : Except String Json := do

@@ -1,0 +1,46 @@
+file	line	endline	name	signature	status	entry	note
+Lib/socket.py	102	110	_intenum_converter	_intenum_converter(value, enum_klass)	todo		
+Lib/socket.py	224	238	socket.__init__	__init__(self, family=-1, type=-1, proto=-1, fileno=None)	todo		
+Lib/socket.py	240	241	socket.__enter__	__enter__(self)	todo		
+Lib/socket.py	243	245	socket.__exit__	__exit__(self, *args)	todo		
+Lib/socket.py	247	275	socket.__repr__	__repr__(self)	todo		
+Lib/socket.py	277	278	socket.__getstate__	__getstate__(self)	todo		
+Lib/socket.py	280	289	socket.dup	dup(self)	todo		
+Lib/socket.py	291	305	socket.accept	accept(self)	todo		
+Lib/socket.py	307	349	socket.makefile	makefile(self, mode='r', buffering=None, *, encoding=None, errors=None, newline=None)	todo		
+Lib/socket.py	353	419	socket._sendfile_use_sendfile	_sendfile_use_sendfile(self, file, offset=0, count=None)	todo		
+Lib/socket.py	421	423	socket._sendfile_use_sendfile	_sendfile_use_sendfile(self, file, offset=0, count=None)	todo		
+Lib/socket.py	425	459	socket._sendfile_use_send	_sendfile_use_send(self, file, offset=0, count=None)	todo		
+Lib/socket.py	461	472	socket._check_sendfile_params	_check_sendfile_params(self, file, offset, count)	todo		
+Lib/socket.py	474	495	socket.sendfile	sendfile(self, file, offset=0, count=None)	todo		
+Lib/socket.py	497	501	socket._decref_socketios	_decref_socketios(self)	todo		
+Lib/socket.py	503	505	socket._real_close	_real_close(self, _ss=_socket.socket)	todo		
+Lib/socket.py	507	511	socket.close	close(self)	todo		
+Lib/socket.py	513	521	socket.detach	detach(self)	todo		
+Lib/socket.py	524	527	socket.family	family(self)	todo		
+Lib/socket.py	530	533	socket.type	type(self)	todo		
+Lib/socket.py	536	537	socket.get_inheritable	get_inheritable(self)	todo		
+Lib/socket.py	538	539	socket.set_inheritable	set_inheritable(self, inheritable)	todo		
+Lib/socket.py	541	542	socket.get_inheritable	get_inheritable(self)	todo		
+Lib/socket.py	543	544	socket.set_inheritable	set_inheritable(self, inheritable)	todo		
+Lib/socket.py	548	555	fromfd	fromfd(fd, family, type, proto=0)	todo		
+Lib/socket.py	558	566	send_fds	send_fds(sock, buffers, fds, flags=0, address=None)	todo		
+Lib/socket.py	570	588	recv_fds	recv_fds(sock, bufsize, maxfds, flags=0)	todo		
+Lib/socket.py	592	598	fromshare	fromshare(info)	todo		
+Lib/socket.py	604	660	_fallback_socketpair	_fallback_socketpair(family=AF_INET, type=SOCK_STREAM, proto=0)	todo		
+Lib/socket.py	663	672	socketpair	socketpair(family=None, type=SOCK_STREAM, proto=0)	todo		
+Lib/socket.py	704	714	SocketIO.__init__	__init__(self, sock, mode)	todo		
+Lib/socket.py	716	736	SocketIO.readinto	readinto(self, b)	todo		
+Lib/socket.py	738	752	SocketIO.write	write(self, b)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/socket.py	754	759	SocketIO.readable	readable(self)	todo		
+Lib/socket.py	761	766	SocketIO.writable	writable(self)	todo		
+Lib/socket.py	768	773	SocketIO.seekable	seekable(self)	todo		
+Lib/socket.py	775	779	SocketIO.fileno	fileno(self)	todo		
+Lib/socket.py	782	786	SocketIO.name	name(self)	todo		
+Lib/socket.py	789	790	SocketIO.mode	mode(self)	todo		
+Lib/socket.py	792	800	SocketIO.close	close(self)	todo		
+Lib/socket.py	803	827	getfqdn	getfqdn(name='')	todo		
+Lib/socket.py	832	880	create_connection	create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=None, *, all_errors=False)	todo		
+Lib/socket.py	883	898	has_dualstack_ipv6	has_dualstack_ipv6()	todo		
+Lib/socket.py	901	969	create_server	create_server(address, *, family=AF_INET, backlog=None, reuse_port=False, dualstack_ipv6=False)	todo		
+Lib/socket.py	972	994	getaddrinfo	getaddrinfo(host, port, family=0, type=0, proto=0, flags=0)	todo		

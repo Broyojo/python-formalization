@@ -1,0 +1,7 @@
+file	line	endline	name	signature	status	entry	note
+Lib/pty.py	26	46	openpty	openpty()	todo		
+Lib/pty.py	48	58	_open_terminal	_open_terminal()	todo		
+Lib/pty.py	61	87	fork	fork()	todo		
+Lib/pty.py	89	91	_read	_read(fd)	todo		
+Lib/pty.py	93	156	_copy	_copy(master_fd, master_read=_read, stdin_read=_read)	todo		
+Lib/pty.py	158	182	spawn	spawn(argv, master_read=_read, stdin_read=_read)	todo		

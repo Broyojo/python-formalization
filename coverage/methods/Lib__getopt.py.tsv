@@ -1,0 +1,9 @@
+file	line	endline	name	signature	status	entry	note
+Lib/getopt.py	39	42	GetoptError.__init__	__init__(self, msg, opt='')	todo		
+Lib/getopt.py	44	45	GetoptError.__str__	__str__(self)	todo		
+Lib/getopt.py	49	92	getopt	getopt(args, shortopts, longopts=[])	todo		
+Lib/getopt.py	94	153	gnu_getopt	gnu_getopt(args, shortopts, longopts=[])	todo		
+Lib/getopt.py	155	172	do_longs	do_longs(opts, opt, longopts, args)	todo		
+Lib/getopt.py	177	202	long_has_args	long_has_args(opt, longopts)	todo		
+Lib/getopt.py	204	218	do_shorts	do_shorts(opts, optstring, shortopts, args)	todo		
+Lib/getopt.py	220	228	short_has_arg	short_has_arg(opt, shortopts)	todo		

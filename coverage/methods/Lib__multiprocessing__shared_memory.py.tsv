@@ -1,0 +1,30 @@
+file	line	endline	name	signature	status	entry	note
+Lib/multiprocessing/shared_memory.py	40	47	_make_filename	_make_filename()	todo		
+Lib/multiprocessing/shared_memory.py	76	185	SharedMemory.__init__	__init__(self, name=None, create=False, size=0, *, track=True)	todo		
+Lib/multiprocessing/shared_memory.py	187	191	SharedMemory.__del__	__del__(self)	todo		
+Lib/multiprocessing/shared_memory.py	193	201	SharedMemory.__reduce__	__reduce__(self)	todo		
+Lib/multiprocessing/shared_memory.py	203	204	SharedMemory.__repr__	__repr__(self)	todo		
+Lib/multiprocessing/shared_memory.py	207	209	SharedMemory.buf	buf(self)	todo		
+Lib/multiprocessing/shared_memory.py	212	218	SharedMemory.name	name(self)	todo		
+Lib/multiprocessing/shared_memory.py	221	223	SharedMemory.size	size(self)	todo		
+Lib/multiprocessing/shared_memory.py	225	236	SharedMemory.close	close(self)	todo		
+Lib/multiprocessing/shared_memory.py	238	254	SharedMemory.unlink	unlink(self)	todo		
+Lib/multiprocessing/shared_memory.py	295	306	ShareableList._extract_recreation_code	_extract_recreation_code(value)	todo		
+Lib/multiprocessing/shared_memory.py	308	379	ShareableList.__init__	__init__(self, sequence=None, *, name=None)	todo		
+Lib/multiprocessing/shared_memory.py	381	395	ShareableList._get_packing_format	_get_packing_format(self, position)	todo		
+Lib/multiprocessing/shared_memory.py	397	410	ShareableList._get_back_transform	_get_back_transform(self, position)	todo		
+Lib/multiprocessing/shared_memory.py	412	432	ShareableList._set_packing_format_and_transform	_set_packing_format_and_transform(self, position, fmt_as_str, value)	todo		
+Lib/multiprocessing/shared_memory.py	434	449	ShareableList.__getitem__	__getitem__(self, position)	todo		
+Lib/multiprocessing/shared_memory.py	451	482	ShareableList.__setitem__	__setitem__(self, position, value)	todo		
+Lib/multiprocessing/shared_memory.py	484	485	ShareableList.__reduce__	__reduce__(self)	todo		
+Lib/multiprocessing/shared_memory.py	487	488	ShareableList.__len__	__len__(self)	todo		
+Lib/multiprocessing/shared_memory.py	490	491	ShareableList.__repr__	__repr__(self)	todo		
+Lib/multiprocessing/shared_memory.py	494	498	ShareableList.format	format(self)	todo		
+Lib/multiprocessing/shared_memory.py	501	503	ShareableList._format_size_metainfo	_format_size_metainfo(self)	todo		
+Lib/multiprocessing/shared_memory.py	506	508	ShareableList._format_packing_metainfo	_format_packing_metainfo(self)	todo		
+Lib/multiprocessing/shared_memory.py	511	513	ShareableList._format_back_transform_codes	_format_back_transform_codes(self)	todo		
+Lib/multiprocessing/shared_memory.py	516	519	ShareableList._offset_data_start	_offset_data_start(self)	todo		
+Lib/multiprocessing/shared_memory.py	522	523	ShareableList._offset_packing_formats	_offset_packing_formats(self)	todo		
+Lib/multiprocessing/shared_memory.py	526	527	ShareableList._offset_back_transform_codes	_offset_back_transform_codes(self)	todo		
+Lib/multiprocessing/shared_memory.py	529	532	ShareableList.count	count(self, value)	todo		candidates:strsearch-count-repeated-find,strsearch-find-slice-literal,strsearch-find-str-bytes
+Lib/multiprocessing/shared_memory.py	534	542	ShareableList.index	index(self, value)	todo		candidates:strsearch-find-str-bytes

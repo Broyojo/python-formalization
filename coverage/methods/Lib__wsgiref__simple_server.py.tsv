@@ -1,0 +1,11 @@
+file	line	endline	name	signature	status	entry	note
+Lib/wsgiref/simple_server.py	32	38	ServerHandler.close	close(self)	todo		
+Lib/wsgiref/simple_server.py	48	51	WSGIServer.server_bind	server_bind(self)	todo		
+Lib/wsgiref/simple_server.py	53	61	WSGIServer.setup_environ	setup_environ(self)	todo		
+Lib/wsgiref/simple_server.py	63	64	WSGIServer.get_app	get_app(self)	todo		
+Lib/wsgiref/simple_server.py	66	67	WSGIServer.set_app	set_app(self, application)	todo		
+Lib/wsgiref/simple_server.py	75	106	WSGIRequestHandler.get_environ	get_environ(self)	todo		
+Lib/wsgiref/simple_server.py	108	109	WSGIRequestHandler.get_stderr	get_stderr(self)	todo		
+Lib/wsgiref/simple_server.py	111	130	WSGIRequestHandler.handle	handle(self)	todo		
+Lib/wsgiref/simple_server.py	134	143	demo_app	demo_app(environ, start_response)	todo		
+Lib/wsgiref/simple_server.py	146	152	make_server	make_server(host, port, app, server_class=WSGIServer, handler_class=WSGIRequestHandler)	todo		

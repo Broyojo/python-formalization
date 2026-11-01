@@ -1,0 +1,24 @@
+file	line	endline	name	signature	status	entry	note
+Modules/gcmodule.c	16	20	get_gc_state	get_gc_state(void)	todo		
+Modules/gcmodule.c	35	40	gc_enable_impl	gc_enable_impl(PyObject *module) /*[clinic end generated code: output=45a427e9dce9155c input=81ac4940ca579707]*/	todo		
+Modules/gcmodule.c	49	54	gc_disable_impl	gc_disable_impl(PyObject *module) /*[clinic end generated code: output=97d1030f7aa9d279 input=8c2e5a14e800d83b]*/	todo		
+Modules/gcmodule.c	63	67	gc_isenabled_impl	gc_isenabled_impl(PyObject *module) /*[clinic end generated code: output=1874298331c49130 input=30005e0422373b31]*/	todo		
+Modules/gcmodule.c	84	95	gc_collect_impl	gc_collect_impl(PyObject *module, int generation) /*[clinic end generated code: output=b697e633043233c7 input=40720128b682d879]*/	todo		
+Modules/gcmodule.c	116	122	gc_set_debug_impl	gc_set_debug_impl(PyObject *module, int flags) /*[clinic end generated code: output=7c8366575486b228 input=5e5ce15e84fbed15]*/	todo		
+Modules/gcmodule.c	131	136	gc_get_debug_impl	gc_get_debug_impl(PyObject *module) /*[clinic end generated code: output=91242f3506cd1e50 input=91a101e1c3b98366]*/	todo		
+Modules/gcmodule.c	156	183	gc_set_threshold_impl	gc_set_threshold_impl(PyObject *module, int threshold0, int group_right_1, int threshold1, int group_right_2, int threshold2) /*[clinic end generated code: output=2e3c7c7dd59060f3 input=0d9612db50984eec]*/	todo		
+Modules/gcmodule.c	192	207	gc_get_threshold_impl	gc_get_threshold_impl(PyObject *module) /*[clinic end generated code: output=7902bc9f41ecbbd8 input=286d79918034d6e6]*/	todo		
+Modules/gcmodule.c	216	241	gc_get_count_impl	gc_get_count_impl(PyObject *module) /*[clinic end generated code: output=354012e67b16398f input=a392794a08251751]*/	todo		
+Modules/gcmodule.c	252	261	gc_get_referrers_impl	gc_get_referrers_impl(PyObject *module, PyObject *objs) /*[clinic end generated code: output=929d6dff26f609b9 input=9102be7ebee69ee3]*/	todo		
+Modules/gcmodule.c	265	269	referentsvisit	referentsvisit(PyObject *obj, void *arg)	todo		
+Modules/gcmodule.c	272	289	append_referrents	append_referrents(PyObject *result, PyObject *args)	todo		
+Modules/gcmodule.c	300	323	gc_get_referents_impl	gc_get_referents_impl(PyObject *module, PyObject *objs) /*[clinic end generated code: output=6dfde40cd1588e1d input=55c078a6d0248fe0]*/	todo		
+Modules/gcmodule.c	337	359	gc_get_objects_impl	gc_get_objects_impl(PyObject *module, Py_ssize_t generation) /*[clinic end generated code: output=48b35fea4ba6cb0e input=3a819826fbde5eef]*/	todo		
+Modules/gcmodule.c	368	406	gc_get_stats_impl	gc_get_stats_impl(PyObject *module) /*[clinic end generated code: output=a8ab1d8a5d26f3ab input=1ef4ed9d17b1a470]*/	todo		
+Modules/gcmodule.c	421	425	gc_is_tracked_impl	gc_is_tracked_impl(PyObject *module, PyObject *obj) /*[clinic end generated code: output=91c8d086b7f47a33 input=423b98ec680c3126]*/	todo		
+Modules/gcmodule.c	437	441	gc_is_finalized_impl	gc_is_finalized_impl(PyObject *module, PyObject *obj) /*[clinic end generated code: output=401ff5d6fc660429 input=ca4d111c8f8c4e3a]*/	todo		
+Modules/gcmodule.c	455	461	gc_freeze_impl	gc_freeze_impl(PyObject *module) /*[clinic end generated code: output=502159d9cdc4c139 input=989012d0ba5a066f]*/	todo		
+Modules/gcmodule.c	472	478	gc_unfreeze_impl	gc_unfreeze_impl(PyObject *module) /*[clinic end generated code: output=1c15f2043b25e169 input=2dd52b170f4cef6c]*/	todo		
+Modules/gcmodule.c	487	492	gc_get_freeze_count_impl	gc_get_freeze_count_impl(PyObject *module) /*[clinic end generated code: output=61cbd9f43aa032e1 input=45ffbc65cfe2a6ed]*/	todo		
+Modules/gcmodule.c	540	563	gcmodule_exec	gcmodule_exec(PyObject *module)	todo		
+Modules/gcmodule.c	582	585	PyInit_gc	PyInit_gc(void)	todo		

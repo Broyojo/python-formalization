@@ -1,0 +1,6 @@
+file	line	endline	name	signature	status	entry	note
+Lib/hashlib.py	82	123	__get_builtin_constructor	__get_builtin_constructor(name)	todo		
+Lib/hashlib.py	126	141	__get_openssl_constructor	__get_openssl_constructor(name)	todo		
+Lib/hashlib.py	144	149	__py_new	__py_new(name, *args, **kwargs)	todo		
+Lib/hashlib.py	152	166	__hash_new	__hash_new(name, *args, **kwargs)	todo		
+Lib/hashlib.py	195	240	file_digest	file_digest(fileobj, digest, /, *, _bufsize=2 ** 18)	todo		

@@ -1,0 +1,7 @@
+file	line	endline	name	signature	status	entry	note
+Lib/multiprocessing/popen_forkserver.py	20	21	_DupFd.__init__	__init__(self, ind)	todo		
+Lib/multiprocessing/popen_forkserver.py	22	23	_DupFd.detach	detach(self)	todo		
+Lib/multiprocessing/popen_forkserver.py	33	35	Popen.__init__	__init__(self, process_obj)	todo		
+Lib/multiprocessing/popen_forkserver.py	37	39	Popen.duplicate_for_child	duplicate_for_child(self, fd)	todo		
+Lib/multiprocessing/popen_forkserver.py	41	59	Popen._launch	_launch(self, process_obj)	todo		
+Lib/multiprocessing/popen_forkserver.py	61	74	Popen.poll	poll(self, flag=os.WNOHANG)	todo		

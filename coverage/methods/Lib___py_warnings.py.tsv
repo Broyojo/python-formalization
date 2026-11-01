@@ -1,0 +1,45 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_py_warnings.py	24	26	_set_module	_set_module(module)	todo		
+Lib/_py_warnings.py	53	55	_Context.__init__	__init__(self, filters)	todo		
+Lib/_py_warnings.py	57	61	_Context.copy	copy(self)	todo		
+Lib/_py_warnings.py	63	64	_Context._record_warning	_record_warning(self, msg)	todo		
+Lib/_py_warnings.py	68	69	_GlobalContext.__init__	__init__(self)	todo		
+Lib/_py_warnings.py	72	80	_GlobalContext._filters	_filters(self)	todo		
+Lib/_py_warnings.py	89	95	_get_context	_get_context()	todo		
+Lib/_py_warnings.py	98	100	_set_context	_set_context(context)	todo		
+Lib/_py_warnings.py	103	108	_new_context	_new_context()	todo		
+Lib/_py_warnings.py	111	114	_get_filters	_get_filters()	todo		
+Lib/_py_warnings.py	117	118	_filters_mutated_lock_held	_filters_mutated_lock_held()	todo		
+Lib/_py_warnings.py	121	124	showwarning	showwarning(message, category, filename, lineno, file=None, line=None)	todo		
+Lib/_py_warnings.py	127	130	formatwarning	formatwarning(message, category, filename, lineno, line=None)	todo		
+Lib/_py_warnings.py	133	150	_showwarnmsg_impl	_showwarnmsg_impl(msg)	todo		
+Lib/_py_warnings.py	153	210	_formatwarnmsg_impl	_formatwarnmsg_impl(msg)	todo		
+Lib/_py_warnings.py	217	233	_showwarnmsg	_showwarnmsg(msg)	todo		
+Lib/_py_warnings.py	240	251	_formatwarnmsg	_formatwarnmsg(msg)	todo		
+Lib/_py_warnings.py	254	291	filterwarnings	filterwarnings(action, message='', category=Warning, module='', lineno=0, append=False)	todo		
+Lib/_py_warnings.py	294	310	simplefilter	simplefilter(action, category=Warning, lineno=0, append=False)	todo		
+Lib/_py_warnings.py	313	317	_filters_mutated	_filters_mutated()	todo		
+Lib/_py_warnings.py	320	334	_add_filter	_add_filter(*item, append)	todo		
+Lib/_py_warnings.py	337	341	resetwarnings	resetwarnings()	todo		
+Lib/_py_warnings.py	350	355	_processoptions	_processoptions(args)	todo		
+Lib/_py_warnings.py	359	384	_setoption	_setoption(arg)	todo		
+Lib/_py_warnings.py	388	394	_getaction	_getaction(action)	todo		
+Lib/_py_warnings.py	398	416	_getcategory	_getcategory(category)	todo		
+Lib/_py_warnings.py	419	420	_is_internal_filename	_is_internal_filename(filename)	todo		
+Lib/_py_warnings.py	423	424	_is_filename_to_skip	_is_filename_to_skip(filename, skip_file_prefixes)	todo		
+Lib/_py_warnings.py	427	429	_is_internal_frame	_is_internal_frame(frame)	todo		
+Lib/_py_warnings.py	432	439	_next_external_frame	_next_external_frame(frame, skip_file_prefixes)	todo		
+Lib/_py_warnings.py	443	495	warn	warn(message, category=None, stacklevel=1, source=None, *, skip_file_prefixes=())	todo		
+Lib/_py_warnings.py	498	568	warn_explicit	warn_explicit(message, category, filename, lineno, module=None, registry=None, module_globals=None, source=None)	todo		
+Lib/_py_warnings.py	576	585	WarningMessage.__init__	__init__(self, message, category, filename, lineno, file=None, line=None, source=None)	todo		
+Lib/_py_warnings.py	587	590	WarningMessage.__str__	__str__(self)	todo		
+Lib/_py_warnings.py	592	593	WarningMessage.__repr__	__repr__(self)	todo		
+Lib/_py_warnings.py	616	628	catch_warnings.__init__	__init__(self, *, record=False, module=None, action=None, category=Warning, lineno=0, append=False)	todo		
+Lib/_py_warnings.py	630	637	catch_warnings.__repr__	__repr__(self)	todo		
+Lib/_py_warnings.py	639	666	catch_warnings.__enter__	__enter__(self)	todo		
+Lib/_py_warnings.py	668	678	catch_warnings.__exit__	__exit__(self, *exc_info)	todo		
+Lib/_py_warnings.py	723	737	deprecated.__init__	__init__(self, message: str, /, *, category: type[Warning] | None=DeprecationWarning, stacklevel: int=1)	todo		
+Lib/_py_warnings.py	739	811	deprecated.__call__	__call__(self, arg, /)	todo		
+Lib/_py_warnings.py	817	833	_deprecated	_deprecated(name, message=_DEPRECATED_MSG, *, remove, _version=sys.version_info)	todo		
+Lib/_py_warnings.py	837	858	_warn_unawaited_coroutine	_warn_unawaited_coroutine(coro)	todo		
+Lib/_py_warnings.py	861	869	_setup_defaults	_setup_defaults()	todo		

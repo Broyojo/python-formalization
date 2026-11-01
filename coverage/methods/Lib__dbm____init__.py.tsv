@@ -1,0 +1,3 @@
+file	line	endline	name	signature	status	entry	note
+Lib/dbm/__init__.py	53	95	open	open(file, flag='r', mode=438)	todo		
+Lib/dbm/__init__.py	98	189	whichdb	whichdb(filename)	todo		

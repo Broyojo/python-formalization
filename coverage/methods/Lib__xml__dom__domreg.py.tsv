@@ -1,0 +1,5 @@
+file	line	endline	name	signature	status	entry	note
+Lib/xml/dom/domreg.py	21	30	registerDOMImplementation	registerDOMImplementation(name, factory)	todo		
+Lib/xml/dom/domreg.py	32	37	_good_enough	_good_enough(dom, features)	todo		
+Lib/xml/dom/domreg.py	39	80	getDOMImplementation	getDOMImplementation(name=None, features=())	todo		
+Lib/xml/dom/domreg.py	82	99	_parse_feature_string	_parse_feature_string(s)	todo		

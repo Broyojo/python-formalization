@@ -1,0 +1,6 @@
+file	line	endline	name	signature	status	entry	note
+Lib/multiprocessing/popen_spawn_posix.py	17	18	_DupFd.__init__	__init__(self, fd)	todo		
+Lib/multiprocessing/popen_spawn_posix.py	19	20	_DupFd.detach	detach(self)	todo		
+Lib/multiprocessing/popen_spawn_posix.py	30	32	Popen.__init__	__init__(self, process_obj)	todo		
+Lib/multiprocessing/popen_spawn_posix.py	34	36	Popen.duplicate_for_child	duplicate_for_child(self, fd)	todo		
+Lib/multiprocessing/popen_spawn_posix.py	38	76	Popen._launch	_launch(self, process_obj)	todo		

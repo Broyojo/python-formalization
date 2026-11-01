@@ -1,0 +1,18 @@
+file	line	endline	name	signature	status	entry	note
+Lib/re/_compiler.py	33	37	_combine_flags	_combine_flags(flags, add_flags, del_flags, TYPE_FLAGS=_parser.TYPE_FLAGS)	todo		
+Lib/re/_compiler.py	39	219	_compile	_compile(code, pattern, flags)	todo		
+Lib/re/_compiler.py	221	246	_compile_charset	_compile_charset(charset, flags, code)	todo		
+Lib/re/_compiler.py	248	395	_optimize_charset	_optimize_charset(charset, iscased=None, fixup=None, fixes=None)	todo		
+Lib/re/_compiler.py	400	403	_mk_bitmap	_mk_bitmap(bits, _CODEBITS=_CODEBITS, _int=int)	todo		
+Lib/re/_compiler.py	405	410	_bytes_to_codes	_bytes_to_codes(b)	todo		
+Lib/re/_compiler.py	412	419	_simple	_simple(p)	todo		
+Lib/re/_compiler.py	421	440	_generate_overlap_table	_generate_overlap_table(prefix)	todo		
+Lib/re/_compiler.py	442	448	_get_iscased	_get_iscased(flags)	todo		
+Lib/re/_compiler.py	450	479	_get_literal_prefix	_get_literal_prefix(pattern, flags)	todo		
+Lib/re/_compiler.py	481	523	_get_charset_prefix	_get_charset_prefix(pattern, flags)	todo		
+Lib/re/_compiler.py	525	585	_compile_info	_compile_info(code, pattern, flags)	todo		
+Lib/re/_compiler.py	587	588	isstring	isstring(obj)	todo		
+Lib/re/_compiler.py	590	603	_code	_code(p, flags)	todo		
+Lib/re/_compiler.py	605	606	_hex_code	_hex_code(code)	todo		
+Lib/re/_compiler.py	608	754	dis	dis(code)	todo		
+Lib/re/_compiler.py	757	782	compile	compile(p, flags=0)	todo		

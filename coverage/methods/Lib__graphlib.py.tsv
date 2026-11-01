@@ -1,0 +1,12 @@
+file	line	endline	name	signature	status	entry	note
+Lib/graphlib.py	12	23	_NodeInfo.__init__	__init__(self, node)	todo		
+Lib/graphlib.py	44	52	TopologicalSorter.__init__	__init__(self, graph=None)	todo		
+Lib/graphlib.py	54	57	TopologicalSorter._get_nodeinfo	_get_nodeinfo(self, node)	todo		
+Lib/graphlib.py	59	84	TopologicalSorter.add	add(self, node, *predecessors)	todo		
+Lib/graphlib.py	86	110	TopologicalSorter.prepare	prepare(self)	todo		
+Lib/graphlib.py	112	136	TopologicalSorter.get_ready	get_ready(self)	todo		
+Lib/graphlib.py	138	150	TopologicalSorter.is_active	is_active(self)	todo		
+Lib/graphlib.py	152	153	TopologicalSorter.__bool__	__bool__(self)	todo		
+Lib/graphlib.py	155	200	TopologicalSorter.done	done(self, *nodes)	todo		
+Lib/graphlib.py	202	237	TopologicalSorter._find_cycle	_find_cycle(self)	todo		
+Lib/graphlib.py	239	252	TopologicalSorter.static_order	static_order(self)	todo		

@@ -1,0 +1,70 @@
+file	line	endline	name	signature	status	entry	note
+Lib/tracemalloc.py	13	27	_format_size	_format_size(size, sign)	todo		
+Lib/tracemalloc.py	37	40	Statistic.__init__	__init__(self, traceback, size, count)	todo		
+Lib/tracemalloc.py	42	43	Statistic.__hash__	__hash__(self)	todo		
+Lib/tracemalloc.py	45	50	Statistic.__eq__	__eq__(self, other)	todo		
+Lib/tracemalloc.py	52	60	Statistic.__str__	__str__(self)	todo		
+Lib/tracemalloc.py	62	64	Statistic.__repr__	__repr__(self)	todo		
+Lib/tracemalloc.py	66	67	Statistic._sort_key	_sort_key(self)	todo		
+Lib/tracemalloc.py	77	82	StatisticDiff.__init__	__init__(self, traceback, size, size_diff, count, count_diff)	todo		
+Lib/tracemalloc.py	84	86	StatisticDiff.__hash__	__hash__(self)	todo		
+Lib/tracemalloc.py	88	95	StatisticDiff.__eq__	__eq__(self, other)	todo		
+Lib/tracemalloc.py	97	107	StatisticDiff.__str__	__str__(self)	todo		
+Lib/tracemalloc.py	109	112	StatisticDiff.__repr__	__repr__(self)	todo		
+Lib/tracemalloc.py	114	117	StatisticDiff._sort_key	_sort_key(self)	todo		
+Lib/tracemalloc.py	120	137	_compare_grouped_stats	_compare_grouped_stats(old_group, new_group)	todo		
+Lib/tracemalloc.py	147	149	Frame.__init__	__init__(self, frame)	todo		
+Lib/tracemalloc.py	152	153	Frame.filename	filename(self)	todo		
+Lib/tracemalloc.py	156	157	Frame.lineno	lineno(self)	todo		
+Lib/tracemalloc.py	159	162	Frame.__eq__	__eq__(self, other)	todo		
+Lib/tracemalloc.py	164	167	Frame.__lt__	__lt__(self, other)	todo		
+Lib/tracemalloc.py	169	170	Frame.__hash__	__hash__(self)	todo		
+Lib/tracemalloc.py	172	173	Frame.__str__	__str__(self)	todo		
+Lib/tracemalloc.py	175	176	Frame.__repr__	__repr__(self)	todo		
+Lib/tracemalloc.py	187	194	Traceback.__init__	__init__(self, frames, total_nframe=None)	todo		
+Lib/tracemalloc.py	197	198	Traceback.total_nframe	total_nframe(self)	todo		
+Lib/tracemalloc.py	200	201	Traceback.__len__	__len__(self)	todo		
+Lib/tracemalloc.py	203	207	Traceback.__getitem__	__getitem__(self, index)	todo		
+Lib/tracemalloc.py	209	210	Traceback.__contains__	__contains__(self, frame)	todo		
+Lib/tracemalloc.py	212	213	Traceback.__hash__	__hash__(self)	todo		
+Lib/tracemalloc.py	215	218	Traceback.__eq__	__eq__(self, other)	todo		
+Lib/tracemalloc.py	220	223	Traceback.__lt__	__lt__(self, other)	todo		
+Lib/tracemalloc.py	225	226	Traceback.__str__	__str__(self)	todo		
+Lib/tracemalloc.py	228	234	Traceback.__repr__	__repr__(self)	todo		
+Lib/tracemalloc.py	236	254	Traceback.format	format(self, limit=None, most_recent_first=False)	todo		
+Lib/tracemalloc.py	257	269	get_object_traceback	get_object_traceback(obj)	todo		
+Lib/tracemalloc.py	278	281	Trace.__init__	__init__(self, trace)	todo		
+Lib/tracemalloc.py	284	285	Trace.domain	domain(self)	todo		
+Lib/tracemalloc.py	288	289	Trace.size	size(self)	todo		
+Lib/tracemalloc.py	292	293	Trace.traceback	traceback(self)	todo		
+Lib/tracemalloc.py	295	298	Trace.__eq__	__eq__(self, other)	todo		
+Lib/tracemalloc.py	300	301	Trace.__hash__	__hash__(self)	todo		
+Lib/tracemalloc.py	303	304	Trace.__str__	__str__(self)	todo		
+Lib/tracemalloc.py	306	308	Trace.__repr__	__repr__(self)	todo		
+Lib/tracemalloc.py	312	315	_Traces.__init__	__init__(self, traces)	todo		
+Lib/tracemalloc.py	317	318	_Traces.__len__	__len__(self)	todo		
+Lib/tracemalloc.py	320	324	_Traces.__getitem__	__getitem__(self, index)	todo		
+Lib/tracemalloc.py	326	327	_Traces.__contains__	__contains__(self, trace)	todo		
+Lib/tracemalloc.py	329	332	_Traces.__eq__	__eq__(self, other)	todo		
+Lib/tracemalloc.py	334	335	_Traces.__repr__	__repr__(self)	todo		
+Lib/tracemalloc.py	338	342	_normalize_filename	_normalize_filename(filename)	todo		
+Lib/tracemalloc.py	346	347	BaseFilter.__init__	__init__(self, inclusive)	todo		
+Lib/tracemalloc.py	349	350	BaseFilter._match	_match(self, trace)	todo		
+Lib/tracemalloc.py	354	361	Filter.__init__	__init__(self, inclusive, filename_pattern, lineno=None, all_frames=False, domain=None)	todo		
+Lib/tracemalloc.py	364	365	Filter.filename_pattern	filename_pattern(self)	todo		
+Lib/tracemalloc.py	367	374	Filter._match_frame_impl	_match_frame_impl(self, filename, lineno)	todo		
+Lib/tracemalloc.py	376	377	Filter._match_frame	_match_frame(self, filename, lineno)	todo		
+Lib/tracemalloc.py	379	388	Filter._match_traceback	_match_traceback(self, traceback)	todo		
+Lib/tracemalloc.py	390	398	Filter._match	_match(self, trace)	todo		
+Lib/tracemalloc.py	402	404	DomainFilter.__init__	__init__(self, inclusive, domain)	todo		
+Lib/tracemalloc.py	407	408	DomainFilter.domain	domain(self)	todo		
+Lib/tracemalloc.py	410	412	DomainFilter._match	_match(self, trace)	todo		
+Lib/tracemalloc.py	420	424	Snapshot.__init__	__init__(self, traces, traceback_limit)	todo		
+Lib/tracemalloc.py	426	431	Snapshot.dump	dump(self, filename)	todo		
+Lib/tracemalloc.py	434	439	Snapshot.load	load(filename)	todo		
+Lib/tracemalloc.py	441	450	Snapshot._filter_trace	_filter_trace(self, include_filters, exclude_filters, trace)	todo		
+Lib/tracemalloc.py	452	475	Snapshot.filter_traces	filter_traces(self, filters)	todo		
+Lib/tracemalloc.py	477	526	Snapshot._group_by	_group_by(self, key_type, cumulative)	todo		
+Lib/tracemalloc.py	528	536	Snapshot.statistics	statistics(self, key_type, cumulative=False)	todo		
+Lib/tracemalloc.py	538	548	Snapshot.compare_to	compare_to(self, old_snapshot, key_type, cumulative=False)	todo		
+Lib/tracemalloc.py	551	560	take_snapshot	take_snapshot()	todo		

@@ -1,0 +1,13 @@
+file	line	endline	name	signature	status	entry	note
+Lib/linecache.py	17	19	clearcache	clearcache()	todo		
+Lib/linecache.py	22	29	getline	getline(filename, lineno, module_globals=None)	todo		
+Lib/linecache.py	32	44	getlines	getlines(filename, module_globals=None)	todo		
+Lib/linecache.py	47	51	_getline_from_code	_getline_from_code(filename, lineno)	todo		
+Lib/linecache.py	53	54	_make_key	_make_key(code)	todo		
+Lib/linecache.py	56	61	_getlines_from_code	_getlines_from_code(code)	todo		
+Lib/linecache.py	64	71	_source_unavailable	_source_unavailable(filename)	todo		
+Lib/linecache.py	74	103	checkcache	checkcache(filename=None)	todo		
+Lib/linecache.py	106	197	updatecache	updatecache(filename, module_globals=None)	todo		
+Lib/linecache.py	200	221	lazycache	lazycache(filename, module_globals)	todo		
+Lib/linecache.py	224	240	_make_lazycache_entry	_make_lazycache_entry(filename, module_globals)	todo		
+Lib/linecache.py	244	256	_register_code	_register_code(code, string, name)	todo		

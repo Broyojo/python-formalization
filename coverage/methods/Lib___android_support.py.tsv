@@ -1,0 +1,15 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_android_support.py	26	33	init_streams	init_streams(android_log_write, stdout_prio, stderr_prio)	excluded		platform: single-OS support
+Lib/_android_support.py	37	54	TextLogStream.__init__	__init__(self, prio, tag, original=None, **kwargs)	excluded		platform: single-OS support
+Lib/_android_support.py	56	57	TextLogStream.__repr__	__repr__(self)	excluded		platform: single-OS support
+Lib/_android_support.py	59	78	TextLogStream.write	write(self, s)	excluded		platform: single-OS support
+Lib/_android_support.py	82	94	TextLogStream._write_chunk	_write_chunk(self, s)	excluded		platform: single-OS support
+Lib/_android_support.py	96	100	TextLogStream.flush	flush(self)	excluded		platform: single-OS support
+Lib/_android_support.py	105	106	TextLogStream.line_buffering	line_buffering(self)	excluded		platform: single-OS support
+Lib/_android_support.py	110	113	BinaryLogStream.__init__	__init__(self, prio, tag, fileno=None)	excluded		platform: single-OS support
+Lib/_android_support.py	115	116	BinaryLogStream.__repr__	__repr__(self)	excluded		platform: single-OS support
+Lib/_android_support.py	118	119	BinaryLogStream.writable	writable(self)	excluded		platform: single-OS support
+Lib/_android_support.py	121	133	BinaryLogStream.write	write(self, b)	excluded		platform: single-OS support
+Lib/_android_support.py	136	139	BinaryLogStream.fileno	fileno(self)	excluded		platform: single-OS support
+Lib/_android_support.py	160	164	Logcat.__init__	__init__(self, android_log_write)	excluded		platform: single-OS support
+Lib/_android_support.py	166	192	Logcat.write	write(self, prio, tag, message)	excluded		platform: single-OS support

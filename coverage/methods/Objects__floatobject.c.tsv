@@ -1,0 +1,61 @@
+file	line	endline	name	signature	status	entry	note
+Objects/floatobject.c	32	35	PyFloat_GetMax	PyFloat_GetMax(void)	todo		
+Objects/floatobject.c	38	41	PyFloat_GetMin	PyFloat_GetMin(void)	todo		
+Objects/floatobject.c	82	121	PyFloat_GetInfo	PyFloat_GetInfo(void)	todo		
+Objects/floatobject.c	124	136	PyFloat_FromDouble	PyFloat_FromDouble(double fval)	todo		
+Objects/floatobject.c	138	147	_PyFloat_FromDouble_ConsumeInputs	_PyStackRef _PyFloat_FromDouble_ConsumeInputs(_PyStackRef left, _PyStackRef right, double value)	todo		
+Objects/floatobject.c	150	187	float_from_string_inner	float_from_string_inner(const char *s, Py_ssize_t len, void *obj)	todo		
+Objects/floatobject.c	190	237	PyFloat_FromString	PyFloat_FromString(PyObject *v)	todo		
+Objects/floatobject.c	240	244	_PyFloat_ExactDealloc	_PyFloat_ExactDealloc(PyObject *obj)	todo		
+Objects/floatobject.c	247	254	float_dealloc	float_dealloc(PyObject *op)	todo		
+Objects/floatobject.c	257	313	PyFloat_AsDouble	PyFloat_AsDouble(PyObject *op)	todo		
+Objects/floatobject.c	330	346	_Py_convert_int_to_double	_Py_convert_int_to_double(PyObject **v, double *dbl)	todo		
+Objects/floatobject.c	349	364	float_repr	float_repr(PyObject *op)	todo		
+Objects/floatobject.c	382	542	float_richcompare	float_richcompare(PyObject *v, PyObject *w, int op)	todo		
+Objects/floatobject.c	545	549	float_hash	float_hash(PyObject *op)	todo		
+Objects/floatobject.c	552	559	float_add	float_add(PyObject *v, PyObject *w)	todo		
+Objects/floatobject.c	562	569	float_sub	float_sub(PyObject *v, PyObject *w)	todo		
+Objects/floatobject.c	572	579	float_mul	float_mul(PyObject *v, PyObject *w)	todo		
+Objects/floatobject.c	582	594	float_div	float_div(PyObject *v, PyObject *w)	todo		
+Objects/floatobject.c	597	622	float_rem	float_rem(PyObject *v, PyObject *w)	todo		
+Objects/floatobject.c	625	660	_float_div_mod	_float_div_mod(double vx, double wx, double *floordiv, double *mod)	todo		
+Objects/floatobject.c	663	675	float_divmod	float_divmod(PyObject *v, PyObject *w)	todo		
+Objects/floatobject.c	678	690	float_floor_div	float_floor_div(PyObject *v, PyObject *w)	todo		
+Objects/floatobject.c	697	813	float_pow	float_pow(PyObject *v, PyObject *w, PyObject *z)	todo		
+Objects/floatobject.c	818	822	float_neg	float_neg(PyObject *op)	todo		
+Objects/floatobject.c	825	829	float_abs	float_abs(PyObject *op)	todo		
+Objects/floatobject.c	832	836	float_bool	float_bool(PyObject *op)	todo		
+Objects/floatobject.c	845	863	float_is_integer_impl	float_is_integer_impl(PyObject *self) /*[clinic end generated code: output=7112acf95a4d31ea input=311810d3f777e10d]*/	todo		
+Objects/floatobject.c	872	876	float___trunc___impl	float___trunc___impl(PyObject *self) /*[clinic end generated code: output=dd3e289dd4c6b538 input=591b9ba0d650fdff]*/	todo		
+Objects/floatobject.c	885	890	float___floor___impl	float___floor___impl(PyObject *self) /*[clinic end generated code: output=e0551dbaea8c01d1 input=77bb13eb12e268df]*/	todo		
+Objects/floatobject.c	899	904	float___ceil___impl	float___ceil___impl(PyObject *self) /*[clinic end generated code: output=a2fd8858f73736f9 input=79e41ae94aa0a516]*/	todo		
+Objects/floatobject.c	916	966	double_round	double_round(double x, int ndigits) {	todo		
+Objects/floatobject.c	974	1016	double_round	double_round(double x, int ndigits) {	todo		
+Objects/floatobject.c	1034	1076	float___round___impl	float___round___impl(PyObject *self, PyObject *o_ndigits) /*[clinic end generated code: output=374c36aaa0f13980 input=fc0fe25924fbc9ed]*/	todo		
+Objects/floatobject.c	1079	1087	float_float	float_float(PyObject *v)	todo		
+Objects/floatobject.c	1096	1100	float_conjugate_impl	float_conjugate_impl(PyObject *self) /*[clinic end generated code: output=8ca292c2479194af input=82ba6f37a9ff91dd]*/	todo		
+Objects/floatobject.c	1105	1109	char_from_hex	char_from_hex(int x)	todo		
+Objects/floatobject.c	1142	1144	hex_from_char	hex_from_char(unsigned char c) {	todo		
+Objects/floatobject.c	1164	1215	float_hex_impl	float_hex_impl(PyObject *self) /*[clinic end generated code: output=0ebc9836e4d302d4 input=bec1271a33d47e67]*/	todo		
+Objects/floatobject.c	1235	1473	float_fromhex_impl	float_fromhex_impl(PyTypeObject *type, PyObject *string) /*[clinic end generated code: output=c54b4923552e5af5 input=0407bebd354bca89]*/	todo		
+Objects/floatobject.c	1492	1560	float_as_integer_ratio_impl	float_as_integer_ratio_impl(PyObject *self) /*[clinic end generated code: output=65f25f0d8d30a712 input=d5ba7765655d75bd]*/	todo		
+Objects/floatobject.c	1575	1593	float_new_impl	float_new_impl(PyTypeObject *type, PyObject *x) /*[clinic end generated code: output=ccf1e8dc460ba6ba input=55909f888aa0c8a6]*/	todo		
+Objects/floatobject.c	1601	1618	float_subtype_new	float_subtype_new(PyTypeObject *type, PyObject *x)	todo		
+Objects/floatobject.c	1621	1635	float_vectorcall	float_vectorcall(PyObject *type, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
+Objects/floatobject.c	1649	1665	float_from_number_impl	float_from_number_impl(PyTypeObject *type, PyObject *number) /*[clinic end generated code: output=dda7e4466ab7068d input=1f8424d9bc11866a]*/	todo		
+Objects/floatobject.c	1673	1677	float___getnewargs___impl	float___getnewargs___impl(PyObject *self) /*[clinic end generated code: output=873258c9d206b088 input=002279d1d77891e6]*/	todo		
+Objects/floatobject.c	1707	1737	float___getformat___impl	float___getformat___impl(PyTypeObject *type, const char *typestr) /*[clinic end generated code: output=2bfb987228cc9628 input=933cc4bdcf8fa8d3]*/	todo		
+Objects/floatobject.c	1741	1744	float_getreal	float_getreal(PyObject *v, void *Py_UNUSED(closure))	todo		
+Objects/floatobject.c	1747	1750	float_getimag	float_getimag(PyObject *Py_UNUSED(v), void *Py_UNUSED(closure))	todo		
+Objects/floatobject.c	1762	1778	float___format___impl	float___format___impl(PyObject *self, PyObject *format_spec) /*[clinic end generated code: output=b260e52a47eade56 input=2ece1052211fd0e6]*/	todo		
+Objects/floatobject.c	1891	1940	_init_global_state	_init_global_state(void)	todo		
+Objects/floatobject.c	1943	1949	_PyFloat_InitState	_PyFloat_InitState(PyInterpreterState *interp)	todo		
+Objects/floatobject.c	1952	1962	_PyFloat_InitTypes	_PyFloat_InitTypes(PyInterpreterState *interp)	todo		
+Objects/floatobject.c	1965	1968	_PyFloat_FiniType	_PyFloat_FiniType(PyInterpreterState *interp)	todo		
+Objects/floatobject.c	1972	1978	_PyFloat_DebugMallocStats	_PyFloat_DebugMallocStats(FILE *out)	todo		
+Objects/floatobject.c	1993	2098	PyFloat_Pack2	PyFloat_Pack2(double x, char *data, int le)	todo		
+Objects/floatobject.c	2101	2244	PyFloat_Pack4	PyFloat_Pack4(double x, char *data, int le)	todo		
+Objects/floatobject.c	2247	2376	PyFloat_Pack8	PyFloat_Pack8(double x, char *data, int le)	todo		
+Objects/floatobject.c	2379	2432	PyFloat_Unpack2	PyFloat_Unpack2(const char *data, int le)	todo		
+Objects/floatobject.c	2435	2546	PyFloat_Unpack4	PyFloat_Unpack4(const char *data, int le)	todo		
+Objects/floatobject.c	2549	2642	PyFloat_Unpack8	PyFloat_Unpack8(const char *data, int le)	todo		

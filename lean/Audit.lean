@@ -1,29 +1,15 @@
-import PyLean
+import PyLean.All
 
 /-!
 Registry audit, run with `lake env lean Audit.lean`. Fails unless every entry
-is proven or refuted by a theorem whose type is exactly the registered
-property (or its negation) and which uses only the standard axioms. A `sorry`
+marked proven or refuted has a theorem whose type is exactly the registered
+property (or its negation) and which uses only the standard axioms. Open
+entries are counted, not fatal; only settled entries count towards coverage. A `sorry`
 anywhere in a proof shows up here as the axiom `sorryAx`.
 -/
 
-open Lean Elab Command PyLean.Registry
+open Lean Elab Command PyLean PyLean.Registry
 
-def allEntries : List Entry :=
-  PyLean.Ipaddress.entries ++
-  PyLean.Datetime.entries ++
-  PyLean.Fractions.entries ++
-  PyLean.RangeSlice.entries ++
-  PyLean.MathInt.entries ++
-  PyLean.StrSearch.entries ++
-  PyLean.Accel.entries ++
-  PyLean.Decimal.entries ++
-  PyLean.PyIO.entries ++
-  PyLean.JsonMod.entries ++
-  PyLean.Pickle.entries ++
-  PyLean.Itertools.entries ++
-  PyLean.Sequences.entries ++
-  PyLean.ListSort.entries
 
 def allowedAxioms : List Name := [``propext, ``Classical.choice, ``Quot.sound]
 
@@ -32,9 +18,10 @@ def allowedAxioms : List Name := [``propext, ``Classical.choice, ``Quot.sound]
   let mut failures : Array String := #[]
   let mut proven : Nat := 0
   let mut refuted : Nat := 0
+  let mut openCount : Nat := 0
   for e in allEntries do
     if e.status == .open then
-      failures := failures.push s!"{e.id}: still open"
+      openCount := openCount + 1
       continue
     let some thm := e.thm | failures := failures.push s!"{e.id}: no theorem"; continue
     let some info := env.find? thm | failures := failures.push s!"{e.id}: unknown {thm}"; continue
@@ -56,6 +43,6 @@ def allowedAxioms : List Name := [``propext, ``Classical.choice, ``Quot.sound]
       refuted := refuted + 1
     else
       proven := proven + 1
-  logInfo m!"{allEntries.length} properties: {proven} proven, {refuted} refuted, {failures.size} failing"
+  logInfo m!"{allEntries.length} properties: {proven} proven, {refuted} refuted, {openCount} open, {failures.size} failing"
   for f in failures do logInfo m!"FAIL {f}"
   unless failures.isEmpty do throwError "audit failed"

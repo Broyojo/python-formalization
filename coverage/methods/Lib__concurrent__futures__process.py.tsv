@@ -1,0 +1,47 @@
+file	line	endline	name	signature	status	entry	note
+Lib/concurrent/futures/process.py	69	72	_ThreadWakeup.__init__	__init__(self)	todo		
+Lib/concurrent/futures/process.py	74	84	_ThreadWakeup.close	close(self)	todo		
+Lib/concurrent/futures/process.py	86	89	_ThreadWakeup.wakeup	wakeup(self)	todo		
+Lib/concurrent/futures/process.py	91	95	_ThreadWakeup.clear	clear(self)	todo		
+Lib/concurrent/futures/process.py	98	106	_python_exit	_python_exit()	todo		
+Lib/concurrent/futures/process.py	130	131	_RemoteTraceback.__init__	__init__(self, tb)	todo		
+Lib/concurrent/futures/process.py	132	133	_RemoteTraceback.__str__	__str__(self)	todo		
+Lib/concurrent/futures/process.py	136	142	_ExceptionWithTraceback.__init__	__init__(self, exc, tb)	todo		
+Lib/concurrent/futures/process.py	143	144	_ExceptionWithTraceback.__reduce__	__reduce__(self)	todo		
+Lib/concurrent/futures/process.py	146	148	_rebuild_exc	_rebuild_exc(exc, tb)	todo		
+Lib/concurrent/futures/process.py	151	155	_WorkItem.__init__	__init__(self, future, fn, args, kwargs)	todo		
+Lib/concurrent/futures/process.py	158	162	_ResultItem.__init__	__init__(self, work_id, exception=None, result=None, exit_pid=None)	todo		
+Lib/concurrent/futures/process.py	165	169	_CallItem.__init__	__init__(self, work_id, fn, args, kwargs)	todo		
+Lib/concurrent/futures/process.py	174	177	_SafeQueue.__init__	__init__(self, max_size=0, *, ctx, pending_work_items, thread_wakeup)	todo		
+Lib/concurrent/futures/process.py	179	191	_SafeQueue._on_queue_feeder_error	_on_queue_feeder_error(self, e, obj)	todo		
+Lib/concurrent/futures/process.py	194	203	_process_chunk	_process_chunk(fn, chunk)	todo		
+Lib/concurrent/futures/process.py	206	215	_sendback_result	_sendback_result(result_queue, work_id, result=None, exception=None, exit_pid=None)	todo		
+Lib/concurrent/futures/process.py	218	269	_process_worker	_process_worker(call_queue, result_queue, initializer, initargs, max_tasks=None)	todo		
+Lib/concurrent/futures/process.py	272	283	_spawn_worker	_spawn_worker(mp_context, call_queue, result_queue, initializer, initargs, max_tasks_per_child, processes)	todo		
+Lib/concurrent/futures/process.py	298	351	_ExecutorManagerThread.__init__	__init__(self, executor)	todo		
+Lib/concurrent/futures/process.py	353	405	_ExecutorManagerThread.run	run(self)	todo		
+Lib/concurrent/futures/process.py	407	470	_ExecutorManagerThread._replace_dead_worker	_replace_dead_worker(self)	todo		
+Lib/concurrent/futures/process.py	472	493	_ExecutorManagerThread.add_call_item_to_queue	add_call_item_to_queue(self)	todo		
+Lib/concurrent/futures/process.py	495	523	_ExecutorManagerThread.wait_result_broken_or_wakeup	wait_result_broken_or_wakeup(self)	todo		
+Lib/concurrent/futures/process.py	525	536	_ExecutorManagerThread.process_result_item	process_result_item(self, result_item)	todo		
+Lib/concurrent/futures/process.py	538	546	_ExecutorManagerThread.is_shutting_down	is_shutting_down(self)	todo		
+Lib/concurrent/futures/process.py	548	598	_ExecutorManagerThread._terminate_broken	_terminate_broken(self, cause, bpe_message=None)	todo		
+Lib/concurrent/futures/process.py	600	602	_ExecutorManagerThread.terminate_broken	terminate_broken(self, cause, bpe_message=None)	todo		
+Lib/concurrent/futures/process.py	604	628	_ExecutorManagerThread.flag_executor_shutting_down	flag_executor_shutting_down(self)	todo		
+Lib/concurrent/futures/process.py	630	642	_ExecutorManagerThread.shutdown_workers	shutdown_workers(self)	todo		
+Lib/concurrent/futures/process.py	644	646	_ExecutorManagerThread.join_executor_internals	join_executor_internals(self)	todo		
+Lib/concurrent/futures/process.py	648	663	_ExecutorManagerThread._join_executor_internals	_join_executor_internals(self, broken=False)	todo		
+Lib/concurrent/futures/process.py	665	667	_ExecutorManagerThread.get_n_children_alive	get_n_children_alive(self)	todo		
+Lib/concurrent/futures/process.py	674	703	_check_system_limits	_check_system_limits()	todo		
+Lib/concurrent/futures/process.py	706	715	_chain_from_iterable_of_lists	_chain_from_iterable_of_lists(iterable)	todo		
+Lib/concurrent/futures/process.py	734	843	ProcessPoolExecutor.__init__	__init__(self, max_workers=None, mp_context=None, initializer=None, initargs=(), *, max_tasks_per_child=None)	todo		
+Lib/concurrent/futures/process.py	845	853	ProcessPoolExecutor._start_executor_manager_thread	_start_executor_manager_thread(self)	todo		
+Lib/concurrent/futures/process.py	855	878	ProcessPoolExecutor._adjust_process_count	_adjust_process_count(self)	todo		
+Lib/concurrent/futures/process.py	880	886	ProcessPoolExecutor._launch_processes	_launch_processes(self)	todo		
+Lib/concurrent/futures/process.py	888	892	ProcessPoolExecutor._spawn_process	_spawn_process(self)	todo		
+Lib/concurrent/futures/process.py	894	916	ProcessPoolExecutor.submit	submit(self, fn, /, *args, **kwargs)	todo		
+Lib/concurrent/futures/process.py	919	953	ProcessPoolExecutor.map	map(self, fn, *iterables, timeout=None, chunksize=1, buffersize=None)	todo		
+Lib/concurrent/futures/process.py	955	973	ProcessPoolExecutor.shutdown	shutdown(self, wait=True, *, cancel_futures=False)	todo		
+Lib/concurrent/futures/process.py	977	1024	ProcessPoolExecutor._force_shutdown	_force_shutdown(self, operation)	todo		
+Lib/concurrent/futures/process.py	1026	1035	ProcessPoolExecutor.terminate_workers	terminate_workers(self)	todo		
+Lib/concurrent/futures/process.py	1037	1046	ProcessPoolExecutor.kill_workers	kill_workers(self)	todo		

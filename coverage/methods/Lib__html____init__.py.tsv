@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Lib/html/__init__.py	12	25	escape	escape(s, quote=True)	todo		
+Lib/html/__init__.py	91	115	_replace_charref	_replace_charref(s)	todo		
+Lib/html/__init__.py	122	132	unescape	unescape(s)	todo		

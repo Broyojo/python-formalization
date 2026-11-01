@@ -1,0 +1,21 @@
+file	line	endline	name	signature	status	entry	note
+Lib/unittest/loader.py	26	28	_FailedTest.__init__	__init__(self, method_name, exception)	todo		
+Lib/unittest/loader.py	30	35	_FailedTest.__getattr__	__getattr__(self, name)	todo		
+Lib/unittest/loader.py	38	41	_make_failed_import_test	_make_failed_import_test(name, suiteClass)	todo		
+Lib/unittest/loader.py	43	46	_make_failed_load_tests	_make_failed_load_tests(name, exception, suiteClass)	todo		
+Lib/unittest/loader.py	48	50	_make_failed_test	_make_failed_test(methodname, exception, suiteClass, message)	todo		
+Lib/unittest/loader.py	52	58	_make_skipped_test	_make_skipped_test(methodname, exception, suiteClass)	todo		
+Lib/unittest/loader.py	60	61	_splitext	_splitext(path)	todo		
+Lib/unittest/loader.py	75	80	TestLoader.__init__	__init__(self)	todo		
+Lib/unittest/loader.py	82	98	TestLoader.loadTestsFromTestCase	loadTestsFromTestCase(self, testCaseClass)	todo		
+Lib/unittest/loader.py	100	123	TestLoader.loadTestsFromModule	loadTestsFromModule(self, module, *, pattern=None)	todo		
+Lib/unittest/loader.py	125	208	TestLoader.loadTestsFromName	loadTestsFromName(self, name, module=None)	todo		
+Lib/unittest/loader.py	210	215	TestLoader.loadTestsFromNames	loadTestsFromNames(self, names, module=None)	todo		
+Lib/unittest/loader.py	217	234	TestLoader.getTestCaseNames	getTestCaseNames(self, testCaseClass)	todo		
+Lib/unittest/loader.py	236	347	TestLoader.discover	discover(self, start_dir, pattern='test*.py', top_level_dir=None)	todo		
+Lib/unittest/loader.py	349	359	TestLoader._get_directory_containing_module	_get_directory_containing_module(self, module_name)	todo		
+Lib/unittest/loader.py	361	371	TestLoader._get_name_from_path	_get_name_from_path(self, path)	todo		
+Lib/unittest/loader.py	373	375	TestLoader._get_module_from_name	_get_module_from_name(self, name)	todo		
+Lib/unittest/loader.py	377	379	TestLoader._match_path	_match_path(self, path, full_path, pattern)	todo		
+Lib/unittest/loader.py	381	413	TestLoader._find_tests	_find_tests(self, start_dir, pattern, namespace=False)	todo		
+Lib/unittest/loader.py	415	488	TestLoader._find_test_path	_find_test_path(self, full_path, pattern, namespace=False)	todo		

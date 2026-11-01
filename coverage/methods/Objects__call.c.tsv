@@ -1,0 +1,43 @@
+file	line	endline	name	signature	status	entry	note
+Objects/call.c	14	21	null_error	null_error(PyThreadState *tstate)	todo		
+Objects/call.c	25	71	_Py_CheckFunctionResult	_Py_CheckFunctionResult(PyThreadState *tstate, PyObject *callable, PyObject *result, const char *where)	todo		
+Objects/call.c	75	95	_Py_CheckSlotResult	_Py_CheckSlotResult(PyObject *obj, const char *slot_name, int success)	todo		
+Objects/call.c	102	107	PyObject_CallNoArgs	PyObject_CallNoArgs(PyObject *func)	todo		
+Objects/call.c	111	151	_PyObject_VectorcallDictTstate	_PyObject_VectorcallDictTstate(PyThreadState *tstate, PyObject *callable, PyObject *const *args, size_t nargsf, PyObject *kwargs)	todo		
+Objects/call.c	155	160	PyObject_VectorcallDict	PyObject_VectorcallDict(PyObject *callable, PyObject *const *args, size_t nargsf, PyObject *kwargs)	todo		
+Objects/call.c	163	196	object_is_not_callable	object_is_not_callable(PyThreadState *tstate, PyObject *callable)	todo		
+Objects/call.c	200	253	_PyObject_MakeTpCall	_PyObject_MakeTpCall(PyThreadState *tstate, PyObject *callable, PyObject *const *args, Py_ssize_t nargs, PyObject *keywords)	todo		
+Objects/call.c	257	260	PyVectorcall_Function	PyVectorcall_Function(PyObject *callable)	todo		
+Objects/call.c	264	290	_PyVectorcall_Call	_PyVectorcall_Call(PyThreadState *tstate, vectorcallfunc func, PyObject *callable, PyObject *tuple, PyObject *kwargs)	todo		
+Objects/call.c	294	319	PyVectorcall_Call	PyVectorcall_Call(PyObject *callable, PyObject *tuple, PyObject *kwargs)	todo		
+Objects/call.c	323	329	PyObject_Vectorcall	PyObject_Vectorcall(PyObject *callable, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
+Objects/call.c	333	367	_PyObject_Call	_PyObject_Call(PyThreadState *tstate, PyObject *callable, PyObject *args, PyObject *kwargs)	todo		
+Objects/call.c	370	374	PyObject_Call	PyObject_Call(PyObject *callable, PyObject *args, PyObject *kwargs)	todo		
+Objects/call.c	378	382	PyAPI_FUNC	PyAPI_FUNC(PyObject *) PyCFunction_Call(PyObject *callable, PyObject *args, PyObject *kwargs)	todo		
+Objects/call.c	386	396	PyObject_CallOneArg	PyObject_CallOneArg(PyObject *func, PyObject *arg)	todo		
+Objects/call.c	402	418	_PyFunction_Vectorcall	_PyFunction_Vectorcall(PyObject *func, PyObject* const* stack, size_t nargsf, PyObject *kwnames)	todo		
+Objects/call.c	425	456	PyAPI_FUNC	PyAPI_FUNC(PyObject*) PyEval_CallObjectWithKeywords(PyObject *callable, PyObject *args, PyObject *kwargs)	todo		
+Objects/call.c	460	473	PyObject_CallObject	PyObject_CallObject(PyObject *callable, PyObject *args)	todo		
+Objects/call.c	478	511	_PyObject_Call_Prepend	_PyObject_Call_Prepend(PyThreadState *tstate, PyObject *callable, PyObject *obj, PyObject *args, PyObject *kwargs)	todo		
+Objects/call.c	517	563	_PyObject_CallFunctionVa	_PyObject_CallFunctionVa(PyThreadState *tstate, PyObject *callable, const char *format, va_list va)	todo		
+Objects/call.c	567	578	PyObject_CallFunction	PyObject_CallFunction(PyObject *callable, const char *format, ...)	todo		
+Objects/call.c	583	595	PyAPI_FUNC	PyAPI_FUNC(PyObject*) PyEval_CallFunction(PyObject *callable, const char *format, ...)	todo		
+Objects/call.c	601	612	PyAPI_FUNC	PyAPI_FUNC(PyObject *) /* abi_only */ _PyObject_CallFunction_SizeT(PyObject *callable, const char *format, ...)	todo		
+Objects/call.c	616	627	callmethod	callmethod(PyThreadState *tstate, PyObject* callable, const char *format, va_list va)	todo		
+Objects/call.c	630	650	PyObject_CallMethod	PyObject_CallMethod(PyObject *obj, const char *name, const char *format, ...)	todo		
+Objects/call.c	655	675	PyAPI_FUNC	PyAPI_FUNC(PyObject*) PyEval_CallMethod(PyObject *obj, const char *name, const char *format, ...)	todo		
+Objects/call.c	679	699	_PyObject_CallMethod	_PyObject_CallMethod(PyObject *obj, PyObject *name, const char *format, ...)	todo		
+Objects/call.c	703	723	_PyObject_CallMethodId	_PyObject_CallMethodId(PyObject *obj, _Py_Identifier *name, const char *format, ...)	todo		
+Objects/call.c	726	735	_PyObject_CallMethodFormat	PyObject * _PyObject_CallMethodFormat(PyThreadState *tstate, PyObject *callable, const char *format, ...)	todo		
+Objects/call.c	740	761	PyAPI_FUNC	PyAPI_FUNC(PyObject *) /* abi_only */ _PyObject_CallMethod_SizeT(PyObject *obj, const char *name, const char *format, ...)	todo		
+Objects/call.c	767	826	object_vacall	object_vacall(PyThreadState *tstate, PyObject *base, PyObject *callable, va_list vargs)	todo		
+Objects/call.c	829	881	_PyObject_VectorcallPrepend	_PyObject_VectorcallPrepend(PyThreadState *tstate, PyObject *callable, PyObject *arg, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
+Objects/call.c	884	931	PyObject_VectorcallMethod	PyObject_VectorcallMethod(PyObject *name, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
+Objects/call.c	935	963	PyObject_CallMethodObjArgs	PyObject_CallMethodObjArgs(PyObject *obj, PyObject *name, ...)	todo		
+Objects/call.c	967	993	_PyObject_CallMethodIdObjArgs	_PyObject_CallMethodIdObjArgs(PyObject *obj, _Py_Identifier *name, ...)	todo		
+Objects/call.c	997	1008	PyObject_CallFunctionObjArgs	PyObject_CallFunctionObjArgs(PyObject *callable, ...)	todo		
+Objects/call.c	1014	1022	_PyStack_AsDict	_PyStack_AsDict(PyObject *const *values, PyObject *kwnames)	todo		
+Objects/call.c	1038	1104	_PyStack_UnpackDict	_PyStack_UnpackDict(PyThreadState *tstate, PyObject *const *args, Py_ssize_t nargs, PyObject *kwargs, PyObject **p_kwnames)	todo		
+Objects/call.c	1107	1115	_PyStack_UnpackDict_Free	_PyStack_UnpackDict_Free(PyObject *const *stack, Py_ssize_t nargs, PyObject *kwnames)	todo		
+Objects/call.c	1118	1122	_PyStack_UnpackDict_FreeNoDecRef	_PyStack_UnpackDict_FreeNoDecRef(PyObject *const *stack, PyObject *kwnames)	todo		
+Objects/call.c	1127	1130	PyVectorcall_NARGS	PyVectorcall_NARGS(size_t n)	todo		

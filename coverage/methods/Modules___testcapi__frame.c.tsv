@@ -1,0 +1,10 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/frame.c	8	15	frame_getlocals	frame_getlocals(PyObject *self, PyObject *frame)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/frame.c	19	26	frame_getglobals	frame_getglobals(PyObject *self, PyObject *frame)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/frame.c	30	37	frame_getgenerator	frame_getgenerator(PyObject *self, PyObject *frame)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/frame.c	41	48	frame_getbuiltins	frame_getbuiltins(PyObject *self, PyObject *frame)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/frame.c	52	64	frame_getlasti	frame_getlasti(PyObject *self, PyObject *frame)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/frame.c	68	81	frame_new	frame_new(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/frame.c	85	97	frame_getvar	frame_getvar(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/frame.c	101	114	frame_getvarstring	frame_getvarstring(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/frame.c	130	133	_PyTestCapi_Init_Frame	_PyTestCapi_Init_Frame(PyObject *m)	excluded		test-support: only for CPython's own tests

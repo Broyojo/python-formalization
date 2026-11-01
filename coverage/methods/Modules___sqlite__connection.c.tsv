@@ -1,0 +1,81 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_sqlite/connection.c	50	70	get_isolation_level	get_isolation_level(const char *level)	todo		
+Modules/_sqlite/connection.c	73	95	isolation_level_converter	isolation_level_converter(PyObject *str_or_none, const char **result)	todo		
+Modules/_sqlite/connection.c	98	119	autocommit_converter	autocommit_converter(PyObject *val, enum autocommit_mode *result)	todo		
+Modules/_sqlite/connection.c	122	133	sqlite3_int64_converter	sqlite3_int64_converter(PyObject *obj, sqlite3_int64 *result)	todo		
+Modules/_sqlite/connection.c	156	176	new_statement_cache	new_statement_cache(pysqlite_Connection *self, pysqlite_state *state, int maxsize)	todo		
+Modules/_sqlite/connection.c	179	197	connection_exec_stmt	connection_exec_stmt(pysqlite_Connection *self, const char *sql)	todo		
+Modules/_sqlite/connection.c	232	352	pysqlite_connection_init_impl	pysqlite_connection_init_impl(pysqlite_Connection *self, PyObject *database, double timeout, int detect_types, const char *isolation_level, int check_same_thread, PyObject *factory, int cache_size, int uri, enum autocommit_mode autocommit) /*[clinic end generated code: output=cba057313ea7712f input=219c3dbecbae7d99]*/	todo		
+Modules/_sqlite/connection.c	391	405	connection_traverse	connection_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_sqlite/connection.c	408	414	clear_callback_context	clear_callback_context(callback_context *ctx)	todo		
+Modules/_sqlite/connection.c	417	429	connection_clear	connection_clear(PyObject *op)	todo		
+Modules/_sqlite/connection.c	432	437	free_callback_contexts	free_callback_contexts(pysqlite_Connection *self)	todo		
+Modules/_sqlite/connection.c	440	452	remove_callbacks	remove_callbacks(sqlite3 *db)	todo		
+Modules/_sqlite/connection.c	455	481	connection_close	connection_close(pysqlite_Connection *self)	todo		
+Modules/_sqlite/connection.c	484	518	connection_finalize	connection_finalize(PyObject *self)	todo		
+Modules/_sqlite/connection.c	521	531	connection_dealloc	connection_dealloc(PyObject *self)	todo		
+Modules/_sqlite/connection.c	542	577	pysqlite_connection_cursor_impl	pysqlite_connection_cursor_impl(pysqlite_Connection *self, PyObject *factory) /*[clinic end generated code: output=562432a9e6af2aa1 input=4127345aa091b650]*/	todo		
+Modules/_sqlite/connection.c	580	584	connection_get_row_factory	connection_get_row_factory(PyObject *op, void *closure)	todo		
+Modules/_sqlite/connection.c	587	597	connection_set_row_factory	connection_set_row_factory(PyObject *op, PyObject *value, void *closure)	todo		
+Modules/_sqlite/connection.c	600	604	connection_get_text_factory	connection_get_text_factory(PyObject *op, void *closure)	todo		
+Modules/_sqlite/connection.c	607	617	connection_set_text_factory	connection_set_text_factory(PyObject *op, PyObject *value, void *closure)	todo		
+Modules/_sqlite/connection.c	640	692	blobopen_impl	blobopen_impl(pysqlite_Connection *self, const char *table, const char *col, sqlite3_int64 row, int readonly, const char *name) /*[clinic end generated code: output=6a02d43efb885d1c input=cc3d4b47dac08401]*/	todo		
+Modules/_sqlite/connection.c	703	725	pysqlite_connection_close_impl	pysqlite_connection_close_impl(pysqlite_Connection *self) /*[clinic end generated code: output=a546a0da212c9b97 input=b3ed5b74f6fefc06]*/	todo		
+Modules/_sqlite/connection.c	732	748	pysqlite_check_connection	int pysqlite_check_connection(pysqlite_Connection* con)	todo		
+Modules/_sqlite/connection.c	759	782	pysqlite_connection_commit_impl	pysqlite_connection_commit_impl(pysqlite_Connection *self) /*[clinic end generated code: output=3da45579e89407f2 input=c8793c97c3446065]*/	todo		
+Modules/_sqlite/connection.c	793	816	pysqlite_connection_rollback_impl	pysqlite_connection_rollback_impl(pysqlite_Connection *self) /*[clinic end generated code: output=b66fa0d43e7ef305 input=7f60a2f1076f16b3]*/	todo		
+Modules/_sqlite/connection.c	819	868	_pysqlite_set_result	_pysqlite_set_result(sqlite3_context* context, PyObject* py_val)	todo		
+Modules/_sqlite/connection.c	871	936	_pysqlite_build_py_params	_pysqlite_build_py_params(sqlite3_context *context, int argc, sqlite3_value **argv)	todo		
+Modules/_sqlite/connection.c	939	950	print_or_clear_traceback	print_or_clear_traceback(callback_context *ctx)	todo		
+Modules/_sqlite/connection.c	954	968	set_sqlite_error	set_sqlite_error(sqlite3_context *context, const char *msg)	todo		
+Modules/_sqlite/connection.c	971	998	func_callback	func_callback(sqlite3_context *context, int argc, sqlite3_value **argv)	todo		
+Modules/_sqlite/connection.c	1001	1054	step_callback	step_callback(sqlite3_context *context, int argc, sqlite3_value **params)	todo		
+Modules/_sqlite/connection.c	1057	1110	final_callback	final_callback(sqlite3_context *context)	todo		
+Modules/_sqlite/connection.c	1113	1142	_pysqlite_drop_unused_cursor_references	_pysqlite_drop_unused_cursor_references(pysqlite_Connection* self)	todo		
+Modules/_sqlite/connection.c	1151	1165	create_callback_context	create_callback_context(PyTypeObject *cls, PyObject *callable)	todo		
+Modules/_sqlite/connection.c	1168	1175	free_callback_context	free_callback_context(callback_context *ctx)	todo		
+Modules/_sqlite/connection.c	1178	1184	incref_callback_context	incref_callback_context(callback_context *ctx)	todo		
+Modules/_sqlite/connection.c	1187	1196	decref_callback_context	decref_callback_context(callback_context *ctx)	todo		
+Modules/_sqlite/connection.c	1199	1207	set_callback_context	set_callback_context(callback_context **ctx_pp, callback_context *ctx)	todo		
+Modules/_sqlite/connection.c	1210	1219	destructor_callback	destructor_callback(void *ctx)	todo		
+Modules/_sqlite/connection.c	1222	1233	check_num_params	check_num_params(pysqlite_Connection *self, const int n, const char *name)	todo		
+Modules/_sqlite/connection.c	1251	1286	pysqlite_connection_create_function_impl	pysqlite_connection_create_function_impl(pysqlite_Connection *self, PyTypeObject *cls, const char *name, int narg, PyObject *func, int deterministic) /*[clinic end generated code: output=8a811529287ad240 input=c7c313b0ca8b519e]*/	todo		
+Modules/_sqlite/connection.c	1297	1337	inverse_callback	inverse_callback(sqlite3_context *context, int argc, sqlite3_value **params)	todo		
+Modules/_sqlite/connection.c	1346	1378	value_callback	value_callback(sqlite3_context *context)	todo		
+Modules/_sqlite/connection.c	1398	1443	create_window_function_impl	create_window_function_impl(pysqlite_Connection *self, PyTypeObject *cls, const char *name, int num_params, PyObject *aggregate_class) /*[clinic end generated code: output=5332cd9464522235 input=46d57a54225b5228]*/	todo		
+Modules/_sqlite/connection.c	1460	1490	pysqlite_connection_create_aggregate_impl	pysqlite_connection_create_aggregate_impl(pysqlite_Connection *self, PyTypeObject *cls, const char *name, int n_arg, PyObject *aggregate_class) /*[clinic end generated code: output=1b02d0f0aec7ff96 input=8087056db6eae1cf]*/	todo		
+Modules/_sqlite/connection.c	1493	1529	authorizer_callback	authorizer_callback(void *ctx_vp, int action, const char *arg1, const char *arg2 , const char *dbname, const char *access_attempt_source)	todo		
+Modules/_sqlite/connection.c	1532	1558	progress_callback	progress_callback(void *ctx_vp)	todo		
+Modules/_sqlite/connection.c	1567	1613	trace_callback	trace_callback(unsigned int type, void *ctx_vp, void *stmt, void *sql)	todo		
+Modules/_sqlite/connection.c	1626	1655	pysqlite_connection_set_authorizer_impl	pysqlite_connection_set_authorizer_impl(pysqlite_Connection *self, PyTypeObject *cls, PyObject *callable) /*[clinic end generated code: output=75fa60114fc971c3 input=a52bd4937c588752]*/	todo		
+Modules/_sqlite/connection.c	1677	1700	pysqlite_connection_set_progress_handler_impl	pysqlite_connection_set_progress_handler_impl(pysqlite_Connection *self, PyTypeObject *cls, PyObject *callable, int n) /*[clinic end generated code: output=0739957fd8034a50 input=d46887797f0c0ecf]*/	todo		
+Modules/_sqlite/connection.c	1713	1743	pysqlite_connection_set_trace_callback_impl	pysqlite_connection_set_trace_callback_impl(pysqlite_Connection *self, PyTypeObject *cls, PyObject *callable) /*[clinic end generated code: output=d91048c03bfcee05 input=d705d592ec03cf28]*/	todo		
+Modules/_sqlite/connection.c	1756	1780	pysqlite_connection_enable_load_extension_impl	pysqlite_connection_enable_load_extension_impl(pysqlite_Connection *self, int onoff) /*[clinic end generated code: output=9cac37190d388baf input=2a1e87931486380f]*/	todo		
+Modules/_sqlite/connection.c	1794	1817	pysqlite_connection_load_extension_impl	pysqlite_connection_load_extension_impl(pysqlite_Connection *self, const char *extension_name, const char *entrypoint) /*[clinic end generated code: output=7e61a7add9de0286 input=c36b14ea702e04f5]*/	todo		
+Modules/_sqlite/connection.c	1820	1833	pysqlite_check_thread	int pysqlite_check_thread(pysqlite_Connection* self)	todo		
+Modules/_sqlite/connection.c	1836	1846	pysqlite_connection_get_isolation_level	pysqlite_connection_get_isolation_level(PyObject *op, void *Py_UNUSED(closure))	todo		
+Modules/_sqlite/connection.c	1849	1856	pysqlite_connection_get_total_changes	pysqlite_connection_get_total_changes(PyObject *op, void *Py_UNUSED(closure))	todo		
+Modules/_sqlite/connection.c	1859	1869	pysqlite_connection_get_in_transaction	pysqlite_connection_get_in_transaction(PyObject *op, void *Py_UNUSED(closure))	todo		
+Modules/_sqlite/connection.c	1872	1896	pysqlite_connection_set_isolation_level	pysqlite_connection_set_isolation_level(PyObject *op, PyObject *isolation_level, void *Py_UNUSED(ignored))	todo		
+Modules/_sqlite/connection.c	1899	1921	pysqlite_connection_call	pysqlite_connection_call(PyObject *op, PyObject *args, PyObject *kwargs)	todo		
+Modules/_sqlite/connection.c	1934	1954	pysqlite_connection_execute_impl	pysqlite_connection_execute_impl(pysqlite_Connection *self, PyObject *sql, PyObject *parameters) /*[clinic end generated code: output=5be05ae01ee17ee4 input=27aa7792681ddba2]*/	todo		
+Modules/_sqlite/connection.c	1967	1987	pysqlite_connection_executemany_impl	pysqlite_connection_executemany_impl(pysqlite_Connection *self, PyObject *sql, PyObject *parameters) /*[clinic end generated code: output=776cd2fd20bfe71f input=495be76551d525db]*/	todo		
+Modules/_sqlite/connection.c	1999	2020	pysqlite_connection_executescript_impl	pysqlite_connection_executescript_impl(pysqlite_Connection *self, PyObject *script_obj) /*[clinic end generated code: output=e921c49e2291782c input=f6e5f1ccfa313db4]*/	todo		
+Modules/_sqlite/connection.c	2025	2080	collation_callback	collation_callback(void *context, int text1_length, const void *text1_data, int text2_length, const void *text2_data)	todo		
+Modules/_sqlite/connection.c	2089	2104	pysqlite_connection_interrupt_impl	pysqlite_connection_interrupt_impl(pysqlite_Connection *self) /*[clinic end generated code: output=f193204bc9e70b47 input=75ad03ade7012859]*/	todo		
+Modules/_sqlite/connection.c	2121	2148	pysqlite_connection_iterdump_impl	pysqlite_connection_iterdump_impl(pysqlite_Connection *self, PyObject *filter) /*[clinic end generated code: output=fd81069c4bdeb6b0 input=4ae6d9a898f108df]*/	todo		
+Modules/_sqlite/connection.c	2164	2247	pysqlite_connection_backup_impl	pysqlite_connection_backup_impl(pysqlite_Connection *self, pysqlite_Connection *target, int pages, PyObject *progress, const char *name, double sleep) /*[clinic end generated code: output=306a3e6a38c36334 input=c6519d0f59d0fd7f]*/	todo		
+Modules/_sqlite/connection.c	2261	2305	pysqlite_connection_create_collation_impl	pysqlite_connection_create_collation_impl(pysqlite_Connection *self, PyTypeObject *cls, const char *name, PyObject *callable) /*[clinic end generated code: output=32d339e97869c378 input=f67ecd2e31e61ad3]*/	todo		
+Modules/_sqlite/connection.c	2324	2356	serialize_impl	serialize_impl(pysqlite_Connection *self, const char *name) /*[clinic end generated code: output=97342b0e55239dd3 input=7e48654e8e082fa8]*/	todo		
+Modules/_sqlite/connection.c	2380	2423	deserialize_impl	deserialize_impl(pysqlite_Connection *self, Py_buffer *data, const char *name) /*[clinic end generated code: output=e394c798b98bad89 input=5d20e028d98c0686]*/	todo		
+Modules/_sqlite/connection.c	2436	2443	pysqlite_connection_enter_impl	pysqlite_connection_enter_impl(pysqlite_Connection *self) /*[clinic end generated code: output=457b09726d3e9dcd input=127d7a4f17e86d8f]*/	todo		
+Modules/_sqlite/connection.c	2460	2494	pysqlite_connection_exit_impl	pysqlite_connection_exit_impl(pysqlite_Connection *self, PyObject *exc_type, PyObject *exc_value, PyObject *exc_tb) /*[clinic end generated code: output=0705200e9321202a input=8fdb0392ee6f3466]*/	todo		
+Modules/_sqlite/connection.c	2514	2527	setlimit_impl	setlimit_impl(pysqlite_Connection *self, int category, int limit) /*[clinic end generated code: output=0d208213f8d68ccd input=5c2e430091206677]*/	todo		
+Modules/_sqlite/connection.c	2540	2544	getlimit_impl	getlimit_impl(pysqlite_Connection *self, int category) /*[clinic end generated code: output=7c3f5d11f24cecb1 input=61e0849fb4fb058f]*/	todo		
+Modules/_sqlite/connection.c	2547	2588	is_int_config	is_int_config(const int op)	todo		
+Modules/_sqlite/connection.c	2602	2623	setconfig_impl	setconfig_impl(pysqlite_Connection *self, int op, int enable) /*[clinic end generated code: output=c60b13e618aff873 input=a10f1539c2d7da6b]*/	todo		
+Modules/_sqlite/connection.c	2636	2654	getconfig_impl	getconfig_impl(pysqlite_Connection *self, int op) /*[clinic end generated code: output=25ac05044c7b78a3 input=b0526d7e432e3f2f]*/	todo		
+Modules/_sqlite/connection.c	2657	2670	get_autocommit	get_autocommit(PyObject *op, void *Py_UNUSED(closure))	todo		
+Modules/_sqlite/connection.c	2673	2697	set_autocommit	set_autocommit(PyObject *op, PyObject *val, void *Py_UNUSED(closure))	todo		
+Modules/_sqlite/connection.c	2700	2703	get_sig	get_sig(PyObject *Py_UNUSED(self), void *Py_UNUSED(closure))	todo		
+Modules/_sqlite/connection.c	2793	2802	pysqlite_connection_setup_types	pysqlite_connection_setup_types(PyObject *module)	todo		

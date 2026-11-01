@@ -1,0 +1,121 @@
+file	line	endline	name	signature	status	entry	note
+Python/flowgraph.c	100	104	is_block_push	is_block_push(cfg_instr *i)	todo		
+Python/flowgraph.c	107	110	is_jump	is_jump(cfg_instr *i)	todo		
+Python/flowgraph.c	143	157	basicblock_next_instr	basicblock_next_instr(basicblock *b)	todo		
+Python/flowgraph.c	160	167	basicblock_last_instr	basicblock_last_instr(const basicblock *b) {	todo		
+Python/flowgraph.c	174	186	cfg_builder_new_block	cfg_builder_new_block(cfg_builder *g)	todo		
+Python/flowgraph.c	189	207	basicblock_addop	basicblock_addop(basicblock *b, int opcode, int oparg, location loc)	todo		
+Python/flowgraph.c	210	223	basicblock_add_jump	basicblock_add_jump(basicblock *b, int opcode, basicblock *target, location loc)	todo		
+Python/flowgraph.c	226	236	basicblock_append_instructions	basicblock_append_instructions(basicblock *to, basicblock *from)	todo		
+Python/flowgraph.c	239	244	basicblock_nofallthrough	basicblock_nofallthrough(const basicblock *b) {	todo		
+Python/flowgraph.c	250	264	copy_basicblock	copy_basicblock(cfg_builder *g, basicblock *block)	todo		
+Python/flowgraph.c	267	274	basicblock_insert_instruction	basicblock_insert_instruction(basicblock *block, int pos, cfg_instr *instr) {	todo		
+Python/flowgraph.c	279	294	dump_instr	dump_instr(cfg_instr *i)	todo		
+Python/flowgraph.c	297	300	basicblock_returns	basicblock_returns(const basicblock *b) {	todo		
+Python/flowgraph.c	303	316	dump_basicblock	dump_basicblock(const basicblock *b)	todo		
+Python/flowgraph.c	319	324	_PyCfgBuilder_DumpGraph	_PyCfgBuilder_DumpGraph(const basicblock *entryblock)	todo		
+Python/flowgraph.c	332	338	cfg_builder_use_next_block	cfg_builder_use_next_block(cfg_builder *g, basicblock *block)	todo		
+Python/flowgraph.c	341	344	basicblock_exits_scope	basicblock_exits_scope(const basicblock *b) {	todo		
+Python/flowgraph.c	347	354	basicblock_has_eval_break	basicblock_has_eval_break(const basicblock *b) {	todo		
+Python/flowgraph.c	357	374	cfg_builder_current_block_is_terminated	cfg_builder_current_block_is_terminated(cfg_builder *g)	todo		
+Python/flowgraph.c	377	389	cfg_builder_maybe_start_new_block	cfg_builder_maybe_start_new_block(cfg_builder *g)	todo		
+Python/flowgraph.c	393	408	cfg_builder_check	cfg_builder_check(cfg_builder *g)	todo		
+Python/flowgraph.c	412	422	init_cfg_builder	init_cfg_builder(cfg_builder *g)	todo		
+Python/flowgraph.c	425	438	_PyCfgBuilder_New	_PyCfgBuilder_New(void)	todo		
+Python/flowgraph.c	441	457	_PyCfgBuilder_Free	_PyCfgBuilder_Free(cfg_builder *g)	todo		
+Python/flowgraph.c	460	471	_PyCfgBuilder_CheckSize	_PyCfgBuilder_CheckSize(cfg_builder *g)	todo		
+Python/flowgraph.c	474	478	_PyCfgBuilder_UseLabel	_PyCfgBuilder_UseLabel(cfg_builder *g, jump_target_label lbl)	todo		
+Python/flowgraph.c	481	485	_PyCfgBuilder_Addop	_PyCfgBuilder_Addop(cfg_builder *g, int opcode, int oparg, location loc)	todo		
+Python/flowgraph.c	489	495	next_nonempty_block	next_nonempty_block(basicblock *b)	todo		
+Python/flowgraph.c	503	508	no_redundant_nops	no_redundant_nops(cfg_builder *g) {	todo		
+Python/flowgraph.c	511	529	no_redundant_jumps	no_redundant_jumps(cfg_builder *g) {	todo		
+Python/flowgraph.c	535	585	normalize_jumps_in_block	normalize_jumps_in_block(cfg_builder *g, basicblock *b) {	todo		
+Python/flowgraph.c	589	600	normalize_jumps	normalize_jumps(cfg_builder *g)	todo		
+Python/flowgraph.c	603	618	check_cfg	check_cfg(cfg_builder *g) {	todo		
+Python/flowgraph.c	621	630	get_max_label	get_max_label(basicblock *entryblock)	todo		
+Python/flowgraph.c	634	664	translate_jump_labels_to_targets	translate_jump_labels_to_targets(basicblock *entryblock)	todo		
+Python/flowgraph.c	667	682	mark_except_handlers	mark_except_handlers(basicblock *entryblock) {	todo		
+Python/flowgraph.c	692	702	push_except_block	push_except_block(struct _PyCfgExceptStack *stack, cfg_instr *setup) {	todo		
+Python/flowgraph.c	705	708	pop_except_block	pop_except_block(struct _PyCfgExceptStack *stack) {	todo		
+Python/flowgraph.c	711	713	except_stack_top	except_stack_top(struct _PyCfgExceptStack *stack) {	todo		
+Python/flowgraph.c	716	725	make_except_stack	make_except_stack(void) {	todo		
+Python/flowgraph.c	728	736	copy_except_stack	copy_except_stack(struct _PyCfgExceptStack *stack) {	todo		
+Python/flowgraph.c	739	750	make_cfg_traversal_stack	make_cfg_traversal_stack(basicblock *entryblock) {	todo		
+Python/flowgraph.c	766	787	Py_LOCAL	Py_LOCAL(int) get_stack_effects(int opcode, int oparg, int jump, stack_effects *effects)	todo		
+Python/flowgraph.c	789	802	Py_LOCAL_INLINE	Py_LOCAL_INLINE(int) stackdepth_push(basicblock ***sp, basicblock *b, int depth)	todo		
+Python/flowgraph.c	808	882	calculate_stackdepth	calculate_stackdepth(cfg_builder *g)	todo		
+Python/flowgraph.c	885	990	label_exception_targets	label_exception_targets(basicblock *entryblock) {	todo		
+Python/flowgraph.c	995	1040	remove_unreachable	remove_unreachable(basicblock *entryblock) {	todo		
+Python/flowgraph.c	1043	1100	basicblock_remove_redundant_nops	basicblock_remove_redundant_nops(basicblock *bb) {	todo		
+Python/flowgraph.c	1103	1111	remove_redundant_nops	remove_redundant_nops(cfg_builder *g) {	todo		
+Python/flowgraph.c	1114	1155	remove_redundant_nops_and_pairs	remove_redundant_nops_and_pairs(basicblock *entryblock)	todo		
+Python/flowgraph.c	1158	1189	remove_redundant_jumps	remove_redundant_jumps(cfg_builder *g) {	todo		
+Python/flowgraph.c	1192	1199	basicblock_has_no_lineno	basicblock_has_no_lineno(basicblock *b) {	todo		
+Python/flowgraph.c	1210	1241	basicblock_inline_small_or_no_lineno_blocks	basicblock_inline_small_or_no_lineno_blocks(basicblock *bb) {	todo		
+Python/flowgraph.c	1244	1257	inline_small_or_no_lineno_blocks	inline_small_or_no_lineno_blocks(basicblock *entryblock) {	todo		
+Python/flowgraph.c	1263	1283	jump_thread	jump_thread(basicblock *bb, cfg_instr *inst, cfg_instr *target, int opcode)	todo		
+Python/flowgraph.c	1286	1289	loads_const	loads_const(int opcode)	todo		
+Python/flowgraph.c	1293	1318	get_const_value	get_const_value(int opcode, int oparg, PyObject *co_consts)	todo		
+Python/flowgraph.c	1322	1356	add_const	add_const(PyObject *newconst, PyObject *consts, PyObject *const_cache, _Py_hashtable_t *consts_index)	todo		
+Python/flowgraph.c	1366	1384	get_const_loading_instrs	get_const_loading_instrs(basicblock *bb, int start, cfg_instr **instrs, int size)	todo		
+Python/flowgraph.c	1391	1399	nop_out	nop_out(cfg_instr **instrs, int size)	todo		
+Python/flowgraph.c	1407	1423	maybe_instr_make_load_smallint	maybe_instr_make_load_smallint(cfg_instr *instr, PyObject *newconst, PyObject *consts, PyObject *const_cache)	todo		
+Python/flowgraph.c	1428	1444	instr_make_load_const	instr_make_load_const(cfg_instr *instr, PyObject *newconst, PyObject *consts, PyObject *const_cache, _Py_hashtable_t *consts_index)	todo		
+Python/flowgraph.c	1453	1492	fold_tuple_of_constants	fold_tuple_of_constants(basicblock *bb, int i, PyObject *consts, PyObject *const_cache, _Py_hashtable_t *consts_index)	todo		
+Python/flowgraph.c	1508	1582	fold_constant_intrinsic_list_to_tuple	fold_constant_intrinsic_list_to_tuple(basicblock *bb, int i, PyObject *consts, PyObject *const_cache, _Py_hashtable_t *consts_index)	todo		
+Python/flowgraph.c	1597	1667	optimize_lists_and_sets	optimize_lists_and_sets(basicblock *bb, int i, int nextop, PyObject *consts, PyObject *const_cache, _Py_hashtable_t *consts_index)	todo		
+Python/flowgraph.c	1674	1687	const_folding_check_complexity	const_folding_check_complexity(PyObject *obj, Py_ssize_t limit)	todo		
+Python/flowgraph.c	1695	1737	const_folding_safe_multiply	const_folding_safe_multiply(PyObject *v, PyObject *w)	todo		
+Python/flowgraph.c	1740	1757	const_folding_safe_power	const_folding_safe_power(PyObject *v, PyObject *w)	todo		
+Python/flowgraph.c	1760	1777	const_folding_safe_lshift	const_folding_safe_lshift(PyObject *v, PyObject *w)	todo		
+Python/flowgraph.c	1780	1787	const_folding_safe_mod	const_folding_safe_mod(PyObject *v, PyObject *w)	todo		
+Python/flowgraph.c	1790	1843	eval_const_binop	eval_const_binop(PyObject *left, int op, PyObject *right)	todo		
+Python/flowgraph.c	1846	1890	fold_const_binop	fold_const_binop(basicblock *bb, int i, PyObject *consts, PyObject *const_cache, _Py_hashtable_t *consts_index)	todo		
+Python/flowgraph.c	1893	1932	eval_const_unaryop	eval_const_unaryop(PyObject *operand, int opcode, int oparg)	todo		
+Python/flowgraph.c	1935	1974	fold_const_unaryop	fold_const_unaryop(basicblock *bb, int i, PyObject *consts, PyObject *const_cache, _Py_hashtable_t *consts_index)	todo		
+Python/flowgraph.c	1981	2074	swaptimize	swaptimize(basicblock *block, int *ix)	todo		
+Python/flowgraph.c	2092	2110	next_swappable_instruction	next_swappable_instruction(basicblock *block, int i, int lineno)	todo		
+Python/flowgraph.c	2116	2165	apply_static_swaps	apply_static_swaps(basicblock *block, int i)	todo		
+Python/flowgraph.c	2168	2298	basicblock_optimize_load_const	basicblock_optimize_load_const(PyObject *const_cache, basicblock *bb, PyObject *consts, _Py_hashtable_t *consts_index)	todo		
+Python/flowgraph.c	2310	2523	optimize_basic_block	optimize_basic_block(PyObject *const_cache, basicblock *bb, PyObject *consts, _Py_hashtable_t *consts_index)	todo		
+Python/flowgraph.c	2528	2541	remove_redundant_nops_and_jumps	remove_redundant_nops_and_jumps(cfg_builder *g)	todo		
+Python/flowgraph.c	2551	2568	optimize_cfg	optimize_cfg(cfg_builder *g, PyObject *consts, PyObject *const_cache, _Py_hashtable_t *consts_index, int firstlineno)	todo		
+Python/flowgraph.c	2571	2584	make_super_instruction	make_super_instruction(cfg_instr *inst1, cfg_instr *inst2, int super_op)	todo		
+Python/flowgraph.c	2587	2616	insert_superinstructions	insert_superinstructions(cfg_builder *g)	todo		
+Python/flowgraph.c	2636	2651	ref_stack_push	ref_stack_push(ref_stack *stack, ref r)	todo		
+Python/flowgraph.c	2654	2660	ref_stack_pop	ref_stack_pop(ref_stack *stack)	todo		
+Python/flowgraph.c	2663	2670	ref_stack_swap_top	ref_stack_swap_top(ref_stack *stack, Py_ssize_t off)	todo		
+Python/flowgraph.c	2673	2677	ref_stack_at	ref_stack_at(ref_stack *stack, Py_ssize_t idx)	todo		
+Python/flowgraph.c	2680	2683	ref_stack_clear	ref_stack_clear(ref_stack *stack)	todo		
+Python/flowgraph.c	2686	2694	ref_stack_fini	ref_stack_fini(ref_stack *stack)	todo		
+Python/flowgraph.c	2706	2715	kill_local	kill_local(uint8_t *instr_flags, ref_stack *refs, int local)	todo		
+Python/flowgraph.c	2718	2724	store_local	store_local(uint8_t *instr_flags, ref_stack *refs, int local, ref r)	todo		
+Python/flowgraph.c	2727	2735	load_fast_push_block	load_fast_push_block(basicblock ***sp, basicblock *target, Py_ssize_t start_depth)	todo		
+Python/flowgraph.c	2775	3057	optimize_load_fast	optimize_load_fast(cfg_builder *g)	todo		
+Python/flowgraph.c	3061	3076	maybe_push	maybe_push(basicblock *b, uint64_t unsafe_mask, basicblock ***sp)	todo		
+Python/flowgraph.c	3079	3123	scan_block_for_locals	scan_block_for_locals(basicblock *b, basicblock ***sp)	todo		
+Python/flowgraph.c	3126	3170	fast_scan_many_locals	fast_scan_many_locals(basicblock *entryblock, int nlocals)	todo		
+Python/flowgraph.c	3173	3269	remove_unused_consts	remove_unused_consts(basicblock *entryblock, PyObject *consts)	todo		
+Python/flowgraph.c	3274	3320	add_checks_for_loads_of_uninitialized_variables	add_checks_for_loads_of_uninitialized_variables(basicblock *entryblock, int nlocals, int nparams)	todo		
+Python/flowgraph.c	3324	3352	mark_warm	mark_warm(basicblock *entryblock) {	todo		
+Python/flowgraph.c	3355	3401	mark_cold	mark_cold(basicblock *entryblock) {	todo		
+Python/flowgraph.c	3405	3483	push_cold_blocks_to_end	push_cold_blocks_to_end(cfg_builder *g) {	todo		
+Python/flowgraph.c	3486	3518	convert_pseudo_conditional_jumps	convert_pseudo_conditional_jumps(cfg_builder *g)	todo		
+Python/flowgraph.c	3521	3541	convert_pseudo_ops	convert_pseudo_ops(cfg_builder *g)	todo		
+Python/flowgraph.c	3544	3551	is_exit_or_eval_check_without_lineno	is_exit_or_eval_check_without_lineno(basicblock *b) {	todo		
+Python/flowgraph.c	3564	3606	duplicate_exits_without_lineno	duplicate_exits_without_lineno(cfg_builder *g)	todo		
+Python/flowgraph.c	3617	3649	propagate_line_numbers	propagate_line_numbers(basicblock *entryblock) {	todo		
+Python/flowgraph.c	3652	3657	resolve_line_numbers	resolve_line_numbers(cfg_builder *g, int firstlineno)	todo		
+Python/flowgraph.c	3660	3710	_PyCfg_OptimizeCodeUnit	_PyCfg_OptimizeCodeUnit(cfg_builder *g, PyObject *consts, PyObject *const_cache, int nlocals, int nparams, int firstlineno)	todo		
+Python/flowgraph.c	3713	3757	build_cellfixedoffsets	build_cellfixedoffsets(_PyCompile_CodeUnitMetadata *umd)	todo		
+Python/flowgraph.c	3763	3843	insert_prefix_instructions	insert_prefix_instructions(_PyCompile_CodeUnitMetadata *umd, basicblock *entryblock, int *fixed, int nfreevars, int code_flags)	todo		
+Python/flowgraph.c	3846	3888	fix_cell_offsets	fix_cell_offsets(_PyCompile_CodeUnitMetadata *umd, basicblock *entryblock, int *fixedmap)	todo		
+Python/flowgraph.c	3891	3922	prepare_localsplus	prepare_localsplus(_PyCompile_CodeUnitMetadata *umd, cfg_builder *g, int code_flags)	todo		
+Python/flowgraph.c	3925	3987	_PyCfg_FromInstructionSequence	_PyCfg_FromInstructionSequence(_PyInstructionSequence *seq)	todo		
+Python/flowgraph.c	3990	4024	_PyCfg_ToInstructionSequence	_PyCfg_ToInstructionSequence(cfg_builder *g, _PyInstructionSequence *seq)	todo		
+Python/flowgraph.c	4028	4072	_PyCfg_OptimizedCfgToInstructionSequence	_PyCfg_OptimizedCfgToInstructionSequence(cfg_builder *g, _PyCompile_CodeUnitMetadata *umd, int code_flags, int *stackdepth, int *nlocalsplus, _PyInstructionSequence *seq)	todo		
+Python/flowgraph.c	4078	4083	_PyCfg_JumpLabelsToTargets	_PyCfg_JumpLabelsToTargets(cfg_builder *g)	todo		
+Python/flowgraph.c	4088	4095	PyCompile_OpcodeStackEffectWithJump	PyCompile_OpcodeStackEffectWithJump(int opcode, int oparg, int jump)	todo		
+Python/flowgraph.c	4098	4105	PyCompile_OpcodeStackEffect	PyCompile_OpcodeStackEffect(int opcode, int oparg)	todo		
+Python/flowgraph.c	4114	4125	cfg_to_instruction_sequence	cfg_to_instruction_sequence(cfg_builder *g)	todo		
+Python/flowgraph.c	4128	4167	_PyCompile_OptimizeCfg	_PyCompile_OptimizeCfg(PyObject *seq, PyObject *consts, int nlocals)	todo		

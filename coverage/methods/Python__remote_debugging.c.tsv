@@ -1,0 +1,10 @@
+file	line	endline	name	signature	status	entry	note
+Python/remote_debugging.c	12	14	init_proc_handle	init_proc_handle(proc_handle_t *handle, pid_t pid) {	todo		
+Python/remote_debugging.c	17	19	cleanup_proc_handle	cleanup_proc_handle(proc_handle_t *handle) {	todo		
+Python/remote_debugging.c	22	25	read_memory	read_memory(proc_handle_t *handle, uintptr_t remote_address, size_t len, void* dst)	todo		
+Python/remote_debugging.c	31	69	write_memory_fallback	write_memory_fallback(proc_handle_t *handle, uintptr_t remote_address, size_t len, const void* src)	todo		
+Python/remote_debugging.c	73	165	write_memory	write_memory(proc_handle_t *handle, uintptr_t remote_address, size_t len, const void* src)	todo		
+Python/remote_debugging.c	168	171	is_prerelease_version	is_prerelease_version(uint64_t version)	todo		
+Python/remote_debugging.c	174	231	ensure_debug_offset_compatibility	ensure_debug_offset_compatibility(const _Py_DebugOffsets* debug_offsets)	todo		
+Python/remote_debugging.c	249	409	send_exec_to_proc_handle	send_exec_to_proc_handle(proc_handle_t *handle, int tid, const char *debugger_script_path)	todo		
+Python/remote_debugging.c	414	440	_PySysRemoteDebug_SendExec	_PySysRemoteDebug_SendExec(int pid, int tid, const char *debugger_script_path)	todo		

@@ -1,0 +1,30 @@
+file	line	endline	name	signature	status	entry	note
+Modules/main.c	36	77	pymain_init	pymain_init(const _PyArgv *args)	todo		
+Modules/main.c	83	86	pymain_check_signals	pymain_check_signals(void)	todo		
+Modules/main.c	90	95	config_run_code	static inline int config_run_code(const PyConfig *config)	todo		
+Modules/main.c	100	103	stdin_is_interactive	stdin_is_interactive(const PyConfig *config)	todo		
+Modules/main.c	108	118	pymain_err_print	pymain_err_print(int *exitcode_p)	todo		
+Modules/main.c	122	127	pymain_exit_err_print	pymain_exit_err_print(void)	todo		
+Modules/main.c	133	162	pymain_get_importer	pymain_get_importer(const wchar_t *filename, PyObject **importer_p, int *exitcode)	todo		
+Modules/main.c	166	188	pymain_sys_path_add_path0	pymain_sys_path_add_path0(PyInterpreterState *interp, PyObject *path0)	todo		
+Modules/main.c	192	206	pymain_header	pymain_header(const PyConfig *config)	todo		
+Modules/main.c	210	241	pymain_import_readline	pymain_import_readline(const PyConfig *config)	todo		
+Modules/main.c	245	287	pymain_run_command	pymain_run_command(wchar_t *command)	todo		
+Modules/main.c	291	350	pymain_run_pyrepl	pymain_run_pyrepl(int pythonstartup)	todo		
+Modules/main.c	354	389	pymain_run_module	pymain_run_module(const wchar_t *modname, int set_argv0)	todo		
+Modules/main.c	393	442	pymain_run_file_obj	pymain_run_file_obj(PyObject *program_name, PyObject *filename, int skip_source_first_line)	todo		
+Modules/main.c	445	462	pymain_run_file	pymain_run_file(const PyConfig *config)	todo		
+Modules/main.c	466	522	pymain_run_startup	pymain_run_startup(PyConfig *config, int *exitcode)	todo		
+Modules/main.c	528	558	pymain_run_interactive_hook	pymain_run_interactive_hook(int *exitcode)	todo		
+Modules/main.c	562	573	pymain_set_inspect	pymain_set_inspect(PyConfig *config, int inspect)	todo		
+Modules/main.c	577	614	_pymain_run_repl	_pymain_run_repl(PyConfig *config, int startup)	todo		
+Modules/main.c	617	634	pymain_run_stdin	pymain_run_stdin(PyConfig *config)	todo		
+Modules/main.c	638	656	pymain_repl	pymain_repl(PyConfig *config, int *exitcode)	todo		
+Modules/main.c	660	773	pymain_run_python	pymain_run_python(int *exitcode)	todo		
+Modules/main.c	779	790	pymain_free	pymain_free(void)	todo		
+Modules/main.c	794	816	exit_sigint	exit_sigint(void)	todo		
+Modules/main.c	820	829	pymain_exit_error	pymain_exit_error(PyStatus status)	todo		
+Modules/main.c	833	854	Py_RunMain	Py_RunMain(void)	todo		
+Modules/main.c	858	870	pymain_main	pymain_main(_PyArgv *args)	todo		
+Modules/main.c	874	882	Py_Main	Py_Main(int argc, wchar_t **argv)	todo		
+Modules/main.c	886	894	Py_BytesMain	Py_BytesMain(int argc, char **argv)	todo		

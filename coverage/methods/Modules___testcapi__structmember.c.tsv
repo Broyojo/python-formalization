@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/structmember.c	55	105	test_structmembers_new	test_structmembers_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/structmember.c	144	147	test_structmembers_free	test_structmembers_free(PyObject *ob)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/structmember.c	193	220	_PyTestCapi_Init_Structmember	_PyTestCapi_Init_Structmember(PyObject *m)	excluded		test-support: only for CPython's own tests

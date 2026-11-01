@@ -1,0 +1,5 @@
+file	line	endline	name	signature	status	entry	note
+Parser/myreadline.c	41	122	my_fgets	my_fgets(PyThreadState* tstate, char *buf, int len, FILE *fp)	todo		
+Parser/myreadline.c	130	250	_PyOS_WindowsConsoleReadline	_PyOS_WindowsConsoleReadline(PyThreadState *tstate, HANDLE hStdIn)	todo		
+Parser/myreadline.c	258	358	PyOS_StdioReadline	PyOS_StdioReadline(FILE *sys_stdin, FILE *sys_stdout, const char *prompt)	todo		
+Parser/myreadline.c	372	437	PyOS_Readline	PyOS_Readline(FILE *sys_stdin, FILE *sys_stdout, const char *prompt)	todo		

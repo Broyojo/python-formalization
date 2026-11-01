@@ -1,0 +1,27 @@
+file	line	endline	name	signature	status	entry	note
+Lib/zipimport.py	67	100	zipimporter.__init__	__init__(self, path)	todo		
+Lib/zipimport.py	103	128	zipimporter.find_spec	find_spec(self, fullname, target=None)	todo		
+Lib/zipimport.py	130	137	zipimporter.get_code	get_code(self, fullname)	todo		
+Lib/zipimport.py	140	159	zipimporter.get_data	get_data(self, pathname)	todo		
+Lib/zipimport.py	163	172	zipimporter.get_filename	get_filename(self, fullname)	todo		
+Lib/zipimport.py	175	197	zipimporter.get_source	get_source(self, fullname)	todo		
+Lib/zipimport.py	201	210	zipimporter.is_package	is_package(self, fullname)	todo		
+Lib/zipimport.py	214	256	zipimporter.load_module	load_module(self, fullname)	todo		
+Lib/zipimport.py	259	263	zipimporter.get_resource_reader	get_resource_reader(self, fullname)	todo		
+Lib/zipimport.py	266	276	zipimporter._get_files	_get_files(self)	todo		
+Lib/zipimport.py	279	281	zipimporter.invalidate_caches	invalidate_caches(self)	todo		
+Lib/zipimport.py	284	285	zipimporter.__repr__	__repr__(self)	todo		
+Lib/zipimport.py	302	303	_get_module_path	_get_module_path(self, fullname)	todo		
+Lib/zipimport.py	306	312	_is_dir	_is_dir(self, path)	todo		
+Lib/zipimport.py	315	321	_get_module_info	_get_module_info(self, fullname)	todo		
+Lib/zipimport.py	346	568	_read_directory	_read_directory(archive)	todo		
+Lib/zipimport.py	610	628	_get_decompress_func	_get_decompress_func()	todo		
+Lib/zipimport.py	631	671	_get_data	_get_data(archive, toc_entry)	todo		
+Lib/zipimport.py	677	679	_eq_mtime	_eq_mtime(t1, t2)	todo		
+Lib/zipimport.py	685	723	_unmarshal_code	_unmarshal_code(self, pathname, fullpath, fullname, data)	todo		
+Lib/zipimport.py	730	733	_normalize_line_endings	_normalize_line_endings(source)	todo		
+Lib/zipimport.py	737	739	_compile_source	_compile_source(pathname, source)	todo		
+Lib/zipimport.py	743	751	_parse_dostime	_parse_dostime(d, t)	todo		
+Lib/zipimport.py	756	769	_get_mtime_and_size_of_source	_get_mtime_and_size_of_source(self, path)	todo		
+Lib/zipimport.py	775	785	_get_pyc_source	_get_pyc_source(self, path)	todo		
+Lib/zipimport.py	790	822	_get_module_code	_get_module_code(self, fullname)	todo		

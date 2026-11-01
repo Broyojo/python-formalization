@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Python/getplatform.c	9	12	Py_GetPlatform	Py_GetPlatform(void)	todo		

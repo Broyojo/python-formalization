@@ -1,0 +1,11 @@
+file	line	endline	name	signature	status	entry	note
+Lib/asyncio/runners.py	50	57	Runner.__init__	__init__(self, *, debug=None, loop_factory=None)	todo		
+Lib/asyncio/runners.py	59	61	Runner.__enter__	__enter__(self)	todo		
+Lib/asyncio/runners.py	63	64	Runner.__exit__	__exit__(self, exc_type, exc_val, exc_tb)	todo		
+Lib/asyncio/runners.py	66	81	Runner.close	close(self)	todo		
+Lib/asyncio/runners.py	83	86	Runner.get_loop	get_loop(self)	todo		
+Lib/asyncio/runners.py	88	139	Runner.run	run(self, coro, *, context=None)	todo		
+Lib/asyncio/runners.py	141	158	Runner._lazy_init	_lazy_init(self)	todo		
+Lib/asyncio/runners.py	160	167	Runner._on_sigint	_on_sigint(self, signum, frame, main_task)	todo		
+Lib/asyncio/runners.py	170	205	run	run(main, *, debug=None, loop_factory=None)	todo		
+Lib/asyncio/runners.py	208	226	_cancel_all_tasks	_cancel_all_tasks(loop)	todo		

@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Python/getcopyright.c	20	23	Py_GetCopyright	Py_GetCopyright(void)	todo		

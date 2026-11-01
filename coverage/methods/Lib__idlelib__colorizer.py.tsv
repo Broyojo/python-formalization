@@ -1,0 +1,21 @@
+file	line	endline	name	signature	status	entry	note
+Lib/idlelib/colorizer.py	12	14	any	any(name, alternates)	excluded		platform: GUI toolkit
+Lib/idlelib/colorizer.py	17	63	make_pat	make_pat()	excluded		platform: GUI toolkit
+Lib/idlelib/colorizer.py	76	78	matched_named_groups	matched_named_groups(re_match)	excluded		platform: GUI toolkit
+Lib/idlelib/colorizer.py	81	99	color_config	color_config(text)	excluded		platform: GUI toolkit
+Lib/idlelib/colorizer.py	118	123	ColorDelegator.__init__	__init__(self)	excluded		platform: GUI toolkit
+Lib/idlelib/colorizer.py	125	130	ColorDelegator.init_state	init_state(self)	excluded		platform: GUI toolkit
+Lib/idlelib/colorizer.py	132	153	ColorDelegator.setdelegate	setdelegate(self, delegate)	excluded		platform: GUI toolkit
+Lib/idlelib/colorizer.py	155	159	ColorDelegator.config_colors	config_colors(self)	excluded		platform: GUI toolkit
+Lib/idlelib/colorizer.py	161	179	ColorDelegator.LoadTagDefs	LoadTagDefs(self)	excluded		platform: GUI toolkit
+Lib/idlelib/colorizer.py	181	185	ColorDelegator.insert	insert(self, index, chars, tags=None)	excluded		platform: GUI toolkit
+Lib/idlelib/colorizer.py	187	191	ColorDelegator.delete	delete(self, index1, index2=None)	excluded		platform: GUI toolkit
+Lib/idlelib/colorizer.py	193	205	ColorDelegator.notify_range	notify_range(self, index1, index2=None)	excluded		platform: GUI toolkit
+Lib/idlelib/colorizer.py	207	214	ColorDelegator.close	close(self)	excluded		platform: GUI toolkit
+Lib/idlelib/colorizer.py	216	238	ColorDelegator.toggle_colorize_event	toggle_colorize_event(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/colorizer.py	240	272	ColorDelegator.recolorize	recolorize(self)	excluded		platform: GUI toolkit
+Lib/idlelib/colorizer.py	274	316	ColorDelegator.recolorize_main	recolorize_main(self)	excluded		platform: GUI toolkit
+Lib/idlelib/colorizer.py	318	333	ColorDelegator._add_tag	_add_tag(self, start, end, head, matched_group_name)	excluded		platform: GUI toolkit
+Lib/idlelib/colorizer.py	335	350	ColorDelegator._add_tags_in_section	_add_tags_in_section(self, chars, head)	excluded		platform: GUI toolkit
+Lib/idlelib/colorizer.py	352	355	ColorDelegator.removecolors	removecolors(self)	excluded		platform: GUI toolkit
+Lib/idlelib/colorizer.py	358	376	_color_delegator	_color_delegator(parent)	excluded		platform: GUI toolkit

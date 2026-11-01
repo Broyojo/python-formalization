@@ -1,0 +1,26 @@
+file	line	endline	name	signature	status	entry	note
+Lib/email/generator.py	38	68	Generator.__init__	__init__(self, outfp, mangle_from_=None, maxheaderlen=None, *, policy=None)	todo		
+Lib/email/generator.py	70	72	Generator.write	write(self, s)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/email/generator.py	74	121	Generator.flatten	flatten(self, msg, unixfrom=False, linesep=None)	todo		
+Lib/email/generator.py	123	128	Generator.clone	clone(self, fp)	todo		
+Lib/email/generator.py	143	145	Generator._new_buffer	_new_buffer(self)	todo		
+Lib/email/generator.py	147	149	Generator._encode	_encode(self, s)	todo		
+Lib/email/generator.py	151	160	Generator._write_lines	_write_lines(self, lines)	todo		
+Lib/email/generator.py	167	204	Generator._write	_write(self, msg)	todo		
+Lib/email/generator.py	206	220	Generator._dispatch	_dispatch(self, msg)	todo		
+Lib/email/generator.py	226	239	Generator._write_headers	_write_headers(self, msg)	todo		
+Lib/email/generator.py	245	264	Generator._handle_text	_handle_text(self, msg)	todo		
+Lib/email/generator.py	269	325	Generator._handle_multipart	_handle_multipart(self, msg)	todo		
+Lib/email/generator.py	327	336	Generator._handle_multipart_signed	_handle_multipart_signed(self, msg)	todo		
+Lib/email/generator.py	338	357	Generator._handle_message_delivery_status	_handle_message_delivery_status(self, msg)	todo		
+Lib/email/generator.py	359	377	Generator._handle_message	_handle_message(self, msg)	todo		
+Lib/email/generator.py	385	400	Generator._make_boundary	_make_boundary(cls, text=None)	todo		
+Lib/email/generator.py	403	404	Generator._compile_re	_compile_re(cls, s, flags)	todo		
+Lib/email/generator.py	420	421	BytesGenerator.write	write(self, s)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/email/generator.py	423	424	BytesGenerator._new_buffer	_new_buffer(self)	todo		
+Lib/email/generator.py	426	427	BytesGenerator._encode	_encode(self, s)	todo		
+Lib/email/generator.py	429	444	BytesGenerator._write_headers	_write_headers(self, msg)	todo		
+Lib/email/generator.py	446	456	BytesGenerator._handle_text	_handle_text(self, msg)	todo		
+Lib/email/generator.py	462	463	BytesGenerator._compile_re	_compile_re(cls, s, flags)	todo		
+Lib/email/generator.py	474	502	DecodedGenerator.__init__	__init__(self, outfp, mangle_from_=None, maxheaderlen=None, fmt=None, *, policy=None)	todo		
+Lib/email/generator.py	504	522	DecodedGenerator._dispatch	_dispatch(self, msg)	todo		

@@ -1,0 +1,7 @@
+file	line	endline	name	signature	status	entry	note
+Parser/tokenizer/string_tokenizer.c	8	27	tok_underflow_string	tok_underflow_string(struct tok_state *tok) {	todo		
+Parser/tokenizer/string_tokenizer.c	31	33	buf_getc	buf_getc(struct tok_state *tok) {	todo		
+Parser/tokenizer/string_tokenizer.c	37	40	buf_ungetc	buf_ungetc(int c, struct tok_state *tok) {	todo		
+Parser/tokenizer/string_tokenizer.c	45	48	buf_setreadl	buf_setreadl(struct tok_state *tok, const char* enc) {	todo		
+Parser/tokenizer/string_tokenizer.c	54	127	decode_str	decode_str(const char *input, int single, struct tok_state *tok, int preserve_crlf)	todo		
+Parser/tokenizer/string_tokenizer.c	131	148	_PyTokenizer_FromString	_PyTokenizer_FromString(const char *str, int exec_input, int preserve_crlf)	todo		

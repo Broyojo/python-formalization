@@ -1,0 +1,10 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testlimitedcapi/bytearray.c	7	11	bytearray_check	bytearray_check(PyObject *Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/bytearray.c	15	19	bytearray_checkexact	bytearray_checkexact(PyObject *Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/bytearray.c	23	37	bytearray_fromstringandsize	bytearray_fromstringandsize(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/bytearray.c	41	45	bytearray_fromobject	bytearray_fromobject(PyObject *Py_UNUSED(module), PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/bytearray.c	49	53	bytearray_size	bytearray_size(PyObject *Py_UNUSED(module), PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/bytearray.c	57	72	bytearray_asstring	bytearray_asstring(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/bytearray.c	76	86	bytearray_concat	bytearray_concat(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/bytearray.c	90	100	bytearray_resize	bytearray_resize(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/bytearray.c	116	123	_PyTestLimitedCAPI_Init_ByteArray	_PyTestLimitedCAPI_Init_ByteArray(PyObject *m)	excluded		test-support: only for CPython's own tests

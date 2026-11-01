@@ -1,0 +1,6 @@
+file	line	endline	name	signature	status	entry	note
+Lib/encodings/palmos.py	12	13	Codec.encode	encode(self, input, errors='strict')	todo		
+Lib/encodings/palmos.py	15	16	Codec.decode	decode(self, input, errors='strict')	todo		
+Lib/encodings/palmos.py	19	20	IncrementalEncoder.encode	encode(self, input, final=False)	todo		
+Lib/encodings/palmos.py	23	24	IncrementalDecoder.decode	decode(self, input, final=False)	todo		
+Lib/encodings/palmos.py	34	43	getregentry	getregentry()	todo		

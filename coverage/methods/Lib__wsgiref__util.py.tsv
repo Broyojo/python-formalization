@@ -1,0 +1,10 @@
+file	line	endline	name	signature	status	entry	note
+Lib/wsgiref/util.py	14	18	FileWrapper.__init__	__init__(self, filelike, blksize=8192)	todo		
+Lib/wsgiref/util.py	20	21	FileWrapper.__iter__	__iter__(self)	todo		
+Lib/wsgiref/util.py	23	27	FileWrapper.__next__	__next__(self)	todo		
+Lib/wsgiref/util.py	29	35	guess_scheme	guess_scheme(environ)	todo		
+Lib/wsgiref/util.py	37	55	application_uri	application_uri(environ)	todo		
+Lib/wsgiref/util.py	57	68	request_uri	request_uri(environ, include_query=True)	todo		
+Lib/wsgiref/util.py	70	109	shift_path_info	shift_path_info(environ)	todo		
+Lib/wsgiref/util.py	111	147	setup_testing_defaults	setup_testing_defaults(environ)	todo		
+Lib/wsgiref/util.py	157	159	is_hop_by_hop	is_hop_by_hop(header_name)	todo		

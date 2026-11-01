@@ -1,0 +1,79 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_io/textio.c	49	53	_unsupported	_unsupported(_PyIO_State *state, const char *message)	todo		
+Modules/_io/textio.c	67	72	_io__TextIOBase_detach_impl	_io__TextIOBase_detach_impl(PyObject *self, PyTypeObject *cls) /*[clinic end generated code: output=50915f40c609eaa4 input=8099c088abcb87d8]*/	todo		
+Modules/_io/textio.c	87	93	_io__TextIOBase_read_impl	_io__TextIOBase_read_impl(PyObject *self, PyTypeObject *cls, int Py_UNUSED(size)) /*[clinic end generated code: output=51a5178a309ce647 input=c9fd4cc1cf1b4614]*/	todo		
+Modules/_io/textio.c	108	114	_io__TextIOBase_readline_impl	_io__TextIOBase_readline_impl(PyObject *self, PyTypeObject *cls, int Py_UNUSED(size)) /*[clinic end generated code: output=3f47d7966d6d074e input=42eafec94107fa27]*/	todo		
+Modules/_io/textio.c	129	135	_io__TextIOBase_write_impl	_io__TextIOBase_write_impl(PyObject *self, PyTypeObject *cls, const char *Py_UNUSED(s)) /*[clinic end generated code: output=18b28231460275de input=e9cabaa5f6732b07]*/	todo		
+Modules/_io/textio.c	147	151	_io__TextIOBase_encoding_get_impl	_io__TextIOBase_encoding_get_impl(PyObject *self) /*[clinic end generated code: output=e0f5d8f548b92432 input=4736d7621dd38f43]*/	todo		
+Modules/_io/textio.c	165	169	_io__TextIOBase_newlines_get_impl	_io__TextIOBase_newlines_get_impl(PyObject *self) /*[clinic end generated code: output=46ec147fb9f00c2a input=a5b196d076af1164]*/	todo		
+Modules/_io/textio.c	181	185	_io__TextIOBase_errors_get_impl	_io__TextIOBase_errors_get_impl(PyObject *self) /*[clinic end generated code: output=c6623d6addcd087d input=974aa52d1db93a82]*/	todo		
+Modules/_io/textio.c	248	268	_io_IncrementalNewlineDecoder___init___impl	_io_IncrementalNewlineDecoder___init___impl(nldecoder_object *self, PyObject *decoder, int translate, PyObject *errors) /*[clinic end generated code: output=fbd04d443e764ec2 input=ed547aa257616b0e]*/	todo		
+Modules/_io/textio.c	271	278	incrementalnewlinedecoder_traverse	incrementalnewlinedecoder_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_io/textio.c	281	287	incrementalnewlinedecoder_clear	incrementalnewlinedecoder_clear(PyObject *op)	todo		
+Modules/_io/textio.c	290	298	incrementalnewlinedecoder_dealloc	incrementalnewlinedecoder_dealloc(PyObject *op)	todo		
+Modules/_io/textio.c	301	313	check_decoded	check_decoded(PyObject *decoded)	todo		
+Modules/_io/textio.c	328	519	_PyIncrementalNewlineDecoder_decode	_PyIncrementalNewlineDecoder_decode(PyObject *myself, PyObject *input, int final)	todo		
+Modules/_io/textio.c	529	534	_io_IncrementalNewlineDecoder_decode_impl	_io_IncrementalNewlineDecoder_decode_impl(nldecoder_object *self, PyObject *input, int final) /*[clinic end generated code: output=0d486755bb37a66e input=9475d16a73168504]*/	todo		
+Modules/_io/textio.c	542	578	_io_IncrementalNewlineDecoder_getstate_impl	_io_IncrementalNewlineDecoder_getstate_impl(nldecoder_object *self) /*[clinic end generated code: output=f0d2c9c136f4e0d0 input=dc3e1f27aa850f12]*/	todo		
+Modules/_io/textio.c	588	617	_io_IncrementalNewlineDecoder_setstate_impl	_io_IncrementalNewlineDecoder_setstate_impl(nldecoder_object *self, PyObject *state) /*[clinic end generated code: output=09135cb6e78a1dc8 input=275fd3982d2b08cb]*/	todo		
+Modules/_io/textio.c	625	636	_io_IncrementalNewlineDecoder_reset_impl	_io_IncrementalNewlineDecoder_reset_impl(nldecoder_object *self) /*[clinic end generated code: output=32fa40c7462aa8ff input=31bd8ae4e36cec83]*/	todo		
+Modules/_io/textio.c	639	663	incrementalnewlinedecoder_newlines_get	incrementalnewlinedecoder_newlines_get(PyObject *op, void *Py_UNUSED(context))	todo		
+Modules/_io/textio.c	739	743	ascii_encode	ascii_encode(PyObject *op, PyObject *text)	todo		
+Modules/_io/textio.c	746	750	utf16be_encode	utf16be_encode(PyObject *op, PyObject *text)	todo		
+Modules/_io/textio.c	753	757	utf16le_encode	utf16le_encode(PyObject *op, PyObject *text)	todo		
+Modules/_io/textio.c	760	772	utf16_encode	utf16_encode(PyObject *op, PyObject *text)	todo		
+Modules/_io/textio.c	775	779	utf32be_encode	utf32be_encode(PyObject *op, PyObject *text)	todo		
+Modules/_io/textio.c	782	786	utf32le_encode	utf32le_encode(PyObject *op, PyObject *text)	todo		
+Modules/_io/textio.c	789	801	utf32_encode	utf32_encode(PyObject *op, PyObject *text)	todo		
+Modules/_io/textio.c	804	808	utf8_encode	utf8_encode(PyObject *op, PyObject *text)	todo		
+Modules/_io/textio.c	811	815	latin1_encode	latin1_encode(PyObject *op, PyObject *text)	todo		
+Modules/_io/textio.c	819	822	is_asciicompat_encoding	is_asciicompat_encoding(encodefunc_t f)	todo		
+Modules/_io/textio.c	845	856	validate_newline	validate_newline(const char *newline)	todo		
+Modules/_io/textio.c	859	892	set_newline	set_newline(textio *self, const char *newline)	todo		
+Modules/_io/textio.c	895	929	_textiowrapper_set_decoder	_textiowrapper_set_decoder(textio *self, PyObject *codec_info, const char *errors)	todo		
+Modules/_io/textio.c	932	948	_textiowrapper_decode	_textiowrapper_decode(_PyIO_State *state, PyObject *decoder, PyObject *bytes, int eof)	todo		
+Modules/_io/textio.c	951	992	_textiowrapper_set_encoder	_textiowrapper_set_encoder(textio *self, PyObject *codec_info, const char *errors)	todo		
+Modules/_io/textio.c	995	1026	_textiowrapper_fix_encoder_state	_textiowrapper_fix_encoder_state(textio *self)	todo		
+Modules/_io/textio.c	1029	1059	io_check_errors	io_check_errors(PyObject *errors)	todo		
+Modules/_io/textio.c	1104	1269	_io_TextIOWrapper___init___impl	_io_TextIOWrapper___init___impl(textio *self, PyObject *buffer, const char *encoding, PyObject *errors, const char *newline, int line_buffering, int write_through) /*[clinic end generated code: output=72267c0c01032ed2 input=0f077220214c40a4]*/	todo		
+Modules/_io/textio.c	1275	1287	convert_optional_bool	convert_optional_bool(PyObject *obj, int default_value)	todo		
+Modules/_io/textio.c	1290	1353	textiowrapper_change_encoding	textiowrapper_change_encoding(textio *self, PyObject *encoding, PyObject *errors, int newline_changed)	todo		
+Modules/_io/textio.c	1372	1447	_io_TextIOWrapper_reconfigure_impl	_io_TextIOWrapper_reconfigure_impl(textio *self, PyObject *encoding, PyObject *errors, PyObject *newline_obj, PyObject *line_buffering_obj, PyObject *write_through_obj) /*[clinic end generated code: output=52b812ff4b3d4b0f input=dc3bd35ebda702a7]*/	todo		
+Modules/_io/textio.c	1450	1467	textiowrapper_clear	textiowrapper_clear(PyObject *op)	todo		
+Modules/_io/textio.c	1470	1483	textiowrapper_dealloc	textiowrapper_dealloc(PyObject *op)	todo		
+Modules/_io/textio.c	1486	1503	textiowrapper_traverse	textiowrapper_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_io/textio.c	1568	1580	_io_TextIOWrapper_detach_impl	_io_TextIOWrapper_detach_impl(textio *self) /*[clinic end generated code: output=7ba3715cd032d5f2 input=c908a3b4ef203b0f]*/	todo		
+Modules/_io/textio.c	1585	1654	_textiowrapper_writeflush	_textiowrapper_writeflush(textio *self)	todo		
+Modules/_io/textio.c	1664	1815	_io_TextIOWrapper_write_impl	_io_TextIOWrapper_write_impl(textio *self, PyObject *text) /*[clinic end generated code: output=d2deb0d50771fcec input=73ec95c5c4a3489c]*/	todo		
+Modules/_io/textio.c	1820	1824	textiowrapper_set_decoded_chars	textiowrapper_set_decoded_chars(textio *self, PyObject *chars)	todo		
+Modules/_io/textio.c	1827	1856	textiowrapper_get_decoded_chars	textiowrapper_get_decoded_chars(textio *self, Py_ssize_t n)	todo		
+Modules/_io/textio.c	1861	1986	textiowrapper_read_chunk	textiowrapper_read_chunk(textio *self, Py_ssize_t size_hint)	todo		
+Modules/_io/textio.c	1996	2103	_io_TextIOWrapper_read_impl	_io_TextIOWrapper_read_impl(textio *self, Py_ssize_t n) /*[clinic end generated code: output=7e651ce6cc6a25a6 input=67d14c5661121377]*/	todo		
+Modules/_io/textio.c	2110	2125	find_control_char	find_control_char(int kind, const char *s, const char *end, Py_UCS4 ch)	todo		
+Modules/_io/textio.c	2128	2211	_PyIO_find_line_ending	_PyIO_find_line_ending( int translated, int universal, PyObject *readnl, int kind, const char *start, const char *end, Py_ssize_t *consumed)	todo		
+Modules/_io/textio.c	2214	2370	_textiowrapper_readline	_textiowrapper_readline(textio *self, Py_ssize_t limit)	todo		
+Modules/_io/textio.c	2380	2385	_io_TextIOWrapper_readline_impl	_io_TextIOWrapper_readline_impl(textio *self, Py_ssize_t size) /*[clinic end generated code: output=344afa98804e8b25 input=b65bab871dc3ddba]*/	todo		
+Modules/_io/textio.c	2430	2451	textiowrapper_parse_cookie	textiowrapper_parse_cookie(cookie_type *cookie, PyObject *cookieObj)	todo		
+Modules/_io/textio.c	2454	2466	textiowrapper_build_cookie	textiowrapper_build_cookie(cookie_type *cookie)	todo		
+Modules/_io/textio.c	2469	2490	_textiowrapper_decoder_setstate	_textiowrapper_decoder_setstate(textio *self, cookie_type *cookie)	todo		
+Modules/_io/textio.c	2493	2509	_textiowrapper_encoder_reset	_textiowrapper_encoder_reset(textio *self, int start_of_stream)	todo		
+Modules/_io/textio.c	2512	2517	_textiowrapper_encoder_setstate	_textiowrapper_encoder_setstate(textio *self, cookie_type *cookie)	todo		
+Modules/_io/textio.c	2544	2729	_io_TextIOWrapper_seek_impl	_io_TextIOWrapper_seek_impl(textio *self, PyObject *cookieObj, int whence) /*[clinic end generated code: output=0a15679764e2d04d input=4bea78698be23d7e]*/	todo		
+Modules/_io/textio.c	2742	2966	_io_TextIOWrapper_tell_impl	_io_TextIOWrapper_tell_impl(textio *self) /*[clinic end generated code: output=4f168c08bf34ad5f input=aeece020f747fd92]*/	todo		
+Modules/_io/textio.c	2976	2986	_io_TextIOWrapper_truncate_impl	_io_TextIOWrapper_truncate_impl(textio *self, PyObject *pos) /*[clinic end generated code: output=90ec2afb9bb7745f input=8bddb320834c93ee]*/	todo		
+Modules/_io/textio.c	2989	3053	textiowrapper_repr	textiowrapper_repr(PyObject *op)	todo		
+Modules/_io/textio.c	3064	3069	_io_TextIOWrapper_fileno_impl	_io_TextIOWrapper_fileno_impl(textio *self) /*[clinic end generated code: output=21490a4c3da13e6c input=515e1196aceb97ab]*/	todo		
+Modules/_io/textio.c	3077	3082	_io_TextIOWrapper_seekable_impl	_io_TextIOWrapper_seekable_impl(textio *self) /*[clinic end generated code: output=ab223dbbcffc0f00 input=71c4c092736c549b]*/	todo		
+Modules/_io/textio.c	3090	3095	_io_TextIOWrapper_readable_impl	_io_TextIOWrapper_readable_impl(textio *self) /*[clinic end generated code: output=72ff7ba289a8a91b input=80438d1f01b0a89b]*/	todo		
+Modules/_io/textio.c	3103	3108	_io_TextIOWrapper_writable_impl	_io_TextIOWrapper_writable_impl(textio *self) /*[clinic end generated code: output=a728c71790d03200 input=9d6c22befb0c340a]*/	todo		
+Modules/_io/textio.c	3116	3121	_io_TextIOWrapper_isatty_impl	_io_TextIOWrapper_isatty_impl(textio *self) /*[clinic end generated code: output=12be1a35bace882e input=7f83ff04d4d1733d]*/	todo		
+Modules/_io/textio.c	3129	3138	_io_TextIOWrapper_flush_impl	_io_TextIOWrapper_flush_impl(textio *self) /*[clinic end generated code: output=59de9165f9c2e4d2 input=3ac3bf521bfed59d]*/	todo		
+Modules/_io/textio.c	3146	3190	_io_TextIOWrapper_close_impl	_io_TextIOWrapper_close_impl(textio *self) /*[clinic end generated code: output=056ccf8b4876e4f4 input=8e12d7079d5ac5c1]*/	todo		
+Modules/_io/textio.c	3193	3229	textiowrapper_iternext_lock_held	textiowrapper_iternext_lock_held(PyObject *op)	todo		
+Modules/_io/textio.c	3232	3239	textiowrapper_iternext	textiowrapper_iternext(PyObject *op)	todo		
+Modules/_io/textio.c	3248	3253	_io_TextIOWrapper_name_get_impl	_io_TextIOWrapper_name_get_impl(textio *self) /*[clinic end generated code: output=8c2f1d6d8756af40 input=26ecec9b39e30e07]*/	todo		
+Modules/_io/textio.c	3262	3267	_io_TextIOWrapper_closed_get_impl	_io_TextIOWrapper_closed_get_impl(textio *self) /*[clinic end generated code: output=b49b68f443a85e3c input=7dfcf43f63c7003d]*/	todo		
+Modules/_io/textio.c	3276	3287	_io_TextIOWrapper_newlines_get_impl	_io_TextIOWrapper_newlines_get_impl(textio *self) /*[clinic end generated code: output=53aa03ac35573180 input=610df647e514b3e8]*/	todo		
+Modules/_io/textio.c	3296	3301	_io_TextIOWrapper_errors_get_impl	_io_TextIOWrapper_errors_get_impl(textio *self) /*[clinic end generated code: output=dca3a3ef21b09484 input=b45f983e6d43c4d8]*/	todo		
+Modules/_io/textio.c	3310	3315	_io_TextIOWrapper__CHUNK_SIZE_get_impl	_io_TextIOWrapper__CHUNK_SIZE_get_impl(textio *self) /*[clinic end generated code: output=039925cd2df375bc input=e9715b0e06ff0fa6]*/	todo		
+Modules/_io/textio.c	3324	3343	_io_TextIOWrapper__CHUNK_SIZE_set_impl	_io_TextIOWrapper__CHUNK_SIZE_set_impl(textio *self, PyObject *value) /*[clinic end generated code: output=edb86d2db660a5ab input=32fc99861db02a0a]*/	todo		

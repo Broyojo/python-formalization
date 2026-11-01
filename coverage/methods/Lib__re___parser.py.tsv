@@ -1,0 +1,37 @@
+file	line	endline	name	signature	status	entry	note
+Lib/re/_parser.py	77	82	State.__init__	__init__(self)	todo		
+Lib/re/_parser.py	84	85	State.groups	groups(self)	todo		
+Lib/re/_parser.py	86	97	State.opengroup	opengroup(self, name=None)	todo		
+Lib/re/_parser.py	98	99	State.closegroup	closegroup(self, gid, p)	todo		
+Lib/re/_parser.py	100	101	State.checkgroup	checkgroup(self, gid)	todo		
+Lib/re/_parser.py	103	109	State.checklookbehindgroup	checklookbehindgroup(self, gid, source)	todo		
+Lib/re/_parser.py	113	118	SubPattern.__init__	__init__(self, state, data=None)	todo		
+Lib/re/_parser.py	120	161	SubPattern.dump	dump(self, level=0)	todo		
+Lib/re/_parser.py	162	163	SubPattern.__repr__	__repr__(self)	todo		
+Lib/re/_parser.py	164	165	SubPattern.__len__	__len__(self)	todo		
+Lib/re/_parser.py	166	167	SubPattern.__delitem__	__delitem__(self, index)	todo		
+Lib/re/_parser.py	168	171	SubPattern.__getitem__	__getitem__(self, index)	todo		
+Lib/re/_parser.py	172	173	SubPattern.__setitem__	__setitem__(self, index, code)	todo		
+Lib/re/_parser.py	174	175	SubPattern.insert	insert(self, index, code)	todo		
+Lib/re/_parser.py	176	177	SubPattern.append	append(self, code)	todo		
+Lib/re/_parser.py	178	228	SubPattern.getwidth	getwidth(self)	todo		
+Lib/re/_parser.py	231	239	Tokenizer.__init__	__init__(self, string)	todo		
+Lib/re/_parser.py	240	255	Tokenizer.__next	__next(self)	todo		
+Lib/re/_parser.py	256	260	Tokenizer.match	match(self, char)	todo		
+Lib/re/_parser.py	261	264	Tokenizer.get	get(self)	todo		
+Lib/re/_parser.py	265	273	Tokenizer.getwhile	getwhile(self, n, charset)	todo		
+Lib/re/_parser.py	274	289	Tokenizer.getuntil	getuntil(self, terminator, name)	todo		
+Lib/re/_parser.py	291	292	Tokenizer.pos	pos(self)	todo		
+Lib/re/_parser.py	293	294	Tokenizer.tell	tell(self)	todo		
+Lib/re/_parser.py	295	297	Tokenizer.seek	seek(self, index)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
+Lib/re/_parser.py	299	302	Tokenizer.error	error(self, msg, offset=0)	todo		
+Lib/re/_parser.py	304	310	Tokenizer.checkgroupname	checkgroupname(self, name, offset)	todo		
+Lib/re/_parser.py	312	370	_class_escape	_class_escape(source, escape)	todo		
+Lib/re/_parser.py	372	447	_escape	_escape(source, escape, state)	todo		
+Lib/re/_parser.py	449	450	_uniq	_uniq(items)	todo		
+Lib/re/_parser.py	452	510	_parse_sub	_parse_sub(source, state, verbose, nested)	todo		
+Lib/re/_parser.py	512	885	_parse	_parse(source, state, verbose, nested, first=False)	todo		
+Lib/re/_parser.py	887	945	_parse_flags	_parse_flags(source, state, char)	todo		
+Lib/re/_parser.py	947	961	fix_flags	fix_flags(src, flags)	todo		
+Lib/re/_parser.py	963	988	parse	parse(str, flags=0, state=None)	todo		
+Lib/re/_parser.py	990	1066	parse_template	parse_template(source, pattern)	todo		

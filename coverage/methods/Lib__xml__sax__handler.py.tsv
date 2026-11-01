@@ -1,0 +1,26 @@
+file	line	endline	name	signature	status	entry	note
+Lib/xml/sax/handler.py	32	34	ErrorHandler.error	error(self, exception)	todo		
+Lib/xml/sax/handler.py	36	38	ErrorHandler.fatalError	fatalError(self, exception)	todo		
+Lib/xml/sax/handler.py	40	42	ErrorHandler.warning	warning(self, exception)	todo		
+Lib/xml/sax/handler.py	54	55	ContentHandler.__init__	__init__(self)	todo		
+Lib/xml/sax/handler.py	57	78	ContentHandler.setDocumentLocator	setDocumentLocator(self, locator)	todo		
+Lib/xml/sax/handler.py	80	85	ContentHandler.startDocument	startDocument(self)	todo		
+Lib/xml/sax/handler.py	87	94	ContentHandler.endDocument	endDocument(self)	todo		
+Lib/xml/sax/handler.py	96	117	ContentHandler.startPrefixMapping	startPrefixMapping(self, prefix, uri)	todo		
+Lib/xml/sax/handler.py	119	124	ContentHandler.endPrefixMapping	endPrefixMapping(self, prefix)	todo		
+Lib/xml/sax/handler.py	126	132	ContentHandler.startElement	startElement(self, name, attrs)	todo		
+Lib/xml/sax/handler.py	134	138	ContentHandler.endElement	endElement(self, name)	todo		
+Lib/xml/sax/handler.py	140	150	ContentHandler.startElementNS	startElementNS(self, name, qname, attrs)	todo		
+Lib/xml/sax/handler.py	152	156	ContentHandler.endElementNS	endElementNS(self, name, qname)	todo		
+Lib/xml/sax/handler.py	158	166	ContentHandler.characters	characters(self, content)	todo		
+Lib/xml/sax/handler.py	168	180	ContentHandler.ignorableWhitespace	ignorableWhitespace(self, whitespace)	todo		
+Lib/xml/sax/handler.py	182	191	ContentHandler.processingInstruction	processingInstruction(self, target, data)	todo		
+Lib/xml/sax/handler.py	193	203	ContentHandler.skippedEntity	skippedEntity(self, name)	todo		
+Lib/xml/sax/handler.py	214	215	DTDHandler.notationDecl	notationDecl(self, name, publicId, systemId)	todo		
+Lib/xml/sax/handler.py	217	218	DTDHandler.unparsedEntityDecl	unparsedEntityDecl(self, name, publicId, systemId, ndata)	todo		
+Lib/xml/sax/handler.py	230	234	EntityResolver.resolveEntity	resolveEntity(self, publicId, systemId)	todo		
+Lib/xml/sax/handler.py	358	362	LexicalHandler.comment	comment(self, content)	todo		
+Lib/xml/sax/handler.py	364	375	LexicalHandler.startDTD	startDTD(self, name, public_id, system_id)	todo		
+Lib/xml/sax/handler.py	377	378	LexicalHandler.endDTD	endDTD(self)	todo		
+Lib/xml/sax/handler.py	380	384	LexicalHandler.startCDATA	startCDATA(self)	todo		
+Lib/xml/sax/handler.py	386	387	LexicalHandler.endCDATA	endCDATA(self)	todo		

@@ -1,0 +1,526 @@
+file	line	endline	name	signature	status	entry	note
+Lib/tkinter/__init__.py	58	60	_join	_join(value)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	63	88	_stringify	_stringify(value)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	91	99	_flatten	_flatten(seq)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	106	121	_cnfmerge	_cnfmerge(cnfs)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	128	149	_splitdict	_splitdict(tk, v, cut_minus=True, conv=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	153	157	_VersionInfoType.__str__	__str__(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	159	171	_parse_version	_parse_version(version)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	260	296	Event.__repr__	__repr__(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	305	316	NoDefaultRoot	NoDefaultRoot()	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	319	328	_get_default_root	_get_default_root(what=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	331	345	_get_temp_root	_get_temp_root()	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	348	353	_destroy_temp_root	_destroy_temp_root(master)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	356	358	_tkerror	_tkerror(err)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	361	367	_exit	_exit(code=0)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	382	410	Variable.__init__	__init__(self, master=None, value=None, name=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	412	421	Variable.__del__	__del__(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	423	425	Variable.__str__	__str__(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	427	429	Variable.set	set(self, value)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	433	435	Variable.get	get(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	437	452	Variable._register	_register(self, callback)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	454	467	Variable.trace_add	trace_add(self, mode, callback)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	469	486	Variable.trace_remove	trace_remove(self, mode, cbname)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	488	492	Variable.trace_info	trace_info(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	494	513	Variable.trace_variable	trace_variable(self, mode, callback)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	517	541	Variable.trace_vdelete	trace_vdelete(self, mode, cbname)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	543	555	Variable.trace_vinfo	trace_vinfo(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	557	562	Variable.__eq__	__eq__(self, other)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	569	579	StringVar.__init__	__init__(self, master=None, value=None, name=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	581	586	StringVar.get	get(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	593	603	IntVar.__init__	__init__(self, master=None, value=None, name=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	605	611	IntVar.get	get(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	618	628	DoubleVar.__init__	__init__(self, master=None, value=None, name=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	630	632	DoubleVar.get	get(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	639	649	BooleanVar.__init__	__init__(self, master=None, value=None, name=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	651	653	BooleanVar.set	set(self, value)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	657	662	BooleanVar.get	get(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	665	667	mainloop	mainloop(n=0)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	675	680	getboolean	getboolean(s)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	696	704	Misc.destroy	destroy(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	706	714	Misc.deletecommand	deletecommand(self, name)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	716	724	Misc.tk_strictMotif	tk_strictMotif(self, boolean=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	726	728	Misc.tk_bisque	tk_bisque(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	730	742	Misc.tk_setPalette	tk_setPalette(self, *args, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	744	749	Misc.wait_variable	wait_variable(self, name='PY_VAR')	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	752	758	Misc.wait_window	wait_window(self, window=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	760	767	Misc.wait_visibility	wait_visibility(self, window=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	769	771	Misc.setvar	setvar(self, name='PY_VAR', value='1')	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	773	775	Misc.getvar	getvar(self, name='PY_VAR')	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	777	781	Misc.getint	getint(self, s)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	783	787	Misc.getdouble	getdouble(self, s)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	789	794	Misc.getboolean	getboolean(self, s)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	796	802	Misc.focus_set	focus_set(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	805	809	Misc.focus_force	focus_force(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	811	823	Misc.focus_get	focus_get(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	825	835	Misc.focus_displayof	focus_displayof(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	837	845	Misc.focus_lastfor	focus_lastfor(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	847	850	Misc.tk_focusFollowsMouse	tk_focusFollowsMouse(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	852	863	Misc.tk_focusNext	tk_focusNext(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	865	869	Misc.tk_focusPrev	tk_focusPrev(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	871	897	Misc.after	after(self, ms, func=None, *args, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	899	905	Misc.after_idle	after_idle(self, func, *args, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	907	922	Misc.after_cancel	after_cancel(self, id)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	924	937	Misc.after_info	after_info(self, id=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	939	941	Misc.bell	bell(self, displayof=0)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	943	950	Misc.tk_busy_cget	tk_busy_cget(self, option)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	953	978	Misc.tk_busy_configure	tk_busy_configure(self, cnf=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	981	989	Misc.tk_busy_current	tk_busy_current(self, pattern=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	992	997	Misc.tk_busy_forget	tk_busy_forget(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1000	1013	Misc.tk_busy_hold	tk_busy_hold(self, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1016	1019	Misc.tk_busy_status	tk_busy_status(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1023	1044	Misc.clipboard_get	clipboard_get(self, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1046	1052	Misc.clipboard_clear	clipboard_clear(self, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1054	1062	Misc.clipboard_append	clipboard_append(self, string, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1065	1070	Misc.grab_current	grab_current(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1072	1074	Misc.grab_release	grab_release(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1076	1081	Misc.grab_set	grab_set(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1083	1089	Misc.grab_set_global	grab_set_global(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1091	1096	Misc.grab_status	grab_status(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1098	1104	Misc.option_add	option_add(self, pattern, value, priority=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1106	1110	Misc.option_clear	option_clear(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1112	1117	Misc.option_get	option_get(self, name, className)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1119	1124	Misc.option_readfile	option_readfile(self, fileName, priority=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1126	1129	Misc.selection_clear	selection_clear(self, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1131	1147	Misc.selection_get	selection_get(self, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1149	1163	Misc.selection_handle	selection_handle(self, command, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1165	1171	Misc.selection_own	selection_own(self, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1173	1183	Misc.selection_own_get	selection_own_get(self, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1185	1187	Misc.send	send(self, interp, cmd, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1189	1191	Misc.lower	lower(self, belowThis=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1193	1195	Misc.tkraise	tkraise(self, aboveThis=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1199	1202	Misc.info_patchlevel	info_patchlevel(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1204	1207	Misc.winfo_atom	winfo_atom(self, name, displayof=0)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1209	1213	Misc.winfo_atomname	winfo_atomname(self, id, displayof=0)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1215	1218	Misc.winfo_cells	winfo_cells(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1220	1231	Misc.winfo_children	winfo_children(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1233	1235	Misc.winfo_class	winfo_class(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1237	1240	Misc.winfo_colormapfull	winfo_colormapfull(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1242	1251	Misc.winfo_containing	winfo_containing(self, rootX, rootY, displayof=0)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1253	1255	Misc.winfo_depth	winfo_depth(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1257	1260	Misc.winfo_exists	winfo_exists(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1262	1266	Misc.winfo_fpixels	winfo_fpixels(self, number)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1268	1270	Misc.winfo_geometry	winfo_geometry(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1272	1275	Misc.winfo_height	winfo_height(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1277	1279	Misc.winfo_id	winfo_id(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1281	1284	Misc.winfo_interps	winfo_interps(self, displayof=0)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1286	1289	Misc.winfo_ismapped	winfo_ismapped(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1291	1293	Misc.winfo_manager	winfo_manager(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1295	1297	Misc.winfo_name	winfo_name(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1299	1301	Misc.winfo_parent	winfo_parent(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1303	1309	Misc.winfo_pathname	winfo_pathname(self, id, displayof=0)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1311	1314	Misc.winfo_pixels	winfo_pixels(self, number)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1316	1319	Misc.winfo_pointerx	winfo_pointerx(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1321	1324	Misc.winfo_pointerxy	winfo_pointerxy(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1326	1329	Misc.winfo_pointery	winfo_pointery(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1331	1334	Misc.winfo_reqheight	winfo_reqheight(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1336	1339	Misc.winfo_reqwidth	winfo_reqwidth(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1341	1344	Misc.winfo_rgb	winfo_rgb(self, color)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1346	1350	Misc.winfo_rootx	winfo_rootx(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1352	1356	Misc.winfo_rooty	winfo_rooty(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1358	1360	Misc.winfo_screen	winfo_screen(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1362	1366	Misc.winfo_screencells	winfo_screencells(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1368	1372	Misc.winfo_screendepth	winfo_screendepth(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1374	1378	Misc.winfo_screenheight	winfo_screenheight(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1380	1384	Misc.winfo_screenmmheight	winfo_screenmmheight(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1386	1390	Misc.winfo_screenmmwidth	winfo_screenmmwidth(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1392	1396	Misc.winfo_screenvisual	winfo_screenvisual(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1398	1402	Misc.winfo_screenwidth	winfo_screenwidth(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1404	1407	Misc.winfo_server	winfo_server(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1409	1412	Misc.winfo_toplevel	winfo_toplevel(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1414	1417	Misc.winfo_viewable	winfo_viewable(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1419	1423	Misc.winfo_visual	winfo_visual(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1425	1427	Misc.winfo_visualid	winfo_visualid(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1429	1438	Misc.winfo_visualsavailable	winfo_visualsavailable(self, includeids=False)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1440	1442	Misc.__winfo_parseitem	__winfo_parseitem(self, t)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1444	1446	Misc.__winfo_getint	__winfo_getint(self, x)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1448	1453	Misc.winfo_vrootheight	winfo_vrootheight(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1455	1460	Misc.winfo_vrootwidth	winfo_vrootwidth(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1462	1466	Misc.winfo_vrootx	winfo_vrootx(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1468	1472	Misc.winfo_vrooty	winfo_vrooty(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1474	1477	Misc.winfo_width	winfo_width(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1479	1483	Misc.winfo_x	winfo_x(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1485	1489	Misc.winfo_y	winfo_y(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1491	1493	Misc.update	update(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1495	1499	Misc.update_idletasks	update_idletasks(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1501	1512	Misc.bindtags	bindtags(self, tagList=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1514	1530	Misc._bind	_bind(self, what, sequence, func, add, needcleanup=1)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1532	1571	Misc.bind	bind(self, sequence=None, func=None, add=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1573	1582	Misc.unbind	unbind(self, sequence, funcid=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1584	1595	Misc._unbind	_unbind(self, what, funcid=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1597	1602	Misc.bind_all	bind_all(self, sequence=None, func=None, add=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1604	1606	Misc.unbind_all	unbind_all(self, sequence)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1608	1616	Misc.bind_class	bind_class(self, className, sequence=None, func=None, add=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1618	1621	Misc.unbind_class	unbind_class(self, className, sequence)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1623	1625	Misc.mainloop	mainloop(self, n=0)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1627	1629	Misc.quit	quit(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1631	1634	Misc._getints	_getints(self, string)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1636	1639	Misc._getdoubles	_getdoubles(self, string)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1641	1644	Misc._getboolean	_getboolean(self, string)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1646	1652	Misc._displayof	_displayof(self, displayof)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1655	1662	Misc._windowingsystem	_windowingsystem(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1664	1688	Misc._options	_options(self, cnf, kw=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1690	1714	Misc.nametowidget	nametowidget(self, name)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1718	1738	Misc._register	_register(self, func, subst=None, needcleanup=1)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1742	1746	Misc._root	_root(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1752	1817	Misc._substitute	_substitute(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1819	1823	Misc._report_exception	_report_exception(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1825	1831	Misc._getconfigure	_getconfigure(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1833	1835	Misc._getconfigure1	_getconfigure1(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1837	1847	Misc._configure	_configure(self, cmd, cnf, kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1850	1863	Misc.configure	configure(self, cnf=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1867	1869	Misc.cget	cget(self, key)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1873	1874	Misc.__setitem__	__setitem__(self, key, value)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1876	1880	Misc.keys	keys(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1882	1884	Misc.__str__	__str__(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1886	1888	Misc.__repr__	__repr__(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1893	1904	Misc.pack_propagate	pack_propagate(self, flag=_noarg_)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1908	1913	Misc.pack_slaves	pack_slaves(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1918	1924	Misc.place_slaves	place_slaves(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1928	1933	Misc.grid_anchor	grid_anchor(self, anchor=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1937	1954	Misc.grid_bbox	grid_bbox(self, column=None, row=None, col2=None, row2=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1958	1970	Misc._gridconvvalue	_gridconvvalue(self, value)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1972	1991	Misc._grid_configure	_grid_configure(self, command, index, cnf, kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	1993	1999	Misc.grid_columnconfigure	grid_columnconfigure(self, index, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2003	2009	Misc.grid_location	grid_location(self, x, y)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2011	2022	Misc.grid_propagate	grid_propagate(self, flag=_noarg_)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2024	2030	Misc.grid_rowconfigure	grid_rowconfigure(self, index, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2034	2037	Misc.grid_size	grid_size(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2041	2056	Misc.grid_slaves	grid_slaves(self, row=None, column=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2061	2066	Misc.event_add	event_add(self, virtual, *sequences)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2068	2071	Misc.event_delete	event_delete(self, virtual, *sequences)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2073	2080	Misc.event_generate	event_generate(self, sequence, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2082	2086	Misc.event_info	event_info(self, virtual=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2090	2092	Misc.image_names	image_names(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2094	2096	Misc.image_types	image_types(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2103	2107	CallWrapper.__init__	__init__(self, func, subst, widget)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2109	2118	CallWrapper.__call__	__call__(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2125	2129	XView.xview	xview(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2131	2134	XView.xview_moveto	xview_moveto(self, fraction)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2136	2139	XView.xview_scroll	xview_scroll(self, number, what)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2146	2150	YView.yview	yview(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2152	2155	YView.yview_moveto	yview_moveto(self, fraction)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2157	2160	YView.yview_scroll	yview_scroll(self, number, what)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2166	2175	Wm.wm_aspect	wm_aspect(self, minNumer=None, minDenom=None, maxNumer=None, maxDenom=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2179	2211	Wm.wm_attributes	wm_attributes(self, *args, return_python_dict=False, **kwargs)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2215	2218	Wm.wm_client	wm_client(self, name=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2222	2233	Wm.wm_colormapwindows	wm_colormapwindows(self, *wlist)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2237	2241	Wm.wm_command	wm_command(self, value=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2245	2248	Wm.wm_deiconify	wm_deiconify(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2252	2256	Wm.wm_focusmodel	wm_focusmodel(self, model=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2260	2266	Wm.wm_forget	wm_forget(self, window)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2270	2272	Wm.wm_frame	wm_frame(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2276	2279	Wm.wm_geometry	wm_geometry(self, newGeometry=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2283	2292	Wm.wm_grid	wm_grid(self, baseWidth=None, baseHeight=None, widthInc=None, heightInc=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2296	2299	Wm.wm_group	wm_group(self, pathName=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2303	2315	Wm.wm_iconbitmap	wm_iconbitmap(self, bitmap=None, default=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2319	2321	Wm.wm_iconify	wm_iconify(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2325	2328	Wm.wm_iconmask	wm_iconmask(self, bitmap=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2332	2335	Wm.wm_iconname	wm_iconname(self, newName=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2339	2362	Wm.wm_iconphoto	wm_iconphoto(self, default=False, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2366	2370	Wm.wm_iconposition	wm_iconposition(self, x=None, y=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2374	2377	Wm.wm_iconwindow	wm_iconwindow(self, pathName=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2381	2385	Wm.wm_manage	wm_manage(self, widget)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2389	2394	Wm.wm_maxsize	wm_maxsize(self, width=None, height=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2398	2403	Wm.wm_minsize	wm_minsize(self, width=None, height=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2407	2412	Wm.wm_overrideredirect	wm_overrideredirect(self, boolean=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2416	2420	Wm.wm_positionfrom	wm_positionfrom(self, who=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2424	2433	Wm.wm_protocol	wm_protocol(self, name=None, func=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2437	2440	Wm.wm_resizable	wm_resizable(self, width=None, height=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2444	2448	Wm.wm_sizefrom	wm_sizefrom(self, who=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2452	2455	Wm.wm_state	wm_state(self, newstate=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2459	2461	Wm.wm_title	wm_title(self, string=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2465	2468	Wm.wm_transient	wm_transient(self, master=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2472	2475	Wm.wm_withdraw	wm_withdraw(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2485	2512	Tk.__init__	__init__(self, screenName=None, baseName=None, className='Tk', useTk=True, sync=False, use=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2514	2517	Tk.loadtk	loadtk(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2519	2543	Tk._loadtk	_loadtk(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2545	2553	Tk.destroy	destroy(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2555	2575	Tk.readprofile	readprofile(self, baseName, className)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2577	2588	Tk.report_callback_exception	report_callback_exception(self, exc, val, tb)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2590	2592	Tk.__getattr__	__getattr__(self, attr)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2595	2599	_print_command	_print_command(cmd, *, file=sys.stderr)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2617	2618	Tcl	Tcl(screenName=None, baseName=None, className='Tk', useTk=False)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2626	2644	Pack.pack_configure	pack_configure(self, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2648	2650	Pack.pack_forget	pack_forget(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2654	2660	Pack.pack_info	pack_info(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2672	2702	Place.place_configure	place_configure(self, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2706	2708	Place.place_forget	place_forget(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2712	2718	Place.place_info	place_info(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2730	2747	Grid.grid_configure	grid_configure(self, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2753	2755	Grid.grid_forget	grid_forget(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2759	2761	Grid.grid_remove	grid_remove(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2763	2769	Grid.grid_info	grid_info(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2782	2812	BaseWidget._setup	_setup(self, master, cnf)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2814	2829	BaseWidget.__init__	__init__(self, master, widgetName, cnf={}, kw={}, extra=())	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2831	2837	BaseWidget.destroy	destroy(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2839	2841	BaseWidget._do	_do(self, name, args=())	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2855	2880	Toplevel.__init__	__init__(self, master=None, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2886	2905	Button.__init__	__init__(self, master=None, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2907	2917	Button.flash	flash(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2919	2927	Button.invoke	invoke(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2933	2943	Canvas.__init__	__init__(self, master=None, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2945	2947	Canvas.addtag	addtag(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2949	2951	Canvas.addtag_above	addtag_above(self, newtag, tagOrId)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2953	2955	Canvas.addtag_all	addtag_all(self, newtag)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2957	2959	Canvas.addtag_below	addtag_below(self, newtag, tagOrId)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2961	2966	Canvas.addtag_closest	addtag_closest(self, newtag, x, y, halo=None, start=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2968	2971	Canvas.addtag_enclosed	addtag_enclosed(self, newtag, x1, y1, x2, y2)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2973	2976	Canvas.addtag_overlapping	addtag_overlapping(self, newtag, x1, y1, x2, y2)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2978	2980	Canvas.addtag_withtag	addtag_withtag(self, newtag, tagOrId)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2982	2986	Canvas.bbox	bbox(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2988	2991	Canvas.tag_unbind	tag_unbind(self, tagOrId, sequence, funcid=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	2993	3000	Canvas.tag_bind	tag_bind(self, tagOrId, sequence=None, func=None, add=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3002	3006	Canvas.canvasx	canvasx(self, screenx, gridspacing=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3008	3012	Canvas.canvasy	canvasy(self, screeny, gridspacing=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3014	3019	Canvas.coords	coords(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3021	3031	Canvas._create	_create(self, itemType, args, kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3033	3035	Canvas.create_arc	create_arc(self, *args, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3037	3039	Canvas.create_bitmap	create_bitmap(self, *args, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3041	3043	Canvas.create_image	create_image(self, *args, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3045	3047	Canvas.create_line	create_line(self, *args, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3049	3051	Canvas.create_oval	create_oval(self, *args, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3053	3055	Canvas.create_polygon	create_polygon(self, *args, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3057	3059	Canvas.create_rectangle	create_rectangle(self, *args, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3061	3063	Canvas.create_text	create_text(self, *args, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3065	3067	Canvas.create_window	create_window(self, *args, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3069	3072	Canvas.dchars	dchars(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3074	3076	Canvas.delete	delete(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3078	3081	Canvas.dtag	dtag(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3083	3086	Canvas.find	find(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3088	3090	Canvas.find_above	find_above(self, tagOrId)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3092	3094	Canvas.find_all	find_all(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3096	3098	Canvas.find_below	find_below(self, tagOrId)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3100	3105	Canvas.find_closest	find_closest(self, x, y, halo=None, start=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3107	3110	Canvas.find_enclosed	find_enclosed(self, x1, y1, x2, y2)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3112	3115	Canvas.find_overlapping	find_overlapping(self, x1, y1, x2, y2)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3117	3119	Canvas.find_withtag	find_withtag(self, tagOrId)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3121	3123	Canvas.focus	focus(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3125	3128	Canvas.gettags	gettags(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3130	3133	Canvas.icursor	icursor(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3135	3137	Canvas.index	index(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3139	3142	Canvas.insert	insert(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3144	3147	Canvas.itemcget	itemcget(self, tagOrId, option)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3149	3154	Canvas.itemconfigure	itemconfigure(self, tagOrId, cnf=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3162	3165	Canvas.tag_lower	tag_lower(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3169	3171	Canvas.move	move(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3173	3180	Canvas.moveto	moveto(self, tagOrId, x='', y='')	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3182	3188	Canvas.postscript	postscript(self, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3190	3193	Canvas.tag_raise	tag_raise(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3197	3199	Canvas.scale	scale(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3201	3203	Canvas.scan_mark	scan_mark(self, x, y)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3205	3209	Canvas.scan_dragto	scan_dragto(self, x, y, gain=10)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3211	3213	Canvas.select_adjust	select_adjust(self, tagOrId, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3215	3217	Canvas.select_clear	select_clear(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3219	3221	Canvas.select_from	select_from(self, tagOrId, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3223	3225	Canvas.select_item	select_item(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3227	3229	Canvas.select_to	select_to(self, tagOrId, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3231	3233	Canvas.type	type(self, tagOrId)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3241	3252	Checkbutton.__init__	__init__(self, master=None, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3254	3265	Checkbutton._setup	_setup(self, master, cnf)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3267	3269	Checkbutton.deselect	deselect(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3271	3273	Checkbutton.flash	flash(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3275	3277	Checkbutton.invoke	invoke(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3279	3281	Checkbutton.select	select(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3283	3285	Checkbutton.toggle	toggle(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3291	3304	Entry.__init__	__init__(self, master=None, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3306	3308	Entry.delete	delete(self, first, last=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3310	3312	Entry.get	get(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3314	3316	Entry.icursor	icursor(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3318	3321	Entry.index	index(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3323	3325	Entry.insert	insert(self, index, string)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3327	3329	Entry.scan_mark	scan_mark(self, x)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3331	3335	Entry.scan_dragto	scan_dragto(self, x)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3337	3339	Entry.selection_adjust	selection_adjust(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3343	3345	Entry.selection_clear	selection_clear(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3349	3351	Entry.selection_from	selection_from(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3355	3359	Entry.selection_present	selection_present(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3363	3365	Entry.selection_range	selection_range(self, start, end)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3369	3371	Entry.selection_to	selection_to(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3379	3395	Frame.__init__	__init__(self, master=None, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3401	3420	Label.__init__	__init__(self, master=None, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3426	3437	Listbox.__init__	__init__(self, master=None, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3439	3441	Listbox.activate	activate(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3443	3446	Listbox.bbox	bbox(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3448	3450	Listbox.curselection	curselection(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3452	3454	Listbox.delete	delete(self, first, last=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3456	3462	Listbox.get	get(self, first, last=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3464	3468	Listbox.index	index(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3470	3472	Listbox.insert	insert(self, index, *elements)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3474	3477	Listbox.nearest	nearest(self, y)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3479	3481	Listbox.scan_mark	scan_mark(self, x, y)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3483	3487	Listbox.scan_dragto	scan_dragto(self, x, y)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3489	3491	Listbox.see	see(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3493	3495	Listbox.selection_anchor	selection_anchor(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3499	3502	Listbox.selection_clear	selection_clear(self, first, last=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3506	3509	Listbox.selection_includes	selection_includes(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3513	3516	Listbox.selection_set	selection_set(self, first, last=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3520	3522	Listbox.size	size(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3524	3527	Listbox.itemcget	itemcget(self, index, option)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3529	3534	Listbox.itemconfigure	itemconfigure(self, index, cnf=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3542	3550	Menu.__init__	__init__(self, master=None, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3552	3554	Menu.tk_popup	tk_popup(self, x, y, entry='')	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3556	3558	Menu.activate	activate(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3560	3563	Menu.add	add(self, itemType, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3565	3567	Menu.add_cascade	add_cascade(self, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3569	3571	Menu.add_checkbutton	add_checkbutton(self, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3573	3575	Menu.add_command	add_command(self, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3577	3579	Menu.add_radiobutton	add_radiobutton(self, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3581	3583	Menu.add_separator	add_separator(self, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3585	3588	Menu.insert	insert(self, index, itemType, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3590	3592	Menu.insert_cascade	insert_cascade(self, index, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3594	3596	Menu.insert_checkbutton	insert_checkbutton(self, index, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3598	3600	Menu.insert_command	insert_command(self, index, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3602	3604	Menu.insert_radiobutton	insert_radiobutton(self, index, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3606	3608	Menu.insert_separator	insert_separator(self, index, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3610	3624	Menu.delete	delete(self, index1, index2=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3626	3628	Menu.entrycget	entrycget(self, index, option)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3630	3636	Menu.entryconfigure	entryconfigure(self, index, cnf=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3640	3643	Menu.index	index(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3645	3648	Menu.invoke	invoke(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3650	3652	Menu.post	post(self, x, y)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3654	3656	Menu.type	type(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3658	3660	Menu.unpost	unpost(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3662	3665	Menu.xposition	xposition(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3667	3670	Menu.yposition	yposition(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3676	3685	Menubutton.__init__	__init__(self, master=None, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3691	3698	Message.__init__	__init__(self, master=None, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3704	3715	Radiobutton.__init__	__init__(self, master=None, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3717	3720	Radiobutton.deselect	deselect(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3722	3724	Radiobutton.flash	flash(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3726	3728	Radiobutton.invoke	invoke(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3730	3732	Radiobutton.select	select(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3738	3747	Scale.__init__	__init__(self, master=None, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3749	3755	Scale.get	get(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3757	3759	Scale.set	set(self, value)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3761	3766	Scale.coords	coords(self, value=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3768	3771	Scale.identify	identify(self, x, y)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3777	3786	Scrollbar.__init__	__init__(self, master=None, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3788	3795	Scrollbar.activate	activate(self, index=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3797	3801	Scrollbar.delta	delta(self, deltax, deltay)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3803	3806	Scrollbar.fraction	fraction(self, x, y)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3808	3811	Scrollbar.identify	identify(self, x, y)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3813	3816	Scrollbar.get	get(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3818	3821	Scrollbar.set	set(self, first, last)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3827	3852	Text.__init__	__init__(self, master=None, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3854	3858	Text.bbox	bbox(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3860	3864	Text.compare	compare(self, index1, op, index2)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3866	3894	Text.count	count(self, index1, index2, *options, return_ints=False)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3896	3901	Text.debug	debug(self, boolean=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3903	3905	Text.delete	delete(self, index1, index2=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3907	3911	Text.dlineinfo	dlineinfo(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3913	3950	Text.dump	dump(self, index1, index2=None, command=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3953	3966	Text.edit	edit(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3968	3977	Text.edit_modified	edit_modified(self, arg=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3979	3987	Text.edit_redo	edit_redo(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3989	3992	Text.edit_reset	edit_reset(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	3994	3999	Text.edit_separator	edit_separator(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4001	4010	Text.edit_undo	edit_undo(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4012	4014	Text.get	get(self, index1, index2=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4017	4023	Text.image_cget	image_cget(self, index, option)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4025	4031	Text.image_configure	image_configure(self, index, cnf=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4033	4037	Text.image_create	image_create(self, index, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4039	4041	Text.image_names	image_names(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4043	4045	Text.index	index(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4047	4050	Text.insert	insert(self, index, chars, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4052	4056	Text.mark_gravity	mark_gravity(self, markName, direction=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4058	4061	Text.mark_names	mark_names(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4063	4065	Text.mark_set	mark_set(self, markName, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4067	4069	Text.mark_unset	mark_unset(self, *markNames)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4071	4073	Text.mark_next	mark_next(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4075	4077	Text.mark_previous	mark_previous(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4079	4085	Text.peer_create	peer_create(self, newPathName, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4087	4090	Text.peer_names	peer_names(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4092	4098	Text.replace	replace(self, index1, index2, chars, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4100	4102	Text.scan_mark	scan_mark(self, x, y)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4104	4108	Text.scan_dragto	scan_dragto(self, x, y)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4110	4128	Text.search	search(self, pattern, index, stopindex=None, forwards=None, backwards=None, exact=None, regexp=None, nocase=None, count=None, elide=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4130	4132	Text.see	see(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4134	4138	Text.tag_add	tag_add(self, tagName, index1, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4140	4143	Text.tag_unbind	tag_unbind(self, tagName, sequence, funcid=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4145	4152	Text.tag_bind	tag_bind(self, tagName, sequence, func, add=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4154	4157	Text._tag_bind	_tag_bind(self, tagName, sequence=None, func=None, add=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4159	4165	Text.tag_cget	tag_cget(self, tagName, option)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4167	4172	Text.tag_configure	tag_configure(self, tagName, cnf=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4176	4178	Text.tag_delete	tag_delete(self, *tagNames)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4180	4183	Text.tag_lower	tag_lower(self, tagName, belowThis=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4185	4188	Text.tag_names	tag_names(self, index=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4190	4195	Text.tag_nextrange	tag_nextrange(self, tagName, index1, index2=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4197	4202	Text.tag_prevrange	tag_prevrange(self, tagName, index1, index2=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4204	4208	Text.tag_raise	tag_raise(self, tagName, aboveThis=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4210	4213	Text.tag_ranges	tag_ranges(self, tagName)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4215	4218	Text.tag_remove	tag_remove(self, tagName, index1, index2=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4220	4226	Text.window_cget	window_cget(self, index, option)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4228	4234	Text.window_configure	window_configure(self, index, cnf=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4238	4242	Text.window_create	window_create(self, index, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4244	4247	Text.window_names	window_names(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4249	4251	Text.yview_pickplace	yview_pickplace(self, *what)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4257	4260	_setit.__init__	__init__(self, var, value, callback=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4262	4265	_setit.__call__	__call__(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4271	4294	OptionMenu.__init__	__init__(self, master, variable, value, *values, **kwargs)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4296	4299	OptionMenu.__getitem__	__getitem__(self, name)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4301	4304	OptionMenu.destroy	destroy(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4311	4325	Image.__init__	__init__(self, imgtype, name=None, cnf={}, master=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4327	4327	Image.__str__	__str__(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4329	4335	Image.__del__	__del__(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4337	4338	Image.__setitem__	__setitem__(self, key, value)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4340	4341	Image.__getitem__	__getitem__(self, key)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4343	4350	Image.configure	configure(self, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4354	4357	Image.height	height(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4359	4361	Image.type	type(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4363	4366	Image.width	width(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4372	4377	PhotoImage.__init__	__init__(self, name=None, cnf={}, master=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4379	4381	PhotoImage.blank	blank(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4383	4385	PhotoImage.cget	cget(self, option)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4388	4389	PhotoImage.__getitem__	__getitem__(self, key)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4391	4411	PhotoImage.copy	copy(self, *, from_coords=None, zoom=None, subsample=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4413	4422	PhotoImage.zoom	zoom(self, x, y='', *, from_coords=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4424	4433	PhotoImage.subsample	subsample(self, x, y='', *, from_coords=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4435	4495	PhotoImage.copy_replace	copy_replace(self, sourceImage, *, from_coords=None, to=None, shrink=False, zoom=None, subsample=None, compositingrule=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4497	4499	PhotoImage.get	get(self, x, y)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4501	4509	PhotoImage.put	put(self, data, to=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4511	4542	PhotoImage.read	read(self, filename, format=None, *, from_coords=None, to=None, shrink=False)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4544	4576	PhotoImage.write	write(self, filename, format=None, from_coords=None, *, background=None, grayscale=False)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4578	4620	PhotoImage.data	data(self, format=None, *, from_coords=None, background=None, grayscale=False)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4622	4625	PhotoImage.transparency_get	transparency_get(self, x, y)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4627	4629	PhotoImage.transparency_set	transparency_set(self, x, y, boolean)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4635	4639	BitmapImage.__init__	__init__(self, name=None, cnf={}, master=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4642	4644	image_names	image_names()	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4647	4649	image_types	image_types()	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4655	4685	Spinbox.__init__	__init__(self, master=None, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4687	4699	Spinbox.bbox	bbox(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4701	4710	Spinbox.delete	delete(self, first, last=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4712	4714	Spinbox.get	get(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4716	4722	Spinbox.icursor	icursor(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4724	4729	Spinbox.identify	identify(self, x, y)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4731	4734	Spinbox.index	index(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4736	4741	Spinbox.insert	insert(self, index, s)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4743	4749	Spinbox.invoke	invoke(self, element)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4751	4754	Spinbox.scan	scan(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4756	4763	Spinbox.scan_mark	scan_mark(self, x)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4765	4775	Spinbox.scan_dragto	scan_dragto(self, x)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4777	4780	Spinbox.selection	selection(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4782	4794	Spinbox.selection_adjust	selection_adjust(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4796	4802	Spinbox.selection_clear	selection_clear(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4804	4810	Spinbox.selection_element	selection_element(self, element=None)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4812	4814	Spinbox.selection_from	selection_from(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4816	4820	Spinbox.selection_present	selection_present(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4822	4824	Spinbox.selection_range	selection_range(self, start, end)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4826	4828	Spinbox.selection_to	selection_to(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4836	4852	LabelFrame.__init__	__init__(self, master=None, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4860	4875	PanedWindow.__init__	__init__(self, master=None, cnf={}, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4877	4885	PanedWindow.add	add(self, child, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4887	4892	PanedWindow.remove	remove(self, child)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4896	4906	PanedWindow.identify	identify(self, x, y)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4908	4911	PanedWindow.proxy	proxy(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4913	4916	PanedWindow.proxy_coord	proxy_coord(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4918	4921	PanedWindow.proxy_forget	proxy_forget(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4923	4926	PanedWindow.proxy_place	proxy_place(self, x, y)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4928	4931	PanedWindow.sash	sash(self, *args)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4933	4945	PanedWindow.sash_coord	sash_coord(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4947	4952	PanedWindow.sash_mark	sash_mark(self, index)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4954	4957	PanedWindow.sash_place	sash_place(self, index, x, y)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4959	4962	PanedWindow.panecget	panecget(self, child, option)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	4964	5032	PanedWindow.paneconfigure	paneconfigure(self, tagOrId, cnf=None, **kw)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	5036	5038	PanedWindow.panes	panes(self)	excluded		platform: GUI toolkit
+Lib/tkinter/__init__.py	5043	5061	_test	_test()	excluded		platform: GUI toolkit

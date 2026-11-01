@@ -1,0 +1,72 @@
+file	line	endline	name	signature	status	entry	note
+Lib/logging/handlers.py	60	69	BaseRotatingHandler.__init__	__init__(self, filename, mode, encoding=None, delay=False, errors=None)	todo		
+Lib/logging/handlers.py	71	83	BaseRotatingHandler.emit	emit(self, record)	todo		
+Lib/logging/handlers.py	85	102	BaseRotatingHandler.rotation_filename	rotation_filename(self, default_name)	todo		
+Lib/logging/handlers.py	104	123	BaseRotatingHandler.rotate	rotate(self, source, dest)	todo		
+Lib/logging/handlers.py	130	164	RotatingFileHandler.__init__	__init__(self, filename, mode='a', maxBytes=0, backupCount=0, encoding=None, delay=False, errors=None)	todo		
+Lib/logging/handlers.py	166	187	RotatingFileHandler.doRollover	doRollover(self)	todo		
+Lib/logging/handlers.py	189	213	RotatingFileHandler.shouldRollover	shouldRollover(self, record)	todo		
+Lib/logging/handlers.py	223	288	TimedRotatingFileHandler.__init__	__init__(self, filename, when='h', interval=1, backupCount=0, encoding=None, delay=False, utc=False, atTime=None, errors=None)	todo		
+Lib/logging/handlers.py	290	365	TimedRotatingFileHandler.computeRollover	computeRollover(self, currentTime)	todo		
+Lib/logging/handlers.py	367	384	TimedRotatingFileHandler.shouldRollover	shouldRollover(self, record)	todo		
+Lib/logging/handlers.py	386	422	TimedRotatingFileHandler.getFilesToDelete	getFilesToDelete(self)	todo		
+Lib/logging/handlers.py	424	462	TimedRotatingFileHandler.doRollover	doRollover(self)	todo		
+Lib/logging/handlers.py	483	491	WatchedFileHandler.__init__	__init__(self, filename, mode='a', encoding=None, delay=False, errors=None)	todo		
+Lib/logging/handlers.py	493	498	WatchedFileHandler._statstream	_statstream(self)	todo		
+Lib/logging/handlers.py	500	534	WatchedFileHandler.reopenIfNeeded	reopenIfNeeded(self)	todo		
+Lib/logging/handlers.py	536	544	WatchedFileHandler.emit	emit(self, record)	todo		
+Lib/logging/handlers.py	560	583	SocketHandler.__init__	__init__(self, host, port)	todo		
+Lib/logging/handlers.py	585	600	SocketHandler.makeSocket	makeSocket(self, timeout=1)	todo		
+Lib/logging/handlers.py	602	628	SocketHandler.createSocket	createSocket(self)	todo		
+Lib/logging/handlers.py	630	647	SocketHandler.send	send(self, s)	todo		
+Lib/logging/handlers.py	649	669	SocketHandler.makePickle	makePickle(self, record)	todo		
+Lib/logging/handlers.py	671	683	SocketHandler.handleError	handleError(self, record)	todo		
+Lib/logging/handlers.py	685	698	SocketHandler.emit	emit(self, record)	todo		
+Lib/logging/handlers.py	700	709	SocketHandler.close	close(self)	todo		
+Lib/logging/handlers.py	722	727	DatagramHandler.__init__	__init__(self, host, port)	todo		
+Lib/logging/handlers.py	729	739	DatagramHandler.makeSocket	makeSocket(self)	todo		
+Lib/logging/handlers.py	741	751	DatagramHandler.send	send(self, s)	todo		
+Lib/logging/handlers.py	861	881	SysLogHandler.__init__	__init__(self, address=('localhost', SYSLOG_UDP_PORT), facility=LOG_USER, socktype=None, timeout=None)	todo		
+Lib/logging/handlers.py	883	905	SysLogHandler._connect_unixsocket	_connect_unixsocket(self, address)	todo		
+Lib/logging/handlers.py	907	953	SysLogHandler.createSocket	createSocket(self)	todo		
+Lib/logging/handlers.py	955	966	SysLogHandler.encodePriority	encodePriority(self, facility, priority)	todo		
+Lib/logging/handlers.py	968	977	SysLogHandler.close	close(self)	todo		
+Lib/logging/handlers.py	979	987	SysLogHandler.mapPriority	mapPriority(self, levelName)	todo		
+Lib/logging/handlers.py	992	1030	SysLogHandler.emit	emit(self, record)	todo		
+Lib/logging/handlers.py	1036	1070	SMTPHandler.__init__	__init__(self, mailhost, fromaddr, toaddrs, subject, credentials=None, secure=None, timeout=5.0)	todo		
+Lib/logging/handlers.py	1072	1079	SMTPHandler.getSubject	getSubject(self, record)	todo		
+Lib/logging/handlers.py	1081	1126	SMTPHandler.emit	emit(self, record)	todo		
+Lib/logging/handlers.py	1138	1171	NTEventLogHandler.__init__	__init__(self, appname, dllname=None, logtype='Application')	todo		
+Lib/logging/handlers.py	1173	1181	NTEventLogHandler.getMessageID	getMessageID(self, record)	todo		
+Lib/logging/handlers.py	1183	1190	NTEventLogHandler.getEventCategory	getEventCategory(self, record)	todo		
+Lib/logging/handlers.py	1192	1203	NTEventLogHandler.getEventType	getEventType(self, record)	todo		
+Lib/logging/handlers.py	1205	1220	NTEventLogHandler.emit	emit(self, record)	todo		
+Lib/logging/handlers.py	1222	1233	NTEventLogHandler.close	close(self)	todo		
+Lib/logging/handlers.py	1240	1258	HTTPHandler.__init__	__init__(self, host, url, method='GET', secure=False, credentials=None, context=None)	todo		
+Lib/logging/handlers.py	1260	1266	HTTPHandler.mapLogRecord	mapLogRecord(self, record)	todo		
+Lib/logging/handlers.py	1268	1280	HTTPHandler.getConnection	getConnection(self, host, secure)	todo		
+Lib/logging/handlers.py	1282	1323	HTTPHandler.emit	emit(self, record)	todo		
+Lib/logging/handlers.py	1331	1337	BufferingHandler.__init__	__init__(self, capacity)	todo		
+Lib/logging/handlers.py	1339	1346	BufferingHandler.shouldFlush	shouldFlush(self, record)	todo		
+Lib/logging/handlers.py	1348	1357	BufferingHandler.emit	emit(self, record)	todo		
+Lib/logging/handlers.py	1359	1366	BufferingHandler.flush	flush(self)	todo		
+Lib/logging/handlers.py	1368	1377	BufferingHandler.close	close(self)	todo		
+Lib/logging/handlers.py	1385	1403	MemoryHandler.__init__	__init__(self, capacity, flushLevel=logging.ERROR, target=None, flushOnClose=True)	todo		
+Lib/logging/handlers.py	1405	1410	MemoryHandler.shouldFlush	shouldFlush(self, record)	todo		
+Lib/logging/handlers.py	1412	1417	MemoryHandler.setTarget	setTarget(self, target)	todo		
+Lib/logging/handlers.py	1419	1431	MemoryHandler.flush	flush(self)	todo		
+Lib/logging/handlers.py	1433	1444	MemoryHandler.close	close(self)	todo		
+Lib/logging/handlers.py	1458	1464	QueueHandler.__init__	__init__(self, queue)	todo		
+Lib/logging/handlers.py	1466	1474	QueueHandler.enqueue	enqueue(self, record)	todo		
+Lib/logging/handlers.py	1476	1507	QueueHandler.prepare	prepare(self, record)	todo		
+Lib/logging/handlers.py	1509	1518	QueueHandler.emit	emit(self, record)	todo		
+Lib/logging/handlers.py	1529	1537	QueueListener.__init__	__init__(self, queue, *handlers, respect_handler_level=False)	todo		
+Lib/logging/handlers.py	1539	1544	QueueListener.__enter__	__enter__(self)	todo		
+Lib/logging/handlers.py	1546	1550	QueueListener.__exit__	__exit__(self, *args)	todo		
+Lib/logging/handlers.py	1552	1559	QueueListener.dequeue	dequeue(self, block)	todo		
+Lib/logging/handlers.py	1561	1573	QueueListener.start	start(self)	todo		
+Lib/logging/handlers.py	1575	1583	QueueListener.prepare	prepare(self, record)	todo		
+Lib/logging/handlers.py	1585	1599	QueueListener.handle	handle(self, record)	todo		
+Lib/logging/handlers.py	1601	1622	QueueListener._monitor	_monitor(self)	todo		
+Lib/logging/handlers.py	1624	1632	QueueListener.enqueue_sentinel	enqueue_sentinel(self)	todo		
+Lib/logging/handlers.py	1634	1645	QueueListener.stop	stop(self)	todo		

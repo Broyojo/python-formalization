@@ -1,0 +1,5 @@
+file	line	endline	name	signature	status	entry	note
+Lib/idlelib/util.py	24	33	fix_scaling	fix_scaling(root)	excluded		platform: GUI toolkit
+Lib/idlelib/util.py	40	46	fix_win_hidpi	fix_win_hidpi()	excluded		platform: GUI toolkit
+Lib/idlelib/util.py	48	54	fix_word_breaks	fix_word_breaks(root)	excluded		platform: GUI toolkit
+Lib/idlelib/util.py	57	65	fix_x11_paste	fix_x11_paste(root)	excluded		platform: GUI toolkit

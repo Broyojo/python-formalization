@@ -1,0 +1,69 @@
+file	line	endline	name	signature	status	entry	note
+Modules/selectmodule.c	104	109	get_select_state	get_select_state(PyObject *module)	todo		
+Modules/selectmodule.c	130	137	reap_obj	reap_obj(pylist fd2obj[FD_SETSIZE + 1])	todo		
+Modules/selectmodule.c	144	201	seq2set	seq2set(PyObject *seq, fd_set *set, pylist fd2obj[FD_SETSIZE + 1])	todo		
+Modules/selectmodule.c	205	236	set2list	set2list(fd_set *set, pylist fd2obj[FD_SETSIZE + 1])	todo		
+Modules/selectmodule.c	278	427	select_select_impl	select_select_impl(PyObject *module, PyObject *rlist, PyObject *wlist, PyObject *xlist, PyObject *timeout_obj) /*[clinic end generated code: output=2b3cfa824f7ae4cf input=34a2c2075ca9830e]*/	todo		
+Modules/selectmodule.c	450	475	update_ufd_array	update_ufd_array(pollObject *self)	todo		
+Modules/selectmodule.c	491	516	select_poll_register_impl	select_poll_register_impl(pollObject *self, int fd, unsigned short eventmask) /*[clinic end generated code: output=0dc7173c800a4a65 input=c475e029ce6c2830]*/	todo		
+Modules/selectmodule.c	534	569	select_poll_modify_impl	select_poll_modify_impl(pollObject *self, int fd, unsigned short eventmask) /*[clinic end generated code: output=1a7b88bf079eff17 input=38c9db5346711872]*/	todo		
+Modules/selectmodule.c	583	604	select_poll_unregister_impl	select_poll_unregister_impl(pollObject *self, int fd) /*[clinic end generated code: output=8c9f42e75e7d291b input=ae6315d7f5243704]*/	todo		
+Modules/selectmodule.c	622	755	select_poll_poll_impl	select_poll_poll_impl(pollObject *self, PyObject *timeout_obj) /*[clinic end generated code: output=876e837d193ed7e4 input=e0a9c0aa283de8c8]*/	todo		
+Modules/selectmodule.c	758	775	newPollObject	newPollObject(PyObject *module)	todo		
+Modules/selectmodule.c	778	788	poll_dealloc	poll_dealloc(PyObject *op)	todo		
+Modules/selectmodule.c	805	809	devpoll_err_closed	devpoll_err_closed(void)	todo		
+Modules/selectmodule.c	811	839	devpoll_flush	static int devpoll_flush(devpollObject *self)	todo		
+Modules/selectmodule.c	842	867	internal_devpoll_register	internal_devpoll_register(devpollObject *self, int fd, unsigned short events, int remove)	todo		
+Modules/selectmodule.c	884	889	select_devpoll_register_impl	select_devpoll_register_impl(devpollObject *self, int fd, unsigned short eventmask) /*[clinic end generated code: output=6e07fe8b74abba0c input=8d48bd2653a61c42]*/	todo		
+Modules/selectmodule.c	906	911	select_devpoll_modify_impl	select_devpoll_modify_impl(devpollObject *self, int fd, unsigned short eventmask) /*[clinic end generated code: output=bc2e6d23aaff98b4 input=773b37e9abca2460]*/	todo		
+Modules/selectmodule.c	924	939	select_devpoll_unregister_impl	select_devpoll_unregister_impl(devpollObject *self, int fd) /*[clinic end generated code: output=95519ffa0c7d43fe input=6052d368368d4d05]*/	todo		
+Modules/selectmodule.c	956	1058	select_devpoll_poll_impl	select_devpoll_poll_impl(devpollObject *self, PyObject *timeout_obj) /*[clinic end generated code: output=2654e5457cca0b3c input=9e1672658d728539]*/	todo		
+Modules/selectmodule.c	1061	1073	devpoll_internal_close	devpoll_internal_close(devpollObject *self)	todo		
+Modules/selectmodule.c	1085	1094	select_devpoll_close_impl	select_devpoll_close_impl(devpollObject *self) /*[clinic end generated code: output=26b355bd6429f21b input=408fde21a377ccfb]*/	todo		
+Modules/selectmodule.c	1097	1104	devpoll_get_closed	devpoll_get_closed(PyObject *op, void *Py_UNUSED(closure))	todo		
+Modules/selectmodule.c	1114	1120	select_devpoll_fileno_impl	select_devpoll_fileno_impl(devpollObject *self) /*[clinic end generated code: output=26920929f8d292f4 input=8c9db2efa1ade538]*/	todo		
+Modules/selectmodule.c	1129	1171	newDevPollObject	newDevPollObject(PyObject *module)	todo		
+Modules/selectmodule.c	1174	1182	devpoll_dealloc	devpoll_dealloc(PyObject *op)	todo		
+Modules/selectmodule.c	1212	1216	select_poll_impl	select_poll_impl(PyObject *module) /*[clinic end generated code: output=16a665a4e1d228c5 input=0aefd4527e99e0aa]*/	todo		
+Modules/selectmodule.c	1230	1234	select_devpoll_impl	select_devpoll_impl(PyObject *module) /*[clinic end generated code: output=ea9213cc87fd9581 input=4c2ac27d10248526]*/	todo		
+Modules/selectmodule.c	1244	1265	select_have_broken_poll	static int select_have_broken_poll(void)	todo		
+Modules/selectmodule.c	1290	1294	pyepoll_err_closed	pyepoll_err_closed(void)	todo		
+Modules/selectmodule.c	1297	1309	pyepoll_internal_close	pyepoll_internal_close(pyEpoll_Object *self)	todo		
+Modules/selectmodule.c	1312	1348	newPyEpoll_Object	newPyEpoll_Object(PyTypeObject *type, int sizehint, SOCKET fd)	todo		
+Modules/selectmodule.c	1368	1387	select_epoll_impl	select_epoll_impl(PyTypeObject *type, int sizehint, int flags) /*[clinic end generated code: output=c87404e705013bb5 input=303e3295e7975e43]*/	todo		
+Modules/selectmodule.c	1391	1399	pyepoll_dealloc	pyepoll_dealloc(PyObject *op)	todo		
+Modules/selectmodule.c	1411	1420	select_epoll_close_impl	select_epoll_close_impl(pyEpoll_Object *self) /*[clinic end generated code: output=ee2144c446a1a435 input=f626a769192e1dbe]*/	todo		
+Modules/selectmodule.c	1424	1431	pyepoll_get_closed	pyepoll_get_closed(PyObject *op, void *Py_UNUSED(closure))	todo		
+Modules/selectmodule.c	1440	1446	select_epoll_fileno_impl	select_epoll_fileno_impl(pyEpoll_Object *self) /*[clinic end generated code: output=e171375fdc619ba3 input=c11091a6aee60b5c]*/	todo		
+Modules/selectmodule.c	1460	1465	select_epoll_fromfd_impl	select_epoll_fromfd_impl(PyTypeObject *type, int fd) /*[clinic end generated code: output=c15de2a083524e8e input=faecefdb55e3046e]*/	todo		
+Modules/selectmodule.c	1469	1504	pyepoll_internal_ctl	pyepoll_internal_ctl(int epfd, int op, int fd, unsigned int events)	todo		
+Modules/selectmodule.c	1520	1525	select_epoll_register_impl	select_epoll_register_impl(pyEpoll_Object *self, int fd, unsigned int eventmask) /*[clinic end generated code: output=318e5e6386520599 input=a5071b71edfe3578]*/	todo		
+Modules/selectmodule.c	1539	1544	select_epoll_modify_impl	select_epoll_modify_impl(pyEpoll_Object *self, int fd, unsigned int eventmask) /*[clinic end generated code: output=7e3447307cff6f65 input=88a83dac53a8c3da]*/	todo		
+Modules/selectmodule.c	1556	1560	select_epoll_unregister_impl	select_epoll_unregister_impl(pyEpoll_Object *self, int fd) /*[clinic end generated code: output=07c5dbd612a512d4 input=3093f68d3644743d]*/	todo		
+Modules/selectmodule.c	1578	1685	select_epoll_poll_impl	select_epoll_poll_impl(pyEpoll_Object *self, PyObject *timeout_obj, int maxevents) /*[clinic end generated code: output=e02d121a20246c6c input=5a49d65788c70c7a]*/	todo		
+Modules/selectmodule.c	1694	1701	select_epoll___enter___impl	select_epoll___enter___impl(pyEpoll_Object *self) /*[clinic end generated code: output=ab45d433504db2a0 input=3c22568587efeadb]*/	todo		
+Modules/selectmodule.c	1714	1720	select_epoll___exit___impl	select_epoll___exit___impl(pyEpoll_Object *self, PyObject *exc_type, PyObject *exc_value, PyObject *exc_tb) /*[clinic end generated code: output=c480f38ce361748e input=7ae81a5a4c1a98d8]*/	todo		
+Modules/selectmodule.c	1895	1903	kqueue_event_repr	kqueue_event_repr(PyObject *op)	todo		
+Modules/selectmodule.c	1906	1949	kqueue_event_init	kqueue_event_init(PyObject *op, PyObject *args, PyObject *kwds)	todo		
+Modules/selectmodule.c	1952	1974	kqueue_event_richcompare	kqueue_event_richcompare(PyObject *lhs, PyObject *rhs, int op)	todo		
+Modules/selectmodule.c	1995	1999	kqueue_queue_err_closed	kqueue_queue_err_closed(void)	todo		
+Modules/selectmodule.c	2002	2017	kqueue_tracking_after_fork	kqueue_tracking_after_fork(PyObject *module, PyObject *Py_UNUSED(dummy)) {	todo		
+Modules/selectmodule.c	2025	2066	kqueue_tracking_init	kqueue_tracking_init(PyObject *module) {	todo		
+Modules/selectmodule.c	2069	2081	kqueue_tracking_add_lock_held	kqueue_tracking_add_lock_held(_selectstate *state, kqueue_queue_Object *self)	todo		
+Modules/selectmodule.c	2084	2095	kqueue_tracking_add	kqueue_tracking_add(_selectstate *state, kqueue_queue_Object *self)	todo		
+Modules/selectmodule.c	2098	2113	kqueue_tracking_remove_lock_held	kqueue_tracking_remove_lock_held(_selectstate *state, kqueue_queue_Object *self)	todo		
+Modules/selectmodule.c	2116	2121	kqueue_tracking_remove	kqueue_tracking_remove(_selectstate *state, kqueue_queue_Object *self)	todo		
+Modules/selectmodule.c	2124	2138	kqueue_queue_internal_close	kqueue_queue_internal_close(kqueue_queue_Object *self)	todo		
+Modules/selectmodule.c	2141	2180	newKqueue_Object	newKqueue_Object(PyTypeObject *type, SOCKET fd)	todo		
+Modules/selectmodule.c	2202	2206	select_kqueue_impl	select_kqueue_impl(PyTypeObject *type) /*[clinic end generated code: output=e0ff89f154d56236 input=cf625e49218366e8]*/	todo		
+Modules/selectmodule.c	2209	2215	kqueue_queue_finalize	kqueue_queue_finalize(PyObject *op)	todo		
+Modules/selectmodule.c	2227	2236	select_kqueue_close_impl	select_kqueue_close_impl(kqueue_queue_Object *self) /*[clinic end generated code: output=d1c7df0b407a4bc1 input=6d763c858b17b690]*/	todo		
+Modules/selectmodule.c	2239	2246	kqueue_queue_get_closed	kqueue_queue_get_closed(PyObject *op, void *Py_UNUSED(closure))	todo		
+Modules/selectmodule.c	2255	2261	select_kqueue_fileno_impl	select_kqueue_fileno_impl(kqueue_queue_Object *self) /*[clinic end generated code: output=716f46112a4f6e5c input=41911c539ca2b0ca]*/	todo		
+Modules/selectmodule.c	2274	2280	select_kqueue_fromfd_impl	select_kqueue_fromfd_impl(PyTypeObject *type, int fd) /*[clinic end generated code: output=d02c3c7dc538a653 input=f6172a48ca4ecdd0]*/	todo		
+Modules/selectmodule.c	2299	2449	select_kqueue_control_impl	select_kqueue_control_impl(kqueue_queue_Object *self, PyObject *changelist, int maxevents, PyObject *otimeout) /*[clinic end generated code: output=81324ff5130db7ae input=59c4e30811209c47]*/	todo		
+Modules/selectmodule.c	2591	2605	_select_traverse	_select_traverse(PyObject *module, visitproc visit, void *arg)	todo		
+Modules/selectmodule.c	2608	2621	_select_clear	_select_clear(PyObject *module)	todo		
+Modules/selectmodule.c	2624	2627	_select_free	_select_free(void *module)	todo		
+Modules/selectmodule.c	2630	2646	_select_exec	_select_exec(PyObject *m)	todo		
+Modules/selectmodule.c	2893	2896	PyInit_select	PyInit_select(void)	todo		

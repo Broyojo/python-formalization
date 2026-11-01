@@ -1,0 +1,13 @@
+file	line	endline	name	signature	status	entry	note
+Lib/idlelib/window.py	7	9	WindowList.__init__	__init__(self)	excluded		platform: GUI toolkit
+Lib/idlelib/window.py	11	13	WindowList.add	add(self, window)	excluded		platform: GUI toolkit
+Lib/idlelib/window.py	15	21	WindowList.delete	delete(self, window)	excluded		platform: GUI toolkit
+Lib/idlelib/window.py	23	34	WindowList.add_windows_to_menu	add_windows_to_menu(self, menu)	excluded		platform: GUI toolkit
+Lib/idlelib/window.py	36	37	WindowList.register_callback	register_callback(self, callback)	excluded		platform: GUI toolkit
+Lib/idlelib/window.py	39	43	WindowList.unregister_callback	unregister_callback(self, callback)	excluded		platform: GUI toolkit
+Lib/idlelib/window.py	45	51	WindowList.call_callbacks	call_callbacks(self)	excluded		platform: GUI toolkit
+Lib/idlelib/window.py	63	70	ListedToplevel.__init__	__init__(self, master, **kw)	excluded		platform: GUI toolkit
+Lib/idlelib/window.py	72	78	ListedToplevel.destroy	destroy(self)	excluded		platform: GUI toolkit
+Lib/idlelib/window.py	80	81	ListedToplevel.update_windowlist_registry	update_windowlist_registry(self, window)	excluded		platform: GUI toolkit
+Lib/idlelib/window.py	83	85	ListedToplevel.get_title	get_title(self)	excluded		platform: GUI toolkit
+Lib/idlelib/window.py	87	97	ListedToplevel.wakeup	wakeup(self)	excluded		platform: GUI toolkit

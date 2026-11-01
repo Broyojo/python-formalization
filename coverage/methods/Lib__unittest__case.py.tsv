@@ -1,0 +1,122 @@
+file	line	endline	name	signature	status	entry	note
+Lib/unittest/case.py	46	51	_Outcome.__init__	__init__(self, result=None)	todo		
+Lib/unittest/case.py	54	83	_Outcome.testPartExecutor	testPartExecutor(self, test_case, subTest=False)	todo		
+Lib/unittest/case.py	86	93	_addSkip	_addSkip(result, test_case, reason)	todo		
+Lib/unittest/case.py	95	100	_addError	_addError(result, test, exc_info)	todo		
+Lib/unittest/case.py	102	103	_id	_id(obj)	todo		
+Lib/unittest/case.py	106	127	_enter_context	_enter_context(cm, addcleanup)	todo		
+Lib/unittest/case.py	131	134	addModuleCleanup	addModuleCleanup(function, /, *args, **kwargs)	todo		
+Lib/unittest/case.py	136	138	enterModuleContext	enterModuleContext(cm)	todo		
+Lib/unittest/case.py	141	154	doModuleCleanups	doModuleCleanups()	todo		
+Lib/unittest/case.py	157	175	skip	skip(reason)	todo		
+Lib/unittest/case.py	177	183	skipIf	skipIf(condition, reason)	todo		
+Lib/unittest/case.py	185	191	skipUnless	skipUnless(condition, reason)	todo		
+Lib/unittest/case.py	193	195	expectedFailure	expectedFailure(test_item)	todo		
+Lib/unittest/case.py	197	200	_is_subtype	_is_subtype(expected, basetype)	todo		
+Lib/unittest/case.py	204	205	_BaseTestCaseContext.__init__	__init__(self, test_case)	todo		
+Lib/unittest/case.py	207	209	_BaseTestCaseContext._raiseFailure	_raiseFailure(self, standardMsg)	todo		
+Lib/unittest/case.py	213	221	_AssertRaisesBaseContext.__init__	__init__(self, expected, test_case, expected_regex=None)	todo		
+Lib/unittest/case.py	223	250	_AssertRaisesBaseContext.handle	handle(self, name, args, kwargs)	todo		
+Lib/unittest/case.py	259	260	_AssertRaisesContext.__enter__	__enter__(self)	todo		
+Lib/unittest/case.py	262	287	_AssertRaisesContext.__exit__	__exit__(self, exc_type, exc_value, tb)	todo		
+Lib/unittest/case.py	298	307	_AssertWarnsContext.__enter__	__enter__(self)	todo		
+Lib/unittest/case.py	309	341	_AssertWarnsContext.__exit__	__exit__(self, exc_type, exc_value, tb)	todo		
+Lib/unittest/case.py	346	358	_AssertNotWarnsContext.__exit__	__exit__(self, exc_type, exc_value, tb)	todo		
+Lib/unittest/case.py	362	368	_OrderedChainMap.__iter__	__iter__(self)	todo		
+Lib/unittest/case.py	414	418	TestCase.__init_subclass__	__init_subclass__(cls, *args, **kwargs)	todo		
+Lib/unittest/case.py	420	450	TestCase.__init__	__init__(self, methodName='runTest')	todo		
+Lib/unittest/case.py	452	465	TestCase.addTypeEqualityFunc	addTypeEqualityFunc(self, typeobj, function)	todo		
+Lib/unittest/case.py	467	473	TestCase.addCleanup	addCleanup(self, function, /, *args, **kwargs)	todo		
+Lib/unittest/case.py	475	481	TestCase.enterContext	enterContext(self, cm)	todo		
+Lib/unittest/case.py	484	487	TestCase.addClassCleanup	addClassCleanup(cls, function, /, *args, **kwargs)	todo		
+Lib/unittest/case.py	490	492	TestCase.enterClassContext	enterClassContext(cls, cm)	todo		
+Lib/unittest/case.py	494	496	TestCase.setUp	setUp(self)	todo		
+Lib/unittest/case.py	498	500	TestCase.tearDown	tearDown(self)	todo		
+Lib/unittest/case.py	503	504	TestCase.setUpClass	setUpClass(cls)	todo		
+Lib/unittest/case.py	507	508	TestCase.tearDownClass	tearDownClass(cls)	todo		
+Lib/unittest/case.py	510	511	TestCase.countTestCases	countTestCases(self)	todo		
+Lib/unittest/case.py	513	514	TestCase.defaultTestResult	defaultTestResult(self)	todo		
+Lib/unittest/case.py	516	524	TestCase.shortDescription	shortDescription(self)	todo		
+Lib/unittest/case.py	527	528	TestCase.id	id(self)	todo		
+Lib/unittest/case.py	530	534	TestCase.__eq__	__eq__(self, other)	todo		
+Lib/unittest/case.py	536	537	TestCase.__hash__	__hash__(self)	todo		
+Lib/unittest/case.py	539	540	TestCase.__str__	__str__(self)	todo		
+Lib/unittest/case.py	542	544	TestCase.__repr__	__repr__(self)	todo		
+Lib/unittest/case.py	547	575	TestCase.subTest	subTest(self, msg=_subtest_msg_sentinel, **params)	todo		
+Lib/unittest/case.py	577	585	TestCase._addExpectedFailure	_addExpectedFailure(self, result, exc_info)	todo		
+Lib/unittest/case.py	587	600	TestCase._addUnexpectedSuccess	_addUnexpectedSuccess(self, result)	todo		
+Lib/unittest/case.py	602	609	TestCase._addDuration	_addDuration(self, result, elapsed)	todo		
+Lib/unittest/case.py	611	612	TestCase._callSetUp	_callSetUp(self)	todo		
+Lib/unittest/case.py	614	626	TestCase._callTestMethod	_callTestMethod(self, method)	todo		
+Lib/unittest/case.py	628	629	TestCase._callTearDown	_callTearDown(self)	todo		
+Lib/unittest/case.py	631	632	TestCase._callCleanup	_callCleanup(self, function, /, *args, **kwargs)	todo		
+Lib/unittest/case.py	634	697	TestCase.run	run(self, result=None)	todo		
+Lib/unittest/case.py	699	710	TestCase.doCleanups	doCleanups(self)	todo		
+Lib/unittest/case.py	713	722	TestCase.doClassCleanups	doClassCleanups(cls)	todo		
+Lib/unittest/case.py	724	725	TestCase.__call__	__call__(self, *args, **kwds)	todo		
+Lib/unittest/case.py	727	742	TestCase.debug	debug(self)	todo		
+Lib/unittest/case.py	744	746	TestCase.skipTest	skipTest(self, reason)	todo		
+Lib/unittest/case.py	748	750	TestCase.fail	fail(self, msg=None)	todo		
+Lib/unittest/case.py	752	756	TestCase.assertFalse	assertFalse(self, expr, msg=None)	todo		
+Lib/unittest/case.py	758	762	TestCase.assertTrue	assertTrue(self, expr, msg=None)	todo		
+Lib/unittest/case.py	764	783	TestCase._formatMessage	_formatMessage(self, msg, standardMsg)	todo		
+Lib/unittest/case.py	785	816	TestCase.assertRaises	assertRaises(self, expected_exception, *args, **kwargs)	todo		
+Lib/unittest/case.py	818	847	TestCase.assertWarns	assertWarns(self, expected_warning, *args, **kwargs)	todo		
+Lib/unittest/case.py	849	852	TestCase._assertNotWarns	_assertNotWarns(self, expected_warning, *args, **kwargs)	todo		
+Lib/unittest/case.py	854	876	TestCase.assertLogs	assertLogs(self, logger=None, level=None)	todo		
+Lib/unittest/case.py	878	885	TestCase.assertNoLogs	assertNoLogs(self, logger=None, level=None)	todo		
+Lib/unittest/case.py	887	911	TestCase._getAssertEqualityFunc	_getAssertEqualityFunc(self, first, second)	todo		
+Lib/unittest/case.py	913	918	TestCase._baseAssertEqual	_baseAssertEqual(self, first, second, msg=None)	todo		
+Lib/unittest/case.py	920	925	TestCase.assertEqual	assertEqual(self, first, second, msg=None)	todo		
+Lib/unittest/case.py	927	934	TestCase.assertNotEqual	assertNotEqual(self, first, second, msg=None)	todo		
+Lib/unittest/case.py	936	979	TestCase.assertAlmostEqual	assertAlmostEqual(self, first, second, places=None, msg=None, delta=None)	todo		
+Lib/unittest/case.py	981	1014	TestCase.assertNotAlmostEqual	assertNotAlmostEqual(self, first, second, places=None, msg=None, delta=None)	todo		
+Lib/unittest/case.py	1016	1113	TestCase.assertSequenceEqual	assertSequenceEqual(self, seq1, seq2, msg=None, seq_type=None)	todo		
+Lib/unittest/case.py	1115	1119	TestCase._truncateMessage	_truncateMessage(self, message, diff)	todo		
+Lib/unittest/case.py	1121	1131	TestCase.assertListEqual	assertListEqual(self, list1, list2, msg=None)	todo		
+Lib/unittest/case.py	1133	1142	TestCase.assertTupleEqual	assertTupleEqual(self, tuple1, tuple2, msg=None)	todo		
+Lib/unittest/case.py	1144	1185	TestCase.assertSetEqual	assertSetEqual(self, set1, set2, msg=None)	todo		
+Lib/unittest/case.py	1187	1192	TestCase.assertIn	assertIn(self, member, container, msg=None)	todo		
+Lib/unittest/case.py	1194	1199	TestCase.assertNotIn	assertNotIn(self, member, container, msg=None)	todo		
+Lib/unittest/case.py	1201	1206	TestCase.assertIs	assertIs(self, expr1, expr2, msg=None)	todo		
+Lib/unittest/case.py	1208	1212	TestCase.assertIsNot	assertIsNot(self, expr1, expr2, msg=None)	todo		
+Lib/unittest/case.py	1214	1224	TestCase.assertDictEqual	assertDictEqual(self, d1, d2, msg=None)	todo		
+Lib/unittest/case.py	1226	1256	TestCase.assertCountEqual	assertCountEqual(self, first, second, msg=None)	todo		
+Lib/unittest/case.py	1258	1291	TestCase.assertMultiLineEqual	assertMultiLineEqual(self, first, second, msg=None)	todo		
+Lib/unittest/case.py	1293	1297	TestCase.assertLess	assertLess(self, a, b, msg=None)	todo		
+Lib/unittest/case.py	1299	1303	TestCase.assertLessEqual	assertLessEqual(self, a, b, msg=None)	todo		
+Lib/unittest/case.py	1305	1309	TestCase.assertGreater	assertGreater(self, a, b, msg=None)	todo		
+Lib/unittest/case.py	1311	1315	TestCase.assertGreaterEqual	assertGreaterEqual(self, a, b, msg=None)	todo		
+Lib/unittest/case.py	1317	1321	TestCase.assertIsNone	assertIsNone(self, obj, msg=None)	todo		
+Lib/unittest/case.py	1323	1327	TestCase.assertIsNotNone	assertIsNotNone(self, obj, msg=None)	todo		
+Lib/unittest/case.py	1329	1337	TestCase.assertIsInstance	assertIsInstance(self, obj, cls, msg=None)	todo		
+Lib/unittest/case.py	1339	1348	TestCase.assertNotIsInstance	assertNotIsInstance(self, obj, cls, msg=None)	todo		
+Lib/unittest/case.py	1350	1362	TestCase.assertIsSubclass	assertIsSubclass(self, cls, superclass, msg=None)	todo		
+Lib/unittest/case.py	1364	1378	TestCase.assertNotIsSubclass	assertNotIsSubclass(self, cls, superclass, msg=None)	todo		
+Lib/unittest/case.py	1380	1388	TestCase.assertHasAttr	assertHasAttr(self, obj, name, msg=None)	todo		
+Lib/unittest/case.py	1390	1398	TestCase.assertNotHasAttr	assertNotHasAttr(self, obj, name, msg=None)	todo		
+Lib/unittest/case.py	1400	1414	TestCase.assertRaisesRegex	assertRaisesRegex(self, expected_exception, expected_regex, *args, **kwargs)	todo		
+Lib/unittest/case.py	1416	1433	TestCase.assertWarnsRegex	assertWarnsRegex(self, expected_warning, expected_regex, *args, **kwargs)	todo		
+Lib/unittest/case.py	1435	1445	TestCase.assertRegex	assertRegex(self, text, expected_regex, msg=None)	todo		
+Lib/unittest/case.py	1447	1459	TestCase.assertNotRegex	assertNotRegex(self, text, unexpected_regex, msg=None)	todo		
+Lib/unittest/case.py	1461	1472	TestCase._tail_type_check	_tail_type_check(self, s, tails, msg)	todo		
+Lib/unittest/case.py	1474	1487	TestCase.assertStartsWith	assertStartsWith(self, s, prefix, msg=None)	todo		
+Lib/unittest/case.py	1489	1503	TestCase.assertNotStartsWith	assertNotStartsWith(self, s, prefix, msg=None)	todo		
+Lib/unittest/case.py	1505	1518	TestCase.assertEndsWith	assertEndsWith(self, s, suffix, msg=None)	todo		
+Lib/unittest/case.py	1520	1534	TestCase.assertNotEndsWith	assertNotEndsWith(self, s, suffix, msg=None)	todo		
+Lib/unittest/case.py	1546	1551	FunctionTestCase.__init__	__init__(self, testFunc, setUp=None, tearDown=None, description=None)	todo		
+Lib/unittest/case.py	1553	1555	FunctionTestCase.setUp	setUp(self)	todo		
+Lib/unittest/case.py	1557	1559	FunctionTestCase.tearDown	tearDown(self)	todo		
+Lib/unittest/case.py	1561	1562	FunctionTestCase.runTest	runTest(self)	todo		
+Lib/unittest/case.py	1564	1565	FunctionTestCase.id	id(self)	todo		
+Lib/unittest/case.py	1567	1574	FunctionTestCase.__eq__	__eq__(self, other)	todo		
+Lib/unittest/case.py	1576	1578	FunctionTestCase.__hash__	__hash__(self)	todo		
+Lib/unittest/case.py	1580	1582	FunctionTestCase.__str__	__str__(self)	todo		
+Lib/unittest/case.py	1584	1586	FunctionTestCase.__repr__	__repr__(self)	todo		
+Lib/unittest/case.py	1588	1592	FunctionTestCase.shortDescription	shortDescription(self)	todo		
+Lib/unittest/case.py	1597	1602	_SubTest.__init__	__init__(self, test_case, message, params)	todo		
+Lib/unittest/case.py	1604	1605	_SubTest.runTest	runTest(self)	todo		
+Lib/unittest/case.py	1607	1616	_SubTest._subDescription	_subDescription(self)	todo		
+Lib/unittest/case.py	1618	1619	_SubTest.id	id(self)	todo		
+Lib/unittest/case.py	1621	1625	_SubTest.shortDescription	shortDescription(self)	todo		
+Lib/unittest/case.py	1627	1628	_SubTest.__str__	__str__(self)	todo		

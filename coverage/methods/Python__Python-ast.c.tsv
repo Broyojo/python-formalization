@@ -1,0 +1,153 @@
+file	line	endline	name	signature	status	entry	note
+Python/Python-ast.c	21	30	get_ast_state	get_ast_state(void)	todo		
+Python/Python-ast.c	32	285	_PyAST_Fini	void _PyAST_Fini(PyInterpreterState *interp)	todo		
+Python/Python-ast.c	287	378	init_identifiers	static int init_identifiers(struct ast_state *state)	todo		
+Python/Python-ast.c	817	5120	add_ast_annotations	add_ast_annotations(struct ast_state *state)	todo		
+Python/Python-ast.c	5130	5141	ast_dealloc	ast_dealloc(PyObject *op)	todo		
+Python/Python-ast.c	5144	5150	ast_traverse	ast_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Python/Python-ast.c	5153	5158	ast_clear	ast_clear(PyObject *op)	todo		
+Python/Python-ast.c	5161	5352	ast_type_init	ast_type_init(PyObject *self, PyObject *args, PyObject *kw)	todo		
+Python/Python-ast.c	5356	5429	ast_type_reduce	ast_type_reduce(PyObject *self, PyObject *unused)	todo		
+Python/Python-ast.c	5455	5605	ast_type_replace_check	ast_type_replace_check(PyObject *self, PyObject *dict, PyObject *fields, PyObject *attributes, PyObject *kwargs)	todo		
+Python/Python-ast.c	5626	5663	ast_type_replace_update_payload	ast_type_replace_update_payload(PyObject *payload, PyObject *keys, PyObject *dict)	todo		
+Python/Python-ast.c	5667	5728	ast_type_replace	ast_type_replace(PyObject *self, PyObject *args, PyObject *kwargs)	todo		
+Python/Python-ast.c	5758	5842	ast_repr_list	ast_repr_list(PyObject *list, int depth)	todo		
+Python/Python-ast.c	5845	5965	ast_repr_max_depth	ast_repr_max_depth(AST_object *self, int depth)	todo		
+Python/Python-ast.c	5968	5971	ast_repr	ast_repr(PyObject *self)	todo		
+Python/Python-ast.c	5999	6023	make_type	make_type(struct ast_state *state, const char *type, PyObject* base, const char* const* fields, int num_fields, const char *doc)	todo		
+Python/Python-ast.c	6026	6043	add_attributes	add_attributes(struct ast_state *state, PyObject *type, const char * const *attrs, int num_fields)	todo		
+Python/Python-ast.c	6047	6064	ast2obj_list	static PyObject* ast2obj_list(struct ast_state *state, asdl_seq *seq, PyObject* (*func)(struct ast_state *state, void*))	todo		
+Python/Python-ast.c	6066	6073	ast2obj_object	static PyObject* ast2obj_object(struct ast_state *Py_UNUSED(state), void *o)	todo		
+Python/Python-ast.c	6078	6081	ast2obj_int	static PyObject* ast2obj_int(struct ast_state *Py_UNUSED(state), long b)	todo		
+Python/Python-ast.c	6085	6100	obj2ast_object	static int obj2ast_object(struct ast_state *Py_UNUSED(state), PyObject* obj, PyObject** out, PyArena* arena)	todo		
+Python/Python-ast.c	6102	6110	obj2ast_constant	static int obj2ast_constant(struct ast_state *Py_UNUSED(state), PyObject* obj, PyObject** out, PyArena* arena)	todo		
+Python/Python-ast.c	6112	6119	obj2ast_identifier	static int obj2ast_identifier(struct ast_state *state, PyObject* obj, PyObject** out, PyArena* arena)	todo		
+Python/Python-ast.c	6121	6128	obj2ast_string	static int obj2ast_string(struct ast_state *state, PyObject* obj, PyObject** out, PyArena* arena)	todo		
+Python/Python-ast.c	6130	6143	obj2ast_int	static int obj2ast_int(struct ast_state* Py_UNUSED(state), PyObject* obj, int* out, PyArena* arena)	todo		
+Python/Python-ast.c	6145	6158	add_ast_fields	static int add_ast_fields(struct ast_state *state)	todo		
+Python/Python-ast.c	6163	6982	init_types	init_types(void *arg)	todo		
+Python/Python-ast.c	7024	7035	_PyAST_Module	_PyAST_Module(asdl_stmt_seq * body, asdl_type_ignore_seq * type_ignores, PyArena *arena)	todo		
+Python/Python-ast.c	7038	7047	_PyAST_Interactive	_PyAST_Interactive(asdl_stmt_seq * body, PyArena *arena)	todo		
+Python/Python-ast.c	7050	7064	_PyAST_Expression	_PyAST_Expression(expr_ty body, PyArena *arena)	todo		
+Python/Python-ast.c	7067	7082	_PyAST_FunctionType	_PyAST_FunctionType(asdl_expr_seq * argtypes, expr_ty returns, PyArena *arena)	todo		
+Python/Python-ast.c	7085	7118	_PyAST_FunctionDef	_PyAST_FunctionDef(identifier name, arguments_ty args, asdl_stmt_seq * body, asdl_expr_seq * decorator_list, expr_ty returns, string type_comment, asdl_type_param_seq * type_params, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7121	7154	_PyAST_AsyncFunctionDef	_PyAST_AsyncFunctionDef(identifier name, arguments_ty args, asdl_stmt_seq * body, asdl_expr_seq * decorator_list, expr_ty returns, string type_comment, asdl_type_param_seq * type_params, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7157	7183	_PyAST_ClassDef	_PyAST_ClassDef(identifier name, asdl_expr_seq * bases, asdl_keyword_seq * keywords, asdl_stmt_seq * body, asdl_expr_seq * decorator_list, asdl_type_param_seq * type_params, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7186	7200	_PyAST_Return	_PyAST_Return(expr_ty value, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7203	7217	_PyAST_Delete	_PyAST_Delete(asdl_expr_seq * targets, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7220	7242	_PyAST_Assign	_PyAST_Assign(asdl_expr_seq * targets, expr_ty value, string type_comment, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7245	7272	_PyAST_TypeAlias	_PyAST_TypeAlias(expr_ty name, asdl_type_param_seq * type_params, expr_ty value, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7275	7306	_PyAST_AugAssign	_PyAST_AugAssign(expr_ty target, operator_ty op, expr_ty value, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7309	7337	_PyAST_AnnAssign	_PyAST_AnnAssign(expr_ty target, expr_ty annotation, expr_ty value, int simple, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7340	7369	_PyAST_For	_PyAST_For(expr_ty target, expr_ty iter, asdl_stmt_seq * body, asdl_stmt_seq * orelse, string type_comment, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7372	7401	_PyAST_AsyncFor	_PyAST_AsyncFor(expr_ty target, expr_ty iter, asdl_stmt_seq * body, asdl_stmt_seq * orelse, string type_comment, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7404	7426	_PyAST_While	_PyAST_While(expr_ty test, asdl_stmt_seq * body, asdl_stmt_seq * orelse, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7429	7451	_PyAST_If	_PyAST_If(expr_ty test, asdl_stmt_seq * body, asdl_stmt_seq * orelse, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7454	7471	_PyAST_With	_PyAST_With(asdl_withitem_seq * items, asdl_stmt_seq * body, string type_comment, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7474	7491	_PyAST_AsyncWith	_PyAST_AsyncWith(asdl_withitem_seq * items, asdl_stmt_seq * body, string type_comment, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7494	7514	_PyAST_Match	_PyAST_Match(expr_ty subject, asdl_match_case_seq * cases, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7517	7532	_PyAST_Raise	_PyAST_Raise(expr_ty exc, expr_ty cause, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7535	7553	_PyAST_Try	_PyAST_Try(asdl_stmt_seq * body, asdl_excepthandler_seq * handlers, asdl_stmt_seq * orelse, asdl_stmt_seq * finalbody, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7556	7575	_PyAST_TryStar	_PyAST_TryStar(asdl_stmt_seq * body, asdl_excepthandler_seq * handlers, asdl_stmt_seq * orelse, asdl_stmt_seq * finalbody, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7578	7598	_PyAST_Assert	_PyAST_Assert(expr_ty test, expr_ty msg, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7601	7615	_PyAST_Import	_PyAST_Import(asdl_alias_seq * names, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7618	7635	_PyAST_ImportFrom	_PyAST_ImportFrom(identifier module, asdl_alias_seq * names, int level, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7638	7652	_PyAST_Global	_PyAST_Global(asdl_identifier_seq * names, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7655	7669	_PyAST_Nonlocal	_PyAST_Nonlocal(asdl_identifier_seq * names, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7672	7691	_PyAST_Expr	_PyAST_Expr(expr_ty value, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7694	7707	_PyAST_Pass	_PyAST_Pass(int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7710	7723	_PyAST_Break	_PyAST_Break(int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7726	7739	_PyAST_Continue	_PyAST_Continue(int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7742	7762	_PyAST_BoolOp	_PyAST_BoolOp(boolop_ty op, asdl_expr_seq * values, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7765	7790	_PyAST_NamedExpr	_PyAST_NamedExpr(expr_ty target, expr_ty value, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7793	7824	_PyAST_BinOp	_PyAST_BinOp(expr_ty left, operator_ty op, expr_ty right, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7827	7852	_PyAST_UnaryOp	_PyAST_UnaryOp(unaryop_ty op, expr_ty operand, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7855	7880	_PyAST_Lambda	_PyAST_Lambda(arguments_ty args, expr_ty body, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7883	7914	_PyAST_IfExp	_PyAST_IfExp(expr_ty test, expr_ty body, expr_ty orelse, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7917	7932	_PyAST_Dict	_PyAST_Dict(asdl_expr_seq * keys, asdl_expr_seq * values, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7935	7949	_PyAST_Set	_PyAST_Set(asdl_expr_seq * elts, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7952	7973	_PyAST_ListComp	_PyAST_ListComp(expr_ty elt, asdl_comprehension_seq * generators, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	7976	7997	_PyAST_SetComp	_PyAST_SetComp(expr_ty elt, asdl_comprehension_seq * generators, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8000	8027	_PyAST_DictComp	_PyAST_DictComp(expr_ty key, expr_ty value, asdl_comprehension_seq * generators, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8030	8051	_PyAST_GeneratorExp	_PyAST_GeneratorExp(expr_ty elt, asdl_comprehension_seq * generators, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8054	8073	_PyAST_Await	_PyAST_Await(expr_ty value, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8076	8090	_PyAST_Yield	_PyAST_Yield(expr_ty value, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8093	8112	_PyAST_YieldFrom	_PyAST_YieldFrom(expr_ty value, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8115	8137	_PyAST_Compare	_PyAST_Compare(expr_ty left, asdl_int_seq * ops, asdl_expr_seq * comparators, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8140	8162	_PyAST_Call	_PyAST_Call(expr_ty func, asdl_expr_seq * args, asdl_keyword_seq * keywords, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8165	8187	_PyAST_FormattedValue	_PyAST_FormattedValue(expr_ty value, int conversion, expr_ty format_spec, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8190	8218	_PyAST_Interpolation	_PyAST_Interpolation(expr_ty value, constant str, int conversion, expr_ty format_spec, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8221	8235	_PyAST_JoinedStr	_PyAST_JoinedStr(asdl_expr_seq * values, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8238	8252	_PyAST_TemplateStr	_PyAST_TemplateStr(asdl_expr_seq * values, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8255	8275	_PyAST_Constant	_PyAST_Constant(constant value, string kind, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8278	8310	_PyAST_Attribute	_PyAST_Attribute(expr_ty value, identifier attr, expr_context_ty ctx, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8313	8345	_PyAST_Subscript	_PyAST_Subscript(expr_ty value, expr_ty slice, expr_context_ty ctx, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8348	8373	_PyAST_Starred	_PyAST_Starred(expr_ty value, expr_context_ty ctx, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8376	8401	_PyAST_Name	_PyAST_Name(identifier id, expr_context_ty ctx, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8404	8424	_PyAST_List	_PyAST_List(asdl_expr_seq * elts, expr_context_ty ctx, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8427	8447	_PyAST_Tuple	_PyAST_Tuple(asdl_expr_seq * elts, expr_context_ty ctx, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8450	8466	_PyAST_Slice	_PyAST_Slice(expr_ty lower, expr_ty upper, expr_ty step, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8469	8491	_PyAST_comprehension	_PyAST_comprehension(expr_ty target, expr_ty iter, asdl_expr_seq * ifs, int is_async, PyArena *arena)	todo		
+Python/Python-ast.c	8494	8511	_PyAST_ExceptHandler	_PyAST_ExceptHandler(expr_ty type, identifier name, asdl_stmt_seq * body, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8514	8531	_PyAST_arguments	_PyAST_arguments(asdl_arg_seq * posonlyargs, asdl_arg_seq * args, arg_ty vararg, asdl_arg_seq * kwonlyargs, asdl_expr_seq * kw_defaults, arg_ty kwarg, asdl_expr_seq * defaults, PyArena *arena)	todo		
+Python/Python-ast.c	8534	8554	_PyAST_arg	_PyAST_arg(identifier arg, expr_ty annotation, string type_comment, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8557	8576	_PyAST_keyword	_PyAST_keyword(identifier arg, expr_ty value, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8579	8598	_PyAST_alias	_PyAST_alias(identifier name, identifier asname, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8601	8615	_PyAST_withitem	_PyAST_withitem(expr_ty context_expr, expr_ty optional_vars, PyArena *arena)	todo		
+Python/Python-ast.c	8618	8634	_PyAST_match_case	_PyAST_match_case(pattern_ty pattern, expr_ty guard, asdl_stmt_seq * body, PyArena *arena)	todo		
+Python/Python-ast.c	8637	8656	_PyAST_MatchValue	_PyAST_MatchValue(expr_ty value, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8659	8678	_PyAST_MatchSingleton	_PyAST_MatchSingleton(constant value, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8681	8695	_PyAST_MatchSequence	_PyAST_MatchSequence(asdl_pattern_seq * patterns, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8698	8715	_PyAST_MatchMapping	_PyAST_MatchMapping(asdl_expr_seq * keys, asdl_pattern_seq * patterns, identifier rest, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8718	8742	_PyAST_MatchClass	_PyAST_MatchClass(expr_ty cls, asdl_pattern_seq * patterns, asdl_identifier_seq * kwd_attrs, asdl_pattern_seq * kwd_patterns, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8745	8759	_PyAST_MatchStar	_PyAST_MatchStar(identifier name, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8762	8777	_PyAST_MatchAs	_PyAST_MatchAs(pattern_ty pattern, identifier name, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8780	8794	_PyAST_MatchOr	_PyAST_MatchOr(asdl_pattern_seq * patterns, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8797	8812	_PyAST_TypeIgnore	_PyAST_TypeIgnore(int lineno, string tag, PyArena *arena)	todo		
+Python/Python-ast.c	8815	8837	_PyAST_TypeVar	_PyAST_TypeVar(identifier name, expr_ty bound, expr_ty default_value, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8840	8860	_PyAST_ParamSpec	_PyAST_ParamSpec(identifier name, expr_ty default_value, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8863	8884	_PyAST_TypeVarTuple	_PyAST_TypeVarTuple(identifier name, expr_ty default_value, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		
+Python/Python-ast.c	8888	8961	ast2obj_mod	ast2obj_mod(struct ast_state *state, void* _o)	todo		
+Python/Python-ast.c	8964	9565	ast2obj_stmt	ast2obj_stmt(struct ast_state *state, void* _o)	todo		
+Python/Python-ast.c	9568	10083	ast2obj_expr	ast2obj_expr(struct ast_state *state, void* _o)	todo		
+Python/Python-ast.c	10085	10096	ast2obj_expr_context	PyObject* ast2obj_expr_context(struct ast_state *state, expr_context_ty o)	todo		
+Python/Python-ast.c	10097	10106	ast2obj_boolop	PyObject* ast2obj_boolop(struct ast_state *state, boolop_ty o)	todo		
+Python/Python-ast.c	10107	10138	ast2obj_operator	PyObject* ast2obj_operator(struct ast_state *state, operator_ty o)	todo		
+Python/Python-ast.c	10139	10152	ast2obj_unaryop	PyObject* ast2obj_unaryop(struct ast_state *state, unaryop_ty o)	todo		
+Python/Python-ast.c	10153	10178	ast2obj_cmpop	PyObject* ast2obj_cmpop(struct ast_state *state, cmpop_ty o)	todo		
+Python/Python-ast.c	10180	10221	ast2obj_comprehension	ast2obj_comprehension(struct ast_state *state, void* _o)	todo		
+Python/Python-ast.c	10224	10285	ast2obj_excepthandler	ast2obj_excepthandler(struct ast_state *state, void* _o)	todo		
+Python/Python-ast.c	10288	10344	ast2obj_arguments	ast2obj_arguments(struct ast_state *state, void* _o)	todo		
+Python/Python-ast.c	10347	10403	ast2obj_arg	ast2obj_arg(struct ast_state *state, void* _o)	todo		
+Python/Python-ast.c	10406	10457	ast2obj_keyword	ast2obj_keyword(struct ast_state *state, void* _o)	todo		
+Python/Python-ast.c	10460	10511	ast2obj_alias	ast2obj_alias(struct ast_state *state, void* _o)	todo		
+Python/Python-ast.c	10514	10545	ast2obj_withitem	ast2obj_withitem(struct ast_state *state, void* _o)	todo		
+Python/Python-ast.c	10548	10584	ast2obj_match_case	ast2obj_match_case(struct ast_state *state, void* _o)	todo		
+Python/Python-ast.c	10587	10744	ast2obj_pattern	ast2obj_pattern(struct ast_state *state, void* _o)	todo		
+Python/Python-ast.c	10747	10782	ast2obj_type_ignore	ast2obj_type_ignore(struct ast_state *state, void* _o)	todo		
+Python/Python-ast.c	10785	10875	ast2obj_type_param	ast2obj_type_param(struct ast_state *state, void* _o)	todo		
+Python/Python-ast.c	10879	11131	obj2ast_mod	obj2ast_mod(struct ast_state *state, PyObject* obj, mod_ty* out, PyArena* arena)	todo		
+Python/Python-ast.c	11134	13788	obj2ast_stmt	obj2ast_stmt(struct ast_state *state, PyObject* obj, stmt_ty* out, PyArena* arena)	todo		
+Python/Python-ast.c	13791	15700	obj2ast_expr	obj2ast_expr(struct ast_state *state, PyObject* obj, expr_ty* out, PyArena* arena)	todo		
+Python/Python-ast.c	15703	15735	obj2ast_expr_context	obj2ast_expr_context(struct ast_state *state, PyObject* obj, expr_context_ty* out, PyArena* arena)	todo		
+Python/Python-ast.c	15738	15762	obj2ast_boolop	obj2ast_boolop(struct ast_state *state, PyObject* obj, boolop_ty* out, PyArena* arena)	todo		
+Python/Python-ast.c	15765	15877	obj2ast_operator	obj2ast_operator(struct ast_state *state, PyObject* obj, operator_ty* out, PyArena* arena)	todo		
+Python/Python-ast.c	15880	15920	obj2ast_unaryop	obj2ast_unaryop(struct ast_state *state, PyObject* obj, unaryop_ty* out, PyArena* arena)	todo		
+Python/Python-ast.c	15923	16011	obj2ast_cmpop	obj2ast_cmpop(struct ast_state *state, PyObject* obj, cmpop_ty* out, PyArena* arena)	todo		
+Python/Python-ast.c	16014	16118	obj2ast_comprehension	obj2ast_comprehension(struct ast_state *state, PyObject* obj, comprehension_ty* out, PyArena* arena)	todo		
+Python/Python-ast.c	16121	16297	obj2ast_excepthandler	obj2ast_excepthandler(struct ast_state *state, PyObject* obj, excepthandler_ty* out, PyArena* arena)	todo		
+Python/Python-ast.c	16300	16543	obj2ast_arguments	obj2ast_arguments(struct ast_state *state, PyObject* obj, arguments_ty* out, PyArena* arena)	todo		
+Python/Python-ast.c	16546	16683	obj2ast_arg	obj2ast_arg(struct ast_state *state, PyObject* obj, arg_ty* out, PyArena* arena)	todo		
+Python/Python-ast.c	16686	16806	obj2ast_keyword	obj2ast_keyword(struct ast_state *state, PyObject* obj, keyword_ty* out, PyArena* arena)	todo		
+Python/Python-ast.c	16809	16929	obj2ast_alias	obj2ast_alias(struct ast_state *state, PyObject* obj, alias_ty* out, PyArena* arena)	todo		
+Python/Python-ast.c	16932	16979	obj2ast_withitem	obj2ast_withitem(struct ast_state *state, PyObject* obj, withitem_ty* out, PyArena* arena)	todo		
+Python/Python-ast.c	16982	17068	obj2ast_match_case	obj2ast_match_case(struct ast_state *state, PyObject* obj, match_case_ty* out, PyArena* arena)	todo		
+Python/Python-ast.c	17071	17656	obj2ast_pattern	obj2ast_pattern(struct ast_state *state, PyObject* obj, pattern_ty* out, PyArena* arena)	todo		
+Python/Python-ast.c	17659	17723	obj2ast_type_ignore	obj2ast_type_ignore(struct ast_state *state, PyObject* obj, type_ignore_ty* out, PyArena* arena)	todo		
+Python/Python-ast.c	17726	17977	obj2ast_type_param	obj2ast_type_param(struct ast_state *state, PyObject* obj, type_param_ty* out, PyArena* arena)	todo		
+Python/Python-ast.c	17981	18391	astmodule_exec	astmodule_exec(PyObject *m)	todo		
+Python/Python-ast.c	18409	18412	PyInit__ast	PyInit__ast(void)	todo		
+Python/Python-ast.c	18415	18424	PyAST_mod2obj	PyObject* PyAST_mod2obj(mod_ty t)	todo		
+Python/Python-ast.c	18427	18452	PyAst_CheckMode	int PyAst_CheckMode(PyObject *ast, int mode)	todo		
+Python/Python-ast.c	18454	18474	PyAST_obj2mod	mod_ty PyAST_obj2mod(PyObject* ast, PyArena* arena, int mode)	todo		
+Python/Python-ast.c	18476	18483	PyAST_Check	int PyAST_Check(PyObject* obj)	todo		

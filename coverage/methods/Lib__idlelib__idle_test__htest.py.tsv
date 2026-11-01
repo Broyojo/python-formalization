@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Lib/idlelib/idle_test/htest.py	368	438	run	run(*tests)	excluded		platform: GUI toolkit

@@ -1,0 +1,3 @@
+file	line	endline	name	signature	status	entry	note
+Python/pystrcmp.c	7	19	PyOS_mystrnicmp	PyOS_mystrnicmp(const char *s1, const char *s2, Py_ssize_t size)	todo		
+Python/pystrcmp.c	22	30	PyOS_mystricmp	PyOS_mystricmp(const char *s1, const char *s2)	todo		

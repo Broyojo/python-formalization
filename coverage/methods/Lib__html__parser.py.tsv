@@ -1,0 +1,29 @@
+file	line	endline	name	signature	status	entry	note
+Lib/html/parser.py	93	103	_replace_attr_charref	_replace_attr_charref(match)	todo		
+Lib/html/parser.py	105	106	_unescape_attrvalue	_unescape_attrvalue(s)	todo		
+Lib/html/parser.py	137	150	HTMLParser.__init__	__init__(self, *, convert_charrefs=True, scripting=False)	todo		
+Lib/html/parser.py	152	163	HTMLParser.reset	reset(self)	todo		
+Lib/html/parser.py	165	193	HTMLParser.feed	feed(self, data)	todo		
+Lib/html/parser.py	195	201	HTMLParser.close	close(self)	todo		
+Lib/html/parser.py	205	207	HTMLParser.get_starttag_text	get_starttag_text(self)	todo		
+Lib/html/parser.py	209	219	HTMLParser.set_cdata_mode	set_cdata_mode(self, elem, *, escapable=False)	todo		
+Lib/html/parser.py	221	224	HTMLParser.clear_cdata_mode	clear_cdata_mode(self)	todo		
+Lib/html/parser.py	226	237	HTMLParser._set_support_cdata	_set_support_cdata(self, flag=True)	todo		
+Lib/html/parser.py	242	385	HTMLParser.goahead	goahead(self, end)	todo		
+Lib/html/parser.py	390	411	HTMLParser.parse_html_declaration	parse_html_declaration(self, i)	todo		
+Lib/html/parser.py	415	428	HTMLParser.parse_comment	parse_comment(self, i, report=True)	todo		
+Lib/html/parser.py	432	441	HTMLParser.parse_bogus_comment	parse_bogus_comment(self, i, report=1)	todo		
+Lib/html/parser.py	444	453	HTMLParser.parse_pi	parse_pi(self, i)	todo		
+Lib/html/parser.py	456	502	HTMLParser.parse_starttag	parse_starttag(self, i)	todo		
+Lib/html/parser.py	506	513	HTMLParser.check_for_whole_start_tag	check_for_whole_start_tag(self, i)	todo		
+Lib/html/parser.py	516	543	HTMLParser.parse_endtag	parse_endtag(self, i)	todo		
+Lib/html/parser.py	546	548	HTMLParser.handle_startendtag	handle_startendtag(self, tag, attrs)	todo		
+Lib/html/parser.py	551	552	HTMLParser.handle_starttag	handle_starttag(self, tag, attrs)	todo		
+Lib/html/parser.py	555	556	HTMLParser.handle_endtag	handle_endtag(self, tag)	todo		
+Lib/html/parser.py	559	560	HTMLParser.handle_charref	handle_charref(self, name)	todo		
+Lib/html/parser.py	563	564	HTMLParser.handle_entityref	handle_entityref(self, name)	todo		
+Lib/html/parser.py	567	568	HTMLParser.handle_data	handle_data(self, data)	todo		
+Lib/html/parser.py	571	572	HTMLParser.handle_comment	handle_comment(self, data)	todo		
+Lib/html/parser.py	575	576	HTMLParser.handle_decl	handle_decl(self, decl)	todo		
+Lib/html/parser.py	579	580	HTMLParser.handle_pi	handle_pi(self, data)	todo		
+Lib/html/parser.py	582	583	HTMLParser.unknown_decl	unknown_decl(self, data)	todo		

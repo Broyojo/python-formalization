@@ -1,0 +1,24 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_strptime.py	29	31	_getlang	_getlang()	todo		
+Lib/_strptime.py	33	43	_findall	_findall(haystack, needle)	todo		
+Lib/_strptime.py	45	52	_fixmonths	_fixmonths(months)	todo		
+Lib/_strptime.py	87	117	LocaleTime.__init__	__init__(self)	todo		
+Lib/_strptime.py	119	125	LocaleTime.__calc_weekday	__calc_weekday(self)	todo		
+Lib/_strptime.py	127	132	LocaleTime.__calc_month	__calc_month(self)	todo		
+Lib/_strptime.py	134	145	LocaleTime.__calc_am_pm	__calc_am_pm(self)	todo		
+Lib/_strptime.py	147	179	LocaleTime.__calc_alt_digits	__calc_alt_digits(self)	todo		
+Lib/_strptime.py	181	258	LocaleTime.__calc_date_time	__calc_date_time(self)	todo		
+Lib/_strptime.py	260	292	LocaleTime.__find_month_format	__find_month_format(self, directive)	todo		
+Lib/_strptime.py	294	320	LocaleTime.__find_weekday_format	__find_weekday_format(self, directive)	todo		
+Lib/_strptime.py	322	337	LocaleTime.__calc_timezone	__calc_timezone(self)	todo		
+Lib/_strptime.py	343	424	TimeRE.__init__	__init__(self, locale_time=None)	todo		
+Lib/_strptime.py	426	444	TimeRE.__seqToRE	__seqToRE(self, to_convert, directive, altregex=None)	todo		
+Lib/_strptime.py	446	482	TimeRE.pattern	pattern(self, format)	todo		
+Lib/_strptime.py	484	486	TimeRE.compile	compile(self, format)	todo		
+Lib/_strptime.py	495	513	_calc_julian_from_U_or_W	_calc_julian_from_U_or_W(year, week_of_year, day_of_week, week_starts_Mon)	todo		
+Lib/_strptime.py	516	778	_strptime	_strptime(data_string, format='%a %b %d %H:%M:%S %Y')	todo		
+Lib/_strptime.py	780	784	_strptime_time	_strptime_time(data_string, format='%a %b %d %H:%M:%S %Y')	todo		
+Lib/_strptime.py	786	791	_strptime_datetime_date	_strptime_datetime_date(cls, data_string, format='%a %b %d %Y')	todo		
+Lib/_strptime.py	793	798	_parse_tz	_parse_tz(tzname, gmtoff, gmtoff_fraction)	todo		
+Lib/_strptime.py	800	810	_strptime_datetime_time	_strptime_datetime_time(cls, data_string, format='%H:%M:%S')	todo		
+Lib/_strptime.py	812	822	_strptime_datetime_datetime	_strptime_datetime_datetime(cls, data_string, format='%a %b %d %H:%M:%S %Y')	todo		

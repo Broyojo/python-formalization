@@ -1,0 +1,11 @@
+file	line	endline	name	signature	status	entry	note
+Modules/grpmodule.c	49	54	get_grp_state	get_grp_state(PyObject *module)	todo		
+Modules/grpmodule.c	66	115	mkgrent	mkgrent(PyObject *module, struct group *p)	todo		
+Modules/grpmodule.c	128	203	grp_getgrgid_impl	grp_getgrgid_impl(PyObject *module, PyObject *id) /*[clinic end generated code: output=30797c289504a1ba input=15fa0e2ccf5cda25]*/	todo		
+Modules/grpmodule.c	216	290	grp_getgrnam_impl	grp_getgrnam_impl(PyObject *module, PyObject *name) /*[clinic end generated code: output=67905086f403c21c input=08ded29affa3c863]*/	todo		
+Modules/grpmodule.c	302	332	grp_getgrall_impl	grp_getgrall_impl(PyObject *module) /*[clinic end generated code: output=585dad35e2e763d7 input=d7df76c825c367df]*/	todo		
+Modules/grpmodule.c	358	370	grpmodule_exec	grpmodule_exec(PyObject *module)	todo		
+Modules/grpmodule.c	379	382	grpmodule_traverse	static int grpmodule_traverse(PyObject *m, visitproc visit, void *arg) {	todo		
+Modules/grpmodule.c	384	387	grpmodule_clear	static int grpmodule_clear(PyObject *m) {	todo		
+Modules/grpmodule.c	389	391	grpmodule_free	static void grpmodule_free(void *m) {	todo		
+Modules/grpmodule.c	406	409	PyInit_grp	PyInit_grp(void)	todo		

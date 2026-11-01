@@ -1,0 +1,6 @@
+file	line	endline	name	signature	status	entry	note
+Python/pystrhex.c	7	143	_Py_strhex_impl	static PyObject *_Py_strhex_impl(const char* argbuf, const Py_ssize_t arglen, PyObject* sep, int bytes_per_sep_group, const int return_bytes)	todo		
+Python/pystrhex.c	145	148	_Py_strhex	PyObject * _Py_strhex(const char* argbuf, const Py_ssize_t arglen)	todo		
+Python/pystrhex.c	152	155	_Py_strhex_bytes	PyObject* _Py_strhex_bytes(const char* argbuf, const Py_ssize_t arglen)	todo		
+Python/pystrhex.c	159	163	_Py_strhex_with_sep	PyObject* _Py_strhex_with_sep(const char* argbuf, const Py_ssize_t arglen, PyObject* sep, const int bytes_per_group)	todo		
+Python/pystrhex.c	167	171	_Py_strhex_bytes_with_sep	PyObject* _Py_strhex_bytes_with_sep(const char* argbuf, const Py_ssize_t arglen, PyObject* sep, const int bytes_per_group)	todo		

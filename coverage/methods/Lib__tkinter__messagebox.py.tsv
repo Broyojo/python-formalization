@@ -1,0 +1,10 @@
+file	line	endline	name	signature	status	entry	note
+Lib/tkinter/messagebox.py	73	85	_show	_show(title=None, message=None, _icon=None, _type=None, **options)	excluded		platform: GUI toolkit
+Lib/tkinter/messagebox.py	88	90	showinfo	showinfo(title=None, message=None, **options)	excluded		platform: GUI toolkit
+Lib/tkinter/messagebox.py	93	95	showwarning	showwarning(title=None, message=None, **options)	excluded		platform: GUI toolkit
+Lib/tkinter/messagebox.py	98	100	showerror	showerror(title=None, message=None, **options)	excluded		platform: GUI toolkit
+Lib/tkinter/messagebox.py	103	105	askquestion	askquestion(title=None, message=None, **options)	excluded		platform: GUI toolkit
+Lib/tkinter/messagebox.py	108	111	askokcancel	askokcancel(title=None, message=None, **options)	excluded		platform: GUI toolkit
+Lib/tkinter/messagebox.py	114	117	askyesno	askyesno(title=None, message=None, **options)	excluded		platform: GUI toolkit
+Lib/tkinter/messagebox.py	120	127	askyesnocancel	askyesnocancel(title=None, message=None, **options)	excluded		platform: GUI toolkit
+Lib/tkinter/messagebox.py	130	133	askretrycancel	askretrycancel(title=None, message=None, **options)	excluded		platform: GUI toolkit

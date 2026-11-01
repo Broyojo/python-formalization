@@ -1,0 +1,28 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/run.c	29	43	run_string	run_string(PyObject *mod, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/run.c	47	73	run_stringflags	run_stringflags(PyObject *mod, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/run.c	76	86	open_file	open_file(PyObject *filename, int *closeit)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/run.c	91	113	run_simplefile	run_simplefile(PyObject *mod, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/run.c	116	133	close_fd	close_fd(FILE *fp, int fd, int closeit)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/run.c	136	155	close_fd_result	close_fd_result(FILE *fp, int fd, int closeit, PyObject *result)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/run.c	159	184	run_simplefileex	run_simplefileex(PyObject *mod, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/run.c	188	221	run_simplefileexflags	run_simplefileexflags(PyObject *mod, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/run.c	225	247	run_anyfile	run_anyfile(PyObject *mod, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/run.c	251	282	run_anyfileflags	run_anyfileflags(PyObject *mod, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/run.c	286	311	run_anyfileex	run_anyfileex(PyObject *mod, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/run.c	315	348	run_anyfileexflags	run_anyfileexflags(PyObject *mod, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/run.c	353	375	run_interactiveone	run_interactiveone(PyObject *mod, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/run.c	379	410	run_interactiveoneflags	run_interactiveoneflags(PyObject *mod, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/run.c	414	445	run_interactiveoneobject	run_interactiveoneobject(PyObject *mod, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/run.c	449	479	run_file	run_file(PyObject *mod, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/run.c	483	515	run_fileex	run_fileex(PyObject *mod, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/run.c	519	558	run_fileflags	run_fileflags(PyObject *mod, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/run.c	561	602	run_fileexflags	run_fileexflags(PyObject *mod, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/run.c	605	615	run_simplestring	run_simplestring(PyObject *mod, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/run.c	618	637	run_simplestringflags	run_simplestringflags(PyObject *mod, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/run.c	642	664	run_interactiveloop	run_interactiveloop(PyObject *mod, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/run.c	669	700	run_interactiveloopflags	run_interactiveloopflags(PyObject *mod, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/run.c	705	726	run_compilestringflags	run_compilestringflags(PyObject *mod, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/run.c	731	753	run_compilestringexflags	run_compilestringexflags(PyObject *mod, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/run.c	758	780	run_compilestringobject	run_compilestringobject(PyObject *mod, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/run.c	811	823	_PyTestCapi_Init_Run	_PyTestCapi_Init_Run(PyObject *mod)	excluded		test-support: only for CPython's own tests

@@ -1,0 +1,16 @@
+file	line	endline	name	signature	status	entry	note
+Lib/hmac.py	29	39	_get_digest_constructor	_get_digest_constructor(digest_like)	todo		
+Lib/hmac.py	56	77	HMAC.__init__	__init__(self, key, msg=None, digestmod='')	todo		
+Lib/hmac.py	79	92	HMAC.__init	__init(self, key, msg, digestmod)	todo		
+Lib/hmac.py	94	98	HMAC._init_openssl_hmac	_init_openssl_hmac(self, key, msg, digestmod)	todo		
+Lib/hmac.py	102	106	HMAC._init_builtin_hmac	_init_builtin_hmac(self, key, msg, digestmod)	todo		
+Lib/hmac.py	108	140	HMAC._init_old	_init_old(self, key, msg, digestmod)	todo		
+Lib/hmac.py	143	147	HMAC.name	name(self)	todo		
+Lib/hmac.py	149	152	HMAC.update	update(self, msg)	todo		
+Lib/hmac.py	154	170	HMAC.copy	copy(self)	todo		
+Lib/hmac.py	172	182	HMAC._current	_current(self)	todo		
+Lib/hmac.py	184	192	HMAC.digest	digest(self)	todo		
+Lib/hmac.py	194	198	HMAC.hexdigest	hexdigest(self)	todo		
+Lib/hmac.py	201	218	new	new(key, msg=None, digestmod='')	todo		
+Lib/hmac.py	221	254	digest	digest(key, msg, digest)	todo		
+Lib/hmac.py	257	269	_compute_digest_fallback	_compute_digest_fallback(key, msg, digest)	todo		

@@ -1,0 +1,6 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/immortal.c	6	15	verify_immortality	int verify_immortality(PyObject *object)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/immortal.c	18	26	test_immortal_builtins	test_immortal_builtins(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/immortal.c	29	45	test_immortal_small_ints	test_immortal_small_ints(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/immortal.c	48	51	is_immortal	is_immortal(PyObject *self, PyObject *op)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/immortal.c	61	67	_PyTestCapi_Init_Immortal	_PyTestCapi_Init_Immortal(PyObject *mod)	excluded		test-support: only for CPython's own tests

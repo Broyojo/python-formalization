@@ -1,0 +1,12 @@
+file	line	endline	name	signature	status	entry	note
+Lib/multiprocessing/resource_sharer.py	29	34	DupSocket.__init__	__init__(self, sock)	todo		
+Lib/multiprocessing/resource_sharer.py	36	40	DupSocket.detach	detach(self)	todo		
+Lib/multiprocessing/resource_sharer.py	47	53	DupFd.__init__	__init__(self, fd)	todo		
+Lib/multiprocessing/resource_sharer.py	55	58	DupFd.detach	detach(self)	todo		
+Lib/multiprocessing/resource_sharer.py	63	70	_ResourceSharer.__init__	__init__(self)	todo		
+Lib/multiprocessing/resource_sharer.py	72	79	_ResourceSharer.register	register(self, send, close)	todo		
+Lib/multiprocessing/resource_sharer.py	82	88	_ResourceSharer.get_connection	get_connection(ident)	todo		
+Lib/multiprocessing/resource_sharer.py	90	109	_ResourceSharer.stop	stop(self, timeout=None)	todo		
+Lib/multiprocessing/resource_sharer.py	111	120	_ResourceSharer._afterfork	_afterfork(self)	todo		
+Lib/multiprocessing/resource_sharer.py	122	131	_ResourceSharer._start	_start(self)	todo		
+Lib/multiprocessing/resource_sharer.py	133	150	_ResourceSharer._serve	_serve(self)	todo		

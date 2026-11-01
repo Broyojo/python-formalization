@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_pyrepl/keymap.py	108	115	parse_keys	parse_keys(keys: str)	todo		
+Lib/_pyrepl/keymap.py	118	194	_parse_single_key_sequence	_parse_single_key_sequence(key: str, s: int)	todo		
+Lib/_pyrepl/keymap.py	197	213	compile_keymap	compile_keymap(keymap, empty=b'')	todo		

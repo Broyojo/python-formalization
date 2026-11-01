@@ -1,0 +1,16 @@
+file	line	endline	name	signature	status	entry	note
+Python/optimizer_analysis.c	55	60	get_mutations	get_mutations(PyObject* dict) {	todo		
+Python/optimizer_analysis.c	63	67	increment_mutations	increment_mutations(PyObject* dict) {	todo		
+Python/optimizer_analysis.c	76	85	globals_watcher_callback	globals_watcher_callback(PyDict_WatchEvent event, PyObject* dict, PyObject* key, PyObject* new_value)	todo		
+Python/optimizer_analysis.c	88	93	type_watcher_callback	type_watcher_callback(PyTypeObject* type)	todo		
+Python/optimizer_analysis.c	96	104	_setup_optimizer_watchers	_setup_optimizer_watchers(void *Py_UNUSED(arg))	todo		
+Python/optimizer_analysis.c	107	139	convert_global_to_const	convert_global_to_const(_PyUOpInstruction *inst, PyObject *obj, bool pop)	todo		
+Python/optimizer_analysis.c	142	152	incorrect_keys	incorrect_keys(_PyUOpInstruction *inst, PyObject *obj)	todo		
+Python/optimizer_analysis.c	158	312	remove_globals	remove_globals(_PyInterpreterFrame *frame, _PyUOpInstruction *buffer, int buffer_size, _PyBloomFilter *dependencies)	todo		
+Python/optimizer_analysis.c	360	379	optimize_to_bool	optimize_to_bool( _PyUOpInstruction *this_instr, JitOptContext *ctx, JitOptSymbol *value, JitOptSymbol **result_ptr)	todo		
+Python/optimizer_analysis.c	382	389	eliminate_pop_guard	eliminate_pop_guard(_PyUOpInstruction *this_instr, bool exit)	todo		
+Python/optimizer_analysis.c	395	413	get_code	get_code(_PyUOpInstruction *op)	todo		
+Python/optimizer_analysis.c	416	437	get_code_with_logging	get_code_with_logging(_PyUOpInstruction *op)	todo		
+Python/optimizer_analysis.c	441	534	optimize_uops	optimize_uops( PyCodeObject *co, _PyUOpInstruction *trace, int trace_len, int curr_stacklen, _PyBloomFilter *dependencies )	todo		
+Python/optimizer_analysis.c	538	628	remove_unneeded_uops	remove_unneeded_uops(_PyUOpInstruction *buffer, int buffer_size)	todo		
+Python/optimizer_analysis.c	634	662	_Py_uop_analyze_and_optimize	_Py_uop_analyze_and_optimize( _PyInterpreterFrame *frame, _PyUOpInstruction *buffer, int length, int curr_stacklen, _PyBloomFilter *dependencies )	todo		

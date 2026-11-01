@@ -1,0 +1,3 @@
+file	line	endline	name	signature	status	entry	note
+Lib/turtledemo/rosette.py	17	32	mn_eck	mn_eck(p, ne, sz)	excluded		platform: GUI toolkit
+Lib/turtledemo/rosette.py	34	57	main	main()	excluded		platform: GUI toolkit

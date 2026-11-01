@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Lib/ensurepip/_uninstall.py	8	27	_main	_main(argv=None)	excluded		platform: installs pip and creates environments

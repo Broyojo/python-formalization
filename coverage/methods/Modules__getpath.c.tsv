@@ -1,0 +1,24 @@
+file	line	endline	name	signature	status	entry	note
+Modules/getpath.c	64	85	getpath_abspath	getpath_abspath(PyObject *Py_UNUSED(self), PyObject *args)	todo		
+Modules/getpath.c	89	101	getpath_basename	getpath_basename(PyObject *Py_UNUSED(self), PyObject *args)	todo		
+Modules/getpath.c	105	117	getpath_dirname	getpath_dirname(PyObject *Py_UNUSED(self), PyObject *args)	todo		
+Modules/getpath.c	121	135	getpath_isabs	getpath_isabs(PyObject *Py_UNUSED(self), PyObject *args)	todo		
+Modules/getpath.c	139	170	getpath_hassuffix	getpath_hassuffix(PyObject *Py_UNUSED(self), PyObject *args)	todo		
+Modules/getpath.c	174	195	getpath_isdir	getpath_isdir(PyObject *Py_UNUSED(self), PyObject *args)	todo		
+Modules/getpath.c	199	220	getpath_isfile	getpath_isfile(PyObject *Py_UNUSED(self), PyObject *args)	todo		
+Modules/getpath.c	224	252	getpath_isxfile	getpath_isxfile(PyObject *Py_UNUSED(self), PyObject *args)	todo		
+Modules/getpath.c	256	337	getpath_joinpath	getpath_joinpath(PyObject *Py_UNUSED(self), PyObject *args)	todo		
+Modules/getpath.c	341	421	getpath_readlines	getpath_readlines(PyObject *Py_UNUSED(self), PyObject *args)	todo		
+Modules/getpath.c	425	563	getpath_realpath	getpath_realpath(PyObject *Py_UNUSED(self) , PyObject *args)	todo		
+Modules/getpath.c	586	594	getpath_warn	getpath_warn(PyObject *Py_UNUSED(self), PyObject *args)	todo		
+Modules/getpath.c	598	601	getpath_nowarn	getpath_nowarn(PyObject *Py_UNUSED(self), PyObject *args)	todo		
+Modules/getpath.c	609	633	funcs_to_dict	funcs_to_dict(PyObject *dict, int warnings)	todo		
+Modules/getpath.c	638	653	wchar_to_dict	wchar_to_dict(PyObject *dict, const char *key, const wchar_t *s)	todo		
+Modules/getpath.c	658	678	decode_to_dict	decode_to_dict(PyObject *dict, const char *key, const char *s)	todo		
+Modules/getpath.c	682	732	env_to_dict	env_to_dict(PyObject *dict, const char *key, int and_clear)	todo		
+Modules/getpath.c	737	748	int_to_dict	int_to_dict(PyObject *dict, const char *key, int v)	todo		
+Modules/getpath.c	753	768	winmodule_to_dict	winmodule_to_dict(PyObject *dict, const char *key, HMODULE mod)	todo		
+Modules/getpath.c	774	802	progname_to_dict	progname_to_dict(PyObject *dict, const char *key)	todo		
+Modules/getpath.c	807	829	library_to_dict	library_to_dict(PyObject *dict, const char *key)	todo		
+Modules/getpath.c	833	837	_Py_Get_Getpath_CodeObject	_Py_Get_Getpath_CodeObject(void)	todo		
+Modules/getpath.c	856	981	_PyConfig_InitPathConfig	_PyConfig_InitPathConfig(PyConfig *config, int compute_path_config)	todo		

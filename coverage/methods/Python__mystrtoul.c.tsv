@@ -1,0 +1,3 @@
+file	line	endline	name	signature	status	entry	note
+Python/mystrtoul.c	101	261	PyOS_strtoul	PyOS_strtoul(const char *str, char **ptr, int base)	todo		
+Python/mystrtoul.c	269	297	PyOS_strtol	PyOS_strtol(const char *str, char **ptr, int base)	todo		

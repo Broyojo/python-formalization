@@ -1,0 +1,3 @@
+file	line	endline	name	signature	status	entry	note
+Lib/xml/dom/__init__.py	66	70	DOMException.__init__	__init__(self, *args, **kw)	todo		
+Lib/xml/dom/__init__.py	72	73	DOMException._get_code	_get_code(self)	todo		

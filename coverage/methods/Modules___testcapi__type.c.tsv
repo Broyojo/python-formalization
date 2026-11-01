@@ -1,0 +1,15 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/type.c	17	20	get_heaptype_for_name	get_heaptype_for_name(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/type.c	24	28	get_type_name	get_type_name(PyObject *self, PyObject *type)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/type.c	32	36	get_type_qualname	get_type_qualname(PyObject *self, PyObject *type)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/type.c	40	44	get_type_fullyqualname	get_type_fullyqualname(PyObject *self, PyObject *type)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/type.c	48	52	get_type_module_name	get_type_module_name(PyObject *self, PyObject *type)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/type.c	56	77	test_get_type_dict	test_get_type_dict(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/type.c	81	133	test_get_statictype_slots	test_get_statictype_slots(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/type.c	138	151	type_get_version	type_get_version(PyObject *self, PyObject *type)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/type.c	154	164	type_modified	type_modified(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/type.c	168	178	type_assign_version	type_assign_version(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/type.c	182	195	type_get_tp_bases	type_get_tp_bases(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/type.c	198	211	type_get_tp_mro	type_get_tp_mro(PyObject *self, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/type.c	215	227	type_freeze	type_freeze(PyObject *module, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/type.c	248	251	_PyTestCapi_Init_Type	_PyTestCapi_Init_Type(PyObject *m)	excluded		test-support: only for CPython's own tests

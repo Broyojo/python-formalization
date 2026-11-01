@@ -1,0 +1,192 @@
+file	line	endline	name	signature	status	entry	note
+Lib/mailbox.py	37	40	Mailbox.__init__	__init__(self, path, factory=None, create=True)	todo		
+Lib/mailbox.py	42	44	Mailbox.add	add(self, message)	todo		
+Lib/mailbox.py	46	48	Mailbox.remove	remove(self, key)	todo		
+Lib/mailbox.py	50	51	Mailbox.__delitem__	__delitem__(self, key)	todo		
+Lib/mailbox.py	53	58	Mailbox.discard	discard(self, key)	todo		
+Lib/mailbox.py	60	62	Mailbox.__setitem__	__setitem__(self, key, message)	todo		
+Lib/mailbox.py	64	69	Mailbox.get	get(self, key, default=None)	todo		
+Lib/mailbox.py	71	77	Mailbox.__getitem__	__getitem__(self, key)	todo		
+Lib/mailbox.py	79	81	Mailbox.get_message	get_message(self, key)	todo		
+Lib/mailbox.py	83	88	Mailbox.get_string	get_string(self, key)	todo		
+Lib/mailbox.py	90	92	Mailbox.get_bytes	get_bytes(self, key)	todo		
+Lib/mailbox.py	94	96	Mailbox.get_file	get_file(self, key)	todo		
+Lib/mailbox.py	98	100	Mailbox.iterkeys	iterkeys(self)	todo		
+Lib/mailbox.py	102	104	Mailbox.keys	keys(self)	todo		
+Lib/mailbox.py	106	113	Mailbox.itervalues	itervalues(self)	todo		
+Lib/mailbox.py	115	116	Mailbox.__iter__	__iter__(self)	todo		
+Lib/mailbox.py	118	120	Mailbox.values	values(self)	todo		
+Lib/mailbox.py	122	129	Mailbox.iteritems	iteritems(self)	todo		
+Lib/mailbox.py	131	133	Mailbox.items	items(self)	todo		
+Lib/mailbox.py	135	137	Mailbox.__contains__	__contains__(self, key)	todo		
+Lib/mailbox.py	139	141	Mailbox.__len__	__len__(self)	todo		
+Lib/mailbox.py	143	146	Mailbox.clear	clear(self)	todo		
+Lib/mailbox.py	148	155	Mailbox.pop	pop(self, key, default=None)	todo		
+Lib/mailbox.py	157	162	Mailbox.popitem	popitem(self)	todo		
+Lib/mailbox.py	164	179	Mailbox.update	update(self, arg=None)	todo		
+Lib/mailbox.py	181	183	Mailbox.flush	flush(self)	todo		
+Lib/mailbox.py	185	187	Mailbox.lock	lock(self)	todo		
+Lib/mailbox.py	189	191	Mailbox.unlock	unlock(self)	todo		
+Lib/mailbox.py	193	195	Mailbox.close	close(self)	todo		
+Lib/mailbox.py	197	205	Mailbox._string_to_bytes	_string_to_bytes(self, message)	todo		
+Lib/mailbox.py	210	262	Mailbox._dump_message	_dump_message(self, message, target, mangle_from_=False)	todo		
+Lib/mailbox.py	272	290	Maildir.__init__	__init__(self, dirname, factory=None, create=True)	todo		
+Lib/mailbox.py	292	332	Maildir.add	add(self, message)	todo		
+Lib/mailbox.py	334	336	Maildir.remove	remove(self, key)	todo		
+Lib/mailbox.py	338	344	Maildir.discard	discard(self, key)	todo		
+Lib/mailbox.py	346	371	Maildir.__setitem__	__setitem__(self, key, message)	todo		
+Lib/mailbox.py	373	386	Maildir.get_message	get_message(self, key)	todo		
+Lib/mailbox.py	388	391	Maildir.get_bytes	get_bytes(self, key)	todo		
+Lib/mailbox.py	393	396	Maildir.get_file	get_file(self, key)	todo		
+Lib/mailbox.py	398	403	Maildir.get_info	get_info(self, key)	todo		
+Lib/mailbox.py	405	418	Maildir.set_info	set_info(self, key, info: str)	todo		
+Lib/mailbox.py	420	425	Maildir.get_flags	get_flags(self, key)	todo		
+Lib/mailbox.py	427	432	Maildir.set_flags	set_flags(self, key, flags: str)	todo		
+Lib/mailbox.py	434	439	Maildir.add_flag	add_flag(self, key, flag: str)	todo		
+Lib/mailbox.py	441	446	Maildir.remove_flag	remove_flag(self, key, flag: str)	todo		
+Lib/mailbox.py	448	456	Maildir.iterkeys	iterkeys(self)	todo		
+Lib/mailbox.py	458	461	Maildir.__contains__	__contains__(self, key)	todo		
+Lib/mailbox.py	463	466	Maildir.__len__	__len__(self)	todo		
+Lib/mailbox.py	468	472	Maildir.flush	flush(self)	todo		
+Lib/mailbox.py	474	476	Maildir.lock	lock(self)	todo		
+Lib/mailbox.py	478	480	Maildir.unlock	unlock(self)	todo		
+Lib/mailbox.py	482	484	Maildir.close	close(self)	todo		
+Lib/mailbox.py	486	493	Maildir.list_folders	list_folders(self)	todo		
+Lib/mailbox.py	495	499	Maildir.get_folder	get_folder(self, folder)	todo		
+Lib/mailbox.py	501	509	Maildir.add_folder	add_folder(self, folder)	todo		
+Lib/mailbox.py	511	528	Maildir.remove_folder	remove_folder(self, folder)	todo		
+Lib/mailbox.py	530	536	Maildir.clean	clean(self)	todo		
+Lib/mailbox.py	540	562	Maildir._create_tmp	_create_tmp(self)	todo		
+Lib/mailbox.py	564	600	Maildir._refresh	_refresh(self)	todo		
+Lib/mailbox.py	602	613	Maildir._lookup	_lookup(self, key)	todo		
+Lib/mailbox.py	616	626	Maildir.next	next(self)	todo		
+Lib/mailbox.py	632	653	_singlefileMailbox.__init__	__init__(self, path, factory=None, create=True)	todo		
+Lib/mailbox.py	655	663	_singlefileMailbox.add	add(self, message)	todo		
+Lib/mailbox.py	665	669	_singlefileMailbox.remove	remove(self, key)	todo		
+Lib/mailbox.py	671	675	_singlefileMailbox.__setitem__	__setitem__(self, key, message)	todo		
+Lib/mailbox.py	677	680	_singlefileMailbox.iterkeys	iterkeys(self)	todo		
+Lib/mailbox.py	682	685	_singlefileMailbox.__contains__	__contains__(self, key)	todo		
+Lib/mailbox.py	687	690	_singlefileMailbox.__len__	__len__(self)	todo		
+Lib/mailbox.py	692	696	_singlefileMailbox.lock	lock(self)	todo		
+Lib/mailbox.py	698	702	_singlefileMailbox.unlock	unlock(self)	todo		
+Lib/mailbox.py	704	770	_singlefileMailbox.flush	flush(self)	todo		
+Lib/mailbox.py	772	774	_singlefileMailbox._pre_mailbox_hook	_pre_mailbox_hook(self, f)	todo		
+Lib/mailbox.py	776	778	_singlefileMailbox._pre_message_hook	_pre_message_hook(self, f)	todo		
+Lib/mailbox.py	780	782	_singlefileMailbox._post_message_hook	_post_message_hook(self, f)	todo		
+Lib/mailbox.py	784	793	_singlefileMailbox.close	close(self)	todo		
+Lib/mailbox.py	795	803	_singlefileMailbox._lookup	_lookup(self, key=None)	todo		
+Lib/mailbox.py	805	824	_singlefileMailbox._append_message	_append_message(self, message)	todo		
+Lib/mailbox.py	833	842	_mboxMMDF.get_message	get_message(self, key)	todo		
+Lib/mailbox.py	844	847	_mboxMMDF.get_string	get_string(self, key, from_=False)	todo		
+Lib/mailbox.py	849	856	_mboxMMDF.get_bytes	get_bytes(self, key, from_=False)	todo		
+Lib/mailbox.py	858	864	_mboxMMDF.get_file	get_file(self, key, from_=False)	todo		
+Lib/mailbox.py	866	892	_mboxMMDF._install_message	_install_message(self, message)	todo		
+Lib/mailbox.py	904	907	mbox.__init__	__init__(self, path, factory=None, create=True)	todo		
+Lib/mailbox.py	909	911	mbox._post_message_hook	_post_message_hook(self, f)	todo		
+Lib/mailbox.py	913	944	mbox._generate_toc	_generate_toc(self)	todo		
+Lib/mailbox.py	950	953	MMDF.__init__	__init__(self, path, factory=None, create=True)	todo		
+Lib/mailbox.py	955	957	MMDF._pre_message_hook	_pre_message_hook(self, f)	todo		
+Lib/mailbox.py	959	961	MMDF._post_message_hook	_post_message_hook(self, f)	todo		
+Lib/mailbox.py	963	989	MMDF._generate_toc	_generate_toc(self)	todo		
+Lib/mailbox.py	995	1005	MH.__init__	__init__(self, path, factory=None, create=True)	todo		
+Lib/mailbox.py	1007	1039	MH.add	add(self, message)	todo		
+Lib/mailbox.py	1041	1053	MH.remove	remove(self, key)	todo		
+Lib/mailbox.py	1055	1077	MH.__setitem__	__setitem__(self, key, message)	todo		
+Lib/mailbox.py	1079	1102	MH.get_message	get_message(self, key)	todo		
+Lib/mailbox.py	1104	1123	MH.get_bytes	get_bytes(self, key)	todo		
+Lib/mailbox.py	1125	1134	MH.get_file	get_file(self, key)	todo		
+Lib/mailbox.py	1136	1139	MH.iterkeys	iterkeys(self)	todo		
+Lib/mailbox.py	1141	1143	MH.__contains__	__contains__(self, key)	todo		
+Lib/mailbox.py	1145	1147	MH.__len__	__len__(self)	todo		
+Lib/mailbox.py	1149	1161	MH._open_mh_sequences_file	_open_mh_sequences_file(self, text)	todo		
+Lib/mailbox.py	1163	1168	MH.lock	lock(self)	todo		
+Lib/mailbox.py	1170	1176	MH.unlock	unlock(self)	todo		
+Lib/mailbox.py	1178	1180	MH.flush	flush(self)	todo		
+Lib/mailbox.py	1182	1185	MH.close	close(self)	todo		
+Lib/mailbox.py	1187	1193	MH.list_folders	list_folders(self)	todo		
+Lib/mailbox.py	1195	1198	MH.get_folder	get_folder(self, folder)	todo		
+Lib/mailbox.py	1200	1203	MH.add_folder	add_folder(self, folder)	todo		
+Lib/mailbox.py	1205	1215	MH.remove_folder	remove_folder(self, folder)	todo		
+Lib/mailbox.py	1217	1243	MH.get_sequences	get_sequences(self)	todo		
+Lib/mailbox.py	1245	1272	MH.set_sequences	set_sequences(self, sequences)	todo		
+Lib/mailbox.py	1274	1298	MH.pack	pack(self)	todo		
+Lib/mailbox.py	1300	1312	MH._dump_sequences	_dump_sequences(self, message, key)	todo		
+Lib/mailbox.py	1321	1324	Babyl.__init__	__init__(self, path, factory=None, create=True)	todo		
+Lib/mailbox.py	1326	1331	Babyl.add	add(self, message)	todo		
+Lib/mailbox.py	1333	1337	Babyl.remove	remove(self, key)	todo		
+Lib/mailbox.py	1339	1343	Babyl.__setitem__	__setitem__(self, key, message)	todo		
+Lib/mailbox.py	1345	1371	Babyl.get_message	get_message(self, key)	todo		
+Lib/mailbox.py	1373	1393	Babyl.get_bytes	get_bytes(self, key)	todo		
+Lib/mailbox.py	1395	1397	Babyl.get_file	get_file(self, key)	todo		
+Lib/mailbox.py	1399	1406	Babyl.get_labels	get_labels(self)	todo		
+Lib/mailbox.py	1408	1436	Babyl._generate_toc	_generate_toc(self)	todo		
+Lib/mailbox.py	1438	1446	Babyl._pre_mailbox_hook	_pre_mailbox_hook(self, f)	todo		
+Lib/mailbox.py	1448	1450	Babyl._pre_message_hook	_pre_message_hook(self, f)	todo		
+Lib/mailbox.py	1452	1454	Babyl._post_message_hook	_post_message_hook(self, f)	todo		
+Lib/mailbox.py	1456	1561	Babyl._install_message	_install_message(self, message)	todo		
+Lib/mailbox.py	1567	1584	Message.__init__	__init__(self, message=None)	todo		
+Lib/mailbox.py	1586	1591	Message._become_message	_become_message(self, message)	todo		
+Lib/mailbox.py	1593	1598	Message._explain_to	_explain_to(self, message)	todo		
+Lib/mailbox.py	1606	1611	MaildirMessage.__init__	__init__(self, message=None)	todo		
+Lib/mailbox.py	1613	1615	MaildirMessage.get_subdir	get_subdir(self)	todo		
+Lib/mailbox.py	1617	1622	MaildirMessage.set_subdir	set_subdir(self, subdir)	todo		
+Lib/mailbox.py	1624	1629	MaildirMessage.get_flags	get_flags(self)	todo		
+Lib/mailbox.py	1631	1633	MaildirMessage.set_flags	set_flags(self, flags)	todo		
+Lib/mailbox.py	1635	1637	MaildirMessage.add_flag	add_flag(self, flag)	todo		
+Lib/mailbox.py	1639	1642	MaildirMessage.remove_flag	remove_flag(self, flag)	todo		
+Lib/mailbox.py	1644	1646	MaildirMessage.get_date	get_date(self)	todo		
+Lib/mailbox.py	1648	1653	MaildirMessage.set_date	set_date(self, date)	todo		
+Lib/mailbox.py	1655	1657	MaildirMessage.get_info	get_info(self)	todo		
+Lib/mailbox.py	1659	1664	MaildirMessage.set_info	set_info(self, info)	todo		
+Lib/mailbox.py	1666	1707	MaildirMessage._explain_to	_explain_to(self, message)	todo		
+Lib/mailbox.py	1715	1722	_mboxMMDFMessage.__init__	__init__(self, message=None)	todo		
+Lib/mailbox.py	1724	1726	_mboxMMDFMessage.get_from	get_from(self)	todo		
+Lib/mailbox.py	1728	1734	_mboxMMDFMessage.set_from	set_from(self, from_, time_=None)	todo		
+Lib/mailbox.py	1736	1738	_mboxMMDFMessage.get_flags	get_flags(self)	todo		
+Lib/mailbox.py	1740	1760	_mboxMMDFMessage.set_flags	set_flags(self, flags)	todo		
+Lib/mailbox.py	1762	1764	_mboxMMDFMessage.add_flag	add_flag(self, flag)	todo		
+Lib/mailbox.py	1766	1769	_mboxMMDFMessage.remove_flag	remove_flag(self, flag)	todo		
+Lib/mailbox.py	1771	1820	_mboxMMDFMessage._explain_to	_explain_to(self, message)	todo		
+Lib/mailbox.py	1832	1835	MHMessage.__init__	__init__(self, message=None)	todo		
+Lib/mailbox.py	1837	1839	MHMessage.get_sequences	get_sequences(self)	todo		
+Lib/mailbox.py	1841	1843	MHMessage.set_sequences	set_sequences(self, sequences)	todo		
+Lib/mailbox.py	1845	1851	MHMessage.add_sequence	add_sequence(self, sequence)	todo		
+Lib/mailbox.py	1853	1858	MHMessage.remove_sequence	remove_sequence(self, sequence)	todo		
+Lib/mailbox.py	1860	1896	MHMessage._explain_to	_explain_to(self, message)	todo		
+Lib/mailbox.py	1904	1908	BabylMessage.__init__	__init__(self, message=None)	todo		
+Lib/mailbox.py	1910	1912	BabylMessage.get_labels	get_labels(self)	todo		
+Lib/mailbox.py	1914	1916	BabylMessage.set_labels	set_labels(self, labels)	todo		
+Lib/mailbox.py	1918	1924	BabylMessage.add_label	add_label(self, label)	todo		
+Lib/mailbox.py	1926	1931	BabylMessage.remove_label	remove_label(self, label)	todo		
+Lib/mailbox.py	1933	1935	BabylMessage.get_visible	get_visible(self)	todo		
+Lib/mailbox.py	1937	1939	BabylMessage.set_visible	set_visible(self, visible)	todo		
+Lib/mailbox.py	1941	1950	BabylMessage.update_visible	update_visible(self)	todo		
+Lib/mailbox.py	1952	1991	BabylMessage._explain_to	_explain_to(self, message)	todo		
+Lib/mailbox.py	2001	2007	_ProxyFile.__init__	__init__(self, f, pos=None)	todo		
+Lib/mailbox.py	2009	2011	_ProxyFile.read	read(self, size=None)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/mailbox.py	2013	2015	_ProxyFile.read1	read1(self, size=None)	todo		
+Lib/mailbox.py	2017	2019	_ProxyFile.readline	readline(self, size=None)	todo		
+Lib/mailbox.py	2021	2030	_ProxyFile.readlines	readlines(self, sizehint=None)	todo		candidates:pyio-bytesio-readlines-hint-doc
+Lib/mailbox.py	2032	2035	_ProxyFile.__iter__	__iter__(self)	todo		
+Lib/mailbox.py	2037	2039	_ProxyFile.tell	tell(self)	todo		
+Lib/mailbox.py	2041	2046	_ProxyFile.seek	seek(self, offset, whence=0)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
+Lib/mailbox.py	2048	2055	_ProxyFile.close	close(self)	todo		
+Lib/mailbox.py	2057	2064	_ProxyFile._read	_read(self, size, read_method)	todo		
+Lib/mailbox.py	2066	2068	_ProxyFile.__enter__	__enter__(self)	todo		
+Lib/mailbox.py	2070	2071	_ProxyFile.__exit__	__exit__(self, *exc)	todo		
+Lib/mailbox.py	2073	2074	_ProxyFile.readable	readable(self)	todo		
+Lib/mailbox.py	2076	2077	_ProxyFile.writable	writable(self)	todo		
+Lib/mailbox.py	2079	2080	_ProxyFile.seekable	seekable(self)	todo		
+Lib/mailbox.py	2082	2083	_ProxyFile.flush	flush(self)	todo		
+Lib/mailbox.py	2086	2091	_ProxyFile.closed	closed(self)	todo		
+Lib/mailbox.py	2099	2103	_PartialFile.__init__	__init__(self, f, start=None, stop=None)	todo		
+Lib/mailbox.py	2105	2107	_PartialFile.tell	tell(self)	todo		
+Lib/mailbox.py	2109	2117	_PartialFile.seek	seek(self, offset, whence=0)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
+Lib/mailbox.py	2119	2126	_PartialFile._read	_read(self, size, read_method)	todo		
+Lib/mailbox.py	2128	2132	_PartialFile.close	close(self)	todo		
+Lib/mailbox.py	2135	2175	_lock_file	_lock_file(f, dotlock=True)	todo		
+Lib/mailbox.py	2177	2182	_unlock_file	_unlock_file(f)	todo		
+Lib/mailbox.py	2184	2186	_create_carefully	_create_carefully(path)	todo		
+Lib/mailbox.py	2188	2192	_create_temporary	_create_temporary(path)	todo		
+Lib/mailbox.py	2194	2198	_sync_flush	_sync_flush(f)	todo		
+Lib/mailbox.py	2200	2203	_sync_close	_sync_close(f)	todo		

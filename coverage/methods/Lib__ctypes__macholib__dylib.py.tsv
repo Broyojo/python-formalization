@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Lib/ctypes/macholib/dylib.py	19	42	dylib_info	dylib_info(filename)	todo		

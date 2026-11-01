@@ -1,0 +1,5 @@
+file	line	endline	name	signature	status	entry	note
+Lib/asyncio/exceptions.py	36	41	IncompleteReadError.__init__	__init__(self, partial, expected)	todo		
+Lib/asyncio/exceptions.py	43	44	IncompleteReadError.__reduce__	__reduce__(self)	todo		
+Lib/asyncio/exceptions.py	53	55	LimitOverrunError.__init__	__init__(self, message, consumed)	todo		
+Lib/asyncio/exceptions.py	57	58	LimitOverrunError.__reduce__	__reduce__(self)	todo		

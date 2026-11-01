@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Lib/encodings/gb18030.py	30	39	getregentry	getregentry()	todo		

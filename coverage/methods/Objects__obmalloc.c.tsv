@@ -1,0 +1,133 @@
+file	line	endline	name	signature	status	entry	note
+Objects/obmalloc.c	55	64	_PyMem_RawMalloc	_PyMem_RawMalloc(void *Py_UNUSED(ctx), size_t size)	todo		
+Objects/obmalloc.c	67	78	_PyMem_RawCalloc	_PyMem_RawCalloc(void *Py_UNUSED(ctx), size_t nelem, size_t elsize)	todo		
+Objects/obmalloc.c	81	86	_PyMem_RawRealloc	_PyMem_RawRealloc(void *Py_UNUSED(ctx), void *ptr, size_t size)	todo		
+Objects/obmalloc.c	89	92	_PyMem_RawFree	_PyMem_RawFree(void *Py_UNUSED(ctx), void *ptr)	todo		
+Objects/obmalloc.c	97	106	_PyMem_mi_page_clear_qsbr	_PyMem_mi_page_clear_qsbr(mi_page_t *page)	todo		
+Objects/obmalloc.c	110	125	_PyMem_mi_page_is_safe_to_free	_PyMem_mi_page_is_safe_to_free(mi_page_t *page)	todo		
+Objects/obmalloc.c	137	151	should_advance_qsbr_for_page	should_advance_qsbr_for_page(struct _qsbr_thread_state *qsbr, mi_page_t *page)	todo		
+Objects/obmalloc.c	154	157	tstate_from_heap	tstate_from_heap(mi_heap_t *heap)	todo		
+Objects/obmalloc.c	161	201	_PyMem_mi_page_maybe_free	_PyMem_mi_page_maybe_free(mi_page_t *page, mi_page_queue_t *pq, bool force)	todo		
+Objects/obmalloc.c	204	221	_PyMem_mi_page_reclaimed	_PyMem_mi_page_reclaimed(mi_page_t *page)	todo		
+Objects/obmalloc.c	224	254	_PyMem_mi_heap_collect_qsbr	_PyMem_mi_heap_collect_qsbr(mi_heap_t *heap)	todo		
+Objects/obmalloc.c	257	266	_PyMem_MiMalloc	_PyMem_MiMalloc(void *ctx, size_t size)	todo		
+Objects/obmalloc.c	269	278	_PyMem_MiCalloc	_PyMem_MiCalloc(void *ctx, size_t nelem, size_t elsize)	todo		
+Objects/obmalloc.c	281	290	_PyMem_MiRealloc	_PyMem_MiRealloc(void *ctx, void *ptr, size_t size)	todo		
+Objects/obmalloc.c	293	296	_PyMem_MiFree	_PyMem_MiFree(void *ctx, void *ptr)	todo		
+Objects/obmalloc.c	299	308	_PyObject_MiMalloc	_PyObject_MiMalloc(void *ctx, size_t nbytes)	todo		
+Objects/obmalloc.c	311	320	_PyObject_MiCalloc	_PyObject_MiCalloc(void *ctx, size_t nelem, size_t elsize)	todo		
+Objects/obmalloc.c	324	333	_PyObject_MiRealloc	_PyObject_MiRealloc(void *ctx, void *ptr, size_t nbytes)	todo		
+Objects/obmalloc.c	336	339	_PyObject_MiFree	_PyObject_MiFree(void *ctx, void *ptr)	todo		
+Objects/obmalloc.c	404	411	_PyMem_DefaultRawMalloc	_PyMem_DefaultRawMalloc(size_t size)	todo		
+Objects/obmalloc.c	414	421	_PyMem_DefaultRawCalloc	_PyMem_DefaultRawCalloc(size_t nelem, size_t elsize)	todo		
+Objects/obmalloc.c	424	431	_PyMem_DefaultRawRealloc	_PyMem_DefaultRawRealloc(void *ptr, size_t size)	todo		
+Objects/obmalloc.c	434	441	_PyMem_DefaultRawFree	_PyMem_DefaultRawFree(void *ptr)	todo		
+Objects/obmalloc.c	444	461	_PyMem_DefaultRawWcsdup	_PyMem_DefaultRawWcsdup(const wchar_t *str)	todo		
+Objects/obmalloc.c	477	493	_PyMem_ArenaAlloc	_PyMem_ArenaAlloc(void *Py_UNUSED(ctx), size_t size)	todo		
+Objects/obmalloc.c	539	568	set_default_allocator_unlocked	set_default_allocator_unlocked(PyMemAllocatorDomain domain, int debug, PyMemAllocatorEx *old_alloc)	todo		
+Objects/obmalloc.c	578	620	_PyMem_GetAllocatorName	_PyMem_GetAllocatorName(const char *name, PyMemAllocatorName *allocator)	todo		
+Objects/obmalloc.c	624	709	set_up_allocators_unlocked	set_up_allocators_unlocked(PyMemAllocatorName allocator)	todo		
+Objects/obmalloc.c	712	718	_PyMem_SetupAllocators	_PyMem_SetupAllocators(PyMemAllocatorName allocator)	todo		
+Objects/obmalloc.c	722	725	pymemallocator_eq	pymemallocator_eq(PyMemAllocatorEx *a, PyMemAllocatorEx *b)	todo		
+Objects/obmalloc.c	729	796	get_current_allocator_name_unlocked	get_current_allocator_name_unlocked(void)	todo		
+Objects/obmalloc.c	799	805	_PyMem_GetCurrentAllocatorName	_PyMem_GetCurrentAllocatorName(void)	todo		
+Objects/obmalloc.c	809	812	_PyMem_DebugEnabled	_PyMem_DebugEnabled(void)	todo		
+Objects/obmalloc.c	816	824	_PyMem_PymallocEnabled	_PyMem_PymallocEnabled(void)	todo		
+Objects/obmalloc.c	828	840	_PyMem_MimallocEnabled	_PyMem_MimallocEnabled(void)	todo		
+Objects/obmalloc.c	847	890	set_up_debug_hooks_domain_unlocked	set_up_debug_hooks_domain_unlocked(PyMemAllocatorDomain domain)	todo		
+Objects/obmalloc.c	894	900	set_up_debug_hooks_unlocked	set_up_debug_hooks_unlocked(void)	todo		
+Objects/obmalloc.c	903	908	PyMem_SetupDebugHooks	PyMem_SetupDebugHooks(void)	todo		
+Objects/obmalloc.c	911	926	get_allocator_unlocked	get_allocator_unlocked(PyMemAllocatorDomain domain, PyMemAllocatorEx *allocator)	todo		
+Objects/obmalloc.c	929	938	set_allocator_unlocked	set_allocator_unlocked(PyMemAllocatorDomain domain, PyMemAllocatorEx *allocator)	todo		
+Objects/obmalloc.c	941	946	PyMem_GetAllocator	PyMem_GetAllocator(PyMemAllocatorDomain domain, PyMemAllocatorEx *allocator)	todo		
+Objects/obmalloc.c	949	954	PyMem_SetAllocator	PyMem_SetAllocator(PyMemAllocatorDomain domain, PyMemAllocatorEx *allocator)	todo		
+Objects/obmalloc.c	957	962	PyObject_GetArenaAllocator	PyObject_GetArenaAllocator(PyObjectArenaAllocator *allocator)	todo		
+Objects/obmalloc.c	965	970	PyObject_SetArenaAllocator	PyObject_SetArenaAllocator(PyObjectArenaAllocator *allocator)	todo		
+Objects/obmalloc.c	992	995	_PyObject_VirtualAlloc	_PyObject_VirtualAlloc(size_t size)	todo		
+Objects/obmalloc.c	998	1001	_PyObject_VirtualFree	_PyObject_VirtualFree(void *obj, size_t size)	todo		
+Objects/obmalloc.c	1009	1020	PyMem_RawMalloc	PyMem_RawMalloc(size_t size)	todo		
+Objects/obmalloc.c	1023	1029	PyMem_RawCalloc	PyMem_RawCalloc(size_t nelem, size_t elsize)	todo		
+Objects/obmalloc.c	1032	1038	PyMem_RawRealloc	PyMem_RawRealloc(void *ptr, size_t new_size)	todo		
+Objects/obmalloc.c	1040	1043	PyMem_RawFree	void PyMem_RawFree(void *ptr)	todo		
+Objects/obmalloc.c	1051	1061	PyMem_Malloc	PyMem_Malloc(size_t size)	todo		
+Objects/obmalloc.c	1064	1074	PyMem_Calloc	PyMem_Calloc(size_t nelem, size_t elsize)	todo		
+Objects/obmalloc.c	1077	1083	PyMem_Realloc	PyMem_Realloc(void *ptr, size_t new_size)	todo		
+Objects/obmalloc.c	1086	1090	PyMem_Free	PyMem_Free(void *ptr)	todo		
+Objects/obmalloc.c	1098	1115	_PyMem_RawWcsdup	_PyMem_RawWcsdup(const wchar_t *str)	todo		
+Objects/obmalloc.c	1118	1128	_PyMem_RawStrdup	_PyMem_RawStrdup(const char *str)	todo		
+Objects/obmalloc.c	1131	1141	_PyMem_Strdup	_PyMem_Strdup(const char *str)	todo		
+Objects/obmalloc.c	1167	1170	work_item_should_decref	work_item_should_decref(uintptr_t ptr)	todo		
+Objects/obmalloc.c	1173	1195	free_work_item	free_work_item(uintptr_t ptr, delayed_dealloc_cb cb, void *state)	todo		
+Objects/obmalloc.c	1212	1230	should_advance_qsbr_for_free	should_advance_qsbr_for_free(struct _qsbr_thread_state *qsbr, size_t size)	todo		
+Objects/obmalloc.c	1234	1310	free_delayed	free_delayed(uintptr_t ptr, size_t size)	todo		
+Objects/obmalloc.c	1313	1319	_PyMem_FreeDelayed	_PyMem_FreeDelayed(void *ptr, size_t size)	todo		
+Objects/obmalloc.c	1323	1332	_PyObject_XDecRefDelayed	_PyObject_XDecRefDelayed(PyObject *ptr)	todo		
+Objects/obmalloc.c	1336	1339	work_queue_first	work_queue_first(struct llist_node *head)	todo		
+Objects/obmalloc.c	1342	1370	process_queue	process_queue(struct llist_node *head, _PyThreadStateImpl *tstate, bool keep_empty, delayed_dealloc_cb cb, void *state)	todo		
+Objects/obmalloc.c	1373	1382	process_interp_queue	process_interp_queue(struct _Py_mem_interp_free_queue *queue, _PyThreadStateImpl *tstate, delayed_dealloc_cb cb, void *state)	todo		
+Objects/obmalloc.c	1385	1398	maybe_process_interp_queue	maybe_process_interp_queue(struct _Py_mem_interp_free_queue *queue, _PyThreadStateImpl *tstate, delayed_dealloc_cb cb, void *state)	todo		
+Objects/obmalloc.c	1401	1413	_PyMem_ProcessDelayed	_PyMem_ProcessDelayed(PyThreadState *tstate)	todo		
+Objects/obmalloc.c	1416	1426	_PyMem_ProcessDelayedNoDealloc	_PyMem_ProcessDelayedNoDealloc(PyThreadState *tstate, delayed_dealloc_cb cb, void *state)	todo		
+Objects/obmalloc.c	1429	1459	_PyMem_AbandonDelayed	_PyMem_AbandonDelayed(PyThreadState *tstate)	todo		
+Objects/obmalloc.c	1462	1481	_PyMem_FiniDelayed	_PyMem_FiniDelayed(PyInterpreterState *interp)	todo		
+Objects/obmalloc.c	1488	1498	PyObject_Malloc	PyObject_Malloc(size_t size)	todo		
+Objects/obmalloc.c	1501	1511	PyObject_Calloc	PyObject_Calloc(size_t nelem, size_t elsize)	todo		
+Objects/obmalloc.c	1514	1520	PyObject_Realloc	PyObject_Realloc(void *ptr, size_t new_size)	todo		
+Objects/obmalloc.c	1523	1527	PyObject_Free	PyObject_Free(void *ptr)	todo		
+Objects/obmalloc.c	1559	1564	has_own_state	has_own_state(PyInterpreterState *interp)	todo		
+Objects/obmalloc.c	1567	1572	get_state	get_state(void)	todo		
+Objects/obmalloc.c	1587	1593	count_blocks	static bool count_blocks( const mi_heap_t* heap, const mi_heap_area_t* area, void* block, size_t block_size, void* allocated_blocks)	todo		
+Objects/obmalloc.c	1596	1619	get_mimalloc_allocated_blocks	get_mimalloc_allocated_blocks(PyInterpreterState *interp)	todo		
+Objects/obmalloc.c	1623	1663	_PyInterpreterState_GetAllocatedBlocks	_PyInterpreterState_GetAllocatedBlocks(PyInterpreterState *interp)	todo		
+Objects/obmalloc.c	1668	1692	_PyInterpreterState_FinalizeAllocatedBlocks	_PyInterpreterState_FinalizeAllocatedBlocks(PyInterpreterState *interp)	todo		
+Objects/obmalloc.c	1703	1707	_Py_FinalizeAllocatedBlocks	_Py_FinalizeAllocatedBlocks(_PyRuntimeState *runtime)	todo		
+Objects/obmalloc.c	1710	1758	get_num_global_allocated_blocks	get_num_global_allocated_blocks(_PyRuntimeState *runtime)	todo		
+Objects/obmalloc.c	1761	1764	_Py_GetGlobalAllocatedBlocks	_Py_GetGlobalAllocatedBlocks(void)	todo		
+Objects/obmalloc.c	1779	1812	arena_map_get	arena_map_get(OMState *state, pymem_block *p, int create)	todo		
+Objects/obmalloc.c	1840	1881	arena_map_mark_used	arena_map_mark_used(OMState *state, uintptr_t arena_base, int is_used)	todo		
+Objects/obmalloc.c	1886	1898	arena_map_is_used	arena_map_is_used(OMState *state, pymem_block *p)	todo		
+Objects/obmalloc.c	1911	2011	new_arena	new_arena(OMState *state)	todo		
+Objects/obmalloc.c	2020	2023	address_in_range	address_in_range(OMState *state, void *p, poolp Py_UNUSED(pool))	todo		
+Objects/obmalloc.c	2103	2114	address_in_range	address_in_range(OMState *state, void *p, poolp pool)	todo		
+Objects/obmalloc.c	2123	2139	pymalloc_pool_extend	pymalloc_pool_extend(poolp pool, uint size)	todo		
+Objects/obmalloc.c	2145	2270	allocate_from_new_pool	allocate_from_new_pool(OMState *state, uint size)	todo		
+Objects/obmalloc.c	2281	2325	pymalloc_alloc	pymalloc_alloc(OMState *state, void *Py_UNUSED(ctx), size_t nbytes)	todo		
+Objects/obmalloc.c	2329	2342	_PyObject_Malloc	_PyObject_Malloc(void *ctx, size_t nbytes)	todo		
+Objects/obmalloc.c	2346	2363	_PyObject_Calloc	_PyObject_Calloc(void *ctx, size_t nelem, size_t elsize)	todo		
+Objects/obmalloc.c	2367	2380	insert_to_usedpool	insert_to_usedpool(OMState *state, poolp pool)	todo		
+Objects/obmalloc.c	2383	2547	insert_to_freepool	insert_to_freepool(OMState *state, poolp pool)	todo		
+Objects/obmalloc.c	2553	2607	pymalloc_free	pymalloc_free(OMState *state, void *Py_UNUSED(ctx), void *p)	todo		
+Objects/obmalloc.c	2611	2624	_PyObject_Free	_PyObject_Free(void *ctx, void *p)	todo		
+Objects/obmalloc.c	2637	2695	pymalloc_realloc	pymalloc_realloc(OMState *state, void *ctx, void **newptr_p, void *p, size_t nbytes)	todo		
+Objects/obmalloc.c	2699	2713	_PyObject_Realloc	_PyObject_Realloc(void *ctx, void *ptr, size_t nbytes)	todo		
+Objects/obmalloc.c	2722	2725	_PyInterpreterState_GetAllocatedBlocks	_PyInterpreterState_GetAllocatedBlocks(PyInterpreterState *Py_UNUSED(interp))	todo		
+Objects/obmalloc.c	2728	2731	_Py_GetGlobalAllocatedBlocks	_Py_GetGlobalAllocatedBlocks(void)	todo		
+Objects/obmalloc.c	2734	2737	_PyInterpreterState_FinalizeAllocatedBlocks	_PyInterpreterState_FinalizeAllocatedBlocks(PyInterpreterState *Py_UNUSED(interp))	todo		
+Objects/obmalloc.c	2740	2743	_Py_FinalizeAllocatedBlocks	_Py_FinalizeAllocatedBlocks(_PyRuntimeState *Py_UNUSED(runtime))	todo		
+Objects/obmalloc.c	2763	2766	bumpserialno	bumpserialno(void)	todo		
+Objects/obmalloc.c	2779	2788	read_size_t	read_size_t(const void *p)	todo		
+Objects/obmalloc.c	2794	2803	write_size_t	write_size_t(void *p, size_t n)	todo		
+Objects/obmalloc.c	2806	2830	fill_mem_debug	fill_mem_debug(debug_alloc_api_t *api, void *data, int c, size_t nbytes, bool is_alloc)	todo		
+Objects/obmalloc.c	2862	2919	_PyMem_DebugRawAlloc	_PyMem_DebugRawAlloc(int use_calloc, void *ctx, size_t nbytes)	todo		
+Objects/obmalloc.c	2922	2925	_PyMem_DebugRawMalloc	_PyMem_DebugRawMalloc(void *ctx, size_t nbytes)	todo		
+Objects/obmalloc.c	2928	2934	_PyMem_DebugRawCalloc	_PyMem_DebugRawCalloc(void *ctx, size_t nelem, size_t elsize)	todo		
+Objects/obmalloc.c	2943	2960	_PyMem_DebugRawFree	_PyMem_DebugRawFree(void *ctx, void *p)	todo		
+Objects/obmalloc.c	2964	3065	_PyMem_DebugRawRealloc	_PyMem_DebugRawRealloc(void *ctx, void *p, size_t nbytes)	todo		
+Objects/obmalloc.c	3068	3083	_PyMem_DebugCheckGIL	_PyMem_DebugCheckGIL(const char *func)	todo		
+Objects/obmalloc.c	3086	3090	_PyMem_DebugMalloc	_PyMem_DebugMalloc(void *ctx, size_t nbytes)	todo		
+Objects/obmalloc.c	3093	3097	_PyMem_DebugCalloc	_PyMem_DebugCalloc(void *ctx, size_t nelem, size_t elsize)	todo		
+Objects/obmalloc.c	3101	3105	_PyMem_DebugFree	_PyMem_DebugFree(void *ctx, void *ptr)	todo		
+Objects/obmalloc.c	3109	3113	_PyMem_DebugRealloc	_PyMem_DebugRealloc(void *ctx, void *ptr, size_t nbytes)	todo		
+Objects/obmalloc.c	3121	3160	_PyMem_DebugCheckAddress	_PyMem_DebugCheckAddress(const char *func, char api, const void *p)	todo		
+Objects/obmalloc.c	3164	3269	_PyObject_DebugDumpAddress	_PyObject_DebugDumpAddress(const void *p)	todo		
+Objects/obmalloc.c	3273	3306	printone	printone(FILE *out, const char* msg, size_t value)	todo		
+Objects/obmalloc.c	3309	3320	_PyDebugAllocatorStats	_PyDebugAllocatorStats(FILE *out, const char *block_name, int num_blocks, size_t sizeof_block)	todo		
+Objects/obmalloc.c	3330	3337	_PyMem_obmalloc_state_on_heap	bool _PyMem_obmalloc_state_on_heap(PyInterpreterState *interp)	todo		
+Objects/obmalloc.c	3341	3348	init_obmalloc_pools	init_obmalloc_pools(PyInterpreterState *interp)	todo		
+Objects/obmalloc.c	3351	3373	_PyMem_init_obmalloc	int _PyMem_init_obmalloc(PyInterpreterState *interp)	todo		
+Objects/obmalloc.c	3379	3410	free_obmalloc_arenas	free_obmalloc_arenas(PyInterpreterState *interp)	todo		
+Objects/obmalloc.c	3418	3430	pool_is_in_list	pool_is_in_list(const poolp target, poolp list)	todo		
+Objects/obmalloc.c	3442	3453	_collect_alloc_stats	static bool _collect_alloc_stats( const mi_heap_t* heap, const mi_heap_area_t* area, void* block, size_t block_size, void* arg)	todo		
+Objects/obmalloc.c	3456	3475	py_mimalloc_print_stats	py_mimalloc_print_stats(FILE *out)	todo		
+Objects/obmalloc.c	3480	3634	pymalloc_print_stats	pymalloc_print_stats(FILE *out)	todo		
+Objects/obmalloc.c	3644	3660	_PyObject_DebugMallocStats	_PyObject_DebugMallocStats(FILE *out)	todo		

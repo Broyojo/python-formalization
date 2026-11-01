@@ -1,0 +1,6 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_sqlite/statement.c	34	101	pysqlite_statement_create	pysqlite_statement_create(pysqlite_Connection *connection, PyObject *sql)	todo		
+Modules/_sqlite/statement.c	104	117	stmt_dealloc	stmt_dealloc(PyObject *op)	todo		
+Modules/_sqlite/statement.c	120	124	stmt_traverse	stmt_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Modules/_sqlite/statement.c	137	182	lstrip_sql	lstrip_sql(const char *sql)	todo		
+Modules/_sqlite/statement.c	199	208	pysqlite_statement_setup_types	pysqlite_statement_setup_types(PyObject *module)	todo		

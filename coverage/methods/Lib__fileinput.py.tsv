@@ -1,0 +1,29 @@
+file	line	endline	name	signature	status	entry	note
+Lib/fileinput.py	78	91	input	input(files=None, inplace=False, backup='', *, mode='r', openhook=None, encoding=None, errors=None)	todo		
+Lib/fileinput.py	93	99	close	close()	todo		
+Lib/fileinput.py	101	113	nextfile	nextfile()	todo		
+Lib/fileinput.py	115	122	filename	filename()	todo		
+Lib/fileinput.py	124	132	lineno	lineno()	todo		
+Lib/fileinput.py	134	142	filelineno	filelineno()	todo		
+Lib/fileinput.py	144	151	fileno	fileno()	todo		
+Lib/fileinput.py	153	160	isfirstline	isfirstline()	todo		
+Lib/fileinput.py	162	169	isstdin	isstdin()	todo		
+Lib/fileinput.py	184	229	FileInput.__init__	__init__(self, files=None, inplace=False, backup='', *, mode='r', openhook=None, encoding=None, errors=None)	todo		
+Lib/fileinput.py	231	232	FileInput.__del__	__del__(self)	todo		
+Lib/fileinput.py	234	238	FileInput.close	close(self)	todo		
+Lib/fileinput.py	240	241	FileInput.__enter__	__enter__(self)	todo		
+Lib/fileinput.py	243	244	FileInput.__exit__	__exit__(self, type, value, traceback)	todo		
+Lib/fileinput.py	246	247	FileInput.__iter__	__iter__(self)	todo		
+Lib/fileinput.py	249	257	FileInput.__next__	__next__(self)	todo		
+Lib/fileinput.py	260	288	FileInput.nextfile	nextfile(self)	todo		
+Lib/fileinput.py	290	298	FileInput.readline	readline(self)	todo		
+Lib/fileinput.py	301	372	FileInput._readline	_readline(self)	todo		
+Lib/fileinput.py	374	375	FileInput.filename	filename(self)	todo		
+Lib/fileinput.py	377	378	FileInput.lineno	lineno(self)	todo		
+Lib/fileinput.py	380	381	FileInput.filelineno	filelineno(self)	todo		
+Lib/fileinput.py	383	390	FileInput.fileno	fileno(self)	todo		
+Lib/fileinput.py	392	393	FileInput.isfirstline	isfirstline(self)	todo		
+Lib/fileinput.py	395	396	FileInput.isstdin	isstdin(self)	todo		
+Lib/fileinput.py	401	417	hook_compressed	hook_compressed(filename, mode, *, encoding=None, errors=None)	todo		
+Lib/fileinput.py	420	423	hook_encoded	hook_encoded(encoding, errors=None)	todo		
+Lib/fileinput.py	426	439	_test	_test()	todo		

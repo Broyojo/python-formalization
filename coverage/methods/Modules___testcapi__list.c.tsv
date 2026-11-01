@@ -1,0 +1,8 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/list.c	6	10	list_get_size	list_get_size(PyObject *Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/list.c	14	23	list_get_item	list_get_item(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/list.c	27	39	list_set_item	list_set_item(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/list.c	43	47	list_clear	list_clear(PyObject* Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/list.c	51	60	list_extend	list_extend(PyObject* Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/list.c	64	103	test_list_api	test_list_api(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/list.c	117	120	_PyTestCapi_Init_List	_PyTestCapi_Init_List(PyObject *m)	excluded		test-support: only for CPython's own tests

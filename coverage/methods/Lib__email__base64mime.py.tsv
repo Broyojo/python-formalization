@@ -1,0 +1,5 @@
+file	line	endline	name	signature	status	entry	note
+Lib/email/base64mime.py	49	56	header_length	header_length(bytearray)	todo		
+Lib/email/base64mime.py	59	70	header_encode	header_encode(header_bytes, charset='iso-8859-1')	todo		
+Lib/email/base64mime.py	73	95	body_encode	body_encode(s, maxlinelen=76, eol=NL)	todo		
+Lib/email/base64mime.py	98	110	decode	decode(string)	todo		

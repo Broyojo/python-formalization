@@ -1,0 +1,106 @@
+file	line	endline	name	signature	status	entry	note
+Lib/xmlrpc/client.py	149	152	escape	escape(s)	todo		
+Lib/xmlrpc/client.py	203	208	ProtocolError.__init__	__init__(self, url, errcode, errmsg, headers)	todo		
+Lib/xmlrpc/client.py	209	213	ProtocolError.__repr__	__repr__(self)	todo		
+Lib/xmlrpc/client.py	235	238	Fault.__init__	__init__(self, faultCode, faultString, **extra)	todo		
+Lib/xmlrpc/client.py	239	241	Fault.__repr__	__repr__(self)	todo		
+Lib/xmlrpc/client.py	251	256	_iso8601_format	_iso8601_format(value)	todo		
+Lib/xmlrpc/client.py	259	268	_strftime	_strftime(value)	todo		
+Lib/xmlrpc/client.py	276	280	DateTime.__init__	__init__(self, value=0)	todo		
+Lib/xmlrpc/client.py	282	298	DateTime.make_comparable	make_comparable(self, other)	todo		
+Lib/xmlrpc/client.py	300	304	DateTime.__lt__	__lt__(self, other)	todo		
+Lib/xmlrpc/client.py	306	310	DateTime.__le__	__le__(self, other)	todo		
+Lib/xmlrpc/client.py	312	316	DateTime.__gt__	__gt__(self, other)	todo		
+Lib/xmlrpc/client.py	318	322	DateTime.__ge__	__ge__(self, other)	todo		
+Lib/xmlrpc/client.py	324	328	DateTime.__eq__	__eq__(self, other)	todo		
+Lib/xmlrpc/client.py	330	331	DateTime.timetuple	timetuple(self)	todo		
+Lib/xmlrpc/client.py	338	339	DateTime.__str__	__str__(self)	todo		
+Lib/xmlrpc/client.py	341	342	DateTime.__repr__	__repr__(self)	todo		
+Lib/xmlrpc/client.py	344	345	DateTime.decode	decode(self, data)	todo		
+Lib/xmlrpc/client.py	347	350	DateTime.encode	encode(self, out)	todo		
+Lib/xmlrpc/client.py	352	356	_datetime	_datetime(data)	todo		
+Lib/xmlrpc/client.py	358	359	_datetime_type	_datetime_type(data)	todo		
+Lib/xmlrpc/client.py	370	378	Binary.__init__	__init__(self, data=None)	todo		
+Lib/xmlrpc/client.py	385	386	Binary.__str__	__str__(self)	todo		
+Lib/xmlrpc/client.py	388	391	Binary.__eq__	__eq__(self, other)	todo		
+Lib/xmlrpc/client.py	393	394	Binary.decode	decode(self, data)	todo		
+Lib/xmlrpc/client.py	396	400	Binary.encode	encode(self, out)	todo		
+Lib/xmlrpc/client.py	402	406	_binary	_binary(data)	todo		
+Lib/xmlrpc/client.py	415	422	ExpatParser.__init__	__init__(self, target)	todo		
+Lib/xmlrpc/client.py	424	425	ExpatParser.feed	feed(self, data)	todo		
+Lib/xmlrpc/client.py	427	434	ExpatParser.close	close(self)	todo		
+Lib/xmlrpc/client.py	459	463	Marshaller.__init__	__init__(self, encoding=None, allow_none=False)	todo		
+Lib/xmlrpc/client.py	467	492	Marshaller.dumps	dumps(self, values)	todo		
+Lib/xmlrpc/client.py	494	510	Marshaller.__dump	__dump(self, value, write)	todo		
+Lib/xmlrpc/client.py	512	515	Marshaller.dump_nil	dump_nil(self, value, write)	todo		
+Lib/xmlrpc/client.py	518	521	Marshaller.dump_bool	dump_bool(self, value, write)	todo		
+Lib/xmlrpc/client.py	524	529	Marshaller.dump_long	dump_long(self, value, write)	todo		
+Lib/xmlrpc/client.py	535	538	Marshaller.dump_double	dump_double(self, value, write)	todo		
+Lib/xmlrpc/client.py	541	544	Marshaller.dump_unicode	dump_unicode(self, value, write, escape=escape)	todo		
+Lib/xmlrpc/client.py	547	551	Marshaller.dump_bytes	dump_bytes(self, value, write)	todo		
+Lib/xmlrpc/client.py	555	565	Marshaller.dump_array	dump_array(self, value, write)	todo		
+Lib/xmlrpc/client.py	569	584	Marshaller.dump_struct	dump_struct(self, value, write, escape=escape)	todo		
+Lib/xmlrpc/client.py	587	590	Marshaller.dump_datetime	dump_datetime(self, value, write)	todo		
+Lib/xmlrpc/client.py	593	601	Marshaller.dump_instance	dump_instance(self, value, write)	todo		
+Lib/xmlrpc/client.py	625	635	Unmarshaller.__init__	__init__(self, use_datetime=False, use_builtin_types=False)	todo		
+Lib/xmlrpc/client.py	637	643	Unmarshaller.close	close(self)	todo		
+Lib/xmlrpc/client.py	645	646	Unmarshaller.getmethodname	getmethodname(self)	todo		
+Lib/xmlrpc/client.py	651	652	Unmarshaller.xml	xml(self, encoding, standalone)	todo		
+Lib/xmlrpc/client.py	655	664	Unmarshaller.start	start(self, tag, attrs)	todo		
+Lib/xmlrpc/client.py	666	667	Unmarshaller.data	data(self, text)	todo		
+Lib/xmlrpc/client.py	669	680	Unmarshaller.end	end(self, tag)	todo		
+Lib/xmlrpc/client.py	685	696	Unmarshaller.end_dispatch	end_dispatch(self, tag, data)	todo		
+Lib/xmlrpc/client.py	703	705	Unmarshaller.end_nil	end_nil(self, data)	todo		
+Lib/xmlrpc/client.py	708	715	Unmarshaller.end_boolean	end_boolean(self, data)	todo		
+Lib/xmlrpc/client.py	718	720	Unmarshaller.end_int	end_int(self, data)	todo		
+Lib/xmlrpc/client.py	728	730	Unmarshaller.end_double	end_double(self, data)	todo		
+Lib/xmlrpc/client.py	734	736	Unmarshaller.end_bigdecimal	end_bigdecimal(self, data)	todo		
+Lib/xmlrpc/client.py	739	743	Unmarshaller.end_string	end_string(self, data)	todo		
+Lib/xmlrpc/client.py	747	751	Unmarshaller.end_array	end_array(self, data)	todo		
+Lib/xmlrpc/client.py	754	762	Unmarshaller.end_struct	end_struct(self, data)	todo		
+Lib/xmlrpc/client.py	765	771	Unmarshaller.end_base64	end_base64(self, data)	todo		
+Lib/xmlrpc/client.py	774	779	Unmarshaller.end_dateTime	end_dateTime(self, data)	todo		
+Lib/xmlrpc/client.py	782	786	Unmarshaller.end_value	end_value(self, data)	todo		
+Lib/xmlrpc/client.py	789	790	Unmarshaller.end_params	end_params(self, data)	todo		
+Lib/xmlrpc/client.py	793	794	Unmarshaller.end_fault	end_fault(self, data)	todo		
+Lib/xmlrpc/client.py	797	801	Unmarshaller.end_methodName	end_methodName(self, data)	todo		
+Lib/xmlrpc/client.py	810	812	_MultiCallMethod.__init__	__init__(self, call_list, name)	todo		
+Lib/xmlrpc/client.py	813	814	_MultiCallMethod.__getattr__	__getattr__(self, name)	todo		
+Lib/xmlrpc/client.py	815	816	_MultiCallMethod.__call__	__call__(self, *args)	todo		
+Lib/xmlrpc/client.py	822	823	MultiCallIterator.__init__	__init__(self, results)	todo		
+Lib/xmlrpc/client.py	825	832	MultiCallIterator.__getitem__	__getitem__(self, i)	todo		
+Lib/xmlrpc/client.py	851	853	MultiCall.__init__	__init__(self, server)	todo		
+Lib/xmlrpc/client.py	855	856	MultiCall.__repr__	__repr__(self)	todo		
+Lib/xmlrpc/client.py	858	859	MultiCall.__getattr__	__getattr__(self, name)	todo		
+Lib/xmlrpc/client.py	861	866	MultiCall.__call__	__call__(self)	todo		
+Lib/xmlrpc/client.py	879	903	getparser	getparser(use_datetime=False, use_builtin_types=False)	todo		
+Lib/xmlrpc/client.py	918	982	dumps	dumps(params, methodname=None, methodresponse=None, encoding=None, allow_none=False)	todo		
+Lib/xmlrpc/client.py	993	1005	loads	loads(data, use_datetime=False, use_builtin_types=False)	todo		
+Lib/xmlrpc/client.py	1015	1025	gzip_encode	gzip_encode(data)	todo		
+Lib/xmlrpc/client.py	1039	1056	gzip_decode	gzip_decode(data, max_decode=20971520)	todo		
+Lib/xmlrpc/client.py	1069	1075	GzipDecodedResponse.__init__	__init__(self, response)	todo		
+Lib/xmlrpc/client.py	1077	1081	GzipDecodedResponse.close	close(self)	todo		
+Lib/xmlrpc/client.py	1090	1092	_Method.__init__	__init__(self, send, name)	todo		
+Lib/xmlrpc/client.py	1093	1094	_Method.__getattr__	__getattr__(self, name)	todo		
+Lib/xmlrpc/client.py	1095	1096	_Method.__call__	__call__(self, *args)	todo		
+Lib/xmlrpc/client.py	1118	1124	Transport.__init__	__init__(self, use_datetime=False, use_builtin_types=False, *, headers=())	todo		
+Lib/xmlrpc/client.py	1136	1147	Transport.request	request(self, host, handler, request_body, verbose=False)	todo		
+Lib/xmlrpc/client.py	1149	1174	Transport.single_request	single_request(self, host, handler, request_body, verbose=False)	todo		
+Lib/xmlrpc/client.py	1182	1185	Transport.getparser	getparser(self)	todo		
+Lib/xmlrpc/client.py	1197	1215	Transport.get_host_info	get_host_info(self, host)	todo		
+Lib/xmlrpc/client.py	1223	1231	Transport.make_connection	make_connection(self, host)	todo		
+Lib/xmlrpc/client.py	1237	1241	Transport.close	close(self)	todo		
+Lib/xmlrpc/client.py	1252	1266	Transport.send_request	send_request(self, host, handler, request_body, debug)	todo		
+Lib/xmlrpc/client.py	1275	1277	Transport.send_headers	send_headers(self, connection, headers)	todo		
+Lib/xmlrpc/client.py	1286	1295	Transport.send_content	send_content(self, connection, request_body)	todo		
+Lib/xmlrpc/client.py	1303	1325	Transport.parse_response	parse_response(self, response)	todo		
+Lib/xmlrpc/client.py	1333	1338	SafeTransport.__init__	__init__(self, use_datetime=False, use_builtin_types=False, *, headers=(), context=None)	todo		
+Lib/xmlrpc/client.py	1342	1354	SafeTransport.make_connection	make_connection(self, host)	todo		
+Lib/xmlrpc/client.py	1395	1424	ServerProxy.__init__	__init__(self, uri, transport=None, encoding=None, verbose=False, allow_none=False, use_datetime=False, use_builtin_types=False, *, headers=(), context=None)	todo		
+Lib/xmlrpc/client.py	1426	1427	ServerProxy.__close	__close(self)	todo		
+Lib/xmlrpc/client.py	1429	1445	ServerProxy.__request	__request(self, methodname, params)	todo		
+Lib/xmlrpc/client.py	1447	1451	ServerProxy.__repr__	__repr__(self)	todo		
+Lib/xmlrpc/client.py	1453	1455	ServerProxy.__getattr__	__getattr__(self, name)	todo		
+Lib/xmlrpc/client.py	1460	1468	ServerProxy.__call__	__call__(self, attr)	todo		
+Lib/xmlrpc/client.py	1470	1471	ServerProxy.__enter__	__enter__(self)	todo		
+Lib/xmlrpc/client.py	1473	1474	ServerProxy.__exit__	__exit__(self, *args)	todo		

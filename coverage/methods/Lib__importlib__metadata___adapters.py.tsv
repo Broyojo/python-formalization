@@ -1,0 +1,7 @@
+file	line	endline	name	signature	status	entry	note
+Lib/importlib/metadata/_adapters.py	41	44	Message.__new__	__new__(cls, orig: email.message.Message)	todo		
+Lib/importlib/metadata/_adapters.py	46	47	Message.__init__	__init__(self, *args, **kwargs)	todo		
+Lib/importlib/metadata/_adapters.py	50	51	Message.__iter__	__iter__(self)	todo		
+Lib/importlib/metadata/_adapters.py	53	61	Message.__getitem__	__getitem__(self, item)	todo		
+Lib/importlib/metadata/_adapters.py	63	73	Message._repair_headers	_repair_headers(self)	todo		
+Lib/importlib/metadata/_adapters.py	76	89	Message.json	json(self)	todo		

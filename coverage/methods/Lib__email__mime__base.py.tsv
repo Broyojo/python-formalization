@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Lib/email/mime/base.py	17	29	MIMEBase.__init__	__init__(self, _maintype, _subtype, *, policy=None, **_params)	todo		

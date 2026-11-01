@@ -1,0 +1,13 @@
+file	line	endline	name	signature	status	entry	note
+Lib/urllib/response.py	19	22	addbase.__init__	__init__(self, fp)	todo		
+Lib/urllib/response.py	24	26	addbase.__repr__	__repr__(self)	todo		
+Lib/urllib/response.py	28	31	addbase.__enter__	__enter__(self)	todo		
+Lib/urllib/response.py	33	34	addbase.__exit__	__exit__(self, type, value, traceback)	todo		
+Lib/urllib/response.py	40	43	addclosehook.__init__	__init__(self, fp, closehook, *hookargs)	todo		
+Lib/urllib/response.py	45	54	addclosehook.close	close(self)	todo		
+Lib/urllib/response.py	60	62	addinfo.__init__	__init__(self, fp, headers)	todo		
+Lib/urllib/response.py	64	65	addinfo.info	info(self)	todo		
+Lib/urllib/response.py	71	74	addinfourl.__init__	__init__(self, fp, headers, url, code=None)	todo		
+Lib/urllib/response.py	77	78	addinfourl.status	status(self)	todo		
+Lib/urllib/response.py	80	81	addinfourl.getcode	getcode(self)	todo		
+Lib/urllib/response.py	83	84	addinfourl.geturl	geturl(self)	todo		

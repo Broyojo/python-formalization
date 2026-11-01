@@ -1,0 +1,73 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_hashopenssl.c	188	190	py_hashentry_t_hash_name	py_hashentry_t_hash_name(const void *key) {	excluded		platform: binds an external library
+Modules/_hashopenssl.c	193	195	py_hashentry_t_compare_name	py_hashentry_t_compare_name(const void *key1, const void *key2) {	excluded		platform: binds an external library
+Modules/_hashopenssl.c	198	211	py_hashentry_t_destroy_value	py_hashentry_t_destroy_value(void *entry) {	excluded		platform: binds an external library
+Modules/_hashopenssl.c	214	252	py_hashentry_table_new	py_hashentry_table_new(void) {	excluded		platform: binds an external library
+Modules/_hashopenssl.c	269	274	get_hashlib_state	get_hashlib_state(PyObject *module)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	310	328	set_ssl_exception_from_errcode	set_ssl_exception_from_errcode(PyObject *exc, unsigned long errcode)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	338	352	raise_ssl_error	raise_ssl_error(PyObject *exc, const char *fallback_format, ...)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	361	364	notify_ssl_error_occurred	notify_ssl_error_occurred(void)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	368	393	py_digest_name	py_digest_name(const EVP_MD *md)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	397	461	py_digest_by_name	py_digest_by_name(PyObject *module, const char *name, enum Py_hash_type py_ht)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	471	498	py_digest_by_digestmod	py_digest_by_digestmod(PyObject *module, PyObject *digestmod, enum Py_hash_type py_ht) {	excluded		platform: binds an external library
+Modules/_hashopenssl.c	501	517	newEVPobject	newEVPobject(PyTypeObject *type)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	520	537	EVP_hash	EVP_hash(EVPobject *self, const void *vp, Py_ssize_t len)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	542	549	EVP_dealloc	EVP_dealloc(PyObject *op)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	552	559	locked_EVP_MD_CTX_copy	locked_EVP_MD_CTX_copy(EVP_MD_CTX *new_ctx_p, EVPobject *self)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	570	584	EVP_copy_impl	EVP_copy_impl(EVPobject *self) /*[clinic end generated code: output=b370c21cdb8ca0b4 input=31455b6a3e638069]*/	excluded		platform: binds an external library
+Modules/_hashopenssl.c	593	623	EVP_digest_impl	EVP_digest_impl(EVPobject *self) /*[clinic end generated code: output=0f6a3a0da46dc12d input=03561809a419bf00]*/	excluded		platform: binds an external library
+Modules/_hashopenssl.c	632	662	EVP_hexdigest_impl	EVP_hexdigest_impl(EVPobject *self) /*[clinic end generated code: output=18e6decbaf197296 input=aff9cf0e4c741a9a]*/	excluded		platform: binds an external library
+Modules/_hashopenssl.c	674	700	EVP_update_impl	EVP_update_impl(EVPobject *self, PyObject *obj) /*[clinic end generated code: output=d56f91c68348f95f input=9b30ec848f015501]*/	excluded		platform: binds an external library
+Modules/_hashopenssl.c	711	716	EVP_get_block_size	EVP_get_block_size(PyObject *op, void *Py_UNUSED(closure))	excluded		platform: binds an external library
+Modules/_hashopenssl.c	719	724	EVP_get_digest_size	EVP_get_digest_size(PyObject *op, void *Py_UNUSED(closure))	excluded		platform: binds an external library
+Modules/_hashopenssl.c	727	736	EVP_get_name	EVP_get_name(PyObject *op, void *Py_UNUSED(closure))	excluded		platform: binds an external library
+Modules/_hashopenssl.c	747	757	EVP_repr	EVP_repr(PyObject *self)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	805	840	EVPXOF_digest_impl	EVPXOF_digest_impl(EVPobject *self, Py_ssize_t length) /*[clinic end generated code: output=ef9320c23280efad input=816a6537cea3d1db]*/	excluded		platform: binds an external library
+Modules/_hashopenssl.c	851	890	EVPXOF_hexdigest_impl	EVPXOF_hexdigest_impl(EVPobject *self, Py_ssize_t length) /*[clinic end generated code: output=eb3e6ee7788bf5b2 input=5f9d6a8f269e34df]*/	excluded		platform: binds an external library
+Modules/_hashopenssl.c	900	903	EVPXOF_get_digest_size	EVPXOF_get_digest_size(PyObject *Py_UNUSED(self), void *Py_UNUSED(closure))	excluded		platform: binds an external library
+Modules/_hashopenssl.c	947	1018	_hashlib_HASH	_hashlib_HASH(PyObject *module, const char *digestname, PyObject *data_obj, int usedforsecurity)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1049	1054	_hashlib_new_impl	_hashlib_new_impl(PyObject *module, const char *name, PyObject *data, int usedforsecurity, PyObject *string) /*[clinic end generated code: output=c01feb4ad6a6303d input=f5ec9bf1fa749d07]*/	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1070	1075	_hashlib_openssl_md5_impl	_hashlib_openssl_md5_impl(PyObject *module, PyObject *data, int usedforsecurity, PyObject *string) /*[clinic end generated code: output=ca8cf184d90f7432 input=e7c0adbd6a867db1]*/	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1091	1096	_hashlib_openssl_sha1_impl	_hashlib_openssl_sha1_impl(PyObject *module, PyObject *data, int usedforsecurity, PyObject *string) /*[clinic end generated code: output=1736fb7b310d64be input=f7e5bb1711e952d8]*/	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1112	1117	_hashlib_openssl_sha224_impl	_hashlib_openssl_sha224_impl(PyObject *module, PyObject *data, int usedforsecurity, PyObject *string) /*[clinic end generated code: output=0d6ff57be5e5c140 input=3820fff7ed3a53b8]*/	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1133	1138	_hashlib_openssl_sha256_impl	_hashlib_openssl_sha256_impl(PyObject *module, PyObject *data, int usedforsecurity, PyObject *string) /*[clinic end generated code: output=412ea7111555b6e7 input=9a2f115cf1f7e0eb]*/	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1154	1159	_hashlib_openssl_sha384_impl	_hashlib_openssl_sha384_impl(PyObject *module, PyObject *data, int usedforsecurity, PyObject *string) /*[clinic end generated code: output=2e0dc395b59ed726 input=1ea48f6f01e77cfb]*/	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1175	1180	_hashlib_openssl_sha512_impl	_hashlib_openssl_sha512_impl(PyObject *module, PyObject *data, int usedforsecurity, PyObject *string) /*[clinic end generated code: output=4bdd760388dbfc0f input=3cf56903e07d1f5c]*/	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1198	1203	_hashlib_openssl_sha3_224_impl	_hashlib_openssl_sha3_224_impl(PyObject *module, PyObject *data, int usedforsecurity, PyObject *string) /*[clinic end generated code: output=6d8dc2a924f3ba35 input=7f14f16a9f6a3158]*/	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1218	1223	_hashlib_openssl_sha3_256_impl	_hashlib_openssl_sha3_256_impl(PyObject *module, PyObject *data, int usedforsecurity, PyObject *string) /*[clinic end generated code: output=9e520f537b3a4622 input=7987150939d5e352]*/	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1238	1243	_hashlib_openssl_sha3_384_impl	_hashlib_openssl_sha3_384_impl(PyObject *module, PyObject *data, int usedforsecurity, PyObject *string) /*[clinic end generated code: output=d239ba0463fd6138 input=fc943401f67e3b81]*/	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1258	1263	_hashlib_openssl_sha3_512_impl	_hashlib_openssl_sha3_512_impl(PyObject *module, PyObject *data, int usedforsecurity, PyObject *string) /*[clinic end generated code: output=17662f21038c2278 input=6601ddd2c6c1516d]*/	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1280	1285	_hashlib_openssl_shake_128_impl	_hashlib_openssl_shake_128_impl(PyObject *module, PyObject *data, int usedforsecurity, PyObject *string) /*[clinic end generated code: output=4e6afed8d18980ad input=373c3f1c93d87b37]*/	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1300	1305	_hashlib_openssl_shake_256_impl	_hashlib_openssl_shake_256_impl(PyObject *module, PyObject *data, int usedforsecurity, PyObject *string) /*[clinic end generated code: output=62481bce4a77d16c input=101c139ea2ddfcbf]*/	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1323	1405	pbkdf2_hmac_impl	pbkdf2_hmac_impl(PyObject *module, const char *hash_name, Py_buffer *password, Py_buffer *salt, long iterations, PyObject *dklen_obj) /*[clinic end generated code: output=144b76005416599b input=ed3ab0d2d28b5d5c]*/	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1426	1498	_hashlib_scrypt_impl	_hashlib_scrypt_impl(PyObject *module, Py_buffer *password, Py_buffer *salt, unsigned long n, unsigned long r, unsigned long p, long maxmem, long dklen) /*[clinic end generated code: output=d424bc3e8c6b9654 input=0c9a84230238fd79]*/	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1515	1555	_hashlib_hmac_singleshot_impl	_hashlib_hmac_singleshot_impl(PyObject *module, Py_buffer *key, Py_buffer *msg, PyObject *digest) /*[clinic end generated code: output=82f19965d12706ac input=0a0790cc3db45c2e]*/	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1563	1570	_hashlib_hmac_get_md	_hashlib_hmac_get_md(HMACobject *self)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1583	1644	_hashlib_hmac_new_impl	_hashlib_hmac_new_impl(PyObject *module, Py_buffer *key, PyObject *msg_obj, PyObject *digestmod) /*[clinic end generated code: output=c20d9e4d9ed6d219 input=5f4071dcc7f34362]*/	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1648	1655	locked_HMAC_CTX_copy	locked_HMAC_CTX_copy(HMAC_CTX *new_ctx_p, HMACobject *self)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1659	1671	_hashlib_hmac_digest_size	_hashlib_hmac_digest_size(HMACobject *self)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1674	1705	_hmac_update	_hmac_update(HMACobject *self, PyObject *obj)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1714	1738	_hashlib_HMAC_copy_impl	_hashlib_HMAC_copy_impl(HMACobject *self) /*[clinic end generated code: output=29aa28b452833127 input=e2fa6a05db61a4d6]*/	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1741	1751	_hmac_dealloc	_hmac_dealloc(PyObject *op)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1754	1770	_hmac_repr	_hmac_repr(PyObject *op)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1780	1787	_hashlib_HMAC_update_impl	_hashlib_HMAC_update_impl(HMACobject *self, PyObject *msg) /*[clinic end generated code: output=f31f0ace8c625b00 input=1829173bb3cfd4e6]*/	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1790	1809	_hmac_digest	_hmac_digest(HMACobject *self, unsigned char *buf, unsigned int len)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1817	1830	_hashlib_HMAC_digest_impl	_hashlib_HMAC_digest_impl(HMACobject *self) /*[clinic end generated code: output=1b1424355af7a41e input=bff07f74da318fb4]*/	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1842	1855	_hashlib_HMAC_hexdigest_impl	_hashlib_HMAC_hexdigest_impl(HMACobject *self) /*[clinic end generated code: output=80d825be1eaae6a7 input=865e6128c7ec0781]*/	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1858	1863	_hashlib_hmac_get_digest_size	_hashlib_hmac_get_digest_size(PyObject *op, void *Py_UNUSED(closure))	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1866	1871	_hashlib_hmac_get_block_size	_hashlib_hmac_get_block_size(PyObject *op, void *Py_UNUSED(closure))	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1874	1888	_hashlib_hmac_get_name	_hashlib_hmac_get_name(PyObject *op, void *Py_UNUSED(closure))	excluded		platform: binds an external library
+Modules/_hashopenssl.c	1977	2000	hashlib_md_meth_names	hashlib_md_meth_names(PyObject *module)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	2042	2061	_tscmp	_tscmp(const unsigned char *a, const unsigned char *b, Py_ssize_t len_a, Py_ssize_t len_b)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	2086	2150	_hashlib_compare_digest_impl	_hashlib_compare_digest_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=6f1c13927480aed9 input=9c40c6e566ca12f5]*/	excluded		platform: binds an external library
+Modules/_hashopenssl.c	2181	2192	hashlib_traverse	hashlib_traverse(PyObject *m, visitproc visit, void *arg)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	2195	2212	hashlib_clear	hashlib_clear(PyObject *m)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	2215	2218	hashlib_free	hashlib_free(void *m)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	2222	2232	hashlib_init_hashtable	hashlib_init_hashtable(PyObject *module)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	2235	2247	hashlib_init_evptype	hashlib_init_evptype(PyObject *module)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	2250	2270	hashlib_init_evpxoftype	hashlib_init_evpxoftype(PyObject *module)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	2273	2285	hashlib_init_hmactype	hashlib_init_hmactype(PyObject *module)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	2288	2331	hashlib_init_constructors	hashlib_init_constructors(PyObject *module)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	2334	2347	hashlib_exception	hashlib_exception(PyObject *module)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	2350	2358	hashlib_constants	hashlib_constants(PyObject *module)	excluded		platform: binds an external library
+Modules/_hashopenssl.c	2387	2390	PyInit__hashlib	PyInit__hashlib(void)	excluded		platform: binds an external library

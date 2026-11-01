@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_hacl/Lib_Memzero0.c	50	72	Lib_Memzero0_memzero0	void Lib_Memzero0_memzero0(void *dst, uint64_t len) {	excluded		vendored: third-party code

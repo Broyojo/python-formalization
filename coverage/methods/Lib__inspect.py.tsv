@@ -1,0 +1,141 @@
+file	line	endline	name	signature	status	entry	note
+Lib/inspect.py	180	182	ismodule	ismodule(object)	todo		
+Lib/inspect.py	184	186	isclass	isclass(object)	todo		
+Lib/inspect.py	188	190	ismethod	ismethod(object)	todo		
+Lib/inspect.py	192	194	ispackage	ispackage(object)	todo		
+Lib/inspect.py	196	217	ismethoddescriptor	ismethoddescriptor(object)	todo		
+Lib/inspect.py	219	236	isdatadescriptor	isdatadescriptor(object)	todo		
+Lib/inspect.py	240	245	ismemberdescriptor	ismemberdescriptor(object)	todo		
+Lib/inspect.py	248	253	ismemberdescriptor	ismemberdescriptor(object)	todo		
+Lib/inspect.py	257	262	isgetsetdescriptor	isgetsetdescriptor(object)	todo		
+Lib/inspect.py	265	270	isgetsetdescriptor	isgetsetdescriptor(object)	todo		
+Lib/inspect.py	272	288	isfunction	isfunction(object)	todo		
+Lib/inspect.py	290	301	_has_code_flag	_has_code_flag(f, flag)	todo		
+Lib/inspect.py	303	308	isgeneratorfunction	isgeneratorfunction(obj)	todo		
+Lib/inspect.py	313	317	_has_coroutine_mark	_has_coroutine_mark(f)	todo		
+Lib/inspect.py	319	326	markcoroutinefunction	markcoroutinefunction(func)	todo		
+Lib/inspect.py	328	334	iscoroutinefunction	iscoroutinefunction(obj)	todo		
+Lib/inspect.py	336	342	isasyncgenfunction	isasyncgenfunction(obj)	todo		
+Lib/inspect.py	344	346	isasyncgen	isasyncgen(object)	todo		
+Lib/inspect.py	348	365	isgenerator	isgenerator(object)	todo		
+Lib/inspect.py	367	369	iscoroutine	iscoroutine(object)	todo		
+Lib/inspect.py	371	376	isawaitable	isawaitable(object)	todo		
+Lib/inspect.py	378	386	istraceback	istraceback(object)	todo		
+Lib/inspect.py	388	404	isframe	isframe(object)	todo		
+Lib/inspect.py	406	435	iscode	iscode(object)	todo		
+Lib/inspect.py	437	444	isbuiltin	isbuiltin(object)	todo		
+Lib/inspect.py	446	448	ismethodwrapper	ismethodwrapper(object)	todo		
+Lib/inspect.py	450	457	isroutine	isroutine(object)	todo		
+Lib/inspect.py	459	481	isabstract	isabstract(object)	todo		
+Lib/inspect.py	483	523	_getmembers	_getmembers(object, predicate, getter)	todo		
+Lib/inspect.py	525	528	getmembers	getmembers(object, predicate=None)	todo		
+Lib/inspect.py	530	542	getmembers_static	getmembers_static(object, predicate=None)	todo		
+Lib/inspect.py	546	658	classify_class_attrs	classify_class_attrs(cls)	todo		
+Lib/inspect.py	662	664	getmro	getmro(cls)	todo		
+Lib/inspect.py	668	697	unwrap	unwrap(func, *, stop=None)	todo		
+Lib/inspect.py	700	703	indentsize	indentsize(line)	todo		
+Lib/inspect.py	705	713	_findclass	_findclass(func)	todo		
+Lib/inspect.py	715	774	_finddoc	_finddoc(obj)	todo		
+Lib/inspect.py	776	793	getdoc	getdoc(object)	todo		
+Lib/inspect.py	795	820	cleandoc	cleandoc(doc)	todo		
+Lib/inspect.py	823	849	getfile	getfile(object)	todo		
+Lib/inspect.py	851	861	getmodulename	getmodulename(path)	todo		
+Lib/inspect.py	863	889	getsourcefile	getsourcefile(object)	todo		
+Lib/inspect.py	891	898	getabsfile	getabsfile(object, _filename=None)	todo		
+Lib/inspect.py	903	948	getmodule	getmodule(object, _filename=None)	todo		
+Lib/inspect.py	955	1012	findsource	findsource(object)	todo		
+Lib/inspect.py	1014	1057	getcomments	getcomments(object)	todo		
+Lib/inspect.py	1063	1070	BlockFinder.__init__	__init__(self)	todo		
+Lib/inspect.py	1072	1118	BlockFinder.tokeneater	tokeneater(self, type, token, srowcol, erowcol, line)	todo		
+Lib/inspect.py	1120	1137	getblock	getblock(lines)	todo		
+Lib/inspect.py	1139	1158	getsourcelines	getsourcelines(object)	todo		
+Lib/inspect.py	1160	1167	getsource	getsource(object)	todo		
+Lib/inspect.py	1170	1178	walktree	walktree(classes, children, parent)	todo		
+Lib/inspect.py	1180	1204	getclasstree	getclasstree(classes, unique=False)	todo		
+Lib/inspect.py	1209	1233	getargs	getargs(co)	todo		
+Lib/inspect.py	1239	1329	getfullargspec	getfullargspec(func)	todo		
+Lib/inspect.py	1334	1342	getargvalues	getargvalues(frame)	todo		
+Lib/inspect.py	1344	1360	formatannotation	formatannotation(annotation, base_module=None, *, quote_annotation_strings=True)	todo		
+Lib/inspect.py	1362	1366	formatannotationrelativeto	formatannotationrelativeto(object)	todo		
+Lib/inspect.py	1369	1390	formatargvalues	formatargvalues(args, varargs, varkw, locals, formatarg=str, formatvarargs=lambda name: '*' + name, formatvarkw=lambda name: '**' + name, formatvalue=lambda value: '=' + repr(value))	todo		
+Lib/inspect.py	1392	1406	_missing_arguments	_missing_arguments(f_name, argnames, pos, values)	todo		
+Lib/inspect.py	1408	1427	_too_many	_too_many(f_name, args, kwonly, varargs, defcount, given, values)	todo		
+Lib/inspect.py	1429	1487	getcallargs	getcallargs(func, /, *positional, **named)	todo		
+Lib/inspect.py	1491	1544	getclosurevars	getclosurevars(func)	todo		
+Lib/inspect.py	1551	1554	Traceback.__new__	__new__(cls, filename, lineno, function, code_context, index, *, positions=None)	todo		
+Lib/inspect.py	1556	1560	Traceback.__repr__	__repr__(self)	todo		
+Lib/inspect.py	1562	1564	_get_code_position_from_tb	_get_code_position_from_tb(tb)	todo		
+Lib/inspect.py	1566	1571	_get_code_position	_get_code_position(code, instruction_index)	todo		
+Lib/inspect.py	1573	1614	getframeinfo	getframeinfo(frame, context=1)	todo		
+Lib/inspect.py	1616	1619	getlineno	getlineno(frame)	todo		
+Lib/inspect.py	1623	1626	FrameInfo.__new__	__new__(cls, frame, filename, lineno, function, code_context, index, *, positions=None)	todo		
+Lib/inspect.py	1628	1632	FrameInfo.__repr__	__repr__(self)	todo		
+Lib/inspect.py	1634	1645	getouterframes	getouterframes(frame, context=1)	todo		
+Lib/inspect.py	1647	1658	getinnerframes	getinnerframes(tb, context=1)	todo		
+Lib/inspect.py	1660	1662	currentframe	currentframe()	todo		
+Lib/inspect.py	1664	1666	stack	stack(context=1)	todo		
+Lib/inspect.py	1668	1672	trace	trace(context=1)	todo		
+Lib/inspect.py	1682	1688	_check_instance	_check_instance(obj, attr)	todo		
+Lib/inspect.py	1691	1695	_check_class	_check_class(klass, attr)	todo		
+Lib/inspect.py	1699	1714	_shadowed_dict_from_weakref_mro_tuple	_shadowed_dict_from_weakref_mro_tuple(*weakref_mro)	todo		
+Lib/inspect.py	1717	1727	_shadowed_dict	_shadowed_dict(klass)	todo		
+Lib/inspect.py	1730	1777	getattr_static	getattr_static(obj, attr, default=_sentinel)	todo		
+Lib/inspect.py	1787	1802	getgeneratorstate	getgeneratorstate(generator)	todo		
+Lib/inspect.py	1805	1819	getgeneratorlocals	getgeneratorlocals(generator)	todo		
+Lib/inspect.py	1829	1844	getcoroutinestate	getcoroutinestate(coroutine)	todo		
+Lib/inspect.py	1847	1857	getcoroutinelocals	getcoroutinelocals(coroutine)	todo		
+Lib/inspect.py	1868	1883	getasyncgenstate	getasyncgenstate(agen)	todo		
+Lib/inspect.py	1886	1901	getasyncgenlocals	getasyncgenlocals(agen)	todo		
+Lib/inspect.py	1915	1942	_signature_get_user_defined_method	_signature_get_user_defined_method(cls, method_name, *, follow_wrapper_chains=True)	todo		
+Lib/inspect.py	1945	2033	_signature_get_partial	_signature_get_partial(wrapped_sig, partial, extra_args=())	todo		
+Lib/inspect.py	2036	2059	_signature_bound_method	_signature_bound_method(sig)	todo		
+Lib/inspect.py	2062	2073	_signature_is_builtin	_signature_is_builtin(obj)	todo		
+Lib/inspect.py	2076	2096	_signature_is_functionlike	_signature_is_functionlike(obj)	todo		
+Lib/inspect.py	2099	2146	_signature_strip_non_python_syntax	_signature_strip_non_python_syntax(signature)	todo		
+Lib/inspect.py	2149	2293	_signature_fromstr	_signature_fromstr(cls, obj, s, skip_bound_arg=True)	todo		
+Lib/inspect.py	2296	2309	_signature_from_builtin	_signature_from_builtin(cls, func, skip_bound_arg=True)	todo		
+Lib/inspect.py	2312	2406	_signature_from_function	_signature_from_function(cls, func, skip_bound_arg=True, globals=None, locals=None, eval_str=False, *, annotation_format=Format.VALUE)	todo		
+Lib/inspect.py	2409	2415	_descriptor_get	_descriptor_get(descriptor, obj)	todo		
+Lib/inspect.py	2418	2618	_signature_from_callable	_signature_from_callable(obj, *, follow_wrapper_chains=True, skip_bound_arg=True, globals=None, locals=None, eval_str=False, sigcls, annotation_format=Format.VALUE)	todo		
+Lib/inspect.py	2636	2641	_ParameterKind.__new__	__new__(cls, description)	todo		
+Lib/inspect.py	2643	2644	_ParameterKind.__str__	__str__(self)	todo		
+Lib/inspect.py	2686	2731	Parameter.__init__	__init__(self, name, kind, *, default=_empty, annotation=_empty)	todo		
+Lib/inspect.py	2733	2737	Parameter.__reduce__	__reduce__(self)	todo		
+Lib/inspect.py	2739	2741	Parameter.__setstate__	__setstate__(self, state)	todo		
+Lib/inspect.py	2744	2745	Parameter.name	name(self)	todo		
+Lib/inspect.py	2748	2749	Parameter.default	default(self)	todo		
+Lib/inspect.py	2752	2753	Parameter.annotation	annotation(self)	todo		
+Lib/inspect.py	2756	2757	Parameter.kind	kind(self)	todo		
+Lib/inspect.py	2759	2775	Parameter.replace	replace(self, *, name=_void, kind=_void, annotation=_void, default=_void)	todo		candidates:strsearch-replace-str-bytes
+Lib/inspect.py	2777	2778	Parameter.__str__	__str__(self)	todo		
+Lib/inspect.py	2780	2801	Parameter._format	_format(self, *, quote_annotation_strings=True)	todo		
+Lib/inspect.py	2805	2806	Parameter.__repr__	__repr__(self)	todo		
+Lib/inspect.py	2808	2809	Parameter.__hash__	__hash__(self)	todo		
+Lib/inspect.py	2811	2819	Parameter.__eq__	__eq__(self, other)	todo		
+Lib/inspect.py	2841	2843	BoundArguments.__init__	__init__(self, signature, arguments)	todo		
+Lib/inspect.py	2846	2847	BoundArguments.signature	signature(self)	todo		
+Lib/inspect.py	2850	2870	BoundArguments.args	args(self)	todo		
+Lib/inspect.py	2873	2900	BoundArguments.kwargs	kwargs(self)	todo		
+Lib/inspect.py	2902	2928	BoundArguments.apply_defaults	apply_defaults(self)	todo		
+Lib/inspect.py	2930	2936	BoundArguments.__eq__	__eq__(self, other)	todo		
+Lib/inspect.py	2938	2940	BoundArguments.__setstate__	__setstate__(self, state)	todo		
+Lib/inspect.py	2942	2943	BoundArguments.__getstate__	__getstate__(self)	todo		
+Lib/inspect.py	2945	2949	BoundArguments.__repr__	__repr__(self)	todo		
+Lib/inspect.py	2982	3040	Signature.__init__	__init__(self, parameters=None, *, return_annotation=_empty, __validate_parameters__=True)	todo		
+Lib/inspect.py	3043	3050	Signature.from_callable	from_callable(cls, obj, *, follow_wrapped=True, globals=None, locals=None, eval_str=False, annotation_format=Format.VALUE)	todo		
+Lib/inspect.py	3053	3054	Signature.parameters	parameters(self)	todo		
+Lib/inspect.py	3057	3058	Signature.return_annotation	return_annotation(self)	todo		
+Lib/inspect.py	3060	3073	Signature.replace	replace(self, *, parameters=_void, return_annotation=_void)	todo		candidates:strsearch-replace-str-bytes
+Lib/inspect.py	3077	3084	Signature._hash_basis	_hash_basis(self)	todo		
+Lib/inspect.py	3086	3089	Signature.__hash__	__hash__(self)	todo		
+Lib/inspect.py	3091	3096	Signature.__eq__	__eq__(self, other)	todo		
+Lib/inspect.py	3098	3238	Signature._bind	_bind(self, args, kwargs, *, partial=False)	todo		
+Lib/inspect.py	3240	3245	Signature.bind	bind(self, /, *args, **kwargs)	todo		
+Lib/inspect.py	3247	3252	Signature.bind_partial	bind_partial(self, /, *args, **kwargs)	todo		
+Lib/inspect.py	3254	3257	Signature.__reduce__	__reduce__(self)	todo		
+Lib/inspect.py	3259	3260	Signature.__setstate__	__setstate__(self, state)	todo		
+Lib/inspect.py	3262	3263	Signature.__repr__	__repr__(self)	todo		
+Lib/inspect.py	3265	3266	Signature.__str__	__str__(self)	todo		
+Lib/inspect.py	3268	3326	Signature.format	format(self, *, max_width=None, quote_annotation_strings=True)	todo		
+Lib/inspect.py	3329	3334	signature	signature(obj, *, follow_wrapped=True, globals=None, locals=None, eval_str=False, annotation_format=Format.VALUE)	todo		
+Lib/inspect.py	3359	3414	_main	_main()	todo		

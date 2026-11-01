@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Parser/tokenizer/readline_tokenizer.c	10	68	tok_readline_string	tok_readline_string(struct tok_state* tok) {	todo		
+Parser/tokenizer/readline_tokenizer.c	71	106	tok_underflow_readline	tok_underflow_readline(struct tok_state* tok) {	todo		
+Parser/tokenizer/readline_tokenizer.c	109	135	_PyTokenizer_FromReadline	_PyTokenizer_FromReadline(PyObject* readline, const char* enc, int exec_input, int preserve_crlf)	todo		

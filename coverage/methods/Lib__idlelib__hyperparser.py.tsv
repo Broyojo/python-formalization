@@ -1,0 +1,8 @@
+file	line	endline	name	signature	status	entry	note
+Lib/idlelib/hyperparser.py	26	79	HyperParser.__init__	__init__(self, editwin, index)	excluded		platform: GUI toolkit
+Lib/idlelib/hyperparser.py	81	100	HyperParser.set_index	set_index(self, index)	excluded		platform: GUI toolkit
+Lib/idlelib/hyperparser.py	102	108	HyperParser.is_in_string	is_in_string(self)	excluded		platform: GUI toolkit
+Lib/idlelib/hyperparser.py	110	114	HyperParser.is_in_code	is_in_code(self)	excluded		platform: GUI toolkit
+Lib/idlelib/hyperparser.py	116	156	HyperParser.get_surrounding_brackets	get_surrounding_brackets(self, openers='([{', mustclose=False)	excluded		platform: GUI toolkit
+Lib/idlelib/hyperparser.py	163	217	HyperParser._eat_identifier	_eat_identifier(cls, str, limit, pos)	excluded		platform: GUI toolkit
+Lib/idlelib/hyperparser.py	222	307	HyperParser.get_expression	get_expression(self)	excluded		platform: GUI toolkit

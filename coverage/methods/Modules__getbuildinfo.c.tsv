@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Modules/getbuildinfo.c	45	61	Py_GetBuildInfo	Py_GetBuildInfo(void)	todo		
+Modules/getbuildinfo.c	64	67	_Py_gitversion	_Py_gitversion(void)	todo		
+Modules/getbuildinfo.c	70	79	_Py_gitidentifier	_Py_gitidentifier(void)	todo		

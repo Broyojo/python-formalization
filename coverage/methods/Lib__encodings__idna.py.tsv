@@ -1,0 +1,9 @@
+file	line	endline	name	signature	status	entry	note
+Lib/encodings/idna.py	14	64	nameprep	nameprep(label)	todo		
+Lib/encodings/idna.py	66	115	ToASCII	ToASCII(label)	todo		
+Lib/encodings/idna.py	117	174	ToUnicode	ToUnicode(label)	todo		
+Lib/encodings/idna.py	179	229	Codec.encode	encode(self, input, errors='strict')	todo		
+Lib/encodings/idna.py	231	270	Codec.decode	decode(self, input, errors='strict')	todo		
+Lib/encodings/idna.py	273	314	IncrementalEncoder._buffer_encode	_buffer_encode(self, input, errors, final)	todo		
+Lib/encodings/idna.py	317	368	IncrementalDecoder._buffer_decode	_buffer_decode(self, input, errors, final)	todo		
+Lib/encodings/idna.py	378	387	getregentry	getregentry()	todo		

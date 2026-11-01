@@ -1,0 +1,121 @@
+file	line	endline	name	signature	status	entry	note
+Lib/urllib/request.py	137	187	urlopen	urlopen(url, data=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, *, context=None)	todo		
+Lib/urllib/request.py	189	191	install_opener	install_opener(opener)	todo		
+Lib/urllib/request.py	194	252	urlretrieve	urlretrieve(url, filename=None, reporthook=None, data=None)	todo		
+Lib/urllib/request.py	254	265	urlcleanup	urlcleanup()	todo		
+Lib/urllib/request.py	269	283	request_host	request_host(request)	todo		
+Lib/urllib/request.py	287	303	Request.__init__	__init__(self, url, data=None, headers={}, origin_req_host=None, unverifiable=False, method=None)	todo		
+Lib/urllib/request.py	306	309	Request.full_url	full_url(self)	todo		
+Lib/urllib/request.py	312	316	Request.full_url	full_url(self, url)	todo		
+Lib/urllib/request.py	319	322	Request.full_url	full_url(self)	todo		
+Lib/urllib/request.py	325	326	Request.data	data(self)	todo		
+Lib/urllib/request.py	329	336	Request.data	data(self, data)	todo		
+Lib/urllib/request.py	339	340	Request.data	data(self)	todo		
+Lib/urllib/request.py	342	348	Request._parse	_parse(self)	todo		
+Lib/urllib/request.py	350	353	Request.get_method	get_method(self)	todo		
+Lib/urllib/request.py	355	356	Request.get_full_url	get_full_url(self)	todo		
+Lib/urllib/request.py	358	364	Request.set_proxy	set_proxy(self, host, type)	todo		
+Lib/urllib/request.py	366	367	Request.has_proxy	has_proxy(self)	todo		
+Lib/urllib/request.py	369	371	Request.add_header	add_header(self, key, val)	todo		
+Lib/urllib/request.py	373	375	Request.add_unredirected_header	add_unredirected_header(self, key, val)	todo		
+Lib/urllib/request.py	377	379	Request.has_header	has_header(self, header_name)	todo		
+Lib/urllib/request.py	381	384	Request.get_header	get_header(self, header_name, default=None)	todo		
+Lib/urllib/request.py	386	388	Request.remove_header	remove_header(self, header_name)	todo		
+Lib/urllib/request.py	390	392	Request.header_items	header_items(self)	todo		
+Lib/urllib/request.py	395	404	OpenerDirector.__init__	__init__(self)	todo		
+Lib/urllib/request.py	406	451	OpenerDirector.add_handler	add_handler(self, handler)	todo		
+Lib/urllib/request.py	453	455	OpenerDirector.close	close(self)	todo		
+Lib/urllib/request.py	457	466	OpenerDirector._call_chain	_call_chain(self, chain, kind, meth_name, *args)	todo		
+Lib/urllib/request.py	468	495	OpenerDirector.open	open(self, fullurl, data=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT)	todo		
+Lib/urllib/request.py	497	510	OpenerDirector._open	_open(self, req, data=None)	todo		
+Lib/urllib/request.py	512	531	OpenerDirector.error	error(self, proto, *args)	todo		
+Lib/urllib/request.py	537	571	build_opener	build_opener(*handlers)	todo		
+Lib/urllib/request.py	576	577	BaseHandler.add_parent	add_parent(self, parent)	todo		
+Lib/urllib/request.py	579	581	BaseHandler.close	close(self)	todo		
+Lib/urllib/request.py	583	589	BaseHandler.__lt__	__lt__(self, other)	todo		
+Lib/urllib/request.py	596	605	HTTPErrorProcessor.http_response	http_response(self, request, response)	todo		
+Lib/urllib/request.py	610	611	HTTPDefaultErrorHandler.http_error_default	http_error_default(self, req, fp, code, msg, hdrs)	todo		
+Lib/urllib/request.py	621	654	HTTPRedirectHandler.redirect_request	redirect_request(self, req, fp, code, msg, headers, newurl)	todo		
+Lib/urllib/request.py	660	718	HTTPRedirectHandler.http_error_302	http_error_302(self, req, fp, code, msg, headers)	todo		
+Lib/urllib/request.py	727	758	_parse_proxy	_parse_proxy(proxy)	todo		
+Lib/urllib/request.py	764	773	ProxyHandler.__init__	__init__(self, proxies=None)	todo		
+Lib/urllib/request.py	775	801	ProxyHandler.proxy_open	proxy_open(self, req, proxy, type)	todo		
+Lib/urllib/request.py	805	806	HTTPPasswordMgr.__init__	__init__(self)	todo		
+Lib/urllib/request.py	808	817	HTTPPasswordMgr.add_password	add_password(self, realm, uri, user, passwd)	todo		
+Lib/urllib/request.py	819	827	HTTPPasswordMgr.find_user_password	find_user_password(self, realm, authuri)	todo		
+Lib/urllib/request.py	829	850	HTTPPasswordMgr.reduce_uri	reduce_uri(self, uri, default_port=True)	todo		
+Lib/urllib/request.py	852	864	HTTPPasswordMgr.is_suburi	is_suburi(self, base, test)	todo		
+Lib/urllib/request.py	869	874	HTTPPasswordMgrWithDefaultRealm.find_user_password	find_user_password(self, realm, authuri)	todo		
+Lib/urllib/request.py	879	881	HTTPPasswordMgrWithPriorAuth.__init__	__init__(self)	todo		
+Lib/urllib/request.py	883	888	HTTPPasswordMgrWithPriorAuth.add_password	add_password(self, realm, uri, user, passwd, is_authenticated=False)	todo		
+Lib/urllib/request.py	890	898	HTTPPasswordMgrWithPriorAuth.update_authenticated	update_authenticated(self, uri, is_authenticated=False)	todo		
+Lib/urllib/request.py	900	905	HTTPPasswordMgrWithPriorAuth.is_authenticated	is_authenticated(self, authuri)	todo		
+Lib/urllib/request.py	929	933	AbstractBasicAuthHandler.__init__	__init__(self, password_mgr=None)	todo		
+Lib/urllib/request.py	935	954	AbstractBasicAuthHandler._parse_realm	_parse_realm(self, header)	todo		
+Lib/urllib/request.py	956	980	AbstractBasicAuthHandler.http_error_auth_reqed	http_error_auth_reqed(self, authreq, host, req, headers)	todo		
+Lib/urllib/request.py	982	992	AbstractBasicAuthHandler.retry_http_basic_auth	retry_http_basic_auth(self, host, req, realm)	todo		
+Lib/urllib/request.py	994	1005	AbstractBasicAuthHandler.http_request	http_request(self, req)	todo		
+Lib/urllib/request.py	1007	1013	AbstractBasicAuthHandler.http_response	http_response(self, req, response)	todo		
+Lib/urllib/request.py	1024	1028	HTTPBasicAuthHandler.http_error_401	http_error_401(self, req, fp, code, msg, headers)	todo		
+Lib/urllib/request.py	1035	1043	ProxyBasicAuthHandler.http_error_407	http_error_407(self, req, fp, code, msg, headers)	todo		
+Lib/urllib/request.py	1061	1068	AbstractDigestAuthHandler.__init__	__init__(self, passwd=None)	todo		
+Lib/urllib/request.py	1070	1071	AbstractDigestAuthHandler.reset_retry_count	reset_retry_count(self)	todo		
+Lib/urllib/request.py	1073	1091	AbstractDigestAuthHandler.http_error_auth_reqed	http_error_auth_reqed(self, auth_header, host, req, headers)	todo		
+Lib/urllib/request.py	1093	1103	AbstractDigestAuthHandler.retry_http_digest_auth	retry_http_digest_auth(self, req, auth)	todo		
+Lib/urllib/request.py	1105	1114	AbstractDigestAuthHandler.get_cnonce	get_cnonce(self, nonce)	todo		
+Lib/urllib/request.py	1116	1176	AbstractDigestAuthHandler.get_authorization	get_authorization(self, req, chal)	todo		
+Lib/urllib/request.py	1178	1192	AbstractDigestAuthHandler.get_algorithm_impls	get_algorithm_impls(self, algorithm)	todo		
+Lib/urllib/request.py	1194	1196	AbstractDigestAuthHandler.get_entity_digest	get_entity_digest(self, data, chal)	todo		
+Lib/urllib/request.py	1209	1214	HTTPDigestAuthHandler.http_error_401	http_error_401(self, req, fp, code, msg, headers)	todo		
+Lib/urllib/request.py	1222	1227	ProxyDigestAuthHandler.http_error_407	http_error_407(self, req, fp, code, msg, headers)	todo		
+Lib/urllib/request.py	1231	1232	AbstractHTTPHandler.__init__	__init__(self, debuglevel=None)	todo		
+Lib/urllib/request.py	1234	1235	AbstractHTTPHandler.set_http_debuglevel	set_http_debuglevel(self, level)	todo		
+Lib/urllib/request.py	1237	1240	AbstractHTTPHandler._get_content_length	_get_content_length(self, request)	todo		
+Lib/urllib/request.py	1242	1278	AbstractHTTPHandler.do_request_	do_request_(self, request)	todo		
+Lib/urllib/request.py	1280	1343	AbstractHTTPHandler.do_open	do_open(self, http_class, req, **http_conn_args)	todo		
+Lib/urllib/request.py	1348	1349	HTTPHandler.http_open	http_open(self, req)	todo		
+Lib/urllib/request.py	1357	1365	HTTPSHandler.__init__	__init__(self, debuglevel=None, context=None, check_hostname=None)	todo		
+Lib/urllib/request.py	1367	1369	HTTPSHandler.https_open	https_open(self, req)	todo		
+Lib/urllib/request.py	1376	1380	HTTPCookieProcessor.__init__	__init__(self, cookiejar=None)	todo		
+Lib/urllib/request.py	1382	1384	HTTPCookieProcessor.http_request	http_request(self, request)	todo		
+Lib/urllib/request.py	1386	1388	HTTPCookieProcessor.http_response	http_response(self, request, response)	todo		
+Lib/urllib/request.py	1394	1396	UnknownHandler.unknown_open	unknown_open(self, req)	todo		
+Lib/urllib/request.py	1398	1406	parse_keqv_list	parse_keqv_list(l)	todo		
+Lib/urllib/request.py	1408	1449	parse_http_list	parse_http_list(s)	todo		
+Lib/urllib/request.py	1454	1462	FileHandler.get_names	get_names(self)	todo		
+Lib/urllib/request.py	1465	1480	FileHandler.open_local_file	open_local_file(self, req)	todo		
+Lib/urllib/request.py	1484	1502	_is_local_authority	_is_local_authority(authority, resolve)	todo		
+Lib/urllib/request.py	1505	1560	FTPHandler.ftp_open	ftp_open(self, req)	todo		
+Lib/urllib/request.py	1562	1564	FTPHandler.connect_ftp	connect_ftp(self, user, passwd, host, port, dirs, timeout)	todo		
+Lib/urllib/request.py	1569	1574	CacheFTPHandler.__init__	__init__(self)	todo		
+Lib/urllib/request.py	1576	1577	CacheFTPHandler.setTimeout	setTimeout(self, t)	todo		
+Lib/urllib/request.py	1579	1580	CacheFTPHandler.setMaxConns	setMaxConns(self, m)	todo		
+Lib/urllib/request.py	1582	1592	CacheFTPHandler.connect_ftp	connect_ftp(self, user, passwd, host, port, dirs, timeout)	todo		
+Lib/urllib/request.py	1594	1612	CacheFTPHandler.check_cache	check_cache(self)	todo		
+Lib/urllib/request.py	1614	1618	CacheFTPHandler.clear_cache	clear_cache(self)	todo		
+Lib/urllib/request.py	1621	1653	DataHandler.data_open	data_open(self, req)	todo		
+Lib/urllib/request.py	1658	1694	url2pathname	url2pathname(url, *, require_scheme=False, resolve_host=False)	todo		
+Lib/urllib/request.py	1697	1729	pathname2url	pathname2url(pathname, *, add_scheme=False)	todo		
+Lib/urllib/request.py	1735	1740	localhost	localhost()	todo		
+Lib/urllib/request.py	1743	1751	thishost	thishost()	todo		
+Lib/urllib/request.py	1754	1760	ftperrors	ftperrors()	todo		
+Lib/urllib/request.py	1763	1768	noheaders	noheaders()	todo		
+Lib/urllib/request.py	1776	1790	ftpwrapper.__init__	__init__(self, user, passwd, host, port, dirs, timeout=None, persistent=True)	todo		
+Lib/urllib/request.py	1792	1799	ftpwrapper.init	init(self)	todo		
+Lib/urllib/request.py	1801	1843	ftpwrapper.retrfile	retrfile(self, file, type)	todo		
+Lib/urllib/request.py	1845	1852	ftpwrapper.endtransfer	endtransfer(self)	todo		
+Lib/urllib/request.py	1854	1857	ftpwrapper.close	close(self)	todo		
+Lib/urllib/request.py	1859	1863	ftpwrapper.file_close	file_close(self)	todo		
+Lib/urllib/request.py	1865	1870	ftpwrapper.real_close	real_close(self)	todo		
+Lib/urllib/request.py	1873	1906	getproxies_environment	getproxies_environment()	todo		
+Lib/urllib/request.py	1908	1940	proxy_bypass_environment	proxy_bypass_environment(host, proxies=None)	todo		
+Lib/urllib/request.py	1945	2005	_proxy_bypass_macosx_sysconf	_proxy_bypass_macosx_sysconf(host, proxy_settings)	todo		
+Lib/urllib/request.py	2009	2030	_proxy_bypass_winreg_override	_proxy_bypass_winreg_override(host, override)	todo		
+Lib/urllib/request.py	2036	2038	proxy_bypass_macosx_sysconf	proxy_bypass_macosx_sysconf(host)	todo		
+Lib/urllib/request.py	2040	2046	getproxies_macosx_sysconf	getproxies_macosx_sysconf()	todo		
+Lib/urllib/request.py	2050	2061	proxy_bypass	proxy_bypass(host)	todo		
+Lib/urllib/request.py	2063	2064	getproxies	getproxies()	todo		
+Lib/urllib/request.py	2068	2115	getproxies_registry	getproxies_registry()	todo		
+Lib/urllib/request.py	2117	2124	getproxies	getproxies()	todo		
+Lib/urllib/request.py	2126	2144	proxy_bypass_registry	proxy_bypass_registry(host)	todo		
+Lib/urllib/request.py	2146	2157	proxy_bypass	proxy_bypass(host)	todo		

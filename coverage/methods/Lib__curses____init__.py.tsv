@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Lib/curses/__init__.py	25	36	initscr	initscr()	todo		
+Lib/curses/__init__.py	42	49	start_color	start_color()	todo		
+Lib/curses/__init__.py	63	101	wrapper	wrapper(func, /, *args, **kwds)	todo		

@@ -1,0 +1,22 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_posixsubprocess.c	107	117	_pos_int_from_ascii	_pos_int_from_ascii(const char *name)	todo		
+Modules/_posixsubprocess.c	128	139	_is_fdescfs_mounted_on_dev_fd	_is_fdescfs_mounted_on_dev_fd(void)	todo		
+Modules/_posixsubprocess.c	145	163	_sanity_check_python_fd_sequence	_sanity_check_python_fd_sequence(PyObject *fd_sequence)	todo		
+Modules/_posixsubprocess.c	168	187	_is_fd_in_sorted_fd_sequence	_is_fd_in_sorted_fd_sequence(int fd, int *fd_sequence, Py_ssize_t fd_sequence_len)	todo		
+Modules/_posixsubprocess.c	202	256	_PySequence_BytesToCharpArray	_PySequence_BytesToCharpArray(PyObject* self)	todo		
+Modules/_posixsubprocess.c	261	268	_Py_FreeCharPArray	_Py_FreeCharPArray(char *const array[])	todo		
+Modules/_posixsubprocess.c	282	301	convert_fds_to_keep_to_c	convert_fds_to_keep_to_c(PyObject *py_fds_to_keep, int *c_fds_to_keep)	todo		
+Modules/_posixsubprocess.c	308	324	make_inheritable	make_inheritable(int *c_fds_to_keep, Py_ssize_t len, int errpipe_write)	todo		
+Modules/_posixsubprocess.c	331	352	safe_get_max_fd	safe_get_max_fd(void)	todo		
+Modules/_posixsubprocess.c	364	389	_close_range_except	_close_range_except(int start_fd, int end_fd, int *fds_to_keep, Py_ssize_t fds_to_keep_len, int (*closer)(int, int))	todo		
+Modules/_posixsubprocess.c	407	414	_brute_force_closer	_brute_force_closer(int first, int last)	todo		
+Modules/_posixsubprocess.c	432	468	_close_open_fds_safe	_close_open_fds_safe(int start_fd, int *fds_to_keep, Py_ssize_t fds_to_keep_len)	todo		
+Modules/_posixsubprocess.c	475	479	_unsafe_closer	_unsafe_closer(int first, int last)	todo		
+Modules/_posixsubprocess.c	495	554	_close_open_fds_maybe_unsafe	_close_open_fds_maybe_unsafe(int start_fd, int *fds_to_keep, Py_ssize_t fds_to_keep_len)	todo		
+Modules/_posixsubprocess.c	571	574	_close_range_closer	_close_range_closer(int first, int last)	todo		
+Modules/_posixsubprocess.c	578	588	_close_open_fds	_close_open_fds(int start_fd, int *fds_to_keep, Py_ssize_t fds_to_keep_len)	todo		
+Modules/_posixsubprocess.c	596	630	reset_signal_handlers	reset_signal_handlers(const sigset_t *child_sigmask)	todo		
+Modules/_posixsubprocess.c	666	864	child_exec	child_exec(char *const exec_array[], char *const argv[], char *const envp[], const char *cwd, int p2cread, int p2cwrite, int c2pread, int c2pwrite, int errread, int errwrite, int errpipe_read, int errpipe_write, int close_fds, int restore_signals, int call_setsid, pid_t pgid_to_set, gid_t gid, Py_ssize_t extra_group_size, const gid_t *extra_groups, uid_t uid, int child_umask, const void *child_sigmask, int *fds_to_keep, Py_ssize_t fds_to_keep_len, PyObject *preexec_fn, PyObject *preexec_fn_args_tuple)	todo		
+Modules/_posixsubprocess.c	876	962	do_fork_exec	do_fork_exec(char *const exec_array[], char *const argv[], char *const envp[], const char *cwd, int p2cread, int p2cwrite, int c2pread, int c2pwrite, int errread, int errwrite, int errpipe_read, int errpipe_write, int close_fds, int restore_signals, int call_setsid, pid_t pgid_to_set, gid_t gid, Py_ssize_t extra_group_size, const gid_t *extra_groups, uid_t uid, int child_umask, const void *child_sigmask, int *fds_to_keep, Py_ssize_t fds_to_keep_len, PyObject *preexec_fn, PyObject *preexec_fn_args_tuple)	todo		
+Modules/_posixsubprocess.c	1014	1332	subprocess_fork_exec_impl	subprocess_fork_exec_impl(PyObject *module, PyObject *process_args, PyObject *executable_list, int close_fds, PyObject *py_fds_to_keep, PyObject *cwd_obj, PyObject *env_list, int p2cread, int p2cwrite, int c2pread, int c2pwrite, int errread, int errwrite, int errpipe_read, int errpipe_write, int restore_signals, int call_setsid, pid_t pgid_to_set, PyObject *gid_object, PyObject *extra_groups_packed, PyObject *uid_object, int child_umask, PyObject *preexec_fn) /*[clinic end generated code: output=288464dc56e373c7 input=5e56eac3e036e349]*/	todo		
+Modules/_posixsubprocess.c	1360	1363	PyInit__posixsubprocess	PyInit__posixsubprocess(void)	todo		

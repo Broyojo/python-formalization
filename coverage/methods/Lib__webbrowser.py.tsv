@@ -1,0 +1,26 @@
+file	line	endline	name	signature	status	entry	note
+Lib/webbrowser.py	24	37	register	register(name, klass, instance=None, *, preferred=False)	todo		
+Lib/webbrowser.py	40	68	get	get(using=None)	todo		
+Lib/webbrowser.py	75	95	open	open(url, new=0, autoraise=True)	todo		
+Lib/webbrowser.py	98	103	open_new	open_new(url)	todo		
+Lib/webbrowser.py	106	111	open_new_tab	open_new_tab(url)	todo		
+Lib/webbrowser.py	114	143	_synthesize	_synthesize(browser, *, preferred=False)	todo		
+Lib/webbrowser.py	153	155	BaseBrowser.__init__	__init__(self, name='')	todo		
+Lib/webbrowser.py	157	158	BaseBrowser.open	open(self, url, new=0, autoraise=True)	todo		
+Lib/webbrowser.py	160	161	BaseBrowser.open_new	open_new(self, url)	todo		
+Lib/webbrowser.py	163	164	BaseBrowser.open_new_tab	open_new_tab(self, url)	todo		
+Lib/webbrowser.py	167	170	BaseBrowser._check_url	_check_url(url)	todo		
+Lib/webbrowser.py	177	185	GenericBrowser.__init__	__init__(self, name)	todo		
+Lib/webbrowser.py	187	199	GenericBrowser.open	open(self, url, new=0, autoraise=True)	todo		
+Lib/webbrowser.py	206	219	BackgroundBrowser.open	open(self, url, new=0, autoraise=True)	todo		
+Lib/webbrowser.py	239	273	UnixBrowser._invoke	_invoke(self, args, remote, autoraise, url=None)	todo		
+Lib/webbrowser.py	275	301	UnixBrowser.open	open(self, url, new=0, autoraise=True)	todo		
+Lib/webbrowser.py	368	412	Konqueror.open	open(self, url, new=0, autoraise=True)	todo		
+Lib/webbrowser.py	432	487	register_X_browsers	register_X_browsers()	todo		
+Lib/webbrowser.py	490	589	register_standard_browsers	register_standard_browsers()	todo		
+Lib/webbrowser.py	600	610	WindowsDefault.open	open(self, url, new=0, autoraise=True)	todo		
+Lib/webbrowser.py	618	619	MacOSXOSAScript.__init__	__init__(self, name='default')	todo		
+Lib/webbrowser.py	621	666	MacOSXOSAScript.open	open(self, url, new=0, autoraise=True)	todo		
+Lib/webbrowser.py	678	731	IOSBrowser.open	open(self, url, new=0, autoraise=True)	todo		
+Lib/webbrowser.py	734	751	parse_args	parse_args(arg_list: list[str] | None)	todo		
+Lib/webbrowser.py	754	759	main	main(arg_list: list[str] | None=None)	todo		

@@ -1,0 +1,12 @@
+file	line	endline	name	signature	status	entry	note
+Python/bootstrap_hash.c	55	72	win32_urandom	win32_urandom(unsigned char *buffer, Py_ssize_t size, int raise)	todo		
+Python/bootstrap_hash.c	92	186	py_getrandom	py_getrandom(void *buffer, Py_ssize_t size, int blocking, int raise)	todo		
+Python/bootstrap_hash.c	213	268	py_getentropy	py_getentropy(char *buffer, Py_ssize_t size, int raise)	todo		
+Python/bootstrap_hash.c	302	397	dev_urandom	dev_urandom(char *buffer, Py_ssize_t size, int raise)	todo		
+Python/bootstrap_hash.c	400	406	dev_urandom_close	dev_urandom_close(void)	todo		
+Python/bootstrap_hash.c	420	432	lcg_urandom	lcg_urandom(unsigned int x0, unsigned char *buffer, size_t size)	todo		
+Python/bootstrap_hash.c	478	520	pyurandom	pyurandom(void *buffer, Py_ssize_t size, int blocking, int raise)	todo		
+Python/bootstrap_hash.c	532	535	_PyOS_URandom	_PyOS_URandom(void *buffer, Py_ssize_t size)	todo		
+Python/bootstrap_hash.c	546	549	_PyOS_URandomNonblock	_PyOS_URandomNonblock(void *buffer, Py_ssize_t size)	todo		
+Python/bootstrap_hash.c	553	589	_Py_HashRandomization_Init	_Py_HashRandomization_Init(const PyConfig *config)	todo		
+Python/bootstrap_hash.c	593	598	_Py_HashRandomization_Fini	_Py_HashRandomization_Fini(void)	todo		

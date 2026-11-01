@@ -1,0 +1,16 @@
+file	line	endline	name	signature	status	entry	note
+Lib/concurrent/futures/thread.py	23	31	_python_exit	_python_exit()	todo		
+Lib/concurrent/futures/thread.py	50	58	WorkerContext.prepare	prepare(cls, initializer, initargs)	todo		
+Lib/concurrent/futures/thread.py	60	62	WorkerContext.__init__	__init__(self, initializer, initargs)	todo		
+Lib/concurrent/futures/thread.py	64	66	WorkerContext.initialize	initialize(self)	todo		
+Lib/concurrent/futures/thread.py	68	69	WorkerContext.finalize	finalize(self)	todo		
+Lib/concurrent/futures/thread.py	71	73	WorkerContext.run	run(self, task)	todo		
+Lib/concurrent/futures/thread.py	77	79	_WorkItem.__init__	__init__(self, future, task)	todo		
+Lib/concurrent/futures/thread.py	81	92	_WorkItem.run	run(self, ctx)	todo		
+Lib/concurrent/futures/thread.py	97	141	_worker	_worker(executor_reference, ctx, work_queue)	todo		
+Lib/concurrent/futures/thread.py	158	159	ThreadPoolExecutor.prepare_context	prepare_context(cls, initializer, initargs)	todo		
+Lib/concurrent/futures/thread.py	161	197	ThreadPoolExecutor.__init__	__init__(self, max_workers=None, thread_name_prefix='', initializer=None, initargs=(), **ctxkwargs)	todo		
+Lib/concurrent/futures/thread.py	199	216	ThreadPoolExecutor.submit	submit(self, fn, /, *args, **kwargs)	todo		
+Lib/concurrent/futures/thread.py	219	239	ThreadPoolExecutor._adjust_thread_count	_adjust_thread_count(self)	todo		
+Lib/concurrent/futures/thread.py	241	252	ThreadPoolExecutor._initializer_failed	_initializer_failed(self)	todo		
+Lib/concurrent/futures/thread.py	254	273	ThreadPoolExecutor.shutdown	shutdown(self, wait=True, *, cancel_futures=False)	todo		

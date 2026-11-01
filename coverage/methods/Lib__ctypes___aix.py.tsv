@@ -1,0 +1,13 @@
+file	line	endline	name	signature	status	entry	note
+Lib/ctypes/_aix.py	61	72	_last_version	_last_version(libnames, sep)	todo		
+Lib/ctypes/_aix.py	74	82	get_ld_header	get_ld_header(p)	todo		
+Lib/ctypes/_aix.py	84	95	get_ld_header_info	get_ld_header_info(p)	todo		
+Lib/ctypes/_aix.py	97	115	get_ld_headers	get_ld_headers(file)	todo		
+Lib/ctypes/_aix.py	117	131	get_shared	get_shared(ld_headers)	todo		
+Lib/ctypes/_aix.py	133	144	get_one_match	get_one_match(expr, lines)	todo		
+Lib/ctypes/_aix.py	147	168	get_legacy	get_legacy(members)	todo		
+Lib/ctypes/_aix.py	170	206	get_version	get_version(name, members)	todo		
+Lib/ctypes/_aix.py	208	234	get_member	get_member(name, members)	todo		
+Lib/ctypes/_aix.py	236	260	get_libpaths	get_libpaths()	todo		
+Lib/ctypes/_aix.py	262	285	find_shared	find_shared(paths, name)	todo		
+Lib/ctypes/_aix.py	287	327	find_library	find_library(name)	todo		

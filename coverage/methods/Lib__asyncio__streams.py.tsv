@@ -1,0 +1,52 @@
+file	line	endline	name	signature	status	entry	note
+Lib/asyncio/streams.py	26	51	open_connection	open_connection(host=None, port=None, *, limit=_DEFAULT_LIMIT, **kwds)	todo		
+Lib/asyncio/streams.py	54	84	start_server	start_server(client_connected_cb, host=None, port=None, *, limit=_DEFAULT_LIMIT, **kwds)	todo		
+Lib/asyncio/streams.py	90	100	open_unix_connection	open_unix_connection(path=None, *, limit=_DEFAULT_LIMIT, **kwds)	todo		
+Lib/asyncio/streams.py	102	113	start_unix_server	start_unix_server(client_connected_cb, path=None, *, limit=_DEFAULT_LIMIT, **kwds)	todo		
+Lib/asyncio/streams.py	126	133	FlowControlMixin.__init__	__init__(self, loop=None)	todo		
+Lib/asyncio/streams.py	135	139	FlowControlMixin.pause_writing	pause_writing(self)	todo		
+Lib/asyncio/streams.py	141	149	FlowControlMixin.resume_writing	resume_writing(self)	todo		
+Lib/asyncio/streams.py	151	162	FlowControlMixin.connection_lost	connection_lost(self, exc)	todo		
+Lib/asyncio/streams.py	164	174	FlowControlMixin._drain_helper	_drain_helper(self)	todo		
+Lib/asyncio/streams.py	176	177	FlowControlMixin._get_close_waiter	_get_close_waiter(self, stream)	todo		
+Lib/asyncio/streams.py	191	208	StreamReaderProtocol.__init__	__init__(self, stream_reader, client_connected_cb=None, loop=None)	todo		
+Lib/asyncio/streams.py	211	214	StreamReaderProtocol._stream_reader	_stream_reader(self)	todo		
+Lib/asyncio/streams.py	216	222	StreamReaderProtocol._replace_transport	_replace_transport(self, transport)	todo		
+Lib/asyncio/streams.py	224	261	StreamReaderProtocol.connection_made	connection_made(self, transport)	todo		
+Lib/asyncio/streams.py	263	279	StreamReaderProtocol.connection_lost	connection_lost(self, exc)	todo		
+Lib/asyncio/streams.py	281	284	StreamReaderProtocol.data_received	data_received(self, data)	todo		
+Lib/asyncio/streams.py	286	295	StreamReaderProtocol.eof_received	eof_received(self)	todo		
+Lib/asyncio/streams.py	297	298	StreamReaderProtocol._get_close_waiter	_get_close_waiter(self, stream)	todo		
+Lib/asyncio/streams.py	300	309	StreamReaderProtocol.__del__	__del__(self)	todo		
+Lib/asyncio/streams.py	322	330	StreamWriter.__init__	__init__(self, transport, protocol, reader, loop)	todo		
+Lib/asyncio/streams.py	332	336	StreamWriter.__repr__	__repr__(self)	todo		
+Lib/asyncio/streams.py	339	340	StreamWriter.transport	transport(self)	todo		
+Lib/asyncio/streams.py	342	343	StreamWriter.write	write(self, data)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/asyncio/streams.py	345	346	StreamWriter.writelines	writelines(self, data)	todo		
+Lib/asyncio/streams.py	348	349	StreamWriter.write_eof	write_eof(self)	todo		
+Lib/asyncio/streams.py	351	352	StreamWriter.can_write_eof	can_write_eof(self)	todo		
+Lib/asyncio/streams.py	354	355	StreamWriter.close	close(self)	todo		
+Lib/asyncio/streams.py	357	358	StreamWriter.is_closing	is_closing(self)	todo		
+Lib/asyncio/streams.py	360	361	StreamWriter.wait_closed	wait_closed(self)	todo		
+Lib/asyncio/streams.py	363	364	StreamWriter.get_extra_info	get_extra_info(self, name, default=None)	todo		
+Lib/asyncio/streams.py	366	389	StreamWriter.drain	drain(self)	todo		
+Lib/asyncio/streams.py	391	405	StreamWriter.start_tls	start_tls(self, sslcontext, *, server_hostname=None, ssl_handshake_timeout=None, ssl_shutdown_timeout=None)	todo		
+Lib/asyncio/streams.py	407	413	StreamWriter.__del__	__del__(self, warnings=warnings)	todo		
+Lib/asyncio/streams.py	419	439	StreamReader.__init__	__init__(self, limit=_DEFAULT_LIMIT, loop=None)	todo		
+Lib/asyncio/streams.py	441	457	StreamReader.__repr__	__repr__(self)	todo		
+Lib/asyncio/streams.py	459	460	StreamReader.exception	exception(self)	todo		
+Lib/asyncio/streams.py	462	469	StreamReader.set_exception	set_exception(self, exc)	todo		
+Lib/asyncio/streams.py	471	477	StreamReader._wakeup_waiter	_wakeup_waiter(self)	todo		
+Lib/asyncio/streams.py	479	481	StreamReader.set_transport	set_transport(self, transport)	todo		
+Lib/asyncio/streams.py	483	485	StreamReader._replace_transport	_replace_transport(self, transport)	todo		
+Lib/asyncio/streams.py	487	490	StreamReader._maybe_resume_transport	_maybe_resume_transport(self)	todo		
+Lib/asyncio/streams.py	492	494	StreamReader.feed_eof	feed_eof(self)	todo		
+Lib/asyncio/streams.py	496	498	StreamReader.at_eof	at_eof(self)	todo		
+Lib/asyncio/streams.py	500	520	StreamReader.feed_data	feed_data(self, data)	todo		
+Lib/asyncio/streams.py	522	548	StreamReader._wait_for_data	_wait_for_data(self, func_name)	todo		
+Lib/asyncio/streams.py	550	579	StreamReader.readline	readline(self)	todo		
+Lib/asyncio/streams.py	581	693	StreamReader.readuntil	readuntil(self, separator=b'\\n')	todo		
+Lib/asyncio/streams.py	695	744	StreamReader.read	read(self, n=-1)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/asyncio/streams.py	746	785	StreamReader.readexactly	readexactly(self, n)	todo		
+Lib/asyncio/streams.py	787	788	StreamReader.__aiter__	__aiter__(self)	todo		
+Lib/asyncio/streams.py	790	794	StreamReader.__anext__	__anext__(self)	todo		

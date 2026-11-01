@@ -1,0 +1,5 @@
+file	line	endline	name	signature	status	entry	note
+Lib/tty.py	18	44	cfmakeraw	cfmakeraw(mode)	todo		
+Lib/tty.py	46	57	cfmakecbreak	cfmakecbreak(mode)	todo		
+Lib/tty.py	59	65	setraw	setraw(fd, when=TCSAFLUSH)	todo		
+Lib/tty.py	67	73	setcbreak	setcbreak(fd, when=TCSAFLUSH)	todo		

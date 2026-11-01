@@ -1,0 +1,24 @@
+file	line	endline	name	signature	status	entry	note
+Lib/idlelib/query.py	38	87	Query.__init__	__init__(self, parent, title, message, *, text0='', used_names={}, _htest=False, _utest=False)	excluded		platform: GUI toolkit
+Lib/idlelib/query.py	89	123	Query.create_widgets	create_widgets(self, ok_text='OK')	excluded		platform: GUI toolkit
+Lib/idlelib/query.py	125	125	Query.create_extra	create_extra(self)	excluded		platform: GUI toolkit
+Lib/idlelib/query.py	127	129	Query.showerror	showerror(self, message, widget=None)	excluded		platform: GUI toolkit
+Lib/idlelib/query.py	131	137	Query.entry_ok	entry_ok(self)	excluded		platform: GUI toolkit
+Lib/idlelib/query.py	139	151	Query.ok	ok(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/query.py	153	156	Query.cancel	cancel(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/query.py	158	160	Query.destroy	destroy(self)	excluded		platform: GUI toolkit
+Lib/idlelib/query.py	167	170	SectionName.__init__	__init__(self, parent, title, message, used_names, *, _htest=False, _utest=False)	excluded		platform: GUI toolkit
+Lib/idlelib/query.py	172	184	SectionName.entry_ok	entry_ok(self)	excluded		platform: GUI toolkit
+Lib/idlelib/query.py	191	194	ModuleName.__init__	__init__(self, parent, title, message, text0, *, _htest=False, _utest=False)	excluded		platform: GUI toolkit
+Lib/idlelib/query.py	196	226	ModuleName.entry_ok	entry_ok(self)	excluded		platform: GUI toolkit
+Lib/idlelib/query.py	233	242	Goto.entry_ok	entry_ok(self)	excluded		platform: GUI toolkit
+Lib/idlelib/query.py	249	260	HelpSource.__init__	__init__(self, parent, title, *, menuitem='', filepath='', used_names={}, _htest=False, _utest=False)	excluded		platform: GUI toolkit
+Lib/idlelib/query.py	262	280	HelpSource.create_extra	create_extra(self)	excluded		platform: GUI toolkit
+Lib/idlelib/query.py	282	287	HelpSource.askfilename	askfilename(self, filetypes, initdir, initfile)	excluded		platform: GUI toolkit
+Lib/idlelib/query.py	289	307	HelpSource.browse_file	browse_file(self)	excluded		platform: GUI toolkit
+Lib/idlelib/query.py	311	326	HelpSource.path_ok	path_ok(self)	excluded		platform: GUI toolkit
+Lib/idlelib/query.py	328	333	HelpSource.entry_ok	entry_ok(self)	excluded		platform: GUI toolkit
+Lib/idlelib/query.py	343	353	CustomRun.__init__	__init__(self, parent, title, *, cli_args=[], _htest=False, _utest=False)	excluded		platform: GUI toolkit
+Lib/idlelib/query.py	355	366	CustomRun.create_extra	create_extra(self)	excluded		platform: GUI toolkit
+Lib/idlelib/query.py	368	376	CustomRun.cli_args_ok	cli_args_ok(self)	excluded		platform: GUI toolkit
+Lib/idlelib/query.py	378	382	CustomRun.entry_ok	entry_ok(self)	excluded		platform: GUI toolkit

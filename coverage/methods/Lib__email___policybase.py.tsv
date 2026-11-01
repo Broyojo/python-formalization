@@ -1,0 +1,24 @@
+file	line	endline	name	signature	status	entry	note
+Lib/email/_policybase.py	21	25	validate_header_name	validate_header_name(name)	todo		
+Lib/email/_policybase.py	50	62	_PolicyBase.__init__	__init__(self, **kw)	todo		
+Lib/email/_policybase.py	64	67	_PolicyBase.__repr__	__repr__(self)	todo		
+Lib/email/_policybase.py	69	85	_PolicyBase.clone	clone(self, **kw)	todo		
+Lib/email/_policybase.py	87	92	_PolicyBase.__setattr__	__setattr__(self, name, value)	todo		
+Lib/email/_policybase.py	94	100	_PolicyBase.__add__	__add__(self, other)	todo		
+Lib/email/_policybase.py	103	106	_append_doc	_append_doc(doc, added_doc)	todo		
+Lib/email/_policybase.py	108	118	_extend_docstrings	_extend_docstrings(cls)	todo		
+Lib/email/_policybase.py	186	203	Policy.handle_defect	handle_defect(self, obj, defect)	todo		
+Lib/email/_policybase.py	205	216	Policy.register_defect	register_defect(self, obj, defect)	todo		
+Lib/email/_policybase.py	218	235	Policy.header_max_count	header_max_count(self, name)	todo		
+Lib/email/_policybase.py	238	245	Policy.header_source_parse	header_source_parse(self, sourcelines)	todo		
+Lib/email/_policybase.py	248	252	Policy.header_store_parse	header_store_parse(self, name, value)	todo		
+Lib/email/_policybase.py	255	263	Policy.header_fetch_parse	header_fetch_parse(self, name, value)	todo		
+Lib/email/_policybase.py	266	275	Policy.fold	fold(self, name, value)	todo		
+Lib/email/_policybase.py	278	285	Policy.fold_binary	fold_binary(self, name, value)	todo		
+Lib/email/_policybase.py	298	308	Compat32._sanitize_header	_sanitize_header(self, name, value)	todo		
+Lib/email/_policybase.py	310	320	Compat32.header_source_parse	header_source_parse(self, sourcelines)	todo		
+Lib/email/_policybase.py	322	327	Compat32.header_store_parse	header_store_parse(self, name, value)	todo		
+Lib/email/_policybase.py	329	334	Compat32.header_fetch_parse	header_fetch_parse(self, name, value)	todo		
+Lib/email/_policybase.py	336	344	Compat32.fold	fold(self, name, value)	todo		
+Lib/email/_policybase.py	346	356	Compat32.fold_binary	fold_binary(self, name, value)	todo		
+Lib/email/_policybase.py	358	389	Compat32._fold	_fold(self, name, value, sanitize)	todo		

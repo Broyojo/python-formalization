@@ -1,0 +1,22 @@
+file	line	endline	name	signature	status	entry	note
+Lib/asyncio/subprocess.py	21	28	SubprocessStreamProtocol.__init__	__init__(self, limit, loop)	todo		
+Lib/asyncio/subprocess.py	30	38	SubprocessStreamProtocol.__repr__	__repr__(self)	todo		
+Lib/asyncio/subprocess.py	40	62	SubprocessStreamProtocol.connection_made	connection_made(self, transport)	todo		
+Lib/asyncio/subprocess.py	64	72	SubprocessStreamProtocol.pipe_data_received	pipe_data_received(self, fd, data)	todo		
+Lib/asyncio/subprocess.py	74	102	SubprocessStreamProtocol.pipe_connection_lost	pipe_connection_lost(self, fd, exc)	todo		
+Lib/asyncio/subprocess.py	104	106	SubprocessStreamProtocol.process_exited	process_exited(self)	todo		
+Lib/asyncio/subprocess.py	108	111	SubprocessStreamProtocol._maybe_close_transport	_maybe_close_transport(self)	todo		
+Lib/asyncio/subprocess.py	113	115	SubprocessStreamProtocol._get_close_waiter	_get_close_waiter(self, stream)	todo		
+Lib/asyncio/subprocess.py	119	126	Process.__init__	__init__(self, transport, protocol, loop)	todo		
+Lib/asyncio/subprocess.py	128	129	Process.__repr__	__repr__(self)	todo		
+Lib/asyncio/subprocess.py	132	133	Process.returncode	returncode(self)	todo		
+Lib/asyncio/subprocess.py	135	137	Process.wait	wait(self)	todo		
+Lib/asyncio/subprocess.py	139	140	Process.send_signal	send_signal(self, signal)	todo		
+Lib/asyncio/subprocess.py	142	143	Process.terminate	terminate(self)	todo		
+Lib/asyncio/subprocess.py	145	146	Process.kill	kill(self)	todo		
+Lib/asyncio/subprocess.py	148	166	Process._feed_stdin	_feed_stdin(self, input)	todo		
+Lib/asyncio/subprocess.py	168	169	Process._noop	_noop(self)	todo		
+Lib/asyncio/subprocess.py	171	186	Process._read_stream	_read_stream(self, fd)	todo		
+Lib/asyncio/subprocess.py	188	203	Process.communicate	communicate(self, input=None)	todo		
+Lib/asyncio/subprocess.py	206	215	create_subprocess_shell	create_subprocess_shell(cmd, stdin=None, stdout=None, stderr=None, limit=streams._DEFAULT_LIMIT, **kwds)	todo		
+Lib/asyncio/subprocess.py	218	229	create_subprocess_exec	create_subprocess_exec(program, *args, stdin=None, stdout=None, stderr=None, limit=streams._DEFAULT_LIMIT, **kwds)	todo		

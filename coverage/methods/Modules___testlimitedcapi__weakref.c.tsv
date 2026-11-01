@@ -1,0 +1,8 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testlimitedcapi/weakref.c	12	16	pyweakref_check	pyweakref_check(PyObject *module, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/weakref.c	19	23	pyweakref_checkref	pyweakref_checkref(PyObject *module, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/weakref.c	26	30	pyweakref_checkrefexact	pyweakref_checkrefexact(PyObject *module, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/weakref.c	33	37	pyweakref_checkproxy	pyweakref_checkproxy(PyObject *module, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/weakref.c	40	49	pyweakref_newref	pyweakref_newref(PyObject *module, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/weakref.c	52	61	pyweakref_newproxy	pyweakref_newproxy(PyObject *module, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/weakref.c	75	78	_PyTestLimitedCAPI_Init_Weakref	_PyTestLimitedCAPI_Init_Weakref(PyObject *m)	excluded		test-support: only for CPython's own tests

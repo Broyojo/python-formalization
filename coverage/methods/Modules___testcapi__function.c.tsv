@@ -1,0 +1,12 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/function.c	6	14	function_get_code	function_get_code(PyObject *self, PyObject *func)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/function.c	18	26	function_get_globals	function_get_globals(PyObject *self, PyObject *func)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/function.c	30	38	function_get_module	function_get_module(PyObject *self, PyObject *func)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/function.c	42	52	function_get_defaults	function_get_defaults(PyObject *self, PyObject *func)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/function.c	56	66	function_set_defaults	function_set_defaults(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/function.c	70	80	function_get_kw_defaults	function_get_kw_defaults(PyObject *self, PyObject *func)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/function.c	84	94	function_set_kw_defaults	function_set_kw_defaults(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/function.c	98	108	function_get_closure	function_get_closure(PyObject *self, PyObject *func)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/function.c	112	123	function_set_closure	function_set_closure(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/function.c	127	130	function_get_annotations	function_get_annotations(PyObject *self, PyObject *func)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/function.c	148	151	_PyTestCapi_Init_Function	_PyTestCapi_Init_Function(PyObject *m)	excluded		test-support: only for CPython's own tests

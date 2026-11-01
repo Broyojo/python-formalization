@@ -1,0 +1,48 @@
+file	line	endline	name	signature	status	entry	note
+Lib/fractions.py	24	54	_hash_algorithm	_hash_algorithm(numerator, denominator)	modelled	fractions-hash-decimal,fractions-hash-int	
+Lib/fractions.py	73	99	_round_to_exponent	_round_to_exponent(n, d, exponent, no_neg_zero=False)	modelled	fractions-format-f-matches-round	
+Lib/fractions.py	102	138	_round_to_figures	_round_to_figures(n, d, figures)	modelled	fractions-format-e-total	
+Lib/fractions.py	206	311	Fraction.__new__	__new__(cls, numerator=0, denominator=None)	modelled	fractions-ctor-normalizes,fractions-ctor-zero-denominator,fractions-format-f-matches-round,fractions-str-roundtrip	
+Lib/fractions.py	314	333	Fraction.from_number	from_number(cls, number)	todo		
+Lib/fractions.py	336	347	Fraction.from_float	from_float(cls, f)	todo		
+Lib/fractions.py	350	359	Fraction.from_decimal	from_decimal(cls, dec)	todo		
+Lib/fractions.py	362	371	Fraction._from_coprime_ints	_from_coprime_ints(cls, numerator, denominator, /)	todo		
+Lib/fractions.py	373	375	Fraction.is_integer	is_integer(self)	modelled	fractions-int-conversions	
+Lib/fractions.py	377	382	Fraction.as_integer_ratio	as_integer_ratio(self)	modelled	fractions-int-conversions	
+Lib/fractions.py	384	439	Fraction.limit_denominator	limit_denominator(self, max_denominator=1000000)	modelled	fractions-limit-denominator-closest	
+Lib/fractions.py	442	443	Fraction.numerator	numerator(a)	todo		
+Lib/fractions.py	446	447	Fraction.denominator	denominator(a)	todo		
+Lib/fractions.py	449	452	Fraction.__repr__	__repr__(self)	todo		
+Lib/fractions.py	454	459	Fraction.__str__	__str__(self)	modelled	fractions-format-empty-is-str,fractions-str-roundtrip	
+Lib/fractions.py	461	493	Fraction._format_general	_format_general(self, match)	modelled	fractions-format-empty-is-str	
+Lib/fractions.py	495	597	Fraction._format_float_style	_format_float_style(self, match)	modelled	fractions-format-e-total,fractions-format-f-matches-round	
+Lib/fractions.py	599	614	Fraction.__format__	__format__(self, format_spec, /)	modelled	fractions-format-e-total,fractions-format-empty-is-str,fractions-format-f-matches-round	
+Lib/fractions.py	616	724	Fraction._operator_fallbacks	_operator_fallbacks(monomorphic_operator, fallback_operator, handle_complex=True)	modelled	fractions-arith-exact	
+Lib/fractions.py	794	806	Fraction._add	_add(a, b)	modelled	fractions-arith-exact	
+Lib/fractions.py	810	822	Fraction._sub	_sub(a, b)	modelled	fractions-arith-exact	
+Lib/fractions.py	826	838	Fraction._mul	_mul(a, b)	modelled	fractions-arith-exact	
+Lib/fractions.py	842	860	Fraction._div	_div(a, b)	modelled	fractions-arith-exact	
+Lib/fractions.py	864	866	Fraction._floordiv	_floordiv(a, b)	modelled	fractions-divmod-consistent	
+Lib/fractions.py	870	874	Fraction._divmod	_divmod(a, b)	modelled	fractions-divmod-consistent	
+Lib/fractions.py	878	881	Fraction._mod	_mod(a, b)	modelled	fractions-divmod-consistent	
+Lib/fractions.py	885	917	Fraction.__pow__	__pow__(a, b, modulo=None)	modelled	fractions-pow-exact	
+Lib/fractions.py	919	933	Fraction.__rpow__	__rpow__(b, a, modulo=None)	todo		
+Lib/fractions.py	935	937	Fraction.__pos__	__pos__(a)	todo		
+Lib/fractions.py	939	941	Fraction.__neg__	__neg__(a)	todo		
+Lib/fractions.py	943	945	Fraction.__abs__	__abs__(a)	todo		
+Lib/fractions.py	947	952	Fraction.__int__	__int__(a, _index=operator.index)	modelled	fractions-int-conversions	
+Lib/fractions.py	954	959	Fraction.__trunc__	__trunc__(a)	modelled	fractions-int-conversions	
+Lib/fractions.py	961	963	Fraction.__floor__	__floor__(a)	modelled	fractions-int-conversions	
+Lib/fractions.py	965	968	Fraction.__ceil__	__ceil__(a)	modelled	fractions-int-conversions	
+Lib/fractions.py	970	994	Fraction.__round__	__round__(self, ndigits=None)	modelled	fractions-format-f-matches-round,fractions-round-half-even,fractions-round-ndigits	
+Lib/fractions.py	996	998	Fraction.__hash__	__hash__(self)	modelled	fractions-hash-decimal,fractions-hash-int	
+Lib/fractions.py	1000	1019	Fraction.__eq__	__eq__(a, b)	modelled	fractions-compare-consistent	
+Lib/fractions.py	1021	1041	Fraction._richcmp	_richcmp(self, other, op)	modelled	fractions-compare-consistent	
+Lib/fractions.py	1043	1045	Fraction.__lt__	__lt__(a, b)	todo		
+Lib/fractions.py	1047	1049	Fraction.__gt__	__gt__(a, b)	todo		
+Lib/fractions.py	1051	1053	Fraction.__le__	__le__(a, b)	todo		
+Lib/fractions.py	1055	1057	Fraction.__ge__	__ge__(a, b)	todo		
+Lib/fractions.py	1059	1063	Fraction.__bool__	__bool__(a)	todo		
+Lib/fractions.py	1067	1068	Fraction.__reduce__	__reduce__(self)	todo		
+Lib/fractions.py	1070	1073	Fraction.__copy__	__copy__(self)	todo		
+Lib/fractions.py	1075	1078	Fraction.__deepcopy__	__deepcopy__(self, memo)	todo		

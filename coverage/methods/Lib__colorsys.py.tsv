@@ -1,0 +1,8 @@
+file	line	endline	name	signature	status	entry	note
+Lib/colorsys.py	40	44	rgb_to_yiq	rgb_to_yiq(r, g, b)	todo		
+Lib/colorsys.py	46	67	yiq_to_rgb	yiq_to_rgb(y, i, q)	todo		
+Lib/colorsys.py	75	97	rgb_to_hls	rgb_to_hls(r, g, b)	todo		
+Lib/colorsys.py	99	107	hls_to_rgb	hls_to_rgb(h, l, s)	todo		
+Lib/colorsys.py	109	117	_v	_v(m1, m2, hue)	todo		
+Lib/colorsys.py	125	143	rgb_to_hsv	rgb_to_hsv(r, g, b)	todo		
+Lib/colorsys.py	145	165	hsv_to_rgb	hsv_to_rgb(h, s, v)	todo		

@@ -1,0 +1,10 @@
+file	line	endline	name	signature	status	entry	note
+Lib/urllib/error.py	25	29	URLError.__init__	__init__(self, reason, filename=None)	todo		
+Lib/urllib/error.py	31	32	URLError.__str__	__str__(self)	todo		
+Lib/urllib/error.py	39	47	HTTPError.__init__	__init__(self, url, code, msg, hdrs, fp)	todo		
+Lib/urllib/error.py	49	50	HTTPError.__str__	__str__(self)	todo		
+Lib/urllib/error.py	52	53	HTTPError.__repr__	__repr__(self)	todo		
+Lib/urllib/error.py	58	59	HTTPError.reason	reason(self)	todo		
+Lib/urllib/error.py	62	63	HTTPError.headers	headers(self)	todo		
+Lib/urllib/error.py	66	67	HTTPError.headers	headers(self, headers)	todo		
+Lib/urllib/error.py	72	74	ContentTooShortError.__init__	__init__(self, message, content)	todo		

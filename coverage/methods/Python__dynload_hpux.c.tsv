@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Python/dynload_hpux.c	18	76	_PyImport_FindSharedFuncptr	dl_funcptr _PyImport_FindSharedFuncptr(const char *prefix, const char *shortname, const char *pathname, FILE *fp)	todo		

@@ -1,0 +1,8 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_pyrepl/terminfo.py	76	115	_get_terminfo_dirs	_get_terminfo_dirs()	todo		
+Lib/_pyrepl/terminfo.py	118	130	_validate_terminal_name_or_raise	_validate_terminal_name_or_raise(terminal_name: str)	todo		
+Lib/_pyrepl/terminfo.py	133	154	_read_terminfo_file	_read_terminfo_file(terminal_name: str)	todo		
+Lib/_pyrepl/terminfo.py	326	355	TermInfo.__post_init__	__post_init__(self)	todo		
+Lib/_pyrepl/terminfo.py	357	430	TermInfo._parse_terminfo_file	_parse_terminfo_file(self, terminal_name: str)	todo		
+Lib/_pyrepl/terminfo.py	432	438	TermInfo.get	get(self, cap: str)	todo		
+Lib/_pyrepl/terminfo.py	441	488	tparm	tparm(cap_bytes: bytes, *params: int)	todo		

@@ -1,0 +1,48 @@
+file	line	endline	name	signature	status	entry	note
+Python/ast_unparse.c	32	35	append_char	append_char(PyUnicodeWriter *writer, Py_UCS4 ch)	todo		
+Python/ast_unparse.c	38	41	append_charp	append_charp(PyUnicodeWriter *writer, const char *charp)	todo		
+Python/ast_unparse.c	87	114	append_repr	append_repr(PyUnicodeWriter *writer, PyObject *obj)	todo		
+Python/ast_unparse.c	140	159	append_ast_boolop	append_ast_boolop(PyUnicodeWriter *writer, expr_ty e, int level)	todo		
+Python/ast_unparse.c	162	194	append_ast_binop	append_ast_binop(PyUnicodeWriter *writer, expr_ty e, int level)	todo		
+Python/ast_unparse.c	197	218	append_ast_unaryop	append_ast_unaryop(PyUnicodeWriter *writer, expr_ty e, int level)	todo		
+Python/ast_unparse.c	221	231	append_ast_arg	append_ast_arg(PyUnicodeWriter *writer, arg_ty arg)	todo		
+Python/ast_unparse.c	234	297	append_ast_args	append_ast_args(PyUnicodeWriter *writer, arguments_ty args)	todo		
+Python/ast_unparse.c	300	311	append_ast_lambda	append_ast_lambda(PyUnicodeWriter *writer, expr_ty e, int level)	todo		
+Python/ast_unparse.c	314	324	append_ast_ifexp	append_ast_ifexp(PyUnicodeWriter *writer, expr_ty e, int level)	todo		
+Python/ast_unparse.c	327	350	append_ast_dict	append_ast_dict(PyUnicodeWriter *writer, expr_ty e)	todo		
+Python/ast_unparse.c	353	365	append_ast_set	append_ast_set(PyUnicodeWriter *writer, expr_ty e)	todo		
+Python/ast_unparse.c	368	380	append_ast_list	append_ast_list(PyUnicodeWriter *writer, expr_ty e)	todo		
+Python/ast_unparse.c	383	403	append_ast_tuple	append_ast_tuple(PyUnicodeWriter *writer, expr_ty e, int level)	todo		
+Python/ast_unparse.c	406	421	append_ast_comprehension	append_ast_comprehension(PyUnicodeWriter *writer, comprehension_ty gen)	todo		
+Python/ast_unparse.c	424	434	append_ast_comprehensions	append_ast_comprehensions(PyUnicodeWriter *writer, asdl_comprehension_seq *comprehensions)	todo		
+Python/ast_unparse.c	437	443	append_ast_genexp	append_ast_genexp(PyUnicodeWriter *writer, expr_ty e)	todo		
+Python/ast_unparse.c	446	452	append_ast_listcomp	append_ast_listcomp(PyUnicodeWriter *writer, expr_ty e)	todo		
+Python/ast_unparse.c	455	461	append_ast_setcomp	append_ast_setcomp(PyUnicodeWriter *writer, expr_ty e)	todo		
+Python/ast_unparse.c	464	472	append_ast_dictcomp	append_ast_dictcomp(PyUnicodeWriter *writer, expr_ty e)	todo		
+Python/ast_unparse.c	475	536	append_ast_compare	append_ast_compare(PyUnicodeWriter *writer, expr_ty e, int level)	todo		
+Python/ast_unparse.c	539	554	append_ast_keyword	append_ast_keyword(PyUnicodeWriter *writer, keyword_ty kw)	todo		
+Python/ast_unparse.c	557	589	append_ast_call	append_ast_call(PyUnicodeWriter *writer, expr_ty e)	todo		
+Python/ast_unparse.c	592	605	escape_braces	escape_braces(PyObject *orig)	todo		
+Python/ast_unparse.c	608	618	append_fstring_unicode	append_fstring_unicode(PyUnicodeWriter *writer, PyObject *unicode)	todo		
+Python/ast_unparse.c	621	639	append_fstring_element	append_fstring_element(PyUnicodeWriter *writer, expr_ty e, bool is_format_spec)	todo		
+Python/ast_unparse.c	644	663	build_ftstring_body	build_ftstring_body(asdl_expr_seq *values, bool is_format_spec)	todo		
+Python/ast_unparse.c	666	681	append_templatestr	append_templatestr(PyUnicodeWriter *writer, expr_ty e)	todo		
+Python/ast_unparse.c	684	704	append_joinedstr	append_joinedstr(PyUnicodeWriter *writer, expr_ty e, bool is_format_spec)	todo		
+Python/ast_unparse.c	707	722	append_interpolation_str	append_interpolation_str(PyUnicodeWriter *writer, PyObject *str)	todo		
+Python/ast_unparse.c	725	736	append_interpolation_value	append_interpolation_value(PyUnicodeWriter *writer, expr_ty e)	todo		
+Python/ast_unparse.c	739	763	append_interpolation_conversion	append_interpolation_conversion(PyUnicodeWriter *writer, int conversion)	todo		
+Python/ast_unparse.c	766	776	append_interpolation_format_spec	append_interpolation_format_spec(PyUnicodeWriter *writer, expr_ty e)	todo		
+Python/ast_unparse.c	779	794	append_interpolation	append_interpolation(PyUnicodeWriter *writer, expr_ty e)	todo		
+Python/ast_unparse.c	797	812	append_formattedvalue	append_formattedvalue(PyUnicodeWriter *writer, expr_ty e)	todo		
+Python/ast_unparse.c	815	833	append_ast_constant	append_ast_constant(PyUnicodeWriter *writer, PyObject *constant)	todo		
+Python/ast_unparse.c	836	853	append_ast_attribute	append_ast_attribute(PyUnicodeWriter *writer, expr_ty e)	todo		
+Python/ast_unparse.c	856	873	append_ast_slice	append_ast_slice(PyUnicodeWriter *writer, expr_ty e)	todo		
+Python/ast_unparse.c	876	882	append_ast_subscript	append_ast_subscript(PyUnicodeWriter *writer, expr_ty e)	todo		
+Python/ast_unparse.c	885	890	append_ast_starred	append_ast_starred(PyUnicodeWriter *writer, expr_ty e)	todo		
+Python/ast_unparse.c	893	902	append_ast_yield	append_ast_yield(PyUnicodeWriter *writer, expr_ty e)	todo		
+Python/ast_unparse.c	905	910	append_ast_yield_from	append_ast_yield_from(PyUnicodeWriter *writer, expr_ty e)	todo		
+Python/ast_unparse.c	913	920	append_ast_await	append_ast_await(PyUnicodeWriter *writer, expr_ty e, int level)	todo		
+Python/ast_unparse.c	923	931	append_named_expr	append_named_expr(PyUnicodeWriter *writer, expr_ty e, int level)	todo		
+Python/ast_unparse.c	934	1008	append_ast_expr	append_ast_expr(PyUnicodeWriter *writer, expr_ty e, int level)	todo		
+Python/ast_unparse.c	1011	1023	expr_as_unicode	expr_as_unicode(expr_ty e, int level)	todo		
+Python/ast_unparse.c	1026	1029	_PyAST_ExprAsUnicode	_PyAST_ExprAsUnicode(expr_ty e)	todo		

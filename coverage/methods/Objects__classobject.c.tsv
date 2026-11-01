@@ -1,0 +1,26 @@
+file	line	endline	name	signature	status	entry	note
+Objects/classobject.c	25	32	PyMethod_Function	PyMethod_Function(PyObject *im)	todo		
+Objects/classobject.c	35	42	PyMethod_Self	PyMethod_Self(PyObject *im)	todo		
+Objects/classobject.c	46	55	method_vectorcall	method_vectorcall(PyObject *method, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
+Objects/classobject.c	64	83	PyMethod_New	PyMethod_New(PyObject *func, PyObject *self)	todo		
+Objects/classobject.c	90	101	method___reduce___impl	method___reduce___impl(PyMethodObject *self) /*[clinic end generated code: output=6c04506d0fa6fdcb input=143a0bf5e96de6e8]*/	todo		
+Objects/classobject.c	128	132	method_get_doc	method_get_doc(PyObject *self, void *context)	todo		
+Objects/classobject.c	140	167	method_getattro	method_getattro(PyObject *obj, PyObject *name)	todo		
+Objects/classobject.c	180	195	method_new_impl	method_new_impl(PyTypeObject *type, PyObject *function, PyObject *instance) /*[clinic end generated code: output=d33ef4ebf702e1f7 input=4e32facc3c3108ae]*/	todo		
+Objects/classobject.c	198	207	method_dealloc	method_dealloc(PyObject *self)	todo		
+Objects/classobject.c	210	235	method_richcompare	method_richcompare(PyObject *self, PyObject *other, int op)	todo		
+Objects/classobject.c	238	263	method_repr	method_repr(PyObject *op)	todo		
+Objects/classobject.c	266	280	method_hash	method_hash(PyObject *self)	todo		
+Objects/classobject.c	283	289	method_traverse	method_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/classobject.c	292	296	method_descr_get	method_descr_get(PyObject *meth, PyObject *obj, PyObject *cls)	todo		
+Objects/classobject.c	332	340	PyInstanceMethod_New	PyInstanceMethod_New(PyObject *func) {	todo		
+Objects/classobject.c	343	350	PyInstanceMethod_Function	PyInstanceMethod_Function(PyObject *im)	todo		
+Objects/classobject.c	361	365	instancemethod_get_doc	instancemethod_get_doc(PyObject *self, void *context)	todo		
+Objects/classobject.c	373	397	instancemethod_getattro	instancemethod_getattro(PyObject *self, PyObject *name)	todo		
+Objects/classobject.c	400	404	instancemethod_dealloc	instancemethod_dealloc(PyObject *self) {	todo		
+Objects/classobject.c	407	410	instancemethod_traverse	instancemethod_traverse(PyObject *self, visitproc visit, void *arg) {	todo		
+Objects/classobject.c	413	416	instancemethod_call	instancemethod_call(PyObject *self, PyObject *arg, PyObject *kw)	todo		
+Objects/classobject.c	419	426	instancemethod_descr_get	instancemethod_descr_get(PyObject *descr, PyObject *obj, PyObject *type) {	todo		
+Objects/classobject.c	429	451	instancemethod_richcompare	instancemethod_richcompare(PyObject *self, PyObject *other, int op)	todo		
+Objects/classobject.c	454	477	instancemethod_repr	instancemethod_repr(PyObject *self)	todo		
+Objects/classobject.c	489	499	instancemethod_new_impl	instancemethod_new_impl(PyTypeObject *type, PyObject *function) /*[clinic end generated code: output=5e0397b2bdb750be input=cfc54e8b973664a8]*/	todo		

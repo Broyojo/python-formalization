@@ -1,0 +1,44 @@
+file	line	endline	name	signature	status	entry	note
+Lib/difflib.py	39	42	_calculate_ratio	_calculate_ratio(matches, length)	todo		
+Lib/difflib.py	120	182	SequenceMatcher.__init__	__init__(self, isjunk=None, a='', b='', autojunk=True)	todo		
+Lib/difflib.py	184	194	SequenceMatcher.set_seqs	set_seqs(self, a, b)	todo		
+Lib/difflib.py	196	220	SequenceMatcher.set_seq1	set_seq1(self, a)	todo		
+Lib/difflib.py	222	248	SequenceMatcher.set_seq2	set_seq2(self, b)	todo		
+Lib/difflib.py	266	303	SequenceMatcher.__chain_b	__chain_b(self)	todo		
+Lib/difflib.py	305	419	SequenceMatcher.find_longest_match	find_longest_match(self, alo=0, ahi=None, blo=0, bhi=None)	todo		
+Lib/difflib.py	421	490	SequenceMatcher.get_matching_blocks	get_matching_blocks(self)	todo		
+Lib/difflib.py	492	545	SequenceMatcher.get_opcodes	get_opcodes(self)	todo		
+Lib/difflib.py	547	595	SequenceMatcher.get_grouped_opcodes	get_grouped_opcodes(self, n=3)	todo		
+Lib/difflib.py	597	620	SequenceMatcher.ratio	ratio(self)	todo		
+Lib/difflib.py	622	649	SequenceMatcher.quick_ratio	quick_ratio(self)	todo		
+Lib/difflib.py	651	661	SequenceMatcher.real_quick_ratio	real_quick_ratio(self)	todo		
+Lib/difflib.py	666	712	get_close_matches	get_close_matches(word, possibilities, n=3, cutoff=0.6)	todo		
+Lib/difflib.py	715	720	_keep_original_ws	_keep_original_ws(s, tag_s)	todo		
+Lib/difflib.py	810	831	Differ.__init__	__init__(self, linejunk=None, charjunk=None)	todo		
+Lib/difflib.py	833	872	Differ.compare	compare(self, a, b)	todo		
+Lib/difflib.py	874	877	Differ._dump	_dump(self, tag, x, lo, hi)	todo		
+Lib/difflib.py	879	891	Differ._plain_replace	_plain_replace(self, a, alo, ahi, b, blo, bhi)	todo		
+Lib/difflib.py	893	983	Differ._fancy_replace	_fancy_replace(self, a, alo, ahi, b, blo, bhi)	todo		
+Lib/difflib.py	985	995	Differ._fancy_helper	_fancy_helper(self, a, alo, ahi, b, blo, bhi)	todo		
+Lib/difflib.py	997	1022	Differ._qformat	_qformat(self, aline, bline, atags, btags)	todo		
+Lib/difflib.py	1041	1060	IS_LINE_JUNK	IS_LINE_JUNK(line, pat=None)	todo		
+Lib/difflib.py	1062	1078	IS_CHARACTER_JUNK	IS_CHARACTER_JUNK(ch, ws=' \\t')	todo		
+Lib/difflib.py	1085	1094	_format_range_unified	_format_range_unified(start, stop)	todo		
+Lib/difflib.py	1096	1162	unified_diff	unified_diff(a, b, fromfile='', tofile='', fromfiledate='', tofiledate='', n=3, lineterm='\\n')	todo		
+Lib/difflib.py	1169	1178	_format_range_context	_format_range_context(start, stop)	todo		
+Lib/difflib.py	1181	1255	context_diff	context_diff(a, b, fromfile='', tofile='', fromfiledate='', tofiledate='', n=3, lineterm='\\n')	todo		
+Lib/difflib.py	1257	1278	_check_types	_check_types(a, b, *args)	todo		
+Lib/difflib.py	1280	1308	diff_bytes	diff_bytes(dfunc, a, b, fromfile=b'', tofile=b'', fromfiledate=b'', tofiledate=b'', n=3, lineterm=b'\\n')	todo		
+Lib/difflib.py	1310	1345	ndiff	ndiff(a, b, linejunk=None, charjunk=IS_CHARACTER_JUNK)	todo		
+Lib/difflib.py	1347	1614	_mdiff	_mdiff(fromlines, tolines, context=None, linejunk=None, charjunk=IS_CHARACTER_JUNK)	todo		
+Lib/difflib.py	1704	1719	HtmlDiff.__init__	__init__(self, tabsize=8, wrapcolumn=None, linejunk=None, charjunk=IS_CHARACTER_JUNK)	todo		
+Lib/difflib.py	1721	1746	HtmlDiff.make_file	make_file(self, fromlines, tolines, fromdesc='', todesc='', context=False, numlines=5, *, charset='utf-8')	todo		
+Lib/difflib.py	1748	1769	HtmlDiff._tab_newline_replace	_tab_newline_replace(self, fromlines, tolines)	todo		
+Lib/difflib.py	1771	1824	HtmlDiff._split_line	_split_line(self, data_list, line_num, text)	todo		
+Lib/difflib.py	1826	1852	HtmlDiff._line_wrapper	_line_wrapper(self, diffs)	todo		
+Lib/difflib.py	1854	1873	HtmlDiff._collect_lines	_collect_lines(self, diffs)	todo		
+Lib/difflib.py	1875	1896	HtmlDiff._format_line	_format_line(self, side, flag, linenum, text)	todo		
+Lib/difflib.py	1898	1907	HtmlDiff._make_prefix	_make_prefix(self)	todo		
+Lib/difflib.py	1909	1954	HtmlDiff._convert_flags	_convert_flags(self, fromlist, tolist, flaglist, context, numlines)	todo		
+Lib/difflib.py	1956	2033	HtmlDiff.make_table	make_table(self, fromlines, tolines, fromdesc='', todesc='', context=False, numlines=5)	todo		
+Lib/difflib.py	2036	2066	restore	restore(delta, which)	todo		

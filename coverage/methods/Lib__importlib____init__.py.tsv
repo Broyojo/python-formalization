@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Lib/importlib/__init__.py	63	68	invalidate_caches	invalidate_caches()	todo		
+Lib/importlib/__init__.py	71	88	import_module	import_module(name, package=None)	todo		
+Lib/importlib/__init__.py	94	136	reload	reload(module)	todo		

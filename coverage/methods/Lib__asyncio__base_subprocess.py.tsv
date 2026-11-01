@@ -1,0 +1,34 @@
+file	line	endline	name	signature	status	entry	note
+Lib/asyncio/base_subprocess.py	15	56	BaseSubprocessTransport.__init__	__init__(self, loop, protocol, args, shell, stdin, stdout, stderr, bufsize, waiter=None, extra=None, **kwargs)	todo		
+Lib/asyncio/base_subprocess.py	58	85	BaseSubprocessTransport.__repr__	__repr__(self)	todo		
+Lib/asyncio/base_subprocess.py	87	88	BaseSubprocessTransport._start	_start(self, args, shell, stdin, stdout, stderr, bufsize, **kwargs)	todo		
+Lib/asyncio/base_subprocess.py	90	91	BaseSubprocessTransport.set_protocol	set_protocol(self, protocol)	todo		
+Lib/asyncio/base_subprocess.py	93	94	BaseSubprocessTransport.get_protocol	get_protocol(self)	todo		
+Lib/asyncio/base_subprocess.py	96	97	BaseSubprocessTransport.is_closing	is_closing(self)	todo		
+Lib/asyncio/base_subprocess.py	99	128	BaseSubprocessTransport.close	close(self)	todo		
+Lib/asyncio/base_subprocess.py	132	135	BaseSubprocessTransport.__del__	__del__(self, _warn=warnings.warn)	todo		
+Lib/asyncio/base_subprocess.py	137	138	BaseSubprocessTransport.get_pid	get_pid(self)	todo		
+Lib/asyncio/base_subprocess.py	140	141	BaseSubprocessTransport.get_returncode	get_returncode(self)	todo		
+Lib/asyncio/base_subprocess.py	143	147	BaseSubprocessTransport.get_pipe_transport	get_pipe_transport(self, fd)	todo		
+Lib/asyncio/base_subprocess.py	149	151	BaseSubprocessTransport._check_proc	_check_proc(self)	todo		
+Lib/asyncio/base_subprocess.py	154	156	BaseSubprocessTransport.send_signal	send_signal(self, signal)	todo		
+Lib/asyncio/base_subprocess.py	158	160	BaseSubprocessTransport.terminate	terminate(self)	todo		
+Lib/asyncio/base_subprocess.py	162	164	BaseSubprocessTransport.kill	kill(self)	todo		
+Lib/asyncio/base_subprocess.py	166	174	BaseSubprocessTransport.send_signal	send_signal(self, signal)	todo		
+Lib/asyncio/base_subprocess.py	176	177	BaseSubprocessTransport.terminate	terminate(self)	todo		
+Lib/asyncio/base_subprocess.py	179	180	BaseSubprocessTransport.kill	kill(self)	todo		
+Lib/asyncio/base_subprocess.py	182	226	BaseSubprocessTransport._connect_pipes	_connect_pipes(self, waiter)	todo		
+Lib/asyncio/base_subprocess.py	228	232	BaseSubprocessTransport._call	_call(self, cb, *data)	todo		
+Lib/asyncio/base_subprocess.py	234	236	BaseSubprocessTransport._pipe_connection_lost	_pipe_connection_lost(self, fd, exc)	todo		
+Lib/asyncio/base_subprocess.py	238	239	BaseSubprocessTransport._pipe_data_received	_pipe_data_received(self, fd, data)	todo		
+Lib/asyncio/base_subprocess.py	241	261	BaseSubprocessTransport._process_exited	_process_exited(self, returncode)	todo		
+Lib/asyncio/base_subprocess.py	263	276	BaseSubprocessTransport._wait	_wait(self)	todo		
+Lib/asyncio/base_subprocess.py	278	286	BaseSubprocessTransport._try_finish	_try_finish(self)	todo		
+Lib/asyncio/base_subprocess.py	288	294	BaseSubprocessTransport._call_connection_lost	_call_connection_lost(self, exc)	todo		
+Lib/asyncio/base_subprocess.py	299	303	WriteSubprocessPipeProto.__init__	__init__(self, proc, fd)	todo		
+Lib/asyncio/base_subprocess.py	305	306	WriteSubprocessPipeProto.connection_made	connection_made(self, transport)	todo		
+Lib/asyncio/base_subprocess.py	308	309	WriteSubprocessPipeProto.__repr__	__repr__(self)	todo		
+Lib/asyncio/base_subprocess.py	311	314	WriteSubprocessPipeProto.connection_lost	connection_lost(self, exc)	todo		
+Lib/asyncio/base_subprocess.py	316	317	WriteSubprocessPipeProto.pause_writing	pause_writing(self)	todo		
+Lib/asyncio/base_subprocess.py	319	320	WriteSubprocessPipeProto.resume_writing	resume_writing(self)	todo		
+Lib/asyncio/base_subprocess.py	326	327	ReadSubprocessPipeProto.data_received	data_received(self, data)	todo		

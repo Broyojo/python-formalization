@@ -1,0 +1,52 @@
+file	line	endline	name	signature	status	entry	note
+Modules/timemodule.c	91	96	get_time_state	get_time_state(PyObject *module)	todo		
+Modules/timemodule.c	100	104	_PyFloat_FromPyTime	_PyFloat_FromPyTime(PyTime_t t)	todo		
+Modules/timemodule.c	108	115	time_time	time_time(PyObject *self, PyObject *unused)	todo		
+Modules/timemodule.c	125	132	time_time_ns	time_time_ns(PyObject *self, PyObject *unused)	todo		
+Modules/timemodule.c	150	170	py_clock	py_clock(time_module_state *state, PyTime_t *tp, _Py_clock_info_t *info)	todo		
+Modules/timemodule.c	186	206	time_clockid_converter	time_clockid_converter(PyObject *obj, clockid_t *p)	todo		
+Modules/timemodule.c	228	238	time_clock_gettime_impl	time_clock_gettime_impl(PyObject *module, clockid_t clk_id) /*[clinic end generated code: output=832b9ebc03328020 input=7e89fcc42ca15e5d]*/	todo		
+Modules/timemodule.c	250	265	time_clock_gettime_ns_impl	time_clock_gettime_ns_impl(PyObject *module, clockid_t clk_id) /*[clinic end generated code: output=4a045c3a36e60044 input=aabc248db8c8e3e5]*/	todo		
+Modules/timemodule.c	270	293	time_clock_settime	time_clock_settime(PyObject *self, PyObject *args)	todo		
+Modules/timemodule.c	301	326	time_clock_settime_ns	time_clock_settime_ns(PyObject *self, PyObject *args)	todo		
+Modules/timemodule.c	336	352	time_clock_getres	time_clock_getres(PyObject *self, PyObject *args)	todo		
+Modules/timemodule.c	367	385	time_pthread_getcpuclockid	time_pthread_getcpuclockid(PyObject *self, PyObject *args)	todo		
+Modules/timemodule.c	394	412	time_sleep	time_sleep(PyObject *self, PyObject *timeout_obj)	todo		
+Modules/timemodule.c	508	524	parse_time_t_args	parse_time_t_args(PyObject *args, const char *format, time_t *pwhen)	todo		
+Modules/timemodule.c	527	545	time_gmtime	time_gmtime(PyObject *module, PyObject *args)	todo		
+Modules/timemodule.c	549	557	timegm	timegm(struct tm *p)	todo		
+Modules/timemodule.c	571	594	time_localtime	time_localtime(PyObject *module, PyObject *args)	todo		
+Modules/timemodule.c	611	672	gettmarg	gettmarg(time_module_state *state, PyObject *args, struct tm *p, const char *format)	todo		
+Modules/timemodule.c	679	742	checktm	checktm(struct tm* buf)	todo		
+Modules/timemodule.c	784	867	time_strftime1	time_strftime1(time_char **outbuf, size_t *bufsize, time_char *format, size_t fmtlen, struct tm *tm)	todo		
+Modules/timemodule.c	870	976	time_strftime	time_strftime(PyObject *module, PyObject *args)	todo		
+Modules/timemodule.c	990	1002	time_strptime	time_strptime(PyObject *self, PyObject *args)	todo		
+Modules/timemodule.c	1014	1032	_asctime	_asctime(struct tm *timeptr)	todo		
+Modules/timemodule.c	1035	1056	time_asctime	time_asctime(PyObject *module, PyObject *args)	todo		
+Modules/timemodule.c	1066	1075	time_ctime	time_ctime(PyObject *self, PyObject *args)	todo		
+Modules/timemodule.c	1086	1153	time_mktime	time_mktime(PyObject *module, PyObject *tm_tuple)	todo		
+Modules/timemodule.c	1168	1190	time_tzset	time_tzset(PyObject *self, PyObject *unused)	todo		
+Modules/timemodule.c	1208	1215	time_monotonic	time_monotonic(PyObject *self, PyObject *unused)	todo		
+Modules/timemodule.c	1223	1230	time_monotonic_ns	time_monotonic_ns(PyObject *self, PyObject *unused)	todo		
+Modules/timemodule.c	1239	1246	time_perf_counter	time_perf_counter(PyObject *self, PyObject *unused)	todo		
+Modules/timemodule.c	1255	1262	time_perf_counter_ns	time_perf_counter_ns(PyObject *self, PyObject *unused)	todo		
+Modules/timemodule.c	1273	1295	process_time_times	process_time_times(time_module_state *state, PyTime_t *tp, _Py_clock_info_t *info)	todo		
+Modules/timemodule.c	1300	1424	py_process_time	py_process_time(time_module_state *state, PyTime_t *tp, _Py_clock_info_t *info)	todo		
+Modules/timemodule.c	1427	1435	time_process_time	time_process_time(PyObject *module, PyObject *unused)	todo		
+Modules/timemodule.c	1443	1451	time_process_time_ns	time_process_time_ns(PyObject *module, PyObject *unused)	todo		
+Modules/timemodule.c	1463	1497	_PyTime_GetThreadTimeWithInfo	_PyTime_GetThreadTimeWithInfo(PyTime_t *tp, _Py_clock_info_t *info)	todo		
+Modules/timemodule.c	1502	1521	_PyTime_GetThreadTimeWithInfo	_PyTime_GetThreadTimeWithInfo(PyTime_t *tp, _Py_clock_info_t *info)	todo		
+Modules/timemodule.c	1526	1538	_PyTime_GetThreadTimeWithInfo	_PyTime_GetThreadTimeWithInfo(PyTime_t *tp, _Py_clock_info_t *info)	todo		
+Modules/timemodule.c	1562	1588	_PyTime_GetThreadTimeWithInfo	_PyTime_GetThreadTimeWithInfo(PyTime_t *tp, _Py_clock_info_t *info)	todo		
+Modules/timemodule.c	1602	1609	time_thread_time	time_thread_time(PyObject *self, PyObject *unused)	todo		
+Modules/timemodule.c	1617	1624	time_thread_time_ns	time_thread_time_ns(PyObject *self, PyObject *unused)	todo		
+Modules/timemodule.c	1640	1760	time_get_clock_info	time_get_clock_info(PyObject *module, PyObject *args)	todo		
+Modules/timemodule.c	1769	1777	get_zone	get_zone(char *zone, int n, struct tm *p)	todo		
+Modules/timemodule.c	1780	1787	get_gmtoff	get_gmtoff(time_t t, struct tm *p)	todo		
+Modules/timemodule.c	1791	1797	init_timezone	init_timezone(PyObject *m)	todo		
+Modules/timemodule.c	1987	2168	time_exec	time_exec(PyObject *module)	todo		
+Modules/timemodule.c	2172	2177	time_module_traverse	time_module_traverse(PyObject *module, visitproc visit, void *arg)	todo		
+Modules/timemodule.c	2181	2186	time_module_clear	time_module_clear(PyObject *module)	todo		
+Modules/timemodule.c	2190	2193	time_module_free	time_module_free(void *module)	todo		
+Modules/timemodule.c	2216	2219	PyInit_time	PyInit_time(void)	todo		
+Modules/timemodule.c	2226	2405	pysleep	pysleep(PyTime_t timeout)	todo		

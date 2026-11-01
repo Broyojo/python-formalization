@@ -1,0 +1,8 @@
+file	line	endline	name	signature	status	entry	note
+Lib/encodings/uu_codec.py	16	35	uu_encode	uu_encode(input, errors='strict', filename='<data>', mode=438)	todo		
+Lib/encodings/uu_codec.py	37	68	uu_decode	uu_decode(input, errors='strict')	todo		
+Lib/encodings/uu_codec.py	71	72	Codec.encode	encode(self, input, errors='strict')	todo		
+Lib/encodings/uu_codec.py	74	75	Codec.decode	decode(self, input, errors='strict')	todo		
+Lib/encodings/uu_codec.py	78	79	IncrementalEncoder.encode	encode(self, input, final=False)	todo		
+Lib/encodings/uu_codec.py	82	83	IncrementalDecoder.decode	decode(self, input, final=False)	todo		
+Lib/encodings/uu_codec.py	93	103	getregentry	getregentry()	todo		

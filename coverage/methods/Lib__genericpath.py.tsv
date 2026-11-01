@@ -1,0 +1,20 @@
+file	line	endline	name	signature	status	entry	note
+Lib/genericpath.py	16	22	exists	exists(path)	todo		
+Lib/genericpath.py	26	32	lexists	lexists(path)	todo		
+Lib/genericpath.py	36	42	isfile	isfile(path)	todo		
+Lib/genericpath.py	48	54	isdir	isdir(s)	todo		
+Lib/genericpath.py	60	66	islink	islink(path)	todo		
+Lib/genericpath.py	70	74	isjunction	isjunction(path)	todo		
+Lib/genericpath.py	77	81	isdevdrive	isdevdrive(path)	todo		
+Lib/genericpath.py	84	86	getsize	getsize(filename)	todo		
+Lib/genericpath.py	89	91	getmtime	getmtime(filename)	todo		
+Lib/genericpath.py	94	96	getatime	getatime(filename)	todo		
+Lib/genericpath.py	99	101	getctime	getctime(filename)	todo		
+Lib/genericpath.py	105	119	commonprefix	commonprefix(m)	todo		
+Lib/genericpath.py	123	126	samestat	samestat(s1, s2)	todo		
+Lib/genericpath.py	130	138	samefile	samefile(f1, f2)	todo		
+Lib/genericpath.py	143	147	sameopenfile	sameopenfile(fp1, fp2)	todo		
+Lib/genericpath.py	157	178	_splitext	_splitext(p, sep, altsep, extsep)	todo		
+Lib/genericpath.py	180	191	_check_arg_types	_check_arg_types(funcname, *args)	todo		
+Lib/genericpath.py	197	198	ALLOW_MISSING.__repr__	__repr__(self)	todo		
+Lib/genericpath.py	199	200	ALLOW_MISSING.__reduce__	__reduce__(self)	todo		

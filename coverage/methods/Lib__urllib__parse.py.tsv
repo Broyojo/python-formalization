@@ -1,0 +1,75 @@
+file	line	endline	name	signature	status	entry	note
+Lib/urllib/parse.py	94	97	clear_cache	clear_cache()	todo		
+Lib/urllib/parse.py	108	109	_noop	_noop(obj)	todo		
+Lib/urllib/parse.py	111	113	_encode_result	_encode_result(obj, encoding=_implicit_encoding, errors=_implicit_errors)	todo		
+Lib/urllib/parse.py	115	117	_decode_args	_decode_args(args, encoding=_implicit_encoding, errors=_implicit_errors)	todo		
+Lib/urllib/parse.py	119	133	_coerce_args	_coerce_args(*args)	todo		
+Lib/urllib/parse.py	140	141	_ResultMixinStr.encode	encode(self, encoding='ascii', errors='strict')	todo		
+Lib/urllib/parse.py	148	149	_ResultMixinBytes.decode	decode(self, encoding='ascii', errors='strict')	todo		
+Lib/urllib/parse.py	157	158	_NetlocResultMixinBase.username	username(self)	todo		
+Lib/urllib/parse.py	161	162	_NetlocResultMixinBase.password	password(self)	todo		
+Lib/urllib/parse.py	165	173	_NetlocResultMixinBase.hostname	hostname(self)	todo		
+Lib/urllib/parse.py	176	185	_NetlocResultMixinBase.port	port(self)	todo		
+Lib/urllib/parse.py	194	203	_NetlocResultMixinStr._userinfo	_userinfo(self)	todo		
+Lib/urllib/parse.py	206	217	_NetlocResultMixinStr._hostinfo	_hostinfo(self)	todo		
+Lib/urllib/parse.py	224	233	_NetlocResultMixinBytes._userinfo	_userinfo(self)	todo		
+Lib/urllib/parse.py	236	247	_NetlocResultMixinBytes._hostinfo	_hostinfo(self)	todo		
+Lib/urllib/parse.py	325	329	DefragResult.geturl	geturl(self)	todo		
+Lib/urllib/parse.py	333	334	SplitResult.geturl	geturl(self)	todo		
+Lib/urllib/parse.py	338	339	ParseResult.geturl	geturl(self)	todo		
+Lib/urllib/parse.py	344	348	DefragResultBytes.geturl	geturl(self)	todo		
+Lib/urllib/parse.py	352	353	SplitResultBytes.geturl	geturl(self)	todo		
+Lib/urllib/parse.py	357	358	ParseResultBytes.geturl	geturl(self)	todo		
+Lib/urllib/parse.py	361	369	_fix_result_transcoding	_fix_result_transcoding()	todo		
+Lib/urllib/parse.py	374	399	urlparse	urlparse(url, scheme='', allow_fragments=True)	todo		
+Lib/urllib/parse.py	401	407	_urlparse	_urlparse(url, scheme=None, allow_fragments=True)	todo		
+Lib/urllib/parse.py	409	416	_splitparams	_splitparams(url, allow_none=False)	todo		
+Lib/urllib/parse.py	418	424	_splitnetloc	_splitnetloc(url, start=0)	todo		
+Lib/urllib/parse.py	426	442	_checknetloc	_checknetloc(netloc)	todo		
+Lib/urllib/parse.py	444	459	_check_bracketed_netloc	_check_bracketed_netloc(netloc)	todo		
+Lib/urllib/parse.py	463	470	_check_bracketed_host	_check_bracketed_host(hostname)	todo		
+Lib/urllib/parse.py	475	499	urlsplit	urlsplit(url, scheme='', allow_fragments=True)	todo		
+Lib/urllib/parse.py	501	533	_urlsplit	_urlsplit(url, scheme=None, allow_fragments=True)	todo		
+Lib/urllib/parse.py	535	550	urlunparse	urlunparse(components)	todo		
+Lib/urllib/parse.py	552	566	urlunsplit	urlunsplit(components)	todo		
+Lib/urllib/parse.py	568	580	_urlunsplit	_urlunsplit(scheme, netloc, url, query, fragment)	todo		
+Lib/urllib/parse.py	582	651	urljoin	urljoin(base, url, allow_fragments=True)	todo		
+Lib/urllib/parse.py	654	668	urldefrag	urldefrag(url)	todo		
+Lib/urllib/parse.py	673	675	unquote_to_bytes	unquote_to_bytes(string)	todo		
+Lib/urllib/parse.py	677	704	_unquote_impl	_unquote_impl(string: bytes | bytearray | str)	todo		
+Lib/urllib/parse.py	708	716	_generate_unquoted_parts	_generate_unquoted_parts(string, encoding, errors)	todo		
+Lib/urllib/parse.py	718	738	unquote	unquote(string, encoding='utf-8', errors='replace')	todo		
+Lib/urllib/parse.py	741	781	parse_qs	parse_qs(qs, keep_blank_values=False, strict_parsing=False, encoding='utf-8', errors='replace', max_num_fields=None, separator='&')	todo		
+Lib/urllib/parse.py	784	863	parse_qsl	parse_qsl(qs, keep_blank_values=False, strict_parsing=False, encoding='utf-8', errors='replace', max_num_fields=None, separator='&', *, _stacklevel=1)	todo		
+Lib/urllib/parse.py	865	872	unquote_plus	unquote_plus(string, encoding='utf-8', errors='replace')	todo		
+Lib/urllib/parse.py	889	891	_Quoter.__init__	__init__(self, safe)	todo		
+Lib/urllib/parse.py	893	894	_Quoter.__repr__	__repr__(self)	todo		
+Lib/urllib/parse.py	896	900	_Quoter.__missing__	__missing__(self, b)	todo		
+Lib/urllib/parse.py	902	954	quote	quote(string, safe='/', encoding=None, errors=None)	todo		
+Lib/urllib/parse.py	956	971	quote_plus	quote_plus(string, safe='', encoding=None, errors=None)	todo		
+Lib/urllib/parse.py	975	976	_byte_quoter_factory	_byte_quoter_factory(safe)	todo		
+Lib/urllib/parse.py	978	1003	quote_from_bytes	quote_from_bytes(bs, safe='/')	todo		
+Lib/urllib/parse.py	1005	1082	urlencode	urlencode(query, doseq=False, safe='', encoding=None, errors=None, quote_via=quote_plus)	todo		
+Lib/urllib/parse.py	1085	1088	to_bytes	to_bytes(url)	todo		
+Lib/urllib/parse.py	1091	1102	_to_bytes	_to_bytes(url)	todo		
+Lib/urllib/parse.py	1105	1115	unwrap	unwrap(url)	todo		
+Lib/urllib/parse.py	1118	1122	splittype	splittype(url)	todo		
+Lib/urllib/parse.py	1126	1136	_splittype	_splittype(url)	todo		
+Lib/urllib/parse.py	1139	1143	splithost	splithost(url)	todo		
+Lib/urllib/parse.py	1147	1159	_splithost	_splithost(url)	todo		
+Lib/urllib/parse.py	1162	1166	splituser	splituser(host)	todo		
+Lib/urllib/parse.py	1169	1172	_splituser	_splituser(host)	todo		
+Lib/urllib/parse.py	1175	1179	splitpasswd	splitpasswd(user)	todo		
+Lib/urllib/parse.py	1182	1185	_splitpasswd	_splitpasswd(user)	todo		
+Lib/urllib/parse.py	1188	1192	splitport	splitport(host)	todo		
+Lib/urllib/parse.py	1197	1208	_splitport	_splitport(host)	todo		
+Lib/urllib/parse.py	1211	1215	splitnport	splitnport(host, defport=-1)	todo		
+Lib/urllib/parse.py	1218	1232	_splitnport	_splitnport(host, defport=-1)	todo		
+Lib/urllib/parse.py	1235	1239	splitquery	splitquery(url)	todo		
+Lib/urllib/parse.py	1242	1247	_splitquery	_splitquery(url)	todo		
+Lib/urllib/parse.py	1250	1254	splittag	splittag(url)	todo		
+Lib/urllib/parse.py	1257	1262	_splittag	_splittag(url)	todo		
+Lib/urllib/parse.py	1265	1269	splitattr	splitattr(url)	todo		
+Lib/urllib/parse.py	1272	1276	_splitattr	_splitattr(url)	todo		
+Lib/urllib/parse.py	1279	1283	splitvalue	splitvalue(attr)	todo		
+Lib/urllib/parse.py	1286	1289	_splitvalue	_splitvalue(attr)	todo		

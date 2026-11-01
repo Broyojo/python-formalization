@@ -1,0 +1,31 @@
+file	line	endline	name	signature	status	entry	note
+Python/preconfig.c	26	39	_Py_ClearFileSystemEncoding	_Py_ClearFileSystemEncoding(void)	todo		
+Python/preconfig.c	48	72	_Py_SetFileSystemEncoding	_Py_SetFileSystemEncoding(const char *encoding, const char *errors)	todo		
+Python/preconfig.c	79	111	_PyArgv_AsWstrList	_PyArgv_AsWstrList(const _PyArgv *args, PyWideStringList *list)	todo		
+Python/preconfig.c	117	121	_PyPreCmdline_Clear	_PyPreCmdline_Clear(_PyPreCmdline *cmdline)	todo		
+Python/preconfig.c	125	128	_PyPreCmdline_SetArgv	_PyPreCmdline_SetArgv(_PyPreCmdline *cmdline, const _PyArgv *args)	todo		
+Python/preconfig.c	132	144	precmdline_get_preconfig	precmdline_get_preconfig(_PyPreCmdline *cmdline, const PyPreConfig *config)	todo		
+Python/preconfig.c	148	158	precmdline_set_preconfig	precmdline_set_preconfig(const _PyPreCmdline *cmdline, PyPreConfig *config)	todo		
+Python/preconfig.c	162	179	_PyPreCmdline_SetConfig	_PyPreCmdline_SetConfig(const _PyPreCmdline *cmdline, PyConfig *config)	todo		
+Python/preconfig.c	184	227	precmdline_parse_cmdline	precmdline_parse_cmdline(_PyPreCmdline *cmdline)	todo		
+Python/preconfig.c	231	277	_PyPreCmdline_Read	_PyPreCmdline_Read(_PyPreCmdline *cmdline, const PyPreConfig *preconfig)	todo		
+Python/preconfig.c	284	308	_PyPreConfig_InitCompatConfig	_PyPreConfig_InitCompatConfig(PyPreConfig *config)	todo		
+Python/preconfig.c	312	329	PyPreConfig_InitPythonConfig	PyPreConfig_InitPythonConfig(PyPreConfig *config)	todo		
+Python/preconfig.c	333	346	PyPreConfig_InitIsolatedConfig	PyPreConfig_InitIsolatedConfig(PyPreConfig *config)	todo		
+Python/preconfig.c	350	356	_PyPreConfig_InitFromPreConfig	_PyPreConfig_InitFromPreConfig(PyPreConfig *config, const PyPreConfig *config2)	todo		
+Python/preconfig.c	360	376	_PyPreConfig_InitFromConfig	_PyPreConfig_InitFromConfig(PyPreConfig *preconfig, const PyConfig *config)	todo		
+Python/preconfig.c	380	399	preconfig_copy	preconfig_copy(PyPreConfig *config, const PyPreConfig *config2)	todo		
+Python/preconfig.c	403	445	_PyPreConfig_AsDict	_PyPreConfig_AsDict(const PyPreConfig *config)	todo		
+Python/preconfig.c	449	462	_PyPreConfig_GetConfig	_PyPreConfig_GetConfig(PyPreConfig *preconfig, const PyConfig *config)	todo		
+Python/preconfig.c	466	496	preconfig_get_global_vars	preconfig_get_global_vars(PyPreConfig *config)	todo		
+Python/preconfig.c	500	523	preconfig_set_global_vars	preconfig_set_global_vars(const PyPreConfig *config)	todo		
+Python/preconfig.c	527	542	_Py_GetEnv	_Py_GetEnv(int use_environment, const char *name)	todo		
+Python/preconfig.c	546	560	_Py_str_to_int	_Py_str_to_int(const char *str, int *result)	todo		
+Python/preconfig.c	564	578	_Py_get_env_flag	_Py_get_env_flag(int use_environment, int *flag, const char *name)	todo		
+Python/preconfig.c	582	599	_Py_get_xoption	_Py_get_xoption(const PyWideStringList *xoptions, const wchar_t *name)	todo		
+Python/preconfig.c	603	670	preconfig_init_utf8_mode	preconfig_init_utf8_mode(PyPreConfig *config, const _PyPreCmdline *cmdline)	todo		
+Python/preconfig.c	674	717	preconfig_init_coerce_c_locale	preconfig_init_coerce_c_locale(PyPreConfig *config)	todo		
+Python/preconfig.c	721	742	preconfig_init_allocator	preconfig_init_allocator(PyPreConfig *config)	todo		
+Python/preconfig.c	746	788	preconfig_read	preconfig_read(PyPreConfig *config, _PyPreCmdline *cmdline)	todo		
+Python/preconfig.c	798	922	_PyPreConfig_Read	_PyPreConfig_Read(PyPreConfig *config, const _PyArgv *args)	todo		
+Python/preconfig.c	938	978	_PyPreConfig_Write	_PyPreConfig_Write(const PyPreConfig *src_config)	todo		

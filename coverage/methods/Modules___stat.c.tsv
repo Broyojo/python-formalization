@@ -1,0 +1,9 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_stat.c	293	320	_PyLong_AsMode_t	_PyLong_AsMode_t(PyObject *op)	todo		
+Modules/_stat.c	379	385	stat_S_IMODE	stat_S_IMODE(PyObject *self, PyObject *omode)	todo		
+Modules/_stat.c	392	398	stat_S_IFMT	stat_S_IFMT(PyObject *self, PyObject *omode)	todo		
+Modules/_stat.c	404	421	filetype	filetype(mode_t mode)	todo		
+Modules/_stat.c	424	447	fileperm	fileperm(mode_t mode, char *buf)	todo		
+Modules/_stat.c	453	465	stat_filemode	stat_filemode(PyObject *self, PyObject *omode)	todo		
+Modules/_stat.c	564	688	stat_exec	stat_exec(PyObject *module)	todo		
+Modules/_stat.c	710	713	PyInit__stat	PyInit__stat(void)	todo		

@@ -1,0 +1,25 @@
+file	line	endline	name	signature	status	entry	note
+Lib/unittest/result.py	12	18	failfast	failfast(method)	todo		
+Lib/unittest/result.py	38	54	TestResult.__init__	__init__(self, stream=None, descriptions=None, verbosity=None)	todo		
+Lib/unittest/result.py	56	57	TestResult.printErrors	printErrors(self)	todo		
+Lib/unittest/result.py	59	63	TestResult.startTest	startTest(self, test)	todo		
+Lib/unittest/result.py	65	71	TestResult._setupStdout	_setupStdout(self)	todo		
+Lib/unittest/result.py	73	77	TestResult.startTestRun	startTestRun(self)	todo		
+Lib/unittest/result.py	79	82	TestResult.stopTest	stopTest(self, test)	todo		
+Lib/unittest/result.py	84	103	TestResult._restoreStdout	_restoreStdout(self)	todo		
+Lib/unittest/result.py	105	109	TestResult.stopTestRun	stopTestRun(self)	todo		
+Lib/unittest/result.py	112	117	TestResult.addError	addError(self, test, err)	todo		
+Lib/unittest/result.py	120	124	TestResult.addFailure	addFailure(self, test, err)	todo		
+Lib/unittest/result.py	126	141	TestResult.addSubTest	addSubTest(self, test, subtest, err)	todo		
+Lib/unittest/result.py	143	145	TestResult.addSuccess	addSuccess(self, test)	todo		
+Lib/unittest/result.py	147	149	TestResult.addSkip	addSkip(self, test, reason)	todo		
+Lib/unittest/result.py	151	154	TestResult.addExpectedFailure	addExpectedFailure(self, test, err)	todo		
+Lib/unittest/result.py	157	159	TestResult.addUnexpectedSuccess	addUnexpectedSuccess(self, test)	todo		
+Lib/unittest/result.py	161	170	TestResult.addDuration	addDuration(self, test, elapsed)	todo		
+Lib/unittest/result.py	172	179	TestResult.wasSuccessful	wasSuccessful(self)	todo		
+Lib/unittest/result.py	181	183	TestResult.stop	stop(self)	todo		
+Lib/unittest/result.py	185	208	TestResult._exc_info_to_string	_exc_info_to_string(self, err, test)	todo		
+Lib/unittest/result.py	210	236	TestResult._clean_tracebacks	_clean_tracebacks(self, exctype, value, tb, test)	todo		
+Lib/unittest/result.py	238	239	TestResult._is_relevant_tb_level	_is_relevant_tb_level(self, tb)	todo		
+Lib/unittest/result.py	241	254	TestResult._remove_unittest_tb_frames	_remove_unittest_tb_frames(self, tb)	todo		
+Lib/unittest/result.py	256	259	TestResult.__repr__	__repr__(self)	todo		

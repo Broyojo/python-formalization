@@ -1,0 +1,8 @@
+file	line	endline	name	signature	status	entry	note
+Lib/codeop.py	50	75	_maybe_compile	_maybe_compile(compiler, source, filename, symbol, flags)	todo		
+Lib/codeop.py	77	81	_compile	_compile(source, filename, symbol, incomplete_input=True, *, flags=0)	todo		
+Lib/codeop.py	83	102	compile_command	compile_command(source, filename='<input>', symbol='single', flags=0)	todo		
+Lib/codeop.py	109	110	Compile.__init__	__init__(self)	todo		
+Lib/codeop.py	112	123	Compile.__call__	__call__(self, source, filename, symbol, flags=0, **kwargs)	todo		
+Lib/codeop.py	132	133	CommandCompiler.__init__	__init__(self)	todo		
+Lib/codeop.py	135	154	CommandCompiler.__call__	__call__(self, source, filename='<input>', symbol='single')	todo		

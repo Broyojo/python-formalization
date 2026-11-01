@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testinternalcapi/complex.c	59	66	_PyTestInternalCapi_Init_Complex	_PyTestInternalCapi_Init_Complex(PyObject *mod)	excluded		test-support: only for CPython's own tests

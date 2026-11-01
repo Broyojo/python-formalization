@@ -1,0 +1,3 @@
+file	line	endline	name	signature	status	entry	note
+Python/getopt.c	52	58	_PyOS_ResetGetOpt	void _PyOS_ResetGetOpt(void)	todo		
+Python/getopt.c	60	163	_PyOS_GetOpt	int _PyOS_GetOpt(Py_ssize_t argc, wchar_t * const *argv, int *longindex)	todo		

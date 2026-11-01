@@ -1,0 +1,30 @@
+file	line	endline	name	signature	status	entry	note
+Lib/tkinter/filedialog.py	58	120	FileDialog.__init__	__init__(self, master, title=None)	excluded		platform: GUI toolkit
+Lib/tkinter/filedialog.py	122	145	FileDialog.go	go(self, dir_or_file=os.curdir, pattern='*', default='', key=None)	excluded		platform: GUI toolkit
+Lib/tkinter/filedialog.py	147	149	FileDialog.quit	quit(self, how=None)	excluded		platform: GUI toolkit
+Lib/tkinter/filedialog.py	151	152	FileDialog.dirs_double_event	dirs_double_event(self, event)	excluded		platform: GUI toolkit
+Lib/tkinter/filedialog.py	154	158	FileDialog.dirs_select_event	dirs_select_event(self, event)	excluded		platform: GUI toolkit
+Lib/tkinter/filedialog.py	160	161	FileDialog.files_double_event	files_double_event(self, event)	excluded		platform: GUI toolkit
+Lib/tkinter/filedialog.py	163	165	FileDialog.files_select_event	files_select_event(self, event)	excluded		platform: GUI toolkit
+Lib/tkinter/filedialog.py	167	168	FileDialog.ok_event	ok_event(self, event)	excluded		platform: GUI toolkit
+Lib/tkinter/filedialog.py	170	171	FileDialog.ok_command	ok_command(self)	excluded		platform: GUI toolkit
+Lib/tkinter/filedialog.py	173	199	FileDialog.filter_command	filter_command(self, event=None)	excluded		platform: GUI toolkit
+Lib/tkinter/filedialog.py	201	206	FileDialog.get_filter	get_filter(self)	excluded		platform: GUI toolkit
+Lib/tkinter/filedialog.py	208	211	FileDialog.get_selection	get_selection(self)	excluded		platform: GUI toolkit
+Lib/tkinter/filedialog.py	213	214	FileDialog.cancel_command	cancel_command(self, event=None)	excluded		platform: GUI toolkit
+Lib/tkinter/filedialog.py	216	226	FileDialog.set_filter	set_filter(self, dir, pat)	excluded		platform: GUI toolkit
+Lib/tkinter/filedialog.py	228	230	FileDialog.set_selection	set_selection(self, file)	excluded		platform: GUI toolkit
+Lib/tkinter/filedialog.py	239	244	LoadFileDialog.ok_command	ok_command(self)	excluded		platform: GUI toolkit
+Lib/tkinter/filedialog.py	253	272	SaveFileDialog.ok_command	ok_command(self)	excluded		platform: GUI toolkit
+Lib/tkinter/filedialog.py	306	311	_Dialog._fixoptions	_fixoptions(self)	excluded		platform: GUI toolkit
+Lib/tkinter/filedialog.py	313	326	_Dialog._fixresult	_fixresult(self, widget, result)	excluded		platform: GUI toolkit
+Lib/tkinter/filedialog.py	337	349	Open._fixresult	_fixresult(self, widget, result)	excluded		platform: GUI toolkit
+Lib/tkinter/filedialog.py	364	375	Directory._fixresult	_fixresult(self, widget, result)	excluded		platform: GUI toolkit
+Lib/tkinter/filedialog.py	381	384	askopenfilename	askopenfilename(**options)	excluded		platform: GUI toolkit
+Lib/tkinter/filedialog.py	387	390	asksaveasfilename	asksaveasfilename(**options)	excluded		platform: GUI toolkit
+Lib/tkinter/filedialog.py	393	400	askopenfilenames	askopenfilenames(**options)	excluded		platform: GUI toolkit
+Lib/tkinter/filedialog.py	405	411	askopenfile	askopenfile(mode='r', **options)	excluded		platform: GUI toolkit
+Lib/tkinter/filedialog.py	414	428	askopenfiles	askopenfiles(mode='r', **options)	excluded		platform: GUI toolkit
+Lib/tkinter/filedialog.py	431	437	asksaveasfile	asksaveasfile(mode='w', **options)	excluded		platform: GUI toolkit
+Lib/tkinter/filedialog.py	440	442	askdirectory	askdirectory(**options)	excluded		platform: GUI toolkit
+Lib/tkinter/filedialog.py	448	488	test	test()	excluded		platform: GUI toolkit

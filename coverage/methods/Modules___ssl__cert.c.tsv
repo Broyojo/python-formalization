@@ -1,0 +1,11 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_ssl/cert.c	18	36	newCertificate	newCertificate(PyTypeObject *type, X509 *cert, int upref)	excluded		platform: binds an external library
+Modules/_ssl/cert.c	39	42	_PySSL_CertificateFromX509	_PySSL_CertificateFromX509(_sslmodulestate *state, X509 *cert, int upref)	excluded		platform: binds an external library
+Modules/_ssl/cert.c	45	65	_PySSL_CertificateFromX509Stack	_PySSL_CertificateFromX509Stack(_sslmodulestate *state, STACK_OF(X509) *stack, int upref)	excluded		platform: binds an external library
+Modules/_ssl/cert.c	74	115	_ssl_Certificate_public_bytes_impl	_ssl_Certificate_public_bytes_impl(PySSLCertificate *self, int format) /*[clinic end generated code: output=c01ddbb697429e12 input=4d38c45e874b0e64]*/	excluded		platform: binds an external library
+Modules/_ssl/cert.c	124	128	_ssl_Certificate_get_info_impl	_ssl_Certificate_get_info_impl(PySSLCertificate *self) /*[clinic end generated code: output=0f0deaac54f4408b input=ba2c1694b39d0778]*/	excluded		platform: binds an external library
+Modules/_ssl/cert.c	131	150	_x509name_print	_x509name_print(_sslmodulestate *state, X509_NAME *name, int indent, unsigned long flags)	excluded		platform: binds an external library
+Modules/_ssl/cert.c	159	179	certificate_repr	certificate_repr(PyObject *op)	excluded		platform: binds an external library
+Modules/_ssl/cert.c	182	195	certificate_hash	certificate_hash(PyObject *op)	excluded		platform: binds an external library
+Modules/_ssl/cert.c	198	217	certificate_richcompare	certificate_richcompare(PyObject *lhs, PyObject *rhs, int op)	excluded		platform: binds an external library
+Modules/_ssl/cert.c	220	227	certificate_dealloc	certificate_dealloc(PyObject *op)	excluded		platform: binds an external library

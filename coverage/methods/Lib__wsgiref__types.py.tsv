@@ -1,0 +1,11 @@
+file	line	endline	name	signature	status	entry	note
+Lib/wsgiref/types.py	21	27	StartResponse.__call__	__call__(self, status: str, headers: list[tuple[str, str]], exc_info: _OptExcInfo | None=..., /)	todo		
+Lib/wsgiref/types.py	35	35	InputStream.read	read(self, size: int=..., /)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/wsgiref/types.py	36	36	InputStream.readline	readline(self, size: int=..., /)	todo		
+Lib/wsgiref/types.py	37	37	InputStream.readlines	readlines(self, hint: int=..., /)	todo		candidates:pyio-bytesio-readlines-hint-doc
+Lib/wsgiref/types.py	38	38	InputStream.__iter__	__iter__(self)	todo		
+Lib/wsgiref/types.py	42	42	ErrorStream.flush	flush(self)	todo		
+Lib/wsgiref/types.py	43	43	ErrorStream.write	write(self, s: str, /)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/wsgiref/types.py	44	44	ErrorStream.writelines	writelines(self, seq: list[str], /)	todo		
+Lib/wsgiref/types.py	47	47	_Readable.read	read(self, size: int=..., /)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/wsgiref/types.py	52	54	FileWrapper.__call__	__call__(self, file: _Readable, block_size: int=..., /)	todo		

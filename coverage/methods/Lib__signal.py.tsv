@@ -1,0 +1,10 @@
+file	line	endline	name	signature	status	entry	note
+Lib/signal.py	24	33	_int_to_enum	_int_to_enum(value, enum_klass)	todo		
+Lib/signal.py	36	43	_enum_to_int	_enum_to_int(value)	todo		
+Lib/signal.py	50	54	_wraps	_wraps(wrapped)	todo		
+Lib/signal.py	57	59	signal	signal(signalnum, handler)	todo		
+Lib/signal.py	63	65	getsignal	getsignal(signalnum)	todo		
+Lib/signal.py	70	72	pthread_sigmask	pthread_sigmask(how, mask)	todo		
+Lib/signal.py	77	78	sigpending	sigpending()	todo		
+Lib/signal.py	83	85	sigwait	sigwait(sigset)	todo		
+Lib/signal.py	90	91	valid_signals	valid_signals()	todo		

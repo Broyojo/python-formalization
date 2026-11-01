@@ -1,0 +1,81 @@
+file	line	endline	name	signature	status	entry	note
+Python/hamt.c	371	383	_hamt_node_array_validate	_hamt_node_array_validate(void *obj_raw)	todo		
+Python/hamt.c	394	426	hamt_hash	hamt_hash(PyObject *o)	todo		
+Python/hamt.c	429	432	hamt_mask	hamt_mask(int32_t hash, uint32_t shift)	todo		
+Python/hamt.c	435	438	hamt_bitpos	hamt_bitpos(int32_t hash, uint32_t shift)	todo		
+Python/hamt.c	441	444	hamt_bitindex	hamt_bitindex(uint32_t bitmap, uint32_t bit)	todo		
+Python/hamt.c	451	481	_hamt_dump_ident	_hamt_dump_ident(PyUnicodeWriter *writer, int level)	todo		
+Python/hamt.c	490	525	hamt_node_bitmap_new	hamt_node_bitmap_new(Py_ssize_t size)	todo		
+Python/hamt.c	528	531	hamt_node_bitmap_count	hamt_node_bitmap_count(PyHamtNode_Bitmap *node)	todo		
+Python/hamt.c	534	552	hamt_node_bitmap_clone	hamt_node_bitmap_clone(PyHamtNode_Bitmap *node)	todo		
+Python/hamt.c	555	582	hamt_node_bitmap_clone_without	hamt_node_bitmap_clone_without(PyHamtNode_Bitmap *o, uint32_t bit)	todo		
+Python/hamt.c	585	640	hamt_node_new_bitmap_or_collision	hamt_node_new_bitmap_or_collision(uint32_t shift, PyObject *key1, PyObject *val1, int32_t key2_hash, PyObject *key2, PyObject *val2)	todo		
+Python/hamt.c	643	901	hamt_node_bitmap_assoc	hamt_node_bitmap_assoc(PyHamtNode_Bitmap *self, uint32_t shift, int32_t hash, PyObject *key, PyObject *val, int* added_leaf)	todo		
+Python/hamt.c	904	1040	hamt_node_bitmap_without	hamt_node_bitmap_without(PyHamtNode_Bitmap *self, uint32_t shift, int32_t hash, PyObject *key, PyHamtNode **new_node)	todo		
+Python/hamt.c	1043	1091	hamt_node_bitmap_find	hamt_node_bitmap_find(PyHamtNode_Bitmap *self, uint32_t shift, int32_t hash, PyObject *key, PyObject **val)	todo		
+Python/hamt.c	1094	1102	hamt_node_bitmap_traverse	hamt_node_bitmap_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Python/hamt.c	1105	1132	hamt_node_bitmap_dealloc	hamt_node_bitmap_dealloc(PyObject *self)	todo		
+Python/hamt.c	1136	1207	hamt_node_bitmap_dump	hamt_node_bitmap_dump(PyHamtNode_Bitmap *node, PyUnicodeWriter *writer, int level)	todo		
+Python/hamt.c	1215	1241	hamt_node_collision_new	hamt_node_collision_new(int32_t hash, Py_ssize_t size)	todo		
+Python/hamt.c	1244	1268	hamt_node_collision_find_index	hamt_node_collision_find_index(PyHamtNode_Collision *self, PyObject *key, Py_ssize_t *idx)	todo		
+Python/hamt.c	1271	1372	hamt_node_collision_assoc	hamt_node_collision_assoc(PyHamtNode_Collision *self, uint32_t shift, int32_t hash, PyObject *key, PyObject *val, int* added_leaf)	todo		
+Python/hamt.c	1375	1378	hamt_node_collision_count	hamt_node_collision_count(PyHamtNode_Collision *node)	todo		
+Python/hamt.c	1381	1466	hamt_node_collision_without	hamt_node_collision_without(PyHamtNode_Collision *self, uint32_t shift, int32_t hash, PyObject *key, PyHamtNode **new_node)	todo		
+Python/hamt.c	1469	1491	hamt_node_collision_find	hamt_node_collision_find(PyHamtNode_Collision *self, uint32_t shift, int32_t hash, PyObject *key, PyObject **val)	todo		
+Python/hamt.c	1495	1503	hamt_node_collision_traverse	hamt_node_collision_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Python/hamt.c	1506	1518	hamt_node_collision_dealloc	hamt_node_collision_dealloc(PyObject *self)	todo		
+Python/hamt.c	1522	1555	hamt_node_collision_dump	hamt_node_collision_dump(PyHamtNode_Collision *node, PyUnicodeWriter *writer, int level)	todo		
+Python/hamt.c	1563	1581	hamt_node_array_new	hamt_node_array_new(Py_ssize_t count)	todo		
+Python/hamt.c	1584	1604	hamt_node_array_clone	hamt_node_array_clone(PyHamtNode_Array *node)	todo		
+Python/hamt.c	1607	1687	hamt_node_array_assoc	hamt_node_array_assoc(PyHamtNode_Array *self, uint32_t shift, int32_t hash, PyObject *key, PyObject *val, int* added_leaf)	todo		
+Python/hamt.c	1690	1841	hamt_node_array_without	hamt_node_array_without(PyHamtNode_Array *self, uint32_t shift, int32_t hash, PyObject *key, PyHamtNode **new_node)	todo		
+Python/hamt.c	1844	1861	hamt_node_array_find	hamt_node_array_find(PyHamtNode_Array *self, uint32_t shift, int32_t hash, PyObject *key, PyObject **val)	todo		
+Python/hamt.c	1864	1872	hamt_node_array_traverse	hamt_node_array_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Python/hamt.c	1875	1884	hamt_node_array_dealloc	hamt_node_array_dealloc(PyObject *self)	todo		
+Python/hamt.c	1888	1928	hamt_node_array_dump	hamt_node_array_dump(PyHamtNode_Array *node, PyUnicodeWriter *writer, int level)	todo		
+Python/hamt.c	1936	1967	hamt_node_assoc	hamt_node_assoc(PyHamtNode *node, uint32_t shift, int32_t hash, PyObject *key, PyObject *val, int* added_leaf)	todo		
+Python/hamt.c	1970	1994	hamt_node_without	hamt_node_without(PyHamtNode *node, uint32_t shift, int32_t hash, PyObject *key, PyHamtNode **new_node)	todo		
+Python/hamt.c	1997	2031	hamt_node_find	hamt_node_find(PyHamtNode *node, uint32_t shift, int32_t hash, PyObject *key, PyObject **val)	todo		
+Python/hamt.c	2035	2057	hamt_node_dump	hamt_node_dump(PyHamtNode *node, PyUnicodeWriter *writer, int level)	todo		
+Python/hamt.c	2069	2080	hamt_iterator_init	hamt_iterator_init(PyHamtIteratorState *iter, PyHamtNode *root)	todo		
+Python/hamt.c	2083	2117	hamt_iterator_bitmap_next	hamt_iterator_bitmap_next(PyHamtIteratorState *iter, PyObject **key, PyObject **val)	todo		
+Python/hamt.c	2120	2141	hamt_iterator_collision_next	hamt_iterator_collision_next(PyHamtIteratorState *iter, PyObject **key, PyObject **val)	todo		
+Python/hamt.c	2144	2182	hamt_iterator_array_next	hamt_iterator_array_next(PyHamtIteratorState *iter, PyObject **key, PyObject **val)	todo		
+Python/hamt.c	2185	2205	hamt_iterator_next	hamt_iterator_next(PyHamtIteratorState *iter, PyObject **key, PyObject **val)	todo		
+Python/hamt.c	2212	2246	_PyHamt_Assoc	_PyHamt_Assoc(PyHamtObject *o, PyObject *key, PyObject *val)	todo		
+Python/hamt.c	2249	2287	_PyHamt_Without	_PyHamt_Without(PyHamtObject *o, PyObject *key)	todo		
+Python/hamt.c	2290	2302	hamt_find	hamt_find(PyHamtObject *o, PyObject *key, PyObject **val)	todo		
+Python/hamt.c	2306	2319	_PyHamt_Find	_PyHamt_Find(PyHamtObject *o, PyObject *key, PyObject **val)	todo		
+Python/hamt.c	2323	2384	_PyHamt_Eq	_PyHamt_Eq(PyHamtObject *v, PyHamtObject *w)	todo		
+Python/hamt.c	2387	2390	_PyHamt_Len	_PyHamt_Len(PyHamtObject *o)	todo		
+Python/hamt.c	2393	2405	hamt_alloc	hamt_alloc(void)	todo		
+Python/hamt.c	2411	2416	_PyHamt_New	_PyHamt_New(void)	todo		
+Python/hamt.c	2420	2441	hamt_dump	hamt_dump(PyHamtObject *self)	todo		
+Python/hamt.c	2449	2454	hamt_baseiter_tp_clear	hamt_baseiter_tp_clear(PyObject *op)	todo		
+Python/hamt.c	2457	2462	hamt_baseiter_tp_dealloc	hamt_baseiter_tp_dealloc(PyObject *it)	todo		
+Python/hamt.c	2465	2470	hamt_baseiter_tp_traverse	hamt_baseiter_tp_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Python/hamt.c	2473	2493	hamt_baseiter_tp_iternext	hamt_baseiter_tp_iternext(PyObject *op)	todo		
+Python/hamt.c	2496	2500	hamt_baseiter_tp_len	hamt_baseiter_tp_len(PyObject *op)	todo		
+Python/hamt.c	2507	2520	hamt_baseiter_new	hamt_baseiter_new(PyTypeObject *type, binaryfunc yield, PyHamtObject *o)	todo		
+Python/hamt.c	2545	2548	hamt_iter_yield_items	hamt_iter_yield_items(PyObject *key, PyObject *val)	todo		
+Python/hamt.c	2551	2555	_PyHamt_NewIterItems	_PyHamt_NewIterItems(PyHamtObject *o)	todo		
+Python/hamt.c	2568	2571	hamt_iter_yield_keys	hamt_iter_yield_keys(PyObject *key, PyObject *val)	todo		
+Python/hamt.c	2574	2578	_PyHamt_NewIterKeys	_PyHamt_NewIterKeys(PyHamtObject *o)	todo		
+Python/hamt.c	2591	2594	hamt_iter_yield_values	hamt_iter_yield_values(PyObject *key, PyObject *val)	todo		
+Python/hamt.c	2597	2601	_PyHamt_NewIterValues	_PyHamt_NewIterValues(PyHamtObject *o)	todo		
+Python/hamt.c	2616	2619	hamt_tp_new	hamt_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Python/hamt.c	2622	2627	hamt_tp_clear	hamt_tp_clear(PyObject *op)	todo		
+Python/hamt.c	2631	2636	hamt_tp_traverse	hamt_tp_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Python/hamt.c	2639	2657	hamt_tp_dealloc	hamt_tp_dealloc(PyObject *self)	todo		
+Python/hamt.c	2661	2682	hamt_tp_richcompare	hamt_tp_richcompare(PyObject *v, PyObject *w, int op)	todo		
+Python/hamt.c	2685	2690	hamt_tp_contains	hamt_tp_contains(PyObject *op, PyObject *key)	todo		
+Python/hamt.c	2693	2709	hamt_tp_subscript	hamt_tp_subscript(PyObject *op, PyObject *key)	todo		
+Python/hamt.c	2712	2716	hamt_tp_len	hamt_tp_len(PyObject *op)	todo		
+Python/hamt.c	2719	2723	hamt_tp_iter	hamt_tp_iter(PyObject *op)	todo		
+Python/hamt.c	2726	2737	hamt_py_set	hamt_py_set(PyObject *op, PyObject *args)	todo		
+Python/hamt.c	2740	2765	hamt_py_get	hamt_py_get(PyObject *op, PyObject *args)	todo		
+Python/hamt.c	2768	2772	hamt_py_delete	hamt_py_delete(PyObject *op, PyObject *key)	todo		
+Python/hamt.c	2775	2779	hamt_py_items	hamt_py_items(PyObject *op, PyObject *args)	todo		
+Python/hamt.c	2782	2786	hamt_py_values	hamt_py_values(PyObject *op, PyObject *args)	todo		
+Python/hamt.c	2789	2793	hamt_py_keys	hamt_py_keys(PyObject *op, PyObject *Py_UNUSED(args))	todo		
+Python/hamt.c	2797	2801	hamt_py_dump	hamt_py_dump(PyObject *op, PyObject *Py_UNUSED(args))	todo		

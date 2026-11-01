@@ -1,0 +1,15 @@
+file	line	endline	name	signature	status	entry	note
+Modules/termios.c	72	77	get_termios_state	get_termios_state(PyObject *module)	todo		
+Modules/termios.c	98	179	termios_tcgetattr_impl	termios_tcgetattr_impl(PyObject *module, int fd) /*[clinic end generated code: output=2b3da39db870e629 input=54dad9779ebe74b1]*/	todo		
+Modules/termios.c	200	229	termios_tcsetattr_impl	termios_tcsetattr_impl(PyObject *module, int fd, int when, PyObject *term) /*[clinic end generated code: output=bcd2b0a7b98a4bf5 input=5dafabdd5a08f018]*/	todo		
+Modules/termios.c	297	312	termios_tcsendbreak_impl	termios_tcsendbreak_impl(PyObject *module, int fd, int duration) /*[clinic end generated code: output=5945f589b5d3ac66 input=dc2f32417691f8ed]*/	todo		
+Modules/termios.c	324	339	termios_tcdrain_impl	termios_tcdrain_impl(PyObject *module, int fd) /*[clinic end generated code: output=5fd86944c6255955 input=c99241b140b32447]*/	todo		
+Modules/termios.c	356	371	termios_tcflush_impl	termios_tcflush_impl(PyObject *module, int fd, int queue) /*[clinic end generated code: output=2424f80312ec2f21 input=0f7d08122ddc07b5]*/	todo		
+Modules/termios.c	388	403	termios_tcflow_impl	termios_tcflow_impl(PyObject *module, int fd, int action) /*[clinic end generated code: output=afd10928e6ea66eb input=c6aff0640b6efd9c]*/	todo		
+Modules/termios.c	417	474	termios_tcgetwinsize_impl	termios_tcgetwinsize_impl(PyObject *module, int fd) /*[clinic end generated code: output=31825977d5325fb6 input=5706c379d7fd984d]*/	todo		
+Modules/termios.c	491	579	termios_tcsetwinsize_impl	termios_tcsetwinsize_impl(PyObject *module, int fd, PyObject *winsz) /*[clinic end generated code: output=2ac3c9bb6eda83e1 input=efc9beb16d06382a]*/	todo		
+Modules/termios.c	1331	1334	termiosmodule_traverse	static int termiosmodule_traverse(PyObject *m, visitproc visit, void *arg) {	todo		
+Modules/termios.c	1336	1339	termiosmodule_clear	static int termiosmodule_clear(PyObject *m) {	todo		
+Modules/termios.c	1341	1343	termiosmodule_free	static void termiosmodule_free(void *m) {	todo		
+Modules/termios.c	1346	1375	termios_exec	termios_exec(PyObject *mod)	todo		
+Modules/termios.c	1396	1399	PyInit_termios	PyMODINIT_FUNC PyInit_termios(void)	todo		

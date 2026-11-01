@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Lib/encodings/mbcs.py	20	21	decode	decode(input, errors='strict')	excluded		platform: Windows only
+Lib/encodings/mbcs.py	24	25	IncrementalEncoder.encode	encode(self, input, final=False)	excluded		platform: Windows only
+Lib/encodings/mbcs.py	38	47	getregentry	getregentry()	excluded		platform: Windows only

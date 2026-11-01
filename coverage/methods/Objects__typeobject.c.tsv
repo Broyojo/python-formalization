@@ -1,0 +1,404 @@
+file	line	endline	name	signature	status	entry	note
+Objects/typeobject.c	80	84	types_stop_world	types_stop_world(void)	todo		
+Objects/typeobject.c	87	91	types_start_world	types_start_world(void)	todo		
+Objects/typeobject.c	96	116	type_lock_prevent_release	type_lock_prevent_release(void)	todo		
+Objects/typeobject.c	119	133	type_lock_allow_release	type_lock_allow_release(void)	todo		
+Objects/typeobject.c	169	176	type_from_ref	type_from_ref(PyObject *ref)	todo		
+Objects/typeobject.c	183	186	managed_static_type_index_is_set	managed_static_type_index_is_set(PyTypeObject *self)	todo		
+Objects/typeobject.c	190	195	managed_static_type_index_get	managed_static_type_index_get(PyTypeObject *self)	todo		
+Objects/typeobject.c	198	203	managed_static_type_index_set	managed_static_type_index_set(PyTypeObject *self, size_t index)	todo		
+Objects/typeobject.c	206	209	managed_static_type_index_clear	managed_static_type_index_clear(PyTypeObject *self)	todo		
+Objects/typeobject.c	212	233	static_ext_type_lookup	static_ext_type_lookup(PyInterpreterState *interp, size_t index, int64_t *p_interp_count)	todo		
+Objects/typeobject.c	236	249	managed_static_type_state_get	managed_static_type_state_get(PyInterpreterState *interp, PyTypeObject *self)	todo		
+Objects/typeobject.c	253	257	_PyStaticType_GetState	_PyStaticType_GetState(PyInterpreterState *interp, PyTypeObject *self)	todo		
+Objects/typeobject.c	261	328	managed_static_type_state_init	managed_static_type_state_init(PyInterpreterState *interp, PyTypeObject *self, int isbuiltin, int initial)	todo		
+Objects/typeobject.c	333	375	managed_static_type_state_clear	managed_static_type_state_clear(PyInterpreterState *interp, PyTypeObject *self, int isbuiltin, int final)	todo		
+Objects/typeobject.c	380	398	_PyStaticType_GetBuiltins	_PyStaticType_GetBuiltins(void)	todo		
+Objects/typeobject.c	406	417	type_set_flags	type_set_flags(PyTypeObject *tp, unsigned long flags)	todo		
+Objects/typeobject.c	420	425	type_set_flags_with_mask	type_set_flags_with_mask(PyTypeObject *tp, unsigned long mask, unsigned long flags)	todo		
+Objects/typeobject.c	428	431	type_add_flags	type_add_flags(PyTypeObject *tp, unsigned long flag)	todo		
+Objects/typeobject.c	434	437	type_clear_flags	type_clear_flags(PyTypeObject *tp, unsigned long flag)	todo		
+Objects/typeobject.c	440	452	start_readying	start_readying(PyTypeObject *type)	todo		
+Objects/typeobject.c	455	467	stop_readying	stop_readying(PyTypeObject *type)	todo		
+Objects/typeobject.c	470	479	is_readying	is_readying(PyTypeObject *type)	todo		
+Objects/typeobject.c	485	494	lookup_tp_dict	lookup_tp_dict(PyTypeObject *self)	todo		
+Objects/typeobject.c	497	501	_PyType_GetDict	_PyType_GetDict(PyTypeObject *self)	todo		
+Objects/typeobject.c	504	508	PyType_GetDict	PyType_GetDict(PyTypeObject *self)	todo		
+Objects/typeobject.c	511	521	set_tp_dict	set_tp_dict(PyTypeObject *self, PyObject *dict)	todo		
+Objects/typeobject.c	524	534	clear_tp_dict	clear_tp_dict(PyTypeObject *self)	todo		
+Objects/typeobject.c	538	541	lookup_tp_bases	lookup_tp_bases(PyTypeObject *self)	todo		
+Objects/typeobject.c	544	554	_PyType_GetBases	_PyType_GetBases(PyTypeObject *self)	todo		
+Objects/typeobject.c	557	578	set_tp_bases	set_tp_bases(PyTypeObject *self, PyObject *bases, int initial)	todo		
+Objects/typeobject.c	581	598	clear_tp_bases	clear_tp_bases(PyTypeObject *self, int final)	todo		
+Objects/typeobject.c	602	605	lookup_tp_mro	lookup_tp_mro(PyTypeObject *self)	todo		
+Objects/typeobject.c	608	627	_PyType_GetMRO	_PyType_GetMRO(PyTypeObject *self)	todo		
+Objects/typeobject.c	630	655	set_tp_mro	set_tp_mro(PyTypeObject *self, PyObject *mro, int initial)	todo		
+Objects/typeobject.c	658	675	clear_tp_mro	clear_tp_mro(PyTypeObject *self, int final)	todo		
+Objects/typeobject.c	679	693	init_tp_subclasses	init_tp_subclasses(PyTypeObject *self)	todo		
+Objects/typeobject.c	696	708	clear_tp_subclasses	clear_tp_subclasses(PyTypeObject *self)	todo		
+Objects/typeobject.c	711	720	lookup_tp_subclasses	lookup_tp_subclasses(PyTypeObject *self)	todo		
+Objects/typeobject.c	723	736	_PyType_HasSubclasses	_PyType_HasSubclasses(PyTypeObject *self)	todo		
+Objects/typeobject.c	739	770	_PyType_GetSubclasses	_PyType_GetSubclasses(PyTypeObject *self)	todo		
+Objects/typeobject.c	784	806	find_signature	find_signature(const char *name, const char *doc)	todo		
+Objects/typeobject.c	815	826	skip_signature	skip_signature(const char *doc)	todo		
+Objects/typeobject.c	829	860	_PyType_CheckConsistency	_PyType_CheckConsistency(PyTypeObject *type)	todo		
+Objects/typeobject.c	863	873	_PyType_DocWithoutSignature	_PyType_DocWithoutSignature(const char *name, const char *internal_doc)	todo		
+Objects/typeobject.c	876	885	_PyType_GetDocFromInternalDoc	_PyType_GetDocFromInternalDoc(const char *name, const char *internal_doc)	todo		
+Objects/typeobject.c	888	906	signature_from_flags	signature_from_flags(int flags)	todo		
+Objects/typeobject.c	909	932	_PyType_GetTextSignatureFromInternalDoc	_PyType_GetTextSignatureFromInternalDoc(const char *name, const char *internal_doc, int flags)	todo		
+Objects/typeobject.c	936	940	get_type_cache	get_type_cache(void)	todo		
+Objects/typeobject.c	944	958	type_cache_clear	type_cache_clear(struct type_cache *cache, PyObject *value)	todo		
+Objects/typeobject.c	962	975	_PyType_InitCache	_PyType_InitCache(PyInterpreterState *interp)	todo		
+Objects/typeobject.c	979	987	_PyType_ClearCache	_PyType_ClearCache(PyInterpreterState *interp)	todo		
+Objects/typeobject.c	991	995	PyType_ClearCache	PyType_ClearCache(void)	todo		
+Objects/typeobject.c	999	1013	_PyTypes_Fini	_PyTypes_Fini(PyInterpreterState *interp)	todo		
+Objects/typeobject.c	1017	1031	PyType_AddWatcher	PyType_AddWatcher(PyType_WatchCallback callback)	todo		
+Objects/typeobject.c	1034	1045	validate_watcher_id	validate_watcher_id(PyInterpreterState *interp, int watcher_id)	todo		
+Objects/typeobject.c	1048	1056	PyType_ClearWatcher	PyType_ClearWatcher(int watcher_id)	todo		
+Objects/typeobject.c	1061	1078	PyType_Watch	PyType_Watch(int watcher_id, PyObject* obj)	todo		
+Objects/typeobject.c	1081	1094	PyType_Unwatch	PyType_Unwatch(int watcher_id, PyObject* obj)	todo		
+Objects/typeobject.c	1097	1127	set_version_unlocked	set_version_unlocked(PyTypeObject *tp, unsigned int version)	todo		
+Objects/typeobject.c	1130	1197	type_modified_unlocked	type_modified_unlocked(PyTypeObject *type)	todo		
+Objects/typeobject.c	1200	1210	PyType_Modified	PyType_Modified(PyTypeObject *type)	todo		
+Objects/typeobject.c	1218	1233	has_custom_mro	has_custom_mro(PyTypeObject *tp)	todo		
+Objects/typeobject.c	1236	1281	type_mro_modified	type_mro_modified(PyTypeObject *type, PyObject *bases)	todo		
+Objects/typeobject.c	1293	1298	_PyType_SetVersion	_PyType_SetVersion(PyTypeObject *tp, unsigned int version)	todo		
+Objects/typeobject.c	1301	1315	_PyType_LookupByVersion	_PyType_LookupByVersion(unsigned int version)	todo		
+Objects/typeobject.c	1318	1321	_PyType_GetVersionForCurrentState	_PyType_GetVersionForCurrentState(PyTypeObject *tp)	todo		
+Objects/typeobject.c	1331	1341	next_global_version_tag	next_global_version_tag(void)	todo		
+Objects/typeobject.c	1344	1391	assign_version_tag	assign_version_tag(PyInterpreterState *interp, PyTypeObject *type)	todo		
+Objects/typeobject.c	1393	1401	PyUnstable_Type_AssignVersionTag	int PyUnstable_Type_AssignVersionTag(PyTypeObject *type)	todo		
+Objects/typeobject.c	1419	1440	check_set_special_type_attr	check_set_special_type_attr(PyTypeObject *type, PyObject *value, const char *name)	todo		
+Objects/typeobject.c	1443	1454	_PyType_Name	_PyType_Name(PyTypeObject *type)	todo		
+Objects/typeobject.c	1457	1467	type_name	type_name(PyObject *tp, void *Py_UNUSED(closure))	todo		
+Objects/typeobject.c	1470	1480	type_qualname	type_qualname(PyObject *tp, void *Py_UNUSED(closure))	todo		
+Objects/typeobject.c	1483	1515	type_set_name	type_set_name(PyObject *tp, PyObject *value, void *Py_UNUSED(closure))	todo		
+Objects/typeobject.c	1518	1535	type_set_qualname	type_set_qualname(PyObject *tp, PyObject *value, void *context)	todo		
+Objects/typeobject.c	1538	1562	type_module	type_module(PyTypeObject *type)	todo		
+Objects/typeobject.c	1565	1569	type_get_module	type_get_module(PyObject *tp, void *Py_UNUSED(closure))	todo		
+Objects/typeobject.c	1572	1585	type_set_module	type_set_module(PyObject *tp, PyObject *value, void *Py_UNUSED(closure))	todo		
+Objects/typeobject.c	1589	1619	_PyType_GetFullyQualifiedName	_PyType_GetFullyQualifiedName(PyTypeObject *type, char sep)	todo		
+Objects/typeobject.c	1622	1625	PyType_GetFullyQualifiedName	PyType_GetFullyQualifiedName(PyTypeObject *type)	todo		
+Objects/typeobject.c	1628	1644	type_abstractmethods	type_abstractmethods(PyObject *tp, void *Py_UNUSED(closure))	todo		
+Objects/typeobject.c	1647	1683	type_set_abstractmethods	type_set_abstractmethods(PyObject *tp, PyObject *value, void *Py_UNUSED(closure))	todo		
+Objects/typeobject.c	1686	1694	type_get_bases	type_get_bases(PyObject *tp, void *Py_UNUSED(closure))	todo		
+Objects/typeobject.c	1697	1705	type_get_mro	type_get_mro(PyObject *tp, void *Py_UNUSED(closure))	todo		
+Objects/typeobject.c	1724	1789	mro_hierarchy_for_complete_type	mro_hierarchy_for_complete_type(PyTypeObject *type, PyObject *temp)	todo		
+Objects/typeobject.c	1792	1926	type_set_bases_unlocked	type_set_bases_unlocked(PyTypeObject *type, PyObject *new_bases)	todo		
+Objects/typeobject.c	1929	1937	type_set_bases	type_set_bases(PyObject *tp, PyObject *new_bases, void *Py_UNUSED(closure))	todo		
+Objects/typeobject.c	1940	1948	type_dict	type_dict(PyObject *tp, void *Py_UNUSED(closure))	todo		
+Objects/typeobject.c	1951	1969	type_get_doc	type_get_doc(PyObject *tp, void *Py_UNUSED(closure))	todo		
+Objects/typeobject.c	1972	1976	type_get_text_signature	type_get_text_signature(PyObject *tp, void *Py_UNUSED(closure))	todo		
+Objects/typeobject.c	1979	1987	type_set_doc	type_set_doc(PyObject *tp, PyObject *value, void *Py_UNUSED(closure))	todo		
+Objects/typeobject.c	1990	2027	type_get_annotate	type_get_annotate(PyObject *tp, void *Py_UNUSED(closure))	todo		
+Objects/typeobject.c	2030	2066	type_set_annotate	type_set_annotate(PyObject *tp, PyObject *value, void *Py_UNUSED(closure))	todo		
+Objects/typeobject.c	2069	2136	type_get_annotations	type_get_annotations(PyObject *tp, void *Py_UNUSED(closure))	todo		
+Objects/typeobject.c	2139	2208	type_set_annotations	type_set_annotations(PyObject *tp, PyObject *value, void *Py_UNUSED(closure))	todo		
+Objects/typeobject.c	2211	2223	type_get_type_params	type_get_type_params(PyObject *tp, void *Py_UNUSED(closure))	todo		
+Objects/typeobject.c	2226	2240	type_set_type_params	type_set_type_params(PyObject *tp, PyObject *value, void *Py_UNUSED(closure))	todo		
+Objects/typeobject.c	2253	2257	type___instancecheck___impl	type___instancecheck___impl(PyTypeObject *self, PyObject *instance) /*[clinic end generated code: output=08b6bf5f591c3618 input=cdbfeaee82c01a0f]*/	todo		
+Objects/typeobject.c	2269	2273	type___subclasscheck___impl	type___subclasscheck___impl(PyTypeObject *self, PyObject *subclass) /*[clinic end generated code: output=97a4e51694500941 input=071b2ca9e03355f4]*/	todo		
+Objects/typeobject.c	2294	2328	type_repr	type_repr(PyObject *self)	todo		
+Objects/typeobject.c	2331	2394	type_call	type_call(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Objects/typeobject.c	2397	2409	_PyType_NewManagedObject	_PyType_NewManagedObject(PyTypeObject *type)	todo		
+Objects/typeobject.c	2412	2454	_PyType_AllocNoTrack	_PyType_AllocNoTrack(PyTypeObject *type, Py_ssize_t nitems)	todo		
+Objects/typeobject.c	2457	2468	PyType_GenericAlloc	PyType_GenericAlloc(PyTypeObject *type, Py_ssize_t nitems)	todo		
+Objects/typeobject.c	2471	2474	PyType_GenericNew	PyType_GenericNew(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Objects/typeobject.c	2479	2482	_PyHeapType_GET_MEMBERS	_PyHeapType_GET_MEMBERS(PyHeapTypeObject* type)	todo		
+Objects/typeobject.c	2485	2504	traverse_slots	traverse_slots(PyTypeObject *type, PyObject *self, visitproc visit, void *arg)	todo		
+Objects/typeobject.c	2507	2557	subtype_traverse	subtype_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/typeobject.c	2560	2577	clear_slots	clear_slots(PyTypeObject *type, PyObject *self)	todo		
+Objects/typeobject.c	2580	2616	subtype_clear	subtype_clear(PyObject *self)	todo		
+Objects/typeobject.c	2619	2785	subtype_dealloc	subtype_dealloc(PyObject *self)	todo		
+Objects/typeobject.c	2792	2801	type_is_subtype_base_chain	type_is_subtype_base_chain(PyTypeObject *a, PyTypeObject *b)	todo		
+Objects/typeobject.c	2804	2826	is_subtype_with_mro	is_subtype_with_mro(PyObject *a_mro, PyTypeObject *a, PyTypeObject *b)	todo		
+Objects/typeobject.c	2829	2832	PyType_IsSubtype	PyType_IsSubtype(PyTypeObject *a, PyTypeObject *b)	todo		
+Objects/typeobject.c	2850	2862	_PyObject_LookupSpecial	_PyObject_LookupSpecial(PyObject *self, PyObject *attr)	todo		
+Objects/typeobject.c	2870	2895	_PyObject_LookupSpecialMethod	_PyObject_LookupSpecialMethod(PyObject *attr, _PyStackRef *method_and_self)	todo		
+Objects/typeobject.c	2898	2930	lookup_method_ex	lookup_method_ex(PyObject *self, PyObject *attr, _PyStackRef *out, int raise_attribute_error)	todo		
+Objects/typeobject.c	2933	2936	lookup_maybe_method	lookup_maybe_method(PyObject *self, PyObject *attr, _PyStackRef *out)	todo		
+Objects/typeobject.c	2939	2942	lookup_method	lookup_method(PyObject *self, PyObject *attr, _PyStackRef *out)	todo		
+Objects/typeobject.c	2946	2958	vectorcall_unbound	vectorcall_unbound(PyThreadState *tstate, int unbound, PyObject *func, PyObject *const *args, Py_ssize_t nargs)	todo		
+Objects/typeobject.c	2961	2969	call_unbound_noarg	call_unbound_noarg(int unbound, PyObject *func, PyObject *self)	todo		
+Objects/typeobject.c	2974	2987	call_method_noarg	call_method_noarg(PyObject *self, PyObject *attr)	todo		
+Objects/typeobject.c	2990	3008	call_method	call_method(PyObject *self, PyObject *attr, PyObject *args, PyObject *kwds)	todo		
+Objects/typeobject.c	3016	3032	vectorcall_method	vectorcall_method(PyObject *name, PyObject *const *args, Py_ssize_t nargs)	todo		
+Objects/typeobject.c	3037	3057	vectorcall_maybe	vectorcall_maybe(PyThreadState *tstate, PyObject *name, PyObject *const *args, Py_ssize_t nargs)	todo		
+Objects/typeobject.c	3064	3081	maybe_call_special_no_args	maybe_call_special_no_args(PyObject *self, PyObject *attr, int *attr_is_none)	todo		
+Objects/typeobject.c	3084	3103	maybe_call_special_one_arg	maybe_call_special_one_arg(PyObject *self, PyObject *attr, PyObject *arg, int *attr_is_none)	todo		
+Objects/typeobject.c	3106	3109	_PyObject_MaybeCallSpecialNoArgs	_PyObject_MaybeCallSpecialNoArgs(PyObject *self, PyObject *attr)	todo		
+Objects/typeobject.c	3112	3115	_PyObject_MaybeCallSpecialOneArg	_PyObject_MaybeCallSpecialOneArg(PyObject *self, PyObject *attr, PyObject *arg)	todo		
+Objects/typeobject.c	3146	3156	tail_contains	tail_contains(PyObject *tuple, Py_ssize_t whence, PyObject *o)	todo		
+Objects/typeobject.c	3159	3166	class_name	class_name(PyObject *cls)	todo		
+Objects/typeobject.c	3169	3197	check_duplicates	check_duplicates(PyObject *tuple)	todo		
+Objects/typeobject.c	3209	3257	set_mro_error	set_mro_error(PyObject **to_merge, Py_ssize_t to_merge_size, Py_ssize_t *remain)	todo		
+Objects/typeobject.c	3260	3327	pmerge	pmerge(PyObject *acc, PyObject **to_merge, Py_ssize_t to_merge_size)	todo		
+Objects/typeobject.c	3330	3415	mro_implementation_unlocked	mro_implementation_unlocked(PyTypeObject *type)	todo		
+Objects/typeobject.c	3418	3425	mro_implementation	mro_implementation(PyTypeObject *type)	todo		
+Objects/typeobject.c	3434	3443	type_mro_impl	type_mro_impl(PyTypeObject *self) /*[clinic end generated code: output=bffc4a39b5b57027 input=28414f4e156db28d]*/	todo		
+Objects/typeobject.c	3446	3475	mro_check	mro_check(PyTypeObject *type, PyObject *mro)	todo		
+Objects/typeobject.c	3492	3527	mro_invoke	mro_invoke(PyTypeObject *type)	todo		
+Objects/typeobject.c	3552	3598	mro_internal_unlocked	mro_internal_unlocked(PyTypeObject *type, int initial, PyObject **p_old_mro)	todo		
+Objects/typeobject.c	3601	3608	mro_internal	mro_internal(PyTypeObject *type, PyObject **p_old_mro)	todo		
+Objects/typeobject.c	3614	3666	best_base	best_base(PyObject *bases)	todo		
+Objects/typeobject.c	3669	3675	shape_differs	shape_differs(PyTypeObject *t1, PyTypeObject *t2)	todo		
+Objects/typeobject.c	3678	3694	solid_base	solid_base(PyTypeObject *type)	todo		
+Objects/typeobject.c	3710	3719	get_builtin_base_with_dict	get_builtin_base_with_dict(PyTypeObject *type)	todo		
+Objects/typeobject.c	3722	3731	get_dict_descriptor	get_dict_descriptor(PyTypeObject *type)	todo		
+Objects/typeobject.c	3734	3739	raise_dict_descr_error	raise_dict_descr_error(PyObject *obj)	todo		
+Objects/typeobject.c	3742	3762	subtype_dict	subtype_dict(PyObject *obj, void *context)	todo		
+Objects/typeobject.c	3765	3792	_PyObject_SetDict	_PyObject_SetDict(PyObject *obj, PyObject *value)	todo		
+Objects/typeobject.c	3795	3815	subtype_setdict	subtype_setdict(PyObject *obj, PyObject *value, void *context)	todo		
+Objects/typeobject.c	3818	3841	subtype_getweakref	subtype_getweakref(PyObject *obj, void *context)	todo		
+Objects/typeobject.c	3866	3880	valid_identifier	valid_identifier(PyObject *s)	todo		
+Objects/typeobject.c	3883	3902	type_init	type_init(PyObject *cls, PyObject *args, PyObject *kwds)	todo		
+Objects/typeobject.c	3906	3909	PyType_GetFlags	PyType_GetFlags(PyTypeObject *type)	todo		
+Objects/typeobject.c	3913	3916	PyType_SUPPORTS_WEAKREFS	PyType_SUPPORTS_WEAKREFS(PyTypeObject *type)	todo		
+Objects/typeobject.c	3921	3953	_PyType_CalculateMetaclass	_PyType_CalculateMetaclass(PyTypeObject *metatype, PyObject *bases)	todo		
+Objects/typeobject.c	3979	4009	type_new_visit_slots	type_new_visit_slots(type_new_ctx *ctx)	todo		
+Objects/typeobject.c	4017	4082	type_new_copy_slots	type_new_copy_slots(type_new_ctx *ctx, PyObject *dict)	todo		
+Objects/typeobject.c	4086	4121	type_new_slots_bases	type_new_slots_bases(type_new_ctx *ctx)	todo		
+Objects/typeobject.c	4125	4151	type_new_slots_impl	type_new_slots_impl(type_new_ctx *ctx, PyObject *dict)	todo		
+Objects/typeobject.c	4155	4179	type_new_slots	type_new_slots(type_new_ctx *ctx, PyObject *dict)	todo		
+Objects/typeobject.c	4183	4229	type_new_alloc	type_new_alloc(type_new_ctx *ctx)	todo		
+Objects/typeobject.c	4233	4246	type_new_set_name	type_new_set_name(const type_new_ctx *ctx, PyTypeObject *type)	todo		
+Objects/typeobject.c	4251	4273	type_new_set_module	type_new_set_module(PyObject *dict)	todo		
+Objects/typeobject.c	4279	4303	type_new_set_ht_name	type_new_set_ht_name(PyTypeObject *type, PyObject *dict)	todo		
+Objects/typeobject.c	4310	4341	type_new_set_doc	type_new_set_doc(PyTypeObject *type, PyObject* dict)	todo		
+Objects/typeobject.c	4345	4368	type_new_staticmethod	type_new_staticmethod(PyObject *dict, PyObject *attr)	todo		
+Objects/typeobject.c	4372	4396	type_new_classmethod	type_new_classmethod(PyObject *dict, PyObject *attr)	todo		
+Objects/typeobject.c	4401	4440	type_new_descriptors	type_new_descriptors(const type_new_ctx *ctx, PyTypeObject *type)	todo		
+Objects/typeobject.c	4444	4469	type_new_set_slots	type_new_set_slots(const type_new_ctx *ctx, PyTypeObject *type)	todo		
+Objects/typeobject.c	4474	4497	type_new_set_classcell	type_new_set_classcell(PyTypeObject *type, PyObject *dict)	todo		
+Objects/typeobject.c	4500	4523	type_new_set_classdictcell	type_new_set_classdictcell(PyObject *dict)	todo		
+Objects/typeobject.c	4526	4575	type_new_set_attrs	type_new_set_attrs(const type_new_ctx *ctx, PyTypeObject *type)	todo		
+Objects/typeobject.c	4579	4606	type_new_get_slots	type_new_get_slots(type_new_ctx *ctx, PyObject *dict)	todo		
+Objects/typeobject.c	4610	4643	type_new_init	type_new_init(type_new_ctx *ctx)	todo		
+Objects/typeobject.c	4647	4692	type_new_impl	type_new_impl(type_new_ctx *ctx)	todo		
+Objects/typeobject.c	4696	4763	type_new_get_bases	type_new_get_bases(type_new_ctx *ctx, PyObject **type)	todo		
+Objects/typeobject.c	4767	4812	type_new	type_new(PyTypeObject *metatype, PyObject *args, PyObject *kwds)	todo		
+Objects/typeobject.c	4816	4830	type_vectorcall	type_vectorcall(PyObject *metatype, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
+Objects/typeobject.c	4851	4854	_align_up	_align_up(Py_ssize_t size)	todo		
+Objects/typeobject.c	4860	4891	get_bases_tuple	get_bases_tuple(PyObject *bases_in, PyType_Spec *spec)	todo		
+Objects/typeobject.c	4894	4931	check_basicsize_includes_size_and_offsets	check_basicsize_includes_size_and_offsets(PyTypeObject* type)	todo		
+Objects/typeobject.c	4934	4956	check_immutable_bases	check_immutable_bases(const char *type_name, PyObject *bases, int skip_first)	todo		
+Objects/typeobject.c	4963	4992	special_offset_from_member	special_offset_from_member( const PyMemberDef *memb /* may be NULL */, Py_ssize_t type_data_offset, Py_ssize_t *dest /* not NULL */)	todo		
+Objects/typeobject.c	4995	5417	PyType_FromMetaclass	PyType_FromMetaclass( PyTypeObject *metaclass, PyObject *module, PyType_Spec *spec, PyObject *bases_in)	todo		
+Objects/typeobject.c	5420	5423	PyType_FromModuleAndSpec	PyType_FromModuleAndSpec(PyObject *module, PyType_Spec *spec, PyObject *bases)	todo		
+Objects/typeobject.c	5426	5429	PyType_FromSpecWithBases	PyType_FromSpecWithBases(PyType_Spec *spec, PyObject *bases)	todo		
+Objects/typeobject.c	5432	5435	PyType_FromSpec	PyType_FromSpec(PyType_Spec *spec)	todo		
+Objects/typeobject.c	5438	5441	PyType_GetName	PyType_GetName(PyTypeObject *type)	todo		
+Objects/typeobject.c	5444	5447	PyType_GetQualName	PyType_GetQualName(PyTypeObject *type)	todo		
+Objects/typeobject.c	5450	5453	PyType_GetModuleName	PyType_GetModuleName(PyTypeObject *type)	todo		
+Objects/typeobject.c	5456	5482	PyType_GetSlot	PyType_GetSlot(PyTypeObject *type, int slot)	todo		
+Objects/typeobject.c	5485	5506	PyType_GetModule	PyType_GetModule(PyTypeObject *type)	todo		
+Objects/typeobject.c	5509	5516	PyType_GetModuleState	PyType_GetModuleState(PyTypeObject *type)	todo		
+Objects/typeobject.c	5523	5579	PyType_GetModuleByDef	PyType_GetModuleByDef(PyTypeObject *type, PyModuleDef *def)	todo		
+Objects/typeobject.c	5583	5604	get_base_by_token_recursive	get_base_by_token_recursive(PyObject *bases, void *token)	todo		
+Objects/typeobject.c	5607	5656	_PyType_GetBaseByToken_Borrow	_PyType_GetBaseByToken_Borrow(PyTypeObject *type, void *token, PyTypeObject **result)	todo		
+Objects/typeobject.c	5659	5680	PyType_GetBaseByToken	PyType_GetBaseByToken(PyTypeObject *type, void *token, PyTypeObject **result)	todo		
+Objects/typeobject.c	5684	5688	PyObject_GetTypeData	PyObject_GetTypeData(PyObject *obj, PyTypeObject *cls)	todo		
+Objects/typeobject.c	5691	5698	PyType_GetTypeDataSize	PyType_GetTypeDataSize(PyTypeObject *cls)	todo		
+Objects/typeobject.c	5701	5710	PyObject_GetItemData	PyObject_GetItemData(PyObject *obj)	todo		
+Objects/typeobject.c	5717	5767	find_name_in_mro	find_name_in_mro(PyTypeObject *type, PyObject *name, _PyStackRef *out)	todo		
+Objects/typeobject.c	5772	5785	is_dunder_name	is_dunder_name(PyObject *name)	todo		
+Objects/typeobject.c	5788	5804	update_cache	update_cache(struct type_cache_entry *entry, PyObject *name, unsigned int version_tag, PyObject *value)	todo		
+Objects/typeobject.c	5809	5829	update_cache_gil_disabled	update_cache_gil_disabled(struct type_cache_entry *entry, PyObject *name, unsigned int version_tag, PyObject *value)	todo		
+Objects/typeobject.c	5834	5848	_PyTypes_AfterFork	_PyTypes_AfterFork(void)	todo		
+Objects/typeobject.c	5856	5867	_PyType_LookupRefAndVersion	_PyType_LookupRefAndVersion(PyTypeObject *type, PyObject *name, unsigned int *version)	todo		
+Objects/typeobject.c	5870	5875	should_assign_version_tag	should_assign_version_tag(PyTypeObject *type, PyObject *name, unsigned int version_tag)	todo		
+Objects/typeobject.c	5878	5958	_PyType_LookupStackRefAndVersion	_PyType_LookupStackRefAndVersion(PyTypeObject *type, PyObject *name, _PyStackRef *out)	todo		
+Objects/typeobject.c	5964	5967	_PyType_LookupRef	_PyType_LookupRef(PyTypeObject *type, PyObject *name)	todo		
+Objects/typeobject.c	5972	5977	_PyType_Lookup	_PyType_Lookup(PyTypeObject *type, PyObject *name)	todo		
+Objects/typeobject.c	5980	5997	_PyType_CacheInitForSpecialization	_PyType_CacheInitForSpecialization(PyHeapTypeObject *type, PyObject *init, unsigned int tp_version)	todo		
+Objects/typeobject.c	6000	6022	_PyType_CacheGetItemForSpecialization	_PyType_CacheGetItemForSpecialization(PyHeapTypeObject *ht, PyObject *descriptor, uint32_t tp_version)	todo		
+Objects/typeobject.c	6025	6030	_PyType_SetFlags	_PyType_SetFlags(PyTypeObject *self, unsigned long mask, unsigned long flags)	todo		
+Objects/typeobject.c	6033	6048	_PyType_Validate	_PyType_Validate(PyTypeObject *ty, _py_validate_type validate, unsigned int *tp_version)	todo		
+Objects/typeobject.c	6051	6071	set_flags_recursive	set_flags_recursive(PyTypeObject *self, unsigned long mask, unsigned long flags)	todo		
+Objects/typeobject.c	6074	6088	_PyType_SetFlagsRecursive	_PyType_SetFlagsRecursive(PyTypeObject *self, unsigned long mask, unsigned long flags)	todo		
+Objects/typeobject.c	6103	6190	_Py_type_getattro_impl	_Py_type_getattro_impl(PyTypeObject *type, PyObject *name, int * suppress_missing_attribute)	todo		
+Objects/typeobject.c	6195	6199	_Py_type_getattro	_Py_type_getattro(PyObject *tp, PyObject *name)	todo		
+Objects/typeobject.c	6202	6235	type_update_dict	type_update_dict(PyTypeObject *type, PyDictObject *dict, PyObject *name, PyObject *value, PyObject **old_value)	todo		
+Objects/typeobject.c	6238	6326	type_setattro	type_setattro(PyObject *self, PyObject *name, PyObject *value)	todo		
+Objects/typeobject.c	6330	6338	type_dealloc_common	type_dealloc_common(PyTypeObject *type)	todo		
+Objects/typeobject.c	6342	6387	clear_static_tp_subclasses	clear_static_tp_subclasses(PyTypeObject *type, int isbuiltin)	todo		
+Objects/typeobject.c	6390	6400	clear_static_type_objects	clear_static_type_objects(PyInterpreterState *interp, PyTypeObject *type, int isbuiltin, int final)	todo		
+Objects/typeobject.c	6404	6424	fini_static_type	fini_static_type(PyInterpreterState *interp, PyTypeObject *type, int isbuiltin, int final)	todo		
+Objects/typeobject.c	6427	6441	_PyTypes_FiniExtTypes	_PyTypes_FiniExtTypes(PyInterpreterState *interp)	todo		
+Objects/typeobject.c	6444	6447	_PyStaticType_FiniBuiltin	_PyStaticType_FiniBuiltin(PyInterpreterState *interp, PyTypeObject *type)	todo		
+Objects/typeobject.c	6451	6491	type_dealloc	type_dealloc(PyObject *self)	todo		
+Objects/typeobject.c	6501	6505	type___subclasses___impl	type___subclasses___impl(PyTypeObject *self) /*[clinic end generated code: output=eb5eb54485942819 input=5af66132436f9a7b]*/	todo		
+Objects/typeobject.c	6508	6512	type_prepare	type_prepare(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)	todo		
+Objects/typeobject.c	6524	6574	merge_class_dict	merge_class_dict(PyObject *dict, PyObject *aclass)	todo		
+Objects/typeobject.c	6587	6598	type___dir___impl	type___dir___impl(PyTypeObject *self) /*[clinic end generated code: output=69d02fe92c0f15fa input=7733befbec645968]*/	todo		
+Objects/typeobject.c	6607	6621	type___sizeof___impl	type___sizeof___impl(PyTypeObject *self) /*[clinic end generated code: output=766f4f16cd3b1854 input=99398f24b9cf45d6]*/	todo		
+Objects/typeobject.c	6644	6672	type_traverse	type_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/typeobject.c	6675	6722	type_clear	type_clear(PyObject *self)	todo		
+Objects/typeobject.c	6725	6729	type_is_gc	type_is_gc(PyObject *tp)	todo		
+Objects/typeobject.c	6825	6829	excess_args	excess_args(PyObject *args, PyObject *kwds)	todo		
+Objects/typeobject.c	6832	6849	object_init	object_init(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Objects/typeobject.c	6852	6919	object_new	object_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Objects/typeobject.c	6922	6925	object_dealloc	object_dealloc(PyObject *self)	todo		
+Objects/typeobject.c	6928	6953	object_repr	object_repr(PyObject *self)	todo		
+Objects/typeobject.c	6956	6964	object_str	object_str(PyObject *self)	todo		
+Objects/typeobject.c	6967	7008	object_richcompare	object_richcompare(PyObject *self, PyObject *other, int op)	todo		
+Objects/typeobject.c	7011	7014	_Py_BaseObject_RichCompare	_Py_BaseObject_RichCompare(PyObject* self, PyObject* other, int op)	todo		
+Objects/typeobject.c	7017	7020	object_get_class	object_get_class(PyObject *self, void *closure)	todo		
+Objects/typeobject.c	7023	7035	compatible_with_tp_base	compatible_with_tp_base(PyTypeObject *child)	todo		
+Objects/typeobject.c	7038	7064	same_slots_added	same_slots_added(PyTypeObject *a, PyTypeObject *b)	todo		
+Objects/typeobject.c	7067	7120	compatible_for_assignment	compatible_for_assignment(PyTypeObject* oldto, PyTypeObject* newto, const char* attr)	todo		
+Objects/typeobject.c	7125	7222	object_set_class_world_stopped	object_set_class_world_stopped(PyObject *self, PyTypeObject *newto)	todo		
+Objects/typeobject.c	7225	7269	object_set_class	object_set_class(PyObject *self, PyObject *value, void *closure)	todo		
+Objects/typeobject.c	7286	7301	import_copyreg	import_copyreg(void)	todo		
+Objects/typeobject.c	7304	7350	_PyType_GetSlotNames	_PyType_GetSlotNames(PyTypeObject *cls)	todo		
+Objects/typeobject.c	7353	7475	object_getstate_default	object_getstate_default(PyObject *obj, int required)	todo		
+Objects/typeobject.c	7478	7498	object_getstate	object_getstate(PyObject *obj, int required)	todo		
+Objects/typeobject.c	7501	7504	_PyObject_GetState	_PyObject_GetState(PyObject *obj)	todo		
+Objects/typeobject.c	7513	7517	object___getstate___impl	object___getstate___impl(PyObject *self) /*[clinic end generated code: output=5a2500dcb6217e9e input=692314d8fbe194ee]*/	todo		
+Objects/typeobject.c	7520	7609	_PyObject_GetNewArguments	_PyObject_GetNewArguments(PyObject *obj, PyObject **args, PyObject **kwargs)	todo		
+Objects/typeobject.c	7612	7649	_PyObject_GetItemsIter	_PyObject_GetItemsIter(PyObject *obj, PyObject **listitems, PyObject **dictitems)	todo		
+Objects/typeobject.c	7652	7746	reduce_newobj	reduce_newobj(PyObject *obj)	todo		
+Objects/typeobject.c	7764	7779	_common_reduce	_common_reduce(PyObject *self, int proto)	todo		
+Objects/typeobject.c	7788	7792	object___reduce___impl	object___reduce___impl(PyObject *self) /*[clinic end generated code: output=d4ca691f891c6e2f input=11562e663947e18b]*/	todo		
+Objects/typeobject.c	7804	7835	object___reduce_ex___impl	object___reduce_ex___impl(PyObject *self, int protocol) /*[clinic end generated code: output=2e157766f6b50094 input=f326b43fb8a4c5ff]*/	todo		
+Objects/typeobject.c	7838	7841	object_subclasshook	object_subclasshook(PyObject *cls, PyObject *args)	todo		
+Objects/typeobject.c	7852	7855	object_init_subclass	object_init_subclass(PyObject *cls, PyObject *arg)	todo		
+Objects/typeobject.c	7875	7887	object___format___impl	object___format___impl(PyObject *self, PyObject *format_spec) /*[clinic end generated code: output=34897efb543a974b input=b94d8feb006689ea]*/	todo		
+Objects/typeobject.c	7896	7911	object___sizeof___impl	object___sizeof___impl(PyObject *self) /*[clinic end generated code: output=73edab332f97d550 input=1200ff3dfe485306]*/	todo		
+Objects/typeobject.c	7923	7965	object___dir___impl	object___dir___impl(PyObject *self) /*[clinic end generated code: output=66dd48ea62f26c90 input=0a89305bec669b10]*/	todo		
+Objects/typeobject.c	8031	8087	type_add_method	type_add_method(PyTypeObject *type, PyMethodDef *meth)	todo		
+Objects/typeobject.c	8090	8093	_PyType_AddMethod	_PyType_AddMethod(PyTypeObject *type, PyMethodDef *meth)	todo		
+Objects/typeobject.c	8098	8111	type_add_methods	type_add_methods(PyTypeObject *type)	todo		
+Objects/typeobject.c	8115	8135	type_add_members	type_add_members(PyTypeObject *type)	todo		
+Objects/typeobject.c	8139	8160	type_add_getset	type_add_getset(PyTypeObject *type)	todo		
+Objects/typeobject.c	8164	8228	inherit_special	inherit_special(PyTypeObject *type, PyTypeObject *base)	todo		
+Objects/typeobject.c	8231	8241	overrides_hash	overrides_hash(PyTypeObject *type)	todo		
+Objects/typeobject.c	8244	8437	inherit_slots	inherit_slots(PyTypeObject *type, PyTypeObject *base)	todo		
+Objects/typeobject.c	8445	8471	type_ready_pre_checks	type_ready_pre_checks(PyTypeObject *type)	todo		
+Objects/typeobject.c	8475	8501	type_ready_set_base	type_ready_set_base(PyTypeObject *type)	todo		
+Objects/typeobject.c	8504	8519	type_ready_set_type	type_ready_set_type(PyTypeObject *type)	todo		
+Objects/typeobject.c	8522	8547	type_ready_set_bases	type_ready_set_bases(PyTypeObject *type, int initial)	todo		
+Objects/typeobject.c	8551	8563	type_ready_set_dict	type_ready_set_dict(PyTypeObject *type)	todo		
+Objects/typeobject.c	8569	8600	type_dict_set_doc	type_dict_set_doc(PyTypeObject *type)	todo		
+Objects/typeobject.c	8604	8623	type_ready_fill_dict	type_ready_fill_dict(PyTypeObject *type)	todo		
+Objects/typeobject.c	8626	8651	type_ready_preheader	type_ready_preheader(PyTypeObject *type)	todo		
+Objects/typeobject.c	8654	8693	type_ready_mro	type_ready_mro(PyTypeObject *type, int initial)	todo		
+Objects/typeobject.c	8702	8719	type_ready_inherit_as_structs	type_ready_inherit_as_structs(PyTypeObject *type, PyTypeObject *base)	todo		
+Objects/typeobject.c	8722	8726	inherit_patma_flags	inherit_patma_flags(PyTypeObject *type, PyTypeObject *base) {	todo		
+Objects/typeobject.c	8729	8772	type_ready_inherit	type_ready_inherit(PyTypeObject *type)	todo		
+Objects/typeobject.c	8781	8801	type_ready_set_hash	type_ready_set_hash(PyTypeObject *type)	todo		
+Objects/typeobject.c	8806	8817	type_ready_add_subclasses	type_ready_add_subclasses(PyTypeObject *type)	todo		
+Objects/typeobject.c	8823	8871	type_ready_set_new	type_ready_set_new(PyTypeObject *type, int initial)	todo		
+Objects/typeobject.c	8874	8898	type_ready_managed_dict	type_ready_managed_dict(PyTypeObject *type)	todo		
+Objects/typeobject.c	8901	8932	type_ready_post_checks	type_ready_post_checks(PyTypeObject *type)	todo		
+Objects/typeobject.c	8936	9016	type_ready	type_ready(PyTypeObject *type, int initial)	todo		
+Objects/typeobject.c	9019	9044	PyType_Ready	PyType_Ready(PyTypeObject *type)	todo		
+Objects/typeobject.c	9048	9085	init_static_type	init_static_type(PyInterpreterState *interp, PyTypeObject *self, int isbuiltin, int initial)	todo		
+Objects/typeobject.c	9088	9091	_PyStaticType_InitForExtension	_PyStaticType_InitForExtension(PyInterpreterState *interp, PyTypeObject *self)	todo		
+Objects/typeobject.c	9094	9097	_PyStaticType_InitBuiltin	_PyStaticType_InitBuiltin(PyInterpreterState *interp, PyTypeObject *self)	todo		
+Objects/typeobject.c	9101	9131	add_subclass	add_subclass(PyTypeObject *base, PyTypeObject *type)	todo		
+Objects/typeobject.c	9134	9147	add_all_subclasses	add_all_subclasses(PyTypeObject *type, PyObject *bases)	todo		
+Objects/typeobject.c	9150	9178	get_subclasses_key	get_subclasses_key(PyTypeObject *type, PyTypeObject *base)	todo		
+Objects/typeobject.c	9181	9201	remove_subclass	remove_subclass(PyTypeObject *base, PyTypeObject *type)	todo		
+Objects/typeobject.c	9204	9217	remove_all_subclasses	remove_all_subclasses(PyTypeObject *type, PyObject *bases)	todo		
+Objects/typeobject.c	9220	9233	check_num_args	check_num_args(PyObject *ob, int n)	todo		
+Objects/typeobject.c	9236	9254	check_pow_args	check_pow_args(PyObject *ob)	todo		
+Objects/typeobject.c	9265	9276	wrap_lenfunc	wrap_lenfunc(PyObject *self, PyObject *args, void *wrapped)	todo		
+Objects/typeobject.c	9279	9290	wrap_inquirypred	wrap_inquirypred(PyObject *self, PyObject *args, void *wrapped)	todo		
+Objects/typeobject.c	9293	9302	wrap_binaryfunc	wrap_binaryfunc(PyObject *self, PyObject *args, void *wrapped)	todo		
+Objects/typeobject.c	9305	9314	wrap_binaryfunc_l	wrap_binaryfunc_l(PyObject *self, PyObject *args, void *wrapped)	todo		
+Objects/typeobject.c	9317	9326	wrap_binaryfunc_r	wrap_binaryfunc_r(PyObject *self, PyObject *args, void *wrapped)	todo		
+Objects/typeobject.c	9329	9347	wrap_ternaryfunc	wrap_ternaryfunc(PyObject *self, PyObject *args, void *wrapped)	todo		
+Objects/typeobject.c	9350	9368	wrap_ternaryfunc_r	wrap_ternaryfunc_r(PyObject *self, PyObject *args, void *wrapped)	todo		
+Objects/typeobject.c	9371	9378	wrap_unaryfunc	wrap_unaryfunc(PyObject *self, PyObject *args, void *wrapped)	todo		
+Objects/typeobject.c	9381	9394	wrap_indexargfunc	wrap_indexargfunc(PyObject *self, PyObject *args, void *wrapped)	todo		
+Objects/typeobject.c	9397	9416	getindex	getindex(PyObject *self, PyObject *arg)	todo		
+Objects/typeobject.c	9419	9435	wrap_sq_item	wrap_sq_item(PyObject *self, PyObject *args, void *wrapped)	todo		
+Objects/typeobject.c	9438	9454	wrap_sq_setitem	wrap_sq_setitem(PyObject *self, PyObject *args, void *wrapped)	todo		
+Objects/typeobject.c	9457	9474	wrap_sq_delitem	wrap_sq_delitem(PyObject *self, PyObject *args, void *wrapped)	todo		
+Objects/typeobject.c	9478	9492	wrap_objobjproc	wrap_objobjproc(PyObject *self, PyObject *args, void *wrapped)	todo		
+Objects/typeobject.c	9495	9507	wrap_objobjargproc	wrap_objobjargproc(PyObject *self, PyObject *args, void *wrapped)	todo		
+Objects/typeobject.c	9510	9523	wrap_delitem	wrap_delitem(PyObject *self, PyObject *args, void *wrapped)	todo		
+Objects/typeobject.c	9530	9575	hackcheck_unlocked	hackcheck_unlocked(PyObject *self, setattrofunc func, const char *what)	todo		
+Objects/typeobject.c	9578	9589	hackcheck	hackcheck(PyObject *self, setattrofunc func, const char *what)	todo		
+Objects/typeobject.c	9592	9606	wrap_setattr	wrap_setattr(PyObject *self, PyObject *args, void *wrapped)	todo		
+Objects/typeobject.c	9609	9624	wrap_delattr	wrap_delattr(PyObject *self, PyObject *args, void *wrapped)	todo		
+Objects/typeobject.c	9627	9638	wrap_hashfunc	wrap_hashfunc(PyObject *self, PyObject *args, void *wrapped)	todo		
+Objects/typeobject.c	9641	9646	wrap_call	wrap_call(PyObject *self, PyObject *args, void *wrapped, PyObject *kwds)	todo		
+Objects/typeobject.c	9649	9658	wrap_del	wrap_del(PyObject *self, PyObject *args, void *wrapped)	todo		
+Objects/typeobject.c	9661	9670	wrap_richcmpfunc	wrap_richcmpfunc(PyObject *self, PyObject *args, void *wrapped, int op)	todo		
+Objects/typeobject.c	9688	9699	wrap_next	wrap_next(PyObject *self, PyObject *args, void *wrapped)	todo		
+Objects/typeobject.c	9702	9720	wrap_descr_get	wrap_descr_get(PyObject *self, PyObject *args, void *wrapped)	todo		
+Objects/typeobject.c	9723	9735	wrap_descr_set	wrap_descr_set(PyObject *self, PyObject *args, void *wrapped)	todo		
+Objects/typeobject.c	9738	9751	wrap_descr_delete	wrap_descr_delete(PyObject *self, PyObject *args, void *wrapped)	todo		
+Objects/typeobject.c	9754	9773	wrap_buffer	wrap_buffer(PyObject *self, PyObject *args, void *wrapped)	todo		
+Objects/typeobject.c	9776	9808	wrap_releasebuffer	wrap_releasebuffer(PyObject *self, PyObject *args, void *wrapped)	todo		
+Objects/typeobject.c	9811	9818	wrap_init	wrap_init(PyObject *self, PyObject *args, void *wrapped, PyObject *kwds)	todo		
+Objects/typeobject.c	9821	9887	tp_new_wrapper	tp_new_wrapper(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Objects/typeobject.c	9898	9917	add_tp_new_wrapper	add_tp_new_wrapper(PyTypeObject *type)	todo		
+Objects/typeobject.c	9941	9968	method_is_overloaded	method_is_overloaded(PyObject *left, PyObject *right, PyObject *name)	todo		
+Objects/typeobject.c	10018	10043	slot_sq_length	slot_sq_length(PyObject *self)	todo		
+Objects/typeobject.c	10046	10056	slot_sq_item	slot_sq_item(PyObject *self, Py_ssize_t i)	todo		
+Objects/typeobject.c	10059	10086	slot_sq_ass_item	slot_sq_ass_item(PyObject *self, Py_ssize_t index, PyObject *value)	todo		
+Objects/typeobject.c	10089	10109	slot_sq_contains	slot_sq_contains(PyObject *self, PyObject *value)	todo		
+Objects/typeobject.c	10116	10135	slot_mp_ass_subscript	slot_mp_ass_subscript(PyObject *self, PyObject *key, PyObject *value)	todo		
+Objects/typeobject.c	10149	10195	slot_nb_power	slot_nb_power(PyObject *self, PyObject *other, PyObject *modulus)	todo		
+Objects/typeobject.c	10202	10243	slot_nb_bool	slot_nb_bool(PyObject *self)	todo		
+Objects/typeobject.c	10247	10251	slot_nb_index	slot_nb_index(PyObject *self)	todo		
+Objects/typeobject.c	10270	10274	slot_nb_inplace_power	slot_nb_inplace_power(PyObject *self, PyObject * arg1, PyObject *arg2)	todo		
+Objects/typeobject.c	10287	10298	slot_tp_repr	slot_tp_repr(PyObject *self)	todo		
+Objects/typeobject.c	10303	10338	slot_tp_hash	slot_tp_hash(PyObject *self)	todo		
+Objects/typeobject.c	10341	10344	slot_tp_call	slot_tp_call(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Objects/typeobject.c	10358	10362	_Py_slot_tp_getattro	_Py_slot_tp_getattro(PyObject *self, PyObject *name)	todo		
+Objects/typeobject.c	10365	10387	call_attribute	call_attribute(PyObject *self, PyObject *attr, PyObject *name)	todo		
+Objects/typeobject.c	10390	10438	_Py_slot_tp_getattr_hook	_Py_slot_tp_getattr_hook(PyObject *self, PyObject *name)	todo		
+Objects/typeobject.c	10441	10459	slot_tp_setattro	slot_tp_setattro(PyObject *self, PyObject *name, PyObject *value)	todo		
+Objects/typeobject.c	10471	10481	slot_tp_richcompare	slot_tp_richcompare(PyObject *self, PyObject *other, int op)	todo		
+Objects/typeobject.c	10484	10493	has_dunder_getitem	has_dunder_getitem(PyObject *self)	todo		
+Objects/typeobject.c	10496	10514	slot_tp_iter	slot_tp_iter(PyObject *self)	todo		
+Objects/typeobject.c	10517	10521	slot_tp_iternext	slot_tp_iternext(PyObject *self)	todo		
+Objects/typeobject.c	10524	10546	slot_tp_descr_get	slot_tp_descr_get(PyObject *self, PyObject *obj, PyObject *type)	todo		
+Objects/typeobject.c	10549	10567	slot_tp_descr_set	slot_tp_descr_set(PyObject *self, PyObject *target, PyObject *value)	todo		
+Objects/typeobject.c	10570	10584	slot_tp_init	slot_tp_init(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Objects/typeobject.c	10587	10600	slot_tp_new	slot_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Objects/typeobject.c	10603	10630	slot_tp_finalize	slot_tp_finalize(PyObject *self)	todo		
+Objects/typeobject.c	10641	10647	bufferwrapper_traverse	bufferwrapper_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Objects/typeobject.c	10650	10658	bufferwrapper_dealloc	bufferwrapper_dealloc(PyObject *self)	todo		
+Objects/typeobject.c	10661	10685	bufferwrapper_releasebuf	bufferwrapper_releasebuf(PyObject *self, Py_buffer *view)	todo		
+Objects/typeobject.c	10705	10746	slot_bf_getbuffer	slot_bf_getbuffer(PyObject *self, Py_buffer *buffer, int flags)	todo		
+Objects/typeobject.c	10749	10784	releasebuffer_maybe_call_super_unlocked	releasebuffer_maybe_call_super_unlocked(PyObject *self, Py_buffer *buffer)	todo		
+Objects/typeobject.c	10787	10798	releasebuffer_maybe_call_super	releasebuffer_maybe_call_super(PyObject *self, Py_buffer *buffer)	todo		
+Objects/typeobject.c	10801	10857	releasebuffer_call_python	releasebuffer_call_python(PyObject *self, Py_buffer *buffer)	todo		
+Objects/typeobject.c	10871	10875	slot_bf_releasebuffer	slot_bf_releasebuffer(PyObject *self, Py_buffer *buffer)	todo		
+Objects/typeobject.c	10878	10887	slot_am_generic	slot_am_generic(PyObject *self, PyObject *name)	todo		
+Objects/typeobject.c	10890	10893	slot_am_await	slot_am_await(PyObject *self)	todo		
+Objects/typeobject.c	10896	10899	slot_am_aiter	slot_am_aiter(PyObject *self)	todo		
+Objects/typeobject.c	10902	10905	slot_am_anext	slot_am_anext(PyObject *self)	todo		
+Objects/typeobject.c	11174	11208	slotptr	slotptr(PyTypeObject *type, int ioffset)	todo		
+Objects/typeobject.c	11213	11250	resolve_slotdups	resolve_slotdups(PyTypeObject *type, PyObject *name)	todo		
+Objects/typeobject.c	11308	11421	update_one_slot	update_one_slot(PyTypeObject *type, pytype_slotdef *p)	todo		
+Objects/typeobject.c	11426	11435	update_slots_callback	update_slots_callback(PyTypeObject *type, void *data)	todo		
+Objects/typeobject.c	11439	11472	update_slot	update_slot(PyTypeObject *type, PyObject *name)	todo		
+Objects/typeobject.c	11478	11491	fixup_slot_dispatchers	fixup_slot_dispatchers(PyTypeObject *type)	todo		
+Objects/typeobject.c	11494	11507	update_all_slots	update_all_slots(PyTypeObject* type)	todo		
+Objects/typeobject.c	11511	11525	_PyType_GetSlotWrapperNames	_PyType_GetSlotWrapperNames(void)	todo		
+Objects/typeobject.c	11531	11572	type_new_set_names	type_new_set_names(PyTypeObject *type)	todo		
+Objects/typeobject.c	11577	11600	type_new_init_subclass	type_new_init_subclass(PyTypeObject *type, PyObject *kwds)	todo		
+Objects/typeobject.c	11608	11615	update_subclasses	update_subclasses(PyTypeObject *type, PyObject *attr_name, update_callback callback, void *data)	todo		
+Objects/typeobject.c	11618	11659	recurse_down_subclasses	recurse_down_subclasses(PyTypeObject *type, PyObject *attr_name, update_callback callback, void *data)	todo		
+Objects/typeobject.c	11662	11679	slot_inherited	slot_inherited(PyTypeObject *type, pytype_slotdef *slotdef, void **slot)	todo		
+Objects/typeobject.c	11712	11757	add_operators	add_operators(PyTypeObject *type)	todo		
+Objects/typeobject.c	11761	11783	PyType_Freeze	PyType_Freeze(PyTypeObject *type)	todo		
+Objects/typeobject.c	11808	11817	super_dealloc	super_dealloc(PyObject *self)	todo		
+Objects/typeobject.c	11820	11833	super_repr	super_repr(PyObject *self)	todo		
+Objects/typeobject.c	11840	11884	_super_lookup_descr	_super_lookup_descr(PyTypeObject *su_type, PyTypeObject *su_obj_type, PyObject *name)	todo		
+Objects/typeobject.c	11889	11937	do_super_lookup	do_super_lookup(superobject *su, PyTypeObject *su_type, PyObject *su_obj, PyTypeObject *su_obj_type, PyObject *name, int *method)	todo		
+Objects/typeobject.c	11940	11952	super_getattro	super_getattro(PyObject *self, PyObject *name)	todo		
+Objects/typeobject.c	11955	12018	supercheck	supercheck(PyTypeObject *type, PyObject *obj)	todo		
+Objects/typeobject.c	12021	12030	_PySuper_Lookup	_PySuper_Lookup(PyTypeObject *su_type, PyObject *su_obj, PyObject *name, int *method)	todo		
+Objects/typeobject.c	12033	12063	super_descr_get	super_descr_get(PyObject *self, PyObject *obj, PyObject *type)	todo		
+Objects/typeobject.c	12066	12145	super_init_without_args	super_init_without_args(_PyInterpreterFrame *cframe, PyTypeObject **type_p, PyObject **obj_p)	todo		
+Objects/typeobject.c	12150	12163	super_init	super_init(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Objects/typeobject.c	12166	12206	super_init_impl	super_init_impl(PyObject *self, PyTypeObject *type, PyObject *obj) {	todo		
+Objects/typeobject.c	12225	12234	super_traverse	super_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/typeobject.c	12237	12275	super_vectorcall	super_vectorcall(PyObject *self, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		

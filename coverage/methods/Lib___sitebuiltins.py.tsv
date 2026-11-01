@@ -1,0 +1,10 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_sitebuiltins.py	14	16	Quitter.__init__	__init__(self, name, eof)	todo		
+Lib/_sitebuiltins.py	17	18	Quitter.__repr__	__repr__(self)	todo		
+Lib/_sitebuiltins.py	19	26	Quitter.__call__	__call__(self, code=None)	todo		
+Lib/_sitebuiltins.py	35	42	_Printer.__init__	__init__(self, name, data, files=(), dirs=())	todo		
+Lib/_sitebuiltins.py	44	58	_Printer.__setup	__setup(self)	todo		
+Lib/_sitebuiltins.py	60	65	_Printer.__repr__	__repr__(self)	todo		
+Lib/_sitebuiltins.py	67	73	_Printer.__call__	__call__(self)	todo		
+Lib/_sitebuiltins.py	86	88	_Helper.__repr__	__repr__(self)	todo		
+Lib/_sitebuiltins.py	89	91	_Helper.__call__	__call__(self, *args, **kwds)	todo		

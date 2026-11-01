@@ -1,0 +1,48 @@
+file	line	endline	name	signature	status	entry	note
+Lib/xml/dom/xmlbuilder.py	57	58	DOMBuilder.__init__	__init__(self)	todo		
+Lib/xml/dom/xmlbuilder.py	60	61	DOMBuilder._get_entityResolver	_get_entityResolver(self)	todo		
+Lib/xml/dom/xmlbuilder.py	62	63	DOMBuilder._set_entityResolver	_set_entityResolver(self, entityResolver)	todo		
+Lib/xml/dom/xmlbuilder.py	65	66	DOMBuilder._get_errorHandler	_get_errorHandler(self)	todo		
+Lib/xml/dom/xmlbuilder.py	67	68	DOMBuilder._set_errorHandler	_set_errorHandler(self, errorHandler)	todo		
+Lib/xml/dom/xmlbuilder.py	70	71	DOMBuilder._get_filter	_get_filter(self)	todo		
+Lib/xml/dom/xmlbuilder.py	72	73	DOMBuilder._set_filter	_set_filter(self, filter)	todo		
+Lib/xml/dom/xmlbuilder.py	75	87	DOMBuilder.setFeature	setFeature(self, name, state)	todo		
+Lib/xml/dom/xmlbuilder.py	89	90	DOMBuilder.supportsFeature	supportsFeature(self, name)	todo		
+Lib/xml/dom/xmlbuilder.py	92	94	DOMBuilder.canSetFeature	canSetFeature(self, name, state)	todo		
+Lib/xml/dom/xmlbuilder.py	162	178	DOMBuilder.getFeature	getFeature(self, name)	todo		
+Lib/xml/dom/xmlbuilder.py	180	185	DOMBuilder.parseURI	parseURI(self, uri)	todo		
+Lib/xml/dom/xmlbuilder.py	187	195	DOMBuilder.parse	parse(self, input)	todo		
+Lib/xml/dom/xmlbuilder.py	197	200	DOMBuilder.parseWithContext	parseWithContext(self, input, cnode, action)	todo		
+Lib/xml/dom/xmlbuilder.py	202	205	DOMBuilder._parse_bytestream	_parse_bytestream(self, stream, options)	todo		
+Lib/xml/dom/xmlbuilder.py	208	209	_name_xform	_name_xform(name)	todo		
+Lib/xml/dom/xmlbuilder.py	215	235	DOMEntityResolver.resolveEntity	resolveEntity(self, publicId, systemId)	todo		
+Lib/xml/dom/xmlbuilder.py	237	242	DOMEntityResolver._get_opener	_get_opener(self)	todo		
+Lib/xml/dom/xmlbuilder.py	244	246	DOMEntityResolver._create_opener	_create_opener(self)	todo		
+Lib/xml/dom/xmlbuilder.py	248	255	DOMEntityResolver._guess_media_encoding	_guess_media_encoding(self, source)	todo		
+Lib/xml/dom/xmlbuilder.py	262	269	DOMInputSource.__init__	__init__(self)	todo		
+Lib/xml/dom/xmlbuilder.py	271	272	DOMInputSource._get_byteStream	_get_byteStream(self)	todo		
+Lib/xml/dom/xmlbuilder.py	273	274	DOMInputSource._set_byteStream	_set_byteStream(self, byteStream)	todo		
+Lib/xml/dom/xmlbuilder.py	276	277	DOMInputSource._get_characterStream	_get_characterStream(self)	todo		
+Lib/xml/dom/xmlbuilder.py	278	279	DOMInputSource._set_characterStream	_set_characterStream(self, characterStream)	todo		
+Lib/xml/dom/xmlbuilder.py	281	282	DOMInputSource._get_stringData	_get_stringData(self)	todo		
+Lib/xml/dom/xmlbuilder.py	283	284	DOMInputSource._set_stringData	_set_stringData(self, data)	todo		
+Lib/xml/dom/xmlbuilder.py	286	287	DOMInputSource._get_encoding	_get_encoding(self)	todo		
+Lib/xml/dom/xmlbuilder.py	288	289	DOMInputSource._set_encoding	_set_encoding(self, encoding)	todo		
+Lib/xml/dom/xmlbuilder.py	291	292	DOMInputSource._get_publicId	_get_publicId(self)	todo		
+Lib/xml/dom/xmlbuilder.py	293	294	DOMInputSource._set_publicId	_set_publicId(self, publicId)	todo		
+Lib/xml/dom/xmlbuilder.py	296	297	DOMInputSource._get_systemId	_get_systemId(self)	todo		
+Lib/xml/dom/xmlbuilder.py	298	299	DOMInputSource._set_systemId	_set_systemId(self, systemId)	todo		
+Lib/xml/dom/xmlbuilder.py	301	302	DOMInputSource._get_baseURI	_get_baseURI(self)	todo		
+Lib/xml/dom/xmlbuilder.py	303	304	DOMInputSource._set_baseURI	_set_baseURI(self, uri)	todo		
+Lib/xml/dom/xmlbuilder.py	324	325	DOMBuilderFilter._get_whatToShow	_get_whatToShow(self)	todo		
+Lib/xml/dom/xmlbuilder.py	327	328	DOMBuilderFilter.acceptNode	acceptNode(self, element)	todo		
+Lib/xml/dom/xmlbuilder.py	330	331	DOMBuilderFilter.startContainer	startContainer(self, element)	todo		
+Lib/xml/dom/xmlbuilder.py	341	342	DocumentLS._get_async	_get_async(self)	todo		
+Lib/xml/dom/xmlbuilder.py	344	347	DocumentLS._set_async	_set_async(self, flag)	todo		
+Lib/xml/dom/xmlbuilder.py	349	353	DocumentLS.abort	abort(self)	todo		
+Lib/xml/dom/xmlbuilder.py	355	356	DocumentLS.load	load(self, uri)	todo		
+Lib/xml/dom/xmlbuilder.py	358	359	DocumentLS.loadXML	loadXML(self, source)	todo		
+Lib/xml/dom/xmlbuilder.py	361	366	DocumentLS.saveXML	saveXML(self, snode)	todo		
+Lib/xml/dom/xmlbuilder.py	373	382	DOMImplementationLS.createDOMBuilder	createDOMBuilder(self, mode, schemaType)	todo		
+Lib/xml/dom/xmlbuilder.py	384	386	DOMImplementationLS.createDOMWriter	createDOMWriter(self)	todo		
+Lib/xml/dom/xmlbuilder.py	388	389	DOMImplementationLS.createDOMInputSource	createDOMInputSource(self)	todo		

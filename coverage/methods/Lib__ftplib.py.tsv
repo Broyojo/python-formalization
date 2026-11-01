@@ -1,0 +1,57 @@
+file	line	endline	name	signature	status	entry	note
+Lib/ftplib.py	109	123	FTP.__init__	__init__(self, host='', user='', passwd='', acct='', timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=None, *, encoding='utf-8')	todo		
+Lib/ftplib.py	125	126	FTP.__enter__	__enter__(self)	todo		
+Lib/ftplib.py	129	137	FTP.__exit__	__exit__(self, *args)	todo		
+Lib/ftplib.py	139	163	FTP.connect	connect(self, host='', port=0, timeout=-999, source_address=None)	todo		
+Lib/ftplib.py	165	170	FTP.getwelcome	getwelcome(self)	todo		
+Lib/ftplib.py	172	178	FTP.set_debuglevel	set_debuglevel(self, level)	todo		
+Lib/ftplib.py	181	185	FTP.set_pasv	set_pasv(self, val)	todo		
+Lib/ftplib.py	188	192	FTP.sanitize	sanitize(self, s)	todo		
+Lib/ftplib.py	195	202	FTP.putline	putline(self, line)	todo		
+Lib/ftplib.py	205	207	FTP.putcmd	putcmd(self, line)	todo		
+Lib/ftplib.py	211	223	FTP.getline	getline(self)	todo		
+Lib/ftplib.py	229	239	FTP.getmultiline	getmultiline(self)	todo		
+Lib/ftplib.py	243	255	FTP.getresp	getresp(self)	todo		
+Lib/ftplib.py	257	262	FTP.voidresp	voidresp(self)	todo		
+Lib/ftplib.py	264	276	FTP.abort	abort(self)	todo		
+Lib/ftplib.py	278	281	FTP.sendcmd	sendcmd(self, cmd)	todo		
+Lib/ftplib.py	283	286	FTP.voidcmd	voidcmd(self, cmd)	todo		
+Lib/ftplib.py	288	296	FTP.sendport	sendport(self, host, port)	todo		
+Lib/ftplib.py	298	309	FTP.sendeprt	sendeprt(self, host, port)	todo		
+Lib/ftplib.py	311	322	FTP.makeport	makeport(self)	todo		
+Lib/ftplib.py	324	334	FTP.makepasv	makepasv(self)	todo		
+Lib/ftplib.py	336	389	FTP.ntransfercmd	ntransfercmd(self, cmd, rest=None)	todo		
+Lib/ftplib.py	391	393	FTP.transfercmd	transfercmd(self, cmd, rest=None)	todo		
+Lib/ftplib.py	395	419	FTP.login	login(self, user='', passwd='', acct='')	todo		
+Lib/ftplib.py	421	442	FTP.retrbinary	retrbinary(self, cmd, callback, blocksize=8192, rest=None)	todo		
+Lib/ftplib.py	444	477	FTP.retrlines	retrlines(self, cmd, callback=None)	todo		
+Lib/ftplib.py	479	503	FTP.storbinary	storbinary(self, cmd, fp, blocksize=8192, callback=None, rest=None)	todo		
+Lib/ftplib.py	505	534	FTP.storlines	storlines(self, cmd, fp, callback=None)	todo		
+Lib/ftplib.py	536	539	FTP.acct	acct(self, password)	todo		
+Lib/ftplib.py	541	548	FTP.nlst	nlst(self, *args)	todo		
+Lib/ftplib.py	550	563	FTP.dir	dir(self, *args)	todo		
+Lib/ftplib.py	565	591	FTP.mlsd	mlsd(self, path='', facts=[])	todo		
+Lib/ftplib.py	593	598	FTP.rename	rename(self, fromname, toname)	todo		
+Lib/ftplib.py	600	606	FTP.delete	delete(self, filename)	todo		
+Lib/ftplib.py	608	619	FTP.cwd	cwd(self, dirname)	todo		
+Lib/ftplib.py	621	627	FTP.size	size(self, filename)	todo		
+Lib/ftplib.py	629	636	FTP.mkd	mkd(self, dirname)	todo		
+Lib/ftplib.py	638	640	FTP.rmd	rmd(self, dirname)	todo		
+Lib/ftplib.py	642	649	FTP.pwd	pwd(self)	todo		
+Lib/ftplib.py	651	655	FTP.quit	quit(self)	todo		
+Lib/ftplib.py	657	668	FTP.close	close(self)	todo		
+Lib/ftplib.py	711	719	FTP_TLS.__init__	__init__(self, host='', user='', passwd='', acct='', *, context=None, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=None, encoding='utf-8')	todo		
+Lib/ftplib.py	721	724	FTP_TLS.login	login(self, user='', passwd='', acct='', secure=True)	todo		
+Lib/ftplib.py	726	736	FTP_TLS.auth	auth(self)	todo		
+Lib/ftplib.py	738	744	FTP_TLS.ccc	ccc(self)	todo		
+Lib/ftplib.py	746	760	FTP_TLS.prot_p	prot_p(self)	todo		
+Lib/ftplib.py	762	766	FTP_TLS.prot_c	prot_c(self)	todo		
+Lib/ftplib.py	770	775	FTP_TLS.ntransfercmd	ntransfercmd(self, cmd, rest=None)	todo		
+Lib/ftplib.py	777	784	FTP_TLS.abort	abort(self)	todo		
+Lib/ftplib.py	792	807	parse150	parse150(resp)	todo		
+Lib/ftplib.py	812	828	parse227	parse227(resp)	todo		
+Lib/ftplib.py	831	849	parse229	parse229(resp, peer)	todo		
+Lib/ftplib.py	852	871	parse257	parse257(resp)	todo		
+Lib/ftplib.py	874	876	print_line	print_line(line)	todo		
+Lib/ftplib.py	879	907	ftpcp	ftpcp(source, sourcename, target, targetname='', type='I')	todo		
+Lib/ftplib.py	910	971	test	test()	todo		

@@ -1,0 +1,6 @@
+file	line	endline	name	signature	status	entry	note
+Lib/json/__init__.py	120	182	dump	dump(obj, fp, *, skipkeys=False, ensure_ascii=True, check_circular=True, allow_nan=True, cls=None, indent=None, separators=None, default=None, sort_keys=False, **kw)	todo		
+Lib/json/__init__.py	185	242	dumps	dumps(obj, *, skipkeys=False, ensure_ascii=True, check_circular=True, allow_nan=True, cls=None, indent=None, separators=None, default=None, sort_keys=False, **kw)	todo		
+Lib/json/__init__.py	248	275	detect_encoding	detect_encoding(b)	todo		
+Lib/json/__init__.py	278	301	load	load(fp, *, cls=None, object_hook=None, parse_float=None, parse_int=None, parse_constant=None, object_pairs_hook=None, **kw)	todo		
+Lib/json/__init__.py	304	365	loads	loads(s, *, cls=None, object_hook=None, parse_float=None, parse_int=None, parse_constant=None, object_pairs_hook=None, **kw)	todo		

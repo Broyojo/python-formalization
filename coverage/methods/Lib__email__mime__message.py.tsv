@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Lib/email/mime/message.py	16	33	MIMEMessage.__init__	__init__(self, _msg, _subtype='rfc822', *, policy=None)	todo		

@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_multiprocessing/posixshmem.c	45	73	_posixshmem_shm_open_impl	_posixshmem_shm_open_impl(PyObject *module, PyObject *path, int flags, int mode) /*[clinic end generated code: output=8d110171a4fa20df input=e83b58fa802fac25]*/	todo		
+Modules/_multiprocessing/posixshmem.c	91	118	_posixshmem_shm_unlink_impl	_posixshmem_shm_unlink_impl(PyObject *module, PyObject *path) /*[clinic end generated code: output=42f8b23d134b9ff5 input=cf7a30ec6503cf78]*/	todo		
+Modules/_multiprocessing/posixshmem.c	148	151	PyInit__posixshmem	PyInit__posixshmem(void)	todo		

@@ -1,0 +1,3 @@
+file	line	endline	name	signature	status	entry	note
+Lib/importlib/metadata/_functools.py	6	85	method_cache	method_cache(method, cache_wrapper=None)	todo		
+Lib/importlib/metadata/_functools.py	89	104	pass_none	pass_none(func)	todo		

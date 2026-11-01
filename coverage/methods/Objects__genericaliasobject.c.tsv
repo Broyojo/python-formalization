@@ -1,0 +1,38 @@
+file	line	endline	name	signature	status	entry	note
+Objects/genericaliasobject.c	32	42	ga_dealloc	ga_dealloc(PyObject *self)	todo		
+Objects/genericaliasobject.c	45	52	ga_traverse	ga_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/genericaliasobject.c	55	87	ga_repr_items_list	ga_repr_items_list(PyUnicodeWriter *writer, PyObject *p)	todo		
+Objects/genericaliasobject.c	90	145	ga_repr	ga_repr(PyObject *self)	todo		
+Objects/genericaliasobject.c	149	157	tuple_index	tuple_index(PyObject *self, Py_ssize_t len, PyObject *item)	todo		
+Objects/genericaliasobject.c	160	167	tuple_add	tuple_add(PyObject *self, Py_ssize_t len, PyObject *item)	todo		
+Objects/genericaliasobject.c	170	183	tuple_extend	tuple_extend(PyObject **dst, Py_ssize_t dstindex, PyObject **src, Py_ssize_t count)	todo		
+Objects/genericaliasobject.c	186	269	_Py_make_parameters	_Py_make_parameters(PyObject *args)	todo		
+Objects/genericaliasobject.c	277	323	subs_tvars	subs_tvars(PyObject *obj, PyObject *params, PyObject **argitems, Py_ssize_t nargs)	todo		
+Objects/genericaliasobject.c	326	338	_is_unpacked_typevartuple	_is_unpacked_typevartuple(PyObject *arg)	todo		
+Objects/genericaliasobject.c	341	362	_unpacked_tuple_args	_unpacked_tuple_args(PyObject *arg)	todo		
+Objects/genericaliasobject.c	365	404	_unpack_args	_unpack_args(PyObject *item)	todo		
+Objects/genericaliasobject.c	407	568	_Py_subs_parameters	_Py_subs_parameters(PyObject *self, PyObject *args, PyObject *parameters, PyObject *item)	todo		
+Objects/genericaliasobject.c	579	604	ga_getitem	ga_getitem(PyObject *self, PyObject *item)	todo		
+Objects/genericaliasobject.c	611	624	ga_hash	ga_hash(PyObject *self)	todo		
+Objects/genericaliasobject.c	627	641	set_orig_class	set_orig_class(PyObject *obj, PyObject *self)	todo		
+Objects/genericaliasobject.c	644	649	ga_call	ga_call(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Objects/genericaliasobject.c	652	658	ga_vectorcall	ga_vectorcall(PyObject *self, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
+Objects/genericaliasobject.c	681	709	ga_getattro	ga_getattro(PyObject *self, PyObject *name)	todo		
+Objects/genericaliasobject.c	712	746	ga_richcompare	ga_richcompare(PyObject *a, PyObject *b, int op)	todo		
+Objects/genericaliasobject.c	749	753	ga_mro_entries	ga_mro_entries(PyObject *self, PyObject *args)	todo		
+Objects/genericaliasobject.c	756	761	ga_instancecheck	ga_instancecheck(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/genericaliasobject.c	764	769	ga_subclasscheck	ga_subclasscheck(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/genericaliasobject.c	772	787	ga_reduce	ga_reduce(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/genericaliasobject.c	790	825	ga_dir	ga_dir(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/genericaliasobject.c	844	854	ga_parameters_lock_held	ga_parameters_lock_held(PyObject *self)	todo		
+Objects/genericaliasobject.c	857	864	ga_parameters	ga_parameters(PyObject *self, void *unused)	todo		
+Objects/genericaliasobject.c	867	874	ga_unpacked_tuple_args	ga_unpacked_tuple_args(PyObject *self, void *unused)	todo		
+Objects/genericaliasobject.c	886	910	setup_ga	setup_ga(gaobject *alias, PyObject *origin, PyObject *args) {	todo		
+Objects/genericaliasobject.c	913	932	ga_new	ga_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Objects/genericaliasobject.c	939	954	ga_iternext	ga_iternext(PyObject *op)	todo		
+Objects/genericaliasobject.c	957	963	ga_iter_dealloc	ga_iter_dealloc(PyObject *op)	todo		
+Objects/genericaliasobject.c	966	971	ga_iter_traverse	ga_iter_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Objects/genericaliasobject.c	974	979	ga_iter_clear	ga_iter_clear(PyObject *self)	todo		
+Objects/genericaliasobject.c	982	995	ga_iter_reduce	ga_iter_reduce(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/genericaliasobject.c	1018	1026	ga_iter	ga_iter(PyObject *self) {	todo		
+Objects/genericaliasobject.c	1058	1070	Py_GenericAlias	Py_GenericAlias(PyObject *origin, PyObject *args)	todo		

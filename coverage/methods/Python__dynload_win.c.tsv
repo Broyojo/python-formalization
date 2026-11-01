@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Python/dynload_win.c	40	146	GetPythonImport	static char *GetPythonImport (HINSTANCE hModule)	todo		
+Python/dynload_win.c	157	201	_Py_CheckPython3	_Py_CheckPython3(void)	todo		
+Python/dynload_win.c	204	329	_PyImport_FindSharedFuncptrWindows	dl_funcptr _PyImport_FindSharedFuncptrWindows(const char *prefix, const char *shortname, PyObject *pathname, FILE *fp)	todo		

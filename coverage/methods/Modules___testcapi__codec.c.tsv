@@ -1,0 +1,20 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/codec.c	7	13	codec_register	codec_register(PyObject *Py_UNUSED(module), PyObject *search_function)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/codec.c	16	22	codec_unregister	codec_unregister(PyObject *Py_UNUSED(module), PyObject *search_function)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/codec.c	25	32	codec_known_encoding	codec_known_encoding(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/codec.c	37	46	codec_encode	codec_encode(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/codec.c	49	58	codec_decode	codec_decode(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/codec.c	61	68	codec_encoder	codec_encoder(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/codec.c	71	78	codec_decoder	codec_decoder(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/codec.c	81	89	codec_incremental_encoder	codec_incremental_encoder(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/codec.c	92	100	codec_incremental_decoder	codec_incremental_decoder(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/codec.c	103	112	codec_stream_reader	codec_stream_reader(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/codec.c	115	124	codec_stream_writer	codec_stream_writer(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/codec.c	129	140	codec_register_error	codec_register_error(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/codec.c	143	150	codec_lookup_error	codec_lookup_error(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/codec.c	153	157	codec_strict_errors	codec_strict_errors(PyObject *Py_UNUSED(module), PyObject *exc)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/codec.c	160	164	codec_ignore_errors	codec_ignore_errors(PyObject *Py_UNUSED(module), PyObject *exc)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/codec.c	167	171	codec_replace_errors	codec_replace_errors(PyObject *Py_UNUSED(module), PyObject *exc)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/codec.c	174	178	codec_xmlcharrefreplace_errors	codec_xmlcharrefreplace_errors(PyObject *Py_UNUSED(module), PyObject *exc)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/codec.c	181	185	codec_backslashreplace_errors	codec_backslashreplace_errors(PyObject *Py_UNUSED(module), PyObject *exc)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/codec.c	214	221	_PyTestCapi_Init_Codec	_PyTestCapi_Init_Codec(PyObject *m)	excluded		test-support: only for CPython's own tests

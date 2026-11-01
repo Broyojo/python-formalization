@@ -1,0 +1,89 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_collectionsmodule.c	21	26	get_module_state	get_module_state(PyObject *mod)	todo		
+Modules/_collectionsmodule.c	29	34	get_module_state_by_cls	get_module_state_by_cls(PyTypeObject *cls)	todo		
+Modules/_collectionsmodule.c	39	44	find_module_state_by_def	find_module_state_by_def(PyTypeObject *type)	todo		
+Modules/_collectionsmodule.c	177	189	newblock	newblock(dequeobject *deque) {	todo		
+Modules/_collectionsmodule.c	192	200	freeblock	freeblock(dequeobject *deque, block *b)	todo		
+Modules/_collectionsmodule.c	203	233	deque_new	deque_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	sequences-deque-construct	
+Modules/_collectionsmodule.c	245	278	deque_pop_impl	deque_pop_impl(dequeobject *deque) /*[clinic end generated code: output=2e5f7890c4251f07 input=55c5b6a8ad51d72f]*/	modelled	sequences-deque-ends-evict,sequences-pop-remove-count-agree	
+Modules/_collectionsmodule.c	290	324	deque_popleft_impl	deque_popleft_impl(dequeobject *deque) /*[clinic end generated code: output=62b154897097ff68 input=1571ce88fe3053de]*/	modelled	sequences-deque-ends-evict,sequences-pop-remove-count-agree	
+Modules/_collectionsmodule.c	341	364	deque_append_lock_held	deque_append_lock_held(dequeobject *deque, PyObject *item, Py_ssize_t maxlen)	modelled	sequences-deque-ends-evict	
+Modules/_collectionsmodule.c	378	384	deque_append_impl	deque_append_impl(dequeobject *deque, PyObject *item) /*[clinic end generated code: output=9c7bcb8b599c6362 input=b0eeeb09b9f5cf18]*/	todo		
+Modules/_collectionsmodule.c	387	411	deque_appendleft_lock_held	deque_appendleft_lock_held(dequeobject *deque, PyObject *item, Py_ssize_t maxlen)	modelled	sequences-deque-ends-evict	
+Modules/_collectionsmodule.c	425	431	deque_appendleft_impl	deque_appendleft_impl(dequeobject *deque, PyObject *item) /*[clinic end generated code: output=9a192edbcd0f20db input=236c2fbceaf08e14]*/	todo		
+Modules/_collectionsmodule.c	434	446	finalize_iterator	finalize_iterator(PyObject *it)	todo		
+Modules/_collectionsmodule.c	451	461	consume_iterator	consume_iterator(PyObject *it)	todo		
+Modules/_collectionsmodule.c	475	516	deque_extend_impl	deque_extend_impl(dequeobject *deque, PyObject *iterable) /*[clinic end generated code: output=8b5ffa57ce82d980 input=85861954127c81da]*/	modelled	sequences-deque-ends-evict	
+Modules/_collectionsmodule.c	530	572	deque_extendleft_impl	deque_extendleft_impl(dequeobject *deque, PyObject *iterable) /*[clinic end generated code: output=ba44191aa8e35a26 input=640dabd086115689]*/	modelled	sequences-deque-ends-evict	
+Modules/_collectionsmodule.c	575	587	deque_inplace_concat	deque_inplace_concat(PyObject *self, PyObject *other)	todo		
+Modules/_collectionsmodule.c	599	658	deque_copy_impl	deque_copy_impl(dequeobject *deque) /*[clinic end generated code: output=6409b3d1ad2898b5 input=51d2ed1a23bab5e2]*/	modelled	sequences-deque-copy-concat	
+Modules/_collectionsmodule.c	668	672	deque___copy___impl	deque___copy___impl(dequeobject *deque) /*[clinic end generated code: output=7c5821504342bf23 input=f5464036f9686a55]*/	todo		
+Modules/_collectionsmodule.c	675	704	deque_concat_lock_held	deque_concat_lock_held(dequeobject *deque, PyObject *other)	modelled	sequences-deque-copy-concat	
+Modules/_collectionsmodule.c	707	715	deque_concat	deque_concat(PyObject *self, PyObject *other)	todo		
+Modules/_collectionsmodule.c	718	800	deque_clear	deque_clear(PyObject *self)	todo		
+Modules/_collectionsmodule.c	812	817	deque_clearmethod_impl	deque_clearmethod_impl(dequeobject *deque) /*[clinic end generated code: output=79b2513e097615c1 input=3a22e9605d20c5e9]*/	todo		
+Modules/_collectionsmodule.c	820	894	deque_inplace_repeat_lock_held	deque_inplace_repeat_lock_held(dequeobject *deque, Py_ssize_t n)	modelled	sequences-deque-irepeat,sequences-deque-irepeat-checked	
+Modules/_collectionsmodule.c	897	905	deque_inplace_repeat	deque_inplace_repeat(PyObject *self, Py_ssize_t n)	todo		
+Modules/_collectionsmodule.c	908	924	deque_repeat	deque_repeat(PyObject *self, Py_ssize_t n)	modelled	sequences-deque-irepeat	
+Modules/_collectionsmodule.c	952	1073	_deque_rotate	_deque_rotate(dequeobject *deque, Py_ssize_t n)	modelled	sequences-deque-rotate-loop	
+Modules/_collectionsmodule.c	1087	1093	deque_rotate_impl	deque_rotate_impl(dequeobject *deque, Py_ssize_t n) /*[clinic end generated code: output=96c2402a371eb15d input=5bf834296246e002]*/	modelled	sequences-deque-rotate-loop	
+Modules/_collectionsmodule.c	1105	1141	deque_reverse_impl	deque_reverse_impl(dequeobject *deque) /*[clinic end generated code: output=bdeebc2cf8c1f064 input=26f4167fd623027f]*/	modelled	sequences-deque-reverse	
+Modules/_collectionsmodule.c	1155	1189	deque_count_impl	deque_count_impl(dequeobject *deque, PyObject *v) /*[clinic end generated code: output=2ca26c49b6ab0400 input=4ef67ef2b34dc1fc]*/	modelled	sequences-pop-remove-count-agree	
+Modules/_collectionsmodule.c	1192	1221	deque_contains_lock_held	deque_contains_lock_held(dequeobject *deque, PyObject *v)	todo		
+Modules/_collectionsmodule.c	1224	1232	deque_contains	deque_contains(PyObject *self, PyObject *v)	todo		
+Modules/_collectionsmodule.c	1235	1239	deque_len	deque_len(PyObject *self)	todo		
+Modules/_collectionsmodule.c	1258	1320	deque_index_impl	deque_index_impl(dequeobject *deque, PyObject *v, Py_ssize_t start, Py_ssize_t stop) /*[clinic end generated code: output=df45132753175ef9 input=1c3b19632cf3484f]*/	modelled	sequences-index-agree	
+Modules/_collectionsmodule.c	1343	1369	deque_insert_impl	deque_insert_impl(dequeobject *deque, Py_ssize_t index, PyObject *value) /*[clinic end generated code: output=ef4d2c15d5532b80 input=dbee706586cc9cde]*/	modelled	sequences-insert-agree	
+Modules/_collectionsmodule.c	1372	1377	valid_index	valid_index(Py_ssize_t i, Py_ssize_t limit)	todo		
+Modules/_collectionsmodule.c	1380	1416	deque_item_lock_held	deque_item_lock_held(dequeobject *deque, Py_ssize_t i)	modelled	sequences-subscript-agree	
+Modules/_collectionsmodule.c	1419	1427	deque_item	deque_item(PyObject *self, Py_ssize_t i)	todo		
+Modules/_collectionsmodule.c	1430	1443	deque_del_item	deque_del_item(dequeobject *deque, Py_ssize_t i)	modelled	sequences-subscript-agree	
+Modules/_collectionsmodule.c	1457	1496	deque_remove_impl	deque_remove_impl(dequeobject *deque, PyObject *value) /*[clinic end generated code: output=54cff28b8ef78c5b input=60eb3f8aa4de532a]*/	modelled	sequences-pop-remove-count-agree	
+Modules/_collectionsmodule.c	1499	1528	deque_ass_item_lock_held	deque_ass_item_lock_held(dequeobject *deque, Py_ssize_t i, PyObject *v)	modelled	sequences-subscript-agree	
+Modules/_collectionsmodule.c	1531	1539	deque_ass_item	deque_ass_item(PyObject *self, Py_ssize_t i, PyObject *v)	todo		
+Modules/_collectionsmodule.c	1542	1562	deque_dealloc	deque_dealloc(PyObject *self)	todo		
+Modules/_collectionsmodule.c	1565	1589	deque_traverse	deque_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Modules/_collectionsmodule.c	1600	1624	deque___reduce___impl	deque___reduce___impl(dequeobject *deque) /*[clinic end generated code: output=cb85d9e0b7d2c5ad input=991a933a5bc7a526]*/	todo		
+Modules/_collectionsmodule.c	1629	1657	deque_repr	deque_repr(PyObject *deque)	todo		
+Modules/_collectionsmodule.c	1660	1736	deque_richcompare	deque_richcompare(PyObject *v, PyObject *w, int op)	todo		
+Modules/_collectionsmodule.c	1751	1774	deque_init_impl	deque_init_impl(dequeobject *deque, PyObject *iterable, PyObject *maxlenobj) /*[clinic end generated code: output=7084a39d71218dcd input=2b9e37af1fd73143]*/	modelled	sequences-deque-construct	
+Modules/_collectionsmodule.c	1786	1796	deque___sizeof___impl	deque___sizeof___impl(dequeobject *deque) /*[clinic end generated code: output=4d36e9fb4f30bbaf input=762312f2d4813535]*/	todo		
+Modules/_collectionsmodule.c	1799	1805	deque_get_maxlen	deque_get_maxlen(PyObject *self, void *Py_UNUSED(closure))	todo		
+Modules/_collectionsmodule.c	1818	1822	deque___reversed___impl	deque___reversed___impl(dequeobject *deque) /*[clinic end generated code: output=3e7e7e715883cf2e input=3d494c25a6fe5c7e]*/	todo		
+Modules/_collectionsmodule.c	1916	1934	deque_iter	deque_iter(PyObject *self)	todo		
+Modules/_collectionsmodule.c	1937	1943	dequeiter_traverse	dequeiter_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_collectionsmodule.c	1946	1951	dequeiter_clear	dequeiter_clear(PyObject *op)	todo		
+Modules/_collectionsmodule.c	1954	1962	dequeiter_dealloc	dequeiter_dealloc(PyObject *dio)	todo		
+Modules/_collectionsmodule.c	1965	1989	dequeiter_next_lock_held	dequeiter_next_lock_held(dequeiterobject *it, dequeobject *deque)	todo		
+Modules/_collectionsmodule.c	1992	2004	dequeiter_next	dequeiter_next(PyObject *op)	todo		
+Modules/_collectionsmodule.c	2007	2039	dequeiter_new	dequeiter_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Modules/_collectionsmodule.c	2042	2047	dequeiter_len	dequeiter_len(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
+Modules/_collectionsmodule.c	2052	2065	dequeiter_reduce	dequeiter_reduce(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
+Modules/_collectionsmodule.c	2096	2113	deque_reviter	deque_reviter(dequeobject *deque)	todo		
+Modules/_collectionsmodule.c	2116	2140	dequereviter_next_lock_held	dequereviter_next_lock_held(dequeiterobject *it, dequeobject *deque)	todo		
+Modules/_collectionsmodule.c	2143	2154	dequereviter_next	dequereviter_next(PyObject *self)	todo		
+Modules/_collectionsmodule.c	2157	2189	dequereviter_new	dequereviter_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Modules/_collectionsmodule.c	2230	2252	defdict_missing	defdict_missing(PyObject *op, PyObject *key)	todo		
+Modules/_collectionsmodule.c	2255	2260	new_defdict	new_defdict(PyObject *op, PyObject *arg)	todo		
+Modules/_collectionsmodule.c	2265	2272	defdict_copy	defdict_copy(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
+Modules/_collectionsmodule.c	2275	2328	defdict_reduce	defdict_reduce(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
+Modules/_collectionsmodule.c	2358	2367	defdict_dealloc	defdict_dealloc(PyObject *op)	todo		
+Modules/_collectionsmodule.c	2370	2406	defdict_repr	defdict_repr(PyObject *op)	todo		
+Modules/_collectionsmodule.c	2409	2440	defdict_or	defdict_or(PyObject* left, PyObject* right)	todo		
+Modules/_collectionsmodule.c	2443	2449	defdict_traverse	defdict_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_collectionsmodule.c	2452	2457	defdict_tp_clear	defdict_tp_clear(PyObject *op)	todo		
+Modules/_collectionsmodule.c	2460	2488	defdict_init	defdict_init(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_collectionsmodule.c	2541	2653	_collections__count_elements_impl	_collections__count_elements_impl(PyObject *module, PyObject *mapping, PyObject *iterable) /*[clinic end generated code: output=7e0c1789636b3d8f input=e79fad04534a0b45]*/	todo		
+Modules/_collectionsmodule.c	2675	2686	tuplegetter_new_impl	tuplegetter_new_impl(PyTypeObject *type, Py_ssize_t index, PyObject *doc) /*[clinic end generated code: output=014be444ad80263f input=87c576a5bdbc0bbb]*/	todo		
+Modules/_collectionsmodule.c	2689	2716	tuplegetter_descr_get	tuplegetter_descr_get(PyObject *self, PyObject *obj, PyObject *type)	todo		
+Modules/_collectionsmodule.c	2719	2727	tuplegetter_descr_set	tuplegetter_descr_set(PyObject *self, PyObject *obj, PyObject *value)	todo		
+Modules/_collectionsmodule.c	2730	2736	tuplegetter_traverse	tuplegetter_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Modules/_collectionsmodule.c	2739	2744	tuplegetter_clear	tuplegetter_clear(PyObject *self)	todo		
+Modules/_collectionsmodule.c	2747	2754	tuplegetter_dealloc	tuplegetter_dealloc(PyObject *self)	todo		
+Modules/_collectionsmodule.c	2757	2762	tuplegetter_reduce	tuplegetter_reduce(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
+Modules/_collectionsmodule.c	2765	2771	tuplegetter_repr	tuplegetter_repr(PyObject *op)	todo		
+Modules/_collectionsmodule.c	2809	2818	collections_traverse	collections_traverse(PyObject *mod, visitproc visit, void *arg)	todo		
+Modules/_collectionsmodule.c	2821	2830	collections_clear	collections_clear(PyObject *mod)	todo		
+Modules/_collectionsmodule.c	2833	2836	collections_free	collections_free(void *module)	todo		
+Modules/_collectionsmodule.c	2861	2874	collections_exec	collections_exec(PyObject *module) {	todo		
+Modules/_collectionsmodule.c	2898	2901	PyInit__collections	PyInit__collections(void)	todo		

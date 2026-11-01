@@ -1,0 +1,14 @@
+file	line	endline	name	signature	status	entry	note
+Lib/multiprocessing/dummy/connection.py	20	21	Listener.__init__	__init__(self, address=None, family=None, backlog=1)	todo		
+Lib/multiprocessing/dummy/connection.py	23	24	Listener.accept	accept(self)	todo		
+Lib/multiprocessing/dummy/connection.py	26	27	Listener.close	close(self)	todo		
+Lib/multiprocessing/dummy/connection.py	30	31	Listener.address	address(self)	todo		
+Lib/multiprocessing/dummy/connection.py	33	34	Listener.__enter__	__enter__(self)	todo		
+Lib/multiprocessing/dummy/connection.py	36	37	Listener.__exit__	__exit__(self, exc_type, exc_value, exc_tb)	todo		
+Lib/multiprocessing/dummy/connection.py	40	43	Client	Client(address)	todo		
+Lib/multiprocessing/dummy/connection.py	46	48	Pipe	Pipe(duplex=True)	todo		
+Lib/multiprocessing/dummy/connection.py	53	57	Connection.__init__	__init__(self, _in, _out)	todo		
+Lib/multiprocessing/dummy/connection.py	59	66	Connection.poll	poll(self, timeout=0.0)	todo		
+Lib/multiprocessing/dummy/connection.py	68	69	Connection.close	close(self)	todo		
+Lib/multiprocessing/dummy/connection.py	71	72	Connection.__enter__	__enter__(self)	todo		
+Lib/multiprocessing/dummy/connection.py	74	75	Connection.__exit__	__exit__(self, exc_type, exc_value, exc_tb)	todo		

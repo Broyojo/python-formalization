@@ -1,0 +1,14 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_sqlite/row.c	44	50	row_clear	row_clear(PyObject *op)	todo		
+Modules/_sqlite/row.c	53	60	row_traverse	row_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_sqlite/row.c	63	70	pysqlite_row_dealloc	pysqlite_row_dealloc(PyObject *self)	todo		
+Modules/_sqlite/row.c	83	99	pysqlite_row_new_impl	pysqlite_row_new_impl(PyTypeObject *type, pysqlite_Cursor *cursor, PyObject *data) /*[clinic end generated code: output=10d58b09a819a4c1 input=b9e954ca31345dbf]*/	todo		
+Modules/_sqlite/row.c	102	107	pysqlite_row_item	pysqlite_row_item(PyObject *op, Py_ssize_t idx)	todo		
+Modules/_sqlite/row.c	110	135	equal_ignore_case	equal_ignore_case(PyObject *left, PyObject *right)	todo		
+Modules/_sqlite/row.c	138	184	pysqlite_row_subscript	pysqlite_row_subscript(PyObject *op, PyObject *idx)	todo		
+Modules/_sqlite/row.c	187	191	pysqlite_row_length	pysqlite_row_length(PyObject *op)	todo		
+Modules/_sqlite/row.c	200	222	pysqlite_row_keys_impl	pysqlite_row_keys_impl(pysqlite_Row *self) /*[clinic end generated code: output=efe3dfb3af6edc07 input=7549a122827c5563]*/	todo		
+Modules/_sqlite/row.c	225	229	pysqlite_iter	pysqlite_iter(PyObject *op)	todo		
+Modules/_sqlite/row.c	232	244	pysqlite_row_hash	pysqlite_row_hash(PyObject *op)	todo		
+Modules/_sqlite/row.c	247	266	pysqlite_row_richcompare	pysqlite_row_richcompare(PyObject *op, PyObject *opother, int opid)	todo		
+Modules/_sqlite/row.c	298	307	pysqlite_row_setup_types	pysqlite_row_setup_types(PyObject *module)	todo		

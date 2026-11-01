@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Lib/encodings/utf_7.py	11	12	decode	decode(input, errors='strict')	todo		
+Lib/encodings/utf_7.py	15	16	IncrementalEncoder.encode	encode(self, input, final=False)	todo		
+Lib/encodings/utf_7.py	29	38	getregentry	getregentry()	todo		

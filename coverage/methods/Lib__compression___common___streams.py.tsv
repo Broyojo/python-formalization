@@ -1,0 +1,15 @@
+file	line	endline	name	signature	status	entry	note
+Lib/compression/_common/_streams.py	12	14	BaseStream._check_not_closed	_check_not_closed(self)	todo		
+Lib/compression/_common/_streams.py	16	18	BaseStream._check_can_read	_check_can_read(self)	todo		
+Lib/compression/_common/_streams.py	20	22	BaseStream._check_can_write	_check_can_write(self)	todo		
+Lib/compression/_common/_streams.py	24	30	BaseStream._check_can_seek	_check_can_seek(self)	todo		
+Lib/compression/_common/_streams.py	36	37	DecompressReader.readable	readable(self)	todo		
+Lib/compression/_common/_streams.py	39	57	DecompressReader.__init__	__init__(self, fp, decomp_factory, trailing_error=(), **decomp_args)	todo		
+Lib/compression/_common/_streams.py	59	61	DecompressReader.close	close(self)	todo		
+Lib/compression/_common/_streams.py	63	64	DecompressReader.seekable	seekable(self)	todo		
+Lib/compression/_common/_streams.py	66	70	DecompressReader.readinto	readinto(self, b)	todo		
+Lib/compression/_common/_streams.py	72	111	DecompressReader.read	read(self, size=-1)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/compression/_common/_streams.py	113	121	DecompressReader.readall	readall(self)	todo		
+Lib/compression/_common/_streams.py	124	128	DecompressReader._rewind	_rewind(self)	todo		
+Lib/compression/_common/_streams.py	130	158	DecompressReader.seek	seek(self, offset, whence=io.SEEK_SET)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
+Lib/compression/_common/_streams.py	160	162	DecompressReader.tell	tell(self)	todo		

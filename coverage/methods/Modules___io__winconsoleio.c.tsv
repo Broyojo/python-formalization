@@ -1,0 +1,32 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_io/winconsoleio.c	52	65	_get_console_type	char _get_console_type(HANDLE handle) {	todo		
+Modules/_io/winconsoleio.c	67	136	_PyIO_get_console_type	char _PyIO_get_console_type(PyObject *path_or_fd) {	todo		
+Modules/_io/winconsoleio.c	139	161	_find_last_utf8_boundary	_find_last_utf8_boundary(const unsigned char *buf, DWORD len)	todo		
+Modules/_io/winconsoleio.c	173	202	_wchar_to_utf8_count	_wchar_to_utf8_count(const unsigned char *s, DWORD len, DWORD n)	todo		
+Modules/_io/winconsoleio.c	228	231	_PyWindowsConsoleIO_closed	_PyWindowsConsoleIO_closed(PyObject *self)	todo		
+Modules/_io/winconsoleio.c	236	247	internal_close	internal_close(winconsoleio *self)	todo		
+Modules/_io/winconsoleio.c	261	286	_io__WindowsConsoleIO_close_impl	_io__WindowsConsoleIO_close_impl(winconsoleio *self, PyTypeObject *cls) /*[clinic end generated code: output=e50c1808c063e1e2 input=161001bd2a649a4b]*/	todo		
+Modules/_io/winconsoleio.c	289	307	winconsoleio_new	winconsoleio_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Modules/_io/winconsoleio.c	324	494	_io__WindowsConsoleIO___init___impl	_io__WindowsConsoleIO___init___impl(winconsoleio *self, PyObject *nameobj, const char *mode, int closefd, PyObject *opener) /*[clinic end generated code: output=3fd9cbcdd8d95429 input=f31100e2cd724617]*/	todo		
+Modules/_io/winconsoleio.c	497	503	winconsoleio_traverse	winconsoleio_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_io/winconsoleio.c	506	511	winconsoleio_clear	winconsoleio_clear(PyObject *op)	todo		
+Modules/_io/winconsoleio.c	514	526	winconsoleio_dealloc	winconsoleio_dealloc(PyObject *op)	todo		
+Modules/_io/winconsoleio.c	529	533	err_closed	err_closed(void)	todo		
+Modules/_io/winconsoleio.c	536	540	err_mode	err_mode(_PyIO_State *state, const char *action)	todo		
+Modules/_io/winconsoleio.c	550	556	_io__WindowsConsoleIO_fileno_impl	_io__WindowsConsoleIO_fileno_impl(winconsoleio *self) /*[clinic end generated code: output=006fa74ce3b5cfbf input=845c47ebbc3a2f67]*/	todo		
+Modules/_io/winconsoleio.c	565	571	_io__WindowsConsoleIO_readable_impl	_io__WindowsConsoleIO_readable_impl(winconsoleio *self) /*[clinic end generated code: output=daf9cef2743becf0 input=6be9defb5302daae]*/	todo		
+Modules/_io/winconsoleio.c	580	586	_io__WindowsConsoleIO_writable_impl	_io__WindowsConsoleIO_writable_impl(winconsoleio *self) /*[clinic end generated code: output=e0a2ad7eae5abf67 input=cefbd8abc24df6a0]*/	todo		
+Modules/_io/winconsoleio.c	589	596	_buflen	_buflen(winconsoleio *self)	todo		
+Modules/_io/winconsoleio.c	599	611	_copyfrombuf	_copyfrombuf(winconsoleio *self, char *buf, DWORD len)	todo		
+Modules/_io/winconsoleio.c	614	718	read_console_w	read_console_w(HANDLE handle, DWORD maxlen, DWORD *readlen) {	todo		
+Modules/_io/winconsoleio.c	722	815	readinto	readinto(_PyIO_State *state, winconsoleio *self, char *buf, Py_ssize_t len)	todo		
+Modules/_io/winconsoleio.c	827	837	_io__WindowsConsoleIO_readinto_impl	_io__WindowsConsoleIO_readinto_impl(winconsoleio *self, PyTypeObject *cls, Py_buffer *buffer) /*[clinic end generated code: output=96717c74f6204b79 input=4b0627c3b1645f78]*/	todo		
+Modules/_io/winconsoleio.c	840	855	new_buffersize	new_buffersize(winconsoleio *self, DWORD currentsize)	todo		
+Modules/_io/winconsoleio.c	866	985	_io__WindowsConsoleIO_readall_impl	_io__WindowsConsoleIO_readall_impl(winconsoleio *self) /*[clinic end generated code: output=e6d312c684f6e23b input=4024d649a1006e69]*/	todo		
+Modules/_io/winconsoleio.c	1001	1042	_io__WindowsConsoleIO_read_impl	_io__WindowsConsoleIO_read_impl(winconsoleio *self, PyTypeObject *cls, Py_ssize_t size) /*[clinic end generated code: output=7e569a586537c0ae input=a14570a5da273365]*/	todo		
+Modules/_io/winconsoleio.c	1057	1142	_io__WindowsConsoleIO_write_impl	_io__WindowsConsoleIO_write_impl(winconsoleio *self, PyTypeObject *cls, Py_buffer *b) /*[clinic end generated code: output=e8019f480243cb29 input=10ac37c19339dfbe]*/	todo		
+Modules/_io/winconsoleio.c	1145	1167	winconsoleio_repr	winconsoleio_repr(PyObject *op)	todo		
+Modules/_io/winconsoleio.c	1176	1183	_io__WindowsConsoleIO_isatty_impl	_io__WindowsConsoleIO_isatty_impl(winconsoleio *self) /*[clinic end generated code: output=9eac09d287c11bd7 input=9b91591dbe356f86]*/	todo		
+Modules/_io/winconsoleio.c	1206	1210	get_closed	get_closed(PyObject *op, void *Py_UNUSED(closure))	todo		
+Modules/_io/winconsoleio.c	1213	1217	get_closefd	get_closefd(PyObject *op, void *Py_UNUSED(closure))	todo		
+Modules/_io/winconsoleio.c	1220	1224	get_mode	get_mode(PyObject *op, void *Py_UNUSED(closure))	todo		

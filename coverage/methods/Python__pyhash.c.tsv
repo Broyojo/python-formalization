@@ -1,0 +1,13 @@
+file	line	endline	name	signature	status	entry	note
+Python/pyhash.c	87	130	_Py_HashDouble	_Py_HashDouble(PyObject *inst, double v)	todo		
+Python/pyhash.c	133	140	Py_HashPointer	Py_HashPointer(const void *ptr)	todo		
+Python/pyhash.c	143	146	PyObject_GenericHash	PyObject_GenericHash(PyObject *obj)	todo		
+Python/pyhash.c	149	197	Py_HashBuffer	Py_HashBuffer(const void *ptr, Py_ssize_t len)	todo		
+Python/pyhash.c	200	212	_PyHash_Fini	_PyHash_Fini(void)	todo		
+Python/pyhash.c	215	218	PyHash_GetFuncDef	PyHash_GetFuncDef(void)	todo		
+Python/pyhash.c	244	281	fnv	fnv(const void *src, Py_ssize_t len)	todo		
+Python/pyhash.c	371	418	siphash13	siphash13(uint64_t k0, uint64_t k1, const void *src, Py_ssize_t src_sz) {	todo		
+Python/pyhash.c	422	468	siphash24	siphash24(uint64_t k0, uint64_t k1, const void *src, Py_ssize_t src_sz) {	todo		
+Python/pyhash.c	472	475	_Py_KeyedHash	_Py_KeyedHash(uint64_t key, const void *src, Py_ssize_t src_sz)	todo		
+Python/pyhash.c	480	484	pysiphash	pysiphash(const void *src, Py_ssize_t src_sz) {	todo		
+Python/pyhash.c	491	495	pysiphash	pysiphash(const void *src, Py_ssize_t src_sz) {	todo		

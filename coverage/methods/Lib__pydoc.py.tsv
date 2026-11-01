@@ -1,0 +1,109 @@
+file	line	endline	name	signature	status	entry	note
+Lib/pydoc.py	99	109	pathdirs	pathdirs()	todo		
+Lib/pydoc.py	111	119	_findclass	_findclass(func)	todo		
+Lib/pydoc.py	121	169	_finddoc	_finddoc(obj)	todo		
+Lib/pydoc.py	171	184	_getowndoc	_getowndoc(obj)	todo		
+Lib/pydoc.py	186	200	_getdoc	_getdoc(object)	todo		
+Lib/pydoc.py	202	205	getdoc	getdoc(object)	todo		
+Lib/pydoc.py	207	214	splitdoc	splitdoc(doc)	todo		
+Lib/pydoc.py	216	235	_getargspec	_getargspec(object)	todo		
+Lib/pydoc.py	237	242	classname	classname(object, modname)	todo		
+Lib/pydoc.py	244	255	parentname	parentname(object, modname)	todo		
+Lib/pydoc.py	257	261	isdata	isdata(object)	todo		
+Lib/pydoc.py	263	268	replace	replace(text, *pairs)	todo		candidates:strsearch-replace-str-bytes
+Lib/pydoc.py	270	276	cram	cram(text, maxlen)	todo		
+Lib/pydoc.py	279	282	stripid	stripid(text)	todo		
+Lib/pydoc.py	284	294	_is_bound_method	_is_bound_method(fn)	todo		
+Lib/pydoc.py	297	305	allmethods	allmethods(cl)	todo		
+Lib/pydoc.py	307	322	_split_list	_split_list(s, predicate)	todo		
+Lib/pydoc.py	326	350	visiblename	visiblename(name, all=None, obj=None)	todo		
+Lib/pydoc.py	352	363	classify_class_attrs	classify_class_attrs(object)	todo		
+Lib/pydoc.py	365	375	sort_attributes	sort_attributes(attrs, object)	todo		
+Lib/pydoc.py	379	387	ispackage	ispackage(path)	todo		
+Lib/pydoc.py	389	412	source_synopsis	source_synopsis(file)	todo		
+Lib/pydoc.py	414	451	synopsis	synopsis(filename, cache={})	todo		
+Lib/pydoc.py	455	466	ErrorDuringImport.__init__	__init__(self, filename, exc_info)	todo		
+Lib/pydoc.py	468	470	ErrorDuringImport.__str__	__str__(self)	todo		
+Lib/pydoc.py	472	488	importfile	importfile(path)	todo		
+Lib/pydoc.py	490	530	safeimport	safeimport(path, forceload=0, cache={})	todo		
+Lib/pydoc.py	540	554	Doc.document	document(self, object, name=None, *args)	todo		
+Lib/pydoc.py	556	560	Doc.fail	fail(self, object, name=None, *args)	todo		
+Lib/pydoc.py	564	598	Doc.getdocloc	getdocloc(self, object, basedir=sysconfig.get_path('stdlib'))	todo		
+Lib/pydoc.py	604	608	HTMLRepr.__init__	__init__(self)	todo		
+Lib/pydoc.py	610	611	HTMLRepr.escape	escape(self, text)	todo		
+Lib/pydoc.py	613	614	HTMLRepr.repr	repr(self, object)	todo		
+Lib/pydoc.py	616	621	HTMLRepr.repr1	repr1(self, x, level)	todo		
+Lib/pydoc.py	623	632	HTMLRepr.repr_string	repr_string(self, x, level)	todo		
+Lib/pydoc.py	636	640	HTMLRepr.repr_instance	repr_instance(self, x, level)	todo		
+Lib/pydoc.py	653	663	HTMLDoc.page	page(self, title, contents)	todo		
+Lib/pydoc.py	665	672	HTMLDoc.heading	heading(self, title, extras='')	todo		
+Lib/pydoc.py	674	693	HTMLDoc.section	section(self, title, cls, contents, width=6, prelude='', marginalia=None, gap='&nbsp;')	todo		
+Lib/pydoc.py	695	698	HTMLDoc.bigsection	bigsection(self, title, *args)	todo		
+Lib/pydoc.py	700	704	HTMLDoc.preformat	preformat(self, text)	todo		
+Lib/pydoc.py	706	716	HTMLDoc.multicolumn	multicolumn(self, list, format)	todo		
+Lib/pydoc.py	718	718	HTMLDoc.grey	grey(self, text)	todo		
+Lib/pydoc.py	720	725	HTMLDoc.namelink	namelink(self, name, *dicts)	todo		
+Lib/pydoc.py	727	733	HTMLDoc.classlink	classlink(self, object, modname)	todo		
+Lib/pydoc.py	735	752	HTMLDoc.parentlink	parentlink(self, object, modname)	todo		
+Lib/pydoc.py	754	756	HTMLDoc.modulelink	modulelink(self, object)	todo		
+Lib/pydoc.py	758	771	HTMLDoc.modpkglink	modpkglink(self, modpkginfo)	todo		
+Lib/pydoc.py	773	775	HTMLDoc.filelink	filelink(self, url, path)	todo		
+Lib/pydoc.py	777	814	HTMLDoc.markup	markup(self, text, escape=None, funcs={}, classes={}, methods={})	todo		
+Lib/pydoc.py	818	835	HTMLDoc.formattree	formattree(self, tree, modname, parent=None)	todo		
+Lib/pydoc.py	837	953	HTMLDoc.docmodule	docmodule(self, object, name=None, mod=None, *ignored)	todo		
+Lib/pydoc.py	955	1110	HTMLDoc.docclass	docclass(self, object, name=None, mod=None, funcs={}, classes={}, *ignored)	todo		
+Lib/pydoc.py	1112	1114	HTMLDoc.formatvalue	formatvalue(self, object)	todo		
+Lib/pydoc.py	1116	1198	HTMLDoc.docroutine	docroutine(self, object, name=None, mod=None, funcs={}, classes={}, methods={}, cl=None, homecls=None)	todo		
+Lib/pydoc.py	1200	1212	HTMLDoc.docdata	docdata(self, object, name=None, mod=None, cl=None, *ignored)	todo		
+Lib/pydoc.py	1216	1219	HTMLDoc.docother	docother(self, object, name=None, mod=None, *ignored)	todo		
+Lib/pydoc.py	1221	1234	HTMLDoc.index	index(self, dir, shadowed=None)	todo		candidates:strsearch-find-str-bytes
+Lib/pydoc.py	1240	1244	TextRepr.__init__	__init__(self)	todo		
+Lib/pydoc.py	1246	1251	TextRepr.repr1	repr1(self, x, level)	todo		
+Lib/pydoc.py	1253	1260	TextRepr.repr_string	repr_string(self, x, level)	todo		
+Lib/pydoc.py	1264	1268	TextRepr.repr_instance	repr_instance(self, x, level)	todo		
+Lib/pydoc.py	1278	1280	TextDoc.bold	bold(self, text)	todo		
+Lib/pydoc.py	1282	1286	TextDoc.indent	indent(self, text, prefix=' ')	todo		
+Lib/pydoc.py	1288	1291	TextDoc.section	section(self, title, contents)	todo		
+Lib/pydoc.py	1295	1309	TextDoc.formattree	formattree(self, tree, modname, parent=None, prefix='')	todo		
+Lib/pydoc.py	1311	1411	TextDoc.docmodule	docmodule(self, object, name=None, mod=None, *ignored)	todo		
+Lib/pydoc.py	1413	1561	TextDoc.docclass	docclass(self, object, name=None, mod=None, *ignored)	todo		
+Lib/pydoc.py	1563	1565	TextDoc.formatvalue	formatvalue(self, object)	todo		
+Lib/pydoc.py	1567	1639	TextDoc.docroutine	docroutine(self, object, name=None, mod=None, cl=None, homecls=None)	todo		
+Lib/pydoc.py	1641	1653	TextDoc.docdata	docdata(self, object, name=None, mod=None, cl=None, *ignored)	todo		
+Lib/pydoc.py	1657	1670	TextDoc.docother	docother(self, object, name=None, mod=None, parent=None, *ignored, maxlen=None, doc=None)	todo		
+Lib/pydoc.py	1674	1675	_PlainTextDoc.bold	bold(self, text)	todo		
+Lib/pydoc.py	1679	1683	pager	pager(text, title='')	todo		
+Lib/pydoc.py	1685	1717	describe	describe(thing)	todo		
+Lib/pydoc.py	1719	1736	locate	locate(path, forceload=0)	todo		
+Lib/pydoc.py	1744	1756	resolve	resolve(thing, forceload=0)	todo		
+Lib/pydoc.py	1758	1783	render_doc	render_doc(thing, title='Python Library Documentation: %s', forceload=0, renderer=None)	todo		
+Lib/pydoc.py	1785	1808	doc	doc(thing, title='Python Library Documentation: %s', forceload=0, output=None, is_cli=False)	todo		
+Lib/pydoc.py	1810	1816	writedoc	writedoc(thing, forceload=0)	todo		
+Lib/pydoc.py	1818	1823	writedocs	writedocs(dir, pkgpath='', done=None)	todo		
+Lib/pydoc.py	1826	1854	_introdoc	_introdoc()	todo		
+Lib/pydoc.py	2036	2038	Helper.__init__	__init__(self, input=None, output=None)	todo		
+Lib/pydoc.py	2041	2042	Helper.input	input(self)	todo		
+Lib/pydoc.py	2045	2046	Helper.output	output(self)	todo		
+Lib/pydoc.py	2048	2053	Helper.__repr__	__repr__(self)	todo		
+Lib/pydoc.py	2056	2070	Helper.__call__	__call__(self, request=_GoInteractive)	todo		
+Lib/pydoc.py	2072	2092	Helper.interact	interact(self)	todo		
+Lib/pydoc.py	2094	2101	Helper.getline	getline(self, prompt)	todo		
+Lib/pydoc.py	2103	2122	Helper.help	help(self, request, is_cli=False)	todo		
+Lib/pydoc.py	2124	2125	Helper.intro	intro(self)	todo		
+Lib/pydoc.py	2127	2138	Helper.list	list(self, items, columns=4, width=80)	todo		
+Lib/pydoc.py	2140	2145	Helper.listkeywords	listkeywords(self)	todo		
+Lib/pydoc.py	2147	2153	Helper.listsymbols	listsymbols(self)	todo		
+Lib/pydoc.py	2155	2160	Helper.listtopics	listtopics(self)	todo		
+Lib/pydoc.py	2162	2196	Helper.showtopic	showtopic(self, topic, more_xrefs='')	todo		
+Lib/pydoc.py	2198	2223	Helper._gettopic	_gettopic(self, topic, more_xrefs='')	todo		
+Lib/pydoc.py	2225	2228	Helper.showsymbol	showsymbol(self, symbol)	todo		
+Lib/pydoc.py	2230	2256	Helper.listmodules	listmodules(self, key='')	todo		
+Lib/pydoc.py	2263	2319	ModuleScanner.run	run(self, callback, key=None, completer=None, onerror=None)	todo		
+Lib/pydoc.py	2321	2331	apropos	apropos(key)	todo		
+Lib/pydoc.py	2335	2485	_start_server	_start_server(urlhandler, hostname, port)	todo		
+Lib/pydoc.py	2488	2721	_url_handler	_url_handler(url, content_type='text/html')	todo		
+Lib/pydoc.py	2724	2756	browse	browse(port=0, *, open_browser=True, hostname='localhost')	todo		
+Lib/pydoc.py	2761	2762	ispath	ispath(x)	todo		
+Lib/pydoc.py	2764	2788	_get_revised_path	_get_revised_path(given_path, argv0)	todo		
+Lib/pydoc.py	2792	2799	_adjust_cli_sys_path	_adjust_cli_sys_path()	todo		
+Lib/pydoc.py	2802	2886	cli	cli()	todo		

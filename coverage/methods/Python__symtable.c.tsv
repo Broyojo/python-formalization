@@ -1,0 +1,71 @@
+file	line	endline	name	signature	status	entry	note
+Python/symtable.c	93	171	ste_new	ste_new(struct symtable *st, identifier name, _Py_block_ty block, void *key, _Py_SourceLocation loc)	todo		
+Python/symtable.c	174	179	ste_repr	ste_repr(PyObject *op)	todo		
+Python/symtable.c	182	195	ste_dealloc	ste_dealloc(PyObject *op)	todo		
+Python/symtable.c	284	372	_dump_symtable	static void _dump_symtable(PySTEntryObject* ste, PyObject* prefix)	todo		
+Python/symtable.c	374	380	dump_symtable	static void dump_symtable(PySTEntryObject* ste)	todo		
+Python/symtable.c	387	410	symtable_new	symtable_new(void)	todo		
+Python/symtable.c	413	489	_PySymtable_Build	_PySymtable_Build(mod_ty mod, PyObject *filename, _PyFutureFeatures *future)	todo		
+Python/symtable.c	493	499	_PySymtable_Free	_PySymtable_Free(struct symtable *st)	todo		
+Python/symtable.c	502	517	_PySymtable_Lookup	_PySymtable_Lookup(struct symtable *st, void *key)	todo		
+Python/symtable.c	520	532	_PySymtable_LookupOptional	_PySymtable_LookupOptional(struct symtable *st, void *key, PySTEntryObject **out)	todo		
+Python/symtable.c	535	553	_PyST_GetSymbol	_PyST_GetSymbol(PySTEntryObject *ste, PyObject *name)	todo		
+Python/symtable.c	556	563	_PyST_GetScope	_PyST_GetScope(PySTEntryObject *ste, PyObject *name)	todo		
+Python/symtable.c	566	573	_PyST_IsFunctionLike	_PyST_IsFunctionLike(PySTEntryObject *ste)	todo		
+Python/symtable.c	576	598	error_at_directive	error_at_directive(PySTEntryObject *ste, PyObject *name)	todo		
+Python/symtable.c	666	782	analyze_name	analyze_name(PySTEntryObject *ste, PyObject *scopes, PyObject *name, long flags, PyObject *bound, PyObject *local, PyObject *free, PyObject *global, PyObject *type_params, PySTEntryObject *class_entry)	todo		
+Python/symtable.c	785	799	is_free_in_any_child	is_free_in_any_child(PySTEntryObject *entry, PyObject *key)	todo		
+Python/symtable.c	802	905	inline_comprehension	inline_comprehension(PySTEntryObject *ste, PySTEntryObject *comp, PyObject *scopes, PyObject *comp_free, PyObject *inlined_cells)	todo		
+Python/symtable.c	918	960	analyze_cells	analyze_cells(PyObject *scopes, PyObject *free, PyObject *inlined_cells)	todo		
+Python/symtable.c	963	983	drop_class_free	drop_class_free(PySTEntryObject *ste, PyObject *free)	todo		
+Python/symtable.c	990	1108	update_symbols	update_symbols(PyObject *symbols, PyObject *scopes, PyObject *bound, PyObject *free, PyObject *inlined_cells, int classflag)	todo		
+Python/symtable.c	1136	1327	analyze_block	analyze_block(PySTEntryObject *ste, PyObject *bound, PyObject *free, PyObject *global, PyObject *type_params, PySTEntryObject *class_entry)	todo		
+Python/symtable.c	1330	1371	analyze_child_block	analyze_child_block(PySTEntryObject *entry, PyObject *bound, PyObject *free, PyObject *global, PyObject *type_params, PySTEntryObject *class_entry, PyObject** child_free)	todo		
+Python/symtable.c	1374	1398	symtable_analyze	symtable_analyze(struct symtable *st)	todo		
+Python/symtable.c	1406	1419	symtable_exit_block	symtable_exit_block(struct symtable *st)	todo		
+Python/symtable.c	1422	1459	symtable_enter_existing_block	symtable_enter_existing_block(struct symtable *st, PySTEntryObject* ste, bool add_to_children)	todo		
+Python/symtable.c	1462	1481	symtable_enter_block	symtable_enter_block(struct symtable *st, identifier name, _Py_block_ty block, void *ast, _Py_SourceLocation loc)	todo		
+Python/symtable.c	1484	1495	symtable_lookup_entry	symtable_lookup_entry(struct symtable *st, PySTEntryObject *ste, PyObject *name)	todo		
+Python/symtable.c	1498	1501	symtable_lookup	symtable_lookup(struct symtable *st, PyObject *name)	todo		
+Python/symtable.c	1504	1594	symtable_add_def_helper	symtable_add_def_helper(struct symtable *st, PyObject *name, int flag, struct _symtable_entry *ste, _Py_SourceLocation loc)	todo		
+Python/symtable.c	1597	1611	check_name	check_name(struct symtable *st, PyObject *name, _Py_SourceLocation loc, expr_context_ty ctx)	todo		
+Python/symtable.c	1614	1623	check_keywords	check_keywords(struct symtable *st, asdl_keyword_seq *keywords)	todo		
+Python/symtable.c	1626	1638	check_kwd_patterns	check_kwd_patterns(struct symtable *st, pattern_ty p)	todo		
+Python/symtable.c	1641	1654	symtable_add_def_ctx	symtable_add_def_ctx(struct symtable *st, PyObject *name, int flag, _Py_SourceLocation loc, expr_context_ty ctx)	todo		
+Python/symtable.c	1657	1662	symtable_add_def	symtable_add_def(struct symtable *st, PyObject *name, int flag, _Py_SourceLocation loc)	todo		
+Python/symtable.c	1665	1711	symtable_enter_type_param_block	symtable_enter_type_param_block(struct symtable *st, identifier name, void *ast, int has_defaults, int has_kwdefaults, enum _stmt_kind kind, _Py_SourceLocation loc)	todo		
+Python/symtable.c	1784	1803	symtable_record_directive	symtable_record_directive(struct symtable *st, identifier name, _Py_SourceLocation loc)	todo		
+Python/symtable.c	1806	1815	has_kwonlydefaults	has_kwonlydefaults(asdl_arg_seq *kwonlyargs, asdl_expr_seq *kw_defaults)	todo		
+Python/symtable.c	1818	1834	check_import_from	check_import_from(struct symtable *st, stmt_ty s)	todo		
+Python/symtable.c	1837	1841	allows_top_level_await	allows_top_level_await(struct symtable *st)	todo		
+Python/symtable.c	1845	1850	maybe_set_ste_coroutine_for_module	maybe_set_ste_coroutine_for_module(struct symtable *st, stmt_ty s)	todo		
+Python/symtable.c	1853	2296	symtable_visit_stmt	symtable_visit_stmt(struct symtable *st, stmt_ty s)	todo		
+Python/symtable.c	2299	2393	symtable_extend_namedexpr_scope	symtable_extend_namedexpr_scope(struct symtable *st, expr_ty e)	todo		
+Python/symtable.c	2396	2412	symtable_handle_namedexpr	symtable_handle_namedexpr(struct symtable *st, expr_ty e)	todo		
+Python/symtable.c	2415	2600	symtable_visit_expr	symtable_visit_expr(struct symtable *st, expr_ty e)	todo		
+Python/symtable.c	2603	2640	symtable_visit_type_param_bound_or_default	symtable_visit_type_param_bound_or_default( struct symtable *st, expr_ty e, identifier name, type_param_ty tp, const char *ste_scope_info)	todo		
+Python/symtable.c	2643	2696	symtable_visit_type_param	symtable_visit_type_param(struct symtable *st, type_param_ty tp)	todo		
+Python/symtable.c	2699	2752	symtable_visit_pattern	symtable_visit_pattern(struct symtable *st, pattern_ty p)	todo		
+Python/symtable.c	2755	2766	symtable_implicit_arg	symtable_implicit_arg(struct symtable *st, int pos)	todo		
+Python/symtable.c	2769	2780	symtable_visit_params	symtable_visit_params(struct symtable *st, asdl_arg_seq *args)	todo		
+Python/symtable.c	2783	2834	symtable_visit_annotation	symtable_visit_annotation(struct symtable *st, expr_ty annotation, void *key)	todo		
+Python/symtable.c	2837	2850	symtable_visit_argannotations	symtable_visit_argannotations(struct symtable *st, asdl_arg_seq *args)	todo		
+Python/symtable.c	2853	2890	symtable_visit_annotations	symtable_visit_annotations(struct symtable *st, stmt_ty o, arguments_ty a, expr_ty returns, struct _symtable_entry *function_ste)	todo		
+Python/symtable.c	2893	2915	symtable_visit_arguments	symtable_visit_arguments(struct symtable *st, arguments_ty a)	todo		
+Python/symtable.c	2919	2928	symtable_visit_excepthandler	symtable_visit_excepthandler(struct symtable *st, excepthandler_ty eh)	todo		
+Python/symtable.c	2931	2938	symtable_visit_withitem	symtable_visit_withitem(struct symtable *st, withitem_ty item)	todo		
+Python/symtable.c	2941	2949	symtable_visit_match_case	symtable_visit_match_case(struct symtable *st, match_case_ty m)	todo		
+Python/symtable.c	2952	2985	symtable_visit_alias	symtable_visit_alias(struct symtable *st, alias_ty a)	todo		
+Python/symtable.c	2989	3002	symtable_visit_comprehension	symtable_visit_comprehension(struct symtable *st, comprehension_ty lc)	todo		
+Python/symtable.c	3006	3010	symtable_visit_keyword	symtable_visit_keyword(struct symtable *st, keyword_ty k)	todo		
+Python/symtable.c	3014	3082	symtable_handle_comprehension	symtable_handle_comprehension(struct symtable *st, expr_ty e, identifier scope_name, asdl_comprehension_seq *generators, expr_ty elt, expr_ty value)	todo		
+Python/symtable.c	3085	3090	symtable_visit_genexp	symtable_visit_genexp(struct symtable *st, expr_ty e)	todo		
+Python/symtable.c	3093	3098	symtable_visit_listcomp	symtable_visit_listcomp(struct symtable *st, expr_ty e)	todo		
+Python/symtable.c	3101	3106	symtable_visit_setcomp	symtable_visit_setcomp(struct symtable *st, expr_ty e)	todo		
+Python/symtable.c	3109	3115	symtable_visit_dictcomp	symtable_visit_dictcomp(struct symtable *st, expr_ty e)	todo		
+Python/symtable.c	3118	3143	symtable_raise_if_annotation_block	symtable_raise_if_annotation_block(struct symtable *st, const char *name, expr_ty e)	todo		
+Python/symtable.c	3146	3155	symtable_raise_if_comprehension_block	symtable_raise_if_comprehension_block(struct symtable *st, expr_ty e) {	todo		
+Python/symtable.c	3158	3165	symtable_raise_if_not_coroutine	symtable_raise_if_not_coroutine(struct symtable *st, const char *msg, _Py_SourceLocation loc) {	todo		
+Python/symtable.c	3168	3193	_Py_SymtableStringObjectFlags	_Py_SymtableStringObjectFlags(const char *str, PyObject *filename, int start, PyCompilerFlags *flags)	todo		
+Python/symtable.c	3196	3213	_Py_MaybeMangle	_Py_MaybeMangle(PyObject *privateobj, PySTEntryObject *ste, PyObject *name)	todo		
+Python/symtable.c	3216	3275	_Py_Mangle	_Py_Mangle(PyObject *privateobj, PyObject *ident)	todo		

@@ -1,0 +1,15 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_markupbase.py	27	30	ParserBase.__init__	__init__(self)	todo		
+Lib/_markupbase.py	32	34	ParserBase.reset	reset(self)	todo		
+Lib/_markupbase.py	36	38	ParserBase.getpos	getpos(self)	todo		
+Lib/_markupbase.py	44	55	ParserBase.updatepos	updatepos(self, i, j)	todo		
+Lib/_markupbase.py	60	137	ParserBase.parse_declaration	parse_declaration(self, i)	todo		
+Lib/_markupbase.py	141	162	ParserBase.parse_marked_section	parse_marked_section(self, i, report=1)	todo		
+Lib/_markupbase.py	165	175	ParserBase.parse_comment	parse_comment(self, i, report=1)	todo		
+Lib/_markupbase.py	179	246	ParserBase._parse_doctype_subset	_parse_doctype_subset(self, i, declstartpos)	todo		
+Lib/_markupbase.py	249	257	ParserBase._parse_doctype_element	_parse_doctype_element(self, i, declstartpos)	todo		
+Lib/_markupbase.py	260	314	ParserBase._parse_doctype_attlist	_parse_doctype_attlist(self, i, declstartpos)	todo		
+Lib/_markupbase.py	317	337	ParserBase._parse_doctype_notation	_parse_doctype_notation(self, i, declstartpos)	todo		
+Lib/_markupbase.py	340	372	ParserBase._parse_doctype_entity	_parse_doctype_entity(self, i, declstartpos)	todo		
+Lib/_markupbase.py	376	392	ParserBase._scan_name	_scan_name(self, i, declstartpos)	todo		
+Lib/_markupbase.py	395	396	ParserBase.unknown_decl	unknown_decl(self, data)	todo		

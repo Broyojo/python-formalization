@@ -1,0 +1,19 @@
+file	line	endline	name	signature	status	entry	note
+Lib/importlib/resources/abc.py	20	29	ResourceReader.open_resource	open_resource(self, resource: Text)	todo		
+Lib/importlib/resources/abc.py	32	42	ResourceReader.resource_path	resource_path(self, resource: Text)	todo		
+Lib/importlib/resources/abc.py	45	50	ResourceReader.is_resource	is_resource(self, path: Text)	todo		
+Lib/importlib/resources/abc.py	53	55	ResourceReader.contents	contents(self)	todo		
+Lib/importlib/resources/abc.py	73	76	Traversable.iterdir	iterdir(self)	todo		
+Lib/importlib/resources/abc.py	78	83	Traversable.read_bytes	read_bytes(self)	todo		
+Lib/importlib/resources/abc.py	85	90	Traversable.read_text	read_text(self, encoding: Optional[str]=None)	todo		
+Lib/importlib/resources/abc.py	93	96	Traversable.is_dir	is_dir(self)	todo		
+Lib/importlib/resources/abc.py	99	102	Traversable.is_file	is_file(self)	todo		
+Lib/importlib/resources/abc.py	104	127	Traversable.joinpath	joinpath(self, *descendants: StrPath)	todo		
+Lib/importlib/resources/abc.py	129	133	Traversable.__truediv__	__truediv__(self, child: StrPath)	todo		
+Lib/importlib/resources/abc.py	136	143	Traversable.open	open(self, mode='r', *args, **kwargs)	todo		
+Lib/importlib/resources/abc.py	147	150	Traversable.name	name(self)	todo		
+Lib/importlib/resources/abc.py	160	161	TraversableResources.files	files(self)	todo		
+Lib/importlib/resources/abc.py	163	164	TraversableResources.open_resource	open_resource(self, resource: StrPath)	todo		
+Lib/importlib/resources/abc.py	166	167	TraversableResources.resource_path	resource_path(self, resource: Any)	todo		
+Lib/importlib/resources/abc.py	169	170	TraversableResources.is_resource	is_resource(self, path: StrPath)	todo		
+Lib/importlib/resources/abc.py	172	173	TraversableResources.contents	contents(self)	todo		

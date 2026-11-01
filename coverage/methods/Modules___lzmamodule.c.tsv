@@ -1,0 +1,44 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_lzmamodule.c	31	40	OutputBuffer_InitAndGrow	OutputBuffer_InitAndGrow(_BlocksOutputBuffer *buffer, Py_ssize_t max_length, uint8_t **next_out, size_t *avail_out)	todo		
+Modules/_lzmamodule.c	45	54	OutputBuffer_Grow	OutputBuffer_Grow(_BlocksOutputBuffer *buffer, uint8_t **next_out, size_t *avail_out)	todo		
+Modules/_lzmamodule.c	57	60	OutputBuffer_GetDataSize	OutputBuffer_GetDataSize(_BlocksOutputBuffer *buffer, size_t avail_out)	todo		
+Modules/_lzmamodule.c	63	66	OutputBuffer_Finish	OutputBuffer_Finish(_BlocksOutputBuffer *buffer, size_t avail_out)	todo		
+Modules/_lzmamodule.c	69	72	OutputBuffer_OnError	OutputBuffer_OnError(_BlocksOutputBuffer *buffer)	todo		
+Modules/_lzmamodule.c	91	96	get_lzma_state	get_lzma_state(PyObject *module)	todo		
+Modules/_lzmamodule.c	136	172	catch_lzma_error	catch_lzma_error(_lzma_state *state, lzma_ret lzret)	todo		
+Modules/_lzmamodule.c	175	183	PyLzma_Malloc	PyLzma_Malloc(void *opaque, size_t items, size_t size)	todo		
+Modules/_lzmamodule.c	186	189	PyLzma_Free	PyLzma_Free(void *opaque, void *ptr)	todo		
+Modules/_lzmamodule.c	240	292	parse_filter_spec_lzma	parse_filter_spec_lzma(_lzma_state *state, PyObject *spec)	todo		
+Modules/_lzmamodule.c	295	316	parse_filter_spec_delta	parse_filter_spec_delta(_lzma_state *state, PyObject *spec)	todo		
+Modules/_lzmamodule.c	319	339	parse_filter_spec_bcj	parse_filter_spec_bcj(_lzma_state *state, PyObject *spec)	todo		
+Modules/_lzmamodule.c	342	388	lzma_filter_converter	lzma_filter_converter(_lzma_state *state, PyObject *spec, void *ptr)	todo		
+Modules/_lzmamodule.c	391	396	free_filter_chain	free_filter_chain(lzma_filter filters[])	todo		
+Modules/_lzmamodule.c	399	429	parse_filter_chain_spec	parse_filter_chain_spec(_lzma_state *state, lzma_filter filters[], PyObject *filterspecs)	todo		
+Modules/_lzmamodule.c	438	453	spec_add_field	spec_add_field(PyObject *spec, const char *key, unsigned long long value)	todo		
+Modules/_lzmamodule.c	456	519	build_filter_spec	build_filter_spec(const lzma_filter *f)	todo		
+Modules/_lzmamodule.c	554	598	compress	compress(Compressor *c, uint8_t *data, size_t len, lzma_action action)	todo		
+Modules/_lzmamodule.c	615	629	_lzma_LZMACompressor_compress_impl	_lzma_LZMACompressor_compress_impl(Compressor *self, Py_buffer *data) /*[clinic end generated code: output=31f615136963e00f input=64019eac7f2cc8d0]*/	todo		
+Modules/_lzmamodule.c	642	656	_lzma_LZMACompressor_flush_impl	_lzma_LZMACompressor_flush_impl(Compressor *self) /*[clinic end generated code: output=fec21f3e22504f50 input=6b369303f67ad0a8]*/	todo		
+Modules/_lzmamodule.c	659	680	Compressor_init_xz	Compressor_init_xz(_lzma_state *state, lzma_stream *lzs, int check, uint32_t preset, PyObject *filterspecs)	todo		
+Modules/_lzmamodule.c	683	717	Compressor_init_alone	Compressor_init_alone(_lzma_state *state, lzma_stream *lzs, uint32_t preset, PyObject *filterspecs)	todo		
+Modules/_lzmamodule.c	720	741	Compressor_init_raw	Compressor_init_raw(_lzma_state *state, lzma_stream *lzs, PyObject *filterspecs)	todo		
+Modules/_lzmamodule.c	777	864	Compressor_new	Compressor_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)	todo		
+Modules/_lzmamodule.c	867	877	Compressor_dealloc	Compressor_dealloc(PyObject *op)	todo		
+Modules/_lzmamodule.c	886	890	Compressor_traverse	Compressor_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Modules/_lzmamodule.c	947	1002	decompress_buf	decompress_buf(Decompressor *d, Py_ssize_t max_length)	todo		
+Modules/_lzmamodule.c	1005	1126	decompress	decompress(Decompressor *d, uint8_t *data, size_t len, Py_ssize_t max_length)	todo		
+Modules/_lzmamodule.c	1152	1165	_lzma_LZMADecompressor_decompress_impl	_lzma_LZMADecompressor_decompress_impl(Decompressor *self, Py_buffer *data, Py_ssize_t max_length) /*[clinic end generated code: output=ef4e20ec7122241d input=0eb62669c4315dee]*/	todo		
+Modules/_lzmamodule.c	1168	1184	Decompressor_init_raw	Decompressor_init_raw(_lzma_state *state, lzma_stream *lzs, PyObject *filterspecs)	todo		
+Modules/_lzmamodule.c	1213	1313	_lzma_LZMADecompressor_impl	_lzma_LZMADecompressor_impl(PyTypeObject *type, int format, PyObject *memlimit, PyObject *filters) /*[clinic end generated code: output=2d46d5e70f10bc7f input=ca40cd1cb1202b0d]*/	todo		
+Modules/_lzmamodule.c	1316	1330	Decompressor_dealloc	Decompressor_dealloc(PyObject *op)	todo		
+Modules/_lzmamodule.c	1333	1337	Decompressor_traverse	Decompressor_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Modules/_lzmamodule.c	1403	1407	_lzma_is_check_supported_impl	_lzma_is_check_supported_impl(PyObject *module, int check_id) /*[clinic end generated code: output=e4f14ba3ce2ad0a5 input=5518297b97b2318f]*/	todo		
+Modules/_lzmamodule.c	1424	1442	_lzma__encode_filter_properties	_lzma__encode_filter_properties(PyObject *module, PyObject *arg)	todo		
+Modules/_lzmamodule.c	1445	1472	_lzma__encode_filter_properties_impl	_lzma__encode_filter_properties_impl(PyObject *module, lzma_filter filter)	todo		
+Modules/_lzmamodule.c	1487	1510	_lzma__decode_filter_properties_impl	_lzma__decode_filter_properties_impl(PyObject *module, lzma_vli filter_id, Py_buffer *encoded_props) /*[clinic end generated code: output=714fd2ef565d5c60 input=246410800782160c]*/	todo		
+Modules/_lzmamodule.c	1515	1518	module_add_int_constant	module_add_int_constant(PyObject *m, const char *name, long long value)	todo		
+Modules/_lzmamodule.c	1521	1605	lzma_exec	lzma_exec(PyObject *module)	todo		
+Modules/_lzmamodule.c	1622	1630	lzma_traverse	lzma_traverse(PyObject *module, visitproc visit, void *arg)	todo		
+Modules/_lzmamodule.c	1633	1641	lzma_clear	lzma_clear(PyObject *module)	todo		
+Modules/_lzmamodule.c	1644	1647	lzma_free	lzma_free(void *module)	todo		
+Modules/_lzmamodule.c	1661	1664	PyInit__lzma	PyInit__lzma(void)	todo		

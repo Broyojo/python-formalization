@@ -1,0 +1,11 @@
+file	line	endline	name	signature	status	entry	note
+Lib/importlib/metadata/_text.py	67	68	FoldedCase.__lt__	__lt__(self, other)	todo		
+Lib/importlib/metadata/_text.py	70	71	FoldedCase.__gt__	__gt__(self, other)	todo		
+Lib/importlib/metadata/_text.py	73	74	FoldedCase.__eq__	__eq__(self, other)	todo		
+Lib/importlib/metadata/_text.py	76	77	FoldedCase.__ne__	__ne__(self, other)	todo		
+Lib/importlib/metadata/_text.py	79	80	FoldedCase.__hash__	__hash__(self)	todo		
+Lib/importlib/metadata/_text.py	82	83	FoldedCase.__contains__	__contains__(self, other)	todo		
+Lib/importlib/metadata/_text.py	85	87	FoldedCase.in_	in_(self, other)	todo		
+Lib/importlib/metadata/_text.py	91	92	FoldedCase.lower	lower(self)	todo		
+Lib/importlib/metadata/_text.py	94	95	FoldedCase.index	index(self, sub)	todo		candidates:strsearch-find-str-bytes
+Lib/importlib/metadata/_text.py	97	99	FoldedCase.split	split(self, splitter=' ', maxsplit=0)	todo		candidates:strsearch-split-char-fast-path,strsearch-split-rsplit-agree

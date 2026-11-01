@@ -1,0 +1,12 @@
+file	line	endline	name	signature	status	entry	note
+Lib/idlelib/autocomplete.py	40	50	AutoComplete.__init__	__init__(self, editwin=None, tags=None)	excluded		platform: GUI toolkit
+Lib/idlelib/autocomplete.py	53	55	AutoComplete.reload	reload(cls)	excluded		platform: GUI toolkit
+Lib/idlelib/autocomplete.py	57	58	AutoComplete._make_autocomplete_window	_make_autocomplete_window(self)	excluded		platform: GUI toolkit
+Lib/idlelib/autocomplete.py	60	63	AutoComplete._remove_autocomplete_window	_remove_autocomplete_window(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/autocomplete.py	65	68	AutoComplete.force_open_completions_event	force_open_completions_event(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/autocomplete.py	70	82	AutoComplete.autocomplete_event	autocomplete_event(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/autocomplete.py	84	93	AutoComplete.try_open_completions_event	try_open_completions_event(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/autocomplete.py	95	99	AutoComplete._delayed_open_completions	_delayed_open_completions(self, args)	excluded		platform: GUI toolkit
+Lib/idlelib/autocomplete.py	101	159	AutoComplete.open_completions	open_completions(self, args)	excluded		platform: GUI toolkit
+Lib/idlelib/autocomplete.py	161	217	AutoComplete.fetch_completions	fetch_completions(self, what, mode)	excluded		platform: GUI toolkit
+Lib/idlelib/autocomplete.py	219	221	AutoComplete.get_entity	get_entity(self, name)	excluded		platform: GUI toolkit

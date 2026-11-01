@@ -1,0 +1,6 @@
+file	line	endline	name	signature	status	entry	note
+Lib/encodings/undefined.py	18	19	Codec.encode	encode(self, input, errors='strict')	todo		
+Lib/encodings/undefined.py	21	22	Codec.decode	decode(self, input, errors='strict')	todo		
+Lib/encodings/undefined.py	25	26	IncrementalEncoder.encode	encode(self, input, final=False)	todo		
+Lib/encodings/undefined.py	29	30	IncrementalDecoder.decode	decode(self, input, final=False)	todo		
+Lib/encodings/undefined.py	40	49	getregentry	getregentry()	todo		

@@ -1,0 +1,14 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_colorize.py	127	131	ThemeSection.__post_init__	__post_init__(self)	todo		
+Lib/_colorize.py	133	138	ThemeSection.copy_with	copy_with(self, **kwargs: str)	todo		
+Lib/_colorize.py	141	145	ThemeSection.no_colors	no_colors(cls)	todo		
+Lib/_colorize.py	147	148	ThemeSection.__getitem__	__getitem__(self, key: str)	todo		
+Lib/_colorize.py	150	151	ThemeSection.__len__	__len__(self)	todo		
+Lib/_colorize.py	153	154	ThemeSection.__iter__	__iter__(self)	todo		
+Lib/_colorize.py	222	240	Theme.copy_with	copy_with(self, *, argparse: Argparse | None=None, syntax: Syntax | None=None, traceback: Traceback | None=None, unittest: Unittest | None=None)	todo		
+Lib/_colorize.py	243	255	Theme.no_colors	no_colors(cls)	todo		
+Lib/_colorize.py	258	264	get_colors	get_colors(colorize: bool=False, *, file: IO[str] | IO[bytes] | None=None)	todo		
+Lib/_colorize.py	267	271	decolor	decolor(text: str)	todo		
+Lib/_colorize.py	274	315	can_colorize	can_colorize(*, file: IO[str] | IO[bytes] | None=None)	todo		
+Lib/_colorize.py	322	343	get_theme	get_theme(*, tty_file: IO[str] | IO[bytes] | None=None, force_color: bool=False, force_no_color: bool=False)	todo		
+Lib/_colorize.py	346	352	set_theme	set_theme(t: Theme)	todo		

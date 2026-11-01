@@ -1,0 +1,8 @@
+file	line	endline	name	signature	status	entry	note
+Modules/fcntlmodule.c	64	132	fcntl_fcntl_impl	fcntl_fcntl_impl(PyObject *module, int fd, int code, PyObject *arg) /*[clinic end generated code: output=888fc93b51c295bd input=56c6d6196a4854df]*/	todo		
+Modules/fcntlmodule.c	175	290	fcntl_ioctl_impl	fcntl_ioctl_impl(PyObject *module, int fd, unsigned long code, PyObject *arg, int mutate_arg) /*[clinic end generated code: output=f72baba2454d7a62 input=b69717a5588e086e]*/	todo		
+Modules/fcntlmodule.c	306	355	fcntl_flock_impl	fcntl_flock_impl(PyObject *module, int fd, int code) /*[clinic end generated code: output=84059e2b37d2fc64 input=ade68943e8599f0a]*/	todo		
+Modules/fcntlmodule.c	393	458	fcntl_lockf_impl	fcntl_lockf_impl(PyObject *module, int fd, int code, PyObject *lenobj, PyObject *startobj, int whence) /*[clinic end generated code: output=4985e7a172e7461a input=369bef4d7a1c5ff4]*/	todo		
+Modules/fcntlmodule.c	481	758	all_ins	all_ins(PyObject* m)	todo		
+Modules/fcntlmodule.c	761	767	fcntl_exec	fcntl_exec(PyObject *module)	todo		
+Modules/fcntlmodule.c	786	789	PyInit_fcntl	PyInit_fcntl(void)	todo		

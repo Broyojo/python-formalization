@@ -1,0 +1,9 @@
+file	line	endline	name	signature	status	entry	note
+Python/frame.c	11	18	_PyFrame_Traverse	_PyFrame_Traverse(_PyInterpreterFrame *frame, visitproc visit, void *arg)	todo		
+Python/frame.c	21	45	_PyFrame_MakeAndSetFrameObject	_PyFrame_MakeAndSetFrameObject(_PyInterpreterFrame *frame)	todo		
+Python/frame.c	48	90	take_ownership	take_ownership(PyFrameObject *f, _PyInterpreterFrame *frame)	todo		
+Python/frame.c	93	104	_PyFrame_ClearLocals	_PyFrame_ClearLocals(_PyInterpreterFrame *frame)	todo		
+Python/frame.c	107	128	_PyFrame_ClearExceptCode	_PyFrame_ClearExceptCode(_PyInterpreterFrame *frame)	todo		
+Python/frame.c	133	136	PyUnstable_InterpreterFrame_GetCode	PyUnstable_InterpreterFrame_GetCode(struct _PyInterpreterFrame *frame)	todo		
+Python/frame.c	141	144	PyUnstable_InterpreterFrame_GetLasti	PyUnstable_InterpreterFrame_GetLasti(struct _PyInterpreterFrame *frame)	todo		
+Python/frame.c	147	151	PyUnstable_InterpreterFrame_GetLine	PyUnstable_InterpreterFrame_GetLine(_PyInterpreterFrame *frame)	todo		

@@ -1,0 +1,32 @@
+file	line	endline	name	signature	status	entry	note
+Lib/wsgiref/validate.py	126	128	assert_	assert_(cond, *args)	todo		
+Lib/wsgiref/validate.py	130	134	check_string_type	check_string_type(value, title)	todo		
+Lib/wsgiref/validate.py	136	189	validator	validator(application)	todo		
+Lib/wsgiref/validate.py	193	194	InputWrapper.__init__	__init__(self, wsgi_input)	todo		
+Lib/wsgiref/validate.py	196	200	InputWrapper.read	read(self, *args)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/wsgiref/validate.py	202	206	InputWrapper.readline	readline(self, *args)	todo		
+Lib/wsgiref/validate.py	208	214	InputWrapper.readlines	readlines(self, *args)	todo		candidates:pyio-bytesio-readlines-hint-doc
+Lib/wsgiref/validate.py	216	218	InputWrapper.__iter__	__iter__(self)	todo		
+Lib/wsgiref/validate.py	220	221	InputWrapper.close	close(self)	todo		
+Lib/wsgiref/validate.py	225	226	ErrorWrapper.__init__	__init__(self, wsgi_errors)	todo		
+Lib/wsgiref/validate.py	228	230	ErrorWrapper.write	write(self, s)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/wsgiref/validate.py	232	233	ErrorWrapper.flush	flush(self)	todo		
+Lib/wsgiref/validate.py	235	237	ErrorWrapper.writelines	writelines(self, seq)	todo		
+Lib/wsgiref/validate.py	239	240	ErrorWrapper.close	close(self)	todo		
+Lib/wsgiref/validate.py	244	245	WriteWrapper.__init__	__init__(self, wsgi_writer)	todo		
+Lib/wsgiref/validate.py	247	249	WriteWrapper.__call__	__call__(self, s)	todo		
+Lib/wsgiref/validate.py	253	254	PartialIteratorWrapper.__init__	__init__(self, wsgi_iterator)	todo		
+Lib/wsgiref/validate.py	256	258	PartialIteratorWrapper.__iter__	__iter__(self)	todo		
+Lib/wsgiref/validate.py	262	266	IteratorWrapper.__init__	__init__(self, wsgi_iterator, check_start_response)	todo		
+Lib/wsgiref/validate.py	268	269	IteratorWrapper.__iter__	__iter__(self)	todo		
+Lib/wsgiref/validate.py	271	281	IteratorWrapper.__next__	__next__(self)	todo		
+Lib/wsgiref/validate.py	283	286	IteratorWrapper.close	close(self)	todo		
+Lib/wsgiref/validate.py	288	293	IteratorWrapper.__del__	__del__(self)	todo		
+Lib/wsgiref/validate.py	295	358	check_environ	check_environ(environ)	todo		
+Lib/wsgiref/validate.py	360	364	check_input	check_input(wsgi_input)	todo		
+Lib/wsgiref/validate.py	366	370	check_errors	check_errors(wsgi_errors)	todo		
+Lib/wsgiref/validate.py	372	384	check_status	check_status(status)	todo		
+Lib/wsgiref/validate.py	386	409	check_headers	check_headers(headers)	todo		
+Lib/wsgiref/validate.py	411	425	check_content_type	check_content_type(status, headers)	todo		
+Lib/wsgiref/validate.py	427	429	check_exc_info	check_exc_info(exc_info)	todo		
+Lib/wsgiref/validate.py	432	438	check_iterator	check_iterator(iterator)	todo		

@@ -1,0 +1,10 @@
+file	line	endline	name	signature	status	entry	note
+Lib/email/_encoded_words.py	67	69	decode_q	decode_q(encoded)	todo		
+Lib/email/_encoded_words.py	77	82	_QByteMap.__missing__	__missing__(self, key)	todo		
+Lib/email/_encoded_words.py	89	90	encode_q	encode_q(bstring)	todo		
+Lib/email/_encoded_words.py	92	93	len_q	len_q(bstring)	todo		
+Lib/email/_encoded_words.py	100	136	decode_b	decode_b(encoded)	todo		
+Lib/email/_encoded_words.py	138	139	encode_b	encode_b(bstring)	todo		
+Lib/email/_encoded_words.py	141	144	len_b	len_b(bstring)	todo		
+Lib/email/_encoded_words.py	152	191	decode	decode(ew)	todo		
+Lib/email/_encoded_words.py	204	233	encode	encode(string, charset='utf-8', encoding=None, lang='')	todo		

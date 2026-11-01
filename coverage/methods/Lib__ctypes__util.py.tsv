@@ -1,0 +1,24 @@
+file	line	endline	name	signature	status	entry	note
+Lib/ctypes/util.py	9	32	_get_build_version	_get_build_version()	todo		
+Lib/ctypes/util.py	34	53	find_msvcrt	find_msvcrt()	todo		
+Lib/ctypes/util.py	55	68	find_library	find_library(name)	todo		
+Lib/ctypes/util.py	93	97	_get_module_filename	_get_module_filename(module: wintypes.HMODULE)	todo		
+Lib/ctypes/util.py	99	126	_get_module_handles	_get_module_handles()	todo		
+Lib/ctypes/util.py	128	133	dllist	dllist()	todo		
+Lib/ctypes/util.py	137	146	find_library	find_library(name)	todo		
+Lib/ctypes/util.py	156	162	dllist	dllist()	todo		
+Lib/ctypes/util.py	174	180	find_library	find_library(name)	todo		
+Lib/ctypes/util.py	183	187	_is_wasm	_is_wasm(filename)	todo		
+Lib/ctypes/util.py	189	199	find_library	find_library(name)	todo		
+Lib/ctypes/util.py	205	212	_is_elf	_is_elf(filename)	todo		
+Lib/ctypes/util.py	214	261	_findLib_gcc	_findLib_gcc(name)	todo		
+Lib/ctypes/util.py	266	281	_get_soname	_get_soname(f)	todo		
+Lib/ctypes/util.py	283	303	_get_soname	_get_soname(f)	todo		
+Lib/ctypes/util.py	307	316	_num_version	_num_version(libname)	todo		
+Lib/ctypes/util.py	318	337	find_library	find_library(name)	todo		
+Lib/ctypes/util.py	341	375	_findLib_crle	_findLib_crle(name, is64)	todo		
+Lib/ctypes/util.py	377	378	find_library	find_library(name, is64=False)	todo		
+Lib/ctypes/util.py	382	410	_findSoname_ldconfig	_findSoname_ldconfig(name)	todo		
+Lib/ctypes/util.py	412	436	_findLib_ld	_findLib_ld(name)	todo		
+Lib/ctypes/util.py	438	441	find_library	find_library(name)	todo		
+Lib/ctypes/util.py	454	499	test	test()	todo		

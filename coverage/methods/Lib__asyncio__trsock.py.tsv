@@ -1,0 +1,19 @@
+file	line	endline	name	signature	status	entry	note
+Lib/asyncio/trsock.py	15	16	TransportSocket.__init__	__init__(self, sock: socket.socket)	todo		
+Lib/asyncio/trsock.py	19	20	TransportSocket.family	family(self)	todo		
+Lib/asyncio/trsock.py	23	24	TransportSocket.type	type(self)	todo		
+Lib/asyncio/trsock.py	27	28	TransportSocket.proto	proto(self)	todo		
+Lib/asyncio/trsock.py	30	51	TransportSocket.__repr__	__repr__(self)	todo		
+Lib/asyncio/trsock.py	53	54	TransportSocket.__getstate__	__getstate__(self)	todo		
+Lib/asyncio/trsock.py	56	57	TransportSocket.fileno	fileno(self)	todo		
+Lib/asyncio/trsock.py	59	60	TransportSocket.dup	dup(self)	todo		
+Lib/asyncio/trsock.py	62	63	TransportSocket.get_inheritable	get_inheritable(self)	todo		
+Lib/asyncio/trsock.py	65	68	TransportSocket.shutdown	shutdown(self, how)	todo		
+Lib/asyncio/trsock.py	70	71	TransportSocket.getsockopt	getsockopt(self, *args, **kwargs)	todo		
+Lib/asyncio/trsock.py	73	74	TransportSocket.setsockopt	setsockopt(self, *args, **kwargs)	todo		
+Lib/asyncio/trsock.py	76	77	TransportSocket.getpeername	getpeername(self)	todo		
+Lib/asyncio/trsock.py	79	80	TransportSocket.getsockname	getsockname(self)	todo		
+Lib/asyncio/trsock.py	82	83	TransportSocket.getsockbyname	getsockbyname(self)	todo		
+Lib/asyncio/trsock.py	85	89	TransportSocket.settimeout	settimeout(self, value)	todo		
+Lib/asyncio/trsock.py	91	92	TransportSocket.gettimeout	gettimeout(self)	todo		
+Lib/asyncio/trsock.py	94	98	TransportSocket.setblocking	setblocking(self, flag)	todo		

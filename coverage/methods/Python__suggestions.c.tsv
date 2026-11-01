@@ -1,0 +1,5 @@
+file	line	endline	name	signature	status	entry	note
+Python/suggestions.c	17	36	substitution_cost	substitution_cost(char a, char b)	todo		
+Python/suggestions.c	40	125	levenshtein_distance	levenshtein_distance(const char *a, size_t a_size, const char *b, size_t b_size, size_t max_cost, size_t *buffer)	todo		
+Python/suggestions.c	128	178	_Py_CalculateSuggestions	_Py_CalculateSuggestions(PyObject *dir, PyObject *name)	todo		
+Python/suggestions.c	181	205	_Py_UTF8_Edit_Cost	_Py_UTF8_Edit_Cost(PyObject *a, PyObject *b, Py_ssize_t max_cost)	todo		

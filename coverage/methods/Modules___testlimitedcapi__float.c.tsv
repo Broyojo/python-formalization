@@ -1,0 +1,10 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testlimitedcapi/float.c	6	10	float_check	float_check(PyObject *Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/float.c	13	17	float_checkexact	float_checkexact(PyObject *Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/float.c	20	24	float_fromstring	float_fromstring(PyObject *Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/float.c	27	36	float_fromdouble	float_fromdouble(PyObject *Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/float.c	39	50	float_asdouble	float_asdouble(PyObject *Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/float.c	53	56	float_getinfo	float_getinfo(PyObject *Py_UNUSED(module), PyObject *Py_UNUSED(arg))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/float.c	59	62	float_getmax	float_getmax(PyObject *Py_UNUSED(module), PyObject *Py_UNUSED(arg))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/float.c	65	68	float_getmin	float_getmin(PyObject *Py_UNUSED(module), PyObject *Py_UNUSED(arg))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/float.c	84	91	_PyTestLimitedCAPI_Init_Float	_PyTestLimitedCAPI_Init_Float(PyObject *mod)	excluded		test-support: only for CPython's own tests

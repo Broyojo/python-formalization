@@ -1,0 +1,18 @@
+file	line	endline	name	signature	status	entry	note
+Python/legacy_tracing.c	38	57	call_profile_func	call_profile_func(_PyLegacyEventHandler *self, PyObject *arg)	todo		
+Python/legacy_tracing.c	137	156	set_opcode_trace_world_stopped	set_opcode_trace_world_stopped(PyCodeObject *code, bool enable)	todo		
+Python/legacy_tracing.c	159	182	_PyEval_SetOpcodeTrace	_PyEval_SetOpcodeTrace(PyFrameObject *frame, bool enable)	todo		
+Python/legacy_tracing.c	185	211	call_trace_func	call_trace_func(_PyLegacyEventHandler *self, PyObject *arg)	todo		
+Python/legacy_tracing.c	430	445	set_callbacks	set_callbacks(int tool, vectorcallfunc vectorcall, int legacy_event, int event1, int event2)	todo		
+Python/legacy_tracing.c	453	458	is_tstate_valid	is_tstate_valid(PyThreadState *tstate)	todo		
+Python/legacy_tracing.c	462	503	setup_profile_callbacks	setup_profile_callbacks(void *Py_UNUSED(arg))	todo		
+Python/legacy_tracing.c	506	515	swap_profile_func_arg	swap_profile_func_arg(PyThreadState *tstate, Py_tracefunc func, PyObject *arg)	todo		
+Python/legacy_tracing.c	518	529	set_monitoring_profile_events	set_monitoring_profile_events(PyInterpreterState *interp)	todo		
+Python/legacy_tracing.c	532	557	_PyEval_SetProfile	_PyEval_SetProfile(PyThreadState *tstate, Py_tracefunc func, PyObject *arg)	todo		
+Python/legacy_tracing.c	560	597	_PyEval_SetProfileAllThreads	_PyEval_SetProfileAllThreads(PyInterpreterState *interp, Py_tracefunc func, PyObject *arg)	todo		
+Python/legacy_tracing.c	600	651	setup_trace_callbacks	setup_trace_callbacks(void *Py_UNUSED(arg))	todo		
+Python/legacy_tracing.c	654	663	swap_trace_func_arg	swap_trace_func_arg(PyThreadState *tstate, Py_tracefunc func, PyObject *arg)	todo		
+Python/legacy_tracing.c	666	679	set_monitoring_trace_events	set_monitoring_trace_events(PyInterpreterState *interp)	todo		
+Python/legacy_tracing.c	683	694	maybe_set_opcode_trace	maybe_set_opcode_trace(PyThreadState *tstate)	todo		
+Python/legacy_tracing.c	697	730	_PyEval_SetTrace	_PyEval_SetTrace(PyThreadState *tstate, Py_tracefunc func, PyObject *arg)	todo		
+Python/legacy_tracing.c	733	781	_PyEval_SetTraceAllThreads	_PyEval_SetTraceAllThreads(PyInterpreterState *interp, Py_tracefunc func, PyObject *arg)	todo		

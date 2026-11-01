@@ -1,0 +1,11 @@
+file	line	endline	name	signature	status	entry	note
+Objects/interpolationobject.c	9	32	_conversion_converter	_conversion_converter(PyObject *arg, PyObject **conversion)	todo		
+Objects/interpolationobject.c	63	79	interpolation_new_impl	interpolation_new_impl(PyTypeObject *type, PyObject *value, PyObject *expression, PyObject *conversion, PyObject *format_spec) /*[clinic end generated code: output=6488e288765bc1a9 input=fc5c285c1dd23d36]*/	todo		
+Objects/interpolationobject.c	82	87	interpolation_dealloc	interpolation_dealloc(PyObject *op)	todo		
+Objects/interpolationobject.c	90	98	interpolation_clear	interpolation_clear(PyObject *op)	todo		
+Objects/interpolationobject.c	101	109	interpolation_traverse	interpolation_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Objects/interpolationobject.c	112	118	interpolation_repr	interpolation_repr(PyObject *op)	todo		
+Objects/interpolationobject.c	129	135	interpolation_reduce	interpolation_reduce(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
+Objects/interpolationobject.c	164	186	_PyInterpolation_InitTypes	_PyInterpolation_InitTypes(PyInterpreterState *interp)	todo		
+Objects/interpolationobject.c	189	225	_PyInterpolation_Build	_PyInterpolation_Build(PyObject *value, PyObject *str, int conversion, PyObject *format_spec)	todo		
+Objects/interpolationobject.c	228	231	_PyInterpolation_GetValueRef	_PyInterpolation_GetValueRef(PyObject *interpolation)	todo		

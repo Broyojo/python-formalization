@@ -1,0 +1,12 @@
+file	line	endline	name	signature	status	entry	note
+Objects/picklebufobject.c	17	33	PyPickleBuffer_FromObject	PyPickleBuffer_FromObject(PyObject *base)	todo		
+Objects/picklebufobject.c	36	52	PyPickleBuffer_GetBuffer	PyPickleBuffer_GetBuffer(PyObject *obj)	todo		
+Objects/picklebufobject.c	55	67	PyPickleBuffer_Release	PyPickleBuffer_Release(PyObject *obj)	todo		
+Objects/picklebufobject.c	70	92	picklebuf_new	picklebuf_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Objects/picklebufobject.c	95	100	picklebuf_traverse	picklebuf_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Objects/picklebufobject.c	103	108	picklebuf_clear	picklebuf_clear(PyObject *op)	todo		
+Objects/picklebufobject.c	111	118	picklebuf_dealloc	picklebuf_dealloc(PyObject *op)	todo		
+Objects/picklebufobject.c	123	132	picklebuf_getbuf	picklebuf_getbuf(PyObject *op, Py_buffer *view, int flags)	todo		
+Objects/picklebufobject.c	135	142	picklebuf_releasebuf	picklebuf_releasebuf(PyObject *self, Py_buffer *view)	todo		
+Objects/picklebufobject.c	152	184	picklebuf_raw	picklebuf_raw(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
+Objects/picklebufobject.c	193	198	picklebuf_release	picklebuf_release(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		

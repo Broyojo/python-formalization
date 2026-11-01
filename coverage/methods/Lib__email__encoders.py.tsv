@@ -1,0 +1,6 @@
+file	line	endline	name	signature	status	entry	note
+Lib/email/encoders.py	19	22	_qencode	_qencode(s)	todo		
+Lib/email/encoders.py	25	33	encode_base64	encode_base64(msg)	todo		
+Lib/email/encoders.py	36	44	encode_quopri	encode_quopri(msg)	todo		
+Lib/email/encoders.py	47	61	encode_7or8bit	encode_7or8bit(msg)	todo		
+Lib/email/encoders.py	64	65	encode_noop	encode_noop(msg)	todo		

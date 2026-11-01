@@ -1,0 +1,50 @@
+file	line	endline	name	signature	status	entry	note
+Modules/readline.c	105	110	get_readline_state	get_readline_state(PyObject *module)	todo		
+Modules/readline.c	118	128	readline_clear	readline_clear(PyObject *m)	todo		
+Modules/readline.c	131	141	readline_traverse	readline_traverse(PyObject *m, visitproc visit, void *arg)	todo		
+Modules/readline.c	144	147	readline_free	readline_free(void *m)	todo		
+Modules/readline.c	152	163	get_hook_module_state	get_hook_module_state(void)	todo		
+Modules/readline.c	168	171	encode	encode(PyObject *b)	todo		
+Modules/readline.c	174	177	decode	decode(const char *s)	todo		
+Modules/readline.c	193	198	disable_bracketed_paste	disable_bracketed_paste(void)	todo		
+Modules/readline.c	213	233	readline_parse_and_bind_impl	readline_parse_and_bind_impl(PyObject *module, PyObject *string) /*[clinic end generated code: output=828d9b6630d434f5 input=cefdc0f9f62f9fcc]*/	todo		
+Modules/readline.c	250	277	readline_read_init_file_impl	readline_read_init_file_impl(PyObject *module, PyObject *filename_obj) /*[clinic end generated code: output=8e059b676142831e input=62b767adfab6cc15]*/	todo		
+Modules/readline.c	294	318	readline_read_history_file_impl	readline_read_history_file_impl(PyObject *module, PyObject *filename_obj) /*[clinic end generated code: output=66a951836fb54fbb input=5d86fd7813172a67]*/	todo		
+Modules/readline.c	337	369	readline_write_history_file_impl	readline_write_history_file_impl(PyObject *module, PyObject *filename_obj) /*[clinic end generated code: output=fbcad13d8ef59ae6 input=34aaada95120cfaa]*/	todo		
+Modules/readline.c	388	428	readline_append_history_file_impl	readline_append_history_file_impl(PyObject *module, int nelements, PyObject *filename_obj) /*[clinic end generated code: output=5df06fc9da56e4e4 input=78a6061a8d3a0275]*/	todo		
+Modules/readline.c	446	451	readline_set_history_length_impl	readline_set_history_length_impl(PyObject *module, int length) /*[clinic end generated code: output=e161a53e45987dc7 input=b8901bf16488b760]*/	todo		
+Modules/readline.c	462	467	readline_get_history_length_impl	readline_get_history_length_impl(PyObject *module) /*[clinic end generated code: output=83a2eeae35b6d2b9 input=5dce2eeba4327817]*/	todo		
+Modules/readline.c	472	487	set_hook	set_hook(const char *funcname, PyObject **hook_var, PyObject *function)	todo		
+Modules/readline.c	504	525	readline_set_completion_display_matches_hook_impl	readline_set_completion_display_matches_hook_impl(PyObject *module, PyObject *function) /*[clinic end generated code: output=516e5cb8db75a328 input=ea4191e4a07d28d3]*/	todo		
+Modules/readline.c	541	547	readline_set_startup_hook_impl	readline_set_startup_hook_impl(PyObject *module, PyObject *function) /*[clinic end generated code: output=02cd0e0c4fa082ad input=11fce34992f1125e]*/	todo		
+Modules/readline.c	568	574	readline_set_pre_input_hook_impl	readline_set_pre_input_hook_impl(PyObject *module, PyObject *function) /*[clinic end generated code: output=fe1a96505096f464 input=96d3d5ff4a0c7c28]*/	todo		
+Modules/readline.c	587	591	readline_get_completion_type_impl	readline_get_completion_type_impl(PyObject *module) /*[clinic end generated code: output=5c54d58a04997c07 input=04b92bc7a82dac91]*/	todo		
+Modules/readline.c	602	607	readline_get_begidx_impl	readline_get_begidx_impl(PyObject *module) /*[clinic end generated code: output=362616ee8ed1b2b1 input=e083b81c8eb4bac3]*/	todo		
+Modules/readline.c	618	623	readline_get_endidx_impl	readline_get_endidx_impl(PyObject *module) /*[clinic end generated code: output=7f763350b12d7517 input=d4c7e34a625fd770]*/	todo		
+Modules/readline.c	638	666	readline_set_completer_delims_impl	readline_set_completer_delims_impl(PyObject *module, PyObject *string) /*[clinic end generated code: output=017e48e9704a2f64 input=6c87bb1cbed7fcf1]*/	todo		
+Modules/readline.c	678	682	_py_free_history_entry_lock_held	_py_free_history_entry_lock_held(HIST_ENTRY *entry)	todo		
+Modules/readline.c	689	696	_py_free_history_entry_lock_held	_py_free_history_entry_lock_held(HIST_ENTRY *entry)	todo		
+Modules/readline.c	711	731	readline_remove_history_item_impl	readline_remove_history_item_impl(PyObject *module, int entry_number) /*[clinic end generated code: output=ab114f029208c7e8 input=847d7cc7e7c25852]*/	todo		
+Modules/readline.c	747	776	readline_replace_history_item_impl	readline_replace_history_item_impl(PyObject *module, int entry_number, PyObject *line) /*[clinic end generated code: output=f8cec2770ca125eb input=b44c8dcdc2dd87fe]*/	todo		
+Modules/readline.c	791	801	readline_add_history_impl	readline_add_history_impl(PyObject *module, PyObject *string) /*[clinic end generated code: output=89047062042ac344 input=faa7053b8612513b]*/	todo		
+Modules/readline.c	817	823	readline_set_auto_history_impl	readline_set_auto_history_impl(PyObject *module, int _should_auto_add_history) /*[clinic end generated code: output=619c6968246fd82b input=3d413073a1a03355]*/	todo		
+Modules/readline.c	836	840	readline_get_completer_delims_impl	readline_get_completer_delims_impl(PyObject *module) /*[clinic end generated code: output=6b060280fa68ef43 input=80583cdf8176bcdd]*/	todo		
+Modules/readline.c	859	864	readline_set_completer_impl	readline_set_completer_impl(PyObject *module, PyObject *function) /*[clinic end generated code: output=171a2a60f81d3204 input=97f539d8d0bfcb95]*/	todo		
+Modules/readline.c	873	881	readline_get_completer_impl	readline_get_completer_impl(PyObject *module) /*[clinic end generated code: output=6e6bbd8226d14475 input=6457522e56d70d13]*/	todo		
+Modules/readline.c	889	900	_py_get_history_length_lock_held	_py_get_history_length_lock_held(void)	todo		
+Modules/readline.c	915	944	readline_get_history_item_impl	readline_get_history_item_impl(PyObject *module, int idx) /*[clinic end generated code: output=83d3e53ea5f34b3d input=2835b50c7bde705f]*/	todo		
+Modules/readline.c	956	960	readline_get_current_history_length_impl	readline_get_current_history_length_impl(PyObject *module) /*[clinic end generated code: output=436b294f12ba1e3f input=22e9fd0abbc2fd8d]*/	todo		
+Modules/readline.c	972	976	readline_get_line_buffer_impl	readline_get_line_buffer_impl(PyObject *module) /*[clinic end generated code: output=d22f9025ecad80e4 input=8e02e0fe081feece]*/	todo		
+Modules/readline.c	990	995	readline_clear_history_impl	readline_clear_history_impl(PyObject *module) /*[clinic end generated code: output=1f2dbb0dfa5d5ebb input=b2c6b11551593053]*/	todo		
+Modules/readline.c	1012	1022	readline_insert_text_impl	readline_insert_text_impl(PyObject *module, PyObject *string) /*[clinic end generated code: output=4bf4e176f68750e0 input=2f401f4316df33c2]*/	todo		
+Modules/readline.c	1034	1039	readline_redisplay_impl	readline_redisplay_impl(PyObject *module) /*[clinic end generated code: output=a8b9725827c3c34b input=5895fd014615ff58]*/	todo		
+Modules/readline.c	1087	1111	on_hook	on_hook(PyObject *func)	todo		
+Modules/readline.c	1158	1197	on_completion_display_matches_hook	on_completion_display_matches_hook(char **matches, int num_matches, int max_length)	todo		
+Modules/readline.c	1206	1218	readline_sigwinch_handler	readline_sigwinch_handler(int signum)	todo		
+Modules/readline.c	1224	1261	on_completion	on_completion(const char *text, int state)	todo		
+Modules/readline.c	1268	1312	flex_complete	flex_complete(const char *text, int start, int end)	todo		
+Modules/readline.c	1318	1436	setup_readline	setup_readline(readlinestate *mod_state)	todo		
+Modules/readline.c	1442	1446	rlhandler	rlhandler(char *text)	todo		
+Modules/readline.c	1449	1516	readline_until_enter_or_signal	readline_until_enter_or_signal(const char *prompt, int *signal)	todo		
+Modules/readline.c	1520	1588	call_readline	call_readline(FILE *sys_stdin, FILE *sys_stdout, const char *prompt)	todo		
+Modules/readline.c	1613	1672	PyInit_readline	PyInit_readline(void)	todo		

@@ -1,0 +1,6 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_ctypes/stgdict.c	24	74	PyCStgInfo_clone	PyCStgInfo_clone(StgInfo *dst_info, StgInfo *src_info)	todo		
+Modules/_ctypes/stgdict.c	81	159	MakeFields	MakeFields(PyObject *type, CFieldObject *descr, Py_ssize_t index, Py_ssize_t offset)	todo		
+Modules/_ctypes/stgdict.c	164	214	MakeAnonFields	MakeAnonFields(PyObject *type)	todo		
+Modules/_ctypes/stgdict.c	226	483	PyCStructUnionType_update_stginfo	PyCStructUnionType_update_stginfo(PyObject *type, PyObject *fields, int isStruct)	todo		
+Modules/_ctypes/stgdict.c	490	707	_replace_array_elements	_replace_array_elements(ctypes_state *st, PyObject *layout_fields, Py_ssize_t ffi_ofs, StgInfo *baseinfo, StgInfo *stginfo)	todo		

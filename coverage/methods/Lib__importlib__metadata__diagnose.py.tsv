@@ -1,0 +1,3 @@
+file	line	endline	name	signature	status	entry	note
+Lib/importlib/metadata/diagnose.py	6	12	inspect	inspect(path)	todo		
+Lib/importlib/metadata/diagnose.py	15	17	run	run()	todo		

@@ -1,0 +1,49 @@
+file	line	endline	name	signature	status	entry	note
+Lib/gzip.py	33	76	open	open(filename, mode='rb', compresslevel=_COMPRESS_LEVEL_BEST, encoding=None, errors=None, newline=None)	todo		
+Lib/gzip.py	78	81	write32u	write32u(output, value)	todo		
+Lib/gzip.py	88	92	_PaddedFile.__init__	__init__(self, f, prepend=b'')	todo		
+Lib/gzip.py	94	105	_PaddedFile.read	read(self, size)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/gzip.py	107	114	_PaddedFile.prepend	prepend(self, prepend=b'')	todo		
+Lib/gzip.py	116	119	_PaddedFile.seek	seek(self, off)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
+Lib/gzip.py	121	122	_PaddedFile.seekable	seekable(self)	todo		
+Lib/gzip.py	131	132	_WriteBufferStream.__init__	__init__(self, gzip_file)	todo		
+Lib/gzip.py	134	138	_WriteBufferStream.write	write(self, data)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/gzip.py	140	141	_WriteBufferStream.seekable	seekable(self)	todo		
+Lib/gzip.py	143	144	_WriteBufferStream.writable	writable(self)	todo		
+Lib/gzip.py	160	258	GzipFile.__init__	__init__(self, filename=None, mode=None, compresslevel=_COMPRESS_LEVEL_BEST, fileobj=None, mtime=None)	todo		
+Lib/gzip.py	261	263	GzipFile.mtime	mtime(self)	todo		
+Lib/gzip.py	265	267	GzipFile.__repr__	__repr__(self)	todo		
+Lib/gzip.py	269	275	GzipFile._init_write	_init_write(self, filename)	todo		
+Lib/gzip.py	277	280	GzipFile.tell	tell(self)	todo		
+Lib/gzip.py	282	312	GzipFile._write_gzip_header	_write_gzip_header(self, compresslevel)	todo		
+Lib/gzip.py	314	323	GzipFile.write	write(self, data)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/gzip.py	325	340	GzipFile._write_raw	_write_raw(self, data)	todo		
+Lib/gzip.py	342	346	GzipFile._check_read	_check_read(self, caller)	todo		
+Lib/gzip.py	348	351	GzipFile.read	read(self, size=-1)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/gzip.py	353	362	GzipFile.read1	read1(self, size=-1)	todo		
+Lib/gzip.py	364	367	GzipFile.readinto	readinto(self, b)	todo		
+Lib/gzip.py	369	372	GzipFile.readinto1	readinto1(self, b)	todo		
+Lib/gzip.py	374	377	GzipFile.peek	peek(self, n)	todo		
+Lib/gzip.py	380	381	GzipFile.closed	closed(self)	todo		
+Lib/gzip.py	383	399	GzipFile.close	close(self)	todo		
+Lib/gzip.py	401	406	GzipFile._close	_close(self)	todo		
+Lib/gzip.py	408	414	GzipFile.flush	flush(self, zlib_mode=zlib.Z_SYNC_FLUSH)	todo		
+Lib/gzip.py	416	422	GzipFile.fileno	fileno(self)	todo		
+Lib/gzip.py	424	429	GzipFile.rewind	rewind(self)	todo		
+Lib/gzip.py	431	432	GzipFile.readable	readable(self)	todo		
+Lib/gzip.py	434	435	GzipFile.writable	writable(self)	todo		
+Lib/gzip.py	437	438	GzipFile.seekable	seekable(self)	todo		
+Lib/gzip.py	440	461	GzipFile.seek	seek(self, offset, whence=io.SEEK_SET)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
+Lib/gzip.py	463	465	GzipFile.readline	readline(self, size=-1)	todo		
+Lib/gzip.py	467	473	GzipFile.__del__	__del__(self)	todo		
+Lib/gzip.py	475	488	_read_exact	_read_exact(fp, n)	todo		
+Lib/gzip.py	491	525	_read_gzip_header	_read_gzip_header(fp)	todo		
+Lib/gzip.py	529	534	_GzipReader.__init__	__init__(self, fp)	todo		
+Lib/gzip.py	536	538	_GzipReader._init_read	_init_read(self)	todo		
+Lib/gzip.py	540	545	_GzipReader._read_gzip_header	_read_gzip_header(self)	todo		
+Lib/gzip.py	547	598	_GzipReader.read	read(self, size=-1)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/gzip.py	600	619	_GzipReader._read_eof	_read_eof(self)	todo		
+Lib/gzip.py	621	623	_GzipReader._rewind	_rewind(self)	todo		
+Lib/gzip.py	626	640	compress	compress(data, compresslevel=_COMPRESS_LEVEL_BEST, *, mtime=0)	todo		
+Lib/gzip.py	643	665	decompress	decompress(data)	todo		
+Lib/gzip.py	668	716	main	main()	todo		

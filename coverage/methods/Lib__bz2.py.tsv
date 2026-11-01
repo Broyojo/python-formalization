@@ -1,0 +1,23 @@
+file	line	endline	name	signature	status	entry	note
+Lib/bz2.py	37	95	BZ2File.__init__	__init__(self, filename, mode='r', *, compresslevel=9)	todo		
+Lib/bz2.py	97	118	BZ2File.close	close(self)	todo		
+Lib/bz2.py	121	123	BZ2File.closed	closed(self)	todo		
+Lib/bz2.py	126	128	BZ2File.name	name(self)	todo		
+Lib/bz2.py	131	132	BZ2File.mode	mode(self)	todo		
+Lib/bz2.py	134	137	BZ2File.fileno	fileno(self)	todo		
+Lib/bz2.py	139	141	BZ2File.seekable	seekable(self)	todo		
+Lib/bz2.py	143	146	BZ2File.readable	readable(self)	todo		
+Lib/bz2.py	148	151	BZ2File.writable	writable(self)	todo		
+Lib/bz2.py	153	163	BZ2File.peek	peek(self, n=0)	todo		
+Lib/bz2.py	165	172	BZ2File.read	read(self, size=-1)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/bz2.py	174	184	BZ2File.read1	read1(self, size=-1)	todo		
+Lib/bz2.py	186	192	BZ2File.readinto	readinto(self, b)	todo		
+Lib/bz2.py	194	206	BZ2File.readline	readline(self, size=-1)	todo		
+Lib/bz2.py	208	220	BZ2File.readlines	readlines(self, size=-1)	todo		candidates:pyio-bytesio-readlines-hint-doc
+Lib/bz2.py	222	241	BZ2File.write	write(self, data)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/bz2.py	243	251	BZ2File.writelines	writelines(self, seq)	todo		
+Lib/bz2.py	253	269	BZ2File.seek	seek(self, offset, whence=io.SEEK_SET)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
+Lib/bz2.py	271	276	BZ2File.tell	tell(self)	todo		
+Lib/bz2.py	279	318	open	open(filename, mode='rb', compresslevel=9, encoding=None, errors=None, newline=None)	todo		
+Lib/bz2.py	321	329	compress	compress(data, compresslevel=9)	todo		
+Lib/bz2.py	332	352	decompress	decompress(data)	todo		

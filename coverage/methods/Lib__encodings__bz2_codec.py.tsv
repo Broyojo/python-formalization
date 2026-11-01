@@ -1,0 +1,12 @@
+file	line	endline	name	signature	status	entry	note
+Lib/encodings/bz2_codec.py	15	17	bz2_encode	bz2_encode(input, errors='strict')	todo		
+Lib/encodings/bz2_codec.py	19	21	bz2_decode	bz2_decode(input, errors='strict')	todo		
+Lib/encodings/bz2_codec.py	24	25	Codec.encode	encode(self, input, errors='strict')	todo		
+Lib/encodings/bz2_codec.py	26	27	Codec.decode	decode(self, input, errors='strict')	todo		
+Lib/encodings/bz2_codec.py	30	33	IncrementalEncoder.__init__	__init__(self, errors='strict')	todo		
+Lib/encodings/bz2_codec.py	35	40	IncrementalEncoder.encode	encode(self, input, final=False)	todo		
+Lib/encodings/bz2_codec.py	42	43	IncrementalEncoder.reset	reset(self)	todo		
+Lib/encodings/bz2_codec.py	46	49	IncrementalDecoder.__init__	__init__(self, errors='strict')	todo		
+Lib/encodings/bz2_codec.py	51	55	IncrementalDecoder.decode	decode(self, input, final=False)	todo		
+Lib/encodings/bz2_codec.py	57	58	IncrementalDecoder.reset	reset(self)	todo		
+Lib/encodings/bz2_codec.py	68	78	getregentry	getregentry()	todo		

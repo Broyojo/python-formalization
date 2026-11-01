@@ -1,0 +1,11 @@
+file	line	endline	name	signature	status	entry	note
+Lib/idlelib/redirector.py	27	47	WidgetRedirector.__init__	__init__(self, widget)	excluded		platform: GUI toolkit
+Lib/idlelib/redirector.py	49	51	WidgetRedirector.__repr__	__repr__(self)	excluded		platform: GUI toolkit
+Lib/idlelib/redirector.py	53	63	WidgetRedirector.close	close(self)	excluded		platform: GUI toolkit
+Lib/idlelib/redirector.py	66	79	WidgetRedirector.register	register(self, operation, function)	excluded		platform: GUI toolkit
+Lib/idlelib/redirector.py	81	95	WidgetRedirector.unregister	unregister(self, operation)	excluded		platform: GUI toolkit
+Lib/idlelib/redirector.py	97	117	WidgetRedirector.dispatch	dispatch(self, operation, *args)	excluded		platform: GUI toolkit
+Lib/idlelib/redirector.py	131	143	OriginalCommand.__init__	__init__(self, redir, operation)	excluded		platform: GUI toolkit
+Lib/idlelib/redirector.py	145	146	OriginalCommand.__repr__	__repr__(self)	excluded		platform: GUI toolkit
+Lib/idlelib/redirector.py	148	149	OriginalCommand.__call__	__call__(self, *args)	excluded		platform: GUI toolkit
+Lib/idlelib/redirector.py	152	166	_widget_redirector	_widget_redirector(parent)	excluded		platform: GUI toolkit

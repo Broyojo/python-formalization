@@ -1,0 +1,46 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_pyrepl/readline.py	119	124	ReadlineAlikeReader.__post_init__	__post_init__(self)	todo		
+Lib/_pyrepl/readline.py	126	127	ReadlineAlikeReader.error	error(self, msg: str='none')	todo		
+Lib/_pyrepl/readline.py	129	135	ReadlineAlikeReader.get_stem	get_stem(self)	todo		
+Lib/_pyrepl/readline.py	137	168	ReadlineAlikeReader.get_completions	get_completions(self, stem: str)	todo		
+Lib/_pyrepl/readline.py	170	172	ReadlineAlikeReader.get_module_completions	get_module_completions(self)	todo		
+Lib/_pyrepl/readline.py	174	181	ReadlineAlikeReader.get_trimmed_history	get_trimmed_history(self, maxlength: int)	todo		
+Lib/_pyrepl/readline.py	183	186	ReadlineAlikeReader.update_last_used_indentation	update_last_used_indentation(self)	todo		
+Lib/_pyrepl/readline.py	190	194	ReadlineAlikeReader.collect_keymap	collect_keymap(self)	todo		
+Lib/_pyrepl/readline.py	196	210	ReadlineAlikeReader.after_command	after_command(self, cmd: Command)	todo		
+Lib/_pyrepl/readline.py	213	215	set_auto_history	set_auto_history(_should_auto_add_history: bool)	todo		
+Lib/_pyrepl/readline.py	218	225	_get_this_line_indent	_get_this_line_indent(buffer: list[str], pos: int)	todo		
+Lib/_pyrepl/readline.py	228	239	_get_previous_line_indent	_get_previous_line_indent(buffer: list[str], pos: int)	todo		
+Lib/_pyrepl/readline.py	242	252	_get_first_indentation	_get_first_indentation(buffer: list[str])	todo		
+Lib/_pyrepl/readline.py	255	272	_should_auto_indent	_should_auto_indent(buffer: list[str], pos: int)	todo		
+Lib/_pyrepl/readline.py	276	319	maybe_accept.do	do(self)	todo		
+Lib/_pyrepl/readline.py	323	341	backspace_dedent.do	do(self)	todo		
+Lib/_pyrepl/readline.py	356	360	_ReadlineWrapper.__post_init__	__post_init__(self)	todo		
+Lib/_pyrepl/readline.py	362	366	_ReadlineWrapper.get_reader	get_reader(self)	todo		
+Lib/_pyrepl/readline.py	368	379	_ReadlineWrapper.input	input(self, prompt: object='')	todo		
+Lib/_pyrepl/readline.py	381	398	_ReadlineWrapper.multiline_input	multiline_input(self, more_lines: MoreLinesCallable, ps1: str, ps2: str)	todo		
+Lib/_pyrepl/readline.py	400	401	_ReadlineWrapper.parse_and_bind	parse_and_bind(self, string: str)	todo		
+Lib/_pyrepl/readline.py	403	404	_ReadlineWrapper.set_completer	set_completer(self, function: Completer | None=None)	todo		
+Lib/_pyrepl/readline.py	406	407	_ReadlineWrapper.get_completer	get_completer(self)	todo		
+Lib/_pyrepl/readline.py	409	410	_ReadlineWrapper.set_completer_delims	set_completer_delims(self, delimiters: Collection[str])	todo		
+Lib/_pyrepl/readline.py	412	413	_ReadlineWrapper.get_completer_delims	get_completer_delims(self)	todo		
+Lib/_pyrepl/readline.py	415	417	_ReadlineWrapper._histline	_histline(self, line: str)	todo		
+Lib/_pyrepl/readline.py	419	420	_ReadlineWrapper.get_history_length	get_history_length(self)	todo		
+Lib/_pyrepl/readline.py	422	423	_ReadlineWrapper.set_history_length	set_history_length(self, length: int)	todo		
+Lib/_pyrepl/readline.py	425	426	_ReadlineWrapper.get_current_history_length	get_current_history_length(self)	todo		
+Lib/_pyrepl/readline.py	428	455	_ReadlineWrapper.read_history_file	read_history_file(self, filename: str=gethistoryfile())	todo		
+Lib/_pyrepl/readline.py	457	465	_ReadlineWrapper.write_history_file	write_history_file(self, filename: str=gethistoryfile())	todo		
+Lib/_pyrepl/readline.py	467	478	_ReadlineWrapper.append_history_file	append_history_file(self, filename: str=gethistoryfile())	todo		
+Lib/_pyrepl/readline.py	480	481	_ReadlineWrapper.clear_history	clear_history(self)	todo		
+Lib/_pyrepl/readline.py	483	488	_ReadlineWrapper.get_history_item	get_history_item(self, index: int)	todo		
+Lib/_pyrepl/readline.py	490	495	_ReadlineWrapper.remove_history_item	remove_history_item(self, index: int)	todo		
+Lib/_pyrepl/readline.py	498	503	_ReadlineWrapper.replace_history_item	replace_history_item(self, index: int, line: str)	todo		
+Lib/_pyrepl/readline.py	506	507	_ReadlineWrapper.add_history	add_history(self, line: str)	todo		
+Lib/_pyrepl/readline.py	509	510	_ReadlineWrapper.set_startup_hook	set_startup_hook(self, function: Callback | None=None)	todo		
+Lib/_pyrepl/readline.py	512	513	_ReadlineWrapper.get_line_buffer	get_line_buffer(self)	todo		
+Lib/_pyrepl/readline.py	515	522	_ReadlineWrapper._get_idxs	_get_idxs(self)	todo		
+Lib/_pyrepl/readline.py	524	525	_ReadlineWrapper.get_begidx	get_begidx(self)	todo		
+Lib/_pyrepl/readline.py	527	528	_ReadlineWrapper.get_endidx	get_endidx(self)	todo		
+Lib/_pyrepl/readline.py	530	531	_ReadlineWrapper.insert_text	insert_text(self, text: str)	todo		
+Lib/_pyrepl/readline.py	571	578	_make_stub	_make_stub(_name: str, _ret: object)	todo		
+Lib/_pyrepl/readline.py	592	617	_setup	_setup(namespace: Mapping[str, Any])	todo		

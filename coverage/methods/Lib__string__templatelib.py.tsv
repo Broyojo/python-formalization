@@ -1,0 +1,3 @@
+file	line	endline	name	signature	status	entry	note
+Lib/string/templatelib.py	8	18	convert	convert(obj, /, conversion)	todo		
+Lib/string/templatelib.py	20	33	_template_unpickle	_template_unpickle(*args)	todo		

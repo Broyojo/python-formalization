@@ -1,0 +1,78 @@
+file	line	endline	name	signature	status	entry	note
+Lib/multiprocessing/connection.py	62	63	_init_timeout	_init_timeout(timeout=CONNECTION_TIMEOUT)	todo		
+Lib/multiprocessing/connection.py	65	66	_check_timeout	_check_timeout(t)	todo		
+Lib/multiprocessing/connection.py	72	88	arbitrary_address	arbitrary_address(family)	todo		
+Lib/multiprocessing/connection.py	90	100	_validate_family	_validate_family(family)	todo		
+Lib/multiprocessing/connection.py	102	115	address_type	address_type(address)	todo		
+Lib/multiprocessing/connection.py	124	133	_ConnectionBase.__init__	__init__(self, handle, readable=True, writable=True)	todo		
+Lib/multiprocessing/connection.py	137	139	_ConnectionBase.__del__	__del__(self)	todo		
+Lib/multiprocessing/connection.py	141	143	_ConnectionBase._check_closed	_check_closed(self)	todo		
+Lib/multiprocessing/connection.py	145	147	_ConnectionBase._check_readable	_check_readable(self)	todo		
+Lib/multiprocessing/connection.py	149	151	_ConnectionBase._check_writable	_check_writable(self)	todo		
+Lib/multiprocessing/connection.py	153	158	_ConnectionBase._bad_message_length	_bad_message_length(self)	todo		
+Lib/multiprocessing/connection.py	161	163	_ConnectionBase.closed	closed(self)	todo		
+Lib/multiprocessing/connection.py	166	168	_ConnectionBase.readable	readable(self)	todo		
+Lib/multiprocessing/connection.py	171	173	_ConnectionBase.writable	writable(self)	todo		
+Lib/multiprocessing/connection.py	175	178	_ConnectionBase.fileno	fileno(self)	todo		
+Lib/multiprocessing/connection.py	180	186	_ConnectionBase.close	close(self)	todo		
+Lib/multiprocessing/connection.py	188	190	_ConnectionBase._detach	_detach(self)	todo		
+Lib/multiprocessing/connection.py	192	210	_ConnectionBase.send_bytes	send_bytes(self, buf, offset=0, size=None)	todo		
+Lib/multiprocessing/connection.py	212	216	_ConnectionBase.send	send(self, obj)	todo		
+Lib/multiprocessing/connection.py	218	229	_ConnectionBase.recv_bytes	recv_bytes(self, maxlength=None)	todo		
+Lib/multiprocessing/connection.py	231	254	_ConnectionBase.recv_bytes_into	recv_bytes_into(self, buf, offset=0)	todo		
+Lib/multiprocessing/connection.py	256	261	_ConnectionBase.recv	recv(self)	todo		
+Lib/multiprocessing/connection.py	263	267	_ConnectionBase.poll	poll(self, timeout=0.0)	todo		
+Lib/multiprocessing/connection.py	269	270	_ConnectionBase.__enter__	__enter__(self)	todo		
+Lib/multiprocessing/connection.py	272	273	_ConnectionBase.__exit__	__exit__(self, exc_type, exc_value, exc_tb)	todo		
+Lib/multiprocessing/connection.py	287	292	PipeConnection._close	_close(self, _CloseHandle=_winapi.CloseHandle)	todo		
+Lib/multiprocessing/connection.py	294	318	PipeConnection._send_bytes	_send_bytes(self, buf)	todo		
+Lib/multiprocessing/connection.py	320	360	PipeConnection._recv_bytes	_recv_bytes(self, maxsize=None)	todo		
+Lib/multiprocessing/connection.py	362	366	PipeConnection._poll	_poll(self, timeout)	todo		
+Lib/multiprocessing/connection.py	368	381	PipeConnection._get_more_data	_get_more_data(self, ov, maxsize)	todo		
+Lib/multiprocessing/connection.py	391	392	Connection._close	_close(self, _close=_multiprocessing.closesocket)	todo		
+Lib/multiprocessing/connection.py	396	397	Connection._close	_close(self, _close=os.close)	todo		
+Lib/multiprocessing/connection.py	401	408	Connection._send	_send(self, buf, write=_write)	todo		
+Lib/multiprocessing/connection.py	410	425	Connection._recv	_recv(self, size, read=_read)	todo		
+Lib/multiprocessing/connection.py	427	448	Connection._send_bytes	_send_bytes(self, buf)	todo		
+Lib/multiprocessing/connection.py	450	458	Connection._recv_bytes	_recv_bytes(self, maxsize=None)	todo		
+Lib/multiprocessing/connection.py	460	462	Connection._poll	_poll(self, timeout)	todo		
+Lib/multiprocessing/connection.py	476	502	Listener.__init__	__init__(self, address=None, family=None, backlog=1, authkey=None)	todo		
+Lib/multiprocessing/connection.py	504	517	Listener.accept	accept(self)	todo		
+Lib/multiprocessing/connection.py	519	526	Listener.close	close(self)	todo		
+Lib/multiprocessing/connection.py	529	530	Listener.address	address(self)	todo		
+Lib/multiprocessing/connection.py	533	534	Listener.last_accepted	last_accepted(self)	todo		
+Lib/multiprocessing/connection.py	536	537	Listener.__enter__	__enter__(self)	todo		
+Lib/multiprocessing/connection.py	539	540	Listener.__exit__	__exit__(self, exc_type, exc_value, exc_tb)	todo		
+Lib/multiprocessing/connection.py	543	561	Client	Client(address, family=None, authkey=None)	todo		
+Lib/multiprocessing/connection.py	566	581	Pipe	Pipe(duplex=True)	todo		
+Lib/multiprocessing/connection.py	585	632	Pipe	Pipe(duplex=True)	todo		
+Lib/multiprocessing/connection.py	642	665	SocketListener.__init__	__init__(self, address, family, backlog=1)	todo		
+Lib/multiprocessing/connection.py	667	670	SocketListener.accept	accept(self)	todo		
+Lib/multiprocessing/connection.py	672	679	SocketListener.close	close(self)	todo		
+Lib/multiprocessing/connection.py	682	690	SocketClient	SocketClient(address)	todo		
+Lib/multiprocessing/connection.py	702	711	PipeListener.__init__	__init__(self, address, backlog=None)	todo		
+Lib/multiprocessing/connection.py	713	723	PipeListener._new_handle	_new_handle(self, first=False)	todo		
+Lib/multiprocessing/connection.py	725	746	PipeListener.accept	accept(self)	todo		
+Lib/multiprocessing/connection.py	749	752	PipeListener._finalize_pipe_listener	_finalize_pipe_listener(queue, address)	todo		
+Lib/multiprocessing/connection.py	754	779	PipeClient	PipeClient(address)	todo		
+Lib/multiprocessing/connection.py	891	914	_get_digest_name_and_payload	_get_digest_name_and_payload(message)	todo		
+Lib/multiprocessing/connection.py	917	942	_create_response	_create_response(authkey, message)	todo		
+Lib/multiprocessing/connection.py	945	967	_verify_challenge	_verify_challenge(authkey, message, response)	todo		
+Lib/multiprocessing/connection.py	970	988	deliver_challenge	deliver_challenge(connection, authkey: bytes, digest_name='sha256')	todo		
+Lib/multiprocessing/connection.py	991	1006	answer_challenge	answer_challenge(connection, authkey: bytes)	todo		
+Lib/multiprocessing/connection.py	1013	1019	ConnectionWrapper.__init__	__init__(self, conn, dumps, loads)	todo		
+Lib/multiprocessing/connection.py	1020	1022	ConnectionWrapper.send	send(self, obj)	todo		
+Lib/multiprocessing/connection.py	1023	1025	ConnectionWrapper.recv	recv(self)	todo		
+Lib/multiprocessing/connection.py	1027	1028	_xml_dumps	_xml_dumps(obj)	todo		
+Lib/multiprocessing/connection.py	1030	1032	_xml_loads	_xml_loads(s)	todo		
+Lib/multiprocessing/connection.py	1035	1039	XmlListener.accept	accept(self)	todo		
+Lib/multiprocessing/connection.py	1041	1044	XmlClient	XmlClient(*args, **kwds)	todo		
+Lib/multiprocessing/connection.py	1052	1082	_exhaustive_wait	_exhaustive_wait(handles, timeout)	todo		
+Lib/multiprocessing/connection.py	1086	1162	wait	wait(object_list, timeout=None)	todo		
+Lib/multiprocessing/connection.py	1176	1197	wait	wait(object_list, timeout=None)	todo		
+Lib/multiprocessing/connection.py	1204	1209	reduce_connection	reduce_connection(conn)	todo		
+Lib/multiprocessing/connection.py	1210	1212	rebuild_connection	rebuild_connection(ds, readable, writable)	todo		
+Lib/multiprocessing/connection.py	1215	1219	reduce_pipe_connection	reduce_pipe_connection(conn)	todo		
+Lib/multiprocessing/connection.py	1220	1222	rebuild_pipe_connection	rebuild_pipe_connection(dh, readable, writable)	todo		
+Lib/multiprocessing/connection.py	1226	1228	reduce_connection	reduce_connection(conn)	todo		
+Lib/multiprocessing/connection.py	1229	1231	rebuild_connection	rebuild_connection(df, readable, writable)	todo		

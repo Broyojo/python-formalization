@@ -1,0 +1,7 @@
+file	line	endline	name	signature	status	entry	note
+Lib/unittest/_log.py	15	17	_CapturingHandler.__init__	__init__(self)	todo		
+Lib/unittest/_log.py	19	20	_CapturingHandler.flush	flush(self)	todo		
+Lib/unittest/_log.py	22	25	_CapturingHandler.emit	emit(self, record)	todo		
+Lib/unittest/_log.py	33	41	_AssertLogsContext.__init__	__init__(self, test_case, logger_name, level, no_logs)	todo		
+Lib/unittest/_log.py	43	61	_AssertLogsContext.__enter__	__enter__(self)	todo		
+Lib/unittest/_log.py	63	86	_AssertLogsContext.__exit__	__exit__(self, exc_type, exc_value, tb)	todo		

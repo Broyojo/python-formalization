@@ -1,0 +1,3 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testlimitedcapi/run.c	11	22	run_compilestring	run_compilestring(PyObject *mod, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/run.c	31	34	_PyTestLimitedCAPI_Init_Run	_PyTestLimitedCAPI_Init_Run(PyObject *m)	excluded		test-support: only for CPython's own tests

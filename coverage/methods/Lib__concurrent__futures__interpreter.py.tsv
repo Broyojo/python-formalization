@@ -1,0 +1,10 @@
+file	line	endline	name	signature	status	entry	note
+Lib/concurrent/futures/interpreter.py	9	22	do_call	do_call(results, func, args, kwargs)	todo		
+Lib/concurrent/futures/interpreter.py	28	48	WorkerContext.prepare	prepare(cls, initializer, initargs)	todo		
+Lib/concurrent/futures/interpreter.py	50	53	WorkerContext.__init__	__init__(self, initdata)	todo		
+Lib/concurrent/futures/interpreter.py	55	57	WorkerContext.__del__	__del__(self)	todo		
+Lib/concurrent/futures/interpreter.py	59	70	WorkerContext.initialize	initialize(self)	todo		
+Lib/concurrent/futures/interpreter.py	72	80	WorkerContext.finalize	finalize(self)	todo		
+Lib/concurrent/futures/interpreter.py	82	91	WorkerContext.run	run(self, task)	todo		
+Lib/concurrent/futures/interpreter.py	105	106	InterpreterPoolExecutor.prepare_context	prepare_context(cls, initializer, initargs)	todo		
+Lib/concurrent/futures/interpreter.py	108	123	InterpreterPoolExecutor.__init__	__init__(self, max_workers=None, thread_name_prefix='', initializer=None, initargs=())	todo		

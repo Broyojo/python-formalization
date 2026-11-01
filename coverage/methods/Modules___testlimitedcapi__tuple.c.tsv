@@ -1,0 +1,10 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testlimitedcapi/tuple.c	6	10	tuple_check	tuple_check(PyObject* Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/tuple.c	13	17	tuple_checkexact	tuple_checkexact(PyObject* Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/tuple.c	20	23	tuple_new	tuple_new(PyObject* Py_UNUSED(module), PyObject *len)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/tuple.c	26	43	tuple_pack	tuple_pack(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/tuple.c	46	50	tuple_size	tuple_size(PyObject *Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/tuple.c	53	62	tuple_getitem	tuple_getitem(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/tuple.c	65	74	tuple_getslice	tuple_getslice(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/tuple.c	77	113	tuple_setitem	tuple_setitem(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/tuple.c	129	136	_PyTestLimitedCAPI_Init_Tuple	_PyTestLimitedCAPI_Init_Tuple(PyObject *m)	excluded		test-support: only for CPython's own tests

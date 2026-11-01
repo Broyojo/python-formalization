@@ -1,0 +1,23 @@
+file	line	endline	name	signature	status	entry	note
+Lib/compression/zstd/_zstdfile.py	13	17	_nbytes	_nbytes(dat, /)	todo		
+Lib/compression/zstd/_zstdfile.py	33	94	ZstdFile.__init__	__init__(self, file, /, mode='r', *, level=None, options=None, zstd_dict=None)	todo		
+Lib/compression/zstd/_zstdfile.py	96	119	ZstdFile.close	close(self)	todo		
+Lib/compression/zstd/_zstdfile.py	121	136	ZstdFile.write	write(self, data, /)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/compression/zstd/_zstdfile.py	138	162	ZstdFile.flush	flush(self, mode=FLUSH_BLOCK)	todo		
+Lib/compression/zstd/_zstdfile.py	164	173	ZstdFile.read	read(self, size=-1)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/compression/zstd/_zstdfile.py	175	188	ZstdFile.read1	read1(self, size=-1)	todo		
+Lib/compression/zstd/_zstdfile.py	190	196	ZstdFile.readinto	readinto(self, b)	todo		
+Lib/compression/zstd/_zstdfile.py	198	205	ZstdFile.readinto1	readinto1(self, b)	todo		
+Lib/compression/zstd/_zstdfile.py	207	215	ZstdFile.readline	readline(self, size=-1)	todo		
+Lib/compression/zstd/_zstdfile.py	217	235	ZstdFile.seek	seek(self, offset, whence=io.SEEK_SET)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
+Lib/compression/zstd/_zstdfile.py	237	246	ZstdFile.peek	peek(self, size=-1)	todo		
+Lib/compression/zstd/_zstdfile.py	248	252	ZstdFile.__next__	__next__(self)	todo		
+Lib/compression/zstd/_zstdfile.py	254	260	ZstdFile.tell	tell(self)	todo		
+Lib/compression/zstd/_zstdfile.py	262	265	ZstdFile.fileno	fileno(self)	todo		
+Lib/compression/zstd/_zstdfile.py	268	270	ZstdFile.name	name(self)	todo		
+Lib/compression/zstd/_zstdfile.py	273	274	ZstdFile.mode	mode(self)	todo		
+Lib/compression/zstd/_zstdfile.py	277	279	ZstdFile.closed	closed(self)	todo		
+Lib/compression/zstd/_zstdfile.py	281	283	ZstdFile.seekable	seekable(self)	todo		
+Lib/compression/zstd/_zstdfile.py	285	288	ZstdFile.readable	readable(self)	todo		
+Lib/compression/zstd/_zstdfile.py	290	293	ZstdFile.writable	writable(self)	todo		
+Lib/compression/zstd/_zstdfile.py	296	347	open	open(file, /, mode='rb', *, level=None, options=None, zstd_dict=None, encoding=None, errors=None, newline=None)	todo		

@@ -1,0 +1,29 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_abc.c	28	33	get_abc_state	get_abc_state(PyObject *module)	todo		
+Modules/_abc.c	36	43	get_invalidation_counter	get_invalidation_counter(_abcmodule_state *state)	todo		
+Modules/_abc.c	46	53	increment_invalidation_counter	increment_invalidation_counter(_abcmodule_state *state)	todo		
+Modules/_abc.c	73	80	get_cache_version	get_cache_version(_abc_data *impl)	todo		
+Modules/_abc.c	83	90	set_cache_version	set_cache_version(_abc_data *impl, uint64_t version)	todo		
+Modules/_abc.c	93	101	abc_data_traverse	abc_data_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_abc.c	104	111	abc_data_clear	abc_data_clear(PyObject *op)	todo		
+Modules/_abc.c	114	121	abc_data_dealloc	abc_data_dealloc(PyObject *self)	todo		
+Modules/_abc.c	124	143	abc_data_new	abc_data_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Modules/_abc.c	165	178	_get_impl	_get_impl(PyObject *module, PyObject *self)	todo		
+Modules/_abc.c	181	201	_in_weak_set	_in_weak_set(_abc_data *impl, PyObject **pset, PyObject *obj)	todo		
+Modules/_abc.c	204	216	_destroy	_destroy(PyObject *setweakref, PyObject *objweakref)	todo		
+Modules/_abc.c	223	257	_add_to_weak_set	_add_to_weak_set(_abc_data *impl, PyObject **pset, PyObject *obj)	todo		
+Modules/_abc.c	271	288	_abc__reset_registry	_abc__reset_registry(PyObject *module, PyObject *self) /*[clinic end generated code: output=92d591a43566cc10 input=12a0b7eb339ac35c]*/	todo		
+Modules/_abc.c	302	325	_abc__reset_caches	_abc__reset_caches(PyObject *module, PyObject *self) /*[clinic end generated code: output=f296f0d5c513f80c input=c0ac616fd8acfb6f]*/	todo		
+Modules/_abc.c	341	358	_abc__get_dump	_abc__get_dump(PyObject *module, PyObject *self) /*[clinic end generated code: output=9d9569a8e2c1c443 input=2c5deb1bfe9e3c79]*/	todo		
+Modules/_abc.c	362	482	compute_abstract_methods	compute_abstract_methods(PyObject *self)	todo		
+Modules/_abc.c	496	543	_abc__abc_init	_abc__abc_init(PyObject *module, PyObject *self) /*[clinic end generated code: output=594757375714cda1 input=8d7fe470ff77f029]*/	todo		
+Modules/_abc.c	556	605	_abc__abc_register_impl	_abc__abc_register_impl(PyObject *module, PyObject *self, PyObject *subclass) /*[clinic end generated code: output=7851e7668c963524 input=ca589f8c3080e67f]*/	todo		
+Modules/_abc.c	619	685	_abc__abc_instancecheck_impl	_abc__abc_instancecheck_impl(PyObject *module, PyObject *self, PyObject *instance) /*[clinic end generated code: output=b8b5148f63b6b56f input=a4f4525679261084]*/	todo		
+Modules/_abc.c	705	841	_abc__abc_subclasscheck_impl	_abc__abc_subclasscheck_impl(PyObject *module, PyObject *self, PyObject *subclass) /*[clinic end generated code: output=b56c9e4a530e3894 input=1d947243409d10b8]*/	todo		
+Modules/_abc.c	845	907	subclasscheck_check_registry	subclasscheck_check_registry(_abc_data *impl, PyObject *subclass, PyObject **result)	todo		
+Modules/_abc.c	920	925	_abc_get_cache_token_impl	_abc_get_cache_token_impl(PyObject *module) /*[clinic end generated code: output=c7d87841e033dacc input=d87acc04492f6bf3]*/	todo		
+Modules/_abc.c	940	950	_abcmodule_exec	_abcmodule_exec(PyObject *module)	todo		
+Modules/_abc.c	953	958	_abcmodule_traverse	_abcmodule_traverse(PyObject *module, visitproc visit, void *arg)	todo		
+Modules/_abc.c	961	966	_abcmodule_clear	_abcmodule_clear(PyObject *module)	todo		
+Modules/_abc.c	969	972	_abcmodule_free	_abcmodule_free(void *module)	todo		
+Modules/_abc.c	994	997	PyInit__abc	PyInit__abc(void)	todo		

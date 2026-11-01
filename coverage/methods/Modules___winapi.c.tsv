@@ -1,0 +1,70 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_winapi.c	120	125	winapi_get_state	winapi_get_state(PyObject *module)	todo		
+Modules/_winapi.c	152	162	fail	quite complex and can fail (see: overlapped_dealloc). */ static int overlapped_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_winapi.c	165	208	overlapped_dealloc	overlapped_dealloc(PyObject *op)	todo		
+Modules/_winapi.c	276	309	_winapi_Overlapped_GetOverlappedResult_impl	_winapi_Overlapped_GetOverlappedResult_impl(OverlappedObject *self, int wait) /*[clinic end generated code: output=bdd0c1ed6518cd03 input=194505ee8e0e3565]*/	todo		
+Modules/_winapi.c	316	328	_winapi_Overlapped_getbuffer_impl	_winapi_Overlapped_getbuffer_impl(OverlappedObject *self) /*[clinic end generated code: output=95a3eceefae0f748 input=347fcfd56b4ceabd]*/	todo		
+Modules/_winapi.c	335	351	_winapi_Overlapped_cancel_impl	_winapi_Overlapped_cancel_impl(OverlappedObject *self) /*[clinic end generated code: output=fcb9ab5df4ebdae5 input=cbf3da142290039f]*/	todo		
+Modules/_winapi.c	385	403	new_overlapped	new_overlapped(PyObject *module, HANDLE handle)	todo		
+Modules/_winapi.c	418	431	_winapi_CloseHandle_impl	_winapi_CloseHandle_impl(PyObject *module, HANDLE handle) /*[clinic end generated code: output=7ad37345f07bd782 input=7f0e4ac36e0352b8]*/	todo		
+Modules/_winapi.c	441	477	_winapi_ConnectNamedPipe_impl	_winapi_ConnectNamedPipe_impl(PyObject *module, HANDLE handle, int use_overlapped) /*[clinic end generated code: output=335a0e7086800671 input=a80e56e8bd370e31]*/	todo		
+Modules/_winapi.c	489	510	_winapi_CreateEventW_impl	_winapi_CreateEventW_impl(PyObject *module, LPSECURITY_ATTRIBUTES security_attributes, BOOL manual_reset, BOOL initial_state, LPCWSTR name) /*[clinic end generated code: output=2d4c7d5852ecb298 input=4187cee28ac763f8]*/	todo		
+Modules/_winapi.c	526	553	_winapi_CreateFile_impl	_winapi_CreateFile_impl(PyObject *module, LPCWSTR file_name, DWORD desired_access, DWORD share_mode, LPSECURITY_ATTRIBUTES security_attributes, DWORD creation_disposition, DWORD flags_and_attributes, HANDLE template_file) /*[clinic end generated code: output=818c811e5e04d550 input=1fa870ed1c2e3d69]*/	todo		
+Modules/_winapi.c	568	590	_winapi_CreateFileMapping_impl	_winapi_CreateFileMapping_impl(PyObject *module, HANDLE file_handle, LPSECURITY_ATTRIBUTES security_attributes, DWORD protect, DWORD max_size_high, DWORD max_size_low, LPCWSTR name) /*[clinic end generated code: output=6c0a4d5cf7f6fcc6 input=3dc5cf762a74dee8]*/	todo		
+Modules/_winapi.c	601	746	_winapi_CreateJunction_impl	_winapi_CreateJunction_impl(PyObject *module, LPCWSTR src_path, LPCWSTR dst_path) /*[clinic end generated code: output=44b3f5e9bbcc4271 input=963d29b44b9384a7]*/	todo		
+Modules/_winapi.c	757	777	_winapi_CreateMutexW_impl	_winapi_CreateMutexW_impl(PyObject *module, LPSECURITY_ATTRIBUTES security_attributes, BOOL initial_owner, LPCWSTR name) /*[clinic end generated code: output=31b9ee8fc37e49a5 input=7d54b921e723254a]*/	todo		
+Modules/_winapi.c	794	819	_winapi_CreateNamedPipe_impl	_winapi_CreateNamedPipe_impl(PyObject *module, LPCWSTR name, DWORD open_mode, DWORD pipe_mode, DWORD max_instances, DWORD out_buffer_size, DWORD in_buffer_size, DWORD default_timeout, LPSECURITY_ATTRIBUTES security_attributes) /*[clinic end generated code: output=7d6fde93227680ba input=5bd4e4a55639ee02]*/	todo		
+Modules/_winapi.c	835	855	_winapi_CreatePipe_impl	_winapi_CreatePipe_impl(PyObject *module, PyObject *pipe_attrs, DWORD size) /*[clinic end generated code: output=1c4411d8699f0925 input=c4f2cfa56ef68d90]*/	todo		
+Modules/_winapi.c	860	873	getulong	getulong(PyObject* obj, const char* name)	todo		
+Modules/_winapi.c	876	892	gethandle	gethandle(PyObject* obj, const char* name)	todo		
+Modules/_winapi.c	895	899	sortenvironmentkey	sortenvironmentkey(PyObject *module, PyObject *item)	todo		
+Modules/_winapi.c	906	927	sort_environment_keys	sort_environment_keys(PyObject *keys)	todo		
+Modules/_winapi.c	930	945	compare_string_ordinal	compare_string_ordinal(PyObject *str1, PyObject *str2, int *result)	todo		
+Modules/_winapi.c	948	987	dedup_environment_keys	dedup_environment_keys(PyObject *keys)	todo		
+Modules/_winapi.c	990	1035	normalize_environment	normalize_environment(PyObject *environment)	todo		
+Modules/_winapi.c	1038	1158	getenvironment	getenvironment(PyObject* environment)	todo		
+Modules/_winapi.c	1161	1208	gethandlelist	gethandlelist(PyObject *mapping, const char *name, Py_ssize_t *size)	todo		
+Modules/_winapi.c	1216	1226	freeattributelist	freeattributelist(AttributeList *attribute_list)	todo		
+Modules/_winapi.c	1229	1320	getattributelist	getattributelist(PyObject *obj, const char *name, AttributeList *attribute_list)	todo		
+Modules/_winapi.c	1346	1435	_winapi_CreateProcess_impl	_winapi_CreateProcess_impl(PyObject *module, const wchar_t *application_name, PyObject *command_line, PyObject *proc_attrs, PyObject *thread_attrs, BOOL inherit_handles, DWORD creation_flags, PyObject *env_mapping, const wchar_t *current_directory, PyObject *startup_info) /*[clinic end generated code: output=a25c8e49ea1d6427 input=42ac293eaea03fc4]*/	todo		
+Modules/_winapi.c	1456	1484	_winapi_DuplicateHandle_impl	_winapi_DuplicateHandle_impl(PyObject *module, HANDLE source_process_handle, HANDLE source_handle, HANDLE target_process_handle, DWORD desired_access, BOOL inherit_handle, DWORD options) /*[clinic end generated code: output=ad9711397b5dcd4e input=b933e3f2356a8c12]*/	todo		
+Modules/_winapi.c	1495	1509	_winapi_ExitProcess_impl	_winapi_ExitProcess_impl(PyObject *module, UINT ExitCode) /*[clinic end generated code: output=a387deb651175301 input=4f05466a9406c558]*/	todo		
+Modules/_winapi.c	1518	1522	_winapi_GetCurrentProcess_impl	_winapi_GetCurrentProcess_impl(PyObject *module) /*[clinic end generated code: output=ddeb4dd2ffadf344 input=b213403fd4b96b41]*/	todo		
+Modules/_winapi.c	1534	1548	_winapi_GetExitCodeProcess_impl	_winapi_GetExitCodeProcess_impl(PyObject *module, HANDLE process) /*[clinic end generated code: output=b4620bdf2bccf36b input=61b6bfc7dc2ee374]*/	todo		
+Modules/_winapi.c	1555	1559	_winapi_GetLastError_impl	_winapi_GetLastError_impl(PyObject *module) /*[clinic end generated code: output=8585b827cb1a92c5 input=62d47fb9bce038ba]*/	todo		
+Modules/_winapi.c	1576	1602	_winapi_GetLongPathName_impl	_winapi_GetLongPathName_impl(PyObject *module, LPCWSTR path) /*[clinic end generated code: output=c4774b080275a2d0 input=9872e211e3a4a88f]*/	todo		
+Modules/_winapi.c	1621	1636	_winapi_GetModuleFileName_impl	_winapi_GetModuleFileName_impl(PyObject *module, HMODULE module_handle) /*[clinic end generated code: output=85b4b728c5160306 input=6d66ff7deca5d11f]*/	todo		
+Modules/_winapi.c	1652	1681	_winapi_GetShortPathName_impl	_winapi_GetShortPathName_impl(PyObject *module, LPCWSTR path) /*[clinic end generated code: output=dab6ae494c621e81 input=43fa349aaf2ac718]*/	todo		
+Modules/_winapi.c	1696	1709	_winapi_GetStdHandle_impl	_winapi_GetStdHandle_impl(PyObject *module, DWORD std_handle) /*[clinic end generated code: output=0e613001e73ab614 input=07016b06a2fc8826]*/	todo		
+Modules/_winapi.c	1744	1760	_winapi_MapViewOfFile_impl	_winapi_MapViewOfFile_impl(PyObject *module, HANDLE file_map, DWORD desired_access, DWORD file_offset_high, DWORD file_offset_low, size_t number_bytes) /*[clinic end generated code: output=f23b1ee4823663e3 input=177471073be1a103]*/	todo		
+Modules/_winapi.c	1770	1784	_winapi_UnmapViewOfFile_impl	_winapi_UnmapViewOfFile_impl(PyObject *module, LPCVOID address) /*[clinic end generated code: output=4f7e18ac75d19744 input=8c4b6119ad9288a3]*/	todo		
+Modules/_winapi.c	1795	1814	_winapi_OpenEventW_impl	_winapi_OpenEventW_impl(PyObject *module, DWORD desired_access, BOOL inherit_handle, LPCWSTR name) /*[clinic end generated code: output=c4a45e95545a4bd2 input=dec26598748d35aa]*/	todo		
+Modules/_winapi.c	1826	1845	_winapi_OpenMutexW_impl	_winapi_OpenMutexW_impl(PyObject *module, DWORD desired_access, BOOL inherit_handle, LPCWSTR name) /*[clinic end generated code: output=dda39d7844397bf0 input=f3a7b466c5307712]*/	todo		
+Modules/_winapi.c	1857	1875	_winapi_OpenFileMapping_impl	_winapi_OpenFileMapping_impl(PyObject *module, DWORD desired_access, BOOL inherit_handle, LPCWSTR name) /*[clinic end generated code: output=08cc44def1cb11f1 input=131f2a405359de7f]*/	todo		
+Modules/_winapi.c	1887	1907	_winapi_OpenProcess_impl	_winapi_OpenProcess_impl(PyObject *module, DWORD desired_access, BOOL inherit_handle, DWORD process_id) /*[clinic end generated code: output=b42b6b81ea5a0fc3 input=ec98c4cf4ea2ec36]*/	todo		
+Modules/_winapi.c	1918	1955	_winapi_PeekNamedPipe_impl	_winapi_PeekNamedPipe_impl(PyObject *module, HANDLE handle, int size) /*[clinic end generated code: output=d0c3e29e49d323dd input=c7aa53bfbce69d70]*/	todo		
+Modules/_winapi.c	1967	2015	_winapi_LCMapStringEx_impl	_winapi_LCMapStringEx_impl(PyObject *module, LPCWSTR locale, DWORD flags, PyObject *src) /*[clinic end generated code: output=b90e6b26e028ff0a input=3e3dcd9b8164012f]*/	todo		
+Modules/_winapi.c	2026	2075	_winapi_ReadFile_impl	_winapi_ReadFile_impl(PyObject *module, HANDLE handle, DWORD size, int use_overlapped) /*[clinic end generated code: output=d3d5b44a8201b944 input=4f82f8e909ad91ad]*/	todo		
+Modules/_winapi.c	2084	2098	_winapi_ReleaseMutex_impl	_winapi_ReleaseMutex_impl(PyObject *module, HANDLE mutex) /*[clinic end generated code: output=5b9001a72dd8af37 input=49e9d20de3559d84]*/	todo		
+Modules/_winapi.c	2107	2121	_winapi_ResetEvent_impl	_winapi_ResetEvent_impl(PyObject *module, HANDLE event) /*[clinic end generated code: output=81c8501d57c0530d input=e2d42d990322e87a]*/	todo		
+Modules/_winapi.c	2130	2144	_winapi_SetEvent_impl	_winapi_SetEvent_impl(PyObject *module, HANDLE event) /*[clinic end generated code: output=c18ba09eb9aa774d input=e660e830a37c09f8]*/	todo		
+Modules/_winapi.c	2157	2185	_winapi_SetNamedPipeHandleState_impl	_winapi_SetNamedPipeHandleState_impl(PyObject *module, HANDLE named_pipe, PyObject *mode, PyObject *max_collection_count, PyObject *collect_data_timeout) /*[clinic end generated code: output=f2129d222cbfa095 input=9142d72163d0faa6]*/	todo		
+Modules/_winapi.c	2199	2216	_winapi_TerminateProcess_impl	_winapi_TerminateProcess_impl(PyObject *module, HANDLE handle, UINT exit_code) /*[clinic end generated code: output=f4e99ac3f0b1f34a input=d6bc0aa1ee3bb4df]*/	todo		
+Modules/_winapi.c	2226	2242	_winapi_VirtualQuerySize_impl	_winapi_VirtualQuerySize_impl(PyObject *module, LPCVOID address) /*[clinic end generated code: output=40c8e0ff5ec964df input=6b784a69755d0bb6]*/	todo		
+Modules/_winapi.c	2253	2266	_winapi_WaitNamedPipe_impl	_winapi_WaitNamedPipe_impl(PyObject *module, LPCWSTR name, DWORD timeout) /*[clinic end generated code: output=e161e2e630b3e9c2 input=099a4746544488fa]*/	todo		
+Modules/_winapi.c	2279	2298	_batched_WaitForMultipleObjects_thread	_batched_WaitForMultipleObjects_thread(LPVOID param)	todo		
+Modules/_winapi.c	2324	2571	_winapi_BatchedWaitForMultipleObjects_impl	_winapi_BatchedWaitForMultipleObjects_impl(PyObject *module, PyObject *handle_seq, BOOL wait_all, DWORD milliseconds) /*[clinic end generated code: output=d21c1a4ad0a252fd input=7e196f29005dc77b]*/	todo		
+Modules/_winapi.c	2583	2642	_winapi_WaitForMultipleObjects_impl	_winapi_WaitForMultipleObjects_impl(PyObject *module, PyObject *handle_seq, BOOL wait_flag, DWORD milliseconds) /*[clinic end generated code: output=295e3f00b8e45899 input=36f76ca057cd28a0]*/	todo		
+Modules/_winapi.c	2659	2675	_winapi_WaitForSingleObject_impl	_winapi_WaitForSingleObject_impl(PyObject *module, HANDLE handle, DWORD milliseconds) /*[clinic end generated code: output=3c4715d8f1b39859 input=443d1ab076edc7b1]*/	todo		
+Modules/_winapi.c	2686	2734	_winapi_WriteFile_impl	_winapi_WriteFile_impl(PyObject *module, HANDLE handle, PyObject *buffer, int use_overlapped) /*[clinic end generated code: output=2ca80f6bf3fa92e3 input=2badb008c8a2e2a0]*/	todo		
+Modules/_winapi.c	2743	2747	_winapi_GetACP_impl	_winapi_GetACP_impl(PyObject *module) /*[clinic end generated code: output=f7ee24bf705dbb88 input=1433c96d03a05229]*/	todo		
+Modules/_winapi.c	2756	2771	_winapi_GetFileType_impl	_winapi_GetFileType_impl(PyObject *module, HANDLE handle) /*[clinic end generated code: output=92b8466ac76ecc17 input=0058366bc40bbfbf]*/	todo		
+Modules/_winapi.c	2786	2879	_winapi__mimetypes_read_windows_registry_impl	_winapi__mimetypes_read_windows_registry_impl(PyObject *module, PyObject *on_type_read) /*[clinic end generated code: output=20829f00bebce55b input=cd357896d6501f68]*/	todo		
+Modules/_winapi.c	2889	2900	_winapi_NeedCurrentDirectoryForExePath_impl	_winapi_NeedCurrentDirectoryForExePath_impl(PyObject *module, LPCWSTR exe_name) /*[clinic end generated code: output=a65ec879502b58fc input=972aac88a1ec2f00]*/	todo		
+Modules/_winapi.c	2921	2960	_winapi_CopyFile2_impl	_winapi_CopyFile2_impl(PyObject *module, LPCWSTR existing_file_name, LPCWSTR new_file_name, DWORD flags, PyObject *progress_routine) /*[clinic end generated code: output=43d960d9df73d984 input=fb976b8d1492d130]*/	todo		
+Modules/_winapi.c	2970	2975	_winapi_GetTickCount64_impl	_winapi_GetTickCount64_impl(PyObject *module) /*[clinic end generated code: output=cb33c0568f0b3ed1 input=77ed6539ac7d6590]*/	todo		
+Modules/_winapi.c	3041	3217	winapi_exec	static int winapi_exec(PyObject *m)	todo		
+Modules/_winapi.c	3227	3232	winapi_traverse	winapi_traverse(PyObject *module, visitproc visit, void *arg)	todo		
+Modules/_winapi.c	3235	3240	winapi_clear	winapi_clear(PyObject *module)	todo		
+Modules/_winapi.c	3243	3246	winapi_free	winapi_free(void *module)	todo		
+Modules/_winapi.c	3260	3263	PyInit__winapi	PyInit__winapi(void)	todo		

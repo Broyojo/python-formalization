@@ -1,0 +1,17 @@
+file	line	endline	name	signature	status	entry	note
+Lib/email/mime/image.py	16	43	MIMEImage.__init__	__init__(self, _imagedata, _subtype=None, _encoder=encoders.encode_base64, *, policy=None, **_params)	todo		
+Lib/email/mime/image.py	50	55	_what	_what(data)	todo		
+Lib/email/mime/image.py	58	60	rule	rule(rulefunc)	todo		
+Lib/email/mime/image.py	64	69	_jpeg	_jpeg(h)	todo		
+Lib/email/mime/image.py	73	75	_png	_png(h)	todo		
+Lib/email/mime/image.py	79	82	_gif	_gif(h)	todo		
+Lib/email/mime/image.py	86	89	_tiff	_tiff(h)	todo		
+Lib/email/mime/image.py	93	96	_rgb	_rgb(h)	todo		
+Lib/email/mime/image.py	100	104	_pbm	_pbm(h)	todo		
+Lib/email/mime/image.py	108	112	_pgm	_pgm(h)	todo		
+Lib/email/mime/image.py	116	120	_ppm	_ppm(h)	todo		
+Lib/email/mime/image.py	124	127	_rast	_rast(h)	todo		
+Lib/email/mime/image.py	131	134	_xbm	_xbm(h)	todo		
+Lib/email/mime/image.py	138	140	_bmp	_bmp(h)	todo		
+Lib/email/mime/image.py	144	146	_webp	_webp(h)	todo		
+Lib/email/mime/image.py	150	152	_exr	_exr(h)	todo		

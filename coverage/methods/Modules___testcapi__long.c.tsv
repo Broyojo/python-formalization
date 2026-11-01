@@ -1,0 +1,14 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/long.c	37	47	pylong_fromunicodeobject	pylong_fromunicodeobject(PyObject *module, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/long.c	51	72	pylong_asnativebytes	pylong_asnativebytes(PyObject *module, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/long.c	76	93	pylong_fromnativebytes	pylong_fromnativebytes(PyObject *module, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/long.c	97	105	pylong_getsign	pylong_getsign(PyObject *module, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/long.c	109	113	pylong_ispositive	pylong_ispositive(PyObject *module, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/long.c	117	121	pylong_isnegative	pylong_isnegative(PyObject *module, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/long.c	125	129	pylong_iszero	pylong_iszero(PyObject *module, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/long.c	133	141	pylong_aspid	pylong_aspid(PyObject *module, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/long.c	145	152	layout_to_dict	layout_to_dict(const PyLongLayout *layout)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/long.c	156	204	pylong_export	pylong_export(PyObject *module, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/long.c	208	254	pylongwriter_create	pylongwriter_create(PyObject *module, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/long.c	258	262	get_pylong_layout	get_pylong_layout(PyObject *module, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/long.c	282	288	_PyTestCapi_Init_Long	_PyTestCapi_Init_Long(PyObject *mod)	excluded		test-support: only for CPython's own tests

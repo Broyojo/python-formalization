@@ -1,0 +1,6 @@
+file	line	endline	name	signature	status	entry	note
+Lib/encodings/cp1253.py	11	12	Codec.encode	encode(self, input, errors='strict')	todo		
+Lib/encodings/cp1253.py	14	15	Codec.decode	decode(self, input, errors='strict')	todo		
+Lib/encodings/cp1253.py	18	19	IncrementalEncoder.encode	encode(self, input, final=False)	todo		
+Lib/encodings/cp1253.py	22	23	IncrementalDecoder.decode	decode(self, input, final=False)	todo		
+Lib/encodings/cp1253.py	33	42	getregentry	getregentry()	todo		

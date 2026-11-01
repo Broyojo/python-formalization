@@ -1,0 +1,268 @@
+file	line	endline	name	signature	status	entry	note
+Grammar/python.gram	89	89	rule:file	file[mod_ty]: a=[statements] ENDMARKER { _PyPegen_make_module(p, a) }	todo		
+Grammar/python.gram	90	90	rule:interactive	interactive[mod_ty]: a=statement_newline { _PyAST_Interactive(a, p->arena) }	todo		
+Grammar/python.gram	91	91	rule:eval	eval[mod_ty]: a=expressions NEWLINE* ENDMARKER { _PyAST_Expression(a, p->arena) }	todo		
+Grammar/python.gram	92	92	rule:func_type	func_type[mod_ty]: '(' a=[type_expressions] ')' '->' b=expression NEWLINE* ENDMARKER { _PyAST_FunctionType(a, b, p->arena) }	todo		
+Grammar/python.gram	97	97	rule:statements	statements[asdl_stmt_seq*]: a=statement+ { (asdl_stmt_seq*)_PyPegen_seq_flatten(p, a) }	todo		
+Grammar/python.gram	99	99	rule:statement	statement[asdl_stmt_seq*]:	todo		
+Grammar/python.gram	105	105	rule:single_compound_stmt	single_compound_stmt[asdl_stmt_seq*]:	todo		
+Grammar/python.gram	109	109	rule:statement_newline	statement_newline[asdl_stmt_seq*]:	todo		
+Grammar/python.gram	115	115	rule:simple_stmts	simple_stmts[asdl_stmt_seq*]:	todo		
+Grammar/python.gram	121	121	rule:simple_stmt	simple_stmt[stmt_ty] (memo):	todo		
+Grammar/python.gram	137	137	rule:compound_stmt	compound_stmt[stmt_ty]:	todo		
+Grammar/python.gram	151	151	rule:assignment	assignment[stmt_ty]:	todo		
+Grammar/python.gram	168	168	rule:annotated_rhs	annotated_rhs[expr_ty]: yield_expr | star_expressions	todo		
+Grammar/python.gram	170	170	rule:augassign	augassign[AugOperator*]:	todo		
+Grammar/python.gram	185	185	rule:return_stmt	return_stmt[stmt_ty]:	todo		
+Grammar/python.gram	188	188	rule:raise_stmt	raise_stmt[stmt_ty]:	todo		
+Grammar/python.gram	192	192	rule:pass_stmt	pass_stmt[stmt_ty]:	todo		
+Grammar/python.gram	195	195	rule:break_stmt	break_stmt[stmt_ty]:	todo		
+Grammar/python.gram	198	198	rule:continue_stmt	continue_stmt[stmt_ty]:	todo		
+Grammar/python.gram	201	201	rule:global_stmt	global_stmt[stmt_ty]: 'global' a[asdl_expr_seq*]=','.NAME+ {	todo		
+Grammar/python.gram	204	204	rule:nonlocal_stmt	nonlocal_stmt[stmt_ty]: 'nonlocal' a[asdl_expr_seq*]=','.NAME+ {	todo		
+Grammar/python.gram	207	207	rule:del_stmt	del_stmt[stmt_ty]:	todo		
+Grammar/python.gram	211	211	rule:yield_stmt	yield_stmt[stmt_ty]: y=yield_expr { _PyAST_Expr(y, EXTRA) }	todo		
+Grammar/python.gram	213	213	rule:assert_stmt	assert_stmt[stmt_ty]: 'assert' a=expression b=[',' z=expression { z }] { _PyAST_Assert(a, b, EXTRA) }	todo		
+Grammar/python.gram	215	215	rule:import_stmt	import_stmt[stmt_ty]:	todo		
+Grammar/python.gram	223	223	rule:import_name	import_name[stmt_ty]: 'import' a=dotted_as_names { _PyAST_Import(a, EXTRA) }	todo		
+Grammar/python.gram	225	225	rule:import_from	import_from[stmt_ty]:	todo		
+Grammar/python.gram	230	230	rule:import_from_targets	import_from_targets[asdl_alias_seq*]:	todo		
+Grammar/python.gram	235	235	rule:import_from_as_names	import_from_as_names[asdl_alias_seq*]:	todo		
+Grammar/python.gram	237	237	rule:import_from_as_name	import_from_as_name[alias_ty]:	todo		
+Grammar/python.gram	242	242	rule:dotted_as_names	dotted_as_names[asdl_alias_seq*]:	todo		
+Grammar/python.gram	244	244	rule:dotted_as_name	dotted_as_name[alias_ty]:	todo		
+Grammar/python.gram	249	249	rule:dotted_name	dotted_name[expr_ty]:	todo		
+Grammar/python.gram	259	259	rule:block	block[asdl_stmt_seq*] (memo):	todo		
+Grammar/python.gram	264	264	rule:decorators	decorators[asdl_expr_seq*]: a[asdl_expr_seq*]=('@' f=named_expression NEWLINE { f })+ { a }	todo		
+Grammar/python.gram	269	269	rule:class_def	class_def[stmt_ty]:	todo		
+Grammar/python.gram	273	273	rule:class_def_raw	class_def_raw[stmt_ty]:	todo		
+Grammar/python.gram	284	284	rule:function_def	function_def[stmt_ty]:	todo		
+Grammar/python.gram	288	288	rule:function_def_raw	function_def_raw[stmt_ty]:	todo		
+Grammar/python.gram	307	307	rule:params	params[arguments_ty]:	todo		
+Grammar/python.gram	311	311	rule:parameters	parameters[arguments_ty]:	todo		
+Grammar/python.gram	324	324	rule:slash_no_default	slash_no_default[asdl_arg_seq*]:	todo		
+Grammar/python.gram	327	327	rule:slash_with_default	slash_with_default[SlashWithDefault*]:	todo		
+Grammar/python.gram	331	331	rule:star_etc	star_etc[StarEtc*]:	todo		
+Grammar/python.gram	341	341	rule:kwds	kwds[arg_ty]:	todo		
+Grammar/python.gram	358	358	rule:param_no_default	param_no_default[arg_ty]:	todo		
+Grammar/python.gram	361	361	rule:param_no_default_star_annotation	param_no_default_star_annotation[arg_ty]:	todo		
+Grammar/python.gram	364	364	rule:param_with_default	param_with_default[NameDefaultPair*]:	todo		
+Grammar/python.gram	367	367	rule:param_maybe_default	param_maybe_default[NameDefaultPair*]:	todo		
+Grammar/python.gram	370	370	rule:param	param[arg_ty]: a=NAME b=annotation? { _PyAST_arg(a->v.Name.id, b, NULL, EXTRA) }	todo		
+Grammar/python.gram	371	371	rule:param_star_annotation	param_star_annotation[arg_ty]: a=NAME b=star_annotation { _PyAST_arg(a->v.Name.id, b, NULL, EXTRA) }	todo		
+Grammar/python.gram	372	372	rule:annotation	annotation[expr_ty]: ':' a=expression { a }	todo		
+Grammar/python.gram	373	373	rule:star_annotation	star_annotation[expr_ty]: ':' a=star_expression { a }	todo		
+Grammar/python.gram	374	374	rule:default	default[expr_ty]: '=' a=expression { a } | invalid_default	todo		
+Grammar/python.gram	379	379	rule:if_stmt	if_stmt[stmt_ty]:	todo		
+Grammar/python.gram	384	384	rule:elif_stmt	elif_stmt[stmt_ty]:	todo		
+Grammar/python.gram	389	389	rule:else_block	else_block[asdl_stmt_seq*]:	todo		
+Grammar/python.gram	396	396	rule:while_stmt	while_stmt[stmt_ty]:	todo		
+Grammar/python.gram	403	403	rule:for_stmt	for_stmt[stmt_ty]:	todo		
+Grammar/python.gram	414	414	rule:with_stmt	with_stmt[stmt_ty]:	todo		
+Grammar/python.gram	426	426	rule:with_item	with_item[withitem_ty]:	todo		
+Grammar/python.gram	434	434	rule:try_stmt	try_stmt[stmt_ty]:	todo		
+Grammar/python.gram	446	446	rule:except_block	except_block[excepthandler_ty]:	todo		
+Grammar/python.gram	460	460	rule:except_star_block	except_star_block[excepthandler_ty]:	todo		
+Grammar/python.gram	473	473	rule:finally_block	finally_block[asdl_stmt_seq*]:	todo		
+Grammar/python.gram	480	480	rule:match_stmt	match_stmt[stmt_ty]:	todo		
+Grammar/python.gram	485	485	rule:subject_expr	subject_expr[expr_ty]:	todo		
+Grammar/python.gram	490	490	rule:case_block	case_block[match_case_ty]:	todo		
+Grammar/python.gram	495	495	rule:guard	guard[expr_ty]: 'if' guard=named_expression { guard }	todo		
+Grammar/python.gram	497	497	rule:patterns	patterns[pattern_ty]:	todo		
+Grammar/python.gram	502	502	rule:pattern	pattern[pattern_ty]:	todo		
+Grammar/python.gram	506	506	rule:as_pattern	as_pattern[pattern_ty]:	todo		
+Grammar/python.gram	511	511	rule:or_pattern	or_pattern[pattern_ty]:	todo		
+Grammar/python.gram	515	515	rule:closed_pattern	closed_pattern[pattern_ty] (memo):	todo		
+Grammar/python.gram	526	526	rule:literal_pattern	literal_pattern[pattern_ty]:	todo		
+Grammar/python.gram	535	535	rule:literal_expr	literal_expr[expr_ty]:	todo		
+Grammar/python.gram	543	543	rule:complex_number	complex_number[expr_ty]:	todo		
+Grammar/python.gram	549	549	rule:signed_number	signed_number[expr_ty]:	todo		
+Grammar/python.gram	553	553	rule:signed_real_number	signed_real_number[expr_ty]:	todo		
+Grammar/python.gram	557	557	rule:real_number	real_number[expr_ty]:	todo		
+Grammar/python.gram	560	560	rule:imaginary_number	imaginary_number[expr_ty]:	todo		
+Grammar/python.gram	563	563	rule:capture_pattern	capture_pattern[pattern_ty]:	todo		
+Grammar/python.gram	566	566	rule:pattern_capture_target	pattern_capture_target[expr_ty]:	todo		
+Grammar/python.gram	570	570	rule:wildcard_pattern	wildcard_pattern[pattern_ty]:	todo		
+Grammar/python.gram	573	573	rule:value_pattern	value_pattern[pattern_ty]:	todo		
+Grammar/python.gram	576	576	rule:attr	attr[expr_ty]:	todo		
+Grammar/python.gram	580	580	rule:name_or_attr	name_or_attr[expr_ty]:	todo		
+Grammar/python.gram	584	584	rule:group_pattern	group_pattern[pattern_ty]:	todo		
+Grammar/python.gram	587	587	rule:sequence_pattern	sequence_pattern[pattern_ty]:	todo		
+Grammar/python.gram	591	591	rule:open_sequence_pattern	open_sequence_pattern[asdl_seq*]:	todo		
+Grammar/python.gram	595	595	rule:maybe_sequence_pattern	maybe_sequence_pattern[asdl_seq*]:	todo		
+Grammar/python.gram	598	598	rule:maybe_star_pattern	maybe_star_pattern[pattern_ty]:	todo		
+Grammar/python.gram	602	602	rule:star_pattern	star_pattern[pattern_ty] (memo):	todo		
+Grammar/python.gram	608	608	rule:mapping_pattern	mapping_pattern[pattern_ty]:	todo		
+Grammar/python.gram	626	626	rule:items_pattern	items_pattern[asdl_seq*]:	todo		
+Grammar/python.gram	629	629	rule:key_value_pattern	key_value_pattern[KeyPatternPair*]:	todo		
+Grammar/python.gram	633	633	rule:double_star_pattern	double_star_pattern[expr_ty]:	todo		
+Grammar/python.gram	636	636	rule:class_pattern	class_pattern[pattern_ty]:	todo		
+Grammar/python.gram	658	658	rule:positional_patterns	positional_patterns[asdl_pattern_seq*]:	todo		
+Grammar/python.gram	661	661	rule:keyword_patterns	keyword_patterns[asdl_seq*]:	todo		
+Grammar/python.gram	664	664	rule:keyword_pattern	keyword_pattern[KeyPatternPair*]:	todo		
+Grammar/python.gram	670	670	rule:type_alias	type_alias[stmt_ty]:	todo		
+Grammar/python.gram	678	678	rule:type_params	type_params[asdl_type_param_seq*]:	todo		
+Grammar/python.gram	683	683	rule:type_param_seq	type_param_seq[asdl_type_param_seq*]: a[asdl_type_param_seq*]=','.type_param+ [','] { a }	todo		
+Grammar/python.gram	685	685	rule:type_param	type_param[type_param_ty] (memo):	todo		
+Grammar/python.gram	691	691	rule:type_param_bound	type_param_bound[expr_ty]: ':' e=expression { e }	todo		
+Grammar/python.gram	692	692	rule:type_param_default	type_param_default[expr_ty]: '=' e=expression {	todo		
+Grammar/python.gram	694	694	rule:type_param_starred_default	type_param_starred_default[expr_ty]: '=' e=star_expression {	todo		
+Grammar/python.gram	700	700	rule:expressions	expressions[expr_ty]:	todo		
+Grammar/python.gram	706	706	rule:expression	expression[expr_ty] (memo):	todo		
+Grammar/python.gram	713	713	rule:yield_expr	yield_expr[expr_ty]:	todo		
+Grammar/python.gram	717	717	rule:star_expressions	star_expressions[expr_ty]:	todo		
+Grammar/python.gram	723	723	rule:star_expression	star_expression[expr_ty] (memo):	todo		
+Grammar/python.gram	727	727	rule:star_named_expressions	star_named_expressions[asdl_expr_seq*]: a[asdl_expr_seq*]=','.star_named_expression+ [','] { a }	todo		
+Grammar/python.gram	729	729	rule:star_named_expression	star_named_expression[expr_ty]:	todo		
+Grammar/python.gram	733	733	rule:assignment_expression	assignment_expression[expr_ty]:	todo		
+Grammar/python.gram	738	738	rule:named_expression	named_expression[expr_ty]:	todo		
+Grammar/python.gram	743	743	rule:disjunction	disjunction[expr_ty] (memo):	todo		
+Grammar/python.gram	750	750	rule:conjunction	conjunction[expr_ty] (memo):	todo		
+Grammar/python.gram	757	757	rule:inversion	inversion[expr_ty] (memo):	todo		
+Grammar/python.gram	764	764	rule:comparison	comparison[expr_ty]:	todo		
+Grammar/python.gram	773	773	rule:compare_op_bitwise_or_pair	compare_op_bitwise_or_pair[CmpopExprPair*]:	todo		
+Grammar/python.gram	785	785	rule:eq_bitwise_or	eq_bitwise_or[CmpopExprPair*]: '==' a=bitwise_or { _PyPegen_cmpop_expr_pair(p, Eq, a) }	todo		
+Grammar/python.gram	786	786	rule:noteq_bitwise_or	noteq_bitwise_or[CmpopExprPair*]:	todo		
+Grammar/python.gram	788	788	rule:lte_bitwise_or	lte_bitwise_or[CmpopExprPair*]: '<=' a=bitwise_or { _PyPegen_cmpop_expr_pair(p, LtE, a) }	todo		
+Grammar/python.gram	789	789	rule:lt_bitwise_or	lt_bitwise_or[CmpopExprPair*]: '<' a=bitwise_or { _PyPegen_cmpop_expr_pair(p, Lt, a) }	todo		
+Grammar/python.gram	790	790	rule:gte_bitwise_or	gte_bitwise_or[CmpopExprPair*]: '>=' a=bitwise_or { _PyPegen_cmpop_expr_pair(p, GtE, a) }	todo		
+Grammar/python.gram	791	791	rule:gt_bitwise_or	gt_bitwise_or[CmpopExprPair*]: '>' a=bitwise_or { _PyPegen_cmpop_expr_pair(p, Gt, a) }	todo		
+Grammar/python.gram	792	792	rule:notin_bitwise_or	notin_bitwise_or[CmpopExprPair*]: 'not' 'in' a=bitwise_or { _PyPegen_cmpop_expr_pair(p, NotIn, a) }	todo		
+Grammar/python.gram	793	793	rule:in_bitwise_or	in_bitwise_or[CmpopExprPair*]: 'in' a=bitwise_or { _PyPegen_cmpop_expr_pair(p, In, a) }	todo		
+Grammar/python.gram	794	794	rule:isnot_bitwise_or	isnot_bitwise_or[CmpopExprPair*]: 'is' 'not' a=bitwise_or { _PyPegen_cmpop_expr_pair(p, IsNot, a) }	todo		
+Grammar/python.gram	795	795	rule:is_bitwise_or	is_bitwise_or[CmpopExprPair*]: 'is' a=bitwise_or { _PyPegen_cmpop_expr_pair(p, Is, a) }	todo		
+Grammar/python.gram	800	800	rule:bitwise_or	bitwise_or[expr_ty]:	todo		
+Grammar/python.gram	804	804	rule:bitwise_xor	bitwise_xor[expr_ty]:	todo		
+Grammar/python.gram	808	808	rule:bitwise_and	bitwise_and[expr_ty]:	todo		
+Grammar/python.gram	812	812	rule:shift_expr	shift_expr[expr_ty]:	todo		
+Grammar/python.gram	821	821	rule:sum	sum[expr_ty]:	todo		
+Grammar/python.gram	826	826	rule:term	term[expr_ty]:	todo		
+Grammar/python.gram	835	835	rule:factor	factor[expr_ty] (memo):	todo		
+Grammar/python.gram	841	841	rule:power	power[expr_ty]:	todo		
+Grammar/python.gram	850	850	rule:await_primary	await_primary[expr_ty] (memo):	todo		
+Grammar/python.gram	854	854	rule:primary	primary[expr_ty]:	todo		
+Grammar/python.gram	865	865	rule:slices	slices[expr_ty]:	todo		
+Grammar/python.gram	869	869	rule:slice	slice[expr_ty]:	todo		
+Grammar/python.gram	873	873	rule:atom	atom[expr_ty]:	todo		
+Grammar/python.gram	885	885	rule:group	group[expr_ty]:	todo		
+Grammar/python.gram	892	892	rule:lambdef	lambdef[expr_ty]:	todo		
+Grammar/python.gram	896	896	rule:lambda_params	lambda_params[arguments_ty]:	todo		
+Grammar/python.gram	904	904	rule:lambda_parameters	lambda_parameters[arguments_ty]:	todo		
+Grammar/python.gram	914	914	rule:lambda_slash_no_default	lambda_slash_no_default[asdl_arg_seq*]:	todo		
+Grammar/python.gram	918	918	rule:lambda_slash_with_default	lambda_slash_with_default[SlashWithDefault*]:	todo		
+Grammar/python.gram	922	922	rule:lambda_star_etc	lambda_star_etc[StarEtc*]:	todo		
+Grammar/python.gram	930	930	rule:lambda_kwds	lambda_kwds[arg_ty]:	todo		
+Grammar/python.gram	934	934	rule:lambda_param_no_default	lambda_param_no_default[arg_ty]:	todo		
+Grammar/python.gram	937	937	rule:lambda_param_with_default	lambda_param_with_default[NameDefaultPair*]:	todo		
+Grammar/python.gram	940	940	rule:lambda_param_maybe_default	lambda_param_maybe_default[NameDefaultPair*]:	todo		
+Grammar/python.gram	943	943	rule:lambda_param	lambda_param[arg_ty]: a=NAME { _PyAST_arg(a->v.Name.id, NULL, NULL, EXTRA) }	todo		
+Grammar/python.gram	948	948	rule:fstring_middle	fstring_middle[expr_ty]:	todo		
+Grammar/python.gram	951	951	rule:fstring_replacement_field	fstring_replacement_field[expr_ty]:	todo		
+Grammar/python.gram	955	955	rule:fstring_conversion	fstring_conversion[ResultTokenWithMetadata*]:	todo		
+Grammar/python.gram	957	957	rule:fstring_full_format_spec	fstring_full_format_spec[ResultTokenWithMetadata*]:	todo		
+Grammar/python.gram	959	959	rule:fstring_format_spec	fstring_format_spec[expr_ty]:	todo		
+Grammar/python.gram	962	962	rule:fstring	fstring[expr_ty]:	todo		
+Grammar/python.gram	965	965	rule:tstring_format_spec_replacement_field	tstring_format_spec_replacement_field[expr_ty]:	todo		
+Grammar/python.gram	969	969	rule:tstring_format_spec	tstring_format_spec[expr_ty]:	todo		
+Grammar/python.gram	972	972	rule:tstring_full_format_spec	tstring_full_format_spec[ResultTokenWithMetadata*]:	todo		
+Grammar/python.gram	974	974	rule:tstring_replacement_field	tstring_replacement_field[expr_ty]:	todo		
+Grammar/python.gram	978	978	rule:tstring_middle	tstring_middle[expr_ty]:	todo		
+Grammar/python.gram	981	981	rule:tstring	tstring[expr_ty] (memo):	todo		
+Grammar/python.gram	989	989	rule:string	string[expr_ty]: s[Token*]=STRING { _PyPegen_constant_from_string(p, s) }	todo		
+Grammar/python.gram	990	990	rule:strings	strings[expr_ty] (memo):	todo		
+Grammar/python.gram	995	995	rule:list	list[expr_ty]:	todo		
+Grammar/python.gram	998	998	rule:tuple	tuple[expr_ty]:	todo		
+Grammar/python.gram	1002	1002	rule:set	set[expr_ty]: '{' a=star_named_expressions '}' { _PyAST_Set(a, EXTRA) }	todo		
+Grammar/python.gram	1007	1007	rule:dict	dict[expr_ty]:	todo		
+Grammar/python.gram	1015	1015	rule:double_starred_kvpairs	double_starred_kvpairs[asdl_seq*]: a=','.double_starred_kvpair+ [','] { a }	todo		
+Grammar/python.gram	1017	1017	rule:double_starred_kvpair	double_starred_kvpair[KeyValuePair*]:	todo		
+Grammar/python.gram	1021	1021	rule:kvpair	kvpair[KeyValuePair*]: a=expression ':' b=expression { _PyPegen_key_value_pair(p, a, b) }	todo		
+Grammar/python.gram	1026	1026	rule:for_if_clauses	for_if_clauses[asdl_comprehension_seq*]:	todo		
+Grammar/python.gram	1029	1029	rule:for_if_clause	for_if_clause[comprehension_ty]:	todo		
+Grammar/python.gram	1037	1037	rule:listcomp	listcomp[expr_ty]:	todo		
+Grammar/python.gram	1041	1041	rule:setcomp	setcomp[expr_ty]:	todo		
+Grammar/python.gram	1045	1045	rule:genexp	genexp[expr_ty]:	todo		
+Grammar/python.gram	1049	1049	rule:dictcomp	dictcomp[expr_ty]:	todo		
+Grammar/python.gram	1056	1056	rule:arguments	arguments[expr_ty] (memo):	todo		
+Grammar/python.gram	1060	1060	rule:args	args[expr_ty]:	todo		
+Grammar/python.gram	1068	1068	rule:kwargs	kwargs[asdl_seq*]:	todo		
+Grammar/python.gram	1073	1073	rule:starred_expression	starred_expression[expr_ty]:	todo		
+Grammar/python.gram	1078	1078	rule:kwarg_or_starred	kwarg_or_starred[KeywordOrStarred*]:	todo		
+Grammar/python.gram	1084	1084	rule:kwarg_or_double_starred	kwarg_or_double_starred[KeywordOrStarred*]:	todo		
+Grammar/python.gram	1097	1097	rule:star_targets	star_targets[expr_ty]:	todo		
+Grammar/python.gram	1102	1102	rule:star_targets_list_seq	star_targets_list_seq[asdl_expr_seq*]: a[asdl_expr_seq*]=','.star_target+ [','] { a }	todo		
+Grammar/python.gram	1104	1104	rule:star_targets_tuple_seq	star_targets_tuple_seq[asdl_expr_seq*]:	todo		
+Grammar/python.gram	1108	1108	rule:star_target	star_target[expr_ty] (memo):	todo		
+Grammar/python.gram	1113	1113	rule:target_with_star_atom	target_with_star_atom[expr_ty] (memo):	todo		
+Grammar/python.gram	1118	1118	rule:star_atom	star_atom[expr_ty]:	todo		
+Grammar/python.gram	1124	1124	rule:single_target	single_target[expr_ty]:	todo		
+Grammar/python.gram	1129	1129	rule:single_subscript_attribute_target	single_subscript_attribute_target[expr_ty]:	todo		
+Grammar/python.gram	1133	1133	rule:t_primary	t_primary[expr_ty]:	todo		
+Grammar/python.gram	1145	1145	rule:t_lookahead	t_lookahead: '(' | '[' | '.'	todo		
+Grammar/python.gram	1150	1150	rule:del_targets	del_targets[asdl_expr_seq*]: a[asdl_expr_seq*]=','.del_target+ [','] { a }	todo		
+Grammar/python.gram	1152	1152	rule:del_target	del_target[expr_ty] (memo):	todo		
+Grammar/python.gram	1157	1157	rule:del_t_atom	del_t_atom[expr_ty]:	todo		
+Grammar/python.gram	1167	1167	rule:type_expressions	type_expressions[asdl_expr_seq*]:	todo		
+Grammar/python.gram	1184	1184	rule:func_type_comment	func_type_comment[Token*]:	todo		
+Grammar/python.gram	1196	1196	rule:invalid_arguments	invalid_arguments:	todo		
+Grammar/python.gram	1209	1209	rule:invalid_kwarg	invalid_kwarg:	todo		
+Grammar/python.gram	1221	1221	rule:expression_without_invalid	expression_without_invalid[expr_ty]:	todo		
+Grammar/python.gram	1225	1225	rule:invalid_legacy_expression	invalid_legacy_expression:	todo		
+Grammar/python.gram	1230	1230	rule:invalid_type_param	invalid_type_param:	todo		
+Grammar/python.gram	1242	1242	rule:invalid_expression	invalid_expression:	todo		
+Grammar/python.gram	1271	1271	rule:invalid_assignment	invalid_assignment:	todo		
+Grammar/python.gram	1291	1291	rule:invalid_ann_assign_target	invalid_ann_assign_target[expr_ty]:	todo		
+Grammar/python.gram	1295	1295	rule:invalid_del_stmt	invalid_del_stmt:	todo		
+Grammar/python.gram	1298	1298	rule:invalid_block	invalid_block:	todo		
+Grammar/python.gram	1300	1300	rule:invalid_comprehension	invalid_comprehension:	todo		
+Grammar/python.gram	1308	1308	rule:invalid_dict_comprehension	invalid_dict_comprehension:	todo		
+Grammar/python.gram	1311	1311	rule:invalid_parameters	invalid_parameters:	todo		
+Grammar/python.gram	1324	1324	rule:invalid_default	invalid_default:	todo		
+Grammar/python.gram	1326	1326	rule:invalid_star_etc	invalid_star_etc:	todo		
+Grammar/python.gram	1332	1332	rule:invalid_kwds	invalid_kwds:	todo		
+Grammar/python.gram	1336	1336	rule:invalid_parameters_helper	invalid_parameters_helper: # This is only there to avoid type errors	todo		
+Grammar/python.gram	1339	1339	rule:invalid_lambda_parameters	invalid_lambda_parameters:	todo		
+Grammar/python.gram	1352	1352	rule:invalid_lambda_parameters_helper	invalid_lambda_parameters_helper:	todo		
+Grammar/python.gram	1355	1355	rule:invalid_lambda_star_etc	invalid_lambda_star_etc:	todo		
+Grammar/python.gram	1360	1360	rule:invalid_lambda_kwds	invalid_lambda_kwds:	todo		
+Grammar/python.gram	1364	1364	rule:invalid_double_type_comments	invalid_double_type_comments:	todo		
+Grammar/python.gram	1367	1367	rule:invalid_with_item	invalid_with_item:	todo		
+Grammar/python.gram	1371	1371	rule:invalid_for_if_clause	invalid_for_if_clause:	todo		
+Grammar/python.gram	1375	1375	rule:invalid_for_target	invalid_for_target:	todo		
+Grammar/python.gram	1379	1379	rule:invalid_group	invalid_group:	todo		
+Grammar/python.gram	1384	1384	rule:invalid_import	invalid_import:	todo		
+Grammar/python.gram	1389	1389	rule:invalid_dotted_as_name	invalid_dotted_as_name:	todo		
+Grammar/python.gram	1393	1393	rule:invalid_import_from_as_name	invalid_import_from_as_name:	todo		
+Grammar/python.gram	1398	1398	rule:invalid_import_from_targets	invalid_import_from_targets:	todo		
+Grammar/python.gram	1404	1404	rule:invalid_with_stmt	invalid_with_stmt:	todo		
+Grammar/python.gram	1407	1407	rule:invalid_with_stmt_indent	invalid_with_stmt_indent:	todo		
+Grammar/python.gram	1413	1413	rule:invalid_try_stmt	invalid_try_stmt:	todo		
+Grammar/python.gram	1421	1421	rule:invalid_except_stmt	invalid_except_stmt:	todo		
+Grammar/python.gram	1429	1429	rule:invalid_except_star_stmt	invalid_except_star_stmt:	todo		
+Grammar/python.gram	1437	1437	rule:invalid_finally_stmt	invalid_finally_stmt:	todo		
+Grammar/python.gram	1440	1440	rule:invalid_except_stmt_indent	invalid_except_stmt_indent:	todo		
+Grammar/python.gram	1444	1444	rule:invalid_except_star_stmt_indent	invalid_except_star_stmt_indent:	todo		
+Grammar/python.gram	1447	1447	rule:invalid_match_stmt	invalid_match_stmt:	todo		
+Grammar/python.gram	1451	1451	rule:invalid_case_block	invalid_case_block:	todo		
+Grammar/python.gram	1455	1455	rule:invalid_as_pattern	invalid_as_pattern:	todo		
+Grammar/python.gram	1460	1460	rule:invalid_class_pattern	invalid_class_pattern:	todo		
+Grammar/python.gram	1465	1465	rule:invalid_class_argument_pattern	invalid_class_argument_pattern[asdl_pattern_seq*]:	todo		
+Grammar/python.gram	1467	1467	rule:invalid_if_stmt	invalid_if_stmt:	todo		
+Grammar/python.gram	1471	1471	rule:invalid_elif_stmt	invalid_elif_stmt:	todo		
+Grammar/python.gram	1475	1475	rule:invalid_else_stmt	invalid_else_stmt:	todo		
+Grammar/python.gram	1479	1479	rule:invalid_while_stmt	invalid_while_stmt:	todo		
+Grammar/python.gram	1483	1483	rule:invalid_for_stmt	invalid_for_stmt:	todo		
+Grammar/python.gram	1487	1487	rule:invalid_def_raw	invalid_def_raw:	todo		
+Grammar/python.gram	1491	1491	rule:invalid_class_def_raw	invalid_class_def_raw:	todo		
+Grammar/python.gram	1496	1496	rule:invalid_double_starred_kvpairs	invalid_double_starred_kvpairs:	todo		
+Grammar/python.gram	1500	1500	rule:invalid_kvpair	invalid_kvpair:	todo		
+Grammar/python.gram	1505	1505	rule:invalid_starred_expression_unpacking	invalid_starred_expression_unpacking:	todo		
+Grammar/python.gram	1507	1507	rule:invalid_starred_expression	invalid_starred_expression:	todo		
+Grammar/python.gram	1510	1510	rule:invalid_fstring_replacement_field	invalid_fstring_replacement_field:	todo		
+Grammar/python.gram	1528	1528	rule:invalid_fstring_conversion_character	invalid_fstring_conversion_character:	todo		
+Grammar/python.gram	1532	1532	rule:invalid_tstring_replacement_field	invalid_tstring_replacement_field:	todo		
+Grammar/python.gram	1550	1550	rule:invalid_tstring_conversion_character	invalid_tstring_conversion_character:	todo		
+Grammar/python.gram	1554	1554	rule:invalid_string_tstring_concat	invalid_string_tstring_concat:	todo		
+Grammar/python.gram	1560	1560	rule:invalid_arithmetic	invalid_arithmetic:	todo		
+Grammar/python.gram	1562	1562	rule:invalid_factor	invalid_factor:	todo		
+Grammar/python.gram	1565	1565	rule:invalid_type_params	invalid_type_params:	todo		

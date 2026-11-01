@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Lib/idlelib/idle_test/tkinter_testing_utils.py	5	62	run_in_tk_mainloop	run_in_tk_mainloop(delay=1)	excluded		platform: GUI toolkit

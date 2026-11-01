@@ -1,0 +1,47 @@
+file	line	endline	name	signature	status	entry	note
+Python/marshal.c	127	132	w_flush	w_flush(WFILE *p)	todo		
+Python/marshal.c	135	167	w_reserve	w_reserve(WFILE *p, Py_ssize_t needed)	todo		
+Python/marshal.c	170	192	w_string	w_string(const void *s, Py_ssize_t n, WFILE *p)	todo		
+Python/marshal.c	195	199	w_short	w_short(int x, WFILE *p)	todo		
+Python/marshal.c	202	208	w_long	w_long(long x, WFILE *p)	todo		
+Python/marshal.c	226	230	w_pstring	w_pstring(const void *s, Py_ssize_t n, WFILE *p)	todo		
+Python/marshal.c	233	237	w_short_pstring	w_short_pstring(const void *s, Py_ssize_t n, WFILE *p)	todo		
+Python/marshal.c	296	354	w_PyLong	w_PyLong(const PyLongObject *ob, char flag, WFILE *p)	todo		
+Python/marshal.c	357	365	w_float_bin	w_float_bin(double v, WFILE *p)	todo		
+Python/marshal.c	368	377	w_float_str	w_float_str(double v, WFILE *p)	todo		
+Python/marshal.c	380	432	w_ref	w_ref(PyObject *v, char *flag, WFILE *p)	todo		
+Python/marshal.c	435	453	w_complete	w_complete(PyObject *v, WFILE *p)	todo		
+Python/marshal.c	459	494	w_object	w_object(PyObject *v, WFILE *p)	todo		
+Python/marshal.c	497	736	w_complex_object	w_complex_object(PyObject *v, char flag, WFILE *p)	todo		
+Python/marshal.c	739	743	w_decref_entry	w_decref_entry(void *key)	todo		
+Python/marshal.c	746	758	w_init_refs	w_init_refs(WFILE *wf, int version)	todo		
+Python/marshal.c	761	766	w_clear_refs	w_clear_refs(WFILE *wf)	todo		
+Python/marshal.c	774	786	PyMarshal_WriteLongToFile	PyMarshal_WriteLongToFile(long x, FILE *fp, int version)	todo		
+Python/marshal.c	789	809	PyMarshal_WriteObjectToFile	PyMarshal_WriteObjectToFile(PyObject *x, FILE *fp, int version)	todo		
+Python/marshal.c	824	892	r_string	r_string(Py_ssize_t n, RFILE *p)	todo		
+Python/marshal.c	895	919	r_byte	r_byte(RFILE *p)	todo		
+Python/marshal.c	922	935	r_short	r_short(RFILE *p)	todo		
+Python/marshal.c	938	955	r_long	r_long(RFILE *p)	todo		
+Python/marshal.c	959	968	r_long64	r_long64(RFILE *p)	todo		
+Python/marshal.c	1023	1073	r_PyLong	r_PyLong(RFILE *p)	todo		
+Python/marshal.c	1076	1082	r_float_bin	r_float_bin(RFILE *p)	todo		
+Python/marshal.c	1087	1103	r_float_str	r_float_str(RFILE *p)	todo		
+Python/marshal.c	1107	1120	r_ref_reserve	r_ref_reserve(int flag, RFILE *p)	todo		
+Python/marshal.c	1131	1139	r_ref_insert	r_ref_insert(PyObject *o, Py_ssize_t idx, int flag, RFILE *p)	todo		
+Python/marshal.c	1146	1156	r_ref	r_ref(PyObject *o, int flag, RFILE *p)	todo		
+Python/marshal.c	1159	1192	r_object	r_object(RFILE *p)	todo		
+Python/marshal.c	1732	1752	read_object	read_object(RFILE *p)	todo		
+Python/marshal.c	1755	1768	PyMarshal_ReadShortFromFile	PyMarshal_ReadShortFromFile(FILE *fp)	todo		
+Python/marshal.c	1771	1783	PyMarshal_ReadLongFromFile	PyMarshal_ReadLongFromFile(FILE *fp)	todo		
+Python/marshal.c	1787	1798	getfilesize	getfilesize(FILE *fp)	todo		
+Python/marshal.c	1807	1829	PyMarshal_ReadLastObjectFromFile	PyMarshal_ReadLastObjectFromFile(FILE *fp)	todo		
+Python/marshal.c	1832	1850	PyMarshal_ReadObjectFromFile	PyMarshal_ReadObjectFromFile(FILE *fp)	todo		
+Python/marshal.c	1853	1872	PyMarshal_ReadObjectFromString	PyMarshal_ReadObjectFromString(const char *str, Py_ssize_t len)	todo		
+Python/marshal.c	1875	1925	_PyMarshal_WriteObjectToString	_PyMarshal_WriteObjectToString(PyObject *x, int version, int allow_code)	todo		
+Python/marshal.c	1928	1931	PyMarshal_WriteObjectToString	PyMarshal_WriteObjectToString(PyObject *x, int version)	todo		
+Python/marshal.c	1956	1970	marshal_dump_impl	marshal_dump_impl(PyObject *module, PyObject *value, PyObject *file, int version, int allow_code) /*[clinic end generated code: output=429e5fd61c2196b9 input=041f7f6669b0aafb]*/	todo		
+Python/marshal.c	1993	2032	marshal_load_impl	marshal_load_impl(PyObject *module, PyObject *file, int allow_code) /*[clinic end generated code: output=0c1aaf3546ae3ed3 input=2dca7b570653b82f]*/	todo		
+Python/marshal.c	2053	2058	marshal_dumps_impl	marshal_dumps_impl(PyObject *module, PyObject *value, int version, int allow_code) /*[clinic end generated code: output=115f90da518d1d49 input=d9609c4dee4507fb]*/	todo		
+Python/marshal.c	2076	2094	marshal_loads_impl	marshal_loads_impl(PyObject *module, Py_buffer *bytes, int allow_code) /*[clinic end generated code: output=62c0c538d3edc31f input=286f1dbd6811d2ad]*/	todo		
+Python/marshal.c	2136	2142	marshal_module_exec	marshal_module_exec(PyObject *mod)	todo		
+Python/marshal.c	2160	2163	PyMarshal_Init	PyMarshal_Init(void)	todo		

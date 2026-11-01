@@ -1,0 +1,123 @@
+file	line	endline	name	signature	status	entry	note
+Lib/multiprocessing/managers.py	48	49	reduce_array	reduce_array(a)	todo		
+Lib/multiprocessing/managers.py	53	54	rebuild_as_list	rebuild_as_list(obj)	todo		
+Lib/multiprocessing/managers.py	69	70	Token.__init__	__init__(self, typeid, address, id)	todo		
+Lib/multiprocessing/managers.py	72	73	Token.__getstate__	__getstate__(self)	todo		
+Lib/multiprocessing/managers.py	75	76	Token.__setstate__	__setstate__(self, state)	todo		
+Lib/multiprocessing/managers.py	78	80	Token.__repr__	__repr__(self)	todo		
+Lib/multiprocessing/managers.py	86	97	dispatch	dispatch(c, id, methodname, args=(), kwds={})	todo		
+Lib/multiprocessing/managers.py	99	112	convert_to_error	convert_to_error(kind, result)	todo		
+Lib/multiprocessing/managers.py	115	116	RemoteError.__str__	__str__(self)	todo		
+Lib/multiprocessing/managers.py	122	131	all_methods	all_methods(obj)	todo		
+Lib/multiprocessing/managers.py	133	137	public_methods	public_methods(obj)	todo		
+Lib/multiprocessing/managers.py	150	166	Server.__init__	__init__(self, registry, address, authkey, serializer)	todo		
+Lib/multiprocessing/managers.py	168	188	Server.serve_forever	serve_forever(self)	todo		
+Lib/multiprocessing/managers.py	190	198	Server.accepter	accepter(self)	todo		
+Lib/multiprocessing/managers.py	200	228	Server._handle_request	_handle_request(self, c)	todo		
+Lib/multiprocessing/managers.py	230	240	Server.handle_request	handle_request(self, conn)	todo		
+Lib/multiprocessing/managers.py	242	321	Server.serve_client	serve_client(self, conn)	todo		
+Lib/multiprocessing/managers.py	323	324	Server.fallback_getvalue	fallback_getvalue(self, conn, ident, obj)	todo		
+Lib/multiprocessing/managers.py	326	327	Server.fallback_str	fallback_str(self, conn, ident, obj)	todo		
+Lib/multiprocessing/managers.py	329	330	Server.fallback_repr	fallback_repr(self, conn, ident, obj)	todo		
+Lib/multiprocessing/managers.py	338	339	Server.dummy	dummy(self, c)	todo		
+Lib/multiprocessing/managers.py	341	355	Server.debug_info	debug_info(self, c)	todo		
+Lib/multiprocessing/managers.py	357	362	Server.number_of_objects	number_of_objects(self, c)	todo		
+Lib/multiprocessing/managers.py	364	375	Server.shutdown	shutdown(self, c)	todo		
+Lib/multiprocessing/managers.py	377	411	Server.create	create(self, c, typeid, /, *args, **kwds)	todo		
+Lib/multiprocessing/managers.py	413	417	Server.get_methods	get_methods(self, c, token)	todo		
+Lib/multiprocessing/managers.py	419	425	Server.accept_connection	accept_connection(self, c, name)	todo		
+Lib/multiprocessing/managers.py	427	442	Server.incref	incref(self, c, ident)	todo		
+Lib/multiprocessing/managers.py	444	469	Server.decref	decref(self, c, ident)	todo		
+Lib/multiprocessing/managers.py	502	513	BaseManager.__init__	__init__(self, address=None, authkey=None, serializer='pickle', ctx=None, *, shutdown_timeout=1.0)	todo		
+Lib/multiprocessing/managers.py	515	528	BaseManager.get_server	get_server(self)	todo		
+Lib/multiprocessing/managers.py	530	537	BaseManager.connect	connect(self)	todo		
+Lib/multiprocessing/managers.py	539	580	BaseManager.start	start(self, initializer=None, initargs=())	todo		
+Lib/multiprocessing/managers.py	583	603	BaseManager._run_server	_run_server(cls, registry, address, authkey, serializer, writer, initializer=None, initargs=())	todo		
+Lib/multiprocessing/managers.py	605	615	BaseManager._create	_create(self, typeid, /, *args, **kwds)	todo		
+Lib/multiprocessing/managers.py	617	624	BaseManager.join	join(self, timeout=None)	todo		
+Lib/multiprocessing/managers.py	626	634	BaseManager._debug_info	_debug_info(self)	todo		
+Lib/multiprocessing/managers.py	636	644	BaseManager._number_of_objects	_number_of_objects(self)	todo		
+Lib/multiprocessing/managers.py	646	657	BaseManager.__enter__	__enter__(self)	todo		
+Lib/multiprocessing/managers.py	659	660	BaseManager.__exit__	__exit__(self, exc_type, exc_val, exc_tb)	todo		
+Lib/multiprocessing/managers.py	663	695	BaseManager._finalize_manager	_finalize_manager(process, address, authkey, state, _Client, shutdown_timeout)	todo		
+Lib/multiprocessing/managers.py	698	699	BaseManager.address	address(self)	todo		
+Lib/multiprocessing/managers.py	702	739	BaseManager.register	register(cls, typeid, callable=None, proxytype=None, exposed=None, method_to_typeid=None, create_method=True)	todo		
+Lib/multiprocessing/managers.py	746	747	ProcessLocalSet.__init__	__init__(self)	todo		
+Lib/multiprocessing/managers.py	748	749	ProcessLocalSet.__reduce__	__reduce__(self)	todo		
+Lib/multiprocessing/managers.py	766	808	BaseProxy.__init__	__init__(self, token, serializer, manager=None, authkey=None, exposed=None, incref=True, manager_owned=False)	todo		
+Lib/multiprocessing/managers.py	810	817	BaseProxy._connect	_connect(self)	todo		
+Lib/multiprocessing/managers.py	819	850	BaseProxy._callmethod	_callmethod(self, methodname, args=(), kwds={})	todo		
+Lib/multiprocessing/managers.py	852	856	BaseProxy._getvalue	_getvalue(self)	todo		
+Lib/multiprocessing/managers.py	858	876	BaseProxy._incref	_incref(self)	todo		
+Lib/multiprocessing/managers.py	879	901	BaseProxy._decref	_decref(token, serial, authkey, state, tls, idset, _Client)	todo		
+Lib/multiprocessing/managers.py	903	909	BaseProxy._after_fork	_after_fork(self)	todo		
+Lib/multiprocessing/managers.py	911	922	BaseProxy.__reduce__	__reduce__(self)	todo		
+Lib/multiprocessing/managers.py	924	925	BaseProxy.__deepcopy__	__deepcopy__(self, memo)	todo		
+Lib/multiprocessing/managers.py	927	929	BaseProxy.__repr__	__repr__(self)	todo		
+Lib/multiprocessing/managers.py	931	938	BaseProxy.__str__	__str__(self)	todo		
+Lib/multiprocessing/managers.py	944	959	RebuildProxy	RebuildProxy(func, token, serializer, kwds)	todo		
+Lib/multiprocessing/managers.py	965	984	MakeProxyType	MakeProxyType(name, exposed, _cache={})	todo		
+Lib/multiprocessing/managers.py	987	1010	AutoProxy	AutoProxy(token, serializer, manager=None, authkey=None, exposed=None, incref=True, manager_owned=False)	todo		
+Lib/multiprocessing/managers.py	1017	1018	Namespace.__init__	__init__(self, /, **kwds)	todo		
+Lib/multiprocessing/managers.py	1019	1026	Namespace.__repr__	__repr__(self)	todo		
+Lib/multiprocessing/managers.py	1029	1031	Value.__init__	__init__(self, typecode, value, lock=True)	todo		
+Lib/multiprocessing/managers.py	1032	1033	Value.get	get(self)	todo		
+Lib/multiprocessing/managers.py	1034	1035	Value.set	set(self, value)	todo		
+Lib/multiprocessing/managers.py	1036	1037	Value.__repr__	__repr__(self)	todo		
+Lib/multiprocessing/managers.py	1040	1041	Array	Array(typecode, sequence, lock=True)	todo		
+Lib/multiprocessing/managers.py	1049	1050	IteratorProxy.__iter__	__iter__(self)	todo		
+Lib/multiprocessing/managers.py	1051	1052	IteratorProxy.__next__	__next__(self, *args)	todo		
+Lib/multiprocessing/managers.py	1053	1054	IteratorProxy.send	send(self, *args)	todo		
+Lib/multiprocessing/managers.py	1055	1056	IteratorProxy.throw	throw(self, *args)	todo		
+Lib/multiprocessing/managers.py	1057	1058	IteratorProxy.close	close(self, *args)	todo		
+Lib/multiprocessing/managers.py	1063	1065	AcquirerProxy.acquire	acquire(self, blocking=True, timeout=None)	todo		
+Lib/multiprocessing/managers.py	1066	1067	AcquirerProxy.release	release(self)	todo		
+Lib/multiprocessing/managers.py	1068	1069	AcquirerProxy.locked	locked(self)	todo		
+Lib/multiprocessing/managers.py	1070	1071	AcquirerProxy.__enter__	__enter__(self)	todo		
+Lib/multiprocessing/managers.py	1072	1073	AcquirerProxy.__exit__	__exit__(self, exc_type, exc_val, exc_tb)	todo		
+Lib/multiprocessing/managers.py	1078	1079	ConditionProxy.wait	wait(self, timeout=None)	todo		
+Lib/multiprocessing/managers.py	1080	1081	ConditionProxy.notify	notify(self, n=1)	todo		
+Lib/multiprocessing/managers.py	1082	1083	ConditionProxy.notify_all	notify_all(self)	todo		
+Lib/multiprocessing/managers.py	1084	1100	ConditionProxy.wait_for	wait_for(self, predicate, timeout=None)	todo		
+Lib/multiprocessing/managers.py	1105	1106	EventProxy.is_set	is_set(self)	todo		
+Lib/multiprocessing/managers.py	1107	1108	EventProxy.set	set(self)	todo		
+Lib/multiprocessing/managers.py	1109	1110	EventProxy.clear	clear(self)	todo		
+Lib/multiprocessing/managers.py	1111	1112	EventProxy.wait	wait(self, timeout=None)	todo		
+Lib/multiprocessing/managers.py	1117	1118	BarrierProxy.wait	wait(self, timeout=None)	todo		
+Lib/multiprocessing/managers.py	1119	1120	BarrierProxy.abort	abort(self)	todo		
+Lib/multiprocessing/managers.py	1121	1122	BarrierProxy.reset	reset(self)	todo		
+Lib/multiprocessing/managers.py	1124	1125	BarrierProxy.parties	parties(self)	todo		
+Lib/multiprocessing/managers.py	1127	1128	BarrierProxy.n_waiting	n_waiting(self)	todo		
+Lib/multiprocessing/managers.py	1130	1131	BarrierProxy.broken	broken(self)	todo		
+Lib/multiprocessing/managers.py	1136	1140	NamespaceProxy.__getattr__	__getattr__(self, key)	todo		
+Lib/multiprocessing/managers.py	1141	1145	NamespaceProxy.__setattr__	__setattr__(self, key, value)	todo		
+Lib/multiprocessing/managers.py	1146	1150	NamespaceProxy.__delattr__	__delattr__(self, key)	todo		
+Lib/multiprocessing/managers.py	1155	1156	ValueProxy.get	get(self)	todo		
+Lib/multiprocessing/managers.py	1157	1158	ValueProxy.set	set(self, value)	todo		
+Lib/multiprocessing/managers.py	1171	1173	ListProxy.__iadd__	__iadd__(self, value)	todo		
+Lib/multiprocessing/managers.py	1174	1176	ListProxy.__imul__	__imul__(self, value)	todo		
+Lib/multiprocessing/managers.py	1192	1194	DictProxy.__ior__	__ior__(self, value)	todo		
+Lib/multiprocessing/managers.py	1212	1214	SetProxy.__ior__	__ior__(self, value)	todo		
+Lib/multiprocessing/managers.py	1215	1217	SetProxy.__iand__	__iand__(self, value)	todo		
+Lib/multiprocessing/managers.py	1218	1220	SetProxy.__ixor__	__ixor__(self, value)	todo		
+Lib/multiprocessing/managers.py	1221	1223	SetProxy.__isub__	__isub__(self, value)	todo		
+Lib/multiprocessing/managers.py	1247	1248	PoolProxy.__enter__	__enter__(self)	todo		
+Lib/multiprocessing/managers.py	1249	1250	PoolProxy.__exit__	__exit__(self, exc_type, exc_val, exc_tb)	todo		
+Lib/multiprocessing/managers.py	1297	1299	_SharedMemoryTracker.__init__	__init__(self, name, segment_names=None)	todo		
+Lib/multiprocessing/managers.py	1301	1304	_SharedMemoryTracker.register_segment	register_segment(self, segment_name)	todo		
+Lib/multiprocessing/managers.py	1306	1313	_SharedMemoryTracker.destroy_segment	destroy_segment(self, segment_name)	todo		
+Lib/multiprocessing/managers.py	1315	1318	_SharedMemoryTracker.unlink	unlink(self)	todo		
+Lib/multiprocessing/managers.py	1320	1322	_SharedMemoryTracker.__del__	__del__(self)	todo		
+Lib/multiprocessing/managers.py	1324	1325	_SharedMemoryTracker.__getstate__	__getstate__(self)	todo		
+Lib/multiprocessing/managers.py	1327	1328	_SharedMemoryTracker.__setstate__	__setstate__(self, state)	todo		
+Lib/multiprocessing/managers.py	1336	1344	SharedMemoryServer.__init__	__init__(self, *args, **kwargs)	todo		
+Lib/multiprocessing/managers.py	1346	1354	SharedMemoryServer.create	create(self, c, typeid, /, *args, **kwargs)	todo		
+Lib/multiprocessing/managers.py	1356	1359	SharedMemoryServer.shutdown	shutdown(self, c)	todo		
+Lib/multiprocessing/managers.py	1361	1363	SharedMemoryServer.track_segment	track_segment(self, c, segment_name)	todo		
+Lib/multiprocessing/managers.py	1365	1368	SharedMemoryServer.release_segment	release_segment(self, c, segment_name)	todo		
+Lib/multiprocessing/managers.py	1370	1373	SharedMemoryServer.list_segments	list_segments(self, c)	todo		
+Lib/multiprocessing/managers.py	1388	1398	SharedMemoryManager.__init__	__init__(self, *args, **kwargs)	todo		
+Lib/multiprocessing/managers.py	1400	1401	SharedMemoryManager.__del__	__del__(self)	todo		
+Lib/multiprocessing/managers.py	1403	1414	SharedMemoryManager.get_server	get_server(self)	todo		
+Lib/multiprocessing/managers.py	1416	1426	SharedMemoryManager.SharedMemory	SharedMemory(self, size)	todo		
+Lib/multiprocessing/managers.py	1428	1438	SharedMemoryManager.ShareableList	ShareableList(self, sequence)	todo		

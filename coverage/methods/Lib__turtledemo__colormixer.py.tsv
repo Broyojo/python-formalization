@@ -1,0 +1,5 @@
+file	line	endline	name	signature	status	entry	note
+Lib/turtledemo/colormixer.py	6	25	ColorTurtle.__init__	__init__(self, x, y)	excluded		platform: GUI toolkit
+Lib/turtledemo/colormixer.py	27	31	ColorTurtle.shift	shift(self, x, y)	excluded		platform: GUI toolkit
+Lib/turtledemo/colormixer.py	33	34	setbgcolor	setbgcolor()	excluded		platform: GUI toolkit
+Lib/turtledemo/colormixer.py	36	52	main	main()	excluded		platform: GUI toolkit

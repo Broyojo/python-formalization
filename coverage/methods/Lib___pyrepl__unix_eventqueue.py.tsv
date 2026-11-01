@@ -1,0 +1,3 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_pyrepl/unix_eventqueue.py	57	68	get_terminal_keycodes	get_terminal_keycodes(ti: TermInfo)	todo		
+Lib/_pyrepl/unix_eventqueue.py	72	77	EventQueue.__init__	__init__(self, fd: int, encoding: str, ti: TermInfo)	todo		

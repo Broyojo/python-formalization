@@ -1,0 +1,5 @@
+file	line	endline	name	signature	status	entry	note
+Lib/asyncio/base_tasks.py	9	25	_task_repr_info	_task_repr_info(task)	todo		
+Lib/asyncio/base_tasks.py	29	31	_task_repr	_task_repr(task)	todo		
+Lib/asyncio/base_tasks.py	34	66	_task_get_stack	_task_get_stack(task, limit)	todo		
+Lib/asyncio/base_tasks.py	69	94	_task_print_stack	_task_print_stack(task, limit, file)	todo		

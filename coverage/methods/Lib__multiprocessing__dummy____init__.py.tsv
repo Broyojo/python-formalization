@@ -1,0 +1,16 @@
+file	line	endline	name	signature	status	entry	note
+Lib/multiprocessing/dummy/__init__.py	36	41	DummyProcess.__init__	__init__(self, group=None, target=None, name=None, args=(), kwargs=None)	todo		
+Lib/multiprocessing/dummy/__init__.py	43	51	DummyProcess.start	start(self)	todo		
+Lib/multiprocessing/dummy/__init__.py	54	58	DummyProcess.exitcode	exitcode(self)	todo		
+Lib/multiprocessing/dummy/__init__.py	68	73	active_children	active_children()	todo		
+Lib/multiprocessing/dummy/__init__.py	75	76	freeze_support	freeze_support()	todo		
+Lib/multiprocessing/dummy/__init__.py	83	84	Namespace.__init__	__init__(self, /, **kwds)	todo		
+Lib/multiprocessing/dummy/__init__.py	85	92	Namespace.__repr__	__repr__(self)	todo		
+Lib/multiprocessing/dummy/__init__.py	97	98	Array	Array(typecode, sequence, lock=True)	todo		
+Lib/multiprocessing/dummy/__init__.py	101	103	Value.__init__	__init__(self, typecode, value, lock=True)	todo		
+Lib/multiprocessing/dummy/__init__.py	106	107	Value.value	value(self)	todo		
+Lib/multiprocessing/dummy/__init__.py	110	111	Value.value	value(self, value)	todo		
+Lib/multiprocessing/dummy/__init__.py	113	114	Value.__repr__	__repr__(self)	todo		
+Lib/multiprocessing/dummy/__init__.py	116	117	Manager	Manager()	todo		
+Lib/multiprocessing/dummy/__init__.py	119	120	shutdown	shutdown()	todo		
+Lib/multiprocessing/dummy/__init__.py	122	124	Pool	Pool(processes=None, initializer=None, initargs=())	todo		

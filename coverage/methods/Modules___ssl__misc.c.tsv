@@ -1,0 +1,3 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_ssl/misc.c	9	19	_PySSL_BytesFromBIO	_PySSL_BytesFromBIO(_sslmodulestate *state, BIO *bio)	excluded		platform: binds an external library
+Modules/_ssl/misc.c	24	34	_PySSL_UnicodeFromBIO	_PySSL_UnicodeFromBIO(_sslmodulestate *state, BIO *bio, const char *error)	excluded		platform: binds an external library

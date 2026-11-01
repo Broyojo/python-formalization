@@ -1,0 +1,31 @@
+file	line	endline	name	signature	status	entry	note
+Python/assemble.c	30	36	same_location	same_location(location a, location b)	todo		
+Python/assemble.c	39	48	instr_size	instr_size(instruction *instr)	todo		
+Python/assemble.c	62	87	assemble_init	assemble_init(struct assembler *a, int firstlineno)	todo		
+Python/assemble.c	90	95	assemble_free	assemble_free(struct assembler *a)	todo		
+Python/assemble.c	98	101	write_except_byte	write_except_byte(struct assembler *a, int byte) {	todo		
+Python/assemble.c	106	127	assemble_emit_exception_table_item	assemble_emit_exception_table_item(struct assembler *a, int value, int msb)	todo		
+Python/assemble.c	133	155	assemble_emit_exception_table_entry	assemble_emit_exception_table_entry(struct assembler *a, int start, int end, int handler_offset, _PyExceptHandlerInfo *handler)	todo		
+Python/assemble.c	158	188	assemble_exception_table	assemble_exception_table(struct assembler *a, instr_sequence *instrs)	todo		
+Python/assemble.c	196	200	write_location_byte	write_location_byte(struct assembler* a, int val)	todo		
+Python/assemble.c	204	208	location_pointer	location_pointer(struct assembler* a)	todo		
+Python/assemble.c	211	215	write_location_first_byte	write_location_first_byte(struct assembler* a, int code, int length)	todo		
+Python/assemble.c	218	222	write_location_varint	write_location_varint(struct assembler* a, unsigned int val)	todo		
+Python/assemble.c	226	230	write_location_signed_varint	write_location_signed_varint(struct assembler* a, int val)	todo		
+Python/assemble.c	233	243	write_location_info_short_form	write_location_info_short_form(struct assembler* a, int length, int column, int end_column)	todo		
+Python/assemble.c	246	255	write_location_info_oneline_form	write_location_info_oneline_form(struct assembler* a, int length, int line_delta, int column, int end_column)	todo		
+Python/assemble.c	258	267	write_location_info_long_form	write_location_info_long_form(struct assembler* a, location loc, int length)	todo		
+Python/assemble.c	270	273	write_location_info_none	write_location_info_none(struct assembler* a, int length)	todo		
+Python/assemble.c	276	280	write_location_info_no_column	write_location_info_no_column(struct assembler* a, int length, int line_delta)	todo		
+Python/assemble.c	286	321	write_location_info_entry	write_location_info_entry(struct assembler* a, location loc, int isize)	todo		
+Python/assemble.c	324	334	assemble_emit_location	assemble_emit_location(struct assembler* a, location loc, int isize)	todo		
+Python/assemble.c	337	366	assemble_location_info	assemble_location_info(struct assembler *a, instr_sequence *instrs, int firstlineno)	todo		
+Python/assemble.c	369	405	write_instr	write_instr(_Py_CODEUNIT *codestr, instruction *instr, int ilen)	todo		
+Python/assemble.c	413	429	assemble_emit_instr	assemble_emit_instr(struct assembler *a, instruction *instr)	todo		
+Python/assemble.c	432	455	assemble_emit	assemble_emit(struct assembler *a, instr_sequence *instrs, int first_lineno, PyObject *const_cache)	todo		
+Python/assemble.c	458	477	dict_keys_inorder	dict_keys_inorder(PyObject *dict, Py_ssize_t offset)	todo		
+Python/assemble.c	484	572	compute_localsplus_info	compute_localsplus_info(_PyCompile_CodeUnitMetadata *umd, int nlocalsplus, int flags, PyObject *names, PyObject *kinds)	todo		
+Python/assemble.c	575	668	makecode	makecode(_PyCompile_CodeUnitMetadata *umd, struct assembler *a, PyObject *const_cache, PyObject *constslist, int maxdepth, int nlocalsplus, int code_flags, PyObject *filename)	todo		
+Python/assemble.c	675	746	resolve_jump_offsets	resolve_jump_offsets(instr_sequence *instrs)	todo		
+Python/assemble.c	749	776	resolve_unconditional_jumps	resolve_unconditional_jumps(instr_sequence *instrs)	todo		
+Python/assemble.c	779	802	_PyAssemble_MakeCodeObject	_PyAssemble_MakeCodeObject(_PyCompile_CodeUnitMetadata *umd, PyObject *const_cache, PyObject *consts, int maxdepth, instr_sequence *instrs, int nlocalsplus, int code_flags, PyObject *filename)	todo		

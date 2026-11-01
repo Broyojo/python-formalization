@@ -1,0 +1,54 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_interpretersmodule.c	30	35	_get_current_interp	_get_current_interp(void)	todo		
+Modules/_interpretersmodule.c	41	54	_get_current_module	_get_current_module(void)	todo		
+Modules/_interpretersmodule.c	58	72	is_running_main	is_running_main(PyInterpreterState *interp)	todo		
+Modules/_interpretersmodule.c	76	80	is_notshareable_raised	is_notshareable_raised(PyThreadState *tstate)	todo		
+Modules/_interpretersmodule.c	83	88	unwrap_not_shareable	unwrap_not_shareable(PyThreadState *tstate, _PyXI_failure *failure)	todo		
+Modules/_interpretersmodule.c	134	157	xibufferview_from_buffer	xibufferview_from_buffer(PyTypeObject *cls, Py_buffer *view, int64_t interpid)	todo		
+Modules/_interpretersmodule.c	160	190	xibufferview_dealloc	xibufferview_dealloc(PyObject *op)	todo		
+Modules/_interpretersmodule.c	193	204	xibufferview_getbuf	xibufferview_getbuf(PyObject *op, Py_buffer *view, int flags)	todo		
+Modules/_interpretersmodule.c	231	256	_memoryview_from_xid	_memoryview_from_xid(_PyXIData_t *data)	todo		
+Modules/_interpretersmodule.c	259	266	_pybuffer_shared_free	_pybuffer_shared_free(void* data)	todo		
+Modules/_interpretersmodule.c	269	288	_pybuffer_shared	_pybuffer_shared(PyThreadState *tstate, PyObject *obj, _PyXIData_t *data)	todo		
+Modules/_interpretersmodule.c	291	313	register_memoryview_xid	register_memoryview_xid(PyObject *mod, PyTypeObject **p_state)	todo		
+Modules/_interpretersmodule.c	327	333	get_module_state	get_module_state(PyObject *mod)	todo		
+Modules/_interpretersmodule.c	336	348	_get_current_module_state	_get_current_module_state(void)	todo		
+Modules/_interpretersmodule.c	351	357	traverse_module_state	traverse_module_state(module_state *state, visitproc visit, void *arg)	todo		
+Modules/_interpretersmodule.c	360	366	clear_module_state	clear_module_state(module_state *state)	todo		
+Modules/_interpretersmodule.c	370	377	_get_current_xibufferview_type	_get_current_xibufferview_type(void)	todo		
+Modules/_interpretersmodule.c	383	407	init_named_config	init_named_config(PyInterpreterConfig *config, const char *name)	todo		
+Modules/_interpretersmodule.c	410	439	config_from_object	config_from_object(PyObject *configobj, PyInterpreterConfig *config)	todo		
+Modules/_interpretersmodule.c	454	466	_interp_call_clear	_interp_call_clear(struct interp_call *call)	todo		
+Modules/_interpretersmodule.c	469	524	_interp_call_pack	_interp_call_pack(PyThreadState *tstate, struct interp_call *call, PyObject *func, PyObject *args, PyObject *kwargs)	todo		
+Modules/_interpretersmodule.c	527	538	wrap_notshareable	wrap_notshareable(PyThreadState *tstate, const char *label)	todo		
+Modules/_interpretersmodule.c	541	586	_interp_call_unpack	_interp_call_unpack(struct interp_call *call, PyObject **p_func, PyObject **p_args, PyObject **p_kwargs)	todo		
+Modules/_interpretersmodule.c	589	617	_make_call	_make_call(struct interp_call *call, PyObject **p_result, _PyXI_failure *failure)	todo		
+Modules/_interpretersmodule.c	620	636	_run_script	_run_script(_PyXIData_t *script, PyObject *ns, _PyXI_failure *failure)	todo		
+Modules/_interpretersmodule.c	644	648	_run_result_clear	_run_result_clear(struct run_result *runres)	todo		
+Modules/_interpretersmodule.c	651	727	_run_in_interpreter	_run_in_interpreter(PyThreadState *tstate, PyInterpreterState *interp, _PyXIData_t *script, struct interp_call *call, PyObject *shareables, struct run_result *runres)	todo		
+Modules/_interpretersmodule.c	733	736	get_whence	get_whence(PyInterpreterState *interp)	todo		
+Modules/_interpretersmodule.c	740	778	resolve_interp	resolve_interp(PyObject *idobj, int restricted, int reqready, const char *op)	todo		
+Modules/_interpretersmodule.c	782	798	get_summary	get_summary(PyInterpreterState *interp)	todo		
+Modules/_interpretersmodule.c	802	831	interp_new_config	interp_new_config(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_interpretersmodule.c	846	886	interp_create	interp_create(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_interpretersmodule.c	905	948	interp_destroy	interp_destroy(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_interpretersmodule.c	960	997	interp_list_all	interp_list_all(PyObject *self, PyObject *args, PyObject *kwargs)	todo		
+Modules/_interpretersmodule.c	1006	1014	interp_get_current	interp_get_current(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Modules/_interpretersmodule.c	1023	1028	interp_get_main	interp_get_main(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Modules/_interpretersmodule.c	1037	1093	interp_set___main___attrs	interp_set___main___attrs(PyObject *self, PyObject *args, PyObject *kwargs)	todo		
+Modules/_interpretersmodule.c	1102	1111	_handle_script_error	_handle_script_error(struct run_result *runres)	todo		
+Modules/_interpretersmodule.c	1114	1155	interp_exec	interp_exec(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_interpretersmodule.c	1175	1219	interp_run_string	interp_run_string(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_interpretersmodule.c	1229	1282	interp_run_func	interp_run_func(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_interpretersmodule.c	1294	1346	interp_call	interp_call(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_interpretersmodule.c	1356	1371	object_is_shareable	object_is_shareable(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_interpretersmodule.c	1381	1404	interp_is_running	interp_is_running(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_interpretersmodule.c	1413	1447	interp_get_config	interp_get_config(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_interpretersmodule.c	1456	1473	interp_whence	interp_whence(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_interpretersmodule.c	1482	1509	interp_incref	interp_incref(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_interpretersmodule.c	1513	1534	interp_decref	interp_decref(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_interpretersmodule.c	1538	1596	capture_exception	capture_exception(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_interpretersmodule.c	1662	1701	module_exec	module_exec(PyObject *mod)	todo		
+Modules/_interpretersmodule.c	1711	1716	module_traverse	module_traverse(PyObject *mod, visitproc visit, void *arg)	todo		
+Modules/_interpretersmodule.c	1719	1724	module_clear	module_clear(PyObject *mod)	todo		
+Modules/_interpretersmodule.c	1727	1732	module_free	module_free(void *mod)	todo		

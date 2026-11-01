@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Lib/encodings/latin_1.py	21	22	IncrementalEncoder.encode	encode(self, input, final=False)	todo		
+Lib/encodings/latin_1.py	25	26	IncrementalDecoder.decode	decode(self, input, final=False)	todo		
+Lib/encodings/latin_1.py	41	50	getregentry	getregentry()	todo		

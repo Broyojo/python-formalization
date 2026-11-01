@@ -1,0 +1,45 @@
+file	line	endline	name	signature	status	entry	note
+Lib/xmlrpc/server.py	124	146	resolve_dotted_attribute	resolve_dotted_attribute(obj, attr, allow_dotted_names=True)	todo		
+Lib/xmlrpc/server.py	148	154	list_public_methods	list_public_methods(obj)	todo		
+Lib/xmlrpc/server.py	165	171	SimpleXMLRPCDispatcher.__init__	__init__(self, allow_none=False, encoding=None, use_builtin_types=False)	todo		
+Lib/xmlrpc/server.py	173	207	SimpleXMLRPCDispatcher.register_instance	register_instance(self, instance, allow_dotted_names=False)	todo		
+Lib/xmlrpc/server.py	209	223	SimpleXMLRPCDispatcher.register_function	register_function(self, function=None, name=None)	todo		
+Lib/xmlrpc/server.py	225	234	SimpleXMLRPCDispatcher.register_introspection_functions	register_introspection_functions(self)	todo		
+Lib/xmlrpc/server.py	236	242	SimpleXMLRPCDispatcher.register_multicall_functions	register_multicall_functions(self)	todo		
+Lib/xmlrpc/server.py	244	277	SimpleXMLRPCDispatcher._marshaled_dispatch	_marshaled_dispatch(self, data, dispatch_method=None, path=None)	todo		
+Lib/xmlrpc/server.py	279	295	SimpleXMLRPCDispatcher.system_listMethods	system_listMethods(self)	todo		
+Lib/xmlrpc/server.py	297	308	SimpleXMLRPCDispatcher.system_methodSignature	system_methodSignature(self, method_name)	todo		
+Lib/xmlrpc/server.py	310	339	SimpleXMLRPCDispatcher.system_methodHelp	system_methodHelp(self, method_name)	todo		
+Lib/xmlrpc/server.py	341	370	SimpleXMLRPCDispatcher.system_multicall	system_multicall(self, call_list)	todo		
+Lib/xmlrpc/server.py	372	421	SimpleXMLRPCDispatcher._dispatch	_dispatch(self, method, params)	todo		
+Lib/xmlrpc/server.py	448	457	SimpleXMLRPCRequestHandler.accept_encodings	accept_encodings(self)	todo		
+Lib/xmlrpc/server.py	459	464	SimpleXMLRPCRequestHandler.is_rpc_path_valid	is_rpc_path_valid(self)	todo		
+Lib/xmlrpc/server.py	466	535	SimpleXMLRPCRequestHandler.do_POST	do_POST(self)	todo		
+Lib/xmlrpc/server.py	537	552	SimpleXMLRPCRequestHandler.decode_request_content	decode_request_content(self, data)	todo		
+Lib/xmlrpc/server.py	554	561	SimpleXMLRPCRequestHandler.report_404	report_404(self)	todo		
+Lib/xmlrpc/server.py	563	567	SimpleXMLRPCRequestHandler.log_request	log_request(self, code='-', size='-')	todo		
+Lib/xmlrpc/server.py	589	595	SimpleXMLRPCServer.__init__	__init__(self, addr, requestHandler=SimpleXMLRPCRequestHandler, logRequests=True, allow_none=False, encoding=None, bind_and_activate=True, use_builtin_types=False)	todo		
+Lib/xmlrpc/server.py	606	614	MultiPathXMLRPCServer.__init__	__init__(self, addr, requestHandler=SimpleXMLRPCRequestHandler, logRequests=True, allow_none=False, encoding=None, bind_and_activate=True, use_builtin_types=False)	todo		
+Lib/xmlrpc/server.py	616	618	MultiPathXMLRPCServer.add_dispatcher	add_dispatcher(self, path, dispatcher)	todo		
+Lib/xmlrpc/server.py	620	621	MultiPathXMLRPCServer.get_dispatcher	get_dispatcher(self, path)	todo		
+Lib/xmlrpc/server.py	623	635	MultiPathXMLRPCServer._marshaled_dispatch	_marshaled_dispatch(self, data, dispatch_method=None, path=None)	todo		
+Lib/xmlrpc/server.py	640	641	CGIXMLRPCRequestHandler.__init__	__init__(self, allow_none=False, encoding=None, use_builtin_types=False)	todo		
+Lib/xmlrpc/server.py	643	653	CGIXMLRPCRequestHandler.handle_xmlrpc	handle_xmlrpc(self, request_text)	todo		
+Lib/xmlrpc/server.py	655	678	CGIXMLRPCRequestHandler.handle_get	handle_get(self)	todo		
+Lib/xmlrpc/server.py	680	700	CGIXMLRPCRequestHandler.handle_request	handle_request(self, request_text=None)	todo		
+Lib/xmlrpc/server.py	709	746	ServerHTMLDoc.markup	markup(self, text, escape=None, funcs={}, classes={}, methods={})	todo		
+Lib/xmlrpc/server.py	748	775	ServerHTMLDoc.docroutine	docroutine(self, object, name, mod=None, funcs={}, classes={}, methods={}, cl=None)	todo		
+Lib/xmlrpc/server.py	777	800	ServerHTMLDoc.docserver	docserver(self, server_name, package_documentation, methods)	todo		
+Lib/xmlrpc/server.py	803	815	ServerHTMLDoc.page	page(self, title, contents)	todo		
+Lib/xmlrpc/server.py	824	830	XMLRPCDocGenerator.__init__	__init__(self)	todo		
+Lib/xmlrpc/server.py	832	835	XMLRPCDocGenerator.set_server_title	set_server_title(self, server_title)	todo		
+Lib/xmlrpc/server.py	837	840	XMLRPCDocGenerator.set_server_name	set_server_name(self, server_name)	todo		
+Lib/xmlrpc/server.py	842	845	XMLRPCDocGenerator.set_server_documentation	set_server_documentation(self, server_documentation)	todo		
+Lib/xmlrpc/server.py	847	896	XMLRPCDocGenerator.generate_html_documentation	generate_html_documentation(self)	todo		
+Lib/xmlrpc/server.py	908	912	DocXMLRPCRequestHandler._get_css	_get_css(self, url)	todo		
+Lib/xmlrpc/server.py	914	936	DocXMLRPCRequestHandler.do_GET	do_GET(self)	todo		
+Lib/xmlrpc/server.py	946	952	DocXMLRPCServer.__init__	__init__(self, addr, requestHandler=DocXMLRPCRequestHandler, logRequests=True, allow_none=False, encoding=None, bind_and_activate=True, use_builtin_types=False)	todo		
+Lib/xmlrpc/server.py	959	973	DocCGIXMLRPCRequestHandler.handle_get	handle_get(self)	todo		
+Lib/xmlrpc/server.py	975	977	DocCGIXMLRPCRequestHandler.__init__	__init__(self)	todo		
+Lib/xmlrpc/server.py	984	985	ExampleService.getData	getData(self)	todo		
+Lib/xmlrpc/server.py	989	990	ExampleService.currentTime.getCurrentTime	getCurrentTime()	todo		

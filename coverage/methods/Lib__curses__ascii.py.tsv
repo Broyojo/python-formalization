@@ -1,0 +1,21 @@
+file	line	endline	name	signature	status	entry	note
+Lib/curses/ascii.py	48	52	_ctoi	_ctoi(c)	todo		
+Lib/curses/ascii.py	54	54	isalnum	isalnum(c)	todo		
+Lib/curses/ascii.py	55	55	isalpha	isalpha(c)	todo		
+Lib/curses/ascii.py	56	56	isascii	isascii(c)	todo		
+Lib/curses/ascii.py	57	57	isblank	isblank(c)	todo		
+Lib/curses/ascii.py	58	58	iscntrl	iscntrl(c)	todo		
+Lib/curses/ascii.py	59	59	isdigit	isdigit(c)	todo		
+Lib/curses/ascii.py	60	60	isgraph	isgraph(c)	todo		
+Lib/curses/ascii.py	61	61	islower	islower(c)	todo		
+Lib/curses/ascii.py	62	62	isprint	isprint(c)	todo		
+Lib/curses/ascii.py	63	63	ispunct	ispunct(c)	todo		
+Lib/curses/ascii.py	64	64	isspace	isspace(c)	todo		
+Lib/curses/ascii.py	65	65	isupper	isupper(c)	todo		
+Lib/curses/ascii.py	66	67	isxdigit	isxdigit(c)	todo		
+Lib/curses/ascii.py	68	68	isctrl	isctrl(c)	todo		
+Lib/curses/ascii.py	69	69	ismeta	ismeta(c)	todo		
+Lib/curses/ascii.py	71	75	ascii	ascii(c)	todo		
+Lib/curses/ascii.py	77	81	ctrl	ctrl(c)	todo		
+Lib/curses/ascii.py	83	87	alt	alt(c)	todo		
+Lib/curses/ascii.py	89	99	unctrl	unctrl(c)	todo		

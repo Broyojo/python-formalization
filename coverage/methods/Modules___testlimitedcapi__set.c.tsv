@@ -1,0 +1,18 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testlimitedcapi/set.c	5	9	set_check	set_check(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/set.c	12	16	set_checkexact	set_checkexact(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/set.c	19	23	frozenset_check	frozenset_check(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/set.c	26	30	frozenset_checkexact	frozenset_checkexact(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/set.c	33	37	anyset_check	anyset_check(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/set.c	40	44	anyset_checkexact	anyset_checkexact(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/set.c	47	54	set_new	set_new(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/set.c	57	64	frozenset_new	frozenset_new(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/set.c	67	71	set_size	set_size(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/set.c	74	83	set_contains	set_contains(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/set.c	86	95	set_add	set_add(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/set.c	98	107	set_discard	set_discard(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/set.c	110	114	set_pop	set_pop(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/set.c	117	121	set_clear	set_clear(PyObject *self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/set.c	124	156	test_frozenset_add_in_capi	test_frozenset_add_in_capi(PyObject *self, PyObject *Py_UNUSED(obj))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/set.c	159	201	test_set_contains_does_not_convert_unhashable_key	test_set_contains_does_not_convert_unhashable_key(PyObject *self, PyObject *Py_UNUSED(obj))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/set.c	229	236	_PyTestLimitedCAPI_Init_Set	_PyTestLimitedCAPI_Init_Set(PyObject *m)	excluded		test-support: only for CPython's own tests

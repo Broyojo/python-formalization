@@ -1,0 +1,6 @@
+file	line	endline	name	signature	status	entry	note
+Lib/encodings/ptcp154.py	16	17	Codec.encode	encode(self, input, errors='strict')	todo		
+Lib/encodings/ptcp154.py	19	20	Codec.decode	decode(self, input, errors='strict')	todo		
+Lib/encodings/ptcp154.py	23	24	IncrementalEncoder.encode	encode(self, input, final=False)	todo		
+Lib/encodings/ptcp154.py	27	28	IncrementalDecoder.decode	decode(self, input, final=False)	todo		
+Lib/encodings/ptcp154.py	38	47	getregentry	getregentry()	todo		

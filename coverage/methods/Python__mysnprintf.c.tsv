@@ -1,0 +1,3 @@
+file	line	endline	name	signature	status	entry	note
+Python/mysnprintf.c	41	50	PyOS_snprintf	PyOS_snprintf(char *str, size_t size, const char *format, ...)	todo		
+Python/mysnprintf.c	53	80	PyOS_vsnprintf	PyOS_vsnprintf(char *str, size_t size, const char *format, va_list va)	todo		

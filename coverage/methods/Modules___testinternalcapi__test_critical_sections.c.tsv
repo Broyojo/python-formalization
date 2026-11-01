@@ -1,0 +1,16 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testinternalcapi/test_critical_sections.c	24	60	test_critical_sections	test_critical_sections(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/test_critical_sections.c	63	70	lock_unlock_object	lock_unlock_object(PyObject *obj, int recurse_depth)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/test_critical_sections.c	73	80	lock_unlock_two_objects	lock_unlock_two_objects(PyObject *a, PyObject *b, int recurse_depth)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/test_critical_sections.c	86	112	test_critical_sections_nest	test_critical_sections_nest(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/test_critical_sections.c	117	136	test_critical_sections_suspend	test_critical_sections_suspend(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/test_critical_sections.c	148	177	thread_critical_sections	thread_critical_sections(void *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/test_critical_sections.c	180	202	test_critical_sections_threads	test_critical_sections_threads(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/test_critical_sections.c	205	212	pysleep	pysleep(int ms)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/test_critical_sections.c	224	265	thread_gc	thread_gc(void *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/test_critical_sections.c	268	285	test_critical_sections_gc	test_critical_sections_gc(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/test_critical_sections.c	292	320	test_critical_section1_reacquisition	test_critical_section1_reacquisition(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/test_critical_sections.c	323	382	test_critical_section2_reacquisition	test_critical_section2_reacquisition(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/test_critical_sections.c	398	414	thread_stw	thread_stw(void *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/test_critical_sections.c	417	463	test_critical_sections_stw	test_critical_sections_stw(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/test_critical_sections.c	484	490	_PyTestInternalCapi_Init_CriticalSection	_PyTestInternalCapi_Init_CriticalSection(PyObject *mod)	excluded		test-support: only for CPython's own tests

@@ -1,0 +1,86 @@
+file	line	endline	name	signature	status	entry	note
+Objects/frameobject.c	43	81	framelocalsproxy_getval	framelocalsproxy_getval(_PyInterpreterFrame *frame, PyCodeObject *co, int i)	todo		
+Objects/frameobject.c	84	92	framelocalsproxy_hasval	framelocalsproxy_hasval(_PyInterpreterFrame *frame, PyCodeObject *co, int i)	todo		
+Objects/frameobject.c	95	184	framelocalsproxy_getkeyindex	framelocalsproxy_getkeyindex(PyFrameObject *frame, PyObject *key, bool read, PyObject **value_ptr)	todo		
+Objects/frameobject.c	187	216	framelocalsproxy_getitem	framelocalsproxy_getitem(PyObject *self, PyObject *key)	todo		
+Objects/frameobject.c	219	243	add_overwritten_fast_local	add_overwritten_fast_local(PyFrameObject *frame, PyObject *obj)	todo		
+Objects/frameobject.c	246	318	framelocalsproxy_setitem	framelocalsproxy_setitem(PyObject *self, PyObject *key, PyObject *value)	todo		
+Objects/frameobject.c	321	367	framelocalsproxy_merge	framelocalsproxy_merge(PyObject* self, PyObject* other)	todo		
+Objects/frameobject.c	370	406	framelocalsproxy_keys	framelocalsproxy_keys(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/frameobject.c	409	415	framelocalsproxy_dealloc	framelocalsproxy_dealloc(PyObject *self)	todo		
+Objects/frameobject.c	418	448	framelocalsproxy_new	framelocalsproxy_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Objects/frameobject.c	451	456	framelocalsproxy_tp_clear	framelocalsproxy_tp_clear(PyObject *self)	todo		
+Objects/frameobject.c	459	464	framelocalsproxy_visit	framelocalsproxy_visit(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/frameobject.c	467	478	framelocalsproxy_iter	framelocalsproxy_iter(PyObject *self)	todo		
+Objects/frameobject.c	481	509	framelocalsproxy_richcompare	framelocalsproxy_richcompare(PyObject *lhs, PyObject *rhs, int op)	todo		
+Objects/frameobject.c	512	537	framelocalsproxy_repr	framelocalsproxy_repr(PyObject *self)	todo		
+Objects/frameobject.c	540	562	framelocalsproxy_or	framelocalsproxy_or(PyObject *self, PyObject *other)	todo		
+Objects/frameobject.c	565	576	framelocalsproxy_inplace_or	framelocalsproxy_inplace_or(PyObject *self, PyObject *other)	todo		
+Objects/frameobject.c	579	614	framelocalsproxy_values	framelocalsproxy_values(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/frameobject.c	617	673	framelocalsproxy_items	framelocalsproxy_items(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/frameobject.c	676	693	framelocalsproxy_length	framelocalsproxy_length(PyObject *self)	todo		
+Objects/frameobject.c	696	714	framelocalsproxy_contains	framelocalsproxy_contains(PyObject *self, PyObject *key)	todo		
+Objects/frameobject.c	716	723	framelocalsproxy___contains__	static PyObject* framelocalsproxy___contains__(PyObject *self, PyObject *key)	todo		
+Objects/frameobject.c	726	734	framelocalsproxy_update	framelocalsproxy_update(PyObject *self, PyObject *other)	todo		
+Objects/frameobject.c	737	762	framelocalsproxy_get	framelocalsproxy_get(PyObject* self, PyObject *const *args, Py_ssize_t nargs)	todo		
+Objects/frameobject.c	765	793	framelocalsproxy_setdefault	framelocalsproxy_setdefault(PyObject* self, PyObject *const *args, Py_ssize_t nargs)	todo		
+Objects/frameobject.c	796	846	framelocalsproxy_pop	framelocalsproxy_pop(PyObject* self, PyObject *const *args, Py_ssize_t nargs)	todo		
+Objects/frameobject.c	849	863	framelocalsproxy_copy	framelocalsproxy_copy(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/frameobject.c	866	879	framelocalsproxy_reversed	framelocalsproxy_reversed(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/frameobject.c	939	949	_PyFrameLocalsProxy_New	_PyFrameLocalsProxy_New(PyFrameObject *frame)	todo		
+Objects/frameobject.c	965	986	frame_locals_get_impl	frame_locals_get_impl(PyFrameObject *self) /*[clinic end generated code: output=b4ace8bb4cae71f4 input=7bd444d0dc8ddf44]*/	todo		
+Objects/frameobject.c	989	1006	PyFrame_GetLineNumber	PyFrame_GetLineNumber(PyFrameObject *f)	todo		
+Objects/frameobject.c	1017	1025	frame_lineno_get_impl	frame_lineno_get_impl(PyFrameObject *self) /*[clinic end generated code: output=70f35de5ac7ad630 input=87b9ec648b742936]*/	todo		
+Objects/frameobject.c	1036	1044	frame_lasti_get_impl	frame_lasti_get_impl(PyFrameObject *self) /*[clinic end generated code: output=03275b4f0327d1a2 input=0225ed49cb1fbeeb]*/	todo		
+Objects/frameobject.c	1055	1063	frame_globals_get_impl	frame_globals_get_impl(PyFrameObject *self) /*[clinic end generated code: output=7758788c32885528 input=7fff7241357d314d]*/	todo		
+Objects/frameobject.c	1074	1082	frame_builtins_get_impl	frame_builtins_get_impl(PyFrameObject *self) /*[clinic end generated code: output=45362faa6d42c702 input=27c696d6ffcad2c7]*/	todo		
+Objects/frameobject.c	1092	1099	frame_code_get_impl	frame_code_get_impl(PyFrameObject *self) /*[clinic end generated code: output=a5ed6207395a8cef input=e127e7098c124816]*/	todo		
+Objects/frameobject.c	1108	1116	frame_back_get_impl	frame_back_get_impl(PyFrameObject *self) /*[clinic end generated code: output=3a84c22a55a63c79 input=9e528570d0e1f44a]*/	todo		
+Objects/frameobject.c	1127	1131	frame_trace_opcodes_get_impl	frame_trace_opcodes_get_impl(PyFrameObject *self) /*[clinic end generated code: output=53ff41d09cc32e87 input=4eb91dc88e04677a]*/	todo		
+Objects/frameobject.c	1140	1159	frame_trace_opcodes_set_impl	frame_trace_opcodes_set_impl(PyFrameObject *self, PyObject *value) /*[clinic end generated code: output=92619da2bfccd449 input=7e286eea3c0333ff]*/	todo		
+Objects/frameobject.c	1176	1187	compatible_kind	compatible_kind(Kind from, Kind to) {	todo		
+Objects/frameobject.c	1200	1208	push_value	push_value(int64_t stack, Kind kind)	todo		
+Objects/frameobject.c	1211	1214	pop_value	pop_value(int64_t stack)	todo		
+Objects/frameobject.c	1219	1222	top_of_stack	top_of_stack(int64_t stack)	todo		
+Objects/frameobject.c	1225	1229	peek	peek(int64_t stack, int n)	todo		
+Objects/frameobject.c	1232	1241	stack_swap	stack_swap(int64_t stack, int n)	todo		
+Objects/frameobject.c	1244	1254	pop_to_level	pop_to_level(int64_t stack, int level) {	todo		
+Objects/frameobject.c	1260	1274	tos_char	tos_char(int64_t stack) {	todo		
+Objects/frameobject.c	1277	1294	print_stack	print_stack(int64_t stack) {	todo		
+Objects/frameobject.c	1297	1303	print_stacks	print_stacks(int64_t *stacks, int n) {	todo		
+Objects/frameobject.c	1308	1519	mark_stacks	mark_stacks(PyCodeObject *code_obj, int len)	todo		
+Objects/frameobject.c	1522	1540	compatible_stack	compatible_stack(int64_t from_stack, int64_t to_stack)	todo		
+Objects/frameobject.c	1543	1566	explain_incompatible_stack	explain_incompatible_stack(int64_t to_stack)	todo		
+Objects/frameobject.c	1569	1592	marklines	marklines(PyCodeObject *code, int len)	todo		
+Objects/frameobject.c	1595	1607	first_line_not_before	first_line_not_before(int *lines, int len, int line)	todo		
+Objects/frameobject.c	1609	1617	frame_is_suspended	static bool frame_is_suspended(PyFrameObject *frame)	todo		
+Objects/frameobject.c	1640	1835	frame_lineno_set_impl	frame_lineno_set_impl(PyFrameObject *self, PyObject *value) /*[clinic end generated code: output=e64c86ff6be64292 input=36ed3c896b27fb91]*/	todo		
+Objects/frameobject.c	1846	1854	frame_trace_get_impl	frame_trace_get_impl(PyFrameObject *self) /*[clinic end generated code: output=5475cbfce07826cd input=f382612525829773]*/	todo		
+Objects/frameobject.c	1863	1876	frame_trace_set_impl	frame_trace_set_impl(PyFrameObject *self, PyObject *value) /*[clinic end generated code: output=d6fe08335cf76ae4 input=d96a18bda085707f]*/	todo		
+Objects/frameobject.c	1887	1895	frame_generator_get_impl	frame_generator_get_impl(PyFrameObject *self) /*[clinic end generated code: output=97aeb2392562e55b input=00a2bd008b239ab0]*/	todo		
+Objects/frameobject.c	1913	1946	frame_dealloc	frame_dealloc(PyObject *op)	todo		
+Objects/frameobject.c	1949	1962	frame_traverse	frame_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Objects/frameobject.c	1965	1984	frame_tp_clear	frame_tp_clear(PyObject *op)	todo		
+Objects/frameobject.c	1994	2023	frame_clear_impl	frame_clear_impl(PyFrameObject *self) /*[clinic end generated code: output=864c662f16e9bfcc input=c358f9cff5f9b681]*/	todo		
+Objects/frameobject.c	2033	2041	frame___sizeof___impl	frame___sizeof___impl(PyFrameObject *self) /*[clinic end generated code: output=82948688e81078e2 input=908f90a83e73131d]*/	todo		
+Objects/frameobject.c	2044	2056	frame_repr	frame_repr(PyObject *op)	todo		
+Objects/frameobject.c	2101	2107	init_frame	init_frame(PyThreadState *tstate, _PyInterpreterFrame *frame, PyFunctionObject *func, PyObject *locals)	todo		
+Objects/frameobject.c	2110	2127	_PyFrame_New_NoTrack	_PyFrame_New_NoTrack(PyCodeObject *code)	todo		
+Objects/frameobject.c	2131	2167	PyFrame_New	PyFrame_New(PyThreadState *tstate, PyCodeObject *code, PyObject *globals, PyObject *locals)	todo		
+Objects/frameobject.c	2171	2195	frame_init_get_vars	frame_init_get_vars(_PyInterpreterFrame *frame)	todo		
+Objects/frameobject.c	2199	2244	frame_get_var	frame_get_var(_PyInterpreterFrame *frame, PyCodeObject *co, int i, PyObject **pvalue)	todo		
+Objects/frameobject.c	2248	2267	_PyFrame_HasHiddenLocals	_PyFrame_HasHiddenLocals(_PyInterpreterFrame *frame)	todo		
+Objects/frameobject.c	2271	2296	_PyFrame_GetLocals	_PyFrame_GetLocals(_PyInterpreterFrame *frame)	todo		
+Objects/frameobject.c	2300	2330	PyFrame_GetVar	PyFrame_GetVar(PyFrameObject *frame_obj, PyObject *name)	todo		
+Objects/frameobject.c	2334	2343	PyFrame_GetVarString	PyFrame_GetVarString(PyFrameObject *frame, const char *name)	todo		
+Objects/frameobject.c	2347	2352	PyFrame_FastToLocalsWithError	PyFrame_FastToLocalsWithError(PyFrameObject *f)	todo		
+Objects/frameobject.c	2355	2360	PyFrame_FastToLocals	PyFrame_FastToLocals(PyFrameObject *f)	todo		
+Objects/frameobject.c	2363	2368	PyFrame_LocalsToFast	PyFrame_LocalsToFast(PyFrameObject *f, int clear)	todo		
+Objects/frameobject.c	2371	2377	_PyFrame_IsEntryFrame	_PyFrame_IsEntryFrame(PyFrameObject *frame)	todo		
+Objects/frameobject.c	2380	2389	PyFrame_GetCode	PyFrame_GetCode(PyFrameObject *frame)	todo		
+Objects/frameobject.c	2393	2409	PyFrame_GetBack	PyFrame_GetBack(PyFrameObject *frame)	todo		
+Objects/frameobject.c	2412	2416	PyFrame_GetLocals	PyFrame_GetLocals(PyFrameObject *frame)	todo		
+Objects/frameobject.c	2419	2423	PyFrame_GetGlobals	PyFrame_GetGlobals(PyFrameObject *frame)	todo		
+Objects/frameobject.c	2426	2430	PyFrame_GetBuiltins	PyFrame_GetBuiltins(PyFrameObject *frame)	todo		
+Objects/frameobject.c	2433	2442	PyFrame_GetLasti	PyFrame_GetLasti(PyFrameObject *frame)	todo		
+Objects/frameobject.c	2445	2449	PyFrame_GetGenerator	PyFrame_GetGenerator(PyFrameObject *frame)	todo		

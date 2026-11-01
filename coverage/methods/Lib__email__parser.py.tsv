@@ -1,0 +1,11 @@
+file	line	endline	name	signature	status	entry	note
+Lib/email/parser.py	17	39	Parser.__init__	__init__(self, _class=None, *, policy=compat32)	todo		
+Lib/email/parser.py	41	54	Parser.parse	parse(self, fp, headersonly=False)	todo		
+Lib/email/parser.py	56	64	Parser.parsestr	parsestr(self, text, headersonly=False)	todo		
+Lib/email/parser.py	68	69	HeaderParser.parse	parse(self, fp, headersonly=True)	todo		
+Lib/email/parser.py	71	72	HeaderParser.parsestr	parsestr(self, text, headersonly=True)	todo		
+Lib/email/parser.py	77	93	BytesParser.__init__	__init__(self, *args, **kw)	todo		
+Lib/email/parser.py	95	107	BytesParser.parse	parse(self, fp, headersonly=False)	todo		
+Lib/email/parser.py	110	119	BytesParser.parsebytes	parsebytes(self, text, headersonly=False)	todo		
+Lib/email/parser.py	123	124	BytesHeaderParser.parse	parse(self, fp, headersonly=True)	todo		
+Lib/email/parser.py	126	127	BytesHeaderParser.parsebytes	parsebytes(self, text, headersonly=True)	todo		

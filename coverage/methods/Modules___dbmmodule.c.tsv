@@ -1,0 +1,28 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_dbmmodule.c	47	52	get_dbm_state	get_dbm_state(PyObject *module)	excluded		platform: binds an external library
+Modules/_dbmmodule.c	79	96	newdbmobject	newdbmobject(_dbm_state *state, const char *file, int flags, int mode)	excluded		platform: binds an external library
+Modules/_dbmmodule.c	100	104	dbm_traverse	dbm_traverse(PyObject *dp, visitproc visit, void *arg)	excluded		platform: binds an external library
+Modules/_dbmmodule.c	107	117	dbm_dealloc	dbm_dealloc(PyObject *self)	excluded		platform: binds an external library
+Modules/_dbmmodule.c	120	140	dbm_length_lock_held	dbm_length_lock_held(PyObject *self)	excluded		platform: binds an external library
+Modules/_dbmmodule.c	143	150	dbm_length	dbm_length(PyObject *self)	excluded		platform: binds an external library
+Modules/_dbmmodule.c	153	182	dbm_bool_lock_held	dbm_bool_lock_held(PyObject *self)	excluded		platform: binds an external library
+Modules/_dbmmodule.c	185	192	dbm_bool	dbm_bool(PyObject *self)	excluded		platform: binds an external library
+Modules/_dbmmodule.c	195	219	dbm_subscript_lock_held	dbm_subscript_lock_held(PyObject *self, PyObject *key)	excluded		platform: binds an external library
+Modules/_dbmmodule.c	222	229	dbm_subscript	dbm_subscript(PyObject *self, PyObject *key)	excluded		platform: binds an external library
+Modules/_dbmmodule.c	232	284	dbm_ass_sub_lock_held	dbm_ass_sub_lock_held(PyObject *self, PyObject *v, PyObject *w)	excluded		platform: binds an external library
+Modules/_dbmmodule.c	287	294	dbm_ass_sub	dbm_ass_sub(PyObject *self, PyObject *v, PyObject *w)	excluded		platform: binds an external library
+Modules/_dbmmodule.c	304	312	_dbm_dbm_close_impl	_dbm_dbm_close_impl(dbmobject *self) /*[clinic end generated code: output=c8dc5b6709600b86 input=4a94f79facbc28ca]*/	excluded		platform: binds an external library
+Modules/_dbmmodule.c	324	353	_dbm_dbm_keys_impl	_dbm_dbm_keys_impl(dbmobject *self, PyTypeObject *cls) /*[clinic end generated code: output=f2a593b3038e5996 input=6ddefeadf2a80156]*/	excluded		platform: binds an external library
+Modules/_dbmmodule.c	356	387	dbm_contains_lock_held	dbm_contains_lock_held(PyObject *self, PyObject *arg)	excluded		platform: binds an external library
+Modules/_dbmmodule.c	390	397	dbm_contains	dbm_contains(PyObject *self, PyObject *arg)	excluded		platform: binds an external library
+Modules/_dbmmodule.c	411	427	_dbm_dbm_get_impl	_dbm_dbm_get_impl(dbmobject *self, PyTypeObject *cls, const char *key, Py_ssize_t key_length, PyObject *default_value) /*[clinic end generated code: output=b4e55f8b6d482bc4 input=1d88a22bb5e55202]*/	excluded		platform: binds an external library
+Modules/_dbmmodule.c	444	483	_dbm_dbm_setdefault_impl	_dbm_dbm_setdefault_impl(dbmobject *self, PyTypeObject *cls, const char *key, Py_ssize_t key_length, PyObject *default_value) /*[clinic end generated code: output=9c2f6ea6d0fb576c input=81224965c110f830]*/	excluded		platform: binds an external library
+Modules/_dbmmodule.c	495	516	_dbm_dbm_clear_impl	_dbm_dbm_clear_impl(dbmobject *self, PyTypeObject *cls) /*[clinic end generated code: output=8d126b9e1d01a434 input=a1aa5d99adfb9656]*/	excluded		platform: binds an external library
+Modules/_dbmmodule.c	519	522	dbm__enter__	dbm__enter__(PyObject *self, PyObject *Py_UNUSED(dummy))	excluded		platform: binds an external library
+Modules/_dbmmodule.c	525	533	dbm__exit__	dbm__exit__(PyObject *self, PyObject *Py_UNUSED(args))	excluded		platform: binds an external library
+Modules/_dbmmodule.c	594	632	dbmopen_impl	dbmopen_impl(PyObject *module, PyObject *filename, const char *flags, int mode) /*[clinic end generated code: output=9527750f5df90764 input=d8cf50a9f81218c8]*/	excluded		platform: binds an external library
+Modules/_dbmmodule.c	640	659	_dbm_exec	_dbm_exec(PyObject *module)	excluded		platform: binds an external library
+Modules/_dbmmodule.c	662	668	_dbm_module_traverse	_dbm_module_traverse(PyObject *module, visitproc visit, void *arg)	excluded		platform: binds an external library
+Modules/_dbmmodule.c	671	677	_dbm_module_clear	_dbm_module_clear(PyObject *module)	excluded		platform: binds an external library
+Modules/_dbmmodule.c	680	683	_dbm_module_free	_dbm_module_free(void *module)	excluded		platform: binds an external library
+Modules/_dbmmodule.c	704	707	PyInit__dbm	PyInit__dbm(void)	excluded		platform: binds an external library

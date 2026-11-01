@@ -1,0 +1,14 @@
+file	line	endline	name	signature	status	entry	note
+Lib/unittest/main.py	30	44	_convert_name	_convert_name(name)	todo		
+Lib/unittest/main.py	46	47	_convert_names	_convert_names(names)	todo		
+Lib/unittest/main.py	50	53	_convert_select_pattern	_convert_select_pattern(pattern)	todo		
+Lib/unittest/main.py	66	104	TestProgram.__init__	__init__(self, module='__main__', defaultTest=None, argv=None, testRunner=None, testLoader=loader.defaultTestLoader, exit=True, verbosity=1, failfast=None, catchbreak=None, buffer=None, warnings=None, *, tb_locals=False, durations=None)	todo		
+Lib/unittest/main.py	106	113	TestProgram._print_help	_print_help(self, *args, **kwargs)	todo		
+Lib/unittest/main.py	115	142	TestProgram.parseArgs	parseArgs(self, argv)	todo		
+Lib/unittest/main.py	144	154	TestProgram.createTests	createTests(self, from_discovery=False, Loader=None)	todo		
+Lib/unittest/main.py	156	159	TestProgram._initArgParsers	_initArgParsers(self)	todo		
+Lib/unittest/main.py	161	197	TestProgram._getParentArgParser	_getParentArgParser(self)	todo		
+Lib/unittest/main.py	199	208	TestProgram._getMainArgParser	_getMainArgParser(self, parent)	todo		
+Lib/unittest/main.py	210	229	TestProgram._getDiscoveryArgParser	_getDiscoveryArgParser(self, parent)	todo		
+Lib/unittest/main.py	231	242	TestProgram._do_discovery	_do_discovery(self, argv, Loader=None)	todo		
+Lib/unittest/main.py	244	277	TestProgram.runTests	runTests(self)	todo		

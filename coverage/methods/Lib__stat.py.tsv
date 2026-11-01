@@ -1,0 +1,14 @@
+file	line	endline	name	signature	status	entry	note
+Lib/stat.py	21	25	S_IMODE	S_IMODE(mode)	todo		
+Lib/stat.py	27	31	S_IFMT	S_IFMT(mode)	todo		
+Lib/stat.py	50	52	S_ISDIR	S_ISDIR(mode)	todo		
+Lib/stat.py	54	56	S_ISCHR	S_ISCHR(mode)	todo		
+Lib/stat.py	58	60	S_ISBLK	S_ISBLK(mode)	todo		
+Lib/stat.py	62	64	S_ISREG	S_ISREG(mode)	todo		
+Lib/stat.py	66	68	S_ISFIFO	S_ISFIFO(mode)	todo		
+Lib/stat.py	70	72	S_ISLNK	S_ISLNK(mode)	todo		
+Lib/stat.py	74	76	S_ISSOCK	S_ISSOCK(mode)	todo		
+Lib/stat.py	78	80	S_ISDOOR	S_ISDOOR(mode)	todo		
+Lib/stat.py	82	84	S_ISPORT	S_ISPORT(mode)	todo		
+Lib/stat.py	86	88	S_ISWHT	S_ISWHT(mode)	todo		
+Lib/stat.py	164	183	filemode	filemode(mode)	todo		

@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Lib/asyncio/mixins.py	12	21	_LoopBoundMixin._get_loop	_get_loop(self)	todo		

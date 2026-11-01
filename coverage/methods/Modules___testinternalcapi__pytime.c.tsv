@@ -1,0 +1,14 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testinternalcapi/pytime.c	13	21	test_pytime_fromseconds	test_pytime_fromseconds(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/pytime.c	24	35	check_time_rounding	check_time_rounding(int round)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/pytime.c	38	53	test_pytime_fromsecondsobject	test_pytime_fromsecondsobject(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/pytime.c	56	80	test_PyTime_AsTimeval	test_PyTime_AsTimeval(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/pytime.c	83	105	test_PyTime_AsTimeval_clamp	test_PyTime_AsTimeval_clamp(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/pytime.c	109	124	test_PyTime_AsTimespec	test_PyTime_AsTimespec(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/pytime.c	127	140	test_PyTime_AsTimespec_clamp	test_PyTime_AsTimespec_clamp(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/pytime.c	144	160	test_PyTime_AsMilliseconds	test_PyTime_AsMilliseconds(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/pytime.c	163	179	test_PyTime_AsMicroseconds	test_PyTime_AsMicroseconds(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/pytime.c	182	197	test_pytime_object_to_time_t	test_pytime_object_to_time_t(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/pytime.c	200	216	test_pytime_object_to_timeval	test_pytime_object_to_timeval(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/pytime.c	219	235	test_pytime_object_to_timespec	test_pytime_object_to_timespec(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/pytime.c	255	261	_PyTestInternalCapi_Init_PyTime	_PyTestInternalCapi_Init_PyTime(PyObject *m)	excluded		test-support: only for CPython's own tests

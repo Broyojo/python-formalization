@@ -1,0 +1,29 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/mem.c	19	25	hook_malloc	hook_malloc(void *ctx, size_t size)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/mem.c	28	35	hook_calloc	hook_calloc(void *ctx, size_t nelem, size_t elsize)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/mem.c	38	45	hook_realloc	hook_realloc(void *ctx, void *ptr, size_t new_size)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/mem.c	48	54	hook_free	hook_free(void *ctx, void *ptr)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/mem.c	72	81	fm_nomemory	fm_nomemory(void)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/mem.c	84	91	hook_fmalloc	hook_fmalloc(void *ctx, size_t size)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/mem.c	94	101	hook_fcalloc	hook_fcalloc(void *ctx, size_t nelem, size_t elsize)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/mem.c	104	111	hook_frealloc	hook_frealloc(void *ctx, void *ptr, size_t new_size)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/mem.c	114	118	hook_ffree	hook_ffree(void *ctx, void *ptr)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/mem.c	121	145	fm_setup_hooks	fm_setup_hooks(void)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/mem.c	148	156	fm_remove_hooks	fm_remove_hooks(void)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/mem.c	159	171	set_nomemory	set_nomemory(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/mem.c	174	178	remove_mem_hooks	remove_mem_hooks(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/mem.c	181	337	test_setallocators	test_setallocators(PyMemAllocatorDomain domain)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/mem.c	340	343	test_pyobject_setallocators	test_pyobject_setallocators(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/mem.c	346	385	test_pyobject_new	test_pyobject_new(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/mem.c	388	441	test_pymem_alloc0	test_pymem_alloc0(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/mem.c	444	447	test_pymem_setrawallocators	test_pymem_setrawallocators(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/mem.c	450	453	test_pymem_setallocators	test_pymem_setallocators(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/mem.c	456	469	pyobject_malloc_without_gil	pyobject_malloc_without_gil(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/mem.c	472	487	pymem_buffer_overflow	pymem_buffer_overflow(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/mem.c	490	500	pymem_api_misuse	pymem_api_misuse(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/mem.c	503	516	pymem_malloc_without_gil	pymem_malloc_without_gil(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/mem.c	521	553	tracemalloc_track	tracemalloc_track(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/mem.c	556	585	tracemalloc_untrack	tracemalloc_untrack(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/mem.c	589	596	tracemalloc_track_race_thread	tracemalloc_track_race_thread(void *data)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/mem.c	600	684	tracemalloc_track_race	tracemalloc_track_race(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/mem.c	710	736	_PyTestCapi_Init_Mem	_PyTestCapi_Init_Mem(PyObject *mod)	excluded		test-support: only for CPython's own tests

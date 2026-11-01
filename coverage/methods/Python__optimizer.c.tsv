@@ -1,0 +1,50 @@
+file	line	endline	name	signature	status	entry	note
+Python/optimizer.c	34	43	has_space_for_executor	has_space_for_executor(PyCodeObject *code, _Py_CODEUNIT *instr)	todo		
+Python/optimizer.c	46	76	get_index_for_executor	get_index_for_executor(PyCodeObject *code, _Py_CODEUNIT *instr)	todo		
+Python/optimizer.c	79	99	insert_executor	insert_executor(PyCodeObject *code, _Py_CODEUNIT *instr, int index, _PyExecutorObject *executor)	todo		
+Python/optimizer.c	114	163	_PyOptimizer_Optimize	_PyOptimizer_Optimize( _PyInterpreterFrame *frame, _Py_CODEUNIT *start, _PyExecutorObject **executor_ptr, int chain_depth)	todo		
+Python/optimizer.c	166	180	get_executor_lock_held	get_executor_lock_held(PyCodeObject *code, int offset)	todo		
+Python/optimizer.c	183	190	_Py_GetExecutor	_Py_GetExecutor(PyCodeObject *code, int offset)	todo		
+Python/optimizer.c	193	196	is_valid	is_valid(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Python/optimizer.c	199	202	get_opcode	get_opcode(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Python/optimizer.c	205	208	get_oparg	get_oparg(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Python/optimizer.c	217	223	free_executor	free_executor(_PyExecutorObject *self)	todo		
+Python/optimizer.c	226	258	_Py_ClearExecutorDeletionList	_Py_ClearExecutorDeletionList(PyInterpreterState *interp)	todo		
+Python/optimizer.c	261	272	add_to_pending_deletion_list	add_to_pending_deletion_list(_PyExecutorObject *self)	todo		
+Python/optimizer.c	275	283	uop_dealloc	uop_dealloc(PyObject *op) {	todo		
+Python/optimizer.c	286	292	_PyUOpName	_PyUOpName(int index)	todo		
+Python/optimizer.c	296	328	_PyUOpPrint	_PyUOpPrint(const _PyUOpInstruction *uop)	todo		
+Python/optimizer.c	332	336	uop_len	uop_len(PyObject *op)	todo		
+Python/optimizer.c	339	375	uop_item	uop_item(PyObject *op, Py_ssize_t index)	todo		
+Python/optimizer.c	383	390	executor_traverse	executor_traverse(PyObject *o, visitproc visit, void *arg)	todo		
+Python/optimizer.c	393	405	get_jit_code	get_jit_code(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Python/optimizer.c	416	419	executor_is_gc	executor_is_gc(PyObject *o)	todo		
+Python/optimizer.c	478	495	add_to_trace	add_to_trace( _PyUOpInstruction *trace, int trace_length, uint16_t opcode, uint16_t oparg, uint64_t operand, uint32_t target)	todo		
+Python/optimizer.c	554	987	translate_bytecode_to_trace	translate_bytecode_to_trace( _PyInterpreterFrame *frame, _Py_CODEUNIT *instr, _PyUOpInstruction *trace, int buffer_size, _PyBloomFilter *dependencies, bool progress_needed)	todo		
+Python/optimizer.c	1002	1012	count_exits	count_exits(_PyUOpInstruction *buffer, int length)	todo		
+Python/optimizer.c	1014	1024	make_exit	static void make_exit(_PyUOpInstruction *inst, int opcode, int target)	todo		
+Python/optimizer.c	1029	1099	prepare_for_execution	prepare_for_execution(_PyUOpInstruction *buffer, int length)	todo		
+Python/optimizer.c	1104	1115	allocate_executor	allocate_executor(int exit_count, int length)	todo		
+Python/optimizer.c	1126	1129	target_unused	target_unused(int opcode)	todo		
+Python/optimizer.c	1132	1173	sanity_check	sanity_check(_PyExecutorObject *executor)	todo		
+Python/optimizer.c	1184	1250	make_executor_from_uops	make_executor_from_uops(_PyUOpInstruction *buffer, int length, const _PyBloomFilter *dependencies)	todo		
+Python/optimizer.c	1255	1269	effective_trace_length	int effective_trace_length(_PyUOpInstruction *buffer, int length)	todo		
+Python/optimizer.c	1273	1325	uop_optimize	uop_optimize( _PyInterpreterFrame *frame, _Py_CODEUNIT *instr, _PyExecutorObject **exec_ptr, int curr_stackentries, bool progress_needed)	todo		
+Python/optimizer.c	1369	1379	address_to_hash	address_to_hash(void *ptr) {	todo		
+Python/optimizer.c	1382	1387	_Py_BloomFilter_Init	_Py_BloomFilter_Init(_PyBloomFilter *bloom)	todo		
+Python/optimizer.c	1395	1404	_Py_BloomFilter_Add	_Py_BloomFilter_Add(_PyBloomFilter *bloom, void *ptr)	todo		
+Python/optimizer.c	1407	1415	bloom_filter_may_contain	bloom_filter_may_contain(_PyBloomFilter *bloom, _PyBloomFilter *hashes)	todo		
+Python/optimizer.c	1418	1438	link_executor	link_executor(_PyExecutorObject *executor)	todo		
+Python/optimizer.c	1441	1463	unlink_executor	unlink_executor(_PyExecutorObject *executor)	todo		
+Python/optimizer.c	1467	1474	_Py_ExecutorInit	_Py_ExecutorInit(_PyExecutorObject *executor, const _PyBloomFilter *dependency_set)	todo		
+Python/optimizer.c	1479	1494	_Py_ExecutorDetach	_Py_ExecutorDetach(_PyExecutorObject *executor)	todo		
+Python/optimizer.c	1497	1518	executor_clear	executor_clear(PyObject *op)	todo		
+Python/optimizer.c	1521	1525	_Py_Executor_DependsOn	_Py_Executor_DependsOn(_PyExecutorObject *executor, void *obj)	todo		
+Python/optimizer.c	1531	1568	_Py_Executors_InvalidateDependency	_Py_Executors_InvalidateDependency(PyInterpreterState *interp, void *obj, int is_invalidation)	todo		
+Python/optimizer.c	1572	1588	_Py_Executors_InvalidateAll	_Py_Executors_InvalidateAll(PyInterpreterState *interp, int is_invalidation)	todo		
+Python/optimizer.c	1591	1626	_Py_Executors_InvalidateCold	_Py_Executors_InvalidateCold(PyInterpreterState *interp)	todo		
+Python/optimizer.c	1629	1641	write_str	write_str(PyObject *str, FILE *out)	todo		
+Python/optimizer.c	1644	1659	find_line_number	find_line_number(PyCodeObject *code, _PyExecutorObject *executor)	todo		
+Python/optimizer.c	1669	1729	executor_to_gv	executor_to_gv(_PyExecutorObject *executor, FILE *out)	todo		
+Python/optimizer.c	1733	1744	_PyDumpExecutors	_PyDumpExecutors(FILE *out)	todo		
+Python/optimizer.c	1749	1753	_PyDumpExecutors	_PyDumpExecutors(FILE *out)	todo		

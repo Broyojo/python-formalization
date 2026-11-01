@@ -1,0 +1,13 @@
+file	line	endline	name	signature	status	entry	note
+Modules/xxmodule.c	31	39	newXxoObject	newXxoObject(PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/xxmodule.c	44	49	Xxo_dealloc	Xxo_dealloc(PyObject *op)	excluded		test-support: only for CPython's own tests
+Modules/xxmodule.c	52	58	Xxo_demo	Xxo_demo(PyObject *Py_UNUSED(op), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/xxmodule.c	66	79	Xxo_getattro	Xxo_getattro(PyObject *op, PyObject *name)	excluded		test-support: only for CPython's own tests
+Modules/xxmodule.c	82	100	Xxo_setattr	Xxo_setattr(PyObject *op, const char *name, PyObject *v)	excluded		test-support: only for CPython's own tests
+Modules/xxmodule.c	157	165	xx_foo	xx_foo(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/xxmodule.c	171	181	xx_new	xx_new(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/xxmodule.c	186	201	xx_bug	xx_bug(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/xxmodule.c	206	213	xx_roj	xx_roj(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/xxmodule.c	267	270	null_richcompare	null_richcompare(PyObject *self, PyObject *other, int op)	excluded		test-support: only for CPython's own tests
+Modules/xxmodule.c	341	386	xx_exec	xx_exec(PyObject *m)	excluded		test-support: only for CPython's own tests
+Modules/xxmodule.c	410	413	PyInit_xx	PyInit_xx(void)	excluded		test-support: only for CPython's own tests

@@ -1,0 +1,15 @@
+file	line	endline	name	signature	status	entry	note
+Lib/runpy.py	28	31	_TempModule.__init__	__init__(self, mod_name)	todo		
+Lib/runpy.py	33	40	_TempModule.__enter__	__enter__(self)	todo		
+Lib/runpy.py	42	47	_TempModule.__exit__	__exit__(self, *args)	todo		
+Lib/runpy.py	50	52	_ModifiedArgv0.__init__	__init__(self, value)	todo		
+Lib/runpy.py	54	58	_ModifiedArgv0.__enter__	__enter__(self)	todo		
+Lib/runpy.py	60	62	_ModifiedArgv0.__exit__	__exit__(self, *args)	todo		
+Lib/runpy.py	65	89	_run_code	_run_code(code, run_globals, init_globals=None, mod_name=None, mod_spec=None, pkg_name=None, script_name=None)	todo		
+Lib/runpy.py	91	102	_run_module_code	_run_module_code(code, init_globals=None, mod_name=None, mod_spec=None, pkg_name=None, script_name=None)	todo		
+Lib/runpy.py	105	169	_get_module_details	_get_module_details(mod_name, error=ImportError)	todo		
+Lib/runpy.py	178	204	_run_module_as_main	_run_module_as_main(mod_name, alter_argv=True)	todo		
+Lib/runpy.py	206	234	run_module	run_module(mod_name, init_globals=None, run_name=None, alter_sys=False)	todo		
+Lib/runpy.py	236	254	_get_main_module_details	_get_main_module_details(error=ImportError)	todo		
+Lib/runpy.py	257	267	_get_code_from_file	_get_code_from_file(fname)	todo		
+Lib/runpy.py	269	317	run_path	run_path(path_name, init_globals=None, run_name=None)	todo		

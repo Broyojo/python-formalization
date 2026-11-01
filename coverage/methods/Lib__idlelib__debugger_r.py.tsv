@@ -1,0 +1,56 @@
+file	line	endline	name	signature	status	entry	note
+Lib/idlelib/debugger_r.py	40	43	wrap_frame	wrap_frame(frame)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	45	55	wrap_info	wrap_info(info)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	59	61	GUIProxy.__init__	__init__(self, conn, gui_adap_oid)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	63	68	GUIProxy.interaction	interaction(self, message, frame, info=None)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	72	73	IdbAdapter.__init__	__init__(self, idb)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	77	78	IdbAdapter.set_step	set_step(self)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	80	81	IdbAdapter.set_quit	set_quit(self)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	83	84	IdbAdapter.set_continue	set_continue(self)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	86	88	IdbAdapter.set_next	set_next(self, fid)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	90	92	IdbAdapter.set_return	set_return(self, fid)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	94	102	IdbAdapter.get_stack	get_stack(self, fid, tbid)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	104	106	IdbAdapter.run	run(self, cmd)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	108	110	IdbAdapter.set_break	set_break(self, filename, lineno)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	112	114	IdbAdapter.clear_break	clear_break(self, filename, lineno)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	116	118	IdbAdapter.clear_all_file_breaks	clear_all_file_breaks(self, filename)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	122	124	IdbAdapter.frame_attr	frame_attr(self, fid, name)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	126	131	IdbAdapter.frame_globals	frame_globals(self, fid)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	133	138	IdbAdapter.frame_locals	frame_locals(self, fid)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	140	145	IdbAdapter.frame_code	frame_code(self, fid)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	149	151	IdbAdapter.code_name	code_name(self, cid)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	153	155	IdbAdapter.code_filename	code_filename(self, cid)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	159	160	IdbAdapter.dict_keys	dict_keys(self, did)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	166	167	IdbAdapter.dict_keys_list	dict_keys_list(self, did)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	169	171	IdbAdapter.dict_item	dict_item(self, did, key)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	176	190	start_debugger	start_debugger(rpchandler, gui_adap_oid)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	200	204	FrameProxy.__init__	__init__(self, conn, fid)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	206	216	FrameProxy.__getattr__	__getattr__(self, name)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	218	220	FrameProxy._get_f_code	_get_f_code(self)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	222	225	FrameProxy._get_f_globals	_get_f_globals(self)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	227	230	FrameProxy._get_f_locals	_get_f_locals(self)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	232	237	FrameProxy._get_dict_proxy	_get_dict_proxy(self, did)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	242	245	CodeProxy.__init__	__init__(self, conn, oid, cid)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	247	253	CodeProxy.__getattr__	__getattr__(self, name)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	258	261	DictProxy.__init__	__init__(self, conn, oid, did)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	267	269	DictProxy.keys	keys(self)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	271	273	DictProxy.__getitem__	__getitem__(self, key)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	275	277	DictProxy.__getattr__	__getattr__(self, name)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	282	284	GUIAdapter.__init__	__init__(self, conn, gui)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	286	289	GUIAdapter.interaction	interaction(self, message, fid, modified_info)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	294	297	IdbProxy.__init__	__init__(self, conn, shell, oid)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	299	303	IdbProxy.call	call(self, methodname, /, *args, **kwargs)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	305	308	IdbProxy.run	run(self, cmd, locals)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	310	314	IdbProxy.get_stack	get_stack(self, frame, tbid)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	316	317	IdbProxy.set_continue	set_continue(self)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	319	320	IdbProxy.set_step	set_step(self)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	322	323	IdbProxy.set_next	set_next(self, frame)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	325	326	IdbProxy.set_return	set_return(self, frame)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	328	329	IdbProxy.set_quit	set_quit(self)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	331	333	IdbProxy.set_break	set_break(self, filename, lineno)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	335	337	IdbProxy.clear_break	clear_break(self, filename, lineno)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	339	341	IdbProxy.clear_all_file_breaks	clear_all_file_breaks(self, filename)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	343	365	start_remote_debugger	start_remote_debugger(rpcclt, pyshell)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	367	377	close_remote_debugger	close_remote_debugger(rpcclt)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	379	380	close_subprocess_debugger	close_subprocess_debugger(rpcclt)	excluded		platform: GUI toolkit
+Lib/idlelib/debugger_r.py	382	385	restart_subprocess_debugger	restart_subprocess_debugger(rpcclt)	excluded		platform: GUI toolkit

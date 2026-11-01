@@ -1,0 +1,90 @@
+file	line	endline	name	signature	status	entry	note
+Python/pylifecycle.c	121	135	_PyRuntime_Initialize	_PyRuntime_Initialize(void)	todo		
+Python/pylifecycle.c	138	142	_PyRuntime_Finalize	_PyRuntime_Finalize(void)	todo		
+Python/pylifecycle.c	145	148	Py_IsFinalizing	Py_IsFinalizing(void)	todo		
+Python/pylifecycle.c	161	164	_Py_IsCoreInitialized	_Py_IsCoreInitialized(void)	todo		
+Python/pylifecycle.c	167	170	Py_IsInitialized	Py_IsInitialized(void)	todo		
+Python/pylifecycle.c	194	217	_Py_LegacyLocaleDetected	_Py_LegacyLocaleDetected(int warn)	todo		
+Python/pylifecycle.c	227	233	emit_stderr_warning_for_legacy_locale	emit_stderr_warning_for_legacy_locale(_PyRuntimeState *runtime)	todo		
+Python/pylifecycle.c	249	258	_Py_IsLocaleCoercionTarget	_Py_IsLocaleCoercionTarget(const char *ctype_loc)	todo		
+Python/pylifecycle.c	267	287	_coerce_default_locale_settings	_coerce_default_locale_settings(int warn, const _LocaleCoercionTarget *target)	todo		
+Python/pylifecycle.c	291	334	_Py_CoerceLegacyLocale	_Py_CoerceLegacyLocale(int warn)	todo		
+Python/pylifecycle.c	341	396	_Py_SetLocaleFromEnv	_Py_SetLocaleFromEnv(int category)	todo		
+Python/pylifecycle.c	400	428	interpreter_update_config	interpreter_update_config(PyThreadState *tstate, int only_update_path_config)	todo		
+Python/pylifecycle.c	444	479	pyinit_core_reconfigure	pyinit_core_reconfigure(_PyRuntimeState *runtime, PyThreadState **tstate_p, const PyConfig *config)	todo		
+Python/pylifecycle.c	483	524	pycore_init_runtime	pycore_init_runtime(_PyRuntimeState *runtime, const PyConfig *config)	todo		
+Python/pylifecycle.c	528	580	init_interp_settings	init_interp_settings(PyInterpreterState *interp, const PyInterpreterConfig *config)	todo		
+Python/pylifecycle.c	584	598	init_interp_create_gil	init_interp_create_gil(PyThreadState *tstate, int gil)	todo		
+Python/pylifecycle.c	601	611	builtins_dict_watcher	builtins_dict_watcher(PyDict_WatchEvent event, PyObject *dict, PyObject *key, PyObject *new_value)	todo		
+Python/pylifecycle.c	614	681	pycore_create_interpreter	pycore_create_interpreter(_PyRuntimeState *runtime, const PyConfig *src_config, PyThreadState **tstate_p)	todo		
+Python/pylifecycle.c	685	703	pycore_init_global_objects	pycore_init_global_objects(PyInterpreterState *interp)	todo		
+Python/pylifecycle.c	707	771	pycore_init_types	pycore_init_types(PyInterpreterState *interp)	todo		
+Python/pylifecycle.c	774	858	pycore_init_builtins	pycore_init_builtins(PyThreadState *tstate)	todo		
+Python/pylifecycle.c	862	936	pycore_interp_init	pycore_interp_init(PyThreadState *tstate)	todo		
+Python/pylifecycle.c	940	964	pyinit_config	pyinit_config(_PyRuntimeState *runtime, PyThreadState **tstate_p, const PyConfig *config)	todo		
+Python/pylifecycle.c	968	1011	_Py_PreInitializeFromPyArgv	_Py_PreInitializeFromPyArgv(const PyPreConfig *src_config, const _PyArgv *args)	todo		
+Python/pylifecycle.c	1015	1019	Py_PreInitializeFromBytesArgs	Py_PreInitializeFromBytesArgs(const PyPreConfig *src_config, Py_ssize_t argc, char **argv)	todo		
+Python/pylifecycle.c	1023	1027	Py_PreInitializeFromArgs	Py_PreInitializeFromArgs(const PyPreConfig *src_config, Py_ssize_t argc, wchar_t **argv)	todo		
+Python/pylifecycle.c	1031	1034	Py_PreInitialize	Py_PreInitialize(const PyPreConfig *src_config)	todo		
+Python/pylifecycle.c	1038	1071	_Py_PreInitializeFromConfig	_Py_PreInitializeFromConfig(const PyConfig *config, const _PyArgv *args)	todo		
+Python/pylifecycle.c	1092	1131	pyinit_core	pyinit_core(_PyRuntimeState *runtime, const PyConfig *src_config, PyThreadState **tstate_p)	todo		
+Python/pylifecycle.c	1138	1144	pyinit_main_reconfigure	pyinit_main_reconfigure(PyThreadState *tstate)	todo		
+Python/pylifecycle.c	1149	1174	run_presite	run_presite(PyThreadState *tstate)	todo		
+Python/pylifecycle.c	1179	1389	init_interp_main	init_interp_main(PyThreadState *tstate)	todo		
+Python/pylifecycle.c	1404	1420	pyinit_main	pyinit_main(PyThreadState *tstate)	todo		
+Python/pylifecycle.c	1424	1453	Py_InitializeFromConfig	Py_InitializeFromConfig(const PyConfig *config)	todo		
+Python/pylifecycle.c	1457	1482	Py_InitializeEx	Py_InitializeEx(int install_sigs)	todo		
+Python/pylifecycle.c	1485	1488	Py_Initialize	Py_Initialize(void)	todo		
+Python/pylifecycle.c	1492	1549	finalize_modules_delete_special	finalize_modules_delete_special(PyThreadState *tstate, int verbose)	todo		
+Python/pylifecycle.c	1553	1622	finalize_remove_modules	finalize_remove_modules(PyObject *modules, int verbose)	todo		
+Python/pylifecycle.c	1626	1636	finalize_clear_modules_dict	finalize_clear_modules_dict(PyObject *modules)	todo		
+Python/pylifecycle.c	1640	1652	finalize_restore_builtins	finalize_restore_builtins(PyThreadState *tstate)	todo		
+Python/pylifecycle.c	1656	1679	finalize_modules_clear_weaklist	finalize_modules_clear_weaklist(PyInterpreterState *interp, PyObject *weaklist, int verbose)	todo		
+Python/pylifecycle.c	1683	1696	finalize_clear_sys_builtins_dict	finalize_clear_sys_builtins_dict(PyInterpreterState *interp, int verbose)	todo		
+Python/pylifecycle.c	1702	1791	finalize_modules	finalize_modules(PyThreadState *tstate)	todo		
+Python/pylifecycle.c	1797	1810	file_is_closed	file_is_closed(PyObject *fobj)	todo		
+Python/pylifecycle.c	1814	1845	flush_std_files	flush_std_files(void)	todo		
+Python/pylifecycle.c	1863	1901	finalize_interp_types	finalize_interp_types(PyInterpreterState *interp)	todo		
+Python/pylifecycle.c	1905	1941	finalize_interp_clear	finalize_interp_clear(PyThreadState *tstate)	todo		
+Python/pylifecycle.c	1945	1957	finalize_interp_delete	finalize_interp_delete(PyInterpreterState *interp)	todo		
+Python/pylifecycle.c	1969	2014	resolve_final_tstate	resolve_final_tstate(_PyRuntimeState *runtime)	todo		
+Python/pylifecycle.c	2017	2263	_Py_Finalize	_Py_Finalize(_PyRuntimeState *runtime)	todo		
+Python/pylifecycle.c	2266	2269	Py_FinalizeEx	Py_FinalizeEx(void)	todo		
+Python/pylifecycle.c	2272	2275	Py_Finalize	Py_Finalize(void)	todo		
+Python/pylifecycle.c	2292	2404	new_interpreter	new_interpreter(PyThreadState **tstate_p, const PyInterpreterConfig *config, long whence)	todo		
+Python/pylifecycle.c	2407	2412	Py_NewInterpreterFromConfig	Py_NewInterpreterFromConfig(PyThreadState **tstate_p, const PyInterpreterConfig *config)	todo		
+Python/pylifecycle.c	2415	2425	Py_NewInterpreter	Py_NewInterpreter(void)	todo		
+Python/pylifecycle.c	2439	2480	Py_EndInterpreter	Py_EndInterpreter(PyThreadState *tstate)	todo		
+Python/pylifecycle.c	2483	2492	_Py_IsInterpreterFinalizing	_Py_IsInterpreterFinalizing(PyInterpreterState *interp)	todo		
+Python/pylifecycle.c	2495	2556	finalize_subinterpreters	finalize_subinterpreters(void)	todo		
+Python/pylifecycle.c	2562	2609	add_main_module	add_main_module(PyInterpreterState *interp)	todo		
+Python/pylifecycle.c	2614	2623	init_import_site	init_import_site(void)	todo		
+Python/pylifecycle.c	2627	2764	create_stdio	create_stdio(const PyConfig *config, PyObject* io, int fd, int write_mode, const char* name, const wchar_t* encoding, const wchar_t* errors)	todo		
+Python/pylifecycle.c	2768	2796	init_set_builtins_open	init_set_builtins_open(void)	todo		
+Python/pylifecycle.c	2801	2894	init_sys_streams	init_sys_streams(PyThreadState *tstate)	todo		
+Python/pylifecycle.c	2901	2914	android_log_write_impl	android_log_write_impl(PyObject *self, PyObject *args)	todo		
+Python/pylifecycle.c	2923	2959	init_android_streams	init_android_streams(PyThreadState *tstate)	todo		
+Python/pylifecycle.c	2966	2980	apple_log_write_impl	apple_log_write_impl(PyObject *self, PyObject *args)	todo		
+Python/pylifecycle.c	2989	3024	init_apple_streams	init_apple_streams(PyThreadState *tstate)	todo		
+Python/pylifecycle.c	3030	3041	_Py_FatalError_DumpTracebacks	_Py_FatalError_DumpTracebacks(int fd, PyInterpreterState *interp, PyThreadState *tstate)	todo		
+Python/pylifecycle.c	3052	3086	_Py_FatalError_PrintExc	_Py_FatalError_PrintExc(PyThreadState *tstate)	todo		
+Python/pylifecycle.c	3092	3122	fatal_output_debug	fatal_output_debug(const char *msg)	todo		
+Python/pylifecycle.c	3127	3152	fatal_error_dump_runtime	fatal_error_dump_runtime(int fd, _PyRuntimeState *runtime)	todo		
+Python/pylifecycle.c	3156	3167	fatal_error_exit	fatal_error_exit(int status)	todo		
+Python/pylifecycle.c	3170	3181	acquire_dict_lock_for_dump	acquire_dict_lock_for_dump(PyObject *obj)	todo		
+Python/pylifecycle.c	3184	3192	release_dict_lock_for_dump	release_dict_lock_for_dump(PyObject *obj)	todo		
+Python/pylifecycle.c	3201	3296	_Py_DumpExtensionModules	_Py_DumpExtensionModules(int fd, PyInterpreterState *interp)	todo		
+Python/pylifecycle.c	3300	3381	fatal_error	fatal_error(int fd, int header, const char *prefix, const char *msg, int status)	todo		
+Python/pylifecycle.c	3387	3390	Py_FatalError	Py_FatalError(const char *msg)	todo		
+Python/pylifecycle.c	3394	3397	_Py_FatalErrorFunc	_Py_FatalErrorFunc(const char *func, const char *msg)	todo		
+Python/pylifecycle.c	3401	3427	_Py_FatalErrorFormat	_Py_FatalErrorFormat(const char *func, const char *format, ...)	todo		
+Python/pylifecycle.c	3431	3437	_Py_FatalRefcountErrorFunc	_Py_FatalRefcountErrorFunc(const char *func, const char *msg)	todo		
+Python/pylifecycle.c	3441	3452	Py_ExitStatusException	Py_ExitStatusException(PyStatus status)	todo		
+Python/pylifecycle.c	3460	3479	wait_for_thread_shutdown	wait_for_thread_shutdown(PyThreadState *tstate)	todo		
+Python/pylifecycle.c	3481	3492	Py_AtExit	int Py_AtExit(void (*func)(void))	todo		
+Python/pylifecycle.c	3495	3515	call_ll_exitfuncs	call_ll_exitfuncs(_PyRuntimeState *runtime)	todo		
+Python/pylifecycle.c	3518	3529	Py_Exit	Py_Exit(int sts)	todo		
+Python/pylifecycle.c	3539	3550	Py_FdIsInteractive	Py_FdIsInteractive(FILE *fp, const char *filename)	todo		
+Python/pylifecycle.c	3554	3565	_Py_FdIsInteractive	_Py_FdIsInteractive(FILE *fp, PyObject *filename)	todo		
+Python/pylifecycle.c	3571	3602	PyOS_getsig	PyOS_getsig(int sig)	todo		
+Python/pylifecycle.c	3610	3635	PyOS_setsig	PyOS_setsig(int sig, PyOS_sighandler_t handler)	todo		

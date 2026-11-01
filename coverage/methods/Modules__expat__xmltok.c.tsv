@@ -1,0 +1,34 @@
+file	line	endline	name	signature	status	entry	note
+Modules/expat/xmltok.c	137	141	isNever	isNever(const ENCODING *enc, const char *p) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	144	147	utf8_isName2	utf8_isName2(const ENCODING *enc, const char *p) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	150	153	utf8_isName3	utf8_isName3(const ENCODING *enc, const char *p) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	158	161	utf8_isNmstrt2	utf8_isNmstrt2(const ENCODING *enc, const char *p) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	164	167	utf8_isNmstrt3	utf8_isNmstrt3(const ENCODING *enc, const char *p) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	172	175	utf8_isInvalid2	utf8_isInvalid2(const ENCODING *enc, const char *p) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	178	181	utf8_isInvalid3	utf8_isInvalid3(const ENCODING *enc, const char *p) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	184	187	utf8_isInvalid4	utf8_isInvalid4(const ENCODING *enc, const char *p) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	254	256	sb_byteType	sb_byteType(const ENCODING *enc, const char *p) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	265	268	sb_byteToAscii	sb_byteToAscii(const ENCODING *enc, const char *p) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	298	301	sb_charMatches	sb_charMatches(const ENCODING *enc, const char *p, int c) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	599	622	unicode_byte_type	unicode_byte_type(char hi, char lo) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	752	754	little2_byteType	little2_byteType(const ENCODING *enc, const char *p) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	757	760	little2_byteToAscii	little2_byteToAscii(const ENCODING *enc, const char *p) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	763	766	little2_charMatches	little2_charMatches(const ENCODING *enc, const char *p, int c) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	769	772	little2_isNameMin	little2_isNameMin(const ENCODING *enc, const char *p) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	775	778	little2_isNmstrtMin	little2_isNmstrtMin(const ENCODING *enc, const char *p) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	885	887	big2_byteType	big2_byteType(const ENCODING *enc, const char *p) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	890	893	big2_byteToAscii	big2_byteToAscii(const ENCODING *enc, const char *p) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	896	899	big2_charMatches	big2_charMatches(const ENCODING *enc, const char *p, int c) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	902	905	big2_isNameMin	big2_isNameMin(const ENCODING *enc, const char *p) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	908	911	big2_isNmstrtMin	big2_isNmstrtMin(const ENCODING *enc, const char *p) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	1009	1027	streqci	streqci(const char *s1, const char *s2) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	1037	1045	toAscii	toAscii(const ENCODING *enc, const char *ptr, const char *end) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	1048	1057	isSpace	isSpace(int c) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	1235	1256	checkCharRefNumber	checkCharRefNumber(int result) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	1259	1292	XmlUtf8Encode	XmlUtf8Encode(int c, char *buf) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	1295	1309	XmlUtf16Encode	XmlUtf16Encode(int charNum, unsigned short *buf) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	1322	1324	XmlSizeOfUnknownEncoding	XmlSizeOfUnknownEncoding(void) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	1327	1333	unknown_isName	unknown_isName(const ENCODING *enc, const char *p) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	1336	1342	unknown_isNmstrt	unknown_isNmstrt(const ENCODING *enc, const char *p) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	1345	1349	unknown_isInvalid	unknown_isInvalid(const ENCODING *enc, const char *p) {	excluded		vendored: third-party code
+Modules/expat/xmltok.c	1506	1517	getEncodingIndex	getEncodingIndex(const char *name) {	excluded		vendored: third-party code

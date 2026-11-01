@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Lib/encodings/utf_16_be.py	15	16	decode	decode(input, errors='strict')	todo		
+Lib/encodings/utf_16_be.py	19	20	IncrementalEncoder.encode	encode(self, input, final=False)	todo		
+Lib/encodings/utf_16_be.py	33	42	getregentry	getregentry()	todo		

@@ -1,0 +1,22 @@
+file	line	endline	name	signature	status	entry	note
+Lib/turtledemo/nim.py	28	29	randomrow	randomrow()	excluded		platform: GUI toolkit
+Lib/turtledemo/nim.py	31	39	computerzug	computerzug(state)	excluded		platform: GUI toolkit
+Lib/turtledemo/nim.py	41	48	randommove	randommove(state)	excluded		platform: GUI toolkit
+Lib/turtledemo/nim.py	52	53	NimModel.__init__	__init__(self, game)	excluded		platform: GUI toolkit
+Lib/turtledemo/nim.py	55	62	NimModel.setup	setup(self)	excluded		platform: GUI toolkit
+Lib/turtledemo/nim.py	64	76	NimModel.move	move(self, row, col)	excluded		platform: GUI toolkit
+Lib/turtledemo/nim.py	78	79	NimModel.game_over	game_over(self)	excluded		platform: GUI toolkit
+Lib/turtledemo/nim.py	81	84	NimModel.notify_move	notify_move(self, row, col)	excluded		platform: GUI toolkit
+Lib/turtledemo/nim.py	88	100	Stick.__init__	__init__(self, row, col, game)	excluded		platform: GUI toolkit
+Lib/turtledemo/nim.py	102	106	Stick.coords	coords(self, row, col)	excluded		platform: GUI toolkit
+Lib/turtledemo/nim.py	108	111	Stick.makemove	makemove(self, x, y)	excluded		platform: GUI toolkit
+Lib/turtledemo/nim.py	115	130	NimView.__init__	__init__(self, game)	excluded		platform: GUI toolkit
+Lib/turtledemo/nim.py	132	142	NimView.display	display(self, msg1, msg2=None)	excluded		platform: GUI toolkit
+Lib/turtledemo/nim.py	144	153	NimView.setup	setup(self)	excluded		platform: GUI toolkit
+Lib/turtledemo/nim.py	155	168	NimView.notify_move	notify_move(self, row, col, maxspalte, player)	excluded		platform: GUI toolkit
+Lib/turtledemo/nim.py	170	175	NimView.notify_over	notify_over(self)	excluded		platform: GUI toolkit
+Lib/turtledemo/nim.py	177	179	NimView.clear	clear(self)	excluded		platform: GUI toolkit
+Lib/turtledemo/nim.py	184	193	NimController.__init__	__init__(self, game)	excluded		platform: GUI toolkit
+Lib/turtledemo/nim.py	195	200	NimController.notify_move	notify_move(self, row, col)	excluded		platform: GUI toolkit
+Lib/turtledemo/nim.py	207	212	Nim.__init__	__init__(self, screen)	excluded		platform: GUI toolkit
+Lib/turtledemo/nim.py	215	220	main	main()	excluded		platform: GUI toolkit

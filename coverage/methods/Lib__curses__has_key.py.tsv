@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Lib/curses/has_key.py	162	176	has_key	has_key(ch)	todo		

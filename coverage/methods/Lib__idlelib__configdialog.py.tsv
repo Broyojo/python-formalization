@@ -1,0 +1,87 @@
+file	line	endline	name	signature	status	entry	note
+Lib/idlelib/configdialog.py	49	94	ConfigDialog.__init__	__init__(self, parent, title='', *, _htest=False, _utest=False)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	96	132	ConfigDialog.create_widgets	create_widgets(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	134	172	ConfigDialog.create_action_buttons	create_action_buttons(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	174	177	ConfigDialog.ok	ok(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	179	184	ConfigDialog.apply	apply(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	186	193	ConfigDialog.cancel	cancel(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	195	199	ConfigDialog.destroy	destroy(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	201	211	ConfigDialog.help	help(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	213	216	ConfigDialog.deactivate_current_config	deactivate_current_config(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	218	232	ConfigDialog.activate_config_changes	activate_config_changes(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	283	287	FontPage.__init__	__init__(self, master, highpage)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	289	376	FontPage.create_page_font	create_page_font(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	378	410	FontPage.load_font_cfg	load_font_cfg(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	412	425	FontPage.var_changed_font	var_changed_font(self, *params)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	427	435	FontPage.on_fontlist_select	on_fontlist_select(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	437	448	FontPage.set_samples	set_samples(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	453	459	HighPage.__init__	__init__(self, master, extpage)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	461	714	HighPage.create_page_highlight	create_page_highlight(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	716	765	HighPage.load_theme_cfg	load_theme_cfg(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	767	784	HighPage.var_changed_builtin_name	var_changed_builtin_name(self, *params)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	786	795	HighPage.var_changed_custom_name	var_changed_custom_name(self, *params)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	797	808	HighPage.var_changed_theme_source	var_changed_theme_source(self, *params)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	810	812	HighPage.var_changed_color	var_changed_color(self, *params)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	814	816	HighPage.var_changed_highlight_target	var_changed_highlight_target(self, *params)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	818	844	HighPage.set_theme_type	set_theme_type(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	846	882	HighPage.get_color	get_color(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	884	893	HighPage.on_new_color_set	on_new_color_set(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	895	901	HighPage.get_new_theme_name	get_new_theme_name(self, message)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	903	912	HighPage.save_as_new_theme	save_as_new_theme(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	914	952	HighPage.create_new	create_new(self, new_theme_name)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	954	980	HighPage.set_highlight_target	set_highlight_target(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	982	988	HighPage.set_color_sample_binding	set_color_sample_binding(self, *args)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	990	1006	HighPage.set_color_sample	set_color_sample(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1008	1046	HighPage.paint_theme_sample	paint_theme_sample(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1048	1057	HighPage.save_new	save_new(self, theme_name, theme)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1059	1061	HighPage.askyesno	askyesno(self, *args, **kwargs)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1063	1108	HighPage.delete_custom	delete_custom(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1113	1118	KeysPage.__init__	__init__(self, master, extpage)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1120	1278	KeysPage.create_page_keys	create_page_keys(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1280	1309	KeysPage.load_key_cfg	load_key_cfg(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1311	1329	KeysPage.var_changed_builtin_name	var_changed_builtin_name(self, *params)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1331	1336	KeysPage.var_changed_custom_name	var_changed_custom_name(self, *params)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1338	1345	KeysPage.var_changed_keyset_source	var_changed_keyset_source(self, *params)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1347	1357	KeysPage.var_changed_keybinding	var_changed_keybinding(self, *params)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1359	1369	KeysPage.set_keys_type	set_keys_type(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1371	1413	KeysPage.get_new_keys	get_new_keys(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1415	1421	KeysPage.get_new_keys_name	get_new_keys_name(self, message)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1423	1427	KeysPage.save_as_new_key_set	save_as_new_key_set(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1429	1431	KeysPage.on_bindingslist_select	on_bindingslist_select(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1433	1461	KeysPage.create_new_key_set	create_new_key_set(self, new_key_set_name)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1463	1488	KeysPage.load_keys_list	load_keys_list(self, keyset_name)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1491	1504	KeysPage.save_new_key_set	save_new_key_set(keyset_name, keyset)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1506	1508	KeysPage.askyesno	askyesno(self, *args, **kwargs)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1510	1542	KeysPage.delete_custom_keys	delete_custom_keys(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1547	1552	WinPage.__init__	__init__(self, master)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1554	1559	WinPage.init_validators	init_validators(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1561	1729	WinPage.create_page_windows	create_page_windows(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1731	1752	WinPage.load_windows_cfg	load_windows_cfg(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1757	1762	ShedPage.__init__	__init__(self, master)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1764	1769	ShedPage.init_validators	init_validators(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1771	1873	ShedPage.create_page_shed	create_page_shed(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1875	1885	ShedPage.load_shelled_cfg	load_shelled_cfg(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1889	1895	ExtPage.__init__	__init__(self, master)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1897	1958	ExtPage.create_page_extensions	create_page_extensions(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	1960	2011	ExtPage.load_extensions	load_extensions(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	2013	2026	ExtPage.extension_selected	extension_selected(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	2028	2052	ExtPage.create_extension_frame	create_extension_frame(self, ext_name)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	2054	2070	ExtPage.set_extension_value	set_extension_value(self, section, opt)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	2072	2088	ExtPage.save_all_changed_extensions	save_all_changed_extensions(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	2093	2096	HelpFrame.__init__	__init__(self, master, **cfg)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	2098	2146	HelpFrame.create_frame_help	create_frame_help(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	2148	2150	HelpFrame.help_source_selected	help_source_selected(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	2152	2163	HelpFrame.set_add_delete_state	set_add_delete_state(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	2165	2175	HelpFrame.helplist_item_add	helplist_item_add(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	2177	2195	HelpFrame.helplist_item_edit	helplist_item_edit(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	2197	2206	HelpFrame.helplist_item_remove	helplist_item_remove(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	2208	2214	HelpFrame.update_help_changes	update_help_changes(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	2216	2222	HelpFrame.load_helplist	load_helplist(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	2228	2238	VarTrace.__init__	__init__(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	2240	2244	VarTrace.clear	clear(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	2246	2261	VarTrace.add	add(self, var, callback)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	2264	2273	VarTrace.make_callback	make_callback(var, config)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	2275	2280	VarTrace.attach	attach(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	2282	2287	VarTrace.detach	detach(self)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	2361	2369	is_int	is_int(s)	excluded		platform: GUI toolkit
+Lib/idlelib/configdialog.py	2379	2412	VerticalScrolledFrame.__init__	__init__(self, parent, *args, **kw)	excluded		platform: GUI toolkit

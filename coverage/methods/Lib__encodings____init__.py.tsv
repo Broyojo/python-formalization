@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Lib/encodings/__init__.py	44	70	normalize_encoding	normalize_encoding(encoding)	todo		
+Lib/encodings/__init__.py	72	158	search_function	search_function(encoding)	todo		
+Lib/encodings/__init__.py	166	180	win32_code_page_search_function	win32_code_page_search_function(encoding)	todo		

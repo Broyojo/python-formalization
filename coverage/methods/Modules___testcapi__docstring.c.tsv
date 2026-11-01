@@ -1,0 +1,3 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/docstring.c	62	65	test_with_docstring	test_with_docstring(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/docstring.c	192	207	_PyTestCapi_Init_Docstring	_PyTestCapi_Init_Docstring(PyObject *mod)	excluded		test-support: only for CPython's own tests

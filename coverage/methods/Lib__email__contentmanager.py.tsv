@@ -1,0 +1,18 @@
+file	line	endline	name	signature	status	entry	note
+Lib/email/contentmanager.py	10	12	ContentManager.__init__	__init__(self)	todo		
+Lib/email/contentmanager.py	14	15	ContentManager.add_get_handler	add_get_handler(self, key, handler)	todo		
+Lib/email/contentmanager.py	17	26	ContentManager.get_content	get_content(self, msg, *args, **kw)	todo		
+Lib/email/contentmanager.py	28	29	ContentManager.add_set_handler	add_set_handler(self, typekey, handler)	todo		
+Lib/email/contentmanager.py	31	38	ContentManager.set_content	set_content(self, msg, obj, *args, **kw)	todo		
+Lib/email/contentmanager.py	40	59	ContentManager._find_set_handler	_find_set_handler(self, msg, obj)	todo		
+Lib/email/contentmanager.py	65	68	get_text_content	get_text_content(msg, errors='replace')	todo		
+Lib/email/contentmanager.py	72	73	get_non_text_content	get_non_text_content(msg)	todo		
+Lib/email/contentmanager.py	79	80	get_message_content	get_message_content(msg)	todo		
+Lib/email/contentmanager.py	86	93	get_and_fixup_unknown_message_content	get_and_fixup_unknown_message_content(msg)	todo		
+Lib/email/contentmanager.py	98	112	_prepare_set	_prepare_set(msg, maintype, subtype, headers)	todo		
+Lib/email/contentmanager.py	115	129	_finalize_set	_finalize_set(msg, disposition, filename, cid, params)	todo		
+Lib/email/contentmanager.py	136	142	_encode_base64	_encode_base64(data, max_line_length)	todo		
+Lib/email/contentmanager.py	145	182	_encode_text	_encode_text(string, charset, cte, policy)	todo		
+Lib/email/contentmanager.py	185	195	set_text_content	set_text_content(msg, string, subtype='plain', charset='utf-8', cte=None, disposition=None, filename=None, cid=None, params=None, headers=None)	todo		
+Lib/email/contentmanager.py	199	228	set_message_content	set_message_content(msg, message, subtype='rfc822', cte=None, disposition=None, filename=None, cid=None, params=None, headers=None)	todo		
+Lib/email/contentmanager.py	232	250	set_bytes_content	set_bytes_content(msg, data, maintype, subtype, cte='base64', disposition=None, filename=None, cid=None, params=None, headers=None)	todo		

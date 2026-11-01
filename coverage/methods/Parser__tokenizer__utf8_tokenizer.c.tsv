@@ -1,0 +1,3 @@
+file	line	endline	name	signature	status	entry	note
+Parser/tokenizer/utf8_tokenizer.c	8	27	tok_underflow_string	tok_underflow_string(struct tok_state *tok) {	todo		
+Parser/tokenizer/utf8_tokenizer.c	31	55	_PyTokenizer_FromUTF8	_PyTokenizer_FromUTF8(const char *str, int exec_input, int preserve_crlf)	todo		

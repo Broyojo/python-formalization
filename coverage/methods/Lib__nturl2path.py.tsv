@@ -1,0 +1,3 @@
+file	line	endline	name	signature	status	entry	note
+Lib/nturl2path.py	16	43	url2pathname	url2pathname(url)	todo		
+Lib/nturl2path.py	45	74	pathname2url	pathname2url(p)	todo		

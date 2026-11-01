@@ -1,0 +1,12 @@
+file	line	endline	name	signature	status	entry	note
+Lib/idlelib/calltip_w.py	22	33	CalltipWindow.__init__	__init__(self, text_widget)	excluded		platform: GUI toolkit
+Lib/idlelib/calltip_w.py	35	48	CalltipWindow.get_position	get_position(self)	excluded		platform: GUI toolkit
+Lib/idlelib/calltip_w.py	50	57	CalltipWindow.position_window	position_window(self)	excluded		platform: GUI toolkit
+Lib/idlelib/calltip_w.py	59	78	CalltipWindow.showtip	showtip(self, text, parenleft, parenright)	excluded		platform: GUI toolkit
+Lib/idlelib/calltip_w.py	80	86	CalltipWindow.showcontents	showcontents(self)	excluded		platform: GUI toolkit
+Lib/idlelib/calltip_w.py	88	113	CalltipWindow.checkhide_event	checkhide_event(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/calltip_w.py	115	121	CalltipWindow.hide_event	hide_event(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/calltip_w.py	123	146	CalltipWindow.hidetip	hidetip(self)	excluded		platform: GUI toolkit
+Lib/idlelib/calltip_w.py	148	158	CalltipWindow._bind_events	_bind_events(self)	excluded		platform: GUI toolkit
+Lib/idlelib/calltip_w.py	160	169	CalltipWindow._unbind_events	_unbind_events(self)	excluded		platform: GUI toolkit
+Lib/idlelib/calltip_w.py	172	194	_calltip_window	_calltip_window(parent)	excluded		platform: GUI toolkit

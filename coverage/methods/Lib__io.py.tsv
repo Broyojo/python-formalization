@@ -1,0 +1,5 @@
+file	line	endline	name	signature	status	entry	note
+Lib/io.py	116	121	Reader.read	read(self, size=..., /)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/io.py	124	127	Reader.__subclasshook__	__subclasshook__(cls, C)	todo		
+Lib/io.py	141	142	Writer.write	write(self, data, /)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/io.py	145	148	Writer.__subclasshook__	__subclasshook__(cls, C)	todo		

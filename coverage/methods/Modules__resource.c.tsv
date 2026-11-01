@@ -1,0 +1,16 @@
+file	line	endline	name	signature	status	entry	note
+Modules/resource.c	83	88	get_resource_state	get_resource_state(PyObject *module)	todo		
+Modules/resource.c	102	148	resource_getrusage_impl	resource_getrusage_impl(PyObject *module, int who) /*[clinic end generated code: output=8fad2880ba6a9843 input=5c857bcc5b9ccb1b]*/	todo		
+Modules/resource.c	152	178	py2rlim	py2rlim(PyObject *obj, rlim_t *out)	todo		
+Modules/resource.c	181	208	py2rlimit	py2rlimit(PyObject *limits, struct rlimit *rl_out)	todo		
+Modules/resource.c	211	217	rlim2py	rlim2py(rlim_t value)	todo		
+Modules/resource.c	220	228	rlimit2py	rlimit2py(struct rlimit rl)	todo		
+Modules/resource.c	239	255	resource_getrlimit_impl	resource_getrlimit_impl(PyObject *module, int resource) /*[clinic end generated code: output=98327b25061ffe39 input=a697cb0004cb3c36]*/	todo		
+Modules/resource.c	267	299	resource_setrlimit_impl	resource_setrlimit_impl(PyObject *module, int resource, PyObject *limits) /*[clinic end generated code: output=4e82ec3f34d013d1 input=6235a6ce23b4ca75]*/	todo		
+Modules/resource.c	313	351	resource_prlimit_impl	resource_prlimit_impl(PyObject *module, pid_t pid, int resource, PyObject *limits) /*[clinic end generated code: output=6ebc49ff8c3a816e input=54bb69c9585e33bf]*/	todo		
+Modules/resource.c	359	371	resource_getpagesize_impl	resource_getpagesize_impl(PyObject *module) /*[clinic end generated code: output=9ba93eb0f3d6c3a9 input=546545e8c1f42085]*/	todo		
+Modules/resource.c	389	527	resource_exec	resource_exec(PyObject *module)	todo		
+Modules/resource.c	537	540	resourcemodule_traverse	resourcemodule_traverse(PyObject *m, visitproc visit, void *arg) {	todo		
+Modules/resource.c	543	546	resourcemodule_clear	resourcemodule_clear(PyObject *m) {	todo		
+Modules/resource.c	549	551	resourcemodule_free	resourcemodule_free(void *m) {	todo		
+Modules/resource.c	565	568	PyInit_resource	PyInit_resource(void)	todo		

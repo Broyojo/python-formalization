@@ -1,0 +1,53 @@
+file	line	endline	name	signature	status	entry	note
+Lib/asyncio/tasks.py	37	41	current_task	current_task(loop=None)	todo		
+Lib/asyncio/tasks.py	44	53	all_tasks	all_tasks(loop=None)	todo		
+Lib/asyncio/tasks.py	84	113	Task.__init__	__init__(self, coro, *, loop=None, name=None, context=None, eager_start=False)	todo		
+Lib/asyncio/tasks.py	115	124	Task.__del__	__del__(self)	todo		
+Lib/asyncio/tasks.py	128	129	Task.__repr__	__repr__(self)	todo		
+Lib/asyncio/tasks.py	131	132	Task.get_coro	get_coro(self)	todo		
+Lib/asyncio/tasks.py	134	135	Task.get_context	get_context(self)	todo		
+Lib/asyncio/tasks.py	137	138	Task.get_name	get_name(self)	todo		
+Lib/asyncio/tasks.py	140	141	Task.set_name	set_name(self, value)	todo		
+Lib/asyncio/tasks.py	143	144	Task.set_result	set_result(self, result)	todo		
+Lib/asyncio/tasks.py	146	147	Task.set_exception	set_exception(self, exception)	todo		
+Lib/asyncio/tasks.py	149	170	Task.get_stack	get_stack(self, *, limit=None)	todo		
+Lib/asyncio/tasks.py	172	181	Task.print_stack	print_stack(self, *, limit=None, file=None)	todo		
+Lib/asyncio/tasks.py	183	223	Task.cancel	cancel(self, msg=None)	todo		
+Lib/asyncio/tasks.py	225	231	Task.cancelling	cancelling(self)	todo		
+Lib/asyncio/tasks.py	233	245	Task.uncancel	uncancel(self)	todo		
+Lib/asyncio/tasks.py	247	264	Task.__eager_start	__eager_start(self)	todo		
+Lib/asyncio/tasks.py	266	281	Task.__step	__step(self, exc=None)	todo		
+Lib/asyncio/tasks.py	283	357	Task.__step_run_and_handle_result	__step_run_and_handle_result(self, exc)	todo		
+Lib/asyncio/tasks.py	359	374	Task.__wakeup	__wakeup(self, future)	todo		
+Lib/asyncio/tasks.py	389	395	create_task	create_task(coro, **kwargs)	todo		
+Lib/asyncio/tasks.py	405	432	wait	wait(fs, *, timeout=None, return_when=ALL_COMPLETED)	todo		
+Lib/asyncio/tasks.py	435	437	_release_waiter	_release_waiter(waiter, *args)	todo		
+Lib/asyncio/tasks.py	440	488	wait_for	wait_for(fut, timeout)	todo		
+Lib/asyncio/tasks.py	490	535	_wait	_wait(fs, timeout, return_when, loop)	todo		
+Lib/asyncio/tasks.py	538	552	_cancel_and_wait	_cancel_and_wait(fut)	todo		
+Lib/asyncio/tasks.py	562	575	_AsCompletedIterator.__init__	__init__(self, aws, timeout)	todo		
+Lib/asyncio/tasks.py	577	578	_AsCompletedIterator.__aiter__	__aiter__(self)	todo		
+Lib/asyncio/tasks.py	580	581	_AsCompletedIterator.__iter__	__iter__(self)	todo		
+Lib/asyncio/tasks.py	583	588	_AsCompletedIterator.__anext__	__anext__(self)	todo		
+Lib/asyncio/tasks.py	590	595	_AsCompletedIterator.__next__	__next__(self)	todo		
+Lib/asyncio/tasks.py	597	601	_AsCompletedIterator._handle_timeout	_handle_timeout(self)	todo		
+Lib/asyncio/tasks.py	603	609	_AsCompletedIterator._handle_completion	_handle_completion(self, f)	todo		
+Lib/asyncio/tasks.py	611	619	_AsCompletedIterator._wait_for_one	_wait_for_one(self, resolve=False)	todo		
+Lib/asyncio/tasks.py	622	675	as_completed	as_completed(fs, *, timeout=None)	todo		
+Lib/asyncio/tasks.py	679	687	__sleep0	__sleep0()	todo		
+Lib/asyncio/tasks.py	690	707	sleep	sleep(delay, result=None)	todo		
+Lib/asyncio/tasks.py	710	739	ensure_future	ensure_future(coro_or_future, *, loop=None)	todo		
+Lib/asyncio/tasks.py	750	754	_GatheringFuture.__init__	__init__(self, children, *, loop)	todo		
+Lib/asyncio/tasks.py	756	768	_GatheringFuture.cancel	cancel(self, msg=None)	todo		
+Lib/asyncio/tasks.py	771	911	gather	gather(*coros_or_futures, return_exceptions=False)	todo		
+Lib/asyncio/tasks.py	914	930	_log_on_exception	_log_on_exception(fut)	todo		
+Lib/asyncio/tasks.py	933	1007	shield	shield(arg)	todo		
+Lib/asyncio/tasks.py	1010	1030	run_coroutine_threadsafe	run_coroutine_threadsafe(coro, loop)	todo		
+Lib/asyncio/tasks.py	1033	1057	create_eager_task_factory	create_eager_task_factory(custom_task_constructor)	todo		
+Lib/asyncio/tasks.py	1074	1076	_register_task	_register_task(task)	todo		
+Lib/asyncio/tasks.py	1079	1081	_register_eager_task	_register_eager_task(task)	todo		
+Lib/asyncio/tasks.py	1084	1089	_enter_task	_enter_task(loop, task)	todo		
+Lib/asyncio/tasks.py	1092	1097	_leave_task	_leave_task(loop, task)	todo		
+Lib/asyncio/tasks.py	1100	1106	_swap_current_task	_swap_current_task(loop, task)	todo		
+Lib/asyncio/tasks.py	1109	1111	_unregister_task	_unregister_task(task)	todo		
+Lib/asyncio/tasks.py	1114	1116	_unregister_eager_task	_unregister_eager_task(task)	todo		

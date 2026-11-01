@@ -1,0 +1,66 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_zoneinfo.c	201	206	zoneinfo_get_state	zoneinfo_get_state(PyObject *mod)	todo		
+Modules/_zoneinfo.c	209	214	zoneinfo_get_state_by_cls	zoneinfo_get_state_by_cls(PyTypeObject *cls)	todo		
+Modules/_zoneinfo.c	219	224	zoneinfo_get_state_by_self	zoneinfo_get_state_by_self(PyTypeObject *self)	todo		
+Modules/_zoneinfo.c	227	290	zoneinfo_new_instance	zoneinfo_new_instance(zoneinfo_state *state, PyTypeObject *type, PyObject *key)	todo		
+Modules/_zoneinfo.c	293	302	get_weak_cache	get_weak_cache(zoneinfo_state *state, PyTypeObject *type)	todo		
+Modules/_zoneinfo.c	315	364	zoneinfo_ZoneInfo_impl	zoneinfo_ZoneInfo_impl(PyTypeObject *type, PyObject *key) /*[clinic end generated code: output=95e61dab86bb95c3 input=ef73d7a83bf8790e]*/	todo		
+Modules/_zoneinfo.c	367	373	zoneinfo_traverse	zoneinfo_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_zoneinfo.c	376	382	zoneinfo_clear	zoneinfo_clear(PyObject *op)	todo		
+Modules/_zoneinfo.c	385	419	zoneinfo_dealloc	zoneinfo_dealloc(PyObject *obj_self)	todo		
+Modules/_zoneinfo.c	434	466	zoneinfo_ZoneInfo_from_file_impl	zoneinfo_ZoneInfo_from_file_impl(PyTypeObject *type, PyTypeObject *cls, PyObject *file_obj, PyObject *key) /*[clinic end generated code: output=77887d1d56a48324 input=d26111f29eed6863]*/	todo		
+Modules/_zoneinfo.c	480	491	zoneinfo_ZoneInfo_no_cache_impl	zoneinfo_ZoneInfo_no_cache_impl(PyTypeObject *type, PyTypeObject *cls, PyObject *key) /*[clinic end generated code: output=b0b09b3344c171b7 input=0238f3d56b1ea3f1]*/	todo		
+Modules/_zoneinfo.c	507	567	zoneinfo_ZoneInfo_clear_cache_impl	zoneinfo_ZoneInfo_clear_cache_impl(PyTypeObject *type, PyTypeObject *cls, PyObject *only_keys) /*[clinic end generated code: output=114d9b7c8a22e660 input=35944715df26d24e]*/	todo		
+Modules/_zoneinfo.c	580	590	zoneinfo_ZoneInfo_utcoffset_impl	zoneinfo_ZoneInfo_utcoffset_impl(PyObject *self, PyTypeObject *cls, PyObject *dt) /*[clinic end generated code: output=b71016c319ba1f91 input=2bb6c5364938f19c]*/	todo		
+Modules/_zoneinfo.c	603	612	zoneinfo_ZoneInfo_dst_impl	zoneinfo_ZoneInfo_dst_impl(PyObject *self, PyTypeObject *cls, PyObject *dt) /*[clinic end generated code: output=cb6168d7723a6ae6 input=2167fb80cf8645c6]*/	todo		
+Modules/_zoneinfo.c	625	635	zoneinfo_ZoneInfo_tzname_impl	zoneinfo_ZoneInfo_tzname_impl(PyObject *self, PyTypeObject *cls, PyObject *dt) /*[clinic end generated code: output=3b6ae6c3053ea75a input=15a59a4f92ed1f1f]*/	todo		
+Modules/_zoneinfo.c	640	760	zoneinfo_fromutc	zoneinfo_fromutc(PyObject *obj_self, PyObject *dt)	todo		
+Modules/_zoneinfo.c	763	771	zoneinfo_repr	zoneinfo_repr(PyObject *op)	todo		
+Modules/_zoneinfo.c	774	781	zoneinfo_str	zoneinfo_str(PyObject *op)	todo		
+Modules/_zoneinfo.c	796	823	zoneinfo_reduce	zoneinfo_reduce(PyObject *obj_self, PyObject *Py_UNUSED(dummy))	todo		
+Modules/_zoneinfo.c	838	853	zoneinfo_ZoneInfo__unpickle_impl	zoneinfo_ZoneInfo__unpickle_impl(PyTypeObject *type, PyTypeObject *cls, PyObject *key, unsigned char from_cache) /*[clinic end generated code: output=556712fc709deecb input=6ac8c73eed3de316]*/	todo		
+Modules/_zoneinfo.c	869	888	load_timedelta	load_timedelta(zoneinfo_state *state, long seconds)	todo		
+Modules/_zoneinfo.c	895	916	build_ttinfo	build_ttinfo(zoneinfo_state *state, long utcoffset, long dstoffset, PyObject *tzname, _ttinfo *out)	todo		
+Modules/_zoneinfo.c	920	927	xdecref_ttinfo	xdecref_ttinfo(_ttinfo *ttinfo)	todo		
+Modules/_zoneinfo.c	931	950	ttinfo_eq	ttinfo_eq(const _ttinfo *const tti0, const _ttinfo *const tti1)	todo		
+Modules/_zoneinfo.c	964	1300	load_data	load_data(zoneinfo_state *state, PyZoneInfo_ZoneInfo *self, PyObject *file_obj)	todo		
+Modules/_zoneinfo.c	1304	1347	calendarrule_year_to_timestamp	calendarrule_year_to_timestamp(TransitionRuleType *base_self, int year)	todo		
+Modules/_zoneinfo.c	1351	1395	calendarrule_new	calendarrule_new(int month, int week, int day, int hour, int minute, int second, CalendarRule *out)	todo		
+Modules/_zoneinfo.c	1404	1437	dayrule_year_to_timestamp	dayrule_year_to_timestamp(TransitionRuleType *base_self, int year)	todo		
+Modules/_zoneinfo.c	1441	1474	dayrule_new	dayrule_new(int julian, int day, int hour, int minute, int second, DayRule *out)	todo		
+Modules/_zoneinfo.c	1478	1484	tzrule_transitions	tzrule_transitions(_tzrule *rule, int year, int64_t *start, int64_t *end)	todo		
+Modules/_zoneinfo.c	1495	1534	find_tzrule_ttinfo	find_tzrule_ttinfo(_tzrule *rule, int64_t ts, unsigned char fold, int year)	todo		
+Modules/_zoneinfo.c	1548	1590	find_tzrule_ttinfo_fromutc	find_tzrule_ttinfo_fromutc(_tzrule *rule, int64_t ts, int year, unsigned char *fold)	todo		
+Modules/_zoneinfo.c	1608	1715	parse_tz_str	parse_tz_str(zoneinfo_state *state, PyObject *tz_str_obj, _tzrule *out)	todo		
+Modules/_zoneinfo.c	1718	1730	parse_digits	parse_digits(const char **p, int min, int max, int *value)	todo		
+Modules/_zoneinfo.c	1734	1790	parse_abbr	parse_abbr(const char **p, PyObject **abbr)	todo		
+Modules/_zoneinfo.c	1794	1828	parse_tz_delta	parse_tz_delta(const char **p, long *total_seconds)	todo		
+Modules/_zoneinfo.c	1832	1929	parse_transition_rule	parse_transition_rule(const char **p, TransitionRuleType **out)	todo		
+Modules/_zoneinfo.c	1933	1981	parse_transition_time	parse_transition_time(const char **p, int *hour, int *minute, int *second)	todo		
+Modules/_zoneinfo.c	1992	2022	build_tzrule	build_tzrule(zoneinfo_state *state, PyObject *std_abbr, PyObject *dst_abbr, long std_offset, long dst_offset, TransitionRuleType *start, TransitionRuleType *end, _tzrule *out)	todo		
+Modules/_zoneinfo.c	2026	2040	free_tzrule	free_tzrule(_tzrule *tzrule)	todo		
+Modules/_zoneinfo.c	2054	2113	utcoff_to_dstoff	utcoff_to_dstoff(size_t *trans_idx, long *utcoffs, long *dstoffs, unsigned char *isdsts, size_t num_transitions, size_t num_ttinfos)	todo		
+Modules/_zoneinfo.c	2138	2187	ts_to_local	ts_to_local(size_t *trans_idx, int64_t *trans_utc, long *utcoff, int64_t *trans_local[2], size_t num_ttinfos, size_t num_transitions)	todo		
+Modules/_zoneinfo.c	2191	2208	_bisect	_bisect(const int64_t value, const int64_t *arr, size_t size)	todo		
+Modules/_zoneinfo.c	2212	2247	find_ttinfo	find_ttinfo(zoneinfo_state *state, PyZoneInfo_ZoneInfo *self, PyObject *dt)	todo		
+Modules/_zoneinfo.c	2250	2254	is_leap_year	is_leap_year(int year)	todo		
+Modules/_zoneinfo.c	2258	2268	ymd_to_ord	ymd_to_ord(int y, int m, int d)	todo		candidates:datetime-ordinal-roundtrip
+Modules/_zoneinfo.c	2277	2340	get_local_timestamp	get_local_timestamp(PyObject *dt, int64_t *local_ts)	todo		
+Modules/_zoneinfo.c	2352	2365	strong_cache_node_new	strong_cache_node_new(PyObject *key, PyObject *zone)	todo		
+Modules/_zoneinfo.c	2369	2375	strong_cache_node_free	strong_cache_node_free(StrongCacheNode *node)	todo		
+Modules/_zoneinfo.c	2384	2394	strong_cache_free	strong_cache_free(StrongCacheNode *root)	todo		
+Modules/_zoneinfo.c	2402	2419	remove_from_strong_cache	remove_from_strong_cache(zoneinfo_state *state, StrongCacheNode *node)	todo		
+Modules/_zoneinfo.c	2429	2445	find_in_strong_cache	find_in_strong_cache(const StrongCacheNode *const root, PyObject *const key)	todo		
+Modules/_zoneinfo.c	2452	2471	eject_from_strong_cache	eject_from_strong_cache(zoneinfo_state *state, const PyTypeObject *const type, PyObject *key)	todo		
+Modules/_zoneinfo.c	2479	2497	move_strong_cache_node_to_front	move_strong_cache_node_to_front(zoneinfo_state *state, StrongCacheNode **root, StrongCacheNode *node)	todo		
+Modules/_zoneinfo.c	2509	2527	zone_from_strong_cache	zone_from_strong_cache(zoneinfo_state *state, const PyTypeObject *const type, PyObject *const key)	todo		
+Modules/_zoneinfo.c	2536	2566	update_strong_cache	update_strong_cache(zoneinfo_state *state, const PyTypeObject *const type, PyObject *key, PyObject *zone)	todo		
+Modules/_zoneinfo.c	2574	2582	clear_strong_cache	clear_strong_cache(zoneinfo_state *state, const PyTypeObject *const type)	todo		
+Modules/_zoneinfo.c	2585	2595	new_weak_cache	new_weak_cache(void)	todo		
+Modules/_zoneinfo.c	2599	2612	initialize_caches	initialize_caches(zoneinfo_state *state)	todo		
+Modules/_zoneinfo.c	2615	2629	zoneinfo_init_subclass	zoneinfo_init_subclass(PyObject *cls, PyObject *args, PyObject *kwargs)	todo		
+Modules/_zoneinfo.c	2691	2715	module_traverse	module_traverse(PyObject *mod, visitproc visit, void *arg)	todo		
+Modules/_zoneinfo.c	2718	2734	module_clear	module_clear(PyObject *mod)	todo		
+Modules/_zoneinfo.c	2737	2740	module_free	module_free(void *mod)	todo		
+Modules/_zoneinfo.c	2743	2795	zoneinfomodule_exec	zoneinfomodule_exec(PyObject *m)	todo		
+Modules/_zoneinfo.c	2817	2820	PyInit__zoneinfo	PyInit__zoneinfo(void)	todo		

@@ -1,0 +1,48 @@
+file	line	endline	name	signature	status	entry	note
+Lib/smtplib.py	97	100	SMTPResponseException.__init__	__init__(self, code, msg)	todo		
+Lib/smtplib.py	109	113	SMTPSenderRefused.__init__	__init__(self, code, msg, sender)	todo		
+Lib/smtplib.py	123	125	SMTPRecipientsRefused.__init__	__init__(self, recipients)	todo		
+Lib/smtplib.py	144	155	quoteaddr	quoteaddr(addrstring)	todo		
+Lib/smtplib.py	157	162	_addr_only	_addr_only(addrstring)	todo		
+Lib/smtplib.py	165	172	quotedata	quotedata(data)	todo		
+Lib/smtplib.py	174	175	_quote_periods	_quote_periods(bindata)	todo		
+Lib/smtplib.py	177	178	_fix_eols	_fix_eols(data)	todo		
+Lib/smtplib.py	236	281	SMTP.__init__	__init__(self, host='', port=0, local_hostname=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, source_address=None)	todo		
+Lib/smtplib.py	283	284	SMTP.__enter__	__enter__(self)	todo		
+Lib/smtplib.py	286	294	SMTP.__exit__	__exit__(self, *args)	todo		
+Lib/smtplib.py	296	303	SMTP.set_debuglevel	set_debuglevel(self, debuglevel)	todo		
+Lib/smtplib.py	305	309	SMTP._print_debug	_print_debug(self, *args)	todo		
+Lib/smtplib.py	311	319	SMTP._get_socket	_get_socket(self, host, port, timeout)	todo		
+Lib/smtplib.py	321	353	SMTP.connect	connect(self, host='localhost', port=0, source_address=None)	todo		
+Lib/smtplib.py	355	372	SMTP.send	send(self, s)	todo		
+Lib/smtplib.py	374	385	SMTP.putcmd	putcmd(self, cmd, args='')	todo		
+Lib/smtplib.py	387	434	SMTP.getreply	getreply(self)	todo		
+Lib/smtplib.py	436	439	SMTP.docmd	docmd(self, cmd, args='')	todo		
+Lib/smtplib.py	442	450	SMTP.helo	helo(self, name='')	todo		
+Lib/smtplib.py	452	501	SMTP.ehlo	ehlo(self, name='')	todo		
+Lib/smtplib.py	503	505	SMTP.has_extn	has_extn(self, opt)	todo		
+Lib/smtplib.py	507	511	SMTP.help	help(self, args='')	todo		
+Lib/smtplib.py	513	516	SMTP.rset	rset(self)	todo		
+Lib/smtplib.py	518	528	SMTP._rset	_rset(self)	todo		
+Lib/smtplib.py	530	532	SMTP.noop	noop(self)	todo		
+Lib/smtplib.py	534	553	SMTP.mail	mail(self, sender, options=())	todo		
+Lib/smtplib.py	555	561	SMTP.rcpt	rcpt(self, recip, options=())	todo		
+Lib/smtplib.py	563	590	SMTP.data	data(self, msg)	todo		
+Lib/smtplib.py	592	595	SMTP.verify	verify(self, address)	todo		
+Lib/smtplib.py	599	602	SMTP.expn	expn(self, address)	todo		
+Lib/smtplib.py	606	621	SMTP.ehlo_or_helo_if_needed	ehlo_or_helo_if_needed(self)	todo		
+Lib/smtplib.py	623	669	SMTP.auth	auth(self, mechanism, authobject, *, initial_response_ok=True)	todo		
+Lib/smtplib.py	671	681	SMTP.auth_cram_md5	auth_cram_md5(self, challenge=None)	todo		
+Lib/smtplib.py	683	686	SMTP.auth_plain	auth_plain(self, challenge=None)	todo		
+Lib/smtplib.py	688	694	SMTP.auth_login	auth_login(self, challenge=None)	todo		
+Lib/smtplib.py	696	762	SMTP.login	login(self, user, password, *, initial_response_ok=True)	todo		
+Lib/smtplib.py	764	807	SMTP.starttls	starttls(self, *, context=None)	todo		
+Lib/smtplib.py	809	911	SMTP.sendmail	sendmail(self, from_addr, to_addrs, msg, mail_options=(), rcpt_options=())	todo		
+Lib/smtplib.py	913	988	SMTP.send_message	send_message(self, msg, from_addr=None, to_addrs=None, mail_options=(), rcpt_options=())	todo		
+Lib/smtplib.py	990	1001	SMTP.close	close(self)	todo		
+Lib/smtplib.py	1003	1011	SMTP.quit	quit(self)	todo		
+Lib/smtplib.py	1028	1035	SMTP_SSL.__init__	__init__(self, host='', port=0, local_hostname=None, *, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, source_address=None, context=None)	todo		
+Lib/smtplib.py	1037	1043	SMTP_SSL._get_socket	_get_socket(self, host, port, timeout)	todo		
+Lib/smtplib.py	1068	1072	LMTP.__init__	__init__(self, host='', port=LMTP_PORT, local_hostname=None, source_address=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT)	todo		
+Lib/smtplib.py	1074	1099	LMTP.connect	connect(self, host='localhost', port=0, source_address=None)	todo		
+Lib/smtplib.py	1105	1108	prompt	prompt(prompt)	todo		

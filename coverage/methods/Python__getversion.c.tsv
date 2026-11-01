@@ -1,0 +1,3 @@
+file	line	endline	name	signature	status	entry	note
+Python/getversion.c	11	24	_Py_InitVersion	void _Py_InitVersion(void)	todo		
+Python/getversion.c	27	31	Py_GetVersion	Py_GetVersion(void)	todo		

@@ -1,0 +1,8 @@
+file	line	endline	name	signature	status	entry	note
+Lib/turtledemo/minimal_hanoi.py	17	22	Disc.__init__	__init__(self, n)	excluded		platform: GUI toolkit
+Lib/turtledemo/minimal_hanoi.py	26	28	Tower.__init__	__init__(self, x)	excluded		platform: GUI toolkit
+Lib/turtledemo/minimal_hanoi.py	29	32	Tower.push	push(self, d)	excluded		platform: GUI toolkit
+Lib/turtledemo/minimal_hanoi.py	33	36	Tower.pop	pop(self)	excluded		platform: GUI toolkit
+Lib/turtledemo/minimal_hanoi.py	38	42	hanoi	hanoi(n, from_, with_, to_)	excluded		platform: GUI toolkit
+Lib/turtledemo/minimal_hanoi.py	44	52	play	play()	excluded		platform: GUI toolkit
+Lib/turtledemo/minimal_hanoi.py	54	68	main	main()	excluded		platform: GUI toolkit

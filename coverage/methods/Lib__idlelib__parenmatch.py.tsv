@@ -1,0 +1,15 @@
+file	line	endline	name	signature	status	entry	note
+Lib/idlelib/parenmatch.py	40	49	ParenMatch.__init__	__init__(self, editwin)	excluded		platform: GUI toolkit
+Lib/idlelib/parenmatch.py	52	60	ParenMatch.reload	reload(cls)	excluded		platform: GUI toolkit
+Lib/idlelib/parenmatch.py	62	67	ParenMatch.activate_restore	activate_restore(self)	excluded		platform: GUI toolkit
+Lib/idlelib/parenmatch.py	69	74	ParenMatch.deactivate_restore	deactivate_restore(self)	excluded		platform: GUI toolkit
+Lib/idlelib/parenmatch.py	76	81	ParenMatch.flash_paren_event	flash_paren_event(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/parenmatch.py	83	94	ParenMatch.paren_closed_event	paren_closed_event(self, event)	excluded		platform: GUI toolkit
+Lib/idlelib/parenmatch.py	96	105	ParenMatch.finish_paren_event	finish_paren_event(self, indices)	excluded		platform: GUI toolkit
+Lib/idlelib/parenmatch.py	107	111	ParenMatch.restore_event	restore_event(self, event=None)	excluded		platform: GUI toolkit
+Lib/idlelib/parenmatch.py	113	115	ParenMatch.handle_restore_timer	handle_restore_timer(self, timer_count)	excluded		platform: GUI toolkit
+Lib/idlelib/parenmatch.py	120	123	ParenMatch.create_tag_opener	create_tag_opener(self, indices)	excluded		platform: GUI toolkit
+Lib/idlelib/parenmatch.py	125	132	ParenMatch.create_tag_parens	create_tag_parens(self, indices)	excluded		platform: GUI toolkit
+Lib/idlelib/parenmatch.py	134	141	ParenMatch.create_tag_expression	create_tag_expression(self, indices)	excluded		platform: GUI toolkit
+Lib/idlelib/parenmatch.py	153	166	ParenMatch.set_timeout_none	set_timeout_none(self)	excluded		platform: GUI toolkit
+Lib/idlelib/parenmatch.py	168	175	ParenMatch.set_timeout_last	set_timeout_last(self)	excluded		platform: GUI toolkit

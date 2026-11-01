@@ -1,0 +1,5 @@
+file	line	endline	name	signature	status	entry	note
+Lib/bisect.py	4	18	insort_right	insort_right(a, x, lo=0, hi=None, *, key=None)	modelled	accel-bisect-twins-agree,accel-bisect-twins-agree-hi-not-minus-one,accel-bisect-twins-agree-in-range,accel-insort-keeps-sorted	
+Lib/bisect.py	21	54	bisect_right	bisect_right(a, x, lo=0, hi=None, *, key=None)	modelled	accel-bisect-doc-partition,accel-bisect-doc-partition-nonneg-hi,accel-bisect-right-partition,accel-bisect-twins-agree,accel-bisect-twins-agree-hi-not-minus-one,accel-bisect-twins-agree-in-range	
+Lib/bisect.py	57	72	insort_left	insort_left(a, x, lo=0, hi=None, *, key=None)	modelled	accel-bisect-twins-agree,accel-bisect-twins-agree-hi-not-minus-one,accel-bisect-twins-agree-in-range,accel-insort-keeps-sorted	
+Lib/bisect.py	74	107	bisect_left	bisect_left(a, x, lo=0, hi=None, *, key=None)	modelled	accel-bisect-doc-partition,accel-bisect-doc-partition-nonneg-hi,accel-bisect-left-partition,accel-bisect-twins-agree,accel-bisect-twins-agree-hi-not-minus-one,accel-bisect-twins-agree-in-range	

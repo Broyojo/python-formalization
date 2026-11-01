@@ -1,0 +1,36 @@
+file	line	endline	name	signature	status	entry	note
+Lib/http/cookies.py	176	180	_has_control_character	_has_control_character(*val)	todo		
+Lib/http/cookies.py	183	193	_quote	_quote(str)	todo		
+Lib/http/cookies.py	198	202	_unquote_replace	_unquote_replace(m)	todo		
+Lib/http/cookies.py	204	222	_unquote	_unquote(str)	todo		
+Lib/http/cookies.py	237	242	_getdate	_getdate(future=0, weekdayname=_weekdayname, monthname=_monthname)	todo		
+Lib/http/cookies.py	283	288	Morsel.__init__	__init__(self)	todo		
+Lib/http/cookies.py	291	292	Morsel.key	key(self)	todo		
+Lib/http/cookies.py	295	296	Morsel.value	value(self)	todo		
+Lib/http/cookies.py	299	300	Morsel.coded_value	coded_value(self)	todo		
+Lib/http/cookies.py	302	308	Morsel.__setitem__	__setitem__(self, K, V)	todo		
+Lib/http/cookies.py	310	316	Morsel.setdefault	setdefault(self, key, val=None)	todo		
+Lib/http/cookies.py	318	324	Morsel.__eq__	__eq__(self, morsel)	todo		
+Lib/http/cookies.py	328	332	Morsel.copy	copy(self)	todo		
+Lib/http/cookies.py	334	344	Morsel.update	update(self, values)	todo		
+Lib/http/cookies.py	346	348	Morsel.__ior__	__ior__(self, values)	todo		
+Lib/http/cookies.py	350	351	Morsel.isReservedKey	isReservedKey(self, K)	todo		
+Lib/http/cookies.py	353	365	Morsel.set	set(self, key, val, coded_val)	todo		
+Lib/http/cookies.py	367	372	Morsel.__getstate__	__getstate__(self)	todo		
+Lib/http/cookies.py	374	383	Morsel.__setstate__	__setstate__(self, state)	todo		
+Lib/http/cookies.py	385	386	Morsel.output	output(self, attrs=None, header='Set-Cookie:')	todo		
+Lib/http/cookies.py	390	391	Morsel.__repr__	__repr__(self)	todo		
+Lib/http/cookies.py	393	408	Morsel.js_output	js_output(self, attrs=None)	todo		
+Lib/http/cookies.py	410	441	Morsel.OutputString	OutputString(self, attrs=None)	todo		
+Lib/http/cookies.py	485	492	BaseCookie.value_decode	value_decode(self, val)	todo		
+Lib/http/cookies.py	494	501	BaseCookie.value_encode	value_encode(self, val)	todo		
+Lib/http/cookies.py	503	505	BaseCookie.__init__	__init__(self, input=None)	todo		
+Lib/http/cookies.py	507	511	BaseCookie.__set	__set(self, key, real_value, coded_value)	todo		
+Lib/http/cookies.py	513	520	BaseCookie.__setitem__	__setitem__(self, key, value)	todo		
+Lib/http/cookies.py	522	531	BaseCookie.output	output(self, attrs=None, header='Set-Cookie:', sep='\\r\\n')	todo		
+Lib/http/cookies.py	535	540	BaseCookie.__repr__	__repr__(self)	todo		
+Lib/http/cookies.py	542	548	BaseCookie.js_output	js_output(self, attrs=None)	todo		
+Lib/http/cookies.py	550	562	BaseCookie.load	load(self, rawdata)	todo		
+Lib/http/cookies.py	564	622	BaseCookie.__parse_string	__parse_string(self, str, patt=_CookiePattern)	todo		
+Lib/http/cookies.py	632	633	SimpleCookie.value_decode	value_decode(self, val)	todo		
+Lib/http/cookies.py	635	637	SimpleCookie.value_encode	value_encode(self, val)	todo		

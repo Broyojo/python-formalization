@@ -1,0 +1,17 @@
+file	line	endline	name	signature	status	entry	note
+Python/pathconfig.c	48	51	_PyPathConfig_GetGlobalModuleSearchPath	_PyPathConfig_GetGlobalModuleSearchPath(void)	todo		
+Python/pathconfig.c	55	74	_PyPathConfig_ClearGlobal	_PyPathConfig_ClearGlobal(void)	todo		
+Python/pathconfig.c	77	119	_PyPathConfig_ReadGlobal	_PyPathConfig_ReadGlobal(PyConfig *config)	todo		
+Python/pathconfig.c	122	193	_PyPathConfig_UpdateGlobal	_PyPathConfig_UpdateGlobal(const PyConfig *config)	todo		
+Python/pathconfig.c	197	200	path_out_of_memory	path_out_of_memory(const char *func)	todo		
+Python/pathconfig.c	203	236	PyAPI_FUNC	PyAPI_FUNC(void) Py_SetPath(const wchar_t *path)	todo		
+Python/pathconfig.c	240	254	Py_SetPythonHome	Py_SetPythonHome(const wchar_t *home)	todo		
+Python/pathconfig.c	258	272	Py_SetProgramName	Py_SetProgramName(const wchar_t *program_name)	todo		
+Python/pathconfig.c	276	284	Py_GetPath	Py_GetPath(void)	todo		
+Python/pathconfig.c	288	295	_Py_GetStdlibDir	_Py_GetStdlibDir(void)	todo		
+Python/pathconfig.c	299	302	Py_GetPrefix	Py_GetPrefix(void)	todo		
+Python/pathconfig.c	306	309	Py_GetExecPrefix	Py_GetExecPrefix(void)	todo		
+Python/pathconfig.c	313	316	Py_GetProgramFullPath	Py_GetProgramFullPath(void)	todo		
+Python/pathconfig.c	320	323	Py_GetPythonHome	Py_GetPythonHome(void)	todo		
+Python/pathconfig.c	327	330	Py_GetProgramName	Py_GetProgramName(void)	todo		
+Python/pathconfig.c	346	471	_PyPathConfig_ComputeSysPath0	_PyPathConfig_ComputeSysPath0(const PyWideStringList *argv, PyObject **path0_p)	todo		

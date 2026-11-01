@@ -1,0 +1,31 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_weakrefset.py	12	22	WeakSet.__init__	__init__(self, data=None)	todo		
+Lib/_weakrefset.py	24	30	WeakSet.__iter__	__iter__(self)	todo		
+Lib/_weakrefset.py	32	33	WeakSet.__len__	__len__(self)	todo		
+Lib/_weakrefset.py	35	40	WeakSet.__contains__	__contains__(self, item)	todo		
+Lib/_weakrefset.py	42	43	WeakSet.__reduce__	__reduce__(self)	todo		
+Lib/_weakrefset.py	45	46	WeakSet.add	add(self, item)	todo		
+Lib/_weakrefset.py	48	49	WeakSet.clear	clear(self)	todo		
+Lib/_weakrefset.py	51	52	WeakSet.copy	copy(self)	todo		
+Lib/_weakrefset.py	54	62	WeakSet.pop	pop(self)	todo		
+Lib/_weakrefset.py	64	65	WeakSet.remove	remove(self, item)	todo		
+Lib/_weakrefset.py	67	68	WeakSet.discard	discard(self, item)	todo		
+Lib/_weakrefset.py	70	72	WeakSet.update	update(self, other)	todo		
+Lib/_weakrefset.py	74	76	WeakSet.__ior__	__ior__(self, other)	todo		
+Lib/_weakrefset.py	78	81	WeakSet.difference	difference(self, other)	todo		
+Lib/_weakrefset.py	84	85	WeakSet.difference_update	difference_update(self, other)	todo		
+Lib/_weakrefset.py	86	91	WeakSet.__isub__	__isub__(self, other)	todo		
+Lib/_weakrefset.py	93	94	WeakSet.intersection	intersection(self, other)	todo		
+Lib/_weakrefset.py	97	98	WeakSet.intersection_update	intersection_update(self, other)	todo		
+Lib/_weakrefset.py	99	101	WeakSet.__iand__	__iand__(self, other)	todo		
+Lib/_weakrefset.py	103	104	WeakSet.issubset	issubset(self, other)	todo		
+Lib/_weakrefset.py	107	108	WeakSet.__lt__	__lt__(self, other)	todo		
+Lib/_weakrefset.py	110	111	WeakSet.issuperset	issuperset(self, other)	todo		
+Lib/_weakrefset.py	114	115	WeakSet.__gt__	__gt__(self, other)	todo		
+Lib/_weakrefset.py	117	120	WeakSet.__eq__	__eq__(self, other)	todo		
+Lib/_weakrefset.py	122	125	WeakSet.symmetric_difference	symmetric_difference(self, other)	todo		
+Lib/_weakrefset.py	128	129	WeakSet.symmetric_difference_update	symmetric_difference_update(self, other)	todo		
+Lib/_weakrefset.py	130	135	WeakSet.__ixor__	__ixor__(self, other)	todo		
+Lib/_weakrefset.py	137	138	WeakSet.union	union(self, other)	todo		
+Lib/_weakrefset.py	141	142	WeakSet.isdisjoint	isdisjoint(self, other)	todo		
+Lib/_weakrefset.py	144	145	WeakSet.__repr__	__repr__(self)	todo		

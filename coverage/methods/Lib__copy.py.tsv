@@ -1,0 +1,10 @@
+file	line	endline	name	signature	status	entry	note
+Lib/copy.py	62	100	copy	copy(x)	todo		
+Lib/copy.py	110	163	deepcopy	deepcopy(x, memo=None, _nil=[])	todo		
+Lib/copy.py	172	178	_deepcopy_list	_deepcopy_list(x, memo, deepcopy=deepcopy)	todo		
+Lib/copy.py	181	195	_deepcopy_tuple	_deepcopy_tuple(x, memo, deepcopy=deepcopy)	todo		
+Lib/copy.py	198	203	_deepcopy_dict	_deepcopy_dict(x, memo, deepcopy=deepcopy)	todo		
+Lib/copy.py	206	207	_deepcopy_method	_deepcopy_method(x, memo)	todo		
+Lib/copy.py	212	226	_keep_alive	_keep_alive(x, memo)	todo		
+Lib/copy.py	228	271	_reconstruct	_reconstruct(x, memo, func, args, state=None, listiter=None, dictiter=None, *, deepcopy=deepcopy)	todo		
+Lib/copy.py	276	286	replace	replace(obj, /, **changes)	todo		candidates:strsearch-replace-str-bytes

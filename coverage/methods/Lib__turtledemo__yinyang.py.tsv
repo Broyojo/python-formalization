@@ -1,0 +1,3 @@
+file	line	endline	name	signature	status	entry	note
+Lib/turtledemo/yinyang.py	13	35	yin	yin(radius, color1, color2)	excluded		platform: GUI toolkit
+Lib/turtledemo/yinyang.py	37	42	main	main()	excluded		platform: GUI toolkit

@@ -1,0 +1,26 @@
+file	line	endline	name	signature	status	entry	note
+Lib/asyncio/queues.py	45	56	Queue.__init__	__init__(self, maxsize=0)	todo		
+Lib/asyncio/queues.py	60	61	Queue._init	_init(self, maxsize)	todo		
+Lib/asyncio/queues.py	63	64	Queue._get	_get(self)	todo		
+Lib/asyncio/queues.py	66	67	Queue._put	_put(self, item)	todo		
+Lib/asyncio/queues.py	71	77	Queue._wakeup_next	_wakeup_next(self, waiters)	todo		
+Lib/asyncio/queues.py	79	80	Queue.__repr__	__repr__(self)	todo		
+Lib/asyncio/queues.py	82	83	Queue.__str__	__str__(self)	todo		
+Lib/asyncio/queues.py	87	99	Queue._format	_format(self)	todo		
+Lib/asyncio/queues.py	101	103	Queue.qsize	qsize(self)	todo		
+Lib/asyncio/queues.py	106	108	Queue.maxsize	maxsize(self)	todo		
+Lib/asyncio/queues.py	110	112	Queue.empty	empty(self)	todo		
+Lib/asyncio/queues.py	114	123	Queue.full	full(self)	todo		
+Lib/asyncio/queues.py	125	154	Queue.put	put(self, item)	todo		
+Lib/asyncio/queues.py	156	170	Queue.put_nowait	put_nowait(self, item)	todo		
+Lib/asyncio/queues.py	172	201	Queue.get	get(self)	todo		
+Lib/asyncio/queues.py	203	218	Queue.get_nowait	get_nowait(self)	todo		
+Lib/asyncio/queues.py	220	238	Queue.task_done	task_done(self)	todo		
+Lib/asyncio/queues.py	240	250	Queue.join	join(self)	todo		
+Lib/asyncio/queues.py	252	280	Queue.shutdown	shutdown(self, immediate=False)	todo		
+Lib/asyncio/queues.py	289	290	PriorityQueue._init	_init(self, maxsize)	todo		
+Lib/asyncio/queues.py	292	293	PriorityQueue._put	_put(self, item, heappush=heapq.heappush)	todo		
+Lib/asyncio/queues.py	295	296	PriorityQueue._get	_get(self, heappop=heapq.heappop)	todo		
+Lib/asyncio/queues.py	302	303	LifoQueue._init	_init(self, maxsize)	todo		
+Lib/asyncio/queues.py	305	306	LifoQueue._put	_put(self, item)	todo		
+Lib/asyncio/queues.py	308	309	LifoQueue._get	_get(self)	todo		

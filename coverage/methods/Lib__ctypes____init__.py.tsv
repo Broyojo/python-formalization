@@ -1,0 +1,36 @@
+file	line	endline	name	signature	status	entry	note
+Lib/ctypes/__init__.py	52	70	create_string_buffer	create_string_buffer(init, size=None)	todo		
+Lib/ctypes/__init__.py	76	110	CFUNCTYPE	CFUNCTYPE(restype, *argtypes, **kw)	todo		
+Lib/ctypes/__init__.py	117	137	WINFUNCTYPE	WINFUNCTYPE(restype, *argtypes, **kw)	todo		
+Lib/ctypes/__init__.py	148	158	_check_size	_check_size(typ, typecode=None)	todo		
+Lib/ctypes/__init__.py	162	166	py_object.__repr__	__repr__(self)	todo		
+Lib/ctypes/__init__.py	259	260	c_char_p.__repr__	__repr__(self)	todo		
+Lib/ctypes/__init__.py	271	295	POINTER	POINTER(cls)	todo		
+Lib/ctypes/__init__.py	297	305	pointer	pointer(obj)	todo		
+Lib/ctypes/__init__.py	308	314	_PointerTypeCache.__setitem__	__setitem__(self, cls, pointer_type)	todo		
+Lib/ctypes/__init__.py	316	322	_PointerTypeCache.__getitem__	__getitem__(self, cls)	todo		
+Lib/ctypes/__init__.py	324	330	_PointerTypeCache.get	get(self, cls, default=None)	todo		
+Lib/ctypes/__init__.py	332	333	_PointerTypeCache.__contains__	__contains__(self, cls)	todo		
+Lib/ctypes/__init__.py	340	341	c_wchar_p.__repr__	__repr__(self)	todo		
+Lib/ctypes/__init__.py	346	354	_reset_cache	_reset_cache()	todo		
+Lib/ctypes/__init__.py	356	382	create_unicode_buffer	create_unicode_buffer(init, size=None)	todo		
+Lib/ctypes/__init__.py	385	388	SetPointerType	SetPointerType(pointer, cls)	todo		
+Lib/ctypes/__init__.py	390	391	ARRAY	ARRAY(typ, len)	todo		
+Lib/ctypes/__init__.py	417	433	CDLL.__init__	__init__(self, name, mode=DEFAULT_MODE, handle=None, use_errno=False, use_last_error=False, winmode=None)	todo		
+Lib/ctypes/__init__.py	436	451	CDLL._load_library	_load_library(self, name, mode, handle, winmode)	todo		
+Lib/ctypes/__init__.py	454	475	CDLL._load_library	_load_library(self, name, mode, handle, winmode)	todo		
+Lib/ctypes/__init__.py	477	481	CDLL.__repr__	__repr__(self)	todo		
+Lib/ctypes/__init__.py	483	488	CDLL.__getattr__	__getattr__(self, name)	todo		
+Lib/ctypes/__init__.py	490	494	CDLL.__getitem__	__getitem__(self, name_or_ordinal)	todo		
+Lib/ctypes/__init__.py	537	538	LibraryLoader.__init__	__init__(self, dlltype)	todo		
+Lib/ctypes/__init__.py	540	548	LibraryLoader.__getattr__	__getattr__(self, name)	todo		
+Lib/ctypes/__init__.py	550	551	LibraryLoader.__getitem__	__getitem__(self, name)	todo		
+Lib/ctypes/__init__.py	553	554	LibraryLoader.LoadLibrary	LoadLibrary(self, name)	todo		
+Lib/ctypes/__init__.py	577	582	WinError	WinError(code=None, descr=None)	todo		
+Lib/ctypes/__init__.py	605	610	PYFUNCTYPE	PYFUNCTYPE(restype, *argtypes)	todo		
+Lib/ctypes/__init__.py	613	614	cast	cast(obj, typ)	todo		
+Lib/ctypes/__init__.py	617	621	string_at	string_at(ptr, size=-1)	todo		
+Lib/ctypes/__init__.py	625	629	memoryview_at	memoryview_at(ptr, size, readonly=False)	todo		
+Lib/ctypes/__init__.py	637	641	wstring_at	wstring_at(ptr, size=-1)	todo		
+Lib/ctypes/__init__.py	645	651	DllGetClassObject	DllGetClassObject(rclsid, riid, ppv)	todo		
+Lib/ctypes/__init__.py	653	658	DllCanUnloadNow	DllCanUnloadNow()	todo		

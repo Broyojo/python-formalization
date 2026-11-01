@@ -1,0 +1,5 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/numbers.c	6	10	number_check	number_check(PyObject *Py_UNUSED(module), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/numbers.c	93	104	number_tobase	number_tobase(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/numbers.c	107	125	number_asssizet	number_asssizet(PyObject *Py_UNUSED(module), PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/numbers.c	170	177	_PyTestCapi_Init_Numbers	_PyTestCapi_Init_Numbers(PyObject *mod)	excluded		test-support: only for CPython's own tests

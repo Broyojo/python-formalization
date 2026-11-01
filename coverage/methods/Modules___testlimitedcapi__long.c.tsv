@@ -1,0 +1,35 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testlimitedcapi/long.c	18	22	raiseTestError	raiseTestError(const char* test_name, const char* msg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	42	45	raise_test_long_error	raise_test_long_error(const char* msg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	64	68	_testlimitedcapi_test_long_api_impl	_testlimitedcapi_test_long_api_impl(PyObject *module) /*[clinic end generated code: output=06a2c02366d1853a input=9012b3d6a483df63]*/	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	81	84	raise_test_longlong_error	raise_test_longlong_error(const char* msg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	100	104	_testlimitedcapi_test_longlong_api_impl	_testlimitedcapi_test_longlong_api_impl(PyObject *module) /*[clinic end generated code: output=8faa10e1c35214bf input=2b582a9d25bd68e7]*/	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	124	280	_testlimitedcapi_test_long_and_overflow_impl	_testlimitedcapi_test_long_and_overflow_impl(PyObject *module) /*[clinic end generated code: output=fdfd3c1eeabb6d14 input=e3a18791de6519fe]*/	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	292	447	_testlimitedcapi_test_long_long_and_overflow_impl	_testlimitedcapi_test_long_long_and_overflow_impl(PyObject *module) /*[clinic end generated code: output=3d2721a49c09a307 input=741c593b606cc6b3]*/	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	459	489	_testlimitedcapi_test_long_as_size_t_impl	_testlimitedcapi_test_long_as_size_t_impl(PyObject *module) /*[clinic end generated code: output=297a9f14a42f55af input=692e73744b35bf6e]*/	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	496	513	_testlimitedcapi_test_long_as_unsigned_long_long_mask_impl	_testlimitedcapi_test_long_as_unsigned_long_long_mask_impl(PyObject *module) /*[clinic end generated code: output=90be09ffeec8ecab input=17c660bd58becad5]*/	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	520	539	_testlimitedcapi_test_long_as_double_impl	_testlimitedcapi_test_long_as_double_impl(PyObject *module) /*[clinic end generated code: output=0e688c2acf224f88 input=e7b5712385064a48]*/	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	542	546	pylong_check	pylong_check(PyObject *module, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	549	553	pylong_checkexact	pylong_checkexact(PyObject *module, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	556	563	pylong_fromdouble	pylong_fromdouble(PyObject *module, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	566	582	pylong_fromstring	pylong_fromstring(PyObject *module, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	585	589	pylong_fromvoidptr	pylong_fromvoidptr(PyObject *module, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	598	608	_testlimitedcapi_PyLong_AsInt	_testlimitedcapi_PyLong_AsInt(PyObject *module, PyObject *arg) /*[clinic end generated code: output=d91db4c1287f85fa input=32c66be86f3265a1]*/	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	611	619	pylong_aslong	pylong_aslong(PyObject *module, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	622	632	pylong_aslongandoverflow	pylong_aslongandoverflow(PyObject *module, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	635	643	pylong_asunsignedlong	pylong_asunsignedlong(PyObject *module, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	646	654	pylong_asunsignedlongmask	pylong_asunsignedlongmask(PyObject *module, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	657	665	pylong_aslonglong	pylong_aslonglong(PyObject *module, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	668	678	pylong_aslonglongandoverflow	pylong_aslonglongandoverflow(PyObject *module, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	681	689	pylong_asunsignedlonglong	pylong_asunsignedlonglong(PyObject *module, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	692	700	pylong_asunsignedlonglongmask	pylong_asunsignedlonglongmask(PyObject *module, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	703	711	pylong_as_ssize_t	pylong_as_ssize_t(PyObject *module, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	714	722	pylong_as_size_t	pylong_as_size_t(PyObject *module, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	725	733	pylong_asdouble	pylong_asdouble(PyObject *module, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	736	747	pylong_asvoidptr	pylong_asvoidptr(PyObject *module, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	750	758	pylong_aspid	pylong_aspid(PyObject *module, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	762	770	pylong_asint32	pylong_asint32(PyObject *module, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	773	781	pylong_asuint32	pylong_asuint32(PyObject *module, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	785	793	pylong_asint64	pylong_asint64(PyObject *module, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	796	804	pylong_asuint64	pylong_asuint64(PyObject *module, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/long.c	842	848	_PyTestLimitedCAPI_Init_Long	_PyTestLimitedCAPI_Init_Long(PyObject *mod)	excluded		test-support: only for CPython's own tests

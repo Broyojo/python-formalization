@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Lib/xml/dom/NodeFilter.py	26	27	NodeFilter.acceptNode	acceptNode(self, node)	todo		

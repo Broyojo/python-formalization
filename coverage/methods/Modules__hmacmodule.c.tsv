@@ -1,0 +1,65 @@
+file	line	endline	name	signature	status	entry	note
+Modules/hmacmodule.c	55	60	set_invalid_key_length_error	set_invalid_key_length_error(void)	todo		
+Modules/hmacmodule.c	63	68	set_invalid_msg_length_error	set_invalid_msg_length_error(void)	todo		
+Modules/hmacmodule.c	366	371	get_hmacmodule_state	get_hmacmodule_state(PyObject *module)	todo		
+Modules/hmacmodule.c	374	379	get_hmacmodule_state_by_cls	get_hmacmodule_state_by_cls(PyTypeObject *cls)	todo		
+Modules/hmacmodule.c	435	450	assert_is_static_hmac_hash_kind	assert_is_static_hmac_hash_kind(HMAC_Hash_Kind kind)	todo		
+Modules/hmacmodule.c	464	486	narrow_hmac_hash_kind	narrow_hmac_hash_kind(hmacmodule_state *state, HMAC_Hash_Kind kind)	todo		
+Modules/hmacmodule.c	495	529	_hacl_convert_errno	_hacl_convert_errno(hacl_errno_t code)	todo		
+Modules/hmacmodule.c	537	547	_hacl_hmac_state_new	_hacl_hmac_state_new(HMAC_Hash_Kind kind, uint8_t *key, uint32_t len)	todo		
+Modules/hmacmodule.c	553	558	_hacl_hmac_state_free	_hacl_hmac_state_free(HACL_HMAC_state *state)	todo		
+Modules/hmacmodule.c	615	622	find_hash_info_by_utf8name	find_hash_info_by_utf8name(hmacmodule_state *state, const char *name, const py_hmac_hinfo **info)	todo		
+Modules/hmacmodule.c	639	668	find_hash_info_by_name	find_hash_info_by_name(hmacmodule_state *state, PyObject *name, const py_hmac_hinfo **info)	todo		
+Modules/hmacmodule.c	685	697	find_hash_info_impl	find_hash_info_impl(hmacmodule_state *state, PyObject *hash_info_ref, const py_hmac_hinfo **info)	todo		
+Modules/hmacmodule.c	706	722	find_hash_info	find_hash_info(hmacmodule_state *state, PyObject *hash_info_ref)	todo		
+Modules/hmacmodule.c	726	733	has_uint32_t_buffer_length	has_uint32_t_buffer_length(const Py_buffer *buffer)	todo		
+Modules/hmacmodule.c	744	758	hmac_set_hinfo	hmac_set_hinfo(hmacmodule_state *state, HMACObject *self, const py_hmac_hinfo *info)	todo		
+Modules/hmacmodule.c	770	788	hmac_new_initial_state	hmac_new_initial_state(HMACObject *self, uint8_t *key, Py_ssize_t len)	todo		
+Modules/hmacmodule.c	800	827	hmac_feed_initial_data	hmac_feed_initial_data(HMACObject *self, uint8_t *msg, Py_ssize_t len)	todo		
+Modules/hmacmodule.c	840	894	_hmac_new_impl	_hmac_new_impl(PyObject *module, PyObject *keyobj, PyObject *msgobj, PyObject *hash_info_ref) /*[clinic end generated code: output=7c7573a427d58758 input=92fc7c0a00707d42]*/	todo		
+Modules/hmacmodule.c	900	913	hmac_copy_hinfo	hmac_copy_hinfo(HMACObject *out, const HMACObject *src)	todo		
+Modules/hmacmodule.c	923	932	hmac_copy_state	hmac_copy_state(HMACObject *out, const HMACObject *src)	todo		
+Modules/hmacmodule.c	943	967	_hmac_HMAC_copy_impl	_hmac_HMAC_copy_impl(HMACObject *self, PyTypeObject *cls) /*[clinic end generated code: output=a955bfa55b65b215 input=17b2c0ad0b147e36]*/	todo		
+Modules/hmacmodule.c	979	996	hmac_update_state_with_lock	hmac_update_state_with_lock(HMACObject *self, uint8_t *buf, Py_ssize_t len)	todo		
+Modules/hmacmodule.c	1008	1022	hmac_update_state_cond_lock	hmac_update_state_cond_lock(HMACObject *self, uint8_t *buf, Py_ssize_t len)	todo		
+Modules/hmacmodule.c	1030	1039	hmac_update_state	hmac_update_state(HMACObject *self, uint8_t *buf, Py_ssize_t len)	todo		
+Modules/hmacmodule.c	1050	1058	_hmac_HMAC_update_impl	_hmac_HMAC_update_impl(HMACObject *self, PyObject *msgobj) /*[clinic end generated code: output=962134ada5e55985 input=7c0ea830efb03367]*/	todo		
+Modules/hmacmodule.c	1071	1083	hmac_digest_compute_cond_lock	hmac_digest_compute_cond_lock(HMACObject *self, uint8_t *digest)	todo		
+Modules/hmacmodule.c	1094	1103	_hmac_HMAC_digest_impl	_hmac_HMAC_digest_impl(HMACObject *self) /*[clinic end generated code: output=5bf3cc5862d26ada input=a70feb0b8e2bbe7d]*/	todo		
+Modules/hmacmodule.c	1117	1126	_hmac_HMAC_hexdigest_impl	_hmac_HMAC_hexdigest_impl(HMACObject *self) /*[clinic end generated code: output=6659807a09ae14ec input=5ae03f21d69c970c]*/	todo		
+Modules/hmacmodule.c	1134	1139	_hmac_HMAC_name_get_impl	_hmac_HMAC_name_get_impl(HMACObject *self) /*[clinic end generated code: output=ae693f09778d96d9 input=41c2c5dd1cf47fbc]*/	todo		
+Modules/hmacmodule.c	1147	1151	_hmac_HMAC_block_size_get_impl	_hmac_HMAC_block_size_get_impl(HMACObject *self) /*[clinic end generated code: output=52cb11dee4e80cae input=9dda6b8d43e995b4]*/	todo		
+Modules/hmacmodule.c	1159	1163	_hmac_HMAC_digest_size_get_impl	_hmac_HMAC_digest_size_get_impl(HMACObject *self) /*[clinic end generated code: output=22eeca1010ac6255 input=5622bb2840025b5a]*/	todo		
+Modules/hmacmodule.c	1166	1171	HMACObject_repr	HMACObject_repr(PyObject *op)	todo		
+Modules/hmacmodule.c	1174	1181	HMACObject_clear	HMACObject_clear(PyObject *op)	todo		
+Modules/hmacmodule.c	1184	1191	HMACObject_dealloc	HMACObject_dealloc(PyObject *op)	todo		
+Modules/hmacmodule.c	1194	1198	HMACObject_traverse	HMACObject_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/hmacmodule.c	1248	1259	_hmac_compute_digest_impl	_hmac_compute_digest_impl(PyObject *module, PyObject *key, PyObject *msg, PyObject *digest) /*[clinic end generated code: output=c519b7c4c9f57333 input=1c2bfc2cd8598574]*/	todo		
+Modules/hmacmodule.c	1310	1314	_hmac_compute_md5_impl	_hmac_compute_md5_impl(PyObject *module, PyObject *key, PyObject *msg) /*[clinic end generated code: output=7837a4ceccbbf636 input=77a4b774c7d61218]*/	todo		
+Modules/hmacmodule.c	1326	1330	_hmac_compute_sha1_impl	_hmac_compute_sha1_impl(PyObject *module, PyObject *key, PyObject *msg) /*[clinic end generated code: output=79fd7689c83691d8 input=3b64dccc6bdbe4ba]*/	todo		
+Modules/hmacmodule.c	1342	1346	_hmac_compute_sha2_224_impl	_hmac_compute_sha2_224_impl(PyObject *module, PyObject *key, PyObject *msg) /*[clinic end generated code: output=7f21f1613e53979e input=a1a75f25f23449af]*/	todo		
+Modules/hmacmodule.c	1358	1362	_hmac_compute_sha2_256_impl	_hmac_compute_sha2_256_impl(PyObject *module, PyObject *key, PyObject *msg) /*[clinic end generated code: output=d4a291f7d9a82459 input=5c9ccf2df048ace3]*/	todo		
+Modules/hmacmodule.c	1374	1378	_hmac_compute_sha2_384_impl	_hmac_compute_sha2_384_impl(PyObject *module, PyObject *key, PyObject *msg) /*[clinic end generated code: output=f211fa26e3700c27 input=2fee2c14766af231]*/	todo		
+Modules/hmacmodule.c	1390	1394	_hmac_compute_sha2_512_impl	_hmac_compute_sha2_512_impl(PyObject *module, PyObject *key, PyObject *msg) /*[clinic end generated code: output=d5c20373762cecca input=3371eaac315c7864]*/	todo		
+Modules/hmacmodule.c	1406	1410	_hmac_compute_sha3_224_impl	_hmac_compute_sha3_224_impl(PyObject *module, PyObject *key, PyObject *msg) /*[clinic end generated code: output=a242ccac9ad9c22b input=d0ab0c7d189c3d87]*/	todo		
+Modules/hmacmodule.c	1422	1426	_hmac_compute_sha3_256_impl	_hmac_compute_sha3_256_impl(PyObject *module, PyObject *key, PyObject *msg) /*[clinic end generated code: output=b539dbb61af2fe0b input=f05d7b6364b35d02]*/	todo		
+Modules/hmacmodule.c	1438	1442	_hmac_compute_sha3_384_impl	_hmac_compute_sha3_384_impl(PyObject *module, PyObject *key, PyObject *msg) /*[clinic end generated code: output=5eb372fb5c4ffd3a input=d842d393e7aa05ae]*/	todo		
+Modules/hmacmodule.c	1454	1458	_hmac_compute_sha3_512_impl	_hmac_compute_sha3_512_impl(PyObject *module, PyObject *key, PyObject *msg) /*[clinic end generated code: output=154bcbf8c2eacac1 input=166fe5baaeaabfde]*/	todo		
+Modules/hmacmodule.c	1470	1474	_hmac_compute_blake2s_32_impl	_hmac_compute_blake2s_32_impl(PyObject *module, PyObject *key, PyObject *msg) /*[clinic end generated code: output=cfc730791bc62361 input=d22c36e7fe31a985]*/	todo		
+Modules/hmacmodule.c	1486	1490	_hmac_compute_blake2b_32_impl	_hmac_compute_blake2b_32_impl(PyObject *module, PyObject *key, PyObject *msg) /*[clinic end generated code: output=765c5c4fb9124636 input=4a35ee058d172f4b]*/	todo		
+Modules/hmacmodule.c	1517	1520	py_hmac_hinfo_ht_hash	py_hmac_hinfo_ht_hash(const void *name)	todo		
+Modules/hmacmodule.c	1523	1526	py_hmac_hinfo_ht_comp	py_hmac_hinfo_ht_comp(const void *a, const void *b)	todo		
+Modules/hmacmodule.c	1529	1536	py_hmac_hinfo_ht_free	py_hmac_hinfo_ht_free(void *hinfo)	todo		
+Modules/hmacmodule.c	1551	1562	py_hmac_hinfo_ht_add	py_hmac_hinfo_ht_add(_Py_hashtable_t *table, const void *key, void *info)	todo		
+Modules/hmacmodule.c	1569	1641	py_hmac_hinfo_ht_new	py_hmac_hinfo_ht_new(void)	todo		
+Modules/hmacmodule.c	1646	1651	hmacmodule_init_hash_info_table	hmacmodule_init_hash_info_table(hmacmodule_state *state)	todo		
+Modules/hmacmodule.c	1654	1669	hmacmodule_init_exceptions	hmacmodule_init_exceptions(PyObject *module, hmacmodule_state *state)	todo		
+Modules/hmacmodule.c	1672	1684	hmacmodule_init_hmac_type	hmacmodule_init_hmac_type(PyObject *module, hmacmodule_state *state)	todo		
+Modules/hmacmodule.c	1687	1699	hmacmodule_init_strings	hmacmodule_init_strings(hmacmodule_state *state)	todo		
+Modules/hmacmodule.c	1702	1713	hmacmodule_init_globals	hmacmodule_init_globals(PyObject *module, hmacmodule_state *state)	todo		
+Modules/hmacmodule.c	1716	1787	hmacmodule_init_cpu_features	hmacmodule_init_cpu_features(hmacmodule_state *state)	todo		
+Modules/hmacmodule.c	1790	1810	hmacmodule_exec	hmacmodule_exec(PyObject *module)	todo		
+Modules/hmacmodule.c	1813	1821	hmacmodule_traverse	hmacmodule_traverse(PyObject *mod, visitproc visit, void *arg)	todo		
+Modules/hmacmodule.c	1824	1835	hmacmodule_clear	hmacmodule_clear(PyObject *mod)	todo		
+Modules/hmacmodule.c	1838	1841	hmacmodule_free	hmacmodule_free(void *mod)	todo		
+Modules/hmacmodule.c	1862	1865	PyInit__hmac	PyInit__hmac(void)	todo		

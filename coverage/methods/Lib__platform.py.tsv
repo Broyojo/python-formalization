@@ -1,0 +1,56 @@
+file	line	endline	name	signature	status	entry	note
+Lib/platform.py	144	155	_comparable_version	_comparable_version(version)	todo		
+Lib/platform.py	160	256	libc_ver	libc_ver(executable=None, lib='', version='', chunksize=16384)	todo		
+Lib/platform.py	258	271	_norm_version	_norm_version(version, build='')	todo		
+Lib/platform.py	283	335	_syscmd_ver	_syscmd_ver(system='', release='', version='', supported_platforms=('win32', 'win16', 'dos'))	todo		
+Lib/platform.py	338	356	_wmi_query	_wmi_query(table, *keys)	todo		
+Lib/platform.py	387	388	win32_is_iot	win32_is_iot()	todo		
+Lib/platform.py	390	403	win32_edition	win32_edition()	todo		
+Lib/platform.py	405	462	_win32_ver	_win32_ver(version, csd, ptype)	todo		
+Lib/platform.py	464	474	win32_ver	win32_ver(release='', version='', csd='', ptype='')	todo		
+Lib/platform.py	477	496	_mac_ver_xml	_mac_ver_xml()	todo		
+Lib/platform.py	499	516	mac_ver	mac_ver(release='', versioninfo=('', '', ''), machine='')	todo		
+Lib/platform.py	526	539	ios_ver	ios_ver(system='', release='', model='', is_simulator=False)	todo		
+Lib/platform.py	542	551	_java_getprop	_java_getprop(name, default)	todo		
+Lib/platform.py	553	586	java_ver	java_ver(release='', vendor='', vminfo=('', '', ''), osinfo=('', '', ''))	todo		
+Lib/platform.py	592	626	android_ver	android_ver(release='', api_level=0, manufacturer='', model='', device='', is_emulator=False)	todo		
+Lib/platform.py	631	669	system_alias	system_alias(system, release, version)	todo		
+Lib/platform.py	673	703	_platform	_platform(*args)	todo		
+Lib/platform.py	705	718	_node	_node(default='')	todo		
+Lib/platform.py	720	729	_follow_symlinks	_follow_symlinks(filepath)	todo		
+Lib/platform.py	732	764	_syscmd_file	_syscmd_file(target, default='')	todo		
+Lib/platform.py	776	851	architecture	architecture(executable=sys.executable, bits='', linkage='')	todo		
+Lib/platform.py	854	879	_get_machine_win32	_get_machine_win32()	todo		
+Lib/platform.py	884	886	_Processor.get	get(cls)	todo		
+Lib/platform.py	888	894	_Processor.get_win32	get_win32()	todo		
+Lib/platform.py	896	903	_Processor.get_OpenVMS	get_OpenVMS()	todo		
+Lib/platform.py	908	911	_Processor.get_ios	get_ios()	todo		
+Lib/platform.py	913	929	_Processor.from_subprocess	from_subprocess()	todo		
+Lib/platform.py	932	933	_unknown_as_blank	_unknown_as_blank(val)	todo		
+Lib/platform.py	953	954	uname_result.processor	processor(self)	todo		
+Lib/platform.py	956	960	uname_result.__iter__	__iter__(self)	todo		
+Lib/platform.py	963	970	uname_result._make	_make(cls, iterable)	todo		
+Lib/platform.py	972	973	uname_result.__getitem__	__getitem__(self, key)	todo		
+Lib/platform.py	975	976	uname_result.__len__	__len__(self)	todo		
+Lib/platform.py	978	979	uname_result.__reduce__	__reduce__(self)	todo		
+Lib/platform.py	985	1079	uname	uname()	todo		
+Lib/platform.py	1083	1090	system	system()	todo		
+Lib/platform.py	1092	1100	node	node()	todo		
+Lib/platform.py	1102	1109	release	release()	todo		
+Lib/platform.py	1111	1118	version	version()	todo		
+Lib/platform.py	1120	1127	machine	machine()	todo		
+Lib/platform.py	1129	1139	processor	processor()	todo		
+Lib/platform.py	1145	1247	_sys_version	_sys_version(sys_version=None)	todo		
+Lib/platform.py	1249	1259	python_implementation	python_implementation()	todo		
+Lib/platform.py	1261	1269	python_version	python_version()	todo		
+Lib/platform.py	1271	1280	python_version_tuple	python_version_tuple()	todo		
+Lib/platform.py	1282	1294	python_branch	python_branch()	todo		
+Lib/platform.py	1296	1307	python_revision	python_revision()	todo		
+Lib/platform.py	1309	1315	python_build	python_build()	todo		
+Lib/platform.py	1317	1323	python_compiler	python_compiler()	todo		
+Lib/platform.py	1329	1404	platform	platform(aliased=False, terse=False)	todo		
+Lib/platform.py	1414	1438	_parse_os_release	_parse_os_release(lines)	todo		
+Lib/platform.py	1441	1461	freedesktop_os_release	freedesktop_os_release()	todo		
+Lib/platform.py	1464	1473	invalidate_caches	invalidate_caches()	todo		
+Lib/platform.py	1478	1502	_parse_args	_parse_args(args: list[str] | None)	todo		
+Lib/platform.py	1505	1511	_main	_main(args: list[str] | None=None)	todo		

@@ -1,0 +1,10 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_pyrepl/fancy_termios.py	32	39	TermState.__init__	__init__(self, attrs: list[int | list[bytes]])	todo		
+Lib/_pyrepl/fancy_termios.py	41	52	TermState.as_list	as_list(self)	todo		
+Lib/_pyrepl/fancy_termios.py	54	55	TermState.copy	copy(self)	todo		
+Lib/_pyrepl/fancy_termios.py	58	59	tcgetattr	tcgetattr(fd: int)	todo		
+Lib/_pyrepl/fancy_termios.py	62	63	tcsetattr	tcsetattr(fd: int, when: int, attrs: TermState)	todo		
+Lib/_pyrepl/fancy_termios.py	69	72	Term.__init__	__init__(self, fd: int=0)	todo		
+Lib/_pyrepl/fancy_termios.py	74	75	Term.save	save(self)	todo		
+Lib/_pyrepl/fancy_termios.py	77	78	Term.set	set(self, when: int=termios.TCSANOW)	todo		
+Lib/_pyrepl/fancy_termios.py	80	82	Term.restore	restore(self)	todo		

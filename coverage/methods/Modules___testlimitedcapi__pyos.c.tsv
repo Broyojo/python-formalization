@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testlimitedcapi/pyos.c	5	27	test_PyOS_mystrnicmp	test_PyOS_mystrnicmp(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/pyos.c	30	44	test_PyOS_mystricmp	test_PyOS_mystricmp(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testlimitedcapi/pyos.c	53	60	_PyTestLimitedCAPI_Init_PyOS	_PyTestLimitedCAPI_Init_PyOS(PyObject *mod)	excluded		test-support: only for CPython's own tests

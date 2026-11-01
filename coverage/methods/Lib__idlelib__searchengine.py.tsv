@@ -1,0 +1,20 @@
+file	line	endline	name	signature	status	entry	note
+Lib/idlelib/searchengine.py	7	16	get	get(root)	excluded		platform: GUI toolkit
+Lib/idlelib/searchengine.py	22	33	SearchEngine.__init__	__init__(self, root)	excluded		platform: GUI toolkit
+Lib/idlelib/searchengine.py	37	38	SearchEngine.getpat	getpat(self)	excluded		platform: GUI toolkit
+Lib/idlelib/searchengine.py	40	41	SearchEngine.setpat	setpat(self, pat)	excluded		platform: GUI toolkit
+Lib/idlelib/searchengine.py	43	44	SearchEngine.isre	isre(self)	excluded		platform: GUI toolkit
+Lib/idlelib/searchengine.py	46	47	SearchEngine.iscase	iscase(self)	excluded		platform: GUI toolkit
+Lib/idlelib/searchengine.py	49	50	SearchEngine.isword	isword(self)	excluded		platform: GUI toolkit
+Lib/idlelib/searchengine.py	52	53	SearchEngine.iswrap	iswrap(self)	excluded		platform: GUI toolkit
+Lib/idlelib/searchengine.py	55	56	SearchEngine.isback	isback(self)	excluded		platform: GUI toolkit
+Lib/idlelib/searchengine.py	60	65	SearchEngine.setcookedpat	setcookedpat(self, pat)	excluded		platform: GUI toolkit
+Lib/idlelib/searchengine.py	67	73	SearchEngine.getcookedpat	getcookedpat(self)	excluded		platform: GUI toolkit
+Lib/idlelib/searchengine.py	75	90	SearchEngine.getprog	getprog(self)	excluded		platform: GUI toolkit
+Lib/idlelib/searchengine.py	92	100	SearchEngine.report_error	report_error(self, pat, msg, col=None)	excluded		platform: GUI toolkit
+Lib/idlelib/searchengine.py	102	140	SearchEngine.search_text	search_text(self, text, prog=None, ok=0)	excluded		platform: GUI toolkit
+Lib/idlelib/searchengine.py	142	162	SearchEngine.search_forward	search_forward(self, text, prog, line, col, wrap, ok=0)	excluded		platform: GUI toolkit
+Lib/idlelib/searchengine.py	164	186	SearchEngine.search_backward	search_backward(self, text, prog, line, col, wrap, ok=0)	excluded		platform: GUI toolkit
+Lib/idlelib/searchengine.py	189	210	search_reverse	search_reverse(prog, chars, col)	excluded		platform: GUI toolkit
+Lib/idlelib/searchengine.py	212	224	get_selection	get_selection(text)	excluded		platform: GUI toolkit
+Lib/idlelib/searchengine.py	226	229	get_line_col	get_line_col(index)	excluded		platform: GUI toolkit

@@ -1,0 +1,20 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_osx_support.py	29	52	_find_executable	_find_executable(executable, path=None)	excluded		platform: single-OS support
+Lib/_osx_support.py	55	74	_read_output	_read_output(commandstring, capture_stderr=False)	excluded		platform: single-OS support
+Lib/_osx_support.py	77	82	_find_build_tool	_find_build_tool(toolname)	excluded		platform: single-OS support
+Lib/_osx_support.py	86	114	_get_system_version	_get_system_version()	excluded		platform: single-OS support
+Lib/_osx_support.py	117	133	_get_system_version_tuple	_get_system_version_tuple()	excluded		platform: single-OS support
+Lib/_osx_support.py	136	141	_remove_original_values	_remove_original_values(_config_vars)	excluded		platform: single-OS support
+Lib/_osx_support.py	143	149	_save_modified_value	_save_modified_value(_config_vars, cv, newvalue)	excluded		platform: single-OS support
+Lib/_osx_support.py	153	176	_default_sysroot	_default_sysroot(cc)	excluded		platform: single-OS support
+Lib/_osx_support.py	178	186	_supports_universal_builds	_supports_universal_builds()	excluded		platform: single-OS support
+Lib/_osx_support.py	188	195	_supports_arm64_builds	_supports_arm64_builds()	excluded		platform: single-OS support
+Lib/_osx_support.py	198	257	_find_appropriate_compiler	_find_appropriate_compiler(_config_vars)	excluded		platform: single-OS support
+Lib/_osx_support.py	260	271	_remove_universal_flags	_remove_universal_flags(_config_vars)	excluded		platform: single-OS support
+Lib/_osx_support.py	274	311	_remove_unsupported_archs	_remove_unsupported_archs(_config_vars)	excluded		platform: single-OS support
+Lib/_osx_support.py	314	328	_override_all_archs	_override_all_archs(_config_vars)	excluded		platform: single-OS support
+Lib/_osx_support.py	331	355	_check_for_unavailable_sdk	_check_for_unavailable_sdk(_config_vars)	excluded		platform: single-OS support
+Lib/_osx_support.py	358	435	compiler_fixup	compiler_fixup(compiler_so, cc_args)	excluded		platform: single-OS support
+Lib/_osx_support.py	438	476	customize_config_vars	customize_config_vars(_config_vars)	excluded		platform: single-OS support
+Lib/_osx_support.py	479	496	customize_compiler	customize_compiler(_config_vars)	excluded		platform: single-OS support
+Lib/_osx_support.py	499	579	get_platform_osx	get_platform_osx(_config_vars, osname, release, machine)	excluded		platform: single-OS support

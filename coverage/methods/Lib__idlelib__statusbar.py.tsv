@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Lib/idlelib/statusbar.py	6	8	MultiStatusBar.__init__	__init__(self, master, **kw)	excluded		platform: GUI toolkit
+Lib/idlelib/statusbar.py	10	19	MultiStatusBar.set_label	set_label(self, name, text='', side='left', width=0)	excluded		platform: GUI toolkit
+Lib/idlelib/statusbar.py	22	44	_multistatus_bar	_multistatus_bar(parent)	excluded		platform: GUI toolkit

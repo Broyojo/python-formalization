@@ -1,9 +1,37 @@
 # Playbook: formalizing a CPython module
 
-The goal per module: a model that is demonstrably faithful, properties a
-CPython maintainer would agree with, every property proven or refuted, and
-bug records a maintainer would want to read. Fewer, better findings beat many
-weak ones.
+The goal is to formalize Python: model as much of CPython as possible, the way
+julia-in-lean models Julia Base. Coverage is the headline number and bugs are a
+by-product of it. `coverage/methods/` lists every function, opcode and grammar
+rule; `python3 scripts/check_coverage.py` reports how many are modelled.
+
+A file you own is finished when every row for it is modelled or excluded with
+a reason. Work breadth first: mirror every function in the file, difftest them,
+give each at least one property, and settle what is cheap. Do not spend your
+effort on a few deep proofs while the rest of the file has no model. A hard
+property stays `.open` in the registry with a note; do not drop it, and do not
+weaken it.
+
+Bug reports stay held to a high bar: fewer, better findings beat many weak ones.
+
+## Coverage rules
+
+- List EVERY function a proven or refuted entry covers in its `pyFns`, helpers
+  included, using the name in the inventory (`coverage/methods/<file>.tsv`). A
+  function counts as modelled only through such an entry. `scripts/check_coverage.py
+  --prefill` matches these names after merge.
+- A row with no behaviour worth modelling becomes `excluded` in its tsv, with a
+  note starting `no-behaviour:`, `deprecated:`, `internal-bootstrap:`,
+  `platform:`, `vendored:`, `test-support:` or `generated:` and a justification.
+  Exclude honestly: reference counting, GC traversal, and allocator plumbing are
+  `no-behaviour:` when they have no Python-visible effect; anything with an
+  observable result is not.
+- Generic functions are modelled over an abstract element type with explicit
+  assumptions, as julia-in-lean does (for example, "if the element type's `__lt__`
+  is a strict weak order"), not by picking `int` and stopping.
+- Every model is later reviewed against `coverage/REVIEW_PROMPT.md`. Hollow
+  entries get withdrawn, so mirror the body rather than specifying its result,
+  and check every source citation against the file instead of from memory.
 
 ## Compute: nothing heavy on this machine
 
@@ -80,8 +108,9 @@ validation done in the wrong order. Look there first.
   silent wraparound are the highest-value bugs here.
 - Strings/bytes: `String`/`List Char` or `List UInt8`/`List Nat` as convenient.
 - Floats: Lean's `Float` cannot be reasoned about in proofs (and `decide`
-  cannot evaluate it). Keep proven/refuted properties to exact (integer,
-  rational, string) behaviour. Float paths may be modelled for difftesting only.
+  cannot evaluate it). Use the exact binary64 model in `lean/PyLean/Binary64/`
+  when it has been merged; until then model float paths for difftesting and keep
+  float properties `.open`.
 - Loops use fuel; `PyExc.modelFuel` is never a Python outcome.
 - Twins: when both a C and a pure-Python implementation exist, model both if
   they differ structurally, and state "C and Python agree" properties.
@@ -109,7 +138,8 @@ validation done in the wrong order. Look there first.
   maintainers have rejected literal one-sentence readings
   (python/cpython#158786).
 - Smoke-test every statement numerically against CPython before proving it.
-- Aim for 8-20 meaningful properties per module, not hundreds of trivial ones.
+- Expect about one meaningful property per function. A property may cover several
+  functions when they form one behaviour, but list them all in `pyFns`.
 
 ## 4. Prove or refute
 
@@ -121,8 +151,8 @@ validation done in the wrong order. Look there first.
 - Forbidden: `sorry`, `admit`, `native_decide`, `bv_decide`, `ofReduceBool`,
   new axioms, `implemented_by`, `@[extern]`. Check with `lake build` and
   `lake env lean Audit.lean` from `lean/`, through `scripts/r`.
-- If a proof is intractable after serious effort, leave the entry `.open`
-  with a note on what is missing, rather than weakening it.
+- If a proof is not cheap, leave the entry `.open` with a note on what is
+  missing and move on; come back once the file has full coverage.
 
 ## 5. Triage (read-only; nothing leaves this repo)
 

@@ -1,0 +1,65 @@
+file	line	endline	name	signature	status	entry	note
+Modules/mathmodule.c	95	102	dl_fast_sum	dl_fast_sum(double a, double b)	todo		
+Modules/mathmodule.c	105	112	dl_sum	dl_sum(double a, double b)	todo		
+Modules/mathmodule.c	117	123	dl_mul	dl_mul(double x, double y)	todo		
+Modules/mathmodule.c	143	149	dl_split	dl_split(double x) {	todo		
+Modules/mathmodule.c	152	162	dl_mul	dl_mul(double x, double y)	todo		
+Modules/mathmodule.c	171	179	tl_fma	tl_fma(double x, double y, TripleLength total)	todo		
+Modules/mathmodule.c	182	186	tl_to_d	tl_to_d(TripleLength total)	todo		
+Modules/mathmodule.c	222	253	m_sinpi	m_sinpi(double x)	todo		
+Modules/mathmodule.c	351	377	lanczos_sum	lanczos_sum(double x)	todo		
+Modules/mathmodule.c	381	474	m_tgamma	m_tgamma(double x)	todo		
+Modules/mathmodule.c	482	523	m_lgamma	m_lgamma(double x)	todo		
+Modules/mathmodule.c	530	617	m_remainder	m_remainder(double x, double y)	todo		
+Modules/mathmodule.c	628	647	m_log	m_log(double x)	todo		
+Modules/mathmodule.c	660	684	m_log2	m_log2(double x)	todo		
+Modules/mathmodule.c	687	706	m_log10	m_log10(double x)	todo		
+Modules/mathmodule.c	718	761	math_gcd_impl	math_gcd_impl(PyObject *module, PyObject * const *args, Py_ssize_t args_length) /*[clinic end generated code: output=a26c95907374ffb4 input=ded7f0ea3850c05c]*/	modelled	mathint-gcd-general,mathint-gcd-small	
+Modules/mathmodule.c	765	789	long_lcm	long_lcm(PyObject *a, PyObject *b)	modelled	mathint-lcm-general,mathint-lcm-small	
+Modules/mathmodule.c	801	840	math_lcm_impl	math_lcm_impl(PyObject *module, PyObject * const *args, Py_ssize_t args_length) /*[clinic end generated code: output=c8a59a5c2e55c816 input=3e4f4b7cdf948a98]*/	modelled	mathint-lcm-general,mathint-lcm-small	
+Modules/mathmodule.c	848	888	is_error	is_error(double x, int raise_edom)	todo		
+Modules/mathmodule.c	921	958	math_1	math_1(PyObject *arg, double (*func) (double), int can_overflow, const char *err_msg)	todo		
+Modules/mathmodule.c	965	985	math_1a	math_1a(PyObject *arg, double (*func) (double), const char *err_msg)	todo		
+Modules/mathmodule.c	1015	1047	math_2	math_2(PyObject *const *args, Py_ssize_t nargs, double (*func) (double, double), const char *funcname)	todo		
+Modules/mathmodule.c	1124	1146	math_ceil	math_ceil(PyObject *module, PyObject *number) /*[clinic end generated code: output=6c3b8a78bc201c67 input=2725352806399cab]*/	todo		
+Modules/mathmodule.c	1193	1215	math_floor	math_floor(PyObject *module, PyObject *number) /*[clinic end generated code: output=c6a65c4884884b8a input=63af6b5d7ebcc3d6]*/	todo		
+Modules/mathmodule.c	1295	1319	_fsum_realloc	_fsum_realloc(double **p_ptr, Py_ssize_t n, double *ps, Py_ssize_t *m_ptr)	todo		
+Modules/mathmodule.c	1363	1478	math_fsum	math_fsum(PyObject *module, PyObject *seq) /*[clinic end generated code: output=ba5c672b87fe34fc input=4506244ded6057dc]*/	todo		
+Modules/mathmodule.c	1484	1492	count_set_bits	count_set_bits(unsigned long n)	modelled	mathint-factorial-exact	
+Modules/mathmodule.c	1676	1681	_approximate_isqrt	_approximate_isqrt(uint64_t n)	modelled	mathint-isqrt-floor-sqrt	
+Modules/mathmodule.c	1693	1821	math_isqrt	math_isqrt(PyObject *module, PyObject *n) /*[clinic end generated code: output=35a6f7f980beab26 input=5b6e7ae4fa6c43d6]*/	modelled	mathint-isqrt-floor-sqrt,mathint-isqrt-negative	
+Modules/mathmodule.c	1893	1941	factorial_partial_product	factorial_partial_product(unsigned long start, unsigned long stop, unsigned long max_bits)	modelled	mathint-factorial-exact	
+Modules/mathmodule.c	1946	1993	factorial_odd_part	factorial_odd_part(unsigned long n)	modelled	mathint-factorial-exact	
+Modules/mathmodule.c	2018	2054	math_factorial	math_factorial(PyObject *module, PyObject *arg) /*[clinic end generated code: output=6686f26fae00e9ca input=366cc321df3d4773]*/	modelled	mathint-factorial-arg-errors,mathint-factorial-exact	
+Modules/mathmodule.c	2069	2086	math_trunc	math_trunc(PyObject *module, PyObject *x) /*[clinic end generated code: output=34b9697b707e1031 input=2168b34e0a09134d]*/	todo		
+Modules/mathmodule.c	2103	2116	math_frexp_impl	math_frexp_impl(PyObject *module, double x) /*[clinic end generated code: output=03e30d252a15ad4a input=215cf8ea28a0959b]*/	todo		
+Modules/mathmodule.c	2132	2197	math_ldexp_impl	math_ldexp_impl(PyObject *module, double x, PyObject *i) /*[clinic end generated code: output=b6892f3c2df9cc6a input=17d5970c1a40a8c1]*/	todo		
+Modules/mathmodule.c	2212	2226	math_modf_impl	math_modf_impl(PyObject *module, double x) /*[clinic end generated code: output=90cee0260014c3c0 input=b4cfb6786afd9035]*/	todo		
+Modules/mathmodule.c	2239	2276	loghelper	loghelper(PyObject* arg, double (*func)(double))	todo		
+Modules/mathmodule.c	2282	2304	math_log	math_log(PyObject *module, PyObject * const *args, Py_ssize_t nargs)	todo		
+Modules/mathmodule.c	2321	2325	math_log2	math_log2(PyObject *module, PyObject *x) /*[clinic end generated code: output=5425899a4d5d6acb input=08321262bae4f39b]*/	todo		
+Modules/mathmodule.c	2338	2342	math_log10	math_log10(PyObject *module, PyObject *x) /*[clinic end generated code: output=be72a64617df9c6f input=b2469d02c6469e53]*/	todo		
+Modules/mathmodule.c	2359	2384	math_fma_impl	math_fma_impl(PyObject *module, double x, double y, double z) /*[clinic end generated code: output=4fc8626dbc278d17 input=e3ad1f4a4c89626e]*/	todo		
+Modules/mathmodule.c	2400	2428	math_fmod_impl	math_fmod_impl(PyObject *module, double x, double y) /*[clinic end generated code: output=7559d794343a27b5 input=4f84caa8cfc26a03]*/	todo		
+Modules/mathmodule.c	2534	2582	vector_norm	vector_norm(Py_ssize_t n, double *vec, double max, int found_nan)	todo		
+Modules/mathmodule.c	2603	2681	math_dist_impl	math_dist_impl(PyObject *module, PyObject *p, PyObject *q) /*[clinic end generated code: output=56bd9538d06bbcfe input=74e85e1b6092e68e]*/	todo		
+Modules/mathmodule.c	2703	2742	math_hypot_impl	math_hypot_impl(PyObject *module, PyObject * const *args, Py_ssize_t args_length) /*[clinic end generated code: output=c9de404e24370068 input=1bceaf7d4fdcd9c2]*/	todo		
+Modules/mathmodule.c	2752	2755	long_add_would_overflow	long_add_would_overflow(long a, long b)	todo		
+Modules/mathmodule.c	2775	2984	math_sumprod_impl	math_sumprod_impl(PyObject *module, PyObject *p, PyObject *q) /*[clinic end generated code: output=6722dbfe60664554 input=a2880317828c61d2]*/	todo		
+Modules/mathmodule.c	3004	3069	math_pow_impl	math_pow_impl(PyObject *module, double x, double y) /*[clinic end generated code: output=fff93e65abccd6b0 input=c26f1f6075088bfd]*/	todo		
+Modules/mathmodule.c	3085	3089	math_degrees_impl	math_degrees_impl(PyObject *module, double x) /*[clinic end generated code: output=7fea78b294acd12f input=81e016555d6e3660]*/	todo		
+Modules/mathmodule.c	3102	3106	math_radians_impl	math_radians_impl(PyObject *module, double x) /*[clinic end generated code: output=34daa47caf9b1590 input=91626fc489fe3d63]*/	todo		
+Modules/mathmodule.c	3119	3123	math_isfinite_impl	math_isfinite_impl(PyObject *module, double x) /*[clinic end generated code: output=8ba1f396440c9901 input=46967d254812e54a]*/	todo		
+Modules/mathmodule.c	3136	3140	math_isnan_impl	math_isnan_impl(PyObject *module, double x) /*[clinic end generated code: output=f537b4d6df878c3e input=935891e66083f46a]*/	todo		
+Modules/mathmodule.c	3153	3157	math_isinf_impl	math_isinf_impl(PyObject *module, double x) /*[clinic end generated code: output=9f00cbec4de7b06b input=32630e4212cf961f]*/	todo		
+Modules/mathmodule.c	3186	3226	math_isclose_impl	math_isclose_impl(PyObject *module, double a, double b, double rel_tol, double abs_tol) /*[clinic end generated code: output=b73070207511952d input=12d41764468bfdb8]*/	todo		
+Modules/mathmodule.c	3229	3276	_check_long_mult_overflow	_check_long_mult_overflow(long a, long b) {	todo		
+Modules/mathmodule.c	3296	3430	math_prod_impl	math_prod_impl(PyObject *module, PyObject *iterable, PyObject *start) /*[clinic end generated code: output=36153bedac74a198 input=4c5ab0682782ed54]*/	todo		
+Modules/mathmodule.c	3557	3669	perm_comb_small	perm_comb_small(unsigned long long n, unsigned long long k, int iscomb)	modelled	mathint-comb-formula,mathint-perm-formula	
+Modules/mathmodule.c	3676	3722	perm_comb	perm_comb(PyObject *n, unsigned long long k, int iscomb)	modelled	mathint-comb-formula,mathint-perm-formula	
+Modules/mathmodule.c	3744	3815	math_perm_impl	math_perm_impl(PyObject *module, PyObject *n, PyObject *k) /*[clinic end generated code: output=e021a25469653e23 input=5311c5a00f359b53]*/	modelled	mathint-comb-perm-negative,mathint-comb-perm-zero-above,mathint-factorial-exact,mathint-perm-formula	
+Modules/mathmodule.c	3839	3933	math_comb_impl	math_comb_impl(PyObject *module, PyObject *n, PyObject *k) /*[clinic end generated code: output=bd2cec8d854f3493 input=9a05315af2518709]*/	modelled	mathint-comb-formula,mathint-comb-perm-negative,mathint-comb-perm-zero-above	
+Modules/mathmodule.c	3954	4065	math_nextafter_impl	math_nextafter_impl(PyObject *module, double x, double y, PyObject *steps) /*[clinic end generated code: output=cc6511f02afc099e input=89764144d1a33160]*/	todo		
+Modules/mathmodule.c	4078	4096	math_ulp_impl	math_ulp_impl(PyObject *module, double x) /*[clinic end generated code: output=f5207867a9384dd4 input=31f9bfbbe373fcaa]*/	todo		
+Modules/mathmodule.c	4099	4119	math_exec	math_exec(PyObject *module)	todo		
+Modules/mathmodule.c	4203	4206	PyInit_math	PyInit_math(void)	todo		

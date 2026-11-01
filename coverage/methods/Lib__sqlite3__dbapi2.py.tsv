@@ -1,0 +1,5 @@
+file	line	endline	name	signature	status	entry	note
+Lib/sqlite3/dbapi2.py	39	40	DateFromTicks	DateFromTicks(ticks)	todo		
+Lib/sqlite3/dbapi2.py	42	43	TimeFromTicks	TimeFromTicks(ticks)	todo		
+Lib/sqlite3/dbapi2.py	45	46	TimestampFromTicks	TimestampFromTicks(ticks)	todo		
+Lib/sqlite3/dbapi2.py	54	90	register_adapters_and_converters	register_adapters_and_converters()	todo		

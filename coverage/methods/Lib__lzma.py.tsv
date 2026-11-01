@@ -1,0 +1,20 @@
+file	line	endline	name	signature	status	entry	note
+Lib/lzma.py	49	132	LZMAFile.__init__	__init__(self, filename=None, mode='r', *, format=None, check=-1, preset=None, filters=None)	todo		
+Lib/lzma.py	134	155	LZMAFile.close	close(self)	todo		
+Lib/lzma.py	158	160	LZMAFile.closed	closed(self)	todo		
+Lib/lzma.py	163	165	LZMAFile.name	name(self)	todo		
+Lib/lzma.py	168	169	LZMAFile.mode	mode(self)	todo		
+Lib/lzma.py	171	174	LZMAFile.fileno	fileno(self)	todo		
+Lib/lzma.py	176	178	LZMAFile.seekable	seekable(self)	todo		
+Lib/lzma.py	180	183	LZMAFile.readable	readable(self)	todo		
+Lib/lzma.py	185	188	LZMAFile.writable	writable(self)	todo		
+Lib/lzma.py	190	199	LZMAFile.peek	peek(self, size=-1)	todo		
+Lib/lzma.py	201	208	LZMAFile.read	read(self, size=-1)	todo		candidates:pyio-bytesio-read-after-seek
+Lib/lzma.py	210	220	LZMAFile.read1	read1(self, size=-1)	todo		
+Lib/lzma.py	222	230	LZMAFile.readline	readline(self, size=-1)	todo		
+Lib/lzma.py	232	251	LZMAFile.write	write(self, data)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/lzma.py	253	269	LZMAFile.seek	seek(self, offset, whence=io.SEEK_SET)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
+Lib/lzma.py	271	276	LZMAFile.tell	tell(self)	todo		
+Lib/lzma.py	279	324	open	open(filename, mode='rb', *, format=None, check=-1, preset=None, filters=None, encoding=None, errors=None, newline=None)	todo		
+Lib/lzma.py	327	336	compress	compress(data, format=FORMAT_XZ, check=-1, preset=None, filters=None)	todo		
+Lib/lzma.py	339	364	decompress	decompress(data, format=FORMAT_AUTO, memlimit=None, filters=None)	todo		

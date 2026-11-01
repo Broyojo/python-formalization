@@ -1,0 +1,129 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_asynciomodule.c	195	200	get_asyncio_state	get_asyncio_state(PyObject *mod)	todo		
+Modules/_asynciomodule.c	203	208	get_asyncio_state_by_cls	get_asyncio_state_by_cls(PyTypeObject *cls)	todo		
+Modules/_asynciomodule.c	213	219	get_asyncio_state_by_def	get_asyncio_state_by_def(PyObject *self)	todo		
+Modules/_asynciomodule.c	238	241	clear_task_coro	clear_task_coro(TaskObj *task)	todo		
+Modules/_asynciomodule.c	245	250	set_task_coro	set_task_coro(TaskObj *task, PyObject *coro)	todo		
+Modules/_asynciomodule.c	254	284	_is_coroutine	_is_coroutine(asyncio_state *state, PyObject *coro)	todo		
+Modules/_asynciomodule.c	288	314	is_coroutine	is_coroutine(asyncio_state *state, PyObject *coro)	todo		
+Modules/_asynciomodule.c	318	339	get_future_loop	get_future_loop(asyncio_state *state, PyObject *fut)	todo		
+Modules/_asynciomodule.c	342	362	get_event_loop	get_event_loop(asyncio_state *state)	todo		
+Modules/_asynciomodule.c	366	397	call_soon	call_soon(asyncio_state *state, PyObject *loop, PyObject *func, PyObject *arg, PyObject *ctx)	todo		
+Modules/_asynciomodule.c	401	404	future_is_alive	future_is_alive(FutureObj *fut)	todo		
+Modules/_asynciomodule.c	408	416	future_ensure_alive	future_ensure_alive(FutureObj *fut)	todo		
+Modules/_asynciomodule.c	430	495	future_schedule_callbacks	future_schedule_callbacks(asyncio_state *state, FutureObj *fut)	todo		
+Modules/_asynciomodule.c	499	558	future_init	future_init(FutureObj *fut, PyObject *loop)	todo		
+Modules/_asynciomodule.c	561	600	future_awaited_by_add	future_awaited_by_add(asyncio_state *state, FutureObj *fut, PyObject *thing)	todo		
+Modules/_asynciomodule.c	603	632	future_awaited_by_discard	future_awaited_by_discard(asyncio_state *state, FutureObj *fut, PyObject *thing)	todo		
+Modules/_asynciomodule.c	636	657	future_set_result	future_set_result(asyncio_state *state, FutureObj *fut, PyObject *res)	todo		
+Modules/_asynciomodule.c	660	725	future_set_exception	future_set_exception(asyncio_state *state, FutureObj *fut, PyObject *exc)	todo		
+Modules/_asynciomodule.c	728	746	create_cancelled_error	create_cancelled_error(asyncio_state *state, FutureObj *fut)	todo		
+Modules/_asynciomodule.c	749	759	future_set_cancelled_error	future_set_cancelled_error(asyncio_state *state, FutureObj *fut)	todo		
+Modules/_asynciomodule.c	762	793	future_get_result	future_get_result(asyncio_state *state, FutureObj *fut, PyObject **result)	todo		
+Modules/_asynciomodule.c	796	870	future_add_done_callback	future_add_done_callback(asyncio_state *state, FutureObj *fut, PyObject *arg, PyObject *ctx)	todo		
+Modules/_asynciomodule.c	873	892	future_cancel	future_cancel(asyncio_state *state, FutureObj *fut, PyObject *msg)	todo		
+Modules/_asynciomodule.c	923	940	FutureObj_clear	FutureObj_clear(PyObject *op)	todo		
+Modules/_asynciomodule.c	943	959	FutureObj_traverse	FutureObj_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_asynciomodule.c	974	1001	_asyncio_Future_result_impl	_asyncio_Future_result_impl(FutureObj *self) /*[clinic end generated code: output=f35f940936a4b1e5 input=ee20e126776cbb04]*/	todo		
+Modules/_asynciomodule.c	1019	1048	_asyncio_Future_exception_impl	_asyncio_Future_exception_impl(FutureObj *self, PyTypeObject *cls) /*[clinic end generated code: output=ce75576b187c905b input=647d1fd1fc403301]*/	todo		
+Modules/_asynciomodule.c	1065	1072	_asyncio_Future_set_result_impl	_asyncio_Future_set_result_impl(FutureObj *self, PyTypeObject *cls, PyObject *result) /*[clinic end generated code: output=99afbbe78f99c32d input=4069306f03a3b6ee]*/	todo		
+Modules/_asynciomodule.c	1089	1096	_asyncio_Future_set_exception_impl	_asyncio_Future_set_exception_impl(FutureObj *self, PyTypeObject *cls, PyObject *exception) /*[clinic end generated code: output=0a5e8b5a52f058d6 input=b6eab43a389bc966]*/	todo		
+Modules/_asynciomodule.c	1116	1131	_asyncio_Future_add_done_callback_impl	_asyncio_Future_add_done_callback_impl(FutureObj *self, PyTypeObject *cls, PyObject *fn, PyObject *context) /*[clinic end generated code: output=922e9a4cbd601167 input=f4f6adb074cd3e0f]*/	todo		
+Modules/_asynciomodule.c	1147	1255	_asyncio_Future_remove_done_callback_impl	_asyncio_Future_remove_done_callback_impl(FutureObj *self, PyTypeObject *cls, PyObject *fn) /*[clinic end generated code: output=2da35ccabfe41b98 input=3afbc9f6a673091b]*/	todo		
+Modules/_asynciomodule.c	1273	1280	_asyncio_Future_cancel_impl	_asyncio_Future_cancel_impl(FutureObj *self, PyTypeObject *cls, PyObject *msg) /*[clinic end generated code: output=074956f35904b034 input=0c9157547a964c4c]*/	todo		
+Modules/_asynciomodule.c	1290	1299	_asyncio_Future_cancelled_impl	_asyncio_Future_cancelled_impl(FutureObj *self) /*[clinic end generated code: output=145197ced586357d input=9b8644819a675416]*/	todo		
+Modules/_asynciomodule.c	1312	1321	_asyncio_Future_done_impl	_asyncio_Future_done_impl(FutureObj *self) /*[clinic end generated code: output=244c5ac351145096 input=acf2c2347f3c01d8]*/	todo		
+Modules/_asynciomodule.c	1334	1340	_asyncio_Future_get_loop_impl	_asyncio_Future_get_loop_impl(FutureObj *self, PyTypeObject *cls) /*[clinic end generated code: output=f50ea6c374d9ee97 input=f3ce629bfd9f45c1]*/	todo		
+Modules/_asynciomodule.c	1349	1371	_asyncio_Future__asyncio_awaited_by_get_impl	_asyncio_Future__asyncio_awaited_by_get_impl(FutureObj *self) /*[clinic end generated code: output=932af76d385d2e2a input=64c1783df2d44d2b]*/	todo		
+Modules/_asynciomodule.c	1381	1390	_asyncio_Future__asyncio_future_blocking_get_impl	_asyncio_Future__asyncio_future_blocking_get_impl(FutureObj *self) /*[clinic end generated code: output=a558a2c51e38823b input=58da92efc03b617d]*/	todo		
+Modules/_asynciomodule.c	1427	1438	_asyncio_Future__log_traceback_get_impl	_asyncio_Future__log_traceback_get_impl(FutureObj *self) /*[clinic end generated code: output=2724433b238593c7 input=91e5144ea4117d8e]*/	todo		
+Modules/_asynciomodule.c	1447	1465	_asyncio_Future__log_traceback_set_impl	_asyncio_Future__log_traceback_set_impl(FutureObj *self, PyObject *value) /*[clinic end generated code: output=9ce8e19504f42f54 input=30ac8217754b08c2]*/	todo		
+Modules/_asynciomodule.c	1473	1480	_asyncio_Future__loop_get_impl	_asyncio_Future__loop_get_impl(FutureObj *self) /*[clinic end generated code: output=5ba31563eecfeedf input=0337130bc5781670]*/	todo		
+Modules/_asynciomodule.c	1489	1536	_asyncio_Future__callbacks_get_impl	_asyncio_Future__callbacks_get_impl(FutureObj *self) /*[clinic end generated code: output=b40d360505fcc583 input=7a466649530c01bb]*/	todo		
+Modules/_asynciomodule.c	1564	1573	_asyncio_Future__exception_get_impl	_asyncio_Future__exception_get_impl(FutureObj *self) /*[clinic end generated code: output=32f2c93b9e021a9b input=1828a1fcac929710]*/	todo		
+Modules/_asynciomodule.c	1582	1589	_asyncio_Future__source_traceback_get_impl	_asyncio_Future__source_traceback_get_impl(FutureObj *self) /*[clinic end generated code: output=d4f12b09af22f61b input=3c831fbde5da90d0]*/	todo		
+Modules/_asynciomodule.c	1598	1605	_asyncio_Future__cancel_message_get_impl	_asyncio_Future__cancel_message_get_impl(FutureObj *self) /*[clinic end generated code: output=52ef6444f92cedac input=54c12c67082e4eea]*/	todo		
+Modules/_asynciomodule.c	1614	1624	_asyncio_Future__cancel_message_set_impl	_asyncio_Future__cancel_message_set_impl(FutureObj *self, PyObject *value) /*[clinic end generated code: output=0854b2f77bff2209 input=f461d17f2d891fad]*/	todo		
+Modules/_asynciomodule.c	1633	1656	_asyncio_Future__state_get_impl	_asyncio_Future__state_get_impl(FutureObj *self) /*[clinic end generated code: output=622f560a3fa69c63 input=7c5ad023a93423ff]*/	todo		
+Modules/_asynciomodule.c	1659	1665	FutureObj_repr	FutureObj_repr(PyObject *op)	todo		
+Modules/_asynciomodule.c	1678	1683	_asyncio_Future__make_cancelled_error_impl	_asyncio_Future__make_cancelled_error_impl(FutureObj *self) /*[clinic end generated code: output=a5df276f6c1213de input=ccb90df8c3c18bcd]*/	todo		
+Modules/_asynciomodule.c	1686	1744	FutureObj_finalize	FutureObj_finalize(PyObject *op)	todo		
+Modules/_asynciomodule.c	1807	1822	FutureObj_dealloc	FutureObj_dealloc(PyObject *self)	todo		
+Modules/_asynciomodule.c	1834	1847	FutureIter_dealloc	FutureIter_dealloc(PyObject *it)	todo		
+Modules/_asynciomodule.c	1850	1876	FutureIter_am_send_lock_held	FutureIter_am_send_lock_held(futureiterobject *it, PyObject **result)	todo		
+Modules/_asynciomodule.c	1879	1890	FutureIter_am_send	FutureIter_am_send(PyObject *op, PyObject *Py_UNUSED(arg), PyObject **result)	todo		
+Modules/_asynciomodule.c	1894	1909	FutureIter_iternext	FutureIter_iternext(PyObject *it)	todo		
+Modules/_asynciomodule.c	1912	1918	FutureIter_send	FutureIter_send(PyObject *self, PyObject *unused)	todo		
+Modules/_asynciomodule.c	1921	1993	FutureIter_throw	FutureIter_throw(PyObject *op, PyObject *const *args, Py_ssize_t nargs)	todo		
+Modules/_asynciomodule.c	1996	2001	FutureIter_clear	FutureIter_clear(PyObject *op)	todo		
+Modules/_asynciomodule.c	2004	2008	FutureIter_close	FutureIter_close(PyObject *self, PyObject *arg)	todo		
+Modules/_asynciomodule.c	2011	2017	FutureIter_traverse	FutureIter_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_asynciomodule.c	2049	2067	future_new_iter	future_new_iter(PyObject *fut)	todo		
+Modules/_asynciomodule.c	2086	2092	TaskStepMethWrapper_clear	TaskStepMethWrapper_clear(PyObject *op)	todo		
+Modules/_asynciomodule.c	2095	2103	TaskStepMethWrapper_dealloc	TaskStepMethWrapper_dealloc(PyObject *op)	todo		
+Modules/_asynciomodule.c	2106	2124	TaskStepMethWrapper_call	TaskStepMethWrapper_call(PyObject *op, PyObject *args, PyObject *kwds)	todo		
+Modules/_asynciomodule.c	2127	2135	TaskStepMethWrapper_traverse	TaskStepMethWrapper_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_asynciomodule.c	2138	2145	TaskStepMethWrapper_get___self__	TaskStepMethWrapper_get___self__(PyObject *op, void *Py_UNUSED(closure))	todo		
+Modules/_asynciomodule.c	2171	2185	TaskStepMethWrapper_new	TaskStepMethWrapper_new(TaskObj *task, PyObject *arg)	todo		
+Modules/_asynciomodule.c	2199	2209	register_task	register_task(TaskObj *task)	todo		
+Modules/_asynciomodule.c	2212	2220	unregister_task_safe	unregister_task_safe(TaskObj *task)	todo		
+Modules/_asynciomodule.c	2223	2242	unregister_task	unregister_task(TaskObj *task)	todo		
+Modules/_asynciomodule.c	2245	2265	enter_task	enter_task(PyObject *loop, PyObject *task)	todo		
+Modules/_asynciomodule.c	2268	2287	leave_task	leave_task(PyObject *loop, PyObject *task)	todo		
+Modules/_asynciomodule.c	2290	2310	swap_current_task	swap_current_task(PyObject *loop, PyObject *task)	todo		
+Modules/_asynciomodule.c	2328	2415	_asyncio_Task___init___impl	_asyncio_Task___init___impl(TaskObj *self, PyObject *coro, PyObject *loop, PyObject *name, PyObject *context, int eager_start) /*[clinic end generated code: output=7aced2d27836f1a1 input=18e3f113a51b829d]*/	todo		
+Modules/_asynciomodule.c	2418	2427	TaskObj_clear	TaskObj_clear(PyObject *op)	todo		
+Modules/_asynciomodule.c	2430	2451	TaskObj_traverse	TaskObj_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_asynciomodule.c	2460	2469	_asyncio_Task__log_destroy_pending_get_impl	_asyncio_Task__log_destroy_pending_get_impl(TaskObj *self) /*[clinic end generated code: output=e6c2a47d029ac93b input=17127298cd4c720b]*/	todo		
+Modules/_asynciomodule.c	2478	2491	_asyncio_Task__log_destroy_pending_set_impl	_asyncio_Task__log_destroy_pending_set_impl(TaskObj *self, PyObject *value) /*[clinic end generated code: output=7ebc030bb92ec5ce input=49b759c97d1216a4]*/	todo		
+Modules/_asynciomodule.c	2501	2510	_asyncio_Task__must_cancel_get_impl	_asyncio_Task__must_cancel_get_impl(TaskObj *self) /*[clinic end generated code: output=70e79b900996c363 input=2d04529fb23feedf]*/	todo		
+Modules/_asynciomodule.c	2519	2527	_asyncio_Task__coro_get_impl	_asyncio_Task__coro_get_impl(TaskObj *self) /*[clinic end generated code: output=a2726012ab5fd531 input=323c31a272020624]*/	todo		
+Modules/_asynciomodule.c	2537	2545	_asyncio_Task__fut_waiter_get_impl	_asyncio_Task__fut_waiter_get_impl(TaskObj *self) /*[clinic end generated code: output=c4f966b847fefcdf input=4d1005d725e72db7]*/	todo		
+Modules/_asynciomodule.c	2548	2552	TaskObj_repr	TaskObj_repr(PyObject *task)	todo		
+Modules/_asynciomodule.c	2566	2571	_asyncio_Task__make_cancelled_error_impl	_asyncio_Task__make_cancelled_error_impl(TaskObj *self) /*[clinic end generated code: output=55a819e8b4276fab input=2d3213be0cb02390]*/	todo		
+Modules/_asynciomodule.c	2603	2646	_asyncio_Task_cancel_impl	_asyncio_Task_cancel_impl(TaskObj *self, PyObject *msg) /*[clinic end generated code: output=c66b60d41c74f9f1 input=6125d45b9a6a5abd]*/	todo		
+Modules/_asynciomodule.c	2659	2664	_asyncio_Task_cancelling_impl	_asyncio_Task_cancelling_impl(TaskObj *self) /*[clinic end generated code: output=803b3af96f917d7e input=5ef89b1b38f080ee]*/ /*[clinic end generated code]*/	todo		
+Modules/_asynciomodule.c	2679	2690	_asyncio_Task_uncancel_impl	_asyncio_Task_uncancel_impl(TaskObj *self) /*[clinic end generated code: output=58184d236a817d3c input=cb3220b0e5afd61d]*/ /*[clinic end generated code]*/	todo		
+Modules/_asynciomodule.c	2722	2730	_asyncio_Task_get_stack_impl	_asyncio_Task_get_stack_impl(TaskObj *self, PyTypeObject *cls, PyObject *limit) /*[clinic end generated code: output=6774dfc10d3857fa input=8e01c9b2618ae953]*/	todo		
+Modules/_asynciomodule.c	2751	2759	_asyncio_Task_print_stack_impl	_asyncio_Task_print_stack_impl(TaskObj *self, PyTypeObject *cls, PyObject *limit, PyObject *file) /*[clinic end generated code: output=b38affe9289ec826 input=150b35ba2d3a7dee]*/	todo		
+Modules/_asynciomodule.c	2769	2775	_asyncio_Task_set_result_impl	_asyncio_Task_set_result_impl(TaskObj *self, PyObject *result) /*[clinic end generated code: output=e9d8e3cdaf18e258 input=9d1a00c07be41bab]*/	todo		
+Modules/_asynciomodule.c	2785	2791	_asyncio_Task_set_exception_impl	_asyncio_Task_set_exception_impl(TaskObj *self, PyObject *exception) /*[clinic end generated code: output=96a91790c192cc7d input=9a8f65c83dcf893a]*/	todo		
+Modules/_asynciomodule.c	2799	2807	_asyncio_Task_get_coro_impl	_asyncio_Task_get_coro_impl(TaskObj *self) /*[clinic end generated code: output=bcac27c8cc6c8073 input=a47f81427e39fe0c]*/	todo		
+Modules/_asynciomodule.c	2814	2818	_asyncio_Task_get_context_impl	_asyncio_Task_get_context_impl(TaskObj *self) /*[clinic end generated code: output=6996f53d3dc01aef input=87c0b209b8fceeeb]*/	todo		
+Modules/_asynciomodule.c	2826	2841	_asyncio_Task_get_name_impl	_asyncio_Task_get_name_impl(TaskObj *self) /*[clinic end generated code: output=0ecf1570c3b37a8f input=92a8f30c85034249]*/	todo		
+Modules/_asynciomodule.c	2852	2866	_asyncio_Task_set_name_impl	_asyncio_Task_set_name_impl(TaskObj *self, PyObject *value) /*[clinic end generated code: output=f88ff4c0d64a9a6f input=e8d400ad64bad799]*/	todo		
+Modules/_asynciomodule.c	2869	2929	TaskObj_finalize	TaskObj_finalize(PyObject *op)	todo		
+Modules/_asynciomodule.c	2993	3014	TaskObj_dealloc	TaskObj_dealloc(PyObject *self)	todo		
+Modules/_asynciomodule.c	3017	3031	task_call_step_soon	task_call_step_soon(asyncio_state *state, TaskObj *task, PyObject *arg)	todo		
+Modules/_asynciomodule.c	3034	3061	task_set_error_soon	task_set_error_soon(asyncio_state *state, TaskObj *task, PyObject *et, const char *format, ...)	todo		
+Modules/_asynciomodule.c	3064	3075	gen_status_from_result	gen_status_from_result(PyObject **result)	todo		
+Modules/_asynciomodule.c	3078	3205	task_step_impl	task_step_impl(asyncio_state *state, TaskObj *task, PyObject *exc)	todo		
+Modules/_asynciomodule.c	3209	3454	task_step_handle_result_impl	task_step_handle_result_impl(asyncio_state *state, TaskObj *task, PyObject *result)	todo		
+Modules/_asynciomodule.c	3457	3482	task_step	task_step(asyncio_state *state, TaskObj *task, PyObject *exc)	todo		
+Modules/_asynciomodule.c	3485	3536	task_eager_start	task_eager_start(asyncio_state *state, TaskObj *task)	todo		
+Modules/_asynciomodule.c	3539	3595	task_wakeup_lock_held	task_wakeup_lock_held(TaskObj *task, PyObject *o)	todo		
+Modules/_asynciomodule.c	3598	3606	task_wakeup	task_wakeup(PyObject *op, PyObject *arg)	todo		
+Modules/_asynciomodule.c	3623	3633	_asyncio__get_running_loop_impl	_asyncio__get_running_loop_impl(PyObject *module) /*[clinic end generated code: output=b4390af721411a0a input=0a21627e25a4bd43]*/	todo		
+Modules/_asynciomodule.c	3647	3656	_asyncio__set_running_loop	_asyncio__set_running_loop(PyObject *module, PyObject *loop) /*[clinic end generated code: output=ae56bf7a28ca189a input=4c9720233d606604]*/	todo		
+Modules/_asynciomodule.c	3672	3677	_asyncio_get_event_loop_impl	_asyncio_get_event_loop_impl(PyObject *module) /*[clinic end generated code: output=2a2d8b2f824c648b input=9364bf2916c8655d]*/	todo		
+Modules/_asynciomodule.c	3688	3701	_asyncio_get_running_loop_impl	_asyncio_get_running_loop_impl(PyObject *module) /*[clinic end generated code: output=c247b5f9e529530e input=2a3bf02ba39f173d]*/	todo		
+Modules/_asynciomodule.c	3714	3733	_asyncio__register_task_impl	_asyncio__register_task_impl(PyObject *module, PyObject *task) /*[clinic end generated code: output=8672dadd69a7d4e2 input=21075aaea14dfbad]*/	todo		
+Modules/_asynciomodule.c	3746	3763	_asyncio__register_eager_task_impl	_asyncio__register_eager_task_impl(PyObject *module, PyObject *task) /*[clinic end generated code: output=dfe1d45367c73f1a input=237f684683398c51]*/	todo		
+Modules/_asynciomodule.c	3777	3792	_asyncio__unregister_task_impl	_asyncio__unregister_task_impl(PyObject *module, PyObject *task) /*[clinic end generated code: output=6e5585706d568a46 input=28fb98c3975f7bdc]*/	todo		
+Modules/_asynciomodule.c	3805	3821	_asyncio__unregister_eager_task_impl	_asyncio__unregister_eager_task_impl(PyObject *module, PyObject *task) /*[clinic end generated code: output=a426922bd07f23d1 input=9d07401ef14ee048]*/	todo		
+Modules/_asynciomodule.c	3838	3845	_asyncio__enter_task_impl	_asyncio__enter_task_impl(PyObject *module, PyObject *loop, PyObject *task) /*[clinic end generated code: output=a22611c858035b73 input=de1b06dca70d8737]*/	todo		
+Modules/_asynciomodule.c	3862	3869	_asyncio__leave_task_impl	_asyncio__leave_task_impl(PyObject *module, PyObject *loop, PyObject *task) /*[clinic end generated code: output=0ebf6db4b858fb41 input=51296a46313d1ad8]*/	todo		
+Modules/_asynciomodule.c	3885	3890	_asyncio__swap_current_task_impl	_asyncio__swap_current_task_impl(PyObject *module, PyObject *loop, PyObject *task) /*[clinic end generated code: output=9f88de958df74c7e input=c9c72208d3d38b6c]*/	todo		
+Modules/_asynciomodule.c	3903	3946	_asyncio_current_task_impl	_asyncio_current_task_impl(PyObject *module, PyObject *loop) /*[clinic end generated code: output=fe15ac331a7f981a input=58910f61a5627112]*/	todo		
+Modules/_asynciomodule.c	3950	3986	add_one_task	add_one_task(asyncio_state *state, PyObject *tasks, PyObject *task, PyObject *loop)	todo		
+Modules/_asynciomodule.c	3989	4010	add_tasks_llist	add_tasks_llist(struct llist_node *head, PyListObject *tasks)	todo		
+Modules/_asynciomodule.c	4013	4038	add_tasks_interp	add_tasks_interp(PyInterpreterState *interp, PyListObject *tasks)	todo		
+Modules/_asynciomodule.c	4052	4145	_asyncio_all_tasks_impl	_asyncio_all_tasks_impl(PyObject *module, PyObject *loop) /*[clinic end generated code: output=0e107cbb7f72aa7b input=43a1b423c2d95bfa]*/	todo		
+Modules/_asynciomodule.c	4159	4174	_asyncio_future_add_to_awaited_by_impl	_asyncio_future_add_to_awaited_by_impl(PyObject *module, PyObject *fut, PyObject *waiter) /*[clinic end generated code: output=0ab9a1a63389e4df input=06e6eaac51f532b9]*/	todo		
+Modules/_asynciomodule.c	4186	4201	_asyncio_future_discard_from_awaited_by_impl	_asyncio_future_discard_from_awaited_by_impl(PyObject *module, PyObject *fut, PyObject *waiter) /*[clinic end generated code: output=a03b0b4323b779de input=3833f7639e88e483]*/	todo		
+Modules/_asynciomodule.c	4204	4231	module_traverse	module_traverse(PyObject *mod, visitproc visit, void *arg)	todo		
+Modules/_asynciomodule.c	4234	4267	module_clear	module_clear(PyObject *mod)	todo		
+Modules/_asynciomodule.c	4270	4273	module_free	module_free(void *mod)	todo		
+Modules/_asynciomodule.c	4276	4354	module_init	module_init(asyncio_state *state)	todo		
+Modules/_asynciomodule.c	4378	4412	module_exec	module_exec(PyObject *mod)	todo		
+Modules/_asynciomodule.c	4434	4437	PyInit__asyncio	PyInit__asyncio(void)	todo		

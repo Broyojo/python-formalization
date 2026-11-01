@@ -1,0 +1,11 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_zstd/zstddict.c	44	96	_zstd_ZstdDict_new_impl	_zstd_ZstdDict_new_impl(PyTypeObject *type, Py_buffer *dict_content, int is_raw) /*[clinic end generated code: output=685b7406a48b0949 input=3bb66063c0240433]*/	todo		
+Modules/_zstd/zstddict.c	99	119	ZstdDict_dealloc	ZstdDict_dealloc(PyObject *ob)	todo		
+Modules/_zstd/zstddict.c	129	134	ZstdDict_repr	ZstdDict_repr(PyObject *ob)	todo		
+Modules/_zstd/zstddict.c	149	153	_zstd_ZstdDict_dict_content_get_impl	_zstd_ZstdDict_dict_content_get_impl(ZstdDict *self) /*[clinic end generated code: output=0d05caa5b550eabb input=4ed526d1c151c596]*/	todo		
+Modules/_zstd/zstddict.c	173	177	_zstd_ZstdDict_as_digested_dict_get_impl	_zstd_ZstdDict_as_digested_dict_get_impl(ZstdDict *self) /*[clinic end generated code: output=09b086e7a7320dbb input=a9417d40f1d7fedd]*/	todo		
+Modules/_zstd/zstddict.c	196	200	_zstd_ZstdDict_as_undigested_dict_get_impl	_zstd_ZstdDict_as_undigested_dict_get_impl(ZstdDict *self) /*[clinic end generated code: output=43c7a989e6d4253a input=56443c9c4e589cd5]*/	todo		
+Modules/_zstd/zstddict.c	219	223	_zstd_ZstdDict_as_prefix_get_impl	_zstd_ZstdDict_as_prefix_get_impl(ZstdDict *self) /*[clinic end generated code: output=6f7130c356595a16 input=192681a899c6fad0]*/	todo		
+Modules/_zstd/zstddict.c	234	238	ZstdDict_length	ZstdDict_length(PyObject *ob)	todo		
+Modules/_zstd/zstddict.c	241	246	ZstdDict_traverse	ZstdDict_traverse(PyObject *ob, visitproc visit, void *arg)	todo		
+Modules/_zstd/zstddict.c	249	254	ZstdDict_clear	ZstdDict_clear(PyObject *ob)	todo		

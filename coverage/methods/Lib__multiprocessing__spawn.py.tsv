@@ -1,0 +1,14 @@
+file	line	endline	name	signature	status	entry	note
+Lib/multiprocessing/spawn.py	36	43	set_executable	set_executable(exe)	todo		
+Lib/multiprocessing/spawn.py	45	46	get_executable	get_executable()	todo		
+Lib/multiprocessing/spawn.py	57	64	is_forking	is_forking(argv)	todo		
+Lib/multiprocessing/spawn.py	67	80	freeze_support	freeze_support()	todo		
+Lib/multiprocessing/spawn.py	83	95	get_command_line	get_command_line(**kwds)	todo		
+Lib/multiprocessing/spawn.py	98	123	spawn_main	spawn_main(pipe_handle, parent_pid=None, tracker_fd=None)	todo		
+Lib/multiprocessing/spawn.py	126	135	_main	_main(fd, parent_sentinel)	todo		
+Lib/multiprocessing/spawn.py	138	157	_check_not_importing_main	_check_not_importing_main()	todo		
+Lib/multiprocessing/spawn.py	160	204	get_preparation_data	get_preparation_data(name)	todo		
+Lib/multiprocessing/spawn.py	212	246	prepare	prepare(data)	todo		
+Lib/multiprocessing/spawn.py	250	272	_fixup_main_from_name	_fixup_main_from_name(mod_name)	todo		
+Lib/multiprocessing/spawn.py	275	300	_fixup_main_from_path	_fixup_main_from_path(main_path)	todo		
+Lib/multiprocessing/spawn.py	303	307	import_main_path	import_main_path(main_path)	todo		

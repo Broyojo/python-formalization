@@ -1,0 +1,43 @@
+file	line	endline	name	signature	status	entry	note
+Lib/multiprocessing/synchronize.py	49	81	SemLock.__init__	__init__(self, kind, value, maxvalue, *, ctx)	todo		
+Lib/multiprocessing/synchronize.py	84	87	SemLock._cleanup	_cleanup(name)	todo		
+Lib/multiprocessing/synchronize.py	89	91	SemLock._make_methods	_make_methods(self)	todo		
+Lib/multiprocessing/synchronize.py	93	94	SemLock.locked	locked(self)	todo		
+Lib/multiprocessing/synchronize.py	96	97	SemLock.__enter__	__enter__(self)	todo		
+Lib/multiprocessing/synchronize.py	99	100	SemLock.__exit__	__exit__(self, *args)	todo		
+Lib/multiprocessing/synchronize.py	102	114	SemLock.__getstate__	__getstate__(self)	todo		
+Lib/multiprocessing/synchronize.py	116	121	SemLock.__setstate__	__setstate__(self, state)	todo		
+Lib/multiprocessing/synchronize.py	124	126	SemLock._make_name	_make_name()	todo		
+Lib/multiprocessing/synchronize.py	134	135	Semaphore.__init__	__init__(self, value=1, *, ctx)	todo		
+Lib/multiprocessing/synchronize.py	137	143	Semaphore.get_value	get_value(self)	todo		
+Lib/multiprocessing/synchronize.py	145	150	Semaphore.__repr__	__repr__(self)	todo		
+Lib/multiprocessing/synchronize.py	158	159	BoundedSemaphore.__init__	__init__(self, value=1, *, ctx)	todo		
+Lib/multiprocessing/synchronize.py	161	167	BoundedSemaphore.__repr__	__repr__(self)	todo		
+Lib/multiprocessing/synchronize.py	175	176	Lock.__init__	__init__(self, *, ctx)	todo		
+Lib/multiprocessing/synchronize.py	178	192	Lock.__repr__	__repr__(self)	todo		
+Lib/multiprocessing/synchronize.py	200	201	RLock.__init__	__init__(self, *, ctx)	todo		
+Lib/multiprocessing/synchronize.py	203	218	RLock.__repr__	__repr__(self)	todo		
+Lib/multiprocessing/synchronize.py	226	231	Condition.__init__	__init__(self, lock=None, *, ctx)	todo		
+Lib/multiprocessing/synchronize.py	233	236	Condition.__getstate__	__getstate__(self)	todo		
+Lib/multiprocessing/synchronize.py	238	241	Condition.__setstate__	__setstate__(self, state)	todo		
+Lib/multiprocessing/synchronize.py	243	244	Condition.__enter__	__enter__(self)	todo		
+Lib/multiprocessing/synchronize.py	246	247	Condition.__exit__	__exit__(self, *args)	todo		
+Lib/multiprocessing/synchronize.py	249	251	Condition._make_methods	_make_methods(self)	todo		
+Lib/multiprocessing/synchronize.py	253	259	Condition.__repr__	__repr__(self)	todo		
+Lib/multiprocessing/synchronize.py	261	282	Condition.wait	wait(self, timeout=None)	todo		
+Lib/multiprocessing/synchronize.py	284	308	Condition.notify	notify(self, n=1)	todo		
+Lib/multiprocessing/synchronize.py	310	311	Condition.notify_all	notify_all(self)	todo		
+Lib/multiprocessing/synchronize.py	313	329	Condition.wait_for	wait_for(self, predicate, timeout=None)	todo		
+Lib/multiprocessing/synchronize.py	337	339	Event.__init__	__init__(self, *, ctx)	todo		
+Lib/multiprocessing/synchronize.py	341	346	Event.is_set	is_set(self)	todo		
+Lib/multiprocessing/synchronize.py	348	352	Event.set	set(self)	todo		
+Lib/multiprocessing/synchronize.py	354	356	Event.clear	clear(self)	todo		
+Lib/multiprocessing/synchronize.py	358	368	Event.wait	wait(self, timeout=None)	todo		
+Lib/multiprocessing/synchronize.py	370	372	Event.__repr__	__repr__(self)	todo		
+Lib/multiprocessing/synchronize.py	379	386	Barrier.__init__	__init__(self, parties, action=None, timeout=None, *, ctx)	todo		
+Lib/multiprocessing/synchronize.py	388	391	Barrier.__setstate__	__setstate__(self, state)	todo		
+Lib/multiprocessing/synchronize.py	393	395	Barrier.__getstate__	__getstate__(self)	todo		
+Lib/multiprocessing/synchronize.py	398	399	Barrier._state	_state(self)	todo		
+Lib/multiprocessing/synchronize.py	402	403	Barrier._state	_state(self, value)	todo		
+Lib/multiprocessing/synchronize.py	406	407	Barrier._count	_count(self)	todo		
+Lib/multiprocessing/synchronize.py	410	411	Barrier._count	_count(self, value)	todo		

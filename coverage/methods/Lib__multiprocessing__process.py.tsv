@@ -1,0 +1,35 @@
+file	line	endline	name	signature	status	entry	note
+Lib/multiprocessing/process.py	37	41	current_process	current_process()	todo		
+Lib/multiprocessing/process.py	43	48	active_children	active_children()	todo		
+Lib/multiprocessing/process.py	51	55	parent_process	parent_process()	todo		
+Lib/multiprocessing/process.py	61	65	_cleanup	_cleanup()	todo		
+Lib/multiprocessing/process.py	77	78	BaseProcess._Popen	_Popen(self)	todo		
+Lib/multiprocessing/process.py	80	97	BaseProcess.__init__	__init__(self, group=None, target=None, name=None, args=(), kwargs=None, *, daemon=None)	todo		
+Lib/multiprocessing/process.py	99	101	BaseProcess._check_closed	_check_closed(self)	todo		
+Lib/multiprocessing/process.py	103	108	BaseProcess.run	run(self)	todo		
+Lib/multiprocessing/process.py	110	126	BaseProcess.start	start(self)	todo		
+Lib/multiprocessing/process.py	128	133	BaseProcess.interrupt	interrupt(self)	todo		
+Lib/multiprocessing/process.py	135	140	BaseProcess.terminate	terminate(self)	todo		
+Lib/multiprocessing/process.py	142	147	BaseProcess.kill	kill(self)	todo		
+Lib/multiprocessing/process.py	149	158	BaseProcess.join	join(self, timeout=None)	todo		
+Lib/multiprocessing/process.py	160	177	BaseProcess.is_alive	is_alive(self)	todo		
+Lib/multiprocessing/process.py	179	194	BaseProcess.close	close(self)	todo		
+Lib/multiprocessing/process.py	197	198	BaseProcess.name	name(self)	todo		
+Lib/multiprocessing/process.py	201	203	BaseProcess.name	name(self, name)	todo		
+Lib/multiprocessing/process.py	206	210	BaseProcess.daemon	daemon(self)	todo		
+Lib/multiprocessing/process.py	213	218	BaseProcess.daemon	daemon(self, daemonic)	todo		
+Lib/multiprocessing/process.py	221	222	BaseProcess.authkey	authkey(self)	todo		
+Lib/multiprocessing/process.py	225	229	BaseProcess.authkey	authkey(self, authkey)	todo		
+Lib/multiprocessing/process.py	232	239	BaseProcess.exitcode	exitcode(self)	todo		
+Lib/multiprocessing/process.py	242	250	BaseProcess.ident	ident(self)	todo		
+Lib/multiprocessing/process.py	255	264	BaseProcess.sentinel	sentinel(self)	todo		
+Lib/multiprocessing/process.py	266	293	BaseProcess.__repr__	__repr__(self)	todo		
+Lib/multiprocessing/process.py	297	340	BaseProcess._bootstrap	_bootstrap(self, parent_sentinel=None)	todo		
+Lib/multiprocessing/process.py	343	346	BaseProcess._after_fork	_after_fork()	todo		
+Lib/multiprocessing/process.py	354	361	AuthenticationString.__reduce__	__reduce__(self)	todo		
+Lib/multiprocessing/process.py	370	378	_ParentProcess.__init__	__init__(self, name, pid, sentinel)	todo		
+Lib/multiprocessing/process.py	380	382	_ParentProcess.is_alive	is_alive(self)	todo		
+Lib/multiprocessing/process.py	385	386	_ParentProcess.ident	ident(self)	todo		
+Lib/multiprocessing/process.py	388	393	_ParentProcess.join	join(self, timeout=None)	todo		
+Lib/multiprocessing/process.py	403	410	_MainProcess.__init__	__init__(self)	todo		
+Lib/multiprocessing/process.py	421	422	_MainProcess.close	close(self)	todo		

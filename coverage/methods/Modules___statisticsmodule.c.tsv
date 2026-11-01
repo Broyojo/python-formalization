@@ -1,0 +1,3 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_statisticsmodule.c	35	126	_statistics__normal_dist_inv_cdf_impl	_statistics__normal_dist_inv_cdf_impl(PyObject *module, double p, double mu, double sigma) /*[clinic end generated code: output=02fd19ddaab36602 input=24715a74be15296a]*/	todo		
+Modules/_statisticsmodule.c	156	159	PyInit__statistics	PyInit__statistics(void)	todo		

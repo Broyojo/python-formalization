@@ -1,0 +1,21 @@
+file	line	endline	name	signature	status	entry	note
+Lib/turtledemo/__main__.py	115	117	getExampleEntries	getExampleEntries()	excluded		platform: GUI toolkit
+Lib/turtledemo/__main__.py	128	201	DemoWindow.__init__	__init__(self, filename=None)	excluded		platform: GUI toolkit
+Lib/turtledemo/__main__.py	204	208	DemoWindow.onResize	onResize(self, event)	excluded		platform: GUI toolkit
+Lib/turtledemo/__main__.py	210	236	DemoWindow.makeTextFrame	makeTextFrame(self, root)	excluded		platform: GUI toolkit
+Lib/turtledemo/__main__.py	238	256	DemoWindow.makeGraphFrame	makeGraphFrame(self, root)	excluded		platform: GUI toolkit
+Lib/turtledemo/__main__.py	258	261	DemoWindow.set_txtsize	set_txtsize(self, size)	excluded		platform: GUI toolkit
+Lib/turtledemo/__main__.py	263	265	DemoWindow.decrease_size	decrease_size(self, dummy=None)	excluded		platform: GUI toolkit
+Lib/turtledemo/__main__.py	267	269	DemoWindow.increase_size	increase_size(self, dummy=None)	excluded		platform: GUI toolkit
+Lib/turtledemo/__main__.py	271	277	DemoWindow.update_mousewheel	update_mousewheel(self, event)	excluded		platform: GUI toolkit
+Lib/turtledemo/__main__.py	279	291	DemoWindow.configGUI	configGUI(self, start, stop, clear, txt='', color='blue')	excluded		platform: GUI toolkit
+Lib/turtledemo/__main__.py	293	300	DemoWindow.makeLoadDemoMenu	makeLoadDemoMenu(self, master)	excluded		platform: GUI toolkit
+Lib/turtledemo/__main__.py	302	314	DemoWindow.makeFontMenu	makeFontMenu(self, master)	excluded		platform: GUI toolkit
+Lib/turtledemo/__main__.py	316	323	DemoWindow.makeHelpMenu	makeHelpMenu(self, master)	excluded		platform: GUI toolkit
+Lib/turtledemo/__main__.py	325	328	DemoWindow.refreshCanvas	refreshCanvas(self)	excluded		platform: GUI toolkit
+Lib/turtledemo/__main__.py	330	343	DemoWindow.loadfile	loadfile(self, filename)	excluded		platform: GUI toolkit
+Lib/turtledemo/__main__.py	345	372	DemoWindow.startDemo	startDemo(self)	excluded		platform: GUI toolkit
+Lib/turtledemo/__main__.py	374	378	DemoWindow.clearCanvas	clearCanvas(self)	excluded		platform: GUI toolkit
+Lib/turtledemo/__main__.py	380	386	DemoWindow.stopIt	stopIt(self)	excluded		platform: GUI toolkit
+Lib/turtledemo/__main__.py	388	391	DemoWindow._destroy	_destroy(self)	excluded		platform: GUI toolkit
+Lib/turtledemo/__main__.py	394	396	main	main()	excluded		platform: GUI toolkit

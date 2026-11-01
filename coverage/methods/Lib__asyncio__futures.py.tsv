@@ -1,0 +1,29 @@
+file	line	endline	name	signature	status	entry	note
+Lib/asyncio/futures.py	75	89	Future.__init__	__init__(self, *, loop=None)	todo		
+Lib/asyncio/futures.py	91	92	Future.__repr__	__repr__(self)	todo		
+Lib/asyncio/futures.py	94	108	Future.__del__	__del__(self)	todo		
+Lib/asyncio/futures.py	113	114	Future._log_traceback	_log_traceback(self)	todo		
+Lib/asyncio/futures.py	117	120	Future._log_traceback	_log_traceback(self, val)	todo		
+Lib/asyncio/futures.py	123	126	Future._asyncio_awaited_by	_asyncio_awaited_by(self)	todo		
+Lib/asyncio/futures.py	128	133	Future.get_loop	get_loop(self)	todo		
+Lib/asyncio/futures.py	135	150	Future._make_cancelled_error	_make_cancelled_error(self)	todo		
+Lib/asyncio/futures.py	152	165	Future.cancel	cancel(self, msg=None)	todo		
+Lib/asyncio/futures.py	167	179	Future.__schedule_callbacks	__schedule_callbacks(self)	todo		
+Lib/asyncio/futures.py	181	183	Future.cancelled	cancelled(self)	todo		
+Lib/asyncio/futures.py	187	193	Future.done	done(self)	todo		
+Lib/asyncio/futures.py	195	209	Future.result	result(self)	todo		
+Lib/asyncio/futures.py	211	224	Future.exception	exception(self)	todo		
+Lib/asyncio/futures.py	226	238	Future.add_done_callback	add_done_callback(self, fn, *, context=None)	todo		
+Lib/asyncio/futures.py	242	253	Future.remove_done_callback	remove_done_callback(self, fn)	todo		
+Lib/asyncio/futures.py	257	267	Future.set_result	set_result(self, result)	todo		
+Lib/asyncio/futures.py	269	290	Future.set_exception	set_exception(self, exception)	todo		
+Lib/asyncio/futures.py	292	298	Future.__await__	__await__(self)	todo		
+Lib/asyncio/futures.py	307	316	_get_loop	_get_loop(fut)	todo		
+Lib/asyncio/futures.py	319	323	_set_result_unless_cancelled	_set_result_unless_cancelled(fut, result)	todo		
+Lib/asyncio/futures.py	326	333	_convert_future_exc	_convert_future_exc(exc)	todo		
+Lib/asyncio/futures.py	336	348	_set_concurrent_future_state	_set_concurrent_future_state(concurrent, source)	todo		
+Lib/asyncio/futures.py	351	368	_copy_future_state	_copy_future_state(source, dest)	todo		
+Lib/asyncio/futures.py	371	412	_chain_future	_chain_future(source, destination)	todo		
+Lib/asyncio/futures.py	415	425	wrap_future	wrap_future(future, *, loop=None)	todo		
+Lib/asyncio/futures.py	428	453	future_add_to_awaited_by	future_add_to_awaited_by(fut, waiter, /)	todo		
+Lib/asyncio/futures.py	456	465	future_discard_from_awaited_by	future_discard_from_awaited_by(fut, waiter, /)	todo		

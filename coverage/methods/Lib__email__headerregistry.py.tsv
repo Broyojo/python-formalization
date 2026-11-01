@@ -1,0 +1,56 @@
+file	line	endline	name	signature	status	entry	note
+Lib/email/headerregistry.py	14	54	Address.__init__	__init__(self, display_name='', username='', domain='', addr_spec=None)	todo		
+Lib/email/headerregistry.py	57	58	Address.display_name	display_name(self)	todo		
+Lib/email/headerregistry.py	61	62	Address.username	username(self)	todo		
+Lib/email/headerregistry.py	65	66	Address.domain	domain(self)	todo		
+Lib/email/headerregistry.py	69	80	Address.addr_spec	addr_spec(self)	todo		
+Lib/email/headerregistry.py	82	85	Address.__repr__	__repr__(self)	todo		
+Lib/email/headerregistry.py	87	94	Address.__str__	__str__(self)	todo		
+Lib/email/headerregistry.py	96	101	Address.__eq__	__eq__(self, other)	todo		
+Lib/email/headerregistry.py	106	122	Group.__init__	__init__(self, display_name=None, addresses=None)	todo		
+Lib/email/headerregistry.py	125	126	Group.display_name	display_name(self)	todo		
+Lib/email/headerregistry.py	129	130	Group.addresses	addresses(self)	todo		
+Lib/email/headerregistry.py	132	135	Group.__repr__	__repr__(self)	todo		
+Lib/email/headerregistry.py	137	145	Group.__str__	__str__(self)	todo		
+Lib/email/headerregistry.py	147	151	Group.__eq__	__eq__(self, other)	todo		
+Lib/email/headerregistry.py	190	198	BaseHeader.__new__	__new__(cls, name, value)	todo		
+Lib/email/headerregistry.py	200	203	BaseHeader.init	init(self, name, *, parse_tree, defects)	todo		
+Lib/email/headerregistry.py	206	207	BaseHeader.name	name(self)	todo		
+Lib/email/headerregistry.py	210	211	BaseHeader.defects	defects(self)	todo		
+Lib/email/headerregistry.py	213	221	BaseHeader.__reduce__	__reduce__(self)	todo		
+Lib/email/headerregistry.py	224	225	BaseHeader._reconstruct	_reconstruct(cls, value)	todo		
+Lib/email/headerregistry.py	227	253	BaseHeader.fold	fold(self, *, policy)	todo		
+Lib/email/headerregistry.py	256	257	_reconstruct_header	_reconstruct_header(cls_name, bases, value)	todo		
+Lib/email/headerregistry.py	266	268	UnstructuredHeader.parse	parse(cls, value, kwds)	todo		
+Lib/email/headerregistry.py	293	311	DateHeader.parse	parse(cls, value, kwds)	todo		
+Lib/email/headerregistry.py	313	315	DateHeader.init	init(self, *args, **kw)	todo		
+Lib/email/headerregistry.py	318	319	DateHeader.datetime	datetime(self)	todo		
+Lib/email/headerregistry.py	332	335	AddressHeader.value_parser	value_parser(value)	todo		
+Lib/email/headerregistry.py	338	363	AddressHeader.parse	parse(cls, value, kwds)	todo		
+Lib/email/headerregistry.py	365	368	AddressHeader.init	init(self, *args, **kw)	todo		
+Lib/email/headerregistry.py	371	372	AddressHeader.groups	groups(self)	todo		
+Lib/email/headerregistry.py	375	379	AddressHeader.addresses	addresses(self)	todo		
+Lib/email/headerregistry.py	390	394	SingleAddressHeader.address	address(self)	todo		
+Lib/email/headerregistry.py	409	418	MIMEVersionHeader.parse	parse(cls, value, kwds)	todo		
+Lib/email/headerregistry.py	420	424	MIMEVersionHeader.init	init(self, *args, **kw)	todo		
+Lib/email/headerregistry.py	427	428	MIMEVersionHeader.major	major(self)	todo		
+Lib/email/headerregistry.py	431	432	MIMEVersionHeader.minor	minor(self)	todo		
+Lib/email/headerregistry.py	435	436	MIMEVersionHeader.version	version(self)	todo		
+Lib/email/headerregistry.py	447	457	ParameterizedMIMEHeader.parse	parse(cls, value, kwds)	todo		
+Lib/email/headerregistry.py	459	461	ParameterizedMIMEHeader.init	init(self, *args, **kw)	todo		
+Lib/email/headerregistry.py	464	465	ParameterizedMIMEHeader.params	params(self)	todo		
+Lib/email/headerregistry.py	472	475	ContentTypeHeader.init	init(self, *args, **kw)	todo		
+Lib/email/headerregistry.py	478	479	ContentTypeHeader.maintype	maintype(self)	todo		
+Lib/email/headerregistry.py	482	483	ContentTypeHeader.subtype	subtype(self)	todo		
+Lib/email/headerregistry.py	486	487	ContentTypeHeader.content_type	content_type(self)	todo		
+Lib/email/headerregistry.py	494	497	ContentDispositionHeader.init	init(self, *args, **kw)	todo		
+Lib/email/headerregistry.py	500	501	ContentDispositionHeader.content_disposition	content_disposition(self)	todo		
+Lib/email/headerregistry.py	511	514	ContentTransferEncodingHeader.parse	parse(cls, value, kwds)	todo		
+Lib/email/headerregistry.py	516	518	ContentTransferEncodingHeader.init	init(self, *args, **kw)	todo		
+Lib/email/headerregistry.py	521	522	ContentTransferEncodingHeader.cte	cte(self)	todo		
+Lib/email/headerregistry.py	531	534	MessageIDHeader.parse	parse(cls, value, kwds)	todo		
+Lib/email/headerregistry.py	543	546	ReferencesHeader.parse	parse(cls, value, kwds)	todo		
+Lib/email/headerregistry.py	580	596	HeaderRegistry.__init__	__init__(self, base_class=BaseHeader, default_class=UnstructuredHeader, use_default_map=True)	todo		
+Lib/email/headerregistry.py	598	602	HeaderRegistry.map_to_type	map_to_type(self, name, cls)	todo		
+Lib/email/headerregistry.py	604	606	HeaderRegistry.__getitem__	__getitem__(self, name)	todo		
+Lib/email/headerregistry.py	608	618	HeaderRegistry.__call__	__call__(self, name, value)	todo		

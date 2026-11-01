@@ -1,0 +1,15 @@
+file	line	endline	name	signature	status	entry	note
+Python/intrinsics.c	21	25	no_intrinsic1	no_intrinsic1(PyThreadState* tstate, PyObject *unused)	todo		
+Python/intrinsics.c	28	37	print_expr	print_expr(PyThreadState* Py_UNUSED(ignored), PyObject *value)	todo		
+Python/intrinsics.c	40	121	import_all_from	import_all_from(PyThreadState *tstate, PyObject *locals, PyObject *v)	todo		
+Python/intrinsics.c	124	140	import_star	import_star(PyThreadState* tstate, PyObject *from)	todo		
+Python/intrinsics.c	143	184	stopiteration_error	stopiteration_error(PyThreadState* tstate, PyObject *exc)	todo		
+Python/intrinsics.c	187	190	unary_pos	unary_pos(PyThreadState* unused, PyObject *value)	todo		
+Python/intrinsics.c	193	197	list_to_tuple	list_to_tuple(PyThreadState* unused, PyObject *v)	todo		
+Python/intrinsics.c	200	204	make_typevar	make_typevar(PyThreadState* Py_UNUSED(ignored), PyObject *v)	todo		
+Python/intrinsics.c	230	234	no_intrinsic2	no_intrinsic2(PyThreadState* tstate, PyObject *unused1, PyObject *unused2)	todo		
+Python/intrinsics.c	237	241	prep_reraise_star	prep_reraise_star(PyThreadState* unused, PyObject *orig, PyObject *excs)	todo		
+Python/intrinsics.c	244	249	make_typevar_with_bound	make_typevar_with_bound(PyThreadState* Py_UNUSED(ignored), PyObject *name, PyObject *evaluate_bound)	todo		
+Python/intrinsics.c	252	257	make_typevar_with_constraints	make_typevar_with_constraints(PyThreadState* Py_UNUSED(ignored), PyObject *name, PyObject *evaluate_constraints)	todo		
+Python/intrinsics.c	272	278	_PyCompile_GetUnaryIntrinsicName	_PyCompile_GetUnaryIntrinsicName(int index)	todo		
+Python/intrinsics.c	281	287	_PyCompile_GetBinaryIntrinsicName	_PyCompile_GetBinaryIntrinsicName(int index)	todo		

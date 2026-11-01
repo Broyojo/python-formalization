@@ -1,0 +1,7 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_pyrepl/base_eventqueue.py	34	40	BaseEventQueue.__init__	__init__(self, encoding: str, keymap_dict: dict[bytes, str])	todo		
+Lib/_pyrepl/base_eventqueue.py	42	49	BaseEventQueue.get	get(self)	todo		
+Lib/_pyrepl/base_eventqueue.py	51	55	BaseEventQueue.empty	empty(self)	todo		
+Lib/_pyrepl/base_eventqueue.py	57	63	BaseEventQueue.flush_buf	flush_buf(self)	todo		
+Lib/_pyrepl/base_eventqueue.py	65	70	BaseEventQueue.insert	insert(self, event: Event)	todo		
+Lib/_pyrepl/base_eventqueue.py	72	110	BaseEventQueue.push	push(self, char: int | bytes)	todo		

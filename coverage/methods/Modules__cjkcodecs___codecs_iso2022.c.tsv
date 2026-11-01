@@ -1,0 +1,33 @@
+file	line	endline	name	signature	status	entry	note
+Modules/cjkcodecs/_codecs_iso2022.c	320	401	iso2022processesc	iso2022processesc(const MultibyteCodec *codec, MultibyteCodec_State *state, const unsigned char **inbuf, Py_ssize_t *inleft)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	420	449	iso2022processg2	iso2022processg2(const MultibyteCodec *codec, MultibyteCodec_State *state, const unsigned char **inbuf, Py_ssize_t *inleft, _PyUnicodeWriter *writer)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	573	582	ksx1001_init	ksx1001_init(const MultibyteCodec *codec)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	585	592	ksx1001_decoder	ksx1001_decoder(const MultibyteCodec *codec, const unsigned char *data)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	595	607	ksx1001_encoder	ksx1001_encoder(const MultibyteCodec *codec, const Py_UCS4 *data, Py_ssize_t *length)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	610	619	jisx0208_init	jisx0208_init(const MultibyteCodec *codec)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	622	631	jisx0208_decoder	jisx0208_decoder(const MultibyteCodec *codec, const unsigned char *data)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	634	648	jisx0208_encoder	jisx0208_encoder(const MultibyteCodec *codec, const Py_UCS4 *data, Py_ssize_t *length)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	651	660	jisx0212_init	jisx0212_init(const MultibyteCodec *codec)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	663	670	jisx0212_decoder	jisx0212_decoder(const MultibyteCodec *codec, const unsigned char *data)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	673	685	jisx0212_encoder	jisx0212_encoder(const MultibyteCodec *codec, const Py_UCS4 *data, Py_ssize_t *length)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	688	704	jisx0213_init	jisx0213_init(const MultibyteCodec *codec)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	708	725	jisx0213_2000_1_decoder	jisx0213_2000_1_decoder(const MultibyteCodec *codec, const unsigned char *data)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	728	739	jisx0213_2000_2_decoder	jisx0213_2000_2_decoder(const MultibyteCodec *codec, const unsigned char *data)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	743	759	jisx0213_2004_1_decoder	jisx0213_2004_1_decoder(const MultibyteCodec *codec, const unsigned char *data)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	762	772	jisx0213_2004_2_decoder	jisx0213_2004_2_decoder(const MultibyteCodec *codec, const unsigned char *data)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	775	827	jisx0213_encoder	jisx0213_encoder(const MultibyteCodec *codec, const Py_UCS4 *data, Py_ssize_t *length, const void *config)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	830	840	jisx0213_2000_1_encoder	jisx0213_2000_1_encoder(const MultibyteCodec *codec, const Py_UCS4 *data, Py_ssize_t *length)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	843	864	jisx0213_2000_1_encoder_paironly	jisx0213_2000_1_encoder_paironly(const MultibyteCodec *codec, const Py_UCS4 *data, Py_ssize_t *length)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	867	877	jisx0213_2000_2_encoder	jisx0213_2000_2_encoder(const MultibyteCodec *codec, const Py_UCS4 *data, Py_ssize_t *length)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	880	890	jisx0213_2004_1_encoder	jisx0213_2004_1_encoder(const MultibyteCodec *codec, const Py_UCS4 *data, Py_ssize_t *length)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	893	914	jisx0213_2004_1_encoder_paironly	jisx0213_2004_1_encoder_paironly(const MultibyteCodec *codec, const Py_UCS4 *data, Py_ssize_t *length)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	917	927	jisx0213_2004_2_encoder	jisx0213_2004_2_encoder(const MultibyteCodec *codec, const Py_UCS4 *data, Py_ssize_t *length)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	930	937	jisx0201_r_decoder	jisx0201_r_decoder(const MultibyteCodec *codec, const unsigned char *data)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	940	948	jisx0201_r_encoder	jisx0201_r_encoder(const MultibyteCodec *codec, const Py_UCS4 *data, Py_ssize_t *length)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	951	958	jisx0201_k_decoder	jisx0201_k_decoder(const MultibyteCodec *codec, const unsigned char *data)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	961	969	jisx0201_k_encoder	jisx0201_k_encoder(const MultibyteCodec *codec, const Py_UCS4 *data, Py_ssize_t *length)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	972	981	gb2312_init	gb2312_init(const MultibyteCodec *codec)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	984	991	gb2312_decoder	gb2312_decoder(const MultibyteCodec *codec, const unsigned char *data)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	994	1006	gb2312_encoder	gb2312_encoder(const MultibyteCodec *codec, const Py_UCS4 *data, Py_ssize_t *length)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	1010	1013	dummy_decoder	dummy_decoder(const MultibyteCodec *codec, const unsigned char *data)	excluded		vendored: third-party code
+Modules/cjkcodecs/_codecs_iso2022.c	1016	1020	dummy_encoder	dummy_encoder(const MultibyteCodec *codec, const Py_UCS4 *data, Py_ssize_t *length)	excluded		vendored: third-party code

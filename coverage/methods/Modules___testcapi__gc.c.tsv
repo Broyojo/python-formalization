@@ -1,0 +1,16 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/gc.c	4	63	test_gc_control	test_gc_control(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/gc.c	66	81	without_gc	without_gc(PyObject *Py_UNUSED(self), PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/gc.c	84	136	slot_tp_del	slot_tp_del(PyObject *self)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/gc.c	139	154	with_tp_del	with_tp_del(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/gc.c	163	171	gc_visit_callback_basic	gc_visit_callback_basic(PyObject *obj, void *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/gc.c	174	196	test_gc_visit_objects_basic	test_gc_visit_objects_basic(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/gc.c	210	221	test_gc_visit_objects_exit_early	test_gc_visit_objects_exit_early(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/gc.c	228	237	obj_extra_data_new	obj_extra_data_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/gc.c	240	243	obj_extra_data_get_extra_storage	obj_extra_data_get_extra_storage(PyObject *self)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/gc.c	246	254	obj_extra_data_get	obj_extra_data_get(PyObject *self, void *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/gc.c	257	265	obj_extra_data_set	obj_extra_data_set(PyObject *self, PyObject *newval, void *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/gc.c	273	279	obj_extra_data_traverse	obj_extra_data_traverse(PyObject *self, visitproc visit, void *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/gc.c	282	287	obj_extra_data_clear	obj_extra_data_clear(PyObject *self)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/gc.c	290	297	obj_extra_data_dealloc	obj_extra_data_dealloc(PyObject *self)	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/gc.c	325	346	_PyTestCapi_Init_GC	int _PyTestCapi_Init_GC(PyObject *mod)	excluded		test-support: only for CPython's own tests

@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testinternalcapi/set.c	9	18	set_update	set_update(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/set.c	21	46	set_next_entry	set_next_entry(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testinternalcapi/set.c	57	63	_PyTestInternalCapi_Init_Set	_PyTestInternalCapi_Init_Set(PyObject *m)	excluded		test-support: only for CPython's own tests

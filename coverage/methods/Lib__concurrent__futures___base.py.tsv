@@ -1,0 +1,44 @@
+file	line	endline	name	signature	status	entry	note
+Lib/concurrent/futures/_base.py	55	57	_Waiter.__init__	__init__(self)	todo		
+Lib/concurrent/futures/_base.py	59	60	_Waiter.add_result	add_result(self, future)	todo		
+Lib/concurrent/futures/_base.py	62	63	_Waiter.add_exception	add_exception(self, future)	todo		
+Lib/concurrent/futures/_base.py	65	66	_Waiter.add_cancelled	add_cancelled(self, future)	todo		
+Lib/concurrent/futures/_base.py	71	73	_AsCompletedWaiter.__init__	__init__(self)	todo		
+Lib/concurrent/futures/_base.py	75	78	_AsCompletedWaiter.add_result	add_result(self, future)	todo		
+Lib/concurrent/futures/_base.py	80	83	_AsCompletedWaiter.add_exception	add_exception(self, future)	todo		
+Lib/concurrent/futures/_base.py	85	88	_AsCompletedWaiter.add_cancelled	add_cancelled(self, future)	todo		
+Lib/concurrent/futures/_base.py	93	95	_FirstCompletedWaiter.add_result	add_result(self, future)	todo		
+Lib/concurrent/futures/_base.py	97	99	_FirstCompletedWaiter.add_exception	add_exception(self, future)	todo		
+Lib/concurrent/futures/_base.py	101	103	_FirstCompletedWaiter.add_cancelled	add_cancelled(self, future)	todo		
+Lib/concurrent/futures/_base.py	108	112	_AllCompletedWaiter.__init__	__init__(self, num_pending_calls, stop_on_exception)	todo		
+Lib/concurrent/futures/_base.py	114	118	_AllCompletedWaiter._decrement_pending_calls	_decrement_pending_calls(self)	todo		
+Lib/concurrent/futures/_base.py	120	122	_AllCompletedWaiter.add_result	add_result(self, future)	todo		
+Lib/concurrent/futures/_base.py	124	129	_AllCompletedWaiter.add_exception	add_exception(self, future)	todo		
+Lib/concurrent/futures/_base.py	131	133	_AllCompletedWaiter.add_cancelled	add_cancelled(self, future)	todo		
+Lib/concurrent/futures/_base.py	138	139	_AcquireFutures.__init__	__init__(self, futures)	todo		
+Lib/concurrent/futures/_base.py	141	143	_AcquireFutures.__enter__	__enter__(self)	todo		
+Lib/concurrent/futures/_base.py	145	147	_AcquireFutures.__exit__	__exit__(self, *args)	todo		
+Lib/concurrent/futures/_base.py	149	168	_create_and_install_waiters	_create_and_install_waiters(fs, return_when)	todo		
+Lib/concurrent/futures/_base.py	171	190	_yield_finished_futures	_yield_finished_futures(fs, waiter, ref_collect)	todo		
+Lib/concurrent/futures/_base.py	193	253	as_completed	as_completed(fs, timeout=None)	todo		
+Lib/concurrent/futures/_base.py	257	306	wait	wait(fs, timeout=None, return_when=ALL_COMPLETED)	todo		
+Lib/concurrent/futures/_base.py	309	317	_result_or_cancel	_result_or_cancel(fut, timeout=None)	todo		
+Lib/concurrent/futures/_base.py	323	330	Future.__init__	__init__(self)	todo		
+Lib/concurrent/futures/_base.py	332	337	Future._invoke_callbacks	_invoke_callbacks(self)	todo		
+Lib/concurrent/futures/_base.py	339	357	Future.__repr__	__repr__(self)	todo		
+Lib/concurrent/futures/_base.py	359	376	Future.cancel	cancel(self)	todo		
+Lib/concurrent/futures/_base.py	378	381	Future.cancelled	cancelled(self)	todo		
+Lib/concurrent/futures/_base.py	383	386	Future.running	running(self)	todo		
+Lib/concurrent/futures/_base.py	388	391	Future.done	done(self)	todo		
+Lib/concurrent/futures/_base.py	393	401	Future.__get_result	__get_result(self)	todo		
+Lib/concurrent/futures/_base.py	403	422	Future.add_done_callback	add_done_callback(self, fn)	todo		
+Lib/concurrent/futures/_base.py	424	459	Future.result	result(self, timeout=None)	todo		
+Lib/concurrent/futures/_base.py	461	492	Future.exception	exception(self, timeout=None)	todo		
+Lib/concurrent/futures/_base.py	495	534	Future.set_running_or_notify_cancel	set_running_or_notify_cancel(self)	todo		
+Lib/concurrent/futures/_base.py	536	549	Future.set_result	set_result(self, result)	todo		
+Lib/concurrent/futures/_base.py	551	564	Future.set_exception	set_exception(self, exception)	todo		
+Lib/concurrent/futures/_base.py	571	581	Executor.submit	submit(self, fn, /, *args, **kwargs)	todo		
+Lib/concurrent/futures/_base.py	583	651	Executor.map	map(self, fn, *iterables, timeout=None, chunksize=1, buffersize=None)	todo		
+Lib/concurrent/futures/_base.py	653	667	Executor.shutdown	shutdown(self, wait=True, *, cancel_futures=False)	todo		
+Lib/concurrent/futures/_base.py	669	670	Executor.__enter__	__enter__(self)	todo		
+Lib/concurrent/futures/_base.py	672	674	Executor.__exit__	__exit__(self, exc_type, exc_val, exc_tb)	todo		

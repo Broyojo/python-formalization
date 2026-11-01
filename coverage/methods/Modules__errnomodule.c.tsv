@@ -1,0 +1,4 @@
+file	line	endline	name	signature	status	entry	note
+Modules/errnomodule.c	59	86	_add_errcode	_add_errcode(PyObject *module_dict, PyObject *error_dict, const char *name_str, int code_int)	todo		
+Modules/errnomodule.c	89	952	errno_exec	errno_exec(PyObject *module)	todo		
+Modules/errnomodule.c	985	988	PyInit_errno	PyInit_errno(void)	todo		

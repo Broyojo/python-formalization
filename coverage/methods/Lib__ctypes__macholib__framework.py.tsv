@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Lib/ctypes/macholib/framework.py	19	42	framework_info	framework_info(filename)	todo		

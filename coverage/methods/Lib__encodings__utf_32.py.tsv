@@ -1,0 +1,18 @@
+file	line	endline	name	signature	status	entry	note
+Lib/encodings/utf_32.py	10	11	decode	decode(input, errors='strict')	todo		
+Lib/encodings/utf_32.py	14	16	IncrementalEncoder.__init__	__init__(self, errors='strict')	todo		
+Lib/encodings/utf_32.py	18	26	IncrementalEncoder.encode	encode(self, input, final=False)	todo		
+Lib/encodings/utf_32.py	28	30	IncrementalEncoder.reset	reset(self)	todo		
+Lib/encodings/utf_32.py	32	37	IncrementalEncoder.getstate	getstate(self)	todo		
+Lib/encodings/utf_32.py	39	46	IncrementalEncoder.setstate	setstate(self, state)	todo		
+Lib/encodings/utf_32.py	49	51	IncrementalDecoder.__init__	__init__(self, errors='strict')	todo		
+Lib/encodings/utf_32.py	53	64	IncrementalDecoder._buffer_decode	_buffer_decode(self, input, errors, final)	todo		
+Lib/encodings/utf_32.py	66	68	IncrementalDecoder.reset	reset(self)	todo		
+Lib/encodings/utf_32.py	70	82	IncrementalDecoder.getstate	getstate(self)	todo		
+Lib/encodings/utf_32.py	84	97	IncrementalDecoder.setstate	setstate(self, state)	todo		
+Lib/encodings/utf_32.py	100	102	StreamWriter.__init__	__init__(self, stream, errors='strict')	todo		
+Lib/encodings/utf_32.py	104	106	StreamWriter.reset	reset(self)	todo		
+Lib/encodings/utf_32.py	108	117	StreamWriter.encode	encode(self, input, errors='strict')	todo		
+Lib/encodings/utf_32.py	121	126	StreamReader.reset	reset(self)	todo		
+Lib/encodings/utf_32.py	128	137	StreamReader.decode	decode(self, input, errors='strict')	todo		
+Lib/encodings/utf_32.py	141	150	getregentry	getregentry()	todo		

@@ -1,0 +1,34 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_gdbmmodule.c	30	35	get_gdbm_state	get_gdbm_state(PyObject *module)	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	44	53	set_gdbm_error	set_gdbm_error(_gdbm_state *state, const char *generic_error)	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	101	122	newgdbmobject	newgdbmobject(_gdbm_state *state, const char *file, int flags, int mode)	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	126	130	gdbm_traverse	gdbm_traverse(PyObject *op, visitproc visit, void *arg)	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	133	143	gdbm_dealloc	gdbm_dealloc(PyObject *op)	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	146	190	gdbm_length_lock_held	gdbm_length_lock_held(PyObject *op)	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	193	200	gdbm_length	gdbm_length(PyObject *op)	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	203	230	gdbm_bool_lock_held	gdbm_bool_lock_held(PyObject *op)	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	233	240	gdbm_bool	gdbm_bool(PyObject *op)	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	246	261	parse_datum	parse_datum(PyObject *o, datum *d, const char *failmsg)	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	264	287	gdbm_subscript_lock_held	gdbm_subscript_lock_held(PyObject *op, PyObject *key)	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	290	297	gdbm_subscript	gdbm_subscript(PyObject *op, PyObject *key)	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	310	321	_gdbm_gdbm_get_impl	_gdbm_gdbm_get_impl(gdbmobject *self, PyObject *key, PyObject *default_value) /*[clinic end generated code: output=92421838f3a852f4 input=a9c20423f34c17b6]*/	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	324	367	gdbm_ass_sub_lock_held	gdbm_ass_sub_lock_held(PyObject *op, PyObject *v, PyObject *w)	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	370	377	gdbm_ass_sub	gdbm_ass_sub(PyObject *op, PyObject *v, PyObject *w)	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	391	405	_gdbm_gdbm_setdefault_impl	_gdbm_gdbm_setdefault_impl(gdbmobject *self, PyObject *key, PyObject *default_value) /*[clinic end generated code: output=f3246e880509f142 input=854374cd81ab51b6]*/	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	415	423	_gdbm_gdbm_close_impl	_gdbm_gdbm_close_impl(gdbmobject *self) /*[clinic end generated code: output=f5abb4d6bb9e52d5 input=56b604f4e77f533d]*/	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	436	476	_gdbm_gdbm_keys_impl	_gdbm_gdbm_keys_impl(gdbmobject *self, PyTypeObject *cls) /*[clinic end generated code: output=c24b824e81404755 input=785988b1ea8f77e0]*/	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	479	508	gdbm_contains_lock_held	gdbm_contains_lock_held(PyObject *self, PyObject *arg)	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	511	518	gdbm_contains	gdbm_contains(PyObject *self, PyObject *arg)	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	534	552	_gdbm_gdbm_firstkey_impl	_gdbm_gdbm_firstkey_impl(gdbmobject *self, PyTypeObject *cls) /*[clinic end generated code: output=139275e9c8b60827 input=ba40f0d81eae0f35]*/	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	574	595	_gdbm_gdbm_nextkey_impl	_gdbm_gdbm_nextkey_impl(gdbmobject *self, PyTypeObject *cls, const char *key, Py_ssize_t key_length) /*[clinic end generated code: output=c81a69300ef41766 input=78293a913b02387e]*/	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	613	630	_gdbm_gdbm_reorganize_impl	_gdbm_gdbm_reorganize_impl(gdbmobject *self, PyTypeObject *cls) /*[clinic end generated code: output=d77c69e8e3dd644a input=d7fcf03051c6f7cd]*/	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	645	653	_gdbm_gdbm_sync_impl	_gdbm_gdbm_sync_impl(gdbmobject *self, PyTypeObject *cls) /*[clinic end generated code: output=bb680a2035c3f592 input=6054385b071d238a]*/	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	665	687	_gdbm_gdbm_clear_impl	_gdbm_gdbm_clear_impl(gdbmobject *self, PyTypeObject *cls) /*[clinic end generated code: output=673577c573318661 input=b17467adfe62f23d]*/	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	690	693	gdbm__enter__	gdbm__enter__(PyObject *self, PyObject *args)	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	696	703	gdbm__exit__	gdbm__exit__(PyObject *self, PyObject *args)	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	780	844	dbmopen_impl	dbmopen_impl(PyObject *module, PyObject *filename, const char *flags, int mode) /*[clinic end generated code: output=9527750f5df90764 input=bca6ec81dc49292c]*/	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	864	893	_gdbm_exec	_gdbm_exec(PyObject *module)	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	896	902	_gdbm_module_traverse	_gdbm_module_traverse(PyObject *module, visitproc visit, void *arg)	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	905	911	_gdbm_module_clear	_gdbm_module_clear(PyObject *module)	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	914	917	_gdbm_module_free	_gdbm_module_free(void *module)	excluded		platform: binds an external library
+Modules/_gdbmmodule.c	939	942	PyInit__gdbm	PyInit__gdbm(void)	excluded		platform: binds an external library

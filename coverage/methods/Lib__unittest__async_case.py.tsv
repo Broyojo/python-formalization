@@ -1,0 +1,17 @@
+file	line	endline	name	signature	status	entry	note
+Lib/unittest/async_case.py	39	42	IsolatedAsyncioTestCase.__init__	__init__(self, methodName='runTest')	todo		
+Lib/unittest/async_case.py	44	45	IsolatedAsyncioTestCase.asyncSetUp	asyncSetUp(self)	todo		
+Lib/unittest/async_case.py	47	48	IsolatedAsyncioTestCase.asyncTearDown	asyncTearDown(self)	todo		
+Lib/unittest/async_case.py	50	63	IsolatedAsyncioTestCase.addAsyncCleanup	addAsyncCleanup(self, func, /, *args, **kwargs)	todo		
+Lib/unittest/async_case.py	65	91	IsolatedAsyncioTestCase.enterAsyncContext	enterAsyncContext(self, cm)	todo		
+Lib/unittest/async_case.py	93	99	IsolatedAsyncioTestCase._callSetUp	_callSetUp(self)	todo		
+Lib/unittest/async_case.py	101	108	IsolatedAsyncioTestCase._callTestMethod	_callTestMethod(self, method)	todo		
+Lib/unittest/async_case.py	110	112	IsolatedAsyncioTestCase._callTearDown	_callTearDown(self)	todo		
+Lib/unittest/async_case.py	114	115	IsolatedAsyncioTestCase._callCleanup	_callCleanup(self, function, *args, **kwargs)	todo		
+Lib/unittest/async_case.py	117	123	IsolatedAsyncioTestCase._callAsync	_callAsync(self, func, /, *args, **kwargs)	todo		
+Lib/unittest/async_case.py	125	133	IsolatedAsyncioTestCase._callMaybeAsync	_callMaybeAsync(self, func, /, *args, **kwargs)	todo		
+Lib/unittest/async_case.py	135	138	IsolatedAsyncioTestCase._setupAsyncioRunner	_setupAsyncioRunner(self)	todo		
+Lib/unittest/async_case.py	140	142	IsolatedAsyncioTestCase._tearDownAsyncioRunner	_tearDownAsyncioRunner(self)	todo		
+Lib/unittest/async_case.py	144	149	IsolatedAsyncioTestCase.run	run(self, result=None)	todo		
+Lib/unittest/async_case.py	151	154	IsolatedAsyncioTestCase.debug	debug(self)	todo		
+Lib/unittest/async_case.py	156	158	IsolatedAsyncioTestCase.__del__	__del__(self)	todo		

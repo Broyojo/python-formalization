@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Lib/importlib/resources/_itertools.py	2	38	only	only(iterable, default=None, too_long=None)	todo		

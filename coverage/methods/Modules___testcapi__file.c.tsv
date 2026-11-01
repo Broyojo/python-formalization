@@ -1,0 +1,5 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapi/file.c	24	28	_testcapi_pyfile_newstdprinter_impl	_testcapi_pyfile_newstdprinter_impl(PyObject *module, int fd) /*[clinic end generated code: output=8a2d1c57b6892db3 input=442f1824142262ea]*/	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/file.c	42	57	_testcapi_py_fopen_impl	_testcapi_py_fopen_impl(PyObject *module, PyObject *path, const char *mode, Py_ssize_t mode_length) /*[clinic end generated code: output=69840d0cfd8b7fbb input=f3a579dd7eb60926]*/	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/file.c	71	98	_testcapi_py_universalnewlinefgets_impl	_testcapi_py_universalnewlinefgets_impl(PyObject *module, PyObject *file, int size) /*[clinic end generated code: output=2ce1bc76c9dc871c input=02c236049d18569a]*/	excluded		test-support: only for CPython's own tests
+Modules/_testcapi/file.c	108	111	_PyTestCapi_Init_File	_PyTestCapi_Init_File(PyObject *m)	excluded		test-support: only for CPython's own tests

@@ -1,0 +1,123 @@
+file	line	endline	name	signature	status	entry	note
+Modules/_testcapimodule.c	45	50	get_testcapi_state	get_testcapi_state(PyObject *module)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	53	56	get_testerror	get_testerror(PyObject *self) {	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	59	62	simple_object_dealloc	simple_object_dealloc(PyObject *self)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	67	71	raiseTestError	raiseTestError(PyObject *self, const char* test_name, const char* msg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	80	87	sizeof_error	sizeof_error(PyObject *self, const char* fatname, const char* typname, int expected, int got)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	90	109	test_config	test_config(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	112	173	test_sizeof_c_types	test_sizeof_c_types(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	220	230	pycompilestring	pycompilestring(PyObject* self, PyObject *obj) {	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	233	242	pycompilestringexflags	pycompilestringexflags(PyObject *self, PyObject *args) {	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	245	305	test_lazy_hash_inheritance	test_lazy_hash_inheritance(PyObject* self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	308	311	return_none	return_none(void *unused)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	314	318	raise_error	raise_error(void *unused)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	321	337	py_buildvalue	py_buildvalue(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	340	353	py_buildvalue_ints	py_buildvalue_ints(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	356	394	test_buildvalue_N_error	test_buildvalue_N_error(PyObject *self, const char *fmt)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	397	433	test_buildvalue_N	test_buildvalue_N(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	436	459	test_buildvalue_p	test_buildvalue_p(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	462	465	pyobject_repr_from_null	pyobject_repr_from_null(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	468	471	pyobject_str_from_null	pyobject_str_from_null(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	474	477	pyobject_bytes_from_null	pyobject_bytes_from_null(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	480	489	set_errno	set_errno(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	501	511	_make_call	_make_call(void *callable)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	517	521	_make_call_from_thread	_make_call_from_thread(void *callable)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	524	570	test_thread_state	test_thread_state(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	573	578	gilstate_ensure_release	gilstate_ensure_release(PyObject *module, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	583	588	wait_for_lock	static void wait_for_lock(void *unused) {	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	594	606	spawn_pthread_waiter	spawn_pthread_waiter(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	609	617	end_spawned_pthread	end_spawned_pthread(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	621	629	_pending_callback	static int _pending_callback(void *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	635	684	pending_threadfunc	pending_threadfunc(PyObject *self, PyObject *arg, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	696	707	capsule_destructor	capsule_destructor(PyObject *o) {	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	716	841	test_capsule	test_capsule(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	845	854	print_delta	static void print_delta(int test, struct timeval *s, struct timeval *e)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	857	963	profile_int	profile_int(PyObject *self, PyObject* args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	969	975	failing_converter	failing_converter(PyObject *obj, void *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	977	994	argparsing	argparsing(PyObject *o, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	998	1009	code_newempty	code_newempty(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1012	1018	make_memoryview_from_NULL_pointer	make_memoryview_from_NULL_pointer(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1021	1038	buffer_fill_info	buffer_fill_info(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1041	1088	test_from_contiguous	test_from_contiguous(PyObject* self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1093	1132	test_pep3118_obsolete_write_locks	test_pep3118_obsolete_write_locks(PyObject* self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1139	1145	getbuffer_with_null_view	getbuffer_with_null_view(PyObject* self, PyObject *obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1149	1159	test_PyBuffer_SizeFromFormat	test_PyBuffer_SizeFromFormat(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1164	1174	crash_no_current_thread	crash_no_current_thread(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1178	1210	test_current_tstate_matches	test_current_tstate_matches(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1214	1245	run_in_subinterp	run_in_subinterp(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1250	1253	create_cfunction	create_cfunction(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1263	1287	test_structseq_newtype_doesnt_leak	test_structseq_newtype_doesnt_leak(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1290	1306	test_structseq_newtype_null_descr_doc	test_structseq_newtype_null_descr_doc(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1315	1340	temporary_c_thread	temporary_c_thread(void *data)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1345	1402	call_in_temporary_c_thread	call_in_temporary_c_thread(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1405	1417	join_temporary_c_thread	join_temporary_c_thread(PyObject *self, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1422	1444	pymarshal_write_long_to_file	pymarshal_write_long_to_file(PyObject* self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1447	1469	pymarshal_write_object_to_file	pymarshal_write_object_to_file(PyObject* self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1472	1495	pymarshal_read_short_from_file	pymarshal_read_short_from_file(PyObject* self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1498	1520	pymarshal_read_long_from_file	pymarshal_read_long_from_file(PyObject* self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1523	1543	pymarshal_read_last_object_from_file	pymarshal_read_last_object_from_file(PyObject* self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1546	1566	pymarshal_read_object_from_file	pymarshal_read_object_from_file(PyObject* self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1569	1575	return_null_without_error	return_null_without_error(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1578	1584	return_result_with_error	return_result_with_error(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1587	1596	getitem_with_error	getitem_with_error(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1600	1619	raise_SIGINT_then_send_None	raise_SIGINT_then_send_None(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1623	1627	stack_pointer	stack_pointer(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1632	1640	py_w_stopcode	py_w_stopcode(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1645	1700	test_pythread_tss_key_state	test_pythread_tss_key_state(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1708	1722	bad_get	bad_get(PyObject *module, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1734	1740	_null_to_none	_null_to_none(PyObject* obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1743	1746	meth_varargs	meth_varargs(PyObject* self, PyObject* args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1749	1752	meth_varargs_keywords	meth_varargs_keywords(PyObject* self, PyObject* args, PyObject* kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1755	1758	meth_o	meth_o(PyObject* self, PyObject* obj)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1761	1764	meth_noargs	meth_noargs(PyObject* self, PyObject *Py_UNUSED(dummy))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1767	1778	_fastcall_to_tuple	_fastcall_to_tuple(PyObject* const* args, Py_ssize_t nargs)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1781	1786	meth_fastcall	meth_fastcall(PyObject* self, PyObject* const* args, Py_ssize_t nargs)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1789	1801	meth_fastcall_keywords	meth_fastcall_keywords(PyObject* self, PyObject* const* args, Py_ssize_t nargs, PyObject* kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1804	1814	test_pycfunction_call	test_pycfunction_call(PyObject *module, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1817	1826	pynumber_tobase	pynumber_tobase(PyObject *module, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1844	1871	get_basic_static_type	get_basic_static_type(PyObject *self, PyObject *args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1876	1917	test_tstate_capi	test_tstate_capi(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1920	1927	gen_get_code	gen_get_code(PyObject *self, PyObject *gen)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	1930	2018	eval_eval_code_ex	eval_eval_code_ex(PyObject *mod, PyObject *pos_args)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2021	2030	get_feature_macros	get_feature_macros(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2033	2112	test_code_api	test_code_api(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2115	2145	record_func	record_func(PyObject *obj, PyFrameObject *f, int what, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2148	2157	settrace_to_record	settrace_to_record(PyObject *self, PyObject *list)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2160	2173	error_func	error_func(PyObject *obj, PyFrameObject *f, int what, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2176	2184	settrace_to_error	settrace_to_error(PyObject *self, PyObject *list)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2187	2220	test_macros	test_macros(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2223	2333	test_weakref_capi	test_weakref_capi(PyObject *Py_UNUSED(module), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2341	2351	_simpletracer	static int _simpletracer(PyObject *obj, PyRefTracerEvent event, void* data) {	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2354	2417	test_reftracer	test_reftracer(PyObject *ob, PyObject *Py_UNUSED(ignored))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2420	2426	function_set_warning	function_set_warning(PyObject *Py_UNUSED(module), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2429	2448	test_critical_sections	test_critical_sections(PyObject *module, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2453	2456	finalize_thread_hang_cleanup_callback	static void finalize_thread_hang_cleanup_callback(void *Py_UNUSED(arg)) {	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2464	2477	finalize_thread_hang	finalize_thread_hang(PyObject *self, PyObject *callback)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2487	2494	atexit_callback	atexit_callback(void *data)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2497	2526	test_atexit	test_atexit(PyObject *self, PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2529	2546	code_offset_to_line	code_offset_to_line(PyObject* self, PyObject* const* args, Py_ssize_t nargsf)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2550	2559	_reftrace_printer	_reftrace_printer(PyObject *obj, PyRefTracerEvent event, void *counter_data)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2563	2572	toggle_reftrace_printer	toggle_reftrace_printer(PyObject *ob, PyObject *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2577	2595	uptime_bsd	uptime_bsd(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(args))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2706	2709	matmulType_matmul	matmulType_matmul(PyObject *self, PyObject *other)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2712	2715	matmulType_imatmul	matmulType_imatmul(PyObject *self, PyObject *other)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2718	2721	matmulType_dealloc	matmulType_dealloc(PyObject *self)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2809	2812	ipowType_ipow	ipowType_ipow(PyObject *self, PyObject *other, PyObject *mod)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2834	2850	awaitObject_new	awaitObject_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2854	2859	awaitObject_dealloc	awaitObject_dealloc(PyObject *op)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2863	2867	awaitObject_await	awaitObject_await(PyObject *op)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2929	2934	MyList_new	MyList_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2937	2947	MyList_dealloc	MyList_dealloc(PyObject *self)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	2998	3003	generic_alias_dealloc	generic_alias_dealloc(PyObject *op)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	3006	3010	generic_alias_mro_entries	generic_alias_mro_entries(PyObject *op, PyObject *Py_UNUSED(bases))	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	3028	3036	generic_alias_new	generic_alias_new(PyObject *item)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	3043	3046	generic_class_getitem	generic_class_getitem(PyObject *type, PyObject *item)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	3136	3150	ContainerNoGC_new	ContainerNoGC_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	3153	3158	ContainerNoGC_dealloc	ContainerNoGC_dealloc(PyObject *op)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	3184	3189	ManualHeapType_traverse	ManualHeapType_traverse(PyObject *self, visitproc visit, void *arg)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	3192	3200	ManualHeapType_dealloc	ManualHeapType_dealloc(PyObject *self)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	3203	3230	create_manual_heap_type	create_manual_heap_type(void)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	3236	3239	ManagedDict_traverse	int ManagedDict_traverse(PyObject *self, visitproc visit, void *arg) {	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	3241	3244	ManagedDict_clear	int ManagedDict_clear(PyObject *self) {	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	3268	3271	create_managed_dict_type	create_managed_dict_type(void)	excluded		test-support: only for CPython's own tests
+Modules/_testcapimodule.c	3284	3543	PyInit__testcapi	PyInit__testcapi(void)	excluded		test-support: only for CPython's own tests

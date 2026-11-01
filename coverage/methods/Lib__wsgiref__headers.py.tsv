@@ -1,0 +1,19 @@
+file	line	endline	name	signature	status	entry	note
+Lib/wsgiref/headers.py	18	30	_formatparam	_formatparam(param, value=None, quote=1)	todo		
+Lib/wsgiref/headers.py	36	44	Headers.__init__	__init__(self, headers=None)	todo		
+Lib/wsgiref/headers.py	46	54	Headers._convert_string_type	_convert_string_type(self, value, *, name)	todo		
+Lib/wsgiref/headers.py	56	58	Headers.__len__	__len__(self)	todo		
+Lib/wsgiref/headers.py	60	64	Headers.__setitem__	__setitem__(self, name, val)	todo		
+Lib/wsgiref/headers.py	66	72	Headers.__delitem__	__delitem__(self, name)	todo		
+Lib/wsgiref/headers.py	74	83	Headers.__getitem__	__getitem__(self, name)	todo		
+Lib/wsgiref/headers.py	85	87	Headers.__contains__	__contains__(self, name)	todo		
+Lib/wsgiref/headers.py	90	99	Headers.get_all	get_all(self, name)	todo		
+Lib/wsgiref/headers.py	102	108	Headers.get	get(self, name, default=None)	todo		
+Lib/wsgiref/headers.py	111	119	Headers.keys	keys(self)	todo		
+Lib/wsgiref/headers.py	121	129	Headers.values	values(self)	todo		
+Lib/wsgiref/headers.py	131	139	Headers.items	items(self)	todo		
+Lib/wsgiref/headers.py	141	142	Headers.__repr__	__repr__(self)	todo		
+Lib/wsgiref/headers.py	144	147	Headers.__str__	__str__(self)	todo		
+Lib/wsgiref/headers.py	149	150	Headers.__bytes__	__bytes__(self)	todo		
+Lib/wsgiref/headers.py	152	163	Headers.setdefault	setdefault(self, name, value)	todo		
+Lib/wsgiref/headers.py	165	192	Headers.add_header	add_header(self, _name, _value, **_params)	todo		

@@ -1,0 +1,19 @@
+file	line	endline	name	signature	status	entry	note
+Objects/capsule.c	25	40	_is_legal_capsule	_is_legal_capsule(PyObject *op, const char *invalid_capsule)	todo		
+Objects/capsule.c	48	55	name_matches	name_matches(const char *name1, const char *name2) {	todo		
+Objects/capsule.c	60	83	PyCapsule_New	PyCapsule_New(void *pointer, const char *name, PyCapsule_Destructor destructor)	todo		
+Objects/capsule.c	87	95	PyCapsule_IsValid	PyCapsule_IsValid(PyObject *op, const char *name)	todo		
+Objects/capsule.c	99	112	PyCapsule_GetPointer	PyCapsule_GetPointer(PyObject *op, const char *name)	todo		
+Objects/capsule.c	116	123	PyCapsule_GetName	PyCapsule_GetName(PyObject *op)	todo		
+Objects/capsule.c	127	134	PyCapsule_GetDestructor	PyCapsule_GetDestructor(PyObject *op)	todo		
+Objects/capsule.c	138	145	PyCapsule_GetContext	PyCapsule_GetContext(PyObject *op)	todo		
+Objects/capsule.c	149	163	PyCapsule_SetPointer	PyCapsule_SetPointer(PyObject *op, void *pointer)	todo		
+Objects/capsule.c	167	176	PyCapsule_SetName	PyCapsule_SetName(PyObject *op, const char *name)	todo		
+Objects/capsule.c	180	189	PyCapsule_SetDestructor	PyCapsule_SetDestructor(PyObject *op, PyCapsule_Destructor destructor)	todo		
+Objects/capsule.c	193	202	PyCapsule_SetContext	PyCapsule_SetContext(PyObject *op, void *context)	todo		
+Objects/capsule.c	206	226	_PyCapsule_SetTraverse	_PyCapsule_SetTraverse(PyObject *op, traverseproc traverse_func, inquiry clear_func)	todo		
+Objects/capsule.c	230	283	PyCapsule_Import	PyCapsule_Import(const char *name, int no_block)	todo		
+Objects/capsule.c	287	295	capsule_dealloc	capsule_dealloc(PyObject *op)	todo		
+Objects/capsule.c	299	315	capsule_repr	capsule_repr(PyObject *o)	todo		
+Objects/capsule.c	319	329	capsule_traverse	capsule_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/capsule.c	333	340	capsule_clear	capsule_clear(PyObject *self)	todo		

@@ -1,0 +1,10 @@
+file	line	endline	name	signature	status	entry	note
+Lib/importlib/resources/_functional.py	11	13	open_binary	open_binary(anchor, *path_names)	todo		
+Lib/importlib/resources/_functional.py	16	20	open_text	open_text(anchor, *path_names, encoding=_MISSING, errors='strict')	todo		
+Lib/importlib/resources/_functional.py	23	25	read_binary	read_binary(anchor, *path_names)	todo		
+Lib/importlib/resources/_functional.py	28	32	read_text	read_text(anchor, *path_names, encoding=_MISSING, errors='strict')	todo		
+Lib/importlib/resources/_functional.py	35	37	path	path(anchor, *path_names)	todo		
+Lib/importlib/resources/_functional.py	40	45	is_resource	is_resource(anchor, *path_names)	todo		
+Lib/importlib/resources/_functional.py	48	60	contents	contents(anchor, *path_names)	todo		
+Lib/importlib/resources/_functional.py	63	75	_get_encoding_arg	_get_encoding_arg(path_names, encoding)	todo		
+Lib/importlib/resources/_functional.py	78	81	_get_resource	_get_resource(anchor, path_names)	todo		

@@ -1,0 +1,21 @@
+file	line	endline	name	signature	status	entry	note
+Lib/multiprocessing/resource_tracker.py	37	38	cleanup_noop	cleanup_noop(name)	todo		
+Lib/multiprocessing/resource_tracker.py	65	81	ResourceTracker.__init__	__init__(self)	todo		
+Lib/multiprocessing/resource_tracker.py	83	89	ResourceTracker._reentrant_call_error	_reentrant_call_error(self)	todo		
+Lib/multiprocessing/resource_tracker.py	91	97	ResourceTracker.__del__	__del__(self)	todo		
+Lib/multiprocessing/resource_tracker.py	99	130	ResourceTracker._after_fork_in_child	_after_fork_in_child(self)	todo		
+Lib/multiprocessing/resource_tracker.py	132	142	ResourceTracker._stop	_stop(self, use_blocking_lock=True, wait_timeout=None)	todo		
+Lib/multiprocessing/resource_tracker.py	144	204	ResourceTracker._stop_locked	_stop_locked(self, close=os.close, waitpid=os.waitpid, waitstatus_to_exitcode=os.waitstatus_to_exitcode, monotonic=time.monotonic, sleep=time.sleep, WNOHANG=getattr(os, 'WNOHANG', None), wait_timeout=None)	todo		
+Lib/multiprocessing/resource_tracker.py	206	208	ResourceTracker.getfd	getfd(self)	todo		
+Lib/multiprocessing/resource_tracker.py	210	215	ResourceTracker.ensure_running	ensure_running(self)	todo		
+Lib/multiprocessing/resource_tracker.py	217	234	ResourceTracker._teardown_dead_process	_teardown_dead_process(self)	todo		
+Lib/multiprocessing/resource_tracker.py	236	274	ResourceTracker._launch	_launch(self)	todo		
+Lib/multiprocessing/resource_tracker.py	276	287	ResourceTracker._make_probe_message	_make_probe_message(self)	todo		
+Lib/multiprocessing/resource_tracker.py	289	320	ResourceTracker._ensure_running_and_write	_ensure_running_and_write(self, msg=None)	todo		
+Lib/multiprocessing/resource_tracker.py	322	331	ResourceTracker._check_alive	_check_alive(self)	todo		
+Lib/multiprocessing/resource_tracker.py	333	335	ResourceTracker.register	register(self, name, rtype)	todo		
+Lib/multiprocessing/resource_tracker.py	337	339	ResourceTracker.unregister	unregister(self, name, rtype)	todo		
+Lib/multiprocessing/resource_tracker.py	341	343	ResourceTracker._write	_write(self, msg)	todo		
+Lib/multiprocessing/resource_tracker.py	345	376	ResourceTracker._send	_send(self, cmd, name, rtype)	todo		
+Lib/multiprocessing/resource_tracker.py	397	418	_decode_message	_decode_message(line)	todo		
+Lib/multiprocessing/resource_tracker.py	421	495	main	main(fd)	todo		

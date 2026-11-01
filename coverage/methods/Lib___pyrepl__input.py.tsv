@@ -1,0 +1,8 @@
+file	line	endline	name	signature	status	entry	note
+Lib/_pyrepl/input.py	50	51	InputTranslator.push	push(self, evt: EventTuple)	todo		
+Lib/_pyrepl/input.py	54	55	InputTranslator.get	get(self)	todo		
+Lib/_pyrepl/input.py	58	59	InputTranslator.empty	empty(self)	todo		
+Lib/_pyrepl/input.py	63	78	KeymapTranslator.__init__	__init__(self, keymap, verbose=False, invalid_cls=None, character_cls=None)	todo		
+Lib/_pyrepl/input.py	80	105	KeymapTranslator.push	push(self, evt)	todo		
+Lib/_pyrepl/input.py	107	111	KeymapTranslator.get	get(self)	todo		
+Lib/_pyrepl/input.py	113	114	KeymapTranslator.empty	empty(self)	todo		
