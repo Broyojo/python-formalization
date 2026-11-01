@@ -103,9 +103,17 @@ Shared files (`Core.lean`, `DiffCore.lean`, `Registry.lean`, `DiffMain.lean`,
 Do not edit them. If you truly need a new `PyExc` constructor or helper, put a
 local definition in your module and mention it in your report.
 
+Python version: everything is pinned to 3.14.7 today, and the project will migrate
+to 3.15.2, the latest release, once the current quality round ends. Until a module
+is told to migrate, keep citing 3.14.7. Formalize one version; other versions get
+reproducers and difftests only.
+
 Sources (absolute paths; `vendor/` is not in git worktrees):
 - CPython 3.14.7 source (matches `python3`, cite these line numbers):
   `/Users/broyojo/code/projects/python-formalization/vendor/cpython-3.14`
+- CPython 3.15.2 source, the migration target:
+  `/Users/broyojo/code/projects/python-formalization/vendor/cpython-3.15`
+  (its interpreter on the pod is `$HOME/pf/vendor/cpython-3.15/python`)
 - CPython main source: `/Users/broyojo/code/projects/python-formalization/vendor/cpython-main`
 - CPython main interpreter (to check bugs still exist on main):
   `/Users/broyojo/code/projects/python-formalization/vendor/cpython-main/python.exe`
