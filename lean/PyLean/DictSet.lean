@@ -278,10 +278,10 @@ def entries : List Entry := [
   { id := "set-table-refines", pyFile := "Objects/setobject.c",
     pyFns := ["set_lookkey", "set_add_entry_takeref", "set_table_resize", "set_contains_entry",
       "set_discard_entry", "set_add_key", "set_contains_key", "set_discard_key"]
-    statement := "From an empty set, a run of add and discard either stops with MemoryError, when a table is refused, or leaves a well-formed table that holds what the abstract list holds, up to order, and `in` answers as the list does."
+    statement := "From an empty set, a run of add and discard leaves a well-formed table that holds what the abstract list holds, up to order, and `in` answers as the list does; or it stops with MemoryError, and then some set of no more keys than the run has steps needed a table PyMem_NEW refuses."
     source := "language: set semantics", status := .proven
     prop := ``SetTableRefines, thm := some ``setTableRefines_proven
-    notes := "The statement admits MemoryError because the model mirrors the refusal of PyMem_NEW at setobject.c:343: a long enough run can reach it." },
+    notes := "The one failure is the refusal of PyMem_NEW at setobject.c:343, about 2**58 slots; an allocator that gives up earlier is not modelled." },
   { id := "set-pop", pyFile := "Objects/setobject.c", pyFns := ["set_pop_impl"]
     statement := "s.pop() raises KeyError on an empty set; otherwise exactly one entry leaves and the table stays well formed, wherever the finger stood."
     source := "set.pop docstring; setobject.c:719-743", status := .proven

@@ -682,12 +682,16 @@ theorem setNewSize_stop (m : Nat) : ∀ (f n : Nat), 0 < n →
       rw [e]
       exact ⟨Or.inl (by omega), 0, by simp⟩
 
+/-- The table `set_table_resize` would pick for `minused` is more than `PyMem_NEW` can give (:343). -/
+def SetResizeRefused (minused : Nat) : Prop :=
+  (2 ^ 63 - 1) / 16 < setNewSize minused 64 PySet_MINSIZE
+
 /-- `set_table_resize`, from any table that may have reached the load limit, with no assumption on
 the size asked for: it refuses a table it cannot allocate, and otherwise gives a table within the
 load limit that holds the same entries. The hypothesis is what every call site passes. -/
 theorem setTableResize_spec (hsym : ∀ a b, eqv a b = eqv b a) (so : SetObj K)
     (w : SetCore hf eqv so) (minused : Nat) (hmin : so.used * 2 ≤ minused) :
-    setTableResize minused so = (.error memoryError, so) ∨
+    (SetResizeRefused minused ∧ setTableResize minused so = (.error memoryError, so)) ∨
     ∃ so', setTableResize minused so = (.ok (), so') ∧ SetWF hf eqv so' ∧
       (setEntries so').Perm (setEntries so) := by
   let r := setNewSize minused 64 PySet_MINSIZE
@@ -714,7 +718,11 @@ theorem setTableResize_spec (hsym : ∀ a b, eqv a b = eqv b a) (so : SetObj K)
     simp [setTableResize, M.bind_run, M.get_run, hr, hno]
   · by_cases hbig : 576460752303423487 < r
     · left
-      simp [setTableResize, M.bind_run, M.get_run, hr, hno, hbig, memoryError]
+      refine ⟨?_, ?_⟩
+      · unfold SetResizeRefused
+        rw [hr]
+        omega
+      · simp [setTableResize, M.bind_run, M.get_run, hr, hno, hbig, memoryError]
     · right
       have hlim : r ≤ 576460752303423487 := by omega
       have hm : minused < r := by

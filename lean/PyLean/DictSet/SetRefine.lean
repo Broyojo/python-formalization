@@ -79,6 +79,13 @@ theorem any_keys_false (so : SetObj K) (key : K)
   rw [hne s e.1 e.2 hs] at hq
   simp at hq
 
+/-- What `set_add_entry` asks of `set_table_resize` for a table of `used` keys (:206-208). -/
+def setGrowMin (used : Nat) : Nat := if used > 50000 then used * 2 else used * 4
+
+/-- A set of `used` keys that would have to grow past what `PyMem_NEW` can give, the one reason an
+add can fail for an honest key. -/
+def SetTooBig (used : Nat) : Prop := SetResizeRefused (setGrowMin used)
+
 section Add
 
 theorem addAux_active (n : Nat) (so : SetObj K) {key : K} {hash : Int}
@@ -117,7 +124,7 @@ it goes in at a dummy the walk passed, or at the first NULL, resizing if the loa
 theorem setAddEntry_spec (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (key : K) :
     ((setKeys so).any (eqv · key) = true ∧ setAddEntry P key (hf key) so = (.ok (), so)) ∨
     ((setKeys so).any (eqv · key) = false ∧
-      ((∃ s, setAddEntry P key (hf key) so = (.error memoryError, s)) ∨
+      ((SetTooBig (so.used + 1) ∧ ∃ s, setAddEntry P key (hf key) so = (.error memoryError, s)) ∨
        ∃ so', setAddEntry P key (hf key) so = (.ok (), so') ∧ SetWF hf eqv so' ∧
          (setEntries so').Perm ((key, hf key) :: setEntries so))) := by
   let u := toU64 (hf key)
@@ -161,7 +168,7 @@ theorem setAddEntry_spec (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (key : K
             (if so1.used > 50000 then so1.used * 2 else so1.used * 4)
             (by split <;> omega) with h1 | ⟨so2, h1, h2, h3⟩
         · left
-          exact ⟨so1, by rw [hrun, hgrow, h1]⟩
+          exact ⟨h1.1, so1, by rw [hrun, hgrow, h1.2]⟩
         · right
           exact ⟨so2, by rw [hrun, hgrow, h1], h2, h3.trans g2⟩
     · obtain ⟨rfl⟩ : fs = some (spos so.mask u t1 + j1) := g3
@@ -252,7 +259,7 @@ theorem setDiscard_spec (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (key : K)
 theorem setAddKey_spec (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (key : K) :
     ((setKeys so).any (eqv · key) = true ∧ setAddKey P key so = (.ok (), so)) ∨
     ((setKeys so).any (eqv · key) = false ∧
-      ((∃ s, setAddKey P key so = (.error memoryError, s)) ∨
+      ((SetTooBig (so.used + 1) ∧ ∃ s, setAddKey P key so = (.error memoryError, s)) ∨
        ∃ so', setAddKey P key so = (.ok (), so') ∧ SetWF hf eqv so' ∧
          (setKeys so').Perm (key :: setKeys so))) := by
   have hunf : setAddKey P key so = setAddEntry P key (hf key) so := setHashKey_bind H key _ so
@@ -352,7 +359,7 @@ theorem wf_empty_set (hf : K → Int) (eqv : K → K → Bool) : SetWF hf eqv ({
 
 theorem setOpsRun_spec (H : HonestSet P hf eqv) :
     ∀ (ops : List (SOp K)) (so : SetObj K) (l : List K), SetWF hf eqv so → (setKeys so).Perm l →
-      setOpsRun P ops so = .error memoryError ∨
+      (setOpsRun P ops so = .error memoryError ∧ ∃ n, n ≤ so.used + ops.length ∧ SetTooBig n) ∨
       ∃ so', setOpsRun P ops so = .ok so' ∧ SetWF hf eqv so' ∧ (setKeys so').Perm (setAbs eqv ops l) := by
   intro ops
   induction ops with
@@ -367,46 +374,69 @@ theorem setOpsRun_spec (H : HonestSet P hf eqv) :
       rw [← hp.any_eq]
       rcases setAddKey_spec H w k with ⟨h1, h2⟩ | ⟨h1, h3⟩
       · simp only [h2, h1, if_true]
-        exact ih so l w hp
+        rcases ih so l w hp with ⟨g1, n, g2, g3⟩ | g
+        · exact Or.inl ⟨g1, n, by simp only [List.length_cons]; omega, g3⟩
+        · exact Or.inr g
       · simp only [h1, Bool.false_eq_true, if_false]
-        rcases h3 with ⟨s, h3⟩ | ⟨so', a, b, c⟩
+        rcases h3 with ⟨hb, s, h3⟩ | ⟨so', a, b, c⟩
         · left
-          simp [h3]
+          exact ⟨by simp [h3], so.used + 1, by simp, hb⟩
         · simp only [a]
-          refine ih so' _ b (c.trans ?_)
-          exact ((hp.cons k).trans (List.perm_append_singleton k l).symm)
+          have hu : so'.used = so.used + 1 := by
+            have h1 := b.used
+            have h2 := w.used
+            have h3 := c.length_eq
+            simp only [setKeys, List.length_map, List.length_cons] at h3
+            omega
+          rcases ih so' _ b (c.trans ((hp.cons k).trans (List.perm_append_singleton k l).symm)) with
+            ⟨g1, n, g2, g3⟩ | g
+          · exact Or.inl ⟨g1, n, by simp only [List.length_cons]; omega, g3⟩
+          · exact Or.inr g
     | discard k =>
       simp only [setOpsRun, setAbs]
       rcases setDiscard_spec H w k with ⟨h1, h2⟩ | ⟨so', a, b, c⟩
       · simp only [h2]
-        refine ih so _ w ?_
-        refine hp.trans ?_
         have hall : ∀ x ∈ l, (!eqv x k) = true := by
           intro x hx
           have h3 : l.any (eqv · k) = false := by rw [← hp.any_eq]; exact h1
           have := List.any_eq_false.mp h3 x hx
           simpa using this
-        rw [List.filter_eq_self.mpr hall]
+        have hp' : (setKeys so).Perm (l.filter fun x => !eqv x k) := by
+          rw [List.filter_eq_self.mpr hall]
+          exact hp
+        rcases ih so _ w hp' with ⟨g1, n, g2, g3⟩ | g
+        · exact Or.inl ⟨g1, n, by simp only [List.length_cons]; omega, g3⟩
+        · exact Or.inr g
       · simp only [a]
-        exact ih so' _ b (c.trans (hp.filter _))
+        have hu : so'.used ≤ so.used := by
+          have h1 := b.used
+          have h2 := w.used
+          have h3 := c.length_eq
+          have h4 := List.length_filter_le (fun x => !eqv x k) (setKeys so)
+          simp only [setKeys, List.length_map] at h3 h4
+          omega
+        rcases ih so' _ b (c.trans (hp.filter _)) with ⟨g1, n, g2, g3⟩ | g
+        · exact Or.inl ⟨g1, n, by simp only [List.length_cons]; omega, g3⟩
+        · exact Or.inr g
 
 end Program
 
 /-- The set table refines a list without duplicates: from an empty set, a run of `add` and `discard`
-either stops with `MemoryError`, when a table is refused, or leaves a well-formed table that holds
-what the list holds, and `in` answers as the list does. -/
+leaves a well-formed table that holds what the list holds, and `in` answers as the list does; or it
+stops with `MemoryError`, and then some set of no more keys than the run has steps needed a table
+`PyMem_NEW` refuses. -/
 def SetTableRefines : Prop :=
   ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (hf : K → Int) (eqv : K → K → Bool),
     HonestSet P hf eqv → ∀ (ops : List (SOp K)) (key : K),
-      setOpsRun P ops {} = .error memoryError ∨
+      (setOpsRun P ops {} = .error memoryError ∧ ∃ n, n ≤ ops.length ∧ SetTooBig n) ∨
       ∃ so, setOpsRun P ops {} = .ok so ∧ SetWF hf eqv so ∧ (setKeys so).Perm (setAbs eqv ops []) ∧
         (setContainsKey P key so).1 = .ok ((setAbs eqv ops []).any (eqv · key))
 
 theorem setTableRefines_proven : SetTableRefines := by
   intro K _ P hf eqv H ops key
   obtain ⟨w0, h0⟩ := wf_empty_set hf eqv
-  rcases setOpsRun_spec H ops {} [] w0 (by rw [h0]) with h | ⟨so, a, b, c⟩
-  · exact Or.inl h
+  rcases setOpsRun_spec H ops {} [] w0 (by rw [h0]) with ⟨h, n, g1, g2⟩ | ⟨so, a, b, c⟩
+  · exact Or.inl ⟨h, n, by simpa using g1, g2⟩
   · refine Or.inr ⟨so, a, b, c, ?_⟩
     rw [setContains_spec H b key, c.any_eq]
 
