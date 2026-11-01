@@ -3,7 +3,7 @@ import PyLean.TextLibs.Diff
 import PyLean.TextLibs.StructClose
 import PyLean.TextLibs.BinasciiProps2
 import PyLean.TextLibs.CsvProps
-import PyLean.TextLibs.ReProps
+import PyLean.TextLibs.ReParseProps
 
 /-!
 Text and binary formats, CPython 3.14.7. `Modules/_struct.c` is modelled in
@@ -351,12 +351,7 @@ def entries : List Entry := [
     source := "docs: writerows", status := .proven
     prop := ``DictWriterowsConcat, thm := some ``dictWriterowsConcat_proven },
   { id := "textlibs-re-digit-limit-parse", pyFile := "Lib/re/_parser.py"
-    pyFns := ["State.__init__", "State.groups", "State.opengroup", "State.closegroup", "State.checkgroup",
-      "State.checklookbehindgroup", "SubPattern.__init__", "SubPattern.__len__", "SubPattern.__delitem__",
-      "SubPattern.__getitem__", "SubPattern.__setitem__", "SubPattern.insert", "SubPattern.append", "SubPattern.getwidth",
-      "Tokenizer.__init__", "Tokenizer.__next", "Tokenizer.match", "Tokenizer.get", "Tokenizer.getwhile",
-      "Tokenizer.getuntil", "Tokenizer.tell", "Tokenizer.seek", "Tokenizer.error", "Tokenizer.checkgroupname",
-      "_escape", "_class_escape", "_uniq", "_parse_sub", "_parse", "_parse_flags", "parse"]
+    pyFns := ["_parse", "parse"]
     statement := "For every allowed sys.set_int_max_str_digits value, a str pattern parsed with no flags reports a bad pattern as PatternError or OverflowError, and never leaks ValueError."
     source := "docs: re.compile raises PatternError; Lib/re/_parser.py:671", status := .refuted
     prop := ``ParseNoValueError, thm := some ``parseNoValueError_refuted
@@ -367,6 +362,65 @@ def entries : List Entry := [
     source := "docs: re.sub", status := .refuted
     prop := ``TemplateNoValueError, thm := some ``templateNoValueError_refuted
     bug := some "textlibs-re-int-digit-limit" },
+  { id := "textlibs-re-parse-plain", pyFile := "Lib/re/_parser.py"
+    pyFns := ["State.__init__", "Tokenizer.__init__", "Tokenizer.__next", "Tokenizer.get", "_parse_sub", "_parse", "parse"]
+    statement := "For every str pattern with no special character, parse returns its literal characters, one group, and UNICODE."
+    source := "docs: re syntax, ordinary characters", status := .proven
+    prop := ``ParsePlain, thm := some ``parsePlain_proven },
+  { id := "textlibs-re-group-lifecycle", pyFile := "Lib/re/_parser.py"
+    pyFns := ["State.groups", "State.opengroup", "State.closegroup", "State.checkgroup"]
+    statement := "opengroup returns the next group number and grows groups by one, a new group cannot be referred to, and closegroup makes it referable."
+    source := "the message at Lib/re/_parser.py:436", status := .proven
+    prop := ``GroupLifecycle, thm := some ``groupLifecycle_proven },
+  { id := "textlibs-re-lookbehind-groups", pyFile := "Lib/re/_parser.py", pyFns := ["State.checklookbehindgroup"]
+    statement := "Outside a lookbehind any group may be referred to; inside one, an open group or one opened in the same lookbehind is refused."
+    source := "the messages at Lib/re/_parser.py:106-109", status := .proven
+    prop := ``LookbehindLaw, thm := some ``lookbehindLaw_proven },
+  { id := "textlibs-re-seek", pyFile := "Lib/re/_parser.py", pyFns := ["Tokenizer.seek"]
+    statement := "seek(i) puts tell() at i when there is a token there."
+    source := "invariant", status := .proven
+    prop := ``SeekTell, thm := some ``seekTell_proven },
+  { id := "textlibs-re-error-position", pyFile := "Lib/re/_parser.py", pyFns := ["Tokenizer.error"]
+    statement := "Tokenizer.error reports the position tell() - offset."
+    source := "Lib/re/_parser.py:302", status := .proven
+    prop := ``ErrorPosition, thm := some ``errorPosition_proven },
+  { id := "textlibs-re-match", pyFile := "Lib/re/_parser.py", pyFns := ["Tokenizer.match"]
+    statement := "match(c) leaves the tokenizer alone and returns False unless the next token is c."
+    source := "Lib/re/_parser.py:256-260", status := .proven
+    prop := ``MatchLaw, thm := some ``matchLaw_proven },
+  { id := "textlibs-re-getwhile", pyFile := "Lib/re/_parser.py", pyFns := ["Tokenizer.getwhile"]
+    statement := "getwhile(n, set) reads at most n characters, all in set."
+    source := "Lib/re/_parser.py:265-273", status := .proven
+    prop := ``GetwhileBound, thm := some ``getwhileBound_proven },
+  { id := "textlibs-re-getuntil", pyFile := "Lib/re/_parser.py", pyFns := ["Tokenizer.getuntil"]
+    statement := "getuntil(term) on plain text returns what comes before the terminator and leaves the tokenizer after it."
+    source := "Lib/re/_parser.py:274-289", status := .proven
+    prop := ``GetuntilLaw, thm := some ``getuntilLaw_proven },
+  { id := "textlibs-re-group-name", pyFile := "Lib/re/_parser.py", pyFns := ["Tokenizer.checkgroupname"]
+    statement := "checkgroupname accepts exactly the identifiers."
+    source := "docs: group names must be valid identifiers", status := .proven
+    prop := ``GroupNameLaw, thm := some ``groupNameLaw_proven
+    notes := "ASCII names: non-ASCII str.isidentifier is not modelled." },
+  { id := "textlibs-re-width-ordered", pyFile := "Lib/re/_parser.py", pyFns := ["SubPattern.getwidth"]
+    statement := "For every tree of the shape the parser produces, getwidth returns lo <= hi."
+    source := "invariant: the lookbehind check at Lib/re/_compiler.py:159 compares them", status := .proven
+    prop := ``WidthOrdered, thm := some ``widthOrdered_proven },
+  { id := "textlibs-re-prefix-factor", pyFile := "Lib/re/_parser.py", pyFns := ["_parse_sub"]
+    statement := "Moving a common prefix out of a branch keeps every alternative: each is still the prefix followed by what stays in the branch."
+    source := "comment at Lib/re/_parser.py:472", status := .proven
+    prop := ``PrefixFactor, thm := some ``prefixFactor_proven },
+  { id := "textlibs-re-branch-set", pyFile := "Lib/re/_parser.py", pyFns := ["_parse_sub"]
+    statement := "A branch of single characters and sets becomes one set that holds all of them."
+    source := "comment at Lib/re/_parser.py:491", status := .proven
+    prop := ``BranchSetLaw, thm := some ``branchSetLaw_proven },
+  { id := "textlibs-re-flags", pyFile := "Lib/re/_parser.py", pyFns := ["_parse_flags"]
+    statement := "An inline flag group never turns a flag both on and off or turns off a global flag, and the refused combinations raise the source's messages."
+    source := "the messages at Lib/re/_parser.py:893-944", status := .proven
+    prop := ``FlagLaws, thm := some ``flagLaws_proven },
+  { id := "textlibs-re-template-plain", pyFile := "Lib/re/_parser.py", pyFns := ["parse_template"]
+    statement := "A replacement with no backslash is that literal text, for every length and every pattern."
+    source := "docs: re.sub", status := .proven
+    prop := ``TemplatePlain, thm := some ``templatePlain_proven },
   { id := "textlibs-re-tell", pyFile := "Lib/re/_parser.py", pyFns := ["Tokenizer.tell", "Tokenizer.pos", "Tokenizer.__next"]
     statement := "After reading a token, tell() is the position of that token."
     source := "invariant: error positions point at the current token", status := .proven
