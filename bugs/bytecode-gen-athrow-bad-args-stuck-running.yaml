@@ -1,0 +1,72 @@
+id: bytecode-gen-athrow-bad-args-stuck-running
+title: "athrow() with a bad argument count leaves ag_running stuck True: the async generator is unusable after a TypeError"
+priority: P3
+kind: state-corruption
+module: bytecode
+files: [Objects/genobject.c]
+functions: ["async_gen_athrow", "async_gen_athrow_send", "async_gen_athrow_new"]
+summary: |
+  async_gen_athrow (:1565-1581) does not check its argument count; athrow is METH_VARARGS and the
+  check is PyArg_UnpackTuple at the first send (:2169-2172). By then async_gen_athrow_send has set
+  agt_state = AWAITABLE_STATE_ITER and ag_running_async = 1 (:2148-2149), and the failed unpack
+  returns NULL without undoing them or going through check_error. So agen.athrow() and
+  agen.athrow(a, b, c, d) raise TypeError from the await, and ag_running stays True for good:
+  every later __anext__(), asend(), aclose() and athrow() raises "asynchronous generator is
+  already running", and the generator's finally blocks do not run from aclose().
+likelihood: |
+  Low: it takes a wrong call to athrow(), which is an uncommon method, caught and survived. A
+  caller that catches the TypeError is left with a generator that can no longer be closed.
+maybe_intended: |
+  No. Fixed on main, where the arguments are unpacked in async_gen_athrow_new at the call, so the
+  TypeError comes from agen.athrow() and no state moves.
+reproducer: |
+  async def ag():
+      try:
+          yield 1
+      finally:
+          print("cleanup")
+  a = ag()
+  try:
+      a.__anext__().send(None)
+  except StopIteration:
+      pass
+  try:
+      t = a.athrow()
+  except TypeError as e:
+      print("rejected at the call:", e)
+  else:
+      try:
+          t.send(None)
+      except TypeError as e:
+          print("TypeError from send:", e)
+      print("ag_running", a.ag_running)
+      try:
+          a.aclose().send(None)
+      except RuntimeError as e:
+          print("aclose:", e)
+          if a.ag_running and "already running" in str(e):
+              print('REPRODUCED bytecode-gen-athrow-bad-args-stuck-running')
+expected: |
+  TypeError, with ag_running False and the generator still usable, as for every other failing path
+  of the awaitable (async_gen_unwrap_value and check_error clear the flag).
+observed: |
+  python3 3.14.7: TypeError: athrow expected at least 1 argument, got 0; ag_running True; aclose():
+  RuntimeError: aclose(): asynchronous generator is already running. REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): the TypeError comes from a.athrow() itself. NOT REPRODUCED.
+promised_by: |
+  Invariant: ag_running_async is true only while an awaitable is running the generator, and the
+  docs say an exception raised by athrow() propagates; nothing says the generator is left unusable.
+cause: |
+  Objects/genobject.c:2148-2149 set the state before the check at :2169-2171, whose failure path is
+  a bare `return NULL`.
+possible_fix: |
+  Backport main's change (unpack in async_gen_athrow_new), or on 3.14 check the argument count in
+  async_gen_athrow, before the awaitable exists.
+duplicates:
+  issues: []
+  bugforge: "no generator entries in vendor/bugforge-results/README.md"
+  queries: ["athrow ag_running", "athrow arguments", "async generator athrow TypeError"]
+lean:
+  property: PyLean.Bytecode.GenObj.AThrowErrorClearsRunning
+  theorem: PyLean.Bytecode.GenObj.aThrowErrorClearsRunning_refuted
+  also: [PyLean.Bytecode.GenObj.AThrowValidArgsClearsRunning, PyLean.Bytecode.GenObj.aThrowValidArgsClearsRunning_proven]

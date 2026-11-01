@@ -1,4 +1,5 @@
 import PyLean.Bytecode.GenObj.AsyncProps
+import PyLean.Bytecode.GenObj.Script
 
 /-!
 # Delegation depth, `throw`, getters, setters, construction
@@ -153,7 +154,8 @@ def GenThrowBadArgUndelegated : Prop :=
 
 theorem genThrowBadArgUndelegated_proven : GenThrowBadArgUndelegated := by
   intro V X h fuel w r typ hy ht
-  cases typ <;> simp_all [genThrow, checkPositional, unpackThrowArgs, genThrowF, throwHere, isThrowable]
+  cases typ <;> simp_all [genThrow, checkPositional, unpackThrowArgs, genThrowF, throwHere,
+    isThrowable, badTraceback]
 
 /-- With or without a sub-iterator, `throw()` with something that cannot be raised
 leaves the generator's state alone. False: a delegating generator gets the
@@ -188,7 +190,7 @@ def GenThrowNoDelegation : Prop :=
 
 theorem genThrowNoDelegation_proven : GenThrowNoDelegation := by
   intro V X h fuel w r c k cls hy
-  simp [genThrowF, hy, throwHere]
+  simp [genThrowF, hy, throwHere, badTraceback]
 
 /-- `_PyGen_yf` is the stack top exactly while suspended in `yield from`. -/
 def GenYfState : Prop :=
@@ -216,6 +218,37 @@ theorem genCloseIterForeign_proven : GenCloseIterForeign := by
   simp only [genCloseIter, hg, genCloseIterForeign]
   rcases hc with hc | ⟨e, hc⟩ <;> simp [hc, closeMeth]
 
+/-- A `getThrow` that returns `bad` unless `r` is marked `FRAME_EXECUTING`. -/
+def guardThrowLookup {V X : Type} (h : Hooks V X) (r : Ref)
+    (bad : World V X × Except (Exc V) (Option (Obj V))) : Hooks V X :=
+  { h with getThrow := fun w o => if (w.get r).state = .executing then h.getThrow w o else bad }
+
+/-- All Python code `_gen_throw` runs for a sub-iterator runs with the delegating
+generator marked `FRAME_EXECUTING`, like every other delegation bracket in the file.
+False on 3.14.7: `PyObject_GetOptionalAttr(yf, throw)` at :514 comes before the
+bracket at :526-529, so a `throw` property can resume or close the generator, and
+:523-531 then links the cleared frame into the thread's frame stack. -/
+def GenThrowLookupSeesExecuting : Prop :=
+  ∀ (V X : Type) (h : Hooks V X) (bad : World V X × Except (Exc V) (Option (Obj V))) (n : Nat)
+    (w : World V X) (r : Ref) (c : Bool) (typ : Obj V) (val tb : Option (Obj V)),
+    genThrowF (guardThrowLookup h r bad) n w r c typ val tb = genThrowF h n w r c typ val tb
+
+/-- Generator 0 delegates to an object that is not a generator. -/
+def foreignDelegateWorld : World Unit Unit :=
+  { gens := fun _ => { kind := .gen, state := .suspendedYieldFrom, stackTop := .other () }
+    asends := fun _ => {}
+    athrows := fun _ => {}
+    ext := () }
+
+theorem genThrowLookupSeesExecuting_refuted : ¬ GenThrowLookupSeesExecuting := by
+  intro hp
+  have := hp Unit Unit noopHooks (foreignDelegateWorld, .error Exc.fuel) 1 foreignDelegateWorld 0
+    false (.excClass .plain "ValueError") none none
+  have h2 := congrArg (fun p => match p.2 with
+    | Ret.err (some e) => e.kind
+    | _ => ExcKind.stopIteration) this
+  exact absurd h2 (by decide)
+
 /-! ## PEP 479 -/
 
 /-- `stopiteration_error` leaves no `StopIteration` (in an async generator, no
@@ -239,6 +272,40 @@ theorem pep479Conversion_proven : Pep479Conversion := by
   all_goals first
     | (split <;> simp_all [Exc.isStopIteration, Exc.isStopAsyncIteration])
     | skip
+
+/-- The asserts at :279-281 applied to the frames the difftest validated: a frame
+never ends by raising `StopIteration`. False: an exception thrown into a
+`FRAME_CREATED` frame is raised at the first `RESUME`, outside the handler that
+performs PEP 479's conversion. -/
+def FrameNeverRaisesStopIteration : Prop :=
+  ∀ (w : Script.W) (r : Ref) (arg : Script.O) (thrown : Option (Exc Script.SV)) (e : Exc Script.SV),
+    (Script.runFrame (Script.hooksAt 1) 1 w r arg thrown).2 = .raised e →
+    e.isStopIteration = false
+
+theorem frameNeverRaisesStopIteration_refuted : ¬ FrameNeverRaisesStopIteration := by
+  intro hp
+  have := hp (Script.initialWorld .gen [] false 0 0) 0 .none (some Exc.stopIterationNone)
+    Exc.stopIterationNone rfl
+  exact absurd this (by decide)
+
+/-- The same past the first `RESUME`: an exception unwinding off the bottom of a
+script frame, the only way `runK` raises, has been through `stopiteration_error`. -/
+def StartedFrameNeverRaisesStopIteration : Prop :=
+  ∀ (k : GenKind) (e : Exc Script.SV) (w : Script.W) (r : Ref) (fuel : Nat),
+    (w.get r).kind = k →
+    ∀ e', (Script.runK (Script.hooksAt 1) 1 fuel w r (.unwind e) []).2 = .raised e' →
+    e'.isStopIteration = false
+
+theorem startedFrameNeverRaisesStopIteration_proven : StartedFrameNeverRaisesStopIteration := by
+  intro k e w r fuel hk e' hr
+  cases fuel with
+  | zero =>
+    simp [Script.runK] at hr
+    subst hr; rfl
+  | succ s =>
+    simp [Script.runK] at hr
+    subst hr
+    exact (pep479Conversion_proven Script.SV _ e).1
 
 /-! ## Getters and setters -/
 
@@ -462,7 +529,7 @@ gets a second coroutine out of `__await__`. -/
 def AwaitableIterResult : Prop :=
   ∀ (V X : Type) (h : Hooks V X) (w : World V X) (o v : Obj V),
     (pyCoroGetAwaitableIter h w o).2 = .ok v →
-    (isCoro w o = true ∨ genIsCoroutine w o = true) ∧ (pyCoroGetAwaitableIter h w o).1 = w ∧ True ∨
+    (isCoro w o = true ∨ genIsCoroutine w o = true) ∧ (pyCoroGetAwaitableIter h w o).1 = w ∨
     (h.isIter v = true ∧ isCoro (pyCoroGetAwaitableIter h w o).1 v = false ∧
       genIsCoroutine (pyCoroGetAwaitableIter h w o).1 v = false)
 
@@ -470,7 +537,7 @@ theorem awaitableIterResult_proven : AwaitableIterResult := by
   intro V X h w o v he
   by_cases hc : isCoro w o = true ∨ genIsCoroutine w o = true
   · left
-    exact ⟨hc, by simp [pyCoroGetAwaitableIter, hc], trivial⟩
+    exact ⟨hc, by simp [pyCoroGetAwaitableIter, hc]⟩
   · right
     cases ha : h.amAwait w o with
     | none => simp [pyCoroGetAwaitableIter, hc, ha] at he

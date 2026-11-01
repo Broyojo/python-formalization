@@ -1,0 +1,56 @@
+id: bytecode-gen-throw-created-skips-pep479
+title: "throw(StopIteration) into a just-created generator skips PEP 479 and fails the asserts in gen_send_ex2 (debug abort); athrow(StopAsyncIteration) likewise"
+priority: P3
+kind: assertion-failure
+module: bytecode
+files: [Objects/genobject.c, Python/intrinsics.c]
+functions: ["gen_send_ex2", "_gen_throw"]
+summary: |
+  An exception thrown into a FRAME_CREATED frame is raised at the first RESUME, outside the handler
+  the compiler wraps the body in, so stopiteration_error does not convert it. gen_send_ex2 asserts at
+  :279-281 that no StopIteration (in an async generator, no StopAsyncIteration) comes out of a frame.
+  So gen().throw(StopIteration) aborts a debug build at :279, and agen().athrow(StopAsyncIteration)
+  at :280. A release build raises StopIteration from throw(), which a caller's `for` or `yield from`
+  takes as the end of iteration: the case PEP 479 exists to remove.
+likelihood: |
+  Low. Needs throw(StopIteration) on an unstarted generator; contrived in practice, per the issue.
+maybe_intended: |
+  No: the assert states the intent. Already reported as python/cpython#152685, still open. Recorded
+  here because the model reaches the same conclusion; the async generator case at :280 is not in that
+  report and could be added to it.
+reproducer: |
+  def g():
+      yield 1
+  try:
+      g().throw(StopIteration)
+  except StopIteration:
+      print("StopIteration escaped")
+      print('REPRODUCED bytecode-gen-throw-created-skips-pep479')
+  except RuntimeError as e:
+      print("converted:", e)
+expected: |
+  RuntimeError("generator raised StopIteration"), as for a started generator, or at least no failed
+  assert.
+observed: |
+  python3 3.14.7: StopIteration escapes. Debug build of 3.14.7: Assertion at Objects/genobject.c:279
+  failed; async generator: at :280. REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): same; debug build of main: asserts at genobject.c:320 and
+  :321 failed. REPRODUCED.
+promised_by: |
+  PEP 479; the asserts at Objects/genobject.c:279-281.
+cause: |
+  The STOPITERATION_ERROR handler does not cover the first RESUME, and the throw path enters there;
+  Python/intrinsics.c:143-184 never runs.
+possible_fix: |
+  See the discussion on python/cpython#152685: extend the handler over the first RESUME, or convert in
+  gen_send_ex2 for FRAME_CREATED.
+duplicates:
+  issues:
+    - {number: 152685, state: open, relation: duplicate, reason: "open; covers the StopIteration half"}
+  bugforge: "no generator entries in vendor/bugforge-results/README.md"
+  queries: ["generator throw StopIteration not started", "throw StopIteration assertion",
+            "gen_send_ex2 assert StopIteration", "Assertion gen_send_ex2", "athrow StopAsyncIteration"]
+lean:
+  property: PyLean.Bytecode.GenObj.FrameNeverRaisesStopIteration
+  theorem: PyLean.Bytecode.GenObj.frameNeverRaisesStopIteration_refuted
+  also: [PyLean.Bytecode.GenObj.StartedFrameNeverRaisesStopIteration, PyLean.Bytecode.GenObj.startedFrameNeverRaisesStopIteration_proven]

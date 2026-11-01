@@ -188,7 +188,7 @@ structure ASend (V : Type) where
   gen : Ref := 0
   /-- `ags_sendval`: `none` is NULL, the `__anext__()` mode. -/
   sendval : Option (Obj V) := none
-  state : AwaitableState := .closed
+  state : AwaitableState := .init
   deriving Inhabited
 
 /-- `PyAsyncGenAThrow`, :1453-1462. -/
@@ -196,7 +196,7 @@ structure AThrow (V : Type) where
   gen : Ref := 0
   /-- `agt_args`: `none` is NULL, the `aclose()` mode; otherwise the args tuple. -/
   args : Option (List (Obj V)) := none
-  state : AwaitableState := .closed
+  state : AwaitableState := .init
   deriving Inhabited
 
 /-- The heap. `X` is free for the instantiation (frames and so on). -/
@@ -573,14 +573,16 @@ def givenMatchesGeneratorExit : Obj V → Bool
   | .excClass k _ | .excInst k _ _ _ => k == .generatorExit
   | _ => false
 
+/-- `tb != NULL && !PyTraceBack_Check(tb)` after `None` became NULL, :544-547. -/
+def badTraceback : Option (Obj V) → Bool
+  | none | some .none | some .traceback => false
+  | some _ => true
+
 /-- `throw_here:`, :541-594. `tb == Py_None` becomes NULL, then the three shapes of
 `typ`. -/
 def throwHere (h : Hooks V X) (w : World V X) (r : Ref) (typ : Obj V)
     (val tb : Option (Obj V)) : World V X × Ret V :=
-  let badTb := match tb with
-    | none | some .none | some .traceback => false
-    | some _ => true
-  if badTb then
+  if badTraceback tb then
     (w, .err (some (Exc.typeError "throw() third argument must be a traceback object")))
   else
     match typ with
@@ -872,7 +874,7 @@ def coroWrapperClose (h : Hooks V X) (fuel : Nat) (w : World V X) (cw : Ref) : W
 
 /-! ## PEP 479 (`Python/intrinsics.c`) -/
 
-/-- `stopiteration_error`, `Python/intrinsics.c:143-186`: the handler the compiler
+/-- `stopiteration_error`, `Python/intrinsics.c:143-184`: the handler the compiler
 wraps every generator body in. A frame's `raised` outcome has been through this,
 which is why `gen_send_ex2` may assert no `StopIteration` comes out (:279-281). -/
 def stopIterationError (kind : GenKind) (e : Exc V) : Exc V :=

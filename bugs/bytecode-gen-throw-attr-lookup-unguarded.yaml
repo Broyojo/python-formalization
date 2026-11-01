@@ -1,0 +1,81 @@
+id: bytecode-gen-throw-attr-lookup-unguarded
+title: "_gen_throw looks up the sub-iterator's throw attribute before marking the generator running: a throw property can close it, and the cleared frame is linked into the frame stack (use-after-free)"
+priority: P2
+kind: crash
+module: bytecode
+files: [Objects/genobject.c]
+functions: ["_gen_throw", "gen_throw"]
+summary: |
+  In _gen_throw every call out to the sub-iterator runs with the delegating generator marked
+  FRAME_EXECUTING (:482-485, :504-508, :526-529), except one: the attribute lookup
+  PyObject_GetOptionalAttr(yf, throw) at :514 runs first, with the generator still suspended.
+  A `throw` property on the sub-iterator is arbitrary Python. If it calls g.close() the frame
+  is cleared, and _gen_throw carries on from :523 with the method it got: it sets
+  frame->previous and tstate->current_frame = frame (:524-525), which puts the cleared frame
+  on the thread's frame stack, and marks the generator FRAME_EXECUTING for the call. Python
+  code in that call can then reach the dead frame, for instance with sys._getframe(1).f_locals
+  or through g.gi_frame, and reads the locals that were already released. The reproducer
+  segfaults in f_locals; a debug build reports a negative refcount on a freed object.
+likelihood: |
+  Low. It needs a `throw` that is a property (or __getattr__) with side effects on the very
+  generator delegating to the object, plus something walking the frame. The reproducer is
+  contrived, though a lazy proxy object forwarding attribute access is a natural way to get a
+  __getattr__ on this path.
+maybe_intended: |
+  No. The brackets around every other call show the intent. Main no longer has this: its
+  _gen_throw takes FRAME_EXECUTING at the top, so close() in the property raises ValueError
+  ("generator already executing").
+reproducer: |
+  import subprocess, sys, textwrap
+  code = r'''
+  import sys
+  class L: pass
+  class It:
+      def __iter__(self): return self
+      def __next__(self): return 1
+      @property
+      def throw(self):
+          g.close()
+          return self._throw
+      def _throw(self, *a):
+          f = sys._getframe(1)
+          junk = [[L() for _ in range(5)] for _ in range(1000)]
+          print(f.f_locals)
+          return 5
+  def gen():
+      a = L(); b = L(); c = [1, 2, 3]
+      yield from It()
+  g = gen()
+  next(g)
+  print(g.throw(ValueError))
+  '''
+  r = subprocess.run([sys.executable, "-c", textwrap.dedent(code)], capture_output=True, text=True)
+  print("returncode", r.returncode, "stderr", r.stderr[-120:])
+  if r.returncode < 0:
+      print('REPRODUCED bytecode-gen-throw-attr-lookup-unguarded')
+expected: |
+  g.close() inside the property raises ValueError("generator already executing"), as it does
+  inside every other part of the delegation.
+observed: |
+  python3 3.14.7: SIGSEGV (returncode -11) in f_locals, with the generator's cleared frame shown
+  as the caller of _throw. Debug build: _Py_NegativeRefcount on a freed object at
+  Objects/frameobject.c:90. REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): ValueError: generator already executing. NOT REPRODUCED.
+promised_by: |
+  Undisputed invariant: no crash from pure Python. The comment and code at :496-510 and :523-531
+  rely on the frame being alive.
+cause: |
+  Objects/genobject.c:514 runs before the state bracket at :526-529. :523-525 then link a frame
+  whose state was never rechecked.
+possible_fix: |
+  Move the bracket up so that the lookup is inside it (set FRAME_EXECUTING before :514 and restore
+  on every exit), which also stops a getter from resuming the generator at a different point. Main
+  does this by taking FRAME_EXECUTING once at the top of _gen_throw.
+duplicates:
+  issues:
+    - {number: 120321, state: closed, relation: "the free-threading work that changed this on main", reason: "completed (2026-08-19)"}
+  bugforge: "no generator entries in vendor/bugforge-results/README.md"
+  queries: ["generator.throw property segfault", "yield from throw attribute crash", "_gen_throw"]
+lean:
+  property: PyLean.Bytecode.GenObj.GenThrowLookupSeesExecuting
+  theorem: PyLean.Bytecode.GenObj.genThrowLookupSeesExecuting_refuted
