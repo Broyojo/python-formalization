@@ -183,20 +183,10 @@ def run [Inhabited T] [Inhabited P] [Inhabited A] (e : Env T P A V W) (fuel : Na
     (s : Sched T P A V W) (blocking : Bool) : Sched T P A V W × Py (Option T) :=
   runLoop e blocking fuel s
 
-/-- `list(map(heapq.heappop, [events]*len(events)))`, Lib/sched.py:167. -/
-def popAll [Inhabited T] [Inhabited P] [Inhabited A] (e : Env T P A V W) :
-    Nat → List (Event T P A V) → Py (List (Event T P A V))
-  | 0, _ => .ok []
-  | n + 1, h =>
-    match heappopP (eventLt e) h with
-    | (_, .error x) => .error x
-    | (h, .ok v) => do
-      let rest ← popAll e n h
-      return v :: rest
-
-/-- `scheduler.queue`, Lib/sched.py:154-167. -/
+/-- `scheduler.queue`, Lib/sched.py:154-167: `list(map(heapq.heappop, [events]*len(events)))` on
+a copy of the heap. -/
 def queue [Inhabited T] [Inhabited P] [Inhabited A] (e : Env T P A V W) (s : Sched T P A V W) :
     Py (List (Event T P A V)) :=
-  popAll e s.queue.length s.queue
+  popsP (eventLt e) s.queue.length s.queue
 
 end PyLean.CoreLibs.Misc.Sched

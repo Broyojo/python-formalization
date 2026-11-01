@@ -72,9 +72,7 @@ def updateLoop (ops : Ops O NS R) (bases : List O) :
     List O → List O → Option (List O) → Py (Option (List O))
   | [], _, new => .ok new
   | base :: rest, before, new =>
-    let keep := match new with
-      | some l => some (l ++ [base])
-      | none => none
+    let keep := new.map (· ++ [base])
     if ops.isType base then updateLoop ops bases rest (before ++ [base]) keep
     else
       match ops.mroEntries base with
