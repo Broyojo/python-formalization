@@ -10,44 +10,44 @@ Modules/_functoolsmodule.c	168	324	partial_new	partial_new(PyTypeObject *type, P
 Modules/_functoolsmodule.c	327	335	partial_clear	partial_clear(PyObject *self)	excluded		no-behaviour: GC clear of owned references
 Modules/_functoolsmodule.c	338	347	partial_traverse	partial_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
 Modules/_functoolsmodule.c	350	359	partial_dealloc	partial_dealloc(PyObject *self)	excluded		no-behaviour: deallocation
-Modules/_functoolsmodule.c	362	368	partial_descr_get	partial_descr_get(PyObject *self, PyObject *obj, PyObject *type)	modelled	corelibs-functools-descriptors	
+Modules/_functoolsmodule.c	362	368	partial_descr_get	partial_descr_get(PyObject *self, PyObject *obj, PyObject *type)	modelled	corelibs-functools-partial-get	
 Modules/_functoolsmodule.c	374	383	partial_vectorcall_fallback	partial_vectorcall_fallback(PyThreadState *tstate, partialobject *pto, PyObject *const *args, size_t nargsf, PyObject *kwnames)	modelled	corelibs-functools-partial-call-twins	
-Modules/_functoolsmodule.c	386	476	partial_vectorcall	partial_vectorcall(PyObject *self, PyObject *const *args, size_t nargsf, PyObject *kwnames)	modelled	corelibs-functools-partial-call-twins	
+Modules/_functoolsmodule.c	386	476	partial_vectorcall	partial_vectorcall(PyObject *self, PyObject *const *args, size_t nargsf, PyObject *kwnames)	modelled	corelibs-functools-partial-call-in-bounds,corelibs-functools-partial-call-in-bounds-always,corelibs-functools-partial-call-twins	
 Modules/_functoolsmodule.c	480	492	partial_setvectorcall	partial_setvectorcall(partialobject *pto)	modelled	corelibs-functools-partial-call-twins	
-Modules/_functoolsmodule.c	497	580	partial_call	partial_call(PyObject *self, PyObject *args, PyObject *kwargs)	modelled	corelibs-functools-partial-call-twins,corelibs-functools-partial-nested-positional	
-Modules/_functoolsmodule.c	610	687	partial_repr	partial_repr(PyObject *self)	modelled	corelibs-functools-partial-repr	
-Modules/_functoolsmodule.c	697	703	partial_reduce	partial_reduce(PyObject *self, PyObject *Py_UNUSED(args))	modelled	corelibs-functools-partial-reduce	
-Modules/_functoolsmodule.c	706	768	partial_setstate	partial_setstate(PyObject *self, PyObject *state)	modelled	corelibs-functools-partial-state-twins	
+Modules/_functoolsmodule.c	497	580	partial_call	partial_call(PyObject *self, PyObject *args, PyObject *kwargs)	modelled	corelibs-functools-partial-call-in-bounds,corelibs-functools-partial-call-in-bounds-always,corelibs-functools-partial-call-twins	
+Modules/_functoolsmodule.c	610	687	partial_repr	partial_repr(PyObject *self)	modelled	corelibs-functools-partial-repr-order,corelibs-functools-partial-repr-self,corelibs-functools-partial-repr-twins	
+Modules/_functoolsmodule.c	697	703	partial_reduce	partial_reduce(PyObject *self, PyObject *Py_UNUSED(args))	modelled	corelibs-functools-partial-reduce-round-trip	
+Modules/_functoolsmodule.c	706	768	partial_setstate	partial_setstate(PyObject *self, PyObject *state)	modelled	corelibs-functools-partial-call-in-bounds-always,corelibs-functools-partial-state-phcount,corelibs-functools-partial-state-twins	
 Modules/_functoolsmodule.c	818	824	keyobject_clear	keyobject_clear(PyObject *op)	excluded		no-behaviour: GC clear of owned references
 Modules/_functoolsmodule.c	827	834	keyobject_dealloc	keyobject_dealloc(PyObject *ko)	excluded		no-behaviour: deallocation
 Modules/_functoolsmodule.c	837	844	keyobject_traverse	keyobject_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
-Modules/_functoolsmodule.c	854	857	keyobject_text_signature	keyobject_text_signature(PyObject *Py_UNUSED(self), void *Py_UNUSED(ignored))	modelled	corelibs-functools-descriptors	
-Modules/_functoolsmodule.c	891	909	keyobject_call	keyobject_call(PyObject *self, PyObject *args, PyObject *kwds)	modelled	corelibs-functools-cmp-to-key-twins	
-Modules/_functoolsmodule.c	912	943	keyobject_richcompare	keyobject_richcompare(PyObject *self, PyObject *other, int op)	modelled	corelibs-functools-cmp-to-key-sign,corelibs-functools-cmp-to-key-twins	
+Modules/_functoolsmodule.c	854	857	keyobject_text_signature	keyobject_text_signature(PyObject *Py_UNUSED(self), void *Py_UNUSED(ignored))	todo		
+Modules/_functoolsmodule.c	891	909	keyobject_call	keyobject_call(PyObject *self, PyObject *args, PyObject *kwds)	modelled	corelibs-functools-key-new	
+Modules/_functoolsmodule.c	912	943	keyobject_richcompare	keyobject_richcompare(PyObject *self, PyObject *other, int op)	modelled	corelibs-functools-cmp-to-key-duck,corelibs-functools-cmp-to-key-ne,corelibs-functools-cmp-to-key-twins	
 Modules/_functoolsmodule.c	955	969	_functools_cmp_to_key_impl	_functools_cmp_to_key_impl(PyObject *module, PyObject *mycmp) /*[clinic end generated code: output=71eaad0f4fc81f33 input=d1b76f231c0dfeb3]*/	modelled	corelibs-functools-cmp-to-key-twins	
 Modules/_functoolsmodule.c	992	1059	_functools_reduce_impl	_functools_reduce_impl(PyObject *module, PyObject *func, PyObject *seq, PyObject *result) /*[clinic end generated code: output=30d898fe1267c79d input=1e2c850f5229ff2a]*/	modelled	corelibs-functools-reduce-twins	
 Modules/_functoolsmodule.c	1095	1103	lru_list_elem_dealloc	lru_list_elem_dealloc(PyObject *op)	excluded		no-behaviour: deallocation of a link
 Modules/_functoolsmodule.c	1141	1199	lru_cache_make_key	lru_cache_make_key(PyObject *kwd_mark, PyObject *args, PyObject *kwds, int typed)	modelled	corelibs-functools-make-key-twins	
-Modules/_functoolsmodule.c	1202	1211	uncached_lru_cache_wrapper	uncached_lru_cache_wrapper(lru_cache_object *self, PyObject *args, PyObject *kwds)	modelled	corelibs-functools-lru-uncached	
-Modules/_functoolsmodule.c	1214	1249	infinite_lru_cache_wrapper	infinite_lru_cache_wrapper(lru_cache_object *self, PyObject *args, PyObject *kwds)	modelled	corelibs-functools-lru-transparent	
-Modules/_functoolsmodule.c	1252	1258	lru_cache_extract_link	lru_cache_extract_link(lru_list_elem *link)	modelled	corelibs-functools-lru-bounded-twins	
-Modules/_functoolsmodule.c	1261	1268	lru_cache_append_link	lru_cache_append_link(lru_cache_object *self, lru_list_elem *link)	modelled	corelibs-functools-lru-bounded-twins	
-Modules/_functoolsmodule.c	1271	1278	lru_cache_prepend_link	lru_cache_prepend_link(lru_cache_object *self, lru_list_elem *link)	excluded		no-behaviour: runs only if popping the oldest key from the cache dict fails, and that pop is an identity match with a known hash, so a Python program cannot reach it
-Modules/_functoolsmodule.c	1312	1344	bounded_lru_cache_get_lock_held	bounded_lru_cache_get_lock_held(lru_cache_object *self, PyObject *args, PyObject *kwds, PyObject **result, PyObject **key, Py_hash_t *hash)	modelled	corelibs-functools-lru-bounded-twins	
-Modules/_functoolsmodule.c	1347	1490	bounded_lru_cache_update_lock_held	bounded_lru_cache_update_lock_held(lru_cache_object *self, PyObject *result, PyObject *key, Py_hash_t hash)	modelled	corelibs-functools-lru-bounded-twins	
-Modules/_functoolsmodule.c	1493	1521	bounded_lru_cache_wrapper	bounded_lru_cache_wrapper(lru_cache_object *self, PyObject *args, PyObject *kwds)	modelled	corelibs-functools-lru-bounded-twins	
-Modules/_functoolsmodule.c	1524	1596	lru_cache_new	lru_cache_new(PyTypeObject *type, PyObject *args, PyObject *kw)	modelled	corelibs-functools-lru-maxsize-overflow,corelibs-functools-lru-mode-twins	
+Modules/_functoolsmodule.c	1202	1211	uncached_lru_cache_wrapper	uncached_lru_cache_wrapper(lru_cache_object *self, PyObject *args, PyObject *kwds)	modelled	corelibs-functools-lru-transparent	
+Modules/_functoolsmodule.c	1214	1249	infinite_lru_cache_wrapper	infinite_lru_cache_wrapper(lru_cache_object *self, PyObject *args, PyObject *kwds)	modelled	corelibs-functools-lru-failure-not-cached,corelibs-functools-lru-infinite,corelibs-functools-lru-transparent	
+Modules/_functoolsmodule.c	1252	1258	lru_cache_extract_link	lru_cache_extract_link(lru_list_elem *link)	modelled	corelibs-functools-lru-twins-step	
+Modules/_functoolsmodule.c	1261	1268	lru_cache_append_link	lru_cache_append_link(lru_cache_object *self, lru_list_elem *link)	modelled	corelibs-functools-lru-twins-step	
+Modules/_functoolsmodule.c	1271	1278	lru_cache_prepend_link	lru_cache_prepend_link(lru_cache_object *self, lru_list_elem *link)	modelled	corelibs-functools-lru-evict-failure	
+Modules/_functoolsmodule.c	1312	1344	bounded_lru_cache_get_lock_held	bounded_lru_cache_get_lock_held(lru_cache_object *self, PyObject *args, PyObject *kwds, PyObject **result, PyObject **key, Py_hash_t *hash)	modelled	corelibs-functools-lru-twins-step	
+Modules/_functoolsmodule.c	1347	1490	bounded_lru_cache_update_lock_held	bounded_lru_cache_update_lock_held(lru_cache_object *self, PyObject *result, PyObject *key, Py_hash_t hash)	modelled	corelibs-functools-lru-bounded,corelibs-functools-lru-evict-failure,corelibs-functools-lru-failed-store,corelibs-functools-lru-recheck,corelibs-functools-lru-twins-step	
+Modules/_functoolsmodule.c	1493	1521	bounded_lru_cache_wrapper	bounded_lru_cache_wrapper(lru_cache_object *self, PyObject *args, PyObject *kwds)	modelled	corelibs-functools-lru-failure-not-cached,corelibs-functools-lru-transparent,corelibs-functools-lru-twins-step	
+Modules/_functoolsmodule.c	1524	1596	lru_cache_new	lru_cache_new(PyTypeObject *type, PyObject *args, PyObject *kw)	modelled	corelibs-functools-lru-bounded,corelibs-functools-lru-maxsize-overflow,corelibs-functools-lru-mode-twins,corelibs-functools-lru-noncallable	
 Modules/_functoolsmodule.c	1599	1608	lru_cache_unlink_list	lru_cache_unlink_list(lru_cache_object *self)	excluded		no-behaviour: memory release inside cache_clear, whose observable effect is in the corelibs-functools-lru-bounded-twins entry
 Modules/_functoolsmodule.c	1611	1617	lru_cache_clear_list	lru_cache_clear_list(lru_list_elem *link)	excluded		no-behaviour: memory release inside cache_clear, whose observable effect is in the corelibs-functools-lru-bounded-twins entry
 Modules/_functoolsmodule.c	1620	1632	lru_cache_tp_clear	lru_cache_tp_clear(PyObject *op)	excluded		no-behaviour: GC clear of owned references
 Modules/_functoolsmodule.c	1635	1646	lru_cache_dealloc	lru_cache_dealloc(PyObject *op)	excluded		no-behaviour: deallocation
-Modules/_functoolsmodule.c	1649	1655	lru_cache_call	lru_cache_call(PyObject *op, PyObject *args, PyObject *kwds)	modelled	corelibs-functools-lru-bounded-twins	
-Modules/_functoolsmodule.c	1658	1664	lru_cache_descr_get	lru_cache_descr_get(PyObject *self, PyObject *obj, PyObject *type)	modelled	corelibs-functools-descriptors	
-Modules/_functoolsmodule.c	1674	1690	_functools__lru_cache_wrapper_cache_info_impl	_functools__lru_cache_wrapper_cache_info_impl(PyObject *self) /*[clinic end generated code: output=cc796a0b06dbd717 input=00e1acb31aa21ecc]*/	modelled	corelibs-functools-lru-bounded-twins	
-Modules/_functoolsmodule.c	1700	1716	_functools__lru_cache_wrapper_cache_clear_impl	_functools__lru_cache_wrapper_cache_clear_impl(PyObject *self) /*[clinic end generated code: output=58423b35efc3e381 input=dfa33acbecf8b4b2]*/	modelled	corelibs-functools-lru-bounded-twins	
-Modules/_functoolsmodule.c	1719	1722	lru_cache_reduce	lru_cache_reduce(PyObject *self, PyObject *Py_UNUSED(dummy))	modelled	corelibs-functools-descriptors	
-Modules/_functoolsmodule.c	1725	1728	lru_cache_copy	lru_cache_copy(PyObject *self, PyObject *Py_UNUSED(args))	modelled	corelibs-functools-descriptors	
-Modules/_functoolsmodule.c	1731	1734	lru_cache_deepcopy	lru_cache_deepcopy(PyObject *self, PyObject *Py_UNUSED(args))	modelled	corelibs-functools-descriptors	
+Modules/_functoolsmodule.c	1649	1655	lru_cache_call	lru_cache_call(PyObject *op, PyObject *args, PyObject *kwds)	modelled	corelibs-functools-lru-twins-step	
+Modules/_functoolsmodule.c	1658	1664	lru_cache_descr_get	lru_cache_descr_get(PyObject *self, PyObject *obj, PyObject *type)	modelled	corelibs-functools-partial-get	
+Modules/_functoolsmodule.c	1674	1690	_functools__lru_cache_wrapper_cache_info_impl	_functools__lru_cache_wrapper_cache_info_impl(PyObject *self) /*[clinic end generated code: output=cc796a0b06dbd717 input=00e1acb31aa21ecc]*/	modelled	corelibs-functools-lru-twins-empty	
+Modules/_functoolsmodule.c	1700	1716	_functools__lru_cache_wrapper_cache_clear_impl	_functools__lru_cache_wrapper_cache_clear_impl(PyObject *self) /*[clinic end generated code: output=58423b35efc3e381 input=dfa33acbecf8b4b2]*/	modelled	corelibs-functools-lru-twins-empty	
+Modules/_functoolsmodule.c	1719	1722	lru_cache_reduce	lru_cache_reduce(PyObject *self, PyObject *Py_UNUSED(dummy))	todo		
+Modules/_functoolsmodule.c	1725	1728	lru_cache_copy	lru_cache_copy(PyObject *self, PyObject *Py_UNUSED(args))	todo		
+Modules/_functoolsmodule.c	1731	1734	lru_cache_deepcopy	lru_cache_deepcopy(PyObject *self, PyObject *Py_UNUSED(args))	todo		
 Modules/_functoolsmodule.c	1737	1756	lru_cache_tp_traverse	lru_cache_tp_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
 Modules/_functoolsmodule.c	1832	1896	_functools_exec	_functools_exec(PyObject *module)	excluded		internal-bootstrap: module initialisation, creates the types
 Modules/_functoolsmodule.c	1899	1909	_functools_traverse	_functools_traverse(PyObject *module, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal of module state

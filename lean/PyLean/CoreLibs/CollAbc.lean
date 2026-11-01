@@ -25,12 +25,7 @@ def entries : List Entry := [
     thm := some ``checkMethodsSpec_proven },
   { id := "corelibs-collabc-subclasshooks"
     pyFile := file
-    pyFns := ["Hashable.__subclasshook__", "Awaitable.__subclasshook__", "Coroutine.__subclasshook__",
-      "AsyncIterable.__subclasshook__", "AsyncIterator.__subclasshook__",
-      "AsyncGenerator.__subclasshook__", "Iterable.__subclasshook__", "Iterator.__subclasshook__",
-      "Reversible.__subclasshook__", "Generator.__subclasshook__", "Sized.__subclasshook__",
-      "Container.__subclasshook__", "Collection.__subclasshook__", "Buffer.__subclasshook__",
-      "Callable.__subclasshook__"]
+    pyFns := ["Awaitable.__subclasshook__", "Coroutine.__subclasshook__", "AsyncIterable.__subclasshook__", "AsyncIterator.__subclasshook__", "AsyncGenerator.__subclasshook__", "Iterable.__subclasshook__", "Iterator.__subclasshook__", "Reversible.__subclasshook__", "Generator.__subclasshook__", "Sized.__subclasshook__", "Container.__subclasshook__", "Collection.__subclasshook__"]
     statement := "A hook answers only for its own ABC; the structural tests respect the hierarchy (sub-ABC implies super-ABC); Collection's test is the conjunction of Sized, Iterable and Container."
     source := "invariant of the ABC hierarchy"
     status := .proven
@@ -38,13 +33,7 @@ def entries : List Entry := [
     thm := some ``hookFamily_proven },
   { id := "corelibs-collabc-abstract-bodies"
     pyFile := file
-    pyFns := ["Hashable.__hash__", "Awaitable.__await__", "Coroutine.send", "AsyncIterable.__aiter__",
-      "AsyncIterator.__anext__", "AsyncGenerator.asend", "Iterable.__iter__", "Iterator.__next__",
-      "Reversible.__reversed__", "Generator.send", "Sized.__len__", "Container.__contains__",
-      "Buffer.__buffer__", "Callable.__call__", "MutableSet.add", "MutableSet.discard",
-      "Mapping.__getitem__", "MutableMapping.__setitem__", "MutableMapping.__delitem__",
-      "Sequence.__getitem__", "MutableSequence.__setitem__", "MutableSequence.__delitem__",
-      "MutableSequence.insert"]
+    pyFns := []
     statement := "The abstract bodies, reachable through super(), describe the empty collection, and the mixins built on the abstract __getitem__ see an empty Sequence and an empty Mapping."
     source := "invariant; ABC method tables"
     status := .proven
@@ -77,8 +66,7 @@ def entries : List Entry := [
     bug := some "corelibs-generator-close-drops-return-value" },
   { id := "corelibs-collabc-next-is-send"
     pyFile := file
-    pyFns := ["Generator.__next__", "AsyncGenerator.__anext__", "Iterator.__iter__",
-      "AsyncIterator.__aiter__"]
+    pyFns := []
     statement := "next(gen) takes the same step as gen.send(None)."
     source := "docs of generator.__next__"
     status := .proven
@@ -153,8 +141,7 @@ def entries : List Entry := [
     thm := some ``setCmpMatchBuiltin_proven },
   { id := "corelibs-collabc-set-algebra"
     pyFile := file
-    pyFns := ["Set.__and__", "Set.__or__", "Set.__sub__", "Set.__rsub__", "Set.__xor__",
-      "Set._from_iterable", "KeysView._from_iterable", "ItemsView._from_iterable"]
+    pyFns := ["Set.__and__", "Set.__or__", "Set.__sub__", "Set.__rsub__", "Set.__xor__"]
     statement := "&, |, -, reflected - and ^ with a set or any iterable give the duplicate-free intersection, union, differences and symmetric difference; NotImplemented for a non-iterable."
     source := "collections.abc.Set docs; twin with set"
     status := .proven
@@ -179,9 +166,7 @@ def entries : List Entry := [
     thm := some ``mSetMatchesBuiltin_proven },
   { id := "corelibs-collabc-mapping"
     pyFile := file
-    pyFns := ["Mapping.get", "Mapping.__contains__", "Mapping.keys", "Mapping.items", "Mapping.values",
-      "MappingView.__init__", "MappingView.__len__", "MappingView.__repr__", "KeysView.__contains__",
-      "KeysView.__iter__", "ItemsView.__iter__", "ValuesView.__contains__", "ValuesView.__iter__"]
+    pyFns := ["Mapping.get", "Mapping.__contains__", "Mapping.keys", "Mapping.items", "Mapping.values", "MappingView.__len__", "KeysView.__contains__", "KeysView.__iter__", "ItemsView.__iter__", "ValuesView.__contains__", "ValuesView.__iter__"]
     statement := "Mapping.get, __contains__ and the views agree with dict and its views on dict primitives."
     source := "collections.abc.Mapping docs; twin with dict"
     status := .proven
@@ -231,7 +216,7 @@ def entries : List Entry := [
     thm := some ``setHashMatchesFrozenset_proven },
   { id := "corelibs-collabc-bytestring-meta"
     pyFile := file
-    pyFns := ["_DeprecateByteStringMeta.__new__", "_DeprecateByteStringMeta.__instancecheck__"]
+    pyFns := []
     statement := "Creating a class with this metaclass warns unless it is named ByteString; isinstance always warns and keeps ABCMeta's answer."
     source := "deprecation in Doc/whatsnew/3.14"
     status := .proven
