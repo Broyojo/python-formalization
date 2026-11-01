@@ -96,16 +96,19 @@ def BoolInvertExact : Prop :=
 theorem boolInvertExact_proven : BoolInvertExact :=
   ⟨rfl, rfl, boolInvert_spec⟩
 
-/-- `&`, `|`, `^` on two `bool`s return a `bool` agreeing with the `int` operator; with an
-`int` operand they return that `int` operator's result. -/
+/-- `&`, `|`, `^` on bools and ints: the bits of the operation on the values, a `bool`
+exactly when both operands are, and `NotImplemented` beside any other object. -/
 def BoolOpsExact : Prop :=
-  ∀ (op : BitOp) (x y : Bool),
-    boolOp op (.b x) (.b y) = .ok (.b (op.bool x y)) ∧
-    (∀ i, bitZ (BoolOperand.b (op.bool x y)).toInt i =
-      op.bool (bitZ (BoolOperand.b x).toInt i) (bitZ (BoolOperand.b y).toInt i))
+  ∀ (op : BitOp) (a b : BoolOperand),
+    (boolOp op .other b = .ok none ∧ boolOp op a .other = .ok none) ∧
+    (a ≠ .other → b ≠ .other → digitCount a.toInt.natAbs + 1 ≤ maxLongDigits →
+      digitCount b.toInt.natAbs + 1 ≤ maxLongDigits →
+      ∃ r, boolOp op a b = .ok (some r) ∧
+        (∀ i, bitZ r.toInt i = op.bool (bitZ a.toInt i) (bitZ b.toInt i)) ∧
+        ((∃ x, r = .b x) ↔ (∃ x y, a = .b x ∧ b = .b y)))
 
-theorem boolOpsExact_proven : BoolOpsExact := fun op x y =>
-  ⟨boolOp_bool op x y, boolOp_agrees op x y⟩
+theorem boolOpsExact_proven : BoolOpsExact := fun op a b =>
+  ⟨by cases a <;> cases b <;> exact ⟨rfl, rfl⟩, boolOp_spec op a b⟩
 
 def entriesConv : List Entry := [
   { id := "longobj-from-c", pyFile := "Objects/longobject.c"
@@ -115,30 +118,13 @@ def entriesConv : List Entry := [
     statement := "Every PyLong_From* of a 32 or 64 bit C integer builds the canonical object of its value."
     source := "C API docs: Integer Objects", status := .proven
     prop := ``FromCCanonical, thm := some ``fromCCanonical_proven },
-  { id := "longobj-as-long-overflow", pyFile := "Objects/longobject.c"
-    pyFns := ["PyLong_AsLongAndOverflow", "PyLong_AsLongLongAndOverflow"]
-    statement := "PyLong_AsLongAndOverflow returns the value with overflow 0 when it fits long, otherwise -1 with overflow the sign."
-    source := "comment at longobject.c:501-509", status := .proven
-    prop := ``AsLongAndOverflowExact, thm := some ``asLongAndOverflowExact_proven
-    notes := "The two functions are identical on LP64 except | versus + on a shifted value. Non-int arguments through __index__ are not modelled." },
-  { id := "longobj-as-signed", pyFile := "Objects/longobject.c"
-    pyFns := ["PyLong_AsLong", "PyLong_AsInt", "PyLong_AsSsize_t"]
-    statement := "PyLong_AsLong, PyLong_AsInt and PyLong_AsSsize_t are exact on their C type and raise OverflowError with their message outside it."
-    source := "C API docs: Integer Objects", status := .proven
-    prop := ``AsSignedExact, thm := some ``asSignedExact_proven },
-  { id := "longobj-as-unsigned", pyFile := "Objects/longobject.c"
-    pyFns := ["PyLong_AsUnsignedLong", "PyLong_AsSize_t"]
-    statement := "PyLong_AsUnsignedLong and PyLong_AsSize_t raise OverflowError on negative values and above 2**64 - 1 and are exact otherwise."
-    source := "C API docs: Integer Objects", status := .proven
-    prop := ``AsUnsignedExact, thm := some ``asUnsignedExact_proven },
   { id := "longobj-as-mask", pyFile := "Objects/longobject.c"
-    pyFns := ["_PyLong_AsUnsignedLongMask", "PyLong_AsUnsignedLongMask", "_PyLong_AsUnsignedLongLongMask",
-      "PyLong_AsUnsignedLongLongMask"]
+    pyFns := ["_PyLong_AsUnsignedLongMask", "_PyLong_AsUnsignedLongLongMask"]
     statement := "The mask conversions return the value modulo 2**64 for every int."
     source := "C API docs: PyLong_AsUnsignedLongMask", status := .proven
     prop := ``AsMaskExact, thm := some ``asMaskExact_proven },
   { id := "longobj-sign", pyFile := "Objects/longobject.c"
-    pyFns := ["long_sign", "_PyLong_Sign", "PyLong_GetSign", "PyLong_IsPositive", "PyLong_IsNegative", "PyLong_IsZero"]
+    pyFns := ["long_sign", "_PyLong_Sign"]
     statement := "long_sign is -1, 0 or 1 by the sign of the value."
     source := "C API docs: PyLong_GetSign", status := .proven
     prop := ``LongSignExact, thm := some ``longSignExact_proven },
@@ -158,16 +144,16 @@ def entriesConv : List Entry := [
     source := "int.bit_count docs", status := .proven
     prop := ``BitCountExact, thm := some ``bitCountExact_proven },
   { id := "bool-twins", pyFile := "Objects/boolobject.c"
-    pyFns := ["bool_new", "bool_vectorcall", "PyBool_FromLong"]
+    pyFns := ["bool_new", "bool_vectorcall"]
     statement := "bool(...) through tp_new and through vectorcall agree for every argument list and truth oracle."
     source := "implementation twins", status := .proven
     prop := ``BoolTwinsAgree, thm := some ``boolTwinsAgree_proven },
-  { id := "bool-repr-invert", pyFile := "Objects/boolobject.c", pyFns := ["bool_repr", "bool_invert"]
+  { id := "bool-repr-invert", pyFile := "Objects/boolobject.c", pyFns := ["bool_invert"]
     statement := "repr gives True or False; ~v is -int(v)-1, or the DeprecationWarning when warnings are errors."
     source := "boolobject.c:14-17, :71-84", status := .proven
     prop := ``BoolInvertExact, thm := some ``boolInvertExact_proven },
   { id := "bool-ops", pyFile := "Objects/boolobject.c", pyFns := ["bool_and", "bool_or", "bool_xor"]
-    statement := "&, | and ^ on two bools return a bool agreeing with the int operator on 0 and 1."
+    statement := "&, | and ^ on bools and ints have the bits of the operation on the values, return a bool exactly when both operands are, and give NotImplemented beside any other object."
     source := "stdtypes: boolean type", status := .proven
     prop := ``BoolOpsExact, thm := some ``boolOpsExact_proven }
 ]

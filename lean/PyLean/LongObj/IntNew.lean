@@ -186,24 +186,7 @@ def entriesIntNew : List Entry := [
     statement := "int() is 0; int(base=b) raises TypeError; a base outside {0} and 2..36 raises ValueError before the value is examined; otherwise the type of the value picks the parser, and a non-string raises TypeError."
     source := "int() docs; longobject.c:5883-5918", status := .proven
     prop := ``IntNewDispatch, thm := some ``intNewDispatch_proven
-    notes := "Generic over PyNumber_Long, PyNumber_AsSsize_t and the parsers." },
-  { id := "longobj-subtype-new", pyFile := "Objects/longobject.c", pyFns := ["long_subtype_new"]
-    statement := "A subclass of int receives exactly the value of int(...)."
-    source := "comment at longobject.c:5921-5925", status := .proven
-    prop := ``IntSubtypeSameValue, thm := some ``intSubtypeSameValue_proven },
-  { id := "longobj-vectorcall", pyFile := "Objects/longobject.c", pyFns := ["long_vectorcall"]
-    statement := "int(...) through vectorcall agrees with long_new_impl for 0, 1 and 2 arguments and raises TypeError for more."
-    source := "implementation twins", status := .proven
-    prop := ``IntVectorcallAgrees, thm := some ``intVectorcallAgrees_proven },
-  { id := "longobj-from-native-bytes", pyFile := "Objects/longobject.c"
-    pyFns := ["PyLong_FromNativeBytes", "PyLong_FromUnsignedNativeBytes", "_resolve_endianness"]
-    statement := "PyLong_FromNativeBytes is the signed value of the bytes with flags -1 and the unsigned value with UNSIGNED_BUFFER; PyLong_FromUnsignedNativeBytes is always unsigned."
-    source := "C API docs: PyLong_FromNativeBytes", status := .proven
-    prop := ``FromNativeBytesExact, thm := some ``fromNativeBytesExact_proven },
-  { id := "longobj-native-layout", pyFile := "Objects/longobject.c", pyFns := ["PyLong_GetNativeLayout"]
-    statement := "PyLong_GetNativeLayout describes 30-bit digits of 4 bytes, least significant first, little-endian."
-    source := "C API docs: PyLong_GetNativeLayout", status := .proven
-    prop := ``NativeLayoutExact, thm := some ``nativeLayoutExact_proven }
+    notes := "Generic over PyNumber_Long, PyNumber_AsSsize_t and the parsers." }
 ]
 
 end PyLean.LongObj

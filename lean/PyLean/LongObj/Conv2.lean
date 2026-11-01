@@ -467,31 +467,16 @@ def FixedWidthExact : Prop :=
 theorem fixedWidthExact_proven : FixedWidthExact := fun a _ name h => toFixed_spec a h name
 
 def entriesConv2 : List Entry := [
-  { id := "longobj-as-long-long", pyFile := "Objects/longobject.c"
-    pyFns := ["PyLong_AsLongLong", "PyLong_AsUnsignedLongLong"]
-    statement := "PyLong_AsLongLong and PyLong_AsUnsignedLongLong are exact on their type and raise OverflowError outside it."
-    source := "C API docs: Integer Objects", status := .proven
-    prop := ``LongLongExact, thm := some ``longLongExact_proven
-    notes := "Non-compact values go through _PyLong_AsByteArray, MathInt.asByteArray here." },
-  { id := "longobj-void-ptr", pyFile := "Objects/longobject.c", pyFns := ["PyLong_AsVoidPtr"]
-    statement := "PyLong_AsVoidPtr keeps the 64 bit pattern of every int from LONG_MIN to ULONG_MAX."
-    source := "C API docs: PyLong_AsVoidPtr", status := .proven
-    prop := ``VoidPtrExact, thm := some ``voidPtrExact_proven },
   { id := "longobj-from-digits", pyFile := "Objects/longobject.c", pyFns := ["_PyLong_FromDigits"]
     statement := "_PyLong_FromDigits of a normalized vector builds the canonical object."
     source := "invariant", status := .proven
     prop := ``FromDigitsExact, thm := some ``fromDigitsExact_proven },
   { id := "longobj-native-bytes", pyFile := "Objects/longobject.c"
-    pyFns := ["PyLong_AsNativeBytes", "_fits_in_n_bits", "_PyLong_NumBits"]
+    pyFns := ["_fits_in_n_bits", "_PyLong_NumBits"]
     statement := "For n >= 1 the result of PyLong_AsNativeBytes is at most n exactly when the value fits n bytes, signed, or unsigned for an unsigned buffer, including the 0x80..00 and top-bit-set edge cases."
     source := "C API docs: PyLong_AsNativeBytes", status := .proven
     prop := ``NativeBytesContract, thm := some ``nativeBytesContract_proven
-    notes := "The buffer is modelled by its value; n == 0, used to query a size, is not covered." },
-  { id := "longobj-fixed-width", pyFile := "Objects/longobject.c"
-    pyFns := ["PyLong_AsInt32", "PyLong_AsInt64", "PyLong_AsUInt32", "PyLong_AsUInt64"]
-    statement := "PyLong_AsInt32/64 succeed exactly on their range, and PyLong_AsUInt32/64 exactly on theirs for non-negative values."
-    source := "C API docs: PyLong_AsInt64", status := .proven
-    prop := ``FixedWidthExact, thm := some ``fixedWidthExact_proven }
+    notes := "The buffer is modelled by its value; n == 0, used to query a size, is not covered." }
 ]
 
 end PyLean.LongObj

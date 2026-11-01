@@ -27,8 +27,7 @@ def complexFile : String := "Objects/complexobject.c"
 
 def entriesComplex : List Entry := [
   { id := "complex-ring-sum-diff", pyFile := complexFile
-    pyFns := ["_Py_c_sum", "_Py_cr_sum", "_Py_rc_sum", "_Py_c_diff", "_Py_cr_diff", "_Py_rc_diff",
-              "_Py_c_neg"]
+    pyFns := ["_Py_cr_sum", "_Py_rc_sum", "_Py_cr_diff", "_Py_rc_diff", "_Py_c_neg"]
     statement := "Over any commutative ring with the C operations being the ring's, _Py_cr_sum, _Py_rc_sum, _Py_cr_diff and _Py_rc_diff equal the complex operation with the real operand given a zero imaginary part; _Py_c_diff(a, b) is _Py_c_sum(a, _Py_c_neg(b)); _Py_c_sum is commutative."
     source := "complexobject.c:665-678 (rules for mixed-mode arithmetic)"
     status := .proven, prop := ``RingSumDiff, thm := some ``ringSumDiff_proven
@@ -157,8 +156,7 @@ def entriesComplex : List Entry := [
     source := "complexobject.c:374-386 (C99 rules)"
     status := .proven, prop := ``CAbsInfinity, thm := some ``cAbsInfinity_proven },
   { id := "complex-constructors-store", pyFile := complexFile
-    pyFns := ["complex_subtype_from_c_complex", "PyComplex_FromCComplex",
-              "complex_subtype_from_doubles", "PyComplex_FromDoubles"]
+    pyFns := []
     statement := "The four constructors store exactly the doubles they are given, signed zeros and NaNs included, in an object of the requested type."
     source := "invariant"
     status := .proven, prop := ``ConstructorsStore, thm := some ``constructorsStore_proven },
@@ -168,12 +166,12 @@ def entriesComplex : List Entry := [
     source := "complex.conjugate docstring, invariant"
     status := .proven, prop := ``NegConjInvolutions, thm := some ``negConjInvolutions_proven },
   { id := "complex-pos-identity", pyFile := complexFile
-    pyFns := ["complex_pos", "complex___complex___impl"]
+    pyFns := []
     statement := "+z and z.__complex__() return z itself for an exact complex, and an exact complex with the same value for a subclass instance."
     source := "complex.__complex__ docstring (\"Convert this value to exact type complex.\")"
     status := .proven, prop := ``PosAndComplexIdentity, thm := some ``posAndComplexIdentity_proven },
   { id := "complex-bool", pyFile := complexFile
-    pyFns := ["complex_bool"]
+    pyFns := []
     statement := "bool(z) is false exactly when both parts compare equal to zero, so a NaN part is truthy."
     source := "invariant"
     status := .proven, prop := ``BoolIffNonzero, thm := some ``boolIffNonzero_proven },

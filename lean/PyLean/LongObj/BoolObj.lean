@@ -10,10 +10,11 @@ namespace PyLean.LongObj
 
 open PyLean
 
-/-- An operand of the `bool` number slots: a `bool`, or a plain `int`. -/
+/-- An operand of the `bool` number slots: a `bool`, an `int`, or any other object. -/
 inductive BoolOperand where
   | b (x : Bool)
   | i (x : Int)
+  | other
   deriving Repr, DecidableEq
 
 /-- The value an operand has as an `int`. -/
@@ -21,6 +22,7 @@ def BoolOperand.toInt : BoolOperand → Int
   | .b true => 1
   | .b false => 0
   | .i x => x
+  | .other => 0
 
 /-- `bool_repr(self)`, boolobject.c:14-17. -/
 def boolRepr (self : Bool) : String := if self then "True" else "False"
@@ -75,13 +77,15 @@ def boolInvert (warnRaises : Bool) (v : Bool) : Py Int :=
     | .error e => .error e
 
 /-- `bool_and`, `bool_or`, `bool_xor`, boolobject.c:87-108: both `bool` gives a `bool`,
-anything else goes to the `int` slot. -/
-def boolOp (op : BitOp) (a b : BoolOperand) : Py BoolOperand :=
+and anything else goes to the `int` slot, whose `CHECK_BINOP` returns `NotImplemented`,
+here `none`, for a non-int. -/
+def boolOp (op : BitOp) (a b : BoolOperand) : Py (Option BoolOperand) :=
   match a, b with
-  | .b x, .b y => .ok (.b (op.bool x y))
+  | .b x, .b y => .ok (some (.b (op.bool x y)))
+  | .other, _ | _, .other => .ok none
   | _, _ =>
     match longBit op (Long.ofInt a.toInt) (Long.ofInt b.toInt) with
-    | .ok r => .ok (.i r.toInt)
+    | .ok r => .ok (some (.i r.toInt))
     | .error e => .error e
 
 /-- `bool(x)` through `tp_new` and through vectorcall agree on every argument list, for
@@ -113,11 +117,6 @@ theorem boolInvert_spec (v : Bool) :
     simp only [boolInvert, Bool.false_eq_true, ite_false, h, Long.toInt_ofInt]
   · rfl
 
-/-- `bool & bool` and friends agree with the `int` operators on the values `0` and `1`,
-and return a `bool`. -/
-theorem boolOp_bool (op : BitOp) (x y : Bool) :
-    boolOp op (.b x) (.b y) = .ok (.b (op.bool x y)) := rfl
-
 /-- The `bool` result has the value the `int` operator gives on `0`/`1`, bit by bit. -/
 theorem boolOp_agrees (op : BitOp) (x y : Bool) (i : Nat) :
     bitZ (BoolOperand.b (op.bool x y)).toInt i =
@@ -136,15 +135,47 @@ theorem boolOp_agrees (op : BitOp) (x y : Bool) (i : Nat) :
   cases op <;> cases x <;> cases y <;>
     simp [BitOp.bool, BoolOperand.toInt, one, zero]
 
-/-- A `bool` operand beside an `int` is the `int` `0` or `1`: the result is an `int` with
-the two's complement bits of the operation. -/
-theorem boolOp_mixed (op : BitOp) (x : Bool) (y : Int)
-    (hy : MathInt.digitCount y.natAbs + 1 ≤ maxLongDigits) :
-    ∃ r, boolOp op (.b x) (.i y) = .ok (.i r) ∧
-      ∀ i, bitZ r i = op.bool (bitZ (BoolOperand.b x).toInt i) (bitZ y i) := by
-  obtain ⟨r, h1, h2⟩ := longBit_spec op (BoolOperand.b x).toInt y (by cases x <;> decide) hy
-  refine ⟨r, ?_, h2⟩
-  have e : (BoolOperand.i y).toInt = y := rfl
-  simp only [boolOp, e, h1, Long.toInt_ofInt]
+/-- For every pair of ints or bools the result has the bits of the operation on the values,
+and is a `bool` exactly when both operands are. -/
+theorem boolOp_spec (op : BitOp) (a b : BoolOperand) (ha : a ≠ .other) (hb : b ≠ .other)
+    (h1 : MathInt.digitCount a.toInt.natAbs + 1 ≤ maxLongDigits)
+    (h2 : MathInt.digitCount b.toInt.natAbs + 1 ≤ maxLongDigits) :
+    ∃ r, boolOp op a b = .ok (some r) ∧
+      (∀ i, bitZ r.toInt i = op.bool (bitZ a.toInt i) (bitZ b.toInt i)) ∧
+      ((∃ x, r = .b x) ↔ (∃ x y, a = .b x ∧ b = .b y)) := by
+  obtain ⟨r, e, f⟩ := longBit_spec op a.toInt b.toInt h1 h2
+  have hmix : ∀ x, (match longBit op (Long.ofInt a.toInt) (Long.ofInt b.toInt) with
+      | .ok r => (.ok (some (.i r.toInt)) : Py (Option BoolOperand))
+      | .error e => .error e) = x → x = .ok (some (.i r)) := by
+    intro x hx
+    rw [e] at hx
+    simp only [Long.toInt_ofInt] at hx
+    exact hx.symm
+  cases a with
+  | other => exact absurd rfl ha
+  | b x =>
+    cases b with
+    | other => exact absurd rfl hb
+    | b y =>
+      exact ⟨.b (op.bool x y), rfl, boolOp_agrees op x y, ⟨fun _ => ⟨x, y, rfl, rfl⟩, fun _ => ⟨_, rfl⟩⟩⟩
+    | i y =>
+      refine ⟨.i r, hmix _ rfl, f, ?_⟩
+      constructor
+      · rintro ⟨_, h⟩; cases h
+      · rintro ⟨_, _, _, h⟩; cases h
+  | i x =>
+    have hb' : ∃ c, c = b := ⟨b, rfl⟩
+    cases b with
+    | other => exact absurd rfl hb
+    | b y =>
+      refine ⟨.i r, hmix _ rfl, f, ?_⟩
+      constructor
+      · rintro ⟨_, h⟩; cases h
+      · rintro ⟨_, _, h, _⟩; cases h
+    | i y =>
+      refine ⟨.i r, hmix _ rfl, f, ?_⟩
+      constructor
+      · rintro ⟨_, h⟩; cases h
+      · rintro ⟨_, _, h, _⟩; cases h
 
 end PyLean.LongObj

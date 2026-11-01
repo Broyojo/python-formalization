@@ -143,34 +143,11 @@ def WriterRejectsEmpty : Prop :=
 theorem writerRejectsEmpty_proven : WriterRejectsEmpty := fun _ => rfl
 
 def entriesMethods : List Entry := [
-  { id := "longobj-methods", pyFile := "Objects/longobject.c"
-    pyFns := ["long_long", "long_long_meth", "long_long_getter", "long_get0", "long_get1",
-      "int___getnewargs___impl", "int_as_integer_ratio_impl", "int_is_integer_impl", "_PyLong_Copy"]
-    statement := "int(a), a.real, a.numerator, a.conjugate(), a.imag == 0, a.denominator == 1, a.as_integer_ratio() == (a, 1), a.is_integer() and a.__getnewargs__() == (a,) for every int."
-    source := "stdtypes: additional methods on integer types", status := .proven
-    prop := ``IntMethodsExact, thm := some ``intMethodsExact_proven },
-  { id := "longobj-sizeof", pyFile := "Objects/longobject.c", pyFns := ["int___sizeof___impl"]
-    statement := "a.__sizeof__() is the base size plus one digit size per digit, with at least one digit."
-    source := "comment at longobject.c:6180-6181", status := .proven
-    prop := ``IntSizeofExact, thm := some ``intSizeofExact_proven },
-  { id := "longobj-int-info", pyFile := "Objects/longobject.c", pyFns := ["PyLong_GetInfo"]
-    statement := "sys.int_info is (30, 4, 4300, 640) on this build."
-    source := "sys.int_info docs", status := .proven
-    prop := ``IntInfoExact, thm := some ``intInfoExact_proven },
-  { id := "longobj-unstable-compact", pyFile := "Objects/longobject.c"
-    pyFns := ["PyUnstable_Long_IsCompact", "PyUnstable_Long_CompactValue"]
-    statement := "PyUnstable_Long_IsCompact is exactly abs(a) < 2**30, and then PyUnstable_Long_CompactValue is a."
-    source := "C API docs", status := .proven
-    prop := ``UnstableCompactExact, thm := some ``unstableCompactExact_proven },
   { id := "longobj-export-writer", pyFile := "Objects/longobject.c"
-    pyFns := ["PyLong_Export", "PyLongWriter_Create", "PyLongWriter_Finish"]
+    pyFns := ["PyLongWriter_Create", "PyLongWriter_Finish"]
     statement := "PyLong_Export followed by the PyLongWriter API round-trips every int."
     source := "C API docs: Export API", status := .proven
-    prop := ``ExportRoundTrip, thm := some ``exportRoundTrip_proven },
-  { id := "longobj-writer-empty", pyFile := "Objects/longobject.c", pyFns := ["PyLongWriter_Create"]
-    statement := "PyLongWriter_Create raises ValueError for ndigits <= 0."
-    source := "longobject.c:6829-6832", status := .proven
-    prop := ``WriterRejectsEmpty, thm := some ``writerRejectsEmpty_proven }
+    prop := ``ExportRoundTrip, thm := some ``exportRoundTrip_proven }
 ]
 
 end PyLean.LongObj

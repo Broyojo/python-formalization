@@ -2,6 +2,7 @@ import PyLean.DiffCore
 import PyLean.LongObj.IntNew
 import PyLean.LongObj.DiffComplex
 import PyLean.LongObj.LongFloat
+import PyLean.LongObj.DiffStr
 
 /-! Differential-testing handler for `longobj` cases (`"mod": "longobj"`). -/
 
@@ -11,10 +12,10 @@ open Lean PyLean PyLean.Diff
 
 /-- The Python value of an object, with its normal form checked: `ok` carries the
 value only when the digits are the canonical ones for that value. -/
-def encLong (x : Long) : Json :=
+def encCanon (x : Long) : Json :=
   if x = Long.ofInt x.toInt then toJson x.toInt else Json.mkObj [("noncanonical", toJson x.toInt)]
 
-def encLongs (p : Long × Long) : Json := Json.arr #[encLong p.1, encLong p.2]
+def encCanons (p : Long × Long) : Json := Json.arr #[encCanon p.1, encCanon p.2]
 
 /-- `Py` of a digit-level result, with `cOverflow` reported as a harness failure. -/
 def encResult {α : Type} (enc : α → Json) (r : Py α) : Except String Json :=
@@ -34,24 +35,24 @@ def bitFn : String → Option BitOp
 
 def run (fn : String) (j : Json) : Except String Json := do
   match fn with
-  | "add" => encResult encLong (longAdd (← getLong j "a") (← getLong j "b"))
-  | "sub" => encResult encLong (longSub (← getLong j "a") (← getLong j "b"))
-  | "mul" => encResult encLong (longMul false (← getLong j "a") (← getLong j "b"))
+  | "add" => encResult encCanon (longAdd (← getLong j "a") (← getLong j "b"))
+  | "sub" => encResult encCanon (longSub (← getLong j "a") (← getLong j "b"))
+  | "mul" => encResult encCanon (longMul false (← getLong j "a") (← getLong j "b"))
   | "square" =>
     let a ← getLong j "a"
-    encResult encLong (longMul true a a)
-  | "divmod" => encResult encLongs (lDivmod (← getLong j "a") (← getLong j "b"))
-  | "floordiv" => encResult encLong (longDiv (← getLong j "a") (← getLong j "b"))
-  | "mod" => encResult encLong (longMod (← getLong j "a") (← getLong j "b"))
-  | "rshift" => encResult encLong (longRshift (← getLong j "a") (← getLong j "b"))
-  | "lshift" => encResult encLong (longLshift (← getLong j "a") (← getLong j "b"))
+    encResult encCanon (longMul true a a)
+  | "divmod" => encResult encCanons (lDivmod (← getLong j "a") (← getLong j "b"))
+  | "floordiv" => encResult encCanon (longDiv (← getLong j "a") (← getLong j "b"))
+  | "mod" => encResult encCanon (longMod (← getLong j "a") (← getLong j "b"))
+  | "rshift" => encResult encCanon (longRshift (← getLong j "a") (← getLong j "b"))
+  | "lshift" => encResult encCanon (longLshift (← getLong j "a") (← getLong j "b"))
   | "and" | "or" | "xor" =>
     match bitFn fn with
-    | some op => encResult encLong (longBit op (← getLong j "a") (← getLong j "b"))
+    | some op => encResult encCanon (longBit op (← getLong j "a") (← getLong j "b"))
     | none => throw "unreachable"
-  | "invert" => encResult encLong (longInvert (← getLong j "a"))
-  | "neg" => return encPy encLong (.ok (longNeg (← getLong j "a")))
-  | "abs" => return encPy encLong (.ok (longAbs (← getLong j "a")))
+  | "invert" => encResult encCanon (longInvert (← getLong j "a"))
+  | "neg" => return encPy encCanon (.ok (longNeg (← getLong j "a")))
+  | "abs" => return encPy encCanon (.ok (longAbs (← getLong j "a")))
   | "bool" => return encPy toJson (.ok (longBool (← getLong j "a")))
   | "pow" =>
     match longPowNone (← getInt j "a") (← getInt j "b") with
@@ -105,7 +106,7 @@ def run (fn : String) (j : Json) : Except String Json := do
     return encPy toJson (.ok (Cplx.Dbl.roundQ (decide (a < 0)) a.natAbs 1).bits)
   | "from_c" =>
     let a ← getInt j "a"
-    return encPy encLong (.ok (if 0 ≤ a then fromCUInt a.toNat else fromCInt a))
+    return encPy encCanon (.ok (if 0 ≤ a then fromCUInt a.toNat else fromCInt a))
   | "as_long_overflow" =>
     let r := asLongAndOverflow (← getLong j "a")
     return encPy (fun (p : Int × Int) => Json.arr #[toJson p.1, toJson p.2]) (.ok r)
@@ -135,9 +136,10 @@ def run (fn : String) (j : Json) : Except String Json := do
       match ← field j key with
       | .bool b => return .b b
       | v => return .i (← v.getInt?)
-    let enc : BoolOperand → Json := fun
-      | .b x => toJson x
-      | .i x => toJson x
+    let enc : Option BoolOperand → Json := fun
+      | some (.b x) => toJson x
+      | some (.i x) => toJson x
+      | some .other | none => Json.null
     match bitFn (← getStr j "op") with
     | some op => encResult enc (boolOp op (← operand "a") (← operand "b"))
     | none => throw "bad op"
@@ -146,6 +148,9 @@ def run (fn : String) (j : Json) : Except String Json := do
 def handler : Handler := fun fn j =>
   match runComplex fn j with
   | some r => some r
-  | none => some (run fn j)
+  | none =>
+    match runStr fn j with
+    | some r => some r
+    | none => some (run fn j)
 
 end PyLean.LongObj
