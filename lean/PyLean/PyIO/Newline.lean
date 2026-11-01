@@ -90,7 +90,7 @@ def record (d : NDec) (out : List Nat) : NDec × List Nat :=
     let (o, s) := transl out seennl
     ({ d with seennl := s }, o)
 
-/-- `_PyIncrementalNewlineDecoder_decode`, textio.c:328-519. -/
+/-- `_PyIncrementalNewlineDecoder_decode`, textio.c:386-513. -/
 def decode (d : NDec) (input : List Nat) (final : Bool) : Py (NDec × List Nat) :=
   match d.inputStep input final with
   | .error e => .error e

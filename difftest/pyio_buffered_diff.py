@@ -216,7 +216,7 @@ def gen_case(rng):
         if k == "peek":
             op["n"] = rng.choice([0, 1, 2, size])
         if k in ("readinto", "readinto1"):
-            op["n"] = rng.choice([0, 1, 2, size, size + 1, 2 * size + 1, 20])
+            op["n"] = max(0, rng.choice([0, 1, 2, size, size + 1, 2 * size + 1, 20]))
         if k == "write":
             op["b"] = [rng.choice([97, 98, 10]) for _ in range(rng.choice([0, 1, 2, 3, size - 1 if size > 1 else 1, size, size + 1, 2 * size, 3 * size + 2]))]
         if k == "seek":
@@ -291,7 +291,8 @@ def run_python(c):
             out.append({"exc": "StopIteration", "msg": ""})
         except Exception as e:
             out.append(norm(e))
-    res = {"ok": out, "log": raw.calls, "data": list(raw.d), "pos": raw.p}
+    # a copy: finalizing `f` after this returns flushes and closes the raw
+    res = {"ok": out, "log": list(raw.calls), "data": list(raw.d), "pos": raw.p}
     raw.cf = None
     return res
 

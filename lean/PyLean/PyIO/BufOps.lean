@@ -44,9 +44,15 @@ def iternext : BM Val := do
 
 /-- The forwarding properties and methods, bufferedio.c:631-719, :532-537. -/
 def stepOp (s : BufS) : BfOp → BufS × Py Val
-  | .read n => (wrapArg (optSsize (-1) n) read) s
+  | .read n =>
+    -- a writer inherits `_io__BufferedIOBase_read_impl`, bufferedio.c:166
+    if !s.readable then (s, .error (unsupportedOp "read")) else
+    (wrapArg (optSsize (-1) n) read) s
   | .read1 n => (wrapArg (argSsize n) read1) s
-  | .peek n => (wrapArg (argSsize n) (fun _ => peek)) s
+  | .peek n =>
+    if !s.readable then
+      (s, .error (.named "AttributeError" "'_io.BufferedWriter' object has no attribute 'peek'")) else
+    (wrapArg (argSsize n) (fun _ => peek)) s
   | .readinto n => (readinto n false) s
   | .readinto1 n => (readinto n true) s
   | .readline n =>
@@ -55,17 +61,19 @@ def stepOp (s : BufS) : BfOp → BufS × Py Val
       let r ← readlineRaw l
       pure (Val.bytes r))) s
   | .next => iternext s
-  | .write b => (write b) s
+  | .write b =>
+    if !s.writable then (s, .error (unsupportedOp "write")) else
+    (write b) s
   | .seek p w => (wrapArg (argCInt w) (seek p)) s
   | .tell => tell s
   | .truncate n => (truncate n) s
-  | .flush => flush s
+  | .flush => flushMethod s
   | .close => close s
   | .detach => detach s
   | .closed => (do checkInit; let s ← SM.get; pure (Val.bool s.raw.closed)) s
-  -- BufferedReader has no writable(), BufferedWriter no readable(): the fields
-  -- carry the kind (reader/writer/random) fixed at init, so a writer reports
-  -- `readable = False` even though its raw is readable.
+  -- bufferedio.c:644-661 forwards to the raw, but only the types that list the
+  -- method do: a reader has no `writable` and a writer no `readable`, so those
+  -- are `_IOBase`'s False. The fields hold the kind; init checked the raw.
   | .readable => (do checkInit; let s ← SM.get; pure (Val.bool s.readable)) s
   | .writable => (do checkInit; let s ← SM.get; pure (Val.bool s.writable)) s
   | .seekable => (do checkInit; let s ← SM.get; pure (Val.bool s.raw.canSeek)) s
@@ -94,21 +102,33 @@ def next : PM Val := do
   if l = [] then thr .stopIteration else pure (Val.bytes l)
 
 def stepOp (s : BufP) : BfOp → BufP × Py Val
-  | .read n => (read n) s
+  -- `BufferedIOBase.read`/`write` raise through `_unsupported` where the kind has
+  -- no override, and only `BufferedReader` defines `peek`
+  | .read n =>
+    if s.kind = 1 then (s, .error (unsupportedOp "BufferedWriter.read() not supported")) else
+    (read n) s
   | .read1 n => (read1 n) s
-  | .peek n => (peek n) s
+  | .peek n =>
+    if s.kind = 1 then
+      (s, .error (.named "AttributeError" "'BufferedWriter' object has no attribute 'peek'")) else
+    (peek n) s
   | .readinto n => (readinto n false) s
   | .readinto1 n => (readinto n true) s
   | .readline n => (do let r ← readlineRaw n; pure (Val.bytes r)) s
   | .next => next s
-  | .write b => (write b) s
+  | .write b =>
+    if s.kind = 0 then (s, .error (unsupportedOp "BufferedReader.write() not supported")) else
+    (write b) s
   | .seek p w => (seek p w) s
   | .tell => tell s
   | .truncate n => (truncate n) s
   | .flush => flush s
   | .close => close s
   | .detach => detach s
-  | .closed => (s, .ok (.bool s.raw.closed))
+  -- `_BufferedIOMixin.closed` reads `self.raw.closed`, and `detach` set `raw` to None
+  | .closed =>
+    if s.detached then (s, .error (.named "AttributeError" "'NoneType' object has no attribute 'closed'"))
+    else (s, .ok (.bool s.raw.closed))
   -- `BufferedWriter` has no `readable`, `BufferedReader` no `writable`: IOBase's False
   | .readable => (s, .ok (.bool (s.kind ≠ 1 && s.raw.canRead)))
   | .writable => (s, .ok (.bool (s.kind ≠ 0 && s.raw.canWrite)))

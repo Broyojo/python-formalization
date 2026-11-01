@@ -52,6 +52,26 @@ def enc_bytes(s, enc):
     return list("".join(map(chr, s)).encode(enc, "surrogatepass" if enc == "utf-8" else "ignore"))
 
 
+def drop_stale_tell(ops):
+    """Remove tell after next() followed by anything that re-enables telling.
+
+    next() stops updating the snapshot and flush() (also via truncate and
+    reconfigure) re-enables tell(), which then reads past the snapshot in C and
+    fails an assertion in _pyio. That outcome is not a function of the case.
+    """
+    out, nexted, stale = [], False, False
+    for op in ops:
+        k = op["op"]
+        if stale and (k in ("tell", "seektell") or (k == "seek" and op.get("whence") == 1)):
+            continue
+        if k == "next":
+            nexted = True
+        if nexted and k in ("flush", "truncate", "reconfigure"):
+            stale = True
+        out.append(op)
+    return out
+
+
 def gen_tiow(rng):
     fn = rng.choice(["tiow_c", "tiow_py", "tiow_py"])
     c_side = fn == "tiow_c"
@@ -92,7 +112,7 @@ def gen_tiow(rng):
     if c_side and rng.random() < 0.08:
         ops += [{"op": "detach"}, {"op": "closed"}]
     else:
-        ops += [{"op": "flush"}, {"op": "bufvalue"}, {"op": "tell"}, {"op": "newlines"}, {"op": "closed"}]
+        ops = drop_stale_tell(ops + [{"op": "flush"}, {"op": "bufvalue"}, {"op": "tell"}, {"op": "newlines"}, {"op": "closed"}])
     return {"mod": "pyio", "fn": fn, "data": data, "enc": enc, "errors": errors, "newline": nl,
             "lb": c_side and rng.random() < 0.15, "wt": c_side and rng.random() < 0.15, "ops": ops}
 

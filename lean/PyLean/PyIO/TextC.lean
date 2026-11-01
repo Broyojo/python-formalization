@@ -367,7 +367,7 @@ def parseCookie (c : Int) : Py (Int × Int × Int × Int × Bool) :=
 def decoderSetstate (start flags : Int) : TM Unit :=
   SM.mod fun t => if start = 0 ∧ flags = 0 then decReset t else decSet t ([], flags)
 
-/-- The fast search of `_io_TextIOWrapper_tell_impl`, textio.c:2835-2862. -/
+/-- The fast search of `_io_TextIOWrapper_tell_impl`, textio.c:2857-2888. -/
 def tellSkip (next : List Nat) (start : Int) : Nat → Int → Int → Int → Int → TM (Int × Int × Int)
   | 0, _, _, _, _ => thr .modelFuel
   | fuel + 1, skipBytes, skipBack, flags, cts => do
@@ -389,7 +389,7 @@ def tellSkip (next : List Nat) (start : Int) : Nat → Int → Int → Int → I
       decoderSetstate start flags
       pure (0, flags, cts)
 
-/-- The byte loop of `tell`, textio.c:2880-2901: `(start, flags, feed, decoded, skip, broke)`. -/
+/-- The byte loop of `tell`, textio.c:2906-2926: `(start, flags, feed, decoded, skip, broke)`. -/
 def tellFeed : List Nat → Int → Int → Int → Int → Int → TM (Int × Int × Int × Int × Int × Bool)
   | [], sp, fl, bf, cd, cts => pure (sp, fl, bf, cd, cts, false)
   | x :: xs, sp, fl, bf, cd, cts => do

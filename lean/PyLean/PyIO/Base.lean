@@ -195,7 +195,7 @@ def readlineLoop (limit : Int) : UObj → List Nat → Nat → UObj × Py (List 
 
 def fuelOf (u : UObj) : Nat := u.reads.length + u.intos.length + (u.peeks.getD []).length + 2
 
-/-- `_io__IOBase_readline_impl`, iobase.c:569-663. -/
+/-- `_io__IOBase_readline_impl`, iobase.c:569-676. -/
 def readline (u : UObj) (limit : Option Int) : UObj × Py Val :=
   match optSsize (-1) limit with
   | .error e => (u, .error e)
@@ -320,7 +320,7 @@ namespace BP
 /-- `_unsupported`, _pyio.py:341-344. -/
 def unsupported (u : UObj) (name : String) : PyExc := unsup s!"{u.name}.{name}() not supported"
 
-/-- `IOBase.flush`, _pyio.py:380-386, after the script. -/
+/-- `IOBase.flush`, _pyio.py:380-385, after the script. -/
 def flush (u : UObj) : UObj × Py Val :=
   let u' := { u with log := u.log ++ [Call.flush] }
   match u.flushes with
@@ -337,7 +337,7 @@ def close (u : UObj) : UObj × Py Val :=
   let (u', r) := flush u
   ({ u' with isClosed := true }, r.map (fun _ => .none))
 
-/-- `RawIOBase.read`, _pyio.py:621-635, for `size >= 0`. -/
+/-- `RawIOBase.read`, _pyio.py:610-627, for `size >= 0`. -/
 def rawReadN (u : UObj) (n : Nat) : UObj × Py Val :=
   match u.callInto n with
   | (u, (_, .raise c m)) => (u, .error (excOf c m))
@@ -360,7 +360,7 @@ def readCall (u : UObj) (n : Nat) : UObj × Ret :=
     | (u, .ok v) => (u, .bytes v.bytesOf)
   else u.callRead n
 
-/-- `nreadahead` with `peek`, _pyio.py:524-531. -/
+/-- `nreadahead` with `peek`, _pyio.py:525-532. -/
 def nreadahead (size : Int) (r : Ret) : Py Nat :=
   match r with
   | .bytes [] | .none | .int 0 => .ok 1
@@ -370,7 +370,7 @@ def nreadahead (size : Int) (r : Ret) : Py Nat :=
   | .int _ => .error (.named "AttributeError" "'int' object has no attribute 'find'")
   | .raise c m => .error (excOf c m)
 
-/-- The loop of `IOBase.readline`, _pyio.py:545-553. -/
+/-- The loop of `IOBase.readline`, _pyio.py:546-553. -/
 def readlineLoop (size : Int) : UObj → List Nat → Nat → UObj × Py (List Nat)
   | u, _, 0 => (u, .error .modelFuel)
   | u, res, fuel + 1 =>
@@ -426,7 +426,7 @@ def readlines (u : UObj) (hint : Option Int) : UObj × Py Val :=
     | none => none
   readlinesLoop hint u 0 [] (BC.fuelOf u)
 
-/-- `IOBase.writelines`, _pyio.py:583-590. -/
+/-- `IOBase.writelines`, _pyio.py:583-591. -/
 def writelinesLoop : UObj → List (List Nat) → UObj × Py Val
   | u, [] => (u, .ok .none)
   | u, l :: ls =>
@@ -434,7 +434,7 @@ def writelinesLoop : UObj → List (List Nat) → UObj × Py Val
     | (u, .raise c m) => (u, .error (excOf c m))
     | (u, _) => writelinesLoop u ls
 
-/-- `RawIOBase.readall`, _pyio.py:637-645; `last` is the falsy `data`. -/
+/-- `RawIOBase.readall`, _pyio.py:629-638; `last` is the falsy `data`. -/
 def readallLoop : UObj → List Nat → Nat → UObj × Py Val
   | u, _, 0 => (u, .error .modelFuel)
   | u, res, fuel + 1 =>

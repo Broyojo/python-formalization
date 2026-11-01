@@ -71,7 +71,7 @@ def asOff (v : Int) : BM Int :=
   if InSsize v then pure v
   else thr (.valueError "cannot fit 'int' into an offset-sized integer")
 
-/-- The tail of `_buffered_raw_tell`/`_buffered_raw_seek`, bufferedio.c:781-792. -/
+/-- The tail of `_buffered_raw_tell`/`_buffered_raw_seek`, bufferedio.c:784-792, :817-825. -/
 def checkPos (n : Int) : BM Int := do
   let n ← asOff n
   if n < 0 then thr (osError s!"Raw stream returned invalid position {n}")
@@ -143,8 +143,9 @@ def rawWrite (b : List Nat) : Nat → BM Int
       pure n
     | .data _ => pure 0
     | .bad v =>
-      if !InSsize v then thr (.valueError "cannot fit 'int' into an index-sized integer") else
-      thr (osError s!"raw write() returned invalid length {v} (should have been between 0 and {b.length})")
+      -- :2002-2009: a failed conversion leaves `n == -1`, and `n < 0` replaces its error
+      let n : Int := if InSsize v then v else -1
+      thr (osError s!"raw write() returned invalid length {n} (should have been between 0 and {b.length})")
 
 def blocking (written : Nat) : PyExc :=
   .named "BlockingIOError" s!"write could not complete without blocking|{written}"
@@ -194,6 +195,23 @@ def flush : BM Val := do
   checkClosed "flush of closed file"
   flushRewind
   pure .none
+
+/-- `_io__Buffered_simple_flush_impl`, bufferedio.c:504-509: `BufferedReader.flush`
+forwards to the raw stream, with no closed check of its own and no rewind. -/
+def simpleFlush : BM Val := do
+  checkInit
+  let s ← SM.get
+  let (r, res) := s.raw.flush
+  SM.put { s with raw := r }
+  match res with
+  | .error e => thr e
+  | .ok () => pure .none
+
+/-- The `flush` method of the object, as `_PyFile_Flush(self)` finds it: a reader
+has the simple one, a writer or random object `_io__Buffered_flush_impl`. -/
+def flushMethod : BM Val := do
+  let s ← SM.get
+  if s.writable then flush else simpleFlush
 
 /-- `_bufferedreader_read_fast`, bufferedio.c:1770-1783. -/
 def readFast (n : Int) : BM (Option (List Nat)) := do
@@ -508,7 +526,7 @@ def close : BM Val := do
   checkInit
   let s ← SM.get
   if s.raw.closed then pure .none else
-  let fl ← SM.attempt flush
+  let fl ← SM.attempt flushMethod
   let s ← SM.get
   let (r, res) := s.raw.close
   SM.put { s with raw := r, hasBuf := false, readEnd := 0, pos := 0 }
@@ -520,7 +538,7 @@ def close : BM Val := do
 /-- `_io__Buffered_detach_impl`, bufferedio.c:608-621. -/
 def detach : BM Val := do
   checkInit
-  let _ ← flush
+  let _ ← flushMethod
   SM.mod fun s => { s with detached := true, ok := false }
   pure .none
 
@@ -596,7 +614,10 @@ def write (b : List Nat) : BM Val := do
       SM.mod fun s => { s with rawPos := 0 }
       pure (.int (written + (if remaining > 0 then remaining else 0)))
 
-/-- `_buffered_init`, bufferedio.c:829-863, as far as it is observable. -/
+/-- `_buffered_init`, bufferedio.c:829-863, as far as it is observable. Nothing
+sets `abs_pos` before the first `_buffered_raw_tell` (assignments are at :791 and
+:824 only), so if that call fails it stays at `tp_alloc`'s 0, not the -1 that
+means unknown, and `RAW_TELL` (:397) trusts it. -/
 def init (kind : Nat) (raw : Raw) (size : Int) : Py BufS :=
   -- kind 0: reader, 1: writer, 2: random
   if kind = 2 ∧ !raw.canSeek then .error (unsupportedOp "File or stream is not seekable.") else
@@ -606,7 +627,7 @@ def init (kind : Nat) (raw : Raw) (size : Int) : Py BufS :=
   if size ≥ memLimit then .error memoryError else
   let s : BufS :=
     { raw := raw, ok := false, detached := false, readable := kind ≠ 1, writable := kind ≠ 0
-      absPos := -1, hasBuf := true, buffer := [], pos := 0, rawPos := 0, readEnd := -1
+      absPos := 0, hasBuf := true, buffer := [], pos := 0, rawPos := 0, readEnd := -1
       writePos := 0, writeEnd := -1, size := size.toNat }
   let (s, _) := (SM.attempt rawTell) s
   .ok { s with ok := true }

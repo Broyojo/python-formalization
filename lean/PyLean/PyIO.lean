@@ -235,8 +235,8 @@ def coreEntries : List Entry := [
     status := .proven, prop := ``StringIOInquiries, thm := some ``stringIOInquiries_proven },
   { id := "pyio-stringio-unsupported", pyFile := "Modules/_io/textio.c"
     pyFns := ["_io__TextIOBase_detach_impl", "_io__TextIOBase_encoding_get_impl",
-      "_io__TextIOBase_errors_get_impl", "_io__IOBase_fileno_impl", "TextIOWrapper.detach",
-      "TextIOWrapper.fileno", "StringIO.encoding", "StringIO.errors", "StringIO.detach"]
+      "_io__TextIOBase_errors_get_impl", "_io__IOBase_fileno_impl", "TextIOWrapper.fileno",
+      "StringIO.encoding", "StringIO.errors", "StringIO.detach"]
     statement := "On a StringIO (both twins), detach() and fileno() raise io.UnsupportedOperation, while the encoding and errors attributes are None (an in-memory text buffer has no underlying binary buffer, encoding or error handler)."
     source := "Doc/library/io.rst (TextIOBase.detach/fileno/encoding/errors: 'not supported by an in-memory text buffer')"
     status := .proven, prop := ``StringIOUnsupported, thm := some ``stringIOUnsupported_proven },

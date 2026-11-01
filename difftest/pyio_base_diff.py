@@ -88,7 +88,7 @@ class IntoMix:
         d, r = self.intos.pop(0)
         m = min(len(d), len(b))
         # C RawIOBase.read hands readinto an uninitialised bytearray and _pyio a
-        # zeroed one (see bugs/pyio-rawiobase-read-uninitialised.yaml)
+        # zeroed one, so a count above what was written is not comparable
         b[:] = bytes(len(b))
         b[:m] = bytes(d[:m])
         return ret(r)
