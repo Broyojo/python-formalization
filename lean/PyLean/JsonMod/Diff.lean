@@ -278,7 +278,7 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "scanstr_py" =>
     let s ← decStr (← field j "s")
     let e ← decIntStr (← field j "end")
-    return encDR s (fun (v, e) => Json.arr #[encStr v, toJson (toString e)]) (pyScanstring s e (← getBool j "strict"))
+    return encDR s (fun (v, e) => Json.arr #[encStr v, toJson (toString e)]) (pyScanstringCall s e (← getBool j "strict"))
   | "scanstr_c" =>
     let x ← getStrArg (← field j "x")
     let e ← decIntStr (← field j "end")

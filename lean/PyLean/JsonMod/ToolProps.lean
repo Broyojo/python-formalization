@@ -1,4 +1,5 @@
 import PyLean.JsonMod.Tool
+import PyLean.JsonMod.RoundTripTop
 
 /-!
 Properties of `Lib/json/tool.py`.
@@ -71,5 +72,17 @@ def ToolLinesPrefix : Prop :=
 theorem toolLinesPrefix_proven : ToolLinesPrefix := by
   intro o env l ls obj h
   simp [toolLines, h]
+
+/-- Open. `python -m json.tool` keeps the document: a value without floats, on
+which `json-roundtrip` applies, comes back from the text written, for every
+indent option and `--compact`. The output ends in a newline, which `json-roundtrip`
+does not cover. -/
+def ToolRoundTrip : Prop :=
+  ∀ (o : ToolOpts) (env : ToolEnv) (input : PStr) (obj : JVal), o.jsonLines = false → o.sortKeys = false →
+    env.theme = none → (∀ c, env.wr c = none) →
+    jsonLoads loadsC {} (.str input) = .ok obj →
+    EVal.toJ (obj.toE env.fl) = some obj → EVal.clean o.ensureAscii (obj.toE env.fl) = true →
+    (toolMain o env input).exit = none →
+    jsonLoads loadsC {} (.str (toolMain o env input).out) = .ok obj
 
 end PyLean.JsonMod

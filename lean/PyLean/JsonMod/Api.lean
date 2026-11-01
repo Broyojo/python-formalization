@@ -194,12 +194,12 @@ inductive LoadArg where
   /-- Any other object, by type name. -/
   | other (t : String)
 
-/-- The condition of the fast path, Lib/json/__init__.py:351-353. -/
+/-- The condition of the fast path, Lib/json/__init__.py:349-351. -/
 def loadsFast (a : DecArgs) : Bool :=
   a.objectHook.isNone && a.parseInt.isNone && a.parseFloat.isNone && a.parseConstant.isNone &&
     a.objectPairsHook.isNone && a.strict.isNone && a.kw.isEmpty
 
-/-- `_default_decoder.decode(s)` or `cls(**kw).decode(s)`, __init__.py:351-365. -/
+/-- `_default_decoder.decode(s)` or `cls(**kw).decode(s)`, __init__.py:349-365. -/
 def loadsDecode (decode : DCfg → PStr → DR JVal) (a : DecArgs) (s : PStr) : Except PyExc JVal :=
   let cfg : Except PyExc DCfg := if loadsFast a then .ok {} else decoderInit a
   match cfg with
@@ -280,7 +280,7 @@ def encoderInit (a : EncArgs) : Except PyExc ECfg :=
 
 /-! ### `json.dumps`, `json.dump` -/
 
-/-- The condition of the cached encoder, Lib/json/__init__.py:230-233. -/
+/-- The condition of the cached encoder, Lib/json/__init__.py:231-233. -/
 def dumpsFast (a : EncArgs) : Bool :=
   !a.skipkeys && a.ensureAscii && a.checkCircular && a.allowNan && a.separators.isNone &&
     a.default.isNone && !a.sortKeys && a.kw.isEmpty &&

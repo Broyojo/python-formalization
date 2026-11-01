@@ -146,7 +146,7 @@ end
 /-- `JSONEncoder.iterencode(o)` (`_one_shot=False`), encoder.py:207-263. -/
 def iterencode (cfg : ECfg) (v : EVal) : Yield := pyIter cfg (encFuel cfg v) 0 [] v
 
-/-- `for chunk in iterable: fp.write(chunk)`, Lib/json/__init__.py:179-180:
+/-- `for chunk in iterable: fp.write(chunk)`, Lib/json/__init__.py:181-182:
 `wr k c` is what the `k`-th write of `c` raises. Returns the chunks written. -/
 def writeAll (wr : Nat → PStr → Option PyExc) : Nat → List PStr → List PStr × Option PyExc
   | _, [] => ([], none)

@@ -34,6 +34,12 @@ def ssizeErr : PyExc := .overflowError "Python int too large to convert to C ssi
 
 def outOfSsize (i : Int) : Bool := decide (i < ssizeMin) || decide (i > ssizeMax)
 
+/-- `py_scanstring(s, end, strict)` called directly, Lib/json/decoder.py:70-127:
+the first `STRINGCHUNK.match(s, end)` converts `end` to `Py_ssize_t`. From the
+scanner `end` is an index plus one, so `pyScanstring` is what it reaches. -/
+def pyScanstringCall (s : PStr) (e : Int) (strict : Bool) : DR (PStr × Int) :=
+  if outOfSsize e then .error (.exc ssizeErr) else pyScanstring s e strict
+
 /-- `py_scanstring`, Modules/_json.c:559-580, with the check of
 `scanstring_unicode` on a negative `end` (:398-400). -/
 def cPyScanstring (x : StrArg) (e : Int) (strict : Bool) : DR (PStr × Int) :=

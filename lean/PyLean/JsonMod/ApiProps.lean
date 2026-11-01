@@ -181,6 +181,31 @@ theorem detectEncoding_proven : DetectEncoding := by
         (startsWith_false_head (by omega)) (startsWith_false_head (by omega)) (startsWith_false_head (by omega))]
       simp
 
+theorem detectEncoding1_proven : DetectEncoding1 := by
+  intro e a ha ha'
+  have a0 : a ≠ 0 := by omega
+  have n1 : a ≠ 0xfe := by omega
+  have n2 : a ≠ 0xff := by omega
+  have n3 : a ≠ 0xef := by omega
+  have e1 : a % 256 = a := Nat.mod_eq_of_lt (by omega)
+  have e2 : a / 256 = 0 := Nat.div_eq_of_lt (by omega)
+  have e3 : a / 65536 = 0 := Nat.div_eq_of_lt (by omega)
+  have e4 : a / 16777216 = 0 := Nat.div_eq_of_lt (by omega)
+  have e5 : a < 0x10000 := by omega
+  have e6 : a < 0x80 := by omega
+  cases e with
+  | utf8 =>
+    simp [TextEnc.encode, TextEnc.name, utf8Enc1, e6, detectEncoding, startsWith, bomU32Be, bomU32Le, bomU16Be,
+      bomU16Le, bomUtf8, n1, n2, n3]
+  | utf16 le =>
+    cases le <;>
+      simp [TextEnc.encode, TextEnc.name, utf16Enc1, e1, e2, e5, detectEncoding, startsWith, bomU32Be, bomU32Le,
+        bomU16Be, bomU16Le, bomUtf8, a0, n1, n2, n3]
+  | utf32 le =>
+    cases le <;>
+      simp [TextEnc.encode, TextEnc.name, utf32Enc1, e1, e2, e3, e4, detectEncoding, startsWith, bomU32Be, bomU32Le,
+        bomU16Be, bomU16Le, bomUtf8, a0, n1, n2, n3]
+
 /-! ### `json.loads`, `json.load` -/
 
 /-- `json.loads`: a `str` with a leading BOM and an argument of any other type
@@ -432,14 +457,14 @@ theorem cScanstring_no_stop (s : PStr) (e : Nat) (strict : Bool) (i : Int) :
 `ScanTwin` for every `end`. -/
 def ScanstringTwins : Prop :=
   ∀ (s : PStr) (e : Int) (strict : Bool),
-    ScanTwin s (pyScanstring s e strict) (cPyScanstring (.str s) e strict)
+    ScanTwin s (pyScanstringCall s e strict) (cPyScanstring (.str s) e strict)
 
 /-- `scanstring('ab', 5)`: C raises `ValueError: end is out of bounds`, and
 `py_scanstring` a `JSONDecodeError` naming a position past the end. -/
 theorem scanstringTwins_refuted : ¬ScanstringTwins := by
   intro h
   have h1 := h (cs "ab") 5 true
-  have e1 : pyScanstring (cs "ab") 5 true = .error (.jde "Unterminated string starting at" 4) := by decide
+  have e1 : pyScanstringCall (cs "ab") 5 true = .error (.jde "Unterminated string starting at" 4) := by decide
   have e2 : cPyScanstring (.str (cs "ab")) 5 true = .error (.exc (.valueError "end is out of bounds")) := by decide
   rw [e1, e2] at h1
   rcases h1 with h1 | ⟨_, _, _, _, h1, _⟩ | ⟨_, _, _, _, h1, _⟩ <;> cases h1
@@ -448,13 +473,13 @@ theorem scanstringTwins_refuted : ¬ScanstringTwins := by
 `ScanTwin`. The bounds are exactly the refuted cases. -/
 def ScanstringTwinsInRange : Prop :=
   ∀ (s : PStr) (e : Nat) (strict : Bool), e ≤ s.length → (s.length : Int) ≤ ssizeMax →
-    ScanTwin s (pyScanstring s (e : Int) strict) (cPyScanstring (.str s) (e : Int) strict)
+    ScanTwin s (pyScanstringCall s (e : Int) strict) (cPyScanstring (.str s) (e : Int) strict)
 
 theorem scanstringTwinsInRange_proven : ScanstringTwinsInRange := by
   intro s e strict h1 hs
   have ho := outOfSsize_false (i := (e : Int)) (by omega) (by omega)
   have hn : ¬ ((e : Int) < 0) := by omega
-  simp only [cPyScanstring, ho, Bool.false_eq_true, ↓reduceIte, hn, Int.toNat_natCast]
+  simp only [pyScanstringCall, cPyScanstring, ho, Bool.false_eq_true, ↓reduceIte, hn, Int.toNat_natCast]
   rcases scanstring_rel s strict e h1 with ⟨v, k, _, h1, h2⟩ | ⟨pe, ce, h1, h2, he⟩
   · rw [h1, h2]; exact Or.inl rfl
   · rw [h1, h2]

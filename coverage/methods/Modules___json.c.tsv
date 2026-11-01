@@ -10,9 +10,9 @@ Modules/_json.c	372	544	scanstring_unicode	scanstring_unicode(PyObject *pystr, P
 Modules/_json.c	560	580	py_scanstring	py_scanstring(PyObject* Py_UNUSED(self), PyObject *args)	todo		candidates:json-roundtrip,json-roundtrip-str
 Modules/_json.c	589	604	py_encode_basestring_ascii	py_encode_basestring_ascii(PyObject* Py_UNUSED(self), PyObject *pystr)	todo		
 Modules/_json.c	614	629	py_encode_basestring	py_encode_basestring(PyObject* Py_UNUSED(self), PyObject *pystr)	todo		
-Modules/_json.c	632	640	scanner_dealloc	scanner_dealloc(PyObject *self)	todo		
-Modules/_json.c	643	653	scanner_traverse	scanner_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/_json.c	656	665	scanner_clear	scanner_clear(PyObject *op)	todo		
+Modules/_json.c	632	640	scanner_dealloc	scanner_dealloc(PyObject *self)	excluded		no-behaviour: tp_dealloc slot of the scanner; frees the object and its references
+Modules/_json.c	643	653	scanner_traverse	scanner_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse slot of the scanner
+Modules/_json.c	656	665	scanner_clear	scanner_clear(PyObject *op)	excluded		no-behaviour: GC tp_clear slot of the scanner; drops references
 Modules/_json.c	668	797	_parse_object_unicode	_parse_object_unicode(PyScannerObject *s, PyObject *memo, PyObject *pystr, Py_ssize_t idx, Py_ssize_t *next_idx_ptr)	modelled	json-loads-twins-scan	
 Modules/_json.c	800	876	_parse_array_unicode	_parse_array_unicode(PyScannerObject *s, PyObject *memo, PyObject *pystr, Py_ssize_t idx, Py_ssize_t *next_idx_ptr) {	modelled	json-loads-twins-scan	
 Modules/_json.c	879	902	_parse_constant	_parse_constant(PyScannerObject *s, const char *constant, Py_ssize_t idx, Py_ssize_t *next_idx_ptr) {	todo		
@@ -34,8 +34,8 @@ Modules/_json.c	1479	1580	encoder_listencode_obj	encoder_listencode_obj(PyEncode
 Modules/_json.c	1583	1652	encoder_encode_key_value	encoder_encode_key_value(PyEncoderObject *s, PyUnicodeWriter *writer, bool *first, PyObject *dct, PyObject *key, PyObject *value, Py_ssize_t indent_level, PyObject *indent_cache, PyObject *item_separator)	todo		
 Modules/_json.c	1655	1767	encoder_listencode_dict	encoder_listencode_dict(PyEncoderObject *s, PyUnicodeWriter *writer, PyObject *dct, Py_ssize_t indent_level, PyObject *indent_cache)	todo		
 Modules/_json.c	1770	1858	encoder_listencode_list	encoder_listencode_list(PyEncoderObject *s, PyUnicodeWriter *writer, PyObject *seq, Py_ssize_t indent_level, PyObject *indent_cache)	todo		
-Modules/_json.c	1861	1869	encoder_dealloc	encoder_dealloc(PyObject *self)	todo		
-Modules/_json.c	1872	1883	encoder_traverse	encoder_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/_json.c	1886	1897	encoder_clear	encoder_clear(PyObject *op)	todo		
-Modules/_json.c	1940	1953	_json_exec	_json_exec(PyObject *module)	todo		
-Modules/_json.c	1971	1974	PyInit__json	PyInit__json(void)	todo		
+Modules/_json.c	1861	1869	encoder_dealloc	encoder_dealloc(PyObject *self)	excluded		no-behaviour: tp_dealloc slot of the encoder; frees the object and its references
+Modules/_json.c	1872	1883	encoder_traverse	encoder_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse slot of the encoder
+Modules/_json.c	1886	1897	encoder_clear	encoder_clear(PyObject *op)	excluded		no-behaviour: GC tp_clear slot of the encoder; drops references
+Modules/_json.c	1940	1953	_json_exec	_json_exec(PyObject *module)	excluded		internal-bootstrap: module exec slot; adds make_scanner and make_encoder to the module
+Modules/_json.c	1971	1974	PyInit__json	PyInit__json(void)	excluded		internal-bootstrap: module init; returns the module definition
