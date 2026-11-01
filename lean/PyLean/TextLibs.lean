@@ -533,24 +533,26 @@ def entries : List Entry := [
     prop := ``CharsetPreservedIgnorecase
     notes := "Difftest agrees (re.sem), and categories in cased sets agree on all code points. Needs the fix-table steps of literalPass and rangeMark proved like the case-free ones." },
   { id := "textlibs-re-findall-is-finditer", pyFile := "Modules/_sre/sre.c"
-    pyFns := ["_sre_SRE_Pattern_findall_impl", "state_getslice", "pattern_new_match", "_sre_SRE_Pattern_finditer_impl", "_sre_SRE_Scanner_search_impl"]
+    pyFns := []
     statement := "findall is finditer with each match read as the whole match, the group, or the tuple of groups, with '' for a group that did not take part. For every pattern."
     source := "twin: findall and finditer", status := .proven
-    prop := ``FindallIsFinditer, thm := some ``findallIsFinditer_proven },
-  { id := "textlibs-re-split-is-finditer", pyFile := "Modules/_sre/sre.c", pyFns := ["_sre_SRE_Pattern_split_impl"]
+    prop := ``FindallIsFinditer, thm := some ``findallIsFinditer_proven
+    notes := "Relative law: it assumes scanLoop succeeds, and scanLoop itself is stated nowhere, so a scanLoop that always fails passes. No row is credited until textlibs-re-sem-agrees-no-self-test settles it." },
+  { id := "textlibs-re-split-is-finditer", pyFile := "Modules/_sre/sre.c", pyFns := []
     statement := "split cuts at the spans finditer finds and keeps the groups, including for patterns that match the empty string."
     source := "twin: split and finditer", status := .proven
     prop := ``SplitIsFinditer, thm := some ``splitIsFinditer_proven
-    notes := "maxsplit 0; a positive maxsplit stops the same loop early." },
-  { id := "textlibs-re-sub-is-finditer", pyFile := "Modules/_sre/sre.c", pyFns := ["pattern_subx", "expand_template"]
+    notes := "maxsplit 0; a positive maxsplit stops the same loop early. Relative law: it assumes scanLoop succeeds, and scanLoop itself is stated nowhere, so a scanLoop that always fails passes. No row is credited until textlibs-re-sem-agrees-no-self-test settles it." },
+  { id := "textlibs-re-sub-is-finditer", pyFile := "Modules/_sre/sre.c", pyFns := []
     statement := "sub with a string repl rebuilds the subject from what finditer finds, with a literal or an expanded template at each match; a template that fails fails the call."
     source := "twin: sub and finditer", status := .proven
     prop := ``SubIsFinditer, thm := some ``subIsFinditer_proven
-    notes := "count 0. textlibs-re-sub-call-is-finditer has the callable path." },
-  { id := "textlibs-re-sub-call-is-finditer", pyFile := "Modules/_sre/sre.c", pyFns := ["pattern_subx", "_sre_SRE_Pattern_sub_impl", "_sre_SRE_Pattern_subn_impl"]
+    notes := "count 0. textlibs-re-sub-call-is-finditer has the callable path. Relative law: it assumes scanLoop succeeds, and scanLoop itself is stated nowhere, so a scanLoop that always fails passes. No row is credited until textlibs-re-sem-agrees-no-self-test settles it." },
+  { id := "textlibs-re-sub-call-is-finditer", pyFile := "Modules/_sre/sre.c", pyFns := []
     statement := "A callable repl is called once per match in order, for any callable: a call that raises ends sub with that exception and no later call runs, and a result of the wrong type surfaces only at the join."
     source := "docs: re.sub with a function", status := .proven
-    prop := ``SubCallIsFinditer, thm := some ``subCallIsFinditer_proven },
+    prop := ``SubCallIsFinditer, thm := some ``subCallIsFinditer_proven
+    notes := "Relative law: it assumes scanLoop succeeds, and scanLoop itself is stated nowhere, so a scanLoop that always fails passes. No row is credited until textlibs-re-sem-agrees-no-self-test settles it." },
   { id := "textlibs-re-group-index-range", pyFile := "Modules/_sre/sre.c", pyFns := ["match_getindex"]
     statement := "An integer group index is valid exactly when it is in range, however large; the failure is IndexError."
     source := "docs: Match.group", status := .proven
