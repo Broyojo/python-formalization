@@ -1,0 +1,64 @@
+id: bytesobj-bytes-fromhex-reads-past-view
+title: "bytes.fromhex(view) reads past the end of a non-NUL-terminated buffer and accepts a digit it was not given"
+priority: P3
+kind: duplicate-already-fixed
+module: bytesobj
+files: [Objects/bytesobject.c]
+functions: ["_PyBytes_FromHex", "bytes_fromhex_impl", "bytearray_fromhex_impl"]
+summary: |
+  3.14 made bytes.fromhex and bytearray.fromhex accept bytes-like objects. _PyBytes_FromHex walks a
+  raw pointer and only tests `str < end` at the top of the loop, which was safe for a str (always
+  NUL-terminated) but is not for a buffer. After the first digit of a pair it reads `*str` with no
+  bounds check, and the skip-spaces loop does the same. So the byte after the view decides the
+  result:
+    bytes.fromhex(memoryview(b'1234')[:1])  ->  b'\x12'     (one digit given; two were used)
+    bytes.fromhex(memoryview(b'1234')[:3])  ->  b'\x124'
+    bytes.fromhex(b'1')                     ->  ValueError
+  With an array.array or any exporter whose data ends at the allocation, the read is out of bounds
+  (one byte for an odd digit count, more for trailing whitespace, which an ASAN build reports).
+  Lean: FromHexIgnoresTail (the result does not depend on what follows the buffer) is refuted;
+  FromHexTerminated (for bytes and bytearray, which are NUL-terminated, the odd digit is reported)
+  and FromHexRoundTrip (bytes.fromhex(b.hex()) == b for every b) are proven.
+likelihood: |
+  Moderate for the wrong result: parsing a slice of a larger buffer with memoryview is the normal way
+  to avoid a copy, and an odd-length field is the case fromhex exists to reject. The out-of-bounds
+  read is one byte past the buffer in the common case; exploitability is low but it is a real over-read
+  of memory the caller did not pass.
+maybe_intended: |
+  No. The test `if (str >= end)` for the second digit shows the code knows the buffer can end there,
+  and the error it tries to give is the right one; it only comes too late.
+reproducer: |
+  r = bytes.fromhex(memoryview(b'1234')[:1])
+  print('bytes.fromhex(memoryview(b"1234")[:1]) ->', r)
+  try:
+      bytes.fromhex(b'1')
+      s = 'no error'
+  except ValueError as e:
+      s = 'ValueError: %s' % e
+  print('bytes.fromhex(b"1")                    ->', s)
+  if r == b'\x12' and s.startswith('ValueError'):
+      print('REPRODUCED bytesobj-bytes-fromhex-reads-past-view')
+expected: |
+  ValueError("fromhex() arg must contain an even number of hexadecimal digits"), as for b'1', and no
+  read past the end of the view.
+observed: |
+  python3 3.14.7: b'\x12'. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): ValueError. NOT REPRODUCED: fixed on main
+  (the loop tests `str >= end` before each read, Objects/bytesobject.c:2751-2769 there). The 3.14
+  branch has the same fix (read with `gh api`), so only 3.14.7 and older releases are affected.
+promised_by: |
+  Doc/library/stdtypes.rst, bytes.fromhex ("must contain two hexadecimal digits per byte"); invariant:
+  a C function must not read outside the buffer it was given.
+cause: |
+  Objects/bytesobject.c:2575-2605 (3.14.7): lines 2578-2580 and 2592 dereference `str` without
+  checking `str < end`; the check at :2595 runs only when the byte read is not a digit.
+possible_fix: |
+  Already done upstream: test `str >= end` before each read. Nothing to file.
+duplicates:
+  issues:
+    - {number: 158583, state: closed, relation: "same bug ('bytes.fromhex() reads uninitialized memory'); fixed on main by gh-158584, backported to 3.14 by gh-158692 on 2026-10-03, after 3.14.7"}
+  queries: ["fromhex memoryview", "bytes.fromhex buffer", "fromhex bytes-like", "fromhex read past end", "fromhex", "_PyBytes_FromHex",
+            "bugforge README: no fromhex entries"]
+lean:
+  property: PyLean.BytesObj.Bytes.FromHexIgnoresTail
+  theorem: PyLean.BytesObj.Bytes.fromHexIgnoresTail_refuted

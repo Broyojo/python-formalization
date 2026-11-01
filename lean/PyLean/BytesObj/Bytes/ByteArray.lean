@@ -117,48 +117,59 @@ def setsliceShrinkMove (b : BA) (lo hi blen : Int) : Py BA := do
 def baCopyIn (b : BA) (lo : Int) (bytes : List Int) : BA :=
   { b with data := b.data.take lo.toNat ++ bytes ++ b.data.drop (lo + bytes.length).toNat }
 
-/-- `bytearray_setslice_linear`, bytearrayobject.c:548-631. The second result is the
-number of resize failures after a partial update: 0, since `memmove` failures are
-undefined and `realloc` to a smaller size succeeds here. -/
-def baSetsliceLinear (self : BA) (lo hi : Int) (bytes : List Int) : Py BA := do
+/-- The resize of the `lo == 0` shrink, bytearrayobject.c:584-585. `ob_start` has
+advanced already, but the size field still has the old value, so the resize is not the
+"same size" no-op; `b.data` is already the new contents. This is `baResize` from the
+`_canresize` on, with the allocation strategy only. -/
+def baResizeNoSize (b : BA) (requested : Int) : Py BA := do
+  canResize b
+  let size := requested
+  let fits := size + b.offset + 1 ≤ b.alloc
+  if fits ∧ ¬ (size < b.alloc / 2) then return b
+  let alloc :=
+    if fits then size + 1
+    else if 8 * size ≤ 9 * b.alloc then size + size / 8 + (if size < 9 then 3 else 6)
+    else size + 1
+  if alloc > ssizeMax then throw memoryError
+  if mallocFails alloc then throw memoryError
+  return { b with alloc, offset := 0 }
+
+/-- `growth < 0`, `lo == 0`: shrink the buffer by advancing its logical start,
+bytearrayobject.c:564-573 and :584. -/
+def baShrinkStart (self : BA) (growth : Int) (bytes : List Int) : Py BA := do
+  let s := { self with offset := self.offset - growth, data := self.data.drop (-growth).toNat }
+  let r ← baResizeNoSize s s.size
+  return baCopyIn r 0 bytes
+
+/-- `growth < 0`, `lo != 0`: `memmove` the tail down, then resize,
+bytearrayobject.c:574-585. -/
+def baShrinkMove (self : BA) (lo hi growth : Int) (bytes : List Int) : Py BA := do
   let blen : Int := bytes.length
-  let avail := hi - lo
-  let growth := blen - avail
+  let s ← setsliceShrinkMove self lo hi blen
+  let r ← baResize s (self.size + growth)
+  return baCopyIn r lo bytes
+
+/-- `growth > 0`: resize, then make the place for the additional bytes,
+bytearrayobject.c:606-626. -/
+def baGrow (self : BA) (lo hi growth : Int) (bytes : List Int) : Py BA := do
+  let blen : Int := bytes.length
+  if self.size > ssizeMax - growth then throw memoryError
+  let r ← baResize self (self.size + growth)
+  let mem ← baMove r.data (lo + blen) hi (r.size - lo - blen)
+  return baCopyIn { r with data := mem } lo bytes
+
+/-- `bytearray_setslice_linear`, bytearrayobject.c:548-631. Resize failures after a
+partial update cannot occur here: `realloc` to a smaller size succeeds. -/
+def baSetsliceLinear (self : BA) (lo hi : Int) (bytes : List Int) : Py BA :=
+  let growth := (bytes.length : Int) - (hi - lo)
   if growth < 0 then
-    canResize self
-    let self ← if lo = 0 then
-        -- Shrink the buffer by advancing its logical start
-        pure { self with offset := self.offset - growth, data := self.data.drop (-growth).toNat }
-      else do
-        setsliceShrinkMove self lo hi blen
-    let target := if lo = 0 then self.size else (self.size + growth)
-    let self' ← if lo = 0 then baResizeNoSize self target else baResize self target
-    return baCopyIn self' lo bytes
-  else if growth > 0 then
-    if self.size > ssizeMax - growth then throw memoryError
-    let oldSize := self.size
-    let self ← baResize self (oldSize + growth)
-    -- Make the place for the additional bytes
-    let mem ← baMove self.data (lo + blen) hi (self.size - lo - blen)
-    return baCopyIn { self with data := mem } lo bytes
-  else return baCopyIn self lo bytes
-where
-  /-- After `ob_start -= growth` the size field still has the old value, so the
-  resize that follows is not the "same size" no-op. `data` is already the new
-  contents here; this is `baResize` with the old `Py_SIZE` compared to `requested`,
-  which always differ when `growth < 0`. -/
-  baResizeNoSize (b : BA) (requested : Int) : Py BA := do
-    canResize b
-    let size := requested
-    let fits := size + b.offset + 1 ≤ b.alloc
-    if fits ∧ ¬ (size < b.alloc / 2) then return b
-    let alloc :=
-      if fits then size + 1
-      else if 8 * size ≤ 9 * b.alloc then size + size / 8 + (if size < 9 then 3 else 6)
-      else size + 1
-    if alloc > ssizeMax then throw memoryError
-    if mallocFails alloc then throw memoryError
-    return { b with alloc, offset := 0 }
+    match canResize self with
+    | .error e => .error e
+    | .ok () =>
+      if lo = 0 then baShrinkStart self growth bytes
+      else baShrinkMove self lo hi growth bytes
+  else if growth > 0 then baGrow self lo hi growth bytes
+  else .ok (baCopyIn self lo bytes)
 
 /-- A value of `bytearray_setslice`: `none` is NULL; `mutate` is what the value's
 `__buffer__` does to `self` while `PyObject_GetBuffer` runs. -/
@@ -391,9 +402,8 @@ def baInsert (self : BA) (index : Int) (item : Obj) : Py BA := do
   let n := self.size
   if n = ssizeMax then throw (.overflowError "cannot add more objects to bytearray")
   let r ← baResize self (n + 1)
-  let index := if index < 0 then (if index + n < 0 then 0 else index + n) else index
-  let index := if index > n then n else index
-  return { r with data := Sequences.insAt self.data index.toNat (item : Int) }
+  -- the same clamps as `ins1`, listobject.c:488-495
+  return { r with data := Sequences.insAt self.data (Sequences.ins1Pos n index).toNat (item : Int) }
 
 /-- `bytearray.append(item)`, bytearrayobject.c:2078-2095. -/
 def baAppend (self : BA) (item : Obj) : Py BA := do
@@ -405,9 +415,7 @@ def baAppend (self : BA) (item : Obj) : Py BA := do
 
 /-- `bytearray.pop(index)`, bytearrayobject.c:2252-2281. -/
 def baPop (self : BA) (index : Option Int) : Py (Int × BA) := do
-  let index ← match index with
-    | some i => Sequences.asSsize i
-    | none => pure (-1)
+  let index ← Sequences.popArg index
   let n := self.size
   if n = 0 then throw (.indexError "pop from empty bytearray")
   let index := if index < 0 then index + n else index
@@ -617,6 +625,14 @@ def baReduce (s : Seq) (proto : Int) : ReduceArgs :=
   if s.isEmpty then .empty
   else if proto < 3 then .text s
   else .bin s
+
+/-- What a buffer request on `bytes` exports: the contents, read-only
+(`bytes_buffer_getbuffer`, bytesobject.c:1701-1707). -/
+def bytesBufferInfo (s : Seq) : Seq × Bool := (s, true)
+
+/-- What a buffer request on `bytearray` exports, and the object afterwards:
+`bytearray_getbuffer`, bytearrayobject.c:46-73, writable. -/
+def baBufferInfo (b : BA) : (Seq × Bool) × BA := ((b.seq, false), baGetBuffer b)
 
 /-- `sizeof(PyByteArrayObject)` on LP64. -/
 def baBasicSize : Int := 56

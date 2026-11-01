@@ -126,6 +126,9 @@ def runBytes (m : String) (j : Json) : Except String Json := do
   if let some r ← runCommon jB m s j then return r
   match m with
   | "repr" => return encPy jS (bytesRepr s true)
+  | "bufinfo" =>
+    let (data, ro) := bytesBufferInfo s
+    return Json.mkObj [("ok", Json.arr #[toJson data, toJson ro])]
   | "mod" => return encPy jB (bytesMod s (← fieldObj j "arg"))
   | "concat" => return encPy jB (bytesConcat (.bytes s) (← fieldObj j "arg"))
   | "mul" => return encPy jB (bytesMul s (← getInt j "n"))
@@ -293,17 +296,32 @@ def runBA (m : String) (j : Json) : Except String Json := do
     let init ← getSeqK j "s"
     let some b0 := (baNew (some (.bytes init)) none none).toOption | throw "init failed"
     let mut b := b0
+    let mut it : BAIter := {}
     let mut out : Array Json := #[]
     for op in ← (← field j "ops").getArr? do
-      let (r, b') ← stepBA b op
-      b := b'
-      out := out.push (Json.arr #[r, stJ b])
+      match (← getStr op "m") with
+      | "iterstart" =>
+        it := {}
+        out := out.push (Json.arr #[Json.mkObj [("ok", Json.null)], stJ b])
+      | "iternext" =>
+        let (v, it') := baIterNext b it
+        it := it'
+        let r := match v with | some x => toJson x | none => "stop"
+        out := out.push (Json.arr #[Json.mkObj [("ok", Json.arr #[r, toJson (baIterLen b it)])], stJ b])
+      | _ =>
+        let (r, b') ← stepBA b op
+        b := b'
+        out := out.push (Json.arr #[r, stJ b])
     return Json.mkObj [("ok", Json.arr out)]
   let s ← getSeqK j "s"
   let wrap (t : Seq) : Json := jA (seqData t)
   if let some r ← runCommon wrap m s j then return r
   match m with
   | "repr" => return encPy jS (bytearrayRepr "bytearray" s)
+  | "bufinfo" =>
+    let some b0 := (baNew (some (.bytes s)) none none).toOption | throw "init failed"
+    let ((data, ro), _) := baBufferInfo b0
+    return Json.mkObj [("ok", Json.arr #[toJson data, toJson ro])]
   | "mod" => return encPy wrap (bytearrayMod s (← fieldObj j "arg"))
   | "rich" =>
     let r := baRichcompare (.bytearray s) (← fieldObj j "other") (← cmpOf (← getStr j "op"))

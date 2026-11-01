@@ -355,8 +355,10 @@ def gen_bytes(rng):
     elif r < 0.60:
         c["fn"] = ty + ".mod"
         c["s"], c["arg"] = rfmt(rng)
-    elif r < 0.64:
+    elif r < 0.63:
         c["fn"] = ty + ".repr"
+    elif r < 0.64:
+        c["fn"] = ty + ".bufinfo"
     elif r < 0.68:
         c["fn"] = ty + ".new"
         c["x"] = rng.choice([robj(rng, 2), ["list", rbyteobjs(rng)], ["tuple", rbyteobjs(rng)],
@@ -483,6 +485,8 @@ def rbaop(rng):
     def idx():
         return rng.choice([0, 1, -1, 2, -2, 5, -5, 40, -40, 2 ** 63, -2 ** 63 - 1, sys.maxsize, -sys.maxsize - 1])
 
+    if r < 0.05:
+        return {"m": rng.choice(["iterstart", "iternext", "iternext", "iternext"])}
     if r < 0.12:
         return {"m": "append", "x": bo()}
     if r < 0.20:
@@ -619,8 +623,16 @@ def run_ba_ops(c):
     views = []
     out = []
     tmp = [None]
+    it = iter(b)
     for op in c["ops"]:
-        r = common.py_result(lambda: ba_step(b, views, op, tmp))
+        if op["m"] == "iterstart":
+            it = iter(b)
+            r = {"ok": None}
+        elif op["m"] == "iternext":
+            v = next(it, "stop")
+            r = {"ok": [v, it.__length_hint__()]}
+        else:
+            r = common.py_result(lambda: ba_step(b, views, op, tmp))
         out.append([r, [list(b), b.__alloc__()]])
     for v in views:
         v.release()
@@ -732,6 +744,11 @@ def run_bytes(case):
             return benc(s % build(c["arg"]))
         if m == "repr":
             return benc(repr(s))
+        if m == "bufinfo":
+            v = memoryview(s)
+            res = [list(v), v.readonly]
+            v.release()
+            return res
         if m == "new":
             a = [] if c.get("x") is None else [build(c["x"])]
             kw = {}

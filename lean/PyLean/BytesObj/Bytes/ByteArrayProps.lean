@@ -33,39 +33,43 @@ theorem baResize_cases (b r : BA) (n : Int) (h : baResize b n = .ok r) :
        (r.offset = 0 ∧ n + 1 ≤ r.alloc))) := by
   unfold baResize at h
   simp only [bind, Except.bind, pure, Except.pure] at h
-  split at h
-  · simp at h
-  rename_i h0
+  by_cases h0 : n < 0
+  · simp [h0] at h
+  rw [if_neg h0] at h
   have h0' : 0 ≤ n := by omega
   refine ⟨h0', ?_⟩
-  split at h
-  · left
+  by_cases hne : n = b.size
+  · rw [if_pos hne] at h
     simp only [Except.ok.injEq] at h
-    exact ⟨h.symm, by assumption⟩
-  rename_i hne
+    exact Or.inl ⟨h.symm, hne⟩
+  rw [if_neg hne] at h
   right
-  unfold canResize at h
-  split at h
-  · simp at h
-  rename_i hexp
-  simp only at h
+  by_cases hx : b.exports > 0
+  · simp [canResize, hx] at h
   have hE : b.exports = 0 := by omega
-  split at h
-  · rename_i hfit
+  have hc : canResize b = .ok () := by simp [canResize, hE]
+  rw [hc] at h
+  simp only at h
+  by_cases hf : n + b.offset + 1 ≤ b.alloc ∧ ¬ (n < b.alloc / 2)
+  · rw [if_pos hf] at h
     simp only [Except.ok.injEq] at h
     subst h
-    exact ⟨hE, hne, rfl, rfl, Or.inl ⟨hfit.1, rfl, rfl⟩⟩
-  · rename_i hfit
-    split at h
-    · simp at h
-    split at h
-    · simp at h
-    simp only [Except.ok.injEq] at h
-    subst h
-    refine ⟨hE, hne, rfl, rfl, Or.inr ⟨rfl, ?_⟩⟩
-    simp only
+    exact ⟨hE, hne, rfl, rfl, Or.inl ⟨hf.1, rfl, rfl⟩⟩
+  rw [if_neg hf] at h
+  have hA : n + 1 ≤ (if n + b.offset + 1 ≤ b.alloc then n + 1
+      else if 8 * n ≤ 9 * b.alloc then n + n / 8 + (if n < 9 then 3 else 6) else n + 1) := by
+    have : 0 ≤ n / 8 := Int.ediv_nonneg h0' (by decide)
     repeat' split
     all_goals omega
+  generalize (if n + b.offset + 1 ≤ b.alloc then n + 1
+      else if 8 * n ≤ 9 * b.alloc then n + n / 8 + (if n < 9 then 3 else 6) else n + 1) = A at h hA
+  split at h
+  · simp at h
+  split at h
+  · simp at h
+  simp only [Except.ok.injEq] at h
+  subst h
+  exact ⟨hE, hne, rfl, rfl, Or.inr ⟨rfl, hA⟩⟩
 
 theorem resizeWF_proven : ResizeWF := by
   intro b r n hw h
@@ -86,7 +90,8 @@ theorem resizeWF_proven : ResizeWF := by
       simp only [resizedData]
       by_cases hle : n.toNat ≤ b.data.length
       · have e : n.toNat - b.data.length = 0 := by omega
-        simp [e, hle]
+        simp only [e, List.replicate_zero, List.append_nil]
+        exact List.take_of_length_le (by simp; omega)
       · have e : b.data.take n.toNat = b.data := List.take_of_length_le (by omega)
         rw [e]
         simp
