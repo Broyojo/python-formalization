@@ -34,6 +34,16 @@ def objectEntries : List Entry := [
     statement := "When join takes the memcpy path, the separator and every item have the byte width of the result."
     source := "invariant: the memcpy of kind * len bytes at unicodeobject.c:10399-10409"
     status := .proven, prop := ``JoinMemcpySafe, thm := some ``joinMemcpySafe_proven },
+  { id := "unicodeobj-intern-start-world", pyFile := "Objects/unicodeobject.c"
+    pyFns := []
+    statement := "The interning tables at the start of a program satisfy the invariant the interning theorems assume."
+    source := "invariant of the interned tables: it holds at the start"
+    status := .proven, prop := ``StartWorldOK, thm := some ``startWorldOK_proven },
+  { id := "unicodeobj-intern-scripts-keep-invariant", pyFile := "Objects/unicodeobject.c"
+    pyFns := []
+    statement := "From the start of a program, through any script of new objects and interning calls, the tables satisfy that invariant."
+    source := "invariant of the interned tables: it holds at every reachable state"
+    status := .proven, prop := ``ScriptsKeepWOK, thm := some ``scriptsKeepWOK_proven },
   { id := "unicodeobj-intern-canonical", pyFile := "Objects/unicodeobject.c"
     pyFns := ["intern_common"]
     statement := "For every two exact strings of equal text, in any state, the second intern returns the object of the first. Objects are compared by id."

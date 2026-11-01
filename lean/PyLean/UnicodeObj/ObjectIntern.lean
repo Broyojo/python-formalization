@@ -145,18 +145,27 @@ def runKOps : IWorld → List ObjId → List KOp → IWorld × List ObjId × Lis
     let (W2, hs2, rs) := runKOps W1 hs1 t
     (W2, hs2, r :: rs)
 
-/-- A world for the difftest. The ids below 256 are `LATIN1`, 256 is the empty string, and the
-statically allocated strings of `statics` follow. -/
+/-- Where a string is in the list of statically allocated strings. -/
+def staticIndex (t : Str) : List Str → Option Nat
+  | [] => none
+  | x :: r => if x = t then some 0 else (staticIndex t r).map (· + 1)
+
+/-- A statically allocated string. -/
+def staticObj (t : Str) : UObj := { text := t, state := .static, immortal := true }
+
+/-- The heap of `startWorld`: the ids below 256 are `LATIN1`, 256 is the empty string, the
+statically allocated strings follow, and every id after them is unused. -/
+def startObj (statics : List Str) (i : ObjId) : UObj :=
+  if i < 256 then staticObj [i]
+  else if i = 256 then staticObj []
+  else if i - 257 < statics.length then staticObj (statics.getD (i - 257) [])
+  else {}
+
+/-- The runtime when a program starts, for a list of statically allocated strings. -/
 def startWorld (statics : List Str) : IWorld :=
-  let stat (t : Str) : UObj := { text := t, state := .static, immortal := true }
-  { objs := fun i =>
-      if i < 256 then stat [i]
-      else if i = 256 then stat []
-      else stat (statics.getD (i - 257) [])
+  { objs := startObj statics
     dict := fun _ => none
-    cache := fun t =>
-      if t.isEmpty then some 256
-      else (statics.findIdx? (· == t)).map (· + 257)
+    cache := fun t => if t.isEmpty then some 256 else (staticIndex t statics).map (· + 257)
     latin1 := fun c => c
     empty := 256
     next := 257 + statics.length }
