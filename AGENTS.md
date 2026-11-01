@@ -23,7 +23,10 @@ Bug reports stay held to a high bar: fewer, better findings beat many weak ones.
   --prefill` matches these names after merge.
 - A row with no behaviour worth modelling becomes `excluded` in its tsv, with a
   note starting `no-behaviour:`, `deprecated:`, `internal-bootstrap:`,
-  `platform:`, `vendored:`, `test-support:` or `generated:` and a justification.
+  `platform:`, `vendored:`, `test-support:`, `generated:` or `trivial:` and a
+  justification. `trivial:` is only for a body that returns one field with no
+  branch; it says there is nothing to prove, and it does not count as coverage. A
+  getter with a released-object check has a branch, so state the refusal.
   Exclude honestly: reference counting, GC traversal, and allocator plumbing are
   `no-behaviour:` when they have no Python-visible effect; anything with an
   observable result is not.
@@ -33,6 +36,9 @@ Bug reports stay held to a high bar: fewer, better findings beat many weak ones.
 - Every model is later reviewed against `coverage/REVIEW_PROMPT.md`. Hollow
   entries get withdrawn, so mirror the body rather than specifying its result,
   and check every source citation against the file instead of from memory.
+- A theorem can be proven and still false about CPython, if the model is wrong
+  where the difftest does not reach. Review found four. Before relying on a
+  statement, run that exact statement against the real interpreter.
 - Review keeps finding the same failures, so check these before you claim a row:
   - Failure paths are part of the body. Mirror what happens when a callback,
     `__eq__`, `__index__` or iterator raises, not only the success path.
