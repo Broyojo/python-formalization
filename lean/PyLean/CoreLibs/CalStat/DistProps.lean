@@ -175,11 +175,14 @@ def NormalDistEqHash : Prop :=
   ∀ X Y : ND,
     ND.beq X Y = ND.beq Y X ∧
     (ND.beq X Y = true → ND.hash X = ND.hash Y) ∧
-    ND.repr X = "NormalDist(mu=" ++ fltRepr X.mu ++ ", sigma=" ++ fltRepr X.sigma ++ ")"
+    ND.repr X = "NormalDist(mu=" ++ fltRepr X.mu ++ ", sigma=" ++ fltRepr X.sigma ++ ")" ∧
+    ND.repr ⟨.zero false, .fin 1⟩ = "NormalDist(mu=0.0, sigma=1.0)" ∧
+    ND.repr ⟨.fin (mkRat 3602879701896397 36028797018963968), .fin (mkRat 5 2)⟩ =
+      "NormalDist(mu=0.1, sigma=2.5)"
 
 theorem normalDistEqHash_proven : NormalDistEqHash := by
   intro X Y
-  refine ⟨?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, by decide +kernel, by decide +kernel⟩
   · simp only [ND.beq, eq_symm X.mu Y.mu, eq_symm X.sigma Y.sigma]
   · intro h
     simp only [ND.beq, Bool.and_eq_true] at h
