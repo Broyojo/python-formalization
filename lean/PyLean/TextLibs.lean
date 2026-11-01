@@ -1,7 +1,7 @@
 import PyLean.Registry
 import PyLean.TextLibs.Diff
 import PyLean.TextLibs.StructFail
-import PyLean.TextLibs.BinasciiProps5
+import PyLean.TextLibs.BinasciiProps7
 import PyLean.TextLibs.CsvRoundTrip
 import PyLean.TextLibs.ReParseProps
 
@@ -398,6 +398,50 @@ def entries : List Entry := [
     source := "docs: a85encode, a85decode", status := .open
     prop := ``A85WrapRoundTrip
     notes := "Needs a85Loop shown to skip the newlines, and the framing shown to survive chunksOf." },
+  { id := "textlibs-base64-b32-round-trip", pyFile := "Lib/base64.py"
+    pyFns := ["_b32encode", "_b32decode", "b32encode", "b32decode", "b32hexencode", "b32hexdecode"]
+    statement := "b32decode(b32encode(d)) == d and b32hexdecode(b32hexencode(d)) == d, for every length, so through all four padding lengths."
+    source := "docs: b32encode, b32decode", status := .proven
+    prop := ``B32RoundTrip, thm := some ``b32RoundTrip_proven },
+  { id := "textlibs-base64-b32-option-law", pyFile := "Lib/base64.py", pyFns := ["_b32decode", "b32decode"]
+    statement := "casefold and map01 only rewrite the input before decoding, map01 first, whether or not the result then decodes."
+    source := "docs: b32decode", status := .proven
+    prop := ``B32OptionLaw, thm := some ``b32OptionLaw_proven },
+  { id := "textlibs-base64-encodebytes-round-trip", pyFile := "Lib/base64.py", pyFns := ["encodebytes", "decodebytes"]
+    statement := "decodebytes(encodebytes(d)) == d."
+    source := "docs: decodebytes", status := .proven
+    prop := ``DecodebytesRoundTrip, thm := some ``decodebytesRoundTrip_proven },
+  { id := "textlibs-base64-encodebytes-line-length", pyFile := "Lib/base64.py", pyFns := ["encodebytes"]
+    statement := "Past 57 bytes, encodebytes starts with exactly 76 characters and a newline, the encoding of the first 57 bytes."
+    source := "docs: encodebytes (a newline after every 76 bytes of output)", status := .proven
+    prop := ``EncodebytesLineLength, thm := some ``encodebytesLineLength_proven },
+  { id := "textlibs-base64-encode-file-law", pyFile := "Lib/base64.py", pyFns := ["encode"]
+    statement := "encode over a file with short reads and scripted failures writes a prefix of encodebytes(data), all of it unless the failure is one the file raised."
+    source := "docs: encode", status := .proven
+    prop := ``EncodeFileLaw, thm := some ``encodeFileLaw_proven
+    notes := "Hypothesis: read returns nothing only at end of file; textlibs-base64-encode-empty-read has the other case." },
+  { id := "textlibs-base64-encode-file-agrees", pyFile := "Lib/base64.py", pyFns := ["encode"]
+    statement := "With no failing call, encode writes exactly encodebytes(data), however short the reads."
+    source := "twin: encode and encodebytes", status := .proven
+    prop := ``EncodeFileAgrees, thm := some ``encodeFileAgrees_proven },
+  { id := "textlibs-base64-encode-empty-read", pyFile := "Lib/base64.py", pyFns := ["encode"]
+    statement := "A read returning nothing before end of file ends encode with no error and nothing written."
+    source := "Lib/base64.py:541 reads until an empty result", status := .proven
+    prop := ``EncodeEmptyReadStops, thm := some ``encodeEmptyReadStops_proven },
+  { id := "textlibs-base64-decode-file-round-trip", pyFile := "Lib/base64.py", pyFns := ["decode"]
+    statement := "decode over the lines readline finds in encodebytes(d) writes d."
+    source := "docs: decode", status := .proven
+    prop := ``DecodeFileRoundTrip, thm := some ``decodeFileRoundTrip_proven },
+  { id := "textlibs-base64-decode-file-stops", pyFile := "Lib/base64.py", pyFns := ["decode"]
+    statement := "A failing readline or a line that does not decode ends decode at once, with nothing more written."
+    source := "invariant: failures pass through", status := .proven
+    prop := ``DecodeFileStops, thm := some ``decodeFileStops_proven },
+  { id := "textlibs-base64-decode-agrees-decodebytes", pyFile := "Lib/base64.py", pyFns := ["decode"]
+    statement := "decode accepts every input decodebytes accepts."
+    source := "twin: decode and decodebytes", status := .refuted
+    prop := ``DecodeAgreesDecodebytes, thm := some ``decodeAgreesDecodebytes_refuted
+    bug := some "textlibs-base64-decode-per-line"
+    notes := "b'YW\\nJj\\n': a group split across two lines." },
   { id := "textlibs-csv-round-trip", pyFile := "Modules/_csv.c"
     pyFns := ["join_reset", "join_append_data", "join_append", "join_append_lineterminator", "csv_writerow_lock_held",
       "csv_writerow", "parse_add_char", "parse_process_char"]
