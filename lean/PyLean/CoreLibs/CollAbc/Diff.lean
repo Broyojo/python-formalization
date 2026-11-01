@@ -239,6 +239,16 @@ def run (fn : String) (j : Json) : Except String Json := do
     let xs ← getIntList j "xs"
     pure (encPy encIntList ((faultMSeq (← getOptInt j "fail")).remove
       (intEq (← getOptInt j "bad")) xs (← getInt j "v") (xs.length + 2)))
+  | "list_remove" =>
+    let r := listRemove (intEq (← getOptInt j "bad")) (← getInt j "v") (← getIntList j "xs")
+    pure (encPy (fun o => toJson o) r)
+  | "bytestring_new" =>
+    pure (Json.mkObj [("ok", toJson (byteStringMetaWarns (← getStr j "name")))])
+  | "bytestring_check" =>
+    let (w, a) := byteStringInstanceCheck (← getBool j "answer")
+    pure (Json.mkObj [("ok", toJson [w, a])])
+  | "view_repr" =>
+    pure (Json.mkObj [("ok", toJson (viewRepr (← getStr j "cls") (← getStr j "r")))])
   | "set_cmp" =>
     let bad ← getOptInt j "bad"
     let s := faultSet bad (← getIntList j "xs")

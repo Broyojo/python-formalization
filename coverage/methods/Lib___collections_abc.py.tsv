@@ -1,8 +1,8 @@
 file	line	endline	name	signature	status	entry	note
-Lib/_collections_abc.py	40	40	_f	_f()	todo		
-Lib/_collections_abc.py	88	89	_get_framelocalsproxy	_get_framelocalsproxy()	todo		
-Lib/_collections_abc.py	94	94	_coro	_coro()	todo		
-Lib/_collections_abc.py	100	100	_ag	_ag()	todo		
+Lib/_collections_abc.py	40	40	_f	_f()	excluded		internal-bootstrap: throwaway function whose type is captured at import to name a builtin type, then deleted
+Lib/_collections_abc.py	88	89	_get_framelocalsproxy	_get_framelocalsproxy()	excluded		internal-bootstrap: called once at import to capture the frame locals proxy type, then deleted
+Lib/_collections_abc.py	94	94	_coro	_coro()	excluded		internal-bootstrap: throwaway coroutine used at import to capture the coroutine type, then deleted
+Lib/_collections_abc.py	100	100	_ag	_ag()	excluded		internal-bootstrap: throwaway async generator used at import to capture the type, then deleted
 Lib/_collections_abc.py	108	118	_check_methods	_check_methods(C, *methods)	todo		
 Lib/_collections_abc.py	125	126	Hashable.__hash__	__hash__(self)	todo		
 Lib/_collections_abc.py	129	132	Hashable.__subclasshook__	__subclasshook__(cls, C)	todo		

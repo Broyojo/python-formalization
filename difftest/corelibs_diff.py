@@ -342,6 +342,17 @@ def collabc_gen(rng):
         return {"fn": "collabc.mseq_extend", "xs": xs, "fail": fail,
                 "vs": None if rng.random() < .3 else collabc_list(rng, 4)}
     if r == 16:
+        k = rng.randrange(0, 5)
+        if k == 0:
+            return {"fn": "collabc.list_remove", "xs": xs, "v": v, "bad": bad}
+        if k == 1:
+            return {"fn": "collabc.bytestring_new",
+                    "name": rng.choice(["ByteString", "Other", "bytestring"])}
+        if k == 2:
+            return {"fn": "collabc.bytestring_check", "answer": rng.random() < .5}
+        if k == 3:
+            return {"fn": "collabc.view_repr", "cls": rng.choice(["KeysView", "ItemsView", "ValuesView"]),
+                    "r": "{1: 2}"}
         return {"fn": "collabc.mseq_remove", "xs": xs, "v": v, "fail": fail, "bad": bad}
     a, b = collabc_uniq(xs), collabc_list(rng)
     kind = rng.choice(["set", "iter", "other"])
@@ -487,6 +498,33 @@ def collabc_run(case):
             s.remove(collabc_E(case["v"]))
             return [e.v for e in s.xs]
         return py_result(f)
+    if fn == "list_remove":
+        ys = list(xs)
+
+        def f():
+            try:
+                ys.remove(collabc_E(case["v"]))
+            except ValueError as e:
+                if str(e) != "list.remove(x): x not in list":
+                    raise
+                return None
+            return [e.v for e in ys]
+        return py_result(f)
+    if fn == "bytestring_new":
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            type(collabc_A.ByteString)(case["name"], (), {})
+        return {"ok": any(x.category is DeprecationWarning for x in w)}
+    if fn == "bytestring_check":
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            a = isinstance(b"" if case["answer"] else 1, collabc_A.ByteString)
+        return {"ok": [any(x.category is DeprecationWarning for x in w), a]}
+    if fn == "view_repr":
+        cls = getattr(collabc_A, case["cls"])
+        return {"ok": repr(cls({1: 2}))}
     if fn == "set_cmp":
         s = collabc_Set(raw)
         o = collabc_operand(case)

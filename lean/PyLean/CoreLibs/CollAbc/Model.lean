@@ -217,7 +217,7 @@ def coroCloseMsg := "coroutine ignored GeneratorExit"
 def asyncCloseMsg := "asynchronous generator ignored GeneratorExit"
 
 /-- The builtin `generator.close()` after the frame has started and not finished,
-Objects/genobject.c `gen_close`: a value returned while closing is the result. -/
+Objects/genobject.c:387 `gen_close`: a value returned while closing is the result. -/
 def builtinClose {σ V : Type} (G : Gen σ V) (s : σ) : Py (Option V) × σ :=
   match G.throwExit s with
   | (.yielded _, s') => (.error (.named "RuntimeError" genCloseMsg), s')
@@ -804,7 +804,7 @@ def MapV.itemsContain {K V : Type} (m : MapV K V) (E : EqOps V) : ItemArg K V �
     | .error e => if isKeyError e then .ok false else .error e
     | .ok v => E.same v value
 
-/-- `dictitems_contains`, Objects/dictobject.c: a non-tuple or a tuple of the wrong
+/-- `dictitems_contains`, Objects/dictobject.c:6595-6612: a non-tuple or a tuple of the wrong
 length is `False`. `getitem` stands for `PyDict_GetItemRef`. -/
 def dictItemsContain {K V : Type} (m : MapV K V) (E : EqOps V) : ItemArg K V → Py Bool
   | .notIterable | .wrongLen .. | .pair _ _ false => .ok false
