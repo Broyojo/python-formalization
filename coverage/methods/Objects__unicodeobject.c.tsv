@@ -118,10 +118,10 @@ Objects/unicodeobject.c	4328	4335	PyUnicode_GetLength	PyUnicode_GetLength(PyObje
 Objects/unicodeobject.c	4338	4354	PyUnicode_ReadChar	PyUnicode_ReadChar(PyObject *unicode, Py_ssize_t index)	todo		
 Objects/unicodeobject.c	4357	4376	PyUnicode_WriteChar	PyUnicode_WriteChar(PyObject *unicode, Py_ssize_t index, Py_UCS4 ch)	todo		
 Objects/unicodeobject.c	4379	4382	PyUnicode_GetDefaultEncoding	PyUnicode_GetDefaultEncoding(void)	todo		
-Objects/unicodeobject.c	4386	4408	make_decode_exception	make_decode_exception(PyObject **exceptionObject, const char *encoding, const char *input, Py_ssize_t length, Py_ssize_t startpos, Py_ssize_t endpos, const char *reason)	todo		
+Objects/unicodeobject.c	4386	4408	make_decode_exception	make_decode_exception(PyObject **exceptionObject, const char *encoding, const char *input, Py_ssize_t length, Py_ssize_t startpos, Py_ssize_t endpos, const char *reason)	modelled	unicodeobj-codec-callback-decode-position	
 Objects/unicodeobject.c	4412	4424	widechar_resize	widechar_resize(wchar_t **buf, Py_ssize_t *size, Py_ssize_t newsize)	excluded		platform: inside #ifdef MS_WINDOWS, not compiled on Linux or macOS
 Objects/unicodeobject.c	4434	4534	unicode_decode_call_errorhandler_wchar	unicode_decode_call_errorhandler_wchar( const char *errors, PyObject **errorHandler, const char *encoding, const char *reason, const char **input, const char **inend, Py_ssize_t *startinpos, Py_ssize_t *endinpos, PyObject **exceptionObject, const char **inptr, wchar_t **buf, Py_ssize_t *bufsize, Py_ssize_t *outpos)	excluded		platform: inside #ifdef MS_WINDOWS, not compiled on Linux or macOS
-Objects/unicodeobject.c	4538	4635	unicode_decode_call_errorhandler_writer	unicode_decode_call_errorhandler_writer( const char *errors, PyObject **errorHandler, const char *encoding, const char *reason, const char **input, const char **inend, Py_ssize_t *startinpos, Py_ssize_t *endinpos, PyObject **exceptionObject, const char **inptr, _PyUnicodeWriter *writer /* PyObject **output, Py_ssize_t *outpos */)	todo		
+Objects/unicodeobject.c	4538	4635	unicode_decode_call_errorhandler_writer	unicode_decode_call_errorhandler_writer( const char *errors, PyObject **errorHandler, const char *encoding, const char *reason, const char **input, const char **inend, Py_ssize_t *startinpos, Py_ssize_t *endinpos, PyObject **exceptionObject, const char **inptr, _PyUnicodeWriter *writer /* PyObject **output, Py_ssize_t *outpos */)	modelled	unicodeobj-codec-callback-decode-position,unicodeobj-codec-wide-std-callback,unicodeobj-codec-ascii-constant-handler	
 Objects/unicodeobject.c	4719	4724	PyUnicode_DecodeUTF7	PyUnicode_DecodeUTF7(const char *s, Py_ssize_t size, const char *errors)	todo		
 Objects/unicodeobject.c	4734	4928	PyUnicode_DecodeUTF7Stateful	PyUnicode_DecodeUTF7Stateful(const char *s, Py_ssize_t size, const char *errors, Py_ssize_t *consumed)	todo		
 Objects/unicodeobject.c	4932	5029	_PyUnicode_EncodeUTF7	_PyUnicode_EncodeUTF7(PyObject *str, int base64SetO, int base64WhiteSpace, const char *errors)	todo		
@@ -146,11 +146,11 @@ Objects/unicodeobject.c	5901	5951	unicode_fill_utf8	unicode_fill_utf8(PyObject *
 Objects/unicodeobject.c	5954	5957	_PyUnicode_AsUTF8String	_PyUnicode_AsUTF8String(PyObject *unicode, const char *errors)	todo		
 Objects/unicodeobject.c	5961	5964	PyUnicode_AsUTF8String	PyUnicode_AsUTF8String(PyObject *unicode)	todo		
 Objects/unicodeobject.c	5969	5975	PyUnicode_DecodeUTF32	PyUnicode_DecodeUTF32(const char *s, Py_ssize_t size, const char *errors, int *byteorder)	todo		
-Objects/unicodeobject.c	5978	6120	PyUnicode_DecodeUTF32Stateful	PyUnicode_DecodeUTF32Stateful(const char *s, Py_ssize_t size, const char *errors, int *byteorder, Py_ssize_t *consumed)	todo		
+Objects/unicodeobject.c	5978	6120	PyUnicode_DecodeUTF32Stateful	PyUnicode_DecodeUTF32Stateful(const char *s, Py_ssize_t size, const char *errors, int *byteorder, Py_ssize_t *consumed)	modelled	unicodeobj-codec-wide-std-callback,unicodeobj-codec-utf32-round-trip	
 Objects/unicodeobject.c	6123	6265	_PyUnicode_EncodeUTF32	_PyUnicode_EncodeUTF32(PyObject *str, const char *errors, int byteorder)	todo		
 Objects/unicodeobject.c	6268	6271	PyUnicode_AsUTF32String	PyUnicode_AsUTF32String(PyObject *unicode)	todo		
 Objects/unicodeobject.c	6276	6282	PyUnicode_DecodeUTF16	PyUnicode_DecodeUTF16(const char *s, Py_ssize_t size, const char *errors, int *byteorder)	todo		
-Objects/unicodeobject.c	6285	6437	PyUnicode_DecodeUTF16Stateful	PyUnicode_DecodeUTF16Stateful(const char *s, Py_ssize_t size, const char *errors, int *byteorder, Py_ssize_t *consumed)	todo		
+Objects/unicodeobject.c	6285	6437	PyUnicode_DecodeUTF16Stateful	PyUnicode_DecodeUTF16Stateful(const char *s, Py_ssize_t size, const char *errors, int *byteorder, Py_ssize_t *consumed)	modelled	unicodeobj-codec-wide-std-callback,unicodeobj-codec-utf16-round-trip	
 Objects/unicodeobject.c	6440	6601	_PyUnicode_EncodeUTF16	_PyUnicode_EncodeUTF16(PyObject *str, const char *errors, int byteorder)	todo		
 Objects/unicodeobject.c	6604	6607	PyUnicode_AsUTF16String	PyUnicode_AsUTF16String(PyObject *unicode)	todo		
 Objects/unicodeobject.c	6610	6624	_PyUnicode_GetNameCAPI	_PyUnicode_GetNameCAPI(void)	todo		
@@ -162,10 +162,10 @@ Objects/unicodeobject.c	7045	7178	_PyUnicode_DecodeRawUnicodeEscapeStateful	_PyU
 Objects/unicodeobject.c	7181	7186	PyUnicode_DecodeRawUnicodeEscape	PyUnicode_DecodeRawUnicodeEscape(const char *s, Py_ssize_t size, const char *errors)	todo		
 Objects/unicodeobject.c	7190	7263	PyUnicode_AsRawUnicodeEscapeString	PyUnicode_AsRawUnicodeEscapeString(PyObject *unicode)	todo		
 Objects/unicodeobject.c	7268	7274	PyUnicode_DecodeLatin1	PyUnicode_DecodeLatin1(const char *s, Py_ssize_t size, const char *errors)	todo		
-Objects/unicodeobject.c	7278	7300	make_encode_exception	make_encode_exception(PyObject **exceptionObject, const char *encoding, PyObject *unicode, Py_ssize_t startpos, Py_ssize_t endpos, const char *reason)	todo		
-Objects/unicodeobject.c	7304	7314	raise_encode_exception	raise_encode_exception(PyObject **exceptionObject, const char *encoding, PyObject *unicode, Py_ssize_t startpos, Py_ssize_t endpos, const char *reason)	todo		
-Objects/unicodeobject.c	7321	7374	unicode_encode_call_errorhandler	unicode_encode_call_errorhandler(const char *errors, PyObject **errorHandler, const char *encoding, const char *reason, PyObject *unicode, PyObject **exceptionObject, Py_ssize_t startpos, Py_ssize_t endpos, Py_ssize_t *newpos)	todo		
-Objects/unicodeobject.c	7377	7551	unicode_encode_ucs1	unicode_encode_ucs1(PyObject *unicode, const char *errors, const Py_UCS4 limit)	todo		
+Objects/unicodeobject.c	7278	7300	make_encode_exception	make_encode_exception(PyObject **exceptionObject, const char *encoding, PyObject *unicode, Py_ssize_t startpos, Py_ssize_t endpos, const char *reason)	modelled	unicodeobj-codec-callback-encode-position	
+Objects/unicodeobject.c	7304	7314	raise_encode_exception	raise_encode_exception(PyObject **exceptionObject, const char *encoding, PyObject *unicode, Py_ssize_t startpos, Py_ssize_t endpos, const char *reason)	modelled	unicodeobj-codec-ucs1-strict-error	
+Objects/unicodeobject.c	7321	7374	unicode_encode_call_errorhandler	unicode_encode_call_errorhandler(const char *errors, PyObject **errorHandler, const char *encoding, const char *reason, PyObject *unicode, PyObject **exceptionObject, Py_ssize_t startpos, Py_ssize_t endpos, Py_ssize_t *newpos)	modelled	unicodeobj-codec-callback-encode-position,unicodeobj-codec-ucs1-inline-callback	
+Objects/unicodeobject.c	7377	7551	unicode_encode_ucs1	unicode_encode_ucs1(PyObject *unicode, const char *errors, const Py_UCS4 limit)	modelled	unicodeobj-codec-ucs1-inline-callback,unicodeobj-codec-ucs1-strict-error,unicodeobj-codec-surrogateescape-error-span	
 Objects/unicodeobject.c	7554	7568	_PyUnicode_AsLatin1String	_PyUnicode_AsLatin1String(PyObject *unicode, const char *errors)	todo		
 Objects/unicodeobject.c	7571	7574	PyUnicode_AsLatin1String	PyUnicode_AsLatin1String(PyObject *unicode)	todo		
 Objects/unicodeobject.c	7579	7675	PyUnicode_DecodeASCII	PyUnicode_DecodeASCII(const char *s, Py_ssize_t size, const char *errors)	todo		

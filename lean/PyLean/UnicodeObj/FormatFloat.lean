@@ -1543,7 +1543,9 @@ def complexPad (content : Str) (f : FormatSpec) : Str :=
 /-- With a presentation type, a complex is its two parts formatted as floats, the imaginary part
 with a forced sign, then `j`, then the padding. `0` fill and `=` are the two options the
 function refuses, and `%` is refused by the dispatcher. `format(z, '.3f')` is
-`format(z.real, '.3f') + format(z.imag, '+.3f') + 'j'`, separators included. -/
+`format(z.real, '.3f') + format(z.imag, '+.3f') + 'j'`, separators included. It is stated for
+parts that format successfully, because the only failure either side can have under these
+hypotheses is the model's own fuel, which is no Python outcome. -/
 def ComplexPartsCompose : Prop :=
   ∀ (re im : F64) (f : FormatSpec) (a b : Str), f.type ≠ 0 → f.type ≠ 37 → f.fillChar ≠ 48 →
     f.align ≠ 61 →
