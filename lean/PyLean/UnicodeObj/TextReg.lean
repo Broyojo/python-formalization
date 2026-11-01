@@ -1,5 +1,6 @@
 import PyLean.Registry
 import PyLean.UnicodeObj.TextProps2
+import PyLean.UnicodeObj.TextCtypeAnchors
 import PyLean.UnicodeObj.TextTranslateX
 
 /-! Registry entries of the text slice. -/
@@ -9,6 +10,11 @@ namespace PyLean.UnicodeObj
 open PyLean.Registry
 
 def textEntries : List Entry := [
+  { id := "unicodeobj-text-ctype-ascii", pyFile := "Objects/unicodectype.c"
+    pyFns := []
+    statement := "On all of ASCII, the predicates and case maps of unicodectype.c are the ASCII rules."
+    source := "implementation against an independent definition: the ranges of the ASCII table"
+    status := .proven, prop := ``CtypeAscii, thm := some ``ctypeAscii_proven },
   { id := "unicodeobj-text-case-ascii-fast-path", pyFile := "Objects/unicodeobject.c"
     pyFns := ["ascii_upper_or_lower", "do_upper", "do_lower", "do_upper_or_lower", "do_casefold"]
     statement := "For every ASCII string, ascii_upper_or_lower gives what the general do_upper, do_lower and do_casefold give."
@@ -47,7 +53,7 @@ def textEntries : List Entry := [
     source := "PEP 3131, comment at unicodeobject.c:12442-12449"
     status := .proven, prop := ``IsIdentifierSpec, thm := some ``isIdentifierSpec_proven },
   { id := "unicodeobj-text-repr-two-passes", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["unicode_repr"]
+    pyFns := []
     statement := "For every string, the size computed by unicode_repr's first pass is the length its second pass writes, and no written character exceeds maxch."
     source := "invariant: no buffer overflow or truncation (first pass sizes the allocation)"
     status := .proven, prop := ``ReprTwoPasses, thm := some ``reprTwoPasses_proven
@@ -90,7 +96,7 @@ def textEntries : List Entry := [
     source := "str.translate docs; invariant: exact errors"
     status := .proven, prop := ``TranslateBadItem, thm := some ``translateBadItem_proven },
   { id := "unicodeobj-text-translate-callback-position", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["unicode_translate_call_errorhandler", "make_translate_exception"]
+    pyFns := []
     statement := "A translate handler's position lands inside the string, and a negative one counts from the end."
     source := "invariant: no out-of-bounds read"
     status := .proven, prop := ``TranslateCallbackPosition, thm := some ``translateCallbackPosition_proven },
@@ -111,12 +117,12 @@ def textEntries : List Entry := [
     status := .proven, prop := ``BytesStrTwin, thm := some ``bytesStrTwin_proven
     notes := "Precondition: at most PY_SSIZE_T_MAX//12 characters, the limit of case_operation." },
   { id := "unicodeobj-text-transform-decimal", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["_PyUnicode_TransformDecimalAndSpaceToASCII"]
+    pyFns := []
     statement := "The result is ASCII for every string, and a string of ASCII below 0x7F, whitespace and decimal digits keeps its length."
     source := "invariant: callers (int, float, complex) parse the result as ASCII"
     status := .proven, prop := ``TransformDecimal, thm := some ``transformDecimal_proven },
   { id := "unicodeobj-text-bloom-superset", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["make_bloom_mask"]
+    pyFns := []
     statement := "Every character of a string passes BLOOM on make_bloom_mask of that string."
     source := "invariant: no false negatives"
     status := .proven, prop := ``BloomSuperset, thm := some ``bloomSuperset_proven },
