@@ -1999,6 +1999,8 @@ def functools_gen(rng):
         return functools_register_case(rng)
     k = rng.randrange(0, 19)
     if k == 13:
+        if rng.random() < .5:
+            return {"fn": "functools.lru_evict", "twin": twin_pick(rng), "arm": rng.random() < .7}
         return {"fn": "functools.key_hash", "twin": twin_pick(rng)}
     if k == 14:
         return {"fn": "functools.key_isinstance", "twin": twin_pick(rng)}
@@ -2237,6 +2239,36 @@ def functools_run(case):
         it = functools_iter(case)
         args = (f, it) if case["initial"] is None else (f, it, case["initial"])
         return py_result(lambda: m.reduce(*args))
+    if fn == "lru_evict":
+        armed = [False]
+
+        class Kk:
+            def __init__(self, n, h):
+                self.n, self.h = n, h
+
+            def __hash__(self):
+                return self.h
+
+            def __eq__(self, o):
+                if armed[0]:
+                    raise ValueError("eq")
+                return self is o
+        a, b, d = Kk(1, 0), Kk(2, 0), Kk(3, 1)
+
+        def user(k):
+            if k is d and case["arm"]:
+                armed[0] = True
+            return k.n * 10
+        f = m.lru_cache(maxsize=2)(user)
+        out = []
+        for key in (a, b, a, d, b):
+            try:
+                out.append(f(key))
+            except ValueError:
+                out.append("ValueError")
+            armed[0] = False
+        i = f.cache_info()
+        return {"ok": [out, [i.hits, i.misses, i.currsize]]}
     if fn == "key_hash":
         K = m.cmp_to_key(lambda a, b: 0)
         return py_result(lambda: hash(K(1))) if False else functools_hashres(lambda: hash(K(1)))

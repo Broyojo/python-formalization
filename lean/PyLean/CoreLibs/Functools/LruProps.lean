@@ -297,14 +297,14 @@ theorem sim (cfg : Cfg K V) (hm : 0 < cfg.maxsize) (hi : ∀ k ks, cfg.F.insert 
           simp only [hnin, ite_false]
           have hrel : Rel cfg.maxsize { c with misses := c.misses + 1 }
               { ring := p.ring, cache := c.cache, hits := p.hits, misses := c.misses + 1,
-                full := p.full, broken := false } :=
+                full := p.full, broken := false, stale := p.stale } :=
             ⟨h.ring, rfl, h.hits, rfl, h.full, rfl, h.bound, h.nodup, h.perm⟩
           obtain ⟨h1, h2⟩ := ihr (cfg.f key (c.misses + 1)) _ _ hrel
           simp only [h.misses]
           revert h1 h2
           generalize runPy cfg fuel (cfg.f key (c.misses + 1))
             { ring := p.ring, cache := c.cache, hits := p.hits, misses := c.misses + 1,
-              full := p.full, broken := false } = rp
+              full := p.full, broken := false, stale := p.stale } = rp
           generalize runC cfg fuel (cfg.f key (c.misses + 1)) { c with misses := c.misses + 1 } = rc
           obtain ⟨r1, s⟩ := rp
           obtain ⟨r2, t⟩ := rc
@@ -681,7 +681,33 @@ key 1: a key whose `__eq__` raises against a colliding key. -/
 def staleCfg : Cfg Nat Nat :=
   ⟨2, fun k _ => .ret k,
     { noFaults Nat with
-      insert := fun k ks => if k = 2 ∧ ks = [1] then some (.valueError "eq") else none }⟩
+      insert := fun k ks => if k = 2 ∧ ks = [1] then some (.valueError "eq") else none }, 0⟩
+
+/-- `maxsize=2`, a user function that gives `k + 1`, and a `del` of key 2 that raises: a key colliding with key 1, whose
+`__eq__` raises while the entry is looked for. `None` is `0`, which the function never gives. -/
+def delCfg : Cfg Nat Nat :=
+  ⟨2, fun k _ => .ret (k + 1), { noFaults Nat with evict := fun k _ => if k = 2 then some (.valueError "eq") else none }, 0⟩
+
+/-- All the Python wrapper returns is something the user function returned. False: after `del cache[oldkey]` raises at
+Lib/functools.py:683, the dict still has `oldkey`, and its link is the new root, whose result is `None`, so the next call with
+that key is a hit that returns `None`. C puts the link back, and keeps the value. -/
+def LruResultsFromFunction : Prop :=
+  ∀ (keys : List Nat) (v : Nat), Except.ok v ∈ (drivePy delCfg 8 keys emptyPy).1 → ∃ k, v = k + 1
+
+theorem lruResultsFromFunction_refuted : ¬LruResultsFromFunction := by
+  intro h
+  obtain ⟨k, hk⟩ := h [1, 2, 1, 3, 2] 0 (by decide +kernel)
+  omega
+
+/-- The same sequence in C keeps to the results of the function: the failed `del` is on record as an exception, and the value
+of the key is still there. -/
+def LruDeleteFailureC : Prop :=
+  (driveC delCfg 8 [1, 2, 1, 3, 2] emptyC).1 =
+    [.ok 2, .ok 3, .ok 2, .error (.valueError "eq"), .ok 3]
+
+theorem lruDeleteFailureC_proven : LruDeleteFailureC := by
+  unfold LruDeleteFailureC
+  decide +kernel
 
 /-- A failed store must not break later calls with unrelated keys. The sequence is 1, then 2 (the store
 raises), then 2 again, 3, 4. C recovers. Python's ring keeps a link for the failed key, the wrapper fills

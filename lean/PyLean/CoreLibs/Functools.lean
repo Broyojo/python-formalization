@@ -21,7 +21,7 @@ def recencyOf (ks : List Nat) : List Nat :=
 `maxsize` most recently used keys, oldest first. The "least recently used" of the name. -/
 def LruRecency : Prop :=
   ∀ (g : Nat → Nat) (m fuel : Nat) (ks : List Nat), 0 < m →
-    let cfg : Cfg Nat Nat := ⟨m, fun k _ => .ret (g k), noFaults Nat⟩
+    let cfg : Cfg Nat Nat := ⟨m, fun k _ => .ret (g k), noFaults Nat, 0⟩
     (driveC cfg (fuel + 2) ks emptyC).2.links.map Prod.fst =
       (recencyOf ks).drop ((recencyOf ks).length - m)
 
@@ -36,6 +36,23 @@ def C3MroMatchesBuiltin : Prop :=
   ∀ (W : World) (fuel : Nat) (cls : Cls), BuiltinC3 W → c3Mro W (fuel + 1) cls [] = .ok (W.mro cls)
 
 def entries : List Entry := [
+  { id := "corelibs-functools-lru-results"
+    pyFile := file
+    pyFns := ["_lru_cache_wrapper"]
+    statement := "All the Python wrapper returns is something the user function returned."
+    source := "docs of lru_cache"
+    status := .refuted
+    prop := ``LruResultsFromFunction
+    thm := some ``lruResultsFromFunction_refuted
+    bug := some "corelibs-lru-failed-delete-none" },
+  { id := "corelibs-functools-lru-delete-c"
+    pyFile := "Modules/_functoolsmodule.c"
+    pyFns := []
+    statement := "On the sequence with a failed del, C raises once and keeps the value of the key."
+    source := "Modules/_functoolsmodule.c:1435-1445"
+    status := .proven
+    prop := ``LruDeleteFailureC
+    thm := some ``lruDeleteFailureC_proven },
   { id := "corelibs-functools-partial-duck"
     pyFile := file
     pyFns := ["_partial_new"]

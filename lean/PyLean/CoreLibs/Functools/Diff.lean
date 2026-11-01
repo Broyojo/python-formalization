@@ -342,6 +342,25 @@ def run (fn : String) (j : Json) : Except String Json := do
     let w0 : Wrapper String := { dict := [], descr := wrapperAssignments }
     pure (encPy (fun (r : Wrapper String) => toJson [toJson (r.get "__name__"), toJson (r.dict.lookup "__name__")])
       (updateWrapper w0 wrapped "self" wrapperAssignments wrapperUpdates))
+  | "lru_evict" =>
+    let arm ← getBool j "arm"
+    let F : Faults Nat := { noFaults Nat with
+      evict := fun k _ => if arm && k == 2 then some (.valueError "eq") else none }
+    let cfg : Cfg Nat Int := ⟨2, fun k _ => .ret ((k : Int) * 10), F, -1⟩
+    let ops : List Nat := [1, 2, 1, 3, 2]
+    let rJ : Py Int → Json := fun r => match r with
+      | .ok v => if v == -1 then Json.null else toJson v
+      | .error e => toJson e.className
+    if c then
+      let (rs, s) := ops.foldl (fun (acc : List (Py Int) × CLru Nat Int) k =>
+        let (r, s') := callC cfg 9 k acc.2
+        (acc.1 ++ [r], s')) ([], emptyC)
+      pure (okJ (toJson [toJson (rs.map rJ), toJson [s.hits, s.misses, s.cache.length]]))
+    else
+      let (rs, s) := ops.foldl (fun (acc : List (Py Int) × PyLru Nat Int) k =>
+        let (r, s') := callPy cfg 9 k acc.2
+        (acc.1 ++ [r], s')) ([], emptyPy)
+      pure (okJ (toJson [toJson (rs.map rJ), toJson [s.hits, s.misses, s.cache.length]]))
   | "key_hash" => pure (unitJ' keyHash)
   | "key_isinstance" => pure (encPy (fun (b : Bool) => toJson b) (keyIsinstance (!c)))
   | "partial_duck" =>
@@ -603,7 +622,7 @@ def run (fn : String) (j : Json) : Except String Json := do
           toJson (0 : Nat)]]))
       else
         let F := faultsOf (some m) (← keys "hash") (← keys "getk") (← keys "recheckk") (← keys "insertk")
-        let cfg : Cfg Nat Int := ⟨m, f, F⟩
+        let cfg : Cfg Nat Int := ⟨m, f, F, -1⟩
         if c then
           let (rs, s) := driveOps emptyC (callC cfg lruFuel) emptyC ops
           pure (okJ (toJson [resJ rs, infoJ (infoC m s)]))
