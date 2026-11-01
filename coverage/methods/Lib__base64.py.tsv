@@ -1,7 +1,7 @@
 file	line	endline	name	signature	status	entry	note
-Lib/base64.py	31	43	_bytes_from_decode_data	_bytes_from_decode_data(s)	todo		
-Lib/base64.py	48	59	b64encode	b64encode(s, altchars=None)	todo		
-Lib/base64.py	62	85	b64decode	b64decode(s, altchars=None, validate=False)	todo		
+Lib/base64.py	31	43	_bytes_from_decode_data	_bytes_from_decode_data(s)	modelled	textlibs-base64-round-trip	
+Lib/base64.py	48	59	b64encode	b64encode(s, altchars=None)	modelled	textlibs-base64-round-trip	
+Lib/base64.py	62	85	b64decode	b64decode(s, altchars=None, validate=False)	modelled	textlibs-base64-round-trip	
 Lib/base64.py	88	93	standard_b64encode	standard_b64encode(s)	todo		
 Lib/base64.py	95	103	standard_b64decode	standard_b64decode(s)	todo		
 Lib/base64.py	109	116	urlsafe_b64encode	urlsafe_b64encode(s)	todo		
