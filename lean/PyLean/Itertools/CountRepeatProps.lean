@@ -16,9 +16,9 @@ open PyLean
 /-- What `count(start, step)` should answer: after `k` calls of `next()` the
 current value is `V = start + k*step`; `repr` shows `V`, and `step` unless it
 is the int 1. -/
-def countSpec (step : Int) : Int → List Op → List OpRes
+def countSpec (step : Int) : Int → List Op → List (OpRes Int)
   | _, [] => []
-  | v, .next :: ops => .int v :: countSpec step (v + step) ops
+  | v, .next :: ops => .val v :: countSpec step (v + step) ops
   | v, .repr :: ops =>
     .str (if step = 1 then s!"count({v})" else s!"count({v}, {step})") :: countSpec step v ops
   | v, .hint :: ops => .exc (.typeError "~no __length_hint__") :: countSpec step v ops
@@ -98,7 +98,7 @@ theorem countFastSlowConsistent_proven : CountFastSlowConsistent := by
   exact countOps_spec _ ops _ _ (countNew_inv start step)
 
 theorem countSpec_values (step : Int) : ∀ (k : Nat) (v : Int),
-    countSpec step v (List.replicate k .next) = ((List.range k).map (fun (i : Nat) => v + i * step)).map .int
+    countSpec step v (List.replicate k .next) = ((List.range k).map (fun (i : Nat) => v + i * step)).map .val
   | 0, _ => rfl
   | k + 1, v => by
     simp only [List.replicate_succ, countSpec, countSpec_values step k (v + step), List.range_succ_eq_map,
@@ -110,7 +110,7 @@ theorem countSpec_values (step : Int) : ∀ (k : Nat) (v : Int),
 /-- `count`'s values are the doc generator's `start, start+step, ...`. -/
 def CountDocAgree : Prop :=
   ∀ (start step : Option Int) (k : Nat),
-    cCount start step (List.replicate k .next) = (docCountValues start step k).map .int
+    cCount start step (List.replicate k .next) = (docCountValues start step k).map .val
 
 theorem countDocAgree_proven : CountDocAgree := by
   intro start step k
@@ -119,61 +119,65 @@ theorem countDocAgree_proven : CountDocAgree := by
 
 /-! ## repeat -/
 
+variable {α : Type}
+
 /-- What `repeat(elem[, times])` should answer, with `rem` the number of items
 left (`none`: endless). -/
-def repeatSpec (elem : Int) : Option Nat → List Op → List OpRes
+def repeatSpec (rp : α → String) (elem : α) : Option Nat → List Op → List (OpRes α ⊕ OpRes Int)
   | _, [] => []
-  | none, .next :: ops => .int elem :: repeatSpec elem none ops
-  | some 0, .next :: ops => .stop :: repeatSpec elem (some 0) ops
-  | some (k + 1), .next :: ops => .int elem :: repeatSpec elem (some k) ops
-  | none, .repr :: ops => .str s!"repeat({elem})" :: repeatSpec elem none ops
-  | some k, .repr :: ops => .str s!"repeat({elem}, {k})" :: repeatSpec elem (some k) ops
-  | none, .hint :: ops => .exc (.typeError "len() of unsized object") :: repeatSpec elem none ops
-  | some k, .hint :: ops => .int k :: repeatSpec elem (some k) ops
+  | none, .next :: ops => .inl (.val elem) :: repeatSpec rp elem none ops
+  | some 0, .next :: ops => .inl .stop :: repeatSpec rp elem (some 0) ops
+  | some (k + 1), .next :: ops => .inl (.val elem) :: repeatSpec rp elem (some k) ops
+  | none, .repr :: ops => .inr (.str s!"repeat({rp elem})") :: repeatSpec rp elem none ops
+  | some k, .repr :: ops => .inr (.str s!"repeat({rp elem}, {k})") :: repeatSpec rp elem (some k) ops
+  | none, .hint :: ops =>
+    .inr (.exc (.typeError "len() of unsized object")) :: repeatSpec rp elem none ops
+  | some k, .hint :: ops => .inr (.val k) :: repeatSpec rp elem (some k) ops
 
-theorem repeatOps_none (elem : Int) : ∀ ops : List Op,
-    cRepeatOps { elem := elem, cnt := -1 } ops = repeatSpec elem none ops
+theorem repeatOps_none (rp : α → String) (elem : α) : ∀ ops : List Op,
+    cRepeatOps rp { elem := elem, cnt := -1 } ops = repeatSpec rp elem none ops
   | [] => rfl
-  | .next :: ops => by simp [cRepeatOps, cRepeatNext, repeatSpec, repeatOps_none elem ops]
-  | .repr :: ops => by simp [cRepeatOps, cRepeatRepr, repeatSpec, repeatOps_none elem ops]
-  | .hint :: ops => by simp [cRepeatOps, cRepeatHint, repeatSpec, repeatOps_none elem ops]
+  | .next :: ops => by simp [cRepeatOps, cRepeatNext, repeatSpec, repeatOps_none rp elem ops]
+  | .repr :: ops => by simp [cRepeatOps, cRepeatRepr, repeatSpec, repeatOps_none rp elem ops]
+  | .hint :: ops => by simp [cRepeatOps, cRepeatHint, repeatSpec, repeatOps_none rp elem ops]
 
-theorem repeatOps_some (elem : Int) : ∀ (ops : List Op) (k : Nat),
-    cRepeatOps { elem := elem, cnt := k } ops = repeatSpec elem (some k) ops
+theorem repeatOps_some (rp : α → String) (elem : α) : ∀ (ops : List Op) (k : Nat),
+    cRepeatOps rp { elem := elem, cnt := k } ops = repeatSpec rp elem (some k) ops
   | [], _ => rfl
   | .next :: ops, 0 => by
-    have := repeatOps_some elem ops 0
+    have := repeatOps_some rp elem ops 0
     simp only [cRepeatOps, cRepeatNext, repeatSpec]
     simpa using this
   | .next :: ops, k + 1 => by
-    have := repeatOps_some elem ops k
+    have := repeatOps_some rp elem ops k
     simp only [cRepeatOps, cRepeatNext, repeatSpec]
     simp only [show ((k + 1 : Nat) : Int) ≠ 0 by omega, ↓reduceIte, show ((k + 1 : Nat) : Int) > 0 by omega,
       show ((k + 1 : Nat) : Int) - 1 = (k : Int) by omega, this]
   | .repr :: ops, k => by
     have h : ((k : Nat) : Int) ≠ -1 := by omega
-    simp [cRepeatOps, cRepeatRepr, repeatSpec, repeatOps_some elem ops k, h]
+    simp [cRepeatOps, cRepeatRepr, repeatSpec, repeatOps_some rp elem ops k, h]
     rfl
   | .hint :: ops, k => by
     have h : ((k : Nat) : Int) ≠ -1 := by omega
-    simp [cRepeatOps, cRepeatHint, repeatSpec, repeatOps_some elem ops k, h]
+    simp [cRepeatOps, cRepeatHint, repeatSpec, repeatOps_some rp elem ops k, h]
 
 /-- For `times` omitted or a `Py_ssize_t` (negative meaning 0), every
 sequence of `next()`, `repr()` and `__length_hint__()` calls answers as the
-spec: `__length_hint__` is exactly the number of items left. -/
+spec: `__length_hint__` is exactly the number of items left. Over any element
+type, for any `repr` of it. -/
 def RepeatConsistent : Prop :=
-  ∀ (elem : Int) (times : Option Int) (ops : List Op), (∀ t, times = some t → InSsize t) →
-    cRepeat elem times ops = repeatSpec elem (times.map Int.toNat) ops
+  ∀ (α : Type) (rp : α → String) (elem : α) (times : Option Int) (ops : List Op),
+    (∀ t, times = some t → InSsize t) →
+    cRepeat rp elem times ops = repeatSpec rp elem (times.map Int.toNat) ops
 
 theorem repeatConsistent_proven : RepeatConsistent := by
-  intro elem times ops h
+  intro α rp elem times ops h
   cases times with
-  | none => exact repeatOps_none elem ops
+  | none => exact repeatOps_none rp elem ops
   | some t =>
     have ht := h t rfl
     simp only [InSsize] at ht
-    simp only [cRepeat, cRepeatNew, asSsize, ht, and_self, ↓reduceIte, bind, Except.bind, pure,
-      Except.pure, Option.map]
+    simp only [cRepeat, cRepeatNew, asSsize, ht, and_self, ↓reduceIte, Option.map]
     by_cases h0 : t < 0
     · simp only [h0, ↓reduceIte]
       rw [show (0 : Int) = ((0 : Nat) : Int) from rfl, repeatOps_some, Int.toNat_of_nonpos (by omega)]
@@ -182,49 +186,50 @@ theorem repeatConsistent_proven : RepeatConsistent := by
       rw [repeatOps_some]
       simp
 
-/-- The ints produced by a sequence of `next()` calls. -/
-def opInts (rs : List OpRes) : List Int :=
-  rs.filterMap (fun r => match r with | .int v => some v | _ => none)
+/-- The items produced by a sequence of `next()` calls. -/
+def opItems (rs : List (OpRes α ⊕ OpRes Int)) : List α :=
+  rs.filterMap (fun r => match r with | .inl (.val v) => some v | _ => none)
 
 /-- Broad: `repeat` produces the doc generator's items for every int `times`. -/
 def RepeatDocAgree : Prop :=
-  ∀ (elem : Int) (times : Option Int) (k : Nat),
-    opInts (cRepeat elem times (List.replicate k .next)) = docRepeatValues elem times k
+  ∀ (α : Type) (rp : α → String) (elem : α) (times : Option Int) (k : Nat),
+    opItems (cRepeat rp elem times (List.replicate k .next)) = docRepeatValues elem times k
 
 theorem repeatDocAgree_refuted : ¬RepeatDocAgree := by
   intro h
-  have := h 0 (some (2 ^ 63)) 1
+  have := h Int (fun _ => "") 0 (some (2 ^ 63)) 1
   revert this
   decide
 
-theorem repeatSpec_values (elem : Int) : ∀ (k : Nat) (rem : Option Nat),
-    opInts (repeatSpec elem rem (List.replicate k .next)) =
+theorem repeatSpec_values (rp : α → String) (elem : α) : ∀ (k : Nat) (rem : Option Nat),
+    opItems (repeatSpec rp elem rem (List.replicate k .next)) =
       List.replicate (match rem with | none => k | some r => min k r) elem
   | 0, rem => by cases rem <;> rfl
   | k + 1, none => by
-    simp only [List.replicate_succ, repeatSpec, opInts, List.filterMap_cons]
-    have := repeatSpec_values elem k none
-    simp only [opInts] at this
+    simp only [List.replicate_succ, repeatSpec, opItems, List.filterMap_cons]
+    have := repeatSpec_values rp elem k none
+    simp only [opItems] at this
     rw [this]
   | k + 1, some 0 => by
-    simp only [List.replicate_succ, repeatSpec, opInts, List.filterMap_cons]
-    have := repeatSpec_values elem k (some 0)
-    simp only [opInts] at this
+    simp only [List.replicate_succ, repeatSpec, opItems, List.filterMap_cons]
+    have := repeatSpec_values rp elem k (some 0)
+    simp only [opItems] at this
     rw [this]; simp
   | k + 1, some (r + 1) => by
-    simp only [List.replicate_succ, repeatSpec, opInts, List.filterMap_cons]
-    have := repeatSpec_values elem k (some r)
-    simp only [opInts] at this
+    simp only [List.replicate_succ, repeatSpec, opItems, List.filterMap_cons]
+    have := repeatSpec_values rp elem k (some r)
+    simp only [opItems] at this
     rw [this, show min (k + 1) (r + 1) = min k r + 1 by omega, List.replicate_succ]
 
 /-- Narrowed to `Py_ssize_t` `times`: the items are the doc generator's. -/
 def RepeatDocAgreeSsize : Prop :=
-  ∀ (elem : Int) (times : Option Int) (k : Nat), (∀ t, times = some t → InSsize t) →
-    opInts (cRepeat elem times (List.replicate k .next)) = docRepeatValues elem times k
+  ∀ (α : Type) (rp : α → String) (elem : α) (times : Option Int) (k : Nat),
+    (∀ t, times = some t → InSsize t) →
+    opItems (cRepeat rp elem times (List.replicate k .next)) = docRepeatValues elem times k
 
 theorem repeatDocAgreeSsize_proven : RepeatDocAgreeSsize := by
-  intro elem times k h
-  rw [repeatConsistent_proven elem times _ h, repeatSpec_values]
+  intro α rp elem times k h
+  rw [repeatConsistent_proven α rp elem times _ h, repeatSpec_values]
   cases times <;> simp [docRepeatValues]
 
 end PyLean.Itertools
