@@ -38,23 +38,23 @@ Objects/frameobject.c	1092	1099	frame_code_get_impl	frame_code_get_impl(PyFrameO
 Objects/frameobject.c	1108	1116	frame_back_get_impl	frame_back_get_impl(PyFrameObject *self) /*[clinic end generated code: output=3a84c22a55a63c79 input=9e528570d0e1f44a]*/	todo		
 Objects/frameobject.c	1127	1131	frame_trace_opcodes_get_impl	frame_trace_opcodes_get_impl(PyFrameObject *self) /*[clinic end generated code: output=53ff41d09cc32e87 input=4eb91dc88e04677a]*/	todo		
 Objects/frameobject.c	1140	1159	frame_trace_opcodes_set_impl	frame_trace_opcodes_set_impl(PyFrameObject *self, PyObject *value) /*[clinic end generated code: output=92619da2bfccd449 input=7e286eea3c0333ff]*/	todo		
-Objects/frameobject.c	1176	1187	compatible_kind	compatible_kind(Kind from, Kind to) {	todo		
-Objects/frameobject.c	1200	1208	push_value	push_value(int64_t stack, Kind kind)	todo		
-Objects/frameobject.c	1211	1214	pop_value	pop_value(int64_t stack)	todo		
-Objects/frameobject.c	1219	1222	top_of_stack	top_of_stack(int64_t stack)	todo		
-Objects/frameobject.c	1225	1229	peek	peek(int64_t stack, int n)	todo		
-Objects/frameobject.c	1232	1241	stack_swap	stack_swap(int64_t stack, int n)	todo		
-Objects/frameobject.c	1244	1254	pop_to_level	pop_to_level(int64_t stack, int level) {	todo		
+Objects/frameobject.c	1176	1187	compatible_kind	compatible_kind(Kind from, Kind to) {	modelled	bytecode-flineno-stack-swap	
+Objects/frameobject.c	1200	1208	push_value	push_value(int64_t stack, Kind kind)	modelled	bytecode-flineno-stack-swap	
+Objects/frameobject.c	1211	1214	pop_value	pop_value(int64_t stack)	modelled	bytecode-flineno-stack-swap	
+Objects/frameobject.c	1219	1222	top_of_stack	top_of_stack(int64_t stack)	modelled	bytecode-flineno-stack-swap	
+Objects/frameobject.c	1225	1229	peek	peek(int64_t stack, int n)	modelled	bytecode-flineno-stack-swap,bytecode-frame-swap-shallow	
+Objects/frameobject.c	1232	1241	stack_swap	stack_swap(int64_t stack, int n)	modelled	bytecode-flineno-stack-swap,bytecode-flineno-swap-overflow,bytecode-frame-swap-shallow	
+Objects/frameobject.c	1244	1254	pop_to_level	pop_to_level(int64_t stack, int level) {	modelled	bytecode-flineno-stack-swap	
 Objects/frameobject.c	1260	1274	tos_char	tos_char(int64_t stack) {	todo		
 Objects/frameobject.c	1277	1294	print_stack	print_stack(int64_t stack) {	todo		
 Objects/frameobject.c	1297	1303	print_stacks	print_stacks(int64_t *stacks, int n) {	todo		
-Objects/frameobject.c	1308	1519	mark_stacks	mark_stacks(PyCodeObject *code_obj, int len)	todo		
-Objects/frameobject.c	1522	1540	compatible_stack	compatible_stack(int64_t from_stack, int64_t to_stack)	todo		
+Objects/frameobject.c	1308	1519	mark_stacks	mark_stacks(PyCodeObject *code_obj, int len)	modelled	bytecode-flineno-null-on-stack,bytecode-flineno-stack-swap	
+Objects/frameobject.c	1522	1540	compatible_stack	compatible_stack(int64_t from_stack, int64_t to_stack)	modelled	bytecode-flineno-null-on-stack,bytecode-flineno-stack-swap	
 Objects/frameobject.c	1543	1566	explain_incompatible_stack	explain_incompatible_stack(int64_t to_stack)	todo		
-Objects/frameobject.c	1569	1592	marklines	marklines(PyCodeObject *code, int len)	todo		
-Objects/frameobject.c	1595	1607	first_line_not_before	first_line_not_before(int *lines, int len, int line)	todo		
+Objects/frameobject.c	1569	1592	marklines	marklines(PyCodeObject *code, int len)	modelled	bytecode-frame-first-line	
+Objects/frameobject.c	1595	1607	first_line_not_before	first_line_not_before(int *lines, int len, int line)	modelled	bytecode-frame-first-line	
 Objects/frameobject.c	1609	1617	frame_is_suspended	static bool frame_is_suspended(PyFrameObject *frame)	todo		
-Objects/frameobject.c	1640	1835	frame_lineno_set_impl	frame_lineno_set_impl(PyFrameObject *self, PyObject *value) /*[clinic end generated code: output=e64c86ff6be64292 input=36ed3c896b27fb91]*/	todo		
+Objects/frameobject.c	1640	1835	frame_lineno_set_impl	frame_lineno_set_impl(PyFrameObject *self, PyObject *value) /*[clinic end generated code: output=e64c86ff6be64292 input=36ed3c896b27fb91]*/	modelled	bytecode-flineno-null-on-stack,bytecode-flineno-stack-swap	
 Objects/frameobject.c	1846	1854	frame_trace_get_impl	frame_trace_get_impl(PyFrameObject *self) /*[clinic end generated code: output=5475cbfce07826cd input=f382612525829773]*/	todo		
 Objects/frameobject.c	1863	1876	frame_trace_set_impl	frame_trace_set_impl(PyFrameObject *self, PyObject *value) /*[clinic end generated code: output=d6fe08335cf76ae4 input=d96a18bda085707f]*/	todo		
 Objects/frameobject.c	1887	1895	frame_generator_get_impl	frame_generator_get_impl(PyFrameObject *self) /*[clinic end generated code: output=97aeb2392562e55b input=00a2bd008b239ab0]*/	todo		

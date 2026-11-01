@@ -1,4 +1,4 @@
 file	line	endline	name	signature	status	entry	note
 Lib/curses/__init__.py	25	36	initscr	initscr()	todo		
 Lib/curses/__init__.py	42	49	start_color	start_color()	todo		
-Lib/curses/__init__.py	63	101	wrapper	wrapper(func, /, *args, **kwds)	todo		
+Lib/curses/__init__.py	63	101	wrapper	wrapper(func, /, *args, **kwds)	modelled	corelibs-functools-dispatch-error,corelibs-functools-lru-failed-store,corelibs-functools-lru-infinite,corelibs-functools-lru-recheck,corelibs-functools-lru-twins-step	

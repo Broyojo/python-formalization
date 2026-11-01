@@ -15,7 +15,7 @@ Lib/operator.py	79	81	abs	abs(a)	todo		withdrawn: thin or definitional entry
 Lib/operator.py	83	85	add	add(a, b)	todo		withdrawn: thin or definitional entry
 Lib/operator.py	87	89	and_	and_(a, b)	modelled	corelibs-operator-binary-dispatch	
 Lib/operator.py	91	93	floordiv	floordiv(a, b)	modelled	corelibs-operator-binary-dispatch	
-Lib/operator.py	95	97	index	index(a)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	95	97	index	index(a)	todo		withdrawn: thin or definitional entry; candidates:strsearch-find-str-bytes
 Lib/operator.py	99	101	inv	inv(a)	todo		withdrawn: thin or definitional entry
 Lib/operator.py	104	106	lshift	lshift(a, b)	modelled	corelibs-operator-binary-dispatch	
 Lib/operator.py	108	110	mod	mod(a, b)	modelled	corelibs-operator-binary-dispatch	
@@ -24,7 +24,7 @@ Lib/operator.py	116	118	matmul	matmul(a, b)	modelled	corelibs-operator-binary-di
 Lib/operator.py	120	122	neg	neg(a)	todo		withdrawn: thin or definitional entry
 Lib/operator.py	124	126	or_	or_(a, b)	modelled	corelibs-operator-binary-dispatch	
 Lib/operator.py	128	130	pos	pos(a)	todo		withdrawn: thin or definitional entry
-Lib/operator.py	132	134	pow	pow(a, b)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	132	134	pow	pow(a, b)	modelled	mathint-pow-neg-exp-inverse	withdrawn: thin or definitional entry
 Lib/operator.py	136	138	rshift	rshift(a, b)	modelled	corelibs-operator-binary-dispatch	
 Lib/operator.py	140	142	sub	sub(a, b)	modelled	corelibs-operator-binary-dispatch	
 Lib/operator.py	144	146	truediv	truediv(a, b)	modelled	corelibs-operator-binary-dispatch	
