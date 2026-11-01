@@ -94,24 +94,39 @@ theorem complexDivZero_proven : ComplexDivZero := by
   · simp [_Py_cr_quot, zero_isZero]
   · simp only [complex_div, complexBinop, e1, ↓reduceIte]
 
-/-- `abs(z)` follows C99 for infinities and NaNs, and raises `OverflowError` exactly when
-`hypot` does not give a finite result on finite parts. -/
+/-- `abs(z)` follows C99 for infinities, and raises `OverflowError` exactly when `hypot` does
+not give a finite result on finite parts, whatever `errno` held before. -/
 def ComplexAbs : Prop :=
-  ∀ (m : Libm) (z : C),
-    (z.re.isInf = true → complex_abs m z = .ok z.re.abs) ∧
-    (z.re.isInf = false → z.im.isInf = true → complex_abs m z = .ok z.im.abs) ∧
+  ∀ (m : Libm) (stale : Bool) (z : C),
+    (z.re.isInf = true → complex_abs m stale z = .ok z.re.abs) ∧
+    (z.re.isInf = false → z.im.isInf = true → complex_abs m stale z = .ok z.im.abs) ∧
     (z.re.isFinite = true → z.im.isFinite = true →
-      complex_abs m z = if (m.hypot z.re z.im).isFinite then .ok (m.hypot z.re z.im)
+      complex_abs m stale z = if (m.hypot z.re z.im).isFinite then .ok (m.hypot z.re z.im)
         else .error (.overflowError "absolute value too large"))
 
 theorem complexAbs_proven : ComplexAbs := by
-  intro m z
+  intro m stale z
   refine ⟨fun h => ?_, fun h1 h2 => ?_, fun h1 h2 => ?_⟩
   · have hf := not_finite_of_inf h
     simp [complex_abs, _Py_c_abs, hf, h]
   · have hf := not_finite_of_inf h2
     simp [complex_abs, _Py_c_abs, hf, h1, h2]
   · cases hr : (m.hypot z.re z.im).isFinite <;> simp [complex_abs, _Py_c_abs, h1, h2, hr]
+
+/-- `abs` of a complex with a NaN part and no infinite part is a NaN, whatever `errno` held
+before the call. -/
+def ComplexAbsNaN : Prop :=
+  ∀ (m : Libm) (stale : Bool) (z : C), z.re.isNaN = true → z.im.isFinite = true →
+    complex_abs m stale z = .ok F64.qnan
+
+/-- With `ERANGE` left over from an earlier overflow, `abs(complex(nan, 1.0))` raises. -/
+theorem complexAbsNaN_refuted : ¬ ComplexAbsNaN := by
+  intro h
+  let m : Libm := { hypot := fun _ _ => d1, pow := fun _ _ => d1, atan2 := fun _ _ => d1, exp := fun _ => d1,
+                    log := fun _ => d1, cos := fun _ => d1, sin := fun _ => d1, trigEdom := F64.isInf }
+  have := h m true ⟨F64.qnan, d1⟩ (by decide +kernel) (by decide +kernel)
+  revert this
+  decide +kernel
 
 /-- `bool(z)` is false exactly when both parts are zero. -/
 def ComplexBool : Prop :=
@@ -198,6 +213,20 @@ def ComplexRealOperand : Prop :=
 
 theorem complexRealOperand_proven : ComplexRealOperand :=
   ⟨fun _ => rfl, fun _ => rfl, fun _ => rfl⟩
+
+/-- A nonzero base never gets `EDOM`, the error `complex_pow` reports as "zero to a negative
+or complex power". -/
+def ComplexPowEdomOnlyForZero : Prop :=
+  ∀ (m : Libm) (a b : C), F64.ne a.re d0 = true → (_Py_c_pow m a b).2 ≠ .edom
+
+/-- `(1+1j) ** complex(1, inf)` on a C library that follows POSIX: the phase is infinite and
+`cos` sets `EDOM`. The other functions are placeholders with the right signs. -/
+theorem complexPowEdomOnlyForZero_refuted : ¬ ComplexPowEdomOnlyForZero := by
+  intro h
+  let m : Libm := { hypot := fun _ _ => d1, pow := fun _ _ => d1, atan2 := fun _ _ => d1, exp := fun _ => d1,
+                    log := fun _ => d1, cos := fun _ => d1, sin := fun _ => d1, trigEdom := F64.isInf }
+  have := h m ⟨d1, d1⟩ ⟨d1, F64.inf false⟩ (by decide +kernel)
+  exact this (by decide +kernel)
 
 /-- `complex_repr` drops the parentheses and the real part for a positive zero real part. -/
 def ComplexRepr : Prop :=

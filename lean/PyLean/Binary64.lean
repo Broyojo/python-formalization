@@ -12,7 +12,6 @@ import PyLean.Binary64.Props
 import PyLean.Binary64.Props2
 import PyLean.Binary64.Props3
 import PyLean.Binary64.Props4
-import PyLean.Binary64.Pack2Check
 import PyLean.Binary64.CompareProps
 import PyLean.Binary64.StrtodProps
 import PyLean.Binary64.DtoaProps
@@ -158,9 +157,10 @@ def entries : List Entry := [
     source := "struct docs; floatobject.c:2358-2375"
     status := .proven, prop := ``Pack8RoundTrip, thm := some ``pack8RoundTrip_proven },
   { id := "float-pack2-roundtrip", pyFile := floatFile, pyFns := ["PyFloat_Pack2", "PyFloat_Unpack2"]
-    statement := "PyFloat_Pack2 inverts PyFloat_Unpack2 on all 65536 half precision patterns, in both byte orders, checked exhaustively."
+    statement := "PyFloat_Pack2 inverts PyFloat_Unpack2 on all 65536 half precision patterns, in both byte orders."
     source := "struct docs ('e' format); floatobject.c:1981-1990"
-    status := .proven, prop := ``Pack2RoundTrip, thm := some ``pack2RoundTrip_proven },
+    status := .open, prop := ``Pack2RoundTrip
+    notes := "An exhaustive decide +kernel took 57 minutes and 29 of 32 chunks failed to reduce; not yet explained. The pack and unpack sides each agree with CPython in the difftest." },
   { id := "dtoa-fixed-keeps-integer-part", pyFile := dtoaFile, pyFns := ["_Py_dg_dtoa"]
     statement := "In mode 3, for |x| >= 1 and any int ndigits >= 0, the returned decimal point lies after the first digit."
     source := "Comment at dtoa.c:2213: through ndigits past the decimal point"
@@ -345,7 +345,7 @@ def entries : List Entry := [
     source := "complexobject.c:200-203, :257-258, :272-274, :710-713"
     status := .proven, prop := ``ComplexDivZero, thm := some ``complexDivZero_proven },
   { id := "complex-abs", pyFile := complexFile, pyFns := ["_Py_c_abs", "complex_abs"]
-    statement := "abs(z) is infinite when a part is infinite, even with a NaN in the other, and for finite parts is hypot, with OverflowError exactly when hypot is not finite. Holds for any C library."
+    statement := "abs(z) is infinite when a part is infinite, even with a NaN in the other, and for finite parts is hypot, with OverflowError exactly when hypot is not finite. Holds for any C library and any errno on entry."
     source := "Comment at complexobject.c:374-376"
     status := .proven, prop := ``ComplexAbs, thm := some ``complexAbs_proven },
   { id := "complex-bool", pyFile := complexFile, pyFns := ["complex_bool"]
@@ -361,6 +361,18 @@ def entries : List Entry := [
     statement := "z ** 0 is 1 for every z, _Py_c_pow answers 1 for a zero exponent, and a zero base with a nonzero imaginary exponent sets EDOM. Holds for any C library."
     source := "complexobject.c:314-323, :738-749"
     status := .proven, prop := ``ComplexPowSpecial, thm := some ``complexPowSpecial_proven },
+  { id := "complex-abs-nan-any-errno", pyFile := complexFile, pyFns := ["_Py_c_abs", "complex_abs"]
+    statement := "abs(z) is a NaN for a NaN real part and finite imaginary part, whatever errno held before the call."
+    source := "Comment at complexobject.c:370: sets errno = ERANGE on overflow; otherwise errno = 0"
+    status := .refuted, prop := ``ComplexAbsNaN, thm := some ``complexAbsNaN_refuted
+    bug := some "binary64-complex-abs-stale-errno"
+    notes := "The NaN return at complexobject.c:389 leaves errno alone, and complex_abs reads it. Fixed upstream as gh-155526." },
+  { id := "complex-pow-edom-only-for-zero", pyFile := complexFile, pyFns := ["_Py_c_pow"]
+    statement := "With a nonzero base, _Py_c_pow never leaves EDOM set, for any C library."
+    source := "complex_pow, complexobject.c:746-749: EDOM is reported as zero to a negative or complex power"
+    status := .refuted, prop := ``ComplexPowEdomOnlyForZero, thm := some ``complexPowEdomOnlyForZero_refuted
+    bug := some "binary64-complex-pow-stray-edom"
+    notes := "On glibc, cos(inf) sets EDOM, so (1+1j) ** complex(1, inf) raises ZeroDivisionError with a nonzero base." },
   { id := "complex-real-operand", pyFile := complexFile, pyFns := ["real_to_double", "real_to_complex"]
     statement := "A float operand keeps its value and gets imaginary part 0.0, and an int goes through the float conversion."
     source := "complexobject.c:644-663"

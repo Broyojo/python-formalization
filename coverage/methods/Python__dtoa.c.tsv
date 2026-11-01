@@ -1,32 +1,32 @@
 file	line	endline	name	signature	status	entry	note
-Python/dtoa.c	342	371	Balloc	Balloc(int k)	todo		
-Python/dtoa.c	376	387	Bfree	Bfree(Bigint *v)	todo		
-Python/dtoa.c	403	421	Balloc	Balloc(int k)	todo		
-Python/dtoa.c	426	431	Bfree	Bfree(Bigint *v)	todo		
-Python/dtoa.c	443	475	multadd	multadd(Bigint *b, int m, int a) /* multiply by m and add a */	todo		
-Python/dtoa.c	484	514	s2b	s2b(const char *s, int nd0, int nd, ULong y9)	todo		
-Python/dtoa.c	519	545	hi0bits	hi0bits(ULong x)	todo		
-Python/dtoa.c	551	591	lo0bits	lo0bits(ULong *y)	todo		
-Python/dtoa.c	596	606	i2b	i2b(int i)	todo		
-Python/dtoa.c	612	667	mult	mult(Bigint *a, Bigint *b)	todo		
-Python/dtoa.c	676	714	pow5mult	pow5mult(Bigint *b, int k)	todo		
-Python/dtoa.c	722	764	pow5mult	pow5mult(Bigint *b, int k)	todo		
-Python/dtoa.c	773	814	lshift	lshift(Bigint *b, int k)	todo		
-Python/dtoa.c	820	846	cmp	cmp(Bigint *a, Bigint *b)	todo		
-Python/dtoa.c	853	904	diff	diff(Bigint *a, Bigint *b)	todo		
-Python/dtoa.c	910	919	ulp	ulp(U *x)	todo		
-Python/dtoa.c	924	956	b2d	b2d(Bigint *a, int *e)	todo		
-Python/dtoa.c	980	1026	sd2b	sd2b(U *d, int scale, int *e)	todo		
-Python/dtoa.c	1038	1080	d2b	d2b(U *d, int *e, int *bits)	todo		
-Python/dtoa.c	1086	1101	ratio	ratio(Bigint *a, Bigint *b)	todo		
-Python/dtoa.c	1127	1133	dshift	dshift(Bigint *b, int p2)	todo		
-Python/dtoa.c	1140	1203	quorem	quorem(Bigint *b, Bigint *S)	todo		
-Python/dtoa.c	1212	1226	sulp	sulp(U *x, BCinfo *bc)	todo		
-Python/dtoa.c	1275	1382	bigcomp	bigcomp(U *rv, const char *s0, BCinfo *bc)	todo		
-Python/dtoa.c	1386	2108	_Py_dg_strtod	_Py_dg_strtod(const char *s00, char **se)	todo		
-Python/dtoa.c	2111	2125	rv_alloc	rv_alloc(int i)	todo		
-Python/dtoa.c	2128	2140	nrv_alloc	nrv_alloc(const char *s, char **rve, int n)	todo		
-Python/dtoa.c	2149	2154	_Py_dg_freedtoa	_Py_dg_freedtoa(char *s)	todo		
-Python/dtoa.c	2195	2802	_Py_dg_dtoa	_Py_dg_dtoa(double dd, int mode, int ndigits, int *decpt, int *sign, char **rve)	todo		
-Python/dtoa.c	2807	2830	_PyDtoa_Init	_PyDtoa_Init(PyInterpreterState *interp)	todo		
-Python/dtoa.c	2833	2843	_PyDtoa_Fini	_PyDtoa_Fini(PyInterpreterState *interp)	todo		
+Python/dtoa.c	342	371	Balloc	Balloc(int k)	excluded		no-behaviour: pool allocation; a Bigint in the model owns its limb list
+Python/dtoa.c	376	387	Bfree	Bfree(Bigint *v)	excluded		no-behaviour: pool deallocation
+Python/dtoa.c	403	421	Balloc	Balloc(int k)	excluded		no-behaviour: pool allocation; a Bigint in the model owns its limb list
+Python/dtoa.c	426	431	Bfree	Bfree(Bigint *v)	excluded		no-behaviour: pool deallocation
+Python/dtoa.c	443	475	multadd	multadd(Bigint *b, int m, int a) /* multiply by m and add a */	modelled	dtoa-multadd	
+Python/dtoa.c	484	514	s2b	s2b(const char *s, int nd0, int nd, ULong y9)	modelled	dtoa-s2b	
+Python/dtoa.c	519	545	hi0bits	hi0bits(ULong x)	modelled	dtoa-hi0bits	
+Python/dtoa.c	551	591	lo0bits	lo0bits(ULong *y)	modelled	dtoa-lo0bits	
+Python/dtoa.c	596	606	i2b	i2b(int i)	modelled	dtoa-s2b	
+Python/dtoa.c	612	667	mult	mult(Bigint *a, Bigint *b)	modelled	dtoa-mult	
+Python/dtoa.c	676	714	pow5mult	pow5mult(Bigint *b, int k)	modelled	dtoa-pow5mult	
+Python/dtoa.c	722	764	pow5mult	pow5mult(Bigint *b, int k)	modelled	dtoa-pow5mult	
+Python/dtoa.c	773	814	lshift	lshift(Bigint *b, int k)	modelled	dtoa-lshift	
+Python/dtoa.c	820	846	cmp	cmp(Bigint *a, Bigint *b)	modelled	dtoa-cmp	
+Python/dtoa.c	853	904	diff	diff(Bigint *a, Bigint *b)	modelled	dtoa-diff	
+Python/dtoa.c	910	919	ulp	ulp(U *x)	modelled	dtoa-ulp	
+Python/dtoa.c	924	956	b2d	b2d(Bigint *a, int *e)	todo		open entry dtoa-b2d
+Python/dtoa.c	980	1026	sd2b	sd2b(U *d, int scale, int *e)	modelled	dtoa-sd2b	
+Python/dtoa.c	1038	1080	d2b	d2b(U *d, int *e, int *bits)	todo		open entry dtoa-d2b
+Python/dtoa.c	1086	1101	ratio	ratio(Bigint *a, Bigint *b)	todo		open entry dtoa-ratio
+Python/dtoa.c	1127	1133	dshift	dshift(Bigint *b, int p2)	modelled	dtoa-dshift	
+Python/dtoa.c	1140	1203	quorem	quorem(Bigint *b, Bigint *S)	todo		open entry dtoa-quorem
+Python/dtoa.c	1212	1226	sulp	sulp(U *x, BCinfo *bc)	modelled	dtoa-ulp	
+Python/dtoa.c	1275	1382	bigcomp	bigcomp(U *rv, const char *s0, BCinfo *bc)	modelled	dtoa-bigcomp-choice	
+Python/dtoa.c	1386	2108	_Py_dg_strtod	_Py_dg_strtod(const char *s00, char **se)	modelled	dtoa-strtod-no-number,dtoa-strtod-sign,dtoa-strtod-fast-path	
+Python/dtoa.c	2111	2125	rv_alloc	rv_alloc(int i)	excluded		no-behaviour: allocates the digit buffer
+Python/dtoa.c	2128	2140	nrv_alloc	nrv_alloc(const char *s, char **rve, int n)	excluded		no-behaviour: copies a constant string into the digit buffer; the strings are in the DtoaSpecial results
+Python/dtoa.c	2149	2154	_Py_dg_freedtoa	_Py_dg_freedtoa(char *s)	excluded		no-behaviour: frees the digit buffer
+Python/dtoa.c	2195	2802	_Py_dg_dtoa	_Py_dg_dtoa(double dd, int mode, int ndigits, int *decpt, int *sign, char **rve)	modelled	dtoa-fixed-keeps-integer-part,dtoa-special-values	
+Python/dtoa.c	2807	2830	_PyDtoa_Init	_PyDtoa_Init(PyInterpreterState *interp)	excluded		internal-bootstrap: fills the p5s cache, modelled as the constant p5s and checked in p5s_val
+Python/dtoa.c	2833	2843	_PyDtoa_Fini	_PyDtoa_Fini(PyInterpreterState *interp)	excluded		internal-bootstrap: frees the p5s cache

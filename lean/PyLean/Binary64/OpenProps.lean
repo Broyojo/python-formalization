@@ -61,6 +61,12 @@ def FloatRoundHalfEven : Prop :=
   ∀ x : F64, x.isFinite = true → ∃ n : Int, float_round_int x = .ok n ∧
     Rat.abs (x.toRat - n) ≤ 1 / 2 ∧ (Rat.abs (x.toRat - n) = 1 / 2 → n % 2 = 0)
 
+/-- `struct.pack('e', struct.unpack('e', b))` gives back every one of the 65536 half
+precision patterns, NaN payloads included, in both byte orders. -/
+def Pack2RoundTrip : Prop :=
+  ∀ b, b < 65536 → ∀ le : Bool,
+    PyFloat_Pack2 (PyFloat_Unpack2 (layout 2 b le) le) le = .ok (layout 2 b le)
+
 /-- `quorem(b, S)` is the quotient digit, under the bound and normalization its callers keep:
 `b < 10 * S`, and the top limb of `S` has bit 27 set. -/
 def QuoremSpec : Prop :=

@@ -179,6 +179,7 @@ def libm : Libm where
   log a := ofFloat (Float.log (toFloat a))
   cos a := ofFloat (Float.cos (toFloat a))
   sin a := ofFloat (Float.sin (toFloat a))
+  trigEdom a := a.isInf
 
 def getCObj (j : Json) (key : String) : Except String CObj := do
   let o ← field j key
@@ -194,6 +195,14 @@ def encOptC : Option C → Json
   | none => Json.str "NotImplemented"
   | some z => encC z
 
+/-- A zero's sign can come from the sign of a NaN made inside `_Py_c_prod`, which is a
+hardware choice the model does not make, so `**` results compare with zeros unsigned. -/
+def encOptCPow : Option C → Json
+  | none => Json.str "NotImplemented"
+  | some z =>
+    let u (x : F64) := if x.isZero then F64.zero false else x
+    encC ⟨u z.re, u z.im⟩
+
 def runComplex (fn : String) (j : Json) : Except String Json := do
   let v := getCObj j "v"
   let w := getCObj j "w"
@@ -206,8 +215,8 @@ def runComplex (fn : String) (j : Json) : Except String Json := do
   | "c_sub" => return encPy encOptC (complex_sub (← v) (← w))
   | "c_mul" => return encPy encOptC (complex_mul (← v) (← w))
   | "c_div" => return encPy encOptC (complex_div (← v) (← w))
-  | "c_pow" => return encPy encOptC (complex_pow libm (← v) (← w))
-  | "c_abs" => return encPy encF (complex_abs libm (← z))
+  | "c_pow" => return encPy encOptCPow (complex_pow libm (← v) (← w))
+  | "c_abs" => return encPy encF (complex_abs libm false (← z))
   | "c_neg" => return Json.mkObj [("ok", encC (complex_neg (← z)))]
   | "c_conj" => return Json.mkObj [("ok", encC (complex_conjugate (← z)))]
   | "c_bool" => return Json.mkObj [("ok", toJson (complex_bool (← z)))]

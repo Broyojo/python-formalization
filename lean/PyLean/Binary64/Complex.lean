@@ -26,6 +26,9 @@ structure Libm where
   log : F64 → F64
   cos : F64 → F64
   sin : F64 → F64
+  /-- Whether `cos` and `sin` of this argument set `errno` to `EDOM`. POSIX asks for that on
+  an infinity, and glibc does it. -/
+  trigEdom : F64 → Bool
 
 /-- `c_1`, complexobject.c:29. -/
 def c_1 : C := ⟨d1, d0⟩
@@ -173,7 +176,7 @@ def _Py_c_pow (m : Libm) (a b : C) : C × PowErrno :=
         (fmul len0 (m.exp (fmul at'.neg b.im)), fadd phase0 (fmul b.im (m.log vabs)))
       else (len0, phase0)
     let r : C := ⟨fmul len (m.cos phase), fmul len (m.sin phase)⟩
-    (r, adjustErange2 r .none)
+    (r, adjustErange2 r (if m.trigEdom phase then .edom else .none))
 
 /-- `c_powu`, complexobject.c:341-355: `mask` walks the bits of `n ≤ 100`. -/
 def c_powuLoop : Nat → Nat → Nat → C → C → C
@@ -191,12 +194,14 @@ def c_powi (x : C) (n : Int) : C × Bool :=
   if 0 < n then (c_powu x n.toNat, false)
   else _Py_c_quot c_1 (c_powu x (-n).toNat)
 
-/-- `_Py_c_abs`, complexobject.c:367-397: the value and `errno == ERANGE`. -/
-def _Py_c_abs (m : Libm) (z : C) : F64 × Bool :=
+/-- `_Py_c_abs`, complexobject.c:367-397: the value and `errno == ERANGE`. `stale` is that
+same test on entry: the NaN path at :389 returns without touching `errno`, and in 3.14.7
+nothing clears it first. -/
+def _Py_c_abs (m : Libm) (stale : Bool) (z : C) : F64 × Bool :=
   if !z.re.isFinite || !z.im.isFinite then
     if z.re.isInf then (z.re.abs, false)
     else if z.im.isInf then (z.im.abs, false)
-    else (F64.qnan, false)
+    else (F64.qnan, stale)
   else
     let result := m.hypot z.re z.im
     (result, !result.isFinite)
@@ -277,8 +282,8 @@ def complex_neg (z : C) : C := ⟨z.re.neg, z.im.neg⟩
 def complex_pos (z : C) : C := z
 
 /-- `complex_abs`, complexobject.c:779-790. -/
-def complex_abs (m : Libm) (z : C) : Py F64 :=
-  let (r, erange) := _Py_c_abs m z
+def complex_abs (m : Libm) (stale : Bool) (z : C) : Py F64 :=
+  let (r, erange) := _Py_c_abs m stale z
   if erange then .error (.overflowError "absolute value too large") else .ok r
 
 /-- `complex_bool`, complexobject.c:792-797. -/

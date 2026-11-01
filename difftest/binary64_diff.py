@@ -667,8 +667,12 @@ def run_complex(c):
 
         def call():
             if isinstance(v, complex):
-                return enc_c(getattr(complex, f"__{name}__")(v, w))
-            return enc_c(getattr(complex, f"__r{name}__")(w, v))
+                r = getattr(complex, f"__{name}__")(v, w)
+            else:
+                r = getattr(complex, f"__r{name}__")(w, v)
+            if fn == "c_pow":  # zero signs depend on NaN signs, see encOptCPow
+                r = complex(r.real + 0.0, r.imag + 0.0)
+            return enc_c(r)
         return common.py_result(call)
     if fn == "c_parse":
         s = "".join(map(chr, c["cps"]))
@@ -683,6 +687,7 @@ def run_complex(c):
     if fn == "c_repr":
         return {"ok": repr(z)}
     if fn == "c_abs":
+        abs(1j)  # sets errno to 0: 3.14.7 reads a stale errno on the NaN path
         return common.py_result(lambda: enc(abs(z)))
     if fn == "c_eq":
         r = getattr(complex, f"__{c['op']}__")(z, py_c(c["w"]))

@@ -1,0 +1,52 @@
+id: binary64-complex-pow-stray-edom
+title: "complex ** raises ZeroDivisionError with a nonzero base when the phase is infinite"
+priority: P3
+kind: wrong-exception
+module: binary64
+files: [Objects/complexobject.c]
+functions: ["_Py_c_pow", "complex_pow"]
+summary: |
+  _Py_c_pow calls cos and sin on the phase. On glibc, cos(inf) sets errno to EDOM, as POSIX
+  asks. complex_pow reads EDOM as its own signal for a zero base, so (1+1j) ** complex(1, inf)
+  raises ZeroDivisionError('zero to a negative or complex power') although the base is
+  nonzero. The outcome depends on the C library: a libm that leaves errno alone gives
+  (nan+nanj).
+likelihood: |
+  Needs an infinite phase, so an infinite exponent part. The found case came from the
+  difftest's edge values rather than from an application.
+maybe_intended: |
+  No. gh-156886 fixed it.
+reproducer: |
+  inf = float('inf')
+  try:
+      r = (1+1j) ** complex(1, inf)
+  except ZeroDivisionError as e:
+      r = repr(e)
+  print(r)
+  if isinstance(r, str) and 'zero to a negative' in r:
+      print('REPRODUCED binary64-complex-pow-stray-edom')
+expected: |
+  A complex result, (nan+nanj), as on main.
+promised_by: |
+  The message itself: the base is not zero. complexobject.c:318-322 sets EDOM only for a zero
+  base.
+cause: |
+  Objects/complexobject.c:333-334 can leave EDOM from cos and sin, and :746 reports any EDOM as
+  a zero base. _Py_ADJUST_ERANGE2 at :336 only handles ERANGE.
+possible_fix: |
+  Already done upstream by gh-156886.
+tested: |
+  python3 3.14.7: REPRODUCED. main: not reproduced, gives (nan+nanj).
+duplicates:
+  issues:
+    - {number: 156886, state: closed, relation: duplicate, reason: fixed on main}
+  related:
+    - {number: 156145, state: open, relation: wider question of relying on errno from libm}
+    - {number: 60200, state: open, relation: rough edges of complex pow}
+  queries: ["repo:python/cpython is:issue complex power ZeroDivisionError infinity",
+            "repo:python/cpython is:issue \"zero to a negative or complex power\"",
+            "repo:python/cpython is:issue complex pow errno EDOM"]
+  bugforge: "no complex pow entry"
+lean:
+  property: PyLean.Binary64.ComplexPowEdomOnlyForZero
+  theorem: PyLean.Binary64.complexPowEdomOnlyForZero_refuted
