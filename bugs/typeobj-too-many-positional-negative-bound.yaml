@@ -36,7 +36,7 @@ expected: |
   A non-negative lower bound ("from 0 to 1"), or the plain "takes 1 positional argument".
 observed: |
   python3 3.14.7: f() takes from -2 to 1 positional arguments but 2 were given. REPRODUCED.
-  main: see check_bugs results below.
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED by scripts/check_bugs.py.
 promised_by: |
   invariant: an argument count in an error message is not negative.
 cause: |

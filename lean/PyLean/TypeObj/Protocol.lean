@@ -755,11 +755,14 @@ def dictUpdateArg (rt : Rt) (es : List (Val × Val)) (x : Val) : M (List (Val ×
       else
         let f ← rt.getAttr x "keys"
         let out ← rt.call f [] []
-        let keys ← tryM (rt.listItems out) fun e => do
+        -- `method_output_as_list`, `Objects/abstract.c:2433-2447`: only `PyObject_GetIter` has
+        -- its TypeError replaced, not an error raised by the iteration itself.
+        let it ← tryM (rt.getIter out) fun e => do
           let w ← getW
           if excMatches w e B.TypeError then
             typeErr s!"{trunc 200 (typeName w x)}.keys() returned a non-iterable (type {trunc 200 (typeName w out)})"
           else raise e
+        let keys ← rt.listItems it
         dictMergeKeys rt x es keys
     | none =>
       let items ← rt.listItems x
@@ -1038,6 +1041,10 @@ where
       let merged ← dictUpdateArg rt ((dictOf w a).getD []) b
       modObj addr fun o => { o with body := .dict merged }
       pure a
+    | .c .list, .obj _ =>
+      -- `update_one_slot` puts `list_inplace_concat` in `nb_inplace_add` of a list subclass:
+      -- `__iadd__` has the same wrapper for `nb_inplace_add` and `sq_inplace_concat`.
+      if idunder == "__iadd__" then callSqInplaceConcat rt f a b else unmodelled
     | _, _ => unmodelled
 
 /-- `binary_iop`, `Objects/abstract.c:1250`. -/
@@ -1479,6 +1486,17 @@ def callIter (rt : Rt) (f : SlotFn) (o : Val) : M Val := do
     let w ← getW
     let keys ← alloc B.list (.list (((dictOf w o).getD []).map (·.1)))
     alloc B.dictKeyIter (.seqIter (some keys) 0)
+  | .c .dictKeys =>
+    -- `dictkeys_iter`, `Objects/dictobject.c:6150`: a key iterator over the view's dict.
+    let w ← getW
+    match o with
+    | .obj a =>
+      match w.get a with
+      | .val { body := .seqIter (some d) _, .. } =>
+        let keys ← alloc B.list (.list (((dictOf w d).getD []).map (·.1)))
+        alloc B.dictKeyIter (.seqIter (some keys) 0)
+      | _ => unmodelled
+    | _ => unmodelled
   | .c .tuple => alloc B.tupleIter (.seqIter (some o) 0)
   | .c .str => alloc B.strIter (.seqIter (some o) 0)
   | .c .seqIter | .c .listIter | .c .tupleIter | .c .strIter => pure o

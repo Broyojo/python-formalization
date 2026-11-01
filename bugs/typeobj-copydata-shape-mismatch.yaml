@@ -71,7 +71,7 @@ expected: |
   Either a BufferError, or every item ends up at an offset inside the destination view.
 observed: |
   python3 3.14.7: returns 0; writes offsets 0, 1, 3, 4, 6, 7, where the view is offsets 0-5.
-  main: see check_bugs results below.
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED by scripts/check_bugs.py.
 promised_by: |
   Undisputed invariant: a copy into a buffer stays inside that buffer's view. The check at
   abstract.c:690 raises "destination is too small to receive data from source", so the

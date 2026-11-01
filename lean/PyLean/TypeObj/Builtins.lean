@@ -37,6 +37,7 @@ def familyOf (a : Addr) : CFn :=
   | 88 => .unicodeTranslateError
   | 100 | 101 | 102 | 103 | 104 => .unmodelled
   | 105 => .listIter
+  | 106 => .dictKeys
   | _ => .exception
 
 /-- Sequence types answer `__add__` and friends with `sq_*` slots. -/
@@ -81,6 +82,10 @@ def methodOf (tn n : String) : Builtin :=
   | "list", "append" => .listAppend
   | "list", "__getitem__" | "dict", "__getitem__" => .dunderGetitem
   | "dict", "__contains__" => .dunderContains
+  | "dict", "keys" => .dictKeysMethod
+  | "iterator", "__length_hint__" | "list_iterator", "__length_hint__"
+  | "tuple_iterator", "__length_hint__" | "str_ascii_iterator", "__length_hint__"
+  | "dict_keyiterator", "__length_hint__" => .iterLengthHint
   | "int", "__format__" | "str", "__format__" | "float", "__format__" => .objectFormat
   | _, "__class_getitem__" => .classGetitem
   | "BaseException", _ | "BaseExceptionGroup", _ | "ImportError", _ | "OSError", _

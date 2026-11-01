@@ -108,7 +108,7 @@ pointer exactly when they hold the same `SlotFn`, because a static subclass inhe
 the pointer. -/
 inductive CFn where
   | object | type | none | notImpl | ellipsis | int | bool | float | str | tuple | list
-  | dict | function | method | builtinFn | wrapperDescr | methodWrapper | methodDescr
+  | dict | dictKeys | function | method | builtinFn | wrapperDescr | methodWrapper | methodDescr
   | classmethodDescr | memberDescr | getsetDescr | property | classmethod | staticmethod
   | super | mappingproxy | seqIter | listIter | tupleIter | strIter | cell | exception
   | exceptionGroup | stopIteration | systemExit | importError | osError | nameError
@@ -229,6 +229,8 @@ inductive Builtin where
   | propertyGetter | propertySetter | propertyDeleter | propertySetName
   -- sequences
   | tupleCount | tupleIndex | listAppend | strFormat | dunderGetitem | dunderContains
+  /-- `dict.keys`, and the `__length_hint__` of the C iterators. -/
+  | dictKeysMethod | iterLengthHint
   /-- A `PyMethodDef` of an exception class, by name (`Exceptions.lean`). -/
   | excMethod (name : String)
   /-- Harness: `hash(x)` as the difftest can compare it. -/
@@ -485,6 +487,7 @@ def bytes : Addr := 102
 def bytearray : Addr := 103
 def traceback : Addr := 104
 def dictKeyIter : Addr := 105
+def dictKeys : Addr := 106
 -- Exception classes used by C code.
 def BaseException : Addr := 31
 def Exception : Addr := 32

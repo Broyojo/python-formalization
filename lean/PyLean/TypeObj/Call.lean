@@ -294,6 +294,12 @@ def strNew (rt : Rt) (t : Addr) (args : List Val) (kw : Kw) : M Val := do
     match strOf w e with
     | none => typeErr s!"str() argument 'encoding' must be str, not {argTypeName w e}"
     | some _ =>
+      -- `Objects/clinic/unicodeobject.c.h:1900`: `errors` is checked before any decoding.
+      match args with
+      | _ :: _ :: er :: _ =>
+        if (strOf w er).isNone then
+          typeErr s!"str() argument 'errors' must be str, not {argTypeName w er}"
+      | _ => pure ()
       match strOf w (args.headD .none) with
       | some _ => typeErr "decoding str is not supported"
       | none =>
@@ -898,6 +904,8 @@ def builtinConv : Builtin → String × MethConv
   | .listAppend => ("append", .o)
   | .dunderGetitem => ("__getitem__", .o)
   | .dunderContains => ("__contains__", .o)
+  | .dictKeysMethod => ("keys", .noargs)
+  | .iterLengthHint => ("__length_hint__", .noargs)
   | _ => ("", .keywords)
 
 /-- `_PyObject_FunctionStr` of a builtin, `Objects/object.c:959`, via `meth_get__qualname__`,
@@ -1117,6 +1125,33 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
     match args with
     | [k] => .bool <$> callContains rt (.c .dict) selfV k
     | _ => typeErr s!"__contains__() takes exactly one argument ({args.length} given)"
+  | .dictKeysMethod =>
+    -- `dict_keys_impl`, `Objects/dictobject.c:6566`: the view keeps a reference to the dict.
+    alloc B.dictKeys (.seqIter (some selfV) 0)
+  | .iterLengthHint =>
+    match selfV with
+    | .obj a =>
+      match w.get a with
+      | .val { body := .seqIter none _, .. } => pure (.int 0)
+      | .val { body := .seqIter (some seq) i, .. } =>
+        if typeOf w selfV == B.seqIter then
+          -- `iter_len`, `Objects/iterobject.c:86`: the object's own `__len__` is called.
+          if hasLen w seq then
+            let n ← pySequenceSize rt seq
+            pure (.int (if n - i ≥ 0 then n - i else 0))
+          else pure .notImpl
+        else
+          -- `listiter_len`, `Objects/listobject.c:4043`, `tupleiter_len`,
+          -- `Objects/tupleobject.c:1074`, `unicodeiter_len`, `Objects/unicodeobject.c:16379`,
+          -- and `dictiter_len`, `Objects/dictobject.c:5194`, read the size directly.
+          let n : Int := match seq, listOf w seq, strOf w seq with
+            | .tuple xs, _, _ => xs.length
+            | _, some xs, _ => xs.length
+            | _, _, some s => s.length
+            | _, _, _ => 0
+          pure (.int (if n - i ≥ 0 then n - i else 0))
+      | _ => unmodelled
+    | _ => unmodelled
   | .listAppend =>
     match args, selfV with
     | [x], .obj a =>

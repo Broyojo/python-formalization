@@ -45,7 +45,7 @@ expected: |
   subclasses.
 observed: |
   python3 3.14.7: doc doc / doc None. REPRODUCED.
-  main: see check_bugs results below.
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED by scripts/check_bugs.py.
 promised_by: |
   The twin behaviour of exact `property`; Doc/library/functions.rst, property: the returned
   property object "has an attribute ... a copy of the property with ..." the accessor changed.

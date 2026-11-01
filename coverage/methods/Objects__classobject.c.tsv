@@ -1,8 +1,8 @@
 file	line	endline	name	signature	status	entry	note
 Objects/classobject.c	25	32	PyMethod_Function	PyMethod_Function(PyObject *im)	todo		
 Objects/classobject.c	35	42	PyMethod_Self	PyMethod_Self(PyObject *im)	todo		
-Objects/classobject.c	46	55	method_vectorcall	method_vectorcall(PyObject *method, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
-Objects/classobject.c	64	83	PyMethod_New	PyMethod_New(PyObject *func, PyObject *self)	todo		
+Objects/classobject.c	46	55	method_vectorcall	method_vectorcall(PyObject *method, PyObject *const *args, size_t nargsf, PyObject *kwnames)	modelled	typeobj-bound-method-self	
+Objects/classobject.c	64	83	PyMethod_New	PyMethod_New(PyObject *func, PyObject *self)	modelled	typeobj-bound-method-self	
 Objects/classobject.c	90	101	method___reduce___impl	method___reduce___impl(PyMethodObject *self) /*[clinic end generated code: output=6c04506d0fa6fdcb input=143a0bf5e96de6e8]*/	todo		
 Objects/classobject.c	128	132	method_get_doc	method_get_doc(PyObject *self, void *context)	todo		
 Objects/classobject.c	140	167	method_getattro	method_getattro(PyObject *obj, PyObject *name)	todo		
