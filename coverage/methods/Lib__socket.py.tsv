@@ -37,7 +37,7 @@ Lib/socket.py	761	766	SocketIO.writable	writable(self)	todo
 Lib/socket.py	768	773	SocketIO.seekable	seekable(self)	todo		
 Lib/socket.py	775	779	SocketIO.fileno	fileno(self)	todo		
 Lib/socket.py	782	786	SocketIO.name	name(self)	todo		
-Lib/socket.py	789	790	SocketIO.mode	mode(self)	todo		
+Lib/socket.py	789	790	SocketIO.mode	mode(self)	todo		candidates:calstat-statistics-mode-spec
 Lib/socket.py	792	800	SocketIO.close	close(self)	todo		
 Lib/socket.py	803	827	getfqdn	getfqdn(name='')	todo		
 Lib/socket.py	832	880	create_connection	create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT, source_address=None, *, all_errors=False)	todo		

@@ -13,5 +13,15 @@ if grep -rnwE 'sorry|admit|native_decide|bv_decide|ofReduceBool|implemented_by|e
 fi
 
 (cd lean && lake env lean Audit.lean)
-for t in difftest/*_diff.py; do python3 "$t" --cases 50000; done
-python3 scripts/check_bugs.py
+# Run everything, so one failing harness cannot hide the results after it.
+failed=""
+for t in difftest/*_diff.py; do
+    echo "--- $t"
+    python3 "$t" --cases 50000 || failed="$failed $t"
+done
+python3 scripts/check_bugs.py || failed="$failed check_bugs"
+if [ -n "$failed" ]; then
+    echo "FAIL audit:$failed"
+    exit 1
+fi
+echo "AUDIT PASSED"

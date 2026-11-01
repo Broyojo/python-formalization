@@ -222,7 +222,7 @@ theorem textIntRoundtrip_proven : TextIntRoundtrip := by
     exact pyInt_dec x hlen
   refine ⟨hpy, ?_, hlong, ?_⟩
   · have := intLineTwinsNarrow_proven (decInt x) (dec_no_nl x) (dec_no_zero x) (dec_not_bool x)
-      (Nat.le_trans (dec_filter x) hlen)
+      (fun _ _ _ _ => Nat.le_trans (dec_filter x) hlen)
     rw [hpy] at this
     cases hc : cLoadIntLine (decInt x ++ [nl]) with
     | error e => rw [hc] at this; exact this.elim

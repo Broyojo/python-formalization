@@ -89,7 +89,30 @@ def name_forms(fn):
     return list(dict.fromkeys(forms))
 
 
-def prefill(by_file, registry):
+def read_reviews():
+    """(file, line) of reviewed rows, split by verdict."""
+    faithful, hollow = set(), {}
+    for path in sorted(REVIEW.glob("*.tsv")) if REVIEW.exists() else []:
+        for row in read_rows(path):
+            key = (row["file"], row["line"])
+            if row["verdict"] == "FAITHFUL":
+                faithful.add(key)
+            else:
+                hollow[key] = row["reason"]
+    return faithful, hollow
+
+
+def withdraw_hollow(by_file, hollow):
+    """A row a review found hollow is todo until its review is redone."""
+    for rows in by_file.values():
+        for row in rows:
+            reason = hollow.get((row["file"], row["line"]))
+            if reason is not None and row["status"] != "todo":
+                row["status"], row["entry"] = "todo", ""
+                row["note"] = "review: " + reason
+
+
+def prefill(by_file, registry, hollow):
     index = defaultdict(list)
     for rows in by_file.values():
         for row in rows:
@@ -116,7 +139,7 @@ def prefill(by_file, registry):
                 unmatched[fn] += 1
     for rows in by_file.values():
         for row in rows:
-            if row["status"] != "todo":
+            if row["status"] != "todo" or (row["file"], row["line"]) in hollow:
                 continue
             if settled[id(row)]:
                 row["status"] = "modelled"
@@ -137,16 +160,12 @@ def main():
 
     registry = read_registry()
     by_file = {p: read_rows(p) for p in sorted(METHODS.glob("*.tsv"))}
+    reviewed, hollow = read_reviews()
     if args.prefill:
-        prefill(by_file, registry)
+        withdraw_hollow(by_file, hollow)
+        prefill(by_file, registry, hollow)
         for path, rows in by_file.items():
             write_rows(path, rows)
-
-    reviewed = set()
-    for path in sorted(REVIEW.glob("*.tsv")) if REVIEW.exists() else []:
-        for row in read_rows(path):
-            if row["verdict"] == "FAITHFUL":
-                reviewed.add((row["file"], row["name"]))
 
     problems = 0
     totals = defaultdict(Counter)
@@ -158,7 +177,7 @@ def main():
                 problems += 1
             area = row["file"].split("/")[0]
             totals[area][row["status"]] += 1
-            totals[area]["faithful"] += (row["file"], row["name"]) in reviewed
+            totals[area]["faithful"] += (row["file"], row["line"]) in reviewed
             claimed.update(e for e in row["entry"].split(",") if e)
 
     print(f"{'area':10s} {'rows':>7s} {'modelled':>9s} {'faithful':>9s} {'excluded':>9s} {'todo':>7s}")
@@ -173,7 +192,8 @@ def main():
           f"{grand['excluded']:9d} {grand['todo']:7d}")
     print(f"{100 * grand['modelled'] / max(in_scope, 1):.1f}% of in-scope rows modelled, "
           f"{100 * grand['faithful'] / max(in_scope, 1):.1f}% reviewed faithful; "
-          f"{len(set(registry) - claimed)} registry entries cover no row")
+          f"{len(set(registry) - claimed)} registry entries cover no row; "
+          f"{len(hollow)} rows withdrawn by review")
     sys.exit(1 if problems or (args.strict and grand["todo"]) else 0)
 
 

@@ -3,7 +3,7 @@ Lib/bz2.py	37	95	BZ2File.__init__	__init__(self, filename, mode='r', *, compress
 Lib/bz2.py	97	118	BZ2File.close	close(self)	todo		
 Lib/bz2.py	121	123	BZ2File.closed	closed(self)	todo		
 Lib/bz2.py	126	128	BZ2File.name	name(self)	todo		
-Lib/bz2.py	131	132	BZ2File.mode	mode(self)	todo		
+Lib/bz2.py	131	132	BZ2File.mode	mode(self)	todo		candidates:calstat-statistics-mode-spec
 Lib/bz2.py	134	137	BZ2File.fileno	fileno(self)	todo		
 Lib/bz2.py	139	141	BZ2File.seekable	seekable(self)	todo		
 Lib/bz2.py	143	146	BZ2File.readable	readable(self)	todo		

@@ -19,7 +19,7 @@ Lib/multiprocessing/shared_memory.py	451	482	ShareableList.__setitem__	__setitem
 Lib/multiprocessing/shared_memory.py	484	485	ShareableList.__reduce__	__reduce__(self)	todo		
 Lib/multiprocessing/shared_memory.py	487	488	ShareableList.__len__	__len__(self)	todo		
 Lib/multiprocessing/shared_memory.py	490	491	ShareableList.__repr__	__repr__(self)	todo		
-Lib/multiprocessing/shared_memory.py	494	498	ShareableList.format	format(self)	todo		
+Lib/multiprocessing/shared_memory.py	494	498	ShareableList.format	format(self)	todo		candidates:calstat-calendar-formatstring-width
 Lib/multiprocessing/shared_memory.py	501	503	ShareableList._format_size_metainfo	_format_size_metainfo(self)	todo		
 Lib/multiprocessing/shared_memory.py	506	508	ShareableList._format_packing_metainfo	_format_packing_metainfo(self)	todo		
 Lib/multiprocessing/shared_memory.py	511	513	ShareableList._format_back_transform_codes	_format_back_transform_codes(self)	todo		

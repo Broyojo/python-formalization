@@ -13,7 +13,7 @@ Lib/filecmp.py	208	211	dircmp.phase4_closure	phase4_closure(self)	todo
 Lib/filecmp.py	213	236	dircmp.report	report(self)	todo		
 Lib/filecmp.py	238	242	dircmp.report_partial_closure	report_partial_closure(self)	todo		
 Lib/filecmp.py	244	248	dircmp.report_full_closure	report_full_closure(self)	todo		
-Lib/filecmp.py	256	260	dircmp.__getattr__	__getattr__(self, attr)	todo		
+Lib/filecmp.py	256	260	dircmp.__getattr__	__getattr__(self, attr)	todo		candidates:calstat-calendar-module-getattr
 Lib/filecmp.py	265	283	cmpfiles	cmpfiles(a, b, common, shallow=True)	todo		
 Lib/filecmp.py	292	296	_cmp	_cmp(a, b, sh, abs=abs, cmp=cmp)	todo		
 Lib/filecmp.py	301	302	_filter	_filter(flist, skip)	todo		

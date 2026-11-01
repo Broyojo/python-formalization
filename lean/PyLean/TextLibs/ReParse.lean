@@ -73,6 +73,9 @@ def atomEq : Node → Node → Bool
   | .at_ a, .at_ b => a == b
   | _, _ => false
 
+/-- The final `min(lo, MAXWIDTH), min(hi, MAXWIDTH)`. -/
+def clampW (w : Nat × Nat) : Nat × Nat := (Nat.min w.1 MAXWIDTH, Nat.min w.2 MAXWIDTH)
+
 mutual
   /-- `SubPattern.getwidth`, `Lib/re/_parser.py:178-228`. `gw` is `state.groupwidths`. -/
   def widthList (gw : List (Option (Nat × Nat))) : List Node → Nat × Nat
@@ -117,9 +120,6 @@ mutual
       let (l, h) := clampW (widthList gw a)
       let (i, j) := widthAlts gw as
       (Nat.min i l, Nat.max j h)
-
-  /-- The final `min(lo, MAXWIDTH), min(hi, MAXWIDTH)`. -/
-  def clampW (w : Nat × Nat) : Nat × Nat := (Nat.min w.1 MAXWIDTH, Nat.min w.2 MAXWIDTH)
 end
 
 def getwidth (gw : List (Option (Nat × Nat))) (p : List Node) : Nat × Nat :=
@@ -198,6 +198,25 @@ def pErr {α : Type} (msg : String) (offset : Int := 0) : P α := do
 
 def tell : P Int := do return (← get).tk.tell
 def peek : P (Option (List Nat)) := do return (← get).tk.next
+
+/-- `State.opengroup`, `Lib/re/_parser.py:86-97`. The two errors are re-raised by the `except` in
+`_parse` with the offset `len(name) + 1`, `Lib/re/_parser.py:850-851`. That `len(name)` would be a
+`TypeError` for an unnamed group, which needs `MAXGROUPS` groups and is out of the model's reach. -/
+def opengroupPure (st : PSt) (name : Option (List Nat)) : Py (Nat × PSt) :=
+  let gid := st.groupwidths.length
+  let st' := { st with groupwidths := st.groupwidths ++ [none] }
+  if st'.groupwidths.length > MAXGROUPS then
+    .error (st.tk.err "too many groups" ((name.getD []).length + 1))
+  else
+    match name with
+    | none => .ok (gid, st')
+    | some n =>
+      if (st.groupdict.lookup n).isSome then .error (reErrorR "redefinition of group name")
+      else .ok (gid, { st' with groupdict := st.groupdict ++ [(n, gid)] })
+
+/-- `State.closegroup`, `Lib/re/_parser.py:98-99`. `width` is `p.getwidth()`. -/
+def closegroupPure (st : PSt) (gid : Nat) (width : Nat × Nat) : PSt :=
+  { st with groupwidths := st.groupwidths.set gid (some width) }
 
 /-- `Tokenizer.get`. -/
 def sget : P (Option (List Nat)) := do
@@ -343,12 +362,17 @@ def classEscape (escape : List Nat) : P Node := do
 def checkgroup (st : PSt) (gid : Nat) : Bool :=
   gid < st.groupwidths.length && (st.groupwidths.getD gid none).isSome
 
-/-- `State.checklookbehindgroup`, `Lib/re/_parser.py:103-109`. -/
+/-- `State.checklookbehindgroup`, `Lib/re/_parser.py:103-109`: the message, if it raises. -/
+def lookbehindError (st : PSt) (gid : Nat) : Option String :=
+  match st.lookbehindgroups with
+  | none => none
+  | some lb =>
+    if !checkgroup st gid then some "cannot refer to an open group"
+    else if gid ≥ lb then some "cannot refer to group defined in the same lookbehind subpattern"
+    else none
+
 def checklookbehindgroup (gid : Nat) : P Unit := do
-  let st ← get
-  if let some lb := st.lookbehindgroups then
-    if !checkgroup st gid then pErr "cannot refer to an open group"
-    if gid ≥ lb then pErr "cannot refer to group defined in the same lookbehind subpattern"
+  if let some m := lookbehindError (← get) gid then pErr m
 
 /-- `_escape`, `Lib/re/_parser.py:372-447`. -/
 def escapeCode (escape : List Nat) : P Node := do
@@ -493,6 +517,12 @@ def flagsOff : (fuel : Nat) → List Nat → Nat → P Nat
         pErr (if isAlphaTok c then "unknown flag" else "missing :") c.length
       flagsOff fuel c del
 
+/-- The last checks of `_parse_flags`, `Lib/re/_parser.py:941-945`. -/
+def flagsCheck (add del : Nat) : P (Option (Nat × Nat)) :=
+  if (del &&& GLOBAL_FLAGS) ≠ 0 then pErr "bad inline flags: cannot turn off global flag" 1
+  else if (add &&& del) ≠ 0 then pErr "bad inline flags: flag turned on and off" 1
+  else pure (some (add, del))
+
 /-- `_parse_flags`, `Lib/re/_parser.py:887-945`; `none` is the global form `(?x)`. -/
 def parseFlags (char : List Nat) : P (Option (Nat × Nat)) := do
   let fuel := (← get).tk.s.length + 8
@@ -510,9 +540,7 @@ def parseFlags (char : List Nat) : P (Option (Nat × Nat)) := do
           pErr (if isAlphaTok c then "unknown flag" else "missing flag") c.length
         flagsOff fuel c 0
     else pure 0
-  if (del &&& GLOBAL_FLAGS) ≠ 0 then pErr "bad inline flags: cannot turn off global flag" 1
-  if (add &&& del) ≠ 0 then pErr "bad inline flags: flag turned on and off" 1
-  return some (add, del)
+  flagsCheck add del
 
 /-! ### `_parse` -/
 
@@ -832,15 +860,8 @@ mutual
     | fuel + 1, verbose, nested, first, sub, start, capture, atomic, name, add, del => do
       let group ← (do
         if capture then
-          let st ← get
-          let gid := st.groupwidths.length
-          let st' := { st with groupwidths := st.groupwidths ++ [none] }
-          if st'.groupwidths.length > MAXGROUPS then pErr "too many groups" ((name.getD []).length + 1)
+          let (gid, st') ← liftPy (opengroupPure (← get) name)
           set st'
-          if let some n := name then
-            if (st.groupdict.lookup n).isSome then
-              throw (reErrorR "redefinition of group name")
-            set { st' with groupdict := st.groupdict ++ [(n, gid)] }
           pure (some gid)
         else pure none)
       let subVerbose := (verbose || (add &&& FLAG_VERBOSE) ≠ 0) && (del &&& FLAG_VERBOSE) = 0
@@ -848,8 +869,7 @@ mutual
       if !(← smatch 41) then
         pErr "missing ), unterminated subpattern" ((← tell) - start)
       if let some g := group then
-        modify fun st =>
-          { st with groupwidths := st.groupwidths.set g (some (getwidth st.groupwidths p)) }
+        modify fun st => closegroupPure st g (getwidth st.groupwidths p)
       let code : Node := if atomic then .atomic p else .subpattern group add del p
       parseSeq fuel verbose nested first (sub ++ [code])
 
@@ -1018,7 +1038,9 @@ def templateLoop (groups : Nat) (groupindex : List (List Nat × Nat)) : (fuel : 
 def parseTemplate (istext : Bool) (s : List Nat) (groups : Nat)
     (groupindex : List (List Nat × Nat)) (maxDigits : Nat := 4300) : Py (List TItem) := do
   let t ← Tk.adv ⟨istext, s, 0, none⟩
-  let (_, st) ← ((templateLoop groups groupindex (s.length + 2)) *> addLiteral).run { tk := t, maxDigits }
+  let (_, st) ← (do
+    templateLoop groups groupindex (s.length + 2)
+    addLiteral).run { tk := t, maxDigits }
   return st.result
 
 end PyLean.TextLibs.Re

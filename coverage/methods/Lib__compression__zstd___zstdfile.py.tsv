@@ -15,7 +15,7 @@ Lib/compression/zstd/_zstdfile.py	248	252	ZstdFile.__next__	__next__(self)	todo
 Lib/compression/zstd/_zstdfile.py	254	260	ZstdFile.tell	tell(self)	todo		
 Lib/compression/zstd/_zstdfile.py	262	265	ZstdFile.fileno	fileno(self)	todo		
 Lib/compression/zstd/_zstdfile.py	268	270	ZstdFile.name	name(self)	todo		
-Lib/compression/zstd/_zstdfile.py	273	274	ZstdFile.mode	mode(self)	todo		
+Lib/compression/zstd/_zstdfile.py	273	274	ZstdFile.mode	mode(self)	todo		candidates:calstat-statistics-mode-spec
 Lib/compression/zstd/_zstdfile.py	277	279	ZstdFile.closed	closed(self)	todo		
 Lib/compression/zstd/_zstdfile.py	281	283	ZstdFile.seekable	seekable(self)	todo		
 Lib/compression/zstd/_zstdfile.py	285	288	ZstdFile.readable	readable(self)	todo		

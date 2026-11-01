@@ -41,7 +41,7 @@ Lib/multiprocessing/managers.py	646	657	BaseManager.__enter__	__enter__(self)	to
 Lib/multiprocessing/managers.py	659	660	BaseManager.__exit__	__exit__(self, exc_type, exc_val, exc_tb)	todo		
 Lib/multiprocessing/managers.py	663	695	BaseManager._finalize_manager	_finalize_manager(process, address, authkey, state, _Client, shutdown_timeout)	todo		
 Lib/multiprocessing/managers.py	698	699	BaseManager.address	address(self)	todo		
-Lib/multiprocessing/managers.py	702	739	BaseManager.register	register(cls, typeid, callable=None, proxytype=None, exposed=None, method_to_typeid=None, create_method=True)	todo		
+Lib/multiprocessing/managers.py	702	739	BaseManager.register	register(cls, typeid, callable=None, proxytype=None, exposed=None, method_to_typeid=None, create_method=True)	todo		candidates:calstat-statistics-kernels-centred
 Lib/multiprocessing/managers.py	746	747	ProcessLocalSet.__init__	__init__(self)	todo		
 Lib/multiprocessing/managers.py	748	749	ProcessLocalSet.__reduce__	__reduce__(self)	todo		
 Lib/multiprocessing/managers.py	766	808	BaseProxy.__init__	__init__(self, token, serializer, manager=None, authkey=None, exposed=None, incref=True, manager_owned=False)	todo		
@@ -89,7 +89,7 @@ Lib/multiprocessing/managers.py	1121	1122	BarrierProxy.reset	reset(self)	todo
 Lib/multiprocessing/managers.py	1124	1125	BarrierProxy.parties	parties(self)	todo		
 Lib/multiprocessing/managers.py	1127	1128	BarrierProxy.n_waiting	n_waiting(self)	todo		
 Lib/multiprocessing/managers.py	1130	1131	BarrierProxy.broken	broken(self)	todo		
-Lib/multiprocessing/managers.py	1136	1140	NamespaceProxy.__getattr__	__getattr__(self, key)	todo		
+Lib/multiprocessing/managers.py	1136	1140	NamespaceProxy.__getattr__	__getattr__(self, key)	todo		candidates:calstat-calendar-module-getattr
 Lib/multiprocessing/managers.py	1141	1145	NamespaceProxy.__setattr__	__setattr__(self, key, value)	todo		
 Lib/multiprocessing/managers.py	1146	1150	NamespaceProxy.__delattr__	__delattr__(self, key)	todo		
 Lib/multiprocessing/managers.py	1155	1156	ValueProxy.get	get(self)	todo		

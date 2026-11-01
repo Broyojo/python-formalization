@@ -254,6 +254,202 @@ def gen_ctx(rng):
             "traps": [t for t in SIGNALS if rng.random() < 0.15]}
 
 
+# Methods checked generically, name -> how the Python side calls them.
+METHODS = {
+    "neg": lambda M, a, b, t: -a, "pos": lambda M, a, b, t: +a, "abs": lambda M, a, b, t: abs(a),
+    "copy_abs": lambda M, a, b, t: a.copy_abs(), "copy_negate": lambda M, a, b, t: a.copy_negate(),
+    "bool": lambda M, a, b, t: bool(a), "adjusted": lambda M, a, b, t: a.adjusted(),
+    "is_nan": lambda M, a, b, t: a.is_nan(), "is_qnan": lambda M, a, b, t: a.is_qnan(),
+    "is_snan": lambda M, a, b, t: a.is_snan(), "is_infinite": lambda M, a, b, t: a.is_infinite(),
+    "is_finite": lambda M, a, b, t: a.is_finite(), "is_signed": lambda M, a, b, t: a.is_signed(),
+    "is_zero": lambda M, a, b, t: a.is_zero(), "is_canonical": lambda M, a, b, t: a.is_canonical(),
+    "is_normal": lambda M, a, b, t: a.is_normal(), "is_subnormal": lambda M, a, b, t: a.is_subnormal(),
+    "number_class": lambda M, a, b, t: a.number_class(), "same_quantum": lambda M, a, b, t: a.same_quantum(b),
+    "radix": lambda M, a, b, t: a.radix(), "canonical": lambda M, a, b, t: a.canonical(),
+    "conjugate": lambda M, a, b, t: a.conjugate(), "real": lambda M, a, b, t: a.real,
+    "imag": lambda M, a, b, t: a.imag,
+    "eq": lambda M, a, b, t: a == b, "lt": lambda M, a, b, t: a < b, "le": lambda M, a, b, t: a <= b,
+    "gt": lambda M, a, b, t: a > b, "ge": lambda M, a, b, t: a >= b,
+    "compare": lambda M, a, b, t: a.compare(b), "compare_signal": lambda M, a, b, t: a.compare_signal(b),
+    "compare_total_mag": lambda M, a, b, t: int(a.compare_total_mag(b)),
+    "max": lambda M, a, b, t: a.max(b), "min": lambda M, a, b, t: a.min(b),
+    "max_mag": lambda M, a, b, t: a.max_mag(b), "min_mag": lambda M, a, b, t: a.min_mag(b),
+    "logb": lambda M, a, b, t: a.logb(), "logical_and": lambda M, a, b, t: a.logical_and(b),
+    "logical_or": lambda M, a, b, t: a.logical_or(b), "logical_xor": lambda M, a, b, t: a.logical_xor(b),
+    "logical_invert": lambda M, a, b, t: a.logical_invert(), "rotate": lambda M, a, b, t: a.rotate(b),
+    "shift": lambda M, a, b, t: a.shift(b), "scaleb": lambda M, a, b, t: a.scaleb(b),
+    "next_minus": lambda M, a, b, t: a.next_minus(), "next_plus": lambda M, a, b, t: a.next_plus(),
+    "next_toward": lambda M, a, b, t: a.next_toward(b), "fma": lambda M, a, b, t: a.fma(b, t),
+    "to_eng_string": lambda M, a, b, t: cps(a.to_eng_string()), "repr": lambda M, a, b, t: cps(repr(a)),
+    "truediv": lambda M, a, b, t: a / b, "floordiv": lambda M, a, b, t: a // b,
+    "mod": lambda M, a, b, t: a % b, "divmod": lambda M, a, b, t: divmod(a, b),
+    "remainder_near": lambda M, a, b, t: a.remainder_near(b),
+}
+LOGICAL = {"logical_and", "logical_or", "logical_xor", "logical_invert"}
+SMALL_INT = {"rotate", "shift", "scaleb"}
+
+
+def gen_method(rng):
+    name = rng.choice(list(METHODS))
+    impl = rng.choice(["py", "c"])
+    a, b, t = gen_dec(rng, wide=True), gen_dec(rng, wide=True), gen_dec(rng, wide=True, special=0.15)
+    ctx = gen_ctx(rng)
+    if rng.random() < 0.25:
+        b = a if rng.random() < 0.5 else (["F", not a[1], a[2], a[3]] if a[0] == "F" else b)
+    if name in LOGICAL and rng.random() < 0.9:
+        n = rng.choice([1, 2, 3, 5, 9, 30])
+        a = ["F", False, str(int("".join(rng.choice("01") for _ in range(n)))), 0]
+        b = ["F", False, str(int("".join(rng.choice("01") for _ in range(n)))), 0]
+    if name in SMALL_INT and rng.random() < 0.9:
+        n = rng.randint(-35, 35)
+        b = ["F", n < 0, str(abs(n)), 0]
+    return {"mod": "decimal", "fn": "m", "m": name, "impl": impl, "ctx": ctx, "a": a, "b": b, "t": t}
+
+
+# Context methods: name -> number of operands.
+CMETHODS = dict.fromkeys(
+    ["add", "subtract", "multiply", "divide", "divide_int", "divmod", "remainder", "compare",
+     "compare_signal", "max", "max_mag", "min", "min_mag", "next_toward", "quantize", "remainder_near",
+     "rotate", "scaleb", "shift", "compare_total", "compare_total_mag", "copy_sign", "same_quantum",
+     "logical_and", "logical_or", "logical_xor"], 2)
+CMETHODS.update(dict.fromkeys(
+    ["abs", "logb", "logical_invert", "minus", "plus", "next_minus", "next_plus", "normalize",
+     "to_integral_exact", "to_integral_value", "number_class", "is_normal", "is_subnormal",
+     "to_eng_string", "to_sci_string", "copy_abs", "copy_negate", "copy_decimal", "is_finite",
+     "is_infinite", "is_nan", "is_qnan", "is_signed", "is_snan", "is_zero", "canonical",
+     "is_canonical"], 1))
+CMETHODS["fma"] = 3
+CMETHODS["radix"] = 0
+ROPS = ["__rsub__", "__rtruediv__", "__rmod__", "__rfloordiv__", "__rdivmod__"]
+ALL_SIGNALS = SIGNALS + ["FloatOperation"]
+TMPL_DEFAULT = {"prec": "28", "rounding": "ROUND_HALF_EVEN", "Emin": "-999999", "Emax": "999999",
+                "capitals": "1", "clamp": "0", "flags": [],
+                "traps": ["DivisionByZero", "InvalidOperation", "Overflow"]}
+ACTS = ["div00", "conv", "impossible", "invalid", "inexact", "divzero"]
+INT_EDGES = [0, 1, -1, 2, 9, 10, 28, 999999, -999999, 2 ** 31 - 1, 2 ** 31, -2 ** 31, -2 ** 31 - 1,
+             2 ** 63 - 1, 2 ** 63, -2 ** 63, -2 ** 63 - 1, 2 ** 64, 999999999999999999,
+             1000000000000000000, -999999999999999999, -1000000000000000000]
+
+
+def gen_arg(rng, wide=True):
+    k = rng.random()
+    if k < 0.70:
+        return ["dec", gen_dec(rng, wide=wide)]
+    if k < 0.92:
+        return ["int", str(rng.choice([0, 1, -1, 2, 7, 10, -10, 123, 10 ** 20, -10 ** 20]))]
+    return ["other"]
+
+
+def gen_cm(rng):
+    name = rng.choice(list(CMETHODS))
+    a, b, t = gen_arg(rng), gen_arg(rng), gen_arg(rng)
+    if name in ("rotate", "shift", "scaleb") and rng.random() < 0.8:
+        b = ["int", str(rng.randint(-35, 35))]
+    if name.startswith("logical") and rng.random() < 0.9:
+        n = rng.choice([1, 2, 3, 5, 9])
+        a = ["int", str(int("".join(rng.choice("01") for _ in range(n))))]
+        b = ["int", str(int("".join(rng.choice("01") for _ in range(n))))]
+    return {"mod": "decimal", "fn": "cm", "m": name, "impl": rng.choice(["py", "c"]), "ctx": gen_ctx(rng),
+            "a": a, "b": b, "t": t}
+
+
+def gen_rop(rng):
+    return {"mod": "decimal", "fn": "rop", "m": rng.choice(ROPS), "impl": rng.choice(["py", "c"]),
+            "ctx": gen_ctx(rng), "a": gen_dec(rng, wide=True), "b": gen_arg(rng)}
+
+
+def gen_tmpl(rng):
+    t = dict(TMPL_DEFAULT)
+    if rng.random() < 0.5:
+        t["prec"] = str(rng.choice([1, 9, 28, 100]))
+        t["rounding"] = rng.choice(ROUNDINGS)
+        t["Emin"] = str(rng.choice([-999999, -30, 0]))
+        t["Emax"] = str(rng.choice([999999, 30, 0]))
+        t["clamp"] = rng.choice(["0", "1"])
+        t["traps"] = [x for x in ALL_SIGNALS if rng.random() < 0.3]
+    if rng.random() < 0.4:
+        t["capitals"] = rng.choice(["0", "1"])
+    if rng.random() < 0.4:
+        t["flags"] = [x for x in ALL_SIGNALS if rng.random() < 0.3]
+    return t
+
+
+def gen_int_arg(rng):
+    return ["int", str(rng.choice(INT_EDGES))]
+
+
+def gen_sig_list(rng):
+    names = [x for x in ALL_SIGNALS if rng.random() < 0.3]
+    if rng.random() < 0.08:
+        names.append("other")
+    return ["list", names]
+
+
+def gen_sig_dict(rng):
+    keys = list(ALL_SIGNALS)
+    r = rng.random()
+    if r < 0.1:
+        keys.remove(rng.choice(keys))
+    elif r < 0.2:
+        keys.append("other")
+    return ["dict", [[k, rng.random() < 0.3] for k in keys]]
+
+
+def gen_attr(rng, name):
+    r = rng.random()
+    if name in ("prec", "Emin", "Emax", "capitals", "clamp"):
+        if r < 0.85:
+            return gen_int_arg(rng)
+        return rng.choice([["str", "1"], ["obj"]])
+    if name == "rounding":
+        if r < 0.8:
+            return ["str", rng.choice(ROUNDINGS)]
+        return rng.choice([["str", "ROUND_NOPE"], ["int", "1"], ["obj"]])
+    if r < 0.6:
+        return gen_sig_dict(rng)
+    return gen_sig_list(rng) if r < 0.9 else ["obj"]
+
+
+def gen_ctxobj(rng):
+    impl = rng.choice(["py", "c"])
+    k = rng.random()
+    if k < 0.3:
+        init = {}
+        for n in ["prec", "rounding", "Emin", "Emax", "capitals", "clamp", "flags", "traps"]:
+            if rng.random() < 0.3:
+                init[n] = gen_attr(rng, n)
+        return {"mod": "decimal", "fn": "ctxnew", "impl": impl, "tmpl": gen_tmpl(rng), "init": init}
+    if k < 0.5:
+        name = rng.choice(["prec", "rounding", "Emin", "Emax", "capitals", "clamp", "flags", "traps", "nope"])
+        val = gen_attr(rng, name) if name != "nope" else ["int", "1"]
+        if name in ("flags", "traps") and val[0] == "list":
+            val = gen_sig_dict(rng)
+        return {"mod": "decimal", "fn": "ctxset", "impl": impl, "tmpl": gen_tmpl(rng), "name": name, "val": val}
+    if k < 0.55:
+        return {"mod": "decimal", "fn": "ctxdel", "impl": impl,
+                "name": rng.choice(["prec", "flags", "traps", "nope"])}
+    acts = [rng.choice(ACTS) for _ in range(rng.choice([0, 1, 1, 2, 3]))]
+    if k < 0.7:
+        return {"mod": "decimal", "fn": "ctxrepr", "impl": impl, "acts": acts}
+    if k < 0.85:
+        return {"mod": "decimal", "fn": "sd", "impl": "c", "acts": acts,
+                "acts2": [rng.choice(ACTS) for _ in range(rng.choice([0, 1, 2]))],
+                "op": rng.choice(["len", "iter", "get", "set", "clear", "del", "repr", "copy", "eq", "ne"]),
+                "key": rng.choice(ALL_SIGNALS + ["other"]), "bound": rng.random() < 0.9,
+                "w": rng.choice(["copy", "self", "unbound", "other_ctx", "bad_dict", "none"])}
+    if k < 0.92:
+        bits = rng.choice([0, 32, 64, 128, 160, 256, 512, 544, 33, -32, 1024, 2 ** 31, 2 ** 63])
+        return {"mod": "decimal", "fn": "ieee", "impl": impl, "tmpl": gen_tmpl(rng), "bits": ["int", str(bits)]}
+    kw = []
+    for n in rng.sample(["prec", "rounding", "Emin", "Emax", "capitals", "clamp", "flags", "traps", "nope"],
+                        rng.choice([0, 1, 1, 2, 3])):
+        val = ["null"] if rng.random() < 0.1 else (gen_attr(rng, n) if n != "nope" else ["int", "1"])
+        if n in ("flags", "traps") and val[0] == "list":
+            val = gen_sig_dict(rng)
+        kw.append([n, None if val == ["null"] else val])
+    return {"mod": "decimal", "fn": "local", "impl": impl, "tmpl": gen_tmpl(rng), "kw": kw}
+
+
 OPS = ["add", "sub", "mul", "quantize", "quantize", "tiv", "tie", "roundn", "normalize", "fix"]
 
 
@@ -273,12 +469,23 @@ def gen_case(rng):
     while True:
         c = gen_case1(rng)
         if c["fn"].endswith("_c") or c.get("impl") == "c":
-            if not all(in_c_limits(c[k]) for k in ("a", "b") if k in c):
+            vals = [c[k] for k in ("a", "b", "t") if k in c]
+            vals = [v[1] if v and v[0] == "dec" else v for v in vals]
+            if not all(in_c_limits(v) for v in vals if v and v[0] in ("F", "I", "N")):
                 continue
         return c
 
 
 def gen_case1(rng):
+    r = rng.random()
+    if r < 0.25:
+        return gen_method(rng)
+    if r < 0.40:
+        return gen_cm(rng)
+    if r < 0.45:
+        return gen_rop(rng)
+    if r < 0.55:
+        return gen_ctxobj(rng)
     k = rng.random()
     if k < 0.18:
         return {"mod": "decimal", "fn": rng.choice(["parse_py", "parse_c"]),
@@ -377,6 +584,179 @@ def run_op(M, case):
     return [enc_dec(r), flags]
 
 
+def enc_val(M, v):
+    if isinstance(v, M.Decimal):
+        return enc_dec(v)
+    if isinstance(v, tuple):
+        return [enc_val(M, x) for x in v]
+    if v is NotImplemented:
+        return None
+    if isinstance(v, str) and getattr(enc_val, "str_cps", False):
+        return cps(v)
+    return v
+
+
+def make_ctx(M, c):
+    return M.Context(prec=c["prec"], rounding=getattr(M, c["rounding"]), Emin=c["emin"],
+                     Emax=c["emax"], clamp=c["clamp"], traps=[getattr(M, t) for t in c["traps"]],
+                     flags=[])
+
+
+def build_arg(M, j):
+    if j[0] == "dec":
+        return build(M, j[1])
+    if j[0] == "int":
+        return int(j[1])
+    return "x"
+
+
+def run_cm(M, case):
+    ctx = make_ctx(M, case["ctx"])
+    name = case["m"]
+    args = [build_arg(M, case[k]) for k in ("a", "b", "t")][:CMETHODS[name]]
+    r = getattr(ctx, name)(*args)
+    flags = sorted(s for s in SIGNALS if ctx.flags[getattr(M, s)])
+    if name in ("to_eng_string", "to_sci_string"):
+        r = cps(r)
+    return [enc_val(M, r), flags]
+
+
+def run_rop(M, case):
+    ctx = make_ctx(M, case["ctx"])
+    a, b = build(M, case["a"]), build_arg(M, case["b"])
+    with M.localcontext(ctx) as cx:
+        r = getattr(a, case["m"])(b)
+        flags = sorted(s for s in SIGNALS if cx.flags[getattr(M, s)])
+    return [enc_val(M, r), flags]
+
+
+def key_obj(M, k):
+    return 5 if k == "other" else getattr(M, k)
+
+
+def ctx_val(M, v):
+    if v is None:
+        return None
+    t = v[0]
+    if t == "int":
+        return int(v[1])
+    if t == "str":
+        return v[1]
+    if t == "list":
+        return [key_obj(M, k) for k in v[1]]
+    if t == "dict":
+        return {key_obj(M, k): b for k, b in v[1]}
+    return object()
+
+
+def enc_ctx(M, c):
+    names = lambda d: sorted(k.__name__ for k in ALL_SIG_OBJ[M] if d[k])
+    return {"prec": str(c.prec), "rounding": c.rounding, "Emin": str(c.Emin), "Emax": str(c.Emax),
+            "capitals": str(c.capitals), "clamp": str(c.clamp), "flags": names(c.flags),
+            "traps": names(c.traps)}
+
+
+ALL_SIG_OBJ = {M: [getattr(M, s) for s in ALL_SIGNALS] for M in (P, C)}
+
+
+def with_template(M, t, f):
+    D = M.DefaultContext
+    saved = (D.prec, D.rounding, D.Emin, D.Emax, D.capitals, D.clamp, dict(D.flags), dict(D.traps))
+    try:
+        D.prec, D.rounding = int(t["prec"]), t["rounding"]
+        D.Emin, D.Emax = int(t["Emin"]), int(t["Emax"])
+        D.capitals, D.clamp = int(t["capitals"]), int(t["clamp"])
+        for s in ALL_SIG_OBJ[M]:
+            D.flags[s] = s.__name__ in t["flags"]
+            D.traps[s] = s.__name__ in t["traps"]
+        return f()
+    finally:
+        D.prec, D.rounding, D.Emin, D.Emax, D.capitals, D.clamp = saved[:6]
+        D.flags, D.traps = saved[6], saved[7]
+
+
+def do_act(M, ctx, a):
+    D = M.Decimal
+    if a == "div00":
+        ctx.divide(D(0), D(0))
+    elif a == "conv":
+        ctx.create_decimal("xyz")
+    elif a == "impossible":
+        ctx.divide_int(D("1E+30"), D(1))
+    elif a == "invalid":
+        ctx.sqrt(D(-1))
+    elif a == "inexact":
+        ctx.divide(D(1), D(3))
+    elif a == "divzero":
+        ctx.divide(D(1), D(0))
+
+
+def acted(M, acts):
+    ctx = M.Context(prec=28, traps=[], flags=[])
+    for a in acts:
+        do_act(M, ctx, a)
+    return ctx
+
+
+def run_sd(case):
+    ctx = acted(C, case["acts"])
+    ctx2 = acted(C, case["acts2"])      # kept alive: a SignalDict dies with its context
+    sd = ctx.flags if case["bound"] else type(ctx.flags)()
+    key = key_obj(C, case["key"])
+    op = case["op"]
+    if op == "len":
+        return len(sd)
+    if op == "iter":
+        return [k.__name__ for k in sd]
+    if op == "get":
+        return sd[key]
+    if op in ("set", "clear"):
+        sd[key] = op == "set"
+        return [s.__name__ for s in ctx2.flags if sd[s]]
+    if op == "del":
+        del sd[key]
+        return None
+    if op == "repr":
+        return repr(sd)
+    if op == "copy":
+        d = sd.copy()
+        return [k.__name__ for k, v in d.items() if v]
+    w = case["w"]
+    other = {"copy": lambda: sd.copy(), "self": lambda: sd, "unbound": lambda: type(ctx.flags)(),
+             "other_ctx": lambda: ctx2.flags, "bad_dict": lambda: {5: True},
+             "none": lambda: 7}[w]()
+    r = sd.__eq__(other) if op == "eq" else sd.__ne__(other)
+    return "NotImplemented" if r is NotImplemented else r
+
+
+def run_local(M, case):
+    t = case["tmpl"]
+    base = with_template(M, t, lambda: M.Context())
+    def body():
+        kw = {k: ctx_val(M, v) for k, v in case["kw"]}
+        M.setcontext(base)
+        with M.localcontext(**kw) as nc:
+            inner = enc_ctx(M, nc)
+        return [inner, M.getcontext() is base]
+    saved = M.getcontext()
+    try:
+        return with_template(M, t, body)
+    finally:
+        M.setcontext(saved)
+
+
+def run_method(M, case):
+    c = case["ctx"]
+    ctx = M.Context(prec=c["prec"], rounding=getattr(M, c["rounding"]), Emin=c["emin"],
+                    Emax=c["emax"], clamp=c["clamp"], traps=[getattr(M, t) for t in c["traps"]],
+                    flags=[])
+    a, b, t = build(M, case["a"]), build(M, case["b"]), build(M, case["t"])
+    with M.localcontext(ctx) as cx:
+        r = METHODS[case["m"]](M, a, b, t)
+        flags = sorted(s for s in SIGNALS if cx.flags[getattr(M, s)])
+    return [enc_val(M, r), flags]
+
+
 def run_python(case):
     fn = case["fn"]
 
@@ -444,6 +824,40 @@ def run_python(case):
             return enc_dec(build(M, case["a"]).copy_sign(build(M, case["b"])))
         if fn == "op":
             return run_op(MODS[case["impl"]], case)
+        if fn == "m":
+            return run_method(MODS[case["impl"]], case)
+        if fn == "cm":
+            return run_cm(MODS[case["impl"]], case)
+        if fn == "rop":
+            return run_rop(MODS[case["impl"]], case)
+        if fn == "ctxnew":
+            M = MODS[case["impl"]]
+            init = {k: ctx_val(M, v) for k, v in case["init"].items()}
+            return enc_ctx(M, with_template(M, case["tmpl"], lambda: M.Context(**init)))
+        if fn == "ctxset":
+            M = MODS[case["impl"]]
+            c = with_template(M, case["tmpl"], lambda: M.Context(
+                prec=int(case["tmpl"]["prec"]), rounding=case["tmpl"]["rounding"],
+                Emin=int(case["tmpl"]["Emin"]), Emax=int(case["tmpl"]["Emax"]),
+                capitals=int(case["tmpl"]["capitals"]), clamp=int(case["tmpl"]["clamp"]),
+                flags=[getattr(M, s) for s in case["tmpl"]["flags"]],
+                traps=[getattr(M, s) for s in case["tmpl"]["traps"]]))
+            setattr(c, case["name"], ctx_val(M, case["val"]))
+            return enc_ctx(M, c)
+        if fn == "ctxdel":
+            M = MODS[case["impl"]]
+            delattr(M.Context(), case["name"])
+            return None
+        if fn == "ctxrepr":
+            M = MODS[case["impl"]]
+            return repr(acted(M, case["acts"]))
+        if fn == "sd":
+            return run_sd(case)
+        if fn == "ieee":
+            M = MODS[case["impl"]]
+            return enc_ctx(M, with_template(M, case["tmpl"], lambda: M.IEEEContext(int(case["bits"][1]))))
+        if fn == "local":
+            return run_local(MODS[case["impl"]], case)
         raise SystemExit("unknown fn " + fn)
 
     return common.py_result(thunk)

@@ -1,0 +1,56 @@
+id: bytesobj-bytes-format-nonascii-conversion
+title: "b'%\\xff' % (1,) raises OverflowError instead of ValueError: a negative char reaches PyErr_Format's %c"
+priority: P4
+kind: wrong-exception
+module: bytesobj
+files: [Objects/bytesobject.c]
+functions: ["_PyBytes_FormatEx", "bytes_mod", "bytearray_mod"]
+summary: |
+  The parser of `bytes % args` stores the conversion byte in an `int c` with `c = *fmt++`, where fmt is
+  a `const char *`. Where char is signed (x86-64, macOS arm64), a byte above 127 gives a negative c. The
+  `default:` case formats the message with PyErr_Format("unsupported format character '%c' (0x%x) ...",
+  c, c, ...), and %c rejects a negative value, so the user gets
+  OverflowError("character argument not in range(0x110000)") and nothing about the format. Every byte
+  from 0x80 to 0xff does this, for bytes and bytearray, while ASCII bytes give the documented ValueError
+  and str % args gives ValueError for the same text. Where char is unsigned (Linux aarch64) this
+  code path would give the ValueError, so the exception type depends on the platform; that is from
+  reading the code, not from a run there.
+  Lean: BadConvIsValueError is refuted; BadConvAsciiIsValueError (every ASCII non-conversion byte gives
+  ValueError) is proven by checking all of them.
+likelihood: |
+  Low to moderate: `%` applied to binary data with a stray percent sign is a common mistake in protocol
+  code, and the message then has nothing to do with the problem.
+maybe_intended: |
+  No. The Py_CHARMASK used on the digit loops of the same function shows the signedness is known.
+reproducer: |
+  try:
+      b'%\xff' % (1,)
+      r = 'no error'
+  except Exception as e:
+      r = '%s: %s' % (type(e).__name__, e)
+  print(r)
+  if r.startswith('OverflowError'):
+      print('REPRODUCED bytesobj-bytes-format-nonascii-conversion')
+expected: |
+  ValueError naming the byte and its position, as for b'%z' % (1,).
+observed: |
+  python3 3.14.7: OverflowError: character argument not in range(0x110000). REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): ValueError: stray % at position 0 or unexpected
+  format character with code 0xff at position 1. NOT REPRODUCED: fixed on main by a rewrite of the error
+  messages.
+promised_by: |
+  Doc/library/stdtypes.rst, printf-style bytes formatting, and the ValueError in `default:` itself.
+cause: |
+  Objects/bytesobject.c:727, :755, :777 (3.14.7) `c = *fmt++` without Py_CHARMASK; :950-954 passes c to
+  `%c`.
+possible_fix: |
+  Use Py_CHARMASK at those reads, or print the code with %x only. The 3.14 branch still has the old code
+  (read with `gh api`), and gh-142081 went to main only, so this is a candidate for a small 3.14 fix.
+duplicates:
+  issues: []
+  fixed_by: "gh-142081 (gh-142037 'Improve error messages for printf-style formatting'), merged 2026-01-24, main only"
+  queries: ["unsupported format character bytes", "character argument not in range bytes format",
+            "stray % at position", "printf-style formatting error messages", "bugforge README: no match"]
+lean:
+  property: PyLean.BytesObj.Bytes.BadConvIsValueError
+  theorem: PyLean.BytesObj.Bytes.badConvIsValueError_refuted

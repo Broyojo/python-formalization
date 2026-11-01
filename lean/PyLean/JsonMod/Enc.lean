@@ -6,11 +6,15 @@ The two encoders of CPython 3.14.7: `py_encode_basestring(_ascii)` and
 `c_encode_basestring(_ascii)` (Modules/_json.c), both reached through
 `JSONEncoder.encode` (`json.dumps`).
 
-Values (`EVal`) are trees of `None`, `bool`, `int`, `str`, `list`, `dict`,
-plus two kinds of leaves that are not JSON: `back k`, a reference to the `k`-th
-enclosing container (a reference cycle), and `other`, an object the encoder
-does not know (a `bytes` object), for which the default `default()` raises.
-Floats, `default=` callbacks and container subclasses are out of scope.
+Values (`EVal`) are trees of `None`, `bool`, `int`, `str`, `float`, `list`,
+`dict`, plus two kinds of leaves that are not JSON: `back k`, a reference to the
+`k`-th enclosing container (a reference cycle), and `other n t`, an object of
+type `t` the encoder does not know, handed to `default()`, an abstract function
+of the object's identity `n` (`ECfg.dflt`).
+
+A float is its IEEE-754 bits, which decide the branches of `floatstr` and
+`encoder_encode_float`, with the text of `float.__repr__` carried as data until
+the binary64 model exists. Container subclasses are out of scope.
 
 `indent` and the separators are the strings `JSONEncoder.iterencode` passes on
 (an int `indent` has already become `' ' * indent`, encoder.py:249-252).
@@ -28,6 +32,8 @@ inductive EKey where
   | bool (b : Bool)
   | none
   | tup (n : Int)
+  /-- A float: its bits and `repr`. -/
+  | flt (bits : Nat) (repr : PStr)
   deriving DecidableEq, Repr, Inhabited
 
 /-- A Python object passed to `json.dumps`. -/
@@ -36,24 +42,42 @@ inductive EVal where
   | bool (b : Bool)
   | int (n : Int)
   | str (s : PStr)
+  /-- A float: its bits and `repr`. -/
+  | flt (bits : Nat) (repr : PStr)
   | list (xs : List EVal)
   | dict (kvs : List (EKey × EVal))
   /-- The `k`-th enclosing list or dict (`0` is the innermost): a cycle. -/
   | back (k : Nat)
-  /-- A `bytes` object: `JSONEncoder.default` raises `TypeError`. -/
-  | other
+  /-- An object of type `t` with identity `n`, handed to `default()`. -/
+  | other (n : Nat) (t : String)
   deriving Repr, Inhabited
+
+/-- `TypeError` raised by `JSONEncoder.default`, encoder.py:182-183. -/
+def defaultErr (t : String) : PyExc := .typeError s!"Object of type {t} is not JSON serializable"
+
+/-- What a custom `encoder` passed to `make_encoder` returns. -/
+inductive EncOut where
+  | str (s : PStr)
+  /-- Not a `str`: the name of its type. -/
+  | nonstr (t : String)
 
 /-- Encoder options after `JSONEncoder.__init__`/`iterencode`. -/
 structure ECfg where
   ensureAscii : Bool := true
   checkCircular : Bool := true
+  allowNan : Bool := true
   sortKeys : Bool := false
   skipKeys : Bool := false
   indent : Option PStr := none
   itemSep : PStr := cs ", "
   keySep : PStr := cs ": "
-  deriving DecidableEq, Repr, Inhabited
+  /-- `default(o)`, for the object `other n t`. -/
+  dflt : Nat → String → Except PyExc EVal := fun _ t => .error (defaultErr t)
+  /-- An upper bound on the nesting added by `default()`: part of the fuel. -/
+  dfltDepth : Nat := 0
+  /-- The `encoder` of `make_encoder`, when it is not one of the two C functions
+  (`fast_encode` is then `NULL`). -/
+  customEnc : Option (PStr → Except PyExc EncOut) := none
 
 abbrev ER := Except PyExc PStr
 
@@ -79,6 +103,45 @@ def decDigitsF : Nat → Nat → PStr
   | f + 1, n => if n < 10 then [48 + n] else decDigitsF f (n / 10) ++ [48 + n % 10]
 
 def decDigits (n : Nat) : PStr := decDigitsF (n + 1) n
+
+/-! ### Floats -/
+
+def fltExp (bits : Nat) : Nat := bits / 2 ^ 52 % 2 ^ 11
+def fltMant (bits : Nat) : Nat := bits % 2 ^ 52
+def fltNeg (bits : Nat) : Bool := bits / 2 ^ 63 % 2 == 1
+
+/-- `o != o`. -/
+def fltIsNan (bits : Nat) : Bool := fltExp bits == 2047 && fltMant bits != 0
+/-- `isfinite(i)`. -/
+def fltIsFinite (bits : Nat) : Bool := fltExp bits != 2047
+/-- `o == INFINITY`. -/
+def fltIsPosInf (bits : Nat) : Bool := fltExp bits == 2047 && fltMant bits == 0 && !fltNeg bits
+/-- `o == -INFINITY`. -/
+def fltIsNegInf (bits : Nat) : Bool := fltExp bits == 2047 && fltMant bits == 0 && fltNeg bits
+
+/-- `ValueError` for a non-finite float with `allow_nan=False`. -/
+def outOfRange (repr : PStr) : PyExc :=
+  .valueError ("Out of range float values are not JSON compliant: " ++ String.ofList (repr.map Char.ofNat))
+
+/-- `floatstr` in `JSONEncoder.iterencode`, encoder.py:226-246. -/
+def pyFloatStr (cfg : ECfg) (bits : Nat) (repr : PStr) : Except PyExc PStr :=
+  let text : Option PStr :=
+    if fltIsNan bits then some (cs "NaN")
+    else if fltIsPosInf bits then some (cs "Infinity")
+    else if fltIsNegInf bits then some (cs "-Infinity")
+    else none
+  match text with
+  | none => .ok repr
+  | some t => if !cfg.allowNan then .error (outOfRange repr) else .ok t
+
+/-- `encoder_encode_float`, Modules/_json.c:1422-1447. -/
+def cEncodeFloat (cfg : ECfg) (bits : Nat) (repr : PStr) : Except PyExc PStr :=
+  if !fltIsFinite bits then
+    if !cfg.allowNan then .error (outOfRange repr)
+    else if fltIsPosInf bits then .ok (cs "Infinity")
+    else if fltIsNegInf bits then .ok (cs "-Infinity")
+    else .ok (cs "NaN")
+  else .ok repr
 
 /-- `int.__repr__` (`_PyLong_Format`), Objects/longobject.c:2133-2139: more than
 4300 digits raise `ValueError`. -/
@@ -162,7 +225,7 @@ def cEscape (s : PStr) : PStr := [34] ++ s.flatMap cEscapeChar ++ [34]
 /-- Comparison classes for `sort_keys`: values of different classes raise
 `TypeError` on `<`. -/
 def EKey.cls : EKey → Nat
-  | .int _ | .bool _ => 0
+  | .int _ | .bool _ | .flt _ _ => 0
   | .str _ => 1
   | .none => 2
   | .tup _ => 3
@@ -174,15 +237,32 @@ def strLt : PStr → PStr → Bool
   | _ :: _, [] => false
   | a :: s, b :: t => a < b || (a == b && strLt s t)
 
+/-- A numeric key as `(rank, n, d)`: `rank` is -1, 0 or 1 for -inf, finite and
+inf, and a finite value is the fraction `n / d`, `d > 0`. NaN keys are out of
+scope for `sort_keys`: they make `<` inconsistent, and the order then depends on
+the sort. -/
+def EKey.num : EKey → Int × Int × Nat
+  | .int a => (0, a, 1)
+  | .bool a => (0, if a then 1 else 0, 1)
+  | .flt b _ =>
+    if fltIsNegInf b then (-1, 0, 1)
+    else if fltIsPosInf b then (1, 0, 1)
+    else
+      let e := fltExp b
+      let m := if e = 0 then fltMant b else fltMant b + 2 ^ 52
+      let sh := if e = 0 then 1 else e
+      let v : Int := if fltNeg b then -(m : Int) else m
+      if sh ≥ 1075 then (0, v * 2 ^ (sh - 1075), 1) else (0, v, 2 ^ (1075 - sh))
+  | _ => (0, 0, 1)
+
 /-- `<` within a class. -/
 def EKey.lt : EKey → EKey → Bool
   | .str a, .str b => strLt a b
-  | .int a, .int b => a < b
-  | .int a, .bool b => a < (if b then 1 else 0)
-  | .bool a, .int b => (if a then 1 else 0) < b
-  | .bool a, .bool b => !a && b
   | .tup a, .tup b => a < b
-  | _, _ => false
+  | a, b =>
+    let (ra, na, da) := a.num
+    let (rb, nb, db) := b.num
+    ra < rb || (ra == rb && na * db < nb * da)
 
 def insertItem (p : EKey × EVal) : List (EKey × EVal) → List (EKey × EVal)
   | [] => [p]
@@ -203,9 +283,6 @@ def sortItems (kvs : List (EKey × EVal)) : Except PyExc (List (EKey × EVal)) :
 /-- `TypeError` for a key that is not str, int, float, bool or None. -/
 def badKeyErr : PyExc := .typeError "keys must be str, int, float, bool or None, not tuple"
 
-/-- `TypeError` raised by `JSONEncoder.default`. -/
-def defaultErr : PyExc := .typeError "Object of type bytes is not JSON serializable"
-
 def circularErr : PyExc := .valueError "Circular reference detected"
 
 /-- Infinite recursion through a cycle when `check_circular=False`. -/
@@ -225,6 +302,7 @@ def pyStrEnc (cfg : ECfg) (s : PStr) : PStr :=
 `none` for a skipped key, or the error. -/
 def pyKeyStr (cfg : ECfg) : EKey → Except PyExc (Option PStr)
   | .str s => .ok (some s)
+  | .flt b r => (pyFloatStr cfg b r).map some
   | .bool true => .ok (some (cs "true"))
   | .bool false => .ok (some (cs "false"))
   | .none => .ok (some (cs "null"))
@@ -233,15 +311,16 @@ def pyKeyStr (cfg : ECfg) : EKey → Except PyExc (Option PStr)
 
 mutual
 /-- `_iterencode(o, _current_indent_level)`, encoder.py:426-460. -/
-def pyEnc (cfg : ECfg) : Nat → Nat → EVal → ER
-  | 0, _, _ => .error .modelFuel
-  | f + 1, lvl, v =>
+def pyEnc (cfg : ECfg) : Nat → Nat → List Nat → EVal → ER
+  | 0, _, _, _ => .error .modelFuel
+  | f + 1, lvl, seen, v =>
     match v with
     | .str s => .ok (pyStrEnc cfg s)
     | .none => .ok (cs "null")
     | .bool true => .ok (cs "true")
     | .bool false => .ok (cs "false")
     | .int n => intRepr n
+    | .flt b r => pyFloatStr cfg b r
     | .list xs =>
       -- `_iterencode_list`, encoder.py:280-337
       if xs = [] then .ok (cs "[]")
@@ -250,7 +329,7 @@ def pyEnc (cfg : ECfg) : Nat → Nat → EVal → ER
           match cfg.indent with
           | some ind => (lvl + 1, some ([10] ++ rep ind (lvl + 1)), cfg.itemSep ++ [10] ++ rep ind (lvl + 1))
           | none => (lvl, none, cfg.itemSep)
-        match pyEncList cfg f lvl sep true xs with
+        match pyEncList cfg f lvl seen sep true xs with
         | .error e => .error e
         | .ok body =>
           let close : PStr := match cfg.indent with
@@ -269,7 +348,7 @@ def pyEnc (cfg : ECfg) : Nat → Nat → EVal → ER
         match items with
         | .error e => .error e
         | .ok items =>
-          match pyEncItems cfg f lvl nl sep true items with
+          match pyEncItems cfg f lvl seen nl sep true items with
           | .error e => .error e
           | .ok (body, first) =>
             let close : PStr := match cfg.indent with
@@ -277,35 +356,45 @@ def pyEnc (cfg : ECfg) : Nat → Nat → EVal → ER
               | none => []
             .ok ([123] ++ body ++ close ++ [125])
     | .back _ => .error (if cfg.checkCircular then circularErr else recursionErr)
-    | .other => .error defaultErr
+    | .other n t =>
+      -- encoder.py:446-460. `seen` holds the objects being serialized: they are
+      -- `markers`, and without `check_circular` a repeat recurses forever.
+      if n ∈ seen then .error (if cfg.checkCircular then circularErr else recursionErr)
+      else
+        match cfg.dflt n t with
+        | .error e => .error e
+        | .ok v' => pyEnc cfg f lvl (n :: seen) v'
+termination_by f _ _ v => (f, sizeOf v)
 
 /-- The `for i, value in enumerate(lst)` loop of `_iterencode_list`. -/
-def pyEncList (cfg : ECfg) : Nat → Nat → PStr → Bool → List EVal → ER
-  | _, _, _, _, [] => .ok []
-  | f, lvl, sep, first, x :: xs =>
-    match pyEnc cfg f lvl x with
+def pyEncList (cfg : ECfg) : Nat → Nat → List Nat → PStr → Bool → List EVal → ER
+  | _, _, _, _, _, [] => .ok []
+  | f, lvl, seen, sep, first, x :: xs =>
+    match pyEnc cfg f lvl seen x with
     | .error e => .error e
     | .ok t =>
-      match pyEncList cfg f lvl sep false xs with
+      match pyEncList cfg f lvl seen sep false xs with
       | .error e => .error e
       | .ok rest => .ok ((if first then [] else sep) ++ t ++ rest)
+termination_by f _ _ _ _ xs => (f, sizeOf xs)
 
 /-- The `for key, value in items` loop of `_iterencode_dict`; also returns
 whether nothing was written (`first`). -/
-def pyEncItems (cfg : ECfg) : Nat → Nat → Option PStr → PStr → Bool → List (EKey × EVal) → Except PyExc (PStr × Bool)
-  | _, _, _, _, first, [] => .ok ([], first)
-  | f, lvl, nl, sep, first, (k, x) :: xs =>
+def pyEncItems (cfg : ECfg) : Nat → Nat → List Nat → Option PStr → PStr → Bool → List (EKey × EVal) → Except PyExc (PStr × Bool)
+  | _, _, _, _, _, first, [] => .ok ([], first)
+  | f, lvl, seen, nl, sep, first, (k, x) :: xs =>
     match pyKeyStr cfg k with
     | .error e => .error e
-    | .ok none => pyEncItems cfg f lvl nl sep first xs
+    | .ok none => pyEncItems cfg f lvl seen nl sep first xs
     | .ok (some ks) =>
       let pre : PStr := if first then nl.getD [] else sep
-      match pyEnc cfg f lvl x with
+      match pyEnc cfg f lvl seen x with
       | .error e => .error e
       | .ok t =>
-        match pyEncItems cfg f lvl nl sep false xs with
+        match pyEncItems cfg f lvl seen nl sep false xs with
         | .error e => .error e
         | .ok (rest, fst) => .ok (pre ++ pyStrEnc cfg ks ++ cfg.keySep ++ t ++ rest, fst)
+termination_by f _ _ _ _ _ items => (f, sizeOf items)
 end
 
 /-! ### C encoder: `encoder_listencode_obj` and friends, Modules/_json.c:1478-1860 -/
@@ -314,11 +403,29 @@ end
 def cStrEnc (cfg : ECfg) (s : PStr) : PStr :=
   if cfg.ensureAscii then cAsciiEscape s else cEscape s
 
+/-- `encoder_encode_string` with a custom `encoder` (:1456-1466), or with
+`fast_encode`. -/
+def cEncStr (cfg : ECfg) (s : PStr) : ER :=
+  match cfg.customEnc with
+  | none => .ok (cStrEnc cfg s)
+  | some g =>
+    match g s with
+    | .error e => .error e
+    | .ok (.str t) => .ok t
+    | .ok (.nonstr t) => .error (.typeError s!"encoder() must return a string, not {(String.ofList (t.toList.take 80))}")
+
+/-- `_encoded_const`, :1403-1420: `None`, `True`, `False` as text. -/
+def encodedConst : Option Bool → PStr
+  | none => cs "null"
+  | some true => cs "true"
+  | some false => cs "false"
+
 /-- The key conversion of `encoder_encode_key_value`, :1590-1613. -/
 def cKeyStr (cfg : ECfg) : EKey → Except PyExc (Option PStr)
   | .str s => .ok (some s)
-  | .bool b => .ok (some (if b then cs "true" else cs "false"))
-  | .none => .ok (some (cs "null"))
+  | .flt b r => (cEncodeFloat cfg b r).map some
+  | .bool b => .ok (some (encodedConst (some b)))
+  | .none => .ok (some (encodedConst none))
   | .int n => (intRepr n).map some
   | .tup _ => if cfg.skipKeys then .ok none else .error badKeyErr
 
@@ -329,14 +436,15 @@ def cSepIndent (cfg : ECfg) (ind : PStr) (k : Nat) : PStr := cfg.itemSep ++ cNew
 
 mutual
 /-- `encoder_listencode_obj`, :1478-1581. -/
-def cEnc (cfg : ECfg) : Nat → Nat → EVal → ER
-  | 0, _, _ => .error .modelFuel
-  | f + 1, lvl, v =>
+def cEnc (cfg : ECfg) : Nat → Nat → List Nat → EVal → ER
+  | 0, _, _, _ => .error .modelFuel
+  | f + 1, lvl, seen, v =>
     match v with
     | .none => .ok (cs "null")
     | .bool b => .ok (if b then cs "true" else cs "false")
-    | .str s => .ok (cStrEnc cfg s)
+    | .str s => cEncStr cfg s
     | .int n => intRepr n
+    | .flt b r => cEncodeFloat cfg b r
     | .list xs =>
       -- `encoder_listencode_list`, :1769-1860
       if xs.length = 0 then .ok (cs "[]")
@@ -345,7 +453,7 @@ def cEnc (cfg : ECfg) : Nat → Nat → EVal → ER
           match cfg.indent with
           | some ind => (lvl + 1, cNewlineIndent ind (lvl + 1), cSepIndent cfg ind (lvl + 1))
           | none => (lvl, [], cfg.itemSep)
-        match cEncList cfg f lvl sep 0 xs with
+        match cEncList cfg f lvl seen sep 0 xs with
         | .error e => .error e
         | .ok body =>
           let post : PStr := match cfg.indent with
@@ -364,7 +472,7 @@ def cEnc (cfg : ECfg) : Nat → Nat → EVal → ER
         match items with
         | .error e => .error e
         | .ok items =>
-          match cEncItems cfg f lvl sep true items with
+          match cEncItems cfg f lvl seen sep true items with
           | .error e => .error e
           | .ok (body, first) =>
             let post : PStr := match cfg.indent with
@@ -372,50 +480,65 @@ def cEnc (cfg : ECfg) : Nat → Nat → EVal → ER
               | none => []
             .ok ([123] ++ body ++ post ++ [125])
     | .back _ => .error (if cfg.checkCircular then circularErr else recursionErr)
-    | .other => .error defaultErr
+    | .other n t =>
+      -- :1542-1579, with `seen` as in `pyEnc`
+      if n ∈ seen then .error (if cfg.checkCircular then circularErr else recursionErr)
+      else
+        match cfg.dflt n t with
+        | .error e => .error e
+        | .ok v' => cEnc cfg f lvl (n :: seen) v'
+termination_by f _ _ v => (f, sizeOf v)
 
 /-- The item loop of `encoder_listencode_list`, :1817-1832. -/
-def cEncList (cfg : ECfg) : Nat → Nat → PStr → Nat → List EVal → ER
-  | _, _, _, _, [] => .ok []
-  | f, lvl, sep, i, x :: xs =>
+def cEncList (cfg : ECfg) : Nat → Nat → List Nat → PStr → Nat → List EVal → ER
+  | _, _, _, _, _, [] => .ok []
+  | f, lvl, seen, sep, i, x :: xs =>
     let pre : PStr := if i ≠ 0 then sep else []
-    match cEnc cfg f lvl x with
+    match cEnc cfg f lvl seen x with
     | .error e => .error e
     | .ok t =>
-      match cEncList cfg f lvl sep (i + 1) xs with
+      match cEncList cfg f lvl seen sep (i + 1) xs with
       | .error e => .error e
       | .ok rest => .ok (pre ++ t ++ rest)
+termination_by f _ _ _ _ xs => (f, sizeOf xs)
 
 /-- The item loop of `encoder_listencode_dict` with `encoder_encode_key_value`
 (:1582-1652); also returns `first`. -/
-def cEncItems (cfg : ECfg) : Nat → Nat → PStr → Bool → List (EKey × EVal) → Except PyExc (PStr × Bool)
-  | _, _, _, first, [] => .ok ([], first)
-  | f, lvl, sep, first, (k, x) :: xs =>
+def cEncItems (cfg : ECfg) : Nat → Nat → List Nat → PStr → Bool → List (EKey × EVal) → Except PyExc (PStr × Bool)
+  | _, _, _, _, first, [] => .ok ([], first)
+  | f, lvl, seen, sep, first, (k, x) :: xs =>
     match cKeyStr cfg k with
     | .error e => .error e
-    | .ok none => cEncItems cfg f lvl sep first xs
+    | .ok none => cEncItems cfg f lvl seen sep first xs
     | .ok (some ks) =>
       let pre : PStr := if first then (match cfg.indent with
           | some ind => cNewlineIndent ind lvl
           | none => []) else sep
-      match cEnc cfg f lvl x with
+      match cEncStr cfg ks with
       | .error e => .error e
-      | .ok t =>
-        match cEncItems cfg f lvl sep false xs with
+      | .ok kt =>
+        match cEnc cfg f lvl seen x with
         | .error e => .error e
-        | .ok (rest, fst) => .ok (pre ++ cStrEnc cfg ks ++ cfg.keySep ++ t ++ rest, fst)
+        | .ok t =>
+          match cEncItems cfg f lvl seen sep false xs with
+          | .error e => .error e
+          | .ok (rest, fst) => .ok (pre ++ kt ++ cfg.keySep ++ t ++ rest, fst)
+termination_by f _ _ _ _ items => (f, sizeOf items)
 end
+
+/-- Fuel for one value. -/
+def encFuel (cfg : ECfg) (v : EVal) : Nat := v.depth + 1 + cfg.dfltDepth
 
 /-- `JSONEncoder.encode(o)`, encoder.py:185-205, with the pure-Python encoder. -/
 def dumpsPy (cfg : ECfg) (v : EVal) : ER :=
   match v with
   | .str s => .ok (pyStrEnc cfg s)
-  | _ => pyEnc cfg (v.depth + 1) 0 v
+  | _ => pyEnc cfg (encFuel cfg v) 0 [] v
 
 /-- `JSONEncoder.encode(o)` with `c_make_encoder`. -/
 def dumpsC (cfg : ECfg) (v : EVal) : ER :=
   match v with
   | .str s => .ok (if cfg.ensureAscii then cAsciiEscape s else cEscape s)
-  | _ => cEnc cfg (v.depth + 1) 0 v
+  | _ => cEnc cfg (encFuel cfg v) 0 [] v
 
 end PyLean.JsonMod

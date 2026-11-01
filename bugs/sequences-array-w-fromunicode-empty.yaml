@@ -1,0 +1,57 @@
+id: sequences-array-w-fromunicode-empty
+title: "array('w').fromunicode('') raises SystemError: PyUnicode_AsUCS4 refuses the NULL buffer and the failure is ignored"
+priority: P3
+kind: internal-error-leak
+module: sequences
+files: [Modules/arraymodule.c]
+functions: ["array_array_fromunicode_impl"]
+summary: |
+  For typecode 'w', fromunicode calls PyUnicode_AsUCS4(ustr, ob_item + old_size, len, 0) after
+  the resize, under a "must not fail" comment. On an array that has never had a buffer and an
+  empty string, ob_item is NULL, PyUnicode_AsUCS4 calls PyErr_BadInternalCall, and the
+  function returns None with the exception set. _Py_CheckFunctionResult turns that into
+  SystemError: <method 'fromunicode' of 'array.array' objects> returned a result with an
+  exception set. In a specialized call the check is skipped, and the pending exception
+  surfaced at a later unrelated call in our difftest. A debug build fails `assert(u != NULL)`.
+  The 'u' branch guards with `if (ustr_length > 1)`, its length counting the NUL.
+  Lean: ArrayFromUnicode is refuted by this input; ArrayFromUnicodeChecked (a 'u' array, or a
+  'w' array that has a buffer or gets at least one character) is proven.
+likelihood: |
+  Moderate: array('w') followed by fromunicode(s) with s empty is a natural pattern in code
+  that accumulates text, and the crash is a SystemError on a valid call.
+maybe_intended: |
+  No. The comment says it must not fail, and the 'u' branch has the guard.
+reproducer: |
+  import array
+  a = array.array('w')
+  try:
+      a.fromunicode('')
+      err = None
+  except SystemError as e:
+      err = str(e)
+  print(err, a)
+  b = array.array('w', 'x')
+  b.fromunicode('')
+  if err is not None and 'exception set' in err and b.tounicode() == 'x':
+      print('REPRODUCED sequences-array-w-fromunicode-empty')
+expected: |
+  None, with the array still empty, as for array('w', 'x').fromunicode('').
+observed: |
+  python3 3.14.7: SystemError ... returned a result with an exception set, caused by
+  SystemError: Objects/unicodeobject.c:2652: bad argument to internal function. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical, at unicodeobject.c:2567.
+  REPRODUCED.
+promised_by: |
+  Invariant: no internal error from a valid call; Doc/library/array.rst:193 fromunicode.
+cause: |
+  Modules/arraymodule.c:1907-1911 (3.14.7): the call is not guarded by ustr_length > 0, as the
+  'u' branch at :1881-1893 is, and `assert(u != NULL)` is compiled out. main has it at :1987.
+possible_fix: |
+  `if (ustr_length > 0) { ... }` around PyUnicode_AsUCS4, as the 'u' branch does.
+duplicates:
+  issues: []
+  queries: ["array fromunicode", "array fromunicode empty SystemError", "PyUnicode_AsUCS4",
+            "result with an exception set array", "bugforge README: no array entries"]
+lean:
+  property: PyLean.Sequences.ArrayFromUnicode
+  theorem: PyLean.Sequences.arrayFromUnicode_refuted

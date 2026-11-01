@@ -29,7 +29,7 @@ Lib/pprint.py	395	410	PrettyPrinter._format_dict_items	_format_dict_items(self, 
 Lib/pprint.py	412	429	PrettyPrinter._format_namespace_items	_format_namespace_items(self, items, stream, indent, allowance, context, level)	todo		
 Lib/pprint.py	431	470	PrettyPrinter._format_items	_format_items(self, items, stream, indent, allowance, context, level)	todo		
 Lib/pprint.py	472	479	PrettyPrinter._repr	_repr(self, object, context, level)	todo		
-Lib/pprint.py	481	486	PrettyPrinter.format	format(self, object, context, maxlevels, level)	todo		
+Lib/pprint.py	481	486	PrettyPrinter.format	format(self, object, context, maxlevels, level)	todo		candidates:calstat-calendar-formatstring-width
 Lib/pprint.py	488	497	PrettyPrinter._pprint_default_dict	_pprint_default_dict(self, object, stream, indent, allowance, context, level)	todo		
 Lib/pprint.py	501	513	PrettyPrinter._pprint_counter	_pprint_counter(self, object, stream, indent, allowance, context, level)	todo		
 Lib/pprint.py	517	530	PrettyPrinter._pprint_chain_map	_pprint_chain_map(self, object, stream, indent, allowance, context, level)	todo		
