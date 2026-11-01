@@ -213,8 +213,8 @@ theorem mpdSetString_num (neg : Bool) (x : Char) (r : List Char) (hx : x.isDigit
     split <;> simp_all
   have hsm : expSign (['-'] ++ x :: r) = (true, x :: r) := rfl
   cases neg
-  · simp only [Bool.false_eq_true, ↓reduceIte, List.nil_append, mpdSetString, hsp, s1, s2, s3]
-  · simp only [↓reduceIte, mpdSetString, hsm, s1, s2, s3]
+  · simp only [Bool.false_eq_true, ↓reduceIte, List.nil_append, mpdSetString, mpdBody, hsp, s1, s2, s3]
+  · simp only [↓reduceIte, mpdSetString, mpdBody, hsm, s1, s2, s3]
 
 theorem numBody_cons (I : List Char) (fr : Option (List Char)) (ex : ExPart) (hI : I ≠ []) (hA : AD I) :
     ∃ x r, numBody I fr ++ expPart ex = x :: r ∧ x.isDigit = true := by
@@ -352,7 +352,7 @@ theorem cParse_nan (neg sig : Bool) (p : Nat) (hlim : (numDigits p : Int) ≤ mp
   rw [hstr]
   simp only [cParse]
   rw [numericAsAscii_plain _ hplain]
-  simp only [mpdSetString, hws]
+  simp only [mpdSetString, mpdBody, hws]
   cases sig
   · have s1 : strneq "nan".toList ("NaN".toList ++ pay) false = some pay := by
       show strneq ['n', 'a', 'n'] ('N' :: 'a' :: 'N' :: pay) false = some pay

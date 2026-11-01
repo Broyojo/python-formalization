@@ -283,10 +283,9 @@ def mpdPayload (neg sig : Bool) (r : List Char) : MpdParse :=
     | some ds => if (ds.length : Int) > mpdMaxPrec then .syntax
                  else .nan neg sig (digitsValue ds) ds.length
 
-/-- `mpd_qset_string(dec, s, maxcontext)`, io.c:200-328, up to the call of
-`mpd_qfinalize`. -/
-def mpdSetString (s0 : List Char) : MpdParse :=
-  let (neg, s) := expSign s0
+/-- `mpd_qset_string` after the sign: the keywords, then the numeric branch,
+io.c:223-305. -/
+def mpdBody (neg : Bool) (s : List Char) : MpdParse :=
   match strneq "nan".toList s false with
   | some r => mpdPayload neg false r
   | none =>
@@ -296,6 +295,12 @@ def mpdSetString (s0 : List Char) : MpdParse :=
   match strneq "inf".toList s false with
   | some r => if r = [] || (strneq "inity".toList r true).isSome then .inf neg else .syntax
   | none => mpdNumeric neg s
+
+/-- `mpd_qset_string(dec, s, maxcontext)`, io.c:200-328, up to the call of
+`mpd_qfinalize`. -/
+def mpdSetString (s0 : List Char) : MpdParse :=
+  let (neg, s) := expSign s0
+  mpdBody neg s
 
 /-- `PyDecType_FromUnicodeExactWS` (_decimal.c:2276-2293 and 2224-2250), with
 the default context (InvalidOperation trapped). -/

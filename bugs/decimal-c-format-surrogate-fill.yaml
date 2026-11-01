@@ -40,7 +40,7 @@ reproducer: |
 expected: |
   '1.5\ud800\ud800', as from _pydecimal and float.
 promised_by: |
-  Twin agreement. The format spec mini-language says the fill "can be any character".
+  Twin agreement. Doc/library/string.rst:342: the fill is a "character that can be any character".
 cause: |
   Modules/_decimal/_decimal.c:3562 `fmt = (char *)PyUnicode_AsUTF8AndSize(fmtarg, &size);` and the
   NULL return at :3563-3565. Same on main at :3830.

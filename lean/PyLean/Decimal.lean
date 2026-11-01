@@ -6,6 +6,7 @@ import PyLean.Decimal.Props
 import PyLean.Decimal.Quantize
 import PyLean.Decimal.RoundTrip
 import PyLean.Decimal.MulProps
+import PyLean.Decimal.ParseAgree
 
 /-!
 `Lib/_pydecimal.py` vs `Modules/_decimal/` (libmpdec), CPython 3.14.7.
@@ -16,7 +17,13 @@ tuple constructors, `__format__` spec handling, `hash`, integer conversions,
 `_rescale`, `quantize`, `to_integral_*`, `round`, `normalize`, `+ - *`,
 `compare_total`, `copy_sign`) is modelled from `_pydecimal` and checked
 against both twins by `difftest/decimal_diff.py`. Division, sqrt, exp, ln,
-log10, pow and floats are out of scope.
+log10, pow and floats are out of scope. `__format__` is modelled as far as
+which specs are accepted; what an accepted spec renders is not modelled.
+
+Properties about `Ctx`-dependent operations are conditional on the operation
+returning: a trapped signal, or `_pydecimal`'s int-limit `ValueError`, raises
+instead (the C twin sets all of an operation's flags before raising, `_pydecimal`
+stops at the first trapped signal; deccheck.py excludes this deliberately).
 
 The difftest and reproducers run on interpreters built with the bundled
 libmpdec 2.5.1, whose source these line numbers cite. A build against system
@@ -36,6 +43,12 @@ def entries : List Entry := [
     status := .refuted, prop := ``ParseCAcceptsPy, thm := some ``parseCAcceptsPy_refuted
     bug := some "decimal-pydecimal-parser-unicode-casefold"
     notes := "Decimal('ınf') (U+0131), 'İnfinity' (U+0130), 'ſNaN' (U+017F): _pydecimal's regex is compiled with re.IGNORECASE and matches these by Unicode case folding; _decimal rejects them. Exhaustively, these three code points are the only non-ASCII characters any letter of the pattern matches." },
+  { id := "decimal-parse-c-accepts-py-casefree", pyFile := "Modules/_decimal/_decimal.c"
+    pyFns := ["Decimal.__new__ (str)", "numeric_as_ascii", "scan_dpoint_exp", "scan_payload", "mpd_qset_string"]
+    statement := "For every string s not containing U+0130, U+0131 or U+017F, if _pydecimal.Decimal(s) returns a value within the C module's documented limits, _decimal.Decimal(s) returns the same value (sign, coefficient, exponent, NaN kind and payload), for arbitrary Unicode input: Nd digits, whitespace, underscores, every spelling of Inf and NaN."
+    source := "twin agreement (narrowed version of decimal-parse-c-accepts-py)"
+    status := .proven, prop := ``ParseCAcceptsPyCasefree, thm := some ``parseCAcceptsPyCasefree_proven
+    notes := "One direction only: _pydecimal accepts => _decimal agrees. The converse (_decimal accepts => _pydecimal agrees or raises the int-limit ValueError) has no proof; the difftest finds no counterexample." },
   { id := "decimal-parse-py-accepts-c", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal.__new__ (str)"]
     statement := "For every string s, if _decimal.Decimal(s) returns a value, _pydecimal.Decimal(s) returns the same value."
@@ -156,6 +169,11 @@ def entries : List Entry := [
     source := "Built-in Types, 'Hashing of numeric types': x == y implies hash(x) == hash(y)"
     status := .proven, prop := ``HashConsistentC, thm := some ``hashConsistentC_proven
     notes := "Reuses PyLean.Fractions.hashMatchesDecimal_proven / hashMatchesInt_proven. The C constant inv10_p equals pow(10, P-2, P) (tenInv_eq)." },
+  { id := "decimal-ratio-correct-c", pyFile := "Modules/_decimal/_decimal.c"
+    pyFns := ["dec_as_integer_ratio"]
+    statement := "For every finite Decimal, as_integer_ratio() returns (n, d) with d > 0, n and d coprime, and n/d exactly the value."
+    source := "as_integer_ratio docstring, _pydecimal.py:929-941"
+    status := .proven, prop := ``RatioCorrectC, thm := some ``ratioCorrectC_proven },
   { id := "decimal-compare-total-order", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal.compare_total", "Decimal._cmp"]
     statement := "For all decimals a, b (NaNs, infinities, signed zeros, any exponents), compare_total(b, a) == -compare_total(a, b), and compare_total(a, b) == 0 iff a and b are the same representation."

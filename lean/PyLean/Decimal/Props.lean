@@ -148,4 +148,54 @@ theorem hashConsistentC_proven : HashConsistentC := by
     rw [h2, PyLean.Fractions.hashMatchesInt_proven n] at h1
     simp [cFromInt, cHash, bind, Except.bind, hashFinite, ← h1, intHash]
 
+/-! ## `as_integer_ratio` -/
+
+/-- `_decimal`'s `as_integer_ratio`: for every finite value `±c·10^e`, the result
+`(n, d)` has `d > 0`, is in lowest terms, and equals the value exactly. -/
+def RatioCorrectC : Prop :=
+  ∀ (neg : Bool) (c : Nat) (e : Int) (n d : Int), cRatio (.fin neg c e) = .ok (n, d) →
+    0 < d ∧ Int.gcd n d = 1 ∧
+    n * 10 ^ (-e).toNat = (if neg then -(c : Int) else c) * 10 ^ e.toNat * d
+
+theorem ratioCorrectC_proven : RatioCorrectC := by
+  intro neg c e n d h
+  simp only [cRatio] at h
+  by_cases he : e ≥ 0
+  · simp only [he, ↓reduceIte, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    have hz : (-e).toNat = 0 := by omega
+    refine ⟨by decide, by simp [Int.gcd], ?_⟩
+    rw [hz]
+    cases neg <;> simp [Int.pow_zero, Int.neg_mul]
+  · simp only [he, ↓reduceIte, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    have hk : (-e).toNat = e.natAbs := by omega
+    have hz : e.toNat = 0 := by omega
+    have hp : 0 < 10 ^ e.natAbs := Nat.pow_pos (by decide)
+    have hg : 0 < Nat.gcd c (10 ^ e.natAbs) := Nat.gcd_pos_of_pos_right _ hp
+    have h1 : Nat.gcd c (10 ^ e.natAbs) ∣ c := Nat.gcd_dvd_left _ _
+    have h2 : Nat.gcd c (10 ^ e.natAbs) ∣ 10 ^ e.natAbs := Nat.gcd_dvd_right _ _
+    obtain ⟨u, hu⟩ := h1
+    obtain ⟨v, hv⟩ := h2
+    have hcop := Nat.coprime_div_gcd_div_gcd (m := c) (n := 10 ^ e.natAbs) hg
+    have hd : 0 < 10 ^ e.natAbs / Nat.gcd c (10 ^ e.natAbs) := Nat.div_pos (Nat.le_of_dvd hp ⟨v, hv⟩) hg
+    have hval : c / Nat.gcd c (10 ^ e.natAbs) * 10 ^ e.natAbs = c * (10 ^ e.natAbs / Nat.gcd c (10 ^ e.natAbs)) := by
+      generalize hG : Nat.gcd c (10 ^ e.natAbs) = g at *
+      generalize hP : 10 ^ e.natAbs = P at *
+      subst hu hv
+      rw [Nat.mul_div_cancel_left _ hg, Nat.mul_div_cancel_left _ hg, ← Nat.mul_assoc, Nat.mul_comm u g]
+    rw [hk, hz]
+    generalize hN : c / Nat.gcd c (10 ^ e.natAbs) = N at *
+    generalize hD : 10 ^ e.natAbs / Nat.gcd c (10 ^ e.natAbs) = D at *
+    refine ⟨by omega, ?_, ?_⟩
+    · cases neg
+      · simpa [Int.gcd] using hcop
+      · simpa [Int.gcd] using hcop
+    · have hval' : (N : Int) * (10 : Int) ^ e.natAbs = c * D := by
+        exact_mod_cast hval
+      cases neg
+      · simpa using hval'
+      · simp only [↓reduceIte, Int.pow_zero, Int.mul_one, Int.neg_mul]
+        omega
+
 end PyLean.Decimal
