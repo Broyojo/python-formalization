@@ -7,12 +7,12 @@ Modules/_struct.c	180	195	get_longlong	get_longlong(_structmodulestate *state, P
 Modules/_struct.c	200	215	get_ulonglong	get_ulonglong(_structmodulestate *state, PyObject *v, unsigned long long *p)	modelled	textlibs-struct-int-round-trip	
 Modules/_struct.c	220	235	get_ssize_t	get_ssize_t(_structmodulestate *state, PyObject *v, Py_ssize_t *p)	modelled	textlibs-struct-int-round-trip	
 Modules/_struct.c	240	255	get_size_t	get_size_t(_structmodulestate *state, PyObject *v, size_t *p)	modelled	textlibs-struct-int-round-trip	
-Modules/_struct.c	264	272	unpack_halffloat	unpack_halffloat(const char *p, /* start of 2-byte string */ int le) /* true for little-endian, false for big-endian */	todo		
-Modules/_struct.c	275	287	pack_halffloat	pack_halffloat(_structmodulestate *state, char *p, /* start of 2-byte string */ PyObject *v, /* value to pack */ int le) /* true for little-endian, false for big-endian */	todo		
-Modules/_struct.c	290	299	unpack_float	unpack_float(const char *p, /* start of 4-byte string */ int le) /* true for little-endian, false for big-endian */	todo		
-Modules/_struct.c	302	311	unpack_double	unpack_double(const char *p, /* start of 8-byte string */ int le) /* true for little-endian, false for big-endian */	todo		
-Modules/_struct.c	315	342	_range_error	_range_error(_structmodulestate *state, const formatdef *f, int is_unsigned)	todo		
-Modules/_struct.c	366	369	nu_char	nu_char(_structmodulestate *state, const char *p, const formatdef *f)	todo		
+Modules/_struct.c	264	272	unpack_halffloat	unpack_halffloat(const char *p, /* start of 2-byte string */ int le) /* true for little-endian, false for big-endian */	modelled	textlibs-struct-scalar-byte-order	
+Modules/_struct.c	275	287	pack_halffloat	pack_halffloat(_structmodulestate *state, char *p, /* start of 2-byte string */ PyObject *v, /* value to pack */ int le) /* true for little-endian, false for big-endian */	modelled	textlibs-struct-scalar-byte-order	
+Modules/_struct.c	290	299	unpack_float	unpack_float(const char *p, /* start of 4-byte string */ int le) /* true for little-endian, false for big-endian */	modelled	textlibs-struct-scalar-byte-order	
+Modules/_struct.c	302	311	unpack_double	unpack_double(const char *p, /* start of 8-byte string */ int le) /* true for little-endian, false for big-endian */	modelled	textlibs-struct-scalar-byte-order	
+Modules/_struct.c	315	342	_range_error	_range_error(_structmodulestate *state, const formatdef *f, int is_unsigned)	modelled	textlibs-struct-range-error	
+Modules/_struct.c	366	369	nu_char	nu_char(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-char-code	
 Modules/_struct.c	372	375	nu_byte	nu_byte(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
 Modules/_struct.c	378	381	nu_ubyte	nu_ubyte(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
 Modules/_struct.c	384	389	nu_short	nu_short(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
@@ -26,15 +26,15 @@ Modules/_struct.c	440	445	nu_size_t	nu_size_t(_structmodulestate *state, const c
 Modules/_struct.c	448	453	nu_longlong	nu_longlong(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
 Modules/_struct.c	456	461	nu_ulonglong	nu_ulonglong(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
 Modules/_struct.c	464	468	nu_bool	nu_bool(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-bool-nonzero	
-Modules/_struct.c	472	479	nu_halffloat	nu_halffloat(_structmodulestate *state, const char *p, const formatdef *f)	todo		
-Modules/_struct.c	482	487	nu_float	nu_float(_structmodulestate *state, const char *p, const formatdef *f)	todo		
-Modules/_struct.c	490	495	nu_double	nu_double(_structmodulestate *state, const char *p, const formatdef *f)	todo		
-Modules/_struct.c	498	504	nu_float_complex	nu_float_complex(_structmodulestate *state, const char *p, const formatdef *f)	todo		
-Modules/_struct.c	507	513	nu_double_complex	nu_double_complex(_structmodulestate *state, const char *p, const formatdef *f)	todo		
+Modules/_struct.c	472	479	nu_halffloat	nu_halffloat(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-scalar-byte-order	
+Modules/_struct.c	482	487	nu_float	nu_float(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-native-float-snan	
+Modules/_struct.c	490	495	nu_double	nu_double(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-scalar-byte-order	
+Modules/_struct.c	498	504	nu_float_complex	nu_float_complex(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-native-complex-snan	
+Modules/_struct.c	507	513	nu_double_complex	nu_double_complex(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-complex-byte-order	
 Modules/_struct.c	516	521	nu_void_p	nu_void_p(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
 Modules/_struct.c	524	538	np_byte	np_byte(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
 Modules/_struct.c	541	555	np_ubyte	np_ubyte(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
-Modules/_struct.c	558	567	np_char	np_char(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	todo		
+Modules/_struct.c	558	567	np_char	np_char(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-char-code	
 Modules/_struct.c	570	586	np_short	np_short(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
 Modules/_struct.c	589	605	np_ushort	np_ushort(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
 Modules/_struct.c	608	625	np_int	np_int(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
@@ -45,84 +45,84 @@ Modules/_struct.c	676	687	np_ssize_t	np_ssize_t(_structmodulestate *state, char 
 Modules/_struct.c	690	701	np_size_t	np_size_t(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
 Modules/_struct.c	704	719	np_longlong	np_longlong(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
 Modules/_struct.c	722	736	np_ulonglong	np_ulonglong(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
-Modules/_struct.c	740	750	np_bool	np_bool(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	todo		
-Modules/_struct.c	753	760	np_halffloat	np_halffloat(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	todo		
-Modules/_struct.c	763	772	np_float	np_float(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	todo		
-Modules/_struct.c	775	785	np_double	np_double(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	todo		
+Modules/_struct.c	740	750	np_bool	np_bool(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-bool-code	
+Modules/_struct.c	753	760	np_halffloat	np_halffloat(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-scalar-byte-order	
+Modules/_struct.c	763	772	np_float	np_float(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-native-float-pack	
+Modules/_struct.c	775	785	np_double	np_double(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-scalar-byte-order	
 Modules/_struct.c	788	801	np_float_complex	np_float_complex(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-le-complex-float-overflow	
-Modules/_struct.c	804	817	np_double_complex	np_double_complex(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	todo		
+Modules/_struct.c	804	817	np_double_complex	np_double_complex(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-complex-byte-order	
 Modules/_struct.c	820	834	np_void_p	np_void_p(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-int-round-trip,textlibs-struct-void-p-index-overflow	
 Modules/_struct.c	866	880	bu_short	bu_short(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
 Modules/_struct.c	883	897	bu_int	bu_int(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
 Modules/_struct.c	900	909	bu_uint	bu_uint(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
 Modules/_struct.c	912	927	bu_longlong	bu_longlong(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
 Modules/_struct.c	930	939	bu_ulonglong	bu_ulonglong(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
-Modules/_struct.c	942	945	bu_halffloat	bu_halffloat(_structmodulestate *state, const char *p, const formatdef *f)	todo		
-Modules/_struct.c	948	951	bu_float	bu_float(_structmodulestate *state, const char *p, const formatdef *f)	todo		
-Modules/_struct.c	954	957	bu_double	bu_double(_structmodulestate *state, const char *p, const formatdef *f)	todo		
-Modules/_struct.c	960	971	bu_float_complex	bu_float_complex(_structmodulestate *state, const char *p, const formatdef *f)	todo		
-Modules/_struct.c	974	987	bu_double_complex	bu_double_complex(_structmodulestate *state, const char *p, const formatdef *f)	todo		
+Modules/_struct.c	942	945	bu_halffloat	bu_halffloat(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-scalar-byte-order	
+Modules/_struct.c	948	951	bu_float	bu_float(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-scalar-byte-order	
+Modules/_struct.c	954	957	bu_double	bu_double(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-scalar-byte-order	
+Modules/_struct.c	960	971	bu_float_complex	bu_float_complex(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-complex-byte-order	
+Modules/_struct.c	974	987	bu_double_complex	bu_double_complex(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-complex-byte-order	
 Modules/_struct.c	990	993	bu_bool	bu_bool(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-bool-nonzero	
 Modules/_struct.c	996	1021	bp_int	bp_int(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
 Modules/_struct.c	1024	1047	bp_uint	bp_uint(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
 Modules/_struct.c	1050	1072	bp_longlong	bp_longlong(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
 Modules/_struct.c	1075	1096	bp_ulonglong	bp_ulonglong(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
-Modules/_struct.c	1099	1102	bp_halffloat	bp_halffloat(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	todo		
-Modules/_struct.c	1105	1114	bp_float	bp_float(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	todo		
-Modules/_struct.c	1117	1126	bp_double	bp_double(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	todo		
+Modules/_struct.c	1099	1102	bp_halffloat	bp_halffloat(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-scalar-byte-order	
+Modules/_struct.c	1105	1114	bp_float	bp_float(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-scalar-byte-order	
+Modules/_struct.c	1117	1126	bp_double	bp_double(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-scalar-byte-order	
 Modules/_struct.c	1129	1141	bp_float_complex	bp_float_complex(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-le-complex-float-overflow	
-Modules/_struct.c	1144	1156	bp_double_complex	bp_double_complex(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	todo		
-Modules/_struct.c	1159	1167	bp_bool	bp_bool(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	todo		
+Modules/_struct.c	1144	1156	bp_double_complex	bp_double_complex(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-complex-byte-order	
+Modules/_struct.c	1159	1167	bp_bool	bp_bool(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-bool-code	
 Modules/_struct.c	1196	1210	lu_short	lu_short(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
 Modules/_struct.c	1213	1227	lu_int	lu_int(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
 Modules/_struct.c	1230	1239	lu_uint	lu_uint(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
 Modules/_struct.c	1242	1257	lu_longlong	lu_longlong(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
 Modules/_struct.c	1260	1269	lu_ulonglong	lu_ulonglong(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
-Modules/_struct.c	1272	1275	lu_halffloat	lu_halffloat(_structmodulestate *state, const char *p, const formatdef *f)	todo		
-Modules/_struct.c	1278	1281	lu_float	lu_float(_structmodulestate *state, const char *p, const formatdef *f)	todo		
-Modules/_struct.c	1284	1287	lu_double	lu_double(_structmodulestate *state, const char *p, const formatdef *f)	todo		
-Modules/_struct.c	1290	1301	lu_float_complex	lu_float_complex(_structmodulestate *state, const char *p, const formatdef *f)	todo		
-Modules/_struct.c	1304	1317	lu_double_complex	lu_double_complex(_structmodulestate *state, const char *p, const formatdef *f)	todo		
+Modules/_struct.c	1272	1275	lu_halffloat	lu_halffloat(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-scalar-byte-order	
+Modules/_struct.c	1278	1281	lu_float	lu_float(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-scalar-byte-order	
+Modules/_struct.c	1284	1287	lu_double	lu_double(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-scalar-byte-order	
+Modules/_struct.c	1290	1301	lu_float_complex	lu_float_complex(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-complex-byte-order	
+Modules/_struct.c	1304	1317	lu_double_complex	lu_double_complex(_structmodulestate *state, const char *p, const formatdef *f)	modelled	textlibs-struct-complex-byte-order	
 Modules/_struct.c	1320	1345	lp_int	lp_int(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
 Modules/_struct.c	1348	1371	lp_uint	lp_uint(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
 Modules/_struct.c	1374	1396	lp_longlong	lp_longlong(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
 Modules/_struct.c	1399	1420	lp_ulonglong	lp_ulonglong(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-int-round-trip	
-Modules/_struct.c	1423	1426	lp_halffloat	lp_halffloat(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	todo		
-Modules/_struct.c	1429	1438	lp_float	lp_float(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	todo		
-Modules/_struct.c	1441	1450	lp_double	lp_double(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	todo		
-Modules/_struct.c	1453	1466	lp_float_complex	lp_float_complex(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	todo		
-Modules/_struct.c	1469	1481	lp_double_complex	lp_double_complex(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	todo		
+Modules/_struct.c	1423	1426	lp_halffloat	lp_halffloat(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-scalar-byte-order	
+Modules/_struct.c	1429	1438	lp_float	lp_float(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-scalar-byte-order	
+Modules/_struct.c	1441	1450	lp_double	lp_double(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-scalar-byte-order	
+Modules/_struct.c	1453	1466	lp_float_complex	lp_float_complex(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-complex-byte-order	
+Modules/_struct.c	1469	1481	lp_double_complex	lp_double_complex(_structmodulestate *state, char *p, PyObject *v, const formatdef *f)	modelled	textlibs-struct-complex-byte-order	
 Modules/_struct.c	1512	1553	init_endian_tables	init_endian_tables(void *Py_UNUSED(arg))	modelled	textlibs-struct-endian-tables	
-Modules/_struct.c	1557	1579	whichtable	whichtable(const char **pfmt)	todo		
-Modules/_struct.c	1585	1594	getentry	getentry(_structmodulestate *state, int c, const formatdef *f)	todo		
+Modules/_struct.c	1557	1579	whichtable	whichtable(const char **pfmt)	modelled	textlibs-struct-prepare-two-passes	
+Modules/_struct.c	1585	1594	getentry	getentry(_structmodulestate *state, int c, const formatdef *f)	modelled	textlibs-struct-prepare-two-passes	
 Modules/_struct.c	1600	1613	align	align(Py_ssize_t size, char c, const formatdef *e)	modelled	textlibs-struct-align	
-Modules/_struct.c	1622	1773	prepare_s	prepare_s(PyStructObject *self, PyObject *format)	todo		
-Modules/_struct.c	1776	1793	s_new	s_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Modules/_struct.c	1622	1773	prepare_s	prepare_s(PyStructObject *self, PyObject *format)	modelled	textlibs-struct-prepare-two-passes	
+Modules/_struct.c	1776	1793	s_new	s_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	textlibs-struct-uninitialized	
 Modules/_struct.c	1809	1835	Struct___init___impl	Struct___init___impl(PyStructObject *self, PyObject *format) /*[clinic end generated code: output=b8e80862444e92d0 input=192a4575a3dde802]*/	modelled	textlibs-struct-bytes-format-nonascii-error	
 Modules/_struct.c	1838	1843	s_clear	s_clear(PyObject *op)	excluded		no-behaviour: GC tp_clear slot; drops a reference
 Modules/_struct.c	1846	1852	s_traverse	s_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse slot
 Modules/_struct.c	1855	1867	s_dealloc	s_dealloc(PyObject *op)	excluded		no-behaviour: frees memory and references
 Modules/_struct.c	1938	1950	Struct_unpack_impl	Struct_unpack_impl(PyStructObject *self, Py_buffer *buffer) /*[clinic end generated code: output=873a24faf02e848a input=3113f8e7038b2f6c]*/	modelled	textlibs-struct-unpack-length	
-Modules/_struct.c	1970	2008	Struct_unpack_from_impl	Struct_unpack_from_impl(PyStructObject *self, Py_buffer *buffer, Py_ssize_t offset) /*[clinic end generated code: output=57fac875e0977316 input=3451f778ed8a5345]*/	todo		
+Modules/_struct.c	1970	2008	Struct_unpack_from_impl	Struct_unpack_from_impl(PyStructObject *self, Py_buffer *buffer, Py_ssize_t offset) /*[clinic end generated code: output=57fac875e0977316 input=3451f778ed8a5345]*/	modelled	textlibs-struct-unpack-from-offsets	
 Modules/_struct.c	2024	2034	unpackiter_dealloc	unpackiter_dealloc(PyObject *op)	excluded		no-behaviour: frees memory and releases the buffer
 Modules/_struct.c	2037	2044	unpackiter_traverse	unpackiter_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse slot
-Modules/_struct.c	2047	2058	unpackiter_len	unpackiter_len(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
-Modules/_struct.c	2066	2086	unpackiter_iternext	unpackiter_iternext(PyObject *op)	todo		
+Modules/_struct.c	2047	2058	unpackiter_len	unpackiter_len(PyObject *op, PyObject *Py_UNUSED(dummy))	modelled	textlibs-struct-iter-length	
+Modules/_struct.c	2066	2086	unpackiter_iternext	unpackiter_iternext(PyObject *op)	modelled	textlibs-struct-iter-length	
 Modules/_struct.c	2122	2154	Struct_iter_unpack_impl	Struct_iter_unpack_impl(PyStructObject *self, PyObject *buffer) /*[clinic end generated code: output=818f89ad4afa8d64 input=6d65b3f3107dbc99]*/	modelled	textlibs-struct-iter-zero-size	
 Modules/_struct.c	2168	2249	s_pack_internal	s_pack_internal(PyStructObject *soself, PyObject *const *args, int offset, char* buf, _structmodulestate *state)	modelled	textlibs-struct-pack-into-0p-outside-field,textlibs-struct-s-pads,textlibs-struct-void-p-index-overflow	
 Modules/_struct.c	2260	2293	s_pack	s_pack(PyObject *self, PyObject *const *args, Py_ssize_t nargs)	modelled	textlibs-struct-le-complex-float-overflow,textlibs-struct-pack-count	
 Modules/_struct.c	2305	2396	s_pack_into	s_pack_into(PyObject *self, PyObject *const *args, Py_ssize_t nargs)	modelled	textlibs-struct-pack-into-0p-outside-field	
-Modules/_struct.c	2399	2405	s_get_format	s_get_format(PyObject *op, void *Py_UNUSED(closure))	todo		
-Modules/_struct.c	2408	2412	s_get_size	s_get_size(PyObject *op, void *Py_UNUSED(closure))	todo		
-Modules/_struct.c	2418	2427	s_sizeof	s_sizeof(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
-Modules/_struct.c	2430	2442	s_repr	s_repr(PyObject *op)	todo		
+Modules/_struct.c	2399	2405	s_get_format	s_get_format(PyObject *op, void *Py_UNUSED(closure))	modelled	textlibs-struct-accessors	
+Modules/_struct.c	2408	2412	s_get_size	s_get_size(PyObject *op, void *Py_UNUSED(closure))	modelled	textlibs-struct-accessors	
+Modules/_struct.c	2418	2427	s_sizeof	s_sizeof(PyObject *op, PyObject *Py_UNUSED(dummy))	modelled	textlibs-struct-accessors	
+Modules/_struct.c	2430	2442	s_repr	s_repr(PyObject *op)	modelled	textlibs-struct-repr	
 Modules/_struct.c	2505	2552	cache_struct_converter	cache_struct_converter(PyObject *module, PyObject *fmt, PyStructObject **ptr)	modelled	textlibs-struct-bytes-format-nonascii-error	
 Modules/_struct.c	2561	2566	_clearcache_impl	_clearcache_impl(PyObject *module) /*[clinic end generated code: output=ce4fb8a7bf7cb523 input=463eaae04bab3211]*/	excluded		no-behaviour: empties a cache whose hits return an object equal to a fresh Struct(fmt), so results do not change (see cacheStruct)
-Modules/_struct.c	2579	2583	calcsize_impl	calcsize_impl(PyObject *module, PyStructObject *s_object) /*[clinic end generated code: output=db7d23d09c6932c4 input=96a6a590c7717ecd]*/	todo		
+Modules/_struct.c	2579	2583	calcsize_impl	calcsize_impl(PyObject *module, PyStructObject *s_object) /*[clinic end generated code: output=db7d23d09c6932c4 input=96a6a590c7717ecd]*/	modelled	textlibs-struct-accessors	
 Modules/_struct.c	2592	2609	pack	pack(PyObject *module, PyObject *const *args, Py_ssize_t nargs)	modelled	textlibs-struct-bytes-format-nonascii-error,textlibs-struct-le-complex-float-overflow	
 Modules/_struct.c	2620	2637	pack_into	pack_into(PyObject *module, PyObject *const *args, Py_ssize_t nargs)	modelled	textlibs-struct-pack-into-0p-outside-field	
 Modules/_struct.c	2654	2658	unpack_impl	unpack_impl(PyObject *module, PyStructObject *s_object, Py_buffer *buffer) /*[clinic end generated code: output=48ddd4d88eca8551 input=05fa3b91678da727]*/	modelled	textlibs-struct-unpack-length	
-Modules/_struct.c	2677	2682	unpack_from_impl	unpack_from_impl(PyObject *module, PyStructObject *s_object, Py_buffer *buffer, Py_ssize_t offset) /*[clinic end generated code: output=1042631674c6e0d3 input=e383ecb97728be2b]*/	todo		
+Modules/_struct.c	2677	2682	unpack_from_impl	unpack_from_impl(PyObject *module, PyStructObject *s_object, Py_buffer *buffer, Py_ssize_t offset) /*[clinic end generated code: output=1042631674c6e0d3 input=e383ecb97728be2b]*/	modelled	textlibs-struct-unpack-from-offsets	
 Modules/_struct.c	2700	2705	iter_unpack_impl	iter_unpack_impl(PyObject *module, PyStructObject *s_object, PyObject *buffer) /*[clinic end generated code: output=0ae50e250d20e74d input=b214a58869a3c98d]*/	modelled	textlibs-struct-iter-zero-size	
 Modules/_struct.c	2752	2762	_structmodule_traverse	_structmodule_traverse(PyObject *module, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal of module state
 Modules/_struct.c	2765	2775	_structmodule_clear	_structmodule_clear(PyObject *module)	excluded		no-behaviour: GC clear of module state

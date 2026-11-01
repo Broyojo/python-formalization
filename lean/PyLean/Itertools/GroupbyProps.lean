@@ -10,6 +10,8 @@ namespace PyLean.Itertools
 
 open PyLean
 
+variable {α κ : Type} [Inhabited α] [Inhabited κ] [DecidableEq κ]
+
 theorem getD_snoc {α : Type} (pre : List α) (x d : α) : (pre ++ [x]).getD pre.length d = x := by
   simp [List.getD_eq_getElem?_getD]
 
@@ -17,7 +19,7 @@ theorem set_snoc {α : Type} (pre : List α) (x y : α) : (pre ++ [x]).set pre.l
   simp
 
 /-- How the C state matches the live group's generator frame. -/
-def GbActive (g : CGroupby) (d : DocGroupby) (T : Int) : GenPc → Prop
+def GbActive (g : CGroupby α κ) (d : DocGroupby α κ) (T : κ) : GenPc → Prop
   | .fresh => g.currvalue = some d.currValue ∧ g.currkey = some d.currKey ∧ d.currKey = T ∧
       d.exhausted = false
   | .suspended => g.currvalue = none ∧ g.currkey = none ∧ d.currKey = T ∧ d.exhausted = false
@@ -26,7 +28,7 @@ def GbActive (g : CGroupby) (d : DocGroupby) (T : Int) : GenPc → Prop
     (g.currkey = none ∧ g.currvalue = none ∧ d.exhausted = true ∧ d.currKey = T ∧ g.it = [])
 
 /-- The simulation relation: not started, a group is live, or finished. -/
-def GbRel (g : CGroupby) (d : DocGroupby) : Prop :=
+def GbRel (g : CGroupby α κ) (d : DocGroupby α κ) : Prop :=
   g.it = d.it ∧ g.groupers = d.groups.map Prod.fst ∧
   ((d.outer = .fresh ∧ d.groups = [] ∧ g.tgtkey = none ∧ g.currkey = none ∧ g.currvalue = none ∧
       g.currgrouper = none ∧ d.exhausted = false) ∨
@@ -37,31 +39,31 @@ def GbRel (g : CGroupby) (d : DocGroupby) : Prop :=
 
 /-! ## One `next()` of the doc's `_grouper` frame -/
 
-theorem grouper_done (key : Int → Int) (d : DocGroupby) (j : Nat)
-    (h : (d.groups.getD j (0, GenPc.done)).2 = GenPc.done) : docGrouperNext key d j = (none, d) := by
+theorem grouper_done (key : α → κ) (d : DocGroupby α κ) (j : Nat)
+    (h : (d.groups.getD j (default, GenPc.done)).2 = GenPc.done) : docGrouperNext key d j = (none, d) := by
   simp only [docGrouperNext]
-  cases hg : d.groups.getD j (0, GenPc.done) with
+  cases hg : d.groups.getD j (default, GenPc.done) with
   | mk t pc => rw [hg] at h; simp only at h; subst h; rfl
 
-theorem grouper_fresh (key : Int → Int) (d : DocGroupby) (pre) (T : Int)
+theorem grouper_fresh (key : α → κ) (d : DocGroupby α κ) (pre : List (κ × GenPc)) (T : κ)
     (h : d.groups = pre ++ [(T, GenPc.fresh)]) :
     docGrouperNext key d pre.length =
       (some d.currValue, { d with groups := pre ++ [(T, GenPc.suspended)] }) := by
   simp [docGrouperNext, h, getD_snoc]
 
-theorem grouper_nil (key : Int → Int) (d : DocGroupby) (pre) (T : Int)
+theorem grouper_nil (key : α → κ) (d : DocGroupby α κ) (pre : List (κ × GenPc)) (T : κ)
     (h : d.groups = pre ++ [(T, GenPc.suspended)]) (hit : d.it = []) :
     docGrouperNext key d pre.length =
       (none, { d with exhausted := true, groups := pre ++ [(T, GenPc.done)] }) := by
   simp [docGrouperNext, h, getD_snoc, hit]
 
-theorem grouper_same (key : Int → Int) (d : DocGroupby) (pre) (T v : Int) (rest)
+theorem grouper_same (key : α → κ) (d : DocGroupby α κ) (pre : List (κ × GenPc)) (T : κ) (v : α) (rest : List α)
     (h : d.groups = pre ++ [(T, GenPc.suspended)]) (hit : d.it = v :: rest) (hv : key v = T) :
     docGrouperNext key d pre.length =
       (some v, { d with it := rest, currValue := v, currKey := key v }) := by
   simp [docGrouperNext, h, getD_snoc, hit, hv]
 
-theorem grouper_new (key : Int → Int) (d : DocGroupby) (pre) (T v : Int) (rest)
+theorem grouper_new (key : α → κ) (d : DocGroupby α κ) (pre : List (κ × GenPc)) (T : κ) (v : α) (rest : List α)
     (h : d.groups = pre ++ [(T, GenPc.suspended)]) (hit : d.it = v :: rest) (hv : key v ≠ T) :
     docGrouperNext key d pre.length =
       (none, { d with it := rest, currValue := v, currKey := key v, groups := pre ++ [(T, GenPc.done)] }) := by
@@ -69,8 +71,8 @@ theorem grouper_new (key : Int → Int) (d : DocGroupby) (pre) (T v : Int) (rest
 
 /-- The input is exhausted or a boundary is reached, in lockstep: `cGroupbySkip`
 drops the rest of the group, `for _ in curr_group: pass` runs the frame out. -/
-theorem exhaust_rel (key : Int → Int) (T : Int) (pre : List (Int × GenPc)) :
-    ∀ (fuelC fuelD : Nat) (g : CGroupby) (d : DocGroupby), g.it = d.it → g.it.length < fuelC →
+theorem exhaust_rel (key : α → κ) (T : κ) (pre : List (κ × GenPc)) :
+    ∀ (fuelC fuelD : Nat) (g : CGroupby α κ) (d : DocGroupby α κ), g.it = d.it → g.it.length < fuelC →
       g.it.length < fuelD → d.groups = pre ++ [(T, GenPc.suspended)] → g.tgtkey = some T →
       (g.currkey = none ∨ g.currkey = some T) → d.exhausted = false → d.currKey = T →
       (cGroupbySkip key fuelC g).2.it = (docExhaustGroup key d pre.length fuelD).it ∧
@@ -132,43 +134,43 @@ theorem exhaust_rel (key : Int → Int) (T : Int) (pre : List (Int × GenPc)) :
 
 /-! ## `next()` on a group -/
 
-theorem gr_getD (pre : List (Int × GenPc)) (T : Int) (pc : GenPc) :
-    ((pre ++ [(T, pc)]).map Prod.fst).getD pre.length 0 = T := by
+theorem gr_getD (pre : List (κ × GenPc)) (T : κ) (pc : GenPc) :
+    ((pre ++ [(T, pc)]).map Prod.fst).getD pre.length default = T := by
   simp [List.getD_eq_getElem?_getD]
 
-theorem pcOf_mem (groups : List (Int × GenPc)) (j : Nat) (hj : j < groups.length)
-    (h : ∀ x ∈ groups, x.2 = GenPc.done) : (groups.getD j (0, GenPc.done)).2 = GenPc.done := by
+theorem pcOf_mem (groups : List (κ × GenPc)) (j : Nat) (hj : j < groups.length)
+    (h : ∀ x ∈ groups, x.2 = GenPc.done) : (groups.getD j (default, GenPc.done)).2 = GenPc.done := by
   apply h
   simp [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hj]
 
-theorem cGrouperNext_stop (key : Int → Int) (g : CGroupby) (j : Nat) (h : g.currgrouper ≠ some j) :
+theorem cGrouperNext_stop (key : α → κ) (g : CGroupby α κ) (j : Nat) (h : g.currgrouper ≠ some j) :
     cGrouperNext key g j = (none, g) := by
   simp [cGrouperNext, h]
 
-theorem cGrouperNext_pending (key : Int → Int) (g : CGroupby) (j : Nat) (T v k : Int)
-    (hc : g.currgrouper = some j) (hv : g.currvalue = some v) (hT : g.groupers.getD j 0 = T)
+theorem cGrouperNext_pending (key : α → κ) (g : CGroupby α κ) (j : Nat) (T k : κ) (v : α)
+    (hc : g.currgrouper = some j) (hv : g.currvalue = some v) (hT : g.groupers.getD j default = T)
     (hk : g.currkey = some k) :
     cGrouperNext key g j =
       if T == k then (some v, { g with currvalue := none, currkey := none }) else (none, g) := by
   simp only [cGrouperNext, hc, bne_self_eq_false, Bool.false_eq_true, ↓reduceIte, hv, Option.isNone_some,
     hT, hk, Option.getD_some]
 
-theorem cGrouperNext_nil (key : Int → Int) (g : CGroupby) (j : Nat)
+theorem cGrouperNext_nil (key : α → κ) (g : CGroupby α κ) (j : Nat)
     (hc : g.currgrouper = some j) (hv : g.currvalue = none) (hit : g.it = []) :
     cGrouperNext key g j = (none, g) := by
   simp only [cGrouperNext, hc, bne_self_eq_false, Bool.false_eq_true, ↓reduceIte, hv, Option.isNone_none,
     cGroupbyStep, hit]
 
-theorem cGrouperNext_cons (key : Int → Int) (g : CGroupby) (j : Nat) (T v : Int) (rest : List Int)
+theorem cGrouperNext_cons (key : α → κ) (g : CGroupby α κ) (j : Nat) (T : κ) (v : α) (rest : List α)
     (hc : g.currgrouper = some j) (hv : g.currvalue = none) (hit : g.it = v :: rest)
-    (hT : g.groupers.getD j 0 = T) :
+    (hT : g.groupers.getD j default = T) :
     cGrouperNext key g j =
       if T == key v then (some v, { g with it := rest, currvalue := none, currkey := none })
       else (none, { g with it := rest, currvalue := some v, currkey := some (key v) }) := by
   simp only [cGrouperNext, hc, bne_self_eq_false, Bool.false_eq_true, ↓reduceIte, hv, Option.isNone_none,
     cGroupbyStep, hit, hT, Option.getD_some]
 
-theorem grouperNext_rel (key : Int → Int) (g : CGroupby) (d : DocGroupby) (h : GbRel g d) (j : Nat)
+theorem grouperNext_rel (key : α → κ) (g : CGroupby α κ) (d : DocGroupby α κ) (h : GbRel g d) (j : Nat)
     (hj : j < d.groups.length) :
     (cGrouperNext key g j).1 = (docGrouperNext key d j).1 ∧
       GbRel (cGrouperNext key g j).2 (docGrouperNext key d j).2 := by
@@ -178,13 +180,13 @@ theorem grouperNext_rel (key : Int → Int) (g : CGroupby) (d : DocGroupby) (h :
   · by_cases hjp : j = pre.length
     · subst hjp
       have hc : g.currgrouper = some pre.length := hcg
-      have hT : g.groupers.getD pre.length 0 = T := by rw [hgl, hgr, gr_getD]
+      have hT : g.groupers.getD pre.length default = T := by rw [hgl, hgr, gr_getD]
       cases pc with
       | fresh =>
         obtain ⟨h1, h2, h3, h4⟩ := hact
         have hc1 : cGrouperNext key g pre.length =
             (some d.currValue, { g with currvalue := none, currkey := none }) := by
-          rw [cGrouperNext_pending key g pre.length T d.currValue d.currKey hc h1 hT h2, h3]; simp
+          rw [cGrouperNext_pending key g pre.length T d.currKey d.currValue hc h1 hT h2, h3]; simp
         rw [hc1, grouper_fresh key d pre T hgr]
         refine ⟨rfl, hit, by simp [hgl, hgr], Or.inr (Or.inl ⟨T, pre, .suspended, rfl, hpre, hou, htk, htg,
           hcg, rfl, rfl, h3, h4⟩)⟩
@@ -221,7 +223,7 @@ theorem grouperNext_rel (key : Int → Int) (g : CGroupby) (d : DocGroupby) (h :
         · have hne : (T == d.currKey) = false := by
             simp only [beq_eq_false_iff_ne]; exact fun h => h3 h.symm
           have hc1 : cGrouperNext key g pre.length = (none, g) := by
-            rw [cGrouperNext_pending key g pre.length T d.currValue d.currKey hc h1 hT h2, hne]; simp
+            rw [cGrouperNext_pending key g pre.length T d.currKey d.currValue hc h1 hT h2, hne]; simp
           rw [hc1, hd]
           exact ⟨rfl, hrel⟩
         · have hc1 := cGrouperNext_nil key g pre.length hc h2 h5
@@ -231,7 +233,7 @@ theorem grouperNext_rel (key : Int → Int) (g : CGroupby) (d : DocGroupby) (h :
       have hc1 := cGrouperNext_stop key g j (by rw [hcg]; simp; omega)
       have hd : docGrouperNext key d j = (none, d) := by
         apply grouper_done
-        rw [hgr, show (pre ++ [(T, pc)]).getD j (0, GenPc.done) = pre.getD j (0, GenPc.done) by
+        rw [hgr, show (pre ++ [(T, pc)]).getD j (default, GenPc.done) = pre.getD j (default, GenPc.done) by
           simp [List.getD_eq_getElem?_getD, List.getElem?_append_left hjl]]
         exact pcOf_mem pre j hjl hpre
       rw [hc1, hd]
@@ -243,23 +245,23 @@ theorem grouperNext_rel (key : Int → Int) (g : CGroupby) (d : DocGroupby) (h :
 /-! ## `next()` on the groupby object -/
 
 /-- The end of `groupby_next` after the loop's `break`. -/
-def gbNew (g : CGroupby) : Option Int × CGroupby :=
-  (some (g.currkey.getD 0),
-    { g with tgtkey := some (g.currkey.getD 0), groupers := g.groupers ++ [g.currkey.getD 0],
+def gbNew (g : CGroupby α κ) : Option κ × CGroupby α κ :=
+  (some (g.currkey.getD default),
+    { g with tgtkey := some (g.currkey.getD default), groupers := g.groupers ++ [g.currkey.getD default],
              currgrouper := some g.groupers.length })
 
-theorem cGroupbyNext_true (key : Int → Int) (g g' : CGroupby)
+theorem cGroupbyNext_true (key : α → κ) (g g' : CGroupby α κ)
     (h : cGroupbySkip key (g.it.length + 1) { g with currgrouper := none } = (true, g')) :
     cGroupbyNext key g = gbNew g' := by
-  simp [cGroupbyNext, h, gbNew]
+  simp [cGroupbyNext, h, gbNew, cGrouperCreate]
 
-theorem cGroupbyNext_false (key : Int → Int) (g g' : CGroupby)
+theorem cGroupbyNext_false (key : α → κ) (g g' : CGroupby α κ)
     (h : cGroupbySkip key (g.it.length + 1) { g with currgrouper := none } = (false, g')) :
     cGroupbyNext key g = (none, g') := by
   simp [cGroupbyNext, h]
 
 /-- A new group starts: the C state and `docGroupbyLoopHead` agree. -/
-theorem finish_new (g : CGroupby) (d : DocGroupby) (pre : List (Int × GenPc))
+theorem finish_new (g : CGroupby α κ) (d : DocGroupby α κ) (pre : List (κ × GenPc))
     (hit : g.it = d.it) (hgl : g.groupers = d.groups.map Prod.fst) (hpre : ∀ x ∈ pre, x.2 = GenPc.done)
     (hgr : d.groups = pre) (hcv : g.currvalue = some d.currValue) (hck : g.currkey = some d.currKey)
     (hex : d.exhausted = false) :
@@ -269,11 +271,11 @@ theorem finish_new (g : CGroupby) (d : DocGroupby) (pre : List (Int × GenPc))
     rfl, ?_, hcv, rfl, rfl, rfl⟩)⟩
   simp [hgl, hgr]
 
-theorem docLoopHead_exh (d : DocGroupby) (h : d.exhausted = true) :
+theorem docLoopHead_exh (d : DocGroupby α κ) (h : d.exhausted = true) :
     docGroupbyLoopHead d = (none, { d with outer := .done }) := by
   simp [docGroupbyLoopHead, h]
 
-theorem allDone_snoc (pre : List (Int × GenPc)) (T : Int) (hpre : ∀ x ∈ pre, x.2 = GenPc.done) :
+theorem allDone_snoc (pre : List (κ × GenPc)) (T : κ) (hpre : ∀ x ∈ pre, x.2 = GenPc.done) :
     ∀ x ∈ pre ++ [(T, GenPc.done)], x.2 = GenPc.done := by
   intro x hx
   simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at hx
@@ -282,8 +284,8 @@ theorem allDone_snoc (pre : List (Int × GenPc)) (T : Int) (hpre : ∀ x ∈ pre
   · subst h; rfl
 
 /-- After the current frame has been run out by the outer generator. -/
-theorem after_exhaust (key : Int → Int) (g g' : CGroupby) (d d' : DocGroupby) (flag : Bool) (T : Int)
-    (pre : List (Int × GenPc)) (hpre : ∀ x ∈ pre, x.2 = GenPc.done)
+theorem after_exhaust (key : α → κ) (g g' : CGroupby α κ) (d d' : DocGroupby α κ) (flag : Bool) (T : κ)
+    (pre : List (κ × GenPc)) (hpre : ∀ x ∈ pre, x.2 = GenPc.done)
     (hskip : cGroupbySkip key (g.it.length + 1) { g with currgrouper := none } = (flag, g'))
     (hit : g'.it = d'.it) (hgl : g'.groupers = g.groupers) (hgl0 : g.groupers = d.groups.map Prod.fst)
     (hgr0 : d.groups.map Prod.fst = (pre ++ [(T, GenPc.done)]).map Prod.fst)
@@ -303,7 +305,7 @@ theorem after_exhaust (key : Int → Int) (g g' : CGroupby) (d d' : DocGroupby) 
       · exact Or.inl h
       · exact Or.inr ⟨T, h, htg⟩
 
-theorem groupbyNext_rel (key : Int → Int) (g : CGroupby) (d : DocGroupby) (h : GbRel g d) :
+theorem groupbyNext_rel (key : α → κ) (g : CGroupby α κ) (d : DocGroupby α κ) (h : GbRel g d) :
     (cGroupbyNext key g).1 = (docGroupbyNext key d).1 ∧
       GbRel (cGroupbyNext key g).2 (docGroupbyNext key d).2 := by
   obtain ⟨hit, hgl, hph⟩ := h
@@ -400,31 +402,56 @@ theorem groupbyNext_rel (key : Int → Int) (g : CGroupby) (d : DocGroupby) (h :
 
 /-! ## Interleavings -/
 
-theorem groupbyOps_eq (key : Int → Int) : ∀ (ops : List GbOp) (g : CGroupby) (d : DocGroupby), GbRel g d →
-    cGroupbyOps key g ops = docGroupbyOps key d ops
-  | [], _, _, _ => rfl
-  | .outer :: ops, g, d, h => by
+/-- The public operations: no direct `_grouper` calls. -/
+def GbOp.isPublic : GbOp κ → Bool
+  | .direct _ => false
+  | _ => true
+
+theorem groupbyOps_eq (key : α → κ) : ∀ (ops : List (GbOp κ)) (g : CGroupby α κ) (d : DocGroupby α κ),
+    GbRel g d → (∀ op ∈ ops, op.isPublic = true) → cGroupbyOps key g ops = docGroupbyOps key d ops
+  | [], _, _, _, _ => rfl
+  | .outer :: ops, g, d, h, hp => by
     have hs := groupbyNext_rel key g d h
     simp only [cGroupbyOps, docGroupbyOps]
-    rw [hs.1, groupbyOps_eq key ops _ _ hs.2]
-  | .group j :: ops, g, d, h => by
+    rw [hs.1, groupbyOps_eq key ops _ _ hs.2 (fun op hop => hp op (by simp [hop]))]
+  | .group j :: ops, g, d, h, hp => by
     have hlen : g.groupers.length = d.groups.length := by rw [h.2.1]; simp
     simp only [cGroupbyOps, docGroupbyOps, hlen]
     by_cases hj : j < d.groups.length
     · have hs := grouperNext_rel key g d h j hj
       simp only [hj, ↓reduceIte]
-      rw [hs.1, groupbyOps_eq key ops _ _ hs.2]
+      rw [hs.1, groupbyOps_eq key ops _ _ hs.2 (fun op hop => hp op (by simp [hop]))]
     · simp only [hj, ↓reduceIte]
-      exact groupbyOps_eq key ops g d h
+      exact groupbyOps_eq key ops g d h (fun op hop => hp op (by simp [hop]))
+  | .direct k :: ops, _, _, _, hp => by
+    have := hp (.direct k) (by simp)
+    simp [GbOp.isPublic] at this
 
 /-- For every key function, input and interleaving of `next()` on the groupby
 object and on any group it returned (including groups already advanced past),
-the C object answers exactly as the doc's generators. -/
+the C object answers exactly as the doc's generators, over any element and
+key type; a non-iterable input raises in both. Keys compare by decidable
+equality. This is the statement for the model without failing calls, which
+ignores `Obj.iter`'s exception; `GroupbyDocAgreeR` in `GroupbyRaising.lean` is the
+one for the full model. -/
 def GroupbyDocAgree : Prop :=
-  ∀ (key : Int → Int) (l : List Int) (ops : List GbOp), cGroupby key l ops = docGroupby key l ops
+  ∀ (α κ : Type) [Inhabited α] [Inhabited κ] [DecidableEq κ] (key : α → κ) (o : Obj α)
+    (ops : List (GbOp κ)), (∀ op ∈ ops, op.isPublic = true) → cGroupby key o ops = docGroupby key o ops
 
 theorem groupbyDocAgree_proven : GroupbyDocAgree := by
-  intro key l ops
-  exact groupbyOps_eq key ops _ _ ⟨rfl, rfl, Or.inl ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩⟩
+  intro α κ _ _ _ key o ops hp
+  cases o with
+  | notIterable ty => rfl
+  | iter l err =>
+    simp only [cGroupby, cGroupbyNew, docGroupby, getIter]
+    exact congrArg Except.ok
+      (groupbyOps_eq key ops _ _ ⟨rfl, rfl, Or.inl ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩⟩ hp)
+
+/-- A groupby over an input that cannot be iterated fails in the constructor. -/
+def GroupbyCtorError : Prop :=
+  ∀ (α κ : Type) (ty : String),
+    (cGroupbyNew (.notIterable ty) : Py (CGroupby α κ)) = .error (.typeError s!"'{ty}' object is not iterable")
+
+theorem groupbyCtorError_proven : GroupbyCtorError := fun _ _ _ => rfl
 
 end PyLean.Itertools

@@ -1,0 +1,52 @@
+id: unicodeobj-format-nul-presentation-type
+title: "format(1.5, '\\x00') succeeds: float and complex take an explicit NUL for 'no presentation type'"
+priority: P5
+kind: validation
+module: formatter_unicode
+files: [Python/formatter_unicode.c]
+functions: ["parse_internal_render_format_spec", "_PyFloat_FormatAdvancedWriter", "_PyComplex_FormatAdvancedWriter"]
+summary: |
+  float and complex pass '\0' as `default_type`, meaning no presentation type was given. The
+  parser then copies the last character of the spec into `format->type` without looking at it,
+  so a literal NUL there is indistinguishable from the default, and the dispatch accepts it as
+  `case '\0'`. format(1.5, '10\x00') is format(1.5, '10'), and format(1.5, ',\x00') also passes the
+  thousands check through its `case '\0'`. int and str have a non-NUL default, so they reach
+  "Unknown format code '\x0'". Lead from the Decimal agent, confirmed here.
+likelihood: |
+  Very rare. It needs a NUL in a format spec, and the result is a silently accepted bad spec.
+maybe_intended: |
+  Not intended, but harmless. A maintainer might fix it in passing or decline it as not worth
+  the change.
+reproducer: |
+  ok = format(1.5, '10\x00') == format(1.5, '10') and format(1.5, ',\x00') == format(1.5, ',')
+  format(1.5 + 2j, '\x00')
+  def raises(v):
+      try:
+          format(v, '10\x00')
+      except ValueError as e:
+          return str(e)
+  print(raises(1), '|', raises('a'), '|', raises(1.5))
+  if ok and raises(1) and raises('a') and raises(1.5) is None:
+      print('REPRODUCED unicodeobj-format-nul-presentation-type')
+expected: |
+  ValueError: Unknown format code '\x0' for object of type 'float', as for int and str.
+observed: |
+  float and complex accept the spec and format as if no type had been given.
+tested: "REPRODUCED on python3 3.14.7 and on main (3.16.0a1+dev) by scripts/check_bugs.py"
+promised_by: |
+  The format specification mini-language in Doc/library/string.rst lists the presentation types,
+  and NUL is not one of them. int and str are the twins that reject it.
+cause: |
+  Python/formatter_unicode.c:322-325 stores any final character as the type. :1671 and :1710 are
+  `case '\0'` in the float and complex dispatch, and :341 is the same case in the thousands check.
+possible_fix: |
+  Keep a flag for "type given" in parse_internal_render_format_spec, and raise
+  unknown_presentation_type when the given type is NUL.
+lean: |
+  Refuted by formatNulRejected_refuted; formatNulIntStr_proven shows int and str reject it for every
+  spec (lean/PyLean/UnicodeObj/FormatProps.lean).
+duplicates:
+  issues:
+    - {number: 61905, state: closed, relation: related, reason: "'Fill Character cannot be \\0': NUL as fill, not as type"}
+  queries: ["format NUL float", "format null character specifier"]
+  bugforge: "no match in vendor/bugforge-results/README.md"
