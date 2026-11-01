@@ -16,8 +16,10 @@ import PyLean.Binary64.Pack2Check
 import PyLean.Binary64.CompareProps
 import PyLean.Binary64.StrtodProps
 import PyLean.Binary64.DtoaProps
+import PyLean.Binary64.RatioProps
 import PyLean.Binary64.OpenProps
 import PyLean.Binary64.Complex
+import PyLean.Binary64.ComplexProps
 import PyLean.Binary64.Diff
 
 /-!
@@ -35,6 +37,7 @@ open PyLean.Registry
 def floatFile : String := "Objects/floatobject.c"
 def strtodFile : String := "Python/pystrtod.c"
 def dtoaFile : String := "Python/dtoa.c"
+def complexFile : String := "Objects/complexobject.c"
 
 def entries : List Entry := [
   { id := "binary64-round-nearest-even", pyFile := floatFile
@@ -296,10 +299,9 @@ def entries : List Entry := [
     status := .open, prop := ``FloatRoundHalfEven
     notes := "Needs exactness of x - round(x) and of x / 2.0 on halfway values. Difftested." },
   { id := "float-as-integer-ratio", pyFile := floatFile, pyFns := ["float_as_integer_ratio_impl"]
-    statement := "x.as_integer_ratio() is exact, in lowest terms, with a positive denominator."
+    statement := "x.as_integer_ratio() is exact, in lowest terms, with a positive denominator, and raises OverflowError for infinities and ValueError for NaNs."
     source := "float.as_integer_ratio docstring, floatobject.c:1478-1481"
-    status := .open, prop := ``AsIntegerRatioExact
-    notes := "Needs an invariant for ratioLoop. Difftested." },
+    status := .proven, prop := ``AsIntegerRatioExact, thm := some ``asIntegerRatioExact_proven },
   { id := "float-pack4-roundtrip", pyFile := floatFile, pyFns := ["PyFloat_Pack4", "PyFloat_Unpack4"]
     statement := "PyFloat_Pack4 inverts PyFloat_Unpack4 on every binary32 pattern, in both byte orders."
     source := "struct docs; floatobject.c:2187-2201 and :2509-2522"
@@ -325,6 +327,53 @@ def entries : List Entry := [
     source := "Comment at dtoa.c:1082-1083"
     status := .open, prop := ``RatioBound
     notes := "Follows from B2dSpec and an error analysis. Difftested through strtod." },
+  { id := "complex-parts", pyFile := complexFile
+    pyFns := ["_Py_c_sum", "_Py_cr_sum", "_Py_rc_sum", "_Py_c_diff", "_Py_cr_diff", "_Py_rc_diff",
+      "_Py_c_neg", "complex_neg", "complex_pos", "complex_conjugate_impl",
+      "complex___getnewargs___impl", "complex___complex___impl"]
+    statement := "Complex addition and subtraction give each part correctly rounded, mixed real and complex forms leave the other part alone, and negation and conjugation only flip signs."
+    source := "Comment at complexobject.c:665-678 (C11 Annex G mixed-mode rules)"
+    status := .proven, prop := ``ComplexParts, thm := some ``complexParts_proven },
+  { id := "complex-prod-shape", pyFile := complexFile
+    pyFns := ["_Py_c_prod", "_Py_cr_prod", "_Py_rc_prod"]
+    statement := "_Py_c_prod is the textbook product unless both of its parts are NaN, and multiplication by a real scales both parts."
+    source := "Comment at complexobject.c:96-97 (C11 Annex G.5.1)"
+    status := .proven, prop := ``ComplexProdShape, thm := some ``complexProdShape_proven },
+  { id := "complex-div-zero", pyFile := complexFile
+    pyFns := ["_Py_c_quot", "_Py_cr_quot", "_Py_rc_quot"]
+    statement := "Dividing by a complex or real zero, of any signs, sets EDOM, so complex division raises ZeroDivisionError for every dividend."
+    source := "complexobject.c:200-203, :257-258, :272-274, :710-713"
+    status := .proven, prop := ``ComplexDivZero, thm := some ``complexDivZero_proven },
+  { id := "complex-abs", pyFile := complexFile, pyFns := ["_Py_c_abs", "complex_abs"]
+    statement := "abs(z) is infinite when a part is infinite, even with a NaN in the other, and for finite parts is hypot, with OverflowError exactly when hypot is not finite. Holds for any C library."
+    source := "Comment at complexobject.c:374-376"
+    status := .proven, prop := ``ComplexAbs, thm := some ``complexAbs_proven },
+  { id := "complex-bool", pyFile := complexFile, pyFns := ["complex_bool"]
+    statement := "bool(z) is false exactly when both parts are zero."
+    source := "complexobject.c:796"
+    status := .proven, prop := ``ComplexBool, thm := some ``complexBool_proven },
+  { id := "complex-compare", pyFile := complexFile, pyFns := ["complex_richcompare"]
+    statement := "Order comparisons are NotImplemented, == with a float needs a zero imaginary part, and == with an int of any size is exact."
+    source := "complexobject.c:806-842; Doc/library/stdtypes.rst, comparisons"
+    status := .proven, prop := ``ComplexCompare, thm := some ``complexCompare_proven },
+  { id := "complex-pow-special", pyFile := complexFile
+    pyFns := ["_Py_c_pow", "c_powu", "c_powi", "complex_pow"]
+    statement := "z ** 0 is 1 for every z, _Py_c_pow answers 1 for a zero exponent, and a zero base with a nonzero imaginary exponent sets EDOM. Holds for any C library."
+    source := "complexobject.c:314-323, :738-749"
+    status := .proven, prop := ``ComplexPowSpecial, thm := some ``complexPowSpecial_proven },
+  { id := "complex-real-operand", pyFile := complexFile, pyFns := ["real_to_double", "real_to_complex"]
+    statement := "A float operand keeps its value and gets imaginary part 0.0, and an int goes through the float conversion."
+    source := "complexobject.c:644-663"
+    status := .proven, prop := ``ComplexRealOperand, thm := some ``complexRealOperand_proven },
+  { id := "complex-repr", pyFile := complexFile, pyFns := ["complex_repr"]
+    statement := "With a positive zero real part, repr(z) is the repr of the imaginary part followed by j, with no parentheses."
+    source := "Comment at complexobject.c:577-578"
+    status := .proven, prop := ``ComplexRepr, thm := some ``complexRepr_proven },
+  { id := "complex-blank-string", pyFile := complexFile
+    pyFns := ["complex_from_string_inner", "complex_subtype_from_string"]
+    statement := "complex() of an empty string, or of one that is only spaces, raises ValueError."
+    source := "parse_error label, complexobject.c:1047-1050"
+    status := .proven, prop := ``ComplexBlankRaises, thm := some ``complexBlankRaises_proven },
   { id := "pystrtod-case-insensitive-match", pyFile := strtodFile, pyFns := ["case_insensitive_match"]
     statement := "case_insensitive_match(s, t) is true exactly when the lowered prefix of s spells t."
     source := "Comment at pystrtod.c:9-10"

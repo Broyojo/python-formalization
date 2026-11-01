@@ -580,14 +580,129 @@ def gen_float_case(rng):
     return {**m, "fn": "asdouble", "v": enc_obj(rng)}
 
 
+# ---------------------------------------------------------------------------
+# complex
+# ---------------------------------------------------------------------------
+
+PART = [0, SIGN, 1, 0x3ff0000000000000, 0xbff0000000000000, 0x7ff0000000000000, 0xfff0000000000000,
+        0x7ff8000000000000, 0x7fefffffffffffff, 0x4000000000000000, 0x3fe0000000000000]
+
+
+def part(rng):
+    return rng.choice(PART) if rng.random() < 0.5 else edge_float(rng)
+
+
+def c_operand(rng, real=True):
+    k = rng.random()
+    if not real or k < 0.7:
+        return {"c": [part(rng), part(rng)]}
+    if k < 0.9:
+        return {"f": part(rng)}
+    return {"i": rng.choice([0, 1, -1, 2, 3, 10, 2 ** 53 + 1, -2 ** 70, 10 ** 400])}
+
+
+def py_c(o):
+    if "c" in o:
+        return complex(of_bits(o["c"][0]), of_bits(o["c"][1]))
+    return py_obj(o)
+
+
+def enc_c(z):
+    return [enc(z.real), enc(z.imag)]
+
+
+NICE_PARTS = ["0", "1", "-1", "1.5", "-2.5e3", "1e400", "-1e400", "inf", "-inf", "nan", "-nan", "infinity",
+              ".5", "5.", "1_0", "1e5", "0.0", "-0.0"]
+
+
+def complex_string(rng):
+    k = rng.random()
+    a, b = rng.choice(NICE_PARTS), rng.choice(NICE_PARTS)
+    sign = rng.choice(["+", "-"])
+    s = rng.choice([a, a + "j", a + sign + b.lstrip("+-") + "j", a + sign + "j", sign + "j", "j", "J",
+                    a + "J", "", " ", "(", ")", "()", "(" + a + ")", "(" + a + sign + "j", a + "+", a + "j" + b,
+                    "1+2", "1+2i", "++1", "1 + 2j", "1\x00", "1_+2j", "١+٢j", "\xa01j\xa0", "1j\x00"])
+    if k < 0.3:
+        s = rng.choice(SPACE) + s + rng.choice(SPACE)
+    elif k < 0.5:
+        s = rng.choice(SPACE) + "(" + rng.choice(SPACE) + s + rng.choice(SPACE) + ")" + rng.choice(SPACE)
+    return s
+
+
+def gen_complex_case(rng):
+    m = {"mod": "binary64"}
+    k = rng.random()
+    if k < 0.5:
+        fn = rng.choice(["c_add", "c_sub", "c_mul", "c_div"])
+        v, w = c_operand(rng), c_operand(rng)
+        if "c" not in v and "c" not in w:
+            v = c_operand(rng, real=False)
+        return {**m, "fn": fn, "v": v, "w": w}
+    if k < 0.65:
+        v, w = c_operand(rng), c_operand(rng)
+        if "c" not in v and "c" not in w:
+            v = c_operand(rng, real=False)
+        if rng.random() < 0.7:
+            w = {"f": to_bits(float(rng.randrange(-101, 102)))}
+            if "c" not in v:
+                v = c_operand(rng, real=False)
+        return {**m, "fn": "c_pow", "v": v, "w": w}
+    if k < 0.8:
+        fn = rng.choice(["c_neg", "c_conj", "c_bool", "c_repr", "c_abs"])
+        return {**m, "fn": fn, "v": c_operand(rng, real=False)}
+    if k < 0.9:
+        return {**m, "fn": "c_eq", "v": c_operand(rng, real=False), "w": c_operand(rng),
+                "op": rng.choice(["eq", "ne", "lt", "ge"])}
+    return {**m, "fn": "c_parse", "cps": [ord(ch) for ch in complex_string(rng)]}
+
+
+C_BIN = {"c_add": "add", "c_sub": "sub", "c_mul": "mul", "c_div": "truediv", "c_pow": "pow"}
+
+
+def run_complex(c):
+    fn = c["fn"]
+    if fn in C_BIN:
+        v, w = py_c(c["v"]), py_c(c["w"])
+        name = C_BIN[fn]
+
+        def call():
+            if isinstance(v, complex):
+                return enc_c(getattr(complex, f"__{name}__")(v, w))
+            return enc_c(getattr(complex, f"__r{name}__")(w, v))
+        return common.py_result(call)
+    if fn == "c_parse":
+        s = "".join(map(chr, c["cps"]))
+        return common.py_result(lambda: enc_c(complex(s)))
+    z = py_c(c["v"])
+    if fn == "c_neg":
+        return {"ok": enc_c(-z)}
+    if fn == "c_conj":
+        return {"ok": enc_c(z.conjugate())}
+    if fn == "c_bool":
+        return {"ok": bool(z)}
+    if fn == "c_repr":
+        return {"ok": repr(z)}
+    if fn == "c_abs":
+        return common.py_result(lambda: enc(abs(z)))
+    if fn == "c_eq":
+        r = getattr(complex, f"__{c['op']}__")(z, py_c(c["w"]))
+        return {"ok": "NotImplemented" if r is NotImplemented else r}
+    raise ValueError(fn)
+
+
 LOW_LEVEL = set(UNARY + BINARY + ["fma", "ldexp", "ofInt", "ratio"])
 
 
 def gen_all(rng):
-    return gen_case(rng) if rng.random() < 0.3 else gen_float_case(rng)
+    k = rng.random()
+    if k < 0.25:
+        return gen_case(rng)
+    return gen_float_case(rng) if k < 0.85 else gen_complex_case(rng)
 
 
 def run_all(c):
+    if c["fn"].startswith("c_"):
+        return run_complex(c)
     return run_python(c) if c["fn"] in LOW_LEVEL else run_float(c)
 
 

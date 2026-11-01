@@ -61,11 +61,6 @@ def FloatRoundHalfEven : Prop :=
   ∀ x : F64, x.isFinite = true → ∃ n : Int, float_round_int x = .ok n ∧
     Rat.abs (x.toRat - n) ≤ 1 / 2 ∧ (Rat.abs (x.toRat - n) = 1 / 2 → n % 2 = 0)
 
-/-- `x.as_integer_ratio()` is exact, in lowest terms, with a positive denominator. -/
-def AsIntegerRatioExact : Prop :=
-  ∀ x : F64, x.isFinite = true → ∃ n d : Int, float_as_integer_ratio x = .ok (n, d) ∧ 0 < d ∧
-    (n : Rat) / d = x.toRat ∧ Nat.gcd n.natAbs d.natAbs = 1
-
 /-- `PyFloat_Pack4` inverts `PyFloat_Unpack4` on every binary32 pattern. -/
 def Pack4RoundTrip : Prop :=
   ∀ b, b < 2 ^ 32 → ∀ le : Bool,

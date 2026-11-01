@@ -1,6 +1,7 @@
 import PyLean.DiffCore
 import PyLean.Binary64.Model
 import PyLean.Binary64.Dtoa
+import PyLean.Binary64.Complex
 
 /-! Differential-testing handler for `binary64` cases (`"mod": "binary64"`). -/
 
@@ -157,8 +158,72 @@ def runRaw (fn : String) (j : Json) : Except String Json := do
     return encF (F64.ofRat ((← getInt j "n") / ((← getInt j "d") : Rat)))
   | _ => throw s!"unknown fn {fn}"
 
+/-- `hypot` with correct rounding, for difftesting only. -/
+def hypotExact (x y : F64) : F64 :=
+  if x.isInf || y.isInf then F64.inf false
+  else if x.isNaN || y.isNaN then F64.qnan
+  else
+    let q := x.toRat * x.toRat + y.toRat * y.toRat
+    if q = 0 then F64.zero false
+    else F64.sqrtRound q.num.natAbs (-(Nat.log2 q.den : Int))
+
+def toFloat (x : F64) : Float := Float.ofBits x.bits.toUInt64
+def ofFloat (x : Float) : F64 := F64.ofBits x.toBits.toNat
+
+/-- The platform C library, for difftesting only. No property uses it. -/
+def libm : Libm where
+  hypot := hypotExact
+  pow := libmPow
+  atan2 a b := ofFloat (Float.atan2 (toFloat a) (toFloat b))
+  exp a := ofFloat (Float.exp (toFloat a))
+  log a := ofFloat (Float.log (toFloat a))
+  cos a := ofFloat (Float.cos (toFloat a))
+  sin a := ofFloat (Float.sin (toFloat a))
+
+def getCObj (j : Json) (key : String) : Except String CObj := do
+  let o ← field j key
+  match o.getObjVal? "c" with
+  | .ok v =>
+    let a ← v.getArr?
+    return .complex ⟨F64.ofBits (← (a.getD 0 Json.null).getNat?), F64.ofBits (← (a.getD 1 Json.null).getNat?)⟩
+  | .error _ => return .real (← getObj j key)
+
+def encC (z : C) : Json := Json.arr #[encF z.re, encF z.im]
+
+def encOptC : Option C → Json
+  | none => Json.str "NotImplemented"
+  | some z => encC z
+
+def runComplex (fn : String) (j : Json) : Except String Json := do
+  let v := getCObj j "v"
+  let w := getCObj j "w"
+  let z : Except String C := do
+    match ← v with
+    | .complex c => return c
+    | .real _ => throw "complex expected"
+  match fn with
+  | "c_add" => return encPy encOptC (complex_add (← v) (← w))
+  | "c_sub" => return encPy encOptC (complex_sub (← v) (← w))
+  | "c_mul" => return encPy encOptC (complex_mul (← v) (← w))
+  | "c_div" => return encPy encOptC (complex_div (← v) (← w))
+  | "c_pow" => return encPy encOptC (complex_pow libm (← v) (← w))
+  | "c_abs" => return encPy encF (complex_abs libm (← z))
+  | "c_neg" => return Json.mkObj [("ok", encC (complex_neg (← z)))]
+  | "c_conj" => return Json.mkObj [("ok", encC (complex_conjugate (← z)))]
+  | "c_bool" => return Json.mkObj [("ok", toJson (complex_bool (← z)))]
+  | "c_eq" =>
+    let r := complex_richcompare (← z) (← w) (← getOp j)
+    return Json.mkObj [("ok", match r with | none => Json.str "NotImplemented" | some b => toJson b)]
+  | "c_repr" =>
+    match complex_repr (← z) with
+    | none => return fuelOut
+    | some r => return Json.mkObj [("ok", encStr r)]
+  | "c_parse" => return encPy encC (complex_subtype_from_string (← getNats j "cps"))
+  | _ => throw s!"unknown fn {fn}"
+
 def run (fn : String) (j : Json) : Except String Json := do
-  if fn.startsWith "f_" || ["pack2", "pack4", "pack8", "unpack2", "unpack4", "unpack8", "repr",
+  if fn.startsWith "c_" then runComplex fn j
+  else if fn.startsWith "f_" || ["pack2", "pack4", "pack8", "unpack2", "unpack4", "unpack8", "repr",
       "fmt", "parse", "getformat", "asdouble", "info"].contains fn then
     runFloat fn j
   else
