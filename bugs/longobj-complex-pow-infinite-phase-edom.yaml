@@ -1,0 +1,46 @@
+id: longobj-complex-pow-infinite-phase-edom
+title: "(1+1j) ** float('inf') raises ZeroDivisionError: zero to a negative or complex power"
+priority: P3
+kind: wrong-exception
+module: longobj
+files: [Objects/complexobject.c]
+functions: [_Py_c_pow, complex_pow]
+summary: |
+  When _Py_c_pow computes an infinite phase, cos() and sin() set errno = EDOM on glibc.
+  complex_pow reads every EDOM as a zero base and raises ZeroDivisionError, though the
+  base is nonzero. Depends on libm: a libm that does not set errno gives nan+nanj.
+likelihood: |
+  Low. Needs an infinite exponent or a phase that overflows.
+maybe_intended: |
+  No. Already accepted upstream as a bug: gh-156886, fixed on main.
+reproducer: |
+  z = 1 + 1j
+  try:
+      print((z ** float('inf')))
+  except ZeroDivisionError as e:
+      print('ZeroDivisionError:', e)
+      print('REPRODUCED longobj-complex-pow-infinite-phase-edom')
+expected: |
+  nan+nanj (main, and GNU MPC per gh-156886).
+promised_by: |
+  The message itself: the base is not zero.
+cause: |
+  Objects/complexobject.c:333-336 keeps the errno that cos() and sin() set, and
+  _Py_ADJUST_ERANGE2 only touches ERANGE; lines 746-749 map any EDOM to the zero-base
+  message.
+possible_fix: |
+  Main clears errno in _Py_c_pow after computing the result and relies on the result for
+  ERANGE. That is the fix to backport to 3.14.
+tested:
+  python3 (3.14.7): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): NOT REPRODUCED (fixed by gh-156886)
+duplicates:
+  issues:
+    - {number: 156886, state: closed, relation: same bug, fixed on main, not in 3.14.7}
+  related:
+    - {number: 156145, state: open, relation: "Don't rely on errno values, coming from platform's math functions"}
+  queries: ["zero to a negative or complex power", "complex exponentiation", "complex errno"]
+  bugforge: "only complex-related entry is cmath-20261003-033712-c2 (cmath.isclose, #158697); not this one"
+lean:
+  property: PyLean.LongObj.Cplx.CPowEdomNeedsZeroBase
+  theorem: PyLean.LongObj.Cplx.cPowEdomNeedsZeroBase_refuted
