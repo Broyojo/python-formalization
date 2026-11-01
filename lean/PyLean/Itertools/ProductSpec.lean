@@ -9,35 +9,37 @@ namespace PyLean.Itertools
 
 open PyLean
 
-theorem snoc_induction {α : Type} {P : List α → Prop} (h0 : P [])
-    (hs : ∀ (l : List α) (a : α), P l → P (l ++ [a])) (l : List α) : P l := by
-  have : ∀ m : List α, P m.reverse := fun m => by
+variable {α : Type} [Inhabited α]
+
+theorem snoc_induction {σ : Type} {P : List σ → Prop} (h0 : P [])
+    (hs : ∀ (l : List σ) (a : σ), P l → P (l ++ [a])) (l : List σ) : P l := by
+  have : ∀ m : List σ, P m.reverse := fun m => by
     induction m with
     | nil => simpa using h0
     | cons a t ih => simpa using hs _ a ih
   simpa using this l.reverse
 
 /-- The tuple of pool items at the given positions. -/
-def vals (pools : List (List Int)) (idx : List Nat) : List Int :=
+def vals (pools : List (List α)) (idx : List Nat) : List α :=
   List.zipWith (fun p i => at! p i) pools idx
 
 /-- One step of the C odometer. -/
-def prodStep (pools : List (List Int)) (idx : List Nat) : Option (List Nat) :=
+def prodStep (pools : List (List α)) (idx : List Nat) : Option (List Nat) :=
   cProductAdvance pools pools.length idx
 
-def pxStep (acc : List (List Nat)) (p : List Int) : List (List Nat) :=
+def pxStep (acc : List (List Nat)) (p : List α) : List (List Nat) :=
   acc.flatMap (fun x => (List.range p.length).map (fun y => x ++ [y]))
 
 /-- All position tuples, in the order of nested `for` loops. -/
-def pxs (pools : List (List Int)) : List (List Nat) := pools.foldl pxStep [[]]
+def pxs (pools : List (List α)) : List (List Nat) := pools.foldl pxStep [[]]
 
-theorem pxs_snoc (ps : List (List Int)) (p : List Int) : pxs (ps ++ [p]) = pxStep (pxs ps) p := by
+theorem pxs_snoc (ps : List (List α)) (p : List α) : pxs (ps ++ [p]) = pxStep (pxs ps) p := by
   simp [pxs, List.foldl_append]
 
 /-- The number of tuples: the product of the pool sizes. -/
-def prodLen (pools : List (List Int)) : Nat := (pools.map List.length).foldr (· * ·) 1
+def prodLen (pools : List (List α)) : Nat := (pools.map List.length).foldr (· * ·) 1
 
-theorem prodLen_snoc (ps : List (List Int)) (p : List Int) :
+theorem prodLen_snoc (ps : List (List α)) (p : List α) :
     prodLen (ps ++ [p]) = prodLen ps * p.length := by
   induction ps with
   | nil => simp [prodLen]
@@ -45,7 +47,7 @@ theorem prodLen_snoc (ps : List (List Int)) (p : List Int) :
     simp only [prodLen, List.cons_append, List.map_cons, List.foldr_cons] at ih ⊢
     rw [ih, Nat.mul_assoc]
 
-theorem pxStep_length (acc : List (List Nat)) (p : List Int) :
+theorem pxStep_length (acc : List (List Nat)) (p : List α) :
     (pxStep acc p).length = acc.length * p.length := by
   induction acc with
   | nil => simp [pxStep]
@@ -54,16 +56,16 @@ theorem pxStep_length (acc : List (List Nat)) (p : List Int) :
       List.length_cons] at ih ⊢
     rw [ih, Nat.add_mul, Nat.one_mul, Nat.add_comm]
 
-theorem pxs_length (pools : List (List Int)) : (pxs pools).length = prodLen pools := by
+theorem pxs_length (pools : List (List α)) : (pxs pools).length = prodLen pools := by
   induction pools using snoc_induction with
   | h0 => rfl
   | hs ps p ih => rw [pxs_snoc, pxStep_length, ih, prodLen_snoc]
 
 /-- A position tuple of the right length, each position inside its pool. -/
-def Below (pools : List (List Int)) (x : List Nat) : Prop :=
+def Below (pools : List (List α)) (x : List Nat) : Prop :=
   x.length = pools.length ∧ ∀ i, i < x.length → ix x i < (pools.getD i []).length
 
-theorem pxs_below (pools : List (List Int)) : ∀ x ∈ pxs pools, Below pools x := by
+theorem pxs_below (pools : List (List α)) : ∀ x ∈ pxs pools, Below pools x := by
   induction pools using snoc_induction with
   | h0 =>
     intro x hx
@@ -109,7 +111,7 @@ theorem lexLt_snoc : ∀ (x : List Nat) (y y' : Nat), y < y' → LexLt (x ++ [y]
     show LexLt (a :: (x ++ [y])) (a :: (x ++ [y']))
     exact Or.inr ⟨rfl, lexLt_snoc x y y' h⟩
 
-theorem pxStep_sorted (acc : List (List Nat)) (p : List Int) (h : acc.Pairwise LexLt) :
+theorem pxStep_sorted (acc : List (List Nat)) (p : List α) (h : acc.Pairwise LexLt) :
     (pxStep acc p).Pairwise LexLt := by
   induction acc with
   | nil => simp [pxStep]
@@ -125,14 +127,14 @@ theorem pxStep_sorted (acc : List (List Nat)) (p : List Int) (h : acc.Pairwise L
       obtain ⟨x', hx', y', _, rfl⟩ := hb
       exact lexLt_append _ _ _ _ (h1 x' hx')
 
-theorem pxs_sorted (pools : List (List Int)) : (pxs pools).Pairwise LexLt := by
+theorem pxs_sorted (pools : List (List α)) : (pxs pools).Pairwise LexLt := by
   induction pools using snoc_induction with
   | h0 => simp [pxs]
   | hs ps p ih => rw [pxs_snoc]; exact pxStep_sorted _ _ ih
 
 /-! ## The odometer -/
 
-theorem adv_length (pools : List (List Int)) : ∀ (k : Nat) (idx idx' : List Nat),
+theorem adv_length (pools : List (List α)) : ∀ (k : Nat) (idx idx' : List Nat),
     cProductAdvance pools k idx = some idx' → idx'.length = idx.length
   | 0, _, _, h => by simp [cProductAdvance] at h
   | k + 1, idx, idx', h => by
@@ -142,7 +144,7 @@ theorem adv_length (pools : List (List Int)) : ∀ (k : Nat) (idx idx' : List Na
       simpa using this
     · simp at h; subst h; simp
 
-theorem adv_snoc (ps : List (List Int)) (p : List Int) (z : Nat) : ∀ (j : Nat) (x : List Nat),
+theorem adv_snoc (ps : List (List α)) (p : List α) (z : Nat) : ∀ (j : Nat) (x : List Nat),
     j ≤ ps.length → x.length = ps.length →
     cProductAdvance (ps ++ [p]) j (x ++ [z]) = (cProductAdvance ps j x).map (· ++ [z])
   | 0, _, _, _ => rfl
@@ -158,7 +160,7 @@ theorem adv_snoc (ps : List (List Int)) (p : List Int) (z : Nat) : ∀ (j : Nat)
     · exact adv_snoc ps p z j _ (by omega) (by simp; omega)
     · rfl
 
-theorem adv_last (ps : List (List Int)) (p : List Int) (x : List Nat) (y : Nat)
+theorem adv_last (ps : List (List α)) (p : List α) (x : List Nat) (y : Nat)
     (hx : x.length = ps.length) :
     prodStep (ps ++ [p]) (x ++ [y]) =
       if y + 1 = p.length then (prodStep ps x).map (· ++ [0]) else some (x ++ [y + 1]) := by
@@ -172,7 +174,7 @@ theorem adv_last (ps : List (List Int)) (p : List Int) (x : List Nat) (y : Nat)
   · exact adv_snoc ps p 0 ps.length x (by omega) hx
   · rfl
 
-theorem rowWalk (ps : List (List Int)) (p : List Int) (x : List Nat) (z : List Nat)
+theorem rowWalk (ps : List (List α)) (p : List α) (x : List Nat) (z : List Nat)
     (hx : x.length = ps.length) (hz : prodStep ps x = some (z.dropLast) ∧ z = z.dropLast ++ [0]) :
     ∀ (d y : Nat), y + d + 1 = p.length →
       Walk (prodStep (ps ++ [p])) (x ++ [y]) ((List.range' y (d + 1)).map (fun v => x ++ [v])) z
@@ -188,7 +190,7 @@ theorem rowWalk (ps : List (List Int)) (p : List Int) (x : List Nat) (z : List N
     rw [List.range'_succ, List.map_cons]
     exact Walk.cons this (rowWalk ps p x z hx hz d (y + 1) (by omega))
 
-theorem rowRun (ps : List (List Int)) (p : List Int) (x : List Nat)
+theorem rowRun (ps : List (List α)) (p : List α) (x : List Nat)
     (hx : x.length = ps.length) (hz : prodStep ps x = none) :
     ∀ (d y : Nat), y + d + 1 = p.length →
       RunTo (prodStep (ps ++ [p])) (x ++ [y]) ((List.range' y (d + 1)).map (fun v => x ++ [v]))
@@ -204,7 +206,7 @@ theorem rowRun (ps : List (List Int)) (p : List Int) (x : List Nat)
     rw [List.range'_succ, List.map_cons]
     exact RunTo.cons this (rowRun ps p x hx hz d (y + 1) (by omega))
 
-theorem prod_run_snoc (ps : List (List Int)) (p : List Int) (hp : p ≠ []) {a : List Nat} {L : List (List Nat)}
+theorem prod_run_snoc (ps : List (List α)) (p : List α) (hp : p ≠ []) {a : List Nat} {L : List (List Nat)}
     (h : RunTo (prodStep ps) a L) (ha : a.length = ps.length) :
     RunTo (prodStep (ps ++ [p])) (a ++ [0]) (pxStep L p) := by
   obtain ⟨d, hd⟩ : ∃ d, p.length = d + 1 := by
@@ -223,7 +225,7 @@ theorem prod_run_snoc (ps : List (List Int)) (p : List Int) (hp : p ≠ []) {a :
     simp only [pxStep, List.flatMap_cons, hr] at ih ⊢
     exact hw.append_run (ih hl)
 
-theorem prod_run (pools : List (List Int)) (h : ∀ p ∈ pools, p ≠ []) :
+theorem prod_run (pools : List (List α)) (h : ∀ p ∈ pools, p ≠ []) :
     RunTo (prodStep pools) (List.replicate pools.length 0) (pxs pools) := by
   induction pools using snoc_induction with
   | h0 => exact RunTo.last rfl
@@ -233,7 +235,7 @@ theorem prod_run (pools : List (List Int)) (h : ∀ p ∈ pools, p ≠ []) :
     rw [pxs_snoc, List.length_append, List.length_singleton, List.replicate_succ']
     exact h2
 
-theorem pxs_empty (pools : List (List Int)) (h : ∃ p ∈ pools, p = []) : pxs pools = [] := by
+theorem pxs_empty (pools : List (List α)) (h : ∃ p ∈ pools, p = []) : pxs pools = [] := by
   induction pools using snoc_induction with
   | h0 => simp at h
   | hs ps p ih =>
@@ -248,7 +250,7 @@ theorem pxs_empty (pools : List (List Int)) (h : ∃ p ∈ pools, p = []) : pxs 
         · exact absurd hq.symm hp
       rw [ih this]; rfl
 
-theorem prodDrain (pools : List (List Int)) {idx : List Nat} {L : List (List Nat)}
+theorem prodDrain (pools : List (List α)) {idx : List Nat} {L : List (List Nat)}
     (h : RunTo (prodStep pools) idx L) : ∀ fuel, L.length ≤ fuel →
     drain cProductNext fuel { pools := pools, indices := idx, started := true, stopped := false } =
       Run.ok (L.tail.map (vals pools)) := by
@@ -270,14 +272,14 @@ theorem prodDrain (pools : List (List Int)) {idx : List Nat} {L : List (List Nat
     rw [ih f (by simp at hf ⊢; omega)]
     rfl
 
-theorem vals_zero : ∀ (pools : List (List Int)),
+theorem vals_zero : ∀ (pools : List (List α)),
     pools.map (at! · 0) = vals pools (List.replicate pools.length 0)
   | [] => rfl
   | p :: ps => by simp [vals, List.replicate_succ, vals_zero ps]
 
 /-- For an in-memory set of pools and enough fuel, the odometer yields the
 values at each tuple of `pxs`. -/
-theorem prod_run_new (pools : List (List Int)) (fuel : Nat) (hf : prodLen pools < fuel) :
+theorem prod_run_new (pools : List (List α)) (fuel : Nat) (hf : prodLen pools < fuel) :
     drain cProductNext fuel
         { pools := pools, indices := List.replicate pools.length 0, started := false, stopped := false } =
       Run.ok ((pxs pools).map (vals pools)) := by
@@ -304,19 +306,19 @@ theorem prod_run_new (pools : List (List Int)) (fuel : Nat) (hf : prodLen pools 
 
 /-! ## The doc's list comprehension -/
 
-theorem map_at_range (p : List Int) : (List.range p.length).map (at! p) = p := by
+theorem map_at_range (p : List α) : (List.range p.length).map (at! p) = p := by
   apply List.ext_getElem
   · simp
   · intro i h1 h2
     simp [at!, List.getD_eq_getElem?_getD, List.getElem?_eq_getElem h2]
 
-theorem vals_snoc (ps : List (List Int)) (p : List Int) (x : List Nat) (y : Nat)
+theorem vals_snoc (ps : List (List α)) (p : List α) (x : List Nat) (y : Nat)
     (hx : x.length = ps.length) : vals (ps ++ [p]) (x ++ [y]) = vals ps x ++ [at! p y] := by
   simp only [vals]
   rw [List.zipWith_append hx.symm]
   simp
 
-theorem docStep_eq (ps : List (List Int)) (p : List Int) (acc : List (List Nat))
+theorem docStep_eq (ps : List (List α)) (p : List α) (acc : List (List Nat))
     (h : ∀ x ∈ acc, x.length = ps.length) :
     docProductStep (acc.map (vals ps)) p = (pxStep acc p).map (vals (ps ++ [p])) := by
   induction acc with
@@ -335,7 +337,7 @@ theorem docStep_eq (ps : List (List Int)) (p : List Int) (acc : List (List Nat))
           intro y _
           simp only [Function.comp, vals_snoc ps p x y (h x (by simp))]
 
-theorem doc_foldl (pools : List (List Int)) :
+theorem doc_foldl (pools : List (List α)) :
     pools.foldl docProductStep [[]] = (pxs pools).map (vals pools) := by
   induction pools using snoc_induction with
   | h0 => rfl
@@ -345,21 +347,21 @@ theorem doc_foldl (pools : List (List Int)) :
 
 /-! ## Arguments -/
 
-theorem prodPools_length (args : List (List Int)) (rep : Nat) :
+theorem prodPools_length (args : List (List α)) (rep : Nat) :
     (prodPools args rep).length = args.length * rep := by
   simp only [prodPools, Int.toNat_natCast]
   by_cases h : args.length = 0
   · simp [h]
   · simp [h, List.length_flatten, Nat.mul_comm]
 
-theorem prodLen_append (a b : List (List Int)) : prodLen (a ++ b) = prodLen a * prodLen b := by
+theorem prodLen_append (a b : List (List α)) : prodLen (a ++ b) = prodLen a * prodLen b := by
   induction a with
   | nil => simp [prodLen]
   | cons q a ih =>
     simp only [prodLen, List.cons_append, List.map_cons, List.foldr_cons] at ih ⊢
     rw [ih, Nat.mul_assoc]
 
-theorem prodLen_pools (args : List (List Int)) (m : Nat) :
+theorem prodLen_pools (args : List (List α)) (m : Nat) :
     prodLen (prodPools args m) = prodLen args ^ m := by
   simp only [prodPools, Int.toNat_natCast]
   by_cases h : args.length = 0
@@ -372,16 +374,21 @@ theorem prodLen_pools (args : List (List Int)) (m : Nat) :
     | succ m ih =>
       rw [List.replicate_succ, List.flatten_cons, prodLen_append, ih, Nat.pow_succ, Nat.mul_comm]
 
-theorem product_new_ok (args : List (List Int)) (rep? : Option Int) (m : Nat)
+theorem prodPools_zero (a b : List (List α)) : prodPools a ((0 : Nat) : Int) = prodPools b ((0 : Nat) : Int) := by
+  simp [prodPools]
+
+theorem product_new_ok (args : List (Obj α)) (ls : List (List α)) (hls : args.mapM tupleOf = .ok ls)
+    (rep? : Option Int) (m : Nat)
     (hrep : ((m : Nat) : Int) = rep?.getD 1) (hle : (m : Int) ≤ ssizeMax)
     (ht : tupleNewOk (args.length * (m : Int)) = true) :
     cProductNew args rep? =
-      .ok { pools := prodPools args m, indices := List.replicate (prodPools args m).length 0,
+      .ok { pools := prodPools ls m, indices := List.replicate (prodPools ls m).length 0,
             started := false, stopped := false } := by
   have hmin : ssizeMin ≤ (m : Int) := by rw [ssizeMin_eq]; omega
   have hmem : memNewOk (args.length * (m : Int)) = true :=
     memNewOk_of_tuple ht (Int.mul_nonneg (by omega) (by omega))
-  have hP := prodPools_length args m
+  have hlen := mapM_length tupleOf args ls hls
+  have hP := prodPools_length ls m
   have hparsed : cProductNew args rep? = cProductNew args (some (m : Int)) := by
     cases rep? with
     | none =>
@@ -394,10 +401,11 @@ theorem product_new_ok (args : List (List Int)) (rep? : Option Int) (m : Nat)
   simp only [cProductNew, asSsize_ok hmin hle, show ¬ ((m : Int) < 0) by omega, ↓reduceIte]
   by_cases hm0 : m = 0
   · subst hm0
-    simp only [hP]
     have a : (0 : Int) ≤ ssizeMax / 8 := by decide
     have b : mallocLimit ≠ 0 := by decide
-    simp [tupleNewOk, memNewOk, a, b]
+    have hz := prodPools_zero ls ([] : List (List α))
+    simp only [hP, hz]
+    simp [tupleNewOk, memNewOk, a, b, prodPools]
   · have hne : (m : Int) ≠ 0 := by omega
     have hdiv : ¬ ((args.length : Int) > ssizeMax / 8 / (m : Int)) := by
       have h1 := hmem
@@ -405,45 +413,73 @@ theorem product_new_ok (args : List (List Int)) (rep? : Option Int) (m : Nat)
       have : (args.length : Int) ≤ ssizeMax / 8 / (m : Int) :=
         Int.le_ediv_of_mul_le (by omega) h1.1
       omega
-    have hto : ((args.length : Int) * (m : Int)).toNat = args.length * m := by
-      rw [← Int.natCast_mul, Int.toNat_natCast]
+    have hto : ((args.length : Int) * (m : Int)).toNat = ls.length * m := by
+      rw [← hlen, ← Int.natCast_mul, Int.toNat_natCast]
     simp only [hne, ↓reduceIte, ne_eq, not_false_eq_true, hdiv, and_false, hmem, ht, Bool.not_true,
-      Bool.false_eq_true, hP, hto]
+      Bool.false_eq_true, hP, hto, hls]
+
+/-- The pools given as lists: objects that iterate without raising. -/
+def liftObjs (args : List (List α)) : List (Obj α) := args.map (fun l => Obj.iter l none)
+
+theorem liftObjs_mapM (args : List (List α)) : (liftObjs args).mapM tupleOf = .ok args := by
+  induction args with
+  | nil => rfl
+  | cons l args ih =>
+    simp only [liftObjs, List.map_cons, List.mapM_cons, bind, Except.bind, tupleOf] at ih ⊢
+    rw [ih]
+    rfl
 
 /-- For a `repeat` in `Py_ssize_t` range with `pools = args * repeat` fitting in
 memory (documented: "keeping pools of values in memory") and enough fuel,
 `product` yields the tuples at exactly the positions in a list `L`, one
 position per pool, of `(len(args[0]) * len(args[1]) * ...) ** repeat` tuples,
-strictly increasing in lexicographic order. -/
+strictly increasing in lexicographic order. Over any element type. -/
 def ProductSpec : Prop :=
-  ∀ (args : List (List Int)) (rep? : Option Int) (fuel : Nat), 0 ≤ rep?.getD 1 →
+  ∀ (α : Type) [Inhabited α] (args : List (List α)) (rep? : Option Int) (fuel : Nat), 0 ≤ rep?.getD 1 →
     rep?.getD 1 ≤ ssizeMax → tupleNewOk (args.length * rep?.getD 1) = true →
     prodLen args ^ (rep?.getD 1).toNat < fuel →
     ∃ L : List (List Nat),
-      cProductF fuel args rep? = Run.ok (L.map (vals (prodPools args (rep?.getD 1)))) ∧
+      cProductF fuel (liftObjs args) rep? = Run.ok (L.map (vals (prodPools args (rep?.getD 1)))) ∧
       L.length = prodLen args ^ (rep?.getD 1).toNat ∧ L.Pairwise LexLt ∧
       ∀ x ∈ L, Below (prodPools args (rep?.getD 1)) x
 
 theorem productSpec_proven : ProductSpec := by
-  intro args rep? fuel h0 hle ht hf
+  intro α _ args rep? fuel h0 hle ht hf
   obtain ⟨m, hm⟩ : ∃ m : Nat, (m : Int) = rep?.getD 1 := ⟨(rep?.getD 1).toNat, by omega⟩
   rw [← hm] at hle ht hf ⊢
   simp only [Int.toNat_natCast] at hf ⊢
   refine ⟨pxs (prodPools args m), ?_, ?_, pxs_sorted _, pxs_below _⟩
-  · simp only [cProductF, product_new_ok args rep? m hm hle ht]
+  · simp only [cProductF, product_new_ok (liftObjs args) args (liftObjs_mapM args) rep? m hm hle
+      (by simpa [liftObjs] using ht)]
     exact prod_run_new _ _ (by rw [prodLen_pools]; exact hf)
   · rw [pxs_length, prodLen_pools]
 
-/-- For every `repeat` (negative or above `sys.maxsize`: both raise) whose
-pools fit in memory, and enough fuel, the C odometer and the doc's list
-comprehension give the same tuples in the same order. -/
-def ProductDocAgree : Prop :=
-  ∀ (args : List (List Int)) (rep? : Option Int) (fuel : Nat),
+/-- Broad: for every `repeat` and every argument object whose pools fit in
+memory, C `product` and the doc's list comprehension give the same tuples and
+raise in the same cases. -/
+def ProductObjAgree : Prop :=
+  ∀ (α : Type) [Inhabited α] (args : List (Obj α)) (rep? : Option Int) (fuel : Nat),
     (0 ≤ rep?.getD 1 → rep?.getD 1 ≤ ssizeMax → tupleNewOk (args.length * rep?.getD 1) = true) →
-    prodLen args ^ (rep?.getD 1).toNat < fuel →
+    (args.map Obj.len).foldr (· * ·) 1 ^ (rep?.getD 1).toNat < fuel →
     runAgree (cProductF fuel args rep?) (docProduct args rep?)
 
-theorem cProduct_err_neg (args : List (List Int)) (r : Int) (h : r < 0 ∨ r > ssizeMax) :
+theorem productObjAgree_refuted : ¬ProductObjAgree := by
+  intro h
+  have := (h Int [.notIterable "int"] (some 0) 3 (by decide) (by decide)).1
+  revert this
+  decide
+
+/-- With `repeat=0` excluded for arguments that raise when iterated (C does
+not touch them then): for every other `repeat`, the same. `prodLen` of the
+tuples is the fuel bound. -/
+def ProductDocAgree : Prop :=
+  ∀ (α : Type) [Inhabited α] (args : List (Obj α)) (rep? : Option Int) (fuel : Nat),
+    (rep?.getD 1 = 0 → ∃ ls, args.mapM tupleOf = .ok ls) →
+    (0 ≤ rep?.getD 1 → rep?.getD 1 ≤ ssizeMax → tupleNewOk (args.length * rep?.getD 1) = true) →
+    (∀ ls, args.mapM tupleOf = .ok ls → prodLen ls ^ (rep?.getD 1).toNat < fuel) →
+    runAgree (cProductF fuel args rep?) (docProduct args rep?)
+
+theorem cProduct_err_neg (args : List (Obj α)) (r : Int) (h : r < 0 ∨ r > ssizeMax) :
     ∃ e, cProductNew args (some r) = .error e := by
   cases ha : asSsize r with
   | error e => exact ⟨e, by simp [cProductNew, ha]⟩
@@ -454,8 +490,24 @@ theorem cProduct_err_neg (args : List (List Int)) (r : Int) (h : r < 0 ∨ r > s
     have : v < 0 := by omega
     exact ⟨.valueError "repeat argument cannot be negative", by simp [cProductNew, ha, this]⟩
 
+theorem listRepeat_ok (size m : Nat) (hle : (m : Int) ≤ ssizeMax)
+    (hmemN : memNewOk (size * (m : Int)) = true) : listRepeatCheck size (m : Int) = .ok () := by
+  simp only [listRepeatCheck]
+  have h1 : ¬ ((m : Int) < ssizeMin ∨ (m : Int) > ssizeMax) := by rw [ssizeMin_eq]; omega
+  rw [if_neg h1]
+  by_cases h2 : size = 0 ∨ (m : Int) ≤ 0
+  · rw [if_pos h2]
+  · rw [if_neg h2]
+    have h3 := hmemN
+    simp only [memNewOk, Bool.and_eq_true, decide_eq_true_eq] at h3
+    have h4 : (size : Int) * (m : Int) ≤ ssizeMax := by
+      rw [ssizeMax_eq] at h3 ⊢; omega
+    have h5 : (size : Int) ≤ ssizeMax / (m : Int) := Int.le_ediv_of_mul_le (by omega) h4
+    rw [if_neg (by omega), hmemN]
+    rfl
+
 theorem productDocAgree_proven : ProductDocAgree := by
-  intro args rep? fuel hmem hf
+  intro α _ args rep? fuel hzero hmem hf
   by_cases hbad : rep?.getD 1 < 0 ∨ rep?.getD 1 > ssizeMax
   · have hsome : ∃ r, rep? = some r ∧ (r < 0 ∨ r > ssizeMax) := by
       cases rep? with
@@ -472,10 +524,13 @@ theorem productDocAgree_proven : ProductDocAgree := by
       by_cases hneg : r < 0
       · exact ⟨.valueError "repeat argument cannot be negative", by simp [hneg]⟩
       · have hgt : r > ssizeMax := by omega
-        have hchk : listRepeatCheck args.length r =
-            .error (.overflowError "cannot fit 'int' into an index-sized integer") := by
-          simp [listRepeatCheck, hgt]
-        exact ⟨.overflowError "cannot fit 'int' into an index-sized integer", by simp [hneg, hchk]⟩
+        cases hm : args.mapM tupleOf with
+        | error e2 => exact ⟨e2, by simp [hneg, hm]⟩
+        | ok ls =>
+          have hchk : listRepeatCheck ls.length r =
+              .error (.overflowError "cannot fit 'int' into an index-sized integer") := by
+            simp [listRepeatCheck, hgt]
+          exact ⟨.overflowError "cannot fit 'int' into an index-sized integer", by simp [hneg, hchk]⟩
     obtain ⟨e', hd'⟩ := hd
     rw [hc, hd']
     exact ⟨rfl, rfl⟩
@@ -483,30 +538,54 @@ theorem productDocAgree_proven : ProductDocAgree := by
     have hle : rep?.getD 1 ≤ ssizeMax := by omega
     have ht := hmem h0 hle
     obtain ⟨m, hm⟩ : ∃ m : Nat, (m : Int) = rep?.getD 1 := ⟨(rep?.getD 1).toNat, by omega⟩
-    rw [← hm] at hle ht hf
-    simp only [Int.toNat_natCast] at hf
-    have hc : cProductF fuel args rep? = Run.ok ((pxs (prodPools args m)).map (vals (prodPools args m))) := by
-      simp only [cProductF, product_new_ok args rep? m hm hle ht]
-      exact prod_run_new _ _ (by rw [prodLen_pools]; exact hf)
-    have hmemN : memNewOk (args.length * (m : Int)) = true :=
-      memNewOk_of_tuple ht (Int.mul_nonneg (by omega) (by omega))
-    have hchk : listRepeatCheck args.length (m : Int) = .ok () := by
-      simp only [listRepeatCheck]
-      have h1 : ¬ ((m : Int) < ssizeMin ∨ (m : Int) > ssizeMax) := by rw [ssizeMin_eq]; omega
-      rw [if_neg h1]
-      by_cases h2 : args.length = 0 ∨ (m : Int) ≤ 0
-      · rw [if_pos h2]
-      · rw [if_neg h2]
-        have h3 := hmemN
-        simp only [memNewOk, Bool.and_eq_true, decide_eq_true_eq] at h3
-        have h4 : (args.length : Int) * (m : Int) ≤ ssizeMax := by
-          rw [ssizeMax_eq] at h3 ⊢; omega
-        have h5 : (args.length : Int) ≤ ssizeMax / (m : Int) := Int.le_ediv_of_mul_le (by omega) h4
-        rw [if_neg (by omega), hmemN]
-        rfl
-    have hd : docProduct args rep? = Run.ok ((pxs (prodPools args m)).map (vals (prodPools args m))) := by
-      simp only [docProduct, ← hm, show ¬ ((m : Int) < 0) by omega, ↓reduceIte, hchk, doc_foldl]
-    rw [hc, hd]
-    exact ⟨rfl, rfl⟩
+    have hmemN : memNewOk (args.length * (m : Int)) = true := by
+      rw [hm]; exact memNewOk_of_tuple ht (Int.mul_nonneg (by omega) h0)
+    cases hls : args.mapM tupleOf with
+    | error e =>
+      obtain hz | hz : (m : Int) = 0 ∨ (m : Int) ≠ 0 := by omega
+      · obtain ⟨ls, h⟩ := hzero (by omega)
+        rw [hls] at h
+        simp at h
+      · have hdoc : docProduct args rep? = Run.err e := by
+          simp only [docProduct, ← hm, show ¬ ((m : Int) < 0) by omega, ↓reduceIte, hls]
+        rw [hdoc]
+        -- C reaches the pool loop after its allocation checks and raises the same error
+        have hc : cProductF fuel args rep? = Run.err e := by
+          have hparsed : cProductNew args rep? = cProductNew args (some (m : Int)) := by
+            cases rep? with
+            | none =>
+              simp only [Option.getD_none] at hm
+              have hone : asSsize (1 : Int) = .ok 1 := asSsize_ok (by decide) (by decide)
+              rw [hm]
+              simp only [cProductNew, hone, show ¬ ((1 : Int) < 0) by omega, ↓reduceIte]
+            | some r => simp only [Option.getD_some] at hm; rw [hm]
+          have hmin : ssizeMin ≤ (m : Int) := by rw [ssizeMin_eq]; omega
+          have hdiv : ¬ ((args.length : Int) > ssizeMax / 8 / (m : Int)) := by
+            have h1 := hmemN
+            simp only [memNewOk, Bool.and_eq_true, decide_eq_true_eq] at h1
+            have : (args.length : Int) ≤ ssizeMax / 8 / (m : Int) :=
+              Int.le_ediv_of_mul_le (by omega) h1.1
+            omega
+          have ht' : tupleNewOk (args.length * (m : Int)) = true := by rw [hm]; exact ht
+          simp only [cProductF, hparsed]
+          simp only [cProductNew, asSsize_ok hmin (by omega), show ¬ ((m : Int) < 0) by omega, ↓reduceIte,
+            hz, ne_eq, not_false_eq_true, hdiv, and_false, hmemN, ht', Bool.not_true, Bool.false_eq_true, hls]
+        rw [hc]
+        exact ⟨rfl, rfl⟩
+    | ok ls =>
+      have hlen := mapM_length tupleOf args ls hls
+      rw [← hm] at hle ht
+      have hf' := hf ls hls
+      rw [← hm] at hf'
+      simp only [Int.toNat_natCast] at hf'
+      have hc : cProductF fuel args rep? =
+          Run.ok ((pxs (prodPools ls m)).map (vals (prodPools ls m))) := by
+        simp only [cProductF, product_new_ok args ls hls rep? m hm hle ht]
+        exact prod_run_new _ _ (by rw [prodLen_pools]; exact hf')
+      have hd : docProduct args rep? = Run.ok ((pxs (prodPools ls m)).map (vals (prodPools ls m))) := by
+        have hchk := listRepeat_ok ls.length m hle (by rw [hlen]; exact hmemN)
+        simp only [docProduct, ← hm, show ¬ ((m : Int) < 0) by omega, ↓reduceIte, hls, hchk, doc_foldl]
+      rw [hc, hd]
+      exact ⟨rfl, rfl⟩
 
 end PyLean.Itertools
