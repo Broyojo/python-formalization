@@ -137,8 +137,18 @@ def udSetdefault (rk : κ → String) (miss : Option (κ → ν)) (u : UD κ ν)
   | .ok v => (v, u)
   | .error _ => (default, udSetitem u k default)
 
-/-- `MutableMapping.clear`, _collections_abc.py:956-962: `popitem` until `KeyError`. -/
-def udClear (u : UD κ ν) : UD κ ν := { u with data := [] }
+/-- The `while True: self.popitem()` loop of `MutableMapping.clear`,
+_collections_abc.py:956-962, stopping at the `KeyError`. -/
+def udClearLoop (rk : κ → String) (miss : Option (κ → ν)) : Nat → UD κ ν → UD κ ν
+  | 0, u => u
+  | n + 1, u =>
+    match udPopitem rk miss u with
+    | .ok (_, u') => udClearLoop rk miss n u'
+    | .error _ => u
+
+/-- `MutableMapping.clear`. `len + 1` iterations reach the `KeyError`. -/
+def udClear (rk : κ → String) (miss : Option (κ → ν)) (u : UD κ ν) : UD κ ν :=
+  udClearLoop rk miss (u.data.length + 1) u
 
 /-- `(k, v) in u.items()`: `ItemsView.__contains__`, _collections_abc.py:872-879. -/
 def udItemsContains [DecidableEq ν] (rk : κ → String) (miss : Option (κ → ν)) (u : UD κ ν)

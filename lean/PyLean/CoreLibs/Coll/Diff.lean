@@ -232,7 +232,7 @@ def runUD (j : Json) : Except String Json := do
   | "setdefault" =>
     let r := udSetdefault rkStr miss u k (dflt.getD 0)
     return okJ (Json.arr #[toJson r.1, encUD r.2])
-  | "clear" => return okJ (encUD (udClear u))
+  | "clear" => return okJ (encUD (udClear rkStr miss u))
   | "items_contains" => return okJ (toJson (udItemsContains rkStr miss u k (dflt.getD 0)))
   | "dict_getitem" => return encPy toJson (dictGetitem rkStr miss u.data k)
   | "dict_pop" => return encPy (fun r => Json.arr #[toJson r.1, encItems r.2]) (dictPop rkStr u.data k dflt)
