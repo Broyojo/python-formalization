@@ -986,7 +986,7 @@ class BBoom(Exception):
 
 def b_exc(e):
     return {"TypeError": TypeError, "ValueError": ValueError, "OverflowError": OverflowError,
-            "BBoom": BBoom}[e[0]](e[1])
+            "BBoom": BBoom, "TSub": TSub, "VSub": VSub}[e[0]](e[1])
 
 
 class BIdxRaises:
@@ -1158,7 +1158,8 @@ def b_robj(rng, depth=2):
     return ["plain"]
 
 
-B_EXC = [["TypeError", "boom"], ["ValueError", "boom"], ["OverflowError", "boom"], ["BBoom", "boom"]]
+B_EXC = [["TypeError", "boom"], ["ValueError", "boom"], ["OverflowError", "boom"], ["BBoom", "boom"],
+         ["TSub", "boom"], ["VSub", "boom"]]
 B_HINT = [0, 1, 3, 64, 100, -1, -5, 2 ** 70, -2 ** 70]
 
 
@@ -1404,6 +1405,44 @@ def b_rhex_input(rng):
     return b_robj(rng, 1)
 
 
+def b_sweep():
+    """Every call site that runs a callback, against every raising object and exception class. A
+    combination of three random choices is too rare to rely on: one wrong arm took 400000 cases."""
+    items = [[["int", 1], ["int", 2]], [], [["int", 256]], [["str", [97]]],
+             [["int", 1], ["indexraises", ["ValueError", "boom"]]]]
+    objs = []
+    for e in B_EXC:
+        objs += [["indexraises", e], ["dunderraises", e], ["itercallraises", e]]
+        for it in items:
+            objs += [["iterraises", it, e], ["iterhint", it, e]]
+    for it in items:
+        objs += [["iterhint", it, h] for h in [0, 1, 64, -1, 2 ** 70, -2 ** 70]]
+    cases = []
+    for ty in ("bytes", "bytearray"):
+        for x in objs:
+            base = {"mod": "bytesobj", "s": [97, 98]}
+            cases.append({**base, "fn": ty + ".new", "x": x})
+            cases.extend({**base, "fn": f"{ty}.{m}", "sub": x, "start": None, "end": None} for m in BSEARCH_M)
+            cases.append({**base, "fn": ty + ".contains", "sub": x})
+            cases.append({**base, "fn": ty + ".join", "it": x})
+            for m in ("startswith", "endswith"):
+                cases.append({**base, "fn": f"{ty}.{m}", "sub": x, "start": None, "end": None})
+                cases.append({**base, "fn": f"{ty}.{m}", "sub": ["tuple", [["bytes", [122]], x]],
+                              "start": None, "end": None})
+            for conv in b"dixoXucbsfeEgG":
+                cases.append({**base, "fn": ty + ".mod", "s": [37, conv], "arg": x})
+                cases.append({**base, "fn": ty + ".mod", "s": [37, conv], "arg": ["tuple", [x]]})
+            cases.extend({**base, "fn": f"{ty}.{m}", "arg": x} for m in ("removeprefix", "removesuffix"))
+            cases.append({**base, "fn": ty + ".fromhex", "x": x})
+            cases.append({**base, "fn": ty + ".translate", "table": x})
+            cases.append({**base, "fn": ty + ".strip", "chars": x})
+            cases.append({**base, "fn": ty + ".hex", "sep": x, "n": 1})
+    return cases
+
+
+_B_SWEEP = None
+
+
 def b_gen_fail(rng):
     """Every C call that runs a callback, with a callback that raises."""
     ty = rng.choice(["bytes", "bytearray"])
@@ -1431,6 +1470,11 @@ def b_gen_fail(rng):
 
 
 def gen_bytes(rng):
+    global _B_SWEEP
+    if _B_SWEEP is None:
+        _B_SWEEP = b_sweep()
+    if _B_SWEEP:
+        return _B_SWEEP.pop()
     if rng.random() < 0.08:
         return b_gen_fail(rng)
     ty = rng.choice(["bytes", "bytes", "bytearray"])
@@ -2040,6 +2084,10 @@ def _nd_items(rng, fmt, n):
     return out
 
 
+# Nothing in the model's store lives at address 0, which is NULL.
+_NULLPAGE = 8
+
+
 def _gen_exporter(rng, store):
     """Lay one exporter out in `store` and return its spec."""
     kind = rng.choice(["bytes", "bytearray", "bytearray", "array", "nd", "nd", "nd", "nd"])
@@ -2153,6 +2201,10 @@ def _gen_exporter(rng, store):
 def _build_exporter(spec):
     kind = spec["kind"]
     data = bytes(spec["data"])
+    if kind == "nil":
+        return _NilTable(data, spec["null"])
+    if kind == "rawfmt":
+        return _RawFmt(data, spec["fmt"], spec["itemsize"])
     if kind == "bytes":
         if "hashrel" in spec:
             e = HashBytes(data)
@@ -2375,7 +2427,7 @@ def _gen_low(rng):
 
 
 def _gen_script(rng):
-    store = []
+    store = [0] * _NULLPAGE
     specs = []
     singletons = []     # empty and one-byte `bytes` are shared, so `m.obj` could not tell two apart
     for _ in range(rng.choice([1, 1, 2, 3])):
@@ -2404,7 +2456,7 @@ def _gen_pack_fail(rng):
     """Assign a failing item through a view cast to each format. A random script rarely
     pairs a format like `?` with the callback object that format runs."""
     data = _rand_bytes(rng, 8)
-    spec = {"kind": "bytearray", "data": data, "buf": 0, "len": 8, "itemsize": 1, "readonly": False,
+    spec = {"kind": "bytearray", "data": data, "buf": _NULLPAGE, "len": 8, "itemsize": 1, "readonly": False,
             "ndim": 1, "format": "B", "shape": [8], "strides": [1], "suboffsets": None,
             "unhash": {"cls": "TypeError", "msg": "unhashable type: 'bytearray'"}}
     fmt = rng.choice("??fdebBhHiIlLqQnN")
@@ -2418,11 +2470,12 @@ def _gen_pack_fail(rng):
            ["tobytes", 0, ""]]
     exps = [{k: spec[k] for k in ("buf", "len", "itemsize", "readonly", "ndim", "format", "shape", "strides",
                                   "suboffsets", "unhash")}]
-    return {"mod": "bytesobj", "fn": "mem.script", "mem": list(data), "exps": exps, "specs": [spec], "ops": ops}
+    return {"mod": "bytesobj", "fn": "mem.script", "mem": [0] * _NULLPAGE + list(data), "exps": exps,
+            "specs": [spec], "ops": ops}
 
 
 def _spec_bytearray(rng, n=8):
-    return {"kind": "bytearray", "data": _rand_bytes(rng, n), "buf": 0, "len": n, "itemsize": 1,
+    return {"kind": "bytearray", "data": _rand_bytes(rng, n), "buf": _NULLPAGE, "len": n, "itemsize": 1,
             "readonly": False, "ndim": 1, "format": "B", "shape": [n], "strides": [1], "suboffsets": None,
             "unhash": {"cls": "TypeError", "msg": "unhashable type: 'bytearray'"}}
 
@@ -2430,7 +2483,7 @@ def _spec_bytearray(rng, n=8):
 def _script_of(spec, ops, extra=()):
     keys = ("buf", "len", "itemsize", "readonly", "ndim", "format", "shape", "strides", "suboffsets",
             "unhash") + tuple(extra)
-    return {"mod": "bytesobj", "fn": "mem.script", "mem": list(spec["data"]),
+    return {"mod": "bytesobj", "fn": "mem.script", "mem": [0] * _NULLPAGE + list(spec["data"]),
             "exps": [{k: spec[k] for k in keys}], "specs": [spec], "ops": ops}
 
 
@@ -2442,7 +2495,7 @@ def _gen_failure(rng):
 def _gen_effect(rng):
     """One short script for each effect of the Python code a memoryview runs. Random scripts
     rarely line up the object, the operation and the view that each of these needs."""
-    k = rng.randrange(8)
+    k = rng.randrange(15)
     spec = _spec_bytearray(rng)
     view = ["view", {"exp": 0, "rel": None}]
     tail = [["tobytes", 0, None], ["release", 0], ["tobytes", 0, None]]
@@ -2480,9 +2533,78 @@ def _gen_effect(rng):
                               ["cmp", 1, hooked, "eq"]] + tail)
         c["nostruct"] = rng.random() < 0.8
         return c
+    if k == 8:      # `bytes == memoryview`: the item of format `c` against a view, reflected
+        one = ["get", 0, {"slice": [0, 1, None], "rel": None}]
+        fmt = rng.choice(["c", "c", "c", "B", "b"])
+        value = {"mv": rng.choice([0, 2, 2, 2])}
+        release = rng.choice([[], [], [["release", 2]]])
+        return _script_of(spec, [view, ["cast", 0, fmt, None], one] + release +
+                          [rng.choice([["count", 1, value], ["index", 1, value, None, None]]), ["tobytes", 0, ""]])
+    if k == 9:      # a truth with no `__bool__`, stored through `?`
+        item = {"lenobj": rng.choice([0, 1, 2, -1, _gen_failure(rng)]), "rel": rng.choice([None, None, 0])}
+        return _script_of(spec, [view, ["cast", 0, "?", None], ["set", 1, 0, item], ["tobytes", 1, ""]] + tail)
+    if k == 10:     # what `__eq__` returns is tested for truth, whatever it is
+        value = {"eqobj": {"wrong": rng.choice(list(_WRONG))}, "rel": rng.choice([None, None, 0])}
+        return _script_of(spec, [view, rng.choice([["count", 0, value], ["index", 0, value, None, None]])] + tail)
+    if k == 11:     # `fix_error_int` and `fix_struct_error_int` match subclasses
+        fmt = rng.choice("bBhHiIqQnNfd")
+        key = "flt" if fmt in "fd" else "idx"
+        item = {key: {"raise": rng.choice(["VSub", "TSub", "OSub", "UnicodeError"])}, "rel": None}
+        return _script_of(spec, [view, ["cast", 0, fmt, None], ["set", 1, 0, item], ["tobytes", 0, ""]])
+    if k == 12:
+        return _gen_nil(rng)
+    if k == 13:
+        return _gen_rawfmt(rng)
+    if k == 14:     # a chain of `__release_buffer__`, each releasing an earlier view
+        ops = [view]
+        n = rng.randint(2, 4)
+        for h in range(1, n):
+            ops.append(["view", {"exp": 0, "rel": None, "hook": rng.randrange(h + 1)}])
+        for h in rng.sample(range(n), rng.randint(1, n)):
+            ops.append(["release", h])
+        return _script_of(spec, ops + [["tobytes", h, ""] for h in range(n)])
     value = {"eqobj": rng.choice([True, False, False, {"raise": rng.choice(list(_RAISES))}]),
              "rel": rng.choice([None, None, 0])}
     return _script_of(spec, [view, rng.choice([["count", 0, value], ["index", 0, value, None, None]])] + tail)
+
+
+def _gen_rawfmt(rng):
+    """A view whose format no exporter in Python can have: a repeat count `Struct` refuses, which
+    `==` reads as "not equal", or one it accepts and `unpack_from` then refuses."""
+    n = rng.randint(1, 4)
+    data = _rand_bytes(rng, n)
+    fmt = rng.choice([str(2 ** 63 - 1) + "B", str(2 ** 63) + "B", "9" * 25 + "B", str(2 ** 62) + "H",
+                      str(2 ** 61) + "Q", "B" + str(2 ** 63 - 1) + "B", str(2 ** 63 - 1) + "x" + "B",
+                      "9" * 25, str(2 ** 63) + "?!", "<" + str(2 ** 62) + "h", "1B", "2B", "Bx"])
+    size = 1
+    if rng.random() < 0.25:     # `PyMem_Malloc(itemsize)` fails, after `Struct` accepted the format
+        size, n, fmt, data = 2 ** 62, 1, rng.choice(["2B", "Bx", "1B"]), data[:1]
+    spec = {"kind": "rawfmt", "data": data, "fmt": fmt, "buf": _NULLPAGE, "len": n, "itemsize": size, "readonly": True,
+            "ndim": 1, "format": fmt, "shape": [n], "strides": [size], "suboffsets": None, "unhash": None}
+    keys = ("buf", "len", "itemsize", "readonly", "ndim", "format", "shape", "strides", "suboffsets", "unhash")
+    ops = [["fromnil", 0], ["cmp", 0, {"bytes": data}, "eq"], ["cmp", 0, {"bytes": data}, "ne"]]
+    return {"mod": "bytesobj", "fn": "mem.script", "mem": [0] * _NULLPAGE + data,
+            "exps": [{k: spec[k] for k in keys}], "specs": [spec], "ops": ops}
+
+
+def _gen_nil(rng):
+    """A PIL view whose pointer table has NULL entries, through `PyMemoryView_FromBuffer`. Only
+    `memoryiter_next` looks at the pointer: anything else that reached a NULL would crash."""
+    n = rng.randint(1, 5)
+    data = _rand_bytes(rng, n)
+    null = [rng.random() < 0.4 for _ in range(n)]
+    table = _NULLPAGE
+    base = table + 8 * n
+    mem = [0] * _NULLPAGE
+    for i in range(n):
+        mem.extend(struct.pack("<Q", 0 if null[i] else base + i))
+    mem.extend(data)
+    spec = {"kind": "nil", "data": data, "null": null, "buf": table, "len": n, "itemsize": 1, "readonly": True,
+            "ndim": 1, "format": "B", "shape": [n], "strides": [8], "suboffsets": [0], "unhash": None}
+    keys = ("buf", "len", "itemsize", "readonly", "ndim", "format", "shape", "strides", "suboffsets", "unhash")
+    ops = [["fromnil", 0], ["iter", 0]] + [["next", 0]] * (n + 1) + [["count", 0, rng.choice([0, 1, data[0]])]]
+    return {"mod": "bytesobj", "fn": "mem.script", "mem": mem, "exps": [{k: spec[k] for k in keys}],
+            "specs": [spec], "ops": ops}
 
 
 def gen_mem(rng):
@@ -2519,12 +2641,86 @@ class _PyBuffer(_ct.Structure):
                 ("suboffsets", _ct.c_void_p), ("internal", _ct.c_void_p)]
 
 
+class _NilTable:
+    """The memory of a PIL view: bytes, and a table of pointers to them, some NULL."""
+
+    def __init__(self, data, null):
+        n = len(data)
+        self.data = (_ct.c_char * n).from_buffer_copy(data)
+        self.table = (_ct.c_void_p * n)(*[None if null[i] else _ct.addressof(self.data) + i for i in range(n)])
+        self.shape = (_ct.c_ssize_t * 1)(n)
+        self.strides = (_ct.c_ssize_t * 1)(8)
+        self.suboffsets = (_ct.c_ssize_t * 1)(0)
+        self.fmt = _ct.create_string_buffer(b"B")
+        self.n = n
+
+    def view(self):
+        info = _PyBuffer()
+        info.buf = _ct.addressof(self.table)
+        info.obj = None
+        info.len = self.n
+        info.itemsize = 1
+        info.readonly = 1
+        info.ndim = 1
+        info.format = _ct.cast(self.fmt, _ct.c_char_p)
+        info.shape = _ct.addressof(self.shape)
+        info.strides = _ct.addressof(self.strides)
+        info.suboffsets = _ct.addressof(self.suboffsets)
+        f = _ct.pythonapi.PyMemoryView_FromBuffer
+        f.restype = _ct.py_object
+        f.argtypes = [_ct.POINTER(_PyBuffer)]
+        return f(_ct.byref(info))
+
+
+class _RawFmt:
+    """Bytes under a format that no Python exporter would give them."""
+
+    def __init__(self, data, fmt, itemsize):
+        n = len(data)
+        self.data = (_ct.c_char * n).from_buffer_copy(data)
+        self.shape = (_ct.c_ssize_t * 1)(n)
+        self.strides = (_ct.c_ssize_t * 1)(itemsize)
+        self.fmt = _ct.create_string_buffer(fmt.encode())
+        self.n = n
+        self.itemsize = itemsize
+
+    def view(self):
+        info = _PyBuffer()
+        info.buf = _ct.addressof(self.data)
+        info.obj = None
+        info.len = self.n
+        info.itemsize = self.itemsize
+        info.readonly = 1
+        info.ndim = 1
+        info.format = _ct.cast(self.fmt, _ct.c_char_p)
+        info.shape = _ct.addressof(self.shape)
+        info.strides = _ct.addressof(self.strides)
+        info.suboffsets = None
+        f = _ct.pythonapi.PyMemoryView_FromBuffer
+        f.restype = _ct.py_object
+        f.argtypes = [_ct.POINTER(_PyBuffer)]
+        return f(_ct.byref(info))
+
+
 class Boom(Exception):
     """Not a built-in class on purpose: `fix_error_int` must pass it through."""
 
 
+class TSub(TypeError):
+    pass
+
+
+class VSub(ValueError):
+    pass
+
+
+class OSub(OverflowError):
+    pass
+
+
 _RAISES = {"ValueError": ValueError, "TypeError": TypeError, "OverflowError": OverflowError,
-           "LookupError": LookupError, "Boom": Boom}
+           "LookupError": LookupError, "Boom": Boom, "TSub": TSub, "VSub": VSub, "OSub": OSub,
+           "UnicodeError": UnicodeError}
 _WRONG = {"str": "x", "NoneType": None, "list": []}
 
 
@@ -2791,6 +2987,8 @@ class _Script:
             return res
         if name == "restricted":
             return {"ok": _run_restricted(self.exps[op[1]])}
+        if name == "fromnil":
+            return {"ok": self.reg(self.exps[op[1]].view())}
         if name == "next":
             if not self.iters:
                 return skip

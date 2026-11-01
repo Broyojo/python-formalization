@@ -365,10 +365,8 @@ def stepOp (d : DS) (op : Array Json) : Except String (Json × DS) := do
   | "restricted" =>
       -- the view `__release_buffer__` receives, Objects/typeobject.c:10833
       let e := d.exps[(← (← argAt op 1).getNat?)]!
-      let (r, st0) := memoryViewFromBuffer e false d.st
+      let (r, st1) := restrictedView e d.st
       let .ok i := r | throw "restricted"
-      let x := st0.mv i
-      let st1 := st0.setMv i { x with flags := { x.flags with restricted := true } }
       let okTrue {α : Type} (m : M α) : Json :=
         match (m st1).1 with
         | .ok _ => okJ (toJson true)
@@ -379,6 +377,9 @@ def stepOp (d : DS) (op : Array Json) : Except String (Json × DS) := do
       return (okJ (Json.arr #[okTrue (memoryviewCast i ['B'] none), okTrue (memoryviewToreadonly i),
         okTrue (memoryviewNew (.view i)), okTrue (memorySubscript i (.one (.slice ⟨none, none, none⟩ none))),
         okTrue (memoryBufferProc i 0), lenJ]), d)
+  | "fromnil" =>
+      let k ← (← argAt op 1).getNat?
+      return runM d (memoryViewFromBuffer d.exps[k]! false) viewRes
   | "frommem" =>
       let k ← (← argAt op 1).getNat?
       let e := d.exps[k]!

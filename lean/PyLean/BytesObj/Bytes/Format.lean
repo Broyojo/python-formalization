@@ -107,7 +107,7 @@ def formatLong (v : Obj) (fl : Fl) (prec : Int) (type : Nat) : Py Seq :=
         else numberLong v
       match iobj with
       | .ok i => unicodeFormatLong i fl.alt prec type
-      | .error e => if e.className = "TypeError" then .error unsupported else .error e
+      | .error e => if isTypeError e then .error unsupported else .error e
     else .error unsupported
 
 /-- The conversion part of `formatfloat`, bytesobject.c:423-450. Every error of
@@ -119,7 +119,8 @@ def formatFloatText (v : Obj) (fl : Fl) (prec : Int) (type : Nat) : Py Seq :=
     let prec := if prec < 0 then 6 else prec
     .ok (dtoa x type prec.toNat fl.alt)
 
-/-- `byte_converter`, bytesobject.c:498-542. -/
+/-- `byte_converter`, bytesobject.c:498-542. The message is for an object with no `__index__`:
+one whose `__index__` fails keeps its exception, :526-528. -/
 def byteConverter (arg : Obj) : Py Nat :=
   match arg with
   | .bytes s =>
@@ -138,7 +139,7 @@ def byteConverter (arg : Obj) : Py Nat :=
       -- this includes an overflow in converting to C long
       if !(0 ≤ ival ∧ ival ≤ 255) then .error (.overflowError "%c arg not in range(256)")
       else .ok ival.toNat
-    | some (.error e) => .error (if isTypeError e then bad else e)
+    | some (.error e) => .error e
     | none => .error bad
 
 /-- `format_obj`, bytesobject.c:546-594. -/

@@ -1,4 +1,5 @@
 import PyLean.BytesObj.Bytes.Ctype
+import PyLean.BytesObj.Exc
 import PyLean.Fractions.Model
 import PyLean.Sequences.Common
 
@@ -10,8 +11,7 @@ C code calls.
   class-based cases stand for tiny Python classes: `index v` has `__index__`,
   `dunder r` has `__bytes__` returning `r`, `plain` is `object()`, `iter xs` is a
   generator (no buffer, no `__len__`, no `__length_hint__`). The `...Raises` cases
-  are the same classes whose method raises; an exception is exact-class, so a
-  subclass of `TypeError` is out of scope where the C code tests for `TypeError`.
+  are the same classes whose method raises.
 * C `char` is signed (x86-64 and macOS arm64 builds; the build `python3` runs on).
 * `malloc(n)` fails for `n ≥ 2^47`, more than the user address space of an LP64
   system; below that memory is unbounded, and the difftest never asks for a size
@@ -129,8 +129,8 @@ def Obj.index? : Obj → Option (Py Int)
   | .indexRaises e => some (.error e)
   | _ => Option.none
 
-/-- `PyErr_ExceptionMatches(PyExc_TypeError)`, for exact classes. -/
-def isTypeError (e : PyExc) : Bool := e.className == "TypeError"
+/-- `PyErr_ExceptionMatches(PyExc_TypeError)`. -/
+def isTypeError (e : PyExc) : Bool := excMatches e "TypeError"
 
 /-- `PyLong_Check`. -/
 def Obj.longValue? : Obj → Option Int

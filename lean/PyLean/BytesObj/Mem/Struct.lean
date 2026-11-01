@@ -47,6 +47,10 @@ def spanDigits : List Char → Nat → Nat × List Char
 def alignTo (size a : Nat) : Nat :=
   if a > 0 ∧ size > 0 then size + ((a - 1) - (size - 1) % a) else size
 
+/-- `goto overflow` of `prepare_s`, Modules/_struct.c:1769-1772: the repeat count, the alignment
+and the running size are each checked against `PY_SSIZE_T_MAX`. -/
+def sizeTooLong : PyExc := structError "total struct size too long"
+
 /-- The loop of `prepare_s`. `fuel` is the format's length. -/
 def parseCodes (native : Bool) : Nat → List Char → Nat → List (Char × Nat × Nat × Nat) →
     Py (List (Char × Nat × Nat × Nat) × Nat)
@@ -55,25 +59,39 @@ def parseCodes (native : Bool) : Nat → List Char → Nat → List (Char × Nat
   | fuel + 1, c :: cs, size, acc =>
     if isCSpace c then parseCodes native fuel cs size acc
     else
-      let (num, c, cs, bad) :=
+      let (num, c, cs, bad) : Nat × Char × List Char × Bool :=
         if isDigit c then
           let (n, rest) := spanDigits (c :: cs) 0
           match rest with
           | [] => (n, c, [], true)
           | c' :: rest' => (n, c', rest', false)
         else (1, c, cs, false)
-      if bad then .error (structError "repeat count given without format specifier")
+      if (num : Int) > ssizeMax then .error sizeTooLong
+      else if bad then .error (structError "repeat count given without format specifier")
       else
         match (if native then nativeSize c else standardSize c) with
         | none => .error (structError "bad char in struct format")
         | some itemsize =>
           let size := alignTo size (if native then itemsize else 0)
+          if (size : Int) > ssizeMax then .error sizeTooLong
+          else if (num : Int) > Int.tdiv (ssizeMax - size) itemsize then .error sizeTooLong
+          else
           let acc :=
             match c with
             | 'x' => acc
             | 's' | 'p' => (c, 1, num, size) :: acc
             | _ => if num = 0 then acc else (c, num, itemsize, size) :: acc
           parseCodes native fuel cs (size + num * itemsize) acc
+
+theorem spanDigits_app (c : Char) (rest : List Char) (hc : isDigit c = false) :
+    ∀ (ds : List Char) (n : Nat), (∀ x ∈ ds, isDigit x = true) →
+      spanDigits (ds ++ c :: rest) n = ((spanDigits ds n).1, c :: rest)
+  | [], n, _ => by simp [spanDigits, hc]
+  | d :: ds, n, h => by
+    have hd := h d (by simp)
+    have ih := spanDigits_app c rest hc ds (10 * n + (d.toNat - 48)) fun x hx => h x (by simp [hx])
+    simp only [List.cons_append, spanDigits, hd, ↓reduceIte]
+    exact ih
 
 /-- `Struct(fmt)`: `whichtable`, then `prepare_s`. -/
 def structParse (fmt : List Char) : Py SFmt :=
@@ -116,7 +134,8 @@ def unpackCode (big : Bool) (bs : List Nat) : Char × Nat × Nat × Nat → List
 /-- `Struct.unpack_from(buffer)`: the items of the tuple. -/
 def structUnpackFrom (sf : SFmt) (bs : List Nat) : Py (List Item) :=
   if bs.length < sf.size then
-    .error (structError s!"~unpack_from requires a buffer of at least {sf.size} bytes")
+    .error (structError (s!"unpack_from requires a buffer of at least {sf.size} bytes for unpacking " ++
+      s!"{sf.size} bytes at offset 0 (actual buffer size is {bs.length})"))
   else .ok (sf.codes.flatMap (unpackCode sf.big bs))
 
 /-- `v == w` for two results of `struct_unpack_single`, memoryobject.c:2128-2144: a

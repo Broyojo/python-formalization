@@ -117,7 +117,7 @@ theorem pack_int_err (st : St) (self : Nat) (ptr v lo hi : Int) (c : Char) (k : 
     | (have e1 := asLong_err v (by omega)
        have e2 := longAsSsize_err v (by omega)
        simp only [packSingle, cc, List.getD_cons_zero, M.bind_app, M.mapErr, pylongAsLd, pylongAsLld,
-         pylongAsZd, numberIndex, M.lift, e1, e2, M.pure_app, fixErrorInt]
+         pylongAsZd, numberIndex, M.lift, e1, e2, M.pure_app, fixErrorInt_type, fixErrorInt_value, fixErrorInt_overflow]
        done)
     | (have e1 := asLong_ok v (by omega)
        simp only [packSingle, cc, List.getD_cons_zero, M.bind_app, M.mapErr, pylongAsLd, numberIndex,
@@ -127,7 +127,7 @@ theorem pack_int_err (st : St) (self : Nat) (ptr v lo hi : Int) (c : Char) (k : 
     | (have hn : ¬ (0 ≤ v ∧ v < 18446744073709551616) := by omega
        obtain ⟨m, e1⟩ := asUnsignedLong_err v hn
        simp only [packSingle, cc, List.getD_cons_zero, M.bind_app, M.mapErr, pylongAsLu, pylongAsLlu,
-         pylongAsZu, numberIndex, M.lift, e1, M.pure_app, fixErrorInt]
+         pylongAsZu, numberIndex, M.lift, e1, M.pure_app, fixErrorInt_type, fixErrorInt_value, fixErrorInt_overflow]
        done)
     | (have e1 := asUnsignedLong_ok v (by omega)
        simp only [packSingle, cc, List.getD_cons_zero, M.bind_app, M.mapErr, pylongAsLu, numberIndex,

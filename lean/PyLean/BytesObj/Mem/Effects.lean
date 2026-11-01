@@ -31,9 +31,9 @@ theorem memoryRelease_released (i : Nat) (st : St) (h : i < st.mvs.length) :
       rw [St.mv_setMb]
       exact hr
 
-theorem memoryRelease0_released (i : Nat) (st : St) (h : i < st.mvs.length) :
-    ((memoryRelease0 i st).2.mv i).flags.released = true := by
-  unfold memoryRelease0
+theorem memoryReleaseAt_released (f i : Nat) (st : St) (h : i < st.mvs.length) :
+    ((memoryReleaseAt (f + 1) i st).2.mv i).flags.released = true := by
+  unfold memoryReleaseAt
   dsimp only
   split
   · assumption
@@ -41,12 +41,19 @@ theorem memoryRelease0_released (i : Nat) (st : St) (h : i < st.mvs.length) :
         = true := by
       rw [St.mv_setMv _ _ _ h]
     split
-    · refine (mbufRelease0_mono _ _).mv i ?_
+    · refine (mbufReleaseWith_mono _ (fun t s => memoryReleaseAt_mono f t s) _ _).mv i ?_
       rw [St.mv_setMb]
       exact hr
     · dsimp only
       rw [St.mv_setMb]
       exact hr
+
+theorem memoryRelease0_released (i : Nat) (st : St) (h : i < st.mvs.length) :
+    ((memoryRelease0 i st).2.mv i).flags.released = true := by
+  unfold memoryRelease0
+  obtain ⟨f, hf⟩ : ∃ f, st.mvs.length = f + 1 := ⟨st.mvs.length - 1, by omega⟩
+  simp only [hf]
+  exact memoryReleaseAt_released f i st h
 
 /-- `PyBuffer_Release` runs the `__release_buffer__` of the buffer it gives back. -/
 theorem pyBufferRelease_hook (b : Buf) (t : Nat) (st : St) (hb : b.hook = some t)

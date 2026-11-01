@@ -172,12 +172,25 @@ theorem iterYields_proven : IterYields := by
   · rw [memoryviewTolist_eq st self c [n] [d] g0 hL.live hf hg0 hL.shape hL.strides (by simp) (by rw [hL.ndim]; rfl)]
     simp [treeOf, Function.comp_def]
 
-/-- A value with no Python `__eq__` compares by value, with no effect. -/
-theorem itemEqM_plain (i : Item) (x : Obj) (hx : ∀ r rel, x ≠ .eqLike r rel) :
+/-- A value with no Python `__eq__` compares by value, with no effect, except a memoryview
+against a `bytes` item, which is `memory_richcompare`. -/
+theorem itemEqM_plain (i : Item) (x : Obj) (hx : ∀ r rel, x ≠ .eqLike r rel)
+    (hv : ∀ j, x = .view j → ∀ b, i ≠ .bytes b) :
     itemEqM i x = pure (itemEqObj i x) := by
   cases x with
   | eqLike r rel => exact absurd rfl (hx r rel)
+  | view j =>
+    cases i with
+    | bytes b => exact absurd rfl (hv j rfl b)
+    | _ => rfl
   | _ => rfl
+
+/-- Only format `c` unpacks to `bytes`. -/
+theorem unpackRaw_bytes (m : Mem) (p : Int) (c : Char) (b : List Nat)
+    (h : unpackRaw m p [c] = .ok (.bytes b)) : c = 'c' := by
+  unfold unpackRaw at h
+  simp only [cc, List.getD_cons_zero] at h
+  split at h <;> first | rfl | (simp at h; done) | skip
 
 /-- The count `countLoop` reaches. -/
 def countItems (x : Obj) (l : List Item) : Int := (l.filter fun i => itemEqObj i x).length
@@ -186,6 +199,7 @@ theorem countLoop_spec (it self : Nat) (n d : Int) (f fmt : List Char) (g : Int 
     (k : Nat) (st : St) (index count : Int) (fuel : Nat) (hL : Live1D st self n d f)
     (hI : IterAt st it self index n fmt) (hk : (n - index).toNat = k) (hi : index ≤ n)
     (h0 : 0 ≤ index) (hn : NoNull st self d n) (hx : ∀ r rel, value ≠ .eqLike r rel)
+    (hv : ∀ j, value = .view j → ∀ p b, g p ≠ .bytes b)
     (hg : ItemAt st self fmt g) (hf : k + 1 ≤ fuel) :
     (countLoop it value fuel count st).1 =
       .ok (count + countItems value ((walk d k ((st.mv self).view.buf + d * index)).map g)) := by
@@ -204,7 +218,7 @@ theorem countLoop_spec (it self : Nat) (n d : Int) (f fmt : List Char) (g : Int 
       have ih' := ih _ (index + 1) (if itemEqObj (g ((st.mv self).view.buf + d * index)) value = true
         then count + 1 else count) fuel hL' (iterAt_step st it self index n fmt hI) (by omega) (by omega)
         (by omega) hn hg (by omega)
-      simp only [countLoop, M.bind_app, e, itemEqM_plain _ _ hx, M.pure_app]
+      simp only [countLoop, M.bind_app, e, itemEqM_plain _ _ hx (fun j e b => hv j e _ b), M.pure_app]
       rw [ih']
       have hbuf : (St.mv (stepIter st it self index n fmt) self).view.buf = (st.mv self).view.buf := rfl
       rw [hbuf, show (st.mv self).view.buf + d * (index + 1) = (st.mv self).view.buf + d * index + d by
@@ -214,22 +228,24 @@ theorem countLoop_spec (it self : Nat) (n d : Int) (f fmt : List Char) (g : Int 
 
 /-- `m.count(x)` is `m.tolist().count(x)` for every 1-D view of a native format and every
 `x` with no Python `__eq__`, for every stride, with or without a suboffset. Hypotheses: a live
-view; `NoNull`, a type invariant; `x` has no Python `__eq__`, the case `EqFailures` is about. -/
+view; `NoNull`, a type invariant; `x` has no Python `__eq__`, the case `EqFailures` is about; `x`
+is not a memoryview compared with the `bytes` items of format `c`, which `ItemEqView` is about. -/
 def CountIsList : Prop :=
   ∀ (st : St) (self : Nat) (n d : Int) (f : List Char) (c : Char) (x : Obj),
     Live1D st self n d f → adjustFmt (st.mv self).view = .ok [c] → nativeChar c = true →
-    NoNull st self d n → (∀ r rel, x ≠ .eqLike r rel) →
+    NoNull st self d n → (∀ r rel, x ≠ .eqLike r rel) → (∀ j, x = .view j → c ≠ 'c') →
     ∃ l : List Item, memoryviewTolist self st = (.ok (.node (l.map .leaf)), st) ∧
       (memoryviewCount self x st).1 = .ok (countItems x l)
 
 theorem countIsList_proven : CountIsList := by
-  intro st self n d f c x hL hf hc hn hx
+  intro st self n d f c x hL hf hc hn hx hview
   obtain ⟨g0, hg0⟩ := native_total st.mem c hc
   have hL' : Live1D (newIter st self n [c]) self n d f := live_iters st self n d f _ hL
   have hg : ItemAt (newIter st self n [c]) self [c] (fun p => g0 (adjustPtr st.mem p (st.mv self).view.suboffsets 0)) :=
     fun p => hg0 _
   have hs := countLoop_spec st.iters.length self n d f [c] _ x n.toNat _ 0 0 (n.toNat + 2) hL'
-    (iterAt_new st self n [c]) (by simp) hL.nonneg (Int.le_refl 0) hn hx hg (by omega)
+    (iterAt_new st self n [c]) (by simp) hL.nonneg (Int.le_refl 0) hn hx
+    (fun j e p b hb => hview j e (unpackRaw_bytes st.mem _ c b (by rw [hg0]; exact congrArg _ hb))) hg (by omega)
   refine ⟨(walk d n.toNat (st.mv self).view.buf).map fun p =>
     g0 (adjustPtr st.mem p (st.mv self).view.suboffsets 0), ?_, ?_⟩
   · rw [memoryviewTolist_eq st self c [n] [d] g0 hL.live hf hg0 hL.shape hL.strides (by simp) (by rw [hL.ndim]; rfl)]
@@ -248,6 +264,7 @@ def firstFrom (g : Int → Item) (buf d : Int) (x : Obj) : Nat → Int → Optio
 theorem indexLoop_spec (self : Nat) (n d : Int) (f fmt : List Char) (g : Int → Item) (value : Obj)
     (st : St) (hL : Live1D st self n d f) (hf : adjustFmt (st.mv self).view = .ok fmt)
     (hg : ItemAt st self fmt g) (hx : ∀ r rel, value ≠ .eqLike r rel)
+    (hv : ∀ j, value = .view j → ∀ p b, g p ≠ .bytes b)
     (fuel : Nat) (i stop : Int) (h0 : 0 ≤ i) (hs : stop ≤ n) (hk : (stop - i).toNat = fuel) :
     indexLoop self value (fuel + 1) i stop st =
       (match firstFrom g (st.mv self).view.buf d value fuel i with
@@ -266,7 +283,8 @@ theorem indexLoop_spec (self : Nat) (n d : Int) (f fmt : List Char) (g : Int →
     have hg' : ∀ p, unpackRaw st.mem (adjustPtr st.mem p (st.mv self).view.suboffsets 0) fmt = .ok (g p) := hg
     simp only [hg'] at hm
     rw [indexLoop]
-    simp only [hlt, ↓reduceIte, M.bind_app, hm, itemEqM_plain _ _ hx, M.pure_app, firstFrom]
+    simp only [hlt, ↓reduceIte, M.bind_app, hm, itemEqM_plain _ _ hx (fun j e b => hv j e _ b), M.pure_app,
+      firstFrom]
     split
     · simp [M.pure_app]
     · exact ih (i + 1) (by omega) (by omega)
@@ -275,11 +293,12 @@ theorem indexLoop_spec (self : Nat) (n d : Int) (f fmt : List Char) (g : Int →
 `range(start', stop')`, where a negative bound counts from the end and both are clipped to
 `[0, n]`: the first position whose item equals `x`, or `ValueError`, like `list.index` on
 `tolist()` (:2852-2898). Hypotheses: a live view; `start` and `stop` are `Py_ssize_t`, as
-`slice_index` leaves them; `x` has no Python `__eq__`, the case `EqFailures` is about. -/
+`slice_index` leaves them; `x` has no Python `__eq__`, the case `EqFailures` is about; `x` is not
+a memoryview compared with the `bytes` items of format `c`, which `ItemEqView` is about. -/
 def IndexIsSearch : Prop :=
   ∀ (st : St) (self : Nat) (n d : Int) (f : List Char) (c : Char) (x : Obj) (start stop : Int),
     Live1D st self n d f → adjustFmt (st.mv self).view = .ok [c] → nativeChar c = true →
-    (∀ r rel, x ≠ .eqLike r rel) →
+    (∀ r rel, x ≠ .eqLike r rel) → (∀ j, x = .view j → c ≠ 'c') →
     ∃ g : Int → Item, ItemAt st self [c] g ∧
       let stop' := min (if stop < 0 then max (stop + n) 0 else stop) n
       let start' := min (if start < 0 then max (start + n) 0 else start) stop'
@@ -289,7 +308,7 @@ def IndexIsSearch : Prop :=
          | none => .error (.valueError "memoryview.index(x): x not found"), st)
 
 theorem indexIsSearch_proven : IndexIsSearch := by
-  intro st self n d f c x start stop hL hf hc hx
+  intro st self n d f c x start stop hL hf hc hx hview
   obtain ⟨g0, hg0⟩ := native_total st.mem c hc
   have hg : ItemAt st self [c] (fun p => g0 (adjustPtr st.mem p (st.mv self).view.suboffsets 0)) :=
     fun p => hg0 _
@@ -307,6 +326,8 @@ theorem indexIsSearch_proven : IndexIsSearch := by
     ↓reduceIte, hL.shape, Option.getD_some, List.getD_cons_zero]
   show indexLoop self x (stop' - start' + 1).toNat start' stop' st = _
   rw [e]
-  exact indexLoop_spec self n d f [c] _ x st hL hf hg hx _ _ _ hsa.1 hst.2 rfl
+  exact indexLoop_spec self n d f [c] _ x st hL hf hg hx
+    (fun j e p b hb => hview j e (unpackRaw_bytes st.mem _ c b (by rw [hg0]; exact congrArg _ hb)))
+    _ _ _ hsa.1 hst.2 rfl
 
 end PyLean.BytesObj.Mem
