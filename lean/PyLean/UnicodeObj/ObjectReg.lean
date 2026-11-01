@@ -6,7 +6,8 @@ import PyLean.UnicodeObj.ObjectFromFormatWriter
 import PyLean.UnicodeObj.ObjectIterProps
 import PyLean.UnicodeObj.ObjectInternProps
 import PyLean.UnicodeObj.ObjectJoinProps
-import PyLean.UnicodeObj.ObjectUtf8Writer
+import PyLean.UnicodeObj.ObjectAscii
+import PyLean.UnicodeObj.ObjectChunksUtf8
 
 /-! Registry entries of the object slice. -/
 
@@ -15,11 +16,41 @@ namespace PyLean.UnicodeObj
 open PyLean.Registry
 
 def objectEntries : List Entry := [
+  { id := "unicodeobj-codec-utf8-chunks", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["unicode_decode_utf8_impl"]
+    statement := "Decoding UTF-8 in two chunks through consumed gives what decoding at once gives, wherever the input is cut, for every standard handler, surrogatepass and the truncated surrogate case included."
+    source := "the contract of incremental decoding, Doc/library/codecs.rst; unicodeobject.c:5346-5353"
+    status := .proven, prop := ``Utf8Chunks, thm := some ``utf8Chunks_proven },
+  { id := "unicodeobj-codec-utf16-chunks", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["PyUnicode_DecodeUTF16Stateful"]
+    statement := "Decoding UTF-16 with a fixed byte order in two chunks gives what decoding at once gives, wherever the input is cut, a surrogate pair included, for every standard handler."
+    source := "the contract of incremental decoding, Doc/library/codecs.rst"
+    status := .proven, prop := ``Utf16Chunks, thm := some ``utf16Chunks_proven },
+  { id := "unicodeobj-codec-utf32-chunks", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["PyUnicode_DecodeUTF32Stateful"]
+    statement := "Decoding UTF-32 with a fixed byte order in two chunks gives what decoding at once gives, wherever the input is cut, for every standard handler."
+    source := "the contract of incremental decoding, Doc/library/codecs.rst"
+    status := .proven, prop := ``Utf32Chunks, thm := some ``utf32Chunks_proven },
+  { id := "unicodeobj-codec-raw-escape-chunks", pyFile := "Objects/unicodeobject.c"
+    pyFns := []
+    statement := "Decoding raw_unicode_escape in two chunks gives what decoding at once gives, wherever the input is cut, for every standard handler."
+    source := "the contract of incremental decoding, Doc/library/codecs.rst"
+    status := .proven, prop := ``RawEscapeChunks, thm := some ``rawEscapeChunks_proven },
+  { id := "unicodeobj-codec-unicode-escape-chunks-narrow", pyFile := "Objects/unicodeobject.c"
+    pyFns := []
+    statement := "Decoding unicode_escape in two chunks gives what decoding at once gives, for every standard handler and name table, unless the cut is inside an octal escape and the next chunk starts with a digit for it. That one case is unicodeobj-codec-unicode-escape-chunks."
+    source := "the contract of incremental decoding, Doc/library/codecs.rst; narrowed from the refuted entry"
+    status := .proven, prop := ``UnicodeEscapeChunksNarrow, thm := some ``unicodeEscapeChunksNarrow_proven },
   { id := "unicodeobj-utf8-std-is-callback", pyFile := "Objects/unicodeobject.c"
     pyFns := ["unicode_decode_utf8_impl"]
     statement := "The ignore, replace and surrogateescape handlers written out inside the UTF-8 decoder do what the registered handlers of those names do through the Python path, for every input and every handler."
-    source := "implementation against itself: inline handlers against Python/codecs.c, unicodeobject.c:5383-5412"
+    source := "implementation against itself: inline handlers against Python/codecs.c, unicodeobject.c:5371-5396"
     status := .proven, prop := ``Utf8StdIsCallback, thm := some ``utf8StdIsCallback_proven },
+  { id := "unicodeobj-ascii-decode-spec", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["PyUnicode_DecodeASCII"]
+    statement := "The replace, surrogateescape and ignore handlers written out inside the ASCII decoder and its fast paths give what the generic handler path gives, for every handler, and the kind of the result is canonical."
+    source := "implementation against itself: inline handlers against Python/codecs.c, unicodeobject.c:7630-7664"
+    status := .proven, prop := ``AsciiDecodeSpec, thm := some ``asciiDecodeSpec_proven },
   { id := "unicodeobj-writer-decode-any-handler", pyFile := "Objects/unicodeobject.c"
     pyFns := ["unicode_decode_utf8_writer"]
     statement := "Decoding into a writer, with any handler, adds what bytes.decode gives, or raises the same exception with none of the text kept; a success keeps the capacity what the text needs."

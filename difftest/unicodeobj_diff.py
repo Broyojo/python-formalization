@@ -1122,7 +1122,7 @@ def run_fmt_join(c):
 
 # ==== UTF-8 through the C entry points, with any handler (codec_utf8_obj, codec_utf8_writer) ====
 
-U8_BYTES = [0x41, 0x80, 0xa0, 0xbf, 0xc2, 0xc3, 0xc4, 0xdf, 0xe0, 0xe2, 0xed, 0xef, 0xf0, 0xf1, 0xf4, 0xf5, 0xff, 0x82, 0x90]
+U8OBJ_BYTES = [0x41, 0x80, 0xa0, 0xbf, 0xc2, 0xc3, 0xc4, 0xdf, 0xe0, 0xe2, 0xed, 0xef, 0xf0, 0xf1, 0xf4, 0xf5, 0xff, 0x82, 0x90]
 U8_VALID = ["a", "abc", "\xe9", "\xff", "Ā", "€", "￿", "\U00010000", "\U0001f600", "\U0010ffff"]
 
 
@@ -1133,7 +1133,7 @@ def u8_input(rng):
     if r < 0.5:
         b = "".join(rng.choice(U8_VALID) for _ in range(rng.randint(1, 4))).encode()
         return list(b[:rng.randint(0, len(b))])
-    return [rng.choice(U8_BYTES) for _ in range(rng.randint(0, 7))]
+    return [rng.choice(U8OBJ_BYTES) for _ in range(rng.randint(0, 7))]
 
 
 def u8_handler(rng, c):
@@ -1203,6 +1203,27 @@ def run_codec_utf8_writer(c):
     r = api.PyUnicodeWriter_Finish(w)
     k = kind_of(r)
     return [{"ok": None} if "ok" in res else res, n.value, cps_of(r), k[0], k[1]]
+
+
+@gen("codec", 4)
+def gen_codec_ascii_obj(rng):
+    b = rng.choice([[], [0x41], [0x80], [0xff], [0x41, 0x42]]) if rng.random() < 0.15 else \
+        [rng.choice([0, 0x41, 0x7f, 0x80, 0xe9, 0xff]) for _ in range(rng.randint(0, 9))]
+    c = {"mod": "unicodeobj", "fn": "codec_ascii_obj", "b": b}
+    u8_handler(rng, c)
+    return c
+
+
+@run("codec_ascii_obj")
+def run_codec_ascii_obj(c):
+    import ctypes
+    f = ctypes.pythonapi.PyUnicode_DecodeASCII
+    f.restype = ctypes.py_object
+    f.argtypes = [ctypes.c_char_p, ctypes.c_ssize_t, ctypes.c_char_p]
+    b = bytes(c["b"])
+    r = f(b, len(b), u8_errors(c))
+    k = kind_of(r)
+    return [cps_of(r), k[0], k[1]]
 
 # ==== end str.format ====
 

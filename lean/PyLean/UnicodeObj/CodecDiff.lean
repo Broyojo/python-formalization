@@ -3,7 +3,7 @@ import PyLean.StrSearch.Diff
 import PyLean.UnicodeObj.CodecProps
 import PyLean.UnicodeObj.CodecCharmap
 import PyLean.UnicodeObj.CodecCallback
-import PyLean.UnicodeObj.ObjectUtf8
+import PyLean.UnicodeObj.ObjectAscii
 
 /-! Difftest handler for the codecs slice (`fn` names start with `codec_`). -/
 
@@ -191,6 +191,11 @@ def run (fn : String) (j : Json) : Except String Json := do
     return encPy (fun (x : Json) => x) (.ok (Json.arr #[encPy (fun (_ : Nat) => Json.null) r,
       toJson (match r with | .ok n => n | .error _ => 0), toJson text, toJson kind.width,
       toJson (kind == .ascii)]))
+  | "codec_ascii_obj" =>
+    let b ← getSeq j "b"
+    let enc (r : Str × Kind) : Json :=
+      Json.arr #[toJson r.1, toJson r.2.width, toJson (r.2 == .ascii)]
+    return encPy enc (asciiDecodeC b (← getDHX j) (b.length + 100))
   | "codec_cb_decode" =>
     let b ← getSeq j "b"
     let H ← getDH j

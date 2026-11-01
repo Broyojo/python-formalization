@@ -168,7 +168,7 @@ Objects/unicodeobject.c	7321	7374	unicode_encode_call_errorhandler	unicode_encod
 Objects/unicodeobject.c	7377	7551	unicode_encode_ucs1	unicode_encode_ucs1(PyObject *unicode, const char *errors, const Py_UCS4 limit)	modelled	unicodeobj-codec-ucs1-inline-callback,unicodeobj-codec-ucs1-strict-error,unicodeobj-codec-surrogateescape-error-span	
 Objects/unicodeobject.c	7554	7568	_PyUnicode_AsLatin1String	_PyUnicode_AsLatin1String(PyObject *unicode, const char *errors)	todo		
 Objects/unicodeobject.c	7571	7574	PyUnicode_AsLatin1String	PyUnicode_AsLatin1String(PyObject *unicode)	todo		
-Objects/unicodeobject.c	7579	7675	PyUnicode_DecodeASCII	PyUnicode_DecodeASCII(const char *s, Py_ssize_t size, const char *errors)	todo		
+Objects/unicodeobject.c	7579	7675	PyUnicode_DecodeASCII	PyUnicode_DecodeASCII(const char *s, Py_ssize_t size, const char *errors)	modelled	unicodeobj-ascii-decode-spec	
 Objects/unicodeobject.c	7678	7690	_PyUnicode_AsASCIIString	_PyUnicode_AsASCIIString(PyObject *unicode, const char *errors)	todo		
 Objects/unicodeobject.c	7693	7696	PyUnicode_AsASCIIString	PyUnicode_AsASCIIString(PyObject *unicode)	todo		
 Objects/unicodeobject.c	7717	7727	code_page_name	code_page_name(UINT code_page, PyObject **obj)	excluded		platform: inside #ifdef MS_WINDOWS, not compiled on Linux or macOS
