@@ -5,6 +5,7 @@ import PyLean.Decimal.TupleProps
 import PyLean.Decimal.Props
 import PyLean.Decimal.Quantize
 import PyLean.Decimal.RoundTrip
+import PyLean.Decimal.MulProps
 
 /-!
 `Lib/_pydecimal.py` vs `Modules/_decimal/` (libmpdec), CPython 3.14.7.
@@ -128,6 +129,12 @@ def entries : List Entry := [
     source := "decimal docs, quantize: 'Return a value equal to the first operand after rounding and having the exponent of the second operand'; 'if the length of the coefficient after the quantize operation would be greater than precision, then an InvalidOperation is signaled'"
     status := .proven, prop := ``QuantizeCorrect, thm := some ``quantizeCorrect_proven
     notes := "round(d, n) is quantize(Decimal((0, (1,), -n))) by definition (_pydecimal.py:1834-1835, _decimal.c PyDec_Round), so this covers it for |n| < 2**63. Beyond that _decimal raises OverflowError and _pydecimal does not: a discrepancy deccheck.py already lists (SkipHandler.__round__), not recorded as a bug here. Conditional on returning: a trapped signal or the int-limit ValueError raises instead. Under clamp=1 the result's exponent can be below the operand's (the fold-down keeps the value), so the docs' 'the quantized exponent is always equal to that of the right-hand operand' holds only for clamp=0, in both twins." },
+  { id := "decimal-mul-correctly-rounded", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.__mul__", "Decimal._fix"]
+    statement := "For every context with prec >= 1, all 8 rounding modes and all finite non-zero operands, when * returns a value in the normal range (no subnormal result, no overflow after rounding), that value is the exact product correctly rounded to prec digits, including the carry from 99...9 to 100...0 (folded down under clamp when nothing was rounded), Inexact is set exactly when non-zero digits were dropped, and Rounded exactly when any digits were dropped."
+    source := "General Decimal Arithmetic, 'multiply' and 'Rounding'; decimal docs, signals Inexact and Rounded"
+    status := .proven, prop := ``MulCorrect, thm := some ``mulCorrect_proven
+    notes := "The subnormal and overflow ranges of _fix are hypotheses here, and + and - have no such theorem: those paths are covered by difftest/decimal_diff.py only. Conditional on returning: a trapped signal or the int-limit ValueError raises instead." },
   { id := "decimal-to-integral-exact-correct", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal.to_integral_exact"]
     statement := "For every context, rounding argument and finite non-zero value with exponent < 0, when to_integral_exact returns, the result is the correctly rounded integer at exponent 0, Rounded is set, and Inexact is set exactly when non-zero digits were dropped."

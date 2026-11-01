@@ -135,6 +135,39 @@ def isZero : Dec → Bool
   | .fin _ 0 _ => true
   | _ => false
 
+/-- `digits`, and the replacement of `self` by `10^(exp_min-1)` when it is
+negative, _pydecimal.py:1661-1664. -/
+def fixDigits (co : Nat) (e expMin : Int) : Nat × Nat :=
+  let digits : Int := numDigits co + e - expMin
+  if digits < 0 then (1, 0) else (co, digits.toNat)
+
+/-- The increment and renormalization, _pydecimal.py:1667-1672. -/
+def fixCarry (c : Ctx) (q : Nat) (changed : Int) (dg : Nat) (expMin : Int) : DM (Nat × Int) :=
+  if changed > 0 then do
+    let q1 ← liftPy (incr q dg)
+    if numDigits q1 > c.prec then pure (q1 / 10, expMin + 1) else pure (q1, expMin)
+  else pure (q, expMin)
+
+/-- The result and its signals, _pydecimal.py:1675-1692. -/
+def fixFinish (c : Ctx) (neg : Bool) (coeff : Nat) (expMin : Int) (changed : Int) (sub : Bool) : DM Dec := do
+  let ans ← if expMin > c.etop then do
+      raiseSig c .overflow
+      pure (overflowResult c neg)
+    else pure (.fin neg coeff expMin)
+  if changed ≠ 0 ∧ sub then raiseSig c .underflow
+  if sub then raiseSig c .subnormal
+  if changed ≠ 0 then raiseSig c .inexact
+  raiseSig c .rounded
+  if isZero ans then raiseSig c .clamped
+  return ans
+
+/-- The rounding branch of `_fix`, _pydecimal.py:1660-1692. -/
+def fixRound (c : Ctx) (neg : Bool) (co : Nat) (e expMin : Int) (sub : Bool) : DM Dec := do
+  let p := fixDigits co e expMin
+  let r := roundKeep c.rounding neg p.1 p.2
+  let t ← fixCarry c r.1 r.2 p.2 expMin
+  fixFinish c neg t.1 t.2 r.2 sub
+
 /-- `Decimal._fix(context)`, _pydecimal.py:1614-1704. -/
 def fix (c : Ctx) : Dec → DM Dec
   | .nan neg sig p => pure (fixNan c neg sig p)
@@ -157,24 +190,7 @@ def fix (c : Ctx) : Dec → DM Dec
       return overflowResult c neg
     let sub := decide (expMin0 < etiny)
     let expMin := if sub then etiny else expMin0
-    if e < expMin then
-      let digits : Int := numDigits co + e - expMin
-      let (co', dg) := if digits < 0 then (1, 0) else (co, digits.toNat)
-      let (q, changed) := roundKeep c.rounding neg co' dg
-      let (coeff, expMin) ← if changed > 0 then do
-          let q1 ← liftPy (incr q dg)
-          if numDigits q1 > c.prec then pure (q1 / 10, expMin + 1) else pure (q1, expMin)
-        else pure (q, expMin)
-      let ans ← if expMin > etop then do
-          raiseSig c .overflow
-          pure (overflowResult c neg)
-        else pure (.fin neg coeff expMin)
-      if changed ≠ 0 ∧ sub then raiseSig c .underflow
-      if sub then raiseSig c .subnormal
-      if changed ≠ 0 then raiseSig c .inexact
-      raiseSig c .rounded
-      if isZero ans then raiseSig c .clamped
-      return ans
+    if e < expMin then fixRound c neg co e expMin sub else
     if sub then raiseSig c .subnormal
     if c.clamp ∧ e > etop then
       raiseSig c .clamped
@@ -449,26 +465,28 @@ def sub (c : Ctx) (a b : Dec) : DM Dec := do
     if let some ans ← checkNans c a (some b) then return ans
   add c a (negate b)
 
+/-- The finite operands of `__mul__`, _pydecimal.py:1249-1272. -/
+def mulFin (c : Ctx) (rs : Bool) (ca : Nat) (ea : Int) (cb : Nat) (eb : Int) : DM Dec := do
+  let re := ea + eb
+  if ca = 0 ∨ cb = 0 then return (← fix c (.fin rs 0 re))
+  if ca = 1 then return (← fix c (.fin rs cb re))
+  if cb = 1 then return (← fix c (.fin rs ca re))
+  liftPy (intLimit (numDigits ca))
+  liftPy (intLimit (numDigits cb))
+  liftPy (strLimit (ca * cb))
+  fix c (.fin rs (ca * cb) re)
+
 /-- `Decimal.__mul__`, _pydecimal.py:1220-1274. -/
 def mul (c : Ctx) (a b : Dec) : DM Dec := do
   let rs := a.neg != b.neg
   match a, b with
-  | .fin _ _ _, .fin _ _ _ => pure ()
+  | .fin _ ca ea, .fin _ cb eb => mulFin c rs ca ea cb eb
   | _, _ =>
     if let some ans ← checkNans c a (some b) then return ans
-  match a, b with
-  | .inf _, _ => if isZero b then invalid c else return .inf rs
-  | _, .inf _ => if isZero a then invalid c else return .inf rs
-  | .fin _ ca ea, .fin _ cb eb =>
-    let re := ea + eb
-    if ca = 0 ∨ cb = 0 then return (← fix c (.fin rs 0 re))
-    if ca = 1 then return (← fix c (.fin rs cb re))
-    if cb = 1 then return (← fix c (.fin rs ca re))
-    liftPy (intLimit (numDigits ca))
-    liftPy (intLimit (numDigits cb))
-    liftPy (strLimit (ca * cb))
-    fix c (.fin rs (ca * cb) re)
-  | _, _ => return a
+    match a, b with
+    | .inf _, _ => if isZero b then invalid c else return .inf rs
+    | _, .inf _ => if isZero a then invalid c else return .inf rs
+    | _, _ => return a
 
 /-! ## Hashing, ratios, construction from int -/
 

@@ -321,6 +321,12 @@ def gen_case1(rng):
         # quantSpec, the specification the quantize property uses, against _decimal itself.
         return {"mod": "decimal", "fn": "quantspec", "rounding": rng.choice(ROUNDINGS),
                 "neg": rng.random() < 0.5, "c": gen_coeff(rng), "e": gen_exp(rng), "qe": gen_exp(rng)}
+    if k < 0.68:
+        # roundPrec, the specification the multiplication property uses, against _decimal itself.
+        return {"mod": "decimal", "fn": "mulspec", "rounding": rng.choice(ROUNDINGS),
+                "neg": rng.random() < 0.5, "prec": rng.choice([1, 2, 3, 5, 9, 16, 28]),
+                "c1": str(int(gen_coeff(rng)) + 1), "c2": str(int(gen_coeff(rng)) + 1),
+                "e1": gen_exp(rng), "e2": gen_exp(rng)}
     impl = rng.choice(["py", "c"])
     op = rng.choice(OPS)
     case = {"mod": "decimal", "fn": "op", "impl": impl, "op": op, "ctx": gen_ctx(rng),
@@ -423,6 +429,13 @@ def run_python(case):
             big = C.Context(prec=5000, Emin=-(10 ** 6), Emax=10 ** 6, traps=[])
             r = d.quantize(C.Decimal((0, (1,), case["qe"])), rounding=getattr(C, case["rounding"]), context=big)
             return "".join(map(str, r.as_tuple().digits))
+        if fn == "mulspec":
+            ctx = C.Context(prec=case["prec"], rounding=getattr(C, case["rounding"]), Emin=-(10 ** 6),
+                            Emax=10 ** 6, traps=[])
+            a = C.Decimal((int(case["neg"]), tuple(map(int, case["c1"])), case["e1"]))
+            b = C.Decimal((0, tuple(map(int, case["c2"])), case["e2"]))
+            t = ctx.multiply(a, b).as_tuple()
+            return ["".join(map(str, t.digits)), t.exponent]
         if fn == "compare_total":
             M = MODS[case["impl"]]
             return int(build(M, case["a"]).compare_total(build(M, case["b"])))
