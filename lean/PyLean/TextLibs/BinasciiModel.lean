@@ -13,10 +13,13 @@ open PyLean
 /-- `binascii.Error`. -/
 def err (m : String) : PyExc := .named "Error" m
 
-/-- A `bytes`-like object or a `str`, by code points. -/
+/-- An argument: a `bytes`-like object, a `str` by code points, an object with no buffer, or one
+whose `__buffer__` raises. -/
 inductive Data where
   | bytes (b : List Nat)
   | str (cps : List Nat)
+  | notBuffer (ty : String)
+  | raises (ty : String) (e : PyExc)
   deriving Repr, DecidableEq, Inhabited
 
 /-- `ascii_buffer_converter`, `Modules/binascii.c:163-190`. -/
@@ -25,6 +28,15 @@ def asciiBuffer : Data → Py (List Nat)
   | .str s =>
     if s.all (· < 128) then .ok s
     else .error (.valueError "string argument should contain only ASCII characters")
+  | .notBuffer t | .raises t _ =>
+    .error (.typeError s!"argument should be bytes, buffer or ASCII string, not '{t}'")
+
+/-- The `y*` of the encoding functions: a failing `__buffer__` passes through. -/
+def bufData : Data → Py (List Nat)
+  | .bytes b => .ok b
+  | .str _ => .error (.typeError "a bytes-like object is required, not 'str'")
+  | .notBuffer t => .error (.typeError s!"a bytes-like object is required, not '{t}'")
+  | .raises _ e => .error e
 
 /-- `table_b2a_base64`, `Modules/binascii.c:104-105`. -/
 def b2aChar (v : Nat) : Nat :=
@@ -152,14 +164,70 @@ def b2aHex : List Nat → List Nat
   | [] => []
   | b :: r => hexDigit (b / 16) :: hexDigit (b % 16) :: b2aHex r
 
+/-- The `sep` argument of `_Py_strhex_impl`. `seqlen` is an object with a length that is neither
+`str` nor `bytes`, and `lenRaises` one whose `__len__` raises. -/
+inductive SepArg where
+  | absent
+  | str (cps : List Nat)
+  | bytes (b : List Nat)
+  | seqlen (n : Nat)
+  | lenRaises (e : PyExc)
+  deriving Repr, DecidableEq, Inhabited
+
+/-- The checks of `_Py_strhex_impl`, `Python/pystrhex.c:13-43`, with `return_bytes` set: the separator
+byte. `PyUnicode_KIND` of a non-ASCII `str` of one character below 256 is `1BYTE`, so it passes. -/
+def strhexSep : SepArg → Py (Option Nat)
+  | .absent => .ok none
+  | .lenRaises e => .error e
+  | .str [c] =>
+    if c < 256 then .ok (some c) else .error (.valueError "sep must be ASCII.")
+  | .bytes [c] => .ok (some c)
+  | .seqlen 1 => .error (.typeError "sep must be str or bytes.")
+  | _ => .error (.valueError "sep must be length 1.")
+
+/-- The negative `bytes_per_sep_group` loop, `Python/pystrhex.c:97-113`: groups count from the left. -/
+def hexLeft (sep k : Nat) : (chunks : Nat) → List Nat → List Nat
+  | 0, l => b2aHex l
+  | c + 1, l => b2aHex (l.take k) ++ [sep] ++ hexLeft sep k c (l.drop k)
+
+/-- The positive loop, `Python/pystrhex.c:115-133`, which fills from the end: groups count from the
+right. -/
+def hexRight (sep k : Nat) : (chunks : Nat) → List Nat → List Nat
+  | 0, l => b2aHex l
+  | c + 1, l =>
+    hexRight sep k c (l.take (l.length - k)) ++ [sep] ++ b2aHex (l.drop (l.length - k))
+
+/-- `_Py_strhex_impl`, `Python/pystrhex.c:7-143`, returning bytes. -/
+def strhexBytes (data : List Nat) (sep : SepArg) (group : Int) : Py (List Nat) := do
+  let sc ← strhexSep sep
+  match sc with
+  | none => return b2aHex data
+  | some c =>
+    let k := group.natAbs
+    if group = 0 ∨ k ≥ data.length then return b2aHex data
+    let chunks := (data.length - 1) / k
+    if group < 0 then return hexLeft c k chunks data
+    return hexRight c k chunks data
+
 /-! ### `Lib/base64.py` -/
 
-/-- `_bytes_from_decode_data`, `Lib/base64.py:31-43`. -/
+/-- `_bytes_from_decode_data`, `Lib/base64.py:31-43`: `memoryview(s)` failing with `TypeError` is
+replaced, and any other exception passes through. -/
 def bytesFromDecodeData : Data → Py (List Nat)
   | .bytes b => .ok b
   | .str s =>
     if s.all (· < 128) then .ok s
     else .error (.valueError "string argument should contain only ASCII characters")
+  | .notBuffer t | .raises t (.typeError _) =>
+    .error (.typeError s!"argument should be a bytes-like object or ASCII string, not '{t}'")
+  | .raises _ e => .error e
+
+/-- `memoryview(s).tobytes()`, for an argument that is not `bytes` already. -/
+def toBytesView : Data → Py (List Nat)
+  | .bytes b => .ok b
+  | .str _ => .error (.typeError "memoryview: a bytes-like object is required, not 'str'")
+  | .notBuffer t => .error (.typeError s!"memoryview: a bytes-like object is required, not '{t}'")
+  | .raises _ e => .error e
 
 /-- `bytes.translate` with the table `bytes.maketrans(frm, to)`; the last equal
 `frm` byte wins, as when the table is filled in order. -/

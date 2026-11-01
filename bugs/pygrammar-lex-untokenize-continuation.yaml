@@ -1,0 +1,50 @@
+id: pygrammar-lex-untokenize-continuation
+title: "tokenize.untokenize loses the indentation of a block indented through a backslash continuation, breaking its round-trip guarantee on valid source"
+priority: P4
+kind: wrong-result
+module: pygrammar
+files: [Parser/lexer/lexer.c, Lib/tokenize.py]
+functions: ["tok_get_normal_mode", "Untokenizer.untokenize"]
+summary: |
+  A body may take its indentation from a backslash-continued line: `if x:\n    \\\ny\n` is valid, and
+  cont_line_col gives the block its depth (lexer.c:532-541). In readline mode the continuation reads
+  the next line, which moves tok->buf, so INDENT has p_start = tok->buf = p_end and an empty string
+  (lexer.c:627-633). Untokenizer stores that empty indent, so the text it writes has no indentation
+  before `y`. Its docstring guarantees that the output tokenizes back to the same types and strings.
+likelihood: |
+  Low: indentation by continuation is rare, and the guarantee only fails for such files.
+maybe_intended: |
+  The empty INDENT string looks accidental, and test_tokenize covers this form of source for tokens
+  but not for the round trip. A fix has to pick what string INDENT should carry.
+reproducer: |
+  import io, tokenize
+  src = "if x:\n    \\\ny\n"
+  compile(src, 'x', 'exec')
+  key = lambda s: [(t.type, t.string) for t in tokenize.generate_tokens(io.StringIO(s).readline)]
+  a = key(src)
+  out = tokenize.untokenize(tokenize.generate_tokens(io.StringIO(src).readline))
+  b = key(out)
+  print(repr(out), a == b)
+  if a != b:
+      print('REPRODUCED pygrammar-lex-untokenize-continuation')
+expected: |
+  Output that tokenizes back to the same (type, string) pairs.
+promised_by: |
+  Lib/tokenize.py untokenize docstring: "The result is guaranteed to tokenize back to match the input
+  so that the conversion is lossless and round-trips are assured."
+cause: |
+  Parser/lexer/lexer.c:627-633 uses tok->buf as the start of INDENT's text, and tok->buf moved when
+  the continuation line was read (Parser/tokenizer/readline_tokenizer.c:75-77).
+possible_fix: |
+  In Untokenizer, when an INDENT string is empty and its start column is not 0, derive the indentation
+  from the column; or have the tokenizer keep the first line's whitespace for INDENT.
+tested:
+  python3 (3.14.7): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
+duplicates:
+  issues: []
+  queries: ["untokenize backslash continuation indent", "tokenize INDENT empty string line continuation"]
+  bugforge: "none"
+lean:
+  property: PyLean.PyGrammar.Lexer.UntokenizeLossless
+  theorem: PyLean.PyGrammar.Lexer.untokenizeLossless_refuted

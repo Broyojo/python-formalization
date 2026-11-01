@@ -357,6 +357,27 @@ def formatArgFormat (ctx : FCtx) (arg : FArg) (index : Nat) : Py (FOut × FCtx) 
     .error (.valueError
       s!"unsupported format character '{shown}' (0x{hexPlain c}) at index {index}")
 
+/-- The part of `unicode_format_arg_output` after the sign is known,
+unicodeobject.c:15380-15469: `sign`, `signchar`, `len`, `pindex` on entry. -/
+def formatArgTail (arg : FArg) (fill : Nat) (sign : Bool) (signchar : Nat) (len : Int) (pindex : Nat)
+    (str : Str) : Str :=
+  let fl := arg.flags
+  let width : Int := if arg.width < len then len else arg.width
+  let hasAlt := fl.alt && (arg.ch == 120 || arg.ch == 88 || arg.ch == 111)
+  let out1 : Str := if sign && fill != 32 then [signchar] else []
+  let width := if sign && width > len then width - 1 else width
+  let out2 : Str := if hasAlt && fill != 32 then [48, arg.ch] else []
+  let width := if hasAlt then max 0 (width - 2) else width
+  let lenAfter : Int := if hasAlt then len - 2 else len
+  let pindex := if hasAlt then pindex + 2 else pindex
+  let pad : Nat := if width > lenAfter && !fl.ljust then (width - lenAfter).toNat else 0
+  let width := if width > lenAfter && !fl.ljust then lenAfter else width
+  let out3 : Str := if fill == 32 && sign then [signchar] else []
+  let out4 : Str := if fill == 32 && hasAlt then [48, arg.ch] else []
+  let body := (str.drop pindex).take lenAfter.toNat
+  let tail : Nat := if width > lenAfter then (width - lenAfter).toNat else 0
+  out1 ++ out2 ++ List.replicate pad fill ++ out3 ++ out4 ++ body ++ List.replicate tail 32
+
 /-- `unicode_format_arg_output`, unicodeobject.c:15320-15469, with `sign0` for
 `arg->sign`. A negative width that is not -1 takes the first test. -/
 def formatArgOutput (arg : FArg) (sign0 : Bool) (str : Str) : Str :=
@@ -377,21 +398,7 @@ def formatArgOutput (arg : FArg) (sign0 : Bool) (str : Str) : Str :=
         else if fl.blank then (true, 32, len, 0)
         else (false, 0, len, 0)
       else (false, 0, len, 0)
-    let width : Int := if arg.width < len then len else arg.width
-    let hasAlt := fl.alt && (arg.ch == 120 || arg.ch == 88 || arg.ch == 111)
-    let out1 : Str := if sign && fill != 32 then [signchar] else []
-    let width := if sign && width > len then width - 1 else width
-    let out2 : Str := if hasAlt && fill != 32 then [48, arg.ch] else []
-    let width := if hasAlt then max 0 (width - 2) else width
-    let lenAfter : Int := if hasAlt then len - 2 else len
-    let pindex := if hasAlt then pindex + 2 else pindex
-    let pad : Nat := if width > lenAfter && !fl.ljust then (width - lenAfter).toNat else 0
-    let width := if width > lenAfter && !fl.ljust then lenAfter else width
-    let out3 : Str := if fill == 32 && sign then [signchar] else []
-    let out4 : Str := if fill == 32 && hasAlt then [48, arg.ch] else []
-    let body := (str.drop pindex).take lenAfter.toNat
-    let tail : Nat := if width > lenAfter then (width - lenAfter).toNat else 0
-    out1 ++ out2 ++ List.replicate pad fill ++ out3 ++ out4 ++ body ++ List.replicate tail 32
+    formatArgTail arg fill sign signchar len pindex str
 
 /-- The final check of `unicode_format_arg`. -/
 def checkDictArgs (ctx : FCtx) : Py Unit :=

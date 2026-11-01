@@ -363,25 +363,31 @@ pickletools-dis-follows-genops	proven	Lib/pickletools.py	dis,_genops,genops
 pickletools-dis-stack-repr	proven	Lib/pickletools.py	StackObject.__repr__
 pickletools-optimize-raw-copy	proven	Lib/pickletools.py	optimize,_genops
 pickle-optimize-sound	open	Lib/pickletools.py	optimize
-itertools-islice-doc-agree	refuted	Modules/itertoolsmodule.c	islice_new,islice_next
+itertools-islice-doc-agree	refuted	Modules/itertoolsmodule.c	islice_new
 itertools-islice-doc-agree-ssize	refuted	Modules/itertoolsmodule.c	islice_new,islice_next
 itertools-islice-doc-agree-nowrap	proven	Modules/itertoolsmodule.c	islice_new,islice_next
 itertools-islice-consumes-max-start-stop	proven	Modules/itertoolsmodule.c	islice_next
 itertools-islice-step-message	refuted	Modules/itertoolsmodule.c	islice_new
-itertools-combinatorics-doc-agree	refuted	Modules/itertoolsmodule.c	itertools_combinations_impl,combinations_next,combinations_next_lock_held,itertools_combinations_with_replacement_impl,cwr_next,cwr_next_lock_held,itertools_permutations_impl,permutations_next,permutations_next_lock_held
-itertools-combinatorics-doc-agree-nonneg	refuted	Modules/itertoolsmodule.c	itertools_combinations_impl,combinations_next,combinations_next_lock_held,itertools_combinations_with_replacement_impl,cwr_next,cwr_next_lock_held,itertools_permutations_impl,permutations_next,permutations_next_lock_held
-itertools-combinatorics-doc-agree-ssize	refuted	Modules/itertoolsmodule.c	itertools_combinations_impl,combinations_next,combinations_next_lock_held,itertools_combinations_with_replacement_impl,cwr_next,cwr_next_lock_held,itertools_permutations_impl,permutations_next,permutations_next_lock_held
+itertools-combinatorics-doc-agree	refuted	Modules/itertoolsmodule.c	itertools_combinations_impl
+itertools-combinatorics-doc-agree-nonneg	refuted	Modules/itertoolsmodule.c	itertools_combinations_impl
+itertools-combinatorics-doc-agree-ssize	refuted	Modules/itertoolsmodule.c	itertools_combinations_impl
 itertools-combinatorics-doc-agree-alloc	proven	Modules/itertoolsmodule.c	itertools_combinations_impl,combinations_next,combinations_next_lock_held,itertools_combinations_with_replacement_impl,cwr_next,cwr_next_lock_held,itertools_permutations_impl,permutations_next,permutations_next_lock_held
-itertools-simple-doc-agree	proven	Modules/itertoolsmodule.c	accumulate_next,accumulate_next_lock_held,chain_next,chain_next_lock_held,compress_next,cycle_next,dropwhile_next,takewhile_next,filterfalse_next,pairwise_next,starmap_next,zip_longest_next,zip_longest_next_lock_held
-itertools-constructor-errors	proven	Modules/itertoolsmodule.c	pairwise_new_impl,itertools_cycle_impl,itertools_dropwhile_impl,itertools_takewhile_impl,itertools_filterfalse_impl,itertools_starmap_impl,itertools_accumulate_impl,itertools_compress_impl,batched_new_impl,chain_new,chain_new_internal,itertools_chain_from_iterable_impl,zip_longest_new
-itertools-arg-checks	proven	Modules/itertoolsmodule.c	islice_new,itertools_count_impl,itertools_permutations_impl
+itertools-simple-doc-agree	proven	Modules/itertoolsmodule.c	itertools_accumulate_impl,accumulate_next,accumulate_next_lock_held,chain_new,chain_new_internal,itertools_chain_from_iterable_impl,chain_next,chain_next_lock_held,itertools_compress_impl,compress_next,itertools_cycle_impl,cycle_next,itertools_dropwhile_impl,dropwhile_next,itertools_takewhile_impl,takewhile_next,itertools_filterfalse_impl,filterfalse_next,itertools_starmap_impl,starmap_next,zip_longest_new,zip_longest_next,zip_longest_next_lock_held
+itertools-constructor-errors	proven	Modules/itertoolsmodule.c	itertools_cycle_impl,itertools_accumulate_impl,itertools_compress_impl,batched_new_impl,chain_new,itertools_chain_from_iterable_impl,zip_longest_new
+itertools-arg-checks	proven	Modules/itertoolsmodule.c	islice_new,itertools_permutations_impl
 itertools-sizeof	proven	Modules/itertoolsmodule.c	product_sizeof,combinations_sizeof,cwr_sizeof,permutations_sizeof
 itertools-batched-doc-agree	refuted	Modules/itertoolsmodule.c	batched_new_impl,batched_next
 itertools-batched-doc-agree-alloc	proven	Modules/itertoolsmodule.c	batched_new_impl,batched_next
 itertools-count-fast-slow	proven	Modules/itertoolsmodule.c	itertools_count_impl,count_next,count_nextlong,count_repr
-itertools-count-doc-agree	proven	Modules/itertoolsmodule.c	count_next
+itertools-count-consistent	proven	Modules/itertoolsmodule.c	itertools_count_impl,count_next,count_nextlong,count_repr
+itertools-count-new-modes	proven	Modules/itertoolsmodule.c	itertools_count_impl
+itertools-count-doc-agree	refuted	Modules/itertoolsmodule.c	itertools_count_impl,count_next,count_nextlong
+itertools-count-doc-agree-total-add	refuted	Modules/itertoolsmodule.c	itertools_count_impl,count_next
+itertools-count-doc-agree-closed	proven	Modules/itertoolsmodule.c	itertools_count_impl,count_next,count_nextlong
+itertools-count-failed-add	proven	Modules/itertoolsmodule.c	count_next,count_nextlong
+itertools-count-float	proven	Modules/itertoolsmodule.c	itertools_count_impl,count_next,count_nextlong
 itertools-repeat-consistent	proven	Modules/itertoolsmodule.c	repeat_new,repeat_next,repeat_len,repeat_repr
-itertools-repeat-doc-agree	refuted	Modules/itertoolsmodule.c	repeat_new,repeat_next
+itertools-repeat-doc-agree	refuted	Modules/itertoolsmodule.c	repeat_new
 itertools-repeat-doc-agree-ssize	proven	Modules/itertoolsmodule.c	repeat_new,repeat_next
 itertools-combinations-spec	proven	Modules/itertoolsmodule.c	itertools_combinations_impl,combinations_next,combinations_next_lock_held
 itertools-cwr-spec	proven	Modules/itertoolsmodule.c	itertools_combinations_with_replacement_impl,cwr_next,cwr_next_lock_held
@@ -391,10 +397,20 @@ itertools-product-doc-agree-iterable	proven	Modules/itertoolsmodule.c	product_ne
 itertools-permutations-spec	proven	Modules/itertoolsmodule.c	itertools_permutations_impl,permutations_next,permutations_next_lock_held
 itertools-count-formulas	proven	Doc/library/itertools.rst	
 itertools-groupby-doc-agree	proven	Modules/itertoolsmodule.c	itertools_groupby_impl,groupby_next,Py_LOCAL_INLINE,_grouper_next,_grouper_create
+itertools-groupby-no-crash	refuted	Modules/itertoolsmodule.c	itertools_groupby_impl,groupby_next,Py_LOCAL_INLINE,_grouper_next,_grouper_create
+itertools-groupby-no-crash-no-reentry	proven	Modules/itertoolsmodule.c	groupby_next,_grouper_next
+itertools-groupby-eq-error	proven	Modules/itertoolsmodule.c	groupby_next,_grouper_next
+itertools-grouper-eq-false	proven	Modules/itertoolsmodule.c	_grouper_next
 itertools-groupby-failed-step	proven	Modules/itertoolsmodule.c	Py_LOCAL_INLINE
 itertools-grouper-direct	proven	Modules/itertoolsmodule.c	itertools__grouper_impl,_grouper_create,_grouper_next
 itertools-groupby-ctor-error	proven	Modules/itertoolsmodule.c	itertools_groupby_impl
-itertools-tee-doc-agree	proven	Modules/itertoolsmodule.c	itertools_tee_impl,itertools__tee_impl,tee_next,teedataobject_newinternal,teedataobject_jumplink,teedataobject_getitem,teedataobject_getitem_lock_held,tee_fromiterable,tee_copy,tee_copy_impl
+itertools-tee-doc-agree	proven	Modules/itertoolsmodule.c	itertools_tee_impl,tee_next,teedataobject_newinternal,teedataobject_jumplink,teedataobject_getitem,teedataobject_getitem_lock_held,tee_fromiterable,tee_copy,tee_copy_impl,itertools__tee_impl
+itertools-tee-reentry-guard	proven	Modules/itertoolsmodule.c	itertools_tee_impl,tee_next,teedataobject_getitem,teedataobject_getitem_lock_held,tee_fromiterable
+itertools-tee-running-balanced	proven	Modules/itertoolsmodule.c	tee_next,teedataobject_getitem,teedataobject_getitem_lock_held
+itertools-tee-wrap	proven	Modules/itertoolsmodule.c	itertools__tee_impl,tee_fromiterable,teedataobject_newinternal
+itertools-tee-clear	proven	Modules/itertoolsmodule.c	tee_clear,tee_dealloc
+itertools-pairwise-doc-agree	proven	Modules/itertoolsmodule.c	pairwise_new_impl,pairwise_next
+itertools-pairwise-reentry	proven	Modules/itertoolsmodule.c	pairwise_next
 itertools-teedataobject-args	proven	Modules/itertoolsmodule.c	itertools_teedataobject_impl
 sequences-deque-ends-evict	proven	Modules/_collectionsmodule.c	deque_append_lock_held,deque_append_impl,deque_appendleft_lock_held,deque_appendleft_impl,deque_extend_impl,deque_extendleft_impl,deque_pop_impl,deque_popleft_impl,deque_clear,deque_clearmethod_impl,deque_inplace_concat,finalize_iterator,consume_iterator
 sequences-deque-construct	proven	Modules/_collectionsmodule.c	deque_new,deque_init_impl,deque_len,deque_get_maxlen
@@ -700,53 +716,65 @@ bytesobj-memoryview-float32-round-trip	open	Objects/memoryobject.c	pack_single,u
 bytesobj-memoryview-float16-round-trip	open	Objects/memoryobject.c	pack_single,unpack_single
 bytesobj-memoryview-tobytes-contig-nd	open	Objects/memoryobject.c	PyBuffer_ToContiguous
 bytesobj-memoryview-tobytes-fortran	open	Objects/memoryobject.c	buffer_to_contiguous,init_fortran_strides_from_shape
-unicodeobj-object-isascii-kind	proven	Objects/unicodeobject.c	unicode_isascii_impl
-unicodeobj-object-concat-kind	proven	Objects/unicodeobject.c	PyUnicode_Concat
-unicodeobj-object-slice-kind	proven	Objects/unicodeobject.c	unicode_subscript,kind_maxchar_limit
+unicodeobj-object-isascii-kind	proven	Objects/unicodeobject.c	
+unicodeobj-object-concat-kind	proven	Objects/unicodeobject.c	
+unicodeobj-object-slice-kind	proven	Objects/unicodeobject.c	kind_maxchar_limit
 unicodeobj-object-repeat-length	proven	Objects/unicodeobject.c	unicode_repeat
-unicodeobj-object-compare-order	proven	Objects/unicodeobject.c	unicode_compare
-unicodeobj-codec-utf8-rejects-forbidden	proven	Objects/stringlib/codecs.h	unicode_decode_utf8_impl
-unicodeobj-codec-utf8-strict-iff-wf	open	Objects/stringlib/codecs.h	unicode_decode_utf8_impl
-unicodeobj-codec-utf8-round-trip	proven	Objects/stringlib/codecs.h	unicode_encode_utf8,unicode_decode_utf8,unicode_decode_utf8_impl,PyUnicode_DecodeUTF8,PyUnicode_DecodeUTF8Stateful,PyUnicode_AsUTF8String,_PyUnicode_AsUTF8String
-unicodeobj-codec-utf16-round-trip	proven	Objects/unicodeobject.c	PyUnicode_DecodeUTF16Stateful,PyUnicode_DecodeUTF16,_PyUnicode_EncodeUTF16,PyUnicode_AsUTF16String
-unicodeobj-codec-utf32-round-trip	proven	Objects/unicodeobject.c	PyUnicode_DecodeUTF32Stateful,PyUnicode_DecodeUTF32,_PyUnicode_EncodeUTF32,PyUnicode_AsUTF32String
-unicodeobj-codec-decode-handler-advances	proven	Objects/unicodeobject.c	unicode_decode_call_errorhandler_writer,make_decode_exception
-unicodeobj-codec-encode-handler-advances	proven	Objects/unicodeobject.c	unicode_encode_call_errorhandler,make_encode_exception,raise_encode_exception
-unicodeobj-codec-surrogateescape-round-trip	open	Objects/unicodeobject.c	unicode_decode_utf8_impl
-unicodeobj-format-nul-presentation-type	refuted	Python/formatter_unicode.c	parse_internal_render_format_spec,_PyFloat_FormatAdvancedWriter,_PyComplex_FormatAdvancedWriter
-unicodeobj-format-nul-int-str	proven	Python/formatter_unicode.c	_PyLong_FormatAdvancedWriter,_PyUnicode_FormatAdvancedWriter,unknown_presentation_type
-unicodeobj-format-parse-asserts	proven	Python/formatter_unicode.c	parse_internal_render_format_spec,get_integer,is_alignment_token,is_sign_element,invalid_thousands_separator_type,invalid_comma_and_underscore
-unicodeobj-format-str-shape	proven	Python/formatter_unicode.c	format_string_internal,calc_padding,fill_padding,unicode___format___impl
-unicodeobj-format-int-fast-slow	proven	Python/formatter_unicode.c	format_long_internal,calc_number_widths,fill_number,get_locale_info
+unicodeobj-object-compare-order	proven	Objects/unicodeobject.c	
+unicodeobj-codec-utf8-rejects-forbidden	proven	Objects/stringlib/codecs.h	
+unicodeobj-codec-utf8-strict-iff-wf	open	Objects/stringlib/codecs.h	
+unicodeobj-codec-utf8-round-trip	proven	Objects/stringlib/codecs.h	
+unicodeobj-codec-utf16-round-trip	proven	Objects/unicodeobject.c	
+unicodeobj-codec-utf32-round-trip	proven	Objects/unicodeobject.c	
+unicodeobj-codec-decode-handler-advances	proven	Objects/unicodeobject.c	
+unicodeobj-codec-encode-handler-advances	proven	Objects/unicodeobject.c	
+unicodeobj-codec-unicode-escape-round-trip	proven	Objects/unicodeobject.c	
+unicodeobj-codec-unicode-escape-chunks	refuted	Objects/unicodeobject.c	
+unicodeobj-codec-raw-escape-round-trip	proven	Objects/unicodeobject.c	
+unicodeobj-codec-latin1-round-trip	proven	Objects/unicodeobject.c	
+unicodeobj-codec-ucs1-strict-error	proven	Objects/unicodeobject.c	
+unicodeobj-codec-ascii-strict	proven	Objects/unicodeobject.c	
+unicodeobj-codec-utf7-direct	proven	Objects/unicodeobject.c	
+unicodeobj-codec-utf7-round-trip	open	Objects/unicodeobject.c	
+unicodeobj-codec-charmap-decode-string	proven	Objects/unicodeobject.c	
+unicodeobj-codec-charmap-decode-mapping	proven	Objects/unicodeobject.c	
+unicodeobj-codec-charmap-encode-mapping	proven	Objects/unicodeobject.c	
+unicodeobj-codec-charmap-build-fffe	refuted	Objects/unicodeobject.c	
+unicodeobj-codec-replacements-ascii	proven	Objects/unicodeobject.c	
+unicodeobj-codec-normalize-case	proven	Objects/unicodeobject.c	_Py_normalize_encoding
+unicodeobj-codec-surrogateescape-round-trip	open	Objects/unicodeobject.c	
+unicodeobj-format-nul-presentation-type	refuted	Python/formatter_unicode.c	
+unicodeobj-format-nul-int-str	proven	Python/formatter_unicode.c	
+unicodeobj-format-parse-asserts	proven	Python/formatter_unicode.c	
+unicodeobj-format-str-shape	proven	Python/formatter_unicode.c	format_string_internal,calc_padding,fill_padding
+unicodeobj-format-int-fast-slow	proven	Python/formatter_unicode.c	
 unicodeobj-format-group-loop	refuted	Objects/unicodeobject.c	_PyUnicode_InsertThousandsGrouping,GroupGenerator_init,GroupGenerator_next,InsertThousandsGrouping_fill
 unicodeobj-format-group-digits	open	Objects/unicodeobject.c	_PyUnicode_InsertThousandsGrouping
-unicodeobj-format-percent-int-fast-slow	proven	Objects/unicodeobject.c	_PyUnicode_FormatLong,mainformatlong
-unicodeobj-format-percent-star-width	refuted	Objects/unicodeobject.c	unicode_format_arg_parse
+unicodeobj-format-percent-int-fast-slow	proven	Objects/unicodeobject.c	
+unicodeobj-format-percent-star-width	refuted	Objects/unicodeobject.c	
 unicodeobj-format-parse-number	proven	Python/formatter_unicode.c	parse_number
-unicodeobj-format-empty-spec	proven	Python/formatter_unicode.c	format_obj
 unicodeobj-format-float-internal	open	Python/formatter_unicode.c	format_float_internal
 unicodeobj-format-complex-internal	open	Python/formatter_unicode.c	format_complex_internal
 unicodeobj-format-percent-float	open	Objects/unicodeobject.c	formatfloat
-unicodeobj-format-percent-no-directive	proven	Objects/unicodeobject.c	PyUnicode_Format,unicode_mod
-unicodeobj-text-case-ascii-fast-path	proven	Objects/unicodeobject.c	ascii_upper_or_lower,do_upper,do_lower,do_upper_or_lower,do_casefold,unicode_upper_impl,unicode_lower_impl,unicode_casefold_impl
-unicodeobj-text-case-output-bound	proven	Objects/unicodeobject.c	do_capitalize,do_swapcase,do_title,do_upper,do_lower,do_casefold,case_operation,lower_ucs4,unicode_title_impl,unicode_capitalize_impl,unicode_swapcase_impl,unicode_upper_impl,unicode_lower_impl,unicode_casefold_impl
+unicodeobj-format-percent-no-directive	proven	Objects/unicodeobject.c	
+unicodeobj-text-case-ascii-fast-path	proven	Objects/unicodeobject.c	ascii_upper_or_lower,do_upper,do_lower,do_upper_or_lower,do_casefold
+unicodeobj-text-case-output-bound	proven	Objects/unicodeobject.c	do_upper,do_lower,do_casefold,lower_ucs4
 unicodeobj-text-final-sigma-regex	refuted	Objects/unicodeobject.c	handle_capital_sigma
-unicodeobj-text-final-sigma-no-overlap	proven	Objects/unicodeobject.c	handle_capital_sigma,lower_ucs4,_PyUnicode_IsCased,_PyUnicode_IsCaseIgnorable
-unicodeobj-text-is-predicates	proven	Objects/unicodeobject.c	unicode_isspace_impl,unicode_isalpha_impl,unicode_isalnum_impl,unicode_isdecimal_impl,unicode_isdigit_impl,unicode_isnumeric_impl,_PyUnicode_IsAlpha,_PyUnicode_ToDecimalDigit,_PyUnicode_IsDecimalDigit,_PyUnicode_ToDigit,_PyUnicode_IsDigit,_PyUnicode_IsNumeric
-unicodeobj-text-is-case-doc	proven	Objects/unicodeobject.c	unicode_islower_impl,unicode_isupper_impl,unicode_istitle_impl,_PyUnicode_IsLowercase,_PyUnicode_IsUppercase,_PyUnicode_IsTitlecase
-unicodeobj-text-isidentifier	proven	Objects/unicodeobject.c	_PyUnicode_ScanIdentifier,PyUnicode_IsIdentifier,unicode_isidentifier_impl,_PyUnicode_IsXidStart,_PyUnicode_IsXidContinue
+unicodeobj-text-final-sigma-no-overlap	proven	Objects/unicodeobject.c	handle_capital_sigma,lower_ucs4
+unicodeobj-text-is-predicates	proven	Objects/unicodeobject.c	unicode_isdecimal_impl,unicode_isdigit_impl,unicode_isnumeric_impl,_PyUnicode_ToDecimalDigit,_PyUnicode_IsDecimalDigit,_PyUnicode_ToDigit,_PyUnicode_IsDigit,_PyUnicode_IsNumeric
+unicodeobj-text-is-case-doc	proven	Objects/unicodeobject.c	unicode_islower_impl,unicode_isupper_impl,_PyUnicode_IsLowercase,_PyUnicode_IsUppercase,_PyUnicode_IsTitlecase
+unicodeobj-text-isidentifier	proven	Objects/unicodeobject.c	_PyUnicode_ScanIdentifier,PyUnicode_IsIdentifier,unicode_isidentifier_impl
 unicodeobj-text-repr-two-passes	proven	Objects/unicodeobject.c	unicode_repr
-unicodeobj-text-isprintable-repr	proven	Objects/unicodeobject.c	unicode_isprintable_impl,_PyUnicode_IsPrintable
-unicodeobj-text-translate-fast-slow	proven	Objects/unicodeobject.c	charmaptranslate_lookup,charmaptranslate_output,unicode_fast_translate_lookup,unicode_fast_translate,_PyUnicode_TranslateCharmap,unicode_translate
-unicodeobj-text-translate-strict	proven	Objects/unicodeobject.c	PyUnicode_Translate
+unicodeobj-text-isprintable-repr	proven	Objects/unicodeobject.c	unicode_isprintable_impl
+unicodeobj-text-translate-fast-slow	proven	Objects/unicodeobject.c	
+unicodeobj-text-translate-strict	proven	Objects/unicodeobject.c	
 unicodeobj-text-maketrans-translate	proven	Objects/unicodeobject.c	unicode_maketrans_impl
-unicodeobj-text-maketrans-dict	proven	Objects/unicodeobject.c	unicode_maketrans_from_dict
-unicodeobj-text-bytes-str-twin	proven	Objects/stringlib/ctype.h	stringlib_isspace,stringlib_isalpha,stringlib_isalnum,stringlib_isdigit,stringlib_islower,stringlib_isupper,stringlib_istitle,stringlib_lower,stringlib_upper,stringlib_title,stringlib_capitalize,stringlib_swapcase
+unicodeobj-text-bytes-str-twin	proven	Objects/stringlib/ctype.h	
 unicodeobj-text-transform-decimal	proven	Objects/unicodeobject.c	_PyUnicode_TransformDecimalAndSpaceToASCII
 unicodeobj-text-bloom-superset	proven	Objects/unicodeobject.c	make_bloom_mask
 unicodeobj-text-dedent-defined	refuted	Objects/unicodeobject.c	_PyUnicode_Dedent,search_longest_common_leading_whitespace
 unicodeobj-text-dedent-textwrap	refuted	Objects/unicodeobject.c	_PyUnicode_Dedent,search_longest_common_leading_whitespace
-unicodeobj-text-case-tables	proven	Objects/unicodectype.c	gettyperecord,_PyUnicode_ToTitlecase,_PyUnicode_ToUppercase,_PyUnicode_ToLowercase,_PyUnicode_ToLowerFull,_PyUnicode_ToTitleFull,_PyUnicode_ToUpperFull,_PyUnicode_ToFoldedFull
+unicodeobj-text-case-tables	proven	Objects/unicodectype.c	gettyperecord,_PyUnicode_ToTitlecase,_PyUnicode_ToUppercase,_PyUnicode_ToLowercase,_PyUnicode_ToLowerFull,_PyUnicode_ToTitleFull,_PyUnicode_ToUpperFull,_PyUnicode_ToFoldedFull,_PyUnicode_IsCased,_PyUnicode_IsXidStart,_PyUnicode_IsXidContinue
 typeobj-c3-local-precedence	proven	Objects/typeobject.c	tail_contains,pmerge,check_duplicates,mro_implementation_unlocked,mro_implementation
 typeobj-c3-monotonic	proven	Objects/typeobject.c	pmerge,mro_implementation_unlocked,type_mro_impl
 typeobj-c3-monotonic-transitive	proven	Objects/typeobject.c	pmerge,mro_implementation_unlocked,mro_internal_unlocked,mro_internal,mro_invoke

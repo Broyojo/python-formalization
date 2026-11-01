@@ -1,5 +1,6 @@
 import PyLean.Registry
 import PyLean.UnicodeObj.CodecProps
+import PyLean.UnicodeObj.CodecCallbackProps
 
 /-! Registry entries of the codecs slice. -/
 
@@ -69,7 +70,7 @@ def codecEntries : List Entry := [
     source := "invariant: Latin-1 is the first 256 ordinals"
     status := .proven, prop := ``Latin1RoundTrip, thm := some ``latin1RoundTrip_proven },
   { id := "unicodeobj-codec-ucs1-strict-error", pyFile := "Objects/unicodeobject.c"
-    pyFns := []
+    pyFns := ["unicode_encode_ucs1", "raise_encode_exception"]
     statement := "The strict ASCII and Latin-1 encoders report exactly the span from the first unencodable character to the end of the unencodable run."
     source := "invariant: exact error positions"
     status := .proven, prop := ``Ucs1StrictError, thm := some ``ucs1StrictError_proven },
@@ -127,7 +128,43 @@ def codecEntries : List Entry := [
     statement := "surrogateescape round-trips every byte string through decode and encode."
     source := "PEP 383"
     status := .open, prop := ``SurrogateEscapeRoundTrip
-    notes := "Not attempted." }
+    notes := "Not attempted." },
+  { id := "unicodeobj-codec-callback-decode-position", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["unicode_decode_call_errorhandler_writer", "make_decode_exception"]
+    statement := "A decode handler can return any position. What reaches the decoder is inside the object as the handler left it, and a negative one counts from that object's end, for every handler, stateful or not."
+    source := "invariant: no out-of-bounds read; codecs.register_error docs"
+    status := .proven, prop := ``DecodeCallbackPosition, thm := some ``decodeCallbackPosition_proven }
+,
+  { id := "unicodeobj-codec-callback-encode-position", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["unicode_encode_call_errorhandler", "make_encode_exception"]
+    statement := "The same for an encode handler, whose object cannot change."
+    source := "invariant: no out-of-bounds read; codecs.register_error docs"
+    status := .proven, prop := ``EncodeCallbackPosition, thm := some ``encodeCallbackPosition_proven }
+,
+  { id := "unicodeobj-codec-wide-std-callback", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["PyUnicode_DecodeUTF16Stateful", "PyUnicode_DecodeUTF32Stateful", "unicode_decode_call_errorhandler_writer"]
+    statement := "A standard handler reached through the callback path, which is the only path C has for UTF-16 and UTF-32, gives what the ErrHandler shortcut gives, and that shortcut is the decoder the round trips are proved over."
+    source := "invariant: a handler's name does not change what it does"
+    status := .proven, prop := ``WideStdIsCallback, thm := some ``wideStdIsCallback_proven }
+,
+  { id := "unicodeobj-codec-ascii-constant-handler", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["unicode_decode_call_errorhandler_writer"]
+    statement := "With a handler that writes a fixed text and resumes after the error, ASCII decoding keeps every byte under 128 and calls the handler once per other byte, for every input."
+    source := "codecs.register_error docs"
+    status := .proven, prop := ``AsciiConstantHandler, thm := some ``asciiConstantHandler_proven }
+,
+  { id := "unicodeobj-codec-ucs1-inline-callback", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["unicode_encode_ucs1", "unicode_encode_call_errorhandler"]
+    statement := "The inline replace, ignore, backslashreplace and xmlcharrefreplace of the ASCII and Latin-1 encoders give what the same handlers give through the callback path, for every string."
+    source := "invariant: fast path vs generic path"
+    status := .proven, prop := ``Ucs1InlineMatchesCallback, thm := some ``ucs1InlineMatchesCallback_proven }
+,
+  { id := "unicodeobj-codec-surrogateescape-error-span", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["unicode_encode_ucs1"]
+    statement := "The inline surrogateescape of the ASCII and Latin-1 encoders also matches the callback path, error span included."
+    source := "invariant: fast path vs generic path"
+    status := .refuted, prop := ``Ucs1SurrogateEscapeMatchesCallback, thm := some ``ucs1SurrogateEscapeMatchesCallback_refuted
+    bug := some "unicodeobj-codec-surrogateescape-error-span" }
 ]
 
 end PyLean.UnicodeObj

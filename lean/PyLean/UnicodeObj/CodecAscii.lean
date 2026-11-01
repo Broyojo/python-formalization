@@ -19,7 +19,7 @@ def unencodableRun (limit : Nat) : List Nat → List Nat
   | [] => []
   | c :: cs => if c ≥ limit then c :: unencodableRun limit cs else []
 
-/-- `surrogateescape`'s test, unicodeobject.c:7461-7468. -/
+/-- `surrogateescape`'s test, unicodeobject.c:7468-7481. -/
 def isEscapedByte (c : Nat) : Bool := decide (0xdc80 ≤ c) && decide (c ≤ 0xdcff)
 
 /-- The longest prefix `surrogateescape` can write. -/

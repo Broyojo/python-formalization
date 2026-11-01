@@ -46,8 +46,7 @@ def formatEntries : List Entry := [
     pyFns := ["_PyUnicode_InsertThousandsGrouping"]
     statement := "With no padding, dropping the separator from the grouped text gives the digits back, and the count is the text's length."
     source := "invariant: format spec mini-language"
-    status := .open, prop := ``GroupDigits
-    notes := "Needs an induction over groupLoop with remaining and min_width; not done." },
+    status := .proven, prop := ``GroupDigits, thm := some ``groupDigits_proven },
   { id := "unicodeobj-format-percent-int-fast-slow", pyFile := "Objects/unicodeobject.c"
     pyFns := []
     statement := "With no precision, _PyUnicode_FormatLong gives what the fast path _PyLong_FormatWriter writes, for %d, %o and %x, with or without #, for every int."
@@ -67,22 +66,49 @@ def formatEntries : List Entry := [
     status := .proven, prop := ``ParseNumberSplit, thm := some ``parseNumberSplit_proven },
   { id := "unicodeobj-format-float-internal", pyFile := "Python/formatter_unicode.c"
     pyFns := ["format_float_internal"]
-    statement := "format(x, spec) for a float gives the digits of PyOS_double_to_string laid out by the spec: width, fill, alignment, sign, grouping and the fraction group; and its shortcut for a plain spec agrees with the general path."
+    statement := "For every float and every spec with no separator, format(x, spec) is the buffer of PyOS_double_to_string with the sign the spec asks for and the padding of its width, fill and alignment."
     source := "format spec mini-language, Doc/library/string.rst"
-    status := .open, prop := ``PendingBinary64
-    notes := "Mirror in FormatNumber.lean; statement next." },
+    status := .proven, prop := ``FloatSpecLayout, thm := some ``floatSpecLayout_proven },
+  { id := "unicodeobj-format-float-fast-slow", pyFile := "Python/formatter_unicode.c"
+    pyFns := ["format_float_internal"]
+    statement := "The fast path of format_float_internal gives what the general path gives, for every float and every spec that takes it."
+    source := "invariant: fast path vs slow path"
+    status := .proven, prop := ``FloatFastSlowAgree, thm := some ``floatFastSlowAgree_proven },
+  { id := "unicodeobj-format-float-width", pyFile := "Python/formatter_unicode.c"
+    pyFns := ["format_float_internal", "calc_number_widths", "fill_number"]
+    statement := "format(x, spec) is at least width characters long, for every float and every spec, separators included."
+    source := "format spec docs: width is the minimum total field width"
+    status := .proven, prop := ``FloatWidthIsMinimum, thm := some ``floatWidthIsMinimum_proven },
+  { id := "unicodeobj-format-int-width", pyFile := "Python/formatter_unicode.c"
+    pyFns := ["format_long_internal", "calc_number_widths", "fill_number"]
+    statement := "format(n, spec) is at least width characters long, for every int and every spec, on the prefix path of '#x' and for the 'c' type."
+    source := "format spec docs: width is the minimum total field width"
+    status := .proven, prop := ``IntWidthIsMinimum, thm := some ``intWidthIsMinimum_proven },
+  { id := "unicodeobj-format-float-grouping", pyFile := "Python/formatter_unicode.c"
+    pyFns := ["_PyUnicode_InsertThousandsGrouping", "InsertThousandsGrouping_fill", "GroupGenerator_next"]
+    statement := "Adding ',' or '_' to the integer part, the fraction or both changes a float's text only by the separators, including '.3_f', where the integer loop runs with an empty separator."
+    source := "invariant: a separator only separates"
+    status := .proven, prop := ``FloatGroupingOnlyInserts, thm := some ``floatGroupingOnlyInserts_proven },
   { id := "unicodeobj-format-complex-internal", pyFile := "Python/formatter_unicode.c"
     pyFns := ["format_complex_internal"]
-    statement := "format(z, spec) for a complex lays out the real and imaginary parts by the spec, with the parentheses of the empty type."
+    statement := "With a presentation type, format(z, spec) is format(z.real, spec) + format(z.imag, '+' + spec) + 'j' with the padding of the spec."
     source := "format spec mini-language, Doc/library/string.rst"
-    status := .open, prop := ``PendingBinary64
-    notes := "Waits on lean/PyLean/Binary64/. Only the dispatch and the three early checks are modelled." },
+    status := .proven, prop := ``ComplexPartsCompose, thm := some ``complexPartsCompose_proven },
+  { id := "unicodeobj-format-complex-repr", pyFile := "Python/formatter_unicode.c"
+    pyFns := ["format_complex_internal"]
+    statement := "A spec with no type, precision or option gives str(z): format_complex_internal and complex_repr drop the real part and add the parentheses under the same rule, for every complex, nan and -0.0 included."
+    source := "format() docs; invariant: format vs repr"
+    status := .proven, prop := ``ComplexOmittedTypeIsRepr, thm := some ``complexOmittedTypeIsRepr_proven },
+  { id := "unicodeobj-format-complex-width", pyFile := "Python/formatter_unicode.c"
+    pyFns := ["format_complex_internal"]
+    statement := "format(z, spec) is at least width characters long, for every complex and every spec."
+    source := "format spec docs: width is the minimum total field width"
+    status := .proven, prop := ``ComplexWidthIsMinimum, thm := some ``complexWidthIsMinimum_proven },
   { id := "unicodeobj-format-percent-float", pyFile := "Objects/unicodeobject.c"
     pyFns := ["formatfloat"]
-    statement := "'%e' % x, '%f' % x and '%g' % x agree with format(x, 'e'), format(x, 'f') and format(x, 'g'), flags included."
+    statement := "A %e, %f or %g directive gives the text of format() with the matching spec, for every float, flag, width and precision: unicode_format_arg_output and calc_number_widths agree on the layout."
     source := "invariant: % vs format"
-    status := .open, prop := ``PendingBinary64
-    notes := "Waits on lean/PyLean/Binary64/. The type errors for str and None are modelled." },
+    status := .proven, prop := ``PercentFloatMatchesFormat, thm := some ``percentFloatMatchesFormat_proven },
   { id := "unicodeobj-format-percent-no-directive", pyFile := "Objects/unicodeobject.c"
     pyFns := []
     statement := "A format with no % gives itself for an empty tuple, and raises 'not all arguments converted' for a non-empty one."

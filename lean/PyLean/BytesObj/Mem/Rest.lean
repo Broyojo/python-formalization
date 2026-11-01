@@ -245,7 +245,7 @@ exporter's buffer has full information. -/
 def NewFromExporter : Prop :=
   ∀ (st : St) (b : Buf) (n d : Int) (f : List Char),
     b.ndim = 1 → b.shape = some [n] → b.strides = some [d] → b.suboffsets = none → b.format = some f →
-    let r := memoryviewNew (.exporter b none) st
+    let r := memoryviewNew (.exporter (.val b) none) st
     let i := st.mvs.length
     let k := st.mbufs.length
     r.1 = .ok i ∧ (r.2.mv i).view = b ∧ (r.2.mv i).mbuf = k ∧ (r.2.mb k).exports = 1 ∧
@@ -298,9 +298,9 @@ theorem newFromExporter_proven : NewFromExporter := by
   have hlen : st2.mbufs.length = st.mbufs.length + 1 := by
     rw [hst2]
     simp [St.setMb]
-  have e : memoryviewNew (.exporter b none) st = mbufAddView st.mbufs.length (some b) st2 := by
+  have e : memoryviewNew (.exporter (.val b) none) st = mbufAddView st.mbufs.length (some b) st2 := by
     simp only [memoryviewNew, memoryViewFromObject, memoryViewFromObjectAndFlags, M.bind_app, fire,
-      M.pure_app, viewOfExporter, managedBufferFromObject, mbufAlloc, M.lift, hg, M.modify]
+      M.pure_app, viewOfExporter, managedBufferFromObject, mbufAlloc, M.lift, hg, M.modify, Ret.get_val]
     rw [← hst2]
     rw [show (M.onError (mbufAddView st.mbufs.length none) (mbufRelease st.mbufs.length)) st2 =
       mbufAddView st.mbufs.length (some b) st2 from ?_]

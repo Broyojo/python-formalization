@@ -491,30 +491,6 @@ def typeReady (rt : Rt) (t : Addr) (members getsets : List Name) : M Unit := do
   for b in (tdata w t).bases do
     addSubclass b t
 
-/-- `_PyErr_FormatNote` / `_PyException_AddNote`, `Objects/exceptions.c:4574`: append a
-note to the exception and re-raise. -/
-def raiseWithNote {α : Type} (e : PyErr) (note : String) : M α := do
-  let x ← excObject e
-  let w ← getW
-  match x, payloadOf w x with
-  | .obj a, some (.exc d) =>
-    let noteList ← match d.notes with
-      | some nl => pure nl
-      | none => alloc B.list (.list [])
-    let w ← getW
-    match noteList with
-    | .obj l =>
-      modObj l fun o => { o with body := .list (((listOf w noteList).getD []) ++ [.str note]) }
-    | _ => pure ()
-    modObj a fun o =>
-      match o.body with
-      | .exc d => { o with body := .exc { d with notes := some noteList } }
-      | _ => o
-    raise (match e with
-      | .exc c m _ => .exc c m (some x)
-      | .fuel => .fuel)
-  | _, _ => raise e
-
 /-- The `while` of `type_new_set_names`, `Objects/typeobject.c:11541`. -/
 def typeNewSetNamesLoop (rt : Rt) (t : Addr) : NameDict → M Unit
   | [] => pure ()
@@ -524,7 +500,7 @@ def typeNewSetNamesLoop (rt : Rt) (t : Addr) : NameDict → M Unit
     | some setName =>
       let _ ← tryM (rt.call setName [.obj t, .str key] []) fun e => do
         let w ← getW
-        raiseWithNote e s!"Error calling __set_name__ on '{trunc 100 (typeName w value)}' instance {reprStr key} in '{trunc 100 (tpName w t)}'"
+        raiseWithNote rt e s!"Error calling __set_name__ on '{trunc 100 (typeName w value)}' instance {reprStr key} in '{trunc 100 (tpName w t)}'"
       typeNewSetNamesLoop rt t rest
 
 /-- `type_new_set_names`, `Objects/typeobject.c:11531`. -/
@@ -608,7 +584,7 @@ def typeNew (rt : Rt) (metatype : Addr) (args : List Val) (kwds : Kw) : M Val :=
       match p.1 with
       | .str k => some (k, p.2)
       | _ => none
-    if orig.length != es.length then unmodelled
+    if orig.length != es.length then gap%
     let ctx : TypeNewCtx := { metatype, args, kwds, name, bases }
     match ← typeNewGetBases rt ctx with
     | .inl r => pure r
@@ -721,7 +697,7 @@ def objectSetClass (self : Val) (value : Option Val) : M Unit := do
           match w.get a with
           | .val o => w.setCell a (.val { o with cls := newto })
           | .ty _ d => w.setCell a (.ty newto d)
-      | _ => unmodelled
+      | _ => gap%
 
 /-- `mro_hierarchy_for_complete_type`, `Objects/typeobject.c:1724`: recompute the MRO of
 `t` and its subclasses, recording old MROs for undo. -/

@@ -1,0 +1,86 @@
+id: bytecode-anext-default-restarts-await
+title: "anext(aiter, default): awaiting the result restarts __await__ on every resume, so a custom awaitable from __anext__ never finishes (3.14 only; fixed on main)"
+priority: P3
+kind: behaviour-mismatch
+module: bytecode
+files: [Objects/iterobject.c]
+functions: ["anextawaitable_getiter", "anextawaitable_iternext", "PyAnextAwaitable_New", "_PyEval_GetANext"]
+summary: |
+  `anext(aiter, default)` wraps `aiter.__anext__()` in an `anextawaitableobject` so that a
+  `StopAsyncIteration` can be turned into the default (Objects/iterobject.c:369-407). Each time
+  the awaitable is resumed, `anextawaitable_iternext` calls `anextawaitable_getiter` (lines
+  339-367), which calls `_PyCoro_GetAwaitableIter(obj->wrapped)` *again* -- it re-invokes
+  `__await__` on the wrapped object and makes a fresh iterator -- and then steps that fresh
+  iterator once and throws it away. When `__anext__` returns a plain custom awaitable (an object
+  with a multi-step `__await__`, not a coroutine), every `send` restarts `__await__` from the top
+  and only ever runs its first step, so `await anext(a, d)` never terminates. With a native
+  coroutine from `__anext__` it happens to work because resuming the coroutine is idempotent in
+  the relevant sense.
+likelihood: |
+  Low. It needs `anext()` called *with* a default (the no-default `anext` does not wrap) on an
+  async iterator whose `__anext__` returns a non-coroutine awaitable. Most `__anext__` are
+  `async def`, which return coroutines, so the bug is masked. It is fixed on main.
+maybe_intended: |
+  No. `await anext(a, d)` is documented to behave like `await a.__anext__()` except for
+  substituting the default on `StopAsyncIteration`; restarting `__await__` each resume contradicts
+  that. The fix on main confirms it was unintended.
+reproducer: |
+  class Aw:
+      calls = 0
+      def __await__(self):
+          Aw.calls += 1
+          yield 1
+          yield 2
+          return 'done'
+  class A:
+      def __anext__(self):
+          return Aw()
+  async def direct():
+      return await Aw()
+  async def via_anext():
+      return await anext(A(), 'default')
+  def drive(c, limit=8):
+      seen = []
+      try:
+          for _ in range(limit):
+              seen.append(c.send(None))
+      except StopIteration as e:
+          return seen, e.value
+      c.close()
+      return seen, 'did not finish'
+  d, dcalls = drive(direct()), Aw.calls
+  Aw.calls = 0
+  v, vcalls = drive(via_anext()), Aw.calls
+  print('direct', d, dcalls)
+  print('anext ', v, vcalls)
+  if d == ([1, 2], 'done') and dcalls == 1 and v == ([1] * 8, 'did not finish') and vcalls == 8:
+      print('REPRODUCED bytecode-anext-default-restarts-await')
+expected: |
+  `await anext(a, d)` drives `a.__anext__().__await__()` to completion, yielding 1 then 2 and
+  returning 'done', calling `__await__` once -- exactly like `await a.__anext__()`.
+observed: |
+  python3 3.14.7: direct ([1, 2], 'done') with 1 __await__ call; anext ([1,1,1,1,1,1,1,1],
+  'did not finish') with 8 __await__ calls. REPRODUCED.
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): both give ([1, 2], 'done') with 1 call; NOT
+  reproduced -- fixed upstream after 3.14.7.
+promised_by: |
+  Doc/library/functions.rst (anext): "Return the next item from the ... async iterator. If default
+  is given, it is returned if the iterator is exhausted". The wrapper must await the single
+  underlying awaitable, not restart it.
+cause: |
+  Objects/iterobject.c:392-398: `anextawaitable_iternext` recreates the iterator through
+  `anextawaitable_getiter` (339-367), which calls `_PyCoro_GetAwaitableIter(obj->wrapped)` on each
+  step, so a non-coroutine awaitable's `__await__` is restarted and only its first step ever runs.
+possible_fix: |
+  Build the underlying iterator once (in `PyAnextAwaitable_New`, or lazily and cache it) and step
+  that same iterator on each resume, as main now does.
+duplicates:
+  issues:
+    - {number: 128078, state: closed, relation: related, reason: "anext default-tuple SystemError, a different anext-default bug"}
+    - {number: 87917, state: closed, relation: related, reason: "await anext() returns None when default given; older, different"}
+  queries: ["anext default __await__", "anext default awaitable restart", "anextawaitable",
+            "anext default infinite loop", "builtin anext default custom awaitable"]
+  note: "Appears fixed on main; file against 3.14 only, or close as already-fixed."
+lean:
+  property: PyLean.Bytecode.IterObj.AnextAwaitsOnce
+  theorem: PyLean.Bytecode.IterObj.anextAwaitsOnce_refuted
