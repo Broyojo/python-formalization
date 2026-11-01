@@ -107,7 +107,7 @@ theorem cEnc_list_view {cfg : ECfg} {f lvl : Nat} {seen : List Nat} {xs : List E
   cases hi : cfg.indent with
   | none =>
     simp only [hi] at h
-    cases hb : cEncList cfg f lvl cfg.itemSep 0 xs with
+    cases hb : cEncList cfg f lvl seen cfg.itemSep 0 xs with
     | error e => rw [hb] at h; cases h
     | ok body =>
       rw [hb] at h
@@ -609,7 +609,7 @@ theorem dec_enc (cfg : ECfg) (dcfg : DCfg) (s : PStr) (hL : Layout cfg) (hR : dc
       simp only
       have hd1 := drop_after hs2
       obtain ⟨a, c, hsp, ha, hc⟩ := hL.key
-      generalize hR : t ++ (body ++ (post ++ 125 :: rest)) = RR at hd1
+      generalize hRg : t ++ (body ++ (post ++ 125 :: rest)) = RR at hd1
       have hd2 : s.drop (q + (cStrEnc cfg ks).length) = a ++ 58 :: (c ++ RR) := by
         rw [hd1, hsp]; simp [List.append_assoc]
       have hw : wsEnd s (q + (cStrEnc cfg ks).length) = q + (cStrEnc cfg ks).length + a.length :=
@@ -619,7 +619,7 @@ theorem dec_enc (cfg : ECfg) (dcfg : DCfg) (s : PStr) (hL : Layout cfg) (hR : dc
       have hd4 : s.drop (q + (cStrEnc cfg ks).length + a.length + 1) = c ++ RR := by
         rw [← List.drop_drop, hd3]; simp
       obtain ⟨c0, r0, ht, hhead⟩ := cEnc_head hL hx h1
-      have hRR : RR = c0 :: (r0 ++ (body ++ (post ++ 125 :: rest))) := by rw [← hR, ht]; simp
+      have hRR : RR = c0 :: (r0 ++ (body ++ (post ++ 125 :: rest))) := by rw [← hRg, ht]; simp
       have hw2 : wsEnd s (q + (cStrEnc cfg ks).length + a.length + 1) =
           q + (cStrEnc cfg ks).length + a.length + 1 + c.length :=
         wsEnd_text hd4 hc (by rw [hRR]; simp [wsLen, hhead.not.1])
@@ -629,7 +629,7 @@ theorem dec_enc (cfg : ECfg) (dcfg : DCfg) (s : PStr) (hL : Layout cfg) (hR : dc
       simp only [n1, ↓reduceIte]
       rw [hw2]
       have hd5 := drop_after hd4
-      rw [← hR] at hd5
+      rw [← hRg] at hd5
       have hkl : cfg.keySep.length = a.length + 1 + c.length := by
         rw [hsp]; simp only [List.length_append, List.length_cons]; omega
       rcases items_view cfg hL.cst f lvl seen sep (decV cfg dcfg f) items false body fst hitems hb with

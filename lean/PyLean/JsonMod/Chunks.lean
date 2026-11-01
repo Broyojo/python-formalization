@@ -50,6 +50,11 @@ def pyScalar (cfg : ECfg) : EVal → Option ER
   | .flt b r => some (pyFloatStr cfg b r)
   | _ => none
 
+/-- `if newline_indent is not None: yield newline_indent`, encoder.py:385-386. -/
+def nlChunks : Option PStr → List PStr
+  | some n => [n]
+  | none => []
+
 mutual
 /-- `_iterencode(o, _current_indent_level)`, encoder.py:426-460, inlining the
 opening of `_iterencode_list` and `_iterencode_dict`. -/
@@ -105,6 +110,7 @@ def pyIter (cfg : ECfg) : Nat → Nat → List Nat → EVal → Yield
         match cfg.dflt n t with
         | .error e => yRaise e
         | .ok v' => pyIter cfg f lvl (n :: seen) v'
+termination_by f _ _ v => (f, sizeOf v)
 
 /-- The `for i, value in enumerate(lst)` loop, encoder.py:297-332: a scalar is
 yielded with `buf` in one chunk, a container after `yield buf`. -/
@@ -120,6 +126,7 @@ def pyIterList (cfg : ECfg) : Nat → Nat → List Nat → PStr → PStr → Nat
         | some (.error e) => yRaise e
         | none => yCons buf' (pyIter cfg f lvl seen x)
     yThen item (pyIterList cfg f lvl seen sep buf (i + 1) xs)
+termination_by f _ _ _ _ _ xs => (f, sizeOf xs)
 
 /-- The `for key, value in items` loop, encoder.py:361-418; also returns `first`. -/
 def pyIterItems (cfg : ECfg) : Nat → Nat → List Nat → Option PStr → PStr → Bool → List (EKey × EVal) → Yield × Bool
@@ -129,14 +136,11 @@ def pyIterItems (cfg : ECfg) : Nat → Nat → List Nat → Option PStr → PStr
     | .error e => (yRaise e, first)
     | .ok none => pyIterItems cfg f lvl seen nl sep first xs
     | .ok (some ks) =>
-      let pre : List PStr :=
-        if first then (match nl with
-          | some n => [n]
-          | none => [])
-        else [sep]
+      let pre : List PStr := if first then nlChunks nl else [sep]
       let head : Yield := (pre ++ [pyStrEnc cfg ks, cfg.keySep], none)
       let r := pyIterItems cfg f lvl seen nl sep false xs
       (yThen head (yThen (pyIter cfg f lvl seen x) r.1), r.2)
+termination_by f _ _ _ _ _ items => (f, sizeOf items)
 end
 
 /-- `JSONEncoder.iterencode(o)` (`_one_shot=False`), encoder.py:207-263. -/

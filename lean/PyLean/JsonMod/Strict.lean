@@ -209,7 +209,7 @@ theorem cFind_ctrl_lt : ∀ (strict : Bool) (t : PStr) (k : Nat), cFind strict t
           simp; omega
         | eof => rw [hf] at h; cases h
 
-theorem cLoop_srel (s : PStr) (b : Nat) : ∀ (g e : Nat) (acc : Option PStr),
+theorem cLoop_srel (s : PStr) (b : Int) : ∀ (g e : Nat) (acc : Option PStr),
     SRel s (fun _ => "Invalid control character at") (cScanLoop s true b g e acc) (cScanLoop s false b g e acc) := by
   intro g
   induction g with
@@ -254,7 +254,7 @@ theorem cLoop_srel (s : PStr) (b : Nat) : ∀ (g e : Nat) (acc : Option PStr),
 theorem cStr_srel (s : PStr) (e : Nat) :
     SRel s (fun _ => "Invalid control character at") (cScanstring s e true) (cScanstring s e false) := by
   unfold cScanstring
-  exact SRel.ite _ (fun _ => Or.inl rfl) (fun _ => cLoop_srel s (e - 1) _ _ _)
+  exact SRel.ite _ (fun _ => Or.inl rfl) (fun _ => cLoop_srel s ((e : Int) - 1) _ _ _)
 
 theorem c_srel (cfg : DCfg) (s : PStr) : ∀ n : Nat,
     (∀ idx : Nat, SRel s (fun _ => "Invalid control character at")

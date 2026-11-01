@@ -114,11 +114,9 @@ theorem iterItems_join (cfg : ECfg) (f : Nat)
         simp only
         constructor
         · simp only [yRes_then, ih, hrest.1]
-          have hhead : yRes ((if first then (match nl with
-              | some n => [n]
-              | none => []) else [sep]) ++ [pyStrEnc cfg ks, cfg.keySep], Option.none) =
+          have hhead : yRes ((if first then nlChunks nl else [sep]) ++ [pyStrEnc cfg ks, cfg.keySep], Option.none) =
               .ok ((if first then nl.getD [] else sep) ++ pyStrEnc cfg ks ++ cfg.keySep) := by
-            cases first <;> cases nl <;> simp [yRes]
+            cases first <;> cases nl <;> simp [yRes, nlChunks]
           rw [hhead]
           cases hx : pyEnc cfg f lvl seen x with
           | error e => simp [erThen, Except.map]
@@ -179,12 +177,13 @@ theorem iter_join (cfg : ECfg) : ∀ (f lvl : Nat) (seen : List Nat) (v : EVal),
           | error e => simp [Except.map, erThen, hb]
           | ok b => simp [Except.map, erThen, hb, yRes]
         | some ind =>
-          simp only [yRes_then]
+          simp only [yRes_then, List.append_assoc]
+          generalize cfg.itemSep ++ ([10] ++ rep ind (lvl + 1)) = sep
           rw [hl (lvl + 1) seen _ _ xs 0 (Or.inr hx)]
           simp only [decide_true, ↓reduceIte, Nat.add_sub_cancel, Option.getD_some]
-          cases hb : pyEncList cfg f (lvl + 1) seen (cfg.itemSep ++ ([10] ++ rep ind (lvl + 1))) true xs with
-          | error e => simp [Except.map, erThen, List.append_assoc, hb]
-          | ok b => simp [Except.map, erThen, List.append_assoc, hb, yRes]
+          cases hb : pyEncList cfg f (lvl + 1) seen sep true xs with
+          | error e => simp [Except.map, erThen]
+          | ok b => simp [Except.map, erThen, yRes]
     | dict kvs =>
       simp only [pyIter, pyEnc]
       by_cases hx : kvs = []
@@ -207,21 +206,20 @@ theorem iter_join (cfg : ECfg) : ∀ (f lvl : Nat) (seen : List Nat) (v : EVal),
               simp [Except.map, erThen, yRes]
         | some ind =>
           simp only [List.append_assoc]
+          generalize cfg.itemSep ++ ([10] ++ rep ind (lvl + 1)) = sep
           cases hs : (if cfg.sortKeys = true then sortItems kvs else Except.ok kvs) with
           | error e => simp [yRes_raise, Except.map]
           | ok items =>
-            have h1 := (hl (lvl + 1) seen (some ([10] ++ rep ind (lvl + 1)))
-              (cfg.itemSep ++ ([10] ++ rep ind (lvl + 1))) items true).1
-            have h2 := (hl (lvl + 1) seen (some ([10] ++ rep ind (lvl + 1)))
-              (cfg.itemSep ++ ([10] ++ rep ind (lvl + 1))) items true).2
+            have h1 := (hl (lvl + 1) seen (some ([10] ++ rep ind (lvl + 1))) sep items true).1
+            have h2 := (hl (lvl + 1) seen (some ([10] ++ rep ind (lvl + 1))) sep items true).2
             simp only [yRes_then, h1]
-            cases hb : pyEncItems cfg f (lvl + 1) seen (some ([10] ++ rep ind (lvl + 1)))
-                (cfg.itemSep ++ ([10] ++ rep ind (lvl + 1))) true items with
+            cases hb : pyEncItems cfg f (lvl + 1) seen (some ([10] ++ rep ind (lvl + 1))) sep true items with
             | error e => simp [Except.map, erThen]
             | ok r =>
               obtain ⟨body, fst⟩ := r
               have := h2 body fst hb
-              cases fst <;> simp [Except.map, erThen, yRes, this]
+              simp only [Except.map, erThen, this, Nat.add_sub_cancel]
+              cases fst <;> simp [yRes]
 
 /-- The chunks of `JSONEncoder.iterencode` join to the result of `encode` with
 the pure-Python encoder, or the generator ends with the same exception. Holds

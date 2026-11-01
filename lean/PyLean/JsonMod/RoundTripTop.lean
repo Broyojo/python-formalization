@@ -325,7 +325,7 @@ theorem decV_toJ (cfg : ECfg) (dcfg : DCfg) (hL : Layout cfg) (hs : cfg.sortKeys
       simp only [EVal.toJ, Option.some.injEq] at hj
       subst hj
       simp only [cEnc] at he
-      simp [decV, decInt, he, hi]
+      simp [decV, decInt, he, parseInt, hi, pyInt_repr he]
     | str x =>
       simp only [EVal.toJ, Option.some.injEq] at hj
       subst hj

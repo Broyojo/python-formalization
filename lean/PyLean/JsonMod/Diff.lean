@@ -21,21 +21,21 @@ open Lean PyLean PyLean.Diff
 
 def encStr (s : PStr) : Json := Json.arr (s.toArray.map toJson)
 
-partial def encJVal (opaque : Bool) : JVal → Json
+partial def encJVal (opq : Bool) : JVal → Json
   | .null => Json.null
   | .bool b => toJson b
   | .int n => Json.mkObj [("int", toJson (toString n))]
   | .str s => Json.mkObj [("s", encStr s)]
   | .hook k t =>
-    if opaque && k != .int then Json.mkObj [("float", toJson (1 : Nat))]
+    if opq && k != .int then Json.mkObj [("float", toJson (1 : Nat))]
     else
       let kn := match k with
         | .float => "float"
         | .int => "int"
         | .const => "const"
       Json.mkObj [("hook", toJson kn), ("t", encStr t)]
-  | .arr xs => Json.arr (xs.toArray.map (encJVal opaque))
-  | .obj kvs => Json.mkObj [("obj", Json.arr (kvs.toArray.map fun (k, v) => Json.arr #[encStr k, encJVal opaque v]))]
+  | .arr xs => Json.arr (xs.toArray.map (encJVal opq))
+  | .obj kvs => Json.mkObj [("obj", Json.arr (kvs.toArray.map fun (k, v) => Json.arr #[encStr k, encJVal opq v]))]
 
 def decStr (j : Json) : Except String PStr := do
   let a ← j.getArr?

@@ -174,7 +174,8 @@ theorem detectEncoding_proven : DetectEncoding := by
       simp [a0]
     | false =>
       simp only [Bool.false_eq_true, ↓reduceIte, List.cons_append, TextEnc.name]
-      have h1 : startsWith (0 :: 0 :: 0 :: a :: (List.flatMap (utf32Enc1 false) (b :: t))) bomU32Be = false := by
+      generalize ([] : List Nat) ++ (utf32Enc1 false b ++ List.flatMap (utf32Enc1 false) t) = R
+      have h1 : startsWith (0 :: 0 :: 0 :: a :: R) bomU32Be = false := by
         simp [startsWith, bomU32Be]
       rw [detect_ge4 0 0 0 a _ h1 (startsWith_false_head (by omega))
         (startsWith_false_head (by omega)) (startsWith_false_head (by omega)) (startsWith_false_head (by omega))]
@@ -403,9 +404,29 @@ theorem encodeBasestringTwins_proven : EncodeBasestringTwins := by
     simp [cPyEncodeBasestring, this]
 
 theorem outOfSsize_false {i : Int} (h0 : 0 ≤ i) (h1 : i ≤ ssizeMax) : outOfSsize i = false := by
-  simp only [ssizeMin, ssizeMax] at h1 ⊢
-  simp only [outOfSsize, ssizeMin, ssizeMax, Bool.or_eq_false_iff, decide_eq_false_iff_not]
-  omega
+  have h2 : ¬ (i < ssizeMin) := by simp only [ssizeMin]; omega
+  have h3 : ¬ (i > ssizeMax) := by omega
+  simp [outOfSsize, h2, h3]
+
+theorem cScanLoop_no_stop (s : PStr) (strict : Bool) (b : Int) :
+    ∀ (g e : Nat) (acc : Option PStr) (i : Int), cScanLoop s strict b g e acc ≠ .error (.stop i) := by
+  intro g
+  induction g with
+  | zero => intro e acc i; simp [cScanLoop, fuelOut]
+  | succ g ih =>
+    intro e acc i h
+    simp only [cScanLoop] at h
+    repeat' split at h
+    all_goals first
+      | (cases h; done)
+      | exact ih _ _ _ h
+
+theorem cScanstring_no_stop (s : PStr) (e : Nat) (strict : Bool) (i : Int) :
+    cScanstring s e strict ≠ .error (.stop i) := by
+  unfold cScanstring
+  split
+  · simp
+  · exact cScanLoop_no_stop _ _ _ _ _ _ _
 
 /-- `scanstring(s, end, strict)`: the C function and `py_scanstring` agree up to
 `ScanTwin` for every `end`. -/
@@ -439,7 +460,7 @@ theorem scanstringTwinsInRange_proven : ScanstringTwinsInRange := by
   · rw [h1, h2]
     rcases he with rfl | ⟨i, rfl, rfl⟩ | ⟨q, ch, hq, hch, rfl, rfl⟩ | ⟨q, ch, hq, hq1, rfl, rfl⟩
     · left; cases pe <;> rfl
-    · left; rfl
+    · exact absurd h2 (cScanstring_no_stop s e strict i)
     · right; left; exact ⟨q, ch, hq, hch, rfl, rfl⟩
     · right; right; exact ⟨q, ch, hq, hq1, rfl, rfl⟩
 
@@ -452,7 +473,7 @@ theorem scannerCallRaw_proven : ScannerCallRaw := by
   intro cfg s idx
   by_cases h : idx < ssizeMin ∨ idx > ssizeMax
   · have ho : outOfSsize idx = true := by simpa [outOfSsize] using h
-    simp [rawDecodeC, cScannerCall, h, ho, stopToJde]
+    simp [rawDecodeC, cScannerCall, h, ho, stopToJde, ssizeErr]
   · have ho : outOfSsize idx = false := by simpa [outOfSsize] using h
     by_cases h2 : idx < 0
     · simp [rawDecodeC, cScannerCall, h, ho, h2, stopToJde]
@@ -475,8 +496,7 @@ theorem scannerNew_proven : ScannerNew := by
   refine ⟨?_, ?_⟩
   · simp [scannerNew, scannerAttrs]
   · intro attrs s h
-    have : attrs.contains "strict" = false := by simpa using h
-    simp [scannerNew, this]
+    simp [scannerNew, h]
 
 /-- `c_make_encoder(markers, default, encoder, indent, key_sep, item_sep,
 sort_keys, skipkeys, allow_nan)` as `JSONEncoder.iterencode` calls it

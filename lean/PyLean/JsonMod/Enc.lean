@@ -364,6 +364,7 @@ def pyEnc (cfg : ECfg) : Nat → Nat → List Nat → EVal → ER
         match cfg.dflt n t with
         | .error e => .error e
         | .ok v' => pyEnc cfg f lvl (n :: seen) v'
+termination_by f _ _ v => (f, sizeOf v)
 
 /-- The `for i, value in enumerate(lst)` loop of `_iterencode_list`. -/
 def pyEncList (cfg : ECfg) : Nat → Nat → List Nat → PStr → Bool → List EVal → ER
@@ -375,6 +376,7 @@ def pyEncList (cfg : ECfg) : Nat → Nat → List Nat → PStr → Bool → List
       match pyEncList cfg f lvl seen sep false xs with
       | .error e => .error e
       | .ok rest => .ok ((if first then [] else sep) ++ t ++ rest)
+termination_by f _ _ _ _ xs => (f, sizeOf xs)
 
 /-- The `for key, value in items` loop of `_iterencode_dict`; also returns
 whether nothing was written (`first`). -/
@@ -392,6 +394,7 @@ def pyEncItems (cfg : ECfg) : Nat → Nat → List Nat → Option PStr → PStr 
         match pyEncItems cfg f lvl seen nl sep false xs with
         | .error e => .error e
         | .ok (rest, fst) => .ok (pre ++ pyStrEnc cfg ks ++ cfg.keySep ++ t ++ rest, fst)
+termination_by f _ _ _ _ _ items => (f, sizeOf items)
 end
 
 /-! ### C encoder: `encoder_listencode_obj` and friends, Modules/_json.c:1478-1860 -/
@@ -484,6 +487,7 @@ def cEnc (cfg : ECfg) : Nat → Nat → List Nat → EVal → ER
         match cfg.dflt n t with
         | .error e => .error e
         | .ok v' => cEnc cfg f lvl (n :: seen) v'
+termination_by f _ _ v => (f, sizeOf v)
 
 /-- The item loop of `encoder_listencode_list`, :1817-1832. -/
 def cEncList (cfg : ECfg) : Nat → Nat → List Nat → PStr → Nat → List EVal → ER
@@ -496,6 +500,7 @@ def cEncList (cfg : ECfg) : Nat → Nat → List Nat → PStr → Nat → List E
       match cEncList cfg f lvl seen sep (i + 1) xs with
       | .error e => .error e
       | .ok rest => .ok (pre ++ t ++ rest)
+termination_by f _ _ _ _ xs => (f, sizeOf xs)
 
 /-- The item loop of `encoder_listencode_dict` with `encoder_encode_key_value`
 (:1582-1652); also returns `first`. -/
@@ -518,6 +523,7 @@ def cEncItems (cfg : ECfg) : Nat → Nat → List Nat → PStr → Bool → List
           match cEncItems cfg f lvl seen sep false xs with
           | .error e => .error e
           | .ok (rest, fst) => .ok (pre ++ kt ++ cfg.keySep ++ t ++ rest, fst)
+termination_by f _ _ _ _ items => (f, sizeOf items)
 end
 
 /-- Fuel for one value. -/

@@ -117,7 +117,7 @@ theorem cScan_raw (s : PStr) (strict : Bool) (t rest : PStr)
     unfold pyScanstring
     rw [clampPos_nat hl, loopRaw s strict _ t _ 1 [] rest hlen hok hs]
     exact ok_congr (by simp) (by omega)
-  rcases scanstring_rel s strict 1 (by omega) hl with ⟨v, k, _, h3, h4⟩ | ⟨pe, ce, h3, _, _⟩
+  rcases scanstring_rel s strict 1 hl with ⟨v, k, _, h3, h4⟩ | ⟨pe, ce, h3, _, _⟩
   · rw [hpy] at h3
     simp only [Except.ok.injEq, Prod.mk.injEq] at h3
     obtain ⟨rfl, h5⟩ := h3
