@@ -12,7 +12,7 @@ Modules/_datetimemodule.c	448	458	days_before_month	days_before_month(int year, 
 Modules/_datetimemodule.c	464	473	days_before_year	days_before_year(int year)	todo		
 Modules/_datetimemodule.c	484	564	ord_to_ymd	ord_to_ymd(int ordinal, int *year, int *month, int *day)	modelled	datetime-ordinal-roundtrip,datetime-toordinal-roundtrip	
 Modules/_datetimemodule.c	568	571	ymd_to_ord	ymd_to_ord(int year, int month, int day)	todo		candidates:datetime-ordinal-roundtrip
-Modules/_datetimemodule.c	575	578	weekday	weekday(int year, int month, int day)	todo		
+Modules/_datetimemodule.c	575	578	weekday	weekday(int year, int month, int day)	todo		candidates:calstat-calendar-weekday-cycle,calstat-calendar-weekday-next-day
 Modules/_datetimemodule.c	584	595	iso_week1_monday	iso_week1_monday(int year)	todo		
 Modules/_datetimemodule.c	642	650	check_delta_day_range	check_delta_day_range(int days)	todo		
 Modules/_datetimemodule.c	656	677	check_date_args	check_date_args(int year, int month, int day)	todo		

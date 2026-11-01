@@ -48,7 +48,7 @@ Lib/_pyio.py	831	832	_BufferedIOMixin.seekable	seekable(self)	todo
 Lib/_pyio.py	835	836	_BufferedIOMixin.raw	raw(self)	todo		
 Lib/_pyio.py	839	840	_BufferedIOMixin.closed	closed(self)	todo		
 Lib/_pyio.py	843	844	_BufferedIOMixin.name	name(self)	todo		
-Lib/_pyio.py	847	848	_BufferedIOMixin.mode	mode(self)	todo		
+Lib/_pyio.py	847	848	_BufferedIOMixin.mode	mode(self)	todo		candidates:calstat-statistics-mode-spec
 Lib/_pyio.py	850	851	_BufferedIOMixin.__getstate__	__getstate__(self)	todo		
 Lib/_pyio.py	853	861	_BufferedIOMixin.__repr__	__repr__(self)	todo		
 Lib/_pyio.py	863	865	_BufferedIOMixin._dealloc_warn	_dealloc_warn(self, source)	todo		
@@ -134,7 +134,7 @@ Lib/_pyio.py	1829	1832	FileIO.fileno	fileno(self)	todo
 Lib/_pyio.py	1834	1837	FileIO.isatty	isatty(self)	todo		
 Lib/_pyio.py	1839	1852	FileIO._isatty_open_only	_isatty_open_only(self)	todo		
 Lib/_pyio.py	1855	1857	FileIO.closefd	closefd(self)	todo		
-Lib/_pyio.py	1860	1878	FileIO.mode	mode(self)	todo		
+Lib/_pyio.py	1860	1878	FileIO.mode	mode(self)	todo		candidates:calstat-statistics-mode-spec
 Lib/_pyio.py	1889	1897	TextIOBase.read	read(self, size=-1)	todo		candidates:pyio-bytesio-read-after-seek
 Lib/_pyio.py	1899	1901	TextIOBase.write	write(self, s)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
 Lib/_pyio.py	1903	1905	TextIOBase.truncate	truncate(self, pos=None)	todo		candidates:pyio-truncate-keeps-position

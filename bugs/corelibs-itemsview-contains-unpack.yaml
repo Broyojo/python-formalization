@@ -1,0 +1,73 @@
+id: corelibs-itemsview-contains-unpack
+title: "ItemsView.__contains__ raises for non-pairs and accepts lists, unlike dict_items; set operators inherit the crash"
+priority: P4
+kind: twin-mismatch
+module: corelibs
+files: [Lib/_collections_abc.py, Objects/dictobject.c]
+functions: ["ItemsView.__contains__", "Set.__and__", "Set.__rsub__", "Set.__xor__", "Set.isdisjoint", "Set.__ge__"]
+summary: |
+  DUPLICATE of the open python/cpython#68622; do not file separately. dict_items.__contains__ is False
+  for anything but a 2-tuple. ItemsView.__contains__ runs `key, value = item` outside its try, so a
+  non-iterable raises TypeError, a wrong-length iterable raises ValueError, and ['a', 1] is True. What
+  the old issue does not list is the consequence for the Set mixins, which call __contains__:
+  M.items() & [1, 2], [1, 2] & M.items(), [1, 2] - M.items(), M.items() ^ [1, 2],
+  M.items().isdisjoint([1, 2]) and M.items() >= {1} all raise TypeError, where the dict_items
+  equivalents return. Mappings with a Python ItemsView include os.environ, shelve and UserDict.
+likelihood: |
+  Low to moderate: mixing item views with arbitrary iterables in set operators is unusual, and
+  the failure is a loud TypeError rather than a wrong answer. The ['a', 1] case is a silent True.
+maybe_intended: |
+  No one defends it as intended, but the issue has stayed open since the bpo era: serhiy-storchaka
+  doubted that a fix was worth the code, and devdanzin asked whether it should change after so
+  long. A maintainer would call it a real but tolerated wart.
+reproducer: |
+  from collections.abc import Mapping
+  class M(Mapping):
+      def __init__(self, d):
+          self.d = d
+      def __getitem__(self, k):
+          return self.d[k]
+      def __iter__(self):
+          return iter(self.d)
+      def __len__(self):
+          return len(self.d)
+  def attempt(f):
+      try:
+          return f()
+      except Exception as e:
+          return type(e).__name__
+  d = {'a': 1}
+  cases = [lambda x: 1 in x, lambda x: (1, 2, 3) in x, lambda x: ['a', 1] in x,
+           lambda x: x & [1, 2], lambda x: x.isdisjoint([1, 2]), lambda x: x ^ [1, 2]]
+  builtin = [attempt(lambda c=c: c(d.items())) for c in cases]
+  mixin = [attempt(lambda c=c: c(M(d).items())) for c in cases]
+  print('dict_items', builtin)
+  print('ItemsView ', mixin)
+  if mixin[:3] == ['TypeError', 'ValueError', True] and builtin[:3] == [False, False, False] \
+          and mixin[3:5] == ['TypeError', 'TypeError'] and mixin[5] == 'TypeError':
+      print('REPRODUCED corelibs-itemsview-contains-unpack')
+expected: |
+  The same outcomes as dict_items: False for a non-pair, and set operators that return.
+observed: |
+  python3 3.14.7: ItemsView gives TypeError, ValueError, True, TypeError, TypeError, TypeError where
+  dict_items gives False, False, False and returns from the operators. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): same. REPRODUCED.
+promised_by: |
+  Nothing explicit. Doc/library/collections.abc.rst:169 lists ItemsView with __contains__ among its
+  mixins, without saying how it treats non-pairs. The expectation comes from dict_items.
+cause: |
+  Lib/_collections_abc.py:873 `key, value = item`, before the try at :874. Compare
+  Objects/dictobject.c:6595-6612, whose check at :6602 returns 0 for a non-2-tuple.
+possible_fix: |
+  if not (isinstance(item, tuple) and len(item) == 2):
+      return False
+  key, value = item
+  This is the patch proposed in the issue; serhiy-storchaka objected to the extra check's cost.
+duplicates:
+  issues:
+    - {number: 68622, state: open, relation: "same defect, 'ItemsView.__contains__ does not mimic dict_items'", reason: "duplicate"}
+    - {number: 135312, state: open, relation: "search hit, makes abstract and dunder methods positional-only", reason: "unrelated"}
+  queries: ["ItemsView contains", "ItemsView __contains__", "bugforge README: only sortedcontainers.SortedItemsView, a different library"]
+lean:
+  property: PyLean.CoreLibs.CollAbc.ItemsContainMatchesDictItems
+  theorem: PyLean.CoreLibs.CollAbc.itemsContainMatchesDictItems_refuted

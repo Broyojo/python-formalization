@@ -18,11 +18,11 @@ Lib/annotationlib.py	445	449	_Stringifier.__get_ast	__get_ast(self)	todo
 Lib/annotationlib.py	451	466	_Stringifier.__make_new	__make_new(self, node, extra_names=None)	todo		
 Lib/annotationlib.py	470	471	_Stringifier.__hash__	__hash__(self)	todo		
 Lib/annotationlib.py	473	490	_Stringifier.__getitem__	__getitem__(self, other)	todo		
-Lib/annotationlib.py	492	493	_Stringifier.__getattr__	__getattr__(self, attr)	todo		
+Lib/annotationlib.py	492	493	_Stringifier.__getattr__	__getattr__(self, attr)	todo		candidates:calstat-calendar-module-getattr
 Lib/annotationlib.py	495	509	_Stringifier.__call__	__call__(self, *args, **kwargs)	todo		
 Lib/annotationlib.py	511	512	_Stringifier.__iter__	__iter__(self)	todo		
 Lib/annotationlib.py	514	517	_Stringifier.__repr__	__repr__(self)	todo		
-Lib/annotationlib.py	519	520	_Stringifier.__format__	__format__(self, format_spec)	todo		
+Lib/annotationlib.py	519	520	_Stringifier.__format__	__format__(self, format_spec)	todo		candidates:coll-userstring-format-spec
 Lib/annotationlib.py	522	529	_Stringifier._make_binop	_make_binop(op: ast.AST)	todo		
 Lib/annotationlib.py	547	554	_Stringifier._make_rbinop	_make_rbinop(op: ast.AST)	todo		
 Lib/annotationlib.py	572	584	_Stringifier._make_compare	_make_compare(op)	todo		

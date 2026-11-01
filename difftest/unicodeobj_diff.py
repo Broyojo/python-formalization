@@ -128,7 +128,8 @@ def run_obj_compare(c):
 U8_BYTES = [0, 0x41, 0x7f, 0x80, 0x8f, 0x90, 0x9f, 0xa0, 0xbf, 0xc0, 0xc1, 0xc2, 0xdf, 0xe0, 0xe1, 0xec,
             0xed, 0xee, 0xef, 0xf0, 0xf1, 0xf3, 0xf4, 0xf5, 0xff]
 DEC_HANDLERS = ["strict", "ignore", "replace", "surrogateescape", "backslashreplace", "surrogatepass"]
-ENC_HANDLERS = DEC_HANDLERS + ["xmlcharrefreplace"]
+ENC_HANDLERS = DEC_HANDLERS + ["xmlcharrefreplace", "namereplace"]
+ALL_HANDLERS = ENC_HANDLERS
 ENC_ALPH = [0, 65, 0x7f, 0x80, 0x7ff, 0x800, 0xd7ff, 0xd800, 0xdbff, 0xdc00, 0xdc7f, 0xdc80, 0xdcff,
             0xdd00, 0xdfff, 0xe000, 0xffff, 0x10000, 0x10ffff]
 
@@ -146,13 +147,61 @@ def u8_bytes(rng):
 @gen("codec", 5)
 def gen_codec_decode(rng):
     fn = rng.choice(["codec_utf8_decode", "codec_utf8_stateful"])
-    return {"mod": "unicodeobj", "fn": fn, "b": u8_bytes(rng), "errors": rng.choice(DEC_HANDLERS)}
+    return {"mod": "unicodeobj", "fn": fn, "b": u8_bytes(rng), "errors": rng.choice(ALL_HANDLERS)}
 
 
 @gen("codec", 3)
 def gen_codec_encode(rng):
     s = [rng.choice(ENC_ALPH) for _ in range(rng.randint(0, 5))]
     return {"mod": "unicodeobj", "fn": "codec_utf8_encode", "s": s, "errors": rng.choice(ENC_HANDLERS)}
+
+
+def wide_bytes(rng, width):
+    out = []
+    for _ in range(rng.randint(0, 5)):
+        r = rng.random()
+        if r < 0.15:
+            out += [rng.choice([0, 0x41, 0x80, 0xd8, 0xdc, 0xff]) for _ in range(rng.randint(1, width))]
+        else:
+            c = rng.choice([0, 0x41, 0xe9, 0xd7ff, 0xd800, 0xdbff, 0xdc00, 0xdfff, 0xe000, 0xfeff,
+                            0xfffe, 0xffff, 0x10000, 0x10ffff, 0x110000, 0xfffffffe])
+            n = c.to_bytes(4, "little")[:width] if width == 2 else c.to_bytes(4, "little")
+            out += list(n if rng.random() < 0.5 else n[::-1])
+    return out
+
+
+WIDE_NAMES = {2: "utf-16", 4: "utf-32"}
+WIDE_DEC = {(2, 0): "utf_16_decode", (2, -1): "utf_16_le_decode", (2, 1): "utf_16_be_decode",
+            (4, 0): "utf_32_decode", (4, -1): "utf_32_le_decode", (4, 1): "utf_32_be_decode"}
+
+
+@gen("codec", 5)
+def gen_codec_wide_decode(rng):
+    width = rng.choice([2, 4])
+    return {"mod": "unicodeobj", "fn": "codec_wide_decode", "width": width, "bo": rng.choice([-1, 0, 1]),
+            "b": wide_bytes(rng, width), "errors": rng.choice(ALL_HANDLERS),
+            "final": rng.random() < 0.7}
+
+
+@gen("codec", 4)
+def gen_codec_wide_encode(rng):
+    s = [rng.choice(ENC_ALPH) for _ in range(rng.randint(0, 5))]
+    return {"mod": "unicodeobj", "fn": "codec_wide_encode", "width": rng.choice([2, 4]),
+            "bo": rng.choice([-1, 0, 1]), "s": s, "errors": rng.choice(ALL_HANDLERS)}
+
+
+@run("codec_wide_decode")
+def run_codec_wide_decode(c):
+    import codecs
+    f = getattr(codecs, WIDE_DEC[c["width"], c["bo"]])
+    s, n = f(bytes(c["b"]), c["errors"], c["final"])
+    return [cps_of(s), n]
+
+
+@run("codec_wide_encode")
+def run_codec_wide_encode(c):
+    suffix = {-1: "-le", 0: "", 1: "-be"}[c["bo"]]
+    return list(s_of(c["s"]).encode(WIDE_NAMES[c["width"]] + suffix, c["errors"]))
 
 
 @run("codec_utf8_decode")
@@ -606,6 +655,50 @@ def run_text_sweep(c):
 # ==== end text slice ====
 
 
+# The size cap. The model builds its output as a list, so a case that asks for a huge result
+# (a large width, a large repeat) can take hundreds of GB in pydiff, where CPython would raise
+# MemoryError at once. Every generated case passes through size_ok, and one that could
+# produce more than SIZE_CAP characters is dropped. Numbers above sys.maxsize stay in: they fail
+# the conversion to Py_ssize_t, which is the behaviour being tested.
+SIZE_CAP = 1 << 20
+
+
+def number_ok(v):
+    return abs(v) <= SIZE_CAP or abs(v) > sys.maxsize
+
+
+def digit_runs(s):
+    """The values of the runs of decimal digits in s, with whether a '.' precedes each."""
+    runs, cur, dotted = [], "", False
+    for i, ch in enumerate(s + " "):
+        if unicodedata.decimal(ch, None) is not None:
+            if not cur:
+                dotted = i > 0 and s[i - 1] == "."
+            cur += ch
+        elif cur:
+            runs.append((int(cur), dotted))
+            cur = ""
+    return runs
+
+
+def size_ok(c):
+    fn = c["fn"]
+    if fn == "obj_repeat":
+        n, length = c["n"], len(c["s"])
+        return n <= 0 or length * n <= SIZE_CAP or (length > 0 and length * n > sys.maxsize)
+    if fn in ("fmt_int", "fmt_str", "fmt_float", "fmt_complex"):
+        # A precision here never pads: it cuts a str, and it is an error for an int.
+        return all(number_ok(v) for v, dotted in digit_runs(s_of(c["spec"])) if not dotted)
+    if fn == "fmt_percent":
+        fmt = s_of(c["fmt"])
+        if not all(number_ok(v) for v, _ in digit_runs(fmt)):
+            return False
+        items = c["args"].get("items", [c["args"].get("item")])
+        ints = [pct_dec(o) for o in items if c["args"]["k"] == "tuple" and o["t"] == "int"]
+        return "*" not in fmt or all(number_ok(v) for v in ints)
+    return True
+
+
 active = [(w, f) for s, w, f in GENS if SLICE in (None, s)]
 pending = [c for s, c in ONCE if SLICE in (None, s)]
 total_weight = sum(w for w, _ in active)
@@ -618,8 +711,11 @@ def gen_case(rng):
     for w, f in active:
         r -= w
         if r <= 0:
-            return f(rng)
-    return active[-1][1](rng)
+            c = f(rng)
+            break
+    else:
+        c = active[-1][1](rng)
+    return c if c is None or size_ok(c) else None
 
 
 def run_python(case):

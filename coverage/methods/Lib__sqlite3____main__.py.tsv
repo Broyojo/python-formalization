@@ -2,4 +2,4 @@ file	line	endline	name	signature	status	entry	note
 Lib/sqlite3/__main__.py	15	34	execute	execute(c, sql, suppress_errors=True)	todo		
 Lib/sqlite3/__main__.py	40	43	SqliteInteractiveConsole.__init__	__init__(self, connection)	todo		
 Lib/sqlite3/__main__.py	45	70	SqliteInteractiveConsole.runsource	runsource(self, source, filename='<input>', symbol='single')	todo		
-Lib/sqlite3/__main__.py	73	135	main	main(*args)	todo		
+Lib/sqlite3/__main__.py	73	135	main	main(*args)	todo		candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output

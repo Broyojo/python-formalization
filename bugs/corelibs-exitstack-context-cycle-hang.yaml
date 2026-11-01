@@ -1,0 +1,131 @@
+id: corelibs-exitstack-context-cycle-hang
+title: "ExitStack can create a __context__ cycle that nested with statements cannot, and its own while 1 loop then never ends"
+priority: P3
+kind: hang
+module: corelibs
+files: [Lib/contextlib.py]
+functions: ["ExitStack.__exit__", "AsyncExitStack.__aexit__"]
+summary: |
+  `_fix_exception_context` (Lib/contextlib.py:578-590) has two related defects.
+
+  1. It assigns `new_exc.__context__ = old_exc` without checking that `new_exc` is not already in
+  the chain of `old_exc`. A callback that re-raises an exception from the chain of the current one
+  then closes a cycle, with no `__context__` assignment in user code: `B -> A -> B`. The equivalent
+  nested `with` statements give `B -> A`, because `_PyErr_SetObject` cuts such a link
+  (Python/errors.c:203-219).
+
+  2. Its `while 1:` walk stops only at `None`, `old_exc` or `frame_exc`. Given an exception whose
+  `__context__` chain is a cycle containing none of those, it never ends. The C code has the same walk
+  and is written not to hang on pre-existing cycles ("while taking care not to hang on pre-existing
+  ones", Python/errors.c:203-205, using Floyd's algorithm since bpo-25782).
+
+  Together: an exception that went through one `ExitStack` makes a later `ExitStack.__exit__` spin at
+  100% CPU if a callback raises that exception while no exception is being handled. `AsyncExitStack.__aexit__` has a copy of the same function.
+likelihood: |
+  Low. It takes a callback that re-raises a saved exception, inside another exception's chain, in a
+  stack with an active exception, and then that exception raised again through a second stack. A
+  cycle set up by hand reaches the hang directly. The usual failure from the first defect alone is a
+  wrong chain, since traceback printing copes with cycles.
+maybe_intended: |
+  No for the hang: the interpreter treats the same situation as a bug (bpo-25782, bpo-25786). The
+  missing cycle cut may be accepted as a limit of emulating the interpreter from Python, but
+  python/cpython#102201 already discusses how far that emulation is from nested `with` statements.
+reproducer: |
+  import contextlib, signal
+  def on_alarm(*_):
+      raise TimeoutError
+  signal.signal(signal.SIGALRM, on_alarm)
+  saved = {}
+  def first(*exc):
+      try:
+          raise KeyError('B')
+      except KeyError as b:
+          saved['b'] = b
+          raise ValueError('A')
+  def second(*exc):
+      raise saved['b']
+  try:
+      with contextlib.ExitStack() as stack:
+          stack.push(second)
+          stack.push(first)
+          raise RuntimeError('F')
+  except KeyError as e:
+      got = e
+  chain = []
+  c = got
+  while c is not None and len(chain) < 5:
+      chain.append(type(c).__name__)
+      c = c.__context__
+  print('ExitStack chain:', chain)
+  saved.clear()
+  class CM:
+      def __init__(self, f):
+          self.f = f
+      def __enter__(self):
+          return self
+      def __exit__(self, *exc):
+          self.f(*exc)
+  try:
+      with CM(second):
+          with CM(first):
+              raise RuntimeError('F')
+  except KeyError as e:
+      nested = e
+  chain2 = []
+  c = nested
+  while c is not None and len(chain2) < 5:
+      chain2.append(type(c).__name__)
+      c = c.__context__
+  print('nested with chain:', chain2)
+  def third(*exc):
+      raise got
+  stack = contextlib.ExitStack()
+  stack.push(third)
+  signal.alarm(3)
+  hang = False
+  try:
+      stack.close()
+  except TimeoutError:
+      hang = True
+  except KeyError:
+      pass
+  signal.alarm(0)
+  print('second ExitStack hangs:', hang)
+  if hang and len(chain) == 5 and len(chain2) == 2:
+      print('REPRODUCED corelibs-exitstack-context-cycle-hang')
+expected: |
+  The chain of nested `with` statements, `KeyError -> ValueError`, and `close()` raising `KeyError`.
+observed: |
+  python3 3.14.7: chain KeyError, ValueError, KeyError, ValueError, ... (cycle); nested with gives
+  KeyError, ValueError; the second stack's close() does not return (stopped by the 3 s alarm).
+  REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same. REPRODUCED.
+promised_by: |
+  The comments at Lib/contextlib.py:575-576 ("We manipulate the exception state so it behaves as
+  though we were actually nesting multiple with statements") and :592-593. Not hanging is an
+  invariant, and Python/errors.c:203-205 states it for the same walk.
+cause: |
+  Lib/contextlib.py:578-590, and the copy at :723-735: `while 1` with no bound and no cycle check,
+  and `new_exc.__context__ = old_exc` at :590 and :735 with no check that `old_exc`'s chain reaches
+  `new_exc`.
+possible_fix: |
+  Before the assignment, walk the chain of `old_exc` and cut a link that reaches `new_exc`, as
+  `_PyErr_SetObject` does, and stop the first walk when it revisits a node (Floyd, or a set of ids).
+  The open PR python/cpython#152151 changes how callbacks run when no exception is active; it leaves
+  this function's loop as it is, so it fixes neither defect.
+duplicates:
+  issues:
+    - {number: 69972, state: closed, relation: "same area: bpo-25786, a cycle from an exception that re-enters its own context; fixed by the `exc_context is old_exc` test", reason: "this path gets past that test"}
+    - {number: 69968, state: closed, relation: "same class of bug in C: bpo-25782 hang in PyErr_SetObject on a cyclic context", reason: "C code, fixed; the Python copy has no guard"}
+    - {number: 71309, state: closed, relation: "same area: bpo-27122 hang with ExitStack and subprocess.Popen", reason: "different cause"}
+    - {number: 102201, state: open, relation: "same function: ExitStack loses __context__ with no active exception", reason: "lost context, no cycle or hang"}
+    - {number: 152151, state: open, relation: "PR for 102201", reason: "does not touch the walk"}
+  queries: ["ExitStack cycle", "AsyncExitStack __context__", "contextlib __context__ cycle",
+            "exception __context__ cycle hang", "ExitStack traceback infinite", "ExitStack hang",
+            "ExitStack __context__ cycle", "_fix_exception_context",
+            "bugforge README: no contextlib entries"]
+lean:
+  property: PyLean.CoreLibs.Misc.Contextlib.ExitStackTerminates
+  theorem: PyLean.CoreLibs.Misc.Contextlib.exitStackTerminates_refuted
+  also:
+    - {property: PyLean.CoreLibs.Misc.Contextlib.ExitKeepsContextAcyclic, theorem: PyLean.CoreLibs.Misc.Contextlib.exitKeepsContextAcyclic_refuted}

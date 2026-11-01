@@ -56,4 +56,4 @@ Lib/dis.py	1074	1076	Bytecode.__repr__	__repr__(self)	todo
 Lib/dis.py	1079	1085	Bytecode.from_traceback	from_traceback(cls, tb, *, show_caches=False, adaptive=False)	todo		
 Lib/dis.py	1087	1089	Bytecode.info	info(self)	todo		
 Lib/dis.py	1091	1128	Bytecode.dis	dis(self)	todo		
-Lib/dis.py	1131	1154	main	main(args=None)	todo		
+Lib/dis.py	1131	1154	main	main(args=None)	todo		candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output

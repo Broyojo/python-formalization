@@ -1,0 +1,51 @@
+id: bytesobj-memoryview-cast-format-embedded-nul
+title: "memoryview.cast accepts a format with an embedded NUL: 'B\\0anything' is taken for 'B'"
+priority: P4
+kind: validation
+module: bytesobj
+files: [Objects/memoryobject.c]
+functions: ["cast_to_1D", "get_native_fmtchar", "get_native_fmtstr"]
+summary: |
+  memoryview.cast's format is a str, converted with PyUnicode_AsASCIIString, and then
+  get_native_fmtchar and get_native_fmtstr receive PyBytes_AS_STRING(asciifmt) as a C string. They
+  stop at the first NUL, so memoryview(b'ab').cast('B\0xyz') succeeds with format 'B', although the
+  documented rule is a single native character with an optional '@'. Every other malformed
+  format raises ValueError.
+  Lean: CastWholeFormat is refuted; NativeFormatAgree (the two format functions agree on every
+  string) is proven.
+likelihood: |
+  Very low. It needs a format string with a NUL in it, and the result is a harmless valid cast.
+maybe_intended: |
+  No, but harmless: an instance of the NUL-terminator class of bugs that a maintainer would fix
+  only in passing. It matters only as input validation.
+reproducer: |
+  m = memoryview(b'ab').cast('B\0xyz')
+  print(repr(m.format), m.itemsize)
+  try:
+      memoryview(b'ab').cast('Bxyz')
+      other = 'accepted'
+  except ValueError as e:
+      other = 'ValueError'
+  print('without the NUL:', other)
+  if m.format == 'B' and other == 'ValueError':
+      print('REPRODUCED bytesobj-memoryview-cast-format-embedded-nul')
+expected: |
+  ValueError("memoryview: destination format must be a native single character format prefixed
+  with an optional '@'").
+observed: |
+  python3 3.14.7: 'B' 1; without the NUL: ValueError. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): identical. REPRODUCED.
+promised_by: |
+  The error message at Objects/memoryobject.c:1297; Doc/library/stdtypes.rst, memoryview.cast.
+cause: |
+  Objects/memoryobject.c:1290-1294 and :1314: the length of asciifmt is never compared with
+  strlen(PyBytes_AS_STRING(asciifmt)).
+possible_fix: |
+  In cast_to_1D, raise the same ValueError when strlen(PyBytes_AS_STRING(asciifmt)) !=
+  PyBytes_GET_SIZE(asciifmt).
+duplicates:
+  issues: []
+  queries: ["memoryview.cast embedded null format", "bugforge README: no memoryview entries"]
+lean:
+  property: PyLean.BytesObj.Mem.CastWholeFormat
+  theorem: PyLean.BytesObj.Mem.castWholeFormat_refuted

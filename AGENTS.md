@@ -165,6 +165,8 @@ validation done in the wrong order. Look there first.
 - NEVER create, comment on, or react to GitHub issues/PRs, and never contact
   anyone. `gh search issues --repo python/cpython ...`, `gh issue view` and
   `gh api` GETs are fine. Record every query in the YAML.
+- `gh search issues "two words"` searches for the exact phrase, so an empty
+  result means little. Search with unquoted words, and try several spellings.
 - Check the bugforge list above too; mark duplicates.
 - Fill `priority`, `kind`, `likelihood` (honest), `maybe_intended`,
   `promised_by`, `cause` (with line numbers), `possible_fix`.

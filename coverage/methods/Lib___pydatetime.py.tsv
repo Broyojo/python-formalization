@@ -63,7 +63,7 @@ Lib/_pydatetime.py	1066	1069	date.strptime	strptime(cls, date_string, format)	to
 Lib/_pydatetime.py	1073	1084	date.__repr__	__repr__(self)	todo		
 Lib/_pydatetime.py	1091	1097	date.ctime	ctime(self)	todo		
 Lib/_pydatetime.py	1099	1105	date.strftime	strftime(self, format)	todo		
-Lib/_pydatetime.py	1107	1112	date.__format__	__format__(self, fmt)	todo		
+Lib/_pydatetime.py	1107	1112	date.__format__	__format__(self, fmt)	todo		candidates:coll-userstring-format-spec
 Lib/_pydatetime.py	1114	1123	date.isoformat	isoformat(self)	modelled	datetime-date-isoformat-roundtrip	
 Lib/_pydatetime.py	1129	1131	date.year	year(self)	todo		
 Lib/_pydatetime.py	1134	1136	date.month	month(self)	todo		
@@ -80,7 +80,7 @@ Lib/_pydatetime.py	1198	1203	date._cmp	_cmp(self, other)	todo
 Lib/_pydatetime.py	1205	1209	date.__hash__	__hash__(self)	todo		
 Lib/_pydatetime.py	1213	1220	date.__add__	__add__(self, other)	modelled	datetime-date-add-timedelta	
 Lib/_pydatetime.py	1224	1232	date.__sub__	__sub__(self, other)	todo		candidates:datetime-timedelta-ops-twins
-Lib/_pydatetime.py	1234	1236	date.weekday	weekday(self)	todo		
+Lib/_pydatetime.py	1234	1236	date.weekday	weekday(self)	todo		candidates:calstat-calendar-weekday-cycle,calstat-calendar-weekday-next-day
 Lib/_pydatetime.py	1240	1243	date.isoweekday	isoweekday(self)	todo		
 Lib/_pydatetime.py	1245	1271	date.isocalendar	isocalendar(self)	modelled	datetime-fromisocalendar-exact,datetime-isocalendar-roundtrip	
 Lib/_pydatetime.py	1275	1277	date._getstate	_getstate(self)	todo		
@@ -94,7 +94,7 @@ Lib/_pydatetime.py	1345	1351	tzinfo.__reduce__	__reduce__(self)	todo
 Lib/_pydatetime.py	1356	1357	IsoCalendarDate.__new__	__new__(cls, year, week, weekday, /)	todo		
 Lib/_pydatetime.py	1360	1361	IsoCalendarDate.year	year(self)	todo		
 Lib/_pydatetime.py	1364	1365	IsoCalendarDate.week	week(self)	todo		
-Lib/_pydatetime.py	1368	1369	IsoCalendarDate.weekday	weekday(self)	todo		
+Lib/_pydatetime.py	1368	1369	IsoCalendarDate.weekday	weekday(self)	todo		candidates:calstat-calendar-weekday-cycle,calstat-calendar-weekday-next-day
 Lib/_pydatetime.py	1371	1374	IsoCalendarDate.__reduce__	__reduce__(self)	todo		
 Lib/_pydatetime.py	1376	1378	IsoCalendarDate.__repr__	__repr__(self)	todo		
 Lib/_pydatetime.py	1411	1448	time.__new__	__new__(cls, hour=0, minute=0, second=0, microsecond=0, tzinfo=None, *, fold=0)	todo		
@@ -117,7 +117,7 @@ Lib/_pydatetime.py	1576	1593	time.__repr__	__repr__(self)	todo
 Lib/_pydatetime.py	1595	1610	time.isoformat	isoformat(self, timespec='auto')	todo		
 Lib/_pydatetime.py	1615	1628	time.fromisoformat	fromisoformat(cls, time_string)	modelled	datetime-time-fromiso-twins	
 Lib/_pydatetime.py	1630	1639	time.strftime	strftime(self, format)	todo		
-Lib/_pydatetime.py	1641	1646	time.__format__	__format__(self, fmt)	todo		
+Lib/_pydatetime.py	1641	1646	time.__format__	__format__(self, fmt)	todo		candidates:coll-userstring-format-spec
 Lib/_pydatetime.py	1650	1657	time.utcoffset	utcoffset(self)	todo		
 Lib/_pydatetime.py	1659	1670	time.tzname	tzname(self)	todo		
 Lib/_pydatetime.py	1672	1685	time.dst	dst(self)	todo		
