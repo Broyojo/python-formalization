@@ -1,5 +1,5 @@
 import PyLean.DiffCore
-import PyLean.TextLibs.CsvModel
+import PyLean.TextLibs.CsvSniff
 
 /-! `csv.*` difftest cases; see `difftest/textlibs_diff.py`. Objects arrive as JSON descriptions,
 and the Python side builds real objects from the same description. -/
@@ -159,6 +159,14 @@ def encCtx (c : WCtx) : Json := toJson c.written
 
 def run (fn : String) (j : Json) : Except String Json := do
   match fn with
+  | "csv.sniff" =>
+    let s ← nats (← field j "s")
+    let ds : Option (List Nat) ← match j.getObjVal? "delims" with
+      | .ok .null => pure none
+      | .ok v => pure (some (← nats v))
+      | .error _ => pure none
+    return encPy (fun (r : Sniffed) => Json.mkObj [("d", toJson r.delimiter), ("q", toJson r.quotechar),
+      ("dq", toJson r.doublequote), ("skip", toJson r.skipinitialspace)]) (sniff s ds)
   | "csv.dialect" =>
     let pos ← srcOf j
     return encPy (fun (r : DRes) => Json.mkObj [("d", encDialect r.dialect),

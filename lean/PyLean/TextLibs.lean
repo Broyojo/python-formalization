@@ -5,6 +5,7 @@ import PyLean.TextLibs.BinasciiProps7
 import PyLean.TextLibs.CsvRoundTrip
 import PyLean.TextLibs.ReParseProps
 import PyLean.TextLibs.ReApiProps
+import PyLean.TextLibs.CsvSniffProps
 
 /-!
 Text and binary formats, CPython 3.14.7. `Modules/_struct.c` is modelled in
@@ -565,6 +566,17 @@ def entries : List Entry := [
     prop := ``ScannerAgreesCompile, thm := some ``scannerAgreesCompile_refuted
     bug := some "textlibs-re-scanner-drops-flags"
     notes := "\\w+ on 'é'. The counterexample runs Scanner.__init__ and the first step of Scanner.scan." },
+  { id := "textlibs-csv-sniff-usable", pyFile := "Lib/csv.py", pyFns := ["Sniffer.sniff", "Sniffer._guess_delimiter"]
+    statement := "What sniff returns has a delimiter different from its quotechar, so that reader accepts it."
+    source := "docs: Sniffer.sniff returns a Dialect subclass", status := .refuted
+    prop := ``SniffUsable, thm := some ``sniffUsable_refuted
+    bug := some "textlibs-csv-sniffer-unusable-dialect"
+    notes := "sniff('\\\"'). Fixed on main by a rewrite of Sniffer." },
+  { id := "textlibs-csv-sniff-respects-delimiters", pyFile := "Lib/csv.py"
+    pyFns := ["Sniffer.sniff", "Sniffer._guess_quote_and_delimiter", "Sniffer._guess_delimiter"]
+    statement := "sniff(sample, delimiters) returns a delimiter from delimiters, through both guessers and the preferred fallback."
+    source := "docs: Sniffer.sniff", status := .proven
+    prop := ``SniffRespectsDelimiters, thm := some ``sniffRespectsDelimiters_proven },
   { id := "textlibs-csv-round-trip", pyFile := "Modules/_csv.c"
     pyFns := ["join_reset", "join_append_data", "join_append", "join_append_lineterminator", "csv_writerow_lock_held",
       "csv_writerow", "parse_add_char", "parse_process_char"]

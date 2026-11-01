@@ -1286,8 +1286,25 @@ class CsvArea:
         pool = cls.TEXT if numeric else cls.TEXT + "\xe9€"
         return "".join(r.choice(pool) for _ in range(r.choice([0, 0, 1, 1, 2, 3, 5, 8])))
 
+    SNIFF = ['a', 'b', '1', ',', ';', '\t', ' ', '"', "'", '\n', '\n', '\r\n', '\r', '|', ':', 'x y', '""', '1.5', ',"', '",', ';"',
+             '";', "'\n", "\n'", '\n"', '"\n', ', "', '\xe9', "''", '\\', ', ']
+
+    @classmethod
+    def gen_sniff(cls, r):
+        if r.random() < 0.3:
+            # rows with a common shape, over more than one chunk
+            row = "".join(r.choice(cls.SNIFF) for _ in range(r.randint(1, 8))).replace("\n", "").replace("\r", "")
+            alt = "".join(r.choice(cls.SNIFF) for _ in range(r.randint(1, 8))).replace("\n", "").replace("\r", "")
+            s = "\n".join(r.choice([row, row, row, alt]) for _ in range(r.choice([2, 3, 9, 10, 11, 12, 25])))
+        else:
+            s = "".join(r.choice(cls.SNIFF) for _ in range(r.randint(0, 16)))
+        return {"mod": "textlibs", "fn": "csv.sniff", "s": cps(s),
+                "delims": r.choice([None, None, None, cps(",;"), cps(","), cps("\t"), cps("abc"), cps(":|"), cps('"'), []])}
+
     @classmethod
     def gen(cls, r):
+        if os.environ.get("CSV_SNIFF") == "1" or r.random() < 0.1:
+            return cls.gen_sniff(r)
         fn = r.choice(["dialect", "dialect", "reader", "reader", "reader", "reader", "script", "script", "script", "writer",
                        "writer", "writer", "roundtrip", "roundtrip", "field_size_limit", "registry", "get_dialect", "unpack",
                        "dictreader", "dictwriter", "dictwriterows", "writeheader", "extrasaction", "classvalidate"])
@@ -1483,6 +1500,13 @@ class CsvArea:
         fn = c["fn"].split(".")[1]
         if fn in ("reader", "writer"):
             return in_child(lambda: cls.run_io(c, fn))
+        if fn == "sniff":
+            def sniff_body():
+                ds = c["delims"]
+                d = csv.Sniffer().sniff(txt(c["s"]), None if ds is None else txt(ds))
+                return {"d": cps(d.delimiter), "q": cps(d.quotechar), "dq": bool(d.doublequote),
+                        "skip": bool(d.skipinitialspace)}
+            return common.py_result(sniff_body)
 
         def body():
             ctx = CsvCtx()
