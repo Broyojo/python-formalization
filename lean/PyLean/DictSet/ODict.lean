@@ -379,21 +379,6 @@ def odictInit (args : List (ODictArg K V)) (kwargs : List (K × V)) : OM K V Uni
 /-- `odict_inplace_or` (:924-931). -/
 def odictInplaceOr (other : ODictArg K V) : OM K V Unit := mutablemappingUpdateArg P other
 
-/-- `odict_or` (:897-922): `other` must be a dict (otherwise `NotImplemented`), and the
-result is `type(left)(left)` updated from `right`. -/
-def odictOr (left : ODict K V) (id : Nat) (right : ODictArg K V) : Py (ODict K V) :=
-  let start : ODict K V := odictNew id left.exact
-  let run : OM K V Unit := do
-    mutablemappingUpdateArg P (.keysObj { items := left.nodes.map (·.key) }
-      (fun k => match (pyDictGetItemWithError P true k left.d).1 with
-        | .ok (some v) => .ok v
-        | .ok none => .error (keyErr P k)
-        | .error e => .error e))
-    mutablemappingUpdateArg P right
-  match run start with
-  | (.ok _, r) => .ok r
-  | (.error e, _) => .error e
-
 /-- `OrderedDict.fromkeys` (`OrderedDict_fromkeys_impl`, :957-962): `_PyDict_FromKeys` takes
 the generic branch because `od` is not an exact dict. -/
 def odictFromkeys (id : Nat) (it : Iterable K) (value : V) : Py (ODict K V) :=
@@ -524,6 +509,35 @@ def odictRepr (krepr : K → Py String) (vrepr : V → Py String) (tname : Strin
         match dictRepr krepr vrepr false dcopy with
         | .error e => .error e
         | .ok r => .ok s!"{tname}({r})"
+
+/-- `type(left)(left)`, the first half of `odict_or`: `mutablemapping_update_arg` finds `keys` on
+`left` and walks `left.keys()` with `PyObject_GetItem` (:2305-2333). That is the real iterator, not
+the node list, and the two differ once `left` and its dict disagree. The state is `(left, new)`:
+iterating can rebuild `left`'s `od_fast_nodes`. -/
+def orCopyLoop : Nat → ODict K V → ODictIter K → ODict K V → Py Unit × ODict K V × ODict K V
+  | 0, left, _, new => (.error .modelFuel, left, new)
+  | fuel + 1, left, di, new =>
+    match odictiterIternext P left di with
+    | (.error e, _, left') => (.error e, left', new)
+    | (.ok none, _, left') => (.ok (), left', new)
+    | (.ok (some (key, _)), di', left') =>
+      match dictSubscript P none key left'.d with
+      | (.error e, d') => (.error e, { left' with d := d' }, new)
+      | (.ok v, d') =>
+        match odictSetItem P key v new with
+        | (.error e, new') => (.error e, { left' with d := d' }, new')
+        | (.ok _, new') => orCopyLoop fuel { left' with d := d' } di' new'
+
+/-- `odict_or` (:897-922): `other` must be a dict (otherwise `NotImplemented`), and the
+result is `type(left)(left)` updated from `right`. Also returns `left` afterwards. -/
+def odictOr (left : ODict K V) (id : Nat) (right : ODictArg K V) : Py (ODict K V) × ODict K V :=
+  let fuel := left.nodes.length + left.d.used + 2
+  match orCopyLoop P fuel left (odictiterNew left .key false) (odictNew id left.exact) with
+  | (.error e, left', _) => (.error e, left')
+  | (.ok _, left', new) =>
+    match mutablemappingUpdateArg P right new with
+    | (.ok _, r) => (.ok r, left')
+    | (.error e, _) => (.error e, left')
 
 /-- `OrderedDict___reduce___impl` (:988-1022): the items the pickle will replay. -/
 def odictReduceItems (od : ODict K V) : Py (List (K × Option V)) := odictToList P od .item false

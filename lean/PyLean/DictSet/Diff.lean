@@ -591,7 +591,9 @@ def stepOD (st : St) (name : String) (a : Array Json) : Except String (Option (J
     return some (resJ unitJ (withO st i (odictInplaceOr P (← odArg false st (← arg a 2)))))
   | "o_or" =>
     let (id, st) := fresh st
-    match odictOr P st.ods[i]! id (← odArg false st (← arg a 2)) with
+    let (r, left') := odictOr P st.ods[i]! id (← odArg false st (← arg a 2))
+    let st := { st with ods := st.ods.set! i left' }
+    match r with
     | .ok r => return some (okJ Json.null, { st with ods := st.ods.set! 2 r })
     | .error e => return some (errJ e, st)
   | "o_eq" =>
