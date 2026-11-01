@@ -1,5 +1,5 @@
 import PyLean.DiffCore
-import PyLean.PyGrammar.Lexer.Iter
+import PyLean.PyGrammar.Lexer.Tokenize
 
 /-! Difftest handler for the lexer and tokenize parts: `fn` starts with `lex.`. -/
 
@@ -32,6 +32,16 @@ def handler : Handler := fun fn j =>
       let text : List Nat ← fromJson? (← field j "text")
       let extra ← getBool j "extra"
       return encStream (tokenizeText text extra)
+  else if fn == "lex.untokenize" then
+    some do
+      let text : List Nat ← fromJson? (← field j "text")
+      match untokenize (tokenizeText text true).1 with
+      | some out => return Json.mkObj [("ok", toJson out)]
+      | none => return Json.mkObj [("ok", Json.null)]
+  else if fn == "lex.cookie" then
+    some do
+      let src : List Nat ← fromJson? (← field j "src")
+      return Json.mkObj [("ok", toJson ((pyCookie src).getD (lit "utf-8")))]
   else none
 
 end PyLean.PyGrammar.Lexer

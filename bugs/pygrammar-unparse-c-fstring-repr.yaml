@@ -41,8 +41,8 @@ cause: |
 possible_fix: |
   Escape only the literal parts, and choose the quotes as Unparser._ftstring_helper does.
 tested:
-  python3 (3.14.7): to be recorded
-  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): to be recorded
+  python3 (3.14.7): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
 duplicates:
   issues: []
   queries: ["annotations future f-string unparse backslash"]

@@ -43,6 +43,7 @@ ROWS = {
     "Python__ast_unparse.c": ("astUnparseC", "pygrammar-unparse-c-roundtrip"),
     "Lib__tokenize.py": ("tokenizePy", None),
     "Lib__ast.py": ("astPy", None),
+    "Lib__token.py": ("tokenPy", None),
     "Python__ast.c": ("astC", "pygrammar-check-try-twin"),
     "Python__ast_preprocess.c": ("preprocess", "pygrammar-check-syntax-only-identity"),
 }
@@ -64,11 +65,17 @@ OVERRIDE = {
     ("Lib__tokenize.py", "untokenize"): "pygrammar-lex-untokenize-lossless",
     ("Lib__tokenize.py", "generate_tokens"): "pygrammar-lex-accepts-valid",
     ("Lib__tokenize.py", "_generate_tokens_from_c_tokenizer"): "pygrammar-lex-accepts-valid",
-    ("Lib__tokenize.py", "_transform_msg"): "pygrammar-lex-accepts-valid",
+    ("Lib__tokenize.py", "TokenInfo.exact_type"): "pygrammar-lex-exact-type",
+    ("Lib__token.py", "ISTERMINAL"): "pygrammar-lex-token-predicates",
+    ("Lib__token.py", "ISNONTERMINAL"): "pygrammar-lex-token-predicates",
+    ("Lib__token.py", "ISEOF"): "pygrammar-lex-token-predicates",
     ("Parser__lexer__lexer.c", "tok_nextc"): "pygrammar-lex-nextc-in-buffer",
     ("Parser__lexer__lexer.c", "contains_null_bytes"): "pygrammar-lex-nextc-in-buffer",
     ("Parser__lexer__lexer.c", "set_ftstring_expr"): "pygrammar-lex-debug-text",
     ("Parser__tokenizer__helpers.c", "_PyTokenizer_translate_newlines"): "pygrammar-lex-translate-newlines",
+    ("Parser__tokenizer__helpers.c", "get_normal_name"): "pygrammar-lex-normal-name-twin",
+    ("Parser__tokenizer__helpers.c", "get_coding_spec"): "pygrammar-lex-cookie-twin",
+    ("Parser__tokenizer__helpers.c", "_PyTokenizer_check_coding_spec"): "pygrammar-lex-cookie-twin",
     ("Parser__tokenizer__string_tokenizer.c", "tok_underflow_string"): "pygrammar-lex-nextc-in-buffer",
     ("Parser__tokenizer__utf8_tokenizer.c", "tok_underflow_string"): "pygrammar-lex-nextc-in-buffer",
     ("Python__ast.c", "validate_name"): "pygrammar-check-validate-name",
@@ -99,6 +106,25 @@ OVERRIDE = {
     ("Parser__action_helpers.c", "_PyPegen_concatenate_tstrings"): "pygrammar-peg-concat",
     ("Parser__pegen_errors.c", "_Pypegen_tokenizer_error"): "pygrammar-peg-roundtrip-parser",
     ("Parser__pegen_errors.c", "_Pypegen_raise_decode_error"): "pygrammar-peg-roundtrip-parser",
+}
+
+# Rows with behaviour that no model reaches yet: they stay `todo`.
+LEFT = {
+    ("Parser__tokenizer__helpers.c", "_PyTokenizer_error_ret"),
+    ("Parser__tokenizer__helpers.c", "_PyTokenizer_raise_init_error"),
+    ("Parser__tokenizer__helpers.c", "_PyTokenizer_translate_into_utf8"),
+    ("Parser__tokenizer__helpers.c", "_PyTokenizer_check_bom"),
+    ("Parser__tokenizer__helpers.c", "valid_utf8"),
+    ("Parser__tokenizer__helpers.c", "_PyTokenizer_ensure_utf8"),
+    ("Parser__tokenizer__string_tokenizer.c", "buf_getc"),
+    ("Parser__tokenizer__string_tokenizer.c", "buf_ungetc"),
+    ("Parser__tokenizer__string_tokenizer.c", "buf_setreadl"),
+    ("Parser__tokenizer__string_tokenizer.c", "decode_str"),
+    ("Parser__tokenizer__string_tokenizer.c", "_PyTokenizer_FromString"),
+    ("Parser__pegen.c", "_PyPegen_set_syntax_error_metadata"),
+    ("Parser__pegen.c", "_PyPegen_run_parser_from_file_pointer"),
+    ("Parser__peg_api.c", "_PyParser_ASTFromFile"),
+    ("Parser__peg_api.c", "_PyParser_InteractiveASTFromFile"),
 }
 
 NOBEH = "no-behaviour: "
@@ -161,6 +187,8 @@ def main():
             key = (stem, r["name"])
             if stem == "Parser__parser.c":
                 r.update(status="excluded", entry="", note=GENERATED)
+                continue
+            if key in LEFT:
                 continue
             if key in EXCLUDE:
                 r.update(status="excluded", entry="", note=EXCLUDE[key])

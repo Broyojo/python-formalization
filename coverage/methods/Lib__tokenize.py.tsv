@@ -1,23 +1,23 @@
 file	line	endline	name	signature	status	entry	note
 Lib/tokenize.py	48	51	TokenInfo.__repr__	__repr__(self)	todo		
-Lib/tokenize.py	54	58	TokenInfo.exact_type	exact_type(self)	todo		
+Lib/tokenize.py	54	58	TokenInfo.exact_type	exact_type(self)	modelled	pygrammar-lex-exact-type	
 Lib/tokenize.py	60	60	group	group(*choices)	todo		
 Lib/tokenize.py	61	61	any	any(*choices)	todo		
 Lib/tokenize.py	62	62	maybe	maybe(*choices)	todo		
 Lib/tokenize.py	85	98	_all_string_prefixes	_all_string_prefixes()	todo		
 Lib/tokenize.py	101	102	_compile	_compile(expr)	todo		
-Lib/tokenize.py	167	173	Untokenizer.__init__	__init__(self)	todo		
-Lib/tokenize.py	175	183	Untokenizer.add_whitespace	add_whitespace(self, start)	todo		
-Lib/tokenize.py	185	200	Untokenizer.add_backslash_continuation	add_backslash_continuation(self, start)	todo		
-Lib/tokenize.py	202	223	Untokenizer.escape_brackets	escape_brackets(self, token)	todo		
-Lib/tokenize.py	225	270	Untokenizer.untokenize	untokenize(self, iterable)	todo		
+Lib/tokenize.py	167	173	Untokenizer.__init__	__init__(self)	modelled	pygrammar-lex-untokenize-lossless	
+Lib/tokenize.py	175	183	Untokenizer.add_whitespace	add_whitespace(self, start)	modelled	pygrammar-lex-untokenize-lossless	
+Lib/tokenize.py	185	200	Untokenizer.add_backslash_continuation	add_backslash_continuation(self, start)	modelled	pygrammar-lex-untokenize-lossless	
+Lib/tokenize.py	202	223	Untokenizer.escape_brackets	escape_brackets(self, token)	modelled	pygrammar-lex-untokenize-lossless	
+Lib/tokenize.py	225	270	Untokenizer.untokenize	untokenize(self, iterable)	modelled	pygrammar-lex-untokenize-lossless	
 Lib/tokenize.py	272	323	Untokenizer.compat	compat(self, token, iterable)	todo		
-Lib/tokenize.py	326	344	untokenize	untokenize(iterable)	todo		
-Lib/tokenize.py	347	356	_get_normal_name	_get_normal_name(orig_enc)	todo		
-Lib/tokenize.py	358	454	detect_encoding	detect_encoding(readline)	todo		
+Lib/tokenize.py	326	344	untokenize	untokenize(iterable)	modelled	pygrammar-lex-untokenize-lossless	
+Lib/tokenize.py	347	356	_get_normal_name	_get_normal_name(orig_enc)	modelled	pygrammar-lex-normal-name-twin	
+Lib/tokenize.py	358	454	detect_encoding	detect_encoding(readline)	modelled	pygrammar-lex-cookie-twin	
 Lib/tokenize.py	457	470	open	open(filename)	todo		
 Lib/tokenize.py	472	498	tokenize	tokenize(readline)	todo		
-Lib/tokenize.py	500	506	generate_tokens	generate_tokens(readline)	todo		
+Lib/tokenize.py	500	506	generate_tokens	generate_tokens(readline)	modelled	pygrammar-lex-accepts-valid	
 Lib/tokenize.py	508	569	_main	_main(args=None)	todo		
-Lib/tokenize.py	571	579	_transform_msg	_transform_msg(msg)	todo		
-Lib/tokenize.py	581	594	_generate_tokens_from_c_tokenizer	_generate_tokens_from_c_tokenizer(source, encoding=None, extra_tokens=False)	todo		
+Lib/tokenize.py	571	579	_transform_msg	_transform_msg(msg)	modelled	pygrammar-lex-accepts-valid	
+Lib/tokenize.py	581	594	_generate_tokens_from_c_tokenizer	_generate_tokens_from_c_tokenizer(source, encoding=None, extra_tokens=False)	modelled	pygrammar-lex-accepts-valid	

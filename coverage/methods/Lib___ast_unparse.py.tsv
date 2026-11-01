@@ -1,114 +1,114 @@
 file	line	endline	name	signature	status	entry	note
-Lib/_ast_unparse.py	38	42	_Precedence.next	next(self)	todo		
-Lib/_ast_unparse.py	54	60	Unparser.__init__	__init__(self)	todo		
-Lib/_ast_unparse.py	62	72	Unparser.interleave	interleave(self, inter, f, seq)	todo		
-Lib/_ast_unparse.py	74	82	Unparser.items_view	items_view(self, traverser, items)	todo		
-Lib/_ast_unparse.py	84	87	Unparser.maybe_newline	maybe_newline(self)	todo		
-Lib/_ast_unparse.py	89	92	Unparser.maybe_semicolon	maybe_semicolon(self)	todo		
-Lib/_ast_unparse.py	94	102	Unparser.fill	fill(self, text='', *, allow_semicolon=True)	todo		
-Lib/_ast_unparse.py	104	106	Unparser.write	write(self, *text)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
-Lib/_ast_unparse.py	109	116	Unparser.buffered	buffered(self, buffer=None)	todo		
-Lib/_ast_unparse.py	119	130	Unparser.block	block(self, *, extra=None)	todo		
-Lib/_ast_unparse.py	133	139	Unparser.delimit	delimit(self, start, end)	todo		
-Lib/_ast_unparse.py	141	145	Unparser.delimit_if	delimit_if(self, start, end, condition)	todo		
-Lib/_ast_unparse.py	147	149	Unparser.require_parens	require_parens(self, precedence, node)	todo		
-Lib/_ast_unparse.py	151	152	Unparser.get_precedence	get_precedence(self, node)	todo		
-Lib/_ast_unparse.py	154	156	Unparser.set_precedence	set_precedence(self, precedence, *nodes)	todo		
-Lib/_ast_unparse.py	158	172	Unparser.get_raw_docstring	get_raw_docstring(self, node)	todo		
-Lib/_ast_unparse.py	174	177	Unparser.get_type_comment	get_type_comment(self, node)	todo		
-Lib/_ast_unparse.py	179	184	Unparser.traverse	traverse(self, node)	todo		
-Lib/_ast_unparse.py	189	194	Unparser.visit	visit(self, node)	todo		
-Lib/_ast_unparse.py	196	201	Unparser._write_docstring_and_traverse_body	_write_docstring_and_traverse_body(self, node)	todo		
-Lib/_ast_unparse.py	203	211	Unparser.visit_Module	visit_Module(self, node)	todo		
-Lib/_ast_unparse.py	213	218	Unparser.visit_Interactive	visit_Interactive(self, node)	todo		
-Lib/_ast_unparse.py	220	227	Unparser.visit_FunctionType	visit_FunctionType(self, node)	todo		
-Lib/_ast_unparse.py	229	232	Unparser.visit_Expr	visit_Expr(self, node)	todo		
-Lib/_ast_unparse.py	234	239	Unparser.visit_NamedExpr	visit_NamedExpr(self, node)	todo		
-Lib/_ast_unparse.py	241	243	Unparser.visit_Import	visit_Import(self, node)	todo		
-Lib/_ast_unparse.py	245	251	Unparser.visit_ImportFrom	visit_ImportFrom(self, node)	todo		
-Lib/_ast_unparse.py	253	261	Unparser.visit_Assign	visit_Assign(self, node)	todo		
-Lib/_ast_unparse.py	263	267	Unparser.visit_AugAssign	visit_AugAssign(self, node)	todo		
-Lib/_ast_unparse.py	269	277	Unparser.visit_AnnAssign	visit_AnnAssign(self, node)	todo		
-Lib/_ast_unparse.py	279	283	Unparser.visit_Return	visit_Return(self, node)	todo		
-Lib/_ast_unparse.py	285	286	Unparser.visit_Pass	visit_Pass(self, node)	todo		
-Lib/_ast_unparse.py	288	289	Unparser.visit_Break	visit_Break(self, node)	todo		
-Lib/_ast_unparse.py	291	292	Unparser.visit_Continue	visit_Continue(self, node)	todo		
-Lib/_ast_unparse.py	294	296	Unparser.visit_Delete	visit_Delete(self, node)	todo		
-Lib/_ast_unparse.py	298	303	Unparser.visit_Assert	visit_Assert(self, node)	todo		
-Lib/_ast_unparse.py	305	307	Unparser.visit_Global	visit_Global(self, node)	todo		
-Lib/_ast_unparse.py	309	311	Unparser.visit_Nonlocal	visit_Nonlocal(self, node)	todo		
-Lib/_ast_unparse.py	313	319	Unparser.visit_Await	visit_Await(self, node)	todo		
-Lib/_ast_unparse.py	321	327	Unparser.visit_Yield	visit_Yield(self, node)	todo		
-Lib/_ast_unparse.py	329	335	Unparser.visit_YieldFrom	visit_YieldFrom(self, node)	todo		
-Lib/_ast_unparse.py	337	347	Unparser.visit_Raise	visit_Raise(self, node)	todo		
-Lib/_ast_unparse.py	349	362	Unparser.do_visit_try	do_visit_try(self, node)	todo		
-Lib/_ast_unparse.py	364	370	Unparser.visit_Try	visit_Try(self, node)	todo		
-Lib/_ast_unparse.py	372	378	Unparser.visit_TryStar	visit_TryStar(self, node)	todo		
-Lib/_ast_unparse.py	380	389	Unparser.visit_ExceptHandler	visit_ExceptHandler(self, node)	todo		
-Lib/_ast_unparse.py	391	415	Unparser.visit_ClassDef	visit_ClassDef(self, node)	todo		
-Lib/_ast_unparse.py	417	418	Unparser.visit_FunctionDef	visit_FunctionDef(self, node)	todo		
-Lib/_ast_unparse.py	420	421	Unparser.visit_AsyncFunctionDef	visit_AsyncFunctionDef(self, node)	todo		
-Lib/_ast_unparse.py	423	438	Unparser._function_helper	_function_helper(self, node, fill_suffix)	todo		
-Lib/_ast_unparse.py	440	443	Unparser._type_params_helper	_type_params_helper(self, type_params)	todo		
-Lib/_ast_unparse.py	445	452	Unparser.visit_TypeVar	visit_TypeVar(self, node)	todo		
-Lib/_ast_unparse.py	454	458	Unparser.visit_TypeVarTuple	visit_TypeVarTuple(self, node)	todo		
-Lib/_ast_unparse.py	460	464	Unparser.visit_ParamSpec	visit_ParamSpec(self, node)	todo		
-Lib/_ast_unparse.py	466	471	Unparser.visit_TypeAlias	visit_TypeAlias(self, node)	todo		
-Lib/_ast_unparse.py	473	474	Unparser.visit_For	visit_For(self, node)	todo		
-Lib/_ast_unparse.py	476	477	Unparser.visit_AsyncFor	visit_AsyncFor(self, node)	todo		
-Lib/_ast_unparse.py	479	490	Unparser._for_helper	_for_helper(self, fill, node)	todo		
-Lib/_ast_unparse.py	492	508	Unparser.visit_If	visit_If(self, node)	todo		
-Lib/_ast_unparse.py	510	518	Unparser.visit_While	visit_While(self, node)	todo		
-Lib/_ast_unparse.py	520	524	Unparser.visit_With	visit_With(self, node)	todo		
-Lib/_ast_unparse.py	526	530	Unparser.visit_AsyncWith	visit_AsyncWith(self, node)	todo		
-Lib/_ast_unparse.py	532	568	Unparser._str_literal_helper	_str_literal_helper(self, string, *, quote_types=_ALL_QUOTES, escape_special_whitespace=False)	todo		
-Lib/_ast_unparse.py	570	574	Unparser._write_str_avoiding_backslashes	_write_str_avoiding_backslashes(self, string, *, quote_types=_ALL_QUOTES)	todo		
-Lib/_ast_unparse.py	576	616	Unparser._ftstring_helper	_ftstring_helper(self, parts)	todo		
-Lib/_ast_unparse.py	618	627	Unparser._write_ftstring	_write_ftstring(self, values, prefix)	todo		
-Lib/_ast_unparse.py	629	630	Unparser.visit_JoinedStr	visit_JoinedStr(self, node)	todo		
-Lib/_ast_unparse.py	632	633	Unparser.visit_TemplateStr	visit_TemplateStr(self, node)	todo		
-Lib/_ast_unparse.py	635	654	Unparser._write_ftstring_inner	_write_ftstring_inner(self, node, is_format_spec=False)	todo		
-Lib/_ast_unparse.py	656	659	Unparser._unparse_interpolation_value	_unparse_interpolation_value(self, inner)	todo		
-Lib/_ast_unparse.py	661	675	Unparser._write_interpolation	_write_interpolation(self, node, use_str_attr=False)	todo		
-Lib/_ast_unparse.py	677	678	Unparser.visit_FormattedValue	visit_FormattedValue(self, node)	todo		
-Lib/_ast_unparse.py	680	682	Unparser.visit_Interpolation	visit_Interpolation(self, node)	todo		
-Lib/_ast_unparse.py	684	685	Unparser.visit_Name	visit_Name(self, node)	todo		
-Lib/_ast_unparse.py	687	691	Unparser._write_docstring	_write_docstring(self, node)	todo		
-Lib/_ast_unparse.py	693	703	Unparser._write_constant	_write_constant(self, value)	todo		
-Lib/_ast_unparse.py	705	715	Unparser.visit_Constant	visit_Constant(self, node)	todo		
-Lib/_ast_unparse.py	717	719	Unparser.visit_List	visit_List(self, node)	todo		
-Lib/_ast_unparse.py	721	725	Unparser.visit_ListComp	visit_ListComp(self, node)	todo		
-Lib/_ast_unparse.py	727	731	Unparser.visit_GeneratorExp	visit_GeneratorExp(self, node)	todo		
-Lib/_ast_unparse.py	733	737	Unparser.visit_SetComp	visit_SetComp(self, node)	todo		
-Lib/_ast_unparse.py	739	745	Unparser.visit_DictComp	visit_DictComp(self, node)	todo		
-Lib/_ast_unparse.py	747	759	Unparser.visit_comprehension	visit_comprehension(self, node)	todo		
-Lib/_ast_unparse.py	761	769	Unparser.visit_IfExp	visit_IfExp(self, node)	todo		
-Lib/_ast_unparse.py	771	778	Unparser.visit_Set	visit_Set(self, node)	todo		
-Lib/_ast_unparse.py	780	800	Unparser.visit_Dict	visit_Dict(self, node)	todo		
-Lib/_ast_unparse.py	802	808	Unparser.visit_Tuple	visit_Tuple(self, node)	todo		
-Lib/_ast_unparse.py	818	828	Unparser.visit_UnaryOp	visit_UnaryOp(self, node)	todo		
-Lib/_ast_unparse.py	863	878	Unparser.visit_BinOp	visit_BinOp(self, node)	todo		
-Lib/_ast_unparse.py	893	899	Unparser.visit_Compare	visit_Compare(self, node)	todo		
-Lib/_ast_unparse.py	904	916	Unparser.visit_BoolOp	visit_BoolOp(self, node)	todo		
-Lib/_ast_unparse.py	918	927	Unparser.visit_Attribute	visit_Attribute(self, node)	todo		
-Lib/_ast_unparse.py	929	945	Unparser.visit_Call	visit_Call(self, node)	todo		
-Lib/_ast_unparse.py	947	961	Unparser.visit_Subscript	visit_Subscript(self, node)	todo		
-Lib/_ast_unparse.py	963	966	Unparser.visit_Starred	visit_Starred(self, node)	todo		
-Lib/_ast_unparse.py	968	969	Unparser.visit_Ellipsis	visit_Ellipsis(self, node)	todo		
-Lib/_ast_unparse.py	971	979	Unparser.visit_Slice	visit_Slice(self, node)	todo		
-Lib/_ast_unparse.py	981	986	Unparser.visit_Match	visit_Match(self, node)	todo		
-Lib/_ast_unparse.py	988	992	Unparser.visit_arg	visit_arg(self, node)	todo		
-Lib/_ast_unparse.py	994	1043	Unparser.visit_arguments	visit_arguments(self, node)	todo		
-Lib/_ast_unparse.py	1045	1051	Unparser.visit_keyword	visit_keyword(self, node)	todo		
-Lib/_ast_unparse.py	1053	1062	Unparser.visit_Lambda	visit_Lambda(self, node)	todo		
-Lib/_ast_unparse.py	1064	1067	Unparser.visit_alias	visit_alias(self, node)	todo		
-Lib/_ast_unparse.py	1069	1073	Unparser.visit_withitem	visit_withitem(self, node)	todo		
-Lib/_ast_unparse.py	1075	1082	Unparser.visit_match_case	visit_match_case(self, node)	todo		
-Lib/_ast_unparse.py	1084	1085	Unparser.visit_MatchValue	visit_MatchValue(self, node)	todo		
-Lib/_ast_unparse.py	1087	1088	Unparser.visit_MatchSingleton	visit_MatchSingleton(self, node)	todo		
-Lib/_ast_unparse.py	1090	1094	Unparser.visit_MatchSequence	visit_MatchSequence(self, node)	todo		
-Lib/_ast_unparse.py	1096	1100	Unparser.visit_MatchStar	visit_MatchStar(self, node)	todo		
-Lib/_ast_unparse.py	1102	1120	Unparser.visit_MatchMapping	visit_MatchMapping(self, node)	todo		
-Lib/_ast_unparse.py	1122	1143	Unparser.visit_MatchClass	visit_MatchClass(self, node)	todo		
-Lib/_ast_unparse.py	1145	1156	Unparser.visit_MatchAs	visit_MatchAs(self, node)	todo		
-Lib/_ast_unparse.py	1158	1161	Unparser.visit_MatchOr	visit_MatchOr(self, node)	todo		
+Lib/_ast_unparse.py	38	42	_Precedence.next	next(self)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	54	60	Unparser.__init__	__init__(self)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	62	72	Unparser.interleave	interleave(self, inter, f, seq)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	74	82	Unparser.items_view	items_view(self, traverser, items)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	84	87	Unparser.maybe_newline	maybe_newline(self)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	89	92	Unparser.maybe_semicolon	maybe_semicolon(self)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	94	102	Unparser.fill	fill(self, text='', *, allow_semicolon=True)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	104	106	Unparser.write	write(self, *text)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	109	116	Unparser.buffered	buffered(self, buffer=None)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	119	130	Unparser.block	block(self, *, extra=None)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	133	139	Unparser.delimit	delimit(self, start, end)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	141	145	Unparser.delimit_if	delimit_if(self, start, end, condition)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	147	149	Unparser.require_parens	require_parens(self, precedence, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	151	152	Unparser.get_precedence	get_precedence(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	154	156	Unparser.set_precedence	set_precedence(self, precedence, *nodes)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	158	172	Unparser.get_raw_docstring	get_raw_docstring(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	174	177	Unparser.get_type_comment	get_type_comment(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	179	184	Unparser.traverse	traverse(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	189	194	Unparser.visit	visit(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	196	201	Unparser._write_docstring_and_traverse_body	_write_docstring_and_traverse_body(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	203	211	Unparser.visit_Module	visit_Module(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	213	218	Unparser.visit_Interactive	visit_Interactive(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	220	227	Unparser.visit_FunctionType	visit_FunctionType(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	229	232	Unparser.visit_Expr	visit_Expr(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	234	239	Unparser.visit_NamedExpr	visit_NamedExpr(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	241	243	Unparser.visit_Import	visit_Import(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	245	251	Unparser.visit_ImportFrom	visit_ImportFrom(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	253	261	Unparser.visit_Assign	visit_Assign(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	263	267	Unparser.visit_AugAssign	visit_AugAssign(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	269	277	Unparser.visit_AnnAssign	visit_AnnAssign(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	279	283	Unparser.visit_Return	visit_Return(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	285	286	Unparser.visit_Pass	visit_Pass(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	288	289	Unparser.visit_Break	visit_Break(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	291	292	Unparser.visit_Continue	visit_Continue(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	294	296	Unparser.visit_Delete	visit_Delete(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	298	303	Unparser.visit_Assert	visit_Assert(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	305	307	Unparser.visit_Global	visit_Global(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	309	311	Unparser.visit_Nonlocal	visit_Nonlocal(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	313	319	Unparser.visit_Await	visit_Await(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	321	327	Unparser.visit_Yield	visit_Yield(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	329	335	Unparser.visit_YieldFrom	visit_YieldFrom(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	337	347	Unparser.visit_Raise	visit_Raise(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	349	362	Unparser.do_visit_try	do_visit_try(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	364	370	Unparser.visit_Try	visit_Try(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	372	378	Unparser.visit_TryStar	visit_TryStar(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	380	389	Unparser.visit_ExceptHandler	visit_ExceptHandler(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	391	415	Unparser.visit_ClassDef	visit_ClassDef(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	417	418	Unparser.visit_FunctionDef	visit_FunctionDef(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	420	421	Unparser.visit_AsyncFunctionDef	visit_AsyncFunctionDef(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	423	438	Unparser._function_helper	_function_helper(self, node, fill_suffix)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	440	443	Unparser._type_params_helper	_type_params_helper(self, type_params)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	445	452	Unparser.visit_TypeVar	visit_TypeVar(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	454	458	Unparser.visit_TypeVarTuple	visit_TypeVarTuple(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	460	464	Unparser.visit_ParamSpec	visit_ParamSpec(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	466	471	Unparser.visit_TypeAlias	visit_TypeAlias(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	473	474	Unparser.visit_For	visit_For(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	476	477	Unparser.visit_AsyncFor	visit_AsyncFor(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	479	490	Unparser._for_helper	_for_helper(self, fill, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	492	508	Unparser.visit_If	visit_If(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	510	518	Unparser.visit_While	visit_While(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	520	524	Unparser.visit_With	visit_With(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	526	530	Unparser.visit_AsyncWith	visit_AsyncWith(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	532	568	Unparser._str_literal_helper	_str_literal_helper(self, string, *, quote_types=_ALL_QUOTES, escape_special_whitespace=False)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	570	574	Unparser._write_str_avoiding_backslashes	_write_str_avoiding_backslashes(self, string, *, quote_types=_ALL_QUOTES)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	576	616	Unparser._ftstring_helper	_ftstring_helper(self, parts)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	618	627	Unparser._write_ftstring	_write_ftstring(self, values, prefix)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	629	630	Unparser.visit_JoinedStr	visit_JoinedStr(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	632	633	Unparser.visit_TemplateStr	visit_TemplateStr(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	635	654	Unparser._write_ftstring_inner	_write_ftstring_inner(self, node, is_format_spec=False)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	656	659	Unparser._unparse_interpolation_value	_unparse_interpolation_value(self, inner)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	661	675	Unparser._write_interpolation	_write_interpolation(self, node, use_str_attr=False)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	677	678	Unparser.visit_FormattedValue	visit_FormattedValue(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	680	682	Unparser.visit_Interpolation	visit_Interpolation(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	684	685	Unparser.visit_Name	visit_Name(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	687	691	Unparser._write_docstring	_write_docstring(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	693	703	Unparser._write_constant	_write_constant(self, value)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	705	715	Unparser.visit_Constant	visit_Constant(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	717	719	Unparser.visit_List	visit_List(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	721	725	Unparser.visit_ListComp	visit_ListComp(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	727	731	Unparser.visit_GeneratorExp	visit_GeneratorExp(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	733	737	Unparser.visit_SetComp	visit_SetComp(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	739	745	Unparser.visit_DictComp	visit_DictComp(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	747	759	Unparser.visit_comprehension	visit_comprehension(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	761	769	Unparser.visit_IfExp	visit_IfExp(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	771	778	Unparser.visit_Set	visit_Set(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	780	800	Unparser.visit_Dict	visit_Dict(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	802	808	Unparser.visit_Tuple	visit_Tuple(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	818	828	Unparser.visit_UnaryOp	visit_UnaryOp(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	863	878	Unparser.visit_BinOp	visit_BinOp(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	893	899	Unparser.visit_Compare	visit_Compare(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	904	916	Unparser.visit_BoolOp	visit_BoolOp(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	918	927	Unparser.visit_Attribute	visit_Attribute(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	929	945	Unparser.visit_Call	visit_Call(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	947	961	Unparser.visit_Subscript	visit_Subscript(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	963	966	Unparser.visit_Starred	visit_Starred(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	968	969	Unparser.visit_Ellipsis	visit_Ellipsis(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	971	979	Unparser.visit_Slice	visit_Slice(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	981	986	Unparser.visit_Match	visit_Match(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	988	992	Unparser.visit_arg	visit_arg(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	994	1043	Unparser.visit_arguments	visit_arguments(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	1045	1051	Unparser.visit_keyword	visit_keyword(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	1053	1062	Unparser.visit_Lambda	visit_Lambda(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	1064	1067	Unparser.visit_alias	visit_alias(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	1069	1073	Unparser.visit_withitem	visit_withitem(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	1075	1082	Unparser.visit_match_case	visit_match_case(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	1084	1085	Unparser.visit_MatchValue	visit_MatchValue(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	1087	1088	Unparser.visit_MatchSingleton	visit_MatchSingleton(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	1090	1094	Unparser.visit_MatchSequence	visit_MatchSequence(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	1096	1100	Unparser.visit_MatchStar	visit_MatchStar(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	1102	1120	Unparser.visit_MatchMapping	visit_MatchMapping(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	1122	1143	Unparser.visit_MatchClass	visit_MatchClass(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	1145	1156	Unparser.visit_MatchAs	visit_MatchAs(self, node)	modelled	pygrammar-unparse-roundtrip	
+Lib/_ast_unparse.py	1158	1161	Unparser.visit_MatchOr	visit_MatchOr(self, node)	modelled	pygrammar-unparse-roundtrip	

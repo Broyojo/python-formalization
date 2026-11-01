@@ -39,8 +39,8 @@ possible_fix: |
   In Untokenizer, when an INDENT string is empty and its start column is not 0, derive the indentation
   from the column; or have the tokenizer keep the first line's whitespace for INDENT.
 tested:
-  python3 (3.14.7): to be recorded
-  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): to be recorded
+  python3 (3.14.7): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
 duplicates:
   issues: []
   queries: ["untokenize backslash continuation indent", "tokenize INDENT empty string line continuation"]

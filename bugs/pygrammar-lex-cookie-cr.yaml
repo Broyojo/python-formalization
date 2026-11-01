@@ -38,8 +38,8 @@ cause: |
 possible_fix: |
   In find_cookie, cut the line at the first CR before matching.
 tested:
-  python3 (3.14.7): to be recorded
-  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): to be recorded
+  python3 (3.14.7): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
 duplicates:
   issues: []
   queries: ["tokenize detect_encoding carriage return cookie", "detect_encoding differs from compiler coding cookie"]

@@ -513,7 +513,27 @@ def gen_text(rng):
     return rng.choice(LIBFILES).read_text(encoding="utf-8", errors="replace")
 
 
+COOKIES = ["# coding: latin-1\n", "#coding=utf-8\n", "# -*- coding: ascii -*-\n", "# vim: set fileencoding=utf_8 :\n",
+           "  # coding: UTF-8\n", "\f# coding: Latin_1-unix\n", "x = 1 # coding: latin-1\n", "#\n# coding: latin-1\n",
+           "\n# coding: latin-1\n", "x\n# coding: latin-1\n", "#\n#\n# coding: latin-1\n", "# coding:\n", "# coding: \n",
+           "# coding : latin-1\n", "# encoding: iso-8859-1\n", "# coding: iso_latin_1-x\n", "#coding:utf8\n", "# coding=", "#cod",
+           "", "\n", "# nothing\n", "#\r# coding: ascii\n", "#\r\n# coding: ascii\r\n"]
+
+
 def gen_case_lex(rng):
+    r = rng.random()
+    if r < 0.1:
+        return {"mod": "pygrammar", "fn": "lex.cookie", "src": list(rng.choice(COOKIES).encode())}
+    if r < 0.25:
+        text = gen_text(rng)
+        try:
+            text.encode("utf-8")
+            list(tokenize.generate_tokens(io.StringIO(text).readline))
+        except Exception:
+            return None
+        if "\0" in text:
+            return None
+        return {"mod": "pygrammar", "fn": "lex.untokenize", "text": [ord(c) for c in text]}
     text = gen_text(rng)
     if rng.random() < 0.1:
         text = text.replace("\n", rng.choice(["\r\n", "\r", "\n\n", "\n\f", " \n", "\t\n"]))
@@ -528,6 +548,19 @@ def gen_case_lex(rng):
 
 
 def run_python_lex(c):
+    if c["fn"] == "lex.cookie":
+        try:
+            enc = tokenize.detect_encoding(io.BytesIO(bytes(c["src"])).readline)[0]
+        except SyntaxError as e:
+            enc = e.msg.rsplit(": ", 1)[1]
+        return {"ok": [ord(x) for x in enc]}
+    if c["fn"] == "lex.untokenize":
+        text = "".join(map(chr, c["text"]))
+        try:
+            out = tokenize.untokenize(tokenize.generate_tokens(io.StringIO(text).readline))
+            return {"ok": [ord(x) for x in out]}
+        except (ValueError, IndexError):
+            return {"ok": None}
     text = "".join(map(chr, c["text"]))
     toks = []
     err = None
@@ -654,6 +687,15 @@ def gen_case_check(rng):
             json.dumps(tree)
         except Exception:
             return None
+        try:
+            compile(t2, "x", mode, flags=ast.PyCF_OPTIMIZED_AST)
+        except TypeError as e:
+            # raised by obj2ast in Python/Python-ast.c, before the validator runs
+            if "required field" in str(e) or "expected some sort of" in str(e) \
+                    or "field " in str(e):
+                return None
+        except Exception:
+            pass
         return {"mod": "pygrammar", "fn": "check.validate", "tree": tree, "pytree": None,
                 "_t": t2, "_mode": mode}
     o = rng.choice([-1, 0, 1, 2])

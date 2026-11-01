@@ -1,4 +1,4 @@
 file	line	endline	name	signature	status	entry	note
-Parser/token.c	84	113	_PyToken_OneChar	_PyToken_OneChar(int c1)	todo		
-Parser/token.c	116	197	_PyToken_TwoChars	_PyToken_TwoChars(int c1, int c2)	todo		
-Parser/token.c	200	250	_PyToken_ThreeChars	_PyToken_ThreeChars(int c1, int c2, int c3)	todo		
+Parser/token.c	84	113	_PyToken_OneChar	_PyToken_OneChar(int c1)	modelled	pygrammar-lex-exact-tokens	
+Parser/token.c	116	197	_PyToken_TwoChars	_PyToken_TwoChars(int c1, int c2)	modelled	pygrammar-lex-exact-tokens	
+Parser/token.c	200	250	_PyToken_ThreeChars	_PyToken_ThreeChars(int c1, int c2, int c3)	modelled	pygrammar-lex-exact-tokens	

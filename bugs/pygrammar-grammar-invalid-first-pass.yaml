@@ -26,8 +26,8 @@ reproducer: |
           compile(src, 'x', 'exec')
       except SyntaxError as e:
           return e._metadata[:2]
-  first = meta("x = 1\n{1: *a}\n")
-  second = meta("x = 1\nprint 1\n")
+  first = meta("if 1:\n    pass\n{1: *a}\n")
+  second = meta("if 1:\n    pass\nprint 1\n")
   print(first, second)
   if first == (0, 0) and second[0] > 0:
       print('REPRODUCED pygrammar-grammar-invalid-first-pass')
@@ -43,8 +43,8 @@ possible_fix: |
   invalid_ item is what the generator sees; or have visit_Alt guard any alternative holding an
   invalid_ item.
 tested:
-  python3 (3.14.7): to be recorded
-  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): to be recorded
+  python3 (3.14.7): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
 duplicates:
   issues: []
   queries: ["invalid_double_starred_kvpairs"]

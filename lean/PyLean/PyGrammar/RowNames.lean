@@ -98,13 +98,12 @@ def lex_accepts_valid : List String := [
   "tok_backup", "_PyLexer_update_ftstring_expr", "lookahead", "verify_end_of_number", "verify_identifier", "tok_decimal_tail",
   "tok_continuation_line", "tok_get_normal_mode", "tok_get_fstring_mode", "tok_get", "_PyTokenizer_Get", "_PyTokenizer_tok_new",
   "_PyToken_Init", "_PyLexer_type_comment_token_setup", "_PyLexer_token_setup", "_syntaxerror_range", "_PyTokenizer_syntaxerror", "_PyTokenizer_syntaxerror_known_range",
-  "_PyTokenizer_indenterror", "_PyTokenizer_error_ret", "_PyTokenizer_warn_invalid_escape_sequence", "_PyTokenizer_raise_init_error", "_PyTokenizer_parser_warn", "_PyTokenizer_translate_into_utf8",
-  "_PyTokenizer_check_bom", "get_normal_name", "get_coding_spec", "_PyTokenizer_check_coding_spec", "valid_utf8", "_PyTokenizer_ensure_utf8",
-  "tok_readline_string", "tok_underflow_readline", "_PyTokenizer_FromReadline", "tokenizeriter_new_impl", "_tokenizer_error", "_get_current_line",
-  "_get_col_offsets", "tokenizeriter_next", "generate_tokens", "_transform_msg", "_generate_tokens_from_c_tokenizer"]
+  "_PyTokenizer_indenterror", "_PyTokenizer_warn_invalid_escape_sequence", "_PyTokenizer_parser_warn", "tok_readline_string", "tok_underflow_readline", "_PyTokenizer_FromReadline",
+  "tokenizeriter_new_impl", "_tokenizer_error", "_get_current_line", "_get_col_offsets", "tokenizeriter_next", "generate_tokens",
+  "_generate_tokens_from_c_tokenizer"]
 
 def lex_cookie_twin : List String := [
-  "detect_encoding"]
+  "get_coding_spec", "_PyTokenizer_check_coding_spec", "detect_encoding"]
 
 def lex_debug_text : List String := [
   "set_ftstring_expr"]
@@ -112,11 +111,17 @@ def lex_debug_text : List String := [
 def lex_exact_tokens : List String := [
   "_PyToken_OneChar", "_PyToken_TwoChars", "_PyToken_ThreeChars"]
 
+def lex_exact_type : List String := [
+  "TokenInfo.exact_type"]
+
 def lex_nextc_in_buffer : List String := [
   "contains_null_bytes", "tok_nextc", "tok_underflow_string"]
 
 def lex_normal_name_twin : List String := [
-  "_get_normal_name"]
+  "get_normal_name", "_get_normal_name"]
+
+def lex_token_predicates : List String := [
+  "ISTERMINAL", "ISNONTERMINAL", "ISEOF"]
 
 def lex_untokenize_lossless : List String := [
   "Untokenizer.__init__", "Untokenizer.add_whitespace", "Untokenizer.add_backslash_continuation", "Untokenizer.escape_brackets", "Untokenizer.untokenize", "untokenize"]
@@ -146,15 +151,13 @@ def peg_roundtrip_actions : List String := [
   "_PyPegen_register_stmts"]
 
 def peg_roundtrip_parser : List String := [
-  "buf_getc", "buf_ungetc", "buf_setreadl", "decode_str", "_PyTokenizer_FromString", "_PyTokenizer_FromUTF8",
-  "_PyPegen_interactive_exit", "_PyPegen_byte_offset_to_character_offset_line", "_PyPegen_byte_offset_to_character_offset_raw", "_PyPegen_byte_offset_to_character_offset", "_PyPegen_insert_memo", "_PyPegen_update_memo",
-  "_get_keyword_or_name_type", "initialize_token", "_PyPegen_fill_token", "_PyPegen_is_memoized", "_PyPegen_expect_token", "_PyPegen_expect_forced_result",
-  "_PyPegen_expect_forced_token", "_PyPegen_expect_soft_keyword", "_PyPegen_get_last_nonnwhitespace_token", "_PyPegen_new_identifier", "_PyPegen_name_from_token", "_PyPegen_name_token",
-  "_PyPegen_string_token", "_PyPegen_soft_keyword_token", "parsenumber_raw", "parsenumber", "_PyPegen_number_token", "bad_single_statement",
-  "compute_parser_flags", "_PyPegen_Parser_New", "reset_parser_state_for_error_pass", "_is_end_of_source", "_PyPegen_set_syntax_error_metadata", "_PyPegen_run_parser",
-  "_PyPegen_run_parser_from_file_pointer", "_PyPegen_run_parser_from_string", "_Pypegen_tokenizer_error", "_Pypegen_raise_decode_error", "warn_invalid_escape_sequence", "decode_utf8",
-  "decode_unicode_with_escapes", "decode_bytes_with_escapes", "_PyPegen_decode_string", "_PyPegen_parse_string", "_PyParser_ASTFromString", "_PyParser_ASTFromFile",
-  "_PyParser_InteractiveASTFromFile"]
+  "_PyTokenizer_FromUTF8", "_PyPegen_interactive_exit", "_PyPegen_byte_offset_to_character_offset_line", "_PyPegen_byte_offset_to_character_offset_raw", "_PyPegen_byte_offset_to_character_offset", "_PyPegen_insert_memo",
+  "_PyPegen_update_memo", "_get_keyword_or_name_type", "initialize_token", "_PyPegen_fill_token", "_PyPegen_is_memoized", "_PyPegen_expect_token",
+  "_PyPegen_expect_forced_result", "_PyPegen_expect_forced_token", "_PyPegen_expect_soft_keyword", "_PyPegen_get_last_nonnwhitespace_token", "_PyPegen_new_identifier", "_PyPegen_name_from_token",
+  "_PyPegen_name_token", "_PyPegen_string_token", "_PyPegen_soft_keyword_token", "parsenumber_raw", "parsenumber", "_PyPegen_number_token",
+  "bad_single_statement", "compute_parser_flags", "_PyPegen_Parser_New", "reset_parser_state_for_error_pass", "_is_end_of_source", "_PyPegen_run_parser",
+  "_PyPegen_run_parser_from_string", "_Pypegen_tokenizer_error", "_Pypegen_raise_decode_error", "warn_invalid_escape_sequence", "decode_utf8", "decode_unicode_with_escapes",
+  "decode_bytes_with_escapes", "_PyPegen_decode_string", "_PyPegen_parse_string", "_PyParser_ASTFromString"]
 
 def unparse_c_roundtrip : List String := [
   "append_char", "append_charp", "append_repr", "append_ast_boolop", "append_ast_binop", "append_ast_unaryop",

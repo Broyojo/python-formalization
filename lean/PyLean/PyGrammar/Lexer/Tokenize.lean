@@ -252,7 +252,43 @@ def exactType (t : TokInfo) : Nat :=
     if k != TokKind.OP.num then k else t.type
   else t.type
 
+/-- `NT_OFFSET`, `Lib/token.py`. -/
+def NT_OFFSET : Nat := 256
+/-- `ISTERMINAL` -/
+def isTerminal (x : Nat) : Bool := decide (x < NT_OFFSET)
+/-- `ISNONTERMINAL` -/
+def isNonTerminal (x : Nat) : Bool := decide (x ≥ NT_OFFSET)
+/-- `ISEOF` -/
+def isEof (x : Nat) : Bool := x == TokKind.ENDMARKER.num
+
 /-! ### Properties -/
+
+/-- `Lib/token.py`: every token number is terminal or nonterminal and never both, every kind in
+`Grammar/Tokens` is terminal, and `ENDMARKER` is the only EOF. -/
+def TokenPredicates : Prop :=
+  (∀ x : Nat, isTerminal x = !isNonTerminal x) ∧
+  (TokKind.all.all fun k => isTerminal k.num && (isEof k.num == (k == .ENDMARKER))) = true
+
+theorem tokenPredicates_proven : TokenPredicates := by
+  constructor
+  · intro x
+    by_cases h : x < NT_OFFSET
+    · simp [isTerminal, isNonTerminal, h, Nat.not_le.mpr h]
+    · simp [isTerminal, isNonTerminal, h, Nat.le_of_not_lt h]
+  · decide +kernel
+
+/-- `TokenInfo.exact_type`: an `OP` token with an exact spelling has the type of that spelling. -/
+def ExactTypeResolves : Prop :=
+  (TokKind.all.all fun k =>
+    match k.exact? with
+    | some e =>
+      exactType { type := TokKind.OP.num, str := e.toList.map Char.toNat, lineno := 1, col := 0,
+                  endLineno := 1, endCol := 1, line := [] } == k.num
+    | none => true) = true
+
+set_option maxRecDepth 100000 in
+theorem exactTypeResolves_proven : ExactTypeResolves := by
+  unfold ExactTypeResolves; decide +kernel
 
 /-- `_get_normal_name` "Imitates get_normal_name in Parser/tokenizer/helpers.c": the two agree
 on every name without a NUL. -/
