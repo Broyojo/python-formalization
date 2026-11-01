@@ -978,7 +978,9 @@ def re_node(op, av):
 
 
 def re_src(c):
-    return "".join(map(chr, c["pat"])) if c["text"] else bytes(c["pat"])
+    if c["text"]:
+        return "".join(map(chr, c["pat"]))
+    return bytes(c["pat"])
 
 
 @area("re", 8)
@@ -1024,6 +1026,61 @@ class ReArea:
                             "badext": r.choice(["(?", "(?P>a)", "(?<a)", "(?<", "(?Z)", "(?P", "(?(", "(?()", "(?(a", "(?(1)a|b|c)"])}[n])
         return "".join(out)
 
+    CHARS = ["a", "b", "k", "s", "i", "K", "S", "I", "z", "0", "9", "_", " ", "-", "é", "É", "ſ", "K", "ı", "İ", "µ", "Μ", "ß",
+             "σ", "ς", "Σ", "中", "€", "\U00010400", "\U00010428", "ǅ"]
+
+    @classmethod
+    def cset(cls, r):
+        parts = []
+        for _ in range(r.choice([1, 1, 2, 3, 4, 6, 20])):
+            roll = r.random()
+            if roll < 0.45:
+                parts.append(r.choice(cls.CHARS))
+            elif roll < 0.75:
+                a = r.choice([0x30, 0x41, 0x61, 0xc0, 0x100, 0x370, 0x400, 0x4e00, 0xfb00, 0xff00, 0xffe0, 0x10400, 0x1f600])
+                # only ranges that start near the top of the BMP may cross it: one starting low
+                # costs 65536 table lookups and reaches no other branch
+                b = a + r.choice([0, 1, 2, 5, 25, 26, 100, 300] + ([70000] if a >= 0xff00 else []))
+                parts.append(chr(a) + "-" + chr(min(b, 0x10ffff)))
+            else:
+                parts.append(r.choice(["\\d", "\\D", "\\s", "\\S", "\\w", "\\W"]))
+        return "[" + r.choice(["", "", "", "^"]) + "".join(parts) + "]"
+
+    @classmethod
+    def compile_pat(cls, r):
+        def atom():
+            roll = r.random()
+            if roll < 0.35:
+                return r.choice(cls.CHARS)
+            if roll < 0.7:
+                return cls.cset(r)
+            if roll < 0.8:
+                return r.choice([".", "\\d", "\\w", "\\s", "\\b", "\\B", "^", "$", "\\A", "\\Z"])
+            return "(" + r.choice(["", "?:", "?i:", "?a:", "?P<x>", "?>", "?-i:", "?s:", "?m:"]).replace("?P<x>", "?P<x%d>" % r.randrange(10**6)) + atom() + atom() + ")"
+
+        def item():
+            a = atom()
+            if a[0] in "^$\\" and len(a) < 3 or a in ("^", "$"):
+                return a
+            return a + r.choice(["", "", "", "*", "+", "?", "*?", "+?", "*+", "{2,3}", "{2}?", "{1,4}+"])
+
+        n = r.choice([0, 1, 1, 2, 3, 5])
+        body = "".join(item() for _ in range(n))
+        roll = r.random()
+        if roll < 0.15:
+            return body + "|" + "".join(item() for _ in range(2))
+        if roll < 0.25:
+            return "(?=" + body + ")" + item()
+        if roll < 0.35:
+            return "(?<=" + r.choice(cls.CHARS) + cls.cset(r) + ")" + body
+        if roll < 0.42:
+            return "(?<!" + r.choice(cls.CHARS) + "*)" + body
+        if roll < 0.5:
+            return "ab|ac|" + item()
+        if roll < 0.6:
+            return r.choice(["abcabd", "(ab)c", "(a)(b)c", "(?:ab)c", "(?i)ab", "ab(?i:c)d", "1(2)3", "aa", "aba", "abab"]) + body
+        return body
+
     @classmethod
     def gen(cls, r):
         pat = cls.gen_pat(r)
@@ -1042,7 +1099,15 @@ class ReArea:
         if not text:
             pat = pat.replace("é", "\xe9")
         c = {"mod": "textlibs", "fn": "re.parse", "pat": [ord(x) for x in pat], "text": text, "flags": flags}
-        if r.random() < 0.3:
+        if r.random() < 0.45:
+            c["fn"] = "re.code"
+            # charsets, case folding and literal prefixes
+            if r.random() < 0.6:
+                pat = cls.compile_pat(r)
+                c["pat"] = [ord(x) for x in pat]
+                c["text"] = text = all(ord(x) < 256 for x in pat) is False or r.random() < 0.85
+                c["flags"] = r.choice([0, 2, 2, 2, 8, 16, 256, 2 | 256, 2 | 8] + ([4, 2 | 4] if not text else []))
+        elif r.random() < 0.4:
             c["fn"] = "re.template"
             c["repl"] = [ord(x) for x in "".join(r.choice(
                 ["a", "\\1", "\\2", "\\0", "\\07", "\\123", "\\400", "\\g<1>", "\\g<0>", "\\g<n0>", "\\g<zz>", "\\g<", "\\g", "\\g<>",
@@ -1055,11 +1120,12 @@ class ReArea:
         src = re_src(c)
 
         def body():
+            if c["fn"] == "re.code":
+                return [int(x) for x in re._compiler._code(sre_parse.parse(src, c["flags"]), c["flags"])]
             if c["fn"] == "re.parse":
                 p = sre_parse.parse(src, c["flags"])
                 return {"p": re_nodes(p), "flags": p.state.flags, "groups": p.state.groups,
                         "width": list(p.getwidth()), "gd": [[[ord(x) for x in k], v] for k, v in p.state.groupdict.items()]}
-            pat = re.compile(src, c["flags"]) if False else None
             p = sre_parse.parse(src, c["flags"])
 
             class P:

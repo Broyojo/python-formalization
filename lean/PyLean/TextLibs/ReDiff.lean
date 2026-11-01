@@ -1,5 +1,5 @@
 import PyLean.DiffCore
-import PyLean.TextLibs.ReParse
+import PyLean.TextLibs.ReCompile
 
 /-! `re.*` difftest cases; see `difftest/textlibs_diff.py`. Trees travel as nested arrays with
 the opcode's short name first. -/
@@ -83,6 +83,8 @@ def run (fn : String) (j : Json) : Except String Json := do
       ("width", toJson [(getwidth p.groupwidths p.p).1, (getwidth p.groupwidths p.p).2]),
       ("gd", Json.arr (p.groupdict.map fun x => Json.arr #[toJson x.1, toJson x.2]).toArray)])
       (parse text pat flags)
+  | "re.code" =>
+    return encPy toJson (do codeOf (← parse text pat flags) flags)
   | "re.template" =>
     let repl ← nats (← field j "repl")
     return encPy (fun (r : List TItem) => Json.arr (r.map encTItem).toArray) (do
