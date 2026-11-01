@@ -1,6 +1,7 @@
 import PyLean.Registry
 import PyLean.TextLibs.Diff
 import PyLean.TextLibs.StructRound
+import PyLean.TextLibs.BinasciiProps
 
 /-!
 Text and binary formats, CPython 3.14.7. `Modules/_struct.c` is modelled in
@@ -8,12 +9,17 @@ Text and binary formats, CPython 3.14.7. `Modules/_struct.c` is modelled in
 with floats as exact bit patterns (`TextLibs/Bits.lean`). `lu_short`, `lu_longlong`,
 `lp_longlong` and similar routines are replaced by native ones at start-up on this build,
 so only the proofs reach them, not the difftest.
+
+The base64, hex, base32 and base16 paths of `Modules/binascii.c` and `Lib/base64.py` are in
+`TextLibs/BinasciiModel.lean`. Not modelled yet: uu, quoted-printable, crc, `hexlify`'s `sep`
+argument, and the a85, b85 and z85 codecs.
 -/
 
 namespace PyLean.TextLibs
 
 open PyLean.Registry
 open PyLean.TextLibs.Struct
+open PyLean.TextLibs.Binascii
 
 /-- The integer routines `IntCodesRoundTrip` drives through `runPack` and `runUnpack`. -/
 def structIntFns : List String :=
@@ -94,7 +100,37 @@ def entries : List Entry := [
     statement := "For every non-NaN 16-bit pattern, packing the unpacked half float gives back the same two bytes."
     source := "invariant", status := .open
     prop := ``HalfRoundTrip
-    notes := "CPython agrees on all 65536 patterns (scratch sweep). decide +kernel passes the first 1024 patterns but hits a deterministic timeout on 65536; this needs a symbolic proof, not a smaller range." }
+    notes := "CPython agrees on all 65536 patterns (scratch sweep). decide +kernel passes the first 1024 patterns but hits a deterministic timeout on 65536; this needs a symbolic proof, not a smaller range." },
+  { id := "textlibs-binascii-base64-round-trip", pyFile := "Modules/binascii.c"
+    pyFns := ["binascii_a2b_base64_impl", "binascii_b2a_base64_impl"]
+    statement := "a2b_base64(b2a_base64(d, newline=False), strict_mode=s) == d for every bytes value d and both strict modes."
+    source := "RFC 4648 and the module's purpose: encoding then decoding returns the data", status := .proven
+    prop := ``Base64RoundTrip, thm := some ``base64RoundTrip_proven
+    notes := "The 32-bit wrap of leftchar is modelled and shown harmless: the encoder only reads low bytes." },
+  { id := "textlibs-binascii-base64-lenient-filter", pyFile := "Modules/binascii.c", pyFns := ["binascii_a2b_base64_impl"]
+    statement := "With strict_mode=False, removing every byte that is neither in the alphabet nor '=' changes nothing, including which error is raised and its message."
+    source := "base64.b64decode docstring: non-alphabet characters are discarded prior to the padding check", status := .proven
+    prop := ``LenientIgnoresNonAlphabet, thm := some ``lenientIgnoresNonAlphabet_proven },
+  { id := "textlibs-binascii-base64-strict-implies-lenient", pyFile := "Modules/binascii.c", pyFns := ["binascii_a2b_base64_impl"]
+    statement := "Whatever strict_mode=True accepts, strict_mode=False accepts with the same result."
+    source := "docs: strict mode only disallows more input", status := .proven
+    prop := ``StrictImpliesLenient, thm := some ``strictImpliesLenient_proven },
+  { id := "textlibs-binascii-base64-length", pyFile := "Modules/binascii.c", pyFns := ["binascii_b2a_base64_impl"]
+    statement := "len(b2a_base64(d, newline=False)) == 4 * ceil(len(d) / 3) for every bytes value d."
+    source := "RFC 4648 section 4", status := .proven
+    prop := ``B2aLength, thm := some ``b2aLength_proven },
+  { id := "textlibs-binascii-hex-round-trip", pyFile := "Modules/binascii.c"
+    pyFns := ["binascii_b2a_hex_impl", "binascii_hexlify_impl", "binascii_a2b_hex_impl", "binascii_unhexlify_impl"]
+    statement := "unhexlify(hexlify(d)) == d for every bytes value d."
+    source := "docs: a2b_hex is the inverse of b2a_hex", status := .proven
+    prop := ``HexRoundTrip, thm := some ``hexRoundTrip_proven
+    notes := "hexlify's sep and bytes_per_sep arguments are not modelled." },
+  { id := "textlibs-base64-round-trip", pyFile := "Lib/base64.py"
+    pyFns := ["b64encode", "b64decode", "_bytes_from_decode_data"]
+    statement := "b64decode(b64encode(d), validate=v) == d for every bytes value d and both modes."
+    source := "docs: b64decode decodes what b64encode produces", status := .proven
+    prop := ``B64ModuleRoundTrip, thm := some ``b64ModuleRoundTrip_proven
+    notes := "Stated without altchars. The str branch of _bytes_from_decode_data is covered by the difftest only." }
 ]
 
 end PyLean.TextLibs

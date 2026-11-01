@@ -269,6 +269,157 @@ def _item_count(s):
     return n
 
 
+# ---- binascii and base64 ---------------------------------------------------
+
+import base64
+import binascii
+
+
+def data_dec(d):
+    """{"b": [...]} is bytes, {"s": [...]} is a str by code points."""
+    if d is None:
+        return None
+    return bytes(d["b"]) if "b" in d else "".join(map(chr, d["s"]))
+
+
+class Codec:
+    B64 = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+    B32 = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
+    B32H = b"0123456789ABCDEFGHIJKLMNOPQRSTUV"
+    ODD = [0, 10, 13, 32, 45, 95, 61, 43, 47, 48, 49, 79, 73, 76, 97, 122, 128, 255]
+
+    @staticmethod
+    def raw(r):
+        return [r.randrange(256) for _ in range(r.choice([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 20, 40]))]
+
+    @classmethod
+    def corrupt(cls, r, b, alpha):
+        """Valid-looking text with the padding and alphabet edges hit often."""
+        b = list(b)
+        for _ in range(r.choice([0, 0, 1, 1, 2, 3])):
+            i = r.randint(0, len(b))
+            op = r.random()
+            if op < 0.4:
+                b.insert(i, 61)
+            elif op < 0.7:
+                b.insert(i, r.choice(cls.ODD))
+            elif op < 0.85 and b:
+                b.pop(min(i, len(b) - 1))
+            elif b:
+                b[min(i, len(b) - 1)] = r.choice(alpha + bytes(cls.ODD))
+        if r.random() < 0.2:
+            b += [61] * r.randint(1, 5)
+        if r.random() < 0.1:
+            b = [61] * r.randint(1, 4) + b
+        return b
+
+    @classmethod
+    def wrap(cls, r, b):
+        b = list(b)
+        if r.random() < 0.3 and all(x < 128 for x in b):
+            return {"s": b}
+        if r.random() < 0.03:
+            return {"s": b + [0xe9]}
+        return {"b": b}
+
+
+@area("binascii", 3)
+class BinasciiArea(Codec):
+    @classmethod
+    def gen(cls, r):
+        d = cls.raw(r)
+        fn = r.choice(["a2b_base64", "a2b_base64", "a2b_base64", "b2a_base64", "a2b_hex", "b2a_hex"])
+        c = {"mod": "textlibs", "fn": "binascii." + fn}
+        if fn == "a2b_base64":
+            c["strict"] = r.random() < 0.5
+            t = binascii.b2a_base64(bytes(d), newline=False)
+            c["d"] = cls.wrap(r, cls.corrupt(r, t, cls.B64))
+        elif fn == "a2b_hex":
+            t = binascii.hexlify(bytes(d))
+            c["d"] = cls.wrap(r, cls.corrupt(r, t, b"0123456789abcdefABCDEFgG"))
+        elif fn == "b2a_base64":
+            c["d"], c["newline"] = d, r.random() < 0.5
+        else:
+            c["d"] = d
+        return c
+
+    @classmethod
+    def run(cls, c):
+        fn = c["fn"].split(".")[1]
+
+        def body():
+            if fn == "a2b_base64":
+                return list(binascii.a2b_base64(data_dec(c["d"]), strict_mode=c["strict"]))
+            if fn == "b2a_base64":
+                return list(binascii.b2a_base64(bytes(c["d"]), newline=c["newline"]))
+            if fn == "a2b_hex":
+                return list(binascii.a2b_hex(data_dec(c["d"])))
+            return list(binascii.b2a_hex(bytes(c["d"])))
+
+        return common.py_result(body)
+
+
+@area("base64", 3)
+class Base64Area(Codec):
+    @classmethod
+    def gen(cls, r):
+        d = cls.raw(r)
+        fn = r.choice(["b64decode", "b64decode", "urlsafe_b64encode", "urlsafe_b64decode", "b32encode",
+                       "b32hexencode", "b32decode", "b32decode", "b32decode", "b32hexdecode",
+                       "b32hexdecode", "b16encode", "b16decode", "b16decode"])
+        c = {"mod": "textlibs", "fn": "base64." + fn}
+        raw = bytes(d)
+        if fn == "b64decode":
+            c["validate"] = r.random() < 0.5
+            alt = r.choice([None, None, {"b": [45, 95]}, {"s": [45, 95]}, {"b": [42, 33]}, {"b": [45]}])
+            t = base64.b64encode(raw)
+            if alt is not None and len(data_dec(alt)) == 2:
+                a = data_dec(alt)
+                a = a.encode() if isinstance(a, str) else a
+                t = base64.b64encode(raw, a)
+            c["alt"] = alt
+            c["d"] = cls.wrap(r, cls.corrupt(r, t, cls.B64))
+        elif fn == "urlsafe_b64decode":
+            c["d"] = cls.wrap(r, cls.corrupt(r, base64.urlsafe_b64encode(raw), cls.B64 + b"-_"))
+        elif fn in ("b32decode", "b32hexdecode"):
+            hexa = fn == "b32hexdecode"
+            t = (base64.b32hexencode if hexa else base64.b32encode)(raw)
+            if r.random() < 0.3:
+                t = t.lower()
+            c["casefold"] = r.random() < 0.5
+            alpha = cls.B32H if hexa else cls.B32
+            c["d"] = cls.wrap(r, t if r.random() < 0.3 else cls.corrupt(r, t, alpha))
+            if not hexa:
+                c["map01"] = r.choice([None, None, None, {"b": [76]}, {"s": [73]}, {"b": [76, 76]}])
+        elif fn == "b16decode":
+            t = base64.b16encode(raw)
+            if r.random() < 0.3:
+                t = t.lower()
+            c["casefold"] = r.random() < 0.5
+            c["d"] = cls.wrap(r, t if r.random() < 0.3 else cls.corrupt(r, t, b"0123456789ABCDEFabcdef"))
+        else:
+            c["d"] = d
+        return c
+
+    @classmethod
+    def run(cls, c):
+        fn = c["fn"].split(".")[1]
+
+        def body():
+            f = getattr(base64, fn)
+            if fn == "b64decode":
+                return list(f(data_dec(c["d"]), altchars=data_dec(c.get("alt")), validate=c["validate"]))
+            if fn == "urlsafe_b64decode":
+                return list(f(data_dec(c["d"])))
+            if fn == "b32decode":
+                return list(f(data_dec(c["d"]), casefold=c["casefold"], map01=data_dec(c.get("map01"))))
+            if fn in ("b32hexdecode", "b16decode"):
+                return list(f(data_dec(c["d"]), casefold=c["casefold"]))
+            return list(f(bytes(c["d"])))
+
+        return common.py_result(body)
+
+
 # ---- driver ----------------------------------------------------------------
 
 only = os.environ.get("TEXTLIBS_ONLY")
