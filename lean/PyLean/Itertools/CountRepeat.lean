@@ -2,12 +2,19 @@ import PyLean.Itertools.Model
 
 /-!
 `itertools.count` (Modules/itertoolsmodule.c:3485-3727) and `itertools.repeat`
-(:3729-3857) with int arguments, driven by a sequence of operations
-(`next(it)`, `repr(it)`, `it.__length_hint__()`), and their doc equivalents
-(rst:320-326, :626-633).
+(:3729-3857), driven by a sequence of operations (`next(it)`, `repr(it)`,
+`it.__length_hint__()`), and their doc equivalents (rst:320-326, :626-633).
 
 `count` keeps a C `Py_ssize_t cnt` while in "fast mode" (int start that fits,
-step exactly 1) and switches to PyLong arithmetic at `PY_SSIZE_T_MAX`.
+step exactly 1) and otherwise, or at `PY_SSIZE_T_MAX`, adds Python objects. Its
+arguments are any numbers ("Either long_cnt or long_step may be a float, Fraction,
+or Decimal", :3510): a `CVal ν` says what the C code can see of one, and `NumOps`
+gives `PyNumber_Add` and `%R` for everything but exact ints, so the model is
+generic in the number types. `CountFloat.lean` instantiates it with `float`.
+
+`NumOps.add` cannot call back into the count object, so the re-entrant `__radd__` of
+python/cpython#154670 (a use-after-free of the `long_cnt` that `count_nextlong` does
+not hold across the add) is out of this model's reach.
 -/
 
 namespace PyLean.Itertools
@@ -29,70 +36,154 @@ inductive OpRes (α : Type) where
 
 /-! ## count -/
 
-/-- The `PyNumber_Check` of `itertools_count_impl` (:3537-3541): non-numbers
-are rejected. (Numbers that are not ints take the slow path with their own
-`+`; they are out of scope here.) -/
-def cCountCheck (startIsNum stepIsNum : Bool) : Py Unit :=
-  if !startIsNum || !stepIsNum then .error (.typeError "a number is required") else .ok ()
+/-- A Python object as `count` sees it. `int` is an exact int; `intSub` a subclass
+of int (`bool`, say) with its value; `num` passes `PyNumber_Check` but not
+`PyLong_Check`; `nonNum` fails `PyNumber_Check`. `ν` is the rest of the object. -/
+inductive CVal (ν : Type) where
+  | int (i : Int)
+  | intSub (i : Int) (x : ν)
+  | num (x : ν)
+  | nonNum (x : ν)
 
+/-- `PyNumber_Check`. -/
+def CVal.isNumber {ν : Type} : CVal ν → Bool
+  | .nonNum _ => false
+  | _ => true
+
+/-- `PyLong_Check`. -/
+def CVal.isLong {ν : Type} : CVal ν → Bool
+  | .int _ | .intSub _ _ => true
+  | _ => false
+
+/-- The value of a `PyLong_Check`ed object. -/
+def CVal.longVal {ν : Type} : CVal ν → Int
+  | .int i | .intSub i _ => i
+  | _ => 0
+
+/-- What the number types do: `PyNumber_Add`, and `%R`, which can raise. Exact ints
+are built in (`pyAdd`, `pyRepr`), so this is everything else. Nothing is assumed
+of these functions. -/
+structure NumOps (ν : Type) where
+  add : CVal ν → CVal ν → Py (CVal ν)
+  repr : CVal ν → Py String
+
+variable {ν : Type}
+
+/-- `PyNumber_Add`: of two exact ints, their sum. -/
+def pyAdd (N : NumOps ν) : CVal ν → CVal ν → Py (CVal ν)
+  | .int a, .int b => .ok (.int (a + b))
+  | a, b => N.add a b
+
+/-- `%R`: of an exact int, its decimal form. -/
+def pyRepr (N : NumOps ν) : CVal ν → Py String
+  | .int a => .ok (toString a)
+  | v => N.repr v
 
 /-- `countobject` (:3487-3492): `longCnt = none` is `long_cnt == NULL`. -/
-structure CountState where
+structure CountState (ν : Type) where
   cnt : Int
-  longCnt : Option Int
-  longStep : Int
-  deriving Repr, DecidableEq
+  longCnt : Option (CVal ν)
+  longStep : CVal ν
 
 /-- `PyLong_AsLong` on an int, "-1 with the error cleared" on overflow. -/
 def asLongOrMinus1 (x : Int) : Int := if ssizeMin ≤ x ∧ x ≤ ssizeMax then x else -1
 
-/-- `itertools_count_impl` (:3529-3604) for int (or omitted) arguments; both
-are `PyLong`s so `fast_mode` starts true. -/
-def cCountNew (start step : Option Int) : CountState :=
-  let longStep := step.getD 1
-  -- :3548-3567: `cnt = PyLong_AsSsize_t(long_cnt)`, overflow → slow mode
-  let (cnt, longCnt, fast) : Int × Int × Bool :=
-    match start with
-    | some s =>
-      match asSsize s with
-      | .ok v => (v, s, true)
-      | .error _ => (-1, s, false)
-    | none => (0, 0, true)
-  -- :3571-3581: fast mode only works when the step is 1
-  let fast := fast && asLongOrMinus1 longStep == 1
-  -- :3582-3585
-  if fast then { cnt := cnt, longCnt := none, longStep := longStep }
-  else { cnt := ssizeMax, longCnt := some longCnt, longStep := longStep }
+/-- `arg != NULL && !PyNumber_Check(arg)`. -/
+def argBad : Option (CVal ν) → Bool
+  | some v => !v.isNumber
+  | none => false
 
-/-- `count_next` (:3651-3678, GIL build) and `count_nextlong` (:3629-3648). -/
-def cCountNext (s : CountState) : Int × CountState :=
+/-- `arg == NULL || PyLong_Check(arg)`. -/
+def argLong : Option (CVal ν) → Bool
+  | some v => v.isLong
+  | none => true
+
+/-- `itertools_count_impl` (:3529-3604). `cnt` is only ever kept in fast mode. -/
+def cCountNew (start step : Option (CVal ν)) : Py (CountState ν) :=
+  -- :3538-3542
+  if argBad start || argBad step then .error (.typeError "a number is required")
+  else
+    -- :3544-3545
+    let fast := argLong start && argLong step
+    -- :3548-3560: `PyLong_AsSsize_t`, overflow clears `fast_mode`
+    let (cnt, longCnt, fast) : Int × CVal ν × Bool :=
+      match start with
+      | some s =>
+        if fast then
+          match asSsize s.longVal with
+          | .ok v => (v, s, true)
+          | .error _ => (-1, s, false)
+        else (0, s, false)
+      | none => (0, .int 0, fast)
+    -- :3564-3566
+    let longStep := step.getD (.int 1)
+    -- :3572-3580: fast mode only works when the step is 1
+    let fast := fast && asLongOrMinus1 longStep.longVal == 1
+    -- :3582-3585
+    if fast then .ok { cnt := cnt, longCnt := none, longStep := longStep }
+    else .ok { cnt := ssizeMax, longCnt := some longCnt, longStep := longStep }
+
+/-- `count_next` (:3651-3678, GIL build) and `count_nextlong` (:3629-3648): the sum
+is computed before the current value is handed over, so a failed add raises in its
+place (:3643-3645) and leaves the state as it was. In fast mode `cnt` becomes an
+exact int: the type of a `bool` start, and `__add__` of an int subclass, are not
+consulted. -/
+def cCountNext (N : NumOps ν) (s : CountState ν) : OpRes (CVal ν) × CountState ν :=
   if s.cnt = ssizeMax then
-    let lc := s.longCnt.getD ssizeMax
-    (lc, { s with longCnt := some (lc + s.longStep) })
-  else (s.cnt, { s with cnt := s.cnt + 1 })
+    let lc := s.longCnt.getD (.int ssizeMax)
+    match pyAdd N lc s.longStep with
+    | .error e => (.exc e, s)
+    | .ok up => (.val lc, { s with longCnt := some up })
+  else (.val (.int s.cnt), { s with cnt := s.cnt + 1 })
 
-/-- `count_repr` (:3681-3705). `%R` of an int is its decimal form. -/
-def cCountRepr (s : CountState) : String :=
+/-- `PyLong_Check(lz->long_step)` and its value is 1 (:3690-3695). -/
+def stepIsOne (step : CVal ν) : Bool := step.isLong && asLongOrMinus1 step.longVal == 1
+
+/-- `count_repr` (:3681-3705). `ty` is `_PyType_Name(Py_TYPE(lz))`. -/
+def cCountRepr (N : NumOps ν) (ty : String) (s : CountState ν) : Py String :=
   match s.longCnt with
-  | none => s!"count({s.cnt})"
+  | none => .ok s!"{ty}({s.cnt})"
   | some lc =>
-    if asLongOrMinus1 s.longStep = 1 then s!"count({lc})"
-    else s!"count({lc}, {s.longStep})"
+    if stepIsOne s.longStep then
+      match pyRepr N lc with
+      | .error e => .error e
+      | .ok r => .ok s!"{ty}({r})"
+    else
+      match pyRepr N lc with
+      | .error e => .error e
+      | .ok r =>
+        match pyRepr N s.longStep with
+        | .error e => .error e
+        | .ok t => .ok s!"{ty}({r}, {t})"
 
-def cCountOps (s : CountState) : List Op → List (OpRes Int)
+/-- A `repr()` as an operation result. -/
+def reprRes {α : Type} : Py String → OpRes α
+  | .ok r => .str r
+  | .error e => .exc e
+
+def cCountOps (N : NumOps ν) (ty : String) (s : CountState ν) : List Op → List (OpRes (CVal ν))
   | [] => []
-  | .next :: ops => let (v, s) := cCountNext s; .val v :: cCountOps s ops
-  | .repr :: ops => .str (cCountRepr s) :: cCountOps s ops
-  | .hint :: ops => .exc (.typeError "~no __length_hint__") :: cCountOps s ops
+  | .next :: ops => let (r, s) := cCountNext N s; r :: cCountOps N ty s ops
+  | .repr :: ops => reprRes (cCountRepr N ty s) :: cCountOps N ty s ops
+  | .hint :: ops => .exc (.typeError "~no __length_hint__") :: cCountOps N ty s ops
 
-def cCount (start step : Option Int) (ops : List Op) : List (OpRes Int) :=
-  cCountOps (cCountNew start step) ops
+/-- `count(start, step)` then the operations; `ty` is the type's name, so
+`"count"` unless subclassed. -/
+def cCount (N : NumOps ν) (start step : Option (CVal ν)) (ops : List Op) (ty : String := "count") :
+    List (OpRes (CVal ν)) :=
+  match cCountNew start step with
+  | .error e => [.exc e]
+  | .ok s => cCountOps N ty s ops
 
-/-- The doc's `count(start=0, step=1)` (rst:320-326): the `k`-th value. -/
-def docCountValues (start step : Option Int) (k : Nat) : List Int :=
-  let s := start.getD 0
-  let st := step.getD 1
-  (List.range k).map (fun (i : Nat) => s + (i : Int) * st)
+/-- The doc's `count(start=0, step=1)` (rst:320-326) under `k` calls of `next()`:
+`yield n`, and only on the next call `n += step`. -/
+def docCountRun (N : NumOps ν) (step : CVal ν) : Nat → CVal ν → Run (CVal ν)
+  | 0, _ => ([], none)
+  | 1, n => ([n], none)
+  | k + 2, n =>
+    match pyAdd N n step with
+    | .error e => ([n], some e)
+    | .ok m => let r := docCountRun N step (k + 1) m; (n :: r.1, r.2)
 
 /-! ## repeat -/
 

@@ -28,7 +28,7 @@ that has no exports, so that the callback's `release()` succeeds. -/
 def ReleasedKeyNoWrite : Prop :=
   ∀ (st : St) (self : Nat) (n : Int) (v : Obj),
     self < st.mvs.length → (st.mv self).exports = 0 →
-    (memoryAssSub self (.one (.obj (.index n (some self)))) (some v) st).2.mem = st.mem
+    (memoryAssSub self (.one (.obj (.index (.val n) (some self)))) (some v) st).2.mem = st.mem
 
 /-- `m = memoryview(bytearray(8)).cast('c'); m[K()] = b'x'` writes: the arm for `c` of
 `pack_single` has no `CHECK_RELEASED_INT_AGAIN`, and `memory_ass_sub` took the pointer
@@ -36,7 +36,7 @@ after the callback ran (with `ba.clear()` in `__index__`, a write to freed memor
 theorem releasedKeyNoWrite_refuted : ¬ ReleasedKeyNoWrite := by
   intro h
   have := h (stateOf [97, 97] (fmtBuf 2 1 ['c'])) 0 0 (.bytes [120]) (by decide) rfl
-  have e : (memoryAssSub 0 (.one (.obj (.index 0 (some 0)))) (some (.bytes [120]))
+  have e : (memoryAssSub 0 (.one (.obj (.index (.val 0) (some 0)))) (some (.bytes [120]))
       (stateOf [97, 97] (fmtBuf 2 1 ['c']))).2.mem = [120, 97] := by rfl
   rw [e] at this
   exact absurd this (by decide)
@@ -51,9 +51,13 @@ theorem fire_bind_mono {α : Type} (r : Option Nat) (f : PUnit → M α) (st : S
   | error e => exact h
   | ok a => exact h.trans (hf s)
 
+theorem get_mono {α : Type} (w : String → PyExc) (r : Ret α) (st : St) : Mono st (r.get w st).2 := by
+  rw [Ret.get_state]
+  exact Mono.refl _
+
 theorem numberIndex_mono (o : Obj) (st : St) : Mono st (numberIndex o st).2 := by
   cases o
-  case index n rel => exact fire_bind_mono rel _ st fun _ => Mono.refl _
+  case index n rel => exact fire_bind_mono rel _ st fun s => get_mono _ _ s
   all_goals exact Mono.refl _
 
 theorem lift_bind_mono {α β : Type} (x : M α) (f : α → Py β) (st : St)
@@ -67,13 +71,14 @@ theorem lift_bind_mono {α β : Type} (x : M α) (f : α → Py β) (st : St)
 
 theorem floatAsDouble_mono (o : Obj) (st : St) : Mono st (floatAsDouble o st).2 := by
   cases o
-  case index n rel => exact fire_bind_mono rel _ st fun _ => Mono.refl _
-  case floatLike b rel => exact fire_bind_mono rel _ st fun _ => Mono.refl _
+  case index n rel =>
+    exact fire_bind_mono rel _ st fun s => lift_bind_mono _ _ s (get_mono _ _ s)
+  case floatLike b rel => exact fire_bind_mono rel _ st fun s => get_mono _ _ s
   all_goals exact Mono.refl _
 
 theorem isTrue_mono (o : Obj) (st : St) : Mono st (isTrue o st).2 := by
   cases o
-  case boolLike b rel => exact fire_bind_mono rel _ st fun _ => Mono.refl _
+  case boolLike b rel => exact fire_bind_mono rel _ st fun s => get_mono _ _ s
   case view i =>
     simp only [isTrue, M.bind_app, M.get]
     cases h : baseInaccessible st i
@@ -165,7 +170,7 @@ def ReleasedKeyNoWriteNotC : Prop :=
   ∀ (st : St) (self : Nat) (n : Int) (v : Obj) (c : Char),
     self < st.mvs.length → (st.mv self).exports = 0 → c ≠ 'c' →
     adjustFmt (st.mv self).view = .ok [c] →
-    (memoryAssSub self (.one (.obj (.index n (some self)))) (some v) st).2.mem = st.mem
+    (memoryAssSub self (.one (.obj (.index (.val n) (some self)))) (some v) st).2.mem = st.mem
 
 theorem releasedKeyNoWriteNotC_proven : ReleasedKeyNoWriteNotC := by
   intro st self n v c hs hexp hc hf
@@ -191,8 +196,8 @@ theorem releasedKeyNoWriteNotC_proven : ReleasedKeyNoWriteNotC := by
           cases res with
           | error e => exact hmem
           | ok u =>
-            simp only [M.bind_app, M.get, M.pure_app, M.lift]
-            cases hk : keyAsSsize (.index n (some self)) n with
+            simp only [M.bind_app, M.get, M.pure_app, M.lift, Ret.get_val]
+            cases hk : keyAsSsize (.index (.val n) (some self)) n with
             | error e => simpa using hmem
             | ok index =>
               simp only [hk]
@@ -211,13 +216,13 @@ with no exports and all exporters of at most 64 dimensions. -/
 def CmpReleasedIdentity : Prop :=
   ∀ (st : St) (v : Nat) (b : Buf),
     v < st.mvs.length → (st.mv v).exports = 0 → b.ndim ≤ 64 →
-    (memoryRichcompare v (.exporter b (some v)) .eq st).1 = .ok (some false)
+    (memoryRichcompare v (.exporter (.val b) (some v)) .eq st).1 = .ok (some false)
 
 /-- `m == W()` with a `__buffer__` that does `m.release()` compares the released memory. -/
 theorem cmpReleasedIdentity_refuted : ¬ CmpReleasedIdentity := by
   intro h
   have := h (stateOf [97] (fmtBuf 1 1 ['B'])) 0 (fmtBuf 1 1 ['B']) (by decide) rfl (by decide)
-  have e : (memoryRichcompare 0 (.exporter (fmtBuf 1 1 ['B']) (some 0)) .eq
+  have e : (memoryRichcompare 0 (.exporter (.val (fmtBuf 1 1 ['B'])) (some 0)) .eq
       (stateOf [97] (fmtBuf 1 1 ['B']))).1 = .ok (some true) := by rfl
   rw [e] at this
   exact absurd this (by decide)

@@ -1,0 +1,59 @@
+id: longobj-complex-float-subclass-dunder-float
+title: "complex(x) ignores __float__ on a float subclass, while complex(x, 0) and float(x) call it"
+priority: P4
+kind: twin-disagreement
+module: longobj
+files: [Objects/complexobject.c]
+functions: [actual_complex_new, complex_new_impl]
+summary: |
+  The 3.14 split of the constructor made complex(x) convert through PyFloat_AsDouble
+  (line 1141), which reads a float subclass's value directly, while complex(x, 0) and
+  complex(real=x) still use PyNumber_Float (line 1256), which calls __float__. So for a
+  float subclass overriding __float__, complex(x) and complex(x, 0) give different real
+  parts. complex(x) now also disagrees with float(x). In 3.13 every path went through
+  PyNumber_Float, so this is a behaviour change.
+likelihood: |
+  Low. Needs a float subclass whose __float__ returns something other than its value.
+maybe_intended: |
+  Perhaps. PyFloat_AsDouble ignoring __float__ on a subclass is the usual C API behaviour,
+  and float.from_number and complex.from_number do the same. The refactor's aim was not to
+  change this, though, and the constructor's own forms now disagree. A maintainer could
+  reasonably prefer to document it, so report it as a low-priority inconsistency.
+reproducer: |
+  class F(float):
+      def __float__(self):
+          return 42.0
+  x = F(1.0)
+  one, two, kw, fl = complex(x), complex(x, 0), complex(real=x), float(x)
+  print('complex(x)      ->', one)
+  print('complex(x, 0)   ->', two)
+  print('complex(real=x) ->', kw)
+  print('float(x)        ->', fl)
+  if one.real == 1.0 and two.real == 42.0 and kw.real == 42.0 and fl == 42.0:
+      print('REPRODUCED longobj-complex-float-subclass-dunder-float')
+expected: |
+  (42+0j) from all three forms, as in 3.13.
+promised_by: |
+  Doc/library/functions.rst:426-431: complex(x) delegates to x.__complex__(), then falls
+  back to __float__() and then __index__().
+cause: |
+  Objects/complexobject.c:1141 calls PyFloat_AsDouble, whose PyFloat_Check shortcut
+  (Objects/floatobject.c:268-270) skips nb_float; line 1256 calls PyNumber_Float, which
+  checks PyFloat_CheckExact and so does call it (Objects/abstract.c:1598-1603).
+possible_fix: |
+  Use PyNumber_Float on line 1141, as 3.13 did for this path, or document the difference.
+tested:
+  python3 (3.14.7): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
+  v3.13.0: not run; source read with `gh api repos/python/cpython/contents/Objects/complexobject.c?ref=v3.13.0`, complex_new_impl converts with PyNumber_Float on every path
+duplicates:
+  issues: []
+  related:
+    - {number: 119620, state: merged, relation: "gh-109218 PR deprecating weird cases of the constructor; same refactoring series"}
+  queries: ["complex __float__ subclass", "complex float subclass __float__ ignored",
+            "complex constructor deprecate __complex__ real imag",
+            "PyFloat_AsDouble PyNumber_Float complex constructor", "109218 (prs)"]
+  bugforge: "only complex-related entry is cmath-20261003-033712-c2 (cmath.isclose, #158697); not this one"
+lean:
+  property: PyLean.LongObj.Cplx.OneArgMatchesTwoArgOnFloats
+  theorem: PyLean.LongObj.Cplx.oneArgMatchesTwoArgOnFloats_refuted

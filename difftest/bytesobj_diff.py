@@ -11,6 +11,7 @@ import ctypes
 import gc
 import operator
 import sys
+import weakref
 
 import common
 
@@ -1088,6 +1089,62 @@ def b_rbyteobjs(rng):
             else ["int", rng.randint(0, 255)] for _ in range(rng.randint(0, 6))]
 
 
+def b_cap_stars(fmt, arg):
+    """Cap the ints a `*` really consumes, so that no case asks for a huge result.
+
+    A value is dangerous by position, not size: as a precision `2 ** 40` is a cheap
+    OverflowError, as a width it pads to 1 TiB, which the model would build as a list.
+    A bare `%` part before a `%.*` spec re-parses as `%%` and shifts every later
+    argument by one, so a value generated as a precision can become a width. This
+    walks the format as `_PyBytes_FormatEx` does (bytesobject.c:672-823) to find what
+    each `*` takes. Only a tuple can get as far as allocating: a single argument is
+    used up by the `*`, and the `getnextarg` at :823 then raises.
+    """
+    if arg[0] != "tuple":
+        return arg
+    args, i, k, n = arg[1], 0, 0, len(fmt)
+
+    def take(risky):
+        nonlocal k
+        if k < len(args) and args[k][0] == "int" and risky(args[k][1]):
+            args[k] = ["int", args[k][1] % 1000]
+        k += 1
+
+    while i < n:
+        if fmt[i] != 37:
+            i += 1
+            continue
+        i += 1
+        if i < n and fmt[i] == 37:      # `%%` takes no argument; `%5%` does (:823)
+            i += 1
+            continue
+        if i < n and fmt[i] == 40:      # no mapping: "format requires a mapping"
+            break
+        while i < n and fmt[i] in b"-+ #0":
+            i += 1
+        if i < n and fmt[i] == 42:
+            take(lambda v: 2000 < abs(v) < 2 ** 47)
+            i += 1
+        else:
+            while i < n and 48 <= fmt[i] <= 57:
+                i += 1
+        if i < n and fmt[i] == 46:
+            i += 1
+            if i < n and fmt[i] == 42:
+                take(lambda v: 2000 < v < 2 ** 31)
+                i += 1
+            else:
+                while i < n and 48 <= fmt[i] <= 57:
+                    i += 1
+        if i < n and fmt[i] in b"hlL":
+            i += 1
+        if i >= n:
+            break
+        i += 1
+        k += 1
+    return arg
+
+
 def b_rfmt(rng):
     """Format strings with every parser path; returns (format bytes, args object)."""
     parts, args = [], []
@@ -1155,7 +1212,7 @@ def b_rfmt(rng):
         a = ["list", args]
     else:
         a = ["tuple", args + [["int", 1]]]
-    return list(fmt), a
+    return list(fmt), b_cap_stars(fmt, a)
 
 
 def b_robj_ascii(rng, depth=2):
@@ -1967,6 +2024,10 @@ def _build_exporter(spec):
     kind = spec["kind"]
     data = bytes(spec["data"])
     if kind == "bytes":
+        if "hashrel" in spec:
+            e = HashBytes(data)
+            e.fails = spec["unhash"] is not None
+            return e
         return data
     if kind == "bytearray":
         return bytearray(data)
@@ -1995,8 +2056,12 @@ def _gen_rel(rng):
 def _gen_obj(rng, n_exp):
     """An argument object."""
     r = rng.random()
-    if r < 0.45:
+    if r < 0.37:
         return rng.choice(_VAL_INTS)
+    if r < 0.41:
+        return {"flt": _gen_end(rng, _fbits(rng.choice(_FLOATS))), "rel": _gen_rel(rng)}
+    if r < 0.45:
+        return {"bln": _gen_end(rng, rng.random() < 0.5), "rel": _gen_rel(rng)}
     if r < 0.5:
         return {"bool": rng.random() < 0.5}
     if r < 0.62:
@@ -2012,12 +2077,26 @@ def _gen_obj(rng, n_exp):
     if r < 0.86:
         return {"mv": rng.randrange(6)}
     if r < 0.9:
-        return {"exp": rng.randrange(n_exp), "rel": _gen_rel(rng)}
+        d = {"exp": rng.randrange(n_exp), "rel": _gen_rel(rng)}
+        ending = _gen_end(rng, None)
+        if ending is not None:
+            d["end"] = ending
+        return d
     if r < 0.95:
-        return {"idx": rng.choice(_VAL_INTS), "rel": _gen_rel(rng)}
+        return {"idx": _gen_end(rng, rng.choice(_VAL_INTS)), "rel": _gen_rel(rng)}
     if r < 0.98:
-        return {"flt": _fbits(rng.choice(_FLOATS)), "rel": _gen_rel(rng)}
-    return {"bln": rng.random() < 0.5, "rel": _gen_rel(rng)}
+        return {"flt": _gen_end(rng, _fbits(rng.choice(_FLOATS))), "rel": _gen_rel(rng)}
+    return {"bln": _gen_end(rng, rng.random() < 0.5), "rel": _gen_rel(rng)}
+
+
+def _gen_end(rng, value):
+    """A callback's ending: usually `value`; sometimes it raises or returns the wrong type."""
+    r = rng.random()
+    if r < 0.15:
+        return {"raise": rng.choice(["ValueError", "TypeError", "OverflowError", "LookupError", "Boom"])}
+    if r < 0.25:
+        return {"wrong": rng.choice(["str", "NoneType", "list"])}
+    return value
 
 
 def _gen_slice(rng):
@@ -2036,7 +2115,7 @@ def _gen_key_elem(rng):
     if r < 0.8:
         return _gen_slice(rng)
     if r < 0.9:
-        return {"idx": rng.choice(_KEY_INTS), "rel": _gen_rel(rng)}
+        return {"idx": _gen_end(rng, rng.choice(_KEY_INTS)), "rel": _gen_rel(rng)}
     if r < 0.95:
         return {"bool": rng.random() < 0.5}
     return rng.choice([{"float": _fbits(1.0)}, {"str": "a"}, None, {"bytes": [1]}])
@@ -2168,20 +2247,114 @@ def _gen_low(rng):
 def _gen_script(rng):
     store = []
     specs = []
+    singletons = []     # empty and one-byte `bytes` are shared, so `m.obj` could not tell two apart
     for _ in range(rng.choice([1, 1, 2, 3])):
         s = _gen_exporter(rng, store)
         if s is None:
             return None
+        if s["kind"] == "bytes":
+            o = _build_exporter(s)
+            if any(o is e for e in singletons):
+                continue
+            singletons.append(o)
         specs.append(s)
     exps = [{k: s[k] for k in ("buf", "len", "itemsize", "readonly", "ndim", "format", "shape", "strides",
                                "suboffsets", "unhash")} for s in specs]
     ops = [["view", {"exp": rng.randrange(len(specs)), "rel": None}]]
     ops += [_gen_op(rng, specs) for _ in range(rng.choice([2, 3, 5, 8, 12]))]
+    # A `contig` view of a short buffer owns a temporary `bytes`, which is the same shared
+    # object as a short exporter, so `.obj` cannot say which. Each pair of these still occurs.
+    if (any(len(e) <= 1 for e in singletons) and any(op[0] == "contig" for op in ops)
+            and any(op[0] == "attr" and op[2] == "obj" for op in ops)):
+        return None
     return {"mod": "bytesobj", "fn": "mem.script", "mem": store, "exps": exps, "specs": specs, "ops": ops}
 
 
+def _gen_pack_fail(rng):
+    """Assign a failing item through a view cast to each format. A random script rarely
+    pairs a format like `?` with the callback object that format runs."""
+    data = _rand_bytes(rng, 8)
+    spec = {"kind": "bytearray", "data": data, "buf": 0, "len": 8, "itemsize": 1, "readonly": False,
+            "ndim": 1, "format": "B", "shape": [8], "strides": [1], "suboffsets": None,
+            "unhash": {"cls": "TypeError", "msg": "unhashable type: 'bytearray'"}}
+    fmt = rng.choice("??fdebBhHiIlLqQnN")
+    key = "bln" if fmt == "?" else "flt" if fmt in "fde" else "idx"
+    value = {"bln": True, "flt": _fbits(1.5), "idx": 1}[key]
+    ending = _gen_end(rng, value)
+    if ending is value and rng.random() < 0.8:
+        ending = rng.choice([{"raise": rng.choice(list(_RAISES))}, {"wrong": rng.choice(list(_WRONG))}])
+    item = {key: ending, "rel": rng.choice([None, None, 0, 1])}
+    ops = [["view", {"exp": 0, "rel": None}], ["cast", 0, fmt, None], ["set", 1, 0, item], ["get", 1, 0],
+           ["tobytes", 0, ""]]
+    exps = [{k: spec[k] for k in ("buf", "len", "itemsize", "readonly", "ndim", "format", "shape", "strides",
+                                  "suboffsets", "unhash")}]
+    return {"mod": "bytesobj", "fn": "mem.script", "mem": list(data), "exps": exps, "specs": [spec], "ops": ops}
+
+
+def _spec_bytearray(rng, n=8):
+    return {"kind": "bytearray", "data": _rand_bytes(rng, n), "buf": 0, "len": n, "itemsize": 1,
+            "readonly": False, "ndim": 1, "format": "B", "shape": [n], "strides": [1], "suboffsets": None,
+            "unhash": {"cls": "TypeError", "msg": "unhashable type: 'bytearray'"}}
+
+
+def _script_of(spec, ops, extra=()):
+    keys = ("buf", "len", "itemsize", "readonly", "ndim", "format", "shape", "strides", "suboffsets",
+            "unhash") + tuple(extra)
+    return {"mod": "bytesobj", "fn": "mem.script", "mem": list(spec["data"]),
+            "exps": [{k: spec[k] for k in keys}], "specs": [spec], "ops": ops}
+
+
+def _gen_failure(rng):
+    """A callback's failure, not a value."""
+    return rng.choice([{"raise": rng.choice(list(_RAISES))}, {"wrong": rng.choice(list(_WRONG))}])
+
+
+def _gen_effect(rng):
+    """One short script for each effect of the Python code a memoryview runs. Random scripts
+    rarely line up the object, the operation and the view that each of these needs."""
+    k = rng.randrange(7)
+    spec = _spec_bytearray(rng)
+    view = ["view", {"exp": 0, "rel": None}]
+    tail = [["tobytes", 0, None], ["release", 0], ["tobytes", 0, None]]
+    if k == 0:      # `__buffer__`: memoryview(x), `==` (cleared) and a slice assignment
+        bad = {"exp": 0, "rel": None, "end": _gen_failure(rng)}
+        return _script_of(spec, [["view", bad], view, ["set", 0, {"slice": [0, 2, None], "rel": None}, bad],
+                                 ["cmp", 0, bad, "eq"]] + tail)
+    if k == 1:      # `__release_buffer__`, on the last view, or at the end of `==`
+        hooked = {"exp": 0, "rel": None, "hook": 0}
+        if rng.random() < 0.5:
+            return _script_of(spec, [view, ["view", hooked], ["tobytes", 1, None], ["release", 1]] + tail)
+        return _script_of(spec, [view, ["cmp", 0, hooked, rng.choice(["eq", "ne"])]] + tail)
+    if k == 2:      # a weakref callback runs after the release in `memory_dealloc`
+        return _script_of(spec, [view, view, ["weak", 1, 0], ["drop", 1]] + tail)
+    if k == 3:      # `__hash__` of a real exporter, with `self` holding an export
+        spec = dict(spec, kind="bytes", readonly=True, hashrel=0,
+                    unhash=rng.choice([None, {"cls": "ValueError", "msg": "boom"}]))
+        h = rng.randrange(2)     # on view 0, `self.release()`; on view 1, the release of another view
+        return _script_of(spec, [view, view, ["hash", h], ["hash", h]] + tail, ("hashrel",))
+    if k == 4:      # a slice part that fails, in `PySlice_Unpack`'s order
+        how = rng.choice([_gen_failure(rng), {"notindex": True}])
+        fail = dict(how, part=rng.choice(["start", "stop", "step"]))
+        rel = None if "notindex" in how else rng.choice([None, 0])
+        parts = rng.choice([[0, 4, 2], [1, 4, None], [0, 4, 0], [None, None, 0]])
+        key = {"slice": parts, "rel": rel, "fail": fail}
+        return _script_of(spec, [view, rng.choice([["get", 0, key], ["set", 0, key, {"bytes": [1, 2]}]])] + tail)
+    if k == 5:      # a `sep` with `__len__`: `self` holds an export only if contiguous
+        sep = {"lenobj": rng.choice([1, 2, 0, -1, _gen_failure(rng)]), "rel": rng.choice([None, 0, 1])}
+        return _script_of(spec, [view, ["get", 0, {"slice": [None, None, 2], "rel": None}],
+                                 ["hex", rng.randrange(2), sep, None], ["tobytes", 1, None]] + tail)
+    value = {"eqobj": rng.choice([True, False, False, {"raise": rng.choice(list(_RAISES))}]),
+             "rel": rng.choice([None, None, 0])}
+    return _script_of(spec, [view, rng.choice([["count", 0, value], ["index", 0, value, None, None]])] + tail)
+
+
 def gen_mem(rng):
-    return _gen_low(rng) if rng.random() < 0.15 else _gen_script(rng)
+    r = rng.random()
+    if r < 0.15:
+        return _gen_low(rng)
+    if r < 0.2:
+        return _gen_pack_fail(rng)
+    return _gen_effect(rng) if r < 0.3 else _gen_script(rng)
 
 
 def _item_json(x):
@@ -2209,13 +2382,31 @@ class _PyBuffer(_ct.Structure):
                 ("suboffsets", _ct.c_void_p), ("internal", _ct.c_void_p)]
 
 
+class Boom(Exception):
+    """Not a built-in class on purpose: `fix_error_int` must pass it through."""
+
+
+_RAISES = {"ValueError": ValueError, "TypeError": TypeError, "OverflowError": OverflowError,
+           "LookupError": LookupError, "Boom": Boom}
+_WRONG = {"str": "x", "NoneType": None, "list": []}
+
+
+def _end(spec):
+    """How a callback ends: a value, a raise, or an object of the wrong type."""
+    if isinstance(spec, dict) and "raise" in spec:
+        raise _RAISES[spec["raise"]]("boom")
+    if isinstance(spec, dict) and "wrong" in spec:
+        return _WRONG[spec["wrong"]]
+    return spec
+
+
 class Idx:
     def __init__(self, n, fire):
         self.n, self.fire = n, fire
 
     def __index__(self):
         self.fire()
-        return self.n
+        return _end(self.n)
 
 
 class Flt:
@@ -2224,7 +2415,8 @@ class Flt:
 
     def __float__(self):
         self.fire()
-        return self.x
+        v = _end(self.x)
+        return _unfbits(v) if isinstance(v, int) else v
 
 
 class Bln:
@@ -2233,16 +2425,63 @@ class Bln:
 
     def __bool__(self):
         self.fire()
-        return self.b
+        return _end(self.b)
 
 
 class Exporter:
-    def __init__(self, ex, fire):
-        self.ex, self.fire = ex, fire
+    def __init__(self, ex, fire, ending=None):
+        self.ex, self.fire, self.ending = ex, fire, ending
 
     def __buffer__(self, flags):
         self.fire()
+        if self.ending is not None:
+            return _end(self.ending)
         return memoryview(self.ex)
+
+
+class HookExporter(Exporter):
+    """An exporter whose `__release_buffer__` releases a view."""
+
+    def __init__(self, ex, fire, ending, hook):
+        super().__init__(ex, fire, ending)
+        self.hook = hook
+
+    def __release_buffer__(self, view):
+        self.hook()
+        view.release()
+
+
+class Len:
+    def __init__(self, n, fire):
+        self.n, self.fire = n, fire
+
+    def __len__(self):
+        self.fire()
+        return _end(self.n)
+
+
+class Eql:
+    def __init__(self, b, fire):
+        self.b, self.fire = b, fire
+
+    def __eq__(self, other):
+        self.fire()
+        return _end(self.b)
+
+    __hash__ = None
+
+
+class HashBytes(bytes):
+    """A real exporter with a Python `__hash__`: a `memoryview` of an `Exporter` hashes the
+    wrapper of `__buffer__`, so only this reaches `PyObject_Hash(view->obj)` with Python code."""
+    on_hash = None
+    fails = False
+
+    def __hash__(self):
+        self.on_hash()
+        if self.fails:
+            raise ValueError("boom")
+        return bytes.__hash__(self)
 
 
 class _Script:
@@ -2251,11 +2490,16 @@ class _Script:
     def __init__(self, case):
         self.specs = case["specs"]
         self.exps = [_build_exporter(s) for s in self.specs]
+        for e in self.exps:
+            if isinstance(e, HashBytes):
+                e.on_hash = lambda: self.rel({"rel": 0})()
         self.handles = []
         self.dropped = set()
         self.iters = []
         self.hashed = {}
         self.pinned = set()
+        self.pinned_objs = []
+        self.weak = []
 
     def pick(self, h):
         if not self.handles:
@@ -2306,16 +2550,28 @@ class _Script:
         fire = self.rel(j)
         if "exp" in j:
             ex = self.exps[j["exp"]]
-            return (ex if raw else Exporter(ex, fire),)
+            if "hook" in j:
+                return (HookExporter(ex, fire, j.get("end"), self.rel({"rel": j["hook"]})),)
+            return (ex if raw and "end" not in j else Exporter(ex, fire, j.get("end")),)
         if "idx" in j:
             return (Idx(j["idx"], fire),)
         if "flt" in j:
-            return (Flt(_unfbits(j["flt"]), fire),)
+            return (Flt(j["flt"], fire),)
+        if "lenobj" in j:
+            return (Len(j["lenobj"], fire),)
+        if "eqobj" in j:
+            return (Eql(j["eqobj"], fire),)
         return (Bln(j["bln"], fire),)
 
     def key_elem(self, j):
         if isinstance(j, dict) and "slice" in j:
             a, b, c = j["slice"]
+            if "fail" in j:
+                f = j["fail"]
+                parts = [a, b, c]
+                parts[("start", "stop", "step").index(f["part"])] = (
+                    "x" if "notindex" in f else Idx(f, self.rel(j)))
+                return (slice(*parts),)
             if j.get("rel") is not None:
                 fire = self.rel(j)
                 if a is not None:
@@ -2362,7 +2618,15 @@ class _Script:
             if o is None:
                 return skip
             buffertype = _tb.PyBUF_WRITE if op[2] else _tb.PyBUF_READ
-            return py(lambda: self.reg(_tb.get_contiguous(o[0], buffertype, op[3])))
+
+            def contig():
+                v = _tb.get_contiguous(o[0], buffertype, op[3])
+                # Keep its temporary alive: an exporter that releases this view during a
+                # comparison would otherwise make CPython read freed memory, see
+                # bugs/bytesobj-memoryview-eq-released-by-buffer.yaml.
+                self.pinned_objs.append(v.obj)
+                return self.reg(v)
+            return py(contig)
         if name == "frommem":
             ba = self.exps[op[1]]
             self.pinned.add(op[1])
@@ -2459,7 +2723,7 @@ class _Script:
         if name == "release":
             return py(lambda: m.release())
         if name == "enter":
-            return py(lambda: (m.__enter__(), None)[1])
+            return py(lambda: {"same": m.__enter__() is m})
         if name == "exit":
             return py(lambda: m.__exit__(None, None, None))
         if name == "cmp":
@@ -2512,6 +2776,10 @@ class _Script:
             return py(at)
         if name == "repr":
             return py(lambda: repr(m).split(" at ")[0])
+        if name == "weak":
+            fire = self.rel({"rel": op[2]})
+            self.weak.append(weakref.ref(m, lambda _: fire()))
+            return {"ok": None}
         if name == "drop":
             del m
             if sys.getrefcount(self.handles[i]) != 2:

@@ -1,0 +1,55 @@
+id: textlibs-base64-decode-per-line
+title: "base64.decode raises on input that base64.decodebytes accepts, when a group spans a line break"
+priority: P4
+kind: twin-disagreement
+module: textlibs
+files: [Lib/base64.py]
+functions: ["decode", "decodebytes"]
+summary: |
+  `base64.decode` passes each `readline()` to `binascii.a2b_base64` on its own, and
+  `base64.decodebytes` passes the whole input. A four-character group split by a line break is valid
+  for the second and raises for the first: `b'YW\nJj\n'` is `b'abc'` for `decodebytes`, and
+  `binascii.Error: Incorrect padding` for `decode`. Output of `encode` and `encodebytes` never does
+  this, because they write whole groups, so only base64 from other encoders is affected.
+likelihood: |
+  Low. It needs line lengths that are not multiples of 4, which RFC 2045 allows but common encoders
+  do not write. The result is an exception, not wrong data.
+maybe_intended: |
+  Possibly. The code is short and has read this way for a long time, the docs promise only that
+  input is read until readline() returns empty, and no decoding state crosses lines. A maintainer
+  could call this a documentation gap or decline it. It may be best left out of any report, or added
+  only as a note.
+reproducer: |
+  import base64, binascii, io
+  data = b'YW\nJj\n'
+  whole = base64.decodebytes(data)
+  try:
+      base64.decode(io.BytesIO(data), io.BytesIO())
+      lines = None
+  except binascii.Error as e:
+      lines = str(e)
+  print(whole, lines)
+  if whole == b'abc' and lines == 'Incorrect padding':
+      print('REPRODUCED textlibs-base64-decode-per-line')
+expected: |
+  Both functions decode the same bytes to the same result.
+observed: |
+  python3 3.14.7: b'abc', Incorrect padding. REPRODUCED.
+  main 3.16.0a1+dev: the same. REPRODUCED.
+promised_by: |
+  The two functions document the same format, and RFC 2045 section 6.8 has decoders ignore line
+  breaks. Neither function's docs state this directly.
+cause: |
+  Lib/base64.py:550-554 calls binascii.a2b_base64(line) per line, with no state kept between calls.
+  Lib/base64.py:583-586 makes one call over everything.
+possible_fix: |
+  Read the whole input and call a2b_base64 once, or keep the undecoded remainder of each line for
+  the next, or state in the docs that each line must hold whole groups.
+duplicates: |
+  None found. Nearest: #64331 (incremental codecs and fragmented data) and #71986 (the base64-codec
+  incremental decoder) are about codecs, not base64.decode. Bugforge base64-20261003-020052-c1
+  (#158696, short writes) and base64-20261004-002157-c1 (read returning None) are other defects of
+  the same file functions. Queries: gh search issues --repo python/cpython "base64.decode line";
+  "base64 decode readline Incorrect padding"; "base64.decode decodebytes multi-line";
+  "base64.decode"; "base64 decode file line"; "base64 padding newline".
+lean: lean/PyLean/TextLibs/BinasciiProps7.lean (DecodeAgreesDecodebytes)

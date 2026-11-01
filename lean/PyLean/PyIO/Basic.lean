@@ -42,6 +42,11 @@ inductive Val where
 @[match_pattern] def Val.bytes (b : List Nat) : Val := .atom (.bytes b)
 @[match_pattern] def Val.str (s : List Nat) : Val := .atom (.str s)
 
+/-- The contents of a `bytes` value (`[]` for anything else). -/
+def Val.bytesOf : Val → List Nat
+  | .bytes b => b
+  | _ => []
+
 /-- The text of a `str` value (`[]` for anything else). -/
 def Val.strOf : Val → List Nat
   | .str l => l

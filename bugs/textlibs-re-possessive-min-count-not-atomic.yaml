@@ -1,0 +1,55 @@
+id: textlibs-re-possessive-min-count-not-atomic
+title: "re: x{m,n}+ with m >= 2 is not equivalent to (?>x{m,n}), as the docs say it is"
+priority: P3
+kind: spec-violation
+module: textlibs
+files: [Modules/_sre/sre_lib.h]
+functions: ["SRE(match)"]
+summary: |
+  The docs say "x{m,n}+ is equivalent to (?>x{m,n})". They differ when m >= 2 and x can match more
+  than one way: `re.fullmatch(r'(?:a|ab){2}+', 'aba')` is None, and
+  `re.fullmatch(r'(?>(?:a|ab){2})', 'aba')` matches. `re.match(r'(?:a+){2}+', 'aa')` is None, and
+  `re.match(r'(?>(?:a+){2})', 'aa')` matches. An atomic group forbids backtracking into it once it is
+  finished, so inside it the iterations can still trade characters to reach the minimum. The
+  possessive loop makes each iteration atomic alone, so the first iteration cannot give back what
+  the second needs. No difference appears with m <= 1, so x*+, x++ and x?+ keep the sentence the docs
+  state for them. The Lean declarative semantics agrees with CPython on 150000 of 150000 random
+  cases once this is modelled, and the documented form is refuted.
+likelihood: |
+  Low to moderate. It needs a possessive quantifier with minimum 2 or more over a body that can
+  match in more than one way. The result is a silent failed match on text the documented form
+  accepts, which is the kind of difference that is hard to spot.
+maybe_intended: |
+  Unclear. The per-iteration loop is how the possessive repeat was written when it was added in 3.11,
+  and PCRE treats x{m,n}+ as (?>x{m,n}). `(?:a+){2}+` matching nothing against 'aa' surprises, but a
+  maintainer may prefer changing the docs to changing the engine. Either fix closes the report.
+reproducer: |
+  import re
+  a = re.fullmatch(r'(?:a|ab){2}+', 'aba')
+  b = re.fullmatch(r'(?>(?:a|ab){2})', 'aba')
+  c = re.match(r'(?:a+){2}+', 'aa')
+  d = re.match(r'(?>(?:a+){2})', 'aa')
+  print(a, b, c, d)
+  if a is None and b is not None and c is None and d is not None:
+      print('REPRODUCED textlibs-re-possessive-min-count-not-atomic')
+expected: |
+  Each pair gives the same result, as the docs state.
+observed: |
+  python3 3.14.7: None, <re.Match span=(0, 3)>, None, <re.Match span=(0, 2)>. REPRODUCED.
+  main 3.16.0a1+dev: the same. REPRODUCED.
+promised_by: |
+  Doc/library/re.rst:216, "x{m,n}+ is equivalent to (?>x{m,n})".
+cause: |
+  Modules/_sre/sre_lib.h:1311-1327 runs the first pattern[1] iterations with DO_JUMP0, each ending at
+  its own SUCCESS, and fails at once when one fails. It never retries an earlier iteration, which
+  the backtracking in an atomic group over MAX_UNTIL would.
+possible_fix: |
+  Compile x{m,n}+ with m >= 2 as an atomic group over a greedy repeat, or match the first m
+  iterations with a backtracking repeat before entering the possessive loop, or change the sentence
+  in the docs to say each iteration is atomic.
+duplicates: |
+  None found. #106052 and #100061 (closed, fixed) were other possessive bugs. Bugforge has no re
+  entries. Queries: gh search issues --repo python/cpython "possessive quantifier"; "possessive
+  atomic group re"; "possessive"; "atomic group"; "possessive repeat minimum atomic re"; "possessive
+  repeat atomic docs".
+lean: lean/PyLean/TextLibs/ReEngineProps.lean (PossessiveIsAtomic, SemAgreesDocumented)

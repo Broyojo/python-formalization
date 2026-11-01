@@ -31,15 +31,15 @@ Python/ceval.c	1101	1106	_PyObjectArray_Free	_PyObjectArray_Free(PyObject **arra
 Python/ceval.c	1148	1376	_PyEval_EvalFrameDefault	_PyEval_EvalFrameDefault(PyThreadState *tstate, _PyInterpreterFrame *frame, int throwflag)	todo		
 Python/ceval.c	1389	1449	format_missing	format_missing(PyThreadState *tstate, const char *kind, PyCodeObject *co, PyObject *names, PyObject *qualname)	todo		
 Python/ceval.c	1452	1488	missing_arguments	missing_arguments(PyThreadState *tstate, PyCodeObject *co, Py_ssize_t missing, Py_ssize_t defcount, _PyStackRef *localsplus, PyObject *qualname)	todo		
-Python/ceval.c	1491	1546	too_many_positional	too_many_positional(PyThreadState *tstate, PyCodeObject *co, Py_ssize_t given, PyObject *defaults, _PyStackRef *localsplus, PyObject *qualname)	todo		
+Python/ceval.c	1491	1546	too_many_positional	too_many_positional(PyThreadState *tstate, PyCodeObject *co, Py_ssize_t given, PyObject *defaults, _PyStackRef *localsplus, PyObject *qualname)	modelled	typeobj-too-many-positional-bound	
 Python/ceval.c	1549	1610	positional_only_passed_as_keyword	positional_only_passed_as_keyword(PyThreadState *tstate, PyCodeObject *co, Py_ssize_t kwcount, PyObject* kwnames, PyObject *qualname)	todo		
-Python/ceval.c	1614	1617	scan_back_to_entry_start	scan_back_to_entry_start(unsigned char *p) {	todo		
-Python/ceval.c	1620	1625	skip_to_next_entry	skip_to_next_entry(unsigned char *p, unsigned char *end) {	todo		
-Python/ceval.c	1631	1678	get_exception_handler	get_exception_handler(PyCodeObject *code, int index, int *level, int *handler, int *lasti)	todo		
+Python/ceval.c	1614	1617	scan_back_to_entry_start	scan_back_to_entry_start(unsigned char *p) {	modelled	bytecode-unwind-to-handler	
+Python/ceval.c	1620	1625	skip_to_next_entry	skip_to_next_entry(unsigned char *p, unsigned char *end) {	modelled	bytecode-unwind-to-handler	
+Python/ceval.c	1631	1678	get_exception_handler	get_exception_handler(PyCodeObject *code, int index, int *level, int *handler, int *lasti)	todo		candidates:bytecode-unwind-to-handler
 Python/ceval.c	1681	1927	initialize_locals	initialize_locals(PyThreadState *tstate, PyFunctionObject *func, _PyStackRef *localsplus, _PyStackRef const *args, Py_ssize_t argcount, PyObject *kwnames)	todo		
-Python/ceval.c	1930	1941	clear_thread_frame	clear_thread_frame(PyThreadState *tstate, _PyInterpreterFrame * frame)	todo		
+Python/ceval.c	1930	1941	clear_thread_frame	clear_thread_frame(PyThreadState *tstate, _PyInterpreterFrame * frame)	modelled	bytecode-unwind-no-handler	
 Python/ceval.c	1944	1956	clear_gen_frame	clear_gen_frame(PyThreadState *tstate, _PyInterpreterFrame * frame)	todo		
-Python/ceval.c	1959	1967	_PyEval_FrameClearAndPop	_PyEval_FrameClearAndPop(PyThreadState *tstate, _PyInterpreterFrame * frame)	todo		
+Python/ceval.c	1959	1967	_PyEval_FrameClearAndPop	_PyEval_FrameClearAndPop(PyThreadState *tstate, _PyInterpreterFrame * frame)	modelled	bytecode-unwind-no-handler	
 Python/ceval.c	1971	2004	_PyEvalFramePushAndInit	_PyEvalFramePushAndInit(PyThreadState *tstate, _PyStackRef func, PyObject *locals, _PyStackRef const* args, size_t argcount, PyObject *kwnames, _PyInterpreterFrame *previous)	todo		
 Python/ceval.c	2010	2068	_PyEvalFramePushAndInit_Ex	_PyEvalFramePushAndInit_Ex(PyThreadState *tstate, _PyStackRef func, PyObject *locals, Py_ssize_t nargs, PyObject *callargs, PyObject *kwargs, _PyInterpreterFrame *previous)	todo		
 Python/ceval.c	2071	2114	_PyEval_Vector	_PyEval_Vector(PyThreadState *tstate, PyFunctionObject *func, PyObject *locals, PyObject* const* args, size_t argcount, PyObject *kwnames)	todo		

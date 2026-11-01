@@ -57,7 +57,7 @@ def cGroupbyNew (iterable : Obj α) : Py (CGroupby α κ) :=
   | .ok ⟨l, _⟩ => .ok { it := l, tgtkey := none, currkey := none, currvalue := none,
                         currgrouper := none, groupers := [] }
 
-/-- `groupby_step` (:508-531): `none` is the `-1` (exhausted) return. -/
+/-- `groupby_step` (:507-531): `none` is the `-1` (exhausted) return. -/
 def cGroupbyStep (key : α → κ) (g : CGroupby α κ) : Option (CGroupby α κ) :=
   match g.it with
   | [] => none
@@ -69,7 +69,7 @@ def gbAdvance : Option κ → Option κ → Bool
   | some _, none => false
   | some ck, some tk => tk == ck
 
-/-- The `for (;;)` loop of `groupby_next` (:541-567). The flag is `true` for
+/-- The `for (;;)` loop of `groupby_next` (:541-568). The flag is `true` for
 the `break` out of the loop and `false` when `groupby_step` failed; the steps
 already taken stay in the state either way. Each iteration but the last
 consumes an item, so `it.length + 1` iterations are enough. -/

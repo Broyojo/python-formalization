@@ -1,10 +1,10 @@
 file	line	endline	name	signature	status	entry	note
 Objects/boolobject.c	14	17	bool_repr	bool_repr(PyObject *self)	todo		
 Objects/boolobject.c	21	24	PyBool_FromLong	PyObject *PyBool_FromLong(long ok)	todo		
-Objects/boolobject.c	29	42	bool_new	bool_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
-Objects/boolobject.c	45	66	bool_vectorcall	bool_vectorcall(PyObject *type, PyObject * const*args, size_t nargsf, PyObject *kwnames)	todo		
-Objects/boolobject.c	71	84	bool_invert	bool_invert(PyObject *v)	todo		
-Objects/boolobject.c	87	92	bool_and	bool_and(PyObject *a, PyObject *b)	todo		
-Objects/boolobject.c	95	100	bool_or	bool_or(PyObject *a, PyObject *b)	todo		
-Objects/boolobject.c	103	108	bool_xor	bool_xor(PyObject *a, PyObject *b)	todo		
-Objects/boolobject.c	160	167	bool_dealloc	bool_dealloc(PyObject *boolean)	todo		
+Objects/boolobject.c	29	42	bool_new	bool_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	bool-twins	
+Objects/boolobject.c	45	66	bool_vectorcall	bool_vectorcall(PyObject *type, PyObject * const*args, size_t nargsf, PyObject *kwnames)	modelled	bool-twins	
+Objects/boolobject.c	71	84	bool_invert	bool_invert(PyObject *v)	modelled	bool-repr-invert	
+Objects/boolobject.c	87	92	bool_and	bool_and(PyObject *a, PyObject *b)	modelled	bool-ops	
+Objects/boolobject.c	95	100	bool_or	bool_or(PyObject *a, PyObject *b)	modelled	bool-ops	
+Objects/boolobject.c	103	108	bool_xor	bool_xor(PyObject *a, PyObject *b)	modelled	bool-ops	
+Objects/boolobject.c	160	167	bool_dealloc	bool_dealloc(PyObject *boolean)	excluded		no-behaviour: never called; re-marks an immortal object

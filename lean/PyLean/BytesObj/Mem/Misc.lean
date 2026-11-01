@@ -18,21 +18,41 @@ def CastRejections : Prop :=
     ((st.mv self).flags.isC = false →
       c = (.error (.typeError "memoryview: casts are restricted to C-contiguous views"), st)) ∧
     ((st.mv self).flags.isC = true → (s.isSome = true ∨ (st.mv self).view.ndim ≠ 1) →
-      zeroInShape (st.mv self).view = true →
-      c = (.error (.typeError "memoryview: cannot cast view with zeros in shape or strides"), st))
+      HasZero (st.mv self).view →
+      c = (.error (.typeError "memoryview: cannot cast view with zeros in shape or strides"), st)) ∧
+    ((st.mv self).flags.isC = true → ¬ HasZero (st.mv self).view → s = some .other →
+      c = (.error (.typeError "shape must be a list or a tuple"), st)) ∧
+    (∀ items, (st.mv self).flags.isC = true → ¬ HasZero (st.mv self).view → s = some (.seq items) →
+      64 < items.length →
+      c = (.error (.valueError "memoryview: number of dimensions must not exceed 64"), st)) ∧
+    (∀ items, (st.mv self).flags.isC = true → ¬ HasZero (st.mv self).view → s = some (.seq items) →
+      items.length ≤ 64 → (st.mv self).view.ndim ≠ 1 → items.length ≠ 1 →
+      c = (.error (.typeError "memoryview: cast must be 1D -> ND or ND -> 1D"), st))
 
 theorem castRejections_proven : CastRejections := by
   intro st self f s hl hr
   dsimp only
-  constructor
+  have hz' := zeroInShape_false (st.mv self).view
+  refine ⟨?_, ?_, fun h1 h2 h3 => ?_, fun items h1 h2 h3 h4 => ?_, fun items h1 h2 h3 h4 h5 h6 => ?_⟩
   · intro h
     simp only [memoryviewCast, M.bind_app, checkReleased_ok _ _ hl, checkRestricted_ok _ _ hr, M.get, h,
       Bool.not_false, ↓reduceIte, M.throw_app]
   · intro h1 h2 h3
     have hz : ((s.isSome || (st.mv self).view.ndim != 1) && zeroInShape (st.mv self).view) = true := by
-      rcases h2 with h | h <;> simp [h, h3]
+      have h3' := (zeroInShape_iff _).2 h3
+      rcases h2 with h | h <;> simp [h, h3']
     simp only [memoryviewCast, M.bind_app, checkReleased_ok _ _ hl, checkRestricted_ok _ _ hr, M.get, h1,
       Bool.not_true, Bool.false_eq_true, ↓reduceIte, hz, M.throw_app]
+  · subst h3
+    simp [memoryviewCast, M.bind_app, checkReleased_ok _ _ hl, checkRestricted_ok _ _ hr, M.get, h1,
+      hz' h2, M.throw_app, M.pure_app]
+  · subst h3
+    simp [memoryviewCast, M.bind_app, checkReleased_ok _ _ hl, checkRestricted_ok _ _ hr, M.get, h1,
+      hz' h2, M.throw_app, M.pure_app, h4]
+  · subst h3
+    have h7 : ¬ items.length > 64 := by omega
+    simp [memoryviewCast, M.bind_app, checkReleased_ok _ _ hl, checkRestricted_ok _ _ hr, M.get, h1,
+      hz' h2, M.throw_app, M.pure_app, h7, h5, h6]
 
 /-- `pack_single` on values of the wrong kind: a non-integer in an integer format raises
 `TypeError("memoryview: invalid type for format ...")`, and in the format `c` anything but
@@ -57,18 +77,16 @@ theorem packTypeErrors_proven : PackTypeErrors := by
     pylongAsLld, pylongAsLlu, pylongAsZd, pylongAsZu, numberIndex, M.throw_app, fixErrorInt]
 
 /-- A view in a reference cycle (`memory_clear`, :1171-1180) is released like any other if
-it has no exports, and left alone if it has; `mbuf_clear` (:138-145) and `memory_dealloc`
-(:1150-1161) are the same release. -/
+it has no exports, and left alone if it has. -/
 def ClearIsRelease : Prop :=
-  ∀ (st : St) (i k : Nat),
+  ∀ (st : St) (i : Nat),
     ((st.mv i).exports = 0 → memoryClear i st = memoryRelease i st) ∧
     ((st.mv i).exports ≠ 0 → memoryClear i st = (.ok (), st)) ∧
-    memoryDealloc i st = memoryRelease i st ∧ mbufClear k st = mbufRelease k st ∧
     (memoryRepr i st).2 = st
 
 theorem clearIsRelease_proven : ClearIsRelease := by
-  intro st i k
-  refine ⟨fun h => ?_, fun h => ?_, rfl, rfl, rfl⟩
+  intro st i
+  refine ⟨fun h => ?_, fun h => ?_, rfl⟩
   · simp [memoryClear, getExports, h]
   · simp [memoryClear, getExports, h]
 
@@ -102,15 +120,17 @@ theorem fortranStrides_proven : FortranStrides := by
 
 /-- `PyBuffer_ToContiguous` normalises a view with full information to itself. -/
 theorem fb_1d (v : Buf) (n d : Int) (f : List Char) (h1 : v.ndim = 1) (hsh : v.shape = some [n])
-    (hst : v.strides = some [d]) (hsub : v.suboffsets = none) (hf : v.format = some f) :
+    (hst : v.strides = some [d]) (hsub : v.suboffsets = none ∨ ∃ o, v.suboffsets = some [o])
+    (hf : v.format = some f) :
     { initSharedValues v v with
       shape := (initShapeStrides v).1, strides := (initShapeStrides v).2,
       suboffsets := initSuboffsets v } = v := by
   cases v
-  simp_all [initShapeStrides, initSharedValues, initSuboffsets]
+  rcases hsub with hsub | ⟨o, hsub⟩ <;> simp_all [initShapeStrides, initSharedValues, initSuboffsets]
 
-/-- `m.tobytes()` of a 1-D view, for every stride: the items in order, by `memcpy` when the
-view is contiguous and through `buffer_to_contiguous` when it is not. The two branches of
+/-- `m.tobytes()` of a 1-D view, for every stride, with or without a suboffset: the items in
+order, by `memcpy` when the view is contiguous and through `buffer_to_contiguous` when it is not.
+The two branches of
 `PyBuffer_ToContiguous` (:1062-1065, :1084) give the same bytes. Hypotheses: a live view with
 `len == n * itemsize`, `itemsize > 0`. -/
 def Tobytes1D : Prop :=
@@ -118,12 +138,14 @@ def Tobytes1D : Prop :=
     Live1D st self n d f → 0 < (st.mv self).view.itemsize →
     (st.mv self).view.len = n * (st.mv self).view.itemsize →
     memoryviewTobytes self none st =
-      (.ok (flatBytes st.mem (st.mv self).view.itemsize [n] [d] none (st.mv self).view.buf), st)
+      (.ok (flatBytes st.mem (st.mv self).view.itemsize [n] [d] (st.mv self).view.suboffsets
+        (st.mv self).view.buf), st)
 
 theorem tobytes1D_proven : Tobytes1D := by
   intro st self n d f hL hit hlen
   have hmain : pyBufferToContiguous st.mem (st.mv self).view (st.mv self).view.len 'C' =
-      .ok (flatBytes st.mem (st.mv self).view.itemsize [n] [d] none (st.mv self).view.buf) := by
+      .ok (flatBytes st.mem (st.mv self).view.itemsize [n] [d] (st.mv self).view.suboffsets
+        (st.mv self).view.buf) := by
     have hsb := hL.subs
     have hsh := hL.shape
     have hst := hL.strides
@@ -132,7 +154,12 @@ theorem tobytes1D_proven : Tobytes1D := by
     have hnn := hL.nonneg
     generalize hv : (st.mv self).view = v at *
     by_cases hc : pyBufferIsContiguous v 'C' = true
-    · simp only [pyBufferToContiguous, ne_eq, not_true_eq_false, ↓reduceIte, hc]
+    · have hsb : v.suboffsets = none := by
+        cases hs : v.suboffsets with
+        | none => rfl
+        | some l =>
+          simp [pyBufferIsContiguous, hs] at hc
+      simp only [pyBufferToContiguous, ne_eq, not_true_eq_false, ↓reduceIte, hc, hsb]
       congr 1
       by_cases hn0 : n = 0
       · subst hn0
@@ -164,17 +191,17 @@ theorem tobytes1D_proven : Tobytes1D := by
       have hfb := fb_1d v n d f hnd hsh hst hsb hfm
       have ht := tobytesC_proven st.mem v [n] [d] hsh hst (by simp) (by simp [hnd])
         (by simpa using hnn) hit (by simp [prod, hlen])
-      rw [hsb] at ht
       simp only [initShapeStrides, hfb] at *
       rw [← ht]
       congr 1
   have hc := checkReleased_ok st self hL.live
   simp only [memoryviewTobytes, M.bind_app, hc, M.pure_app, M.get, M.lift, hmain, parseOrder]
 
-/-- `m.toreadonly()` is a new read-only view of the same buffer and shape; `m` is unchanged
-and the new view counts on the managed buffer. Hypotheses: a live, unrestricted 1-D view. -/
+/-- `m.toreadonly()` is a new read-only view of the same buffer, shape, strides and suboffsets,
+of any number of dimensions; `m` is unchanged and the new view counts on the managed buffer.
+Hypotheses: a live, unrestricted view. -/
 def ToReadonlySpec : Prop :=
-  ∀ (st : St) (self : Nat) (n d : Int) (f : List Char), Live1D st self n d f →
+  ∀ (st : St) (self : Nat), LiveView st self →
     let r := memoryviewToreadonly self st
     let i := st.mvs.length
     r.1 = .ok i ∧ (r.2.mv i).view = { (st.mv self).view with readonly := true } ∧
@@ -182,9 +209,9 @@ def ToReadonlySpec : Prop :=
       (r.2.mb (st.mv self).mbuf).exports = (st.mb (st.mv self).mbuf).exports + 1
 
 theorem toReadonlySpec_proven : ToReadonlySpec := by
-  intro st self n d f hL
-  have hview := viewCopy_1d _ n d f hL.ndim hL.shape hL.strides hL.subs hL.format
-  have ⟨hr1, hA⟩ := mbufAddView_added (st.mv self).mbuf (st.mv self).view st (by rw [hL.ndim]; omega)
+  intro st self hL
+  have hview := viewCopy_full _ hL.full
+  have ⟨hr1, hA⟩ := mbufAddView_added (st.mv self).mbuf (st.mv self).view st hL.small
   rw [hview] at hA
   dsimp only
   simp only [memoryviewToreadonly, M.bind_app, checkReleased_ok _ _ hL.live,
@@ -201,12 +228,12 @@ theorem toReadonlySpec_proven : ToReadonlySpec := by
   · exact hA.mem
   · rw [St.mb_setMv]; exact hA.exports hL.mbuf
 
-/-- Constructing from a memoryview shares its managed buffer and checks it is usable; from
+/-- Constructing from a memoryview of any shape shares its managed buffer and checks it is usable,
+and `_from_flags` ignores the flags on that path, which is the source's own comment (:805-809); from
 anything that is not a buffer the constructor raises `TypeError`, from `memoryview(obj)` to
 `_from_flags`, with the type's name in the message (:800-825). -/
 def NewViewRules : Prop :=
-  ∀ (st : St) (self : Nat) (n d : Int) (f : List Char) (flags : Nat) (k : Int),
-    Live1D st self n d f →
+  ∀ (st : St) (self : Nat) (flags : Nat) (k : Int), LiveView st self →
     (let r := memoryviewNew (.view self) st
      let i := st.mvs.length
      r.1 = .ok i ∧ (r.2.mv i).view = (st.mv self).view ∧ (r.2.mv i).mbuf = (st.mv self).mbuf ∧
@@ -218,9 +245,9 @@ def NewViewRules : Prop :=
       (.error (.typeError "memoryview: a bytes-like object is required, not 'NoneType'"), st)
 
 theorem newViewRules_proven : NewViewRules := by
-  intro st self n d f flags k hL
-  have hview := viewCopy_1d _ n d f hL.ndim hL.shape hL.strides hL.subs hL.format
-  have ⟨hr1, hA⟩ := mbufAddView_added (st.mv self).mbuf (st.mv self).view st (by rw [hL.ndim]; omega)
+  intro st self flags k hL
+  have hview := viewCopy_full _ hL.full
+  have ⟨hr1, hA⟩ := mbufAddView_added (st.mv self).mbuf (st.mv self).view st hL.small
   rw [hview] at hA
   have e : ∀ fl, memoryViewFromObjectAndFlags (.view self) fl st =
       mbufAddView (st.mv self).mbuf (some (st.mv self).view) st := by

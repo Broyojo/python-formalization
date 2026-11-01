@@ -1,0 +1,50 @@
+id: textlibs-re-scanner-drops-flags
+title: "re.Scanner compiles str phrases without UNICODE and ignores their inline flags"
+priority: P4
+kind: wrong-result
+module: textlibs
+files: [Lib/re/__init__.py]
+functions: ["Scanner.__init__"]
+summary: |
+  `re.Scanner([(r'\w+', 'W')]).scan('é')` returns `([], 'é')`, while `re.match(r'\w+', 'é')` matches.
+  Each phrase is parsed on its own and `fix_flags` adds UNICODE in that parse's state, but the
+  combined pattern is compiled from a separate state whose flags stay at what the caller passed.
+  So `\w`, `\d`, `\s` and `IGNORECASE` act as ASCII. Inline global flags in a phrase are lost in the
+  same way: `re.Scanner([(r'(?i)a', 'A')]).scan('A')` finds nothing, and `(?s)` too. Passing
+  `re.UNICODE` or `re.I` to the constructor works.
+likelihood: |
+  Moderate for code that uses Scanner on non-ASCII text, and silent: tokens stop being recognised.
+  Scanner has few users, because it is undocumented.
+maybe_intended: |
+  Unlikely to be intended, but Scanner is undocumented (#106338 asks to document it), and a
+  maintainer may say the flags argument is the supported way. Scanner.__init__ takes flags and sets
+  `s.flags = flags` with no fix_flags, so a one-line fix is possible.
+reproducer: |
+  import re
+  a = re.Scanner([(r'\w+', 'W')]).scan('\xe9')
+  b = re.match(r'\w+', '\xe9')
+  c = re.Scanner([(r'(?i)a', 'A')]).scan('A')
+  d = re.Scanner([(r'a', 'A')], re.I).scan('A')
+  print(a, b, c, d)
+  if a == ([], '\xe9') and b is not None and c == ([], 'A') and d == (['A'], ''):
+      print('REPRODUCED textlibs-re-scanner-drops-flags')
+expected: |
+  A phrase matches in a Scanner what it matches in re.compile, as its name and code suggest.
+observed: |
+  python3 3.14.7: ([], 'é'), <re.Match span=(0, 1)>, ([], 'A'), (['A'], ''). REPRODUCED.
+  main 3.16.0a1+dev: the same. REPRODUCED.
+promised_by: |
+  Nothing explicit: the class is undocumented. Doc/library/re.rst says str patterns are Unicode by
+  default.
+cause: |
+  Lib/re/__init__.py:396-404: `s.flags = flags`, then each phrase runs `_parser.parse(phrase, flags)`
+  in a state of its own, and `_compiler.compile(p)` takes the flags from `s`. `fix_flags` never runs
+  on `s`, and the phrases' state flags are dropped.
+possible_fix: |
+  Run `_parser.fix_flags` on the combined flags for str phrases, and merge each phrase's state flags
+  into `s.flags`, or reject inline global flags in a phrase.
+duplicates: |
+  None found. #106338 (open) asks to document Scanner. #140797, #142220 and #84440 are about capturing
+  groups. Queries: gh search issues --repo python/cpython "re.Scanner"; "Scanner lexicon"; "re Scanner
+  unicode"; "sre Scanner flags".
+lean: lean/PyLean/TextLibs/ReApiProps.lean (ScannerAgreesCompile)

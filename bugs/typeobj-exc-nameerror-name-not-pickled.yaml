@@ -1,0 +1,56 @@
+id: typeobj-exc-nameerror-name-not-pickled
+title: "NameError.name is lost by pickle and copy, unlike AttributeError.name and ImportError.name"
+priority: P4
+kind: self-inconsistency
+module: typeobj
+files: [Objects/exceptions.c]
+functions: ["BaseException___reduce___impl", "NameError_init"]
+summary: |
+  `NameError` gained a keyword-only `name` in 3.10. `NameError` has no `__reduce__`, so
+  `BaseException.__reduce__` is used, which carries `args` and the instance dict, and `name`
+  is a C member:
+
+      import pickle, copy
+      e = NameError('x', name='y')
+      pickle.loads(pickle.dumps(e)).name      # None
+      copy.copy(e).name                       # None
+
+  `ImportError` has `ImportError_reduce` and `AttributeError` has `AttributeError_reduce` for
+  this reason (bpo-29998 and gh-103352 respectively). `UnboundLocalError` inherits the problem.
+  `name` feeds the "Did you mean" suggestion in tracebacks, so an exception sent across
+  `multiprocessing` loses its suggestion.
+likelihood: |
+  Low. It matters to code that pickles exceptions, and only for the suggestion text.
+maybe_intended: |
+  No, but it is an instance of a known gap: gh-74191 (bpo-30005) is the open umbrella issue
+  "Pickling and copying exceptions doesn't preserve non-__dict__ attributes". The specific
+  fixes for its siblings make this the one exception left with a keyword-only member.
+reproducer: |
+  import copy, pickle
+  rows = [(c, pickle.loads(pickle.dumps(c('x', name='y'))).name, copy.copy(c('x', name='y')).name)
+          for c in (ImportError, AttributeError, NameError, UnboundLocalError)]
+  for r in rows:
+      print(r)
+  if rows[0][1:] == ('y', 'y') and rows[1][1:] == ('y', 'y') and rows[2][1:] == (None, None):
+      print('REPRODUCED typeobj-exc-nameerror-name-not-pickled')
+expected: "'y' for all four classes."
+promised_by: |
+  The implementation disagrees with itself: of the three classes with a `name` member, two
+  pickle it.
+cause: |
+  Objects/exceptions.c:2559 `NameError_methods` is empty, so no `__reduce__` overrides
+  `BaseException___reduce___impl` (:220).
+possible_fix: |
+  Add `NameError_getstate` and `NameError_reduce` on the pattern of `AttributeError_getstate`
+  (:2643) and `AttributeError_reduce` (:2672).
+reproduces:
+  python3 (3.14.7): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues:
+    - {number: 74191, state: open, relation: umbrella issue that covers this case, reason: null}
+  queries: ["NameError pickle", "NameError name attribute pickle", "UnboundLocalError pickle", "AttributeError name pickle",
+            "NameError name pickle", "bugforge-results/README.md: no exceptions.c entries"]
+lean:
+  property: PyLean.TypeObj.NameErrorReduceKeepsName
+  theorem: PyLean.TypeObj.nameErrorReduceKeepsName_refuted

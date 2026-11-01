@@ -1,0 +1,50 @@
+id: textlibs-csv-num-fields-int-overflow
+title: "csv.writer silently drops delimiters after 2**31 fields, because num_fields is a C int"
+priority: P3
+kind: data-loss
+module: textlibs
+files: [Modules/_csv.c]
+functions: ["join_append", "join_append_data"]
+summary: |
+  WriterObj.num_fields is a C int (Modules/_csv.c:149), incremented with no check for every field
+  (:1297). join_append_data writes a delimiter when num_fields > 0 (:1173). With a row of more than
+  INT_MAX fields the count wraps negative, which is undefined behaviour in C and in practice a wrap,
+  and every later field is written with no delimiter and no error. Fields run together silently. The
+  Lean model, where the count is a C int, predicted the exact figure below before it was measured: a
+  row of 2147483653 fields gets 2147483647 delimiters, not 2147483652.
+likelihood: |
+  Low. A row needs over two billion fields, and the record buffer takes 8 GB or more. It is reachable
+  from a generator or itertools.repeat, with no C API, and the failure is silent.
+maybe_intended: |
+  Unlikely to be intended, but a maintainer may consider the case too remote to matter. The record
+  length next to it is a Py_ssize_t with an explicit overflow check (:1157), so sizes in this
+  function were meant to be handled. Changing the field to Py_ssize_t or to a bool costs nothing.
+reproducer: |
+  import csv, itertools
+  n = 2**31 + 5
+  got = []
+  class W:
+      def write(self, line):
+          got.append(line.count(','))
+  csv.writer(W(), lineterminator='\n').writerow(itertools.repeat('', n))
+  print('fields', n, 'delimiters', got[0], 'expected', n - 1)
+  if got[0] != n - 1:
+      print('REPRODUCED textlibs-csv-num-fields-int-overflow')
+expected: |
+  2147483652 delimiters for 2147483653 fields, or an OverflowError.
+observed: |
+  python3 3.14.7: 2147483647 delimiters, in 31 s with about 10 GB. REPRODUCED.
+  main 3.16.0a1+dev: 2147483647 delimiters. REPRODUCED. num_fields is still an int there.
+promised_by: |
+  The csv format and the docs of writerow: the fields of a row are separated by the delimiter.
+cause: |
+  Modules/_csv.c:149 declares int num_fields; :1297 increments it with no check; :1173 tests > 0.
+  At INT_MAX the increment overflows. The test at :1399 uses it too.
+possible_fix: |
+  Declare num_fields as Py_ssize_t. The only uses are the increment, the decrement at :1409 and two
+  tests against 0.
+duplicates: |
+  No report found. Not in the bugforge list.
+  Queries: gh search issues --repo python/cpython "csv num_fields overflow";
+  "csv writer integer overflow fields"; "csv writerow delimiter lost too many fields".
+lean: lean/PyLean/TextLibs/CsvIoProps.lean (NumFieldsPositive, numFieldsPositive_refuted)

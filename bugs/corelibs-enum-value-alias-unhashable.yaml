@@ -1,0 +1,64 @@
+id: corelibs-enum-value-alias-unhashable
+title: "Enum._add_value_alias_ does not keep its ValueError for an unhashable value"
+priority: P3
+kind: logic-error
+module: corelibs
+files: [Lib/enum.py]
+functions: ["Enum._add_value_alias_"]
+summary: |
+  The docs say that _add_value_alias_ raises ValueError if the value is already linked with a different member.
+  That holds for a hashable value. For an unhashable one it fails in two ways. When the value is another member's
+  _value_, the ValueError at Lib/enum.py:1223 is formatted with cls._value2member_map_[value], which hashes the
+  value again, so TypeError "cannot use 'list' as a dict key" comes out instead. When the value was linked by an
+  earlier _add_value_alias_, the long search at :1220-1224 only reads _value_, does not see it, and the second member
+  is linked as well, with no error: D.A._add_value_alias_([9]) and then D.B._add_value_alias_([9]) both succeed, and
+  D([9]) finds the first.
+likelihood: |
+  Low. The method exists for multi-value members, and unhashable alias values are less common than hashable
+  ones, but the code has a branch made for them.
+maybe_intended: |
+  No. The first is the code path of the ValueError failing in its own message, the second is the check being weaker
+  than the one for hashable values a few lines above.
+reproducer: |
+  from enum import Enum
+  class C(Enum):
+      A = [1]
+      B = 2
+  class D(Enum):
+      A = 1
+      B = 2
+  def attempt(f):
+      try:
+          f()
+          return 'no error'
+      except Exception as e:
+          return type(e).__name__
+  first = attempt(lambda: C.B._add_value_alias_([1]))
+  D.A._add_value_alias_(9)
+  hashable = attempt(lambda: D.B._add_value_alias_(9))
+  D.A._add_value_alias_([9])
+  second = attempt(lambda: D.B._add_value_alias_([9]))
+  print(first, hashable, second, D._unhashable_values_map_)
+  if first == 'TypeError' and hashable == 'ValueError' and second == 'no error':
+      print('REPRODUCED corelibs-enum-value-alias-unhashable')
+expected: |
+  ValueError in all three calls.
+observed: |
+  python3 3.14.7: TypeError, ValueError, no error. REPRODUCED.
+  main (3.16.0a1+dev): same, REPRODUCED.
+promised_by: |
+  Doc/library/enum.rst, Enum._add_value_alias_: "Raises a ValueError if the value is already linked with a different
+  member."
+cause: |
+  Lib/enum.py:1223 subscripts _value2member_map_ with an unhashable value, and should print m. :1220-1224 reads
+  m._value_ only, and not _unhashable_values_map_.
+possible_fix: |
+  Format the message with m, and search _unhashable_values_map_ as Enum.__new__ does at :1163-1165.
+duplicates:
+  issues:
+    - {number: 136672, state: closed, relation: "search hit, documentation of _add_alias_ and _add_value_alias_", reason: "docs only, different"}
+  queries: ["gh search issues _add_value_alias_", "gh search issues enum unhashable value already bound",
+            "bugforge README: no match for enum"]
+lean:
+  property: PyLean.CoreLibs.EnumDC.ValueAliasExclusive
+  theorem: PyLean.CoreLibs.EnumDC.valueAliasExclusive_refuted

@@ -33,6 +33,8 @@ structure Buf where
   shape : Option (List Int) := none
   strides : Option (List Int) := none
   suboffsets : Option (List Int) := none
+  /-- The view a Python `__release_buffer__` releases, for an exporter that has one. -/
+  hook : Option Nat := none
   deriving Repr, DecidableEq, Inhabited
 
 /-- `mv->flags`, Include/cpython/memoryobject.h:19-25. -/
@@ -60,6 +62,8 @@ structure MV where
   hash : Option (List Nat) := none
   flags : Flags := {}
   exports : Int := 0
+  /-- The view a weakref callback releases when this view is deallocated. -/
+  weakcb : Option Nat := none
   deriving Repr, DecidableEq, Inhabited
 
 /-- `memoryiterobject`, :3466-3472. -/
@@ -79,6 +83,8 @@ structure St where
   iters : List MIter := []
   /-- `PyObject_Hash(obj)` failure of exporter `i`, if it has one. -/
   unhashable : List (Option PyExc) := []
+  /-- The view that `__hash__` of exporter `i` releases, if it does. -/
+  hashHook : List (Option Nat) := []
   deriving Repr, Inhabited
 
 def St.mv (st : St) (i : Nat) : MV := st.mvs.getD i default
@@ -238,7 +244,7 @@ def initLen (shape : List Int) (itemsize : Int) : Int := shape.foldl (· * ·) 1
 def initSharedValues (dest src : Buf) : Buf :=
   { dest with
     obj := src.obj, buf := src.buf, len := src.len, itemsize := src.itemsize,
-    readonly := src.readonly, format := some (src.format.getD ['B']) }
+    readonly := src.readonly, format := some (src.format.getD ['B']), hook := src.hook }
 
 /-- `init_shape_strides`, :555-580: `(shape, strides)` of `dest`, reconstructing what
 `src` lacks. -/

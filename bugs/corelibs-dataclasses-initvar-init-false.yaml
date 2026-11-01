@@ -1,0 +1,51 @@
+id: corelibs-dataclasses-initvar-init-false
+title: "An InitVar with init=False makes every instantiation raise NameError in generated code"
+priority: P4
+kind: crash-on-valid-input
+module: corelibs
+files: [Lib/dataclasses.py]
+functions: ["_init_fn", "_get_field"]
+summary: |
+  x: InitVar[int] = field(default=1, init=False) is accepted by @dataclass. If the class has a __post_init__, the
+  generated __init__ passes every InitVar by name, and x is not a parameter of __init__, so C() raises
+  NameError: name 'x' is not defined, from code the user did not write. A TypeError when the class is defined
+  would say what is wrong.
+likelihood: |
+  Low: init=False on an InitVar makes no sense, and a user finds out at the first call.
+maybe_intended: |
+  Partly. The comment at Lib/dataclasses.py:894-898 considers checking init on ClassVar and InitVar and leaves it. A
+  maintainer may call this user error, and only the message is at fault.
+reproducer: |
+  from dataclasses import dataclass, field, InitVar
+  @dataclass
+  class C:
+      x: InitVar[int] = field(default=1, init=False)
+      def __post_init__(self, x):
+          pass
+  try:
+      C()
+      r = 'no error'
+  except NameError as e:
+      r = 'NameError'
+  print(r)
+  if r == 'NameError':
+      print('REPRODUCED corelibs-dataclasses-initvar-init-false')
+expected: |
+  TypeError at class definition, or the default passed to __post_init__.
+observed: |
+  python3 3.14.7: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+promised_by: |
+  Nothing explicit. Undisputed: generated code should not fail with a NameError.
+cause: |
+  Lib/dataclasses.py:704-707 lists every _FIELD_INITVAR in the call, and :713-719 only makes parameters of those with
+  init; :889-898 does not reject the combination.
+possible_fix: |
+  Raise TypeError in _get_field, next to the check for a default factory.
+duplicates:
+  issues:
+    - {number: 82900, state: open, relation: "search hit, passing of InitVar to __post_init__", reason: "different: about defaults of InitVar in __post_init__, to confirm by a human"}
+  queries: ["gh search issues dataclass InitVar init False NameError", "gh search issues InitVar field init=False __post_init__",
+            "bugforge README: no match for dataclass"]
+lean:
+  property: PyLean.CoreLibs.EnumDC.InitBindsAlways
+  theorem: PyLean.CoreLibs.EnumDC.initBindsAlways_refuted

@@ -1,100 +1,100 @@
 file	line	endline	name	signature	status	entry	note
 Objects/memoryobject.c	72	86	mbuf_alloc	mbuf_alloc(void)	modelled	bytesobj-memoryview-new-exporter	
-Objects/memoryobject.c	89	104	_PyManagedBuffer_FromObject	_PyManagedBuffer_FromObject(PyObject *base, int flags)	modelled	bytesobj-memoryview-new-exporter	
-Objects/memoryobject.c	107	117	mbuf_release	mbuf_release(_PyManagedBufferObject *self)	modelled	bytesobj-memoryview-release-rules	
-Objects/memoryobject.c	120	128	mbuf_dealloc	mbuf_dealloc(PyObject *_self)	excluded		no-behaviour: frees the object and a copied format string once no view refers to it; its mbuf_release is modelled and is a no-op by then, since the last view's release already ran it
+Objects/memoryobject.c	89	104	_PyManagedBuffer_FromObject	_PyManagedBuffer_FromObject(PyObject *base, int flags)	modelled	bytesobj-memoryview-new-exporter,bytesobj-memoryview-from-flags-exporter,bytesobj-memoryview-buffer-failures	
+Objects/memoryobject.c	107	117	mbuf_release	mbuf_release(_PyManagedBufferObject *self)	modelled	bytesobj-memoryview-mbuf-release	
+Objects/memoryobject.c	120	128	mbuf_dealloc	mbuf_dealloc(PyObject *_self)	modelled	bytesobj-memoryview-dealloc-on-fail	
 Objects/memoryobject.c	131	136	mbuf_traverse	mbuf_traverse(PyObject *_self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal; what the collector then does is memory_clear and mbuf_clear, which are modelled
-Objects/memoryobject.c	139	145	mbuf_clear	mbuf_clear(PyObject *_self)	modelled	bytesobj-memoryview-clear-release	
-Objects/memoryobject.c	272	279	last_dim_is_contiguous	last_dim_is_contiguous(const Py_buffer *dest, const Py_buffer *src)	modelled	bytesobj-memoryview-copy-single,bytesobj-memoryview-tobytes-c	
-Objects/memoryobject.c	288	302	equiv_format	equiv_format(const Py_buffer *dest, const Py_buffer *src)	modelled	bytesobj-memoryview-copy-single,bytesobj-memoryview-tobytes-c	
-Objects/memoryobject.c	308	323	equiv_shape	equiv_shape(const Py_buffer *dest, const Py_buffer *src)	modelled	bytesobj-memoryview-cmp-reflexive,bytesobj-memoryview-copy-single,bytesobj-memoryview-tobytes-c	
-Objects/memoryobject.c	328	339	equiv_structure	equiv_structure(const Py_buffer *dest, const Py_buffer *src)	modelled	bytesobj-memoryview-copy-single,bytesobj-memoryview-tobytes-c	
-Objects/memoryobject.c	345	370	copy_base	copy_base(const Py_ssize_t *shape, Py_ssize_t itemsize, char *dptr, const Py_ssize_t *dstrides, const Py_ssize_t *dsuboffsets, char *sptr, const Py_ssize_t *sstrides, const Py_ssize_t *ssuboffsets, char *mem)	modelled	bytesobj-memoryview-copy-single,bytesobj-memoryview-tobytes-c	
-Objects/memoryobject.c	375	401	copy_rec	copy_rec(const Py_ssize_t *shape, Py_ssize_t ndim, Py_ssize_t itemsize, char *dptr, const Py_ssize_t *dstrides, const Py_ssize_t *dsuboffsets, char *sptr, const Py_ssize_t *sstrides, const Py_ssize_t *ssuboffsets, char *mem)	modelled	bytesobj-memoryview-contig-copy,bytesobj-memoryview-tobytes-c	
-Objects/memoryobject.c	405	432	copy_single	copy_single(PyMemoryViewObject *self, const Py_buffer *dest, const Py_buffer *src)	modelled	bytesobj-memoryview-copy-single	
-Objects/memoryobject.c	438	464	copy_buffer	copy_buffer(const Py_buffer *dest, const Py_buffer *src)	modelled	bytesobj-memoryview-contig-copy,bytesobj-memoryview-tobytes-c	
+Objects/memoryobject.c	139	145	mbuf_clear	mbuf_clear(PyObject *_self)	modelled	bytesobj-memoryview-mbuf-release	
+Objects/memoryobject.c	272	279	last_dim_is_contiguous	last_dim_is_contiguous(const Py_buffer *dest, const Py_buffer *src)	modelled	bytesobj-memoryview-copy-single-sub	
+Objects/memoryobject.c	288	302	equiv_format	equiv_format(const Py_buffer *dest, const Py_buffer *src)	modelled	bytesobj-memoryview-equiv-rules	
+Objects/memoryobject.c	308	323	equiv_shape	equiv_shape(const Py_buffer *dest, const Py_buffer *src)	modelled	bytesobj-memoryview-equiv-rules	
+Objects/memoryobject.c	328	339	equiv_structure	equiv_structure(const Py_buffer *dest, const Py_buffer *src)	modelled	bytesobj-memoryview-equiv-rules	
+Objects/memoryobject.c	345	370	copy_base	copy_base(const Py_ssize_t *shape, Py_ssize_t itemsize, char *dptr, const Py_ssize_t *dstrides, const Py_ssize_t *dsuboffsets, char *sptr, const Py_ssize_t *sstrides, const Py_ssize_t *ssuboffsets, char *mem)	modelled	bytesobj-memoryview-copy-single-sub,bytesobj-memoryview-fortran-copy,bytesobj-memoryview-copy-single	
+Objects/memoryobject.c	375	401	copy_rec	copy_rec(const Py_ssize_t *shape, Py_ssize_t ndim, Py_ssize_t itemsize, char *dptr, const Py_ssize_t *dstrides, const Py_ssize_t *dsuboffsets, char *sptr, const Py_ssize_t *sstrides, const Py_ssize_t *ssuboffsets, char *mem)	modelled	bytesobj-memoryview-fortran-copy,bytesobj-memoryview-tobytes-c	
+Objects/memoryobject.c	405	432	copy_single	copy_single(PyMemoryViewObject *self, const Py_buffer *dest, const Py_buffer *src)	modelled	bytesobj-memoryview-copy-single,bytesobj-memoryview-copy-single-sub,bytesobj-memoryview-copy-single-refuses	
+Objects/memoryobject.c	438	464	copy_buffer	copy_buffer(const Py_buffer *dest, const Py_buffer *src)	modelled	bytesobj-memoryview-fortran-copy,bytesobj-memoryview-tobytes-c	
 Objects/memoryobject.c	468	477	init_strides_from_shape	init_strides_from_shape(Py_buffer *view)	modelled	bytesobj-memoryview-cast-nd,bytesobj-memoryview-tobytes-c	
 Objects/memoryobject.c	481	490	init_fortran_strides_from_shape	init_fortran_strides_from_shape(Py_buffer *view)	modelled	bytesobj-memoryview-fortran-strides	
-Objects/memoryobject.c	496	534	buffer_to_contiguous	buffer_to_contiguous(char *mem, const Py_buffer *src, char order)	modelled	bytesobj-memoryview-tobytes-c	
+Objects/memoryobject.c	496	534	buffer_to_contiguous	buffer_to_contiguous(char *mem, const Py_buffer *src, char order)	modelled	bytesobj-memoryview-fortran-copy,bytesobj-memoryview-tobytes-c	
 Objects/memoryobject.c	543	552	init_shared_values	init_shared_values(Py_buffer *dest, const Py_buffer *src)	modelled	bytesobj-memoryview-buffer-noformat-itemsize,bytesobj-memoryview-cast-1d,bytesobj-memoryview-from-buffer	
-Objects/memoryobject.c	556	580	init_shape_strides	init_shape_strides(Py_buffer *dest, const Py_buffer *src)	modelled	bytesobj-memoryview-from-buffer,bytesobj-memoryview-slice-items	
-Objects/memoryobject.c	583	593	init_suboffsets	init_suboffsets(Py_buffer *dest, const Py_buffer *src)	modelled	bytesobj-memoryview-slice-items	
-Objects/memoryobject.c	597	607	init_len	init_len(Py_buffer *view)	modelled	bytesobj-memoryview-slice-items	
+Objects/memoryobject.c	556	580	init_shape_strides	init_shape_strides(Py_buffer *dest, const Py_buffer *src)	modelled	bytesobj-memoryview-init-arrays	
+Objects/memoryobject.c	583	593	init_suboffsets	init_suboffsets(Py_buffer *dest, const Py_buffer *src)	modelled	bytesobj-memoryview-init-arrays,bytesobj-memoryview-slice-items	
+Objects/memoryobject.c	597	607	init_len	init_len(Py_buffer *view)	modelled	bytesobj-memoryview-slice-tolist,bytesobj-memoryview-slice-items	
 Objects/memoryobject.c	611	639	init_flags	init_flags(PyMemoryViewObject *mv)	modelled	bytesobj-memoryview-cast-nd,bytesobj-memoryview-contig-nonempty,bytesobj-memoryview-empty-step-not-contiguous	
 Objects/memoryobject.c	644	665	memory_alloc	memory_alloc(int ndim)	modelled	bytesobj-memoryview-cast-1d	
-Objects/memoryobject.c	676	705	mbuf_add_view	mbuf_add_view(_PyManagedBufferObject *mbuf, const Py_buffer *src)	modelled	bytesobj-memoryview-from-buffer,bytesobj-memoryview-new-exporter,bytesobj-memoryview-new-view,bytesobj-memoryview-slice-items,bytesobj-memoryview-toreadonly	
+Objects/memoryobject.c	676	705	mbuf_add_view	mbuf_add_view(_PyManagedBufferObject *mbuf, const Py_buffer *src)	modelled	bytesobj-memoryview-from-buffer-full,bytesobj-memoryview-toreadonly,bytesobj-memoryview-dealloc-on-fail	
 Objects/memoryobject.c	713	735	mbuf_add_incomplete_view	mbuf_add_incomplete_view(_PyManagedBufferObject *mbuf, const Py_buffer *src, int ndim)	modelled	bytesobj-memoryview-cast-1d,bytesobj-memoryview-contig-copy	
 Objects/memoryobject.c	741	762	PyMemoryView_FromMemory	PyMemoryView_FromMemory(char *mem, Py_ssize_t size, int flags)	modelled	bytesobj-memoryview-from-memory	
-Objects/memoryobject.c	770	794	PyMemoryView_FromBuffer	PyMemoryView_FromBuffer(const Py_buffer *info)	modelled	bytesobj-memoryview-from-buffer,bytesobj-memoryview-from-memory	
-Objects/memoryobject.c	801	825	PyMemoryView_FromObjectAndFlags	PyMemoryView_FromObjectAndFlags(PyObject *v, int flags)	modelled	bytesobj-memoryview-new-exporter,bytesobj-memoryview-new-view,bytesobj-memoryview-released-forbids	
-Objects/memoryobject.c	832	848	_PyMemoryView_FromBufferProc	_PyMemoryView_FromBufferProc(PyObject *v, int flags, getbufferproc bufferproc)	modelled	bytesobj-memoryview-buffer-noformat-itemsize	
-Objects/memoryobject.c	854	857	PyMemoryView_FromObject	PyMemoryView_FromObject(PyObject *v)	modelled	bytesobj-memoryview-get-contiguous,bytesobj-memoryview-new-exporter,bytesobj-memoryview-new-view	
+Objects/memoryobject.c	770	794	PyMemoryView_FromBuffer	PyMemoryView_FromBuffer(const Py_buffer *info)	modelled	bytesobj-memoryview-from-buffer-full,bytesobj-memoryview-from-buffer	
+Objects/memoryobject.c	801	825	PyMemoryView_FromObjectAndFlags	PyMemoryView_FromObjectAndFlags(PyObject *v, int flags)	modelled	bytesobj-memoryview-new-exporter,bytesobj-memoryview-new-view,bytesobj-memoryview-buffer-failures,bytesobj-memoryview-dealloc-on-fail	
+Objects/memoryobject.c	832	848	_PyMemoryView_FromBufferProc	_PyMemoryView_FromBufferProc(PyObject *v, int flags, getbufferproc bufferproc)	modelled	bytesobj-memoryview-buffer-proc	
+Objects/memoryobject.c	854	857	PyMemoryView_FromObject	PyMemoryView_FromObject(PyObject *v)	modelled	bytesobj-memoryview-new-exporter,bytesobj-memoryview-new-view,bytesobj-memoryview-buffer-failures	
 Objects/memoryobject.c	861	874	mbuf_copy_format	mbuf_copy_format(_PyManagedBufferObject *mbuf, const char *fmt)	modelled	bytesobj-memoryview-contig-copy	
-Objects/memoryobject.c	889	946	memory_from_contiguous_copy	memory_from_contiguous_copy(const Py_buffer *src, char order)	modelled	bytesobj-memoryview-contig-copy	
-Objects/memoryobject.c	966	1001	PyMemoryView_GetContiguous	PyMemoryView_GetContiguous(PyObject *obj, int buffertype, char order)	modelled	bytesobj-memoryview-get-contiguous	
-Objects/memoryobject.c	1014	1018	memoryview_impl	memoryview_impl(PyTypeObject *type, PyObject *object) /*[clinic end generated code: output=7de78e184ed66db8 input=f04429eb0bdf8c6e]*/	modelled	bytesobj-memoryview-new-exporter,bytesobj-memoryview-new-view	
-Objects/memoryobject.c	1032	1036	memoryview__from_flags_impl	memoryview__from_flags_impl(PyTypeObject *type, PyObject *object, int flags) /*[clinic end generated code: output=bf71f9906c266ee2 input=f5f82fd0e744356b]*/	modelled	bytesobj-memoryview-new-view	
-Objects/memoryobject.c	1049	1087	PyBuffer_ToContiguous	PyBuffer_ToContiguous(void *buf, const Py_buffer *src, Py_ssize_t len, char order)	modelled	bytesobj-memoryview-tobytes-1d	
+Objects/memoryobject.c	889	946	memory_from_contiguous_copy	memory_from_contiguous_copy(const Py_buffer *src, char order)	modelled	bytesobj-memoryview-contig-copy,bytesobj-memoryview-from-contig-copy-f	
+Objects/memoryobject.c	966	1001	PyMemoryView_GetContiguous	PyMemoryView_GetContiguous(PyObject *obj, int buffertype, char order)	modelled	bytesobj-memoryview-get-contiguous,bytesobj-memoryview-get-contiguous-copy,bytesobj-memoryview-get-contiguous-copy-f	
+Objects/memoryobject.c	1014	1018	memoryview_impl	memoryview_impl(PyTypeObject *type, PyObject *object) /*[clinic end generated code: output=7de78e184ed66db8 input=f04429eb0bdf8c6e]*/	modelled	bytesobj-memoryview-new-exporter,bytesobj-memoryview-new-view,bytesobj-memoryview-buffer-failures	
+Objects/memoryobject.c	1032	1036	memoryview__from_flags_impl	memoryview__from_flags_impl(PyTypeObject *type, PyObject *object, int flags) /*[clinic end generated code: output=bf71f9906c266ee2 input=f5f82fd0e744356b]*/	modelled	bytesobj-memoryview-from-flags-exporter,bytesobj-memoryview-new-view	
+Objects/memoryobject.c	1049	1087	PyBuffer_ToContiguous	PyBuffer_ToContiguous(void *buf, const Py_buffer *src, Py_ssize_t len, char order)	modelled	bytesobj-memoryview-tobytes-orders,bytesobj-memoryview-tobytes-contig-nd	
 Objects/memoryobject.c	1090	1097	get_exports	get_exports(PyMemoryViewObject *buf)	modelled	bytesobj-memoryview-release-rules	
 Objects/memoryobject.c	1109	1120	_memory_release	_memory_release(PyMemoryViewObject *self)	modelled	bytesobj-memoryview-release-rules	
 Objects/memoryobject.c	1129	1148	memoryview_release_impl	memoryview_release_impl(PyMemoryViewObject *self) /*[clinic end generated code: output=d0b7e3ba95b7fcb9 input=bc71d1d51f4a52f0]*/	modelled	bytesobj-memoryview-release-rules	
-Objects/memoryobject.c	1151	1161	memory_dealloc	memory_dealloc(PyObject *_self)	modelled	bytesobj-memoryview-clear-release	
+Objects/memoryobject.c	1151	1161	memory_dealloc	memory_dealloc(PyObject *_self)	modelled	bytesobj-memoryview-dealloc-weakrefs	
 Objects/memoryobject.c	1164	1169	memory_traverse	memory_traverse(PyObject *_self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal; what the collector then does is memory_clear and mbuf_clear, which are modelled
 Objects/memoryobject.c	1172	1180	memory_clear	memory_clear(PyObject *_self)	modelled	bytesobj-memoryview-clear-release	
-Objects/memoryobject.c	1183	1187	memory_enter	memory_enter(PyObject *self, PyObject *args)	modelled	bytesobj-memoryview-released-forbids	
-Objects/memoryobject.c	1190	1193	memory_exit	memory_exit(PyObject *self, PyObject *args)	modelled	bytesobj-memoryview-release-rules	
+Objects/memoryobject.c	1183	1187	memory_enter	memory_enter(PyObject *self, PyObject *args)	modelled	bytesobj-memoryview-context	
+Objects/memoryobject.c	1190	1193	memory_exit	memory_exit(PyObject *self, PyObject *args)	modelled	bytesobj-memoryview-context	
 Objects/memoryobject.c	1203	1229	get_native_fmtchar	get_native_fmtchar(char *result, const char *fmt)	modelled	bytesobj-memoryview-cast-format-embedded-nul,bytesobj-memoryview-cmp-reflexive,bytesobj-memoryview-format-native	
 Objects/memoryobject.c	1232	1268	get_native_fmtstr	get_native_fmtstr(const char *fmt)	modelled	bytesobj-memoryview-cast-format-embedded-nul,bytesobj-memoryview-format-native	
 Objects/memoryobject.c	1276	1335	cast_to_1D	cast_to_1D(PyMemoryViewObject *mv, PyObject *format)	modelled	bytesobj-memoryview-cast-1d,bytesobj-memoryview-cast-format-embedded-nul	
 Objects/memoryobject.c	1339	1372	copy_shape	copy_shape(Py_ssize_t *shape, const PyObject *seq, Py_ssize_t ndim, Py_ssize_t itemsize)	modelled	bytesobj-memoryview-cast-nd	
-Objects/memoryobject.c	1378	1411	cast_to_ND	cast_to_ND(PyMemoryViewObject *mv, const PyObject *shape, int ndim)	modelled	bytesobj-memoryview-cast-nd	
-Objects/memoryobject.c	1414	1424	zero_in_shape	zero_in_shape(PyMemoryViewObject *mv)	modelled	bytesobj-memoryview-cast-rejections	
-Objects/memoryobject.c	1448	1499	memoryview_cast_impl	memoryview_cast_impl(PyMemoryViewObject *self, PyObject *format, PyObject *shape) /*[clinic end generated code: output=bae520b3a389cbab input=138936cc9041b1a3]*/	modelled	bytesobj-memoryview-cast-1d,bytesobj-memoryview-cast-rejections,bytesobj-memoryview-format-native,bytesobj-memoryview-released-forbids	
-Objects/memoryobject.c	1508	1521	memoryview_toreadonly_impl	memoryview_toreadonly_impl(PyMemoryViewObject *self) /*[clinic end generated code: output=2c7e056f04c99e62 input=dc06d20f19ba236f]*/	modelled	bytesobj-memoryview-released-forbids,bytesobj-memoryview-toreadonly	
+Objects/memoryobject.c	1378	1411	cast_to_ND	cast_to_ND(PyMemoryViewObject *mv, const PyObject *shape, int ndim)	modelled	bytesobj-memoryview-cast-nd,bytesobj-memoryview-cast-shape	
+Objects/memoryobject.c	1414	1424	zero_in_shape	zero_in_shape(PyMemoryViewObject *mv)	modelled	bytesobj-memoryview-cast-1d,bytesobj-memoryview-cast-rejections	
+Objects/memoryobject.c	1448	1499	memoryview_cast_impl	memoryview_cast_impl(PyMemoryViewObject *self, PyObject *format, PyObject *shape) /*[clinic end generated code: output=bae520b3a389cbab input=138936cc9041b1a3]*/	modelled	bytesobj-memoryview-cast-shape,bytesobj-memoryview-cast-cleanup,bytesobj-memoryview-cast-rejections,bytesobj-memoryview-cast-1d	
+Objects/memoryobject.c	1508	1521	memoryview_toreadonly_impl	memoryview_toreadonly_impl(PyMemoryViewObject *self) /*[clinic end generated code: output=2c7e056f04c99e62 input=dc06d20f19ba236f]*/	modelled	bytesobj-memoryview-toreadonly	
 Objects/memoryobject.c	1529	1606	memory_getbuf	memory_getbuf(PyObject *_self, Py_buffer *view, int flags)	modelled	bytesobj-memoryview-buffer-noformat-itemsize,bytesobj-memoryview-getbuf,bytesobj-memoryview-released-forbids	
 Objects/memoryobject.c	1609	1615	memory_releasebuf	memory_releasebuf(PyObject *_self, Py_buffer *view)	modelled	bytesobj-memoryview-getbuf	
-Objects/memoryobject.c	1635	1640	type_error_int	type_error_int(const char *fmt)	modelled	bytesobj-memoryview-pack-type-errors	
-Objects/memoryobject.c	1643	1648	value_error_int	value_error_int(const char *fmt)	modelled	bytesobj-memoryview-pack-type-errors,bytesobj-memoryview-pack-unpack-int	
-Objects/memoryobject.c	1651	1665	fix_error_int	fix_error_int(const char *fmt)	modelled	bytesobj-memoryview-pack-type-errors,bytesobj-memoryview-pack-unpack-int	
-Objects/memoryobject.c	1673	1685	pylong_as_ld	pylong_as_ld(PyObject *item)	modelled	bytesobj-memoryview-pack-unpack-int	
-Objects/memoryobject.c	1688	1700	pylong_as_lu	pylong_as_lu(PyObject *item)	modelled	bytesobj-memoryview-pack-unpack-int	
-Objects/memoryobject.c	1703	1715	pylong_as_lld	pylong_as_lld(PyObject *item)	modelled	bytesobj-memoryview-pack-unpack-int	
-Objects/memoryobject.c	1718	1730	pylong_as_llu	pylong_as_llu(PyObject *item)	modelled	bytesobj-memoryview-pack-unpack-int	
-Objects/memoryobject.c	1733	1745	pylong_as_zd	pylong_as_zd(PyObject *item)	modelled	bytesobj-memoryview-pack-unpack-int	
-Objects/memoryobject.c	1748	1760	pylong_as_zu	pylong_as_zu(PyObject *item)	modelled	bytesobj-memoryview-pack-unpack-int	
-Objects/memoryobject.c	1776	1863	unpack_single	unpack_single(PyMemoryViewObject *self, const char *ptr, const char *fmt)	modelled	bytesobj-memoryview-pack-unpack-int,bytesobj-memoryview-released-key-not-c,bytesobj-memoryview-tolist-flat	
-Objects/memoryobject.c	1875	2026	pack_single	pack_single(PyMemoryViewObject *self, char *ptr, PyObject *item, const char *fmt)	modelled	bytesobj-memoryview-ass-item-int,bytesobj-memoryview-pack-type-errors,bytesobj-memoryview-pack-unpack-int,bytesobj-memoryview-released-key-not-c,bytesobj-memoryview-setitem-c-released	
+Objects/memoryobject.c	1635	1640	type_error_int	type_error_int(const char *fmt)	modelled	bytesobj-memoryview-fix-error-int,bytesobj-memoryview-pack-type-errors	
+Objects/memoryobject.c	1643	1648	value_error_int	value_error_int(const char *fmt)	modelled	bytesobj-memoryview-fix-error-int,bytesobj-memoryview-pack-type-errors,bytesobj-memoryview-pack-unpack-int	
+Objects/memoryobject.c	1651	1665	fix_error_int	fix_error_int(const char *fmt)	modelled	bytesobj-memoryview-fix-error-int,bytesobj-memoryview-pack-type-errors,bytesobj-memoryview-pack-unpack-int	
+Objects/memoryobject.c	1673	1685	pylong_as_ld	pylong_as_ld(PyObject *item)	modelled	bytesobj-memoryview-pack-unpack-int,bytesobj-memoryview-pylong-failures	
+Objects/memoryobject.c	1688	1700	pylong_as_lu	pylong_as_lu(PyObject *item)	modelled	bytesobj-memoryview-pack-unpack-int,bytesobj-memoryview-pylong-failures	
+Objects/memoryobject.c	1703	1715	pylong_as_lld	pylong_as_lld(PyObject *item)	modelled	bytesobj-memoryview-pack-unpack-int,bytesobj-memoryview-pylong-failures	
+Objects/memoryobject.c	1718	1730	pylong_as_llu	pylong_as_llu(PyObject *item)	modelled	bytesobj-memoryview-pack-unpack-int,bytesobj-memoryview-pylong-failures	
+Objects/memoryobject.c	1733	1745	pylong_as_zd	pylong_as_zd(PyObject *item)	modelled	bytesobj-memoryview-pack-unpack-int,bytesobj-memoryview-pylong-failures	
+Objects/memoryobject.c	1748	1760	pylong_as_zu	pylong_as_zu(PyObject *item)	modelled	bytesobj-memoryview-pack-unpack-int,bytesobj-memoryview-pylong-failures	
+Objects/memoryobject.c	1776	1863	unpack_single	unpack_single(PyMemoryViewObject *self, const char *ptr, const char *fmt)	modelled	bytesobj-memoryview-pack-unpack-other,bytesobj-memoryview-pack-unpack-int,bytesobj-memoryview-tolist-flat	
+Objects/memoryobject.c	1875	2026	pack_single	pack_single(PyMemoryViewObject *self, char *ptr, PyObject *item, const char *fmt)	modelled	bytesobj-memoryview-pack-unpack-other,bytesobj-memoryview-pack-unpack-int,bytesobj-memoryview-pack-failures	
 Objects/memoryobject.c	2045	2060	unpacker_new	unpacker_new(void)	excluded		no-behaviour: allocator plumbing for struct unpacker; its fields are filled by struct_get_unpacker, which is modelled
 Objects/memoryobject.c	2063	2071	unpacker_free	unpacker_free(struct unpacker *x)	excluded		no-behaviour: allocator plumbing for struct unpacker, runs after the comparison's result is known
-Objects/memoryobject.c	2075	2124	struct_get_unpacker	struct_get_unpacker(const char *fmt, Py_ssize_t itemsize)	modelled	bytesobj-memoryview-cmp-bad-format,bytesobj-memoryview-cmp-fast-struct	
-Objects/memoryobject.c	2128	2144	struct_unpack_single	struct_unpack_single(const char *ptr, struct unpacker *x)	modelled	bytesobj-memoryview-cmp-fast-struct	
-Objects/memoryobject.c	2153	2164	adjust_fmt	adjust_fmt(const Py_buffer *view)	modelled	bytesobj-memoryview-index-item	
+Objects/memoryobject.c	2075	2124	struct_get_unpacker	struct_get_unpacker(const char *fmt, Py_ssize_t itemsize)	todo		review: The import failure at :2082-2084 is dropped (State.lean:383-384), though fix_struct_error_int exists to preserve it, CmpBadFormat assumes the rejection as a hypothesis, and CmpFastStruct only parses one native character.
+Objects/memoryobject.c	2128	2144	struct_unpack_single	struct_unpack_single(const char *ptr, struct unpacker *x)	modelled	bytesobj-memoryview-cmp-is-tolist,bytesobj-memoryview-cmp-non-native	
+Objects/memoryobject.c	2153	2164	adjust_fmt	adjust_fmt(const Py_buffer *view)	modelled	bytesobj-memoryview-adjust-fmt	
 Objects/memoryobject.c	2168	2190	tolist_base	tolist_base(PyMemoryViewObject *self, const char *ptr, const Py_ssize_t *shape, const Py_ssize_t *strides, const Py_ssize_t *suboffsets, const char *fmt)	modelled	bytesobj-memoryview-tolist-flat	
 Objects/memoryobject.c	2195	2226	tolist_rec	tolist_rec(PyMemoryViewObject *self, const char *ptr, Py_ssize_t ndim, const Py_ssize_t *shape, const Py_ssize_t *strides, const Py_ssize_t *suboffsets, const char *fmt)	modelled	bytesobj-memoryview-tolist-flat	
-Objects/memoryobject.c	2237	2261	memoryview_tolist_impl	memoryview_tolist_impl(PyMemoryViewObject *self) /*[clinic end generated code: output=a6cda89214fd5a1b input=21e7d0c1860b211a]*/	modelled	bytesobj-memoryview-released-forbids,bytesobj-memoryview-tolist-flat	
-Objects/memoryobject.c	2279	2312	memoryview_tobytes_impl	memoryview_tobytes_impl(PyMemoryViewObject *self, const char *order) /*[clinic end generated code: output=1288b62560a32a23 input=119c70aa91791dc8]*/	modelled	bytesobj-memoryview-released-forbids,bytesobj-memoryview-tobytes-1d,bytesobj-memoryview-tobytes-order	
-Objects/memoryobject.c	2338	2373	memoryview_hex_impl	memoryview_hex_impl(PyMemoryViewObject *self, PyObject *sep, int bytes_per_sep) /*[clinic end generated code: output=430ca760f94f3ca7 input=94c2495f886c786b]*/	modelled	bytesobj-memoryview-hex-groups,bytesobj-memoryview-hex-tobytes,bytesobj-memoryview-released-forbids	
+Objects/memoryobject.c	2237	2261	memoryview_tolist_impl	memoryview_tolist_impl(PyMemoryViewObject *self) /*[clinic end generated code: output=a6cda89214fd5a1b input=21e7d0c1860b211a]*/	modelled	bytesobj-memoryview-tolist-flat,bytesobj-memoryview-zero-dim	
+Objects/memoryobject.c	2279	2312	memoryview_tobytes_impl	memoryview_tobytes_impl(PyMemoryViewObject *self, const char *order) /*[clinic end generated code: output=1288b62560a32a23 input=119c70aa91791dc8]*/	modelled	bytesobj-memoryview-tobytes-orders,bytesobj-memoryview-tobytes-order	
+Objects/memoryobject.c	2338	2373	memoryview_hex_impl	memoryview_hex_impl(PyMemoryViewObject *self, PyObject *sep, int bytes_per_sep) /*[clinic end generated code: output=430ca760f94f3ca7 input=94c2495f886c786b]*/	modelled	bytesobj-memoryview-hex-holds-export,bytesobj-memoryview-hex-tobytes	
 Objects/memoryobject.c	2376	2383	memory_repr	memory_repr(PyObject *_self)	modelled	bytesobj-memoryview-repr	
 Objects/memoryobject.c	2391	2413	lookup_dimension	lookup_dimension(const Py_buffer *view, char *ptr, int dim, Py_ssize_t index)	modelled	bytesobj-memoryview-ass-item-int,bytesobj-memoryview-index-item,bytesobj-memoryview-tuple-item	
-Objects/memoryobject.c	2417	2421	ptr_from_index	ptr_from_index(const Py_buffer *view, Py_ssize_t index)	modelled	bytesobj-memoryview-ass-item-int,bytesobj-memoryview-index-item	
-Objects/memoryobject.c	2425	2448	ptr_from_tuple	ptr_from_tuple(const Py_buffer *view, PyObject *tup)	modelled	bytesobj-memoryview-tuple-item	
-Objects/memoryobject.c	2454	2480	memory_item	memory_item(PyObject *_self, Py_ssize_t index)	modelled	bytesobj-memoryview-index,bytesobj-memoryview-index-item,bytesobj-memoryview-key-rejections	
-Objects/memoryobject.c	2484	2506	memory_item_multi	memory_item_multi(PyMemoryViewObject *self, PyObject *tup)	modelled	bytesobj-memoryview-key-rejections,bytesobj-memoryview-tuple-item	
-Objects/memoryobject.c	2509	2535	init_slice	init_slice(Py_buffer *base, PyObject *key, int dim)	modelled	bytesobj-memoryview-slice-items,bytesobj-memoryview-slice-stride-overflow	
+Objects/memoryobject.c	2417	2421	ptr_from_index	ptr_from_index(const Py_buffer *view, Py_ssize_t index)	modelled	bytesobj-memoryview-index-item	
+Objects/memoryobject.c	2425	2448	ptr_from_tuple	ptr_from_tuple(const Py_buffer *view, PyObject *tup)	modelled	bytesobj-memoryview-tuple-item,bytesobj-memoryview-tuple-refusals	
+Objects/memoryobject.c	2454	2480	memory_item	memory_item(PyObject *_self, Py_ssize_t index)	modelled	bytesobj-memoryview-index-item,bytesobj-memoryview-rank-rules	
+Objects/memoryobject.c	2484	2506	memory_item_multi	memory_item_multi(PyMemoryViewObject *self, PyObject *tup)	modelled	bytesobj-memoryview-tuple-item,bytesobj-memoryview-tuple-refusals	
+Objects/memoryobject.c	2509	2535	init_slice	init_slice(Py_buffer *base, PyObject *key, int dim)	modelled	bytesobj-memoryview-slice-tolist,bytesobj-memoryview-slice-items,bytesobj-memoryview-slice-failures	
 Objects/memoryobject.c	2538	2554	is_multislice	is_multislice(PyObject *key)	modelled	bytesobj-memoryview-key-rejections	
 Objects/memoryobject.c	2557	2571	is_multiindex	is_multiindex(PyObject *key)	modelled	bytesobj-memoryview-key-rejections,bytesobj-memoryview-tuple-item	
-Objects/memoryobject.c	2580	2640	memory_subscript	memory_subscript(PyObject *_self, PyObject *key)	modelled	bytesobj-memoryview-index-item,bytesobj-memoryview-key-rejections,bytesobj-memoryview-released-forbids,bytesobj-memoryview-slice-items,bytesobj-memoryview-tuple-item	
-Objects/memoryobject.c	2643	2743	memory_ass_sub	memory_ass_sub(PyObject *_self, PyObject *key, PyObject *value)	modelled	bytesobj-memoryview-ass-item-int,bytesobj-memoryview-copy-single,bytesobj-memoryview-released-forbids,bytesobj-memoryview-released-key-not-c,bytesobj-memoryview-setitem-c-released	
-Objects/memoryobject.c	2746	2755	memory_length	memory_length(PyObject *_self)	modelled	bytesobj-memoryview-iter,bytesobj-memoryview-released-forbids	
-Objects/memoryobject.c	2787	2819	memoryview_count_impl	memoryview_count_impl(PyMemoryViewObject *self, PyObject *value) /*[clinic end generated code: output=a15cb19311985063 input=e3036ce1ed7d1823]*/	modelled	bytesobj-memoryview-count,bytesobj-memoryview-released-forbids	
-Objects/memoryobject.c	2840	2905	memoryview_index_impl	memoryview_index_impl(PyMemoryViewObject *self, PyObject *value, Py_ssize_t start, Py_ssize_t stop) /*[clinic end generated code: output=e0185e3819e549df input=0697a0165bf90b5a]*/	modelled	bytesobj-memoryview-index,bytesobj-memoryview-released-forbids	
-Objects/memoryobject.c	2917	2928	fix_struct_error_int	fix_struct_error_int(void)	modelled	bytesobj-memoryview-cmp-bad-format	
-Objects/memoryobject.c	2932	2956	struct_unpack_cmp	struct_unpack_cmp(const char *p, const char *q, struct unpacker *unpack_p, struct unpacker *unpack_q)	modelled	bytesobj-memoryview-cmp-fast-struct	
+Objects/memoryobject.c	2580	2640	memory_subscript	memory_subscript(PyObject *_self, PyObject *key)	modelled	bytesobj-memoryview-slice-tolist,bytesobj-memoryview-slice-items,bytesobj-memoryview-index-item,bytesobj-memoryview-key-failures,bytesobj-memoryview-slice-cleanup	
+Objects/memoryobject.c	2643	2743	memory_ass_sub	memory_ass_sub(PyObject *_self, PyObject *key, PyObject *value)	modelled	bytesobj-memoryview-ass-slice,bytesobj-memoryview-key-failures,bytesobj-memoryview-slice-cleanup	
+Objects/memoryobject.c	2746	2755	memory_length	memory_length(PyObject *_self)	modelled	bytesobj-memoryview-rank-rules,bytesobj-memoryview-iter	
+Objects/memoryobject.c	2787	2819	memoryview_count_impl	memoryview_count_impl(PyMemoryViewObject *self, PyObject *value) /*[clinic end generated code: output=a15cb19311985063 input=e3036ce1ed7d1823]*/	modelled	bytesobj-memoryview-count,bytesobj-memoryview-eq-failures,bytesobj-memoryview-rank-rules	
+Objects/memoryobject.c	2840	2905	memoryview_index_impl	memoryview_index_impl(PyMemoryViewObject *self, PyObject *value, Py_ssize_t start, Py_ssize_t stop) /*[clinic end generated code: output=e0185e3819e549df input=0697a0165bf90b5a]*/	modelled	bytesobj-memoryview-index,bytesobj-memoryview-eq-failures,bytesobj-memoryview-rank-rules	
+Objects/memoryobject.c	2917	2928	fix_struct_error_int	fix_struct_error_int(void)	todo		review: CmpBadFormat states the StructError arm only, with the error as a hypothesis, and the ImportError and MemoryError arm at :2921-2924 is dead because no model path raises them.
+Objects/memoryobject.c	2932	2956	struct_unpack_cmp	struct_unpack_cmp(const char *p, const char *q, struct unpacker *unpack_p, struct unpacker *unpack_q)	modelled	bytesobj-memoryview-cmp-is-tolist,bytesobj-memoryview-cmp-non-native	
 Objects/memoryobject.c	2974	3037	unpack_cmp	unpack_cmp(const char *p, const char *q, char fmt, struct unpacker *unpack_p, struct unpacker *unpack_q)	modelled	bytesobj-memoryview-cmp-fast-struct,bytesobj-memoryview-cmp-reflexive	
-Objects/memoryobject.c	3041	3058	cmp_base	cmp_base(const char *p, const char *q, const Py_ssize_t *shape, const Py_ssize_t *pstrides, const Py_ssize_t *psuboffsets, const Py_ssize_t *qstrides, const Py_ssize_t *qsuboffsets, char fmt, struct unpacker *unpack_p, struct unpacker *unpack_q)	modelled	bytesobj-memoryview-cmp-reflexive	
-Objects/memoryobject.c	3063	3096	cmp_rec	cmp_rec(const char *p, const char *q, Py_ssize_t ndim, const Py_ssize_t *shape, const Py_ssize_t *pstrides, const Py_ssize_t *psuboffsets, const Py_ssize_t *qstrides, const Py_ssize_t *qsuboffsets, char fmt, struct unpacker *unpack_p, struct unpacker *unpack_q)	modelled	bytesobj-memoryview-cmp-reflexive	
-Objects/memoryobject.c	3099	3199	memory_richcompare	memory_richcompare(PyObject *v, PyObject *w, int op)	modelled	bytesobj-memoryview-cmp-bad-format,bytesobj-memoryview-cmp-eq-ne,bytesobj-memoryview-cmp-reflexive,bytesobj-memoryview-cmp-special,bytesobj-memoryview-eq-released-by-buffer	
-Objects/memoryobject.c	3206	3260	memory_hash	memory_hash(PyObject *_self)	modelled	bytesobj-memoryview-hash,bytesobj-memoryview-hash-rejections	
+Objects/memoryobject.c	3041	3058	cmp_base	cmp_base(const char *p, const char *q, const Py_ssize_t *shape, const Py_ssize_t *pstrides, const Py_ssize_t *psuboffsets, const Py_ssize_t *qstrides, const Py_ssize_t *qsuboffsets, char fmt, struct unpacker *unpack_p, struct unpacker *unpack_q)	modelled	bytesobj-memoryview-cmp-is-tolist,bytesobj-memoryview-cmp-non-native	
+Objects/memoryobject.c	3063	3096	cmp_rec	cmp_rec(const char *p, const char *q, Py_ssize_t ndim, const Py_ssize_t *shape, const Py_ssize_t *pstrides, const Py_ssize_t *psuboffsets, const Py_ssize_t *qstrides, const Py_ssize_t *qsuboffsets, char fmt, struct unpacker *unpack_p, struct unpacker *unpack_q)	modelled	bytesobj-memoryview-cmp-is-tolist	
+Objects/memoryobject.c	3099	3199	memory_richcompare	memory_richcompare(PyObject *v, PyObject *w, int op)	modelled	bytesobj-memoryview-cmp-is-tolist,bytesobj-memoryview-compare-releases	
+Objects/memoryobject.c	3206	3260	memory_hash	memory_hash(PyObject *_self)	modelled	bytesobj-memoryview-hash,bytesobj-memoryview-hash-holds-export,bytesobj-memoryview-hash-view-exporter	
 Objects/memoryobject.c	3268	3289	_IntTupleFromSsizet	_IntTupleFromSsizet(int len, Py_ssize_t *vals)	modelled	bytesobj-memoryview-getters	
 Objects/memoryobject.c	3292	3302	memory_obj_get	memory_obj_get(PyObject *_self, void *Py_UNUSED(ignored))	modelled	bytesobj-memoryview-getters	
 Objects/memoryobject.c	3305	3310	memory_nbytes_get	memory_nbytes_get(PyObject *_self, void *Py_UNUSED(ignored))	modelled	bytesobj-memoryview-getters	
@@ -110,5 +110,5 @@ Objects/memoryobject.c	3377	3382	memory_f_contiguous	memory_f_contiguous(PyObjec
 Objects/memoryobject.c	3385	3390	memory_contiguous	memory_contiguous(PyObject *_self, void *Py_UNUSED(ignored))	modelled	bytesobj-memoryview-getters	
 Objects/memoryobject.c	3475	3481	memoryiter_dealloc	memoryiter_dealloc(PyObject *self)	excluded		no-behaviour: reference counting of it_seq and freeing the iterator, no Python-visible effect
 Objects/memoryobject.c	3484	3489	memoryiter_traverse	memoryiter_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal of it_seq, no Python-visible effect
-Objects/memoryobject.c	3492	3517	memoryiter_next	memoryiter_next(PyObject *self)	modelled	bytesobj-memoryview-count,bytesobj-memoryview-iter	
-Objects/memoryobject.c	3520	3555	memory_iter	memory_iter(PyObject *seq)	modelled	bytesobj-memoryview-count,bytesobj-memoryview-iter,bytesobj-memoryview-released-forbids	
+Objects/memoryobject.c	3492	3517	memoryiter_next	memoryiter_next(PyObject *self)	modelled	bytesobj-memoryview-iter,bytesobj-memoryview-iter-null	
+Objects/memoryobject.c	3520	3555	memory_iter	memory_iter(PyObject *seq)	modelled	bytesobj-memoryview-iter,bytesobj-memoryview-rank-rules	

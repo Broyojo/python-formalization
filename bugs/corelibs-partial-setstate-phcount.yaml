@@ -1,0 +1,86 @@
+id: corelibs-partial-setstate-phcount
+title: "partial.__setstate__ counts placeholders on a tuple subclass's storage and keeps its iteration, so a call reads and writes out of bounds"
+priority: P1
+kind: crash
+module: corelibs
+files: [Modules/_functoolsmodule.c]
+functions: ["partial_setstate", "partial_call", "partial_vectorcall"]
+summary: |
+  partial_setstate walks the storage of the state's args tuple with PyTuple_GET_ITEM to check for a
+  trailing Placeholder and to count placeholders (:726-737), and only then turns a tuple subclass into a
+  real tuple with PySequence_Tuple (:739-743), which runs the subclass's __iter__. The stored args and
+  the stored phcount then describe two different tuples. partial_call and partial_vectorcall trust
+  phcount: with more placeholders in args than phcount they read past the end of the call's argument
+  array, and with fewer they size the stack by phcount while the memcpy at :460-462 copies from j, so it
+  writes past the end. Both crash the interpreter from pure Python, with no threads and no re-entrancy. The
+  write needs nothing large: a tuple of four items, phcount 2 and three call arguments overrun small_stack,
+  and glibc stops with "stack smashing detected". A smaller form of the same defect is
+  silent: raw (Placeholder, 1), iteration (1, 2) gives p(10) == f(1, 2), dropping the argument.
+likelihood: |
+  Low in ordinary code: it needs a tuple subclass with its own __iter__, in a state passed to __setstate__
+  directly or through pickle. But it is a memory-safety bug reachable from pure Python, and a crafted
+  state can steer which pointers are read and how many words are copied onto the stack.
+maybe_intended: |
+  No. The comment in the source calls PySequence_Tuple the conversion for subclasses, which is
+  there because of the 2016 type confusion in this function (#70133), and the placeholder count added in
+  3.14 went in above it. A maintainer will want this fixed; pickle-based reachability alone is not news,
+  since pickle runs arbitrary code, but direct __setstate__ with a tuple subclass is plain Python.
+reproducer: |
+  import functools
+  import subprocess
+  import sys
+  from functools import Placeholder, partial
+  class T(tuple):
+      def __iter__(self):
+          return iter((1, 2))
+  def f(*a):
+      return a
+  p = partial(f)
+  p.__setstate__((f, T((Placeholder, 1)), {}, None))
+  silent = p(10)
+  print('argument dropped:', silent)
+  crash = """
+  from functools import Placeholder, partial
+  class T(tuple):
+      def __iter__(self):
+          return iter((Placeholder,) * 40 + (1,))
+  def f(*a):
+      return a
+  p = partial(f)
+  p.__setstate__((f, T((Placeholder, 1)), {}, None))
+  print(len(p(10)))
+  """
+  r = subprocess.run([sys.executable, '-c', crash], capture_output=True, text=True, timeout=60)
+  print('subprocess exit', r.returncode)
+  if silent == (1, 2) and r.returncode < 0:
+      print('REPRODUCED corelibs-partial-setstate-phcount')
+expected: |
+  phcount describes the stored args in every path: either the count is taken after the conversion, or
+  the state is rejected. No out-of-bounds access.
+observed: |
+  python3 3.14.7: argument dropped: (1, 2); subprocess exit -11 (SIGSEGV), faulthandler points into
+  partial_vectorcall. A kw-carrying state crashes through partial_call as well, and a third form, raw
+  (Placeholder,) * 100000 + (1,) with iteration (1,) and 100001 call arguments, makes the memcpy at :461
+  overflow small_stack (exit -11); raw (Placeholder, Placeholder, 1), iteration (1, 2, 3, 4) and three call
+  arguments abort with stack smashing detected (exit -6). REPRODUCED. main (python 3.16.0a1+dev): REPRODUCED, the same
+  code order at Modules/_functoolsmodule.c:821-843.
+promised_by: |
+  No interpreter crash from pure Python. The pure-Python twin has the same stale count but stays memory
+  safe: it returns garbled arguments instead.
+cause: |
+  Modules/_functoolsmodule.c:726-737 read the raw tuple, :739-743 call PySequence_Tuple after that.
+  partial_call :550-565 and partial_vectorcall :450-462 then index args with j and copy by phcount.
+possible_fix: |
+  Do the PySequence_Tuple conversion first, and run the trailing-Placeholder check and the count on the
+  converted tuple. The same change to Lib/functools.py:415-419 keeps the twins together.
+duplicates:
+  issues: []
+  related: ["#70133 type confusion in partial_setstate (2016, the reason for the conversion)",
+            "#157841 and #157099 concurrent __setstate__ crashes, free-threaded only, a different cause",
+            "#154189 use-after-free through a re-entrant __setstate__, a different cause"]
+  queries: ["gh search issues partial setstate crash", "gh search issues partial Placeholder segfault",
+            "gh search issues partial __setstate__ tuple subclass", "gh issue view 157197", "gh issue view 154189",
+            "gh issue view 157099", "bugforge README: no match for partial and setstate"]
+lean:
+  property: PyLean.CoreLibs.Functools.PartialCallInBoundsAlways
+  theorem: PyLean.CoreLibs.Functools.partialCallInBoundsAlways_refuted

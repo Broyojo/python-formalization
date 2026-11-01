@@ -1,5 +1,5 @@
 file	line	endline	name	signature	status	entry	note
-Objects/descrobject.c	23	31	descr_dealloc	descr_dealloc(PyObject *self)	todo		
+Objects/descrobject.c	23	31	descr_dealloc	descr_dealloc(PyObject *self)	excluded		no-behaviour: deallocation and reference counting
 Objects/descrobject.c	34	39	descr_name	descr_name(PyDescrObject *descr)	todo		
 Objects/descrobject.c	42	49	descr_repr	descr_repr(PyDescrObject *descr, const char *format)	todo		
 Objects/descrobject.c	52	56	method_repr	method_repr(PyObject *descr)	todo		
@@ -36,7 +36,7 @@ Objects/descrobject.c	656	663	member_get_doc	member_get_doc(PyObject *_descr, vo
 Objects/descrobject.c	672	679	getset_get_doc	getset_get_doc(PyObject *self, void *closure)	todo		
 Objects/descrobject.c	688	692	wrapperdescr_get_doc	wrapperdescr_get_doc(PyObject *self, void *closure)	todo		
 Objects/descrobject.c	695	700	wrapperdescr_get_text_signature	wrapperdescr_get_text_signature(PyObject *self, void *closure)	todo		
-Objects/descrobject.c	710	715	descr_traverse	descr_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/descrobject.c	710	715	descr_traverse	descr_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
 Objects/descrobject.c	907	924	descr_new	descr_new(PyTypeObject *descrtype, PyTypeObject *type, const char *name)	todo		
 Objects/descrobject.c	927	970	PyDescr_NewMethod	PyDescr_NewMethod(PyTypeObject *type, PyMethodDef *method)	todo		
 Objects/descrobject.c	973	982	PyDescr_NewClassMethod	PyDescr_NewClassMethod(PyTypeObject *type, PyMethodDef *method)	todo		
@@ -55,17 +55,17 @@ Objects/descrobject.c	1138	1142	mappingproxy_values	mappingproxy_values(PyObject
 Objects/descrobject.c	1145	1149	mappingproxy_items	mappingproxy_items(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
 Objects/descrobject.c	1152	1156	mappingproxy_copy	mappingproxy_copy(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
 Objects/descrobject.c	1159	1163	mappingproxy_reversed	mappingproxy_reversed(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
-Objects/descrobject.c	1188	1194	mappingproxy_dealloc	mappingproxy_dealloc(PyObject *self)	todo		
+Objects/descrobject.c	1188	1194	mappingproxy_dealloc	mappingproxy_dealloc(PyObject *self)	excluded		no-behaviour: deallocation and reference counting
 Objects/descrobject.c	1197	1201	mappingproxy_getiter	mappingproxy_getiter(PyObject *self)	todo		
 Objects/descrobject.c	1204	1208	mappingproxy_hash	mappingproxy_hash(PyObject *self)	todo		
 Objects/descrobject.c	1211	1215	mappingproxy_str	mappingproxy_str(PyObject *self)	todo		
 Objects/descrobject.c	1218	1222	mappingproxy_repr	mappingproxy_repr(PyObject *self)	todo		
-Objects/descrobject.c	1225	1230	mappingproxy_traverse	mappingproxy_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/descrobject.c	1225	1230	mappingproxy_traverse	mappingproxy_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
 Objects/descrobject.c	1233	1237	mappingproxy_richcompare	mappingproxy_richcompare(PyObject *self, PyObject *w, int op)	todo		
 Objects/descrobject.c	1240	1251	mappingproxy_check_mapping	mappingproxy_check_mapping(PyObject *mapping)	todo		
 Objects/descrobject.c	1263	1277	mappingproxy_new_impl	mappingproxy_new_impl(PyTypeObject *type, PyObject *mapping) /*[clinic end generated code: output=65f27f02d5b68fa7 input=c156df096ef7590c]*/	todo		
 Objects/descrobject.c	1280	1293	PyDictProxy_New	PyDictProxy_New(PyObject *mapping)	todo		
-Objects/descrobject.c	1310	1317	wrapper_dealloc	wrapper_dealloc(PyObject *self)	todo		
+Objects/descrobject.c	1310	1317	wrapper_dealloc	wrapper_dealloc(PyObject *self)	excluded		no-behaviour: deallocation and reference counting
 Objects/descrobject.c	1320	1343	wrapper_richcompare	wrapper_richcompare(PyObject *a, PyObject *b, int op)	todo		
 Objects/descrobject.c	1346	1356	wrapper_hash	wrapper_hash(PyObject *self)	todo		
 Objects/descrobject.c	1359	1366	wrapper_repr	wrapper_repr(PyObject *self)	todo		
@@ -76,20 +76,20 @@ Objects/descrobject.c	1403	1407	wrapper_doc	wrapper_doc(PyObject *self, void *Py
 Objects/descrobject.c	1410	1415	wrapper_text_signature	wrapper_text_signature(PyObject *self, void *Py_UNUSED(ignored))	todo		
 Objects/descrobject.c	1418	1422	wrapper_qualname	wrapper_qualname(PyObject *self, void *Py_UNUSED(ignored))	todo		
 Objects/descrobject.c	1434	1438	wrapper_call	wrapper_call(PyObject *self, PyObject *args, PyObject *kwds)	todo		
-Objects/descrobject.c	1441	1447	wrapper_traverse	wrapper_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/descrobject.c	1441	1447	wrapper_traverse	wrapper_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
 Objects/descrobject.c	1488	1505	PyWrapper_New	PyWrapper_New(PyObject *d, PyObject *self)	todo		
 Objects/descrobject.c	1573	1576	property_getter	property_getter(PyObject *self, PyObject *getter)	todo		
 Objects/descrobject.c	1583	1586	property_setter	property_setter(PyObject *self, PyObject *setter)	todo		
 Objects/descrobject.c	1593	1596	property_deleter	property_deleter(PyObject *self, PyObject *deleter)	todo		
 Objects/descrobject.c	1606	1621	property_set_name	property_set_name(PyObject *self, PyObject *args) {	todo		
-Objects/descrobject.c	1633	1644	property_dealloc	property_dealloc(PyObject *self)	todo		
+Objects/descrobject.c	1633	1644	property_dealloc	property_dealloc(PyObject *self)	excluded		no-behaviour: deallocation and reference counting
 Objects/descrobject.c	1647	1658	property_name	property_name(propertyobject *prop, PyObject **name)	todo		
-Objects/descrobject.c	1661	1694	property_descr_get	property_descr_get(PyObject *self, PyObject *obj, PyObject *type)	todo		
+Objects/descrobject.c	1661	1694	property_descr_get	property_descr_get(PyObject *self, PyObject *obj, PyObject *type)	modelled	typeobj-property-get	
 Objects/descrobject.c	1697	1759	property_descr_set	property_descr_set(PyObject *self, PyObject *obj, PyObject *value)	todo		
-Objects/descrobject.c	1762	1797	property_copy	property_copy(PyObject *old, PyObject *get, PyObject *set, PyObject *del)	todo		
+Objects/descrobject.c	1762	1797	property_copy	property_copy(PyObject *old, PyObject *get, PyObject *set, PyObject *del)	modelled	typeobj-property-copy-doc	
 Objects/descrobject.c	1837	1912	property_init_impl	property_init_impl(propertyobject *self, PyObject *fget, PyObject *fset, PyObject *fdel, PyObject *doc) /*[clinic end generated code: output=01a960742b692b57 input=dfb5dbbffc6932d5]*/	todo		
 Objects/descrobject.c	1915	1927	property_get__name__	property_get__name__(PyObject *op, void *Py_UNUSED(ignored))	todo		
 Objects/descrobject.c	1930	1935	property_set__name__	property_set__name__(PyObject *op, PyObject *value, void *Py_UNUSED(ignored))	todo		
 Objects/descrobject.c	1938	1965	property_get___isabstractmethod__	property_get___isabstractmethod__(PyObject *op, void *closure)	todo		
-Objects/descrobject.c	1976	1985	property_traverse	property_traverse(PyObject *self, visitproc visit, void *arg)	todo		
-Objects/descrobject.c	1988	1993	property_clear	property_clear(PyObject *self)	todo		
+Objects/descrobject.c	1976	1985	property_traverse	property_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
+Objects/descrobject.c	1988	1993	property_clear	property_clear(PyObject *self)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have

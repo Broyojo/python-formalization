@@ -1,27 +1,27 @@
 file	line	endline	name	signature	status	entry	note
 Modules/_operator.c	19	24	get_operator_state	get_operator_state(PyObject *module)	excluded		internal-bootstrap: module-state accessor with no Python-visible behaviour of its own
-Modules/_operator.c	51	55	_operator_truth_impl	_operator_truth_impl(PyObject *module, PyObject *a) /*[clinic end generated code: output=eaf87767234fa5d7 input=bc74a4cd90235875]*/	modelled	corelibs-operator-unary-truth	
-Modules/_operator.c	68	72	_operator_add_impl	_operator_add_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=8292984204f45164 input=5efe3bff856ac215]*/	modelled	corelibs-operator-binary-dispatch	
+Modules/_operator.c	51	55	_operator_truth_impl	_operator_truth_impl(PyObject *module, PyObject *a) /*[clinic end generated code: output=eaf87767234fa5d7 input=bc74a4cd90235875]*/	modelled	corelibs-operator-truth	
+Modules/_operator.c	68	72	_operator_add_impl	_operator_add_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=8292984204f45164 input=5efe3bff856ac215]*/	modelled	corelibs-operator-sequence-fallback	
 Modules/_operator.c	81	85	_operator_sub_impl	_operator_sub_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=4adfc3b888c1ee2e input=6494c6b100b8e795]*/	modelled	corelibs-operator-binary-dispatch	
-Modules/_operator.c	94	98	_operator_mul_impl	_operator_mul_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=d24d66f55a01944c input=2368615b4358b70d]*/	modelled	corelibs-operator-binary-dispatch	
+Modules/_operator.c	94	98	_operator_mul_impl	_operator_mul_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=d24d66f55a01944c input=2368615b4358b70d]*/	modelled	corelibs-operator-sequence-fallback	
 Modules/_operator.c	107	111	_operator_matmul_impl	_operator_matmul_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=a20d917eb35d0101 input=9ab304e37fb42dd4]*/	modelled	corelibs-operator-binary-dispatch	
 Modules/_operator.c	120	124	_operator_floordiv_impl	_operator_floordiv_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=df26b71a60589f99 input=bb2e88ba446c612c]*/	modelled	corelibs-operator-binary-dispatch	
 Modules/_operator.c	133	137	_operator_truediv_impl	_operator_truediv_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=0e6a959944d77719 input=ecbb947673f4eb1f]*/	modelled	corelibs-operator-binary-dispatch	
 Modules/_operator.c	146	150	_operator_mod_impl	_operator_mod_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=9519822f0bbec166 input=102e19b422342ac1]*/	modelled	corelibs-operator-binary-dispatch	
-Modules/_operator.c	162	166	_operator_neg	_operator_neg(PyObject *module, PyObject *a) /*[clinic end generated code: output=36e08ecfc6a1c08c input=84f09bdcf27c96ec]*/	modelled	corelibs-operator-unary-truth	
-Modules/_operator.c	175	179	_operator_pos	_operator_pos(PyObject *module, PyObject *a) /*[clinic end generated code: output=dad7a126221dd091 input=b6445b63fddb8772]*/	modelled	corelibs-operator-unary-truth	
-Modules/_operator.c	188	192	_operator_abs	_operator_abs(PyObject *module, PyObject *a) /*[clinic end generated code: output=1389a93ba053ea3e input=341d07ba86f58039]*/	modelled	corelibs-operator-unary-truth	
-Modules/_operator.c	201	205	_operator_inv	_operator_inv(PyObject *module, PyObject *a) /*[clinic end generated code: output=a56875ba075ee06d input=b01a4677739f6eb2]*/	modelled	corelibs-operator-unary-truth	
-Modules/_operator.c	214	218	_operator_invert	_operator_invert(PyObject *module, PyObject *a) /*[clinic end generated code: output=406b5aa030545fcc input=7f2d607176672e55]*/	modelled	corelibs-operator-unary-truth	
+Modules/_operator.c	162	166	_operator_neg	_operator_neg(PyObject *module, PyObject *a) /*[clinic end generated code: output=36e08ecfc6a1c08c input=84f09bdcf27c96ec]*/	modelled	corelibs-operator-unary	
+Modules/_operator.c	175	179	_operator_pos	_operator_pos(PyObject *module, PyObject *a) /*[clinic end generated code: output=dad7a126221dd091 input=b6445b63fddb8772]*/	modelled	corelibs-operator-unary	
+Modules/_operator.c	188	192	_operator_abs	_operator_abs(PyObject *module, PyObject *a) /*[clinic end generated code: output=1389a93ba053ea3e input=341d07ba86f58039]*/	modelled	corelibs-operator-unary	
+Modules/_operator.c	201	205	_operator_inv	_operator_inv(PyObject *module, PyObject *a) /*[clinic end generated code: output=a56875ba075ee06d input=b01a4677739f6eb2]*/	modelled	corelibs-operator-unary	
+Modules/_operator.c	214	218	_operator_invert	_operator_invert(PyObject *module, PyObject *a) /*[clinic end generated code: output=406b5aa030545fcc input=7f2d607176672e55]*/	modelled	corelibs-operator-unary	
 Modules/_operator.c	227	231	_operator_lshift_impl	_operator_lshift_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=37f7e52c41435bd8 input=746e8a160cbbc9eb]*/	modelled	corelibs-operator-binary-dispatch	
 Modules/_operator.c	240	244	_operator_rshift_impl	_operator_rshift_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=4593c7ef30ec2ee3 input=d2c85bb5a64504c2]*/	modelled	corelibs-operator-binary-dispatch	
-Modules/_operator.c	253	257	_operator_not__impl	_operator_not__impl(PyObject *module, PyObject *a) /*[clinic end generated code: output=743f9c24a09759ef input=854156d50804d9b8]*/	modelled	corelibs-operator-unary-truth	
+Modules/_operator.c	253	257	_operator_not__impl	_operator_not__impl(PyObject *module, PyObject *a) /*[clinic end generated code: output=743f9c24a09759ef input=854156d50804d9b8]*/	modelled	corelibs-operator-truth	
 Modules/_operator.c	266	270	_operator_and__impl	_operator_and__impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=93c4fe88f7b76d9e input=4f3057c90ec4c99f]*/	modelled	corelibs-operator-binary-dispatch	
 Modules/_operator.c	279	283	_operator_xor_impl	_operator_xor_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=b24cd8b79fde0004 input=3c5cfa7253d808dd]*/	modelled	corelibs-operator-binary-dispatch	
 Modules/_operator.c	292	296	_operator_or__impl	_operator_or__impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=58024867b8d90461 input=b40c6c44f7c79c09]*/	modelled	corelibs-operator-binary-dispatch	
 Modules/_operator.c	305	309	_operator_iadd_impl	_operator_iadd_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=07dc627832526eb5 input=d22a91c07ac69227]*/	modelled	corelibs-operator-inplace-fallback	
 Modules/_operator.c	318	322	_operator_isub_impl	_operator_isub_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=4513467d23b5e0b1 input=4591b00d0a0ccafd]*/	modelled	corelibs-operator-inplace-fallback	
-Modules/_operator.c	331	335	_operator_imul_impl	_operator_imul_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=5e87dacd19a71eab input=0e01fb8631e1b76f]*/	modelled	corelibs-operator-inplace-fallback	
+Modules/_operator.c	331	335	_operator_imul_impl	_operator_imul_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=5e87dacd19a71eab input=0e01fb8631e1b76f]*/	modelled	corelibs-operator-imul-fallback,corelibs-operator-imul-is-mul	
 Modules/_operator.c	344	348	_operator_imatmul_impl	_operator_imatmul_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=d603cbdf716ce519 input=bb614026372cd542]*/	modelled	corelibs-operator-inplace-fallback	
 Modules/_operator.c	357	361	_operator_ifloordiv_impl	_operator_ifloordiv_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=535336048c681794 input=9df3b5021cff4ca1]*/	modelled	corelibs-operator-inplace-fallback	
 Modules/_operator.c	370	374	_operator_itruediv_impl	_operator_itruediv_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=28017fbd3563952f input=9a1ee01608f5f590]*/	modelled	corelibs-operator-inplace-fallback	
@@ -33,60 +33,60 @@ Modules/_operator.c	435	439	_operator_ixor_impl	_operator_ixor_impl(PyObject *mo
 Modules/_operator.c	448	452	_operator_ior_impl	_operator_ior_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=48aac319445bf759 input=8f01d03eda9920cf]*/	modelled	corelibs-operator-inplace-fallback	
 Modules/_operator.c	461	465	_operator_concat_impl	_operator_concat_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=80028390942c5f11 input=8544ccd5341a3658]*/	modelled	corelibs-operator-concat-is-plus,corelibs-operator-concat-user-sequences	
 Modules/_operator.c	474	478	_operator_iconcat_impl	_operator_iconcat_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=3ea0a162ebb2e26d input=8f5fe5722fcd837e]*/	modelled	corelibs-operator-concat-user-sequences	
-Modules/_operator.c	491	495	_operator_contains_impl	_operator_contains_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=413b4dbe82b6ffc1 input=9122a69b505fde13]*/	modelled	corelibs-operator-subscript-call	
+Modules/_operator.c	491	495	_operator_contains_impl	_operator_contains_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=413b4dbe82b6ffc1 input=9122a69b505fde13]*/	modelled	corelibs-operator-contains-index,corelibs-operator-iter-errors	
 Modules/_operator.c	508	512	_operator_indexOf_impl	_operator_indexOf_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=c6226d8e0fb60fa6 input=8be2e43b6a6fffe3]*/	modelled	corelibs-operator-count-index	
 Modules/_operator.c	521	525	_operator_countOf_impl	_operator_countOf_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=9e1623197daf3382 input=93ea57f170f3f0bb]*/	modelled	corelibs-operator-count-index	
-Modules/_operator.c	538	542	_operator_getitem_impl	_operator_getitem_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=6c8d8101a676e594 input=6682797320e48845]*/	modelled	corelibs-operator-subscript-call	
-Modules/_operator.c	556	563	_operator_setitem_impl	_operator_setitem_impl(PyObject *module, PyObject *a, PyObject *b, PyObject *c) /*[clinic end generated code: output=1324f9061ae99e25 input=ceaf453c4d3a58df]*/	modelled	corelibs-operator-subscript-call	
-Modules/_operator.c	572	578	_operator_delitem_impl	_operator_delitem_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=db18f61506295799 input=991bec56a0d3ec7f]*/	modelled	corelibs-operator-subscript-call	
-Modules/_operator.c	591	595	_operator_eq_impl	_operator_eq_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=8d7d46ed4135677c input=586fca687a95a83f]*/	modelled	corelibs-operator-compare-default	
-Modules/_operator.c	604	608	_operator_ne_impl	_operator_ne_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=c99bd0c3a4c01297 input=5d88f23d35e9abac]*/	modelled	corelibs-operator-compare-default	
-Modules/_operator.c	617	621	_operator_lt_impl	_operator_lt_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=082d7c45c440e535 input=34a59ad6d39d3a2b]*/	modelled	corelibs-operator-compare-default	
-Modules/_operator.c	630	634	_operator_le_impl	_operator_le_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=00970a2923d0ae17 input=b812a7860a0bef44]*/	modelled	corelibs-operator-compare-default	
-Modules/_operator.c	643	647	_operator_gt_impl	_operator_gt_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=8d373349ecf25641 input=9bdb45b995ada35b]*/	modelled	corelibs-operator-compare-default	
-Modules/_operator.c	656	660	_operator_ge_impl	_operator_ge_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=7ce3882256d4b137 input=cf1dc4a5ca9c35f5]*/	modelled	corelibs-operator-compare-default	
-Modules/_operator.c	669	673	_operator_pow_impl	_operator_pow_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=09e668ad50036120 input=690b40f097ab1637]*/	modelled	corelibs-operator-binary-dispatch	
-Modules/_operator.c	682	686	_operator_ipow_impl	_operator_ipow_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=7189ff4d4367c808 input=f00623899d07499a]*/	modelled	corelibs-operator-inplace-fallback	
-Modules/_operator.c	698	702	_operator_index	_operator_index(PyObject *module, PyObject *a) /*[clinic end generated code: output=d972b0764ac305fc input=6f54d50ea64a579c]*/	modelled	corelibs-operator-index-twins	
-Modules/_operator.c	711	716	_operator_is__impl	_operator_is__impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=bcd47a402e482e1d input=5fa9b97df03c427f]*/	modelled	corelibs-operator-unary-truth	
-Modules/_operator.c	725	731	_operator_is_not_impl	_operator_is_not_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=491a1f2f81f6c7f9 input=5a93f7e1a93535f1]*/	modelled	corelibs-operator-unary-truth	
-Modules/_operator.c	740	745	_operator_is_none	_operator_is_none(PyObject *module, PyObject *a) /*[clinic end generated code: output=07159cc102261dec input=0448b38af7b8533d]*/	modelled	corelibs-operator-unary-truth	
-Modules/_operator.c	754	759	_operator_is_not_none	_operator_is_not_none(PyObject *module, PyObject *a) /*[clinic end generated code: output=b0168a51451d9140 input=7587f38ebac51688]*/	modelled	corelibs-operator-unary-truth	
+Modules/_operator.c	538	542	_operator_getitem_impl	_operator_getitem_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=6c8d8101a676e594 input=6682797320e48845]*/	modelled	corelibs-operator-getitem	
+Modules/_operator.c	556	563	_operator_setitem_impl	_operator_setitem_impl(PyObject *module, PyObject *a, PyObject *b, PyObject *c) /*[clinic end generated code: output=1324f9061ae99e25 input=ceaf453c4d3a58df]*/	modelled	corelibs-operator-setdel	
+Modules/_operator.c	572	578	_operator_delitem_impl	_operator_delitem_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=db18f61506295799 input=991bec56a0d3ec7f]*/	modelled	corelibs-operator-setdel	
+Modules/_operator.c	591	595	_operator_eq_impl	_operator_eq_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=8d7d46ed4135677c input=586fca687a95a83f]*/	modelled	corelibs-operator-rich-compare	
+Modules/_operator.c	604	608	_operator_ne_impl	_operator_ne_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=c99bd0c3a4c01297 input=5d88f23d35e9abac]*/	modelled	corelibs-operator-rich-compare	
+Modules/_operator.c	617	621	_operator_lt_impl	_operator_lt_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=082d7c45c440e535 input=34a59ad6d39d3a2b]*/	modelled	corelibs-operator-rich-compare	
+Modules/_operator.c	630	634	_operator_le_impl	_operator_le_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=00970a2923d0ae17 input=b812a7860a0bef44]*/	modelled	corelibs-operator-rich-compare	
+Modules/_operator.c	643	647	_operator_gt_impl	_operator_gt_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=8d373349ecf25641 input=9bdb45b995ada35b]*/	modelled	corelibs-operator-rich-compare	
+Modules/_operator.c	656	660	_operator_ge_impl	_operator_ge_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=7ce3882256d4b137 input=cf1dc4a5ca9c35f5]*/	modelled	corelibs-operator-rich-compare	
+Modules/_operator.c	669	673	_operator_pow_impl	_operator_pow_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=09e668ad50036120 input=690b40f097ab1637]*/	modelled	corelibs-operator-power	
+Modules/_operator.c	682	686	_operator_ipow_impl	_operator_ipow_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=7189ff4d4367c808 input=f00623899d07499a]*/	modelled	corelibs-operator-power	
+Modules/_operator.c	698	702	_operator_index	_operator_index(PyObject *module, PyObject *a) /*[clinic end generated code: output=d972b0764ac305fc input=6f54d50ea64a579c]*/	modelled	corelibs-operator-index-always,corelibs-operator-index-lawful	
+Modules/_operator.c	711	716	_operator_is__impl	_operator_is__impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=bcd47a402e482e1d input=5fa9b97df03c427f]*/	todo		
+Modules/_operator.c	725	731	_operator_is_not_impl	_operator_is_not_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=491a1f2f81f6c7f9 input=5a93f7e1a93535f1]*/	todo		
+Modules/_operator.c	740	745	_operator_is_none	_operator_is_none(PyObject *module, PyObject *a) /*[clinic end generated code: output=07159cc102261dec input=0448b38af7b8533d]*/	todo		
+Modules/_operator.c	754	759	_operator_is_not_none	_operator_is_not_none(PyObject *module, PyObject *a) /*[clinic end generated code: output=b0168a51451d9140 input=7587f38ebac51688]*/	todo		
 Modules/_operator.c	772	807	_tscmp	_tscmp(const unsigned char *a, const unsigned char *b, Py_ssize_t len_a, Py_ssize_t len_b)	modelled	corelibs-operator-compare-digest	
 Modules/_operator.c	826	831	_operator_length_hint_impl	_operator_length_hint_impl(PyObject *module, PyObject *obj, Py_ssize_t default_value) /*[clinic end generated code: output=01d469edc1d612ad input=65ed29f04401e96a]*/	modelled	corelibs-operator-length-hint-twins	
 Modules/_operator.c	852	916	_operator__compare_digest_impl	_operator__compare_digest_impl(PyObject *module, PyObject *a, PyObject *b) /*[clinic end generated code: output=11d452bdd3a23cbc input=9ac7e2c4e30bc356]*/	modelled	corelibs-operator-compare-digest	
-Modules/_operator.c	928	937	_operator_call	_operator_call(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)	modelled	corelibs-operator-subscript-call	
+Modules/_operator.c	928	937	_operator_call	_operator_call(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)	modelled	corelibs-operator-call	
 Modules/_operator.c	1004	1007	text_signature	text_signature(PyObject *Py_UNUSED(self), void *Py_UNUSED(closure))	excluded		no-behaviour: returns the constant __text_signature__ string (obj, /) for inspect.signature; carries no logic
-Modules/_operator.c	1034	1079	itemgetter_new	itemgetter_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	corelibs-operator-itemgetter-fast-path	
+Modules/_operator.c	1034	1079	itemgetter_new	itemgetter_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	corelibs-operator-itemgetter-index	
 Modules/_operator.c	1082	1087	itemgetter_clear	itemgetter_clear(PyObject *op)	excluded		no-behaviour: GC clear of owned references
 Modules/_operator.c	1090	1097	itemgetter_dealloc	itemgetter_dealloc(PyObject *op)	excluded		no-behaviour: deallocation
 Modules/_operator.c	1100	1106	itemgetter_traverse	itemgetter_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
-Modules/_operator.c	1109	1118	itemgetter_call	itemgetter_call(PyObject *op, PyObject *args, PyObject *kw)	modelled	corelibs-operator-itemgetter-fast-path	
-Modules/_operator.c	1121	1133	itemgetter_vectorcall	itemgetter_vectorcall(PyObject *op, PyObject *const *args, size_t nargsf, PyObject *kwnames)	modelled	corelibs-operator-itemgetter-fast-path	
-Modules/_operator.c	1136	1169	itemgetter_call_impl	itemgetter_call_impl(itemgetterobject *ig, PyObject *obj)	modelled	corelibs-operator-itemgetter-fast-path	
-Modules/_operator.c	1172	1189	itemgetter_repr	itemgetter_repr(PyObject *op)	modelled	corelibs-operator-itemgetter-fast-path	
-Modules/_operator.c	1192	1198	itemgetter_reduce	itemgetter_reduce(PyObject *op, PyObject *Py_UNUSED(dummy))	modelled	corelibs-operator-itemgetter-fast-path	
-Modules/_operator.c	1262	1367	attrgetter_new	attrgetter_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	corelibs-operator-attrgetter-chain	
+Modules/_operator.c	1109	1118	itemgetter_call	itemgetter_call(PyObject *op, PyObject *args, PyObject *kw)	modelled	corelibs-operator-itemgetter-twins	
+Modules/_operator.c	1121	1133	itemgetter_vectorcall	itemgetter_vectorcall(PyObject *op, PyObject *const *args, size_t nargsf, PyObject *kwnames)	modelled	corelibs-operator-itemgetter-twins	
+Modules/_operator.c	1136	1169	itemgetter_call_impl	itemgetter_call_impl(itemgetterobject *ig, PyObject *obj)	modelled	corelibs-operator-itemgetter-twins	
+Modules/_operator.c	1172	1189	itemgetter_repr	itemgetter_repr(PyObject *op)	modelled	corelibs-operator-getter-repr,corelibs-operator-getter-repr-recursive	
+Modules/_operator.c	1192	1198	itemgetter_reduce	itemgetter_reduce(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
+Modules/_operator.c	1262	1367	attrgetter_new	attrgetter_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	corelibs-operator-attrgetter-rejects,corelibs-operator-attrgetter-str-subclass,corelibs-operator-attrgetter-twins	
 Modules/_operator.c	1370	1375	attrgetter_clear	attrgetter_clear(PyObject *op)	excluded		no-behaviour: GC clear of owned references
 Modules/_operator.c	1378	1385	attrgetter_dealloc	attrgetter_dealloc(PyObject *op)	excluded		no-behaviour: deallocation
 Modules/_operator.c	1388	1394	attrgetter_traverse	attrgetter_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
-Modules/_operator.c	1397	1427	dotted_getattr	dotted_getattr(PyObject *obj, PyObject *attr)	modelled	corelibs-operator-attrgetter-chain	
-Modules/_operator.c	1430	1438	attrgetter_call	attrgetter_call(PyObject *op, PyObject *args, PyObject *kw)	modelled	corelibs-operator-attrgetter-chain	
-Modules/_operator.c	1441	1453	attrgetter_vectorcall	attrgetter_vectorcall(PyObject *op, PyObject *const *args, size_t nargsf, PyObject *kwnames)	modelled	corelibs-operator-attrgetter-chain	
-Modules/_operator.c	1456	1484	attrgetter_call_impl	attrgetter_call_impl(attrgetterobject *ag, PyObject *obj)	modelled	corelibs-operator-attrgetter-chain	
-Modules/_operator.c	1487	1499	dotjoinattr	dotjoinattr(PyObject *attr, PyObject **attrsep)	modelled	corelibs-operator-attrgetter-chain	
-Modules/_operator.c	1502	1522	attrgetter_args	attrgetter_args(attrgetterobject *ag)	modelled	corelibs-operator-attrgetter-chain	
-Modules/_operator.c	1525	1555	attrgetter_repr	attrgetter_repr(PyObject *op)	modelled	corelibs-operator-attrgetter-chain	
-Modules/_operator.c	1558	1565	attrgetter_reduce	attrgetter_reduce(PyObject *op, PyObject *Py_UNUSED(dummy))	modelled	corelibs-operator-attrgetter-chain	
-Modules/_operator.c	1628	1646	methodcaller_vectorcall	methodcaller_vectorcall(PyObject *op, PyObject *const *args, size_t nargsf, PyObject* kwnames)	modelled	corelibs-operator-methodcaller-vectorcall	
-Modules/_operator.c	1649	1686	_methodcaller_initialize_vectorcall	_methodcaller_initialize_vectorcall(methodcallerobject* mc)	modelled	corelibs-operator-methodcaller-vectorcall	
-Modules/_operator.c	1690	1741	methodcaller_new	methodcaller_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	corelibs-operator-methodcaller-vectorcall	
+Modules/_operator.c	1397	1427	dotted_getattr	dotted_getattr(PyObject *obj, PyObject *attr)	modelled	corelibs-operator-attrgetter-twins	
+Modules/_operator.c	1430	1438	attrgetter_call	attrgetter_call(PyObject *op, PyObject *args, PyObject *kw)	modelled	corelibs-operator-getter-arity	
+Modules/_operator.c	1441	1453	attrgetter_vectorcall	attrgetter_vectorcall(PyObject *op, PyObject *const *args, size_t nargsf, PyObject *kwnames)	modelled	corelibs-operator-getter-arity	
+Modules/_operator.c	1456	1484	attrgetter_call_impl	attrgetter_call_impl(attrgetterobject *ag, PyObject *obj)	modelled	corelibs-operator-attrgetter-twins	
+Modules/_operator.c	1487	1499	dotjoinattr	dotjoinattr(PyObject *attr, PyObject **attrsep)	modelled	corelibs-operator-attrgetter-twins	
+Modules/_operator.c	1502	1522	attrgetter_args	attrgetter_args(attrgetterobject *ag)	modelled	corelibs-operator-attrgetter-twins	
+Modules/_operator.c	1525	1555	attrgetter_repr	attrgetter_repr(PyObject *op)	modelled	corelibs-operator-getter-repr,corelibs-operator-getter-repr-recursive	
+Modules/_operator.c	1558	1565	attrgetter_reduce	attrgetter_reduce(PyObject *op, PyObject *Py_UNUSED(dummy))	modelled	corelibs-operator-attrgetter-twins	
+Modules/_operator.c	1628	1646	methodcaller_vectorcall	methodcaller_vectorcall(PyObject *op, PyObject *const *args, size_t nargsf, PyObject* kwnames)	modelled	corelibs-operator-methodcaller-twins	
+Modules/_operator.c	1649	1686	_methodcaller_initialize_vectorcall	_methodcaller_initialize_vectorcall(methodcallerobject* mc)	modelled	corelibs-operator-methodcaller-twins	
+Modules/_operator.c	1690	1741	methodcaller_new	methodcaller_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	corelibs-operator-methodcaller-new	
 Modules/_operator.c	1744	1752	methodcaller_clear	methodcaller_clear(PyObject *op)	excluded		no-behaviour: GC clear of owned references
 Modules/_operator.c	1755	1762	methodcaller_dealloc	methodcaller_dealloc(PyObject *op)	excluded		no-behaviour: deallocation
 Modules/_operator.c	1765	1775	methodcaller_traverse	methodcaller_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
-Modules/_operator.c	1778	1795	methodcaller_call	methodcaller_call(PyObject *op, PyObject *args, PyObject *kw)	modelled	corelibs-operator-methodcaller-vectorcall	
-Modules/_operator.c	1798	1872	methodcaller_repr	methodcaller_repr(PyObject *op)	modelled	corelibs-operator-methodcaller-vectorcall	
-Modules/_operator.c	1875	1907	methodcaller_reduce	methodcaller_reduce(PyObject *op, PyObject *Py_UNUSED(dummy))	modelled	corelibs-operator-methodcaller-vectorcall	
+Modules/_operator.c	1778	1795	methodcaller_call	methodcaller_call(PyObject *op, PyObject *args, PyObject *kw)	modelled	corelibs-operator-getter-arity,corelibs-operator-methodcaller-twins	
+Modules/_operator.c	1798	1872	methodcaller_repr	methodcaller_repr(PyObject *op)	modelled	corelibs-operator-getter-repr-recursive,corelibs-operator-methodcaller-repr	
+Modules/_operator.c	1875	1907	methodcaller_reduce	methodcaller_reduce(PyObject *op, PyObject *Py_UNUSED(dummy))	modelled	corelibs-operator-methodcaller-new	
 Modules/_operator.c	1952	1980	operator_exec	operator_exec(PyObject *module)	excluded		internal-bootstrap: module initialisation, creates the types
 Modules/_operator.c	1991	1998	operator_traverse	operator_traverse(PyObject *module, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal of module state
 Modules/_operator.c	2001	2008	operator_clear	operator_clear(PyObject *module)	excluded		no-behaviour: GC clear of module state

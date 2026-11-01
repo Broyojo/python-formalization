@@ -40,4 +40,4 @@ Objects/call.c	1014	1022	_PyStack_AsDict	_PyStack_AsDict(PyObject *const *values
 Objects/call.c	1038	1104	_PyStack_UnpackDict	_PyStack_UnpackDict(PyThreadState *tstate, PyObject *const *args, Py_ssize_t nargs, PyObject *kwargs, PyObject **p_kwnames)	todo		
 Objects/call.c	1107	1115	_PyStack_UnpackDict_Free	_PyStack_UnpackDict_Free(PyObject *const *stack, Py_ssize_t nargs, PyObject *kwnames)	todo		
 Objects/call.c	1118	1122	_PyStack_UnpackDict_FreeNoDecRef	_PyStack_UnpackDict_FreeNoDecRef(PyObject *const *stack, PyObject *kwnames)	todo		
-Objects/call.c	1127	1130	PyVectorcall_NARGS	PyVectorcall_NARGS(size_t n)	todo		
+Objects/call.c	1127	1130	PyVectorcall_NARGS	PyVectorcall_NARGS(size_t n)	modelled	typeobj-vectorcall-nargs	

@@ -1,0 +1,46 @@
+id: corelibs-enum-flag-contains-conform
+title: "Any int is `in` a CONFORM Flag class, whose own value it is not"
+priority: P4
+kind: logic-error
+module: corelibs
+files: [Lib/enum.py]
+functions: ["EnumType.__contains__", "Flag._missing_"]
+summary: |
+  EnumType.__contains__ answers for a Flag class by calling cls._missing_(value) and looking at the type of the
+  result. Under CONFORM, _missing_ drops the unknown bits and returns a member, so `8 in F` is True for a class with
+  A = 1 and B = 2, although F(8) is F(0), and no member or pseudo-member has the value 8. The same goes for any int,
+  which makes the test vacuous on such a class, while the same value in the same class under STRICT or EJECT is False.
+likelihood: |
+  Low. CONFORM is not the default, and `value in FlagClass` on an unknown value is the case where it matters.
+maybe_intended: |
+  Arguable. A maintainer could say that "in" means "the class accepts this value", and CONFORM accepts all ints.
+  The docstring of __contains__ says something narrower.
+reproducer: |
+  from enum import Flag, CONFORM
+  class F(Flag, boundary=CONFORM):
+      A = 1
+      B = 2
+  print(8 in F, F(8), F(8).value)
+  if (8 in F) and F(8).value != 8:
+      print('REPRODUCED corelibs-enum-flag-contains-conform')
+expected: |
+  8 in F is False: 8 is not the value of a member, nor of a pseudo-member.
+observed: |
+  python3 3.14.7: True F(0) 0. REPRODUCED.
+  main (3.16.0a1+dev): same, REPRODUCED.
+promised_by: |
+  The docstring of EnumType.__contains__ at Lib/enum.py:729-732: `value` is in `cls` if it is a member, the value of
+  a member, or a pseudo-member.
+cause: |
+  Lib/enum.py:736-739 takes isinstance(result, cls) and does not compare result._value_ with value; :1476-1477
+  has changed the value by then.
+possible_fix: |
+  Compare the value of the result with the argument, or say in the docstring that the test is "would be accepted".
+duplicates:
+  issues:
+    - {number: 82431, state: closed, relation: "search hit, 'enum.Flag should be more set-like'", reason: "different"}
+  queries: ["gh search issues Flag contains CONFORM", "gh search issues enum flag containment int boundary",
+            "bugforge README: no match for enum"]
+lean:
+  property: PyLean.CoreLibs.EnumDC.FlagClassContainsValue
+  theorem: PyLean.CoreLibs.EnumDC.flagClassContainsValue_refuted

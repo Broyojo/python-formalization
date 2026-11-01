@@ -1,0 +1,51 @@
+id: corelibs-partial-repr-exception-order
+title: "repr(partial) raises a different exception in the twins when two reprs fail"
+priority: P4
+kind: twin-mismatch
+module: corelibs
+files: [Lib/functools.py, Modules/_functoolsmodule.c]
+functions: ["_partial_repr", "partial_repr"]
+summary: |
+  _partial_repr evaluates repr(self.func) first; partial_repr formats the arguments and keywords and takes the
+  function's repr last, in the final format call. With both raising, each twin reports its own one.
+likelihood: |
+  Negligible.
+maybe_intended: |
+  Harmless. Recorded so the twin difference is on file; not worth a report.
+reproducer: |
+  import functools
+  from test.support import import_helper
+  py = import_helper.import_fresh_module('functools', blocked=['_functools'])
+  class F:
+      def __call__(self):
+          pass
+      def __repr__(self):
+          raise ValueError('func')
+  class A:
+      def __repr__(self):
+          raise ValueError('arg')
+  def go(m):
+      try:
+          repr(m.partial(F(), A()))
+      except ValueError as e:
+          return str(e)
+  c, p = go(functools), go(py)
+  print('C:', c, 'Python:', p)
+  if c == 'arg' and p == 'func':
+      print('REPRODUCED corelibs-partial-repr-exception-order')
+expected: |
+  The same exception in both twins.
+observed: |
+  python3 3.14.7: C: arg, Python: func. REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+promised_by: |
+  Nothing.
+cause: |
+  Lib/functools.py:363 against Modules/_functoolsmodule.c:677.
+possible_fix: |
+  None needed.
+duplicates:
+  issues: []
+  queries: ["gh search issues functools partial repr order", "bugforge README: no match"]
+lean:
+  property: PyLean.CoreLibs.Functools.PartialReprOrderAlways
+  theorem: PyLean.CoreLibs.Functools.partialReprOrderAlways_refuted

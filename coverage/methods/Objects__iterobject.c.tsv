@@ -1,22 +1,22 @@
 file	line	endline	name	signature	status	entry	note
-Objects/iterobject.c	18	33	PySeqIter_New	PySeqIter_New(PyObject *seq)	todo		
+Objects/iterobject.c	18	33	PySeqIter_New	PySeqIter_New(PyObject *seq)	modelled	bytecode-iter-exhausted-sticky	
 Objects/iterobject.c	36	42	iter_dealloc	iter_dealloc(PyObject *op)	todo		
 Objects/iterobject.c	45	50	iter_traverse	iter_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Objects/iterobject.c	53	83	iter_iternext	iter_iternext(PyObject *iterator)	todo		
+Objects/iterobject.c	53	83	iter_iternext	iter_iternext(PyObject *iterator)	modelled	typeobj-seqiter-sticky	
 Objects/iterobject.c	86	105	iter_len	iter_len(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
 Objects/iterobject.c	110	123	iter_reduce	iter_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
 Objects/iterobject.c	128	140	iter_setstate	iter_setstate(PyObject *op, PyObject *state)	todo		
-Objects/iterobject.c	193	203	PyCallIter_New	PyCallIter_New(PyObject *callable, PyObject *sentinel)	todo		
+Objects/iterobject.c	193	203	PyCallIter_New	PyCallIter_New(PyObject *callable, PyObject *sentinel)	modelled	bytecode-anext-default-restarts-await,bytecode-calliter-ends	
 Objects/iterobject.c	205	212	calliter_dealloc	calliter_dealloc(PyObject *op)	todo		
 Objects/iterobject.c	215	221	calliter_traverse	calliter_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Objects/iterobject.c	224	254	calliter_iternext	calliter_iternext(PyObject *op)	todo		
-Objects/iterobject.c	257	270	calliter_reduce	calliter_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
+Objects/iterobject.c	224	254	calliter_iternext	calliter_iternext(PyObject *op)	modelled	bytecode-calliter-ends	
+Objects/iterobject.c	257	270	calliter_reduce	calliter_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	bytecode-calliter-ends	
 Objects/iterobject.c	321	328	anextawaitable_dealloc	anextawaitable_dealloc(PyObject *op)	todo		
 Objects/iterobject.c	331	337	anextawaitable_traverse	anextawaitable_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Objects/iterobject.c	340	367	anextawaitable_getiter	anextawaitable_getiter(anextawaitableobject *obj)	todo		
-Objects/iterobject.c	370	407	anextawaitable_iternext	anextawaitable_iternext(PyObject *op)	todo		
-Objects/iterobject.c	411	436	anextawaitable_proxy	anextawaitable_proxy(anextawaitableobject *obj, char *meth, PyObject *arg)	todo		
+Objects/iterobject.c	340	367	anextawaitable_getiter	anextawaitable_getiter(anextawaitableobject *obj)	modelled	bytecode-anext-default-restarts-await	
+Objects/iterobject.c	370	407	anextawaitable_iternext	anextawaitable_iternext(PyObject *op)	modelled	bytecode-anext-default-restarts-await	
+Objects/iterobject.c	411	436	anextawaitable_proxy	anextawaitable_proxy(anextawaitableobject *obj, char *meth, PyObject *arg)	modelled	bytecode-anext-default-restarts-await	
 Objects/iterobject.c	440	444	anextawaitable_send	anextawaitable_send(PyObject *op, PyObject *arg)	todo		
 Objects/iterobject.c	448	452	anextawaitable_throw	anextawaitable_throw(PyObject *op, PyObject *args)	todo		
 Objects/iterobject.c	456	460	anextawaitable_close	anextawaitable_close(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
-Objects/iterobject.c	530	541	PyAnextAwaitable_New	PyAnextAwaitable_New(PyObject *awaitable, PyObject *default_value)	todo		
+Objects/iterobject.c	530	541	PyAnextAwaitable_New	PyAnextAwaitable_New(PyObject *awaitable, PyObject *default_value)	modelled	bytecode-anext-default-restarts-await	

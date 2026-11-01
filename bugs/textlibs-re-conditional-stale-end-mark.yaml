@@ -1,0 +1,49 @@
+id: textlibs-re-conditional-stale-end-mark
+title: "re: a conditional inside the group it tests sees the end mark of a failed path"
+priority: P4
+kind: wrong-result
+module: textlibs
+files: [Modules/_sre/sre_lib.h]
+functions: ["SRE(match)"]
+summary: |
+  `re.fullmatch(r'(()(?:(?(1)b))??)', 'b')` matches, and the same pattern with a greedy `?` does not.
+  Greedy and lazy order the same alternatives, so whether a fullmatch exists should not depend on it.
+  The lazy repeat first tries the tail, which closes group 1 with an empty span and fails because
+  the end was not reached. That leaves mark[1] set. Group 2 has already raised lastmark past it, so
+  LASTMARK_RESTORE does not hide it, and with no enclosing repeat there is no MARK_PUSH to restore
+  it. The next iteration's `(?(1)b)` then sees group 1 as set, while the group is still open.
+likelihood: |
+  Very low. It needs a conditional inside the group it tests, with a nested group before it, and a
+  failed tail. Backreferences cannot reach this, because the parser rejects a reference to an open
+  group; the parser has no such check for conditionals.
+maybe_intended: |
+  The result is plainly accidental, but testing an open group has no documented meaning, so a
+  maintainer could reasonably reject the pattern at parse time instead, or decline to act.
+reproducer: |
+  import re
+  lazy = re.fullmatch(r'(()(?:(?(1)b))??)', 'b')
+  greedy = re.fullmatch(r'(()(?:(?(1)b))?)', 'b')
+  print(lazy, greedy)
+  if lazy is not None and greedy is None:
+      print('REPRODUCED textlibs-re-conditional-stale-end-mark')
+expected: |
+  The two results agree, and with the group not closed at the conditional, both are None.
+observed: |
+  python3 3.14.7: <re.Match span=(0, 1)>, None. REPRODUCED.
+  main 3.16.0a1+dev: the same. REPRODUCED.
+promised_by: |
+  Doc/library/re.rst on (?(id/name)yes|no): the yes pattern is tried "if the group with given id or
+  name exists". No failed path should count. Nothing states the open-group case.
+cause: |
+  Modules/_sre/sre_lib.h:1248 pushes marks only `if (state->repeat)`, and :1261-1262 restores them
+  the same way. The code relies on marks above lastmark being invisible, which covers every mark
+  except the end mark of an open group below a nested closed group. Modules/_sre/sre_lib.h:1539-1554
+  reads that mark.
+possible_fix: |
+  Reject a conditional on an open group in Lib/re/_parser.py, as a backreference is, or clear the end
+  mark of a group when it is entered.
+duplicates: |
+  None found. Bugforge has no re entries. Queries: gh search issues --repo python/cpython
+  "conditional group"; "GROUPREF_EXISTS"; "re lookahead conditional"; "conditional group regex re
+  open group"; "conditional group regex re backtrack stale".
+lean: lean/PyLean/TextLibs/ReEngineProps.lean (SemAgreesPerIteration)

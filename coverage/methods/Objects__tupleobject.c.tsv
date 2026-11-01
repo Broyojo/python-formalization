@@ -23,7 +23,7 @@ Objects/tupleobject.c	486	530	tuple_concat	tuple_concat(PyObject *aa, PyObject *
 Objects/tupleobject.c	533	579	tuple_repeat	tuple_repeat(PyObject *self, Py_ssize_t n)	modelled	bytesobj-repeat	
 Objects/tupleobject.c	595	621	tuple_index_impl	tuple_index_impl(PyTupleObject *self, PyObject *value, Py_ssize_t start, Py_ssize_t stop) /*[clinic end generated code: output=07b6f9f3cb5c33eb input=fb39e9874a21fe3f]*/	modelled	bytesobj-index-agree	
 Objects/tupleobject.c	633	647	tuple_count_impl	tuple_count_impl(PyTupleObject *self, PyObject *value) /*[clinic end generated code: output=cf02888d4bc15d7a input=531721aff65bd772]*/	modelled	bytesobj-count-agree	
-Objects/tupleobject.c	650	657	tuple_traverse	tuple_traverse(PyObject *self, visitproc visit, void *arg)	modelled	bytesobj-release-order	
+Objects/tupleobject.c	650	657	tuple_traverse	tuple_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: tp_traverse, excluded by the GC traversal policy
 Objects/tupleobject.c	660	710	tuple_richcompare	tuple_richcompare(PyObject *v, PyObject *w, int op)	modelled	bytesobj-compare-agree,bytesobj-compare-reflexive	
 Objects/tupleobject.c	730	742	tuple_new_impl	tuple_new_impl(PyTypeObject *type, PyObject *iterable) /*[clinic end generated code: output=4546d9f0d469bce7 input=86963bcde633b5a2]*/	modelled	bytesobj-tuple-construct	
 Objects/tupleobject.c	745	763	tuple_vectorcall	tuple_vectorcall(PyObject *type, PyObject * const*args, size_t nargsf, PyObject *kwnames)	modelled	bytesobj-tuple-construct	
@@ -32,7 +32,7 @@ Objects/tupleobject.c	812	865	tuple_subscript	tuple_subscript(PyObject *op, PyOb
 Objects/tupleobject.c	872	876	tuple___getnewargs___impl	tuple___getnewargs___impl(PyTupleObject *self) /*[clinic end generated code: output=25e06e3ee56027e2 input=1aeb4b286a21639a]*/	modelled	bytesobj-tuple-construct	
 Objects/tupleobject.c	956	1020	_PyTuple_Resize	_PyTuple_Resize(PyObject **pv, Py_ssize_t newsize)	modelled	bytesobj-capi-agree	
 Objects/tupleobject.c	1027	1034	tupleiter_dealloc	tupleiter_dealloc(PyObject *self)	excluded		no-behaviour: drops the iterator's single reference and frees it; there is no order to observe, and object lifetime is outside the model
-Objects/tupleobject.c	1037	1042	tupleiter_traverse	tupleiter_traverse(PyObject *self, visitproc visit, void *arg)	modelled	bytesobj-release-order	
+Objects/tupleobject.c	1037	1042	tupleiter_traverse	tupleiter_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: tp_traverse, excluded by the GC traversal policy
 Objects/tupleobject.c	1045	1071	tupleiter_next	tupleiter_next(PyObject *self)	modelled	bytesobj-tuple-iter-yields	
 Objects/tupleobject.c	1074	1088	tupleiter_len	tupleiter_len(PyObject *self, PyObject *Py_UNUSED(ignored))	modelled	bytesobj-tuple-iter-reduce	
 Objects/tupleobject.c	1093	1111	tupleiter_reduce	tupleiter_reduce(PyObject *self, PyObject *Py_UNUSED(ignored))	modelled	bytesobj-tuple-iter-reduce	

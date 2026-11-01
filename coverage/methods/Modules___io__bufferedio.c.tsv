@@ -8,10 +8,10 @@ Modules/_io/bufferedio.c	166	172	_io__BufferedIOBase_read_impl	_io__BufferedIOBa
 Modules/_io/bufferedio.c	188	194	_io__BufferedIOBase_read1_impl	_io__BufferedIOBase_read1_impl(PyObject *self, PyTypeObject *cls, int Py_UNUSED(size)) /*[clinic end generated code: output=2e7fc62972487eaa input=af76380e020fd9e6]*/	todo		
 Modules/_io/bufferedio.c	213	219	_io__BufferedIOBase_write_impl	_io__BufferedIOBase_write_impl(PyObject *self, PyTypeObject *cls, PyObject *Py_UNUSED(b)) /*[clinic end generated code: output=712c635246bf2306 input=9793f5c8f71029ad]*/	todo		
 Modules/_io/bufferedio.c	294	326	_enter_buffered_busy	_enter_buffered_busy(buffered *self)	todo		
-Modules/_io/bufferedio.c	406	413	buffered_clear	buffered_clear(PyObject *op)	todo		
+Modules/_io/bufferedio.c	406	413	buffered_clear	buffered_clear(PyObject *op)	excluded		no-behaviour: GC traversal/clear of object references, no Python-visible result
 Modules/_io/bufferedio.c	416	437	buffered_dealloc	buffered_dealloc(PyObject *op)	todo		
 Modules/_io/bufferedio.c	445	453	_io__Buffered___sizeof___impl	_io__Buffered___sizeof___impl(buffered *self) /*[clinic end generated code: output=0231ef7f5053134e input=07a32d578073ea64]*/	todo		
-Modules/_io/bufferedio.c	456	463	buffered_traverse	buffered_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_io/bufferedio.c	456	463	buffered_traverse	buffered_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal/clear of object references, no Python-visible result
 Modules/_io/bufferedio.c	477	489	_io__Buffered__dealloc_warn_impl	_io__Buffered__dealloc_warn_impl(buffered *self, PyObject *source) /*[clinic end generated code: output=d8db21c6dec0e614 input=8f845f2a4786391c]*/	todo		
 Modules/_io/bufferedio.c	504	509	_io__Buffered_simple_flush_impl	_io__Buffered_simple_flush_impl(buffered *self) /*[clinic end generated code: output=29ebb3820db1bdfd input=5248cb84a65f80bd]*/	todo		
 Modules/_io/bufferedio.c	512	523	buffered_closed	buffered_closed(buffered *self)	todo		
@@ -27,17 +27,17 @@ Modules/_io/bufferedio.c	701	706	_io__Buffered_fileno_impl	_io__Buffered_fileno_
 Modules/_io/bufferedio.c	714	719	_io__Buffered_isatty_impl	_io__Buffered_isatty_impl(buffered *self) /*[clinic end generated code: output=c20e55caae67baea input=e53d182d7e490e3a]*/	todo		
 Modules/_io/bufferedio.c	747	756	_set_BlockingIOError	_set_BlockingIOError(const char *msg, Py_ssize_t written)	todo		
 Modules/_io/bufferedio.c	761	772	_buffered_check_blocking_error	_buffered_check_blocking_error(void)	todo		
-Modules/_io/bufferedio.c	775	793	_buffered_raw_tell	_buffered_raw_tell(buffered *self)	todo		
+Modules/_io/bufferedio.c	775	793	_buffered_raw_tell	_buffered_raw_tell(buffered *self)	modelled	pyio-bufferedreader-readinto-twins	
 Modules/_io/bufferedio.c	796	826	_buffered_raw_seek	_buffered_raw_seek(buffered *self, Py_off_t target, int whence)	todo		
-Modules/_io/bufferedio.c	829	863	_buffered_init	_buffered_init(buffered *self)	todo		
+Modules/_io/bufferedio.c	829	863	_buffered_init	_buffered_init(buffered *self)	modelled	pyio-bufferedreader-readinto-twins	
 Modules/_io/bufferedio.c	870	892	_PyIO_trap_eintr	_PyIO_trap_eintr(void)	todo		
 Modules/_io/bufferedio.c	899	918	buffered_flush_and_rewind_unlocked	buffered_flush_and_rewind_unlocked(buffered *self)	todo		
 Modules/_io/bufferedio.c	926	940	_io__Buffered_flush_impl	_io__Buffered_flush_impl(buffered *self) /*[clinic end generated code: output=da2674ef1ce71f3a input=6b30de9f083419c2]*/	todo		
 Modules/_io/bufferedio.c	951	973	_io__Buffered_peek_impl	_io__Buffered_peek_impl(buffered *self, Py_ssize_t size) /*[clinic end generated code: output=ba7a097ca230102b input=56733376f926d982]*/	todo		
-Modules/_io/bufferedio.c	983	1015	_io__Buffered_read_impl	_io__Buffered_read_impl(buffered *self, Py_ssize_t n) /*[clinic end generated code: output=f41c78bb15b9bbe9 input=bdb4b0425b295472]*/	todo		
+Modules/_io/bufferedio.c	983	1015	_io__Buffered_read_impl	_io__Buffered_read_impl(buffered *self, Py_ssize_t n) /*[clinic end generated code: output=f41c78bb15b9bbe9 input=bdb4b0425b295472]*/	modelled	pyio-bufferedreader-readinto-twins	
 Modules/_io/bufferedio.c	1025	1080	_io__Buffered_read1_impl	_io__Buffered_read1_impl(buffered *self, Py_ssize_t n) /*[clinic end generated code: output=bcc4fb4e54d103a3 input=3d0ad241aa52b36c]*/	todo		
-Modules/_io/bufferedio.c	1083	1162	_buffered_readinto_generic	_buffered_readinto_generic(buffered *self, Py_buffer *buffer, char readinto1)	todo		
-Modules/_io/bufferedio.c	1172	1176	_io__Buffered_readinto_impl	_io__Buffered_readinto_impl(buffered *self, Py_buffer *buffer) /*[clinic end generated code: output=bcb376580b1d8170 input=777c33e7adaa2bcd]*/	todo		
+Modules/_io/bufferedio.c	1083	1162	_buffered_readinto_generic	_buffered_readinto_generic(buffered *self, Py_buffer *buffer, char readinto1)	modelled	pyio-bufferedreader-readinto-twins	
+Modules/_io/bufferedio.c	1172	1176	_io__Buffered_readinto_impl	_io__Buffered_readinto_impl(buffered *self, Py_buffer *buffer) /*[clinic end generated code: output=bcb376580b1d8170 input=777c33e7adaa2bcd]*/	modelled	pyio-bufferedreader-readinto-twins	
 Modules/_io/bufferedio.c	1186	1190	_io__Buffered_readinto1_impl	_io__Buffered_readinto1_impl(buffered *self, Py_buffer *buffer) /*[clinic end generated code: output=6e5c6ac5868205d6 input=ef03cc5fc92a6895]*/	todo		
 Modules/_io/bufferedio.c	1194	1299	_buffered_readline	_buffered_readline(buffered *self, Py_ssize_t limit)	todo		
 Modules/_io/bufferedio.c	1309	1314	_io__Buffered_readline_impl	_io__Buffered_readline_impl(buffered *self, Py_ssize_t size) /*[clinic end generated code: output=24dd2aa6e33be83c input=e81ca5abd4280776]*/	todo		
@@ -47,12 +47,12 @@ Modules/_io/bufferedio.c	1453	1483	_io__Buffered_truncate_impl	_io__Buffered_tru
 Modules/_io/bufferedio.c	1486	1526	buffered_iternext	buffered_iternext(PyObject *op)	todo		
 Modules/_io/bufferedio.c	1529	1560	buffered_repr	buffered_repr(PyObject *op)	todo		
 Modules/_io/bufferedio.c	1566	1569	_bufferedreader_reset_buf	static void _bufferedreader_reset_buf(buffered *self)	todo		
-Modules/_io/bufferedio.c	1580	1608	_io_BufferedReader___init___impl	_io_BufferedReader___init___impl(buffered *self, PyObject *raw, Py_ssize_t buffer_size) /*[clinic end generated code: output=cddcfefa0ed294c4 input=fb887e06f11b4e48]*/	todo		
-Modules/_io/bufferedio.c	1611	1658	_bufferedreader_raw_read	_bufferedreader_raw_read(buffered *self, char *start, Py_ssize_t len)	todo		
-Modules/_io/bufferedio.c	1661	1675	_bufferedreader_fill_buffer	_bufferedreader_fill_buffer(buffered *self)	todo		
+Modules/_io/bufferedio.c	1580	1608	_io_BufferedReader___init___impl	_io_BufferedReader___init___impl(buffered *self, PyObject *raw, Py_ssize_t buffer_size) /*[clinic end generated code: output=cddcfefa0ed294c4 input=fb887e06f11b4e48]*/	modelled	pyio-bufferedreader-readinto-twins	
+Modules/_io/bufferedio.c	1611	1658	_bufferedreader_raw_read	_bufferedreader_raw_read(buffered *self, char *start, Py_ssize_t len)	modelled	pyio-bufferedreader-readinto-twins	
+Modules/_io/bufferedio.c	1661	1675	_bufferedreader_fill_buffer	_bufferedreader_fill_buffer(buffered *self)	modelled	pyio-bufferedreader-readinto-twins	
 Modules/_io/bufferedio.c	1678	1765	_bufferedreader_read_all	_bufferedreader_read_all(buffered *self)	todo		
-Modules/_io/bufferedio.c	1770	1783	_bufferedreader_read_fast	_bufferedreader_read_fast(buffered *self, Py_ssize_t n)	todo		
-Modules/_io/bufferedio.c	1789	1883	_bufferedreader_read_generic	_bufferedreader_read_generic(buffered *self, Py_ssize_t n)	todo		
+Modules/_io/bufferedio.c	1770	1783	_bufferedreader_read_fast	_bufferedreader_read_fast(buffered *self, Py_ssize_t n)	modelled	pyio-bufferedreader-readinto-twins	
+Modules/_io/bufferedio.c	1789	1883	_bufferedreader_read_generic	_bufferedreader_read_generic(buffered *self, Py_ssize_t n)	modelled	pyio-bufferedreader-readinto-twins	
 Modules/_io/bufferedio.c	1886	1910	_bufferedreader_peek_unlocked	_bufferedreader_peek_unlocked(buffered *self)	todo		
 Modules/_io/bufferedio.c	1917	1921	_bufferedwriter_reset_buf	_bufferedwriter_reset_buf(buffered *self)	todo		
 Modules/_io/bufferedio.c	1936	1966	_io_BufferedWriter___init___impl	_io_BufferedWriter___init___impl(buffered *self, PyObject *raw, Py_ssize_t buffer_size) /*[clinic end generated code: output=c8942a020c0dee64 input=914be9b95e16007b]*/	todo		

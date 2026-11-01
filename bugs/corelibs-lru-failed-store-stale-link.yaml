@@ -1,0 +1,73 @@
+id: corelibs-lru-failed-store-stale-link
+title: "pure-Python lru_cache: a failed cache[key] store leaves a ring link, and a later unrelated call raises KeyError"
+priority: P4
+kind: twin-mismatch
+module: corelibs
+files: [Lib/functools.py]
+functions: ["_lru_cache_wrapper.wrapper"]
+summary: |
+  In the not-full branch the pure-Python wrapper runs `last[NEXT] = root[PREV] = cache[key] = link`, and
+  assignment targets run left to right: the ring is linked before the dict store. If the store raises, from
+  `__eq__` on a colliding key, the link stays in the ring with no dict entry. The ring is now one longer than
+  the dict, and once the wrapper is full it picks that link as oldest and `del cache[oldkey]` raises KeyError
+  from a call that has nothing to do with the failed key. The C wrapper stores first and links afterwards
+  (Modules/_functoolsmodule.c:1403-1408), so it recovers. The twin's own comment at
+  bounded_lru_cache_update_lock_held explains why that order was chosen.
+likelihood: |
+  Very low. It needs a key class whose `__eq__` raises on a hash collision, and the pure-Python wrapper, which
+  runs only without _functools.
+maybe_intended: |
+  Not intended, but a maintainer may reasonably not care: the C wrapper is what everyone runs, and the
+  sequence needs a raising __eq__. Worth one line in a report as the twins' failure paths differ.
+reproducer: |
+  import functools
+  from test.support import import_helper
+  py = import_helper.import_fresh_module('functools', blocked=['_functools'])
+  class Key:
+      armed = None
+      def __init__(self, n):
+          self.n = n
+      def __hash__(self):
+          return 0
+      def __eq__(self, other):
+          if Key.armed is not None:
+              Key.armed -= 1
+              if Key.armed == 0:
+                  Key.armed = None
+                  raise ValueError('eq')
+          return self.n == other.n
+  def run(m):
+      w = m.lru_cache(maxsize=2)(lambda k: k.n)
+      w(Key(1))
+      Key.armed = 3      # the third compare is the store, after the lookup and the re-check
+      try:
+          w(Key(2))
+      except ValueError:
+          pass
+      out = []
+      for n in (3, 4, 5, 6):
+          try:
+              out.append(w(Key(n)))
+          except KeyError:
+              out.append('KeyError')
+      return out
+  c, p = run(functools), run(py)
+  print('C:', c, 'Python:', p)
+  if 'KeyError' in p and 'KeyError' not in c:
+      print('REPRODUCED corelibs-lru-failed-store-stale-link')
+expected: |
+  The same results in both twins: each later call computes its value.
+observed: |
+  python3 3.14.7: C [3, 4, 5, 6]; Python raises KeyError on a later call. REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+promised_by: |
+  Twin agreement, and the docstring of the C function, which says the order is deliberate.
+cause: |
+  Lib/functools.py:692, where the chained assignment links the ring before `cache[key] = link`.
+possible_fix: |
+  Write `cache[key] = link` as its own statement before linking.
+duplicates:
+  issues: []
+  queries: ["gh search issues lru_cache KeyError pure python", "bugforge README: no match for lru_cache"]
+lean:
+  property: PyLean.CoreLibs.Functools.LruFailedStoreRecovers
+  theorem: PyLean.CoreLibs.Functools.lruFailedStoreRecovers_refuted

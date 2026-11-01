@@ -1,12 +1,12 @@
 file	line	endline	name	signature	status	entry	note
-Lib/abc.py	7	25	abstractmethod	abstractmethod(funcobj)	modelled	corelibs-operator-update-abstract	
-Lib/abc.py	43	45	abstractclassmethod.__init__	__init__(self, callable)	modelled	corelibs-operator-update-abstract	
-Lib/abc.py	63	65	abstractstaticmethod.__init__	__init__(self, callable)	modelled	corelibs-operator-update-abstract	
-Lib/abc.py	105	108	ABCMeta.__new__	__new__(mcls, name, bases, namespace, /, **kwargs)	modelled	corelibs-operator-abc-subclass-check	
-Lib/abc.py	110	115	ABCMeta.register	register(cls, subclass)	modelled	corelibs-operator-abc-subclass-check	
-Lib/abc.py	117	119	ABCMeta.__instancecheck__	__instancecheck__(cls, instance)	modelled	corelibs-operator-abc-subclass-check	
-Lib/abc.py	121	123	ABCMeta.__subclasscheck__	__subclasscheck__(cls, subclass)	modelled	corelibs-operator-abc-subclass-check	
+Lib/abc.py	7	25	abstractmethod	abstractmethod(funcobj)	todo		
+Lib/abc.py	43	45	abstractclassmethod.__init__	__init__(self, callable)	todo		
+Lib/abc.py	63	65	abstractstaticmethod.__init__	__init__(self, callable)	todo		
+Lib/abc.py	105	108	ABCMeta.__new__	__new__(mcls, name, bases, namespace, /, **kwargs)	modelled	corelibs-abc-abstract-twins	
+Lib/abc.py	110	115	ABCMeta.register	register(cls, subclass)	modelled	corelibs-abc-register,corelibs-abc-register-invalidates	
+Lib/abc.py	117	119	ABCMeta.__instancecheck__	__instancecheck__(cls, instance)	modelled	corelibs-abc-instance-check	
+Lib/abc.py	121	123	ABCMeta.__subclasscheck__	__subclasscheck__(cls, subclass)	modelled	corelibs-abc-check-order,corelibs-abc-second-check	
 Lib/abc.py	125	135	ABCMeta._dump_registry	_dump_registry(cls, file=None)	excluded		test-support: its docstring calls it a debug helper; it prints internal caches
 Lib/abc.py	137	139	ABCMeta._abc_registry_clear	_abc_registry_clear(cls)	excluded		test-support: its docstring says for debugging or testing
 Lib/abc.py	141	143	ABCMeta._abc_caches_clear	_abc_caches_clear(cls)	excluded		test-support: its docstring says for debugging or testing
-Lib/abc.py	146	181	update_abstractmethods	update_abstractmethods(cls)	modelled	corelibs-operator-update-abstract	
+Lib/abc.py	146	181	update_abstractmethods	update_abstractmethods(cls)	modelled	corelibs-abc-abstract-inherited,corelibs-abc-abstract-twins	

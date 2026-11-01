@@ -1,0 +1,65 @@
+id: corelibs-operator-twin-corners
+title: "operator twins differ on index, on attrgetter with a str subclass, and on a getter holding itself"
+priority: P4
+kind: twin-mismatch
+module: corelibs
+files: [Lib/operator.py, Modules/_operator.c]
+functions: ["index", "_operator_index", "attrgetter.__init__", "attrgetter_new", "itemgetter_repr"]
+summary: |
+  Three small differences, each a consequence of the pure twin being written literally. operator.index is
+  a.__index__() in Python and PyNumber_Index in C: no __index__ is AttributeError against TypeError, a non-int
+  result comes back from Python and is a TypeError in C, and an __index__ in the instance dict is used by Python
+  and ignored by C. attrgetter calls attr.split('.') in Python, so a str subclass overriding split changes
+  the lookup, and C reads the characters. And the C getters guard repr with Py_ReprEnter and the Python ones do
+  not, so a getter that holds itself prints differently.
+likelihood: |
+  Very low: the pure twin only runs without _operator.
+maybe_intended: |
+  Yes in practice: the docstring of the Python index says what it does. Recorded so that the twin differences
+  are on file, as the model keeps them apart. Not worth a report.
+reproducer: |
+  import operator
+  from test.support import import_helper
+  py = import_helper.import_fresh_module('operator', blocked=['_operator'])
+  def t(f):
+      try:
+          return f()
+      except Exception as e:
+          return type(e).__name__
+  a = t(lambda: operator.index(1.5)), t(lambda: py.index(1.5))
+  class Bad:
+      def __index__(self):
+          return 'x'
+  b = t(lambda: operator.index(Bad())), t(lambda: py.index(Bad()))
+  class S(str):
+      def split(self, sep):
+          return ['real']
+  class O:
+      real = 5
+      x = 7
+  c = operator.attrgetter(S('x'))(O), py.attrgetter(S('x'))(O)
+  l1, l2 = [], []
+  g1, g2 = operator.itemgetter(l1), py.itemgetter(l2)
+  l1.append(g1)
+  l2.append(g2)
+  d = repr(g1), repr(g2)
+  print(a, b, c, d)
+  if a == ('TypeError', 'AttributeError') and b == ('TypeError', 'x') and c == (7, 5) and d[0] != d[1]:
+      print('REPRODUCED corelibs-operator-twin-corners')
+expected: |
+  The same outcome in both twins.
+observed: |
+  python3 3.14.7: as in the reproducer, REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+promised_by: |
+  Nothing explicit.
+cause: |
+  Lib/operator.py:97, :255, :271-274, against Objects/abstract.c:1400-1437, Modules/_operator.c:1283-1345, :1178.
+possible_fix: |
+  None needed.
+duplicates:
+  issues: []
+  queries: ["gh search issues operator.index pure python __index__ AttributeError",
+            "bugforge README: no match for operator"]
+lean:
+  property: PyLean.CoreLibs.Operator.IndexTwinsAlways
+  theorem: PyLean.CoreLibs.Operator.indexTwinsAlways_refuted

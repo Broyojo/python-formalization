@@ -1642,6 +1642,8 @@ def collabc_mmap(case):
 # ====== BEGIN AREA functools (Lib/functools.py, Modules/_functoolsmodule.c) ======
 # Everything for this area stays between these two markers; prefix top-level names with functools_.
 import abc as functools_abc  # noqa: E402
+import operator as functools_operator  # noqa: E402
+import warnings as functools_warnings  # noqa: E402
 from test.support import import_helper as functools_ih  # noqa: E402
 
 functools_C = functools_ih.import_fresh_module("functools", fresh=["_functools"])
@@ -1650,6 +1652,13 @@ functools_P = functools_ih.import_fresh_module("functools", blocked=["_functools
 
 def functools_mod(case):
     return functools_C if case.get("twin") == "c" else functools_P
+
+
+def functools_tilde(r, needle):
+    """A message that embeds an object or a CPython-generated signature is a wildcard."""
+    if "exc" in r and needle in r["msg"]:
+        r["msg"] = "~" + r["msg"]
+    return r
 
 
 def functools_iter(case):
@@ -1686,6 +1695,21 @@ def functools_build(m, s):
     return p
 
 
+def functools_fid_safe(f, m):
+    if isinstance(f, m.partial):
+        o = getattr(type(f), "_o", None)
+        return {"partial": o}
+    return f()[0]
+
+
+def functools_obj(m, p, more, morekw):
+    PH = m.Placeholder
+    return {"func": functools_fid_safe(p.func, m),
+            "args": ["PH" if a is PH else a for a in p.args],
+            "kw": [[k, v] for k, v in p.keywords.items()],
+            "call": py_result(lambda: p(*more, **dict(morekw)))}
+
+
 def functools_run_partial(case):
     m = functools_mod(case)
 
@@ -1693,19 +1717,20 @@ def functools_run_partial(case):
         p = functools_build(m, case["spec"])
         if not isinstance(p, m.partial):
             return "notpartial"
-        PH = m.Placeholder
-        return {"func": functools_fid_safe(p.func, m),
-                "args": ["PH" if a is PH else a for a in p.args],
-                "kw": [[k, v] for k, v in p.keywords.items()],
-                "call": py_result(lambda: p(*case["more"], **dict(case["morekw"])))}
+        return functools_obj(m, p, case["more"], case["morekw"])
     return py_result(go)
 
 
-def functools_fid_safe(f, m):
-    if isinstance(f, m.partial):
-        o = getattr(type(f), "_o", None)
-        return {"partial": o}
-    return f()[0]
+def functools_run_reduce(case):
+    m = functools_mod(case)
+
+    def go():
+        p = functools_build(m, case["spec"])
+        cls, ctor, state = p.__reduce__()
+        q = cls(*ctor)
+        q.__setstate__(state)
+        return functools_obj(m, q, case["more"], [])
+    return py_result(go)
 
 
 def functools_spec(rng, depth):
@@ -1718,6 +1743,15 @@ def functools_spec(rng, depth):
         kw[0][1] = "PH"
     return {"kind": "partial", "func": functools_spec(rng, depth - 1), "args": args, "kw": kw,
             "override": rng.choice([None, None, None, None, 77]), "dict": rng.random() < .15}
+
+
+def functools_pspec(rng):
+    spec = functools_spec(rng, 3)
+    if spec["kind"] == "base":
+        spec = {"kind": "partial", "func": spec, "args": [], "kw": [], "override": None,
+                "dict": False}
+    spec["override"] = None
+    return spec
 
 
 functools_V = [(0, 0), (1, 0), (2, 0), (1, 1), (1, 2), (2, 2), (3, 0)]  # (value, type)
@@ -1734,8 +1768,12 @@ def functools_lru_call(rng):
     return {"args": args, "kw": kw}
 
 
+class functools_hookmeta(functools_abc.ABCMeta):
+    pass
+
+
 def functools_worlds(rng):
-    """A random hierarchy: returns real classes, with virtual registrations applied later."""
+    """A random hierarchy: real classes, with virtual registrations applied later."""
     classes = [object]
     n = rng.randrange(2, 7)
     for i in range(1, n):
@@ -1750,27 +1788,98 @@ def functools_worlds(rng):
         except TypeError:
             continue
         classes.append(c)
+    if rng.random() < .25 and len(classes) > 2:
+        victim = rng.choice(classes[1:])
+
+        def hook(cls, sub, v=victim):
+            if sub is v:
+                raise ValueError("hook")
+            return NotImplemented
+        classes.append(functools_abc.ABCMeta("H", (), {"__subclasshook__": classmethod(hook)}))
     return classes
+
+
+def functools_issub(a, b):
+    try:
+        return issubclass(a, b)
+    except ValueError:
+        return True
+
+
+def functools_vreg(abc_cls, c):
+    try:
+        abc_cls.register(c)
+    except (ValueError, RuntimeError):
+        pass
 
 
 def functools_world_json(classes):
     idx = {c: i for i, c in enumerate(classes)}
+
     def members(cs):
         return [idx[c] for c in cs if c in idx]
-    return {"n": len(classes),
-            "bases": [members(c.__bases__) for c in classes],
-            "mro": [members(c.__mro__) for c in classes],
+    issub, bad = [], []
+    for i, c in enumerate(classes):
+        row = []
+        for j, b in enumerate(classes):
+            try:
+                if issubclass(c, b):
+                    row.append(j)
+            except ValueError:
+                bad.append([i, j])
+        issub.append(row)
+    pseudo_alias, pseudo_type = len(classes), len(classes) + 1
+    return {"n": len(classes), "bad": bad,
+            "bases": [members(c.__bases__) for c in classes] + [[], []],
+            "mro": [members(c.__mro__) for c in classes] + [[], []],
             "subclasses": [members(c.__subclasses__()) if c is not object else []
-                           for c in classes],
-            "issub": [[j for j, b in enumerate(classes) if issubclass(c, b)] for c in classes],
+                           for c in classes] + [[], []],
+            "issub": issub + [[], []], "alias": [pseudo_alias], "notype": [pseudo_type],
             "abc": [i for i, c in enumerate(classes) if hasattr(c, "__abstractmethods__")]}
 
 
 functools_HIER = {}
+functools_ALIAS = list[int]
+functools_NOTYPE = object()
+functools_STEP = [["ret", 1], ["ret", 2], ["raise"]]
+
+
+def functools_script(rng, n, calls):
+    """`calls` is how many inner calls one script may make. The first may be the key itself, for
+    re-entrancy, and a later one only a higher key, so that the recursion stays shallow."""
+    out = []
+    for _ in range(n):
+        s = []
+        if calls:
+            k = len(out)
+            for i in range(rng.randrange(0, calls + 1)):
+                if i == 0:
+                    s.append(["call", rng.randrange(k, n)])
+                elif k + 1 < n:
+                    s.append(["call", rng.randrange(k + 1, n)])
+        else:
+            if rng.random() < .1:
+                s.append(["clear"])
+        s.append(rng.choice([["ret", rng.randrange(0, 9)], ["ret", rng.randrange(0, 9)], ["raise"]]))
+        out.append(s)
+    return out
+
+
+functools_SOURCES = [
+    ("def g(x: int): pass", [["x", {"cls": 1}]]),
+    ("def g(x: int | str): pass", [["x", {"union": [1, 2]}]]),
+    ("def g(x: list[int]): pass", [["x", "other"]]),
+    ("def g(x: 'Undefined'): pass", [["x", "fw"]]),
+    ("def g(x: int | list[int]): pass", [["x", {"union": [1, None]}]]),
+    ("def g(x) -> int: pass", [["return", {"cls": 1}]]),
+    ("def g(x, y: str): pass", [["y", {"cls": 2}]]),
+    ("def g(*, y: str): pass", [["y", {"cls": 2}]]),
+    ("def g(x): pass", None),
+]
 
 
 def functools_gen(rng):
-    r = rng.randrange(0, 15)
+    r = rng.randrange(0, 27)
     twin = rng.choice(["c", "py"])
     if r == 0:
         xs = [rng.randrange(-3, 6) for _ in range(rng.randrange(0, 5))]
@@ -1779,56 +1888,92 @@ def functools_gen(rng):
                 "initial": rng.choice([None, 0, 7]), "kind": rng.choice(["add", "sub"]),
                 "bad": rng.choice([None, None, 2])}
     if r == 1:
-        ops = ["__lt__", "__le__", "__gt__", "__ge__"]
-        return {"fn": "functools.total_ordering", "roots": rng.sample(ops, rng.randrange(0, 3)),
-                "op": rng.choice(ops), "a": rng.randrange(0, 3), "b": rng.randrange(0, 3),
-                "foreign": rng.random() < .2}
+        return {"fn": "functools.reduce_wrapper", "werror": rng.random() < .3,
+                "names": rng.sample(["function", "sequence", "initial"], rng.randrange(0, 4))}
     if r == 2:
+        ops = ["__lt__", "__le__", "__gt__", "__ge__"]
+        roots = rng.sample(ops, rng.randrange(0, 3))
+        return {"fn": "functools.total_ordering", "roots": roots, "inherit": rng.random() < .3,
+                "op": rng.choice(ops), "foreign": rng.random() < .15, "rootbad": rng.random() < .08,
+                "res": rng.choice([0, 1, 2, 9]), "eq": rng.choice([0, 1, 3, 9]),
+                "ne": rng.choice([0, 1, 4]),
+                "setfail": rng.choice([None, None, None, rng.choice(ops)])}
+    if r == 3:
         return {"fn": "functools.cmp_key", "twin": twin, "x": rng.randrange(0, 4),
-                "other": rng.choice([0, 1, 2, 3, None]),
+                "other": rng.randrange(0, 4), "otherkind": rng.choice(["key", "key", "key", "duck", "plain"]),
                 "op": rng.choice(["lt", "le", "eq", "ne", "gt", "ge"]),
-                "bad": rng.choice([None, None, 1])}
-    if r in (3, 4, 5):
-        spec = functools_spec(rng, 3)
-        if spec["kind"] == "base":
-            spec = {"kind": "partial", "func": spec, "args": [], "kw": [], "override": None,
-                    "dict": False}
-        spec["override"] = None
-        return {"fn": "functools.partial", "twin": twin, "spec": spec,
+                "bad": rng.choice([None, None, 1]), "res": rng.choice(["int", "int", "obj", "boom"])}
+    if r == 4:
+        pos = [1] * rng.randrange(0, 3)
+        return {"fn": "functools.key_new", "twin": twin, "pos": pos,
+                "kw": rng.choice([[], [], [["obj", 2]], [["x", 2]]])}
+    if r in (5, 6, 7):
+        return {"fn": "functools.partial", "twin": twin, "spec": functools_pspec(rng),
                 "more": [rng.randrange(0, 9) for _ in range(rng.randrange(0, 4))],
                 "morekw": [["b", 9]] if rng.random() < .3 else []}
-    if r == 6:
+    if r == 8:
+        return {"fn": "functools.partial_reduce", "twin": twin, "spec": functools_pspec(rng),
+                "more": [rng.randrange(0, 9) for _ in range(rng.randrange(0, 4))]}
+    if r == 9:
+        return {"fn": "functools.descr_get", "twin": twin, "spec": functools_pspec(rng),
+                "obj": rng.choice([None, 3]),
+                "more": [rng.randrange(0, 5) for _ in range(rng.randrange(0, 3))]}
+    if r in (10, 11):
+        return functools_setstate_case(rng, twin)
+    if r == 12:
         n = rng.randrange(0, 4)
-        args = [("PH" if rng.random() < .3 else 1) for _ in range(n)]
-        kw = rng.choice(["none", "dict", "bad"])
-        ns = rng.choice(["none", "dict", "bad"])
-        return {"fn": "functools.setstate", "twin": twin, "isTuple": rng.random() < .9,
-                "size": rng.choice([4, 4, 4, 4, 3]), "callable": rng.random() < .9,
-                "argsTuple": rng.random() < .9, "args": args, "kwNone": kw == "none",
-                "kwDict": kw == "dict", "nsNone": ns == "none", "nsDict": ns == "dict"}
-    if r == 7:
+        return {"fn": "functools.partial_repr", "twin": twin, "funcbad": rng.random() < .2,
+                "args": [rng.choice(["PH", 1, 2, -1, -2]) for _ in range(n - 1)] + [1] * (n > 0),
+                "kw": rng.choice([[], [["a", 1]], [["a", 1], ["b", -1]], [["c", -2]]])}
+    if r == 13:
+        return {"fn": "functools.placeholder", "twin": twin, "name": rng.choice(["X", "Sub"]),
+                "nargs": rng.choice([0, 0, 1])}
+    if r in (14, 15):
+        n = rng.randrange(0, 3)
+        args = [("PH" if i < n - 1 and rng.random() < .5 else 7) for i in range(n)]
+        if rng.random() < .05 and args:
+            args[-1] = "PH"
+        k = rng.randrange(0, 3)
+        nest = [("PH" if i < k - 1 and rng.random() < .5 else 8) for i in range(k)]
+        return {"fn": "functools.pm_get", "twin": twin,
+                "kind": rng.choice(["fn", "fn", "classm", "staticm", "obj", "partial", "custom"]),
+                "id": rng.randrange(1, 4), "args": args, "nest": nest,
+                "kw": rng.choice([[], [["a", 1]]]), "morekw": rng.choice([[], [["b", 2]]]),
+                "abstract": rng.choice(["none", "none", "true", "raise"]),
+                "instance": rng.random() < .6,
+                "get": rng.choice(["new", "self", "raise"]), "self": rng.choice(["none", "attr", "raise"]),
+                "more": [rng.randrange(0, 5) for _ in range(rng.randrange(0, 4))]}
+    if r == 16:
+        def u(d):
+            k = rng.choice(["leaf", "leaf", "part", "pm", "method", "bad"]) if d else "leaf"
+            if k == "leaf":
+                return {"k": "leaf", "id": rng.randrange(1, 4)}
+            if k == "bad":
+                return {"k": "bad"}
+            return {"k": k, "f": u(d - 1)}
+        return {"fn": "functools.unwrap", "obj": u(5)}
+    if r == 17:
         return {"fn": "functools.make_key", "typed": False, **functools_lru_call(rng)}
-    if r in (8, 9):
-        ops = ["clear" if rng.random() < .07 else functools_lru_call(rng)
-               for _ in range(rng.randrange(0, 12))]
-        return {"fn": "functools.lru", "twin": twin, "ops": ops, "typed": rng.random() < .3,
-                "maxsize": rng.choice([None, 0, 1, 2, 3]), "bad": rng.choice([None, None, 2])}
-    if r == 10:
+    if r in (18, 19, 20):
+        return functools_lru_case(rng, twin)
+    if r == 21:
         k = rng.choice(["int", "int", "none", "callable", "other"])
-        return {"fn": "functools.lru_mode", "twin": twin, "kind": k, "typedbool": rng.random() < .7,
-                "n": rng.choice([-2**70, -1, 0, 1, 5, 2**63 - 1])}
-    if r == 11:
+        usable = k == "callable" or rng.random() < .85
+        return {"fn": "functools.lru_dec", "twin": twin, "kind": k, "typedbool": rng.random() < .7,
+                "n": rng.choice([-2**70, -1, 0, 1, 5, 2**63 - 1]), "callable": usable,
+                "fail": usable and rng.random() < .1, "viacache": rng.random() < .15}
+    if r == 22:
         seqs = [rng.sample(range(5), rng.randrange(0, 4)) for _ in range(rng.randrange(0, 4))]
         return {"fn": "functools.c3_merge", "seqs": seqs}
-    if r == 12:
+    if r == 23:
         classes = functools_worlds(rng)
         key = len(functools_HIER)
         for c in classes[1:]:
             if rng.random() < .3:
                 targets = [t for t in classes[1:] if isinstance(t, functools_abc.ABCMeta)
-                           and not issubclass(t, c)]
+                           and t.__name__ != "H" and not functools_issub(t, c)]
                 if targets:
-                    rng.choice(targets).register(c)
+                    functools_vreg(rng.choice(targets), c)
         functools_HIER[key] = classes
         i = rng.randrange(len(classes))
         types = rng.sample(range(len(classes)), rng.randrange(0, len(classes) + 1))
@@ -1836,48 +1981,112 @@ def functools_gen(rng):
         if which == "find_impl" and 0 not in types:
             types.append(0)
         w = functools_world_json(classes)
+        if rng.random() < .3 and which != "c3_mro":
+            types.append(len(classes) + rng.randrange(0, 2))
         extra = {"abcs": [t for t in types if t in w["abc"]]} if which == "c3_mro" else {}
         return {"fn": "functools." + which, "key": key, "cls": i, "types": types, **w, **extra}
-    if r == 13:
+    if r == 24:
         return functools_dispatch_case(rng)
-    k = rng.randrange(0, 11)
-    if k == 4:
-        n = rng.randrange(0, 3)
-        return {"fn": "functools.pm_call", "bound": rng.random() < .5,
-                "args": [("PH" if i < n - 1 and rng.random() < .5 else 7) for i in range(n)],
-                "obj": 1, "more": [rng.randrange(0, 5) for _ in range(rng.randrange(0, 3))]}
-    if k == 5:
-        return {"fn": "functools.descr_get", "twin": twin, "obj": rng.choice([None, 3]),
-                "more": [rng.randrange(0, 5) for _ in range(rng.randrange(0, 3))]}
-    if k == 6:
-        return {"fn": "functools.sdm_getattr",
-                "name": rng.choice(["__name__", "__qualname__", "__isabstractmethod__",
-                                    "__annotations__", "__type_params__", "foo", "__dict2__"])}
-    if k == 7:
-        return {"fn": "functools.sdm_init", "callable": rng.random() < .5,
-                "hasget": rng.random() < .5}
-    if k == 8:
-        return {"fn": "functools.sd_noarg"}
-    if k == 9:
-        return {"fn": "functools.reduce_warns",
-                "names": rng.sample(["function", "sequence", "initial"], rng.randrange(0, 3))}
-    if k == 10:
-        return {"fn": rng.choice(["functools.key_sig", "functools.lru_misc", "functools.unwrap"]),
-                "q": "functools_mod", "depth": 2}
+    if r == 25:
+        return functools_register_case(rng)
+    k = rng.randrange(0, 9)
     if k == 0:
-        return {"fn": "functools.update_wrapper",
-                "wrapper": [["__name__", 1]], "wrapped": rng.sample([["__name__", 2], ["__doc__", 3],
-                                                                     ["__module__", 4]], 2),
-                "wrapperd": [["x", 1], ["y", 2]], "wrappedd": rng.sample([["y", 5], ["z", 6]], 1),
-                "assigned": rng.sample(["__name__", "__doc__", "__module__", "__qualname__"], 3)}
+        names = ["a", "b", "c"]
+        return {"fn": "functools.update_wrapper", "viawraps": rng.random() < .3,
+                "wrapper": functools_wrapper_spec(rng),
+                "wrapped": {"attrs": [[k2, 10 + i] for i, k2 in enumerate(rng.sample(names, 2))],
+                            "bad": rng.choice([None, None, None, "b"]),
+                            "dictkind": rng.choice(["dict", "dict", "dict", "none", "bad"]),
+                            "dict": rng.sample([["y", 5], ["z", 6], ["a", 7], ["__wrapped__", 8]], 2)},
+                "assigned": rng.sample(names, rng.randrange(0, 4)),
+                "updated": rng.choice([["__dict__"], ["__dict__"], [], ["missing"]])}
     if k == 1:
-        return {"fn": "functools.cached_get",
-                "name": rng.choice(["p", None]), "fail": rng.random() < .2,
-                "dict": rng.choice([None, [], [["p", 1]], [["q", 1]]]), "frozen": rng.random() < .2}
+        return {"fn": "functools.cached_get", "name": rng.choice(["p", "p", None]),
+                "func": rng.choice(["ok", "mutate", "raise"]),
+                "dict": rng.choice(["rw", "rw", "rw", "none", "class", "frozen"]),
+                "items": rng.choice([[], [["p", 1]], [["q", 1]]])}
     if k == 2:
+        return {"fn": "functools.cached_init",
+                "tbl": [["__doc__", rng.choice(["d", None, "RAISE"])],
+                        ["__module__", rng.choice(["m", None, "RAISE"])]]}
+    if k == 3:
         return {"fn": "functools.set_name", "attr": rng.choice([None, "a", "b"]), "name": "a"}
-    return {"fn": "functools.sdm_repr", "q": rng.choice([None, "A.f"]), "n": rng.choice([None, "f"]),
-            "o": rng.choice([None, "5"])}
+    if k in (4, 5):
+        return functools_sdm_case(rng)
+    if k == 6:
+        return {"fn": "functools.sd_noarg", "tbl": [["__name__", rng.choice(["f", None, "RAISE"])]]}
+    if k == 7:
+        return {"fn": "functools.key_sig"}
+    return {"fn": "functools.lru_misc", "q": "functools_mod"}
+
+
+def functools_wrapper_spec(rng):
+    hasdict = rng.random() < .85
+    return {"dict": [["a", 1], ["y", 2]][:rng.randrange(0, 3)] if hasdict else [], "hasdict": hasdict,
+            "setfail": rng.choice([None, None, None, "a", "__wrapped__"])}
+
+
+def functools_setstate_case(rng, twin):
+    shape = rng.choice(["four"] * 8 + ["nottuple", "size"])
+    state = {"shape": shape, "n": rng.choice([0, 3, 5])}
+    raw = [("PH" if rng.random() < .35 else i) for i in range(rng.randrange(0, 4))]
+    it = [("PH" if rng.random() < .3 else 10 + i) for i in range(rng.randrange(2, 5))]
+    argkind = rng.choice(["tuple", "tuple", "tuple", "sub", "sub", "other"])
+    state.update({"callable": rng.random() < .9, "raw": raw, "iter": it, "argkind": argkind,
+                  "iterbad": rng.random() < .1, "kw": rng.choice(["none", "dict", "sub", "subbad", "other"]),
+                  "kwitems": rng.choice([[], [["a", 1]]]), "ns": rng.choice(["none", "dict", "other"]),
+                  "nsitems": rng.choice([[], [["x", 1]]])})
+    if argkind != "sub":
+        state["iter"] = raw
+    ph_raw = sum(1 for a in raw[:-1] if a == "PH")
+    ph_it = sum(1 for a in state["iter"] if a == "PH")
+    pyok = sum(1 for a in state["iter"] if a == "PH") == 0 or argkind != "sub"
+    # a call of a C partial whose count differs from the slots of its tuple can read or write out of bounds:
+    # the finding corelibs-partial-setstate-phcount, reproduced in its own process, not in this one. The
+    # tuple must not hold one element either, where the fast path takes over.
+    more = [rng.randrange(0, 9) for _ in range(rng.randrange(0, 4))]
+    safe = argkind != "sub" or (twin == "py" and pyok) or \
+        (twin == "c" and len(state["iter"]) >= 2 and
+         (ph_it == ph_raw or (ph_it < ph_raw and len(more) <= ph_raw)))
+    return {"fn": "functools.setstate", "twin": twin, "state": state, "more": more, "call": safe}
+
+
+def functools_lru_case(rng, twin):
+    maxsize = rng.choice([None, 0, 1, 2, 3, 4])
+    n = rng.randrange(2, 5)
+    ops = ["clear" if rng.random() < .05 else rng.randrange(n) for _ in range(rng.randrange(0, 14))]
+    stage = {k: rng.choice([None, None, None, "hash", "getk", "getk", "recheckk", "insertk", "insertk"])
+             for k in range(n)}
+    pick = lambda name: [k for k in range(n) if stage[k] == name]
+    return {"fn": "functools.lru", "twin": twin, "maxsize": maxsize, "ops": ops,
+            "scripta": functools_script(rng, n, 1 if maxsize in (0, 1) else 2),
+            "scriptb": functools_script(rng, n, 0),
+            "hash": pick("hash"), "getk": pick("getk"), "recheckk": pick("recheckk"),
+            "insertk": pick("insertk")}
+
+
+def functools_register_case(rng):
+    k = rng.randrange(0, 4)
+    if k == 0:
+        return {"fn": "functools.register", "withfunc": rng.random() < .5,
+                "first": {"k": "val", "v": rng.choice([{"cls": 1}, {"union": [1, 2]}, {"union": [1, None]},
+                                                       "other"])}}
+    src, hints = rng.choice(functools_SOURCES)
+    return {"fn": "functools.register", "withfunc": rng.random() < .1,
+            "first": {"k": "func", "hints": hints, "src": src}}
+
+
+def functools_sdm_case(rng):
+    tbl = [["__qualname__", rng.choice(["A.f", None, "RAISE"])],
+           ["__name__", rng.choice(["f", None, None, "RAISE"])],
+           ["__module__", rng.choice(["m", None, "RAISE"])],
+           ["__doc__", rng.choice(["d", None])]]
+    return {"fn": "functools.sdm", "tbl": tbl, "callable": rng.random() < .8, "hasget": rng.random() < .6,
+            "absbad": rng.random() < .2, "kind": rng.choice(["fn", "classm", "staticm", "obj", "partial"]),
+            "id": rng.randrange(1, 4), "obj": rng.choice([None, 501, -1]),
+            "what": rng.choice(["repr", "getrepr", "getattr", "call", "call", "abstract", "wrapped"]),
+            "name": rng.choice(["__name__", "__qualname__", "__annotations__", "foo", "__wrapped2__"]),
+            "more": rng.choice([[], [1], [1, 2]]), "register": rng.random() < .5}
 
 
 def functools_dispatch_case(rng):
@@ -1888,7 +2097,6 @@ def functools_dispatch_case(rng):
         return 1000
     d = m.singledispatch(f)
     worlds, ops, out = [], [], []
-    impls = {}
 
     def snap():
         worlds.append(functools_world_json(classes))
@@ -1912,9 +2120,9 @@ def functools_dispatch_case(rng):
                 ops.append({"op": "reg", "c": c, "impl": impl, "w": w, "token": tok})
         elif a == 1:
             targets = [t for t in classes[1:] if isinstance(t, functools_abc.ABCMeta)
-                       and not issubclass(t, classes[c])]
+                       and t.__name__ != "H" and not functools_issub(t, classes[c])]
             if targets and classes[c] is not object:
-                rng.choice(targets).register(classes[c])
+                functools_vreg(rng.choice(targets), classes[c])
                 w = snap()
         else:
             cls = classes[rng.randrange(0, len(classes))]
@@ -1926,7 +2134,38 @@ def functools_dispatch_case(rng):
                 msg = str(e)
                 out.append({"exc": "RuntimeError",
                             "msg": "~Ambiguous dispatch" if msg.startswith("Ambiguous") else msg})
+            except ValueError as e:
+                out.append({"exc": "ValueError", "msg": str(e)})
     return {"fn": "functools.dispatch", "worlds": worlds, "ops": ops, "expect": out}
+
+
+class functools_reader:
+    """An object whose attribute reads follow a table: a value, `None` for AttributeError, or RAISE."""
+
+    def __init__(self, tbl, callable_=True):
+        object.__setattr__(self, "_tbl", dict(tbl))
+
+    def __getattribute__(self, k):
+        t = object.__getattribute__(self, "_tbl")
+        if k in t:
+            v = t[k]
+            if v == "RAISE":
+                raise ValueError("read")
+            if v is None:
+                raise AttributeError(k)
+            return v
+        if k in ("__class__", "__call__", "__get__", "__wrapped__"):
+            return object.__getattribute__(self, k)
+        raise AttributeError(k)
+
+
+def functools_reader_cls(callable_, hasget):
+    body = {}
+    if callable_:
+        body["__call__"] = lambda self, *a: 0
+    if hasget:
+        body["__get__"] = lambda self, o, t=None: self
+    return type("R", (functools_reader,), body)
 
 
 def functools_run(case):
@@ -1942,25 +2181,48 @@ def functools_run(case):
         it = functools_iter(case)
         args = (f, it) if case["initial"] is None else (f, it, case["initial"])
         return py_result(lambda: m.reduce(*args))
+    if fn == "reduce_wrapper":
+        vals = {"function": lambda a, b: 1, "sequence": [1, 2], "initial": 0}
+        kw = {k: vals[k] for k in case["names"]}
+        kw2 = dict(kw)
+        if "initial" in kw2 and "function" in kw2 and "sequence" in kw2:
+            kw2["sequence"] = [1]
+        with functools_warnings.catch_warnings(record=True) as w:
+            functools_warnings.simplefilter("error" if case["werror"] else "always")
+            r = py_result(lambda: functools_P.reduce(**kw2))
+        if r.get("exc") == "TypeError":
+            r["msg"] = "~reduce() missing"
+        if r.get("exc") == "DeprecationWarning":
+            r["msg"] = "~reduce"
+        warned = "function" in kw or "sequence" in kw
+        return {"ok": [r, warned]}
     if fn == "total_ordering":
         return functools_total(case)
     if fn == "cmp_key":
-        bad = case["bad"]
-
-        def cmp(a, b):
-            if a == bad:
-                raise ValueError("cmp")
-            return a - b
-        K = m.cmp_to_key(cmp)
-        x = K(case["x"])
-        o = K(case["other"]) if case["other"] is not None else 5
-        import operator
-        op = getattr(operator, case["op"])
-        return py_result(lambda: op(x, o))
+        return functools_cmp(case, m)
+    if fn == "key_new":
+        K = m.cmp_to_key(lambda a, b: 0)
+        r = py_result(lambda: K(*case["pos"], **dict(case["kw"])).obj)
+        return functools_tilde(functools_tilde(functools_tilde(r, "argument"), "keyword"), "missing")
     if fn == "partial":
         return functools_run_partial(case)
+    if fn == "partial_reduce":
+        return functools_run_reduce(case)
+    if fn == "descr_get":
+        def go():
+            q = functools_build(m, case["spec"])
+            return q.__get__(case["obj"], int)(*case["more"])
+        return functools_tilde(py_result(go), "object is not callable")
     if fn == "setstate":
         return functools_setstate(case, m)
+    if fn == "partial_repr":
+        return functools_repr(case, m)
+    if fn == "placeholder":
+        return functools_placeholder(case, m)
+    if fn == "pm_get":
+        return functools_pm(case, m)
+    if fn == "unwrap":
+        return functools_unwrap(case)
     if fn == "make_key":
         args = tuple(functools_val(p) for p in case["args"])
         kw = {k: functools_val(v) for k, v in case["kw"]}
@@ -1968,12 +2230,12 @@ def functools_run(case):
         return {"ok": k if isinstance(k, int) else ("tuple" if not isinstance(k, str) else int(k))}
     if fn == "lru":
         return functools_lru(case, m)
-    if fn == "lru_mode":
-        return functools_lru_mode(case, m)
+    if fn == "lru_dec":
+        return functools_lru_dec(case, m)
     if fn == "c3_merge":
         return py_result(lambda: functools_P._c3_merge([list(s) for s in case["seqs"]]))
     if fn in ("c3_mro", "compose_mro", "find_impl"):
-        cs = functools_HIER[case["key"]]
+        cs = list(functools_HIER[case["key"]]) + [functools_ALIAS, functools_NOTYPE]
         idx = {c: i for i, c in enumerate(cs)}
         cls = cs[case["cls"]]
         if fn == "c3_mro":
@@ -1983,19 +2245,25 @@ def functools_run(case):
             return py_result(lambda: [idx[c] for c in functools_P._compose_mro(
                 cls, [cs[a] for a in case["types"]])])
         reg = {cs[t]: t + 1000 for t in case["types"]}
-        return py_result(lambda: functools_P._find_impl(cls, reg))
+        return functools_tilde(py_result(lambda: functools_P._find_impl(cls, reg)), "Ambiguous dispatch")
     if fn == "dispatch":
         return {"ok": case["expect"]}
+    if fn == "register":
+        return functools_register(case)
+    if fn == "sd_noarg":
+        tbl = dict(case["tbl"])
+
+        def go():
+            cls = functools_reader_cls(True, False)
+            return functools_P.singledispatch(cls(tbl))()
+        return functools_tilde(py_result(go), "\0")
     if fn == "update_wrapper":
-        wrapper = functools_attrobj(dict(case["wrapper"]), case["wrapperd"])
-        wrapped = functools_attrobj(dict(case["wrapped"]), case["wrappedd"])
-        r = functools_P.update_wrapper(wrapper, wrapped, tuple(case["assigned"]))
-        attrs = dict(r.attrs)
-        attrs["__wrapped__"] = 7 if attrs["__wrapped__"] is wrapped else -1
-        return {"ok": [sorted([k, v] for k, v in attrs.items()),
-                       sorted([k, v] for k, v in r.d.items())]}
+        return functools_update_wrapper(case)
     if fn == "cached_get":
         return functools_cached(case)
+    if fn == "cached_init":
+        return py_result(lambda: (functools_P.cached_property(functools_reader(case["tbl"]))).attrname) \
+            if True else None
     if fn == "set_name":
         cp = functools_P.cached_property(lambda s: 1)
         cp.attrname = case["attr"]
@@ -2003,47 +2271,9 @@ def functools_run(case):
         def go():
             cp.__set_name__(object, case["name"])
             return cp.attrname
-        return py_result(go)
-    if fn == "sdm_repr":
+        return functools_tilde(py_result(go), "Cannot assign the same")
+    if fn == "sdm":
         return functools_sdm(case)
-    if fn == "pm_call":
-        return functools_pm(case)
-    if fn == "descr_get":
-        q = m.partial(lambda *a: list(a))
-        obj = case["obj"]
-        return {"ok": q.__get__(obj, int)(*case["more"])}
-    if fn == "sdm_getattr":
-        def f():
-            return 0
-        g = functools_P.singledispatchmethod(f).__get__(None, int)
-        n = case["name"]
-        try:
-            g.__getattr__(n)
-            return {"ok": True}
-        except AttributeError as e:
-            return {"ok": str(e) != ""}
-    if fn == "sdm_init":
-        cls = type("X", (), {**({"__call__": lambda s: 0} if case["callable"] else {}),
-                             **({"__get__": lambda s, o, t=None: s} if case["hasget"] else {})})
-        return py_result(lambda: (functools_P.singledispatchmethod(cls()), None)[1])
-    if fn == "sd_noarg":
-        def f2(*a):
-            return 0
-        f2.__name__ = "f"
-        return py_result(functools_P.singledispatch(f2))
-    if fn == "reduce_warns":
-        import warnings
-        kw = {k: {"function": max, "sequence": [1], "initial": 0}[k] for k in case["names"]}
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            try:
-                if "function" in kw or "sequence" in kw:
-                    functools_P.reduce(**kw)
-                else:
-                    functools_P.reduce(max, [1], **kw)
-            except TypeError:
-                pass
-        return {"ok": any(x.category is DeprecationWarning for x in w)}
     if fn == "key_sig":
         return {"ok": functools_C.cmp_to_key(max).__text_signature__}
     if fn == "lru_misc":
@@ -2052,156 +2282,642 @@ def functools_run(case):
         assert copy.copy(wr) is wr and copy.deepcopy(wr) is wr
         assert wr.__get__(None, int) is wr and type(wr.__get__(1, int)).__name__ == "method"
         return {"ok": [wr.__reduce__()]}
-    if fn == "unwrap":
-        f = functools_mod
-        q = functools_P.partial(functools_P.partial(f))
-        assert functools_P._unwrap_partial(q) is f
-        assert functools_P._unwrap_partialmethod(functools_P.partialmethod(q)) is f
-        return {"ok": True}
     raise ValueError(fn)
 
 
-def functools_pm(case):
-    P = functools_P.Placeholder
-    args = [P if a == "PH" else a for a in case["args"]]
-
-    def target(*a):
-        return [1, list(a), []]
-    if case["bound"]:
-        class A:
-            h = functools_P.partialmethod(target, *args)
-    else:
-        class Plain:
-            def __call__(self, *a):
-                return [1, list(a), []]
-
-        class A:
-            h = functools_P.partialmethod(Plain(), *args)
-    obj = A()
-    r = py_result(lambda: obj.h(*case["more"]))
-    if "ok" in r:
-        r["ok"][1][0] = 1
-    return r
+def functools_norm(v, cls=None, obj=None):
+    if isinstance(v, bool):
+        return 101 if v else 100
+    if isinstance(v, functools_R):
+        return v.v
+    return v
 
 
-class functools_attrobj:
-    """An object whose attribute reads and writes are visible as a dict, and whose `__dict__`
-    is a separate dict, so `update_wrapper` can be observed."""
+class functools_R:
+    """A comparison result that is not a bool."""
 
-    def __init__(self, attrs, d):
-        object.__setattr__(self, "attrs", dict(attrs))
-        object.__setattr__(self, "d", dict(d))
+    def __init__(self, v):
+        self.v = v
 
-    def __getattribute__(self, k):
-        if k == "__dict__":
-            return object.__getattribute__(self, "d")
-        if k in ("attrs", "d"):
-            return object.__getattribute__(self, k)
-        a = object.__getattribute__(self, "attrs")
-        if k in a:
-            return a[k]
-        raise AttributeError(k)
-
-    def __setattr__(self, k, v):
-        object.__getattribute__(self, "attrs")[k] = v
+    def __bool__(self):
+        if self.v == 9:
+            raise ValueError("bool")
+        return self.v != 0
 
 
 def functools_total(case):
-    root_ops = {"__lt__": "<", "__le__": "<=", "__gt__": ">", "__ge__": ">="}
-    foreign = case["foreign"]
-    body = {"__eq__": lambda s, o: s.v == o.v, "__hash__": None,
-            "__init__": lambda s, v: setattr(s, "v", v)}
+    foreign, rootbad = case["foreign"], case["rootbad"]
+    res, eqv, nev = case["res"], case["eq"], case["ne"]
+
+    def root(s, o):
+        if rootbad:
+            raise ValueError("root")
+        return NotImplemented if foreign else functools_R(res)
+    body = {"__eq__": lambda s, o: functools_R(eqv), "__ne__": lambda s, o: functools_R(nev),
+            "__hash__": None}
     for r in case["roots"]:
-        body[r] = eval(f"lambda s, o: NotImplemented if {foreign} else s.v {root_ops[r]} o.v")
+        body[r] = root
+    setfail = case["setfail"]
+
+    class Meta(type):
+        def __setattr__(cls, k, v):
+            if k == setfail:
+                raise ValueError("set")
+            super().__setattr__(k, v)
+    if case["inherit"]:
+        base = Meta("B", (), body)
+        cls = Meta("T", (base,), {})
+    else:
+        cls = Meta("T", (), body)
 
     def go():
-        c = functools_P.total_ordering(type("T", (), body))
-        v = getattr(c, case["op"])(c(case["a"]), c(case["b"]))
-        return "NotImplemented" if v is NotImplemented else {"val": v}
+        c = functools_P.total_ordering(cls)
+        v = getattr(c, case["op"])(c(), c())
+        return "NotImplemented" if v is NotImplemented else {"val": functools_norm(v)}
+    r = py_result(go)
+    return r
+
+
+class functools_cmpres(int):
+    pass
+
+
+def functools_cmp(case, m):
+    bad, kind = case["bad"], case["res"]
+
+    class Res:
+        def __init__(self, v):
+            self.v = v
+
+        def __lt__(self, o):
+            return self.w("lt", self.v < o)
+
+        def __le__(self, o):
+            return self.w("le", self.v <= o)
+
+        def __eq__(self, o):
+            return self.w("eq", self.v == o)
+
+        def __ne__(self, o):
+            return self.w("ne", self.v != o)
+
+        def __gt__(self, o):
+            return self.w("gt", self.v > o)
+
+        def __ge__(self, o):
+            return self.w("ge", self.v >= o)
+
+        def w(self, op, b):
+            if kind == "boom":
+                raise ValueError("cmp0")
+            if op == "ne":
+                return 7
+            return 1 if b else 0
+
+    def cmp(a, b):
+        if a == bad:
+            raise ValueError("cmp")
+        return a - b if kind == "int" else Res(a - b)
+    K = m.cmp_to_key(cmp)
+    x = K(case["x"])
+
+    class Duck:
+        obj = case["other"]
+    ok = case["otherkind"]
+    o = K(case["other"]) if ok == "key" else (Duck() if ok == "duck" else 5)
+    op = getattr(functools_operator, case["op"])
+
+    def go():
+        v = op(x, o)
+        if isinstance(v, bool):
+            return 101 if v else 100
+        return v
+    r = py_result(go)
+    if r.get("exc") == "AttributeError":
+        r["msg"] = "~object has no attribute 'obj'"
+    return r
+
+
+def functools_repr(case, m):
+    PH = m.Placeholder
+
+    class V:
+        def __init__(self, v):
+            self.v = v
+
+        def __repr__(self):
+            if self.v == -1:
+                raise ValueError("arg")
+            return str(self.v)
+
+    class F:
+        def __call__(self):
+            return 0
+
+        def __repr__(self):
+            if case["funcbad"]:
+                raise ValueError("func")
+            return "F"
+    p = m.partial(F())
+    conv = lambda a: PH if a == "PH" else (p if a == -2 else V(a))
+    args = tuple(conv(a) for a in case["args"])
+    kw = {k: conv(v) for k, v in case["kw"]}
+    p.__setstate__((p.func, args, kw, None))
+    return py_result(lambda: repr(p))
+
+
+def functools_ph_new(m, a, nargs):
+    r = py_result(lambda: m._PlaceholderType(*[1] * nargs) is a)
+    if "exc" in r and "positional argument" in r["msg"]:
+        r["msg"] = "~takes 1 positional argument"
+    return r
+
+
+def functools_placeholder(case, m):
+    a = m._PlaceholderType()
+    b = m.Placeholder
+
+    def sub():
+        type(m._PlaceholderType)(case["name"], (m._PlaceholderType,), {})
+    return {"ok": [a is b, repr(a), a.__reduce__(), py_result(sub),
+                   functools_ph_new(m, a, case["nargs"])]}
+
+
+class functools_targets:
+    pass
+
+
+def functools_pm(case, m):
+    P = m.Placeholder
+    args = [P if a == "PH" else a for a in case["args"]]
+    nest = [P if a == "PH" else a for a in case["nest"]]
+    i = case["id"]
+    holder = {}
+
+    def norm(a):
+        if isinstance(a, holder["A"]):
+            return 501
+        if a is holder["A"]:
+            return 502
+        return a
+
+    def target(*a, **k):
+        return [i, [norm(x) for x in a], [[x, y] for x, y in k.items()]]
+    kind = case["kind"]
+    ab = case["abstract"]
+
+    class Abs:
+        """A plain callable with the `__isabstractmethod__` the case asks for."""
+
+        def __call__(self, *a, **k):
+            return target(*a, **k)
+
+        @property
+        def __isabstractmethod__(self):
+            if ab == "raise":
+                raise ValueError("abs")
+            if ab == "true":
+                return True
+            raise AttributeError("__isabstractmethod__")
+
+    class Func(Abs):
+        def __get__(self, obj, cls=None):
+            if obj is None:
+                return self
+            return functools_operator_bound(self, obj)
+
+    def wrapf(x):
+        return x
+
+    def bound(f, o):
+        class Mt(Abs):
+            __self__ = o
+
+            def __call__(self, *a, **k):
+                return f(o, *a, **k)
+        return Mt()
+    functools_operator_bound = bound
+    if kind == "fn":
+        func = Func()
+    elif kind == "classm":
+        class Cm(Abs):
+            __call__ = None
+
+            def __get__(self, obj, cls=None):
+                return bound(target, cls)
+        func = Cm()
+        if True:
+            del_call = None
+    elif kind == "staticm":
+        class Sm(Abs):
+            def __get__(self, obj, cls=None):
+                return target
+        func = Sm()
+    elif kind == "obj":
+        func = Abs()
+    elif kind == "partial":
+        class Pa(Abs):
+            def __get__(self, obj, cls=None):
+                return self if obj is None else bound(target, obj)
+        func = Pa()
+    else:
+        ge, se = case["get"], case["self"]
+
+        class Cu(Abs):
+            def __get__(self, obj, cls=None):
+                if ge == "raise":
+                    raise ValueError("get")
+                if ge == "self":
+                    return self
+
+                class New:
+                    def __call__(self2, *a, **k):
+                        return [i + 100, [norm(x) for x in a], [[x, y] for x, y in k.items()]]
+
+                    @property
+                    def __self__(self2):
+                        if se == "raise":
+                            raise ValueError("self")
+                        if se == "attr":
+                            return 700
+                        raise AttributeError("__self__")
+                return New()
+        func = Cu()
+
+    def go():
+        pm = m.partialmethod(func, *args, **dict(case["kw"]))
+        if nest:
+            pm = m.partialmethod(pm, *nest)
+
+        class A:
+            h = pm
+        holder["A"] = A
+        got = pm.__get__(A() if case["instance"] else None, A)
+        return got(*case["more"], **dict(case["morekw"]))
+    r = py_result(go)
+    if "exc" in r and "cls_or_self" in r["msg"]:
+        r["msg"] = "~_method() missing 1 required positional argument: 'cls_or_self'"
+    if "exc" in r and "object is not callable" in r["msg"]:
+        r["msg"] = "~object is not callable"
+    if "exc" in r and "must be a callable" in r["msg"]:
+        r["msg"] = "~the first argument must be a callable or a descriptor"
+    return r
+
+
+def functools_unwrap(case):
+    P = functools_P
+
+    def mk(u):
+        k = u["k"]
+        if k == "leaf":
+            def f():
+                return u["id"]
+            return f
+        if k == "bad":
+            class Bad:
+                @property
+                def __partialmethod__(self):
+                    raise ValueError("read")
+            return Bad()
+        inner = mk(u["f"])
+        if k == "part":
+            o = object.__new__(P.partial)
+            o.func = inner
+            return o
+        if k == "pm":
+            o = object.__new__(P.partialmethod)
+            o.func = inner
+            return o
+
+        class Met:
+            pass
+        o = Met()
+        o.__partialmethod__ = inner
+        return o
+
+    def go():
+        r = P._unwrap_partialmethod(mk(case["obj"]))
+        return r() if type(r).__name__ == "function" else "method"
     return py_result(go)
 
 
 def functools_setstate(case, m):
     PH = m.Placeholder
-    args = [PH if a == "PH" else a for a in case["args"]]
-    fn = (lambda: 0) if case["callable"] else 5
-    a = tuple(args) if case["argsTuple"] else args
-    kw = None if case["kwNone"] else ({} if case["kwDict"] else 5)
-    ns = None if case["nsNone"] else ({} if case["nsDict"] else 5)
-    st = (fn, a, kw, ns)
-    if case["size"] != 4:
-        st = st[:case["size"]]
-    if not case["isTuple"]:
-        st = list(st)
+    st = case["state"]
+    conv = lambda l: tuple(PH if a == "PH" else a for a in l)
+    if st["shape"] == "nottuple":
+        state = [1]
+    elif st["shape"] == "size":
+        state = (1,) * st["n"]
+    else:
+        fn = (lambda *a, **k: [1, list(a), [[x, y] for x, y in k.items()]]) if st["callable"] else 5
+        ak = st["argkind"]
+        if ak == "tuple":
+            a = conv(st["raw"])
+        elif ak == "sub":
+            it, itbad = conv(st["iter"]), st["iterbad"]
+
+            class T(tuple):
+                def __iter__(self):
+                    if itbad:
+                        raise ValueError("iter")
+                    return iter(it)
+            a = T(conv(st["raw"]))
+        else:
+            a = list(conv(st["raw"]))
+        ki = dict(st["kwitems"])
+        kk = st["kw"]
+        if kk == "none":
+            kw = None
+        elif kk == "dict":
+            kw = ki
+        elif kk == "sub":
+            class D(dict):
+                pass
+            kw = D(ki)
+        elif kk == "subbad":
+            class D2(dict):
+                def keys(self):
+                    raise ValueError("conv")
+
+                def __iter__(self):
+                    raise ValueError("conv")
+            kw = D2(ki)
+        else:
+            kw = 5
+        ns = None if st["ns"] == "none" else (dict(st["nsitems"]) if st["ns"] == "dict" else 5)
+        state = (fn, a, kw, ns)
     p = m.partial(lambda: 0)
 
     def go():
-        p.__setstate__(st)
-        return sum(1 for x in p.args if x is PH)
+        p.__setstate__(state)
+        _, _, rs = p.__reduce__()
+        red = [["PH" if a is PH else a for a in rs[1]],
+               [[k, v] for k, v in rs[2].items()] if rs[2] is not None else None,
+               [[k, v] for k, v in rs[3].items()] if rs[3] is not None else None]
+        if case["call"]:
+            return [red, py_result(lambda: p(*case["more"]))]
+        return [red, None]
     return py_result(go)
 
 
-def functools_lru(case, m):
-    bad = case["bad"]
+class functools_key:
+    """A key whose hash is shared, so every lookup compares; `__eq__` raises when poisoned."""
+    poison = None   # set of keys armed now, with the remaining compares
 
-    def f(*a, **k):
-        v = sum(int(x) for x in a) + sum(int(x) for x in k.values())
-        if v == bad:
-            raise ValueError("f")
-        return v
-    w = m.lru_cache(maxsize=case["maxsize"], typed=case["typed"])(f)
+    def __init__(self, n, stage):
+        self.n, self.stage = n, stage
+        self.count = None
+
+    def __hash__(self):
+        if self.stage == "hash":
+            raise TypeError("unhashable")
+        return 0
+
+    def __eq__(self, other):
+        for k in (self, other):
+            if k.count is not None:
+                k.count -= 1
+                if k.count <= 0:
+                    k.count = None
+                    raise ValueError("eq")
+        return self.n == other.n
+
+
+def functools_lru(case, m):
+    maxsize = case["maxsize"]
+    box = {}
+    current = []
+
+    def run(steps):
+        for s in steps:
+            if s[0] == "ret":
+                return s[1]
+            if s[0] == "raise":
+                raise ValueError("f")
+            if s[0] == "clear":
+                box["w"].cache_clear()
+            if s[0] == "call":
+                try:
+                    call(s[1])
+                except Exception:
+                    pass
+        return 0
+
+    def f(key):
+        if key.stage == "get":
+            key.count = None
+        mi = box["w"].cache_info().misses
+        steps = case["scripta"][key.n] if mi % 2 == 1 else case["scriptb"][key.n]
+        r = run(steps)
+        size = box["w"].cache_info().currsize
+        if key.stage == "recheck":
+            key.count = 1
+        elif key.stage == "insert" and maxsize is not None and size + 1 < maxsize + 0:
+            key.count = size + 1
+        return r
+
+    def stage(n):
+        for name, l in (("hash", "hash"), ("get", "getk"), ("recheck", "recheckk"), ("insert", "insertk")):
+            if n in case[l]:
+                return name
+        return None
+
+    def call(n):
+        st = stage(n)
+        if maxsize is None and st in ("recheck", "insert"):
+            st = None
+        if maxsize == 0:
+            st = None
+        key = functools_key(n, st)
+        if st == "get":
+            key.count = 1
+        try:
+            return box["w"](key)
+        finally:
+            key.count = None
+    box["w"] = w = m.lru_cache(maxsize=maxsize)(f)
     out = []
     for op in case["ops"]:
         if op == "clear":
             w.cache_clear()
             continue
-        args = [functools_val(p) for p in op["args"]]
-        kw = {k: functools_val(v) for k, v in op["kw"]}
-        out.append(py_result(lambda: w(*args, **kw)))
+        r = py_result(lambda: call(op))
+        if r.get("exc") == "TypeError":
+            r["msg"] = "~unhashable"
+        if r.get("exc") == "KeyError":
+            r["msg"] = "~key"
+        out.append(r)
     i = w.cache_info()
     return {"ok": [out, [i.hits, i.misses, i.maxsize, i.currsize]]}
 
 
-def functools_lru_mode(case, m):
+def functools_lru_dec(case, m):
     k = case["kind"]
-    arg = {"int": case["n"], "none": None, "callable": (lambda: 0), "other": 1.5}[k]
-    typed = False if case["typedbool"] else 1
+    fail = case["fail"]
+
+    class F:
+        def __call__(self):
+            return 0
+
+        @property
+        def __module__(self):
+            raise ValueError("read")
+    user = (F() if fail else (lambda: 0)) if case["callable"] else 5
+    arg = {"int": case["n"], "none": None, "callable": user, "other": 1.5}[k]
+    typed = case["typedbool"]
+    if k == "callable":
+        typed = False if case["typedbool"] else 1
 
     def go():
-        w = m.lru_cache(arg, typed)
-        if k != "callable":
-            w = w(lambda: 0)
-        i = w.cache_info()
-        return ("infinite" if i.maxsize is None else "uncached" if i.maxsize == 0
-                else int(i.maxsize))
-    return py_result(go)
+        if case["viacache"]:
+            w = m.cache(user)
+        else:
+            w = m.lru_cache(arg, typed)
+            if k != "callable":
+                w = w(user)
+        p = w.cache_parameters()
+        i = p["maxsize"]
+        mode = "infinite" if i is None else "uncached" if i == 0 else int(i)
+        return [mode, i, p["typed"]]
+    return functools_tilde(py_result(go), "\0")
+
+
+def functools_register(case):
+    d = functools_P.singledispatch(lambda x: 1000)
+    first = case["first"]
+    table = {1: int, 2: str}
+    funcarg = (lambda x: 7) if case["withfunc"] else None
+
+    def val(v):
+        if v == "other":
+            return 5
+        if "cls" in v:
+            return table[v["cls"]]
+        args = [table[a] if a is not None else list[int] for a in v["union"]]
+        return args[0] | args[1]
+
+    def go():
+        if first["k"] == "val":
+            r = d.register(val(first["v"]), funcarg)
+        else:
+            ns = {}
+            exec(first["src"], ns)
+            r = d.register(ns["g"], funcarg)
+        keys = sorted({object: 0, int: 1, str: 2}[k] for k in d.registry)
+        kind = "decorator" if getattr(r, "__name__", "") == "<lambda>" and funcarg is None \
+            and first["k"] == "val" else "func"
+        return [kind, keys]
+    r = py_result(go)
+    if "exc" in r and r["exc"] == "TypeError":
+        msg = r["msg"]
+        if "Use either" in msg:
+            r["msg"] = "~Invalid first argument to `register()`: Use either `@register(some_class)`"
+        elif "is not a class or union type" in msg:
+            r["msg"] = "~Invalid first argument to `register()`. is not a class or union type."
+        elif "not all arguments" in msg:
+            r["msg"] = "~Invalid annotation: not all arguments are classes."
+        elif "unresolved forward" in msg:
+            r["msg"] = "~Invalid annotation: is an unresolved forward reference."
+        elif "is not a class" in msg:
+            r["msg"] = "~Invalid annotation: is not a class."
+    return r
+
+
+def functools_update_wrapper(case):
+    wr, wd = case["wrapper"], case["wrapped"]
+    setfail = wr["setfail"]
+
+    class Base:
+        __slots__ = ()
+
+        def __setattr__(self, k, v):
+            if k == setfail:
+                raise ValueError("set")
+            object.__setattr__(self, k, v)
+
+    class WithDict(Base):
+        pass
+
+    class Slots(Base):
+        __slots__ = ("a", "b", "c", "y", "__wrapped__")
+
+    if wr["hasdict"]:
+        wrapper = WithDict()
+        for k, v in wr["dict"]:
+            wrapper.__dict__[k] = v
+    else:
+        wrapper = Slots()
+    attrs, bad, dk, dd = dict(wd["attrs"]), wd["bad"], wd["dictkind"], dict(wd["dict"])
+
+    class W:
+        def __getattribute__(self, k):
+            if k == bad:
+                raise ValueError("read")
+            if k in attrs:
+                return attrs[k]
+            if k == "__dict__":
+                if dk == "bad":
+                    raise ValueError("dict")
+                if dk == "none":
+                    raise AttributeError(k)
+                return dd
+            if k == "__class__":
+                return W
+            raise AttributeError(k)
+    wrapped = W()
+
+    def go():
+        if case["viawraps"]:
+            r = functools_P.wraps(wrapped, tuple(case["assigned"]), tuple(case["updated"]))(wrapper)
+        else:
+            r = functools_P.update_wrapper(wrapper, wrapped, tuple(case["assigned"]), tuple(case["updated"]))
+        fix = lambda v: 7 if v is wrapped else v
+        if wr["hasdict"]:
+            return [sorted([k, fix(v)] for k, v in r.__dict__.items()), []]
+        slots = [[n, fix(getattr(r, n))] for n in Slots.__slots__ if hasattr(r, n)]
+        return [[], sorted(slots)]
+    res = py_result(go)
+    if res.get("exc") == "AttributeError":
+        res["msg"] = "~object has no attribute"
+    return res
 
 
 def functools_cached(case):
     class Plain:
         pass
+    name, mode, dk, items = case["name"], case["func"], case["dict"], case["items"]
 
     def func(self):
-        if case["fail"]:
+        if mode == "raise":
             raise ValueError("f")
+        if mode == "mutate":
+            self.__dict__["extra"] = 3
+            self.__dict__[name or "p"] = 9
         return 5
     cp = functools_P.cached_property(func)
-    cp.attrname = case["name"]
-    d = case["dict"]
-    if d is None:
+    cp.attrname = name
+    if dk == "class":
+        inst = None
+    elif dk == "none":
         inst = type("S", (), {"__slots__": ()})()
+    elif dk == "frozen":
+        inst = functools_frozen(dict(items))
     else:
         inst = Plain()
-        if case["frozen"]:
-            inst = functools_frozen(dict(d))
-        else:
-            inst.__dict__.update(d)
+        inst.__dict__.update(items)
 
     def go():
-        v = cp.__get__(inst, type(inst))
-        dd = inst.__dict__
-        return [v, [[k, x] for k, x in dd.items()]]
-    return py_result(go)
+        v = cp.__get__(inst, Plain)
+        if v is cp:
+            return "self"
+        return [v, sorted([k, x] for k, x in inst.__dict__.items())]
+    r = py_result(go)
+    if "exc" in r and "No '__dict__'" in r["msg"]:
+        r["msg"] = "~No '__dict__' attribute on instance"
+    if "exc" in r and "does not support item assignment" in r["msg"]:
+        r["msg"] = "~The '__dict__' attribute does not support item assignment"
+    return r
 
 
 class functools_FrozenDict(dict):
@@ -2227,41 +2943,96 @@ functools_frozen_store = {}
 
 
 def functools_sdm(case):
-    q, n, o = case["q"], case["n"], case["o"]
-
-    class F:
-        def __call__(self):
-            return 0
-    f = F()
-    if q is not None:
-        f.__qualname__ = q
-    if n is not None:
-        f.__name__ = n
-    s = functools_P.singledispatchmethod(f)
+    i = case["id"]
+    tbl = dict(case["tbl"])
+    if case["absbad"]:
+        tbl["__isabstractmethod__"] = "RAISE"
+    cls = functools_reader_cls(case["callable"], case["hasget"])
+    f = cls(tbl)
+    what = case["what"]
+    obj = case["obj"]
 
     class Obj:
         def __repr__(self):
-            return o
-    g = s.__get__(Obj() if o is not None else None, Obj)
-    return {"ok": [repr(s), repr(g)]}
+            if obj == -1:
+                raise ValueError("objrepr")
+            return str(obj)
+
+    class A:
+        pass
+    inst = None if obj is None else Obj()
+
+    def norm(a):
+        if a is inst:
+            return obj
+        if a is A:
+            return 502
+        return a
+
+    def target(*a, **k):
+        return [i, [norm(x) for x in a], []]
+    kind = case["kind"]
+    if kind == "fn":
+        impl = target
+    elif kind == "classm":
+        impl = classmethod(target)
+    elif kind == "staticm":
+        impl = staticmethod(target)
+    elif kind == "obj":
+        class C:
+            def __call__(self, *a, **k):
+                return target(*a, **k)
+        impl = C()
+    else:
+        impl = functools_P.partial(target)
+
+    def go():
+        s = functools_P.singledispatchmethod(f)
+        # `impl` is what `object` dispatches to in the model too
+        s.dispatcher.registry  # read only
+        base = None
+        s.dispatcher.register(object, impl)
+        if what == "repr":
+            return repr(s)
+        if what == "abstract":
+            return s.__isabstractmethod__ is not False and bool(s.__isabstractmethod__)
+        g = s.__get__(inst, A)
+        if what == "getrepr":
+            return repr(g)
+        if what == "getattr":
+            try:
+                v = g.__getattr__(case["name"])
+            except AttributeError:
+                return None
+            return v
+        if what == "wrapped":
+            return g.__wrapped__ is f
+        if case["register"]:
+            g.register(int, impl)
+        return g(*case["more"])
+    r = py_result(go)
+    if "exc" in r and "is not callable or a descriptor" in r["msg"]:
+        r["msg"] = "~is not callable or a descriptor"
+    if "exc" in r and "has no attribute '__get__'" in r["msg"]:
+        r["msg"] = "~object has no attribute '__get__'"
+    return r
 # ====== END AREA functools ======
 
 # ====== BEGIN AREA operator (Lib/operator.py, Modules/_operator.c, Lib/copy.py, Lib/abc.py) ======
 # Everything for this area stays between these two markers; prefix top-level names with operator_.
 import abc as operator_abc  # noqa: E402
+import collections as operator_collections  # noqa: E402
 import copy as operator_copy  # noqa: E402
+import types as operator_types  # noqa: E402
 import _operator as operator_C  # noqa: E402
 from test.support import import_helper as operator_ih  # noqa: E402
 
 operator_P = operator_ih.import_fresh_module("operator", blocked=["_operator"])
 operator_BIN = {"add": "+", "sub": "-", "mul": "*", "matmul": "@", "floordiv": "//",
                 "truediv": "/", "mod": "%", "lshift": "<<", "rshift": ">>", "and_": "&",
-                "xor": "^", "or_": "|"}
-operator_DUNDER = {"add": "add", "sub": "sub", "mul": "mul", "matmul": "matmul",
-                   "floordiv": "floordiv", "truediv": "truediv", "mod": "mod",
-                   "lshift": "lshift", "rshift": "rshift", "and_": "and", "xor": "xor",
-                   "or_": "or"}
-operator_DUNDER["pow"] = "pow"
+                "xor": "^", "or_": "|", "pow": "**"}
+operator_DUNDER = {k: k.rstrip("_") for k in operator_BIN}
+operator_INAME = {"and_": "iand", "or_": "ior"}
 
 
 def operator_mod(case):
@@ -2284,103 +3055,136 @@ def operator_pair(case, name):
     d = operator_DUNDER[name]
     A = type("A", (), {k: v for k, v in [(f"__{d}__", operator_slot(case["l"], 1))] if v})
     r = {k: v for k, v in [(f"__r{d}__", operator_slot(case["r"], 2))] if v}
-    if case["sub"]:
-        B = type("B", (A,), r)
-    else:
-        B = type("B", (), r)
+    B = type("B", (A,) if case["sub"] else (), r)
     return A, B
 
 
 def operator_gen(rng):
-    r = rng.randrange(0, 18)
+    r = rng.randrange(0, 24)
     twin = rng.choice(["c", "py"])
     if r in (0, 1):
         name = rng.choice(list(operator_BIN))
-        l, rr = rng.choice(["none", "val", "ni", "raise"]), rng.choice(["none", "val", "ni", "raise"])
-        sub = rng.random() < .3 and rr != "none"
+        kinds = ["none", "val", "ni", "raise"]
+        l, rr = rng.choice(kinds), rng.choice(kinds)
+        sub = rng.random() < .3
         case = {"twin": twin, "name": name, "sym": operator_BIN[name], "l": l, "r": rr, "sub": sub}
         if r == 0:
             return {"fn": "operator.binop", **case}
-        return {"fn": "operator.iop", **case, "i": rng.choice(["none", "val", "ni", "raise"])}
-    if r == 2:
-        return {"fn": "operator.cmp", "twin": twin, "op": rng.choice(["lt", "le", "eq", "ne", "gt", "ge"]),
-                "l": rng.choice(["val", "ni", "raise"]), "r": rng.choice(["val", "ni", "raise"]),
-                "sub": rng.random() < .3}
-    if r == 3:
-        return {"fn": "operator.unary", "twin": twin, "name": rng.choice(["neg", "pos", "invert", "abs"]),
-                "has": rng.random() < .6, "desc": ""}
+        return {"fn": "operator.iop", **case, "i": rng.choice(kinds)}
+    if r in (2, 3):
+        kinds = ["list", "tuple", "int", "i", "idx", "plain"]
+        return {"fn": "operator.seqop", "twin": twin, "name": rng.choice(["add", "mul", "iadd", "imul"]),
+                "kv": rng.choice(kinds), "kw": rng.choice(kinds),
+                "a": rng.randrange(0, 3), "b": rng.choice([0, 1, 2, -1])}
     if r == 4:
-        return {"fn": "operator.index", "twin": twin, "k": rng.choice(["int", "none", "bad"]),
-                "n": rng.choice([0, -1, 2**70])}
+        same = rng.random() < .2
+        kinds = ["val", "ni", "raise", "none"]
+        return {"fn": "operator.cmp", "twin": twin, "op": rng.choice(["lt", "le", "eq", "ne", "gt", "ge"]),
+                "l": rng.choice(kinds), "r": rng.choice(kinds), "sub": not same and rng.random() < .3,
+                "same": same}
     if r == 5:
+        return {"fn": "operator.truth", "twin": twin, "name": rng.choice(["truth", "not_"]),
+                "k": rng.choice(["true", "false", "none", "booltrue", "boolfalse", "boolraise", "badbool",
+                                 "nonebool", "len", "lenraise", "plain"]),
+                "n": rng.choice([0, 1, 5, -1, 2**63, -2**63 - 1])}
+    if r == 6:
+        return {"fn": "operator.unary", "twin": twin, "name": rng.choice(["neg", "pos", "inv", "abs"]),
+                "has": rng.choice(["val", "raise", "none"])}
+    if r == 7:
+        return {"fn": "operator.index", "twin": twin, "isint": rng.random() < .15,
+                "slot": rng.choice(["none", "exact", "exact", "other", "raise"]),
+                "inst": rng.choice(["none", "none", "none", "exact"]), "n": rng.choice([0, 1, -1, 2**70])}
+    if r == 8:
+        name = rng.choice(["getitem", "setitem", "delitem"])
+        objs = ["deque", "user", "userraise", "int"]
+        objs += ["cls", "cg", "cgraise"] if name == "getitem" else ["tuple"]
+        return {"fn": "operator." + name, "twin": twin, "o": rng.choice(objs),
+                "k": rng.choice(["int", "int", "idx", "bad", "str"]),
+                "n": rng.choice([0, 1, 2, 3, -1, -3, -4, 2**63, -2**63 - 1])}
+    if r == 9:
         kinds = ["list", "tuple", "dict", "seqadd", "radd", "plain", "int"]
         return {"fn": "operator.concat", "twin": twin, "a": rng.choice(kinds), "b": rng.choice(kinds),
                 "inplace": rng.random() < .4}
-    if r in (6, 7):
+    if r in (10, 11):
         xs = [rng.randrange(0, 4) for _ in range(rng.randrange(0, 6))]
-        return {"fn": "operator." + ("count_of" if r == 6 else "index_of"), "twin": twin, "xs": xs,
-                "b": rng.randrange(0, 4), "bad": rng.choice([None, None, None, 1]),
-                "itfail": rng.random() < .2}
-    if r == 8:
+        return {"fn": "operator.search", "name": rng.choice(["countOf", "indexOf", "contains"]), "twin": twin,
+                "xs": xs, "b": rng.randrange(0, 4), "bad": rng.choice([None, None, None, 1]),
+                "itfail": rng.random() < .2, "notiter": rng.choice(["no", "no", "no", "no", "type", "value"]),
+                "slot": rng.choice(["none", "none", "true", "raise"])}
+    if r == 12:
         return {"fn": "operator.length_hint", "twin": twin,
                 "len": rng.choice([None, None, 3, 0, "raise"]),
                 "hint": rng.choice([None, 0, 2, -1, "ni", "typeerror", "raise", "str"]),
-                "dkind": rng.choice(["int", "int", "int", "other"]) if True else "",
-                "d": rng.choice([0, 7, -1])}
-    if r == 9:
+                "dkind": rng.choice(["int", "int", "int", "other"]), "d": rng.choice([0, 7, -1])}
+    if r == 13:
         xs = [rng.randrange(0, 9) for _ in range(rng.randrange(0, 5))]
-        return rng.choice([
-            {"fn": "operator.itemgetter", "twin": twin, "xs": xs,
-             "items": [rng.randrange(-6, 6) for _ in range(rng.randrange(1, 4))]},
-            {"fn": "operator.itemgetter_fast", "xs": xs, "i": rng.randrange(-6, 6)}])
-    if r == 10:
-        return {"fn": "operator.getter_repr", "twin": twin, "cls": "operator.itemgetter",
-                "items": [str(rng.randrange(0, 5)) for _ in range(rng.randrange(1, 4))]}
-    if r == 11:
-        names = ["a", "b.c", "x", "a.x", "", "a.", ".b", 5]
-        return {"fn": "operator.attrgetter", "twin": twin,
-                "attrs": [rng.choice(names) for _ in range(rng.randrange(1, 3))]}
-    if r == 12:
-        k = rng.randrange(0, 3)
+        return {"fn": "operator.itemgetter", "twin": twin, "xs": xs, "obj": rng.choice(["tuple", "sub", "list"]),
+                "items": [rng.choice([0, 1, 2, -1, -6, 5, 2**63, -2**63 - 1])
+                          for _ in range(rng.randrange(1, 4))]}
+    if r == 14:
+        k = rng.randrange(0, 2)
+        if k == 0:
+            return {"fn": "operator.getter_repr", "twin": twin,
+                    "items": [rng.choice([1, 2, -9]) for _ in range(rng.randrange(1, 4))]}
+        return {"fn": "operator.arity", "twin": twin, "cls": rng.choice(["itemgetter", "attrgetter", "methodcaller"]),
+                "call": rng.random() < .6, "nargs": rng.choice([0, 1, 1, 2]), "nkw": rng.choice([0, 0, 1])}
+    if r == 15:
+        names = ["a", "b.c", "x", "a.x", "", "a.", ".b", "a..b", 5, ["x", "real"]]
+        return {"fn": "operator.attrgetter" if rng.random() < .3 else "operator.attr_call", "twin": twin,
+                "attrs": [rng.choice(names[:-1]) for _ in range(rng.randrange(1, 3))]}
+    if r == 16:
+        k = rng.randrange(0, 5)
         if k == 0:
             return {"fn": "operator.mc_new", "twin": twin, "name": rng.choice([None, "BAD", "m"])}
         args = [rng.randrange(0, 5) for _ in range(rng.randrange(0, 9))]
         kw = [[n, rng.randrange(0, 5)] for n in rng.sample(["p", "q", "r"], rng.randrange(0, 3))]
-        if k == 1:
-            return {"fn": "operator.mc_call", "twin": twin, "args": args, "kw": kw}
-        return {"fn": "operator.mc_repr", "twin": twin, "args": [repr(a) for a in args],
-                "kw": [[n, repr(v)] for n, v in kw]}
-    if r == 13:
+        if k in (1, 2):
+            return {"fn": "operator.mc_call", "twin": twin, "args": args, "kw": kw,
+                    "bad": rng.choice(["no", "no", "getattr", "call"])}
+        if k == 3:
+            if rng.random() < .3 and args:
+                args[0] = -9
+            return {"fn": "operator.mc_repr", "twin": twin, "args": args, "kw": kw}
+        return {"fn": "operator.mc_reduce", "twin": twin, "args": args, "kw": kw}
+    if r == 17:
         def arg():
             k = rng.choice(["str", "str", "bytes", "bytes", "int"])
             return {"k": k, "ascii": rng.random() < .8,
                     "data": [rng.randrange(97, 100) for _ in range(rng.randrange(0, 4))]}
         a = arg()
         return {"fn": "operator.digest", "a": a, "b": dict(a) if rng.random() < .3 else arg()}
-    if r == 14:
+    if r in (18, 19):
         return operator_graph(rng)
-    if r == 15:
+    if r == 20:
         return rng.choice([
-            {"fn": "operator.copy_route", "k": "tuple", "n": rng.randrange(2, 7)},
-            {"fn": "operator.deep_method", "self": rng.choice([0, 1])},
-            {"fn": "operator.subscript", "twin": twin, "op": rng.choice(["get", "contains"]),
-             "xs": [1, 2, 3], "i": rng.randrange(-5, 5)},
-            {"fn": "operator.call_op", "twin": twin, "args": [0] * rng.randrange(0, 3)},
-            {"fn": "operator.replace", "has": rng.random() < .5}])
-    if r == 16:
+            {"fn": "operator.call_op", "twin": twin, "args": [0] * rng.randrange(0, 3), "bad": rng.random() < .3,
+             "kw": rng.random() < .3},
+            {"fn": "operator.replace", "has": rng.choice(["ok", "raise", "none"])}])
+    if r == 21:
         names = ["f", "g", "h"]
-        return {"fn": "operator.update_abstract", "isabc": rng.random() < .8,
+        table = [[n, rng.choice(["abs", "no"])] for n in names]
+        return {"fn": "operator.abstract", "update": rng.random() < .5,
                 "parents": [rng.sample(names, rng.randrange(0, 3)) for _ in range(rng.randrange(1, 3))],
-                "abstract": rng.sample(names, rng.randrange(0, 3)),
-                "own": [[n, rng.random() < .5] for n in rng.sample(["u", "v"], rng.randrange(0, 2))]}
+                "table": table, "own": [[n, rng.choice(["abs", "no", "no"])]
+                                        for n in rng.sample(["u", "v"], rng.randrange(0, 2))]}
     return operator_abc_case(rng)
+
+
+def operator_spec(rng, n):
+    size = rng.choice([2, 3, 3, 4, 5, 5, 1, 6])
+    kind = rng.choice(["inst", "inst", "list", "dict"])
+    return {"rv": "tuple", "size": size, "ctorfail": rng.random() < .1, "kind": kind,
+            "args": [rng.randrange(0, n) for _ in range(rng.randrange(0, 3))] if kind == "inst" else [],
+            "state": rng.randrange(0, n) if kind == "inst" and size >= 3 and rng.random() < .5 else None,
+            "listiter": [rng.randrange(0, n)] if size >= 4 and rng.random() < .4 else None,
+            "dictiter": None, "setstate": rng.choice(["no", "no", "ok", "raise"]) if kind == "inst" else "no"}
 
 
 def operator_graph(rng):
     n = rng.randrange(1, 7)
     cells = []
     for i in range(n):
-        k = rng.choice(["atom", "atom", "list", "tuple", "dict"])
+        k = rng.choice(["atom", "atom", "list", "tuple", "dict", "inst", "method", "cls", "hooked"])
         if k == "atom":
             cells.append({"k": k, "n": rng.randrange(0, 4)})
         elif k == "list":
@@ -2388,54 +3192,181 @@ def operator_graph(rng):
         elif k == "tuple":
             low = [j for j in range(i) if cells[j]["k"] != "tuple"] + list(range(i + 1, n))
             cells.append({"k": k, "items": rng.sample(low, min(len(low), rng.randrange(0, 3)))})
-        else:
+        elif k == "dict":
             atoms = list({cells[j]["n"]: j for j in range(i) if cells[j]["k"] == "atom"}.values())
             items = []
             for key in rng.sample(atoms, min(len(atoms), 2)):
                 items += [key, rng.randrange(0, n)]
             cells.append({"k": k, "items": items})
-    # a tuple may only refer forward to non-tuples, so it can be built after them
+        elif k == "inst":
+            cells.append({"k": k, "attrs": [[a, rng.randrange(0, n)]
+                                            for a in rng.sample(["a", "b"], rng.randrange(0, 3))]})
+        elif k == "method":
+            cells.append({"k": k, "self": rng.randrange(0, n)})
+        elif k == "cls":
+            cells.append({"k": k})
+        else:
+            c = {"k": k, "copier": rng.choice(["no", "no", "ok", "raise"]),
+                 "deepcopier": rng.choice(["no", "no", "ok", "raise"])}
+            rv = rng.choice(["absent", "str", "raise", "tuple", "tuple", "tuple"])
+            if rv == "tuple":
+                c.update(operator_spec(rng, n))
+            else:
+                c.update({"rv": rv})
+            cells.append(c)
+    for i, c in enumerate(cells):
+        if c["k"] == "method":
+            ok = [j for j in range(n) if cells[j]["k"] == "inst"]
+            if ok:
+                c["self"] = rng.choice(ok)
+            else:
+                cells[i] = {"k": "atom", "n": 0}
     for i, c in enumerate(cells):
         if c["k"] == "tuple":
-            c["items"] = [j for j in c["items"] if cells[j]["k"] != "tuple"]
+            c["items"] = [j for j in c["items"] if cells[j]["k"] not in ("tuple", "method")]
             # `()` is a singleton in CPython; the model's cells are distinct objects
             if not c["items"]:
                 cells[i] = {"k": "atom", "n": 0}
-    return {"fn": "operator.deepcopy", "cells": cells, "root": rng.randrange(0, n)}
+    # a method's self or a tuple item that loops through a hook has no answer to copy, so a hook's own
+    # references go only to plain data
+    for c in cells:
+        if c["k"] == "hooked" and c["rv"] == "tuple":
+            plain = [j for j in range(n) if cells[j]["k"] == "atom"] or [None]
+            ok = [j for j in plain if j is not None]
+            if not ok:
+                c.update({"args": [], "state": None, "listiter": None})
+                continue
+            c["args"] = [rng.choice(ok) for _ in c["args"]]
+            if c["state"] is not None:
+                c["state"] = rng.choice(ok)
+                if cells[c["state"]]["n"] == 0:      # the model's `None`
+                    c["state"] = None
+            if c["listiter"] is not None:
+                c["listiter"] = [rng.choice(ok)]
+    return {"fn": "operator.deepcopy", "cells": cells, "root": rng.randrange(0, n),
+            "shallow": rng.random() < .3}
+
+
+class operator_Atom(int):
+    """An atom keeps its identity through both copies, like the model's atoms."""
+
+    def __deepcopy__(self, memo):
+        return self
+
+    def __copy__(self):
+        return self
+
+
+class operator_Inst:
+    def __init__(self, *args):
+        for i, a in enumerate(args):
+            setattr(self, f"k{i}", a)
+
+    def operator_fn(self):
+        return 0
+
+
+class operator_InstS(operator_Inst):
+    def __setstate__(self, st):
+        if type(self).fail:
+            raise ValueError("setstate")
+        self.__dict__["__state__"] = st
+
+
+class operator_InstOk(operator_InstS):
+    fail = False
+
+
+class operator_InstBad(operator_InstS):
+    fail = True
+
+
+def operator_ctor(spec):
+    def f(*args):
+        if spec["ctorfail"]:
+            raise ValueError("ctor")
+        if spec["kind"] == "list":
+            return []
+        if spec["kind"] == "dict":
+            return {}
+        c = {"ok": operator_InstOk, "raise": operator_InstBad}.get(spec["setstate"], operator_Inst)
+        return c(*args)
+    return f
+
+
+def operator_hooked(spec, objs):
+    body = {}
+    if spec["copier"] == "ok":
+        body["__copy__"] = lambda s: operator_Atom(1)
+    elif spec["copier"] == "raise":
+        def cf(s):
+            raise ValueError("copier")
+        body["__copy__"] = cf
+    if spec["deepcopier"] == "ok":
+        body["__deepcopy__"] = lambda s, memo: operator_Atom(1)
+    elif spec["deepcopier"] == "raise":
+        def df(s, memo):
+            raise ValueError("deepcopier")
+        body["__deepcopy__"] = df
+    rv = spec["rv"]
+
+    def reduce_ex(s, proto):
+        if rv == "str":
+            return "name"
+        if rv == "raise":
+            raise ValueError("reduce")
+        t = [operator_ctor(spec), tuple(objs[j] for j in spec["args"]),
+             objs[spec["state"]] if spec["state"] is not None else None,
+             iter([objs[j] for j in spec["listiter"]]) if spec["listiter"] is not None else None, None, None]
+        return tuple(t[:spec["size"]])
+    body["__reduce_ex__"] = reduce_ex if rv != "absent" else None
+    body["__reduce__"] = None
+    return type("Hooked", (), body)()
 
 
 def operator_build_graph(cells):
     objs = {}
     for i, c in enumerate(cells):
-        if c["k"] == "atom":
+        k = c["k"]
+        if k == "atom":
             objs[i] = operator_Atom(c["n"])
-        elif c["k"] == "list":
+        elif k == "list":
             objs[i] = []
-        elif c["k"] == "dict":
+        elif k == "dict":
             objs[i] = {}
+        elif k == "inst":
+            objs[i] = operator_Inst()
+        elif k == "cls":
+            objs[i] = operator_Empty
+        elif k == "hooked":
+            objs[i] = operator_hooked(c, objs)
     for i, c in enumerate(cells):
         if c["k"] == "tuple":
             objs[i] = tuple(objs[j] for j in c["items"])
     for i, c in enumerate(cells):
-        if c["k"] == "list":
+        if c["k"] == "method":
+            objs[i] = objs[c["self"]].operator_fn
+    for i, c in enumerate(cells):
+        k = c["k"]
+        if k == "list":
             objs[i].extend(objs[j] for j in c["items"])
-        elif c["k"] == "dict":
+        elif k == "dict":
             it = c["items"]
             for a, b in zip(it[::2], it[1::2]):
                 objs[i][objs[a]] = objs[b]
+        elif k == "inst":
+            for a, j in c["attrs"]:
+                setattr(objs[i], a, objs[j])
     return objs
-
-
-class operator_Atom(int):
-    """An int subclass would be copied, so use exact behaviour through deepcopy's atomic table."""
-
-    def __deepcopy__(self, memo):
-        return self
 
 
 def operator_render(o, seen):
     if isinstance(o, operator_Atom):
         return ["atom", int(o)]
+    if o is operator_Empty:
+        return ["cls"]
+    if type(o).__name__ == "Hooked":
+        return ["hooked"]
     for i, s in enumerate(seen):
         if s is o:
             return ["ref", i]
@@ -2444,6 +3375,11 @@ def operator_render(o, seen):
         return ["list", [operator_render(x, seen) for x in o]]
     if isinstance(o, tuple):
         return ["tuple", [operator_render(x, seen) for x in o]]
+    if isinstance(o, operator_types.MethodType):
+        return ["method", [operator_render(o.__self__, seen)]]
+    if isinstance(o, operator_Inst):
+        names = sorted(o.__dict__)
+        return ["inst", names, [operator_render(o.__dict__[n], seen) for n in names]]
     out = []
     for k, v in o.items():
         out.append(operator_render(k, seen))
@@ -2451,39 +3387,48 @@ def operator_render(o, seen):
     return ["dict", out]
 
 
+class operator_hook_table:
+    current = {}
+
+
 def operator_abc_case(rng):
     n = rng.randrange(2, 5)
-    A = operator_abc.ABCMeta("C0", (), {})
-    classes = [A]
-    hooks = []
-    for i in range(1, n):
-        base = rng.choice(classes)
-        classes.append(operator_abc.ABCMeta(f"C{i}", (base,), {}))
-    for i in range(1, n):
-        if rng.random() < .3:
-            j = rng.randrange(0, n)
-            if j != i and not issubclass(classes[j], classes[i]):
-                try:
-                    classes[i].register(classes[j])
-                except RuntimeError:
-                    pass
+    table = {}
+
+    def hook(cls, sub):
+        v = table.get((cls._i, sub._i))
+        if v == "raise":
+            raise ValueError("hook")
+        if v == "other":
+            return 5
+        return {"true": True, "false": False}.get(v, NotImplemented)
+    classes = []
+    for i in range(n + 2):
+        bases = ()
+        if i and i < n and rng.random() < .5:
+            bases = (rng.choice(classes),)
+        if i >= n:
+            c = type(f"P{i}", (), {"_i": i})
+        else:
+            c = operator_abc.ABCMeta(f"C{i}", bases, {"_i": i, "__subclasshook__": classmethod(hook)})
+        classes.append(c)
+    for _ in range(rng.randrange(0, 3)):
+        table[(rng.randrange(n), rng.randrange(n + 2))] = rng.choice(["true", "false", "other", "raise"])
+    hooks = [[a, b, v] for (a, b), v in table.items()]
     idx = {c: i for i, c in enumerate(classes)}
-    W = {"mro": [[idx[m] for m in c.__mro__ if m in idx] for c in classes],
-         "reg": [[idx[r] for r in c._abc_impl and operator_registry(c) if r in idx] for c in classes],
+    W = {"n": n, "mro": [[idx[m] for m in c.__mro__ if m in idx] for c in classes],
          "subs": [[idx[s] for s in c.__subclasses__() if s in idx] for c in classes]}
+    ops = []
+    for _ in range(rng.randrange(1, 7)):
+        # a hook that lies can hide a cycle from `register`, and the check then recurses without end
+        names = ["check", "check", "isinst"] + ([] if hooks else ["reg"])
+        ops.append({"op": rng.choice(names), "cls": rng.randrange(n), "sub": rng.randrange(n + 2)})
     key = len(operator_HIER)
     operator_HIER[key] = classes
-    return {"fn": "operator.abc_check", "key": key, "cls": rng.randrange(n), "sub": rng.randrange(n),
-            "hooks": hooks, **W}
+    return {"fn": "operator.abc", "key": key, "hooks": hooks, "ops": ops, **W}
 
 
 operator_HIER = {}
-
-
-def operator_registry(c):
-    import _abc
-    reg, _, _, _ = _abc._get_dump(c)
-    return [r() for r in reg]
 
 
 def operator_run(case):
@@ -2497,74 +3442,98 @@ def operator_run(case):
         s = operator_slot(case["i"], 3)
         if s:
             setattr(A, f"__i{operator_DUNDER[case['name']]}__", s)
-        name = {"and_": "iand", "or_": "ior"}.get(case["name"], "i" + case["name"])
-        return py_result(lambda: getattr(m, name)(A(), B()))
+        name = operator_INAME.get(case["name"], "i" + case["name"])
+        return operator_binmsg(py_result(lambda: getattr(m, name)(A(), B())))
+    if fn == "seqop":
+        return operator_seqop(case, m)
     if fn == "cmp":
         return operator_cmp(case, m)
+    if fn == "truth":
+        return operator_truth(case, m)
     if fn == "unary":
         name = case["name"]
-        d = {"neg": "neg", "pos": "pos", "invert": "invert", "abs": "abs"}[name]
-        cls = type("A", (), {f"__{d}__": (lambda s: 4)} if case["has"] else {})
-        r = py_result(lambda: getattr(m, name)(cls()))
-        if "exc" in r:
-            r["msg"] = r["msg"]
-            return {"exc": r["exc"], "msg": "bad operand type for : 'A'"}
-        return r
+        d = {"neg": "neg", "pos": "pos", "inv": "invert", "abs": "abs"}[name]
+        s = {"val": lambda self: 4}.get(case["has"])
+        if case["has"] == "raise":
+            def s(self):
+                raise ValueError("slot")
+        cls = type("A", (), {f"__{d}__": s} if s else {})
+        return py_result(lambda: getattr(m, name)(cls()))
     if fn == "index":
-        k = case["k"]
-        cls = {"int": type("I", (), {"__index__": lambda s: case["n"]}),
-               "none": object, "bad": type("I", (), {"__index__": lambda s: "x"})}[k]
-
-        def go():
-            v = m.index(cls())
-            return v if isinstance(v, int) else None
-        return py_result(go)
+        return operator_index(case, m)
+    if fn in ("getitem", "setitem", "delitem"):
+        return operator_subscript(case, m, fn)
     if fn == "concat":
         return operator_concat(case, m)
-    if fn in ("count_of", "index_of"):
-        bad = case["bad"]
-
-        class E:
-            def __init__(self, v):
-                self.v = v
-
-            def __eq__(self, o):
-                if self.v == bad:
-                    raise ValueError("eq")
-                return self.v == o
-
-        def gen():
-            yield from (E(x) for x in case["xs"])
-            if case["itfail"]:
-                raise ValueError("it")
-        f = m.countOf if fn == "count_of" else m.indexOf
-        return py_result(lambda: f(gen(), case["b"]))
+    if fn == "search":
+        return operator_search(case, m)
     if fn == "length_hint":
         return operator_hint(case, m)
     if fn == "itemgetter":
         items = case["items"]
-        return py_result(lambda: operator_as_list(m.itemgetter(*items)(tuple(case["xs"])), len(items)))
-    if fn == "itemgetter_fast":
-        return py_result(lambda: operator_C.itemgetter(case["i"])(tuple(case["xs"])))
+        ob = {"tuple": tuple, "sub": type("T", (tuple,), {}), "list": list}[case["obj"]](case["xs"])
+
+        def go():
+            v = m.itemgetter(*items)(ob)
+            return ["many", list(v)] if len(items) > 1 else ["one", v]
+        return py_result(go)
     if fn == "getter_repr":
-        ints = [int(i) for i in case["items"]]
-        return {"ok": repr(m.itemgetter(*ints))}
-    if fn == "attrgetter":
-        return operator_attr(case, m)
+        class It:
+            def __init__(self, v):
+                self.v = v
+
+            def __repr__(self):
+                if self.v == -9:
+                    raise ValueError("repr")
+                return str(self.v)
+        return py_result(lambda: repr(m.itemgetter(*[It(i) for i in case["items"]])))
+    if fn == "arity":
+        return operator_arity(case, m)
+    if fn in ("attrgetter", "attr_call"):
+        return operator_attr(case, m, fn)
     if fn == "mc_new":
         n = case["name"]
-        if n is None:
-            return py_result(lambda: (m.methodcaller(), None)[1])
-        return py_result(lambda: (m.methodcaller(5 if n == "BAD" else n), n)[1])
+
+        def go():
+            if n is None:
+                m.methodcaller()
+            return m.methodcaller(5 if n == "BAD" else n).__reduce__()[1][0]
+        r = py_result(go)
+        if "exc" in r and "missing 1 required" in r["msg"]:
+            r["msg"] = "~" + r["msg"]
+        return r
     if fn == "mc_call":
+        bad = case["bad"]
+
         class O:
-            def m(self, *a, **k):
-                return [list(a), [[x, y] for x, y in k.items()]]
-        return {"ok": m.methodcaller("m", *case["args"], **dict(case["kw"]))(O())}
+            def __getattr__(self, n):
+                if bad == "getattr":
+                    raise ValueError("getattr")
+
+                def call(*a, **k):
+                    if bad == "call":
+                        raise ValueError("call")
+                    return [list(a), [[x, y] for x, y in k.items()]]
+                return call
+        return py_result(lambda: m.methodcaller("m", *case["args"], **dict(case["kw"]))(O()))
     if fn == "mc_repr":
-        args = [eval(a) for a in case["args"]]
-        kw = {k: eval(v) for k, v in case["kw"]}
-        return {"ok": repr(m.methodcaller("m", *args, **kw))}
+        class It:
+            def __init__(self, v):
+                self.v = v
+
+            def __repr__(self):
+                if self.v == -9:
+                    raise ValueError("repr")
+                return str(self.v)
+        args = [It(a) for a in case["args"]]
+        kw = {k: It(v) for k, v in case["kw"]}
+        return py_result(lambda: repr(m.methodcaller("m", *args, **kw)))
+    if fn == "mc_reduce":
+        f = m.methodcaller("m", *case["args"], **dict(case["kw"]))
+        r = f.__reduce__()
+        if not case["kw"]:
+            return {"ok": ["plain", list(r[1][1:])]}
+        return {"ok": ["partial", [[k, v] for k, v in r[0].keywords.items()], list(r[1])]}
     if fn == "digest":
         def conv(a):
             if a["k"] == "str":
@@ -2572,61 +3541,70 @@ def operator_run(case):
             if a["k"] == "bytes":
                 return bytes(a["data"])
             return 5
-        return py_result(lambda: operator_C._compare_digest(conv(case["a"]), conv(case["b"])))
+        r = py_result(lambda: operator_C._compare_digest(conv(case["a"]), conv(case["b"])))
+        if "exc" in r and "bytes-like" in r["msg"]:
+            r["msg"] = "~" + r["msg"]
+        return r
     if fn == "deepcopy":
-        objs = operator_build_graph(case["cells"])
-        x = objs[case["root"]]
-        y = operator_copy.deepcopy(x)
-        return {"ok": [operator_render(y, []), y is x]}
-    if fn == "copy_route":
-        n = case["n"]
-
-        class R:
-            def __reduce__(self):
-                return (operator_mk, (), None, None, None, None)[:n]
-        return py_result(lambda: (operator_copy.copy(R()), "reconstruct")[1])
-    if fn == "deep_method":
-        class O:
-            def __init__(self, v):
-                self.v = v
-
-            def m(self):
-                return 0
-        o = O(1)
-        bound = o.m if case["self"] == 1 else operator_Atom(1).__index__
-        if case["self"] == 0:
-            return {"ok": [True, True]}
-        c = operator_copy.deepcopy(bound)
-        return {"ok": [c.__func__ is bound.__func__, c.__self__ is bound.__self__]}
-    if fn == "subscript":
-        xs = tuple(case["xs"])
-        if case["op"] == "get":
-            return py_result(lambda: m.getitem(xs, case["i"]))
-        return py_result(lambda: m.contains(xs, case["i"]))
+        return operator_deep(case)
     if fn == "call_op":
-        args = [(lambda *a: len(a))] + [0] * (len(case["args"]) - 1) if case["args"] else []
-        return py_result(lambda: m.call(*args))
+        def target(*a, **k):
+            if case["bad"]:
+                raise ValueError("call")
+            return len(a) + len(k)
+        args = [target] + [0] * (len(case["args"]) - 1) if case["args"] else []
+        kw = {"k": 1} if case["kw"] else {}
+        return py_result(lambda: m.call(*args, **kw))
     if fn == "replace":
-        cls = type("X", (), {"__replace__": lambda s, **k: None} if case["has"] else {})
-        return py_result(lambda: (operator_copy.replace(cls()), None)[1])
-    if fn == "update_abstract":
-        return operator_update(case)
-    if fn == "abc_check":
-        cs = operator_HIER[case["key"]]
-        return {"ok": issubclass(cs[case["sub"]], cs[case["cls"]])}
+        h = case["has"]
+
+        def rep(s, **k):
+            if h == "raise":
+                raise ValueError("replace")
+            return 4
+        cls = type("X", (), {"__replace__": rep} if h != "none" else {})
+        return py_result(lambda: operator_copy.replace(cls()))
+    if fn == "abstract":
+        return operator_abstract(case)
+    if fn == "abc":
+        return operator_abc_run(case)
     raise ValueError(fn)
-
-
-def operator_mk():
-    return object.__new__(operator_Empty)
 
 
 class operator_Empty:
     pass
 
 
-def operator_as_list(v, n):
-    return list(v) if n > 1 else [v]
+def operator_binmsg(r):
+    return r
+
+
+def operator_seqop(case, m):
+    class I(int):
+        pass
+
+    class Idx:
+        def __index__(self):
+            return 2
+
+    class Plain:
+        pass
+
+    def mk(k, n):
+        return {"list": lambda: [0] * n, "tuple": lambda: (0,) * n, "int": lambda: n, "i": lambda: I(n),
+                "idx": Idx, "plain": Plain}[k]()
+    a, b = mk(case["kv"], case["a"]), mk(case["kw"], case["b"]) if case["b"] >= 0 or case["kw"] in ("int", "i") \
+        else mk(case["kw"], 0)
+
+    def norm(x):
+        if isinstance(x, list):
+            return ["list", len(x)]
+        if isinstance(x, tuple):
+            return ["tuple", len(x)]
+        if isinstance(x, int):
+            return ["int", int(x)]
+        return [{Idx: "idx", Plain: "plain"}[type(x)], 0]
+    return py_result(lambda: norm(getattr(m, case["name"])(a, b)))
 
 
 def operator_cmp(case, m):
@@ -2641,10 +3619,124 @@ def operator_cmp(case, m):
                 raise ValueError("slot")
             return f
         return lambda s, o: NotImplemented
-    A = type("A", (), {f"__{op}__": mk(case["l"], True), "__hash__": None})
-    B = type("B", (A,) if case["sub"] else (), {f"__{refl}__": mk(case["r"], False),
-                                                "__hash__": None})
-    return py_result(lambda: getattr(m, op)(A(), B()))
+    ab = {"__hash__": None}
+    if case["l"] != "none":
+        ab[f"__{op}__"] = mk(case["l"], 1)
+    br = {"__hash__": None}
+    if case["r"] != "none":
+        br[f"__{refl}__"] = mk(case["r"], 2)
+    A = type("A", (), ab)
+    B = type("B", (A,) if case["sub"] else (), br)
+
+    def go():
+        a = A()
+        v = getattr(m, op)(a, a if case["same"] else B())
+        return 101 if v is True else 100 if v is False else v
+    return py_result(go)
+
+
+def operator_truth(case, m):
+    k, n = case["k"], case["n"]
+    o = {"true": True, "false": False, "none": None}.get(k, 0)
+    if k not in ("true", "false", "none"):
+        body = {}
+        if k == "booltrue":
+            body["__bool__"] = lambda s: True
+        elif k == "boolfalse":
+            body["__bool__"] = lambda s: False
+        elif k == "boolraise":
+            def f(s):
+                raise ValueError("bool")
+            body["__bool__"] = f
+        elif k == "badbool":
+            body["__bool__"] = lambda s: 1
+        elif k == "nonebool":
+            body["__bool__"] = None
+        elif k == "len":
+            body["__len__"] = lambda s: n
+        elif k == "lenraise":
+            def g(s):
+                raise ValueError("len")
+            body["__len__"] = g
+        o = type("T", (), body)()
+    return py_result(lambda: getattr(m, case["name"])(o))
+
+
+def operator_index(case, m):
+    n = case["n"]
+
+    def mk(k, v):
+        def f(*a):
+            if k == "exact":
+                return v
+            if k == "other":
+                return "x"
+            raise ValueError("index")
+        return f
+    if case["isint"]:
+        o = operator_IntO(n)
+    else:
+        body = {"__slots__": ()} if False else {}
+        if case["slot"] != "none":
+            body["__index__"] = mk(case["slot"], n)
+        o = type("O", (), body)()
+    if case["inst"] != "none" and not case["isint"]:
+        o.__index__ = mk(case["inst"], n + 1)
+    elif case["inst"] != "none":
+        return {"ok": ["int", n]} if case.get("twin") == "c" else {"ok": ["int", n + 1]}
+
+    def go():
+        v = m.index(o)
+        return ["int", v] if isinstance(v, int) else ["other", type(v).__name__]
+    return py_result(go)
+
+
+class operator_IntO(int):
+    pass
+
+
+def operator_subscript(case, m, fn):
+    o, k, n = case["o"], case["k"], case["n"]
+
+    class Idx:
+        def __index__(self):
+            return 3
+
+    class Bad:
+        def __index__(self):
+            raise ValueError("index")
+    key = {"int": n, "idx": Idx(), "bad": Bad(), "str": "s"}[k]
+
+    class U:
+        def __getitem__(self, k):
+            if o == "userraise":
+                raise ValueError("get")
+            return 7
+
+        def __setitem__(self, k, v):
+            if o == "userraise":
+                raise ValueError("set")
+
+        def __delitem__(self, k):
+            if o == "userraise":
+                raise ValueError("set")
+
+    class C:
+        pass
+
+    def cgi(cls, item):
+        if o == "cgraise":
+            raise ValueError("cg")
+        return 9
+    obj = {"deque": lambda: operator_collections.deque([0, 1, 2]), "user": U, "userraise": U,
+           "int": lambda: 5, "tuple": lambda: (1,), "cls": lambda: C,
+           "cg": lambda: type("D", (), {"__class_getitem__": classmethod(cgi)}),
+           "cgraise": lambda: type("D", (), {"__class_getitem__": classmethod(cgi)})}[o]()
+    if fn == "setitem":
+        return py_result(lambda: m.setitem(obj, key, 0))
+    if fn == "delitem":
+        return py_result(lambda: m.delitem(obj, key))
+    return py_result(lambda: m.getitem(obj, key))
 
 
 def operator_concat(case, m):
@@ -2673,6 +3765,46 @@ def operator_concat(case, m):
     return py_result(lambda: names[type(f(a, b))])
 
 
+def operator_search(case, m):
+    bad, name = case["bad"], case["name"]
+
+    class E:
+        def __init__(self, v):
+            self.v = v
+
+        def __eq__(self, o):
+            if self.v == bad:
+                raise ValueError("eq")
+            return self.v == o
+
+    def gen():
+        yield from (E(x) for x in case["xs"])
+        if case["itfail"]:
+            raise ValueError("it")
+    ni = case["notiter"]
+    if ni == "type":
+        src = 5
+    elif ni == "value":
+        def it(s):
+            raise ValueError("iter")
+        src = type("I", (), {"__iter__": it})()
+    else:
+        src = gen()
+    if name == "contains" and case["slot"] != "none":
+        sl = case["slot"]
+
+        def cf(s, o):
+            if sl == "raise":
+                raise ValueError("contains")
+            return True
+        src = type("C", (), {"__contains__": cf})()
+    f = getattr(m, name)
+    r = py_result(lambda: f(src, case["b"]))
+    if "exc" in r and r["exc"] == "TypeError" and case.get("twin") == "py" and name != "contains":
+        r["msg"] = "'int' object is not iterable"
+    return r
+
+
 def operator_hint(case, m):
     ln, hint = case["len"], case["hint"]
     body = {}
@@ -2692,11 +3824,46 @@ def operator_hint(case, m):
         body["__length_hint__"] = h
     obj = type("O", (), body)()
     d = case["d"] if case["dkind"] == "int" else "x"
-    r = py_result(lambda: m.length_hint(obj, d))
+    return py_result(lambda: m.length_hint(obj, d))
+
+
+def operator_arity(case, m):
+    name, nargs, nkw = case["cls"], case["nargs"], case["nkw"]
+    C = getattr(m, name)
+    kw = {"x": 1} if nkw else {}
+    arg0 = "a"
+
+    class O:
+        a = 1
+
+        def __getitem__(self, i):
+            return 1
+
+        def a2(self):
+            return 1
+    if case["call"]:
+        f = C("a")
+        if name == "methodcaller":
+            O.a = lambda s: None
+
+        def go():
+            f(*[O()] * nargs, **kw)
+            return None
+    else:
+        def go():
+            if name == "methodcaller" and case.get("twin") == "c":
+                return None
+            C(*[arg0] * nargs, **kw)
+            return None
+    r = py_result(go)
+    if case.get("twin") == "c" and name == "methodcaller" and not case["call"]:
+        return {"ok": None}
+    if case.get("twin") == "py" and "exc" in r:
+        r["msg"] = "~" + r["msg"]
     return r
 
 
-def operator_attr(case, m):
+def operator_attr(case, m, fn):
     class N:
         def __init__(self, path):
             self.path = path
@@ -2705,56 +3872,94 @@ def operator_attr(case, m):
             if n in ("", "x"):
                 raise AttributeError("no attribute")
             return N(self.path + "." + n)
-
     attrs = case["attrs"]
 
+    def run():
+        g = m.attrgetter(*attrs)
+        v = g(N("o"))
+        o = ["many", [x.path for x in v]] if isinstance(v, tuple) else ["one", v.path]
+        if fn == "attr_call":
+            return o
+        return [o, list(g.__reduce__()[1])]
+
+    def rdone():
+        g = m.attrgetter(*attrs)
+        try:
+            v = g(N("o"))
+            o = ["many", [x.path for x in v]] if isinstance(v, tuple) else ["one", v.path]
+        except AttributeError:
+            o = ["one", "fail"]
+        return [o, list(g.__reduce__()[1])]
+    r = py_result(run if fn == "attr_call" else rdone)
+    if r.get("exc") == "AttributeError":
+        r["msg"] = "~no attribute"
+    return r
+
+
+def operator_deep(case):
+    objs = operator_build_graph(case["cells"])
+    x = objs[case["root"]]
+    f = operator_copy.copy if case["shallow"] else operator_copy.deepcopy
+
     def go():
-        v = m.attrgetter(*attrs)(N("o"))
-        return [x.path for x in v] if isinstance(v, tuple) else [v.path]
-    return py_result(go)
+        y = f(x)
+        return [operator_render(y, []), y is x]
+    r = py_result(go)
+    if "exc" in r:
+        if r["exc"] == "TypeError" and "_reconstruct" in r["msg"]:
+            r["msg"] = "~_reconstruct()"
+        if r["exc"] == "Error":
+            r["msg"] = "~" + r["msg"]
+        if r["exc"] == "AttributeError":
+            r["msg"] = "~" + r["msg"]
+    return r
 
 
-def operator_update(case):
-    names = {}
-    abstract = set(case["abstract"])
-    parents = []
-    for i, p in enumerate(case["parents"]):
-        parents.append(p)
-    body = {}
-    for n, is_abs in case["own"]:
-        f = (lambda: 0)
-        if is_abs:
+def operator_abstract(case):
+    table = dict(case["table"])
+    own = dict(case["own"])
+
+    def val(k):
+        def f():
+            return 0
+        if k == "abs":
             f.__isabstractmethod__ = True
-        body[n] = f
-
-    class P:
-        __slots__ = ("__abstractmethods__",)
+        return f
     bases = []
-    for i, p in enumerate(parents):
-        ns = {n: operator_mark(n in abstract) for n in p}
-        b = operator_abc.ABCMeta(f"P{i}", (), ns)
-        b.__abstractmethods__ = frozenset(p)
-        bases.append(b)
-    all_names = {n for p in parents for n in p}
-    if case["isabc"]:
-        c = operator_abc.ABCMeta("C", tuple(bases), {**{n: operator_mark(n in abstract)
-                                                       for n in all_names}, **body})
-    else:
-        return {"ok": None}
-    operator_abc.update_abstractmethods(c)
+    for i, p in enumerate(case["parents"]):
+        ns = {n: val("abs") for n in p}
+        bases.append(operator_abc.ABCMeta(f"P{i}", (), ns))
+    names = {n for p in case["parents"] for n in p}
+    body = {**{n: val(table[n]) for n in names}, **{n: val(k) for n, k in own.items()}}
+    if case["update"]:
+        c = operator_abc.ABCMeta("C", tuple(bases), {})
+        for n, f in body.items():
+            setattr(c, n, f)
+        operator_abc.update_abstractmethods(c)
+        return {"ok": sorted(c.__abstractmethods__)}
+    c = operator_abc.ABCMeta("C", tuple(bases), body)
     return {"ok": sorted(c.__abstractmethods__)}
 
 
-def operator_mark(is_abs):
-    def f():
-        return 0
-    if is_abs:
-        f.__isabstractmethod__ = True
-    return f
+def operator_abc_run(case):
+    cs = operator_HIER[case["key"]]
+    out = []
+    for op in case["ops"]:
+        a, b = cs[op["cls"]], cs[op["sub"]]
+        if op["op"] == "reg":
+            r = py_result(lambda: cs.index(a.register(b)))
+        elif op["op"] == "isinst":
+            inst = object.__new__(b)
+            r = py_result(lambda: type(a).__instancecheck__(a, inst))
+        else:
+            r = py_result(lambda: issubclass(b, a))
+        out.append(r)
+    return {"ok": out}
 # ====== END AREA operator ======
 
 # ====== BEGIN AREA enumdc (Lib/enum.py, Lib/dataclasses.py) ======
 # Everything for this area stays between these two markers; prefix top-level names with enumdc_.
+import collections as enumdc_collections  # noqa: E402
 import dataclasses as enumdc_dc  # noqa: E402
 import enum as enumdc_enum  # noqa: E402
 
@@ -2777,7 +3982,411 @@ def enumdc_out(x, F):
     return ["plain", x]
 
 
+enumdc_OBJ = [object(), object(), object()]
+enumdc_WORDS = ["A", "B", "C", "D", "name", "AB", "a", "Zed"]
+
+
+def enumdc_gatom(rng):
+    r = rng.randrange(0, 8)
+    if r <= 3:
+        return ["int", rng.choice([0, 1, 1, 2, 2, 3, 5, -1, 10, 2**63])]
+    if r == 4:
+        return ["str", rng.choice(["x", "y", "", "1"])]
+    if r == 5:
+        return ["obj", rng.randrange(0, 3)]
+    return ["list", rng.randrange(0, 3)]
+
+
+def enumdc_gval(rng, mode):
+    """A class body value: `mode` 0 has auto and tuples of ints, so that `sorted` is exact; 1 has any tuple."""
+    r = rng.randrange(0, 14)
+    if r <= 4:
+        return enumdc_gatom(rng)
+    if r <= 7:
+        if mode == 1:
+            return enumdc_gatom(rng)
+        return ["auto", rng.choice([None, None, None, 7, 1])]
+    if r == 8:
+        if mode == 0:
+            return ["tup", [["int", rng.randrange(0, 4)] for _ in range(rng.randrange(0, 3))]]
+        return ["tup", [enumdc_gatom(rng) for _ in range(rng.randrange(0, 3))]]
+    if r == 9:
+        if mode == 1:
+            return ["tup", [enumdc_gatom(rng) for _ in range(rng.randrange(0, 3))]]
+        return ["tup", [["auto", None]] + [rng.choice([["auto", None], ["auto", 4], ["int", 1], ["str", "s"]])
+                                           for _ in range(rng.randrange(0, 3))]]
+    if r == 10:
+        v = enumdc_gval(rng, mode)
+        while v[0] in ("member", "nonmember"):
+            v = enumdc_gval(rng, mode)
+        return ["member", v]
+    if r == 11:
+        return ["nonmember", enumdc_gatom(rng)]
+    if r == 12:
+        return ["descr", rng.randrange(0, 2)]
+    return ["inner", rng.randrange(0, 2)]
+
+
+def enumdc_gorder(rng, keys):
+    l = list(keys)
+    rng.shuffle(l)
+    l = l[:rng.randrange(0, len(l) + 2)] + rng.choice([[], [], ["Q"]])
+    if rng.random() < .5:
+        return ["str", rng.choice([" ", ",", ", "]).join(l)]
+    return ["names", l]
+
+
+def enumdc_gbody(rng, kind):
+    mode = rng.randrange(0, 2)
+    body = []
+    keys = ["A", "B", "C", "D"]
+    if rng.random() < .1:
+        body.append(["_generate_next_value_",
+                     ["gen", rng.choice([["enum"], ["flag"], ["const", ["int", 7]],
+                                         ["raises", "ValueError", "boom"]] if kind == "flag" else
+                                        [["enum"], ["flag"], ["strEnum"], ["const", ["int", 7]],
+                                         ["const", ["str", "k"]], ["raises", "ValueError", "boom"]])]])
+    if rng.random() < .08:
+        body.append(["_ignore_", rng.choice([["str", "A B"], ["str", "C,D"], ["names", ["B"]], ["names", []],
+                                             ["int", 1]])])
+    for _ in range(rng.randrange(0, 6)):
+        k = rng.randrange(0, 40)
+        if k < 28:
+            key = rng.choice(keys)
+        else:
+            key = rng.choice(["name", "mro", "", "_C__x", "_C__x__", "_foo_", "_repr_x_", "__foo__", "_repr_y_",
+                              "_ignore_", "_generate_next_value_", "X"])
+        if kind == "flag":
+            if key == "_generate_next_value_" or key == "_ignore_":
+                v = ["names", ["B"]] if key == "_ignore_" else ["gen", ["flag"]]
+            elif rng.random() < .3:
+                v = ["auto", None]
+            else:
+                v = ["int", rng.choice([0, 1, 2, 3, 4, 5, 6, 8])]
+        elif kind == "strEnum":
+            r = rng.randrange(0, 7)
+            if key == "_generate_next_value_" or key == "_ignore_":
+                v = ["names", ["B"]] if key == "_ignore_" else ["gen", ["strEnum"]]
+            elif r <= 2:
+                v = ["str", rng.choice(["x", "y", "", "x"])]
+            elif r == 3:
+                v = ["auto", None]
+            elif r == 4:
+                v = enumdc_gatom(rng)
+            else:
+                v = ["tup", [rng.choice([["str", "a"], ["int", 1]]) for _ in range(rng.randrange(0, 6))]]
+        elif key == "_generate_next_value_":
+            v = ["gen", ["enum"]]
+        elif key == "_ignore_":
+            v = ["names", ["D"]]
+        else:
+            v = enumdc_gval(rng, mode)
+        if key == "name" and v[0] == "nonmember" and v[1][0] == "list":
+            v = ["nonmember", ["int", 1]]
+        body.append([key, v])
+    if rng.random() < .25:
+        names = [b[0] for b in body if b[0] in keys]
+        k = "_order_" if rng.random() < .8 else "__order__"
+        body.append([k, enumdc_gorder(rng, names)])
+    return body
+
+
+def enumdc_gop(rng, kind, body):
+    names = [b[0] for b in body] + ["A", "B", "Q"]
+    r = rng.randrange(0, 15)
+    if kind == "flag" and r in (1, 2, 3, 4, 7):
+        r = 0
+    if r == 0:
+        return ["summary"]
+    if r <= 2:
+        a = rng.choice([b[1] for b in body if b[1][0] in ("int", "str", "obj", "list")] or [["int", 1]])
+        more = [] if rng.random() < .8 else [enumdc_gatom(rng) for _ in range(rng.randrange(1, 3))]
+        miss = rng.choice([["none"], ["none"], ["member", rng.choice(names)], ["other"],
+                           ["raises", "KeyError", "m"], ["raises", "ValueError", "m"]])
+        return ["call", rng.choice([a, enumdc_gatom(rng)]), more, miss]
+    if r == 3:
+        return ["contains", rng.choice([b[1] for b in body if b[1][0] in ("int", "str", "obj", "list", "tup")
+                                        and all(x[0] != "auto" for x in (b[1][1] if b[1][0] == "tup" else []))]
+                                       or [["int", 1]])]
+    if r == 4:
+        return ["contains", enumdc_gatom(rng)]
+    if r == 5:
+        return ["callself", rng.choice(names)]
+    if r == 6:
+        return ["getitem", rng.choice(names)]
+    if r == 7:
+        return ["iter"]
+    if r == 8:
+        return ["setattr", rng.choice(names)]
+    if r == 9:
+        return ["delattr", rng.choice(names + ["_repr_x_", "X"])]
+    if r == 10:
+        return ["alias", rng.choice(names), rng.choice(names + ["W", "P"])]
+    if r == 11:
+        return ["valias", rng.choice(names), enumdc_gatom(rng)]
+    if r == 12:
+        return ["valias_call", rng.choice(names), enumdc_gatom(rng)]
+    return ["unique"]
+
+
+def enumdc_gclass(rng):
+    kind = rng.choice(["plain", "plain", "plain", "plain", "flag", "strEnum"])
+    body = enumdc_gbody(rng, kind)
+    return {"fn": "enumdc.ec_class", "kind": kind, "body": body, "op": enumdc_gop(rng, kind, body)}
+
+
+def enumdc_gverify(rng):
+    kind = rng.choice(["plain", "flag"])
+    body = []
+    for key in rng.sample(["A", "B", "C", "D", "E", "F"], rng.randrange(0, 6)):
+        if rng.random() < .25:
+            v = ["auto", None]
+        elif kind == "flag":
+            v = ["int", rng.choice([1, 2, 3, 4, 5, 6, 7, 8, 12, 16])]
+        else:
+            v = ["int", rng.choice([-2, -1, 0, 1, 2, 3, 4, 5, 6])]
+        body.append([key, v])
+    return {"fn": "enumdc.ec_class", "kind": kind, "body": body,
+            "op": ["verify", [rng.choice(["unique", "continuous", "named"]) for _ in range(rng.randrange(0, 4))]]}
+
+
+def enumdc_gupdate(rng):
+    items = []
+    for _ in range(rng.randrange(0, 4)):
+        items.append([rng.choice(["A", "B", "AB", "CD", "_x_", "_order_", "ABC"]),
+                      rng.choice([["int", 1], ["auto", None], ["auto", 3], ["descr", 0], ["str", "s"],
+                                  ["nonmember", ["int", 2]]])])
+    more = [[rng.choice(["E", "F"]), rng.choice([["int", 2], ["auto", None]])]
+            for _ in range(rng.randrange(0, 2))]
+    mapping = rng.random() < .7
+    if mapping:
+        items = [[k, v] for k, v in dict((k, v) for k, v in items).items()]
+    return {"fn": "enumdc.ec_update", "cls": rng.choice(["C", None]), "gen": rng.random() < .5, "members": items,
+            "more": more, "mapping": mapping}
+
+
+def enumdc_gcreate(rng):
+    kind = rng.choice(["plain", "plain", "flag", "strEnum"])
+    words = rng.sample(enumdc_WORDS, rng.randrange(0, 5))
+    if rng.random() < .15:
+        words = words + words[:1]
+    r = rng.randrange(0, 3)
+    if r == 0:
+        names = ["text", rng.choice([" ", ",", ", ", "  "]).join(words)]
+    elif r == 1:
+        names = ["seq", words]
+    else:
+        names = ["pairs", [[w, ["int", rng.randrange(0, 4)] if kind != "strEnum" else ["str", "v"]] for w in words]]
+    return {"fn": "enumdc.ec_create", "kind": kind, "start": rng.choice([1, 1, 0, 5]), "names": names}
+
+
+def enumdc_gflag(rng):
+    mixin = rng.random() < .5
+    op = rng.choice(["or", "and", "xor", "in", "invert", "bool", "class_in", "class_in"])
+    other = rng.choice([["same", rng.randrange(0, 8)], ["same", rng.randrange(0, 8)],
+                        ["mixin", rng.randrange(-9, 20)], ["other", 0], ["none", 0]])
+    if op == "class_in":
+        other = rng.choice([["same", rng.randrange(-20, 40)], ["same", rng.randrange(-20, 40)], ["other", 0]])
+    if mixin and other[0] == "none":
+        other = ["other", 0]
+    return {"fn": "enumdc.ec_flag", "members": rng.choice(enumdc_DEFS),
+            "boundary": rng.choice(["strict", "conform", "eject", "keep"]), "mixin": mixin, "op": op,
+            "v": rng.randrange(0, 8), "self_none": not mixin and rng.random() < .1, "other": other}
+
+
+def enumdc_gfield(rng, name, kind, plain_default=True):
+    f = {"name": name, "kind": kind, "default": None, "unhash": False, "factory": None, "init": rng.random() < .85,
+         "repr": rng.random() < .8, "hash": rng.choice([None, None, True, False]), "compare": rng.random() < .8,
+         "kw": rng.choice([None, None, True, False])}
+    r = rng.randrange(0, 8)
+    if r <= 2:
+        f["default"] = rng.randrange(0, 5)
+    elif r == 3 and plain_default:
+        f["factory"] = rng.randrange(5, 9)
+    elif r == 4 and rng.random() < .3:
+        f["default"] = rng.randrange(0, 5)
+        f["unhash"] = True
+    return f
+
+
+def enumdc_gbase(rng):
+    fields = []
+    for name in rng.sample(["a", "b", "c", "d"], rng.randrange(0, 3)):
+        kind = rng.choice(["plain", "plain", "plain", "classvar", "initvar"])
+        f = enumdc_gfield(rng, name, kind, kind == "plain")
+        f["unhash"] = f["unhash"] and kind != "plain"
+        f["kw"] = None if kind == "classvar" else bool(f["kw"])
+        f["init"] = True if kind == "classvar" else f["init"]
+        fields.append(f)
+    # A base must be a valid dataclass: no default before a field without one.
+    seen = False
+    for f in fields:
+        if f["kind"] == "classvar" or f["kw"] or not f["init"]:
+            continue
+        if f["default"] is not None or f["factory"] is not None:
+            seen = True
+        elif seen:
+            f["default"] = 1
+    return {"fields": fields, "frozen": rng.random() < .3}
+
+
+def enumdc_gdc(rng):
+    params = {"init": rng.random() < .9, "repr": rng.random() < .9, "eq": rng.random() < .85, "order": rng.random() < .15,
+              "unsafe_hash": rng.random() < .15, "frozen": rng.random() < .2, "match_args": rng.random() < .85,
+              "kw_only": rng.random() < .15, "slots": rng.random() < .07, "weakref_slot": rng.random() < .03}
+    if rng.random() < .7:
+        params["weakref_slot"] = False
+    bases = [enumdc_gbase(rng) for _ in range(rng.choice([0, 0, 0, 1, 1, 2]))]
+    frozen = rng.random()
+    if frozen < .85 and bases:
+        v = bases[0]["frozen"]
+        for b in bases:
+            b["frozen"] = v
+        params["frozen"] = v
+    anns = []
+    for name in rng.sample(["a", "b", "c", "e", "f"], rng.randrange(0, 5)):
+        kind = rng.choice(["plain", "plain", "plain", "plain", "classvar", "initvar"])
+        r = rng.randrange(0, 5)
+        if r <= 1:
+            attr = ["missing"]
+        elif r == 2:
+            attr = ["value", rng.randrange(0, 5), rng.random() < .1]
+        else:
+            attr = ["field", enumdc_gfield(rng, name, kind)]
+            if rng.random() < .9 and kind != "plain":
+                attr[1]["factory"] = None
+            if rng.random() < .9 and kind == "classvar":
+                attr[1]["kw"] = None
+        anns.append({"name": name, "kind": kind, "attr": attr})
+    if rng.random() < .15:
+        anns.insert(rng.randrange(0, len(anns) + 1), {"name": "_", "kind": "kw", "attr": ["missing"]})
+    if rng.random() < .03:
+        anns.insert(rng.randrange(0, len(anns) + 1), {"name": "__", "kind": "kw", "attr": ["missing"]})
+    defined = [n for n in ["__repr__", "__eq__", "__lt__", "__setattr__", "__init__", "__match_args__"]
+               if rng.random() < .06]
+    names = []
+    for b in bases:
+        names += [f["name"] for f in b["fields"]]
+    names += [a["name"] for a in anns if a["kind"] != "kw"]
+    names = list(dict.fromkeys(names))
+    r = rng.randrange(0, 6)
+    if r <= 1:
+        op = ["info"]
+    else:
+        params["init"] = True
+        defined = [n for n in defined if n not in ("__init__", "__setattr__")]
+        args = [rng.randrange(10, 20) for _ in range(rng.randrange(0, len(names) + 2))]
+        kw = [[n, rng.randrange(20, 30)] for n in rng.sample(names, rng.randrange(0, len(names) + 1))]
+        if rng.random() < .1:
+            kw.append(["zz", 1])
+        if r <= 3:
+            args = args[:rng.randrange(0, len(args) + 1)]
+            if rng.random() < .5:
+                args, kw = [], [[n, rng.randrange(20, 30)] for n in names]
+            op = ["init", args, kw]
+        else:
+            ch = [[n, rng.randrange(30, 40)] for n in rng.sample(names, rng.randrange(0, len(names) + 1))]
+            if rng.random() < .7:
+                args, kw = [], [[n, rng.randrange(20, 30)] for n in names]
+            op = ["replace", args, kw, ch]
+    return {"fn": "enumdc.dc_class", "params": params, "bases": bases, "anns": anns,
+            "stray": "s" if rng.random() < .02 else None, "hash": rng.choice([None, None, None, None, False, True]),
+            "defined": defined, "has_slots": op[0] == "info" and rng.random() < .1, "post": rng.random() < .2, "op": op}
+
+
+def enumdc_gdv(rng, depth):
+    r = rng.randrange(0, 15 if depth > 0 else 4)
+    if r == 0:
+        return ["atom", rng.randrange(-3, 4)]
+    if r == 1:
+        return ["str", rng.choice(["x", "y", ""])]
+    if r == 2:
+        return ["copied", rng.randrange(0, 3)]
+    if r == 3:
+        return ["unhash", rng.randrange(0, 3)]
+    items = lambda: [enumdc_gdv(rng, depth - 1) for _ in range(rng.randrange(0, 3))]
+    if r in (4, 5):
+        return ["list", items()]
+    if r == 6:
+        return ["tuple", items()]
+    if r == 7:
+        return ["named", items()]
+    if r == 8:
+        return ["listSub", items()]
+    if r == 9:
+        return ["tupleSub", items()]
+    if r in (10, 11):
+        return enumdc_ginst(rng, depth - 1)
+    keys = {}
+    for _ in range(rng.randrange(0, 3)):
+        k = rng.choice([["atom", rng.randrange(0, 3)], ["str", "k"], ["copied", 1],
+                        ["tuple", [["atom", rng.randrange(0, 2)]]],
+                        ["inst", ["p"], [["atom", rng.randrange(0, 2)]]]])
+        keys[str(k)] = k
+    ks = list(keys.values())
+    kind = ["dict", "dictSub", "defaultDict", "counter"][r - 12 if r <= 14 else 0]
+    if rng.random() < .25:
+        kind = "counter"
+    if kind == "counter":
+        return [kind, ks, [["atom", rng.randrange(1, 3)] for _ in ks]]
+    return [kind, ks, [enumdc_gdv(rng, depth - 1) for _ in ks]]
+
+
+def enumdc_ginst(rng, depth):
+    names = rng.sample(["p", "q", "r"], rng.randrange(0, 4))
+    return ["inst", names, [enumdc_gdv(rng, depth) for _ in names]]
+
+
+def enumdc_gmisc(rng):
+    r = rng.randrange(0, 7)
+    if r == 0:
+        fs = [enumdc_gfield(rng, n, "plain") for n in rng.sample(["a", "b", "c", "d"], rng.randrange(0, 5))]
+        return {"fn": "enumdc.dc_hash", "fields": fs}
+    if r == 1:
+        n = rng.randrange(0, 4)
+        return {"fn": "enumdc.dc_eq", "terms": [rng.choice(["t", "t", "f", "raise"]) for _ in range(n)],
+                "same": rng.random() < .1, "same_class": rng.random() < .85}
+    if r == 2:
+        n = rng.randrange(0, 4)
+        a = [rng.randrange(0, 3) for _ in range(n)]
+        return {"fn": "enumdc.dc_order", "a": a, "b": [rng.choice([x, rng.randrange(0, 3)]) for x in a],
+                "op": rng.choice(["lt", "le", "gt", "ge"]), "same_class": rng.random() < .9}
+    if r == 3:
+        names = rng.sample(["a", "b", "c"], rng.randrange(0, 4))
+        return {"fn": "enumdc.dc_frozen", "fields": names, "name": rng.choice(["a", "b", "z"]),
+                "exact": rng.random() < .5, "del": rng.random() < .5}
+    if r == 4:
+        items = []
+        for _ in range(rng.randrange(0, 4)):
+            s = rng.choice(["a", "b", "a", "x1", "_y", "1a", "a-b", "", "class", "def", "None", "match", "type"])
+            items.append(rng.choice([["name", s], ["named", s], ["name", s], ["named", s], ["notStr"], ["bad"]]))
+        return {"fn": "enumdc.dc_make", "items": items}
+    if r == 5:
+        return {"fn": "enumdc.dc_asdict", "v": enumdc_ginst(rng, 3), "fact": rng.choice(["dict", "dictLike", "list"])}
+    return {"fn": "enumdc.dc_astuple", "v": enumdc_ginst(rng, 3), "fact": rng.choice(["tuple", "list"])}
+
+
 def enumdc_gen(rng):
+    r0 = rng.randrange(0, 40)
+    if r0 >= 33:
+        return enumdc_gmisc(rng)
+    if r0 >= 25:
+        return enumdc_gdc(rng)
+    if r0 <= 8:
+        return enumdc_gclass(rng)
+    if r0 == 9:
+        return enumdc_gverify(rng)
+    if r0 == 10:
+        return enumdc_gupdate(rng)
+    if r0 == 11:
+        return enumdc_gcreate(rng)
+    if r0 == 12:
+        return {"fn": "enumdc.ec_scan",
+                "bases": [rng.choice(["absent", "prop", "descr", "plain"]) for _ in range(rng.randrange(0, 5))]}
+    if r0 == 13:
+        return {"fn": "enumdc.ec_progress"} if rng.random() < .5 else {"fn": "enumdc.ec_verify_other"}
+    if r0 <= 17:
+        return enumdc_gflag(rng)
     r = rng.randrange(0, 12)
     if r <= 5:
         v = rng.randrange(-12, 20)
@@ -2841,8 +4450,546 @@ def enumdc_hash(case):
     return {"ok": "add"}
 
 
+class enumdc_Descr:
+    def __init__(self, i):
+        self.i = i
+
+    def __get__(self, obj, owner=None):
+        return self
+
+
+def enumdc_dec(v, cls="C"):
+    k = v[0]
+    if k == "int" or k == "str":
+        return v[1]
+    if k == "obj":
+        return enumdc_OBJ[v[1]]
+    if k == "list":
+        return [v[1]]
+    if k == "auto":
+        return enumdc_enum.auto() if v[1] is None else enumdc_enum.auto(v[1])
+    if k == "tup":
+        return tuple(enumdc_dec(x, cls) for x in v[1])
+    if k == "member":
+        return enumdc_enum.member(enumdc_dec(v[1], cls))
+    if k == "nonmember":
+        return enumdc_enum.nonmember(enumdc_dec(v[1], cls))
+    if k == "descr":
+        return enumdc_Descr(v[1])
+    if k == "inner":
+        return type("Inner", (), {"__qualname__": str(cls) + ".Inner", "i": v[1]})
+    if k == "names":
+        return list(v[1])
+    if k == "gen":
+        g = v[1]
+        if g[0] == "enum":
+            return enumdc_enum.Enum._generate_next_value_
+        if g[0] == "flag":
+            return enumdc_enum.Flag._generate_next_value_
+        if g[0] == "strEnum":
+            return enumdc_enum.StrEnum._generate_next_value_
+        if g[0] == "const":
+            return lambda *a: enumdc_dec(g[1])
+
+        def raiser(*a):
+            raise {"ValueError": ValueError}[g[1]](g[2])
+        return raiser
+    raise ValueError(k)
+
+
+def enumdc_enc(x):
+    if isinstance(x, bool):
+        raise ValueError(x)
+    if isinstance(x, int):
+        return ["int", x]
+    if isinstance(x, str):
+        return ["str", x]
+    if isinstance(x, tuple):
+        return ["tup", [enumdc_enc(i) for i in x]]
+    if isinstance(x, list):
+        if x and all(isinstance(i, int) for i in x):
+            return ["list", x[0]]
+        return ["names", list(x)]
+    if isinstance(x, enumdc_Descr):
+        return ["descr", x.i]
+    if isinstance(x, (enumdc_enum.nonmember, enumdc_enum.member)):
+        return None
+    if isinstance(x, enumdc_enum.auto):
+        return ["auto"]
+    if isinstance(x, type) and hasattr(x, "i"):
+        return ["inner", x.i]
+    if x in enumdc_OBJ:
+        return ["obj", enumdc_OBJ.index(x)]
+    if callable(x) or isinstance(x, staticmethod):
+        return ["gen"]
+    raise ValueError(x)
+
+
+def enumdc_summary(C):
+    flag = issubclass(C, enumdc_enum.Flag)
+    return [list(C._member_names_),
+            [[n, m._name_, enumdc_enc(m._value_)] for n, m in C._member_map_.items()],
+            [[enumdc_enc(k), m._name_] for k, m in C._value2member_map_.items()],
+            [enumdc_enc(v) for v in C._hashable_values_], [enumdc_enc(v) for v in C._unhashable_values_],
+            [[k if isinstance(k, str) else "?", [enumdc_enc(x) for x in l]]
+             for k, l in C._unhashable_values_map_.items()],
+            [C._flag_mask_, C._singles_mask_, C._all_bits_] if flag else None]
+
+
+enumdc_BASE = {"plain": enumdc_enum.Enum, "flag": enumdc_enum.Flag, "strEnum": enumdc_enum.StrEnum}
+
+
+def enumdc_build(case):
+    base = enumdc_BASE[case["kind"]]
+    op = case["op"]
+    ns = enumdc_enum.EnumType.__prepare__("C", (base,))
+    if op[0] == "call":
+        miss = op[3]
+
+        def _missing_(cls, value):
+            if miss[0] == "none":
+                return None
+            if miss[0] == "other":
+                return 42
+            if miss[0] == "member":
+                return cls[miss[1]]
+            raise {"KeyError": KeyError, "ValueError": ValueError}[miss[1]](miss[2])
+        ns["_missing_"] = classmethod(_missing_)
+    for k, v in case["body"]:
+        ns[k] = enumdc_dec(v)
+    return enumdc_enum.EnumType("C", (base,), ns)
+
+
+def enumdc_class(case):
+    op = case["op"]
+    k = op[0]
+
+    def go():
+        C = enumdc_build(case)
+        if k == "summary":
+            return enumdc_summary(C)
+        if k == "call":
+            if op[2] and not C._member_map_:
+                return "functional"
+            return C(enumdc_dec(op[1]), *[enumdc_dec(x) for x in op[2]])._name_
+        if k == "callself":
+            return C(C[op[1]])._name_
+        if k == "contains":
+            return enumdc_dec(op[1]) in C
+        if k == "getitem":
+            return C[op[1]]._name_
+        if k == "iter":
+            return [[m._name_ for m in C], [m._name_ for m in reversed(C)], len(C)]
+        if k == "setattr":
+            setattr(C, op[1], 1)
+            return None
+        if k == "delattr":
+            delattr(C, op[1])
+            return None
+        if k == "alias":
+            C[op[1]]._add_alias_(op[2])
+            return enumdc_summary(C)
+        if k == "valias":
+            C[op[1]]._add_value_alias_(enumdc_dec(op[2]))
+            return enumdc_summary(C)
+        if k == "valias_call":
+            C[op[1]]._add_value_alias_(enumdc_dec(op[2]))
+            return C(enumdc_dec(op[2]))._name_
+        if k == "unique":
+            enumdc_enum.unique(C)
+            return None
+        checks = [{"unique": enumdc_enum.UNIQUE, "continuous": enumdc_enum.CONTINUOUS,
+                   "named": enumdc_enum.NAMED_FLAGS}[k] for k in op[1]]
+        enumdc_enum.verify(*checks)(C)
+        return None
+    return py_result(go)
+
+
+def enumdc_update(case):
+    def go():
+        d = enumdc_enum.EnumDict(case["cls"])
+        if case["gen"]:
+            d._generate_next_value = enumdc_enum.Enum._generate_next_value_
+        items = [(k, enumdc_dec(v, case["cls"])) for k, v in case["members"]]
+        more = {k: enumdc_dec(v, case["cls"]) for k, v in case["more"]}
+        d.update(dict(items) if case["mapping"] else items, **more)
+        return [[[k, enumdc_enc(v)] for k, v in d.items()], d.member_names,
+                [enumdc_enc(v) for v in d._last_values]]
+    return py_result(go)
+
+
+def enumdc_create(case):
+    def go():
+        base = enumdc_BASE[case["kind"]]
+        kind, v = case["names"]
+        names = [(k, enumdc_dec(x)) for k, x in v] if kind == "pairs" else v
+        return enumdc_summary(base("C", names, start=case["start"]))
+    return py_result(go)
+
+
+def enumdc_scan(case):
+    def go():
+        mix = []
+        for b in case["bases"]:
+            ns = {"prop": {"P": enumdc_enum.property(lambda s: 1)}, "descr": {"P": enumdc_Descr(0)}, "plain": {"P": 5},
+                  "absent": {}}[b]
+            mix.append(type("M", (), ns))
+        bases = tuple(mix) + (enumdc_enum.Enum,)
+        ns = enumdc_enum.EnumType.__prepare__("E", bases)
+        ns["A"] = 1
+        E = enumdc_enum.EnumType("E", bases, ns)
+        E.A._add_alias_("P")
+        d = E.__dict__["P"]
+        if isinstance(d, enumdc_enum.property):
+            return [True, d._attr_type, E.__mro__[1:].index(d._cls_type)]
+        return [False]
+    return py_result(go)
+
+
+def enumdc_new_in_progress():
+    class E(enumdc_enum.Enum):
+        def __new__(cls, v):
+            return super().__new__(cls, v)
+        A = 1
+    return E.A._name_
+
+
+def enumdc_flag(case):
+    base = enumdc_enum.IntFlag if case["mixin"] else enumdc_enum.Flag
+    members = [tuple(m) for m in case["members"]]
+    F = base("F", members + [("NONE", None)] if case["self_none"] or case["other"][0] == "none" else members,
+             boundary=enumdc_BOUND[case["boundary"]])
+    op = case["op"]
+    okind, ov = case["other"]
+
+    def go():
+        if op == "class_in":
+            return (ov if okind != "other" else "x") in F
+        self = F.NONE if case["self_none"] else F(case["v"])
+        if not isinstance(self, F):
+            return "skip"
+        if op in ("or", "and", "xor", "in"):
+            if okind == "other":
+                other = "x"
+            elif okind == "mixin":
+                other = ov
+            elif okind == "none":
+                other = F.NONE
+            else:
+                other = F(ov)
+                if not isinstance(other, F):
+                    return "skip"
+            if op == "in":
+                if case["self_none"]:
+                    return "skip"
+                return F.__contains__(self, other)
+            r = {"or": F.__or__, "and": F.__and__, "xor": F.__xor__}[op](self, other)
+            if r is NotImplemented:
+                return "NotImplemented"
+            return enumdc_out(r, F)
+        if op == "invert":
+            a = ~self
+            return [enumdc_out(a, F), (~self) is a]
+        if case["self_none"]:
+            return "skip"
+        return bool(self)
+    return py_result(go)
+
+
+def enumdc_fld(f):
+    kw = {"init": f["init"], "repr": f["repr"], "hash": f["hash"], "compare": f["compare"]}
+    if f["kw"] is not None:
+        kw["kw_only"] = f["kw"]
+    if f["default"] is not None:
+        kw["default"] = [f["default"]] if f["unhash"] else f["default"]
+    if f["factory"] is not None:
+        v = f["factory"]
+        kw["default_factory"] = lambda: v
+    return enumdc_dc.field(**kw)
+
+
+def enumdc_ann(kind):
+    import typing
+    return {"plain": int, "classvar": typing.ClassVar[int], "initvar": enumdc_dc.InitVar[int],
+            "kw": enumdc_dc.KW_ONLY}[kind]
+
+
+def enumdc_user(*a, **k):
+    return None
+
+
+enumdc_user.user = True
+
+
+def enumdc_mkbase(b):
+    ns = {"__annotations__": {f["name"]: enumdc_ann(f["kind"]) for f in b["fields"]}}
+    for f in b["fields"]:
+        ns[f["name"]] = enumdc_fld(f)
+    return enumdc_dc.dataclass(frozen=b["frozen"])(type("B", (), ns))
+
+
+def enumdc_plain(x):
+    return x[0] if isinstance(x, list) else x
+
+
+def enumdc_obj(C, o, seen):
+    post = seen.get("post")
+    return [[enumdc_plain(getattr(o, f.name, "unset")) for f in enumdc_dc.fields(C)],
+            None if post is None else [enumdc_plain(x) for x in post]]
+
+
+def enumdc_dcclass(case):
+    op = case["op"]
+    p = case["params"]
+    seen = {}
+
+    def go():
+        bases = tuple(enumdc_mkbase(b) for b in reversed(case["bases"]))
+        anns = {}
+        ns = {}
+        for a in case["anns"]:
+            anns[a["name"]] = enumdc_ann(a["kind"])
+            at = a["attr"]
+            if at[0] == "value":
+                ns[a["name"]] = [at[1]] if at[2] else at[1]
+            elif at[0] == "field":
+                ns[a["name"]] = enumdc_fld(at[1])
+        ns["__annotations__"] = anns
+        if case["stray"]:
+            ns[case["stray"]] = enumdc_dc.field()
+        for n in case["defined"]:
+            ns[n] = () if n == "__match_args__" else enumdc_user
+        if case["hash"] is True:
+            ns["__hash__"] = enumdc_user
+        elif case["hash"] is False:
+            ns["__hash__"] = None
+        if case["has_slots"]:
+            ns["__slots__"] = ()
+        if case["post"]:
+            def __post_init__(self, *a):
+                seen["post"] = list(a)
+            ns["__post_init__"] = __post_init__
+        C = enumdc_dc.dataclass(**p)(type("C", bases, ns))
+        if op[0] == "info":
+            sig = []
+            kwl = []
+            if p["init"] or "__init__" in case["defined"]:
+                pass
+            fl = list(C.__dataclass_fields__.values())
+            kinds = {enumdc_dc._FIELD: "plain", enumdc_dc._FIELD_CLASSVAR: "classVar",
+                     enumdc_dc._FIELD_INITVAR: "initVar"}
+            has = lambda f: f.default is not enumdc_dc.MISSING or f.default_factory is not enumdc_dc.MISSING
+            all_ = [f for f in fl if f._field_type is not enumdc_dc._FIELD_CLASSVAR]
+            std, kwo = enumdc_dc._fields_in_init_order(all_)
+            hash_ = C.__dict__.get("__hash__", "absent")
+            state = hash_ if hash_ == "absent" else ("None" if hash_ is None else
+                                                     ("user" if hash_ is enumdc_user else "gen"))
+            names = ["__init__", "__repr__", "__eq__", "__lt__", "__le__", "__gt__", "__ge__", "__setattr__",
+                     "__delattr__"]
+            gen = [n for n in names if n in C.__dict__ and C.__dict__[n] is not enumdc_user]
+            return [[[f.name, "PyLean.CoreLibs.EnumDC.FKind." + kinds[f._field_type],
+                      None if f.kw_only is enumdc_dc.MISSING else f.kw_only,
+                      None if f.default is enumdc_dc.MISSING else enumdc_plain(f.default),
+                      f.default_factory is not enumdc_dc.MISSING] for f in fl],
+                    [[f.name, has(f)] for f in std], [[f.name, has(f)] for f in kwo],
+                    None if "__match_args__" in case["defined"] or not p["match_args"]
+                    else list(C.__match_args__), state, gen]
+        o = C(*op[1], **dict(op[2]))
+        if op[0] == "init":
+            return enumdc_obj(C, o, seen)
+        return enumdc_obj(C, enumdc_dc.replace(o, **dict(op[3])), seen)
+    return py_result(go)
+
+
+class enumdc_Cp:
+    def __init__(self, n):
+        self.n = n
+
+    def __eq__(self, o):
+        return isinstance(o, enumdc_Cp) and self.n == o.n
+
+    def __hash__(self):
+        return hash(("cp", self.n))
+
+
+class enumdc_L(list):
+    pass
+
+
+class enumdc_T(tuple):
+    pass
+
+
+class enumdc_D(dict):
+    pass
+
+
+enumdc_INST = {}
+enumdc_NT = {}
+
+
+def enumdc_dv(v):
+    k = v[0]
+    if k == "atom" or k == "str":
+        return v[1]
+    if k == "copied":
+        return enumdc_Cp(v[1])
+    if k == "unhash":
+        return {v[1]}
+    if k in ("list", "tuple", "named", "listSub", "tupleSub"):
+        l = [enumdc_dv(x) for x in v[1]]
+        if k == "list":
+            return l
+        if k == "tuple":
+            return tuple(l)
+        if k == "listSub":
+            return enumdc_L(l)
+        if k == "tupleSub":
+            return enumdc_T(l)
+        n = len(l)
+        if n not in enumdc_NT:
+            enumdc_NT[n] = enumdc_collections.namedtuple("N", ["f%d" % i for i in range(n)])
+        return enumdc_NT[n](*l)
+    if k == "inst":
+        key = tuple(v[1])
+        if key not in enumdc_INST:
+            enumdc_INST[key] = enumdc_dc.make_dataclass("I", list(key), frozen=True)
+        return enumdc_INST[key](*[enumdc_dv(x) for x in v[2]])
+    pairs = [(enumdc_dv(a), enumdc_dv(b)) for a, b in zip(v[1], v[2])]
+    if k == "dict":
+        return dict(pairs)
+    if k == "dictSub":
+        return enumdc_D(pairs)
+    if k == "defaultDict":
+        return enumdc_collections.defaultdict(int, pairs)
+    return enumdc_collections.Counter(dict(pairs))
+
+
+def enumdc_dvenc(x):
+    enc = enumdc_dvenc
+    if isinstance(x, int):
+        return ["atom", x]
+    if isinstance(x, str):
+        return ["str", x]
+    if isinstance(x, enumdc_Cp):
+        return ["copied", x.n]
+    if isinstance(x, set):
+        return ["unhash", next(iter(x))]
+    if isinstance(x, enumdc_L):
+        return ["listSub", [enc(i) for i in x]]
+    if isinstance(x, list):
+        return ["list", [enc(i) for i in x]]
+    if isinstance(x, enumdc_T):
+        return ["tupleSub", [enc(i) for i in x]]
+    if isinstance(x, tuple) and hasattr(x, "_fields"):
+        return ["named", [enc(i) for i in x]]
+    if isinstance(x, tuple):
+        return ["tuple", [enc(i) for i in x]]
+    name = ("counter" if isinstance(x, enumdc_collections.Counter) else
+            "defaultDict" if isinstance(x, enumdc_collections.defaultdict) else
+            "dictSub" if isinstance(x, enumdc_D) else "dict")
+    return [name, [enc(k) for k in x.keys()], [enc(v) for v in x.values()]]
+
+
+def enumdc_dcmisc(case, fn):
+    def go():
+        if fn == "dc_hash":
+            fs = case["fields"]
+            for f in fs:
+                f["default"] = None
+                f["factory"] = None
+                f["unhash"] = False
+            ns = {"__annotations__": {f["name"]: int for f in fs}}
+            C = enumdc_dc.make_dataclass("H", [(f["name"], int, enumdc_dc.field(hash=f["hash"], compare=f["compare"]))
+                                               for f in fs], unsafe_hash=True)
+            vals = {f["name"]: 1000 + i for i, f in enumerate(fs)}
+            h = hash(C(*vals.values()))
+            names = [f["name"] for f in fs]
+            for m in range(2 ** len(names)):
+                sub = [n for i, n in enumerate(names) if m >> i & 1]
+                if hash(tuple(vals[n] for n in sub)) == h:
+                    return sub
+            return "none"
+        if fn == "dc_eq":
+            terms = case["terms"]
+
+            class E:
+                def __init__(self, t):
+                    self.t = t
+
+                def __eq__(self, o):
+                    if self.t == "raise":
+                        raise ValueError("eq")
+                    return 1 if self.t == "t" else 0
+            names = ["f%d" % i for i in range(len(terms))]
+            C = enumdc_dc.make_dataclass("Q", names)
+            a = C(*[E(t) for t in terms])
+            if case["same"]:
+                return int(C.__eq__(a, a))
+            b = C(*[E(t) for t in terms]) if case["same_class"] else 3
+            r = C.__eq__(a, b)
+            return "NotImplemented" if r is NotImplemented else int(r)
+        if fn == "dc_order":
+            names = ["f%d" % i for i in range(len(case["a"]))]
+            C = enumdc_dc.make_dataclass("O", names, order=True)
+            a = C(*case["a"])
+            b = C(*case["b"]) if case["same_class"] else 3
+            r = getattr(C, "__%s__" % case["op"])(a, b)
+            return "NotImplemented" if r is NotImplemented else r
+        if fn == "dc_frozen":
+            C = enumdc_dc.make_dataclass("F", case["fields"], frozen=True)
+            G = C if case["exact"] else type("G", (C,), {})
+            o = G(*[1 for _ in case["fields"]])
+            n = case["name"]
+            if case["del"]:
+                if not case["exact"] and n not in case["fields"]:
+                    object.__setattr__(o, n, 1)
+                delattr(o, n)
+            else:
+                setattr(o, n, 1)
+            return None
+        if fn == "dc_make":
+            items = []
+            for i in case["items"]:
+                if i[0] == "name":
+                    items.append(i[1])
+                elif i[0] == "named":
+                    items.append((i[1], int))
+                elif i[0] == "notStr":
+                    items.append((1, int))
+                else:
+                    items.append(("a", int, enumdc_dc.field(), 1))
+            return [f.name for f in enumdc_dc.fields(enumdc_dc.make_dataclass("X", items))]
+        o = enumdc_dv(case["v"])
+        if fn == "dc_asdict":
+            fact = {"dict": dict, "dictLike": lambda p: dict(p), "list": list}[case["fact"]]
+            return enumdc_dvenc(enumdc_dc.asdict(o, dict_factory=fact))
+        return enumdc_dvenc(enumdc_dc.astuple(o, tuple_factory={"tuple": tuple, "list": list}[case["fact"]]))
+    return py_result(go)
+
+
 def enumdc_run(case):
     fn = case["fn"].split(".")[1]
+    if fn == "dc_class":
+        return enumdc_dcclass(case)
+    if fn in ("dc_hash", "dc_eq", "dc_order", "dc_frozen", "dc_make", "dc_asdict", "dc_astuple"):
+        return enumdc_dcmisc(case, fn)
+    if fn == "ec_class":
+        return enumdc_class(case)
+    if fn == "ec_update":
+        return enumdc_update(case)
+    if fn == "ec_create":
+        return enumdc_create(case)
+    if fn == "ec_scan":
+        return enumdc_scan(case)
+    if fn == "ec_progress":
+        return py_result(enumdc_new_in_progress)
+    if fn == "ec_flag":
+        return enumdc_flag(case)
+    if fn == "ec_verify_other":
+        def go():
+            enumdc_enum.verify(enumdc_enum.UNIQUE)(int)
+        return py_result(go)
     if fn.startswith("flag_"):
         F = enumdc_cls(case)
         v, w = case["v"], case.get("w", 0)

@@ -1,0 +1,50 @@
+file	line	name	verdict	mirror	property	settled	reason
+Objects/memoryobject.c	72	mbuf_alloc	FAITHFUL	yes	yes	yes	The NULL return is out of memory, which no model here expresses; passes on the fresh MBuf fields NewFromExporter states.
+Objects/memoryobject.c	131	mbuf_traverse	FAITHFUL	yes	-	-	
+Objects/memoryobject.c	468	init_strides_from_shape	FAITHFUL	yes	yes	yes	Written as the Fortran loop on the reversed shape, which gives the same array; cLoop_cStrides and copyRec_spec depend on it.
+Objects/memoryobject.c	481	init_fortran_strides_from_shape	FAITHFUL	yes	yes	yes	
+Objects/memoryobject.c	543	init_shared_values	FAITHFUL	yes	yes	yes	dest->internal at :551 is dropped, which nothing Python can see.
+Objects/memoryobject.c	611	init_flags	FAITHFUL	yes	yes	yes	Passes on the listed entries plus hex-tobytes, whose proof depends on the 0-dim and suboffsets branches; the PIL bit itself is stated nowhere, and the registry source of empty-step-not-contiguous cites abstract.c:458-459, the Fortran twin, where :498-499 is meant.
+Objects/memoryobject.c	644	memory_alloc	FAITHFUL	yes	yes	yes	Field initialisation is split with the caller; the mv == NULL return is out of memory.
+Objects/memoryobject.c	713	mbuf_add_incomplete_view	FAITHFUL	yes	yes	yes	
+Objects/memoryobject.c	741	PyMemoryView_FromMemory	FAITHFUL	yes	yes	yes	
+Objects/memoryobject.c	861	mbuf_copy_format	FAITHFUL	yes	yes	yes	Inlined in contigBytes; passes on v.format = src.format in FromContigCopy, and the malloc failure is out of memory.
+Objects/memoryobject.c	1090	get_exports	FAITHFUL	yes	yes	yes	
+Objects/memoryobject.c	1109	_memory_release	FAITHFUL	yes	yes	yes	Its own lines are mirrored in order; the gap in PyBuffer_Release is charged to mbuf_release.
+Objects/memoryobject.c	1129	memoryview_release_impl	FAITHFUL	yes	yes	yes	The SystemError arm at :1145-1147 is mirrored and unreachable under export counting.
+Objects/memoryobject.c	1164	memory_traverse	FAITHFUL	yes	-	-	
+Objects/memoryobject.c	1172	memory_clear	FAITHFUL	yes	yes	yes	Both arms are stated, though the proposition is close to the definition; Py_CLEAR(self->mbuf) at :1177 is dropped with no visible effect because BASE_INACCESSIBLE tests the released flag first.
+Objects/memoryobject.c	1203	get_native_fmtchar	FAITHFUL	yes	yes	yes	
+Objects/memoryobject.c	1232	get_native_fmtstr	FAITHFUL	yes	yes	yes	
+Objects/memoryobject.c	1276	cast_to_1D	FAITHFUL	yes	yes	yes	The error arms at :1295-1312 are mirrored verbatim and taken as hypotheses; no theorem states them.
+Objects/memoryobject.c	1339	copy_shape	FAITHFUL	yes	yes	yes	Soundness only (if the copy succeeds the result is the positive product); the error arms are mirrored verbatim and unstated.
+Objects/memoryobject.c	1529	memory_getbuf	FAITHFUL	yes	yes	yes	GetbufRules covers all flags and views; each contiguity refusal is covered only by 'a failure changes nothing', and the CHECK_RESTRICTED_INT arm is mirrored and unstated.
+Objects/memoryobject.c	1609	memory_releasebuf	FAITHFUL	yes	yes	yes	
+Objects/memoryobject.c	1635	type_error_int	FAITHFUL	yes	yes	yes	
+Objects/memoryobject.c	1643	value_error_int	FAITHFUL	yes	yes	yes	
+Objects/memoryobject.c	2045	unpacker_new	FAITHFUL	yes	-	-	
+Objects/memoryobject.c	2063	unpacker_free	FAITHFUL	yes	-	-	Applies for the stock struct.Struct; the Py_XDECREFs at :2066-2067 could run a finalizer only if struct.Struct is replaced.
+Objects/memoryobject.c	2075	struct_get_unpacker	HOLLOW	no	no	yes	The import failure at :2082-2084 is dropped (State.lean:383-384), though fix_struct_error_int exists to preserve it, CmpBadFormat assumes the rejection as a hypothesis, and CmpFastStruct only parses one native character.
+Objects/memoryobject.c	2168	tolist_base	FAITHFUL	yes	yes	yes	
+Objects/memoryobject.c	2195	tolist_rec	FAITHFUL	yes	yes	yes	
+Objects/memoryobject.c	2376	memory_repr	FAITHFUL	yes	yes	yes	The proposition restates the body by rfl, accepted only because the body is one flag test; the %p address is not modelled.
+Objects/memoryobject.c	2391	lookup_dimension	FAITHFUL	yes	yes	yes	Passes on the union: index-item for negative and out-of-range indices, tuple-item for dim > 0 and suboffsets.
+Objects/memoryobject.c	2538	is_multislice	FAITHFUL	yes	yes	yes	
+Objects/memoryobject.c	2557	is_multiindex	FAITHFUL	yes	yes	yes	
+Objects/memoryobject.c	2917	fix_struct_error_int	HOLLOW	yes	no	yes	CmpBadFormat states the StructError arm only, with the error as a hypothesis, and the ImportError and MemoryError arm at :2921-2924 is dead because no model path raises them.
+Objects/memoryobject.c	2974	unpack_cmp	FAITHFUL	yes	yes	yes	
+Objects/memoryobject.c	3268	_IntTupleFromSsizet	FAITHFUL	yes	yes	yes	
+Objects/memoryobject.c	3292	memory_obj_get	FAITHFUL	yes	yes	yes	
+Objects/memoryobject.c	3305	memory_nbytes_get	FAITHFUL	yes	yes	yes	
+Objects/memoryobject.c	3313	memory_format_get	FAITHFUL	yes	yes	yes	
+Objects/memoryobject.c	3321	memory_itemsize_get	FAITHFUL	yes	yes	yes	
+Objects/memoryobject.c	3329	memory_shape_get	FAITHFUL	yes	yes	yes	
+Objects/memoryobject.c	3337	memory_strides_get	FAITHFUL	yes	yes	yes	
+Objects/memoryobject.c	3345	memory_suboffsets_get	FAITHFUL	yes	yes	yes	
+Objects/memoryobject.c	3353	memory_readonly_get	FAITHFUL	yes	yes	yes	
+Objects/memoryobject.c	3361	memory_ndim_get	FAITHFUL	yes	yes	yes	
+Objects/memoryobject.c	3369	memory_c_contiguous	FAITHFUL	yes	yes	yes	
+Objects/memoryobject.c	3377	memory_f_contiguous	FAITHFUL	yes	yes	yes	
+Objects/memoryobject.c	3385	memory_contiguous	FAITHFUL	yes	yes	yes	
+Objects/memoryobject.c	3475	memoryiter_dealloc	FAITHFUL	yes	-	-	Ruling: plain reference-dropping is an accepted scope limit; see the Coverage rules in AGENTS.md.
+Objects/memoryobject.c	3484	memoryiter_traverse	FAITHFUL	yes	-	-	Applies by the tp_traverse policy, although the note's 'no Python-visible effect' overstates it, since gc.get_referents() can see it_seq.

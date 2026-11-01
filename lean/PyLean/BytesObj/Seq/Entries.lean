@@ -8,6 +8,7 @@ import PyLean.BytesObj.Seq.SliceProps
 import PyLean.BytesObj.Seq.AllocProps
 import PyLean.BytesObj.Seq.MiscProps
 import PyLean.BytesObj.Seq.CApiProps
+import PyLean.BytesObj.Seq.CApiContent
 import PyLean.BytesObj.Seq.ContentProps
 import PyLean.BytesObj.Seq.BugProps
 import PyLean.BytesObj.Seq.Release
@@ -41,9 +42,14 @@ def entries : List Entry := [
     prop := ``ContainsAgree, thm := some ``containsAgree_proven
     notes := "The operands are item == x, deliberately since gh-81829. expressions.rst still writes x == e; that doc wording is not treated as a bug here." },
   { id := "bytesobj-contains-identity", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_contains"]
-    statement := "An object is always in a tuple that holds that very object: the identity shortcut of PyObject_RichCompareBool decides, so a NaN-like element is found."
+    statement := "An object is in a tuple that holds that very object at any position, unless an earlier comparison raises: the identity shortcut of PyObject_RichCompareBool decides, so a NaN-like element is found."
     source := "Doc/reference/expressions.rst:2025 ('x is e or x == e')", status := .proven
     prop := ``ContainsIdentity, thm := some ``containsIdentity_proven },
+  { id := "bytesobj-list-search-reentrant", pyFile := "Objects/listobject.c"
+    pyFns := ["list_contains", "list_index_impl", "list_count_impl", "list_remove_impl", "list_richcompare_impl"]
+    statement := "x in l, l.index, l.count, l.remove and the search of l == r read no slot outside the list, whatever a comparison does to it, however often."
+    source := "listobject.c:649-666, :3297-3309, :3323-3382, :3416-3432", status := .proven
+    prop := ``ListSearchSafe, thm := some ``listSearchSafe_proven },
   { id := "bytesobj-index-agree", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_index_impl", "list_index_impl"]
     statement := "list.index and tuple.index run the same search for every element type, every comparison (including raising ones) and every int start and stop: their different clipping of stop never shows."
     source := "common sequence s.index(x[, i[, j]]), Doc/library/stdtypes.rst", status := .proven
@@ -118,8 +124,8 @@ def entries : List Entry := [
     statement := "The tuple construction paths and their GC tracking decisions, as gc.is_tracked shows them; tuple(t) is t for an exact tuple; a subclass instance starts with no cached hash; keyword arguments are rejected first."
     source := "tupleobject.c:386-457; Doc/library/gc.rst (is_tracked)", status := .proven
     prop := ``TupleConstruct, thm := some ``tupleConstruct_proven },
-  { id := "bytesobj-capi-agree", pyFile := "Objects/listobject.c", pyFns := ["PyList_Size", "PyList_GetItem", "PyList_GetItemRef", "PyList_SetItem", "PyList_Insert", "PyList_Append", "PyList_SetSlice", "PyList_Reverse", "PyList_AsTuple", "PyList_Extend", "PyList_Clear", "list_copy_impl", "PyTuple_Size", "PyTuple_GetItem", "_PyTuple_Resize"]
-    statement := "Each C API entry point checks its argument's type and otherwise does what the Python-level operation does; _PyTuple_Resize keeps the prefix and pads with NULL."
+  { id := "bytesobj-capi-agree", pyFile := "Objects/listobject.c", pyFns := ["PyList_Size", "PyList_GetItem", "PyList_GetItemRef", "PyList_SetItem", "PyList_Insert", "PyList_Append", "PyList_SetSlice", "PyList_Reverse", "PyList_AsTuple", "PyList_Extend", "PyList_Clear", "list_copy_impl", "PyTuple_Size", "PyTuple_GetItem", "_PyTuple_Resize", "list_ass_slice"]
+    statement := "Each C API entry point refuses an object of another type with its own error; PyList_GetItem and friends take no negative index, unlike l[i], and the others act on the contents as described, for every argument; _PyTuple_Resize keeps the prefix and pads with NULL."
     source := "Doc/c-api/list.rst, Doc/c-api/tuple.rst", status := .proven
     prop := ``CApiAgree, thm := some ``cApiAgree_proven },
   { id := "bytesobj-item-access", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_item", "tuple_length", "list_item", "list_length", "tuple_subscript"]
@@ -130,7 +136,7 @@ def entries : List Entry := [
     statement := "The C API constructors and slice getters for every argument: PyList_New and PyTuple_New for every size, the stack-reference and tuple-and-clear paths, PyTuple_SetItem on a uniquely referenced tuple, PyList_GetSlice, PyTuple_GetSlice, and list_vectorcall's argument checks."
     source := "Doc/c-api/list.rst, Doc/c-api/tuple.rst", status := .proven
     prop := ``CApiConstruct, thm := some ``cApiConstruct_proven },
-  { id := "bytesobj-list-contents", pyFile := "Objects/listobject.c", pyFns := ["list_append_impl", "PyList_Insert", "list_clear_impl", "reverse_slice", "list_reverse_impl", "PyList_Reverse", "list_extend_fast", "list_extend_set", "list_extend_dict", "list_extend_dictitems", "_list_extend", "list_extend_impl", "_PyList_Extend", "list_inplace_concat", "list_concat_lock_held", "list_concat", "list_copy_impl", "list___init___impl"]
+  { id := "bytesobj-list-contents", pyFile := "Objects/listobject.c", pyFns := ["list_append_impl", "PyList_Insert", "list_clear_impl", "reverse_slice", "list_reverse_impl", "PyList_Reverse", "list_extend_fast", "list_extend_set", "list_extend_dict", "list_extend_dictitems", "_list_extend", "list_extend_impl", "_PyList_Extend", "list_inplace_concat", "list_concat_lock_held", "list_concat", "list_copy_impl", "list___init___impl", "list_inplace_repeat", "list_inplace_repeat_lock_held"]
     statement := "What the list methods do to the contents, for every element type and argument, including that __init__ drops the old contents before it looks at the iterable."
     source := "Doc/library/stdtypes.rst, mutable sequence types", status := .proven
     prop := ``ListContents, thm := some ``listContents_proven },
@@ -146,12 +152,11 @@ def entries : List Entry := [
     statement := "merge_init sizes the stack area as documented, and merge_getmem provides at least need slots, its overflow check not firing below the limit."
     source := "listobject.c:2190-2201, :2247", status := .proven
     prop := ``MergeMemSpec, thm := some ``mergeMemSpec_proven },
-  { id := "bytesobj-sort-compare-agree", pyFile := "Objects/listobject.c", pyFns := ["safe_object_compare", "unsafe_latin_compare", "unsafe_tuple_compare", "unsafe_float_compare", "PyList_Sort"]
+  { id := "bytesobj-sort-compare-agree", pyFile := "Objects/listobject.c", pyFns := ["safe_object_compare", "unsafe_latin_compare", "unsafe_tuple_compare", "PyList_Sort"]
     statement := "The compares list.sort selects agree with the generic path: unsafe_latin_compare is str.__lt__ on all byte strings, unsafe_tuple_compare is tuple.__lt__ for every comparison including raising ones, and PyList_Sort rejects a non-list and is otherwise list.sort."
     source := "listobject.c:2713-2873 (the asserts at :2789, :2814, :2829)", status := .proven
-    prop := ``SortCompareAgree, thm := some ``sortCompareAgree_proven
-    notes := "unsafe_float_compare is stated over an abstract double order: it says only that both paths are the one C comparison, not anything about IEEE doubles." },
-  { id := "bytesobj-release-order", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_dealloc", "list_dealloc", "tuple_traverse", "list_traverse", "tupleiter_traverse", "listiter_traverse", "listreviter_traverse"]
+    prop := ``SortCompareAgree, thm := some ``sortCompareAgree_proven },
+  { id := "bytesobj-release-order", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_dealloc", "list_dealloc"]
     statement := "Containers release and visit their items last to first, for every element type, as finalizers and gc.get_referents show; a live iterator refers to exactly its sequence."
     source := "listobject.c:555-558 ('Do it backwards'); Doc/library/gc.rst (get_referents)", status := .proven
     prop := ``ReleaseOrder, thm := some ``releaseOrder_proven },
