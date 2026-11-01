@@ -1,0 +1,73 @@
+id: corelibs-inplace-mul-heap-left
+title: "x *= [1] raises TypeError where x * [1] works, when x is an instance of a Python class with __index__"
+priority: P2
+kind: wrong-exception
+module: corelibs
+files: [Objects/abstract.c]
+functions: ["PyNumber_InPlaceMultiply", "_operator_imul_impl", "imul"]
+summary: |
+  PyNumber_Multiply falls back to the right operand's sq_repeat with `else if (mw && mw->sq_repeat)`.
+  PyNumber_InPlaceMultiply has `if (mv != NULL) {...} else if (mw != NULL)`: it tests whether the left type has
+  a tp_as_sequence at all, and not whether it has a repeat slot. Every heap class has tp_as_sequence, so for a
+  left operand of a Python class, with no __imul__, no __mul__ and an __index__, the right operand's repeat is
+  never tried. class I(int): pass; x = I(2); then x * [1] is [1, 1], and x *= [1] is a TypeError. With a plain
+  int on the left it works, because int has no tp_as_sequence. So int subclasses, IntEnum members and any
+  index-like class behave differently from int, and `x *= y` from `x = x * y`.
+likelihood: |
+  Moderate to low: multiplying a list by an int subclass in place, with the int on the left. Reachable with
+  plain IntEnum or numpy-free index classes. The TypeError is loud, so it fails rather than corrupts.
+maybe_intended: |
+  No. The comment there only explains why sq_inplace_repeat is not used for the right operand. The `else if` was
+  written for the left type having sequence methods with a repeat, and the heap-class case is an oversight.
+reproducer: |
+  import enum
+  import operator
+  class I(int):
+      pass
+  x = I(2)
+  print(x * [1])
+  try:
+      x *= [1]
+      print(x)
+      r = 'ok'
+  except TypeError as e:
+      print('TypeError', e)
+      r = 'TypeError'
+  class E(enum.IntEnum):
+      TWO = 2
+  y = E.TWO
+  try:
+      y *= [1]
+      r2 = 'ok'
+  except TypeError as e:
+      r2 = 'TypeError'
+  def t(f):
+      try:
+          return f()
+      except TypeError:
+          return 'TypeError'
+  r3 = t(lambda: operator.imul(I(2), [1]))
+  print(r, r2, r3)
+  if r == 'TypeError' and r2 == 'TypeError' and r3 == 'TypeError' and I(2) * [1] == [1, 1]:
+      print('REPRODUCED corelibs-inplace-mul-heap-left')
+expected: |
+  x *= [1] gives [1, 1], as x = x * [1] does and as it does for an int.
+observed: |
+  python3 3.14.7: [1, 1], then TypeError: unsupported operand type(s) for *=: 'I' and 'list'; also for IntEnum and
+  operator.imul. REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+promised_by: |
+  Language reference, augmented assignment; data model at __imul__: "if x is an instance of a class with an
+  __iadd__ ... Otherwise, x.__add__(y) and y.__radd__(x) are considered, as with the evaluation of x + y".
+cause: |
+  Objects/abstract.c:1327-1339, the `else if (mw != NULL)`.
+possible_fix: |
+  Make the second branch independent of the first, as in PyNumber_Multiply: after trying the left operand's
+  slots, try `mw && mw->sq_repeat`.
+duplicates:
+  issues: []
+  related: ["#55686 Incorrect operand precedence when implementing sequences in C"]
+  queries: ["gh search issues InPlaceMultiply sq_repeat", "gh search issues imul list int subclass TypeError",
+            "gh search issues *= sequence repeat __index__", "bugforge README: no match for imul"]
+lean:
+  property: PyLean.CoreLibs.Operator.ImulIsMul
+  theorem: PyLean.CoreLibs.Operator.imulIsMul_refuted

@@ -52,7 +52,8 @@ theorem reverseLoop_eq (f : Nat) (front mid back : List α) (hf : mid.length ≤
 
 /-- What the list methods do to the contents, for every element type and every
 argument: `append`, `insert` at the clipped position, `clear`, `reverse`, `extend`
-from a sequence or a sized container, `l.extend(l)`, `a + b`, `l.copy()`, `len(l)`,
+from a sequence or a sized container, `l.extend(l)`, `l += x` from a sequence and from something
+not iterable, which leaves `l` alone, `l *= n`, `a + b`, `l.copy()`, `len(l)`,
 `__init__` without an argument, and `__init__` with something not iterable, which
 drops the old contents and then raises, because the clear comes first
 (listobject.c:3491-3499). A method that fails with `MemoryError` is the `.ok`
@@ -69,7 +70,11 @@ def ListContents : Prop :=
     (listExtendFast o s = .ok o' → o'.items = o.items ++ s) ∧
     (listExtendSized o s = .ok o' → o'.items = o.items ++ s) ∧
     (listExtend o .self = (o', none) → o'.items = o.items ++ o.items) ∧
-    (∀ arg : ExtArg α, listIConcat o arg = listExtend o arg) ∧
+    (listIConcat o (.fast s) = (o', none) → o'.items = o.items ++ s) ∧
+    (listIConcat o (.notIterable name)).1 = o ∧
+    (listIConcat o (.notIterable name)).2 = some (.typeError s!"'{name}' object is not iterable") ∧
+    (1 ≤ w → listInplaceRepeat o w = .ok o' → o'.items = (List.replicate w.toNat o.items).flatten) ∧
+    (w < 1 → listInplaceRepeat o w = .ok o' → o'.items = []) ∧
     (listConcat a b).items = a ++ b ∧
     (listSliceLH a 0 a.length).items = a ∧
     (listInit o none).1.items = [] ∧
@@ -118,9 +123,31 @@ theorem listInplaceRepeat_two (o o2 : LObj α) (h : listInplaceRepeat o 2 = .ok 
         rw [← h]
         simp [List.replicate_succ]
 
+theorem listExtendFast_items (o o' : LObj α) (s : List α) (hw : o.WF) (h : listExtendFast o s = .ok o') :
+    o'.items = o.items ++ s := by
+  unfold listExtendFast at h
+  split at h
+  · rename_i h0
+    simp only [Except.ok.injEq] at h
+    rw [← h, List.length_eq_zero_iff.mp h0]
+    simp
+  · split at h
+    · cases hp : listPreallocateExact (s.length : Int) with
+      | error e => rw [hp] at h; simp at h
+      | ok c =>
+        rw [hp] at h
+        simp only [Except.ok.injEq] at h
+        rw [← h]
+    · exact (resizeTo_wf hw h).2
+
+theorem replicate_flatten_nil (n : Nat) : (List.replicate n ([] : List α)).flatten = [] := by
+  induction n with
+  | zero => rfl
+  | succ n ih => simp [List.replicate_succ, ih]
+
 theorem listContents_proven : ListContents := by
   intro α o o' a b s v w name hw
-  refine ⟨?_, ?_, ?_, listClear_items o hw, ?_, ?_, ?_, ?_, ?_, by simp [listConcat], ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, listClear_items o hw, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, by simp [listConcat], ?_, ?_, ?_, ?_⟩
   · intro h
     unfold listAppend at h
     split at h
@@ -146,21 +173,7 @@ theorem listContents_proven : ListContents := by
         | cons y ys =>
           rw [hi] at h
           simp at h
-  · intro h
-    unfold listExtendFast at h
-    split at h
-    · rename_i h0
-      simp only [Except.ok.injEq] at h
-      rw [← h, List.length_eq_zero_iff.mp h0]
-      simp
-    · split at h
-      · cases hp : listPreallocateExact (s.length : Int) with
-        | error e => rw [hp] at h; simp at h
-        | ok c =>
-          rw [hp] at h
-          simp only [Except.ok.injEq] at h
-          rw [← h]
-      · exact (resizeTo_wf hw h).2
+  · exact listExtendFast_items o o' s hw
   · intro h
     unfold listExtendSized at h
     split at h
@@ -177,8 +190,52 @@ theorem listContents_proven : ListContents := by
       simp only [listExtend, liftRes, hr, Prod.mk.injEq] at h
       rw [← h.1]
       exact listInplaceRepeat_two o o2 hr
-  · intro arg
-    rfl
+  · intro h
+    cases hr : listExtendFast o s with
+    | error e => simp [listIConcat, listExtend, liftRes, hr] at h
+    | ok o2 =>
+      simp only [listIConcat, listExtend, liftRes, hr, Prod.mk.injEq] at h
+      rw [← h.1]
+      exact listExtendFast_items o o2 s hw hr
+  · simp [listIConcat, listExtend]
+  · simp [listIConcat, listExtend]
+  · intro h1 h
+    unfold listInplaceRepeat at h
+    simp only at h
+    by_cases h0 : (o.items.length : Int) = 0 ∨ w = 1
+    · rw [if_pos h0] at h
+      simp only [Except.ok.injEq] at h
+      rw [← h]
+      rcases h0 with h0 | h0
+      · have he : o.items = [] := List.length_eq_zero_iff.mp (by omega)
+        rw [he, replicate_flatten_nil]
+      · rw [h0]
+        simp
+    · rw [if_neg h0, if_neg (by omega)] at h
+      by_cases h2 : (o.items.length : Int) > ssizeMax / w
+      · rw [if_pos h2] at h
+        simp at h
+      · rw [if_neg h2] at h
+        cases hl : listResize o.allocated o.hasItems o.items.length ((o.items.length : Int) * w) with
+        | error e => rw [hl] at h; simp at h
+        | ok p =>
+          rw [hl] at h
+          simp only [Except.ok.injEq] at h
+          rw [← h]
+  · intro h1 h
+    unfold listInplaceRepeat at h
+    simp only at h
+    by_cases h0 : (o.items.length : Int) = 0 ∨ w = 1
+    · rw [if_pos h0] at h
+      simp only [Except.ok.injEq] at h
+      rw [← h]
+      rcases h0 with h0 | h0
+      · exact List.length_eq_zero_iff.mp (by omega)
+      · omega
+    · rw [if_neg h0, if_pos h1] at h
+      simp only [Except.ok.injEq] at h
+      rw [← h]
+      exact listClear_items o hw
   · exact listSliceLH_all a
   · simp only [listInit]
     exact listInit_clears o hw
@@ -492,23 +549,13 @@ def pyListSort (lt : α → α → Bool) (op : Option (List α)) : Py (List α) 
   | none => .error systemError
   | some l => .ok (PyLean.ListSort.listSort lt l)
 
-/-- `unsafe_float_compare(v, w, ms)`, listobject.c:2819-2831: `PyFloat_AS_DOUBLE(v) <
-PyFloat_AS_DOUBLE(w)`, over the C double `<`, which is `dlt` here. -/
-def unsafeFloatCompare {δ : Type} (dlt : δ → δ → Bool) (v w : δ) : Bool := dlt v w
-
-/-- `float_richcompare(v, w, Py_LT)` for two floats, Objects/floatobject.c: `i < j`
-on the two doubles, after neither is an int. -/
-def floatRichcompareLt {δ : Type} (dlt : δ → δ → Bool) (v w : δ) : Bool := dlt v w
-
 /-- The compares `list.sort` selects agree with the generic path they replace:
 `safe_object_compare` is `PyObject_RichCompareBool(v, w, Py_LT)`;
 `unsafe_latin_compare` is `str.__lt__` on all byte strings, whichever is the shorter;
-`unsafe_tuple_compare` is `tuple.__lt__` for every comparison, including raising ones;
-`unsafe_float_compare` is the `<` of `float_richcompare` over any double order, so
-this says only that both are that one C comparison (the model of doubles is not
-needed for it). `PyList_Sort` rejects a non-list and is otherwise `list.sort`. -/
+`unsafe_tuple_compare` is `tuple.__lt__` for every comparison, including raising ones.
+`PyList_Sort` rejects a non-list and is otherwise `list.sort`. -/
 def SortCompareAgree : Prop :=
-  ∀ (α ρ δ : Type) (E : ElemOps α ρ) (lt : α → α → Bool) (dlt : δ → δ → Bool) (x y : α) (d e : δ)
+  ∀ (α ρ : Type) (E : ElemOps α ρ) (lt : α → α → Bool) (x y : α)
     (v w : List Nat) (t u : List α) (l : List α),
     (∀ b, E.truth (E.ofBool b) = .ok b) →
     safeObjectCompare E x y = richBool E .lt x y ∧
@@ -517,12 +564,11 @@ def SortCompareAgree : Prop :=
       (match tupleRichcompare E .lt t u with
        | .ok r => E.truth r
        | .error e => .error e) ∧
-    unsafeFloatCompare dlt d e = floatRichcompareLt dlt d e ∧
     pyListSort lt (none : Option (List α)) = .error systemError ∧
     pyListSort lt (some l) = .ok (PyLean.ListSort.listSort lt l)
 
 theorem sortCompareAgree_proven : SortCompareAgree := by
-  intro α ρ δ E lt dlt x y d e v w t u l ht
-  refine ⟨rfl, memcmp_strLt v w, unsafeTuple_go E ht t u 0, rfl, rfl, rfl⟩
+  intro α ρ E lt x y v w t u l ht
+  refine ⟨rfl, memcmp_strLt v w, unsafeTuple_go E ht t u 0, rfl, rfl⟩
 
 end PyLean.BytesObj.Seq

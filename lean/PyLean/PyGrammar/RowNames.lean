@@ -11,6 +11,16 @@ def ast_pad_whitespace : List String := [
 def check_docstring_body : List String := [
   "remove_docstring"]
 
+def check_fold_docstring : List String := [
+  "astfold_body"]
+
+def check_fold_reaches : List String := [
+  "astfold_pattern"]
+
+def check_fold_reaches_narrow : List String := [
+  "astfold_mod", "astfold_expr", "astfold_keyword", "astfold_comprehension", "astfold_arguments", "astfold_arg",
+  "astfold_stmt", "astfold_excepthandler", "astfold_withitem", "astfold_match_case", "astfold_type_param"]
+
 def check_fold_value : List String := [
   "make_const", "fold_const_match_patterns"]
 
@@ -27,9 +37,7 @@ def check_nonempty : List String := [
   ]
 
 def check_syntax_only_identity : List String := [
-  "astfold_body", "astfold_mod", "astfold_expr", "astfold_keyword", "astfold_comprehension", "astfold_arguments",
-  "astfold_arg", "astfold_stmt", "astfold_excepthandler", "astfold_withitem", "astfold_pattern", "astfold_match_case",
-  "astfold_type_param", "_PyAST_Preprocess"]
+  ]
 
 def check_try_twin : List String := [
   "validate_stmt"]

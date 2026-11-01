@@ -313,6 +313,12 @@ theorem cMerge_ok {α : Type} (pargs : List (PArg α)) (args : List α) (h : phC
     List.take_of_length_le (by simp)
   simp only [cMerge, h1, hc, ite_true, ht, h2]
 
+theorem vecMerge_ok {α : Type} (pargs : List (PArg α)) (args : List α) (h : phCount pargs ≤ args.length) :
+    vecMerge pargs (phCount pargs) args = .ok (fillCall pargs args) := by
+  obtain ⟨t, h1, _⟩ := cMergeLoop_ok args pargs 0 (by omega)
+  simp only [Nat.zero_add] at h1
+  simp only [vecMerge, h1, cMerge_ok pargs args h, ne_eq, not_true_eq_false, and_false, ite_false]
+
 theorem partialCallC_spec {α : Type} (func : Fn α) (pargs : List (PArg α)) (pkw kw : List (String × α))
     (ph : Nat) (args : List α) (hph : ph = phCount pargs) :
     partialCallC func pargs pkw ph args kw =
@@ -346,7 +352,7 @@ theorem partialVectorcall_spec {α : Type} (func : Fn α) (pargs : List (PArg α
       by_cases h0 : phCount pargs = 0
       · simp only [h0, ne_eq, not_true_eq_false, ite_false]
         rw [fillCall_no_ph pargs args h0]
-      · simp only [h0, ne_eq, not_false_eq_true, ite_true, cMerge_ok pargs args h1]
+      · simp only [h0, ne_eq, not_false_eq_true, ite_true, vecMerge_ok pargs args h1]
   · simp only [he, Bool.not_false, ite_true, ite_false]
     rw [partialCallC_spec func pargs pkw kw _ args rfl]
     simp [he]
@@ -763,6 +769,22 @@ theorem partialCallInBoundsAlways_refuted : ¬PartialCallInBoundsAlways := by
   intro h
   have := (h (.four (.base 0) (.sub [.ph, .val 1] (.ok [.ph, .ph, .val 1])) .none .none) none (.base 0)
     [.ph, .ph, .val 1] [] 1 [10] (by decide)).1
+  revert this
+  decide
+
+/-- A vectorcall of a `partial` writes only inside its stack array, whatever `__setstate__` was given. False
+when `args` has fewer placeholders than `phcount`, with more call arguments than `phcount`: the `memcpy` starts
+at `j`, not at `phcount`, and overruns the array by the difference. With a tuple of four items and three call
+arguments that is `small_stack`, and glibc reports stack smashing. -/
+def PartialVectorcallWritesInBounds : Prop :=
+  ∀ (st : PState Nat) (d : Option (List (String × Nat))) (f : Fn Nat) (a : List (PArg Nat))
+    (k : List (String × Nat)) (ph : Nat) (args : List Nat),
+    setstateC none st = .ok (.pobj none d f a k ph) → partialVectorcall f a k ph args [] ≠ .error oobWrite
+
+theorem partialVectorcallWritesInBounds_refuted : ¬PartialVectorcallWritesInBounds := by
+  intro h
+  have := h (.four (.base 0) (.sub [.ph, .ph, .val 1] (.ok [.val 1, .val 2, .val 3, .val 4])) .none .none)
+    none (.base 0) [.val 1, .val 2, .val 3, .val 4] [] 2 [10, 11, 12] (by decide)
   revert this
   decide
 

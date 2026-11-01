@@ -14,18 +14,18 @@ Python/ast_preprocess.c	317	366	optimize_format	optimize_format(expr_ty node, Py
 Python/ast_preprocess.c	369	391	fold_binop	fold_binop(expr_ty node, PyArena *arena, _PyASTPreprocessState *state)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Python/ast_preprocess.c	426	437	stmt_seq_remove_item	stmt_seq_remove_item(asdl_stmt_seq *stmts, Py_ssize_t idx)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Python/ast_preprocess.c	440	462	remove_docstring	remove_docstring(asdl_stmt_seq *stmts, Py_ssize_t idx, PyArena *ctx_)	modelled	pygrammar-check-docstring-body	
-Python/ast_preprocess.c	465	492	astfold_body	astfold_body(asdl_stmt_seq *stmts, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-syntax-only-identity	
-Python/ast_preprocess.c	495	514	astfold_mod	astfold_mod(mod_ty node_, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-syntax-only-identity	
-Python/ast_preprocess.c	517	639	astfold_expr	astfold_expr(expr_ty node_, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-syntax-only-identity	
-Python/ast_preprocess.c	642	646	astfold_keyword	astfold_keyword(keyword_ty node_, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-syntax-only-identity	
-Python/ast_preprocess.c	649	655	astfold_comprehension	astfold_comprehension(comprehension_ty node_, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-syntax-only-identity	
-Python/ast_preprocess.c	658	668	astfold_arguments	astfold_arguments(arguments_ty node_, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-syntax-only-identity	
-Python/ast_preprocess.c	671	677	astfold_arg	astfold_arg(arg_ty node_, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-syntax-only-identity	
-Python/ast_preprocess.c	680	832	astfold_stmt	astfold_stmt(stmt_ty node_, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-syntax-only-identity	
-Python/ast_preprocess.c	835	846	astfold_excepthandler	astfold_excepthandler(excepthandler_ty node_, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-syntax-only-identity	
-Python/ast_preprocess.c	849	854	astfold_withitem	astfold_withitem(withitem_ty node_, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-syntax-only-identity	
+Python/ast_preprocess.c	465	492	astfold_body	astfold_body(asdl_stmt_seq *stmts, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-fold-docstring	
+Python/ast_preprocess.c	495	514	astfold_mod	astfold_mod(mod_ty node_, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-fold-reaches-narrow	
+Python/ast_preprocess.c	517	639	astfold_expr	astfold_expr(expr_ty node_, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-fold-reaches-narrow	
+Python/ast_preprocess.c	642	646	astfold_keyword	astfold_keyword(keyword_ty node_, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-fold-reaches-narrow	
+Python/ast_preprocess.c	649	655	astfold_comprehension	astfold_comprehension(comprehension_ty node_, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-fold-reaches-narrow	
+Python/ast_preprocess.c	658	668	astfold_arguments	astfold_arguments(arguments_ty node_, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-fold-reaches-narrow	
+Python/ast_preprocess.c	671	677	astfold_arg	astfold_arg(arg_ty node_, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-fold-reaches-narrow	
+Python/ast_preprocess.c	680	832	astfold_stmt	astfold_stmt(stmt_ty node_, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-fold-reaches-narrow	
+Python/ast_preprocess.c	835	846	astfold_excepthandler	astfold_excepthandler(excepthandler_ty node_, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-fold-reaches-narrow	
+Python/ast_preprocess.c	849	854	astfold_withitem	astfold_withitem(withitem_ty node_, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-fold-reaches-narrow	
 Python/ast_preprocess.c	857	895	fold_const_match_patterns	fold_const_match_patterns(expr_ty node, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-fold-value	
-Python/ast_preprocess.c	898	937	astfold_pattern	astfold_pattern(pattern_ty node_, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-syntax-only-identity	
-Python/ast_preprocess.c	940	946	astfold_match_case	astfold_match_case(match_case_ty node_, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-syntax-only-identity	
-Python/ast_preprocess.c	949	964	astfold_type_param	astfold_type_param(type_param_ty node_, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-syntax-only-identity	
-Python/ast_preprocess.c	971	990	_PyAST_Preprocess	_PyAST_Preprocess(mod_ty mod, PyArena *arena, PyObject *filename, int optimize, int ff_features, int syntax_check_only, int enable_warnings)	modelled	pygrammar-check-syntax-only-identity	
+Python/ast_preprocess.c	898	937	astfold_pattern	astfold_pattern(pattern_ty node_, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-fold-reaches	
+Python/ast_preprocess.c	940	946	astfold_match_case	astfold_match_case(match_case_ty node_, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-fold-reaches-narrow	
+Python/ast_preprocess.c	949	964	astfold_type_param	astfold_type_param(type_param_ty node_, PyArena *ctx_, _PyASTPreprocessState *state)	modelled	pygrammar-check-fold-reaches-narrow	
+Python/ast_preprocess.c	971	990	_PyAST_Preprocess	_PyAST_Preprocess(mod_ty mod, PyArena *arena, PyObject *filename, int optimize, int ff_features, int syntax_check_only, int enable_warnings)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body

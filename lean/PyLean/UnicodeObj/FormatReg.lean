@@ -2,6 +2,7 @@ import PyLean.Registry
 import PyLean.UnicodeObj.FormatProps
 import PyLean.UnicodeObj.FormatFloat
 import PyLean.UnicodeObj.FormatPercentProps
+import PyLean.UnicodeObj.FormatStrProps
 
 /-! Registry entries of the formatting slice. -/
 
@@ -109,6 +110,82 @@ def formatEntries : List Entry := [
     statement := "A %e, %f or %g directive gives the text of format() with the matching spec, for every float, flag, width and precision: unicode_format_arg_output and calc_number_widths agree on the layout."
     source := "invariant: % vs format"
     status := .proven, prop := ``PercentFloatMatchesFormat, thm := some ``percentFloatMatchesFormat_proven },
+  { id := "unicodeobj-format-str-builtin", pyFile := "Objects/stringlib/unicode_format.h"
+    pyFns := ["do_string_format", "build_string", "do_markup", "output_markup", "MarkupIterator_next", "parse_field", "get_field_object", "field_name_split", "AutoNumber_Init"]
+    statement := "'{0:spec}'.format(x) is format(x, spec), for every object and every spec with no braces."
+    source := "Doc/library/string.rst: a replacement field calls format()"
+    status := .proven, prop := ``FormatFieldIsBuiltin, thm := some ``formatFieldIsBuiltin_proven },
+  { id := "unicodeobj-format-str-render-field", pyFile := "Objects/stringlib/unicode_format.h"
+    pyFns := ["render_field"]
+    statement := "render_field, which skips the __format__ lookup for the exact types, gives what format(obj, spec) gives, for every object and spec."
+    source := "invariant: fast path vs generic path"
+    status := .proven, prop := ``RenderFieldIsFormat, thm := some ``renderFieldIsFormat_proven },
+  { id := "unicodeobj-format-str-autonumber", pyFile := "Objects/stringlib/unicode_format.h"
+    pyFns := ["field_name_split", "autonumber_state_error"]
+    statement := "The numbering rule holds for every field name and state: an empty name takes the next number and is refused after manual numbering, a numeric name is refused after automatic numbering, and any other name leaves the state alone."
+    source := "Doc/library/string.rst: auto-numbering"
+    status := .proven, prop := ``AutoNumberingRule, thm := some ``autoNumberingRule_proven },
+  { id := "unicodeobj-format-str-get-integer", pyFile := "Objects/stringlib/unicode_format.h"
+    pyFns := ["get_integer"]
+    statement := "A field index in any script of decimal digits is read without wrapping: its value if it fits Py_ssize_t, otherwise ValueError."
+    source := "invariant: no silent wraparound"
+    status := .proven, prop := ``GetIntegerNoWrap, thm := some ``getIntegerNoWrap_proven },
+  { id := "unicodeobj-format-str-conversion-rejected", pyFile := "Objects/stringlib/unicode_format.h"
+    pyFns := ["do_conversion"]
+    statement := "Every conversion character but r, s, a and NUL is refused with its exact error, for every object."
+    source := "Doc/library/string.rst: conversion"
+    status := .proven, prop := ``ConversionRejected, thm := some ``conversionRejected_proven },
+  { id := "unicodeobj-format-nul-conversion", pyFile := "Objects/stringlib/unicode_format.h"
+    pyFns := ["parse_field", "output_markup"]
+    statement := "Every conversion character but r, s and a is refused."
+    source := "Doc/library/string.rst: conversion"
+    status := .refuted, prop := ``ConversionChecked, thm := some ``conversionChecked_refuted
+    bug := some "unicodeobj-format-nul-conversion" },
+  { id := "unicodeobj-format-str-escape", pyFile := "Objects/stringlib/unicode_format.h"
+    pyFns := ["MarkupIterator_next", "do_markup"]
+    statement := "Doubling every brace of any string and formatting gives the string back, whatever the arguments."
+    source := "Doc/library/string.rst: {{ and }}"
+    status := .proven, prop := ``BraceEscapeRoundTrip, thm := some ``braceEscapeRoundTrip_proven },
+  { id := "unicodeobj-format-str-format-map", pyFile := "Objects/stringlib/unicode_format.h"
+    pyFns := ["do_string_format_map", "get_field_object"]
+    statement := "format_map refuses a positional field, for every field name, mapping and state, before the mapping is touched."
+    source := "str.format_map docs; invariant: no positional arguments"
+    status := .proven, prop := ``FormatMapNoPositional, thm := some ``formatMapNoPositional_proven },
+  { id := "unicodeobj-format-str-parser-accepts", pyFile := "Objects/stringlib/unicode_format.h"
+    pyFns := ["MarkupIterator_next", "formatter_parser"]
+    statement := "Whatever str.format accepts, _string.formatter_parser accepts."
+    source := "invariant: string.Formatter vs str.format"
+    status := .proven, prop := ``FormatterParserAccepts, thm := some ``formatterParserAccepts_proven },
+  { id := "unicodeobj-format-str-parser-reads", pyFile := "Objects/stringlib/unicode_format.h"
+    pyFns := ["formatter_parser", "formatteriter_next"]
+    statement := "formatter_parser reports a field's name and spec, gives None in all three places for plain text, and refuses anything but a str."
+    source := "string.Formatter.parse docs"
+    status := .proven, prop := ``FormatterParserReads, thm := some ``formatterParserReads_proven },
+  { id := "unicodeobj-format-str-field-name", pyFile := "Objects/stringlib/unicode_format.h"
+    pyFns := ["FieldNameIterator_next", "_FieldNameIterator_attr", "_FieldNameIterator_item", "fieldnameiter_next", "formatter_field_name_split"]
+    statement := "formatter_field_name_split reads back every chain of attributes and non-numeric items."
+    source := "invariant: round trip"
+    status := .proven, prop := ``FieldNameRoundTrip, thm := some ``fieldNameRoundTrip_proven },
+  { id := "unicodeobj-format-str-nested-spec", pyFile := "Objects/stringlib/unicode_format.h"
+    pyFns := ["output_markup", "build_string"]
+    statement := "A nested field's text is the spec and is not parsed again: '{0:{1}}'.format(x, spec) is format(x, spec), for every object and every string."
+    source := "Doc/library/string.rst: nested replacement fields"
+    status := .proven, prop := ``NestedSpecExpands, thm := some ``nestedSpecExpands_proven },
+  { id := "unicodeobj-format-str-nested-auto", pyFile := "Objects/stringlib/unicode_format.h"
+    pyFns := ["output_markup", "field_name_split"]
+    statement := "A nested field shares the outer numbering, and the outer field numbers first: '{:{}}'.format(x, spec) is format(x, spec)."
+    source := "Doc/library/string.rst: auto-numbering"
+    status := .proven, prop := ``NestedAutoNumbering, thm := some ``nestedAutoNumbering_proven },
+  { id := "unicodeobj-format-str-recursion-limit", pyFile := "Objects/stringlib/unicode_format.h"
+    pyFns := ["build_string", "output_markup"]
+    statement := "'{0:{1:{2}}}' raises 'Max string recursion exceeded', for every object, before anything is rendered."
+    source := "PEP 3101; do_string_format comment"
+    status := .proven, prop := ``RecursionLimit, thm := some ``recursionLimit_proven },
+  { id := "unicodeobj-format-str-many-fields", pyFile := "Objects/stringlib/unicode_format.h"
+    pyFns := ["do_markup", "MarkupIterator_next", "field_name_split"]
+    statement := "'{}{}...' is the concatenation of each object formatted with an empty spec, in order, and the first failure is the exception, for every list of objects."
+    source := "Doc/library/string.rst: auto-numbering"
+    status := .proven, prop := ``AutoFieldsConcat, thm := some ``autoFieldsConcat_proven },
   { id := "unicodeobj-format-percent-no-directive", pyFile := "Objects/unicodeobject.c"
     pyFns := []
     statement := "A format with no % gives itself for an empty tuple, and raises 'not all arguments converted' for a non-empty one."

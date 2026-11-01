@@ -296,6 +296,326 @@ def run_codec_cb_encode(c):
 # ==== end error handler callbacks ====
 
 
+# ==== str.format (fn names fmt_strformat, fmt_format_map, fmt_parser, fmt_fieldsplit) ====
+
+SF_NAMES = ["", "", "", "0", "0", "1", "2", "9", "a", "a", "b", "\u0663", "\xb2", "-1", "00", "0.real", "0.imag",
+            "0.nope", "1.real", "a.real", ".real", "0[0]", "0[1]", "0[a]", "0[9]", "a[0]", "a[a]", "[0]", "0[]", "0.",
+            "0..real", "0[0][0]", "0[0].real", "0[0", "0]", "0[0]x", "0[:]", "0[!]", "0[{]", "9" * 25, "0[" + "9" * 25 + "]"]
+SF_CONVS = ["", "", "", "", "!r", "!s", "!a", "!x", "!\x00", "!\x01", "!\xe9", "!", "!rx", "!}"]
+SF_SPECS = ["", "", "", ":", ":>5", ":<5", ":^7", ":x", ":d", ":.2f", ":e", ":{}", ":{0}", ":{1}", ":{a}", ":{}>3",
+            ":>{}", ":{:{}}", ":{0:{1}}", ":{{}}", ":{", ":}", ":{{", ":\x00", ":{}{}"]
+SF_CHARS = list("{}{}[]!:.0a1 ") + ["\xe9", "\U0001f600"]
+
+
+def sf_string(rng):
+    if rng.random() < 0.12:
+        return "".join(rng.choice(SF_CHARS) for _ in range(rng.randint(0, 9)))
+    out = ""
+    for _ in range(rng.randint(0, 3)):
+        out += rng.choice(["", "", "x", "{{", "}}", "\xe9", " ", "}", "{"] if rng.random() < 0.3 else ["", "x", " "])
+        out += "{" + rng.choice(SF_NAMES) + rng.choice(SF_CONVS) + rng.choice(SF_SPECS) + "}"
+    return out + rng.choice(["", "", "x", "{{", "}}"])
+
+
+def sf_clean(rng, positional=True):
+    """A string with coherent numbering and a spec most objects take, so rendering is reached."""
+    style = rng.choice(["auto", "manual", "named"]) if positional else "named"
+    out = rng.choice(["", "x", "{{"])
+    for i in range(rng.randint(1, 3)):
+        name = {"auto": "", "manual": str(i), "named": "ab"[i % 2]}[style]
+        tail = rng.choice(["", "", ".real", "[0]"]) if rng.random() < 0.2 else ""
+        conv = rng.choice(["", "", "!r", "!s", "!a"])
+        spec = rng.choice(["", "", ":", ":>5", ":<7", ":^9", ":*^6"])
+        out += "{" + name + tail + conv + spec + "}" + rng.choice(["", " ", "}}"])
+    return out
+
+
+SF_INTS = [0, 1, -1, 2, 3, 7, 65, 255, 2 ** 63, -2 ** 63, 10 ** 30, 10 ** 4300]
+
+
+def sf_obj(rng, depth=0):
+    r = rng.random()
+    if r < 0.3:
+        return {"t": "int", "v": hex_of(rng.choice(SF_INTS))}
+    if r < 0.36:
+        return {"t": "bool", "v": rng.random() < 0.5}
+    if r < 0.46:
+        return {"t": "float", "v": format(float_bits(rng.choice(FLOATS)), "x")}
+    if r < 0.5:
+        return {"t": "complex", "re": format(float_bits(rng.choice(FLOATS)), "x"),
+                "im": format(float_bits(rng.choice(FLOATS)), "x")}
+    if r < 0.72:
+        return {"t": "str", "s": cps_of(rng.choice(["", "a", "abc", "it's", "\xe9t\xe9", "\u20ac", ">5", "x", "d",
+                                                   "<", "\U0001f600"]))}
+    if r < 0.77:
+        return {"t": "none"}
+    if depth < 2 and r < 0.84:
+        return {"t": "tuple", "items": [sf_obj(rng, depth + 1) for _ in range(rng.randint(0, 2))]}
+    if depth < 2 and r < 0.9:
+        keys = rng.sample(["a", "b", "0"], rng.randint(0, 2))
+        return {"t": "dict", "items": [[cps_of(k), sf_obj(rng, depth + 1)] for k in keys]}
+    if depth < 2:
+        return sf_user(rng, depth)
+    return {"t": "int", "v": hex_of(1)}
+
+
+def sf_resp(rng, depth, text=True):
+    if rng.random() < 0.2:
+        return {"k": "raise"}
+    if text and rng.random() < 0.8:
+        return {"k": "ok", "v": {"t": "str", "s": cps_of(rng.choice(["", "u", ">5", "<u>"]))}}
+    return {"k": "ok", "v": sf_obj(rng, depth + 1)}
+
+
+def sf_user(rng, depth):
+    attrs = [[cps_of(n), sf_resp(rng, depth, False)] for n in rng.sample(["real", "imag"], rng.randint(0, 2))]
+    return {"t": "user", "fmt": sf_resp(rng, depth), "str": sf_resp(rng, depth), "repr": sf_resp(rng, depth),
+            "attrs": attrs, "item": sf_resp(rng, depth, False) if rng.random() < 0.6 else None}
+
+
+def sf_dec(j):
+    t = j["t"]
+    if t == "int":
+        s = j["v"]
+        return -int(s[1:], 16) if s.startswith("-") else int(s, 16)
+    if t == "bool":
+        return j["v"]
+    if t == "float":
+        return float_of(j["v"])
+    if t == "complex":
+        return complex(float_of(j["re"]), float_of(j["im"]))
+    if t == "str":
+        return s_of(j["s"])
+    if t == "none":
+        return None
+    if t == "tuple":
+        return tuple(sf_dec(x) for x in j["items"])
+    if t == "dict":
+        return {s_of(k): sf_dec(v) for k, v in j["items"]}
+
+    def answer(r):
+        if r["k"] == "raise":
+            raise ValueError("boom")
+        return sf_dec(r["v"])
+    attrs = {s_of(k): v for k, v in j["attrs"]}
+
+    class U:
+        def __format__(self, spec):
+            return answer(j["fmt"])
+
+        def __str__(self):
+            return answer(j["str"])
+
+        def __repr__(self):
+            return answer(j["repr"])
+
+        def __getattr__(self, name):
+            if name in attrs:
+                return answer(attrs[name])
+            raise AttributeError(f"'U' object has no attribute '{name}'")
+    if j["item"] is not None:
+        U.__getitem__ = lambda self, k: answer(j["item"])
+    return U()
+
+
+@gen("format", 9)
+def gen_fmt_strformat(rng):
+    if rng.random() < 0.55:
+        return {"mod": "unicodeobj", "fn": "fmt_strformat", "s": cps_of(sf_clean(rng)),
+                "args": [sf_obj(rng) for _ in range(3)],
+                "kw": [[cps_of(k), sf_obj(rng)] for k in ["a", "b"]]}
+    return {"mod": "unicodeobj", "fn": "fmt_strformat", "s": cps_of(sf_string(rng)),
+            "args": [sf_obj(rng) for _ in range(rng.randint(0, 3))],
+            "kw": [[cps_of(k), sf_obj(rng)] for k in rng.sample(["a", "b"], rng.randint(0, 2))]}
+
+
+@gen("format", 3)
+def gen_fmt_format_map(rng):
+    s = sf_clean(rng, False) if rng.random() < 0.55 else sf_string(rng)
+    return {"mod": "unicodeobj", "fn": "fmt_format_map", "s": cps_of(s),
+            "map": [sf_resp(rng, 1, False) for _ in range(rng.randint(0, 4))]}
+
+
+@gen("format", 3)
+def gen_fmt_parser(rng):
+    return {"mod": "unicodeobj", "fn": "fmt_parser", "s": cps_of(sf_string(rng)), "bad": rng.random() < 0.03}
+
+
+@gen("format", 2)
+def gen_fmt_fieldsplit(rng):
+    name = rng.choice(SF_NAMES) if rng.random() < 0.7 else "".join(rng.choice(list("0a.[]x")) for _ in range(rng.randint(0, 6)))
+    return {"mod": "unicodeobj", "fn": "fmt_fieldsplit", "s": cps_of(name), "bad": rng.random() < 0.03}
+
+
+@run("fmt_strformat")
+def run_fmt_strformat(c):
+    return cps_of(s_of(c["s"]).format(*[sf_dec(a) for a in c["args"]],
+                                      **{s_of(k): sf_dec(v) for k, v in c["kw"]}))
+
+
+@run("fmt_format_map")
+def run_fmt_format_map(c):
+    items = list(c["map"])
+
+    class M:
+        def __getitem__(self, key):
+            if not items:
+                raise KeyError(key)
+            r = items.pop(0)
+            if r["k"] == "raise":
+                raise ValueError("boom")
+            return sf_dec(r["v"])
+    return cps_of(s_of(c["s"]).format_map(M()))
+
+
+@run("fmt_parser")
+def run_fmt_parser(c):
+    import _string
+    arg = 1 if c["bad"] else s_of(c["s"])
+    return [[cps_of(a), None if b is None else cps_of(b), None if s is None else cps_of(s),
+             None if k is None else cps_of(k)] for a, b, s, k in _string.formatter_parser(arg)]
+
+
+def idx_str(v):
+    return {"i": v} if isinstance(v, int) else {"s": cps_of(v)}
+
+
+@run("fmt_fieldsplit")
+def run_fmt_fieldsplit(c):
+    import _string
+    first, rest = _string.formatter_field_name_split(1 if c["bad"] else s_of(c["s"]))
+    return [idx_str(first), [[b, idx_str(v)] for b, v in rest]]
+
+
+# ==== PyUnicodeWriter (fn name fmt_writer) ====
+
+WR_BYTES = [b"", b"a", b"abc", b"\xc3\xa9", b"\xe2\x82\xac", b"\xf0\x9f\x98\x80", b"\xff", b"a\xff",
+            b"\xe2\x82\xac\xff", b"\xc3\xa9\xff", b"\xf0\x9f\x98\x80\xc0", b"\xe2\x82", b"\xed\xa0\x80",
+            b"a\x00\xc3\xa9", b"\xc3\xa9\xe2\x82", b"\xed\xa0\x80\xff", b"\xe2\x82\xac\xf0\x9f"]
+WR_STRS = ["", "a", "abc", "\xe9", "€", "\U0001f600", "a\xe9", "a€", "\xe9€\U0001f600",
+           "\ud800", "a\x00b"]
+WR_HANDLERS = ["strict", "strict", "ignore", "replace", "surrogateescape", "backslashreplace",
+               "surrogatepass", "xmlcharrefreplace", "namereplace"]
+
+
+def wr_size(rng, n):
+    return rng.choice([-1, n, n, rng.randint(0, n)])
+
+
+def wop_bytes(rng, key):
+    b = rng.choice(WR_BYTES)
+    return {"op": key, "s": list(b), "n": wr_size(rng, len(b))}
+
+
+def gen_wop(rng):
+    r = rng.random()
+    if r < 0.14:
+        return {"op": "char", "c": rng.choice([0, 97, 127, 128, 255, 256, 0x20ac, 0xffff, 0x10000, 0x10ffff,
+                                               0x110000, 0xffffffff])}
+    if r < 0.26:
+        o = {"t": "str", "s": cps_of(rng.choice(WR_STRS))} if rng.random() < 0.6 else sf_obj(rng, 1)
+        return {"op": "str", "o": o}
+    if r < 0.34:
+        return {"op": "repr", "o": sf_obj(rng, 1)} if rng.random() < 0.9 else {"op": "reprnull"}
+    if r < 0.4:
+        s = rng.choice(["", "x", "ascii", "a\x00b"])
+        return {"op": "ascii", "s": cps_of(s), "n": wr_size(rng, len(s))}
+    if r < 0.47:
+        s = rng.choice(WR_STRS)
+        return {"op": "ucs4", "s": cps_of(s), "n": rng.choice([-1, len(s), rng.randint(0, len(s))])}
+    if r < 0.54:
+        s = cps_of(rng.choice(WR_STRS)) + rng.choice([[], [], [0x110000], [0xffffffff], [65, 0x110000]])
+        return {"op": "wide", "s": s, "n": wr_size(rng, len(s))}
+    if r < 0.68:
+        s = rng.choice(WR_STRS)
+        o = {"t": "str", "s": cps_of(s)} if rng.random() < 0.9 else rng.choice([
+            {"t": "int", "v": hex_of(1)}, {"t": "none"}])
+        if rng.random() < 0.7:
+            a = rng.randint(0, len(s))
+            return {"op": "sub", "o": o, "a": a, "b": rng.randint(a, len(s))}
+        return {"op": "sub", "o": o, "a": rng.randint(-1, len(s) + 1), "b": rng.randint(-1, len(s) + 1)}
+    if r < 0.84:
+        return wop_bytes(rng, "utf8")
+    op = wop_bytes(rng, "decode")
+    op["h"] = rng.choice(WR_HANDLERS)
+    op["consumed"] = rng.random() < 0.5
+    return op
+
+
+@gen("format", 6)
+def gen_fmt_writer(rng):
+    n = rng.choice([0, 0, 0, 1, 16, -1])
+    ops = [gen_wop(rng) for _ in range(rng.randint(0, 5))]
+    if rng.random() < 0.3:
+        # The shape of a rollback: something short, a decode failing after wide characters, and
+        # at times more text, so that the kind of the result is decided by the failure.
+        first = rng.choice([[], [{"op": "char", "c": 97}], [{"op": "ascii", "s": cps_of("ab"), "n": 2}]])
+        fail = {"op": "utf8", "s": list(rng.choice([b"\xc3\xa9\xff", b"\xe2\x82\xac\xff",
+                                                    b"\xf0\x9f\x98\x80\xff"])), "n": -1}
+        rest = rng.choice([[], [{"op": "char", "c": 98}], [{"op": "ascii", "s": cps_of("cd"), "n": -1}]])
+        ops = first + [fail] + rest
+    return {"mod": "unicodeobj", "fn": "fmt_writer", "n": n, "ops": ops}
+
+
+def writer_api():
+    import ctypes
+    api = ctypes.pythonapi
+    P, O, N = ctypes.c_void_p, ctypes.py_object, ctypes.c_ssize_t
+    for name, args in [("WriteChar", [P, ctypes.c_uint32]), ("WriteStr", [P, O]), ("WriteRepr", [P, O]),
+                       ("WriteASCII", [P, ctypes.c_char_p, N]), ("WriteSubstring", [P, O, N, N]),
+                       ("WriteUTF8", [P, ctypes.c_char_p, N]), ("WriteUCS4", [P, P, N]),
+                       ("WriteWideChar", [P, P, N]),
+                       ("DecodeUTF8Stateful", [P, ctypes.c_char_p, N, ctypes.c_char_p, P])]:
+        f = getattr(api, "PyUnicodeWriter_" + name)
+        f.restype, f.argtypes = ctypes.c_int, args
+    api.PyUnicodeWriter_Create.restype, api.PyUnicodeWriter_Create.argtypes = P, [N]
+    api.PyUnicodeWriter_Finish.restype, api.PyUnicodeWriter_Finish.argtypes = O, [P]
+    null = ctypes.PYFUNCTYPE(ctypes.c_int, P, P)(("PyUnicodeWriter_WriteRepr", api))
+    return api, null
+
+
+def writer_step(api, null, w, op, consumed):
+    import ctypes
+    k = op["op"]
+    if k == "char":
+        api.PyUnicodeWriter_WriteChar(w, op["c"])
+    elif k == "str":
+        api.PyUnicodeWriter_WriteStr(w, sf_dec(op["o"]))
+    elif k == "repr":
+        api.PyUnicodeWriter_WriteRepr(w, sf_dec(op["o"]))
+    elif k == "reprnull":
+        null(w, None)
+    elif k == "ascii":
+        api.PyUnicodeWriter_WriteASCII(w, bytes(op["s"]), op["n"])
+    elif k in ("ucs4", "wide"):
+        a = (ctypes.c_uint32 * (len(op["s"]) + 1))(*op["s"], 0)
+        f = api.PyUnicodeWriter_WriteUCS4 if k == "ucs4" else api.PyUnicodeWriter_WriteWideChar
+        f(w, a, op["n"])
+    elif k == "sub":
+        api.PyUnicodeWriter_WriteSubstring(w, sf_dec(op["o"]), op["a"], op["b"])
+    elif k == "utf8":
+        api.PyUnicodeWriter_WriteUTF8(w, bytes(op["s"]), op["n"])
+    else:
+        ref = ctypes.byref(consumed) if op["consumed"] else None
+        api.PyUnicodeWriter_DecodeUTF8Stateful(w, bytes(op["s"]), op["n"], op["h"].encode(), ref)
+
+
+@run("fmt_writer")
+def run_fmt_writer(c):
+    import ctypes
+    api, null = writer_api()
+    w = api.PyUnicodeWriter_Create(c["n"])
+    trace = []
+    for op in c["ops"]:
+        consumed = ctypes.c_ssize_t(77 if op.get("consumed") else 0)
+        t = common.py_result(lambda: writer_step(api, null, w, op, consumed))
+        trace.append([{"ok": None} if "ok" in t else t, consumed.value])
+    r = api.PyUnicodeWriter_Finish(w)
+    return [trace, cps_of(r), kind_of(r)]
+
+# ==== end str.format ====
+
+
 # ==== codec slice (fn names codec_*) ====
 
 U8_BYTES = [0, 0x41, 0x7f, 0x80, 0x8f, 0x90, 0x9f, 0xa0, 0xbf, 0xc0, 0xc1, 0xc2, 0xdf, 0xe0, 0xe1, 0xec,
@@ -959,6 +1279,27 @@ def gen_text_translate(rng):
     return {"mod": "unicodeobj", "fn": fn, "s": s, "table": [[k, v] for k, v in table.items()]}
 
 
+@gen("text", 5)
+def gen_text_translate_x(rng):
+    s = text_str(rng) if rng.random() < 0.5 else [rng.choice([97, 98, 99, 100]) for _ in range(rng.randint(0, 7))]
+    if rng.random() < 0.25:
+        s = s + [rng.choice([0xe9, 0x20ac, 0x1f600])]
+    keys = list(dict.fromkeys(s + rng.sample(TEXT_ALPH, 2)))
+    table = [[k, [text_item(rng) for _ in range(rng.randint(1, 3))]] for k in keys if rng.random() < 0.75]
+    mode = rng.choice(["ignore", "ignore", "strict", "custom"])
+    script = []
+    for _ in range(rng.randint(1, 4)):
+        r = rng.random()
+        if r < 0.1:
+            script.append({"t": "raise"})
+        elif r < 0.2:
+            script.append({"t": "bad", "form": rng.randint(0, 2)})
+        else:
+            pos, rel = (rng.choice([0, 0, 0, 1, -1]), True) if rng.random() < 0.7 else (rng.choice(CB_POS), False)
+            script.append({"t": "ret", "rep": cps_of(rng.choice(["", "x", "\xe9", "\U0001f600"])), "pos": pos, "rel": rel})
+    return {"mod": "unicodeobj", "fn": "text_translate_x", "s": s, "table": table, "mode": mode, "script": script}
+
+
 @gen("text", 3)
 def gen_text_maketrans(rng):
     r = rng.random()
@@ -1058,6 +1399,50 @@ def run_text_bytes(c):
 @run("text_repr")
 def run_text_repr(c):
     return cps_of(repr(s_of(c["s"])))
+
+
+class ScriptMapping:
+    """The n-th lookup of a key gets its n-th answer, and the last answer repeats."""
+
+    def __init__(self, table):
+        self.d = {k: [conv_item(v) for v in vs] for k, vs in table}
+        self.seen = {}
+
+    def __getitem__(self, k):
+        vs = self.d[k]
+        n = self.seen.get(k, 0)
+        self.seen[k] = n + 1
+        v = vs[min(n, len(vs) - 1)]
+        if v is RAISE:
+            raise ValueError("boom")
+        return v
+
+
+def tr_handler(script):
+    items = list(script)
+
+    def handler(e):
+        if not items:
+            raise RuntimeError("done")
+        r = items.pop(0)
+        if r["t"] == "raise":
+            raise ValueError("boom")
+        if r["t"] == "bad":
+            return ["x", ("x",), (b"x", 1)][r["form"]]
+        return s_of(r["rep"]), r["pos"] + e.end if r["rel"] else r["pos"]
+    return handler
+
+
+@run("text_translate_x")
+def run_text_translate_x(c):
+    import codecs
+    s, m = s_of(c["s"]), ScriptMapping(c["table"])
+    if c["mode"] == "ignore":
+        return cps_of(s.translate(m))
+    if c["mode"] == "strict":
+        return cps_of(TRANSLATE(s, m, None))
+    codecs.register_error("uo_tr", tr_handler(c["script"]))
+    return cps_of(TRANSLATE(s, m, b"uo_tr"))
 
 
 @run("text_translate")

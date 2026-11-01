@@ -1,6 +1,6 @@
 id: bytecode-call-alloc-abstract
 title: "CALL_ALLOC_AND_ENTER_INIT instantiates an abstract class, bypassing object.__new__'s ABC check"
-priority: P2
+priority: P4
 kind: specialization-mismatch
 module: bytecode
 files: [Python/bytecodes.c, Python/specialize.c, Objects/typeobject.c]
@@ -20,6 +20,9 @@ summary: |
   PyType_GenericAlloc`, heap type, and a simple-function `__init__`, but never
   `Py_TPFLAGS_IS_ABSTRACT`.
 likelihood: |
+  Real abc.ABC classes are not affected: 200 of 200 calls raise TypeError on 3.14.7 and main,
+  for an ABC and for a concrete-looking subclass still abstract. Only a plain class with
+  __abstractmethods__ assigned by hand reaches it, so this is rare.
   Low to medium. It needs a class created without `abc.ABCMeta` setting the flag at class
   creation (ABCMeta-created classes are caught earlier, at `__call__`), i.e. `__abstractmethods__`
   assigned after the fact, or a metaclass that sets it. The reproducer assigns

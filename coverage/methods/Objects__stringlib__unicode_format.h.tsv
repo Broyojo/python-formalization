@@ -1,33 +1,33 @@
 file	line	endline	name	signature	status	entry	note
-Objects/stringlib/unicode_format.h	47	51	AutoNumber_Init	AutoNumber_Init(AutoNumber *auto_number)	todo		
-Objects/stringlib/unicode_format.h	54	60	Py_LOCAL_INLINE	Py_LOCAL_INLINE(void) SubString_init(SubString *str, PyObject *s, Py_ssize_t start, Py_ssize_t end)	todo		
-Objects/stringlib/unicode_format.h	63	69	Py_LOCAL_INLINE	Py_LOCAL_INLINE(PyObject *) SubString_new_object(SubString *str)	todo		
-Objects/stringlib/unicode_format.h	72	79	Py_LOCAL_INLINE	Py_LOCAL_INLINE(PyObject *) SubString_new_object_or_empty(SubString *str)	todo		
-Objects/stringlib/unicode_format.h	85	104	autonumber_state_error	autonumber_state_error(AutoNumberState state, int field_name_is_empty)	todo		
-Objects/stringlib/unicode_format.h	112	140	get_integer	get_integer(const SubString *str)	todo		
+Objects/stringlib/unicode_format.h	47	51	AutoNumber_Init	AutoNumber_Init(AutoNumber *auto_number)	modelled	unicodeobj-format-str-builtin	
+Objects/stringlib/unicode_format.h	54	60	Py_LOCAL_INLINE	Py_LOCAL_INLINE(void) SubString_init(SubString *str, PyObject *s, Py_ssize_t start, Py_ssize_t end)	excluded		no-behaviour: sets three fields; in the model a SubString is the list itself
+Objects/stringlib/unicode_format.h	63	69	Py_LOCAL_INLINE	Py_LOCAL_INLINE(PyObject *) SubString_new_object(SubString *str)	modelled	unicodeobj-format-str-parser-reads	
+Objects/stringlib/unicode_format.h	72	79	Py_LOCAL_INLINE	Py_LOCAL_INLINE(PyObject *) SubString_new_object_or_empty(SubString *str)	modelled	unicodeobj-format-str-parser-reads	
+Objects/stringlib/unicode_format.h	85	104	autonumber_state_error	autonumber_state_error(AutoNumberState state, int field_name_is_empty)	modelled	unicodeobj-format-str-autonumber	
+Objects/stringlib/unicode_format.h	112	140	get_integer	get_integer(const SubString *str)	modelled	unicodeobj-format-str-get-integer	
 Objects/stringlib/unicode_format.h	148	157	getattr	getattr(PyObject *obj, SubString *name)	todo		
 Objects/stringlib/unicode_format.h	161	164	getitem_sequence	getitem_sequence(PyObject *obj, Py_ssize_t idx)	todo		
 Objects/stringlib/unicode_format.h	168	177	getitem_idx	getitem_idx(PyObject *obj, Py_ssize_t idx)	todo		
 Objects/stringlib/unicode_format.h	181	190	getitem_str	getitem_str(PyObject *obj, SubString *name)	todo		
-Objects/stringlib/unicode_format.h	204	210	FieldNameIterator_init	FieldNameIterator_init(FieldNameIterator *self, PyObject *s, Py_ssize_t start, Py_ssize_t end)	todo		
-Objects/stringlib/unicode_format.h	213	237	_FieldNameIterator_attr	_FieldNameIterator_attr(FieldNameIterator *self, SubString *name)	todo		
-Objects/stringlib/unicode_format.h	240	270	_FieldNameIterator_item	_FieldNameIterator_item(FieldNameIterator *self, SubString *name)	todo		
-Objects/stringlib/unicode_format.h	274	310	FieldNameIterator_next	FieldNameIterator_next(FieldNameIterator *self, int *is_attribute, Py_ssize_t *name_idx, SubString *name)	todo		
-Objects/stringlib/unicode_format.h	320	388	field_name_split	field_name_split(PyObject *str, Py_ssize_t start, Py_ssize_t end, SubString *first, Py_ssize_t *first_idx, FieldNameIterator *rest, AutoNumber *auto_number)	todo		
-Objects/stringlib/unicode_format.h	397	485	get_field_object	get_field_object(SubString *input, PyObject *args, PyObject *kwargs, AutoNumber *auto_number)	todo		
-Objects/stringlib/unicode_format.h	500	551	render_field	render_field(PyObject *fieldobj, SubString *format_spec, _PyUnicodeWriter *writer)	todo		
-Objects/stringlib/unicode_format.h	554	649	parse_field	parse_field(SubString *str, SubString *field_name, SubString *format_spec, int *format_spec_needs_expanding, Py_UCS4 *conversion)	todo		
-Objects/stringlib/unicode_format.h	665	670	MarkupIterator_init	MarkupIterator_init(MarkupIterator *self, PyObject *str, Py_ssize_t start, Py_ssize_t end)	todo		
-Objects/stringlib/unicode_format.h	675	760	MarkupIterator_next	MarkupIterator_next(MarkupIterator *self, SubString *literal, int *field_present, SubString *field_name, SubString *format_spec, Py_UCS4 *conversion, int *format_spec_needs_expanding)	todo		
-Objects/stringlib/unicode_format.h	765	790	do_conversion	do_conversion(PyObject *obj, Py_UCS4 conversion)	todo		
-Objects/stringlib/unicode_format.h	806	858	output_markup	output_markup(SubString *field_name, SubString *format_spec, int format_spec_needs_expanding, Py_UCS4 conversion, _PyUnicodeWriter *writer, PyObject *args, PyObject *kwargs, int recursion_depth, AutoNumber *auto_number)	todo		
-Objects/stringlib/unicode_format.h	867	902	do_markup	do_markup(SubString *input, PyObject *args, PyObject *kwargs, _PyUnicodeWriter *writer, int recursion_depth, AutoNumber *auto_number)	todo		
-Objects/stringlib/unicode_format.h	910	933	build_string	build_string(SubString *input, PyObject *args, PyObject *kwargs, int recursion_depth, AutoNumber *auto_number)	todo		
-Objects/stringlib/unicode_format.h	941	955	do_string_format	do_string_format(PyObject *self, PyObject *args, PyObject *kwargs)	todo		
-Objects/stringlib/unicode_format.h	958	961	do_string_format_map	do_string_format_map(PyObject *self, PyObject *obj)	todo		
-Objects/stringlib/unicode_format.h	980	985	formatteriter_dealloc	formatteriter_dealloc(PyObject *op)	todo		
-Objects/stringlib/unicode_format.h	996	1059	formatteriter_next	formatteriter_next(PyObject *op)	todo		
-Objects/stringlib/unicode_format.h	1103	1122	formatter_parser	formatter_parser(PyObject *Py_UNUSED(module), PyObject *self)	todo		
-Objects/stringlib/unicode_format.h	1141	1146	fieldnameiter_dealloc	fieldnameiter_dealloc(PyObject *op)	todo		
-Objects/stringlib/unicode_format.h	1155	1193	fieldnameiter_next	fieldnameiter_next(PyObject *op)	todo		
-Objects/stringlib/unicode_format.h	1239	1283	formatter_field_name_split	formatter_field_name_split(PyObject *Py_UNUSED(module), PyObject *self)	todo		
+Objects/stringlib/unicode_format.h	204	210	FieldNameIterator_init	FieldNameIterator_init(FieldNameIterator *self, PyObject *s, Py_ssize_t start, Py_ssize_t end)	excluded		no-behaviour: sets two fields; in the model the iterator state is the unread list
+Objects/stringlib/unicode_format.h	213	237	_FieldNameIterator_attr	_FieldNameIterator_attr(FieldNameIterator *self, SubString *name)	modelled	unicodeobj-format-str-field-name	
+Objects/stringlib/unicode_format.h	240	270	_FieldNameIterator_item	_FieldNameIterator_item(FieldNameIterator *self, SubString *name)	modelled	unicodeobj-format-str-field-name	
+Objects/stringlib/unicode_format.h	274	310	FieldNameIterator_next	FieldNameIterator_next(FieldNameIterator *self, int *is_attribute, Py_ssize_t *name_idx, SubString *name)	modelled	unicodeobj-format-str-field-name	
+Objects/stringlib/unicode_format.h	320	388	field_name_split	field_name_split(PyObject *str, Py_ssize_t start, Py_ssize_t end, SubString *first, Py_ssize_t *first_idx, FieldNameIterator *rest, AutoNumber *auto_number)	modelled	unicodeobj-format-str-builtin,unicodeobj-format-str-autonumber,unicodeobj-format-str-nested-auto,unicodeobj-format-str-many-fields	
+Objects/stringlib/unicode_format.h	397	485	get_field_object	get_field_object(SubString *input, PyObject *args, PyObject *kwargs, AutoNumber *auto_number)	modelled	unicodeobj-format-str-builtin,unicodeobj-format-str-format-map	
+Objects/stringlib/unicode_format.h	500	551	render_field	render_field(PyObject *fieldobj, SubString *format_spec, _PyUnicodeWriter *writer)	modelled	unicodeobj-format-str-render-field	
+Objects/stringlib/unicode_format.h	554	649	parse_field	parse_field(SubString *str, SubString *field_name, SubString *format_spec, int *format_spec_needs_expanding, Py_UCS4 *conversion)	modelled	unicodeobj-format-str-builtin,unicodeobj-format-nul-conversion	
+Objects/stringlib/unicode_format.h	665	670	MarkupIterator_init	MarkupIterator_init(MarkupIterator *self, PyObject *str, Py_ssize_t start, Py_ssize_t end)	excluded		no-behaviour: sets one field; in the model the iterator state is the unread list
+Objects/stringlib/unicode_format.h	675	760	MarkupIterator_next	MarkupIterator_next(MarkupIterator *self, SubString *literal, int *field_present, SubString *field_name, SubString *format_spec, Py_UCS4 *conversion, int *format_spec_needs_expanding)	modelled	unicodeobj-format-str-builtin,unicodeobj-format-str-escape,unicodeobj-format-str-parser-accepts,unicodeobj-format-str-many-fields	
+Objects/stringlib/unicode_format.h	765	790	do_conversion	do_conversion(PyObject *obj, Py_UCS4 conversion)	modelled	unicodeobj-format-str-conversion-rejected	
+Objects/stringlib/unicode_format.h	806	858	output_markup	output_markup(SubString *field_name, SubString *format_spec, int format_spec_needs_expanding, Py_UCS4 conversion, _PyUnicodeWriter *writer, PyObject *args, PyObject *kwargs, int recursion_depth, AutoNumber *auto_number)	modelled	unicodeobj-format-str-builtin,unicodeobj-format-nul-conversion,unicodeobj-format-str-nested-spec,unicodeobj-format-str-nested-auto,unicodeobj-format-str-recursion-limit	
+Objects/stringlib/unicode_format.h	867	902	do_markup	do_markup(SubString *input, PyObject *args, PyObject *kwargs, _PyUnicodeWriter *writer, int recursion_depth, AutoNumber *auto_number)	modelled	unicodeobj-format-str-builtin,unicodeobj-format-str-escape,unicodeobj-format-str-many-fields	
+Objects/stringlib/unicode_format.h	910	933	build_string	build_string(SubString *input, PyObject *args, PyObject *kwargs, int recursion_depth, AutoNumber *auto_number)	modelled	unicodeobj-format-str-builtin,unicodeobj-format-str-nested-spec,unicodeobj-format-str-recursion-limit	
+Objects/stringlib/unicode_format.h	941	955	do_string_format	do_string_format(PyObject *self, PyObject *args, PyObject *kwargs)	modelled	unicodeobj-format-str-builtin	
+Objects/stringlib/unicode_format.h	958	961	do_string_format_map	do_string_format_map(PyObject *self, PyObject *obj)	modelled	unicodeobj-format-str-format-map	
+Objects/stringlib/unicode_format.h	980	985	formatteriter_dealloc	formatteriter_dealloc(PyObject *op)	excluded		no-behaviour: releases a reference when the iterator is freed
+Objects/stringlib/unicode_format.h	996	1059	formatteriter_next	formatteriter_next(PyObject *op)	modelled	unicodeobj-format-str-parser-reads	
+Objects/stringlib/unicode_format.h	1103	1122	formatter_parser	formatter_parser(PyObject *Py_UNUSED(module), PyObject *self)	modelled	unicodeobj-format-str-parser-reads,unicodeobj-format-str-parser-accepts	
+Objects/stringlib/unicode_format.h	1141	1146	fieldnameiter_dealloc	fieldnameiter_dealloc(PyObject *op)	excluded		no-behaviour: releases a reference when the iterator is freed
+Objects/stringlib/unicode_format.h	1155	1193	fieldnameiter_next	fieldnameiter_next(PyObject *op)	modelled	unicodeobj-format-str-field-name	
+Objects/stringlib/unicode_format.h	1239	1283	formatter_field_name_split	formatter_field_name_split(PyObject *Py_UNUSED(module), PyObject *self)	modelled	unicodeobj-format-str-field-name	

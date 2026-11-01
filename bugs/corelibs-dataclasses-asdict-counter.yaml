@@ -1,0 +1,44 @@
+id: corelibs-dataclasses-asdict-counter
+title: "dataclasses.asdict and astuple turn a Counter field into a Counter of (key, count) pairs"
+priority: P3
+kind: silent-wrong-result
+module: corelibs
+files: [Lib/dataclasses.py]
+functions: ["_asdict_inner", "_astuple_inner"]
+summary: |
+  For a dict subclass without default_factory, _asdict_inner builds obj_type((k, v) for ...). dict accepts pairs,
+  and Counter counts what it is given, so Counter({'a': 2, 'b': 1}) comes back as Counter({('a', 2): 1, ('b', 1): 1}).
+  The data is changed with no error, in asdict and astuple.
+likelihood: |
+  Moderate: Counter fields are plausible, and the result looks like a Counter.
+maybe_intended: |
+  No. Already reported and open upstream.
+reproducer: |
+  from collections import Counter
+  from dataclasses import dataclass, asdict, astuple
+  @dataclass
+  class C:
+      x: object
+  a = asdict(C(Counter('aab')))['x']
+  b = astuple(C(Counter('aab')))[0]
+  print(a, b)
+  if a == Counter({('a', 2): 1, ('b', 1): 1}) and b == a:
+      print('REPRODUCED corelibs-dataclasses-asdict-counter')
+expected: |
+  Counter({'a': 2, 'b': 1}).
+observed: |
+  python3 3.14.7: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+promised_by: |
+  Doc/library/dataclasses.rst: dataclasses, dicts, lists and tuples are recursed into.
+cause: |
+  Lib/dataclasses.py:1565-1567 and :1630-1631 pass pairs to obj_type, as if it took them as dict does.
+possible_fix: |
+  Copy the container and assign the converted items, as the defaultdict branch does.
+duplicates:
+  issues:
+    - {number: 84110, state: open, relation: "duplicate", reason: "dataclasses.asdict will mangle collection.Counter instances"}
+  queries: ["gh search issues asdict Counter", "gh search issues dataclasses asdict dict subclass",
+            "bugforge README: no match for dataclass"]
+lean:
+  property: PyLean.CoreLibs.EnumDC.CounterSurvives
+  theorem: PyLean.CoreLibs.EnumDC.counterSurvives_refuted

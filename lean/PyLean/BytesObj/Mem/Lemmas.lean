@@ -119,11 +119,60 @@ theorem bind_ok {α β : Type} (x : M α) (f : α → M β) (st st' : St) (a : �
     (h : x st = (.ok a, st')) : (x >>= f) st = f a st' := by
   rw [M.bind_app, h]
 
+theorem sliceStage_none (a p : SlicePart) (st : St) :
+    sliceStage a p Option.none Option.none st = (.ok (), st) := by
+  unfold sliceStage
+  split <;> rfl
+
+/-- With no callback and no failing part, `PySlice_Unpack` runs no Python code. -/
+theorem sliceEvents_none (s : PyLean.RangeSlice.Slice) (h0 : s.step ≠ some 0) (st : St) :
+    sliceEvents s Option.none Option.none st = (.ok (), st) := by
+  simp only [sliceEvents, M.bind_app, sliceStage_none, if_neg h0, M.pure_app]
+
 /-! ## Handles -/
 
 theorem St.mv_setMv (st : St) (i : Nat) (x : MV) (h : i < st.mvs.length) :
     (st.setMv i x).mv i = x := by
   simp [St.mv, St.setMv, List.getD_eq_getElem?_getD, List.getElem?_set, h]
+
+theorem pyBufferRelease0_ok (b : Buf) (st : St) : (pyBufferRelease0 b st).1 = .ok () := by
+  unfold pyBufferRelease0
+  split <;> rfl
+
+theorem pyBufferRelease_ok (b : Buf) (st : St) : (pyBufferRelease b st).1 = .ok () := by
+  unfold pyBufferRelease
+  split
+  · exact pyBufferRelease0_ok _ _
+  · exact pyBufferRelease0_ok _ _
+
+theorem St.setMv_same (st : St) (i : Nat) (h : i < st.mvs.length) : st.setMv i (st.mv i) = st := by
+  simp [St.mv, St.setMv, List.getD_eq_getElem?_getD, h]
+
+/-- The export `withExport` takes is given back: a body that leaves the state alone leaves
+the whole call without an effect. -/
+theorem withExport_same {α : Type} (i : Nat) (x : M α) (st : St) {r : Except PyExc α}
+    (h : i < st.mvs.length)
+    (hx : x (st.setMv i { st.mv i with exports := (st.mv i).exports + 1 }) =
+      (r, st.setMv i { st.mv i with exports := (st.mv i).exports + 1 })) :
+    withExport i x st = (r, st) := by
+  have hm : ∀ m : MV, ({ { m with exports := m.exports + 1 } with exports := m.exports + 1 + -1 } : MV) = m := by
+    intro m
+    cases m
+    simp only [MV.mk.injEq, and_true, true_and]
+    omega
+  simp only [withExport, hx]
+  have e : ∀ s : St, s = st.setMv i { st.mv i with exports := (st.mv i).exports + 1 } →
+      s.setMv i { s.mv i with exports := (s.mv i).exports + -1 } = st := by
+    intro s hs
+    subst hs
+    rw [St.mv_setMv _ _ _ h]
+    simp only [St.setMv, List.set_set]
+    rw [show (st.mvs.set i _) = st.mvs from ?_]
+    have := hm (st.mv i)
+    simp only at this
+    rw [this]
+    simp [St.mv, List.getD_eq_getElem?_getD, h]
+  exact congrArg (Prod.mk _) (e _ rfl)
 
 theorem St.mv_setMv_ne (st : St) (i j : Nat) (x : MV) (h : i ≠ j) :
     (st.setMv i x).mv j = st.mv j := by

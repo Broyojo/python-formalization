@@ -1,6 +1,6 @@
 import PyLean.Registry
 import PyLean.PyGrammar.RowNames
-import PyLean.PyGrammar.Check.Props
+import PyLean.PyGrammar.Check.FoldProps
 
 /-! Registry entries for the `Check` part of `PyGrammar`. -/
 
@@ -37,6 +37,36 @@ def entries : List Entry := [
     prop := ``NamesAlwaysChecked
     thm := some ``namesAlwaysChecked_refuted
     bug := some "pygrammar-check-namedexpr-target" },
+  { id := "pygrammar-check-fold-reaches"
+    pyFile := "Python/ast_preprocess.c"
+    pyFns := Rows.check_fold_reaches
+    statement := "After folding, no Name('__debug__', Load) is left in any expression or pattern " ++
+      "field of the module, except annotations under the __future__ import."
+    source := "Python/ast_preprocess.c astfold_pattern 'We still recurse into all " ++
+      "subexpressions and subpatterns anyway'"
+    status := .refuted
+    prop := ``FoldReachesAll
+    thm := some ``foldReachesAll_refuted
+    bug := some "pygrammar-check-debug-in-pattern" },
+  { id := "pygrammar-check-fold-reaches-narrow"
+    pyFile := "Python/ast_preprocess.c"
+    pyFns := Rows.check_fold_reaches_narrow
+    statement := "With MatchValue values and MatchMapping keys set aside, folding reaches every " ++
+      "node-typed field of Python.asdl: no Name('__debug__', Load) survives anywhere else."
+    source := "the implementation against Parser/Python.asdl"
+    status := .proven
+    prop := ``FoldReachesNames
+    thm := some ``foldReachesNames_proven
+    notes := "Depends on each row of visits: dropping a field from a row breaks coverOK." },
+  { id := "pygrammar-check-fold-docstring"
+    pyFile := "Python/ast_preprocess.c"
+    pyFns := Rows.check_fold_docstring
+    statement := "Below optimize 2 folding keeps a body's docstring as it is and never creates " ++
+      "one; at optimize 2 a folded body has no docstring at all."
+    source := "Python/ast_preprocess.c astfold_body 'so that it is not mistaken for a docstring'"
+    status := .proven
+    prop := ``FoldKeepsDocstring
+    thm := some ``foldKeepsDocstring_proven },
   { id := "pygrammar-check-validate-name"
     pyFile := "Python/ast.c"
     pyFns := Rows.check_validate_name
