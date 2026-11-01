@@ -1,3 +1,3 @@
 file	line	endline	name	signature	status	entry	note
-Objects/stringlib/partition.h	12	67	Py_LOCAL_INLINE	Py_LOCAL_INLINE(PyObject*) STRINGLIB(partition)(PyObject* str_obj, const STRINGLIB_CHAR* str, Py_ssize_t str_len, PyObject* sep_obj, const STRINGLIB_CHAR* sep, Py_ssize_t sep_len)	todo		
-Objects/stringlib/partition.h	69	124	Py_LOCAL_INLINE	Py_LOCAL_INLINE(PyObject*) STRINGLIB(rpartition)(PyObject* str_obj, const STRINGLIB_CHAR* str, Py_ssize_t str_len, PyObject* sep_obj, const STRINGLIB_CHAR* sep, Py_ssize_t sep_len)	todo		
+Objects/stringlib/partition.h	12	67	Py_LOCAL_INLINE	Py_LOCAL_INLINE(PyObject*) STRINGLIB(partition)(PyObject* str_obj, const STRINGLIB_CHAR* str, Py_ssize_t str_len, PyObject* sep_obj, const STRINGLIB_CHAR* sep, Py_ssize_t sep_len)	modelled	strsearch-partition-find	
+Objects/stringlib/partition.h	69	124	Py_LOCAL_INLINE	Py_LOCAL_INLINE(PyObject*) STRINGLIB(rpartition)(PyObject* str_obj, const STRINGLIB_CHAR* str, Py_ssize_t str_len, PyObject* sep_obj, const STRINGLIB_CHAR* sep, Py_ssize_t sep_len)	modelled	strsearch-partition-find	

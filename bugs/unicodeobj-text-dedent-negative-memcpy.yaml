@@ -1,0 +1,86 @@
+id: unicodeobj-text-dedent-negative-memcpy
+title: "_PyUnicode_Dedent calls memcpy with a negative length when the last line is blank, shorter than the margin and has no newline"
+priority: P3
+kind: crash
+module: unicodeobject
+files: [Objects/unicodeobject.c, Modules/main.c]
+functions: ["_PyUnicode_Dedent", "pymain_run_command"]
+summary: |
+  `_PyUnicode_Dedent` handles a whitespace-only line with `if (in_leading_space && append_newline)`,
+  so a whitespace-only LAST line without '\n' falls through to the copy, where
+  `new_line_len = iter - line_start - whitespace_len`. Blank lines do not take part in computing
+  `whitespace_len`, so that line may be shorter than the margin and `new_line_len` is negative.
+  `assert(new_line_len >= 0)` is compiled out in release builds, and `memcpy` receives a huge
+  size_t: a segmentation fault. `python -c` cannot reach this, because the command line parser
+  appends '\n' to the command. An embedder that sets `PyConfig.run_command` can.
+likelihood: |
+  Low, embedding only. It needs an indented `run_command` whose last line is shorter whitespace,
+  which is the usual shape of a C or generated multi-line literal closed on an indented line:
+  L"\n    import foo\n    foo.main()\n  ". The dedent step is new in 3.14, so such a command used
+  to fail with IndentationError; now it crashes.
+maybe_intended: |
+  No. The assert states the intent, and the function's comment says it matches textwrap.dedent,
+  which normalises such a line to nothing.
+reproducer: |
+  import os, subprocess, sys, sysconfig, tempfile
+  SRC = r'''
+  #include <Python.h>
+  int main(int argc, char **argv) {
+      PyConfig config;
+      PyConfig_InitPythonConfig(&config);
+      wchar_t *cmd = Py_DecodeLocale(argv[1], NULL);
+      PyConfig_SetString(&config, &config.run_command, cmd);
+      PyStatus st = Py_InitializeFromConfig(&config);
+      if (PyStatus_Exception(st)) { puts("init failed"); return 3; }
+      PyConfig_Clear(&config);
+      return Py_RunMain();
+  }
+  '''
+  g = sysconfig.get_config_var
+  with tempfile.TemporaryDirectory() as d:
+      c = os.path.join(d, "e.c")
+      exe = os.path.join(d, "e")
+      with open(c, "w") as f:
+          f.write(SRC)
+      if sysconfig.is_python_build():
+          src = g("srcdir")
+          bld = os.path.dirname(sys.executable)
+          inc = ["-I" + src + "/Include", "-I" + src, "-I" + bld]
+          lib = [os.path.join(bld, g("LDLIBRARY"))]
+      else:
+          inc = ["-I" + g("INCLUDEPY")]
+          lib = [os.path.join(g("LIBDIR"), g("LDLIBRARY"))]
+      extra = (g("LIBS") or "").split() + (g("SYSLIBS") or "").split() + (g("MODLIBS") or "").split()
+      r = subprocess.run(["cc", c, "-o", exe, *inc, *lib, *extra, "-rdynamic"],
+                         capture_output=True, text=True)
+      if r.returncode:
+          sys.exit("cc failed: " + r.stderr[-500:])
+      env = dict(os.environ, PYTHONPATH=os.pathsep.join(p for p in sys.path if p))
+      if not sysconfig.is_python_build():
+          env["PYTHONHOME"] = sys.base_prefix
+      control = subprocess.run([exe, "    pass\n"], capture_output=True, text=True, env=env)
+      crash = subprocess.run([exe, "    pass\n  "], capture_output=True, text=True, env=env)
+  print("with trailing newline:", control.returncode, "without:", crash.returncode)
+  if control.returncode == 0 and crash.returncode < 0:
+      print("REPRODUCED unicodeobj-text-dedent-negative-memcpy")
+expected: |
+  Both commands run. A whitespace-only last line contributes nothing, as in textwrap.dedent.
+observed: |
+  3.14.7: the control exits 0 and the command without a final newline dies with SIGSEGV (-11).
+tested: "REPRODUCED on python3 3.14.7 and on main (3.16.0a1+dev) by scripts/check_bugs.py"
+promised_by: |
+  assert(new_line_len >= 0) at Objects/unicodeobject.c:14487; the comment at :14425-14428
+  ("Behaviour is expected to be an exact match of `textwrap.dedent`").
+cause: |
+  Objects/unicodeobject.c:14478 tests `in_leading_space && append_newline`, so a blank last line
+  reaches :14486-14488. search_longest_common_leading_whitespace skips blank lines at :14381.
+possible_fix: |
+  Test `in_leading_space` alone, writing '\n' only if append_newline:
+  if (in_leading_space) { if (append_newline) *dest_iter++ = '\n'; continue; }
+lean: |
+  Refuted by dedentDefined_refuted (lean/PyLean/UnicodeObj/TextProps2.lean) on "    a\n  ".
+  The model returns `none` where the C code would reach memcpy with a negative length.
+duplicates:
+  issues: []
+  queries: ["_PyUnicode_Dedent", "dedent run_command", "dedent crash", "dedent segfault"]
+  bugforge: "no match in vendor/bugforge-results/README.md"

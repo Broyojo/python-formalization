@@ -1,18 +1,18 @@
 file	line	endline	name	signature	status	entry	note
 Modules/binascii.c	73	76	get_binascii_state	get_binascii_state(PyObject *module)	excluded		no-behaviour: fetches the C module state pointer; nothing Python-visible
-Modules/binascii.c	164	190	ascii_buffer_converter	ascii_buffer_converter(PyObject *arg, Py_buffer *buf)	todo		
+Modules/binascii.c	164	190	ascii_buffer_converter	ascii_buffer_converter(PyObject *arg, Py_buffer *buf)	modelled	textlibs-binascii-ascii-buffer	
 Modules/binascii.c	204	296	binascii_a2b_uu_impl	binascii_a2b_uu_impl(PyObject *module, Py_buffer *data) /*[clinic end generated code: output=e027f8e0b0598742 input=7cafeaf73df63d1c]*/	todo		
 Modules/binascii.c	310	368	binascii_b2a_uu_impl	binascii_b2a_uu_impl(PyObject *module, Py_buffer *data, int backtick) /*[clinic end generated code: output=b1b99de62d9bbeb8 input=beb27822241095cd]*/	todo		
 Modules/binascii.c	386	517	binascii_a2b_base64_impl	binascii_a2b_base64_impl(PyObject *module, Py_buffer *data, int strict_mode) /*[clinic end generated code: output=5409557788d4f975 input=c0c15fd0f8f9a62d]*/	modelled	textlibs-binascii-base64-lenient-filter,textlibs-binascii-base64-round-trip,textlibs-binascii-base64-strict-implies-lenient	
 Modules/binascii.c	532	593	binascii_b2a_base64_impl	binascii_b2a_base64_impl(PyObject *module, Py_buffer *data, int newline) /*[clinic end generated code: output=4ad62c8e8485d3b3 input=0e20ff59c5f2e3e1]*/	modelled	textlibs-binascii-base64-length,textlibs-binascii-base64-round-trip	
-Modules/binascii.c	607	622	binascii_crc_hqx_impl	binascii_crc_hqx_impl(PyObject *module, Py_buffer *data, unsigned int crc) /*[clinic end generated code: output=2fde213d0f547a98 input=56237755370a951c]*/	todo		
+Modules/binascii.c	607	622	binascii_crc_hqx_impl	binascii_crc_hqx_impl(PyObject *module, Py_buffer *data, unsigned int crc) /*[clinic end generated code: output=2fde213d0f547a98 input=56237755370a951c]*/	modelled	textlibs-binascii-crc-incremental,textlibs-binascii-crc-table	
 Modules/binascii.c	850	856	binascii_b2a_hex_impl	binascii_b2a_hex_impl(PyObject *module, Py_buffer *data, PyObject *sep, int bytes_per_sep) /*[clinic end generated code: output=a26937946a81d2c7 input=ec0ade6ba2e43543]*/	modelled	textlibs-binascii-hex-round-trip	
 Modules/binascii.c	868	874	binascii_hexlify_impl	binascii_hexlify_impl(PyObject *module, Py_buffer *data, PyObject *sep, int bytes_per_sep) /*[clinic end generated code: output=d12aa1b001b15199 input=bc317bd4e241f76b]*/	modelled	textlibs-binascii-hex-round-trip	
 Modules/binascii.c	889	941	binascii_a2b_hex_impl	binascii_a2b_hex_impl(PyObject *module, Py_buffer *hexstr) /*[clinic end generated code: output=0cc1a139af0eeecb input=9e1e7f2f94db24fd]*/	modelled	textlibs-binascii-hex-round-trip	
 Modules/binascii.c	952	956	binascii_unhexlify_impl	binascii_unhexlify_impl(PyObject *module, Py_buffer *hexstr) /*[clinic end generated code: output=51a64c06c79629e3 input=dd8c012725f462da]*/	modelled	textlibs-binascii-hex-round-trip	
-Modules/binascii.c	971	1040	binascii_a2b_qp_impl	binascii_a2b_qp_impl(PyObject *module, Py_buffer *data, int header) /*[clinic end generated code: output=e99f7846cfb9bc53 input=bdfb31598d4e47b9]*/	todo		
-Modules/binascii.c	1043	1051	to_hex	to_hex (unsigned char ch, unsigned char *s)	todo		
-Modules/binascii.c	1073	1245	binascii_b2a_qp_impl	binascii_b2a_qp_impl(PyObject *module, Py_buffer *data, int quotetabs, int istext, int header) /*[clinic end generated code: output=e9884472ebb1a94c input=e9102879afb0defd]*/	todo		
+Modules/binascii.c	971	1040	binascii_a2b_qp_impl	binascii_a2b_qp_impl(PyObject *module, Py_buffer *data, int header) /*[clinic end generated code: output=e99f7846cfb9bc53 input=bdfb31598d4e47b9]*/	modelled	textlibs-binascii-a2b-qp-plain	
+Modules/binascii.c	1043	1051	to_hex	to_hex (unsigned char ch, unsigned char *s)	modelled	textlibs-binascii-to-hex	
+Modules/binascii.c	1073	1245	binascii_b2a_qp_impl	binascii_b2a_qp_impl(PyObject *module, Py_buffer *data, int quotetabs, int istext, int header) /*[clinic end generated code: output=e9884472ebb1a94c input=e9102879afb0defd]*/	modelled	textlibs-binascii-qp-line-length	
 Modules/binascii.c	1270	1288	binascii_exec	binascii_exec(PyObject *module)	excluded		internal-bootstrap: creates binascii.Error and binascii.Incomplete at import
 Modules/binascii.c	1298	1304	binascii_traverse	binascii_traverse(PyObject *module, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal of module state
 Modules/binascii.c	1307	1313	binascii_clear	binascii_clear(PyObject *module)	excluded		no-behaviour: GC clear of module state
