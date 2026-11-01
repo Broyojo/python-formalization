@@ -7,6 +7,8 @@ import PyLean.Itertools.BatchedProps
 import PyLean.Itertools.CountRepeatProps
 import PyLean.Itertools.TeeProps
 import PyLean.Itertools.GroupbyProps
+import PyLean.Itertools.CwrSpec
+import PyLean.Itertools.ProductSpec
 
 /-!
 `Modules/itertoolsmodule.c` vs the equivalents in `Doc/library/itertools.rst`, CPython 3.14.7.
@@ -119,6 +121,28 @@ def entries : List Entry := [
     statement := "For times omitted or any Py_ssize_t (negative meaning 0), repeat yields the doc generator's items."
     source := "Doc/library/itertools.rst:615-631", status := .proven
     prop := ``RepeatDocAgreeSsize, thm := some ``repeatDocAgreeSsize_proven },
+  { id := "itertools-combinations-spec", pyFile := "Modules/itertoolsmodule.c"
+    pyFns := ["combinations_next"]
+    statement := "For every r >= 0 that can be allocated, combinations(pool, r) yields the items at exactly the positions in a list of math.comb(n, r) strictly increasing r-tuples of positions < n (zero when r > n), and that list is strictly increasing lexicographically, so nothing repeats."
+    source := "Doc/library/itertools.rst:219-231", status := .proven
+    prop := ``CombinationsSpec, thm := some ``combinationsSpec_proven
+    notes := "choose is Pascal's rule, i.e. math.comb. Statements are over positions ('treated as unique based on their position'), so they hold for every pool." },
+  { id := "itertools-cwr-spec", pyFile := "Modules/itertoolsmodule.c"
+    pyFns := ["cwr_next"]
+    statement := "For every r >= 0 that can be allocated, combinations_with_replacement(pool, r) yields the items at exactly the positions in a list of comb(n + r - 1, r) non-decreasing r-tuples (for n = 0: one empty tuple if r = 0, else none), strictly increasing lexicographically."
+    source := "Doc/library/itertools.rst:267-277", status := .proven
+    prop := ``CwrSpec, thm := some ``cwrSpec_proven },
+  { id := "itertools-product-spec", pyFile := "Modules/itertoolsmodule.c"
+    pyFns := ["product_new", "product_next"]
+    statement := "For repeat in Py_ssize_t range whose pools fit in memory, product(*args, repeat=repeat) yields the items at exactly the positions in a list of prod(len(p) for p in args)**repeat tuples, one in-range position per pool, strictly increasing lexicographically (the rightmost position advances fastest)."
+    source := "Doc/library/itertools.rst:560-576", status := .proven
+    prop := ``ProductSpec, thm := some ``productSpec_proven },
+  { id := "itertools-product-doc-agree", pyFile := "Modules/itertoolsmodule.c"
+    pyFns := ["product_new", "product_next"]
+    statement := "For every int repeat (raising in both for negative and above sys.maxsize) whose pools fit in memory, the C odometer and the doc's list comprehension give the same tuples in the same order."
+    source := "Doc/library/itertools.rst:568-584 (roughly equivalent to)", status := .proven
+    prop := ``ProductDocAgree, thm := some ``productDocAgree_proven
+    notes := "Hypothesis tupleNewOk(len(args) * repeat): both sides keep the pools in memory. With repeat above that, C says OverflowError or MemoryError and the doc code MemoryError; model only compares raising, and the hypothesis keeps the model's malloc limit out of the statement." },
   { id := "itertools-groupby-doc-agree", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["groupby_next", "groupby_step", "_grouper_next"]
     statement := "For every key function, input and interleaving of next() on the groupby object and on any group it returned (including old groups), the C object returns exactly what the doc's generators return."

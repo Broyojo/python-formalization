@@ -56,21 +56,35 @@ structure ProductState where
   started : Bool
   stopped : Bool
 
-/-- `product_new` (:2072-2153). `repeat = none` is "no keyword" (repeat 1). -/
-def cProductNew (args : List (List Int)) (rep? : Option Int) : Py ProductState := do
-  let mut rep : Int := 1
-  if let some r := rep? then
-    rep ← asSsize r
-    if rep < 0 then throw (.valueError "repeat argument cannot be negative")
-  let nargs : Int := if rep = 0 then 0 else args.length
-  if rep ≠ 0 ∧ nargs > ssizeMax / 8 / rep then
-    throw (.overflowError "repeat argument too large")
-  let npools := nargs * rep
-  if !memNewOk npools then throw memoryError
-  if !tupleNewOk npools then throw memoryError
-  let base := if rep = 0 then [] else args
-  let pools := if npools = 0 then [] else (List.replicate rep.toNat base).flatten
-  return { pools := pools, indices := List.replicate npools.toNat 0, started := false, stopped := false }
+/-- `[tuple(pool) for pool in iterables] * repeat`. -/
+def prodPools (args : List (List Int)) (rep : Int) : List (List Int) :=
+  if args.length = 0 then [] else (List.replicate rep.toNat args).flatten
+
+/-- `product_new` (:2072-2153). `rep? = none` is "no keyword" (repeat 1). -/
+def cProductNew (args : List (List Int)) (rep? : Option Int) : Py ProductState :=
+  -- :2079-2096
+  let parsed : Py Int :=
+    match rep? with
+    | none => .ok 1
+    | some r =>
+      match asSsize r with
+      | .error e => .error e
+      | .ok v =>
+        if v < 0 then .error (.valueError "repeat argument cannot be negative") else .ok v
+  match parsed with
+  | .error e => .error e
+  | .ok rep =>
+    -- :2098-2108
+    let nargs : Int := if rep = 0 then 0 else args.length
+    if rep ≠ 0 ∧ nargs > ssizeMax / 8 / rep then
+      .error (.overflowError "repeat argument too large")
+    else
+      let npools := nargs * rep
+      -- :2110-2118
+      if !memNewOk npools then .error memoryError
+      else if !tupleNewOk npools then .error memoryError
+      else .ok { pools := prodPools args rep, indices := List.replicate npools.toNat 0,
+                 started := false, stopped := false }
 
 /-- The right-to-left odometer loop of `product_next_lock_held` (:2240-2264),
 by recursion on `i + 1`: `none` is "`i` went negative". -/
@@ -115,8 +129,7 @@ def docProduct (args : List (List Int)) (rep? : Option Int) : Run (List Int) :=
   if rep < 0 then Run.err (.valueError "repeat argument cannot be negative")
   else if let .error e := listRepeatCheck args.length rep then Run.err e
   else
-    let pools := if args.length = 0 then [] else (List.replicate rep.toNat args).flatten
-    Run.ok (pools.foldl docProductStep [[]])
+    Run.ok ((prodPools args rep).foldl docProductStep [[]])
 
 /-! ## combinations -/
 
