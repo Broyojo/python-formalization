@@ -1,6 +1,7 @@
 import PyLean.DiffCore
 import PyLean.StrSearch.Diff
 import PyLean.UnicodeObj.FormatSpec
+import PyLean.UnicodeObj.FormatNumber
 import PyLean.UnicodeObj.FormatPercent
 
 /-! Difftest handler for the formatting slice (`fn` names start with `fmt_`). -/
@@ -21,6 +22,7 @@ def getObj (j : Json) : Except String FObj := do
   match ← getStr j "t" with
   | "int" => return .int (← getHexInt j "v")
   | "bool" => return .bool (← getBool j "v")
+  | "float" => return .float (Binary64.F64.ofBits (← getHexInt j "v").toNat)
   | "str" => return .str (← getSeq j "s")
   | "none" => return .none
   | t => throw s!"bad obj {t}"
@@ -50,13 +52,19 @@ def run (fn : String) (j : Json) : Except String Json := do
     let spec ← getSeq j "spec"
     if spec.isEmpty && name == "int" then
       return encPy (fun (s : Str) => toJson s) (longFormat v 10 false)
-    return encPy (fun (r : Option Str) => match r with
-        | some s => toJson s
-        | none => toJson "float") (formatLongAdvanced v name spec shown)
+    return encPy toJson (do
+      match ← formatLongAdvanced v name spec shown with
+      | some s => .ok s
+      | none => formatLongAsFloat v spec name)
   | "fmt_percent" =>
     return encPy toJson (pyUnicodeFormat (← getSeq j "fmt") (← getArgs (← field j "args")))
-  | "fmt_float" => return encPy (fun _ => toJson true) (formatFloatAdvanced (← getSeq j "spec"))
-  | "fmt_complex" => return encPy (fun _ => toJson true) (formatComplexAdvanced (← getSeq j "spec"))
+  | "fmt_float" =>
+    let x := Binary64.F64.ofBits (← getHexInt j "x").toNat
+    return encPy toJson (formatFloatAdvanced x (← getSeq j "spec"))
+  | "fmt_complex" =>
+    let re := Binary64.F64.ofBits (← getHexInt j "re").toNat
+    let im := Binary64.F64.ofBits (← getHexInt j "im").toNat
+    return encPy toJson (formatComplexAdvanced re im (← getSeq j "spec"))
   | _ => throw s!"unknown fn {fn}"
 
 def handler : Handler := fun fn j =>

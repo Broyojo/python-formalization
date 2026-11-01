@@ -1,28 +1,14 @@
 import PyLean.UnicodeObj.FormatProps
+import PyLean.UnicodeObj.FormatNumber
+import PyLean.UnicodeObj.FormatPercent
 
 /-!
-What of float formatting can be modelled before `lean/PyLean/Binary64/` exists.
-`parse_number` is string logic. The rest waits for a binary64 type.
+Properties of float and complex formatting over the exact binary64 model.
 -/
 
 namespace PyLean.UnicodeObj
 
 open PyLean
-
-/-- `Py_ISDIGIT`. -/
-def pyDigit (c : Nat) : Bool := decide (48 ≤ c) && decide (c ≤ 57)
-
-/-- What `parse_number` does after the integer digits: `has_decimal`, `n_frac`,
-`n_remainder`. -/
-def parseRest (rest : List Nat) : Bool × Nat × Nat :=
-  let hasDecimal := rest.head? == some 46
-  let r := if hasDecimal then rest.tail else rest
-  (hasDecimal, (r.takeWhile pyDigit).length, (r.dropWhile pyDigit).length)
-
-/-- `parse_number`, formatter_unicode.c:489-516: the digits before the point,
-`has_decimal`, `n_frac`, `n_remainder`. -/
-def parseNumber (s : Str) : Nat × Bool × Nat × Nat :=
-  ((s.takeWhile pyDigit).length, parseRest (s.dropWhile pyDigit))
 
 /-- `parse_number` splits the number with nothing lost: the digits, the decimal point, the
 fraction and the remainder add up to its length, for every string. -/
@@ -69,10 +55,139 @@ def FormatEmptySpec : Prop :=
 theorem formatEmptySpec_proven : FormatEmptySpec :=
   ⟨fun _ _ _ => rfl, fun _ => rfl⟩
 
-/-- A placeholder for the entries that wait on `lean/PyLean/Binary64/`. There is no binary64
-type yet to state them over, so each entry gives its property in words and points here.
-It is `False` so that it cannot be proven by accident: such an entry has to get a real
-statement before it can be settled. -/
+/-! ## The text `parse_number` measures -/
+
+theorem take_tw (p : Nat → Bool) (s : List Nat) : s.take (s.takeWhile p).length = s.takeWhile p := by
+  induction s with
+  | nil => rfl
+  | cons a t ih =>
+    simp only [List.takeWhile_cons]
+    split <;> simp [ih]
+
+theorem drop_tw (p : Nat → Bool) (s : List Nat) : s.drop (s.takeWhile p).length = s.dropWhile p := by
+  induction s with
+  | nil => rfl
+  | cons a t ih =>
+    simp only [List.takeWhile_cons, List.dropWhile_cons]
+    split <;> simp [ih]
+
+/-- What follows the integer digits and the decimal point. -/
+def restOf (s : Str) : Str :=
+  let d := s.dropWhile pyDigit
+  if (d.head? == some 46) = true then d.tail else d
+
+theorem splitNumber_eq (s : Str) :
+    splitNumber s = (s.takeWhile pyDigit, (s.dropWhile pyDigit).head? == some 46,
+      (restOf s).takeWhile pyDigit, (restOf s).dropWhile pyDigit) := by
+  simp only [splitNumber, parseNumber, parseRest, take_tw, drop_tw, restOf]
+
+theorem splitNumber_join (s : Str) :
+    s.takeWhile pyDigit ++ (if ((s.dropWhile pyDigit).head? == some 46) = true then [46] else []) ++
+      (restOf s).takeWhile pyDigit ++ (restOf s).dropWhile pyDigit = s := by
+  have h0 : s.takeWhile pyDigit ++ s.dropWhile pyDigit = s := List.takeWhile_append_dropWhile
+  have h1 : (restOf s).takeWhile pyDigit ++ (restOf s).dropWhile pyDigit = restOf s :=
+    List.takeWhile_append_dropWhile
+  rw [List.append_assoc, h1, List.append_assoc]
+  suffices h : (if ((s.dropWhile pyDigit).head? == some 46) = true then [46] else []) ++ restOf s =
+      s.dropWhile pyDigit by rw [h, h0]
+  unfold restOf
+  cases hd : s.dropWhile pyDigit with
+  | nil => simp
+  | cons a t => by_cases ha : a = 46 <;> simp [ha]
+
+/-! ## The grouping loops -/
+
+/-- What the loop's count means: it is the length of what the loop wrote. -/
+theorem groupLoop_count (grouping : List Nat) (sep : Str) :
+    ∀ (fuel i prev : Nat) (useSep : Bool) (rem mw : Int) (rev : List Nat) (count : Nat)
+      (out : List Nat) (it n : Nat) (o : List Nat) (it' : Nat),
+      groupLoop grouping sep fuel i prev useSep rem mw rev count out it = .ok (n, o, it') →
+      rem = rev.length → o.length + count = n + out.length := by
+  intro fuel
+  induction fuel with
+  | zero =>
+    intro i prev useSep rem mw rev count out it n o it' h _
+    simp [groupLoop] at h
+  | succ fuel ih =>
+    intro i prev useSep rem mw rev count out it n o it' h hrem
+    simp only [groupLoop] at h
+    generalize groupNext grouping i prev = g at h
+    obtain ⟨len0, i', prev'⟩ := g
+    simp only at h
+    split at h
+    · obtain ⟨len, hlen⟩ : ∃ len : Int, len = min (len0 : Int) (max (max rem mw) 1) := ⟨_, rfl⟩
+      rw [← hlen] at h
+      obtain ⟨z, hz⟩ : ∃ z : Int, z = max 0 (len - rem) := ⟨_, rfl⟩
+      obtain ⟨k, hk⟩ : ∃ k : Int, k = max 0 (min rem len) := ⟨_, rfl⟩
+      rw [← hz, ← hk] at h
+      have hkr : k.toNat ≤ rev.length := by omega
+      simp only [groupPiece] at h
+      have hlenout : (List.replicate z.toNat 48 ++ (rev.take k.toNat).reverse ++
+          (if useSep = true then sep else []) ++ out).length =
+          z.toNat + k.toNat + (if useSep = true then sep.length else 0) + out.length := by
+        cases useSep <;> simp [List.length_take, Nat.min_eq_left hkr] <;> omega
+      split at h
+      · simp only [Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl, rfl⟩ := h
+        omega
+      · have := ih _ _ true (rem - k) _ (rev.drop k.toNat) _ _ _ n o it' h
+          (by rw [List.length_drop]; omega)
+        omega
+    · obtain ⟨len, hlen⟩ : ∃ len : Int, len = max (max rem mw) 1 := ⟨_, rfl⟩
+      rw [← hlen] at h
+      obtain ⟨z, hz⟩ : ∃ z : Int, z = max 0 (len - rem) := ⟨_, rfl⟩
+      obtain ⟨k, hk⟩ : ∃ k : Int, k = max 0 (min rem len) := ⟨_, rfl⟩
+      rw [← hz, ← hk] at h
+      have hkr : k.toNat ≤ rev.length := by omega
+      simp only [groupPiece, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      cases useSep <;> simp [List.length_take, Nat.min_eq_left hkr] <;> omega
+
+theorem groupLoopFwd_count (grouping : List Nat) (sep : Str) :
+    ∀ (fuel i prev : Nat) (useSep : Bool) (rem mw : Int) (ds : Str) (count : Nat)
+      (out : Str) (n : Nat) (o : Str),
+      groupLoopFwd grouping sep fuel i prev useSep rem mw ds count out = .ok (n, o) →
+      rem = ds.length → o.length + count = n + out.length := by
+  intro fuel
+  induction fuel with
+  | zero =>
+    intro i prev useSep rem mw ds count out n o h _
+    simp [groupLoopFwd] at h
+  | succ fuel ih =>
+    intro i prev useSep rem mw ds count out n o h hrem
+    simp only [groupLoopFwd] at h
+    generalize groupNext grouping i prev = g at h
+    obtain ⟨len0, i', prev'⟩ := g
+    simp only at h
+    split at h
+    · obtain ⟨len, hlen⟩ : ∃ len : Int, len = min (len0 : Int) (max (max rem mw) 1) := ⟨_, rfl⟩
+      rw [← hlen] at h
+      obtain ⟨z, hz⟩ : ∃ z : Int, z = max 0 (len - rem) := ⟨_, rfl⟩
+      obtain ⟨k, hk⟩ : ∃ k : Int, k = max 0 (min rem len) := ⟨_, rfl⟩
+      rw [← hz, ← hk] at h
+      have hkr : k.toNat ≤ ds.length := by omega
+      simp only [groupPieceFwd] at h
+      have hlenout : (out ++ (if useSep = true then sep else []) ++ ds.take k.toNat ++
+          List.replicate z.toNat 48).length =
+          z.toNat + k.toNat + (if useSep = true then sep.length else 0) + out.length := by
+        cases useSep <;> simp [List.length_take, Nat.min_eq_left hkr] <;> omega
+      split at h
+      · simp only [Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        omega
+      · have := ih _ _ true (rem - k) _ (ds.drop k.toNat) _ _ n o h
+          (by rw [List.length_drop]; omega)
+        omega
+    · obtain ⟨len, hlen⟩ : ∃ len : Int, len = max (max rem mw) 1 := ⟨_, rfl⟩
+      rw [← hlen] at h
+      obtain ⟨z, hz⟩ : ∃ z : Int, z = max 0 (len - rem) := ⟨_, rfl⟩
+      obtain ⟨k, hk⟩ : ∃ k : Int, k = max 0 (min rem len) := ⟨_, rfl⟩
+      rw [← hz, ← hk] at h
+      have hkr : k.toNat ≤ ds.length := by omega
+      simp only [groupPieceFwd, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      cases useSep <;> simp [List.length_take, Nat.min_eq_left hkr] <;> omega
+
 def PendingBinary64 : Prop := False
 
 end PyLean.UnicodeObj

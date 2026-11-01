@@ -11,6 +11,7 @@ ones (the all-code-point table sweeps). Each slice edits its own section only.
 """
 
 import os
+import struct
 import sys
 
 import common
@@ -544,21 +545,74 @@ def gen_fmt_str(rng):
         ["", "a", "abc", "hello world", "\xe9t\xe9", "€", "\U0001f600x"])), "spec": cps_of(fmt_spec(rng))}
 
 
-@gen("format", 2)
+FLOATS = [0.0, -0.0, 1.0, -1.0, 0.5, 1.5, 2.5, 0.1, 0.125, 9.5, 9.995, 99.5, 100.0, 1234.5, 1234.5678,
+          -1234.5678, 1234567.125, 0.0001, 0.00001, 1e15, 1e16, 1e17, 1e21, 1e22, 1e23, 1e100, -1e100,
+          1.7976931348623157e308, 5e-324, 2.2250738585072014e-308, float("inf"), float("-inf"),
+          float("nan"), -float("nan"), 1 / 3, 2 / 3, 123456789012345678.0, -0.0001, 0.999, 0.9999999]
+
+
+def float_bits(x):
+    return struct.unpack("<Q", struct.pack("<d", x))[0]
+
+
+def float_of(s):
+    return struct.unpack("<d", struct.pack("<Q", int(s, 16)))[0]
+
+
+def rand_float(rng):
+    r = rng.random()
+    if r < 0.55:
+        return rng.choice(FLOATS)
+    if r < 0.75:
+        return rng.randint(-10 ** 9, 10 ** 9) / rng.choice([1, 2, 4, 8, 10, 100, 1000])
+    if r < 0.9:
+        return struct.unpack("<d", struct.pack("<Q", rng.getrandbits(64)))[0]
+    return rng.choice([-1, 1]) * rng.random() * 10.0 ** rng.randint(-30, 30)
+
+
+def float_spec(rng):
+    if rng.random() < 0.15:
+        return fmt_spec(rng)
+    fill = rng.choice(["", "", "", "*", "0", " ", "\xe9", "\U0001f600", "<", "\x00"])
+    align = rng.choice(["", "", "<", ">", "=", "^"]) if fill == "" else rng.choice("<>=^")
+    sign = rng.choice(["", "", "+", "-", " "])
+    z = rng.choice(["", "", "", "z"])
+    alt = rng.choice(["", "", "", "#"])
+    zero = rng.choice(["", "", "", "0"])
+    width = rng.choice(["", "", "", "1", "5", "8", "12", "20", "30", "40", chr(0x663), "007"])
+    group = rng.choice(["", "", "", ",", "_", ",_", "_,"])
+    prec = rng.choice(["", "", ".", ".0", ".1", ".2", ".3", ".6", ".10", ".17", ".20", ".50", ".350", ".1100",
+                       ".,", "._", ".3,", ".3_", ".7,", ".10_", ".20_", "._,", ".,_", "." + str(2 ** 31),
+                       "." + str(2 ** 31 - 1), "." + "9" * 30])
+    typ = rng.choice(["", "", "e", "E", "f", "F", "g", "G", "n", "%", "\x00", "r", "q", "d"])
+    return fill + align + sign + z + alt + zero + width + group + prec + typ
+
+
+@gen("format", 7)
 def gen_fmt_float(rng):
-    return {"mod": "unicodeobj", "fn": rng.choice(["fmt_float", "fmt_complex"]),
-            "spec": cps_of(fmt_spec(rng))}
+    return {"mod": "unicodeobj", "fn": "fmt_float", "x": format(float_bits(rand_float(rng)), "x"),
+            "spec": cps_of(float_spec(rng) if rng.random() < 0.98 else "")}
+
+
+@gen("format", 5)
+def gen_fmt_complex(rng):
+    return {"mod": "unicodeobj", "fn": "fmt_complex", "re": format(float_bits(rand_float(rng)), "x"),
+            "im": format(float_bits(rand_float(rng)), "x"),
+            "spec": cps_of(float_spec(rng) if rng.random() < 0.97 else "")}
 
 
 def hex_of(v):
     return ("-" if v < 0 else "") + format(abs(v), "x")
 
 
-PCT_TYPES = "sradiuoxXc"
+PCT_TYPES = "sradiuoxXceEfFgGeEfFgG"
 # A `*` takes its width from these, and the model builds a list of that length, so they stay small
 # apart from values that fail the conversion.
 PCT_OBJS = [0, 1, -1, 7, 255, -255, 65, 2 ** 63, -2 ** 63, 10 ** 30, 10 ** 4300,
-            True, False, None, "", "a", "abc", chr(0xe9), chr(0x20ac), chr(0x1f600), "it's"]
+            2 ** 1024 - 2 ** 970, 2 ** 1024 - 2 ** 970 - 1, 2 ** 53 + 1,
+            True, False, None, "", "a", "abc", chr(0xe9), chr(0x20ac), chr(0x1f600), "it's",
+            0.0, -0.0, 1.5, -1.5, 0.1, 3.7, -3.7, 1e22, 1e300, -1e300, 5e-324, float("inf"),
+            float("-inf"), float("nan"), 1234.5678, 2.5, 0.0001, 1e16, -2.5]
 
 
 def pct_enc(o):
@@ -568,6 +622,8 @@ def pct_enc(o):
         return {"t": "bool", "v": o}
     if isinstance(o, int):
         return {"t": "int", "v": hex_of(o)}
+    if isinstance(o, float):
+        return {"t": "float", "v": format(float_bits(o), "x")}
     return {"t": "str", "s": cps_of(o)}
 
 
@@ -580,6 +636,8 @@ def pct_dec(j):
     if t == "int":
         s = j["v"]
         return -int(s[1:], 16) if s.startswith("-") else int(s, 16)
+    if t == "float":
+        return float_of(j["v"])
     return s_of(j["s"])
 
 
@@ -632,9 +690,7 @@ def run_fmt_int(c):
     v = -int(s[1:], 16) if s.startswith("-") else int(s, 16)
     if c["name"] == "bool":
         v = bool(v)
-    spec = s_of(c["spec"])
-    r = format(v, spec)
-    return "float" if spec[-1:] in tuple("eEfFgG%") else cps_of(r)
+    return cps_of(format(v, s_of(c["spec"])))
 
 
 @run("fmt_str")
@@ -644,14 +700,12 @@ def run_fmt_str(c):
 
 @run("fmt_float")
 def run_fmt_float(c):
-    format(1.5, s_of(c["spec"]))
-    return True
+    return cps_of(format(float_of(c["x"]), s_of(c["spec"])))
 
 
 @run("fmt_complex")
 def run_fmt_complex(c):
-    format(1.5 + 2j, s_of(c["spec"]))
-    return True
+    return cps_of(format(complex(float_of(c["re"]), float_of(c["im"])), s_of(c["spec"])))
 
 # ==== end format slice ====
 
@@ -964,8 +1018,10 @@ def size_ok(c):
         n, length = c["n"], len(c["s"])
         return n <= 0 or length * n <= SIZE_CAP or (length > 0 and length * n > sys.maxsize)
     if fn in ("fmt_int", "fmt_str", "fmt_float", "fmt_complex"):
-        # A precision here never pads: it cuts a str, and it is an error for an int.
-        return all(number_ok(v) for v, dotted in digit_runs(s_of(c["spec"])) if not dotted)
+        # A precision pads a float, or an int given a float type, with zeros. Above INT_MAX it
+        # is an error, which is the behaviour being tested.
+        return all(number_ok(v) if not dotted else (v <= SIZE_CAP or v > 2 ** 31 - 1)
+                   for v, dotted in digit_runs(s_of(c["spec"])))
     if fn == "fmt_percent":
         fmt = s_of(c["fmt"])
         if not all(number_ok(v) for v, _ in digit_runs(fmt)):
