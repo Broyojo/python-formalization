@@ -243,29 +243,36 @@ def lastLive (es : List (Option (Ent K V))) : Nat → Option (Nat × Ent K V)
     | some (some e) => some (i, e)
     | _ => lastLive es i
 
+/-- The part of `dict_popitem_impl` after the table is known to be combined (:4630-4676). -/
+def popLast (k : Keys K V) (mp : PyDict K V) : Py (K × V) × PyDict K V :=
+  match lastLive k.entries k.nentries with
+  | none => (.error .modelFuel, mp)
+  | some (i, e) =>
+    match lookdictIndex k e.hash i with
+    | .error x => (.error x, mp)
+    | .ok j =>
+      if j < 0 then (.error .modelFuel, mp)
+      else
+        (.ok (e.key, e.value), { mp with
+          used := mp.used - 1
+          body := .combined { (k.setIndex j.toNat DKIX_DUMMY) with
+            entries := k.entries.take i
+            version := 0 } })
+
 /-- `dict_popitem_impl` (:4596-4679). -/
-def dictPopitem : DM K V (K × V) := do
-  let mp ← M.get
-  if mp.used == 0 then
-    M.throw (.keyError "'popitem(): dictionary is empty'")
-  -- Convert split table to combined table.
-  if mp.body.isSplit then
-    dictResize mp.body.log2Size true
-  let mp ← M.get
-  match mp.body with
-  | .split _ _ => M.unreachable
-  | .combined k =>
-    match lastLive k.entries k.nentries with
-    | none => M.unreachable
-    | some (i, e) =>
-      let j ← M.lift (lookdictIndex k e.hash i)
-      if j < 0 then M.unreachable
-      M.put { mp with
-        used := mp.used - 1
-        body := .combined { (k.setIndex j.toNat DKIX_DUMMY) with
-          entries := k.entries.take i
-          version := 0 } }
-      return (e.key, e.value)
+def dictPopitem : DM K V (K × V) := fun mp =>
+  if mp.used == 0 then (.error (.keyError "'popitem(): dictionary is empty'"), mp)
+  else
+    match mp.body with
+    | .combined k => popLast k mp
+    | .split _ _ =>
+      -- Convert split table to combined table.
+      match dictResize mp.body.log2Size true mp with
+      | (.error e, s) => (.error e, s)
+      | (.ok _, s) =>
+        match s.body with
+        | .combined k => popLast k s
+        | .split _ _ => (.error .modelFuel, s)
 
 /-- `clear_embedded_values` (:2944-2957). -/
 def clearEmbeddedValues (v : Values V) (nentries : Nat) : Values V :=

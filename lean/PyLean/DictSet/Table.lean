@@ -217,17 +217,18 @@ written through it. -/
 def doLookup {σ : Type} (getIx : σ → Nat → Int) (check : Nat → M σ Int) :
     Nat → Nat → Nat → Nat → M σ Int
   | 0, _, _, _ => M.throw .modelFuel
-  | fuel + 1, mask, i, perturb => do
-    let s ← M.get
+  | fuel + 1, mask, i, perturb => fun s =>
     let ix := getIx s i
-    if ix ≥ 0 then
-      let cmp ← check ix.toNat
-      if cmp < 0 then return cmp
-      if cmp != 0 then return ix
-    else if ix == DKIX_EMPTY then
-      return DKIX_EMPTY
     let next := probeStep mask i perturb
-    doLookup getIx check fuel mask next.1 next.2
+    if ix ≥ 0 then
+      match check ix.toNat s with
+      | (.error e, s') => (.error e, s')
+      | (.ok cmp, s') =>
+        if cmp < 0 then (.ok cmp, s')
+        else if cmp != 0 then (.ok ix, s')
+        else doLookup getIx check fuel mask next.1 next.2 s'
+    else if ix == DKIX_EMPTY then (.ok DKIX_EMPTY, s)
+    else doLookup getIx check fuel mask next.1 next.2 s
 
 abbrev DM (K V : Type) := M (PyDict K V)
 
@@ -242,37 +243,31 @@ def stillThere (mp : PyDict K V) (dk ix : Nat) (startkey : K) : Bool :=
     | none => false
 
 /-- `compare_unicode_generic` (:1045-1071). -/
-def compareUnicodeGeneric (ix : Nat) (key : K) (hash : Int) : DM K V Int := do
-  let mp ← M.get
+def compareUnicodeGeneric (ix : Nat) (key : K) (hash : Int) : DM K V Int := fun mp =>
   match mp.body.entryKH ix with
-  | none => M.unreachable
+  | none => (.error .modelFuel, mp)
   | some (epKey, epHash) =>
     if epHash = hash then
-      let dk := mp.body.ident
-      let cmp ← P.eq epKey key
-      let mp' ← M.get
-      if stillThere mp' dk ix epKey then
-        return (if cmp then 1 else 0)
-      else
-        return DKIX_KEY_CHANGED
-    return 0
+      match P.eq epKey key mp with
+      | (.error e, mp') => (.error e, mp')
+      | (.ok cmp, mp') =>
+        if stillThere mp' mp.body.ident ix epKey then (.ok (if cmp then 1 else 0), mp')
+        else (.ok DKIX_KEY_CHANGED, mp')
+    else (.ok 0, mp)
 
 /-- `compare_generic` (:1101-1127). -/
-def compareGeneric (ix : Nat) (key : K) (hash : Int) : DM K V Int := do
-  let mp ← M.get
+def compareGeneric (ix : Nat) (key : K) (hash : Int) : DM K V Int := fun mp =>
   match mp.body.entryKH ix with
-  | none => M.unreachable
+  | none => (.error .modelFuel, mp)
   | some (epKey, epHash) =>
-    if epKey = key then return 1
-    if epHash = hash then
-      let dk := mp.body.ident
-      let cmp ← P.eq epKey key
-      let mp' ← M.get
-      if stillThere mp' dk ix epKey then
-        return (if cmp then 1 else 0)
-      else
-        return DKIX_KEY_CHANGED
-    return 0
+    if epKey = key then (.ok 1, mp)
+    else if epHash = hash then
+      match P.eq epKey key mp with
+      | (.error e, mp') => (.error e, mp')
+      | (.ok cmp, mp') =>
+        if stillThere mp' mp.body.ident ix epKey then (.ok (if cmp then 1 else 0), mp')
+        else (.ok DKIX_KEY_CHANGED, mp')
+    else (.ok 0, mp)
 
 /-- `compare_unicode_unicode` (:1080-1093). No callback can run here. -/
 def compareUnicodeUnicode (e : Option (K × Int)) (key : K) (hash : Int) : Bool :=
@@ -288,17 +283,22 @@ def unicodekeysLookupUnicode {W : Type} (dk : Keys K W) (key : K) (hash : Int) :
                      then 1 else 0))
     (probeFuel dk.log2Size) dk.mask (u &&& dk.mask) u ()).1
 
+/-- `dictkeys_get_index(dk, i)` on the dict's current keys. -/
+def bodyIx (s : PyDict K V) (i : Nat) : Int := s.body.getIndex i
+
+/-- `check_lookup` of `unicodekeys_lookup_unicode` on the dict's current keys. -/
+def checkUnicode (key : K) (hash : Int) : Nat → DM K V Int := fun ix s =>
+  (.ok (if compareUnicodeUnicode P (s.body.entryKH ix) key hash then 1 else 0), s)
+
 /-- `unicodekeys_lookup_generic` (:1074-1078). -/
 def unicodekeysLookupGeneric (mask : Nat) (fuel : Nat) (key : K) (hash : Int) : DM K V Int :=
   let u := toU64 hash
-  doLookup (fun s i => s.body.getIndex i) (fun ix => compareUnicodeGeneric P ix key hash)
-    fuel mask (u &&& mask) u
+  doLookup bodyIx (fun ix => compareUnicodeGeneric P ix key hash) fuel mask (u &&& mask) u
 
 /-- `dictkeys_generic_lookup` (:1129-1133). -/
 def dictkeysGenericLookup (mask : Nat) (fuel : Nat) (key : K) (hash : Int) : DM K V Int :=
   let u := toU64 hash
-  doLookup (fun s i => s.body.getIndex i) (fun ix => compareGeneric P ix key hash)
-    fuel mask (u &&& mask) u
+  doLookup bodyIx (fun ix => compareGeneric P ix key hash) fuel mask (u &&& mask) u
 
 /-- How many times `goto start` may run in the model. -/
 def restartFuel : Nat := 256
@@ -307,28 +307,23 @@ def restartFuel : Nat := 256
 `DKIX_ERROR`. The value is read after the loop, from the current state. -/
 def dictLookupAux (key : K) (hash : Int) : Nat → DM K V (Int × Option V)
   | 0 => M.throw .modelFuel
-  | restarts + 1 => do
-    let mp ← M.get
+  | restarts + 1 => fun mp =>
     let mask := mp.body.mask
     let fuel := probeFuel mp.body.log2Size
-    let ix ←
+    let u := toU64 hash
+    let r : Py Int × PyDict K V :=
       if mp.body.kind != .general then
         if P.isStr key then
-          let u := toU64 hash
-          doLookup (fun s i => s.body.getIndex i)
-            (fun ix => do
-              let s ← M.get
-              return (if compareUnicodeUnicode P (s.body.entryKH ix) key hash then 1 else 0))
-            fuel mask (u &&& mask) u
+          doLookup bodyIx (checkUnicode P key hash) fuel mask (u &&& mask) u mp
         else
-          unicodekeysLookupGeneric P mask fuel key hash
+          unicodekeysLookupGeneric P mask fuel key hash mp
       else
-        dictkeysGenericLookup P mask fuel key hash
-    if ix == DKIX_KEY_CHANGED then
-      dictLookupAux key hash restarts
-    else
-      let mp' ← M.get
-      return (ix, if ix ≥ 0 then mp'.body.valueAt ix.toNat else none)
+        dictkeysGenericLookup P mask fuel key hash mp
+    match r with
+    | (.error e, mp') => (.error e, mp')
+    | (.ok ix, mp') =>
+      if ix == DKIX_KEY_CHANGED then dictLookupAux key hash restarts mp'
+      else (.ok (ix, if ix ≥ 0 then mp'.body.valueAt ix.toNat else none), mp')
 
 def dictLookup (key : K) (hash : Int) : DM K V (Int × Option V) :=
   dictLookupAux P key hash restartFuel
@@ -394,9 +389,8 @@ this is the `memcpy` branch. -/
 def liveEntries (k : Keys K V) : List (Ent K V) := k.entries.filterMap id
 
 /-- `dictresize` (:2064-2214). -/
-def dictResize (log2New : Nat) (unicode : Bool) : DM K V Unit := do
-  if log2New ≥ 64 then M.throw memoryError
-  let mp ← M.get
+def dictResize (log2New : Nat) (unicode : Bool) : DM K V Unit := fun mp =>
+  if log2New ≥ 64 then (.error memoryError, mp) else
   let unicode := if mp.body.isUnicode then unicode else false
   let newkeys : Keys K V := newKeysObject mp.nextId log2New unicode
   let numentries := mp.used
@@ -404,19 +398,19 @@ def dictResize (log2New : Nat) (unicode : Bool) : DM K V Unit := do
     match mp.body with
     | .split k v => splitLive k v numentries
     | .combined k => (liveEntries k).take numentries
-  let idx ← M.lift (buildIndices newkeys.mask (probeFuel log2New) newkeys.indices 0
-    (live.map (·.hash)))
-  M.put { mp with
-    nextId := mp.nextId + 1
-    body := .combined { newkeys with
-      indices := idx
-      entries := live.map some
-      usable := newkeys.usable - numentries } }
+  match buildIndices newkeys.mask (probeFuel log2New) newkeys.indices 0 (live.map (·.hash)) with
+  | .error e => (.error e, mp)
+  | .ok idx =>
+    (.ok (), { mp with
+      nextId := mp.nextId + 1
+      body := .combined { newkeys with
+        indices := idx
+        entries := live.map some
+        usable := newkeys.usable - numentries } })
 
 /-- `insertion_resize` (:1781-1785). -/
-def insertionResize (unicode : Bool) : DM K V Unit := do
-  let mp ← M.get
-  dictResize (calculateLog2Keysize (growthRate mp.used)) unicode
+def insertionResize (unicode : Bool) : DM K V Unit := fun mp =>
+  dictResize (calculateLog2Keysize (growthRate mp.used)) unicode mp
 
 /-- The body of `insert_combined_dict` after any resize (:1806-1826). -/
 def appendEntry (k : Keys K V) (key : K) (hash : Int) (value : V) : Py (Keys K V) :=
@@ -429,20 +423,21 @@ def appendEntry (k : Keys K V) (key : K) (hash : Int) (value : V) : Py (Keys K V
   | .error e => .error e
 
 /-- `insert_combined_dict` (:1787-1829). -/
-def insertCombinedDict (KO : KeyOps K) (hash : Int) (key : K) (value : V) : DM K V Unit := do
+def insertCombinedDict (KO : KeyOps K) (hash : Int) (key : K) (value : V) : DM K V Unit := fun mp0 =>
   -- gh-140551: the dict may have been cleared during the lookup.
-  let mp ← M.get
-  if mp.body.isUnicode && !KO.isStr key then
-    insertionResize false
-  let mp ← M.get
-  if mp.body.usable ≤ 0 then
-    insertionResize true
-  let mp ← M.get
-  match mp.body with
-  | .combined k =>
-    let k' ← M.lift (appendEntry k key hash value)
-    M.put { mp with body := .combined k' }
-  | .split _ _ => M.unreachable
+  match (if mp0.body.isUnicode && !KO.isStr key then insertionResize false mp0
+         else (.ok (), mp0)) with
+  | (.error e, s) => (.error e, s)
+  | (.ok _, mp1) =>
+    match (if mp1.body.usable ≤ 0 then insertionResize true mp1 else (.ok (), mp1)) with
+    | (.error e, s) => (.error e, s)
+    | (.ok _, mp2) =>
+      match mp2.body with
+      | .combined k =>
+        match appendEntry k key hash value with
+        | .ok k' => (.ok (), { mp2 with body := .combined k' })
+        | .error e => (.error e, mp2)
+      | .split _ _ => (.error .modelFuel, mp2)
 
 section Split
 variable [DecidableEq K] (P : Proto K (PyDict K V))
@@ -473,59 +468,56 @@ def insertSplitValue (value : V) (ix : Nat) : DM K V Unit := do
   | .combined _ => M.unreachable
 
 /-- Overwrite the value at `ix` (:1931-1947). -/
-def storeValue (value : V) (ix : Nat) : DM K V Unit := do
-  let mp ← M.get
+def storeValue (value : V) (ix : Nat) : DM K V Unit := fun mp =>
   match mp.body with
-  | .split k v => M.put { mp with body := .split k (v.set ix (some value)) }
+  | .split k v => (.ok (), { mp with body := .split k (v.set ix (some value)) })
   | .combined k =>
     match k.entries[ix]? with
     | some (some e) =>
-      let k' : Keys K V := { k with entries := k.entries.set ix (some { e with value := value }) }
-      M.put { mp with body := .combined k' }
-    | _ => M.unreachable
+      (.ok (), { mp with
+        body := .combined { k with entries := k.entries.set ix (some { e with value := value }) } })
+    | _ => (.error .modelFuel, mp)
 
 /-- The tail of `insertdict` (:1915-1951), after the lookup. -/
 def insertAfterLookup (key : K) (hash : Int) (value : V) (ix : Int) (old : Option V) :
-    DM K V Unit := do
+    DM K V Unit := fun mp =>
   match old with
   | none =>
-    insertCombinedDict P.toKeyOps hash key value
-    M.modify fun mp => { mp with used := mp.used + 1 }
-  | some _ =>
-    storeValue value ix.toNat
+    match insertCombinedDict P.toKeyOps hash key value mp with
+    | (.ok _, s) => (.ok (), { s with used := s.used + 1 })
+    | (.error e, s) => (.error e, s)
+  | some _ => storeValue value ix.toNat mp
 
 /-- `insertdict` (:1890-1957). -/
-def insertDict (key : K) (hash : Int) (value : V) : DM K V Unit := do
-  let mp ← M.get
+def insertDict (key : K) (hash : Int) (value : V) : DM K V Unit := fun mp =>
+  let viaLookup : Py Unit × PyDict K V :=
+    match dictLookup P key hash mp with
+    | (.ok (ix, old), mp') => insertAfterLookup P key hash value ix old mp'
+    | (.error e, mp') => (.error e, mp')
   match mp.body with
   | .split keys vals =>
     if P.isStr key then
-      let (ix, keys') ← M.lift (insertSplitKey P keys key hash)
-      M.put { mp with body := .split keys' vals }
-      if ix != DKIX_EMPTY then
-        insertSplitValue value ix.toNat
-        return ()
-      -- No space in shared keys.
-      insertAfterLookup P key hash value ix none
-    else
-      let (ix, old) ← dictLookup P key hash
-      insertAfterLookup P key hash value ix old
-  | .combined _ =>
-    let (ix, old) ← dictLookup P key hash
-    insertAfterLookup P key hash value ix old
+      match insertSplitKey P keys key hash with
+      | .error e => (.error e, mp)
+      | .ok (ix, keys') =>
+        let mp' := { mp with body := .split keys' vals }
+        if ix != DKIX_EMPTY then insertSplitValue value ix.toNat mp'
+        -- No space in shared keys.
+        else insertAfterLookup P key hash value ix none mp'
+    else viaLookup
+  | .combined _ => viaLookup
 
 /-- `insert_to_emptydict` (:1959-2004). -/
-def insertToEmptyDict (key : K) (hash : Int) (value : V) : DM K V Unit := do
-  let mp ← M.get
+def insertToEmptyDict (key : K) (hash : Int) (value : V) : DM K V Unit := fun mp =>
   let unicode := P.isStr key
   let newkeys : Keys K V := newKeysObject mp.nextId PyDict_LOG_MINSIZE unicode
   let hashpos := toU64 hash &&& (PyDict_MINSIZE - 1)
-  M.put { mp with
+  (.ok (), { mp with
     used := mp.used + 1
     nextId := mp.nextId + 1
     body := .combined { (newkeys.setIndex hashpos 0) with
       entries := [some ⟨key, hash, value⟩]
-      usable := newkeys.usable - 1 } }
+      usable := newkeys.usable - 1 } })
 
 /-- `dict_unhashable_type` (:2352-2366): only an exact `TypeError` is rewritten. -/
 def dictUnhashableType (key : K) (e : PyExc) : PyExc :=
@@ -542,13 +534,12 @@ def hashKey (key : K) : DM K V Int :=
 
 /-- `setitem_take2_lock_held` (:2676-2700), with `PyDict_SetItem`, `setitem_lock_held`
 and `_PyDict_SetItem_Take2`, which differ only in reference counting. -/
-def dictSetItem (key : K) (value : V) : DM K V Unit := do
-  let hash ← hashKey P key
-  let mp ← M.get
-  if mp.body.isEmptyKeys then
-    insertToEmptyDict P key hash value
-  else
-    insertDict P key hash value
+def dictSetItem (key : K) (value : V) : DM K V Unit := fun mp =>
+  match P.hash key with
+  | .error e => (.error (dictUnhashableType P key e), mp)
+  | .ok hash =>
+    if mp.body.isEmptyKeys then insertToEmptyDict P key hash value mp
+    else insertDict P key hash value mp
 
 /-- `_PyDict_SetItem_KnownHash_LockHeld` (:2741-2751). -/
 def dictSetItemKnownHash (key : K) (value : V) (hash : Int) : DM K V Unit := do
@@ -559,37 +550,43 @@ def dictSetItemKnownHash (key : K) (value : V) (hash : Int) : DM K V Unit := do
     insertDict P key hash value
 
 /-- `delitem_common` (:2790-2831). -/
-def delitemCommon (hash : Int) (ix : Nat) : DM K V Unit := do
-  let mp ← M.get
+def delitemCommon (hash : Int) (ix : Nat) : DM K V Unit := fun mp =>
   match mp.body with
   | .split k v =>
-    let hashpos ← M.lift (lookdictIndex k hash ix)
-    if hashpos < 0 then M.unreachable
-    M.put { mp with
-      used := mp.used - 1
-      body := .split k ((v.set ix none).deleteIndex ix) }
+    match lookdictIndex k hash ix with
+    | .error e => (.error e, mp)
+    | .ok hashpos =>
+      if hashpos < 0 then (.error .modelFuel, mp)
+      else (.ok (), { mp with
+        used := mp.used - 1
+        body := .split k ((v.set ix none).deleteIndex ix) })
   | .combined k =>
-    let hashpos ← M.lift (lookdictIndex k hash ix)
-    if hashpos < 0 then M.unreachable
-    M.put { mp with
-      used := mp.used - 1
-      body := .combined { (k.setIndex hashpos.toNat DKIX_DUMMY) with
-        entries := k.entries.set ix none
-        version := 0 } }
+    match lookdictIndex k hash ix with
+    | .error e => (.error e, mp)
+    | .ok hashpos =>
+      if hashpos < 0 then (.error .modelFuel, mp)
+      else (.ok (), { mp with
+        used := mp.used - 1
+        body := .combined { (k.setIndex hashpos.toNat DKIX_DUMMY) with
+          entries := k.entries.set ix none
+          version := 0 } })
 
 /-- `_PyDict_DelItem_KnownHash_LockHeld` (:2846-2875), and `_PyDict_DelItem_KnownHash`. -/
-def dictDelItemKnownHash (key : K) (hash : Int) : DM K V Unit := do
-  let (ix, old) ← dictLookup P key hash
-  match old with
-  | some _ =>
-    if ix == DKIX_EMPTY then M.throw (keyErr P key)
-    delitemCommon hash ix.toNat
-  | none => M.throw (keyErr P key)
+def dictDelItemKnownHash (key : K) (hash : Int) : DM K V Unit := fun mp =>
+  match dictLookup P key hash mp with
+  | (.error e, s) => (.error e, s)
+  | (.ok (ix, old), s) =>
+    match old with
+    | some _ =>
+      if ix == DKIX_EMPTY then (.error (keyErr P key), s)
+      else delitemCommon hash ix.toNat s
+    | none => (.error (keyErr P key), s)
 
 /-- `PyDict_DelItem` (:2833-2844). -/
-def dictDelItem (key : K) : DM K V Unit := do
-  let hash ← hashKey P key
-  dictDelItemKnownHash P key hash
+def dictDelItem (key : K) : DM K V Unit := fun mp =>
+  match P.hash key with
+  | .error e => (.error (dictUnhashableType P key e), mp)
+  | .ok hash => dictDelItemKnownHash P key hash mp
 
 end Split
 
