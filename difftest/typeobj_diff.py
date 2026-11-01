@@ -1248,9 +1248,72 @@ def fam_numbers(g):
     g.probe(call(name("repr"), call(name("I"), lit(5))))
 
 
+def fam_list_extend(g):
+    """list += and list.__init__: the items before a raising __next__ stay in the list, the
+    iterator can change the list, self-extension runs no Python code, and the size hint."""
+    r = g.rng
+    k = r.choice([0, 1, 2, 3])
+    exc = r.choice(["ValueError", "TypeError", "StopIteration", "KeyError"])
+    reenter = r.random() < 0.4
+    # Sizes that fail the allocator's check at once: nothing large is allocated.
+    hint = r.choice([None, None, lit(0), lit(1), lit(-1), lit("s"), NOTIMPL,
+                     lit(["bigint", str(2**63 - 1)]), lit(["bigint", str(2**61)])])
+    step = [["log", "It.__next__"],
+            ["setattr", name("s"), "n", ["bin", "+", attr(name("s"), "n"), lit(1)]],
+            ["if", ["cmp", ">", attr(name("s"), "n"), lit(k)],
+             [["raise", call(name(exc), lit("e"))]], []]]
+    if reenter:
+        step.append(["expr", call(attr(attr(name("s"), "t"), "append"), lit(99))])
+    step.append(["ret", attr(name("s"), "n")])
+    body = [g.method("__iter__", "It.__iter__", ["s"], [["log", "It.__iter__"], ["ret", name("s")]]),
+            g.method("__next__", "It.__next__", ["s"], step)]
+    if hint is not None:
+        body.append(simple_method(g, "__length_hint__", "It.__length_hint__", ["s"], hint))
+    cls(g, "It", (), body)
+    lbody = []
+    if r.random() < 0.4:
+        lbody.append(simple_method(g, "__len__", "L.__len__", ["s"], lit(3)))
+    if r.random() < 0.4:
+        lbody.append(g.method("__iter__", "L.__iter__", ["s"], [["log", "L.__iter__"], ["ret", lit(3)]]))
+    cls(g, "L", ["list"], lbody or None)
+
+    def fresh():
+        new = ["list", [lit(1)]]
+        if r.random() < 0.5:
+            new = call(name("L"), new)
+        g.main.append(["assign", "l", new])
+        g.main.append(["assign", "it", call(name("It"))])
+        g.main.append(["setattr", name("it"), "n", lit(0)])
+        g.main.append(["setattr", name("it"), "t", name("l")])
+
+    fresh()
+    g.probes(["aug", "l", "+", name("it")])
+    g.probe(name("l"))
+    fresh()
+    g.probe(call(attr(name("l"), "__init__"), name("it")))
+    g.probe(name("l"))
+    fresh()
+    g.probes(["aug", "l", "+", name("l")])
+    g.probe(name("l"))
+    fresh()
+    g.probe(call(attr(name("l"), "__init__"), name("l")))
+    g.probe(name("l"))
+    fresh()
+    g.probe(call(attr(name("l"), "__init__"), call(name("iter"), name("l"))))
+    g.probe(name("l"))
+    fresh()
+    g.probe(call(name("list"), name("it")))
+    for v in [["tuple", [lit(5)]], ["list", [lit(5)]], ["dict", [[lit(5), lit(6)]]],
+              call(attr(["dict", [[lit(5), lit(6)]]], "keys")), lit("ab"), lit(5), NONE,
+              call(name("L"), ["list", [lit(5)]])]:
+        fresh()
+        g.probes(["aug", "l", "+", v])
+        g.probe(name("l"))
+
+
 FAMILIES = [fam_calls, fam_property, fam_super, fam_mro, fam_class_stmt, fam_class_assign,
             fam_wrappers, fam_abstract, fam_type_attrs, fam_slot_updates, fam_descriptors,
-            fam_iter_seq, fam_numbers]
+            fam_iter_seq, fam_numbers, fam_list_extend]
 
 
 def gen_case(rng):

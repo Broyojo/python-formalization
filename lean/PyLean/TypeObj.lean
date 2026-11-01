@@ -4,6 +4,7 @@ import PyLean.TypeObj.PropsTypeNew
 import PyLean.TypeObj.PropsBuffer
 import PyLean.TypeObj.PropsType2
 import PyLean.TypeObj.ExcProps
+import PyLean.TypeObj.PropsList
 
 /-!
 The data model: `Objects/typeobject.c`, `Objects/object.c`, `Objects/abstract.c`,
@@ -822,6 +823,26 @@ def entries : List Entry := [
     source := "invariant: pure Python does not crash the interpreter", status := .refuted,
     prop := ``SuperBindHasType, thm := some ``superBindHasType_refuted,
     bug := some "typeobj-super-uninitialized-get" },
+  p "typeobj-list-extend-loop" "Objects/listobject.c" ["list_extend_iter_lock_held"]
+    "For every __next__, an item is in the list before __next__ runs again, and a raising __next__ ends the loop in the world it raised in."
+    "listobject.c:1262-1283"
+    ``ListExtendLoopStep ``listExtendLoopStep_proven,
+  p "typeobj-list-extend-self" "Objects/listobject.c" ["_list_extend", "list_inplace_concat"]
+    "Extending a list with itself doubles it and runs no Python code."
+    "listobject.c:1407"
+    ``ListExtendSelf ``listExtendSelf_proven,
+  p "typeobj-list-reserve" "Objects/listobject.c" ["list_extend_iter_lock_held"]
+    "A length hint that overflows m + n is ignored; otherwise an unservable total is a MemoryError."
+    "listobject.c:1241-1259"
+    ``ListReserveRule ``listReserveRule_proven,
+  p "typeobj-list-extend-iter-first" "Objects/listobject.c" ["list_extend_iter_lock_held"]
+    "A failing __iter__ ends the extension before the length hint runs."
+    "listobject.c:1227-1234"
+    ``ListExtendIterFirst ``listExtendIterFirst_proven,
+  p "typeobj-list-init-clears" "Objects/listobject.c" ["list___init___impl"]
+    "list.__init__ empties the list before it extends it."
+    "listobject.c:3491-3497"
+    ``ListInitClearsFirst ``listInitClearsFirst_proven,
   p "typeobj-super-skips" ty ["_super_lookup_descr", "do_super_lookup", "super_getattro"]
     "super looks strictly after __thisclass__ in the MRO of the object's type."
     "docs: super"

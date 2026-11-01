@@ -952,23 +952,71 @@ def callSqRepeat (f : SlotFn) (a : Val) (n : Int) : M Val := do
   | .c .list => alloc B.list (.list (listRepeat ((listOf w a).getD []) k))
   | _ => unmodelled
 
-/-- The items `_list_extend`, `Objects/listobject.c:1402`, appends. Extending a list with
-itself is `list_inplace_repeat(self, 2)` (:1407), which calls neither `__iter__` nor `__len__`;
-the other branches give the items `PySequence_List` does. -/
-def listExtendItems (rt : Rt) (self b : Val) : M (List Val) := do
+/-- Loop bound for iteration. A model limit, not a Python one. -/
+def iterFuel : Nat := 100000
+
+/-- Append `items` to the list at `addr`. -/
+def listAppendAll (addr : Addr) (items : List Val) : M Unit :=
+  modObj addr fun o =>
+    match o.body with
+    | .list xs => { o with body := .list (xs ++ items) }
+    | body => { o with body := body }
+
+/-- The reservation of `list_extend_iter_lock_held`, `Objects/listobject.c:1241-1259`. When
+`m + n` overflows the hint is ignored (:1241), so the loop still runs. Otherwise
+`list_preallocate_exact` or `list_resize` fails on a size no allocator can serve. -/
+def listReserve (m n : Int) : M Unit :=
+  if m > PyLean.ssizeMax - n then pure ()
+  else if m + n ≥ 2 ^ 48 then raiseC B.MemoryError ""
+  else pure ()
+
+/-- The loop of `list_extend_iter_lock_held`, `Objects/listobject.c:1262-1283`: each item goes
+into the list as it arrives, so the items before a raising `__next__` stay, and the iterator
+sees and can change the list. -/
+def listExtendLoop (rt : Rt) (addr : Addr) (it : Val) : Nat → M Unit
+  | 0 => raise .fuel
+  | fuel + 1 => do
+    match ← rt.iterNext it with
+    | none => pure ()
+    | some x =>
+      listAppendAll addr [x]
+      listExtendLoop rt addr it fuel
+
+/-- `list_extend_iter_lock_held`, `Objects/listobject.c:1225`. -/
+def listExtendIter (rt : Rt) (addr : Addr) (b : Val) : M Unit := do
+  let it ← rt.getIter b
+  let n ← pyLengthHint rt b 8
   let w ← getW
-  if self.is b then pure ((listOf w self).getD []) else rt.listItems b
+  listReserve ((listOf w (.obj addr)).getD []).length n
+  listExtendLoop rt addr it iterFuel
+
+/-- The keys of a dict, in order. -/
+def dictKeyList (w : World) (d : Val) : List Val := ((dictOf w d).getD []).map (·.1)
+
+/-- `_list_extend`, `Objects/listobject.c:1402`, in the order of its branches. Extending a list
+with itself is `list_inplace_repeat(self, 2)` (:1407) and runs no Python code; exact lists,
+tuples, dicts and `dict_keys` are read directly; anything else is iterated. -/
+def listExtend (rt : Rt) (self : Val) (addr : Addr) (b : Val) : M Unit := do
+  let w ← getW
+  if self.is b then listAppendAll addr ((listOf w self).getD [])
+  else
+    match b with
+    | .tuple xs => listAppendAll addr xs
+    | _ =>
+      if typeOf w b == B.list then listAppendAll addr ((listOf w b).getD [])
+      else if typeOf w b == B.dict then listAppendAll addr (dictKeyList w b)
+      else if typeOf w b == B.dictKeys then
+        match payloadOf w b with
+        | some (.seqIter (some d) _) => listAppendAll addr (dictKeyList w d)
+        | _ => unmodelled
+      else listExtendIter rt addr b
 
 /-- `sq_inplace_concat` of `list`: `list_inplace_concat` extends with any iterable and
 returns the list; the other sequences have only `sq_concat`. -/
 def callSqInplaceConcat (rt : Rt) (f : SlotFn) (a b : Val) : M Val := do
   match f, a with
   | .c .list, .obj addr =>
-    let items ← listExtendItems rt a b
-    modObj addr fun o =>
-      match o.body with
-      | .list xs => { o with body := .list (xs ++ items) }
-      | body => { o with body := body }
+    listExtend rt a addr b
     pure a
   | _, _ => callSqConcat rt f a b
 
@@ -1596,9 +1644,6 @@ def collectIter (rt : Rt) (it : Val) : Nat → M (List Val)
     | some x =>
       let rest ← collectIter rt it fuel
       pure (x :: rest)
-
-/-- Loop bound for iteration. A model limit, not a Python one. -/
-def iterFuel : Nat := 100000
 
 /-- `PySequence_Tuple`, `Objects/abstract.c:1996`, items only. The eight-item stack
 buffer of `:2021` changes nothing visible. -/

@@ -325,8 +325,7 @@ def listInit (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Unit := do
   | x :: _, .obj a =>
     -- `list___init___impl`, `Objects/listobject.c:3491-3497`: clear, then `_list_extend`.
     modObj a fun o => { o with body := .list [] }
-    let xs ← listExtendItems rt self x
-    modObj a fun o => { o with body := .list xs }
+    listExtend rt self a x
   | _, _ => unmodelled
 
 /-- `dict_init` through `dict_update_arg`, `Objects/dictobject.c`: a dict is merged, an
