@@ -2398,6 +2398,9 @@ def operator_graph(rng):
     for i, c in enumerate(cells):
         if c["k"] == "tuple":
             c["items"] = [j for j in c["items"] if cells[j]["k"] != "tuple"]
+            # `()` is a singleton in CPython; the model's cells are distinct objects
+            if not c["items"]:
+                cells[i] = {"k": "atom", "n": 0}
     return {"fn": "operator.deepcopy", "cells": cells, "root": rng.randrange(0, n)}
 
 
