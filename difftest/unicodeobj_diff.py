@@ -296,6 +296,199 @@ def run_codec_cb_encode(c):
 # ==== end error handler callbacks ====
 
 
+# ==== str.format (fn names fmt_strformat, fmt_format_map, fmt_parser, fmt_fieldsplit) ====
+
+SF_NAMES = ["", "", "", "0", "0", "1", "2", "9", "a", "a", "b", "\u0663", "\xb2", "-1", "00", "0.real", "0.imag",
+            "0.nope", "1.real", "a.real", ".real", "0[0]", "0[1]", "0[a]", "0[9]", "a[0]", "a[a]", "[0]", "0[]", "0.",
+            "0..real", "0[0][0]", "0[0].real", "0[0", "0]", "0[0]x", "0[:]", "0[!]", "0[{]", "9" * 25, "0[" + "9" * 25 + "]"]
+SF_CONVS = ["", "", "", "", "!r", "!s", "!a", "!x", "!\x00", "!\x01", "!\xe9", "!", "!rx", "!}"]
+SF_SPECS = ["", "", "", ":", ":>5", ":<5", ":^7", ":x", ":d", ":.2f", ":e", ":{}", ":{0}", ":{1}", ":{a}", ":{}>3",
+            ":>{}", ":{:{}}", ":{0:{1}}", ":{{}}", ":{", ":}", ":{{", ":\x00", ":{}{}"]
+SF_CHARS = list("{}{}[]!:.0a1 ") + ["\xe9", "\U0001f600"]
+
+
+def sf_string(rng):
+    if rng.random() < 0.12:
+        return "".join(rng.choice(SF_CHARS) for _ in range(rng.randint(0, 9)))
+    out = ""
+    for _ in range(rng.randint(0, 3)):
+        out += rng.choice(["", "", "x", "{{", "}}", "\xe9", " ", "}", "{"] if rng.random() < 0.3 else ["", "x", " "])
+        out += "{" + rng.choice(SF_NAMES) + rng.choice(SF_CONVS) + rng.choice(SF_SPECS) + "}"
+    return out + rng.choice(["", "", "x", "{{", "}}"])
+
+
+def sf_clean(rng, positional=True):
+    """A string with coherent numbering and a spec most objects take, so rendering is reached."""
+    style = rng.choice(["auto", "manual", "named"]) if positional else "named"
+    out = rng.choice(["", "x", "{{"])
+    for i in range(rng.randint(1, 3)):
+        name = {"auto": "", "manual": str(i), "named": "ab"[i % 2]}[style]
+        tail = rng.choice(["", "", ".real", "[0]"]) if rng.random() < 0.2 else ""
+        conv = rng.choice(["", "", "!r", "!s", "!a"])
+        spec = rng.choice(["", "", ":", ":>5", ":<7", ":^9", ":*^6"])
+        out += "{" + name + tail + conv + spec + "}" + rng.choice(["", " ", "}}"])
+    return out
+
+
+SF_INTS = [0, 1, -1, 2, 3, 7, 65, 255, 2 ** 63, -2 ** 63, 10 ** 30, 10 ** 4300]
+
+
+def sf_obj(rng, depth=0):
+    r = rng.random()
+    if r < 0.3:
+        return {"t": "int", "v": hex_of(rng.choice(SF_INTS))}
+    if r < 0.36:
+        return {"t": "bool", "v": rng.random() < 0.5}
+    if r < 0.46:
+        return {"t": "float", "v": format(float_bits(rng.choice(FLOATS)), "x")}
+    if r < 0.5:
+        return {"t": "complex", "re": format(float_bits(rng.choice(FLOATS)), "x"),
+                "im": format(float_bits(rng.choice(FLOATS)), "x")}
+    if r < 0.72:
+        return {"t": "str", "s": cps_of(rng.choice(["", "a", "abc", "it's", "\xe9t\xe9", "\u20ac", ">5", "x", "d",
+                                                   "<", "\U0001f600"]))}
+    if r < 0.77:
+        return {"t": "none"}
+    if depth < 2 and r < 0.84:
+        return {"t": "tuple", "items": [sf_obj(rng, depth + 1) for _ in range(rng.randint(0, 2))]}
+    if depth < 2 and r < 0.9:
+        keys = rng.sample(["a", "b", "0"], rng.randint(0, 2))
+        return {"t": "dict", "items": [[cps_of(k), sf_obj(rng, depth + 1)] for k in keys]}
+    if depth < 2:
+        return sf_user(rng, depth)
+    return {"t": "int", "v": hex_of(1)}
+
+
+def sf_resp(rng, depth, text=True):
+    if rng.random() < 0.2:
+        return {"k": "raise"}
+    if text and rng.random() < 0.8:
+        return {"k": "ok", "v": {"t": "str", "s": cps_of(rng.choice(["", "u", ">5", "<u>"]))}}
+    return {"k": "ok", "v": sf_obj(rng, depth + 1)}
+
+
+def sf_user(rng, depth):
+    attrs = [[cps_of(n), sf_resp(rng, depth, False)] for n in rng.sample(["real", "imag"], rng.randint(0, 2))]
+    return {"t": "user", "fmt": sf_resp(rng, depth), "str": sf_resp(rng, depth), "repr": sf_resp(rng, depth),
+            "attrs": attrs, "item": sf_resp(rng, depth, False) if rng.random() < 0.6 else None}
+
+
+def sf_dec(j):
+    t = j["t"]
+    if t == "int":
+        s = j["v"]
+        return -int(s[1:], 16) if s.startswith("-") else int(s, 16)
+    if t == "bool":
+        return j["v"]
+    if t == "float":
+        return float_of(j["v"])
+    if t == "complex":
+        return complex(float_of(j["re"]), float_of(j["im"]))
+    if t == "str":
+        return s_of(j["s"])
+    if t == "none":
+        return None
+    if t == "tuple":
+        return tuple(sf_dec(x) for x in j["items"])
+    if t == "dict":
+        return {s_of(k): sf_dec(v) for k, v in j["items"]}
+
+    def answer(r):
+        if r["k"] == "raise":
+            raise ValueError("boom")
+        return sf_dec(r["v"])
+    attrs = {s_of(k): v for k, v in j["attrs"]}
+
+    class U:
+        def __format__(self, spec):
+            return answer(j["fmt"])
+
+        def __str__(self):
+            return answer(j["str"])
+
+        def __repr__(self):
+            return answer(j["repr"])
+
+        def __getattr__(self, name):
+            if name in attrs:
+                return answer(attrs[name])
+            raise AttributeError(f"'U' object has no attribute '{name}'")
+    if j["item"] is not None:
+        U.__getitem__ = lambda self, k: answer(j["item"])
+    return U()
+
+
+@gen("format", 9)
+def gen_fmt_strformat(rng):
+    if rng.random() < 0.55:
+        return {"mod": "unicodeobj", "fn": "fmt_strformat", "s": cps_of(sf_clean(rng)),
+                "args": [sf_obj(rng) for _ in range(3)],
+                "kw": [[cps_of(k), sf_obj(rng)] for k in ["a", "b"]]}
+    return {"mod": "unicodeobj", "fn": "fmt_strformat", "s": cps_of(sf_string(rng)),
+            "args": [sf_obj(rng) for _ in range(rng.randint(0, 3))],
+            "kw": [[cps_of(k), sf_obj(rng)] for k in rng.sample(["a", "b"], rng.randint(0, 2))]}
+
+
+@gen("format", 3)
+def gen_fmt_format_map(rng):
+    s = sf_clean(rng, False) if rng.random() < 0.55 else sf_string(rng)
+    return {"mod": "unicodeobj", "fn": "fmt_format_map", "s": cps_of(s),
+            "map": [sf_resp(rng, 1, False) for _ in range(rng.randint(0, 4))]}
+
+
+@gen("format", 3)
+def gen_fmt_parser(rng):
+    return {"mod": "unicodeobj", "fn": "fmt_parser", "s": cps_of(sf_string(rng)), "bad": rng.random() < 0.03}
+
+
+@gen("format", 2)
+def gen_fmt_fieldsplit(rng):
+    name = rng.choice(SF_NAMES) if rng.random() < 0.7 else "".join(rng.choice(list("0a.[]x")) for _ in range(rng.randint(0, 6)))
+    return {"mod": "unicodeobj", "fn": "fmt_fieldsplit", "s": cps_of(name), "bad": rng.random() < 0.03}
+
+
+@run("fmt_strformat")
+def run_fmt_strformat(c):
+    return cps_of(s_of(c["s"]).format(*[sf_dec(a) for a in c["args"]],
+                                      **{s_of(k): sf_dec(v) for k, v in c["kw"]}))
+
+
+@run("fmt_format_map")
+def run_fmt_format_map(c):
+    items = list(c["map"])
+
+    class M:
+        def __getitem__(self, key):
+            if not items:
+                raise KeyError(key)
+            r = items.pop(0)
+            if r["k"] == "raise":
+                raise ValueError("boom")
+            return sf_dec(r["v"])
+    return cps_of(s_of(c["s"]).format_map(M()))
+
+
+@run("fmt_parser")
+def run_fmt_parser(c):
+    import _string
+    arg = 1 if c["bad"] else s_of(c["s"])
+    return [[cps_of(a), None if b is None else cps_of(b), None if s is None else cps_of(s),
+             None if k is None else cps_of(k)] for a, b, s, k in _string.formatter_parser(arg)]
+
+
+def idx_str(v):
+    return {"i": v} if isinstance(v, int) else {"s": cps_of(v)}
+
+
+@run("fmt_fieldsplit")
+def run_fmt_fieldsplit(c):
+    import _string
+    first, rest = _string.formatter_field_name_split(1 if c["bad"] else s_of(c["s"]))
+    return [idx_str(first), [[b, idx_str(v)] for b, v in rest]]
+
+# ==== end str.format ====
+
+
 # ==== codec slice (fn names codec_*) ====
 
 U8_BYTES = [0, 0x41, 0x7f, 0x80, 0x8f, 0x90, 0x9f, 0xa0, 0xbf, 0xc0, 0xc1, 0xc2, 0xdf, 0xe0, 0xe1, 0xec,
