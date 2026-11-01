@@ -6,6 +6,7 @@ import PyLean.DictSet.Readers
 import PyLean.DictSet.Mutation
 import PyLean.DictSet.Merge
 import PyLean.DictSet.Split
+import PyLean.DictSet.Reentrant
 import PyLean.DictSet.SetProps
 import PyLean.DictSet.SetRefine
 import PyLean.DictSet.Findings
@@ -188,6 +189,20 @@ def entries : List Entry := [
     statement := "If the lookup in insertdict raises, the exception is the result; dictresize refuses a size of 64 bits or more with MemoryError and changes nothing."
     source := "dictobject.c:1909-1913, 1953-1956, 2064-2214", status := .proven
     prop := ``InsertFailure, thm := some ``insertFailure_proven },
+  { id := "dict-lookup-index-valid", pyFile := "Objects/dictobject.c",
+    pyFns := ["_Py_dict_lookup", "do_lookup", "compare_generic", "compare_unicode_generic"]
+    statement := "For every key protocol, including an __eq__ that lies, raises or changes the dict in any way, an index _Py_dict_lookup reports is one the table has when it returns."
+    source := "dictobject.c:1062, 1118: dk == mp->ma_keys && ep->me_key == startkey", status := .proven
+    prop := ``LookupIndexValid, thm := some ``lookupIndexValid_proven },
+  { id := "dict-struct-survives", pyFile := "Objects/dictobject.c", pyFns := []
+    statement := "If every comparison keeps the chains and counts of a combined table, whatever it answers and whether or not it raises, then _Py_dict_lookup, insertdict and _PyDict_DelItem_KnownHash keep them, on all their outcomes. Key uniqueness is not claimed: a lying __eq__ can break it."
+    source := "invariant: _PyDict_CheckConsistency", status := .proven
+    prop := ``StructSurvives, thm := some ``structSurvives_proven
+    notes := "Combined tables only; the split case is not proved." },
+  { id := "dict-struct-hyp-met", pyFile := "Objects/dictobject.c", pyFns := []
+    statement := "An __eq__ that clears the dict it is probing meets the hypothesis of dict-struct-survives."
+    source := "dictobject.c:2959-3002", status := .proven
+    prop := ``StructHypMet, thm := some ``structHypMet_proven },
   { id := "dict-merge-guard", pyFile := "Objects/dictobject.c", pyFns := ["dict_dict_merge"]
     statement := "For every key protocol and every override: an error from the loop body is raised as it stands, even if the source changed; otherwise a changed number of items in the source raises RuntimeError('dict mutated during update'), in the state the callback left; otherwise the loop goes on from the source as it now stands."
     source := "dictobject.c:3952-3986", status := .proven
