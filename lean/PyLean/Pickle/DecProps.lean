@@ -42,8 +42,8 @@ theorem not_same_err_ok {r1 r2 : Py (DV × Heap)} (h1 : isErr r1 = true) (h2 : i
     | ok b => simp [isErr] at h1
     | error e => simp [resolved, SameOutcome, Functor.map, Except.map]
 
-/-- On every stream the two unpicklers return the same object or raise the same
-exception class and message. Source: twin agreement. -/
+/-- On every stream the two unpicklers raise the same exception class, or
+neither raises. Source: twin agreement. -/
 def LoadsTwinsExact : Prop :=
   ∀ data : Bytes, DataOnly data → clsOf (cLoads data) = clsOf (pyLoads data)
 
