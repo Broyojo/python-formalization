@@ -9,6 +9,7 @@ import PyLean.TextLibs.PathProps
 import PyLean.TextLibs.ShlexProps
 import PyLean.TextLibs.TextwrapProps
 import PyLean.TextLibs.QuopriProps
+import PyLean.TextLibs.HtmlProps
 import PyLean.TextLibs.CsvSniffProps
 
 /-!
@@ -36,6 +37,7 @@ open PyLean.TextLibs.Path
 open PyLean.TextLibs.Textwrap
 open PyLean.TextLibs.Shlex
 open PyLean.TextLibs.Quopri
+open PyLean.TextLibs.Html
 
 /-- The integer routines `IntCodesRoundTrip` drives through `runPack` and `runUnpack`. -/
 def structIntFns : List String :=
@@ -1166,7 +1168,45 @@ def entries : List Entry := [
     statement := "The pure-Python body round-trips."
     source := "the implementation disagreeing with itself: round trip", status := .refuted
     prop := ``PyRoundTrip, thm := some ``pyRoundTrip_refuted
-    bug := some "textlibs-quopri-py-soft-break-escape" }
+    bug := some "textlibs-quopri-py-soft-break-escape" },
+  { id := "textlibs-html-round-trip", pyFile := "Lib/html/__init__.py", pyFns := ["escape", "unescape", "_replace_charref"]
+    statement := "unescape(escape(s, quote)) == s for every string, on the real entity table."
+    source := "the implementation disagreeing with itself: round trip", status := .proven
+    prop := ``UnescapeEscape, thm := some ``unescapeEscape_proven },
+  { id := "textlibs-html-fast-path", pyFile := "Lib/html/__init__.py", pyFns := ["unescape"]
+    statement := "The test for '&' before the regex agrees with the regex."
+    source := "the implementation disagreeing with itself: fast and slow path", status := .proven
+    prop := ``UnescapeFastPath, thm := some ``unescapeFastPath_proven },
+  { id := "textlibs-html-escape-safe", pyFile := "Lib/html/__init__.py", pyFns := ["escape"]
+    statement := "The output of escape holds no < or >, and with quote no quotes."
+    source := "docstring of escape", status := .proven
+    prop := ``EscapeSafe, thm := some ``escapeSafe_proven },
+  { id := "textlibs-html-total", pyFile := "Lib/html/__init__.py", pyFns := ["unescape", "_replace_charref"]
+    statement := "unescape never raises on a str."
+    source := "invariant: no internal error leaking", status := .refuted
+    prop := ``UnescapeTotal, thm := some ``unescapeTotal_refuted
+    bug := some "textlibs-html-unescape-digit-limit" },
+  { id := "textlibs-html-total-narrow", pyFile := "Lib/html/__init__.py", pyFns := ["unescape", "_replace_charref"]
+    statement := "With no run of more than 4300 decimal digits, unescape does not raise."
+    source := "narrows textlibs-html-total", status := .proven
+    prop := ``UnescapeTotalNarrow, thm := some ``unescapeTotalNarrow_proven },
+  { id := "textlibs-html-numeric-twin", pyFile := "Lib/html/__init__.py", pyFns := ["_replace_charref"]
+    statement := "A decimal and a hexadecimal reference with the same value give the same result."
+    source := "the implementation disagreeing with itself", status := .refuted
+    prop := ``NumericTwin, thm := some ``numericTwin_refuted
+    bug := some "textlibs-html-unescape-digit-limit" },
+  { id := "textlibs-html-numeric-twin-narrow", pyFile := "Lib/html/__init__.py", pyFns := ["_replace_charref"]
+    statement := "With at most 4300 decimal digits, decimal and hexadecimal references of one value agree."
+    source := "narrows textlibs-html-numeric-twin", status := .proven
+    prop := ``NumericTwinNarrow, thm := some ``numericTwinNarrow_proven },
+  { id := "textlibs-html-numeric-valid", pyFile := "Lib/html/__init__.py", pyFns := ["_replace_charref"]
+    statement := "A numeric reference gives nothing or one scalar value, never a surrogate, for every number."
+    source := "docs: the HTML 5 rules", status := .proven
+    prop := ``NumericValid, thm := some ``numericValid_proven },
+  { id := "textlibs-html-named-longest", pyFile := "Lib/html/__init__.py", pyFns := ["_replace_charref"]
+    statement := "A named reference is the whole name, else the longest proper prefix of two or more characters in the table, else unchanged."
+    source := "comment at Lib/html/__init__.py:110", status := .proven
+    prop := ``NamedLongest, thm := some ``namedLongest_proven }
 ]
 
 end PyLean.TextLibs

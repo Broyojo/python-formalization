@@ -1,0 +1,43 @@
+id: textlibs-html-unescape-digit-limit
+title: "DUPLICATE of #158719 (closed, not planned): html.unescape raises ValueError on a long decimal reference"
+priority: P3
+kind: internal-error
+module: textlibs
+files: [Lib/html/__init__.py]
+functions: ["_replace_charref", "unescape"]
+summary: |
+  `html.unescape('&#' + '1' * 4301 + ';')` raises ValueError, from the digit limit of int(). So does
+  `'&#' + '0' * 4301`, whose value is 0. The hexadecimal form is not limited, and gives U+FFFD. HTMLParser
+  with the default convert_charrefs=True raises too, in text and in attribute values, so a short piece
+  of hostile HTML stops a parser that is otherwise forgiving. The HTML 5 rule is U+FFFD for any number
+  past 0x10FFFF.
+likelihood: |
+  Low by accident, easy on purpose: anything that passes untrusted text to unescape or HTMLParser.
+maybe_intended: |
+  The limit itself is intended. The maintainers closed #158719 as not planned.
+reproducer: |
+  import html
+  print(ascii(html.unescape('&#x' + '1' * 5000 + ';')))
+  try:
+      html.unescape('&#' + '1' * 4301 + ';')
+  except ValueError as e:
+      print(str(e)[:44])
+      print('REPRODUCED textlibs-html-unescape-digit-limit')
+expected: |
+  U+FFFD, as for the hexadecimal form.
+observed: |
+  python3 3.14.7: '\\ufffd', then ValueError. REPRODUCED.
+  main 3.16.0a1+dev: the same. REPRODUCED.
+promised_by: |
+  Docstring of unescape: "This function uses the rules defined by the HTML 5 standard for both valid and
+  invalid character references".
+cause: |
+  Lib/html/__init__.py:96 calls int(s[2:].rstrip(';'), 16), which has no limit, and :98 calls
+  int(s[1:].rstrip(';')), which does.
+possible_fix: |
+  Treat more than 7 significant digits as past 0x10FFFF without calling int.
+duplicates: |
+  DUPLICATE of #158719 (closed, not planned) and of bugforge html-20261003 and html.parser entries
+  (lines 132-134 of its list). Do not file. Queries: gh search issues --repo python/cpython html.unescape;
+  "unescape ValueError"; gh issue view 158719.
+lean: lean/PyLean/TextLibs/HtmlProps.lean (UnescapeTotal, NumericTwin; the Narrow versions are proven)

@@ -2698,6 +2698,51 @@ class QuopriArea:
         return common.py_result(body)
 
 
+@area("html", 4)
+class HtmlArea:
+    NAMES = ["amp", "amp;", "lt;", "gt", "quot;", "notin;", "notit;", "not", "no", "n", "nsubE;", "AElig", "AElig;", "AEligx", "CounterClockwiseContourIntegral;",
+             "CounterClockwiseContourIntegra", "xx", "x;", ";", "a" * 31, "a" * 32, "a" * 33, "a" * 32 + ";", "amp" + "b" * 29 + ";", "amp" + "b" * 30 + ";"]
+    NUMS = [0, 1, 8, 9, 10, 11, 12, 13, 14, 31, 32, 38, 60, 126, 127, 128, 129, 0x8d, 0x9b, 0x9f, 0xa0, 0xd7ff, 0xd800, 0xdfff, 0xe000, 0xfdcf, 0xfdd0, 0xfdef, 0xfdf0,
+            0xfffd, 0xfffe, 0xffff, 0x10000, 0x1fffe, 0x10fffd, 0x10fffe, 0x10ffff, 0x110000, 2**32, 2**64, 10**40]
+
+    @classmethod
+    def piece(cls, r):
+        k = r.random()
+        if k < 0.3:
+            return "&" + r.choice(cls.NAMES) + r.choice(["", "", ";", " ", "x", "&"])
+        if k < 0.55:
+            n = r.choice(cls.NUMS)
+            return "&#" + str(n) + r.choice(["", ";", ";;", "x"])
+        if k < 0.75:
+            n = r.choice(cls.NUMS)
+            return "&#" + r.choice("xX") + r.choice(["%x", "%X"]) % n + r.choice(["", ";", "g"])
+        if k < 0.8:
+            return "&#" + r.choice(["0", "1", "9"]) * r.choice([4299, 4300, 4301, 5000]) + r.choice(["", ";"])
+        if k < 0.83:
+            return "&#x" + r.choice(["0", "1", "f"]) * 5000
+        return r.choice(["&", "&&", "&#", "&#;", "&#x", "&#x;", "&#X;", "&#xg", "& ", "&;", "<", ">", '"', "\'", "a", " ", "\t", "\n", "\f", "\u0660", "&\u0660;",
+                         "\xe9", "&\xe9", "&#\u0661;", "\ud800", "#", ";"])
+
+    @classmethod
+    def gen(cls, r):
+        fn = r.choice(["escape", "unescape", "unescape", "unescape"])
+        c = {"mod": "textlibs", "fn": "html." + fn, "s": cps("".join(cls.piece(r) for _ in range(r.randint(0, 5))))}
+        if fn == "escape":
+            c["quote"] = r.random() < 0.5
+        return c
+
+    @classmethod
+    def run(cls, c):
+        import html
+
+        def body():
+            s = txt(c["s"])
+            if c["fn"] == "html.escape":
+                return cps(html.escape(s, c["quote"]))
+            return cps(html.unescape(s))
+        return common.py_result(body)
+
+
 only = os.environ.get("TEXTLIBS_ONLY")
 names = [n for n in AREAS if not only or n in only.split(",")]
 weights = [AREAS[n][1] for n in names]
