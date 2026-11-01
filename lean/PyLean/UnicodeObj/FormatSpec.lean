@@ -6,9 +6,8 @@ Objects/stringlib/localeutil.h, with `_PyUnicode_InsertThousandsGrouping`,
 Objects/unicodeobject.c:9791-9899.
 
 Abstractions:
-* `int` and `str` are rendered in full. `float` and `complex` stop at the dispatch
-  and the checks made before any digit is computed (`formatFloatChecks`); their
-  digits wait for `lean/PyLean/Binary64/`.
+* `int` and `str` are rendered in full here. `float` and `complex` stop at the
+  dispatch; `FormatNumber.lean` carries on with their digits.
 * The `'n'` type reads `localeconv()`. The model is the C locale (`decimal_point`
   `.`, no `thousands_sep`, empty `grouping`), which is what a process has unless it
   calls `locale.setlocale(LC_NUMERIC, ...)`.
@@ -399,8 +398,7 @@ def formatStrAdvanced (value spec : Str) : Py Str := do
     if f.type == 115 then formatStringInternal value f
     else .error (unknownPresentationType f.type "str")
 
-/-- The checks of `format_float_internal` before any digit is computed,
-formatter_unicode.c:1167-1171. -/
+/-- The check `format_float_internal` makes first, formatter_unicode.c:1167-1171. -/
 def formatFloatChecks (f : FormatSpec) : Py Unit :=
   if f.precision > 2 ^ 31 - 1 then .error (.valueError "precision too big") else .ok ()
 
@@ -424,34 +422,26 @@ def formatLongAdvanced (v : Int) (name : String) (spec : Str) (emptyStr : Str) :
         .ok none
     else .error (unknownPresentationType t name)
 
-/-- `_PyFloat_FormatAdvancedWriter`, formatter_unicode.c:1652-1688, up to the checks. -/
-def formatFloatAdvanced (spec : Str) : Py Unit := do
-  if spec.isEmpty then .ok ()
+/-- `_PyFloat_FormatAdvancedWriter`, formatter_unicode.c:1652-1688, up to its call of
+`format_float_internal`: `none` for the empty spec, else the parsed spec. -/
+def formatFloatDispatch (spec : Str) : Py (Option FormatSpec) := do
+  if spec.isEmpty then .ok none
   else
     let f ← parseFormatSpec "float" spec 0 62
     let t := f.type
     if t == 0 || t == 101 || t == 69 || t == 102 || t == 70 || t == 103 || t == 71 ||
-        t == 110 || t == 37 then formatFloatChecks f
+        t == 110 || t == 37 then .ok (some f)
     else .error (unknownPresentationType t "float")
 
-/-- `_PyComplex_FormatAdvancedWriter`, formatter_unicode.c:1691-1726, up to the dispatch. -/
-def formatComplexAdvanced (spec : Str) : Py Unit := do
-  if spec.isEmpty then .ok ()
+/-- `_PyComplex_FormatAdvancedWriter`, formatter_unicode.c:1691-1726, up to its call of
+`format_complex_internal`. -/
+def formatComplexDispatch (spec : Str) : Py (Option FormatSpec) := do
+  if spec.isEmpty then .ok none
   else
     let f ← parseFormatSpec "complex" spec 0 62
     let t := f.type
-    if t == 0 || t == 101 || t == 69 || t == 102 || t == 70 || t == 103 || t == 71 || t == 110 then
-      -- format_complex_internal, formatter_unicode.c:1338-1358
-      if f.precision > 2 ^ 31 - 1 then .error (.valueError "precision too big")
-      else if f.fillChar == 48 then
-        .error (.valueError "Zero padding is not allowed in complex format specifier")
-      else if f.align == 61 then
-        .error (.valueError "'=' alignment flag is not allowed in complex format specifier")
-      else .ok ()
+    if t == 0 || t == 101 || t == 69 || t == 102 || t == 70 || t == 103 || t == 71 ||
+        t == 110 then .ok (some f)
     else .error (unknownPresentationType t "complex")
-
-example : formatLongAdvanced 1234567 "int" (lit ",") [] = .ok (some (lit "1,234,567")) := by
-  decide +kernel
-example : formatLongAdvanced 255 "int" (lit "#x") [] = .ok (some (lit "0xff")) := by decide +kernel
 
 end PyLean.UnicodeObj

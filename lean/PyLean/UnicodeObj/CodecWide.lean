@@ -22,10 +22,14 @@ open PyLean
 inductive DStep where
   /-- A character and the bytes it took. -/
   | char (c n : Nat)
+  /-- Any number of characters and the bytes they took. -/
+  | multi (w : Str) (n : Nat)
   /-- Stop here. -/
   | stop
   /-- An error: `reason`, and `start`, `end` relative to the head. -/
   | fail (reason : String) (start stop : Nat)
+  /-- An exception that does not go through the error handler. -/
+  | raise (e : PyExc)
   deriving Repr, DecidableEq
 
 /-- The `while (1)` of the UTF-16 and UTF-32 decoders, with the error handler call. -/
@@ -35,7 +39,9 @@ def decodeDriver (step : List Nat → DStep) (h : ErrHandler) (enc : String) (co
   | fuel + 1, pos, rest, out =>
     match step rest with
     | .char c n => decodeDriver step h enc code input fuel (pos + n) (rest.drop n) (out ++ [c])
+    | .multi w n => decodeDriver step h enc code input fuel (pos + n) (rest.drop n) (out ++ w)
     | .stop => .ok (out, pos)
+    | .raise e => .error e
     | .fail reason s e =>
       match decodeHandlerCall h enc code input (pos + s) (pos + e) reason with
       | .error x => .error x

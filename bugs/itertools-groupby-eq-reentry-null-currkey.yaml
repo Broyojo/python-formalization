@@ -1,0 +1,101 @@
+id: itertools-groupby-eq-reentry-null-currkey
+title: "itertools.groupby segfaults: a re-entrant key __eq__ can clear currkey, and groupby_next then does Py_INCREF(NULL)"
+priority: P2
+kind: crash
+module: itertools
+files: [Modules/itertoolsmodule.c]
+functions: ["groupby_next", "_grouper_next"]
+summary: |
+  groupby_next compares tgtkey with currkey, and if they differ breaks out of its loop and reads
+  gbo->currkey without checking it (Py_INCREF at :569). A key __eq__ can re-enter during that
+  comparison: next(groupby) starts a new group, and next() on that group goes through
+  _grouper_next, which clears currvalue and currkey (:696-697). If __eq__ then returns False, the
+  outer groupby_next takes the break with currkey NULL and dereferences it. Pure Python segfaults
+  the interpreter, on 3.14.7 and on main.
+  This is not the bug fixed by gh-143543 and gh-146613 (use-after-free of the keys during the
+  comparison). Those fixes hold strong references to snapshots for the comparison; this is the read
+  of the live field after it. The regression test of gh-143543 calls next(g) in __eq__ but does not
+  read the new group, so currkey stays set and it passes.
+  All of these are needed: re-entry through next(groupby) alone survives; __eq__ returning True
+  survives (the loop goes on to groupby_step).
+  Lean: GroupbyNoCrash is refuted by running the model's own operations, with the re-entrant __eq__
+  going through the same function as top-level calls. Without re-entrancy the crash is impossible
+  for every comparison, key function and input, including raising ones
+  (itertools-groupby-no-crash-no-reentry, proven). The difftest runs random hooks in forked
+  children: over 40000 cases the model predicted a crash in 21 and CPython segfaulted in those 21.
+likelihood: |
+  Low in ordinary code: it takes a key __eq__ that advances the groupby it is being compared in,
+  and reads the new group, and then answers False. It is a crash from pure Python all the same,
+  and upstream has treated this family of reports as bugs (gh-143543, gh-146613).
+maybe_intended: |
+  No. The source comment at :547-550 says __eq__ can re-enter and mutate tgtkey and currkey, and the
+  code defends the comparison against that, but not what follows it.
+reproducer: |
+  import itertools, subprocess, sys
+  child = r"""
+  import itertools
+  armed = False
+  class K:
+      def __init__(self, v):
+          self.v = v
+      def __eq__(self, other):
+          global armed
+          if armed:
+              armed = False
+              k, g = next(gb)   # re-enter: a new group
+              next(g)           # _grouper_next clears currkey and currvalue
+          return False
+      __hash__ = None
+  gb = itertools.groupby([1, 2, 3, 4, 5, 6], key=K)
+  next(gb)
+  armed = True
+  next(gb)
+  print("survived")
+  """
+  r = subprocess.run([sys.executable, "-c", child], capture_output=True, text=True)
+  print("exit status", r.returncode)
+  if r.returncode < 0 or r.returncode == 139:
+      print('REPRODUCED itertools-groupby-eq-reentry-null-currkey')
+expected: |
+  No crash. Any Python-level outcome will do: a new group, or an exception.
+observed: |
+  python3 3.14.7 (Linux build pod): SIGSEGV, exit status -11. The faulting address resolves to
+  groupby_next (nm on the binary), called from builtin_next with no __eq__ frame above it, so after
+  the comparison returned. REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): SIGSEGV, exit status -11. The code is the same there, at
+  Modules/itertoolsmodule.c:579. REPRODUCED.
+promised_by: |
+  Undisputed invariant: Python code does not crash the interpreter. The comment at
+  Modules/itertoolsmodule.c:547-550 shows this path is meant to be safe under re-entry.
+cause: |
+  Modules/itertoolsmodule.c:556-563 compares and breaks on rcmp == 0; :569 does
+  Py_INCREF(gbo->currkey) with no check. _grouper_next at :696-697 can have cleared it during the
+  comparison, since a new grouper made by the re-entrant next(groupby) is the current one
+  (:637, :673). Variants that return True or skip reading the group do not crash, which pins the
+  fault to this read.
+possible_fix: |
+  Re-check after the comparison, before acting on rcmp == 0, so the loop reads the next item when
+  a re-entrant call consumed the key:
+      if (rcmp == -1) return NULL;
+      if (gbo->currkey != NULL && rcmp == 0) break;
+  and fall through to groupby_step otherwise. Not tested against a CPython build. A maintainer may
+  prefer raising an exception on re-entry instead.
+duplicates:
+  issues:
+    - {number: 143543, state: closed, relation: "use-after-free of the keys during the comparison in groupby_next", reason: "different fault: fixed by the snapshots this bug survives"}
+    - {number: 143738, state: merged, relation: "fix and regression test for 143543", reason: "the test does not read the new group"}
+    - {number: 145678, state: closed, relation: "use-after-free in _grouper_next", reason: "different function and fault"}
+    - {number: 146613, state: closed, relation: "use-after-free in _grouper_next", reason: "different function and fault"}
+    - {number: 147962, state: merged, relation: "fix for 146613", reason: "snapshots in _grouper_next only"}
+    - {number: 150791, state: open, relation: "data race in groupby_next", reason: "free-threaded builds; this one is single-threaded"}
+    - {number: 74532, state: closed, relation: "groupby can fail a C assert", reason: "old, different path"}
+    - {number: 142732, state: open, relation: "re-entrant use-after-free in zip_longest, islice, batched", reason: "other iterators"}
+  queries: ["groupby __eq__", "groupby reentrant", "groupby re-entrant", "groupby re-enter", "groupby segfault",
+            "groupby crash", "groupby use-after-free", "groupby UAF", "groupby currkey", "groupby tgtkey",
+            "itertools groupby NULL", "itertools groupby mutate", "itertools reentrant crash", "itertools __eq__ crash",
+            "(all of the above: word searches, with and without --include-prs, titles read)",
+            "issues 143543, 146613, 145678, 150791 and the diff of PR 143738 read",
+            "bugforge README: no itertools entries (more_itertools only)"]
+lean:
+  property: PyLean.Itertools.GroupbyNoCrash
+  theorem: PyLean.Itertools.groupbyNoCrash_refuted

@@ -1,0 +1,59 @@
+id: unicodeobj-codec-charmap-build-fffe
+title: "codecs.charmap_build maps U+FFFE in its dict branch, though the trie branch treats it as unmapped"
+priority: P5
+kind: twin-mismatch
+module: unicodeobject
+files: [Objects/unicodeobject.c]
+functions: ["PyUnicode_BuildEncodingMap"]
+summary: |
+  U+FFFE in a charmap decoding table means "undefined": charmap_decode_string raises for such a
+  byte. PyUnicode_BuildEncodingMap follows this in its trie branch, skipping the character with the
+  comment "unmapped character". Its dict branch, taken when the table has a non-BMP character, a NUL
+  after the first position, a non-NUL first character or too many pages, assigns every position
+  with no such check. A table in the dict branch therefore encodes U+FFFE to a byte that the same
+  table refuses to decode.
+likelihood: |
+  Very low. No stdlib codec is affected: all 70 table codecs in Lib/encodings use the trie.
+  charmap_build is undocumented, so this needs a third-party codec built by hand with such a table.
+maybe_intended: |
+  Probably an oversight, but of no consequence in practice. Worth mentioning only alongside other
+  findings, not on its own.
+reproducer: |
+  import codecs
+  trie = codecs.charmap_build('\x00￾a')
+  table = '\x00￾a\U00010000'
+  dict_map = codecs.charmap_build(table)
+  try:
+      codecs.charmap_encode('￾', 'strict', trie)
+      trie_result = 'encoded'
+  except UnicodeEncodeError:
+      trie_result = 'UnicodeEncodeError'
+  dict_result = codecs.charmap_encode('￾', 'strict', dict_map)[0]
+  try:
+      codecs.charmap_decode(dict_result, 'strict', table)
+      back = 'decoded'
+  except UnicodeDecodeError:
+      back = 'UnicodeDecodeError'
+  print(trie_result, dict_result, back)
+  if trie_result == 'UnicodeEncodeError' and dict_result == b'\x01' and back == 'UnicodeDecodeError':
+      print('REPRODUCED unicodeobj-codec-charmap-build-fffe')
+expected: |
+  UnicodeEncodeError in both branches.
+observed: |
+  b'\x01' in the dict branch, which charmap_decode then rejects.
+tested: "REPRODUCED on python3 3.14.7 and on main (3.16.0a1+dev) by scripts/check_bugs.py"
+promised_by: |
+  Internal consistency: the trie branch and the decoder both treat U+FFFE as undefined.
+cause: |
+  Objects/unicodeobject.c:8696-8809: the first and third loops test `ch == 0xFFFE`, and the dict loop
+  does not.
+possible_fix: |
+  Skip U+FFFE in the dict loop.
+lean: |
+  Refuted by buildMapsNoFFFE_refuted (lean/PyLean/UnicodeObj/CodecDispatch.lean).
+duplicates:
+  issues:
+    - {number: 48181, state: closed, relation: related, reason: "charmap_build is untested and undocumented; not this behaviour"}
+  queries: ["charmap_build", "PyUnicode_BuildEncodingMap", "charmap fffe", "EncodingMap undefined",
+            "decoding table FFFE encode"]
+  bugforge: "no match in vendor/bugforge-results/README.md"

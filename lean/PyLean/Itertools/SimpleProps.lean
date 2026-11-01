@@ -546,12 +546,13 @@ def CtorErrors : Prop :=
     (cChainFromIterable (α := α) (.notIterable ty) = .error e) ∧
     (∀ (args : List (Obj α)), ∃ s, cChainNew args false = .ok s) ∧
     (∀ (args : List (Obj α)), cChainNew args true = .error (.typeError "chain() takes no keyword arguments")) ∧
+    (∀ (args : List (Obj α)), ∃ s, cChainNew args true true = .ok s) ∧
     (∀ (k : String) (v : Option α), k ≠ "fillvalue" → ∀ (args : List (Obj α)),
       cZipLongestNew args [(k, v)] = .error (.typeError "zip_longest() got an unexpected keyword argument"))
 
 theorem ctorErrors_proven : CtorErrors := by
   intro α β ty
-  refine ⟨fun _ => rfl, ?_, rfl, rfl, rfl, fun _ => rfl, ?_, rfl, fun _ => ⟨_, rfl⟩, fun _ => rfl, ?_⟩
+  refine ⟨fun _ => rfl, ?_, rfl, rfl, rfl, fun _ => rfl, ?_, rfl, fun _ => ⟨_, rfl⟩, fun _ => rfl, fun _ => ⟨_, rfl⟩, ?_⟩
   · intro n strict h h1
     simp [cBatchedNew, h, show ¬ n < 1 by omega, getIter]
   · intro d o h

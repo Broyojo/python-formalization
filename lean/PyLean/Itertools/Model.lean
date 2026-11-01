@@ -3,16 +3,21 @@ import PyLean.Core
 /-!
 Shared vocabulary for the `itertools` models: `Modules/itertoolsmodule.c`
 (CPython 3.14.7) and the "Roughly equivalent to" code in
-`Doc/library/itertools.rst` (3.14.7), over iterables of Python ints.
+`Doc/library/itertools.rst` (3.14.7), over an abstract element type.
 
 Conventions:
 
-* An input iterable is a finite `List Int` (a list iterator: once exhausted it
-  stays exhausted). Its length is a `Py_ssize_t`, so `l.length ≤ ssizeMax` is a
-  type invariant wherever C counts items.
-* Predicates, key functions and binary functions are pure (`Int → Bool`,
-  `Int → Int`, `Int → Int → Int`); raising callbacks and re-entrancy are out of
-  scope.
+* An argument is an `Obj α`: an iterable with finitely many items that may raise
+  once after them (`Obj.iter`, a generator-like iterator: once finished it stays
+  finished), or a non-iterable (`Obj.notIterable`). `getIter` is
+  `PyObject_GetIter`. Its length is a `Py_ssize_t`, so `l.length ≤ ssizeMax` is
+  a type invariant wherever C counts items.
+* Callbacks (predicates, key functions, binary functions) are functions into
+  `Py`, so they may raise. Where C re-reads its state after a callback, the
+  callback may also re-enter the object: `GroupbyRaising.lean`,
+  `TeeReentry.lean` and `PairwiseReentry.lean` are the mirrors with those paths,
+  each with a theorem reducing it to the plain model when nothing re-enters.
+  Elsewhere a callback cannot re-enter.
 * A C iterator is a state `σ` and a `tp_iternext` function `σ → Step σ α`
   (`NULL` without an exception is `stop`, `NULL` with one is `raise`). The doc
   generators are written as direct recursive functions over the input list,

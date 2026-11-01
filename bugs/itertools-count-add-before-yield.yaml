@@ -1,0 +1,66 @@
+id: itertools-count-add-before-yield
+title: "itertools.count computes the next value before returning the current one: a failing add loses a value the documented equivalent yields"
+priority: P4
+kind: doc-mismatch
+module: itertools
+files: [Modules/itertoolsmodule.c, Doc/library/itertools.rst]
+functions: ["count_nextlong"]
+summary: |
+  count_nextlong adds the step before returning the current value, while the equivalent in the docs
+  yields n and adds on the following call. When the add can fail the two differ:
+  next(count(10**400, 1.0)) raises OverflowError, where the doc code yields 10**400 first. The value
+  is not recoverable from the C object by next(), though its repr shows it. A side-effecting __add__
+  also runs once more in C than in the doc code, for the same number of values.
+  Lean: count gives the doc generator's values whenever adds cannot fail and no int subclass is
+  involved (itertools-count-doc-agree-closed, proven); for floats that is exact repeated IEEE-754
+  addition (itertools-count-float). C and the spec agree on the failing path too
+  (itertools-count-consistent). itertools-count-doc-agree is refuted by a start whose add raises.
+likelihood: |
+  Very low: it takes an int beyond float range with a float step, or a number whose addition raises.
+maybe_intended: |
+  Probably an accepted detail of the implementation: long_cnt has to be replaced somewhere, and
+  adding first avoids holding a value that was already handed out. Worth one line of the same
+  upstream report at most; a maintainer can reasonably decline.
+reproducer: |
+  import itertools
+  def doc_count(start=0, step=1):
+      n = start
+      while True:
+          yield n
+          n += step
+  doc = next(doc_count(10**400, 1.0))
+  try:
+      c = next(itertools.count(10**400, 1.0))
+  except OverflowError as e:
+      c = e
+  print('doc:', str(doc)[:8], 'C:', repr(c))
+  if doc == 10**400 and isinstance(c, OverflowError):
+      print('REPRODUCED itertools-count-add-before-yield')
+expected: |
+  10**400 from the first next(), as in the doc code and the docstring's "Equivalent to".
+observed: |
+  python3 3.14.7 (Linux build pod): OverflowError: int too large to convert to float. REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Doc/library/itertools.rst:320-326 ("Roughly equivalent to") and the docstring at
+  Modules/itertoolsmodule.c:3520-3525, which says "Equivalent to", without "roughly".
+cause: |
+  Modules/itertoolsmodule.c:3643-3647: stepped_up = PyNumber_Add(long_cnt, lz->long_step), and
+  return NULL on failure, before long_cnt is returned.
+possible_fix: |
+  Say "Roughly equivalent to" in the docstring, or nothing. Computing the sum lazily would change
+  the structure for no practical gain.
+duplicates:
+  issues:
+    - {number: 154670, state: open, relation: "use-after-free in count_nextlong via re-entrant __radd__", reason: "different bug in the same lines"}
+    - {number: 72206, state: closed, relation: "count fast mode when the step rounds to 1", reason: "different bug, fixed by the PyLong_Check"}
+    - {number: 135284, state: closed, relation: "count error message for strings", reason: "different bug"}
+  queries: ["itertools count float", "itertools count OverflowError", "itertools count bool", "itertools count True",
+            "itertools count subclass", "itertools count equivalent", "itertools count __add__", "itertools count Decimal",
+            "itertools count Fraction", "itertools count step exception", "count fast_mode", "count_nextlong",
+            "itertools count first value lost", "itertools count int subclass",
+            "(all of the above: word searches, with and without --include-prs, titles filtered on count and read)",
+            "bugforge README: no itertools entries (more_itertools only)"]
+lean:
+  property: PyLean.Itertools.CountDocAgreeAll
+  theorem: PyLean.Itertools.countDocAgreeAll_refuted

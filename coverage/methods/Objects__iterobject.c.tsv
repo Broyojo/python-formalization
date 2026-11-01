@@ -2,7 +2,7 @@ file	line	endline	name	signature	status	entry	note
 Objects/iterobject.c	18	33	PySeqIter_New	PySeqIter_New(PyObject *seq)	todo		
 Objects/iterobject.c	36	42	iter_dealloc	iter_dealloc(PyObject *op)	todo		
 Objects/iterobject.c	45	50	iter_traverse	iter_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Objects/iterobject.c	53	83	iter_iternext	iter_iternext(PyObject *iterator)	todo		
+Objects/iterobject.c	53	83	iter_iternext	iter_iternext(PyObject *iterator)	modelled	typeobj-seqiter-sticky	
 Objects/iterobject.c	86	105	iter_len	iter_len(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
 Objects/iterobject.c	110	123	iter_reduce	iter_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
 Objects/iterobject.c	128	140	iter_setstate	iter_setstate(PyObject *op, PyObject *state)	todo		
