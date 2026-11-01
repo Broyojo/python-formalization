@@ -5,6 +5,7 @@ import PyLean.UnicodeObj.ObjectFromFormatTwin
 import PyLean.UnicodeObj.ObjectFromFormatWriter
 import PyLean.UnicodeObj.ObjectIterProps
 import PyLean.UnicodeObj.ObjectInternProps
+import PyLean.UnicodeObj.ObjectJoinProps
 
 /-! Registry entries of the object slice. -/
 
@@ -13,6 +14,26 @@ namespace PyLean.UnicodeObj
 open PyLean.Registry
 
 def objectEntries : List Entry := [
+  { id := "unicodeobj-join-spec", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["_PyUnicode_JoinArray"]
+    statement := "sep.join(items) is the items with the separator between them, of the canonical kind, for every list of strings that fits; one exact str is returned itself, and one item of a subclass ignores the separator."
+    source := "Doc/library/stdtypes.rst: str.join; invariant: _PyUnicode_CheckConsistency"
+    status := .proven, prop := ``JoinSpec, thm := some ``joinSpec_proven },
+  { id := "unicodeobj-join-errors", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["_PyUnicode_JoinArray"]
+    statement := "With two or more items the separator is checked first, the first item that is not a str is named by its index, and a result too long for Py_ssize_t raises OverflowError."
+    source := "invariant: no wraparound; unicodeobject.c:10320-10368"
+    status := .proven, prop := ``JoinErrors, thm := some ``joinErrors_proven },
+  { id := "unicodeobj-join-sequence", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["PyUnicode_Join"]
+    statement := "An iterator gives what a list of its items gives, the first exception from next is raised as it is, a TypeError from __iter__ becomes 'can only join an iterable', and any other exception from __iter__ is kept."
+    source := "implementation against itself: list against iterator; Objects/abstract.c:2095-2120"
+    status := .proven, prop := ``JoinSequence, thm := some ``joinSequence_proven },
+  { id := "unicodeobj-join-memcpy-safe", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["_PyUnicode_JoinArray"]
+    statement := "When join takes the memcpy path, the separator and every item have the byte width of the result."
+    source := "invariant: the memcpy of kind * len bytes at unicodeobject.c:10399-10409"
+    status := .proven, prop := ``JoinMemcpySafe, thm := some ``joinMemcpySafe_proven },
   { id := "unicodeobj-intern-canonical", pyFile := "Objects/unicodeobject.c"
     pyFns := ["intern_common"]
     statement := "For every two exact strings of equal text, in any state, the second intern returns the object of the first. Objects are compared by id."

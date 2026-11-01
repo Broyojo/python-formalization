@@ -224,8 +224,8 @@ Objects/unicodeobject.c	10159	10162	do_lower	do_lower(int kind, const void *data
 Objects/unicodeobject.c	10165	10179	do_casefold	do_casefold(int kind, const void *data, Py_ssize_t length, Py_UCS4 *res, Py_UCS4 *maxchar)	modelled	unicodeobj-text-case-ascii-fast-path,unicodeobj-text-case-output-bound	
 Objects/unicodeobject.c	10182	10206	do_title	do_title(int kind, const void *data, Py_ssize_t length, Py_UCS4 *res, Py_UCS4 *maxchar)	todo		
 Objects/unicodeobject.c	10209	10252	case_operation	case_operation(PyObject *self, Py_ssize_t (*perform)(int, const void *, Py_ssize_t, Py_UCS4 *, Py_UCS4 *))	todo		
-Objects/unicodeobject.c	10255	10277	PyUnicode_Join	PyUnicode_Join(PyObject *separator, PyObject *seq)	todo		
-Objects/unicodeobject.c	10280	10444	_PyUnicode_JoinArray	_PyUnicode_JoinArray(PyObject *separator, PyObject *const *items, Py_ssize_t seqlen)	todo		
+Objects/unicodeobject.c	10255	10277	PyUnicode_Join	PyUnicode_Join(PyObject *separator, PyObject *seq)	modelled	unicodeobj-join-sequence	pyUnicodeJoin, with sequenceFast and iterList
+Objects/unicodeobject.c	10280	10444	_PyUnicode_JoinArray	_PyUnicode_JoinArray(PyObject *separator, PyObject *const *items, Py_ssize_t seqlen)	modelled	unicodeobj-join-spec,unicodeobj-join-errors,unicodeobj-join-memcpy-safe	joinArray; the two copy loops are one, and JoinMemcpySafe is why that is sound
 Objects/unicodeobject.c	10447	10457	_PyUnicode_FastFill	_PyUnicode_FastFill(PyObject *unicode, Py_ssize_t start, Py_ssize_t length, Py_UCS4 fill_char)	todo		
 Objects/unicodeobject.c	10460	10490	PyUnicode_Fill	PyUnicode_Fill(PyObject *unicode, Py_ssize_t start, Py_ssize_t length, Py_UCS4 fill_char)	todo		
 Objects/unicodeobject.c	10493	10531	pad	pad(PyObject *self, Py_ssize_t left, Py_ssize_t right, Py_UCS4 fill)	modelled	strsearch-pad-str-bytes,strsearch-center-balanced	

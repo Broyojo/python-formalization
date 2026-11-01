@@ -1036,6 +1036,90 @@ def run_fmt_intern(c):
 
     return [rs, [show(x) for x in hs]]
 
+# ==== join (fn name fmt_join) ====
+
+JN_STRS = ["", "", "a", "abc", "\xe9", "a\xff", "€", "a€", "\U0001f600", "x\U0001f600y", "\ud800"]
+
+
+def jn_item(rng, other=0.08):
+    r = rng.random()
+    if r < other:
+        return {"t": "other", "n": rng.choice(["int", "Thing", "T" * 100])}
+    s = cps_of(rng.choice(JN_STRS))
+    return {"t": "sub" if rng.random() < 0.15 else "exact", "s": s}
+
+
+@gen("format", 4)
+def gen_fmt_join(rng):
+    r = rng.random()
+    sep = {"t": "null"} if r < 0.1 else {"t": "other", "n": rng.choice(["int", "T" * 100])} if r < 0.16 else \
+        {"t": "str", "s": cps_of(rng.choice(JN_STRS + [" ", ", "]))}
+    n = rng.choice([0, 1, 1, 2, 2, 3, 4, 6])
+    bad = rng.choice([0, 0.08, 0.3])
+    r = rng.random()
+    if r < 0.55:
+        seq = {"t": "array", "kind": rng.choice(["list", "tuple"]), "items": [jn_item(rng, bad) for _ in range(n)]}
+    elif r < 0.9:
+        steps = [jn_item(rng, bad) for _ in range(n)]
+        if rng.random() < 0.4:
+            steps.insert(rng.randint(0, n), {"exc": rng.choice(["ValueError", "TypeError"])})
+        seq = {"t": "iter", "steps": steps}
+    else:
+        seq = {"t": "getiter", "exc": rng.choice(["ValueError", "TypeError"])}
+    return {"mod": "unicodeobj", "fn": "fmt_join", "sep": sep, "seq": seq}
+
+
+class JnSub(str):
+    pass
+
+
+def jn_obj(x):
+    if x["t"] == "exact":
+        return kn_new(str_of(x["s"]))
+    if x["t"] == "sub":
+        return JnSub(str_of(x["s"]))
+    return 1 if x["n"] == "int" else type(x["n"], (), {})()
+
+
+def jn_exc(name):
+    return (TypeError if name == "TypeError" else ValueError)("boom")
+
+
+def jn_seq(q):
+    if q["t"] == "array":
+        items = [jn_obj(x) for x in q["items"]]
+        return (items if q["kind"] == "list" else tuple(items)), items
+    if q["t"] == "iter":
+        got = []
+
+        def walk():
+            for s in q["steps"]:
+                if "exc" in s:
+                    raise jn_exc(s["exc"])
+                got.append(jn_obj(s))
+                yield got[-1]
+        return walk(), got
+
+    class NoIter:
+        def __iter__(self):
+            raise jn_exc(q["exc"])
+    return NoIter(), None
+
+
+@run("fmt_join")
+def run_fmt_join(c):
+    import ctypes
+    api = ctypes.pythonapi
+    f = api.PyUnicode_Join
+    f.restype, f.argtypes = ctypes.py_object, [ctypes.c_void_p, ctypes.py_object]
+    q = c["sep"]
+    sep = None if q["t"] == "null" else (str_of(q["s"]) if q["t"] == "str" else jn_obj(q))
+    seq, items = jn_seq(c["seq"])
+    r = f(None if sep is None else id(sep), seq)
+    if items is not None and len(items) == 1 and r is items[0]:
+        return "itself"
+    return [cps_of(r), kind_of(r)]
+
 # ==== end str.format ====
 
 

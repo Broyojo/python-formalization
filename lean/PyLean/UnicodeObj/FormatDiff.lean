@@ -8,6 +8,7 @@ import PyLean.UnicodeObj.ObjectWriter
 import PyLean.UnicodeObj.ObjectFromFormat
 import PyLean.UnicodeObj.ObjectIter
 import PyLean.UnicodeObj.ObjectIntern
+import PyLean.UnicodeObj.ObjectJoin
 
 /-! Difftest handler for the formatting slice (`fn` names start with `fmt_`). -/
 
@@ -171,6 +172,35 @@ def getKOp (j : Json) : Except String KOp := do
   | "fromstring" => return .fromString (← getSeq j "s")
   | o => throw s!"bad op {o}"
 
+def getJItem (j : Json) : Except String JItem := do
+  match ← getStr j "t" with
+  | "exact" => return .exact (← getSeq j "s")
+  | "sub" => return .sub (← getSeq j "s")
+  | "other" => return .other (← getStr j "n")
+  | o => throw s!"bad item {o}"
+
+def getJExc (s : String) : PyExc :=
+  if s == "TypeError" then .typeError "boom" else .valueError "boom"
+
+def getJStep (j : Json) : Except String (Py JItem) := do
+  match j.getObjVal? "exc" with
+  | .ok e => return .error (getJExc (← e.getStr?))
+  | .error _ => return .ok (← getJItem j)
+
+def getJSep (j : Json) : Except String JSep := do
+  match ← getStr j "t" with
+  | "null" => return .null
+  | "str" => return .str (← getSeq j "s")
+  | "other" => return .other (← getStr j "n")
+  | o => throw s!"bad separator {o}"
+
+def getJSeq (j : Json) : Except String JSeq := do
+  match ← getStr j "t" with
+  | "array" => return .array (← (← (← field j "items").getArr?).toList.mapM getJItem)
+  | "iter" => return .iter (← (← (← field j "steps").getArr?).toList.mapM getJStep)
+  | "getiter" => return .getIterFails (getJExc (← getStr j "exc"))
+  | o => throw s!"bad sequence {o}"
+
 def kindJson : Kind → Json
   | .ascii => Json.arr #[toJson (1 : Nat), toJson true]
   | .ucs1 => Json.arr #[toJson (1 : Nat), toJson false]
@@ -187,6 +217,10 @@ def encIOut : IOut → Json
       match x.2.2 with
       | some i => toJson i
       | none => Json.null]) r
+
+def encJOut : JOut → Json
+  | .itself => toJson "itself"
+  | .fresh t k _ => Json.arr #[toJson t, kindJson k]
 
 def encOptStr : Option Str → Json
   | some s => toJson s
@@ -247,6 +281,8 @@ def run (fn : String) (j : Json) : Except String Json := do
         toJson (consumedOut r)]
       Json.arr #[Json.arr (trace.map step).toArray, toJson text, kindJson kind])
       (writerCreate (← getInt j "n"))
+  | "fmt_join" =>
+    return encPy encJOut (pyUnicodeJoin (← getJSep (← field j "sep")) (← getJSeq (← field j "seq")))
   | "fmt_intern" =>
     let ops ← (← (← field j "ops").getArr?).toList.mapM getKOp
     let statics ← (← (← field j "statics").getArr?).toList.mapM fun x => do
