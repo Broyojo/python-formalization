@@ -1440,7 +1440,10 @@ def getsetGetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) : M Val := do
         match NameDict.get? d.dict "__module__" with
         | some m => return m
         | none => attrErr "__module__"
-      else return .str "builtins"
+      else
+        -- `type_module`, `Objects/typeobject.c`: what `tp_name` has before its last dot.
+        let parts := d.name.splitOn "."
+        return .str (if parts.length > 1 then ".".intercalate parts.dropLast else "builtins")
     if n == "__abstractmethods__" then
       if tA == B.type then attrErr "__abstractmethods__"
       match NameDict.get? d.dict "__abstractmethods__" with

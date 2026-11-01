@@ -126,7 +126,7 @@ def emit(addr, name, t, index):
 
 
 def main():
-    rows = (CORE + all_exceptions() + [("GenericAlias", types.GenericAlias), ("Union", types.UnionType)]
+    rows = (CORE + all_exceptions() + [("types.GenericAlias", types.GenericAlias), ("typing.Union", types.UnionType)]
             + [("bytes", bytes), ("bytearray", bytearray), ("traceback", types.TracebackType)]
             + [("dict_keyiterator", type(iter({}))), ("dict_keys", type({}.keys())),
                ("str_iterator", type(iter("\u00e9")))])
