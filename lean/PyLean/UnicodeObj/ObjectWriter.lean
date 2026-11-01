@@ -174,6 +174,12 @@ def sizedWide (s : Str) (size : Int) : Str :=
 def noConsumed (r : UWriter × Py Nat) : UWriter × Py Nat :=
   (r.1, r.2.map fun _ => 0)
 
+/-- `*consumed` after `PyUnicodeWriter_DecodeUTF8Stateful`: `unicode_decode_utf8_impl` sets it on
+success, and unicodeobject.c:14187-14189 resets it on failure. -/
+def consumedOut : Py Nat → Nat
+  | .ok n => n
+  | .error _ => 0
+
 /-- `PyUnicodeWriter_WriteUCS4`, unicodeobject.c:2384-2424. `ucs4lib_find_max_char` rounds to
 the limit of a kind, which `prepareCap` does too. Unlike `WriteWideChar` nothing checks the range;
 CPython's own test marks an out of range character as `# CRASHES`, on a debug build. -/

@@ -177,7 +177,7 @@ def run (fn : String) (j : Json) : Except String Json := do
       let (w, trace) := runOps w0 ops
       let (text, kind) := w.finish
       let step (r : Py Nat) : Json := Json.arr #[encPy (fun (_ : Nat) => Json.null) r,
-        toJson (match r with | .ok n => n | .error _ => 0)]
+        toJson (consumedOut r)]
       Json.arr #[Json.arr (trace.map step).toArray, toJson text, kindJson kind])
       (writerCreate (← getInt j "n"))
   | "fmt_percent" =>

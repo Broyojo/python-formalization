@@ -677,6 +677,24 @@ theorem writerConsumed_proven : WriterConsumed := by
   simp only [applyOp]
   rw [decodeWriter_ok hd]
 
+/-- The failure half: when the stateful decoder raises, for any handler, the writer raises the same
+exception, no text stays, and `*consumed` is 0, whatever the decoder had got through. So a caller
+that retries from `*consumed` starts from the beginning of what it passed. -/
+def WriterConsumedFailure : Prop :=
+  ∀ (w : UWriter) (b : Bytes) (size : Int) (h : ErrHandler) (e : PyExc),
+    utf8DecodeStateful (sizedBytes b size) h = .error e →
+    (applyOp w (.decode b size h true)).1.text = w.text ∧
+      (applyOp w (.decode b size h true)).2 = .error e ∧
+      consumedOut (applyOp w (.decode b size h true)).2 = 0
+
+theorem writerConsumedFailure_proven : WriterConsumedFailure := by
+  intro w b size h e hd
+  simp only [utf8DecodeStateful] at hd
+  have r := decodeWriter_err hd w
+  simp only [applyOp]
+  rw [r.2]
+  exact ⟨r.1, rfl, rfl⟩
+
 /-- A writer's capacity stays the limit of a kind, whatever happens: the premise of the theorems
 below holds of every writer, including one a failed decode left too wide. -/
 def WriterCapValue : Prop := ∀ (w : UWriter) (op : WOp), CapValue w.cap →

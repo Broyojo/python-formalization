@@ -16,10 +16,15 @@ def objectEntries : List Entry := [
     source := "implementation against itself: the exact-str and exact-int fast paths and the writer's decoder against the object-level functions; Doc/c-api/unicode.rst"
     status := .proven, prop := ``WriterText, thm := some ``writerText_proven },
   { id := "unicodeobj-writer-consumed", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["PyUnicodeWriter_DecodeUTF8Stateful", "unicode_decode_utf8_writer"]
-    statement := "PyUnicodeWriter_DecodeUTF8Stateful writes the text and reports the *consumed of PyUnicode_DecodeUTF8Stateful, for every handler."
+    pyFns := []
+    statement := "PyUnicodeWriter_DecodeUTF8Stateful writes the text and reports the *consumed of PyUnicode_DecodeUTF8Stateful, for every built-in handler."
     source := "implementation against itself: the writer path against the stateful decoder; Doc/c-api/unicode.rst"
     status := .proven, prop := ``WriterConsumed, thm := some ``writerConsumed_proven },
+  { id := "unicodeobj-writer-consumed-failure", pyFile := "Objects/unicodeobject.c"
+    pyFns := []
+    statement := "When the stateful decoder raises, PyUnicodeWriter_DecodeUTF8Stateful raises the same exception, keeps no text, and sets *consumed to 0, for every built-in handler."
+    source := "implementation against itself: the writer path against the stateful decoder; unicodeobject.c:14185-14190"
+    status := .proven, prop := ``WriterConsumedFailure, thm := some ``writerConsumedFailure_proven },
   { id := "unicodeobj-writer-cap-value", pyFile := "Objects/unicodeobject.c"
     pyFns := []
     statement := "writer->maxchar stays the limit of a kind through every operation, failed ones included."
