@@ -1,11 +1,14 @@
 id: corelibs-namedtuple-nfkc-field-names
 title: "namedtuple validates field names as raw strings but compiles them after NFKC normalisation"
-priority: P3
+priority: P4
 kind: missing-validation
 module: corelibs
 files: [Lib/collections/__init__.py]
 functions: ["namedtuple"]
 summary: |
+  DUPLICATE of the closed python/cpython#78061, "namedtuple should use NFKD to find duplicate members",
+  which rhettinger closed: the checks are "just courtesy checks", and "It wasn't the goal to upstage all
+  possible syntax errors." Do not file. Kept as the record of the refuted property.
   namedtuple checks field names as plain strings (isidentifier, iskeyword, `seen`), then builds
   `__new__` by eval'ing source text, where the compiler NFKC-normalises every identifier. So a
   name that is not NFKC-stable means one thing to the checks and another to the compiler:
@@ -83,8 +86,11 @@ possible_fix: |
   raise the same SyntaxError; those would need their own one-line checks.
 duplicates:
   issues:
+    - {number: 78061, state: closed, relation: "same defect, 'namedtuple should use NFKD to find duplicate members'", reason: "duplicate; declined by the maintainer"}
+    - {number: 61533, state: closed, relation: "same area, 'namedtuple raises a SyntaxError instead of ValueError on invalid identifier'", reason: "related"}
+    - {number: 78062, state: closed, relation: "the same question for dataclasses", reason: "related"}
     - {number: 90713, state: open, relation: "same root: 'Unicode-mangled names refer inconsistently to constants', about source code", reason: "language-level, does not mention namedtuple"}
-  queries: ["namedtuple NFKC", "namedtuple normalization identifier", "namedtuple unicode field names",
+  queries: ["namedtuple NFKC (unquoted)", "namedtuple normalization identifier", "namedtuple unicode field names",
             "namedtuple SyntaxError duplicate argument", "namedtuple non-ascii field",
             "namedtuple unicode identifier normalization", "namedtuple ligature",
             "namedtuple _asdict non-ascii", "namedtuple None constant identifier field",
