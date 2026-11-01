@@ -26,7 +26,7 @@ Objects/listobject.c	549	572	list_dealloc	list_dealloc(PyObject *self)	modelled	
 Objects/listobject.c	575	627	list_repr_impl	list_repr_impl(PyListObject *v)	modelled	bytesobj-repr-shape,bytesobj-repr-terminates	
 Objects/listobject.c	630	641	list_repr	list_repr(PyObject *self)	modelled	bytesobj-repr-shape,bytesobj-repr-terminates	
 Objects/listobject.c	644	647	list_length	list_length(PyObject *a)	modelled	bytesobj-item-access	
-Objects/listobject.c	650	666	list_contains	list_contains(PyObject *aa, PyObject *el)	modelled	bytesobj-contains-agree	
+Objects/listobject.c	650	666	list_contains	list_contains(PyObject *aa, PyObject *el)	modelled	bytesobj-contains-agree,bytesobj-list-search-reentrant	
 Objects/listobject.c	669	687	list_item	list_item(PyObject *aa, Py_ssize_t i)	modelled	bytesobj-item-access	
 Objects/listobject.c	690	711	list_slice_lock_held	list_slice_lock_held(PyListObject *a, Py_ssize_t ilow, Py_ssize_t ihigh)	modelled	bytesobj-slice-reads	
 Objects/listobject.c	714	737	PyList_GetSlice	PyList_GetSlice(PyObject *a, Py_ssize_t ilow, Py_ssize_t ihigh)	modelled	bytesobj-capi-construct	
@@ -38,10 +38,10 @@ Objects/listobject.c	843	870	list_clear_impl	list_clear_impl(PyListObject *a, bo
 Objects/listobject.c	873	876	list_clear	list_clear(PyListObject *a)	modelled	bytesobj-list-ops-wf	
 Objects/listobject.c	879	883	list_clear_slot	list_clear_slot(PyObject *self)	modelled	bytesobj-list-ops-wf	
 Objects/listobject.c	892	990	list_ass_slice_lock_held	list_ass_slice_lock_held(PyListObject *a, Py_ssize_t ilow, Py_ssize_t ihigh, PyObject *v)	modelled	sequences-list-slice-assign	
-Objects/listobject.c	993	1020	list_ass_slice	list_ass_slice(PyListObject *a, Py_ssize_t ilow, Py_ssize_t ihigh, PyObject *v)	modelled	bytesobj-list-ops-wf	
+Objects/listobject.c	993	1020	list_ass_slice	list_ass_slice(PyListObject *a, Py_ssize_t ilow, Py_ssize_t ihigh, PyObject *v)	modelled	bytesobj-capi-agree,bytesobj-list-ops-wf	
 Objects/listobject.c	1023	1030	PyList_SetSlice	PyList_SetSlice(PyObject *a, Py_ssize_t ilow, Py_ssize_t ihigh, PyObject *v)	modelled	bytesobj-capi-agree	
-Objects/listobject.c	1033	1064	list_inplace_repeat_lock_held	list_inplace_repeat_lock_held(PyListObject *self, Py_ssize_t n)	modelled	sequences-list-repeat	
-Objects/listobject.c	1067	1080	list_inplace_repeat	list_inplace_repeat(PyObject *_self, Py_ssize_t n)	modelled	bytesobj-list-ops-wf	
+Objects/listobject.c	1033	1064	list_inplace_repeat_lock_held	list_inplace_repeat_lock_held(PyListObject *self, Py_ssize_t n)	modelled	bytesobj-list-contents,sequences-list-repeat	
+Objects/listobject.c	1067	1080	list_inplace_repeat	list_inplace_repeat(PyObject *_self, Py_ssize_t n)	modelled	bytesobj-list-contents,bytesobj-list-ops-wf	
 Objects/listobject.c	1083	1103	list_ass_item_lock_held	list_ass_item_lock_held(PyListObject *a, Py_ssize_t i, PyObject *v)	modelled	sequences-subscript-agree	
 Objects/listobject.c	1106	1114	list_ass_item	list_ass_item(PyObject *aa, Py_ssize_t i, PyObject *v)	modelled	bytesobj-list-del-keeps-allocation,bytesobj-list-del-like-pop,bytesobj-list-ops-wf	
 Objects/listobject.c	1128	1135	list_insert_impl	list_insert_impl(PyListObject *self, Py_ssize_t index, PyObject *object) /*[clinic end generated code: output=7f35e32f60c8cb78 input=b1987ca998a4ae2d]*/	modelled	sequences-insert-agree,sequences-insert-is-slice-assign,sequences-insert-is-slice-assign-ssize	
@@ -87,7 +87,7 @@ Objects/listobject.c	2724	2728	safe_object_compare	safe_object_compare(PyObject 
 Objects/listobject.c	2735	2767	unsafe_object_compare	unsafe_object_compare(PyObject *v, PyObject *w, MergeState *ms)	modelled	listsort-long-compare	
 Objects/listobject.c	2771	2791	unsafe_latin_compare	unsafe_latin_compare(PyObject *v, PyObject *w, MergeState *ms)	modelled	bytesobj-sort-compare-agree	
 Objects/listobject.c	2795	2816	unsafe_long_compare	unsafe_long_compare(PyObject *v, PyObject *w, MergeState *ms)	modelled	listsort-long-compare	
-Objects/listobject.c	2820	2831	unsafe_float_compare	unsafe_float_compare(PyObject *v, PyObject *w, MergeState *ms)	modelled	bytesobj-sort-compare-agree	
+Objects/listobject.c	2820	2831	unsafe_float_compare	unsafe_float_compare(PyObject *v, PyObject *w, MergeState *ms)	todo		withdrawn: the only statement compared one abstract order with itself
 Objects/listobject.c	2840	2873	unsafe_tuple_compare	unsafe_tuple_compare(PyObject *v, PyObject *w, MergeState *ms)	modelled	bytesobj-sort-compare-agree	
 Objects/listobject.c	2900	3162	list_sort_impl	list_sort_impl(PyListObject *self, PyObject *keyfunc, int reverse) /*[clinic end generated code: output=57b9f9c5e23fbe42 input=c145526281e1fb9f]*/	modelled	listsort-perm-any-compare,listsort-sort-push-assert,listsort-stack-bound	
 Objects/listobject.c	3167	3180	PyList_Sort	PyList_Sort(PyObject *v)	modelled	bytesobj-sort-compare-agree	
@@ -96,11 +96,11 @@ Objects/listobject.c	3199	3213	PyList_Reverse	PyList_Reverse(PyObject *v)	modell
 Objects/listobject.c	3216	3228	PyList_AsTuple	PyList_AsTuple(PyObject *v)	modelled	bytesobj-capi-agree	
 Objects/listobject.c	3231	3247	_PyList_AsTupleAndClear	_PyList_AsTupleAndClear(PyListObject *self)	modelled	bytesobj-capi-construct	
 Objects/listobject.c	3250	3267	_PyList_FromStackRefStealOnSuccess	_PyList_FromStackRefStealOnSuccess(const _PyStackRef *src, Py_ssize_t n)	modelled	bytesobj-capi-construct	
-Objects/listobject.c	3283	3312	list_index_impl	list_index_impl(PyListObject *self, PyObject *value, Py_ssize_t start, Py_ssize_t stop) /*[clinic end generated code: output=ec51b88787e4e481 input=40ec5826303a0eb1]*/	modelled	sequences-index-agree	
-Objects/listobject.c	3324	3347	list_count_impl	list_count_impl(PyListObject *self, PyObject *value) /*[clinic end generated code: output=eff66f14aef2df86 input=3bdc3a5e6f749565]*/	modelled	sequences-pop-remove-count-agree	
-Objects/listobject.c	3362	3382	list_remove_impl	list_remove_impl(PyListObject *self, PyObject *value) /*[clinic end generated code: output=b9b76a6633b18778 input=26c813dbb95aa93b]*/	modelled	sequences-pop-remove-count-agree	
-Objects/listobject.c	3385	3393	list_traverse	list_traverse(PyObject *self, visitproc visit, void *arg)	modelled	bytesobj-release-order	
-Objects/listobject.c	3396	3456	list_richcompare_impl	list_richcompare_impl(PyObject *v, PyObject *w, int op)	modelled	bytesobj-compare-agree	
+Objects/listobject.c	3283	3312	list_index_impl	list_index_impl(PyListObject *self, PyObject *value, Py_ssize_t start, Py_ssize_t stop) /*[clinic end generated code: output=ec51b88787e4e481 input=40ec5826303a0eb1]*/	modelled	bytesobj-list-search-reentrant,sequences-index-agree	
+Objects/listobject.c	3324	3347	list_count_impl	list_count_impl(PyListObject *self, PyObject *value) /*[clinic end generated code: output=eff66f14aef2df86 input=3bdc3a5e6f749565]*/	modelled	bytesobj-list-search-reentrant,sequences-pop-remove-count-agree	
+Objects/listobject.c	3362	3382	list_remove_impl	list_remove_impl(PyListObject *self, PyObject *value) /*[clinic end generated code: output=b9b76a6633b18778 input=26c813dbb95aa93b]*/	modelled	bytesobj-list-search-reentrant,sequences-pop-remove-count-agree	
+Objects/listobject.c	3385	3393	list_traverse	list_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: tp_traverse, excluded by the GC traversal policy
+Objects/listobject.c	3396	3456	list_richcompare_impl	list_richcompare_impl(PyObject *v, PyObject *w, int op)	modelled	bytesobj-compare-agree,bytesobj-list-search-reentrant	
 Objects/listobject.c	3459	3466	list_richcompare	list_richcompare(PyObject *v, PyObject *w, int op)	modelled	bytesobj-compare-agree	
 Objects/listobject.c	3481	3502	list___init___impl	list___init___impl(PyListObject *self, PyObject *iterable) /*[clinic end generated code: output=0f3c21379d01de48 input=b3f3fe7206af8f6b]*/	modelled	bytesobj-list-contents	
 Objects/listobject.c	3505	3527	list_vectorcall	list_vectorcall(PyObject *type, PyObject * const*args, size_t nargsf, PyObject *kwnames)	modelled	bytesobj-capi-construct	
@@ -115,14 +115,14 @@ Objects/listobject.c	3688	3854	list_ass_subscript_lock_held	list_ass_subscript_l
 Objects/listobject.c	3857	3872	list_ass_subscript	list_ass_subscript(PyObject *self, PyObject *item, PyObject *value)	modelled	sequences-list-slice-assign	
 Objects/listobject.c	3982	3999	list_iter	list_iter(PyObject *seq)	modelled	bytesobj-list-iter-safe,bytesobj-list-iter-yields	
 Objects/listobject.c	4002	4009	listiter_dealloc	listiter_dealloc(PyObject *self)	excluded		no-behaviour: drops the iterator's single reference and frees it; there is no order to observe, and object lifetime is outside the model
-Objects/listobject.c	4012	4016	listiter_traverse	listiter_traverse(PyObject *it, visitproc visit, void *arg)	modelled	bytesobj-release-order	
+Objects/listobject.c	4012	4016	listiter_traverse	listiter_traverse(PyObject *it, visitproc visit, void *arg)	excluded		no-behaviour: tp_traverse, excluded by the GC traversal policy
 Objects/listobject.c	4019	4040	listiter_next	listiter_next(PyObject *self)	modelled	bytesobj-list-iter-releases,bytesobj-list-iter-safe,bytesobj-list-iter-yields	
 Objects/listobject.c	4043	4054	listiter_len	listiter_len(PyObject *self, PyObject *Py_UNUSED(ignored))	modelled	bytesobj-list-iter-hint	
 Objects/listobject.c	4057	4060	listiter_reduce	listiter_reduce(PyObject *it, PyObject *Py_UNUSED(ignored))	modelled	bytesobj-list-iter-hint	
 Objects/listobject.c	4063	4077	listiter_setstate	listiter_setstate(PyObject *self, PyObject *state)	modelled	bytesobj-list-iter-hint,bytesobj-list-iter-safe	
 Objects/listobject.c	4141	4154	list___reversed___impl	list___reversed___impl(PyListObject *self) /*[clinic end generated code: output=b166f073208c888c input=eadb6e17f8a6a280]*/	modelled	bytesobj-list-iter-safe,bytesobj-list-iter-yields	
 Objects/listobject.c	4157	4163	listreviter_dealloc	listreviter_dealloc(PyObject *self)	excluded		no-behaviour: drops the iterator's single reference and frees it; there is no order to observe, and object lifetime is outside the model
-Objects/listobject.c	4166	4170	listreviter_traverse	listreviter_traverse(PyObject *it, visitproc visit, void *arg)	modelled	bytesobj-release-order	
+Objects/listobject.c	4166	4170	listreviter_traverse	listreviter_traverse(PyObject *it, visitproc visit, void *arg)	excluded		no-behaviour: tp_traverse, excluded by the GC traversal policy
 Objects/listobject.c	4173	4195	listreviter_next	listreviter_next(PyObject *self)	modelled	bytesobj-list-iter-safe,bytesobj-list-iter-yields,bytesobj-list-reviter-releases,bytesobj-list-reviter-stops	
 Objects/listobject.c	4198	4206	listreviter_len	listreviter_len(PyObject *self, PyObject *Py_UNUSED(ignored))	modelled	bytesobj-list-iter-hint	
 Objects/listobject.c	4209	4212	listreviter_reduce	listreviter_reduce(PyObject *it, PyObject *Py_UNUSED(ignored))	modelled	bytesobj-list-iter-hint	

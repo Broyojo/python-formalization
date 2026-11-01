@@ -11,6 +11,7 @@ import ctypes
 import gc
 import operator
 import sys
+import weakref
 
 import common
 
@@ -2023,6 +2024,10 @@ def _build_exporter(spec):
     kind = spec["kind"]
     data = bytes(spec["data"])
     if kind == "bytes":
+        if "hashrel" in spec:
+            e = HashBytes(data)
+            e.fails = spec["unhash"] is not None
+            return e
         return data
     if kind == "bytearray":
         return bytearray(data)
@@ -2286,11 +2291,70 @@ def _gen_pack_fail(rng):
     return {"mod": "bytesobj", "fn": "mem.script", "mem": list(data), "exps": exps, "specs": [spec], "ops": ops}
 
 
+def _spec_bytearray(rng, n=8):
+    return {"kind": "bytearray", "data": _rand_bytes(rng, n), "buf": 0, "len": n, "itemsize": 1,
+            "readonly": False, "ndim": 1, "format": "B", "shape": [n], "strides": [1], "suboffsets": None,
+            "unhash": {"cls": "TypeError", "msg": "unhashable type: 'bytearray'"}}
+
+
+def _script_of(spec, ops, extra=()):
+    keys = ("buf", "len", "itemsize", "readonly", "ndim", "format", "shape", "strides", "suboffsets",
+            "unhash") + tuple(extra)
+    return {"mod": "bytesobj", "fn": "mem.script", "mem": list(spec["data"]),
+            "exps": [{k: spec[k] for k in keys}], "specs": [spec], "ops": ops}
+
+
+def _gen_failure(rng):
+    """A callback's failure, not a value."""
+    return rng.choice([{"raise": rng.choice(list(_RAISES))}, {"wrong": rng.choice(list(_WRONG))}])
+
+
+def _gen_effect(rng):
+    """One short script for each effect of the Python code a memoryview runs. Random scripts
+    rarely line up the object, the operation and the view that each of these needs."""
+    k = rng.randrange(7)
+    spec = _spec_bytearray(rng)
+    view = ["view", {"exp": 0, "rel": None}]
+    tail = [["tobytes", 0, None], ["release", 0], ["tobytes", 0, None]]
+    if k == 0:      # `__buffer__`: memoryview(x), `==` (cleared) and a slice assignment
+        bad = {"exp": 0, "rel": None, "end": _gen_failure(rng)}
+        return _script_of(spec, [["view", bad], view, ["set", 0, {"slice": [0, 2, None], "rel": None}, bad],
+                                 ["cmp", 0, bad, "eq"]] + tail)
+    if k == 1:      # `__release_buffer__`, on the last view, or at the end of `==`
+        hooked = {"exp": 0, "rel": None, "hook": 0}
+        if rng.random() < 0.5:
+            return _script_of(spec, [view, ["view", hooked], ["tobytes", 1, None], ["release", 1]] + tail)
+        return _script_of(spec, [view, ["cmp", 0, hooked, rng.choice(["eq", "ne"])]] + tail)
+    if k == 2:      # a weakref callback runs after the release in `memory_dealloc`
+        return _script_of(spec, [view, view, ["weak", 1, 0], ["drop", 1]] + tail)
+    if k == 3:      # `__hash__` of a real exporter, with `self` holding an export
+        spec = dict(spec, kind="bytes", readonly=True, hashrel=0,
+                    unhash=rng.choice([None, {"cls": "ValueError", "msg": "boom"}]))
+        h = rng.randrange(2)     # on view 0, `self.release()`; on view 1, the release of another view
+        return _script_of(spec, [view, view, ["hash", h], ["hash", h]] + tail, ("hashrel",))
+    if k == 4:      # a slice part that fails, in `PySlice_Unpack`'s order
+        how = rng.choice([_gen_failure(rng), {"notindex": True}])
+        fail = dict(how, part=rng.choice(["start", "stop", "step"]))
+        rel = None if "notindex" in how else rng.choice([None, 0])
+        parts = rng.choice([[0, 4, 2], [1, 4, None], [0, 4, 0], [None, None, 0]])
+        key = {"slice": parts, "rel": rel, "fail": fail}
+        return _script_of(spec, [view, rng.choice([["get", 0, key], ["set", 0, key, {"bytes": [1, 2]}]])] + tail)
+    if k == 5:      # a `sep` with `__len__`: `self` holds an export only if contiguous
+        sep = {"lenobj": rng.choice([1, 2, 0, -1, _gen_failure(rng)]), "rel": rng.choice([None, 0, 1])}
+        return _script_of(spec, [view, ["get", 0, {"slice": [None, None, 2], "rel": None}],
+                                 ["hex", rng.randrange(2), sep, None], ["tobytes", 1, None]] + tail)
+    value = {"eqobj": rng.choice([True, False, False, {"raise": rng.choice(list(_RAISES))}]),
+             "rel": rng.choice([None, None, 0])}
+    return _script_of(spec, [view, rng.choice([["count", 0, value], ["index", 0, value, None, None]])] + tail)
+
+
 def gen_mem(rng):
     r = rng.random()
     if r < 0.15:
         return _gen_low(rng)
-    return _gen_pack_fail(rng) if r < 0.2 else _gen_script(rng)
+    if r < 0.2:
+        return _gen_pack_fail(rng)
+    return _gen_effect(rng) if r < 0.3 else _gen_script(rng)
 
 
 def _item_json(x):
@@ -2375,18 +2439,67 @@ class Exporter:
         return memoryview(self.ex)
 
 
+class HookExporter(Exporter):
+    """An exporter whose `__release_buffer__` releases a view."""
+
+    def __init__(self, ex, fire, ending, hook):
+        super().__init__(ex, fire, ending)
+        self.hook = hook
+
+    def __release_buffer__(self, view):
+        self.hook()
+        view.release()
+
+
+class Len:
+    def __init__(self, n, fire):
+        self.n, self.fire = n, fire
+
+    def __len__(self):
+        self.fire()
+        return _end(self.n)
+
+
+class Eql:
+    def __init__(self, b, fire):
+        self.b, self.fire = b, fire
+
+    def __eq__(self, other):
+        self.fire()
+        return _end(self.b)
+
+    __hash__ = None
+
+
+class HashBytes(bytes):
+    """A real exporter with a Python `__hash__`: a `memoryview` of an `Exporter` hashes the
+    wrapper of `__buffer__`, so only this reaches `PyObject_Hash(view->obj)` with Python code."""
+    on_hash = None
+    fails = False
+
+    def __hash__(self):
+        self.on_hash()
+        if self.fails:
+            raise ValueError("boom")
+        return bytes.__hash__(self)
+
+
 class _Script:
     """Runs one script against the real objects."""
 
     def __init__(self, case):
         self.specs = case["specs"]
         self.exps = [_build_exporter(s) for s in self.specs]
+        for e in self.exps:
+            if isinstance(e, HashBytes):
+                e.on_hash = lambda: self.rel({"rel": 0})()
         self.handles = []
         self.dropped = set()
         self.iters = []
         self.hashed = {}
         self.pinned = set()
         self.pinned_objs = []
+        self.weak = []
 
     def pick(self, h):
         if not self.handles:
@@ -2437,16 +2550,28 @@ class _Script:
         fire = self.rel(j)
         if "exp" in j:
             ex = self.exps[j["exp"]]
-            return (ex if raw else Exporter(ex, fire, j.get("end")),)
+            if "hook" in j:
+                return (HookExporter(ex, fire, j.get("end"), self.rel({"rel": j["hook"]})),)
+            return (ex if raw and "end" not in j else Exporter(ex, fire, j.get("end")),)
         if "idx" in j:
             return (Idx(j["idx"], fire),)
         if "flt" in j:
             return (Flt(j["flt"], fire),)
+        if "lenobj" in j:
+            return (Len(j["lenobj"], fire),)
+        if "eqobj" in j:
+            return (Eql(j["eqobj"], fire),)
         return (Bln(j["bln"], fire),)
 
     def key_elem(self, j):
         if isinstance(j, dict) and "slice" in j:
             a, b, c = j["slice"]
+            if "fail" in j:
+                f = j["fail"]
+                parts = [a, b, c]
+                parts[("start", "stop", "step").index(f["part"])] = (
+                    "x" if "notindex" in f else Idx(f, self.rel(j)))
+                return (slice(*parts),)
             if j.get("rel") is not None:
                 fire = self.rel(j)
                 if a is not None:
@@ -2598,7 +2723,7 @@ class _Script:
         if name == "release":
             return py(lambda: m.release())
         if name == "enter":
-            return py(lambda: (m.__enter__(), None)[1])
+            return py(lambda: {"same": m.__enter__() is m})
         if name == "exit":
             return py(lambda: m.__exit__(None, None, None))
         if name == "cmp":
@@ -2651,6 +2776,10 @@ class _Script:
             return py(at)
         if name == "repr":
             return py(lambda: repr(m).split(" at ")[0])
+        if name == "weak":
+            fire = self.rel({"rel": op[2]})
+            self.weak.append(weakref.ref(m, lambda _: fire()))
+            return {"ok": None}
         if name == "drop":
             del m
             if sys.getrefcount(self.handles[i]) != 2:

@@ -115,16 +115,239 @@ theorem tupleContains_true (E : ElemOps α ρ) (el : α) (l : List α)
         obtain ⟨y, hy, hr⟩ := ih h
         exact ⟨y, List.mem_cons_of_mem _ hy, hr⟩
 
-/-- The identity shortcut of `PyObject_RichCompareBool` under `Py_EQ`: an element is
-always in a tuple that holds that very object, even a NaN-like one, unless an
-earlier comparison raises. -/
+/-- The identity shortcut of `PyObject_RichCompareBool` under `Py_EQ`: an object is in a tuple
+that holds that very object at any position, even a NaN-like one, unless an earlier comparison
+raises or finds it first. Hypothesis: the comparisons before that position succeed, which is the
+case; `tupleContains_exists` is the other direction. -/
 def ContainsIdentity : Prop :=
-  ∀ (α ρ : Type) (E : ElemOps α ρ) (x : α), E.same x x = true →
-    tupleContains E x [x] = .ok true
+  ∀ (α ρ : Type) (E : ElemOps α ρ) (x y : α) (pre post : List α), E.same y x = true →
+    (∀ z ∈ pre, ∃ b, richBool E .eq z x = .ok b) →
+    tupleContains E x (pre ++ y :: post) = .ok true
 
 theorem containsIdentity_proven : ContainsIdentity := by
-  intro α ρ E x h
-  simp [tupleContains, richBool, h]
+  intro α ρ E x y pre post h hp
+  induction pre with
+  | nil => simp [tupleContains, richBool, h]
+  | cons z zs ih =>
+    obtain ⟨b, hb⟩ := hp z (by simp)
+    have hr := ih (fun w hw => hp w (by simp [hw]))
+    cases b with
+    | true => simp [tupleContains, hb]
+    | false => simp only [List.cons_append, tupleContains, hb, hr]
+
+/-! ## A comparison that changes the list -/
+
+/-- What a comparison can do is Python code: it can raise, and it can replace the list, but it
+cannot produce the model's marker for a C-level fault. -/
+def NoFault (cmp : Cmp α) : Prop := ∀ o a b msg, (cmp o a b).1 ≠ .error (cUB msg)
+
+theorem containsLoop_safe (cmp : Cmp α) (hc : NoFault cmp) (el : α) (fuel : Nat) (i : Int) (o : LObj α)
+    (msg : String) : (containsLoop cmp el fuel i o).1 ≠ .error (cUB msg) := by
+  induction fuel generalizing i o with
+  | zero =>
+    simp only [containsLoop]
+    intro h
+    injection h with h
+    simp [cUB] at h
+    cases h
+  | succ fuel ih =>
+    simp only [containsLoop]
+    cases hg : listGetItemRef o.items i with
+    | none => simp
+    | some item =>
+      simp only
+      have hx := hc o item el msg
+      rcases hr : cmp o item el with ⟨r, s⟩
+      rw [hr] at hx
+      simp only at hx
+      cases r with
+      | ok b =>
+        cases b with
+        | true => simp
+        | false => exact ih _ _
+      | error e => exact hx
+
+theorem indexLoop_safe (cmp : Cmp α) (hc : NoFault cmp) (v : α) (stop : Int) (fuel : Nat) (i : Int)
+    (o : LObj α) (msg : String) : (indexLoop cmp v stop fuel i o).1 ≠ .error (cUB msg) := by
+  induction fuel generalizing i o with
+  | zero =>
+    simp only [indexLoop]
+    intro h
+    injection h with h
+    simp [cUB] at h
+    cases h
+  | succ fuel ih =>
+    simp only [indexLoop]
+    split
+    · cases hg : listGetItemRef o.items i with
+      | none => simp
+      | some item =>
+        simp only
+        have hx := hc o item v msg
+        rcases hr : cmp o item v with ⟨r, s⟩
+        rw [hr] at hx
+        simp only at hx
+        cases r with
+        | ok b =>
+          cases b with
+          | true => simp
+          | false => exact ih _ _
+        | error e => simpa using hx
+    · simp
+
+theorem countLoop_safe (same : α → α → Bool) (cmp : Cmp α) (hc : NoFault cmp) (v : α) (fuel : Nat)
+    (i n : Int) (o : LObj α) (msg : String) : (countLoop same cmp v fuel i n o).1 ≠ .error (cUB msg) := by
+  induction fuel generalizing i n o with
+  | zero =>
+    simp only [countLoop]
+    intro h
+    injection h with h
+    simp [cUB] at h
+    cases h
+  | succ fuel ih =>
+    simp only [countLoop]
+    cases hg : listGetItemRef o.items i with
+    | none => simp
+    | some item =>
+      simp only
+      split
+      · exact ih _ _ _
+      · have hx := hc o item v msg
+        rcases hr : cmp o item v with ⟨r, s⟩
+        rw [hr] at hx
+        simp only at hx
+        cases r with
+        | ok b =>
+          cases b with
+          | true => exact ih _ _ _
+          | false => exact ih _ _ _
+        | error e => simpa using hx
+
+theorem resizeTo_err (o : LObj α) (items : List α) (e : PyExc) (h : resizeTo o items = .error e) :
+    e = memoryError := by
+  unfold resizeTo at h
+  cases hl : listResize o.allocated o.hasItems o.items.length items.length with
+  | ok p =>
+    rw [hl] at h
+    simp at h
+  | error x =>
+    rw [hl] at h
+    simp only [Except.error.injEq] at h
+    subst h
+    unfold listResize at hl
+    split at hl
+    · simp at hl
+    · dsimp only at hl
+      split at hl
+      · simp at hl
+      · simpa using hl.symm
+
+theorem listAssSlice_err (o : LObj α) (i j : Int) (v : Option (List α)) (e : PyExc)
+    (h : listAssSlice o i j v = .error e) : e = memoryError := by
+  unfold listAssSlice at h
+  dsimp only at h
+  repeat' (split at h)
+  all_goals first
+    | (simp at h; done)
+    | exact resizeTo_err _ _ _ h
+
+theorem memoryError_ne (msg : String) : memoryError ≠ cUB msg := by
+  intro h
+  injection h with h1
+  exact absurd h1 (by decide)
+
+theorem removeLoop_safe (cmp : Cmp α) (hc : NoFault cmp) (v : α) (fuel : Nat) (i : Int) (h0 : 0 ≤ i)
+    (o : LObj α) (msg : String) : (removeLoop cmp v fuel i o).1 ≠ .error (cUB msg) := by
+  induction fuel generalizing i o with
+  | zero =>
+    simp only [removeLoop]
+    intro h
+    injection h with h
+    simp [cUB] at h
+    cases h
+  | succ fuel ih =>
+    simp only [removeLoop]
+    split
+    · rename_i hlt
+      have hlt' : i.toNat < o.items.length := by omega
+      have hs : slot o.items i = some o.items[i.toNat] := by simp [slot, h0, hlt']
+      rw [hs]
+      simp only
+      have hx := hc o o.items[i.toNat] v msg
+      rcases hr : cmp o o.items[i.toNat] v with ⟨r, s⟩
+      rw [hr] at hx
+      simp only at hx
+      cases r with
+      | ok b =>
+        cases b with
+        | true =>
+          simp only
+          cases ha : listAssSlice s i (i + 1) none with
+          | ok x => simp
+          | error e =>
+            have := listAssSlice_err _ _ _ _ _ ha
+            subst this
+            simpa using memoryError_ne msg
+        | false => exact ih _ (by omega) _
+      | error e => simpa using hx
+    · simp [PyLean.Sequences.cUB, cUB]
+
+/-- `cmp_loop` rereads sizes and slots on every pass, so a comparison that changes either list
+cannot make it read outside them. -/
+theorem cmpLoop_safe (same : α → α → Bool) (cmp : Cmp2 α) (hc : ∀ st a b msg, (cmp st a b).1 ≠ .error (cUB msg))
+    (fuel : Nat) (i : Int) (h0 : 0 ≤ i) (st : List α × List α) (msg : String) :
+    (cmpLoop same cmp fuel i st).1 ≠ .error (cUB msg) := by
+  induction fuel generalizing i st with
+  | zero =>
+    simp only [cmpLoop]
+    intro h
+    injection h with h
+    simp [cUB] at h
+    cases h
+  | succ fuel ih =>
+    simp only [cmpLoop]
+    split
+    · rename_i hlt
+      have h1 : i.toNat < st.1.length := by omega
+      have h2 : i.toNat < st.2.length := by omega
+      have hs1 : slot st.1 i = some st.1[i.toNat] := by simp [slot, h0, h1]
+      have hs2 : slot st.2 i = some st.2[i.toNat] := by simp [slot, h0, h2]
+      rw [hs1, hs2]
+      simp only
+      split
+      · exact ih _ (by omega) _
+      · have hx := hc st st.1[i.toNat] st.2[i.toNat] msg
+        rcases hr : cmp st st.1[i.toNat] st.2[i.toNat] with ⟨r, s⟩
+        rw [hr] at hx
+        simp only at hx
+        cases r with
+        | ok b =>
+          cases b with
+          | true => exact ih _ (by omega) _
+          | false => simp
+        | error e => simpa using hx
+    · simp
+
+/-- `x in l`, `l.index`, `l.count`, `l.remove` and the search of `l == r` on a comparison that can do
+anything Python can: raise, and change the list, however often. No path reads outside the items, in
+the C sense. The list is reread on each pass (`list_get_item_ref`, the size tests of :3361-3382
+and :3416-3432), which is what these functions are written for; `l.remove` then deletes with the old
+index on the current list, and `list_ass_slice` clips it. Hypothesis: `NoFault`. -/
+def ListSearchSafe : Prop :=
+  ∀ (α : Type) (cmp : Cmp α) (cmp2 : Cmp2 α) (same : α → α → Bool) (o : LObj α) (x : α) (fuel : Nat)
+    (stop : Int) (v w : List α) (msg : String), NoFault cmp →
+    (∀ st a b m, (cmp2 st a b).1 ≠ .error (cUB m)) →
+    (listContains cmp fuel o x).1 ≠ .error (cUB msg) ∧
+    (indexLoop cmp x stop fuel 0 o).1 ≠ .error (cUB msg) ∧
+    (listCount same cmp fuel o x).1 ≠ .error (cUB msg) ∧
+    (listRemove cmp fuel o x).1 ≠ .error (cUB msg) ∧
+    (cmpLoop same cmp2 fuel 0 (v, w)).1 ≠ .error (cUB msg)
+
+theorem listSearchSafe_proven : ListSearchSafe := by
+  intro α cmp cmp2 same o x fuel stop v w msg hc hc2
+  exact ⟨containsLoop_safe cmp hc x fuel 0 o msg, indexLoop_safe cmp hc x stop fuel 0 o msg,
+    countLoop_safe same cmp hc x fuel 0 0 o msg, removeLoop_safe cmp hc x fuel 0 (by omega) o msg,
+    cmpLoop_safe same cmp2 hc2 fuel 0 (by omega) (v, w) msg⟩
 
 /-! ## index -/
 
