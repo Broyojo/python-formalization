@@ -5,6 +5,7 @@ import PyLean.Pickle.LongLineProps
 import PyLean.Pickle.IntNarrow
 import PyLean.Pickle.LongShortest
 import PyLean.Pickle.TextRoundtrip
+import PyLean.Pickle.OpenProps
 import PyLean.Pickle.EncProps
 import PyLean.Pickle.EncFrame
 import PyLean.Pickle.DecProps
@@ -23,7 +24,7 @@ open PyLean.Registry
 
 def entries : List Entry := [
   { id := "pickle-decode-encode-long", pyFile := "Lib/pickle.py"
-    pyFns := ["encode_long", "decode_long"]
+    pyFns := ["encode_long", "decode_long", "load_counted_long"]
     statement := "decode_long(encode_long(x)) == x for every int x, through the trimmed two's-complement encoding at every byte boundary."
     source := "docstrings of encode_long and decode_long, Lib/pickle.py:356-404", status := .proven
     prop := ``DecodeEncodeLong, thm := some ``decodeEncodeLong_proven },
@@ -33,7 +34,7 @@ def entries : List Entry := [
     source := "docstrings of encode_long and decode_long, Lib/pickle.py:356-404; LONG1/LONG4 in Lib/pickletools.py", status := .proven
     prop := ``EncodeLongShortest, thm := some ``encodeLongShortest_proven },
   { id := "pickle-text-int-roundtrip", pyFile := "Lib/pickle.py"
-    pyFns := ["save_long", "load_int", "load_long"]
+    pyFns := ["_Pickler.save_long", "_Unpickler.load_int", "_Unpickler.load_long", "load_int", "load_long"]
     statement := "For every int with at most 4300 decimal digits, the protocol 0/1 lines I<x> and L<x>L read back as the int x in both unpicklers, never as a bool."
     source := "pickle round trip, Doc/library/pickle.rst", status := .proven
     prop := ``TextIntRoundtrip, thm := some ``textIntRoundtrip_proven
@@ -45,8 +46,14 @@ def entries : List Entry := [
     prop := ``SaveLongTwinsAgree, thm := some ``saveLongTwinsAgree_refuted
     bug := some "pickle-c-long4-untrimmed-size"
     notes := "C checks the untrimmed byte count, so it refuses -(2**(8*(2**31-1)-1)), which Python encodes in LONG4." },
+  { id := "pickle-save-long-same-outcome", pyFile := "Modules/_pickle.c"
+    pyFns := ["save_long", "_Pickler.save_long", "encode_long"]
+    statement := "For every int except -(2**(8*(2**31-1)-1)) and every protocol 0-5, the C and Python save_long both raise or return the same bytes."
+    source := "invariant: C accelerator vs pure-Python twin", status := .proven
+    prop := ``SaveLongSameOutcome, thm := some ``saveLongSameOutcome_proven
+    notes := "The exclusion is the single counterexample of pickle-save-long-twins. Past the LONG4 limit both raise, with different classes." },
   { id := "pickle-save-long-twins-sized", pyFile := "Modules/_pickle.c"
-    pyFns := ["save_long"]
+    pyFns := ["save_long", "_Pickler.save_long", "encode_long"]
     statement := "For every int with bit_length/8 + 1 <= 0x7fffffff and every protocol 0-5, the C and Python save_long produce the same bytes, so they choose among BININT1, BININT2, BININT, LONG1, LONG4, INT and LONG identically at every boundary."
     source := "invariant: C accelerator vs pure-Python twin", status := .proven
     prop := ``SaveLongTwinsAgreeSized, thm := some ``saveLongTwinsAgreeSized_proven
@@ -73,11 +80,11 @@ def entries : List Entry := [
     bug := some "pickle-c-int-digit-limit"
     notes := "5000 zeros and a 1 are 1 through strtol in C and over the digit limit in Python." },
   { id := "pickle-int-line-twins-narrow", pyFile := "Modules/_pickle.c"
-    pyFns := ["load_int"]
-    statement := "For every complete INT line with no NUL byte, not a bool spelling and with at most 4300 digit bytes, the C strtol fast path, its PyLong_FromString fallback and Python's int() accept the same lines and return the same value, including the bools I00 and I01."
+    pyFns := ["load_int", "_Unpickler.load_int"]
+    statement := "For every complete INT line that is not a bool spelling, not a line with NUL that C accepts, and not a line past the digit limit that C's strtol path accepts, the C strtol fast path, its PyLong_FromString fallback and Python's int() accept the same lines and return the same value, including the bools I00 and I01."
     source := "invariant: C accelerator vs pure-Python twin", status := .proven
-    prop := ``IntLineTwinsNarrow, thm := some ``intLineTwinsNarrow_proven
-    notes := "The three hypotheses are the three refutations above. The digit bound is the documented sys.get_int_max_str_digits limit; it excludes some lines both twins reject. Exception classes can differ (an empty line is UnpicklingError in C, ValueError in Python)." },
+    prop := ``IntLineTwinsPrecise, thm := some ``intLineTwinsPrecise_proven
+    notes := "The hypotheses are exactly the three refutations above; lines both twins reject stay in the statement. Exception classes can differ (an empty line is UnpicklingError in C, ValueError in Python)." },
   { id := "pickle-long-line-twins", pyFile := "Modules/_pickle.c"
     pyFns := ["load_long"]
     statement := "For every complete LONG line, the C and Python unpicklers accept the same lines and return the same value."
@@ -86,10 +93,10 @@ def entries : List Entry := [
     bug := some "pickle-c-nul-in-text-args"
     notes := "L5\\0 is 5 in C and ValueError in Python." },
   { id := "pickle-long-line-twins-no-nul", pyFile := "Modules/_pickle.c"
-    pyFns := ["load_long"]
-    statement := "For every complete LONG line without NUL bytes, with or without the L suffix, the C and Python unpicklers accept the same lines and return the same value."
+    pyFns := ["load_long", "_Unpickler.load_long"]
+    statement := "For every complete LONG line, with or without the L suffix, except lines with NUL that C accepts, the C and Python unpicklers accept the same lines and return the same value."
     source := "invariant: C accelerator vs pure-Python twin", status := .proven
-    prop := ``LongLineTwinsNoNul, thm := some ``longLineTwinsNoNul_proven
+    prop := ``LongLineTwinsPrecise, thm := some ``longLineTwinsPrecise_proven
     notes := "The hypothesis is exactly the refuted case. Includes the 4300-digit limit, whitespace and underscores." },
   { id := "pickle-dumps-twins", pyFile := "Modules/_pickle.c"
     pyFns := ["dumps", "_dumps"]
@@ -113,11 +120,35 @@ def entries : List Entry := [
     bug := some "pickle-py-oversize-struct-error"
     notes := "bytes(2**32) at protocol 3: OverflowError in C, struct.error in Python." },
   { id := "pickle-dumps-twins-narrow", pyFile := "Modules/_pickle.c"
-    pyFns := ["dumps", "_dumps"]
+    pyFns := ["dump", "_pickle_dumps_impl", "save", "save_none", "save_bool", "save_long", "save_bytes",
+      "_save_bytes_data", "save_bytearray", "_save_bytearray_data", "_Pickler_write_bytes", "save_unicode",
+      "write_unicode_binary", "raw_unicode_escape", "store_tuple_elements", "save_tuple", "save_list",
+      "batch_list", "batch_list_exact", "save_dict", "batch_dict", "batch_dict_exact_impl", "batch_dict_exact",
+      "save_set", "save_frozenset_impl", "save_frozenset", "memo_get", "memo_put", "_Pickler_Write",
+      "_Pickler_OpcodeBoundary", "_Pickler_CommitFrame", "_Pickler_SetProtocol", "_write_size64",
+      "_Pickler.dump", "_dumps", "_Pickler.__init__", "_Pickler.memoize", "_Pickler.put", "_Pickler.get",
+      "_Pickler.save", "_Pickler.save_none", "_Pickler.save_bool", "_Pickler.save_long",
+      "_Pickler._save_bytes_no_memo", "_Pickler.save_bytes", "_Pickler._save_bytearray_no_memo",
+      "_Pickler.save_bytearray", "_Pickler.save_str", "_Pickler.save_tuple", "_Pickler.save_list",
+      "_Pickler._batch_appends", "_Pickler.save_dict", "_Pickler._batch_setitems", "_Pickler.save_set",
+      "_Pickler.save_frozenset", "_Framer.__init__", "_Framer.start_framing", "_Framer.end_framing",
+      "_Framer.commit_frame", "_Framer.write", "_Framer.write_large_bytes", "encode_long"]
     statement := "For every plain value without the batch shapes, whose ints pass C's LONG4 size check, and every protocol within C long, pickle.dumps and pickle._dumps both raise, or both return the same bytes: memoization, framing at protocol 4+, opcode choice and the reduce paths for bytes, bytearray, set and frozenset included."
     source := "invariant: C accelerator vs pure-Python twin", status := .proven
     prop := ``DumpsTwinsNarrow, thm := some ``dumpsTwinsNarrow_proven
-    notes := "Each hypothesis is one refutation above. Exception classes may differ when both raise (pickle-py-oversize-struct-error). Values are acyclic by construction; object identity is arbitrary, so sharing is covered." },
+    notes := "Each hypothesis is one refutation above. Exception classes may differ when both raise: on record in pickle-dumps-twins-batch-ok-long, exact equality is the open pickle-dumps-twins-exact-sized. Values are acyclic by construction; object identity is arbitrary, so sharing is covered. save_reduce and save_global are mirrored for the five globals only, so they are not claimed here." },
+  { id := "pickle-dumps-twins-exact-sized", pyFile := "Modules/_pickle.c"
+    pyFns := ["dumps", "_dumps"]
+    statement := "With no str or bytes payload over 4 GiB below protocol 4, and fewer than 2**32 memoized objects, pickle.dumps and pickle._dumps produce the same bytes or the same exception, class and message."
+    source := "invariant: C accelerator vs pure-Python twin", status := .open
+    prop := ``DumpsTwinsExactSized
+    notes := "Open: EncSim's Out relation forgets the exception. Needs the simulation redone with equal exceptions and SizeOk threaded through every lemma. The only exceptions left are the repr digit limit, which is equal in both twins." },
+  { id := "pickle-roundtrip", pyFile := "Lib/pickle.py"
+    pyFns := ["_dumps", "_loads", "dump", "load"]
+    statement := "For every well-formed plain value (hashable distinct keys and set elements, consistent ids, valid code points), every protocol 0-5 and every pairing of the two picklers and two unpicklers, loads(dumps(x, p)) is x with structure and type preserved, whenever dumps returns."
+    source := "Doc/library/pickle.rst; invariant", status := .open
+    prop := ``RoundTrip
+    notes := "Open: needs a compiler-correctness proof over the memo, the heap (lists are memoized before their items are appended) and frames. Difftest evidence only; the integer and text-line cases are proven separately." },
   { id := "pickle-loads-twins-exact", pyFile := "Modules/_pickle.c"
     pyFns := ["loads", "_loads"]
     statement := "On every data-only stream, pickle.loads and pickle._loads raise the same exception class."
