@@ -423,8 +423,407 @@ def coll_run_ud(case):
     return py_result(body)
 
 
-coll_GENS = [coll_gen_ctr, coll_gen_cm, coll_gen_ud]
-coll_RUNS = {"coll.ctr": coll_run_ctr, "coll.cm": coll_run_cm, "coll.ud": coll_run_ud}
+class coll_ULPlain(coll_collections.UserList):
+    pass
+
+
+class coll_USPlain(coll_collections.UserString):
+    pass
+
+
+coll_IDX = [0, 1, 2, -1, -2, 3, 5, -5, 7, -7, 2**31, 2**63 - 1, -2**63, 2**63, -2**63 - 1, 2**64]
+
+
+def coll_ints(rng):
+    return [rng.randint(-2, 4) for _ in range(rng.randint(0, 7))]
+
+
+def coll_slice_args(rng, case, names=("st", "sp", "se")):
+    for name in names:
+        if rng.random() < 0.6:
+            v = rng.choice(coll_IDX)
+            if name == names[-1] and v == 0 and rng.random() < 0.9:
+                v = 1
+            case[name] = v
+
+
+def coll_slice_of(case, names=("st", "sp", "se")):
+    return slice(*(case.get(n) for n in names))
+
+
+def coll_gen_ul(rng):
+    op = rng.choice(["new", "repr", "lt", "le", "eq", "gt", "ge", "contains", "len", "getitem",
+                     "getslice", "setitem", "setslice", "delitem", "delslice", "add", "radd",
+                     "iadd", "mul", "imul", "copy", "copy_dunder", "append", "insert", "pop",
+                     "remove", "clear", "count", "index", "reverse", "sort", "extend"])
+    case = {"fn": "coll.ul", "op": op, "sub": rng.choice([0, 1]), "a": coll_ints(rng)}
+    if op in ("contains", "setitem", "append", "insert", "remove", "count", "index"):
+        case["x"] = rng.randint(-2, 5)
+    if op in ("getitem", "setitem", "delitem", "insert", "mul", "imul"):
+        case["i"] = rng.choice(coll_IDX)
+    if op in ("mul", "imul"):
+        case["i"] = rng.choice([0, 1, 2, 3, -1, -2**63, 2**63, 2**62, 2**63 - 1])
+        if rng.random() < 0.3:
+            case["a"] = []
+        # a one-item list times a huge count is a real allocation attempt in both sides
+        if len(case["a"]) == 1 and case["i"] in (2**62, 2**63 - 1):
+            case["i"] = 2
+    if op == "pop" and rng.random() < 0.6:
+        case["i"] = rng.choice(coll_IDX)
+    if op in ("getslice", "setslice", "delslice"):
+        coll_slice_args(rng, case)
+    if op == "index":
+        coll_slice_args(rng, case, ("st", "sp"))
+    if op == "sort":
+        case["r"] = rng.random() < 0.5
+    if op == "setslice":
+        case["o"] = coll_ints(rng)
+    if op in ("new", "lt", "le", "eq", "gt", "ge", "add", "radd", "iadd", "extend"):
+        if op != "new" or rng.random() < 0.8:
+            case["oty"] = rng.choice(["user", "list", "tuple", "int"])
+            case["o"] = coll_ints(rng)
+            if rng.random() < 0.3:
+                case["o"] = list(case["a"])
+    return case
+
+
+def coll_enc_ul(u):
+    return [type(u).__name__, list(u.data)]
+
+
+def coll_opnd(case):
+    ty = case["oty"]
+    if ty == "user":
+        return coll_collections.UserList(case["o"])
+    if ty == "list":
+        return list(case["o"])
+    return tuple(case["o"]) if ty == "tuple" else 5
+
+
+def coll_run_ul(case):
+    op = case["op"]
+    cls = coll_ULPlain if case["sub"] else coll_collections.UserList
+    u = cls(case["a"])
+    x = case.get("x", 0)
+    i = case.get("i", 0)
+
+    def body():
+        if op == "new":
+            return coll_enc_ul(cls(coll_opnd(case)) if "oty" in case else cls())
+        if op == "repr":
+            return repr(u)
+        if op in ("lt", "le", "eq", "gt", "ge"):
+            o = coll_opnd(case)
+            return {"lt": lambda: u < o, "le": lambda: u <= o, "eq": lambda: u == o,
+                    "gt": lambda: u > o, "ge": lambda: u >= o}[op]()
+        if op == "contains":
+            return x in u
+        if op == "len":
+            return len(u)
+        if op == "getitem":
+            return u[i]
+        if op == "getslice":
+            return coll_enc_ul(u[coll_slice_of(case)])
+        if op == "setitem":
+            u[i] = x
+            return coll_enc_ul(u)
+        if op == "setslice":
+            u[coll_slice_of(case)] = case["o"]
+            return coll_enc_ul(u)
+        if op == "delitem":
+            del u[i]
+            return coll_enc_ul(u)
+        if op == "delslice":
+            del u[coll_slice_of(case)]
+            return coll_enc_ul(u)
+        if op == "add":
+            return coll_enc_ul(u + coll_opnd(case))
+        if op == "radd":
+            o = coll_opnd(case)
+            return coll_enc_ul(u.__radd__(o))
+        if op == "iadd":
+            r = u
+            r += coll_opnd(case)
+            return coll_enc_ul(r)
+        if op == "mul":
+            return coll_enc_ul(u * i)
+        if op == "imul":
+            r = u
+            r *= i
+            return coll_enc_ul(r)
+        if op == "copy":
+            return coll_enc_ul(u.copy())
+        if op == "copy_dunder":
+            return coll_enc_ul(coll_copy.copy(u))
+        if op == "append":
+            u.append(x)
+            return coll_enc_ul(u)
+        if op == "insert":
+            u.insert(i, x)
+            return coll_enc_ul(u)
+        if op == "pop":
+            r = u.pop(i) if "i" in case else u.pop()
+            return [r, coll_enc_ul(u)]
+        if op == "remove":
+            u.remove(x)
+            return coll_enc_ul(u)
+        if op == "clear":
+            u.clear()
+            return coll_enc_ul(u)
+        if op == "count":
+            return u.count(x)
+        if op == "index":
+            return u.index(x, *[v for v in (case.get("st", 0), case.get("sp", 2**63 - 1))])
+        if op == "reverse":
+            u.reverse()
+            return coll_enc_ul(u)
+        if op == "sort":
+            u.sort(reverse=case["r"])
+            return coll_enc_ul(u)
+        if op == "extend":
+            u.extend(coll_opnd(case))
+            return coll_enc_ul(u)
+        raise AssertionError(op)
+    return py_result(body)
+
+
+coll_ALPHA = "abAB12 -_\t\n"
+coll_UNI = [233, 0x2003, 0x3000, 0x85, 0x2028, 0x1f600, 0xff21]
+coll_NUMS = ["12", " 7 ", "-3", "+4", "abc", "", "1_0", "1__0", "_1", "5"]
+
+
+def coll_cps(rng, ascii_only=True, n=8):
+    out = [ord(rng.choice(coll_ALPHA)) for _ in range(rng.randint(0, n))]
+    if not ascii_only and rng.random() < 0.3:
+        out[rng.randint(0, len(out)):0] = [rng.choice(coll_UNI)]
+    return out
+
+
+def coll_sarg(rng, s=None):
+    r = rng.random()
+    if s is None:
+        s = coll_cps(rng, n=3)
+    if r < 0.45:
+        return {"k": "str", "s": s}
+    if r < 0.85:
+        return {"k": "user", "s": s}
+    return {"k": "int", "s": [53]}
+
+
+def coll_arg_of(a):
+    if a is None:
+        return None
+    if a["k"] == "int":
+        return 5
+    t = "".join(map(chr, a["s"]))
+    return coll_collections.UserString(t) if a["k"] == "user" else t
+
+
+def coll_gen_us(rng):
+    case_ops = ["capitalize", "casefold", "lower", "upper", "swapcase", "title"]
+    pred_ops = ["isalpha", "isalnum", "isascii", "isdecimal", "isdigit", "isidentifier", "islower",
+                "isnumeric", "isprintable", "isspace", "istitle", "isupper"]
+    op = rng.choice(case_ops + pred_ops + [
+        "new", "str", "getnewargs", "add", "radd", "rmod", "replace_kw", "str_replace_kw",
+        "dformat", "encode_none", "eq", "lt", "le", "gt", "ge", "center", "ljust", "rjust", "zfill",
+        "expandtabs", "count", "find", "rfind", "index", "rindex", "startswith", "endswith",
+        "removeprefix", "removesuffix", "partition", "rpartition", "replace", "split", "rsplit",
+        "splitlines", "strip", "lstrip", "rstrip", "join", "contains", "mul", "getitem", "getslice",
+        "format", "format_map", "mod", "translate", "encode", "len", "hash", "repr", "toInt",
+        "toFloat", "toComplex"] * 2)
+    ascii_only = op not in ("count", "find", "rfind", "index", "rindex", "partition", "rpartition",
+                            "split", "rsplit", "splitlines", "strip", "lstrip", "rstrip",
+                            "replace", "len", "getitem", "getslice", "startswith", "endswith")
+    s = coll_cps(rng, ascii_only)
+    case = {"fn": "coll.us", "op": op, "sub": rng.choice([0, 1]), "s": s,
+            "plain": rng.random() < 0.15}
+    sub = s[rng.randint(0, len(s)):][:rng.randint(0, 3)] if rng.random() < 0.6 else None
+    if op in ("new", "add", "radd", "eq", "lt", "le", "gt", "ge", "count", "find", "rfind",
+              "index", "rindex", "removeprefix", "removesuffix", "partition", "rpartition",
+              "contains", "startswith", "endswith", "replace", "replace_kw", "str_replace_kw"):
+        case["a"] = coll_sarg(rng, sub)
+    if op in ("replace", "replace_kw", "str_replace_kw"):
+        case["b"] = coll_sarg(rng)
+        if rng.random() < 0.6:
+            case["w"] = rng.choice([-1, 0, 1, 2])
+    if op in ("replace_kw", "str_replace_kw"):
+        case["kw"] = rng.choice(["count", "maxsplit", "n"])
+        case["w"] = rng.choice([0, 1, 2])
+    if op in ("startswith", "endswith") and rng.random() < 0.3:
+        case["tup"] = [coll_cps(rng, n=2) for _ in range(rng.randint(0, 3))]
+    if op in ("count", "find", "rfind", "index", "rindex", "startswith", "endswith"):
+        coll_slice_args(rng, case, ("st", "en"))
+    if op in ("split", "rsplit", "strip", "lstrip", "rstrip") and rng.random() < 0.7:
+        a = coll_sarg(rng, sub)
+        if op in ("split", "rsplit") and rng.random() < 0.1:
+            a["s"] = []
+        case["a"] = a
+    if op in ("split", "rsplit"):
+        case["w"] = rng.choice([-1, -1, 0, 1, 2, 2**63 - 1])
+    if op in ("center", "ljust", "rjust", "zfill", "expandtabs", "mul", "getitem"):
+        case["w"] = rng.choice([0, 1, 2, 3, 5, 9, 12, -1, -2])
+    if op == "mul" and rng.random() < 0.2 and len(s) != 1:
+        case["w"] = rng.choice([2**62, 2**63 - 1, 2**63, -2**63 - 1])
+    if op == "getitem" and rng.random() < 0.2:
+        case["w"] = rng.choice(coll_IDX)
+    if op in ("center", "ljust", "rjust") and rng.random() < 0.6:
+        case["fill"] = coll_sarg(rng, coll_cps(rng, n=2))
+    if op == "splitlines":
+        case["keep"] = rng.random() < 0.5
+    if op == "join":
+        case["items"] = [coll_sarg(rng) if rng.random() < 0.4 else {"k": "str", "s": coll_cps(rng, n=3)}
+                         for _ in range(rng.randint(0, 4))]
+    if op == "getslice":
+        coll_slice_args(rng, case, ("st", "en", "se"))
+    if op == "format":
+        case["s"] = list(map(ord, rng.choice(["x", "{}", "{}{}", "{0}", "{1}", ""])))
+        case["args"] = coll_ints(rng)[:2]
+    if op == "format_map":
+        case["s"] = list(map(ord, rng.choice(["x", "{a}", "{b}", ""])))
+        case["m"] = [["a", rng.randint(0, 9)]]
+    if op == "mod":
+        case["s"] = list(map(ord, rng.choice(["x", "%d", "%s%d", "%%", "", "%d%%"])))
+        case["args"] = coll_ints(rng)[:2]
+    if op == "rmod":
+        case["t"] = list(map(ord, rng.choice(["5", "%s", "x%sy", "%s%s"])))
+    if op == "translate":
+        case["t"] = [[ord(rng.choice(coll_ALPHA)), rng.choice([None, 120])]
+                     for _ in range(rng.randint(0, 3))]
+        case["t"] = list({p[0]: p for p in case["t"]}.values())
+    if op == "encode":
+        case["enc"] = rng.choice(["utf-8", "ascii", "nope"])
+        case["err"] = rng.choice(["strict", "ignore"])
+    if op == "dformat":
+        case["spec"] = rng.choice(["", ">5", "s"])
+    if op in ("toInt", "toFloat", "toComplex"):
+        case["s"] = list(map(ord, rng.choice(coll_NUMS)))
+    return case
+
+
+def coll_enc_us(r):
+    if isinstance(r, coll_collections.UserString):
+        return {"us": [type(r).__name__, list(map(ord, r.data))]}
+    if isinstance(r, bool) or isinstance(r, int):
+        return r
+    if isinstance(r, str):
+        return {"str": list(map(ord, r))}
+    if isinstance(r, bytes):
+        return {"bytes": list(r)}
+    if isinstance(r, list):
+        return {"strs": [list(map(ord, x)) for x in r]}
+    if isinstance(r, tuple):
+        return {"tup": [list(map(ord, x)) for x in r]}
+    raise AssertionError(type(r))
+
+
+def coll_run_us(case):
+    op = case["op"]
+    t = "".join(map(chr, case["s"]))
+    plain = case.get("plain") and op not in ("new", "str", "getnewargs", "add", "radd", "rmod",
+                                             "replace_kw", "str_replace_kw", "dformat",
+                                             "encode_none")
+    u = t if plain else (coll_USPlain if case["sub"] else coll_collections.UserString)(t)
+    a = coll_arg_of(case.get("a"))
+    w = case.get("w")
+    fill = coll_arg_of(case.get("fill"))
+    st, en = case.get("st"), case.get("en")
+    pad = () if "fill" not in case else (fill,)
+
+    def se():
+        # defaults when absent; None is accepted and means the same
+        return (0 if st is None else st, 2**63 - 1 if en is None else en)
+
+    def affix():
+        if "tup" in case:
+            return tuple("".join(map(chr, p)) for p in case["tup"])
+        return a
+
+    def body():
+        if op == "new":
+            return coll_enc_us(type(u)(a))
+        if op == "str":
+            return coll_enc_us(str(u))
+        if op == "getnewargs":
+            return coll_enc_us(u.__getnewargs__()[0])
+        if op == "add":
+            return coll_enc_us(u + a)
+        if op == "radd":
+            return coll_enc_us(u.__radd__(a))
+        if op == "rmod":
+            return coll_enc_us(5 % u if case["t"] == [53] else u.__rmod__("".join(map(chr, case["t"]))))
+        if op == "replace_kw":
+            return coll_enc_us(u.replace(a, coll_arg_of(case["b"]), **{case["kw"]: w}))
+        if op == "str_replace_kw":
+            return coll_enc_us(t.replace(a, coll_arg_of(case["b"]), **{case["kw"]: w}))
+        if op == "dformat":
+            return coll_enc_us(format(u, case["spec"]))
+        if op == "encode_none":
+            return coll_enc_us(u.encode(None, None))
+        if op in ("eq", "lt", "le", "gt", "ge"):
+            return {"eq": lambda: u == a, "lt": lambda: u < a, "le": lambda: u <= a,
+                    "gt": lambda: u > a, "ge": lambda: u >= a}[op]()
+        if op in ("capitalize", "casefold", "lower", "upper", "swapcase", "title", "isalpha",
+                  "isalnum", "isascii", "isdecimal", "isdigit", "isidentifier", "islower",
+                  "isnumeric", "isprintable", "isspace", "istitle", "isupper"):
+            return coll_enc_us(getattr(u, op)())
+        if op in ("center", "ljust", "rjust"):
+            return coll_enc_us(getattr(u, op)(w, *pad))
+        if op in ("zfill", "expandtabs"):
+            return coll_enc_us(getattr(u, op)(w))
+        if op in ("count", "find", "rfind", "index", "rindex"):
+            return coll_enc_us(getattr(u, op)(a, *se()))
+        if op in ("startswith", "endswith"):
+            return coll_enc_us(getattr(u, op)(affix(), *se()))
+        if op in ("removeprefix", "removesuffix", "partition", "rpartition"):
+            return coll_enc_us(getattr(u, op)(a))
+        if op == "replace":
+            return coll_enc_us(u.replace(a, coll_arg_of(case["b"]), -1 if w is None else w))
+        if op in ("split", "rsplit"):
+            return coll_enc_us(getattr(u, op)(a, w))
+        if op == "splitlines":
+            return coll_enc_us(u.splitlines(case["keep"]))
+        if op in ("strip", "lstrip", "rstrip"):
+            return coll_enc_us(getattr(u, op)(a))
+        if op == "join":
+            return coll_enc_us(u.join([coll_arg_of(x) for x in case["items"]]))
+        if op == "contains":
+            return a in u
+        if op == "mul":
+            return coll_enc_us(u * w)
+        if op == "getitem":
+            return coll_enc_us(u[w])
+        if op == "getslice":
+            return coll_enc_us(u[slice(st, en, case.get("se"))])
+        if op == "format":
+            return coll_enc_us(u.format(*case["args"]))
+        if op == "format_map":
+            return coll_enc_us(u.format_map(coll_d(case["m"])))
+        if op == "mod":
+            return coll_enc_us(u % tuple(case["args"]))
+        if op == "translate":
+            return coll_enc_us(u.translate(coll_d(case["t"])))
+        if op == "encode":
+            return coll_enc_us(u.encode(case["enc"], case["err"]))
+        if op == "len":
+            return len(u)
+        if op == "hash":
+            return 0 if hash(u) == hash(t) else 1
+        if op == "repr":
+            return {"text": repr(u)}
+        if op == "toInt":
+            return int(u)
+        if op == "toFloat":
+            return {"text": repr(float(u))}
+        if op == "toComplex":
+            return {"text": repr(complex(u))}
+        raise AssertionError(op)
+    r = py_result(body)
+    return r
+
+
+coll_GENS = [coll_gen_ctr, coll_gen_cm, coll_gen_ud, coll_gen_ul, coll_gen_us]
+coll_RUNS = {"coll.ctr": coll_run_ctr, "coll.cm": coll_run_cm, "coll.ud": coll_run_ud,
+             "coll.ul": coll_run_ul, "coll.us": coll_run_us}
 
 
 def coll_gen(rng):
