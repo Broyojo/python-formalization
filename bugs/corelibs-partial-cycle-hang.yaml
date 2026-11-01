@@ -1,0 +1,55 @@
+id: corelibs-partial-cycle-hang
+title: "partial.__setstate__ can make a partial its own func, and inspect then hangs on it"
+priority: P4
+kind: hang
+module: corelibs
+files: [Lib/functools.py, Modules/_functoolsmodule.c]
+functions: ["_unwrap_partial", "partial.__setstate__"]
+summary: |
+  p.__setstate__((p, (), {}, None)) is accepted, since p is callable, and leaves p.func is p. _unwrap_partial is a
+  plain `while isinstance(func, partial): func = func.func`, so it never returns on p, in a loop that does not
+  allocate and is not stopped by the recursion limit. inspect.iscoroutinefunction(p), isgeneratorfunction and
+  isasyncgenfunction all reach it through _has_code_flag.
+likelihood: |
+  Very low: it needs a hand-made state, as from a crafted pickle, and __setstate__ on a partial is already a
+  sharp tool. The same class is what corelibs-partial-setstate-phcount crashes.
+maybe_intended: |
+  Not intended, but a maintainer may not care: a pickle can do worse. A hang in a check as innocent as
+  iscoroutinefunction is still worth a line in the group report.
+reproducer: |
+  import inspect, signal
+  from functools import partial
+  class Stop(Exception):
+      pass
+  def on(*a):
+      raise Stop
+  signal.signal(signal.SIGALRM, on)
+  p = partial(int)
+  p.__setstate__((p, (), {}, None))
+  signal.alarm(2)
+  try:
+      inspect.iscoroutinefunction(p)
+      r = 'returned'
+  except Stop:
+      r = 'hung'
+  signal.alarm(0)
+  print(p.func is p, r)
+  if p.func is p and r == 'hung':
+      print('REPRODUCED corelibs-partial-cycle-hang')
+expected: |
+  __setstate__ refuses p itself as func, or the check returns.
+observed: |
+  python3 3.14.7: True hung. REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+promised_by: |
+  Nothing explicit. Undisputed: a predicate should not hang.
+cause: |
+  Modules/_functoolsmodule.c partial_setstate checks only PyCallable_Check(fn). Lib/functools.py:500-503 follows .func
+  with no cycle check.
+possible_fix: |
+  Reject fn == self in partial_setstate, which covers the direct case; a longer cycle needs a check in _unwrap_partial.
+duplicates:
+  issues: []
+  queries: ["gh search issues partial __setstate__ itself recursion", "bugforge README: no match for partial cycle"]
+lean:
+  property: PyLean.CoreLibs.Functools.UnwrapAlwaysEnds
+  theorem: PyLean.CoreLibs.Functools.unwrapAlwaysEnds_refuted

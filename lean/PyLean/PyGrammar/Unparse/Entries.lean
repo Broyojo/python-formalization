@@ -1,5 +1,7 @@
 import PyLean.Registry
+import PyLean.PyGrammar.RowNames
 import PyLean.PyGrammar.Unparse.AstPy
+import PyLean.PyGrammar.Unparse.ReprRound
 
 /-! Registry entries for `Lib/ast.py`. The round trips need the parser, so they sit in
 `Peg/Entries.lean`, which imports both. -/
@@ -9,6 +11,17 @@ namespace PyLean.PyGrammar.Unparse
 open PyLean.Registry
 
 def entries : List Entry := [
+  { id := "pygrammar-unparse-str-repr"
+    pyFile := "Parser/string_parser.c"
+    pyFns := Rows.unparse_str_repr
+    statement := "_PyPegen_parse_string inverts what Unparser._write_constant writes for a str " ++
+      "whose repr is pure ASCII, through decode_unicode_with_escapes, with no warning."
+    source := "the implementation against itself: Lib/_ast_unparse.py against Parser/string_parser.c"
+    status := .proven
+    prop := ``StrReprRoundTrip
+    thm := some ``strReprRoundTrip_proven
+    notes := "Narrowed: no printable non-ASCII, and only the str branch of _write_constant. " ++
+      "Bytes prefixes, raw strings and escapes repr never writes are not reached." },
   { id := "pygrammar-ast-increment-lineno"
     pyFile := "Lib/ast.py"
     pyFns := []

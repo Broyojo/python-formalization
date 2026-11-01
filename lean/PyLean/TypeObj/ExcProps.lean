@@ -45,13 +45,13 @@ def excEntries : List Entry := [
   p "typeobj-exc-setstate" ["BaseException___setstate___impl"]
     "__setstate__(None) does nothing; a non-dict is a TypeError that changes nothing; a non-string key is a TypeError."
     "exceptions.c:243-266" ``BaseExceptionSetstateChecks ``baseExceptionSetstateChecks_proven,
-  p "typeobj-exc-traceback-setter" ["BaseException___traceback___set_impl", "BaseException___traceback___get_impl", "BaseException_with_traceback_impl"]
+  p "typeobj-exc-traceback-setter" ["BaseException___traceback___set_impl", "BaseException_with_traceback_impl"]
     "__traceback__ accepts only a traceback or None (TypeError otherwise, world unchanged), cannot be deleted, and with_traceback returns self."
     "exceptions.c:279-286, :398-418" ``TracebackSetterChecks ``tracebackSetterChecks_proven,
-  p "typeobj-exc-cause-suppress" ["BaseException___cause___set_impl", "BaseException___cause___get_impl", "PyException_SetCause"]
+  p "typeobj-exc-cause-suppress" ["BaseException___cause___set_impl", "PyException_SetCause"]
     "Every successful assignment to __cause__, None included, stores the value and sets __suppress_context__."
     "docs (Built-in Exceptions: raising and handling) and exceptions.c:551-558" ``CauseSetsSuppressContext ``causeSetsSuppressContext_proven,
-  p "typeobj-exc-context-set" ["BaseException___context___set_impl", "BaseException___context___get_impl", "PyException_SetContext"]
+  p "typeobj-exc-context-set" ["BaseException___context___set_impl", "PyException_SetContext"]
     "Assigning __context__ stores the value (None as NULL) and leaves __cause__ and __suppress_context__ alone."
     "exceptions.c:443-461" ``ContextSetKeepsSuppress ``contextSetKeepsSuppress_proven,
   p "typeobj-exc-suppress-bool" []
@@ -96,10 +96,10 @@ def excEntries : List Entry := [
     "AttributeError(*args, name=n, obj=o) keeps args and stores n and o."
     "exceptions.c:2587-2613" ``AttributeErrorInitKeywords ``attributeErrorInitKeywords_proven,
   -- OSError
-  p "typeobj-exc-oserror-parsed-once" ["oserror_use_init", "OSError_new", "OSError_init"]
+  p "typeobj-exc-oserror-parsed-once" ["oserror_use_init"]
     "When oserror_use_init holds, OSError_new parses nothing, keywords included; when it does not, OSError_init does nothing. Arguments are processed exactly once."
     "comment at exceptions.c:2116-2125" ``OsErrorParsedOnce ``osErrorParsedOnce_proven,
-  p "typeobj-exc-oserror-remap" ["OSError_new"]
+  p "typeobj-exc-oserror-remap" []
     "OSError_new changes the class only when called on OSError itself, for every errno object and every __hash__ it has."
     "exceptions.c:2158-2167" ``OsErrorRemapOnlyExact ``osErrorRemapOnlyExact_proven,
   p "typeobj-exc-oserror-errnomap" []
@@ -135,7 +135,7 @@ def excEntries : List Entry := [
   p "typeobj-exc-unicode-adjust" ["unicode_error_adjust_start", "unicode_error_adjust_end", "unicode_error_adjust_len", "assert_adjusted_unicode_error_start", "assert_adjusted_unicode_error_end", "assert_adjusted_unicode_error_len"]
     "For every start, end and length, the three adjustments satisfy the three assert_adjusted functions."
     "exceptions.c:3156-3275" ``UnicodeAdjustInRange ``unicodeAdjustInRange_proven,
-  p "typeobj-exc-unicode-params" ["_PyUnicodeError_GetParams"]
+  p "typeobj-exc-unicode-params" []
     "On success, _PyUnicodeError_GetParams returns start, end and slen inside the bounds of the object, for every stored start and end."
     "comment at exceptions.c:3277-3304" ``UnicodeGetParamsInRange ``unicodeGetParamsInRange_proven,
   p "typeobj-exc-unicode-str-bounds" ["UnicodeEncodeError_str", "UnicodeDecodeError_str", "UnicodeTranslateError_str"]
@@ -233,7 +233,7 @@ def excEntries : List Entry := [
   p "typeobj-exc-split-structure" ["exceptiongroup_split_recursive", "BaseExceptionGroup_split_impl"]
     "Under the same hypotheses each part has the shape specSplit gives: matching exceptions stay whole, a partly matching group is rebuilt around its matching children, and empty groups are dropped."
     "docs for BaseExceptionGroup.subgroup ('preserves the nesting structure')" ``SplitPreservesStructure ``splitPreservesStructure_proven,
-  p "typeobj-exc-subgroup-is-split-match" ["BaseExceptionGroup_subgroup_impl", "exceptiongroup_split_recursive"]
+  p "typeobj-exc-subgroup-is-split-match" ["exceptiongroup_split_recursive"]
     "Under the same hypotheses, the recursion with construct_rest false builds the shape of the match part of the recursion with construct_rest true, and no rest."
     "docs for BaseExceptionGroup.split" ``SubgroupEqualsSplitMatch ``subgroupEqualsSplitMatch_proven,
   p "typeobj-exc-split-identity" ["exceptiongroup_split_recursive", "BaseExceptionGroup_split_impl", "BaseExceptionGroup_subgroup_impl"]

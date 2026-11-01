@@ -96,7 +96,7 @@ def grammar_left_recursion : List String := [
   ]
 
 def lex_accepts_valid : List String := [
-  "_PyLexer_update_ftstring_expr", "tok_get_normal_mode", "tok_get_fstring_mode", "tok_get", "_PyTokenizer_Get"]
+  "_PyLexer_update_ftstring_expr"]
 
 def lex_debug_text : List String := [
   "set_ftstring_expr"]
@@ -106,6 +106,9 @@ def lex_exact_tokens : List String := [
 
 def lex_nextc_in_buffer : List String := [
   "tok_nextc", "tok_underflow_string"]
+
+def lex_stacks : List String := [
+  "tok_get_normal_mode", "tok_get_fstring_mode", "tok_get", "_PyTokenizer_Get"]
 
 def lex_untokenize_lossless : List String := [
   "Untokenizer.add_whitespace", "Untokenizer.add_backslash_continuation"]
@@ -171,11 +174,12 @@ def peg_tokenizer_error : List String := [
   "_Pypegen_tokenizer_error"]
 
 def unparse_c_roundtrip : List String := [
-  "append_fstring_element", "build_ftstring_body", "append_joinedstr", "append_formattedvalue", "append_ast_expr", "expr_as_unicode",
-  "_PyAST_ExprAsUnicode"]
+  "append_joinedstr"]
 
 def unparse_roundtrip : List String := [
-  "Unparser._ftstring_helper", "Unparser._write_ftstring", "Unparser.visit_JoinedStr", "Unparser._write_ftstring_inner", "Unparser._unparse_interpolation_value", "Unparser._write_interpolation",
-  "Unparser.visit_FormattedValue", "unparse"]
+  "Unparser._write_ftstring_inner", "unparse"]
+
+def unparse_str_repr : List String := [
+  "decode_unicode_with_escapes", "_PyPegen_decode_string", "_PyPegen_parse_string", "Unparser._write_constant"]
 
 end PyLean.PyGrammar.Rows

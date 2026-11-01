@@ -4,12 +4,12 @@ priority: P4
 kind: invariant-violation
 module: unicodeobject
 files: [Objects/unicodeobject.c]
-functions: ["PyUnicodeWriter_WriteUTF8", "PyUnicodeWriter_DecodeUTF8Stateful", "_PyUnicodeWriter_Finish"]
+functions: ["PyUnicodeWriter_WriteUTF8", "PyUnicodeWriter_DecodeUTF8Stateful", "PyUnicodeWriter_Format", "_PyUnicodeWriter_Finish"]
 status: duplicate
 duplicate_of: python/cpython#158439 (closed), fixed by PR gh-158442 on main
 summary: |
-  PyUnicodeWriter_WriteUTF8 and PyUnicodeWriter_DecodeUTF8Stateful put `writer->pos` back when the
-  decode fails, but not `writer->maxchar`: characters decoded before the error have already widened
+  PyUnicodeWriter_WriteUTF8, PyUnicodeWriter_DecodeUTF8Stateful and PyUnicodeWriter_Format put
+  `writer->pos` back when they fail, but not `writer->maxchar`: characters decoded before the error have already widened
   the buffer. _PyUnicodeWriter_Finish takes the kind from the buffer and never looks at the
   characters, so the str it returns can break the canonical kind invariant. Such a str prints as
   'a' and is not equal to 'a'. NOT A NEW FINDING: this is python/cpython#158439. Found here
@@ -64,7 +64,9 @@ possible_fix: |
   (Objects/unicode_writer.c:583). A backport to 3.14 would close it there.
 lean: |
   Refuted by writerAlwaysCanonical_refuted and writerFailureUnobservable_refuted
-  (lean/PyLean/UnicodeObj/ObjectWriterProps.lean); the narrowed writerFinishCanonical_proven and
+  (lean/PyLean/UnicodeObj/ObjectWriterProps.lean), and for Format by
+  writerFormatUnobservable_refuted (ObjectFromFormatProps.lean); the narrowed
+  writerFinishCanonical_proven and
   writerFailureKeepsState_proven show that a failed decode is the only exception.
 duplicates:
   issues:

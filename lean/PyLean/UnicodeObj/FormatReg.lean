@@ -28,7 +28,7 @@ def formatEntries : List Entry := [
     source := "assert (format->align <= 127) and assert (format->sign <= 127), formatter_unicode.c:369-370, in sharp form"
     status := .proven, prop := ``ParseAsserts, thm := some ``parseAsserts_proven },
   { id := "unicodeobj-format-str-shape", pyFile := "Python/formatter_unicode.c"
-    pyFns := ["format_string_internal", "calc_padding", "fill_padding"]
+    pyFns := []
     statement := "format(s, spec) is s cut to the precision and padded to the width, left, right or centred, with the extra fill going to the right."
     source := "format spec mini-language, Doc/library/string.rst"
     status := .proven, prop := ``StrFormatShape, thm := some ``strFormatShape_proven },
@@ -61,27 +61,27 @@ def formatEntries : List Entry := [
     bug := some "unicodeobj-format-percent-star-width"
     notes := "Known: python/cpython#151847 (open)." },
   { id := "unicodeobj-format-parse-number", pyFile := "Python/formatter_unicode.c"
-    pyFns := ["parse_number"]
+    pyFns := []
     statement := "parse_number splits a number into digits, decimal point, fraction and remainder with nothing lost, for every string."
     source := "invariant"
     status := .proven, prop := ``ParseNumberSplit, thm := some ``parseNumberSplit_proven },
   { id := "unicodeobj-format-float-internal", pyFile := "Python/formatter_unicode.c"
-    pyFns := ["format_float_internal"]
+    pyFns := []
     statement := "For every float and every spec with no separator, format(x, spec) is the buffer of PyOS_double_to_string with the sign the spec asks for and the padding of its width, fill and alignment."
     source := "format spec mini-language, Doc/library/string.rst"
     status := .proven, prop := ``FloatSpecLayout, thm := some ``floatSpecLayout_proven },
   { id := "unicodeobj-format-float-fast-slow", pyFile := "Python/formatter_unicode.c"
-    pyFns := ["format_float_internal"]
+    pyFns := []
     statement := "The fast path of format_float_internal gives what the general path gives, for every float and every spec that takes it."
     source := "invariant: fast path vs slow path"
     status := .proven, prop := ``FloatFastSlowAgree, thm := some ``floatFastSlowAgree_proven },
   { id := "unicodeobj-format-float-width", pyFile := "Python/formatter_unicode.c"
-    pyFns := ["format_float_internal", "calc_number_widths", "fill_number"]
+    pyFns := ["calc_number_widths", "fill_number"]
     statement := "format(x, spec) is at least width characters long, for every float and every spec, separators included."
     source := "format spec docs: width is the minimum total field width"
     status := .proven, prop := ``FloatWidthIsMinimum, thm := some ``floatWidthIsMinimum_proven },
   { id := "unicodeobj-format-int-width", pyFile := "Python/formatter_unicode.c"
-    pyFns := ["format_long_internal", "calc_number_widths", "fill_number"]
+    pyFns := ["calc_number_widths", "fill_number"]
     statement := "format(n, spec) is at least width characters long, for every int and every spec, on the prefix path of '#x' and for the 'c' type."
     source := "format spec docs: width is the minimum total field width"
     status := .proven, prop := ``IntWidthIsMinimum, thm := some ``intWidthIsMinimum_proven },
@@ -91,17 +91,17 @@ def formatEntries : List Entry := [
     source := "invariant: a separator only separates"
     status := .proven, prop := ``FloatGroupingOnlyInserts, thm := some ``floatGroupingOnlyInserts_proven },
   { id := "unicodeobj-format-complex-internal", pyFile := "Python/formatter_unicode.c"
-    pyFns := ["format_complex_internal"]
+    pyFns := []
     statement := "With a presentation type, format(z, spec) is format(z.real, spec) + format(z.imag, '+' + spec) + 'j' with the padding of the spec."
     source := "format spec mini-language, Doc/library/string.rst"
     status := .proven, prop := ``ComplexPartsCompose, thm := some ``complexPartsCompose_proven },
   { id := "unicodeobj-format-complex-repr", pyFile := "Python/formatter_unicode.c"
-    pyFns := ["format_complex_internal"]
+    pyFns := []
     statement := "A spec with no type, precision or option gives str(z): format_complex_internal and complex_repr drop the real part and add the parentheses under the same rule, for every complex, nan and -0.0 included."
     source := "format() docs; invariant: format vs repr"
     status := .proven, prop := ``ComplexOmittedTypeIsRepr, thm := some ``complexOmittedTypeIsRepr_proven },
   { id := "unicodeobj-format-complex-width", pyFile := "Python/formatter_unicode.c"
-    pyFns := ["format_complex_internal"]
+    pyFns := []
     statement := "format(z, spec) is at least width characters long, for every complex and every spec."
     source := "format spec docs: width is the minimum total field width"
     status := .proven, prop := ``ComplexWidthIsMinimum, thm := some ``complexWidthIsMinimum_proven },
@@ -111,7 +111,7 @@ def formatEntries : List Entry := [
     source := "invariant: % vs format"
     status := .proven, prop := ``PercentFloatMatchesFormat, thm := some ``percentFloatMatchesFormat_proven },
   { id := "unicodeobj-format-str-builtin", pyFile := "Objects/stringlib/unicode_format.h"
-    pyFns := ["do_string_format", "build_string", "do_markup", "output_markup", "MarkupIterator_next", "parse_field", "get_field_object", "field_name_split", "AutoNumber_Init"]
+    pyFns := ["do_string_format", "build_string", "do_markup", "output_markup", "MarkupIterator_next", "parse_field", "field_name_split", "AutoNumber_Init"]
     statement := "'{0:spec}'.format(x) is format(x, spec), for every object and every spec with no braces."
     source := "Doc/library/string.rst: a replacement field calls format()"
     status := .proven, prop := ``FormatFieldIsBuiltin, thm := some ``formatFieldIsBuiltin_proven },
@@ -121,7 +121,7 @@ def formatEntries : List Entry := [
     source := "invariant: fast path vs generic path"
     status := .proven, prop := ``RenderFieldIsFormat, thm := some ``renderFieldIsFormat_proven },
   { id := "unicodeobj-format-str-autonumber", pyFile := "Objects/stringlib/unicode_format.h"
-    pyFns := ["field_name_split", "autonumber_state_error"]
+    pyFns := ["field_name_split"]
     statement := "The numbering rule holds for every field name and state: an empty name takes the next number and is refused after manual numbering, a numeric name is refused after automatic numbering, and any other name leaves the state alone."
     source := "Doc/library/string.rst: auto-numbering"
     status := .proven, prop := ``AutoNumberingRule, thm := some ``autoNumberingRule_proven },
@@ -131,7 +131,7 @@ def formatEntries : List Entry := [
     source := "invariant: no silent wraparound"
     status := .proven, prop := ``GetIntegerNoWrap, thm := some ``getIntegerNoWrap_proven },
   { id := "unicodeobj-format-str-conversion-rejected", pyFile := "Objects/stringlib/unicode_format.h"
-    pyFns := ["do_conversion"]
+    pyFns := []
     statement := "Every conversion character but r, s, a and NUL is refused with its exact error, for every object."
     source := "Doc/library/string.rst: conversion"
     status := .proven, prop := ``ConversionRejected, thm := some ``conversionRejected_proven },
@@ -147,22 +147,22 @@ def formatEntries : List Entry := [
     source := "Doc/library/string.rst: {{ and }}"
     status := .proven, prop := ``BraceEscapeRoundTrip, thm := some ``braceEscapeRoundTrip_proven },
   { id := "unicodeobj-format-str-format-map", pyFile := "Objects/stringlib/unicode_format.h"
-    pyFns := ["do_string_format_map", "get_field_object"]
+    pyFns := []
     statement := "format_map refuses a positional field, for every field name, mapping and state, before the mapping is touched."
     source := "str.format_map docs; invariant: no positional arguments"
     status := .proven, prop := ``FormatMapNoPositional, thm := some ``formatMapNoPositional_proven },
   { id := "unicodeobj-format-str-parser-accepts", pyFile := "Objects/stringlib/unicode_format.h"
-    pyFns := ["MarkupIterator_next", "formatter_parser"]
+    pyFns := ["MarkupIterator_next"]
     statement := "Whatever str.format accepts, _string.formatter_parser accepts."
     source := "invariant: string.Formatter vs str.format"
     status := .proven, prop := ``FormatterParserAccepts, thm := some ``formatterParserAccepts_proven },
   { id := "unicodeobj-format-str-parser-reads", pyFile := "Objects/stringlib/unicode_format.h"
-    pyFns := ["formatter_parser", "formatteriter_next"]
+    pyFns := []
     statement := "formatter_parser reports a field's name and spec, gives None in all three places for plain text, and refuses anything but a str."
     source := "string.Formatter.parse docs"
     status := .proven, prop := ``FormatterParserReads, thm := some ``formatterParserReads_proven },
   { id := "unicodeobj-format-str-field-name", pyFile := "Objects/stringlib/unicode_format.h"
-    pyFns := ["FieldNameIterator_next", "_FieldNameIterator_attr", "_FieldNameIterator_item", "fieldnameiter_next", "formatter_field_name_split"]
+    pyFns := []
     statement := "formatter_field_name_split reads back every chain of attributes and non-numeric items."
     source := "invariant: round trip"
     status := .proven, prop := ``FieldNameRoundTrip, thm := some ``fieldNameRoundTrip_proven },

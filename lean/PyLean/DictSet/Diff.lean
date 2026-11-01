@@ -252,6 +252,17 @@ def cmpOf (s : String) : Except String CmpOp :=
   | "ge" => .ok .ge
   | t => .error s!"cmp {t}"
 
+/-- An exception's note, as the test reports it. -/
+def withNote (n : Option String) (j : Json) : Json :=
+  match n with
+  | some x => j.mergeObj (Json.mkObj [("note", toJson x)])
+  | none => j
+
+/-- Report the note left on slot `i`, and clear it. -/
+def takeNote (i : Nat) (p : Json × St) : Json × St :=
+  let d := p.2.ds[i]!
+  (withNote d.note p.1, { p.2 with ds := p.2.ds.set! i { d with note := none } })
+
 def stepDict (st : St) (name : String) (a : Array Json) : Except String (Option (Json × St)) := do
   let i := (a[1]?.bind fun j => j.getNat?.toOption).getD 0
   let k (n : Nat) : Except String DObj := do obj st (← arg a n)
@@ -284,10 +295,10 @@ def stepDict (st : St) (name : String) (a : Array Json) : Except String (Option 
       else match dictFromItems P 0 kw with
         | .ok d => some d
         | .error _ => none
-    return some (resJ unitJ (withD st i (dictUpdateCommon P [u] kwd "update")))
+    return some (takeNote i (resJ unitJ (withD st i (dictUpdateCommon P [u] kwd "update"))))
   | "ior" =>
     let u ← updArg st (← arg a 2)
-    return some (resJ unitJ (withD st i (dictIor P u)))
+    return some (takeNote i (resJ unitJ (withD st i (dictIor P u))))
   | "or" =>
     let j ← argN a 2
     let (id, st) := fresh st
@@ -335,14 +346,14 @@ def stepDict (st : St) (name : String) (a : Array Json) : Except String (Option 
     let (r, d) := dictVectorcall P [← updArg st (← arg a 2)] [] ({ ident := id } : DD)
     match r with
     | .ok _ => return some (okJ Json.null, { st with ds := st.ds.set! 2 d })
-    | .error e => return some (errJ e, st)
+    | .error e => return some (withNote d.note (errJ e), st)
   | _ => return none
 
 def encKV (kind : IterKind) (p : DObj × DObj) : Json :=
-  match kind with
-  | .key => enc p.1
-  | .value => enc p.2
-  | .item => encPair p
+  match kind.result p with
+  | .key k => enc k
+  | .value v => enc v
+  | .item k v => encPair (k, v)
 
 def stepIter (st : St) (name : String) (a : Array Json) : Except String (Option (Json × St)) := do
   let setIt (st : St) (n : Nat) (it : It) : St := { st with its := st.its.set! n (some it) }

@@ -24,23 +24,60 @@ descriptor add no member, and a plain value on a name already in the body, a des
 Docstring of `__setitem__`. -/
 def EnumDictBranches : Prop :=
   ∀ (d : EnumDict) (key : Name) (v : EV) (a : Atom) (i : Nat),
-    (d.privateName key = true → ∃ d', d.set key v = .ok d' ∧ d'.memberNames = d.memberNames) ∧
+    (d.store key v).items.lookup key = some v ∧
+    (d.privateName key = true → d.set key v = .ok (d.store key v)) ∧
     (d.privateName key = false → isSunder key = true → sunderReserved key = true →
       (d.set key v).raises "ValueError") ∧
     (d.privateName key = false → isSunder key = false → isDunder key = false →
       (d.memberNames.contains key = true → (d.set key v).raises "TypeError") ∧
       (d.memberNames.contains key = false →
-        (d.ignore.contains key = true → ∃ d', d.set key v = .ok d' ∧ d'.memberNames = d.memberNames) ∧
+        (d.ignore.contains key = true → d.set key v = .ok (d.store key v)) ∧
         (d.ignore.contains key = false →
-          (∃ d', d.set key (.nonmember v) = .ok d' ∧ d'.memberNames = d.memberNames) ∧
-          (∃ d', d.set key (.descr i) = .ok d' ∧ d'.memberNames = d.memberNames) ∧
-          (d.has key = true → (d.set key (.atom a)).raises "TypeError"))))
+          d.set key (.nonmember v) = .ok (d.store key v) ∧
+          d.set key (.descr i) = .ok (d.store key (.descr i)) ∧
+          (d.has key = true → (d.set key (.atom a)).raises "TypeError") ∧
+          (d.has key = false → a.isAuto = false →
+            d.set key (.atom a) = .ok (d.addMember key (.atom a))))))
+
+private theorem lookup_dictSet (l : List (Name × EV)) (k : Name) (v : EV) : (dictSet l k v).lookup k = some v := by
+  unfold dictSet
+  split
+  · rename_i h
+    induction l with
+    | nil => simp at h
+    | cons x xs ih =>
+      obtain ⟨a, b⟩ := x
+      by_cases hx : a = k
+      · subst hx; simp
+      · have h1 : (a == k) = false := by simpa using hx
+        have h2 : (k == a) = false := by
+          have : k ≠ a := fun e => hx e.symm
+          simpa using this
+        have h' : xs.any (fun p => p.1 == k) = true := by simpa [h1] using h
+        simp only [List.map_cons, h1, Bool.false_eq_true, ↓reduceIte, List.lookup_cons, h2]
+        exact ih h'
+  · rename_i h
+    induction l with
+    | nil => simp
+    | cons x xs ih =>
+      obtain ⟨a, b⟩ := x
+      have h1 : (a == k) = false := by
+        cases hh : a == k with
+        | false => rfl
+        | true => exact absurd (by simp [hh]) h
+      have hx : a ≠ k := by simpa using h1
+      have h2 : (k == a) = false := by
+        have : k ≠ a := fun e => hx e.symm
+        simpa using this
+      have h' : ¬ xs.any (fun p => p.1 == k) = true := by simpa [h1] using h
+      simp only [List.cons_append, List.lookup_cons, h2]
+      exact ih h'
 
 theorem enumDictBranches_proven : EnumDictBranches := by
   intro d key v a i
-  refine ⟨?_, ?_, ?_⟩
+  refine ⟨lookup_dictSet _ _ _, ?_, ?_, ?_⟩
   · intro h
-    exact ⟨_, set_private v h, rfl⟩
+    exact set_private v h
   · intro h1 h2 h3
     refine ⟨.valueError "~_sunder_ names are reserved for future Enum use", ?_, rfl⟩
     simp [EnumDict.set, h1, h2, h3]
@@ -52,16 +89,20 @@ theorem enumDictBranches_proven : EnumDictBranches := by
     · intro h4
       refine ⟨?_, ?_⟩
       · intro h5
-        refine ⟨d.store key v, ?_, rfl⟩
         simp only [EnumDict.set, h1, h2, h3, h4, h5, Bool.false_eq_true, ↓reduceIte]
       · intro h5
-        refine ⟨⟨d.store key v, ?_, rfl⟩, ⟨d.store key (.descr i), ?_, rfl⟩, ?_⟩
+        refine ⟨?_, ?_, ?_, ?_⟩
         · rw [set_plain _ h1 h2 h3 h4 h5]; rfl
         · rw [set_plain _ h1 h2 h3 h4 h5]; rfl
         · intro h6
           refine ⟨.typeError "~already defined as", ?_, rfl⟩
           rw [set_plain _ h1 h2 h3 h4 h5]
           simp [EnumDict.setValue, EnumDict.storeMember, h6]
+        · intro h6 h7
+          rw [set_plain _ h1 h2 h3 h4 h5]
+          cases a with
+          | auto x => simp [Atom.isAuto] at h7
+          | _ => simp [EnumDict.setValue, EnumDict.storeMember, h6]
 
 theorem storeMember_names {d d' : EnumDict} {key : Name} {v : EV} (h : d.storeMember key v = .ok d') :
     d'.memberNames = d.memberNames ++ [key] := by
@@ -542,16 +583,30 @@ theorem addAlias_proven : AddAlias := by
     simp [EClass.addAlias, EClass.addToMap, h, hn]
 
 /-- The scan of the bases in `_add_member_`: `enum.property` stops it at once, with type `enum`. Short of one, a redirect
-is made exactly when a descriptor is there; a plain attribute does not make one. -/
+is made exactly when a descriptor is there; a plain attribute does not make one, but it takes over the type and the class,
+as the last one seen, and a descriptor leaves what is there. -/
 def ScanBases : Prop :=
   (∀ (pre post : List BaseAttr) (i : Nat) (s : Scan), (∀ a ∈ pre, a = .absent) →
     scanBases i s (pre ++ .prop :: post) =
       { found := true, attrType := some "enum", clsIndex := some (i + pre.length) }) ∧
   (∀ (l : List BaseAttr) (i : Nat) (s : Scan), .prop ∉ l →
-    (scanBases i s l).found = (s.found || l.contains .descr))
+    (scanBases i s l).found = (s.found || l.contains .descr)) ∧
+  (∀ (pre : List BaseAttr) (i : Nat) (s : Scan), .prop ∉ pre →
+    (scanBases i s (pre ++ [.plain])).attrType = some "attr" ∧
+    (scanBases i s (pre ++ [.plain])).clsIndex = some (i + pre.length)) ∧
+  (∀ (i : Nat) (s : Scan) (r : List BaseAttr), s.attrType = none → (∀ a ∈ r, a = .absent) →
+    (scanBases i s (.descr :: r)).attrType = some "desc" ∧ (scanBases i s (.descr :: r)).found = true)
+
+private theorem scan_absent : ∀ (r : List BaseAttr) (i : Nat) (s : Scan), (∀ a ∈ r, a = .absent) → scanBases i s r = s
+  | [], _, _, _ => rfl
+  | a :: t, i, s, h => by
+    have ha : a = .absent := h a (by simp)
+    subst ha
+    simp only [scanBases]
+    exact scan_absent t _ _ (fun x hx => h x (by simp [hx]))
 
 theorem scanBases_proven : ScanBases := by
-  refine ⟨?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_⟩
   · intro pre
     induction pre with
     | nil => intro post i s _; simp [scanBases]
@@ -573,6 +628,29 @@ theorem scanBases_proven : ScanBases := by
       | prop => simp at h
       | descr => simp [scanBases, ih _ _ hr]
       | plain => simp [scanBases, ih _ _ hr]
+  · intro pre
+    induction pre with
+    | nil => intro i s _; simp [scanBases]
+    | cons a r ih =>
+      intro i s h
+      have hr : .prop ∉ r := fun e => h (by simp [e])
+      cases a with
+      | prop => simp at h
+      | absent =>
+        have := ih (i + 1) s hr
+        simp only [List.cons_append, scanBases, this]
+        simp [Nat.add_comm, Nat.add_left_comm]
+      | descr =>
+        have := ih (i + 1) { found := true, attrType := s.attrType <|> some "desc", clsIndex := s.clsIndex <|> some i } hr
+        simp only [List.cons_append, scanBases, this]
+        simp [Nat.add_comm, Nat.add_left_comm]
+      | plain =>
+        have := ih (i + 1) { s with attrType := some "attr", clsIndex := some i } hr
+        simp only [List.cons_append, scanBases, this]
+        simp [Nat.add_comm, Nat.add_left_comm]
+  · intro i s r h1 h2
+    simp only [scanBases, scan_absent r _ _ h2]
+    simp [h1]
 
 private theorem lookup_snoc_self (l : List (EV × Name)) (k : EV) (v : Name) (h : l.lookup k = none) :
     (l ++ [(k, v)]).lookup k = some v := by
@@ -617,6 +695,24 @@ theorem valueAliasHashable_proven : ValueAliasHashable := by
 def twoMembers (a b : EV) : EClass :=
   { memberMap := [(['A'], ['A']), (['B'], ['B'])]
     values := [(['A'], a), (['B'], b)] }
+
+/-- A value that nobody has goes in: on a fresh value `_add_value_alias_` succeeds, the member is what the lookups find, and
+what it was before stays. So a function that always raises fails this. -/
+def ValueAliasBinds : Prop :=
+  ∀ (c : EClass) (f : Name → Name) (m : Name) (v : EV), v.hashable = true → c.value2member.lookup v = none →
+    ∃ c', c.addValueAlias f m v = .ok c' ∧ c'.value2member.lookup v = some m ∧ enumNew c' none v false .none = .ok m ∧
+      c'.memberMap = c.memberMap ∧ c'.memberNames = c.memberNames ∧ enumContains c' false v = true
+
+theorem valueAliasBinds_proven : ValueAliasBinds := by
+  intro c f m v hv hl
+  have h1 : (c.bindValue f m v).value2member.lookup v = some m := by
+    simp [EClass.bindValue, hv, setDefault, hl, lookup_snoc_self _ _ _ hl]
+  refine ⟨c.bindValue f m v, ?_, h1, ?_, ?_, ?_, ?_⟩
+  · simp [EClass.addValueAlias, hv, hl]
+  · simp [enumNew, EClass.found, hv, h1]
+  · simp [EClass.bindValue, hv]
+  · simp [EClass.bindValue, hv]
+  · simp [enumContains, EClass.bindValue, hv, List.contains_append]
 
 /-- The same sentence for every value. False: for an unhashable value the check at Lib/enum.py:1220-1224 reads the
 `_value_` of the members only, so a value linked with `_add_value_alias_` is not seen, and the second member gets it
@@ -924,6 +1020,23 @@ theorem flagOperands_proven : FlagOperands := by
   · simp [flagBool]
   · intro h; simp [flagInvert, h]
 
+/-- `value in cls` for a `Flag` class, each path: a value that is not an `int` is not in it; what `_missing_` makes a member of
+the class is in it, and a plain `int` from `EJECT` is not; and with `ValueError` from `_missing_` the value of a member is
+in it, and nothing else. -/
+def FlagClassPaths : Prop :=
+  ∀ (c : FlagCls) (i : Int) (n : Nat) (m : Option String) (p : Int) (e : PyExc),
+    c.classContains none = false ∧
+    (c.missing i = .ok (.flag n m) → c.classContains (some i) = true) ∧
+    (c.missing i = .ok (.plain p) → c.classContains (some i) = false) ∧
+    (c.missing i = .error e → c.classContains (some i) = c.members.any (fun q => (q.2 : Int) == i))
+
+theorem flagClassPaths_proven : FlagClassPaths := by
+  intro c i n m p e
+  refine ⟨rfl, ?_, ?_, ?_⟩
+  · intro h; simp [FlagCls.classContains, h]
+  · intro h; simp [FlagCls.classContains, h]
+  · intro h; simp [FlagCls.classContains, h]
+
 /-- `value in cls`, for a `Flag` class and a value that is not negative, means that the value is the value of a member or
 a pseudo-member: the docstring of `EnumType.__contains__`. False under `CONFORM`: `_missing_` discards the unknown bits
 before it returns a member, and `__contains__` only looks at the type of that member, so `8 in F` is true for a class of
@@ -940,13 +1053,14 @@ theorem flagClassContainsValue_refuted : ¬FlagClassContainsValue := by
   simp only [Except.ok.injEq, FlagVal.flag.injEq] at h1
   omega
 
-/-- `Flag._generate_next_value_`: the first value is `start`; after that the next power of two above every value so far.
-Docs of `auto`, for `Flag`. Values with no order are the `TypeError`s of the source. -/
+/-- `Flag._generate_next_value_`: the first value is `start`; after that the next power of two above every value so far,
+the least one, so that a value further up fails this. Docs of `auto`, for `Flag`. Values with no order are the `TypeError`s
+of the source. -/
 def FlagGenerateRules : Prop :=
   ∀ (st : Int) (count : Nat) (last : List EV) (i : Nat) (r : List Nat) (s : String),
     flagGenerate st 0 last = .ok (.int st) ∧
     (∃ k, flagGenerate 1 (count + 1) ((i :: r).map (fun (x : Nat) => .atom (.int (x : Int)))) =
-        .ok (.int ((2 ^ k : Nat) : Int)) ∧ ∀ x ∈ i :: r, x < 2 ^ k) ∧
+        .ok (.int ((2 ^ k : Nat) : Int)) ∧ (∀ x ∈ i :: r, x < 2 ^ k) ∧ ∀ j, k = j + 1 → ∃ x ∈ i :: r, 2 ^ j ≤ x) ∧
     (flagGenerate 1 (count + 1) [.atom (.str s)]).raises "TypeError" ∧
     (flagGenerate 1 (count + 1) [.atom (.int i), .atom (.str s)]).raises "TypeError"
 
@@ -981,7 +1095,7 @@ theorem flagGenerateRules_proven : FlagGenerateRules := by
   intro st count last i r s
   refine ⟨rfl, ?_, ⟨.typeError "~invalid flag value", rfl, rfl⟩, ⟨.typeError "~not supported between instances", rfl, rfl⟩⟩
   obtain ⟨h1, h2⟩ := foldl_nat_bound r i
-  refine ⟨bitLength (r.foldl max i), ?_, ?_⟩
+  refine ⟨bitLength (r.foldl max i), ?_, ?_, ?_⟩
   · have hs : sortable ((i :: r).map (fun x : Nat => EV.atom (.int (x : Int)))) = true := by
       apply sortable_ints
       intro v hv
@@ -1012,6 +1126,32 @@ theorem flagGenerateRules_proven : FlagGenerateRules := by
     · omega
     · have := h2 x hx
       omega
+  · intro j hj
+    have hmem : ∀ l : List Nat, ∀ a, l.foldl max a = a ∨ l.foldl max a ∈ l := by
+      intro l
+      induction l with
+      | nil => intro a; simp
+      | cons y ys ih =>
+        intro a
+        simp only [List.foldl_cons]
+        rcases ih (max a y) with h | h
+        · rw [h]
+          by_cases hay : y ≤ a
+          · left; omega
+          · right; simp; left; omega
+        · right; simp [h]
+    have hm : r.foldl max i ∈ i :: r := by
+      rcases hmem r i with h | h
+      · rw [h]; simp
+      · simp [h]
+    refine ⟨_, hm, ?_⟩
+    unfold bitLength at hj
+    split at hj
+    · omega
+    · rename_i hn
+      have : j = (r.foldl max i).log2 := by omega
+      rw [this]
+      exact Nat.log2_self_le hn
 
 /-- The class blocks what would undo a member: `__setattr__` and `__delattr__` raise `AttributeError` on a name in
 `_member_map_`, aliases too, and leave any other name alone. Docstring of `__setattr__`: "Block attempts to reassign
@@ -1187,13 +1327,16 @@ theorem verifyCall_proven : VerifyCall := by
 
 /-! ### Names and bits -/
 
-/-- A name is not both dunder and sunder, and every sunder name is outside the dunder branch, so the branches of
-`__setitem__` do not overlap. The private test needs more than one trailing underscore to fail. -/
+/-- What the two tests accept, exactly: a sunder name is one or more characters between single underscores, and a dunder name
+the same between double ones, the inner part being more than nothing and not starting or ending with an underscore. So
+neither a test that is always false nor one that takes any underscore fits, and no name is both. -/
 def NameClasses : Prop :=
-  ∀ name : Name, (isDunder name = true → isSunder name = false)
+  ∀ m : Name, m ≠ [] → m.head? ≠ some '_' → m.getLast? ≠ some '_' →
+    isSunder (['_'] ++ m ++ ['_']) = true ∧ isDunder (['_', '_'] ++ m ++ ['_', '_']) = true ∧
+    isDunder (['_'] ++ m ++ ['_']) = false ∧ isSunder (['_', '_'] ++ m ++ ['_', '_']) = false ∧
+    isSunder m = false ∧ (∀ name, isDunder name = true → isSunder name = false)
 
-theorem nameClasses_proven : NameClasses := by
-  intro name h
+private theorem dunder_not_sunder (name : Name) (h : isDunder name = true) : isSunder name = false := by
   match name with
   | [] => simp [isDunder] at h
   | [_] => simp [isDunder] at h
@@ -1205,6 +1348,45 @@ theorem nameClasses_proven : NameClasses := by
       exact h2.2
     subst this
     simp [isSunder]
+
+theorem nameClasses_proven : NameClasses := by
+  intro m hm h1 h2
+  obtain ⟨x, t, rfl⟩ : ∃ x t, m = x :: t := by
+    cases m with
+    | nil => exact absurd rfl hm
+    | cons x t => exact ⟨x, t, rfl⟩
+  have hx : x ≠ '_' := by simpa using h1
+  have hr : ∃ y u, (x :: t).reverse = y :: u ∧ y ≠ '_' := by
+    cases hv : (x :: t).reverse with
+    | nil => simp at hv
+    | cons y u =>
+      refine ⟨y, u, rfl, ?_⟩
+      intro he
+      apply h2
+      have : (x :: t).getLast? = (x :: t).reverse.head? := List.head?_reverse.symm
+      rw [this, hv, he]
+      rfl
+  obtain ⟨y, u, hrev, hy⟩ := hr
+  have r1 : (['_'] ++ (x :: t) ++ ['_']).reverse = '_' :: y :: (u ++ ['_']) := by
+    rw [List.append_assoc, List.reverse_append, List.reverse_append, hrev]
+    rfl
+  have r2 : (['_', '_'] ++ (x :: t) ++ ['_', '_']).reverse = '_' :: '_' :: y :: (u ++ ['_', '_']) := by
+    rw [List.append_assoc, List.reverse_append, List.reverse_append, hrev]
+    rfl
+  have l1 : (['_'] ++ (x :: t) ++ ['_']).length > 2 := by simp
+  have l2 : (['_', '_'] ++ (x :: t) ++ ['_', '_']).length > 4 := by simp
+  refine ⟨?_, ?_, ?_, ?_, ?_, dunder_not_sunder⟩
+  · unfold isSunder
+    rw [r1]
+    simp only [l1, decide_true, Bool.true_and]
+    simp [hx, hy]
+  · unfold isDunder
+    rw [r2]
+    simp only [l2, decide_true, Bool.true_and]
+    simp [hx, hy]
+  · simp [isDunder, hx]
+  · simp [isSunder]
+  · simp [isSunder, hx]
 
 /-- `_is_single_bit` is what it says: a power of two, and nothing else. -/
 def SingleBit : Prop :=

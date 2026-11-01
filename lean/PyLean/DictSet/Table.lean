@@ -154,6 +154,9 @@ inductive Body (K V : Type) where
   | split (k : Keys K Unit) (v : Values V)
   deriving Repr, Inhabited
 
+/-- `PyErr_BadInternalCall()`. -/
+def badInternalCallT : PyExc := systemError "~bad argument to internal function"
+
 /-- A second `PyDictObject`, as a callback sees it: the fields of `PyDict` without `peer`. -/
 structure PeerDict (K V : Type) where
   ident : Nat
@@ -175,6 +178,9 @@ structure PyDict (K V : Type) where
   body : Body K V := .combined emptyKeys
   nextId : Nat := 1
   peer : Option (PeerDict K V) := none
+  /-- The note `_PyErr_FormatNote` put on the exception being raised. Not a field of the C struct:
+  `PyExc` has no notes, and an operation that raises can carry one here. -/
+  note : Option String := none
   deriving Repr, Inhabited
 
 def PyDict.toPeer {K V : Type} (d : PyDict K V) : PeerDict K V :=
@@ -601,6 +607,10 @@ def dictDelItemKnownHash (key : K) (hash : Int) : DM K V Unit := fun mp =>
       if ix == DKIX_EMPTY then (.error (keyErr P key), s)
       else delitemCommon hash ix.toNat s
     | none => (.error (keyErr P key), s)
+
+/-- `_PyDict_DelItem_KnownHash_LockHeld` with its `PyDict_Check` (:2853-2856). -/
+def dictDelItemKnownHashChecked (isDict : Bool) (key : K) (hash : Int) : DM K V Unit :=
+  if isDict then dictDelItemKnownHash P key hash else M.throw badInternalCallT
 
 /-- `PyDict_DelItem` (:2833-2844). -/
 def dictDelItem (key : K) : DM K V Unit := fun mp =>

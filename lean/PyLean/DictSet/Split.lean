@@ -589,7 +589,7 @@ theorem dictResize_split (H : Honest P hf eqv) (mp : PyDict K V) (k : Keys K Uni
         ((live k v).map (·.hash)) = .ok idx := h1
     rw [h1']
   · refine { toChain := hchain, hashes := ?_, uniq := ?_, strs := ?_, notSplit := ?_, load := ?_,
-             nent := ?_, usableNN := ?_ }
+             nent := ?_, usableNN := ?_, small := hlt }
     · intro ix e h
       obtain ⟨t, e0, x, _, h4, _, rfl⟩ := mem_live_slot (hmem ix e h)
       exact w.core.hashes t e0 h4
@@ -624,7 +624,7 @@ theorem dictResize_split (H : Honest P hf eqv) (mp : PyDict K V) (k : Keys K Uni
 room. -/
 theorem insertionResize_split (H : Honest P hf eqv) (mp : PyDict K V) (k : Keys K Unit) (v : Values V)
     (hb : mp.body = .split k v) (w : SplitWF hf eqv P.isStr k v mp.used) (unicode : Bool) :
-    insertionResize unicode mp = (.error memoryError, mp) ∨
+    (TooBig mp.used ∧ insertionResize unicode mp = (.error memoryError, mp)) ∨
     ∃ k' : Keys K V, insertionResize unicode mp =
         (.ok (), { mp with nextId := mp.nextId + 1, body := .combined k' }) ∧
       WF hf eqv P.isStr k' ∧ liveEntries k' = live k v ∧ 0 < k'.usable ∧
@@ -638,6 +638,7 @@ theorem insertionResize_split (H : Honest P hf eqv) (mp : PyDict K V) (k : Keys 
     rw [h5]
     omega
   · left
+    refine ⟨by simp only [TooBig]; omega, ?_⟩
     simp only [dictResize]
     rw [if_pos (by omega)]
 
@@ -858,7 +859,7 @@ theorem insertNew_split (H : Honest P hf eqv) (d : PyDict K V) (k : Keys K Unit)
     (hb : d.body = .split k v) (w : SplitWF hf eqv P.isStr k v d.used) (key : K) (value : V) (ix : Int)
     (habs : assocGet eqv (dictAssoc d) key = none)
     (hroute : P.isStr key = false ∨ (P.isStr key = true ∧ k.usable ≤ 0)) :
-    insertAfterLookup P key (hf key) value ix none d = (.error memoryError, d) ∨
+    (TooBig d.used ∧ insertAfterLookup P key (hf key) value ix none d = (.error memoryError, d)) ∨
     ∃ d', insertAfterLookup P key (hf key) value ix none d = (.ok (), d') ∧
       DictInv hf eqv P.isStr d' ∧ dictAssoc d' = dictAssoc d ++ [(key, value)] := by
   have hlist : dictAssoc d = (live k v).map (fun e => (e.key, e.value)) :=
@@ -895,8 +896,9 @@ theorem insertNew_split (H : Honest P hf eqv) (d : PyDict K V) (k : Keys K Unit)
   · have hc : (d.body.isUnicode && !P.toKeyOps.isStr key) = true := by
       have : P.toKeyOps.isStr key = false := hs
       simp [hU, this]
-    rcases insertionResize_split H d k v hb w false with h | ⟨k', h1, h2, h3, h4, h5⟩
+    rcases insertionResize_split H d k v hb w false with ⟨hbig, h⟩ | ⟨k', h1, h2, h3, h4, h5⟩
     · left
+      refine ⟨hbig, ?_⟩
       simp only [hc, if_true, h]
     · have hgen := h5 rfl
       obtain ⟨k'', h6, h7, h8⟩ := finish k' h2 h3 h4 (fun h => absurd hgen h)
@@ -913,8 +915,9 @@ theorem insertNew_split (H : Honest P hf eqv) (d : PyDict K V) (k : Keys K Unit)
       have : P.toKeyOps.isStr key = true := hs
       simp [this]
     have huse : d.body.usable ≤ 0 := by simpa [Body.usable, hb] using hus
-    rcases insertionResize_split H d k v hb w true with h | ⟨k', h1, h2, h3, h4, _⟩
+    rcases insertionResize_split H d k v hb w true with ⟨hbig, h⟩ | ⟨k', h1, h2, h3, h4, _⟩
     · left
+      refine ⟨hbig, ?_⟩
       simp only [hc, Bool.false_eq_true, if_false]
       rw [if_pos huse, h]
     · obtain ⟨k'', h6, h7, h8⟩ := finish k' h2 h3 h4 (fun _ => hs)
@@ -997,7 +1000,7 @@ combined otherwise; `MemoryError` changes nothing. The list is `assocSet`'s up t
 key: an exact str that matches a shared key leaves the shared key. -/
 theorem insertDict_split (H : Honest P hf eqv) (d : PyDict K V) (k : Keys K Unit) (v : Values V)
     (hb : d.body = .split k v) (w : SplitWF hf eqv P.isStr k v d.used) (key : K) (value : V) :
-    insertDict P key (hf key) value d = (.error memoryError, d) ∨
+    (TooBig d.used ∧ insertDict P key (hf key) value d = (.error memoryError, d)) ∨
     ∃ d', insertDict P key (hf key) value d = (.ok (), d') ∧
       (SplitInv hf eqv P.isStr d' ∨ DictInv hf eqv P.isStr d') ∧
       AssocEq eqv (dictAssoc d') (assocSet eqv (dictAssoc d) key value) := by
@@ -1010,7 +1013,7 @@ theorem insertDict_split (H : Honest P hf eqv) (d : PyDict K V) (k : Keys K Unit
     simp [assocSet, any_of_assocGet_none _ _ h]
   have viaNew : ∀ (ix : Int), assocGet eqv (dictAssoc d) key = none →
       (P.isStr key = false ∨ (P.isStr key = true ∧ k.usable ≤ 0)) →
-      (insertAfterLookup P key (hf key) value ix none d = (.error memoryError, d) ∨
+      ((TooBig d.used ∧ insertAfterLookup P key (hf key) value ix none d = (.error memoryError, d)) ∨
       ∃ d', insertAfterLookup P key (hf key) value ix none d = (.ok (), d') ∧
         (SplitInv hf eqv P.isStr d' ∨ DictInv hf eqv P.isStr d') ∧
         AssocEq eqv (dictAssoc d') (assocSet eqv (dictAssoc d) key value)) := by
@@ -1441,7 +1444,7 @@ def SplitRefines : Prop :=
   ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (hf : K → Int) (eqv : K → K → Bool),
     Honest P hf eqv → ∀ d : PyDict K V, SplitInv hf eqv P.isStr d → ∀ (key : K) (value : V),
       (∃ ix, dictLookup P key (hf key) d = (.ok (ix, assocGet eqv (dictAssoc d) key), d)) ∧
-      (dictSetItem P key value d = (.error memoryError, d) ∨
+      ((TooBig d.used ∧ dictSetItem P key value d = (.error memoryError, d)) ∨
         ∃ d', dictSetItem P key value d = (.ok (), d') ∧
           (SplitInv hf eqv P.isStr d' ∨ DictInv hf eqv P.isStr d') ∧
           AssocEq eqv (dictAssoc d') (assocSet eqv (dictAssoc d) key value)) ∧
@@ -1466,35 +1469,73 @@ theorem splitRefines_proven : SplitRefines := by
   · rw [dictItems_split d k v hb w, dictAssoc_split d k v hb w]
     simp [live, Function.comp_def]
 
-section Fresh
-variable (P : Proto K (PyDict K V)) (hf : K → Int) (eqv : K → K → Bool)
+/-- Keys a `new_dict_with_shared_keys` can be given: well formed, shared, not `Py_EMPTY_KEYS`, and
+with no hole in `dk_entries`, since shared keys are never deleted. -/
+structure SharedOK (hf : K → Int) (eqv : K → K → Bool) (isStr : K → Bool) (k : Keys K Unit) :
+    Prop where
+  core : Core hf eqv isStr k
+  kind : k.kind = .split
+  notEmpty : 0 < k.log2Size
+  small : k.log2Size < 64
+  entries : ∀ ix, ix < k.nentries → ∃ e, k.entry ix = some e
+  nent : (k.nentries : Int) + k.usable ≤ usableFraction k.size
 
-/-- `SplitInv` is inhabited by the model's own constructor: `new_dict_with_shared_keys` on the keys
-of a class with no static attributes. -/
-theorem splitInv_fresh (id : Nat) :
-    SplitInv hf eqv P.isStr (newDictWithSharedKeys (V := V) id (dictNewKeysForClass P [])) := by
-  let k : Keys K Unit := dictNewKeysForClass P []
+section Fresh
+variable {hf : K → Int} {eqv : K → K → Bool} {isStr : K → Bool}
+
+omit [DecidableEq K] in
+theorem newValues_get (n j : Nat) : (Values.new n : Values V).get j = none := by
+  simp only [Values.get, Values.new]
+  by_cases hj : j < n <;> simp [List.getElem?_replicate, hj]
+
+/-- `new_values` of `shared_keys_usable_size` slots, all `NULL`, makes a well-formed split dict of no
+items on any shared keys. -/
+theorem newValues_wf {k : Keys K Unit} (w : SharedOK hf eqv isStr k) :
+    SplitWF hf eqv isStr k (Values.new (sharedKeysUsableSize k) : Values V) 0 :=
+  { core := w.core
+    kind := w.kind
+    notEmpty := w.notEmpty
+    small := w.small
+    entries := w.entries
+    cap := by
+      have h0 := w.core.usableNN
+      have h1 : (Values.new (sharedKeysUsableSize k) : Values V).capacity =
+          sharedKeysUsableSize k := by
+        simp [Values.capacity, Values.new]
+      rw [h1]
+      simp only [sharedKeysUsableSize, Keys.nentries]
+      omega
+    nent := w.nent
+    nodup := by simp [Values.new]
+    order := fun j => by
+      constructor
+      · intro h
+        simp [Values.new] at h
+      · rintro ⟨_, h2⟩
+        rw [newValues_get] at h2
+        simp at h2
+    high := fun j _ => newValues_get _ j
+    used := by simp [Values.new] }
+
+/-- The empty table `_PyDict_NewKeysForClass` starts from (:6792-6802). -/
+def sharedKeys0 (K : Type) : Keys K Unit :=
+  { (newKeysObject 1 NEXT_LOG2_SHARED_KEYS_MAX_SIZE true : Keys K Unit) with
+    usable := SHARED_KEYS_MAX_SIZE, kind := .split }
+
+theorem sharedOK_keys0 : SharedOK hf eqv isStr (sharedKeys0 K) := by
+  let k : Keys K Unit := sharedKeys0 K
   have hc := chain_new (K := K) (V := Unit) 1 NEXT_LOG2_SHARED_KEYS_MAX_SIZE true
   have hnone : ∀ ix (e : Ent K Unit), k.entry ix = some e → False := by
     intro ix e h
-    simp [k, dictNewKeysForClass, dictNewKeysForClass.go, Keys.entry, newKeysObject] at h
+    simp [k, sharedKeys0, Keys.entry, newKeysObject] at h
   have hn : k.nentries = 0 := by
-    simp [k, dictNewKeysForClass, dictNewKeysForClass.go, Keys.nentries, newKeysObject]
-  have hget : ∀ j, (Values.new (sharedKeysUsableSize k) : Values V).get j = none := by
-    intro j
-    simp only [Values.get, Values.new]
-    by_cases hj : j < sharedKeysUsableSize k <;> simp [List.getElem?_replicate, hj]
+    simp [k, sharedKeys0, Keys.nentries, newKeysObject]
   have hfilled : k.filled = 0 := by
-    simp [k, dictNewKeysForClass, dictNewKeysForClass.go, Keys.filled, newKeysObject,
-      List.countP_replicate, DKIX_EMPTY]
+    simp [k, sharedKeys0, Keys.filled, newKeysObject, List.countP_replicate, DKIX_EMPTY]
   have hus : k.usable = SHARED_KEYS_MAX_SIZE := rfl
   have hsz : k.size = 2 ^ NEXT_LOG2_SHARED_KEYS_MAX_SIZE := rfl
   have hlog : k.log2Size = NEXT_LOG2_SHARED_KEYS_MAX_SIZE := rfl
-  have hsu : sharedKeysUsableSize k = 30 := by
-    have hl : k.entries.length = 0 := hn
-    simp only [sharedKeysUsableSize, hl, hus]
-    rfl
-  have hw : SplitWF hf eqv P.isStr k (Values.new (sharedKeysUsableSize k) : Values V) 0 :=
+  exact
     { core :=
         { toChain := ⟨hc.len, hc.range, hc.inj, hc.reach⟩
           hashes := fun ix e h => (hnone ix e h).elim
@@ -1505,32 +1546,111 @@ theorem splitInv_fresh (id : Nat) :
       kind := rfl
       notEmpty := by rw [hlog]; decide
       small := by rw [hlog]; decide
-      entries := fun ix hix => by omega
-      cap := by
-        have : (Values.new (sharedKeysUsableSize k) : Values V).capacity = sharedKeysUsableSize k := by
-          simp [Values.capacity, Values.new]
-        rw [this, hsu, hn, hus]
-        decide
-      nent := by rw [hn, hus, hsz]; decide
-      nodup := by simp [Values.new]
-      order := fun j => by
-        constructor
-        · intro h
-          simp [Values.new] at h
-        · rintro ⟨h1, _⟩
-          rw [hn] at h1
-          omega
-      high := fun j _ => hget j
-      used := by simp [Values.new] }
-  exact ⟨k, _, rfl, hw⟩
+      entries := fun ix hix => by
+        rw [hn] at hix
+        omega
+      nent := by rw [hn, hus, hsz]; decide }
+
+variable {V : Type} {P : Proto K (PyDict K V)}
+
+/-- `insert_split_key` keeps keys fit for a new dict: found, or full, it leaves them; otherwise it
+appends one more. -/
+theorem sharedOK_insert (H : Honest P hf eqv) {k k' : Keys K Unit} (w : SharedOK hf eqv P.isStr k)
+    (key : K) (hs : P.isStr key = true) (ix : Int)
+    (h : insertSplitKey P k key (hf key) = .ok (ix, k')) : SharedOK hf eqv P.isStr k' := by
+  rcases dichotomy (eqv := eqv) k key with ⟨jx, e, he, heq⟩ | hno
+  · have hl := lookupUnicode_found H k w.core w.kind key hs jx e he heq
+    have h1 : ((jx : Int) == DKIX_EMPTY) = false := by simp [DKIX_EMPTY]
+    simp only [insertSplitKey, hl, h1, Bool.false_and, Bool.false_eq_true, if_false] at h
+    have : k' = k := by
+      injection h with h
+      injection h with _ h
+      exact h.symm
+    rw [this]
+    exact w
+  · have hl := lookupUnicode_missing H k w.core w.kind key hs hno
+    by_cases hus : k.usable ≤ 0
+    · have h1 : decide (k.usable > 0) = false := by simp; omega
+      simp only [insertSplitKey, hl, h1, Bool.and_false, Bool.false_eq_true, if_false] at h
+      have : k' = k := by
+        injection h with h
+        injection h with _ h
+        exact h.symm
+      rw [this]
+      exact w
+    · have hpos : 0 < k.usable := by omega
+      obtain ⟨k2, h1, c', hkind, hn, hu, hsz, hlog, hold, hnew⟩ :=
+        appendEntry_core H k w.core hpos key () hno (fun _ => hs)
+      have h2 : decide (k.usable > 0) = true := by simp; omega
+      have h3 : k' = k2 := by
+        have : insertSplitKey P k key (hf key) = .ok ((k.nentries : Int), k2) := by
+          simp [insertSplitKey, hl, h2, h1]
+        rw [this] at h
+        injection h with h
+        injection h with _ h
+        exact h.symm
+      rw [h3]
+      exact
+        { core := c'
+          kind := by rw [hkind]; exact w.kind
+          notEmpty := by rw [hlog]; exact w.notEmpty
+          small := by rw [hlog]; exact w.small
+          entries := fun jx hjx => by
+            by_cases hlt : jx < k.nentries
+            · obtain ⟨e, he⟩ := w.entries jx hlt
+              exact ⟨e, hold jx e he⟩
+            · have : jx = k.nentries := by omega
+              exact ⟨_, this ▸ hnew⟩
+          nent := by
+            rw [hn, hu, hsz]
+            have := w.nent
+            omega }
+
+/-- `_PyDict_NewKeysForClass`'s loop over the class's attributes (:6806-6815). -/
+theorem sharedOK_go (H : Honest P hf eqv) : ∀ (attrs : List K) (k : Keys K Unit),
+    SharedOK hf eqv P.isStr k → SharedOK hf eqv P.isStr (dictNewKeysForClass.go P attrs k) := by
+  intro attrs
+  induction attrs with
+  | nil => intro k w; exact w
+  | cons a rest ih =>
+    intro k w
+    simp only [dictNewKeysForClass.go]
+    by_cases hs : P.isStr a = true
+    · rw [if_pos hs, H.hash_ok]
+      simp only
+      cases hi : insertSplitKey P k a (hf a) with
+      | error e => exact w
+      | ok r =>
+        obtain ⟨ix, k'⟩ := r
+        simp only
+        by_cases h0 : (ix == DKIX_EMPTY) = true
+        · rw [if_pos h0]
+          exact w
+        · rw [if_neg h0]
+          exact ih k' (sharedOK_insert H w a hs ix hi)
+    · rw [if_neg hs]
+      exact ih k w
 
 end Fresh
 
-/-- A new instance dict is a well-formed split table. -/
+/-- `new_dict_with_shared_keys` on any keys it can be given: a well-formed split dict of no items,
+with as many value slots as `shared_keys_usable_size`, none of them filled. And the keys a class
+builds from any attribute list are such keys, for any key protocol that keeps the hash contract. -/
 def SplitFresh : Prop :=
-  ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (hf : K → Int) (eqv : K → K → Bool)
-    (id : Nat), SplitInv hf eqv P.isStr (newDictWithSharedKeys (V := V) id (dictNewKeysForClass P []))
-theorem splitFresh_proven : SplitFresh := fun _ _ _ P hf eqv id => splitInv_fresh P hf eqv id
+  ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (hf : K → Int) (eqv : K → K → Bool),
+    (∀ (k : Keys K Unit), SharedOK hf eqv P.isStr k → ∀ id : Nat,
+      let d := newDictWithSharedKeys (V := V) id k
+      SplitInv hf eqv P.isStr d ∧ d.used = 0 ∧ dictAssoc d = [] ∧
+        ∃ v, d.body = .split k v ∧ v.capacity = sharedKeysUsableSize k ∧ v.order = [] ∧
+          ∀ ix, v.get ix = none) ∧
+    (Honest P hf eqv → ∀ attrs : List K, SharedOK hf eqv P.isStr (dictNewKeysForClass P attrs))
+theorem splitFresh_proven : SplitFresh := by
+  intro K V _ P hf eqv
+  refine ⟨fun k w id => ?_, fun H attrs => sharedOK_go H attrs (sharedKeys0 K) sharedOK_keys0⟩
+  refine ⟨⟨k, _, rfl, newValues_wf w⟩, rfl, ?_, _, rfl, ?_, ?_, newValues_get _⟩
+  · simp [dictAssoc, newDictWithSharedKeys, splitLive, Values.new]
+  · simp [Values.capacity, Values.new]
+  · rfl
 
 /-- The state the `dict.setdefault` crash needs is an ordinary one: `del d[key]` on any well-formed
 split dict leaves the key in the shared keys, no value in this dict, the invariant intact and the

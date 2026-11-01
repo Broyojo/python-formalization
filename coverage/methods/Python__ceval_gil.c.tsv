@@ -12,7 +12,7 @@ Python/ceval_gil.c	285	418	take_gil	take_gil(PyThreadState *tstate)	todo
 Python/ceval_gil.c	420	426	_PyEval_SetSwitchInterval	void _PyEval_SetSwitchInterval(unsigned long microseconds)	todo		
 Python/ceval_gil.c	428	434	_PyEval_GetSwitchInterval	unsigned long _PyEval_GetSwitchInterval(void)	todo		
 Python/ceval_gil.c	438	449	_PyEval_ThreadsInitialized	_PyEval_ThreadsInitialized(void)	todo		
-Python/ceval_gil.c	452	456	PyAPI_FUNC	PyAPI_FUNC(int) PyEval_ThreadsInitialized(void)	todo		
+Python/ceval_gil.c	452	456	PyEval_ThreadsInitialized	PyAPI_FUNC(int) PyEval_ThreadsInitialized(void)	todo		
 Python/ceval_gil.c	460	473	current_thread_holds_gil	current_thread_holds_gil(struct _gil_runtime_state *gil, PyThreadState *tstate)	todo		
 Python/ceval_gil.c	477	482	init_shared_gil	init_shared_gil(PyInterpreterState *interp, struct _gil_runtime_state *gil)	todo		
 Python/ceval_gil.c	485	496	init_own_gil	init_own_gil(PyInterpreterState *interp, struct _gil_runtime_state *gil)	todo		
@@ -20,8 +20,8 @@ Python/ceval_gil.c	499	517	_PyEval_InitGIL	_PyEval_InitGIL(PyThreadState *tstate
 Python/ceval_gil.c	520	547	_PyEval_FiniGIL	_PyEval_FiniGIL(PyInterpreterState *interp)	todo		
 Python/ceval_gil.c	550	553	PyEval_InitThreads	PyEval_InitThreads(void)	todo		
 Python/ceval_gil.c	556	561	_PyEval_Fini	_PyEval_Fini(void)	todo		
-Python/ceval_gil.c	564	571	PyAPI_FUNC	PyAPI_FUNC(void) PyEval_AcquireLock(void)	todo		
-Python/ceval_gil.c	574	582	PyAPI_FUNC	PyAPI_FUNC(void) PyEval_ReleaseLock(void)	todo		
+Python/ceval_gil.c	564	571	PyEval_AcquireLock	PyAPI_FUNC(void) PyEval_AcquireLock(void)	todo		
+Python/ceval_gil.c	574	582	PyEval_ReleaseLock	PyAPI_FUNC(void) PyEval_ReleaseLock(void)	todo		
 Python/ceval_gil.c	585	589	_PyEval_AcquireLock	_PyEval_AcquireLock(PyThreadState *tstate)	todo		
 Python/ceval_gil.c	592	599	_PyEval_ReleaseLock	_PyEval_ReleaseLock(PyInterpreterState *interp, PyThreadState *tstate, int final_release)	todo		
 Python/ceval_gil.c	602	606	PyEval_AcquireThread	PyEval_AcquireThread(PyThreadState *tstate)	todo		

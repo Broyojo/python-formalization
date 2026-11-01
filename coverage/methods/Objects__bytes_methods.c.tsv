@@ -1,26 +1,26 @@
 file	line	endline	name	signature	status	entry	note
-Objects/bytes_methods.c	12	32	_Py_bytes_isspace	_Py_bytes_isspace(const char *cptr, Py_ssize_t len)	modelled	bytesobj-bytes-class-shortcut	
-Objects/bytes_methods.c	42	62	_Py_bytes_isalpha	_Py_bytes_isalpha(const char *cptr, Py_ssize_t len)	modelled	bytesobj-bytes-class-shortcut	
-Objects/bytes_methods.c	72	92	_Py_bytes_isalnum	_Py_bytes_isalnum(const char *cptr, Py_ssize_t len)	modelled	bytesobj-bytes-class-shortcut	
-Objects/bytes_methods.c	102	122	_Py_bytes_isdigit	_Py_bytes_isdigit(const char *cptr, Py_ssize_t len)	modelled	bytesobj-bytes-class-shortcut	
-Objects/bytes_methods.c	132	156	_Py_bytes_islower	_Py_bytes_islower(const char *cptr, Py_ssize_t len)	modelled	bytesobj-bytes-cased	
-Objects/bytes_methods.c	166	190	_Py_bytes_isupper	_Py_bytes_isupper(const char *cptr, Py_ssize_t len)	modelled	bytesobj-bytes-cased	
+Objects/bytes_methods.c	12	32	_Py_bytes_isspace	_Py_bytes_isspace(const char *cptr, Py_ssize_t len)	modelled	bytesobj-bytes-class-shortcut,bytesobj-bytes-class-tables	
+Objects/bytes_methods.c	42	62	_Py_bytes_isalpha	_Py_bytes_isalpha(const char *cptr, Py_ssize_t len)	modelled	bytesobj-bytes-class-shortcut,bytesobj-bytes-class-tables	
+Objects/bytes_methods.c	72	92	_Py_bytes_isalnum	_Py_bytes_isalnum(const char *cptr, Py_ssize_t len)	modelled	bytesobj-bytes-class-shortcut,bytesobj-bytes-class-tables	
+Objects/bytes_methods.c	102	122	_Py_bytes_isdigit	_Py_bytes_isdigit(const char *cptr, Py_ssize_t len)	modelled	bytesobj-bytes-class-shortcut,bytesobj-bytes-class-tables	
+Objects/bytes_methods.c	132	156	_Py_bytes_islower	_Py_bytes_islower(const char *cptr, Py_ssize_t len)	modelled	bytesobj-bytes-case-laws,bytesobj-bytes-cased	
+Objects/bytes_methods.c	166	190	_Py_bytes_isupper	_Py_bytes_isupper(const char *cptr, Py_ssize_t len)	modelled	bytesobj-bytes-case-laws,bytesobj-bytes-cased	
 Objects/bytes_methods.c	202	242	_Py_bytes_istitle	_Py_bytes_istitle(const char *cptr, Py_ssize_t len)	modelled	bytesobj-bytes-title	
-Objects/bytes_methods.c	251	258	_Py_bytes_lower	_Py_bytes_lower(char *result, const char *cptr, Py_ssize_t len)	modelled	bytesobj-bytes-case-maps	
-Objects/bytes_methods.c	267	274	_Py_bytes_upper	_Py_bytes_upper(char *result, const char *cptr, Py_ssize_t len)	modelled	bytesobj-bytes-case-maps	
-Objects/bytes_methods.c	284	303	_Py_bytes_title	_Py_bytes_title(char *result, const char *s, Py_ssize_t len)	modelled	bytesobj-bytes-title	
+Objects/bytes_methods.c	251	258	_Py_bytes_lower	_Py_bytes_lower(char *result, const char *cptr, Py_ssize_t len)	modelled	bytesobj-bytes-case-laws,bytesobj-bytes-case-maps	
+Objects/bytes_methods.c	267	274	_Py_bytes_upper	_Py_bytes_upper(char *result, const char *cptr, Py_ssize_t len)	modelled	bytesobj-bytes-case-laws,bytesobj-bytes-case-maps	
+Objects/bytes_methods.c	284	303	_Py_bytes_title	_Py_bytes_title(char *result, const char *s, Py_ssize_t len)	modelled	bytesobj-bytes-case-laws,bytesobj-bytes-title	
 Objects/bytes_methods.c	313	319	_Py_bytes_capitalize	_Py_bytes_capitalize(char *result, const char *s, Py_ssize_t len)	modelled	bytesobj-bytes-case-maps	
-Objects/bytes_methods.c	329	345	_Py_bytes_swapcase	_Py_bytes_swapcase(char *result, const char *s, Py_ssize_t len)	modelled	bytesobj-bytes-case-maps	
-Objects/bytes_methods.c	357	379	_Py_bytes_maketrans	_Py_bytes_maketrans(Py_buffer *frm, Py_buffer *to)	modelled	bytesobj-bytes-maketrans	
-Objects/bytes_methods.c	405	432	Py_LOCAL_INLINE	Py_LOCAL_INLINE(int) parse_args_finds_byte(const char *function_name, PyObject **subobj, char *byte)	modelled	bytesobj-bytes-find-byte-arg	
-Objects/bytes_methods.c	454	512	Py_LOCAL_INLINE	Py_LOCAL_INLINE(Py_ssize_t) find_internal(const char *str, Py_ssize_t len, const char *function_name, PyObject *subobj, Py_ssize_t start, Py_ssize_t end, int dir)	modelled	bytesobj-bytes-find-byte-arg	
-Objects/bytes_methods.c	515	522	_Py_bytes_find	_Py_bytes_find(const char *str, Py_ssize_t len, PyObject *sub, Py_ssize_t start, Py_ssize_t end)	modelled	bytesobj-bytes-find-byte-arg	
-Objects/bytes_methods.c	525	537	_Py_bytes_index	_Py_bytes_index(const char *str, Py_ssize_t len, PyObject *sub, Py_ssize_t start, Py_ssize_t end)	modelled	bytesobj-bytes-find-byte-arg	
-Objects/bytes_methods.c	540	547	_Py_bytes_rfind	_Py_bytes_rfind(const char *str, Py_ssize_t len, PyObject *sub, Py_ssize_t start, Py_ssize_t end)	modelled	bytesobj-bytes-find-byte-arg	
-Objects/bytes_methods.c	550	562	_Py_bytes_rindex	_Py_bytes_rindex(const char *str, Py_ssize_t len, PyObject *sub, Py_ssize_t start, Py_ssize_t end)	modelled	bytesobj-bytes-find-byte-arg	
-Objects/bytes_methods.c	565	601	_Py_bytes_count	_Py_bytes_count(const char *str, Py_ssize_t len, PyObject *sub_obj, Py_ssize_t start, Py_ssize_t end)	modelled	bytesobj-bytes-find-byte-arg	
-Objects/bytes_methods.c	604	624	_Py_bytes_contains	_Py_bytes_contains(const char *str, Py_ssize_t len, PyObject *arg)	modelled	bytesobj-bytes-contains	
-Objects/bytes_methods.c	632	675	tailmatch	tailmatch(const char *str, Py_ssize_t len, PyObject *substr, Py_ssize_t start, Py_ssize_t end, int direction)	modelled	bytesobj-bytes-tailmatch-tuple	
+Objects/bytes_methods.c	329	345	_Py_bytes_swapcase	_Py_bytes_swapcase(char *result, const char *s, Py_ssize_t len)	modelled	bytesobj-bytes-case-laws,bytesobj-bytes-case-maps	
+Objects/bytes_methods.c	357	379	_Py_bytes_maketrans	_Py_bytes_maketrans(Py_buffer *frm, Py_buffer *to)	modelled	bytesobj-bytes-maketrans,bytesobj-bytes-maketrans-hit	
+Objects/bytes_methods.c	405	432	parse_args_finds_byte	Py_LOCAL_INLINE(int) parse_args_finds_byte(const char *function_name, PyObject **subobj, char *byte)	modelled	bytesobj-bytes-count-spec,bytesobj-bytes-find-byte-arg,bytesobj-bytes-find-extreme,bytesobj-bytes-index-raises	
+Objects/bytes_methods.c	454	512	find_internal	Py_LOCAL_INLINE(Py_ssize_t) find_internal(const char *str, Py_ssize_t len, const char *function_name, PyObject *subobj, Py_ssize_t start, Py_ssize_t end, int dir)	modelled	bytesobj-bytes-find-byte-arg,bytesobj-bytes-find-extreme	
+Objects/bytes_methods.c	515	522	_Py_bytes_find	_Py_bytes_find(const char *str, Py_ssize_t len, PyObject *sub, Py_ssize_t start, Py_ssize_t end)	modelled	bytesobj-bytes-find-byte-arg,bytesobj-bytes-find-extreme	
+Objects/bytes_methods.c	525	537	_Py_bytes_index	_Py_bytes_index(const char *str, Py_ssize_t len, PyObject *sub, Py_ssize_t start, Py_ssize_t end)	modelled	bytesobj-bytes-find-byte-arg,bytesobj-bytes-find-extreme	
+Objects/bytes_methods.c	540	547	_Py_bytes_rfind	_Py_bytes_rfind(const char *str, Py_ssize_t len, PyObject *sub, Py_ssize_t start, Py_ssize_t end)	modelled	bytesobj-bytes-find-byte-arg,bytesobj-bytes-find-extreme	
+Objects/bytes_methods.c	550	562	_Py_bytes_rindex	_Py_bytes_rindex(const char *str, Py_ssize_t len, PyObject *sub, Py_ssize_t start, Py_ssize_t end)	modelled	bytesobj-bytes-find-byte-arg,bytesobj-bytes-find-extreme	
+Objects/bytes_methods.c	565	601	_Py_bytes_count	_Py_bytes_count(const char *str, Py_ssize_t len, PyObject *sub_obj, Py_ssize_t start, Py_ssize_t end)	modelled	bytesobj-bytes-count-spec,bytesobj-bytes-find-byte-arg	
+Objects/bytes_methods.c	604	624	_Py_bytes_contains	_Py_bytes_contains(const char *str, Py_ssize_t len, PyObject *arg)	modelled	bytesobj-bytes-contains,bytesobj-bytes-contains-index-error,bytesobj-bytes-contains-sub,bytesobj-bytes-index-raises	
+Objects/bytes_methods.c	632	675	tailmatch	tailmatch(const char *str, Py_ssize_t len, PyObject *substr, Py_ssize_t start, Py_ssize_t end, int direction)	modelled	bytesobj-bytes-tailmatch-spec,bytesobj-bytes-tailmatch-tuple	
 Objects/bytes_methods.c	678	708	_Py_bytes_tailmatch	_Py_bytes_tailmatch(const char *str, Py_ssize_t len, const char *function_name, PyObject *subobj, Py_ssize_t start, Py_ssize_t end, int direction)	modelled	bytesobj-bytes-tailmatch-tuple	
 Objects/bytes_methods.c	711	715	_Py_bytes_startswith	_Py_bytes_startswith(const char *str, Py_ssize_t len, PyObject *subobj, Py_ssize_t start, Py_ssize_t end)	modelled	bytesobj-bytes-tailmatch-tuple	
 Objects/bytes_methods.c	718	722	_Py_bytes_endswith	_Py_bytes_endswith(const char *str, Py_ssize_t len, PyObject *subobj, Py_ssize_t start, Py_ssize_t end)	modelled	bytesobj-bytes-tailmatch-tuple	

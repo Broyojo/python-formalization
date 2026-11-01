@@ -221,32 +221,6 @@ theorem forward_drain (d : PyDict K V) (k : Keys K V) (hb : d.body = .combined k
       rw [h2, hd]
       simp
 
-/-- `list(iter(d))` and the views' iterators on an unchanged dict: the whole list, in order. The
-hypothesis is the type invariant of `ma_used`, a `Py_ssize_t`. -/
-theorem iter_toList (d : PyDict K V) (k : Keys K V) (hb : d.body = .combined k)
-    (hu : d.used = (liveEntries k).length) (hmax : d.used < 2 ^ 63) (kind : IterKind) :
-    (dictiterToList d (dictiterNew d kind false)).1 = .ok k.items := by
-  have hint : toU64 (d.used : Int) = d.used := by
-    simp only [toU64]
-    have : (d.used : Int) % (2 ^ 64 : Int) = d.used := Int.emod_eq_of_lt (by omega) (by omega)
-    rw [this]
-    simp
-  have hhint : dictiterLengthHint d (dictiterNew d kind false) = .ok d.used := by
-    simp [dictiterLengthHint, dictiterLen, dictiterNew, hint, hmax, Nat.not_le.mpr hmax]
-  simp only [dictiterToList, hhint]
-  have hdrop : (k.entries.drop 0) = k.entries := rfl
-  have hle : (liveEntries k).length ≤ d.body.nentries := by
-    have := liveEntries_length_le k
-    simpa [Body.nentries, hb] using this
-  have := forward_drain d k hb (d.body.nentries + d.used + 2) (dictiterNew d kind false) 0 []
-    rfl (by simp [dictiterNew]) (by simp [dictiterNew]) (by simp [dictiterNew])
-    (by simp [dictiterNew, hu, liveEntries])
-    (by
-      have h1 : (k.entries.filterMap id).length ≤ d.body.nentries := hle
-      simp only [hdrop]
-      omega)
-  simpa [Keys.items, liveEntries] using this
-
 /-- The C API reads. -/
 def ReadFamily : Prop :=
   ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (hf : K → Int) (eqv : K → K → Bool),
@@ -300,13 +274,5 @@ def LenSpec : Prop :=
   ∀ (K V : Type) [DecidableEq K] (d : PyDict K V) (hf : K → Int) (eqv : K → K → Bool) (isStr : K → Bool),
     DictInv hf eqv isStr d → d.used = (dictAssoc d).length
 theorem lenSpec_proven : LenSpec := fun _ _ _ d hf eqv isStr hd => len_spec d hf eqv isStr hd
-
-/-- A forward iterator over an unchanged dict yields the list in order, whatever its kind. -/
-def ForwardIterOrder : Prop :=
-  ∀ (K V : Type) [DecidableEq K] (d : PyDict K V) (k : Keys K V), d.body = .combined k →
-    d.used = (liveEntries k).length → d.used < 2 ^ 63 → ∀ kind : IterKind,
-      (dictiterToList d (dictiterNew d kind false)).1 = .ok k.items
-theorem forwardIterOrder_proven : ForwardIterOrder := fun _ _ _ d k hb hu hmax kind =>
-  iter_toList d k hb hu hmax kind
 
 end PyLean.DictSet

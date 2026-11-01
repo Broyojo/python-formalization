@@ -21,9 +21,9 @@ Objects/setobject.c	631	635	set_len	set_len(PyObject *self)	todo
 Objects/setobject.c	638	707	set_merge_lock_held	set_merge_lock_held(PySetObject *so, PyObject *otherset)	todo		
 Objects/setobject.c	720	743	set_pop_impl	set_pop_impl(PySetObject *so) /*[clinic end generated code: output=4d65180f1271871b input=9296c84921125060]*/	modelled	set-pop	
 Objects/setobject.c	746	755	set_traverse	set_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or GC clear hook, no effect on the object's Python-level behaviour
-Objects/setobject.c	763	766	_shuffle_bits	_shuffle_bits(Py_uhash_t h)	todo		withdrawn: the order-free proof works for any shuffle; \"depends only on active entries\" is unproved
-Objects/setobject.c	779	818	frozenset_hash_impl	frozenset_hash_impl(PyObject *self)	todo		withdrawn: the order-free proof works for any shuffle; \"depends only on active entries\" is unproved
-Objects/setobject.c	821	833	frozenset_hash	frozenset_hash(PyObject *self)	todo		withdrawn: the order-free proof works for any shuffle; \"depends only on active entries\" is unproved
+Objects/setobject.c	763	766	_shuffle_bits	_shuffle_bits(Py_uhash_t h)	todo		withdrawn: the order-free proof works for any shuffle; \\\"depends only on active entries\\\" is unproved
+Objects/setobject.c	779	818	frozenset_hash_impl	frozenset_hash_impl(PyObject *self)	todo		withdrawn: the order-free proof works for any shuffle; \\\"depends only on active entries\\\" is unproved
+Objects/setobject.c	821	833	frozenset_hash	frozenset_hash(PyObject *self)	todo		withdrawn: the order-free proof works for any shuffle; \\\"depends only on active entries\\\" is unproved
 Objects/setobject.c	846	853	setiter_dealloc	setiter_dealloc(PyObject *self)	excluded		no-behaviour: deallocation, runs when no reference remains
 Objects/setobject.c	856	861	setiter_traverse	setiter_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or GC clear hook, no effect on the object's Python-level behaviour
 Objects/setobject.c	864	871	setiter_len	setiter_len(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	set-iter-len	

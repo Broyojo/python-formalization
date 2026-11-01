@@ -64,6 +64,8 @@ def python_rows(path, rel):
 
 
 C_DEF = re.compile(r"^(?:[A-Za-z_][\w ]*[ *]+)?\*?([A-Za-z_]\w*)\s*\(")
+# Return-type macros: the function's name follows, on this line or the next.
+C_WRAPPER = re.compile(r"^(?:static\s+)?(?:Py_LOCAL_INLINE|Py_LOCAL|PyAPI_FUNC|PyMODINIT_FUNC)\([^)]*\)\s*")
 
 
 def c_rows(path):
@@ -72,7 +74,14 @@ def c_rows(path):
     i = 0
     while i < len(lines):
         line = lines[i]
-        match = C_DEF.match(line)
+        wrapper = C_WRAPPER.match(line)
+        if wrapper:
+            rest = line[wrapper.end():]
+            match = C_DEF.match(rest or (lines[i + 1] if i + 1 < len(lines) else ""))
+            if match and not rest:
+                line = lines[i + 1]
+        else:
+            match = C_DEF.match(line)
         if (not match or line.startswith(("typedef", "extern", "#", "static PyMethodDef", "PyDoc_"))
                 or match.group(1).isupper()):
             i += 1
@@ -168,13 +177,14 @@ def main():
             with target.open(newline="") as f:
                 for row in csv.DictReader(f, delimiter="\t", quoting=csv.QUOTE_NONE):
                     old[row["name"], row["signature"]] = row
+                    old[row["line"]] = row
         reason = exclusion(rel, patterns)
         with target.open("w", newline="") as f:
             writer = csv.writer(f, delimiter="\t", quoting=csv.QUOTE_NONE, escapechar="\\",
                                 lineterminator="\n")
             writer.writerow(FIELDS)
             for line, end, name, signature in rows:
-                previous = old.get((name, signature), {})
+                previous = old.get((name, signature)) or old.get(str(line), {})
                 status = previous.get("status", "excluded" if reason else "todo")
                 writer.writerow([rel, line, end, name, signature.replace("\t", " "), status,
                                  previous.get("entry", ""), previous.get("note", reason)])

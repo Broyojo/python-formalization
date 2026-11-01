@@ -84,6 +84,9 @@ def methodOf (tn n : String) : Builtin :=
   | "list", "__getitem__" | "dict", "__getitem__" => .dunderGetitem
   | "dict", "__contains__" => .dunderContains
   | "dict", "keys" => .dictKeysMethod
+  | "float", "is_integer" | "float", "__trunc__" | "float", "__floor__" | "float", "__ceil__"
+  | "float", "conjugate" | "float", "__getnewargs__" | "float", "hex"
+  | "float", "as_integer_ratio" | "float", "__round__" | "float", "fromhex" => .floatMethod n
   | "mappingproxy", "keys" | "mappingproxy", "values" | "mappingproxy", "items"
   | "mappingproxy", "copy" | "mappingproxy", "get" | "mappingproxy", "__reversed__" =>
     .proxyCall n

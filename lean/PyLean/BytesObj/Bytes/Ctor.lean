@@ -34,12 +34,18 @@ def bytesFromObject (x : Obj) : Py Seq :=
     match x.buffer? with
     | some b => .ok b   -- _PyBytes_FromBuffer, :2846-2868
     | none =>
+      let cannot : PyExc := .typeError s!"cannot convert '{x.typeName}' object to bytes"
       match x with
-      | .str _ => .error (.typeError s!"cannot convert '{x.typeName}' object to bytes")
-      | _ =>
-        match iterItems? x with
-        | some items => bytesFromItems items
-        | none => .error (.typeError s!"cannot convert '{x.typeName}' object to bytes")
+      | .str _ => .error cannot
+      | .list items | .tuple items => bytesFromItems items
+      | _ => do
+        let items ← getIterOr cannot x
+        -- `_PyBytes_FromIterator`, bytesobject.c:2958-2965: the hint, then the allocation.
+        let size ← lengthHint x 64
+        if mallocFails (bytesObjectSize + size) then throw memoryError
+        let vals ← bytesFromItems items
+        iterFinish x
+        return vals
 
 /-- `PyNumber_AsSsize_t(x, PyExc_OverflowError)` on an index object of value `v`,
 Objects/abstract.c:1458-1500: the message names the object's type. -/
@@ -67,6 +73,7 @@ def bytesNew (x : Option Obj) (encoding errors : Option String) : Py Seq :=
         | _ => .error (.typeError "errors without a string argument")
       else
         match x with
+        | .dunderRaises e => .error e
         | .dunder r =>
           match r with
           | .bytes s => .ok s
@@ -75,12 +82,13 @@ def bytesNew (x : Option Obj) (encoding errors : Option String) : Py Seq :=
         | .str _ => .error (.typeError "string argument without an encoding")
         | _ =>
           match x.index? with
-          | some v =>
+          | some (.ok v) =>
             match countOf x v with
             | .error e => .error e
             | .ok size =>
               if size < 0 then .error (.valueError "negative count")
               else bytesFromSize size
+          | some (.error e) => if isTypeError e then bytesFromObject x else .error e
           | none => bytesFromObject x
 
 /-- `bytes.__bytes__`, bytesobject.c:1737-1747 (copy for a subclass) and

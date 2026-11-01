@@ -112,7 +112,34 @@ def withdraw_hollow(by_file, hollow):
                 row["note"] = "review: " + reason
 
 
+def module_files(registry):
+    """Files each module's entries name, by id prefix: a credit stays inside them."""
+    files = defaultdict(set)
+    for entry, info in registry.items():
+        files[entry.split("-")[0]].add(info["file"])
+    return files
+
+
+def withdraw_stale(by_file, registry):
+    """A modelled row keeps only entries that exist, are settled and still name it."""
+    for rows in by_file.values():
+        for row in rows:
+            if row["status"] != "modelled":
+                continue
+            keep = []
+            for entry in filter(None, row["entry"].split(",")):
+                info = registry.get(entry)
+                if info and info["status"] in {"proven", "refuted"} and any(
+                        form in (row["name"], row["name"].split(".")[-1])
+                        for fn in info["fns"] for form in name_forms(fn)):
+                    keep.append(entry)
+            row["entry"] = ",".join(keep)
+            if not keep:
+                row["status"] = "todo"
+
+
 def prefill(by_file, registry, hollow):
+    allowed = module_files(registry)
     index = defaultdict(list)
     for rows in by_file.values():
         for row in rows:
@@ -126,7 +153,8 @@ def prefill(by_file, registry, hollow):
         for fn in info["fns"]:
             found = None
             for form in name_forms(fn):
-                matches = list({id(r): r for r in index.get(form, [])}.values())
+                matches = [r for r in {id(r): r for r in index.get(form, [])}.values()
+                           if r["file"] in allowed[entry.split("-")[0]]]
                 local = [r for r in matches if r["file"] == info["file"]]
                 if len(local) == 1 or (not local and len(matches) == 1):
                     found = (local or matches)[0]
@@ -163,6 +191,7 @@ def main():
     reviewed, hollow = read_reviews()
     if args.prefill:
         withdraw_hollow(by_file, hollow)
+        withdraw_stale(by_file, registry)
         prefill(by_file, registry, hollow)
         for path, rows in by_file.items():
             write_rows(path, rows)

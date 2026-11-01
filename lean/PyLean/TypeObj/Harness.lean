@@ -94,7 +94,8 @@ def canon (w : World) : Nat → Val → String
     | .ellipsis => "Ellipsis"
     | .bool b => if b then "True" else "False"
     | .int i => toString i
-    | .float _ => "<float>"
+    | .float b => (PyLean.Binary64.float_repr (PyLean.Binary64.F64.ofBits b)).elim "<float>"
+        (fun cs => String.ofList (cs.map Char.ofNat))
     | .str s => reprStr s
     | .tuple xs => "(" ++ ", ".intercalate (xs.map (canon w fuel)) ++ ")"
     | .obj a =>
@@ -110,7 +111,8 @@ def canon (w : World) : Nat → Val → String
           let items := es.map fun (k, x) => canon w fuel k ++ ": " ++ canon w fuel x
           if typeOf w v == B.dict then "{" ++ ", ".intercalate items ++ "}"
           else s!"<{tn} " ++ "{" ++ ", ".intercalate items ++ "}>"
-        | some (.boxed x) => s!"<{tn} {canon w fuel x}>"
+        | some (.boxed x) =>
+          if typeOf w v == B.float then canon w fuel x else s!"<{tn} {canon w fuel x}>"
         | some (.func f) => s!"<function {f.qualname}>"
         | some (.bound f s) => s!"<method {canon w fuel f} of {canon w fuel s}>"
         | some (.builtin _ _) => "<builtin>"
@@ -239,6 +241,7 @@ mutual
     | 0, _ => raise .fuel
     | fuel + 1, e =>
       match e with
+      | .lit (.float b) => alloc B.float (.boxed (.float b))
       | .lit v => pure v
       | .name n => loadName env rt fr n
       | .attr o n => do

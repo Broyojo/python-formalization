@@ -3,20 +3,20 @@ Python/formatter_unicode.c	15	31	unknown_presentation_type	unknown_presentation_
 Python/formatter_unicode.c	34	45	invalid_thousands_separator_type	invalid_thousands_separator_type(char specifier, Py_UCS4 presentation_type)	todo		
 Python/formatter_unicode.c	48	51	invalid_comma_and_underscore	invalid_comma_and_underscore(void)	todo		
 Python/formatter_unicode.c	61	91	get_integer	get_integer(PyObject *str, Py_ssize_t *ppos, Py_ssize_t end, Py_ssize_t *result)	todo		
-Python/formatter_unicode.c	98	107	Py_LOCAL_INLINE	Py_LOCAL_INLINE(int) is_alignment_token(Py_UCS4 c)	todo		
-Python/formatter_unicode.c	110	119	Py_LOCAL_INLINE	Py_LOCAL_INLINE(int) is_sign_element(Py_UCS4 c)	todo		
+Python/formatter_unicode.c	98	107	is_alignment_token	Py_LOCAL_INLINE(int) is_alignment_token(Py_UCS4 c)	todo		
+Python/formatter_unicode.c	110	119	is_sign_element	Py_LOCAL_INLINE(int) is_sign_element(Py_UCS4 c)	todo		
 Python/formatter_unicode.c	151	372	parse_internal_render_format_spec	parse_internal_render_format_spec(PyObject *obj, PyObject *format_spec, Py_ssize_t start, Py_ssize_t end, InternalFormatSpec *format, char default_type, char default_align)	todo		
-Python/formatter_unicode.c	376	405	calc_padding	calc_padding(Py_ssize_t nchars, Py_ssize_t width, Py_UCS4 align, Py_ssize_t *n_lpadding, Py_ssize_t *n_rpadding, Py_ssize_t *n_total)	modelled	unicodeobj-format-str-shape	
-Python/formatter_unicode.c	410	432	fill_padding	fill_padding(_PyUnicodeWriter *writer, Py_ssize_t nchars, Py_UCS4 fill_char, Py_ssize_t n_lpadding, Py_ssize_t n_rpadding)	modelled	unicodeobj-format-str-shape	
-Python/formatter_unicode.c	489	516	parse_number	parse_number(PyObject *s, Py_ssize_t pos, Py_ssize_t end, Py_ssize_t *n_remainder, Py_ssize_t *n_frac, int *has_decimal)	modelled	unicodeobj-format-parse-number	
+Python/formatter_unicode.c	376	405	calc_padding	calc_padding(Py_ssize_t nchars, Py_ssize_t width, Py_UCS4 align, Py_ssize_t *n_lpadding, Py_ssize_t *n_rpadding, Py_ssize_t *n_total)	todo		
+Python/formatter_unicode.c	410	432	fill_padding	fill_padding(_PyUnicodeWriter *writer, Py_ssize_t nchars, Py_UCS4 fill_char, Py_ssize_t n_lpadding, Py_ssize_t n_rpadding)	todo		
+Python/formatter_unicode.c	489	516	parse_number	parse_number(PyObject *s, Py_ssize_t pos, Py_ssize_t end, Py_ssize_t *n_remainder, Py_ssize_t *n_frac, int *has_decimal)	todo		
 Python/formatter_unicode.c	524	666	calc_number_widths	calc_number_widths(NumberFieldWidths *spec, Py_ssize_t n_prefix, Py_UCS4 sign_char, Py_ssize_t n_start, Py_ssize_t n_end, Py_ssize_t n_remainder, Py_ssize_t n_frac, int has_decimal, const LocaleInfo *locale, const InternalFormatSpec *format, Py_UCS4 *maxchar)	modelled	unicodeobj-format-float-width,unicodeobj-format-int-width	
 Python/formatter_unicode.c	672	777	fill_number	fill_number(_PyUnicodeWriter *writer, const NumberFieldWidths *spec, PyObject *digits, Py_ssize_t d_start, PyObject *prefix, Py_ssize_t p_start, Py_UCS4 fill_char, LocaleInfo *locale, int toupper)	modelled	unicodeobj-format-float-width,unicodeobj-format-int-width	
 Python/formatter_unicode.c	786	846	get_locale_info	get_locale_info(enum LocaleType type, enum LocaleType frac_type, LocaleInfo *locale_info)	todo		
 Python/formatter_unicode.c	849	855	free_locale_info	free_locale_info(LocaleInfo *locale_info)	excluded		no-behaviour: releases the references held by LocaleInfo
-Python/formatter_unicode.c	862	952	format_string_internal	format_string_internal(PyObject *value, const InternalFormatSpec *format, _PyUnicodeWriter *writer)	modelled	unicodeobj-format-str-shape	
-Python/formatter_unicode.c	960	1130	format_long_internal	format_long_internal(PyObject *value, const InternalFormatSpec *format, _PyUnicodeWriter *writer)	modelled	unicodeobj-format-int-width	
-Python/formatter_unicode.c	1138	1284	format_float_internal	format_float_internal(PyObject *value, const InternalFormatSpec *format, _PyUnicodeWriter *writer)	modelled	unicodeobj-format-float-internal,unicodeobj-format-float-fast-slow,unicodeobj-format-float-width	
-Python/formatter_unicode.c	1291	1534	format_complex_internal	format_complex_internal(PyObject *value, const InternalFormatSpec *format, _PyUnicodeWriter *writer)	modelled	unicodeobj-format-complex-internal,unicodeobj-format-complex-repr,unicodeobj-format-complex-width	
+Python/formatter_unicode.c	862	952	format_string_internal	format_string_internal(PyObject *value, const InternalFormatSpec *format, _PyUnicodeWriter *writer)	todo		
+Python/formatter_unicode.c	960	1130	format_long_internal	format_long_internal(PyObject *value, const InternalFormatSpec *format, _PyUnicodeWriter *writer)	todo		
+Python/formatter_unicode.c	1138	1284	format_float_internal	format_float_internal(PyObject *value, const InternalFormatSpec *format, _PyUnicodeWriter *writer)	todo		
+Python/formatter_unicode.c	1291	1534	format_complex_internal	format_complex_internal(PyObject *value, const InternalFormatSpec *format, _PyUnicodeWriter *writer)	todo		
 Python/formatter_unicode.c	1540	1551	format_obj	format_obj(PyObject *obj, _PyUnicodeWriter *writer)	todo		
 Python/formatter_unicode.c	1554	1587	_PyUnicode_FormatAdvancedWriter	_PyUnicode_FormatAdvancedWriter(_PyUnicodeWriter *writer, PyObject *obj, PyObject *format_spec, Py_ssize_t start, Py_ssize_t end)	todo		
 Python/formatter_unicode.c	1590	1649	_PyLong_FormatAdvancedWriter	_PyLong_FormatAdvancedWriter(_PyUnicodeWriter *writer, PyObject *obj, PyObject *format_spec, Py_ssize_t start, Py_ssize_t end)	todo		

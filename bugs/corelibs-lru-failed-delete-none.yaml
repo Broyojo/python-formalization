@@ -1,0 +1,65 @@
+id: corelibs-lru-failed-delete-none
+title: "After a failed del in the pure Python lru_cache, a hit on the old key returns None"
+priority: P4
+kind: silent-wrong-result
+module: corelibs
+files: [Lib/functools.py]
+functions: ["_lru_cache_wrapper"]
+summary: |
+  The bounded wrapper empties the oldest link and makes it the new root before `del cache[oldkey]`. If that raises, from the
+  __eq__ of a key that collides with it, the dict keeps oldkey, and its link is now the root, whose key and result are
+  None. The next call with oldkey is a hit that returns None, and rewires the root to point at itself; a later eviction
+  raises KeyError. The comment at :684-686 is careful about the assignment after the del, and not about the del itself.
+  The C wrapper puts the link back, and keeps the value.
+likelihood: |
+  Very low: it needs a colliding key whose __eq__ raises only at that moment, and the pure Python twin.
+maybe_intended: |
+  No, though a raising __eq__ on a cache key leaves few promises. Compare corelibs-lru-failed-store-stale-link.
+reproducer: |
+  from test.support import import_helper
+  py = import_helper.import_fresh_module('functools', blocked=['_functools'])
+  c = import_helper.import_fresh_module('functools', fresh=['_functools'])
+  def run(m):
+      armed = [False]
+      class K:
+          def __init__(self, n, h):
+              self.n, self.h = n, h
+          def __hash__(self):
+              return self.h
+          def __eq__(self, o):
+              if armed[0]:
+                  raise ValueError('eq')
+              return self is o
+      a, b, d = K(1, 0), K(2, 0), K(3, 1)
+      def user(k):
+          if k is d:
+              armed[0] = True
+          return k.n * 10
+      f = m.lru_cache(maxsize=2)(user)
+      f(a), f(b), f(a)
+      try:
+          f(d)
+      except ValueError:
+          pass
+      armed[0] = False
+      return f(b)
+  x, y = run(c), run(py)
+  print(x, y)
+  if x == 20 and y is None:
+      print('REPRODUCED corelibs-lru-failed-delete-none')
+expected: |
+  20, the result of the function for that key, or a fresh call of it.
+observed: |
+  python3 3.14.7: 20 None. REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+promised_by: |
+  The docs of lru_cache: the function is memoized, so a call returns what the function returned.
+cause: |
+  Lib/functools.py:678-683: root[KEY] and root[RESULT] are cleared before `del cache[oldkey]`, which can raise.
+possible_fix: |
+  Delete the key first, or restore the link on failure, as bounded_lru_cache_update_lock_held does.
+duplicates:
+  issues: []
+  queries: ["gh search issues lru_cache eq raises eviction pure python None", "bugforge README: no match for lru_cache"]
+lean:
+  property: PyLean.CoreLibs.Functools.LruResultsFromFunction
+  theorem: PyLean.CoreLibs.Functools.lruResultsFromFunction_refuted

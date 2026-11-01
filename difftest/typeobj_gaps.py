@@ -25,7 +25,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import common
 import typeobj_diff as td
-from typeobj_diff import G, NONE, attr, call, lit, name
+from typeobj_diff import G, NONE, attr, call, fl, lit, name
 
 GIB = 1 << 30
 FIRST = re.compile(r"'__firstlineno__': \d+, ")
@@ -45,7 +45,7 @@ def prelude(g):
 # A subclass of each builtin that takes one: instances run the same slots with a heap type.
 SUBCLASSES = [("SI", "int"), ("SS", "str"), ("ST", "tuple"), ("SL", "list"), ("SD", "dict"),
               ("SP", "property"), ("SC", "classmethod"), ("SM", "staticmethod"), ("SU", "super"),
-              ("SE", "Exception"), ("SK", "KeyError"), ("SY", "type"), ("SG", "ExceptionGroup")]
+              ("SF", "float"), ("SE", "Exception"), ("SK", "KeyError"), ("SY", "type"), ("SG", "ExceptionGroup")]
 
 VALUES = [
     NONE, name("NotImplemented"), name("Ellipsis"), lit(True), lit(0), lit(1),
@@ -65,6 +65,8 @@ VALUES = [
     call(name("iter"), ["dict", [[lit(1), lit(2)]]]),
     call(attr(["dict", [[lit(1), lit(2)]]], "keys")),
     call(name("ValueError"), lit("x")), name("ValueError"),
+    fl(1.5), fl(-0.0), fl(1e308), name("float"), call(name("float"), lit("nan")),
+    call(name("float"), lit("inf")), call(name("SF"), fl(2.5)), name("SF"),
     # Instances of subclasses, and the subclasses themselves.
     call(name("SI"), lit(3)), call(name("SS"), lit("t")), call(name("ST"), ["tuple", [lit(1)]]),
     call(name("SL"), ["list", [lit(1)]]), call(name("SD"), ["dict", [[lit(1), lit(2)]]]),

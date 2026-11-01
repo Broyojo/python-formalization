@@ -35,6 +35,7 @@ theorem wf_empty (hf : K → Int) (eqv : K → K → Bool) (isStr : K → Bool) 
   load := by simp [emptyKeys, Keys.filled, Keys.size, usableFraction, DKIX_EMPTY]
   nent := by simp [emptyKeys, Keys.nentries, Keys.size, usableFraction]
   usableNN := by simp [emptyKeys]
+  small := by simp [emptyKeys]
 
 /-- A new dict satisfies the invariant. -/
 theorem dictInv_new (hf : K → Int) (eqv : K → K → Bool) (isStr : K → Bool) (id n : Nat) :
@@ -185,7 +186,8 @@ theorem storeValue_spec (H : Honest P hf eqv) (mp : PyDict K V) (k : Keys K V)
       have : k'.nentries = k.nentries := by simp [k', Keys.nentries]
       rw [this]
       exact w.nent
-    usableNN := w.usableNN }
+    usableNN := w.usableNN
+    small := w.small }
   have hitems : k'.items = k.items.map fun p => if eqv p.1 key then (p.1, v) else p := by
     simp only [Keys.items, liveEntries, k']
     exact filterMap_set_value eqv key v k.entries ix e he' heq (fun j e' a b => by
@@ -206,7 +208,7 @@ theorem storeValue_spec (H : Honest P hf eqv) (mp : PyDict K V) (k : Keys K V)
 theorem insertCombined_spec (H : Honest P hf eqv) (mp : PyDict K V) (k : Keys K V)
     (hb : mp.body = .combined k) (w : WF hf eqv P.isStr k) (hused : mp.used = (liveEntries k).length)
     (key : K) (v : V) (hno : ∀ ix e, k.entry ix = some e → eqv e.key key = false) :
-    insertCombinedDict P.toKeyOps (hf key) key v mp = (.error memoryError, mp) ∨
+    (TooBig mp.used ∧ insertCombinedDict P.toKeyOps (hf key) key v mp = (.error memoryError, mp)) ∨
     ∃ k' : Keys K V, ∃ n, insertCombinedDict P.toKeyOps (hf key) key v mp =
         (.ok (), { mp with nextId := n, body := .combined k' }) ∧ WF hf eqv P.isStr k' ∧
       liveEntries k' = liveEntries k ++ [⟨key, hf key, v⟩] := by
@@ -235,8 +237,8 @@ theorem insertCombined_spec (H : Honest P hf eqv) (mp : PyDict K V) (k : Keys K 
   simp only [insertCombinedDict]
   by_cases hA : (mp.body.isUnicode && !P.toKeyOps.isStr key) = true
   · simp only [hA, if_true]
-    rcases insertionResize_spec H mp k hb w hused false with h | ⟨k1, h1, w1, l1, u1, _, g1⟩
-    · left; simp only [h]
+    rcases insertionResize_spec H mp k hb w hused false with ⟨hbig, h⟩ | ⟨k1, h1, w1, l1, u1, _, g1⟩
+    · left; exact ⟨hbig, by simp only [h]⟩
     · right
       simp only [h1]
       have hus : ¬ ({ mp with nextId := mp.nextId + 1, body := Body.combined k1 } : PyDict K V).body.usable ≤ 0 := by
@@ -253,8 +255,8 @@ theorem insertCombined_spec (H : Honest P hf eqv) (mp : PyDict K V) (k : Keys K 
       simpa [this] using hA
     by_cases hB : mp.body.usable ≤ 0
     · simp only [hB, if_true]
-      rcases insertionResize_spec H mp k hb w hused true with h | ⟨k1, h1, w1, l1, u1, g1, _⟩
-      · left; simp only [h]
+      rcases insertionResize_spec H mp k hb w hused true with ⟨hbig, h⟩ | ⟨k1, h1, w1, l1, u1, g1, _⟩
+      · left; exact ⟨hbig, by simp only [h]⟩
       · right
         simp only [h1]
         obtain ⟨k', a, b, c⟩ := tail { mp with nextId := mp.nextId + 1, body := Body.combined k1 } k1 rfl w1 u1
@@ -273,7 +275,7 @@ theorem insertCombined_spec (H : Honest P hf eqv) (mp : PyDict K V) (k : Keys K 
 theorem insertDict_spec (H : Honest P hf eqv) (mp : PyDict K V) (k : Keys K V)
     (hb : mp.body = .combined k) (w : WF hf eqv P.isStr k) (hused : mp.used = (liveEntries k).length)
     (key : K) (v : V) :
-    insertDict P key (hf key) v mp = (.error memoryError, mp) ∨
+    (TooBig mp.used ∧ insertDict P key (hf key) v mp = (.error memoryError, mp)) ∨
     ∃ d', insertDict P key (hf key) v mp = (.ok (), d') ∧ DictInv hf eqv P.isStr d' ∧
       dictAssoc d' = assocSet eqv k.items key v := by
   simp only [insertDict, hb]
@@ -284,8 +286,8 @@ theorem insertDict_spec (H : Honest P hf eqv) (mp : PyDict K V) (k : Keys K V)
     exact storeValue_spec H mp k hb w hused key v ix e h1 h2
   · rw [lookup_missing H mp k hb w key hno]
     simp only [insertAfterLookup]
-    rcases insertCombined_spec H mp k hb w hused key v hno with h | ⟨k', n, a, b, c⟩
-    · left; simp only [h]
+    rcases insertCombined_spec H mp k hb w hused key v hno with ⟨hbig, h⟩ | ⟨k', n, a, b, c⟩
+    · left; exact ⟨hbig, by simp only [h]⟩
     · right
       simp only [a]
       refine ⟨_, rfl, ⟨⟨k', rfl, b, ?_⟩⟩, ?_⟩
@@ -298,7 +300,7 @@ theorem insertDict_spec (H : Honest P hf eqv) (mp : PyDict K V) (k : Keys K V)
 table; everything else goes through `insertdict`. -/
 theorem dictSetItem_spec (H : Honest P hf eqv) (mp : PyDict K V)
     (hd : DictInv hf eqv P.isStr mp) (key : K) (v : V) :
-    dictSetItem P key v mp = (.error memoryError, mp) ∨
+    (TooBig mp.used ∧ dictSetItem P key v mp = (.error memoryError, mp)) ∨
     ∃ d', dictSetItem P key v mp = (.ok (), d') ∧ DictInv hf eqv P.isStr d' ∧
       dictAssoc d' = assocSet eqv (dictAssoc mp) key v := by
   obtain ⟨k, hb, w, hu⟩ := hd.wf
@@ -391,6 +393,9 @@ theorem dictSetItem_spec (H : Honest P hf eqv) (mp : PyDict K V)
           show (usableFraction (2 ^ 3) : Int) - 1 = 4
           decide
         rw [h3]
+        decide
+      small := by
+        show (3 : Nat) < 64
         decide }
     refine ⟨{ mp with used := mp.used + 1, nextId := mp.nextId + 1, body := .combined k' }, rfl,
       ⟨⟨k', rfl, hw, ?_⟩⟩, ?_⟩

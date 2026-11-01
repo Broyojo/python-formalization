@@ -133,16 +133,16 @@ def setFtstringExpr : M Bool := do
         | _ :: t => 10 :: strip f t inStr q
       else ch :: strip f rest inStr q
   if n < 0 then
-    set { s with err := some { cls := "MemoryError", msg := "" } }
+    modify fun s => { s with err := some { cls := "MemoryError", msg := "" } }
     return true
   let out := if scan bytes false 0 then strip (bytes.length + 1) bytes false 0 else bytes
   -- `PyUnicode_DecodeUTF8(..., NULL)` is strict: a stale size can cut a character in two.
   match firstBadUtf8 (out.length + 1) out 0 with
   | some (i, b, why) =>
-    set { s with err := some (utf8Error i b why) }
+    modify fun s => { s with err := some (utf8Error i b why) }
     return true
   | none =>
-    set { s with metadata := some (utf8Decode out) }
+    modify fun s => { s with metadata := some (utf8Decode out) }
     return false
 
 /-- `_PyLexer_update_ftstring_expr`, `Parser/lexer/lexer.c:227-279`, without the case
@@ -490,6 +490,33 @@ def letterQuote {α : Type} (c : Int) (fuel : Nat) : M α := do
   let s ← get
   emit TokKind.STRING.num (s.start.getD 0) s.cur
 
+/-- The depth check failing in `f_string_quote:`. -/
+def tooManyFStrings (t : Ret) : M Unit := do
+  let e ← syntaxerror "too many nested f-strings or t-strings"
+  throw { t with type := e }
+
+/-- `tok_mode_stack[++tok_mode_stack_index]`, after its depth check. -/
+def pushMode (m : Mode) (t : Ret) : M Unit := fun s =>
+  if s.modeIndex + 1 ≥ MAXFSTRINGLEVEL then tooManyFStrings t s
+  else .ok () { s with modes := m :: s.modes, modeIndex := s.modeIndex + 1 }
+
+/-- `tok_mode_stack_index--`, at the end of an f-string. -/
+def popMode : M Unit :=
+  modify fun s => { s with modes := s.modes.drop 1, modeIndex := s.modeIndex - 1 }
+
+/-- The depth check failing on an open bracket. -/
+def tooManyParens : M Unit := errMsg "too many nested parentheses"
+
+/-- `tok->parenstack[tok->level++] = c`, after its depth check. -/
+def openBracket (c : Int) : M Unit := fun s =>
+  if s.level ≥ MAXLEVEL then tooManyParens s
+  else
+    let col : Int := (s.start.getD 0 : Int) - (s.lineStart : Int)
+    let s1 := { s with parenstack := (c.toNat, s.lineno, col) :: s.parenstack,
+                       level := s.level + 1 }
+    .ok () (if s1.insideFString then s1.setMode fun m => { m with curlyDepth := m.curlyDepth + 1 }
+            else s1)
+
 /-- The `f_string_quote:` branch, `Parser/lexer/lexer.c:1052-1128`. -/
 def fStringQuote {α : Type} (c : Int) : M α := do
   let quote := c
@@ -508,9 +535,6 @@ def fStringQuote {α : Type} (c : Int) : M α := do
   let s ← get
   let st := s.start.getD 0
   let t : Ret := { type := TokKind.ERRORTOKEN.num, pStart := st, pEnd := s.cur }
-  if s.modeIndex + 1 ≥ MAXFSTRINGLEVEL then
-    let e ← syntaxerror "too many nested f-strings or t-strings"
-    throw { t with type := e }
   let first := s.at st
   let second := toLower (s.at (st + 1))
   let (raw, tstr) :=
@@ -522,12 +546,11 @@ def fStringQuote {α : Type} (c : Int) : M α := do
       multiLineStart := s.lineStart, firstLine := s.lineno, lastExprBuf := none,
       lastExprSize := 0, lastExprEnd := -1, inFormatSpec := false, inDebug := false,
       raw, tstring := tstr, curlyDepth := 0, curlyExprStart := -1 }
-  set { s with modes := m :: s.modes, modeIndex := s.modeIndex + 1 }
+  pushMode m t
   throw { t with type := if tstr then TokKind.TSTRING_START.num else TokKind.FSTRING_START.num }
 
-/-- Everything after the string branches for a character that starts no token so far:
-`Parser/lexer/lexer.c:1253-1389`. -/
-def punctuation {α : Type} (c : Int) : M α := do
+/-- The start of punctuation handling, for an f-string expression's `:`, `}`, `!` and `{`. -/
+def punctFString (c : Int) : M Unit := do
   let s ← get
   let cur := s.mode
   let isPunct := c == ch! ':' || c == ch! '}' || c == ch! '!' || c == ch! '{'
@@ -540,9 +563,14 @@ def punctuation {α : Type} (c : Int) : M α := do
     if cursorValid && c != ch! '{' then
       if ← setFtstringExpr then errTok
     if c == ch! ':' && cursor == cur.curlyExprStart then
-      modify fun s => s.setMode fun m => { m with fstringMode := true, inFormatSpec := true }
+      modify fun s =>
+        if s.insideFString then s.setMode fun m => { m with fstringMode := true, inFormatSpec := true }
+        else s
       let s ← get
       emit (oneChar c) (s.start.getD 0) s.cur
+
+/-- Two- and three-character tokens. -/
+def punctTwo (c : Int) : M Unit := do
   -- Check for two-character token
   let c2 ← nextc
   let tok2 := twoChars c c2
@@ -557,16 +585,14 @@ def punctuation {α : Type} (c : Int) : M α := do
     let s ← get
     emit t (s.start.getD 0) s.cur
   backup c2
+
+/-- Keep track of parentheses nesting level. -/
+def punctBracket (c : Int) : M Unit := do
   -- Keep track of parentheses nesting level
   let s ← get
   let cur := s.mode
   if c == ch! '(' || c == ch! '[' || c == ch! '{' then
-    if s.level ≥ MAXLEVEL then errMsg "too many nested parentheses"
-    let col : Int := (s.start.getD 0 : Int) - (s.lineStart : Int)
-    modify fun s =>
-      let s := { s with parenstack := (c.toNat, s.lineno, col) :: s.parenstack,
-                        level := s.level + 1 }
-      if s.insideFString then s.setMode fun m => { m with curlyDepth := m.curlyDepth + 1 } else s
+    openBracket c
   else if c == ch! ')' || c == ch! ']' || c == ch! '}' then
     if s.insideFString && cur.curlyDepth == 0 && c == ch! '}' then
       errMsg s!"{cur.prefixStr}-string: single '}' is not allowed"
@@ -593,15 +619,29 @@ def punctuation {α : Type} (c : Int) : M α := do
       if m.curlyDepth < 0 then
         errMsg s!"{m.prefixStr}-string: unmatched '{chStr c.toNat}'"
       if c == ch! '}' && m.curlyDepth == m.curlyExprStart then
-        modify fun s => s.setMode fun m =>
-          { m with curlyExprStart := m.curlyExprStart - 1, fstringMode := true,
-                   inFormatSpec := false, inDebug := false }
+        modify fun s =>
+          if s.insideFString then
+            s.setMode fun m =>
+              { m with curlyExprStart := m.curlyExprStart - 1, fstringMode := true,
+                       inFormatSpec := false, inDebug := false }
+          else s
+
+/-- The last checks, and the one-character token. -/
+def punctFinal {α : Type} (c : Int) : M α := do
   if !isPrintable c.toNat then
     errMsg s!"invalid non-printable character U+{hex4 c.toNat}"
   if c == ch! '=' && (← get).mode.insideExprAtTop then
     modify fun s => s.setMode fun m => { m with inDebug := true }
   let s ← get
   emit (oneChar c) (s.start.getD 0) s.cur
+
+/-- Everything after the string branches for a character that starts no token so far:
+`Parser/lexer/lexer.c:1253-1389`. -/
+def punctuation {α : Type} (c : Int) : M α := do
+  punctFString c
+  punctTwo c
+  punctBracket c
+  punctFinal c
 
 /-- `f_string_quote:` onward, `Parser/lexer/lexer.c:1051-1389`, for a `c` that the
 earlier branches left alone. The line continuation returns to `again:`. -/
@@ -775,6 +815,50 @@ def againPass (fuel : Nat) (blankline : Bool) : M Jump := do
   fromFStringQuote c fuel
   return .again
 
+/-- The dedent loop of the indentation check. -/
+def popIndents (col : Nat) : Nat → M Unit
+  | 0 => pure ()
+  | f + 1 => fun s =>
+    if s.indent > 0 && col < s.indstack.headD 0 then
+      popIndents col f { s with pendin := s.pendin - 1, indent := s.indent - 1,
+                                indstack := s.indstack.drop 1,
+                                altindstack := s.altindstack.drop 1 }
+    else .ok () s
+
+/-- The `MAXINDENT` check failing. -/
+def tooDeep : M Unit := do
+  modify fun s => { s with done := E_TOODEEP, cur := s.inp }
+  errTok
+
+/-- `return MAKE_TOKEN(_PyTokenizer_indenterror(tok))`. -/
+def tabError : M Unit := do
+  let t ← indenterror
+  emit0 t
+
+/-- `tok->indstack[++tok->indent] = col`, after its depth check. -/
+def pushIndent (col altcol : Nat) : M Unit := fun s =>
+  if s.indent + 1 ≥ MAXINDENT then tooDeep s
+  else if altcol ≤ s.altindstack.headD 0 then tabError s
+  else
+    .ok () { s with pendin := s.pendin + 1, indent := s.indent + 1,
+                    indstack := col :: s.indstack, altindstack := altcol :: s.altindstack }
+
+/-- The dedent branch: pop, then the indentation must match the stack. -/
+def dedentTo (col altcol n : Nat) : M Unit := do
+  popIndents col n
+  let s ← get
+  if col != s.indstack.headD 0 then
+    modify fun s => { s with done := E_DEDENT, cur := s.inp }
+    errTok
+  if altcol != s.altindstack.headD 0 then tabError
+
+/-- Comparing a line's indentation with the stack, `Parser/lexer/lexer.c:651-710`. -/
+def indentStack (col altcol : Nat) : M Unit := fun s =>
+  if col == s.indstack.headD 0 then
+    if altcol != s.altindstack.headD 0 then tabError s else .ok () s
+  else if col > s.indstack.headD 0 then pushIndent col altcol s
+  else dedentTo col altcol (s.indent + 1) s
+
 /-- The indentation block, `Parser/lexer/lexer.c:514-611`. Returns `blankline`. -/
 def indentation (fuel : Nat) : M Bool := do
   modify fun s => { s with atbol := false }
@@ -804,41 +888,7 @@ def indentation (fuel : Nat) : M Bool := do
       else (true, col, altcol)
     else (false, col, altcol)
   if !blankline && s.level == 0 then
-    let col := if contCol != 0 then contCol else col
-    let altcol := if contCol != 0 then contCol else altcol
-    let top := s.indstack.headD 0
-    let altTop := s.altindstack.headD 0
-    if col == top then
-      if altcol != altTop then
-        let t ← indenterror
-        emit0 t
-    else if col > top then
-      if s.indent + 1 ≥ MAXINDENT then
-        modify fun s => { s with done := E_TOODEEP, cur := s.inp }
-        errTok
-      if altcol ≤ altTop then
-        let t ← indenterror
-        emit0 t
-      modify fun s => { s with pendin := s.pendin + 1, indent := s.indent + 1,
-                               indstack := col :: s.indstack,
-                               altindstack := altcol :: s.altindstack }
-    else
-      let rec dedent : Nat → M Unit
-        | 0 => pure ()
-        | f + 1 => do
-          let s ← get
-          if s.indent > 0 && col < s.indstack.headD 0 then
-            set { s with pendin := s.pendin - 1, indent := s.indent - 1,
-                         indstack := s.indstack.drop 1, altindstack := s.altindstack.drop 1 }
-            dedent f
-      dedent (s.indent + 1)
-      let s ← get
-      if col != s.indstack.headD 0 then
-        modify fun s => { s with done := E_DEDENT, cur := s.inp }
-        errTok
-      if altcol != s.altindstack.headD 0 then
-        let t ← indenterror
-        emit0 t
+    indentStack (if contCol != 0 then contCol else col) (if contCol != 0 then contCol else altcol)
   return blankline
 
 /-- `tok_get_normal_mode`, `Parser/lexer/lexer.c:501-1390`. The `nextline:` and `again:`
@@ -986,7 +1036,7 @@ def fstringMode (fuel : Nat) : M Unit := do
   if ← atEnd cur.quoteSize then
     let s ← get
     let st := s.start.getD 0
-    set { s with modes := s.modes.drop 1, modeIndex := s.modeIndex - 1 }
+    popMode
     emit cur.end_ st s.cur
   -- f_string_middle:
   modify fun s => { s with multiLineStart := s.lineStart }

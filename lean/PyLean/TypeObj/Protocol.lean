@@ -1,4 +1,4 @@
-import PyLean.TypeObj.Exceptions
+import PyLean.TypeObj.FloatOps
 
 /-!
 The abstract object protocols: rich comparison, truth, hashing, repr/str
@@ -223,9 +223,20 @@ def callRichcompareEq (rt : Rt) (f : SlotFn) (a b : Val) (op : CmpOp) : M Val :=
     | .obj x, .obj y, some _, some _ => dictRichcompare rt x y op
     | _, _, _, _ => pure .notImpl
   | .c .float =>
-    match a, b with
-    | .float _, .float _ => gap%
-    | _, _ => pure .notImpl
+    -- `float_richcompare`, `Objects/floatobject.c:416`, with its exact comparison of an int.
+    match floatOf w a with
+    | some x =>
+      let bop : Binary64.CmpOp := match op with
+        | .lt => .lt
+        | .le => .le
+        | .eq => .eq
+        | .ne => .ne
+        | .gt => .gt
+        | .ge => .ge
+      match Binary64.float_richcompare x (floatObj w b) bop with
+      | some r => pure (.bool r)
+      | none => pure .notImpl
+    | none => pure .notImpl
   | .c .builtinFn =>
     -- `meth_richcompare`, `Objects/methodobject.c:318`.
     match op, payloadOf w a, payloadOf w b with
@@ -374,6 +385,16 @@ def callHash (rt : Rt) (f : SlotFn) (v : Val) : M Int := do
     let m ← proxyMapping v
     rt.hash m
   | .c .str => pure (strHash ((strOf w v).getD ""))
+  | .c .float =>
+    -- `float_hash`, `Objects/floatobject.c:542`: a NaN hashes by address.
+    match floatOf w v with
+    | some x =>
+      match Binary64.float_hash x with
+      | some h => pure h
+      | none => pure (match v with
+        | .obj a => (a : Int)
+        | _ => 0)
+    | none => gap%
   | .c .tuple =>
     -- `tuple_hash`, `Objects/tupleobject.c:323`. C keeps the result in `ob_hash`, so a second
     -- hash of one tuple does not call the items again; a tuple value here has no such place.
@@ -541,6 +562,9 @@ def builtinConv : Builtin → String × MethConv
   | .dunderGetitem => ("__getitem__", .o)
   | .dunderContains => ("__contains__", .o)
   | .dictKeysMethod => ("keys", .noargs)
+  | .floatMethod "__round__" => ("__round__", .fast)
+  | .floatMethod "fromhex" => ("fromhex", .o)
+  | .floatMethod n => (n, .noargs)
   | .proxyCall "get" => ("get", .fast)
   | .proxyCall n => (n, .noargs)
   | .getnewargs => ("__getnewargs__", .noargs)
@@ -598,6 +622,10 @@ def callRepr (rt : Rt) (f : SlotFn) (v : Val) : M Val := do
     withRepr v "{...}" do
       let rs ← dictReprLoop rt v iterFuel 0 []
       pure (.str ("{" ++ ", ".intercalate rs ++ "}"))
+  | .c .float =>
+    match floatOf w v with
+    | some x => .str <$> floatReprStr x
+    | none => gap%
   | .c .wrapperDescr =>
     match payloadOf w v with
     | some (.wrapperDescr o p _) => pure (.str (descrRepr w "slot wrapper" o p.name))
@@ -754,6 +782,27 @@ def callUnaryNb (rt : Rt) (s : Slot) (dunder : Name) (f : SlotFn) (v : Val) : M 
   | .c .int, .nb_negative => pure (.int (-((intOf w v).getD 0)))
   | .c .int, .nb_invert | .c .bool, .nb_invert => pure (.int (-((intOf w v).getD 0) - 1))
   | .c .int, .nb_absolute => pure (.int ((((intOf w v).getD 0).natAbs : Nat) : Int))
+  | .c .float, .nb_negative =>
+    match floatOf w v with
+    | some x => mkFloat x.neg
+    | none => gap%
+  | .c .float, .nb_absolute =>
+    match floatOf w v with
+    | some x => mkFloat x.abs
+    | none => gap%
+  | .c .float, .nb_positive | .c .float, .nb_float =>
+    -- `float_float`, `Objects/floatobject.c`: an exact float is returned as it is.
+    match floatOf w v with
+    | some x => if typeOf w v == B.float then pure v else mkFloat x
+    | none => gap%
+  | .c .float, .nb_int =>
+    match floatOf w v with
+    | some x => .int <$> pyToM (Binary64.float_trunc x)
+    | none => gap%
+  | .c .int, .nb_float | .c .bool, .nb_float =>
+    -- `long_float`, `Objects/longobject.c`.
+    let x ← pyToM (Binary64.PyLong_AsDouble ((intOf w v).getD 0))
+    mkFloat x
   | _, _ => gap%
 
 /-- `_PyNumber_Index`, `Objects/abstract.c:1400`. The `DeprecationWarning` for a strict
@@ -910,6 +959,10 @@ def pyIsTrue (rt : Rt) (v : Val) : M Bool := do
       match f with
       | .generic => slotNbBool rt v
       | .c .int | .c .bool => pure (((intOf w v).getD 0) != 0)
+      | .c .float =>
+        match floatOf w v with
+        | some x => pure (Binary64.float_bool x)
+        | none => gap%
       | .c .notImpl => typeErr "NotImplemented should not be used in a boolean context"
       | .c .none => pure false
       | _ => gap%
@@ -1190,10 +1243,7 @@ def longBinary (s : Slot) (a b : Int) : M Val :=
   | .nb_floor_divide =>
     if b == 0 then raiseC B.ZeroDivisionError "division by zero"
     else pure (.int (Int.fdiv a b))
-  | .nb_true_divide =>
-    -- A float whose bits are not modelled: `long_true_divide` belongs to `LongObj`.
-    if b == 0 then raiseC B.ZeroDivisionError "division by zero"
-    else pure (.float 0)
+  | .nb_true_divide => longTrueDivide a b
   | .nb_remainder =>
     if b == 0 then raiseC B.ZeroDivisionError "division by zero"
     else pure (.int (Int.fmod a b))
@@ -1217,6 +1267,7 @@ def longBinary (s : Slot) (a b : Int) : M Val :=
 def callNbBinary (rt : Rt) (s : Slot) (f : SlotFn) (a b : Val) : M Val := do
   let w ← getW
   match f with
+  | .c .float => floatBinary s a b
   | .generic =>
     let op := nbOpOfSlot s
     slot1Bin rt s op.dunder op.rdunder a b []
@@ -1243,10 +1294,6 @@ def callNbBinary (rt : Rt) (s : Slot) (f : SlotFn) (a b : Val) : M Val := do
       match intOf w a, intOf w b with
       | some x, some y => longBinary s x y
       | _, _ => pure .notImpl
-  | .c .float =>
-    match intOf w a, intOf w b, a, b with
-    | none, _, .float _, _ | _, none, _, .float _ => gap%
-    | _, _, _, _ => pure .notImpl
   | .c .type =>
     -- `_Py_union_type_or`: only classes and `None` are unionable.
     let unionable (x : Val) : Bool := x.is .none || typeCheck w x
@@ -1571,10 +1618,8 @@ def slotNbPower (rt : Rt) (self other modulus : Val) : M Val :=
 def longPow (w : World) (a b z : Val) : M Val :=
   match intOf w a, intOf w b, z with
   | some x, some y, .none =>
-    if y < 0 then
-      -- `long_pow` hands negative exponents to `float_pow`.
-      if x == 0 then raiseC B.ZeroDivisionError "zero to a negative power"
-      else pure (.float 0)
+    -- `long_pow` hands negative exponents to `float_pow`.
+    if y < 0 then floatPow a b .none
     else if y > 10000 then gap% else pure (.int (x ^ y.toNat))
   | some x, some y, z' =>
     match intOf w z' with
@@ -1591,6 +1636,7 @@ def callNbPower (rt : Rt) (f : SlotFn) (a b c : Val) : M Val := do
   match f with
   | .generic => slotNbPower rt a b c
   | .c .int => longPow w a b c
+  | .c .float => floatPow a b c
   | _ => gap%
 
 /-- `ternary_op`, `Objects/abstract.c:1020`. -/
@@ -1721,37 +1767,48 @@ def pyNumberLong (rt : Rt) (o : Val) : M Val := do
         | none =>
           typeErr s!"int() argument must be a string, a bytes-like object or a real number, not '{trunc 200 (typeName w o)}'"
 
-/-- `PyNumber_Float`, `Objects/abstract.c:1592`, up to the string-parsing fallback. -/
+/-- `PyFloat_FromString`, `Objects/floatobject.c:189`, for a str. Bytes and other buffers are not
+in the object model, and any other object is the exact `TypeError`. -/
+def floatFromString (rt : Rt) (o : Val) : M Val := do
+  let w ← getW
+  match strOf w o with
+  | some s =>
+    match Binary64.PyFloat_FromString (.str (s.toList.map (·.toNat))) with
+    | .ok x => mkFloat x
+    -- `could not convert string to float: %R`, so a subclass's `__repr__` runs.
+    | .error (.valueError _) =>
+      valueErr s!"could not convert string to float: {← rt.repr o}"
+    | .error e => pyToM (.error e)
+  | none =>
+    typeErr s!"float() argument must be a string or a real number, not '{trunc 200 (typeName w o)}'"
+
+/-- `PyNumber_Float`, `Objects/abstract.c:1592`. `__float__` may return a subclass of `float`,
+which gives a plain copy. -/
 def pyNumberFloat (rt : Rt) (o : Val) : M Val := do
-  match o with
-  | .float _ => pure o
-  | _ =>
-    let w ← getW
+  let w ← getW
+  if typeOf w o == B.float then pure o
+  else
     match slotIn w o .nb_float with
     | some f =>
-      let res ← match f with
-        | .generic => vectorcallMethod rt "__float__" [o]
-        | _ => gap%
+      let res ← callUnaryNb rt .nb_float "__float__" f o
       let w ← getW
-      match res with
-      | .float _ => pure res
-      | _ =>
-        match payloadOf w res with
-        | some (.boxed (.float b)) => pure (.float b)
-        | _ =>
+      if typeOf w res == B.float then pure res
+      else
+        match floatOf w res with
+        | some x => mkFloat x
+        | none =>
           typeErr s!"{trunc 50 (typeName w o)}.__float__ returned non-float (type {trunc 50 (typeName w res)})"
     | none =>
       match slotIn w o .nb_index with
       | some _ =>
-        let _ ← numberIndex rt o
-        gap%
+        let r ← numberIndex rt o
+        let w ← getW
+        let x ← pyToM (Binary64.PyLong_AsDouble ((intOf w r).getD 0))
+        mkFloat x
       | none =>
-        match payloadOf w o with
-        | some (.boxed (.float b)) => pure (.float b)
-        | _ =>
-          typeErr s!"float() argument must be a string or a real number, not '{trunc 200 (typeName w o)}'"
-
-/-! ## Sequences, mappings, iteration -/
+        match floatOf w o with
+        | some x => mkFloat x
+        | none => floatFromString rt o
 
 /-- `slot_sq_contains`, `sq_item`, ... use these. `PySequence_Check`,
 `Objects/abstract.c:1672`. -/

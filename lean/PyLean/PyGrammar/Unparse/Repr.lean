@@ -45,19 +45,23 @@ def unicodeEscape (c : Nat) : List Nat :=
   else if c < 0x20 || c ≥ 0x7f then hexEscape c
   else [c]
 
+/-- One character of `unicode_repr`, with quote `q`. -/
+def reprEsc (q c : Nat) : List Nat :=
+  if c == q || c == 92 then [92, c]
+  else if c == 9 then [92, 116]
+  else if c == 10 then [92, 110]
+  else if c == 13 then [92, 114]
+  else if c < 0x20 || c == 0x7f then hexEscape c
+  else if c < 0x7f then [c]
+  else if printable c then [c]
+  else hexEscape c
+
+/-- `unicode_repr`'s choice of quote. -/
+def reprQuote (s : List Nat) : Nat := if s.contains 39 && !s.contains 34 then 34 else 39
+
 /-- `unicode_repr` -/
 def strRepr (s : List Nat) : List Nat :=
-  let q : Nat := if s.contains 39 && !s.contains 34 then 34 else 39
-  let esc (c : Nat) : List Nat :=
-    if c == q || c == 92 then [92, c]
-    else if c == 9 then [92, 116]
-    else if c == 10 then [92, 110]
-    else if c == 13 then [92, 114]
-    else if c < 0x20 || c == 0x7f then hexEscape c
-    else if c < 0x7f then [c]
-    else if printable c then [c]
-    else hexEscape c
-  q :: s.flatMap esc ++ [q]
+  reprQuote s :: s.flatMap (reprEsc (reprQuote s)) ++ [reprQuote s]
 
 /-- `PyBytes_Repr` -/
 def bytesRepr (s : List Nat) : List Nat :=

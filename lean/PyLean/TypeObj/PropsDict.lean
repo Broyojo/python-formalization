@@ -80,4 +80,30 @@ theorem dictProbeFindsIdentical_proven : DictProbeFindsIdentical := by
           hall j k' v' (by omega) hji hg
         simp [h2, h3, ih (s + 1) i k v (by omega) h4 hi hk h5]
 
+/-- **A NaN is unequal to every float, itself included, through `do_richcompare`.** With
+`typeobj-richcomparebool-identity`, which makes `x == x` true in a container by the identity test,
+this fixes `[nan] == [nan]`: true for one object and false for two. The two together reject both
+a comparison that always answers true and one that always answers false. The operands are exact
+floats, and `float`'s `tp_richcompare` is the C function, which is a type invariant. -/
+def NanNeverEqual : Prop :=
+  ∀ (rt : Rt) (a b : Addr) (x y : PyLean.Binary64.F64) (w : World),
+    typeOf w (.obj a) = B.float → typeOf w (.obj b) = B.float →
+    floatOf w (.obj a) = some x → floatOf w (.obj b) = some y → x.isNaN = true →
+    slotOf w B.float .tp_richcompare = some (.c .float) →
+    doRichcompare rt (.obj a) (.obj b) .eq w = .ok (.bool false) w ∧
+    doRichcompare rt (.obj a) (.obj b) .ne w = .ok (.bool true) w
+
+theorem nanNeverEqual_proven : NanNeverEqual := by
+  intro rt a b x y w ta tb fa fb hn hs
+  have hobj : floatObj w (.obj b) = .float y := by simp [floatObj, fb, tb]
+  have heq : PyLean.Binary64.F64.eq x y = false := by
+    simp [PyLean.Binary64.F64.eq, hn]
+  have hne : PyLean.Binary64.F64.ne x y = true := by
+    simp [PyLean.Binary64.F64.ne, heq]
+  constructor
+  · simp [doRichcompare, ta, tb, hs, callRichcompare, callRichcompareEq, fa, hobj,
+      PyLean.Binary64.float_richcompare, PyLean.Binary64.compareDoubles, heq]
+  · simp [doRichcompare, ta, tb, hs, callRichcompare, callRichcompareEq, fa, hobj,
+      PyLean.Binary64.float_richcompare, PyLean.Binary64.compareDoubles, hne]
+
 end PyLean.TypeObj

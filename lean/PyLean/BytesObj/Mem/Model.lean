@@ -1205,8 +1205,16 @@ def memoryviewIndex (self : Nat) (value : Obj) (start stop : Int) : M Int := do
 /-- `fix_struct_error_int`, :2916-2928: `struct.error` means "not equal". -/
 def fixStructError : PyExc → Py Bool
   | .named "ImportError" m => .error (.named "ImportError" m)
+  | .named "ModuleNotFoundError" m => .error (.named "ModuleNotFoundError" m)
   | .named "MemoryError" m => .error (.named "MemoryError" m)
   | _ => .ok false
+
+/-- What `import struct` raises with `sys.modules['struct'] = None`. -/
+def importStruct : PyExc := .named "ModuleNotFoundError" "import of struct halted; None in sys.modules"
+
+/-- `struct_get_unpacker`, :2075-2124: the import of `struct.Struct` comes first (:2084-2086). -/
+def unpackerOf (noStruct : Bool) (fmt : List Char) (itemsize : Int) : Py Unpacker :=
+  if noStruct then .error importStruct else structGetUnpacker fmt itemsize
 
 /-- `Py_EQ`, `Py_NE`, or an ordering operator. -/
 inductive CmpOp where
@@ -1214,7 +1222,7 @@ inductive CmpOp where
   deriving Repr, DecidableEq, Inhabited
 
 /-- The comparison proper, :3134-3178, once both buffers are at hand. -/
-def compareBufs (m : Mem) (vv ww : Buf) : Py Bool :=
+def compareBufs (m : Mem) (noStruct : Bool) (vv ww : Buf) : Py Bool :=
   if !equivShape vv ww then .ok false
   else
     let vf := vv.format.getD []
@@ -1230,10 +1238,10 @@ def compareBufs (m : Mem) (vv ww : Buf) : Py Bool :=
         cmpRec m fmt unp (vv.shape.getD []) (vv.strides.getD []) vv.suboffsets
           (ww.strides.getD []) ww.suboffsets vv.buf ww.buf
     if vfmt = '_' ∨ wfmt = '_' ∨ vfmt ≠ wfmt then
-      match structGetUnpacker vf vv.itemsize with
+      match unpackerOf noStruct vf vv.itemsize with
       | .error e => fixStructError e
       | .ok up =>
-        match structGetUnpacker wf ww.itemsize with
+        match unpackerOf noStruct wf ww.itemsize with
         | .error e => fixStructError e
         | .ok uq => run '_' (some (up, uq))
     else run vfmt Option.none
@@ -1251,13 +1259,13 @@ def memoryRichEqual (v : Nat) (w : Obj) : M (Option Bool) := do
     if baseInaccessible st i then
       return some (i == v)
     let ww := (st.mv i).view
-    return some (← M.lift (compareBufs st.mem vv ww))
+    return some (← M.lift (compareBufs st.mem st.noStruct vv ww))
   | .bytes _ | .exporter _ _ =>
     match ← tryCatch (some <$> getBufferFull w) (fun _ => pure Option.none) with
     | Option.none => return Option.none
     | some ww =>
       let st ← M.get
-      let r := compareBufs st.mem vv ww
+      let r := compareBufs st.mem st.noStruct vv ww
       -- `PyBuffer_Release(ww)`, :3192-3193, after the result is known
       pyBufferRelease ww
       return some (← M.lift r)

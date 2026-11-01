@@ -7,6 +7,7 @@ import PyLean.TypeObj.ExcProps
 import PyLean.TypeObj.PropsList
 import PyLean.TypeObj.PropsDict
 import PyLean.TypeObj.PropsReduce
+import PyLean.TypeObj.PropsTotal
 
 /-!
 The data model: `Objects/typeobject.c`, `Objects/object.c`, `Objects/abstract.c`,
@@ -515,7 +516,7 @@ def entries : List Entry := [
     "PyVectorcall_NARGS clears PY_VECTORCALL_ARGUMENTS_OFFSET and keeps the count."
     "call.c:1127"
     ``VectorcallNargs ``vectorcallNargs_proven,
-  p "typeobj-best-base" ty ["best_base", "solid_base", "shape_differs"]
+  p "typeobj-best-base" ty ["best_base"]
     "Under the subtype order, best_base returns one of the bases, whose solid base is a subclass of every base's solid base."
     "typeobject.c:3610-3611"
     ``BestBaseMostDerived ``bestBaseMostDerived_proven,
@@ -523,7 +524,7 @@ def entries : List Entry := [
     "A base without Py_TPFLAGS_BASETYPE is refused."
     "typeobject.c:3638"
     ``BestBaseRefusesFinal ``bestBaseRefusesFinal_proven,
-  p "typeobj-no-slots-dict-weak" ty ["type_new_slots"]
+  p "typeobj-no-slots-dict-weak" ty []
     "Without __slots__ a class adds a dict and a weakref unless its base provides them."
     "docs: __slots__"
     ``NoSlotsAddsDictWeak ``noSlotsAddsDictWeak_proven,
@@ -865,6 +866,36 @@ def entries : List Entry := [
     "If the slot loop of object_getstate_default completes, __slotnames__ has its original size, for every getter."
     "typeobject.c:7440"
     ``GetstateSlotsGuard ``getstateSlotsGuard_proven,
+  p "typeobj-best-base-decides" ty ["best_base"]
+    "One acceptable base wins, an unacceptable base is the exact TypeError, and two unrelated solid bases are the layout conflict."
+    "typeobject.c:3624-3662"
+    ``BestBaseDecides ``bestBaseDecides_proven,
+  p "typeobj-ready-hash-accepts" ty ["type_ready_set_hash"]
+    "type_ready_set_hash leaves a type with tp_hash alone, and always succeeds."
+    "typeobject.c:8781"
+    ``TypeReadySetHashAccepts ``typeReadySetHashAccepts_proven,
+  p "typeobj-exc-init-accepts" "Objects/exceptions.c"
+    ["StopIteration_init", "SystemExit_init", "NameError_init", "AttributeError_init", "ImportError_init"]
+    "These __init__s succeed on any positional arguments and the keywords they define."
+    "exceptions.c:754-769"
+    ``ExcInitAccepts ``excInitAccepts_proven,
+  p "typeobj-exc-chain-accepts" "Objects/exceptions.c"
+    ["BaseException___cause___set_impl", "BaseException___context___set_impl"]
+    "__cause__ and __context__ accept None or an exception, and any other value is the exact TypeError."
+    "exceptions.c:445-478"
+    ``ExcChainSetAccepts ``excChainSetAccepts_proven,
+  p "typeobj-getnewargs-order" ty ["_PyObject_GetNewArguments"]
+    "__getnewargs_ex__ is checked first, __getnewargs__ only if it is absent and must give a tuple, and two absences give no arguments."
+    "typeobject.c:7520-7609"
+    ``GetNewArgumentsOrder ``getNewArgumentsOrder_proven,
+  p "typeobj-super-null-branch" ty ["super_descr_get"]
+    "The state superBindsNullType describes runs super_descr_get into the branch where C dereferences NULL."
+    "typeobject.c:12049"
+    ``SuperBindNullIsTheBranch ``superBindNullIsTheBranch_proven,
+  p "typeobj-nan-never-equal" "Objects/floatobject.c" ["float_richcompare"]
+    "A NaN compares unequal to every float object through do_richcompare, itself included."
+    "floatobject.c:416; with PyObject_RichCompareBool's identity test, the rule for containers"
+    ``NanNeverEqual ``nanNeverEqual_proven,
   p "typeobj-super-skips" ty ["_super_lookup_descr", "do_super_lookup", "super_getattro"]
     "super looks strictly after __thisclass__ in the MRO of the object's type."
     "docs: super"

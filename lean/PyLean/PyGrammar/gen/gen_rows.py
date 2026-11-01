@@ -40,8 +40,14 @@ CREDIT = {
     },
     "pygrammar-lex-debug-text": {"Parser__lexer__lexer.c": ["set_ftstring_expr"]},
     "pygrammar-lex-accepts-valid": {
-        "Parser__lexer__lexer.c": ["_PyLexer_update_ftstring_expr", "tok_get_normal_mode",
-                                   "tok_get_fstring_mode", "tok_get", "_PyTokenizer_Get"]},
+        "Parser__lexer__lexer.c": ["_PyLexer_update_ftstring_expr"]},
+    "pygrammar-lex-stacks": {
+        "Parser__lexer__lexer.c": ["tok_get_normal_mode", "tok_get_fstring_mode", "tok_get",
+                                   "_PyTokenizer_Get"]},
+    "pygrammar-unparse-str-repr": {
+        "Parser__string_parser.c": ["_PyPegen_parse_string", "decode_unicode_with_escapes",
+                                    "_PyPegen_decode_string"],
+        "Lib___ast_unparse.py": ["Unparser._write_constant"]},
     "pygrammar-lex-untokenize-lossless": {
         "Lib__tokenize.py": ["Untokenizer.add_whitespace",
                              "Untokenizer.add_backslash_continuation"]},
@@ -49,15 +55,8 @@ CREDIT = {
     "pygrammar-ast-docstring-twins": {"Python__ast.c": ["_PyAST_GetDocString"]},
     "pygrammar-unparse-roundtrip": {
         "Lib__ast.py": ["unparse"],
-        "Lib___ast_unparse.py": [
-            "Unparser._write_ftstring_inner", "Unparser._write_ftstring", "Unparser.visit_JoinedStr",
-            "Unparser.visit_FormattedValue", "Unparser._write_interpolation",
-            "Unparser._ftstring_helper", "Unparser._unparse_interpolation_value"],
-    },
-    "pygrammar-unparse-c-roundtrip": {
-        "Python__ast_unparse.c": ["append_joinedstr", "build_ftstring_body",
-                                  "append_fstring_element", "append_formattedvalue",
-                                  "append_ast_expr", "expr_as_unicode", "_PyAST_ExprAsUnicode"]},
+        "Lib___ast_unparse.py": ["Unparser._write_ftstring_inner"]},
+    "pygrammar-unparse-c-roundtrip": {"Python__ast_unparse.c": ["append_joinedstr"]},
     "pygrammar-check-validate-name": {"Python__ast.c": ["validate_name"]},
     "pygrammar-check-try-twin": {"Python__ast.c": ["validate_stmt"]},
     "pygrammar-check-no-null-deref": {"Python__ast.c": ["validate_pattern", "validate_patterns"]},

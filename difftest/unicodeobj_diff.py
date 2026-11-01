@@ -613,6 +613,513 @@ def run_fmt_writer(c):
     r = api.PyUnicodeWriter_Finish(w)
     return [trace, cps_of(r), kind_of(r)]
 
+# ==== PyUnicode_FromFormat (fn names fmt_fromformat, fmt_writerformat) ====
+
+FF_INTS = [0, 1, -1, 7, 123, -123, 255, 2 ** 31 - 1, -2 ** 31, 2 ** 31, 2 ** 32 - 1, 2 ** 32, 2 ** 63 - 1,
+           -2 ** 63, 2 ** 63, 2 ** 64 - 1]
+FF_CT = {"": "int", "l": "long", "ll": "longlong", "z": "ssize", "t": "ssize", "j": "longlong"}
+FF_CSTR = [b"", b"a", b"abc", b"abcdefgh", b"\xc3\xa9", b"a\xc3\xa9b", b"\xe2\x82\xac", b"ab\xe2\x82\xac", b"ab\xe2\x82",
+           b"\xf0\x9f\x98\x80", b"a\xf0\x9f\x98", b"\xff", b"a\xffb", b"\xc0\x80", b"a\x00b", b"\xed\xa0\x80"]
+FF_STRS = ["", "a", "abc", "abcdefgh", "\xe9", "a\xe9b", "€", "ab€", "\U0001f600", "a\U0001f600", "\ud800"]
+FF_WIDE = [[], [97], [97, 98, 99], [233], [0x20ac], [97, 0x1f600], [97, 0, 98], [0x110000], [97, 0xffffffff]]
+FF_STATIC = ["int", "str", "NoneType", "tuple", "types.GenericAlias"]
+FF_HEAP = [("mod", "Q"), ("mod", "A.B"), ("a.b", "Q"), ("builtins", "Q"), ("__main__", "Q"), (None, "Q"),
+           ("collections", "deque")]
+
+
+def ff_tname(rng):
+    if rng.random() < 0.4:
+        return {"k": "static", "s": cps_of(rng.choice(FF_STATIC))}
+    m, q = rng.choice(FF_HEAP)
+    return {"k": "heap", "m": None if m is None else cps_of(m), "q": cps_of(q)}
+
+
+def ff_builtin_obj(rng):
+    return rng.choice([{"t": "int", "v": hex_of(1)}, {"t": "none"}, {"t": "str", "s": cps_of("x")},
+                       {"t": "tuple", "items": []}])
+
+
+def ff_directive(rng):
+    """A conversion specification and its arguments, in the order va_arg takes them."""
+    args = []
+    flags = "".join(rng.choice("-0#") for _ in range(rng.choice([0, 0, 0, 1, 1, 2, 3])))
+    r = rng.random()
+    width = ""
+    if r < 0.3:
+        width = str(rng.choice([0, 1, 2, 5, 12]))
+    elif r < 0.45:
+        width = "*"
+        args.append({"t": "int", "c": "int", "v": rng.choice([0, 1, 5, 12, -1, -5])})
+    r = rng.random()
+    prec, starneg = "", False
+    if r < 0.25:
+        prec = "." + str(rng.choice([0, 1, 2, 3, 7]))
+    elif r < 0.32:
+        prec = "."
+    elif r < 0.5:
+        prec = ".*"
+        v = rng.choice([0, 1, 2, 3, 7, -1, -3])
+        starneg = v < 0
+        args.append({"t": "int", "c": "int", "v": v})
+    conv = rng.choice("ddiouxXcpsssUVVSRATNq")
+    if conv in "diouxX":
+        mod = rng.choice(["", "", "l", "ll", "z", "t", "j"])
+        args.append({"t": "int", "c": FF_CT[mod], "v": rng.choice(FF_INTS)})
+    elif conv == "c":
+        mod = rng.choice(["", "", "", "l"])
+        args.append({"t": "int", "c": "int", "v": rng.choice([0, 97, 233, 0x20ac, 0x1f600, 0x10ffff, 0x110000, -1])})
+    elif conv == "p":
+        mod = rng.choice(["", "", "", "l"])
+        args.append({"t": "ptr", "v": rng.choice([0, 1, 255, 0x7fff0000])})
+    elif conv == "s":
+        mod = rng.choice(["", "", "", "l", "ll"])
+        if mod == "l":
+            args.append({"t": "wstr", "s": rng.choice(FF_WIDE)})
+        else:
+            args.append({"t": "cstr", "s": list(rng.choice(FF_CSTR))})
+    elif conv == "V":
+        mod = rng.choice(["", "", "l"])
+        if starneg or rng.random() < 0.5:
+            args.append({"t": "null"})
+        else:
+            args.append({"t": "obj", "o": {"t": "str", "s": cps_of(rng.choice(FF_STRS))}})
+        if mod == "l":
+            args.append({"t": "wstr", "s": rng.choice(FF_WIDE)})
+        else:
+            args.append({"t": "cstr", "s": list(rng.choice(FF_CSTR))})
+    else:
+        mod = rng.choice(["", "", "", "", "", "l"])
+        if starneg and conv != "q":
+            # This is the undefined behaviour: see the record of the precision. Not run here.
+            prec = ".0"
+            args = [a for a in args[:-1]] if prec and args and args[-1]["v"] < 0 else args
+        if conv == "U":
+            args.append({"t": "obj", "o": {"t": "str", "s": cps_of(rng.choice(FF_STRS))}})
+        elif conv in "SRA":
+            args.append({"t": "obj", "o": sf_obj(rng, 1)})
+        elif conv == "T":
+            args.append({"t": "inst", "n": ff_tname(rng)} if rng.random() < 0.6
+                        else {"t": "obj", "o": ff_builtin_obj(rng)})
+        elif conv == "N":
+            args.append({"t": "type", "n": ff_tname(rng)} if rng.random() < 0.85
+                        else {"t": "obj", "o": ff_builtin_obj(rng)})
+    return "%" + flags + width + prec + mod + conv, args
+
+
+def ff_format(rng):
+    fmt, args = "", []
+    for _ in range(rng.randint(0, 4)):
+        r = rng.random()
+        if r < 0.3:
+            fmt += rng.choice(["a", "abc", " ", "x y"])
+        elif r < 0.4:
+            fmt += "%%"
+        else:
+            d, a = ff_directive(rng)
+            fmt += d
+            args += a
+    return fmt, args
+
+
+@gen("format", 8)
+def gen_fmt_fromformat(rng):
+    fmt, args = ff_format(rng)
+    b = list(fmt.encode())
+    r = rng.random()
+    if r < 0.02:
+        b.append(rng.choice([0xe9, 0x80, 0xff]))
+    elif r < 0.04:
+        b += [37]
+    return {"mod": "unicodeobj", "fn": "fmt_fromformat", "fmt": b, "args": args}
+
+
+@gen("format", 3)
+def gen_fmt_writerformat(rng):
+    fmt, args = ff_format(rng)
+    if rng.random() < 0.3:
+        # A failure after wide characters: gh-158439, by way of Format.
+        fmt = rng.choice(["%c%c", "%s%c", "x%c%c"])
+        args = [{"t": "int", "c": "int", "v": 0x20ac}] if fmt[-3:] == "c%c" else [
+            {"t": "cstr", "s": list(b"\xe2\x82\xac")}]
+        args = args + [{"t": "int", "c": "int", "v": 0x110000}]
+    pre = [gen_wop(rng) for _ in range(rng.randint(0, 2))]
+    post = [gen_wop(rng) for _ in range(rng.randint(0, 2))]
+    return {"mod": "unicodeobj", "fn": "fmt_writerformat", "pre": pre, "post": post, "fmt": list(fmt.encode()),
+            "args": args}
+
+
+def str_of(cps):
+    return "".join(map(chr, cps))
+
+
+def ff_type(n):
+    if n["k"] == "static":
+        import types
+        return {"int": int, "str": str, "NoneType": type(None), "tuple": tuple,
+                "types.GenericAlias": types.GenericAlias}[str_of(n["s"])]
+    if str_of(n["q"]) == "deque":
+        import collections
+        return collections.deque  # a heap type in 3.14, with a dotted name
+    cls = type("Heap", (), {})
+    cls.__qualname__ = str_of(n["q"])
+    cls.__module__ = 1 if n["m"] is None else str_of(n["m"])
+    return cls
+
+
+def ff_args(args, keep):
+    import ctypes
+    ct = {"int": ctypes.c_int, "long": ctypes.c_long, "longlong": ctypes.c_longlong, "ssize": ctypes.c_ssize_t}
+    out = []
+    for a in args:
+        t = a["t"]
+        if t == "int":
+            out.append(ct[a["c"]](a["v"]))
+        elif t == "obj":
+            o = sf_dec(a["o"])
+            keep.append(o)
+            out.append(ctypes.py_object(o))
+        elif t == "null":
+            out.append(ctypes.c_void_p(None))
+        elif t == "cstr":
+            b = ctypes.create_string_buffer(bytes(a["s"]))
+            keep.append(b)
+            out.append(ctypes.cast(b, ctypes.c_void_p))
+        elif t == "wstr":
+            b = (ctypes.c_uint32 * (len(a["s"]) + 1))(*a["s"], 0)
+            keep.append(b)
+            out.append(ctypes.cast(b, ctypes.c_void_p))
+        elif t == "ptr":
+            out.append(ctypes.c_void_p(a["v"]))
+        else:
+            o = ff_type(a["n"])
+            if t != "type":
+                import types
+                o = types.GenericAlias(list, int) if o is types.GenericAlias else o()
+            keep.append(o)
+            out.append(ctypes.py_object(o))
+    return out
+
+
+@run("fmt_fromformat")
+def run_fmt_fromformat(c):
+    import ctypes
+    f = ctypes.pythonapi.PyUnicode_FromFormat
+    f.restype, f.argtypes = ctypes.py_object, [ctypes.c_char_p]
+    keep = []
+    r = f(bytes(c["fmt"]), *ff_args(c["args"], keep))
+    return [cps_of(r), kind_of(r)]
+
+
+@run("fmt_writerformat")
+def run_fmt_writerformat(c):
+    import ctypes
+    api, null = writer_api()
+    f = api.PyUnicodeWriter_Format
+    f.restype, f.argtypes = ctypes.c_int, [ctypes.c_void_p, ctypes.c_char_p]
+    w = api.PyUnicodeWriter_Create(0)
+
+    def ops(lst):
+        for op in lst:
+            consumed = ctypes.c_ssize_t(77)
+            common.py_result(lambda: writer_step(api, null, w, op, consumed))
+
+    ops(c["pre"])
+    keep = []
+    res = common.py_result(lambda: f(w, bytes(c["fmt"]), *ff_args(c["args"], keep)))
+    ops(c["post"])
+    r = api.PyUnicodeWriter_Finish(w)
+    return [{"ok": None} if "ok" in res else res, cps_of(r), kind_of(r)]
+
+# ==== str iterators (fn name fmt_iter) ====
+
+IT_STRS = ["", "a", "ab", "abc", "abcdef", "\xe9", "a\xe9", "\xe9\xff", "€", "a€b", "\U0001f600", "a\U0001f600",
+           "\ud800", "\x00", "a\x00b"]
+IT_STATES = [0, 1, 2, 3, 5, 100, -1, -5, 2 ** 63 - 1, -2 ** 63, 2 ** 63, -2 ** 63 - 1, 2 ** 70]
+
+
+def it_state(rng):
+    r = rng.random()
+    if r < 0.7:
+        return {"t": "int", "v": hex_of(rng.choice(IT_STATES))}
+    if r < 0.85:
+        return {"t": "bool", "v": rng.random() < 0.5}
+    return sf_obj(rng, 1)
+
+
+def it_simple(rng):
+    return {"op": "next"} if rng.random() < 0.8 else {
+        "op": "setstate", "o": {"t": "int", "v": hex_of(rng.choice([0, 1, 2, 100, -1]))}}
+
+
+def it_op(rng):
+    r = rng.random()
+    if r < 0.45:
+        return {"op": "next"}
+    if r < 0.6:
+        return {"op": "len"}
+    if r < 0.75:
+        return {"op": "setstate", "o": it_state(rng)}
+    return {"op": "reduce", "pre": [it_simple(rng) for _ in range(rng.choice([0, 0, 1, 2, 8]))],
+            "r": rng.choice(["orig", "orig", "alt", "missing", "raise"])}
+
+
+@gen("format", 4)
+def gen_fmt_iter(rng):
+    return {"mod": "unicodeobj", "fn": "fmt_iter", "s": cps_of(rng.choice(IT_STRS)), "exact": rng.random() < 0.8,
+            "ops": [it_op(rng) for _ in range(rng.randint(0, 9))]}
+
+
+class ItSub(str):
+    pass
+
+
+def it_step(it, op):
+    if op["op"] == "next":
+        next(it, None)
+    else:
+        try:
+            it.__setstate__(sf_dec(op["o"]))
+        except Exception:
+            pass
+
+
+def it_reduce(it, op):
+    """__reduce__ from a frame whose builtins run the script when `iter` is looked up."""
+    alt = lambda *a: None
+
+    class Builtins(dict):
+        def __getitem__(self, key):
+            for s in op["pre"]:
+                it_step(it, s)
+            if op["r"] == "raise":
+                raise ValueError("hook")
+            if op["r"] == "missing":
+                raise KeyError(key)
+            return iter if op["r"] == "orig" else alt
+
+    glob = {"__builtins__": Builtins(), "it": it}
+    exec("r = it.__reduce__()", glob)
+    r = glob["r"]
+    label = 0 if r[0] is iter else 1 if r[0] is alt else -1
+    return [label, cps_of(r[1][0]), r[2] if len(r) > 2 else None]
+
+
+def it_run(it, op):
+    k = op["op"]
+    if k == "next":
+        x = next(it, None)
+        return None if x is None else [cps_of(x), kind_of(x)]
+    if k == "len":
+        return it.__length_hint__()
+    if k == "setstate":
+        return common.py_result(lambda: (it.__setstate__(sf_dec(op["o"])), None)[1])
+    return common.py_result(lambda: it_reduce(it, op))
+
+
+@run("fmt_iter")
+def run_fmt_iter(c):
+    s = str_of(c["s"])
+    it = iter(s if c["exact"] else ItSub(s))
+    return [type(it).__name__, [it_run(it, op) for op in c["ops"]]]
+
+# ==== interning (fn name fmt_intern) ====
+
+KN_STATICS = ["__init__", "__name__", "__dict__"]
+KN_SUFFIX = ["", "", "\xe9", "€", "\U0001f600"]
+KN_WIDE_USED = set()
+
+
+def kn_wide(rng):
+    """One wide character no case of this run has used: it cannot carry a token."""
+    while True:
+        c = rng.randrange(0x10000, 0x110000)
+        if c not in KN_WIDE_USED:
+            KN_WIDE_USED.add(c)
+            return chr(c)
+
+
+
+@gen("format", 4)
+def gen_fmt_intern(rng):
+    # The interned dict outlives a case and immortal strings never leave it, so a case uses its own
+    # text. Handles are in the order the operations make them.
+    token = "k" + format(rng.getrandbits(64), "x")
+    texts = [token + rng.choice(KN_SUFFIX) for _ in range(2)] + [token]
+    texts += ["€" + token[1:], rng.choice(KN_STATICS), rng.choice(["", "a", "\xe9", "\xff"])]
+    wide1 = kn_wide(rng)
+    ops, n = [], 0
+    for _ in range(rng.randint(1, 10)):
+        r = rng.random()
+        if n == 0 or r < 0.35:
+            ops.append({"op": "new", "s": cps_of(rng.choice(texts))})
+        elif r < 0.42:
+            ops.append({"op": "new", "s": cps_of(wide1)})
+        elif r < 0.5:
+            ops.append({"op": "sub", "s": cps_of(rng.choice(texts))})
+        elif r < 0.54:
+            ops.append({"op": "other"})
+        elif r < 0.76:
+            ops.append({"op": "mortal", "h": rng.randrange(n)})
+        elif r < 0.9:
+            ops.append({"op": "immortal", "h": rng.randrange(n)})
+        else:
+            b = rng.choice([rng.choice(texts).encode("utf-8", "surrogatepass"), b"a", b"", b"\xff", token.encode() + b"\xc3"])
+            ops.append({"op": "fromstring", "s": list(b)})
+            if b in (b"\xff",) or b.endswith(b"\xc3"):
+                n -= 1
+        n += 1
+    return {"mod": "unicodeobj", "fn": "fmt_intern", "statics": [cps_of(s) for s in KN_STATICS], "ops": ops}
+
+
+class KnSub(str):
+    pass
+
+
+class KnOther:
+    pass
+
+
+def kn_new(s):
+    # A fresh object: join makes one unless there is a singleton.
+    return "".join(list(s)) if len(s) != 1 else chr(ord(s))
+
+
+def kn_inplace(fn, x):
+    import ctypes
+    api = ctypes.pythonapi
+    p = ctypes.py_object(x)
+    api.Py_IncRef.argtypes = [ctypes.py_object]
+    api.Py_IncRef.restype = None
+    api.Py_IncRef(x)  # the call steals one reference; what it leaves in p is never released
+    f = getattr(api, fn)
+    f.argtypes, f.restype = [ctypes.POINTER(ctypes.py_object)], None
+    f(ctypes.byref(p))
+    return p.value
+
+
+@run("fmt_intern")
+def run_fmt_intern(c):
+    import ctypes
+    api = ctypes.pythonapi
+    api.PyUnicode_InternFromString.restype = ctypes.py_object
+    api.PyUnicode_InternFromString.argtypes = [ctypes.c_char_p]
+    hs, rs = [], []
+    for op in c["ops"]:
+        k = op["op"]
+        if k == "new":
+            hs.append(kn_new(str_of(op["s"])))
+        elif k == "sub":
+            hs.append(KnSub(str_of(op["s"])))
+        elif k == "other":
+            hs.append(KnOther())
+        elif k == "mortal":
+            hs.append(kn_inplace("PyUnicode_InternInPlace", hs[op["h"]]))
+        elif k == "immortal":
+            hs.append(kn_inplace("PyUnicode_InternImmortal", hs[op["h"]]))
+        else:
+            r = common.py_result(lambda: api.PyUnicode_InternFromString(bytes(op["s"])))
+            if "ok" in r:
+                hs.append(r["ok"])
+                rs.append({"ok": None})
+            else:
+                rs.append(r)
+            continue
+        rs.append({"ok": None})
+    import sys
+
+    def is_interned(x):
+        return sys._is_interned(x) if type(x) is str or isinstance(x, str) else False
+
+    def show(x):
+        first = next(i for i, y in enumerate(hs) if y is x)
+        return [first, is_interned(x), sys._is_immortal(x)]
+
+    return [rs, [show(x) for x in hs]]
+
+# ==== join (fn name fmt_join) ====
+
+JN_STRS = ["", "", "a", "abc", "\xe9", "a\xff", "€", "a€", "\U0001f600", "x\U0001f600y", "\ud800"]
+
+
+def jn_item(rng, other=0.08):
+    r = rng.random()
+    if r < other:
+        return {"t": "other", "n": rng.choice(["int", "Thing", "T" * 100])}
+    s = cps_of(rng.choice(JN_STRS))
+    return {"t": "sub" if rng.random() < 0.15 else "exact", "s": s}
+
+
+@gen("format", 4)
+def gen_fmt_join(rng):
+    r = rng.random()
+    sep = {"t": "null"} if r < 0.1 else {"t": "other", "n": rng.choice(["int", "T" * 100])} if r < 0.16 else \
+        {"t": "str", "s": cps_of(rng.choice(JN_STRS + [" ", ", "]))}
+    n = rng.choice([0, 1, 1, 2, 2, 3, 4, 6])
+    bad = rng.choice([0, 0.08, 0.3])
+    r = rng.random()
+    if r < 0.55:
+        seq = {"t": "array", "kind": rng.choice(["list", "tuple"]), "items": [jn_item(rng, bad) for _ in range(n)]}
+    elif r < 0.9:
+        steps = [jn_item(rng, bad) for _ in range(n)]
+        if rng.random() < 0.4:
+            steps.insert(rng.randint(0, n), {"exc": rng.choice(["ValueError", "TypeError"])})
+        seq = {"t": "iter", "steps": steps}
+    else:
+        seq = {"t": "getiter", "exc": rng.choice(["ValueError", "TypeError"])}
+    return {"mod": "unicodeobj", "fn": "fmt_join", "sep": sep, "seq": seq}
+
+
+class JnSub(str):
+    pass
+
+
+def jn_obj(x):
+    if x["t"] == "exact":
+        return kn_new(str_of(x["s"]))
+    if x["t"] == "sub":
+        return JnSub(str_of(x["s"]))
+    return 1 if x["n"] == "int" else type(x["n"], (), {})()
+
+
+def jn_exc(name):
+    return (TypeError if name == "TypeError" else ValueError)("boom")
+
+
+def jn_seq(q):
+    if q["t"] == "array":
+        items = [jn_obj(x) for x in q["items"]]
+        return (items if q["kind"] == "list" else tuple(items)), items
+    if q["t"] == "iter":
+        got = []
+
+        def walk():
+            for s in q["steps"]:
+                if "exc" in s:
+                    raise jn_exc(s["exc"])
+                got.append(jn_obj(s))
+                yield got[-1]
+        return walk(), got
+
+    class NoIter:
+        def __iter__(self):
+            raise jn_exc(q["exc"])
+    return NoIter(), None
+
+
+@run("fmt_join")
+def run_fmt_join(c):
+    import ctypes
+    api = ctypes.pythonapi
+    f = api.PyUnicode_Join
+    f.restype, f.argtypes = ctypes.py_object, [ctypes.c_void_p, ctypes.py_object]
+    q = c["sep"]
+    sep = None if q["t"] == "null" else (str_of(q["s"]) if q["t"] == "str" else jn_obj(q))
+    seq, items = jn_seq(c["seq"])
+    r = f(None if sep is None else id(sep), seq)
+    if items is not None and len(items) == 1 and r is items[0]:
+        return "itself"
+    return [cps_of(r), kind_of(r)]
+
 # ==== end str.format ====
 
 

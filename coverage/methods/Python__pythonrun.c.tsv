@@ -48,17 +48,17 @@ Python/pythonrun.c	1573	1583	Py_CompileStringExFlags	Py_CompileStringExFlags(con
 Python/pythonrun.c	1586	1603	_PyObject_SupportedAsScript	_PyObject_SupportedAsScript(PyObject *cmd)	todo		
 Python/pythonrun.c	1606	1652	_Py_SourceAsString	_Py_SourceAsString(PyObject *cmd, const char *funcname, const char *what, PyCompilerFlags *cf, PyObject **cmd_copy)	todo		
 Python/pythonrun.c	1662	1666	PyOS_CheckStack	PyOS_CheckStack(void)	todo		
-Python/pythonrun.c	1673	1677	PyAPI_FUNC	PyAPI_FUNC(int) PyRun_AnyFile(FILE *fp, const char *name)	todo		
-Python/pythonrun.c	1680	1684	PyAPI_FUNC	PyAPI_FUNC(int) PyRun_AnyFileEx(FILE *fp, const char *name, int closeit)	todo		
-Python/pythonrun.c	1687	1691	PyAPI_FUNC	PyAPI_FUNC(int) PyRun_AnyFileFlags(FILE *fp, const char *name, PyCompilerFlags *flags)	todo		
-Python/pythonrun.c	1694	1698	PyAPI_FUNC	PyAPI_FUNC(PyObject *) PyRun_File(FILE *fp, const char *p, int s, PyObject *g, PyObject *l)	todo		
-Python/pythonrun.c	1701	1705	PyAPI_FUNC	PyAPI_FUNC(PyObject *) PyRun_FileEx(FILE *fp, const char *p, int s, PyObject *g, PyObject *l, int c)	todo		
-Python/pythonrun.c	1708	1713	PyAPI_FUNC	PyAPI_FUNC(PyObject *) PyRun_FileFlags(FILE *fp, const char *p, int s, PyObject *g, PyObject *l, PyCompilerFlags *flags)	todo		
-Python/pythonrun.c	1716	1720	PyAPI_FUNC	PyAPI_FUNC(int) PyRun_SimpleFile(FILE *f, const char *p)	todo		
-Python/pythonrun.c	1723	1727	PyAPI_FUNC	PyAPI_FUNC(int) PyRun_SimpleFileEx(FILE *f, const char *p, int c)	todo		
-Python/pythonrun.c	1731	1735	PyAPI_FUNC	PyAPI_FUNC(PyObject *) PyRun_String(const char *str, int s, PyObject *g, PyObject *l)	todo		
-Python/pythonrun.c	1738	1742	PyAPI_FUNC	PyAPI_FUNC(int) PyRun_SimpleString(const char *s)	todo		
-Python/pythonrun.c	1745	1749	PyAPI_FUNC	PyAPI_FUNC(PyObject *) Py_CompileString(const char *str, const char *p, int s)	todo		
+Python/pythonrun.c	1673	1677	PyRun_AnyFile	PyAPI_FUNC(int) PyRun_AnyFile(FILE *fp, const char *name)	todo		
+Python/pythonrun.c	1680	1684	PyRun_AnyFileEx	PyAPI_FUNC(int) PyRun_AnyFileEx(FILE *fp, const char *name, int closeit)	todo		
+Python/pythonrun.c	1687	1691	PyRun_AnyFileFlags	PyAPI_FUNC(int) PyRun_AnyFileFlags(FILE *fp, const char *name, PyCompilerFlags *flags)	todo		
+Python/pythonrun.c	1694	1698	PyRun_File	PyAPI_FUNC(PyObject *) PyRun_File(FILE *fp, const char *p, int s, PyObject *g, PyObject *l)	todo		
+Python/pythonrun.c	1701	1705	PyRun_FileEx	PyAPI_FUNC(PyObject *) PyRun_FileEx(FILE *fp, const char *p, int s, PyObject *g, PyObject *l, int c)	todo		
+Python/pythonrun.c	1708	1713	PyRun_FileFlags	PyAPI_FUNC(PyObject *) PyRun_FileFlags(FILE *fp, const char *p, int s, PyObject *g, PyObject *l, PyCompilerFlags *flags)	todo		
+Python/pythonrun.c	1716	1720	PyRun_SimpleFile	PyAPI_FUNC(int) PyRun_SimpleFile(FILE *f, const char *p)	todo		
+Python/pythonrun.c	1723	1727	PyRun_SimpleFileEx	PyAPI_FUNC(int) PyRun_SimpleFileEx(FILE *f, const char *p, int c)	todo		
+Python/pythonrun.c	1731	1735	PyRun_String	PyAPI_FUNC(PyObject *) PyRun_String(const char *str, int s, PyObject *g, PyObject *l)	todo		
+Python/pythonrun.c	1738	1742	PyRun_SimpleString	PyAPI_FUNC(int) PyRun_SimpleString(const char *s)	todo		
+Python/pythonrun.c	1745	1749	Py_CompileString	PyAPI_FUNC(PyObject *) Py_CompileString(const char *str, const char *p, int s)	todo		
 Python/pythonrun.c	1753	1757	Py_CompileStringFlags	Py_CompileStringFlags(const char *str, const char *p, int s, PyCompilerFlags *flags)	todo		
-Python/pythonrun.c	1760	1764	PyAPI_FUNC	PyAPI_FUNC(int) PyRun_InteractiveOne(FILE *f, const char *p)	todo		
-Python/pythonrun.c	1767	1771	PyAPI_FUNC	PyAPI_FUNC(int) PyRun_InteractiveLoop(FILE *f, const char *p)	todo		
+Python/pythonrun.c	1760	1764	PyRun_InteractiveOne	PyAPI_FUNC(int) PyRun_InteractiveOne(FILE *f, const char *p)	todo		
+Python/pythonrun.c	1767	1771	PyRun_InteractiveLoop	PyAPI_FUNC(int) PyRun_InteractiveLoop(FILE *f, const char *p)	todo		

@@ -382,6 +382,87 @@ theorem processAccepted_proven : ProcessAccepted := by
     simp only [Bool.and_eq_true, Bool.not_eq_true', not_and, Bool.not_eq_false] at this
     exact this hw
 
+/-- The other way round from `ProcessAccepted`: a class that meets each condition is accepted, so that a function that always
+raises fails the pair; and with the annotations good, a `Field` without an annotation is a `TypeError` before anything else,
+and a frozen base under a class that is not frozen is the next. -/
+def ProcessOk : Prop :=
+  ∀ (c : DClass) (own : List DField) (gen : List String), scanAnns c.anns c.params.kwOnly false = .ok own →
+    (∀ n, c.stray = some n → (processClass c).raises "TypeError") ∧
+    (c.stray = none → c.bases ≠ [] → anyFrozen c.bases = true → c.params.frozen = false →
+      (processClass c).raises "TypeError") ∧
+    (c.stray = none → (c.bases = [] ∨ ((c.params.frozen = true ↔ anyFrozen c.bases = true) ∧
+        (c.params.frozen = true → allFrozen c.bases = true))) →
+      (c.params.order = true → c.params.eq = true) →
+      (c.params.init = true → initCheck none (initFields ((allFields c own).filter (fun f => f.kind != .classVar))).1 = .ok ()) →
+      hashAction c.params.unsafeHash c.params.eq c.params.frozen (explicitHash c) ≠ .exception →
+      addFns c.name c.defined (methodNames c.params) = .ok gen →
+      (c.params.weakrefSlot = true → c.params.slots = true) → (c.params.slots = true → c.hasSlots = false) →
+      ∃ i, processClass c = .ok i ∧ i.generated = gen)
+
+theorem processOk_proven : ProcessOk := by
+  intro c own gen hs
+  refine ⟨?_, ?_, ?_⟩
+  · intro n hn
+    exact ⟨.typeError s!"'{n}' is a field but has no type annotation", by simp [processClass, hs, hn], rfl⟩
+  · intro hn hb ha hf
+    have he : c.bases.isEmpty = false := by
+      cases hh : c.bases with
+      | nil => exact absurd hh hb
+      | cons _ _ => rfl
+    exact ⟨.typeError "cannot inherit non-frozen dataclass from a frozen one", by
+      simp [processClass, hs, hn, he, ha, hf], rfl⟩
+  · intro hn hb ho hi hh ha hw hsl
+    have h1 : ¬ ((!c.bases.isEmpty && anyFrozen c.bases && !c.params.frozen) = true) := by
+      rcases hb with hb | ⟨hb, _⟩
+      · simp [hb]
+      · intro h
+        simp only [Bool.and_eq_true, Bool.not_eq_true'] at h
+        have := hb.2 h.1.2
+        rw [this] at h
+        exact Bool.noConfusion h.2
+    have h2 : ¬ ((!c.bases.isEmpty && !allFrozen c.bases && c.params.frozen) = true) := by
+      rcases hb with hb | ⟨_, hb⟩
+      · simp [hb]
+      · intro h
+        simp only [Bool.and_eq_true, Bool.not_eq_true'] at h
+        have := hb h.2
+        rw [this] at h
+        exact Bool.noConfusion h.1.2
+    have h3 : ¬ ((c.params.order && !c.params.eq) = true) := by
+      intro h
+      simp only [Bool.and_eq_true, Bool.not_eq_true'] at h
+      have := ho h.1
+      rw [this] at h
+      exact Bool.noConfusion h.2
+    have h4 : (if c.params.init = true then initCheck none (initFields ((allFields c own).filter (fun f => f.kind != .classVar))).1
+        else (.ok () : Py Unit)) = .ok () := by
+      by_cases hc : c.params.init = true
+      · rw [if_pos hc]
+        exact hi hc
+      · rw [if_neg hc]
+    have h5 : ¬ ((hashAction c.params.unsafeHash c.params.eq c.params.frozen (explicitHash c) == .exception) = true) := by
+      simpa using hh
+    have h6 : ¬ ((c.params.weakrefSlot && !c.params.slots) = true) := by
+      intro h
+      simp only [Bool.and_eq_true, Bool.not_eq_true'] at h
+      have := hw h.1
+      rw [this] at h
+      exact Bool.noConfusion h.2
+    have h7 : ¬ ((c.params.slots && c.hasSlots) = true) := by
+      intro h
+      simp only [Bool.and_eq_true] at h
+      have := hsl h.1
+      rw [this] at h
+      exact Bool.noConfusion h.2
+    unfold processClass
+    simp only [hs, hn]
+    rw [if_neg h1, if_neg h2, if_neg h3]
+    simp only [h4]
+    rw [if_neg h5]
+    simp only [ha]
+    rw [if_neg h6, if_neg h7]
+    exact ⟨_, rfl, rfl⟩
+
 /-! ### `__init__` -/
 
 /-- The interpreter's binding of `__init__`, exactly: too many positional arguments, an unknown keyword, a keyword that
@@ -668,6 +749,113 @@ theorem replaceSpec_proven : ReplaceSpec := by
   have := h1 _ _ hw
   rw [hv] at this
   simpa using this
+
+/-- `replace` on a class of real fields succeeds when the changes name fields and the other fields can be read: with
+`ReplaceSpec`, which is about a result, a function that always raises fails the pair. -/
+def ReplaceOk : Prop :=
+  ∀ (i : DInfo) (o : DObj) (ch : List (String × Int)), (∀ f, f ∈ i.fields ↔ f ∈ i.std ++ i.kw) →
+    (∀ f ∈ i.fields, f.kind = .plain ∧ f.init = true) →
+    (∀ p ∈ ch, ∃ f ∈ i.fields, f.name = p.1) →
+    (∀ f ∈ i.fields, ch.lookup f.name = none → ∃ v, getAttrD i o f.name = .ok v) →
+    ∃ o', dcReplace i false o ch = .ok o'
+
+private theorem replaceLoop_ok (i : DInfo) (o : DObj) (ch0 : List (String × Int)) (fs : List DField) :
+    ∀ ch, (∀ f ∈ fs, f.kind = .plain ∧ f.init = true) →
+      (∀ f ∈ fs, ch.lookup f.name = none → ∃ v, getAttrD i o f.name = .ok v) →
+      (∀ p ∈ ch, p ∈ ch0 ∨ ∃ f ∈ i.fields, f.name = p.1) → (∀ f ∈ fs, f ∈ i.fields) →
+      ∃ ch', replaceLoop i o fs ch = .ok ch' ∧ (∀ p ∈ ch', p ∈ ch0 ∨ ∃ f ∈ i.fields, f.name = p.1) ∧
+        (∀ n w, ch.lookup n = some w → ch'.lookup n = some w) ∧ ∀ f ∈ fs, (ch'.lookup f.name).isSome = true := by
+  induction fs with
+  | nil =>
+    intro ch _ _ h3 _
+    exact ⟨ch, rfl, h3, fun _ _ h => h, by simp⟩
+  | cons f r ih =>
+    intro ch h1 h2 h3 h4
+    obtain ⟨hp, hi⟩ := h1 f (by simp)
+    have hk : (f.kind == .classVar) = false := by simp [hp]
+    have hv : (f.kind == .initVar) = false := by simp [hp]
+    simp only [replaceLoop, hk, Bool.false_eq_true, ↓reduceIte, hi, Bool.not_true, hv, Bool.false_and]
+    by_cases hc : (ch.lookup f.name).isNone = true
+    · simp only [hc, ↓reduceIte]
+      have hc' : ch.lookup f.name = none := by simpa using hc
+      obtain ⟨v, hg⟩ := h2 f (by simp) hc'
+      simp only [hg]
+      have snoc : ∀ n w, ch.lookup n = some w → (ch ++ [(f.name, v)]).lookup n = some w := by
+        intro n w hw
+        simp [List.lookup_append, hw]
+      have self : (ch ++ [(f.name, v)]).lookup f.name = some v := by
+        simp [List.lookup_append, hc']
+      obtain ⟨c2, a1, a2, a3, a4⟩ := ih (ch ++ [(f.name, v)]) (fun x hx => h1 x (by simp [hx]))
+        (by
+          intro x hx hn
+          refine h2 x (by simp [hx]) ?_
+          cases hl : ch.lookup x.name with
+          | none => rfl
+          | some w =>
+            have := snoc _ _ hl
+            rw [hn] at this
+            cases this)
+        (by
+          intro p hq
+          rcases List.mem_append.1 hq with hq | hq
+          · exact h3 p hq
+          · simp only [List.mem_singleton] at hq
+            subst hq
+            exact .inr ⟨f, h4 f (by simp), rfl⟩)
+        (fun x hx => h4 x (by simp [hx]))
+      refine ⟨c2, a1, a2, fun n w hw => a3 n w (snoc n w hw), ?_⟩
+      intro x hx
+      rcases List.mem_cons.1 hx with rfl | hx
+      · simp [a3 _ _ self]
+      · exact a4 x hx
+    · have hc' : (ch.lookup f.name).isNone = false := Bool.eq_false_iff.2 hc
+      simp only [hc', Bool.false_eq_true, ↓reduceIte]
+      obtain ⟨c2, a1, a2, a3, a4⟩ := ih ch (fun x hx => h1 x (by simp [hx]))
+        (fun x hx hn => h2 x (by simp [hx]) hn) h3 (fun x hx => h4 x (by simp [hx]))
+      refine ⟨c2, a1, a2, a3, ?_⟩
+      intro x hx
+      rcases List.mem_cons.1 hx with rfl | hx
+      · cases hw : ch.lookup x.name with
+        | none => simp [hw] at hc
+        | some w => simp [a3 _ _ hw]
+      · exact a4 x hx
+
+theorem replaceOk_proven : ReplaceOk := by
+  intro i o ch hsplit hall hk hr
+  obtain ⟨kw, h1, h2, _, h4⟩ := replaceLoop_ok i o ch i.fields ch hall hr (fun p hp => .inl hp) (fun _ h => h)
+  have hnames : (kw.any (fun p => !((i.std ++ i.kw).map (·.name)).contains p.1)) = false := by
+    apply Bool.eq_false_iff.2
+    intro h
+    obtain ⟨p, hp, hq⟩ := List.any_eq_true.1 h
+    have : ∃ f ∈ i.fields, f.name = p.1 := by
+      rcases h2 p hp with hq2 | hq2
+      · exact hk p hq2
+      · exact hq2
+    obtain ⟨f, hf, he⟩ := this
+    have hm : p.1 ∈ (i.std ++ i.kw).map (·.name) := List.mem_map.2 ⟨f, (hsplit f).1 hf, he⟩
+    simp only [Bool.not_eq_true', List.contains_eq_mem, decide_eq_false_iff_not] at hq
+    exact hq hm
+  have hmiss : ∀ b' : List (String × Int), b' = kw →
+      ((i.std ++ i.kw).any (fun f => f.dflt.isNone && f.factory.isNone && (b'.lookup f.name).isNone)) = false := by
+    intro b' he
+    subst he
+    apply Bool.eq_false_iff.2
+    intro h
+    obtain ⟨f, hf, hq⟩ := List.any_eq_true.1 h
+    have := h4 f ((hsplit f).2 hf)
+    simp only [Bool.and_eq_true] at hq
+    have hs := hq.2
+    cases hl : b'.lookup f.name with
+    | none => simp [hl] at this
+    | some w => simp [hl] at hs
+  have hbind : ∃ b, bindArgs i.std i.kw [] kw = .ok b := by
+    obtain ⟨_, _, _, hh⟩ := bindExact_proven i.std i.kw [] kw
+    have h' := hh (by simp) hnames (by simp)
+    exact ⟨_, h'.2 (hmiss _ (by simp))⟩
+  obtain ⟨b, hb⟩ := hbind
+  refine ⟨initBody i false b, ?_⟩
+  simp only [dcReplace, h1, callInit, hb]
+  cases hf : i.fields.find? (fun f => f.kind == .initVar && !f.init) <;> simp
 
 /-- Any instance can be made once its arguments bind: "`__init__` raises only what binding raises". False: an `InitVar`
 with `init=False` is not a parameter, and the generated `__post_init__` call names it, so `__init__` raises `NameError`.

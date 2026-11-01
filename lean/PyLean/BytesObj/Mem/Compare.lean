@@ -131,7 +131,7 @@ theorem cmpReflexive_proven : CmpReflexive := by
     simp only [equivShape, beq_self_eq_true, Bool.true_and, hsh]
     rw [← hn, List.take_length]
     exact shapeLoop_refl sh
-  have hcmp : compareBufs st.mem (st.mv self).view (st.mv self).view = .ok true := by
+  have hcmp : compareBufs st.mem st.noStruct (st.mv self).view (st.mv self).view = .ok true := by
     have h_ : c ≠ '_' := by
       intro e
       rw [e] at hnat
