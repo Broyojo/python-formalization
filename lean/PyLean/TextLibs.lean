@@ -6,6 +6,7 @@ import PyLean.TextLibs.CsvRoundTrip
 import PyLean.TextLibs.ReParseProps
 import PyLean.TextLibs.ReMisc
 import PyLean.TextLibs.PathProps
+import PyLean.TextLibs.ShlexProps
 import PyLean.TextLibs.CsvSniffProps
 
 /-!
@@ -30,6 +31,7 @@ open PyLean.TextLibs.Binascii
 open PyLean.TextLibs.Csv
 open PyLean.TextLibs.Re
 open PyLean.TextLibs.Path
+open PyLean.TextLibs.Shlex
 
 /-- The integer routines `IntCodesRoundTrip` drives through `runPack` and `runUnpack`. -/
 def structIntFns : List String :=
@@ -662,6 +664,25 @@ def entries : List Entry := [
     prop := ``NtNormpathKeepsRelative, thm := some ``ntNormpathKeepsRelative_refuted
     bug := some "textlibs-path-ntpath-normpath-drive"
     notes := "Duplicate of #100162 (open). normpath is in a try/except row the fallback sits in; no row credited." },
+  { id := "textlibs-shlex-join-round-trip", pyFile := "Lib/shlex.py"
+    pyFns := ["shlex.read_token", "shlex.__next__", "split", "join", "quote"]
+    statement := "shlex.split(shlex.join(args)) == args, for every list of strings."
+    source := "docs: shlex.join", status := .proven
+    prop := ``JoinRoundTrip, thm := some ``joinRoundTrip_proven
+    notes := "Walks the state machine over what quote writes: safe words, quoted text, the five-character form of a quote, and empty strings." },
+  { id := "textlibs-shlex-quote-type", pyFile := "Lib/shlex.py", pyFns := ["quote"]
+    statement := "quote raises TypeError for anything but a string."
+    source := "the check at Lib/shlex.py:326", status := .refuted
+    prop := ``QuoteRejectsNonStr, thm := some ``quoteRejectsNonStr_refuted
+    bug := some "textlibs-shlex-quote-false-objects" },
+  { id := "textlibs-shlex-stream-failure", pyFile := "Lib/shlex.py", pyFns := ["shlex.read_token"]
+    statement := "A stream that raises stops the lexer with that exception."
+    source := "invariant: failures pass through", status := .proven
+    prop := ``StreamFailurePasses, thm := some ``streamFailurePasses_proven },
+  { id := "textlibs-shlex-open-quote", pyFile := "Lib/shlex.py", pyFns := ["shlex.read_token"]
+    statement := "An open quote at the end of the text raises ValueError, whatever was read."
+    source := "Lib/shlex.py:192-196", status := .proven
+    prop := ``OpenQuoteRaises, thm := some ``openQuoteRaises_proven },
   { id := "textlibs-csv-round-trip", pyFile := "Modules/_csv.c"
     pyFns := ["join_reset", "join_append_data", "join_append", "join_append_lineterminator", "csv_writerow_lock_held",
       "csv_writerow", "parse_add_char", "parse_process_char"]

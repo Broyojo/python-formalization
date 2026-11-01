@@ -2469,6 +2469,92 @@ class PathArea:
         return common.py_result(body)
 
 
+@area("shlex", 6)
+class ShlexArea:
+    PARTS = ["a", "b", " ", "  ", "'", '"', "\\", "#", "\n", "\t", "\r", "$", "\xe9", "(", ")", ";", "&", "|", "<", ">", "=", "*", "~", "-", ".",
+             "/", "''", '""', "\\'", '\\"', "\\\\", "\u0100", "ab c"]
+
+    @classmethod
+    def text(cls, r, n=12):
+        return "".join(r.choice(cls.PARTS) for _ in range(r.randint(0, n)))
+
+    @classmethod
+    def gen(cls, r):
+        f = r.choice(["split", "split", "lex", "lex", "lex", "quote", "join"])
+        c = {"mod": "textlibs", "fn": "shlex." + f}
+        if f == "split":
+            c.update(s=cps(cls.text(r)), comments=r.random() < 0.3, posix=r.random() < 0.7)
+        elif f == "lex":
+            c.update(s=cps(cls.text(r)), posix=r.random() < 0.6, wsplit=r.random() < 0.4)
+            if r.random() < 0.4:
+                c["punct"] = cps(r.choice(["();<>|&", "();", "|", "<>"]))
+            if r.random() < 0.2:
+                c["commenters"] = cps(r.choice(["", "#;", "a"]))
+            if r.random() < 0.15:
+                c["quotes"] = cps(r.choice(["'", '"', "'a"]))
+            if r.random() < 0.15:
+                c["escape"] = cps(r.choice(["", "^", "\\^"]))
+            if r.random() < 0.2:
+                c["fail"] = r.randint(0, 10)
+        elif f == "quote":
+            if r.random() < 0.8:
+                c["s"] = cps(cls.text(r, 5))
+            elif r.random() < 0.3:
+                c["raise"] = True
+            else:
+                c["truth"] = r.random() < 0.5
+        else:
+            c["args"] = [cps(cls.text(r, 4)) for _ in range(r.randint(0, 4))]
+        return c
+
+    @classmethod
+    def run(cls, c):
+        import shlex
+        f = c["fn"].split(".")[1]
+
+        def body():
+            if f == "split":
+                return [cps(x) for x in shlex.split(txt(c["s"]), comments=c["comments"], posix=c["posix"])]
+            if f == "lex":
+                inner = io.StringIO(txt(c["s"]))
+
+                class S:
+                    n = c.get("fail")
+
+                    def tick(self):
+                        if S.n is not None:
+                            if S.n == 0:
+                                raise ValueError("boom")
+                            S.n -= 1
+
+                    def read(self, k):
+                        self.tick()
+                        return inner.read(k)
+
+                    def readline(self):
+                        self.tick()
+                        return inner.readline()
+                pc = txt(c["punct"]) if "punct" in c else False
+                lx = shlex.shlex(S(), posix=c["posix"], punctuation_chars=pc)
+                lx.whitespace_split = c["wsplit"]
+                for k in ("commenters", "quotes", "escape"):
+                    if k in c:
+                        setattr(lx, k, txt(c[k]))
+                return [cps(x) for x in lx]
+            if f == "quote":
+                if "s" in c:
+                    return cps(shlex.quote(txt(c["s"])))
+
+                class Obj:
+                    def __bool__(self):
+                        if "raise" in c:
+                            raise ValueError("boom")
+                        return c["truth"]
+                return cps(shlex.quote(Obj()))
+            return cps(shlex.join([txt(a) for a in c["args"]]))
+        return common.py_result(body)
+
+
 only = os.environ.get("TEXTLIBS_ONLY")
 names = [n for n in AREAS if not only or n in only.split(",")]
 weights = [AREAS[n][1] for n in names]
