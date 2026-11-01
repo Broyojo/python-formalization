@@ -55,7 +55,7 @@ expected: |
   as an estimate that is never required for correctness.
 observed: |
   python3 3.14.7: list(x): MemoryError, [].extend(x): MemoryError, [0].extend(x): ok. REPRODUCED.
-  main (python.exe 3.16.0a1+dev): identical. REPRODUCED.
+  main (python.exe 3.16.0a1+dev, ef1fce0): identical. REPRODUCED.
   The signed overflow at :203 comes from reading the source. It has not been observed under UBSan:
   no sanitizer build was run.
 promised_by: |

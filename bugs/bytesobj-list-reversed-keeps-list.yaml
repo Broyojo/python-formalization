@@ -51,7 +51,7 @@ expected: |
   The list is released when the reversed iterator is exhausted, as with iter(l).
 observed: |
   python3 3.14.7: reversed(l) keeps the list: True; iter(l): False. REPRODUCED.
-  main (python.exe 3.16.0a1+dev): identical. REPRODUCED.
+  main (python.exe 3.16.0a1+dev, ef1fce0): identical. REPRODUCED.
 promised_by: |
   Objects/listobject.c:4084 and Include/internal/pycore_list.h: the comment on it_seq, "Set to NULL
   when iterator is exhausted". This is an internal contract; no user-facing document promises it.

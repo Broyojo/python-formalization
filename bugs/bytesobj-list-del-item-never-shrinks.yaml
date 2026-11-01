@@ -34,7 +34,7 @@ expected: |
   The same shrinking as l.pop(i), as `del l[i:i+1]` does.
 observed: |
   python3 3.14.7: full 800040, after del: 800040, after pop: 72. REPRODUCED.
-  main (python.exe 3.16.0a1+dev): after del: 232, after pop: 232. NOT REPRODUCED: fixed on main.
+  main (python.exe 3.16.0a1+dev, ef1fce0): after del: 232, after pop: 232. NOT REPRODUCED: fixed on main.
   So scripts/check_bugs.py reports this one as NOT REPRODUCED on main, which is the expected result.
 promised_by: |
   Objects/listobject.c:113-116 ("If the newsize falls lower than half the allocated size, then proceed

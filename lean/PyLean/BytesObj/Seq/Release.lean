@@ -56,8 +56,11 @@ theorem backLoop_take (items : List α) (n : Nat) (h : n ≤ items.length) :
   | zero => simp [backLoop]
   | succ n ih =>
     have hlt : n < items.length := by omega
-    rw [backLoop, ih (by omega), List.take_succ_eq_append_getElem hlt, List.getElem?_eq_getElem hlt]
-    simp
+    have hrev : (items.take (n + 1)).reverse = items[n] :: (items.take n).reverse := by
+      rw [List.take_succ_eq_append_getElem hlt, List.reverse_append]
+      rfl
+    rw [backLoop, ih (by omega), List.getElem?_eq_getElem hlt, hrev]
+    rfl
 
 /-- Containers release and visit their items last to first, for every element type:
 finalizers run in that order when a tuple or list dies or a list is cleared, and
@@ -126,7 +129,7 @@ theorem forward_step (it it' : ListIter) (l : List α) (v : Option α) (hr : For
         rw [hg] at h
         simp only [Except.ok.injEq, Prod.mk.injEq] at h
         rw [← h.2]
-        exact Or.inl ⟨h2, by simp only; omega⟩
+        exact Or.inl ⟨rfl, by simp only; omega⟩
     · simp [h2] at h
 
 theorem forward_run (l : List α) (n : Nat) (it it' : ListIter) (hr : ForwardReach it)
