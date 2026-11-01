@@ -206,6 +206,53 @@ def LookupRestarts : Prop :=
 theorem lookupRestarts_proven : LookupRestarts := fun _ _ _ P key hash n mp mp' hg hr =>
   lookup_restarts P key hash n mp mp' hg hr
 
+/-- Control after the scan of `_Py_dict_lookup`, for every dispatch branch and every protocol: an
+exception is `DKIX_ERROR`, and `DKIX_KEY_CHANGED` is `goto start`, on the dict as `__eq__` left it. -/
+def LookupControl : Prop :=
+  ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (key : K) (hash : Int) (n : Nat)
+    (mp s : PyDict K V),
+    let scan : Py Int × PyDict K V :=
+      if mp.body.kind != .general then
+        if P.isStr key then
+          doLookup bodyIx (checkUnicode P key hash) (probeFuel mp.body.log2Size) mp.body.mask
+            (toU64 hash &&& mp.body.mask) (toU64 hash) mp
+        else unicodekeysLookupGeneric P mp.body.mask (probeFuel mp.body.log2Size) key hash mp
+      else dictkeysGenericLookup P mp.body.mask (probeFuel mp.body.log2Size) key hash mp
+    (∀ e, scan = (.error e, s) → dictLookupAux P key hash (n + 1) mp = (.error e, s)) ∧
+    (scan = (.ok DKIX_KEY_CHANGED, s) → dictLookupAux P key hash (n + 1) mp = dictLookupAux P key hash n s)
+theorem lookupControl_proven : LookupControl := by
+  intro K V _ P key hash n mp s scan
+  refine ⟨fun e h => ?_, fun h => ?_⟩
+  · simp only [scan] at h
+    simp only [dictLookupAux]
+    rw [h]
+  · simp only [scan] at h
+    simp only [dictLookupAux]
+    rw [h]
+    simp
+
+/-- The `Fail` path of `insertdict` (:1953-1956): when the lookup raises, for a table or a key that
+goes through the lookup, the exception is the result and nothing is stored beyond what `__eq__` did.
+The same goes for `dictresize` asked for an impossible size. -/
+def InsertFailure : Prop :=
+  ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (key : K) (hash : Int) (value : V)
+    (mp s : PyDict K V) (e : PyExc) (l : Nat) (u : Bool),
+    dictLookup P key hash mp = (.error e, s) →
+    ((∃ k, mp.body = .combined k) ∨ (mp.body.isSplit = true ∧ P.isStr key = false)) →
+    insertDict P key hash value mp = (.error e, s) ∧
+    (64 ≤ l → dictResize l u mp = (.error memoryError, mp))
+theorem insertFailure_proven : InsertFailure := by
+  intro K V _ P key hash value mp s e l u hl hr
+  refine ⟨?_, fun h => ?_⟩
+  · simp only [insertDict]
+    rcases hr with ⟨k, hb⟩ | ⟨hs, hk⟩
+    · simp [hb, hl]
+    · cases hb : mp.body with
+      | combined k => simp [hb, Body.isSplit] at hs
+      | split k v => simp [hk, hl]
+  · simp only [dictResize]
+    rw [if_pos h]
+
 /-- `d[key]` on an absent key of a subclass with `__missing__`. -/
 def MissingHook : Prop :=
   ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (hf : K → Int) (eqv : K → K → Bool),

@@ -5,6 +5,7 @@ import PyLean.DictSet.Failure
 import PyLean.DictSet.Readers
 import PyLean.DictSet.Mutation
 import PyLean.DictSet.Merge
+import PyLean.DictSet.Split
 import PyLean.DictSet.SetProps
 import PyLean.DictSet.Findings
 
@@ -162,6 +163,30 @@ def entries : List Entry := [
     statement := "A new dict is well formed and holds nothing."
     source := "invariant", status := .proven
     prop := ``NewDictEmpty, thm := some ``newDictEmpty_proven },
+  { id := "dict-split-refines", pyFile := "Objects/dictobject.c",
+    pyFns := ["_Py_dict_lookup", "dictresize", "insertdict", "insert_split_key", "insert_split_value",
+      "delitem_common", "delete_index_from_values", "dict_popitem_impl", "clear_lock_held",
+      "clear_embedded_values"]
+    statement := "On a well-formed split dict, for a key of any kind: the lookup agrees with the list, in which a shared key with no value is absent; d[key] = v keeps the table well formed, split or combined, and does what assocSet does, up to the object of a key equal to a shared one; del, popitem and clear do what the list does; a full iteration gives the list in insertion order."
+    source := "task: the model equals an abstract association list; dictobject.c:1247-1311, 1831-1882, 1890-1957, 2064-2214, 2772-2831, 2944-3002, 4596-4679", status := .proven
+    prop := ``SplitRefines, thm := some ``splitRefines_proven
+    notes := "The combined half of these rows is in dict-lookup-*, dict-setitem-refines, dict-delitem-refines, dict-popitem-lifo and dict-clear; their failure paths are in dict-lookup-control and dict-insert-failure." },
+  { id := "dict-split-fresh", pyFile := "Objects/dictobject.c", pyFns := ["new_dict_with_shared_keys"]
+    statement := "A new dict with the shared keys of a class is a well-formed split table, so dict-split-refines is not vacuous."
+    source := "dictobject.c:896-909", status := .proven
+    prop := ``SplitFresh, thm := some ``splitFresh_proven },
+  { id := "dict-split-del-keeps-key", pyFile := "Objects/dictobject.c", pyFns := []
+    statement := "del d[key] on a split dict leaves the key in the shared keys with no value in this dict: the state dict.setdefault fails on is reached by ordinary operations and satisfies the invariant."
+    source := "dictobject.c:2802-2807", status := .proven
+    prop := ``SplitDelKeepsKey, thm := some ``splitDelKeepsKey_proven },
+  { id := "dict-lookup-control", pyFile := "Objects/dictobject.c", pyFns := ["_Py_dict_lookup"]
+    statement := "After the scan of _Py_dict_lookup, in every dispatch branch and for every key protocol: an exception is the result, in the state __eq__ left, and DKIX_KEY_CHANGED restarts on that state."
+    source := "dictobject.c:1261-1301", status := .proven
+    prop := ``LookupControl, thm := some ``lookupControl_proven },
+  { id := "dict-insert-failure", pyFile := "Objects/dictobject.c", pyFns := ["insertdict", "dictresize"]
+    statement := "If the lookup in insertdict raises, the exception is the result; dictresize refuses a size of 64 bits or more with MemoryError and changes nothing."
+    source := "dictobject.c:1909-1913, 1953-1956, 2064-2214", status := .proven
+    prop := ``InsertFailure, thm := some ``insertFailure_proven },
   { id := "dict-merge-guard", pyFile := "Objects/dictobject.c", pyFns := ["dict_dict_merge"]
     statement := "For every key protocol and every override: an error from the loop body is raised as it stands, even if the source changed; otherwise a changed number of items in the source raises RuntimeError('dict mutated during update'), in the state the callback left; otherwise the loop goes on from the source as it now stands."
     source := "dictobject.c:3952-3986", status := .proven
