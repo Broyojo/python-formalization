@@ -85,6 +85,8 @@ structure St where
   unhashable : List (Option PyExc) := []
   /-- The view that `__hash__` of exporter `i` releases, if it does. -/
   hashHook : List (Option Nat) := []
+  /-- `sys.modules['struct'] = None`: `PyImport_ImportModuleAttrString("struct", "Struct")` fails. -/
+  noStruct : Bool := false
   deriving Repr, Inhabited
 
 def St.mv (st : St) (i : Nat) : MV := st.mvs.getD i default

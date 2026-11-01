@@ -2312,7 +2312,7 @@ def _gen_failure(rng):
 def _gen_effect(rng):
     """One short script for each effect of the Python code a memoryview runs. Random scripts
     rarely line up the object, the operation and the view that each of these needs."""
-    k = rng.randrange(7)
+    k = rng.randrange(8)
     spec = _spec_bytearray(rng)
     view = ["view", {"exp": 0, "rel": None}]
     tail = [["tobytes", 0, None], ["release", 0], ["tobytes", 0, None]]
@@ -2343,6 +2343,13 @@ def _gen_effect(rng):
         sep = {"lenobj": rng.choice([1, 2, 0, -1, _gen_failure(rng)]), "rel": rng.choice([None, 0, 1])}
         return _script_of(spec, [view, ["get", 0, {"slice": [None, None, 2], "rel": None}],
                                  ["hex", rng.randrange(2), sep, None], ["tobytes", 1, None]] + tail)
+    if k == 6:      # `import struct` fails: the same format stays on the `switch`
+        hooked = {"exp": 0, "rel": None, "hook": 0}
+        c = _script_of(spec, [view, ["cast", 0, rng.choice(["b", "B", "c"]), None],
+                              ["cmp", 0, {"mv": 1}, rng.choice(["eq", "ne"])], ["cmp", 1, {"mv": 0}, "eq"],
+                              ["cmp", 1, hooked, "eq"]] + tail)
+        c["nostruct"] = rng.random() < 0.8
+        return c
     value = {"eqobj": rng.choice([True, False, False, {"raise": rng.choice(list(_RAISES))}]),
              "rel": rng.choice([None, None, 0])}
     return _script_of(spec, [view, rng.choice([["count", 0, value], ["index", 0, value, None, None]])] + tail)
@@ -2825,7 +2832,13 @@ def run_mem(case):
     fn = case["fn"]
     if fn == "mem.script":
         s = _Script(case)
-        out = [s.step(op) for op in case["ops"]]
+        saved = sys.modules.get("struct")
+        if case.get("nostruct"):
+            sys.modules["struct"] = None
+        try:
+            out = [s.step(op) for op in case["ops"]]
+        finally:
+            sys.modules["struct"] = saved
         for r in out:
             if r.get("exc") == "UnicodeEncodeError":
                 r["msg"] = "~'ascii' codec can't encode"

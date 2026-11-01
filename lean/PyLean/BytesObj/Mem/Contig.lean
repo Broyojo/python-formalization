@@ -16,11 +16,11 @@ def CmpBadFormat : Prop :=
   ∀ (m : Mem) (vv ww : Buf) (msg : String),
     equivShape vv ww = true → getNativeFmtchar (vv.format.getD []) = none →
     structGetUnpacker (vv.format.getD []) vv.itemsize = .error (structError msg) →
-    compareBufs m vv ww = .ok false
+    compareBufs m false vv ww = .ok false
 
 theorem cmpBadFormat_proven : CmpBadFormat := by
   intro m vv ww msg h1 h2 h3
-  simp only [compareBufs, h1, Bool.not_true, Bool.false_eq_true, ↓reduceIte, h2, true_or, h3]
+  simp only [compareBufs, h1, Bool.not_true, Bool.false_eq_true, ↓reduceIte, h2, true_or, unpackerOf, h3]
   rfl
 
 /-- `dest[k] = src[k]` for all `k` after `m[s] = src` on a 1-D view with no suboffsets, by
