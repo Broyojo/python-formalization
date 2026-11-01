@@ -1,0 +1,57 @@
+id: corelibs-random-sample-negative-counts
+title: "random.sample accepts negative counts when their total is not negative, and then skews the selection"
+priority: P4
+kind: missing-validation
+module: corelibs
+files: [Lib/random.py]
+functions: ["Random.sample"]
+summary: |
+  sample raises "Counts must be non-negative", but it tests only the total. counts=[3, -1] passes,
+  the prefix sums [3, 2] are no longer sorted, and bisect's precondition is gone. The result is a
+  sample that matches no expansion of the population: sample(['a', 'b', 'c'], counts=[1, -1, 2], k=2)
+  always returns ['c', 'c'], so 'a', with a count of 1, is never selected.
+likelihood: |
+  Low. Negative counts are a caller error, and they usually come from a computed difference.
+  There the caller gets a plausible-looking wrong sample, not the ValueError that a list of all
+  negative counts gets.
+maybe_intended: |
+  Partly. Checking only the total is O(1) after the accumulate, and a full check costs a little.
+  The message wording was discussed in python/cpython#130285, where "Total of counts must be
+  non-negative" was proposed and the shorter text kept, so the total-only test was in view.
+  Raymond Hettinger may well call this out of scope, as in python/cpython#134668.
+reproducer: |
+  import random
+  r = random.Random(1)
+  a = {tuple(r.sample(['a', 'b'], counts=[3, -1], k=2)) for _ in range(200)}
+  b = {tuple(r.sample(['a', 'b', 'c'], counts=[1, -1, 2], k=2)) for _ in range(200)}
+  print(a, b)
+  try:
+      r.sample(['a', 'b'], counts=[-1, -1], k=0)
+      raised = False
+  except ValueError as e:
+      raised = 'non-negative' in str(e)
+  if a == {('a', 'a')} and b == {('c', 'c')} and raised:
+      print('REPRODUCED corelibs-random-sample-negative-counts')
+expected: |
+  ValueError: Counts must be non-negative.
+observed: |
+  python3 3.14.7: counts=[3, -1], k=2 always gives ['a', 'a'], counts=[1, -1, 2], k=2 always gives
+  ['c', 'c'], and counts=[-1, -1] raises ValueError. REPRODUCED.
+  main (python.exe 3.16.0a1+dev, ef1fce0): identical. REPRODUCED.
+promised_by: |
+  The message at Lib/random.py:430. Doc/library/random.rst:245-248 describes counts as a repeat count.
+cause: |
+  Lib/random.py:429 `if total < 0` looks at the last prefix sum only; :433 then bisects a list that
+  is not sorted.
+possible_fix: |
+  Check the prefix sums once: `if any(b < a for a, b in pairwise(chain((0,), cum_counts)))`, or
+  document that counts are assumed non-negative, as choices does for weights.
+duplicates:
+  issues:
+    - {number: 130285, state: closed, relation: "same lines, empty counts", reason: "different bug; shows the wording was discussed"}
+  queries: ["random.sample counts negative", "random sample counts non-negative", "random.sample counts",
+            "sample counts negative", "Counts must be non-negative", "bugforge README: no entry for this"]
+lean:
+  property: PyLean.CoreLibs.Rand.SampleRejectsNegativeCounts
+  theorem: PyLean.CoreLibs.Rand.sampleRejectsNegativeCounts_refuted
+  also_proven: "PyLean.CoreLibs.Rand.SampleCountsEquivalent: for non-negative counts, sample with counts equals sample on the expanded list"

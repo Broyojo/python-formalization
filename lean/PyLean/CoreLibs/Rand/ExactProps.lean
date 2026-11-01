@@ -73,10 +73,12 @@ fits `k = n.bit_length()` bits and `2 ** k ≤ 2 * n`, so with a uniform source 
 draw is accepted with probability above 1/2 (the loop terminates with probability 1;
 the fuel of the model is not part of the claim). -/
 def RandbelowInRange : Prop :=
+  ∀ (σ F : Type),
   (∀ (g : Gen σ F) (fuel : Nat), BelowValid (randbelowWith g fuel)) ∧
   (∀ n : Nat, 0 < n → n < 2 ^ bitLength n ∧ 2 ^ bitLength n ≤ 2 * n)
 
-theorem randbelowInRange_proven : RandbelowInRange (σ := σ) (F := F) := by
+theorem randbelowInRange_proven : RandbelowInRange := by
+  intro σ F
   refine ⟨fun g fuel n _ => Post.bind (Post.any _) (fun r _ => belowLoop_lt g n _ fuel r), ?_⟩
   intro n hn
   refine ⟨lt_pow_bitLength n, ?_⟩
@@ -89,9 +91,11 @@ theorem randbelowInRange_proven : RandbelowInRange (σ := σ) (F := F) := by
 `n < maxsize`: the result is an `int % n`. (`n >= maxsize` is `floor(random() * n)`,
 a float bound, entry `rand-randbelow-without-huge`.) -/
 def RandbelowWithoutInRange : Prop :=
+  ∀ (σ F : Type),
   ∀ [Flt F] (g : Gen σ F) (fuel n : Nat), 0 < n → n < 2 ^ 53 → Post (randbelowWithout g fuel n) (· < n)
 
-theorem randbelowWithoutInRange_proven : RandbelowWithoutInRange (σ := σ) (F := F) := by
+theorem randbelowWithoutInRange_proven : RandbelowWithoutInRange := by
+  intro σ F
   intro _ g fuel n h0 h1
   simp only [randbelowWithout]
   rw [if_neg (by omega)]
@@ -137,6 +141,7 @@ theorem fromBytesLE_range : ∀ (m n : Nat),
 contract: exactly `n` bytes, each below 256, which are the bytes of
 `getrandbits(8 * n)`, little-endian, from the same draw. `to_bytes` cannot overflow. -/
 def RandbytesSpec : Prop :=
+  ∀ (σ F : Type),
   ∀ (g : Gen σ F) (n : Nat) (s : σ), g.Valid →
     let k := 8 * n
     match g.getrandbits (.int (k : Int)) s with
@@ -145,7 +150,8 @@ def RandbytesSpec : Prop :=
       ∃ b, randbytes g (.int (n : Int)) s = (.ok b, s') ∧
         b.length = n ∧ (∀ x ∈ b, x < 256) ∧ fromBytesLE b = r
 
-theorem randbytesSpec_proven : RandbytesSpec (σ := σ) (F := F) := by
+theorem randbytesSpec_proven : RandbytesSpec := by
+  intro σ F
   intro g n s hg
   have hdef : randbytes g (.int (n : Int)) s =
       (match g.getrandbits (.int ((8 * n : Nat) : Int)) s with
@@ -226,6 +232,7 @@ for `int` arguments: with `L = len(range(start, stop, step))`, if `L > 0` then
 `step == 0` it raises `ValueError` without drawing. Python's `range` is the model
 `computeRangeLength`, `computeItem` of `RangeSlice`. -/
 def RandrangeIsRangeChoice : Prop :=
+  ∀ (σ : Type),
   ∀ (below : Nat → RM σ Nat) (a b c : Int) (s : σ), c ≠ 0 →
     let L := computeRangeLength a b c
     let r := makeRangeObject a b c
@@ -310,7 +317,8 @@ theorem bind_congr_result {x : RM σ Nat} {f g : Nat → RM σ Int} {s : σ}
     | ok a => exact h a t hx
     | error e => rfl
 
-theorem randrangeIsRangeChoice_proven : RandrangeIsRangeChoice (σ := σ) := by
+theorem randrangeIsRangeChoice_proven : RandrangeIsRangeChoice := by
+  intro σ
   intro below a b c s hc
   have hlen := computeRangeLength_eq a b c hc
   simp only
@@ -349,12 +357,14 @@ theorem randrangeIsRangeChoice_proven : RandrangeIsRangeChoice (σ := σ) := by
 and `step`, the result is `a + k * c` for a `k ≥ 0` that is strictly before `b` in the
 direction of `c`. -/
 def RandrangeBounds : Prop :=
+  ∀ (σ : Type),
   ∀ below : Nat → RM σ Nat, BelowValid below →
     (∀ a : Int, Post (randrange below (.int a) none none) (fun r => 0 ≤ r ∧ r < a)) ∧
     (∀ a b c : Int, Post (randrange below (.int a) (some (.int b)) (some (.int c)))
       (fun r => c ≠ 0 ∧ ∃ k : Int, 0 ≤ k ∧ r = a + k * c ∧ InSeq a b c k))
 
-theorem randrangeBounds_proven : RandrangeBounds (σ := σ) := by
+theorem randrangeBounds_proven : RandrangeBounds := by
+  intro σ
   intro below hv
   refine ⟨fun a => ?_, fun a b c => ?_⟩
   · rw [randrange_one]
@@ -402,6 +412,7 @@ theorem randrangeBounds_proven : RandrangeBounds (σ := σ) := by
 /-- Every way `randrange` rejects its arguments: a non-integer argument, `step` given
 without `stop`, and an empty one-argument range, each before any draw. -/
 def RandrangeArgErrors : Prop :=
+  ∀ (σ : Type),
   ∀ (below : Nat → RM σ Nat) (s : σ),
     (∀ (ty : String) (stop step : Option IntArg),
       randrange below (.other ty) stop step s =
@@ -413,7 +424,8 @@ def RandrangeArgErrors : Prop :=
       randrange below (.int a) none none s =
         (.error (.valueError "empty range for randrange()"), s))
 
-theorem randrangeArgErrors_proven : RandrangeArgErrors (σ := σ) := by
+theorem randrangeArgErrors_proven : RandrangeArgErrors := by
+  intro σ
   intro below s
   refine ⟨fun ty stop step => rfl, fun a step h => ?_, fun a h => ?_⟩
   · have hdef : randrange below (.int a) none (some step) =
@@ -430,6 +442,7 @@ theorem randrangeArgErrors_proven : RandrangeArgErrors (σ := σ) := by
 call and same result for `a ≤ b`; for `b < a` a `ValueError` without a draw. Its
 result lies in `[a, b]`. -/
 def RandintSpec : Prop :=
+  ∀ (σ : Type),
   ∀ (below : Nat → RM σ Nat) (a b : Int) (s : σ),
     (a ≤ b → randint below (.int a) (.int b) s =
       randrange below (.int a) (some (.int (b + 1))) none s) ∧
@@ -444,7 +457,8 @@ theorem randint_int (below : Nat → RM σ Nat) (a b : Int) :
           return s!"empty range in randint({sa}, {sb})")
        else (do let r ← below (b - a + 1).toNat; return a + (r : Int))) := rfl
 
-theorem randintSpec_proven : RandintSpec (σ := σ) := by
+theorem randintSpec_proven : RandintSpec := by
+  intro σ
   intro below a b s
   refine ⟨fun h => ?_, fun h => ?_, fun hv => ?_⟩
   · have hdef : randrange below (.int a) (some (.int (b + 1))) none =
@@ -498,6 +512,7 @@ theorem randintSpec_proven : RandintSpec (σ := σ) := by
 otherwise the result is `seq[j]` for some `j` in range, for any object with `__len__`
 and `__getitem__`. For a list that means the result is an element of it. -/
 def ChoiceSpec : Prop :=
+  ∀ (σ α : Type),
   ∀ below : Nat → RM σ Nat, BelowValid below →
     (∀ seq : SeqObj α, seq.len = .ok 0 → ∀ s,
       choice below seq s = (.error (.indexError "Cannot choose from an empty sequence"), s)) ∧
@@ -532,7 +547,8 @@ theorem choice_post (below : Nat → RM σ Nat) (hv : BelowValid below) (seq : S
     refine Post.mono (Post.lift _) (fun a ha => ?_)
     exact ⟨n', j, hn, hj, ha⟩
 
-theorem choiceSpec_proven : ChoiceSpec (σ := σ) (α := α) := by
+theorem choiceSpec_proven : ChoiceSpec := by
+  intro σ α
   intro below hv
   refine ⟨fun seq h s => ?_, choice_post below hv, fun l => ?_⟩
   · simp only [choice, RM.bind_apply, RM.lift_apply, h]
@@ -600,6 +616,7 @@ theorem shuffleLoop_perm (below : Nat → RM σ Nat) : ∀ (i : Nat) (x : List �
 its contract and never raises, `shuffle` cannot raise either: the indices are always
 in range. -/
 def ShuffleSpec : Prop :=
+  ∀ (σ α : Type),
   ∀ (below : Nat → RM σ Nat) (x : List α),
     Post (shuffle below x) (·.Perm x) ∧
     (BelowValid below → (∀ n s, ∃ r s', below n s = (.ok r, s')) →
@@ -633,7 +650,8 @@ theorem shuffleLoop_total (below : Nat → RM σ Nat) (hv : BelowValid below)
     simp only [shuffleLoop, RM.bind_apply, RM.lift_apply, hj, hsw]
     exact hz
 
-theorem shuffleSpec_proven : ShuffleSpec (σ := σ) (α := α) := by
+theorem shuffleSpec_proven : ShuffleSpec := by
+  intro σ α
   intro below x
   rw [shuffle_none]
   refine ⟨shuffleLoop_perm below _ x, fun hv ht s => ?_⟩
@@ -642,12 +660,14 @@ theorem shuffleSpec_proven : ShuffleSpec (σ := σ) (α := α) := by
 /-- `shuffle` on an immutable sequence of at least two items raises `TypeError` at
 the first assignment, after one draw; shorter ones are left alone. -/
 def ShuffleImmutable : Prop :=
+  ∀ (σ α : Type),
   ∀ (below : Nat → RM σ Nat) (x : List α) (ty : String) (s : σ),
     (x.length ≤ 1 → shuffle below x (some ty) s = (.ok x, s)) ∧
     (2 ≤ x.length → (∀ r t, below x.length s = (.ok r, t) →
       shuffle below x (some ty) s = (.error (.typeError s!"'{ty}' object does not support item assignment"), t)))
 
-theorem shuffleImmutable_proven : ShuffleImmutable (σ := σ) (α := α) := by
+theorem shuffleImmutable_proven : ShuffleImmutable := by
+  intro σ α
   intro below x ty s
   constructor
   · intro h
@@ -793,6 +813,7 @@ the pool branch and the set branch. Elements need not be distinct ("each occurre
 is a possible selection"), so positions are the right notion. Holds for every `fuel`
 and `_randbelow` that meets its contract. -/
 def SampleDistinctPositions : Prop :=
+  ∀ (σ α : Type),
   ∀ (below : Nat → RM σ Nat) (fuel : Nat) (p : List α) (k : Int), BelowValid below →
     Post (sample below fuel (listSeq p) k)
       (fun l => (l.length : Int) = k ∧ ∃ pos : List Nat, pos.Nodup ∧ pos.length = l.length ∧
@@ -842,7 +863,8 @@ theorem sampleCore_list (below : Nat → RM σ Nat) (hv : BelowValid below) (fue
     rintro l ⟨hlen, pos, hnd, hpl, hall, hm⟩
     exact ⟨by omega, pos, hnd, by omega, fun j hj => (hall j hj).1, hm⟩
 
-theorem sampleDistinctPositions_proven : SampleDistinctPositions (σ := σ) (α := α) := by
+theorem sampleDistinctPositions_proven : SampleDistinctPositions := by
+  intro σ α
   intro below fuel p k hv
   have hdef : sample below fuel (listSeq p) k =
       (RM.lift (listSeq p).len >>= fun n => sampleCore below fuel (listSeq p) n k) := rfl
@@ -857,6 +879,7 @@ theorem sampleDistinctPositions_proven : SampleDistinctPositions (σ := σ) (α 
 
 /-- The argument checks of `sample`, each before any draw. -/
 def SampleArgErrors : Prop :=
+  ∀ (σ α : Type),
   ∀ (below : Nat → RM σ Nat) (fuel : Nat) (pop : SeqObj α) (k : Int) (counts : Option CountsArg) (s : σ),
     (pop.isSequence = false → sample below fuel pop k counts s =
       (.error (.typeError "Population must be a sequence.  For dicts or sets, use sorted(d)."), s)) ∧
@@ -879,7 +902,8 @@ theorem accumulateCounts_length (cs : List CountV) : (accumulateCounts cs).lengt
   | nil => rfl
   | cons c cs => simp [accumulateCounts, go]
 
-theorem sampleArgErrors_proven : SampleArgErrors (σ := σ) (α := α) := by
+theorem sampleArgErrors_proven : SampleArgErrors := by
+  intro σ α
   intro below fuel pop k counts s
   refine ⟨fun h => ?_, fun n h1 h2 h3 h4 => ?_, fun n cs h1 h2 h3 h4 => ?_⟩
   · simp only [sample, h]

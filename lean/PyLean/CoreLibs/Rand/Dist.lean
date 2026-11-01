@@ -25,12 +25,12 @@ def uniform (g : Gen σ F) (a b : F) : RM σ F := do
 `ZeroDivisionError`, after the draw. -/
 def triangular (g : Gen σ F) (low high : F) (mode : Option F) : RM σ F := do
   let u ← rnd g
-  let c? : Option F ← match mode with
-    | none => pure (some 0.5)
+  let c? : Option F := match mode with
+    | none => some 0.5
     | some m =>
       match pyDiv (m - low) (high - low) with
-      | .ok c => pure (some c)
-      | .error _ => pure none
+      | .ok c => some c
+      | .error _ => none
   match c? with
   | none => return low
   | some c =>
@@ -81,6 +81,14 @@ def expovariate (g : Gen σ F) (lambd : F) : RM σ F := do
   let l ← lift (mathLog (1.0 - r))
   lift (pyDiv (-l) lambd)
 
+/-- The acceptance test `u2 < 1.0 - d * d or u2 <= (1.0 - d) * _exp(d)`,
+Lib/random.py:654, with `or`'s short circuit. -/
+def vonmisesAccept (u2 d : F) : Py Bool :=
+  if Flt.lt u2 (1.0 - d * d) then .ok true
+  else do
+    let e ← mathExp d
+    return Flt.le u2 ((1.0 - d) * e)
+
 /-- The `while True` of `vonmisesvariate`, Lib/random.py:648-655. The result is `z`. -/
 def vonmisesLoop (g : Gen σ F) (r : F) : Nat → RM σ F
   | 0 => raise .modelFuel
@@ -89,11 +97,7 @@ def vonmisesLoop (g : Gen σ F) (r : F) : Nat → RM σ F
     let z ← lift (mathCos (PI * u1))
     let d ← lift (pyDiv z (r + z))
     let u2 ← rnd g
-    let accept : Bool ←
-      if Flt.lt u2 (1.0 - d * d) then pure true
-      else do
-        let e ← lift (mathExp d)
-        pure (Flt.le u2 ((1.0 - d) * e))
+    let accept ← lift (vonmisesAccept u2 d)
     if accept then pure z else vonmisesLoop g r fuel
 
 /-- `Random.vonmisesvariate`, Lib/random.py:625-665. -/
@@ -135,6 +139,16 @@ def gammaCheng (g : Gen σ F) (alpha ainv bbb ccc : F) : Nat → RM σ F
         let lz ← lift (mathLog z)
         if Flt.le lz r then pure x else gammaCheng g alpha ainv bbb ccc fuel
 
+/-- `x` in the `alpha < 1.0` loop of `gammavariate`, Lib/random.py:724-727. -/
+def gammaGSx (alpha b p : F) : Py F :=
+  if Flt.le p 1.0 then do
+    let e ← pyDiv 1.0 alpha
+    pyPow p e
+  else do
+    let q ← pyDiv (b - p) alpha
+    let l ← mathLog q
+    return -l
+
 /-- The `alpha < 1.0` loop of `gammavariate` (ALGORITHM GS), Lib/random.py:720-733. -/
 def gammaGS (g : Gen σ F) (alpha : F) : Nat → RM σ F
   | 0 => raise .modelFuel
@@ -142,14 +156,7 @@ def gammaGS (g : Gen σ F) (alpha : F) : Nat → RM σ F
     let u ← rnd g
     let b := (E + alpha) / E
     let p := b * u
-    let x ←
-      if Flt.le p 1.0 then do
-        let e ← lift (pyDiv 1.0 alpha)
-        lift (pyPow p e)
-      else do
-        let q ← lift (pyDiv (b - p) alpha)
-        let l ← lift (mathLog q)
-        pure (-l)
+    let x ← lift (gammaGSx alpha b p)
     let u1 ← rnd g
     if Flt.lt 1.0 p then
       let w ← lift (pyPow x (alpha - 1.0))
@@ -238,6 +245,11 @@ def btrsSetup (n : Int) (p spq b : F) : Py (BtrsSetup F) := do
   let l2 ← mathLgamma a2
   return { alpha, lpq, m, h := l1 + l2 }
 
+/-- `if not setup_complete: ...`, Lib/random.py:878-883. -/
+def btrsEnsure (n : Int) (p spq b : F) : Option (BtrsSetup F) → Py (BtrsSetup F)
+  | some st => .ok st
+  | none => btrsSetup n p spq b
+
 /-- The BTRS loop, Lib/random.py:859-890, with its
 `except ZeroDivisionError: continue`. -/
 def btrsLoop (g : Gen σ F) (n : Int) (p spq a b c vr : F) :
@@ -259,9 +271,7 @@ def btrsLoop (g : Gen σ F) (n : Int) (p spq a b c vr : F) :
         let v ← rnd g
         if Flt.le 0.07 us && Flt.le v vr then pure k
         else
-          let st ← match setup with
-            | some st => pure st
-            | none => lift (btrsSetup n p spq b)
+          let st ← lift (btrsEnsure n p spq b setup)
           let d1 ← lift (pyDiv a (us * us))
           let d2 ← lift (pyDiv st.alpha (d1 + b))
           let v := v * d2

@@ -17,10 +17,12 @@ variable {F : Type}
 /-- `Random` meets the `getrandbits` contract for every allocator, and `random()`
 uses exactly two words. -/
 def MtGenValid : Prop :=
+  ∀ (F : Type),
   ∀ [Flt F] (m : Nat → Bool),
     (mtGen (F := F) m).Valid ∧ (∀ s, ((mtGen (F := F) m).random s).2 = advance 2 s)
 
-theorem mtGenValid_proven : MtGenValid (F := F) := by
+theorem mtGenValid_proven : MtGenValid := by
+  intro F
   intro _ m
   refine ⟨?_, fun s => ?_⟩
   · intro k r s s' h
@@ -42,6 +44,7 @@ theorem mtGenValid_proven : MtGenValid (F := F) := by
 negative `k` is a `ValueError`, and `k ≥ 2**64` an `OverflowError`, all before any
 draw. -/
 def GetrandbitsArgErrors : Prop :=
+  ∀ (F : Type),
   ∀ [Flt F] (m : Nat → Bool) (s : State),
     (∀ k : Int, k < 0 → (mtGen (F := F) m).getrandbits (.int k) s =
       (.error (.valueError "Cannot convert negative int"), s)) ∧
@@ -53,7 +56,8 @@ def GetrandbitsArgErrors : Prop :=
       (mtGen (F := F) m).getrandbits (.int (if b then 1 else 0)) s) ∧
     (mtGen (F := F) m).getrandbits (.int 0) s = (.ok 0, s)
 
-theorem getrandbitsArgErrors_proven : GetrandbitsArgErrors (F := F) := by
+theorem getrandbitsArgErrors_proven : GetrandbitsArgErrors := by
+  intro F
   intro _ m s
   refine ⟨fun k h => ?_, fun k h => ?_, fun ty => rfl, fun b => rfl, rfl⟩
   · simp only [mtGen, uint64Converter, IntArg.index, bind, Except.bind]
@@ -67,12 +71,14 @@ theorem getrandbitsArgErrors_proven : GetrandbitsArgErrors (F := F) := by
 string seeds like its UTF-8 bytes (Lib/random.py:165-167). A lone surrogate has no
 UTF-8 form and raises `UnicodeEncodeError` before anything is written. -/
 def SeedStrBytesAgree : Prop :=
+  ∀ (F : Type),
   ∀ (ent : Entropy) (cps b : List Nat) (h h' : Int) (o : Obj F),
     utf8Encode cps = .ok b →
     pySeed ent (.str cps h) 2 o = pySeed ent (.bytes b h') 2 o ∧
     pySeed ent (.bytes b h') 2 o = pySeed ent (.bytearray b) 2 o
 
-theorem seedStrBytesAgree_proven : SeedStrBytesAgree (F := F) := by
+theorem seedStrBytesAgree_proven : SeedStrBytesAgree := by
+  intro F
   intro ent cps b h h' o hb
   constructor
   · simp [pySeed, seedConvert, hb, bind, Except.bind, pure, Except.pure]
@@ -91,6 +97,7 @@ theorem seedV1_fold : ∀ (l : List Nat) (x : Nat), l ≠ [] → l.foldl seedV1S
 string that fits in `Py_ssize_t`), so the `-2 if x == -1` branch at :152 is dead, and
 `str` and `bytes` agree, as bytes decode as latin-1 (:147). -/
 def SeedV1Hash : Prop :=
+  ∀ (F : Type),
   (∀ cps : List Nat, cps.length < 2 ^ 63 →
     0 ≤ seedV1 cps ∧ seedV1 cps < 2 ^ 64 ∧ seedV1 cps ≠ -2) ∧
   (∀ (ent : Entropy) (cps : List Nat) (h h' : Int) (o : Obj F),
@@ -101,7 +108,8 @@ theorem seedV1_nat (cps : List Nat) : seedV1 cps =
   simp only [seedV1]
   rw [if_neg (by omega)]
 
-theorem seedV1Hash_proven : SeedV1Hash (F := F) := by
+theorem seedV1Hash_proven : SeedV1Hash := by
+  intro F
   refine ⟨fun cps hl => ?_, fun ent cps h h' o => ?_⟩
   · rw [seedV1_nat]
     have hx : cps.foldl seedV1Step (seedV1Init cps) < 2 ^ 64 := by
@@ -116,20 +124,23 @@ theorem seedV1Hash_proven : SeedV1Hash (F := F) := by
 /-- Types other than `None`, `int`, `float`, `str`, `bytes` and `bytearray` raise the
 documented `TypeError`, for every `version` (since 3.11), without touching the object. -/
 def SeedUnsupportedType : Prop :=
+  ∀ (F : Type),
   ∀ (ent : Entropy) (version : Int) (o : Obj F),
     pySeed ent .other version o =
       (.error (.typeError "The only supported seed types are:\nNone, int, float, str, bytes, and bytearray."), o)
 
-theorem seedUnsupportedType_proven : SeedUnsupportedType (F := F) := fun _ _ _ => rfl
+theorem seedUnsupportedType_proven : SeedUnsupportedType := fun _ _ _ _ => rfl
 
 /-- `seed` either replaces the state and clears `gauss_next`, or (when it raises)
 changes nothing. -/
 def SeedAllOrNothing : Prop :=
+  ∀ (F : Type),
   ∀ (ent : Entropy) (a : SeedArg) (version : Int) (o o' : Obj F),
     (pySeed ent a version o = (.ok (), o') → o'.gaussNext = none) ∧
     (∀ e, pySeed ent a version o = (.error e, o') → o' = o)
 
-theorem seedAllOrNothing_proven : SeedAllOrNothing (F := F) := by
+theorem seedAllOrNothing_proven : SeedAllOrNothing := by
+  intro F
   intro ent a version o o'
   constructor
   · intro h
@@ -259,6 +270,7 @@ theorem seedV2AllBits_proven : SeedV2AllBits := by
 
 /-- `Random(x)` and `r.seed(x)` give the same object, whatever `r` held. -/
 def InitMatchesSeed : Prop :=
+  ∀ (F : Type),
   ∀ (ent : Entropy) (x : SeedArg) (o : Obj F), o.core.mt.size = N →
     match pySeed ent x 2 o with
     | (.ok (), o') => pyInit ent x = .ok o'
@@ -274,7 +286,8 @@ theorem pySeed_arg (ent : Entropy) (x : SeedArg) (o : Obj F) :
   | error e => rfl
   | ok a => rfl
 
-theorem initMatchesSeed_proven : InitMatchesSeed (F := F) := by
+theorem initMatchesSeed_proven : InitMatchesSeed := by
+  intro F
   intro ent x o ho
   have key : ∀ a : CArg, randomSeed o.core a ent = randomSeed genericNew a ent :=
     fun a => randomSeed_indep a ent ho genericNew_size
@@ -295,6 +308,7 @@ theorem initMatchesSeed_proven : InitMatchesSeed (F := F) := by
 `gauss_next`. Since every state reached by `advance` is valid, this covers a state
 captured mid-stream: the continuation of the stream is the same. -/
 def StateRoundTrip : Prop :=
+  ∀ (F : Type),
   ∀ (o o' : Obj F), o.core.WF →
     pySetstate (pyGetstate o).toArg o' = (.ok (), o) ∧
     (∀ n, pySetstate (pyGetstate { o with core := advance n o.core }).toArg o'
@@ -307,13 +321,15 @@ theorem stateRoundTrip_one (o o' : Obj F) (h : o.core.WF) :
   cases o
   rfl
 
-theorem stateRoundTrip_proven : StateRoundTrip (F := F) := by
+theorem stateRoundTrip_proven : StateRoundTrip := by
+  intro F
   intro o o' h
   exact ⟨stateRoundTrip_one o o' h, fun n => stateRoundTrip_one _ o' (advance_wf n h)⟩
 
 /-- A `setstate` that raises leaves the C state as it was (`new_state`,
 _randommodule.c:461, and bpo-29960). -/
 def SetstateFailureKeepsCore : Prop :=
+  ∀ (F : Type),
   ∀ (st : SetArg F) (o o' : Obj F) (e : PyExc),
     pySetstate st o = (.error e, o') → o'.core = o.core
 
@@ -325,7 +341,8 @@ theorem applyC_error {st : CStateArg} {o o' : Obj F} {e : PyExc}
     rw [h.2]
   · simp at h
 
-theorem setstateFailureKeepsCore_proven : SetstateFailureKeepsCore (F := F) := by
+theorem setstateFailureKeepsCore_proven : SetstateFailureKeepsCore := by
+  intro F
   intro st o o' e h
   unfold pySetstate at h
   repeat' split at h
@@ -359,6 +376,7 @@ state with each element reduced modulo `2**32` (Lib/random.py:188-196), and
 `__setstate__` agrees with `setstate`. Any other version is a `ValueError` naming it,
 and a state of the wrong length fails to unpack. -/
 def SetstateVersions : Prop :=
+  ∀ (F : Type),
   (∀ (xs ys : List Elem) (g : Option F) (o : Obj F) (t : String) (t' : String), modElems xs = .ok ys →
     pySetstate (.seq 3 { value := some 2, text := t } (.tuple xs) g) o =
       pySetstate (.seq 3 { value := some 3, text := t' } (.tuple ys) g) o ∧
@@ -373,7 +391,8 @@ def SetstateVersions : Prop :=
     pySetstate (.seq len v i g) o = (.error (unpackError len), o)) ∧
   (∀ (st : SetArg F) (o : Obj F), pyDunderSetstate st o = pySetstate st o)
 
-theorem setstateVersions_proven : SetstateVersions (F := F) := by
+theorem setstateVersions_proven : SetstateVersions := by
+  intro F
   refine ⟨fun xs ys g o t t' h => ?_, fun len v i g o h3 h2 => ?_, fun len v i g o h h3 => ?_,
     fun _ _ => rfl⟩
   · constructor
@@ -394,10 +413,12 @@ theorem setstateVersions_proven : SetstateVersions (F := F) := by
 the unpickler builds a fresh instance (whatever entropy it reads) and calls
 `__setstate__`, which restores the object exactly. -/
 def PickleRoundTrip : Prop :=
+  ∀ (F : Type),
   ∀ (ent : Entropy) (o o0 : Obj F), o.core.WF → pyInit ent .none = .ok o0 →
     pyUnpickle ent (pyReduce o) = .ok o ∧ pyDunderGetstate o = pyReduce o
 
-theorem pickleRoundTrip_proven : PickleRoundTrip (F := F) := by
+theorem pickleRoundTrip_proven : PickleRoundTrip := by
+  intro F
   intro ent o o0 h h0
   refine ⟨?_, rfl⟩
   simp only [pyUnpickle, bind, Except.bind, h0, pyDunderSetstate, pyReduce]

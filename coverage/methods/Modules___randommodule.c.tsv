@@ -1,5 +1,5 @@
 file	line	endline	name	signature	status	entry	note
-Modules/_randommodule.c	102	107	get_random_state	get_random_state(PyObject *module)	todo		
+Modules/_randommodule.c	102	107	get_random_state	get_random_state(PyObject *module)	excluded		internal-bootstrap: fetches the per-module state struct; no Python-visible behaviour of its own
 Modules/_randommodule.c	135	166	genrand_uint32	genrand_uint32(RandomObject *self)	todo		
 Modules/_randommodule.c	188	193	_random_Random_random_impl	_random_Random_random_impl(RandomObject *self) /*[clinic end generated code: output=117ff99ee53d755c input=26492e52d26e8b7b]*/	todo		
 Modules/_randommodule.c	197	214	init_genrand	init_genrand(RandomObject *self, uint32_t s)	todo		
@@ -12,8 +12,8 @@ Modules/_randommodule.c	415	440	_random_Random_getstate_impl	_random_Random_gets
 Modules/_randommodule.c	455	493	_random_Random_setstate_impl	_random_Random_setstate_impl(RandomObject *self, PyObject *state) /*[clinic end generated code: output=babfc2c2eac6b027 input=358e898ec07469b7]*/	todo		
 Modules/_randommodule.c	507	550	_random_Random_getrandbits_impl	_random_Random_getrandbits_impl(RandomObject *self, uint64_t k) /*[clinic end generated code: output=c30ef8435f3433cf input=64226ac13bb4d2a3]*/	todo		
 Modules/_randommodule.c	562	566	random_init_impl	random_init_impl(RandomObject *self, PyObject *seed) /*[clinic end generated code: output=260734a3739c394f input=e516bf32e8a05e28]*/	todo		
-Modules/_randommodule.c	602	633	_random_exec	_random_exec(PyObject *module)	todo		
-Modules/_randommodule.c	643	647	_random_traverse	_random_traverse(PyObject *module, visitproc visit, void *arg)	todo		
-Modules/_randommodule.c	650	655	_random_clear	_random_clear(PyObject *module)	todo		
-Modules/_randommodule.c	658	661	_random_free	_random_free(void *module)	todo		
-Modules/_randommodule.c	676	679	PyInit__random	PyInit__random(void)	todo		
+Modules/_randommodule.c	602	633	_random_exec	_random_exec(PyObject *module)	excluded		internal-bootstrap: creates the type and caches int.__abs__ at import; the type is modelled through its methods
+Modules/_randommodule.c	643	647	_random_traverse	_random_traverse(PyObject *module, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal of the cached type
+Modules/_randommodule.c	650	655	_random_clear	_random_clear(PyObject *module)	excluded		no-behaviour: GC clear, releases two references at module teardown
+Modules/_randommodule.c	658	661	_random_free	_random_free(void *module)	excluded		no-behaviour: module deallocation, calls _random_clear
+Modules/_randommodule.c	676	679	PyInit__random	PyInit__random(void)	excluded		internal-bootstrap: module init entry point, returns the module definition

@@ -144,9 +144,9 @@ def pyMod (v w : F) : Py F :=
       if Flt.lt w 0.0 != Flt.lt m 0.0 then .ok (m + w) else .ok m
     else .ok (zeroLike w)
 
-/-- `a ** b` on floats: `float_pow`, Objects/floatobject.c:697-813, without the
-complex-result branch at :769, which `Lib/random.py` cannot reach (every base
-there is `>= 0`), reported as `modelFuel`-free `TypeError` for visibility. -/
+/-- `a ** b` on floats: `float_pow`, Objects/floatobject.c:697-813. The complex-result
+branch at :769 is not modelled: `Lib/random.py` cannot reach it, because every base
+there is `>= 0`, so it gets a marker exception that the difftest would expose. -/
 def pyPow (iv iw : F) : Py F :=
   if Flt.beq iw 0.0 then .ok 1.0
   else if isNan iv then .ok iv

@@ -471,6 +471,7 @@ rand_handlers = {
     "betavariate": lambda c: rand_f(c, "betavariate", "a", "b"),
     "paretovariate": lambda c: rand_f(c, "paretovariate", "a"),
     "weibullvariate": lambda c: rand_f(c, "weibullvariate", "a", "b"),
+    "lgamma": lambda c: rand_call(c, lambda r: rand_bits(rand_math.lgamma(rand_float(c["x"])))),
     "binomialvariate": lambda c: rand_call(c, lambda r: r.binomialvariate(c["n"], rand_float(c["p"]))),
     "sys_random": lambda c: rand_sys(c, lambda sr: rand_bits(sr.random())),
     "sys_getrandbits": lambda c: rand_sys(c, lambda sr: rand_ienc(sr.getrandbits(rand_arg(c["k"])))),
@@ -788,6 +789,9 @@ def rand_gen_dist(rng, c):
         c["a"], c["b"] = pos(), pos()
         if rng.random() < 0.05:
             c["b"] = rand_bits(-1.0)
+    elif fn == "rand.lgamma":
+        c["x"] = rand_bits(float(rng.choice([1, 2, 3, 4, 5, 6, 7, rng.randrange(1, 40), rng.randrange(1, 3000),
+                                             rng.randrange(1, 10**7), 2**53, 10**20])) + rng.choice([0.0, 0.0, 0.5]))
     elif fn == "rand.binomialvariate":
         c["n"] = rng.choice([-1, 0, 1, 2, 3, 10, 19, 20, 21, 100, 1000, 10**6, 10**15, 2**53, 2**64, 10**400])
         c["p"] = rand_bits(rng.choice([0.0, -0.0, 1.0, 0.5, 0.1, 0.9, 1e-9, 1 - 1e-9, 0.3, 0.7, 1.5, -0.1, 1e-20,
@@ -899,7 +903,7 @@ rand_GROUPS = {
                      "choices", "choices"],
     rand_gen_dist: ["uniform", "triangular", "normalvariate", "gauss", "lognormvariate", "expovariate",
                     "vonmisesvariate", "gammavariate", "betavariate", "paretovariate", "weibullvariate",
-                    "binomialvariate", "binomialvariate"],
+                    "binomialvariate", "binomialvariate", "lgamma"],
     rand_gen_sys: ["sys_random", "sys_getrandbits", "sys_randbytes", "sys_randrange", "sys_seed", "sys_state"],
 }
 rand_TABLE = [(g, n) for g, names in rand_GROUPS.items() for n in names]

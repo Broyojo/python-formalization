@@ -218,6 +218,17 @@ def getStrListOpt (j : Json) (key : String) : Except String (Option (List String
   | .ok .null | .error _ => pure none
   | .ok v => do pure (some (← (← v.getArr?).toList.mapM (·.getStr?)))
 
+/-- What the loop of `__init_subclass__` assigns: nothing when it stops at `_randbelow`. -/
+def assigned : List ClsDict → Option String
+  | [] => none
+  | c :: mro =>
+    match c.randbelow with
+    | some _ => none
+    | none =>
+      if c.hasGetrandbits then some "_randbelow_with_getrandbits"
+      else if c.hasRandom then some "_randbelow_without_getrandbits"
+      else assigned mro
+
 def stateSum (l : List Int) : Int :=
   (l.zipIdx.foldl (fun acc p => (acc + p.1 * ((p.2 : Int) + 1)) % (2 ^ 61 - 1)) 0)
 
@@ -382,6 +393,8 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "betavariate" => encRM encF (betavariate G bigFuel (← getF j "a") (← getF j "b")) s
   | "paretovariate" => encRM encF (paretovariate G (← getF j "a")) s
   | "weibullvariate" => encRM encF (weibullvariate G (← getF j "a") (← getF j "b")) s
+  | "lgamma" =>
+    enc encF (Flt.mathLgamma (← getF j "x")) s
   | "binomialvariate" =>
     encRM encInt (binomialvariate G bigFuel 4 (← getInt j "n") (← getF j "p")) s
   | "sys_random" =>
@@ -415,7 +428,10 @@ def run (fn : String) (j : Json) : Except String Json := do
         -- Otherwise the attribute is plain inheritance along the MRO.
         let res := if isRandom then initSubclass (chain ++ [rootFn])
                    else chain.findSome? (·.randbelow)
-        let (out, tail) ← build rest (done ++ [{ base with randbelow := res }])
+        -- `cls._randbelow = ...` runs only when the loop did not stop at an existing
+        -- `_randbelow`, so only then does the class's own `__dict__` change.
+        let own' := if isRandom then own <|> assigned (chain ++ [rootFn]) else own
+        let (out, tail) ← build rest (done ++ [{ base with randbelow := own' }])
         return (out, res :: tail)
     let (_, res) ← build cs []
     enc (fun (l : List (Option String)) => toJson l) (.ok res) s
