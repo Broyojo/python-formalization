@@ -8,28 +8,32 @@ namespace PyLean.Sequences
 
 open PyLean
 
-/-- `items` repeated `n` times. -/
-def rep (n : Nat) (l : List Int) : List Int := (List.replicate n l).flatten
+set_option linter.unusedSectionVars false
 
-theorem rep_add (a b : Nat) (l : List Int) : rep (a + b) l = rep a l ++ rep b l := by
+variable {α : Type} [Inhabited α]
+
+/-- `items` repeated `n` times. -/
+def rep (n : Nat) (l : List α) : List α := (List.replicate n l).flatten
+
+theorem rep_add (a b : Nat) (l : List α) : rep (a + b) l = rep a l ++ rep b l := by
   unfold rep; rw [← List.replicate_append_replicate, List.flatten_append]
 
-theorem rep_succ' (n : Nat) (l : List Int) : rep (n + 1) l = rep n l ++ l := by
+theorem rep_succ' (n : Nat) (l : List α) : rep (n + 1) l = rep n l ++ l := by
   rw [rep_add]; simp [rep]
 
-theorem length_rep (n : Nat) (l : List Int) : (rep n l).length = n * l.length := by
+theorem length_rep (n : Nat) (l : List α) : (rep n l).length = n * l.length := by
   induction n with
   | zero => simp [rep]
   | succ n ih => rw [rep_succ', List.length_append, ih, Nat.succ_mul]
 
-theorem keepLast_append_long (m : Int) (X Y : List Int) (hm : 0 ≤ m) (hY : m ≤ Y.length) :
+theorem keepLast_append_long (m : Int) (X Y : List α) (hm : 0 ≤ m) (hY : m ≤ Y.length) :
     keepLast m (X ++ Y) = keepLast m Y := by
   unfold keepLast
   rw [iteF (by omega), iteF (by omega), List.drop_append, List.length_append,
     List.drop_of_length_le (by omega), List.nil_append]
   congr 1; omega
 
-theorem keepLast_keepLast' (m : Int) (A B : List Int) : keepLast m (keepLast m A ++ B) = keepLast m (A ++ B) := by
+theorem keepLast_keepLast' (m : Int) (A B : List α) : keepLast m (keepLast m A ++ B) = keepLast m (A ++ B) := by
   unfold keepLast
   split
   · rfl
@@ -37,11 +41,12 @@ theorem keepLast_keepLast' (m : Int) (A B : List Int) : keepLast m (keepLast m A
 
 /-- `d *= n` keeps the last `maxlen` items of `list(d) * n` (all of them for
 an unbounded deque), as the documented `maxlen` eviction implies: for every
-deque (type invariant `WF`) and every int `n` inside `Py_ssize_t`, whenever
+deque of any element type (type invariant `WF`) and every int `n` inside
+`Py_ssize_t`, whenever
 that result has at most `sys.maxsize` items (always true for a bounded
 deque), `d *= n` succeeds with exactly those items. -/
 def DequeIRepeat : Prop :=
-  ∀ (d : Deque), d.WF → ∀ (n : Int), ssizeMin ≤ n → n ≤ ssizeMax →
+  ∀ (α : Type) [Inhabited α] (d : Deque α), d.WF → ∀ (n : Int), ssizeMin ≤ n → n ≤ ssizeMax →
     (0 ≤ d.maxlen ∨ (d.items.length : Int) * n ≤ ssizeMax) →
     ∃ d', d.irepeat n = .ok d' ∧ d'.items = keepLast d.maxlen (rep n.toNat d.items)
 
@@ -49,24 +54,29 @@ def DequeIRepeat : Prop :=
 size check `size > PY_SSIZE_T_MAX / n` (done before `maxlen` is applied)
 lets through; the result also keeps the invariant and `maxlen`. -/
 def DequeIRepeatChecked : Prop :=
-  ∀ (d : Deque), d.WF → ∀ (n : Int), ssizeMin ≤ n → n ≤ ssizeMax →
+  ∀ (α : Type) [Inhabited α] (d : Deque α), d.WF → ∀ (n : Int), ssizeMin ≤ n → n ≤ ssizeMax →
     (d.items.length ≤ 1 ∨ (d.items.length : Int) * n ≤ ssizeMax) →
     ∃ d', d.irepeat n = .ok d' ∧ d'.items = keepLast d.maxlen (rep n.toNat d.items) ∧ d'.WF ∧
       d'.maxlen = d.maxlen
 
+/-- `deque([1, 2], maxlen=3)`. -/
+def d12 : Deque Int := ⟨1, 2, [1, 2], 3, 2, "deque"⟩
+
+theorem d12_make : Deque.make [1, 2] (.int 3) = .ok d12 := by decide
+
+theorem d12_wf : d12.WF := by
+  refine ⟨?_, ?_⟩
+  · rw [Deque.layout_iff]; decide
+  · rw [Deque.maxOk_iff]; decide
+
 theorem dequeIRepeat_refuted : ¬ DequeIRepeat := by
   intro h
-  have hd : Deque.make [1, 2] (some 3) = .ok ⟨1, 2, [1, 2], 3⟩ := by decide
-  have hwf : (⟨1, 2, [1, 2], 3⟩ : Deque).WF := by
-    refine ⟨?_, ?_⟩
-    · rw [Deque.layout_iff]; decide
-    · rw [Deque.maxOk_iff]; decide
-  obtain ⟨d', h1, _⟩ := h ⟨1, 2, [1, 2], 3⟩ hwf (2 ^ 62) (by decide) (by decide) (Or.inl (by decide))
-  have : (⟨1, 2, [1, 2], 3⟩ : Deque).irepeat (2 ^ 62) = .error memoryError := by decide
+  obtain ⟨d', h1, _⟩ := h Int d12 d12_wf (2 ^ 62) (by decide) (by decide) (Or.inl (by decide))
+  have : d12.irepeat (2 ^ 62) = .error memoryError := by decide
   rw [this] at h1
   exact nomatch h1
 
-theorem foldl_extend_rep (seq : List Int) (k : Nat) : ∀ (d : Deque), d.WF →
+theorem foldl_extend_rep (seq : List α) (k : Nat) : ∀ (d : Deque α), d.WF →
     let d' := (List.range k).foldl (fun d _ => d.extend seq) d
     d'.WF ∧ d'.items = keepLast d.maxlen (d.items ++ rep k seq) ∧ d'.maxlen = d.maxlen := by
   induction k with
@@ -89,7 +99,7 @@ theorem foldl_extend_rep (seq : List Int) (k : Nat) : ∀ (d : Deque), d.WF →
     rw [i2, i1, m1, keepLast_keepLast', rep_succ', List.append_assoc]
 
 theorem dequeIRepeatChecked_proven : DequeIRepeatChecked := by
-  intro d h n hn0 hn1 hsmall
+  intro α _ d h n hn0 hn1 hsmall
   have hL := h.1
   have h' := h.1
   rw [Deque.layout_iff] at h'
@@ -214,7 +224,7 @@ every int `n`: outside `Py_ssize_t` both raise `OverflowError`; `n <= 0`
 gives `[]`; otherwise the result is `l` repeated `n` times, and `MemoryError`
 is raised exactly when that would exceed `sys.maxsize` items. -/
 def ListRepeat : Prop :=
-  ∀ (l : List Int) (n : Int), (l.length : Int) ≤ ssizeMax →
+  ∀ (α : Type) [Inhabited α] (l : List α) (n : Int), (l.length : Int) ≤ ssizeMax →
     ((n < ssizeMin ∨ ssizeMax < n) →
       listIRepeat l n = .error (.overflowError "cannot fit 'int' into an index-sized integer") ∧
       listRepeat l n = .error (.overflowError "cannot fit 'int' into an index-sized integer")) ∧
@@ -225,7 +235,7 @@ def ListRepeat : Prop :=
       (0 < n → ssizeMax < (l.length : Int) * n → listRepeat l n = .error memoryError))
 
 theorem listRepeat_proven : ListRepeat := by
-  intro l n hlen
+  intro α _ l n hlen
   refine ⟨fun hn => ?_, fun hn0 hn1 => ?_⟩
   · simp only [listIRepeat, listRepeat, repeatCount, asSsizeExc, bind, Except.bind]
     rw [iteF (by omega)]; exact ⟨rfl, rfl⟩
@@ -266,33 +276,46 @@ theorem listRepeat_proven : ListRepeat := by
       · omega),
       iteT (show ((l.length : Int) > ssizeMax / n) from (hdiv h).mpr hgt)]; rfl
 
-/-- `d.copy()`, `d + other` and `d + d`: for every deque (type invariant
-`WF`) and every other deque, `copy()` has the same items and `maxlen`, and
-`d + other` holds the last `d.maxlen` items of `list(d) + list(other)` with
-`d`'s `maxlen` (Doc/library/collections.rst:503-507, 599-600); all results
-keep the invariant. -/
+/-- `d.copy()`, `d + other`: for every deque (type invariant `WF`) and every other
+deque, `copy()` has the same items, `maxlen` and type, and `d + other` holds the last
+`d.maxlen` items of `list(d) + list(other)` with `d`'s `maxlen` and type
+(Doc/library/collections.rst:503-507, 599-600); all results keep the invariant.
+`__copy__` is the same function. -/
 def DequeCopyConcat : Prop :=
-  ∀ (d : Deque), d.WF → ∀ (other : Deque),
-    d.copy.WF ∧ d.copy.items = d.items ∧ d.copy.maxlen = d.maxlen ∧
-    (d.concat other).WF ∧ (d.concat other).items = keepLast d.maxlen (d.items ++ other.items) ∧
-    (d.concat other).maxlen = d.maxlen
+  ∀ (α : Type) [Inhabited α] (d : Deque α), d.WF → ∀ (other : Deque α),
+    ∃ c, d.copy = .ok c ∧ c.WF ∧ c.items = d.items ∧ c.maxlen = d.maxlen ∧ c.tname = d.tname ∧
+      ∃ n, d.concat (.inl other) = .ok n ∧ n.WF ∧ n.items = keepLast d.maxlen (d.items ++ other.items) ∧
+        n.maxlen = d.maxlen ∧ n.tname = d.tname
 
-theorem copy_spec (d : Deque) (h : d.WF) : d.copy.WF ∧ d.copy.items = d.items ∧ d.copy.maxlen = d.maxlen := by
-  have hmx : d.maxlen < 0 ∨ (d.items.length : Int) ≤ d.maxlen := by
-    rcases h.2 with h2 | h2
-    · left; omega
-    · right; rw [Deque.size_eq] at h2; exact h2.2
-  unfold Deque.copy
+/-- The same for the exact type, and for a subclass whose `maxlen` is unbounded or
+below `2**31` (the `"i"` format of the subclass path of `deque_copy_impl`). -/
+def DequeCopyConcatChecked : Prop :=
+  ∀ (α : Type) [Inhabited α] (d : Deque α), d.WF → (d.tname = "deque" ∨ d.maxlen < 2147483648) →
+    ∀ (other : Deque α),
+    ∃ c, d.copy = .ok c ∧ c.WF ∧ c.items = d.items ∧ c.maxlen = d.maxlen ∧ c.tname = d.tname ∧
+      ∃ n, d.concat (.inl other) = .ok n ∧ n.WF ∧ n.items = keepLast d.maxlen (d.items ++ other.items) ∧
+        n.maxlen = d.maxlen ∧ n.tname = d.tname
+
+theorem maxOk_le (d : Deque α) (h : d.WF) : d.maxlen < 0 ∨ (d.items.length : Int) ≤ d.maxlen := by
+  rcases h.2 with h2 | h2
+  · left; omega
+  · right; rw [Deque.size_eq] at h2; exact h2.2
+
+theorem copyExact_spec (d : Deque α) (h : d.WF) :
+    d.copyExact.WF ∧ d.copyExact.items = d.items ∧ d.copyExact.maxlen = d.maxlen ∧
+      d.copyExact.tname = "deque" := by
+  have hmx := maxOk_le d h
+  unfold Deque.copyExact
   by_cases hs : d.size > 0
   · rw [iteT hs]
     have hpos : d.maxlen = -1 ∨ 0 < d.maxlen := by
       rcases h.2 with h2 | h2
       · left; exact h2
       · right; rw [Deque.size_eq] at h2 hs; omega
-    have hl : ({ { Deque.new with maxlen := d.maxlen } with left := 1, right := 0 } : Deque).Layout := by
+    have hl : ({ { (Deque.new : Deque α) with maxlen := d.maxlen } with left := 1, right := 0 } : Deque α).Layout := by
       rw [Deque.layout_iff]; simp [Deque.new]
     obtain ⟨a, b, c⟩ := Deque.foldl_appendM d.items _ hl hpos (by simp [Deque.new]; omega)
-    refine ⟨⟨a, ?_⟩, ?_, ?_⟩
+    refine ⟨⟨a, ?_⟩, ?_, ?_, ?_⟩
     · rw [Deque.maxOk_iff, c, b]
       simp only [Deque.new, List.nil_append]
       rw [keepLast_of_le _ _ hmx]
@@ -301,16 +324,61 @@ theorem copy_spec (d : Deque) (h : d.WF) : d.copy.WF ∧ d.copy.items = d.items 
       · right; rw [Deque.size_eq] at h2; exact h2
     · rw [b]; simp only [Deque.new, List.nil_append]; exact keepLast_of_le _ _ hmx
     · rw [c]
+    · rw [foldl_appendM_tname]; rfl
   · rw [iteF hs]
     have : d.items = [] := List.eq_nil_of_length_eq_zero (by rw [Deque.size_eq] at hs; omega)
-    refine ⟨new_wf d.maxlen (by rcases h.2 with h2 | h2 <;> omega), by simp [Deque.new, this], rfl⟩
+    refine ⟨new_wf "deque" d.maxlen (by rcases h.2 with h2 | h2 <;> omega), by simp [Deque.new, this], rfl, rfl⟩
 
-theorem dequeCopyConcat_proven : DequeCopyConcat := by
-  intro d h other
-  obtain ⟨w, i, m⟩ := copy_spec d h
-  obtain ⟨w2, i2, m2⟩ := Deque.extend_spec d.copy other.items w
-  refine ⟨w, i, m, w2, ?_, ?_⟩
-  · unfold Deque.concat; rw [i2, m, i]
-  · unfold Deque.concat; rw [m2, m]
+theorem wrap32_of_lt (m : Int) (h0 : 0 ≤ m) (h1 : m < 2147483648) : wrap32 m = m := by
+  unfold wrap32; rw [iteF (by omega)]; omega
+
+theorem copy_spec (d : Deque α) (h : d.WF) (hc : d.tname = "deque" ∨ d.maxlen < 2147483648) :
+    ∃ c, d.copy = .ok c ∧ c.WF ∧ c.items = d.items ∧ c.maxlen = d.maxlen ∧ c.tname = d.tname := by
+  have hmx := maxOk_le d h
+  unfold Deque.copy
+  by_cases ht : d.tname = "deque"
+  · rw [iteT ht]
+    obtain ⟨a, b, c, e⟩ := copyExact_spec d h
+    exact ⟨_, rfl, a, b, c, by rw [e, ht]⟩
+  rw [iteF ht]
+  have hlt := hc.resolve_left ht
+  by_cases hneg : d.maxlen < 0
+  · rw [iteT hneg]
+    have hm : d.maxlen = -1 := by rcases h.2 with h2 | h2 <;> omega
+    rw [makeOf_absent]
+    obtain ⟨a, b, c⟩ := Deque.extend_spec { Deque.new d.tname with maxlen := -1 } d.items (new_wf _ (-1) (Or.inl rfl))
+    refine ⟨_, rfl, a, ?_, by rw [c, hm], extend_tname _ _⟩
+    rw [b]; simp [Deque.new, keepLast]
+  · rw [iteF hneg, wrap32_of_lt _ (by omega) hlt,
+      makeOf_int _ _ _ (by omega) (by unfold ssizeMax; omega)]
+    obtain ⟨a, b, c⟩ := Deque.extend_spec { Deque.new d.tname with maxlen := d.maxlen } d.items
+      (new_wf _ _ (Or.inr (by omega)))
+    refine ⟨_, rfl, a, ?_, c, extend_tname _ _⟩
+    rw [b]; simp only [Deque.new, List.nil_append]; exact keepLast_of_le _ _ hmx
+
+/-- A subclass of `deque` with `maxlen=2**32`. -/
+def dBig : Deque Int := ⟨1, 1, [1], 4294967296, 1, "D"⟩
+
+theorem dequeCopyConcat_refuted : ¬ DequeCopyConcat := by
+  intro h
+  have hw : dBig.WF := by
+    refine ⟨?_, ?_⟩
+    · rw [Deque.layout_iff]; decide
+    · rw [Deque.maxOk_iff]; decide
+  obtain ⟨c, h1, _, h3, _⟩ := h Int dBig hw dBig
+  have e : dBig.copy = .ok ⟨32, 31, [], 0, 0, "D"⟩ := by decide
+  rw [e] at h1
+  cases h1
+  exact nomatch h3
+
+theorem dequeCopyConcatChecked_proven : DequeCopyConcatChecked := by
+  intro α _ d h hc other
+  obtain ⟨c, h1, w, i, m, t⟩ := copy_spec d h hc
+  obtain ⟨w2, i2, m2⟩ := Deque.extend_spec c other.items w
+  refine ⟨c, h1, w, i, m, t, c.extend other.items, ?_, w2, ?_, ?_, ?_⟩
+  · unfold Deque.concat; rw [h1]
+  · rw [i2, m, i]
+  · rw [m2, m]
+  · rw [extend_tname, t]
 
 end PyLean.Sequences

@@ -9,10 +9,14 @@ namespace PyLean.Sequences
 
 open PyLean
 
+set_option linter.unusedSectionVars false
+
+variable {α : Type} [Inhabited α]
+
 /-- `omega` after unfolding the deque size and right-block number. -/
 macro "dq_omega" : tactic => `(tactic| ((try simp only [Deque.rbNum, Deque.size_eq] at *) <;> omega))
 
-theorem keepLast_keepLast (k : Nat) (l ys : List Int) :
+theorem keepLast_keepLast (k : Nat) (l ys : List α) :
     (l.drop (l.length - k) ++ ys).drop ((l.drop (l.length - k) ++ ys).length - k) =
       (l ++ ys).drop ((l ++ ys).length - k) := by
   have h1 : (l ++ ys).drop (l.length - k) = l.drop (l.length - k) ++ ys :=
@@ -22,42 +26,84 @@ theorem keepLast_keepLast (k : Nat) (l ys : List Int) :
   simp only [List.length_drop, List.length_append]
   omega
 
-theorem keepFirst_cons (k : Nat) (x : Int) (l : List Int) :
+theorem keepFirst_cons (k : Nat) (x : α) (l : List α) :
     (x :: l.take k).take k = (x :: l).take k := by
   cases k with
   | zero => rfl
   | succ k => simp only [List.take_succ_cons, List.take_take]; congr 2; omega
 
-theorem take_append_take (k : Nat) (ys l : List Int) :
+theorem take_append_take (k : Nat) (ys l : List α) :
     (ys ++ l.take k).take k = (ys ++ l).take k := by
   rw [List.take_append, List.take_append, List.take_take]
   congr 2; omega
 
-theorem length_keepLast_le (m : Int) (l : List Int) (hm : 0 ≤ m) :
+theorem length_keepLast_le (m : Int) (l : List α) (hm : 0 ≤ m) :
     ((keepLast m l).length : Int) ≤ m := by
   unfold keepLast; rw [iteF (by omega)]; simp only [List.length_drop]; omega
 
-theorem length_keepFirst_le (m : Int) (l : List Int) (hm : 0 ≤ m) :
+theorem length_keepFirst_le (m : Int) (l : List α) (hm : 0 ≤ m) :
     ((keepFirst m l).length : Int) ≤ m := by
   unfold keepFirst; rw [iteF (by omega)]; simp only [List.length_take]; omega
 
-theorem keepLast_of_le (m : Int) (l : List Int) (h : m < 0 ∨ (l.length : Int) ≤ m) : keepLast m l = l := by
+theorem keepLast_of_le (m : Int) (l : List α) (h : m < 0 ∨ (l.length : Int) ≤ m) : keepLast m l = l := by
   unfold keepLast; split
   · rfl
   · rw [show l.length - m.toNat = 0 by omega]; rfl
 
-theorem keepFirst_of_le (m : Int) (l : List Int) (h : m < 0 ∨ (l.length : Int) ≤ m) : keepFirst m l = l := by
+theorem keepFirst_of_le (m : Int) (l : List α) (h : m < 0 ∨ (l.length : Int) ≤ m) : keepFirst m l = l := by
   unfold keepFirst; split
   · rfl
   · rw [List.take_of_length_le (by omega)]
 
+theorem snd_popleft_tname (d : Deque α) : (Deque.snd' d.popleft d).tname = d.tname := by
+  unfold Deque.popleft
+  split
+  · rfl
+  · dsimp only
+    split
+    · split <;> rfl
+    · rfl
+
+theorem snd_pop_tname (d : Deque α) : (Deque.snd' d.pop d).tname = d.tname := by
+  unfold Deque.pop
+  split
+  · rfl
+  · dsimp only
+    split
+    · split <;> rfl
+    · rfl
+
+theorem appendM_tname (d : Deque α) (x : α) (m : Int) : (d.appendM x m).tname = d.tname := by
+  unfold Deque.appendM
+  dsimp only
+  split <;> split <;> first | rfl | exact snd_popleft_tname _
+
+theorem appendleftM_tname (d : Deque α) (x : α) (m : Int) : (d.appendleftM x m).tname = d.tname := by
+  unfold Deque.appendleftM
+  dsimp only
+  split <;> split <;> first | rfl | exact snd_pop_tname _
+
+theorem foldl_appendM_tname (xs : List α) : ∀ d : Deque α,
+    (xs.foldl (fun d x => d.appendM x d.maxlen) d).tname = d.tname := by
+  induction xs with
+  | nil => intro d; rfl
+  | cons x xs ih => intro d; simp only [List.foldl_cons]; rw [ih, appendM_tname]
+
+theorem extend_tname (d : Deque α) (xs : List α) : (d.extend xs).tname = d.tname := by
+  unfold Deque.extend
+  split
+  · rfl
+  · dsimp only
+    rw [foldl_appendM_tname]
+    split <;> rfl
+
 namespace Deque
 
-theorem maxOk_iff (d : Deque) : d.MaxOk ↔ d.maxlen = -1 ∨ (0 ≤ d.maxlen ∧ (d.items.length : Int) ≤ d.maxlen) :=
+theorem maxOk_iff (d : Deque α) : d.MaxOk ↔ d.maxlen = -1 ∨ (0 ≤ d.maxlen ∧ (d.items.length : Int) ≤ d.maxlen) :=
   Iff.rfl
 
 /-- The fold of `deque_extend_impl`. -/
-theorem foldl_appendM (xs : List Int) : ∀ (d : Deque), d.Layout →
+theorem foldl_appendM (xs : List α) : ∀ (d : Deque α), d.Layout →
     (d.maxlen = -1 ∨ 0 < d.maxlen) → (d.maxlen < 0 ∨ (d.items.length : Int) ≤ d.maxlen) →
     let d' := xs.foldl (fun d x => d.appendM x d.maxlen) d
     d'.Layout ∧ d'.items = keepLast d.maxlen (d.items ++ xs) ∧ d'.maxlen = d.maxlen := by
@@ -81,7 +127,7 @@ theorem foldl_appendM (xs : List Int) : ∀ (d : Deque), d.Layout →
     · simp
     · rw [keepLast_keepLast]; simp
 
-theorem foldl_appendleftM (xs : List Int) : ∀ (d : Deque), d.Layout →
+theorem foldl_appendleftM (xs : List α) : ∀ (d : Deque α), d.Layout →
     (d.maxlen = -1 ∨ 0 < d.maxlen) → (d.maxlen < 0 ∨ (d.items.length : Int) ≤ d.maxlen) →
     let d' := xs.foldl (fun d x => d.appendleftM x d.maxlen) d
     d'.Layout ∧ d'.items = keepFirst d.maxlen (xs.reverse ++ d.items) ∧ d'.maxlen = d.maxlen := by
@@ -106,20 +152,20 @@ theorem foldl_appendleftM (xs : List Int) : ∀ (d : Deque), d.Layout →
     · rfl
     · exact take_append_take _ _ _
 
-theorem maxlen_cases (d : Deque) (h : d.WF) :
+theorem maxlen_cases (d : Deque α) (h : d.WF) :
     d.maxlen = -1 ∨ d.maxlen = 0 ∨ 0 < d.maxlen := by
   rcases h.2 with h | h
   · left; exact h
   · right; omega
 
-theorem items_nil_of_maxlen_zero (d : Deque) (h : d.WF) (h0 : d.maxlen = 0) : d.items = [] := by
+theorem items_nil_of_maxlen_zero (d : Deque α) (h : d.WF) (h0 : d.maxlen = 0) : d.items = [] := by
   rcases h.2 with h | h
   · omega
   · have : d.items.length = 0 := by have := h.2; rw [size_eq] at this; omega
     exact List.eq_nil_of_length_eq_zero this
 
 /-- `d.extend(xs)`: layout and `maxlen` kept, items `keepLast maxlen (items ++ xs)`. -/
-theorem extend_spec (d : Deque) (xs : List Int) (h : d.WF) :
+theorem extend_spec (d : Deque α) (xs : List α) (h : d.WF) :
     (d.extend xs).WF ∧ (d.extend xs).items = keepLast d.maxlen (d.items ++ xs) ∧
       (d.extend xs).maxlen = d.maxlen := by
   unfold extend
@@ -161,7 +207,7 @@ theorem extend_spec (d : Deque) (xs : List Int) (h : d.WF) :
     exact ⟨by omega, length_keepLast_le _ _ (by omega)⟩
 
 /-- `d.extendleft(xs)`: items `keepFirst maxlen (reversed xs ++ items)`. -/
-theorem extendleft_spec (d : Deque) (xs : List Int) (h : d.WF) :
+theorem extendleft_spec (d : Deque α) (xs : List α) (h : d.WF) :
     (d.extendleft xs).WF ∧ (d.extendleft xs).items = keepFirst d.maxlen (xs.reverse ++ d.items) ∧
       (d.extendleft xs).maxlen = d.maxlen := by
   unfold extendleft
@@ -202,7 +248,7 @@ theorem extendleft_spec (d : Deque) (xs : List Int) (h : d.WF) :
     rw [maxOk_iff, c, hmx1, b, hmx1]; right
     exact ⟨by omega, length_keepFirst_le _ _ (by omega)⟩
 
-theorem append_spec (d : Deque) (x : Int) (h : d.WF) :
+theorem append_spec (d : Deque α) (x : α) (h : d.WF) :
     (d.append x).WF ∧ (d.append x).items = keepLast d.maxlen (d.items ++ [x]) ∧
       (d.append x).maxlen = d.maxlen := by
   unfold append
@@ -217,7 +263,7 @@ theorem append_spec (d : Deque) (x : Int) (h : d.WF) :
   · left; exact h2
   · right; exact ⟨h2.1, length_keepLast_le _ _ h2.1⟩
 
-theorem appendleft_spec (d : Deque) (x : Int) (h : d.WF) :
+theorem appendleft_spec (d : Deque α) (x : α) (h : d.WF) :
     (d.appendleft x).WF ∧ (d.appendleft x).items = keepFirst d.maxlen (x :: d.items) ∧
       (d.appendleft x).maxlen = d.maxlen := by
   unfold appendleft
@@ -234,7 +280,7 @@ theorem appendleft_spec (d : Deque) (x : Int) (h : d.WF) :
 
 /-! ### Item access -/
 
-theorem read_ok (d : Deque) (_h : d.Layout) (b j : Int) (hb0 : 0 ≤ b) (hb : b ≤ d.rbNum)
+theorem read_ok (d : Deque α) (_h : d.Layout) (b j : Int) (hb0 : 0 ≤ b) (hb : b ≤ d.rbNum)
     (hj0 : 0 ≤ j) (hj : j < 64) (hk0 : 0 ≤ b * 64 + j - d.left) (hk : b * 64 + j - d.left < d.size) :
     d.read b j = .ok (ix d.items (b * 64 + j - d.left)) := by
   unfold read
@@ -242,7 +288,7 @@ theorem read_ok (d : Deque) (_h : d.Layout) (b j : Int) (hb0 : 0 ≤ b) (hb : b 
   simp only
   rw [iteT ⟨hj0, hj, hk0, hk⟩]
 
-theorem write_ok (d : Deque) (b j v : Int) (hb0 : 0 ≤ b) (hb : b ≤ d.rbNum)
+theorem write_ok (d : Deque α) (b j : Int) (v : α) (hb0 : 0 ≤ b) (hb : b ≤ d.rbNum)
     (hj0 : 0 ≤ j) (hj : j < 64) (hk0 : 0 ≤ b * 64 + j - d.left) (hk : b * 64 + j - d.left < d.size) :
     d.write b j v = .ok { d with items := d.items.set (b * 64 + j - d.left).toNat v } := by
   unfold write
@@ -252,7 +298,7 @@ theorem write_ok (d : Deque) (b j v : Int) (hb0 : 0 ≤ b) (hb : b ≤ d.rbNum)
 
 /-- `deque_item_lock_held`: every in-range index reads its item through the
 block arithmetic (from the left or from the right). -/
-theorem itemC_spec (d : Deque) (h : d.Layout) (i : Int) :
+theorem itemC_spec (d : Deque α) (h : d.Layout) (i : Int) :
     d.itemC i = if 0 ≤ i ∧ i < d.size then .ok (ix d.items i)
       else .error (.indexError "deque index out of range") := by
   have hL := h
@@ -279,7 +325,7 @@ theorem itemC_spec (d : Deque) (h : d.Layout) (i : Int) :
     rw [hv', iteF hv]
     rfl
 
-theorem pop_wf (d : Deque) (h : d.WF) (hne : d.items ≠ []) :
+theorem pop_wf (d : Deque α) (h : d.WF) (hne : d.items ≠ []) :
     ∃ d', d.pop = .ok (ix d.items (d.items.length - 1), d') ∧ d'.WF ∧
       d'.items = d.items.dropLast ∧ d'.maxlen = d.maxlen := by
   obtain ⟨d', hp, hl, hi, hm⟩ := pop_spec d h.1 hne
@@ -289,7 +335,7 @@ theorem pop_wf (d : Deque) (h : d.WF) (hne : d.items ≠ []) :
   · left; exact h2
   · right; rw [size_eq] at h2; omega
 
-theorem popleft_wf (d : Deque) (h : d.WF) (hne : d.items ≠ []) :
+theorem popleft_wf (d : Deque α) (h : d.WF) (hne : d.items ≠ []) :
     ∃ d', d.popleft = .ok (ix d.items 0, d') ∧ d'.WF ∧ d'.items = d.items.drop 1 ∧ d'.maxlen = d.maxlen := by
   obtain ⟨d', hp, hl, hi, hm⟩ := popleft_spec d h.1 hne
   refine ⟨d', hp, ⟨hl, ?_⟩, hi, hm⟩
@@ -298,19 +344,19 @@ theorem popleft_wf (d : Deque) (h : d.WF) (hne : d.items ≠ []) :
   · left; exact h2
   · right; rw [size_eq] at h2; omega
 
-theorem rotateC_wf (d : Deque) (n : Int) (h : d.WF) :
+theorem rotateC_wf (d : Deque α) (n : Int) (h : d.WF) :
     ∃ d', d.rotateC n = .ok d' ∧ d'.WF ∧ d'.items = rotLi (-n) d.items ∧ d'.maxlen = d.maxlen := by
   obtain ⟨d', hr, hl, hi, hm⟩ := rotateC_spec d n h.1
   refine ⟨d', hr, ⟨hl, ?_⟩, hi, hm⟩
   rw [maxOk_iff, hm, hi, length_rotLi]
   exact h.2
 
-theorem rotL_append (A B : List Int) : rotL A.length (A ++ B) = B ++ A := by
+theorem rotL_append (A B : List α) : rotL A.length (A ++ B) = B ++ A := by
   unfold rotL
   rw [List.drop_append_of_le_length (Nat.le_refl _), List.take_append_of_le_length (Nat.le_refl _),
     List.drop_length, List.take_length, List.nil_append]
 
-theorem rotLi_erase (l : List Int) (i : Nat) (hi : i < l.length) :
+theorem rotLi_erase (l : List α) (i : Nat) (hi : i < l.length) :
     rotLi (-(i : Int)) ((rotLi i l).drop 1) = l.eraseIdx i := by
   rw [rotLi_nat _ _ hi, List.eraseIdx_eq_take_drop_succ]
   unfold rotL
@@ -334,7 +380,7 @@ theorem rotLi_erase (l : List Int) (i : Nat) (hi : i < l.length) :
     rw [this, rotL_append]
 
 /-- `deque_del_item`: rotate, popleft, rotate back deletes item `i`. -/
-theorem delItem_spec (d : Deque) (i : Int) (h : d.WF) (h0 : 0 ≤ i) (hi : i < d.size) :
+theorem delItem_spec (d : Deque α) (i : Int) (h : d.WF) (h0 : 0 ≤ i) (hi : i < d.size) :
     ∃ d', d.delItem i = .ok d' ∧ d'.WF ∧ d'.items = d.items.eraseIdx i.toNat ∧ d'.maxlen = d.maxlen := by
   unfold delItem
   obtain ⟨d1, h1, w1, i1, m1⟩ := rotateC_wf d (-i) h
@@ -352,7 +398,7 @@ theorem delItem_spec (d : Deque) (i : Int) (h : d.WF) (h0 : 0 ≤ i) (hi : i < d
     exact this
 
 /-- `d[i] = v` / `del d[i]` after `PySequence_SetItem` normalisation. -/
-theorem assItemC_spec (d : Deque) (h : d.WF) (i : Int) (v : Option Int) :
+theorem assItemC_spec (d : Deque α) (h : d.WF) (i : Int) (v : Option α) :
     d.assItemC i v = if 0 ≤ i ∧ i < d.size then
         (match v with
          | some v => .ok { d with items := d.items.set i.toNat v }
@@ -379,6 +425,26 @@ theorem assItemC_spec (d : Deque) (h : d.WF) (i : Int) (v : Option Int) :
   · have hv' : validIndex i d.size = false := by unfold validIndex; simp only [decide_eq_false_iff_not]; exact hv
     rw [hv', iteF hv]
     rfl
+
+theorem step1_pos (d : Deque α) (b j p : Int) (hp : b * 64 + j - d.left = p) (hj0 : 0 ≤ j) (hj : j < 64) :
+    (step1 b j).1 * 64 + (step1 b j).2 - d.left = p + 1 ∧ 0 ≤ (step1 b j).2 ∧ (step1 b j).2 < 64 := by
+  unfold step1
+  split
+  · simp only; omega
+  · simp only; omega
+
+theorem foldl_step1 (d : Deque α) (k : Nat) : ∀ (b j p : Int), b * 64 + j - d.left = p → 0 ≤ j → j < 64 →
+    let bj := (List.range k).foldl (fun (bj : Int × Int) _ => step1 bj.1 bj.2) (b, j)
+    bj.1 * 64 + bj.2 - d.left = p + k ∧ 0 ≤ bj.2 ∧ bj.2 < 64 := by
+  induction k with
+  | zero => intro b j p hp h0 h1; simp only [List.range_zero, List.foldl_nil]; exact ⟨by omega, h0, h1⟩
+  | succ k ih =>
+    intro b j p hp h0 h1
+    simp only [List.range_succ, List.foldl_append, List.foldl_cons, List.foldl_nil]
+    obtain ⟨a1, a2, a3⟩ := ih b j p hp h0 h1
+    obtain ⟨c1, c2, c3⟩ := step1_pos d _ _ _ a1 a2 a3
+    exact ⟨by rw [c1]; omega, c2, c3⟩
+
 
 end Deque
 
