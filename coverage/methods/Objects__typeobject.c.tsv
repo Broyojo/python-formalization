@@ -141,8 +141,8 @@ Objects/typeobject.c	3492	3527	mro_invoke	mro_invoke(PyTypeObject *type)	todo
 Objects/typeobject.c	3552	3598	mro_internal_unlocked	mro_internal_unlocked(PyTypeObject *type, int initial, PyObject **p_old_mro)	todo		
 Objects/typeobject.c	3601	3608	mro_internal	mro_internal(PyTypeObject *type, PyObject **p_old_mro)	todo		
 Objects/typeobject.c	3614	3666	best_base	best_base(PyObject *bases)	modelled	typeobj-best-base,typeobj-best-base-final	
-Objects/typeobject.c	3669	3675	shape_differs	shape_differs(PyTypeObject *t1, PyTypeObject *t2)	modelled	typeobj-best-base	
-Objects/typeobject.c	3678	3694	solid_base	solid_base(PyTypeObject *type)	modelled	typeobj-best-base	
+Objects/typeobject.c	3669	3675	shape_differs	shape_differs(PyTypeObject *t1, PyTypeObject *t2)	todo		
+Objects/typeobject.c	3678	3694	solid_base	solid_base(PyTypeObject *type)	todo		
 Objects/typeobject.c	3710	3719	get_builtin_base_with_dict	get_builtin_base_with_dict(PyTypeObject *type)	todo		
 Objects/typeobject.c	3722	3731	get_dict_descriptor	get_dict_descriptor(PyTypeObject *type)	todo		
 Objects/typeobject.c	3734	3739	raise_dict_descr_error	raise_dict_descr_error(PyObject *obj)	todo		
@@ -159,7 +159,7 @@ Objects/typeobject.c	3979	4009	type_new_visit_slots	type_new_visit_slots(type_ne
 Objects/typeobject.c	4017	4082	type_new_copy_slots	type_new_copy_slots(type_new_ctx *ctx, PyObject *dict)	todo		
 Objects/typeobject.c	4086	4121	type_new_slots_bases	type_new_slots_bases(type_new_ctx *ctx)	todo		
 Objects/typeobject.c	4125	4151	type_new_slots_impl	type_new_slots_impl(type_new_ctx *ctx, PyObject *dict)	todo		
-Objects/typeobject.c	4155	4179	type_new_slots	type_new_slots(type_new_ctx *ctx, PyObject *dict)	modelled	typeobj-no-slots-dict-weak	
+Objects/typeobject.c	4155	4179	type_new_slots	type_new_slots(type_new_ctx *ctx, PyObject *dict)	todo		
 Objects/typeobject.c	4183	4229	type_new_alloc	type_new_alloc(type_new_ctx *ctx)	todo		
 Objects/typeobject.c	4233	4246	type_new_set_name	type_new_set_name(const type_new_ctx *ctx, PyTypeObject *type)	todo		
 Objects/typeobject.c	4251	4273	type_new_set_module	type_new_set_module(PyObject *dict)	todo		
