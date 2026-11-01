@@ -847,15 +847,552 @@ def misc_run_types(case):
     return {"ok": misc_coroutine(case["kind"])}
 
 
+# --- contextlib ---
+
+import contextlib as misc_contextlib  # noqa: E402
+
+sys.unraisablehook = lambda unraisable: None  # generators dropped mid-script
+
+
+class MiscRt(RuntimeError):
+    pass
+
+
+class BadInit(Exception):
+    def __init__(self):
+        raise ValueError("init failed")
+
+
+class MiscEG(ExceptionGroup):
+    pass
+
+
+MISC_EXC = {c.__name__: c for c in
+            (ValueError, KeyError, LookupError, RuntimeError, MiscRt, StopIteration,
+             StopAsyncIteration, GeneratorExit, KeyboardInterrupt, BadInit)}
+
+
+def misc_run_co(coro):
+    """Drive a coroutine that never suspends."""
+    try:
+        coro.send(None)
+    except StopIteration as e:
+        return e.value
+    raise AssertionError("coroutine suspended")
+
+
+def misc_gen_of(script):
+    def gen():
+        thrown = None
+        for step in script:
+            k = step[0]
+            if k == "y":
+                try:
+                    yield step[1]
+                    thrown = None
+                except BaseException as e:
+                    thrown = e
+            elif k == "ret":
+                return
+            elif k == "raise":
+                raise MISC_EXC[step[1]]("gen")
+            else:
+                if thrown is not None:
+                    raise thrown
+                raise RuntimeError("nothing")
+    return gen
+
+
+def misc_agen_of(script):
+    async def gen():
+        thrown = None
+        for step in script:
+            k = step[0]
+            if k == "y":
+                try:
+                    yield step[1]
+                    thrown = None
+                except BaseException as e:
+                    thrown = e
+            elif k == "ret":
+                return
+            elif k == "raise":
+                raise MISC_EXC[step[1]]("gen")
+            else:
+                if thrown is not None:
+                    raise thrown
+                raise RuntimeError("nothing")
+    return gen
+
+
+def misc_arg0(e):
+    return e.args[0] if e.args and isinstance(e.args[0], str) else ""
+
+
+def misc_desc(e, labels, d=3):
+    if e is None:
+        return None
+    if d == 0:
+        return "..."
+    for o, l in labels:
+        if o is e:
+            return l
+    return [type(e).__name__, misc_arg0(e), misc_desc(e.__cause__, labels, d - 1),
+            misc_desc(e.__context__, labels, d - 1)]
+
+
+def misc_cres(thunk, labels):
+    try:
+        return ["ok", thunk()]
+    except BaseException as e:
+        return ["exc", misc_desc(e, labels)]
+
+
+def misc_some_tb():
+    try:
+        raise ValueError
+    except ValueError as e:
+        return e.__traceback__
+
+
+def misc_gen_ctx(rng):
+    excs = ["ValueError", "KeyError", "RuntimeError", "MiscRt", "StopIteration",
+            "StopAsyncIteration", "GeneratorExit", "KeyboardInterrupt"]
+    def step():
+        k = rng.random()
+        if k < 0.45:
+            return ["y", rng.randint(1, 9)]
+        if k < 0.6:
+            return ["ret"]
+        if k < 0.8:
+            return ["reraise"]
+        return ["raise", rng.choice(excs)]
+    def script():
+        s = [["y", 1]] if rng.random() < 0.8 else []
+        return s + [step() for _ in range(rng.randint(0, 3))]
+    def body():
+        return None if rng.random() < 0.4 else rng.choice(excs)
+    kind = rng.choice(["gcm", "gcm", "gcm", "with", "deco", "suppress", "stack", "stack",
+                       "redirect", "chdir", "hook", "closing", "null"])
+    case = {"fn": "misc.ctx", "k": kind}
+    if kind == "gcm":
+        case["async"] = rng.random() < 0.4
+        case["script"] = script()
+        ops = [["enter"]] if rng.random() < 0.9 else []
+        for _ in range(rng.choice([1, 1, 1, 2])):
+            k = rng.random()
+            if k < 0.3:
+                ops.append(["exit_none"])
+            elif k < 0.8:
+                ops.append(["exit_inst", rng.choice(excs), rng.random() < 0.5])
+            else:
+                ops.append(["exit_type", rng.choice(excs + ["BadInit"])])
+        if rng.random() < 0.1:
+            ops.append(["enter"])
+        case["ops"] = ops
+    elif kind in ("with", "deco"):
+        case["async"] = rng.random() < 0.4
+        case["script"] = script()
+        case["body"] = body()
+    elif kind == "suppress":
+        names = ["ValueError", "KeyError", "RuntimeError", "KeyboardInterrupt"]
+        def tree(d=0):
+            if d < 2 and rng.random() < 0.5 or d == 0 and rng.random() < .7:
+                kids = [tree(d + 1) for _ in range(rng.randint(1, 3))]
+                has_base = misc_tree_base(kids)
+                c = "BaseExceptionGroup" if has_base else rng.choice(["ExceptionGroup", "MiscEG", "BaseExceptionGroup"])
+                return ["group", c, kids]
+            return ["leaf", rng.choice(names)]
+        case["classes"] = rng.sample(names + ["LookupError", "ExceptionGroup", "BaseExceptionGroup"],
+                                     rng.randint(0, 3))
+        case["tree"] = tree()
+        case["with"] = rng.random() < 0.5
+    elif kind == "stack":
+        a = rng.random() < 0.4
+        case["async"] = a
+        def beh(d=0):
+            k = rng.random()
+            if k < 0.45:
+                return ["ret", rng.random() < 0.4]
+            if k < 0.7:
+                return ["raise", rng.choice(excs)]
+            if k < 0.85 or d > 0:
+                return ["reraise"]
+            return ["pushcb", beh(1), rng.randint(50, 60)]
+        ops = []
+        for i in range(rng.randint(0, 5)):
+            k = rng.random()
+            asy = a and rng.random() < 0.5
+            if k < 0.25:
+                ops.append(["push_fn", i, beh(), asy])
+            elif k < 0.5:
+                ops.append(["push_cm", i, beh(), asy])
+            elif k < 0.75:
+                ops.append(["callback", i, beh(), asy])
+            elif k < 0.9:
+                ops.append(["enter_ctx", i, beh(), rng.randint(0, 9), rng.random() < 0.2, a])
+            else:
+                ops.append(["enter_bad", a])
+            if rng.random() < 0.1:
+                ops.append(["pop_all"])
+        if rng.random() < 0.8:
+            exc = None if rng.random() < 0.4 else rng.choice(excs)
+            ops.append(["exit", exc, exc is not None and rng.random() < 0.5])
+        else:
+            ops.append(["close"])
+        case["ops"] = ops
+    elif kind == "redirect":
+        case["ops"] = [[rng.choice(["enter", "enter", "exit"]), rng.randint(0, 1)]
+                       for _ in range(rng.randint(1, 7))]
+    elif kind == "chdir":
+        case["paths"] = [rng.choice(["/usr", "/", "/nonexistent", "."]) for _ in range(2)]
+        case["ops"] = [[rng.choice(["enter", "enter", "exit"]), rng.randint(0, 1)]
+                       for _ in range(rng.randint(1, 7))]
+    elif kind == "hook":
+        a = rng.random() < 0.5
+        ms = ["__aenter__", "__aexit__"] if a else ["__enter__", "__exit__"]
+        case["async"] = a
+        case["exact"] = rng.random() < 0.8
+        case["mro"] = [[[m, rng.random() < 0.3] for m in ms if rng.random() < 0.6]
+                       for _ in range(rng.randint(1, 3))] + [[]]
+    elif kind == "closing":
+        case["fail"] = rng.random() < 0.3
+        case["body"] = body()
+    else:
+        case["v"] = rng.randint(0, 9)
+        case["body"] = body()
+    return case
+
+
+def misc_tree_base(kids):
+    for k in kids:
+        if k[0] == "leaf" and k[1] == "KeyboardInterrupt":
+            return True
+        if k[0] == "group" and (k[1] == "BaseExceptionGroup" and misc_tree_base(k[2])):
+            return True
+    return False
+
+
+def misc_build_tree(t):
+    if t[0] == "leaf":
+        return MISC_EXC[t[1]]("leaf")
+    cls = {"ExceptionGroup": ExceptionGroup, "BaseExceptionGroup": BaseExceptionGroup,
+           "MiscEG": MiscEG}[t[1]]
+    return cls("g", [misc_build_tree(c) for c in t[2]])
+
+
+def misc_tree_enc(e, orig):
+    if e is orig:
+        return "orig"
+    if isinstance(e, BaseExceptionGroup):
+        return [type(e).__name__, e.message, [misc_tree_enc(c, orig) for c in e.exceptions]]
+    return [type(e).__name__, misc_arg0(e)]
+
+
+class MiscNoCM:
+    pass
+
+
+def misc_stack_fn(run, log, tag, stack_ref):
+    def f(*a):
+        return run(a[1] if len(a) >= 2 else None)
+    return f
+
+
+def misc_run_stack(case):
+    a = case["async"]
+    Stack = misc_contextlib.AsyncExitStack if a else misc_contextlib.ExitStack
+    box = [Stack()]
+    log = []
+    labels = []
+
+    def behave(i, b, tag, d):
+        log.append([i, tag, misc_desc(d, labels, 1)])
+        if b[0] == "ret":
+            return b[1]
+        if b[0] == "raise":
+            raise MISC_EXC[b[1]]("cb")
+        if b[0] == "reraise":
+            if d is not None:
+                raise d
+            raise RuntimeError("nothing")
+        i2, b2 = b[2], b[1]
+        def f(*x):
+            return behave(i2, b2, "s", x[1] if len(x) > 1 else None)
+        box[0].push(f)
+        return False
+
+    def afn(i, b):
+        async def f(*x):
+            return behave(i, b, "a", x[1] if len(x) > 1 else None)
+        return f
+
+    def fn(i, b):
+        def f(*x):
+            return behave(i, b, "s", x[1] if len(x) > 1 else None)
+        return f
+
+    def cm(i, b, v=None, fails=False):
+        class C:
+            def __enter__(self):
+                if fails:
+                    raise ValueError("enter")
+                return v
+
+            def __exit__(self, *x):
+                return behave(i, b, "s", x[1])
+        return C()
+
+    def acm(i, b, v=None, fails=False):
+        class C:
+            async def __aenter__(self):
+                if fails:
+                    raise ValueError("enter")
+                return v
+
+            async def __aexit__(self, *x):
+                return behave(i, b, "a", x[1])
+        return C()
+
+    out = []
+    for op in case["ops"]:
+        k = op[0]
+        if k == "push_fn":
+            if op[3]:
+                box[0].push_async_exit(afn(op[1], op[2]))
+            else:
+                box[0].push(fn(op[1], op[2]))
+            out.append(op[1])
+        elif k == "push_cm":
+            box[0].push_async_exit(acm(op[1], op[2])) if op[3] else box[0].push(cm(op[1], op[2]))
+            out.append(op[1])
+        elif k == "callback":
+            if op[3]:
+                box[0].push_async_callback(afn(op[1], op[2]))
+            else:
+                box[0].callback(fn(op[1], op[2]))
+            out.append(op[1])
+        elif k == "enter_ctx":
+            i, b, v, fails, is_async = op[1], op[2], op[3], op[4], op[5]
+            if is_async:
+                c = acm(i, b, v, fails)
+                out.append(misc_cres(lambda: misc_run_co(box[0].enter_async_context(c)), labels))
+            else:
+                c = cm(i, b, v, fails)
+                out.append(misc_cres(lambda: box[0].enter_context(c), labels))
+        elif k == "enter_bad":
+            if op[1]:
+                out.append(misc_cres(lambda: misc_run_co(box[0].enter_async_context(MiscNoCM())), labels))
+            else:
+                out.append(misc_cres(lambda: box[0].enter_context(MiscNoCM()), labels))
+        elif k == "pop_all":
+            old = box[0]
+            box[0] = old.pop_all()
+            out.append(len(old._exit_callbacks))
+        elif k == "exit":
+            exc = None if op[1] is None else MISC_EXC[op[1]]("body")
+            if exc is not None:
+                labels.append((exc, "value"))
+            details = (None, None, None) if exc is None else (type(exc), exc, exc.__traceback__)
+            def call():
+                if a:
+                    return misc_run_co(box[0].__aexit__(*details))
+                return box[0].__exit__(*details)
+            def run():
+                if op[2]:
+                    try:
+                        raise exc
+                    except BaseException:
+                        return bool(call())
+                return bool(call())
+            out.append(misc_cres(run, labels))
+        else:
+            if a:
+                out.append(misc_cres(lambda: misc_run_co(box[0].aclose()), labels))
+            else:
+                out.append(misc_cres(box[0].close, labels))
+    return {"ok": [out, log, len(box[0]._exit_callbacks)]}
+
+
+def misc_run_ctx(case):
+    k = case["k"]
+    if k == "gcm":
+        a = case["async"]
+        g = (misc_agen_of if a else misc_gen_of)(case["script"])
+        cm = (misc_contextlib.asynccontextmanager if a else misc_contextlib.contextmanager)(g)()
+        labels = []
+        out = []
+        for op in case["ops"]:
+            n = op[0]
+            if n == "enter":
+                out.append(misc_cres((lambda: misc_run_co(cm.__aenter__())) if a else cm.__enter__, labels))
+            elif n == "exit_none":
+                def r():
+                    v = misc_run_co(cm.__aexit__(None, None, None)) if a else cm.__exit__(None, None, None)
+                    return v
+                out.append(misc_cres(r, labels))
+            elif n == "exit_inst":
+                c = MISC_EXC[op[1]]
+                v = c("body")
+                labels.append((v, "value"))
+                tb = misc_some_tb() if op[2] else None
+                def r():
+                    return misc_run_co(cm.__aexit__(c, v, tb)) if a else cm.__exit__(c, v, tb)
+                out.append(misc_cres(r, labels))
+                out.append(v.__traceback__ is tb)
+            else:
+                c = MISC_EXC[op[1]]
+                def r():
+                    return misc_run_co(cm.__aexit__(c, None, None)) if a else cm.__exit__(c, None, None)
+                out.append(misc_cres(r, labels))
+        frame = cm.gen.ag_frame if a else cm.gen.gi_frame
+        finished = frame is None
+        out.append(finished)
+        return {"ok": out}
+    if k == "with":
+        a = case["async"]
+        g = (misc_agen_of if a else misc_gen_of)(case["script"])
+        cm = (misc_contextlib.asynccontextmanager if a else misc_contextlib.contextmanager)(g)()
+        body = case["body"]
+        def run():
+            if a:
+                async def co():
+                    async with cm:
+                        if body is None:
+                            return 1
+                        raise MISC_EXC[body]("body")
+                return misc_run_co(co())
+            with cm:
+                if body is None:
+                    return 1
+                raise MISC_EXC[body]("body")
+        r = misc_cres(run, [])
+        frame = cm.gen.ag_frame if a else cm.gen.gi_frame
+        return {"ok": [r, frame is None]}
+    if k == "deco":
+        a = case["async"]
+        g = (misc_agen_of if a else misc_gen_of)(case["script"])
+        cm = (misc_contextlib.asynccontextmanager if a else misc_contextlib.contextmanager)(g)()
+        body = case["body"]
+        if a:
+            async def f():
+                if body is None:
+                    return 1
+                raise MISC_EXC[body]("body")
+            d = cm(f)
+            return {"ok": [misc_cres(lambda: misc_run_co(d()), []), misc_cres(lambda: misc_run_co(d()), [])]}
+        def f():
+            if body is None:
+                return 1
+            raise MISC_EXC[body]("body")
+        d = cm(f)
+        return {"ok": [misc_cres(d, []), misc_cres(d, [])]}
+    if k == "suppress":
+        cs = {"ValueError": ValueError, "KeyError": KeyError, "RuntimeError": RuntimeError,
+              "KeyboardInterrupt": KeyboardInterrupt, "LookupError": LookupError,
+              "ExceptionGroup": ExceptionGroup, "BaseExceptionGroup": BaseExceptionGroup}
+        s = misc_contextlib.suppress(*[cs[c] for c in case["classes"]])
+        e = misc_build_tree(case["tree"])
+        try:
+            if case["with"]:
+                try:
+                    raise e
+                except BaseException:
+                    r = s.__exit__(type(e), e, None)
+            else:
+                r = s.__exit__(type(e), e, None)
+            return {"ok": ["ok", r]}
+        except BaseException as x:
+            ctx = x.__context__
+            return {"ok": ["exc", misc_tree_enc(x, e), None if ctx is None else misc_tree_enc(ctx, e), x is e]}
+    if k == "stack":
+        return misc_run_stack(case)
+    if k == "redirect":
+        objs = [object(), object(), object()]
+        rs = [misc_contextlib.redirect_stdout(objs[1]), misc_contextlib.redirect_stdout(objs[2])]
+        saved = sys.stdout
+        sys.stdout = objs[0]
+        out = []
+        try:
+            for op in case["ops"]:
+                r = rs[op[1]]
+                if op[0] == "enter":
+                    out.append(objs.index(r.__enter__()))
+                else:
+                    try:
+                        r.__exit__(None, None, None)
+                        out.append(objs.index(sys.stdout))
+                    except IndexError as e:
+                        out.append(["exc", "IndexError", str(e)])
+                out.append([objs.index(sys.stdout), [objs.index(o) for o in rs[0]._old_targets],
+                            [objs.index(o) for o in rs[1]._old_targets]])
+        finally:
+            sys.stdout = saved
+        return {"ok": out}
+    if k == "chdir":
+        saved = os.getcwd()
+        os.chdir("/")
+        cs = [misc_contextlib.chdir(p) for p in case["paths"]]
+        out = []
+        try:
+            for op in case["ops"]:
+                c = cs[op[1]]
+                if op[0] == "enter":
+                    out.append(misc_res(c.__enter__))
+                else:
+                    out.append(misc_res(lambda: c.__exit__(None, None, None)))
+                out.append(os.getcwd())
+        finally:
+            os.chdir(saved)
+        return {"ok": out}
+    if k == "hook":
+        bases = ()
+        for d in reversed(case["mro"][:-1]):
+            bases = (type("K", bases, {m: (None if isn else (lambda self: None)) for m, isn in d}),)
+        cls = bases[0]
+        base = misc_contextlib.AbstractAsyncContextManager if case["async"] else misc_contextlib.AbstractContextManager
+        hook = base if case["exact"] else type("Sub", (base,), {"__exit__": None, "__aexit__": None})
+        r = hook.__subclasshook__(cls)
+        return {"ok": None if r is NotImplemented else r}
+    if k == "closing":
+        n = [0]
+        fail = case["fail"]
+        class T:
+            def close(self):
+                n[0] += 1
+                if fail:
+                    raise ValueError("close")
+        body = case["body"]
+        def run():
+            with misc_contextlib.closing(T()):
+                if body is None:
+                    return 1
+                raise MISC_EXC[body]("body")
+        r = misc_cres(run, [])
+        return {"ok": [r, n[0]]}
+    body = case["body"]
+    def run():
+        with misc_contextlib.nullcontext(case["v"]) as v:
+            if body is None:
+                return v
+            raise MISC_EXC[body]("body")
+    return {"ok": misc_cres(run, [])}
+
+
 MISC_GENS = [misc_gen_graphlib, misc_gen_sched, misc_gen_queue, misc_gen_numbers,
-             misc_gen_keyword, misc_gen_types]
+             misc_gen_keyword, misc_gen_types, misc_gen_ctx]
 MISC_RUNS = {"misc.graphlib": misc_run_graphlib, "misc.sched": misc_run_sched,
              "misc.queue": misc_run_queue, "misc.numbers": misc_run_numbers,
-             "misc.keyword": misc_run_keyword, "misc.types": misc_run_types}
+             "misc.keyword": misc_run_keyword, "misc.types": misc_run_types,
+             "misc.ctx": misc_run_ctx}
+
+
+MISC_ONLY = os.environ.get("MISC_ONLY")
 
 
 def misc_gen(rng):
-    return rng.choice(MISC_GENS)(rng)
+    gens = [g for g in MISC_GENS if not MISC_ONLY or MISC_ONLY in g.__name__]
+    return rng.choice(gens)(rng)
 
 
 def misc_run(case):
