@@ -150,7 +150,8 @@ theorem bytesNewSpec_proven : BytesNewSpec := by
     have := items_ok vals h
     simp only
     refine ⟨?_, ?_, ?_⟩ <;>
-      simp [bytesNew, Obj.index?, bytesFromObject, Obj.buffer?, iterItems?, this]
+      simp [bytesNew, Obj.index?, bytesFromObject, Obj.buffer?, iterItems?, this, getIterOr, lengthHint,
+        iterFinish, mallocFails, bytesObjectSize, bind, Except.bind, pure, Except.pure]
   · intro n h0 hs
     have h1 : ssizeMin ≤ (n : Int) ∧ (n : Int) ≤ ssizeMax := by
       rw [ssizeMax_val, show ssizeMin = -9223372036854775808 by decide]; omega

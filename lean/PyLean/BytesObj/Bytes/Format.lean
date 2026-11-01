@@ -101,7 +101,8 @@ def formatLong (v : Obj) (fl : Fl) (prec : Int) (type : Nat) : Py Seq :=
       let iobj : Py Int :=
         if type = 111 ∨ type = 120 ∨ type = 88 then
           match v.index? with
-          | some i => .ok i
+          | some (.ok i) => .ok i
+          | some (.error e) => .error e
           | none => .error (notInteger v)
         else numberLong v
       match iobj with
@@ -130,19 +131,22 @@ def byteConverter (arg : Obj) : Py Nat :=
       .error (.typeError s!"%c requires an integer in range(256) or a single byte, not a bytearray object of length {s.length}")
     else .ok (s.headD 0)
   | _ =>
+    let bad : PyExc :=
+      .typeError s!"%c requires an integer in range(256) or a single byte, not {arg.typeName}"
     match arg.index? with
-    | some ival =>
+    | some (.ok ival) =>
       -- this includes an overflow in converting to C long
       if !(0 ≤ ival ∧ ival ≤ 255) then .error (.overflowError "%c arg not in range(256)")
       else .ok ival.toNat
-    | none =>
-      .error (.typeError s!"%c requires an integer in range(256) or a single byte, not {arg.typeName}")
+    | some (.error e) => .error (if isTypeError e then bad else e)
+    | none => .error bad
 
 /-- `format_obj`, bytesobject.c:546-594. -/
 def formatObj (v : Obj) : Py Seq :=
   match v with
   | .bytes s => .ok s
   | .bytearray s => .ok s
+  | .dunderRaises e => .error e
   | .dunder r =>
     match r with
     | .bytes s => .ok s

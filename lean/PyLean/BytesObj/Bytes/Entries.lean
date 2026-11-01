@@ -1,5 +1,5 @@
 import PyLean.Registry
-import PyLean.BytesObj.Bytes.ByteArrayProps4
+import PyLean.BytesObj.Bytes.Fallible
 
 /-! Registry entries for bytes (Objects/bytesobject.c, Objects/bytes_methods.c) and
 bytearray (Objects/bytearrayobject.c). -/
@@ -352,7 +352,125 @@ def entries : List Entry := [
     statement := "The read-only bytearray methods run the bytes code on the contents and leave ob_exports as it was; while they run ob_exports is raised, so any callback that tries to resize gets BufferError."
     source := "comment bytearrayobject.c:97; GH-143195 comment, :2627", status := .proven
     prop := ``ReadWrappers, thm := some ``readWrappers_proven
-    notes := "The search, split, partition, pad and strip results are compared for bytes and bytearray by difftest/strsearch_diff.py; the entries strsearch-* prove their content." }
+    notes := "The search, split, partition, pad and strip results are compared for bytes and bytearray by difftest/strsearch_diff.py; the entries strsearch-* prove their content." },
+  { id := "bytesobj-bytes-class-tables", pyFile := "Objects/bytes_methods.c"
+    pyFns := ["_Py_bytes_isspace", "_Py_bytes_isalpha", "_Py_bytes_isalnum", "_Py_bytes_isdigit"]
+    statement := "isspace, isalpha, isdigit and isalnum are 'non-empty and every byte in the class', for the exact byte ranges of pyctype.c."
+    source := "docstrings, bytes_methods.c:5-9; Python/pyctype.c", status := .proven
+    prop := ``ClassTables, thm := some ``classTables_proven },
+  { id := "bytesobj-bytes-case-laws", pyFile := "Objects/bytes_methods.c"
+    pyFns := ["_Py_bytes_lower", "_Py_bytes_upper", "_Py_bytes_title", "_Py_bytes_swapcase", "_Py_bytes_islower", "_Py_bytes_isupper"]
+    statement := "lower leaves no uppercase byte and is islower exactly when the input has a cased byte, likewise upper; swapcase exchanges isupper and islower; title changes only the case of letters; a string with no cased byte is left alone."
+    source := "docstrings, bytes_methods.c:245-326", status := .proven
+    prop := ``CaseLaws, thm := some ``caseLaws_proven },
+  { id := "bytesobj-bytes-maketrans-hit", pyFile := "Objects/bytes_methods.c"
+    pyFns := ["_Py_bytes_maketrans"]
+    statement := "maketrans sends each byte of frm to the byte of to at the place of its last occurrence."
+    source := "docstring, bytes_methods.c:348-354", status := .proven
+    prop := ``MaketransHit, thm := some ``maketransHit_proven },
+  { id := "bytesobj-bytes-find-extreme", pyFile := "Objects/bytes_methods.c"
+    pyFns := ["parse_args_finds_byte", "find_internal", "_Py_bytes_find", "_Py_bytes_index", "_Py_bytes_rfind", "_Py_bytes_rindex"]
+    statement := "find gives the least and rfind the greatest index at which sub occurs within the normalised bounds, or -1 when there is none; index and rindex give the same answer and raise instead of -1."
+    source := "docstring of bytes.find; the reading of the bounds given in python/cpython#68431", status := .proven
+    prop := ``BytesFindExtreme, thm := some ``bytesFindExtreme_proven },
+  { id := "bytesobj-bytes-count-spec", pyFile := "Objects/bytes_methods.c"
+    pyFns := ["parse_args_finds_byte", "_Py_bytes_count"]
+    statement := "count of a non-empty sub is the number of rounds of the loop that repeats find from the end of the previous match; count of the empty string is the number of positions in the bounds."
+    source := "docstring of bytes.count: 'non-overlapping occurrences'", status := .proven
+    prop := ``BytesCountSpec, thm := some ``bytesCountSpec_proven },
+  { id := "bytesobj-bytes-contains-sub", pyFile := "Objects/bytes_methods.c"
+    pyFns := ["_Py_bytes_contains"]
+    statement := "p in b for a bytes-like p is exactly 'p occurs in b', at any place and any length."
+    source := "Doc/library/stdtypes.rst common sequence 'x in s', bytes note", status := .proven
+    prop := ``ContainsSub, thm := some ``containsSub_proven },
+  { id := "bytesobj-bytes-tailmatch-spec", pyFile := "Objects/bytes_methods.c"
+    pyFns := ["tailmatch"]
+    statement := "startswith holds exactly when the normalised bounds leave room for p and p occurs at their start; endswith the same at their end."
+    source := "Doc/library/stdtypes.rst bytes.startswith, bytes.endswith", status := .proven
+    prop := ``TailmatchSpec, thm := some ``tailmatchSpec_proven },
+  { id := "bytesobj-bytes-rich-lex", pyFile := "Objects/bytesobject.c"
+    pyFns := ["bytes_richcompare"]
+    statement := "<, <=, > and >= of bytes are the sign of the first difference as unsigned bytes, a proper prefix coming first; the order is antisymmetric and zero exactly on equal strings."
+    source := "Doc/reference/expressions.rst, sequence comparison", status := .proven
+    prop := ``RichLex, thm := some ``richLex_proven },
+  { id := "bytesobj-bytes-subscript-spec", pyFile := "Objects/bytesobject.c"
+    pyFns := ["bytes_item", "bytes_subscript"]
+    statement := "b[i] counts a negative index from the end and raises outside; b[s] holds the elements of range(*s.indices(len(b))), in order and in bounds, for every slice with a non-zero step."
+    source := "Doc/library/stdtypes.rst common sequence operations", status := .proven
+    prop := ``SubscriptSpec, thm := some ``subscriptSpec_proven },
+  { id := "bytesobj-bytes-hex-groups", pyFile := "Objects/bytesobject.c"
+    pyFns := ["bytes_hex_impl", "bytearray_hex_impl"]
+    statement := "hex(sep, n) puts sep between groups of |n| bytes counted from the left for n < 0 and from the right for n > 0, the odd group at the far end, and adds no separator with n = 0 or |n| at least the length."
+    source := "docstring, bytesobject.c:2636-2651", status := .proven
+    prop := ``HexGroups, thm := some ``hexGroups_proven },
+  { id := "bytesobj-bytes-fromhex-spec", pyFile := "Objects/bytesobject.c"
+    pyFns := ["_PyBytes_FromHex", "bytes_fromhex_impl", "bytearray_fromhex_impl"]
+    statement := "fromhex of bytes, bytearray or ASCII str follows a position-by-position grammar: skip ASCII whitespace, two digits make a byte, the first offending position is reported, a lone last digit is the odd-count error; a non-ASCII str is refused at its first non-ASCII position."
+    source := "docstring, bytesobject.c:2502-2505", status := .proven
+    prop := ``FromHexSpec, thm := some ``fromHexSpec_proven },
+  { id := "bytesobj-bytes-repr-spec", pyFile := "Objects/bytesobject.c"
+    pyFns := ["PyBytes_Repr"]
+    statement := "repr(b) uses \" only in smart mode for a body with ' and no \", its text is printable ASCII, printable bytes other than the quote and the backslash stand for themselves, and the quote appears only escaped."
+    source := "Doc/library/functions.rst repr; Doc/library/stdtypes.rst bytes literals", status := .proven
+    prop := ``ReprSpec, thm := some ``reprSpec_proven },
+  { id := "bytesobj-bytes-strip-spec", pyFile := "Objects/bytesobject.c"
+    pyFns := ["do_xstrip", "do_strip", "do_argstrip"]
+    statement := "strip removes only members of the set, only from the sides asked for, and a stripped side of the result is not a member; the result is a piece of the input."
+    source := "Doc/library/stdtypes.rst bytes.strip", status := .proven
+    prop := ``BytesStripSpec, thm := some ``bytesStripSpec_proven },
+  { id := "bytesobj-bytes-translate-spec", pyFile := "Objects/bytesobject.c"
+    pyFns := ["bytes_translate_impl"]
+    statement := "translate keeps the bytes outside delete and sends each through the table; no table keeps them; a table of another length raises ValueError."
+    source := "Doc/library/stdtypes.rst bytes.translate", status := .proven
+    prop := ``TranslateSpec, thm := some ``translateSpec_proven },
+  { id := "bytesobj-bytes-concat-value", pyFile := "Objects/bytesobject.c"
+    pyFns := ["bytes_concat", "PyBytes_Concat"]
+    statement := "PyBytes_Concat gives the concatenation on both the in-place and the new-object path."
+    source := "Doc/c-api/bytes.rst PyBytes_Concat", status := .proven
+    prop := ``ConcatValue, thm := some ``concatValue_proven },
+  { id := "bytesobj-bytes-join-intercalate", pyFile := "Objects/bytesobject.c"
+    pyFns := ["bytes_join_impl", "PyBytes_Join"]
+    statement := "The write loop of join is the items with sep between them and nowhere else."
+    source := "docstring, bytesobject.c:1880-1892", status := .proven
+    prop := ``JoinIntercalate, thm := some ``joinIntercalate_proven },
+  { id := "bytesobj-bytes-removesuffix-miss", pyFile := "Objects/bytesobject.c"
+    pyFns := ["bytes_removesuffix_impl"]
+    statement := "A suffix that does not match leaves the bytes alone."
+    source := "docstring, bytesobject.c:2369-2373", status := .proven
+    prop := ``RemoveSuffixMiss, thm := some ``removeSuffixMiss_proven },
+  { id := "bytesobj-bytes-contains-index-error", pyFile := "Objects/bytes_methods.c"
+    pyFns := ["_Py_bytes_contains"]
+    statement := "x in b reports what x.__index__ raised, as b.find(x) does: refuted, the exception is cleared and the buffer protocol's TypeError takes its place."
+    source := "twin: parse_args_finds_byte keeps the error, bytes_methods.c:420-423", status := .refuted
+    prop := ``ContainsKeepsIndexError, thm := some ``containsKeepsIndexError_refuted
+    bug := some "bytesobj-bytes-contains-index-error-masked" },
+  { id := "bytesobj-bytes-index-raises", pyFile := "Objects/bytes_methods.c"
+    pyFns := ["parse_args_finds_byte", "_Py_bytes_contains", "_getbytevalue", "byte_converter", "formatlong", "bytes_new_impl",
+      "bytearray___init___impl"]
+    statement := "An exception from __index__ passes through find, index, count, the item conversions and the integer conversions of %; bytes(x) and bytearray(x) fall through on TypeError only; %c and %d replace a TypeError by their own message; in loses it."
+    source := "the error paths at bytes_methods.c:420-423, :606-612, bytesobject.c:2819-2826, bytearrayobject.c:969-974", status := .proven
+    prop := ``IndexRaisesRules, thm := some ``indexRaisesRules_proven },
+  { id := "bytesobj-bytearray-index-raises", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_append_impl", "bytearray_insert_impl", "bytearray_remove_impl", "bytearray_ass_subscript_lock_held",
+      "bytearray_setitem_lock_held"]
+    statement := "An exception from the item's __index__ is what append, insert, remove and item assignment raise, before any change to the object."
+    source := "error paths of _getbytevalue, bytearrayobject.c:31-34", status := .proven
+    prop := ``MutatorsIndexRaises, thm := some ``mutatorsIndexRaises_proven },
+  { id := "bytesobj-bytes-iter-raises", pyFile := "Objects/bytesobject.c"
+    pyFns := ["_PyBytes_FromIterator", "PyBytes_FromObject", "PyBytes_Join", "bytearray_extend_impl"]
+    statement := "bytes(it) and extend check items as they come, so a failing iterator's exception comes after good items and a bad item comes before it; join runs the iterator to its end first, so its exception wins over any item; extend writes nothing."
+    source := "the loops at bytesobject.c:2970-2998, bytearrayobject.c:2179-2217; PySequence_Fast", status := .proven
+    prop := ``IterRaisesRules, thm := some ``iterRaisesRules_proven },
+  { id := "bytesobj-bytes-hint-rules", pyFile := "Objects/bytesobject.c"
+    pyFns := ["_PyBytes_FromIterator", "PyBytes_Join", "bytearray_extend_impl"]
+    statement := "__length_hint__ runs before the first item: a TypeError from it is ignored, another exception wins over a bad item, a negative value is ValueError, and a good value does not change the result."
+    source := "PyObject_LengthHint, Objects/abstract.c:95-150; bytesobject.c:2958-2960", status := .proven
+    prop := ``HintRules, thm := some ``hintRules_proven },
+  { id := "bytesobj-bytes-call-raises", pyFile := "Objects/bytesobject.c"
+    pyFns := ["PyBytes_FromObject", "PyBytes_Join", "bytearray_extend_impl", "bytes_new_impl", "format_obj", "bytearray___init___impl"]
+    statement := "__iter__ raising: each caller keeps a non-TypeError and turns a TypeError into its own message. __bytes__ raising: bytes(x) and %b pass it on, and bytearray(x) never calls it."
+    source := "bytesobject.c:3036-3051, :2798-2802, :561-568; bytearrayobject.c:1036-1043, :2155-2162", status := .proven
+    prop := ``CallRaisesRules, thm := some ``callRaisesRules_proven }
 ]
 
 end PyLean.BytesObj.Bytes
