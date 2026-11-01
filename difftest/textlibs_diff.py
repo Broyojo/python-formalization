@@ -2555,6 +2555,50 @@ class ShlexArea:
         return common.py_result(body)
 
 
+@area("textwrap", 5)
+class TextwrapArea:
+    CHUNKS = ["a", "bb", "ccc", "dddd", "eeeeeeee", "aaaaaaaaaaaaaaaaaa", " ", "  ", "\t", "\u00a0", "-", "--", "ab-", "a-b-c", "--a", "a--b-cc-dd-eee",
+              "", "\u3000", "\xe9\xe9", ".", "x y", "-----"]
+
+    @classmethod
+    def gen(cls, r):
+        c = {"mod": "textlibs", "fn": "textwrap.chunks", "chunks": [cps(r.choice(cls.CHUNKS)) for _ in range(r.randint(0, 12))],
+             "width": r.choice([-1, 0, 1, 2, 3, 4, 5, 6, 8, 10, 20]), "initial": cps(r.choice(["", "", "", ">", "> ", "    ", "      "])),
+             "subsequent": cps(r.choice(["", "", "", "  ", ">>>", "       "])), "drop": r.random() < 0.7, "blw": r.random() < 0.7,
+             "boh": r.random() < 0.7, "ph": cps(r.choice([" [...]", "...", " ", "", "   x"]))}
+        if r.random() < 0.4:
+            c["max"] = r.choice([-1, 0, 1, 2, 3, 5])
+        return c
+
+    @classmethod
+    def run(cls, c):
+        import textwrap
+
+        def body():
+            kw = dict(width=c["width"], initial_indent=txt(c["initial"]), subsequent_indent=txt(c["subsequent"]),
+                      drop_whitespace=c["drop"], break_long_words=c["blw"], break_on_hyphens=c["boh"], placeholder=txt(c["ph"]),
+                      max_lines=c.get("max"))
+            chunks = [txt(x) for x in c["chunks"]]
+            # Only a pass through _handle_long_word can leave the chunks as they were, so counting
+            # those calls is an exact hang test. The bound is far above any terminating run.
+            calls = [10 * (sum(map(len, chunks)) + len(chunks)) + 100]
+
+            class Hang(Exception):
+                pass
+
+            class W(textwrap.TextWrapper):
+                def _handle_long_word(self, *a):
+                    calls[0] -= 1
+                    if calls[0] < 0:
+                        raise Hang
+                    return super()._handle_long_word(*a)
+            try:
+                return [cps(x) for x in W(**kw)._wrap_chunks(chunks)]
+            except Hang:
+                return "hang"
+        return common.py_result(body)
+
+
 only = os.environ.get("TEXTLIBS_ONLY")
 names = [n for n in AREAS if not only or n in only.split(",")]
 weights = [AREAS[n][1] for n in names]

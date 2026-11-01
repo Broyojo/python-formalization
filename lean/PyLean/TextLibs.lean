@@ -7,6 +7,7 @@ import PyLean.TextLibs.ReParseProps
 import PyLean.TextLibs.ReMisc
 import PyLean.TextLibs.PathProps
 import PyLean.TextLibs.ShlexProps
+import PyLean.TextLibs.TextwrapProps
 import PyLean.TextLibs.CsvSniffProps
 
 /-!
@@ -31,6 +32,7 @@ open PyLean.TextLibs.Binascii
 open PyLean.TextLibs.Csv
 open PyLean.TextLibs.Re
 open PyLean.TextLibs.Path
+open PyLean.TextLibs.Textwrap
 open PyLean.TextLibs.Shlex
 
 /-- The integer routines `IntCodesRoundTrip` drives through `runPack` and `runUnpack`. -/
@@ -1078,7 +1080,51 @@ def entries : List Entry := [
   { id := "textlibs-re-escape-twins", pyFile := "Lib/re/_parser.py", pyFns := ["_escape", "_class_escape"]
     statement := "_escape and _class_escape agree on every single-character ASCII escape, except those that mean something else outside a set."
     source := "the implementation disagreeing with itself", status := .proven
-    prop := ``EscapeTwins, thm := some ``escapeTwins_proven }
+    prop := ``EscapeTwins, thm := some ``escapeTwins_proven },
+  { id := "textlibs-textwrap-terminates", pyFile := "Lib/textwrap.py", pyFns := ["TextWrapper._wrap_chunks", "TextWrapper._handle_long_word"]
+    statement := "For a positive width, _wrap_chunks returns."
+    source := "invariant: no hang", status := .refuted
+    prop := ``WrapTerminates, thm := some ``wrapTerminates_refuted
+    bug := some "textlibs-textwrap-indent-hang" },
+  { id := "textlibs-textwrap-succeeds", pyFile := "Lib/textwrap.py", pyFns := ["TextWrapper._wrap_chunks", "TextWrapper._handle_long_word"]
+    statement := "With indents of at most width, _wrap_chunks returns exactly when its two checks pass."
+    source := "narrows textlibs-textwrap-terminates", status := .proven
+    prop := ``WrapSucceeds, thm := some ``wrapSucceeds_proven },
+  { id := "textlibs-textwrap-errors", pyFile := "Lib/textwrap.py", pyFns := ["TextWrapper._wrap_chunks"]
+    statement := "The width check comes first and the placeholder check second, each with its message."
+    source := "Lib/textwrap.py:252-260", status := .proven
+    prop := ``WrapErrors, thm := some ``wrapErrors_proven },
+  { id := "textlibs-textwrap-width", pyFile := "Lib/textwrap.py", pyFns := ["TextWrapper._wrap_chunks"]
+    statement := "With break_long_words on, every line is at most width."
+    source := "docstring of TextWrapper.wrap", status := .refuted
+    prop := ``WrapWidthLaw, thm := some ``wrapWidthLaw_refuted
+    bug := some "textlibs-textwrap-indent-over-width" },
+  { id := "textlibs-textwrap-width-narrow", pyFile := "Lib/textwrap.py", pyFns := ["TextWrapper._wrap_chunks", "TextWrapper._handle_long_word"]
+    statement := "With break_long_words on and indents shorter than width, every line is at most width, including with max_lines."
+    source := "narrows textlibs-textwrap-width", status := .proven
+    prop := ``WrapWidthNarrow, thm := some ``wrapWidthNarrow_proven },
+  { id := "textlibs-textwrap-keeps-text", pyFile := "Lib/textwrap.py", pyFns := ["TextWrapper._wrap_chunks", "TextWrapper._handle_long_word"]
+    statement := "Without max_lines the lines hold all the text of the chunks, or all but its whitespace under drop_whitespace."
+    source := "docstring of _wrap_chunks", status := .proven
+    prop := ``WrapKeepsText, thm := some ``wrapKeepsText_proven },
+  { id := "textlibs-textwrap-max-lines", pyFile := "Lib/textwrap.py", pyFns := ["TextWrapper._wrap_chunks"]
+    statement := "With max_lines there are at most max(max_lines, 1) lines, and text that was cut leaves the stripped placeholder at the end."
+    source := "docs: TextWrapper.max_lines", status := .proven
+    prop := ``WrapMaxLines, thm := some ``wrapMaxLines_proven },
+  { id := "textlibs-textwrap-no-break", pyFile := "Lib/textwrap.py", pyFns := ["TextWrapper._wrap_chunks", "TextWrapper._handle_long_word"]
+    statement := "With break_long_words off, the lines are runs of the chunks, and only a single chunk exceeds width."
+    source := "docstring of _wrap_chunks", status := .proven
+    prop := ``WrapNoBreak, thm := some ``wrapNoBreak_proven },
+  { id := "textlibs-textwrap-greedy", pyFile := "Lib/textwrap.py", pyFns := ["TextWrapper._wrap_chunks", "TextWrapper._handle_long_word"]
+    statement := "With break_long_words and drop_whitespace off, each line ends only because the next chunk would not fit."
+    source := "docstring of _wrap_chunks", status := .proven
+    prop := ``WrapGreedy, thm := some ``wrapGreedy_proven
+    notes := "Both switches are off so that the partition is exact; the same lines of code run with them on." },
+  { id := "textlibs-textwrap-fitting-text", pyFile := "Lib/textwrap.py", pyFns := ["TextWrapper._wrap_chunks"]
+    statement := "Text that fits in width passes, whatever the placeholder."
+    source := "docs: shorten", status := .refuted
+    prop := ``FittingTextPasses, thm := some ``fittingTextPasses_refuted
+    bug := some "textlibs-textwrap-placeholder-check-first" }
 ]
 
 end PyLean.TextLibs
