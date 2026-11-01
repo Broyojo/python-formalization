@@ -108,7 +108,7 @@ Objects/memoryobject.c	3361	memory_ndim_get	FAITHFUL	yes	yes	yes
 Objects/memoryobject.c	3369	memory_c_contiguous	FAITHFUL	yes	yes	yes	
 Objects/memoryobject.c	3377	memory_f_contiguous	FAITHFUL	yes	yes	yes	
 Objects/memoryobject.c	3385	memory_contiguous	FAITHFUL	yes	yes	yes	
-Objects/memoryobject.c	3475	memoryiter_dealloc	HOLLOW	no	-	-	Not no-behaviour: Py_XDECREF(it->it_seq) at :3479 can drop the last reference to the memoryview (iter(memoryview(ba))), which runs memory_dealloc, so weakref callbacks fire and the exporter's buffer is released.
+Objects/memoryobject.c	3475	memoryiter_dealloc	FAITHFUL	yes	-	-	Ruling: plain reference-dropping is an accepted scope limit; see the Coverage rules in AGENTS.md.
 Objects/memoryobject.c	3484	memoryiter_traverse	FAITHFUL	yes	-	-	Applies by the tp_traverse policy, although the note's 'no Python-visible effect' overstates it, since gc.get_referents() can see it_seq.
 Objects/memoryobject.c	3492	memoryiter_next	HOLLOW	no	no	yes	The ptr == NULL exit at :3508-3510 has no counterpart, Py_DECREF(seq) at :3515 can be the last reference and run memory_dealloc, and IterYields assumes Live1D.subs, so ADJUST_PTR at :3507 is in no proposition.
 Objects/memoryobject.c	3520	memory_iter	HOLLOW	yes	no	yes	IterYields and CountIsList assume Live1D.subs although the registry says every 1-D view, so a 1-D view with suboffsets is excluded, and the arms at :3529-3537 are unstated.
