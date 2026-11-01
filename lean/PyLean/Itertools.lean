@@ -5,6 +5,8 @@ import PyLean.Itertools.CombProps
 import PyLean.Itertools.SimpleProps
 import PyLean.Itertools.BatchedProps
 import PyLean.Itertools.CountRepeatProps
+import PyLean.Itertools.TeeProps
+import PyLean.Itertools.GroupbyProps
 
 /-!
 `Modules/itertoolsmodule.c` vs the equivalents in `Doc/library/itertools.rst`, CPython 3.14.7.
@@ -116,7 +118,18 @@ def entries : List Entry := [
     pyFns := ["repeat_new", "repeat_next"]
     statement := "For times omitted or any Py_ssize_t (negative meaning 0), repeat yields the doc generator's items."
     source := "Doc/library/itertools.rst:615-631", status := .proven
-    prop := ``RepeatDocAgreeSsize, thm := some ``repeatDocAgreeSsize_proven }
+    prop := ``RepeatDocAgreeSsize, thm := some ``repeatDocAgreeSsize_proven },
+  { id := "itertools-groupby-doc-agree", pyFile := "Modules/itertoolsmodule.c"
+    pyFns := ["groupby_next", "groupby_step", "_grouper_next"]
+    statement := "For every key function, input and interleaving of next() on the groupby object and on any group it returned (including old groups), the C object returns exactly what the doc's generators return."
+    source := "Doc/library/itertools.rst:396-445 (roughly equivalent to)", status := .proven
+    prop := ``GroupbyDocAgree, thm := some ``groupbyDocAgree_proven },
+  { id := "itertools-tee-doc-agree", pyFile := "Modules/itertoolsmodule.c"
+    pyFns := ["itertools_tee_impl", "tee_next", "teedataobject_jumplink", "teedataobject_getitem_lock_held", "tee_copy_impl"]
+    statement := "For every n whose result tuple fits in memory and every interleaving of next(), tee() and __copy__() on the iterators, the C chain of LINKCELLS-sized blocks returns the same results as the doc's linked list and pulls the same number of input items; for n < 0 both raise."
+    source := "Doc/library/itertools.rst:682-719 (Roughly equivalent to, flattening)", status := .proven
+    prop := ``TeeDocAgree, thm := some ``teeDocAgree_proven
+    notes := "The doc side uses _tee(t) for __copy__, which the doc text defines as the same flattening. Hypothesis tupleNewOk n: both sides need n objects in memory." }
 ]
 
 end PyLean.Itertools

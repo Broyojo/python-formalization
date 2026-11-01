@@ -43,26 +43,30 @@ def cGroupbyStep (key : Int → Int) (g : CGroupby) : Option CGroupby :=
   | [] => none
   | v :: rest => some { g with it := rest, currvalue := some v, currkey := some (key v) }
 
-/-- The `for (;;)` loop of `groupby_next` (:540-568), by recursion on the
-input (each `groupby_step` consumes an item). -/
-def cGroupbySkip (key : Int → Int) (g : CGroupby) : Nat → Option CGroupby
-  | 0 => none
-  | fuel + 1 =>
-    let advance := match g.currkey, g.tgtkey with
-      | none, _ => true
-      | some _, none => false
-      | some ck, some tk => tk == ck
-    if !advance then some g
+/-- The tests at the head of that loop: `true` means "call `groupby_step`". -/
+def gbAdvance : Option Int → Option Int → Bool
+  | none, _ => true
+  | some _, none => false
+  | some ck, some tk => tk == ck
+
+/-- The `for (;;)` loop of `groupby_next` (:540-568). The flag is `true` for
+the `break` out of the loop and `false` when `groupby_step` failed; the steps
+already taken stay in the state either way. Each iteration but the last
+consumes an item, so `it.length + 1` iterations are enough. -/
+def cGroupbySkip (key : Int → Int) : Nat → CGroupby → Bool × CGroupby
+  | 0, g => (false, g)
+  | fuel + 1, g =>
+    if !gbAdvance g.currkey g.tgtkey then (true, g)
     else match cGroupbyStep key g with
-      | none => none
-      | some g => cGroupbySkip key g fuel
+      | none => (false, g)
+      | some g => cGroupbySkip key fuel g
 
 /-- `groupby_next` (:533-578). -/
 def cGroupbyNext (key : Int → Int) (g : CGroupby) : Option Int × CGroupby :=
   let g := { g with currgrouper := none }
-  match cGroupbySkip key g (g.it.length + 1) with
-  | none => (none, g)
-  | some g =>
+  match cGroupbySkip key (g.it.length + 1) g with
+  | (false, g) => (none, g)
+  | (true, g) =>
     let ck := g.currkey.getD 0
     let id := g.groupers.length
     (some ck, { g with tgtkey := some ck, groupers := g.groupers ++ [ck], currgrouper := some id })
@@ -185,16 +189,17 @@ structure CTee where
   tees : List (Nat × Nat)
   deriving Repr
 
-/-- `tee_next` (:952-972, GIL build) with `teedataobject_jumplink`
-(:772-782) and `teedataobject_getitem_lock_held` (:784-809). -/
-def cTeeNext (t : CTee) (k : Nat) : Option Int × CTee :=
-  let (b, i) := t.tees.getD k (0, 0)
-  let (t, b, i) :=
-    if i ≥ LINKCELLS then
-      let t := if b + 1 < t.blocks.length then t else { t with blocks := t.blocks ++ [[]] }
-      (t, b + 1, 0)
-    else (t, b, i)
-  let t := { t with tees := t.tees.set k (b, i) }
+/-- `teedataobject_jumplink` (:772-782) as used by `tee_next` (:960-967): at
+`index >= LINKCELLS` move to the next block, creating it if needed. -/
+def teeJump (t : CTee) (b i : Nat) : CTee × Nat × Nat :=
+  if i ≥ LINKCELLS then
+    let t := if b + 1 < t.blocks.length then t else { t with blocks := t.blocks ++ [[]] }
+    (t, b + 1, 0)
+  else (t, b, i)
+
+/-- `teedataobject_getitem_lock_held` (:784-809) and the `to->index++` of
+`tee_next` (:968-971): a stored value, or (lead iterator) pull one more item. -/
+def teeGetitem (t : CTee) (k b i : Nat) : Option Int × CTee :=
   let blk := t.blocks.getD b []
   if i < blk.length then
     (some (blk.getD i 0), { t with tees := t.tees.set k (b, i + 1) })
@@ -204,6 +209,12 @@ def cTeeNext (t : CTee) (k : Nat) : Option Int × CTee :=
     | v :: rest =>
       (some v, { t with it := rest, blocks := t.blocks.set b (blk ++ [v]),
                         tees := t.tees.set k (b, i + 1) })
+
+/-- `tee_next` (:952-972, GIL build). -/
+def cTeeNext (t : CTee) (k : Nat) : Option Int × CTee :=
+  let (b, i) := t.tees.getD k (0, 0)
+  let (t, b, i) := teeJump t b i
+  teeGetitem { t with tees := t.tees.set k (b, i) } k b i
 
 def cTeeOps : CTee → List TeeOp → List (Option Int) × CTee
   | t, [] => ([], t)
