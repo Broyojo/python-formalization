@@ -29,7 +29,7 @@ theorem lookup_of_mem : ∀ (d : List (K × V)) (k : K) (v : V), (d.map Prod.fst
 theorem itemsOf_dict (d : List (K × V)) (hn : (d.map Prod.fst).Nodup) :
     ∀ suf : List (K × V), (∀ p ∈ suf, p ∈ d) →
     (dictMap d).itemsOf (suf.map Prod.fst) = .ok suf
-  | [], _ => by simp [MapV.itemsOf]
+  | [], _ => by simp [MapV.itemsOf, raiseTail, dictMap]
   | (a, b) :: rest, h => by
     have hg : (dictMap d).getitem a = .ok b := by
       simp [dictMap, dictGet, lookup_of_mem d a b hn (h _ (by simp))]
@@ -45,7 +45,7 @@ theorem contains_values (E : EqOps V) (d : List (K × V)) (hn : (d.map Prod.fst)
     (value : V) : ∀ suf : List (K × V), (∀ p ∈ suf, p ∈ d) →
     MapV.valuesContain.go (dictMap d) E value (suf.map Prod.fst) =
       listContains E value (suf.map Prod.snd)
-  | [], _ => by simp [MapV.valuesContain.go, listContains]
+  | [], _ => by simp [MapV.valuesContain.go, listContains, raiseTail, dictMap]
   | (a, b) :: rest, h => by
     have hg : (dictMap d).getitem a = .ok b := by
       simp [dictMap, dictGet, lookup_of_mem d a b hn (h _ (by simp))]
@@ -118,7 +118,7 @@ def ItemsContainMatchesDictItems : Prop :=
 
 theorem itemsContainMatchesDictItems_refuted : ¬ItemsContainMatchesDictItems := by
   intro h
-  have := h Nat Nat ⟨fun _ => .ok 0, .ok [], .ok 0⟩ ⟨fun _ _ => true, fun _ _ => .ok true⟩ .notIterable
+  have := h Nat Nat ⟨fun _ => .ok 0, .ok [], .ok 0, none⟩ ⟨fun _ _ => true, fun _ _ => .ok true⟩ .notIterable
   simp [MapV.itemsContain, dictItemsContain] at this
 
 /-- `Mapping.__eq__` on two `dict`-backed mappings is the `dict` comparison of their item lists,

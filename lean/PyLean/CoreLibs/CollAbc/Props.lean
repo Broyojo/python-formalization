@@ -105,7 +105,7 @@ def stubGetitem {K α : Type} (e : PyExc) : K → Py α := fun _ => .error e
 def stubSeq (α : Type) : Seq α := ⟨stubGetitem (.indexError ""), .ok 0⟩
 
 /-- The `Mapping` an object has when it relies on the abstract primitives. -/
-def stubMap (K V : Type) : MapV K V := ⟨stubGetitem (.keyError ""), .ok [], .ok 0⟩
+def stubMap (K V : Type) : MapV K V := ⟨stubGetitem (.keyError ""), .ok [], .ok 0, none⟩
 
 /-- The abstract bodies, reachable by `super()`, describe the empty collection: `len` 0, nothing
 contained, empty iteration; the abstract `__getitem__`s raise the very exceptions the mixins catch,
