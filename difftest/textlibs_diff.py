@@ -1798,6 +1798,8 @@ class ReArea:
         if not text:
             pat = pat.replace("é", "\xe9")
         c = {"mod": "textlibs", "fn": "re.parse", "pat": [ord(x) for x in pat], "text": text, "flags": flags}
+        if os.environ.get("RE_SEM") == "1" or r.random() < 0.1:
+            return cls.gen_sem(r)
         if os.environ.get("RE_EXEC") == "1" or r.random() < 0.5:
             return cls.gen_exec(r)
         if r.random() < 0.45:
@@ -1815,6 +1817,74 @@ class ReArea:
                  "\\g<1", "\\g<1a>", "\\8", "\\12", "\\n", "\\\\", "\\q", "\\_", "\\.", "\\g<" + "9" * 5000 + ">",
                  "\\g<2147483647>", "\\g<99>"]) for _ in range(r.choice([0, 1, 2, 3])))]
         return c
+
+    SEM_ATOMS = ["a", "b", "c", "a", "b", "A", "s", "k", ".", "[ab]", "[^a]", "[a-c]", "\\w", "\\W", "\\d", "\\s", "\\b",
+                 "\\B", "^", "$", "\\A", "\\Z", ""]
+
+    @classmethod
+    def gen_tree(cls, r, d, st):
+        """A pattern as text. st is [groups opened, groups closed]: a conditional or a backreference
+        names a closed group, since one that tests its own open group is a recorded refutation."""
+        c = r.random()
+        if d <= 0 or c < 0.3:
+            return r.choice(cls.SEM_ATOMS)
+        if c < 0.45:
+            return cls.gen_tree(r, d - 1, st) + cls.gen_tree(r, d - 1, st)
+        if c < 0.58:
+            return "(?:" + cls.gen_tree(r, d - 1, st) + "|" + cls.gen_tree(r, d - 1, st) + ")"
+        if c < 0.73:
+            st[0] += 1
+            g = st[0]
+            inner = cls.gen_tree(r, d - 1, st)
+            st[1].append(g)
+            return "(" + inner + ")"
+        if c < 0.88:
+            q = r.choice(["*", "+", "?", "{2}", "{1,2}", "{0,2}", "{2,3}", "{2,}"]) + r.choice(["", "", "?", "+"])
+            return "(?:" + cls.gen_tree(r, d - 1, st) + ")" + q
+        if c < 0.91:
+            return "(?>" + cls.gen_tree(r, d - 1, st) + ")"
+        if c < 0.94:
+            return r.choice(["(?=", "(?!"]) + cls.gen_tree(r, d - 1, st) + ")"
+        if c < 0.96:
+            st[0] += 2
+            st[1].extend([st[0] - 1])
+            st[1].append(st[0])
+            body = r.choice(["(a)()", "(.)()", "(a)()b", "(a|b)()", "(?:(a)|b)()"])
+            return r.choice(["(?<=", "(?<!"]) + body + ")"
+        if st[1]:
+            g = r.choice(st[1])
+            if r.random() < 0.5:
+                return "\\%d" % g
+            return "(?(%d)%s|%s)" % (g, cls.gen_tree(r, d - 1, st), cls.gen_tree(r, d - 1, st))
+        return "b"
+
+    @classmethod
+    def gen_sem(cls, r):
+        flags = r.choice([0, 0, 0, 2, 2, 8, 16, 256, 2 | 256, 2 | 16])
+        while True:
+            pat = cls.gen_tree(r, r.choice([2, 3, 3, 4]), [0, []])
+            try:
+                re.compile(pat, flags)
+                break
+            except Exception:
+                continue
+        alpha = "aabbcAskK _\n\xe9\xc9\u017f\u212a"
+        subj = "".join(r.choice(alpha) for _ in range(r.randint(0, 6)))
+        return {"mod": "textlibs", "fn": "re.sem", "pat": [ord(x) for x in pat], "flags": flags,
+                "s": [ord(x) for x in subj], "full": r.random() < 0.4}
+
+    @classmethod
+    def run_sem(cls, c):
+        pat = "".join(map(chr, c["pat"]))
+        subj = "".join(map(chr, c["s"]))
+
+        def body():
+            m = (re.fullmatch if c["full"] else re.match)(pat, subj, c["flags"])
+            if m is None:
+                return None
+            gs = [None if m.span(i) == (-1, -1) else list(m.span(i)) for i in range(1, m.re.groups + 1)]
+            return {"stop": m.end(), "groups": gs, "last": m.lastindex}
+        return common.py_result(body)
 
     @classmethod
     def gen_validate(cls, r):
@@ -2087,6 +2157,8 @@ class ReArea:
 
     @classmethod
     def run(cls, c):
+        if c["fn"] == "re.sem":
+            return cls.run_sem(c)
         if c["fn"] == "re.exec":
             return cls.run_exec(c)
         if c["fn"] == "re.validate":

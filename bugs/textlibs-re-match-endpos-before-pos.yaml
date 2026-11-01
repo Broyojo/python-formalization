@@ -1,0 +1,39 @@
+id: textlibs-re-match-endpos-before-pos
+title: "DUPLICATE of #160316: Pattern.match finds a match when endpos is less than pos"
+priority: P3
+kind: spec-violation
+module: textlibs
+files: [Modules/_sre/sre.c]
+functions: ["_sre_SRE_Pattern_match_impl", "_sre_SRE_Pattern_fullmatch_impl"]
+summary: |
+  `re.compile('').match('\n', 1, 0)` returns a match at (1, 1), past endpos, though the docs say no
+  match will be found when endpos is less than pos. `search` returns None, since SRE(search) tests
+  `ptr > end` first, which is proved in the model. `match`, `fullmatch` and `findall` run the engine.
+likelihood: |
+  Low. It needs an endpos before pos and a pattern that can match empty.
+maybe_intended: |
+  No. The docs are explicit, and upstream has fixed it.
+reproducer: |
+  import re
+  m = re.compile('').match('\n', 1, 0)
+  s = re.compile('').search('\n', 1, 0)
+  print(m, s)
+  if m is not None and s is None:
+      print('REPRODUCED textlibs-re-match-endpos-before-pos')
+expected: |
+  None from both.
+observed: |
+  python3 3.14.7: <re.Match span=(1, 1)>, None. REPRODUCED.
+  main 3.16.0a1+dev (the vendored checkout predates the fix): the same. REPRODUCED.
+promised_by: |
+  Doc/library/re.rst:1262-1268 on endpos: "If endpos is less than pos, no match will be found."
+cause: |
+  Modules/_sre/sre.c:799 and :844 call sre_match with no test of start against end; only
+  Modules/_sre/sre_lib.h:1705 has one, for search.
+possible_fix: |
+  Already fixed by PR 160317, merged 2026-10-31; backports 161043 and 161044 were open when checked.
+duplicates: |
+  DUPLICATE of #160316 (closed, completed 2026-10-31), which also shows an out-of-bounds read on
+  mmap subjects. Do not file. Queries: gh search issues --repo python/cpython "endpos"; "endpos less
+  than pos"; "re endpos"; "endpos pos match empty"; gh issue view 160316; gh pr list --search 160316.
+lean: lean/PyLean/TextLibs/ReEngineProps.lean (EndposBeforePos, EndposBeforePosSearch)

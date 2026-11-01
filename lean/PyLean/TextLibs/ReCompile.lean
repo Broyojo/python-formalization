@@ -326,11 +326,17 @@ def compileCharset (charset : List CItem) (flags : Nat) : List Nat :=
 
 /-! ### `_compile`, `Lib/re/_compiler.py:39-219` -/
 
-/-- `_simple`, `Lib/re/_compiler.py:412-419`. -/
-def simple : List Node → Bool
-  | [.literal _] | [.notLiteral _] | [.any] | [.in_ _] => true
-  | [.subpattern none _ _ p] => simple p
-  | _ => false
+mutual
+  /-- `_simple`, `Lib/re/_compiler.py:412-419`. -/
+  def simple : List Node → Bool
+    | [n] => simpleNode n
+    | _ => false
+
+  def simpleNode : Node → Bool
+    | .literal _ | .notLiteral _ | .any | .in_ _ => true
+    | .subpattern none _ _ p => simple p
+    | _ => false
+end
 
 /-- The `op in LITERAL_CODES` branch, `Lib/re/_compiler.py:59-86`. `isNot` is `NOT_LITERAL`. -/
 def compLiteral (flags : Nat) (isNot : Bool) (av : Nat) : List Nat :=
@@ -383,6 +389,22 @@ def atCode (flags : Nat) (a : AtCode) : Nat :=
   | .end_ => if multi then 6 else 5
   | .endString => 7
 
+/-- The `op in ASSERT_CODES` branch, `Lib/re/_compiler.py:150-164`, given the compiled body. The
+look-behind checks come first, as in the source; the body is a pure value, so nothing runs early. -/
+def assertWrap (gw : List (Option (Nat × Nat))) (op : Nat) (d : Int) (p : List Node)
+    (body : Py (List Nat)) : Py (List Nat) := do
+  let back ←
+    if d ≥ 0 then pure 0
+    else
+      let (lo, hi) := getwidth gw p
+      if lo > MAXCODE then
+        (Except.error (.named "PatternError" "looks too much behind") : Py Nat)
+      else if lo ≠ hi then
+        Except.error (.named "PatternError" "look-behind requires fixed-width pattern")
+      else pure lo
+  let c ← body
+  return [op, c.length + 3, back] ++ c ++ [OP_SUCCESS]
+
 mutual
   def compNode (gw : List (Option (Nat × Nat))) (flags : Nat) : Node → Py (List Nat)
     | .literal c => .ok (compLiteral flags false c)
@@ -411,8 +433,8 @@ mutual
       let c ← compList gw flags p
       return [OP_ATOMIC_GROUP, c.length + 2] ++ c ++ [OP_SUCCESS]
     | .failure => .ok [OP_FAILURE]
-    | .assert_ d p => compAssert gw flags OP_ASSERT d p
-    | .assertNot d p => compAssert gw flags OP_ASSERT_NOT d p
+    | .assert_ d p => assertWrap gw OP_ASSERT d p (compList gw flags p)
+    | .assertNot d p => assertWrap gw OP_ASSERT_NOT d p (compList gw flags p)
     | .at_ a => .ok [OP_AT, atCode flags a]
     | .branch alts => do
       let frags ← compAlts gw flags alts
@@ -428,25 +450,12 @@ mutual
     | .grouprefExists g yes no => do
       let y ← compList gw flags yes
       match no with
-      | some (n :: ns) =>
-        let c ← compList gw flags (n :: ns)
-        return [OP_GROUPREF_EXISTS, g - 1, y.length + 3 + 1 - 0] ++ y ++ [OP_JUMP, c.length + 1] ++ c
-      | _ => return [OP_GROUPREF_EXISTS, g - 1, y.length + 2] ++ y
-
-  /-- The `op in ASSERT_CODES` branch, `Lib/re/_compiler.py:150-164`. -/
-  def compAssert (gw : List (Option (Nat × Nat))) (flags op : Nat) (d : Int) (p : List Node) :
-      Py (List Nat) := do
-    let back ←
-      if d ≥ 0 then pure 0
-      else
-        let (lo, hi) := getwidth gw p
-        if lo > MAXCODE then
-          (Except.error (.named "PatternError" "looks too much behind") : Py Nat)
-        else if lo ≠ hi then
-          Except.error (.named "PatternError" "look-behind requires fixed-width pattern")
-        else pure lo
-    let c ← compList gw flags p
-    return [op, c.length + 3, back] ++ c ++ [OP_SUCCESS]
+      | some l =>
+        if l.isEmpty then return [OP_GROUPREF_EXISTS, g - 1, y.length + 2] ++ y
+        else
+          let c ← compList gw flags l
+          return [OP_GROUPREF_EXISTS, g - 1, y.length + 3 + 1 - 0] ++ y ++ [OP_JUMP, c.length + 1] ++ c
+      | none => return [OP_GROUPREF_EXISTS, g - 1, y.length + 2] ++ y
 
   def compList (gw : List (Option (Nat × Nat))) (flags : Nat) : List Node → Py (List Nat)
     | [] => .ok []

@@ -1,5 +1,5 @@
 import PyLean.DiffCore
-import PyLean.TextLibs.ReApi
+import PyLean.TextLibs.ReSem
 
 /-! `re.*` difftest cases; see `difftest/textlibs_diff.py`. Trees travel as nested arrays with
 the opcode's short name first. -/
@@ -106,6 +106,21 @@ def gidxs (j : Json) : Except String (List GIdx) := do
 def encPat (p : Pat) : Json := Json.mkObj [("code", toJson p.code.toList), ("groups", toJson p.groups)]
 
 def run (fn : String) (j : Json) : Except String Json := do
+  if fn == "re.sem" then
+    let pat ← nats (← field j "pat")
+    let flags ← getNat j "flags"
+    let s ← nats (← field j "s")
+    let full ← getBool j "full"
+    return encPy id (do
+      let p ← parse true pat flags
+      match semMatch true p flags pat s 0 s.length full with
+      | none => throw .modelFuel
+      | some none => return Json.null
+      | some (some o) =>
+        return Json.mkObj [("stop", toJson o.stop), ("groups", Json.arr (o.groups.map encOptSpan).toArray),
+          ("last", (match o.last with
+            | some i => toJson i
+            | none => Json.null))] : Py Json)
   if fn == "re.validate" then
     let code ← nats (← field j "code")
     let groups ← getInt j "groups"

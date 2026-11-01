@@ -4,6 +4,7 @@ import PyLean.TextLibs.StructFail
 import PyLean.TextLibs.BinasciiProps7
 import PyLean.TextLibs.CsvRoundTrip
 import PyLean.TextLibs.ReParseProps
+import PyLean.TextLibs.ReCompileProps
 
 /-!
 Text and binary formats, CPython 3.14.7. `Modules/_struct.c` is modelled in
@@ -442,6 +443,66 @@ def entries : List Entry := [
     prop := ``DecodeAgreesDecodebytes, thm := some ``decodeAgreesDecodebytes_refuted
     bug := some "textlibs-base64-decode-per-line"
     notes := "b'YW\\nJj\\n': a group split across two lines." },
+  { id := "textlibs-re-possessive-is-atomic", pyFile := "Modules/_sre/sre_lib.h", pyFns := []
+    statement := "x{m,n}+ is equivalent to (?>x{m,n})."
+    source := "docs: re, x{m,n}+", status := .refuted
+    prop := ``PossessiveIsAtomic, thm := some ``possessiveIsAtomic_refuted
+    bug := some "textlibs-re-possessive-min-count-not-atomic"
+    notes := "(?:a+){2}+ on 'aa'. No function credited: sre_lib.h is one function row family, and this runs part of it." },
+  { id := "textlibs-re-possessive-star-is-atomic", pyFile := "Modules/_sre/sre_lib.h", pyFns := []
+    statement := "x*+, x++ and x?+ are equivalent to (?>x*), (?>x+) and (?>x?)."
+    source := "docs: re, x*+", status := .open
+    prop := ``PossessiveStarIsAtomic
+    notes := "The two forms run different engine code. Needs textlibs-re-sem-agrees-no-self-test, or a direct simulation of possMore against MAX_UNTIL under an atomic group." },
+  { id := "textlibs-re-sem-agrees-documented", pyFile := "Modules/_sre/sre_lib.h", pyFns := []
+    statement := "re.match and re.fullmatch give what the declarative backtracking semantics gives, with possessive repeats as documented."
+    source := "the module's documented backtracking behaviour", status := .refuted
+    prop := ``SemAgreesDocumented, thm := some ``semAgreesDocumented_refuted
+    bug := some "textlibs-re-possessive-min-count-not-atomic"
+    notes := "Same counterexample as textlibs-re-possessive-is-atomic, through the semantics." },
+  { id := "textlibs-re-sem-agrees-per-iteration", pyFile := "Modules/_sre/sre_lib.h", pyFns := []
+    statement := "The same, with each of the first m iterations of a possessive repeat atomic, as re runs them."
+    source := "the module's documented backtracking behaviour", status := .refuted
+    prop := ``SemAgreesPerIteration, thm := some ``semAgreesPerIteration_refuted
+    bug := some "textlibs-re-conditional-stale-end-mark"
+    notes := "(()(?:(?(1)b))??) on 'b' with fullmatch." },
+  { id := "textlibs-re-sem-agrees-no-self-test", pyFile := "Modules/_sre/sre_lib.h", pyFns := []
+    statement := "With no conditional testing an open group, re gives what the semantics gives: the same end, group spans and lastindex."
+    source := "the module's documented backtracking behaviour", status := .open
+    prop := ``SemAgreesNoSelfTest
+    notes := "Difftest 150000/150000 (re.sem, seeds 71-73). Needs a simulation of the compiled code against semSeq, with an invariant relating SSt to SemSt that survives LASTMARK_RESTORE and MARK_POP." },
+  { id := "textlibs-re-endpos-before-pos", pyFile := "Modules/_sre/sre.c", pyFns := []
+    statement := "Pattern.match finds no match when endpos is less than pos."
+    source := "docs: Pattern.search, endpos", status := .refuted
+    prop := ``EndposBeforePos, thm := some ``endposBeforePos_refuted
+    bug := some "textlibs-re-match-endpos-before-pos"
+    notes := "Duplicate of #160316, fixed upstream on 2026-10-31." },
+  { id := "textlibs-re-endpos-before-pos-search", pyFile := "Modules/_sre/sre_lib.h", pyFns := ["SRE(search)"]
+    statement := "Pattern.search finds no match when endpos is less than pos, for every compiled pattern."
+    source := "docs: Pattern.search, endpos", status := .proven
+    prop := ``EndposBeforePosSearch, thm := some ``endposBeforePosSearch_proven },
+  { id := "textlibs-re-backref-matches-literal", pyFile := "Modules/_sre/sre_lib.h", pyFns := []
+    statement := "Under IGNORECASE, (x)\\1 matches wherever x followed by x as literals matches."
+    source := "twin: backreference and literal", status := .refuted
+    prop := ``BackrefMatchesLiteral, thm := some ``backrefMatchesLiteral_refuted
+    bug := some "textlibs-re-backref-extra-cases"
+    notes := "Duplicate of #156513 (open)." },
+  { id := "textlibs-re-bitmap-law", pyFile := "Lib/re/_compiler.py", pyFns := ["_mk_bitmap"]
+    statement := "Bit i of the words _mk_bitmap makes, read as SRE(charset) reads CHARSET, is bit i of the charmap."
+    source := "the engine reads back what the compiler packs", status := .proven
+    prop := ``BitmapLaw, thm := some ``bitmapLaw_proven },
+  { id := "textlibs-re-bytes-to-codes-law", pyFile := "Lib/re/_compiler.py", pyFns := ["_bytes_to_codes"]
+    statement := "Byte i of the words _bytes_to_codes makes, read as SRE(charset) reads the block map of BIGCHARSET, is byte i."
+    source := "the engine reads back what the compiler packs", status := .proven
+    prop := ``BytesToCodesLaw, thm := some ``bytesToCodesLaw_proven },
+  { id := "textlibs-re-overlap-table-law", pyFile := "Lib/re/_compiler.py", pyFns := ["_generate_overlap_table"]
+    statement := "Entry i of the overlap table is the length of the longest proper border of prefix[:i+1], for every prefix."
+    source := "the KMP failure function the search relies on", status := .proven
+    prop := ``OverlapTableLaw, thm := some ``overlapTableLaw_proven },
+  { id := "textlibs-re-simple-width", pyFile := "Lib/re/_compiler.py", pyFns := ["_simple"]
+    statement := "A pattern _simple accepts has width exactly 1."
+    source := "REPEAT_ONE steps back one character at a time", status := .proven
+    prop := ``SimpleWidth, thm := some ``simpleWidth_proven },
   { id := "textlibs-csv-round-trip", pyFile := "Modules/_csv.c"
     pyFns := ["join_reset", "join_append_data", "join_append", "join_append_lineterminator", "csv_writerow_lock_held",
       "csv_writerow", "parse_add_char", "parse_process_char"]
