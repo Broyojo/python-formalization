@@ -2,13 +2,13 @@ file	line	endline	name	signature	status	entry	note
 Modules/_sre/sre.c	60	66	sre_isalnum	static int sre_isalnum(unsigned int ch) {	todo		
 Modules/_sre/sre.c	68	74	sre_tolower	static unsigned int sre_tolower(unsigned int ch) {	todo		
 Modules/_sre/sre.c	76	82	sre_toupper	static unsigned int sre_toupper(unsigned int ch) {	todo		
-Modules/_sre/sre.c	143	146	sre_lower_ascii	static unsigned int sre_lower_ascii(unsigned int ch)	todo		
+Modules/_sre/sre.c	143	146	sre_lower_ascii	static unsigned int sre_lower_ascii(unsigned int ch)	modelled	textlibs-re-ascii-case	
 Modules/_sre/sre.c	154	157	sre_lower_locale	static unsigned int sre_lower_locale(unsigned int ch)	todo		
 Modules/_sre/sre.c	159	162	sre_upper_locale	static unsigned int sre_upper_locale(unsigned int ch)	todo		
 Modules/_sre/sre.c	172	175	sre_lower_unicode	static unsigned int sre_lower_unicode(unsigned int ch)	todo		
 Modules/_sre/sre.c	177	180	sre_upper_unicode	static unsigned int sre_upper_unicode(unsigned int ch)	todo		
-Modules/_sre/sre.c	183	227	sre_category	sre_category(SRE_CODE category, unsigned int ch)	todo		
-Modules/_sre/sre.c	230	235	char_loc_ignore	char_loc_ignore(SRE_CODE pattern, SRE_CODE ch)	todo		
+Modules/_sre/sre.c	183	227	sre_category	sre_category(SRE_CODE category, unsigned int ch)	modelled	textlibs-re-category-negation	
+Modules/_sre/sre.c	230	235	char_loc_ignore	char_loc_ignore(SRE_CODE pattern, SRE_CODE ch)	modelled	textlibs-re-char-loc-ignore	
 Modules/_sre/sre.c	241	248	data_stack_dealloc	data_stack_dealloc(SRE_STATE* state)	todo		
 Modules/_sre/sre.c	251	270	data_stack_grow	data_stack_grow(SRE_STATE* state, Py_ssize_t size)	todo		
 Modules/_sre/sre.c	279	305	repeat_pool_malloc	repeat_pool_malloc(SRE_STATE *state)	todo		
@@ -16,9 +16,9 @@ Modules/_sre/sre.c	308	327	repeat_pool_free	repeat_pool_free(SRE_STATE *state, S
 Modules/_sre/sre.c	330	349	repeat_pool_clear	repeat_pool_clear(SRE_STATE *state)	todo		
 Modules/_sre/sre.c	385	390	get_sre_module_state	get_sre_module_state(PyObject *m)	todo		
 Modules/_sre/sre.c	418	422	_sre_getcodesize_impl	_sre_getcodesize_impl(PyObject *module) /*[clinic end generated code: output=e0db7ce34a6dd7b1 input=bd6f6ecf4916bb2b]*/	todo		
-Modules/_sre/sre.c	433	438	_sre_ascii_iscased_impl	_sre_ascii_iscased_impl(PyObject *module, int character) /*[clinic end generated code: output=4f454b630fbd19a2 input=9f0bd952812c7ed3]*/	todo		
+Modules/_sre/sre.c	433	438	_sre_ascii_iscased_impl	_sre_ascii_iscased_impl(PyObject *module, int character) /*[clinic end generated code: output=4f454b630fbd19a2 input=9f0bd952812c7ed3]*/	modelled	textlibs-re-ascii-case	
 Modules/_sre/sre.c	449	454	_sre_unicode_iscased_impl	_sre_unicode_iscased_impl(PyObject *module, int character) /*[clinic end generated code: output=9c5ddee0dc2bc258 input=51e42c3b8dddb78e]*/	todo		
-Modules/_sre/sre.c	465	469	_sre_ascii_tolower_impl	_sre_ascii_tolower_impl(PyObject *module, int character) /*[clinic end generated code: output=228294ed6ff2a612 input=272c609b5b61f136]*/	todo		
+Modules/_sre/sre.c	465	469	_sre_ascii_tolower_impl	_sre_ascii_tolower_impl(PyObject *module, int character) /*[clinic end generated code: output=228294ed6ff2a612 input=272c609b5b61f136]*/	modelled	textlibs-re-ascii-case	
 Modules/_sre/sre.c	480	484	_sre_unicode_tolower_impl	_sre_unicode_tolower_impl(PyObject *module, int character) /*[clinic end generated code: output=6422272d7d7fee65 input=91d708c5f3c2045a]*/	todo		
 Modules/_sre/sre.c	487	498	state_reset	state_reset(SRE_STATE* state)	todo		
 Modules/_sre/sre.c	501	536	getstring	getstring(PyObject* string, Py_ssize_t* p_length, int* p_isbytes, int* p_charsize, Py_buffer *view)	todo		

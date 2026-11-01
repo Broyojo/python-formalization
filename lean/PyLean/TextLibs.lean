@@ -4,7 +4,7 @@ import PyLean.TextLibs.StructFail
 import PyLean.TextLibs.BinasciiProps7
 import PyLean.TextLibs.CsvRoundTrip
 import PyLean.TextLibs.ReParseProps
-import PyLean.TextLibs.ReApiProps
+import PyLean.TextLibs.ReMisc
 import PyLean.TextLibs.CsvSniffProps
 
 /-!
@@ -577,6 +577,34 @@ def entries : List Entry := [
     statement := "sniff(sample, delimiters) returns a delimiter from delimiters, through both guessers and the preferred fallback."
     source := "docs: Sniffer.sniff", status := .proven
     prop := ``SniffRespectsDelimiters, thm := some ``sniffRespectsDelimiters_proven },
+  { id := "textlibs-re-combine-flags", pyFile := "Lib/re/_compiler.py", pyFns := ["_combine_flags"]
+    statement := "Every bit of _combine_flags: del_flags clears, add_flags sets, and a type flag in add_flags first clears the old type flags."
+    source := "docs: re, inline flag groups", status := .proven
+    prop := ``CombineFlagsLaw, thm := some ``combineFlagsLaw_proven },
+  { id := "textlibs-re-ascii-case", pyFile := "Modules/_sre/sre.c"
+    pyFns := ["sre_lower_ascii", "_sre_ascii_iscased_impl", "_sre_ascii_tolower_impl"]
+    statement := "A code point is ASCII-cased exactly when a case mapping moves it, and the mappings undo each other."
+    source := "twin: iscased and the case mappings", status := .proven
+    prop := ``AsciiCaseLaw, thm := some ``asciiCaseLaw_proven },
+  { id := "textlibs-re-char-loc-ignore", pyFile := "Modules/_sre/sre.c", pyFns := ["char_loc_ignore"]
+    statement := "In the C locale, a letter of either case matches itself and its other case, and nothing else."
+    source := "docs: re.LOCALE with IGNORECASE", status := .proven
+    prop := ``CharLocIgnoreLaw, thm := some ``charLocIgnoreLaw_proven
+    notes := "C locale only. Other locales are out of the model, as the file's header says." },
+  { id := "textlibs-re-category-negation", pyFile := "Modules/_sre/sre.c", pyFns := ["sre_category"]
+    statement := "Under any flags, a category and its negation answer opposite ways for every character."
+    source := "the [\\s\\S] shortcut of _optimize_charset relies on it", status := .proven
+    prop := ``CategoryNegation, thm := some ``categoryNegation_proven },
+  { id := "textlibs-re-compile-law", pyFile := "Lib/re/__init__.py", pyFns := ["_compile"]
+    statement := "_compile: a compiled pattern with flags is ValueError, one without goes through, anything but a string or a pattern is TypeError, and a string compiles under its own kind."
+    source := "docs: re.compile", status := .proven
+    prop := ``ReCompileLaw, thm := some ``reCompileLaw_proven
+    notes := "The caches are not modelled: they only return an earlier result. An unhashable pattern raises at the cache lookup first, which the model's `other` does not separate." },
+  { id := "textlibs-re-escape-round-trip", pyFile := "Lib/re/__init__.py", pyFns := []
+    statement := "re.escape(s) parses to the literal characters of s, with or without VERBOSE."
+    source := "docs: re.escape", status := .open
+    prop := ``EscapeRoundTrip
+    notes := "100000 random strings and every code point below U+0300 agree on CPython. Needs parseSub walked over the escape branch of the tokenizer." },
   { id := "textlibs-csv-round-trip", pyFile := "Modules/_csv.c"
     pyFns := ["join_reset", "join_append_data", "join_append", "join_append_lineterminator", "csv_writerow_lock_held",
       "csv_writerow", "parse_add_char", "parse_process_char"]
