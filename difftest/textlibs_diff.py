@@ -615,6 +615,8 @@ def _main_probe(flags):
 # ---- csv -------------------------------------------------------------------
 
 import csv
+import _csv
+import json
 
 
 def cps(t):
@@ -633,24 +635,229 @@ class NotNum:
         return self.t
 
 
-def csv_obj(j):
+class CsvCtx:
+    reader = None
+    writer = None
+
+
+EXCS = {"ValueError": ValueError, "TypeError": TypeError, "ZeroDivisionError": ZeroDivisionError,
+        "AttributeError": AttributeError, "OSError": OSError}
+
+
+def mk_exc(x):
+    return EXCS[x[0]](x[1])
+
+
+def run_eff(e, ctx):
+    try:
+        if e["e"] == "advance":
+            next(ctx.reader)
+        elif e["e"] == "limit":
+            csv.field_size_limit(csv_obj(e["n"], ctx))
+        else:
+            ctx.writer.writerow(csv_obj(e["row"], ctx))
+    except Exception:
+        pass
+
+
+class Scripted:
+    def __init__(self, steps, ctx):
+        self.steps, self.ctx, self.i = steps, ctx, 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        while self.i < len(self.steps):
+            st = self.steps[self.i]
+            self.i += 1
+            if "s" in st:
+                return txt(st["s"])
+            k = st.get("k")
+            if k == "eff":
+                run_eff(st["e"], self.ctx)
+            elif k == "ret":
+                return csv_obj(st["o"], self.ctx)
+            elif k == "raise":
+                raise mk_exc(st["x"])
+            elif k == "stop":
+                raise StopIteration
+            else:
+                return 7
+        raise StopIteration
+
+
+def key_hash(k):
+    if k is None:
+        return 12345
+    if "hash" in k:
+        raise mk_exc(k["hash"])
+    if "eq" in k:
+        return hash("excel")
+    return hash(txt(k["k"]))
+
+
+def key_eq(k, other):
+    if k is None:
+        return False
+    if "eq" in k:
+        raise mk_exc(k["eq"])
+    return isinstance(other, str) and txt(k["k"]) == other
+
+
+class Other:
+    __module__ = "m"
+
+    def __init__(self, spec, ctx):
+        self.__dict__["_spec"], self.__dict__["_ctx"] = spec, ctx
+
+    def __bool__(self):
+        t = self._spec["truth"]
+        if "raise" in t:
+            raise mk_exc(t["raise"])
+        return t["ok"]
+
+    def __hash__(self):
+        return key_hash(self._spec["key"])
+
+    def __eq__(self, other):
+        return key_eq(self._spec["key"], other)
+
+    def __getattr__(self, n):
+        for k, v in self._spec["attrs"]:
+            if k == n:
+                if "raise" in v:
+                    raise mk_exc(v["raise"])
+                return csv_obj(v["ok"], self._ctx)
+        raise AttributeError(n)
+
+    def __str__(self):
+        st = self._spec["str"]
+        for e in st["effs"]:
+            run_eff(e, self._ctx)
+        if "raise" in st["res"]:
+            raise mk_exc(st["res"]["raise"])
+        return txt(st["res"]["ok"])
+
+    def __iter__(self):
+        it = self._spec["iter"]
+        if "raise" in it:
+            raise mk_exc(it["raise"])
+        return Scripted(it["ok"], self._ctx)
+
+
+class OtherNum(Other):
+    def __float__(self):
+        return 1.0
+
+
+OtherNum.__qualname__ = OtherNum.__name__ = "Other"
+OtherNum.__module__ = "m"
+
+
+class Sub(str):
+    __module__ = "m"
+
+    def __new__(cls, t, key):
+        o = super().__new__(cls, t)
+        o.key = key
+        return o
+
+    def __hash__(self):
+        return key_hash(self.key)
+
+    def __eq__(self, other):
+        return key_eq(self.key, other)
+
+
+class WriteFn:
+    def __init__(self, calls, ctx):
+        self.calls, self.ctx, self.i = calls, ctx, 0
+
+    def __call__(self, line):
+        self.ctx.written.append(cps(line))
+        if self.i >= len(self.calls):
+            return None
+        c = self.calls[self.i]
+        self.i += 1
+        for e in c["effs"]:
+            run_eff(e, self.ctx)
+        if "raise" in c["res"]:
+            raise mk_exc(c["res"]["raise"])
+        return csv_obj(c["res"]["ok"], self.ctx)
+
+
+def csv_obj(j, ctx=None):
     if j is None:
         return None
     if "s" in j:
         return txt(j["s"])
     if "i" in j:
         return j["i"]
+    if "big" in j:
+        return 10**4400
     if "b" in j:
         return j["b"]
+    if "sub" in j:
+        return Sub(txt(j["sub"]), j["key"])
+    if "d" in j:
+        return csv.get_dialect(txt(j["d"]))
+    if "cls" in j:
+        return getattr(csv, j["cls"])
+    if "func" in j:
+        return WriteFn(j["func"], ctx)
+    if "spec" in j:
+        return (OtherNum if j["spec"]["num"] else Other)(j["spec"], ctx)
     return {"list": [], "float": 1.5, "bytes": b"x"}.get(j["o"], [])
 
 
-def csv_kw(c):
-    return {k: csv_obj(v) for k, v in c["args"].items()}
+def in_child(fn):
+    """Run fn in a forked child: a segfault is a result here, not the end of the run."""
+    rd, wr = os.pipe()
+    pid = os.fork()
+    if pid == 0:
+        os.close(rd)
+        try:
+            out = fn()
+        except BaseException as e:
+            out = {"exc": type(e).__name__, "msg": str(e)}
+        os.write(wr, json.dumps(out).encode())
+        os._exit(0)
+    os.close(wr)
+    buf = b""
+    while True:
+        chunk = os.read(rd, 65536)
+        if not chunk:
+            break
+        buf += chunk
+    os.close(rd)
+    _, status = os.waitpid(pid, 0)
+    if os.WIFSIGNALED(status) or not buf:
+        return {"exc": "SegmentationFault", "msg": ""}
+    return json.loads(buf)
 
 
-def csv_src(c):
-    return () if c.get("src") is None else (txt(c["src"]),)
+def enc_ret(x):
+    if x is None:
+        return None
+    if type(x) is str:
+        return {"s": cps(x)}
+    if type(x) is bool:
+        return {"b": x}
+    if type(x) is int:
+        return {"i": x}
+    return {"obj": None}
+
+
+def csv_kw(c, ctx=None):
+    return {k: csv_obj(v, ctx) for k, v in c["args"].items()}
+
+
+def csv_src(c, ctx=None):
+    v = c.get("src")
+    if v is None:
+        return ()
+    return (txt(v),) if isinstance(v, list) else (csv_obj(v, ctx),)
 
 
 def enc_dialect(d):
@@ -668,23 +875,35 @@ def enc_field(x):
     return {"f": float_bits(x)}
 
 
+def norm_msg(m):
+    if m.startswith("could not convert"):
+        return "~could not convert string to float: "
+    if "unexpected keyword argument" in m:
+        return "~this function got an unexpected keyword argument"
+    if m.startswith("dict contains fields"):
+        return "~dict contains fields not in fieldnames"
+    if m.startswith("extrasaction"):
+        return "~extrasaction must be 'raise' or 'ignore'"
+    if m.startswith("zip("):
+        return "~zip() argument must support iteration"
+    return m
+
+
 def norm_exc(e):
-    m = str(e)
-    if isinstance(e, ValueError) and m.startswith("could not convert"):
-        m = "~could not convert string to float"
-    return [type(e).__name__, m]
+    return [type(e).__name__, norm_msg(str(e))]
 
 
-def csv_line(j):
-    return txt(j["s"]) if "s" in j else 7
-
-
-def wfield(j):
-    if j is None:
-        return None
-    if "s" in j:
-        return txt(j["s"])
-    return (int(txt(j["t"])) if j["num"] else NotNum(txt(j["t"])))
+def spec_obj(r, depth=0):
+    """A random object with fallible behaviour; the Lean side builds the same thing."""
+    x = lambda: [r.choice(["ValueError", "TypeError", "ZeroDivisionError", "OSError"]), "boom"]
+    res = lambda ok, p=0.25: {"raise": x()} if r.random() < p else {"ok": ok}
+    attrs = []
+    return {"o": "Other", "spec": {
+        "truth": res(r.random() < 0.5),
+        "key": r.choice([None, None, {"hash": x()}, {"eq": x()}, {"k": cps("excel")}]),
+        "attrs": attrs, "num": r.random() < 0.3,
+        "str": {"effs": [], "res": res(cps(r.choice(["", "s", "a,b", '"', "12"])))},
+        "iter": res([], 0.5)}}
 
 
 @area("csv", 6)
@@ -744,13 +963,23 @@ class CsvArea:
 
     @classmethod
     def gen(cls, r):
-        fn = r.choice(["dialect", "reader", "reader", "reader", "reader", "writerow", "writerow", "writerows",
-                       "roundtrip", "roundtrip", "field_size_limit", "registry", "get_dialect", "dictreader",
-                       "dictwriter", "writeheader", "extrasaction"])
+        fn = r.choice(["dialect", "dialect", "reader", "reader", "reader", "reader", "script", "script", "script", "writer",
+                       "writer", "writer", "roundtrip", "roundtrip", "field_size_limit", "registry", "get_dialect", "unpack",
+                       "dictreader", "dictwriter", "dictwriterows", "writeheader", "extrasaction", "classvalidate"])
         c = {"mod": "textlibs", "fn": "csv." + fn}
         if fn == "dialect":
-            c["args"] = cls.args(r, False)
-            c["src"] = r.choice([None, None, cps("excel"), cps("unix"), cps("excel-tab"), cps("nope")])
+            c["args"] = r.choice([{}, {}, cls.args(r, False), cls.args(r, True)])
+            c["src"] = r.choice([None, None, cps("excel"), cps("unix"), cps("excel-tab"), cps("nope"), {"d": cps("excel")}, {"d": cps("unix")},
+                                 {"cls": "excel"}, {"cls": "unix_dialect"}, None, {"i": 1}, spec_obj(r)])
+            if c["src"] is None and "None" == r.choice(["None", "x", "x", "x"]):
+                c["src"] = {"o": "float", "t": True}
+            if r.random() < 0.05:
+                c["args"]["bogus"] = {"i": 1}
+            if r.random() < 0.05 and c["src"] is not None:
+                c["args"]["dialect"] = {"s": cps("excel")}
+            if r.random() < 0.15:
+                k = r.choice(["doublequote", "skipinitialspace", "strict"])
+                c["args"][k] = spec_obj(r)
         elif fn in ("reader", "roundtrip"):
             c["fn"] = "csv.reader"
             a = cls.valid_args(r) if r.random() < 0.9 else cls.args(r, False)
@@ -779,28 +1008,97 @@ class CsvArea:
             if r.random() < 0.02:
                 c["lines"].insert(r.randint(0, len(c["lines"])), {"o": "int"})
             c["limit"] = r.choice([131072, 131072, 131072, 3, 1, 0, -1])
-        elif fn in ("writerow", "writerows"):
+        elif fn == "script":
+            c["fn"] = "csv.reader"
+            a = cls.valid_args(r)
+            c["args"], c["src"] = a, None
+            q = a.get("quoting", {}).get("i", 0)
+
+            def step():
+                roll = r.random()
+                if roll < 0.5:
+                    t = r.choice(['"abc', 'a,b', '"q"', 'x"', '', '1', 'a"b,c', '"a\n', 'b"\n', 'abcd,efgh', '\n'])
+                    return {"s": cps(t)}
+                if roll < 0.68:
+                    return {"k": "eff", "e": {"e": "advance"}}
+                if roll < 0.76:
+                    return {"k": "eff", "e": {"e": "limit", "n": r.choice([{"i": 2}, {"i": 131072}, {"s": cps("x")}, {"i": 2**70}])}}
+                if roll < 0.86:
+                    return {"k": "raise", "x": [r.choice(["ValueError", "TypeError", "OSError"]), "boom"]}
+                if roll < 0.96:
+                    return {"k": "stop"}
+                return {"o": "int"}
+
+            c["lines"] = [step() for _ in range(r.choice([1, 2, 3, 4, 6, 8]))]
+            c["limit"] = r.choice([131072, 131072, 3])
+        elif fn == "writer":
             a = cls.valid_args(r) if r.random() < 0.9 else cls.args(r, False)
             c["args"], c["src"] = a, None
 
-            def row():
-                out = []
-                for _ in range(r.choice([0, 1, 1, 2, 3, 4])):
-                    roll = r.random()
-                    if roll < 0.7:
-                        out.append({"s": cps(cls.text(r, False))})
-                    elif roll < 0.85:
-                        out.append(None)
-                    elif roll < 0.95:
-                        out.append({"t": cps(str(r.choice([0, 1, -5, 123]))), "num": True})
-                    else:
-                        out.append({"t": cps(cls.text(r, False)), "num": False})
-                return out
+            def eff(depth):
+                return {"e": "row", "row": row_obj(depth + 1)}
 
-            if fn == "writerow":
-                c["row"] = row()
-            else:
-                c["rows"] = [row() for _ in range(r.choice([0, 1, 2, 3]))]
+            def field(depth):
+                roll = r.random()
+                if roll < 0.55:
+                    return {"s": cps(cls.text(r, False))}
+                if roll < 0.68:
+                    return None
+                if roll < 0.78:
+                    return r.choice([{"i": 0}, {"i": -5}, {"i": 123}, {"big": 1}, {"b": True}])
+                if roll < 0.84:
+                    return {"sub": cps(cls.text(r, False)), "key": None}
+                o = spec_obj(r)
+                if r.random() < 0.3 and depth < 1:
+                    o["spec"]["str"]["effs"] = [eff(depth)]
+                return o
+
+            def row_obj(depth):
+                roll = r.random()
+                n = r.choice([0, 1, 1, 2, 3, 4])
+                if roll < 0.5:
+                    return {"o": "Other", "spec": {"truth": {"ok": True}, "key": None, "attrs": [], "num": False,
+                                                   "str": {"effs": [], "res": {"ok": []}},
+                                                   "iter": {"ok": [{"k": "ret", "o": field(depth)} for _ in range(n)]}}}
+                steps = []
+                for _ in range(n + 1):
+                    k = r.random()
+                    if k < 0.65:
+                        steps.append({"k": "ret", "o": field(depth)})
+                    elif k < 0.75 and depth < 1:
+                        steps.append({"k": "eff", "e": eff(depth)})
+                    elif k < 0.85:
+                        steps.append({"k": "raise", "x": [r.choice(["ValueError", "OSError"]), "boom"]})
+                    else:
+                        steps.append({"k": "stop"})
+                res = {"raise": [r.choice(["TypeError", "ValueError"]), "boom"]} if r.random() < 0.1 else {"ok": steps}
+                return {"o": "Other", "spec": {"truth": {"ok": True}, "key": None, "attrs": [], "num": False,
+                                               "str": {"effs": [], "res": {"ok": []}}, "iter": res}}
+
+            calls = []
+            for _ in range(r.choice([0, 1, 2])):
+                res = r.choice([{"ok": None}, {"ok": {"i": 42}}, {"ok": {"s": cps("x")}}, {"raise": ["OSError", "boom"]}, {"ok": {"b": False}}])
+                calls.append({"effs": [eff(0)] if r.random() < 0.2 else [], "res": res})
+            c["file"] = {"o": "Other", "spec": {"truth": {"ok": True}, "key": None, "num": False, "str": {"effs": [], "res": {"ok": []}},
+                                                "iter": {"ok": []}, "attrs": [["write", {"ok": {"func": calls}}]]}}
+            if r.random() < 0.05:
+                c["file"] = r.choice([{"i": 1}, {"o": "Other", "spec": {"truth": {"ok": True}, "key": None, "num": False,
+                                                                       "str": {"effs": [], "res": {"ok": []}}, "iter": {"ok": []},
+                                                                       "attrs": r.choice([[["write", {"raise": ["OSError", "boom"]}]],
+                                                                                          [["write", {"ok": {"i": 1}}]], []])}}])
+            ops = []
+            for _ in range(r.choice([1, 1, 2, 3])):
+                if r.random() < 0.7:
+                    ops.append(["row", row_obj(0) if r.random() < 0.95 else r.choice([{"i": 1}, None, {"s": cps("ab")}])])
+                else:
+                    rows = [{"k": "ret", "o": row_obj(0)} for _ in range(r.choice([0, 1, 2, 3]))]
+                    if r.random() < 0.3:
+                        rows.append({"k": "raise", "x": ["ValueError", "boom"]})
+                    if r.random() < 0.2:
+                        rows.insert(0, {"k": "eff", "e": eff(0)})
+                    ops.append(["rows", {"o": "Other", "spec": {"truth": {"ok": True}, "key": None, "attrs": [], "num": False,
+                                                                "str": {"effs": [], "res": {"ok": []}}, "iter": {"ok": rows}}}])
+            c["ops"] = ops
         elif fn == "field_size_limit":
             c["cur"] = 131072
             c["new"] = r.choice([{"i": 5}, {"i": 0}, {"i": -1}, {"i": 2**70}, {"o": "float", "t": True}, {"b": True}, None])
@@ -808,10 +1106,31 @@ class CsvArea:
                 del c["new"]
         elif fn == "registry":
             c["op"] = r.choice(["register", "unregister"])
-            c["name"] = r.choice([cps("mine"), cps("excel"), cps("nope"), cps("unix")])
+            c["name"] = r.choice([{"s": cps("mine")}, {"s": cps("excel")}, {"s": cps("nope")}, {"s": cps("unix")}, {"i": 1}, None,
+                                  {"sub": cps("mine"), "key": r.choice([None, {"k": cps("excel")}, {"hash": ["ValueError", "boom"]},
+                                                                        {"hash": ["TypeError", "boom"]}, {"eq": ["TypeError", "boom"]}])},
+                                  spec_obj(r), {"o": "list", "t": False}])
             c["args"] = cls.args(r, r.random() < 0.8)
+            c["src"] = r.choice([None, None, {"d": cps("excel")}, cps("unix"), cps("nope")])
         elif fn == "get_dialect":
-            c["name"] = r.choice([cps("excel"), cps("excel-tab"), cps("unix"), cps("nope")])
+            c["name"] = r.choice([{"s": cps("excel")}, {"s": cps("excel-tab")}, {"s": cps("unix")}, {"s": cps("nope")}, {"i": 1}, None,
+                                  {"o": "list", "t": False}, spec_obj(r),
+                                  {"sub": cps("zz"), "key": r.choice([None, {"k": cps("unix")}, {"hash": ["TypeError", "boom"]}])}])
+        elif fn == "unpack":
+            c["f"] = r.choice(["reader", "writer", "register_dialect"])
+            c["pos"] = [r.choice([{"i": 1}, {"s": cps("a")}, None, {"s": cps("excel")}]) for _ in range(r.choice([0, 0, 1, 2, 3, 4]))]
+        elif fn == "classvalidate":
+            attrs = []
+            for k, v in [("delimiter", {"s": cps(",")}), ("quotechar", {"s": cps('"')}), ("quoting", {"i": 0}), ("doublequote", {"b": True})]:
+                roll = r.random()
+                if roll < 0.5:
+                    attrs.append([k, {"ok": v}])
+                elif roll < 0.7:
+                    attrs.append([k, {"ok": r.choice([{"s": cps("ab")}, {"i": 9}, None, {"s": cps("\n")}])}])
+                elif roll < 0.85:
+                    attrs.append([k, {"raise": ["ZeroDivisionError", "boom"]}])
+            c["obj"] = {"o": "Other", "spec": {"truth": {"ok": True}, "key": None, "num": False, "str": {"effs": [], "res": {"ok": []}},
+                                               "iter": {"ok": []}, "attrs": attrs}}
         elif fn == "dictreader":
             c["lines"] = [{"s": cps(r.choice(["a,b\r\n", "1,2,3\n", "\n", "x\r\n", ",\n", "", "a,a\n", "p,q,r,s\n"]))}
                           for _ in range(r.choice([0, 1, 2, 3, 4]))]
@@ -822,6 +1141,12 @@ class CsvArea:
             c["raises"] = r.random() < 0.5
             c["row"] = [[cps(k), {"s": cps(v)}] for k, v in
                         r.choice([[("a", "1")], [("a", "1"), ("b", "x,y")], [("c", "3")], [], [("a", "1"), ("c", "3")]])]
+        elif fn == "dictwriterows":
+            c["names"] = r.choice([[cps("a"), cps("b")], [cps("b")], []])
+            c["raises"] = r.random() < 0.5
+            c["rows"] = [[[cps(k), {"s": cps(v)}] for k, v in
+                          r.choice([[("a", "1")], [("a", "1"), ("b", "x,y")], [("c", "3")], [], [("a", "1"), ("c", "3")]])]
+                         for _ in range(r.choice([0, 1, 2, 3]))]
         elif fn == "writeheader":
             c["names"] = r.choice([[cps("a"), cps("b")], [cps("x,y")], [], [cps("a"), cps("a")]])
         else:
@@ -831,35 +1156,15 @@ class CsvArea:
     @classmethod
     def run(cls, c):
         fn = c["fn"].split(".")[1]
+        if fn in ("reader", "writer"):
+            return in_child(lambda: cls.run_io(c, fn))
 
         def body():
+            ctx = CsvCtx()
             if fn == "dialect":
-                return enc_dialect(csv.reader([], *csv_src(c), **csv_kw(c)).dialect)
-            if fn == "reader":
-                rd = csv.reader([csv_line(l) for l in c["lines"]], *csv_src(c), **csv_kw(c))
-                old = csv.field_size_limit(c["limit"])
-                rows, exc = [], None
-                try:
-                    for row in rd:
-                        rows.append([enc_field(x) for x in row])
-                except Exception as e:
-                    exc = norm_exc(e)
-                finally:
-                    csv.field_size_limit(old)
-                return {"rows": rows, "exc": exc, "n": rd.line_num}
-            if fn == "writerow":
-                buf = io.StringIO(newline="")
-                csv.writer(buf, *csv_src(c), **csv_kw(c)).writerow([wfield(x) for x in c["row"]])
-                return cps(buf.getvalue())
-            if fn == "writerows":
-                buf = io.StringIO(newline="")
-                w = csv.writer(buf, *csv_src(c), **csv_kw(c))
-                exc = None
-                try:
-                    w.writerows([[wfield(x) for x in row] for row in c["rows"]])
-                except Exception as e:
-                    exc = norm_exc(e)
-                return {"text": cps(buf.getvalue()), "exc": exc}
+                src = csv_src(c, ctx)
+                d = _csv.Dialect(*src, **csv_kw(c, ctx))
+                return {"d": enc_dialect(d), "same": bool(src) and d is src[0] or (bool(src) and isinstance(src[0], str) and d is csv.get_dialect(src[0]))}
             if fn == "field_size_limit":
                 old = csv.field_size_limit()
                 try:
@@ -872,10 +1177,11 @@ class CsvArea:
             if fn == "registry":
                 saved = {n: csv.get_dialect(n) for n in csv.list_dialects()}
                 try:
+                    name = csv_obj(c["name"], ctx)
                     if c["op"] == "register":
-                        csv.register_dialect(txt(c["name"]), **csv_kw(c))
+                        csv.register_dialect(name, *csv_src(c, ctx), **csv_kw(c, ctx))
                     else:
-                        csv.unregister_dialect(txt(c["name"]))
+                        csv.unregister_dialect(name)
                     return [cps(n) for n in csv.list_dialects()]
                 finally:
                     for n in list(csv.list_dialects()):
@@ -883,18 +1189,35 @@ class CsvArea:
                     for n, d in saved.items():
                         csv.register_dialect(n, d)
             if fn == "get_dialect":
-                return enc_dialect(csv.get_dialect(txt(c["name"])))
+                return enc_dialect(csv.get_dialect(csv_obj(c["name"], ctx)))
+            if fn == "unpack":
+                pos = [csv_obj(x, ctx) for x in c["pos"]]
+                saved = list(csv.list_dialects())
+                if c["f"] == "reader":
+                    csv.reader(*pos)
+                    return None
+                if c["f"] == "writer":
+                    csv.writer(*pos)
+                    return None
+                try:
+                    csv.register_dialect(*pos)
+                    return [cps(n) for n in csv.list_dialects()]
+                finally:
+                    for n in list(csv.list_dialects()):
+                        if n not in saved:
+                            csv.unregister_dialect(n)
             if fn == "dictreader":
                 names = None if c["names"] is None else [txt(n) for n in c["names"]]
                 rk = None if c["restkey"] is None else txt(c["restkey"])
                 sentinel = object()
-                rd = csv.DictReader([txt(l["s"]) for l in c["lines"]], fieldnames=names, restkey=rk, restval=sentinel)
+                rd = csv.DictReader(Scripted(c["lines"], ctx), fieldnames=names, restkey=rk, restval=sentinel)
+                ctx.reader = rd.reader
                 rows, exc = [], None
                 try:
                     for d in rd:
                         row = []
                         for k, v in d.items():
-                            jk = None if k is None else cps(k)
+                            jk = enc_field(k)
                             if v is sentinel:
                                 row.append([jk, {"restval": None}])
                             elif k == rk and isinstance(v, list):
@@ -904,23 +1227,62 @@ class CsvArea:
                         rows.append(row)
                 except Exception as e:
                     exc = norm_exc(e)
-                return {"rows": rows, "exc": exc}
-            if fn == "dictwriter":
-                buf = io.StringIO(newline="")
-                w = csv.DictWriter(buf, [txt(n) for n in c["names"]], extrasaction="raise" if c["raises"] else "ignore")
-                w.writerow({txt(k): wfield(v) for k, v in c["row"]})
-                return cps(buf.getvalue())
-            if fn == "writeheader":
-                buf = io.StringIO(newline="")
-                csv.DictWriter(buf, [txt(n) for n in c["names"]]).writeheader()
-                return cps(buf.getvalue())
+                return {"rows": rows, "exc": exc, "n": rd.line_num}
+            if fn in ("dictwriter", "dictwriterows", "writeheader"):
+                ctx.written = []
+                f = type("F", (), {"write": WriteFn([], ctx)})()
+                names = [txt(n) for n in c["names"]]
+                w = csv.DictWriter(f, names, extrasaction="raise" if c.get("raises", True) else "ignore")
+                try:
+                    if fn == "dictwriter":
+                        r = {"ok": enc_ret(w.writerow({txt(k): csv_obj(v, ctx) for k, v in c["row"]}))}
+                    elif fn == "dictwriterows":
+                        r = {"ok": enc_ret(w.writerows([{txt(k): csv_obj(v, ctx) for k, v in row} for row in c["rows"]]))}
+                    else:
+                        r = {"ok": enc_ret(w.writeheader())}
+                except Exception as e:
+                    r = {"exc": type(e).__name__, "msg": norm_msg(str(e))}
+                return {"res": r, "written": ctx.written}
+            if fn == "classvalidate":
+                obj = csv_obj(c["obj"], ctx)
+                try:
+                    _csv.Dialect(obj)
+                except TypeError as e:
+                    raise csv.Error(str(e)) from None
+                return None
             csv.DictWriter(io.StringIO(), ["a"], extrasaction=txt(c["s"]))
             return txt(c["s"]).lower() == "raise"
 
         res = common.py_result(body)
-        if "exc" in res and (res["msg"].startswith("dict contains fields") or res["msg"].startswith("extrasaction")):
-            res["msg"] = {"d": "~dict contains fields not in fieldnames", "e": "~extrasaction must be 'raise' or 'ignore'"}[res["msg"][0]]
+        if "exc" in res:
+            res["msg"] = norm_msg(res["msg"])
         return res
+
+    @classmethod
+    def run_io(cls, c, fn):
+        ctx = CsvCtx()
+        ctx.written = []
+        if fn == "reader":
+            rd = csv.reader(Scripted(c["lines"], ctx), *csv_src(c), **csv_kw(c, ctx))
+            ctx.reader = rd
+            csv.field_size_limit(c["limit"])
+            rows, exc = [], None
+            try:
+                for row in rd:
+                    rows.append([enc_field(x) for x in row])
+            except Exception as e:
+                exc = norm_exc(e)
+            return {"ok": {"rows": rows, "exc": exc, "n": rd.line_num, "limit": csv.field_size_limit()}}
+        wr = csv.writer(csv_obj(c["file"], ctx), *csv_src(c), **csv_kw(c, ctx))
+        ctx.writer = wr
+        out = []
+        for k, o in c["ops"]:
+            try:
+                x = (wr.writerow if k == "row" else wr.writerows)(csv_obj(o, ctx))
+                out.append({"ok": enc_ret(x)})
+            except Exception as e:
+                out.append({"exc": type(e).__name__, "msg": norm_msg(str(e))})
+        return {"ok": {"res": out, "written": ctx.written}}
 
 
 # ---- re --------------------------------------------------------------------

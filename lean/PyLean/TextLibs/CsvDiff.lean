@@ -1,7 +1,8 @@
 import PyLean.DiffCore
 import PyLean.TextLibs.CsvModel
 
-/-! `csv.*` difftest cases; see `difftest/textlibs_diff.py`. -/
+/-! `csv.*` difftest cases; see `difftest/textlibs_diff.py`. Objects arrive as JSON descriptions,
+and the Python side builds real objects from the same description. -/
 
 namespace PyLean.TextLibs.Csv
 
@@ -10,29 +11,104 @@ open Lean PyLean PyLean.Diff
 def nats (j : Json) : Except String (List Nat) := do
   (← j.getArr?).toList.mapM Json.getNat?
 
-def decObj (j : Json) : Except String Obj := do
-  if j.isNull then return .none
-  if let .ok s := j.getObjVal? "s" then return .str (← nats s)
-  if let .ok n := j.getObjVal? "i" then return .int (← n.getInt?)
-  if let .ok b := j.getObjVal? "b" then return .bool (← b.getBool?)
-  return .other (← getStr j "o") (← getBool j "t")
+def decExc (j : Json) : Except String PyExc := do
+  let a ← j.getArr?
+  let cls ← a[0]!.getStr?
+  let msg ← a[1]!.getStr?
+  return match cls with
+    | "ValueError" => .valueError msg
+    | "TypeError" => .typeError msg
+    | _ => .named cls msg
 
-def optObj (j : Json) (k : String) : Except String (Option Obj) :=
-  match j.getObjVal? k with
-  | .error _ => .ok Option.none
-  | .ok v => some <$> decObj v
+def decKey (j : Json) : Except String KeyProbe := do
+  if j.isNull then return .noMatch
+  if let .ok e := j.getObjVal? "hash" then return .hashRaises (← decExc e)
+  if let .ok e := j.getObjVal? "eq" then return .eqRaises (← decExc e)
+  return .equals (← nats (← field j "k"))
 
-def decArgs (j : Json) : Except String DArgs := do
-  return { delimiter := ← optObj j "delimiter", doublequote := ← optObj j "doublequote",
-           escapechar := ← optObj j "escapechar", lineterminator := ← optObj j "lineterminator",
-           quotechar := ← optObj j "quotechar", quoting := ← optObj j "quoting",
-           skipinitialspace := ← optObj j "skipinitialspace", strict := ← optObj j "strict" }
+def decTy (j : Json) : Except String TyName := do
+  return ⟨← getStr j "full", ← getStr j "tp", ← getStr j "short"⟩
 
-def decSrc (r : Registry) (j : Json) : Except String DSrc := do
-  let _ := r
+def otherTy : TyName := ⟨"m.Other", "Other", "Other"⟩
+
+/-- `{"ok": v}` or `{"raise": [cls, msg]}`. -/
+def decRes {α : Type} (f : Json → Except String α) (j : Json) : Except String (Except PyExc α) := do
+  if let .ok e := j.getObjVal? "raise" then return .error (← decExc e)
+  return .ok (← f (← field j "ok"))
+
+def builtinOther (name : String) (t : Bool) : Obj :=
+  let ty := builtinTy name
+  let notIter : Except PyExc (List Step) := .error (.typeError s!"'{name}' object is not iterable")
+  match name with
+  | "list" => .other ty (.ok t) (.hashRaises (.typeError "unhashable type: 'list'")) [] false
+      ([], .ok (strToList "[]")) (.ok [])
+  | "float" => .other ty (.ok t) .noMatch [] true ([], .ok (strToList "1.5")) notIter
+  | "bytes" => .other ty (.ok t) .noMatch [] false ([], .ok (strToList "b'x'")) (.ok [.ret (.int 120)])
+  | _ => .other ty (.ok t) .noMatch [] false ([], .ok []) notIter
+
+mutual
+  partial def decObj (j : Json) : Except String Obj := do
+    if j.isNull then return .none
+    if let .ok s := j.getObjVal? "s" then return .str (← nats s)
+    if let .ok n := j.getObjVal? "i" then return .int (← n.getInt?)
+    if (j.getObjVal? "big").toOption.isSome then return .int (10 ^ 4400)
+    if let .ok b := j.getObjVal? "b" then return .bool (← b.getBool?)
+    if let .ok s := j.getObjVal? "sub" then
+      return .strSub ⟨"m.Sub", "Sub", "Sub"⟩ (← nats s) (← decKey (← field j "key"))
+    if let .ok n := j.getObjVal? "d" then
+      return (initialRegistry.lookup (← nats n)).getD .none
+    if let .ok n := j.getObjVal? "cls" then
+      return match ← n.getStr? with
+        | "excel" => dialectClass "excel" [44] [13, 10] QUOTE_MINIMAL
+        | "excel_tab" => dialectClass "excel_tab" [9] [13, 10] QUOTE_MINIMAL
+        | _ => dialectClass "unix_dialect" [44] [10] QUOTE_ALL
+    if let .ok c := j.getObjVal? "func" then
+      return .func (← (← c.getArr?).toList.mapM decCall)
+    if let .ok o := j.getObjVal? "o" then
+      if let .ok spec := j.getObjVal? "spec" then
+        let attrs ← (← (← field spec "attrs").getArr?).toList.mapM fun p => do
+          let a ← p.getArr?
+          return ((← a[0]!.getStr?), (← decRes decObj a[1]!))
+        let st ← field spec "str"
+        let effs ← (← (← field st "effs").getArr?).toList.mapM decEff
+        return .other otherTy (← decRes Json.getBool? (← field spec "truth")) (← decKey (← field spec "key"))
+          attrs (← getBool spec "num") (effs, ← decRes nats (← field st "res"))
+          (← decRes (fun x => do (← x.getArr?).toList.mapM decStep) (← field spec "iter"))
+      return builtinOther (← o.getStr?) (← getBool j "t")
+    throw "bad object"
+
+  partial def decEff (j : Json) : Except String Eff := do
+    match ← getStr j "e" with
+    | "advance" => return .advance
+    | "limit" => return .setLimit (← decObj (← field j "n"))
+    | _ => return .writerow (← decObj (← field j "row"))
+
+  partial def decStep (j : Json) : Except String Step := do
+    match ← getStr j "k" with
+    | "eff" => return .eff (← decEff (← field j "e"))
+    | "ret" => return .ret (← decObj (← field j "o"))
+    | "raise" => return .raise (← decExc (← field j "x"))
+    | _ => return .stop
+
+  partial def decCall (j : Json) : Except String (List Eff × Except PyExc Obj) := do
+    let effs ← (← (← field j "effs").getArr?).toList.mapM decEff
+    return (effs, ← decRes decObj (← field j "res"))
+end
+
+def kwOf (j : Json) : Except String (List (List Nat × Obj)) := do
+  match j.getObjVal? "args" with
+  | .error _ => return []
+  | .ok v =>
+    let o ← v.getObj?
+    let l := o.toArray.toList
+    l.mapM fun p => do return (strToList p.1, ← decObj p.2)
+
+def srcOf (j : Json) : Except String (List Obj) := do
   match j.getObjVal? "src" with
-  | .ok .null | .error _ => return .absent
-  | .ok v => return .name (← nats v)
+  | .ok .null | .error _ => return []
+  | .ok v =>
+    if (v.getArr?).toOption.isSome then return [.str (← nats v)]
+    return [← decObj v]
 
 def encChar (c : Nat) : Json := if c = NOT_SET then Json.null else toJson [c]
 
@@ -45,95 +121,139 @@ def encDialect (d : Dialect) : Json :=
 def encField : Field → Json
   | .str s => Json.mkObj [("s", toJson s)]
   | .none => Json.null
-  | .float b => Json.mkObj [("f", toJson b)]
+  | .float x => Json.mkObj [("f", toJson x.bits)]
 
 def encExc : Option PyExc → Json
   | Option.none => Json.null
   | some e => Json.arr #[toJson e.className, toJson e.message]
 
-def decLine (j : Json) : Except String Line := do
-  if let .ok s := j.getObjVal? "s" then return .str (← nats s)
-  return .notStr (← getStr j "o")
+def encObj : Obj → Json
+  | .none => Json.null
+  | .str s => Json.mkObj [("s", toJson s)]
+  | .int n => Json.mkObj [("i", toJson n)]
+  | .bool b => Json.mkObj [("b", toJson b)]
+  | _ => Json.mkObj [("obj", Json.null)]
 
-def getLines (j : Json) : Except String (List Line) := do
+def fuelFor (n : Nat) : Nat := 64 + 16 * n
+
+def decLine (j : Json) : Except String Step := do
+  if let .ok s := j.getObjVal? "s" then return .ret (.str (← nats s))
+  if (j.getObjVal? "k").toOption.isSome then return ← decStep j
+  return .ret (.int 7)
+
+def getLines (j : Json) : Except String (List Step) := do
   (← (← field j "lines").getArr?).toList.mapM decLine
 
-def decW (j : Json) : Except String WField := do
-  if j.isNull then return .none
-  if let .ok s := j.getObjVal? "s" then return .str (← nats s)
-  return .other (← nats (← field j "t")) (← getBool j "num")
-
-def getRow (j : Json) : Except String (List WField) := do
-  j.getArr? >>= fun a => a.toList.mapM decW
-
-def dialectOf (j : Json) : Except String (Py Dialect) := do
-  let a ← decArgs (← field j "args")
-  return dialectNew initialRegistry (← decSrc initialRegistry j) a
-
-def encPairs (d : List (Option (List Nat) × DVal)) : Json :=
+def encPairs (d : List (Field × DVal)) : Json :=
   Json.arr (d.map fun p =>
-    Json.arr #[(match p.1 with | some k => toJson k | Option.none => Json.null),
+    Json.arr #[encField p.1,
       (match p.2 with
        | .field f => encField f
        | .rest fs => Json.mkObj [("rest", Json.arr (fs.map encField).toArray)]
        | .restval => Json.mkObj [("restval", Json.null)])]).toArray
 
+def encRows (rows : List (List Field)) : Json :=
+  Json.arr (rows.map fun r => Json.arr (r.map encField).toArray).toArray
+
+def encCtx (c : WCtx) : Json := toJson c.written
+
 def run (fn : String) (j : Json) : Except String Json := do
   match fn with
-  | "csv.dialect" => return encPy encDialect (← dialectOf j)
+  | "csv.dialect" =>
+    let pos ← srcOf j
+    return encPy (fun (r : DRes) => Json.mkObj [("d", encDialect r.dialect),
+      ("same", toJson (match r with | .same _ _ => true | .fresh _ _ => false))])
+      (dialectNew initialRegistry dialectTy ⟨pos, ← kwOf j⟩)
   | "csv.reader" =>
     let lines ← getLines j
     let limit ← getInt j "limit"
-    return encPy (fun d =>
-      let (rows, e, n) := readAll d limit (lines.length + 1) lines 0
-      Json.mkObj [("rows", Json.arr (rows.map fun r => Json.arr (r.map encField).toArray).toArray),
-        ("exc", encExc e), ("n", toJson n)]) (← dialectOf j)
-  | "csv.writerow" =>
-    let row ← getRow (← field j "row")
-    let d? ← dialectOf j
-    return encPy toJson (do writerow (← d?) row)
-  | "csv.writerows" =>
-    let rows ← (← (← field j "rows").getArr?).toList.mapM getRow
-    return encPy (fun d =>
-      let (t, e) := writerows d rows
-      Json.mkObj [("text", toJson t), ("exc", encExc e)]) (← dialectOf j)
+    let args : Args := ⟨iterObj lines :: (← srcOf j), ← kwOf j⟩
+    return match csvReader initialRegistry limit args with
+      | .error e => encPy (fun (_ : Unit) => Json.null) (.error e)
+      | .ok p =>
+        let (rows, e, c) := readAll p.1 (fuelFor lines.length) (lines.length + 2) p.2
+        if decide (e = some CRASH) then encPy (fun (_ : Unit) => Json.null) (.error CRASH)
+        else Json.mkObj [("ok", Json.mkObj [("rows", encRows rows), ("exc", encExc e),
+          ("n", toJson c.lineNum), ("limit", toJson c.limit)])]
+  | "csv.writer" =>
+    let file ← decObj (← field j "file")
+    let ops ← (← (← field j "ops").getArr?).toList.mapM fun o => do
+      let a ← o.getArr?
+      return ((← a[0]!.getStr?), (← decObj a[1]!))
+    let args : Args := ⟨file :: (← srcOf j), ← kwOf j⟩
+    return encPy (fun (p : Dialect × WCtx) => Id.run do
+      let mut c := p.2
+      let mut out : Array Json := #[]
+      for (k, o) in ops do
+        let (c', r) := if k == "row" then writerowM p.1 256 c o else writerowsM p.1 256 c o
+        c := c'
+        out := out.push (encPy encObj r)
+      return Json.mkObj [("res", Json.arr out), ("written", toJson c.written)])
+      (csvWriter initialRegistry args)
   | "csv.field_size_limit" =>
     let cur ← getInt j "cur"
-    return encPy (fun (p : Int × Int) => Json.arr #[toJson p.1, toJson p.2])
-      (fieldSizeLimit cur (← optObj j "new"))
+    let n ← match j.getObjVal? "new" with
+      | .ok v => some <$> decObj v
+      | .error _ => pure Option.none
+    return encPy (fun (p : Int × Int) => Json.arr #[toJson p.1, toJson p.2]) (fieldSizeLimit cur n)
   | "csv.registry" =>
-    let name ← nats (← field j "name")
+    let name ← decObj (← field j "name")
     let op ← getStr j "op"
-    let a ← decArgs (← field j "args")
     let r : Py Registry := match op with
-      | "register" => registerDialect initialRegistry name .absent a
-      | _ => unregisterDialect initialRegistry name
-    return encPy (fun r => toJson (listDialects r)) r
+      | "register" => .error .modelFuel
+      | _ => csvUnregisterDialect initialRegistry name
+    let r ← if op == "register" then
+        pure (csvRegisterDialect initialRegistry ⟨name :: (← srcOf j), ← kwOf j⟩)
+      else pure r
+    return encPy (fun r => toJson (csvListDialects r)) r
   | "csv.get_dialect" =>
-    return encPy encDialect (registryGet initialRegistry (← nats (← field j "name")))
+    return encPy (fun (o : Obj) => match o with
+      | .dialect _ d => encDialect d
+      | _ => Json.null) (csvGetDialect initialRegistry (← decObj (← field j "name")))
+  | "csv.unpack" =>
+    let pos ← (← (← field j "pos").getArr?).toList.mapM decObj
+    return match ← getStr j "f" with
+      | "reader" => encPy (fun _ => Json.null) (csvReader initialRegistry 131072 ⟨pos, []⟩)
+      | "writer" => encPy (fun _ => Json.null) (csvWriter initialRegistry ⟨pos, []⟩)
+      | _ => encPy (fun r => toJson (csvListDialects r)) (csvRegisterDialect initialRegistry ⟨pos, []⟩)
   | "csv.dictreader" =>
     let lines ← getLines j
     let names0 ← match j.getObjVal? "names" with
       | .ok .null | .error _ => pure Option.none
-      | .ok v => some <$> ((← v.getArr?).toList.mapM nats)
+      | .ok v => some <$> ((← v.getArr?).toList.mapM fun x => do return Field.str (← nats x))
     let restkey ← match j.getObjVal? "restkey" with
-      | .ok .null | .error _ => pure Option.none
-      | .ok v => some <$> nats v
-    let (rows, e) := dictRead excel 131072 names0 lines restkey
-    return Json.mkObj [("ok", Json.mkObj [("rows", Json.arr (rows.map encPairs).toArray),
-      ("exc", encExc e)])]
+      | .ok .null | .error _ => pure Field.none
+      | .ok v => Field.str <$> nats v
+    let fuel := fuelFor lines.length
+    return encPy (fun (p : Dialect × DR) =>
+      let (rows, e, r) := drAll p.1 fuel (lines.length + 2) (lines.length + 2) p.2
+      Json.mkObj [("rows", Json.arr (rows.map encPairs).toArray), ("exc", encExc e), ("n", toJson r.lineNum)])
+      (drInit initialRegistry 131072 (iterObj lines) names0 restkey (.str (strToList "excel")) [])
   | "csv.dictwriter" =>
     let names ← (← (← field j "names").getArr?).toList.mapM nats
     let raises ← getBool j "raises"
     let items ← (← (← field j "row").getArr?).toList.mapM fun p => do
       let a ← p.getArr?
-      return ((← nats (a[0]!)), (← decW (a[1]!)))
-    return encPy toJson (dictWriterow excel names (.str []) raises items)
+      return ((← nats (a[0]!)), (← decObj (a[1]!)))
+    let (c, r) := dictWriterow excel 256 names (.str []) raises {} items
+    return Json.mkObj [("ok", Json.mkObj [("res", encPy encObj r), ("written", toJson c.written)])]
+  | "csv.dictwriterows" =>
+    let names ← (← (← field j "names").getArr?).toList.mapM nats
+    let raises ← getBool j "raises"
+    let rows ← (← (← field j "rows").getArr?).toList.mapM fun row => do
+      (← row.getArr?).toList.mapM fun p => do
+        let a ← p.getArr?
+        return ((← nats (a[0]!)), (← decObj (a[1]!)))
+    let (c, r) := dictWriterows excel 256 names (.str []) raises {} rows
+    return Json.mkObj [("ok", Json.mkObj [("res", encPy encObj r), ("written", toJson c.written)])]
   | "csv.writeheader" =>
     let names ← (← (← field j "names").getArr?).toList.mapM nats
-    return encPy toJson (writeheader excel names)
+    let (c, r) := writeheader excel 256 {} names
+    return Json.mkObj [("ok", Json.mkObj [("res", encPy encObj r), ("written", toJson c.written)])]
   | "csv.extrasaction" =>
     return encPy toJson (extrasactionCheck (← nats (← field j "s")))
+  | "csv.classvalidate" =>
+    return encPy (fun _ => Json.null) (dialectInit initialRegistry (← decObj (← field j "obj")))
   | _ => throw s!"unknown fn {fn}"
 
 end PyLean.TextLibs.Csv
