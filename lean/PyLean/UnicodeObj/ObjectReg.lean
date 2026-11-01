@@ -9,7 +9,7 @@ open PyLean.Registry
 
 def objectEntries : List Entry := [
   { id := "unicodeobj-object-isascii-kind", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["unicode_isascii_impl"]
+    pyFns := []
     statement := "PyUnicode_IS_ASCII, a flag of the representation, holds exactly when every character is below 128."
     source := "invariant: PEP 393 canonical kind"
     status := .proven, prop := ``IsAsciiKind, thm := some ``isAsciiKind_proven },

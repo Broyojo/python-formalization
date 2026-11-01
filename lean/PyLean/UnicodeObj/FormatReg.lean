@@ -11,23 +11,23 @@ open PyLean.Registry
 
 def formatEntries : List Entry := [
   { id := "unicodeobj-format-nul-presentation-type", pyFile := "Python/formatter_unicode.c"
-    pyFns := ["parse_internal_render_format_spec", "_PyFloat_FormatAdvancedWriter", "_PyComplex_FormatAdvancedWriter"]
+    pyFns := []
     statement := "A format spec ending in NUL is rejected by float and complex, as it is by int and str."
     source := "the presentation types of Doc/library/string.rst; int and str as twins"
     status := .refuted, prop := ``FormatNulRejected, thm := some ``formatNulRejected_refuted
     bug := some "unicodeobj-format-nul-presentation-type" },
   { id := "unicodeobj-format-nul-int-str", pyFile := "Python/formatter_unicode.c"
-    pyFns := ["_PyLong_FormatAdvancedWriter", "_PyUnicode_FormatAdvancedWriter"]
+    pyFns := []
     statement := "For every spec that parses to a NUL type, int and str raise Unknown format code."
     source := "the presentation types of Doc/library/string.rst"
     status := .proven, prop := ``FormatNulIntStr, thm := some ``formatNulIntStr_proven },
   { id := "unicodeobj-format-parse-asserts", pyFile := "Python/formatter_unicode.c"
-    pyFns := ["parse_internal_render_format_spec"]
+    pyFns := []
     statement := "Every parsed spec has one of the four alignments and a sign of NUL, space, + or -, whatever the input."
     source := "assert (format->align <= 127) and assert (format->sign <= 127), formatter_unicode.c:369-370, in sharp form"
     status := .proven, prop := ``ParseAsserts, thm := some ``parseAsserts_proven },
   { id := "unicodeobj-format-str-shape", pyFile := "Python/formatter_unicode.c"
-    pyFns := ["format_string_internal", "calc_padding", "fill_padding", "unicode___format___impl"]
+    pyFns := ["format_string_internal", "calc_padding", "fill_padding"]
     statement := "format(s, spec) is s cut to the precision and padded to the width, left, right or centred, with the extra fill going to the right."
     source := "format spec mini-language, Doc/library/string.rst"
     status := .proven, prop := ``StrFormatShape, thm := some ``strFormatShape_proven },
@@ -49,7 +49,7 @@ def formatEntries : List Entry := [
     status := .open, prop := ``GroupDigits
     notes := "Needs an induction over groupLoop with remaining and min_width; not done." },
   { id := "unicodeobj-format-percent-int-fast-slow", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["_PyUnicode_FormatLong"]
+    pyFns := []
     statement := "With no precision, _PyUnicode_FormatLong gives what the fast path _PyLong_FormatWriter writes, for %d, %o and %x, with or without #, for every int."
     source := "invariant: fast path vs general path"
     status := .proven, prop := ``PercentIntFastSlow, thm := some ``percentIntFastSlow_proven },
@@ -65,17 +65,12 @@ def formatEntries : List Entry := [
     statement := "parse_number splits a number into digits, decimal point, fraction and remainder with nothing lost, for every string."
     source := "invariant"
     status := .proven, prop := ``ParseNumberSplit, thm := some ``parseNumberSplit_proven },
-  { id := "unicodeobj-format-empty-spec", pyFile := "Python/formatter_unicode.c"
-    pyFns := ["format_obj"]
-    statement := "format(v, '') is str(v) for an int and format(s, '') is s."
-    source := "format() docs: an empty spec is the same as str(value)"
-    status := .proven, prop := ``FormatEmptySpec, thm := some ``formatEmptySpec_proven },
   { id := "unicodeobj-format-float-internal", pyFile := "Python/formatter_unicode.c"
     pyFns := ["format_float_internal"]
     statement := "format(x, spec) for a float gives the digits of PyOS_double_to_string laid out by the spec: width, fill, alignment, sign, grouping and the fraction group; and its shortcut for a plain spec agrees with the general path."
     source := "format spec mini-language, Doc/library/string.rst"
     status := .open, prop := ``PendingBinary64
-    notes := "Waits on lean/PyLean/Binary64/. Only the dispatch and the 'precision too big' check are modelled." },
+    notes := "Mirror in FormatNumber.lean; statement next." },
   { id := "unicodeobj-format-complex-internal", pyFile := "Python/formatter_unicode.c"
     pyFns := ["format_complex_internal"]
     statement := "format(z, spec) for a complex lays out the real and imaginary parts by the spec, with the parentheses of the empty type."
