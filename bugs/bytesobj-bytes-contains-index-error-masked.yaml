@@ -1,0 +1,62 @@
+id: bytesobj-bytes-contains-index-error-masked
+title: "x in b replaces an exception raised by x.__index__ with 'a bytes-like object is required'"
+priority: P4
+kind: wrong-exception
+module: bytesobj
+files: [Objects/bytes_methods.c]
+functions: ["_Py_bytes_contains"]
+summary: |
+  _Py_bytes_contains calls PyNumber_AsSsize_t and, on any failure, clears the exception and tries the
+  buffer protocol. That is right for an object with no __index__, which is what the fallback is for.
+  But it also runs when __index__ exists and raises: the exception is lost and the caller sees
+  TypeError: a bytes-like object is required, not 'I'. The other search methods pass it on, because
+  parse_args_finds_byte tests _PyIndex_Check first and then returns the error, so b.find(x) raises the
+  original exception and x in b does not.
+  Lean: ContainsKeepsIndexError is refuted; IndexRaisesRules records each caller's behaviour.
+likelihood: |
+  Low. It needs a class whose __index__ fails, and the result is still an exception. The cost is a
+  misleading message that hides the real cause, including MemoryError or KeyboardInterrupt raised
+  inside __index__.
+maybe_intended: |
+  The PyErr_Clear itself is intended for arguments with no __index__. Nothing suggests it was meant to
+  cover an __index__ that raises, but the fallback has been there for a long time and no one has
+  complained, so a maintainer may reasonably leave it. bytes(x) and bytearray(x) do something similar
+  with more care: they fall through on TypeError only (python/cpython#73345).
+reproducer: |
+  class I:
+      def __index__(self):
+          raise KeyError('boom')
+
+  def err(f):
+      try:
+          f()
+      except Exception as e:
+          return type(e).__name__
+
+  a = err(lambda: I() in b'abc')
+  b = err(lambda: b'abc'.find(I()))
+  print('in:', a, ' find:', b)
+  if a == 'TypeError' and b == 'KeyError':
+      print('REPRODUCED bytesobj-bytes-contains-index-error-masked')
+expected: |
+  KeyError, as for b.find.
+observed: |
+  python3 3.14.7: in: TypeError, find: KeyError. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): in: TypeError, find: KeyError. REPRODUCED.
+promised_by: |
+  Twin behaviour: find and in search for the same argument, and parse_args_finds_byte, which serves
+  find, rfind, index, rindex and count, keeps the error.
+cause: |
+  Objects/bytes_methods.c:606-612 (3.14.7): the test is ival == -1 && PyErr_Occurred(), with no
+  _PyIndex_Check before it and PyErr_Clear inside it.
+possible_fix: |
+  Test _PyIndex_Check first, as parse_args_finds_byte does at :412-419, and return the error when it
+  fails; keep the buffer path for arguments with no __index__.
+duplicates:
+  issues:
+    - {number: 71661, state: closed, relation: "'Unify exception in _Py_bytes_contains for integers': the out-of-range ValueError, a different question"}
+    - {number: 73345, state: closed, relation: "'Regression in bytes constructor': the TypeError fallback in bytes(x), which is the careful version of the same pattern"}
+  queries: ["bytes contains __index__ exception", "_Py_bytes_contains", "in bytes __index__ raises TypeError swallowed", "bugforge README: no match on contains"]
+lean:
+  property: PyLean.BytesObj.Bytes.ContainsKeepsIndexError
+  theorem: PyLean.BytesObj.Bytes.containsKeepsIndexError_refuted

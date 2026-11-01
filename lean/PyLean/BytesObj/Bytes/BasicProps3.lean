@@ -247,9 +247,9 @@ theorem joinSpec_proven : JoinSpec := by
   refine ⟨?_, ?_⟩
   · intro sep xs h
     obtain ⟨t, ht⟩ := joinPass_ok sep xs 0 0 (by omega) (by simpa using h)
-    simp [pyBytesJoin, stringlibJoin, iterItems?, ht]
+    simp [pyBytesJoin, stringlibJoin, sequenceFast, getIterOr, lengthHint, iterFinish, iterItems?, ht, bind, Except.bind, pure, Except.pure]
   · intro sep v rest
-    simp [pyBytesJoin, stringlibJoin, iterItems?, joinPass, Obj.buffer?]
+    simp [pyBytesJoin, stringlibJoin, sequenceFast, joinPass, Obj.buffer?]
 
 /-! ## translate -/
 

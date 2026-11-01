@@ -9,7 +9,9 @@ C code calls.
 * `Obj` lists every kind of argument the difftest passes to the C code. The
   class-based cases stand for tiny Python classes: `index v` has `__index__`,
   `dunder r` has `__bytes__` returning `r`, `plain` is `object()`, `iter xs` is a
-  generator (no buffer, no `__len__`, no `__length_hint__`).
+  generator (no buffer, no `__len__`, no `__length_hint__`). The `...Raises` cases
+  are the same classes whose method raises; an exception is exact-class, so a
+  subclass of `TypeError` is out of scope where the C code tests for `TypeError`.
 * C `char` is signed (x86-64 and macOS arm64 builds; the build `python3` runs on).
 * `malloc(n)` fails for `n ≥ 2^47`, more than the user address space of an LP64
   system; below that memory is unbounded, and the difftest never asks for a size
@@ -77,8 +79,18 @@ inductive Obj where
   /-- A `dict` with bytes keys. -/
   | dict (kv : List (Seq × Obj))
   | iter (xs : List Obj)
+  /-- A generator that yields `xs`, then raises `e`. -/
+  | iterRaises (xs : List Obj) (e : PyExc)
+  /-- An iterator with a `__length_hint__`: `xs`, then the hint's value or exception. -/
+  | iterHint (xs : List Obj) (hint : Py Int)
+  /-- A class whose `__iter__` raises `e`. -/
+  | iterCallRaises (e : PyExc)
   | index (v : Int)
+  /-- A class whose `__index__` raises `e`, or returns a non-int (the `TypeError`). -/
+  | indexRaises (e : PyExc)
   | dunder (r : Obj)
+  /-- A class whose `__bytes__` raises `e`. -/
+  | dunderRaises (e : PyExc)
   | plain
   deriving Inhabited
 
@@ -95,9 +107,13 @@ def Obj.typeName : Obj → String
   | .list _ => "list"
   | .tuple _ => "tuple"
   | .dict _ => "dict"
-  | .iter _ => "generator"
+  | .iter _ | .iterRaises _ _ => "generator"
+  | .iterHint _ _ => "BHint"
+  | .iterCallRaises _ => "BIterCall"
   | .index _ => "BIdx"
+  | .indexRaises _ => "BIdxRaises"
   | .dunder _ => "BDun"
+  | .dunderRaises _ => "BDunRaises"
   | .plain => "object"
 
 /-- `PyObject_CheckBuffer` / the contents of the buffer (`PyBUF_SIMPLE`). -/
@@ -105,11 +121,16 @@ def Obj.buffer? : Obj → Option Seq
   | .bytes s | .bytearray s | .memview s _ => some s
   | _ => Option.none
 
-/-- The value of an object with `nb_index` (`_PyIndex_Check`). -/
-def Obj.index? : Obj → Option Int
-  | .bool b => some (if b then 1 else 0)
-  | .int v | .index v => some v
+/-- `_PyNumber_Index` on an object with `nb_index` (`_PyIndex_Check`): `none` when it
+has none. Failure is part of the result, because the callers treat it differently. -/
+def Obj.index? : Obj → Option (Py Int)
+  | .bool b => some (.ok (if b then 1 else 0))
+  | .int v | .index v => some (.ok v)
+  | .indexRaises e => some (.error e)
   | _ => Option.none
+
+/-- `PyErr_ExceptionMatches(PyExc_TypeError)`, for exact classes. -/
+def isTypeError (e : PyExc) : Bool := e.className == "TypeError"
 
 /-- `PyLong_Check`. -/
 def Obj.longValue? : Obj → Option Int
@@ -119,7 +140,7 @@ def Obj.longValue? : Obj → Option Int
 
 /-- `PyNumber_Check`. -/
 def Obj.isNumber : Obj → Bool
-  | .bool _ | .int _ | .float _ | .index _ => true
+  | .bool _ | .int _ | .float _ | .index _ | .indexRaises _ => true
   | _ => false
 
 /-- `"a bytes-like object is required, not '%.100s'"`, `PyObject_GetBuffer`,
@@ -140,7 +161,8 @@ def notInteger (o : Obj) : PyExc :=
 /-- `PyNumber_AsSsize_t(o, NULL)`: saturates. -/
 def asSsizeClamp (o : Obj) : Py Int :=
   match o.index? with
-  | some v => .ok (clampSsize v)
+  | some (.ok v) => .ok (clampSsize v)
+  | some (.error e) => .error e
   | none => .error (notInteger o)
 
 /-! ## `repr` of bytes, bytesobject.c:1344-1416 -/
@@ -301,9 +323,10 @@ def intToFlt (v : Int) : Py Flt :=
 def asDouble (o : Obj) : Py Flt :=
   match o with
   | .float f => .ok f
-  | .bool _ | .int _ | .index _ =>
+  | .bool _ | .int _ | .index _ | .indexRaises _ =>
     match o.index? with
-    | some v => intToFlt v
+    | some (.ok v) => intToFlt v
+    | some (.error e) => .error e
     | none => .error (.typeError "unreachable")
   | _ => .error (.typeError s!"must be real number, not {o.typeName}")
 
@@ -411,7 +434,8 @@ def numberLong (o : Obj) : Py Int :=
       .ok (if f.neg then -t else t)
   | _ =>
     match o.index? with
-    | some v => .ok v
+    | some (.ok v) => .ok v
+    | some (.error e) => .error e
     | none => .error (.typeError "int() argument must be a string, a bytes-like object or a real number")
 
 /-! ## Encoders and decoders used by `bytes()`, `decode` -/

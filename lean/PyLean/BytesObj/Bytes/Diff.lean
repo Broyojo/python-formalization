@@ -16,6 +16,15 @@ namespace PyLean.BytesObj.Bytes
 open Lean PyLean PyLean.Diff PyLean.StrSearch
 open PyLean.RangeSlice (Slice)
 
+/-- An exception by class and message. -/
+def decExc (j : Json) : Except String PyExc := do
+  let arr ← j.getArr?
+  let cls ← (arr.getD 0 Json.null).getStr?
+  let msg ← (arr.getD 1 Json.null).getStr?
+  if cls = "TypeError" then return .typeError msg
+  if cls = "ValueError" then return .valueError msg
+  return .named cls msg
+
 partial def decObj (j : Json) : Except String Obj := do
   let arr ← j.getArr?
   let tag ← (arr.getD 0 Json.null).getStr?
@@ -37,6 +46,13 @@ partial def decObj (j : Json) : Except String Obj := do
   | "list" => return .list (← (← (at' 1).getArr?).toList.mapM decObj)
   | "tuple" => return .tuple (← (← (at' 1).getArr?).toList.mapM decObj)
   | "iter" => return .iter (← (← (at' 1).getArr?).toList.mapM decObj)
+  | "iterraises" => return .iterRaises (← (← (at' 1).getArr?).toList.mapM decObj) (← decExc (at' 2))
+  | "iterhint" =>
+    let xs ← (← (at' 1).getArr?).toList.mapM decObj
+    match at' 2 with
+    | .arr _ => return .iterHint xs (.error (← decExc (at' 2)))
+    | h => return .iterHint xs (.ok (← h.getInt?))
+  | "itercallraises" => return .iterCallRaises (← decExc (at' 1))
   | "dict" =>
     let items ← (at' 1).getArr?
     let kv ← items.toList.mapM fun p => do
@@ -45,7 +61,9 @@ partial def decObj (j : Json) : Except String Obj := do
       return (k, ← decObj (pa.getD 1 Json.null))
     return .dict kv
   | "index" => return .index (← (at' 1).getInt?)
+  | "indexraises" => return .indexRaises (← decExc (at' 1))
   | "dunder" => return .dunder (← decObj (at' 1))
+  | "dunderraises" => return .dunderRaises (← decExc (at' 1))
   | "plain" => return .plain
   | t => throw s!"obj tag {t}"
 
