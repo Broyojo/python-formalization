@@ -385,13 +385,68 @@ def z85decode (s0 : Data) : Py (List Nat) := do
 
 def MAXBINSIZE : Nat := 57
 
-/-- `encode`, `Lib/base64.py:541-547`, on a stream whose `read(n)` returns `n` bytes while it can
-(`io.BytesIO`), so the inner short-read loop never runs. Short reads are outside this model. -/
+/-- `b2a_base64` on successive `MAXBINSIZE` slices, as `encodebytes` makes them. -/
 def encodeStream : (fuel : Nat) → List Nat → List Nat
   | 0, _ => []
   | _ + 1, [] => []
   | fuel + 1, s =>
     b2aBase64 (s.take MAXBINSIZE) true ++ encodeStream fuel (s.drop MAXBINSIZE)
+
+/-- A binary file object. `read(n)` returns at most `n` bytes of `data`, as the file API promises:
+`reads` is what each call does, `give k` returning at most `k` more limits it further, and `raises`
+raising. With the script used up, reads are full. `writes` is what each `write` does; `written` is
+every argument `write` was given. -/
+inductive ReadStep where
+  | give (k : Nat)
+  | raises (e : PyExc)
+  deriving Repr, DecidableEq, Inhabited
+
+structure FileSim where
+  data : List Nat
+  reads : List ReadStep := []
+  writes : List (Py Unit) := []
+  written : List (List Nat) := []
+  deriving Repr, Inhabited
+
+def FileSim.read (f : FileSim) (n : Nat) : FileSim × Py (List Nat) :=
+  match f.reads with
+  | [] => ({ f with data := f.data.drop n }, .ok (f.data.take n))
+  | .raises e :: r => ({ f with reads := r }, .error e)
+  | .give k :: r =>
+    let m := min k n
+    ({ f with reads := r, data := f.data.drop m }, .ok (f.data.take m))
+
+def FileSim.write (f : FileSim) (line : List Nat) : FileSim × Py Unit :=
+  let f := { f with written := f.written ++ [line] }
+  match f.writes with
+  | [] => (f, .ok ())
+  | r :: rest => ({ f with writes := rest }, r)
+
+/-- The inner `while`, `Lib/base64.py:544-545`. -/
+def fillChunk : (fuel : Nat) → FileSim → List Nat → FileSim × Py (List Nat)
+  | 0, f, _ => (f, .error .modelFuel)
+  | fuel + 1, f, s =>
+    if s.length < MAXBINSIZE then
+      match f.read (MAXBINSIZE - s.length) with
+      | (f, .error e) => (f, .error e)
+      | (f, .ok ns) => if ns.isEmpty then (f, .ok s) else fillChunk fuel f (s ++ ns)
+    else (f, .ok s)
+
+/-- `encode`, `Lib/base64.py:541-547`. -/
+def encodeFile : (fuel : Nat) → FileSim → FileSim × Py Unit
+  | 0, f => (f, .error .modelFuel)
+  | fuel + 1, f =>
+    match f.read MAXBINSIZE with
+    | (f, .error e) => (f, .error e)
+    | (f, .ok s) =>
+      if s.isEmpty then (f, .ok ())
+      else
+        match fillChunk (MAXBINSIZE + 1) f s with
+        | (f, .error e) => (f, .error e)
+        | (f, .ok s) =>
+          match f.write (b2aBase64 s true) with
+          | (f, .error e) => (f, .error e)
+          | (f, .ok ()) => encodeFile fuel f
 
 /-- `encodebytes`, `Lib/base64.py:572-580`. -/
 def encodebytes (s : List Nat) : List Nat := encodeStream (s.length + 1) s
@@ -408,10 +463,20 @@ def splitLines : (fuel : Nat) → List Nat → List (List Nat)
     | some i => s.take (i + 1) :: splitLines fuel (s.drop (i + 1))
     | none => [s]
 
-/-- `decode`, `Lib/base64.py:550-554`: each line is decoded on its own. -/
-def decodeStream : List (List Nat) → Py (List Nat)
-  | [] => .ok []
-  | l :: ls => do return (← a2bBase64 false (.bytes l)) ++ (← decodeStream ls)
+/-- `decode`, `Lib/base64.py:550-554`: each line is decoded on its own. `lines` is what `readline`
+returns or raises, and an empty line ends the loop. -/
+def decodeFile : List (Py (List Nat)) → FileSim → FileSim × Py Unit
+  | [], f => (f, .ok ())
+  | .error e :: _, f => (f, .error e)
+  | .ok l :: ls, f =>
+    if l.isEmpty then (f, .ok ())
+    else
+      match a2bBase64 false (.bytes l) with
+      | .error e => (f, .error e)
+      | .ok s =>
+        match f.write s with
+        | (f, .error e) => (f, .error e)
+        | (f, .ok ()) => decodeFile ls f
 
 /-- What `_input_type_check` sees of its argument. -/
 inductive TypeCheck where
@@ -434,6 +499,73 @@ def standardB64encode (s : List Nat) : Py (List Nat) := b64encode s none
 
 /-- `standard_b64decode`, `Lib/base64.py:95-103`. -/
 def standardB64decode (s : Data) : Py (List Nat) := b64decode s none false
+
+/-- The argument of `_input_type_check`, from a `Data`. -/
+def typeCheckOf : Data → Py TypeCheck
+  | .bytes _ => .ok (.view "B" 1 "bytes")
+  | .str _ => .ok (.notBuffer "str")
+  | .notBuffer t => .ok (.notBuffer t)
+  | .raises t (.typeError _) => .ok (.notBuffer t)
+  | .raises _ e => .error e
+
+/-- `binascii.b2a_base64` with its arguments as objects: `newline` is a `bool` converter, which runs
+`__bool__`, after `data`. -/
+def b2aBase64A (d : Data) (newline : Py Bool) : Py (List Nat) := do
+  let b ← bufData d
+  return b2aBase64 b (← newline)
+
+def a2bBase64A (d : Data) (strict : Py Bool) : Py (List Nat) := do
+  let b ← asciiBuffer d
+  a2bBase64Bytes (← strict) b
+
+/-- `binascii_b2a_hex_impl`, `Modules/binascii.c:849-856`, and `binascii_hexlify_impl`,
+`Modules/binascii.c:867-874`, which is the same call. -/
+def b2aHexA (d : Data) (sep : SepArg) (group : Py Int) : Py (List Nat) := do
+  let b ← bufData d
+  let g ← group
+  if g < -(2 ^ 31) ∨ g > 2 ^ 31 - 1 then
+    throw (.overflowError "Python int too large to convert to C int")
+  strhexBytes b sep g
+
+def a2bHexA (d : Data) : Py (List Nat) := a2bHex d
+
+def a2bUuA (d : Data) : Py (List Nat) := a2bUu d
+
+def b2aUuA (d : Data) (backtick : Py Bool) : Py (List Nat) := do
+  let b ← bufData d
+  b2aUu b (← backtick)
+
+/-- `crc_hqx`: `crc` is `unsigned_int(bitwise=True)`, so only `__index__` can fail. -/
+def crcHqxA (d : Data) (crc : Py Int) : Py Nat := do
+  let b ← bufData d
+  return crcHqx b (← crc)
+
+def a2bQpA (d : Data) (header : Py Bool) : Py (List Nat) := do
+  let b ← asciiBuffer d
+  let _ := b
+  a2bQp d (← header)
+
+def b2aQpA (d : Data) (quotetabs istext header : Py Bool) : Py (List Nat) := do
+  let b ← bufData d
+  return b2aQp b ⟨← quotetabs, ← istext, ← header⟩
+
+/-- The encoders of `Lib/base64.py` on any object: the first thing each does with its argument. -/
+def encodeAny (name : String) (d : Data) : Py (List Nat) :=
+  match name with
+  | "b64encode" | "standard_b64encode" => do b64encode (← bufData d) none
+  | "urlsafe_b64encode" => do return urlsafeEncode (← bufData d)
+  | "b32encode" => do return b32encode b32alphabet (← toBytesView d)
+  | "b32hexencode" => do return b32encode b32hexalphabet (← toBytesView d)
+  | "b16encode" => do return b16encode (← bufData d)
+  | "a85encode" => do return a85encode (← toBytesView d) false 0 false false
+  | "b85encode" => do return b85encode (← toBytesView d) false
+  | "z85encode" => do return z85encode (← toBytesView d)
+  | "encodebytes" => do
+    inputTypeCheck (← typeCheckOf d)
+    return encodebytes (← bufData d)
+  | _ => do
+    inputTypeCheck (← typeCheckOf d)
+    decodebytes (← bufData d)
 
 /-- `main`'s flag loop, `Lib/base64.py:604-609`: the last flag wins, `-h` returns at once. -/
 def mainSelect : List Char → Option Bool → Option Bool

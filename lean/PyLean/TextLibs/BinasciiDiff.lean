@@ -15,6 +15,15 @@ def decData (j : Json) (key : String) : Except String Data := do
   let d ← field j key
   if let .ok b := d.getObjVal? "b" then
     return .bytes (← (← b.getArr?).toList.mapM Json.getNat?)
+  if let .ok t := d.getObjVal? "nb" then return .notBuffer (← t.getStr?)
+  if let .ok x := d.getObjVal? "rz" then
+    let a ← x.getArr?
+    let cls ← a[0]!.getStr?
+    let msg ← a[1]!.getStr?
+    return .raises "BF" (match cls with
+      | "TypeError" => .typeError msg
+      | "ValueError" => .valueError msg
+      | _ => .named cls msg)
   let s ← d.getObjVal? "s"
   return .str (← (← s.getArr?).toList.mapM Json.getNat?)
 
@@ -23,9 +32,91 @@ def optData (j : Json) (key : String) : Except String (Option Data) :=
   | .ok .null | .error _ => .ok none
   | .ok _ => some <$> decData j key
 
+def decExcJ (j : Json) : Except String PyExc := do
+  let a ← j.getArr?
+  let cls ← a[0]!.getStr?
+  let msg ← a[1]!.getStr?
+  return match cls with
+    | "TypeError" => .typeError msg
+    | "ValueError" => .valueError msg
+    | "OverflowError" => .overflowError msg
+    | _ => .named cls msg
+
+/-- `true`, `false`, or `{"raise": [cls, msg]}`. -/
+def decFlag (j : Json) (key : String) : Except String (Py Bool) := do
+  let v ← field j key
+  if let .ok x := v.getObjVal? "raise" then return .error (← decExcJ x)
+  return .ok (← v.getBool?)
+
+def decIntP (j : Json) (key : String) : Except String (Py Int) := do
+  let v ← field j key
+  if let .ok x := v.getObjVal? "raise" then return .error (← decExcJ x)
+  return .ok (← v.getInt?)
+
+def decSep (j : Json) : Except String SepArg := do
+  match j.getObjVal? "sep" with
+  | .error _ | .ok .null => return .absent
+  | .ok v =>
+    if let .ok s := v.getObjVal? "s" then
+      return .str (← (← s.getArr?).toList.mapM Json.getNat?)
+    if let .ok b := v.getObjVal? "b" then
+      return .bytes (← (← b.getArr?).toList.mapM Json.getNat?)
+    if let .ok n := v.getObjVal? "len" then return .seqlen (← n.getNat?)
+    return .lenRaises (← decExcJ (← field v "raise"))
+
+def decRead (j : Json) : Except String ReadStep := do
+  if let .ok k := j.getObjVal? "give" then return .give (← k.getNat?)
+  return .raises (← decExcJ (← field j "raise"))
+
+def decWrite (j : Json) : Except String (Py Unit) := do
+  if j.isNull then return .ok ()
+  return .error (← decExcJ (← field j "raise"))
+
+def encFile (f : FileSim) (r : Py Unit) : Json :=
+  Json.mkObj [("ok", Json.mkObj [("written", toJson f.written),
+    ("res", encPy (fun _ => Json.null) r)])]
+
 def run (fn : String) (j : Json) : Except String Json := do
   let r (x : Py (List Nat)) := encPy toJson x
   match fn with
+  | "binascii.api" =>
+    let d ← decData j "d"
+    return r (match ← getStr j "op" with
+      | "b2a_base64" => b2aBase64A d (.ok true)
+      | "a2b_hex" => a2bHexA d
+      | "a2b_uu" => a2bUuA d
+      | "b2a_uu" => b2aUuA d (.ok false)
+      | "crc_hqx" => (do return [← crcHqxA d (.ok 0)])
+      | "a2b_qp" => a2bQpA d (.ok false)
+      | "b2a_qp" => b2aQpA d (.ok false) (.ok true) (.ok false)
+      | _ => a2bBase64A d (.ok false))
+  | "binascii.flag" =>
+    let d ← decData j "d"
+    let f ← decFlag j "f"
+    return r (match ← getStr j "op" with
+      | "b2a_base64" => b2aBase64A d f
+      | "a2b_base64" => a2bBase64A d f
+      | "b2a_uu" => b2aUuA d f
+      | "a2b_qp" => a2bQpA d f
+      | "b2a_qp1" => b2aQpA d f (.ok true) (.ok false)
+      | "b2a_qp2" => b2aQpA d (.ok false) f (.ok false)
+      | _ => b2aQpA d (.ok false) (.ok true) f)
+  | "binascii.hex" =>
+    return r (b2aHexA (← decData j "d") (← decSep j) (← decIntP j "group"))
+  | "base64.any" => return r (encodeAny (← getStr j "name") (← decData j "d"))
+  | "base64.encode_file" =>
+    let reads ← (← (← field j "reads").getArr?).toList.mapM decRead
+    let writes ← (← (← field j "writes").getArr?).toList.mapM decWrite
+    let d ← bytesOf j "d"
+    let (f, x) := encodeFile (d.length + reads.length + 4) { data := d, reads, writes }
+    return encFile f x
+  | "base64.decode_file" =>
+    let lines ← (← (← field j "lines").getArr?).toList.mapM fun l => do
+      if let .ok x := l.getObjVal? "raise" then return (.error (← decExcJ x) : Py (List Nat))
+      return .ok (← (← l.getArr?).toList.mapM Json.getNat?)
+    let writes ← (← (← field j "writes").getArr?).toList.mapM decWrite
+    let (f, x) := decodeFile lines { data := [], writes }
+    return encFile f x
   | "binascii.a2b_base64" => return r (a2bBase64 (← getBool j "strict") (← decData j "d"))
   | "binascii.b2a_base64" =>
     return toJsonOk (b2aBase64 (← bytesOf j "d") (← getBool j "newline"))
@@ -66,12 +157,6 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "base64.z85decode" => return r (z85decode (← decData j "d"))
   | "base64.encodebytes" => return toJsonOk (encodebytes (← bytesOf j "d"))
   | "base64.decodebytes" => return r (decodebytes (← bytesOf j "d"))
-  | "base64.encode" =>
-    let d ← bytesOf j "d"
-    return toJsonOk (encodeStream (d.length + 1) d)
-  | "base64.decode" =>
-    let d ← bytesOf j "d"
-    return r (decodeStream (splitLines (d.length + 1) d))
   | "base64.standard_b64encode" => return r (standardB64encode (← bytesOf j "d"))
   | "base64.standard_b64decode" => return r (standardB64decode (← decData j "d"))
   | "base64.input_check" =>
