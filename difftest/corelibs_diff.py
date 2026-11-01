@@ -15,7 +15,8 @@ from common import main, py_result  # noqa: E402
 # ====== BEGIN AREA coll (Lib/collections/__init__.py (everything except OrderedDict)) ======
 # Everything for this area stays between these two markers; prefix top-level names with coll_.
 import collections as coll_collections  # noqa: E402
-import itertools as coll_itertools  # noqa: E402
+import collections.abc as coll_abc  # noqa: E402
+import copy as coll_copy  # noqa: E402
 
 coll_KEYS = ["a", "b", "c", "d", "e", "f"]
 coll_EDGE = [0, 0, 1, -1, 2, -2, 3, 5, -5, 2**31, -2**31, 2**63 - 1, -2**63, 2**63, 2**64, -2**64]
@@ -193,8 +194,237 @@ def coll_run_ctr(case):
     return py_result(body)
 
 
-coll_GENS = [coll_gen_ctr]
-coll_RUNS = {"coll.ctr": coll_run_ctr}
+class coll_CMMiss(coll_collections.ChainMap):
+    def __missing__(self, key):
+        return -1
+
+
+class coll_UDPlain(coll_collections.UserDict):
+    pass
+
+
+class coll_UDMiss(coll_collections.UserDict):
+    def __missing__(self, key):
+        return -1
+
+
+class coll_DictMiss(dict):
+    def __missing__(self, key):
+        return -1
+
+
+coll_UD_CLASSES = [coll_collections.UserDict, coll_UDPlain, coll_UDMiss]
+
+
+def coll_d(items):
+    return dict(map(tuple, items))
+
+
+def coll_gen_cm(rng):
+    op = rng.choice(["new", "getitem", "get", "len", "iter", "contains", "bool", "repr", "fromkeys",
+                     "copy", "new_child", "parents", "setitem", "delitem", "popitem", "pop",
+                     "clear", "ior", "or", "ror"])
+    n = rng.choice([0, 1, 1, 2, 2, 3, 4])
+    case = {"fn": "coll.cm", "op": op, "k": rng.choice(coll_KEYS),
+            "maps": [coll_items(rng, small=True) if rng.random() < 0.8 else [] for _ in range(n)]}
+    if rng.random() < 0.4:
+        case["d"] = rng.randint(-3, 3)
+    if op in ("get", "getitem") and rng.random() < 0.5:
+        case["sub"] = 1
+    if op == "fromkeys":
+        case["xs"] = coll_xs(rng)
+    if op in ("or", "ror", "new_child"):
+        if rng.random() < 0.8:
+            case["o"] = coll_items(rng, small=True)
+    if op == "ior":
+        case["o"] = coll_items(rng, small=True)
+    if op == "new_child":
+        case["kw"] = coll_items(rng, small=True) if rng.random() < 0.5 else []
+    return case
+
+
+def coll_enc_cm(c):
+    return [coll_enc(m) for m in c.maps]
+
+
+def coll_run_cm(case):
+    op = case["op"]
+    ChainMap = coll_collections.ChainMap
+    cls = coll_CMMiss if case.get("sub") == 1 else ChainMap
+    maps = [coll_d(m) for m in case["maps"]]
+    c = cls(*maps)
+    c.maps = maps
+    k = case.get("k")
+    d = case.get("d")
+
+    def body():
+        if op == "new":
+            return coll_enc_cm(ChainMap(*maps))
+        if op == "getitem":
+            return c[k]
+        if op == "get":
+            return c.get(k, d) if d is not None else c.get(k)
+        if op == "len":
+            return len(c)
+        if op == "iter":
+            return list(c)
+        if op == "contains":
+            return k in c
+        if op == "bool":
+            return bool(c)
+        if op == "repr":
+            return repr(c)
+        if op == "fromkeys":
+            return coll_enc_cm(ChainMap.fromkeys(case["xs"], 0 if d is None else d))
+        if op == "copy":
+            return coll_enc_cm(c.copy())
+        if op == "new_child":
+            m = coll_d(case["o"]) if "o" in case else None
+            return coll_enc_cm(c.new_child(m, **coll_d(case["kw"])))
+        if op == "parents":
+            return coll_enc_cm(c.parents)
+        if op == "setitem":
+            c[k] = 0 if d is None else d
+            return coll_enc_cm(c)
+        if op == "delitem":
+            del c[k]
+            return coll_enc_cm(c)
+        if op == "popitem":
+            r = c.popitem()
+            return [list(r), coll_enc_cm(c)]
+        if op == "pop":
+            r = c.pop(k, d) if d is not None else c.pop(k)
+            return [r, coll_enc_cm(c)]
+        if op == "clear":
+            c.clear()
+            return coll_enc_cm(c)
+        if op == "ior":
+            r = c
+            r |= coll_d(case["o"])
+            return coll_enc_cm(r)
+        if op == "or":
+            return coll_enc_cm(c | (coll_d(case["o"]) if "o" in case else 5))
+        if op == "ror":
+            return coll_enc_cm((coll_d(case["o"]) if "o" in case else 5) | c)
+        raise AssertionError(op)
+    return py_result(body)
+
+
+def coll_gen_ud(rng):
+    op = rng.choice(["new", "len", "getitem", "setitem", "delitem", "iter", "contains", "get",
+                     "repr", "or", "ror", "ior", "copy", "copy_dunder", "fromkeys", "pop",
+                     "popitem", "setdefault", "clear", "items_contains", "dict_getitem",
+                     "dict_pop", "dict_popitem", "dict_setdefault", "dict_items_contains"])
+    case = {"fn": "coll.ud", "op": op, "a": coll_items(rng, small=True),
+            "sub": rng.choice([0, 1, 2]), "k": rng.choice(coll_KEYS)}
+    if rng.random() < 0.5:
+        case["d"] = rng.randint(-3, 3)
+    if op in ("items_contains", "dict_items_contains") and rng.random() < 0.5:
+        case["d"] = -1
+    if op == "new":
+        case["kw"] = coll_items(rng, small=True) if rng.random() < 0.5 else []
+        if rng.random() < 0.7:
+            case["o"] = coll_items(rng, small=True)
+    if op in ("or", "ror"):
+        case["oty"] = rng.choice(["user", "dict", "int"])
+        case["o"] = coll_items(rng, small=True)
+    if op == "ior":
+        case["o"] = coll_items(rng, small=True)
+    if op == "fromkeys":
+        case["xs"] = coll_xs(rng)
+    return case
+
+
+def coll_enc_ud(u):
+    return [type(u).__name__, coll_enc(u.data)]
+
+
+def coll_run_ud(case):
+    op = case["op"]
+    cls = coll_UD_CLASSES[case["sub"]]
+    u = cls()
+    u.data = coll_d(case["a"])
+    k = case["k"]
+    d = case.get("d")
+    plain = (coll_DictMiss if case["sub"] == 2 else dict)(coll_d(case["a"]))
+
+    def other():
+        ty = case["oty"]
+        if ty == "user":
+            return coll_collections.UserDict(coll_d(case["o"]))
+        return coll_d(case["o"]) if ty == "dict" else 5
+
+    def body():
+        if op == "new":
+            src = coll_d(case["o"]) if "o" in case else None
+            return coll_enc_ud(cls(src, **coll_d(case["kw"])))
+        if op == "len":
+            return len(u)
+        if op == "getitem":
+            return u[k]
+        if op == "setitem":
+            u[k] = 0 if d is None else d
+            return coll_enc_ud(u)
+        if op == "delitem":
+            del u[k]
+            return coll_enc_ud(u)
+        if op == "iter":
+            return list(u)
+        if op == "contains":
+            return k in u
+        if op == "get":
+            return u.get(k, d) if d is not None else u.get(k)
+        if op == "repr":
+            return repr(u)
+        if op == "or":
+            return coll_enc_ud(u | other())
+        if op == "ror":
+            if case["oty"] == "user":
+                return coll_enc_ud(coll_collections.UserDict.__ror__(u, other()))
+            return coll_enc_ud(other() | u)
+        if op == "ior":
+            r = u
+            r |= coll_d(case["o"])
+            return coll_enc_ud(r)
+        if op == "copy":
+            return coll_enc_ud(u.copy())
+        if op == "copy_dunder":
+            return coll_enc_ud(coll_copy.copy(u))
+        if op == "fromkeys":
+            return coll_enc_ud(cls.fromkeys(case["xs"], 0 if d is None else d))
+        if op == "pop":
+            r = u.pop(k, d) if d is not None else u.pop(k)
+            return [r, coll_enc_ud(u)]
+        if op == "popitem":
+            r = coll_abc.MutableMapping.popitem(u)
+            return [list(r), coll_enc_ud(u)]
+        if op == "setdefault":
+            r = u.setdefault(k, 0 if d is None else d)
+            return [r, coll_enc_ud(u)]
+        if op == "clear":
+            u.clear()
+            return coll_enc_ud(u)
+        if op == "items_contains":
+            return (k, 0 if d is None else d) in u.items()
+        if op == "dict_getitem":
+            return plain[k]
+        if op == "dict_pop":
+            r = plain.pop(k, d) if d is not None else plain.pop(k)
+            return [r, coll_enc(plain)]
+        if op == "dict_popitem":
+            r = plain.popitem()
+            return [list(r), coll_enc(plain)]
+        if op == "dict_setdefault":
+            r = plain.setdefault(k, 0 if d is None else d)
+            return [r, coll_enc(plain)]
+        if op == "dict_items_contains":
+            return (k, 0 if d is None else d) in plain.items()
+        raise AssertionError(op)
+    return py_result(body)
+
+
+coll_GENS = [coll_gen_ctr, coll_gen_cm, coll_gen_ud]
+coll_RUNS = {"coll.ctr": coll_run_ctr, "coll.cm": coll_run_cm, "coll.ud": coll_run_ud}
 
 
 def coll_gen(rng):

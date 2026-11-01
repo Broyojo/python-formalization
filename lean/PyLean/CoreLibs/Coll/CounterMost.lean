@@ -97,7 +97,8 @@ theorem mostCommonPrefix_proven : MostCommonPrefix := by
       simp only [true_and]
       omega
     have h3 : n.toNat = 0 := by omega
-    simp [mostCommon, Accel.nlargest, h1, bind, Except.bind, pure, Except.pure, h3, atIndices]
+    have h4 : ¬ (((indices c).length : Int) ≤ n) := by omega
+    simp [mostCommon, Accel.nlargest, h1, h4, bind, Except.bind, pure, Except.pure, h3, atIndices]
 
 theorem countAt_of_get (c : Ctr κ) {i : Int} {p : κ × Int} (h : c[i.toNat]? = some p) :
     countAt c i = p.2 := by
@@ -119,19 +120,39 @@ theorem perm_atIndices (c : Ctr κ) : (sortedItems c).Perm c := by
   unfold sortedItems atIndices
   rwa [e] at h
 
+/-- The comparison behind `sorted(..., reverse=True)` on positions. -/
+def leR (c : Ctr κ) (a b : Int) : Bool := decide (countAt c b ≤ countAt c a)
+
+theorem leR_trans (c : Ctr κ) : ∀ a b d, leR c a b = true → leR c b d = true → leR c a d = true := by
+  intro a b d
+  simp only [leR, decide_eq_true_eq]
+  intro h1 h2
+  omega
+
+theorem leR_total (c : Ctr κ) : ∀ a b, (leR c a b || leR c b a) = true := by
+  intro a b
+  simp only [leR, Bool.or_eq_true, decide_eq_true_eq]
+  omega
+
+theorem filterMap_congr' {α β : Type} {f g : α → Option β} {l : List α} (h : ∀ a ∈ l, f a = g a) :
+    l.filterMap f = l.filterMap g := by
+  induction l with
+  | nil => rfl
+  | cons a t ih =>
+    have := ih (fun b hb => h b (List.mem_cons_of_mem _ hb))
+    simp [List.filterMap_cons, h a (by simp), this]
+
 theorem mostCommonSorted_proven : MostCommonSorted := by
   intro κ _ c
+  have hdef : Accel.pySortedRev (some (countAt c)) (indices c) = (indices c).mergeSort (leR c) := rfl
   refine ⟨perm_atIndices c, ?_, ?_⟩
   · have hp : (Accel.pySortedRev (some (countAt c)) (indices c)).Pairwise
         (fun a b => countAt c b ≤ countAt c a) := by
-      have := List.pairwise_mergeSort (l := indices c)
-        (le := fun a b => decide (Accel.applyKey (some (countAt c)) b ≤ Accel.applyKey (some (countAt c)) a))
-        (by intro a b d; simp only [decide_eq_true_eq]; intro h1 h2; omega)
-        (by intro a b; simp only [decide_eq_true_eq]; omega)
-      simpa [Accel.pySortedRev, Accel.applyKey] using this
+      rw [hdef]
+      have := List.pairwise_mergeSort (leR_trans c) (leR_total c) (indices c)
+      simpa [leR] using this
     unfold sortedItems atIndices
     rw [List.pairwise_filterMap]
-    have hr := inRange_sorted c
     refine (List.Pairwise.imp_of_mem ?_ hp)
     intro a b ha hb hab p hpa q hqb
     have h1 : countAt c a = p.2 := countAt_of_get c (by simpa using hpa)
@@ -139,35 +160,32 @@ theorem mostCommonSorted_proven : MostCommonSorted := by
     rw [← h1, ← h2]
     exact hab
   · intro m
-    have hsub := List.sublist_mergeSort (l := indices c)
-      (le := fun a b => decide (Accel.applyKey (some (countAt c)) b ≤ Accel.applyKey (some (countAt c)) a))
-      (by intro a b d; simp only [decide_eq_true_eq]; intro h1 h2; omega)
-      (by intro a b; simp only [decide_eq_true_eq]; omega)
-      (c := (indices c).filter (fun i => countAt c i = m))
+    have hall : ∀ i ∈ (indices c).filter (fun i => decide (countAt c i = m)), countAt c i = m :=
+      fun i hi => by simpa using (List.mem_filter.mp hi).2
+    have hsub := List.sublist_mergeSort (leR_trans c) (leR_total c)
+      (ys := (indices c).filter (fun i => decide (countAt c i = m)))
       (by
         rw [List.pairwise_iff_getElem]
         intro i j hi hj _
-        have h1 := List.mem_filter.mp (List.getElem_mem hi)
-        have h2 := List.mem_filter.mp (List.getElem_mem hj)
-        have e1 : countAt c _ = m := by simpa using h1.2
-        have e2 : countAt c _ = m := by simpa using h2.2
-        simp [Accel.applyKey, e1, e2])
-      (List.filter_sublist)
+        have e1 := hall _ (List.getElem_mem hi)
+        have e2 := hall _ (List.getElem_mem hj)
+        simp only [leR, decide_eq_true_eq]
+        omega)
+      (List.filter_sublist (l := indices c))
     have hmap := hsub.filterMap (fun i => c[i.toNat]?)
-    have e : ((indices c).filter (fun i => countAt c i = m)).filterMap (fun i => c[i.toNat]?) =
+    have e : ((indices c).filter (fun i => decide (countAt c i = m))).filterMap (fun i => c[i.toNat]?) =
         c.filter (fun p => p.2 = m) := by
       have hc := atIndices_indices c
       unfold atIndices at hc
       conv => rhs; rw [← hc]
       rw [List.filter_filterMap, List.filterMap_filter]
       -- both sides pick the same positions
-      have : ∀ i ∈ indices c, (if decide (countAt c i = m) = true then c[i.toNat]? else none) =
-          (c[i.toNat]?).filter (fun p => decide (p.2 = m)) := by
-        intro i hi
-        obtain ⟨p, hp⟩ := inRange_indices c i hi
-        simp [hp, countAt_of_get c hp, Option.filter]
-        by_cases h : p.2 = m <;> simp [h]
-      exact List.filterMap_congr_of_mem this
+      apply filterMap_congr'
+      intro i hi
+      obtain ⟨p, hp⟩ := inRange_indices c i hi
+      by_cases h : p.2 = m
+      · simp [hp, countAt_of_get c hp, Option.filter, h]
+      · simp [hp, countAt_of_get c hp, Option.filter, h]
     rw [e] at hmap
     exact hmap
 
