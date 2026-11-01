@@ -113,6 +113,29 @@ accel-heapify-makes-heap	proven	Lib/heapq.py	heapify,heapify_max
 accel-nsmallest-sorted-prefix	proven	Lib/heapq.py	nsmallest
 accel-nlargest-sorted-prefix	proven	Lib/heapq.py	nlargest
 accel-merge-sorted	proven	Lib/heapq.py	merge
+decimal-parse-c-accepts-py	refuted	Modules/_decimal/_decimal.c	Decimal.__new__ (str),numeric_as_ascii,mpd_qset_string,_pydecimal._parser
+decimal-parse-c-accepts-py-casefree	proven	Modules/_decimal/_decimal.c	Decimal.__new__ (str),numeric_as_ascii,scan_dpoint_exp,scan_payload,mpd_qset_string
+decimal-parse-py-accepts-c	refuted	Lib/_pydecimal.py	Decimal.__new__ (str)
+decimal-str-roundtrip-py	refuted	Lib/_pydecimal.py	Decimal.__str__,Decimal.__new__ (str)
+decimal-str-roundtrip-py-bounded	proven	Lib/_pydecimal.py	Decimal.__str__,Decimal.__new__ (str)
+decimal-str-roundtrip-c	proven	Modules/_decimal/_decimal.c	dec_str,PyDecType_FromUnicodeExactWS,numeric_as_ascii,mpd_qset_string
+decimal-hash-twins-agree	refuted	Lib/_pydecimal.py	Decimal.__hash__
+decimal-int-conversions-py	refuted	Lib/_pydecimal.py	Decimal.__floor__,Decimal.__ceil__,Decimal.__round__
+decimal-mul-no-valueerror-py	refuted	Lib/_pydecimal.py	Decimal.__mul__,Decimal.__add__,_WorkRep,_normalize
+decimal-tuple-twins-agree	refuted	Lib/_pydecimal.py	Decimal.__new__ (tuple),dectuple_as_str
+decimal-tuple-twins-agree-int-digits	proven	Lib/_pydecimal.py	Decimal.__new__ (tuple),dectuple_as_str,Decimal.__str__
+decimal-format-c-accepts-only-py	refuted	Modules/_decimal/_decimal.c	dec_format,mpd_parse_fmt_str
+decimal-format-no-encode-error	refuted	Modules/_decimal/_decimal.c	dec_format
+decimal-rounding-modes-correct	proven	Lib/_pydecimal.py	Decimal._rescale,Decimal._round_down,Decimal._round_up,Decimal._round_half_up,Decimal._round_half_down,Decimal._round_half_even,Decimal._round_ceiling,Decimal._round_floor,Decimal._round_05up
+decimal-to-integral-value-correct	proven	Lib/_pydecimal.py	Decimal.to_integral_value
+decimal-quantize-correct	proven	Lib/_pydecimal.py	Decimal.quantize,Decimal._rescale,Decimal._fix,Decimal.__round__
+decimal-mul-correctly-rounded	proven	Lib/_pydecimal.py	Decimal.__mul__,Decimal._fix
+decimal-to-integral-exact-correct	proven	Lib/_pydecimal.py	Decimal.to_integral_exact
+decimal-int-conversions-c	proven	Modules/_decimal/_decimal.c	dec_as_long,PyDec_Round,dec_floor,dec_ceil,dec_trunc
+decimal-int-conversions-py-or-limit	proven	Lib/_pydecimal.py	Decimal.__floor__,Decimal.__ceil__,Decimal.__round__,Decimal.__int__
+decimal-hash-consistent-c	proven	Modules/_decimal/_decimal.c	_dec_hash,dec_from_long
+decimal-ratio-correct-c	proven	Modules/_decimal/_decimal.c	dec_as_integer_ratio
+decimal-compare-total-order	proven	Lib/_pydecimal.py	Decimal.compare_total,Decimal._cmp
 pyio-bytesio-twins-agree	refuted	Modules/_io/bytesio.c	_io.BytesIO,_pyio.BytesIO
 pyio-bytesio-twins-same-class	refuted	Modules/_io/bytesio.c	_io.BytesIO.seek,_pyio.BytesIO.seek
 pyio-bytesio-twins-same-class-in-range	refuted	Modules/_io/bytesio.c	_io.BytesIO.getbuffer,_io.BytesIO.write,_io.BytesIO.truncate,_io.BytesIO.close
