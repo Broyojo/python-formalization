@@ -15,11 +15,11 @@ Objects/exceptions.c	279	286	BaseException_with_traceback_impl	BaseException_wit
 Objects/exceptions.c	298	326	BaseException_add_note_impl	BaseException_add_note_impl(PyBaseExceptionObject *self, PyObject *note) /*[clinic end generated code: output=fb7cbcba611c187b input=e60a6b6e9596acaf]*/	modelled	typeobj-exc-add-note	
 Objects/exceptions.c	343	350	BaseException_args_get_impl	BaseException_args_get_impl(PyBaseExceptionObject *self) /*[clinic end generated code: output=e02e34e35cf4d677 input=64282386e4d7822d]*/	modelled	typeobj-exc-args-set	
 Objects/exceptions.c	359	372	BaseException_args_set_impl	BaseException_args_set_impl(PyBaseExceptionObject *self, PyObject *value) /*[clinic end generated code: output=331137e11d8f9e80 input=2400047ea5970a84]*/	modelled	typeobj-exc-args-set	
-Objects/exceptions.c	381	388	BaseException___traceback___get_impl	BaseException___traceback___get_impl(PyBaseExceptionObject *self) /*[clinic end generated code: output=17cf874a52339398 input=a2277f0de62170cf]*/	modelled	typeobj-exc-traceback-setter	
+Objects/exceptions.c	381	388	BaseException___traceback___get_impl	BaseException___traceback___get_impl(PyBaseExceptionObject *self) /*[clinic end generated code: output=17cf874a52339398 input=a2277f0de62170cf]*/	todo		
 Objects/exceptions.c	398	418	BaseException___traceback___set_impl	BaseException___traceback___set_impl(PyBaseExceptionObject *self, PyObject *value) /*[clinic end generated code: output=a82c86d9f29f48f0 input=12676035676badad]*/	modelled	typeobj-exc-traceback-setter	
-Objects/exceptions.c	427	434	BaseException___context___get_impl	BaseException___context___get_impl(PyBaseExceptionObject *self) /*[clinic end generated code: output=6ec5d296ce8d1c93 input=b2d22687937e66ab]*/	modelled	typeobj-exc-context-set	
+Objects/exceptions.c	427	434	BaseException___context___get_impl	BaseException___context___get_impl(PyBaseExceptionObject *self) /*[clinic end generated code: output=6ec5d296ce8d1c93 input=b2d22687937e66ab]*/	todo		
 Objects/exceptions.c	443	461	BaseException___context___set_impl	BaseException___context___set_impl(PyBaseExceptionObject *self, PyObject *value) /*[clinic end generated code: output=b4cb52dcca1da3bd input=c0971adf47fa1858]*/	modelled	typeobj-exc-context-set	
-Objects/exceptions.c	470	477	BaseException___cause___get_impl	BaseException___cause___get_impl(PyBaseExceptionObject *self) /*[clinic end generated code: output=987f6c4d8a0bdbab input=40e0eac427b6e602]*/	modelled	typeobj-exc-cause-suppress	
+Objects/exceptions.c	470	477	BaseException___cause___get_impl	BaseException___cause___get_impl(PyBaseExceptionObject *self) /*[clinic end generated code: output=987f6c4d8a0bdbab input=40e0eac427b6e602]*/	todo		
 Objects/exceptions.c	486	505	BaseException___cause___set_impl	BaseException___cause___set_impl(PyBaseExceptionObject *self, PyObject *value) /*[clinic end generated code: output=6161315398aaf541 input=e1b403c0bde3f62a]*/	modelled	typeobj-exc-cause-suppress	
 Objects/exceptions.c	519	526	PyException_GetTraceback	PyException_GetTraceback(PyObject *self)	todo		
 Objects/exceptions.c	530	537	PyException_SetTraceback	PyException_SetTraceback(PyObject *self, PyObject *tb)	todo		
@@ -55,7 +55,7 @@ Objects/exceptions.c	1249	1280	get_matcher_type	get_matcher_type(PyObject *value
 Objects/exceptions.c	1283	1318	exceptiongroup_split_check_match	exceptiongroup_split_check_match(PyObject *exc, _exceptiongroup_split_matcher_type matcher_type, PyObject *matcher_value)	modelled	typeobj-exc-match-by-type,typeobj-exc-split-partition,typeobj-exc-instance-ids	
 Objects/exceptions.c	1326	1434	exceptiongroup_split_recursive	exceptiongroup_split_recursive(PyObject *exc, _exceptiongroup_split_matcher_type matcher_type, PyObject *matcher_value, bool construct_rest, _exceptiongroup_split_result *result)	modelled	typeobj-exc-split-partition,typeobj-exc-split-structure,typeobj-exc-subgroup-is-split-match,typeobj-exc-split-identity,typeobj-exc-split-leaf	
 Objects/exceptions.c	1444	1469	BaseExceptionGroup_split_impl	BaseExceptionGroup_split_impl(PyBaseExceptionGroupObject *self, PyObject *matcher_value) /*[clinic end generated code: output=d74db579da4df6e2 input=0c5cfbfed57e0052]*/	modelled	typeobj-exc-split-partition,typeobj-exc-split-structure,typeobj-exc-split-identity	
-Objects/exceptions.c	1479	1502	BaseExceptionGroup_subgroup_impl	BaseExceptionGroup_subgroup_impl(PyBaseExceptionGroupObject *self, PyObject *matcher_value) /*[clinic end generated code: output=07dbec8f77d4dd8e input=988ffdd755a151ce]*/	modelled	typeobj-exc-subgroup-is-split-match,typeobj-exc-split-identity	
+Objects/exceptions.c	1479	1502	BaseExceptionGroup_subgroup_impl	BaseExceptionGroup_subgroup_impl(PyBaseExceptionGroupObject *self, PyObject *matcher_value) /*[clinic end generated code: output=07dbec8f77d4dd8e input=988ffdd755a151ce]*/	modelled	typeobj-exc-split-identity	
 Objects/exceptions.c	1505	1540	collect_exception_group_leaf_ids	collect_exception_group_leaf_ids(PyObject *exc, PyObject *leaf_ids)	modelled	typeobj-exc-leaf-ids	
 Objects/exceptions.c	1549	1584	exception_group_projection	exception_group_projection(PyObject *eg, PyObject *keep)	modelled	typeobj-exc-instance-ids,typeobj-exc-same-metadata-notes	
 Objects/exceptions.c	1587	1599	is_same_exception_metadata	is_same_exception_metadata(PyObject *exc1, PyObject *exc2)	modelled	typeobj-exc-same-metadata-notes	
@@ -72,8 +72,8 @@ Objects/exceptions.c	1886	1914	ImportError_getstate	ImportError_getstate(PyObjec
 Objects/exceptions.c	1918	1931	ImportError_reduce	ImportError_reduce(PyObject *self, PyObject *Py_UNUSED(ignored))	modelled	typeobj-exc-reduce-keeps-name	
 Objects/exceptions.c	1969	1973	PyOSErrorObject_CAST	PyOSErrorObject_CAST(PyObject *self)	excluded		no-behaviour: pointer cast with a debug assert
 Objects/exceptions.c	2114	2131	oserror_use_init	oserror_use_init(PyTypeObject *type)	modelled	typeobj-exc-oserror-parsed-once	
-Objects/exceptions.c	2134	2199	OSError_new	OSError_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-oserror-parsed-once,typeobj-exc-oserror-remap	
-Objects/exceptions.c	2202	2238	OSError_init	OSError_init(PyObject *op, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-oserror-parsed-once,typeobj-exc-oserror-positions	
+Objects/exceptions.c	2134	2199	OSError_new	OSError_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
+Objects/exceptions.c	2202	2238	OSError_init	OSError_init(PyObject *op, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-oserror-positions	
 Objects/exceptions.c	2241	2252	OSError_clear	OSError_clear(PyObject *op)	excluded		no-behaviour: GC tp_clear; drops references, no Python-visible effect while the object is reachable
 Objects/exceptions.c	2255	2260	OSError_dealloc	OSError_dealloc(PyObject *self)	excluded		no-behaviour: deallocation; the object model has no reference counts
 Objects/exceptions.c	2263	2274	OSError_traverse	OSError_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse
@@ -116,7 +116,7 @@ Objects/exceptions.c	3207	3217	unicode_error_adjust_end	unicode_error_adjust_end
 Objects/exceptions.c	3227	3236	assert_adjusted_unicode_error_end	assert_adjusted_unicode_error_end(Py_ssize_t end, Py_ssize_t objlen)	modelled	typeobj-exc-unicode-adjust	
 Objects/exceptions.c	3253	3260	unicode_error_adjust_len	unicode_error_adjust_len(Py_ssize_t start, Py_ssize_t end, Py_ssize_t objlen)	modelled	typeobj-exc-unicode-adjust	
 Objects/exceptions.c	3266	3271	assert_adjusted_unicode_error_len	assert_adjusted_unicode_error_len(Py_ssize_t ranlen, Py_ssize_t objlen)	modelled	typeobj-exc-unicode-adjust	
-Objects/exceptions.c	3306	3354	_PyUnicodeError_GetParams	_PyUnicodeError_GetParams(PyObject *self, PyObject **obj, Py_ssize_t *objlen, Py_ssize_t *start, Py_ssize_t *end, Py_ssize_t *slen, int as_bytes)	modelled	typeobj-exc-unicode-params	
+Objects/exceptions.c	3306	3354	_PyUnicodeError_GetParams	_PyUnicodeError_GetParams(PyObject *self, PyObject **obj, Py_ssize_t *objlen, Py_ssize_t *start, Py_ssize_t *end, Py_ssize_t *slen, int as_bytes)	todo		
 Objects/exceptions.c	3361	3365	PyUnicodeEncodeError_GetEncoding	PyUnicodeEncodeError_GetEncoding(PyObject *self)	todo		
 Objects/exceptions.c	3369	3373	PyUnicodeDecodeError_GetEncoding	PyUnicodeDecodeError_GetEncoding(PyObject *self)	todo		
 Objects/exceptions.c	3379	3383	PyUnicodeEncodeError_GetObject	PyUnicodeEncodeError_GetObject(PyObject *self)	todo		

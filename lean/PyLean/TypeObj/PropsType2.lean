@@ -227,6 +227,25 @@ def SuperBindHasType : Prop :=
     alloc B.super (freshBody w B.super) w = .ok v w' →
     superBindsNullType w' v o = false
 
+/-- **`superBindsNullType` is the branch of `super_descr_get` that crashes.** For every `Rt`, an
+object for which the predicate holds runs `superDescrGet` into its `none` branch, the point where
+C calls `supercheck` with a NULL type. So the refutation below is about `super_descr_get` itself
+and not only about the predicate. -/
+def SuperBindNullIsTheBranch : Prop :=
+  ∀ (rt : Rt) (self o : Val) (w : World), superBindsNullType w self o = true →
+    ∃ site, superDescrGet rt self (some o) w = .err (.gap site) w
+
+theorem superBindNullIsTheBranch_proven : SuperBindNullIsTheBranch := by
+  intro rt self o w h
+  cases hp : payloadOf w self with
+  | none => cases o <;> simp [superBindsNullType, hp] at h
+  | some b =>
+    cases b
+    case super ty so ot =>
+      cases ty <;> cases so <;> cases o <;> simp [superBindsNullType, hp] at h
+      all_goals simp [superDescrGet, hp, h, gapAt]
+    all_goals cases o <;> simp [superBindsNullType, hp] at h
+
 /-- A heap in which address 24 is `super`, with the MRO it has in CPython. -/
 def superNullW : World :=
   { heap := (Array.replicate 24 (.val {} : Cell)).push
