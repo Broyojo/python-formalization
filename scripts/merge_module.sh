@@ -7,7 +7,8 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 branch=$1 mod=$2 key=$3
 base=$(git merge-base HEAD "$branch")
 
-outside=$(git diff --name-only "$base" "$branch" | grep -vE \
+# ALLOW names extra files a person has checked, such as a fix to a shared table.
+outside=$(git diff --name-only "$base" "$branch" | grep -vxE "${ALLOW:-^$}" | grep -vE \
   "^(\.gitignore|lean/PyLean/$mod\.lean|lean/PyLean/$mod/.*|difftest/${key}(_[a-z0-9_]+)?\.py|bugs/${key}-[^/]*\.yaml|coverage/registry\.tsv|coverage/methods/[^/]*\.tsv|coverage/review/[^/]*\.tsv)$" || true)
 if [ -n "$outside" ]; then
     echo "FAIL $branch touches files outside its module:"
