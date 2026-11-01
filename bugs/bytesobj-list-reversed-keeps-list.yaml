@@ -1,0 +1,80 @@
+id: bytesobj-list-reversed-keeps-list
+title: "An exhausted reversed(list) iterator keeps the list alive, unlike iter(list)"
+priority: P3
+kind: regression
+module: bytesobj
+files: [Objects/listobject.c]
+functions: ["listreviter_next"]
+summary: |
+  list iterators release their list when exhausted, and the field says so: `it_seq` is
+  "Set to NULL when iterator is exhausted" (listobject.c:4084). reversed(l) does not do this on
+  normal exhaustion. Yielding the item at index 0 stores it_index = -1, and the next call then
+  returns at the early `if (index < 0) return NULL;` (:4178), so the code that clears it_seq
+  (:4189-4193) never runs. That code is reached only when the list has shrunk below the index. An
+  exhausted reversed iterator therefore holds a strong reference to the list for as long as the
+  iterator lives, however many more times next() is called. iter(l), iter(t) and the generic
+  reversed(seq) all release theirs.
+  Lean: ListRevIterReleases is refuted; ListIterReleases (the forward iterator, for every list and
+  any number of next calls) is proven, and so is ListRevIterStops, the one path that does release.
+  The difftest compares gc.get_referents(it) against the model after next calls.
+likelihood: |
+  Moderate to low. Iterators are usually short-lived, so most code never notices. It matters when
+  an exhausted reversed iterator outlives a large list: stored on an object, held in a generator's
+  frame, or kept by a framework. It is a memory-retention problem, not a wrong result.
+maybe_intended: |
+  Not intended, as far as the source shows: it contradicts the comment on the field and the behaviour
+  of the forward iterator, and 3.12 cleared it_seq on this path. The early return looks like a side
+  effect of the free-threading rewrite, which leaves it_seq set under Py_GIL_DISABLED on purpose.
+  What the default build gains from skipping the clear is not apparent.
+reproducer: |
+  import gc
+  import weakref
+  class L(list):
+      pass
+  def still_alive(make):
+      l = L([1, 2, 3])
+      r = weakref.ref(l)
+      it = make(l)
+      for _ in it:
+          pass
+      next(it, None)
+      del l
+      gc.collect()
+      return r() is not None
+  rev = still_alive(reversed)
+  fwd = still_alive(iter)
+  print('reversed(l) keeps the list after exhaustion:', rev)
+  print('iter(l) keeps the list after exhaustion:', fwd)
+  if rev and not fwd:
+      print('REPRODUCED bytesobj-list-reversed-keeps-list')
+expected: |
+  The list is released when the reversed iterator is exhausted, as with iter(l).
+observed: |
+  python3 3.14.7: reversed(l) keeps the list: True; iter(l): False. REPRODUCED.
+  main (python.exe 3.16.0a1+dev, ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Objects/listobject.c:4084 and Include/internal/pycore_list.h: the comment on it_seq, "Set to NULL
+  when iterator is exhausted". This is an internal contract; no user-facing document promises it.
+cause: |
+  Objects/listobject.c:4178-4180 (3.14.7): `if (index < 0) { return NULL; }` returns before
+  :4189-4193, which clear it_seq. The fetched tags show the history: v3.12.0's listreviter_next tests
+  `index >= 0 && index < size` and falls through to the clearing code; v3.13.0 and v3.14.0 have the
+  early return. The same code is on main.
+possible_fix: |
+  In the default build, clear it_seq on the `index < 0` path when it is not already NULL, as the
+  fall-through does, keeping `#ifndef Py_GIL_DISABLED`. listreviter_len and listreviter_setstate
+  already handle a NULL it_seq, and listiter_reduce_general tests only the index.
+duplicates:
+  issues:
+    - {number: 112087, state: closed, relation: "the free-threading list work, likely where the early return came from; not this report"}
+  queries: ["listreviter", "reversed iterator exhausted", "list_reverseiterator", "listreviter_next (PRs)",
+            "bugforge README: grep for reversed/reviter/reverse iter: no match",
+            "Lib/test/test_list.py: grep for exhaust/it_seq/reversed: pickling only"]
+  note: |
+    Multi-word GitHub searches require every term and can miss a real duplicate: "list del shrink
+    memory" returned nothing although gh-158592 is exactly that kind of report. Treat "none found" here
+    as weak evidence; a human should search again before filing. The attribution to the free-threading
+    work is inferred from the tags and is not confirmed by a bisect.
+lean:
+  property: PyLean.BytesObj.Seq.ListRevIterReleases
+  theorem: PyLean.BytesObj.Seq.listRevIterReleases_refuted

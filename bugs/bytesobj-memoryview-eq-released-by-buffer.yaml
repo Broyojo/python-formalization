@@ -1,0 +1,82 @@
+id: bytesobj-memoryview-eq-released-by-buffer
+title: "m == w reads released memory when w.__buffer__ releases m (use after free)"
+priority: P1
+kind: memory-safety
+module: bytesobj
+files: [Objects/memoryobject.c]
+functions: ["memory_richcompare"]
+summary: |
+  memory_richcompare tests BASE_INACCESSIBLE(v) and then calls PyObject_GetBuffer(w). For a class
+  with __buffer__ that is Python code, which can release v and free its buffer. Nothing tests v
+  again, so the comparison reads the buffer of a released view:
+      ba = bytearray(N); m = memoryview(ba)
+      class W:
+          def __buffer__(self, flags):
+              m.release(); ba.clear(); return memoryview(other)
+      m == W()
+  With a large buffer the process dies with SIGSEGV. With a small buffer that is not freed, the
+  released view compares by content and gives True, where a released view compares by identity
+  (:3113-3116).
+  Lean: CmpReleasedIdentity is refuted on a 1-byte view; CmpSpecialCases (a view already
+  released on entry compares by identity, for all states) is proven.
+likelihood: |
+  Low: it needs a __buffer__ that releases the other operand. It is reachable from pure Python
+  since PEP 688 (3.12), and gives an out-of-bounds read.
+maybe_intended: |
+  No. All other re-entrant paths of this file were closed by gh-92888, gh-142664 and gh-143195;
+  this one reads v after running arbitrary code with no export or check held.
+reproducer: |
+  import subprocess, sys
+  crash = '''
+  N = 1 << 27
+  other = bytes(N)
+  ba = bytearray(N)
+  m = memoryview(ba)
+  class W:
+      def __buffer__(self, flags):
+          m.release()
+          ba.clear()
+          return memoryview(other)
+  print(m == W())
+  '''
+  r = subprocess.run([sys.executable, "-I", "-c", crash], capture_output=True, text=True)
+  print("freed buffer: exit status", r.returncode, r.stdout.strip())
+  ba = bytearray(b"abc")
+  m = memoryview(ba)
+  class W:
+      def __buffer__(self, flags):
+          m.release()
+          return memoryview(b"abc")
+  result = m == W()
+  print("released during ==:", m, result)
+  if result is True and "released" in repr(m):
+      print("REPRODUCED bytesobj-memoryview-eq-released-by-buffer")
+expected: |
+  m == W() is False: a released view is equal only to itself. The buffer is never read.
+observed: |
+  python3 3.14.7: True for the small case; SIGSEGV (status -11) for a 128 MB buffer freed in
+  __buffer__. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): identical, SIGSEGV included. REPRODUCED.
+promised_by: |
+  Doc/library/stdtypes.rst, memoryview.release: "any further operation on the view raises a
+  ValueError"; Objects/memoryobject.c:3113-3116 (released views compare by identity).
+cause: |
+  Objects/memoryobject.c:3113 tests v; :3127 PyObject_GetBuffer(w, &wbuf, PyBUF_FULL_RO) may run
+  __buffer__; :3163-3177 read vv->buf. struct_get_unpacker (:2082) can also run Python code if
+  sys.modules['struct'] was replaced, with the same effect. main: Objects/memoryobject.c:3287.
+possible_fix: |
+  Hold an export on v across the call (FT_ATOMIC_ADD_SSIZE(self->exports, 1), as memory_hash and
+  memoryview_hex_impl do since gh-142664 and gh-143195), or repeat the BASE_INACCESSIBLE test after
+  PyObject_GetBuffer and take the identity branch.
+duplicates:
+  issues:
+    - {number: 92888, state: closed, relation: "same class; assignment only"}
+    - {number: 60198, state: open, relation: "older report, components IO and Unicode, with a release-view patch; looks like a different path (only its metadata and start were read), a human should confirm"}
+    - {number: 142664, state: closed, relation: "same class, __hash__; its fix is the model for this one"}
+    - {number: 143195, state: closed, relation: "same class, hex"}
+  queries: ["memoryview comparison __buffer__ release", "memoryview richcompare use after free",
+            "memoryview use after free", "memoryview crash segfault release",
+            "gh search prs: memoryview released", "bugforge README: no memoryview entries"]
+lean:
+  property: PyLean.BytesObj.Mem.CmpReleasedIdentity
+  theorem: PyLean.BytesObj.Mem.cmpReleasedIdentity_refuted

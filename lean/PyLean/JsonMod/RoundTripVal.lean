@@ -11,6 +11,48 @@ namespace PyLean.JsonMod
 
 open PyLean
 
+mutual
+/-- `EVal.ok`, without float values: their text is `float.__repr__`, which is
+abstract here (see `json-dumps-accepted-float`). -/
+def EVal.okJ : EVal → Bool
+  | .flt _ _ => false
+  | .str s => strOk s
+  | .list xs => EVal.okJList xs
+  | .dict kvs => EVal.okJItems kvs
+  | _ => true
+def EVal.okJList : List EVal → Bool
+  | [] => true
+  | x :: xs => EVal.okJ x && EVal.okJList xs
+def EVal.okJItems : List (EKey × EVal) → Bool
+  | [] => true
+  | (k, x) :: xs => k.ok && EVal.okJ x && EVal.okJItems xs
+end
+
+mutual
+theorem EVal.ok_of_okJ : ∀ v : EVal, v.okJ = true → v.ok = true
+  | .none, _ => rfl
+  | .bool _, _ => rfl
+  | .int _, _ => rfl
+  | .str _, h => h
+  | .flt _ _, h => by simp [EVal.okJ] at h
+  | .list xs, h => EVal.okList_of_okJ xs h
+  | .dict kvs, h => EVal.okItems_of_okJ kvs h
+  | .back _, _ => rfl
+  | .other _ _, _ => rfl
+theorem EVal.okList_of_okJ : ∀ xs : List EVal, EVal.okJList xs = true → EVal.okList xs = true
+  | [], _ => rfl
+  | x :: xs, h => by
+    simp only [EVal.okJList, Bool.and_eq_true] at h
+    simp only [EVal.okList, Bool.and_eq_true]
+    exact ⟨EVal.ok_of_okJ x h.1, EVal.okList_of_okJ xs h.2⟩
+theorem EVal.okItems_of_okJ : ∀ xs : List (EKey × EVal), EVal.okJItems xs = true → EVal.okItems xs = true
+  | [], _ => rfl
+  | (k, x) :: xs, h => by
+    simp only [EVal.okJItems, Bool.and_eq_true] at h
+    simp only [EVal.okItems, Bool.and_eq_true]
+    exact ⟨⟨h.1.1, EVal.ok_of_okJ x h.1.2⟩, EVal.okItems_of_okJ xs h.2⟩
+end
+
 /-- Only JSON white space. -/
 def wsOnly (t : PStr) : Bool := t.all isWs
 
@@ -25,6 +67,8 @@ structure Layout (cfg : ECfg) : Prop where
   item : SepOk cfg.itemSep 44
   key : SepOk cfg.keySep 58
   ind : ∀ i, cfg.indent = some i → wsOnly i = true
+  cst : cfg.customEnc = none
+  dfl : ∀ n t v', cfg.dflt n t = .ok v' → EVal.okJ v' = true
 
 theorem wsOnly_nil : wsOnly [] = true := rfl
 
@@ -149,7 +193,7 @@ theorem scanOnce_obj (cfg : DCfg) (n : Nat) {s : PStr} {p : Nat} {R : PStr} (hs 
         (if wsEnd s (p + 1) ≥ s.length ∨ s.getD (wsEnd s (p + 1)) 0 ≠ 34 then
           .error (.jde "Expecting property name enclosed in double quotes" (wsEnd s (p + 1)))
          else cObjBody cfg s n (wsEnd s (p + 1)) [])
-      else .ok (.obj [], wsEnd s (p + 1) + 1) := by
+      else (cFinish cfg []).map (·, wsEnd s (p + 1) + 1) := by
   obtain ⟨h1, _, h3⟩ := char_at hs
   have hl : ¬ p ≥ s.length := by omega
   simp only [cScanOnce, hl, ↓reduceIte, h3, Nat.reduceEqDiff]
@@ -168,9 +212,9 @@ theorem scanOnce_lit (cfg : DCfg) (n : Nat) {s : PStr} {p : Nat} (lit : String) 
       (if c = 110 ∧ litAt s p "null" = true then .ok (.null, p + 4)
        else if c = 116 ∧ litAt s p "true" = true then .ok (.bool true, p + 4)
        else if c = 102 ∧ litAt s p "false" = true then .ok (.bool false, p + 5)
-       else if c = 78 ∧ litAt s p "NaN" = true then cConst "NaN" p
-       else if c = 73 ∧ litAt s p "Infinity" = true then cConst "Infinity" p
-       else if c = 45 ∧ litAt s p "-Infinity" = true then cConst "-Infinity" p
+       else if c = 78 ∧ litAt s p "NaN" = true then cConst cfg "NaN" p
+       else if c = 73 ∧ litAt s p "Infinity" = true then cConst cfg "Infinity" p
+       else if c = 45 ∧ litAt s p "-Infinity" = true then cConst cfg "-Infinity" p
        else cMatchNumber cfg s p) := by
   have hs' : s.drop p = c :: (tl ++ R) := by rw [hs, hc]; rfl
   obtain ⟨h1, _, h3⟩ := char_at hs'
@@ -219,11 +263,13 @@ theorem intRepr_head {n : Int} {t : PStr} (h : intRepr n = .ok t) :
       decide
     exact ⟨d, r, rfl, by simp [ValHead, h2], fun e => absurd e h3, fun _ => h2⟩
 
-theorem cEnc_head {cfg : ECfg} {f lvl : Nat} {v : EVal} {t : PStr} (h : cEnc cfg f lvl v = .ok t) :
-    ∃ c r, t = c :: r ∧ ValHead c := by
-  cases f with
-  | zero => simp [cEnc] at h
-  | succ f =>
+theorem cEnc_head {cfg : ECfg} (hL : Layout cfg) : ∀ {f lvl : Nat} {seen : List Nat} {v : EVal} {t : PStr},
+    v.okJ = true → cEnc cfg f lvl seen v = .ok t → ∃ c r, t = c :: r ∧ ValHead c := by
+  intro f
+  induction f with
+  | zero => intro lvl seen v t _ h; simp [cEnc] at h
+  | succ f ih =>
+    intro lvl seen v t hok h
     cases v with
     | none =>
       simp only [cEnc, Except.ok.injEq] at h
@@ -238,8 +284,9 @@ theorem cEnc_head {cfg : ECfg} {f lvl : Nat} {v : EVal} {t : PStr} (h : cEnc cfg
       simp only [cEnc] at h
       obtain ⟨c, r, h1, h2, _⟩ := intRepr_head h
       exact ⟨c, r, h1, h2⟩
+    | flt b r => simp [EVal.okJ] at hok
     | str x =>
-      simp only [cEnc, Except.ok.injEq] at h
+      simp only [cEnc, cEncStr, hL.cst, Except.ok.injEq] at h
       obtain ⟨r, hr⟩ := cStrEnc_head cfg x
       exact ⟨34, r, by rw [← h, hr], by simp [ValHead]⟩
     | list xs =>
@@ -265,6 +312,14 @@ theorem cEnc_head {cfg : ECfg} {f lvl : Nat} {v : EVal} {t : PStr} (h : cEnc cfg
     | back k =>
       simp only [cEnc] at h
       cases h
-    | other => simp [cEnc] at h
+    | other n t' =>
+      simp only [cEnc] at h
+      split at h
+      · cases h
+      · cases hd : cfg.dflt n t' with
+        | error e => rw [hd] at h; cases h
+        | ok v' =>
+          rw [hd] at h
+          exact ih (hL.dfl n t' v' hd) h
 
 end PyLean.JsonMod

@@ -1,0 +1,98 @@
+id: json-indent-recursion-memory
+title: "json: dumps(cyclic, check_circular=False, indent=1) with the C encoder uses gigabytes before RecursionError (quadratic in depth)"
+priority: P4
+kind: resource-use
+module: json
+files: [Modules/_json.c, Lib/json/encoder.py]
+functions: ["C update_indent_cache", "C get_item_separator", "C encoder_listencode_list", "C encoder_listencode_obj"]
+summary: |
+  With check_circular=False a reference cycle recurses until the recursion check stops it. The C
+  encoder is limited by the C stack (about 51,000 lists with the default 8 MB stack), not by
+  sys.getrecursionlimit(). With an indent, every level adds two cached strings of length
+  proportional to the level and writes one more such string, so memory is quadratic in the depth:
+  at depth n, about n^2 * len(indent) characters in the indent cache and n^2/2 * len(indent) in
+  the output writer. json.dumps(l, check_circular=False, indent=1) with l = []; l.append(l) peaks
+  at 3.9 GB (1.6 s) before RecursionError, and indent=4 hits a 6 GB address-space limit
+  (MemoryError); without an indent the same call peaks at 22 MB and takes 0.03 s. The pure-Python
+  encoder raises RecursionError at depth 1000 straight away. Lean: IndentCacheSize gives the exact
+  length of every cache entry, and json-indent-cache proves the cache contents.
+likelihood: |
+  Low: needs check_circular=False, an accidental cycle (or a very deeply nested value) and an
+  indent. The result is a failure that would have happened anyway, but much more expensively: an
+  out-of-memory kill rather than an exception on a small machine or in a constrained container,
+  and without a bound at all under `ulimit -s unlimited` (compare gh-143460).
+maybe_intended: |
+  Quite possibly. The docs say that with check_circular=False a circular reference results in a
+  RecursionError "(or worse)" (Doc/library/json.rst:191-194), so this is inside what was promised.
+  About a third of the memory is the indented text itself, which any encoder that keeps its output
+  would need; only the other two thirds are the cache from gh-118636. For a legitimately deep,
+  acyclic value the output is quadratic regardless. A maintainer may reasonably close this as
+  documented behaviour; it is recorded because the twins differ so widely in cost.
+reproducer: |
+  import json, resource
+  from test.support.import_helper import import_fresh_module
+  pyjson = import_fresh_module('json', blocked=['_json'])
+  assert pyjson.encoder.c_make_encoder is None
+  l = []
+  l.append(l)
+  def run(mod, **kw):
+      try:
+          mod.dumps(l, check_circular=False, **kw)
+          return 'returned'
+      except BaseException as e:
+          return type(e).__name__
+  py = run(pyjson, indent=1)
+  limit = 2 * 2**30
+  resource.setrlimit(resource.RLIMIT_AS, (limit, limit))
+  plain = run(json)
+  indented = run(json, indent=1)
+  print('Python encoder, indent=1:', py)
+  print('C encoder, no indent, 2 GiB address space:', plain)
+  print('C encoder, indent=1, 2 GiB address space:', indented)
+  if py == 'RecursionError' and plain == 'RecursionError' and indented == 'MemoryError':
+      print('REPRODUCED json-indent-recursion-memory')
+expected: |
+  RecursionError, at a cost comparable to the same call without an indent or to the pure-Python
+  encoder.
+observed: |
+  On the Linux build pod with an 8 MB stack and a 6 GB address-space cap (peak RSS, time):
+  python3 3.14.7, maximum list depth 51,755: no indent 22 MB 0.03 s, indent=0 26 MB 0.03 s,
+  indent=1 3927 MB 1.63 s, indent=4 MemoryError at 5899 MB after 2.34 s.
+  main 3.16.0a1+dev, maximum list depth 45,898: no indent 23 MB, indent=0 26 MB, indent=1 3247 MB
+  1.32 s, indent=4 MemoryError at 5900 MB after 2.38 s.
+  The figures match the model: 51,755^2 * 1.5 is 4.0e9 characters.
+promised_by: |
+  Nothing explicit. C/Python twin agreement holds for the exception class only when memory is
+  plentiful; Doc/library/json.rst:191-194 allows "(or worse)".
+cause: |
+  Modules/_json.c:1308-1335 (update_indent_cache) appends, for each new level, a newline_indent of
+  length 1 + level*len(indent) and a separator_indent longer by len(item_separator), and keeps them
+  for the whole call. The recursion check at Modules/_json.c:1519 uses _Py_EnterRecursiveCall, which
+  in 3.14 compares the C stack pointer with its limit, so the depth reached is set by the stack
+  size, about fifty times the Python recursion limit that stops Lib/json/encoder.py.
+  Unchanged on main (Modules/_json.c:1395 update_indent_cache).
+possible_fix: |
+  Probably none needed beyond noting it in the docs for check_circular. If it is worth changing: cap
+  the indent cache at some depth and build the strings on the fly past it, which removes the two
+  thirds that are cache but not the writer's third.
+reproduces:
+  python3 (3.14.7): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues:
+    - {number: 134935, state: closed, relation: "related (use RecursionError to detect cycles; rejected, serhiy-storchaka notes the C stack limit is implementation detail), no memory discussion", reason: not planned}
+    - {number: 137103, state: open, relation: "unrelated (Py_ReprEnter for check_circular=True)", reason: open}
+    - {number: 143460, state: closed, relation: "related (OOM in test_json under ulimit -s unlimited: no stack limit, no indent involved)", reason: closed}
+    - {number: 65412, state: closed, relation: "related in spirit (memory bomb from a default= that never converges, closed as invalid: nested exception reprs, a different mechanism)", reason: not planned}
+    - {number: 140750, state: closed, relation: "unrelated (heap-buffer-overflow in the indent cache)", reason: completed}
+    - {number: 143196, state: closed, relation: "unrelated (heap-buffer-overflow via re-entrant __mul__)", reason: completed}
+  queries: ["json indent memory", "json indent cache", "json indent quadratic", "json check_circular",
+            "json check_circular RecursionError", "json circular reference memory", "json dumps cyclic",
+            "json dumps recursion memory", "json dumps deep nesting", "json encoder recursion crash",
+            "json C encoder indent", "json indent_cache", "update_indent_cache", "JSONEncoder RecursionError indent",
+            "_json encoder_listencode_list recursion", "json dumps memory error nested",
+            "gh issue view 143460, 137103, 134935, 65412; gh api issues/143460/comments, 65412/comments, 134935/comments",
+            "bugforge-results/README.md: json entries (4, none related)"]
+lean:
+  property: PyLean.JsonMod.IndentCacheSize
+  theorem: PyLean.JsonMod.indentCacheSize_proven

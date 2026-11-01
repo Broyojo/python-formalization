@@ -1,0 +1,65 @@
+id: bytesobj-bytearray-init-iterator-ignores-start
+title: "bytearray.__init__ from an iterator tests capacity without ob_start: an iterator that shrinks the front gets a heap write past the buffer"
+priority: P2
+kind: duplicate-open-upstream
+module: bytesobj
+files: [Objects/bytearrayobject.c]
+functions: ["bytearray___init___impl"]
+summary: |
+  The slow path of bytearray.__init__ appends in place when `Py_SIZE(self) + 1 < self->ob_alloc`.
+  ob_alloc counts from ob_bytes, but the bytes start at ob_start, so after a front deletion
+  (`b[:k] = b''` advances ob_start) the free space is ob_alloc - offset. An iterator can do that while
+  __init__ runs, because self is reachable. Every later item then grows the object past the end of the
+  allocation.
+  Lean: InitLoopKeepsLayout (one append of this loop keeps a valid buffer layout) is refuted, by the same
+  BA.WF invariant that ResizeWF proves bytearray_resize_lock_held keeps. InitLoopFreshLayout, the same
+  statement for offset 0, is proven, so the offset is the whole cause.
+likelihood: |
+  Low: the iterator has to mutate the object being initialised. Severity is high: this is a heap write
+  of attacker-chosen bytes from pure Python.
+maybe_intended: |
+  No. Every other path goes through PyByteArray_Resize, which accounts for the offset.
+reproducer: |
+  b = bytearray()
+  N, K = 400, 150
+  class It:
+      def __iter__(self):
+          return self
+      def __next__(self):
+          if not hasattr(self, 'alloc'):
+              b.extend(b'x' * N)
+              b[0:K] = b''
+              self.alloc = b.__alloc__()
+              return 0x41
+          if K + len(b) + 1 > self.alloc:
+              raise StopIteration
+          return 0x41
+  it = It()
+  b.__init__(it)
+  print('len', len(b), 'alloc', it.alloc, 'now', b.__alloc__(), 'offset', K)
+  # The terminator of the last append lands at offset + len. The loop stops one byte past the
+  # allocation, inside the allocator's rounding, so this reproducer does not corrupt the heap. If the
+  # allocation did not change, nothing moved the data, and that byte was written out of bounds.
+  if K + len(b) + 1 > it.alloc and b.__alloc__() == it.alloc:
+      print('REPRODUCED bytesobj-bytearray-init-iterator-ignores-start')
+expected: |
+  The append goes through PyByteArray_Resize and stays inside the allocation.
+observed: |
+  python3 3.14.7: the object grows to offset + len + 1 > ob_alloc with the allocation unchanged. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same, Objects/bytearrayobject.c:1163 there still
+  has the test. REPRODUCED.
+promised_by: |
+  Invariant: no write outside an allocation.
+cause: |
+  Objects/bytearrayobject.c:1070-1073 (3.14.7): the test ignores `ob_start - ob_bytes`. Same test at
+  :1163 on main.
+possible_fix: |
+  Compare with PyByteArray_AS_STRING/ob_alloc offset, or always call PyByteArray_Resize, which has the
+  right test.
+duplicates:
+  issues:
+    - {number: 158928, state: open, relation: "same bug, with a crashing PoC; gh-158947 is an open PR"}
+  queries: ["bytearray init"]
+lean:
+  property: PyLean.BytesObj.Bytes.InitLoopKeepsLayout
+  theorem: PyLean.BytesObj.Bytes.initLoopKeepsLayout_refuted

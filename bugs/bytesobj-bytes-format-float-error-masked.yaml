@@ -1,0 +1,50 @@
+id: bytesobj-bytes-format-float-error-masked
+title: "b'%f' % 10**400 says 'float argument required, not int'; every __float__ failure is replaced by TypeError"
+priority: P4
+kind: wrong-exception
+module: bytesobj
+files: [Objects/bytesobject.c]
+functions: ["formatfloat"]
+summary: |
+  formatfloat in bytesobject.c turns any failure of PyFloat_AsDouble into
+  TypeError("float argument required, not <type>"). So b'%f' % 10**400 claims an int is not acceptable
+  (b'%f' % 1 works), and an exception raised inside a __float__ method is lost. The str twin,
+  formatfloat in unicodeobject.c, returns the original error: '%f' % 10**400 raises
+  OverflowError: int too large to convert to float.
+  Lean: FloatErrorPreserved is refuted; FloatArgType (a non-number gets the TypeError) is proven.
+likelihood: |
+  Low. Formatting a value that overflows a double with %f as bytes is unusual, but the message then
+  misleads, and swallowing a __float__ exception hides the real cause.
+maybe_intended: |
+  Partly: the replacement gives a good message for non-numbers, which is its purpose. The bug is that
+  it also fires for numbers. main no longer does it.
+reproducer: |
+  def err(f):
+      try:
+          f()
+      except Exception as e:
+          return type(e).__name__
+  a = err(lambda: b'%f' % 10 ** 400)
+  b = err(lambda: '%f' % 10 ** 400)
+  print('bytes:', a, ' str:', b)
+  if a == 'TypeError' and b == 'OverflowError':
+      print('REPRODUCED bytesobj-bytes-format-float-error-masked')
+expected: |
+  OverflowError, as for str.
+observed: |
+  python3 3.14.7: TypeError for bytes, OverflowError for str. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): OverflowError for both. NOT REPRODUCED: fixed on main.
+promised_by: |
+  Twin behaviour: PEP 461 defines bytes formatting by reference to str formatting.
+cause: |
+  Objects/bytesobject.c:432-437 (3.14.7): the PyErr_Format replaces whatever exception is set.
+possible_fix: |
+  Only replace TypeError, or apply the check to non-numbers only. The 3.14 branch still has the old
+  code (read with `gh api`).
+duplicates:
+  issues:
+    - {number: 58776, state: closed, relation: "'float argument required, not NoneType': the message itself, a different question"}
+  queries: ["float argument required", "bugforge README: no match"]
+lean:
+  property: PyLean.BytesObj.Bytes.FloatErrorPreserved
+  theorem: PyLean.BytesObj.Bytes.floatErrorPreserved_refuted
