@@ -361,6 +361,8 @@ structure World where
   heap : Array Cell := #[]
   /-- Observable events in reverse order: the difftest's call log. -/
   trace : List String := []
+  /-- `globals()['__name__']` of the running frame, read by `type_new_set_module`. -/
+  curModule : Option Val := none
   deriving Inhabited
 
 /-- A raised exception. `val` is the exception object when one exists; a C-level
@@ -685,6 +687,8 @@ structure Rt where
   getsetGet (owner : Addr) (n : Name) (obj : Val) : M Val
   /-- The setter of the same; `none` deletes. -/
   getsetSet (owner : Addr) (n : Name) (obj : Val) (value : Option Val) : M Unit
+  /-- Call the `tp_new` function `f` on type `t`. -/
+  tpNew (f : SlotFn) (t : Addr) (args : List Val) (kw : Kw) : M Val
   deriving Inhabited
 
 /-- `Py_ssize_t` range check. -/
