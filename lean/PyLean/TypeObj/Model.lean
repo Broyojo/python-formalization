@@ -681,6 +681,10 @@ structure Rt where
   getIter (v : Val) : M Val
   /-- `PyIter_Next(it)`: `none` on exhaustion. -/
   iterNext (it : Val) : M (Option Val)
+  /-- The getter of the `PyGetSetDef` (or C member) `n` of the static type `owner`. -/
+  getsetGet (owner : Addr) (n : Name) (obj : Val) : M Val
+  /-- The setter of the same; `none` deletes. -/
+  getsetSet (owner : Addr) (n : Name) (obj : Val) (value : Option Val) : M Unit
   deriving Inhabited
 
 /-- `Py_ssize_t` range check. -/
