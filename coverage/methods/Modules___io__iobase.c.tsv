@@ -1,16 +1,16 @@
 file	line	endline	name	signature	status	entry	note
-Modules/_io/iobase.c	81	84	iobase_is_closed	iobase_is_closed(PyObject *self)	todo		
-Modules/_io/iobase.c	87	91	iobase_unsupported	iobase_unsupported(_PyIO_State *state, const char *message)	todo		
-Modules/_io/iobase.c	119	125	_io__IOBase_seek_impl	_io__IOBase_seek_impl(PyObject *self, PyTypeObject *cls, int Py_UNUSED(offset), int Py_UNUSED(whence)) /*[clinic end generated code: output=8bd74ea6538ded53 input=22eaf07a7a0ee289]*/	todo		
-Modules/_io/iobase.c	134	138	_io__IOBase_tell_impl	_io__IOBase_tell_impl(PyObject *self) /*[clinic end generated code: output=89a1c0807935abe2 input=04e615fec128801f]*/	todo		
-Modules/_io/iobase.c	153	159	_io__IOBase_truncate_impl	_io__IOBase_truncate_impl(PyObject *self, PyTypeObject *cls, PyObject *Py_UNUSED(size)) /*[clinic end generated code: output=2013179bff1fe8ef input=5b3b6ab3c7abd806]*/	todo		
+Modules/_io/iobase.c	81	84	iobase_is_closed	iobase_is_closed(PyObject *self)	modelled	pyio-base-closed-protocol	
+Modules/_io/iobase.c	87	91	iobase_unsupported	iobase_unsupported(_PyIO_State *state, const char *message)	modelled	pyio-base-unsupported-ops	
+Modules/_io/iobase.c	119	125	_io__IOBase_seek_impl	_io__IOBase_seek_impl(PyObject *self, PyTypeObject *cls, int Py_UNUSED(offset), int Py_UNUSED(whence)) /*[clinic end generated code: output=8bd74ea6538ded53 input=22eaf07a7a0ee289]*/	modelled	pyio-base-unsupported-ops	
+Modules/_io/iobase.c	134	138	_io__IOBase_tell_impl	_io__IOBase_tell_impl(PyObject *self) /*[clinic end generated code: output=89a1c0807935abe2 input=04e615fec128801f]*/	modelled	pyio-base-unsupported-ops	
+Modules/_io/iobase.c	153	159	_io__IOBase_truncate_impl	_io__IOBase_truncate_impl(PyObject *self, PyTypeObject *cls, PyObject *Py_UNUSED(size)) /*[clinic end generated code: output=2013179bff1fe8ef input=5b3b6ab3c7abd806]*/	modelled	pyio-base-unsupported-ops	
 Modules/_io/iobase.c	172	185	_io__IOBase_flush_impl	_io__IOBase_flush_impl(PyObject *self) /*[clinic end generated code: output=7cef4b4d54656a3b input=773be121abe270aa]*/	todo		
-Modules/_io/iobase.c	188	195	iobase_closed_get	iobase_closed_get(PyObject *self, void *context)	todo		
-Modules/_io/iobase.c	198	214	iobase_check_closed	iobase_check_closed(PyObject *self)	todo		
-Modules/_io/iobase.c	217	226	_PyIOBase_check_closed	_PyIOBase_check_closed(PyObject *self, PyObject *args)	todo		
-Modules/_io/iobase.c	229	233	iobase_check_seekable	iobase_check_seekable(PyObject *self, PyObject *args)	todo		
-Modules/_io/iobase.c	236	240	iobase_check_readable	iobase_check_readable(PyObject *self, PyObject *args)	todo		
-Modules/_io/iobase.c	243	247	iobase_check_writable	iobase_check_writable(PyObject *self, PyObject *args)	todo		
+Modules/_io/iobase.c	188	195	iobase_closed_get	iobase_closed_get(PyObject *self, void *context)	modelled	pyio-base-closed-protocol	
+Modules/_io/iobase.c	198	214	iobase_check_closed	iobase_check_closed(PyObject *self)	modelled	pyio-base-closed-protocol	
+Modules/_io/iobase.c	217	226	_PyIOBase_check_closed	_PyIOBase_check_closed(PyObject *self, PyObject *args)	modelled	pyio-base-closed-protocol	
+Modules/_io/iobase.c	229	233	iobase_check_seekable	iobase_check_seekable(PyObject *self, PyObject *args)	modelled	pyio-base-checks-unsupported	
+Modules/_io/iobase.c	236	240	iobase_check_readable	iobase_check_readable(PyObject *self, PyObject *args)	modelled	pyio-base-checks-unsupported	
+Modules/_io/iobase.c	243	247	iobase_check_writable	iobase_check_writable(PyObject *self, PyObject *args)	modelled	pyio-base-checks-unsupported	
 Modules/_io/iobase.c	250	255	_PyIOBase_cannot_pickle	_PyIOBase_cannot_pickle(PyObject *self, PyObject *args)	todo		
 Modules/_io/iobase.c	270	291	_io__IOBase_close_impl	_io__IOBase_close_impl(PyObject *self) /*[clinic end generated code: output=63c6a6f57d783d6d input=f4494d5c31dbc6b7]*/	todo		
 Modules/_io/iobase.c	296	333	iobase_finalize	iobase_finalize(PyObject *self)	todo		
@@ -18,18 +18,18 @@ Modules/_io/iobase.c	336	349	_PyIOBase_finalize	_PyIOBase_finalize(PyObject *sel
 Modules/_io/iobase.c	352	358	iobase_traverse	iobase_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal/clear of object references, no Python-visible result
 Modules/_io/iobase.c	361	366	iobase_clear	iobase_clear(PyObject *op)	excluded		no-behaviour: GC traversal/clear of object references, no Python-visible result
 Modules/_io/iobase.c	371	393	iobase_dealloc	iobase_dealloc(PyObject *op)	todo		
-Modules/_io/iobase.c	407	411	_io__IOBase_seekable_impl	_io__IOBase_seekable_impl(PyObject *self) /*[clinic end generated code: output=4c24c67f5f32a43d input=b976622f7fdf3063]*/	todo		
-Modules/_io/iobase.c	414	428	_PyIOBase_check_seekable	_PyIOBase_check_seekable(_PyIO_State *state, PyObject *self, PyObject *args)	todo		
-Modules/_io/iobase.c	439	443	_io__IOBase_readable_impl	_io__IOBase_readable_impl(PyObject *self) /*[clinic end generated code: output=e48089250686388b input=285b3b866a0ec35f]*/	todo		
-Modules/_io/iobase.c	447	461	_PyIOBase_check_readable	_PyIOBase_check_readable(_PyIO_State *state, PyObject *self, PyObject *args)	todo		
-Modules/_io/iobase.c	472	476	_io__IOBase_writable_impl	_io__IOBase_writable_impl(PyObject *self) /*[clinic end generated code: output=406001d0985be14f input=9dcac18a013a05b5]*/	todo		
-Modules/_io/iobase.c	480	494	_PyIOBase_check_writable	_PyIOBase_check_writable(_PyIO_State *state, PyObject *self, PyObject *args)	todo		
-Modules/_io/iobase.c	499	505	iobase_enter	iobase_enter(PyObject *self, PyObject *args)	todo		
+Modules/_io/iobase.c	407	411	_io__IOBase_seekable_impl	_io__IOBase_seekable_impl(PyObject *self) /*[clinic end generated code: output=4c24c67f5f32a43d input=b976622f7fdf3063]*/	modelled	pyio-base-inquiries-false	
+Modules/_io/iobase.c	414	428	_PyIOBase_check_seekable	_PyIOBase_check_seekable(_PyIO_State *state, PyObject *self, PyObject *args)	modelled	pyio-base-checks-unsupported	
+Modules/_io/iobase.c	439	443	_io__IOBase_readable_impl	_io__IOBase_readable_impl(PyObject *self) /*[clinic end generated code: output=e48089250686388b input=285b3b866a0ec35f]*/	modelled	pyio-base-inquiries-false	
+Modules/_io/iobase.c	447	461	_PyIOBase_check_readable	_PyIOBase_check_readable(_PyIO_State *state, PyObject *self, PyObject *args)	modelled	pyio-base-checks-unsupported	
+Modules/_io/iobase.c	472	476	_io__IOBase_writable_impl	_io__IOBase_writable_impl(PyObject *self) /*[clinic end generated code: output=406001d0985be14f input=9dcac18a013a05b5]*/	modelled	pyio-base-inquiries-false	
+Modules/_io/iobase.c	480	494	_PyIOBase_check_writable	_PyIOBase_check_writable(_PyIO_State *state, PyObject *self, PyObject *args)	modelled	pyio-base-checks-unsupported	
+Modules/_io/iobase.c	499	505	iobase_enter	iobase_enter(PyObject *self, PyObject *args)	modelled	pyio-base-closed-protocol	
 Modules/_io/iobase.c	508	511	iobase_exit	iobase_exit(PyObject *self, PyObject *args)	todo		
-Modules/_io/iobase.c	528	533	_io__IOBase_fileno_impl	_io__IOBase_fileno_impl(PyObject *self, PyTypeObject *cls) /*[clinic end generated code: output=7caaa32a6f4ada3d input=1927c8bea5c85099]*/	todo		
-Modules/_io/iobase.c	544	550	_io__IOBase_isatty_impl	_io__IOBase_isatty_impl(PyObject *self) /*[clinic end generated code: output=60cab77cede41cdd input=9ef76530d368458b]*/	todo		
+Modules/_io/iobase.c	528	533	_io__IOBase_fileno_impl	_io__IOBase_fileno_impl(PyObject *self, PyTypeObject *cls) /*[clinic end generated code: output=7caaa32a6f4ada3d input=1927c8bea5c85099]*/	modelled	pyio-base-unsupported-ops,pyio-stringio-unsupported	
+Modules/_io/iobase.c	544	550	_io__IOBase_isatty_impl	_io__IOBase_isatty_impl(PyObject *self) /*[clinic end generated code: output=60cab77cede41cdd input=9ef76530d368458b]*/	modelled	pyio-base-closed-protocol,pyio-stringio-inquiries	
 Modules/_io/iobase.c	569	676	_io__IOBase_readline_impl	_io__IOBase_readline_impl(PyObject *self, Py_ssize_t limit) /*[clinic end generated code: output=4479f79b58187840 input=d0c596794e877bff]*/	todo		
-Modules/_io/iobase.c	679	685	iobase_iter	iobase_iter(PyObject *self)	todo		
+Modules/_io/iobase.c	679	685	iobase_iter	iobase_iter(PyObject *self)	modelled	pyio-base-closed-protocol,pyio-stringio-c-readlines-hint-doc	
 Modules/_io/iobase.c	688	702	iobase_iternext	iobase_iternext(PyObject *self)	todo		
 Modules/_io/iobase.c	717	777	_io__IOBase_readlines_impl	_io__IOBase_readlines_impl(PyObject *self, Py_ssize_t hint) /*[clinic end generated code: output=2f50421677fa3dea input=9400c786ea9dc416]*/	modelled	pyio-stringio-c-readlines-hint-doc	
 Modules/_io/iobase.c	791	827	_io__IOBase_writelines	_io__IOBase_writelines(PyObject *self, PyObject *lines) /*[clinic end generated code: output=976eb0a9b60a6628 input=cac3fc8864183359]*/	todo		
