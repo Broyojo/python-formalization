@@ -58,26 +58,63 @@ def sliceIndex (x : Int) : Int := RangeSlice.clampSsize x
 /-- `valid_index(i, limit)`: `(size_t)i < (size_t)limit` for `0 <= limit`. -/
 def validIndex (i limit : Int) : Bool := decide (0 ≤ i ∧ i < limit)
 
-/-! ## List helpers -/
+/-- An iterable argument: not iterable (`PyObject_GetIter` fails on an object of
+this type), or an iterator that yields `xs` and then ends with the exception
+`e` (`none`: plain exhaustion). -/
+inductive PyIterable (α : Type) where
+  | notIterable (tname : String)
+  | iter (xs : List α) (e : Option PyExc)
+  deriving Repr
 
-/-- `l[i]` (0-based, `Nat`), `0` past the end. -/
-def ix (l : List Int) (i : Int) : Int := l.getD i.toNat 0
+/-- `PyObject_GetIter` on a non-iterable (Objects/abstract.c:2806). -/
+def notIterableErr (tname : String) : PyExc := .typeError s!"'{tname}' object is not iterable"
+
+/-- A rich comparison operator. -/
+inductive CmpOp where
+  | lt | le | eq | ne | gt | ge
+  deriving Repr, DecidableEq, Inhabited
+
+/-! ## List helpers
+
+Sequences hold arbitrary Python objects, so the list helpers and the `list` and
+`deque` models are generic in the element type `α`. Rich comparison of elements
+is an explicit parameter of the functions that need it. -/
+
+section
+variable {α : Type} [Inhabited α]
+
+/-- `l[i]` (0-based), the default element past the end. -/
+def ix (l : List α) (i : Int) : α := l.getD i.toNat default
 
 /-- `take i l ++ x :: drop i l`. -/
-def insAt (l : List Int) (i : Nat) (x : Int) : List Int := l.take i ++ x :: l.drop i
+def insAt (l : List α) (i : Nat) (x : α) : List α := l.take i ++ x :: l.drop i
 
 /-- `memmove(mem + dst, mem + src, cnt)` on a buffer of `mem.length` items;
 undefined if either range leaves the buffer. Reads see the old contents. -/
-def memmove (mem : List Int) (dst src cnt : Int) : Py (List Int) :=
+def memmove (mem : List α) (dst src cnt : Int) : Py (List α) :=
   if 0 ≤ dst ∧ 0 ≤ src ∧ 0 ≤ cnt ∧ dst + cnt ≤ mem.length ∧ src + cnt ≤ mem.length then
     .ok (mem.take dst.toNat ++ (mem.drop src.toNat).take cnt.toNat ++ mem.drop (dst + cnt).toNat)
   else .error (cUB "memmove out of bounds")
 
-/-- Index of the first element equal to `x` at or after `i`, scanning `fuel`
-positions. -/
-def firstFrom (l : List Int) (x : Int) : Nat → Nat → Option Nat
+theorem ix_getElem (l : List α) (i : Nat) (h : i < l.length) : ix l i = l[i] := by
+  unfold ix
+  rw [List.getD_eq_getElem?_getD, show ((i : Int)).toNat = i by omega, List.getElem?_eq_getElem h]
+  rfl
+
+theorem ix_mem (l : List α) (k : Int) (h0 : 0 ≤ k) (h1 : k < l.length) : ix l k ∈ l := by
+  have h : k.toNat < l.length := by omega
+  have e := ix_getElem l k.toNat h
+  rw [show ((k.toNat : Nat) : Int) = k by omega] at e
+  rw [e]
+  exact List.getElem_mem h
+
+/-- The first position at or after `i` whose element satisfies `p`, scanning
+`fuel` positions. -/
+def firstFrom (p : α → Bool) (l : List α) : Nat → Nat → Option Nat
   | _, 0 => none
-  | i, fuel + 1 => if i < l.length then (if ix l i = x then some i else firstFrom l x (i + 1) fuel) else none
+  | i, fuel + 1 => if i < l.length then (if p (ix l i) then some i else firstFrom p l (i + 1) fuel) else none
+
+end
 
 end PyLean.Sequences
 

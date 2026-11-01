@@ -15,6 +15,12 @@ Three kinds of case, each run on one twin ("impl": "c" is `pickle.dumps` /
   could make CPython allocate a huge buffer or memo. As a second line of
   defence `__import__` is disabled while hand-crafted streams are loaded.
 
+* genops, optimize, dis: `pickletools` over real pickles, hand-crafted streams,
+  mutations of both and random bytes. Nothing here runs a stream: `genops` only
+  parses it and `optimize` only copies it. Streams with a FLOAT byte are
+  skipped (`float()` of text needs the binary64 model), and for `dis` so are
+  floats and non-Latin-1 characters, whose repr the model does not render.
+
 Values are sent to the model with their object identity: every memoizable
 object carries an id derived from `id()`, except CPython's cached
 one-character Latin-1 strs and one-byte bytes, which use canonical ids so the
@@ -24,8 +30,10 @@ Exits non-zero on any mismatch. See difftest/common.py.
 
 import builtins
 import codecs
+import io
 import json
 import pickle
+import pickletools
 import re
 import struct
 import sys
@@ -409,7 +417,154 @@ def safe_stream(s):
 COUNTER = [0]
 
 
+class NoTell:
+    """A file without `tell`: `_genops` reports no positions."""
+
+    def __init__(self, data):
+        self.f = io.BytesIO(data)
+
+    def read(self, n):
+        return self.f.read(n)
+
+    def readline(self):
+        return self.f.readline()
+
+
+STRING_OPS = {'STRING', 'BINSTRING', 'SHORT_BINSTRING'}
+STACK_OBJECTS = {o.name: o for op in pickletools.opcodes for o in op.stack_before + op.stack_after}
+BAD_KEY_BYTES = [bytes([b]) for b in sorted(BAD_KEYS)]
+PLAIN_OPS = b'()0212.Nabdeltu}]\x85\x86\x87\x88\x89\x8f\x90\x91\x93\x94\x97\x98Rbo\x81\x92Qs'
+MARK_OPS = b'(((000\x85\x862t1ae\x94'
+
+
+def tool_op(rng):
+    """One opcode with an edge-case argument, for the branches of the readers and of `dis`."""
+    line = rng.choice([b'', b'0', b'1', b'00', b'01', b'-1', b' 1', b'+5', b'1_0', b'12', b'5L', b'L',
+                       b'x', b'\\', b'a\\', b'\\x41', b'\\x4', b'\\n', b'\xff', b'\xc3\xa9', b"'", b'"',
+                       b"''", b'""', b"'a'", b'"a"', b"'a\"", b"\"a'", b"'\\''", b'9' * 30, b'1' * 4301])
+    count = rng.choice([0, 1, 2, 3, 255, 256, 2**31 - 1, 2**32 - 1, 2**63 - 1, 2**63, 2**64 - 1])
+    i32_count = rng.choice([0, 1, 2, -1, -2**31, 2**31 - 1])
+    tail = bytes(rng.choice(b'ab\xc3\xa9\xed\xa0\x80\x00\n') for _ in range(rng.randrange(5)))
+    return rng.choice([
+        lambda: b'I' + line + b'\n', lambda: b'L' + line + b'\n', lambda: b'S' + line + b'\n',
+        lambda: b'V' + line + b'\n', lambda: b'p' + line + b'\n', lambda: b'g' + line + b'\n',
+        lambda: b'P' + line + b'\n', lambda: b'c' + line + b'\n' + line + b'\n',
+        lambda: b'i' + line + b'\n' + line + b'\n',
+        lambda: b'S' + line, lambda: b'I' + line,
+        lambda: b'J' + i32(i32_count), lambda: b'K' + bytes([count & 255]), lambda: b'M' + bytes([count & 255, 1]),
+        lambda: b'T' + i32(i32_count) + tail, lambda: b'U' + bytes([rng.randrange(6)]) + tail,
+        lambda: b'\x8a' + bytes([rng.randrange(6)]) + tail, lambda: b'\x8b' + i32(i32_count) + tail,
+        lambda: b'B' + u32(min(count, 2**32 - 1)) + tail, lambda: b'C' + bytes([rng.randrange(6)]) + tail,
+        lambda: b'X' + u32(min(count, 2**32 - 1)) + tail, lambda: b'\x8c' + bytes([rng.randrange(6)]) + tail,
+        lambda: b'\x8d' + u64(count) + tail, lambda: b'\x8e' + u64(count) + tail,
+        lambda: b'\x96' + u64(count) + tail, lambda: b'\x95' + u64(count),
+        lambda: b'q' + bytes([rng.randrange(4)]), lambda: b'r' + u32(rng.choice([0, 1, 2, 2**32 - 1])),
+        lambda: b'h' + bytes([rng.randrange(4)]), lambda: b'j' + u32(rng.choice([0, 1, 2, 2**32 - 1])),
+        lambda: b'\x80' + bytes([rng.choice([0, 1, 2, 3, 4, 5, 6, 255])]), lambda: b'\x82' + bytes([count & 255]),
+        lambda: b'\x83' + bytes([1, 2]), lambda: b'\x84' + i32(i32_count), lambda: b'G' + bytes(8),
+        lambda: bytes([rng.choice(PLAIN_OPS)]),
+        lambda: bytes([rng.choice(MARK_OPS)]),
+        lambda: rng.choice(BAD_KEY_BYTES),
+    ])()
+
+
+def tool_stream(rng):
+    k = rng.random()
+    if k < 0.35:
+        try:
+            s = rng.choice([pickle.dumps, pickle._dumps])(ValueGen(rng).value(), rng.randrange(6))
+        except Exception:
+            s = b'N.'
+    elif k < 0.55:
+        s = hand_stream(rng)
+    elif k < 0.92:
+        s = b''.join(tool_op(rng) for _ in range(rng.randrange(9)))
+        if rng.random() < 0.8:
+            s += b'.'
+    else:
+        s = bytes(rng.randrange(256) for _ in range(rng.randrange(24)))
+    if s and rng.random() < 0.3:
+        b = bytearray(s)
+        m = rng.random()
+        i = rng.randrange(len(b))
+        if m < 0.5:
+            b[i] = rng.randrange(256)
+        elif m < 0.8:
+            del b[i:]
+        else:
+            b[i:i] = tool_op(rng)
+        s = bytes(b)
+    return s
+
+
+def dis_renders(s):
+    try:
+        for op, arg, _ in pickletools.genops(s):
+            if isinstance(arg, float):
+                return False
+            if isinstance(arg, str) and op.name not in STRING_OPS and any(ord(c) > 0xff for c in arg):
+                return False
+    except Exception:
+        pass
+    return True
+
+
+def tool_case(rng):
+    s = tool_stream(rng)
+    if 0x46 in s:
+        return None
+    c = {"mod": "pickle", "data": list(s), "tell": rng.random() < 0.85}
+    r = rng.random()
+    if r < 0.35:
+        return {**c, "fn": "genops"}
+    if r < 0.6:
+        return {**c, "fn": "optimize"}
+    if not dis_renders(s):
+        return None
+    memo = [[rng.choice([0, 1, 2, 5]), rng.choice(['any', 'int', 'list'])] for _ in range(rng.choice([0, 0, 0, 1, 2]))]
+    return {**c, "fn": "dis", "indent": rng.choice([4, 4, 0, 1, 7]), "annotate": rng.choice([0, 0, 1, 20, 40, 60]),
+            "memo": memo}
+
+
+def run_tool(c):
+    data = bytes(c["data"])
+    src = data if c["tell"] else NoTell(data)
+    if c["fn"] == "genops":
+        def enc(a):
+            if a is None:
+                return None
+            if isinstance(a, bool):
+                return {"t": "bool", "v": a}
+            if isinstance(a, int):
+                return {"t": "int", "v": hex(a)}
+            if isinstance(a, bytes):
+                return {"t": "bytes", "v": list(a)}
+            if isinstance(a, bytearray):
+                return {"t": "bytearray", "v": list(a)}
+            if isinstance(a, str):
+                return {"t": "str", "v": [ord(x) for x in a]}
+            return {"t": "float", "v": list(struct.pack('>d', a))}
+
+        def walk():
+            ops = list(pickletools._genops(src, yield_end_pos=True))
+            public = list(pickletools.genops(NoTell(data) if not c["tell"] else data))
+            assert [o[:3] for o in ops] == public
+            return [[o.name, enc(a), p, e] for o, a, p, e in ops]
+        return common.py_result(walk)
+    if c["fn"] == "optimize":
+        return common.py_result(lambda: list(pickletools.optimize(data)))
+    out = io.StringIO()
+    memo = {k: STACK_OBJECTS[n] for k, n in c["memo"]}
+    try:
+        pickletools.dis(src, out=out, memo=memo, indentlevel=c["indent"], annotate=c["annotate"])
+    except Exception as e:
+        return {"exc": type(e).__name__, "msg": out.getvalue() + "\x00" + str(e)}
+    return {"ok": out.getvalue()}
+
+
 def gen_case(rng):
+    if rng.random() < 0.35:
+        return tool_case(rng)
     k = rng.random()
     impl = rng.choice(["c", "py"])
     if k < 0.45:
@@ -445,6 +600,10 @@ def no_import(*a, **k):
 
 def run_python(c):
     fn = c["fn"]
+    if fn in ("genops", "optimize", "dis"):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")  # invalid escapes in read_stringnl
+            return run_tool(c)
     if fn == "loads":
         f = pickle.loads if c["impl"] == "c" else pickle._loads
         data = bytes(c["data"])

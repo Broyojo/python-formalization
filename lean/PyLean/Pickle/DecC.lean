@@ -191,33 +191,39 @@ def cDoAppend (x : Int) : CM Unit := do
   let s ← get
   let len := s.stack.length
   if x > len ∨ x ≤ cFence s then cUnderflow
-  if x = len then return
-  let x := x.toNat
-  let lst := s.stack.getD (len - x) .none
-  let (items, rest) := splitAt s x
-  set { s with stack := rest }
-  let h := s.heap
-  if hasExtend h lst then cSetHeap (← cLift (extendObj h lst items))
-  else match lst with
-    | .glob _ => cThrow (excluded "global as APPEND target")
-    | _ => cThrow (attributeError s!"'{lst.typeName h}' object has no attribute 'append'")
+  else if x = len then pure ()
+  else
+    let x := x.toNat
+    let lst := s.stack.getD (len - x) .none
+    let (items, rest) := splitAt s x
+    set { s with stack := rest }
+    let h := s.heap
+    if hasExtend h lst then cSetHeap (← cLift (extendObj h lst items))
+    else
+      match lst with
+      | .glob _ => cThrow (excluded "global as APPEND target")
+      | _ => cThrow (attributeError s!"'{lst.typeName h}' object has no attribute 'append'")
+
+/-- The loop of `do_setitems`, :6765-6771. -/
+def cSetitemsGo (d : DV) (h : Heap) : List DV → Py Heap
+  | k :: v :: r => do cSetitemsGo d (← setItem h d k v) r
+  | _ => .ok h
 
 /-- `do_setitems` (`Modules/_pickle.c:6743-6777`). -/
 def cDoSetitems (x : Int) : CM Unit := do
   let s ← get
   let len := s.stack.length
   if x > len ∨ x ≤ cFence s then cUnderflow
-  if x = len then return
-  let x := x.toNat
-  if (len - x) % 2 ≠ 0 then cThrow (unpicklingError "odd number of items for SETITEMS")
-  let d := s.stack.getD (len - x) .none
-  let (items, rest) := splitAt s x
-  let rec go (h : Heap) : List DV → Py Heap
-    | k :: v :: r => do go (← setItem h d k v) r
-    | _ => .ok h
-  let r := go s.heap items
-  set { s with stack := rest }
-  cSetHeap (← cLift r)
+  else if x = len then pure ()
+  else
+    let x := x.toNat
+    if (len - x) % 2 ≠ 0 then cThrow (unpicklingError "odd number of items for SETITEMS")
+    else
+      let d := s.stack.getD (len - x) .none
+      let (items, rest) := splitAt s x
+      let r := cSetitemsGo d s.heap items
+      set { s with stack := rest }
+      cSetHeap (← cLift r)
 
 /-- `invalid load key` (`Modules/_pickle.c:7178-7189`). -/
 def cBadKey (c : UInt8) : PyExc :=
@@ -225,101 +231,108 @@ def cBadKey (c : UInt8) : PyExc :=
     unpicklingError s!"invalid load key, '{Char.ofNat c.toNat}'."
   else unpicklingError s!"invalid load key, '\\x{Char.ofNat (hexDigit (c.toNat / 16)).toNat}{Char.ofNat (hexDigit (c.toNat % 16)).toNat}'."
 
-/-- One opcode of the C `load` loop (`Modules/_pickle.c:7077-7210`); `true`
-on `STOP`. -/
-def cStep (op : UInt8) : CM Bool := do
-  if op == oNONE then cPush .none; return false
-  else if op == oBININT then cPush (.int (calcBinint (← cRead 4))); return false
-  else if op == oBININT1 then cPush (.int (calcBinint (← cRead 1))); return false
-  else if op == oBININT2 then cPush (.int (calcBinint (← cRead 2))); return false
-  else if op == oINT then
-    match ← cLift (cLoadIntLine (← cReadline)) with
-    | .int v => cPush (.int v)
-    | .bool b => cPush (.bool b)
-    return false
-  else if op == oLONG then cPush (.int (← cLift (cLoadLongLine (← cReadline)))); return false
-  else if op == oLONG1 || op == oLONG4 then
-    -- load_counted_long, :5580-5611
-    let size := calcBinint (← cRead (if op == oLONG1 then 1 else 4))
-    if size < 0 then cThrow (unpicklingError "LONG pickle has negative byte count")
-    if size = 0 then cPush (.int 0)
-    else cPush (.int (decodeLong (← cRead size.toNat)))
-    return false
-  else if op == oSHORT_BINBYTES || op == oBINBYTES || op == oBINBYTES8 then
-    -- load_counted_binbytes, :5747-5774
-    let nb := if op == oSHORT_BINBYTES then 1 else if op == oBINBYTES then 4 else 8
-    match calcBinsize (← cRead nb) with
-    | none => cThrow (.overflowError s!"BINBYTES exceeds system's maximum size of {ssizeMaxN} bytes")
-    | some size => cPush (.bytes (← cReadInto size))
-    return false
-  else if op == oBYTEARRAY8 then
-    match calcBinsize (← cRead 8) with
-    | none => cThrow (.overflowError s!"BYTEARRAY8 exceeds system's maximum size of {ssizeMaxN} bytes")
-    | some size => cPush (← cAlloc (.bytearray (← cReadInto size)))
-    return false
-  else if op == oSHORT_BINSTRING || op == oBINSTRING then
-    -- load_counted_binstring, :5711-5744
-    let size := calcBinint (← cRead (if op == oSHORT_BINSTRING then 1 else 4))
-    if size < 0 then cThrow (unpicklingError "BINSTRING pickle has negative byte count")
-    cPush (← cLift (decodeString (← cRead size.toNat)))
-    return false
-  else if op == oSTRING then
-    -- load_string, :5664-5708
-    let s := (← cReadline).dropLast
-    if s.length ≥ 2 ∧ s.head? = s.getLast? ∧ (s.head? = some 0x27 ∨ s.head? = some 0x22) then
-      cPush (← cLift (decodeString (← cLift (escapeDecode 0 ((s.drop 1).dropLast)))))
-    else cThrow (unpicklingError "the STRING opcode argument must be quoted")
-    return false
-  else if op == oUNICODE then
-    cPush (.str (← cLift (decodeRUE (← cReadline).dropLast))); return false
-  else if op == oSHORT_BINUNICODE || op == oBINUNICODE || op == oBINUNICODE8 then
-    -- load_counted_binunicode, :5878-5904
-    let nb := if op == oSHORT_BINUNICODE then 1 else if op == oBINUNICODE then 4 else 8
-    match calcBinsize (← cRead nb) with
-    | none => cThrow (.overflowError s!"BINUNICODE exceeds system's maximum size of {ssizeMaxN} bytes")
-    | some size => cPush (.str (← cLift (decodeUtf8SP (← cRead size))))
-    return false
-  else if op == oEMPTY_TUPLE || op == oTUPLE1 || op == oTUPLE2 || op == oTUPLE3 then
-    -- load_counted_tuple, :5907-5919
-    let len := if op == oEMPTY_TUPLE then 0 else if op == oTUPLE1 then 1 else if op == oTUPLE2 then 2 else 3
-    let s ← get
-    if s.stack.length < len then cUnderflow
-    cPush (.tuple (← cPopTuple (s.stack.length - len)))
-    return false
-  else if op == oTUPLE then
-    let i ← cMarker
-    let s ← get
-    if s.stack.length < s.stack.length - i then cUnderflow
-    cPush (.tuple (← cPopTuple i))
-    return false
-  else if op == oEMPTY_LIST then cPush (← cAlloc (.list [])); return false
-  else if op == oLIST then
-    let i ← cMarker
-    let (items, rest) := splitAt (← get) i
-    modify fun s => { s with stack := rest }
-    cPush (← cAlloc (.list items)); return false
-  else if op == oEMPTY_DICT then cPush (← cAlloc (.dict [])); return false
-  else if op == oDICT then
-    -- load_dict, :5982-6011
-    let i ← cMarker
-    let s ← get
-    let j := s.stack.length
-    if (j - i) % 2 ≠ 0 then cThrow (unpicklingError "odd number of items for DICT")
+/-! ## Opcode handlers (`Modules/_pickle.c:5391-7074`) -/
+
+def cLoadNone : CM Unit := cPush .none
+def cLoadBinint : CM Unit := do cPush (.int (calcBinint (← cRead 4)))
+def cLoadBinint1 : CM Unit := do cPush (.int (calcBinint (← cRead 1)))
+def cLoadBinint2 : CM Unit := do cPush (.int (calcBinint (← cRead 2)))
+
+/-- `load_int`, :5398-5439. -/
+def cLoadInt : CM Unit := do
+  match ← cLift (cLoadIntLine (← cReadline)) with
+  | .int v => cPush (.int v)
+  | .bool b => cPush (.bool b)
+
+def cLoadLong : CM Unit := do cPush (.int (← cLift (cLoadLongLine (← cReadline))))
+
+/-- `load_counted_long`, :5580-5611. -/
+def cLoadCountedLong (nb : Nat) : CM Unit := do
+  let size := calcBinint (← cRead nb)
+  if size < 0 then cThrow (unpicklingError "LONG pickle has negative byte count")
+  else if size = 0 then cPush (.int 0)
+  else cPush (.int (decodeLong (← cRead size.toNat)))
+
+/-- `load_counted_binbytes`, :5747-5774. -/
+def cLoadCountedBinbytes (nb : Nat) : CM Unit := do
+  match calcBinsize (← cRead nb) with
+  | none => cThrow (.overflowError s!"BINBYTES exceeds system's maximum size of {ssizeMaxN} bytes")
+  | some size => cPush (.bytes (← cReadInto size))
+
+/-- `load_counted_bytearray`, :5777-5807. -/
+def cLoadCountedBytearray : CM Unit := do
+  match calcBinsize (← cRead 8) with
+  | none => cThrow (.overflowError s!"BYTEARRAY8 exceeds system's maximum size of {ssizeMaxN} bytes")
+  | some size => cPush (← cAlloc (.bytearray (← cReadInto size)))
+
+/-- `load_counted_binstring`, :5711-5744. -/
+def cLoadCountedBinstring (nb : Nat) : CM Unit := do
+  let size := calcBinint (← cRead nb)
+  if size < 0 then cThrow (unpicklingError "BINSTRING pickle has negative byte count")
+  else cPush (← cLift (decodeString (← cRead size.toNat)))
+
+/-- `load_string`, :5664-5708. -/
+def cLoadString : CM Unit := do
+  let s := (← cReadline).dropLast
+  if quotedString s then
+    cPush (← cLift (decodeString (← cLift (escapeDecode 0 ((s.drop 1).dropLast)))))
+  else cThrow (unpicklingError "the STRING opcode argument must be quoted")
+
+def cLoadUnicode : CM Unit := do cPush (.str (← cLift (decodeRUE (← cReadline).dropLast)))
+
+/-- `load_counted_binunicode`, :5878-5904. -/
+def cLoadCountedBinunicode (nb : Nat) : CM Unit := do
+  match calcBinsize (← cRead nb) with
+  | none => cThrow (.overflowError s!"BINUNICODE exceeds system's maximum size of {ssizeMaxN} bytes")
+  | some size => cPush (.str (← cLift (decodeUtf8SP (← cRead size))))
+
+/-- `load_counted_tuple`, :5907-5919. -/
+def cLoadCountedTuple (len : Nat) : CM Unit := do
+  let s ← get
+  if s.stack.length < len then cUnderflow
+  else cPush (.tuple (← cPopTuple (s.stack.length - len)))
+
+/-- `load_tuple`, :5922-5930. -/
+def cLoadTuple : CM Unit := do
+  let i ← cMarker
+  cPush (.tuple (← cPopTuple i))
+
+def cLoadEmptyList : CM Unit := do cPush (← cAlloc (.list []))
+def cLoadEmptyDict : CM Unit := do cPush (← cAlloc (.dict []))
+def cLoadEmptySet : CM Unit := do cPush (← cAlloc (.set []))
+
+/-- `load_list`, :5966-5979. -/
+def cLoadList : CM Unit := do
+  let i ← cMarker
+  let (items, rest) := splitAt (← get) i
+  modify fun s => { s with stack := rest }
+  cPush (← cAlloc (.list items))
+
+/-- The pairs of `load_dict`, :5999-6006. -/
+def cDictBuild (h : Heap) (acc : List (DV × DV)) : List DV → Py (List (DV × DV))
+  | k :: v :: r => do cDictBuild h (← dictSet h acc k v) r
+  | _ => .ok acc
+
+/-- `load_dict`, :5982-6011. -/
+def cLoadDict : CM Unit := do
+  let i ← cMarker
+  let s ← get
+  let j := s.stack.length
+  if (j - i) % 2 ≠ 0 then cThrow (unpicklingError "odd number of items for DICT")
+  else
     let (items, rest) := splitAt s i
-    let rec build (acc : List (DV × DV)) : List DV → Py (List (DV × DV))
-      | k :: v :: r => do build (← dictSet s.heap acc k v) r
-      | _ => .ok acc
-    let kvs ← cLift (build [] items)
+    let kvs ← cLift (cDictBuild s.heap [] items)
     modify fun s => { s with stack := rest }
-    cPush (← cAlloc (.dict kvs)); return false
-  else if op == oEMPTY_SET then cPush (← cAlloc (.set [])); return false
-  else if op == oADDITEMS then
-    -- load_additems, :6795-6848
-    let mark ← cMarker
-    let s ← get
-    let len := s.stack.length
-    if mark > len ∨ mark ≤ cFence s then cUnderflow
-    if mark = len then return false
+    cPush (← cAlloc (.dict kvs))
+
+/-- `load_additems`, :6795-6848. -/
+def cLoadAdditems : CM Unit := do
+  let mark ← cMarker
+  let s ← get
+  let len := s.stack.length
+  if mark > len ∨ mark ≤ cFence s then cUnderflow
+  else if mark = len then pure ()
+  else
     let so := s.stack.getD (len - mark) .none
     if isSetRef s.heap so then
       let items ← cPopTuple mark
@@ -327,129 +340,179 @@ def cStep (op : UInt8) : CM Bool := do
     else
       modify fun s => { s with stack := s.stack.drop (len - mark) }
       cThrow (noAdd s.heap so)
-    return false
-  else if op == oFROZENSET then
-    let i ← cMarker
-    let items ← cPopTuple i
-    cPush (← cLift (mkFrozenset (← get).heap items)); return false
-  else if op == oAPPEND then
-    let s ← get
-    if (s.stack.length : Int) - 1 ≤ cFence s then cUnderflow
-    cDoAppend (s.stack.length - 1); return false
-  else if op == oAPPENDS then cDoAppend (← cMarker); return false
-  else if op == oDUP then
-    let s ← get
-    if s.stack.length ≤ cFence s then cUnderflow
-    cPush (s.stack.headD .none); return false
-  else if op == oBINGET then
-    let i := leNat (← cRead 1)
-    cMemoGetD i i; return false
-  else if op == oLONG_BINGET then
-    let i := leNat (← cRead 4)
-    cMemoGetD i i; return false
-  else if op == oGET then
-    -- load_get, :6388-6421
-    let line ← cReadline
-    if line.length < 2 then cThrow truncated
+
+/-- `load_frozenset`, :6014-6034. -/
+def cLoadFrozenset : CM Unit := do
+  let i ← cMarker
+  let items ← cPopTuple i
+  cPush (← cLift (mkFrozenset (← get).heap items))
+
+/-- `load_append`, :6726-6731. -/
+def cLoadAppend : CM Unit := do
+  let s ← get
+  if (s.stack.length : Int) - 1 ≤ cFence s then cUnderflow
+  else cDoAppend (s.stack.length - 1)
+
+def cLoadAppends : CM Unit := do cDoAppend (← cMarker)
+
+/-- `load_dup`, :6375-6385. -/
+def cLoadDup : CM Unit := do
+  let s ← get
+  if s.stack.length ≤ cFence s then cUnderflow
+  else cPush (s.stack.headD .none)
+
+def cLoadBinget : CM Unit := do
+  let i := leNat (← cRead 1)
+  cMemoGetD i i
+
+def cLoadLongBinget : CM Unit := do
+  let i := leNat (← cRead 4)
+  cMemoGetD i i
+
+/-- `load_get`, :6388-6421. -/
+def cLoadGet : CM Unit := do
+  let line ← cReadline
+  if line.length < 2 then cThrow truncated
+  else
     let key ← cLift (cLongFromLine line)
     let idx ← cLift (asSsize key)
     if idx < 0 then cThrow (unpicklingError s!"Memo value not found at index {idx}")
-    cMemoGetD idx.toNat idx; return false
-  else if op == oMARK then
-    modify fun s => { s with marks := s.stack.length :: s.marks }; return false
-  else if op == oBINPUT then
-    let b ← cRead 1
-    let v ← cTopChecked
-    cMemoPutD (leNat b) v; return false
-  else if op == oLONG_BINPUT then
-    let b ← cRead 4
-    let v ← cTopChecked
-    cMemoPutD (leNat b) v; return false
-  else if op == oPUT then
-    -- load_put, :6565-6593
-    let line ← cReadline
-    if line.length < 2 then cThrow truncated
+    else cMemoGetD idx.toNat idx
+
+def cLoadMark : CM Unit := modify fun s => { s with marks := s.stack.length :: s.marks }
+
+def cLoadBinput : CM Unit := do
+  let b ← cRead 1
+  let v ← cTopChecked
+  cMemoPutD (leNat b) v
+
+def cLoadLongBinput : CM Unit := do
+  let b ← cRead 4
+  let v ← cTopChecked
+  cMemoPutD (leNat b) v
+
+/-- `load_put`, :6565-6593. -/
+def cLoadPut : CM Unit := do
+  let line ← cReadline
+  if line.length < 2 then cThrow truncated
+  else
     let v ← cTopChecked
     let key ← cLift (cLongFromLine line)
     let idx ← cLift (asSsize key)
     if idx < 0 then cThrow (.valueError "negative PUT argument")
-    cMemoPutD idx.toNat v; return false
-  else if op == oMEMOIZE then
-    let v ← cTopChecked
-    cMemoPutD (← get).memo.length v; return false
-  else if op == oPOP then
-    -- load_pop, :6336-6360
-    let s ← get
-    let len := s.stack.length
-    match s.marks with
-    | m :: r =>
-      if m = len then set { s with marks := r }; return false
-      else pure ()
-    | [] => pure ()
+    else cMemoPutD idx.toNat v
+
+def cLoadMemoize : CM Unit := do
+  let v ← cTopChecked
+  cMemoPutD (← get).memo.length v
+
+/-- `load_pop`, :6336-6360. -/
+def cLoadPop : CM Unit := do
+  let s ← get
+  let len := s.stack.length
+  match s.marks with
+  | m :: r =>
+    if m = len then set { s with marks := r }
+    else if len ≤ cFence s then cUnderflow
+    else modify fun s => { s with stack := s.stack.drop 1 }
+  | [] =>
     if len ≤ cFence s then cUnderflow
-    modify fun s => { s with stack := s.stack.drop 1 }; return false
-  else if op == oPOP_MARK then
-    let i ← cMarker
-    let s ← get
-    set { s with stack := s.stack.drop (s.stack.length - i) }; return false
-  else if op == oSETITEM then cDoSetitems (((← get).stack.length : Int) - 2); return false
-  else if op == oSETITEMS then cDoSetitems (← cMarker); return false
-  else if op == oPROTO then
-    let i := leNat (← cRead 1)
-    if i ≤ 5 then modify fun s => { s with proto := i } else cThrow (.valueError s!"unsupported pickle protocol: {i}")
-    return false
-  else if op == oFRAME then
-    -- load_frame, :7035-7074
-    let b ← cRead 8
-    let s ← get
-    match s.frameEnd with
-    | some fe =>
-      if s.idx < fe then cThrow (unpicklingError "beginning of a new frame before end of current frame")
+    else modify fun s => { s with stack := s.stack.drop 1 }
+
+/-- `load_pop_mark`, :6363-6372. -/
+def cLoadPopMark : CM Unit := do
+  let i ← cMarker
+  modify fun s => { s with stack := s.stack.drop (s.stack.length - i) }
+
+def cLoadSetitem : CM Unit := do cDoSetitems (((← get).stack.length : Int) - 2)
+def cLoadSetitems : CM Unit := do cDoSetitems (← cMarker)
+
+/-- `load_proto`, :7016-7032. -/
+def cLoadProto : CM Unit := do
+  let i := leNat (← cRead 1)
+  if i ≤ 5 then modify fun s => { s with proto := i }
+  else cThrow (.valueError s!"unsupported pickle protocol: {i}")
+
+/-- The tail of `load_frame` after the size check: read the frame through and
+rewind, capping `input_len`. -/
+def cOpenFrame (b : Bytes) : CM Unit := do
+  match calcBinsize b with
+  | none => cThrow (.overflowError s!"FRAME length exceeds system's maximum of {ssizeMaxN} bytes")
+  | some frameLen =>
+    discard (cRead frameLen)
+    modify fun s =>
+      let start := s.idx - frameLen
+      { s with idx := start, frameEnd := some (start + frameLen), savedInputLen := s.inputLen,
+               inputLen := start + frameLen }
+
+/-- `load_frame`, :7035-7074. -/
+def cLoadFrame : CM Unit := do
+  let b ← cRead 8
+  let s ← get
+  match s.frameEnd with
+  | some fe =>
+    if s.idx < fe then cThrow (unpicklingError "beginning of a new frame before end of current frame")
+    else
       set { s with inputLen := s.savedInputLen, frameEnd := none }
-    | none => pure ()
-    match calcBinsize b with
-    | none => cThrow (.overflowError s!"FRAME length exceeds system's maximum of {ssizeMaxN} bytes")
-    | some frameLen =>
-      discard (cRead frameLen)
-      modify fun s =>
-        let start := s.idx - frameLen
-        { s with idx := start, frameEnd := some (start + frameLen), savedInputLen := s.inputLen,
-                 inputLen := start + frameLen }
-    return false
-  else if op == oNEWTRUE then cPush (.bool true); return false
-  else if op == oNEWFALSE then cPush (.bool false); return false
-  else if op == oGLOBAL then
-    -- load_global, :6218-6251
-    let m := (← cReadline).dropLast
-    let n := (← cReadline).dropLast
-    let m ← cLift (match utf8Dec false m with | some s => .ok s | none => .error unicodeDecodeError)
-    let n ← cLift (match utf8Dec false n with | some s => .ok s | none => .error unicodeDecodeError)
-    cPush (.glob (← cLift (findGlob (← get).proto m n))); return false
-  else if op == oSTACK_GLOBAL then
-    -- load_stack_global, :6254-6284
-    let name ← cPop
-    let module ← cPop
-    match module, name with
-    | .str m, .str n => cPush (.glob (← cLift (findGlob (← get).proto m n)))
-    | _, _ => cThrow (unpicklingError "STACK_GLOBAL requires str")
-    return false
-  else if op == oREDUCE then
-    -- load_reduce, :6989-7013
-    let args ← cPop
-    let func ← cPop
-    match func, args with
-    | .glob g, .tuple xs =>
-      let (h', v) ← cLift (callGlob (← get).heap g xs)
-      cSetHeap h'
-      cPush v
-    | _, _ => cThrow (excluded "REDUCE")
-    return false
-  else if op == oSTOP then return true
-  else if op == oFLOAT || op == oBINFLOAT || op == oPERSID || op == oBINPERSID || op == oINST
-      || op == oOBJ || op == oNEWOBJ || op == oNEWOBJ_EX || op == oBUILD || op == oEXT1
-      || op == oEXT2 || op == oEXT4 || op == oNEXT_BUFFER || op == oREADONLY_BUFFER then
-    cThrow (excluded "opcode")
-  else cThrow (cBadKey op)
+      cOpenFrame b
+  | none => cOpenFrame b
+
+def cLoadTrue : CM Unit := cPush (.bool true)
+def cLoadFalse : CM Unit := cPush (.bool false)
+
+/-- `load_global`, :6218-6251. -/
+def cLoadGlobal : CM Unit := do
+  let m := (← cReadline).dropLast
+  let n := (← cReadline).dropLast
+  let m ← cLift (utf8Name m)
+  let n ← cLift (utf8Name n)
+  cPush (.glob (← cLift (findGlob (← get).proto m n)))
+
+/-- `load_stack_global`, :6254-6284. -/
+def cLoadStackGlobal : CM Unit := do
+  let name ← cPop
+  let module ← cPop
+  match module, name with
+  | .str m, .str n => cPush (.glob (← cLift (findGlob (← get).proto m n)))
+  | _, _ => cThrow (unpicklingError "STACK_GLOBAL requires str")
+
+/-- `load_reduce`, :6989-7013. -/
+def cLoadReduce : CM Unit := do
+  let args ← cPop
+  let func ← cPop
+  match func, args with
+  | .glob g, .tuple xs =>
+    let (h', v) ← cLift (callGlob (← get).heap g xs)
+    cSetHeap h'
+    cPush v
+  | _, _ => cThrow (excluded "REDUCE")
+
+/-- The `switch` of `load`, in the order of `pyTable`. -/
+def cTable : List (UInt8 × CM Unit) := [
+  (oPROTO, cLoadProto), (oFRAME, cLoadFrame), (oNONE, cLoadNone), (oNEWFALSE, cLoadFalse),
+  (oNEWTRUE, cLoadTrue), (oINT, cLoadInt), (oBININT, cLoadBinint), (oBININT1, cLoadBinint1),
+  (oBININT2, cLoadBinint2), (oLONG, cLoadLong), (oLONG1, cLoadCountedLong 1), (oLONG4, cLoadCountedLong 4),
+  (oSTRING, cLoadString), (oBINSTRING, cLoadCountedBinstring 4), (oSHORT_BINSTRING, cLoadCountedBinstring 1),
+  (oBINBYTES, cLoadCountedBinbytes 4), (oSHORT_BINBYTES, cLoadCountedBinbytes 1), (oBINBYTES8, cLoadCountedBinbytes 8),
+  (oBYTEARRAY8, cLoadCountedBytearray), (oUNICODE, cLoadUnicode), (oBINUNICODE, cLoadCountedBinunicode 4),
+  (oSHORT_BINUNICODE, cLoadCountedBinunicode 1), (oBINUNICODE8, cLoadCountedBinunicode 8), (oTUPLE, cLoadTuple),
+  (oEMPTY_TUPLE, cLoadCountedTuple 0), (oTUPLE1, cLoadCountedTuple 1), (oTUPLE2, cLoadCountedTuple 2),
+  (oTUPLE3, cLoadCountedTuple 3), (oEMPTY_LIST, cLoadEmptyList), (oEMPTY_DICT, cLoadEmptyDict),
+  (oEMPTY_SET, cLoadEmptySet), (oFROZENSET, cLoadFrozenset), (oLIST, cLoadList), (oDICT, cLoadDict),
+  (oAPPEND, cLoadAppend), (oAPPENDS, cLoadAppends), (oSETITEM, cLoadSetitem), (oSETITEMS, cLoadSetitems),
+  (oADDITEMS, cLoadAdditems), (oPOP, cLoadPop), (oPOP_MARK, cLoadPopMark), (oDUP, cLoadDup),
+  (oGET, cLoadGet), (oBINGET, cLoadBinget), (oLONG_BINGET, cLoadLongBinget), (oPUT, cLoadPut),
+  (oBINPUT, cLoadBinput), (oLONG_BINPUT, cLoadLongBinput), (oMEMOIZE, cLoadMemoize), (oMARK, cLoadMark),
+  (oGLOBAL, cLoadGlobal), (oSTACK_GLOBAL, cLoadStackGlobal), (oREDUCE, cLoadReduce)]
+
+/-- One opcode of the C `load` loop (`Modules/_pickle.c:7077-7210`); `true`
+on `STOP`. -/
+def cStep (op : UInt8) : CM Bool :=
+  if op == oSTOP then pure true
+  else match cTable.lookup op with
+    | some h => do h; return false
+    | none =>
+      if excludedOps.contains op then cThrow (excluded "opcode") else cThrow (cBadKey op)
 
 def cLoop : Nat → CM DV
   | 0 => cThrow .modelFuel

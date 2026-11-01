@@ -8,13 +8,26 @@ branch=$1 mod=$2 key=$3
 base=$(git merge-base HEAD "$branch")
 
 outside=$(git diff --name-only "$base" "$branch" | grep -vE \
-  "^(lean/PyLean/$mod\.lean|lean/PyLean/$mod/.*|difftest/${key}_diff\.py|bugs/${key}-[^/]*\.yaml|coverage/methods/[^/]*\.tsv|coverage/review/[^/]*\.tsv)$" || true)
+  "^(lean/PyLean/$mod\.lean|lean/PyLean/$mod/.*|difftest/${key}(_[a-z0-9]+)?_diff\.py|bugs/${key}-[^/]*\.yaml|coverage/registry\.tsv|coverage/methods/[^/]*\.tsv|coverage/review/[^/]*\.tsv)$" || true)
 if [ -n "$outside" ]; then
     echo "FAIL $branch touches files outside its module:"
     echo "$outside"
     exit 1
 fi
 git diff --stat "$base" "$branch" | tail -1
-git merge --no-ff -q -m "Merge $mod module ($branch)" "$branch"
+if ! git merge --no-ff -q -m "Merge $mod module ($branch)" "$branch"; then
+    # Coverage rows conflict with main's auto-filled ones: the module's own rows
+    # win, and the registry is regenerated after the merge anyway.
+    conflicts=$(git diff --name-only --diff-filter=U)
+    if echo "$conflicts" | grep -qv '^coverage/'; then
+        echo "FAIL $branch has conflicts outside coverage/:"
+        echo "$conflicts"
+        git merge --abort
+        exit 1
+    fi
+    echo "$conflicts" | xargs git checkout --theirs --
+    echo "$conflicts" | xargs git add
+    git commit -q --no-edit
+fi
 # Batch merges set SKIP_AUDIT and run one full audit afterwards.
 [ -n "${SKIP_AUDIT:-}" ] || scripts/r scripts/audit.sh

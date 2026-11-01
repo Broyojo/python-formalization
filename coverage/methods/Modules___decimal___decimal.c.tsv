@@ -1,94 +1,94 @@
 file	line	endline	name	signature	status	entry	note
-Modules/_decimal/_decimal.c	116	121	get_module_state	get_module_state(PyObject *mod)	todo		
-Modules/_decimal/_decimal.c	128	133	get_module_state_by_def	get_module_state_by_def(PyTypeObject *tp)	todo		
-Modules/_decimal/_decimal.c	136	148	find_state_left_or_right	find_state_left_or_right(PyObject *left, PyObject *right)	todo		
-Modules/_decimal/_decimal.c	151	166	find_state_ternary	find_state_ternary(PyObject *left, PyObject *right, PyObject *modulus)	todo		
-Modules/_decimal/_decimal.c	241	247	get_module_state_from_ctx	get_module_state_from_ctx(PyObject *v)	todo		
-Modules/_decimal/_decimal.c	250	254	Py_LOCAL_INLINE	Py_LOCAL_INLINE(PyObject *) incr_true(void)	todo		
-Modules/_decimal/_decimal.c	256	260	Py_LOCAL_INLINE	Py_LOCAL_INLINE(PyObject *) incr_false(void)	todo		
-Modules/_decimal/_decimal.c	307	318	dec_cond_map_init	dec_cond_map_init(DecCondMap *template, Py_ssize_t size)	todo		
+Modules/_decimal/_decimal.c	116	121	get_module_state	get_module_state(PyObject *mod)	excluded		internal-bootstrap: module state or type setup, no behaviour of its own
+Modules/_decimal/_decimal.c	128	133	get_module_state_by_def	get_module_state_by_def(PyTypeObject *tp)	excluded		internal-bootstrap: module state or type setup, no behaviour of its own
+Modules/_decimal/_decimal.c	136	148	find_state_left_or_right	find_state_left_or_right(PyObject *left, PyObject *right)	excluded		internal-bootstrap: module state or type setup, no behaviour of its own
+Modules/_decimal/_decimal.c	151	166	find_state_ternary	find_state_ternary(PyObject *left, PyObject *right, PyObject *modulus)	excluded		internal-bootstrap: module state or type setup, no behaviour of its own
+Modules/_decimal/_decimal.c	241	247	get_module_state_from_ctx	get_module_state_from_ctx(PyObject *v)	excluded		internal-bootstrap: module state or type setup, no behaviour of its own
+Modules/_decimal/_decimal.c	250	254	Py_LOCAL_INLINE	Py_LOCAL_INLINE(PyObject *) incr_true(void)	excluded		no-behaviour: incr_true returns a new reference to True; the callers are mirrored returning a bool
+Modules/_decimal/_decimal.c	256	260	Py_LOCAL_INLINE	Py_LOCAL_INLINE(PyObject *) incr_false(void)	excluded		no-behaviour: incr_false returns a new reference to False; the callers are mirrored returning a bool
+Modules/_decimal/_decimal.c	307	318	dec_cond_map_init	dec_cond_map_init(DecCondMap *template, Py_ssize_t size)	excluded		internal-bootstrap: module state or type setup, no behaviour of its own
 Modules/_decimal/_decimal.c	363	367	value_error_int	value_error_int(const char *mesg)	todo		
 Modules/_decimal/_decimal.c	370	374	value_error_ptr	value_error_ptr(const char *mesg)	todo		
 Modules/_decimal/_decimal.c	377	381	type_error_int	type_error_int(const char *mesg)	todo		
 Modules/_decimal/_decimal.c	384	388	runtime_error_int	runtime_error_int(const char *mesg)	todo		
 Modules/_decimal/_decimal.c	393	397	runtime_error_ptr	runtime_error_ptr(const char *mesg)	todo		
 Modules/_decimal/_decimal.c	408	419	flags_as_exception	flags_as_exception(decimal_state *state, uint32_t flags)	todo		
-Modules/_decimal/_decimal.c	421	434	Py_LOCAL_INLINE	Py_LOCAL_INLINE(uint32_t) exception_as_flag(decimal_state *state, PyObject *ex)	todo		
+Modules/_decimal/_decimal.c	421	434	Py_LOCAL_INLINE	Py_LOCAL_INLINE(uint32_t) exception_as_flag(decimal_state *state, PyObject *ex)	modelled	decimal-c-signaldict-set-get	exception_as_flag; the inventory names it Py_LOCAL_INLINE
 Modules/_decimal/_decimal.c	437	467	flags_as_list	flags_as_list(decimal_state *state, uint32_t flags)	todo		
 Modules/_decimal/_decimal.c	470	490	signals_as_list	signals_as_list(decimal_state *state, uint32_t flags)	todo		
 Modules/_decimal/_decimal.c	493	513	list_as_flags	list_as_flags(decimal_state *state, PyObject *list)	todo		
-Modules/_decimal/_decimal.c	516	535	flags_as_dict	flags_as_dict(decimal_state *state, uint32_t flags)	todo		
-Modules/_decimal/_decimal.c	538	578	dict_as_flags	dict_as_flags(decimal_state *state, PyObject *val)	todo		
-Modules/_decimal/_decimal.c	582	596	long_as_flags	long_as_flags(PyObject *v)	todo		
+Modules/_decimal/_decimal.c	516	535	flags_as_dict	flags_as_dict(decimal_state *state, uint32_t flags)	modelled	decimal-c-signaldict-eq-copy	
+Modules/_decimal/_decimal.c	538	578	dict_as_flags	dict_as_flags(decimal_state *state, PyObject *val)	modelled	decimal-c-signaldict-eq-copy	
+Modules/_decimal/_decimal.c	582	596	long_as_flags	long_as_flags(PyObject *v)	excluded		platform: compiled only with EXTRA_FUNCTIONALITY, which CPython builds leave undefined (_decimal.c:580)
 Modules/_decimal/_decimal.c	600	628	dec_addstatus	dec_addstatus(PyObject *context, uint32_t status)	todo		
 Modules/_decimal/_decimal.c	631	648	getround	getround(decimal_state *state, PyObject *v)	todo		
 Modules/_decimal/_decimal.c	664	669	signaldict_init	signaldict_init(PyObject *self, PyObject *Py_UNUSED(args), PyObject *Py_UNUSED(kwds))	todo		
 Modules/_decimal/_decimal.c	672	678	signaldict_len	signaldict_len(PyObject *self)	todo		
 Modules/_decimal/_decimal.c	681	688	signaldict_iter	signaldict_iter(PyObject *self)	todo		
-Modules/_decimal/_decimal.c	691	705	signaldict_getitem	signaldict_getitem(PyObject *self, PyObject *key)	todo		
-Modules/_decimal/_decimal.c	708	740	signaldict_setitem	signaldict_setitem(PyObject *self, PyObject *key, PyObject *value)	todo		
-Modules/_decimal/_decimal.c	743	747	signaldict_traverse	signaldict_traverse(PyObject *self, visitproc visit, void *arg)	todo		
-Modules/_decimal/_decimal.c	750	756	signaldict_dealloc	signaldict_dealloc(PyObject *self)	todo		
+Modules/_decimal/_decimal.c	691	705	signaldict_getitem	signaldict_getitem(PyObject *self, PyObject *key)	modelled	decimal-c-signaldict-set-get	
+Modules/_decimal/_decimal.c	708	740	signaldict_setitem	signaldict_setitem(PyObject *self, PyObject *key, PyObject *value)	modelled	decimal-c-signaldict-set-get	
+Modules/_decimal/_decimal.c	743	747	signaldict_traverse	signaldict_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or deallocation, no Python-visible effect
+Modules/_decimal/_decimal.c	750	756	signaldict_dealloc	signaldict_dealloc(PyObject *self)	excluded		no-behaviour: GC traversal or deallocation, no Python-visible effect
 Modules/_decimal/_decimal.c	759	784	signaldict_repr	signaldict_repr(PyObject *self)	todo		
-Modules/_decimal/_decimal.c	787	820	signaldict_richcompare	signaldict_richcompare(PyObject *v, PyObject *w, int op)	todo		
+Modules/_decimal/_decimal.c	787	820	signaldict_richcompare	signaldict_richcompare(PyObject *v, PyObject *w, int op)	modelled	decimal-c-signaldict-eq-canonical,decimal-c-signaldict-eq-copy,decimal-c-signaldict-eq-items	
 Modules/_decimal/_decimal.c	823	830	signaldict_copy	signaldict_copy(PyObject *self, PyObject *Py_UNUSED(dummy))	todo		
 Modules/_decimal/_decimal.c	895	901	context_getround	context_getround(PyObject *self, void *Py_UNUSED(closure))	todo		
 Modules/_decimal/_decimal.c	904	907	context_getcapitals	context_getcapitals(PyObject *self, void *Py_UNUSED(closure))	todo		
-Modules/_decimal/_decimal.c	911	914	context_getallcr	context_getallcr(PyObject *self, void *Py_UNUSED(closure))	todo		
+Modules/_decimal/_decimal.c	911	914	context_getallcr	context_getallcr(PyObject *self, void *Py_UNUSED(closure))	excluded		platform: compiled only with EXTRA_FUNCTIONALITY, which CPython builds leave undefined (_decimal.c:909)
 Modules/_decimal/_decimal.c	918	921	context_getetiny	context_getetiny(PyObject *self, PyObject *Py_UNUSED(dummy))	todo		
 Modules/_decimal/_decimal.c	924	927	context_getetop	context_getetop(PyObject *self, PyObject *Py_UNUSED(dummy))	todo		
-Modules/_decimal/_decimal.c	930	947	context_setprec	context_setprec(PyObject *self, PyObject *value, void *Py_UNUSED(closure))	todo		
-Modules/_decimal/_decimal.c	950	967	context_setemin	context_setemin(PyObject *self, PyObject *value, void *Py_UNUSED(closure))	todo		
-Modules/_decimal/_decimal.c	970	987	context_setemax	context_setemax(PyObject *self, PyObject *value, void *Py_UNUSED(closure))	todo		
-Modules/_decimal/_decimal.c	991	1008	context_unsafe_setprec	context_unsafe_setprec(PyObject *self, PyObject *value)	todo		
-Modules/_decimal/_decimal.c	1011	1028	context_unsafe_setemin	context_unsafe_setemin(PyObject *self, PyObject *value)	todo		
-Modules/_decimal/_decimal.c	1031	1048	context_unsafe_setemax	context_unsafe_setemax(PyObject *self, PyObject *value)	todo		
+Modules/_decimal/_decimal.c	930	947	context_setprec	context_setprec(PyObject *self, PyObject *value, void *Py_UNUSED(closure))	modelled	decimal-context-attr-twins	
+Modules/_decimal/_decimal.c	950	967	context_setemin	context_setemin(PyObject *self, PyObject *value, void *Py_UNUSED(closure))	modelled	decimal-context-attr-twins	
+Modules/_decimal/_decimal.c	970	987	context_setemax	context_setemax(PyObject *self, PyObject *value, void *Py_UNUSED(closure))	modelled	decimal-context-attr-twins	
+Modules/_decimal/_decimal.c	991	1008	context_unsafe_setprec	context_unsafe_setprec(PyObject *self, PyObject *value)	excluded		platform: compiled only with CONFIG_32 (_decimal.c:989); the 64-bit build is modelled
+Modules/_decimal/_decimal.c	1011	1028	context_unsafe_setemin	context_unsafe_setemin(PyObject *self, PyObject *value)	excluded		platform: compiled only with CONFIG_32 (_decimal.c:989); the 64-bit build is modelled
+Modules/_decimal/_decimal.c	1031	1048	context_unsafe_setemax	context_unsafe_setemax(PyObject *self, PyObject *value)	excluded		platform: compiled only with CONFIG_32 (_decimal.c:989); the 64-bit build is modelled
 Modules/_decimal/_decimal.c	1052	1069	context_setround	context_setround(PyObject *self, PyObject *value, void *Py_UNUSED(closure))	todo		
-Modules/_decimal/_decimal.c	1072	1088	context_setcapitals	context_setcapitals(PyObject *self, PyObject *value, void *Py_UNUSED(closure))	todo		
-Modules/_decimal/_decimal.c	1092	1108	context_settraps	context_settraps(PyObject *self, PyObject *value, void *Py_UNUSED(closure))	todo		
+Modules/_decimal/_decimal.c	1072	1088	context_setcapitals	context_setcapitals(PyObject *self, PyObject *value, void *Py_UNUSED(closure))	modelled	decimal-context-attr-twins	
+Modules/_decimal/_decimal.c	1092	1108	context_settraps	context_settraps(PyObject *self, PyObject *value, void *Py_UNUSED(closure))	excluded		platform: compiled only with EXTRA_FUNCTIONALITY, which CPython builds leave undefined (_decimal.c:1090)
 Modules/_decimal/_decimal.c	1112	1128	context_settraps_list	context_settraps_list(PyObject *self, PyObject *value)	todo		
 Modules/_decimal/_decimal.c	1131	1153	context_settraps_dict	context_settraps_dict(PyObject *self, PyObject *value)	todo		
-Modules/_decimal/_decimal.c	1157	1173	context_setstatus	context_setstatus(PyObject *self, PyObject *value, void *Py_UNUSED(closure))	todo		
+Modules/_decimal/_decimal.c	1157	1173	context_setstatus	context_setstatus(PyObject *self, PyObject *value, void *Py_UNUSED(closure))	excluded		platform: compiled only with EXTRA_FUNCTIONALITY, which CPython builds leave undefined (_decimal.c:1155)
 Modules/_decimal/_decimal.c	1177	1194	context_setstatus_list	context_setstatus_list(PyObject *self, PyObject *value)	todo		
 Modules/_decimal/_decimal.c	1197	1219	context_setstatus_dict	context_setstatus_dict(PyObject *self, PyObject *value)	todo		
-Modules/_decimal/_decimal.c	1222	1239	context_setclamp	context_setclamp(PyObject *self, PyObject *value, void *Py_UNUSED(closure))	todo		
-Modules/_decimal/_decimal.c	1243	1260	context_setallcr	context_setallcr(PyObject *self, PyObject *value, void *Py_UNUSED(closure))	todo		
+Modules/_decimal/_decimal.c	1222	1239	context_setclamp	context_setclamp(PyObject *self, PyObject *value, void *Py_UNUSED(closure))	modelled	decimal-context-attr-twins	
+Modules/_decimal/_decimal.c	1243	1260	context_setallcr	context_setallcr(PyObject *self, PyObject *value, void *Py_UNUSED(closure))	excluded		platform: compiled only with EXTRA_FUNCTIONALITY, which CPython builds leave undefined (_decimal.c:1241)
 Modules/_decimal/_decimal.c	1264	1280	context_getattr	context_getattr(PyObject *self, PyObject *name)	todo		
-Modules/_decimal/_decimal.c	1283	1301	context_setattr	context_setattr(PyObject *self, PyObject *name, PyObject *value)	todo		
+Modules/_decimal/_decimal.c	1283	1301	context_setattr	context_setattr(PyObject *self, PyObject *name, PyObject *value)	modelled	decimal-context-attr-twins	
 Modules/_decimal/_decimal.c	1365	1369	context_clear_traps	context_clear_traps(PyObject *self, PyObject *Py_UNUSED(dummy))	todo		
 Modules/_decimal/_decimal.c	1372	1376	context_clear_flags	context_clear_flags(PyObject *self, PyObject *Py_UNUSED(dummy))	todo		
-Modules/_decimal/_decimal.c	1388	1439	context_new	context_new(PyTypeObject *type, PyObject *Py_UNUSED(args), PyObject *Py_UNUSED(kwds))	todo		
-Modules/_decimal/_decimal.c	1442	1449	context_traverse	context_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_decimal/_decimal.c	1388	1439	context_new	context_new(PyTypeObject *type, PyObject *Py_UNUSED(args), PyObject *Py_UNUSED(kwds))	modelled	decimal-c-context-clean-template,decimal-c-context-clears-flags,decimal-c-context-copies-capitals	
+Modules/_decimal/_decimal.c	1442	1449	context_traverse	context_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or deallocation, no Python-visible effect
 Modules/_decimal/_decimal.c	1452	1472	context_clear	context_clear(PyObject *op)	todo		
-Modules/_decimal/_decimal.c	1475	1482	context_dealloc	context_dealloc(PyObject *self)	todo		
-Modules/_decimal/_decimal.c	1485	1515	context_init	context_init(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_decimal/_decimal.c	1475	1482	context_dealloc	context_dealloc(PyObject *self)	excluded		no-behaviour: GC traversal or deallocation, no Python-visible effect
+Modules/_decimal/_decimal.c	1485	1515	context_init	context_init(PyObject *self, PyObject *args, PyObject *kwds)	modelled	decimal-c-context-clean-template,decimal-c-context-clears-flags,decimal-c-context-copies-capitals	
 Modules/_decimal/_decimal.c	1518	1547	context_repr	context_repr(PyObject *self)	todo		
 Modules/_decimal/_decimal.c	1550	1560	init_basic_context	init_basic_context(PyObject *v)	todo		
 Modules/_decimal/_decimal.c	1563	1572	init_extended_context	init_extended_context(PyObject *v)	todo		
 Modules/_decimal/_decimal.c	1576	1608	ieee_context	ieee_context(PyObject *module, PyObject *v)	todo		
 Modules/_decimal/_decimal.c	1611	1626	context_copy	context_copy(PyObject *self, PyObject *Py_UNUSED(dummy))	todo		
 Modules/_decimal/_decimal.c	1629	1659	context_reduce	context_reduce(PyObject *self, PyObject *Py_UNUSED(dummy))	todo		
-Modules/_decimal/_decimal.c	1711	1759	current_context_from_dict	current_context_from_dict(decimal_state *modstate)	todo		
-Modules/_decimal/_decimal.c	1763	1771	current_context	current_context(decimal_state *modstate)	todo		
-Modules/_decimal/_decimal.c	1784	1791	PyDec_GetCurrentContext	PyDec_GetCurrentContext(PyObject *self, PyObject *Py_UNUSED(dummy))	todo		
-Modules/_decimal/_decimal.c	1795	1832	PyDec_SetCurrentContext	PyDec_SetCurrentContext(PyObject *self, PyObject *v)	todo		
+Modules/_decimal/_decimal.c	1711	1759	current_context_from_dict	current_context_from_dict(decimal_state *modstate)	excluded		platform: compiled only without WITH_DECIMAL_CONTEXTVAR, the --without-decimal-contextvar build (_decimal.c:1708); the contextvar variants are the ones modelled
+Modules/_decimal/_decimal.c	1763	1771	current_context	current_context(decimal_state *modstate)	excluded		platform: compiled only without WITH_DECIMAL_CONTEXTVAR, the --without-decimal-contextvar build (_decimal.c:1708); the contextvar variants are the ones modelled
+Modules/_decimal/_decimal.c	1784	1791	PyDec_GetCurrentContext	PyDec_GetCurrentContext(PyObject *self, PyObject *Py_UNUSED(dummy))	excluded		platform: compiled only without WITH_DECIMAL_CONTEXTVAR, the --without-decimal-contextvar build (_decimal.c:1708); the contextvar variants are the ones modelled
+Modules/_decimal/_decimal.c	1795	1832	PyDec_SetCurrentContext	PyDec_SetCurrentContext(PyObject *self, PyObject *v)	excluded		platform: compiled only without WITH_DECIMAL_CONTEXTVAR, the --without-decimal-contextvar build (_decimal.c:1708); the contextvar variants are the ones modelled
 Modules/_decimal/_decimal.c	1835	1851	init_current_context	init_current_context(decimal_state *state)	todo		
 Modules/_decimal/_decimal.c	1854	1866	current_context	current_context(decimal_state *state)	todo		
 Modules/_decimal/_decimal.c	1880	1884	PyDec_GetCurrentContext	PyDec_GetCurrentContext(PyObject *self, PyObject *Py_UNUSED(dummy))	todo		
 Modules/_decimal/_decimal.c	1888	1916	PyDec_SetCurrentContext	PyDec_SetCurrentContext(PyObject *self, PyObject *v)	todo		
 Modules/_decimal/_decimal.c	1923	1986	ctxmanager_new	ctxmanager_new(PyObject *m, PyObject *args, PyObject *kwds)	todo		
-Modules/_decimal/_decimal.c	1989	1996	ctxmanager_traverse	ctxmanager_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/_decimal/_decimal.c	1999	2005	ctxmanager_clear	ctxmanager_clear(PyObject *op)	todo		
-Modules/_decimal/_decimal.c	2008	2015	ctxmanager_dealloc	ctxmanager_dealloc(PyObject *self)	todo		
+Modules/_decimal/_decimal.c	1989	1996	ctxmanager_traverse	ctxmanager_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or deallocation, no Python-visible effect
+Modules/_decimal/_decimal.c	1999	2005	ctxmanager_clear	ctxmanager_clear(PyObject *op)	excluded		no-behaviour: GC traversal or deallocation, no Python-visible effect
+Modules/_decimal/_decimal.c	2008	2015	ctxmanager_dealloc	ctxmanager_dealloc(PyObject *self)	excluded		no-behaviour: GC traversal or deallocation, no Python-visible effect
 Modules/_decimal/_decimal.c	2018	2029	ctxmanager_set_local	ctxmanager_set_local(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
 Modules/_decimal/_decimal.c	2032	2043	ctxmanager_restore_global	ctxmanager_restore_global(PyObject *op, PyObject *Py_UNUSED(args))	todo		
 Modules/_decimal/_decimal.c	2075	2103	PyDecType_New	PyDecType_New(decimal_state *state, PyTypeObject *type)	todo		
-Modules/_decimal/_decimal.c	2107	2111	dec_traverse	dec_traverse(PyObject *dec, visitproc visit, void *arg)	todo		
-Modules/_decimal/_decimal.c	2114	2121	dec_dealloc	dec_dealloc(PyObject *dec)	todo		
-Modules/_decimal/_decimal.c	2128	2133	Py_LOCAL_INLINE	Py_LOCAL_INLINE(int) is_space(int kind, const void *data, Py_ssize_t pos)	todo		
+Modules/_decimal/_decimal.c	2107	2111	dec_traverse	dec_traverse(PyObject *dec, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or deallocation, no Python-visible effect
+Modules/_decimal/_decimal.c	2114	2121	dec_dealloc	dec_dealloc(PyObject *dec)	excluded		no-behaviour: GC traversal or deallocation, no Python-visible effect
+Modules/_decimal/_decimal.c	2128	2133	Py_LOCAL_INLINE	Py_LOCAL_INLINE(int) is_space(int kind, const void *data, Py_ssize_t pos)	excluded		no-behaviour: is_space is Py_UNICODE_ISSPACE on one character, mirrored by isSpace inside numeric_as_ascii
 Modules/_decimal/_decimal.c	2144	2196	numeric_as_ascii	numeric_as_ascii(PyObject *u, int strip_ws, int ignore_underscores)	modelled	decimal-parse-c-accepts-py,decimal-parse-c-accepts-py-casefree,decimal-str-roundtrip-c	
 Modules/_decimal/_decimal.c	2201	2219	PyDecType_FromCString	PyDecType_FromCString(PyTypeObject *type, const char *s, PyObject *context)	todo		
-Modules/_decimal/_decimal.c	2225	2252	PyDecType_FromCStringExact	PyDecType_FromCStringExact(PyTypeObject *type, const char *s, PyObject *context)	todo		
+Modules/_decimal/_decimal.c	2225	2252	PyDecType_FromCStringExact	PyDecType_FromCStringExact(PyTypeObject *type, const char *s, PyObject *context)	modelled	decimal-parse-c-accepts-py,decimal-parse-c-accepts-py-casefree,decimal-parse-py-accepts-c,decimal-str-roundtrip-c,decimal-tuple-twins-agree,decimal-tuple-twins-agree-int-digits	
 Modules/_decimal/_decimal.c	2256	2270	PyDecType_FromUnicode	PyDecType_FromUnicode(PyTypeObject *type, PyObject *u, PyObject *context)	todo		
 Modules/_decimal/_decimal.c	2276	2290	PyDecType_FromUnicodeExactWS	PyDecType_FromUnicodeExactWS(PyTypeObject *type, PyObject *u, PyObject *context)	modelled	decimal-str-roundtrip-c	
 Modules/_decimal/_decimal.c	2293	2311	Py_LOCAL_INLINE	Py_LOCAL_INLINE(void) _dec_settriple(PyObject *dec, uint8_t sign, uint32_t v, mpd_ssize_t exp)	todo		
@@ -175,9 +175,9 @@ Modules/_decimal/_decimal.c	5656	5676	ctx_mpd_to_sci	ctx_mpd_to_sci(PyObject *co
 Modules/_decimal/_decimal.c	5679	5699	ctx_mpd_to_eng	ctx_mpd_to_eng(PyObject *context, PyObject *v)	todo		
 Modules/_decimal/_decimal.c	5706	5735	ctx_mpd_qcopy_sign	ctx_mpd_qcopy_sign(PyObject *context, PyObject *args)	todo		
 Modules/_decimal/_decimal.c	5746	5763	ctx_mpd_same_quantum	ctx_mpd_same_quantum(PyObject *context, PyObject *args)	todo		
-Modules/_decimal/_decimal.c	5957	5978	cfunc_noargs	cfunc_noargs(PyTypeObject *t, const char *name)	todo		
-Modules/_decimal/_decimal.c	5983	6027	_decimal_exec	_decimal_exec(PyObject *m)	todo		
-Modules/_decimal/_decimal.c	6244	6279	decimal_traverse	decimal_traverse(PyObject *module, visitproc visit, void *arg)	todo		
-Modules/_decimal/_decimal.c	6282	6324	decimal_clear	decimal_clear(PyObject *module)	todo		
-Modules/_decimal/_decimal.c	6327	6330	decimal_free	decimal_free(void *module)	todo		
-Modules/_decimal/_decimal.c	6352	6355	PyInit__decimal	PyInit__decimal(void)	todo		
+Modules/_decimal/_decimal.c	5957	5978	cfunc_noargs	cfunc_noargs(PyTypeObject *t, const char *name)	excluded		internal-bootstrap: module state or type setup, no behaviour of its own
+Modules/_decimal/_decimal.c	5983	6027	_decimal_exec	_decimal_exec(PyObject *m)	excluded		internal-bootstrap: module state or type setup, no behaviour of its own
+Modules/_decimal/_decimal.c	6244	6279	decimal_traverse	decimal_traverse(PyObject *module, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or deallocation, no Python-visible effect
+Modules/_decimal/_decimal.c	6282	6324	decimal_clear	decimal_clear(PyObject *module)	excluded		no-behaviour: GC traversal or deallocation, no Python-visible effect
+Modules/_decimal/_decimal.c	6327	6330	decimal_free	decimal_free(void *module)	excluded		no-behaviour: GC traversal or deallocation, no Python-visible effect
+Modules/_decimal/_decimal.c	6352	6355	PyInit__decimal	PyInit__decimal(void)	excluded		internal-bootstrap: module state or type setup, no behaviour of its own

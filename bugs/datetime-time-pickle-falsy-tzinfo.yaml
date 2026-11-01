@@ -1,0 +1,49 @@
+id: datetime-time-pickle-falsy-tzinfo
+title: "_pydatetime time(state, tzinfo) accepts any falsy tzinfo where C raises TypeError"
+priority: P4
+kind: twin-mismatch
+module: datetime
+files: [Lib/_pydatetime.py]
+functions: ["time.__new__"]
+summary: |
+  The pickle form of the time constructor passes `minute or None` as the tzinfo, so a falsy
+  second argument (0, '', ...) becomes None and is accepted. C passes the argument itself to
+  time_from_pickle and raises TypeError('bad tzinfo state arg').
+likelihood: |
+  Only code that calls the constructor with hand-made pickle state and a wrong tzinfo argument.
+maybe_intended: |
+  `minute or None` is there for the default minute=0 of the signature, not for this case.
+  Harmless; recorded because the twins disagree, not because anyone is affected.
+reproducer: |
+  import datetime, _pydatetime
+  state = b'\x01\x00\x00\x00\x00\x00'
+  def run(m):
+      try:
+          return repr(m.time(state, 0))
+      except TypeError as e:
+          return 'TypeError: %s' % e
+  c, p = run(datetime), run(_pydatetime)
+  print(c, p)
+  if c == 'TypeError: bad tzinfo state arg' and p.endswith('time(1, 0)'):
+      print('REPRODUCED datetime-time-pickle-falsy-tzinfo')
+expected: |
+  TypeError in both implementations.
+promised_by: |
+  Nothing explicit; _pydatetime is meant to be equivalent to _datetime (PEP 399).
+cause: |
+  Lib/_pydatetime.py:1434: `self.__setstate(hour, minute or None)`.
+  Modules/_datetimemodule.c:4627: time_from_pickle rejects a tzinfo that is neither None nor a
+  tzinfo instance.
+possible_fix: |
+  Pass `minute` through unchanged unless it is the signature's default 0 given by omission
+  (a sentinel default would tell the two apart), or leave it.
+reproduces:
+  python3 (3.14.7): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues: []
+  queries: ["bad tzinfo state arg", "time pickle tzinfo falsy", "PR: bad tzinfo state arg",
+            "bugforge-results/README.md: datetime entries (none related)"]
+lean:
+  property: PyLean.Datetime.TimePickleCtorTwins
+  theorem: PyLean.Datetime.timePickleCtorTwins_refuted

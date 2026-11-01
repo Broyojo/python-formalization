@@ -32,6 +32,21 @@ Bug reports stay held to a high bar: fewer, better findings beat many weak ones.
 - Every model is later reviewed against `coverage/REVIEW_PROMPT.md`. Hollow
   entries get withdrawn, so mirror the body rather than specifying its result,
   and check every source citation against the file instead of from memory.
+- The first review found a quarter of `modelled` claims hollow, in the same places
+  every time, so check these before you claim a row:
+  - Failure paths are part of the body. Mirror what happens when a callback,
+    `__eq__`, `__index__` or iterator raises, not only the success path.
+  - Re-entrancy guards too: "already running" checks, re-checks after calling
+    Python code. These are where CPython's real memory-safety bugs live.
+  - Non-int inputs. `count(2.5, 0.5)` is documented; an int-only model of it is
+    hollow. Use `lean/PyLean/Binary64/` for floats.
+  - A row needs a theorem that unfolds that function's body. Listing a name in
+    `pyFns`, or an alias restated as a conjunct, is not coverage. A refutation
+    covers only the functions its counterexample runs.
+- GC traversal rows are `no-behaviour:` by policy, as a stated scope limit: we have
+  no heap model, though `gc.get_referents()` can observe them. This covers
+  `tp_traverse` only. `tp_clear` and `tp_dealloc` that run weakref callbacks or
+  finalizers are Python-visible, so they are not `no-behaviour:`.
 
 ## Compute: nothing heavy on this machine
 
@@ -94,6 +109,7 @@ Sources (absolute paths; `vendor/` is not in git worktrees):
   a C-API finding reproduced with a tiny compiled extension.
 - `Accel`: layered twin properties (broad "C == Py" refuted, narrowed version
   proven, so every excluded case is on record as a refutation).
+- `Binary64`: exact IEEE-754 doubles for proofs. Use `F64` in `Binary64.Model`.
 - `Fractions`: exact arithmetic proofs, the 4300-digit int/str limit, format specs.
 - `StrSearch`: str vs bytes vs bytearray agreement.
 
@@ -114,9 +130,7 @@ validation done in the wrong order. Look there first.
   silent wraparound are the highest-value bugs here.
 - Strings/bytes: `String`/`List Char` or `List UInt8`/`List Nat` as convenient.
 - Floats: Lean's `Float` cannot be reasoned about in proofs (and `decide`
-  cannot evaluate it). Use the exact binary64 model in `lean/PyLean/Binary64/`
-  when it has been merged; until then model float paths for difftesting and keep
-  float properties `.open`.
+  cannot evaluate it). Use the exact binary64 model in `lean/PyLean/Binary64/`.
 - Loops use fuel; `PyExc.modelFuel` is never a Python outcome.
 - Twins: when both a C and a pure-Python implementation exist, model both if
   they differ structurally, and state "C and Python agree" properties.
