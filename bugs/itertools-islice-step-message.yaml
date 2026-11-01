@@ -1,0 +1,63 @@
+id: itertools-islice-step-message
+title: "islice rejects a step above sys.maxsize with 'Step for islice() must be a positive integer or None.'"
+priority: P4
+kind: misleading-error-message
+module: itertools
+files: [Modules/itertoolsmodule.c]
+functions: ["islice_new"]
+summary: |
+  For start and stop above sys.maxsize, islice says what the limit is ("must be None or an
+  integer: 0 <= x <= sys.maxsize."; the stop message was clarified for exactly this reason in
+  bpo-6305 / gh-50554). For the step, an int above sys.maxsize hits the overflow branch of
+  PyNumber_AsSsize_t, is replaced by -1, and is then reported as
+  "Step for islice() must be a positive integer or None." although it is a positive integer.
+  Lean: itertools-islice-step-message (refuted by step = 2**63).
+likelihood: |
+  Very low: only for steps above sys.maxsize, and only the message is wrong (the ValueError
+  itself is intended, gh-50554).
+maybe_intended: |
+  No, an oversight: the start/stop messages were updated to mention sys.maxsize, the step one
+  was not. Purely cosmetic.
+reproducer: |
+  from itertools import islice
+  msgs = {}
+  for name, args in [('start', (2**63, None)), ('stop', (0, 2**63)), ('step', (0, None, 2**63))]:
+      try:
+          islice('abc', *args)
+      except ValueError as e:
+          msgs[name] = str(e)
+      print(f'{name} = 2**63:', msgs.get(name))
+  if 'sys.maxsize' in msgs['start'] and 'sys.maxsize' in msgs['stop'] and 'sys.maxsize' not in msgs['step'] \
+          and 'positive integer' in msgs['step']:
+      print('REPRODUCED itertools-islice-step-message')
+expected: |
+  A message naming the limit, e.g. "Step for islice() must be a positive integer or None:
+  1 <= x <= sys.maxsize."
+observed: |
+  python3 3.14.7 (macOS and the Linux build pod): "Step for islice() must be a positive integer or None." for step = 2**63.
+  REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+promised_by: |
+  No documentation; invariant that an error message describes the violated constraint (the
+  sibling messages for start/stop do).
+cause: |
+  Modules/itertoolsmodule.c:1650-1659: `step = PyNumber_AsSsize_t(a3, PyExc_OverflowError)`;
+  on overflow the error is cleared and step stays -1, then "Step for islice() must be a positive
+  integer or None." is raised.
+possible_fix: |
+  Use the same wording as for start/stop: "Step for islice() must be a positive integer or None:
+  1 <= x <= sys.maxsize." (or mention sys.maxsize only on overflow).
+duplicates:
+  issues:
+    - {number: 50554, state: closed, relation: "large islice arguments; clarified the stop message", reason: "step message not touched"}
+    - {number: 39433, state: closed, relation: "wrong error message of islice indexing", reason: "old (2003), different message"}
+    - {number: 39457, state: closed, relation: "islice error messages", reason: "old (2003)"}
+  queries: ["islice error message step",
+            "islice positive integer",
+            "islice step large",
+            "islice step overflow",
+            "(all of the above: word searches, --include-prs, all titles read)",
+            "islice in:title (all 20 results read)"]
+lean:
+  property: PyLean.Itertools.IsliceStepMessageAccurate
+  theorem: PyLean.Itertools.isliceStepMessageAccurate_refuted

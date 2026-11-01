@@ -7,7 +7,7 @@ Modules/_bz2module.c	72	75	OutputBuffer_GetDataSize	OutputBuffer_GetDataSize(_Bl
 Modules/_bz2module.c	78	81	OutputBuffer_Finish	OutputBuffer_Finish(_BlocksOutputBuffer *buffer, uint32_t avail_out)	todo		
 Modules/_bz2module.c	84	87	OutputBuffer_OnError	OutputBuffer_OnError(_BlocksOutputBuffer *buffer)	todo		
 Modules/_bz2module.c	139	185	catch_bz2_error	catch_bz2_error(int bzerror)	todo		
-Modules/_bz2module.c	191	242	compress	compress(BZ2Compressor *c, char *data, size_t len, int action)	todo		
+Modules/_bz2module.c	191	242	compress	compress(BZ2Compressor *c, char *data, size_t len, int action)	todo		candidates:itertools-simple-doc-agree
 Modules/_bz2module.c	270	282	_bz2_BZ2Compressor_compress_impl	_bz2_BZ2Compressor_compress_impl(BZ2Compressor *self, Py_buffer *data) /*[clinic end generated code: output=59365426e941fbcc input=85c963218070fc4c]*/	todo		
 Modules/_bz2module.c	295	309	_bz2_BZ2Compressor_flush_impl	_bz2_BZ2Compressor_flush_impl(BZ2Compressor *self) /*[clinic end generated code: output=3ef03fc1b092a701 input=d64405d3c6f76691]*/	todo		
 Modules/_bz2module.c	312	321	BZ2_Malloc	BZ2_Malloc(void* ctx, int items, int size)	todo		

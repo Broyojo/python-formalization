@@ -19,5 +19,5 @@ Lib/bz2.py	243	251	BZ2File.writelines	writelines(self, seq)	todo
 Lib/bz2.py	253	269	BZ2File.seek	seek(self, offset, whence=io.SEEK_SET)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
 Lib/bz2.py	271	276	BZ2File.tell	tell(self)	todo		
 Lib/bz2.py	279	318	open	open(filename, mode='rb', compresslevel=9, encoding=None, errors=None, newline=None)	todo		
-Lib/bz2.py	321	329	compress	compress(data, compresslevel=9)	todo		
+Lib/bz2.py	321	329	compress	compress(data, compresslevel=9)	todo		candidates:itertools-simple-doc-agree
 Lib/bz2.py	332	352	decompress	decompress(data)	todo		

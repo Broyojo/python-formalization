@@ -113,6 +113,29 @@ accel-heapify-makes-heap	proven	Lib/heapq.py	heapify,heapify_max
 accel-nsmallest-sorted-prefix	proven	Lib/heapq.py	nsmallest
 accel-nlargest-sorted-prefix	proven	Lib/heapq.py	nlargest
 accel-merge-sorted	proven	Lib/heapq.py	merge
+decimal-parse-c-accepts-py	refuted	Modules/_decimal/_decimal.c	Decimal.__new__ (str),numeric_as_ascii,mpd_qset_string,_pydecimal._parser
+decimal-parse-c-accepts-py-casefree	proven	Modules/_decimal/_decimal.c	Decimal.__new__ (str),numeric_as_ascii,scan_dpoint_exp,scan_payload,mpd_qset_string
+decimal-parse-py-accepts-c	refuted	Lib/_pydecimal.py	Decimal.__new__ (str)
+decimal-str-roundtrip-py	refuted	Lib/_pydecimal.py	Decimal.__str__,Decimal.__new__ (str)
+decimal-str-roundtrip-py-bounded	proven	Lib/_pydecimal.py	Decimal.__str__,Decimal.__new__ (str)
+decimal-str-roundtrip-c	proven	Modules/_decimal/_decimal.c	dec_str,PyDecType_FromUnicodeExactWS,numeric_as_ascii,mpd_qset_string
+decimal-hash-twins-agree	refuted	Lib/_pydecimal.py	Decimal.__hash__
+decimal-int-conversions-py	refuted	Lib/_pydecimal.py	Decimal.__floor__,Decimal.__ceil__,Decimal.__round__
+decimal-mul-no-valueerror-py	refuted	Lib/_pydecimal.py	Decimal.__mul__,Decimal.__add__,_WorkRep,_normalize
+decimal-tuple-twins-agree	refuted	Lib/_pydecimal.py	Decimal.__new__ (tuple),dectuple_as_str
+decimal-tuple-twins-agree-int-digits	proven	Lib/_pydecimal.py	Decimal.__new__ (tuple),dectuple_as_str,Decimal.__str__
+decimal-format-c-accepts-only-py	refuted	Modules/_decimal/_decimal.c	dec_format,mpd_parse_fmt_str
+decimal-format-no-encode-error	refuted	Modules/_decimal/_decimal.c	dec_format
+decimal-rounding-modes-correct	proven	Lib/_pydecimal.py	Decimal._rescale,Decimal._round_down,Decimal._round_up,Decimal._round_half_up,Decimal._round_half_down,Decimal._round_half_even,Decimal._round_ceiling,Decimal._round_floor,Decimal._round_05up
+decimal-to-integral-value-correct	proven	Lib/_pydecimal.py	Decimal.to_integral_value
+decimal-quantize-correct	proven	Lib/_pydecimal.py	Decimal.quantize,Decimal._rescale,Decimal._fix,Decimal.__round__
+decimal-mul-correctly-rounded	proven	Lib/_pydecimal.py	Decimal.__mul__,Decimal._fix
+decimal-to-integral-exact-correct	proven	Lib/_pydecimal.py	Decimal.to_integral_exact
+decimal-int-conversions-c	proven	Modules/_decimal/_decimal.c	dec_as_long,PyDec_Round,dec_floor,dec_ceil,dec_trunc
+decimal-int-conversions-py-or-limit	proven	Lib/_pydecimal.py	Decimal.__floor__,Decimal.__ceil__,Decimal.__round__,Decimal.__int__
+decimal-hash-consistent-c	proven	Modules/_decimal/_decimal.c	_dec_hash,dec_from_long
+decimal-ratio-correct-c	proven	Modules/_decimal/_decimal.c	dec_as_integer_ratio
+decimal-compare-total-order	proven	Lib/_pydecimal.py	Decimal.compare_total,Decimal._cmp
 pyio-bytesio-twins-agree	refuted	Modules/_io/bytesio.c	_io.BytesIO,_pyio.BytesIO
 pyio-bytesio-twins-same-class	refuted	Modules/_io/bytesio.c	_io.BytesIO.seek,_pyio.BytesIO.seek
 pyio-bytesio-twins-same-class-in-range	refuted	Modules/_io/bytesio.c	_io.BytesIO.getbuffer,_io.BytesIO.write,_io.BytesIO.truncate,_io.BytesIO.close
@@ -135,6 +158,72 @@ pyio-stringio-init-write-twins	refuted	Lib/_pyio.py	StringIO.__init__,TextIOWrap
 pyio-stringio-read-write-twins	refuted	Lib/_pyio.py	TextIOWrapper.read,TextIOWrapper.write
 pyio-stringio-tell-after-reads	refuted	Lib/_pyio.py	TextIOWrapper.__next__,IOBase.readlines,TextIOWrapper.tell
 pyio-stringio-newlines-attr	refuted	Lib/_pyio.py	TextIOWrapper.newlines
+json-loads-twins	refuted	Lib/json/decoder.py	json.loads,py_scanstring,JSONObject,JSONArray,py_make_scanner,C scan_once_unicode
+json-loads-twins-pos	refuted	Lib/json/decoder.py	json.loads,py_scanstring,C scanstring_unicode
+json-loads-twins-scan	proven	Lib/json/decoder.py	json.loads,py_scanstring,JSONObject,JSONArray,NUMBER_RE,C scanstring_unicode,C _parse_object_unicode,C _parse_array_unicode,C _match_number_unicode
+json-raw-decode-twins	refuted	Lib/json/scanner.py	JSONDecoder.raw_decode,py_make_scanner,C scanner_call
+json-raw-decode-twins-in-range	proven	Lib/json/scanner.py	JSONDecoder.raw_decode,py_make_scanner,JSONObject,JSONArray,C scan_once_unicode
+json-dumps-twins	proven	Lib/json/encoder.py	json.dumps,_make_iterencode,py_encode_basestring,py_encode_basestring_ascii,C c_make_encoder,C ascii_escape_unicode,C escape_unicode
+json-roundtrip-str	refuted	Lib/json/encoder.py	json.dumps,json.loads,py_encode_basestring_ascii,py_scanstring
+json-roundtrip	proven	Lib/json/encoder.py	json.dumps,json.loads,_make_iterencode,C c_make_encoder,py_scanstring,C scanstring_unicode
+json-dumps-accepted	proven	Lib/json/encoder.py	json.dumps,json.loads
+json-decode-terminates	proven	Lib/json/decoder.py	JSONDecoder.raw_decode,py_make_scanner,C scan_once_unicode
+json-strict-only-control	proven	Lib/json/decoder.py	JSONDecoder,py_scanstring,C scanstring_unicode
+json-strict-literal	proven	Lib/json/decoder.py	JSONDecoder,py_scanstring,C scanstring_unicode
+json-ensure-ascii-output	proven	Lib/json/encoder.py	json.dumps,py_encode_basestring_ascii,C ascii_escape_unicode
+json-int-literal	proven	Lib/json/scanner.py	json.loads,NUMBER_RE,C _match_number_unicode,int
+pickle-decode-encode-long	proven	Lib/pickle.py	encode_long,decode_long
+pickle-encode-long-shortest	proven	Lib/pickle.py	encode_long,decode_long
+pickle-text-int-roundtrip	proven	Lib/pickle.py	save_long,load_int,load_long
+pickle-save-long-twins	refuted	Modules/_pickle.c	save_long
+pickle-save-long-twins-sized	proven	Modules/_pickle.c	save_long
+pickle-int-line-twins	refuted	Modules/_pickle.c	load_int
+pickle-int-line-twins-no-bool-spelling	refuted	Modules/_pickle.c	load_int
+pickle-int-line-twins-no-nul	refuted	Modules/_pickle.c	load_int
+pickle-int-line-twins-narrow	proven	Modules/_pickle.c	load_int
+pickle-long-line-twins	refuted	Modules/_pickle.c	load_long
+pickle-long-line-twins-no-nul	proven	Modules/_pickle.c	load_long
+pickle-dumps-twins	refuted	Modules/_pickle.c	dumps,_dumps
+pickle-dumps-twins-batch-ok	refuted	Modules/_pickle.c	dumps,_dumps
+pickle-dumps-twins-batch-ok-long	refuted	Modules/_pickle.c	dumps,_dumps
+pickle-dumps-twins-narrow	proven	Modules/_pickle.c	dumps,_dumps
+pickle-loads-twins-exact	refuted	Modules/_pickle.c	loads,_loads
+pickle-loads-twins-accept	refuted	Modules/_pickle.c	loads,_loads
+pickle-frame-twins	refuted	Lib/pickle.py	_Unframer.load_frame,load_frame
+pickle-put-twins	refuted	Modules/_pickle.c	load_put
+itertools-islice-doc-agree	refuted	Modules/itertoolsmodule.c	islice_new,islice_next
+itertools-islice-doc-agree-ssize	refuted	Modules/itertoolsmodule.c	islice_new,islice_next
+itertools-islice-doc-agree-nowrap	proven	Modules/itertoolsmodule.c	islice_new,islice_next
+itertools-islice-consumes-max-start-stop	proven	Modules/itertoolsmodule.c	islice_next
+itertools-islice-step-message	refuted	Modules/itertoolsmodule.c	islice_new
+itertools-combinatorics-doc-agree	refuted	Modules/itertoolsmodule.c	itertools_combinations_impl,combinations_next,combinations_next_lock_held,itertools_combinations_with_replacement_impl,cwr_next,cwr_next_lock_held,itertools_permutations_impl,permutations_next,permutations_next_lock_held
+itertools-combinatorics-doc-agree-nonneg	refuted	Modules/itertoolsmodule.c	itertools_combinations_impl,combinations_next,combinations_next_lock_held,itertools_combinations_with_replacement_impl,cwr_next,cwr_next_lock_held,itertools_permutations_impl,permutations_next,permutations_next_lock_held
+itertools-combinatorics-doc-agree-ssize	refuted	Modules/itertoolsmodule.c	itertools_combinations_impl,combinations_next,combinations_next_lock_held,itertools_combinations_with_replacement_impl,cwr_next,cwr_next_lock_held,itertools_permutations_impl,permutations_next,permutations_next_lock_held
+itertools-combinatorics-doc-agree-alloc	proven	Modules/itertoolsmodule.c	itertools_combinations_impl,combinations_next,combinations_next_lock_held,itertools_combinations_with_replacement_impl,cwr_next,cwr_next_lock_held,itertools_permutations_impl,permutations_next,permutations_next_lock_held
+itertools-simple-doc-agree	proven	Modules/itertoolsmodule.c	accumulate_next,accumulate_next_lock_held,chain_next,chain_next_lock_held,compress_next,cycle_next,dropwhile_next,takewhile_next,filterfalse_next,pairwise_next,starmap_next,zip_longest_next,zip_longest_next_lock_held
+itertools-constructor-errors	proven	Modules/itertoolsmodule.c	pairwise_new_impl,itertools_cycle_impl,itertools_dropwhile_impl,itertools_takewhile_impl,itertools_filterfalse_impl,itertools_starmap_impl,itertools_accumulate_impl,itertools_compress_impl,batched_new_impl,chain_new,chain_new_internal,itertools_chain_from_iterable_impl,zip_longest_new
+itertools-arg-checks	proven	Modules/itertoolsmodule.c	islice_new,itertools_count_impl,itertools_permutations_impl
+itertools-sizeof	proven	Modules/itertoolsmodule.c	product_sizeof,combinations_sizeof,cwr_sizeof,permutations_sizeof
+itertools-batched-doc-agree	refuted	Modules/itertoolsmodule.c	batched_new_impl,batched_next
+itertools-batched-doc-agree-alloc	proven	Modules/itertoolsmodule.c	batched_new_impl,batched_next
+itertools-count-fast-slow	proven	Modules/itertoolsmodule.c	itertools_count_impl,count_next,count_nextlong,count_repr
+itertools-count-doc-agree	proven	Modules/itertoolsmodule.c	count_next
+itertools-repeat-consistent	proven	Modules/itertoolsmodule.c	repeat_new,repeat_next,repeat_len,repeat_repr
+itertools-repeat-doc-agree	refuted	Modules/itertoolsmodule.c	repeat_new,repeat_next
+itertools-repeat-doc-agree-ssize	proven	Modules/itertoolsmodule.c	repeat_new,repeat_next
+itertools-combinations-spec	proven	Modules/itertoolsmodule.c	itertools_combinations_impl,combinations_next,combinations_next_lock_held
+itertools-cwr-spec	proven	Modules/itertoolsmodule.c	itertools_combinations_with_replacement_impl,cwr_next,cwr_next_lock_held
+itertools-product-spec	proven	Modules/itertoolsmodule.c	product_new,product_next,product_next_lock_held
+itertools-product-doc-agree	refuted	Modules/itertoolsmodule.c	product_new,product_next,product_next_lock_held
+itertools-product-doc-agree-iterable	proven	Modules/itertoolsmodule.c	product_new,product_next,product_next_lock_held
+itertools-permutations-spec	proven	Modules/itertoolsmodule.c	itertools_permutations_impl,permutations_next,permutations_next_lock_held
+itertools-count-formulas	proven	Doc/library/itertools.rst	
+itertools-groupby-doc-agree	proven	Modules/itertoolsmodule.c	itertools_groupby_impl,groupby_next,Py_LOCAL_INLINE,_grouper_next,_grouper_create
+itertools-groupby-failed-step	proven	Modules/itertoolsmodule.c	Py_LOCAL_INLINE
+itertools-grouper-direct	proven	Modules/itertoolsmodule.c	itertools__grouper_impl,_grouper_create,_grouper_next
+itertools-groupby-ctor-error	proven	Modules/itertoolsmodule.c	itertools_groupby_impl
+itertools-tee-doc-agree	proven	Modules/itertoolsmodule.c	itertools_tee_impl,itertools__tee_impl,tee_next,teedataobject_newinternal,teedataobject_jumplink,teedataobject_getitem,teedataobject_getitem_lock_held,tee_fromiterable,tee_copy,tee_copy_impl
+itertools-teedataobject-args	proven	Modules/itertoolsmodule.c	itertools_teedataobject_impl
 sequences-deque-ends-evict	proven	Modules/_collectionsmodule.c	deque_append_lock_held,deque_appendleft_lock_held,deque_extend_impl,deque_extendleft_impl,deque_pop_impl,deque_popleft_impl
 sequences-deque-construct	proven	Modules/_collectionsmodule.c	deque_new,deque_init_impl
 sequences-deque-rotate-loop	proven	Modules/_collectionsmodule.c	_deque_rotate,deque_rotate_impl
@@ -171,3 +260,113 @@ listsort-int-sorted-stable	proven	Objects/listobject.c	list.sort
 listsort-reverse-stable	proven	Objects/listobject.c	list.sort
 listsort-key	proven	Objects/listobject.c	list.sort
 listsort-long-compare	proven	Objects/listobject.c	unsafe_long_compare,unsafe_object_compare,long_compare,long_richcompare
+unicodeobj-object-isascii-kind	proven	Objects/unicodeobject.c	unicode_isascii_impl
+unicodeobj-object-concat-kind	proven	Objects/unicodeobject.c	PyUnicode_Concat
+unicodeobj-object-slice-kind	proven	Objects/unicodeobject.c	unicode_subscript,kind_maxchar_limit
+unicodeobj-object-repeat-length	proven	Objects/unicodeobject.c	unicode_repeat
+unicodeobj-object-compare-order	proven	Objects/unicodeobject.c	unicode_compare
+unicodeobj-codec-utf8-rejects-forbidden	proven	Objects/stringlib/codecs.h	unicode_decode_utf8_impl
+unicodeobj-codec-utf8-strict-iff-wf	open	Objects/stringlib/codecs.h	unicode_decode_utf8_impl
+unicodeobj-codec-utf8-round-trip	open	Objects/stringlib/codecs.h	unicode_encode_utf8
+unicodeobj-codec-surrogateescape-round-trip	open	Objects/unicodeobject.c	unicode_decode_utf8_impl
+unicodeobj-format-nul-presentation-type	refuted	Python/formatter_unicode.c	parse_internal_render_format_spec,_PyFloat_FormatAdvancedWriter,_PyComplex_FormatAdvancedWriter
+unicodeobj-format-nul-int-str	proven	Python/formatter_unicode.c	_PyLong_FormatAdvancedWriter,_PyUnicode_FormatAdvancedWriter,unknown_presentation_type
+unicodeobj-format-parse-asserts	proven	Python/formatter_unicode.c	parse_internal_render_format_spec,get_integer,is_alignment_token,is_sign_element,invalid_thousands_separator_type,invalid_comma_and_underscore
+unicodeobj-format-str-shape	proven	Python/formatter_unicode.c	format_string_internal,calc_padding,fill_padding,unicode___format___impl
+unicodeobj-format-int-fast-slow	proven	Python/formatter_unicode.c	format_long_internal,calc_number_widths,fill_number,get_locale_info
+unicodeobj-format-group-loop	refuted	Objects/unicodeobject.c	_PyUnicode_InsertThousandsGrouping,GroupGenerator_init,GroupGenerator_next,InsertThousandsGrouping_fill
+unicodeobj-format-group-digits	open	Objects/unicodeobject.c	_PyUnicode_InsertThousandsGrouping
+unicodeobj-format-percent-int-fast-slow	proven	Objects/unicodeobject.c	_PyUnicode_FormatLong,mainformatlong
+unicodeobj-format-percent-star-width	refuted	Objects/unicodeobject.c	unicode_format_arg_parse
+unicodeobj-format-percent-no-directive	proven	Objects/unicodeobject.c	PyUnicode_Format,unicode_mod
+unicodeobj-text-case-ascii-fast-path	proven	Objects/unicodeobject.c	ascii_upper_or_lower,do_upper,do_lower,do_upper_or_lower,do_casefold,unicode_upper_impl,unicode_lower_impl,unicode_casefold_impl
+unicodeobj-text-case-output-bound	proven	Objects/unicodeobject.c	do_capitalize,do_swapcase,do_title,do_upper,do_lower,do_casefold,case_operation,lower_ucs4,unicode_title_impl,unicode_capitalize_impl,unicode_swapcase_impl,unicode_upper_impl,unicode_lower_impl,unicode_casefold_impl
+unicodeobj-text-final-sigma-regex	refuted	Objects/unicodeobject.c	handle_capital_sigma
+unicodeobj-text-final-sigma-no-overlap	proven	Objects/unicodeobject.c	handle_capital_sigma,lower_ucs4,_PyUnicode_IsCased,_PyUnicode_IsCaseIgnorable
+unicodeobj-text-is-predicates	proven	Objects/unicodeobject.c	unicode_isspace_impl,unicode_isalpha_impl,unicode_isalnum_impl,unicode_isdecimal_impl,unicode_isdigit_impl,unicode_isnumeric_impl,_PyUnicode_IsAlpha,_PyUnicode_ToDecimalDigit,_PyUnicode_IsDecimalDigit,_PyUnicode_ToDigit,_PyUnicode_IsDigit,_PyUnicode_IsNumeric
+unicodeobj-text-is-case-doc	proven	Objects/unicodeobject.c	unicode_islower_impl,unicode_isupper_impl,unicode_istitle_impl,_PyUnicode_IsLowercase,_PyUnicode_IsUppercase,_PyUnicode_IsTitlecase
+unicodeobj-text-isidentifier	proven	Objects/unicodeobject.c	_PyUnicode_ScanIdentifier,PyUnicode_IsIdentifier,unicode_isidentifier_impl,_PyUnicode_IsXidStart,_PyUnicode_IsXidContinue
+unicodeobj-text-repr-two-passes	proven	Objects/unicodeobject.c	unicode_repr
+unicodeobj-text-isprintable-repr	proven	Objects/unicodeobject.c	unicode_isprintable_impl,_PyUnicode_IsPrintable
+unicodeobj-text-translate-fast-slow	proven	Objects/unicodeobject.c	charmaptranslate_lookup,charmaptranslate_output,unicode_fast_translate_lookup,unicode_fast_translate,_PyUnicode_TranslateCharmap,unicode_translate
+unicodeobj-text-translate-strict	proven	Objects/unicodeobject.c	PyUnicode_Translate
+unicodeobj-text-maketrans-translate	proven	Objects/unicodeobject.c	unicode_maketrans_impl
+unicodeobj-text-maketrans-dict	proven	Objects/unicodeobject.c	unicode_maketrans_from_dict
+unicodeobj-text-bytes-str-twin	proven	Objects/stringlib/ctype.h	stringlib_isspace,stringlib_isalpha,stringlib_isalnum,stringlib_isdigit,stringlib_islower,stringlib_isupper,stringlib_istitle,stringlib_lower,stringlib_upper,stringlib_title,stringlib_capitalize,stringlib_swapcase
+unicodeobj-text-transform-decimal	proven	Objects/unicodeobject.c	_PyUnicode_TransformDecimalAndSpaceToASCII
+unicodeobj-text-bloom-superset	proven	Objects/unicodeobject.c	make_bloom_mask
+unicodeobj-text-dedent-defined	refuted	Objects/unicodeobject.c	_PyUnicode_Dedent,search_longest_common_leading_whitespace
+unicodeobj-text-dedent-textwrap	refuted	Objects/unicodeobject.c	_PyUnicode_Dedent,search_longest_common_leading_whitespace
+unicodeobj-text-case-tables	proven	Objects/unicodectype.c	gettyperecord,_PyUnicode_ToTitlecase,_PyUnicode_ToUppercase,_PyUnicode_ToLowercase,_PyUnicode_ToLowerFull,_PyUnicode_ToTitleFull,_PyUnicode_ToUpperFull,_PyUnicode_ToFoldedFull
+textlibs-struct-int-round-trip	proven	Modules/_struct.c	get_pylong,get_long,get_ulong,get_longlong,get_ulonglong,get_ssize_t,get_size_t,nu_byte,nu_ubyte,nu_short,nu_ushort,nu_int,nu_uint,nu_long,nu_ulong,nu_ssize_t,nu_size_t,nu_longlong,nu_ulonglong,nu_void_p,np_byte,np_ubyte,np_short,np_ushort,np_int,np_uint,np_long,np_ulong,np_ssize_t,np_size_t,np_longlong,np_ulonglong,np_void_p,bu_short,bu_int,bu_uint,bu_longlong,bu_ulonglong,bp_int,bp_uint,bp_longlong,bp_ulonglong,lu_short,lu_int,lu_uint,lu_longlong,lu_ulonglong,lp_int,lp_uint,lp_longlong,lp_ulonglong
+textlibs-struct-endian-tables	proven	Modules/_struct.c	init_endian_tables
+textlibs-struct-align	proven	Modules/_struct.c	align
+textlibs-struct-bool-nonzero	proven	Modules/_struct.c	nu_bool,bu_bool
+textlibs-struct-s-pads	proven	Modules/_struct.c	s_pack_internal
+textlibs-struct-unpack-length	proven	Modules/_struct.c	Struct_unpack_impl,unpack_impl
+textlibs-struct-iter-zero-size	proven	Modules/_struct.c	Struct_iter_unpack_impl,iter_unpack_impl
+textlibs-struct-pack-count	proven	Modules/_struct.c	s_pack
+textlibs-struct-le-complex-float-overflow	refuted	Modules/_struct.c	np_float_complex,bp_float_complex,s_pack,pack
+textlibs-struct-bytes-format-nonascii-error	refuted	Modules/_struct.c	cache_struct_converter,Struct___init___impl,pack
+textlibs-struct-void-p-index-overflow	refuted	Modules/_struct.c	np_void_p,s_pack_internal
+textlibs-struct-pack-into-0p-outside-field	refuted	Modules/_struct.c	s_pack_internal,s_pack_into,pack_into
+textlibs-struct-half-round-trip	open	Modules/_struct.c	unpack_halffloat,pack_halffloat,nu_halffloat,np_halffloat
+textlibs-struct-float-round-trip	open	Modules/_struct.c	unpack_float,lu_float,lp_float
+textlibs-struct-prepare-two-passes	proven	Modules/_struct.c	prepare_s,whichtable,getentry
+textlibs-struct-char-code	proven	Modules/_struct.c	nu_char,np_char
+textlibs-struct-bool-code	proven	Modules/_struct.c	np_bool,bp_bool,nu_bool,bu_bool
+textlibs-struct-scalar-byte-order	proven	Modules/_struct.c	unpack_halffloat,pack_halffloat,unpack_float,unpack_double,nu_halffloat,np_halffloat,bu_halffloat,lu_halffloat,bp_halffloat,lp_halffloat,bu_float,lu_float,bp_float,lp_float,bu_double,lu_double,bp_double,lp_double,nu_double,np_double
+textlibs-struct-native-float-pack	proven	Modules/_struct.c	np_float
+textlibs-struct-complex-byte-order	proven	Modules/_struct.c	bu_double_complex,lu_double_complex,bp_double_complex,lp_double_complex,nu_double_complex,np_double_complex,lu_float_complex,lp_float_complex,bu_float_complex,bp_float_complex
+textlibs-struct-native-float-snan	refuted	Modules/_struct.c	nu_float
+textlibs-struct-native-complex-snan	refuted	Modules/_struct.c	nu_float_complex
+textlibs-struct-unpack-from-offsets	proven	Modules/_struct.c	Struct_unpack_from_impl,unpack_from_impl
+textlibs-struct-iter-length	proven	Modules/_struct.c	unpackiter_len,unpackiter_iternext
+textlibs-struct-accessors	proven	Modules/_struct.c	s_get_format,s_get_size,s_sizeof,calcsize_impl
+textlibs-struct-uninitialized	proven	Modules/_struct.c	s_new
+textlibs-struct-range-error	proven	Modules/_struct.c	_range_error
+textlibs-struct-repr	proven	Modules/_struct.c	s_repr
+textlibs-binascii-base64-round-trip	proven	Modules/binascii.c	binascii_a2b_base64_impl,binascii_b2a_base64_impl
+textlibs-binascii-base64-lenient-filter	proven	Modules/binascii.c	binascii_a2b_base64_impl
+textlibs-binascii-base64-strict-implies-lenient	proven	Modules/binascii.c	binascii_a2b_base64_impl
+textlibs-binascii-base64-length	proven	Modules/binascii.c	binascii_b2a_base64_impl
+textlibs-binascii-hex-round-trip	proven	Modules/binascii.c	binascii_b2a_hex_impl,binascii_hexlify_impl,binascii_a2b_hex_impl,binascii_unhexlify_impl
+textlibs-base64-round-trip	proven	Lib/base64.py	b64encode,b64decode,_bytes_from_decode_data
+textlibs-binascii-ascii-buffer	proven	Modules/binascii.c	ascii_buffer_converter
+textlibs-binascii-crc-incremental	proven	Modules/binascii.c	binascii_crc_hqx_impl
+textlibs-binascii-crc-table	proven	Modules/binascii.c	binascii_crc_hqx_impl
+textlibs-binascii-to-hex	proven	Modules/binascii.c	to_hex
+textlibs-binascii-a2b-qp-plain	proven	Modules/binascii.c	binascii_a2b_qp_impl
+textlibs-binascii-qp-line-length	refuted	Modules/binascii.c	binascii_b2a_qp_impl
+textlibs-base64-standard-round-trip	proven	Lib/base64.py	standard_b64encode,standard_b64decode
+textlibs-base64-input-check	proven	Lib/base64.py	_input_type_check
+textlibs-base64-main-flags	proven	Lib/base64.py	main
+textlibs-csv-round-trip	refuted	Modules/_csv.c	join_reset,join_append_data,join_append,join_append_lineterminator,csv_writerow_lock_held,csv_writerow,parse_save_field,parse_add_char,parse_process_char,parse_reset,Reader_iternext_lock_held,Reader_iternext
+textlibs-csv-round-trip-no-skip	open	Modules/_csv.c	join_append_data,parse_process_char
+textlibs-csv-dialect-valid	proven	Modules/_csv.c	_set_bool,_set_int,_set_char_or_none,_set_char,_set_str,dialect_check_quoting,dialect_check_char,dialect_check_chars,dialect_new,Dialect_get_lineterminator,Dialect_get_quoting
+textlibs-csv-char-or-none	proven	Modules/_csv.c	get_char_or_None,Dialect_get_delimiter,Dialect_get_escapechar,Dialect_get_quotechar
+textlibs-csv-add-char-limit	proven	Modules/_csv.c	parse_add_char
+textlibs-csv-save-empty-field	proven	Modules/_csv.c	parse_save_field
+textlibs-csv-blank-line	proven	Modules/_csv.c	parse_process_char
+textlibs-csv-eat-crnl	proven	Modules/_csv.c	parse_process_char
+textlibs-csv-eof-in-quotes	proven	Modules/_csv.c	Reader_iternext_lock_held
+textlibs-csv-writerows	proven	Modules/_csv.c	csv_writerows
+textlibs-csv-single-empty-field	proven	Modules/_csv.c	csv_writerow_lock_held
+textlibs-csv-registry	proven	Modules/_csv.c	csv_register_dialect,get_dialect_from_registry,_csv_get_dialect_impl
+textlibs-csv-unregister	proven	Modules/_csv.c	_csv_unregister_dialect_impl,_csv_list_dialects_impl
+textlibs-csv-field-limit	proven	Modules/_csv.c	_csv_field_size_limit_impl
+textlibs-csv-dialect-reuse	proven	Modules/_csv.c	_call_dialect,Dialect_reduce
+textlibs-csv-dialect-validate	proven	Lib/csv.py	Dialect.__init__,Dialect._validate
+textlibs-csv-dictwriter-order	proven	Lib/csv.py	DictWriter._dict_to_list
+textlibs-csv-dictwriter-extra	proven	Lib/csv.py	DictWriter._dict_to_list,DictWriter.writerow
+textlibs-csv-extrasaction	proven	Lib/csv.py	DictWriter.__init__
+textlibs-csv-dictreader-count	proven	Lib/csv.py	DictReader.__init__,DictReader.__iter__,DictReader.fieldnames,DictReader.__next__
+textlibs-csv-writeheader	proven	Lib/csv.py	DictWriter.writeheader
+textlibs-csv-dictwriter-writerows	proven	Lib/csv.py	DictWriter.writerows
+textlibs-re-digit-limit-parse	refuted	Lib/re/_parser.py	State.__init__,State.groups,State.opengroup,State.closegroup,State.checkgroup,State.checklookbehindgroup,SubPattern.__init__,SubPattern.__len__,SubPattern.__delitem__,SubPattern.__getitem__,SubPattern.__setitem__,SubPattern.insert,SubPattern.append,SubPattern.getwidth,Tokenizer.__init__,Tokenizer.__next,Tokenizer.match,Tokenizer.get,Tokenizer.getwhile,Tokenizer.getuntil,Tokenizer.tell,Tokenizer.seek,Tokenizer.error,Tokenizer.checkgroupname,_escape,_class_escape,_uniq,_parse_sub,_parse,_parse_flags,parse
+textlibs-re-digit-limit-template	refuted	Lib/re/_parser.py	parse_template
+textlibs-re-tell	proven	Lib/re/_parser.py	Tokenizer.tell,Tokenizer.pos,Tokenizer.__next
+textlibs-re-fix-flags	proven	Lib/re/_parser.py	fix_flags
+textlibs-re-uniq	proven	Lib/re/_parser.py	_uniq
+textlibs-re-message	proven	Lib/re/_constants.py	PatternError.__init__
+textlibs-re-escape-twins	proven	Lib/re/_parser.py	_escape,_class_escape

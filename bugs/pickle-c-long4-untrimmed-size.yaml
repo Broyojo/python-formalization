@@ -1,0 +1,57 @@
+id: pickle-c-long4-untrimmed-size
+title: "_pickle: save_long checks the LONG4 size before trimming the sign byte, so it refuses an int that fits"
+priority: P4
+kind: twin-mismatch
+module: pickle
+files: [Modules/_pickle.c, Lib/pickle.py]
+functions: [save_long]
+summary: |
+  LONG4 stores a signed 32-bit byte count, so at most 2**31 - 1 bytes. `save_long` computes
+  `nbytes = nbits / 8 + 1` and raises OverflowError "int too large to pickle" when that exceeds
+  0x7fffffff, before dropping the redundant sign byte of an int of the form -(2**(8*j - 1)). For
+  j = 2**31 - 1 the trimmed encoding has exactly 2**31 - 1 bytes and is valid; the Python pickler
+  writes it, the C pickler refuses it. Off by one in an error check, at a 2 GiB int.
+  Other oversized ints differ only in class: C OverflowError, Python struct.error.
+likelihood: |
+  Essentially none: one value per sign at the 2 GiB boundary.
+maybe_intended: |
+  No, but nobody would notice; a maintainer may reasonably decline to change it.
+reproducer: |
+  # Needs about 7 GiB of memory and a few seconds.
+  import pickle
+  class Sink:
+      n = 0
+      def write(self, b): self.n += len(b)
+  x = -(1 << (8 * (2**31 - 1) - 1))
+  c, p = Sink(), Sink()
+  try:
+      pickle.Pickler(c, 2).dump(x); cres = 'ok'
+  except Exception as e:
+      cres = type(e).__name__ + ': ' + str(e)
+  try:
+      pickle._Pickler(p, 2).dump(x); pres = 'ok'
+  except Exception as e:
+      pres = type(e).__name__ + ': ' + str(e)
+  print('C     :', cres)
+  print('Python:', pres, p.n, 'bytes')
+  if cres.startswith('OverflowError') and pres == 'ok':
+      print('REPRODUCED pickle-c-long4-untrimmed-size')
+expected: |
+  Both picklers accept every int whose encoding fits LONG4's signed length.
+observed: |
+  python3 3.14.7: C OverflowError 'int too large to pickle'; Python writes 2147483655 bytes. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): REPRODUCED, same behaviour.
+promised_by: |
+  Twin relation; the size limit itself comes from pickletools' `long4` (signed 4-byte length).
+cause: |
+  Modules/_pickle.c:2320-2324 tests `nbytes > 0x7fffffffL` on the untrimmed size; the trim is at
+  :2339-2344. Lib/pickle.py:825-829 packs `len(encode_long(x))`, the trimmed size.
+possible_fix: |
+  Compare against 0x80000000 and re-check after trimming, or move the check after the trim.
+duplicates:
+  issues: []
+  queries: ["pickle LONG4", "pickle int too large", "int too large to pickle"]
+  bugforge: "no pickle entries in vendor/bugforge-results/README.md"
+lean:
+  property: PyLean.Pickle.SaveLongTwinsAgree
+  theorem: PyLean.Pickle.saveLongTwinsAgree_refuted
