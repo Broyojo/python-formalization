@@ -13,14 +13,14 @@ Parser/action_helpers.c	178	192	_PyPegen_map_names_to_ids	_PyPegen_map_names_to_
 Parser/action_helpers.c	196	206	_PyPegen_cmpop_expr_pair	_PyPegen_cmpop_expr_pair(Parser *p, cmpop_ty cmpop, expr_ty expr)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/action_helpers.c	209	223	_PyPegen_get_cmpops	_PyPegen_get_cmpops(Parser *p, asdl_seq *seq)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/action_helpers.c	226	240	_PyPegen_get_exprs	_PyPegen_get_exprs(Parser *p, asdl_seq *seq)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Parser/action_helpers.c	244	264	_set_seq_context	_set_seq_context(Parser *p, asdl_expr_seq *seq, expr_context_ty ctx)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Parser/action_helpers.c	267	270	_set_name_context	_set_name_context(Parser *p, expr_ty e, expr_context_ty ctx)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Parser/action_helpers.c	273	280	_set_tuple_context	_set_tuple_context(Parser *p, expr_ty e, expr_context_ty ctx)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Parser/action_helpers.c	283	290	_set_list_context	_set_list_context(Parser *p, expr_ty e, expr_context_ty ctx)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Parser/action_helpers.c	293	297	_set_subscript_context	_set_subscript_context(Parser *p, expr_ty e, expr_context_ty ctx)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Parser/action_helpers.c	300	304	_set_attribute_context	_set_attribute_context(Parser *p, expr_ty e, expr_context_ty ctx)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Parser/action_helpers.c	307	314	_set_starred_context	_set_starred_context(Parser *p, expr_ty e, expr_context_ty ctx)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Parser/action_helpers.c	318	346	_PyPegen_set_expr_context	_PyPegen_set_expr_context(Parser *p, expr_ty expr, expr_context_ty ctx)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/action_helpers.c	244	264	_set_seq_context	_set_seq_context(Parser *p, asdl_expr_seq *seq, expr_context_ty ctx)	modelled	pygrammar-check-targets	
+Parser/action_helpers.c	267	270	_set_name_context	_set_name_context(Parser *p, expr_ty e, expr_context_ty ctx)	modelled	pygrammar-check-targets	
+Parser/action_helpers.c	273	280	_set_tuple_context	_set_tuple_context(Parser *p, expr_ty e, expr_context_ty ctx)	modelled	pygrammar-check-targets	
+Parser/action_helpers.c	283	290	_set_list_context	_set_list_context(Parser *p, expr_ty e, expr_context_ty ctx)	modelled	pygrammar-check-targets	
+Parser/action_helpers.c	293	297	_set_subscript_context	_set_subscript_context(Parser *p, expr_ty e, expr_context_ty ctx)	modelled	pygrammar-check-targets	
+Parser/action_helpers.c	300	304	_set_attribute_context	_set_attribute_context(Parser *p, expr_ty e, expr_context_ty ctx)	modelled	pygrammar-check-targets	
+Parser/action_helpers.c	307	314	_set_starred_context	_set_starred_context(Parser *p, expr_ty e, expr_context_ty ctx)	modelled	pygrammar-check-targets	
+Parser/action_helpers.c	318	346	_PyPegen_set_expr_context	_PyPegen_set_expr_context(Parser *p, expr_ty expr, expr_context_ty ctx)	modelled	pygrammar-check-targets	
 Parser/action_helpers.c	350	359	_PyPegen_key_value_pair	_PyPegen_key_value_pair(Parser *p, expr_ty key, expr_ty value)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/action_helpers.c	363	375	_PyPegen_get_keys	_PyPegen_get_keys(Parser *p, asdl_seq *seq)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/action_helpers.c	379	391	_PyPegen_get_values	_PyPegen_get_values(Parser *p, asdl_seq *seq)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
@@ -54,7 +54,7 @@ Parser/action_helpers.c	975	996	_PyPegen_check_fstring_conversion	_PyPegen_check
 Parser/action_helpers.c	999	1050	_PyPegen_setup_full_format_spec	_PyPegen_setup_full_format_spec(Parser *p, Token *colon, asdl_expr_seq *spec, int lineno, int col_offset, int end_lineno, int end_col_offset, PyArena *arena)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/action_helpers.c	1053	1128	_PyPegen_get_expr_name	_PyPegen_get_expr_name(expr_ty e)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/action_helpers.c	1131	1136	_PyPegen_get_last_comprehension_item	_PyPegen_get_last_comprehension_item(comprehension_ty comprehension) {	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Parser/action_helpers.c	1184	1238	_PyPegen_get_invalid_target	_PyPegen_get_invalid_target(expr_ty e, TARGETS_TYPE targets_type)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Parser/action_helpers.c	1184	1238	_PyPegen_get_invalid_target	_PyPegen_get_invalid_target(expr_ty e, TARGETS_TYPE targets_type)	modelled	pygrammar-check-targets	
 Parser/action_helpers.c	1240	1257	_PyPegen_arguments_parsing_error	void *_PyPegen_arguments_parsing_error(Parser *p, expr_ty e) {	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/action_helpers.c	1260	1281	_PyPegen_nonparen_genexp_in_call	_PyPegen_nonparen_genexp_in_call(Parser *p, expr_ty args, asdl_comprehension_seq *comprehensions)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/action_helpers.c	1286	1314	_PyPegen_decode_fstring_part	_PyPegen_decode_fstring_part(Parser* p, int is_raw, expr_ty constant, Token* token) {	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body

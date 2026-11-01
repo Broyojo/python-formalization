@@ -3,6 +3,7 @@ import PyLean.PyGrammar.RowNames
 import PyLean.PyGrammar.Check.FoldProps
 import PyLean.PyGrammar.Check.NullSites
 import PyLean.PyGrammar.Check.TableCovers
+import PyLean.PyGrammar.Check.Targets
 
 /-! Registry entries for the `Check` part of `PyGrammar`. -/
 
@@ -69,6 +70,45 @@ def entries : List Entry := [
     thm := some ``tableCovers_proven
     notes := "A fact about the table of pygrammar-check-rejects, so it credits no row. The one " ++
       "exception is the refutation pygrammar-check-names-always." },
+  { id := "pygrammar-check-targets"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.check_targets
+    statement := "A target for which _PyPegen_get_invalid_target finds nothing, as STAR_TARGETS or " ++
+      "DEL_TARGETS, becomes under _PyPegen_set_expr_context a tree whose every target position " ++
+      "passes the context switch of validate_expr."
+    source := "the three implementations agreeing: Parser/action_helpers.c and Python/ast.c"
+    status := .proven
+    prop := ``TargetValidates
+    thm := some ``targetValidates_proven
+    notes := "TShape is the type invariant of parser output. FOR_TARGETS is out: it looks through " ++
+      "`in`, which the rewrite does not. Vacuous alone for a get_invalid_target that blames " ++
+      "everything; pygrammar-check-target-legal closes that." },
+  { id := "pygrammar-check-target-legal"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.check_target_legal
+    statement := "_PyPegen_get_invalid_target returns NULL for a STAR_TARGETS target built only " ++
+      "from names, attributes, subscripts, stars, tuples and lists."
+    source := "Parser/action_helpers.c:1184-1238, the converse of pygrammar-check-targets"
+    status := .proven
+    prop := ``LegalTargetAccepted
+    thm := some ``legalTargetAccepted_proven
+    notes := "The fuel bound is the tree's height; the call sites pass 100000." },
+  { id := "pygrammar-check-set-context-last"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.check_set_context_last
+    statement := "Setting a context and then another gives the same tree as setting the second."
+    source := "Parser/action_helpers.c:316 'equivalent to expr but with ctx as context'"
+    status := .proven
+    prop := ``SetContextLast
+    thm := some ``setContextLast_proven },
+  { id := "pygrammar-check-set-context-restores"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.check_set_context_restores
+    statement := "Changing the context of a tree and changing it back gives the tree."
+    source := "Parser/action_helpers.c:316 'equivalent to expr but with ctx as context'"
+    status := .proven
+    prop := ``SetContextRestores
+    thm := some ``setContextRestores_proven },
   { id := "pygrammar-check-names-always"
     pyFile := "Python/ast.c"
     pyFns := Rows.check_names_always
