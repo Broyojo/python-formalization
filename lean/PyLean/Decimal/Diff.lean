@@ -71,6 +71,7 @@ def signalOf : String → Except String Signal
   | "DivisionByZero" => pure .divisionByZero | "Inexact" => pure .inexact
   | "Rounded" => pure .rounded | "Subnormal" => pure .subnormal
   | "Overflow" => pure .overflow | "Underflow" => pure .underflow
+  | "FloatOperation" => pure .floatOperation
   | s => throw s!"bad signal {s}"
 
 def getCtx (j : Json) : Except String Ctx := do

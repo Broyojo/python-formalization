@@ -21,6 +21,9 @@ summary: |
     _pydecimal.Decimal(5) == 10 ** 4300                 -> ValueError   (a comparison raising)
     x = _pydecimal.Decimal('1' * 2200); x * x          -> ValueError at the default precision 28:
         __mul__ formats the exact 4400-digit product with str() before rounding it to 28 digits.
+    x = _pydecimal.Decimal('9' * 4300); x + x          -> ValueError at the default precision 28:
+        each operand is under the limit, but Decimal(result) formats the exact 4301-digit sum with
+        str() before rounding it. x - (-x) fails the same way.
   str(d) of such a value works, so Decimal(str(d)) does not round-trip.
 likelihood: |
   Very low in CPython. The decimal module uses _decimal whenever it is built; _pydecimal is reached
@@ -55,6 +58,8 @@ reproducer: |
       "math.floor(Decimal('1E+4300'))": lambda M: math.floor(M.Decimal('1E+4300')),
       "Decimal('1'*2200)**2 via *": lambda M: M.Decimal('1' * 2200) * M.Decimal('1' * 2200),
       "Decimal(5) == 10**4300": lambda M: M.Decimal(5) == 10 ** 4300,
+      "Decimal('9'*4300) + same": lambda M: M.Decimal('9' * 4300) + M.Decimal('9' * 4300),
+      "Decimal('9'*4300) - (-same)": lambda M: M.Decimal('9' * 4300) - M.Decimal('-' + '9' * 4300),
   }
   bad = 0
   for name, f in checks.items():
