@@ -1,5 +1,5 @@
 import PyLean.DiffCore
-import PyLean.LongObj.BoolObj
+import PyLean.LongObj.Methods
 
 /-! Differential-testing handler for `longobj` cases (`"mod": "longobj"`). -/
 
@@ -73,6 +73,15 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "bit_length" => return encPy toJson (.ok (numBits (← getLong j "a")))
   | "bit_count" => return encPy toJson (.ok (bitCount (← getLong j "a")))
   | "hash" => return encPy toJson (.ok (longHash (← getLong j "a")))
+  | "sizeof" => return encPy toJson (.ok (intSizeof (← getLong j "a")))
+  | "ratio" =>
+    let a ← getLong j "a"
+    let r := asIntegerRatio a
+    let ints : List Long := [r.1, r.2, longLong a, longGet0, longLong a, longGet1, longLong a]
+      ++ getNewArgs a
+    let vals : List Json := (ints.map (fun x => toJson x.toInt)) ++ [toJson (isInteger a)]
+    return encPy id (.ok (Json.arr vals.toArray))
+  | "int_info" => return encPy toJson (.ok intInfo)
   | "bool_repr" => return encPy toJson (.ok (boolRepr (← getBool j "a")))
   | "bool_invert" => encResult toJson (boolInvert false (← getBool j "a"))
   | "bool_op" =>

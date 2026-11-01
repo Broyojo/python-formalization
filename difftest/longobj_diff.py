@@ -94,14 +94,15 @@ def knuth_pair(rng):
 def gen_case(rng):
     fn = rng.choice(["add", "sub", "mul", "mul", "square", "divmod", "divmod", "floordiv", "mod",
                      "rshift", "lshift", "and", "or", "xor", "invert", "neg", "abs", "bool",
-                     "pow", "powmod", "lopsided", "knuth", "bigdiv", "as_long_overflow", "as_long",
+                     "pow", "powmod", "lopsided", "balanced", "balanced", "bigsquare", "knuth", "bigdiv",
+                     "as_long_overflow", "as_long", "sizeof", "ratio", "int_info",
                      "as_int", "as_ssize", "as_ulong", "as_size_t", "as_mask", "from_c", "get_sign",
                      "bit_length", "bit_count", "hash", "bool_repr", "bool_invert", "bool_op"])
     c = {"mod": "longobj", "fn": fn}
     if fn in ("add", "sub", "mul", "and", "or", "xor"):
         c["a"], c["b"] = edge_int(rng), edge_int(rng)
     elif fn in ("square", "invert", "neg", "abs", "bool", "get_sign", "bit_length", "bit_count",
-                "hash"):
+                "hash", "sizeof", "ratio"):
         c["a"] = edge_int(rng)
     elif fn in ("as_long_overflow", "as_long", "as_int", "as_ssize", "as_ulong", "as_size_t", "as_mask"):
         base = rng.choice([0, 1, B - 1, B, 1 << 31, (1 << 31) - 1, P63, P63 - 1, P64, P64 - 1, 1 << 90])
@@ -123,6 +124,15 @@ def gen_case(rng):
         n = rng.randrange(71, 110)
         c["a"] = digits(rng, n) * rng.choice([1, -1])
         c["b"] = digits(rng, rng.randrange(2 * n, 5 * n)) * rng.choice([1, -1])
+    elif fn == "balanced":
+        # the Karatsuba split itself: both operands above the cutoff, within a factor of two
+        c["fn"] = "mul"
+        n = rng.randrange(71, 320)
+        c["a"] = digits(rng, n) * rng.choice([1, -1])
+        c["b"] = digits(rng, rng.randrange(n, 2 * n)) * rng.choice([1, -1])
+    elif fn == "bigsquare":
+        c["fn"] = "square"
+        c["a"] = digits(rng, rng.randrange(139, 420)) * rng.choice([1, -1])
     elif fn == "knuth":
         v, w = knuth_pair(rng)
         c["fn"] = rng.choice(["divmod", "floordiv", "mod"])
@@ -226,6 +236,14 @@ def run_python(c):
             return a.bit_count()
         if fn == "hash":
             return hash(a)
+        if fn == "sizeof":
+            return a.__sizeof__()
+        if fn == "ratio":
+            r = a.as_integer_ratio()
+            return [r[0], r[1], a.real, a.imag, a.numerator, a.denominator, a.conjugate(),
+                    a.__getnewargs__()[0], a.is_integer()]
+        if fn == "int_info":
+            return list(sys.int_info)
         if fn == "bool_repr":
             return repr(a)
         if fn == "bool_invert":
