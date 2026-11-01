@@ -11,7 +11,7 @@ Lib/_pydecimal.py	355	367	getcontext	getcontext()	todo
 Lib/_pydecimal.py	369	374	setcontext	setcontext(context)	todo		
 Lib/_pydecimal.py	378	421	localcontext	localcontext(ctx=None, **kwargs)	todo		
 Lib/_pydecimal.py	424	442	IEEEContext	IEEEContext(bits, /)	todo		
-Lib/_pydecimal.py	460	608	Decimal.__new__	__new__(cls, value='0', context=None)	todo		
+Lib/_pydecimal.py	460	608	Decimal.__new__	__new__(cls, value='0', context=None)	modelled	decimal-parse-c-accepts-py,decimal-parse-c-accepts-py-casefree,decimal-parse-py-accepts-c,decimal-str-roundtrip-py,decimal-str-roundtrip-py-bounded,decimal-tuple-twins-agree,decimal-tuple-twins-agree-int-digits	
 Lib/_pydecimal.py	611	623	Decimal.from_number	from_number(cls, number)	todo		
 Lib/_pydecimal.py	626	668	Decimal.from_float	from_float(cls, f)	todo		
 Lib/_pydecimal.py	670	683	Decimal._isnan	_isnan(self)	todo		
@@ -19,26 +19,26 @@ Lib/_pydecimal.py	685	696	Decimal._isinfinity	_isinfinity(self)	todo
 Lib/_pydecimal.py	698	728	Decimal._check_nans	_check_nans(self, other=None, context=None)	todo		
 Lib/_pydecimal.py	730	761	Decimal._compare_check_nans	_compare_check_nans(self, other, context)	todo		
 Lib/_pydecimal.py	763	768	Decimal.__bool__	__bool__(self)	todo		
-Lib/_pydecimal.py	770	815	Decimal._cmp	_cmp(self, other)	todo		
+Lib/_pydecimal.py	770	815	Decimal._cmp	_cmp(self, other)	modelled	decimal-compare-total-order	
 Lib/_pydecimal.py	834	840	Decimal.__eq__	__eq__(self, other, context=None)	todo		
 Lib/_pydecimal.py	842	849	Decimal.__lt__	__lt__(self, other, context=None)	todo		
 Lib/_pydecimal.py	851	858	Decimal.__le__	__le__(self, other, context=None)	todo		
 Lib/_pydecimal.py	860	867	Decimal.__gt__	__gt__(self, other, context=None)	todo		
 Lib/_pydecimal.py	869	876	Decimal.__ge__	__ge__(self, other, context=None)	todo		
 Lib/_pydecimal.py	878	894	Decimal.compare	compare(self, other, context=None)	todo		
-Lib/_pydecimal.py	896	920	Decimal.__hash__	__hash__(self)	todo		
+Lib/_pydecimal.py	896	920	Decimal.__hash__	__hash__(self)	modelled	decimal-hash-twins-agree	
 Lib/_pydecimal.py	922	927	Decimal.as_tuple	as_tuple(self)	todo		
 Lib/_pydecimal.py	929	977	Decimal.as_integer_ratio	as_integer_ratio(self)	todo		
 Lib/_pydecimal.py	979	982	Decimal.__repr__	__repr__(self)	todo		
-Lib/_pydecimal.py	984	1034	Decimal.__str__	__str__(self, eng=False, context=None)	todo		
+Lib/_pydecimal.py	984	1034	Decimal.__str__	__str__(self, eng=False, context=None)	modelled	decimal-str-roundtrip-py,decimal-str-roundtrip-py-bounded,decimal-tuple-twins-agree-int-digits	
 Lib/_pydecimal.py	1036	1043	Decimal.to_eng_string	to_eng_string(self, context=None)	todo		
 Lib/_pydecimal.py	1045	1065	Decimal.__neg__	__neg__(self, context=None)	todo		
 Lib/_pydecimal.py	1067	1086	Decimal.__pos__	__pos__(self, context=None)	todo		
 Lib/_pydecimal.py	1088	1108	Decimal.__abs__	__abs__(self, round=True, context=None)	todo		
-Lib/_pydecimal.py	1110	1194	Decimal.__add__	__add__(self, other, context=None)	todo		
+Lib/_pydecimal.py	1110	1194	Decimal.__add__	__add__(self, other, context=None)	modelled	decimal-mul-no-valueerror-py	
 Lib/_pydecimal.py	1198	1210	Decimal.__sub__	__sub__(self, other, context=None)	todo		
 Lib/_pydecimal.py	1212	1218	Decimal.__rsub__	__rsub__(self, other, context=None)	todo		
-Lib/_pydecimal.py	1220	1274	Decimal.__mul__	__mul__(self, other, context=None)	todo		
+Lib/_pydecimal.py	1220	1274	Decimal.__mul__	__mul__(self, other, context=None)	modelled	decimal-mul-correctly-rounded,decimal-mul-no-valueerror-py	
 Lib/_pydecimal.py	1277	1334	Decimal.__truediv__	__truediv__(self, other, context=None)	todo		
 Lib/_pydecimal.py	1336	1367	Decimal._divide	_divide(self, other, context)	todo		
 Lib/_pydecimal.py	1369	1374	Decimal.__rtruediv__	__rtruediv__(self, other, context=None)	todo		
@@ -50,36 +50,36 @@ Lib/_pydecimal.py	1453	1526	Decimal.remainder_near	remainder_near(self, other, c
 Lib/_pydecimal.py	1528	1554	Decimal.__floordiv__	__floordiv__(self, other, context=None)	todo		
 Lib/_pydecimal.py	1556	1561	Decimal.__rfloordiv__	__rfloordiv__(self, other, context=None)	todo		
 Lib/_pydecimal.py	1563	1571	Decimal.__float__	__float__(self)	todo		
-Lib/_pydecimal.py	1573	1584	Decimal.__int__	__int__(self)	todo		
+Lib/_pydecimal.py	1573	1584	Decimal.__int__	__int__(self)	modelled	decimal-int-conversions-py-or-limit	
 Lib/_pydecimal.py	1589	1590	Decimal.real	real(self)	todo		
 Lib/_pydecimal.py	1593	1594	Decimal.imag	imag(self)	todo		
 Lib/_pydecimal.py	1596	1597	Decimal.conjugate	conjugate(self)	todo		
 Lib/_pydecimal.py	1599	1600	Decimal.__complex__	__complex__(self)	todo		
 Lib/_pydecimal.py	1602	1612	Decimal._fix_nan	_fix_nan(self, context)	todo		
-Lib/_pydecimal.py	1614	1704	Decimal._fix	_fix(self, context)	todo		
-Lib/_pydecimal.py	1716	1721	Decimal._round_down	_round_down(self, prec)	todo		
-Lib/_pydecimal.py	1723	1725	Decimal._round_up	_round_up(self, prec)	todo		
-Lib/_pydecimal.py	1727	1734	Decimal._round_half_up	_round_half_up(self, prec)	todo		
-Lib/_pydecimal.py	1736	1741	Decimal._round_half_down	_round_half_down(self, prec)	todo		
-Lib/_pydecimal.py	1743	1749	Decimal._round_half_even	_round_half_even(self, prec)	todo		
-Lib/_pydecimal.py	1751	1756	Decimal._round_ceiling	_round_ceiling(self, prec)	todo		
-Lib/_pydecimal.py	1758	1763	Decimal._round_floor	_round_floor(self, prec)	todo		
-Lib/_pydecimal.py	1765	1770	Decimal._round_05up	_round_05up(self, prec)	todo		
-Lib/_pydecimal.py	1783	1843	Decimal.__round__	__round__(self, n=None)	todo		
-Lib/_pydecimal.py	1845	1858	Decimal.__floor__	__floor__(self)	todo		
-Lib/_pydecimal.py	1860	1873	Decimal.__ceil__	__ceil__(self)	todo		
+Lib/_pydecimal.py	1614	1704	Decimal._fix	_fix(self, context)	modelled	decimal-mul-correctly-rounded,decimal-quantize-correct	
+Lib/_pydecimal.py	1716	1721	Decimal._round_down	_round_down(self, prec)	modelled	decimal-rounding-modes-correct	
+Lib/_pydecimal.py	1723	1725	Decimal._round_up	_round_up(self, prec)	modelled	decimal-rounding-modes-correct	
+Lib/_pydecimal.py	1727	1734	Decimal._round_half_up	_round_half_up(self, prec)	modelled	decimal-rounding-modes-correct	
+Lib/_pydecimal.py	1736	1741	Decimal._round_half_down	_round_half_down(self, prec)	modelled	decimal-rounding-modes-correct	
+Lib/_pydecimal.py	1743	1749	Decimal._round_half_even	_round_half_even(self, prec)	modelled	decimal-rounding-modes-correct	
+Lib/_pydecimal.py	1751	1756	Decimal._round_ceiling	_round_ceiling(self, prec)	modelled	decimal-rounding-modes-correct	
+Lib/_pydecimal.py	1758	1763	Decimal._round_floor	_round_floor(self, prec)	modelled	decimal-rounding-modes-correct	
+Lib/_pydecimal.py	1765	1770	Decimal._round_05up	_round_05up(self, prec)	modelled	decimal-rounding-modes-correct	
+Lib/_pydecimal.py	1783	1843	Decimal.__round__	__round__(self, n=None)	modelled	decimal-int-conversions-py,decimal-int-conversions-py-or-limit,decimal-quantize-correct	
+Lib/_pydecimal.py	1845	1858	Decimal.__floor__	__floor__(self)	modelled	decimal-int-conversions-py,decimal-int-conversions-py-or-limit	
+Lib/_pydecimal.py	1860	1873	Decimal.__ceil__	__ceil__(self)	modelled	decimal-int-conversions-py,decimal-int-conversions-py-or-limit	
 Lib/_pydecimal.py	1875	1917	Decimal.fma	fma(self, other, third, context=None)	todo		
 Lib/_pydecimal.py	1919	2002	Decimal._power_modulo	_power_modulo(self, other, modulo, context=None)	todo		
 Lib/_pydecimal.py	2004	2250	Decimal._power_exact	_power_exact(self, other, p)	todo		
 Lib/_pydecimal.py	2252	2466	Decimal.__pow__	__pow__(self, other, modulo=None, context=None)	todo		
 Lib/_pydecimal.py	2468	2473	Decimal.__rpow__	__rpow__(self, other, modulo=None, context=None)	todo		
 Lib/_pydecimal.py	2475	2498	Decimal.normalize	normalize(self, context=None)	todo		
-Lib/_pydecimal.py	2500	2559	Decimal.quantize	quantize(self, exp, rounding=None, context=None)	todo		
+Lib/_pydecimal.py	2500	2559	Decimal.quantize	quantize(self, exp, rounding=None, context=None)	modelled	decimal-quantize-correct	
 Lib/_pydecimal.py	2561	2574	Decimal.same_quantum	same_quantum(self, other, context=None)	todo		
-Lib/_pydecimal.py	2576	2608	Decimal._rescale	_rescale(self, exp, rounding)	todo		
+Lib/_pydecimal.py	2576	2608	Decimal._rescale	_rescale(self, exp, rounding)	modelled	decimal-quantize-correct,decimal-rounding-modes-correct	
 Lib/_pydecimal.py	2610	2631	Decimal._round	_round(self, places, rounding)	todo		
-Lib/_pydecimal.py	2633	2660	Decimal.to_integral_exact	to_integral_exact(self, rounding=None, context=None)	todo		
-Lib/_pydecimal.py	2662	2676	Decimal.to_integral_value	to_integral_value(self, rounding=None, context=None)	todo		
+Lib/_pydecimal.py	2633	2660	Decimal.to_integral_exact	to_integral_exact(self, rounding=None, context=None)	modelled	decimal-to-integral-exact-correct	
+Lib/_pydecimal.py	2662	2676	Decimal.to_integral_value	to_integral_value(self, rounding=None, context=None)	modelled	decimal-to-integral-value-correct	
 Lib/_pydecimal.py	2681	2778	Decimal.sqrt	sqrt(self, context=None)	todo		
 Lib/_pydecimal.py	2780	2820	Decimal.max	max(self, other, context=None)	todo		
 Lib/_pydecimal.py	2822	2854	Decimal.min	min(self, other, context=None)	todo		
@@ -88,7 +88,7 @@ Lib/_pydecimal.py	2865	2869	Decimal._iseven	_iseven(self)	todo
 Lib/_pydecimal.py	2871	2877	Decimal.adjusted	adjusted(self)	todo		
 Lib/_pydecimal.py	2879	2885	Decimal.canonical	canonical(self)	todo		
 Lib/_pydecimal.py	2887	2897	Decimal.compare_signal	compare_signal(self, other, context=None)	todo		
-Lib/_pydecimal.py	2899	2969	Decimal.compare_total	compare_total(self, other, context=None)	todo		
+Lib/_pydecimal.py	2899	2969	Decimal.compare_total	compare_total(self, other, context=None)	modelled	decimal-compare-total-order	
 Lib/_pydecimal.py	2972	2982	Decimal.compare_total_mag	compare_total_mag(self, other, context=None)	todo		
 Lib/_pydecimal.py	2984	2986	Decimal.copy_abs	copy_abs(self)	todo		
 Lib/_pydecimal.py	2988	2993	Decimal.copy_negate	copy_negate(self)	todo		
@@ -216,7 +216,7 @@ Lib/_pydecimal.py	5535	5563	Context.to_integral_exact	to_integral_exact(self, a)
 Lib/_pydecimal.py	5565	5592	Context.to_integral_value	to_integral_value(self, a)	todo		
 Lib/_pydecimal.py	5603	5616	_WorkRep.__init__	__init__(self, value=None)	todo		
 Lib/_pydecimal.py	5618	5619	_WorkRep.__repr__	__repr__(self)	todo		
-Lib/_pydecimal.py	5623	5649	_normalize	_normalize(op1, op2, prec=0)	todo		
+Lib/_pydecimal.py	5623	5649	_normalize	_normalize(op1, op2, prec=0)	modelled	decimal-mul-no-valueerror-py	
 Lib/_pydecimal.py	5655	5674	_decimal_lshift_exact	_decimal_lshift_exact(n, e)	todo		
 Lib/_pydecimal.py	5676	5689	_sqrt_nearest	_sqrt_nearest(n, a)	todo		
 Lib/_pydecimal.py	5691	5697	_rshift_nearest	_rshift_nearest(x, shift)	todo		

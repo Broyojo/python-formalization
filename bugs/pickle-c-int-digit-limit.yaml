@@ -1,0 +1,53 @@
+id: pickle-c-int-digit-limit
+title: "_pickle: INT opcode skips the 4300-digit limit when the value fits a C long"
+priority: P4
+kind: twin-mismatch
+module: pickle
+files: [Modules/_pickle.c, Lib/pickle.py]
+functions: [load_int]
+summary: |
+  `load_int` tries strtol before PyLong_FromString, so a long run of leading zeros parses even past
+  `sys.get_int_max_str_digits()`: `pickle.loads(b'I' + b'0'*5000 + b'1\n.')` is 1. The same stream
+  raises ValueError in `pickle._loads`, because `int(bytes)` counts every digit, and the C unpickler
+  itself raises for the same digits under LONG, GET and PUT, and under INT once the value overflows
+  a C long. So the limit is not applied consistently, even within `_pickle`.
+likelihood: |
+  Very low: hand-made pickles only. No denial-of-service angle: strtol is linear, which is what the
+  limit protects against. The only effect is an accept/reject difference.
+maybe_intended: |
+  Possibly tolerated. The limit exists to stop quadratic conversions, and strtol is not one, so a
+  maintainer could well say this is fine. Recorded as a real twin mismatch, not as a defect worth
+  a change on its own; it could join #126996 if `load_int` is rewritten.
+reproducer: |
+  import pickle
+  data = b'I' + b'0' * 5000 + b'1\n.'
+  def r(f, s):
+      try: return ('ok', f(s))
+      except Exception as e: return (type(e).__name__, str(e)[:60])
+  c, p = r(pickle.loads, data), r(pickle._loads, data)
+  ls = b'L' + b'0' * 5000 + b'1L\n.'
+  l = r(pickle.loads, ls)
+  print('INT C', c, 'INT Python', p, 'LONG C', l)
+  if c == ('ok', 1) and p[0] == 'ValueError' and l[0] == 'ValueError':
+      print('REPRODUCED pickle-c-int-digit-limit')
+expected: |
+  INT behaves as `int(line)`: ValueError past the limit in both twins.
+observed: |
+  python3 3.14.7: INT: C 1, Python ValueError (digit limit); LONG: C ValueError. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): REPRODUCED, same behaviour.
+promised_by: |
+  Doc/library/stdtypes.rst "Integer string conversion length limitation"; twin relation.
+cause: |
+  Modules/_pickle.c:5411-5414: strtol succeeds, so PyLong_FromString and its limit check
+  (Objects/longobject.c:2943-2951) never run. Lib/pickle.py:1383 uses `int(data)`.
+possible_fix: |
+  None needed unless `load_int` changes; dropping the strtol path would make INT match LONG.
+duplicates:
+  issues: []
+  queries: ["pickle int_max_str_digits", "pickle 4300", "int_max_str_digits strtol", "pickle max_str_digits",
+            "max str digits pickle protocol 0", "pickle leading zeros", "int_max_str_digits",
+            "Exceeds the limit (4300 digits)", "integer string conversion limit"]
+  bugforge: "no pickle entries in vendor/bugforge-results/README.md"
+lean:
+  property: PyLean.Pickle.IntLineTwinsNoNul
+  theorem: PyLean.Pickle.intLineTwinsNoNul_refuted

@@ -30,7 +30,7 @@ Lib/xmlrpc/client.py	415	422	ExpatParser.__init__	__init__(self, target)	todo
 Lib/xmlrpc/client.py	424	425	ExpatParser.feed	feed(self, data)	todo		
 Lib/xmlrpc/client.py	427	434	ExpatParser.close	close(self)	todo		
 Lib/xmlrpc/client.py	459	463	Marshaller.__init__	__init__(self, encoding=None, allow_none=False)	todo		
-Lib/xmlrpc/client.py	467	492	Marshaller.dumps	dumps(self, values)	todo		
+Lib/xmlrpc/client.py	467	492	Marshaller.dumps	dumps(self, values)	todo		candidates:json-dumps-accepted,json-dumps-twins,json-ensure-ascii-output,json-roundtrip,json-roundtrip-str,pickle-dumps-twins,pickle-dumps-twins-batch-ok,pickle-dumps-twins-batch-ok-long,pickle-dumps-twins-narrow
 Lib/xmlrpc/client.py	494	510	Marshaller.__dump	__dump(self, value, write)	todo		
 Lib/xmlrpc/client.py	512	515	Marshaller.dump_nil	dump_nil(self, value, write)	todo		
 Lib/xmlrpc/client.py	518	521	Marshaller.dump_bool	dump_bool(self, value, write)	todo		
@@ -74,8 +74,8 @@ Lib/xmlrpc/client.py	855	856	MultiCall.__repr__	__repr__(self)	todo
 Lib/xmlrpc/client.py	858	859	MultiCall.__getattr__	__getattr__(self, name)	todo		
 Lib/xmlrpc/client.py	861	866	MultiCall.__call__	__call__(self)	todo		
 Lib/xmlrpc/client.py	879	903	getparser	getparser(use_datetime=False, use_builtin_types=False)	todo		
-Lib/xmlrpc/client.py	918	982	dumps	dumps(params, methodname=None, methodresponse=None, encoding=None, allow_none=False)	todo		
-Lib/xmlrpc/client.py	993	1005	loads	loads(data, use_datetime=False, use_builtin_types=False)	todo		
+Lib/xmlrpc/client.py	918	982	dumps	dumps(params, methodname=None, methodresponse=None, encoding=None, allow_none=False)	todo		candidates:json-dumps-accepted,json-dumps-twins,json-ensure-ascii-output,json-roundtrip,json-roundtrip-str,pickle-dumps-twins,pickle-dumps-twins-batch-ok,pickle-dumps-twins-batch-ok-long,pickle-dumps-twins-narrow
+Lib/xmlrpc/client.py	993	1005	loads	loads(data, use_datetime=False, use_builtin_types=False)	todo		candidates:json-dumps-accepted,json-int-literal,json-loads-twins,json-loads-twins-pos,json-loads-twins-scan,json-roundtrip,json-roundtrip-str,pickle-loads-twins-accept,pickle-loads-twins-exact
 Lib/xmlrpc/client.py	1015	1025	gzip_encode	gzip_encode(data)	todo		
 Lib/xmlrpc/client.py	1039	1056	gzip_decode	gzip_decode(data, max_decode=20971520)	todo		
 Lib/xmlrpc/client.py	1069	1075	GzipDecodedResponse.__init__	__init__(self, response)	todo		

@@ -1,0 +1,48 @@
+id: textlibs-struct-void-p-index-overflow
+title: "struct: 'P' lets OverflowError escape for __index__ objects but raises struct.error for the equal int"
+priority: P4
+kind: internal-inconsistency
+module: textlibs
+files: [Modules/_struct.c]
+functions: ["np_void_p", "s_pack_internal"]
+summary: |
+  `struct.pack('P', 2**64)` raises struct.error "int too large to convert", while the same value
+  through an `__index__` object raises a bare OverflowError. Every other integer code turns the
+  overflow into struct.error itself; `np_void_p` has no RANGE_ERROR and relies on the rewrite in
+  `s_pack_internal`, which only applies when `PyLong_Check(v)`.
+likelihood: |
+  Very low: `P`, an out-of-range value, and a non-int with `__index__`, all at once.
+maybe_intended: |
+  Probably an oversight, but trivial. An honest maintainer would likely call this not worth a
+  change on its own; recorded for completeness, and at most a line in a combined report.
+reproducer: |
+  import struct
+  class I:
+      def __index__(self):
+          return 2**64
+  try:
+      struct.pack('P', 2**64)
+  except Exception as e:
+      a = type(e).__name__
+  try:
+      struct.pack('P', I())
+  except Exception as e:
+      b = type(e).__name__
+  print(a, b)
+  if a == 'error' and b == 'OverflowError':
+      print('REPRODUCED textlibs-struct-void-p-index-overflow')
+expected: |
+  The same exception as for the equal int, as with every other integer code.
+observed: |
+  python3 3.14.7: error / OverflowError. REPRODUCED.
+  main 3.16.0a1+dev (ef1fce0): error / OverflowError. REPRODUCED.
+promised_by: |
+  invariant: struct documents struct.error for out-of-range values.
+cause: |
+  Modules/_struct.c:819-834 (no range error) and :2236-2241 (rewrite gated on PyLong_Check).
+possible_fix: |
+  Test the converted value in s_pack_internal, or give np_void_p a RANGE_ERROR path.
+duplicates: |
+  No report found. Not in the bugforge list.
+  Queries: gh api search/issues q='repo:python/cpython struct void pointer __index__ OverflowError'
+lean: lean/PyLean/TextLibs/StructProps.lean (PIndexLikeInt, pIndexLikeInt_refuted)

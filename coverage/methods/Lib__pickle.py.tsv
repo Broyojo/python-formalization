@@ -10,11 +10,11 @@ Lib/pickle.py	258	261	_Unframer.__init__	__init__(self, file_read, file_readline
 Lib/pickle.py	263	278	_Unframer.readinto	readinto(self, buf)	todo		
 Lib/pickle.py	280	291	_Unframer.read	read(self, n)	todo		candidates:pyio-bytesio-read-after-seek
 Lib/pickle.py	293	304	_Unframer.readline	readline(self)	todo		
-Lib/pickle.py	306	310	_Unframer.load_frame	load_frame(self, frame_size)	todo		
+Lib/pickle.py	306	310	_Unframer.load_frame	load_frame(self, frame_size)	modelled	pickle-frame-twins	
 Lib/pickle.py	315	318	_getattribute	_getattribute(obj, dotted_path)	todo		
 Lib/pickle.py	320	354	whichmodule	whichmodule(obj, name)	todo		
-Lib/pickle.py	356	384	encode_long	encode_long(x)	todo		
-Lib/pickle.py	386	404	decode_long	decode_long(data)	todo		
+Lib/pickle.py	356	384	encode_long	encode_long(x)	modelled	pickle-decode-encode-long,pickle-encode-long-shortest	
+Lib/pickle.py	386	404	decode_long	decode_long(data)	modelled	pickle-decode-encode-long,pickle-encode-long-shortest	
 Lib/pickle.py	406	411	_T	_T(obj)	todo		
 Lib/pickle.py	420	475	_Pickler.__init__	__init__(self, file, protocol=None, *, fix_imports=True, buffer_callback=None)	todo		
 Lib/pickle.py	477	485	_Pickler.clear_memo	clear_memo(self)	todo		
@@ -28,7 +28,7 @@ Lib/pickle.py	624	634	_Pickler.save_pers	save_pers(self, pid)	todo
 Lib/pickle.py	636	789	_Pickler.save_reduce	save_reduce(self, func, args, state=None, listitems=None, dictitems=None, state_setter=None, *, obj=None)	todo		
 Lib/pickle.py	795	796	_Pickler.save_none	save_none(self, obj)	todo		
 Lib/pickle.py	799	803	_Pickler.save_bool	save_bool(self, obj)	todo		
-Lib/pickle.py	806	834	_Pickler.save_long	save_long(self, obj)	todo		
+Lib/pickle.py	806	834	_Pickler.save_long	save_long(self, obj)	modelled	pickle-text-int-roundtrip	
 Lib/pickle.py	837	841	_Pickler.save_float	save_float(self, obj)	todo		
 Lib/pickle.py	844	856	_Pickler._save_bytes_no_memo	_save_bytes_no_memo(self, obj)	todo		
 Lib/pickle.py	858	867	_Pickler.save_bytes	save_bytes(self, obj)	todo		
@@ -51,17 +51,17 @@ Lib/pickle.py	1294	1322	_Unpickler.load	load(self)	todo
 Lib/pickle.py	1325	1329	_Unpickler.pop_mark	pop_mark(self)	todo		
 Lib/pickle.py	1331	1332	_Unpickler.persistent_load	persistent_load(self, pid)	todo		
 Lib/pickle.py	1336	1340	_Unpickler.load_proto	load_proto(self)	todo		
-Lib/pickle.py	1343	1347	_Unpickler.load_frame	load_frame(self)	todo		
+Lib/pickle.py	1343	1347	_Unpickler.load_frame	load_frame(self)	todo		candidates:pickle-frame-twins
 Lib/pickle.py	1350	1356	_Unpickler.load_persid	load_persid(self)	todo		
 Lib/pickle.py	1359	1361	_Unpickler.load_binpersid	load_binpersid(self)	todo		
 Lib/pickle.py	1364	1365	_Unpickler.load_none	load_none(self)	todo		
 Lib/pickle.py	1368	1369	_Unpickler.load_false	load_false(self)	todo		
 Lib/pickle.py	1372	1373	_Unpickler.load_true	load_true(self)	todo		
-Lib/pickle.py	1376	1384	_Unpickler.load_int	load_int(self)	todo		
+Lib/pickle.py	1376	1384	_Unpickler.load_int	load_int(self)	modelled	pickle-text-int-roundtrip	
 Lib/pickle.py	1387	1388	_Unpickler.load_binint	load_binint(self)	todo		
 Lib/pickle.py	1391	1392	_Unpickler.load_binint1	load_binint1(self)	todo		
 Lib/pickle.py	1395	1396	_Unpickler.load_binint2	load_binint2(self)	todo		
-Lib/pickle.py	1399	1403	_Unpickler.load_long	load_long(self)	todo		
+Lib/pickle.py	1399	1403	_Unpickler.load_long	load_long(self)	modelled	pickle-text-int-roundtrip	
 Lib/pickle.py	1406	1409	_Unpickler.load_long1	load_long1(self)	todo		
 Lib/pickle.py	1412	1418	_Unpickler.load_long4	load_long4(self)	todo		
 Lib/pickle.py	1421	1422	_Unpickler.load_float	load_float(self)	todo		
@@ -123,7 +123,7 @@ Lib/pickle.py	1823	1844	_Unpickler.load_build	load_build(self)	todo
 Lib/pickle.py	1847	1850	_Unpickler.load_mark	load_mark(self)	todo		
 Lib/pickle.py	1853	1855	_Unpickler.load_stop	load_stop(self)	todo		
 Lib/pickle.py	1861	1863	_dump	_dump(obj, file, protocol=None, *, fix_imports=True, buffer_callback=None)	todo		
-Lib/pickle.py	1865	1871	_dumps	_dumps(obj, protocol=None, *, fix_imports=True, buffer_callback=None)	todo		
+Lib/pickle.py	1865	1871	_dumps	_dumps(obj, protocol=None, *, fix_imports=True, buffer_callback=None)	modelled	pickle-dumps-twins,pickle-dumps-twins-batch-ok,pickle-dumps-twins-batch-ok-long,pickle-dumps-twins-narrow	
 Lib/pickle.py	1873	1876	_load	_load(file, *, fix_imports=True, encoding='ASCII', errors='strict', buffers=None)	todo		
-Lib/pickle.py	1878	1884	_loads	_loads(s, /, *, fix_imports=True, encoding='ASCII', errors='strict', buffers=None)	todo		
+Lib/pickle.py	1878	1884	_loads	_loads(s, /, *, fix_imports=True, encoding='ASCII', errors='strict', buffers=None)	modelled	pickle-loads-twins-accept,pickle-loads-twins-exact	
 Lib/pickle.py	1904	1921	_main	_main(args=None)	todo		
