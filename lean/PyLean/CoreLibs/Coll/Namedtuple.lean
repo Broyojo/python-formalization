@@ -168,15 +168,21 @@ def fillRest (kw : D String ν) (defaults : List ν) (n : Nat) : Nat → List St
     let r ← fillRest kw defaults n (i + 1) t
     return v :: r
 
+/-- Every keyword names a parameter not already taken by the first `np` positionals. -/
+def checkKw (args : List String) (np : Nat) : D String ν → Py Unit
+  | [] => .ok ()
+  | p :: t =>
+    if !args.contains p.1 then .error (.typeError "~unexpected keyword argument")
+    else if (args.take np).contains p.1 then .error (.typeError "~multiple values")
+    else checkKw args np t
+
 /-- `T(*pos, **kw)`: binding to the parameters of `__new__`, `initialize_locals` in
 Python/ceval.c. Every failure is a `TypeError`, whose text is not modelled. Keywords
 match parameter names exactly: no normalisation happens at run time. -/
 def ntCall (T : NT ν) (pos : List ν) (kw : D String ν) : Py (List ν) := do
   let n := T.args.length
   if pos.length > n then throw (.typeError "~too many positional arguments")
-  for p in kw do
-    if !T.args.contains p.1 then throw (.typeError "~unexpected keyword argument")
-    if (T.args.take pos.length).contains p.1 then throw (.typeError "~multiple values")
+  checkKw T.args pos.length kw
   let r ← fillRest kw T.defaults n pos.length (T.args.drop pos.length)
   return pos ++ r
 
