@@ -189,7 +189,7 @@ def maketransFromDict (items : List (MkKey × MapItem)) (d : TransDict) : Py Tra
     | _ => .error (.valueError "string keys in translatetable must be of length 1")
   | (.int k, value) :: rest => maketransFromDict rest (dictSet d k value)
   | (.other, _) :: _ =>
-    .error (.typeError "keys in translate tablemust be strings or integers")
+    .error (.typeError "keys in translate table mustbe strings or integers")
 
 /-- The first loop of `unicode_maketrans_impl`, unicodeobject.c:13478-13492. -/
 def maketransPairs (d : TransDict) : List Nat → List Nat → TransDict

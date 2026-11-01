@@ -230,25 +230,32 @@ theorem outcome_lift (m : Mapping) (c : Nat) (cs : List Nat) (w : Option Str)
     have e : p - pos = (p - (pos + 1)) + 1 := by omega
     rw [e, List.drop_succ_cons]
 
-theorem fastLoop_spec (m : Mapping) (s : List Nat) (hs : ∀ c ∈ s, c < 128) (t : AsciiTable)
-    (ht : TableOk m t) (out : Str) (pos : Nat) :
-    FastOutcome m s out pos (fastTranslateLoop m true s t out pos) := by
+theorem fastLoop_spec (m : Mapping) (ignore : Bool) (s : List Nat) (hs : ∀ c ∈ s, c < 128)
+    (t : AsciiTable) (ht : TableOk m t) (out : Str) (pos : Nat) :
+    FastOutcome m s out pos (fastTranslateLoop m ignore s t out pos) := by
   induction s generalizing t out pos with
   | nil => simp [fastTranslateLoop, FastOutcome, translateSpec, withPrefix, Except.map]
   | cons c cs ih =>
     have hc := hs c List.mem_cons_self
     have hcs : ∀ x ∈ cs, x < 128 := fun x hx => hs x (List.mem_cons_of_mem _ hx)
+    have stop : FastOutcome m (c :: cs) out pos (.ok (false, out, pos)) :=
+      ⟨Nat.le_refl _, by simp, [], by simp, by simp⟩
     have step : ∀ t', TableOk m t' → t' c ≠ 0xff →
         FastOutcome m (c :: cs) out pos
-          (if t' c = 0xfe then fastTranslateLoop m true cs t' out (pos + 1)
-           else fastTranslateLoop m true cs t' (out ++ [t' c]) (pos + 1)) := by
+          (if t' c = 0xfe then
+             (if ignore then fastTranslateLoop m ignore cs t' out (pos + 1)
+              else .ok (false, out, pos))
+           else fastTranslateLoop m ignore cs t' (out ++ [t' c]) (pos + 1)) := by
       intro t' ht' hne
       rcases ht' c hne with ⟨h1, h2⟩ | ⟨h1, h2⟩
       · rw [if_pos h1]
-        exact outcome_lift m c cs none h2 out pos _ (by simpa using ih hcs t' ht' out (pos + 1))
+        cases ignore with
+        | false => exact stop
+        | true =>
+          exact outcome_lift m c cs none h2 out pos _ (by simpa using ih hcs t' ht' out (pos + 1))
       · rw [if_neg (by omega)]
         exact outcome_lift m c cs (some [t' c]) h2 out pos _ (ih hcs t' ht' _ (pos + 1))
-    simp only [fastTranslateLoop, ↓reduceIte, bind, Except.bind]
+    simp only [fastTranslateLoop, bind, Except.bind]
     by_cases hff : t c = 0xff
     · simp only [hff, if_true]
       have hl := fastLookup_spec m c hc t ht
@@ -263,7 +270,7 @@ theorem fastLoop_spec (m : Mapping) (s : List Nat) (hs : ∀ c ∈ s, c < 128) (
         cases tr with
         | false =>
           simp only [Bool.not_false, if_true]
-          exact ⟨Nat.le_refl _, by simp, [], by simp, by simp⟩
+          exact stop
         | true =>
           simp only at hl
           simpa using step t' hl.1 hl.2
@@ -290,7 +297,7 @@ theorem translateFastSlow_proven : TranslateFastSlow := by
   simp only
   by_cases ha : isAscii s = true
   · rw [if_pos ha]
-    have hf := fastLoop_spec m s (fun c hc => mem_ascii ha hc) (fun _ => 0xff)
+    have hf := fastLoop_spec m true s (fun c hc => mem_ascii ha hc) (fun _ => 0xff)
       (fun c h => absurd rfl h) [] 0
     simp only [bind, Except.bind]
     cases hk : fastTranslateLoop m true s (fun _ => 0xff) [] 0 with
@@ -311,7 +318,92 @@ theorem translateFastSlow_proven : TranslateFastSlow := by
         rw [translateLoop_spec m s _ _ _ _ (by simp only [List.length_drop]; omega), h4]
   · rw [if_neg ha, translateLoop_spec m s _ _ _ _ (by omega), withPrefix_nil]
 
+theorem translateLoop_strict (m : Mapping) (input : Str) (fuel i : Nat) (rest out : List Nat)
+    (hf : rest.length < fuel) (hn : ∀ c ∈ rest, charmaptranslateOutput m c ≠ .ok none) :
+    translateLoop m false input fuel i rest out = withPrefix out (translateSpec m rest) := by
+  induction fuel generalizing i rest out with
+  | zero => omega
+  | succ fuel ih =>
+    cases rest with
+    | nil => simp [translateLoop, translateSpec, withPrefix, Except.map]
+    | cons c cs =>
+      simp only [List.length_cons] at hf
+      have hc := hn c List.mem_cons_self
+      simp only [translateLoop, translateSpec]
+      cases ho : charmaptranslateOutput m c with
+      | error e => simp [bind, Except.bind, withPrefix, Except.map]
+      | ok w =>
+        cases w with
+        | none => exact absurd ho hc
+        | some w =>
+          simp only [bind, Except.bind, pure, Except.pure, Option.getD_some]
+          rw [ih _ _ _ (by omega) (fun x hx => hn x (List.mem_cons_of_mem _ hx))]
+          cases translateSpec m cs <;> simp [withPrefix, Except.map]
+
+/-- `PyUnicode_Translate(s, table, NULL)`: when no character maps to `None`, the
+strict mode gives the same result as the per-character reading, through the fast
+path or not. -/
+def TranslateStrict : Prop :=
+  ∀ (m : Mapping) (s : Str), (∀ c ∈ s, charmaptranslateOutput m c ≠ .ok none) →
+    pyUnicodeTranslateStrict s m = translateSpec m s
+
+theorem translateStrict_proven : TranslateStrict := by
+  intro m s hn
+  unfold pyUnicodeTranslateStrict translateCharmap
+  by_cases h0 : s.length = 0
+  · have : s = [] := List.eq_nil_of_length_eq_zero h0
+    subst this
+    rfl
+  rw [if_neg h0]
+  simp only
+  by_cases ha : isAscii s = true
+  · rw [if_pos ha]
+    have hf := fastLoop_spec m false s (fun c hc => mem_ascii ha hc) (fun _ => 0xff)
+      (fun c h => absurd rfl h) [] 0
+    simp only [bind, Except.bind]
+    cases hk : fastTranslateLoop m false s (fun _ => 0xff) [] 0 with
+    | error e =>
+      rw [hk] at hf
+      exact hf.symm
+    | ok v =>
+      obtain ⟨res, o, p⟩ := v
+      rw [hk] at hf
+      cases res with
+      | true =>
+        simp only [FastOutcome, withPrefix_nil] at hf
+        exact hf.symm
+      | false =>
+        simp only [FastOutcome, withPrefix_nil, Nat.sub_zero] at hf
+        obtain ⟨-, h2, _, _, h4⟩ := hf
+        simp only [Bool.false_eq_true, if_false]
+        rw [translateLoop_strict m s _ _ _ _ (by simp only [List.length_drop]; omega)
+          (fun x hx => hn x (List.mem_of_mem_drop hx)), h4]
+  · rw [if_neg ha, translateLoop_strict m s _ _ _ _ (by omega) hn, withPrefix_nil]
+
 /-! ## `maketrans` -/
+
+/-- The dict form of `maketrans`: "Character keys will be then converted to
+ordinals", a string key of another length raises `ValueError`, and a key that is
+neither `str` nor `int` raises `TypeError`, for every value and every remaining
+items. -/
+def MaketransDict : Prop :=
+  (∀ (c : Nat) v rest d, maketransFromDict ((.str [c], v) :: rest) d =
+    maketransFromDict ((.int c, v) :: rest) d) ∧
+  (∀ (s : Str) v rest d, s.length ≠ 1 → maketransFromDict ((.str s, v) :: rest) d =
+    .error (.valueError "string keys in translatetable must be of length 1")) ∧
+  (∀ v rest d, maketransFromDict ((.other, v) :: rest) d =
+    .error (.typeError "keys in translate table mustbe strings or integers"))
+
+theorem maketransDict_proven : MaketransDict := by
+  refine ⟨fun c v rest d => ?_, fun s v rest d h => ?_, fun v rest d => ?_⟩
+  · simp only [maketransFromDict]
+  · cases s with
+    | nil => simp only [maketransFromDict]
+    | cons a l =>
+      cases l with
+      | nil => simp at h
+      | cons b t => simp only [maketransFromDict]
+  · simp only [maketransFromDict]
 
 theorem find_dictSet (d : TransDict) (k : Int) (v : MapItem) (c : Int) :
     (dictSet d k v).find? (·.1 == c) =
