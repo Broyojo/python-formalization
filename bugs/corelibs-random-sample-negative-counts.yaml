@@ -6,6 +6,9 @@ module: corelibs
 files: [Lib/random.py]
 functions: ["Random.sample"]
 summary: |
+  DUPLICATE of the closed python/cpython#134816, 'random.sample() does not properly check counts
+  parameter for negative entries', where the maintainer answered "It's the caller's bug" and cited
+  garbage in, garbage out. Do not file. Kept as the record of the refuted property.
   sample raises "Counts must be non-negative", but it tests only the total. counts=[3, -1] passes,
   the prefix sums [3, 2] are no longer sorted, and bisect's precondition is gone. The result is a
   sample that matches no expansion of the population: sample(['a', 'b', 'c'], counts=[1, -1, 2], k=2)
@@ -48,8 +51,9 @@ possible_fix: |
   document that counts are assumed non-negative, as choices does for weights.
 duplicates:
   issues:
+    - {number: 134816, state: closed, relation: "same defect", reason: "duplicate; declined as the caller's bug"}
     - {number: 130285, state: closed, relation: "same lines, empty counts", reason: "different bug; shows the wording was discussed"}
-  queries: ["random.sample counts negative", "random sample counts non-negative", "random.sample counts",
+  queries: ["random sample counts negative (unquoted)", "random.sample counts negative", "random sample counts non-negative", "random.sample counts",
             "sample counts negative", "Counts must be non-negative", "bugforge README: no entry for this"]
 lean:
   property: PyLean.CoreLibs.Rand.SampleRejectsNegativeCounts
