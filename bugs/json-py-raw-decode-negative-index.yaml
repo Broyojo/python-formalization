@@ -1,0 +1,78 @@
+id: json-py-raw-decode-negative-index
+title: "json: pure-Python raw_decode() accepts a negative idx and returns garbage (C raises ValueError('idx cannot be negative'))"
+priority: P3
+kind: twin-mismatch
+module: json
+files: [Lib/json/scanner.py, Lib/json/decoder.py, Modules/_json.c]
+functions: ["py_make_scanner._scan_once", "JSONObject", "JSONArray", "JSONDecoder.raw_decode", "C scan_once_unicode"]
+summary: |
+  JSONDecoder.raw_decode(s, idx) with the C scanner rejects idx < 0 with
+  ValueError('idx cannot be negative') (the check added for bpo-21529, CVE-2014-4616). The
+  pure-Python scanner has no such check: `string[idx]` wraps around, slices and
+  `NUMBER_RE.match(string, idx)` (which clamps a negative pos to 0) then read from unrelated
+  places, and it can return a value and even a negative end index:
+  raw_decode('12', -1) == (12, 2) (string[-1] is '2', then the number is matched from index 0),
+  raw_decode('{}x', -3) == ({}, -1), raw_decode('null ', -5) == (None, -1), and
+  raw_decode('12', -3) raises JSONDecodeError('Expecting value: line 1 column -2 (char -3)').
+  For idx > sys.maxsize C raises OverflowError while Python raises JSONDecodeError. For
+  0 <= idx <= sys.maxsize the twins agree (Lean: json-raw-decode-twins-in-range).
+likelihood: |
+  Low: needs a negative index passed to raw_decode (an off-by-one or `idx - k` computation), and
+  only matters where _json is unavailable (other implementations, or the blocked-import test
+  configuration). The results are silently wrong rather than an error.
+maybe_intended: |
+  Unlikely to be intended: bpo-21529 decided that a negative idx is invalid and the C scanner
+  rejects it, and test_decode.py:143-145 (test_negative_index) asserts ValueError for both twins,
+  but only with idx=-50000, which the pure-Python twin happens to turn into JSONDecodeError (a
+  ValueError subclass) because string[-50000] raises IndexError.
+reproducer: |
+  import json
+  from test.support.import_helper import import_fresh_module
+  pyjson = import_fresh_module('json', blocked=['_json'])
+  assert pyjson.scanner.make_scanner is pyjson.scanner.py_make_scanner
+  def run(mod, s, idx):
+      try:
+          return repr(mod.JSONDecoder().raw_decode(s, idx))
+      except Exception as e:
+          return f'{type(e).__name__}: {e}'
+  cases = [('12', -1), ('[1, 2]', -1), ('{}x', -3), ('null ', -5), ('12', -3), ('12', 2**63)]
+  out = []
+  for s, idx in cases:
+      c, p = run(json, s, idx), run(pyjson, s, idx)
+      out.append((c, p))
+      print(f'raw_decode({s!r}, {idx}): C {c} | Python {p}')
+  if out[0][0].startswith('ValueError: idx cannot be negative') and out[0][1] == '(12, 2)':
+      print('REPRODUCED json-py-raw-decode-negative-index')
+expected: |
+  ValueError('idx cannot be negative') from both twins for every idx < 0.
+observed: |
+  python3 3.14.7 and main: raw_decode('12', -1) -> C ValueError / Python (12, 2);
+  raw_decode('{}x', -3) -> C ValueError / Python ({}, -1); raw_decode('null ', -5) -> C
+  ValueError / Python (None, -1); raw_decode('[1, 2]', -1) -> Python JSONDecodeError at
+  'line 1 column 0 (char -1)'; raw_decode('12', 2**63) -> C OverflowError / Python
+  JSONDecodeError.
+promised_by: |
+  C/Python twin agreement and the explicit check in Modules/_json.c (bpo-21529); the
+  raw_decode docstring describes idx as an index into s where a document begins.
+cause: |
+  Lib/json/scanner.py:28-63 (_scan_once) indexes `string[idx]` and slices `string[idx:idx + 4]`
+  without checking idx >= 0, and NUMBER_RE.match(string, idx) clamps a negative pos to 0;
+  JSONObject/JSONArray (Lib/json/decoder.py:137-259) continue from the negative index.
+  Modules/_json.c:1037-1040 (scan_once_unicode) raises ValueError("idx cannot be negative").
+  Unchanged on main.
+possible_fix: |
+  In py_make_scanner's scan_once (Lib/json/scanner.py:65), or in JSONDecoder.raw_decode, add
+  `if idx < 0: raise ValueError('idx cannot be negative')`, and extend test_negative_index to
+  idx=-1.
+reproduces:
+  python3 (3.14.7): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues:
+    - {number: 65728, state: closed, relation: related (bpo-21529, the C-side fix that added the check; the Python twin was not changed), reason: completed}
+    - {number: 59598, state: open, relation: unrelated (raw_decode and leading whitespace), reason: open}
+  queries: ["raw_decode index", "raw_decode negative", "idx cannot be negative", "json negative index", "raw_decode",
+            "scan_once", "gh issue view 65728", "bugforge-results/README.md: json entries (4, none related)"]
+lean:
+  property: PyLean.JsonMod.RawDecodeTwins
+  theorem: PyLean.JsonMod.rawDecodeTwins_refuted
