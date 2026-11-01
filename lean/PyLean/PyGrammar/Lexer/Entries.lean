@@ -1,6 +1,7 @@
 import PyLean.Registry
 import PyLean.PyGrammar.RowNames
 import PyLean.PyGrammar.Lexer.Props
+import PyLean.PyGrammar.Lexer.Stacks
 
 /-! Registry entries for the `Lexer` part of `PyGrammar`. -/
 
@@ -9,6 +10,20 @@ namespace PyLean.PyGrammar.Lexer
 open PyLean.Registry
 
 def entries : List Entry := [
+  { id := "pygrammar-lex-stacks"
+    pyFile := "Parser/lexer/lexer.c"
+    pyFns := Rows.lex_stacks
+    statement := "Across any call of tok_get on a sound state, level matches parenstack, indent " ++
+      "matches indstack and altindstack, tok_mode_stack_index matches the mode stack, each stays " ++
+      "within its fixed C array, indentation columns strictly increase, and the mode index is " ++
+      "never decremented at the regular mode."
+    source := "invariant: writes to the fixed-size arrays of struct tok_state stay in bounds"
+    status := .proven
+    prop := ``LexStacks
+    thm := some ``lexStacks_proven
+    notes := "Says nothing about which tokens come out. Depends on the bracket, indentation and " ++
+      "f-string mode code; the number, string and identifier branches only have to leave the " ++
+      "stacks alone." },
   { id := "pygrammar-lex-accepts-valid"
     pyFile := "Parser/lexer/lexer.c"
     pyFns := Rows.lex_accepts_valid

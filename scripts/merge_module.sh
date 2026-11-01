@@ -7,7 +7,8 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 branch=$1 mod=$2 key=$3
 base=$(git merge-base HEAD "$branch")
 
-outside=$(git diff --name-only "$base" "$branch" | grep -vE \
+# ALLOW names extra files a person has checked, such as a fix to a shared table.
+outside=$(git diff --name-only "$base" "$branch" | grep -vxE "${ALLOW:-^$}" | grep -vE \
   "^(\.gitignore|lean/PyLean/$mod\.lean|lean/PyLean/$mod/.*|difftest/${key}(_[a-z0-9_]+)?\.py|bugs/${key}-[^/]*\.yaml|coverage/registry\.tsv|coverage/methods/[^/]*\.tsv|coverage/review/[^/]*\.tsv)$" || true)
 if [ -n "$outside" ]; then
     echo "FAIL $branch touches files outside its module:"
@@ -16,8 +17,9 @@ if [ -n "$outside" ]; then
 fi
 git diff --stat "$base" "$branch" | tail -1
 if ! git merge --no-ff -q -m "Merge $mod module ($branch)" "$branch"; then
-    # Coverage rows conflict with main's auto-filled ones: the module's own rows
-    # win, and the registry is regenerated after the merge anyway.
+    # A module's own rows win in coverage/methods, and the registry is regenerated
+    # after the merge anyway. Reviews always keep main's verdicts: an author must
+    # never overwrite an independent review.
     conflicts=$(git diff --name-only --diff-filter=U)
     if echo "$conflicts" | grep -qv '^coverage/'; then
         echo "FAIL $branch has conflicts outside coverage/:"
@@ -25,8 +27,13 @@ if ! git merge --no-ff -q -m "Merge $mod module ($branch)" "$branch"; then
         git merge --abort
         exit 1
     fi
-    echo "$conflicts" | xargs git checkout --theirs --
-    echo "$conflicts" | xargs git add
+    for f in $conflicts; do
+        case "$f" in
+            coverage/review/*) git checkout --ours -- "$f" ;;
+            *) git checkout --theirs -- "$f" ;;
+        esac
+        git add "$f"
+    done
     git commit -q --no-edit
 fi
 # Batch merges set SKIP_AUDIT and run one full audit afterwards.

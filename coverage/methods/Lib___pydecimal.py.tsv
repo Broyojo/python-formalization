@@ -35,7 +35,7 @@ Lib/_pydecimal.py	1036	1043	Decimal.to_eng_string	to_eng_string(self, context=No
 Lib/_pydecimal.py	1045	1065	Decimal.__neg__	__neg__(self, context=None)	todo		
 Lib/_pydecimal.py	1067	1086	Decimal.__pos__	__pos__(self, context=None)	todo		
 Lib/_pydecimal.py	1088	1108	Decimal.__abs__	__abs__(self, round=True, context=None)	todo		
-Lib/_pydecimal.py	1110	1194	Decimal.__add__	__add__(self, other, context=None)	modelled	decimal-mul-no-valueerror-py	
+Lib/_pydecimal.py	1110	1194	Decimal.__add__	__add__(self, other, context=None)	modelled	decimal-add-no-valueerror-py,decimal-sub-no-valueerror-py	
 Lib/_pydecimal.py	1198	1210	Decimal.__sub__	__sub__(self, other, context=None)	modelled	decimal-sub-no-valueerror-py	
 Lib/_pydecimal.py	1212	1218	Decimal.__rsub__	__rsub__(self, other, context=None)	modelled	decimal-reflected-operators	
 Lib/_pydecimal.py	1220	1274	Decimal.__mul__	__mul__(self, other, context=None)	modelled	decimal-mul-correctly-rounded,decimal-mul-no-valueerror-py	
@@ -216,7 +216,7 @@ Lib/_pydecimal.py	5535	5563	Context.to_integral_exact	to_integral_exact(self, a)
 Lib/_pydecimal.py	5565	5592	Context.to_integral_value	to_integral_value(self, a)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	5603	5616	_WorkRep.__init__	__init__(self, value=None)	modelled	decimal-add-no-valueerror-py,decimal-divide-correct,decimal-mul-correctly-rounded,decimal-mul-no-valueerror-py,decimal-sub-no-valueerror-py,decimal-truediv-core	
 Lib/_pydecimal.py	5618	5619	_WorkRep.__repr__	__repr__(self)	todo		
-Lib/_pydecimal.py	5623	5649	_normalize	_normalize(op1, op2, prec=0)	modelled	decimal-mul-no-valueerror-py	
+Lib/_pydecimal.py	5623	5649	_normalize	_normalize(op1, op2, prec=0)	modelled	decimal-add-no-valueerror-py,decimal-sub-no-valueerror-py	
 Lib/_pydecimal.py	5655	5674	_decimal_lshift_exact	_decimal_lshift_exact(n, e)	todo		
 Lib/_pydecimal.py	5676	5689	_sqrt_nearest	_sqrt_nearest(n, a)	todo		
 Lib/_pydecimal.py	5691	5697	_rshift_nearest	_rshift_nearest(x, shift)	todo		

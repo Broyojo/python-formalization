@@ -1,0 +1,44 @@
+id: textlibs-shlex-quote-false-objects
+title: "DUPLICATE of #149280: shlex.quote returns '' for any false object, past its own type check"
+priority: P4
+kind: wrong-result
+module: textlibs
+files: [Lib/shlex.py]
+functions: ["quote", "join"]
+summary: |
+  `shlex.quote(None)`, `shlex.quote(0)`, `shlex.quote([])` and `shlex.quote(b'')` all return `''`, an
+  empty shell word, because `if not s` comes before the `isinstance(s, str)` check. `shlex.quote(1)`
+  raises TypeError. So `shlex.join(['rm', None])` silently builds `rm ''` where a missing value was
+  meant to be an error, which is what the check is for.
+likelihood: |
+  Moderate in code that builds command lines from optional values, though the effect is an empty
+  argument rather than an injection.
+maybe_intended: |
+  Possibly historic: `if not s` predates the type check. Rejecting these now could break callers
+  that pass None by accident and get away with it, so a maintainer may keep it.
+reproducer: |
+  import shlex
+  out = [shlex.quote(x) for x in (None, 0, [], b'')]
+  try:
+      shlex.quote(1)
+      one = None
+  except TypeError as e:
+      one = str(e)
+  print(out, one)
+  if out == ["''"] * 4 and one == "expected string object, got 'int'":
+      print('REPRODUCED textlibs-shlex-quote-false-objects')
+expected: |
+  TypeError for all of them, as for 1.
+observed: |
+  python3 3.14.7: ["''", "''", "''", "''"], expected string object, got 'int'. REPRODUCED.
+  main 3.16.0a1+dev: the same. REPRODUCED.
+promised_by: |
+  Doc/library/shlex.rst: "Return a shell-escaped version of the string s."
+cause: |
+  Lib/shlex.py:323-327: the test of truth is first.
+possible_fix: |
+  Swap the two tests, with a deprecation period if needed.
+duplicates: |
+  DUPLICATE of #149280 (open). Do not file. Queries: gh search issues --repo python/cpython
+  "shlex.quote"; "shlex quote None"; "shlex.join".
+lean: lean/PyLean/TextLibs/ShlexProps.lean (QuoteRejectsNonStr)

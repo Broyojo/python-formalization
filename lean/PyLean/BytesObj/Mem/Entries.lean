@@ -436,6 +436,16 @@ def entries : List Entry := [
     statement := "For the formats other than the integers, pack then unpack: ? gives the truth of the item, c the byte, P the pointer, d the double exactly, f and e the pattern they stored; a released view refuses to unpack."
     source := "memoryobject.c:1776-1863, :1875-2026", status := .proven
     prop := ``PackUnpackOther, thm := some ``packUnpackOther_proven },
+  { id := "bytesobj-memoryview-fix-struct", pyFile := memFile
+    pyFns := ["fix_struct_error_int"]
+    statement := "A struct error means not equal and is cleared; a failed import of struct and a MemoryError pass through."
+    source := "memoryobject.c:2917-2928", status := .proven
+    prop := ``FixStructRules, thm := some ``fixStructRules_proven },
+  { id := "bytesobj-memoryview-cmp-import", pyFile := memFile
+    pyFns := ["struct_get_unpacker", "fix_struct_error_int", "memory_richcompare"]
+    statement := "With struct not importable, two views of one native format still compare by the switch, and any comparison needing struct raises ModuleNotFoundError out of ==."
+    source := "memoryobject.c:2084-2086, :3144-3158", status := .proven
+    prop := ``CmpImportFails, thm := some ``cmpImportFails_proven },
   { id := "bytesobj-memoryview-rank-rules", pyFile := memFile
     pyFns := ["memory_length", "memory_iter", "memory_item", "memoryview_count_impl", "memoryview_index_impl"]
     statement := "len(m) is shape[0] on every view with dimensions. A 0-dim view has no length, iterator, items or lookup, and a view of two or more dimensions refuses iteration, count, index and m[i] as not implemented, each with the source's message."

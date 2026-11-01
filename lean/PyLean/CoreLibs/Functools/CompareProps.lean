@@ -180,24 +180,24 @@ theorem rootsOf_mem (c : OrdClass) : ∀ (os roots : List OrdOp), rootsOf c os =
 /-- `total_ordering(cls)`: a comparison that differs from `object`'s counts as a root, inherited or not
 (the note in the docs); with none it raises `ValueError`; the root is the greatest name; and when every
 `setattr` succeeds, every comparison ends up defined, with exactly the missing ones added. A refused
-`setattr` escapes. -/
+`setattr` escapes, in `TotalOrderingExact`. -/
 def TotalOrderingFills : Prop :=
   (∀ c : OrdClass, (∀ o, c.attr o = .ok (c.objectAttr o)) →
     totalOrdering c = .error (.valueError "must define at least one ordering operation: < > <= >=")) ∧
-  (∀ (c : OrdClass) (root : OrdOp) (added : List OrdOp), totalOrdering c = .ok (root, added) →
+  (∀ (c : OrdClass) (root : OrdOp) (added : List (OrdOp × Shape)), totalOrdering c = .ok (root, added) →
     (∃ a, c.attr root = .ok a ∧ a ≠ c.objectAttr root) ∧
-    ∀ o, o ∈ added → ∀ a, c.attr o = .ok a → a = c.objectAttr o) ∧
-  (∀ c : OrdClass, (∀ o, c.setAttr o = .ok ()) → (∃ o a, c.attr o = .ok a ∧ a ≠ c.objectAttr o) →
+    ∀ o, o ∈ added.map Prod.fst → ∀ a, c.attr o = .ok a → a = c.objectAttr o) ∧
+  (∀ c : OrdClass, (∀ o s, c.setAttr o s = .ok ()) → (∃ o a, c.attr o = .ok a ∧ a ≠ c.objectAttr o) →
     (∀ o, ∃ a, c.attr o = .ok a) →
     ∃ root added, totalOrdering c = .ok (root, added) ∧
-      ∀ o, (∃ a, c.attr o = .ok a ∧ a ≠ c.objectAttr o) ∨ o ∈ added)
+      ∀ o, (∃ a, c.attr o = .ok a ∧ a ≠ c.objectAttr o) ∨ o ∈ added.map Prod.fst)
 
 theorem convert_covers (r : OrdOp) : ∀ o : OrdOp, o = r ∨ o ∈ (convert r).map Prod.fst := by
   intro o
   cases r <;> cases o <;> simp [convert]
 
-theorem addMissing_ok (c : OrdClass) (roots : List OrdOp) (hs : ∀ o, c.setAttr o = .ok ()) :
-    ∀ l : List (OrdOp × Shape), addMissing c roots l = .ok ((l.map Prod.fst).filter (· ∉ roots))
+theorem addMissing_ok (c : OrdClass) (roots : List OrdOp) (hs : ∀ o s, c.setAttr o s = .ok ()) :
+    ∀ l : List (OrdOp × Shape), addMissing c roots l = .ok (l.filter (fun p => decide (p.1 ∉ roots)))
   | [] => rfl
   | (o, s) :: rest => by
     have ih := addMissing_ok c roots hs rest
@@ -206,8 +206,8 @@ theorem addMissing_ok (c : OrdClass) (roots : List OrdOp) (hs : ∀ o, c.setAttr
     · simp [addMissing, h, ih, hs, bind, Except.bind, pure, Except.pure]
 
 theorem addMissing_mem (c : OrdClass) (roots : List OrdOp) :
-    ∀ (l : List (OrdOp × Shape)) (added : List OrdOp), addMissing c roots l = .ok added →
-    ∀ o ∈ added, o ∉ roots
+    ∀ (l : List (OrdOp × Shape)) (added : List (OrdOp × Shape)), addMissing c roots l = .ok added →
+    ∀ o ∈ added.map Prod.fst, o ∉ roots
   | [], added, h, o, ho => by
     simp only [addMissing, Except.ok.injEq] at h
     subst h
@@ -219,7 +219,7 @@ theorem addMissing_mem (c : OrdClass) (roots : List OrdOp) :
       exact addMissing_mem c roots rest added h o ho
     · rw [if_neg hx] at h
       simp only [bind, Except.bind] at h
-      cases hs : c.setAttr x with
+      cases hs : c.setAttr x s with
       | error e => simp [hs] at h
       | ok u =>
         simp only [hs] at h
@@ -228,6 +228,7 @@ theorem addMissing_mem (c : OrdClass) (roots : List OrdOp) :
         | ok more =>
           simp only [hm, pure, Except.pure, Except.ok.injEq] at h
           subst h
+          simp only [List.map_cons] at ho
           rcases List.mem_cons.mp ho with rfl | ho
           · exact hx
           · exact addMissing_mem c roots rest more hm o ho
@@ -296,7 +297,7 @@ theorem totalOrderingFills_proven : TotalOrderingFills := by
         · exact absurd hin h4
     obtain ⟨r, hm⟩ := hsome
     have hrm := (maxRoot_is_max roots r hm).1
-    refine ⟨r, ((convert r).map Prod.fst).filter (· ∉ roots), ?_, ?_⟩
+    refine ⟨r, (convert r).filter (fun p => decide (p.1 ∉ roots)), ?_, ?_⟩
     · simp only [totalOrdering, hr, hm, addMissing_ok c roots hs, bind, Except.bind, pure,
         Except.pure]
       first | rfl | skip
@@ -306,7 +307,8 @@ theorem totalOrderingFills_proven : TotalOrderingFills := by
     · right
       rcases convert_covers r o with rfl | h
       · exact absurd hrm ho
-      · exact List.mem_filter.mpr ⟨h, by simpa using ho⟩
+      · obtain ⟨p, hp, rfl⟩ := List.mem_map.1 h
+        exact List.mem_map.2 ⟨p, List.mem_filter.2 ⟨hp, by simpa using ho⟩, rfl⟩
 
 /-! ### `cmp_to_key` -/
 
@@ -337,9 +339,17 @@ def CmpToKeySign : Prop :=
       | .lt => decide (r < 0) | .le => decide (r ≤ 0) | .eq => decide (r = 0)
       | .ne => decide (r ≠ 0) | .gt => decide (r > 0) | .ge => decide (r ≥ 0)), fun b => .ok b, id⟩
     keyComparePy K mycmp .lt (some x) (.key (some y)) = .ok (decide (r < 0)) ∧
+    keyComparePy K mycmp .le (some x) (.key (some y)) = .ok (decide (r ≤ 0)) ∧
+    keyComparePy K mycmp .eq (some x) (.key (some y)) = .ok (decide (r = 0)) ∧
     keyComparePy K mycmp .ne (some x) (.key (some y)) = .ok (decide (r ≠ 0)) ∧
-    keyCompareC K mycmp .ge (some x) (.key (some y)) = .ok (decide (r ≥ 0)) ∧
-    keyCompareC K mycmp .ne (some x) (.key (some y)) = .ok (decide (r ≠ 0))
+    keyComparePy K mycmp .gt (some x) (.key (some y)) = .ok (decide (r > 0)) ∧
+    keyComparePy K mycmp .ge (some x) (.key (some y)) = .ok (decide (r ≥ 0)) ∧
+    keyCompareC K mycmp .lt (some x) (.key (some y)) = .ok (decide (r < 0)) ∧
+    keyCompareC K mycmp .le (some x) (.key (some y)) = .ok (decide (r ≤ 0)) ∧
+    keyCompareC K mycmp .eq (some x) (.key (some y)) = .ok (decide (r = 0)) ∧
+    keyCompareC K mycmp .ne (some x) (.key (some y)) = .ok (decide (r ≠ 0)) ∧
+    keyCompareC K mycmp .gt (some x) (.key (some y)) = .ok (decide (r > 0)) ∧
+    keyCompareC K mycmp .ge (some x) (.key (some y)) = .ok (decide (r ≥ 0))
 
 theorem cmpToKeySign_proven : CmpToKeySign := by
   intro α mycmp x y r h K
@@ -371,14 +381,70 @@ theorem cmpToKeyTwinsOnNe_refuted : ¬CmpToKeyTwinsOnNe := by
     (fun _ _ => .ok 0) 1 2
   simp [keyCompareC, keyComparePy, bind, Except.bind, pure, Except.pure] at this
 
-/-- Construction takes one argument, positional or `obj=`, and refuses anything else, in both twins. -/
+/-- Construction takes one argument, positional or `obj=`, and every other argument list is a `TypeError`, in both twins. -/
 def KeyNewOneArgument : Prop :=
-  ∀ (α : Type) (a b : α),
-    keyNew [a] [] = .ok a ∧ keyNew [] [("obj", a)] = .ok a ∧
-    (keyNew ([] : List α) []).raises "TypeError" ∧ (keyNew [a, b] []).raises "TypeError" ∧
-    (keyNew [a] [("obj", b)]).raises "TypeError"
+  ∀ (α : Type) (pos : List α) (kw : List (String × α)) (a : α),
+    (keyNew pos kw = .ok a ↔ (pos = [a] ∧ kw = []) ∨ (pos = [] ∧ kw = [("obj", a)])) ∧
+    ((∀ b, keyNew pos kw ≠ .ok b) → (keyNew pos kw).raises "TypeError")
 
-theorem keyNewOneArgument_proven : KeyNewOneArgument :=
-  fun _ _ _ => ⟨rfl, rfl, ⟨_, rfl, rfl⟩, ⟨_, rfl, rfl⟩, ⟨_, rfl, rfl⟩⟩
+theorem keyNewOneArgument_proven : KeyNewOneArgument := by
+  intro α pos kw a
+  have shape : ∀ r, keyNew pos kw = .ok r ∨ keyNew pos kw = .error (.typeError "~K() takes exactly one argument 'obj'") ∨ True := by
+    intro _; exact .inr (.inr trivial)
+  refine ⟨?_, ?_⟩
+  · constructor
+    · intro h
+      match pos, kw with
+      | [b], [] =>
+        simp only [keyNew, Except.ok.injEq] at h
+        subst h
+        exact .inl ⟨rfl, rfl⟩
+      | [], [("obj", b)] =>
+        simp only [keyNew, Except.ok.injEq] at h
+        subst h
+        exact .inr ⟨rfl, rfl⟩
+      | [], [] => simp [keyNew] at h
+      | [], [(k, v)] =>
+        by_cases hk : k = "obj"
+        · subst hk
+          simp only [keyNew, Except.ok.injEq] at h
+          subst h
+          exact .inr ⟨rfl, rfl⟩
+        · simp [keyNew, hk] at h
+      | [], _ :: _ :: _ => simp [keyNew] at h
+      | _ :: _ :: _, _ => simp [keyNew] at h
+      | [_], _ :: _ => simp [keyNew] at h
+    · rintro (⟨rfl, rfl⟩ | ⟨rfl, rfl⟩) <;> rfl
+  · intro h
+    match pos, kw with
+    | [b], [] => exact absurd rfl (h b)
+    | [], [] => exact ⟨_, rfl, rfl⟩
+    | [], [(k, v)] =>
+      by_cases hk : k = "obj"
+      · subst hk
+        exact absurd rfl (h v)
+      · exact ⟨.typeError "~K() takes exactly one argument 'obj'", by simp [keyNew, hk], rfl⟩
+    | [], _ :: _ :: _ => exact ⟨.typeError "~K() takes exactly one argument 'obj'", by simp [keyNew], rfl⟩
+    | _ :: _ :: _, _ => exact ⟨.typeError "~K() takes exactly one argument 'obj'", by simp [keyNew], rfl⟩
+    | [_], _ :: _ => exact ⟨.typeError "~K() takes exactly one argument 'obj'", by simp [keyNew], rfl⟩
+
+/-- A key object is unhashable in both twins, by `__hash__ = None` and by `PyType_Ready`. An `other.obj` that raises anything
+but `AttributeError` propagates from the Python class, and C never reads it: it refuses the type. -/
+def KeyHashAndRead : Prop :=
+  ∀ (α ρ τ : Type) (K : KeyOps ρ τ) (mycmp : α → α → Py ρ) (op : CmpOp) (x : α) (e : PyExc),
+    keyHash.raises "TypeError" ∧ keyComparePy K mycmp op (some x) (.raises e) = .error e ∧
+    (keyCompareC K mycmp op (some x) (.raises e)).raises "TypeError"
+
+theorem keyHashAndRead_proven : KeyHashAndRead := by
+  intro α ρ τ K mycmp op x e
+  exact ⟨⟨_, rfl, rfl⟩, rfl, ⟨_, rfl, rfl⟩⟩
+
+/-- `K` is a class in both twins, as in `isinstance(k, K)`. False: in C it is a callable `KeyWrapper` object. -/
+def KeyIsClass : Prop := ∀ py : Bool, keyIsinstance py = .ok true
+
+theorem keyIsClass_refuted : ¬KeyIsClass := by
+  intro h
+  have := h false
+  simp [keyIsinstance] at this
 
 end PyLean.CoreLibs.Functools

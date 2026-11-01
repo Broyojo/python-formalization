@@ -1062,6 +1062,28 @@ theorem writerFinishCanonical_proven : WriterFinishCanonical := by
   intro n w ops hw hv hd
   exact (runOps_inv (create_inv hw) hv hd).finish
 
+/-- What `WriterFinishCanonical` cannot see, since under its invariant these branches change nothing:
+a one-byte buffer holding at most one character gives the canonical kind whatever the writer has
+been through, failed decodes included. That is the `LATIN1` singleton of `unicode_result`, and
+`pos == 0` in `_PyUnicodeWriter_Finish`. A `Finish` that kept the buffer's kind fails this at
+`{ text := [97], cap := 255 }`, which a failed decode of `\xc3\xa9\xff` reaches. -/
+def WriterFinishOneByte : Prop :=
+  ∀ w : UWriter, w.cap ≤ 255 → w.text.length ≤ 1 →
+    w.finish = (w.text, canonicalKind w.text)
+
+theorem writerFinishOneByte_proven : WriterFinishOneByte := by
+  intro w hc hl
+  unfold UWriter.finish canonicalKind
+  cases ht : w.text with
+  | nil => simp [maxCharOf, kindOfMax]
+  | cons c t =>
+    rw [ht] at hl
+    cases t with
+    | nil =>
+      have e : maxCharOf [c] = c := by simp [maxCharOf]
+      simp only [e, if_pos hc]
+    | cons d r => simp at hl
+
 /-- The broad form: every script, failed decodes included. Refuted: 'a', then a decode of
 `€` followed by a bad byte, returns a two-byte string holding only `a`. -/
 def WriterAlwaysCanonical : Prop :=

@@ -4,7 +4,10 @@ import PyLean.TextLibs.StructFail
 import PyLean.TextLibs.BinasciiProps7
 import PyLean.TextLibs.CsvRoundTrip
 import PyLean.TextLibs.ReParseProps
-import PyLean.TextLibs.ReApiProps
+import PyLean.TextLibs.ReMisc
+import PyLean.TextLibs.PathProps
+import PyLean.TextLibs.ShlexProps
+import PyLean.TextLibs.TextwrapProps
 import PyLean.TextLibs.CsvSniffProps
 
 /-!
@@ -28,6 +31,9 @@ open PyLean.TextLibs.Struct
 open PyLean.TextLibs.Binascii
 open PyLean.TextLibs.Csv
 open PyLean.TextLibs.Re
+open PyLean.TextLibs.Path
+open PyLean.TextLibs.Textwrap
+open PyLean.TextLibs.Shlex
 
 /-- The integer routines `IntCodesRoundTrip` drives through `runPack` and `runUnpack`. -/
 def structIntFns : List String :=
@@ -529,24 +535,26 @@ def entries : List Entry := [
     prop := ``CharsetPreservedIgnorecase
     notes := "Difftest agrees (re.sem), and categories in cased sets agree on all code points. Needs the fix-table steps of literalPass and rangeMark proved like the case-free ones." },
   { id := "textlibs-re-findall-is-finditer", pyFile := "Modules/_sre/sre.c"
-    pyFns := ["_sre_SRE_Pattern_findall_impl", "state_getslice", "pattern_new_match", "_sre_SRE_Pattern_finditer_impl", "_sre_SRE_Scanner_search_impl"]
+    pyFns := []
     statement := "findall is finditer with each match read as the whole match, the group, or the tuple of groups, with '' for a group that did not take part. For every pattern."
     source := "twin: findall and finditer", status := .proven
-    prop := ``FindallIsFinditer, thm := some ``findallIsFinditer_proven },
-  { id := "textlibs-re-split-is-finditer", pyFile := "Modules/_sre/sre.c", pyFns := ["_sre_SRE_Pattern_split_impl"]
+    prop := ``FindallIsFinditer, thm := some ``findallIsFinditer_proven
+    notes := "Relative law: it assumes scanLoop succeeds, and scanLoop itself is stated nowhere, so a scanLoop that always fails passes. No row is credited until textlibs-re-sem-agrees-no-self-test settles it." },
+  { id := "textlibs-re-split-is-finditer", pyFile := "Modules/_sre/sre.c", pyFns := []
     statement := "split cuts at the spans finditer finds and keeps the groups, including for patterns that match the empty string."
     source := "twin: split and finditer", status := .proven
     prop := ``SplitIsFinditer, thm := some ``splitIsFinditer_proven
-    notes := "maxsplit 0; a positive maxsplit stops the same loop early." },
-  { id := "textlibs-re-sub-is-finditer", pyFile := "Modules/_sre/sre.c", pyFns := ["pattern_subx", "expand_template"]
+    notes := "maxsplit 0; a positive maxsplit stops the same loop early. Relative law: it assumes scanLoop succeeds, and scanLoop itself is stated nowhere, so a scanLoop that always fails passes. No row is credited until textlibs-re-sem-agrees-no-self-test settles it." },
+  { id := "textlibs-re-sub-is-finditer", pyFile := "Modules/_sre/sre.c", pyFns := []
     statement := "sub with a string repl rebuilds the subject from what finditer finds, with a literal or an expanded template at each match; a template that fails fails the call."
     source := "twin: sub and finditer", status := .proven
     prop := ``SubIsFinditer, thm := some ``subIsFinditer_proven
-    notes := "count 0. textlibs-re-sub-call-is-finditer has the callable path." },
-  { id := "textlibs-re-sub-call-is-finditer", pyFile := "Modules/_sre/sre.c", pyFns := ["pattern_subx", "_sre_SRE_Pattern_sub_impl", "_sre_SRE_Pattern_subn_impl"]
+    notes := "count 0. textlibs-re-sub-call-is-finditer has the callable path. Relative law: it assumes scanLoop succeeds, and scanLoop itself is stated nowhere, so a scanLoop that always fails passes. No row is credited until textlibs-re-sem-agrees-no-self-test settles it." },
+  { id := "textlibs-re-sub-call-is-finditer", pyFile := "Modules/_sre/sre.c", pyFns := []
     statement := "A callable repl is called once per match in order, for any callable: a call that raises ends sub with that exception and no later call runs, and a result of the wrong type surfaces only at the join."
     source := "docs: re.sub with a function", status := .proven
-    prop := ``SubCallIsFinditer, thm := some ``subCallIsFinditer_proven },
+    prop := ``SubCallIsFinditer, thm := some ``subCallIsFinditer_proven
+    notes := "Relative law: it assumes scanLoop succeeds, and scanLoop itself is stated nowhere, so a scanLoop that always fails passes. No row is credited until textlibs-re-sem-agrees-no-self-test settles it." },
   { id := "textlibs-re-group-index-range", pyFile := "Modules/_sre/sre.c", pyFns := ["match_getindex"]
     statement := "An integer group index is valid exactly when it is in range, however large; the failure is IndexError."
     source := "docs: Match.group", status := .proven
@@ -577,6 +585,108 @@ def entries : List Entry := [
     statement := "sniff(sample, delimiters) returns a delimiter from delimiters, through both guessers and the preferred fallback."
     source := "docs: Sniffer.sniff", status := .proven
     prop := ``SniffRespectsDelimiters, thm := some ``sniffRespectsDelimiters_proven },
+  { id := "textlibs-re-combine-flags", pyFile := "Lib/re/_compiler.py", pyFns := ["_combine_flags"]
+    statement := "Every bit of _combine_flags: del_flags clears, add_flags sets, and a type flag in add_flags first clears the old type flags."
+    source := "docs: re, inline flag groups", status := .proven
+    prop := ``CombineFlagsLaw, thm := some ``combineFlagsLaw_proven },
+  { id := "textlibs-re-ascii-case", pyFile := "Modules/_sre/sre.c"
+    pyFns := ["sre_lower_ascii", "_sre_ascii_iscased_impl", "_sre_ascii_tolower_impl"]
+    statement := "A code point is ASCII-cased exactly when a case mapping moves it, and the mappings undo each other."
+    source := "twin: iscased and the case mappings", status := .proven
+    prop := ``AsciiCaseLaw, thm := some ``asciiCaseLaw_proven },
+  { id := "textlibs-re-char-loc-ignore", pyFile := "Modules/_sre/sre.c", pyFns := ["char_loc_ignore"]
+    statement := "In the C locale, a letter of either case matches itself and its other case, and nothing else."
+    source := "docs: re.LOCALE with IGNORECASE", status := .proven
+    prop := ``CharLocIgnoreLaw, thm := some ``charLocIgnoreLaw_proven
+    notes := "C locale only. Other locales are out of the model, as the file's header says." },
+  { id := "textlibs-re-category-negation", pyFile := "Modules/_sre/sre.c", pyFns := ["sre_category"]
+    statement := "Under any flags, a category and its negation answer opposite ways for every character."
+    source := "the [\\s\\S] shortcut of _optimize_charset relies on it", status := .proven
+    prop := ``CategoryNegation, thm := some ``categoryNegation_proven },
+  { id := "textlibs-re-compile-law", pyFile := "Lib/re/__init__.py", pyFns := ["_compile"]
+    statement := "_compile: a compiled pattern with flags is ValueError, one without goes through, anything but a string or a pattern is TypeError, and a string compiles under its own kind."
+    source := "docs: re.compile", status := .proven
+    prop := ``ReCompileLaw, thm := some ``reCompileLaw_proven
+    notes := "The caches are not modelled: they only return an earlier result. An unhashable pattern raises at the cache lookup first, which the model's `other` does not separate." },
+  { id := "textlibs-re-escape-round-trip", pyFile := "Lib/re/__init__.py", pyFns := []
+    statement := "re.escape(s) parses to the literal characters of s, with or without VERBOSE."
+    source := "docs: re.escape", status := .open
+    prop := ``EscapeRoundTrip
+    notes := "100000 random strings and every code point below U+0300 agree on CPython. Needs parseSub walked over the escape branch of the tokenizer." },
+  { id := "textlibs-path-p-splitext", pyFile := "Lib/posixpath.py", pyFns := ["splitext"]
+    statement := "root + ext == p, an extension starts with a dot, and it holds no separator."
+    source := "docs: os.path.splitext", status := .proven
+    prop := ``SplitextLaw, thm := some ``splitextLaw_proven
+    notes := "Stated on genericpath._splitext, which both splitext functions call." },
+  { id := "textlibs-path-n-splitext", pyFile := "Lib/ntpath.py", pyFns := ["splitext"]
+    statement := "The same for ntpath, with both separators."
+    source := "docs: os.path.splitext", status := .proven
+    prop := ``SplitextLaw, thm := some ``splitextLaw_proven },
+  { id := "textlibs-path-p-split", pyFile := "Lib/posixpath.py", pyFns := ["split"]
+    statement := "The tail of split has no slash, and the path is the head, some slashes, and the tail."
+    source := "docs: os.path.split", status := .proven
+    prop := ``PosixSplitLaw, thm := some ``posixSplitLaw_proven },
+  { id := "textlibs-path-p-join", pyFile := "Lib/posixpath.py", pyFns := ["join"]
+    statement := "join of two values of a kind: an absolute second part replaces the first, and otherwise one slash goes between them unless the first ends in one."
+    source := "docs: os.path.join", status := .proven
+    prop := ``JoinLaw, thm := some ``joinLaw_proven },
+  { id := "textlibs-path-p-join-mix", pyFile := "Lib/posixpath.py", pyFns := ["join"]
+    statement := "Mixing str and bytes through an os.PathLike gives the same error as without one."
+    source := "twin: join with and without PathLike", status := .refuted
+    prop := ``JoinMixMessage, thm := some ``joinMixMessage_refuted
+    bug := some "textlibs-path-join-pathlike-error" },
+  { id := "textlibs-path-p-join-fspath-error", pyFile := "Lib/posixpath.py", pyFns := ["join"]
+    statement := "An exception from __fspath__ reaches the caller of join."
+    source := "invariant: exceptions are not rewritten", status := .refuted
+    prop := ``JoinKeepsFspathError, thm := some ``joinKeepsFspathError_refuted
+    bug := some "textlibs-path-join-pathlike-error" },
+  { id := "textlibs-path-p-join-other-errors", pyFile := "Lib/posixpath.py", pyFns := ["join"]
+    statement := "Exceptions from __fspath__ other than TypeError and AttributeError reach the caller, and later arguments are not read."
+    source := "Lib/posixpath.py:84", status := .proven
+    prop := ``JoinPassesOtherErrors, thm := some ``joinPassesOtherErrors_proven },
+  { id := "textlibs-path-p-normpath-twin", pyFile := "Lib/posixpath.py", pyFns := []
+    statement := "C _Py_normpath_and_size and the Python fallback of posixpath.normpath agree on every path."
+    source := "twin: C and Python", status := .open
+    prop := ``PosixNormpathTwin
+    notes := "Both are modelled and agree with CPython on every difftest case. Needs an invariant relating the C output buffer to the fallback's component list." },
+  { id := "textlibs-path-p-normpath-idempotent", pyFile := "Lib/posixpath.py", pyFns := []
+    statement := "posixpath.normpath is idempotent."
+    source := "invariant", status := .open
+    prop := ``PosixNormpathIdempotent
+    notes := "Needs splitOn and intercalate shown inverse on the normal form." },
+  { id := "textlibs-path-n-splitroot", pyFile := "Lib/ntpath.py", pyFns := ["splitdrive"]
+    statement := "The three parts of splitroot are the path, the root is at most one separator, and a drive letter, a lone separator and neither are told apart."
+    source := "docs: os.path.splitroot", status := .proven
+    prop := ``NtSplitrootLaw, thm := some ``ntSplitrootLaw_proven },
+  { id := "textlibs-path-n-join-absolute", pyFile := "Lib/ntpath.py", pyFns := ["join"]
+    statement := "ntpath.join with a second part that has a drive and a root gives that part, whatever came first."
+    source := "docs: os.path.join", status := .proven
+    prop := ``NtJoinAbsolute, thm := some ``ntJoinAbsolute_proven },
+  { id := "textlibs-path-n-normpath-relative", pyFile := "Lib/ntpath.py", pyFns := []
+    statement := "ntpath.normpath keeps a path with no drive and no root that way."
+    source := "docs: os.path.normpath", status := .refuted
+    prop := ``NtNormpathKeepsRelative, thm := some ``ntNormpathKeepsRelative_refuted
+    bug := some "textlibs-path-ntpath-normpath-drive"
+    notes := "Duplicate of #100162 (open). normpath is in a try/except row the fallback sits in; no row credited." },
+  { id := "textlibs-shlex-join-round-trip", pyFile := "Lib/shlex.py"
+    pyFns := ["shlex.read_token", "shlex.__next__", "split", "join", "quote"]
+    statement := "shlex.split(shlex.join(args)) == args, for every list of strings."
+    source := "docs: shlex.join", status := .proven
+    prop := ``JoinRoundTrip, thm := some ``joinRoundTrip_proven
+    notes := "Walks the state machine over what quote writes: safe words, quoted text, the five-character form of a quote, and empty strings." },
+  { id := "textlibs-shlex-quote-type", pyFile := "Lib/shlex.py", pyFns := ["quote"]
+    statement := "quote raises TypeError for anything but a string."
+    source := "the check at Lib/shlex.py:326", status := .refuted
+    prop := ``QuoteRejectsNonStr, thm := some ``quoteRejectsNonStr_refuted
+    bug := some "textlibs-shlex-quote-false-objects" },
+  { id := "textlibs-shlex-stream-failure", pyFile := "Lib/shlex.py", pyFns := ["shlex.read_token"]
+    statement := "A stream that raises stops the lexer with that exception."
+    source := "invariant: failures pass through", status := .proven
+    prop := ``StreamFailurePasses, thm := some ``streamFailurePasses_proven },
+  { id := "textlibs-shlex-open-quote", pyFile := "Lib/shlex.py", pyFns := ["shlex.read_token"]
+    statement := "An open quote at the end of the text raises ValueError, whatever was read."
+    source := "Lib/shlex.py:192-196", status := .proven
+    prop := ``OpenQuoteRaises, thm := some ``openQuoteRaises_proven },
   { id := "textlibs-csv-round-trip", pyFile := "Modules/_csv.c"
     pyFns := ["join_reset", "join_append_data", "join_append", "join_append_lineterminator", "csv_writerow_lock_held",
       "csv_writerow", "parse_add_char", "parse_process_char"]
@@ -664,6 +774,67 @@ def entries : List Entry := [
     statement := "Every failure of a dialect attribute is cleared, so an object whose attributes all raise gives the default dialect."
     source := "Modules/_csv.c:504-511", status := .proven
     prop := ``GetattrCleared, thm := some ``getattrCleared_proven },
+  { id := "textlibs-csv-dialect-keywords", pyFile := "Modules/_csv.c", pyFns := ["dialect_new"]
+    statement := "A keyword beats the attribute, and with one present an object is not reused, even a Dialect: the new one is built from the keywords and the old object's attributes."
+    source := "Modules/_csv.c:504-511 and the reuse test at :475", status := .proven
+    prop := ``DialectKeywords, thm := some ``dialectKeywords_proven },
+  { id := "textlibs-csv-dialect-arg-errors", pyFile := "Modules/_csv.c", pyFns := ["dialect_new"]
+    statement := "PyArg_ParseTupleAndKeywords fails first, for too many arguments and for a keyword that names no parameter."
+    source := "Modules/_csv.c:449-460", status := .proven
+    prop := ``DialectArgErrors, thm := some ``dialectArgErrors_proven },
+  { id := "textlibs-csv-dialect-unknown-name", pyFile := "Modules/_csv.c", pyFns := ["dialect_new", "get_dialect_from_registry"]
+    statement := "A name that is not registered is csv.Error, whatever keywords come with it."
+    source := "docs: csv.Error", status := .proven
+    prop := ``DialectUnknownName, thm := some ``dialectUnknownName_proven },
+  { id := "textlibs-csv-dialect-new-valid", pyFile := "Modules/_csv.c", pyFns := ["dialect_new"]
+    statement := "What dialect_new builds, by any route, came through dialectBuild, so textlibs-csv-dialect-valid applies to it; the stored line terminator is that of the arguments."
+    source := "Modules/_csv.c:527-560", status := .proven
+    prop := ``DialectNewValid, thm := some ``dialectNewValid_proven },
+  { id := "textlibs-csv-subclass-attrs", pyFile := "Modules/_csv.c", pyFns := ["dialect_new"]
+    statement := "An attribute of a Dialect subclass shadows the C field for DIALECT_GETATTR; one that raises is cleared."
+    source := "Modules/_csv.c:507", status := .proven
+    prop := ``SubclassAttrs, thm := some ``subclassAttrs_proven },
+  { id := "textlibs-csv-lineterminator-stored", pyFile := "Modules/_csv.c", pyFns := ["Dialect_get_lineterminator"]
+    statement := "The getter returns the object in the slot, which is the argument itself, so a str subclass stays one; an empty slot gives NULL."
+    source := "Modules/_csv.c:182-187", status := .proven
+    prop := ``LineterminatorStored, thm := some ``lineterminatorStored_proven
+    notes := "Identity is the constructor LtRes.stored, not equality of contents." },
+  { id := "textlibs-csv-lineterminator-not-null", pyFile := "Modules/_csv.c", pyFns := ["Dialect_get_lineterminator"]
+    statement := "The lineterminator getter never returns NULL with no exception set."
+    source := "invariant: the C API result rule", status := .refuted
+    prop := ``LineterminatorNotNull, thm := some ``lineterminatorNotNull_refuted
+    bug := some "textlibs-csv-lineterminator-null"
+    notes := "A half-built instance, reached from a subclass __del__ when dialect_new fails." },
+  { id := "textlibs-csv-call-dialect", pyFile := "Modules/_csv.c", pyFns := ["_call_dialect"]
+    statement := "type_call runs tp_init on what dialect_new returned: a reused subclass instance runs its own __init__, which can raise; keywords make a new instance, which skips it; no instance and no keywords give the default."
+    source := "Objects/typeobject.c:2382-2384", status := .proven
+    prop := ``CallDialectLaw, thm := some ``callDialectLaw_proven
+    notes := "The first clause is the behaviour of bugs/textlibs-csv-dialect-subclass-reinit.yaml, stated rather than refuted." },
+  { id := "textlibs-csv-reuse-never-fails", pyFile := "Modules/_csv.c", pyFns := ["_call_dialect"]
+    statement := "_call_dialect on a reusable instance hands it back and cannot fail."
+    source := "the \"Can we reuse this instance?\" branch of dialect_new", status := .refuted
+    prop := ``ReuseNeverFails, thm := some ``reuseNeverFails_refuted
+    bug := some "textlibs-csv-dialect-subclass-reinit" },
+  { id := "textlibs-csv-no-pickle", pyFile := "Modules/_csv.c", pyFns := ["Dialect_reduce"]
+    statement := "__reduce__ and __reduce_ex__ raise TypeError with the short name of the instance's own class, unless that class defines the method."
+    source := "docs: dialect_reduce_doc", status := .proven
+    prop := ``DialectNoPickle, thm := some ``dialectNoPickle_proven },
+  { id := "textlibs-csv-register-sees-callbacks", pyFile := "Modules/_csv.c", pyFns := ["csv_register_dialect"]
+    statement := "PyDict_SetItem at :1635 works on the registry as callbacks left it, not as it was at :1632, for any callbacks; a failed _call_dialect keeps their effects and adds nothing."
+    source := "Modules/_csv.c:1632-1635", status := .proven
+    prop := ``RegisterSeesCallbacks, thm := some ``registerSeesCallbacks_proven },
+  { id := "textlibs-csv-subclass-key", pyFile := "Modules/_csv.c", pyFns := ["csv_register_dialect", "_csv_list_dialects_impl"]
+    statement := "A str subclass stays the key with its own __hash__ and __eq__: list_dialects returns the object, and a key that compares unequal is listed and not found by its text."
+    source := "PyDict_SetItem", status := .proven
+    prop := ``SubclassKeyKept, thm := some ``subclassKeyKept_proven },
+  { id := "textlibs-csv-list-dialects", pyFile := "Modules/_csv.c", pyFns := ["_csv_list_dialects_impl"]
+    statement := "list_dialects is the keys in dict order: a new name comes last, a name set again keeps its place, and a removed name is gone."
+    source := "docs: list_dialects", status := .proven
+    prop := ``ListDialectsLaw, thm := some ``listDialectsLaw_proven },
+  { id := "textlibs-csv-reader-resets", pyFile := "Modules/_csv.c", pyFns := ["parse_reset"]
+    statement := "parse_reset clears fields, the NULL of the re-entrancy crash, the state, the field and unquoted_field, so the next __next__ cannot depend on what the last one left."
+    source := "Modules/_csv.c:913-923", status := .proven
+    prop := ``ReaderResets, thm := some ``readerResets_proven },
   { id := "textlibs-csv-registry", pyFile := "Modules/_csv.c", pyFns := ["csv_register_dialect"]
     statement := "A registered dialect can be read back by name, and it is the object _call_dialect made."
     source := "docs: register_dialect, get_dialect", status := .proven
@@ -909,7 +1080,51 @@ def entries : List Entry := [
   { id := "textlibs-re-escape-twins", pyFile := "Lib/re/_parser.py", pyFns := ["_escape", "_class_escape"]
     statement := "_escape and _class_escape agree on every single-character ASCII escape, except those that mean something else outside a set."
     source := "the implementation disagreeing with itself", status := .proven
-    prop := ``EscapeTwins, thm := some ``escapeTwins_proven }
+    prop := ``EscapeTwins, thm := some ``escapeTwins_proven },
+  { id := "textlibs-textwrap-terminates", pyFile := "Lib/textwrap.py", pyFns := ["TextWrapper._wrap_chunks", "TextWrapper._handle_long_word"]
+    statement := "For a positive width, _wrap_chunks returns."
+    source := "invariant: no hang", status := .refuted
+    prop := ``WrapTerminates, thm := some ``wrapTerminates_refuted
+    bug := some "textlibs-textwrap-indent-hang" },
+  { id := "textlibs-textwrap-succeeds", pyFile := "Lib/textwrap.py", pyFns := ["TextWrapper._wrap_chunks", "TextWrapper._handle_long_word"]
+    statement := "With indents of at most width, _wrap_chunks returns exactly when its two checks pass."
+    source := "narrows textlibs-textwrap-terminates", status := .proven
+    prop := ``WrapSucceeds, thm := some ``wrapSucceeds_proven },
+  { id := "textlibs-textwrap-errors", pyFile := "Lib/textwrap.py", pyFns := ["TextWrapper._wrap_chunks"]
+    statement := "The width check comes first and the placeholder check second, each with its message."
+    source := "Lib/textwrap.py:252-260", status := .proven
+    prop := ``WrapErrors, thm := some ``wrapErrors_proven },
+  { id := "textlibs-textwrap-width", pyFile := "Lib/textwrap.py", pyFns := ["TextWrapper._wrap_chunks"]
+    statement := "With break_long_words on, every line is at most width."
+    source := "docstring of TextWrapper.wrap", status := .refuted
+    prop := ``WrapWidthLaw, thm := some ``wrapWidthLaw_refuted
+    bug := some "textlibs-textwrap-indent-over-width" },
+  { id := "textlibs-textwrap-width-narrow", pyFile := "Lib/textwrap.py", pyFns := ["TextWrapper._wrap_chunks", "TextWrapper._handle_long_word"]
+    statement := "With break_long_words on and indents shorter than width, every line is at most width, including with max_lines."
+    source := "narrows textlibs-textwrap-width", status := .proven
+    prop := ``WrapWidthNarrow, thm := some ``wrapWidthNarrow_proven },
+  { id := "textlibs-textwrap-keeps-text", pyFile := "Lib/textwrap.py", pyFns := ["TextWrapper._wrap_chunks", "TextWrapper._handle_long_word"]
+    statement := "Without max_lines the lines hold all the text of the chunks, or all but its whitespace under drop_whitespace."
+    source := "docstring of _wrap_chunks", status := .proven
+    prop := ``WrapKeepsText, thm := some ``wrapKeepsText_proven },
+  { id := "textlibs-textwrap-max-lines", pyFile := "Lib/textwrap.py", pyFns := ["TextWrapper._wrap_chunks"]
+    statement := "With max_lines there are at most max(max_lines, 1) lines, and text that was cut leaves the stripped placeholder at the end."
+    source := "docs: TextWrapper.max_lines", status := .proven
+    prop := ``WrapMaxLines, thm := some ``wrapMaxLines_proven },
+  { id := "textlibs-textwrap-no-break", pyFile := "Lib/textwrap.py", pyFns := ["TextWrapper._wrap_chunks", "TextWrapper._handle_long_word"]
+    statement := "With break_long_words off, the lines are runs of the chunks, and only a single chunk exceeds width."
+    source := "docstring of _wrap_chunks", status := .proven
+    prop := ``WrapNoBreak, thm := some ``wrapNoBreak_proven },
+  { id := "textlibs-textwrap-greedy", pyFile := "Lib/textwrap.py", pyFns := ["TextWrapper._wrap_chunks", "TextWrapper._handle_long_word"]
+    statement := "With break_long_words and drop_whitespace off, each line ends only because the next chunk would not fit."
+    source := "docstring of _wrap_chunks", status := .proven
+    prop := ``WrapGreedy, thm := some ``wrapGreedy_proven
+    notes := "Both switches are off so that the partition is exact; the same lines of code run with them on." },
+  { id := "textlibs-textwrap-fitting-text", pyFile := "Lib/textwrap.py", pyFns := ["TextWrapper._wrap_chunks"]
+    statement := "Text that fits in width passes, whatever the placeholder."
+    source := "docs: shorten", status := .refuted
+    prop := ``FittingTextPasses, thm := some ``fittingTextPasses_refuted
+    bug := some "textlibs-textwrap-placeholder-check-first" }
 ]
 
 end PyLean.TextLibs

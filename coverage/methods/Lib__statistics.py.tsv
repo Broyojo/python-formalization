@@ -1,60 +1,60 @@
 file	line	endline	name	signature	status	entry	note
 Lib/statistics.py	158	178	mean	mean(data)	modelled	calstat-statistics-mean-floats,calstat-statistics-mean-fractions,calstat-statistics-mean-int-subclass,calstat-statistics-mean-ints	
-Lib/statistics.py	181	221	fmean	fmean(data, weights=None)	modelled	calstat-statistics-fmean-checks	withdrawn: checks or edge cases only, float result unproven
-Lib/statistics.py	224	261	geometric_mean	geometric_mean(data)	modelled	calstat-statistics-geometric-checks	withdrawn: checks or edge cases only, float result unproven
+Lib/statistics.py	181	221	fmean	fmean(data, weights=None)	todo		withdrawn: only input checks: an always-raising or constant result passes
+Lib/statistics.py	224	261	geometric_mean	geometric_mean(data)	todo		withdrawn: only input checks: an always-raising or constant result passes
 Lib/statistics.py	264	324	harmonic_mean	harmonic_mean(data, weights=None)	modelled	calstat-statistics-harmonic-early-out,calstat-statistics-harmonic-exact	
 Lib/statistics.py	327	348	median	median(data)	modelled	calstat-statistics-median-order	
 Lib/statistics.py	351	373	median_low	median_low(data)	modelled	calstat-statistics-median-order	
 Lib/statistics.py	376	392	median_high	median_high(data)	modelled	calstat-statistics-median-order	
-Lib/statistics.py	395	464	median_grouped	median_grouped(data, interval=1.0)	modelled	calstat-statistics-grouped-bounds	
+Lib/statistics.py	395	464	median_grouped	median_grouped(data, interval=1.0)	todo		withdrawn: bounds only: a result at the lower bound passes
 Lib/statistics.py	467	494	mode	mode(data)	modelled	calstat-statistics-mode-spec	
 Lib/statistics.py	497	515	multimode	multimode(data)	modelled	calstat-statistics-mode-spec	
 Lib/statistics.py	520	563	variance	variance(data, xbar=None)	modelled	calstat-statistics-mean-int-subclass,calstat-statistics-variance-fractions,calstat-statistics-variance-with-mean	
 Lib/statistics.py	566	606	pvariance	pvariance(data, mu=None)	modelled	calstat-statistics-mean-int-subclass,calstat-statistics-variance-fractions,calstat-statistics-variance-with-mean	
 Lib/statistics.py	609	629	stdev	stdev(data, xbar=None)	modelled	calstat-statistics-stdev-of-variance	
 Lib/statistics.py	632	652	pstdev	pstdev(data, mu=None)	modelled	calstat-statistics-stdev-of-variance	
-Lib/statistics.py	657	683	covariance	covariance(x, y, /)	modelled	calstat-statistics-two-input-checks	withdrawn: checks or edge cases only, float result unproven
-Lib/statistics.py	686	738	correlation	correlation(x, y, /, *, method='linear')	modelled	calstat-statistics-correlation-bounded,calstat-statistics-correlation-constant,calstat-statistics-two-input-checks	
-Lib/statistics.py	744	804	linear_regression	linear_regression(x, y, /, *, proportional=False)	modelled	calstat-statistics-correlation-constant,calstat-statistics-two-input-checks	withdrawn: checks or edge cases only, float result unproven
-Lib/statistics.py	811	818	register	register(*kernels)	modelled	calstat-statistics-kernels-centred	
-Lib/statistics.py	821	828	normal_kernel	normal_kernel()	modelled	calstat-statistics-kernels-centred	
-Lib/statistics.py	831	837	logistic_kernel	logistic_kernel()	modelled	calstat-statistics-kernels-centred	
-Lib/statistics.py	840	849	sigmoid_kernel	sigmoid_kernel()	modelled	calstat-statistics-kernels-centred	
-Lib/statistics.py	852	857	rectangular_kernel	rectangular_kernel()	modelled	calstat-statistics-kernels-centred	
-Lib/statistics.py	860	865	triangular_kernel	triangular_kernel()	modelled	calstat-statistics-kernels-centred	
-Lib/statistics.py	868	873	parabolic_kernel	parabolic_kernel()	modelled	calstat-statistics-kernels-centred	
-Lib/statistics.py	875	882	_newton_raphson	_newton_raphson(f_inv_estimate, f, f_prime, tolerance=1e-12)	modelled	calstat-statistics-newton-post	
-Lib/statistics.py	884	892	_quartic_invcdf_estimate	_quartic_invcdf_estimate(p)	modelled	calstat-statistics-newton-post	
-Lib/statistics.py	895	901	quartic_kernel	quartic_kernel()	modelled	calstat-statistics-kernels-centred	
-Lib/statistics.py	903	909	_triweight_invcdf_estimate	_triweight_invcdf_estimate(p)	modelled	calstat-statistics-newton-post	
-Lib/statistics.py	912	918	triweight_kernel	triweight_kernel()	modelled	calstat-statistics-kernels-centred	
-Lib/statistics.py	921	928	cosine_kernel	cosine_kernel()	modelled	calstat-statistics-kernels-centred	
-Lib/statistics.py	935	1091	kde	kde(data, h, kernel='normal', *, cumulative=False)	modelled	calstat-statistics-kde-cdf-outside,calstat-statistics-kde-checks	
-Lib/statistics.py	1094	1136	kde_random	kde_random(data, h, kernel='normal', *, seed=None)	modelled	calstat-statistics-kde-checks	withdrawn: checks or edge cases only, float result unproven
-Lib/statistics.py	1175	1223	quantiles	quantiles(data, *, n=4, method='exclusive')	modelled	calstat-statistics-quantiles-exclusive,calstat-statistics-quantiles-inclusive,calstat-statistics-quantiles-method,calstat-statistics-quantiles-shape	
+Lib/statistics.py	657	683	covariance	covariance(x, y, /)	todo		withdrawn: only input checks: an always-raising or constant result passes
+Lib/statistics.py	686	738	correlation	correlation(x, y, /, *, method='linear')	todo		withdrawn: only input checks: an always-raising or constant result passes
+Lib/statistics.py	744	804	linear_regression	linear_regression(x, y, /, *, proportional=False)	todo		withdrawn: only input checks: an always-raising or constant result passes
+Lib/statistics.py	811	818	register	register(*kernels)	todo		withdrawn: only cdf(0) and the support: any centred kernel passes
+Lib/statistics.py	821	828	normal_kernel	normal_kernel()	todo		withdrawn: only cdf(0) and the support: any centred kernel passes
+Lib/statistics.py	831	837	logistic_kernel	logistic_kernel()	todo		withdrawn: only cdf(0) and the support: any centred kernel passes
+Lib/statistics.py	840	849	sigmoid_kernel	sigmoid_kernel()	todo		withdrawn: only cdf(0) and the support: any centred kernel passes
+Lib/statistics.py	852	857	rectangular_kernel	rectangular_kernel()	todo		withdrawn: only cdf(0) and the support: any centred kernel passes
+Lib/statistics.py	860	865	triangular_kernel	triangular_kernel()	todo		withdrawn: only cdf(0) and the support: any centred kernel passes
+Lib/statistics.py	868	873	parabolic_kernel	parabolic_kernel()	todo		withdrawn: only cdf(0) and the support: any centred kernel passes
+Lib/statistics.py	875	882	_newton_raphson	_newton_raphson(f_inv_estimate, f, f_prime, tolerance=1e-12)	todo		withdrawn: only cdf(0) and the support: any centred kernel passes
+Lib/statistics.py	884	892	_quartic_invcdf_estimate	_quartic_invcdf_estimate(p)	todo		withdrawn: only cdf(0) and the support: any centred kernel passes
+Lib/statistics.py	895	901	quartic_kernel	quartic_kernel()	todo		withdrawn: only cdf(0) and the support: any centred kernel passes
+Lib/statistics.py	903	909	_triweight_invcdf_estimate	_triweight_invcdf_estimate(p)	todo		withdrawn: only cdf(0) and the support: any centred kernel passes
+Lib/statistics.py	912	918	triweight_kernel	triweight_kernel()	todo		withdrawn: only cdf(0) and the support: any centred kernel passes
+Lib/statistics.py	921	928	cosine_kernel	cosine_kernel()	todo		withdrawn: only cdf(0) and the support: any centred kernel passes
+Lib/statistics.py	935	1091	kde	kde(data, h, kernel='normal', *, cumulative=False)	todo		withdrawn: only input checks: an always-raising or constant result passes
+Lib/statistics.py	1094	1136	kde_random	kde_random(data, h, kernel='normal', *, seed=None)	todo		withdrawn: only input checks: an always-raising or constant result passes
+Lib/statistics.py	1175	1223	quantiles	quantiles(data, *, n=4, method='exclusive')	todo		withdrawn: bounds only: a result at the lower bound passes
 Lib/statistics.py	1238	1243	NormalDist.__init__	__init__(self, mu=0.0, sigma=1.0)	modelled	calstat-statistics-normaldist-init	
-Lib/statistics.py	1246	1248	NormalDist.from_samples	from_samples(cls, data)	modelled	calstat-statistics-from-samples-short	withdrawn: checks or edge cases only, float result unproven
-Lib/statistics.py	1250	1256	NormalDist.samples	samples(self, n, *, seed=None)	modelled	calstat-statistics-inv-cdf-centre	
-Lib/statistics.py	1258	1264	NormalDist.pdf	pdf(self, x)	modelled	calstat-statistics-normaldist-undefined	withdrawn: checks or edge cases only, float result unproven
-Lib/statistics.py	1266	1270	NormalDist.cdf	cdf(self, x)	modelled	calstat-statistics-normaldist-undefined	withdrawn: checks or edge cases only, float result unproven
-Lib/statistics.py	1272	1284	NormalDist.inv_cdf	inv_cdf(self, p)	modelled	calstat-statistics-inv-cdf-centre,calstat-statistics-normaldist-undefined	
-Lib/statistics.py	1286	1295	NormalDist.quantiles	quantiles(self, n=4)	modelled	calstat-statistics-inv-cdf-centre	
-Lib/statistics.py	1297	1329	NormalDist.overlap	overlap(self, other)	modelled	calstat-statistics-normaldist-undefined	withdrawn: checks or edge cases only, float result unproven
-Lib/statistics.py	1331	1340	NormalDist.zscore	zscore(self, x)	modelled	calstat-statistics-normaldist-undefined	withdrawn: checks or edge cases only, float result unproven
+Lib/statistics.py	1246	1248	NormalDist.from_samples	from_samples(cls, data)	todo		withdrawn: only input checks: an always-raising or constant result passes
+Lib/statistics.py	1250	1256	NormalDist.samples	samples(self, n, *, seed=None)	todo		withdrawn: the sigma-zero error or a length, no value: an always-raising method passes
+Lib/statistics.py	1258	1264	NormalDist.pdf	pdf(self, x)	todo		withdrawn: the sigma-zero error or a length, no value: an always-raising method passes
+Lib/statistics.py	1266	1270	NormalDist.cdf	cdf(self, x)	todo		withdrawn: the sigma-zero error or a length, no value: an always-raising method passes
+Lib/statistics.py	1272	1284	NormalDist.inv_cdf	inv_cdf(self, p)	todo		withdrawn: the sigma-zero error or a length, no value: an always-raising method passes
+Lib/statistics.py	1286	1295	NormalDist.quantiles	quantiles(self, n=4)	todo		withdrawn: the sigma-zero error or a length, no value: an always-raising method passes
+Lib/statistics.py	1297	1329	NormalDist.overlap	overlap(self, other)	todo		withdrawn: the sigma-zero error or a length, no value: an always-raising method passes
+Lib/statistics.py	1331	1340	NormalDist.zscore	zscore(self, x)	todo		withdrawn: the sigma-zero error or a length, no value: an always-raising method passes
 Lib/statistics.py	1343	1345	NormalDist.mean	mean(self)	modelled	calstat-statistics-normaldist-init	
 Lib/statistics.py	1348	1350	NormalDist.median	median(self)	modelled	calstat-statistics-normaldist-init	
 Lib/statistics.py	1353	1359	NormalDist.mode	mode(self)	modelled	calstat-statistics-normaldist-init	
 Lib/statistics.py	1362	1364	NormalDist.stdev	stdev(self)	modelled	calstat-statistics-normaldist-init	
 Lib/statistics.py	1367	1369	NormalDist.variance	variance(self)	modelled	calstat-statistics-normaldist-init	
-Lib/statistics.py	1371	1383	NormalDist.__add__	__add__(x1, x2)	modelled	calstat-statistics-normaldist-arith,calstat-statistics-normaldist-sum	
-Lib/statistics.py	1385	1397	NormalDist.__sub__	__sub__(x1, x2)	modelled	calstat-statistics-normaldist-arith,calstat-statistics-normaldist-sum	
-Lib/statistics.py	1399	1405	NormalDist.__mul__	__mul__(x1, x2)	modelled	calstat-statistics-normaldist-arith	
-Lib/statistics.py	1407	1413	NormalDist.__truediv__	__truediv__(x1, x2)	modelled	calstat-statistics-normaldist-arith	
+Lib/statistics.py	1371	1383	NormalDist.__add__	__add__(x1, x2)	todo		withdrawn: ok-implies statements: always raising passes
+Lib/statistics.py	1385	1397	NormalDist.__sub__	__sub__(x1, x2)	todo		withdrawn: ok-implies statements: always raising passes
+Lib/statistics.py	1399	1405	NormalDist.__mul__	__mul__(x1, x2)	todo		withdrawn: ok-implies statements: always raising passes
+Lib/statistics.py	1407	1413	NormalDist.__truediv__	__truediv__(x1, x2)	todo		withdrawn: ok-implies statements: always raising passes
 Lib/statistics.py	1415	1417	NormalDist.__pos__	__pos__(x1)	modelled	calstat-statistics-normaldist-arith	
 Lib/statistics.py	1419	1421	NormalDist.__neg__	__neg__(x1)	modelled	calstat-statistics-normaldist-arith	
 Lib/statistics.py	1425	1427	NormalDist.__rsub__	__rsub__(x1, x2)	modelled	calstat-statistics-normaldist-arith	
-Lib/statistics.py	1431	1435	NormalDist.__eq__	__eq__(x1, x2)	modelled	calstat-statistics-normaldist-eq-hash	
-Lib/statistics.py	1437	1439	NormalDist.__hash__	__hash__(self)	modelled	calstat-statistics-normaldist-eq-hash	
+Lib/statistics.py	1431	1435	NormalDist.__eq__	__eq__(x1, x2)	todo		withdrawn: symmetry and hash consistency: an always-false equality passes
+Lib/statistics.py	1437	1439	NormalDist.__hash__	__hash__(self)	todo		withdrawn: symmetry and hash consistency: an always-false equality passes
 Lib/statistics.py	1441	1442	NormalDist.__repr__	__repr__(self)	modelled	calstat-statistics-normaldist-eq-hash	withdrawn: checks or edge cases only, float result unproven
 Lib/statistics.py	1444	1445	NormalDist.__getstate__	__getstate__(self)	modelled	calstat-statistics-normaldist-init	
 Lib/statistics.py	1447	1448	NormalDist.__setstate__	__setstate__(self, state)	modelled	calstat-statistics-normaldist-init	
@@ -65,10 +65,10 @@ Lib/statistics.py	1565	1594	_coerce	_coerce(T, S)	modelled	calstat-statistics-co
 Lib/statistics.py	1597	1620	_exact_ratio	_exact_ratio(x)	modelled	calstat-statistics-exact-ratio-spec	
 Lib/statistics.py	1623	1640	_convert	_convert(value, T)	modelled	calstat-statistics-convert-spec,calstat-statistics-mean-floats,calstat-statistics-mean-int-subclass,calstat-statistics-mean-ints	
 Lib/statistics.py	1643	1648	_fail_neg	_fail_neg(values, errmsg='negative value')	modelled	calstat-statistics-fail-neg	
-Lib/statistics.py	1651	1702	_rank	_rank(data, /, *, key=None, reverse=False, ties='average', start=1)	modelled	calstat-statistics-rank	
+Lib/statistics.py	1651	1702	_rank	_rank(data, /, *, key=None, reverse=False, ties='average', start=1)	todo		withdrawn: single examples, or a sign rule only
 Lib/statistics.py	1705	1709	_integer_sqrt_of_frac_rto	_integer_sqrt_of_frac_rto(n: int, m: int)	modelled	calstat-statistics-integer-sqrt-rto	
 Lib/statistics.py	1717	1727	_float_sqrt_of_frac	_float_sqrt_of_frac(n: int, m: int)	modelled	calstat-statistics-float-sqrt-basic	
-Lib/statistics.py	1730	1755	_decimal_sqrt_of_frac	_decimal_sqrt_of_frac(n: int, m: int)	modelled	calstat-statistics-decimal-sqrt-sign	
+Lib/statistics.py	1730	1755	_decimal_sqrt_of_frac	_decimal_sqrt_of_frac(n: int, m: int)	todo		withdrawn: single examples, or a sign rule only
 Lib/statistics.py	1758	1768	_mean_stdev	_mean_stdev(data)	modelled	calstat-statistics-stdev-of-variance	
-Lib/statistics.py	1771	1794	_sqrtprod	_sqrtprod(x: float, y: float)	modelled	calstat-statistics-correlation-bounded,calstat-statistics-sqrtprod	
-Lib/statistics.py	1797	1872	_normal_dist_inv_cdf	_normal_dist_inv_cdf(p, mu, sigma)	modelled	calstat-statistics-inv-cdf-centre	
+Lib/statistics.py	1771	1794	_sqrtprod	_sqrtprod(x: float, y: float)	todo		withdrawn: single examples, or a sign rule only
+Lib/statistics.py	1797	1872	_normal_dist_inv_cdf	_normal_dist_inv_cdf(p, mu, sigma)	todo		withdrawn: the sigma-zero error or a length, no value: an always-raising method passes

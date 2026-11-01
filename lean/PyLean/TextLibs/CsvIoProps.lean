@@ -46,6 +46,19 @@ theorem iterRaisePasses_proven : IterRaisePasses := by
   intro d fuel c e rest h
   simp [readerNext, readerLoop, iterNext, h]
 
+/-- `parse_reset` clears everything a `__next__` left, whatever state it left: fields, the `NULL` of
+the re-entrancy crash, the parser state, the half-read field and `unquoted_field`. So what the next
+`__next__` does cannot depend on any of it. -/
+def ReaderResets : Prop :=
+  (∀ s : RSt, parseReset s = {}) ∧
+  ∀ (d : Dialect) (fuel : Nat) (c : RCtx) (s1 s2 : RSt),
+    readerNext d (fuel + 1) { c with s := s1 } = readerNext d (fuel + 1) { c with s := s2 }
+
+theorem readerResets_proven : ReaderResets := by
+  have h : ∀ s : RSt, parseReset s = {} := fun s => rfl
+  refine ⟨h, fun d fuel c s1 s2 => ?_⟩
+  simp only [readerNext, h]
+
 /-- The input iterator ending with no open field or quote is `StopIteration`, and ending in the
 middle of a quoted field raises `csv.Error` in strict mode. Without `strict`, the open field is
 saved and returned as a row. -/

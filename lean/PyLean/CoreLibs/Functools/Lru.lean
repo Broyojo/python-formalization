@@ -52,8 +52,9 @@ structure CLru (K V : Type) where
 
 /-- The Python wrapper's closure state, Lib/functools.py:606-613: the circular list starting at `root`,
 which is the `none` link, and the keys of the `cache` dict, kept separately because a failure can leave
-them out of step. `broken` marks the state after a failed `del cache[oldkey]`, where the dict refers to a
-recycled link; the model stops there. -/
+them out of step. After a failed `del cache[oldkey]`, Lib/functools.py:683, the dict still has `oldkey`, and its link is the
+new root, whose key and result are `None`: `stale` is that key. A hit on it returns `None`, and leaves `root[NEXT]` pointing
+at the root itself, which a list cannot show: `broken` marks that, and the model stops there. -/
 structure PyLru (K V : Type) where
   ring : List (Option (K × V))
   cache : List K
@@ -61,18 +62,20 @@ structure PyLru (K V : Type) where
   misses : Nat
   full : Bool
   broken : Bool
+  stale : Option K
   deriving Repr, DecidableEq
 
 def emptyC {K V : Type} : CLru K V := ⟨[], [], 0, 0⟩
-def emptyPy {K V : Type} : PyLru K V := ⟨[none], [], 0, 0, false, false⟩
+def emptyPy {K V : Type} : PyLru K V := ⟨[none], [], 0, 0, false, false, none⟩
 
 /-- A bounded cached function: `maxsize`, the user function and the dict faults. The user function gets the
 key and the current miss count, which a real function can read with `cache_info()`: so the same key can
-take a different path on a re-entrant call, and that re-entrant call can terminate. -/
+take a different path on a re-entrant call, and that re-entrant call can terminate. `none` is the value `None`. -/
 structure Cfg (K V : Type) where
   maxsize : Nat
   f : K → Nat → Prog K V
   F : Faults K
+  none : V
 
 section
 variable {K V : Type} [DecidableEq K]
@@ -107,7 +110,10 @@ mutual
           | some result =>
             (.ok result, { s with
               ring := dropLastP (ringIs key) s.ring ++ [some (key, result)], hits := s.hits + 1 })
-          | none => (.error .modelFuel, s)
+          | none =>
+            -- :649: the link is the root
+            if s.stale = some key then (.ok cfg.none, { s with hits := s.hits + 1, broken := true })
+            else (.error .modelFuel, s)
         else
           let s := { s with misses := s.misses + 1 }
           match runPy cfg fuel (cfg.f key s.misses) s with
@@ -123,7 +129,7 @@ mutual
                   -- :669-681: the old root takes the key, the oldest link becomes the root
                   let s := { s with ring := none :: rest ++ [some (key, result)] }
                   match cfg.F.evict old.1 s.cache with
-                  | some e => (.error e, { s with broken := true })
+                  | some e => (.error e, { s with stale := some old.1 })
                   | none =>
                     if old.1 ∉ s.cache then
                       (.error (.keyError "~key"), s)  -- :683, a link no dict entry refers to

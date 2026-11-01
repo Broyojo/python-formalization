@@ -90,9 +90,9 @@ Python/sysmodule.c	2626	2631	sys__get_cpu_count_config_impl	sys__get_cpu_count_c
 Python/sysmodule.c	2640	2646	sys__baserepl_impl	sys__baserepl_impl(PyObject *module) /*[clinic end generated code: output=f19a36375ebe0a45 input=ade0ebb9fab56f3c]*/	todo		
 Python/sysmodule.c	2660	2686	sys__clear_type_descriptors_impl	sys__clear_type_descriptors_impl(PyObject *module, PyObject *type) /*[clinic end generated code: output=5ad17851b762b6d9 input=dc536c97fde07251]*/	todo		
 Python/sysmodule.c	2696	2704	sys__is_gil_enabled_impl	sys__is_gil_enabled_impl(PyObject *module) /*[clinic end generated code: output=57732cf53f5b9120 input=7e9c47f15a00e809]*/	todo		
-Python/sysmodule.c	2711	2740	PyAPI_FUNC	PyAPI_FUNC(int) PyUnstable_PerfMapState_Init(void) {	todo		
-Python/sysmodule.c	2762	2775	PyAPI_FUNC	PyAPI_FUNC(void) PyUnstable_PerfMapState_Fini(void) {	todo		
-Python/sysmodule.c	2777	2821	PyAPI_FUNC	PyAPI_FUNC(int) PyUnstable_CopyPerfMapFile(const char* parent_filename) {	todo		
+Python/sysmodule.c	2711	2740	PyUnstable_PerfMapState_Init	PyAPI_FUNC(int) PyUnstable_PerfMapState_Init(void) {	todo		
+Python/sysmodule.c	2762	2775	PyUnstable_PerfMapState_Fini	PyAPI_FUNC(void) PyUnstable_PerfMapState_Fini(void) {	todo		
+Python/sysmodule.c	2777	2821	PyUnstable_CopyPerfMapFile	PyAPI_FUNC(int) PyUnstable_CopyPerfMapFile(const char* parent_filename) {	todo		
 Python/sysmodule.c	2904	2920	list_builtin_module_names	list_builtin_module_names(void)	todo		
 Python/sysmodule.c	2924	2945	list_stdlib_module_names	list_stdlib_module_names(void)	todo		
 Python/sysmodule.c	2974	2991	_alloc_preinit_entry	_alloc_preinit_entry(const wchar_t *value)	todo		
@@ -103,12 +103,12 @@ Python/sysmodule.c	3049	3063	_PySys_ReadPreinitXOptions	_PySys_ReadPreinitXOptio
 Python/sysmodule.c	3067	3095	get_warnoptions	get_warnoptions(PyThreadState *tstate)	todo		
 Python/sysmodule.c	3098	3115	PySys_ResetWarnOptions	PySys_ResetWarnOptions(void)	todo		
 Python/sysmodule.c	3118	3131	_PySys_AddWarnOptionWithError	_PySys_AddWarnOptionWithError(PyThreadState *tstate, PyObject *option)	todo		
-Python/sysmodule.c	3134	3144	PyAPI_FUNC	PyAPI_FUNC(void) PySys_AddWarnOptionUnicode(PyObject *option)	todo		
-Python/sysmodule.c	3147	3164	PyAPI_FUNC	PyAPI_FUNC(void) PySys_AddWarnOption(const wchar_t *s)	todo		
-Python/sysmodule.c	3167	3179	PyAPI_FUNC	PyAPI_FUNC(int) PySys_HasWarnOptions(void)	todo		
+Python/sysmodule.c	3134	3144	PySys_AddWarnOptionUnicode	PyAPI_FUNC(void) PySys_AddWarnOptionUnicode(PyObject *option)	todo		
+Python/sysmodule.c	3147	3164	PySys_AddWarnOption	PyAPI_FUNC(void) PySys_AddWarnOption(const wchar_t *s)	todo		
+Python/sysmodule.c	3167	3179	PySys_HasWarnOptions	PyAPI_FUNC(int) PySys_HasWarnOptions(void)	todo		
 Python/sysmodule.c	3182	3210	get_xoptions	get_xoptions(PyThreadState *tstate)	todo		
 Python/sysmodule.c	3213	3254	_PySys_AddXOptionWithError	_PySys_AddXOptionWithError(const wchar_t *s)	todo		
-Python/sysmodule.c	3257	3269	PyAPI_FUNC	PyAPI_FUNC(void) PySys_AddXOption(const wchar_t *s)	todo		
+Python/sysmodule.c	3257	3269	PySys_AddXOption	PyAPI_FUNC(void) PySys_AddXOption(const wchar_t *s)	todo		
 Python/sysmodule.c	3272	3278	PySys_GetXOptions	PySys_GetXOptions(void)	todo		
 Python/sysmodule.c	3425	3432	sys_set_flag	sys_set_flag(PyObject *flags, Py_ssize_t pos, PyObject *value)	todo		
 Python/sysmodule.c	3436	3471	_PySys_SetFlagObj	_PySys_SetFlagObj(Py_ssize_t pos, PyObject *value)	todo		
@@ -127,7 +127,7 @@ Python/sysmodule.c	4136	4141	_jit_is_active_impl	_jit_is_active_impl(PyObject *m
 Python/sysmodule.c	4161	4236	_PySys_Create	_PySys_Create(PyThreadState *tstate, PyObject **sysmod_p)	todo		
 Python/sysmodule.c	4240	4254	_PySys_FiniTypes	_PySys_FiniTypes(PyInterpreterState *interp)	todo		
 Python/sysmodule.c	4258	4288	makepathobject	makepathobject(const wchar_t *path, wchar_t delim)	todo		
-Python/sysmodule.c	4291	4302	PyAPI_FUNC	PyAPI_FUNC(void) PySys_SetPath(const wchar_t *path)	todo		
+Python/sysmodule.c	4291	4302	PySys_SetPath	PyAPI_FUNC(void) PySys_SetPath(const wchar_t *path)	todo		
 Python/sysmodule.c	4305	4321	make_sys_argv	make_sys_argv(int argc, wchar_t * const * argv)	todo		
 Python/sysmodule.c	4324	4368	PySys_SetArgvEx	PySys_SetArgvEx(int argc, wchar_t **argv, int updatepath)	todo		
 Python/sysmodule.c	4371	4377	PySys_SetArgv	PySys_SetArgv(int argc, wchar_t **argv)	todo		

@@ -31,15 +31,15 @@ Lib/numbers.py	249	251	Real.__mod__	__mod__(self, other)	todo		withdrawn: consta
 Lib/numbers.py	254	256	Real.__rmod__	__rmod__(self, other)	todo		withdrawn: constant NotImplementedError stubs
 Lib/numbers.py	259	263	Real.__lt__	__lt__(self, other)	todo		withdrawn: constant NotImplementedError stubs
 Lib/numbers.py	266	268	Real.__le__	__le__(self, other)	todo		withdrawn: constant NotImplementedError stubs
-Lib/numbers.py	271	273	Real.__complex__	__complex__(self)	modelled	misc-numbers-real-components	
-Lib/numbers.py	276	278	Real.real	real(self)	modelled	misc-numbers-real-components	
-Lib/numbers.py	281	283	Real.imag	imag(self)	modelled	misc-numbers-real-components	
-Lib/numbers.py	285	287	Real.conjugate	conjugate(self)	modelled	misc-numbers-real-components	
+Lib/numbers.py	271	273	Real.__complex__	__complex__(self)	modelled	misc-numbers-real-components	withdrawn: equal to another mixin under hypotheses, no failure path
+Lib/numbers.py	276	278	Real.real	real(self)	modelled	misc-numbers-real-components	withdrawn: rfl on a one-line body or a constant
+Lib/numbers.py	281	283	Real.imag	imag(self)	modelled	misc-numbers-real-components	withdrawn: rfl on a one-line body or a constant
+Lib/numbers.py	285	287	Real.conjugate	conjugate(self)	modelled	misc-numbers-real-components	withdrawn: rfl on a one-line body or a constant
 Lib/numbers.py	303	305	Rational.numerator	numerator(self)	todo		withdrawn: constant NotImplementedError stubs
 Lib/numbers.py	309	314	Rational.denominator	denominator(self)	todo		withdrawn: constant NotImplementedError stubs
-Lib/numbers.py	317	325	Rational.__float__	__float__(self)	modelled	misc-numbers-integral-rational	
+Lib/numbers.py	317	325	Rational.__float__	__float__(self)	modelled	misc-numbers-integral-rational	withdrawn: equal to another mixin under hypotheses, no failure path
 Lib/numbers.py	338	340	Integral.__int__	__int__(self)	todo		withdrawn: constant NotImplementedError stubs
-Lib/numbers.py	342	344	Integral.__index__	__index__(self)	modelled	misc-numbers-integral-rational	
+Lib/numbers.py	342	344	Integral.__index__	__index__(self)	modelled	misc-numbers-integral-rational	withdrawn: equal to another mixin under hypotheses, no failure path
 Lib/numbers.py	347	355	Integral.__pow__	__pow__(self, exponent, modulus=None)	todo		withdrawn: constant NotImplementedError stubs
 Lib/numbers.py	358	360	Integral.__lshift__	__lshift__(self, other)	todo		withdrawn: constant NotImplementedError stubs
 Lib/numbers.py	363	365	Integral.__rlshift__	__rlshift__(self, other)	todo		withdrawn: constant NotImplementedError stubs
@@ -52,6 +52,6 @@ Lib/numbers.py	393	395	Integral.__rxor__	__rxor__(self, other)	todo		withdrawn: 
 Lib/numbers.py	398	400	Integral.__or__	__or__(self, other)	todo		withdrawn: constant NotImplementedError stubs
 Lib/numbers.py	403	405	Integral.__ror__	__ror__(self, other)	todo		withdrawn: constant NotImplementedError stubs
 Lib/numbers.py	408	410	Integral.__invert__	__invert__(self)	todo		withdrawn: constant NotImplementedError stubs
-Lib/numbers.py	413	415	Integral.__float__	__float__(self)	modelled	misc-numbers-integral-rational	
-Lib/numbers.py	418	420	Integral.numerator	numerator(self)	modelled	misc-numbers-integral-rational	
-Lib/numbers.py	423	425	Integral.denominator	denominator(self)	modelled	misc-numbers-integral-rational	
+Lib/numbers.py	413	415	Integral.__float__	__float__(self)	modelled	misc-numbers-integral-rational	withdrawn: equal to another mixin under hypotheses, no failure path
+Lib/numbers.py	418	420	Integral.numerator	numerator(self)	modelled	misc-numbers-integral-rational	withdrawn: rfl on a one-line body or a constant
+Lib/numbers.py	423	425	Integral.denominator	denominator(self)	modelled	misc-numbers-integral-rational	withdrawn: rfl on a one-line body or a constant

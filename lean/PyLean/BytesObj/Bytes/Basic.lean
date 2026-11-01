@@ -22,7 +22,8 @@ def parseFindsByteObj (sub : Obj) : Py BSub :=
   | some b => .ok (.buf b)
   | none =>
     match sub.index? with
-    | some v => .ok (.byte v)
+    | some (.ok v) => .ok (.byte v)
+    | some (.error e) => .error e
     | none =>
       .error (.typeError s!"argument should be integer or bytes-like object, not '{sub.typeName}'")
 
@@ -46,12 +47,13 @@ def bytesCountObj (s : Seq) (sub : Obj) (start «end» : Option Int) : Py Int :=
 it tries the index first, and on a `PyNumber_AsSsize_t` failure falls back to the
 buffer protocol, losing the original exception. -/
 def bytesContains (s : Seq) (arg : Obj) : Py Bool :=
-  match arg.index? with
-  | none =>
+  let viaBuffer : Py Bool :=
     match getBuffer arg with
     | .error e => .error e
     | .ok b => .ok (decide (stringlibFind s b 0 ≥ 0))
-  | some v =>
+  match arg.index? with
+  | none | some (.error _) => viaBuffer
+  | some (.ok v) =>
     let ival := clampSsize v
     if ival < 0 ∨ ival ≥ 256 then .error (.valueError "byte must be in range(0, 256)")
     else .ok (s.contains ival.toNat)
@@ -241,11 +243,50 @@ def bytesGetItem (s : Seq) (i : Int) : Py Nat := do
 iterate. A `bytes` argument yields ints. -/
 def iterItems? (o : Obj) : Option (List Obj) :=
   match o with
-  | .list xs | .tuple xs | .iter xs => some xs
+  | .list xs | .tuple xs | .iter xs | .iterRaises xs _ | .iterHint xs _ => some xs
   | .bytes s | .bytearray s | .memview s _ => some (s.map (fun (c : Nat) => Obj.int (c : Int)))
   | .str cs => some (cs.map (fun c => Obj.str [c]))
   | .dict kv => some (kv.map (fun p => Obj.bytes p.1))
   | _ => none
+
+/-- `PyObject_GetIter(o)`: the items, or the error of `__iter__`, where the callers turn a
+`TypeError` into their own message `msg`. -/
+def getIterOr (msg : PyExc) (o : Obj) : Py (List Obj) :=
+  match o with
+  | .iterCallRaises e => .error (if isTypeError e then msg else e)
+  | _ =>
+    match iterItems? o with
+    | some xs => .ok xs
+    | none => .error msg
+
+/-- What ends an iteration: `PyIter_Next` failing after the last item. -/
+def iterFinish (o : Obj) : Py Unit :=
+  match o with
+  | .iterRaises _ e => .error e
+  | _ => .ok ()
+
+/-- `PyObject_LengthHint(o, d)`, Objects/abstract.c:95-150, with the default `d` for a
+sized object too (the difftest only sizes small ones, so the value does not matter). -/
+def lengthHint (o : Obj) (d : Int) : Py Int :=
+  match o with
+  | .iterHint _ (.error e) => if isTypeError e then .ok d else .error e
+  | .iterHint _ (.ok v) =>
+    if v < ssizeMin ∨ v > ssizeMax then
+      .error (.overflowError "Python int too large to convert to C ssize_t")
+    else if v < 0 then .error (.valueError "__length_hint__() should return >= 0")
+    else .ok v
+  | _ => .ok d
+
+/-- `PySequence_Fast(o, msg)`, Objects/abstract.c:2095-2120: an exact list or tuple as it
+is, anything else through `PySequence_List`, which runs the iterator to its end first. -/
+def sequenceFast (msg : PyExc) (o : Obj) : Py (List Obj) :=
+  match o with
+  | .list xs | .tuple xs => .ok xs
+  | _ => do
+    let xs ← getIterOr msg o
+    let _ ← lengthHint o 8
+    iterFinish o
+    return xs
 
 /-- The pre-pass of `stringlib_bytes_join`, join.h:61-112: the buffers in order, or
 the error of the first bad item. -/
@@ -278,9 +319,9 @@ def joinWrite (sep : Seq) : List Seq → Seq
 `seqlen == 1` shortcut for `bytes` only (`!STRINGLIB_MUTABLE`), which returns the
 item itself. -/
 def stringlibJoin (sep : Seq) (iterable : Obj) : Py Seq :=
-  match iterItems? iterable with
-  | none => .error (.typeError "can only join an iterable")
-  | some items =>
+  match sequenceFast (.typeError "can only join an iterable") iterable with
+  | .error e => .error e
+  | .ok items =>
     match joinPass sep 0 items 0 with
     | .error e => .error e
     | .ok (bs, _) => .ok (joinWrite sep bs)

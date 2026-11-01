@@ -1,5 +1,5 @@
 file	line	endline	name	signature	status	entry	note
-Lib/re/_compiler.py	33	37	_combine_flags	_combine_flags(flags, add_flags, del_flags, TYPE_FLAGS=_parser.TYPE_FLAGS)	todo		
+Lib/re/_compiler.py	33	37	_combine_flags	_combine_flags(flags, add_flags, del_flags, TYPE_FLAGS=_parser.TYPE_FLAGS)	modelled	textlibs-re-combine-flags	
 Lib/re/_compiler.py	39	219	_compile	_compile(code, pattern, flags)	todo		
 Lib/re/_compiler.py	221	246	_compile_charset	_compile_charset(charset, flags, code)	modelled	textlibs-re-charset-preserved	
 Lib/re/_compiler.py	248	395	_optimize_charset	_optimize_charset(charset, iscased=None, fixup=None, fixes=None)	modelled	textlibs-re-charset-preserved	

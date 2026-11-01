@@ -359,8 +359,8 @@ theorem run_spec (st : St) (v w : Nat) (cv cw : Char) (shv shw stv stw : List In
 
 theorem compareBufs_views (st : St) (v w : Nat) (cv cw : Char) (shv shw stv stw : List Int)
     (hv : NativeView st v cv shv stv) (hw : NativeView st w cw shw stw)
-    (hnd : (st.mv v).view.ndim = (st.mv w).view.ndim) :
-    compareBufs st.mem (st.mv v).view (st.mv w).view =
+    (hnd : (st.mv v).view.ndim = (st.mv w).view.ndim) (hns : cv = cw ∨ st.noStruct = false) :
+    compareBufs st.mem st.noStruct (st.mv v).view (st.mv w).view =
       .ok (treeEq (viewTree st.mem cv (st.mv v).view shv stv) (viewTree st.mem cw (st.mv w).view shw stw)) := by
   have hlen : shv.length = shw.length := by rw [hv.rank, hnd, hw.rank]
   have hes := equivShape_views st v w cv cw shv shw stv stw hv hw hnd
@@ -393,15 +393,17 @@ theorem compareBufs_views (st : St) (v w : Nat) (cv cw : Char) (shv shw stv stw 
       exact absurd hnw (by decide)
     obtain ⟨kv, hkv, s1, s2, u1, u2, -⟩ := native_item cv hnv
     obtain ⟨kw, hkw, s3, s4, u3, u4, -⟩ := native_item cw hnw
-    have up1 : structGetUnpacker ((st.mv v).view.format.getD []) (st.mv v).view.itemsize =
+    have up1 : ∀ h : st.noStruct = false, unpackerOf st.noStruct ((st.mv v).view.format.getD []) (st.mv v).view.itemsize =
         .ok ⟨⟨false, [(cv, 1, kv, 0)], kv⟩, fmtSize cv⟩ := by
-      rw [← hsv]
+      intro h0
+      rw [unpackerOf, if_neg (by simp [h0]), ← hsv]
       rcases hfv with h | h <;> rw [h]
       · exact u1
       · exact u2
-    have up2 : structGetUnpacker ((st.mv w).view.format.getD []) (st.mv w).view.itemsize =
+    have up2 : ∀ h : st.noStruct = false, unpackerOf st.noStruct ((st.mv w).view.format.getD []) (st.mv w).view.itemsize =
         .ok ⟨⟨false, [(cw, 1, kw, 0)], kw⟩, fmtSize cw⟩ := by
-      rw [← hsw]
+      intro h0
+      rw [unpackerOf, if_neg (by simp [h0]), ← hsw]
       rcases hfw with h | h <;> rw [h]
       · exact u3
       · exact u4
@@ -410,7 +412,8 @@ theorem compareBufs_views (st : St) (v w : Nat) (cv cw : Char) (shv shw stv stw 
     · subst hc
       simp only [hcv, or_self, ne_eq, not_true_eq_false, ↓reduceIte]
       exact run_spec st v w cv cv shv shw stv stw cv none hv hw hnd hloop (fun p q => fast_cmp st.mem cv hnv p q)
-    · simp only [hc, ne_eq, not_false_eq_true, or_true, ↓reduceIte, up1, up2]
+    · have hn0 : st.noStruct = false := hns.resolve_left hc
+      simp only [hc, ne_eq, not_false_eq_true, or_true, ↓reduceIte, up1 hn0, up2 hn0]
       refine run_spec st v w cv cw shv shw stv stw '_' _ hv hw hnd hloop (fun p q => ?_)
       exact struct_cmp st.mem cv cw kv kw hkv hkw ⟨s1, s2⟩ ⟨s3, s4⟩ p q
 
@@ -419,22 +422,23 @@ shape, strides and suboffsets, equal or different formats, floats included: `cmp
 `cmp_rec` compare what `tolist` shows, the `switch` and `struct` paths agree, and a shape
 `equiv_shape` refuses is a list of a different shape. With a different `ndim` they are not equal,
 though the lists can be: `(0,)` and `(0, 3)` both give `[]` (Doc/library/stdtypes.rst, "their
-shapes are equivalent"). Hypotheses: `NativeView`, which is `tolist` succeeding. -/
+shapes are equivalent"). Hypotheses: `NativeView`, which is `tolist` succeeding; for two different
+formats, `struct` can be imported (`CmpImportFails` is the other case). -/
 def CmpIsTolist : Prop :=
   ∀ (st : St) (v w : Nat) (cv cw : Char) (shv shw stv stw : List Int),
-    NativeView st v cv shv stv → NativeView st w cw shw stw →
+    NativeView st v cv shv stv → NativeView st w cw shw stw → (cv = cw ∨ st.noStruct = false) →
     ∃ tv tw, memoryviewTolist v st = (.ok tv, st) ∧ memoryviewTolist w st = (.ok tw, st) ∧
       memoryRichcompare v (.view w) .eq st =
         (.ok (some ((st.mv v).view.ndim == (st.mv w).view.ndim && treeEq tv tw)), st)
 
 theorem cmpIsTolist_proven : CmpIsTolist := by
-  intro st v w cv cw shv shw stv stw hv hw
+  intro st v w cv cw shv shw stv stw hv hw hns
   refine ⟨_, _, tolist_viewTree st v cv shv stv hv, tolist_viewTree st w cw shw stw hw, ?_⟩
-  have e : compareBufs st.mem (st.mv v).view (st.mv w).view =
+  have e : compareBufs st.mem st.noStruct (st.mv v).view (st.mv w).view =
       .ok ((st.mv v).view.ndim == (st.mv w).view.ndim &&
         treeEq (viewTree st.mem cv (st.mv v).view shv stv) (viewTree st.mem cw (st.mv w).view shw stw)) := by
     by_cases hnd : (st.mv v).view.ndim = (st.mv w).view.ndim
-    · rw [compareBufs_views st v w cv cw shv shw stv stw hv hw hnd]
+    · rw [compareBufs_views st v w cv cw shv shw stv stw hv hw hnd hns]
       simp [hnd]
     · have : equivShape (st.mv v).view (st.mv w).view = false := by
         simp [equivShape, hnd]
@@ -475,7 +479,7 @@ def CmpNonNative : Prop :=
     structGetUnpacker (vv.format.getD []) vv.itemsize = .ok up →
     structGetUnpacker (ww.format.getD []) ww.itemsize = .ok uq →
     up.fmt.size ≤ up.itemsize.toNat → uq.fmt.size ≤ uq.itemsize.toNat →
-    compareBufs m vv ww = .ok
+    compareBufs m false vv ww = .ok
       (((walk ((vv.strides.getD []).getD 0 0) n.toNat vv.buf).zip
         (walk ((ww.strides.getD []).getD 0 0) n.toNat ww.buf)).all fun x =>
           structResultEq (unpackAt m up (adjustPtr m x.1 vv.suboffsets 0))
@@ -496,12 +500,53 @@ theorem cmpNonNative_proven : CmpNonNative := by
     simp only [unpackCmp, structUnpackCmp, structUnpackSingle_fits m _ _ hsu,
       structUnpackSingle_fits m _ _ hsw, bind, Except.bind, pure, Except.pure]
   rcases hn with h | h
-  · simp only [compareBufs, hs, Bool.not_true, Bool.false_eq_true, ↓reduceIte, h, eq_self, true_or, hu, hw,
-      h1, Nat.one_ne_zero, h3, Option.getD_some, List.getD_cons_zero]
-    exact cmpBase_all m '_' _ _ hm _ _ _ _ _ _ _
-  · simp only [compareBufs, hs, Bool.not_true, Bool.false_eq_true, ↓reduceIte, h, eq_self, true_or, or_true,
+  · simp only [compareBufs, hs, Bool.not_true, Bool.false_eq_true, ↓reduceIte, h, eq_self, true_or, unpackerOf,
       hu, hw, h1, Nat.one_ne_zero, h3, Option.getD_some, List.getD_cons_zero]
     exact cmpBase_all m '_' _ _ hm _ _ _ _ _ _ _
+  · simp only [compareBufs, hs, Bool.not_true, Bool.false_eq_true, ↓reduceIte, h, eq_self, true_or, or_true,
+      unpackerOf, hu, hw, h1, Nat.one_ne_zero, h3, Option.getD_some, List.getD_cons_zero]
+    exact cmpBase_all m '_' _ _ hm _ _ _ _ _ _ _
+
+/-! ## `import struct` fails -/
+
+/-- `fix_struct_error_int`, :2917-2928: anything from `struct` itself means "not equal" and is
+cleared; a failed import and `MemoryError` are real errors and pass through. -/
+def FixStructRules : Prop :=
+  ∀ (msg : String),
+    fixStructError (structError msg) = .ok false ∧
+    fixStructError importStruct = .error importStruct ∧
+    fixStructError (.named "ImportError" msg) = .error (.named "ImportError" msg) ∧
+    fixStructError (.named "MemoryError" msg) = .error (.named "MemoryError" msg)
+
+theorem fixStructRules_proven : FixStructRules := fun _ => ⟨rfl, rfl, rfl, rfl⟩
+
+/-- `memory_richcompare` with `sys.modules['struct'] = None`, :3144-3158: two views of the same native
+format take the `switch` and never import `struct`, so `==` is unchanged; when the formats differ or
+one is not native, `struct_get_unpacker` fails, :2084-2086, and `fix_struct_error_int` lets the
+`ModuleNotFoundError` out of `==`, where a bad format would be "not equal". Hypotheses: the shapes
+pass `equiv_shape`, the case. -/
+def CmpImportFails : Prop :=
+  ∀ (m : Mem) (vv ww : Buf), equivShape vv ww = true →
+    (getNativeFmtchar (vv.format.getD []) = none ∨ getNativeFmtchar (ww.format.getD []) = none →
+      compareBufs m true vv ww = .error importStruct) ∧
+    (∀ c c' s s', getNativeFmtchar (vv.format.getD []) = some (c, s) →
+      getNativeFmtchar (ww.format.getD []) = some (c', s') →
+      (c ≠ c' → compareBufs m true vv ww = .error importStruct) ∧
+      (c = c' → nativeChar c = true → compareBufs m true vv ww = compareBufs m false vv ww))
+
+theorem cmpImportFails_proven : CmpImportFails := by
+  intro m vv ww hs
+  refine ⟨fun h => ?_, fun c c' s s' h1 h2 => ⟨fun hc => ?_, fun hc hn => ?_⟩⟩
+  · rcases h with h | h
+    · simp [compareBufs, hs, h, unpackerOf, fixStructError, importStruct]
+    · simp [compareBufs, hs, h, unpackerOf, fixStructError, importStruct]
+  · simp [compareBufs, hs, h1, h2, hc, unpackerOf, fixStructError, importStruct]
+  · subst hc
+    have h_ : c ≠ '_' := by
+      intro e
+      rw [e] at hn
+      exact absurd hn (by decide)
+    simp [compareBufs, hs, h1, h2, h_]
 
 /-! ## `equiv_format`, `equiv_shape`, `equiv_structure`, `adjust_fmt` -/
 
