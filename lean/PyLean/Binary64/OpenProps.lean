@@ -61,11 +61,6 @@ def FloatRoundHalfEven : Prop :=
   ∀ x : F64, x.isFinite = true → ∃ n : Int, float_round_int x = .ok n ∧
     Rat.abs (x.toRat - n) ≤ 1 / 2 ∧ (Rat.abs (x.toRat - n) = 1 / 2 → n % 2 = 0)
 
-/-- `PyFloat_Pack4` inverts `PyFloat_Unpack4` on every binary32 pattern. -/
-def Pack4RoundTrip : Prop :=
-  ∀ b, b < 2 ^ 32 → ∀ le : Bool,
-    PyFloat_Pack4 (PyFloat_Unpack4 (layout 4 b le) le) le = .ok (layout 4 b le)
-
 /-- `quorem(b, S)` is the quotient digit, under the bound and normalization its callers keep:
 `b < 10 * S`, and the top limb of `S` has bit 27 set. -/
 def QuoremSpec : Prop :=

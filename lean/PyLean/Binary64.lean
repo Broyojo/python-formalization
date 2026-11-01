@@ -17,6 +17,7 @@ import PyLean.Binary64.CompareProps
 import PyLean.Binary64.StrtodProps
 import PyLean.Binary64.DtoaProps
 import PyLean.Binary64.RatioProps
+import PyLean.Binary64.Pack4Props
 import PyLean.Binary64.OpenProps
 import PyLean.Binary64.Complex
 import PyLean.Binary64.ComplexProps
@@ -305,8 +306,7 @@ def entries : List Entry := [
   { id := "float-pack4-roundtrip", pyFile := floatFile, pyFns := ["PyFloat_Pack4", "PyFloat_Unpack4"]
     statement := "PyFloat_Pack4 inverts PyFloat_Unpack4 on every binary32 pattern, in both byte orders."
     source := "struct docs; floatobject.c:2187-2201 and :2509-2522"
-    status := .open, prop := ``Pack4RoundTrip
-    notes := "Needs roundPos on exact binary32 values. Difftested." },
+    status := .proven, prop := ``Pack4RoundTrip, thm := some ``pack4RoundTrip_proven },
   { id := "dtoa-quorem", pyFile := dtoaFile, pyFns := ["quorem"]
     statement := "quorem(b, S) is the quotient digit and the remainder, given b < 10 * S and a normalized S."
     source := "Comment at dtoa.c:1135-1137"
