@@ -1,8 +1,8 @@
 import PyLean.Itertools.Model
 
 /-!
-`itertools.islice`: the C object (Modules/itertoolsmodule.c:1580-1740) and the
-doc equivalent (Doc/library/itertools.rst:456-487).
+`itertools.islice`: the C object (Modules/itertoolsmodule.c:1582-1740) and the
+doc equivalent (Doc/library/itertools.rst:459-501).
 
 Arguments after the iterable are `args : List (Option Int)` of length 1 to 3
 (`none` is `None`), i.e. `islice(it, stop)` or `islice(it, start, stop[, step])`.
@@ -27,7 +27,7 @@ def asSsizeOrMinus1 (x : Int) : Int :=
   | .ok v => v
   | .error _ => -1
 
-/-- `isliceobject` (:1582-1589); `it = none` after `Py_CLEAR(lz->it)`. -/
+/-- `isliceobject` (:1584-1591); `it = none` after `Py_CLEAR(lz->it)`. -/
 structure IsliceState where
   it : Option (List Int)
   next : Int
@@ -36,7 +36,7 @@ structure IsliceState where
   cnt : Int
   deriving Repr, DecidableEq
 
-/-- `islice_new` (:1593-1680): validated `(start, stop, step)`, with
+/-- `islice_new` (:1596-1680): validated `(start, stop, step)`, with
 `stop = -1` for `None`. -/
 def cIsliceArgs (args : List (Option Int)) : Py (Int × Int × Int) :=
   let (a1, a2, a3) : Option Int × Option Int × Option (Option Int) :=
@@ -45,7 +45,7 @@ def cIsliceArgs (args : List (Option Int)) : Py (Int × Int × Int) :=
     | [a1, a2] => (a1, a2, none)
     | a1 :: a2 :: a3 :: _ => (a1, a2, some a3)
     | [] => (none, none, none)
-  -- (start, stop) after :1611-1638
+  -- (start, stop) after :1613-1641
   let startStop : Py (Int × Int) :=
     if args.length = 1 then
       -- numargs == 2: islice(seq, stop)
@@ -64,10 +64,10 @@ def cIsliceArgs (args : List (Option Int)) : Py (Int × Int × Int) :=
   match startStop with
   | .error e => .error e
   | .ok (start, stop) =>
-    -- :1640-1645
+    -- :1643-1648
     if start < 0 ∨ stop < -1 then .error (.valueError isliceIdxMsg)
     else
-      -- :1647-1656
+      -- :1650-1659
       let step := match a3 with | some (some v) => asSsizeOrMinus1 v | _ => 1
       if step < 1 then .error (.valueError isliceStepMsg) else .ok (start, stop, step)
 
@@ -77,8 +77,8 @@ def cIsliceSkip (next : Int) : List Int → Int → Option (List Int) × Int
   | [], cnt => if cnt < next then (none, cnt) else (some [], cnt)
   | x :: rest, cnt => if cnt < next then cIsliceSkip next rest (cnt + 1) else (some (x :: rest), cnt)
 
-/-- `islice_next` (:1702-1740). The step is added in `size_t` and converted
-back (:1729-1731), i.e. with two's complement wraparound. -/
+/-- `islice_next` (:1703-1740). The step is added in `size_t` and converted
+back (:1729-1734), i.e. with two's complement wraparound. -/
 def cIsliceNext (s : IsliceState) : Step IsliceState Int :=
   match s.it with
   | none => .stop s
@@ -110,7 +110,7 @@ def cIslice (l : List Int) (args : List (Option Int)) : Run Int × Int :=
 
 /-! ### Doc equivalent -/
 
-/-- `slice(*args)` then the defaults and the check of rst:465-469: `(start,
+/-- `slice(*args)` then the defaults and the check of rst:483-487: `(start,
 stop, step)` with `stop = none` for `None`. The doc raises a bare
 `ValueError`. -/
 def docIsliceArgs (args : List (Option Int)) : Py (Int × Option Int × Int) :=
@@ -130,7 +130,7 @@ def pastBound : Option Int → Int → Bool
   | some m, i => decide (m ≤ i)
   | none, _ => false
 
-/-- The `for i, element in zip(indices, iterable)` loop (rst:471-475):
+/-- The `for i, element in zip(indices, iterable)` loop (rst:489-493):
 `indices` is `range(bound)` (`some bound`) or `count()` (`none`); `zip` pulls
 the index first, so an exhausted `range` stops without touching the input.
 Returns the yielded items and the number of input items consumed. -/

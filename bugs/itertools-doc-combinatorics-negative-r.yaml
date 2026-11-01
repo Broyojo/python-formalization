@@ -76,11 +76,11 @@ reproducer: |
 expected: |
   The doc equivalents raise ValueError for r < 0, like the C code and like product()'s equivalent.
 observed: |
-  python3 3.14.7: C raises ValueError; the doc code yields [()] and [('a', 'b')]. REPRODUCED.
+  python3 3.14.7 (macOS and the Linux build pod): C raises ValueError; the doc code yields [()] and [('a', 'b')]. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical (the doc code is unchanged).
   REPRODUCED.
 promised_by: |
-  Doc/library/itertools.rst:239-258, :275-295, :572-598 ("Roughly equivalent to").
+  Doc/library/itertools.rst:232-254, :275-294, :548-576 ("Roughly equivalent to").
 cause: |
   The doc code lacks the `r < 0` check that Modules/itertoolsmodule.c:2366-2369, :2620-2623 and
   :2881-2884 perform.
@@ -90,8 +90,15 @@ possible_fix: |
 duplicates:
   issues:
     - {number: 118476, state: closed, relation: "corner cases in the islice equivalent", reason: "same kind of doc fix, different function"}
-  queries: ["itertools.combinations (titles read)", "itertools.permutations (titles read)",
-            "combinations_with_replacement (titles read)", "islice in:title"]
+  queries: ["combinations negative r",
+            "permutations negative r",
+            "itertools roughly equivalent negative",
+            "itertools docs equivalent ValueError r",
+            "(all of the above: word searches, --include-prs, all titles read)",
+            "itertools.combinations (titles read)",
+            "itertools.permutations (titles read)",
+            "combinations_with_replacement (titles read)",
+            "islice in:title"]
 lean:
   property: PyLean.Itertools.CombDocAgree
   theorem: PyLean.Itertools.combDocAgree_refuted

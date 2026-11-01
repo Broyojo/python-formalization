@@ -17,10 +17,10 @@ summary: |
   inside the documented range 0 <= x <= sys.maxsize, no error is raised, and the result is
   silently wrong. With an int stop the same overflow is harmless (next is set to stop), and
   range(10)[1::sys.maxsize] / the documented pure-Python equivalent give [1].
-  Lean: the C model and the doc equivalent agree on items, consumption and errors for every
-  Py_ssize_t start/stop/step except exactly this case (itertools-islice-doc-agree-nowrap is
-  proven under "stop is not None or len + step <= sys.maxsize + 1";
-  itertools-islice-doc-agree-ssize is refuted by this reproducer).
+  Lean: the C model and the doc equivalent agree on items, consumption and when they raise for
+  every Py_ssize_t start/stop/step with stop given, or with len + step <= sys.maxsize + 1
+  (itertools-islice-doc-agree-nowrap, proven); itertools-islice-doc-agree-ssize, without that
+  hypothesis, is refuted by this reproducer.
 likelihood: |
   Low. It needs start >= 1 and start + step > sys.maxsize, i.e. a step within `start` of
   sys.maxsize, together with stop=None. A step of sys.maxsize is a natural way to say "take
@@ -29,9 +29,9 @@ likelihood: |
   When it does happen the result is silently wrong (one extra item), not an exception.
 maybe_intended: |
   No. The (size_t) cast and the `lz->next < oldnext` test were added precisely to handle this
-  overflow (comment at :1728-1729: "avoids the danger of undefined behaviour from signed
+  overflow (comment at :1730-1731: "avoids the danger of undefined behaviour from signed
   integer overflow"); the handling is only wrong for the stop=None sentinel. The documented
-  equivalent (rst:463-481) and sequence slicing both give one item.
+  equivalent (rst:478-496) and sequence slicing both give one item.
 reproducer: |
   import sys
   from itertools import islice
@@ -47,15 +47,15 @@ reproducer: |
 expected: |
   [1] and [5] (the item at index start only; start + step is past any possible input).
 observed: |
-  python3 3.14.7: [1, 2] and [5, 6]; with stop=10 the result is [1]. REPRODUCED.
+  python3 3.14.7 (macOS and the Linux build pod): [1, 2] and [5, 6]; with stop=10 the result is [1]. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical (islice_next is unchanged on
   main). REPRODUCED.
 promised_by: |
-  Doc/library/itertools.rst:452-481: islice "works like sequence slicing", the "Roughly
+  Doc/library/itertools.rst:459-496: islice "works like sequence slicing", the "Roughly
   equivalent to" code yields only indices start, start+step, ...; the C error messages accept
   0 <= x <= sys.maxsize for every argument.
 cause: |
-  Modules/itertoolsmodule.c:1727-1733 (islice_next):
+  Modules/itertoolsmodule.c:1729-1734 (islice_next):
       oldnext = lz->next;
       lz->next += (size_t)lz->step;
       if (lz->next < oldnext || (stop != -1 && lz->next > stop))
@@ -73,11 +73,21 @@ duplicates:
     - {number: 151409, state: open, relation: "same function, different bug (free-threading race)", reason: "not a duplicate"}
     - {number: 50554, state: closed, relation: "islice arguments above sys.maxsize", reason: "won't fix; about rejecting big values, not about in-range overflow"}
     - {number: 118476, state: closed, relation: "doc equivalent corner cases", reason: "docs only"}
-  queries: ["islice overflow", "islice maxsize", "islice step sys.maxsize", "islice next overflow",
-            "islice extra element", "islice step large", "islice step overflow", "islice sys.maxsize step",
-            "islice wraparound", "islice extra item", "islice step huge", "islice undefined behaviour",
-            "islice signed integer overflow", "islice integer overflow", "itertools islice overflow",
-            "islice in:title (all 20 results read)", "islice_next", "islice large step", "islice step argument",
+    - {number: 145333, state: closed, relation: "islice __length_hint__ PR", reason: "unrelated to the overflow"}
+  queries: ["islice overflow",
+            "islice maxsize",
+            "islice sys.maxsize step",
+            "islice step large",
+            "islice step overflow",
+            "islice next overflow",
+            "islice extra item",
+            "islice wraparound",
+            "islice stop None step",
+            "islice signed overflow",
+            "islice_next",
+            "(all of the above: word searches, --include-prs, all titles read)",
+            "islice in:title (all 20 results read)",
+            "PR 145333 and issue 118476 read: no mention of this overflow",
             "bugforge README: no itertools entries"]
 lean:
   property: PyLean.Itertools.IsliceDocAgreeSsize

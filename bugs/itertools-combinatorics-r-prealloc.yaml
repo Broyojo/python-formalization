@@ -45,17 +45,18 @@ expected: |
   Empty iterators (math.comb(3, sys.maxsize) == math.perm(3, sys.maxsize) == 0; cwr of an empty
   pool with r > 0 is empty), as the doc equivalents return.
 observed: |
-  python3 3.14.7: MemoryError for all three. REPRODUCED.
+  python3 3.14.7 (macOS and the Linux build pod): MemoryError for all three. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical (main only moved the r < 0 check
   into Argument Clinic). REPRODUCED.
 promised_by: |
-  Doc/library/itertools.rst:221-224 and :530-533 ("The length of the output is given by
-  math.comb/math.perm ... or zero when r > n"); :269-271 for combinations_with_replacement
-  (n == 0, r > 0 gives nothing); the "Roughly equivalent to" code returns before allocating.
+  Doc/library/itertools.rst:219-223 and :536-539 ("The length of the output is given by
+  math.comb/math.perm ... or zero when r > n"); for combinations_with_replacement the "Roughly
+  equivalent to" code's `if not n and r: return` (:282). All three doc equivalents return
+  before allocating anything.
 cause: |
   Modules/itertoolsmodule.c:2371-2378 (combinations: PyMem_New(Py_ssize_t, r) and fill, then
-  `co->stopped = r > n` at :2389), :2625-2632 (cwr: same, `stopped = !n && r` at :2642),
-  :2886-2896 (permutations: PyMem_New(Py_ssize_t, r) for cycles, `stopped = r > n` at :2910).
+  `co->stopped = r > n` at :2389), :2625-2632 (cwr: same, `stopped = !n && r` at :2643),
+  :2886-2896 (permutations: PyMem_New(Py_ssize_t, r) for cycles, `stopped = r > n` at :2908).
 possible_fix: |
   When the result is known to be empty (r > n for combinations/permutations, n == 0 && r > 0
   for cwr), allocate no index arrays (or allocate 0 entries) and just set stopped = 1.
@@ -64,10 +65,19 @@ duplicates:
     - {number: 104419, state: closed, relation: "MemoryError from combinations with a huge real output", reason: "not planned; different case (non-empty output)"}
     - {number: 67555, state: closed, relation: "integer overflow in r * sizeof(Py_ssize_t)", reason: "fixed (bpo-23366) by the PyMem_New overflow check that now raises this MemoryError"}
     - {number: 81852, state: closed, relation: "combinations consumes its input eagerly", reason: "rejected; different"}
-  queries: ["combinations MemoryError", "combinations large r", "permutations large r",
-            "combinations r greater than n memory", "combinations_with_replacement MemoryError",
-            "PyMem_New indices combinations", "itertools.combinations (100 results, titles read)",
-            "itertools.permutations (titles read)", "combinations_with_replacement (titles read)",
+    - {number: 49066, state: closed, relation: "made r > n return an empty iterator instead of ValueError", reason: "the empty result is the deliberate design; allocation not discussed"}
+    - {number: 67553, state: closed, relation: "integer overflow in product", reason: "fixed; same overflow-check family"}
+  queries: ["combinations MemoryError",
+            "combinations large r",
+            "permutations MemoryError",
+            "permutations large r",
+            "combinations_with_replacement MemoryError",
+            "combinations r greater n",
+            "itertools MemoryError",
+            "(all of the above: word searches, --include-prs, all titles read)",
+            "itertools.combinations (100 results, titles read)",
+            "itertools.permutations (titles read)",
+            "combinations_with_replacement (titles read)",
             "bugforge README: no itertools entries"]
 lean:
   property: PyLean.Itertools.CombDocAgreeSsize

@@ -108,7 +108,7 @@ instance (x : Int) : Decidable (InSsize x) := inferInstanceAs (Decidable (_ ∧ 
 def two64 : Int := 18446744073709551616
 
 /-- `(Py_ssize_t)(size_t)x`: two's complement wraparound to 64 bits. CPython is
-built with `-fno-strict-overflow`, and itertoolsmodule.c:1729-1731 adds via
+built with `-fno-strict-overflow`, and itertoolsmodule.c:1730-1732 adds via
 `size_t` precisely to get this. -/
 def wrapSsize (x : Int) : Int :=
   if x % two64 > ssizeMax then x % two64 - two64 else x % two64

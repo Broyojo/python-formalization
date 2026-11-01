@@ -1,8 +1,8 @@
 import PyLean.Itertools.Model
 
 /-!
-`itertools.groupby` (Modules/itertoolsmodule.c:422-735) and `itertools.tee`
-(:737-1210) with their doc equivalents (rst:393-445, :682-719), driven by
+`itertools.groupby` (Modules/itertoolsmodule.c:426-720) and `itertools.tee`
+(:722-1205) with their doc equivalents (rst:426-456, :687-718), driven by
 interleaved operations on the returned iterators.
 
 groupby operations: `outer` is `next(groupby_obj)` (result: the key, the group
@@ -26,7 +26,7 @@ inductive GbOp where
   | group (j : Nat)
   deriving Repr, DecidableEq
 
-/-- `groupbyobject` (:422-431); groupers are numbered by creation, and
+/-- `groupbyobject` (:428-437); groupers are numbered by creation, and
 `currgrouper` is the number of the current one. -/
 structure CGroupby where
   it : List Int
@@ -37,7 +37,7 @@ structure CGroupby where
   groupers : List Int   -- `tgtkey` of each `_grouper`, by number
   deriving Repr
 
-/-- `groupby_step` (:507-531): `none` is the `-1` (exhausted) return. -/
+/-- `groupby_step` (:508-531): `none` is the `-1` (exhausted) return. -/
 def cGroupbyStep (key : Int → Int) (g : CGroupby) : Option CGroupby :=
   match g.it with
   | [] => none
@@ -49,7 +49,7 @@ def gbAdvance : Option Int → Option Int → Bool
   | some _, none => false
   | some ck, some tk => tk == ck
 
-/-- The `for (;;)` loop of `groupby_next` (:540-568). The flag is `true` for
+/-- The `for (;;)` loop of `groupby_next` (:541-567). The flag is `true` for
 the `break` out of the loop and `false` when `groupby_step` failed; the steps
 already taken stay in the state either way. Each iteration but the last
 consumes an item, so `it.length + 1` iterations are enough. -/
@@ -61,7 +61,7 @@ def cGroupbySkip (key : Int → Int) : Nat → CGroupby → Bool × CGroupby
       | none => (false, g)
       | some g => cGroupbySkip key fuel g
 
-/-- `groupby_next` (:533-578). -/
+/-- `groupby_next` (:534-579). -/
 def cGroupbyNext (key : Int → Int) (g : CGroupby) : Option Int × CGroupby :=
   let g := { g with currgrouper := none }
   match cGroupbySkip key (g.it.length + 1) g with
@@ -71,7 +71,7 @@ def cGroupbyNext (key : Int → Int) (g : CGroupby) : Option Int × CGroupby :=
     let id := g.groupers.length
     (some ck, { g with tgtkey := some ck, groupers := g.groupers ++ [ck], currgrouper := some id })
 
-/-- `_grouper_next` (:665-703). -/
+/-- `_grouper_next` (:666-700). -/
 def cGrouperNext (key : Int → Int) (g : CGroupby) (j : Nat) : Option Int × CGroupby :=
   if g.currgrouper != some j then (none, g)
   else
@@ -113,7 +113,7 @@ structure DocGroupby where
   groups : List (Int × GenPc)   -- `(target_key, frame state)` of each `_grouper`
   deriving Repr
 
-/-- `next()` on the `j`-th `_grouper(target_key)` generator (rst:420-428). -/
+/-- `next()` on the `j`-th `_grouper(target_key)` generator (rst:431-439). -/
 def docGrouperNext (key : Int → Int) (d : DocGroupby) (j : Nat) : Option Int × DocGroupby :=
   let (tk, pc) := d.groups.getD j (0, .done)
   let setPc (d : DocGroupby) (pc : GenPc) := { d with groups := d.groups.set j (tk, pc) }
@@ -128,7 +128,7 @@ def docGrouperNext (key : Int → Int) (d : DocGroupby) (j : Nat) : Option Int �
       if d.currKey != tk then (none, setPc d .done)
       else (some d.currValue, d)
 
-/-- `for _ in curr_group: pass` (rst:441-442). -/
+/-- `for _ in curr_group: pass` (rst:455-456). -/
 def docExhaustGroup (key : Int → Int) (d : DocGroupby) (j : Nat) : Nat → DocGroupby
   | 0 => d
   | fuel + 1 =>
@@ -136,14 +136,14 @@ def docExhaustGroup (key : Int → Int) (d : DocGroupby) (j : Nat) : Nat → Doc
     | (none, d) => d
     | (some _, d) => docExhaustGroup key d j fuel
 
-/-- The `while not exhausted:` body up to its `yield` (rst:436-439). -/
+/-- The `while not exhausted:` body up to its `yield` (rst:451-454). -/
 def docGroupbyLoopHead (d : DocGroupby) : Option Int × DocGroupby :=
   if d.exhausted then (none, { d with outer := .done })
   else
     let d := { d with targetKey := d.currKey, groups := d.groups ++ [(d.currKey, GenPc.fresh)] }
     (some d.currKey, { d with outer := .suspended })
 
-/-- `next()` on the doc's `groupby` generator (rst:409-442). -/
+/-- `next()` on the doc's `groupby` generator (rst:426-456). -/
 def docGroupbyNext (key : Int → Int) (d : DocGroupby) : Option Int × DocGroupby :=
   match d.outer with
   | .done => (none, d)
@@ -177,10 +177,10 @@ inductive TeeOp where
   | copy (k : Nat)
   deriving Repr, DecidableEq
 
-/-- `#define LINKCELLS 57` (:746). -/
+/-- `#define LINKCELLS 57` (:732). -/
 def LINKCELLS : Nat := 57
 
-/-- The shared chain of `teedataobject`s (:748-755): block `b` holds
+/-- The shared chain of `teedataobject`s (:734-741): block `b` holds
 `blocks[b]` (`numread` values); `nextlink` of block `b` exists iff
 `b + 1 < blocks.length`. Each tee is `(dataobj, index)`. -/
 structure CTee where
@@ -189,7 +189,7 @@ structure CTee where
   tees : List (Nat × Nat)
   deriving Repr
 
-/-- `teedataobject_jumplink` (:772-782) as used by `tee_next` (:960-967): at
+/-- `teedataobject_jumplink` (:773-782) as used by `tee_next` (:961-968): at
 `index >= LINKCELLS` move to the next block, creating it if needed. -/
 def teeJump (t : CTee) (b i : Nat) : CTee × Nat × Nat :=
   if i ≥ LINKCELLS then
@@ -197,8 +197,8 @@ def teeJump (t : CTee) (b i : Nat) : CTee × Nat × Nat :=
     (t, b + 1, 0)
   else (t, b, i)
 
-/-- `teedataobject_getitem_lock_held` (:784-809) and the `to->index++` of
-`tee_next` (:968-971): a stored value, or (lead iterator) pull one more item. -/
+/-- `teedataobject_getitem_lock_held` (:785-809) and the `to->index++` of
+`tee_next` (:969-973): a stored value, or (lead iterator) pull one more item. -/
 def teeGetitem (t : CTee) (k b i : Nat) : Option Int × CTee :=
   let blk := t.blocks.getD b []
   if i < blk.length then
@@ -210,7 +210,7 @@ def teeGetitem (t : CTee) (k b i : Nat) : Option Int × CTee :=
       (some v, { t with it := rest, blocks := t.blocks.set b (blk ++ [v]),
                         tees := t.tees.set k (b, i + 1) })
 
-/-- `tee_next` (:952-972, GIL build). -/
+/-- `tee_next` (:953-975, GIL build). -/
 def cTeeNext (t : CTee) (k : Nat) : Option Int × CTee :=
   let (b, i) := t.tees.getD k (0, 0)
   let (t, b, i) := teeJump t b i
@@ -232,7 +232,7 @@ def cTeeOps : CTee → List TeeOp → List (Option Int) × CTee
     if k < t.tees.length then cTeeOps { t with tees := t.tees ++ [t.tees.getD k (0, 0)] } ops
     else cTeeOps t ops
 
-/-- `itertools_tee_impl` (:1164-1203): `n` through the `Py_ssize_t` converter;
+/-- `itertools_tee_impl` (:1165-1204): `n` through the `Py_ssize_t` converter;
 `n == 0` returns `()`. Results of the ops, then the number of items pulled from
 the input. -/
 def cTee (l : List Int) (n : Int) (ops : List TeeOp) : Py (List (Option Int) × Nat) := do
@@ -243,7 +243,7 @@ def cTee (l : List Int) (n : Int) (ops : List TeeOp) : Py (List (Option Int) × 
   let (rs, t) := cTeeOps t ops
   return (rs, l.length - t.it.length)
 
-/-- The doc's `_tee` objects (rst:697-719) sharing one chain of
+/-- The doc's `_tee` objects (rst:698-718) sharing one chain of
 `[value, next]` links: link `c` is filled iff `c < values.length`; each tee
 holds its current link number. -/
 structure DocTee where
@@ -280,7 +280,7 @@ def docTeeOps : DocTee → List TeeOp → List (Option Int) × DocTee
     if k < t.tees.length then docTeeOps { t with tees := t.tees ++ [t.tees.getD k 0] } ops
     else docTeeOps t ops
 
-/-- rst:686-695: bare `ValueError` for `n < 0`. -/
+/-- rst:687-696: bare `ValueError` for `n < 0`. -/
 def docTee (l : List Int) (n : Int) (ops : List TeeOp) : Py (List (Option Int) × Nat) := do
   if n < 0 then throw (.valueError "")
   let t : DocTee := { it := l, values := [], tees := List.replicate n.toNat 0 }

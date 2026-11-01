@@ -1,10 +1,10 @@
 import PyLean.Itertools.Model
 
 /-!
-`itertools.count` (Modules/itertoolsmodule.c:3484-3720) and `itertools.repeat`
-(:3722-3860) with int arguments, driven by a sequence of operations
+`itertools.count` (Modules/itertoolsmodule.c:3485-3727) and `itertools.repeat`
+(:3729-3857) with int arguments, driven by a sequence of operations
 (`next(it)`, `repr(it)`, `it.__length_hint__()`), and their doc equivalents
-(rst:315-334, :615-631).
+(rst:320-326, :626-633).
 
 `count` keeps a C `Py_ssize_t cnt` while in "fast mode" (int start that fits,
 step exactly 1) and switches to PyLong arithmetic at `PY_SSIZE_T_MAX`.
@@ -30,7 +30,7 @@ inductive OpRes where
 
 /-! ## count -/
 
-/-- `countobject` (:3486-3491): `longCnt = none` is `long_cnt == NULL`. -/
+/-- `countobject` (:3487-3492): `longCnt = none` is `long_cnt == NULL`. -/
 structure CountState where
   cnt : Int
   longCnt : Option Int
@@ -40,11 +40,11 @@ structure CountState where
 /-- `PyLong_AsLong` on an int, "-1 with the error cleared" on overflow. -/
 def asLongOrMinus1 (x : Int) : Int := if ssizeMin ≤ x ∧ x ≤ ssizeMax then x else -1
 
-/-- `itertools_count_impl` (:3528-3605) for int (or omitted) arguments; both
+/-- `itertools_count_impl` (:3529-3604) for int (or omitted) arguments; both
 are `PyLong`s so `fast_mode` starts true. -/
 def cCountNew (start step : Option Int) : CountState :=
   let longStep := step.getD 1
-  -- :3546-3561: `cnt = PyLong_AsSsize_t(long_cnt)`, overflow → slow mode
+  -- :3548-3567: `cnt = PyLong_AsSsize_t(long_cnt)`, overflow → slow mode
   let (cnt, longCnt, fast) : Int × Int × Bool :=
     match start with
     | some s =>
@@ -52,20 +52,20 @@ def cCountNew (start step : Option Int) : CountState :=
       | .ok v => (v, s, true)
       | .error _ => (-1, s, false)
     | none => (0, 0, true)
-  -- :3569-3577: fast mode only works when the step is 1
+  -- :3571-3581: fast mode only works when the step is 1
   let fast := fast && asLongOrMinus1 longStep == 1
-  -- :3579-3582
+  -- :3582-3585
   if fast then { cnt := cnt, longCnt := none, longStep := longStep }
   else { cnt := ssizeMax, longCnt := some longCnt, longStep := longStep }
 
-/-- `count_next` (:3650-3678, GIL build) and `count_nextlong` (:3628-3648). -/
+/-- `count_next` (:3651-3678, GIL build) and `count_nextlong` (:3629-3648). -/
 def cCountNext (s : CountState) : Int × CountState :=
   if s.cnt = ssizeMax then
     let lc := s.longCnt.getD ssizeMax
     (lc, { s with longCnt := some (lc + s.longStep) })
   else (s.cnt, { s with cnt := s.cnt + 1 })
 
-/-- `count_repr` (:3680-3707). `%R` of an int is its decimal form. -/
+/-- `count_repr` (:3681-3705). `%R` of an int is its decimal form. -/
 def cCountRepr (s : CountState) : String :=
   match s.longCnt with
   | none => s!"count({s.cnt})"
@@ -82,7 +82,7 @@ def cCountOps (s : CountState) : List Op → List OpRes
 def cCount (start step : Option Int) (ops : List Op) : List OpRes :=
   cCountOps (cCountNew start step) ops
 
-/-- The doc's `count(start=0, step=1)` (rst:323-329): the `k`-th value. -/
+/-- The doc's `count(start=0, step=1)` (rst:320-326): the `k`-th value. -/
 def docCountValues (start step : Option Int) (k : Nat) : List Int :=
   let s := start.getD 0
   let st := step.getD 1
@@ -90,13 +90,13 @@ def docCountValues (start step : Option Int) (k : Nat) : List Int :=
 
 /-! ## repeat -/
 
-/-- `repeatobject` (:3724-3728): `cnt = -1` is "endless". -/
+/-- `repeatobject` (:3731-3735): `cnt = -1` is "endless". -/
 structure RepeatState where
   elem : Int
   cnt : Int
   deriving Repr, DecidableEq
 
-/-- `repeat_new` (:3739-3763): `times` parsed with format `n`; a supplied
+/-- `repeat_new` (:3740-3763): `times` parsed with format `n`; a supplied
 negative `times` becomes 0. -/
 def cRepeatNew (elem : Int) (times : Option Int) : Py RepeatState := do
   match times with
@@ -105,17 +105,17 @@ def cRepeatNew (elem : Int) (times : Option Int) : Py RepeatState := do
     let c ← asSsize t
     return { elem := elem, cnt := if c < 0 then 0 else c }
 
-/-- `repeat_next` (:3785-3798). -/
+/-- `repeat_next` (:3786-3798). -/
 def cRepeatNext (s : RepeatState) : Option Int × RepeatState :=
   if s.cnt = 0 then (none, s)
   else if s.cnt > 0 then (some s.elem, { s with cnt := s.cnt - 1 })
   else (some s.elem, s)
 
-/-- `repeat_repr` (:3800-3811). -/
+/-- `repeat_repr` (:3801-3811). -/
 def cRepeatRepr (s : RepeatState) : String :=
   if s.cnt = -1 then s!"repeat({s.elem})" else s!"repeat({s.elem}, {s.cnt})"
 
-/-- `repeat_len` (:3813-3822), i.e. `__length_hint__`. -/
+/-- `repeat_len` (:3814-3822), i.e. `__length_hint__`. -/
 def cRepeatHint (s : RepeatState) : OpRes :=
   if s.cnt = -1 then .exc (.typeError "len() of unsized object") else .int s.cnt
 
@@ -132,7 +132,7 @@ def cRepeat (elem : Int) (times : Option Int) (ops : List Op) : List OpRes :=
   | .error e => [.exc e]
   | .ok s => cRepeatOps s ops
 
-/-- The doc's `repeat(object, times=None)` (rst:622-629): the first `k`
+/-- The doc's `repeat(object, times=None)` (rst:626-633): the first `k`
 values. `range(times)` accepts every int. -/
 def docRepeatValues (elem : Int) (times : Option Int) (k : Nat) : List Int :=
   match times with

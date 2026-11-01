@@ -16,14 +16,14 @@ def pop : List Int → Option (Int × List Int)
   | [] => none
   | x :: xs => some (x, xs)
 
-/-! ## accumulate (:3080-3250; rst:94-117) -/
+/-! ## accumulate (:3083-3224; rst:102-119) -/
 
 structure AccState where
   it : List Int
   total : Option Int
   initial : Option Int
 
-/-- `accumulate_next_lock_held` (:3162-3193). `binop` is `func` (default
+/-- `accumulate_next_lock_held` (:3163-3193). `binop` is `func` (default
 `PyNumber_Add`). -/
 def cAccumulateNext (binop : Int → Int → Int) (s : AccState) : Step AccState Int :=
   match s.initial with
@@ -46,7 +46,7 @@ def docAccumulateLoop (f : Int → Int → Int) : Int → List Int → List Int
   | _, [] => []
   | total, x :: xs => let t := f total x; t :: docAccumulateLoop f t xs
 
-/-- rst:105-117. -/
+/-- rst:102-119. -/
 def docAccumulate (f : Int → Int → Int) (initial : Option Int) (l : List Int) : Run Int :=
   match initial with
   | none =>
@@ -55,20 +55,20 @@ def docAccumulate (f : Int → Int → Int) (initial : Option Int) (l : List Int
     | x :: xs => Run.ok (x :: docAccumulateLoop f x xs)
   | some t => Run.ok (t :: docAccumulateLoop f t l)
 
-/-! ## batched (:100-260; rst:158-167) -/
+/-! ## batched (:98-271; rst:175-183) -/
 
 structure BatchedState where
   it : List Int
   batchSize : Int
   strict : Bool
 
-/-- `batched_new_impl` (:136-167); `n` went through the `Py_ssize_t` converter. -/
+/-- `batched_new_impl` (:137-167); `n` went through the `Py_ssize_t` converter. -/
 def cBatchedNew (l : List Int) (n : Int) (strict : Bool) : Py BatchedState := do
   let n ← asSsize n
   if n < 1 then throw (.valueError "n must be at least one")
   return { it := l, batchSize := n, strict := strict }
 
-/-- `batched_next` (:189-247). The `for (i=0; i < n; i++)` loop pulls items
+/-- `batched_next` (:190-249). The `for (i=0; i < n; i++)` loop pulls items
 until `n` are read or the input runs out, i.e. takes `min(n, len)` items. -/
 def cBatchedNext (s : BatchedState) : Step BatchedState (List Int) :=
   let n := s.batchSize
@@ -87,7 +87,7 @@ def cBatched (l : List Int) (n : Int) (strict : Bool) : Run (List Int) :=
   | .error e => Run.err e
   | .ok s => drain cBatchedNext (l.length + 2) s
 
-/-- The `while batch := tuple(islice(iterator, n))` loop (rst:163-166), with
+/-- The `while batch := tuple(islice(iterator, n))` loop (rst:180-183), with
 the C `islice` (whose `stop` must be at most `sys.maxsize`). -/
 def docBatchedLoop (n : Int) (strict : Bool) : Nat → List Int → Run (List Int)
   | 0, _ => Run.err .modelFuel
@@ -100,19 +100,19 @@ def docBatchedLoop (n : Int) (strict : Bool) : Nat → List Int → Run (List In
       else if strict && (batch.length : Int) != n then Run.err (.valueError "batched(): incomplete batch")
       else Run.cons batch (docBatchedLoop n strict fuel (it.drop consumed.toNat))
 
-/-- rst:160-167. -/
+/-- rst:175-183. -/
 def docBatched (l : List Int) (n : Int) (strict : Bool) : Run (List Int) :=
   if n < 1 then Run.err (.valueError "n must be at least one")
   else docBatchedLoop n strict (l.length + 2) l
 
-/-! ## chain, chain.from_iterable (:1880-2017; rst:190-212) -/
+/-! ## chain, chain.from_iterable (:1883-2057; rst:198-201, :198) -/
 
 structure ChainState where
   source : Option (List (List Int))
   active : Option (List Int)
 
 /-- The `while (lz->source != NULL)` loop of `chain_next_lock_held`
-(:1970-2007), by recursion on the remaining sources. -/
+(:1971-2007), by recursion on the remaining sources. -/
 def cChainLoop : List (List Int) → Option (List Int) → Step ChainState Int
   | src, some (x :: xs) => .yield x { source := some src, active := some xs }
   | [], some [] => .stop { source := none, active := none }
@@ -131,9 +131,9 @@ def cChain (ls : List (List Int)) : Run Int :=
 /-- `for iterable in iterables: yield from iterable`. -/
 def docChain (ls : List (List Int)) : Run Int := Run.ok ls.flatten
 
-/-! ## compress (:3240-3370; rst:302-312) -/
+/-! ## compress (:3226-3360; rst:299-311) -/
 
-/-- `compress_next` (:3304-3337): pull a datum, then a selector. -/
+/-- `compress_next` (:3305-3339): pull a datum, then a selector. -/
 def cCompressNext (s : List Int × List Int) : Step (List Int × List Int) Int :=
   go s.1 s.2
 where
@@ -149,14 +149,14 @@ def cCompress (data sel : List Int) : Run Int :=
 def docCompress (data sel : List Int) : Run Int :=
   Run.ok ((data.zip sel).filter (fun p => truthy p.2) |>.map Prod.fst)
 
-/-! ## cycle (:1215-1325; rst:337-352) -/
+/-! ## cycle (:1207-1338; rst:342-352) -/
 
 structure CycleState where
   it : Option (List Int)
   saved : List Int
   index : Int
 
-/-- `cycle_next` (:1281-1312). -/
+/-- `cycle_next` (:1282-1317). -/
 def cCycleNext (s : CycleState) : Step CycleState Int :=
   let fromSaved (s : CycleState) : Step CycleState Int :=
     if s.saved.length = 0 then .stop s
@@ -185,15 +185,15 @@ def docCycleSaved (saved : List Int) : Nat → List Int → List Int
     | [] => []
     | y :: ys => y :: docCycleSaved saved k ys
 
-/-- rst:341-350: the first pass (`yield element; saved.append(element)`), then
+/-- rst:342-352: the first pass (`yield element; saved.append(element)`), then
 the saved copy forever; the first `k` items. -/
 def docCycle (l : List Int) (k : Nat) : Run Int :=
   let first := l.take k
   Run.ok (first ++ docCycleSaved l (k - first.length) [])
 
-/-! ## dropwhile, takewhile, filterfalse (:1340-1580, :3370-3480) -/
+/-! ## dropwhile, takewhile, filterfalse (:1340-1578, :3362-3482) -/
 
-/-- `dropwhile_next` (:1409-1437); `start` is the "predicate failed" flag. -/
+/-- `dropwhile_next` (:1410-1441); `start` is the "predicate failed" flag. -/
 def cDropwhileNext (pred : Int → Bool) : List Int × Bool → Step (List Int × Bool) Int
   | ([], start) => .stop ([], start)
   | (x :: xs, true) => .yield x (xs, true)
@@ -202,7 +202,7 @@ def cDropwhileNext (pred : Int → Bool) : List Int × Bool → Step (List Int �
 def cDropwhile (pred : Int → Bool) (l : List Int) : Run Int :=
   drain (cDropwhileNext pred) (l.length + 2) (l, false)
 
-/-- rst:362-371. -/
+/-- rst:364-374. -/
 def docDropwhile (pred : Int → Bool) (l : List Int) : Run Int :=
   Run.ok (go l)
 where
@@ -210,7 +210,7 @@ where
     | [] => []
     | x :: xs => if !pred x then x :: xs else go xs
 
-/-- `takewhile_next` (:1531-1557); the flag is `lz->stop`. -/
+/-- `takewhile_next` (:1532-1559); the flag is `lz->stop`. -/
 def cTakewhileNext (pred : Int → Bool) : List Int × Bool → Step (List Int × Bool) Int
   | (l, true) => .stop (l, true)
   | ([], false) => .stop ([], false)
@@ -219,7 +219,7 @@ def cTakewhileNext (pred : Int → Bool) : List Int × Bool → Step (List Int �
 def cTakewhile (pred : Int → Bool) (l : List Int) : Run Int :=
   drain (cTakewhileNext pred) (l.length + 2) (l, false)
 
-/-- rst:663-668. -/
+/-- rst:665-670. -/
 def docTakewhile (pred : Int → Bool) (l : List Int) : Run Int :=
   Run.ok (go l)
 where
@@ -234,7 +234,7 @@ def ffTest (pred : Option (Int → Bool)) (x : Int) : Bool :=
   | none => truthy x
   | some f => f x
 
-/-- `filterfalse_next` (:3429-3460). `pred = none` is `None` (or `bool`):
+/-- `filterfalse_next` (:3430-3462). `pred = none` is `None` (or `bool`):
 `PyObject_IsTrue(item)`. -/
 def cFilterfalseNext (pred : Option (Int → Bool)) : List Int → Step (List Int) Int
   | [] => .stop []
@@ -244,18 +244,18 @@ def cFilterfalseNext (pred : Option (Int → Bool)) : List Int → Step (List In
 def cFilterfalse (pred : Option (Int → Bool)) (l : List Int) : Run Int :=
   drain (cFilterfalseNext pred) (l.length + 2) l
 
-/-- rst:381-390. -/
+/-- rst:387-395. -/
 def docFilterfalse (pred : Option (Int → Bool)) (l : List Int) : Run Int :=
   let p := pred.getD truthy
   Run.ok (l.filter (fun x => !p x))
 
-/-! ## pairwise (:262-420; rst:490-509) -/
+/-! ## pairwise (:273-424; rst:513-521) -/
 
 structure PairwiseState where
   it : Option (List Int)
   old : Option Int
 
-/-- `pairwise_next` (:345-401). -/
+/-- `pairwise_next` (:346-402). -/
 def cPairwiseNext (s : PairwiseState) : Step PairwiseState (Int × Int) :=
   match s.it with
   | none => .stop s
@@ -279,15 +279,15 @@ def docPairwiseLoop : Int → List Int → List (Int × Int)
   | _, [] => []
   | a, b :: rest => (a, b) :: docPairwiseLoop b rest
 
-/-- rst:502-509 (`a = next(iterator, None)`). -/
+/-- rst:513-521 (`a = next(iterator, None)`). -/
 def docPairwise (l : List Int) : Run (Int × Int) :=
   match l with
   | [] => Run.ok []
   | a :: rest => Run.ok (docPairwiseLoop a rest)
 
-/-! ## starmap (:1760-1890; rst:645-652) -/
+/-! ## starmap (:1774-1881; rst:654-657) -/
 
-/-- `starmap_next` (:1839-1858); the argument tuples are lists of ints and
+/-- `starmap_next` (:1840-1860); the argument tuples are lists of ints and
 `func` is a pure function of the argument tuple. -/
 def cStarmapNext (func : List Int → Int) : List (List Int) → Step (List (List Int)) Int
   | [] => .stop []
@@ -298,15 +298,15 @@ def cStarmap (func : List Int → Int) (l : List (List Int)) : Run Int :=
 
 def docStarmap (func : List Int → Int) (l : List (List Int)) : Run Int := Run.ok (l.map func)
 
-/-! ## zip_longest (:3855-4080; rst:756-782) -/
+/-! ## zip_longest (:3859-4079; rst:768-788) -/
 
 structure ZipLongestState where
   its : List (Option (List Int))
   numactive : Nat
   fill : Option Int
 
-/-- The per-iterator loop of `zip_longest_next_lock_held` (:3979-4002 and
-:4010-4029): `none` is the "all exhausted" `return NULL`. -/
+/-- The per-iterator loop of `zip_longest_next_lock_held` (both copies of the
+loop, :3965-4034): `none` is the "all exhausted" `return NULL`. -/
 def cZipLongestRow (fill : Option Int) : List (Option (List Int)) → Nat →
     Option (List (Option Int) × List (Option (List Int)) × Nat)
   | [], numactive => some ([], [], numactive)
@@ -336,7 +336,7 @@ def cZipLongest (ls : List (List Int)) (fill : Option Int) : Run (List (Option I
   drain cZipLongestNext ((ls.map List.length).foldr max 0 + 2)
     { its := ls.map some, numactive := ls.length, fill := fill }
 
-/-- The `for i, iterator in enumerate(iterators)` loop of rst:771-781;
+/-- The `for i, iterator in enumerate(iterators)` loop of rst:768-788;
 `none` is the `return`. Exhausted iterators are replaced by
 `repeat(fillvalue)` (`none` here). -/
 def docZipLongestRow (fill : Option Int) : List (Option (List Int)) → Nat →
@@ -362,7 +362,7 @@ def docZipLongestLoop (fill : Option Int) : Nat → List (Option (List Int)) →
     | none => Run.ok []
     | some (row, its', na') => Run.cons row (docZipLongestLoop fill fuel its' na')
 
-/-- rst:766-781. -/
+/-- rst:768-788. -/
 def docZipLongest (ls : List (List Int)) (fill : Option Int) : Run (List (Option Int)) :=
   if ls.length = 0 then Run.ok []
   else docZipLongestLoop fill ((ls.map List.length).foldr max 0 + 2) (ls.map some) ls.length

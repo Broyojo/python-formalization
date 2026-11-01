@@ -251,6 +251,16 @@ def doc_tee(iterable, n=2):
     return tuple(result)
 
 
+class IntLike:
+    """An int-like object: only `__index__`."""
+
+    def __init__(self, value):
+        self.value = value
+
+    def __index__(self):
+        return self.value
+
+
 class _tee:
 
     def __init__(self, iterable):
@@ -349,7 +359,8 @@ def gen_islice(rng):
         args[0] = rng.choice([0, 1, 2, 3, n - 1, n])
         args[2] = rng.choice([M, M - 1, M - 2, M - 3, M - rng.randrange(12), M // 2 + 1, 1, 2])
         args[1] = rng.choice([None, None, n, M, rng.randrange(n + 2)])
-    return {"l": l, "args": args}
+    # C side only: the same ints as __index__ objects (PyNumber_AsSsize_t).
+    return {"l": l, "args": args, "index": rng.random() < 0.3}
 
 
 def gen_case(rng):
@@ -408,7 +419,7 @@ def gen_case(rng):
             return rng.choice([None, 0, 1, -1, 2, 5, M, M - 1, M - 2, M - 3, M + 1, -M - 1,
                                -M - 2, 2**64, -2**64, rng.randint(-10, 10)])
         c.update(start=arg(), step=rng.choice([None, None, 1, 1, 0, -1, 2, 3, M, -M - 1,
-                                                M + 1, 2**64, -2**64, True and 1]),
+                                                M + 1, 2**64, -2**64]),
                  ops=[rng.choice("nnr") for _ in range(rng.randrange(8))])
         if c["start"] is None:
             del c["start"]
@@ -419,8 +430,6 @@ def gen_case(rng):
         c.update(elem=rng.randint(-3, 3), ops=[rng.choice("nrh") for _ in range(rng.randrange(8))])
         if times is not None:
             c["times"] = times
-        if impl == "doc" and times is not None and times > M:
-            pass  # range(times) is fine in the doc
     elif fn == "groupby":
         c.update(l=small_list(rng, 12, span=rng.choice([1, 2, 4])),
                  key=rng.choice(list(KEYS)),
@@ -491,7 +500,10 @@ def run_python(c):
     tup = lambda t: list(t)
     if fn == "islice":
         it = iter(c["l"])
-        r = drain(lambda: F(it, *c["args"]))
+        args = c["args"]
+        if impl == "c" and c["index"]:
+            args = [a if a is None else IntLike(a) for a in args]
+        r = drain(lambda: F(it, *args))
         rest = list(it)
         return {"ok": r + [len(c["l"]) - len(rest)]}
     if fn == "batched":

@@ -34,14 +34,14 @@ expected: |
   A message naming the limit, e.g. "Step for islice() must be a positive integer or None:
   1 <= x <= sys.maxsize."
 observed: |
-  python3 3.14.7: "Step for islice() must be a positive integer or None." for step = 2**63.
+  python3 3.14.7 (macOS and the Linux build pod): "Step for islice() must be a positive integer or None." for step = 2**63.
   REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
 promised_by: |
   No documentation; invariant that an error message describes the violated constraint (the
   sibling messages for start/stop do).
 cause: |
-  Modules/itertoolsmodule.c:1646-1655: `step = PyNumber_AsSsize_t(a3, PyExc_OverflowError)`;
+  Modules/itertoolsmodule.c:1650-1659: `step = PyNumber_AsSsize_t(a3, PyExc_OverflowError)`;
   on overflow the error is cleared and step stays -1, then "Step for islice() must be a positive
   integer or None." is raised.
 possible_fix: |
@@ -52,7 +52,11 @@ duplicates:
     - {number: 50554, state: closed, relation: "large islice arguments; clarified the stop message", reason: "step message not touched"}
     - {number: 39433, state: closed, relation: "wrong error message of islice indexing", reason: "old (2003), different message"}
     - {number: 39457, state: closed, relation: "islice error messages", reason: "old (2003)"}
-  queries: ["Step for islice", "islice step argument", "islice step maxsize", "islice large step",
+  queries: ["islice error message step",
+            "islice positive integer",
+            "islice step large",
+            "islice step overflow",
+            "(all of the above: word searches, --include-prs, all titles read)",
             "islice in:title (all 20 results read)"]
 lean:
   property: PyLean.Itertools.IsliceStepMessageAccurate
