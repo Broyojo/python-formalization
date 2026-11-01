@@ -1,0 +1,59 @@
+id: decimal-c-format-surrogate-fill
+title: "_decimal's Decimal.__format__ raises UnicodeEncodeError for a lone surrogate fill character"
+priority: P4
+kind: wrong-exception
+module: decimal
+files: [Modules/_decimal/_decimal.c]
+functions: ["dec_format"]
+summary: |
+  dec_format encodes the whole spec as UTF-8 before parsing it, so a spec containing a lone
+  surrogate raises UnicodeEncodeError, whether or not the surrogate would be valid there:
+    format(_decimal.Decimal('1.5'), '\ud800<5')   -> UnicodeEncodeError
+    format(_pydecimal.Decimal('-0.5'), '\ud800<5') -> '-0.5\ud800'
+    format(1.5, '\ud800<5')                       -> '1.5\ud800\ud800'
+    format(15, '\ud800<5')                        -> '15\ud800\ud800\ud800'
+    format(Fraction(3, 2), '\ud800<5')            -> '3/2\ud800\ud800'
+  A surrogate outside the fill position is an invalid spec, where the other types raise
+  ValueError and _decimal raises UnicodeEncodeError (a subclass of ValueError).
+likelihood: |
+  Very low. Lone surrogates as a fill character come only from surrogateescape-decoded data or
+  deliberate tests.
+maybe_intended: |
+  Likely a side effect, not a decision, but it is defensible: libmpdec takes UTF-8 fill characters
+  and a lone surrogate has no UTF-8 form. UnicodeEncodeError is a ValueError, so `except
+  ValueError` still catches it. A maintainer may well close this as not worth changing. Worth
+  recording only with the NUL finding, in the same function.
+reproducer: |
+  import _decimal as C, _pydecimal as P
+  from fractions import Fraction
+  def fmt(x):
+      try:
+          return ascii(format(x, '\ud800<5'))
+      except Exception as e:
+          return type(e).__name__
+  c = fmt(C.Decimal('1.5'))
+  others = [fmt(P.Decimal('1.5')), fmt(1.5), fmt(15), fmt(Fraction(3, 2))]
+  print('_decimal:', c)
+  print('_pydecimal, float, int, Fraction:', others)
+  if c == 'UnicodeEncodeError' and 'UnicodeEncodeError' not in others:
+      print('REPRODUCED decimal-c-format-surrogate-fill')
+expected: |
+  '1.5\ud800\ud800', as from _pydecimal and float.
+promised_by: |
+  Twin agreement. The format spec mini-language says the fill "can be any character".
+cause: |
+  Modules/_decimal/_decimal.c:3562 `fmt = (char *)PyUnicode_AsUTF8AndSize(fmtarg, &size);` and the
+  NULL return at :3563-3565. Same on main at :3830.
+possible_fix: |
+  On a UnicodeEncodeError from that call, clear it and take the existing pydec_format path, which
+  handles any str.
+tested:
+  python3 (3.14.7): NOT YET RUN
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): NOT YET RUN
+duplicates:
+  issues: []
+  queries: []
+  bugforge: "no decimal entries in vendor/bugforge-results/README.md"
+lean:
+  property: PyLean.Decimal.FormatNoEncodeError
+  theorem: PyLean.Decimal.formatNoEncodeError_refuted

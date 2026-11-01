@@ -1,0 +1,69 @@
+id: decimal-pydecimal-parser-unicode-casefold
+title: "_pydecimal.Decimal accepts 'ınf', 'İnfinity' and 'ſNaN' through re.IGNORECASE Unicode case folding; _decimal rejects them"
+priority: P4
+kind: twin-disagreement
+module: decimal
+files: [Lib/_pydecimal.py]
+functions: ["Decimal.__new__", "_parser"]
+summary: |
+  The numeric-string regex is compiled with re.IGNORECASE on a str pattern, so its letters match
+  by Unicode case folding. U+0130 (İ) and U+0131 (ı) match the `i` of Inf/Infinity, and U+017F
+  (ſ, long s) matches the `s` of sNaN:
+    _pydecimal.Decimal('ınf')      -> Decimal('Infinity')
+    _pydecimal.Decimal('İnfinity') -> Decimal('Infinity')
+    _pydecimal.Decimal('ſNaN')     -> Decimal('sNaN')
+    _decimal.Decimal(any of them)  -> InvalidOperation (ConversionSyntax)
+  float('ınf') rejects the string too. A scan over every code point substituted into the letters
+  of Inf, Infinity, NaN, sNaN and 1E5 in both cases found exactly these three characters. The
+  other non-ASCII acceptances agree between the twins (Unicode digits, Unicode whitespace at the ends).
+likelihood: |
+  Very low. It needs one of three specific characters in place of an ASCII letter of a special
+  value's name, on a build or program using _pydecimal. The practical consequence is a string
+  that validates on one twin and fails on the other; the `ſNaN` form yields a signaling NaN.
+maybe_intended: |
+  Not intended as far as the source shows: the decimal specification's numeric-string syntax
+  spells these keywords in ASCII letters, compared case-insensitively, and the C parser compares
+  against explicit ASCII pairs (_mpd_strneq, whose comment shows the author guarding against locale
+  case-mapping surprises for the letter I). But this is harmless leniency in the pure-Python twin,
+  so a maintainer could reasonably decline to change it, or read "Case is not significant" as
+  covering these case variants.
+reproducer: |
+  import _pydecimal as P, _decimal as C
+  def kind(M, s):
+      try:
+          return repr(M.Decimal(s))
+      except M.InvalidOperation:
+          return 'InvalidOperation'
+  hits = 0
+  for s, want in [('ınf', "Decimal('Infinity')"), ('İnfinity', "Decimal('Infinity')"),
+                  ('ſNaN', "Decimal('sNaN')")]:
+      p, c = kind(P, s), kind(C, s)
+      print(ascii(s), '_pydecimal:', p, ' _decimal:', c)
+      hits += (p == want and c == 'InvalidOperation')
+  if hits == 3:
+      print('REPRODUCED decimal-pydecimal-parser-unicode-casefold')
+expected: |
+  InvalidOperation from both twins (or, if the leniency were wanted, acceptance by both).
+promised_by: |
+  Twin agreement. Doc/library/decimal.rst:377-393 gives the numeric-string grammar, with the
+  keywords 'Infinity', 'Inf', 'NaN', 'sNaN', and adds "Case is not significant, so, for example,
+  inf, Inf, INFINITY, and iNfINity are all acceptable spellings". The same paragraph extends digits
+  to Unicode explicitly but says nothing of the kind for letters.
+cause: |
+  Lib/_pydecimal.py:6117 `""", re.VERBOSE | re.IGNORECASE).match`. Under IGNORECASE the str
+  pattern's `I` and `s` also match their Unicode case variants. The C path rejects these
+  characters in numeric_as_ascii (Modules/_decimal/_decimal.c:2184-2189), which only passes ASCII,
+  whitespace and decimal digits. On main the flags are at Lib/_pydecimal.py:6232.
+possible_fix: |
+  Spell the keywords with explicit ASCII classes ([Ii][Nn][Ff]...) and drop re.IGNORECASE, keeping
+  `\d` Unicode-aware; or check `.isascii()` on the keyword part. `[eE]` covers the exponent marker.
+tested:
+  python3 (3.14.7): NOT YET RUN
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): NOT YET RUN
+duplicates:
+  issues: []
+  queries: []
+  bugforge: "no decimal entries in vendor/bugforge-results/README.md"
+lean:
+  property: PyLean.Decimal.ParseCAcceptsPy
+  theorem: PyLean.Decimal.parseCAcceptsPy_refuted

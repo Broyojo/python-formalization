@@ -1,0 +1,76 @@
+id: decimal-pydecimal-tuple-bool-digits
+title: "_pydecimal.Decimal((0, (True,), 0)) builds a corrupt Decimal('True'); the tuple constructor also ignores the coefficient of an infinity"
+priority: P4
+kind: invalid-state
+module: decimal
+files: [Lib/_pydecimal.py]
+functions: ["Decimal.__new__"]
+summary: |
+  The tuple branch of _pydecimal.Decimal.__new__ validates digits with
+  `isinstance(digit, int) and 0 <= digit <= 9`, which a bool passes, then builds the coefficient
+  with `''.join(map(str, digits))`. str(True) is 'True', so the coefficient string holds letters:
+    _pydecimal.Decimal((0, (True,), 0))     -> Decimal('True')
+    _pydecimal.Decimal((0, (1, False), 0))  -> Decimal('1False')
+    _decimal.Decimal((0, (True,), 0))       -> Decimal('1')
+    _decimal.Decimal((0, (1, False), 0))    -> Decimal('10')
+  The object is corrupt: every later use reads letters as digits, for instance
+  int(_pydecimal.Decimal((0, (True,), 0))) raises ValueError from int('True'), and
+  _pydecimal.Context(prec=3).create_decimal((0, (True,), 0)) prints 'T.ruE+3'.
+  Second difference in the same branch: for an exponent of 'F' the coefficient is not looked at,
+  so _pydecimal.Decimal((0, None, 'F')) and Decimal((0, (10,), 'F')) return Infinity, while
+  _decimal raises ValueError (its source comment says it accepts "any well-formed coefficient
+  for compatibility with decimal.py").
+likelihood: |
+  Very low. Needs bools in a digit tuple, for example digits produced by a comparison such as
+  tuple(c > 0 for c in bits), passed to Decimal on a build or program using _pydecimal.
+maybe_intended: |
+  The corrupt bool case cannot be intended: the check exists to reject non-digits, and the result
+  breaks the class invariant that _int is a digit string. A one-line fix is possible, so a
+  maintainer would plausibly accept it, though with low urgency. The infinity case is a smaller
+  matter; the C comment shows the difference is known.
+reproducer: |
+  import _pydecimal as P, _decimal as C
+  def show(f):
+      try:
+          return repr(f())
+      except Exception as e:
+          return type(e).__name__
+  p = show(lambda: P.Decimal((0, (True,), 0)))
+  c = show(lambda: C.Decimal((0, (True,), 0)))
+  p2 = show(lambda: P.Decimal((0, (1, False), 0)))
+  c2 = show(lambda: C.Decimal((0, (1, False), 0)))
+  p3 = show(lambda: int(P.Decimal((0, (True,), 0))))
+  c3 = show(lambda: int(C.Decimal((0, (True,), 0))))
+  p4 = show(lambda: P.Decimal((0, None, 'F')))
+  c4 = show(lambda: C.Decimal((0, None, 'F')))
+  print('(0,(True,),0)    _pydecimal:', p, ' _decimal:', c)
+  print('(0,(1,False),0)  _pydecimal:', p2, ' _decimal:', c2)
+  print('int(...)         _pydecimal:', p3, ' _decimal:', c3)
+  print("(0,None,'F')     _pydecimal:", p4, ' _decimal:', c4)
+  if p == "Decimal('True')" and c == "Decimal('1')" and p2 == "Decimal('1False')" and c2 == "Decimal('10')" \
+          and p3 == 'ValueError' and c3 == '1' and p4 == "Decimal('Infinity')" and c4 == 'ValueError':
+      print('REPRODUCED decimal-pydecimal-tuple-bool-digits')
+expected: |
+  Decimal('1') and Decimal('10') as in _decimal, or a ValueError in both twins; never an object
+  whose coefficient is not a digit string.
+promised_by: |
+  Doc/library/decimal.rst:395-397: a tuple has "three components, a sign (0 for positive or 1 for
+  negative), a tuple of digits, and an integer exponent". Class invariant, and the C twin.
+cause: |
+  Lib/_pydecimal.py:571 `if isinstance(digit, int) and 0 <= digit <= 9:` admits bool; :581 and :586
+  `''.join(map(str, digits ...))` then use str(). :562-566 skip the coefficient for 'F'. The C code
+  reads the value with PyLong_AsLong (Modules/_decimal/_decimal.c:2761) and validates the
+  coefficient for infinities too (:2770-2774). Same lines on main (the check is at :663).
+possible_fix: |
+  Convert before storing: `digits.append(int(digit))`, or join with `'%d' % d`. Whether to validate
+  value[1] for 'F' is a separate choice; matching _decimal would change accepted inputs.
+tested:
+  python3 (3.14.7): NOT YET RUN
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): NOT YET RUN
+duplicates:
+  issues: []
+  queries: []
+  bugforge: "no decimal entries in vendor/bugforge-results/README.md"
+lean:
+  property: PyLean.Decimal.TupleTwinsAgree
+  theorem: PyLean.Decimal.tupleTwinsAgree_refuted

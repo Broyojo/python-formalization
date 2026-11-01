@@ -156,7 +156,7 @@ theorem tupleTwinsAgree_refuted : ¬TupleTwinsAgree := by
 
 /-- For both libmpdec versions and every format spec not ending in the C-only,
 deprecated type `N`, if `format(_decimal.Decimal(x), spec)` accepts the spec
-then so does `_pydecimal` (and so do `float` and `int`). -/
+then so does `_pydecimal`. -/
 def FormatCAcceptsOnlyPy : Prop :=
   ∀ (lib : LibMpdec) (s : List Nat), s.getLast? ≠ some (cp 'N') →
     cFormat lib s = .accepted → pyFormat s = .accepted

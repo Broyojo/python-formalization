@@ -39,7 +39,7 @@ def entries : List Entry := [
     source := "twin agreement; decimal docs: 'user alterable precision ... which can be as large as needed for a given problem' (Doc/library/decimal.rst:63-65)"
     status := .refuted, prop := ``ParsePyAcceptsC, thm := some ``parsePyAcceptsC_refuted
     bug := some "decimal-pydecimal-int-max-str-digits"
-    notes := "Decimal('1'*4301): _pydecimal stores str(int(intpart+fracpart)), and int() refuses more than 4300 digits (leading zeros included), so it raises ValueError." },
+    notes := "Decimal('1'*4301): _pydecimal stores str(int(intpart+fracpart)), and int() refuses more than 4300 digits (leading zeros included), so it raises ValueError. Known and declined upstream: python/cpython#96589, closed as not planned." },
   { id := "decimal-str-roundtrip-py", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal.__str__", "Decimal.__new__ (str)"]
     statement := "For every decimal d within the C limits, Decimal(str(d)) == d in _pydecimal, with the same sign, coefficient and exponent."
@@ -67,7 +67,7 @@ def entries : List Entry := [
     source := "invariant; twin agreement (_decimal rounds the product to the context precision)"
     status := .refuted, prop := ``MulNoValueErrorPy, thm := some ``mulNoValueErrorPy_refuted
     bug := some "decimal-pydecimal-int-max-str-digits"
-    notes := "Decimal('1'*2200) * Decimal('1'*2200) at the default precision 28: __mul__ formats the exact 4400-digit product with str() before rounding. + and - fail the same way through _WorkRep and _normalize." },
+    notes := "Decimal('1'*2200) * Decimal('1'*2200) at the default precision 28: __mul__ formats the exact 4400-digit product with str() before rounding. + and - fail the same way through _WorkRep and _normalize. Both operands are under the limit here, but the root cause is the one declined in python/cpython#96589." },
   { id := "decimal-tuple-twins-agree", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal.__new__ (tuple)", "dectuple_as_str"]
     statement := "For every tuple (sign, digits, exp) with |exp| <= 10**17 and at most 10**17 digits, if _pydecimal.Decimal(t) succeeds then _decimal.Decimal(t) succeeds and str() of both agree."
@@ -84,7 +84,7 @@ def entries : List Entry := [
   { id := "decimal-format-c-accepts-only-py", pyFile := "Modules/_decimal/_decimal.c"
     pyFns := ["dec_format", "mpd_parse_fmt_str"]
     statement := "For every format spec not ending in the C-only deprecated type 'N', if format(_decimal.Decimal(x), spec) accepts the spec, so does _pydecimal."
-    source := "twin agreement; format spec mini-language (float and int reject the same specs)"
+    source := "twin agreement; format spec mini-language (int, str and Fraction reject these specs; float rejects all but a single trailing NUL)"
     status := .refuted, prop := ``FormatCAcceptsOnlyPy, thm := some ``formatCAcceptsOnlyPy_refuted
     bug := some "decimal-c-format-spec-nul"
     notes := "format(Decimal('1234.5'), '10\\x00xyz') == '    1234.5': dec_format passes the UTF-8 buffer to libmpdec as a C string, which ends at the embedded NUL." },

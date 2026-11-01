@@ -1,0 +1,69 @@
+id: decimal-c-format-spec-nul
+title: "_decimal's Decimal.__format__ ignores everything after an embedded NUL in the format spec"
+priority: P3
+kind: wrong-result
+module: decimal
+files: [Modules/_decimal/_decimal.c]
+functions: ["dec_format", "mpd_parse_fmt_str"]
+summary: |
+  dec_format hands the spec's UTF-8 buffer to libmpdec as a NUL-terminated C string and has the
+  length in hand but does not check it, so a spec with an embedded NUL is cut there and the rest
+  is never validated. An invalid spec is accepted and formatted with its prefix:
+    format(_decimal.Decimal('1234.5'), '10\x00xyz')   -> '    1234.5'
+    format(_decimal.Decimal('1234.5'), '.2f\x00')     -> '1234.50'
+    format(_pydecimal.Decimal('1234.5'), '10\x00xyz') -> ValueError
+    format(1234.5, '10\x00xyz'), format(1234, '10\x00xyz'), format(Fraction(3, 2), '10\x00xyz') -> ValueError
+  dec_format does know about NUL: it special-cases a NUL fill character at position 0, but only
+  there.
+  A neighbouring, separate oddity: float and complex accept exactly one trailing NUL, because
+  Python/formatter_unicode.c:323 reads it as the type character and :341 treats '\0' as "no type".
+  So format(1234.5, '10\x00') works there, while int, str, Fraction and _pydecimal raise
+  ValueError. _decimal differs in discarding any tail after the NUL, of any length, so the specs in
+  the reproducer are the ones every other numeric type rejects.
+likelihood: |
+  Low. Specs are usually literals. It matters where a spec comes from data, since validating it by
+  a trial format() passes on _decimal, and a NUL can hide trailing text from the check.
+maybe_intended: |
+  Not intended: the NUL-fill special case at _decimal.c:3575-3584 shows NUL was considered, and the
+  fallback path through _pydecimal already rejects these specs when libmpdec's parser fails first.
+  Same class as other embedded-NUL fixes in CPython's C code.
+reproducer: |
+  import _decimal as C, _pydecimal as P
+  def fmt(x, spec):
+      try:
+          return repr(format(x, spec))
+      except ValueError:
+          return 'ValueError'
+  hits = 0
+  for spec, want in [('10\x00xyz', "'    1234.5'"), ('.2f\x00', "'1234.50'"), ('x>10\x00z', "'xxxx1234.5'")]:
+      c = fmt(C.Decimal('1234.5'), spec)
+      p = fmt(P.Decimal('1234.5'), spec)
+      f = fmt(1234.5, spec)
+      print(ascii(spec), '_decimal:', c, ' _pydecimal:', p, ' float:', f)
+      hits += (c == want and p == 'ValueError' and f == 'ValueError')
+  if hits == 3:
+      print('REPRODUCED decimal-c-format-spec-nul')
+expected: |
+  ValueError ("invalid format string"), as from _pydecimal, and from float, int and Fraction for
+  these specs.
+promised_by: |
+  Twin agreement, and the format specification mini-language, which has no place for a NUL
+  outside the fill position.
+cause: |
+  Modules/_decimal/_decimal.c:3562 gets (fmt, size) from PyUnicode_AsUTF8AndSize; :3592 calls
+  mpd_parse_fmt_str(&spec, fmt, ...), which walks to the first NUL (libmpdec/io.c:910 `if (*cp !=
+  '\0') return 0;` is its only end check). Same logic on main at _decimal.c:3830 and :3854. It
+  reproduces with bundled libmpdec 2.5.1 and with system libmpdec 4.0.1.
+possible_fix: |
+  After the NUL-fill replacement, reject `memchr(fmt, '\0', size)` hits by taking the existing
+  pydec_format path, which reports ValueError for the complete string.
+tested:
+  python3 (3.14.7): NOT YET RUN
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): NOT YET RUN
+duplicates:
+  issues: []
+  queries: []
+  bugforge: "no decimal entries in vendor/bugforge-results/README.md"
+lean:
+  property: PyLean.Decimal.FormatCAcceptsOnlyPy
+  theorem: PyLean.Decimal.formatCAcceptsOnlyPy_refuted
