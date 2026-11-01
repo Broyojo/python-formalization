@@ -29,7 +29,7 @@ theorem roundingModesCorrect_proven : RoundingModesCorrect :=
 /-- For every context, rounding argument and finite value `c·10^e` with
 `e < 0`, `to_integral_value` returns the integer `roundSpec` prescribes (at
 exponent 0) and leaves the flags untouched (docs: "without signaling
-Inexact or Rounded"), or raises the int/str-limit `ValueError`; values with
+Inexact or Rounded", Doc/library/decimal.rst:937), or raises the int/str-limit `ValueError`; values with
 `e ≥ 0` are returned unchanged. -/
 def ToIntegralValueCorrect : Prop :=
   ∀ (ctx : Ctx) (r : Option Rounding) (neg : Bool) (c : Nat) (e : Int) (fl : List Signal),

@@ -17,7 +17,7 @@ Two implementations are modelled side by side:
 For every value either twin can build from a well-formed input, both carry
 the same information, captured by `Dec`. `_pydecimal`'s `_int` is the decimal
 spelling of `Dec.fin`'s `coeff` (`str(int(...))` everywhere it is built,
-_pydecimal.py:503, :519, :550-553), except when a constructor is fed digits
+_pydecimal.py:504, :530, :545), except when a constructor is fed digits
 that are not plain ints; that case is modelled separately in `Tuple.lean`.
 -/
 

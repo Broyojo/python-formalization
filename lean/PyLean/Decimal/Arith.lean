@@ -496,7 +496,9 @@ def cHash : Dec → Py (Option Int)
   | .inf neg => .ok (some (if neg then -hashInf else hashInf))
   | .fin neg co e => .ok (some (hashFinite neg co e))
 
-/-- `as_integer_ratio`, _pydecimal.py:929-977. -/
+/-- `as_integer_ratio`, _pydecimal.py:929-977. The source strips factors of 5 and
+of 2 from `n` and `10^-exp` in turn (:960-973), which yields the fraction in
+lowest terms; the model writes that fraction with a gcd. -/
 def pyRatio : Dec → Py (Int × Int)
   | .nan _ _ _ => .error (.valueError "cannot convert NaN to integer ratio")
   | .inf _ => .error (.overflowError "cannot convert Infinity to integer ratio")
@@ -510,7 +512,7 @@ def pyRatio : Dec → Py (Int × Int)
         (co / g, 10 ^ e.natAbs / g)
     return (if neg then -(n : Int) else n, d)
 
-/-- `_decimal`'s `as_integer_ratio` (_decimal.c:3799-3870): numerator and
+/-- `_decimal`'s `as_integer_ratio` (`dec_as_integer_ratio`, _decimal.c:3770-3870): numerator and
 `10^-exp` reduced by their gcd, via libmpdec. -/
 def cRatio : Dec → Py (Int × Int)
   | .nan _ _ _ => .error (.valueError "cannot convert NaN to integer ratio")
@@ -542,12 +544,12 @@ def cToInt (m : Rounding) : Dec → Py Int
   | .inf _ => .error (.overflowError "cannot convert Infinity to integer")
   | .fin neg co e => .ok (roundToIntExact m neg co e)
 
-/-- `_pydecimal.Decimal(int)`, _pydecimal.py:516-524: `str(abs(value))`. -/
+/-- `_pydecimal.Decimal(int)`, _pydecimal.py:523-532: `str(abs(value))`. -/
 def pyFromInt (n : Int) : Py Dec := do
   strLimit n.natAbs
   return .fin (n < 0) n.natAbs 0
 
-/-- `_decimal.Decimal(int)`, `dec_from_long` (_decimal.c:2360-2404),
+/-- `_decimal.Decimal(int)`, `dec_from_long` (_decimal.c:2361-2404),
 importing the digits with `mpd_qimport_u32`. -/
 def cFromInt (n : Int) : Py Dec := .ok (.fin (n < 0) n.natAbs 0)
 

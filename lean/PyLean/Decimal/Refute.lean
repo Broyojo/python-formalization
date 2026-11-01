@@ -154,29 +154,31 @@ theorem tupleTwinsAgree_refuted : ¬TupleTwinsAgree := by
 
 /-! ## Format specifications -/
 
-/-- For every format spec not ending in the C-only, deprecated type `N`, if
-`format(_decimal.Decimal(x), spec)` accepts the spec then so does
-`_pydecimal` (and so do `float` and `int`). -/
+/-- For both libmpdec versions and every format spec not ending in the C-only,
+deprecated type `N`, if `format(_decimal.Decimal(x), spec)` accepts the spec
+then so does `_pydecimal` (and so do `float` and `int`). -/
 def FormatCAcceptsOnlyPy : Prop :=
-  ∀ s : List Nat, s.getLast? ≠ some (cp 'N') → cFormat s = .accepted → pyFormat s = .accepted
+  ∀ (lib : LibMpdec) (s : List Nat), s.getLast? ≠ some (cp 'N') →
+    cFormat lib s = .accepted → pyFormat s = .accepted
 
 /-- `format(Decimal('1234.5'), '10\x00xyz')`: `_decimal` hands the spec to
 libmpdec as a C string, which ends at the NUL, so it formats with width 10;
 `_pydecimal` rejects the spec. -/
 theorem formatCAcceptsOnlyPy_refuted : ¬FormatCAcceptsOnlyPy := by
   intro h
-  have := h [0x31, 0x30, 0, 0x78, 0x79, 0x7A] (by decide) (by decide)
+  have := h .bundled251 [0x31, 0x30, 0, 0x78, 0x79, 0x7A] (by decide) (by decide)
   revert this
   decide
 
 /-- `format(_decimal.Decimal(x), spec)` never raises `UnicodeEncodeError`. -/
-def FormatNoEncodeError : Prop := ∀ s : List Nat, cFormat s ≠ .unicodeEncodeError
+def FormatNoEncodeError : Prop :=
+  ∀ (lib : LibMpdec) (s : List Nat), cFormat lib s ≠ .unicodeEncodeError
 
 /-- `format(Decimal('1.5'), '\ud800<5')`: a lone surrogate as the fill
 character (accepted by `_pydecimal`, `float`, `int` and `Fraction`) makes
 `PyUnicode_AsUTF8AndSize` fail. -/
 theorem formatNoEncodeError_refuted : ¬FormatNoEncodeError := by
   intro h
-  exact h [0xD800, 0x3C, 0x35] (by decide)
+  exact h .bundled251 [0xD800, 0x3C, 0x35] (by decide)
 
 end PyLean.Decimal

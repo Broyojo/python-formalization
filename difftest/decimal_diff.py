@@ -308,7 +308,8 @@ def gen_case1(rng):
         return {"mod": "decimal", "fn": rng.choice(["fromint_py", "fromint_c"]), "n": hex(n)[2:],
                 "neg": rng.random() < 0.5}
     if k < 0.58:
-        return {"mod": "decimal", "fn": rng.choice(["fmt_py", "fmt_c"]), "spec": cps(gen_spec(rng))}
+        return {"mod": "decimal", "fn": rng.choice(["fmt_py", "fmt_c"]), "spec": cps(gen_spec(rng)),
+                "libmpdec": C.__libmpdec_version__.split(".")[0]}
     if k < 0.62:
         return {"mod": "decimal", "fn": rng.choice(["compare_total", "copy_sign"]),
                 "impl": rng.choice(["py", "c"]),

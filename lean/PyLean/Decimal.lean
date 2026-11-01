@@ -15,9 +15,10 @@ tuple constructors, `__format__` spec handling, `hash`, integer conversions,
 against both twins by `difftest/decimal_diff.py`. Division, sqrt, exp, ln,
 log10, pow and floats are out of scope.
 
-The interpreters under test link the system libmpdec 4.0.1
-(`decimal.__libmpdec_version__`); its string parser and finalization are
-the bundled 2.5.1 code, its format-spec parser adds `z` (see Format.lean).
+The difftest and reproducers run on interpreters built with the bundled
+libmpdec 2.5.1, whose source these line numbers cite. A build against system
+libmpdec 4.0.1 (Homebrew) differs only in the format-spec parser, which also
+takes `z`; Format.lean models both.
 -/
 
 namespace PyLean.Decimal
@@ -35,7 +36,7 @@ def entries : List Entry := [
   { id := "decimal-parse-py-accepts-c", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal.__new__ (str)"]
     statement := "For every string s, if _decimal.Decimal(s) returns a value, _pydecimal.Decimal(s) returns the same value."
-    source := "twin agreement; Decimal docs (arbitrary precision, no digit limit on the constructor)"
+    source := "twin agreement; decimal docs: 'user alterable precision ... which can be as large as needed for a given problem' (Doc/library/decimal.rst:63-65)"
     status := .refuted, prop := ``ParsePyAcceptsC, thm := some ``parsePyAcceptsC_refuted
     bug := some "decimal-pydecimal-int-max-str-digits"
     notes := "Decimal('1'*4301): _pydecimal stores str(int(intpart+fracpart)), and int() refuses more than 4300 digits (leading zeros included), so it raises ValueError." },
@@ -63,14 +64,14 @@ def entries : List Entry := [
   { id := "decimal-mul-no-valueerror-py", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal.__mul__", "Decimal.__add__", "_WorkRep", "_normalize"]
     statement := "Under every context, _pydecimal's * returns a value or raises a trapped decimal signal; it never raises ValueError."
-    source := "invariant (Decimal docs: arithmetic results are rounded to the context precision; the signals are the documented error channel)"
+    source := "invariant; twin agreement (_decimal rounds the product to the context precision)"
     status := .refuted, prop := ``MulNoValueErrorPy, thm := some ``mulNoValueErrorPy_refuted
     bug := some "decimal-pydecimal-int-max-str-digits"
     notes := "Decimal('1'*2200) * Decimal('1'*2200) at the default precision 28: __mul__ formats the exact 4400-digit product with str() before rounding. + and - fail the same way through _WorkRep and _normalize." },
   { id := "decimal-tuple-twins-agree", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal.__new__ (tuple)", "dectuple_as_str"]
     statement := "For every tuple (sign, digits, exp) with |exp| <= 10**17 and at most 10**17 digits, if _pydecimal.Decimal(t) succeeds then _decimal.Decimal(t) succeeds and str() of both agree."
-    source := "twin agreement; Decimal docs ('a tuple ... a tuple of digits')"
+    source := "twin agreement; Decimal docs: 'three components, a sign ..., a tuple of digits, and an integer exponent' (Doc/library/decimal.rst:395-397)"
     status := .refuted, prop := ``TupleTwinsAgree, thm := some ``tupleTwinsAgree_refuted
     bug := some "decimal-pydecimal-tuple-bool-digits"
     notes := "Decimal((0, (True,), 0)) is Decimal('True') in _pydecimal (the bool passes isinstance(digit, int) and is joined with str()) and Decimal('1') in _decimal. Also Decimal((0, None, 'F')): _pydecimal ignores the coefficient of an infinity, _decimal requires a tuple of digits." },
@@ -108,7 +109,7 @@ def entries : List Entry := [
     source := "to_integral_value docstring ('without raising inexact, rounded'), decimal docs"
     status := .proven, prop := ``ToIntegralValueCorrect, thm := some ``toIntegralValueCorrect_proven },
   { id := "decimal-int-conversions-c", pyFile := "Modules/_decimal/_decimal.c"
-    pyFns := ["dec_as_long", "PyDec_Round", "dec_floor", "dec_ceil", "PyDec_AsLong"]
+    pyFns := ["dec_as_long", "PyDec_Round", "dec_floor", "dec_ceil", "dec_trunc"]
     statement := "For every finite decimal and rounding mode, _decimal's int()/math.floor/math.ceil/round() return the signed integer whose magnitude the mode prescribes (exact for exponents >= 0)."
     source := "__floor__/__ceil__/__round__/__int__ docs"
     status := .proven, prop := ``IntConversionsC, thm := some ``intConversionsC_proven },
@@ -126,7 +127,7 @@ def entries : List Entry := [
   { id := "decimal-compare-total-order", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal.compare_total", "Decimal._cmp"]
     statement := "For all decimals a, b (NaNs, infinities, signed zeros, any exponents), compare_total(b, a) == -compare_total(a, b), and compare_total(a, b) == 0 iff a and b are the same representation."
-    source := "compare_total docs ('a total ordering ... on their abstract representation')"
+    source := "compare_total docs: 'the result gives a total ordering on Decimal instances' (Doc/library/decimal.rst:529-530)"
     status := .proven, prop := ``CompareTotalOrder, thm := some ``compareTotalOrder_proven }
 ]
 

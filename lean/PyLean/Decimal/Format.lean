@@ -7,8 +7,8 @@ A specification is a list of code points (`List Nat`), so that lone
 surrogates, which a Python `str` may contain but a Lean `Char` may not, are
 representable.
 
-**`_pydecimal`** (`_parse_format_specifier`, _pydecimal.py:6130-6243): the
-regex at :6115-6128
+**`_pydecimal`** (`_parse_format_specifier`, _pydecimal.py:6161-6242): the
+regex at :6131-6149
 
 ```
 \A (?:(?P<fill>.)?(?P<align>[<>=^]))? (?P<sign>[-+ ])? (?P<no_neg_0>z)? (?P<alt>\#)?
@@ -17,25 +17,30 @@ regex at :6115-6128
    (?P<type>[eEfFgGn%])? \z          (re.VERBOSE | re.DOTALL)
 ```
 
-followed by the checks at :6187-6236 (`0` with an explicit fill or
-alignment, `n` with a thousands separator, and `int()` on the width and the
-precision, which applies the 4300-digit limit). The regex has a unique
-match: each optional piece is followed by pieces that cannot start with the
-characters it consumes, except `(?P<zeropad>0)?(?P<minimumwidth>\d+)?`,
-where both readings leave the same remainder.
+followed by the checks at :6192-6199 (`0` with an explicit fill or alignment),
+:6210-6212 (`int()` on the width and the precision, which applies the
+4300-digit limit) and :6227-6229 (`n` with a thousands separator). The regex
+has a unique match: each optional piece is followed by pieces that cannot
+start with the characters it consumes, except
+`(?P<zeropad>0)?(?P<minimumwidth>\d+)?`, where both readings leave the same
+remainder.
 
-**`_decimal`** (`dec_format`, _decimal.c:3536-3679): the `str` is encoded
-with `PyUnicode_AsUTF8AndSize` (which fails on a lone surrogate), a NUL
-fill character in position 0 is replaced by `'_'`, and the *C string* is
-handed to `mpd_parse_fmt_str`, which stops at the first NUL byte. The
-interpreters under test (Homebrew 3.14.7 and the main build) link the system
-libmpdec 4.0.1 (`decimal.__libmpdec_version__`), not the bundled 2.5.1; its
-`mpd_parse_fmt_str` (mpdecimal-4.0.1 libmpdec/io.c:789-915) is the bundled
-one (Modules/_decimal/libmpdec/io.c:796-915) plus an optional `z` after the
-sign. Line numbers below are the bundled copy's. If that parser rejects the spec, `pydec_format` (:3499-3534)
-falls back to `_pydecimal`'s `__format__` on the full `str`. A spec accepted
-by `mpd_parse_fmt_str` is rejected later only if its width exceeds
-`MPD_MAX_PREC` (`mpd_qformat_spec`, io.c:1268-1271).
+**`_decimal`** (`dec_format`, _decimal.c:3538-3679): the `str` is encoded
+with `PyUnicode_AsUTF8AndSize` (:3562, which fails on a lone surrogate), a NUL
+fill character in position 0 is replaced by `'_'` (:3575-3584), and the *C
+string* is handed to `mpd_parse_fmt_str`, which stops at the first NUL byte.
+If that parser rejects the spec, `pydec_format` (:3500-3534) falls back to
+`_pydecimal`'s `__format__` on the full `str`. A spec accepted by
+`mpd_parse_fmt_str` is rejected later only if its width exceeds `MPD_MAX_PREC`
+(`mpd_qformat_spec`, io.c:1268-1271).
+
+Which `mpd_parse_fmt_str` runs depends on the build. The bundled libmpdec
+2.5.1 (Modules/_decimal/libmpdec/io.c:796-915, the line numbers cited here)
+does not know `z`, so `z` specs reach the fallback. libmpdec 4.0.1, which a
+`--with-system-libmpdec` build such as Homebrew's links, is the same parser
+plus an optional `z` after the sign (mpdecimal-4.0.1 libmpdec/io.c:835-839).
+The two differ on, for instance, `'zN'`. `LibMpdec` selects the parser, and
+the differential test reads it from `decimal.__libmpdec_version__`.
 -/
 
 namespace PyLean.Decimal
@@ -132,9 +137,15 @@ def strtollDigits (ds : List Nat) : Option Nat :=
   let v : Nat := ds.foldl (fun acc c => acc * 10 + (c - 0x30)) 0
   if (v : Int) > mpdSsizeMax then none else some v
 
+/-- Which libmpdec `_decimal` was built with. -/
+inductive LibMpdec where
+  | bundled251
+  | system401
+  deriving Repr, DecidableEq, Inhabited
+
 /-- `mpd_parse_fmt_str` on the code points of the C string (already cut at
 its first NUL): `some width` on success. -/
-def mpdParseFmt (s : List Nat) : Option Nat := do
+def mpdParseFmt (lib : LibMpdec) (s : List Nat) : Option Nat := do
   -- fill (io.c:813-834)
   let (haveAlign, r) := match s with
     | _ :: a :: r => if isAlignCp a then (true, r)
@@ -147,9 +158,9 @@ def mpdParseFmt (s : List Nat) : Option Nat := do
   let r := match r with
     | c :: r' => if c == cp '+' || c == cp '-' || c == cp ' ' then r' else r
     | [] => []
-  -- coerce to positive zero (libmpdec 4.0.1 io.c:835-839)
+  -- coerce to positive zero (libmpdec 4.0.1 only, its io.c:835-839)
   let r := match r with
-    | c :: r' => if c == cp 'z' then r' else r
+    | c :: r' => if lib == .system401 && c == cp 'z' then r' else r
     | [] => []
   -- zero padding (:842-851)
   let r ← match r with
@@ -197,7 +208,7 @@ def mpdParseFmt (s : List Nat) : Option Nat := do
 def isSurrogate (c : Nat) : Bool := 0xD800 ≤ c && c ≤ 0xDFFF
 
 /-- `format(_decimal.Decimal(x), spec)` for a finite `x`: the spec decides. -/
-def cFormat (s : List Nat) : FmtOutcome :=
+def cFormat (lib : LibMpdec) (s : List Nat) : FmtOutcome :=
   if s.any isSurrogate then .unicodeEncodeError
   else
     -- NUL fill character replaced by '_' (:3575-3584); the C string ends at
@@ -205,7 +216,7 @@ def cFormat (s : List Nat) : FmtOutcome :=
     let s' := match s with
       | 0 :: r => cp '_' :: r
       | r => r
-    match mpdParseFmt (s'.takeWhile (· ≠ 0)) with
+    match mpdParseFmt lib (s'.takeWhile (· ≠ 0)) with
     | some w => if (w : Int) > mpdMaxPrec then .valueError else .accepted
     | none => pyFormat s
 

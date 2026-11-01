@@ -152,7 +152,9 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "fromint_py" => return encPy encDec (pyFromInt (Int.ofNat (natOfHex (← getStr j "n")) * (if ← getBool j "neg" then -1 else 1)))
   | "fromint_c" => return encPy encDec (cFromInt (Int.ofNat (natOfHex (← getStr j "n")) * (if ← getBool j "neg" then -1 else 1)))
   | "fmt_py" => return Json.mkObj [("ok", encOutcome (pyFormat (← getCps j "spec")))]
-  | "fmt_c" => return Json.mkObj [("ok", encOutcome (cFormat (← getCps j "spec")))]
+  | "fmt_c" =>
+    let lib : LibMpdec := if (← getStr j "libmpdec") == "2" then .bundled251 else .system401
+    return Json.mkObj [("ok", encOutcome (cFormat lib (← getCps j "spec")))]
   | "op" =>
     let c ← getCtx j
     let a ← getDec j "a"

@@ -24,11 +24,11 @@ non-ASCII character matches a letter of this pattern (checked exhaustively
 against `re` on 3.14.7). The groups then go through `int()`, which applies
 the 4300-digit limit.
 
-**`_decimal`** (_decimal.c:2276-2293 → 2222-2250): `numeric_as_ascii(u, 1, 1)`
-(:2143-2195) strips Unicode whitespace, drops `_`, keeps ASCII, maps other
+**`_decimal`** (_decimal.c:2276-2293 → 2224-2250): `numeric_as_ascii(u, 1, 1)`
+(:2144-2195) strips Unicode whitespace, drops `_`, keeps ASCII, maps other
 whitespace to `' '` and `Nd` digits to ASCII, and rejects anything else; then
 `mpd_qset_string` (libmpdec/io.c:200-328) under `mpd_maxcontext`, and any
-Inexact/Rounded/Clamped becomes InvalidOperation (:2240-2244).
+Inexact/Rounded/Clamped becomes InvalidOperation (:2241-2244).
 -/
 
 namespace PyLean.Decimal
@@ -126,7 +126,7 @@ def pyParse (s : List Char) : Py Dec :=
 
 /-! ## The C twin -/
 
-/-- `numeric_as_ascii(u, strip_ws=1, ignore_underscores=1)`, _decimal.c:2143-2195.
+/-- `numeric_as_ascii(u, strip_ws=1, ignore_underscores=1)`, _decimal.c:2144-2195.
 An invalid character makes the whole result the empty string. -/
 def numericAsAscii (s : List Char) : List Char :=
   let rec go (acc : List Char) : List Char → Option (List Char)
@@ -270,7 +270,7 @@ def mpdSetString (s0 : List Char) : MpdParse :=
         let cds := ((s.drop coeff).take (endc - coeff)).filter (· != '.')
         .fin neg (digitsValue cds) digits e3
 
-/-- `PyDecType_FromUnicodeExactWS` (_decimal.c:2276-2293 and 2222-2250), with
+/-- `PyDecType_FromUnicodeExactWS` (_decimal.c:2276-2293 and 2224-2250), with
 the default context (InvalidOperation trapped). -/
 def cParse (s : List Char) : Py Dec :=
   match mpdSetString (numericAsAscii s) with
