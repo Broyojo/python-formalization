@@ -10,8 +10,12 @@ namespace PyLean.UnicodeObj
 
 open Tables
 
-/-- Element `i` of a packed table with `w`-bit elements. -/
+/-- Element `i` of a packed literal with `w`-bit elements. -/
 def pick (table w i : Nat) : Nat := (table >>> (w * i)) &&& (2 ^ w - 1)
+
+/-- Element `i` of a chunked table: `bits` is the log2 of the chunk size. -/
+def pickChunked (chunk : Nat → Nat) (bits w i : Nat) : Nat :=
+  pick (chunk (i >>> bits)) w (i &&& (2 ^ bits - 1))
 
 /-- Sign extension of a 32-bit field (`const int`). -/
 def int32 (v : Nat) : Int := if v < 2 ^ 31 then v else (v : Int) - 2 ^ 32
@@ -27,7 +31,7 @@ structure TypeRecord where
   deriving Repr, DecidableEq
 
 def recordAt (i : Nat) : TypeRecord :=
-  let r := pick typeRecords 128 i
+  let r := pickChunked typeRecordsChunk 4 128 i
   { upper := int32 (r &&& 0xFFFFFFFF)
     lower := int32 ((r >>> 32) &&& 0xFFFFFFFF)
     title := int32 ((r >>> 64) &&& 0xFFFFFFFF)
@@ -40,8 +44,8 @@ def gettyperecord (code : Nat) : TypeRecord :=
   let index :=
     if code ≥ 0x110000 then 0
     else
-      let index := pick index1 16 (code >>> shift)
-      pick index2 16 ((index <<< shift) + (code &&& ((1 <<< shift) - 1)))
+      let index := pickChunked index1Chunk 6 16 (code >>> shift)
+      pickChunked index2Chunk 6 16 ((index <<< shift) + (code &&& ((1 <<< shift) - 1)))
   recordAt index
 
 /-! Masks, unicodectype.c:13-25. -/
@@ -64,7 +68,7 @@ def hasFlag (ctype : TypeRecord) (mask : Nat) : Bool := (ctype.flags &&& mask) !
 /-- `ch + delta` in `Py_UCS4` (unsigned 32-bit wraparound). -/
 def addUCS4 (ch : Nat) (delta : Int) : Nat := (((ch : Int) + delta) % (2 ^ 32)).toNat
 
-def extendedCaseAt (i : Nat) : Nat := pick extendedCase 32 i
+def extendedCaseAt (i : Nat) : Nat := pickChunked extendedCaseChunk 5 32 i
 
 /-- `_PyUnicode_ToTitlecase`, unicodectype.c:62-69. -/
 def toTitlecase (ch : Nat) : Nat :=

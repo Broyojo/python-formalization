@@ -57,13 +57,14 @@ def stringlibRepr (s : Str) (quote : Nat) : Str :=
 the `osize` and `maxch` the first pass computed, which the C code uses to allocate
 the output. The `OverflowError` branch needs an input of about `PY_SSIZE_T_MAX / 10`
 characters, which no allocation can provide. -/
-def unicodeReprFull (s : Str) : Str × Nat × Nat :=
-  let a := reprScan s
+def reprFinish (s : Str) (a : ReprScan) : Str × Nat × Nat :=
   let quote := reprQuote a.squote a.dquote
   let changed := a.osize != s.length || a.squote != 0
   let osize := (if a.squote ≠ 0 ∧ a.dquote ≠ 0 then a.osize + a.squote else a.osize) + 2
   let out := if !changed then [quote] ++ s ++ [quote] else stringlibRepr s quote
   (out, osize, a.maxch)
+
+def unicodeReprFull (s : Str) : Str × Nat × Nat := reprFinish s (reprScan s)
 
 /-- `repr(s)`. -/
 def unicodeRepr (s : Str) : Str := (unicodeReprFull s).1

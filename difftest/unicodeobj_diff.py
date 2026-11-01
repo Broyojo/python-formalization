@@ -61,6 +61,277 @@ def cps_of(s):
 
 # ==== text slice (fn names text_*) ====
 
+import ctypes
+import subprocess
+import textwrap
+import unicodedata
+
+import _sre
+
+TEXT_ALPH = [65, 90, 97, 122, 48, 57, 95, 32, 39, 34, 92, 46, 45, 9, 10, 13, 11, 12, 0x1c, 0x1f,
+             0x7f, 0x80, 0x85, 0xa0, 0xaa, 0xad, 0xb5, 0xb7, 0xbd, 0xdf, 0xe9, 0xff, 0x130, 0x131,
+             0x149, 0x17f, 0x1c4, 0x1c5, 0x1c6, 0x1f0, 0x2b0, 0x2bc, 0x300, 0x301, 0x345, 0x37a,
+             0x390, 0x391, 0x3a3, 0x3c2, 0x3c3, 0x2019, 0x2028, 0x2029, 0x3000, 0x660, 0x663,
+             0xbf0, 0x1e9e, 0x1f80, 0x1f88, 0x1fb3, 0x1fb7, 0x2160, 0x2170, 0x2460, 0xfb00,
+             0xfb03, 0xd800, 0xdfff, 0xfffe, 0xffff, 0x10000, 0x10400, 0x10428, 0x1d7ce, 0x10ffff]
+CASE_OPS = ["upper", "lower", "title", "capitalize", "casefold", "swapcase"]
+IS_OPS = ["isascii", "islower", "isupper", "istitle", "isspace", "isalpha", "isalnum",
+          "isdecimal", "isdigit", "isnumeric", "isprintable", "isidentifier"]
+BYTE_OPS = ["isspace", "isalpha", "isalnum", "isdigit", "isascii", "islower", "isupper",
+            "istitle", "lower", "upper", "title", "capitalize", "swapcase"]
+SWEEP_BLOCK = 0x1000
+SWEEP_PRIME = 2 ** 61 - 1
+
+
+def text_str(rng, maxlen=8):
+    n = rng.choice([0, 1, 1, 2, 3, maxlen, rng.randint(0, maxlen)])
+    pool = TEXT_ALPH if rng.random() < 0.7 else rng.sample(TEXT_ALPH, 4)
+    if rng.random() < 0.2:
+        pool = [c for c in TEXT_ALPH if c < 128]
+    return [rng.choice(pool) for _ in range(n)]
+
+
+def text_item(rng):
+    r = rng.random()
+    if r < 0.25:
+        return {"t": "none"}
+    if r < 0.6:
+        return {"t": "int", "v": rng.choice([97, 65, 0, 127, 128, 255, 256, 0x10ffff, 0x110000,
+                                             -1, 2 ** 31, 2 ** 63, 2 ** 64, -2 ** 63])}
+    if r < 0.9:
+        return {"t": "str", "s": text_str(rng, 3)}
+    if r < 0.95:
+        return {"t": "wrong"}
+    return {"t": "raise"}
+
+
+@gen("text", 12)
+def gen_text_case(rng):
+    return {"mod": "unicodeobj", "fn": "text_case", "op": rng.choice(CASE_OPS), "s": text_str(rng)}
+
+
+@gen("text", 8)
+def gen_text_is(rng):
+    return {"mod": "unicodeobj", "fn": "text_is", "op": rng.choice(IS_OPS), "s": text_str(rng)}
+
+
+@gen("text", 6)
+def gen_text_bytes(rng):
+    alph = [65, 90, 97, 122, 48, 57, 32, 9, 13, 11, 39, 0, 127, 128, 0xe9, 0xff]
+    b = [rng.choice(alph) for _ in range(rng.choice([0, 1, 1, 2, 3, 6]))]
+    return {"mod": "unicodeobj", "fn": "text_bytes", "op": rng.choice(BYTE_OPS), "s": b}
+
+
+@gen("text", 4)
+def gen_text_repr(rng):
+    return {"mod": "unicodeobj", "fn": "text_repr", "s": text_str(rng)}
+
+
+@gen("text", 6)
+def gen_text_translate(rng):
+    s = text_str(rng)
+    keys = (s + rng.sample(TEXT_ALPH, 2)) if rng.random() < 0.8 else rng.sample(TEXT_ALPH, 3)
+    table = {k: text_item(rng) for k in keys if rng.random() < 0.6}
+    fn = "text_translate" if rng.random() < 0.8 else "text_translate_strict"
+    return {"mod": "unicodeobj", "fn": fn, "s": s, "table": [[k, v] for k, v in table.items()]}
+
+
+@gen("text", 3)
+def gen_text_maketrans(rng):
+    r = rng.random()
+    if r < 0.5:
+        x = text_str(rng, 5)
+        y = text_str(rng, 5)
+        if rng.random() < 0.7:
+            y = (y + [65] * len(x))[:len(x)]
+        z = text_str(rng, 3) if rng.random() < 0.6 else None
+        return {"mod": "unicodeobj", "fn": "text_maketrans_str", "x": x, "y": y, "z": z}
+    if r < 0.9:
+        items = []
+        seen = set()
+        for _ in range(rng.randrange(4)):
+            kr = rng.random()
+            k = ({"t": "str", "s": text_str(rng, 2)} if kr < 0.5 else
+                 {"t": "int", "v": rng.choice([97, -1, 2 ** 70])} if kr < 0.9 else {"t": "other"})
+            if str(k) not in seen:
+                seen.add(str(k))
+                items.append([k, text_item(rng)])
+        return {"mod": "unicodeobj", "fn": "text_maketrans_dict", "x": items}
+    return {"mod": "unicodeobj", "fn": "text_maketrans_other", "y": rng.choice([None, [97]])}
+
+
+DEDENT_LINES = ["", " ", "  ", "\t", " \t", "    ", "a", " a", "  a", "   b", "\ta", " \ta", "  \tb",
+                "    c", "  \x0c", "\x0c", "\r", "  \r", "　", "  　x", "  \xe9"]
+
+
+@gen("text", 2)
+def gen_text_dedent(rng):
+    lines = [rng.choice(DEDENT_LINES) for _ in range(rng.randint(0, 5))]
+    return {"mod": "unicodeobj", "fn": "text_dedent", "s": cps_of("\n".join(lines))}
+
+
+@gen("text", 0.02)
+def gen_text_dedent_c(rng):
+    margin = rng.choice([" ", "  ", "    ", "\t", " \t"])
+    body = [rng.choice([margin + "x", margin + " y", margin, " ", "", margin + margin, "\x0c",
+                        margin[:1], "\r"]) for _ in range(rng.randint(1, 4))]
+    text = margin + 's = """' + "\n".join(body) + "\n" + margin + '"""\n' + margin + "print(ascii(s))"
+    return {"mod": "unicodeobj", "fn": "text_dedent_c", "s": cps_of(text)}
+
+
+@gen("text", 1)
+def gen_text_transform(rng):
+    return {"mod": "unicodeobj", "fn": "text_transform", "s": text_str(rng)}
+
+
+for _lo in range(0, 0x110000, SWEEP_BLOCK):
+    ONCE.append(("text", {"mod": "unicodeobj", "fn": "text_sweep", "lo": _lo, "hi": _lo + SWEEP_BLOCK}))
+
+RAISE = object()
+
+
+def conv_item(v):
+    return {"none": None, "int": v.get("v"), "str": s_of(v.get("s", [])), "raise": RAISE,
+            "wrong": 1.5}[v["t"]]
+
+
+class TextMapping:
+    def __init__(self, table):
+        self.d = {k: conv_item(v) for k, v in table}
+
+    def __getitem__(self, k):
+        v = self.d[k]
+        if v is RAISE:
+            raise ValueError("boom")
+        return v
+
+
+UPPER_SIMPLE = ctypes.pythonapi._PyUnicode_ToUppercase
+TITLE_SIMPLE = ctypes.pythonapi._PyUnicode_ToTitlecase
+for _f in (UPPER_SIMPLE, TITLE_SIMPLE):
+    _f.restype = ctypes.c_uint
+    _f.argtypes = [ctypes.c_uint]
+TRANSLATE = ctypes.pythonapi.PyUnicode_Translate
+TRANSLATE.restype = ctypes.py_object
+TRANSLATE.argtypes = [ctypes.py_object, ctypes.py_object, ctypes.c_char_p]
+
+
+@run("text_case")
+def run_text_case(c):
+    return cps_of(getattr(s_of(c["s"]), c["op"])())
+
+
+@run("text_is")
+def run_text_is(c):
+    return getattr(s_of(c["s"]), c["op"])()
+
+
+@run("text_bytes")
+def run_text_bytes(c):
+    r = getattr(bytes(c["s"]), c["op"])()
+    return r if isinstance(r, bool) else list(r)
+
+
+@run("text_repr")
+def run_text_repr(c):
+    return cps_of(repr(s_of(c["s"])))
+
+
+@run("text_translate")
+def run_text_translate(c):
+    return cps_of(s_of(c["s"]).translate(TextMapping(c["table"])))
+
+
+@run("text_translate_strict")
+def run_text_translate_strict(c):
+    return cps_of(TRANSLATE(s_of(c["s"]), TextMapping(c["table"]), None))
+
+
+def enc_item(v):
+    if v is None:
+        return ["none"]
+    if isinstance(v, int):
+        return ["int", v]
+    if isinstance(v, str):
+        return ["str", cps_of(v)]
+    return ["raise"] if v is RAISE else ["wrong"]
+
+
+def enc_trans(d):
+    return [[k, enc_item(v)] for k, v in d.items()]
+
+
+@run("text_maketrans_str")
+def run_text_maketrans_str(c):
+    args = [s_of(c["x"]), s_of(c["y"])] + ([s_of(c["z"])] if c["z"] is not None else [])
+    return enc_trans(str.maketrans(*args))
+
+
+@run("text_maketrans_dict")
+def run_text_maketrans_dict(c):
+    d = {}
+    for k, v in c["x"]:
+        key = s_of(k["s"]) if k["t"] == "str" else k["v"] if k["t"] == "int" else (1, 2)
+        d[key] = conv_item(v)
+    return enc_trans(str.maketrans(d))
+
+
+@run("text_maketrans_other")
+def run_text_maketrans_other(c):
+    if c["y"] is None:
+        str.maketrans(3)
+    else:
+        str.maketrans(3, s_of(c["y"]))
+    return None
+
+
+@run("text_dedent")
+def run_text_dedent(c):
+    return cps_of(textwrap.dedent(s_of(c["s"])))
+
+
+@run("text_dedent_c")
+def run_text_dedent_c(c):
+    r = subprocess.run([sys.executable, "-c", s_of(c["s"])], capture_output=True, text=True)
+    if r.returncode != 0:
+        return -1
+    return cps_of(eval(r.stdout))
+
+
+@run("text_transform")
+def run_text_transform(c):
+    f = ctypes.pythonapi._PyUnicode_TransformDecimalAndSpaceToASCII
+    f.restype = ctypes.py_object
+    f.argtypes = [ctypes.py_object]
+    return cps_of(f(s_of(c["s"])))
+
+
+def sweep_values(c):
+    ch = chr(c)
+    upper, lower, title, fold = ch.upper(), ch.lower(), ch.title(), ch.casefold()
+    cased = (ch + "a").title()[-1] == "a"
+    if cased:
+        ignorable = (ch + "Σ").lower()[-1] == "σ"
+    else:
+        ignorable = ("A" + ch + "Σ").lower()[-1] == "ς"
+    return [int(ch.isalpha()), int(ch.isdecimal()), int(ch.isdigit()), int(ch.isnumeric()),
+            int(ch.isprintable()), int(ch.islower()), int(ch.isupper()), int(ch.istitle()),
+            int(ch.isspace()), int(ch.isidentifier()), int(("a" + ch).isidentifier()),
+            int(len(("a" + ch + "b").splitlines()) > 1), int(cased), int(ignorable),
+            unicodedata.decimal(ch, -1) + 1, unicodedata.digit(ch, -1) + 1,
+            UPPER_SIMPLE(c), _sre.unicode_tolower(c), TITLE_SIMPLE(c),
+            len(upper), *map(ord, upper), len(lower), *map(ord, lower), len(title),
+            *map(ord, title), len(fold), *map(ord, fold)]
+
+
+@run("text_sweep")
+def run_text_sweep(c):
+    h = 0
+    for cp in range(c["lo"], c["hi"]):
+        for v in sweep_values(cp):
+            h = (h * 1000003 + v + 1) % SWEEP_PRIME
+    return h
+
 # ==== end text slice ====
 
 
