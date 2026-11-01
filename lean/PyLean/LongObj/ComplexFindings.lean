@@ -203,4 +203,38 @@ theorem oneArgMatchesTwoArgOnFloats_refuted : ¬ OneArgMatchesTwoArgOnFloats := 
   revert this
   decide +kernel
 
+/-! ## Stated, waiting on `Binary64`
+
+These need facts about rounding that `Dbl` has no proofs for. `Dbl.Valid` is the type
+invariant of a 64-bit pattern. -/
+
+def Dbl.Valid (x : Dbl) : Prop := x.bits < 2 ^ 64
+
+/-- C11 Annex G.5.1: an infinite operand and a nonzero finite one multiply to a value
+with an infinite part. -/
+def CProdAnnexG : Prop :=
+  ∀ z w : Cx Dbl, z.real.Valid → z.imag.Valid → w.real.Valid → w.imag.Valid →
+    (isinf z.real || isinf z.imag) = true → isfinite w.real = true → isfinite w.imag = true →
+    ((w.real ==. CDouble.zero) && (w.imag ==. CDouble.zero)) = false →
+    (isinf (c_prod z w).real || isinf (c_prod z w).imag) = true
+
+/-- C11 Annex G.5.2: an infinite dividend over a finite nonzero divisor has an infinite
+part, and a finite dividend over an infinite divisor has zero parts. -/
+def CQuotAnnexG : Prop :=
+  ∀ a b : Cx Dbl, a.real.Valid → a.imag.Valid → b.real.Valid → b.imag.Valid →
+    ((isinf a.real || isinf a.imag) = true → isfinite b.real = true → isfinite b.imag = true →
+      ((b.real ==. CDouble.zero) && (b.imag ==. CDouble.zero)) = false →
+      (isinf (c_quot a b Errno.ok).1.real || isinf (c_quot a b Errno.ok).1.imag) = true) ∧
+    (isfinite a.real = true → isfinite a.imag = true → (isinf b.real || isinf b.imag) = true →
+      ((c_quot a b Errno.ok).1.real ==. CDouble.zero) = true ∧
+      ((c_quot a b Errno.ok).1.imag ==. CDouble.zero) = true)
+
+/-- The narrowing of `RcQuotMatchesCQuot`: the disagreement needs an infinite dividend
+(or a NaN one). -/
+def RcQuotMatchesCQuotFinite : Prop :=
+  ∀ (a : Dbl) (b : Cx Dbl), a.Valid → b.real.Valid → b.imag.Valid → isfinite a = true →
+    let r := rc_quot a b Errno.ok
+    let c := c_quot ⟨a, CDouble.zero⟩ b Errno.ok
+    (sameValue r.1.real c.1.real && sameValue r.1.imag c.1.imag && r.2 == c.2) = true
+
 end PyLean.LongObj.Cplx

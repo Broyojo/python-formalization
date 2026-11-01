@@ -152,13 +152,13 @@ def toLong (x : Dbl) : Int :=
   let q : Int := x.mag / 2 ^ 1074
   if x.sign then -q else q
 
-/-- `PyLong_AsDouble`, `Objects/longobject.c:3484-3514`: round to nearest-even,
+/-- `PyLong_AsDouble`, `Objects/longobject.c:3484-3513`: round to nearest-even,
 and report overflow if the rounded value does not fit. -/
 def ofInt (n : Int) : Option Dbl :=
   let r := ofNat' (n < 0) n.natAbs
   if r.isInf then none else some r
 
-/-- `float == int`, exact, as `float_richcompare` (`Objects/floatobject.c:382-552`)
+/-- `float == int`, exact, as `float_richcompare` (`Objects/floatobject.c:382-542`)
 decides it. An infinity or NaN equals no int. -/
 def eqInt (x : Dbl) (n : Int) : Bool :=
   if x.isNaN || x.isInf then false else x.sval == n * 2 ^ 1074
@@ -209,7 +209,7 @@ def decToDbl (neg : Bool) (digits : Nat) (e : Int) : Dbl :=
 
 private def lower (c : Nat) : Nat := if 65 ≤ c && c ≤ 90 then c + 32 else c
 
-/-- `case_insensitive_match`, `Python/pystrtod.c:10-20`. -/
+/-- `case_insensitive_match`, `Python/pystrtod.c:13-20`. -/
 def ciPrefix : List Nat → List Nat → Bool
   | _, [] => true
   | [], _ :: _ => false
@@ -217,7 +217,7 @@ def ciPrefix : List Nat → List Nat → Bool
 
 private def lit (s : String) : List Nat := s.toList.map Char.toNat
 
-/-- `_Py_parse_inf_or_nan`, `Python/pystrtod.c:27-57`. -/
+/-- `_Py_parse_inf_or_nan`, `Python/pystrtod.c:28-58`. -/
 def parseInfNan (p : List Nat) : Dbl × Nat :=
   let (negate, s, off) : Bool × List Nat × Nat :=
     match p with
@@ -266,7 +266,7 @@ def dgStrtod (p : List Nat) : Dbl × Nat :=
   let digits := ip * 10 ^ nf + fp
   (decToDbl negS digits (e - (nf : Int)), consumed + expLen)
 
-/-- `_PyOS_ascii_strtod`, `Python/pystrtod.c:93-112`. -/
+/-- `_PyOS_ascii_strtod`, `Python/pystrtod.c:93-113`. -/
 def asciiStrtod (p : List Nat) : Dbl × Nat :=
   let r := dgStrtod p
   if r.2 == 0 then parseInfNan p else r
@@ -356,7 +356,7 @@ def dblToString (x : Dbl) (alwaysSign : Bool) : String :=
 
 def hashModulus : Nat := 2 ^ 61 - 1
 
-/-- `_Py_HashDouble`, `Python/pyhash.c:87-133`, for non-NaN `x`, by its closed
+/-- `_Py_HashDouble`, `Python/pyhash.c:87-130`, for non-NaN `x`, by its closed
 form (the loop computes the value modulo the prime `2^61 - 1`). The result is a
 signed `Py_hash_t`. -/
 def hashFinite (x : Dbl) : Int :=

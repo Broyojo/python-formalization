@@ -472,4 +472,148 @@ theorem ratFieldCompat : FieldCompat Rat where
     have hxx : x * x = 0 := by grind
     rcases Rat.mul_eq_zero.1 hxx with h1 | h1 <;> exact h1
 
+/-! ## The closed statements -/
+
+/-- Over any commutative ring, the mixed-mode sums and differences are the complex
+ones with the real operand given a zero imaginary part: the rules on lines 673-674.
+`_Py_c_diff` is `_Py_c_sum` with `_Py_c_neg`, and `_Py_c_sum` is commutative. -/
+def RingSumDiff : Prop :=
+  ∀ (R : Type) [CommRing R] [CDouble R], RingCompat R → ∀ (a b : Cx R) (x : R),
+    cr_sum a x = c_sum a ⟨x, 0⟩ ∧
+    rc_sum x b = c_sum ⟨x, 0⟩ b ∧
+    cr_diff a x = c_diff a ⟨x, 0⟩ ∧
+    rc_diff x b = c_diff ⟨x, 0⟩ b ∧
+    c_diff a b = c_sum a (c_neg b) ∧
+    c_sum a b = c_sum b a
+
+theorem ringSumDiff_proven : RingSumDiff := by
+  intro R _ _ h a b x
+  cases a with
+  | mk ar ai =>
+    cases b with
+    | mk br bi =>
+      simp only [cr_sum, rc_sum, cr_diff, rc_diff, c_neg, c_sum_eq h, c_diff_eq h, h.add_eq,
+        h.sub_eq, h.neg_eq, Cx.mk.injEq]
+      refine ⟨⟨?_, ?_⟩, ⟨?_, ?_⟩, ⟨?_, ?_⟩, ⟨?_, ?_⟩, ⟨?_, ?_⟩, ⟨?_, ?_⟩⟩ <;> grind
+
+/-- Over any commutative ring, `_Py_c_prod` is `(ac - bd) + (ad + bc)j`: the NaN and
+infinity recovery of lines 98-145 changes nothing. It is commutative, and
+`_Py_cr_prod` and `_Py_rc_prod` are it with a zero imaginary part. -/
+def RingProd : Prop :=
+  ∀ (R : Type) [CommRing R] [CDouble R], RingCompat R → ∀ (z w : Cx R) (x : R),
+    c_prod z w = ⟨z.real * w.real - z.imag * w.imag, z.real * w.imag + z.imag * w.real⟩ ∧
+    c_prod z w = c_prod w z ∧
+    cr_prod z x = c_prod z ⟨x, 0⟩ ∧
+    rc_prod x z = c_prod ⟨x, 0⟩ z
+
+theorem ringProd_proven : RingProd := by
+  intro R _ _ h z w x
+  refine ⟨c_prod_eq h z w, ?_, ?_, ?_⟩
+  · rw [c_prod_eq h, c_prod_eq h]
+    cases z; cases w
+    simp only [Cx.mk.injEq]
+    constructor <;> grind
+  · rw [c_prod_eq h]
+    cases z
+    simp only [cr_prod, h.mul_eq, Cx.mk.injEq]
+    constructor <;> grind
+  · rw [c_prod_eq h]
+    cases z
+    simp only [rc_prod, cr_prod, h.mul_eq, Cx.mk.injEq]
+    constructor <;> grind
+
+/-- Over any commutative ring, the loop of `c_powu` computes the `n`-th power, for
+every `n` a non-negative C `long` holds. The bound is the type of the parameter. -/
+def RingPowu : Prop :=
+  ∀ (R : Type) [CommRing R] [CDouble R], RingCompat R → ∀ (x : Cx R) (n : Nat),
+    n < 2 ^ 63 → c_powu x (n : Int) = cxPow x n
+
+theorem ringPowu_proven : RingPowu := by
+  intro R _ _ h x n hn
+  exact c_powu_eq_pow h x n hn
+
+/-- Over any ordered field, `_Py_c_quot` is division: a nonzero divisor leaves
+`errno` alone and the quotient times the divisor is the dividend; a zero divisor
+sets `EDOM` and gives zero. So Smith's two branches are exhaustive there, and the
+third, for a NaN, is unreachable. -/
+def FieldQuot : Prop :=
+  ∀ (R : Type) [Field R] [CDouble R], FieldCompat R → ∀ (a b : Cx R) (e : Errno),
+    (¬ (b.real = 0 ∧ b.imag = 0) →
+      (c_quot a b e).2 = e ∧ c_prod (c_quot a b e).1 b = a) ∧
+    (b.real = 0 ∧ b.imag = 0 → c_quot a b e = (⟨0, 0⟩, Errno.edom))
+
+theorem fieldQuot_proven : FieldQuot := by
+  intro R _ _ h a b e
+  exact ⟨c_quot_mul h a b e, c_quot_zero h a b e⟩
+
+/-- Over any ordered field, `_Py_cr_quot` and `_Py_rc_quot` are `_Py_c_quot` with the
+real operand given a zero imaginary part, which is what the comment on line 263
+says. At binary64 this fails: `RcQuotMatchesCQuot`. -/
+def FieldMixedQuot : Prop :=
+  ∀ (R : Type) [Field R] [CDouble R], FieldCompat R → ∀ (a b : Cx R) (x : R) (e : Errno),
+    cr_quot a x e = c_quot a ⟨x, 0⟩ e ∧ rc_quot x b e = c_quot ⟨x, 0⟩ b e
+
+theorem fieldMixedQuot_proven : FieldMixedQuot := by
+  intro R _ _ h a b x e
+  exact ⟨cr_quot_eq h a x e, rc_quot_eq h x b e⟩
+
+/-- Over any ordered field, `c_powi` is the integer power: `x ** n` for `n > 0`,
+`1` at `0`, the inverse of `x ** n` at `-n`; only `0` to a negative power sets
+`EDOM`. At binary64 a nonzero base can set it too:
+`PowZeroDivisionNeedsZeroBase`. -/
+def FieldPowi : Prop :=
+  ∀ (R : Type) [Field R] [CDouble R], FieldCompat R →
+    ∀ (x : Cx R) (n : Nat) (e : Errno), 0 < n → n < 2 ^ 63 →
+      c_powi x (n : Int) e = (cxPow x n, e) ∧
+      c_powi x 0 e = (c_1, e) ∧
+      (¬ (x.real = 0 ∧ x.imag = 0) →
+        (c_powi x (-(n : Int)) e).2 = e ∧
+        c_prod (c_powi x (-(n : Int)) e).1 (cxPow x n) = c_1) ∧
+      (x.real = 0 ∧ x.imag = 0 → (c_powi x (-(n : Int)) e).2 = Errno.edom)
+
+theorem cxPow_zero_base {R : Type} [Field R] [CDouble R] (h : FieldCompat R) (x : Cx R)
+    (hx : x.real = 0 ∧ x.imag = 0) (n : Nat) (hn : 0 < n) :
+    (cxPow x n).real = 0 ∧ (cxPow x n).imag = 0 := by
+  cases n with
+  | zero => omega
+  | succ k =>
+    simp only [cxPow]
+    rw [c_prod_eq h.toRingCompat, hx.1, hx.2]
+    simp only
+    constructor <;> grind
+
+theorem fieldPowi_proven : FieldPowi := by
+  intro R _ _ h x n e hn hlt
+  have hne : ¬ ((c_1 : Cx R).real = 0 ∧ (c_1 : Cx R).imag = 0) := by
+    rw [c_1_eq h.toRingCompat]
+    intro ⟨h1, _⟩
+    exact Lean.Grind.Field.zero_ne_one h1.symm
+  have hpos : ¬ (-(n : Int)) > 0 := by omega
+  have hneg : ∀ y : Cx R, c_powi y (-(n : Int)) e = c_quot c_1 (c_powu y (n : Int)) e := by
+    intro y
+    simp only [c_powi]
+    rw [ite_eq_right hpos, Int.neg_neg]
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · have hp : (n : Int) > 0 := by omega
+    simp only [c_powi]
+    rw [ite_eq_left hp, c_powu_eq_pow h.toRingCompat x n hlt]
+  · have h1 : c_powi x 0 e = c_quot c_1 c_1 e := by
+      have : c_powu x 0 = c_1 := rfl
+      simp only [c_powi]
+      simp [this]
+    have hq := c_quot_mul h c_1 c_1 e hne
+    rw [c_prod_one_right h.toRingCompat] at hq
+    rw [h1]
+    generalize c_quot (c_1 : Cx R) c_1 e = q at hq ⊢
+    obtain ⟨q1, q2⟩ := q
+    simp only at hq
+    obtain ⟨rfl, rfl⟩ := hq
+    rfl
+  · intro hx
+    rw [hneg, c_powu_eq_pow h.toRingCompat x n hlt]
+    exact c_quot_mul h c_1 (cxPow x n) e (cxPow_ne_zero h x hx n)
+  · intro hx
+    rw [hneg, c_powu_eq_pow h.toRingCompat x n hlt,
+      c_quot_zero h c_1 (cxPow x n) e (cxPow_zero_base h x hx n hn)]
+
 end PyLean.LongObj.Cplx

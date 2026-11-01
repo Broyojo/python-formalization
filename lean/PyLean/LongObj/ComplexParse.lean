@@ -5,7 +5,7 @@ String parsing for `complex()`: `complex_from_string_inner` and
 `complex_subtype_from_string` (`Objects/complexobject.c:930-1081`), with the two
 helpers they call, `_Py_string_to_number_with_underscores`
 (`Python/pystrtod.c:345-402`) and `_PyUnicode_TransformDecimalAndSpaceToASCII`
-(`Objects/unicodeobject.c:9614-9654`), and `float_from_string_inner`
+(`Objects/unicodeobject.c:9614-9657`), and `float_from_string_inner`
 (`Objects/floatobject.c:149-187`) for the twin property.
 
 A `const char *` is the remaining suffix as a `List Nat` of code units, and
@@ -118,7 +118,7 @@ def complex_from_string_inner (sd : Strtod R) (s : List Nat) (len : Nat) : Py (C
 
 end parse
 
-/-- The loop of `_Py_string_to_number_with_underscores`, lines 372-387 of
+/-- The loop of `_Py_string_to_number_with_underscores`, lines 367-382 of
 `Python/pystrtod.c`: runs up to the first NUL. Returns the characters kept (in
 reverse), the last character, and how far it got; `none` is `goto error`. -/
 def underscoreScan : List Nat → Nat → List Nat → Nat → Option (List Nat × Nat × Nat)
@@ -158,7 +158,7 @@ structure UniDB where
   /-- `Py_UNICODE_TODECIMAL`; `none` is `-1`. -/
   toDecimal : Nat → Option Nat
 
-/-- The loop of `_PyUnicode_TransformDecimalAndSpaceToASCII`, lines 9632-9651.
+/-- The loop of `_PyUnicode_TransformDecimalAndSpaceToASCII`, lines 9635-9653.
 An unconvertible character becomes `?` and ends the string. -/
 def transformLoop (db : UniDB) : List Nat → List Nat
   | [] => []
@@ -170,7 +170,7 @@ def transformLoop (db : UniDB) : List Nat → List Nat
       | none => [63]
       | some d => (48 + d) :: transformLoop db t
 
-/-- `_PyUnicode_TransformDecimalAndSpaceToASCII`, lines 9614-9654: an ASCII
+/-- `_PyUnicode_TransformDecimalAndSpaceToASCII`, lines 9614-9657: an ASCII
 string comes back unchanged. -/
 def transformDecimalAndSpace (db : UniDB) (s : List Nat) : List Nat :=
   if s.all (· < 128) then s else transformLoop db s
@@ -188,31 +188,34 @@ def complex_from_str (db : UniDB) (sd : Strtod R) (v : List Nat) (objRepr : Stri
   let s := transformDecimalAndSpace db v
   withUnderscores s s.length "complex" objRepr (complex_from_string_inner sd)
 
+/-- `while (s < last && Py_ISSPACE(*s)) s++;`, `Objects/floatobject.c:156-158`. -/
+def floatLead (len : Nat) : List Nat → Nat → Nat × List Nat
+  | [], i => (i, [])
+  | c :: t, i =>
+    if i < len && isSpaceC c then floatLead len t (i + 1) else (i, c :: t)
+
+/-- `while (s < last - 1 && Py_ISSPACE(last[-1])) last--;`, lines 167-169. `fuel`
+counts the characters left to look at. -/
+def floatTrail (s : List Nat) (i : Nat) : Nat → Nat → Nat
+  | 0, last => last
+  | fuel + 1, last =>
+    if i + 1 < last && isSpaceC (s.getD (last - 1) 0) then floatTrail s i fuel (last - 1)
+    else last
+
 /-- `float_from_string_inner`, `Objects/floatobject.c:149-187`, up to the
 allocation of the result. The twin of `complex_from_string_inner`. `last` is the
 index one past the end. -/
 def float_from_string_inner (sd : Strtod R) (s : List Nat) (len : Nat) (objRepr : String) :
     Py R :=
   let err : Py R := .error (.valueError s!"could not convert string to float: {objRepr}")
-  -- strip leading whitespace, stopping at `last`
-  let rec lead : List Nat → Nat → Nat × List Nat
-    | [], i => (i, [])
-    | c :: t, i =>
-      if i < len && isSpaceC c then lead t (i + 1) else (i, c :: t)
-  let (i, p) := lead s 0
+  let (i, p) := floatLead len s 0
   if i == len then err
   else
-    -- strip trailing whitespace: `last` moves down while `s < last - 1`
-    let rec trail : Nat → Nat → Nat
-      | 0, last => last
-      | fuel + 1, last =>
-        if i + 1 < last && isSpaceC (s.getD (last - 1) 0) then trail fuel (last - 1)
-        else last
-    let last := trail len len
+    let last := floatTrail s i len len
     let (x, n) := sd p
     if i + n != last then err else .ok x
 
-/-- `PyFloat_FromString` on a `str`, `Objects/floatobject.c:190-250`, the path
+/-- `PyFloat_FromString` on a `str`, `Objects/floatobject.c:190-237`, the path
 that goes through the same transform and `float_from_string_inner`. -/
 def float_from_str (db : UniDB) (sd : Strtod R) (v : List Nat) (objRepr : String) : Py R :=
   let s := transformDecimalAndSpace db v

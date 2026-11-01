@@ -125,7 +125,7 @@ theorem toUhash_of_neg {h : Int} (h0 : h < 0) (h1 : -(2 ^ 63) ≤ h) :
   omega
 
 /-- `complex_hash` over any real hash `hd`. `_Py_HashDouble` returns a `Py_hash_t`
-that is never `-1` (`Python/pyhash.c:129-131`, and `Py_HashPointer` for a NaN),
+that is never `-1` (`Python/pyhash.c:127-128`, and `Py_HashPointer` for a NaN),
 which is the hypothesis. Then the result is never `-1`, and if the imaginary part
 hashes to `0` the result is the hash of the real part: the note on lines 625-630,
 which is what makes `hash(x + 0j) == hash(x)`. -/

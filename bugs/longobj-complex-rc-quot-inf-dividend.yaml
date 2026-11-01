@@ -1,0 +1,52 @@
+id: longobj-complex-rc-quot-inf-dividend
+title: "float('inf') / (1e308+1e308j) is nan+nanj, but complex('inf') / (1e308+1e308j) is inf-infj"
+priority: P4
+kind: twin-disagreement
+module: longobj
+files: [Objects/complexobject.c]
+functions: [_Py_rc_quot, _Py_c_quot, complex_div]
+summary: |
+  _Py_rc_quot, new in 3.14, is commented as "an equivalent of _Py_c_quot() function, when
+  1st argument is real". _Py_c_quot has two recovery branches for a nan+nanj result, and
+  _Py_rc_quot has only the second. The first handles an infinite dividend over a finite
+  divisor. It looks unreachable for a real dividend, but it is reachable when Smith's
+  denominator overflows: inf / inf is NaN in both parts. So a float infinity divided by a
+  large finite complex gives nan+nanj, while the same value as a complex gives an
+  infinity, as C11 Annex G.5.2 asks.
+likelihood: |
+  Very low. Needs an infinite real dividend and a divisor whose Smith denominator
+  overflows.
+maybe_intended: |
+  Possibly an oversight rather than a choice. The mixed-mode work follows Annex G, and the
+  missing branch is the one that gives the Annex G result here. A maintainer may still
+  consider it too rare to matter.
+reproducer: |
+  inf = float('inf')
+  b = 1e308 + 1e308j
+  r, c = inf / b, complex(inf, 0) / b
+  print('float  ->', r)
+  print('complex ->', c)
+  if r != r and c.real == inf and c.imag == -inf:
+      print('REPRODUCED longobj-complex-rc-quot-inf-dividend')
+expected: |
+  inf-infj, the same as complex(inf, 0) / b.
+promised_by: |
+  Objects/complexobject.c:263, and C11 Annex G.5.2, which lines 224-225 cite.
+cause: |
+  Objects/complexobject.c:294-301 has the counterpart of lines 235-242 and no counterpart
+  of lines 227-234.
+possible_fix: |
+  Add the branch: if a is infinite and b is finite, set r from copysign(1, a) and b, as on
+  lines 230-233 with y = 0.
+tested:
+  python3 (3.14.7): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
+duplicates:
+  issues: []
+  related: []
+  queries: ["_Py_rc_quot", "complex division infinity", "complex real divided by complex nan mixed-mode",
+            "complex division Annex G real by complex"]
+  bugforge: "only complex-related entry is cmath-20261003-033712-c2 (cmath.isclose, #158697); not this one"
+lean:
+  property: PyLean.LongObj.Cplx.RcQuotMatchesCQuot
+  theorem: PyLean.LongObj.Cplx.rcQuotMatchesCQuot_refuted

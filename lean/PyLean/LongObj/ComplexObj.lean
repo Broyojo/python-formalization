@@ -163,7 +163,7 @@ def warnDep (E : Env R) (msg : String) : M Unit :=
 
 def intTooLarge : PyExc := .overflowError "int too large to convert to float"
 
-/-- `PyLong_AsDouble`, `Objects/longobject.c:3484-3514`. -/
+/-- `PyLong_AsDouble`, `Objects/longobject.c:3484-3513`. -/
 def longAsDouble (n : Int) : Py R :=
   match ofInt n with
   | some x => .ok x
@@ -223,7 +223,7 @@ def nonFloatDep (op res : Obj R) : String :=
     "The ability to return an instance of a strict subclass of float " ++
     "is deprecated, and may be removed in a future version of Python."
 
-/-- `PyFloat_AsDouble`, `Objects/floatobject.c:257-314`. A `float` subclass is
+/-- `PyFloat_AsDouble`, `Objects/floatobject.c:257-313`. A `float` subclass is
 read directly: its `__float__` is not consulted. -/
 def PyFloat_AsDouble (E : Env R) (op : Obj R) : M R :=
   match op.val with
@@ -245,7 +245,7 @@ def PyFloat_AsDouble (E : Env R) (op : Obj R) : M R :=
           pure x
       | _ => throw (.typeError (nonFloatMsg op res))
 
-/-- `PyNumber_Float`, `Objects/abstract.c:1592-1646`. A `float` subclass goes
+/-- `PyNumber_Float`, `Objects/abstract.c:1592-1649`. A `float` subclass goes
 through its `nb_float` here, unlike in `PyFloat_AsDouble`. The final
 `PyFloat_FromString` is not reachable from this file, since `complex_new_impl`
 only calls this after finding `nb_float` or `nb_index`; its `TypeError` for a
@@ -272,6 +272,19 @@ def PyNumber_Float (E : Env R) (o : Obj R) : M R :=
       | _ => throw (.typeError
           s!"float() argument must be a string or a real number, not '{pct 200 o.ti.tpName}'")
 
+/-- Lines 497-516: what `try_complex_special_method` does with the method's result. -/
+def complexResult (E : Env R) (res : Obj R) : M (Option (Cx R)) :=
+  match res.val with
+  | .cplx c =>
+    if res.exact then pure (some c)
+    else do
+      warnDep E (s!"__complex__ returned non-complex (type {pct 200 res.ti.tpName}).  " ++
+        "The ability to return an instance of a strict subclass of complex " ++
+        "is deprecated, and may be removed in a future version of Python.")
+      pure (some c)
+  | _ => throw (.typeError
+      s!"__complex__ returned non-complex (type {pct 200 res.ti.tpName})")
+
 /-- `try_complex_special_method`, lines 488-519. C returns `NULL` both when the
 method is absent and when it failed; here those are `none` and an exception. -/
 def try_complex_special_method (E : Env R) (op : Obj R) : M (Option (Cx R)) :=
@@ -279,16 +292,7 @@ def try_complex_special_method (E : Env R) (op : Obj R) : M (Option (Cx R)) :=
   | .absent => pure none
   | s => do
     let res ← callSlot "__complex__" s op
-    match res.val with
-    | .cplx c =>
-      if res.exact then pure (some c)
-      else do
-        warnDep E (s!"__complex__ returned non-complex (type {pct 200 res.ti.tpName}).  " ++
-          "The ability to return an instance of a strict subclass of complex " ++
-          "is deprecated, and may be removed in a future version of Python.")
-        pure (some c)
-    | _ => throw (.typeError
-        s!"__complex__ returned non-complex (type {pct 200 res.ti.tpName})")
+    complexResult E res
 
 /-- `PyComplex_RealAsDouble`, lines 443-462. -/
 def PyComplex_RealAsDouble (E : Env R) (op : Obj R) : M R :=
