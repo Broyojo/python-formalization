@@ -1,0 +1,54 @@
+id: longobj-complex-abs-stale-errno
+title: "abs() of a complex with a NaN part raises OverflowError if an earlier C call left errno = ERANGE"
+priority: P3
+kind: wrong-exception
+module: longobj
+files: [Objects/complexobject.c]
+functions: [complex_abs, _Py_c_abs]
+summary: |
+  _Py_c_abs documents that it sets errno on every path (line 370), but its NaN branch
+  (line 389) returns without touching it, and complex_abs (3.14.7) does not clear errno
+  before the call. complex_abs then reads whatever the previous C call left, so
+  abs(complex(nan, 0)) raises "OverflowError: absolute value too large" right after,
+  for example, float('1e400') or math.exp(-1000). The result of abs() depends on
+  unrelated earlier code.
+likelihood: |
+  Low to moderate. Needs a value with a NaN and no infinity, and an earlier libm or
+  strtod call that set ERANGE with nothing clearing it in between. Numeric code with
+  overflowing or underflowing math calls followed by abs() of a NaN complex can hit it.
+maybe_intended: |
+  No. Already accepted upstream as a bug: gh-155526, fixed on main.
+reproducer: |
+  import math
+  z = complex(float('nan'), 0)
+  print('clean ->', abs(z))
+  try:
+      math.exp(-1000)   # leaves errno = ERANGE
+      r = abs(z)
+      print('after math.exp(-1000) ->', r)
+  except OverflowError as e:
+      print('after math.exp(-1000) -> OverflowError:', e)
+      print('REPRODUCED longobj-complex-abs-stale-errno')
+expected: |
+  nan, whatever ran before.
+promised_by: |
+  Objects/complexobject.c:370: "sets errno = ERANGE on overflow;  otherwise errno = 0".
+cause: |
+  Objects/complexobject.c:387-389 returns Py_NAN without setting errno;
+  Objects/complexobject.c:783-784 reads errno without clearing it first.
+possible_fix: |
+  Main sets errno = 0 in complex_abs before calling _Py_c_abs. That is the fix to
+  backport to 3.14.
+tested:
+  python3 (3.14.7): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): NOT REPRODUCED (fixed by gh-155526)
+duplicates:
+  issues:
+    - {number: 155526, state: closed, relation: same bug, fixed on main, not in 3.14.7}
+  related:
+    - {number: 156145, state: open, relation: "Don't rely on errno values, coming from platform's math functions"}
+  queries: ["absolute value too large", "complex errno"]
+  bugforge: "only complex-related entry is cmath-20261003-033712-c2 (cmath.isclose, #158697); not this one"
+lean:
+  property: PyLean.LongObj.Cplx.ComplexAbsIgnoresStaleErrno
+  theorem: PyLean.LongObj.Cplx.complexAbsIgnoresStaleErrno_refuted
