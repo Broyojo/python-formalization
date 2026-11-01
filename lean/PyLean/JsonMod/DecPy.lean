@@ -27,6 +27,12 @@ def findTerm : PStr → Option Nat
   | [] => none
   | c :: t => if isTerm c then some 0 else (findTerm t).map (· + 1)
 
+/-- `_decode_uXXXX(s, pos)`, decoder.py:60-68: `pos` is the index of the `u`. -/
+def decodeUXXXX (s : PStr) (pos : Nat) : DR Nat :=
+  match hex4 s (pos + 1) with
+  | some v => .ok v
+  | none => .error (.jde "Invalid \\uXXXX escape" (pos : Int))
+
 /-- The `while 1` loop of `py_scanstring`, decoder.py:83-126, from `end`
 (non-negative: `chunk.end()`), with the chunks decoded so far. -/
 def pyScanLoop (s : PStr) (strict : Bool) (begin : Int) : Nat → Nat → PStr → DR (PStr × Int)
@@ -51,15 +57,14 @@ def pyScanLoop (s : PStr) (strict : Bool) (begin : Int) : Nat → Nat → PStr �
             | none => .error (.jde (escMsgPy esc) e)
             | some ch => pyScanLoop s strict begin f (e + 1) (acc ++ [ch])
           else
-            -- `_decode_uXXXX(s, end)` raises at `end`
-            match hex4 s (e + 1) with
-            | none => .error (.jde "Invalid \\uXXXX escape" e)
-            | some uni =>
+            match decodeUXXXX s e with
+            | .error err => .error err
+            | .ok uni =>
               let e := e + 5
               if 0xd800 ≤ uni ∧ uni ≤ 0xdbff ∧ (s.drop e).take 2 = [92, 117] then
-                match hex4 s (e + 2) with
-                | none => .error (.jde "Invalid \\uXXXX escape" ((e : Int) + 1))
-                | some uni2 =>
+                match decodeUXXXX s (e + 1) with
+                | .error err => .error err
+                | .ok uni2 =>
                   if 0xdc00 ≤ uni2 ∧ uni2 ≤ 0xdfff then
                     pyScanLoop s strict begin f (e + 6) (acc ++ [joinSurrogates uni uni2])
                   else pyScanLoop s strict begin f e (acc ++ [uni])
@@ -203,9 +208,15 @@ def pyObjAfter (s : PStr) (e : Int) : ObjStep :=
       else .err (.jde "Expecting property name enclosed in double quotes" (e - 1))
     else .next e
 
-/-- `dict(pairs)` or `object_pairs_hook(pairs)`, decoder.py:156-162, 213-219. -/
-def pyMkObj (cfg : DCfg) (pairs : List (PStr × JVal)) : JVal :=
-  if cfg.pairsHook then .obj pairs else .obj (dictOf pairs)
+/-- `object_pairs_hook(pairs)`, or `object_hook(dict(pairs))`, or
+`dict(pairs)`, decoder.py:156-162, 213-219. -/
+def pyMkObj (cfg : DCfg) (pairs : List (PStr × JVal)) : DR JVal :=
+  match cfg.pairsHook with
+  | some h => h pairs
+  | none =>
+    match cfg.objectHook with
+    | some h => h (dictOf pairs)
+    | none => .ok (.obj (dictOf pairs))
 
 /-- `NUMBER_RE` and the literals after it in `_scan_once`, scanner.py:48-63. -/
 def pyScanNumber (cfg : DCfg) (s : PStr) (idx : Int) (c : Nat) : DR (JVal × Int) :=
@@ -213,14 +224,15 @@ def pyScanNumber (cfg : DCfg) (s : PStr) (idx : Int) (c : Nat) : DR (JVal × Int
   match numberRe (s.drop p) with
   | some (i, fr, ex) =>
     let e : Int := (p + (i.length + fr.length + ex.length) : Nat)
-    if fr ≠ [] ∨ ex ≠ [] then .ok (.hook .float (i ++ fr ++ ex), e)
+    if fr ≠ [] ∨ ex ≠ [] then (cfg.parseFloat (i ++ fr ++ ex)).map (·, e)
     else (parseInt cfg i).map (·, e)
   | none =>
-    if c = 78 ∧ pySlice s idx (idx + 3) = cs "NaN" then .ok (.hook .const (cs "NaN"), idx + 3)
+    if c = 78 ∧ pySlice s idx (idx + 3) = cs "NaN" then
+      (cfg.parseConstant (cs "NaN")).map (·, idx + 3)
     else if c = 73 ∧ pySlice s idx (idx + 8) = cs "Infinity" then
-      .ok (.hook .const (cs "Infinity"), idx + 8)
+      (cfg.parseConstant (cs "Infinity")).map (·, idx + 8)
     else if c = 45 ∧ pySlice s idx (idx + 9) = cs "-Infinity" then
-      .ok (.hook .const (cs "-Infinity"), idx + 9)
+      (cfg.parseConstant (cs "-Infinity")).map (·, idx + 9)
     else .error (.stop idx)
 
 mutual
@@ -242,7 +254,7 @@ def pyScanOnce (cfg : DCfg) (s : PStr) : Nat → Int → DR (JVal × Int)
         if nc ≠ [34] then
           let (e, nc) : Int × PStr :=
             if inWsSlice nc then (wsEndPy s e, pySlice s (wsEndPy s e) (wsEndPy s e + 1)) else (e, nc)
-          if nc = [125] then .ok (pyMkObj cfg [], e + 1)
+          if nc = [125] then (pyMkObj cfg []).map (·, e + 1)
           else if nc ≠ [34] then .error (.jde "Expecting property name enclosed in double quotes" e)
           else pyObjLoop cfg s n (e + 1) []
         else pyObjLoop cfg s n (e + 1) []
@@ -289,7 +301,7 @@ def pyObjLoop (cfg : DCfg) (s : PStr) : Nat → Int → List (PStr × JVal) → 
         | .error err => .error err
         | .ok (v, e) =>
           match pyObjAfter s e with
-          | .close e => .ok (pyMkObj cfg (pairs ++ [(key, v)]), e)
+          | .close e => (pyMkObj cfg (pairs ++ [(key, v)])).map (·, e)
           | .err err => .error err
           | .next e => pyObjLoop cfg s n e (pairs ++ [(key, v)])
 end

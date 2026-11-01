@@ -46,7 +46,7 @@ def cFind (strict : Bool) : PStr → CFind
 
 /-- The `while (1)` loop of `scanstring_unicode`, :402-535, from `end` with the
 writer's contents `acc` (`none` while the writer is empty). -/
-def cScanLoop (s : PStr) (strict : Bool) (begin : Nat) : Nat → Nat → Option PStr → DR (PStr × Nat)
+def cScanLoop (s : PStr) (strict : Bool) (begin : Int) : Nat → Nat → Option PStr → DR (PStr × Nat)
   | 0, _, _ => fuelOut
   | f + 1, e, acc =>
     match cFind strict (s.drop e) with
@@ -91,7 +91,7 @@ def cScanLoop (s : PStr) (strict : Bool) (begin : Nat) : Nat → Nat → Option 
 /-- `scanstring_unicode(pystr, end, strict)`, :371-544 (`end <= len`). -/
 def cScanstring (s : PStr) (e : Nat) (strict : Bool) : DR (PStr × Nat) :=
   if s.length < e then .error (.exc (.valueError "end is out of bounds"))
-  else cScanLoop s strict (e - 1) (s.length + 1) e none
+  else cScanLoop s strict ((e : Int) - 1) (s.length + 1) e none
 
 /-- The sign, :928-935: `if (idx > end_idx) raise_stop_iteration(start)`. -/
 def cNumSign (s : PStr) (start : Nat) : Option Nat :=
@@ -129,16 +129,26 @@ def cMatchNumber (cfg : DCfg) (s : PStr) (start : Nat) : DR (JVal × Nat) :=
       let (idx, isFloat) := cNumFrac s idx
       let (idx, isFloat) := cNumExp s idx isFloat
       let numstr := (s.drop start).take (idx - start)
-      if isFloat then .ok (.hook .float numstr, idx)
+      if isFloat then (cfg.parseFloat numstr).map (·, idx)
       else (parseInt cfg numstr).map (·, idx)
 
 /-- `has_pairs_hook ? PyList_Append : PyDict_SetItem`, :734-751. -/
 def cAddPair (cfg : DCfg) (acc : List (PStr × JVal)) (k : PStr) (v : JVal) : List (PStr × JVal) :=
-  if cfg.pairsHook then acc ++ [(k, v)] else dictSet k v acc
+  if cfg.pairsHook.isSome then acc ++ [(k, v)] else dictSet k v acc
+
+/-- The end of `_parse_object_unicode`, :779-790: `object_pairs_hook(rval)`, or
+`object_hook(rval)`, or `rval`. -/
+def cFinish (cfg : DCfg) (acc : List (PStr × JVal)) : DR JVal :=
+  match cfg.pairsHook with
+  | some h => h acc
+  | none =>
+    match cfg.objectHook with
+    | some h => h acc
+    | none => .ok (.obj acc)
 
 /-- `_parse_constant`, :878-902. -/
-def cConst (name : String) (idx : Nat) : DR (JVal × Nat) :=
-  .ok (.hook .const (cs name), idx + (cs name).length)
+def cConst (cfg : DCfg) (name : String) (idx : Nat) : DR (JVal × Nat) :=
+  (cfg.parseConstant (cs name)).map (·, idx + (cs name).length)
 
 /-- Matches `lit` at `idx` (the guarded `PyUnicode_READ` chains of `scan_once_unicode`). -/
 def litAt (s : PStr) (idx : Nat) (lit : String) : Bool :=
@@ -191,7 +201,7 @@ def cScanOnce (cfg : DCfg) (s : PStr) : Nat → Nat → DR (JVal × Nat)
           if idx ≥ s.length ∨ s.getD idx 0 ≠ 34 then
             .error (.jde "Expecting property name enclosed in double quotes" idx)
           else cObjBody cfg s n idx []
-        else .ok (.obj [], idx + 1)
+        else (cFinish cfg []).map (·, idx + 1)
       else if c = 91 then
         -- `_parse_array_unicode`, :824-868
         let idx := wsEnd s (idx + 1)
@@ -200,9 +210,9 @@ def cScanOnce (cfg : DCfg) (s : PStr) : Nat → Nat → DR (JVal × Nat)
       else if c = 110 ∧ litAt s idx "null" then .ok (.null, idx + 4)
       else if c = 116 ∧ litAt s idx "true" then .ok (.bool true, idx + 4)
       else if c = 102 ∧ litAt s idx "false" then .ok (.bool false, idx + 5)
-      else if c = 78 ∧ litAt s idx "NaN" then cConst "NaN" idx
-      else if c = 73 ∧ litAt s idx "Infinity" then cConst "Infinity" idx
-      else if c = 45 ∧ litAt s idx "-Infinity" then cConst "-Infinity" idx
+      else if c = 78 ∧ litAt s idx "NaN" then cConst cfg "NaN" idx
+      else if c = 73 ∧ litAt s idx "Infinity" then cConst cfg "Infinity" idx
+      else if c = 45 ∧ litAt s idx "-Infinity" then cConst cfg "-Infinity" idx
       else cMatchNumber cfg s idx
 
 /-- The `while (1)` loop of `_parse_array_unicode`, :829-862. -/
@@ -237,7 +247,7 @@ def cObjBody (cfg : DCfg) (s : PStr) : Nat → Nat → List (PStr × JVal) → D
         | .ok (v, next) =>
           let acc := cAddPair cfg acc key v
           match cObjAfter s next with
-          | .close i => .ok (.obj acc, i.toNat)
+          | .close i => (cFinish cfg acc).map (·, i.toNat)
           | .err err => .error err
           | .next i =>
             -- top of the `while (1)` loop, :706-710
