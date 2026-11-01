@@ -40,13 +40,9 @@ def entries : List Entry := [
     prop := ``GenIternextVsSendNone, thm := some ``genIternextVsSendNone_proven
     notes := "Precondition: not an async generator, the type assert at genobject.c:632." },
   { id := "gen-send-vs-am-send", pyFile := src, pyFns := ["gen_send", "gen_send_ex", "PyGen_am_send"]
-    statement := "On generators and coroutines, gen.send(arg) is PyGen_am_send(arg) with the conversion at :301-313: same world, a yield is returned, a returned value v becomes a StopIteration whose value is exactly v, and errors are unchanged."
+    statement := "On generators and coroutines, gen.send(arg) is PyGen_am_send(arg) with the conversion at :301-313: same world, a yield is returned, a returned value v becomes a StopIteration carrying v, and errors are unchanged. The model does not track object identity."
     source := "twin paths: PyGen_am_send (:290-295) and gen_send_ex (:297-315)", status := .proven
     prop := ``GenSendVsAmSend, thm := some ``genSendVsAmSend_proven },
-  { id := "gen-stopiteration-value-roundtrip", pyFile := src, pyFns := ["_PyGen_SetStopIterationValue", "_PyGen_FetchStopIterationValue"]
-    statement := "For every value v, fetching from the StopIteration made by _PyGen_SetStopIterationValue(v) gives exactly v (a tuple stays a tuple), and any other exception stays pending."
-    source := "genobject.c:655-659 (comment on tuples), :670-677", status := .proven
-    prop := ``StopIterationValueRoundTrip, thm := some ``stopIterationValueRoundTrip_proven },
   { id := "gen-close-idempotent", pyFile := src, pyFns := ["gen_close", "gen_clear_frame"]
     statement := "For every object and frame outcome: if close() returns normally the object is finished, and closing again returns None and changes nothing."
     source := "Doc/reference/expressions.rst generator.close", status := .proven
@@ -96,12 +92,12 @@ def entries : List Entry := [
     statement := "The first step of athrow or aclose with a well-formed argument list closes the awaitable and clears ag_running_async whenever it raises."
     source := "narrowing of gen-athrow-error-closes and gen-athrow-error-clears-running", status := .proven
     prop := ``AThrowStartErrorCloses, thm := some ``aThrowStartErrorCloses_proven },
-  { id := "gen-athrow-error-closes", pyFile := src, pyFns := ["async_gen_athrow_send", "async_gen_athrow_iternext"]
+  { id := "gen-athrow-error-closes", pyFile := src, pyFns := ["async_gen_athrow_send"]
     statement := "An athrow() or aclose() awaitable that raises from send(None), at any step, is closed."
     source := "message at genobject.c:2111; sibling paths at :1819-1821, :2269-2272", status := .refuted
     prop := ``AThrowErrorCloses, thm := some ``aThrowErrorCloses_refuted
     bug := some "bytecode-gen-athrow-awaitable-reusable" },
-  { id := "gen-athrow-error-clears-running", pyFile := src, pyFns := ["async_gen_athrow", "async_gen_athrow_send"]
+  { id := "gen-athrow-error-clears-running", pyFile := src, pyFns := ["async_gen_athrow_send"]
     statement := "An athrow() or aclose() awaitable that passed its state checks clears ag_running_async whenever send(None) raises."
     source := "invariant: ag_running_async is set only while an awaitable runs the generator", status := .refuted
     prop := ``AThrowErrorClearsRunning, thm := some ``aThrowErrorClearsRunning_refuted
@@ -142,25 +138,17 @@ def entries : List Entry := [
     statement := "anext, asend, aclose and athrow, after the hooks, create an AWAITABLE_STATE_INIT awaitable on the generator holding exactly their argument, or NULL for anext and aclose."
     source := "genobject.c:1533-1581, :1965-1982, :2408-2421", status := .proven
     prop := ``AsyncGenMethodsCreate, thm := some ``asyncGenMethodsCreate_proven },
-  { id := "gen-awaitable-finalize", pyFile := src, pyFns := ["async_gen_asend_finalize", "async_gen_athrow_finalize"]
-    statement := "The finalizers of asend and athrow awaitables warn about an awaitable that was never started, with the right method name, and otherwise do nothing."
-    source := "genobject.c:1896-1903, :2337-2345", status := .proven
-    prop := ``AwaitableFinalizeWarnsInit, thm := some ``awaitableFinalizeWarnsInit_proven },
-  { id := "gen-close-stack-bounded", pyFile := src, pyFns := ["gen_close", "gen_close_iter", "_PyGen_Finalize"]
+  { id := "gen-close-stack-bounded", pyFile := src, pyFns := ["gen_close", "gen_close_iter"]
     statement := "A fixed amount of C stack closes any generator: there is a K such that gen_close never recurses more than K levels."
     source := "invariant: no crash from pure Python at the default recursion limit", status := .refuted
     prop := ``GenCloseStackBounded, thm := some ``genCloseStackBounded_refuted
     bug := some "bytecode-gen-close-deep-chain-stack-overflow"
     notes := "The model's fuel stands for the C stack. Segfaults 3.14.7 and main from pure Python." },
-  { id := "gen-throw-stack-bounded", pyFile := src, pyFns := ["_gen_throw", "gen_throw"]
+  { id := "gen-throw-stack-bounded", pyFile := src, pyFns := ["_gen_throw"]
     statement := "A fixed amount of C stack serves any throw(): there is a K such that _gen_throw never recurses more than K levels."
     source := "invariant: no crash from pure Python at the default recursion limit", status := .refuted
     prop := ``GenThrowStackBounded, thm := some ``genThrowStackBounded_refuted
     bug := some "bytecode-gen-close-deep-chain-stack-overflow" },
-  { id := "gen-throw-arity", pyFile := src, pyFns := ["gen_throw"]
-    statement := "throw() with no arguments or more than three is a TypeError and changes nothing."
-    source := "genobject.c:606-608", status := .proven
-    prop := ``GenThrowArity, thm := some ``genThrowArity_proven },
   { id := "gen-throw-bad-arg-undelegated", pyFile := src, pyFns := ["gen_throw", "_gen_throw"]
     statement := "With no sub-iterator, throw() of something that cannot be raised is the documented TypeError and changes nothing."
     source := "genobject.c:578-584", status := .proven
@@ -180,65 +168,32 @@ def entries : List Entry := [
     prop := ``GenThrowLookupSeesExecuting, thm := some ``genThrowLookupSeesExecuting_refuted
     bug := some "bytecode-gen-throw-attr-lookup-unguarded"
     notes := "Crashes 3.14.7 through a throw property; fixed on main." },
-  { id := "gen-yf-state", pyFile := src, pyFns := ["_PyGen_yf", "gen_getyieldfrom", "coro_get_cr_await"]
-    statement := "_PyGen_yf, gi_yieldfrom, cr_await and ag_await are the stack top exactly in FRAME_SUSPENDED_YIELD_FROM, and otherwise None."
-    source := "genobject.c:373-384", status := .proven
-    prop := ``GenYfState, thm := some ``genYfState_proven },
   { id := "gen-close-iter-foreign", pyFile := src, pyFns := ["gen_close_iter"]
     statement := "gen_close_iter on an object that is not a generator succeeds when the object has no close attribute, and also when looking the attribute up fails, which is reported and ignored."
     source := "genobject.c:346-351", status := .proven
     prop := ``GenCloseIterForeign, thm := some ``genCloseIterForeign_proven },
-  { id := "gen-pep479-conversion", pyFile := src, pyFns := ["gen_send_ex2"]
+  { id := "gen-pep479-conversion", pyFile := "Python/intrinsics.c", pyFns := ["stopiteration_error"]
     statement := "stopiteration_error leaves no StopIteration, and in an async generator no StopAsyncIteration, and passes every other exception through unchanged, which is what the asserts in gen_send_ex2 rely on."
     source := "PEP 479; asserts at genobject.c:279-281; Python/intrinsics.c:143-184", status := .proven
     prop := ``Pep479Conversion, thm := some ``pep479Conversion_proven },
-  { id := "gen-frame-never-raises-stopiteration", pyFile := src, pyFns := ["gen_send_ex2"]
+  { id := "gen-frame-never-raises-stopiteration", pyFile := src, pyFns := []
     statement := "A frame never ends by raising StopIteration (the assert at genobject.c:279), on the frames of the difftest's evaluator."
     source := "asserts at genobject.c:279-281", status := .refuted
     prop := ``FrameNeverRaisesStopIteration, thm := some ``frameNeverRaisesStopIteration_refuted
     bug := some "bytecode-gen-throw-created-skips-pep479"
-    notes := "Duplicate of python/cpython#152685; aborts debug builds." },
-  { id := "gen-started-frame-never-raises-stopiteration", pyFile := src, pyFns := ["gen_send_ex2"]
-    statement := "An exception unwinding off the bottom of a started frame of the difftest's evaluator, the only way such a frame raises, is never StopIteration: it has been through stopiteration_error."
-    source := "narrowing of gen-frame-never-raises-stopiteration", status := .proven
-    prop := ``StartedFrameNeverRaisesStopIteration, thm := some ``startedFrameNeverRaisesStopIteration_proven },
-  { id := "gen-flag-getters", pyFile := src, pyFns := ["gen_getrunning", "gen_getsuspended", "_gen_getframe", "gen_getframe", "cr_getrunning", "cr_getsuspended", "cr_getframe", "ag_getframe", "ag_getsuspended"]
-    statement := "gi_running (cr_running) is true exactly in FRAME_EXECUTING, gi_suspended (cr_, ag_) exactly in the two suspended states, and gi_frame (cr_, ag_) is None exactly when finished."
-    source := "Doc/library/inspect.rst getgeneratorstate; genobject.c:760-787", status := .proven
-    prop := ``GenFlagGetters, thm := some ``genFlagGetters_proven },
-  { id := "gen-code-stable", pyFile := src, pyFns := ["_PyGen_GetCode", "PyGen_GetCode", "_gen_getcode", "gen_getcode", "cr_getcode", "ag_getcode"]
-    statement := "gi_code, cr_code and ag_code do not depend on the frame state: they read the same code object after the frame is cleared."
-    source := "genobject.c:76-79", status := .proven
-    prop := ``GenCodeStable, thm := some ``genCodeStable_proven
-    notes := "Hypothesis: the audit hook answers the same on both worlds; PySys_Audit is not exercised by the difftest." },
+    notes := "Duplicate of python/cpython#152685; aborts debug builds. The counterexample runs the difftest script evaluator, so it covers no CPython function." },
   { id := "gen-name-setters", pyFile := src, pyFns := ["gen_get_name", "gen_set_name", "gen_get_qualname", "gen_set_qualname"]
     statement := "__name__ and __qualname__: anything but a str, or deletion, is a TypeError and changes nothing; a str reads back and only that attribute changes."
     source := "genobject.c:716-722, :738-744", status := .proven
     prop := ``GenNameSetters, thm := some ``genNameSetters_proven },
-  { id := "gen-sizeof-stateless", pyFile := src, pyFns := ["gen_sizeof"]
-    statement := "__sizeof__ is the fixed header plus eight bytes per frame slot of the code object, and does not depend on the frame state."
-    source := "genobject.c:830-839", status := .proven
-    prop := ``GenSizeofStateless, thm := some ``genSizeofStateless_proven },
-  { id := "gen-repr-names", pyFile := src, pyFns := ["gen_repr", "coro_repr", "async_gen_repr"]
-    statement := "repr() of each type is <tp_name object qualname at address>."
-    source := "genobject.c:701, :1113, :1491", status := .proven
-    prop := ``GenReprNames, thm := some ``genReprNames_proven },
   { id := "gen-make-coro-kinds", pyFile := src, pyFns := ["make_gen", "_Py_MakeCoro"]
     statement := "_Py_MakeCoro picks the type from the code flags, starts from a cleared frame with the function's names, and initialises the async generator flags and cr_origin."
     source := "genobject.c:915-985", status := .proven
     prop := ``PyMakeCoroKinds, thm := some ``pyMakeCoroKinds_proven },
-  { id := "gen-new-fallbacks", pyFile := src, pyFns := ["gen_new_with_qualname", "PyGen_NewWithQualName", "PyGen_New", "PyCoro_New", "PyAsyncGen_New"]
-    statement := "The frame-copying constructors start in FRAME_CREATED, and a NULL name or qualname falls back to the code object's."
-    source := "genobject.c:1003, :1012-1019", status := .proven
-    prop := ``GenNewFallbacks, thm := some ``genNewFallbacks_proven },
-  { id := "gen-cr-origin-take", pyFile := src, pyFns := ["compute_cr_origin", "PyCoro_New"]
+  { id := "gen-cr-origin-take", pyFile := src, pyFns := ["compute_cr_origin"]
     statement := "cr_origin is the innermost origin_depth frames, innermost first, and no more than the stack has."
     source := "Doc/library/sys.rst set_coroutine_origin_tracking_depth", status := .proven
     prop := ``CrOriginTake, thm := some ``crOriginTake_proven },
-  { id := "gen-coro-wrapper", pyFile := src, pyFns := ["coro_await", "coro_wrapper_iternext", "coro_wrapper_send", "coro_wrapper_throw", "coro_wrapper_close"]
-    statement := "The methods of coro.__await__() are the coroutine's own."
-    source := "genobject.c:1284-1310", status := .proven
-    prop := ``CoroWrapperPassThrough, thm := some ``coroWrapperPassThrough_proven },
   { id := "gen-awaitable-iter-result", pyFile := src, pyFns := ["_PyCoro_GetAwaitableIter", "gen_is_coroutine"]
     statement := "_PyCoro_GetAwaitableIter returns a coroutine or types.coroutine generator as it is, and otherwise only an iterator that is not a coroutine."
     source := "PEP 492; genobject.c:1060-1067, :1087-1088", status := .proven

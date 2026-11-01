@@ -74,7 +74,7 @@ expected: |
 observed: |
   python3 3.14.7: `TypeError: 'NoneType' object is not an iterator` from the jumped-to code.
   REPRODUCED.
-  main (vendor/cpython-main/python.exe, 3.15.0a0): segmentation fault (core dumped). REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): segmentation fault (core dumped). REPRODUCED
   (the harness runs it in a child and detects the negative return code).
 promised_by: |
   invariant: `frame.f_lineno = n` from a trace function must not corrupt the interpreter;

@@ -8,9 +8,24 @@ twice in the model, the second time on a program rewritten to specialized forms
 from a profile of the first run, so the specialized step rules and their deopts
 are exercised too.
 
-Sets are never printed unsorted: their iteration order is not part of the model.
+Whatever the model cannot run yet is not silently steered around: the generator
+draws the case, `exclude` counts it under a name, and the run prints the counts. Each
+name but `syntax-error` is a `.open` entry (`bytecode-gap-*`) in `lean/PyLean/Bytecode.lean`:
+
+  str-percent-conversion    a `%` conversion in a str or bytes template
+  float-pow-complex         `float ** float` with a complex result: no complex value
+  huge-int-pow              int ** int with |base| > 1, exponent > 1000 (time, memory)
+  huge-shift                nonzero int << 2**20 or more (memory)
+  huge-seq-repeat           sequence * count > 1000 (memory, MemoryError paths)
+  is-on-immediates          `is` on ints, floats, strs: CPython's identity of equal
+                            immutable values depends on caching the model does not have
+  set-iteration-order       printing a set: order depends on the table layout
+  refcount-finalizer-order  when a finalizer prints depends on reference counts
+  syntax-error              the generated source does not compile
 """
 
+import atexit
+import collections
 import contextlib
 import dis
 import gc
@@ -26,12 +41,19 @@ from common import main
 
 sys.unraisablehook = lambda u: None
 
+EXCLUDED = collections.Counter()
+
+
+def exclude(name):
+    EXCLUDED[name] += 1
+
+
 INTS = ["0", "1", "-1", "2", "3", "7", "10", "-3", "255", "256", "1000", "2**30-1", "2**30", "-(2**30)",
         "-(2**30)+1", "2**31", "2**62", "2**63-1", "2**63", "-(2**63)", "2**64", "10**20"]
 FLOATS = ["0.0", "-0.0", "1.5", "-2.5", "0.1", "3.0", "1e16", "1e22", "1e-5", "1e300", "2.0**53"]
-STRS = ["''", "'a'", "'abc'", "'é'", "'a b'", "'x'*3", "'10'", "'\\n'", "\"it's\""]
+STRS = ["''", "'a'", "'abc'", "'é'", "'a b'", "'x'*3", "'10'", "'\\n'", "\"it's\"", "'%d'", "'%s %s'", "'100%'"]
 ATOMS = ["None", "True", "False", "[]", "[1]", "[1, 2, 3]", "()", "(1,)", "(1, 2)", "{}", "{1: 2}", "{'a': 1}",
-         "set()", "{1, 2}", "range(3)", "range(0)", "[[1], [2]]", "b'ab'", "...", "NotImplemented"]
+         "set()", "{1, 2}", "range(3)", "range(0)", "[[1], [2]]", "b'ab'", "b'%d'", "...", "NotImplemented"]
 BINOPS = ["+", "-", "*", "/", "//", "%", "**", "&", "|", "^", "<<", ">>"]
 CMPOPS = ["==", "!=", "<", "<=", ">", ">=", "is", "is not", "in", "not in"]
 
@@ -45,6 +67,33 @@ def value(r):
     if k < 0.75:
         return r.choice(STRS)
     return r.choice(ATOMS)
+
+
+def unmodelled_binop(op, a, b):
+    """The exclusion name for `a op b`, or None when the model runs it."""
+    x, y = eval(a), eval(b)
+    is_int = lambda v: isinstance(v, int)
+    if op == "%" and ((isinstance(x, str) and "%" in x) or (isinstance(x, bytes) and b"%" in x)):
+        return "str-percent-conversion"
+    if op == "**":
+        if is_int(x) and is_int(y) and abs(x) > 1 and y > 1000:
+            return "huge-int-pow"
+        if isinstance(x, (int, float)) and isinstance(y, (int, float)):
+            try:
+                if isinstance(x ** y, complex):
+                    return "float-pow-complex"
+            except (OverflowError, ZeroDivisionError):
+                pass
+    if op == "<<" and is_int(x) and x != 0 and is_int(y) and y >= 2**20:
+        return "huge-shift"
+    if op == "*":
+        seqs = (str, bytes, list, tuple)
+        if (isinstance(x, seqs) and is_int(y) and y > 1000) or (is_int(x) and isinstance(y, seqs) and x > 1000):
+            return "huge-seq-repeat"
+    return None
+
+
+IDENTITY_SAFE = ("None", "True", "False", "[]")
 
 
 def guarded(body, r=None):
@@ -61,22 +110,16 @@ def p_arith(r):
         k = r.random()
         if k < 0.45:
             op = r.choice(BINOPS)
-            if op in ("**", "<<"):
-                b = r.choice(["0", "1", "2", "3", "-1", "10"])
-                if op == "**" and a in ("2**63", "2**64", "10**20", "2**62", "2**63-1", "-(2**63)", "1e300", "1e22"):
-                    a = "2"
-            if op == "*" and any(c in a + b for c in "'[(") :
-                b = r.choice(["0", "1", "2", "-1", "3"])
-            if op in ("%", "//") and ("." in a + b or "e" in a + b):
-                a, b = r.choice(INTS), r.choice(INTS)
-            if op == "%" and ("'" in a or "'" in b or a.startswith("b") or b.startswith("b")
-                              or "*" in a or "*" in b):
-                # str/bytes % with conversions is modelled for difftest only; use ints.
-                a, b = r.choice(INTS), r.choice(INTS)
+            why = unmodelled_binop(op, a, b)
+            if why:
+                exclude(why)
+                continue
             out.append(guarded(f"x = {a}\ny = {b}\nprint(x {op} y)"))
         elif k < 0.7:
             op = r.choice(CMPOPS)
             if op in ("is", "is not"):
+                if a not in IDENTITY_SAFE or b not in IDENTITY_SAFE:
+                    exclude("is-on-immediates")
                 a, b = r.choice(["None", "True", "[]"]), r.choice(["None", "False", "x"])
                 out.append(guarded(f"x = None\ny = {a}\nprint(y {op} {b})"))
             else:
@@ -86,8 +129,10 @@ def p_arith(r):
             out.append(guarded(f"x = {a}\nprint({op}x)"))
         elif k < 0.9:
             op = r.choice(["+=", "-=", "*=", "|=", "&="])
-            if op == "*=":
-                b = r.choice(["0", "1", "2"])
+            why = unmodelled_binop(op[:-1], a, b)
+            if why:
+                exclude(why)
+                continue
             out.append(guarded(f"x = {a}\nx {op} {b}\nprint(x)"))
         else:
             fn = r.choice(["bool", "len", "str", "repr", "abs", "int", "list", "tuple", "sorted", "sum", "min", "max",
@@ -97,6 +142,7 @@ def p_arith(r):
             elif fn == "hash":
                 out.append(guarded(f"d = {{}}\nd[{a}] = 1\nprint(len(d), {a} in d)"))
             elif fn in ("str", "repr") and ("set" in a or "{1, 2}" in a):
+                exclude("set-iteration-order")
                 out.append(guarded(f"print(len({a}))"))
             else:
                 out.append(guarded(f"print({fn}({a}))"))
@@ -262,7 +308,8 @@ def p_gen(r):
     out = [sub, f"def f():\n{indented}", "g = f()"]
     # `throw(1)` on a delegating generator drops the subiterator, and what its
     # finalizer prints depends on reference counts, which the model does not have.
-    if "sub()" in body:
+    if "sub()" in body and "g.throw(1)" in ops:
+        exclude("refcount-finalizer-order")
         ops = [o for o in ops if o != "g.throw(1)"]
     for o in ops:
         out.append(guarded(f"print({o})"))
@@ -411,6 +458,7 @@ def gen_case(rng):
             warnings.simplefilter("ignore")
             co = compile(src, "<prog>", "exec")
     except SyntaxError:
+        exclude("syntax-error")
         return None
     table = []
     main_idx = dump(co, table)
@@ -441,4 +489,5 @@ def run_python(case):
 
 
 if __name__ == "__main__":
+    atexit.register(lambda: print("excluded", dict(sorted(EXCLUDED.items()))))
     main(gen_case, run_python)

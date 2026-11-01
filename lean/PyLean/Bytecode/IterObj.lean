@@ -359,6 +359,13 @@ def IterSetstate : Prop :=
   ∀ (it : SeqIter) (i : Int), 0 ≤ it.index → 0 ≤ (iterSetstate it i).index ∧
     (iterSetstate it i).held = it.held
 
+/-- `__length_hint__` is never negative, and pickling then unpickling a live
+iterator restores its index. -/
+def IterLenReduce : Prop :=
+  ∀ (it : SeqIter) (n : Int), 0 ≤ it.index → it.held = true →
+    (∀ h, iterLen (some (.ok n)) it = .ok (some h) → 0 ≤ h) ∧
+    iterReduce (iterSetstate ⟨true, 0⟩ it.index) = iterReduce it
+
 /-- A sentinel match ends a callable iterator for good, and so does `StopIteration`;
 any other exception keeps it alive. -/
 def CalliterEnds : Prop :=

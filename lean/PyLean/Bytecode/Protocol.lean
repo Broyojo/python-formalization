@@ -104,7 +104,40 @@ def opDunder : Nat → String
   | 6 => "mod" | 7 => "or" | 8 => "pow" | 9 => "rshift" | 10 => "sub" | 11 => "truediv"
   | _ => "xor"
 
-def pyPow (a b : UInt64) : UInt64 := (Float.pow (Float.ofBits a) (Float.ofBits b)).toBits
+/-- The C library `pow` that `float_pow` calls. It is an oracle for the difftest
+(`Binary64.floatPowCore` takes any `pow`); no proof depends on it. -/
+def cpow (a b : Binary64.F64) : Binary64.F64 :=
+  Binary64.F64.ofBits (Float.pow (Float.ofBits (ofF a)) (Float.ofBits (ofF b))).toBits.toNat
+
+/-- `float` arithmetic, `Objects/floatobject.c:551-813`, through the exact mirrors in
+`Binary64/Float.lean`. `(-2.5) ** 0.5` hands off to `complex_pow`, and the model has no
+`complex` value: `bytecode_diff.py` excludes that case by name (`float-pow-complex`). -/
+def floatBinary (nb : Nat) (a b : UInt64) : RM (Option Val) :=
+  let (x, y) := (toF a, toF b)
+  let fin (r : Binary64.F64) : RM (Option Val) := pure (some (.float (ofF r)))
+  let raised {α} (e : PyExc) : RM α :=
+    match e with
+    | .zeroDivisionError m => raiseS "ZeroDivisionError" m
+    -- `_Py_ADJUST_ERANGE1` then `PyErr_SetFromErrno`: `str(e)` shows the args tuple.
+    | .overflowError _ => raiseS "OverflowError" "(34, 'Numerical result out of range')"
+    | _ => fault "float arithmetic raised an unexpected exception"
+  let lift (r : Py Binary64.F64) : RM (Option Val) :=
+    match r with
+    | .ok v => fin v
+    | .error e => raised e
+  match nb with
+  | 0 => fin (Binary64.F64.add x y)
+  | 5 => fin (Binary64.F64.mul x y)
+  | 10 => fin (Binary64.F64.sub x y)
+  | 11 => lift (if Binary64.F64.eq y Binary64.d0 then Binary64.zeroDiv else .ok (Binary64.F64.div x y))
+  | 2 => lift (if Binary64.F64.eq y Binary64.d0 then Binary64.zeroDiv else .ok (Binary64.float_div_mod x y).1)
+  | 6 => lift (Binary64.floatRemCore x y)
+  | 8 =>
+    match Binary64.floatPowCore cpow x y with
+    | .ok (.float r) => fin r
+    | .ok (.complexPow ..) => fault "float ** gives a complex result, which is not modelled"
+    | .error e => raised e
+  | _ => pure none
 
 /-- `int` arithmetic, `Objects/longobject.c`. `none` is `NotImplemented`. -/
 def intBinary (nb : Nat) (a b : Int) : RM (Option Val) :=
@@ -122,9 +155,15 @@ def intBinary (nb : Nat) (a b : Int) : RM (Option Val) :=
          else pure (some (.int (Int.fmod a b)))
   | 7 => pure (some (.int (intOr a b)))
   | 8 =>
-    if b ≥ 0 then pure (some (.int (a ^ b.toNat)))
-    else if a == 0 then raiseS "ZeroDivisionError" "zero to a negative power"
-    else pure (some (.float (pyPow (Num.ofInt a) (Num.ofInt b))))
+    -- `long_pow`: a negative exponent goes to `float_pow`, longobject.c. The bases
+    -- 0, 1, -1 are decided here so that a huge exponent costs nothing, as it does in
+    -- the binary-exponentiation loop of `long_pow`.
+    if b ≥ 0 then
+      if a == 0 then pure (some (.int (if b == 0 then 1 else 0)))
+      else if a == 1 then pure (some (.int 1))
+      else if a == -1 then pure (some (.int (if b % 2 == 0 then 1 else -1)))
+      else pure (some (.int (a ^ b.toNat)))
+    else floatBinary 8 (Num.ofInt a) (Num.ofInt b)
   | 9 => if b < 0 then valueError "negative shift count"
          -- `long_rshift1`: a shift past every digit leaves the sign
          else if b ≥ 1 <<< 24 then pure (some (.int (if a < 0 then -1 else 0)))
@@ -132,46 +171,14 @@ def intBinary (nb : Nat) (a b : Int) : RM (Option Val) :=
   | 10 => pure (some (.int (a - b)))
   | 11 =>
     if b == 0 then raiseS "ZeroDivisionError" "division by zero"
+    -- `long_true_divide`, longobject.c:4750-4751: `negate ? -0.0 : 0.0`
+    else if a == 0 then pure (some (.float (if b < 0 then 0x8000000000000000 else 0)))
     else
       let n := if b < 0 then -a else a
       let r := Num.ofRat n b.natAbs
       if Num.tooLarge r then raiseS "OverflowError" "integer division result too large for a float"
       else pure (some (.float r))
   | 12 => pure (some (.int (intXor a b)))
-  | _ => pure none
-
-/-- `float` arithmetic, `Objects/floatobject.c`. -/
-def floatBinary (nb : Nat) (a b : UInt64) : RM (Option Val) :=
-  let fz := (Num.toRat b).1 == 0 && Num.isFinite b
-  match nb with
-  | 0 => pure (some (.float (fadd a b)))
-  | 5 => pure (some (.float (fmul a b)))
-  | 10 => pure (some (.float (fsub a b)))
-  | 8 =>
-    if (Num.toRat a).1 == 0 && Num.isFinite a && (Num.isFinite b) && (Num.toRat b).1 < 0 then
-      raiseS "ZeroDivisionError" "zero to a negative power"
-    else pure (some (.float (pyPow a b)))
-  | 11 =>
-    if fz then raiseS "ZeroDivisionError" "division by zero"
-    else pure (some (.float ((Float.ofBits a / Float.ofBits b).toBits)))
-  | 2 | 6 =>
-    if fz then raiseS "ZeroDivisionError" "division by zero"
-    else
-      -- `float_divmod` with exact arithmetic on the finite case
-      if !Num.isFinite a || !Num.isFinite b then fault "float floor division of a non-finite value"
-      else
-        let (x, dx) := Num.toRat a
-        let (y, dy) := Num.toRat b
-        let d := max dx dy
-        let xn := x * (2 : Int) ^ (d - dx)
-        let yn := y * (2 : Int) ^ (d - dy)
-        let q := Int.fdiv xn yn
-        let r := xn - q * yn
-        if nb == 2 then pure (some (.float (Num.ofRat q 1)))
-        else
-          let v := Num.ofRat r (2 ^ d)
-          -- `mod = copysign(0, wx)` when the remainder vanishes
-          pure (some (.float (if r == 0 then (if y < 0 then 0x8000000000000000 else 0) else v)))
   | _ => pure none
 
 def pyStrRepeat (s : String) (n : Int) : String :=
@@ -670,9 +677,10 @@ def builtinCompare (l r : Val) (op : Nat) : RM (Option Val) := do
     | _, _ =>
       match l, r with
       | .float a, .float b =>
-        let (x, y) := (Float.ofBits a, Float.ofBits b)
+        let (x, y) := (toF a, toF b)
         some' (match op with
-          | 0 => x < y | 1 => x <= y | 2 => x == y | 3 => x != y | 4 => x > y | _ => x >= y)
+          | 0 => Binary64.F64.lt x y | 1 => Binary64.F64.le x y | 2 => Binary64.F64.eq x y
+          | 3 => Binary64.F64.ne x y | 4 => Binary64.F64.gt x y | _ => Binary64.F64.ge x y)
       | .float a, _ =>
         match intOf r with
         | some i =>
@@ -783,6 +791,13 @@ def hashImpl (v : Val) : RM Int := do
       pure (hs.foldl (fun h x => (h * 1000003 + x) % 2305843009213693951) 0x345678)
     | .set true items =>
       pure (frozensetHash items)
+    | .range start _ step len =>
+      -- `range_hash`, rangeobject.c:579: `hash((len(r), None, None))` when empty,
+      -- `hash((len(r), r.start, None))` for one element, else `(len, start, step)`.
+      let hs := [hashInt len,
+        if len == 0 then 0x123456 else hashInt start,
+        if len ≤ 1 then 0x123456 else hashInt step]
+      pure (hs.foldl (fun h x => (h * 1000003 + x) % 2305843009213693951) 0x345678)
     | .inst i =>
       match ← userLookup i.cls "__hash__" with
       | some .none => unhashable

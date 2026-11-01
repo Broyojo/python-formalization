@@ -1,4 +1,5 @@
 import PyLean.Bytecode.Stack
+import PyLean.Binary64.Float
 
 /-!
 Step rules of `Python/bytecodes.c`, part 1: lines 146-1712 (constants, locals,
@@ -17,9 +18,11 @@ namespace PyLean.Bytecode.Uop
 open PyLean.Bytecode
 
 /-- Binary64 helpers (the `double` arithmetic of the float specializations). -/
-def fadd (a b : UInt64) : UInt64 := (Float.ofBits a + Float.ofBits b).toBits
-def fsub (a b : UInt64) : UInt64 := (Float.ofBits a - Float.ofBits b).toBits
-def fmul (a b : UInt64) : UInt64 := (Float.ofBits a * Float.ofBits b).toBits
+def toF (b : UInt64) : Binary64.F64 := Binary64.F64.ofBits b.toNat
+def ofF (x : Binary64.F64) : UInt64 := x.bits.toUInt64
+def fadd (a b : UInt64) : UInt64 := ofF (Binary64.F64.add (toF a) (toF b))
+def fsub (a b : UInt64) : UInt64 := ofF (Binary64.F64.sub (toF a) (toF b))
+def fmul (a b : UInt64) : UInt64 := ofF (Binary64.F64.mul (toF a) (toF b))
 
 /-- `COMPARISON_BIT(x, y)`, `Include/internal/pycore_code.h:502`. -/
 def comparisonBit (ge le : Bool) : Nat :=

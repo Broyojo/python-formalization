@@ -11,6 +11,10 @@ reduces to the opcode's `stk`/`stkK` combinator, whose effect is exactly its
 declared `(pop, push)` numbers (`eff_stk`, `eff_stkK` in `Stack.lean`), and
 `numPopped`/`numPushed` reduce to those same numbers.
 
+These proofs read only the `(pop, push)` annotation of `stk`, so they hold for any
+body: they check the annotations against the metadata, and they are not coverage of
+any opcode. The registry entry is `.open`.
+
 The full 398-opcode version is future work; the peek-and-dispatch opcodes
 (`FOR_ITER`, `SEND`, `WITH_EXCEPT_START`, `RERAISE`, `END_ASYNC_FOR`,
 `CLEANUP_THROW`), the two super-instructions (`CALL_LIST_APPEND`,

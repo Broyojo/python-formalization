@@ -54,7 +54,7 @@ expected: |
   one does and as `object_new` guarantees.
 observed: |
   python3 3.14.7: created 39, errors 1. REPRODUCED.
-  main (vendor/cpython-main/python.exe, 3.15.0a0): created 39, errors 1. REPRODUCED.
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): created 39, errors 1. REPRODUCED.
 promised_by: |
   object_new, Objects/typeobject.c:6867 ("if (type->tp_flags & Py_TPFLAGS_IS_ABSTRACT)"); the
   generic CALL path reaches it and raises, the specialized path does not.

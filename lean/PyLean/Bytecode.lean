@@ -65,11 +65,11 @@ def entries : List Entry := GenObj.entries ++ [
     status := .proven, prop := ``SubscrListInt, thm := some ``subscrListInt_proven },
   -- Stack effects against the generated metadata.
   { id := "bytecode-stack-effects", pyFile := "Python/bytecodes.c"
-    pyFns := [op "POP_TOP", op "BUILD_TUPLE", op "BUILD_MAP", op "GET_ITER", op "IS_OP", op "GET_LEN",
-              op "MATCH_KEYS", op "IMPORT_FROM", op "STORE_FAST", op "BUILD_SLICE"]
-    statement := "Every opcode that completes in the same frame pops exactly _PyOpcode_num_popped(op, oparg) values and pushes _PyOpcode_num_pushed(op, oparg), leaving the rest of the stack unchanged, for all stacks and args. Excludes the two super-instructions (CALL_LIST_APPEND, BINARY_OP_INPLACE_ADD_UNICODE), the frame-leaving opcodes, and the peek-and-dispatch opcodes (FOR_ITER, SEND, WITH_EXCEPT_START, RERAISE), noted in StackEffect.lean."
+    pyFns := []
+    statement := "Every opcode that completes in the same frame pops exactly _PyOpcode_num_popped(op, oparg) values and pushes _PyOpcode_num_pushed(op, oparg), leaving the rest of the stack unchanged, for every stack and oparg."
     source := "invariant: stack effect matches Include/internal/pycore_opcode_metadata.h (stack_effect / flowgraph.c)"
-    status := .proven, prop := ``StackEffects, thm := some ``stackEffects_proven },
+    status := .open, prop := ``StackEffects
+    notes := "Withdrawn from proven. stackEffects_proven covers ten opcodes and reads only the (pop, push) annotation of the stk wrapper, so it holds for any body. The prop is that sample, not the statement. A real proof needs the effect of each body, including the opcodes that peek and dispatch." },
   { id := "bytecode-send-gen-recursion", pyFile := "Python/bytecodes.c"
     pyFns := [op "SEND_GEN", op "_SEND_GEN_FRAME", op "_PUSH_FRAME"]
     statement := "SEND_GEN steps as the generic SEND. It does not: the generic path runs the generator frame through _PyEval_EvalFrame (gen_send_ex2), which enters start_frame and enforces the Python recursion limit, while SEND_GEN's _PUSH_FRAME pushes the generator frame with no _CHECK_RECURSION_REMAINING, so a deep resume that the generic form stops with RecursionError proceeds."
@@ -131,16 +131,6 @@ def entries : List Entry := GenObj.entries ++ [
     statement := "enumerate(iterable, start) yields the indices start, start+1, ... for every start and length, across the Py_ssize_t fast path and the PyLong slow path and their switch at PY_SSIZE_T_MAX."
     source := "enum_next/enum_next_long, Objects/enumobject.c:197-286"
     status := .proven, prop := ``IterObj.EnumCounts, thm := some ``IterObj.enumCounts_proven },
-  { id := "bytecode-cell-order", pyFile := "Objects/cellobject.c"
-    pyFns := ["cell_richcompare", "cell_compare_impl"]
-    statement := "An empty cell sorts before every full cell, two empty cells compare equal, and two full cells compare by contents, for every element comparison."
-    source := "cell_compare_impl, Objects/cellobject.c:85-115"
-    status := .proven, prop := ``IterObj.CellOrder, thm := some ``IterObj.cellOrder_proven },
-  { id := "bytecode-cell-contents", pyFile := "Objects/cellobject.c"
-    pyFns := ["cell_get_contents", "cell_set_contents", "PyCell_Get", "PyCell_Set"]
-    statement := "cell.cell_contents reads back what was stored, an empty cell raises ValueError, and del empties the cell."
-    source := "cell_get_contents/cell_set_contents, Objects/cellobject.c:146-165"
-    status := .proven, prop := ``IterObj.CellContents, thm := some ``IterObj.cellContents_proven },
   { id := "bytecode-cell-new", pyFile := "Objects/cellobject.c"
     pyFns := ["cell_new", "PyCell_New"]
     statement := "cell() takes at most one positional argument and no keywords."
@@ -182,16 +172,6 @@ def entries : List Entry := GenObj.entries ++ [
     statement := "FOR_ITER with a next item pushes it above the iterator, for every iterator."
     source := "_FOR_ITER, Python/bytecodes.c:3146-3175"
     status := .proven, prop := ``ForIterNext, thm := some ``forIterNext_proven },
-  { id := "bytecode-frame-compatible-kind", pyFile := "Objects/frameobject.c"
-    pyFns := ["compatible_kind"]
-    statement := "compatible_kind: nothing is compatible with kind 0, NULL is never compatible with Object, anything is compatible with Null, and otherwise the kinds must match."
-    source := "compatible_kind, Objects/frameobject.c:1175-1187"
-    status := .proven, prop := ``FrameObj.CompatibleKind, thm := some ``FrameObj.compatibleKind_proven },
-  { id := "bytecode-frame-overflowed", pyFile := "Objects/frameobject.c"
-    pyFns := ["push_value", "pop_value"]
-    statement := "An OVERFLOWED stack stays OVERFLOWED under push_value and pop_value."
-    source := "push_value/pop_value, Objects/frameobject.c:1199-1214"
-    status := .proven, prop := ``FrameObj.Overflowed, thm := some ``FrameObj.overflowed_proven },
   { id := "bytecode-frame-swap-shallow", pyFile := "Objects/frameobject.c"
     pyFns := ["stack_swap", "peek"]
     statement := "stack_swap is correct while its result fits 32 bits (at most ten stack entries): there the truncating version equals the full 64-bit computation."
@@ -201,7 +181,98 @@ def entries : List Entry := GenObj.entries ++ [
     pyFns := ["first_line_not_before", "marklines"]
     statement := "first_line_not_before returns a line that is in the table and not before the request, or -1 when none exists."
     source := "first_line_not_before, Objects/frameobject.c:1594-1607"
-    status := .proven, prop := ``FrameObj.FirstLine, thm := some ``FrameObj.firstLine_proven }
+    status := .proven, prop := ``FrameObj.FirstLine, thm := some ``FrameObj.firstLine_proven },
+  { id := "bytecode-iter-setstate", pyFile := "Objects/iterobject.c"
+    pyFns := ["iter_setstate"]
+    statement := "iter(seq).__setstate__(i) never leaves a negative index and never revives an exhausted iterator, for every i."
+    source := "iter_setstate, Objects/iterobject.c:127-140"
+    status := .open, prop := ``IterObj.IterSetstate
+    notes := "Proof did not survive; needs the arithmetic of the clamp at iterobject.c." },
+  { id := "bytecode-iter-len-reduce", pyFile := "Objects/iterobject.c"
+    pyFns := ["iter_len", "iter_reduce"]
+    statement := "iter(seq).__length_hint__() is never negative for a live iterator, and __reduce__/__setstate__ round-trips the index."
+    source := "iter_len/iter_reduce, Objects/iterobject.c:85-140"
+    status := .open, prop := ``IterObj.IterLenReduce
+    notes := "Proof did not survive; the statement was also ill-typed and is fixed here." },
+  { id := "bytecode-anext-coroutine", pyFile := "Objects/iterobject.c"
+    pyFns := ["anextawaitable_iternext", "anextawaitable_getiter"]
+    statement := "For a coroutine from __anext__ (state kept in the object), await anext(a, default) drives it to completion like await a.__anext__(), when it does not raise StopAsyncIteration."
+    source := "anextawaitable_iternext, Objects/iterobject.c:369-407"
+    status := .open, prop := ``IterObj.AnextCoroutine
+    notes := "Proof did not survive; needs induction over runAnext and runAwait. The refuted bytecode-anext-default-restarts-await is the non-coroutine case." },
+  { id := "bytecode-enum-reduce", pyFile := "Objects/enumobject.c"
+    pyFns := ["enum_reduce"]
+    statement := "Pickling enumerate and rebuilding continues the count unbroken, in both the fast and the slow index state."
+    source := "enum_reduce, Objects/enumobject.c:288-303"
+    status := .open, prop := ``IterObj.EnumReduce
+    notes := "Proof did not survive; needs an invariant over the enum_next fold across PY_SSIZE_T_MAX." },
+  { id := "bytecode-reversed-setstate", pyFile := "Objects/enumobject.c"
+    pyFns := ["reversed_setstate", "reversed_len"]
+    statement := "reversed.__setstate__ clamps the index to [-1, n-1] and leaves an exhausted iterator alone; __length_hint__ is then in [0, n]."
+    source := "reversed_setstate/reversed_len, Objects/enumobject.c:480-534"
+    status := .open, prop := ``IterObj.RevSetstate
+    notes := "Proof did not survive; needs the clamp arithmetic of reversed_setstate." },
+  { id := "bytecode-yield-suspends", pyFile := "Python/bytecodes.c"
+    pyFns := [op "YIELD_VALUE"]
+    statement := "YIELD_VALUE sets gi_frame_state to FRAME_SUSPENDED + oparg, stores the frame with instr_ptr advanced and its stack saved, resumes the caller after the SEND/FOR_ITER, and moves the generator's handled exception back into the generator, for every state."
+    source := "YIELD_VALUE, Python/bytecodes.c:1370-1402"
+    status := .open, prop := ``YieldSuspends
+    notes := "Proof did not survive: excInfo and prev are projections of regs, so they cannot be substituted; needs rewriting with the hypotheses instead." },
+  -- frameobject stack analysis facts.,
+  { id := "bytecode-frame-push-pop", pyFile := "Objects/frameobject.c"
+    pyFns := ["push_value", "pop_value", "top_of_stack"]
+    statement := "Below the overflow threshold, pop_value undoes push_value and top_of_stack reads the kind pushed."
+    source := "push_value/pop_value/top_of_stack, Objects/frameobject.c:1199-1222"
+    status := .open, prop := ``FrameObj.PushPop
+    notes := "Proof did not survive: needs the shift arithmetic of push_value below the overflow threshold in core Lean." },
+  { id := "bytecode-gap-str-percent", pyFile := "Objects/unicodeobject.c"
+    pyFns := []
+    statement := "str % args and bytes % args with a conversion in the template format their arguments."
+    source := "PyUnicode_Format, unicodeobject.c:15549; _PyBytes_FormatEx, bytesobject.c:634"
+    status := .open, prop := ``FormatRuns
+    notes := "The model has no conversions and faults. bytecode_diff.py exclusion: str-percent-conversion. Not started." },
+  { id := "bytecode-gap-float-pow-complex", pyFile := "Objects/floatobject.c"
+    pyFns := []
+    statement := "A negative float to a non-integer power gives a complex."
+    source := "float_pow, floatobject.c:696-813"
+    status := .open, prop := ``FloatPowRuns
+    notes := "The machine has no complex value and faults. bytecode_diff.py exclusion: float-pow-complex." },
+  { id := "bytecode-gap-huge-shift", pyFile := "Objects/longobject.c"
+    pyFns := []
+    statement := "A nonzero int shifted left by 2**24 or more behaves as in long_lshift."
+    source := "long_lshift, longobject.c"
+    status := .open, prop := ``HugeShiftRuns
+    notes := "The model faults rather than allocate. bytecode_diff.py exclusion: huge-shift." },
+  { id := "bytecode-gap-huge-int-pow", pyFile := "Objects/longobject.c"
+    pyFns := []
+    statement := "int ** int with a large result behaves as in long_pow, including MemoryError."
+    source := "long_pow, longobject.c"
+    status := .open, prop := ``NotYetStated
+    notes := "Allocation failure is not modelled. bytecode_diff.py exclusion: huge-int-pow." },
+  { id := "bytecode-gap-huge-seq-repeat", pyFile := "Objects/abstract.c"
+    pyFns := []
+    statement := "A sequence repeated by a count past Py_ssize_t raises OverflowError, and an unallocatable repeat raises MemoryError."
+    source := "sequence_repeat, abstract.c:1147-1163"
+    status := .open, prop := ``NotYetStated
+    notes := "PyNumber_AsSsize_t overflow and allocation failure are not modelled. bytecode_diff.py exclusion: huge-seq-repeat." },
+  { id := "bytecode-gap-is-on-immediates", pyFile := "Python/bytecodes.c"
+    pyFns := []
+    statement := "`is` on ints, floats and strs agrees with CPython."
+    source := "IS_OP, Py_Is"
+    status := .open, prop := ``NotYetStated
+    notes := "Those values have no address in the machine, so equal values compare identical; CPython depends on its small-int cache, interning and constant merging. bytecode_diff.py exclusion: is-on-immediates." },
+  { id := "bytecode-gap-set-iteration-order", pyFile := "Objects/setobject.c"
+    pyFns := []
+    statement := "Set iteration order agrees with CPython."
+    source := "set_next, setobject.c"
+    status := .open, prop := ``NotYetStated
+    notes := "The model keeps insertion order, not the hash table. bytecode_diff.py exclusion: set-iteration-order." },
+  { id := "bytecode-gap-refcount-finalizers", pyFile := "Objects/genobject.c"
+    pyFns := []
+    statement := "Finalizers run when CPython runs them."
+    source := "_PyGen_Finalize; reference counting"
+    status := .open, prop := ``NotYetStated
+    notes := "The machine has no reference counts. bytecode_diff.py exclusion: refcount-finalizer-order." }
 ]
 
 end PyLean.Bytecode

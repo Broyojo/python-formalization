@@ -1,88 +1,92 @@
 id: bytecode-push-frame-gen-recursion
-title: "SEND_GEN / FOR_ITER_GEN push a generator frame via _PUSH_FRAME with no recursion-limit check, so a deep generator resume bypasses RecursionError that the generic SEND/FOR_ITER enforce"
+title: "SEND_GEN and FOR_ITER_GEN push a generator frame with no recursion check, so a chain of delegating generators passes the recursion limit once its site has specialized"
 priority: P3
 kind: specialization-mismatch
 module: bytecode
-files: [Python/bytecodes.c]
-functions: ["SEND_GEN", "_SEND_GEN_FRAME", "FOR_ITER_GEN", "_FOR_ITER_GEN_FRAME", "_PUSH_FRAME",
-            "_SEND", "gen_send_ex2"]
+files: [Python/bytecodes.c, Python/ceval.c]
+functions: ["SEND_GEN", "_SEND_GEN_FRAME", "FOR_ITER_GEN", "_FOR_ITER_GEN_FRAME", "_PUSH_FRAME", "_SEND"]
 summary: |
-  The generic `SEND` and `FOR_ITER` resume a generator by calling its `send`/`tp_iternext`, which
-  for a Python generator runs `_PyEval_EvalFrame` -> the eval loop's `start_frame` label, where
-  `_Py_EnterRecursivePy` enforces the Python recursion limit. The specialized `SEND_GEN` and
-  `FOR_ITER_GEN` instead inline the generator's frame with `_SEND_GEN_FRAME` / `_FOR_ITER_GEN_FRAME`
-  followed by `_PUSH_FRAME` (Python/bytecodes.c:1348-1368, 3468-3494, 4010-4025). `_PUSH_FRAME`
-  does `tstate->py_recursion_remaining--` but, unlike `start_frame`, performs no
-  `_Py_EnterRecursivePy` / `_CHECK_RECURSION_REMAINING` check. So once `SEND`/`FOR_ITER` specializes,
-  a resume at the recursion boundary that the generic form would stop with `RecursionError`
-  proceeds into the generator frame.
-  This is the same underlying shape as python/cpython#155151 (CALL_EX_PY / CALL_KW_BOUND_METHOD
-  bypass RecursionError after specialization): a specialized `_PUSH_FRAME` path missing the
-  recursion check that the generic path has. The model finds it for the generator-frame opcodes.
+  The generic path enforces the recursion limit when it enters a generator frame. `_SEND`
+  (Python/bytecodes.c:1297) inlines a generator with `DISPATCH_INLINED` (:1317), which goes
+  through the `start_frame` label, where `_Py_EnterRecursivePy` (Python/ceval.c:1212) raises
+  `RecursionError`. Generic `FOR_ITER` reaches the same check through `tp_iternext` and the
+  evaluation loop.
+  The specialized forms do not. `SEND_GEN` (:1364-1368) and `FOR_ITER_GEN` (:3490-3494) are
+  `_CHECK_PEP_523` + a frame op + `_PUSH_FRAME`. `_PUSH_FRAME` (:4010) decrements
+  `py_recursion_remaining` (:4021) and tests nothing, and neither macro contains
+  `_CHECK_RECURSION_REMAINING` (:3994), which `CALL_PY_GENERAL`, `CALL_PY_EXACT_ARGS`,
+  `CALL_BOUND_METHOD_GENERAL` and `CALL_KW_PY` do contain.
+  So one `yield from` or `for` site that has specialized descends a chain of generators of
+  any depth without a `RecursionError`, while the same chain on unspecialized code stops at
+  the limit. Whether `next(g)` raises depends on whether the site has warmed up.
 likelihood: |
-  Low. It needs a `yield from`/`await`/`for`-over-generator chain deep enough to sit at the
-  recursion limit, and the call site must have specialized. The effect is a few extra frames of
-  C-stack headroom used before the error, not an unbounded overrun, because `_PUSH_FRAME` still
-  decrements and the C recursion guard eventually fires; so the practical risk is lower than a
-  missing check in a plain call.
+  Low. It takes a chain of delegating generators deeper than the recursion limit. The site
+  specializes within a few executions, so in practice the limit is simply not enforced on
+  such a chain, even on its first descent: only a chain whose every level has its own code
+  object stays generic. Frames are pushed inline, so this descent used no C stack; the
+  reproducer went to depth 1000 under limit 200 and nothing crashed. Greater depths and
+  deallocation of the chain were not examined here.
 maybe_intended: |
-  Uncertain. The fix for #155151 added `_CHECK_RECURSION_REMAINING` to several `CALL*` macros
-  (gh-137887 and follow-ups) but the generator-frame macros `SEND_GEN`/`FOR_ITER_GEN` still omit
-  it. Whether that is deliberate (the generator frame is counted elsewhere) or an oversight is for
-  a maintainer to judge; it is recorded as part of the specialization-refinement comparison, and
-  should be reported together with #155151 rather than separately.
+  Unknown. The limit exists mainly to protect the stack, and an inlined generator frame costs
+  no C stack, so a maintainer may accept the difference. Against that, `CALL_PY_*` does check
+  in the same situation, and behaviour that changes with specialization is what the adaptive
+  interpreter is meant not to do.
 reproducer: |
-  import sys
-  sys.setrecursionlimit(170)
-  def link(inner):
-      r = yield from inner
-      return r
+  import os, sys
+  SEND = "def link(inner):\n    yield from inner\n"
+  FOR = "def link(inner):\n    for x in inner:\n        yield x\n"
+  def fresh(src):
+      ns = {}
+      exec(compile(src, "<chain>", "exec"), ns)
+      return ns["link"]
   def leaf():
       yield 1
-  def build(n):
+  keep = []
+  def run(links):
       g = leaf()
-      for _ in range(n):
+      for link in links:
           g = link(g)
-      return g
-  # Cold (unspecialized) and hot (specialized) FOR_ITER/SEND over a deep yield-from chain.
-  cold_depths = []
-  for n in (150, 400, 1200):
-      g = build(n)
+      keep.append(g)
       try:
-          next(g)
-          cold_depths.append((n, 'ok'))
+          return next(g)
       except RecursionError:
-          cold_depths.append((n, 'RecursionError'))
-  print(cold_depths)
-  # A depth that errors generically but is admitted once specialized demonstrates the gap;
-  # the exact boundary depends on the C stack, so this reproducer reports the observation rather
-  # than asserting a fixed number.
-  print('REPRODUCED bytecode-push-frame-gen-recursion')
+          return "RecursionError"
+  LIMIT, DEPTH = 200, 1000
+  sys.setrecursionlimit(LIMIT)
+  out = {}
+  for name, src in (("SEND", SEND), ("FOR_ITER", FOR)):
+      # Own code object per level: each site runs once and stays generic.
+      generic = run([fresh(src) for _ in range(DEPTH)])
+      # One code object: its site specializes after a few executions.
+      shared = fresh(src)
+      specialized = run([shared] * DEPTH)
+      out[name] = (generic, specialized)
+      print(name, "generic:", generic, "specialized:", specialized, flush=True)
+  if any(g == "RecursionError" and s == 1 for g, s in out.values()):
+      print("REPRODUCED bytecode-push-frame-gen-recursion", flush=True)
+  os._exit(0)
 expected: |
-  A generator resume enforces the Python recursion limit identically whether or not the
-  SEND/FOR_ITER call site has specialized to SEND_GEN/FOR_ITER_GEN.
+  `next(g)` on a chain deeper than the recursion limit behaves the same whether or not the
+  delegating site has specialized.
 observed: |
-  Model: `sendGenAgrees_refuted` shows `SEND_GEN` completes (pushes the generator frame) in a state
-  with `py_recursion_remaining = 0` where the generic `SEND` path's `start_frame` would raise
-  `RecursionError`. On the interpreter the boundary is C-stack dependent; recorded as an
-  observation, to be confirmed by a maintainer alongside #155151. Not independently gated on the
-  interpreter here (the recursion boundary shifts with build options).
+  python3 3.14.7: SEND generic: RecursionError specialized: 1; FOR_ITER generic:
+  RecursionError specialized: 1. REPRODUCED.
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): identical. REPRODUCED.
 promised_by: |
-  invariant: a specialized opcode refines its generic form; python/cpython#155151 established that
-  the recursion check must be preserved across call specialization.
+  invariant: a specialized opcode refines its generic form. The check was added to the
+  keyword-call paths for the same reason in python/cpython#137887.
 cause: |
-  Python/bytecodes.c:4010-4025 (`_PUSH_FRAME`) decrements `py_recursion_remaining` without a
-  recursion check, and the macros `SEND_GEN` (1364-1368) and `FOR_ITER_GEN` (3490-3494) use it
-  with no `_CHECK_RECURSION_REMAINING`, unlike the `CALL_PY_*` macros fixed for #155151.
+  Python/bytecodes.c:1364-1368 and :3490-3494: the macros have no
+  `_CHECK_RECURSION_REMAINING`, and `_PUSH_FRAME` (:4010-4021) decrements the counter without
+  testing it. Python/ceval.c:1212 is the check the generic path passes through.
 possible_fix: |
-  Add `_CHECK_RECURSION_REMAINING` to the `SEND_GEN` and `FOR_ITER_GEN` macros (as done for the
-  `CALL_PY_*` family), or perform the check in `_PUSH_FRAME`.
+  Add `_CHECK_RECURSION_REMAINING` to `SEND_GEN` and `FOR_ITER_GEN`, so that a site at the
+  limit deopts to the generic form, as the `CALL_PY_*` macros do.
 duplicates:
   issues:
-    - {number: 155151, state: open, relation: same-root-cause, reason: "specialized _PUSH_FRAME paths bypassing RecursionError; this is the generator-frame instance of the same defect (report together)"}
-    - {number: 137883, state: closed, relation: related, reason: "earlier specialized-call recursion-limit bypass"}
-  queries: ["SEND_GEN recursion", "FOR_ITER_GEN recursion limit", "_PUSH_FRAME recursion check",
-            "generator specialization RecursionError bypass", "155151"]
+    - {number: 155151, state: open, relation: related, reason: "reported by someone else (marinelay): CALL_EX_PY and CALL_KW_BOUND_METHOD bypass RecursionError after specialization. Same kind of gap, different opcodes; it does not mention SEND_GEN or FOR_ITER_GEN. Open, so these macros have no fix to compare with."}
+    - {number: 137883, state: closed, relation: related, reason: "'Runaway recursion with keyword arguments in 3.14'; fixed by PR 137887, which covers keyword calls only"}
+  queries: ["gh issue view 155151", "gh issue view 137883", "gh issue view 137887", "gh search issues --repo python/cpython \"SEND_GEN recursion\" (no results)"]
 lean:
   property: PyLean.Bytecode.SendGenAgrees
   theorem: PyLean.Bytecode.sendGenAgrees_refuted

@@ -126,4 +126,27 @@ theorem abstractNeverAllocates_refuted : ¬AbstractNeverAllocates := by
     rfl rfl (by decide)
   exact absurd this (by decide)
 
+/-! ## Named gaps
+
+Each is an `.open` entry and a named exclusion of `difftest/bytecode_diff.py`. -/
+
+/-- A template applied to `None` does not reach the model's `fault`. False today: a
+template with a `%` in it does. -/
+def FormatRuns : Prop :=
+  ∀ (om : ObjModel) (ctx : Ctx) (a : String) (b : List UInt8) (rt rt' : Rt) (m : String),
+    seqBinary om ctx 6 (.str a) .none rt ≠ .error (.fault m) rt' ∧
+    seqBinary om ctx 6 (.bytes b) .none rt ≠ .error (.fault m) rt'
+
+/-- `float ** float` does not reach the model's `fault`. False today: a complex result does. -/
+def FloatPowRuns : Prop :=
+  ∀ (a b : UInt64) (rt rt' : Rt) (m : String), floatBinary 8 a b rt ≠ .error (.fault m) rt'
+
+/-- `int << int` does not reach the model's `fault`. False today: a huge shift does. -/
+def HugeShiftRuns : Prop :=
+  ∀ (a b : Int) (rt rt' : Rt) (m : String), intBinary 3 a b rt ≠ .error (.fault m) rt'
+
+/-- An `.open` entry whose property cannot be written until the model has what the
+entry's notes name. No theorem claims it. -/
+def NotYetStated : Prop := True
+
 end PyLean.Bytecode

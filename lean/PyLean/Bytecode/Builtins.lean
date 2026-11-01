@@ -15,33 +15,45 @@ variable (P : Program) (om : ObjModel) (ctx : Ctx)
 /-- Builtin non-numeric operators: sequence concatenation and repetition, set and
 dict operators. `none` is `NotImplemented`. -/
 def seqBinary (nb : Nat) (l r : Val) : RM (Option Val) := do
+  /- `PyMapping_Check`, abstract.c: the type has `mp_subscript`. -/
+  let hasSubscript (v : Val) : RM Bool := do
+    match v with
+    | .str _ | .bytes _ => pure true
+    | .ref b =>
+      match ← getObj b with
+      | .dict _ | .list _ | .tuple _ | .range .. => pure true
+      | .inst i => pure (← userLookup i.cls "__getitem__").isSome
+      | _ => pure false
+    | _ => pure false
   match nb, l, r with
   | 0, .str a, .str b => pure (some (.str (a ++ b)))
   | 0, .bytes a, .bytes b => pure (some (.bytes (a ++ b)))
   | 6, .str a, _ =>
-    -- `PyUnicode_Format` for a template with no conversion in it
+    -- `PyUnicode_Format`, unicodeobject.c:15549,15583, for a template with no conversion
+    -- in it; a template with one is the named exclusion `str-percent-conversion`.
     if a.contains '%' then fault "str % with conversions is not modelled"
     else
-      let mapping ← match r with
-        | .ref b =>
-          match ← getObj b with
-          | .dict _ | .list _ | .range .. => pure true
-          | .tuple x => pure (x.size == 0)
-          | _ => pure false
-        | _ => pure false
-      if mapping then pure (some (.str a))
+      let isTuple ← match r with
+        | .ref b => match ← getObj b with
+          | .tuple x => pure (some x.size)
+          | _ => pure none
+        | _ => pure none
+      let isStr := match r with | .str _ => true | _ => false
+      let dict := (← hasSubscript r) && isTuple.isNone && !isStr
+      if dict || isTuple == some 0 then pure (some (.str a))
       else typeError "not all arguments converted during string formatting"
   | 6, .bytes a, _ =>
+    -- `_PyBytes_FormatEx`, bytesobject.c:634-635,1063, with the same named exclusion.
     if a.contains 37 then fault "bytes % with conversions is not modelled"
     else
-      let mapping ← match r with
-        | .ref b =>
-          match ← getObj b with
-          | .dict _ | .list _ | .range .. => pure true
-          | .tuple x => pure (x.size == 0)
-          | _ => pure false
-        | _ => pure false
-      if mapping then pure (some (.bytes a))
+      let isTuple ← match r with
+        | .ref b => match ← getObj b with
+          | .tuple x => pure (some x.size)
+          | _ => pure none
+        | _ => pure none
+      let isBytesOrStr := match r with | .bytes _ | .str _ => true | _ => false
+      let dict := (← hasSubscript r) && isTuple.isNone && !isBytesOrStr
+      if dict || isTuple == some 0 then pure (some (.bytes a))
       else typeError "not all arguments converted during bytes formatting"
   | 5, .bytes a, _ =>
     match intOf r with
@@ -102,6 +114,12 @@ def seqBinary (nb : Nat) (l r : Val) : RM (Option Val) := do
 
 /-- `binary_op1` over builtin payloads: numbers first, then sequences. -/
 def builtinBinary (nb : Nat) (l r : Val) : RM (Option Val) := do
+  match nb, l, r with
+  -- `bool_and`, `bool_or`, `bool_xor`, boolobject.c: two bools give a bool
+  | 1, .bool a, .bool b => return some (.bool (a && b))
+  | 7, .bool a, .bool b => return some (.bool (a || b))
+  | 12, .bool a, .bool b => return some (.bool (a != b))
+  | _, _, _ => pure ()
   match intOf l, intOf r with
   | some a, some b => intBinary nb a b
   | _, _ =>
@@ -125,19 +143,38 @@ def builtinBinary (nb : Nat) (l r : Val) : RM (Option Val) := do
 def seqToList (v : Val) : RM (List Val) := do
   drain om ctx (← om.getIter ctx v) 1000000 []
 
-/-- `dict_update_arg`, `Objects/dictobject.c`: a mapping, or a sequence of pairs. -/
+/-- `PySequence_Fast`, `Objects/abstract.c`: an exact list or tuple as it is, otherwise
+`list(iter(v))`, with a `TypeError` from `iter` replaced by `msg`. -/
+def seqFast (v : Val) (msg : String) : RM (List Val) := do
+  if let .ref a := v then
+    match ← getObj a with
+    | .list x | .tuple x => return x.toList
+    | _ => pure ()
+  let it ← tryExc (om.getIter ctx v) fun e => do
+    if ← givenMatches e 8 (.cls "TypeError") then typeError msg else throw (.exc e)
+  drain om ctx it 1000000 []
+
+/-- The loop of `merge_from_seq2_lock_held`, `Objects/dictobject.c:3810-3866`. Elements
+are taken one at a time, so pairs before a failing element stay in the dict. The
+`_PyErr_FormatNote` of line 3826 adds a note, which the model does not record. -/
+def mergeFromSeq2Loop (d it : Val) : Nat → Nat → RM Unit
+  | 0, _ => throw .fuel
+  | n + 1, i => do
+    match ← iterNextOpt om ctx it with
+    | none => pure ()
+    | some item =>
+      let kv ← seqFast om ctx item "object is not iterable"
+      match kv with
+      | [k, v] =>
+        dictSet om ctx d k v
+        mergeFromSeq2Loop d it n (i + 1)
+      | _ => valueError s!"dictionary update sequence element #{i} has length {kv.length}; 2 is required"
+
+/-- `dict_update_arg`, `Objects/dictobject.c:3735`: a mapping, or a sequence of pairs. -/
 def dictUpdateArgFwd (d o : Val) : RM Unit := do
   if (← isExactDict o) || (← optAttr om ctx o "keys").isSome then
     return ← om.dictUpdate ctx d o
-  let pairs ← seqToList om ctx o
-  for (p, i) in pairs.zipIdx do
-    let kv ← tryExc (seqToList om ctx p) fun e => do
-      if ← givenMatches e 8 (.cls "TypeError") then
-        typeError s!"cannot convert dictionary update sequence element #{i} to a sequence"
-      else throw (.exc e)
-    match kv with
-    | [k, v] => dictSet om ctx d k v
-    | _ => valueError s!"dictionary update sequence element #{i} has length {kv.length}; 2 is required"
+  mergeFromSeq2Loop om ctx d (← om.getIter ctx o) 1000000 0
 
 /-- The concatenation errors of `PyNumber_Add`/`Multiply` when the left operand
 is a sequence, `Objects/abstract.c`. -/
@@ -151,12 +188,56 @@ def seqError (nb : Nat) (l r : Val) : RM (Option String) := do
     match ← getObj a with
     | .list _ | .tuple _ => pure (some s!"can only concatenate {name} (not \"{rn}\") to {name}")
     | _ => pure none
-  | 5, .str _ => pure (some s!"can't multiply sequence by non-int of type '{rn}'")
-  | 5, .ref a =>
-    match ← getObj a with
-    | .list _ | .tuple _ => pure (some s!"can't multiply sequence by non-int of type '{rn}'")
-    | _ => pure none
   | _, _ => pure none
+
+/-- `(tp_as_sequence != NULL, sq_repeat != NULL)` of the type of `v`. Every heap type
+has a `tp_as_sequence`; it has `sq_repeat` only by inheriting one. -/
+def seqSlots (v : Val) : RM (Bool × Bool) := do
+  let builtinRepeat (x : Val) : RM Bool := do
+    match x with
+    | .str _ | .bytes _ => pure true
+    | .ref a =>
+      match ← getObj a with
+      | .list _ | .tuple _ => pure true
+      | _ => pure false
+    | _ => pure false
+  match v with
+  | .str _ | .bytes _ => pure (true, true)
+  | .ref a =>
+    match ← getObj a with
+    | .list _ | .tuple _ => pure (true, true)
+    | .dict _ | .set .. | .range .. | .dictView .. => pure (true, false)
+    | .inst i => pure (true, ← builtinRepeat i.base)
+    | _ => pure (false, false)
+  | _ => pure (false, false)
+
+/-- `sequence_repeat`, `Objects/abstract.c:1147-1163`. The `OverflowError` of
+`PyNumber_AsSsize_t` is the named exclusion `huge-seq-repeat`. -/
+def sequenceRepeat (seq n : Val) : RM Val := do
+  match ← asIndex om ctx n with
+  | some c =>
+    match ← seqBinary om ctx 5 (← payload seq) (.int c) with
+    | some v => pure v
+    | none => fault "sq_repeat on a type that has none"
+  | none => typeError s!"can't multiply sequence by non-int of type '{← tpName n}'"
+
+/-- The `sq_repeat` fallback of `PyNumber_Multiply`, abstract.c:1169-1179, and of
+`PyNumber_InPlaceMultiply`, abstract.c:1323-1341. They differ: in place, a left operand
+with a `tp_as_sequence` and no repeat (a `dict`, a `set`, a `range`) rules out the right
+operand. `none` is `binop_type_error`. -/
+def mulSeqFallback (inplace : Bool) (l r : Val) : RM (Option Val) := do
+  let (mv, rv) ← seqSlots l
+  let (mw, rw) ← seqSlots r
+  if inplace then
+    if mv then
+      if rv then return some (← sequenceRepeat om ctx l r)
+    else if mw then
+      if rw then return some (← sequenceRepeat om ctx r l)
+    pure none
+  else
+    if rv then return some (← sequenceRepeat om ctx l r)
+    if rw then return some (← sequenceRepeat om ctx r l)
+    pure none
 
 /-- `_PyEval_BinaryOps[nb]`: `binary_op1` with the reflected protocol, the
 in-place slot first for `NB_INPLACE_*`, and `PyObject_GetItem` for `NB_SUBSCR`. -/
@@ -179,7 +260,8 @@ def binaryOpImpl (nb : Nat) (l r : Val) : RM Val := do
         setObj a (.list (x ++ vals.toArray))
         return l
       | .list x, 5 =>
-        if let some n := intOf r then
+        -- `list_inplace_repeat` through `sequence_repeat`
+        if let some n ← asIndex om ctx r then
           setObj a (.list (List.flatten (List.replicate n.toNat x.toList)).toArray)
           return l
       | .dict _, 7 =>
@@ -206,7 +288,9 @@ def binaryOpImpl (nb : Nat) (l r : Val) : RM Val := do
     if let some x ← builtinBinary om ctx base (← payload l) (← payload r) then return x
   if !rFirst && lt != rt_ && rU.isSome then
     if let some x ← attempt r l s!"__r{name}__" then return x
-  if let some m ← seqError base l r then typeError m
+  if base == 5 then
+    if let some v ← mulSeqFallback om ctx inplace l r then return v
+  else if let some m ← seqError base l r then typeError m
   typeError s!"unsupported operand type(s) for {opSymbol nb}: '{← tpName l}' and '{← tpName r}'"
 
 /-- `PyNumber_Negative`. -/
@@ -269,7 +353,10 @@ def containsImpl (c item : Val) : RM Bool := do
         if len == 0 then pure false
         else if step > 0 then pure (start ≤ i && i < stop && (i - start) % step == 0)
         else pure (stop < i && i ≤ start && (start - i) % (-step) == 0)
-      | none => pure false
+      -- `range_contains`, rangeobject.c:489: anything but an exact int or bool goes to
+      -- `_PySequence_IterSearch`, abstract.c:2166, which compares `item == obj`.
+      | none =>
+        (List.range len.toNat).anyM fun (k : Nat) => eqBool om ctx (.int (start + (k : Int) * step)) item
     | .list items | .tuple items =>
       items.toList.anyM fun x => eqBool om ctx item x
     | _ =>
@@ -339,7 +426,12 @@ def reprImpl (v : Val) : RM Val := do
   | .notImpl => pure (.str "NotImplemented")
   | .ellipsis => pure (.str "Ellipsis")
   | .bool b => pure (.str (if b then "True" else "False"))
-  | .int i => pure (.str (toString i))
+  | .int i =>
+    -- `long_to_decimal_string_internal`, longobject.c: `sys.int_info.default_max_str_digits`
+    let t := toString i.natAbs
+    if t.length > 4300 then
+      valueError "Exceeds the limit (4300 digits) for integer string conversion; use sys.set_int_max_str_digits() to increase the limit"
+    pure (.str (toString i))
   | .float b => pure (.str (Num.repr b))
   | .str s => pure (.str (strRepr s))
   | .bytes b => pure (.str (bytesRepr b))
@@ -1193,6 +1285,11 @@ def callType (n : String) (args : List Val) (kw : List String) : RM Val := do
         match intFromStr s with
         | some i => pure (.int i)
         | none => valueError s!"invalid literal for int() with base 10: {strRepr s}"
+      -- `PyNumber_Long` -> `_PyLong_FromBytes`, longobject.c:3084
+      | .bytes b =>
+        match intFromStr (String.ofList (b.map fun x => Char.ofNat x.toNat)) with
+        | some i => pure (.int i)
+        | none => valueError s!"invalid literal for int() with base 10: {bytesRepr (b.take 200)}"
       | x =>
         match ← callDunder om ctx x "__int__" [] with
         | some r => pure r

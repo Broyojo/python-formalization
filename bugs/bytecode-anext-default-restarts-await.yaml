@@ -61,7 +61,7 @@ expected: |
 observed: |
   python3 3.14.7: direct ([1, 2], 'done') with 1 __await__ call; anext ([1,1,1,1,1,1,1,1],
   'did not finish') with 8 __await__ calls. REPRODUCED.
-  main (vendor/cpython-main/python.exe, 3.15.0a0): both give ([1, 2], 'done') with 1 call; NOT
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): both give ([1, 2], 'done') with 1 call; NOT
   reproduced -- fixed upstream after 3.14.7.
 promised_by: |
   Doc/library/functions.rst (anext): "Return the next item from the ... async iterator. If default
@@ -84,4 +84,3 @@ duplicates:
 lean:
   property: PyLean.Bytecode.IterObj.AnextAwaitsOnce
   theorem: PyLean.Bytecode.IterObj.anextAwaitsOnce_refuted
-  also: [PyLean.Bytecode.IterObj.AnextCoroutine, PyLean.Bytecode.IterObj.anextCoroutine_proven]

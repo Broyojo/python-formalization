@@ -65,7 +65,7 @@ expected: |
   on the evaluation stack to be used as an object.
 observed: |
   python3 3.14.7: segmentation fault (core dumped). REPRODUCED.
-  main (vendor/cpython-main/python.exe, 3.15.0a0): segmentation fault (core dumped). REPRODUCED.
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): segmentation fault (core dumped). REPRODUCED.
 promised_by: |
   invariant: `frame.f_lineno = n` from a trace function must not corrupt the interpreter.
 cause: |
