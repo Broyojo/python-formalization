@@ -76,8 +76,13 @@ def IsDigits (l : List Nat) : Prop := ∀ d ∈ l, d < 2 ^ 30
 /-- The top digit of a vector, if any, is non-zero (`long_normalize`'s postcondition). -/
 def Normal (l : List Nat) : Prop := ∀ h : l ≠ [], l.getLast h ≠ 0
 
-@[simp] theorem val_nil : val [] = 0 := rfl
-@[simp] theorem val_cons (d : Nat) (ds : List Nat) : val (d :: ds) = d + 2 ^ 30 * val ds := rfl
+/-! `val_nil` and `val_cons` are deliberately not `rfl` theorems. `simp` would use
+those as definitional rewrites, leaving the kernel to compare terms such as
+`d + 2^30 * (x + 2^30 * 0)` by unfolding `Nat.mul` on an open term, which runs out
+of memory on the literal `2^30`. -/
+@[simp] theorem val_nil : val [] = 0 := Eq.trans rfl rfl
+@[simp] theorem val_cons (d : Nat) (ds : List Nat) : val (d :: ds) = d + 2 ^ 30 * val ds :=
+  Eq.trans rfl rfl
 
 theorem isDigits_nil : IsDigits [] := by simp [IsDigits]
 theorem isDigits_cons {d : Nat} {ds : List Nat} :
