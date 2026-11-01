@@ -1,11 +1,580 @@
 import PyLean.DiffCore
+import PyLean.ListSort.Model
+import PyLean.BytesObj.Seq.Repr
+import PyLean.BytesObj.Seq.SortAux
 
-/-! Differential-testing handler for tuple and list: `fn` names start with `tuple.` or `list.`. -/
+/-! Differential-testing handler for tuple and list: `fn` names start with `tuple.` or `list.`.
+
+The element type `DEl` stands for the objects built by `difftest/bytesobj_diff.py`:
+ints, tuples of those, and instances of its class `El`, whose `kind` picks the
+comparison behaviour:
+
+* `nan`: every comparison is false (`!=` true), hash `1000 + id`, repr `<nan7>`.
+* `bad`: comparisons, `__hash__` and `__repr__` raise `ValueError`.
+* `weird`: comparisons return an object whose `__bool__` raises `TypeError`.
+* `pop`, `clear`, `add`: like `nan`, but a comparison or repr also changes the
+  list under test (`pop()` if non-empty; `clear()`; `append(0)` up to 12 items).
+
+A case's result is compared as JSON. See the docstrings of the Python twins for
+the shapes. -/
 
 namespace PyLean.BytesObj.Seq
 
 open Lean PyLean PyLean.Diff
+open PyLean.RangeSlice (Slice)
 
-def handler : Handler := fun _ _ => none
+inductive DEl where
+  | int (n : Int)
+  | obj (kind : String) (id : Nat)
+  | tup (xs : List DEl)
+  deriving Repr, Inhabited, BEq
+
+/-- `PyObject_RichCompare` results: a bool, or an object whose truth value raises. -/
+inductive Res where
+  | bool (b : Bool)
+  | weird
+  deriving Repr, BEq
+
+partial def jEl (j : Json) : Except String DEl :=
+  match j with
+  | .arr xs => do return .tup (← xs.toList.mapM jEl)
+  | .obj _ => do return .obj (← getStr j "k") (← getNat j "id")
+  | v => do return .int (← v.getInt?)
+
+partial def enEl : DEl → Json
+  | .int n => toJson n
+  | .obj k i => Json.mkObj [("k", toJson k), ("id", toJson i)]
+  | .tup xs => Json.arr (xs.map enEl).toArray
+
+def jEls (j : Json) : Except String (List DEl) := do
+  (← j.getArr?).toList.mapM jEl
+
+def enEls (l : List DEl) : Json := Json.arr (l.map enEl).toArray
+
+def kindOf : DEl → Option String
+  | .obj k _ => some k
+  | _ => none
+
+/-- The object whose method runs first: the left operand unless it is an int, in
+which case `int.__eq__` returns `NotImplemented` and the right operand's reflected
+method runs. -/
+def driver (a b : DEl) : Option String := (kindOf a) <|> (kindOf b)
+
+def dSame : DEl → DEl → Bool
+  | .obj k i, .obj k' i' => k == k' && i == i'
+  | _, _ => false
+
+def cmpTrue (op : CmpOp) (x y : Int) : Bool := cmpSizes op x y
+
+def dRich (op : CmpOp) (a b : DEl) : Py Res :=
+  match driver a b with
+  | some "bad" => .error (.valueError "bad")
+  | some "weird" => .ok .weird
+  | some _ => .ok (.bool (op == .ne))
+  | none =>
+    match a, b with
+    | .int x, .int y => .ok (.bool (cmpTrue op x y))
+    -- Only `dict.items()` tuples of ints get here, and only under `==` and `!=`.
+    | .tup _, .tup _ => .ok (.bool (if op == .ne then a != b else a == b))
+    | _, _ => .ok (.bool (op == .ne))
+
+def dTruth : Res → Py Bool
+  | .bool b => .ok b
+  | .weird => .error (.typeError "weird")
+
+def E : ElemOps DEl Res where
+  same := dSame
+  rich := dRich
+  truth := dTruth
+  ofBool := .bool
+
+def mayTrack : DEl → Bool
+  | .int _ => false
+  | _ => true
+
+/-- The `__hash__` of an int: `Objects/longobject.c:long_hash`. -/
+def intHash (x : Int) : Int :=
+  let p : Nat := 2 ^ 61 - 1
+  let r : Int := (x.natAbs % p : Nat)
+  let r := if x < 0 then -r else r
+  if r = -1 then -2 else r
+
+def dHash : DEl → Py Int
+  | .int x => .ok (intHash x)
+  | .obj "bad" _ => .error (.valueError "badhash")
+  | .obj _ i => .ok (1000 + i)
+  | .tup _ => .ok 0
+
+def dReprLeaf : DEl → Py String
+  | .int x => .ok (toString x)
+  | .obj "bad" _ => .error (.valueError "badrepr")
+  | .obj k i => .ok s!"<{k}{i}>"
+  | .tup _ => .ok "()"
+
+def dRepr : DEl → Py String
+  | .tup xs => tupleRepr dReprLeaf false xs
+  | x => dReprLeaf x
+
+abbrev St := LObj DEl
+
+/-- What `El.__eq__` and `El.__repr__` do to the target list. -/
+def applyEff (k : Option String) (o : St) : St :=
+  match k with
+  | some "pop" =>
+    match o.items with
+    | [] => o
+    | _ =>
+      match listPopK o (-1) with
+      | .ok (_, o') => o'
+      | .error _ => o
+  | some "clear" => listClear o
+  | some "add" =>
+    if o.items.length < 12 then
+      match listAppend o (.int 0) with
+      | .ok o' => o'
+      | .error _ => o
+    else o
+  | _ => o
+
+/-- `PyObject_RichCompareBool(a, b, Py_EQ)` with the side effect of the method that runs. -/
+def effCmp : Cmp DEl := fun o a b =>
+  if dSame a b then (.ok true, o)
+  else (richBool E .eq a b, applyEff (driver a b) o)
+
+def effRepr (o : St) (x : DEl) : Py String × St := (dRepr x, applyEff (kindOf x) o)
+
+/-- The `Cmp2` of the difftest: effects hit the left list. -/
+def effCmp2 : Cmp2 DEl := fun st a b =>
+  let o : St := { items := st.1 }
+  let (r, o') := effCmp o a b
+  (r, (o'.items, st.2))
+
+def okJ (v : Json) : Json := Json.mkObj [("ok", v)]
+def errJ (e : PyExc) : Json := Json.mkObj [("exc", toJson e.className), ("msg", toJson e.message)]
+def unitJ : Json := Json.null
+
+def jOptI : Json → Except String (Option Int)
+  | .null => .ok none
+  | v => some <$> v.getInt?
+
+def jSlice (j : Json) : Except String Slice := do
+  let arr ← j.getArr?
+  let some a := arr[0]? | throw "slice"
+  let some b := arr[1]? | throw "slice"
+  let some c := arr[2]? | throw "slice"
+  return ⟨← jOptI a, ← jOptI b, ← jOptI c⟩
+
+def argAt (op : Array Json) (k : Nat) : Except String Json :=
+  match op[k]? with
+  | some v => .ok v
+  | none => .error s!"missing argument {k}"
+
+def optAt (op : Array Json) (k : Nat) : Except String (Option Int) :=
+  match op[k]? with
+  | some v => jOptI v
+  | none => .ok none
+
+def stateJ (o : St) : Json :=
+  Json.arr #[enEls o.items, toJson (listSizeof o)]
+
+def enRes : Res → Json
+  | .bool b => toJson b
+  | .weird => toJson "weird"
+
+/-- `PyObject_LengthHint` of the iterable classes in the Python twin. -/
+def jHint (j : Json) : Except String (Py Int) :=
+  match j with
+  | .null => .ok (.ok 8)
+  | .str "raise" => .ok (.error (.valueError "hint"))
+  | v => do
+    let h ← v.getInt?
+    if h > ssizeMax then
+      return .error (.overflowError "Python int too large to convert to C ssize_t")
+    if h < 0 then return .error (.valueError "__length_hint__() should return >= 0")
+    return .ok h
+
+def jExt (j : Json) : Except String (ExtArg DEl) := do
+  match ← getStr j "k" with
+  | "self" => return .self
+  | "fast" => return .fast (← jEls (← field j "items"))
+  | "sized" => return .sized (← jEls (← field j "items"))
+  | "iter" =>
+    let hint ← jHint (← field j "hint")
+    let err := (j.getObjValAs? Bool "err").toOption.getD false
+    return .iter { hint := hint, items := ← jEls (← field j "items"),
+                   err := if err then some (.valueError "gen") else none }
+  | "noniter" => return .notIterable "int"
+  | k => throw s!"ext {k}"
+
+def fuelOf (o : St) : Nat := o.items.length + 64
+
+def resJ (o : St) : LRes DEl → Json × St
+  | (o', none) => let _ := o; (okJ unitJ, o')
+  | (o', some e) => (errJ e, o')
+
+def stepList (o : St) (op : Array Json) : Except String (Json × St) := do
+  let name ← (← argAt op 0).getStr?
+  let keep (r : Py St) : Json × St :=
+    match r with
+    | .ok o' => (okJ unitJ, o')
+    | .error e => (errJ e, o)
+  match name with
+  | "append" => return keep (listAppend o (← jEl (← argAt op 1)))
+  | "insert" => return keep (listInsert o (← (← argAt op 1).getInt?) (← jEl (← argAt op 2)))
+  | "pop" =>
+    match listPop o (← optAt op 1) with
+    | .ok (v, o') => return (okJ (enEl v), o')
+    | .error e => return (errJ e, o)
+  | "remove" =>
+    let (r, o') := listRemove effCmp (fuelOf o) o (← jEl (← argAt op 1))
+    match r with
+    | .ok () => return (okJ unitJ, o')
+    | .error e => return (errJ e, o')
+  | "index" =>
+    let (r, o') := listIndex effCmp (fuelOf o) o (← jEl (← argAt op 1)) (← optAt op 2) (← optAt op 3)
+    return (encPy toJson r, o')
+  | "count" =>
+    let (r, o') := listCount dSame effCmp (fuelOf o) o (← jEl (← argAt op 1))
+    return (encPy toJson r, o')
+  | "contains" =>
+    let (r, o') := listContains effCmp (fuelOf o) o (← jEl (← argAt op 1))
+    return (encPy toJson r, o')
+  | "repr" =>
+    let (r, o') := listRepr effRepr (fuelOf o) false o
+    return (encPy toJson r, o')
+  | "clear" => return (okJ unitJ, listClear o)
+  | "copy" => return (okJ (stateJ (listSliceLH o.items 0 o.items.length)), o)
+  | "reverse" => return (okJ unitJ, listReverse o)
+  | "getitem" => return (encPy enEl (listGetItem o.items (← (← argAt op 1).getInt?)), o)
+  | "getslice" => return (encPy stateJ (listGetSlice o.items (← jSlice (← argAt op 1))), o)
+  | "setitem" => return keep (listSetItem o (← (← argAt op 1).getInt?) (some (← jEl (← argAt op 2))))
+  | "delitem" => return keep (listSetItem o (← (← argAt op 1).getInt?) none)
+  | "setslice" =>
+    return keep (listAssSubscript o (← jSlice (← argAt op 1)) (.seq (← jEls (← argAt op 2))))
+  | "setslice_self" => return keep (listAssSubscript o (← jSlice (← argAt op 1)) .selfCopy)
+  | "setslice_bad" => return keep (listAssSubscript o (← jSlice (← argAt op 1)) .notIterable)
+  | "delslice" => return keep (listAssSubscript o (← jSlice (← argAt op 1)) .del)
+  | "imul" => return keep (listIMul o (← (← argAt op 1).getInt?))
+  | "mul" => return (encPy stateJ (listMul o.items (← (← argAt op 1).getInt?)), o)
+  | "add" => return (encPy stateJ (listConcatAny o.items (.inl (← jEls (← argAt op 1)))), o)
+  | "add_bad" => return (encPy stateJ (listConcatAny o.items (.inr (← (← argAt op 1).getStr?))), o)
+  | "extend" => return resJ o (listExtend o (← jExt (← argAt op 1)))
+  | "init" =>
+    match (op[1]? : Option Json) with
+    | some Json.null => return resJ o (listInit o none)
+    | some j => return resJ o (listInit o (some (← jExt j)))
+    | none => return resJ o (listInit o none)
+  | other => throw s!"unknown list op {other}"
+
+def initList (j : Json) : Except String St := do
+  let items ← jEls (← field j "items")
+  match ← getStr j "how" with
+  | "display" => return listFromStack items
+  | "tuple" =>
+    match listVectorcall [.fast items] 0 with
+    | .ok o => return o
+    | .error _ => throw "init"
+  | "gen" =>
+    match listVectorcall [.iter { items := items }] 0 with
+    | .ok o => return o
+    | .error _ => throw "init"
+  | h => throw s!"init {h}"
+
+/-- `{"init": ..., "ops": [...]}`: `[result, state]` after each operation. -/
+def runOps (j : Json) : Except String Json := do
+  let mut o ← initList (← field j "init")
+  let mut out : Array Json := #[]
+  for op in (← (← field j "ops").getArr?) do
+    let (r, o') ← stepList o (← op.getArr?)
+    out := out.push (Json.arr #[r, stateJ o'])
+    o := o'
+  return okJ (Json.arr out)
+
+/-! ## Iterators -/
+
+def itJ (it : ListIter) : Json := Json.arr #[toJson it.index, toJson it.alive]
+
+/-- `[r, list]` after each of `next`, `hint`, `reduce`, `setstate`, `pop`, `add`, `clear`. -/
+def stepIter (forward : Bool) (it : ListIter) (l : List DEl) (op : Array Json) :
+    Except String (Json × ListIter × List DEl) := do
+  match ← (← argAt op 0).getStr? with
+  | "next" =>
+    let r := if forward then listIterNext it l else listRevIterNext it l
+    match r with
+    | .ok (v, it') =>
+      return (okJ (match v with | some x => enEl x | none => toJson "stop"), it', l)
+    | .error e => return (errJ e, it, l)
+  | "hint" => return (okJ (toJson (if forward then listIterLen it l else listRevIterLen it l)), it, l)
+  | "reduce" =>
+    let (a, st) := listIterReduce it l
+    return (okJ (Json.arr #[enEls a, match st with | some i => toJson i | none => Json.null]), it, l)
+  | "setstate" =>
+    let s ← (← argAt op 1).getInt?
+    let r := if forward then listIterSetstate it l s else listRevIterSetstate it l s
+    match r with
+    | .ok it' => return (okJ unitJ, it', l)
+    | .error e => return (errJ e, it, l)
+  | "pop" => return (okJ unitJ, it, l.dropLast)
+  | "add" => return (okJ unitJ, it, l ++ [.int 0])
+  | "clear" => return (okJ unitJ, it, [])
+  | k => throw s!"iter op {k}"
+
+def runIter (j : Json) : Except String Json := do
+  let l0 ← jEls (← field j "items")
+  let forward ← getBool j "forward"
+  let mut l := l0
+  let mut it : ListIter := if forward then listIter else listReversed l0
+  let mut out : Array Json := #[]
+  for op in (← (← field j "ops").getArr?) do
+    let (r, it', l') ← stepIter forward it l (← op.getArr?)
+    out := out.push (Json.arr #[r, enEls l'])
+    it := it'
+    l := l'
+  return okJ (Json.arr out)
+
+/-- Tuple iterators: `next`, `hint`, `reduce`, `setstate`. -/
+def runTupleIter (j : Json) : Except String Json := do
+  let t ← jEls (← field j "items")
+  let mut it := tupleIter t
+  let mut out : Array Json := #[]
+  for op in (← (← field j "ops").getArr?) do
+    let op ← op.getArr?
+    match ← (← argAt op 0).getStr? with
+    | "next" =>
+      let (v, it') := tupleIterNext it
+      it := it'
+      out := out.push (okJ (match v with | some x => enEl x | none => toJson "stop"))
+    | "hint" => out := out.push (okJ (toJson (tupleIterLen it)))
+    | "reduce" =>
+      let (a, st) := tupleIterReduce it
+      out := out.push (okJ (Json.arr #[enEls a, match st with | some i => toJson i | none => Json.null]))
+    | "setstate" =>
+      match tupleIterSetstate it (← (← argAt op 1).getInt?) with
+      | .ok it' => it := it'; out := out.push (okJ unitJ)
+      | .error e => out := out.push (errJ e)
+    | k => throw s!"tuple iter op {k}"
+  return okJ (Json.arr out)
+
+/-! ## Tuples -/
+
+/-- A tuple argument: `{"items": [...], "sub": bool}`. -/
+def jTup (j : Json) : Except String (Tup DEl) := do
+  let items ← jEls (← field j "items")
+  let sub := (j.getObjValAs? Bool "sub").toOption.getD false
+  return { items := items, exact := !sub,
+           tracked := if sub then true else items.any mayTrack }
+
+def tupOutJ (r : String) (items : List DEl) (tracked : Bool) : Json :=
+  Json.mkObj [("r", toJson r), ("items", enEls items), ("tracked", toJson tracked)]
+
+def enTRes (a b : Tup DEl) : TRes DEl → Json
+  | .arg 0 =>
+    if a.exact && a.items.isEmpty then tupOutJ "empty" [] false else tupOutJ "arg0" a.items a.tracked
+  | .arg _ =>
+    if b.exact && b.items.isEmpty then tupOutJ "empty" [] false else tupOutJ "arg1" b.items b.tracked
+  | .empty => tupOutJ "empty" [] false
+  | .fresh t => tupOutJ "fresh" t.items t.tracked
+
+def noTup : Tup DEl := { items := [] }
+
+def jSrc (j : Json) : Except String (TupleSrc DEl × Tup DEl) := do
+  let items ← jEls (← field j "items")
+  match ← getStr j "k" with
+  | "tuple" => let t := { items := items, tracked := items.any mayTrack : Tup DEl }
+               return (.exactTuple t, t)
+  | "list" => return (.exactList items, noTup)
+  | "iter" => return (.iterable items, noTup)
+  | k => throw s!"src {k}"
+
+def cmpOpOf : String → Except String CmpOp
+  | "lt" => .ok .lt | "le" => .ok .le | "eq" => .ok .eq
+  | "ne" => .ok .ne | "gt" => .ok .gt | "ge" => .ok .ge
+  | s => .error s!"cmp op {s}"
+
+def cntHash (call : Nat) : DEl → Py Int
+  | .obj "cnt" i => .ok (100 * call + i)
+  | .obj "flaky" _ => if call = 1 then .error (.valueError "flaky") else .ok 5
+  | x => dHash x
+
+def runTuple (fn : String) (j : Json) : Except String Json := do
+  match fn with
+  | "tuple.hash" =>
+    let t ← jTup (← field j "t")
+    return encPy (fun p => toJson p.1) (tupleHash dHash t)
+  | "tuple.hash2" =>
+    let t ← jTup (← field j "t")
+    let r1 := tupleHash (cntHash 1) t
+    let t' := match r1 with | .ok p => p.2 | .error _ => t
+    let r2 := tupleHash (cntHash 2) t'
+    return okJ (Json.arr #[encPy (fun p => toJson p.1) r1, encPy (fun p => toJson p.1) r2])
+  | "tuple.repr" =>
+    return encPy toJson (tupleRepr dRepr false (← jEls (← field j "items")))
+  | "tuple.getitem" =>
+    return encPy enEl (tupleGetItem (← jEls (← field j "items")) (← getInt j "i"))
+  | "tuple.getslice" =>
+    let t ← jTup (← field j "t")
+    return encPy (enTRes t noTup) (tupleGetSlice t (← jSlice (← field j "s")))
+  | "tuple.add" =>
+    let a ← jTup (← field j "a")
+    match j.getObjVal? "other" with
+    | .ok (.str name) => return encPy (enTRes a noTup) (tupleConcat a (.other name))
+    | _ =>
+      let b ← jTup (← field j "b")
+      return encPy (enTRes a b) (tupleConcat a (.tuple b))
+  | "tuple.mul" =>
+    let t ← jTup (← field j "t")
+    return encPy (enTRes t noTup) (tupleMul t (← getInt j "n"))
+  | "tuple.index" =>
+    let v ← jEl (← field j "x")
+    return encPy toJson (tupleIndex E (← jEls (← field j "items")) v
+      (← jOptI (← field j "start")) (← jOptI (← field j "stop")))
+  | "tuple.count" =>
+    return encPy toJson (tupleCount E (← jEl (← field j "x")) (← jEls (← field j "items")) 0)
+  | "tuple.contains" =>
+    return encPy toJson (tupleContains E (← jEl (← field j "x")) (← jEls (← field j "items")))
+  | "tuple.cmp" =>
+    let op ← cmpOpOf (← getStr j "op")
+    return encPy enRes (tupleRichcompare E op (← jEls (← field j "a")) (← jEls (← field j "b")))
+  | "tuple.new" =>
+    let (src, t) ← jSrc (← field j "src")
+    return encPy (enTRes t noTup) (tupleNew mayTrack (some src))
+  | "tuple.sub_new" =>
+    let (src, _) ← jSrc (← field j "src")
+    return encPy (fun (t : Tup DEl) => Json.arr #[enEls t.items, toJson t.exact]) (tupleSubtypeNew mayTrack (some src))
+  | "tuple.call" =>
+    let nargs ← getNat j "nargs"
+    let nkw ← getNat j "nkw"
+    let args := List.replicate nargs (TupleSrc.exactTuple noTup)
+    return encPy (fun _ => Json.null) (tupleVectorcall mayTrack args nkw)
+  | "tuple.getnewargs" =>
+    let t ← jTup (← field j "t")
+    return encPy (enTRes t noTup) (tupleGetnewargs mayTrack t)
+  | "tuple.iter" => runTupleIter j
+  | "tuple.c_size" =>
+    let op := (jEls (← field j "items")).toOption
+    return encPy toJson (pyTupleSize op)
+  | "tuple.c_getitem" =>
+    let op := (jEls (← field j "items")).toOption
+    return encPy enEl (pyTupleGetItem op (← getInt j "i"))
+  | "tuple.c_setitem" =>
+    let op := (jEls (← field j "items")).toOption
+    return encPy enEls (pyTupleSetItem op (← getBool j "unique") (← getInt j "i") (← jEl (← field j "x")))
+  | "tuple.c_getslice" =>
+    let items ← jEls (← field j "items")
+    let t : Tup DEl := { items := items, tracked := items.any mayTrack }
+    return encPy (enTRes t noTup) (pyTupleGetSlice mayTrack (some t) (← getInt j "i") (← getInt j "j"))
+  | "tuple.c_new" =>
+    return encPy (fun (r : TRes (Option DEl)) => toJson (r.items [] []).length) (pyTupleNew (← getInt j "n"))
+  | "tuple.c_pack" =>
+    let items ← jEls (← field j "items")
+    return encPy (enTRes noTup noTup) (tuplePack mayTrack items.length items)
+  | "tuple.c_resize" =>
+    let items ← jEls (← field j "items")
+    let enO : Option DEl → Json := fun x => match x with | some v => enEl v | none => Json.null
+    return encPy (fun (l : List (Option DEl)) => Json.arr (l.map enO).toArray)
+      (tupleResize (some (items.map some)) true true (← getInt j "n"))
+  | "tuple.untrack" =>
+    let items ← jEls (← field j "items")
+    return okJ (toJson (tupleMaybeUntrack mayTrack true true (items.map some)))
+  | _ => throw s!"unknown fn {fn}"
+
+/-! ## Lists: everything but `list.ops` -/
+
+/-- `{"heap": [{"list": b, "items": [...]}, ...], "root": k}`; an item that is a
+string is an atom, a number a heap reference. -/
+def jHeap (j : Json) : Except String RHeap := do
+  let cells ← j.getArr?
+  cells.toList.mapM fun c => do
+    let isList ← getBool c "list"
+    let items ← (← field c "items").getArr?
+    let items ← items.toList.mapM fun (x : Json) =>
+      match x with
+      | .str s => Except.ok (RObj.atom s)
+      | v => do return RObj.ref (← v.getNat?)
+    return { isList := isList, items := items }
+
+def elIntPair : Json → Except String (List Nat)
+  | j => do
+    let a ← j.getArr?
+    a.toList.mapM (·.getNat?)
+
+def runList (fn : String) (j : Json) : Except String Json := do
+  match fn with
+  | "list.ops" => runOps j
+  | "list.iter" => runIter j
+  | "list.cmp" =>
+    let op ← cmpOpOf (← getStr j "op")
+    let a ← jEls (← field j "a")
+    let b ← jEls (← field j "b")
+    let fuel := a.length + b.length + 64
+    let (r, st) := listRichcompare E effCmp2 fuel op a b
+    return okJ (Json.arr #[encPy enRes r, enEls st.1])
+  | "list.repr" =>
+    let h ← jHeap (← field j "heap")
+    return encPy toJson (reprObj h (h.length + 2) [] (.ref (← getNat j "root")))
+  | "list.call" =>
+    let nargs ← getNat j "nargs"
+    let nkw ← getNat j "nkw"
+    let args := List.replicate nargs (ExtArg.fast ([] : List DEl))
+    return encPy (fun _ => Json.null) (listVectorcall args nkw)
+  | "list.sort_sizeof" => return okJ (toJson (listSizeof (listDuringSort : St)))
+  | "list.latin_lt" =>
+    let v ← elIntPair (← field j "v")
+    let w ← elIntPair (← field j "w")
+    return okJ (Json.arr #[toJson (unsafeLatinCompare v w), toJson (strLt v w)])
+  | "list.tuple_sort" =>
+    let keys ← (← field j "keys").getArr?
+    let keys ← keys.toList.mapM (fun k => jEls k)
+    let lt : List DEl → List DEl → Bool := fun v w =>
+      match unsafeTupleCompare E (fun x y => richBool E .lt x y) v w with
+      | .ok b => b
+      | .error _ => false
+    return okJ (Json.arr (((PyLean.ListSort.listSort lt keys).map enEls).toArray))
+  | "list.c_size" => return encPy toJson (pyListSize (jEls (← field j "items")).toOption)
+  | "list.c_getitem" =>
+    return encPy enEl (pyListGetItem (jEls (← field j "items")).toOption (← getInt j "i"))
+  | "list.c_getitemref" =>
+    return encPy enEl (pyListGetItemRef (jEls (← field j "items")).toOption (← getInt j "i"))
+  | "list.c_setitem" =>
+    let o : Option St := (jEls (← field j "items")).toOption.map LObj.prealloc
+    return encPy stateJ (pyListSetItem o (← getInt j "i") (← jEl (← field j "x")))
+  | "list.c_insert" =>
+    let o : Option St := (jEls (← field j "items")).toOption.map LObj.prealloc
+    let v := (jEl (← field j "x")).toOption
+    let v := match j.getObjVal? "null" with | .ok _ => none | _ => v
+    return encPy stateJ (pyListInsert o (← getInt j "i") v)
+  | "list.c_append" =>
+    let o : Option St := (jEls (← field j "items")).toOption.map LObj.prealloc
+    let v := (jEl (← field j "x")).toOption
+    let v := match j.getObjVal? "null" with | .ok _ => none | _ => v
+    return encPy stateJ (pyListAppend o v)
+  | "list.c_getslice" =>
+    return encPy stateJ (pyListGetSlice (jEls (← field j "items")).toOption (← getInt j "i") (← getInt j "j"))
+  | "list.c_setslice" =>
+    let o : Option St := (jEls (← field j "items")).toOption.map LObj.prealloc
+    let v : Option (List DEl) := (jEls (← field j "v")).toOption
+    return encPy stateJ (pyListSetSlice o (← getInt j "i") (← getInt j "j") v (← getBool j "self"))
+  | "list.c_clear" =>
+    return encPy stateJ (pyListClear ((jEls (← field j "items")).toOption.map LObj.prealloc))
+  | "list.c_reverse" =>
+    return encPy stateJ (pyListReverse ((jEls (← field j "items")).toOption.map LObj.prealloc))
+  | "list.c_astuple" =>
+    return encPy (enTRes noTup noTup) (pyListAsTuple mayTrack (jEls (← field j "items")).toOption)
+  | "list.c_new" =>
+    return encPy (fun (o : LObj (Option DEl)) => Json.arr #[toJson o.items.length, toJson (listSizeof o)])
+      (pyListNew (← getInt j "n"))
+  | "list.c_extend" =>
+    let o : Option St := (jEls (← field j "items")).toOption.map LObj.prealloc
+    let ((r, e), ok) := pyListExtend o (← jExt (← field j "arg"))
+    match ok, e with
+    | none, some e => return errJ e
+    | _, some e => return errJ e
+    | _, none => return okJ (stateJ r)
+  | _ => throw s!"unknown fn {fn}"
+
+def handler : Handler := fun fn j =>
+  if fn.startsWith "tuple." then some (runTuple fn j)
+  else if fn.startsWith "list." then some (runList fn j)
+  else none
 
 end PyLean.BytesObj.Seq
