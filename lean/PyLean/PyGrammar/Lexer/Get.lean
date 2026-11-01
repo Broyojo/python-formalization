@@ -36,7 +36,11 @@ def underflow (s : TokState) : Bool × TokState :=
   let endPos := findEnd (n - s.inp + 1) s.inp
   match endPos with
   | none =>
-    if s.inp ≥ n then (false, { s with done := E_EOF })
+    if s.inp ≥ n then
+      if s.readline then
+        let s1 := if s.start.isNone && !s.insideFString then { s with buf := s.cur } else s
+        (false, { s1 with done := E_EOF, lineStart := s1.cur, implicitNewline := s1.implicitNewline })
+      else (false, { s with done := E_EOF })
     else
       -- string tokenizer, last line without newline (`exec_input` false)
       let s1 := if s.start.isNone then { s with buf := s.cur } else s

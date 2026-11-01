@@ -1,5 +1,6 @@
 import PyLean.DiffCore
 import PyLean.PyGrammar.Peg.Interp
+import PyLean.PyGrammar.Check.Preprocess
 
 /-! Difftest handler for the PEG interpreter and parser actions: `fn` starts with `peg.`. -/
 
@@ -59,7 +60,16 @@ def parseCase (j : Json) : Except String Json := do
   if src.contains 0 then
     return encErr { cls := "SyntaxError", msg := "source code cannot contain null bytes" }
   match parseStr cfg src start tc fv with
-  | .ok t => return Json.mkObj [("ok", t.toJ)]
+  | .ok t =>
+    -- `Py_CompileStringObject` then runs `_PyCompile_AstPreprocess` in syntax-check mode.
+    match Check.futureParse t with
+    | .ok _ => return Json.mkObj [("ok", t.toJ)]
+    | .error e =>
+      let err : PyError :=
+        { cls := "SyntaxError", msg := e.msg, lineno := some e.loc.lineno,
+          offset := some (e.loc.colOffset + 1), endLineno := some e.loc.endLineno,
+          endOffset := some (e.loc.endColOffset + 1) }
+      return encErr err
   | .error e => return encErr e
 
 def handler : Handler := fun fn j =>
