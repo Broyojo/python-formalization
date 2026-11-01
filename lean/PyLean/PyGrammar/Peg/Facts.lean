@@ -182,6 +182,7 @@ theorem registerStmts_proven : RegisterStmts := by
   · intro h1 h2
     have : ¬ p.lastStmt.1 > loc.lineno := by omega
     simp [registerStmts, h1, this, bind, StateT.bind, get, getThe, MonadStateOf.get, StateT.get,
-      pure, StateT.pure, set, MonadStateOf.set, StateT.set, seqOf, locOf]
+      pure, StateT.pure, modify, modifyGet, MonadStateOf.modifyGet, StateT.modifyGet,
+      MonadState.modifyGet, seqOf, locOf]
 
 end PyLean.PyGrammar.Peg

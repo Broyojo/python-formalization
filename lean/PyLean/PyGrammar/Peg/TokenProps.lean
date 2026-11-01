@@ -227,8 +227,8 @@ theorem isMemoized_hit (q : PS) (m ty : Nat) (node : Ast) (e : Nat) (h : m < q.f
     simp only [PS.fill] at hn ⊢
     simp only [hn, Bool.false_eq_true, ↓reduceIte]
   have e1 : isMemoized ty { q with mark := m } =
-      (if !(ensureToken { q with mark := m }).1 then pure (some .null) else memoLookup ty)
-        (ensureToken { q with mark := m }).2 := rfl
+      (if (ensureToken { q with mark := m }).1 then memoLookup ty (ensureToken { q with mark := m }).2
+       else (some .null, (ensureToken { q with mark := m }).2)) := rfl
   rw [e1, h']
   show (match (q.memo.getD m []).find? (fun x => x.1 == ty) with
     | some (_, node, mark) => (some node, { q with mark := mark })

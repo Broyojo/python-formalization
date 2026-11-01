@@ -152,7 +152,7 @@ def warnInvalidEscapeSeq (buf : Array Nat) (ptr : Nat) (t : Token) : PM Unit := 
         ++ s!"future. Did you mean \"\\\\{chStr c}\"? A raw string is also an option."
   let category := if p.featureVersion ≥ 12 then "SyntaxWarning" else "DeprecationWarning"
   let lineno := t.lineno + (((buf.extract 0 ptr).toList.filter (· == 10)).length : Int)
-  set { p with tok := { p.tok with warnings := (category, msg, lineno) :: p.tok.warnings } }
+  modify fun p => { p with tok := { p.tok with warnings := (category, msg, lineno) :: p.tok.warnings } }
 
 /-- `decode_unicode_with_escapes`, `Parser/string_parser.c:135-218`. -/
 def decodeUnicodeWithEscapes (s : List Nat) (t : Option Token) : PM (Option (List Nat)) := do

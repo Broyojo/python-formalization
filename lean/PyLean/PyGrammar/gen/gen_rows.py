@@ -79,6 +79,9 @@ CREDIT = {
     "pygrammar-peg-strip-interpolation": {"Parser__action_helpers.c": ["_strip_interpolation_expr"]},
     "pygrammar-peg-register-stmts": {"Parser__action_helpers.c": ["_PyPegen_register_stmts"]},
     "pygrammar-peg-never-silent": {"Parser__pegen.c": ["_PyPegen_run_parser"]},
+    "pygrammar-peg-token-readers": {
+        "Parser__pegen.c": ["_PyPegen_name_token", "_PyPegen_soft_keyword_token",
+                            "_PyPegen_expect_soft_keyword", "_PyPegen_expect_forced_token"]},
     "pygrammar-peg-fill-token": {"Parser__pegen.c": ["_PyPegen_fill_token"]},
     "pygrammar-peg-expect-token": {"Parser__pegen.c": ["_PyPegen_expect_token"]},
     "pygrammar-peg-memo-cache": {
@@ -96,7 +99,7 @@ CREDIT = {
 }
 
 # Entries that hold as properties but credit no row: `Rows.<id>` is empty for them.
-NO_ROWS = ["grammar-left-recursion", "peg-first-error", "peg-roundtrip-parser",
+NO_ROWS = ["grammar-left-recursion", "grammar-call-rule-sound", "peg-first-error", "peg-roundtrip-parser",
            "peg-roundtrip-actions", "lex-exact-tokens", "check-nonempty"]
 
 CREDITED = {(stem, name): entry for entry, files in CREDIT.items()
@@ -178,6 +181,10 @@ def main():
                 r.update(status="excluded", entry="", note=GENERATED)
             elif key in EXCLUDE:
                 r.update(status="excluded", entry="", note=EXCLUDE[key])
+            elif stem == "Grammar__python.gram":
+                # Every rule, through `CallRuleSound` and `Peg/RuleFacts.lean`.
+                r.update(status="modelled", entry="pygrammar-grammar-call-rule-sound", note="")
+                per_entry["pygrammar-grammar-call-rule-sound"].append(r["name"])
             elif key in CREDITED:
                 r.update(status="modelled", entry=CREDITED[key], note="")
                 per_entry[CREDITED[key]].append(r["name"])

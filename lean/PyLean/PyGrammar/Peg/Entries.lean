@@ -2,6 +2,7 @@ import PyLean.Registry
 import PyLean.PyGrammar.RowNames
 import PyLean.PyGrammar.Peg.Props
 import PyLean.PyGrammar.Peg.TokenProps
+import PyLean.PyGrammar.Peg.RuleFacts
 
 /-! Registry entries for the `Peg` part of `PyGrammar`. -/
 
@@ -156,6 +157,46 @@ def entries : List Entry := [
     prop := ``CUnparseRoundTrip
     thm := some ``cUnparseRoundTrip_refuted
     bug := some "pygrammar-unparse-c-fstring-repr" },
+  { id := "pygrammar-grammar-call-rule-sound"
+    pyFile := "Grammar/python.gram"
+    pyFns := Rows.grammar_call_rule_sound
+    statement := "When callRule succeeds on any rule with no error, from any state with an empty " ++
+      "memo and the mark within the tokens read, the tokens it consumed match that rule's " ++
+      "alternatives in the grammar data, item by item, left recursion included."
+    source := "the implementation against itself: Parser/parser.c against Grammar/python.gram"
+    status := .proven
+    prop := ``CallRuleSound
+    thm := some ``callRuleSound_proven
+    notes := "One direction only: lookaheads and alternative order are not in RuleM, and what " ++
+      "an action computes is not claimed. Peg/RuleFacts.lean has the per-rule statements." },
+  { id := "pygrammar-grammar-rule-starts"
+    pyFile := "Grammar/python.gram"
+    pyFns := []
+    statement := "A rule that succeeds starts with a token of a type in its FIRST set, or matched " ++
+      "nothing and is nullable; the table is checked closed over all 445 rules."
+    source := "invariant"
+    status := .proven
+    prop := ``AllRulesStart
+    thm := some ``allRulesStart_proven },
+  { id := "pygrammar-peg-actions-frame"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := []
+    statement := "No action moves the mark, drops a token, touches the memo or clears " ++
+      "error_indicator."
+    source := "invariant"
+    status := .proven
+    prop := ``ActionsFrame
+    thm := some ``actionsFrame_proven
+    notes := "Holds of any pure helper, so it credits no helper row." },
+  { id := "pygrammar-peg-token-readers"
+    pyFile := "Parser/pegen.c"
+    pyFns := Rows.peg_token_readers
+    statement := "name_token, soft_keyword_token, expect_soft_keyword and expect_forced_token " ++
+      "take the token they promise and move the mark past it, or leave it, or end in an error."
+    source := "invariant"
+    status := .proven
+    prop := ``TokenReaders
+    thm := some ``tokenReaders_proven },
   { id := "pygrammar-peg-never-silent"
     pyFile := "Parser/pegen.c"
     pyFns := Rows.peg_never_silent

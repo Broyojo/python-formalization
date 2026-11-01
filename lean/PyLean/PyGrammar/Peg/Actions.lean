@@ -580,7 +580,7 @@ def registerStmts (a0 : Ast) : PM Ast := do
   | some last =>
     let l := locOf last
     if p.lastStmt.1 > l.lineno then return a0
-    set { p with lastStmt := (l.lineno, l.colOffset) }
+    modify fun p => { p with lastStmt := (l.lineno, l.colOffset) }
     return a0
 
 /-- Call a helper of `Parser/action_helpers.c`, or a macro of `Parser/pegen.h`. -/

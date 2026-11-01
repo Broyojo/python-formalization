@@ -341,9 +341,9 @@ def memoLookup (ty : Nat) : PM (Option Ast) := fun p =>
 
 /-- `_PyPegen_is_memoized`, `Parser/pegen.c:350-381`. `some r` when the C function
 returns nonzero. -/
-def isMemoized (ty : Nat) : PM (Option Ast) := do
-  if !(← ensureToken) then return some .null
-  memoLookup ty
+def isMemoized (ty : Nat) : PM (Option Ast) := fun p =>
+  let e := ensureToken p
+  if e.1 then memoLookup ty e.2 else (some .null, e.2)
 
 /-- `_PyPegen_insert_memo`, `Parser/pegen.c:81-94`. -/
 def insertMemo (mark ty : Nat) (node : Ast) : PM Unit :=
@@ -391,57 +391,56 @@ def newIdentifier (bytes : List Nat) : PM Ast := do
 def tokLoc (t : Token) : Loc := ⟨t.lineno, t.colOffset, t.endLineno, t.endColOffset⟩
 
 /-- `_PyPegen_name_from_token`, `Parser/pegen.c:573-590`. -/
-def nameFromToken (t : Ast) : PM Ast := do
+def nameFromToken (t : Ast) : PM Ast := fun p =>
   match t with
   | .tok t =>
-    match ← newIdentifier t.bytes with
-    | .null =>
-      modify fun p => { p with errorIndicator := true }
-      return .null
-    | id => return .node .Name [id, .node .Load [] none] (some (tokLoc t))
-  | _ => return .null
+    let n := newIdentifier t.bytes p
+    match n.1 with
+    | .null => (.null, { n.2 with errorIndicator := true })
+    | id => (.node .Name [id, .node .Load [] none] (some (tokLoc t)), n.2)
+  | _ => (.null, p)
 
 /-- `_PyPegen_name_token`, `Parser/pegen.c:593-597`. -/
 def nameToken : PM Ast := do nameFromToken (← expectToken TokKind.NAME.num)
 
-/-- `_PyPegen_soft_keyword_token`, `Parser/pegen.c:605-620`. -/
-def softKeywordToken : PM Ast := do
-  match ← expectToken TokKind.NAME.num with
-  | .tok t =>
-    if softKeywords.contains t.bytes then nameFromToken (.tok t) else return .null
-  | _ => return .null
+/-- `_PyPegen_soft_keyword_token`, `Parser/pegen.c:605-620`. A `NAME` that is not a soft keyword
+stays consumed: the function returns `NULL` with `p->mark` advanced. -/
+def softKeywordToken : PM Ast := fun p =>
+  let e := expectToken TokKind.NAME.num p
+  match e.1 with
+  | .tok t => if softKeywords.contains t.bytes then nameFromToken (.tok t) e.2 else (.null, e.2)
+  | _ => (.null, e.2)
 
 /-- `_PyPegen_expect_soft_keyword`, `Parser/pegen.c:465-486`. -/
-def expectSoftKeyword (kw : List Nat) : PM Ast := do
-  let p ← get
-  if p.mark == p.fill then
-    if (← fillToken) < 0 then
-      modify fun p => { p with errorIndicator := true }
-      return .null
-  let p ← get
-  let t := p.tokenAt p.mark
-  if t.type != TokKind.NAME.num then return .null
-  if t.bytes != kw then return .null
-  nameToken
+def expectSoftKeyword (kw : List Nat) : PM Ast := fun p =>
+  let e := ensureToken p
+  if !e.1 then (.null, e.2) else
+  let t := e.2.tokenAt e.2.mark
+  if t.type != TokKind.NAME.num then (.null, e.2)
+  else if t.bytes != kw then (.null, e.2)
+  else nameToken e.2
+
+/-- The tail of `_PyPegen_number_token`, `Parser/pegen.c:696-749`, on what
+`_PyPegen_expect_token` returned. -/
+def numberFromToken (t : Ast) : PM Ast := fun p =>
+  match t with
+  | .tok t =>
+    if p.featureVersion < 6 && t.bytes.contains 95 then
+      (.null, (raiseError0 "SyntaxError"
+        "Underscores in numeric literals are only supported in Python 3.6 and greater"
+        { p with errorIndicator := true }).2)
+    else
+      match parseNumber t.bytes with
+      | .ok c => (.node .Constant [.const c, .null] (some (tokLoc t)), p)
+      | .limit msg =>
+        (.null, (raiseErrorKnownLocation "SyntaxError" t.lineno (-1) t.endLineno (-1)
+          (msg ++ " - Consider hexadecimal for huge integer literals "
+            ++ "to avoid decimal conversion limits.")
+          { p with errorIndicator := true }).2)
+  | _ => (.null, p)
 
 /-- `_PyPegen_number_token`, `Parser/pegen.c:696-749`. -/
-def numberToken : PM Ast := do
-  match ← expectToken TokKind.NUMBER.num with
-  | .tok t =>
-    if (← get).featureVersion < 6 && t.bytes.contains 95 then
-      modify fun p => { p with errorIndicator := true }
-      raiseError0 "SyntaxError"
-        "Underscores in numeric literals are only supported in Python 3.6 and greater"
-      return .null
-    match parseNumber t.bytes with
-    | .ok c => return .node .Constant [.const c, .null] (some (tokLoc t))
-    | .limit msg =>
-      modify fun p => { p with errorIndicator := true }
-      raiseErrorKnownLocation "SyntaxError" t.lineno (-1) t.endLineno (-1)
-        (msg ++ " - Consider hexadecimal for huge integer literals "
-          ++ "to avoid decimal conversion limits.")
-      return .null
-  | _ => return .null
+def numberToken : PM Ast := do numberFromToken (← expectToken TokKind.NUMBER.num)
 
 /-- `_PyPegen_get_last_nonnwhitespace_token`, `Parser/pegen.c:489-500`. -/
 def lastNonWhitespaceToken (p : PS) : Token :=
