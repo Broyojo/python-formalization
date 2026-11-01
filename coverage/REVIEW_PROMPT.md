@@ -3,7 +3,7 @@
 Adapted from julia-in-lean. This procedure checks whether registry entries
 really model the CPython functions they claim to cover. A row marked `modelled`
 is only a claim until it passes this review. Read the pinned source in
-`vendor/cpython-3.14` (see `coverage/SOURCE_COMMIT`). Review the source and the
+`vendor/cpython-3.15` (see `coverage/SOURCE_COMMIT`). Review the source and the
 proofs by reading them; do not execute Lean or Python.
 
 Your input is `coverage/methods/{FILE}.tsv`. For every row with status

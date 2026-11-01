@@ -886,6 +886,29 @@ bytesobj-bytearray-index-raises	proven	Objects/bytearrayobject.c	bytearray_appen
 bytesobj-bytes-iter-raises	proven	Objects/bytesobject.c	_PyBytes_FromIterator,PyBytes_FromObject,PyBytes_Join,bytearray_extend_impl
 bytesobj-bytes-hint-rules	proven	Objects/bytesobject.c	_PyBytes_FromIterator,PyBytes_Join,bytearray_extend_impl
 bytesobj-bytes-call-raises	proven	Objects/bytesobject.c	PyBytes_FromObject,PyBytes_Join,bytearray_extend_impl,bytes_new_impl,format_obj,bytearray___init___impl
+bytesobj-memoryview-struct-no-memory	proven	Objects/memoryobject.c	struct_get_unpacker,fix_struct_error_int
+bytesobj-memoryview-item-eq-view	proven	Objects/memoryobject.c	memoryview_count_impl,memoryview_index_impl
+bytesobj-memoryview-eq-truth	proven	Objects/memoryobject.c	memoryview_count_impl,memoryview_index_impl
+bytesobj-memoryview-pack-bool-len	proven	Objects/memoryobject.c	pack_single
+bytesobj-memoryview-pack-messages	proven	Objects/memoryobject.c	pack_single,type_error_int,value_error_int
+bytesobj-memoryview-getbuf-order	proven	Objects/memoryobject.c	memory_getbuf
+bytesobj-memoryview-getbuf-lift	proven	Objects/memoryobject.c	memory_getbuf
+bytesobj-memoryview-copy-shape-rules	proven	Objects/memoryobject.c	copy_shape
+bytesobj-memoryview-multislice-spec	proven	Objects/memoryobject.c	is_multislice
+bytesobj-memoryview-cast1d-refusals	proven	Objects/memoryobject.c	cast_to_1D
+bytesobj-memoryview-ass-sub-rules	proven	Objects/memoryobject.c	memory_ass_sub
+bytesobj-memoryview-restricted-refuses	proven	Objects/memoryobject.c	PyMemoryView_FromObjectAndFlags,memoryview_cast_impl,memoryview_toreadonly_impl,memory_getbuf,memory_subscript
+bytesobj-memoryview-restricted-made	proven	Objects/memoryobject.c	PyMemoryView_FromObjectAndFlags
+bytesobj-memoryview-init-flags-bits	proven	Objects/memoryobject.c	init_flags
+bytesobj-memoryview-fortran-bit	proven	Objects/memoryobject.c	init_flags
+bytesobj-memoryview-contig-getters	proven	Objects/memoryobject.c	memory_c_contiguous,memory_f_contiguous,memory_contiguous
+bytesobj-memoryview-getter-refusal	proven	Objects/memoryobject.c	memory_obj_get,memory_nbytes_get,memory_readonly_get,memory_itemsize_get,memory_format_get,memory_ndim_get,memory_shape_get,memory_strides_get,memory_suboffsets_get,memory_c_contiguous,memory_f_contiguous,memory_contiguous
+bytesobj-memoryview-int-tuple	proven	Objects/memoryobject.c	_IntTupleFromSsizet
+bytesobj-memoryview-clear-effect	proven	Objects/memoryobject.c	memory_clear
+bytesobj-memoryview-repr-states	proven	Objects/memoryobject.c	memory_repr
+bytesobj-memoryview-struct-too-long	proven	Objects/memoryobject.c	struct_get_unpacker,fix_struct_error_int
+bytesobj-memoryview-reentrant-release	proven	Objects/memoryobject.c	mbuf_release,_memory_release,memory_releasebuf
+bytesobj-memoryview-null-reachable	proven	Objects/memoryobject.c	memoryiter_next
 bytesobj-memoryview-pylong-failures	proven	Objects/memoryobject.c	pylong_as_ld,pylong_as_lu,pylong_as_lld,pylong_as_llu,pylong_as_zd,pylong_as_zu
 bytesobj-memoryview-fix-error-int	proven	Objects/memoryobject.c	fix_error_int,type_error_int,value_error_int
 bytesobj-memoryview-pack-failures	proven	Objects/memoryobject.c	pack_single
@@ -983,10 +1006,22 @@ bytesobj-memoryview-float32-round-trip	open	Objects/memoryobject.c	pack_single,u
 bytesobj-memoryview-float16-round-trip	open	Objects/memoryobject.c	pack_single,unpack_single
 bytesobj-memoryview-tobytes-contig-nd	proven	Objects/memoryobject.c	PyBuffer_ToContiguous
 bytesobj-memoryview-tobytes-fortran	open	Objects/memoryobject.c	buffer_to_contiguous,init_fortran_strides_from_shape
+unicodeobj-codec-utf8-chunks	proven	Objects/unicodeobject.c	unicode_decode_utf8_impl
+unicodeobj-codec-utf16-chunks	proven	Objects/unicodeobject.c	PyUnicode_DecodeUTF16Stateful
+unicodeobj-codec-utf32-chunks	proven	Objects/unicodeobject.c	PyUnicode_DecodeUTF32Stateful
+unicodeobj-codec-raw-escape-chunks	proven	Objects/unicodeobject.c	
+unicodeobj-codec-unicode-escape-chunks-narrow	proven	Objects/unicodeobject.c	
+unicodeobj-utf8-std-is-callback	proven	Objects/unicodeobject.c	unicode_decode_utf8_impl
+unicodeobj-ascii-decode-spec	proven	Objects/unicodeobject.c	PyUnicode_DecodeASCII
+unicodeobj-writer-decode-any-handler	proven	Objects/unicodeobject.c	unicode_decode_utf8_writer
+unicodeobj-writer-decode-stateful-any-handler	proven	Objects/unicodeobject.c	PyUnicodeWriter_DecodeUTF8Stateful
+unicodeobj-decode-utf8-spec	proven	Objects/unicodeobject.c	unicode_decode_utf8,PyUnicode_DecodeUTF8Stateful,PyUnicode_DecodeUTF8
 unicodeobj-join-spec	proven	Objects/unicodeobject.c	_PyUnicode_JoinArray
 unicodeobj-join-errors	proven	Objects/unicodeobject.c	_PyUnicode_JoinArray
 unicodeobj-join-sequence	proven	Objects/unicodeobject.c	PyUnicode_Join
 unicodeobj-join-memcpy-safe	proven	Objects/unicodeobject.c	_PyUnicode_JoinArray
+unicodeobj-intern-start-world	proven	Objects/unicodeobject.c	
+unicodeobj-intern-scripts-keep-invariant	proven	Objects/unicodeobject.c	
 unicodeobj-intern-canonical	proven	Objects/unicodeobject.c	intern_common
 unicodeobj-intern-spec	proven	Objects/unicodeobject.c	intern_common,immortalize_interned
 unicodeobj-intern-idempotent	proven	Objects/unicodeobject.c	
@@ -1321,6 +1356,20 @@ typeobj-getnewargs-order	proven	Objects/typeobject.c	_PyObject_GetNewArguments
 typeobj-super-null-branch	proven	Objects/typeobject.c	super_descr_get
 typeobj-nan-never-equal	proven	Objects/floatobject.c	float_richcompare
 typeobj-super-skips	proven	Objects/typeobject.c	_super_lookup_descr,do_super_lookup,super_getattro
+typeobj-method-eq-by-binding	proven	Objects/classobject.c	method_richcompare,method_hash
+typeobj-func-descr-get-binds	proven	Objects/funcobject.c	func_descr_get
+typeobj-method-equal-hash-equal	proven	Objects/classobject.c	method_richcompare,method_hash
+typeobj-method-compare-protocol	proven	Objects/classobject.c	method_richcompare
+typeobj-method-hash-propagates	proven	Objects/classobject.c	method_hash
+typeobj-method-new-binding	proven	Objects/classobject.c	method_new_impl
+typeobj-cfunction-eq-by-binding	proven	Objects/methodobject.c	meth_richcompare,meth_hash
+typeobj-method-get-binds	proven	Objects/descrobject.c	method_get
+typeobj-wrapper-eq-by-binding	proven	Objects/descrobject.c	wrapper_richcompare,wrapper_hash,wrapperdescr_get
+typeobj-descr-gets-share-guard	proven	Objects/descrobject.c	descr_check,method_get,wrapperdescr_get
+typeobj-reduce-getattr-method	proven	Objects/classobject.c	method___reduce___impl
+typeobj-reduce-getattr-cfunction	proven	Objects/methodobject.c	meth_reduce
+typeobj-reduce-getattr-descr	proven	Objects/descrobject.c	wrapper_reduce,descr_reduce
+typeobj-classmethod-bindings-agree	proven	Objects/funcobject.c	cm_descr_get
 typeobj-exc-str-args	proven	Objects/exceptions.c	
 typeobj-exc-repr-args	proven	Objects/exceptions.c	
 typeobj-exc-keyerror-str	proven	Objects/exceptions.c	
@@ -1384,6 +1433,9 @@ typeobj-exc-matcher-type	proven	Objects/exceptions.c	get_matcher_type
 typeobj-exc-match-by-type	proven	Objects/exceptions.c	exceptiongroup_split_check_match
 typeobj-exc-split-partition	proven	Objects/exceptions.c	exceptiongroup_split_recursive,BaseExceptionGroup_split_impl,exceptiongroup_split_check_match,exceptiongroup_subset
 typeobj-exc-split-structure	proven	Objects/exceptions.c	exceptiongroup_split_recursive,BaseExceptionGroup_split_impl
+typeobj-exc-split-computes-spec	proven	Objects/exceptions.c	exceptiongroup_split_recursive,exceptiongroup_subset,BaseExceptionGroup_split_impl,BaseExceptionGroup_subgroup_impl
+typeobj-exc-split-hyps-inhabited	proven	Objects/exceptions.c	
+typeobj-exc-split-failures	proven	Objects/exceptions.c	exceptiongroup_split_recursive,exceptiongroup_subset
 typeobj-exc-subgroup-is-split-match	proven	Objects/exceptions.c	exceptiongroup_split_recursive
 typeobj-exc-split-identity	proven	Objects/exceptions.c	exceptiongroup_split_recursive,BaseExceptionGroup_split_impl,BaseExceptionGroup_subgroup_impl
 typeobj-exc-split-leaf	proven	Objects/exceptions.c	exceptiongroup_split_recursive
@@ -1536,9 +1588,16 @@ pygrammar-ast-splitlines	proven	Lib/ast.py
 pygrammar-ast-pad-whitespace	proven	Lib/ast.py	_pad_whitespace
 pygrammar-ast-docstring-twins	proven	Lib/ast.py	_PyAST_GetDocString
 pygrammar-ast-literal-eval	proven	Lib/ast.py	
-pygrammar-check-try-twin	refuted	Python/ast.c	validate_stmt
-pygrammar-check-no-null-deref	refuted	Python/ast.c	validate_pattern,validate_patterns
-pygrammar-check-names-always	refuted	Python/ast.c	validate_expr
+pygrammar-check-try-twin	refuted	Python/ast.c	
+pygrammar-check-no-null-deref	refuted	Python/ast.c	
+pygrammar-check-null-sites	proven	Python/ast.c	validate_pattern,validate_patterns,_PyAST_Validate
+pygrammar-check-rejects	proven	Python/ast.c	validate_comprehension,validate_keywords,validate_args,validate_arguments,validate_expr,ensure_literal_number,ensure_literal_negative,ensure_literal_complex,validate_pattern_match_value,validate_capture,_validate_nonempty_seq,validate_assignlist,validate_body,validate_stmt,validate_stmts,validate_exprs,validate_typeparam,validate_type_params
+pygrammar-check-table-covers	proven	Python/ast.c	
+pygrammar-check-targets	proven	Parser/action_helpers.c	_set_seq_context,_set_name_context,_set_tuple_context,_set_list_context,_set_subscript_context,_set_attribute_context,_set_starred_context,_PyPegen_set_expr_context,_PyPegen_get_invalid_target
+pygrammar-check-target-legal	proven	Parser/action_helpers.c	
+pygrammar-check-set-context-last	proven	Parser/action_helpers.c	
+pygrammar-check-set-context-restores	proven	Parser/action_helpers.c	
+pygrammar-check-names-always	refuted	Python/ast.c	
 pygrammar-check-fold-reaches	refuted	Python/ast_preprocess.c	astfold_pattern
 pygrammar-check-fold-reaches-narrow	proven	Python/ast_preprocess.c	astfold_mod,astfold_expr,astfold_keyword,astfold_comprehension,astfold_arguments,astfold_arg,astfold_stmt,astfold_excepthandler,astfold_withitem,astfold_match_case,astfold_type_param
 pygrammar-check-fold-docstring	proven	Python/ast_preprocess.c	astfold_body
@@ -1783,6 +1842,32 @@ textlibs-textwrap-max-lines	proven	Lib/textwrap.py	TextWrapper._wrap_chunks
 textlibs-textwrap-no-break	proven	Lib/textwrap.py	TextWrapper._wrap_chunks,TextWrapper._handle_long_word
 textlibs-textwrap-greedy	proven	Lib/textwrap.py	TextWrapper._wrap_chunks,TextWrapper._handle_long_word
 textlibs-textwrap-fitting-text	refuted	Lib/textwrap.py	TextWrapper._wrap_chunks
+textlibs-binascii-qp-round-trip	proven	Modules/binascii.c	binascii_a2b_qp_impl,binascii_b2a_qp_impl
+textlibs-binascii-qp-round-trip-broad	refuted	Modules/binascii.c	binascii_a2b_qp_impl,binascii_b2a_qp_impl
+textlibs-quopri-file-round-trip	proven	Lib/quopri.py	encode,decode,encodestring,decodestring
+textlibs-quopri-file-failures	proven	Lib/quopri.py	encode,decode
+textlibs-quopri-quote-set-twin	proven	Lib/quopri.py	needsquoting
+textlibs-quopri-quote-decodes	proven	Lib/quopri.py	quote,ishex,unhex
+textlibs-quopri-encode-twin	refuted	Lib/quopri.py	encode,encodestring,needsquoting,quote
+textlibs-quopri-decode-twin	refuted	Lib/quopri.py	decode,decodestring
+textlibs-quopri-py-round-trip	refuted	Lib/quopri.py	encode,decode,quote
+textlibs-html-round-trip	proven	Lib/html/__init__.py	escape,unescape,_replace_charref
+textlibs-html-fast-path	proven	Lib/html/__init__.py	unescape
+textlibs-html-escape-safe	proven	Lib/html/__init__.py	escape
+textlibs-html-total	refuted	Lib/html/__init__.py	unescape,_replace_charref
+textlibs-html-total-narrow	proven	Lib/html/__init__.py	unescape,_replace_charref
+textlibs-html-numeric-twin	refuted	Lib/html/__init__.py	_replace_charref
+textlibs-html-numeric-twin-narrow	proven	Lib/html/__init__.py	_replace_charref
+textlibs-html-numeric-valid	proven	Lib/html/__init__.py	_replace_charref
+textlibs-html-named-longest	proven	Lib/html/__init__.py	_replace_charref
+textlibs-difflib-find-longest	proven	Lib/difflib.py	SequenceMatcher.find_longest_match,SequenceMatcher.__chain_b
+textlibs-difflib-blocks	proven	Lib/difflib.py	SequenceMatcher.get_matching_blocks,SequenceMatcher.find_longest_match,SequenceMatcher.__chain_b
+textlibs-difflib-opcodes	proven	Lib/difflib.py	SequenceMatcher.get_opcodes
+textlibs-difflib-grouped	proven	Lib/difflib.py	SequenceMatcher.get_grouped_opcodes
+textlibs-difflib-grouped-cache	refuted	Lib/difflib.py	SequenceMatcher.get_grouped_opcodes,SequenceMatcher.get_opcodes
+textlibs-difflib-ratio-bound	proven	Lib/difflib.py	SequenceMatcher.ratio,SequenceMatcher.real_quick_ratio
+textlibs-difflib-quick-bound	proven	Lib/difflib.py	SequenceMatcher.quick_ratio
+textlibs-difflib-set-seqs	proven	Lib/difflib.py	SequenceMatcher.__init__,SequenceMatcher.set_seqs,SequenceMatcher.set_seq1,SequenceMatcher.set_seq2
 coll-count-elements-twins	proven	Lib/collections/__init__.py	_count_elements
 coll-counter-update-fast-slow	proven	Lib/collections/__init__.py	Counter.update
 coll-counter-update-adds	proven	Lib/collections/__init__.py	Counter.update,Counter.__init__,Counter.__missing__,_count_elements
@@ -1865,6 +1950,17 @@ corelibs-collabc-mapping-eq	proven	Lib/_collections_abc.py	Mapping.__eq__
 corelibs-collabc-mutablemapping	proven	Lib/_collections_abc.py	MutableMapping.pop,MutableMapping.popitem,MutableMapping.clear,MutableMapping.update,MutableMapping.setdefault
 corelibs-collabc-set-hash	proven	Lib/_collections_abc.py	Set._hash
 corelibs-collabc-bytestring-meta	proven	Lib/_collections_abc.py	
+corelibs-collabc-throw-paths	proven	Lib/_collections_abc.py	Coroutine.throw,Generator.throw,AsyncGenerator.athrow
+corelibs-collabc-mapping-paths	proven	Lib/_collections_abc.py	Mapping.get,Mapping.__contains__,ItemsView.__contains__
+corelibs-collabc-mmap-paths	proven	Lib/_collections_abc.py	MutableMapping.pop,MutableMapping.popitem,MutableMapping.setdefault,MutableMapping.update
+corelibs-collabc-mmap-clear	proven	Lib/_collections_abc.py	MutableMapping.clear
+corelibs-collabc-seq-paths	proven	Lib/_collections_abc.py	Sequence.__iter__,Sequence.__contains__,Sequence.index
+corelibs-collabc-mseq-paths	proven	Lib/_collections_abc.py	MutableSequence.clear,MutableSequence.extend,MutableSequence.remove
+corelibs-collabc-set-cmp-paths	proven	Lib/_collections_abc.py	Set.__le__,Set.__lt__,Set.__gt__,Set.__ge__,Set.__eq__
+corelibs-collabc-set-alg-paths	proven	Lib/_collections_abc.py	Set.__and__,Set.isdisjoint,Set.__or__
+corelibs-collabc-set-sub-paths	proven	Lib/_collections_abc.py	Set.__sub__,Set.__rsub__,Set.__xor__
+corelibs-collabc-mset-paths	proven	Lib/_collections_abc.py	MutableSet.remove,MutableSet.pop,MutableSet.clear,MutableSet.__ior__,MutableSet.__iand__,MutableSet.__ixor__,MutableSet.__isub__
+corelibs-collabc-values-tail	proven	Lib/_collections_abc.py	ValuesView.__contains__
 corelibs-functools-lru-results	refuted	Lib/functools.py	_lru_cache_wrapper
 corelibs-functools-lru-delete-c	proven	Modules/_functoolsmodule.c	
 corelibs-functools-partial-duck	refuted	Lib/functools.py	_partial_new
@@ -1978,6 +2074,17 @@ corelibs-functools-sdm-call	proven	Lib/functools.py	_singledispatchmethod_get.__
 corelibs-functools-sdm-register	proven	Lib/functools.py	singledispatchmethod.register,_singledispatchmethod_get.register
 corelibs-functools-sdm-callable	refuted	Lib/functools.py	singledispatchmethod.__init__,_singledispatchmethod_get.__call__
 corelibs-functools-sdm-get	proven	Lib/functools.py	singledispatchmethod.__get__,_singledispatchmethod_get.__init__
+corelibs-lru-twins-reentrant-eq	refuted	Lib/functools.py	_lru_cache_wrapper,bounded_lru_cache_update_lock_held,bounded_lru_cache_wrapper
+corelibs-lru-orphan-reached	proven	Lib/functools.py	_lru_cache_wrapper,_functools__lru_cache_wrapper_cache_info_impl,lru_cache_append_link
+corelibs-lru-twins-raising-eq	refuted	Lib/functools.py	_lru_cache_wrapper
+corelibs-lru-ring-closes	refuted	Lib/functools.py	bounded_lru_cache_update_lock_held,bounded_lru_cache_get_lock_held,lru_cache_prepend_link
+corelibs-lru-orphan-c	proven	Lib/functools.py	_lru_cache_wrapper,bounded_lru_cache_update_lock_held,lru_cache_extract_link
+corelibs-lru-orphan-py	proven	Lib/functools.py	_lru_cache_wrapper
+corelibs-lru-pop-raises-c	proven	Lib/functools.py	_lru_cache_wrapper,bounded_lru_cache_update_lock_held,lru_cache_prepend_link,lru_cache_extract_link
+corelibs-lru-del-raises-py	proven	Lib/functools.py	_lru_cache_wrapper
+corelibs-lru-clear-resets	proven	Lib/functools.py	_lru_cache_wrapper,_functools__lru_cache_wrapper_cache_clear_impl
+corelibs-lru-uncached-runs	proven	Lib/functools.py	_lru_cache_wrapper,uncached_lru_cache_wrapper
+corelibs-lru-infinite-memo	proven	Lib/functools.py	_lru_cache_wrapper,infinite_lru_cache_wrapper
 corelibs-operator-binary-dispatch	proven	Lib/operator.py	sub,matmul,floordiv,truediv,mod,lshift,rshift,and_,xor,or_,_operator_sub_impl,_operator_matmul_impl,_operator_floordiv_impl,_operator_truediv_impl,_operator_mod_impl,_operator_lshift_impl,_operator_rshift_impl,_operator_and__impl,_operator_xor_impl,_operator_or__impl
 corelibs-operator-heap-dispatch	proven	Lib/operator.py	sub,add,mul
 corelibs-operator-sequence-fallback	proven	Lib/operator.py	add,mul,_operator_add_impl,_operator_mul_impl

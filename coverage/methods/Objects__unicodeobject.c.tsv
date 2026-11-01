@@ -45,7 +45,7 @@ Objects/unicodeobject.c	1466	1474	unicode_check_modifiable	unicode_check_modifia
 Objects/unicodeobject.c	1477	1617	_copy_characters	_copy_characters(PyObject *to, Py_ssize_t to_start, PyObject *from, Py_ssize_t from_start, Py_ssize_t how_many, int check_maxchar)	todo		
 Objects/unicodeobject.c	1620	1625	_PyUnicode_FastCopyCharacters	_PyUnicode_FastCopyCharacters( PyObject *to, Py_ssize_t to_start, PyObject *from, Py_ssize_t from_start, Py_ssize_t how_many)	todo		
 Objects/unicodeobject.c	1628	1676	PyUnicode_CopyCharacters	PyUnicode_CopyCharacters(PyObject *to, Py_ssize_t to_start, PyObject *from, Py_ssize_t from_start, Py_ssize_t how_many)	todo		
-Objects/unicodeobject.c	1684	1721	find_maxchar_surrogates	find_maxchar_surrogates(const wchar_t *begin, const wchar_t *end, Py_UCS4 *maxchar, Py_ssize_t *num_surrogates)	modelled	unicodeobj-writer-text,unicodeobj-writer-paths-agree	findMaxcharSurrogates, for a four-byte wchar_t; the SIZEOF_WCHAR_T == 2 pairing is a platform branch
+Objects/unicodeobject.c	1684	1721	find_maxchar_surrogates	find_maxchar_surrogates(const wchar_t *begin, const wchar_t *end, Py_UCS4 *maxchar, Py_ssize_t *num_surrogates)	modelled	unicodeobj-writer-text	findMaxcharSurrogates, for a four-byte wchar_t; the SIZEOF_WCHAR_T == 2 pairing is a platform branch
 Objects/unicodeobject.c	1724	1809	unicode_dealloc	unicode_dealloc(PyObject *unicode)	excluded		no-behaviour: memory management with no Python-visible effect
 Objects/unicodeobject.c	1813	1827	unicode_is_singleton	unicode_is_singleton(PyObject *unicode)	todo		
 Objects/unicodeobject.c	1831	1847	unicode_modifiable	unicode_modifiable(PyObject *unicode)	todo		
@@ -56,7 +56,7 @@ Objects/unicodeobject.c	1960	1964	get_latin1_char	get_latin1_char(Py_UCS1 ch)	to
 Objects/unicodeobject.c	1967	1990	unicode_char	unicode_char(Py_UCS4 ch)	modelled	unicodeobj-iter-drains	unicodeChar; both branches give the canonical kind
 Objects/unicodeobject.c	1994	2045	unicode_write_widechar	unicode_write_widechar(int kind, void *data, const wchar_t *u, Py_ssize_t size, Py_ssize_t num_surrogates)	todo		
 Objects/unicodeobject.c	2049	2104	PyUnicode_FromWideChar	PyUnicode_FromWideChar(const wchar_t *u, Py_ssize_t size)	todo		
-Objects/unicodeobject.c	2108	2154	PyUnicodeWriter_WriteWideChar	PyUnicodeWriter_WriteWideChar(PyUnicodeWriter *pub_writer, const wchar_t *str, Py_ssize_t size)	modelled	unicodeobj-writer-text,unicodeobj-writer-paths-agree	writeWide, for a four-byte wchar_t; the first character out of range raises
+Objects/unicodeobject.c	2108	2154	PyUnicodeWriter_WriteWideChar	PyUnicodeWriter_WriteWideChar(PyUnicodeWriter *pub_writer, const wchar_t *str, Py_ssize_t size)	modelled	unicodeobj-writer-text	writeWide, for a four-byte wchar_t; the first character out of range raises
 Objects/unicodeobject.c	2158	2174	PyUnicode_FromStringAndSize	PyUnicode_FromStringAndSize(const char *u, Py_ssize_t size)	todo		
 Objects/unicodeobject.c	2177	2185	PyUnicode_FromString	PyUnicode_FromString(const char *u)	todo		
 Objects/unicodeobject.c	2189	2251	_PyUnicode_FromId	_PyUnicode_FromId(_Py_Identifier *id)	todo		
@@ -66,7 +66,7 @@ Objects/unicodeobject.c	2291	2303	kind_maxchar_limit	kind_maxchar_limit(int kind
 Objects/unicodeobject.c	2306	2326	_PyUnicode_FromUCS1	_PyUnicode_FromUCS1(const Py_UCS1* u, Py_ssize_t size)	todo		
 Objects/unicodeobject.c	2329	2352	_PyUnicode_FromUCS2	_PyUnicode_FromUCS2(const Py_UCS2 *u, Py_ssize_t size)	todo		
 Objects/unicodeobject.c	2355	2380	_PyUnicode_FromUCS4	_PyUnicode_FromUCS4(const Py_UCS4 *u, Py_ssize_t size)	todo		
-Objects/unicodeobject.c	2384	2424	PyUnicodeWriter_WriteUCS4	PyUnicodeWriter_WriteUCS4(PyUnicodeWriter *pub_writer, Py_UCS4 *str, Py_ssize_t size)	modelled	unicodeobj-writer-paths-agree,unicodeobj-writer-text	writeUCS4: no range check, unlike WriteWideChar; CPython's test marks that case # CRASHES
+Objects/unicodeobject.c	2384	2424	PyUnicodeWriter_WriteUCS4	PyUnicodeWriter_WriteUCS4(PyUnicodeWriter *pub_writer, Py_UCS4 *str, Py_ssize_t size)	modelled	unicodeobj-writer-paths-agree	writeUCS4: no range check, unlike WriteWideChar; CPython's test marks that case # CRASHES
 Objects/unicodeobject.c	2428	2445	PyUnicode_FromKindAndData	PyUnicode_FromKindAndData(int kind, const void *buffer, Py_ssize_t size)	todo		
 Objects/unicodeobject.c	2448	2480	_PyUnicode_FindMaxChar	_PyUnicode_FindMaxChar(PyObject *unicode, Py_ssize_t start, Py_ssize_t end)	todo		
 Objects/unicodeobject.c	2486	2526	unicode_adjust_maxchar	unicode_adjust_maxchar(PyObject **p_unicode)	todo		
@@ -118,7 +118,7 @@ Objects/unicodeobject.c	4328	4335	PyUnicode_GetLength	PyUnicode_GetLength(PyObje
 Objects/unicodeobject.c	4338	4354	PyUnicode_ReadChar	PyUnicode_ReadChar(PyObject *unicode, Py_ssize_t index)	todo		
 Objects/unicodeobject.c	4357	4376	PyUnicode_WriteChar	PyUnicode_WriteChar(PyObject *unicode, Py_ssize_t index, Py_UCS4 ch)	todo		
 Objects/unicodeobject.c	4379	4382	PyUnicode_GetDefaultEncoding	PyUnicode_GetDefaultEncoding(void)	todo		
-Objects/unicodeobject.c	4386	4408	make_decode_exception	make_decode_exception(PyObject **exceptionObject, const char *encoding, const char *input, Py_ssize_t length, Py_ssize_t startpos, Py_ssize_t endpos, const char *reason)	modelled	unicodeobj-codec-callback-decode-position,unicodeobj-codec-wide-std-callback	
+Objects/unicodeobject.c	4386	4408	make_decode_exception	make_decode_exception(PyObject **exceptionObject, const char *encoding, const char *input, Py_ssize_t length, Py_ssize_t startpos, Py_ssize_t endpos, const char *reason)	modelled	unicodeobj-codec-callback-decode-position	
 Objects/unicodeobject.c	4412	4424	widechar_resize	widechar_resize(wchar_t **buf, Py_ssize_t *size, Py_ssize_t newsize)	excluded		platform: inside #ifdef MS_WINDOWS, not compiled on Linux or macOS
 Objects/unicodeobject.c	4434	4534	unicode_decode_call_errorhandler_wchar	unicode_decode_call_errorhandler_wchar( const char *errors, PyObject **errorHandler, const char *encoding, const char *reason, const char **input, const char **inend, Py_ssize_t *startinpos, Py_ssize_t *endinpos, PyObject **exceptionObject, const char **inptr, wchar_t **buf, Py_ssize_t *bufsize, Py_ssize_t *outpos)	excluded		platform: inside #ifdef MS_WINDOWS, not compiled on Linux or macOS
 Objects/unicodeobject.c	4538	4635	unicode_decode_call_errorhandler_writer	unicode_decode_call_errorhandler_writer( const char *errors, PyObject **errorHandler, const char *encoding, const char *reason, const char **input, const char **inend, Py_ssize_t *startinpos, Py_ssize_t *endinpos, PyObject **exceptionObject, const char **inptr, _PyUnicodeWriter *writer /* PyObject **output, Py_ssize_t *outpos */)	modelled	unicodeobj-codec-callback-decode-position,unicodeobj-codec-wide-std-callback,unicodeobj-codec-ascii-constant-handler	
@@ -146,11 +146,11 @@ Objects/unicodeobject.c	5901	5951	unicode_fill_utf8	unicode_fill_utf8(PyObject *
 Objects/unicodeobject.c	5954	5957	_PyUnicode_AsUTF8String	_PyUnicode_AsUTF8String(PyObject *unicode, const char *errors)	todo		
 Objects/unicodeobject.c	5961	5964	PyUnicode_AsUTF8String	PyUnicode_AsUTF8String(PyObject *unicode)	todo		
 Objects/unicodeobject.c	5969	5975	PyUnicode_DecodeUTF32	PyUnicode_DecodeUTF32(const char *s, Py_ssize_t size, const char *errors, int *byteorder)	todo		
-Objects/unicodeobject.c	5978	6120	PyUnicode_DecodeUTF32Stateful	PyUnicode_DecodeUTF32Stateful(const char *s, Py_ssize_t size, const char *errors, int *byteorder, Py_ssize_t *consumed)	modelled	unicodeobj-codec-wide-std-callback,unicodeobj-codec-utf32-round-trip	
+Objects/unicodeobject.c	5978	6120	PyUnicode_DecodeUTF32Stateful	PyUnicode_DecodeUTF32Stateful(const char *s, Py_ssize_t size, const char *errors, int *byteorder, Py_ssize_t *consumed)	modelled	unicodeobj-codec-wide-std-callback	
 Objects/unicodeobject.c	6123	6265	_PyUnicode_EncodeUTF32	_PyUnicode_EncodeUTF32(PyObject *str, const char *errors, int byteorder)	todo		
 Objects/unicodeobject.c	6268	6271	PyUnicode_AsUTF32String	PyUnicode_AsUTF32String(PyObject *unicode)	todo		
 Objects/unicodeobject.c	6276	6282	PyUnicode_DecodeUTF16	PyUnicode_DecodeUTF16(const char *s, Py_ssize_t size, const char *errors, int *byteorder)	todo		
-Objects/unicodeobject.c	6285	6437	PyUnicode_DecodeUTF16Stateful	PyUnicode_DecodeUTF16Stateful(const char *s, Py_ssize_t size, const char *errors, int *byteorder, Py_ssize_t *consumed)	modelled	unicodeobj-codec-wide-std-callback,unicodeobj-codec-utf16-round-trip	
+Objects/unicodeobject.c	6285	6437	PyUnicode_DecodeUTF16Stateful	PyUnicode_DecodeUTF16Stateful(const char *s, Py_ssize_t size, const char *errors, int *byteorder, Py_ssize_t *consumed)	modelled	unicodeobj-codec-wide-std-callback	
 Objects/unicodeobject.c	6440	6601	_PyUnicode_EncodeUTF16	_PyUnicode_EncodeUTF16(PyObject *str, const char *errors, int byteorder)	todo		
 Objects/unicodeobject.c	6604	6607	PyUnicode_AsUTF16String	PyUnicode_AsUTF16String(PyObject *unicode)	todo		
 Objects/unicodeobject.c	6610	6624	_PyUnicode_GetNameCAPI	_PyUnicode_GetNameCAPI(void)	todo		
@@ -162,7 +162,7 @@ Objects/unicodeobject.c	7045	7178	_PyUnicode_DecodeRawUnicodeEscapeStateful	_PyU
 Objects/unicodeobject.c	7181	7186	PyUnicode_DecodeRawUnicodeEscape	PyUnicode_DecodeRawUnicodeEscape(const char *s, Py_ssize_t size, const char *errors)	todo		
 Objects/unicodeobject.c	7190	7263	PyUnicode_AsRawUnicodeEscapeString	PyUnicode_AsRawUnicodeEscapeString(PyObject *unicode)	todo		
 Objects/unicodeobject.c	7268	7274	PyUnicode_DecodeLatin1	PyUnicode_DecodeLatin1(const char *s, Py_ssize_t size, const char *errors)	todo		
-Objects/unicodeobject.c	7278	7300	make_encode_exception	make_encode_exception(PyObject **exceptionObject, const char *encoding, PyObject *unicode, Py_ssize_t startpos, Py_ssize_t endpos, const char *reason)	modelled	unicodeobj-codec-callback-encode-position,unicodeobj-codec-ucs1-inline-callback	
+Objects/unicodeobject.c	7278	7300	make_encode_exception	make_encode_exception(PyObject **exceptionObject, const char *encoding, PyObject *unicode, Py_ssize_t startpos, Py_ssize_t endpos, const char *reason)	modelled	unicodeobj-codec-callback-encode-position	
 Objects/unicodeobject.c	7304	7314	raise_encode_exception	raise_encode_exception(PyObject **exceptionObject, const char *encoding, PyObject *unicode, Py_ssize_t startpos, Py_ssize_t endpos, const char *reason)	modelled	unicodeobj-codec-ucs1-strict-error	
 Objects/unicodeobject.c	7321	7374	unicode_encode_call_errorhandler	unicode_encode_call_errorhandler(const char *errors, PyObject **errorHandler, const char *encoding, const char *reason, PyObject *unicode, PyObject **exceptionObject, Py_ssize_t startpos, Py_ssize_t endpos, Py_ssize_t *newpos)	modelled	unicodeobj-codec-callback-encode-position,unicodeobj-codec-ucs1-inline-callback	
 Objects/unicodeobject.c	7377	7551	unicode_encode_ucs1	unicode_encode_ucs1(PyObject *unicode, const char *errors, const Py_UCS4 limit)	modelled	unicodeobj-codec-ucs1-inline-callback,unicodeobj-codec-ucs1-strict-error,unicodeobj-codec-surrogateescape-error-span	
@@ -206,12 +206,12 @@ Objects/unicodeobject.c	9436	9484	unicode_fast_translate	unicode_fast_translate(
 Objects/unicodeobject.c	9487	9601	_PyUnicode_TranslateCharmap	_PyUnicode_TranslateCharmap(PyObject *input, PyObject *mapping, const char *errors)	modelled	unicodeobj-text-translate-pure-fast-slow	
 Objects/unicodeobject.c	9604	9611	PyUnicode_Translate	PyUnicode_Translate(PyObject *str, PyObject *mapping, const char *errors)	todo		
 Objects/unicodeobject.c	9614	9657	_PyUnicode_TransformDecimalAndSpaceToASCII	_PyUnicode_TransformDecimalAndSpaceToASCII(PyObject *unicode)	todo		
-Objects/unicodeobject.c	9682	9762	any_find_slice	any_find_slice(PyObject* s1, PyObject* s2, Py_ssize_t start, Py_ssize_t end, int direction)	modelled	strsearch-find-str-bytes	
+Objects/unicodeobject.c	9682	9762	any_find_slice	any_find_slice(PyObject* s1, PyObject* s2, Py_ssize_t start, Py_ssize_t end, int direction)	todo		
 Objects/unicodeobject.c	9791	9899	_PyUnicode_InsertThousandsGrouping	_PyUnicode_InsertThousandsGrouping( _PyUnicodeWriter *writer, Py_ssize_t n_buffer, PyObject *digits, Py_ssize_t d_pos, Py_ssize_t n_digits, Py_ssize_t min_width, const char *grouping, PyObject *thousands_sep, Py_UCS4 *maxchar, int forward)	modelled	unicodeobj-format-group-loop,unicodeobj-format-group-digits,unicodeobj-format-float-grouping	
 Objects/unicodeobject.c	9902	9911	PyUnicode_Count	PyUnicode_Count(PyObject *str, PyObject *substr, Py_ssize_t start, Py_ssize_t end)	todo		
 Objects/unicodeobject.c	9914	9924	PyUnicode_Find	PyUnicode_Find(PyObject *str, PyObject *substr, Py_ssize_t start, Py_ssize_t end, int direction)	todo		
 Objects/unicodeobject.c	9927	9944	PyUnicode_FindChar	PyUnicode_FindChar(PyObject *str, Py_UCS4 ch, Py_ssize_t start, Py_ssize_t end, int direction)	todo		
-Objects/unicodeobject.c	9947	10007	tailmatch	tailmatch(PyObject *self, PyObject *substring, Py_ssize_t start, Py_ssize_t end, int direction)	modelled	strsearch-tailmatch-str-bytes	
+Objects/unicodeobject.c	9947	10007	tailmatch	tailmatch(PyObject *self, PyObject *substring, Py_ssize_t start, Py_ssize_t end, int direction)	todo		
 Objects/unicodeobject.c	10010	10020	PyUnicode_Tailmatch	PyUnicode_Tailmatch(PyObject *str, PyObject *substr, Py_ssize_t start, Py_ssize_t end, int direction)	todo		
 Objects/unicodeobject.c	10023	10039	ascii_upper_or_lower	ascii_upper_or_lower(PyObject *self, int lower)	modelled	unicodeobj-text-case-ascii-fast-path	
 Objects/unicodeobject.c	10042	10068	handle_capital_sigma	handle_capital_sigma(int kind, const void *data, Py_ssize_t length, Py_ssize_t i)	modelled	unicodeobj-text-final-sigma-no-overlap,unicodeobj-text-final-sigma-regex	
@@ -228,7 +228,7 @@ Objects/unicodeobject.c	10255	10277	PyUnicode_Join	PyUnicode_Join(PyObject *sepa
 Objects/unicodeobject.c	10280	10444	_PyUnicode_JoinArray	_PyUnicode_JoinArray(PyObject *separator, PyObject *const *items, Py_ssize_t seqlen)	modelled	unicodeobj-join-spec,unicodeobj-join-errors,unicodeobj-join-memcpy-safe	joinArray; the two copy loops are one, and JoinMemcpySafe is why that is sound
 Objects/unicodeobject.c	10447	10457	_PyUnicode_FastFill	_PyUnicode_FastFill(PyObject *unicode, Py_ssize_t start, Py_ssize_t length, Py_UCS4 fill_char)	todo		
 Objects/unicodeobject.c	10460	10490	PyUnicode_Fill	PyUnicode_Fill(PyObject *unicode, Py_ssize_t start, Py_ssize_t length, Py_UCS4 fill_char)	todo		
-Objects/unicodeobject.c	10493	10531	pad	pad(PyObject *self, Py_ssize_t left, Py_ssize_t right, Py_UCS4 fill)	modelled	strsearch-pad-str-bytes,strsearch-center-balanced	
+Objects/unicodeobject.c	10493	10531	pad	pad(PyObject *self, Py_ssize_t left, Py_ssize_t right, Py_UCS4 fill)	todo		
 Objects/unicodeobject.c	10534	10566	PyUnicode_Splitlines	PyUnicode_Splitlines(PyObject *string, int keepends)	todo		
 Objects/unicodeobject.c	10569	10658	split	split(PyObject *self, PyObject *substring, Py_ssize_t maxcount)	modelled	strsearch-replace-split-join,strsearch-split-str-bytes	
 Objects/unicodeobject.c	10661	10750	rsplit	rsplit(PyObject *self, PyObject *substring, Py_ssize_t maxcount)	modelled	strsearch-split-str-bytes	
@@ -240,7 +240,7 @@ Objects/unicodeobject.c	11101	11105	unicode_title_impl	unicode_title_impl(PyObje
 Objects/unicodeobject.c	11117	11123	unicode_capitalize_impl	unicode_capitalize_impl(PyObject *self) /*[clinic end generated code: output=e49a4c333cdb7667 input=e50e50ed45a654cf]*/	todo		
 Objects/unicodeobject.c	11132	11138	unicode_casefold_impl	unicode_casefold_impl(PyObject *self) /*[clinic end generated code: output=0120daf657ca40af input=384d66cc2ae30daf]*/	todo		
 Objects/unicodeobject.c	11144	11161	convert_uc	convert_uc(PyObject *obj, void *addr)	todo		
-Objects/unicodeobject.c	11177	11189	unicode_center_impl	unicode_center_impl(PyObject *self, Py_ssize_t width, Py_UCS4 fillchar) /*[clinic end generated code: output=420c8859effc7c0c input=df91017dfd186a78]*/	modelled	strsearch-center-balanced	
+Objects/unicodeobject.c	11177	11189	unicode_center_impl	unicode_center_impl(PyObject *self, Py_ssize_t width, Py_UCS4 fillchar) /*[clinic end generated code: output=420c8859effc7c0c input=df91017dfd186a78]*/	todo		
 Objects/unicodeobject.c	11194	11307	unicode_compare	unicode_compare(PyObject *str1, PyObject *str2)	todo		
 Objects/unicodeobject.c	11311	11319	_PyUnicode_Equal	_PyUnicode_Equal(PyObject *str1, PyObject *str2)	todo		
 Objects/unicodeobject.c	11323	11337	PyUnicode_Equal	PyUnicode_Equal(PyObject *str1, PyObject *str2)	todo		
@@ -255,13 +255,13 @@ Objects/unicodeobject.c	11573	11629	PyUnicode_Contains	PyUnicode_Contains(PyObje
 Objects/unicodeobject.c	11634	11680	PyUnicode_Concat	PyUnicode_Concat(PyObject *left, PyObject *right)	todo		
 Objects/unicodeobject.c	11683	11757	PyUnicode_Append	PyUnicode_Append(PyObject **p_left, PyObject *right)	todo		
 Objects/unicodeobject.c	11760	11764	PyUnicode_AppendAndDel	PyUnicode_AppendAndDel(PyObject **pleft, PyObject *right)	todo		
-Objects/unicodeobject.c	11783	11848	unicode_count_impl	unicode_count_impl(PyObject *str, PyObject *substr, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=8fcc3aef0b18edbf input=0db5f2367599b50d]*/	modelled	strsearch-count-repeated-find	
+Objects/unicodeobject.c	11783	11848	unicode_count_impl	unicode_count_impl(PyObject *str, PyObject *substr, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=8fcc3aef0b18edbf input=0db5f2367599b50d]*/	todo		
 Objects/unicodeobject.c	11866	11870	unicode_encode_impl	unicode_encode_impl(PyObject *self, const char *encoding, const char *errors) /*[clinic end generated code: output=bf78b6e2a9470e3c input=b85a9645cb33b729]*/	todo		
 Objects/unicodeobject.c	11883	11956	unicode_expandtabs_impl	unicode_expandtabs_impl(PyObject *self, int tabsize) /*[clinic end generated code: output=3457c5dcee26928f input=8a01914034af4c85]*/	todo		
-Objects/unicodeobject.c	11968	11977	unicode_find_impl	unicode_find_impl(PyObject *str, PyObject *substr, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=51dbe6255712e278 input=6be5f4af6fc545d8]*/	modelled	strsearch-find-extreme	
+Objects/unicodeobject.c	11968	11977	unicode_find_impl	unicode_find_impl(PyObject *str, PyObject *substr, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=51dbe6255712e278 input=6be5f4af6fc545d8]*/	todo		
 Objects/unicodeobject.c	11980	11998	unicode_getitem	unicode_getitem(PyObject *self, Py_ssize_t index)	todo		
 Objects/unicodeobject.c	12003	12019	unicode_hash	unicode_hash(PyObject *self)	todo		
-Objects/unicodeobject.c	12031	12043	unicode_index_impl	unicode_index_impl(PyObject *str, PyObject *substr, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=77558288837cdf40 input=39f29462607c38cf]*/	modelled	strsearch-find-str-bytes	
+Objects/unicodeobject.c	12031	12043	unicode_index_impl	unicode_index_impl(PyObject *str, PyObject *substr, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=77558288837cdf40 input=39f29462607c38cf]*/	todo		
 Objects/unicodeobject.c	12055	12059	unicode_isascii_impl	unicode_isascii_impl(PyObject *self) /*[clinic end generated code: output=c5910d64b5a8003f input=5a43cbc6399621d5]*/	todo		
 Objects/unicodeobject.c	12071	12102	unicode_islower_impl	unicode_islower_impl(PyObject *self) /*[clinic end generated code: output=dbd41995bd005b81 input=1879b48dfc628366]*/	modelled	unicodeobj-text-is-case-doc	
 Objects/unicodeobject.c	12114	12145	unicode_isupper_impl	unicode_isupper_impl(PyObject *self) /*[clinic end generated code: output=049209c8e7f15f59 input=77d29904aef0e3a0]*/	modelled	unicodeobj-text-is-case-doc	
@@ -278,7 +278,7 @@ Objects/unicodeobject.c	12482	12486	unicode_isidentifier_impl	unicode_isidentifi
 Objects/unicodeobject.c	12497	12519	unicode_isprintable_impl	unicode_isprintable_impl(PyObject *self) /*[clinic end generated code: output=3ab9626cd32dd1a0 input=4e56bcc6b06ca18c]*/	modelled	unicodeobj-text-isprintable-repr	
 Objects/unicodeobject.c	12536	12540	unicode_join	unicode_join(PyObject *self, PyObject *iterable) /*[clinic end generated code: output=6857e7cecfe7bf98 input=fd330a11ee845fb2]*/	todo		
 Objects/unicodeobject.c	12543	12546	unicode_length	unicode_length(PyObject *self)	todo		
-Objects/unicodeobject.c	12562	12569	unicode_ljust_impl	unicode_ljust_impl(PyObject *self, Py_ssize_t width, Py_UCS4 fillchar) /*[clinic end generated code: output=1cce0e0e0a0b84b3 input=8a55f06694c20ed6]*/	modelled	strsearch-pad-str-bytes	
+Objects/unicodeobject.c	12562	12569	unicode_ljust_impl	unicode_ljust_impl(PyObject *self, Py_ssize_t width, Py_UCS4 fillchar) /*[clinic end generated code: output=1cce0e0e0a0b84b3 input=8a55f06694c20ed6]*/	todo		
 Objects/unicodeobject.c	12578	12584	unicode_lower_impl	unicode_lower_impl(PyObject *self) /*[clinic end generated code: output=84ef9ed42efad663 input=60a2984b8beff23a]*/	todo		
 Objects/unicodeobject.c	12597	12641	_PyUnicode_XStrip	_PyUnicode_XStrip(PyObject *self, int striptype, PyObject *sepobj)	todo		
 Objects/unicodeobject.c	12644	12675	PyUnicode_Substring	PyUnicode_Substring(PyObject *self, Py_ssize_t start, Py_ssize_t end)	todo		
@@ -289,13 +289,13 @@ Objects/unicodeobject.c	12789	12793	unicode_lstrip_impl	unicode_lstrip_impl(PyOb
 Objects/unicodeobject.c	12808	12812	unicode_rstrip_impl	unicode_rstrip_impl(PyObject *self, PyObject *chars) /*[clinic end generated code: output=4a59230017cc3b7a input=62566c627916557f]*/	todo		
 Objects/unicodeobject.c	12816	12867	unicode_repeat	unicode_repeat(PyObject *str, Py_ssize_t len)	todo		
 Objects/unicodeobject.c	12870	12879	PyUnicode_Replace	PyUnicode_Replace(PyObject *str, PyObject *substr, PyObject *replstr, Py_ssize_t maxcount)	todo		
-Objects/unicodeobject.c	12898	12903	unicode_replace_impl	unicode_replace_impl(PyObject *self, PyObject *old, PyObject *new, Py_ssize_t count) /*[clinic end generated code: output=b63f1a8b5eebf448 input=3345c455d60a5499]*/	modelled	strsearch-replace-str-bytes	
+Objects/unicodeobject.c	12898	12903	unicode_replace_impl	unicode_replace_impl(PyObject *self, PyObject *old, PyObject *new, Py_ssize_t count) /*[clinic end generated code: output=b63f1a8b5eebf448 input=3345c455d60a5499]*/	todo		
 Objects/unicodeobject.c	12919	12931	unicode_removeprefix_impl	unicode_removeprefix_impl(PyObject *self, PyObject *prefix) /*[clinic end generated code: output=f1e5945e9763bcb9 input=90d162724944bfa7]*/	todo		
 Objects/unicodeobject.c	12947	12959	unicode_removesuffix_impl	unicode_removesuffix_impl(PyObject *self, PyObject *suffix) /*[clinic end generated code: output=d36629e227636822 input=6efc96152d4bfcd5]*/	todo		
 Objects/unicodeobject.c	12962	13050	unicode_repr	unicode_repr(PyObject *unicode)	todo		
-Objects/unicodeobject.c	13062	13071	unicode_rfind_impl	unicode_rfind_impl(PyObject *str, PyObject *substr, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=880b29f01dd014c8 input=130dfb5a94532dd6]*/	modelled	strsearch-find-extreme	
-Objects/unicodeobject.c	13083	13095	unicode_rindex_impl	unicode_rindex_impl(PyObject *str, PyObject *substr, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=5f3aef124c867fe1 input=97a766ba968a214e]*/	modelled	strsearch-find-str-bytes	
-Objects/unicodeobject.c	13111	13118	unicode_rjust_impl	unicode_rjust_impl(PyObject *self, Py_ssize_t width, Py_UCS4 fillchar) /*[clinic end generated code: output=804a1a57fbe8d5cf input=1256a8d659589907]*/	modelled	strsearch-pad-str-bytes	
+Objects/unicodeobject.c	13062	13071	unicode_rfind_impl	unicode_rfind_impl(PyObject *str, PyObject *substr, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=880b29f01dd014c8 input=130dfb5a94532dd6]*/	todo		
+Objects/unicodeobject.c	13083	13095	unicode_rindex_impl	unicode_rindex_impl(PyObject *str, PyObject *substr, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=5f3aef124c867fe1 input=97a766ba968a214e]*/	todo		
+Objects/unicodeobject.c	13111	13118	unicode_rjust_impl	unicode_rjust_impl(PyObject *self, Py_ssize_t width, Py_UCS4 fillchar) /*[clinic end generated code: output=804a1a57fbe8d5cf input=1256a8d659589907]*/	todo		
 Objects/unicodeobject.c	13121	13127	PyUnicode_Split	PyUnicode_Split(PyObject *s, PyObject *sep, Py_ssize_t maxsplit)	todo		
 Objects/unicodeobject.c	13153	13165	unicode_split_impl	unicode_split_impl(PyObject *self, PyObject *sep, Py_ssize_t maxsplit) /*[clinic end generated code: output=3a65b1db356948dc input=9dc157701983897d]*/	todo		
 Objects/unicodeobject.c	13168	13216	PyUnicode_Partition	PyUnicode_Partition(PyObject *str_obj, PyObject *sep_obj)	todo		
@@ -311,7 +311,7 @@ Objects/unicodeobject.c	13384	13420	unicode_maketrans_from_dict	unicode_maketran
 Objects/unicodeobject.c	13448	13526	unicode_maketrans_impl	unicode_maketrans_impl(PyObject *x, PyObject *y, PyObject *z) /*[clinic end generated code: output=a925c89452bd5881 input=66bc00a1b4258a6e]*/	modelled	unicodeobj-text-maketrans-translate	
 Objects/unicodeobject.c	13545	13549	unicode_translate	unicode_translate(PyObject *self, PyObject *table) /*[clinic end generated code: output=3cb448ff2fd96bf3 input=9874c06808f58900]*/	modelled	unicodeobj-text-translate-pure-fast-slow,unicodeobj-text-translate-doc	
 Objects/unicodeobject.c	13558	13564	unicode_upper_impl	unicode_upper_impl(PyObject *self) /*[clinic end generated code: output=1b7ddd16bbcdc092 input=db3d55682dfe2e6c]*/	todo		
-Objects/unicodeobject.c	13578	13609	unicode_zfill_impl	unicode_zfill_impl(PyObject *self, Py_ssize_t width) /*[clinic end generated code: output=e13fb6bdf8e3b9df input=c6b2f772c6f27799]*/	modelled	strsearch-zfill-spec	
+Objects/unicodeobject.c	13578	13609	unicode_zfill_impl	unicode_zfill_impl(PyObject *self, Py_ssize_t width) /*[clinic end generated code: output=e13fb6bdf8e3b9df input=c6b2f772c6f27799]*/	todo		
 Objects/unicodeobject.c	13627	13664	unicode_startswith_impl	unicode_startswith_impl(PyObject *self, PyObject *subobj, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=4bd7cfd0803051d4 input=5f918b5f5f89d856]*/	todo		
 Objects/unicodeobject.c	13683	13719	unicode_endswith_impl	unicode_endswith_impl(PyObject *self, PyObject *subobj, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=cce6f8ceb0102ca9 input=00fbdc774a7d4d71]*/	todo		
 Objects/unicodeobject.c	13723	13743	_PyUnicodeWriter_Update	_PyUnicodeWriter_Update(_PyUnicodeWriter *writer)	todo		
@@ -321,21 +321,21 @@ Objects/unicodeobject.c	13792	13799	PyUnicodeWriter_Discard	void PyUnicodeWriter
 Objects/unicodeobject.c	13804	13810	_PyUnicodeWriter_InitWithBuffer	_PyUnicodeWriter_InitWithBuffer(_PyUnicodeWriter *writer, PyObject *buffer)	todo		
 Objects/unicodeobject.c	13814	13889	_PyUnicodeWriter_PrepareInternal	_PyUnicodeWriter_PrepareInternal(_PyUnicodeWriter *writer, Py_ssize_t length, Py_UCS4 maxchar)	todo		
 Objects/unicodeobject.c	13892	13910	_PyUnicodeWriter_PrepareKindInternal	_PyUnicodeWriter_PrepareKindInternal(_PyUnicodeWriter *writer, int kind)	todo		
-Objects/unicodeobject.c	13913	13921	_PyUnicodeWriter_WriteCharInline	_PyUnicodeWriter_WriteCharInline(_PyUnicodeWriter *writer, Py_UCS4 ch)	modelled	unicodeobj-writer-paths-agree,unicodeobj-writer-text	applyOp .char: chars_run writes a string one character at a time
-Objects/unicodeobject.c	13924	13927	_PyUnicodeWriter_WriteChar	_PyUnicodeWriter_WriteChar(_PyUnicodeWriter *writer, Py_UCS4 ch)	modelled	unicodeobj-writer-paths-agree,unicodeobj-writer-text	applyOp .char
-Objects/unicodeobject.c	13930	13939	PyUnicodeWriter_WriteChar	PyUnicodeWriter_WriteChar(PyUnicodeWriter *writer, Py_UCS4 ch)	modelled	unicodeobj-writer-paths-agree,unicodeobj-writer-text	applyOp .char, with its range check
+Objects/unicodeobject.c	13913	13921	_PyUnicodeWriter_WriteCharInline	_PyUnicodeWriter_WriteCharInline(_PyUnicodeWriter *writer, Py_UCS4 ch)	modelled	unicodeobj-writer-paths-agree	applyOp .char: chars_run writes a string one character at a time
+Objects/unicodeobject.c	13924	13927	_PyUnicodeWriter_WriteChar	_PyUnicodeWriter_WriteChar(_PyUnicodeWriter *writer, Py_UCS4 ch)	modelled	unicodeobj-writer-paths-agree	applyOp .char
+Objects/unicodeobject.c	13930	13939	PyUnicodeWriter_WriteChar	PyUnicodeWriter_WriteChar(PyUnicodeWriter *writer, Py_UCS4 ch)	modelled	unicodeobj-writer-paths-agree	applyOp .char, with its range check
 Objects/unicodeobject.c	13942	13969	_PyUnicodeWriter_WriteStr	_PyUnicodeWriter_WriteStr(_PyUnicodeWriter *writer, PyObject *str)	todo		
-Objects/unicodeobject.c	13972	13991	PyUnicodeWriter_WriteStr	PyUnicodeWriter_WriteStr(PyUnicodeWriter *writer, PyObject *obj)	modelled	unicodeobj-writer-text,unicodeobj-writer-finish-canonical	writeStrOp: exact str, exact int, PyObject_Str with fallible objects
-Objects/unicodeobject.c	13995	14013	PyUnicodeWriter_WriteRepr	PyUnicodeWriter_WriteRepr(PyUnicodeWriter *writer, PyObject *obj)	modelled	unicodeobj-writer-text,unicodeobj-writer-finish-canonical	writeReprOp: NULL, exact int, PyObject_Repr with fallible objects
+Objects/unicodeobject.c	13972	13991	PyUnicodeWriter_WriteStr	PyUnicodeWriter_WriteStr(PyUnicodeWriter *writer, PyObject *obj)	modelled	unicodeobj-writer-text	writeStrOp: exact str, exact int, PyObject_Str with fallible objects
+Objects/unicodeobject.c	13995	14013	PyUnicodeWriter_WriteRepr	PyUnicodeWriter_WriteRepr(PyUnicodeWriter *writer, PyObject *obj)	modelled	unicodeobj-writer-text	writeReprOp: NULL, exact int, PyObject_Repr with fallible objects
 Objects/unicodeobject.c	14017	14047	_PyUnicodeWriter_WriteSubstring	_PyUnicodeWriter_WriteSubstring(_PyUnicodeWriter *writer, PyObject *str, Py_ssize_t start, Py_ssize_t end)	modelled	unicodeobj-writer-substring-slice	writeSubstring
-Objects/unicodeobject.c	14051	14069	PyUnicodeWriter_WriteSubstring	PyUnicodeWriter_WriteSubstring(PyUnicodeWriter *writer, PyObject *str, Py_ssize_t start, Py_ssize_t end)	modelled	unicodeobj-writer-substring-slice,unicodeobj-writer-text	writeSubOp
+Objects/unicodeobject.c	14051	14069	PyUnicodeWriter_WriteSubstring	PyUnicodeWriter_WriteSubstring(PyUnicodeWriter *writer, PyObject *str, Py_ssize_t start, Py_ssize_t end)	modelled	unicodeobj-writer-substring-slice	writeSubOp
 Objects/unicodeobject.c	14073	14134	_PyUnicodeWriter_WriteASCIIString	_PyUnicodeWriter_WriteASCIIString(_PyUnicodeWriter *writer, const char *ascii, Py_ssize_t len)	todo		
-Objects/unicodeobject.c	14138	14147	PyUnicodeWriter_WriteASCII	PyUnicodeWriter_WriteASCII(PyUnicodeWriter *writer, const char *str, Py_ssize_t size)	modelled	unicodeobj-writer-text,unicodeobj-writer-finish-canonical	applyOp .ascii, with asciiBytes
-Objects/unicodeobject.c	14151	14167	PyUnicodeWriter_WriteUTF8	PyUnicodeWriter_WriteUTF8(PyUnicodeWriter *writer, const char *str, Py_ssize_t size)	modelled	unicodeobj-writer-text,unicodeobj-writer-paths-agree	applyOp .utf8: the put back of pos; that it leaves maxchar is the refuted entry
+Objects/unicodeobject.c	14138	14147	PyUnicodeWriter_WriteASCII	PyUnicodeWriter_WriteASCII(PyUnicodeWriter *writer, const char *str, Py_ssize_t size)	modelled	unicodeobj-writer-text	applyOp .ascii, with asciiBytes
+Objects/unicodeobject.c	14151	14167	PyUnicodeWriter_WriteUTF8	PyUnicodeWriter_WriteUTF8(PyUnicodeWriter *writer, const char *str, Py_ssize_t size)	modelled	unicodeobj-writer-text	applyOp .utf8: the put back of pos; that it leaves maxchar is the refuted entry
 Objects/unicodeobject.c	14171	14192	PyUnicodeWriter_DecodeUTF8Stateful	PyUnicodeWriter_DecodeUTF8Stateful(PyUnicodeWriter *writer, const char *string, Py_ssize_t length, const char *errors, Py_ssize_t *consumed)	modelled	unicodeobj-writer-decode-stateful-any-handler	
 Objects/unicodeobject.c	14196	14207	_PyUnicodeWriter_WriteLatin1String	_PyUnicodeWriter_WriteLatin1String(_PyUnicodeWriter *writer, const char *str, Py_ssize_t len)	todo		
 Objects/unicodeobject.c	14210	14239	_PyUnicodeWriter_Finish	_PyUnicodeWriter_Finish(_PyUnicodeWriter *writer)	todo		
-Objects/unicodeobject.c	14243	14249	PyUnicodeWriter_Finish	PyUnicodeWriter_Finish(PyUnicodeWriter *writer)	modelled	unicodeobj-writer-finish-canonical,unicodeobj-writer-finish-one-byte	UWriter.finish; the readonly branch of _PyUnicodeWriter_Finish is reached after PyUnicodeWriter_Format, and returns the same text and kind
+Objects/unicodeobject.c	14243	14249	PyUnicodeWriter_Finish	PyUnicodeWriter_Finish(PyUnicodeWriter *writer)	modelled	unicodeobj-writer-finish-canonical	UWriter.finish; the readonly branch of _PyUnicodeWriter_Finish is reached after PyUnicodeWriter_Format, and returns the same text and kind
 Objects/unicodeobject.c	14253	14256	_PyUnicodeWriter_Dealloc	_PyUnicodeWriter_Dealloc(_PyUnicodeWriter *writer)	excluded		no-behaviour: releases the buffer
 Objects/unicodeobject.c	14284	14299	unicode___format___impl	unicode___format___impl(PyObject *self, PyObject *format_spec) /*[clinic end generated code: output=45fceaca6d2ba4c8 input=5e135645d167a214]*/	todo		
 Objects/unicodeobject.c	14308	14334	unicode_sizeof_impl	unicode_sizeof_impl(PyObject *self) /*[clinic end generated code: output=6dbc2f5a408b6d4f input=6dd011c108e33fb0]*/	todo		
@@ -365,9 +365,9 @@ Objects/unicodeobject.c	15876	15892	_PyUnicode_InitGlobalObjects	_PyUnicode_Init
 Objects/unicodeobject.c	15896	15911	_PyUnicode_InitTypes	_PyUnicode_InitTypes(PyInterpreterState *interp)	excluded		internal-bootstrap: interpreter start-up or shutdown of the unicode state
 Objects/unicodeobject.c	15914	15950	intern_static	intern_static(PyInterpreterState *interp, PyObject *s /* stolen */)	excluded		internal-bootstrap: runs only during runtime initialization
 Objects/unicodeobject.c	15953	15960	_PyUnicode_InternStatic	_PyUnicode_InternStatic(PyInterpreterState *interp, PyObject **p)	excluded		internal-bootstrap: asserts the runtime is not initialized
-Objects/unicodeobject.c	15963	15980	immortalize_interned	immortalize_interned(PyObject *s)	modelled	unicodeobj-intern-spec,unicodeobj-intern-mortality	immortalizeInterned
+Objects/unicodeobject.c	15963	15980	immortalize_interned	immortalize_interned(PyObject *s)	modelled	unicodeobj-intern-spec	immortalizeInterned
 Objects/unicodeobject.c	15984	15991	can_immortalize_safely	can_immortalize_safely(PyObject *s)	todo		
-Objects/unicodeobject.c	15995	16163	intern_common	intern_common(PyInterpreterState *interp, PyObject *s /* stolen */, bool immortalize)	modelled	unicodeobj-intern-canonical,unicodeobj-intern-spec,unicodeobj-intern-mortality	internCommon, default build; PyDict_SetDefaultRef failure is allocation only
+Objects/unicodeobject.c	15995	16163	intern_common	intern_common(PyInterpreterState *interp, PyObject *s /* stolen */, bool immortalize)	modelled	unicodeobj-intern-canonical,unicodeobj-intern-spec	internCommon, default build; PyDict_SetDefaultRef failure is allocation only
 Objects/unicodeobject.c	16166	16170	_PyUnicode_InternImmortal	_PyUnicode_InternImmortal(PyInterpreterState *interp, PyObject **p)	modelled	unicodeobj-intern-mortality	internImmortal
 Objects/unicodeobject.c	16173	16177	_PyUnicode_InternMortal	_PyUnicode_InternMortal(PyInterpreterState *interp, PyObject **p)	modelled	unicodeobj-intern-mortality	internMortal
 Objects/unicodeobject.c	16181	16185	_PyUnicode_InternInPlace	_PyUnicode_InternInPlace(PyInterpreterState *interp, PyObject **p)	todo		

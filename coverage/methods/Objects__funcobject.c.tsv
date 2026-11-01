@@ -52,7 +52,7 @@ Objects/funcobject.c	1196	1227	func_clear	func_clear(PyObject *self)	excluded		n
 Objects/funcobject.c	1230	1246	func_dealloc	func_dealloc(PyObject *self)	excluded		no-behaviour: deallocation and reference counting
 Objects/funcobject.c	1249	1254	func_repr	func_repr(PyObject *self)	todo		
 Objects/funcobject.c	1257	1275	func_traverse	func_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
-Objects/funcobject.c	1279	1285	func_descr_get	func_descr_get(PyObject *func, PyObject *obj, PyObject *type)	todo		
+Objects/funcobject.c	1279	1285	func_descr_get	func_descr_get(PyObject *func, PyObject *obj, PyObject *type)	modelled	typeobj-func-descr-get-binds	
 Objects/funcobject.c	1332	1386	_PyFunction_VerifyStateless	_PyFunction_VerifyStateless(PyThreadState *tstate, PyObject *func)	todo		
 Objects/funcobject.c	1390	1399	functools_copy_attr	functools_copy_attr(PyObject *wrapper, PyObject *wrapped, PyObject *name)	todo		
 Objects/funcobject.c	1403	1419	functools_wraps	functools_wraps(PyObject *wrapper, PyObject *wrapped)	todo		
@@ -61,7 +61,7 @@ Objects/funcobject.c	1454	1483	descriptor_set_wrapped_attribute	descriptor_set_w
 Objects/funcobject.c	1517	1524	cm_dealloc	cm_dealloc(PyObject *self)	excluded		no-behaviour: deallocation and reference counting
 Objects/funcobject.c	1527	1533	cm_traverse	cm_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
 Objects/funcobject.c	1536	1542	cm_clear	cm_clear(PyObject *self)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
-Objects/funcobject.c	1546	1558	cm_descr_get	cm_descr_get(PyObject *self, PyObject *obj, PyObject *type)	todo		
+Objects/funcobject.c	1546	1558	cm_descr_get	cm_descr_get(PyObject *self, PyObject *obj, PyObject *type)	modelled	typeobj-classmethod-bindings-agree	
 Objects/funcobject.c	1561	1571	cm_new	cm_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
 Objects/funcobject.c	1574	1589	cm_init	cm_init(PyObject *self, PyObject *args, PyObject *kwds)	todo		
 Objects/funcobject.c	1598	1609	cm_get___isabstractmethod__	cm_get___isabstractmethod__(PyObject *self, void *closure)	todo		

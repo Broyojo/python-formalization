@@ -3,14 +3,14 @@ Objects/classobject.c	25	32	PyMethod_Function	PyMethod_Function(PyObject *im)	to
 Objects/classobject.c	35	42	PyMethod_Self	PyMethod_Self(PyObject *im)	todo		
 Objects/classobject.c	46	55	method_vectorcall	method_vectorcall(PyObject *method, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
 Objects/classobject.c	64	83	PyMethod_New	PyMethod_New(PyObject *func, PyObject *self)	todo		
-Objects/classobject.c	90	101	method___reduce___impl	method___reduce___impl(PyMethodObject *self) /*[clinic end generated code: output=6c04506d0fa6fdcb input=143a0bf5e96de6e8]*/	todo		
+Objects/classobject.c	90	101	method___reduce___impl	method___reduce___impl(PyMethodObject *self) /*[clinic end generated code: output=6c04506d0fa6fdcb input=143a0bf5e96de6e8]*/	modelled	typeobj-reduce-getattr-method	
 Objects/classobject.c	128	132	method_get_doc	method_get_doc(PyObject *self, void *context)	todo		
 Objects/classobject.c	140	167	method_getattro	method_getattro(PyObject *obj, PyObject *name)	todo		
-Objects/classobject.c	180	195	method_new_impl	method_new_impl(PyTypeObject *type, PyObject *function, PyObject *instance) /*[clinic end generated code: output=d33ef4ebf702e1f7 input=4e32facc3c3108ae]*/	todo		
+Objects/classobject.c	180	195	method_new_impl	method_new_impl(PyTypeObject *type, PyObject *function, PyObject *instance) /*[clinic end generated code: output=d33ef4ebf702e1f7 input=4e32facc3c3108ae]*/	modelled	typeobj-method-new-binding	
 Objects/classobject.c	198	207	method_dealloc	method_dealloc(PyObject *self)	excluded		no-behaviour: deallocation and reference counting
-Objects/classobject.c	210	235	method_richcompare	method_richcompare(PyObject *self, PyObject *other, int op)	todo		
+Objects/classobject.c	210	235	method_richcompare	method_richcompare(PyObject *self, PyObject *other, int op)	modelled	typeobj-method-compare-protocol,typeobj-method-eq-by-binding,typeobj-method-equal-hash-equal	
 Objects/classobject.c	238	263	method_repr	method_repr(PyObject *op)	todo		
-Objects/classobject.c	266	280	method_hash	method_hash(PyObject *self)	todo		
+Objects/classobject.c	266	280	method_hash	method_hash(PyObject *self)	modelled	typeobj-method-eq-by-binding,typeobj-method-equal-hash-equal,typeobj-method-hash-propagates	
 Objects/classobject.c	283	289	method_traverse	method_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
 Objects/classobject.c	292	296	method_descr_get	method_descr_get(PyObject *meth, PyObject *obj, PyObject *cls)	todo		
 Objects/classobject.c	332	340	PyInstanceMethod_New	PyInstanceMethod_New(PyObject *func) {	todo		

@@ -6,12 +6,12 @@ Objects/descrobject.c	52	56	method_repr	method_repr(PyObject *descr)	todo
 Objects/descrobject.c	59	63	member_repr	member_repr(PyObject *descr)	todo		
 Objects/descrobject.c	66	70	getset_repr	getset_repr(PyObject *descr)	todo		
 Objects/descrobject.c	73	77	wrapperdescr_repr	wrapperdescr_repr(PyObject *descr)	todo		
-Objects/descrobject.c	80	92	descr_check	descr_check(PyDescrObject *descr, PyObject *obj)	todo		
+Objects/descrobject.c	80	92	descr_check	descr_check(PyDescrObject *descr, PyObject *obj)	modelled	typeobj-descr-gets-share-guard	
 Objects/descrobject.c	95	135	classmethod_get	classmethod_get(PyObject *self, PyObject *obj, PyObject *type)	todo		
-Objects/descrobject.c	138	160	method_get	method_get(PyObject *self, PyObject *obj, PyObject *type)	todo		
+Objects/descrobject.c	138	160	method_get	method_get(PyObject *self, PyObject *obj, PyObject *type)	modelled	typeobj-descr-gets-share-guard,typeobj-method-get-binds	
 Objects/descrobject.c	163	181	member_get	member_get(PyObject *self, PyObject *obj, PyObject *type)	todo		
 Objects/descrobject.c	184	201	getset_get	getset_get(PyObject *self, PyObject *obj, PyObject *type)	todo		
-Objects/descrobject.c	204	214	wrapperdescr_get	wrapperdescr_get(PyObject *self, PyObject *obj, PyObject *type)	todo		
+Objects/descrobject.c	204	214	wrapperdescr_get	wrapperdescr_get(PyObject *self, PyObject *obj, PyObject *type)	modelled	typeobj-descr-gets-share-guard,typeobj-wrapper-eq-by-binding	
 Objects/descrobject.c	217	230	descr_setcheck	descr_setcheck(PyDescrObject *descr, PyObject *obj, PyObject *value)	todo		
 Objects/descrobject.c	233	240	member_set	member_set(PyObject *self, PyObject *obj, PyObject *value)	todo		
 Objects/descrobject.c	243	259	getset_set	getset_set(PyObject *self, PyObject *obj, PyObject *value)	todo		
@@ -31,7 +31,7 @@ Objects/descrobject.c	577	581	method_get_doc	method_get_doc(PyObject *_descr, vo
 Objects/descrobject.c	584	590	method_get_text_signature	method_get_text_signature(PyObject *_descr, void *closure)	todo		
 Objects/descrobject.c	593	618	calculate_qualname	calculate_qualname(PyDescrObject *descr)	todo		
 Objects/descrobject.c	621	627	descr_get_qualname	descr_get_qualname(PyObject *self, void *Py_UNUSED(ignored))	todo		
-Objects/descrobject.c	630	635	descr_reduce	descr_reduce(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/descrobject.c	630	635	descr_reduce	descr_reduce(PyObject *self, PyObject *Py_UNUSED(ignored))	modelled	typeobj-reduce-getattr-descr	
 Objects/descrobject.c	656	663	member_get_doc	member_get_doc(PyObject *_descr, void *closure)	todo		
 Objects/descrobject.c	672	679	getset_get_doc	getset_get_doc(PyObject *self, void *closure)	todo		
 Objects/descrobject.c	688	692	wrapperdescr_get_doc	wrapperdescr_get_doc(PyObject *self, void *closure)	todo		
@@ -66,10 +66,10 @@ Objects/descrobject.c	1240	1251	mappingproxy_check_mapping	mappingproxy_check_ma
 Objects/descrobject.c	1263	1277	mappingproxy_new_impl	mappingproxy_new_impl(PyTypeObject *type, PyObject *mapping) /*[clinic end generated code: output=65f27f02d5b68fa7 input=c156df096ef7590c]*/	todo		
 Objects/descrobject.c	1280	1293	PyDictProxy_New	PyDictProxy_New(PyObject *mapping)	todo		
 Objects/descrobject.c	1310	1317	wrapper_dealloc	wrapper_dealloc(PyObject *self)	excluded		no-behaviour: deallocation and reference counting
-Objects/descrobject.c	1320	1343	wrapper_richcompare	wrapper_richcompare(PyObject *a, PyObject *b, int op)	todo		
-Objects/descrobject.c	1346	1356	wrapper_hash	wrapper_hash(PyObject *self)	todo		
+Objects/descrobject.c	1320	1343	wrapper_richcompare	wrapper_richcompare(PyObject *a, PyObject *b, int op)	modelled	typeobj-wrapper-eq-by-binding	
+Objects/descrobject.c	1346	1356	wrapper_hash	wrapper_hash(PyObject *self)	modelled	typeobj-wrapper-eq-by-binding	
 Objects/descrobject.c	1359	1366	wrapper_repr	wrapper_repr(PyObject *self)	todo		
-Objects/descrobject.c	1369	1374	wrapper_reduce	wrapper_reduce(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/descrobject.c	1369	1374	wrapper_reduce	wrapper_reduce(PyObject *self, PyObject *Py_UNUSED(ignored))	modelled	typeobj-reduce-getattr-descr	
 Objects/descrobject.c	1387	1392	wrapper_objclass	wrapper_objclass(PyObject *wp, void *Py_UNUSED(ignored))	todo		
 Objects/descrobject.c	1395	1400	wrapper_name	wrapper_name(PyObject *wp, void *Py_UNUSED(ignored))	todo		
 Objects/descrobject.c	1403	1407	wrapper_doc	wrapper_doc(PyObject *self, void *Py_UNUSED(ignored))	todo		
