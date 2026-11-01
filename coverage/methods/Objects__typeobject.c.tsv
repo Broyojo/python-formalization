@@ -1,73 +1,73 @@
 file	line	endline	name	signature	status	entry	note
-Objects/typeobject.c	80	84	types_stop_world	types_stop_world(void)	todo		
-Objects/typeobject.c	87	91	types_start_world	types_start_world(void)	todo		
-Objects/typeobject.c	96	116	type_lock_prevent_release	type_lock_prevent_release(void)	todo		
-Objects/typeobject.c	119	133	type_lock_allow_release	type_lock_allow_release(void)	todo		
-Objects/typeobject.c	169	176	type_from_ref	type_from_ref(PyObject *ref)	todo		
-Objects/typeobject.c	183	186	managed_static_type_index_is_set	managed_static_type_index_is_set(PyTypeObject *self)	todo		
-Objects/typeobject.c	190	195	managed_static_type_index_get	managed_static_type_index_get(PyTypeObject *self)	todo		
-Objects/typeobject.c	198	203	managed_static_type_index_set	managed_static_type_index_set(PyTypeObject *self, size_t index)	todo		
-Objects/typeobject.c	206	209	managed_static_type_index_clear	managed_static_type_index_clear(PyTypeObject *self)	todo		
-Objects/typeobject.c	212	233	static_ext_type_lookup	static_ext_type_lookup(PyInterpreterState *interp, size_t index, int64_t *p_interp_count)	todo		
-Objects/typeobject.c	236	249	managed_static_type_state_get	managed_static_type_state_get(PyInterpreterState *interp, PyTypeObject *self)	todo		
-Objects/typeobject.c	253	257	_PyStaticType_GetState	_PyStaticType_GetState(PyInterpreterState *interp, PyTypeObject *self)	todo		
-Objects/typeobject.c	261	328	managed_static_type_state_init	managed_static_type_state_init(PyInterpreterState *interp, PyTypeObject *self, int isbuiltin, int initial)	todo		
-Objects/typeobject.c	333	375	managed_static_type_state_clear	managed_static_type_state_clear(PyInterpreterState *interp, PyTypeObject *self, int isbuiltin, int final)	todo		
-Objects/typeobject.c	380	398	_PyStaticType_GetBuiltins	_PyStaticType_GetBuiltins(void)	todo		
-Objects/typeobject.c	406	417	type_set_flags	type_set_flags(PyTypeObject *tp, unsigned long flags)	todo		
-Objects/typeobject.c	420	425	type_set_flags_with_mask	type_set_flags_with_mask(PyTypeObject *tp, unsigned long mask, unsigned long flags)	todo		
-Objects/typeobject.c	428	431	type_add_flags	type_add_flags(PyTypeObject *tp, unsigned long flag)	todo		
-Objects/typeobject.c	434	437	type_clear_flags	type_clear_flags(PyTypeObject *tp, unsigned long flag)	todo		
-Objects/typeobject.c	440	452	start_readying	start_readying(PyTypeObject *type)	todo		
-Objects/typeobject.c	455	467	stop_readying	stop_readying(PyTypeObject *type)	todo		
-Objects/typeobject.c	470	479	is_readying	is_readying(PyTypeObject *type)	todo		
-Objects/typeobject.c	485	494	lookup_tp_dict	lookup_tp_dict(PyTypeObject *self)	todo		
-Objects/typeobject.c	497	501	_PyType_GetDict	_PyType_GetDict(PyTypeObject *self)	todo		
+Objects/typeobject.c	80	84	types_stop_world	types_stop_world(void)	excluded		no-behaviour: free-threading locks; the model is single-threaded
+Objects/typeobject.c	87	91	types_start_world	types_start_world(void)	excluded		no-behaviour: free-threading locks; the model is single-threaded
+Objects/typeobject.c	96	116	type_lock_prevent_release	type_lock_prevent_release(void)	excluded		no-behaviour: free-threading locks; the model is single-threaded
+Objects/typeobject.c	119	133	type_lock_allow_release	type_lock_allow_release(void)	excluded		no-behaviour: free-threading locks; the model is single-threaded
+Objects/typeobject.c	169	176	type_from_ref	type_from_ref(PyObject *ref)	excluded		no-behaviour: field accessor; the model reads the same field of TypeData directly
+Objects/typeobject.c	183	186	managed_static_type_index_is_set	managed_static_type_index_is_set(PyTypeObject *self)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
+Objects/typeobject.c	190	195	managed_static_type_index_get	managed_static_type_index_get(PyTypeObject *self)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
+Objects/typeobject.c	198	203	managed_static_type_index_set	managed_static_type_index_set(PyTypeObject *self, size_t index)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
+Objects/typeobject.c	206	209	managed_static_type_index_clear	managed_static_type_index_clear(PyTypeObject *self)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
+Objects/typeobject.c	212	233	static_ext_type_lookup	static_ext_type_lookup(PyInterpreterState *interp, size_t index, int64_t *p_interp_count)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
+Objects/typeobject.c	236	249	managed_static_type_state_get	managed_static_type_state_get(PyInterpreterState *interp, PyTypeObject *self)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
+Objects/typeobject.c	253	257	_PyStaticType_GetState	_PyStaticType_GetState(PyInterpreterState *interp, PyTypeObject *self)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
+Objects/typeobject.c	261	328	managed_static_type_state_init	managed_static_type_state_init(PyInterpreterState *interp, PyTypeObject *self, int isbuiltin, int initial)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
+Objects/typeobject.c	333	375	managed_static_type_state_clear	managed_static_type_state_clear(PyInterpreterState *interp, PyTypeObject *self, int isbuiltin, int final)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
+Objects/typeobject.c	380	398	_PyStaticType_GetBuiltins	_PyStaticType_GetBuiltins(void)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
+Objects/typeobject.c	406	417	type_set_flags	type_set_flags(PyTypeObject *tp, unsigned long flags)	excluded		no-behaviour: field accessor; the model reads the same field of TypeData directly
+Objects/typeobject.c	420	425	type_set_flags_with_mask	type_set_flags_with_mask(PyTypeObject *tp, unsigned long mask, unsigned long flags)	excluded		no-behaviour: field accessor; the model reads the same field of TypeData directly
+Objects/typeobject.c	428	431	type_add_flags	type_add_flags(PyTypeObject *tp, unsigned long flag)	excluded		no-behaviour: field accessor; the model reads the same field of TypeData directly
+Objects/typeobject.c	434	437	type_clear_flags	type_clear_flags(PyTypeObject *tp, unsigned long flag)	excluded		no-behaviour: field accessor; the model reads the same field of TypeData directly
+Objects/typeobject.c	440	452	start_readying	start_readying(PyTypeObject *type)	excluded		no-behaviour: field accessor; the model reads the same field of TypeData directly
+Objects/typeobject.c	455	467	stop_readying	stop_readying(PyTypeObject *type)	excluded		no-behaviour: field accessor; the model reads the same field of TypeData directly
+Objects/typeobject.c	470	479	is_readying	is_readying(PyTypeObject *type)	excluded		no-behaviour: field accessor; the model reads the same field of TypeData directly
+Objects/typeobject.c	485	494	lookup_tp_dict	lookup_tp_dict(PyTypeObject *self)	excluded		no-behaviour: field accessor; the model reads the same field of TypeData directly
+Objects/typeobject.c	497	501	_PyType_GetDict	_PyType_GetDict(PyTypeObject *self)	excluded		no-behaviour: field accessor; the model reads the same field of TypeData directly
 Objects/typeobject.c	504	508	PyType_GetDict	PyType_GetDict(PyTypeObject *self)	todo		
-Objects/typeobject.c	511	521	set_tp_dict	set_tp_dict(PyTypeObject *self, PyObject *dict)	todo		
-Objects/typeobject.c	524	534	clear_tp_dict	clear_tp_dict(PyTypeObject *self)	todo		
-Objects/typeobject.c	538	541	lookup_tp_bases	lookup_tp_bases(PyTypeObject *self)	todo		
-Objects/typeobject.c	544	554	_PyType_GetBases	_PyType_GetBases(PyTypeObject *self)	todo		
-Objects/typeobject.c	557	578	set_tp_bases	set_tp_bases(PyTypeObject *self, PyObject *bases, int initial)	todo		
-Objects/typeobject.c	581	598	clear_tp_bases	clear_tp_bases(PyTypeObject *self, int final)	todo		
-Objects/typeobject.c	602	605	lookup_tp_mro	lookup_tp_mro(PyTypeObject *self)	todo		
-Objects/typeobject.c	608	627	_PyType_GetMRO	_PyType_GetMRO(PyTypeObject *self)	todo		
-Objects/typeobject.c	630	655	set_tp_mro	set_tp_mro(PyTypeObject *self, PyObject *mro, int initial)	todo		
-Objects/typeobject.c	658	675	clear_tp_mro	clear_tp_mro(PyTypeObject *self, int final)	todo		
-Objects/typeobject.c	679	693	init_tp_subclasses	init_tp_subclasses(PyTypeObject *self)	todo		
-Objects/typeobject.c	696	708	clear_tp_subclasses	clear_tp_subclasses(PyTypeObject *self)	todo		
-Objects/typeobject.c	711	720	lookup_tp_subclasses	lookup_tp_subclasses(PyTypeObject *self)	todo		
-Objects/typeobject.c	723	736	_PyType_HasSubclasses	_PyType_HasSubclasses(PyTypeObject *self)	todo		
+Objects/typeobject.c	511	521	set_tp_dict	set_tp_dict(PyTypeObject *self, PyObject *dict)	excluded		no-behaviour: field accessor; the model reads the same field of TypeData directly
+Objects/typeobject.c	524	534	clear_tp_dict	clear_tp_dict(PyTypeObject *self)	excluded		no-behaviour: field accessor; the model reads the same field of TypeData directly
+Objects/typeobject.c	538	541	lookup_tp_bases	lookup_tp_bases(PyTypeObject *self)	excluded		no-behaviour: field accessor; the model reads the same field of TypeData directly
+Objects/typeobject.c	544	554	_PyType_GetBases	_PyType_GetBases(PyTypeObject *self)	excluded		no-behaviour: field accessor; the model reads the same field of TypeData directly
+Objects/typeobject.c	557	578	set_tp_bases	set_tp_bases(PyTypeObject *self, PyObject *bases, int initial)	excluded		no-behaviour: field accessor; the model reads the same field of TypeData directly
+Objects/typeobject.c	581	598	clear_tp_bases	clear_tp_bases(PyTypeObject *self, int final)	excluded		no-behaviour: field accessor; the model reads the same field of TypeData directly
+Objects/typeobject.c	602	605	lookup_tp_mro	lookup_tp_mro(PyTypeObject *self)	excluded		no-behaviour: field accessor; the model reads the same field of TypeData directly
+Objects/typeobject.c	608	627	_PyType_GetMRO	_PyType_GetMRO(PyTypeObject *self)	excluded		no-behaviour: field accessor; the model reads the same field of TypeData directly
+Objects/typeobject.c	630	655	set_tp_mro	set_tp_mro(PyTypeObject *self, PyObject *mro, int initial)	excluded		no-behaviour: field accessor; the model reads the same field of TypeData directly
+Objects/typeobject.c	658	675	clear_tp_mro	clear_tp_mro(PyTypeObject *self, int final)	excluded		no-behaviour: field accessor; the model reads the same field of TypeData directly
+Objects/typeobject.c	679	693	init_tp_subclasses	init_tp_subclasses(PyTypeObject *self)	excluded		no-behaviour: field accessor; the model reads the same field of TypeData directly
+Objects/typeobject.c	696	708	clear_tp_subclasses	clear_tp_subclasses(PyTypeObject *self)	excluded		no-behaviour: field accessor; the model reads the same field of TypeData directly
+Objects/typeobject.c	711	720	lookup_tp_subclasses	lookup_tp_subclasses(PyTypeObject *self)	excluded		no-behaviour: field accessor; the model reads the same field of TypeData directly
+Objects/typeobject.c	723	736	_PyType_HasSubclasses	_PyType_HasSubclasses(PyTypeObject *self)	excluded		no-behaviour: field accessor; the model reads the same field of TypeData directly
 Objects/typeobject.c	739	770	_PyType_GetSubclasses	_PyType_GetSubclasses(PyTypeObject *self)	todo		
 Objects/typeobject.c	784	806	find_signature	find_signature(const char *name, const char *doc)	todo		
 Objects/typeobject.c	815	826	skip_signature	skip_signature(const char *doc)	todo		
-Objects/typeobject.c	829	860	_PyType_CheckConsistency	_PyType_CheckConsistency(PyTypeObject *type)	todo		
+Objects/typeobject.c	829	860	_PyType_CheckConsistency	_PyType_CheckConsistency(PyTypeObject *type)	excluded		test-support: debug-build diagnostic, not reachable from Python
 Objects/typeobject.c	863	873	_PyType_DocWithoutSignature	_PyType_DocWithoutSignature(const char *name, const char *internal_doc)	todo		
 Objects/typeobject.c	876	885	_PyType_GetDocFromInternalDoc	_PyType_GetDocFromInternalDoc(const char *name, const char *internal_doc)	todo		
 Objects/typeobject.c	888	906	signature_from_flags	signature_from_flags(int flags)	todo		
 Objects/typeobject.c	909	932	_PyType_GetTextSignatureFromInternalDoc	_PyType_GetTextSignatureFromInternalDoc(const char *name, const char *internal_doc, int flags)	todo		
-Objects/typeobject.c	936	940	get_type_cache	get_type_cache(void)	todo		
-Objects/typeobject.c	944	958	type_cache_clear	type_cache_clear(struct type_cache *cache, PyObject *value)	todo		
-Objects/typeobject.c	962	975	_PyType_InitCache	_PyType_InitCache(PyInterpreterState *interp)	todo		
-Objects/typeobject.c	979	987	_PyType_ClearCache	_PyType_ClearCache(PyInterpreterState *interp)	todo		
+Objects/typeobject.c	936	940	get_type_cache	get_type_cache(void)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
+Objects/typeobject.c	944	958	type_cache_clear	type_cache_clear(struct type_cache *cache, PyObject *value)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
+Objects/typeobject.c	962	975	_PyType_InitCache	_PyType_InitCache(PyInterpreterState *interp)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
+Objects/typeobject.c	979	987	_PyType_ClearCache	_PyType_ClearCache(PyInterpreterState *interp)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
 Objects/typeobject.c	991	995	PyType_ClearCache	PyType_ClearCache(void)	todo		
-Objects/typeobject.c	999	1013	_PyTypes_Fini	_PyTypes_Fini(PyInterpreterState *interp)	todo		
+Objects/typeobject.c	999	1013	_PyTypes_Fini	_PyTypes_Fini(PyInterpreterState *interp)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
 Objects/typeobject.c	1017	1031	PyType_AddWatcher	PyType_AddWatcher(PyType_WatchCallback callback)	todo		
 Objects/typeobject.c	1034	1045	validate_watcher_id	validate_watcher_id(PyInterpreterState *interp, int watcher_id)	todo		
 Objects/typeobject.c	1048	1056	PyType_ClearWatcher	PyType_ClearWatcher(int watcher_id)	todo		
 Objects/typeobject.c	1061	1078	PyType_Watch	PyType_Watch(int watcher_id, PyObject* obj)	todo		
 Objects/typeobject.c	1081	1094	PyType_Unwatch	PyType_Unwatch(int watcher_id, PyObject* obj)	todo		
-Objects/typeobject.c	1097	1127	set_version_unlocked	set_version_unlocked(PyTypeObject *tp, unsigned int version)	todo		
-Objects/typeobject.c	1130	1197	type_modified_unlocked	type_modified_unlocked(PyTypeObject *type)	todo		
-Objects/typeobject.c	1200	1210	PyType_Modified	PyType_Modified(PyTypeObject *type)	todo		
-Objects/typeobject.c	1218	1233	has_custom_mro	has_custom_mro(PyTypeObject *tp)	todo		
-Objects/typeobject.c	1236	1281	type_mro_modified	type_mro_modified(PyTypeObject *type, PyObject *bases)	todo		
-Objects/typeobject.c	1293	1298	_PyType_SetVersion	_PyType_SetVersion(PyTypeObject *tp, unsigned int version)	todo		
-Objects/typeobject.c	1301	1315	_PyType_LookupByVersion	_PyType_LookupByVersion(unsigned int version)	todo		
-Objects/typeobject.c	1318	1321	_PyType_GetVersionForCurrentState	_PyType_GetVersionForCurrentState(PyTypeObject *tp)	todo		
-Objects/typeobject.c	1331	1341	next_global_version_tag	next_global_version_tag(void)	todo		
-Objects/typeobject.c	1344	1391	assign_version_tag	assign_version_tag(PyInterpreterState *interp, PyTypeObject *type)	todo		
-Objects/typeobject.c	1393	1401	PyUnstable_Type_AssignVersionTag	int PyUnstable_Type_AssignVersionTag(PyTypeObject *type)	todo		
+Objects/typeobject.c	1097	1127	set_version_unlocked	set_version_unlocked(PyTypeObject *tp, unsigned int version)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
+Objects/typeobject.c	1130	1197	type_modified_unlocked	type_modified_unlocked(PyTypeObject *type)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
+Objects/typeobject.c	1200	1210	PyType_Modified	PyType_Modified(PyTypeObject *type)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
+Objects/typeobject.c	1218	1233	has_custom_mro	has_custom_mro(PyTypeObject *tp)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
+Objects/typeobject.c	1236	1281	type_mro_modified	type_mro_modified(PyTypeObject *type, PyObject *bases)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
+Objects/typeobject.c	1293	1298	_PyType_SetVersion	_PyType_SetVersion(PyTypeObject *tp, unsigned int version)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
+Objects/typeobject.c	1301	1315	_PyType_LookupByVersion	_PyType_LookupByVersion(unsigned int version)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
+Objects/typeobject.c	1318	1321	_PyType_GetVersionForCurrentState	_PyType_GetVersionForCurrentState(PyTypeObject *tp)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
+Objects/typeobject.c	1331	1341	next_global_version_tag	next_global_version_tag(void)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
+Objects/typeobject.c	1344	1391	assign_version_tag	assign_version_tag(PyInterpreterState *interp, PyTypeObject *type)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
+Objects/typeobject.c	1393	1401	PyUnstable_Type_AssignVersionTag	int PyUnstable_Type_AssignVersionTag(PyTypeObject *type)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
 Objects/typeobject.c	1419	1440	check_set_special_type_attr	check_set_special_type_attr(PyTypeObject *type, PyObject *value, const char *name)	todo		
 Objects/typeobject.c	1443	1454	_PyType_Name	_PyType_Name(PyTypeObject *type)	todo		
 Objects/typeobject.c	1457	1467	type_name	type_name(PyObject *tp, void *Py_UNUSED(closure))	todo		
@@ -100,16 +100,16 @@ Objects/typeobject.c	2253	2257	type___instancecheck___impl	type___instancecheck_
 Objects/typeobject.c	2269	2273	type___subclasscheck___impl	type___subclasscheck___impl(PyTypeObject *self, PyObject *subclass) /*[clinic end generated code: output=97a4e51694500941 input=071b2ca9e03355f4]*/	todo		
 Objects/typeobject.c	2294	2328	type_repr	type_repr(PyObject *self)	todo		
 Objects/typeobject.c	2331	2394	type_call	type_call(PyObject *self, PyObject *args, PyObject *kwds)	todo		
-Objects/typeobject.c	2397	2409	_PyType_NewManagedObject	_PyType_NewManagedObject(PyTypeObject *type)	todo		
-Objects/typeobject.c	2412	2454	_PyType_AllocNoTrack	_PyType_AllocNoTrack(PyTypeObject *type, Py_ssize_t nitems)	todo		
-Objects/typeobject.c	2457	2468	PyType_GenericAlloc	PyType_GenericAlloc(PyTypeObject *type, Py_ssize_t nitems)	todo		
+Objects/typeobject.c	2397	2409	_PyType_NewManagedObject	_PyType_NewManagedObject(PyTypeObject *type)	excluded		no-behaviour: object allocator or free list
+Objects/typeobject.c	2412	2454	_PyType_AllocNoTrack	_PyType_AllocNoTrack(PyTypeObject *type, Py_ssize_t nitems)	excluded		no-behaviour: object allocator or free list
+Objects/typeobject.c	2457	2468	PyType_GenericAlloc	PyType_GenericAlloc(PyTypeObject *type, Py_ssize_t nitems)	excluded		no-behaviour: object allocator or free list
 Objects/typeobject.c	2471	2474	PyType_GenericNew	PyType_GenericNew(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
-Objects/typeobject.c	2479	2482	_PyHeapType_GET_MEMBERS	_PyHeapType_GET_MEMBERS(PyHeapTypeObject* type)	todo		
-Objects/typeobject.c	2485	2504	traverse_slots	traverse_slots(PyTypeObject *type, PyObject *self, visitproc visit, void *arg)	todo		
-Objects/typeobject.c	2507	2557	subtype_traverse	subtype_traverse(PyObject *self, visitproc visit, void *arg)	todo		
-Objects/typeobject.c	2560	2577	clear_slots	clear_slots(PyTypeObject *type, PyObject *self)	todo		
-Objects/typeobject.c	2580	2616	subtype_clear	subtype_clear(PyObject *self)	todo		
-Objects/typeobject.c	2619	2785	subtype_dealloc	subtype_dealloc(PyObject *self)	todo		
+Objects/typeobject.c	2479	2482	_PyHeapType_GET_MEMBERS	_PyHeapType_GET_MEMBERS(PyHeapTypeObject* type)	excluded		no-behaviour: field accessor; the model reads the same field of TypeData directly
+Objects/typeobject.c	2485	2504	traverse_slots	traverse_slots(PyTypeObject *type, PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
+Objects/typeobject.c	2507	2557	subtype_traverse	subtype_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
+Objects/typeobject.c	2560	2577	clear_slots	clear_slots(PyTypeObject *type, PyObject *self)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
+Objects/typeobject.c	2580	2616	subtype_clear	subtype_clear(PyObject *self)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
+Objects/typeobject.c	2619	2785	subtype_dealloc	subtype_dealloc(PyObject *self)	excluded		no-behaviour: deallocation and reference counting
 Objects/typeobject.c	2792	2801	type_is_subtype_base_chain	type_is_subtype_base_chain(PyTypeObject *a, PyTypeObject *b)	todo		
 Objects/typeobject.c	2804	2826	is_subtype_with_mro	is_subtype_with_mro(PyObject *a_mro, PyTypeObject *a, PyTypeObject *b)	todo		
 Objects/typeobject.c	2829	2832	PyType_IsSubtype	PyType_IsSubtype(PyTypeObject *a, PyTypeObject *b)	todo		
@@ -178,7 +178,7 @@ Objects/typeobject.c	4647	4692	type_new_impl	type_new_impl(type_new_ctx *ctx)	to
 Objects/typeobject.c	4696	4763	type_new_get_bases	type_new_get_bases(type_new_ctx *ctx, PyObject **type)	todo		
 Objects/typeobject.c	4767	4812	type_new	type_new(PyTypeObject *metatype, PyObject *args, PyObject *kwds)	todo		
 Objects/typeobject.c	4816	4830	type_vectorcall	type_vectorcall(PyObject *metatype, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
-Objects/typeobject.c	4851	4854	_align_up	_align_up(Py_ssize_t size)	todo		
+Objects/typeobject.c	4851	4854	_align_up	_align_up(Py_ssize_t size)	excluded		no-behaviour: object allocator or free list
 Objects/typeobject.c	4860	4891	get_bases_tuple	get_bases_tuple(PyObject *bases_in, PyType_Spec *spec)	todo		
 Objects/typeobject.c	4894	4931	check_basicsize_includes_size_and_offsets	check_basicsize_includes_size_and_offsets(PyTypeObject* type)	todo		
 Objects/typeobject.c	4934	4956	check_immutable_bases	check_immutable_bases(const char *type_name, PyObject *bases, int skip_first)	todo		
@@ -202,16 +202,16 @@ Objects/typeobject.c	5691	5698	PyType_GetTypeDataSize	PyType_GetTypeDataSize(PyT
 Objects/typeobject.c	5701	5710	PyObject_GetItemData	PyObject_GetItemData(PyObject *obj)	todo		
 Objects/typeobject.c	5717	5767	find_name_in_mro	find_name_in_mro(PyTypeObject *type, PyObject *name, _PyStackRef *out)	todo		
 Objects/typeobject.c	5772	5785	is_dunder_name	is_dunder_name(PyObject *name)	todo		
-Objects/typeobject.c	5788	5804	update_cache	update_cache(struct type_cache_entry *entry, PyObject *name, unsigned int version_tag, PyObject *value)	todo		
-Objects/typeobject.c	5809	5829	update_cache_gil_disabled	update_cache_gil_disabled(struct type_cache_entry *entry, PyObject *name, unsigned int version_tag, PyObject *value)	todo		
-Objects/typeobject.c	5834	5848	_PyTypes_AfterFork	_PyTypes_AfterFork(void)	todo		
+Objects/typeobject.c	5788	5804	update_cache	update_cache(struct type_cache_entry *entry, PyObject *name, unsigned int version_tag, PyObject *value)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
+Objects/typeobject.c	5809	5829	update_cache_gil_disabled	update_cache_gil_disabled(struct type_cache_entry *entry, PyObject *name, unsigned int version_tag, PyObject *value)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
+Objects/typeobject.c	5834	5848	_PyTypes_AfterFork	_PyTypes_AfterFork(void)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
 Objects/typeobject.c	5856	5867	_PyType_LookupRefAndVersion	_PyType_LookupRefAndVersion(PyTypeObject *type, PyObject *name, unsigned int *version)	todo		
-Objects/typeobject.c	5870	5875	should_assign_version_tag	should_assign_version_tag(PyTypeObject *type, PyObject *name, unsigned int version_tag)	todo		
+Objects/typeobject.c	5870	5875	should_assign_version_tag	should_assign_version_tag(PyTypeObject *type, PyObject *name, unsigned int version_tag)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
 Objects/typeobject.c	5878	5958	_PyType_LookupStackRefAndVersion	_PyType_LookupStackRefAndVersion(PyTypeObject *type, PyObject *name, _PyStackRef *out)	todo		
 Objects/typeobject.c	5964	5967	_PyType_LookupRef	_PyType_LookupRef(PyTypeObject *type, PyObject *name)	todo		
 Objects/typeobject.c	5972	5977	_PyType_Lookup	_PyType_Lookup(PyTypeObject *type, PyObject *name)	todo		
-Objects/typeobject.c	5980	5997	_PyType_CacheInitForSpecialization	_PyType_CacheInitForSpecialization(PyHeapTypeObject *type, PyObject *init, unsigned int tp_version)	todo		
-Objects/typeobject.c	6000	6022	_PyType_CacheGetItemForSpecialization	_PyType_CacheGetItemForSpecialization(PyHeapTypeObject *ht, PyObject *descriptor, uint32_t tp_version)	todo		
+Objects/typeobject.c	5980	5997	_PyType_CacheInitForSpecialization	_PyType_CacheInitForSpecialization(PyHeapTypeObject *type, PyObject *init, unsigned int tp_version)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
+Objects/typeobject.c	6000	6022	_PyType_CacheGetItemForSpecialization	_PyType_CacheGetItemForSpecialization(PyHeapTypeObject *ht, PyObject *descriptor, uint32_t tp_version)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
 Objects/typeobject.c	6025	6030	_PyType_SetFlags	_PyType_SetFlags(PyTypeObject *self, unsigned long mask, unsigned long flags)	todo		
 Objects/typeobject.c	6033	6048	_PyType_Validate	_PyType_Validate(PyTypeObject *ty, _py_validate_type validate, unsigned int *tp_version)	todo		
 Objects/typeobject.c	6051	6071	set_flags_recursive	set_flags_recursive(PyTypeObject *self, unsigned long mask, unsigned long flags)	todo		
@@ -220,25 +220,25 @@ Objects/typeobject.c	6103	6190	_Py_type_getattro_impl	_Py_type_getattro_impl(PyT
 Objects/typeobject.c	6195	6199	_Py_type_getattro	_Py_type_getattro(PyObject *tp, PyObject *name)	todo		
 Objects/typeobject.c	6202	6235	type_update_dict	type_update_dict(PyTypeObject *type, PyDictObject *dict, PyObject *name, PyObject *value, PyObject **old_value)	todo		
 Objects/typeobject.c	6238	6326	type_setattro	type_setattro(PyObject *self, PyObject *name, PyObject *value)	todo		
-Objects/typeobject.c	6330	6338	type_dealloc_common	type_dealloc_common(PyTypeObject *type)	todo		
-Objects/typeobject.c	6342	6387	clear_static_tp_subclasses	clear_static_tp_subclasses(PyTypeObject *type, int isbuiltin)	todo		
-Objects/typeobject.c	6390	6400	clear_static_type_objects	clear_static_type_objects(PyInterpreterState *interp, PyTypeObject *type, int isbuiltin, int final)	todo		
-Objects/typeobject.c	6404	6424	fini_static_type	fini_static_type(PyInterpreterState *interp, PyTypeObject *type, int isbuiltin, int final)	todo		
-Objects/typeobject.c	6427	6441	_PyTypes_FiniExtTypes	_PyTypes_FiniExtTypes(PyInterpreterState *interp)	todo		
-Objects/typeobject.c	6444	6447	_PyStaticType_FiniBuiltin	_PyStaticType_FiniBuiltin(PyInterpreterState *interp, PyTypeObject *type)	todo		
-Objects/typeobject.c	6451	6491	type_dealloc	type_dealloc(PyObject *self)	todo		
+Objects/typeobject.c	6330	6338	type_dealloc_common	type_dealloc_common(PyTypeObject *type)	excluded		no-behaviour: deallocation and reference counting
+Objects/typeobject.c	6342	6387	clear_static_tp_subclasses	clear_static_tp_subclasses(PyTypeObject *type, int isbuiltin)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
+Objects/typeobject.c	6390	6400	clear_static_type_objects	clear_static_type_objects(PyInterpreterState *interp, PyTypeObject *type, int isbuiltin, int final)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
+Objects/typeobject.c	6404	6424	fini_static_type	fini_static_type(PyInterpreterState *interp, PyTypeObject *type, int isbuiltin, int final)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
+Objects/typeobject.c	6427	6441	_PyTypes_FiniExtTypes	_PyTypes_FiniExtTypes(PyInterpreterState *interp)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
+Objects/typeobject.c	6444	6447	_PyStaticType_FiniBuiltin	_PyStaticType_FiniBuiltin(PyInterpreterState *interp, PyTypeObject *type)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
+Objects/typeobject.c	6451	6491	type_dealloc	type_dealloc(PyObject *self)	excluded		no-behaviour: deallocation and reference counting
 Objects/typeobject.c	6501	6505	type___subclasses___impl	type___subclasses___impl(PyTypeObject *self) /*[clinic end generated code: output=eb5eb54485942819 input=5af66132436f9a7b]*/	todo		
 Objects/typeobject.c	6508	6512	type_prepare	type_prepare(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)	todo		
 Objects/typeobject.c	6524	6574	merge_class_dict	merge_class_dict(PyObject *dict, PyObject *aclass)	todo		
 Objects/typeobject.c	6587	6598	type___dir___impl	type___dir___impl(PyTypeObject *self) /*[clinic end generated code: output=69d02fe92c0f15fa input=7733befbec645968]*/	todo		
 Objects/typeobject.c	6607	6621	type___sizeof___impl	type___sizeof___impl(PyTypeObject *self) /*[clinic end generated code: output=766f4f16cd3b1854 input=99398f24b9cf45d6]*/	todo		
-Objects/typeobject.c	6644	6672	type_traverse	type_traverse(PyObject *self, visitproc visit, void *arg)	todo		
-Objects/typeobject.c	6675	6722	type_clear	type_clear(PyObject *self)	todo		
-Objects/typeobject.c	6725	6729	type_is_gc	type_is_gc(PyObject *tp)	todo		
+Objects/typeobject.c	6644	6672	type_traverse	type_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
+Objects/typeobject.c	6675	6722	type_clear	type_clear(PyObject *self)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
+Objects/typeobject.c	6725	6729	type_is_gc	type_is_gc(PyObject *tp)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
 Objects/typeobject.c	6825	6829	excess_args	excess_args(PyObject *args, PyObject *kwds)	todo		
 Objects/typeobject.c	6832	6849	object_init	object_init(PyObject *self, PyObject *args, PyObject *kwds)	todo		
 Objects/typeobject.c	6852	6919	object_new	object_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
-Objects/typeobject.c	6922	6925	object_dealloc	object_dealloc(PyObject *self)	todo		
+Objects/typeobject.c	6922	6925	object_dealloc	object_dealloc(PyObject *self)	excluded		no-behaviour: deallocation and reference counting
 Objects/typeobject.c	6928	6953	object_repr	object_repr(PyObject *self)	todo		
 Objects/typeobject.c	6956	6964	object_str	object_str(PyObject *self)	todo		
 Objects/typeobject.c	6967	7008	object_richcompare	object_richcompare(PyObject *self, PyObject *other, int op)	todo		
@@ -293,9 +293,9 @@ Objects/typeobject.c	8874	8898	type_ready_managed_dict	type_ready_managed_dict(P
 Objects/typeobject.c	8901	8932	type_ready_post_checks	type_ready_post_checks(PyTypeObject *type)	todo		
 Objects/typeobject.c	8936	9016	type_ready	type_ready(PyTypeObject *type, int initial)	todo		
 Objects/typeobject.c	9019	9044	PyType_Ready	PyType_Ready(PyTypeObject *type)	todo		
-Objects/typeobject.c	9048	9085	init_static_type	init_static_type(PyInterpreterState *interp, PyTypeObject *self, int isbuiltin, int initial)	todo		
-Objects/typeobject.c	9088	9091	_PyStaticType_InitForExtension	_PyStaticType_InitForExtension(PyInterpreterState *interp, PyTypeObject *self)	todo		
-Objects/typeobject.c	9094	9097	_PyStaticType_InitBuiltin	_PyStaticType_InitBuiltin(PyInterpreterState *interp, PyTypeObject *self)	todo		
+Objects/typeobject.c	9048	9085	init_static_type	init_static_type(PyInterpreterState *interp, PyTypeObject *self, int isbuiltin, int initial)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
+Objects/typeobject.c	9088	9091	_PyStaticType_InitForExtension	_PyStaticType_InitForExtension(PyInterpreterState *interp, PyTypeObject *self)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
+Objects/typeobject.c	9094	9097	_PyStaticType_InitBuiltin	_PyStaticType_InitBuiltin(PyInterpreterState *interp, PyTypeObject *self)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
 Objects/typeobject.c	9101	9131	add_subclass	add_subclass(PyTypeObject *base, PyTypeObject *type)	todo		
 Objects/typeobject.c	9134	9147	add_all_subclasses	add_all_subclasses(PyTypeObject *type, PyObject *bases)	todo		
 Objects/typeobject.c	9150	9178	get_subclasses_key	get_subclasses_key(PyTypeObject *type, PyTypeObject *base)	todo		
@@ -362,8 +362,8 @@ Objects/typeobject.c	10549	10567	slot_tp_descr_set	slot_tp_descr_set(PyObject *s
 Objects/typeobject.c	10570	10584	slot_tp_init	slot_tp_init(PyObject *self, PyObject *args, PyObject *kwds)	todo		
 Objects/typeobject.c	10587	10600	slot_tp_new	slot_tp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
 Objects/typeobject.c	10603	10630	slot_tp_finalize	slot_tp_finalize(PyObject *self)	todo		
-Objects/typeobject.c	10641	10647	bufferwrapper_traverse	bufferwrapper_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Objects/typeobject.c	10650	10658	bufferwrapper_dealloc	bufferwrapper_dealloc(PyObject *self)	todo		
+Objects/typeobject.c	10641	10647	bufferwrapper_traverse	bufferwrapper_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
+Objects/typeobject.c	10650	10658	bufferwrapper_dealloc	bufferwrapper_dealloc(PyObject *self)	excluded		no-behaviour: deallocation and reference counting
 Objects/typeobject.c	10661	10685	bufferwrapper_releasebuf	bufferwrapper_releasebuf(PyObject *self, Py_buffer *view)	todo		
 Objects/typeobject.c	10705	10746	slot_bf_getbuffer	slot_bf_getbuffer(PyObject *self, Py_buffer *buffer, int flags)	todo		
 Objects/typeobject.c	10749	10784	releasebuffer_maybe_call_super_unlocked	releasebuffer_maybe_call_super_unlocked(PyObject *self, Py_buffer *buffer)	todo		
@@ -389,7 +389,7 @@ Objects/typeobject.c	11618	11659	recurse_down_subclasses	recurse_down_subclasses
 Objects/typeobject.c	11662	11679	slot_inherited	slot_inherited(PyTypeObject *type, pytype_slotdef *slotdef, void **slot)	todo		
 Objects/typeobject.c	11712	11757	add_operators	add_operators(PyTypeObject *type)	todo		
 Objects/typeobject.c	11761	11783	PyType_Freeze	PyType_Freeze(PyTypeObject *type)	todo		
-Objects/typeobject.c	11808	11817	super_dealloc	super_dealloc(PyObject *self)	todo		
+Objects/typeobject.c	11808	11817	super_dealloc	super_dealloc(PyObject *self)	excluded		no-behaviour: deallocation and reference counting
 Objects/typeobject.c	11820	11833	super_repr	super_repr(PyObject *self)	todo		
 Objects/typeobject.c	11840	11884	_super_lookup_descr	_super_lookup_descr(PyTypeObject *su_type, PyTypeObject *su_obj_type, PyObject *name)	todo		
 Objects/typeobject.c	11889	11937	do_super_lookup	do_super_lookup(superobject *su, PyTypeObject *su_type, PyObject *su_obj, PyTypeObject *su_obj_type, PyObject *name, int *method)	todo		
@@ -400,5 +400,5 @@ Objects/typeobject.c	12033	12063	super_descr_get	super_descr_get(PyObject *self,
 Objects/typeobject.c	12066	12145	super_init_without_args	super_init_without_args(_PyInterpreterFrame *cframe, PyTypeObject **type_p, PyObject **obj_p)	todo		
 Objects/typeobject.c	12150	12163	super_init	super_init(PyObject *self, PyObject *args, PyObject *kwds)	todo		
 Objects/typeobject.c	12166	12206	super_init_impl	super_init_impl(PyObject *self, PyTypeObject *type, PyObject *obj) {	todo		
-Objects/typeobject.c	12225	12234	super_traverse	super_traverse(PyObject *self, visitproc visit, void *arg)	todo		
+Objects/typeobject.c	12225	12234	super_traverse	super_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
 Objects/typeobject.c	12237	12275	super_vectorcall	super_vectorcall(PyObject *self, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		

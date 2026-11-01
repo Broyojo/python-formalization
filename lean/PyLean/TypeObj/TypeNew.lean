@@ -107,31 +107,32 @@ def mroInternal (rt : Rt) (t : Addr) : M Bool := do
     modType t fun d => { d with mro := some newMro }
     pure true
 
+/-- The loop of `best_base`, `Objects/typeobject.c:3624-3662`. `winner` is the most derived
+solid base so far, `base` the base that provided it. -/
+def bestBaseLoop (w : World) : List Val → Option Addr → Option Addr → Except String Addr
+  | [], _, some b => .ok b
+  | [], _, none => .error "bases must be types"
+  | bp :: rest, winner, base =>
+    match asType w bp with
+    | none => .error "bases must be types"
+    | some bi =>
+      if !(tdata w bi).baseType then
+        .error s!"type '{trunc 100 (tpName w bi)}' is not an acceptable base type"
+      else
+        let candidate := solidBase w bi
+        match winner with
+        | none => bestBaseLoop w rest (some candidate) (some bi)
+        | some win =>
+          if isSubtype w win candidate then bestBaseLoop w rest winner base
+          else if isSubtype w candidate win then bestBaseLoop w rest (some candidate) (some bi)
+          else .error "multiple bases have instance lay-out conflict"
+
 /-- `best_base`, `Objects/typeobject.c:3614`. -/
 def bestBase (bases : List Val) : M Addr := do
-  let mut base : Option Addr := none
-  let mut winner : Option Addr := none
-  for bp in bases do
-    let w ← getW
-    match asType w bp with
-    | none => typeErr "bases must be types"
-    | some bi =>
-      unless (tdata w bi).baseType do
-        typeErr s!"type '{trunc 100 (tpName w bi)}' is not an acceptable base type"
-      let candidate := solidBase w bi
-      match winner with
-      | none =>
-        winner := some candidate
-        base := some bi
-      | some win =>
-        if isSubtype w win candidate then pure ()
-        else if isSubtype w candidate win then
-          winner := some candidate
-          base := some bi
-        else typeErr "multiple bases have instance lay-out conflict"
-  match base with
-  | some b => pure b
-  | none => unmodelled
+  let w ← getW
+  match bestBaseLoop w bases none none with
+  | .ok b => pure b
+  | .error m => typeErr m
 
 /-- `_PyType_CalculateMetaclass`, `Objects/typeobject.c:3921`, as a pure loop. -/
 def calculateMetaclassLoop (w : World) (winner : Addr) : List Val → Option Addr
@@ -196,17 +197,17 @@ def validIdentifier (s : Val) : M String := do
     if isIdentifier n then pure n else typeErr "__slots__ must be identifiers"
 
 /-- `type_new_visit_slots`, `Objects/typeobject.c:3979`. -/
-def typeNewVisitSlots (ctx : TypeNewCtx) (slots : List Val) : M TypeNewCtx := do
-  let mut c := ctx
-  for s in slots do
+def typeNewVisitSlots (ctx : TypeNewCtx) : List Val → M TypeNewCtx
+  | [] => pure ctx
+  | s :: rest => do
     let n ← validIdentifier s
-    if n == "__dict__" then
-      if !c.mayAddDict || c.addDict then typeErr "__dict__ slot disallowed: we already got one"
-      c := { c with addDict := true }
-    if n == "__weakref__" then
-      if !c.mayAddWeak || c.addWeak then typeErr "__weakref__ slot disallowed: we already got one"
-      c := { c with addWeak := true }
-  pure c
+    if n == "__dict__" && (!ctx.mayAddDict || ctx.addDict) then
+      typeErr "__dict__ slot disallowed: we already got one"
+    let c := if n == "__dict__" then { ctx with addDict := true } else ctx
+    if n == "__weakref__" && (!c.mayAddWeak || c.addWeak) then
+      typeErr "__weakref__ slot disallowed: we already got one"
+    let c := if n == "__weakref__" then { c with addWeak := true } else c
+    typeNewVisitSlots c rest
 
 /-- `type_new_copy_slots`, `Objects/typeobject.c:4017`. Sorted with `PyList_Sort` on
 strings: code point order. -/
@@ -334,7 +335,7 @@ def typeNewDescriptors (ctx : TypeNewCtx) (t : Addr) (nslot : Nat) : M (List Nam
 
 /-- `type_new_set_classcell`/`type_new_set_classdictcell`, `Objects/typeobject.c:4474`,
 `:4500`. The dict cell receives the tp_dict proxy. -/
-def typeNewSetCell (key : Name) (t : Addr) (value : Val) (dict : NameDict) : M NameDict := do
+def typeNewSetCell (key : Name) (value : Val) (dict : NameDict) : M NameDict := do
   let w ← getW
   match NameDict.get? dict key with
   | none => pure dict
@@ -345,7 +346,6 @@ def typeNewSetCell (key : Name) (t : Addr) (value : Val) (dict : NameDict) : M N
       pure (NameDict.erase dict key)
     | _, _ =>
       typeErr s!"{key} must be a nonlocal cell, not {trunc 200 (typeRepr w (typeOf w cell))}"
-  where _unused := t
 
 /-! ## `PyType_Ready` for heap types -/
 
@@ -546,18 +546,16 @@ def typeNewImpl (rt : Rt) (ctx0 : TypeNewCtx) (orig : NameDict) : M Val := do
   let ctx ← typeNewGetSlots rt ctx0 orig
   let (ctx, names) ← typeNewSlots ctx orig
   let w ← getW
-  let bd := tdata w ctx.base
   let baseAddrs := ctx.bases.filterMap (asType w)
   let t ← allocCell (.ty ctx.metatype {
     name := ctx.name, qualname := ctx.name, base := some ctx.base, bases := baseAddrs,
     dict := orig, asNumber := true, asSequence := true, asMapping := true, asAsync := true,
     asBuffer := true, heap := true, baseType := true, htSlots := names })
-  let _ := bd
   let dict ← typeNewSetAttrs ctx t orig
   let members := names.getD []
   let getsets ← typeNewDescriptors ctx t ctx.nslot
-  let dict ← typeNewSetCell "__classcell__" t (.obj t) dict
-  let dict ← typeNewSetCell "__classdictcell__" t (.obj t) dict
+  let dict ← typeNewSetCell "__classcell__" (.obj t) dict
+  let dict ← typeNewSetCell "__classdictcell__" (.obj t) dict
   modType t fun d => { d with dict := dict }
   typeReady rt t members getsets
   modW fun w => fixupSlotDispatchers w t
@@ -565,17 +563,23 @@ def typeNewImpl (rt : Rt) (ctx0 : TypeNewCtx) (orig : NameDict) : M Val := do
   typeNewInitSubclass rt t ctx.kwds
   pure (.obj t)
 
+/-- The loop at `Objects/typeobject.c:4710-4725`: a non-class base with `__mro_entries__`. -/
+def checkMroEntries (rt : Rt) : List Val → M Unit
+  | [] => pure ()
+  | base :: rest => do
+    let w ← getW
+    if typeCheck w base then checkMroEntries rt rest
+    else
+      match ← rt.getOptionalAttr base "__mro_entries__" with
+      | some _ => typeErr "type() doesn't support MRO entry resolution; use types.new_class()"
+      | none => checkMroEntries rt rest
+
 /-- `type_new_get_bases`, `Objects/typeobject.c:4696`. The left result is a finished
 object from a more derived metaclass. -/
 def typeNewGetBases (rt : Rt) (ctx : TypeNewCtx) : M (Sum Val TypeNewCtx) := do
   if ctx.bases.isEmpty then
     return .inr { ctx with base := B.object, bases := [.obj B.object] }
-  let w ← getW
-  for base in ctx.bases do
-    if typeCheck w base then continue
-    match ← rt.getOptionalAttr base "__mro_entries__" with
-    | some _ => typeErr "type() doesn't support MRO entry resolution; use types.new_class()"
-    | none => pure ()
+  checkMroEntries rt ctx.bases
   let winner ← calculateMetaclass ctx.metatype ctx.bases
   let w ← getW
   let mut c := ctx
@@ -675,10 +679,10 @@ def inlineValuesFlag (w : World) (t : Addr) : Bool :=
   let d := tdata w t
   d.heap && d.dictoffset == -1 && d.itemsize == 0
 
-/-- `Py_TPFLAGS_PREHEADER`: managed dict or managed weakref. -/
-def preheaderFlag (w : World) (t : Addr) : Bool :=
+/-- `tp_flags & Py_TPFLAGS_PREHEADER`: managed dict, managed weakref. -/
+def preheaderFlag (w : World) (t : Addr) : Bool × Bool :=
   let d := tdata w t
-  d.dictoffset == -1 || d.weaklistoffset == -32
+  (d.dictoffset == -1, d.weaklistoffset == -32)
 
 /-- `compatible_for_assignment`, `Objects/typeobject.c:7067`. `tp_free` is
 `PyObject_GC_Del` exactly for GC types among those modelled. -/

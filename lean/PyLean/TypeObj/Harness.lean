@@ -329,7 +329,8 @@ def makeFunction (env : Env) (rt : Rt) (fr : Frame) (fuel : Nat) (n qual : Name)
     argcount := p.pos.length, posonly := p.posonly, kwonly := p.kwonly.length
     varnames := p.pos ++ p.kwonly ++ p.varargs.toList ++ p.varkw.toList
     hasVarargs := p.varargs.isSome, hasVarkw := p.varkw.isSome
-    defaults := defaults, kwdefaults := kwdefaults, code := code, classCell := cellAddr })
+    defaults := defaults, kwdefaults := kwdefaults, code := code, classCell := cellAddr
+    defaultsSet := !defaults.isEmpty, kwdefaultsSet := !kwdefaults.isEmpty })
 
 /-- Instantiate what `raise X` names: `_PyErr_SetObject` with a class calls it. -/
 def raiseValue (rt : Rt) (v : Val) : M Val := do
@@ -349,6 +350,16 @@ def modExc (v : Val) (f : ExcData → ExcData) : M Unit :=
     match o.body with
     | .exc d => { o with body := .exc (f d) }
     | _ => o
+  | _ => pure ()
+
+/-- `PyTraceBack_Here` as far as a scenario can see: an exception caught in a frame has a
+traceback object. -/
+def attachTraceback (x : Val) : M Unit := do
+  let w ← getW
+  match (excDataOf w x).traceback with
+  | .none =>
+    let tb ← alloc B.traceback .plain
+    modExc x fun d => { d with traceback := tb }
   | _ => pure ()
 
 mutual
@@ -433,6 +444,7 @@ mutual
           | some c =>
             if excMatches w e c then
               let x ← excObject e
+              attachTraceback x
               let fr' := { saved with locals := NameDict.set saved.locals var x, handling := some x }
               let (fr2, r) ← execBlock env rt inFunc fuel fr' handler
               pure ({ fr2 with handling := saved.handling }, r)
@@ -559,6 +571,23 @@ def harnessExec (env : Env) (rt : Rt) (code : Nat) (func : Val) (locals : NameDi
 /-- Re-entrancy bound of the scenario interpreter. -/
 def harnessFuel : Nat := 6000
 
+/-- The scenario helpers of `difftest/typeobj_exc_diff.py`: `bytes` constructors and the
+`_testcapi` entry points into `Objects/exceptions.c`. Each is an `excMethod` by name. -/
+def harnessExcFunctions : List (Name × String) :=
+  [("_bytes", "harness.bytes"), ("_bytearray", "harness.bytearray"),
+   ("_prep_reraise_star", "capi.prep_reraise_star")] ++
+  (["encode", "decode", "translate"].flatMap fun k =>
+    ["get_start", "set_start", "get_end", "set_end"].map fun op =>
+      (s!"_unicode_{k}_{op}", s!"capi.unicode_{k}_{op}"))
+
+/-- Bind `harnessExcFunctions` in the globals. -/
+def installExcFunctions (env : Env) : List (Name × String) → M Unit
+  | [] => pure ()
+  | (n, m) :: rest => do
+    let f ← alloc B.builtinFn (.builtin (.excMethod m) none)
+    storeGlobal env n f
+    installExcFunctions env rest
+
 /-- Run a scenario: the observable trace in order. -/
 def runScenario (codes : Array (List Stmt)) (main : List Stmt) : List String :=
   let (w0, bi) := initialState
@@ -569,6 +598,7 @@ def runScenario (codes : Array (List Stmt)) (main : List Stmt) : List String :=
       let env : Env := { codes := codes, builtins := bi, globals := ga }
       let rt := rtOf (harnessExec env) harnessFuel
       modW fun w => { w with curModule := some (.str "__main__") }
+      installExcFunctions env harnessExcFunctions
       let _ ← execBlock env rt false 100000 {} main
     | _ => pure ()
   match setup w0 with

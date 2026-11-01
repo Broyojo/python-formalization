@@ -236,6 +236,11 @@ def longHash (i : Int) : Int :=
   let r : Int := if i < 0 then -(h : Int) else h
   if r == -1 then -2 else r
 
+/-- The transformation of `slot_tp_hash`, `Objects/typeobject.c:10325-10335`. -/
+def hashOfInt (i : Int) : Int :=
+  let h := if inSsize i then i else longHash i
+  if h == -1 then -2 else h
+
 /-- `slot_tp_hash`, `Objects/typeobject.c:10303`. -/
 def slotTpHash (rt : Rt) (self : Val) : M Int := do
   let m ← maybeCallSpecial rt self "__hash__" [] true
@@ -245,9 +250,7 @@ def slotTpHash (rt : Rt) (self : Val) : M Int := do
     let w ← getW
     match intOf w res with
     | none => typeErr "__hash__ method should return an integer"
-    | some i =>
-      let h := if inSsize i then i else longHash i
-      pure (if h == -1 then -2 else h)
+    | some i => pure (hashOfInt i)
 
 /-- Call the `tp_hash` function `f`. -/
 def callHash (rt : Rt) (f : SlotFn) (v : Val) : M Int := do
@@ -429,7 +432,7 @@ def callUnaryNb (rt : Rt) (s : Slot) (dunder : Name) (f : SlotFn) (v : Val) : M 
   | .c .bool, .nb_int =>
     pure (.int ((intOf w v).getD 0))
   | .c .int, .nb_negative => pure (.int (-((intOf w v).getD 0)))
-  | .c .int, .nb_invert => pure (.int (-((intOf w v).getD 0) - 1))
+  | .c .int, .nb_invert | .c .bool, .nb_invert => pure (.int (-((intOf w v).getD 0) - 1))
   | .c .int, .nb_absolute => pure (.int ((((intOf w v).getD 0).natAbs : Nat) : Int))
   | _, _ => unmodelled
 
@@ -487,6 +490,10 @@ def callLen (rt : Rt) (f : SlotFn) (v : Val) : M Int := do
   | .c .tuple => pure (((tupleOf w v).getD []).length : Nat)
   | .c .list => pure (((listOf w v).getD []).length : Nat)
   | .c .dict => pure (((dictOf w v).getD []).length : Nat)
+  | .c .mappingproxy =>
+    match payloadOf w v with
+    | some (.typeDictProxy t) => pure ((tdata w t).dict.length : Nat)
+    | _ => unmodelled
   | _ => unmodelled
 
 /-- The filled slot `s` of the type of `v`, honouring NULL `tp_as_*` structs. -/
@@ -980,7 +987,13 @@ def longPow (w : World) (a b z : Val) : M Val :=
       if x == 0 then raiseC B.ZeroDivisionError "zero to a negative power"
       else pure (.float 0)
     else if y > 10000 then unmodelled else pure (.int (x ^ y.toNat))
-  | some _, some _, _ => unmodelled
+  | some x, some y, z' =>
+    match intOf w z' with
+    | none => pure .notImpl
+    | some m =>
+      if m == 0 then valueErr "pow() 3rd argument cannot be 0"
+      else if y < 0 || y > 10000 then unmodelled
+      else pure (.int (Int.fmod (x ^ y.toNat) m))
   | _, _, _ => pure .notImpl
 
 /-- Call `nb_power`. -/
@@ -1215,6 +1228,15 @@ def callMpSubscript (rt : Rt) (f : SlotFn) (o key : Val) : M Val := do
     | none =>
       let x ← alloc B.KeyError (.exc { args := [key] })
       raise (.exc B.KeyError "" (some x))
+  | .c .mappingproxy =>
+    match payloadOf w o, key with
+    | some (.typeDictProxy t), .str n =>
+      match NameDict.get? (tdata w t).dict n with
+      | some v => pure v
+      | none =>
+        let x ← alloc B.KeyError (.exc { args := [key] })
+        raise (.exc B.KeyError "" (some x))
+    | _, _ => unmodelled
   | _ => unmodelled
 
 /-- `PySequence_GetItem`, `Objects/abstract.c:1832`. -/

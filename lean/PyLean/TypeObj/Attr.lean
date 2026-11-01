@@ -126,30 +126,32 @@ def excMembers (w : World) (v : Val) : NameDict :=
   | some (.exc e) => e.members
   | _ => []
 
+/-- The augmentation in `_PyObject_SetAttributeErrorContext`, `Objects/object.c:1276-1283`:
+set `.name` and `.obj` unless already set. -/
+def attachContext (x v : Val) (n : Name) : M Unit := do
+  let w ← getW
+  let ms := excMembers w x
+  if NameDict.contains ms "name" || NameDict.contains ms "obj" then pure ()
+  else
+    match x with
+    | .obj a =>
+      modObj a fun o =>
+        match o.body with
+        | .exc d =>
+          let ms := NameDict.set (NameDict.set d.members "name" (.str n)) "obj" v
+          { o with body := .exc { d with members := ms } }
+        | _ => o
+    | _ => pure ()
+
 /-- `_PyObject_SetAttributeErrorContext`, `Objects/object.c:1263`, then re-raise. -/
 def setAttributeErrorContext {α : Type} (v : Val) (n : Name) (e : PyErr) : M α := do
   let w ← getW
   if excMatches w e B.AttributeError then
     let x ← excObject e
-    let w ← getW
-    let ms := excMembers w x
-    if NameDict.contains ms "name" || NameDict.contains ms "obj" then
-      raise (match e with
-        | .exc c m _ => .exc c m (some x)
-        | .fuel => .fuel)
-    else
-      match x with
-      | .obj a =>
-        modObj a fun o =>
-          match o.body with
-          | .exc d =>
-            let ms := NameDict.set (NameDict.set d.members "name" (.str n)) "obj" v
-            { o with body := .exc { d with members := ms } }
-          | _ => o
-        raise (match e with
-          | .exc c m _ => .exc c m (some x)
-          | .fuel => .fuel)
-      | _ => raise e
+    attachContext x v n
+    raise (match e with
+      | .exc c m _ => .exc c m (some x)
+      | .fuel => .fuel)
   else raise e
 
 /-! ## `tp_descr_get` -/
@@ -832,6 +834,9 @@ def genericSetAttr (rt : Rt) (obj : Val) (n : Name) (value : Option Val) : M Uni
             | .dict es => { o with body := .dict (dictDelEntry es (.str n)) }
             | b => { o with body := b }
         else
+          -- `_PyObjectDict_SetItem` creates a `tp_dictoffset > 0` dict before deleting.
+          if (tdata w tp).dictoffset > 0 then
+            let _ ← ensureDict obj
           tryM (raiseC B.AttributeError noAttr) (setAttributeErrorContext obj n)
     else
       match descr with
@@ -890,6 +895,10 @@ def callSetattro (rt : Rt) (f : SlotFn) (v : Val) (n : Name) (value : Option Val
   | .c .type => typeSetattro rt v n value
   | _ => unmodelled
 
+/-- The message at `Objects/object.c:1480`. -/
+def roAttrMsg (tp what n : String) : String :=
+  s!"'{trunc 100 tp}' object has only read-only attributes ({what} .{n})"
+
 /-- `PyObject_SetAttr`, `Objects/object.c:1440`. -/
 def pySetAttr (rt : Rt) (v : Val) (n : Name) (value : Option Val) : M Unit := do
   let w ← getW
@@ -903,6 +912,6 @@ def pySetAttr (rt : Rt) (v : Val) (n : Name) (value : Option Val) : M Unit := do
     if (slotOf w tp .tp_getattro).isNone then
       typeErr s!"'{trunc 100 (tpName w tp)}' object has no attributes ({what} .{n})"
     else
-      typeErr s!"'{trunc 100 (tpName w tp)}' object has only read-only attributes ({what} .{n})"
+      typeErr (roAttrMsg (tpName w tp) what n)
 
 end PyLean.TypeObj

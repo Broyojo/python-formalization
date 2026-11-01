@@ -3,7 +3,7 @@ Objects/abstract.c	24	28	type_error	type_error(const char *msg, PyObject *obj)	t
 Objects/abstract.c	31	39	null_error	null_error(void)	todo		
 Objects/abstract.c	44	54	PyObject_Type	PyObject_Type(PyObject *o)	todo		
 Objects/abstract.c	57	72	PyObject_Size	PyObject_Size(PyObject *o)	todo		
-Objects/abstract.c	76	79	PyObject_Length	PyObject_Length(PyObject *o)	todo		
+Objects/abstract.c	76	79	PyObject_Length	PyObject_Length(PyObject *o)	excluded		no-behaviour: same function as its PyObject_Size or PySequence_Size target, an ABI alias
 Objects/abstract.c	83	86	_PyObject_HasLen	_PyObject_HasLen(PyObject *o) {	todo		
 Objects/abstract.c	95	150	PyObject_LengthHint	PyObject_LengthHint(PyObject *o, Py_ssize_t defaultvalue)	todo		
 Objects/abstract.c	153	204	PyObject_GetItem	PyObject_GetItem(PyObject *o, PyObject *key)	todo		
@@ -30,9 +30,9 @@ Objects/abstract.c	669	737	PyObject_CopyData	int PyObject_CopyData(PyObject *des
 Objects/abstract.c	740	761	PyBuffer_FillContiguousStrides	PyBuffer_FillContiguousStrides(int nd, Py_ssize_t *shape, Py_ssize_t *strides, int itemsize, char fort)	todo		
 Objects/abstract.c	764	804	PyBuffer_FillInfo	PyBuffer_FillInfo(Py_buffer *view, PyObject *obj, void *buf, Py_ssize_t len, int readonly, int flags)	todo		
 Objects/abstract.c	807	819	PyBuffer_Release	PyBuffer_Release(Py_buffer *view)	todo		
-Objects/abstract.c	822	826	_buffer_release_call	_buffer_release_call(void *arg)	todo		
-Objects/abstract.c	829	833	_PyBuffer_ReleaseInInterpreter	_PyBuffer_ReleaseInInterpreter(PyInterpreterState *interp, Py_buffer *view)	todo		
-Objects/abstract.c	836	840	_PyBuffer_ReleaseInInterpreterAndRawFree	_PyBuffer_ReleaseInInterpreterAndRawFree(PyInterpreterState *interp, Py_buffer *view)	todo		
+Objects/abstract.c	822	826	_buffer_release_call	_buffer_release_call(void *arg)	excluded		no-behaviour: thin interpreter-state wrapper around PyBuffer_Release
+Objects/abstract.c	829	833	_PyBuffer_ReleaseInInterpreter	_PyBuffer_ReleaseInInterpreter(PyInterpreterState *interp, Py_buffer *view)	excluded		no-behaviour: thin interpreter-state wrapper around PyBuffer_Release
+Objects/abstract.c	836	840	_PyBuffer_ReleaseInInterpreterAndRawFree	_PyBuffer_ReleaseInInterpreterAndRawFree(PyInterpreterState *interp, Py_buffer *view)	excluded		no-behaviour: thin interpreter-state wrapper around PyBuffer_Release
 Objects/abstract.c	843	899	PyObject_Format	PyObject_Format(PyObject *obj, PyObject *format_spec)	todo		
 Objects/abstract.c	903	909	PyNumber_Check	PyNumber_Check(PyObject *o)	todo		
 Objects/abstract.c	989	998	binop_type_error	binop_type_error(PyObject *v, PyObject *w, const char *op_name)	todo		
@@ -58,7 +58,7 @@ Objects/abstract.c	1592	1649	PyNumber_Float	PyNumber_Float(PyObject *o)	todo
 Objects/abstract.c	1653	1666	PyNumber_ToBase	PyNumber_ToBase(PyObject *n, int base)	todo		
 Objects/abstract.c	1672	1678	PySequence_Check	PySequence_Check(PyObject *s)	todo		
 Objects/abstract.c	1681	1701	PySequence_Size	PySequence_Size(PyObject *s)	todo		
-Objects/abstract.c	1705	1708	PySequence_Length	PySequence_Length(PyObject *s)	todo		
+Objects/abstract.c	1705	1708	PySequence_Length	PySequence_Length(PyObject *s)	excluded		no-behaviour: same function as its PyObject_Size or PySequence_Size target, an ABI alias
 Objects/abstract.c	1712	1735	PySequence_Concat	PySequence_Concat(PyObject *s, PyObject *o)	todo		
 Objects/abstract.c	1738	1766	PySequence_Repeat	PySequence_Repeat(PyObject *o, Py_ssize_t count)	todo		
 Objects/abstract.c	1769	1795	PySequence_InPlaceConcat	PySequence_InPlaceConcat(PyObject *s, PyObject *o)	todo		
@@ -79,7 +79,7 @@ Objects/abstract.c	2246	2249	PySequence_In	PySequence_In(PyObject *w, PyObject *
 Objects/abstract.c	2252	2255	PySequence_Index	PySequence_Index(PyObject *s, PyObject *o)	todo		
 Objects/abstract.c	2260	2264	PyMapping_Check	PyMapping_Check(PyObject *o)	todo		
 Objects/abstract.c	2267	2288	PyMapping_Size	PyMapping_Size(PyObject *o)	todo		
-Objects/abstract.c	2292	2295	PyMapping_Length	PyMapping_Length(PyObject *o)	todo		
+Objects/abstract.c	2292	2295	PyMapping_Length	PyMapping_Length(PyObject *o)	excluded		no-behaviour: same function as its PyObject_Size or PySequence_Size target, an ABI alias
 Objects/abstract.c	2299	2313	PyMapping_GetItemString	PyMapping_GetItemString(PyObject *o, const char *key)	todo		
 Objects/abstract.c	2316	2331	PyMapping_GetOptionalItemString	PyMapping_GetOptionalItemString(PyObject *obj, const char *key, PyObject **result)	todo		
 Objects/abstract.c	2334	2350	PyMapping_SetItemString	PyMapping_SetItemString(PyObject *o, const char *key, PyObject *value)	todo		

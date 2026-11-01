@@ -46,12 +46,15 @@ def missingArguments (f : FuncData) (slots : List (Option Val)) (defcount : Opti
   let miss := idx.filter fun i => (slots.getD i none).isNone
   formatMissing kind f.qualname (miss.map fun i => reprStr (f.varnames.getD i ""))
 
+/-- `atleast`, `Python/ceval.c:1510`. -/
+def tooManyAtLeast (f : FuncData) : Int := (f.argcount : Int) - f.defaults.length
+
 /-- `too_many_positional`, `Python/ceval.c:1491`. -/
 def tooManyPositional (f : FuncData) (givenN : Nat) (slots : List (Option Val)) : String :=
   let kwonlyGiven := ((slots.drop f.argcount).filter Option.isSome).length
   let defcount := f.defaults.length
   let (plural, sig) :=
-    if defcount != 0 then (true, s!"from {f.argcount - defcount} to {f.argcount}")
+    if defcount != 0 then (true, s!"from {tooManyAtLeast f} to {f.argcount}")
     else (f.argcount != 1, toString f.argcount)
   let kwonlySig :=
     if kwonlyGiven != 0 then
@@ -86,19 +89,21 @@ def bindKeywords (f : FuncData) (allKw : Kw) : Bound → Kw → Except String Bo
     | .ok b' => bindKeywords f allKw b' rest
     | .error e => .error e
 
-/-- Fill defaults for positional parameters, `Python/ceval.c:1856-1883`. -/
+/-- Fill defaults for positional parameters, `Python/ceval.c:1856-1883`. `m` is a signed
+`Py_ssize_t`: assigning `__defaults__` can make it negative. -/
 def fillDefaults (f : FuncData) (argc : Nat) (n : Nat) (b : Bound) : Except String Bound :=
   if argc < f.argcount then
     let defcount := f.defaults.length
-    let m := f.argcount - defcount
-    let missing := ((List.range (m - argc)).map (· + argc)).filter fun i =>
+    let m : Int := (f.argcount : Int) - defcount
+    let missing := ((List.range (m.toNat - argc)).map (· + argc)).filter fun i =>
       (b.slots.getD i none).isNone
     if !missing.isEmpty then .error (missingArguments f b.slots (some defcount))
     else
-      let start := if n > m then n - m else 0
+      let start : Nat := if (n : Int) > m then ((n : Int) - m).toNat else 0
       let idx := (List.range (defcount - start)).map (· + start)
-      let slots := idx.foldl (fun s i =>
-        if (s.getD (m + i) none).isNone then s.set (m + i) (f.defaults[i]?) else s) b.slots
+      let slots := idx.foldl (fun s (i : Nat) =>
+        let k := (m + (i : Int)).toNat
+        if (s.getD k none).isNone then s.set k (f.defaults[i]?) else s) b.slots
       .ok { b with slots := slots }
   else .ok b
 
@@ -194,7 +199,12 @@ def abstractNames (rt : Rt) (t : Addr) : M (List String) := do
     let items ← pySequenceList rt am
     let w ← getW
     let names := items.filterMap (strOf w)
-    if names.length != items.length then unmodelled
+    if names.length != items.length then
+      -- `PyList_Sort` of mixed or non-str items, then `PyUnicode_Join`.
+      match items.findIdx? (fun x => (strOf w x).isNone) with
+      | some i =>
+        typeErr s!"sequence item {i}: expected str instance, {trunc 80 (typeName w (items.getD i .none))} found"
+      | none => unmodelled
     pure (names.mergeSort fun a b => decide (strCompare a.toList b.toList ≤ 0))
 
 /-- `object_new`, `Objects/typeobject.c:6852`. -/
@@ -497,10 +507,14 @@ def tpNewWrapper (rt : Rt) (ty : Addr) (args : List Val) (kw : Kw) : M Val := do
 
 /-! ## Slot wrappers -/
 
+/-- The message of `check_num_args`, `Objects/typeobject.c:9229`. -/
+def argCountMsg (n got : Nat) : String :=
+  s!"expected {n} argument{if n == 1 then "" else "s"}, got {got}"
+
 /-- `check_num_args`, `Objects/typeobject.c:9220`. -/
 def checkNumArgs (args : List Val) (n : Nat) : M Unit := do
   unless args.length == n do
-    typeErr s!"expected {n} argument{if n == 1 then "" else "s"}, got {args.length}"
+    typeErr (argCountMsg n args.length)
 
 /-- `wrap_*` arity: `check_pow_args`, `Objects/typeobject.c:9236`. -/
 def checkPowArgs (args : List Val) : M Unit := do
@@ -748,9 +762,13 @@ def pyDir (rt : Rt) (obj : Val) : M Val := do
     let w' ← getW
     let names := items.filterMap (strOf w')
     if names.length != items.length then unmodelled
-    let sorted := names.eraseDups.mergeSort fun a b => decide (strCompare a.toList b.toList ≤ 0)
+    let sorted := names.mergeSort fun a b => decide (strCompare a.toList b.toList ≤ 0)
     let _ := w
     alloc B.list (.list (sorted.map Val.str))
+
+/-- The `doc` argument of `property_copy`, `Objects/descrobject.c:1780-1786`. -/
+def copyDocArg (getterDoc : Bool) (g doc : Val) : Val :=
+  if getterDoc && !g.is .none then .none else doc
 
 /-- `property_copy`, `Objects/descrobject.c:1762`. -/
 def propertyCopy (rt : Rt) (old : Val) (get set del : Option Val) : M Val := do
@@ -765,7 +783,7 @@ def propertyCopy (rt : Rt) (old : Val) (get set del : Option Val) : M Val := do
     let g' := pick get g
     let s' := pick set s
     let d' := pick del d
-    let docArg : Val := if getterDoc && !g'.is .none then .none else doc
+    let docArg : Val := copyDocArg getterDoc g' doc
     let n ← rt.call (.obj (typeOf w old)) [g', s', d', docArg] []
     let w ← getW
     match n, payloadOf w n with
@@ -782,46 +800,110 @@ def typeMroImpl (rt : Rt) (self : Val) : M Val := do
     alloc B.list (.list (m.map Val.obj))
   | _ => unmodelled
 
+/-- The calling convention of a builtin: `METH_NOARGS`, `METH_O`, `METH_FASTCALL` without
+keywords, or keywords accepted. -/
+inductive MethConv where
+  | noargs | o | fast | keywords
+
+/-- `ml_name` and `ml_flags` of a `Builtin`. -/
+def builtinConv : Builtin → String × MethConv
+  | .objectInitSubclass => ("__init_subclass__", .noargs)
+  | .objectSubclasshook => ("__subclasshook__", .o)
+  | .objectFormat => ("__format__", .o)
+  | .objectDir => ("__dir__", .noargs)
+  | .objectSizeof => ("__sizeof__", .noargs)
+  | .objectGetstate => ("__getstate__", .noargs)
+  | .objectReduce => ("__reduce__", .noargs)
+  | .objectReduceEx => ("__reduce_ex__", .o)
+  | .classGetitem => ("__class_getitem__", .o)
+  | .typeMro => ("mro", .noargs)
+  | .typeSubclasses => ("__subclasses__", .noargs)
+  | .typeInstancecheck => ("__instancecheck__", .o)
+  | .typeSubclasscheck => ("__subclasscheck__", .o)
+  | .typeDir => ("__dir__", .noargs)
+  | .typeSizeof => ("__sizeof__", .noargs)
+  | .isinstance => ("isinstance", .fast)
+  | .issubclass => ("issubclass", .fast)
+  | .getattr => ("getattr", .fast)
+  | .setattr => ("setattr", .fast)
+  | .delattr => ("delattr", .fast)
+  | .hasattr => ("hasattr", .fast)
+  | .len => ("len", .o)
+  | .iter => ("iter", .fast)
+  | .next => ("next", .fast)
+  | .repr => ("repr", .o)
+  | .hash => ("hash", .o)
+  | .callable => ("callable", .o)
+  | .dir => ("dir", .fast)
+  | .abs => ("abs", .o)
+  | .divmod => ("divmod", .fast)
+  | .format => ("format", .fast)
+  | .propertyGetter => ("getter", .o)
+  | .propertySetter => ("setter", .o)
+  | .propertyDeleter => ("deleter", .o)
+  | .listAppend => ("append", .o)
+  | .dunderGetitem => ("__getitem__", .o)
+  | .dunderContains => ("__contains__", .o)
+  | _ => ("", .keywords)
+
+/-- `_PyObject_FunctionStr` of a builtin, `Objects/object.c:959`, via `meth_get__qualname__`,
+`Objects/methodobject.c:231`. -/
+def builtinFuncStr (w : World) (name : String) (self : Option Val) : String :=
+  match self with
+  | none => name ++ "()"
+  | some s =>
+    let t := match asType w s with
+      | some a => a
+      | none => typeOf w s
+    s!"{typeQualname w t}.{name}()"
+
+/-- `cfunction_check_kwargs` and the argument counts of `cfunction_vectorcall_NOARGS` and
+`_O`, `Objects/methodobject.c:407`, `:487`, `:515`. -/
+def checkBuiltinArgs (b : Builtin) (self : Option Val) (args : List Val) (kw : Kw) : M Unit := do
+  let w ← getW
+  let (n, conv) := builtinConv b
+  let fs := builtinFuncStr w n self
+  match conv with
+  | .keywords => pure ()
+  | .fast => unless kw.isEmpty do typeErr s!"{fs} takes no keyword arguments"
+  | .noargs =>
+    unless kw.isEmpty do typeErr s!"{fs} takes no keyword arguments"
+    unless args.isEmpty do typeErr s!"{fs} takes no arguments ({args.length} given)"
+  | .o =>
+    unless kw.isEmpty do typeErr s!"{fs} takes no keyword arguments"
+    unless args.length == 1 do
+      typeErr s!"{fs} takes exactly one argument ({args.length} given)"
+
 /-- Call a `Builtin`. `self` is `m_self`; methods receive their instance there. -/
 def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (kw : Kw) :
     M Val := do
+  checkBuiltinArgs b self args kw
   let w ← getW
   let selfV := self.getD .none
-  let noKw (n : String) : M Unit := unless kw.isEmpty do typeErr s!"{n}() takes no keyword arguments"
   match b with
   | .stub _ => unmodelled
   | .excMethod n => excMethod rt n selfV args kw
   | .tpNewWrapper ty => tpNewWrapper rt ty args kw
-  | .objectInitSubclass =>
-    noKw (typeOf w selfV |> fun _ => (match selfV with
-      | .obj a => tpName w a ++ ".__init_subclass__"
-      | _ => "__init_subclass__"))
-    match args with
-    | [] => pure .none
-    | _ =>
-      typeErr s!"{(match selfV with
-        | .obj a => tpName w a
-        | _ => "")}.__init_subclass__() takes no arguments ({args.length} given)"
+  | .objectInitSubclass => pure .none
   | .objectSubclasshook => pure .notImpl
-  | .classGetitem =>
-    match args with
-    | [_] => alloc B.genericAlias .plain
-    | _ => typeErr s!"__class_getitem__() takes exactly one argument ({args.length} given)"
+  | .classGetitem => alloc B.genericAlias .plain
   | .objectFormat =>
     match args with
     | [s] =>
       match strOf w s with
       | some sp => objectFormat rt selfV sp
       | none => typeErr s!"__format__() argument must be str, not {typeName w s}"
-    | _ => typeErr s!"__format__() takes exactly one argument ({args.length} given)"
+    | _ => unmodelled
   | .objectDir =>
     let inst : List Val := match instDictAddr w selfV with
       | some da => ((dictOf w (.obj da)).getD []).map (·.1)
       | none => []
-    alloc B.list (.list (inst ++ (classDictKeys w (typeOf w selfV)).map Val.str))
+    let keys := inst ++ (classDictKeys w (typeOf w selfV)).map Val.str
+    let names := keys.filterMap (strOf w)
+    alloc B.list (.list (names.eraseDups.map Val.str))
   | .typeDir =>
     match selfV with
-    | .obj t => alloc B.list (.list ((classDictKeys w t).map Val.str))
+    | .obj t => alloc B.list (.list ((classDictKeys w t).eraseDups.map Val.str))
     | _ => unmodelled
   | .typeMro => typeMroImpl rt selfV
   | .typeSubclasses =>
@@ -1074,10 +1156,11 @@ def getsetGetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) : M Val := do
       if n == "__module__" then return f.module
       if n == "__doc__" then return f.doc
       if n == "__defaults__" then
-        return if f.defaults.isEmpty then .none else .tuple f.defaults
+        return if f.defaultsSet then .tuple f.defaults else .none
       if n == "__kwdefaults__" then
-        return ← if f.kwdefaults.isEmpty then pure .none
-          else alloc B.dict (.dict (f.kwdefaults.map fun (k, v) => (Val.str k, v)))
+        return ← if f.kwdefaultsSet then
+            alloc B.dict (.dict (f.kwdefaults.map fun (k, v) => (Val.str k, v)))
+          else pure .none
       if n == "__dict__" then return ← genericGetDict obj
       unmodelled
     | _ => unmodelled
@@ -1228,11 +1311,23 @@ def getsetSetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) (value : Optio
       if n == "__doc__" then return ← setF { f with doc := value.getD .none }
       if n == "__defaults__" then
         match value with
-        | none | some .none => return ← setF { f with defaults := [] }
+        | none | some .none => return ← setF { f with defaults := [], defaultsSet := false }
         | some v =>
           match tupleOf w v with
-          | some xs => return ← setF { f with defaults := xs }
+          | some xs => return ← setF { f with defaults := xs, defaultsSet := true }
           | none => typeErr "__defaults__ must be set to a tuple object"
+      if n == "__kwdefaults__" then
+        match value with
+        | none | some .none => return ← setF { f with kwdefaults := [], kwdefaultsSet := false }
+        | some v =>
+          match dictOf w v with
+          | some es =>
+            let d := es.filterMap fun (k, x) =>
+              match k with
+              | .str n => some (n, x)
+              | _ => none
+            return ← setF { f with kwdefaults := d, kwdefaultsSet := true }
+          | none => typeErr "__kwdefaults__ must be set to a dict object"
       unmodelled
     | _, _ => unmodelled
   if isSubtype w owner B.BaseException then return ← excGetsetSet rt owner n obj value

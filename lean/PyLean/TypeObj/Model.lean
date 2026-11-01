@@ -201,6 +201,10 @@ structure FuncData where
   hasVarkw : Bool := false
   defaults : List Val := []
   kwdefaults : NameDict := []
+  /-- `func_defaults` and `func_kwdefaults` are not NULL (an empty tuple or dict differs from
+  NULL for `__defaults__` and `__kwdefaults__`). -/
+  defaultsSet : Bool := false
+  kwdefaultsSet : Bool := false
   /-- The code object, opaque here; `Rt.exec` interprets it. -/
   code : Nat := 0
   /-- `__class__` cell for zero-argument `super()`. -/
@@ -264,6 +268,10 @@ structure ExcData where
   /-- `BaseExceptionGroup.message` and `.exceptions`. -/
   egMessage : Option Val := none
   egExceptions : List Val := []
+  /-- `PyBaseExceptionGroupObject.excs_str`: the repr saved for custom sequences. -/
+  egExcsStr : Option String := none
+  /-- `PyOSErrorObject.written`; `-1` means unset. -/
+  written : Int := -1
   deriving Repr, Inhabited
 
 /-- Type-specific part of a heap object. -/
@@ -306,6 +314,8 @@ inductive Payload where
   | mappingproxy (mapping : Val)
   | cell (v : Option Val)
   | exc (e : ExcData)
+  /-- The contents of a `bytes` or `bytearray`, which the exception code reads. -/
+  | bytes (b : List Nat)
 
 /-- A `PyTypeObject`. -/
 structure TypeData where
@@ -468,9 +478,12 @@ def listIter : Addr := 27
 def tupleIter : Addr := 28
 def strIter : Addr := 29
 def cell : Addr := 30
-/-- `types.GenericAlias` and `types.UnionType`: the last two rows of the table. -/
-def genericAlias : Addr := 102
-def unionType : Addr := 103
+/-- `types.GenericAlias` and `types.UnionType`, then the types the exception code needs. -/
+def genericAlias : Addr := 100
+def unionType : Addr := 101
+def bytes : Addr := 102
+def bytearray : Addr := 103
+def traceback : Addr := 104
 -- Exception classes used by C code.
 def BaseException : Addr := 31
 def Exception : Addr := 32
