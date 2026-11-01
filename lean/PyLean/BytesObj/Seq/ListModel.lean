@@ -496,6 +496,13 @@ abbrev Cmp2 (α : Type) := List α × List α → α → α → Py Bool × (List
 /-- A comparison that does not change either list. -/
 def pureCmp2 (E : ElemOps α ρ) : Cmp2 α := fun st a b => (richBool E .eq a b, st)
 
+/-- The closing `PyObject_RichCompare(vitem, witem, op)`: user code again, so it may
+change the lists as well, though nothing reads them afterwards. -/
+abbrev Final (α ρ : Type) := CmpOp → List α × List α → α → α → Py ρ × (List α × List α)
+
+/-- A closing comparison that does not change either list. -/
+def pureFinal (E : ElemOps α ρ) : Final α ρ := fun op st a b => (E.rich op a b, st)
+
 /-- The search of `list_richcompare_impl`, listobject.c:3416-3432: sizes and slots
 are reread on each pass, and an identical pair is skipped without a call. -/
 def cmpLoop (same : α → α → Bool) (cmp : Cmp2 α) :
@@ -515,8 +522,8 @@ def cmpLoop (same : α → α → Bool) (cmp : Cmp2 α) :
     else (.ok i, st)
 
 /-- `list_richcompare_impl(v, w, op)`, listobject.c:3395-3456, for two lists. -/
-def listRichcompare (E : ElemOps α ρ) (cmp : Cmp2 α) (fuel : Nat) (op : CmpOp) (v w : List α) :
-    Py ρ × (List α × List α) :=
+def listRichcompare (E : ElemOps α ρ) (cmp : Cmp2 α) (final : Final α ρ) (fuel : Nat)
+    (op : CmpOp) (v w : List α) : Py ρ × (List α × List α) :=
   if v.length ≠ w.length ∧ (op = .eq ∨ op = .ne) then
     (.ok (E.ofBool (op = .ne)), (v, w))
   else
@@ -529,7 +536,7 @@ def listRichcompare (E : ElemOps α ρ) (cmp : Cmp2 α) (fuel : Nat) (op : CmpOp
       else if op = .ne then (.ok (E.ofBool true), st)
       else
         match slot st.1 i, slot st.2 i with
-        | some vi, some wi => (E.rich op vi wi, st)
+        | some vi, some wi => final op st vi wi
         | _, _ => (.error (cUB "list_richcompare_impl"), st)
 
 /-! ## Slice assignment -/

@@ -145,9 +145,12 @@ def effRepr (o : St) (x : DEl) : Py String × St := (dRepr x, applyEff (kindOf x
 
 /-- The `Cmp2` of the difftest: effects hit the left list. -/
 def effCmp2 : Cmp2 DEl := fun st a b =>
-  let o : St := { items := st.1 }
-  let (r, o') := effCmp o a b
+  let (r, o') := effCmp (LObj.prealloc st.1) a b
   (r, (o'.items, st.2))
+
+/-- The closing comparison runs the same method, with the same effect. -/
+def effFinal : Final DEl Res := fun op st a b =>
+  (dRich op a b, ((applyEff (driver a b) (LObj.prealloc st.1)).items, st.2))
 
 def okJ (v : Json) : Json := Json.mkObj [("ok", v)]
 def errJ (e : PyExc) : Json := Json.mkObj [("exc", toJson e.className), ("msg", toJson e.message)]
@@ -507,7 +510,7 @@ def runList (fn : String) (j : Json) : Except String Json := do
     let a ← jEls (← field j "a")
     let b ← jEls (← field j "b")
     let fuel := a.length + b.length + 64
-    let (r, st) := listRichcompare E effCmp2 fuel op a b
+    let (r, st) := listRichcompare E effCmp2 effFinal fuel op a b
     return okJ (Json.arr #[encPy enRes r, enEls st.1])
   | "list.repr" =>
     let h ← jHeap (← field j "heap")
